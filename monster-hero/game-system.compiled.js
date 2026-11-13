@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: cd00ff0090685437
+// source-sha256: 40e61b9b15c057a0
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -161083,7 +161083,13 @@ const MSX_CSS = `
 .msx .v-cup.sel{border-color:#fde047;background:#3b2f0b;box-shadow:0 0 12px #fde04766}
 .msx .v-cup.rv{border-color:#f87171;background:linear-gradient(90deg,#3b1220,#1e1a36)}.msx .v-cup.rv .tx small{color:#fca5a5}
 .msx .v-cup .rvb{position:absolute;right:8px;top:-8px;background:linear-gradient(90deg,#ef4444,#fb923c);border-radius:99px;padding:0 8px;font-size:10px;font-weight:900;line-height:1.6;white-space:nowrap}
-.msx .v-cup.ng{opacity:.55;border-style:dashed}.msx .v-cup.ng .tx small{color:#fca5a5}
+.msx .v-cup.ng{opacity:.55;border-style:dashed}
+.msx .v-cup .e .gr{position:absolute;left:2px;bottom:-2px;font-size:8.5px;font-weight:900;border-radius:5px;padding:0 3px;color:#1e1b4b;background:#cbd5e1;letter-spacing:0}
+.msx .v-cup .e .gr.g-bronze{background:#d9a066}.msx .v-cup .e .gr.g-silver{background:#cbd5e1}.msx .v-cup .e .gr.g-gold{background:#fde047}
+.msx .v-cup .e .gr.g-green{background:#86efac}.msx .v-cup .e .gr.g-four{background:#c4b5fd}.msx .v-cup .e .gr.g-rainbow{background:linear-gradient(90deg,#fda4af,#fde047,#86efac,#93c5fd);color:#1e1b4b}
+.msx .v-cup.ex .e{position:relative}
+.msx .v-cup.ex.g-four{border-color:#a78bfa}.msx .v-cup.ex.g-gold{border-color:#fde047}.msx .v-cup.ex.g-rainbow{border-color:#fda4af}
+.msx .v-cup.hard .tx small{color:#fca5a5}.msx .v-cup.ng .tx small{color:#fca5a5}
 .msx .v-vsh{display:flex;align-items:center;gap:4px;margin-top:6px;border-radius:16px;overflow:hidden;border:1px solid #4a4380;background:linear-gradient(100deg,#9d174d 0,#3b2a6b 49%,#0f0d24 50%,#1e3a8a 100%);padding:6px 6px;min-height:104px}
 .msx .v-vsh .sd{flex:1;min-width:0;display:flex;align-items:center;gap:4px;line-height:1.3}.msx .v-vsh .sd.op{justify-content:flex-end;text-align:right}
 .msx .v-vsh .sd img{height:70px;aspect-ratio:1;object-fit:contain;flex:none;filter:drop-shadow(0 5px 3px #0008)}.msx .v-vsh .sd.op img{transform:scaleX(-1)}
@@ -164525,6 +164531,46 @@ const MSX_EXTRA_ITEM = Object.freeze({
   herb: {
     e: '🌱',
     desc: 'ストレスを下げる'
+  },
+  elixir0: {
+    e: '🧪',
+    desc: '使ったターンの修行で、零の間合いの技を覚える率が上がる'
+  },
+  elixir1: {
+    e: '🧪',
+    desc: '使ったターンの修行で、近の間合いの技を覚える率が上がる'
+  },
+  elixir2: {
+    e: '🧪',
+    desc: '使ったターンの修行で、中の間合いの技を覚える率が上がる'
+  },
+  elixir3: {
+    e: '🧪',
+    desc: '使ったターンの修行で、遠の間合いの技を覚える率が上がる'
+  },
+  fruit_life: {
+    e: '🍎',
+    desc: '使ったターンの訓練で、ライフが伸びやすくなる'
+  },
+  fruit_pow: {
+    e: '🍖',
+    desc: '使ったターンの訓練で、ちからが伸びやすくなる'
+  },
+  fruit_wise: {
+    e: '🫐',
+    desc: '使ったターンの訓練で、かしこさが伸びやすくなる'
+  },
+  fruit_hit: {
+    e: '🍊',
+    desc: '使ったターンの訓練で、命中が伸びやすくなる'
+  },
+  fruit_eva: {
+    e: '🍇',
+    desc: '使ったターンの訓練で、回避が伸びやすくなる'
+  },
+  fruit_tough: {
+    e: '🥥',
+    desc: '使ったターンの訓練で、丈夫さが伸びやすくなる'
   }
 });
 const msxItemView = k => {
@@ -165474,10 +165520,50 @@ const MSX_R3_CUP_ICON = Object.freeze({
   herosummer: '👑',
   herowinter: '👑',
   debut: '🎀',
-  peak: '🗻'
+  peak: '🗻',
+  derby: '🔥',
+  four1: '🌅',
+  four2: '🌊',
+  four3: '🦁',
+  four4: '🏔',
+  distT0: '🤜',
+  distT1: '👊',
+  distT2: '🏹',
+  distT3: '🔭',
+  distC0: '🤜',
+  distC1: '👊',
+  distC2: '🏹',
+  distC3: '🔭',
+  sel_life: '❤️',
+  sel_pow: '💪',
+  sel_wise: '🧠',
+  sel_hit: '🎯',
+  sel_eva: '💨',
+  sel_tough: '🛡️',
+  mem_life: '🏮',
+  mem_pow: '🥊',
+  mem_wise: '📖',
+  mem_hit: '🎯',
+  mem_eva: '👟',
+  mem_tough: '🛡️',
+  gem_attacker: '♦️',
+  gem_tank: '🔷',
+  gem_supporter: '💚',
+  gem_healer: '🔶',
+  gem_shadow: '🟣'
+});
+const MSX_R3_CUP_GRADE = Object.freeze({
+  bronze: '銅',
+  silver: '銀',
+  gold: '金',
+  green: '緑',
+  four: '四大',
+  rainbow: '特別'
 });
 const msxR3Stars = n => n >= 4 ? '👑' : '★'.repeat(Math.max(1, n || 1));
 const msxR3CupName = sys => {
+  const S0 = msxSuc && msxSuc.SUC;
+  if (S0 && S0.EX_BY_SYS && S0.EX_BY_SYS[sys]) return S0.EX_BY_SYS[sys].name;
   const names = typeof window !== 'undefined' && window.MONSUC_REGULAR_CUPS ? window.MONSUC_REGULAR_CUPS : {};
   if (names[sys]) return String(names[sys]).replace(/(自慢|大会)$/, m => m === '自慢' ? '自慢の大会' : m);
   const S = msxSuc && msxSuc.SUC;
@@ -166018,9 +166104,26 @@ const msxR3WhyText = (e, s) => {
   if (e.why === 'cond') return '体調が悪いと出られない';
   if (e.why === 'loyal') return `忠誠が ${e.need} 以上 要る`;
   if (e.why === 'fame') return `これまでの賞金の合計が ${msxFmt(e.need)}G 以上で出られる(いま ${msxFmt(s.fameTotal)}G)`;
+  if (e.why === 'rank') return `賞金の段が ${e.needName} 以上で出られる(${msxFmt(e.needG)}G・いま ${msxFmt(s.fameTotal)}G)`;
+  if (e.why === 'won') return `${e.wonName} 優勝で出られる`;
   return '出られない';
 };
 const msxR3CupReward = (SUC, c) => {
+  const ex = SUC.EX_BY_SYS ? SUC.EX_BY_SYS[c.sys] : null;
+  if (ex) {
+    const rw = ex.rw || {};
+    const o = [];
+    if (rw.all) o.push(`全能力 +${rw.all}`);
+    if (rw.stat) Object.entries(rw.stat).forEach(([k, v]) => o.push(`${MSX_STAT_NAME[k]} +${v}`));
+    if (rw.hpMax) o.push(`体力の最大値 +${rw.hpMax}`);
+    if (rw.loy) o.push(`忠誠度 +${rw.loy}`);
+    if (rw.pts) o.push(`能力ポイント +${rw.pts}`);
+    if (rw.pop) o.push(`人気 +${rw.pop}`);
+    if (rw.bag) Object.entries(rw.bag).forEach(([k, n]) => o.push(`${(SUC.ITEMS[k] || {}).name || k} ×${n}`));
+    if (Number.isInteger(rw.apt)) o.push('その間合いの適性が1段上がる');
+    if (ex.four) o.push('四大大会');
+    return o.length ? o.join('・') : '賞金と修行チケット';
+  }
   const R = SUC.CUP_SYS ? SUC.CUP_SYS[c.sys] || {} : {};
   const out = [];
   const pts = {
@@ -166130,7 +166233,7 @@ function MsxR3Cup({
     className: "v-cups"
   }, cups.length ? cups.map(c => {
     const ok = c.entry && c.entry.ok;
-    const cls = !ok ? 'ng' : c.id === pick ? 'sel' : c.rival ? 'rv' : c.done ? 'won' : '';
+    const cls = `${!ok ? 'ng' : c.id === pick ? 'sel' : c.rival ? 'rv' : c.done ? 'won' : ''}${c.ex ? ` ex g-${c.grade || 'gold'}` : ''}${c.hard ? ' hard' : ''}`;
     return React.createElement("button", {
       type: "button",
       key: c.id,
@@ -166140,9 +166243,11 @@ function MsxR3Cup({
       "data-msx-r3-cup": c.id
     }, React.createElement("div", {
       className: "e"
-    }, c.scenario ? '📖' : MSX_R3_CUP_ICON[c.sys] || '🏆'), React.createElement("div", {
+    }, c.scenario ? '📖' : MSX_R3_CUP_ICON[c.sys] || '🏆', c.ex && c.grade ? React.createElement("small", {
+      className: `gr g-${c.grade}`
+    }, MSX_R3_CUP_GRADE[c.grade] || '') : null), React.createElement("div", {
       className: "tx"
-    }, React.createElement("b", null, c.scenario ? c.name : msxR3CupName(c.sys)), React.createElement("small", null, !ok ? `✖ ${msxR3WhyText(c.entry, s)}` : c.rival ? `ライバル: ${c.rival.name}` : c.done ? '👑 優勝したことがある → ⏩ スキップできる' : '出られる ✔'), React.createElement("span", {
+    }, React.createElement("b", null, c.scenario ? c.name : msxR3CupName(c.sys)), React.createElement("small", null, !ok ? `✖ ${msxR3WhyText(c.entry, s)}` : c.hard ? '🔥 勝ち目なし… 相手がとても強い' : c.rival ? `ライバル: ${c.rival.name}` : c.done ? '👑 優勝したことがある → ⏩ スキップできる' : '出られる ✔'), React.createElement("span", {
       className: "rw"
     }, "🎁 ", msxR3CupReward(SUC, c))), React.createElement("div", {
       className: "rt"

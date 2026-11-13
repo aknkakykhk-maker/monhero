@@ -28,9 +28,25 @@ const msxR3WhyText = (e, s) => {
   if (e.why === 'cond') return '体調が悪いと出られない';
   if (e.why === 'loyal') return `忠誠が ${e.need} 以上 要る`;
   if (e.why === 'fame') return `これまでの賞金の合計が ${msxFmt(e.need)}G 以上で出られる(いま ${msxFmt(s.fameTotal)}G)`;
+  if (e.why === 'rank') return `賞金の段が ${e.needName} 以上で出られる(${msxFmt(e.needG)}G・いま ${msxFmt(s.fameTotal)}G)`;
+  if (e.why === 'won') return `${e.wonName} 優勝で出られる`;
   return '出られない';
 };
 const msxR3CupReward = (SUC, c) => {
+  const ex = SUC.EX_BY_SYS ? SUC.EX_BY_SYS[c.sys] : null;
+  if (ex) { // 大会の第2版: その大会が持つごほうび
+    const rw = ex.rw || {}; const o = [];
+    if (rw.all) o.push(`全能力 +${rw.all}`);
+    if (rw.stat) Object.entries(rw.stat).forEach(([k, v]) => o.push(`${MSX_STAT_NAME[k]} +${v}`));
+    if (rw.hpMax) o.push(`体力の最大値 +${rw.hpMax}`);
+    if (rw.loy) o.push(`忠誠度 +${rw.loy}`);
+    if (rw.pts) o.push(`能力ポイント +${rw.pts}`);
+    if (rw.pop) o.push(`人気 +${rw.pop}`);
+    if (rw.bag) Object.entries(rw.bag).forEach(([k, n]) => o.push(`${(SUC.ITEMS[k] || {}).name || k} ×${n}`));
+    if (Number.isInteger(rw.apt)) o.push('その間合いの適性が1段上がる');
+    if (ex.four) o.push('四大大会');
+    return o.length ? o.join('・') : '賞金と修行チケット';
+  }
   const R = SUC.CUP_SYS ? (SUC.CUP_SYS[c.sys] || {}) : {};
   const out = [];
   const pts = { 3: 10, 4: 20 }[c.star]; const pop = { 2: 2, 3: 4, 4: 8 }[c.star]; const up = { 2: 6, 3: 12 }[c.star];
@@ -71,12 +87,12 @@ function MsxR3Cup({ run, setRun, v, ev, onBack, onActed }) {
     <div className="v-cups">
       {cups.length ? cups.map((c) => {
         const ok = c.entry && c.entry.ok;
-        const cls = !ok ? 'ng' : c.id === pick ? 'sel' : c.rival ? 'rv' : c.done ? 'won' : '';
+        const cls = `${!ok ? 'ng' : c.id === pick ? 'sel' : c.rival ? 'rv' : c.done ? 'won' : ''}${c.ex ? ` ex g-${c.grade || 'gold'}` : ''}${c.hard ? ' hard' : ''}`;
         return (
           <button type="button" key={c.id} className={`v-cup ${cls}`} disabled={!ok} onClick={() => setPick(c.id)} data-msx-r3-cup={c.id}>
-            <div className="e">{c.scenario ? '📖' : (MSX_R3_CUP_ICON[c.sys] || '🏆')}</div>
+            <div className="e">{c.scenario ? '📖' : (MSX_R3_CUP_ICON[c.sys] || '🏆')}{c.ex && c.grade ? <small className={`gr g-${c.grade}`}>{MSX_R3_CUP_GRADE[c.grade] || ''}</small> : null}</div>
             <div className="tx"><b>{c.scenario ? c.name : msxR3CupName(c.sys)}</b>
-              <small>{!ok ? `✖ ${msxR3WhyText(c.entry, s)}` : c.rival ? `ライバル: ${c.rival.name}` : c.done ? '👑 優勝したことがある → ⏩ スキップできる' : '出られる ✔'}</small>
+              <small>{!ok ? `✖ ${msxR3WhyText(c.entry, s)}` : c.hard ? '🔥 勝ち目なし… 相手がとても強い' : c.rival ? `ライバル: ${c.rival.name}` : c.done ? '👑 優勝したことがある → ⏩ スキップできる' : '出られる ✔'}</small>
               <span className="rw">🎁 {msxR3CupReward(SUC, c)}</span></div>
             <div className="rt"><span className="st">{msxR3Stars(c.star)}</span><span className="g">💰 {msxFmt(c.prize)}G</span><span className="kd">{c.scenario ? 'シナリオ' : (SUC.CUP_SYS[c.sys] || {}).stat ? '自慢' : (SUC.CUP_SYS[c.sys] || {}).dist !== undefined ? '間合い' : (SUC.CUP_SYS[c.sys] || {}).type ? 'タイプ' : ['spring', 'summer', 'autumn', 'winter'].includes(c.sys) ? '四季' : 'ふつう'}</span></div>
             {c.rival ? <><span className="rvi"><img src={msxMonThumb(c.rival.species)} alt=""/><b>ライバル</b></span><span className="rvb">ごほうび大</span></> : null}

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 4c63fc20418f5d5b
+// generated-sha256: ae2dc80dfc3b5198
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -83980,7 +83980,13 @@ const MSX_CSS = `
 .msx .v-cup.sel{border-color:#fde047;background:#3b2f0b;box-shadow:0 0 12px #fde04766}
 .msx .v-cup.rv{border-color:#f87171;background:linear-gradient(90deg,#3b1220,#1e1a36)}.msx .v-cup.rv .tx small{color:#fca5a5}
 .msx .v-cup .rvb{position:absolute;right:8px;top:-8px;background:linear-gradient(90deg,#ef4444,#fb923c);border-radius:99px;padding:0 8px;font-size:10px;font-weight:900;line-height:1.6;white-space:nowrap}
-.msx .v-cup.ng{opacity:.55;border-style:dashed}.msx .v-cup.ng .tx small{color:#fca5a5}
+.msx .v-cup.ng{opacity:.55;border-style:dashed}
+.msx .v-cup .e .gr{position:absolute;left:2px;bottom:-2px;font-size:8.5px;font-weight:900;border-radius:5px;padding:0 3px;color:#1e1b4b;background:#cbd5e1;letter-spacing:0}
+.msx .v-cup .e .gr.g-bronze{background:#d9a066}.msx .v-cup .e .gr.g-silver{background:#cbd5e1}.msx .v-cup .e .gr.g-gold{background:#fde047}
+.msx .v-cup .e .gr.g-green{background:#86efac}.msx .v-cup .e .gr.g-four{background:#c4b5fd}.msx .v-cup .e .gr.g-rainbow{background:linear-gradient(90deg,#fda4af,#fde047,#86efac,#93c5fd);color:#1e1b4b}
+.msx .v-cup.ex .e{position:relative}
+.msx .v-cup.ex.g-four{border-color:#a78bfa}.msx .v-cup.ex.g-gold{border-color:#fde047}.msx .v-cup.ex.g-rainbow{border-color:#fda4af}
+.msx .v-cup.hard .tx small{color:#fca5a5}.msx .v-cup.ng .tx small{color:#fca5a5}
 .msx .v-vsh{display:flex;align-items:center;gap:4px;margin-top:6px;border-radius:16px;overflow:hidden;border:1px solid #4a4380;background:linear-gradient(100deg,#9d174d 0,#3b2a6b 49%,#0f0d24 50%,#1e3a8a 100%);padding:6px 6px;min-height:104px}
 .msx .v-vsh .sd{flex:1;min-width:0;display:flex;align-items:center;gap:4px;line-height:1.3}.msx .v-vsh .sd.op{justify-content:flex-end;text-align:right}
 .msx .v-vsh .sd img{height:70px;aspect-ratio:1;object-fit:contain;flex:none;filter:drop-shadow(0 5px 3px #0008)}.msx .v-vsh .sd.op img{transform:scaleX(-1)}
@@ -85286,7 +85292,18 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug }) 
 }
 
 // ---- 持ち物(1ターンに1個まで・ターンは進まない)。中身は芯の s.bag(育成中に使う物の数)と s.carry(はじめる前に効いている物) ----
-const MSX_EXTRA_ITEM = Object.freeze({ oil: { e: '🫙', desc: '体力を少し回復する' }, herb: { e: '🌱', desc: 'ストレスを下げる' } });
+const MSX_EXTRA_ITEM = Object.freeze({ oil: { e: '🫙', desc: '体力を少し回復する' }, herb: { e: '🌱', desc: 'ストレスを下げる' },
+  // 大会の賞品(2026-11-13 大会の第2版)。使ったターンのあいだだけ効く
+  elixir0: { e: '🧪', desc: '使ったターンの修行で、零の間合いの技を覚える率が上がる' },
+  elixir1: { e: '🧪', desc: '使ったターンの修行で、近の間合いの技を覚える率が上がる' },
+  elixir2: { e: '🧪', desc: '使ったターンの修行で、中の間合いの技を覚える率が上がる' },
+  elixir3: { e: '🧪', desc: '使ったターンの修行で、遠の間合いの技を覚える率が上がる' },
+  fruit_life: { e: '🍎', desc: '使ったターンの訓練で、ライフが伸びやすくなる' },
+  fruit_pow: { e: '🍖', desc: '使ったターンの訓練で、ちからが伸びやすくなる' },
+  fruit_wise: { e: '🫐', desc: '使ったターンの訓練で、かしこさが伸びやすくなる' },
+  fruit_hit: { e: '🍊', desc: '使ったターンの訓練で、命中が伸びやすくなる' },
+  fruit_eva: { e: '🍇', desc: '使ったターンの訓練で、回避が伸びやすくなる' },
+  fruit_tough: { e: '🥥', desc: '使ったターンの訓練で、丈夫さが伸びやすくなる' } });
 const msxItemView = (k) => {
   const base = MSX_ITEM_BY_ID[k]; const core = msxSuc && msxSuc.SUC.ITEMS ? msxSuc.SUC.ITEMS[k] : null; const ex = MSX_EXTRA_ITEM[k];
   return { id: k, name: (base && base.name) || (core && core.name) || k, desc: (base && base.desc) || (ex && ex.desc) || '', e: (base && base.e) || (ex && ex.e) || '🎁', during: core ? core.use === 'during' : !!(base && base.when === 'both') };
@@ -85673,9 +85690,18 @@ const msxR3Ranks = () => (typeof MASMON_CALC !== 'undefined' && MASMON_CALC && A
 const MSX_R3_CUP_ICON = Object.freeze({
   str: '💪', int: '🧠', aim: '🎯', dodge: '💨', hard: '🛡️', life: '❤️', dist0: '🤜', dist1: '👊', dist2: '🏹', dist3: '🔭',
   attacker: '⚔', tank: '🧱', supporter: '🎺', healer: '🌿', shadow: '🌑', spring: '🌸', summer: '🌻', autumn: '🍁', winter: '⛄', normal: '🏟', herosummer: '👑', herowinter: '👑', debut: '🎀', peak: '🗻',
+  derby: '🔥', four1: '🌅', four2: '🌊', four3: '🦁', four4: '🏔',
+  distT0: '🤜', distT1: '👊', distT2: '🏹', distT3: '🔭', distC0: '🤜', distC1: '👊', distC2: '🏹', distC3: '🔭',
+  sel_life: '❤️', sel_pow: '💪', sel_wise: '🧠', sel_hit: '🎯', sel_eva: '💨', sel_tough: '🛡️',
+  mem_life: '🏮', mem_pow: '🥊', mem_wise: '📖', mem_hit: '🎯', mem_eva: '👟', mem_tough: '🛡️',
+  gem_attacker: '♦️', gem_tank: '🔷', gem_supporter: '💚', gem_healer: '🔶', gem_shadow: '🟣',
 });
+// 第2版の札の格(色)。CSS は .v-cup.g-<格>
+const MSX_R3_CUP_GRADE = Object.freeze({ bronze: '銅', silver: '銀', gold: '金', green: '緑', four: '四大', rainbow: '特別' });
 const msxR3Stars = (n) => (n >= 4 ? '👑' : '★'.repeat(Math.max(1, n || 1)));
 const msxR3CupName = (sys) => {
+  const S0 = msxSuc && msxSuc.SUC; // 大会の第2版(四大大会・季節の賞・選抜→記念 など)は芯が名前を持つ
+  if (S0 && S0.EX_BY_SYS && S0.EX_BY_SYS[sys]) return S0.EX_BY_SYS[sys].name;
   const names = typeof window !== 'undefined' && window.MONSUC_REGULAR_CUPS ? window.MONSUC_REGULAR_CUPS : {};
   if (names[sys]) return String(names[sys]).replace(/(自慢|大会)$/, (m) => (m === '自慢' ? '自慢の大会' : m));
   const S = msxSuc && msxSuc.SUC; const aid = typeof sys === 'string' && sys.startsWith('sc') ? sys.slice(2) : '';
@@ -85936,9 +85962,25 @@ const msxR3WhyText = (e, s) => {
   if (e.why === 'cond') return '体調が悪いと出られない';
   if (e.why === 'loyal') return `忠誠が ${e.need} 以上 要る`;
   if (e.why === 'fame') return `これまでの賞金の合計が ${msxFmt(e.need)}G 以上で出られる(いま ${msxFmt(s.fameTotal)}G)`;
+  if (e.why === 'rank') return `賞金の段が ${e.needName} 以上で出られる(${msxFmt(e.needG)}G・いま ${msxFmt(s.fameTotal)}G)`;
+  if (e.why === 'won') return `${e.wonName} 優勝で出られる`;
   return '出られない';
 };
 const msxR3CupReward = (SUC, c) => {
+  const ex = SUC.EX_BY_SYS ? SUC.EX_BY_SYS[c.sys] : null;
+  if (ex) { // 大会の第2版: その大会が持つごほうび
+    const rw = ex.rw || {}; const o = [];
+    if (rw.all) o.push(`全能力 +${rw.all}`);
+    if (rw.stat) Object.entries(rw.stat).forEach(([k, v]) => o.push(`${MSX_STAT_NAME[k]} +${v}`));
+    if (rw.hpMax) o.push(`体力の最大値 +${rw.hpMax}`);
+    if (rw.loy) o.push(`忠誠度 +${rw.loy}`);
+    if (rw.pts) o.push(`能力ポイント +${rw.pts}`);
+    if (rw.pop) o.push(`人気 +${rw.pop}`);
+    if (rw.bag) Object.entries(rw.bag).forEach(([k, n]) => o.push(`${(SUC.ITEMS[k] || {}).name || k} ×${n}`));
+    if (Number.isInteger(rw.apt)) o.push('その間合いの適性が1段上がる');
+    if (ex.four) o.push('四大大会');
+    return o.length ? o.join('・') : '賞金と修行チケット';
+  }
   const R = SUC.CUP_SYS ? (SUC.CUP_SYS[c.sys] || {}) : {};
   const out = [];
   const pts = { 3: 10, 4: 20 }[c.star]; const pop = { 2: 2, 3: 4, 4: 8 }[c.star]; const up = { 2: 6, 3: 12 }[c.star];
@@ -85979,12 +86021,12 @@ function MsxR3Cup({ run, setRun, v, ev, onBack, onActed }) {
     <div className="v-cups">
       {cups.length ? cups.map((c) => {
         const ok = c.entry && c.entry.ok;
-        const cls = !ok ? 'ng' : c.id === pick ? 'sel' : c.rival ? 'rv' : c.done ? 'won' : '';
+        const cls = `${!ok ? 'ng' : c.id === pick ? 'sel' : c.rival ? 'rv' : c.done ? 'won' : ''}${c.ex ? ` ex g-${c.grade || 'gold'}` : ''}${c.hard ? ' hard' : ''}`;
         return (
           <button type="button" key={c.id} className={`v-cup ${cls}`} disabled={!ok} onClick={() => setPick(c.id)} data-msx-r3-cup={c.id}>
-            <div className="e">{c.scenario ? '📖' : (MSX_R3_CUP_ICON[c.sys] || '🏆')}</div>
+            <div className="e">{c.scenario ? '📖' : (MSX_R3_CUP_ICON[c.sys] || '🏆')}{c.ex && c.grade ? <small className={`gr g-${c.grade}`}>{MSX_R3_CUP_GRADE[c.grade] || ''}</small> : null}</div>
             <div className="tx"><b>{c.scenario ? c.name : msxR3CupName(c.sys)}</b>
-              <small>{!ok ? `✖ ${msxR3WhyText(c.entry, s)}` : c.rival ? `ライバル: ${c.rival.name}` : c.done ? '👑 優勝したことがある → ⏩ スキップできる' : '出られる ✔'}</small>
+              <small>{!ok ? `✖ ${msxR3WhyText(c.entry, s)}` : c.hard ? '🔥 勝ち目なし… 相手がとても強い' : c.rival ? `ライバル: ${c.rival.name}` : c.done ? '👑 優勝したことがある → ⏩ スキップできる' : '出られる ✔'}</small>
               <span className="rw">🎁 {msxR3CupReward(SUC, c)}</span></div>
             <div className="rt"><span className="st">{msxR3Stars(c.star)}</span><span className="g">💰 {msxFmt(c.prize)}G</span><span className="kd">{c.scenario ? 'シナリオ' : (SUC.CUP_SYS[c.sys] || {}).stat ? '自慢' : (SUC.CUP_SYS[c.sys] || {}).dist !== undefined ? '間合い' : (SUC.CUP_SYS[c.sys] || {}).type ? 'タイプ' : ['spring', 'summer', 'autumn', 'winter'].includes(c.sys) ? '四季' : 'ふつう'}</span></div>
             {c.rival ? <><span className="rvi"><img src={msxMonThumb(c.rival.species)} alt=""/><b>ライバル</b></span><span className="rvb">ごほうび大</span></> : null}
