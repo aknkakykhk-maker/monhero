@@ -28,6 +28,21 @@ const MSX_STAT_NAME = Object.freeze({ life: 'ライフ', pow: 'ちから', wise:
 // 訓練の名前(2026-11-13 社長「トレごとに特色を」。うちのオリジナル)と、その場面の小物
 const MSX_TRAIN_NAME = Object.freeze({ life: '坂道ダッシュ', pow: '丸太割り', wise: '積み木パズル', hit: '的当て', eva: '落ち葉よけ', tough: '岩受け止め' });
 const MSX_TRAIN_ICON = Object.freeze({ life: '🏃', pow: '🪵', wise: '🧩', hit: '🎯', eva: '🍂', tough: '🪨' });
+// 訓練Lv(1〜5)ごとの名前と見出しの絵(2026-11-13 社長「トレーニング名はレベルごとに名前を変えて」。段が上がるほど大きく・強そうに)
+const MSX_TRAIN_LV = Object.freeze({
+  life: [['坂道ダッシュ', '🏃'], ['丘越えダッシュ', '🏃'], ['山道かけ登り', '⛰️'], ['雪山かけ登り', '🏔️'], ['火山かけ登り', '🌋']],
+  pow: [['丸太割り', '🪵'], ['大丸太割り', '🪵'], ['岩割り', '🪨'], ['大岩くだき', '🪨'], ['鉄球くだき', '⚫']],
+  wise: [['積み木パズル', '🧱'], ['絵合わせパズル', '🧩'], ['迷路ときあかし', '🌀'], ['星図よみ', '✨'], ['古文書ときあかし', '📜']],
+  hit: [['的当て', '🎯'], ['遠くの的当て', '🎯'], ['動く的当て', '🎯'], ['三つ的当て', '🎯'], ['流星の的当て', '🌠']],
+  eva: [['落ち葉よけ', '🍂'], ['木の実よけ', '🌰'], ['雪玉よけ', '❄️'], ['落石よけ', '🪨'], ['流れ星よけ', '🌠']],
+  tough: [['岩受け止め', '🪨'], ['大岩受け止め', '🪨'], ['滝打たれ', '💧'], ['落石受け止め', '🪨'], ['隕石受け止め', '☄️']],
+});
+const msxTrainLvAt = (lv) => Math.max(1, Math.min(5, Math.round(Number(lv)) || 1));
+const msxTrainName = (stat, lv) => { const t = MSX_TRAIN_LV[stat]; return t ? t[msxTrainLvAt(lv) - 1][0] : ''; };
+// 札で2行に折るとき、言葉の途中で折らない(「火山|かけ登り」のように、うしろの動きの言葉の前でだけ折る)
+const MSX_TRAIN_TAIL = Object.freeze(['ときあかし', 'ダッシュ', 'かけ登り', '受け止め', 'パズル', 'くだき', '的当て', '打たれ', '割り', 'よけ', 'よみ']);
+const msxTrainNameParts = (stat, lv) => { const n = msxTrainName(stat, lv); const t = MSX_TRAIN_TAIL.find((x) => n.endsWith(x) && n.length > x.length); return t ? [n.slice(0, n.length - t.length), t] : [n]; };
+const msxTrainIcon = (stat, lv) => { const t = MSX_TRAIN_LV[stat]; return t ? t[msxTrainLvAt(lv) - 1][1] : '💪'; };
 const MSX_STATS = Object.freeze(['life', 'pow', 'wise', 'hit', 'eva', 'tough']);
 const MSX_BOX_CAP0 = 30;
 

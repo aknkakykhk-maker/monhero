@@ -281,6 +281,8 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug }) 
   const [sel, setSel] = useState(null);
   // 期の区切りの演出(56-monsuc-kifx.jsx)を見終えたターン(保存しない。読み直したときはもう一度出る)
   const [kiAt, setKiAt] = useState(null);
+  // 訓練している場面(56-monsuc-actfx.jsx)をまだ見せていないターン。押した直後だけ立てる(読み直したときは出さない・保存しない)
+  const [actAt, setActAt] = useState(null);
   const [sheet, setSheet] = useState(null); // 'log' | 'menu' | { soon: 名前 }
   const [, setScriptTick] = useState(0);
   // 台本(共通 + 助手の分)を読む。読み終わったら描き直して台詞を出す
@@ -335,10 +337,11 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug }) 
     const r = SUC.act(s, a);
     if (!r.out.ok) return;
     setSub('main'); setSel(null);
-    let next = { ...run, s: r.state, out: { ...r.out, kind: a.kind } };
+    let next = { ...run, s: r.state, out: { ...r.out, kind: a.kind, hpFrom: Number.isFinite(s.hp) ? s.hp : null } };
     if (a.kind === 'retry') { endTurnFlow(next); return; }
     const text = r.out.result ? `${MSX_STAT_NAME[a.stat] || ''}の訓練: ${MSX_RES[r.out.result].word}` : a.kind === 'rest' ? '休んだ' : a.kind === 'play' ? '遊んだ' : a.kind === 'clinic' ? '通院した' : '休み';
     next = pushLog(next, text);
+    if (r.out.result && typeof MsxTrainAct === 'function') setActAt(r.state.turn);
     setRun({ ...next, phase: 'result' });
   };
 
@@ -360,6 +363,9 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug }) 
   if (phase === 'result' && run.out) {
     const o = run.out; const isTrain = !!o.result;
     const R = isTrain ? MSX_RES[o.result] : null;
+    const acting = isTrain && actAt === s.turn && typeof MsxTrainAct === 'function';
+    const hpLost = isTrain && Number.isFinite(o.hpFrom) && Number.isFinite(s.hp) ? Math.max(0, Math.round(o.hpFrom - s.hp)) : 0;
+    const tlv = isTrain && Number.isFinite(o.trainLv) ? o.trainLv - (o.lvUp ? 1 : 0) : 1;
     const gains = o.gain || {};
     const members = o.card && Array.isArray(o.card.members) ? o.card.members.map((i) => s.team[i]).filter(Boolean) : [];
     const restName = o.rest && SUC.REST ? (SUC.REST.find((x) => x.key === o.rest) || {}).name : null;
@@ -370,25 +376,26 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug }) 
       <MsxBand s={s} v={v} ev={ev}/>
       <div className="v-scene" style={{ flex: '1 1 0' }}>
         <img className="bg" src={`images/story-bg/${isTrain ? R.bg : 'monhero_plaza'}.jpg`} alt=""/><div className="sh"/>
-        {isTrain && o.result === 'great' ? <div className="v-burst"/> : isTrain && o.result === 'ok' ? <div className="v-burst b2"/> : null}
+        {acting ? <MsxTrainAct key={`act-${s.turn}`} run={run} o={o} onDone={() => setActAt(null)}/> : null}
+        {acting ? null : isTrain && o.result === 'great' ? <div className="v-burst"/> : isTrain && o.result === 'ok' ? <div className="v-burst b2"/> : null}
         <div className="gr" style={{ left: '62%', bottom: 'calc(14% - 5px)' }}/>
-        <MsxMonArt run={run} className="mon" live={typeof MsxLiveMon === 'function'} react={isTrain ? { kind: o.result, id: s.turn } : null} style={{ left: '62%', bottom: '14%', height: '46%', transform: o.result === 'sab' ? 'translateX(-50%) rotate(84deg)' : o.result === 'fail' ? 'translateX(-50%) rotate(-12deg)' : 'translateX(-50%) rotate(6deg)', filter: o.result === 'fail' ? 'grayscale(.5) drop-shadow(0 8px 5px #0009)' : undefined }}/>
-        <div className={`v-stamp msx-pop ${isTrain ? R.cls : 'ok'}`}>{isTrain ? R.word : o.kind === 'rest' ? (restName || '休んだ') : o.kind === 'play' ? '遊んだ!' : o.kind === 'clinic' ? '通院' : '休み'}
-          {isTrain && o.card && o.card.tags && o.card.tags.length ? <small>🤝 友情タッグ ×{o.card.tags.length}{o.result === 'great' ? '・伸び ×1.5' : ''}</small> : null}</div>
-        {members.length ? <div className="v-chips" style={{ top: 'auto', bottom: 8 }}>{members.map((m, i) => <span key={i} className="v-chip">{msxMemberName(m)} 親密度 +{(SUC.BOND && SUC.BOND.train) || 8}</span>)}</div> : null}
+        {acting ? null : <MsxMonArt run={run} className="mon" live={typeof MsxLiveMon === 'function'} react={isTrain ? { kind: o.result, id: s.turn } : null} style={{ left: '62%', bottom: '14%', height: '46%', transform: o.result === 'sab' ? 'translateX(-50%) rotate(84deg)' : o.result === 'fail' ? 'translateX(-50%) rotate(-12deg)' : 'translateX(-50%) rotate(6deg)', filter: o.result === 'fail' ? 'grayscale(.5) drop-shadow(0 8px 5px #0009)' : undefined }}/>}
+        {acting ? null : <div className={`v-stamp msx-pop ${isTrain ? R.cls : 'ok'}`}>{isTrain ? R.word : o.kind === 'rest' ? (restName || '休んだ') : o.kind === 'play' ? '遊んだ!' : o.kind === 'clinic' ? '通院' : '休み'}
+          {isTrain && o.card && o.card.tags && o.card.tags.length ? <small>🤝 友情タッグ ×{o.card.tags.length}{o.result === 'great' ? '・伸び ×1.5' : ''}</small> : null}</div>}
+        {!acting && members.length ? <div className="v-chips" style={{ top: 'auto', bottom: 8 }}>{members.map((m, i) => <span key={i} className="v-chip">{msxMemberName(m)} 親密度 +{(SUC.BOND && SUC.BOND.train) || 8}</span>)}</div> : null}
       </div>
-      {isTrain ? <MsxStRow stats={s.stats} ups={gains} main={o.card && o.card.stat}/> : null}
-      <div className="v-log">
+      {isTrain ? <MsxStRow stats={s.stats} ups={acting ? null : gains} main={o.card && o.card.stat}/> : null}
+      {acting ? <div className="v-log" style={{ opacity: .35 }}><span className="hd2">{msxTrainIcon(o.card.stat, tlv)} {msxTrainName(o.card.stat, tlv)}をしている…</span></div> : <div className="v-log">
         {isTrain && o.lvUp ? <div className="v-lvup">⬆ 訓練Lvアップ! {MSX_STAT_ICON[o.card.stat]} {MSX_STAT_NAME[o.card.stat]} <b>Lv.{o.trainLv - 1} → Lv.{o.trainLv}</b><small>次から、{MSX_STAT_NAME[o.card.stat]}の訓練の基本の伸びが上がる</small></div> : null}
-        {isTrain ? <><span className="hd2">{MSX_STAT_ICON[o.card.stat]} {MSX_STAT_NAME[o.card.stat]}の訓練</span><br/>
-          {Object.keys(gains).length ? <>{Object.entries(gains).map(([k, g], i) => <span key={k}>{i ? '・' : ''}{MSX_STAT_NAME[k]} <b className="gu">{g > 0 ? `+${g}` : g}</b></span>)}</> : '能力は上がらなかった'}</>
+        {isTrain ? <><span className="hd2">{msxTrainIcon(o.card.stat, tlv)} {msxTrainName(o.card.stat, tlv)}({MSX_STAT_NAME[o.card.stat]}の訓練)</span><br/>
+          {Object.keys(gains).length ? <>{Object.entries(gains).map(([k, g], i) => <span key={k}>{i ? '・' : ''}{MSX_STAT_NAME[k]} <b className="gu">{g > 0 ? `+${g}` : g}</b></span>)}</> : '能力は上がらなかった'}{hpLost ? <><br/><span data-msx-hp-lost>体力が <b style={{ color: '#dc2626' }}>{hpLost}</b> 下がった</span></> : null}</>
           : o.kind === 'rest' || o.kind === 'play' ? <><span className="hd2">{o.kind === 'rest' ? '🛌 休む' : '🎈 遊ぶ'}</span><br/>体力が回復した{(o.cured || []).includes('utsu') ? '。ようす「うつ病」が治った' : ''}</>
           : o.kind === 'clinic' ? <><span className="hd2">🏥 通院</span><br/>{(o.cured || []).length ? 'ようすが治った' : '今回は治らなかった。もう1回来れば治る'}</>
           : <><span className="hd2">🛌 休み</span><br/>{MSX_COND[o.cond] || '体調'}のため、このターンは休んだ</>}
         {o.event && typeof MsxTrainEvent !== 'function' ? <><br/><b className="ga">{msxMemberName(evMember)}</b>{o.event.story ? `との出来事 第${o.event.story}話` : 'との小さな出来事'}{evLine ? `: ${evLine.t}` : ''}</> : null}
         {o.cond && isTrain ? <><br/><b style={{ color: '#fca5a5' }}>{MSX_COND[o.cond]}</b>をしてしまった…しばらく休み</> : null}
-      </div>
-      {say && say.t ? <MsxSay aid={s.aid} ex={say.e || 'normal'} text={say.t}/> : null}
+      </div>}
+      {!acting && say && say.t ? <MsxSay aid={s.aid} ex={say.e || 'normal'} text={say.t}/> : null}
     </>);
     // 編成のモンスターとの出来事があれば、結果のあとに場面を1枚挟む(56-monsuc-tevent.jsx。とばすと飛ぶ)
     const tev = isTrain && o.event && typeof MsxTrainEvent === 'function';
@@ -517,7 +524,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug }) 
       <div className="v-scene" style={{ flex: '1 1 0' }}>
         <img className="bg" src={msxSceneBg(s.turn).bg} alt=""/><div className="sh"/>
         <div className="gr" style={{ left: '30%', bottom: 'calc(38% - 5px)', width: '14%' }}/><MsxMonArt run={run} className="mon" style={{ left: '30%', bottom: '38%', height: '16%' }} live/>
-        <div className="v-chips" style={{ right: 'auto', left: 7 }}><span className="v-chip ylw">{MSX_STAT_ICON[stat]} {MSX_STAT_NAME[stat]}の訓練{trainLv ? ` Lv${trainLv}` : ''}</span></div>
+        <div className="v-chips" style={{ right: 'auto', left: 7 }}><span className="v-chip ylw" data-msx-train-chip style={{ display: 'block', width: 'max-content', maxWidth: 'calc(50vw - 24px)', whiteSpace: 'normal', lineHeight: 1.2, textAlign: 'left' }}>{msxTrainIcon(stat, trainLv)} {msxTrainName(stat, trainLv)}<small style={{ display: 'block', fontSize: 10, fontWeight: 800, opacity: .85 }}>{MSX_STAT_NAME[stat]}の訓練{trainLv ? ` Lv${trainLv}` : ''}</small></span></div>
         <div className="v-come">
           {members.map((i) => { const m = s.team[i]; const tag = s.bond[i] >= tagAt; const eff = SUC.memberEffect(m, stat, SUC.loyalOf(s)); return (
             <div key={i} className={`v-cm${tag ? ' tag' : ''}`}><MsxPf m={m} bond={s.bond[i]} tagAt={999}/>
@@ -534,10 +541,10 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug }) 
       <div className="v-trs">
         {MSX_STATS.map((k) => { const c = msxCardOf(v, k); const lv = lvOf(c); return (
           <button type="button" key={k} className={`v-tr${c && c.tags.length ? ' tag' : ''}${k === stat ? ' sel' : ''}`} onClick={() => setSel(k)}>
-            <div className="o">{MSX_STAT_ICON[k]}</div><b className="nm">{MSX_STAT_NAME[k]}</b>{lv ? <i className="lv">Lv.{lv}</i> : null}</button>); })}
+            <div className="o">{MSX_STAT_ICON[k]}</div><b className="nm">{MSX_STAT_NAME[k]}</b><small className="tn">{msxTrainNameParts(k, lv).map((x, i) => <React.Fragment key={i}>{i ? <wbr/> : null}{x}</React.Fragment>)}</small>{lv ? <i className="lv">Lv.{lv}</i> : null}</button>); })}
       </div>
     </>);
-    foot = <div className="v-ft"><button type="button" onClick={() => { setSub('main'); setSel(null); }}>← もどる</button><button type="button" className="go" disabled={!card} onClick={() => doAct({ kind: card.kind, stat })}>{MSX_STAT_ICON[stat]} {MSX_STAT_NAME[stat]}の訓練をする</button></div>;
+    foot = <div className="v-ft"><button type="button" onClick={() => { setSub('main'); setSel(null); }}>← もどる</button><button type="button" className="go" disabled={!card} onClick={() => doAct({ kind: card.kind, stat })}>{msxTrainIcon(stat, trainLv)} {msxTrainName(stat, trainLv)}をする</button></div>;
   }
   // ---- メイン ----
   else {
