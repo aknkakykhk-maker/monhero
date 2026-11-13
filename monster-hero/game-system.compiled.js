@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d2e63a4d82ec5fcf
+// source-sha256: 634f1c1a4eac62d0
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -169178,19 +169178,21 @@ const MSA_DC_CSS = `
 .msa-sh-use small.p{color:#fde68a}
 .msa-tg{display:flex;flex-wrap:wrap;gap:3px 8px;margin:2px 0 1px;font-size:10.5px;color:#cbd5e1;font-weight:800}
 .msa-tg-i{white-space:nowrap}.msa-tg-i b{display:inline-block;min-width:14px;margin-left:3px;text-align:center;font-weight:900;color:#e2e8f0}
-.msa-tg-i.gS b{color:#fde047}.msa-tg-i.gA b{color:#fb923c}.msa-tg-i.gB b{color:#86efac}.msa-tg-i.gC b{color:#e2e8f0}.msa-tg-i.gD b,.msa-tg-i.gE b,.msa-tg-i.gx b{color:#94a3b8}
-.msa-dc-c small.dmg b{color:#fde047;margin-left:2px}
+.msa-tg-i b,.msa-dc-c small.dmg b{color:#94a3b8}
+.msa-tg-i.gSS b,.msa-dc-c small.dmg b.gSS{background:linear-gradient(90deg,#f472b6,#fde047,#4ade80,#60a5fa,#c084fc);-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:0 0 6px #fde04755}
+.msa-tg-i.gS b,.msa-dc-c small.dmg b.gS{color:#fde047}.msa-tg-i.gA b,.msa-dc-c small.dmg b.gA{color:#fb923c}.msa-tg-i.gB b,.msa-dc-c small.dmg b.gB{color:#86efac}.msa-tg-i.gC b,.msa-dc-c small.dmg b.gC{color:#e2e8f0}
+.msa-dc-c small.dmg b{margin-left:2px}
 .msa-sh-rep{flex:none;border-radius:99px;border:1px solid #a78bfa;background:#1e1b4b;color:#ddd6fe;font-size:11px;padding:5px 9px;font-weight:900;font-family:inherit;white-space:nowrap}
 .msa-sh-rep.on{border-color:#fde047;background:#3b2f0b;color:#fde047}
 ${MSA_TN_CSS}
 `;
 const MSA_TECH_GRADE_CUTS = Object.freeze({
-  power: [8, 16, 27, 38, 49],
-  hit: [-19, -9, -2, 4, 12],
-  gd: [5, 7, 12, 15, 24],
-  crit: [8, 10, 12, 18, 25]
+  power: [8, 11, 16, 21, 27, 33, 39, 51],
+  hit: [-21, -18, -12, -8, -2, 2, 8, 13],
+  gd: [3, 5, 6, 7, 10, 15, 24, 27],
+  crit: [7, 8, 9, 11, 12, 18, 19, 26]
 });
-const MSA_TECH_GRADES = ['E', 'D', 'C', 'B', 'A', 'S'];
+const MSA_TECH_GRADES = ['G', 'F', 'E', 'D', 'C', 'B', 'A', 'S', 'SS'];
 const msaTechGrade = (key, v) => {
   const c = MSA_TECH_GRADE_CUTS[key],
     n = Number(v);
@@ -169260,9 +169262,14 @@ function MsaDistCards({
       className: "msa-dc-none"
     }, "届く技なし"), t ? React.createElement("small", {
       className: "p"
-    }, Number.isFinite(hp) ? `命中 ${Math.round(hp)}%` : '命中 —') : null, t ? React.createElement("small", null, "ガッツ ", t.guts) : null, t && t.base ? React.createElement("small", {
-      className: "dmg"
-    }, "ダメージ", React.createElement("b", null, msaTechGrade('power', t.base.power))) : null);
+    }, Number.isFinite(hp) ? `命中 ${Math.round(hp)}%` : '命中 —') : null, t ? React.createElement("small", null, "ガッツ ", t.guts) : null, t && t.base ? (() => {
+      const g = msaTechGrade('power', t.base.power);
+      return React.createElement("small", {
+        className: "dmg"
+      }, "ダメージ", React.createElement("b", {
+        className: `g${g}`
+      }, g));
+    })() : null);
   }));
 }
 function MsaTechSheet({

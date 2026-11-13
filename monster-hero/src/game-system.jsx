@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 655d94b9179d43b7
+// generated-sha256: c29385c77a549f24
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -86934,17 +86934,20 @@ const MSA_DC_CSS = `
 .msa-sh-use small.p{color:#fde68a}
 .msa-tg{display:flex;flex-wrap:wrap;gap:3px 8px;margin:2px 0 1px;font-size:10.5px;color:#cbd5e1;font-weight:800}
 .msa-tg-i{white-space:nowrap}.msa-tg-i b{display:inline-block;min-width:14px;margin-left:3px;text-align:center;font-weight:900;color:#e2e8f0}
-.msa-tg-i.gS b{color:#fde047}.msa-tg-i.gA b{color:#fb923c}.msa-tg-i.gB b{color:#86efac}.msa-tg-i.gC b{color:#e2e8f0}.msa-tg-i.gD b,.msa-tg-i.gE b,.msa-tg-i.gx b{color:#94a3b8}
-.msa-dc-c small.dmg b{color:#fde047;margin-left:2px}
+.msa-tg-i b,.msa-dc-c small.dmg b{color:#94a3b8}
+.msa-tg-i.gSS b,.msa-dc-c small.dmg b.gSS{background:linear-gradient(90deg,#f472b6,#fde047,#4ade80,#60a5fa,#c084fc);-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:0 0 6px #fde04755}
+.msa-tg-i.gS b,.msa-dc-c small.dmg b.gS{color:#fde047}.msa-tg-i.gA b,.msa-dc-c small.dmg b.gA{color:#fb923c}.msa-tg-i.gB b,.msa-dc-c small.dmg b.gB{color:#86efac}.msa-tg-i.gC b,.msa-dc-c small.dmg b.gC{color:#e2e8f0}
+.msa-dc-c small.dmg b{margin-left:2px}
 .msa-sh-rep{flex:none;border-radius:99px;border:1px solid #a78bfa;background:#1e1b4b;color:#ddd6fe;font-size:11px;padding:5px 9px;font-weight:900;font-family:inherit;white-space:nowrap}
 .msa-sh-rep.on{border-color:#fde047;background:#3b2f0b;color:#fde047}
 ${MSA_TN_CSS}
 `;
 // 技の性能の段(2026-11-13 社長「MF みたいにダメージ・命中・ガッツダウン・クリティカルを文字の段で。消費ガッツは数値・実際の命中率は計算から数値で」)
-//   技表の元の数(base: power・hit(命中の補正)・gd・crit)を E・D・C・B・A・S に。区切りは技表 第2版の全515技の分布(下から 10%・30%・55%・80%・95%)。
+//   技表の元の数(base: power・hit(命中の補正)・gd・crit)を G〜SS の9段に(社長「最低は G、上は SS まで」)。
+//   区切りは技表 第2版の全515技の分布(下から 5%・12%・22%・36%・52%・70%・86%・97% にいちばん近い値の境目。SS は上位3%ほど)。
 //   作り直し: node tools/masmon-battle/masmon-tech-grades.js。ガッツダウンが 0 の技は「−」
-const MSA_TECH_GRADE_CUTS = Object.freeze({ power: [8, 16, 27, 38, 49], hit: [-19, -9, -2, 4, 12], gd: [5, 7, 12, 15, 24], crit: [8, 10, 12, 18, 25] });
-const MSA_TECH_GRADES = ['E', 'D', 'C', 'B', 'A', 'S'];
+const MSA_TECH_GRADE_CUTS = Object.freeze({ power: [8, 11, 16, 21, 27, 33, 39, 51], hit: [-21, -18, -12, -8, -2, 2, 8, 13], gd: [3, 5, 6, 7, 10, 15, 24, 27], crit: [7, 8, 9, 11, 12, 18, 19, 26] });
+const MSA_TECH_GRADES = ['G', 'F', 'E', 'D', 'C', 'B', 'A', 'S', 'SS'];
 const msaTechGrade = (key, v) => {
   const c = MSA_TECH_GRADE_CUTS[key], n = Number(v);
   if (!c || !Number.isFinite(n)) return '';
@@ -86984,7 +86987,7 @@ function MsaDistCards({ list, rep, dist = null, guts = null, hitAt = null, lastM
             {t ? <MsaTechName name={t.name} icon={msaKindIcon(t)}/> : <span className="msa-dc-none">届く技なし</span>}
             {t ? <small className="p">{Number.isFinite(hp) ? `命中 ${Math.round(hp)}%` : '命中 —'}</small> : null}
             {t ? <small>ガッツ {t.guts}</small> : null}
-            {t && t.base ? <small className="dmg">ダメージ<b>{msaTechGrade('power', t.base.power)}</b></small> : null}
+            {t && t.base ? (() => { const g = msaTechGrade('power', t.base.power); return <small className="dmg">ダメージ<b className={`g${g}`}>{g}</b></small>; })() : null}
           </button>
         );
       })}
