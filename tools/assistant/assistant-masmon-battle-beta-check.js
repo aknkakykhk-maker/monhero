@@ -159,6 +159,7 @@ const seed = () => {
       gains: document.querySelectorAll('[data-ambb-gain] .ambb-gain').length, ifs: !!document.querySelector('[data-ambb-if] .ambb-if'), ask: !!document.querySelector('[data-ambb-ask]'),
       wide: document.documentElement.scrollWidth > window.innerWidth + 1 || [...document.querySelectorAll('.ambw-in *')].some(x => x.getBoundingClientRect().right > window.innerWidth + 1),
       noImg: [...document.querySelectorAll('.ambw img')].filter(i => i.complete && i.naturalWidth === 0).length,
+      who: [...document.querySelectorAll('.ambw-in *')].filter(x => x.getBoundingClientRect().right > window.innerWidth + 1).slice(0, 3).map(x => `${x.tagName}.${String(x.className).slice(0, 30)}:${Math.round(x.getBoundingClientRect().right)}`),
     }));
     check('振り返り: 関わって伸びた分が2行・もしも・提案のボタン', rv.gains === 2 && rv.ifs && rv.ask, JSON.stringify(rv));
     check('横にはみ出さない・絵が出ている', !rv.wide && rv.noImg === 0, JSON.stringify(rv));

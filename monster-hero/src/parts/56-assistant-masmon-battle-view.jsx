@@ -134,6 +134,8 @@ const AMBW_CSS = `
 .ambw-num{width:78px;text-align:right;font-size:14px;line-height:1.15;font-weight:900}.ambw-num small{font-size:10px;color:#94a3b8}.ambw-num em{font-style:normal;font-size:11px;color:#fde047}
 .ambw-chips{display:flex;gap:4px;margin-top:6px;flex-wrap:wrap}
 .ambw-chip{flex:1 1 22%;min-width:0;font-size:10px;font-weight:800;background:#0f172a;border:1px solid #475569;color:#64748b;border-radius:8px;padding:3px 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center;line-height:1.3}
+.ambw-chip .msa-tn{display:block;white-space:normal;word-break:keep-all;overflow-wrap:normal;line-height:1.15}.ambw-chip .msa-tn-s{white-space:nowrap}
+.ambw-chip{white-space:normal!important;text-overflow:clip!important}
 .ambw-chip-all{flex:0 0 auto;color:#c4b5fd;border-style:dashed;background:#1e1b4b;font-family:inherit}
 .ambw-chip small{display:block;font-size:9px;line-height:1.2}.ambw-chip small.ambw-hit{font-size:10px;font-weight:900;color:#fde68a}.ambw-chip.use small.ambw-hit{color:#7c2d12}.ambw-chip.on{border-color:#fde047;color:#fff;background:#3b2f0b}.ambw-chip.ng{border-color:#64748b;color:#cbd5e1}.ambw-chip.use{background:#fde047;color:#422006;border-color:#fde047}
 .ambw-ring{position:relative;height:244px;margin-top:8px;border-radius:14px;background:radial-gradient(ellipse at 50% 85%,#4c3f8f 0,#241d4a 55%,#171230 100%);border:1px solid #3b3566;overflow:hidden}
@@ -197,6 +199,7 @@ function AmbwPanel({ side, team, frame, maxHp, moves, lastMove, mine, catalog = 
   const i = frame.act[side];
   const hp = Math.max(0, frame.hp[side][i] || 0), mx = maxHp[side][i] || 1, g = frame.g[side];
   const list = (moves && moves[i]) || [];
+  useEffect(() => { if (typeof msaFitTechNames === 'function') msaFitTechNames(); });
   return (
     <div className={`ambw-card ${mine ? 'me' : 'foe'}`} data-ambw-panel={side}>
       <div className="ambw-row">
@@ -218,7 +221,7 @@ function AmbwPanel({ side, team, frame, maxHp, moves, lastMove, mine, catalog = 
         const reach = Array.isArray(mv.dist) && mv.dist.includes(frame.d), ok = g >= mv.guts;
         const cls = lastMove === mv.id ? 'use' : reach && ok ? 'on' : reach ? 'ng' : '';
         const hp = ambwHitPct(catalog, teams, side, frame, mv.id);
-        return <span key={mv.id} className={`ambw-chip ${cls}`}>{mv.kind === 'pow' ? '💪' : '🧠'}{mv.name}{hp != null ? <small className="ambw-hit" data-ambw-hit={hp}>命中 {hp}%</small> : null}<small>ガッツ{mv.guts}・{(mv.dist || []).map(d => AMBW_DIST[d]).join('')}</small></span>;
+        return <span key={mv.id} className={`ambw-chip ${cls}`}>{typeof MsaTechName === 'function' ? <MsaTechName name={mv.name} icon={mv.kind === 'pow' ? '💪' : '🧠'}/> : <>{mv.kind === 'pow' ? '💪' : '🧠'}{mv.name}</>}{hp != null ? <small className="ambw-hit" data-ambw-hit={hp}>命中 {hp}%</small> : null}<small>ガッツ{mv.guts}・{(mv.dist || []).map(d => AMBW_DIST[d]).join('')}</small></span>;
       })}{onAll && list.length ? <button type="button" className="ambw-chip ambw-chip-all" data-ambw-all={side} onClick={() => onAll(side)}>📜 全部の技<small>{list.length}こ</small></button> : null}</div>
     </div>
   );

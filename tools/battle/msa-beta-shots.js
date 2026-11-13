@@ -18,6 +18,15 @@ const PORT = 8977;
 // MANUAL=1 … 手動で対戦する場面を撮る(段3)
 const TECHS = process.env.TECHS_JSON ? JSON.parse(fs.readFileSync(process.env.TECHS_JSON, 'utf8')).species : null;
 const MANUAL = process.env.MANUAL === '1';
+// LONGEST=1 … TECHS_JSON の中で名前の長い技24個を、どの種類にも全部の間合いで持たせる(技名が切れないかの確かめ)。WIDTH=<幅> … 画面の幅
+const LONGEST = process.env.LONGEST === '1';
+const WIDTH = Number(process.env.WIDTH) || 390;
+let TECHS_USE = TECHS;
+if (TECHS && LONGEST) {
+  const all = Object.values(TECHS).flat().sort((a, b) => [...b.name].length - [...a.name].length);
+  const seen = new Set(); const top = all.filter((t) => (seen.has(t.name) ? false : seen.add(t.name))).slice(0, 24).map((t, i) => ({ ...t, id: `long_${i}`, dist: [0, 1, 2, 3], guts: 5 + i }));
+  TECHS_USE = Object.fromEntries(Object.keys(TECHS).map((k) => [k, top]));
+}
 const URL = `http://localhost:${PORT}/monster-hero/index.html`;
 
 const seed = () => {
@@ -34,7 +43,7 @@ const seed = () => {
   const tmp = OUT ? path.join(path.dirname(OUT), `.rec-${process.pid}`) : '';
   const errs = [];
   try {
-    const ctx = await browser.newContext(STILL_DIR ? { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 } : { viewport: { width: 390, height: 844 }, recordVideo: { dir: tmp, size: { width: 390, height: 844 } } });
+    const ctx = await browser.newContext(STILL_DIR ? { viewport: { width: WIDTH, height: 844 }, deviceScaleFactor: 2 } : { viewport: { width: WIDTH, height: 844 }, recordVideo: { dir: tmp, size: { width: WIDTH, height: 844 } } });
     const page = await ctx.newPage();
     const t0 = Date.now(); let tPrep = 0;
     page.on('pageerror', (e) => errs.push(String(e)));
@@ -60,7 +69,7 @@ const seed = () => {
       await page.waitForTimeout(700);
       if (!closed && !(await page.evaluate(() => !!document.querySelector('[role="dialog"]')))) break;
     }
-    if (TECHS) await page.evaluate((t) => { for (const [k, v] of Object.entries(t)) ASSISTANT_MASMON_TECHS.species[k] = v.map((x) => ({ ...x, learn: { start: true } })); }, TECHS);
+    if (TECHS_USE) await page.evaluate((t) => { for (const [k, v] of Object.entries(t)) ASSISTANT_MASMON_TECHS.species[k] = v.map((x) => ({ ...x, learn: { start: true } })); }, TECHS_USE);
     await page.evaluate(async () => {
       await ASSISTANT_MASMON_STORE.load(); await assistantMasmonEnsureMade();
       const st = ASSISTANT_MASMON_STORE.state, w = { ...st.draw.welcomed };
@@ -98,7 +107,12 @@ const seed = () => {
       await page.evaluate(() => { const b = [...document.querySelectorAll('[data-msxm-tech]')].find((x) => !x.disabled); if (b) b.click(); });
       await page.waitForTimeout(OUT ? 3500 : 2500); await still('10-manual-after');
       await waitBar().catch(() => {});
+      // 技名が切れていないか(枠からはみ出さない・言葉の途中で折れない・字が 7px 以上)を、帯・上下の欄・一覧で数える
+      const fitOf = () => page.evaluate(() => { const els = [...document.querySelectorAll('[data-msa-tn]')]; const bad = els.filter((el) => el.scrollWidth > el.clientWidth + 1 || [...el.querySelectorAll('.msa-tn-s')].some((s) => s.getClientRects().length > 1) || parseFloat(getComputedStyle(el).fontSize) < 7).map((el) => `${el.textContent}@${(el.closest('[data-ambw-panel],[data-msxm],[data-ambb-techlist]') || {}).className || ''}`.slice(0, 40)); return { n: els.length, bad: bad.slice(0, 5), badN: bad.length, minFont: Math.min(...els.map((el) => parseFloat(getComputedStyle(el).fontSize))) }; });
+      await clickSel('[data-msxm-all]'); await page.waitForTimeout(300); const fitBar = await fitOf(); await clickSel('[data-msxm-all]');
       await clickSel('[data-ambw-all="B"]'); await page.waitForTimeout(OUT ? 1500 : 400); await still('11-techlist');
+      const fitList = await fitOf();
+      console.log(`技名(幅 ${WIDTH}): 帯+欄 ${JSON.stringify(fitBar)} / 一覧 ${JSON.stringify(fitList)}`);
       await page.evaluate(() => { const b = [...document.querySelectorAll('[data-ambb-techlist] button')].find((x) => /閉じる/.test(x.textContent)); if (b) b.click(); });
       if (OUT) {
         // もう1手選んでから「オートにする」で進むところまで(終わっていたら待たない)

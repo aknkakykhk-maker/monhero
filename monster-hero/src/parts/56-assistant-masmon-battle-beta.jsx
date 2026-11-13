@@ -264,7 +264,7 @@ const AMBB_CSS = `
 .ambw.ambb-full .ambb-bar-wrap .msxm-btn.atk:not(.far) small:not(.p){display:none}
 .ambw.ambb-full .ambb-bar-wrap .msxm-btn small{font-size:9.5px}
 .ambw.ambb-full .ambb-bar-wrap .msxm-btn:not(.atk):not([data-msxm-move]) small{display:none}
-.ambw.ambb-full .ambb-bar-wrap .msxm-btn small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ambw.ambb-full .ambb-bar-wrap .msxm-btn small{white-space:nowrap}
 .ambw.ambb-full .ambb-bar-wrap .msxm-sec{margin-top:5px}
 .ambw.ambb-full .ambb-bar-wrap .msxm-foot{margin-top:5px}
 .ambb-sheet{position:fixed;inset:0;z-index:9600;background:#000a;display:flex;align-items:flex-end;justify-content:center}
@@ -278,6 +278,9 @@ const AMBB_CSS = `
 .ambw.ambb-full [data-ambw-panel] .ambw-face{width:28px;height:28px}
 .ambw.ambb-full [data-ambw-panel] .ambw-small{display:none}
 .ambw.ambb-full [data-ambw-panel] .ambw-chips{margin-top:5px}
+.ambw.ambb-full [data-ambw-panel] .ambw-chip{flex:1 1 30%;font-size:10.5px}
+@media (max-width:360px){.ambw-top{font-size:11px;gap:4px}.ambw-top>span{white-space:nowrap}.ambw-top .ambw-btn2{padding-left:8px;padding-right:8px}}
+@media (max-width:360px){.ambw.ambb-full .ambb-bar-wrap .msxm-btn.atk{flex:1 1 45%}.ambw.ambb-full [data-ambw-panel] .ambw-chip{flex:1 1 45%}}
 `;
 
 function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, preview, tryPvp, onClose }) {
@@ -481,6 +484,7 @@ function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, preview, tryPv
   };
   const manualAuto = () => { const m = battle && battle.match; if (!m) return; m.auto('A'); syncManual(m); setPaused(false); };
   const [techList, setTechList] = useState(null);
+  useEffect(() => { if (typeof msaFitTechNames === 'function') msaFitTechNames(); });
   const nameOf = (id) => ((typeof ASSISTANT_LIST !== 'undefined' && ASSISTANT_LIST.find(a => a.id === id)) || {}).name || id;
   const faceOf = (id) => { const a = typeof ASSISTANT_LIST !== 'undefined' && ASSISTANT_LIST.find(x => x.id === id); return a ? assistantFaceSrc(a, 'normal') : ''; };
   const rec = save.rec[meId] || { w: 0, l: 0, d: 0 };
@@ -754,7 +758,7 @@ function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, preview, tryPv
               <p className="ambw-small">いまの間合い: {AMBW_DIST[fr.d]}・届く技に ● が付いています</p>
               <div className="ambb-tl">{list.map((mv) => {
                 const reach = Array.isArray(mv.dist) && mv.dist.includes(fr.d), hp = ambwHitPct(catalog, { A: battle.teamA, B: battle.teamB }, side, fr, mv.id);
-                return <div key={mv.id} className={`ambb-tl-row ${reach ? 'on' : ''}`}><span>{reach ? '●' : '○'} {mv.kind === 'pow' ? '💪' : '🧠'} {mv.name}</span><small>{hp != null ? `命中 ${hp}%・` : ''}ガッツ {mv.guts}・{(mv.dist || []).map(d => AMBW_DIST[d]).join('')}</small></div>;
+                return <div key={mv.id} className={`ambb-tl-row ${reach ? 'on' : ''}`}><span style={{ flex: 1, minWidth: 0 }}>{typeof MsaTechName === 'function' ? <MsaTechName name={mv.name} icon={`${reach ? '●' : '○'} ${mv.kind === 'pow' ? '💪' : '🧠'} `}/> : `${mv.name}`}</span><small>{hp != null ? `命中 ${hp}%・` : ''}ガッツ {mv.guts}・{(mv.dist || []).map(d => AMBW_DIST[d]).join('')}</small></div>;
               })}</div>
             </div>
           </div>

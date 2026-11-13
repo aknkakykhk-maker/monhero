@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 7764e56fc46117a9
+// source-sha256: 673dba52bb301bba
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -146425,6 +146425,8 @@ const AMBW_CSS = `
 .ambw-num{width:78px;text-align:right;font-size:14px;line-height:1.15;font-weight:900}.ambw-num small{font-size:10px;color:#94a3b8}.ambw-num em{font-style:normal;font-size:11px;color:#fde047}
 .ambw-chips{display:flex;gap:4px;margin-top:6px;flex-wrap:wrap}
 .ambw-chip{flex:1 1 22%;min-width:0;font-size:10px;font-weight:800;background:#0f172a;border:1px solid #475569;color:#64748b;border-radius:8px;padding:3px 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center;line-height:1.3}
+.ambw-chip .msa-tn{display:block;white-space:normal;word-break:keep-all;overflow-wrap:normal;line-height:1.15}.ambw-chip .msa-tn-s{white-space:nowrap}
+.ambw-chip{white-space:normal!important;text-overflow:clip!important}
 .ambw-chip-all{flex:0 0 auto;color:#c4b5fd;border-style:dashed;background:#1e1b4b;font-family:inherit}
 .ambw-chip small{display:block;font-size:9px;line-height:1.2}.ambw-chip small.ambw-hit{font-size:10px;font-weight:900;color:#fde68a}.ambw-chip.use small.ambw-hit{color:#7c2d12}.ambw-chip.on{border-color:#fde047;color:#fff;background:#3b2f0b}.ambw-chip.ng{border-color:#64748b;color:#cbd5e1}.ambw-chip.use{background:#fde047;color:#422006;border-color:#fde047}
 .ambw-ring{position:relative;height:244px;margin-top:8px;border-radius:14px;background:radial-gradient(ellipse at 50% 85%,#4c3f8f 0,#241d4a 55%,#171230 100%);border:1px solid #3b3566;overflow:hidden}
@@ -146503,6 +146505,9 @@ function AmbwPanel({
     mx = maxHp[side][i] || 1,
     g = frame.g[side];
   const list = moves && moves[i] || [];
+  useEffect(() => {
+    if (typeof msaFitTechNames === 'function') msaFitTechNames();
+  });
   return React.createElement("div", {
     className: `ambw-card ${mine ? 'me' : 'foe'}`,
     "data-ambw-panel": side
@@ -146582,7 +146587,10 @@ function AmbwPanel({
     return React.createElement("span", {
       key: mv.id,
       className: `ambw-chip ${cls}`
-    }, mv.kind === 'pow' ? '💪' : '🧠', mv.name, hp != null ? React.createElement("small", {
+    }, typeof MsaTechName === 'function' ? React.createElement(MsaTechName, {
+      name: mv.name,
+      icon: mv.kind === 'pow' ? '💪' : '🧠'
+    }) : React.createElement(React.Fragment, null, mv.kind === 'pow' ? '💪' : '🧠', mv.name), hp != null ? React.createElement("small", {
       className: "ambw-hit",
       "data-ambw-hit": hp
     }, "命中 ", hp, "%") : null, React.createElement("small", null, "ガッツ", mv.guts, "・", (mv.dist || []).map(d => AMBW_DIST[d]).join('')));
@@ -147618,7 +147626,7 @@ const AMBB_CSS = `
 .ambw.ambb-full .ambb-bar-wrap .msxm-btn.atk:not(.far) small:not(.p){display:none}
 .ambw.ambb-full .ambb-bar-wrap .msxm-btn small{font-size:9.5px}
 .ambw.ambb-full .ambb-bar-wrap .msxm-btn:not(.atk):not([data-msxm-move]) small{display:none}
-.ambw.ambb-full .ambb-bar-wrap .msxm-btn small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ambw.ambb-full .ambb-bar-wrap .msxm-btn small{white-space:nowrap}
 .ambw.ambb-full .ambb-bar-wrap .msxm-sec{margin-top:5px}
 .ambw.ambb-full .ambb-bar-wrap .msxm-foot{margin-top:5px}
 .ambb-sheet{position:fixed;inset:0;z-index:9600;background:#000a;display:flex;align-items:flex-end;justify-content:center}
@@ -147632,6 +147640,9 @@ const AMBB_CSS = `
 .ambw.ambb-full [data-ambw-panel] .ambw-face{width:28px;height:28px}
 .ambw.ambb-full [data-ambw-panel] .ambw-small{display:none}
 .ambw.ambb-full [data-ambw-panel] .ambw-chips{margin-top:5px}
+.ambw.ambb-full [data-ambw-panel] .ambw-chip{flex:1 1 30%;font-size:10.5px}
+@media (max-width:360px){.ambw-top{font-size:11px;gap:4px}.ambw-top>span{white-space:nowrap}.ambw-top .ambw-btn2{padding-left:8px;padding-right:8px}}
+@media (max-width:360px){.ambw.ambb-full .ambb-bar-wrap .msxm-btn.atk{flex:1 1 45%}.ambw.ambb-full [data-ambw-panel] .ambw-chip{flex:1 1 45%}}
 `;
 function AssistantMasmonBattleBeta({
   assistantId,
@@ -148065,6 +148076,9 @@ function AssistantMasmonBattleBeta({
     setPaused(false);
   };
   const [techList, setTechList] = useState(null);
+  useEffect(() => {
+    if (typeof msaFitTechNames === 'function') msaFitTechNames();
+  });
   const nameOf = id => (typeof ASSISTANT_LIST !== 'undefined' && ASSISTANT_LIST.find(a => a.id === id) || {}).name || id;
   const faceOf = id => {
     const a = typeof ASSISTANT_LIST !== 'undefined' && ASSISTANT_LIST.find(x => x.id === id);
@@ -148750,7 +148764,15 @@ function AssistantMasmonBattleBeta({
       return React.createElement("div", {
         key: mv.id,
         className: `ambb-tl-row ${reach ? 'on' : ''}`
-      }, React.createElement("span", null, reach ? '●' : '○', " ", mv.kind === 'pow' ? '💪' : '🧠', " ", mv.name), React.createElement("small", null, hp != null ? `命中 ${hp}%・` : '', "ガッツ ", mv.guts, "・", (mv.dist || []).map(d => AMBW_DIST[d]).join('')));
+      }, React.createElement("span", {
+        style: {
+          flex: 1,
+          minWidth: 0
+        }
+      }, typeof MsaTechName === 'function' ? React.createElement(MsaTechName, {
+        name: mv.name,
+        icon: `${reach ? '●' : '○'} ${mv.kind === 'pow' ? '💪' : '🧠'} `
+      }) : `${mv.name}`), React.createElement("small", null, hp != null ? `命中 ${hp}%・` : '', "ガッツ ", mv.guts, "・", (mv.dist || []).map(d => AMBW_DIST[d]).join('')));
     }))));
   })(), ask && me && React.createElement(AssistantMasmonAskSheet, {
     who: me,
@@ -168298,6 +168320,7 @@ const monsucLendClaim = async () => {
   };
 };
 const MSX_MANUAL_DIST = ['零', '近', '中', '遠'];
+const MSA_TN_CSS = `.msa-tn{display:block;white-space:normal;word-break:keep-all;overflow-wrap:normal;line-height:1.15;min-width:0}.msa-tn-s{white-space:nowrap}`;
 const MSX_MANUAL_CSS = `
 .msxm{background:#1e1a36;border:1px solid #f472b6aa;border-radius:14px;padding:9px;margin-top:8px;color:#fff;font-weight:700}
 .msxm-top{display:flex;align-items:center;gap:8px;font-size:12px;color:#f9a8d4}
@@ -168308,7 +168331,8 @@ const MSX_MANUAL_CSS = `
 .msxm-row{display:flex;flex-wrap:wrap;gap:6px}
 .msxm-btn{flex:1 1 46%;min-height:44px;border-radius:11px;border:1px solid #4c4680;background:#2b2650;color:#fff;font-weight:900;font-size:13px;padding:6px 8px;text-align:left;line-height:1.25}
 .msxm-btn small{display:block;font-size:10.5px;color:#cbd5e1;font-weight:700}
-.msxm-nm{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.msxm-nm{margin-bottom:1px}
+${MSA_TN_CSS}
 .msxm-btn:disabled{opacity:.38}
 .msxm-btn.hint{border-color:#fde047;box-shadow:0 0 0 1px #fde04766 inset}
 .msxm-btn.atk{background:#3a2448;border-color:#f472b6aa}
@@ -168320,6 +168344,55 @@ const MSX_MANUAL_CSS = `
 .msxm-swap{font-size:11px}
 .msxm-all{border-radius:99px;border:1px solid #64748b;background:#0f172a;color:#e2e8f0;font-size:11px;padding:3px 10px;font-weight:900}
 `;
+const msaTechNameParts = name => {
+  const t = String(name || '');
+  const cls = ch => /[\u30A0-\u30FF]/.test(ch) ? 'k' : /[\u3040-\u309F]/.test(ch) ? 'h' : /[\u4E00-\u9FFF\u3005]/.test(ch) ? 'c' : /[A-Za-z0-9'’]/.test(ch) ? 'l' : 'o';
+  const out = [];
+  let cur = '',
+    prev = '';
+  for (const ch of t) {
+    const c = ch === '・' ? 'o' : cls(ch);
+    const cut = cur && (prev === '・' || c !== 'o' && prev && cls(prev) !== c && cls(prev) !== 'o' && !(cls(prev) === 'c' && c === 'h'));
+    if (cut) {
+      out.push(cur);
+      cur = '';
+    }
+    cur += ch;
+    prev = ch;
+  }
+  if (cur) out.push(cur);
+  return out;
+};
+function MsaTechName({
+  name,
+  icon = '',
+  className = ''
+}) {
+  const parts = msaTechNameParts(name);
+  return React.createElement("span", {
+    className: `msa-tn ${className}`,
+    "data-msa-tn": true
+  }, icon ? React.createElement("span", {
+    className: "msa-tn-s"
+  }, icon) : null, parts.map((p, i) => React.createElement(React.Fragment, {
+    key: i
+  }, i ? React.createElement("wbr", null) : null, React.createElement("span", {
+    className: "msa-tn-s"
+  }, p))));
+}
+const msaFitTechNames = () => {
+  try {
+    document.querySelectorAll('[data-msa-tn]').forEach(el => {
+      el.style.fontSize = '';
+      let fs = parseFloat(getComputedStyle(el).fontSize) || 12,
+        n = 0;
+      while (el.scrollWidth > el.clientWidth + 0.5 && fs > 7 && n++ < 12) {
+        fs -= 0.5;
+        el.style.fontSize = `${fs}px`;
+      }
+    });
+  } catch (_) {}
+};
 const msxManualOpen = (engine, input, choices) => {
   if (!engine || typeof engine.createMatch !== 'function' || !input) return null;
   try {
@@ -168377,6 +168450,9 @@ function MsxManualBar({
   allInit = false
 }) {
   const [allOpen, setAllOpen] = useState(!!allInit);
+  useEffect(() => {
+    msaFitTechNames();
+  });
   if (!opt) return null;
   const isHint = c => !!(opt.hint && opt.hint.type === c.type && (c.key == null || opt.hint.key === c.key) && (c.step == null || opt.hint.step === c.step) && (c.to == null || opt.hint.to === c.to));
   const go = c => {
@@ -168443,9 +168519,11 @@ function MsxManualBar({
       type: 'tech',
       key: t.key
     })
-  }, React.createElement("span", {
+  }, React.createElement(MsaTechName, {
+    name: t.name,
+    icon: t.kind === 'pow' ? '💪' : '🧠',
     className: "msxm-nm"
-  }, t.kind === 'pow' ? '💪' : '🧠', t.name), React.createElement("small", {
+  }), React.createElement("small", {
     className: "p"
   }, "命中 ", Math.round(t.p), "%・ガッツ ", t.guts, t.reach && !t.ok ? `(あと${t.need})` : ''), React.createElement("small", null, "届く ", distOf(t), t.reach ? '' : '(いまは届かない)'))))), React.createElement("div", {
     className: "msxm-sec"

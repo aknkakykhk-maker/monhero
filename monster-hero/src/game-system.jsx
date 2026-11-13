@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 2d32c36c676e6ff5
+// generated-sha256: 8a7c41fc5158e5cf
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -77036,6 +77036,8 @@ const AMBW_CSS = `
 .ambw-num{width:78px;text-align:right;font-size:14px;line-height:1.15;font-weight:900}.ambw-num small{font-size:10px;color:#94a3b8}.ambw-num em{font-style:normal;font-size:11px;color:#fde047}
 .ambw-chips{display:flex;gap:4px;margin-top:6px;flex-wrap:wrap}
 .ambw-chip{flex:1 1 22%;min-width:0;font-size:10px;font-weight:800;background:#0f172a;border:1px solid #475569;color:#64748b;border-radius:8px;padding:3px 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center;line-height:1.3}
+.ambw-chip .msa-tn{display:block;white-space:normal;word-break:keep-all;overflow-wrap:normal;line-height:1.15}.ambw-chip .msa-tn-s{white-space:nowrap}
+.ambw-chip{white-space:normal!important;text-overflow:clip!important}
 .ambw-chip-all{flex:0 0 auto;color:#c4b5fd;border-style:dashed;background:#1e1b4b;font-family:inherit}
 .ambw-chip small{display:block;font-size:9px;line-height:1.2}.ambw-chip small.ambw-hit{font-size:10px;font-weight:900;color:#fde68a}.ambw-chip.use small.ambw-hit{color:#7c2d12}.ambw-chip.on{border-color:#fde047;color:#fff;background:#3b2f0b}.ambw-chip.ng{border-color:#64748b;color:#cbd5e1}.ambw-chip.use{background:#fde047;color:#422006;border-color:#fde047}
 .ambw-ring{position:relative;height:244px;margin-top:8px;border-radius:14px;background:radial-gradient(ellipse at 50% 85%,#4c3f8f 0,#241d4a 55%,#171230 100%);border:1px solid #3b3566;overflow:hidden}
@@ -77099,6 +77101,7 @@ function AmbwPanel({ side, team, frame, maxHp, moves, lastMove, mine, catalog = 
   const i = frame.act[side];
   const hp = Math.max(0, frame.hp[side][i] || 0), mx = maxHp[side][i] || 1, g = frame.g[side];
   const list = (moves && moves[i]) || [];
+  useEffect(() => { if (typeof msaFitTechNames === 'function') msaFitTechNames(); });
   return (
     <div className={`ambw-card ${mine ? 'me' : 'foe'}`} data-ambw-panel={side}>
       <div className="ambw-row">
@@ -77120,7 +77123,7 @@ function AmbwPanel({ side, team, frame, maxHp, moves, lastMove, mine, catalog = 
         const reach = Array.isArray(mv.dist) && mv.dist.includes(frame.d), ok = g >= mv.guts;
         const cls = lastMove === mv.id ? 'use' : reach && ok ? 'on' : reach ? 'ng' : '';
         const hp = ambwHitPct(catalog, teams, side, frame, mv.id);
-        return <span key={mv.id} className={`ambw-chip ${cls}`}>{mv.kind === 'pow' ? '💪' : '🧠'}{mv.name}{hp != null ? <small className="ambw-hit" data-ambw-hit={hp}>命中 {hp}%</small> : null}<small>ガッツ{mv.guts}・{(mv.dist || []).map(d => AMBW_DIST[d]).join('')}</small></span>;
+        return <span key={mv.id} className={`ambw-chip ${cls}`}>{typeof MsaTechName === 'function' ? <MsaTechName name={mv.name} icon={mv.kind === 'pow' ? '💪' : '🧠'}/> : <>{mv.kind === 'pow' ? '💪' : '🧠'}{mv.name}</>}{hp != null ? <small className="ambw-hit" data-ambw-hit={hp}>命中 {hp}%</small> : null}<small>ガッツ{mv.guts}・{(mv.dist || []).map(d => AMBW_DIST[d]).join('')}</small></span>;
       })}{onAll && list.length ? <button type="button" className="ambw-chip ambw-chip-all" data-ambw-all={side} onClick={() => onAll(side)}>📜 全部の技<small>{list.length}こ</small></button> : null}</div>
     </div>
   );
@@ -77651,7 +77654,7 @@ const AMBB_CSS = `
 .ambw.ambb-full .ambb-bar-wrap .msxm-btn.atk:not(.far) small:not(.p){display:none}
 .ambw.ambb-full .ambb-bar-wrap .msxm-btn small{font-size:9.5px}
 .ambw.ambb-full .ambb-bar-wrap .msxm-btn:not(.atk):not([data-msxm-move]) small{display:none}
-.ambw.ambb-full .ambb-bar-wrap .msxm-btn small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ambw.ambb-full .ambb-bar-wrap .msxm-btn small{white-space:nowrap}
 .ambw.ambb-full .ambb-bar-wrap .msxm-sec{margin-top:5px}
 .ambw.ambb-full .ambb-bar-wrap .msxm-foot{margin-top:5px}
 .ambb-sheet{position:fixed;inset:0;z-index:9600;background:#000a;display:flex;align-items:flex-end;justify-content:center}
@@ -77665,6 +77668,9 @@ const AMBB_CSS = `
 .ambw.ambb-full [data-ambw-panel] .ambw-face{width:28px;height:28px}
 .ambw.ambb-full [data-ambw-panel] .ambw-small{display:none}
 .ambw.ambb-full [data-ambw-panel] .ambw-chips{margin-top:5px}
+.ambw.ambb-full [data-ambw-panel] .ambw-chip{flex:1 1 30%;font-size:10.5px}
+@media (max-width:360px){.ambw-top{font-size:11px;gap:4px}.ambw-top>span{white-space:nowrap}.ambw-top .ambw-btn2{padding-left:8px;padding-right:8px}}
+@media (max-width:360px){.ambw.ambb-full .ambb-bar-wrap .msxm-btn.atk{flex:1 1 45%}.ambw.ambb-full [data-ambw-panel] .ambw-chip{flex:1 1 45%}}
 `;
 
 function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, preview, tryPvp, onClose }) {
@@ -77868,6 +77874,7 @@ function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, preview, tryPv
   };
   const manualAuto = () => { const m = battle && battle.match; if (!m) return; m.auto('A'); syncManual(m); setPaused(false); };
   const [techList, setTechList] = useState(null);
+  useEffect(() => { if (typeof msaFitTechNames === 'function') msaFitTechNames(); });
   const nameOf = (id) => ((typeof ASSISTANT_LIST !== 'undefined' && ASSISTANT_LIST.find(a => a.id === id)) || {}).name || id;
   const faceOf = (id) => { const a = typeof ASSISTANT_LIST !== 'undefined' && ASSISTANT_LIST.find(x => x.id === id); return a ? assistantFaceSrc(a, 'normal') : ''; };
   const rec = save.rec[meId] || { w: 0, l: 0, d: 0 };
@@ -78141,7 +78148,7 @@ function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, preview, tryPv
               <p className="ambw-small">いまの間合い: {AMBW_DIST[fr.d]}・届く技に ● が付いています</p>
               <div className="ambb-tl">{list.map((mv) => {
                 const reach = Array.isArray(mv.dist) && mv.dist.includes(fr.d), hp = ambwHitPct(catalog, { A: battle.teamA, B: battle.teamB }, side, fr, mv.id);
-                return <div key={mv.id} className={`ambb-tl-row ${reach ? 'on' : ''}`}><span>{reach ? '●' : '○'} {mv.kind === 'pow' ? '💪' : '🧠'} {mv.name}</span><small>{hp != null ? `命中 ${hp}%・` : ''}ガッツ {mv.guts}・{(mv.dist || []).map(d => AMBW_DIST[d]).join('')}</small></div>;
+                return <div key={mv.id} className={`ambb-tl-row ${reach ? 'on' : ''}`}><span style={{ flex: 1, minWidth: 0 }}>{typeof MsaTechName === 'function' ? <MsaTechName name={mv.name} icon={`${reach ? '●' : '○'} ${mv.kind === 'pow' ? '💪' : '🧠'} `}/> : `${mv.name}`}</span><small>{hp != null ? `命中 ${hp}%・` : ''}ガッツ {mv.guts}・{(mv.dist || []).map(d => AMBW_DIST[d]).join('')}</small></div>;
               })}</div>
             </div>
           </div>
@@ -86498,6 +86505,7 @@ const monsucLendClaim = async () => {
 // 観戦の画面(ambwFramesOf・AmbwPanel)は m.log をそのまま読める。保存は「種+手の列(choices)」だけで足りる(replay で同じ所まで進む)。
 // 公開の印 monheroSuccess(偽)の後ろで使う。この部品は単独では画面に出ない。
 const MSX_MANUAL_DIST = ['零', '近', '中', '遠'];
+const MSA_TN_CSS = `.msa-tn{display:block;white-space:normal;word-break:keep-all;overflow-wrap:normal;line-height:1.15;min-width:0}.msa-tn-s{white-space:nowrap}`;
 const MSX_MANUAL_CSS = `
 .msxm{background:#1e1a36;border:1px solid #f472b6aa;border-radius:14px;padding:9px;margin-top:8px;color:#fff;font-weight:700}
 .msxm-top{display:flex;align-items:center;gap:8px;font-size:12px;color:#f9a8d4}
@@ -86508,7 +86516,8 @@ const MSX_MANUAL_CSS = `
 .msxm-row{display:flex;flex-wrap:wrap;gap:6px}
 .msxm-btn{flex:1 1 46%;min-height:44px;border-radius:11px;border:1px solid #4c4680;background:#2b2650;color:#fff;font-weight:900;font-size:13px;padding:6px 8px;text-align:left;line-height:1.25}
 .msxm-btn small{display:block;font-size:10.5px;color:#cbd5e1;font-weight:700}
-.msxm-nm{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.msxm-nm{margin-bottom:1px}
+${MSA_TN_CSS}
 .msxm-btn:disabled{opacity:.38}
 .msxm-btn.hint{border-color:#fde047;box-shadow:0 0 0 1px #fde04766 inset}
 .msxm-btn.atk{background:#3a2448;border-color:#f472b6aa}
@@ -86520,6 +86529,41 @@ const MSX_MANUAL_CSS = `
 .msxm-swap{font-size:11px}
 .msxm-all{border-radius:99px;border:1px solid #64748b;background:#0f172a;color:#e2e8f0;font-size:11px;padding:3px 10px;font-weight:900}
 `;
+
+// ---- 技名を切らずに見せる(2026-11-13 社長「技名の途中切れが気になる」) ----
+//   言葉の切れ目(カタカナ・ひらがな・漢字・英数の変わり目と「・」の後。漢字→ひらがなの送りがなは切らない)でだけ折り返す。
+//   1つの言葉が札に入りきらないときは、その札の字だけを小さくする(msaFitTechNames)
+const msaTechNameParts = (name) => {
+  const t = String(name || ''); const cls = (ch) => (/[\u30A0-\u30FF]/.test(ch) ? 'k' : /[\u3040-\u309F]/.test(ch) ? 'h' : /[\u4E00-\u9FFF\u3005]/.test(ch) ? 'c' : /[A-Za-z0-9'’]/.test(ch) ? 'l' : 'o');
+  const out = []; let cur = '', prev = '';
+  for (const ch of t) {
+    const c = ch === '・' ? 'o' : cls(ch);
+    const cut = cur && (prev === '・' || (c !== 'o' && prev && cls(prev) !== c && cls(prev) !== 'o' && !(cls(prev) === 'c' && c === 'h')));
+    if (cut) { out.push(cur); cur = ''; }
+    cur += ch; prev = ch;
+  }
+  if (cur) out.push(cur);
+  return out;
+};
+function MsaTechName({ name, icon = '', className = '' }) {
+  const parts = msaTechNameParts(name);
+  return (
+    <span className={`msa-tn ${className}`} data-msa-tn>
+      {icon ? <span className="msa-tn-s">{icon}</span> : null}
+      {parts.map((p, i) => <React.Fragment key={i}>{i ? <wbr/> : null}<span className="msa-tn-s">{p}</span></React.Fragment>)}
+    </span>
+  );
+}
+// 画面の技名の札で、入りきらない言葉があれば字を 0.5px ずつ小さくする(7px まで)
+const msaFitTechNames = () => {
+  try {
+    document.querySelectorAll('[data-msa-tn]').forEach((el) => {
+      el.style.fontSize = '';
+      let fs = parseFloat(getComputedStyle(el).fontSize) || 12, n = 0;
+      while (el.scrollWidth > el.clientWidth + 0.5 && fs > 7 && n++ < 12) { fs -= 0.5; el.style.fontSize = `${fs}px`; }
+    });
+  } catch (_) {}
+};
 
 // 試合を作る(手の列があれば、その所まで進めた試合)。芯が無い・古いときは null
 const msxManualOpen = (engine, input, choices) => {
@@ -86556,6 +86600,7 @@ function useMsxManualMatch(engine, input, choices, key) {
 function MsxManualBar({ opt, onPick, onAuto, busy, allInit = false }) {
   // 技が多い(資料の技で12〜24)ので、ふだんは「いまの間合いで届く技」だけを札にし、全部はボタンで開く(2026-11-13 社長「技の札はいまの間合いで届く技だけ」)
   const [allOpen, setAllOpen] = useState(!!allInit);
+  useEffect(() => { msaFitTechNames(); });
   if (!opt) return null;
   const isHint = (c) => !!(opt.hint && opt.hint.type === c.type && (c.key == null || opt.hint.key === c.key) && (c.step == null || opt.hint.step === c.step) && (c.to == null || opt.hint.to === c.to));
   const go = (c) => { if (!busy && onPick) onPick(c); };
@@ -86590,7 +86635,7 @@ function MsxManualBar({ opt, onPick, onAuto, busy, allInit = false }) {
         </div>
         <div className="msxm-row">{techs.map((t) => (
           <button key={t.key} type="button" className={`msxm-btn atk ${isHint(t) ? 'hint' : ''} ${t.reach ? '' : 'far'}`} disabled={!t.ok || busy} data-msxm-tech={t.key} data-msxm-reach={t.reach ? '1' : '0'} onClick={() => go({ type: 'tech', key: t.key })}>
-            <span className="msxm-nm">{t.kind === 'pow' ? '💪' : '🧠'}{t.name}</span>
+            <MsaTechName name={t.name} icon={t.kind === 'pow' ? '💪' : '🧠'} className="msxm-nm"/>
             <small className="p">命中 {Math.round(t.p)}%・ガッツ {t.guts}{t.reach && !t.ok ? `(あと${t.need})` : ''}</small>
             <small>届く {distOf(t)}{t.reach ? '' : '(いまは届かない)'}</small>
           </button>
