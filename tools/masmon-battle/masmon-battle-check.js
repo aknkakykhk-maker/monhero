@@ -394,5 +394,24 @@ const FORMATS = [[1, 1], [2, 2], [3, 3], [1, 2], [2, 3], [3, 1]];
   check('⑮ 距離適性: 間合いを渡さない命中の見積もりには効かない(画面の古い呼び方)', I.hitChance(m.a, m.b, m.mv, 50) === I.hitChance(c.a, c.b, c.mv, 50));
 }
 
+// ⑯ 子ごとに上げた間合い適性(aptUp): 端末の値をそのまま信じず芯で切りそろえる(合計・1つの間合い・M の数)/無い試合は今と同じ
+{
+  const L = engine.APT_UP_LIMITS; const nu = I.normAptUp; const ap = I.applyAptUp;
+  const sum = (a) => a.reduce((x, y) => x + y, 0);
+  const big = nu([99, 99, 99, 99]); const bad = nu(['3', -2, 1.5, null]); const back = nu([L.per, L.per, L.per, L.per]);
+  check('⑯ aptUp: 整数でないもの・負は 0/1つの間合いは per まで/合計は total まで(後ろの間合いから削る)',
+    JSON.stringify(bad) === '[0,0,0,0]' && big.every((v) => v <= L.per) && sum(big) <= L.total && back[0] === L.per && back[3] <= back[0] && JSON.stringify(nu(undefined)) === '[0,0,0,0]',
+    `${JSON.stringify(big)} 合計 ${sum(big)}`);
+  const allM = ap(['G', 'G', 'G', 'G'], [11, 11, 11, 11]);
+  check('⑯ aptUp: 種の段に足して G〜M に収める・M の数は mMax まで(超えた分は SS+)', JSON.stringify(ap(['C', 'C', 'C', 'C'], [0, 1, 2, 7])) === '["C","B","A","M"]'
+    && allM.filter((g) => g === 'M').length <= L.mMax && JSON.stringify(ap(['B', 'A', 'C', 'D'], [0, 0, 0, 0])) === '["B","A","C","D"]', JSON.stringify(allM));
+  const sp0 = Object.keys(catalog.species)[0];
+  const mem = (up) => ({ species: sp0, name: 'x', stats: { life: 400, pow: 400, wise: 400, hit: 400, eva: 400, tough: 400 }, ...(up ? { aptUp: up } : {}) });
+  const run = (up) => engine.simulate({ seed: 'aptup', catalog, teamA: { assistantId: 'atsu', members: [mem(up)] }, teamB: { assistantId: 'atsu', members: [mem(null)] } });
+  const r0 = run(null), rz = run([0, 0, 0, 0]), ru = run([3, 3, 3, 3]), rx = run([99, 99, 99, 99]), rc = run(nu([99, 99, 99, 99]));
+  check('⑯ aptUp: 無い・全部 0 の試合は同じ/上げると結果が変わる/端末から大きすぎる値が来ても、切りそろえた値と同じ試合になる',
+    r0.digest === rz.digest && r0.digest !== ru.digest && rx.digest === rc.digest, `${r0.digest}/${ru.digest}`);
+}
+
 console.log(failed ? `\nNG が ${failed} 件` : '\nすべてOK');
 process.exit(failed ? 1 : 0);

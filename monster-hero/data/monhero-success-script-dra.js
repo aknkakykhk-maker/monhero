@@ -137,6 +137,7 @@
     {"id":"ev.daily.chase.dra1","who":"dra","e":"happy","t":"ちょうちょか。おでの膝じゃ追いつけないけど、{mon}ならいけるな"},
     {"id":"ev.daily.juggler.dra1","who":"dra","e":"normal","t":"あの手元、全部「間」なんだよ。見てるだけでも勉強になるぞ"},
     {"id":"ev.daily.arm.dra1","who":"dra","e":"excited","t":"力くらべか。受けて立つか？ おでは見てるだけにしとくわ"},
+    {"id":"ev.daily.range.dra1","who":"dra","e":"normal","t":"間合いの稽古か。技くらべは、まず立つ場所で決まるんだよな"},
     {"id":"ev.daily.dream.dra1","who":"dra","e":"normal","t":"こわかったな。大丈夫、ここにいるよ。……どうする？"},
     {"id":"ev.daily.picky.dra1","who":"dra","e":"normal","t":"{food}だけよけてるな。直すなら今だけど、むりにとは言わないよ"},
     {"id":"ev.daily.mirror.dra1","who":"dra","e":"happy","t":"決めポーズか。……おでもやってみるか。あ、膝が。えへへ"},
