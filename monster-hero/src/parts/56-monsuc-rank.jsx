@@ -76,6 +76,7 @@ const monsucRankQueue = async () => {
 const monsucRankQueueSave = async (list) => { try { await storeSet(MONSUC_RANK_QUEUE_KEY, list.slice(-MONSUC_RANK_QUEUE_MAX), false); } catch (_) {} };
 
 // 送る中身(サーバの monsuc_rank_submit の p_row の形)。送らない育成は null
+const MONSUC_RANK_APT = ['G', 'F', 'E', 'D', 'C', 'B', 'A', 'S', 'S+', 'SS', 'SS+', 'M']; // 間合い適性の段(サーバの式と同じ並び)
 const monsucRankRowOf = ({ owner, run, ev, name, colors, userName }) => {
   if (!run || typeof run !== 'object') return null;
   if (!['done', 'lost'].includes(run.over) && run.retired !== true) return null; // まだ終わっていない・デビュー戦のゲームオーバーは送らない
@@ -83,7 +84,12 @@ const monsucRankRowOf = ({ owner, run, ev, name, colors, userName }) => {
   const st = run.stats && typeof run.stats === 'object' ? run.stats : {};
   const stats = {};
   MONSUC_RANK_STAT_KEYS.forEach(k => { stats[k] = monsucRankClamp(Math.round(monsucRankNum(st[k])), 0, 999); });
-  const techs = (Array.isArray(run.techs) ? run.techs : []).slice(0, 8).map(t => monsucRankClamp(Math.round(monsucRankNum(run.mastery && run.mastery[t])), 0, 100));
+  // 技(2026-11-13 社長): 技ごとに { r: ランク 1〜5, a: 届く間合いのいちばん高い適性の段 }。サーバが同じ式で総合力を出し直す(MONSUC_RANK_V2_TECHS.sql)。
+  //   芯の evaluate が techRows を返さない古い形なら、今までどおり熟練の並び(8つまで)
+  const rows = ev && Array.isArray(ev.techRows) ? ev.techRows : null;
+  const techs = rows
+    ? rows.slice(0, 99).map(x => ({ r: monsucRankClamp(Math.round(monsucRankNum(x && x.r, 1)), 1, 5), a: MONSUC_RANK_APT.includes(x && x.a) ? x.a : 'C' }))
+    : (Array.isArray(run.techs) ? run.techs : []).slice(0, 8).map(t => monsucRankClamp(Math.round(monsucRankNum(run.mastery && run.mastery[t])), 0, 100));
   const species = typeof run.species === 'string' && /^[A-Za-z]{2,32}$/.test(run.species) ? run.species : null;
   if (!species) return null;
   const e = ev && typeof ev === 'object' ? ev : {};
