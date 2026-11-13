@@ -99,7 +99,8 @@ const playRandom = (m, seed, stopAt = -1) => {
     if (m.done() && m.result() && ['A', 'B', 'draw'].includes(m.result().winner)) ends++;
     const r = m.result(); if (!r) continue;
     if (r.log[0].ctl && r.log[0].ctl.A === 'human' && !r.log[0].ctl.B) ctlRow++;
-    const aActs = r.log.filter(e => e.side === 'A' && ['tech', 'move', 'guard', 'charge', 'swap'].includes(e.ev));
+    // 技の勢いで移った行(ev:'move'・why:'techMove'・byTech)は、芯が技のあとに足す移動で「自分の手」ではない
+    const aActs = r.log.filter(e => e.side === 'A' && ['tech', 'move', 'guard', 'charge', 'swap'].includes(e.ev) && !e.byTech);
     if (aActs.filter(e => e.why !== 'sulk').every(e => e.why === 'player')) player++;
     if (loy < 100) { sulkN++; const sulks = aActs.filter(e => e.why === 'sulk').length; sulkAll += sulks; if (sulks + asksA === aActs.length) sulkOk++; }
     if (size === 3 && sawEnter) enterAsked++;
@@ -129,7 +130,7 @@ const playRandom = (m, seed, stopAt = -1) => {
     const ch = m.choices();
     if (ch.length && ch[ch.length - 1].type === 'auto') mark++;
     const r = m.result();
-    if (r.log.some(e => e.side === 'A' && e.why && e.why !== 'player' && e.why !== 'sulk')) aiAfter++;
+    if (r.log.some(e => e.side === 'A' && !e.byTech && e.why && e.why !== 'player' && e.why !== 'sulk')) aiAfter++;
     const rp = engine.replay(inp, ch);
     if (rp.ok && rp.match.result().digest === r.digest) ok++;
   }
