@@ -27,7 +27,7 @@
 (function (root) {
   'use strict';
 
-  const VERSION = 7;           // 計算を変えたら上げる(7 = 距離適性が G〜M の12段で与ダメ・被ダメ・命中・回避に効く・6 = ガッツの回復を種ごとに広げ(5〜15・等級 G〜A)・移動速度で先手・サイズ(小さい=当たりにくい/大きい=受けるダメージ減)・移動とガードの回復を増やし・回復の速さで与ダメを補正・サーバの試合の行に残る。2 = 技を MF のように一新・3 = 作戦と交代の早さ・4 = 忠誠度の「そっぽを向く番」と人気の会心・5 = ちから/かしこさが同じ種類の技の受けるダメージも減らす)
+  const VERSION = 7;           // 計算を変えたら上げる(7 = 距離適性が G〜M の12段で与ダメ・被ダメ・命中・回避に効く・オリジナル5種の等級と与ダメの補正 ×0.80〜×1.20 を社長の値に・6 = ガッツの回復を種ごとに広げ(5〜15・等級 G〜A)・移動速度で先手・サイズ(小さい=当たりにくい/大きい=受けるダメージ減)・移動とガードの回復を増やし・回復の速さで与ダメを補正・サーバの試合の行に残る。2 = 技を MF のように一新・3 = 作戦と交代の早さ・4 = 忠誠度の「そっぽを向く番」と人気の会心・5 = ちから/かしこさが同じ種類の技の受けるダメージも減らす)
   const VERSION_PLAIN = 7;     // 忠誠度・人気が効かない編成(忠誠100・人気0)の版。版4までは 3 のままにしていたが、版5でダメージの式がすべての試合で変わったのでそろえた
   const DEF_SAME_KIND = 0.45;  // 受ける技と同じ種類の能力の、防ぎの効き目(丈夫さ 0.9 の半分。版5)
   const STAT_KEYS = ['life', 'pow', 'wise', 'hit', 'eva', 'tough'];
@@ -60,13 +60,13 @@
     Yaobikuni: { g: 'B', m: 'B', z: 'S' }, Yggdrasil: { g: 'C', m: 'F', z: 'L' }, MelWhip: { g: 'B', m: 'C', z: 'L' }, Ghost: { g: 'A', m: 'A', z: 'S' },
     Spooky: { g: 'A', m: 'A', z: 'S' }, Illumine: { g: 'B', m: 'A', z: 'M' }, Dreamy: { g: 'A', m: 'A', z: 'M' }, Kyubi: { g: 'A', m: 'B', z: 'S' },
     Orihime: { g: 'A', m: 'A', z: 'S' },
-    // 資料に無い5種(案): エイキ=ザン寄りで速い/剣士モッチー=モッチー寄りで素早い/パンドラ=ピクシー寄り/メロディー・クロミー=ユグドラシルの小さめの子
-    Eiki: { g: 'B', m: 'A', z: 'M' }, KenshiMocchi: { g: 'C', m: 'B', z: 'S' }, Pandora: { g: 'A', m: 'B', z: 'S' }, Melody: { g: 'B', m: 'D', z: 'M' }, Kuromy: { g: 'B', m: 'C', z: 'S' },
+    // 資料に無いうちのオリジナルの5種(2026-11-13 社長が決めた値)
+    Eiki: { g: 'A', m: 'A', z: 'M' }, KenshiMocchi: { g: 'A', m: 'A', z: 'S' }, Pandora: { g: 'A', m: 'A', z: 'S' }, Melody: { g: 'B', m: 'D', z: 'L' }, Kuromy: { g: 'B', m: 'C', z: 'L' },
   });
   const gradeIdx = (g) => { const t = typeof g === 'string' ? g.trim().toUpperCase() : ''; const i = GUTS_REGEN_GRADES.indexOf(t); if (i >= 0) return i; const u = GUTS_REGEN_GRADES_UP.indexOf(t); return u >= 0 ? GUTS_REGEN_GRADES.length + u : -1; };
   const GUTS_CHARGE = 22;     // 「ためる」で足す分(移動・ガードより多いまま)
   const GUTS_MOVE = 10;       // 移動・ガードで足す分
-  const REGEN_DMG_SWING = 0.25; // 回復がいちばん速い種は与ダメ ×(1−これ)、いちばん遅い種は ×(1+これ)。真ん中は ×1(社長「×0.7〜×1.3 ぐらい差があってもよさそう」)
+  const REGEN_DMG_SWING = 0.2;  // 回復がいちばん速い種(A)は与ダメ ×(1−これ)、いちばん遅い種(G)は ×(1+これ)。真ん中は ×1(2026-11-13 社長「×0.80〜×1.20」)
   const GUTS_SWAP_IN = 40;    // 交代で出てきたときの最低ガッツ
   const ROUND_LIMIT = 150;    // これを超えたら判定(無限に続かない)
   const SWAP_COOLDOWN = 2;    // 出てきてから自分の手番2回は交代しない(行ったり来たりを防ぐ)
