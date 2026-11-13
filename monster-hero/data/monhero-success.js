@@ -22,7 +22,7 @@
 (function (root) {
   'use strict';
 
-  const VERSION = 8;   // 計算を変えたら上げる(ランキングの行に残る)。8 = 修行の作り直し(技のランク1〜5・仕上がりで率・技ごとの外した回数・超修行。2026-11-13)/7 = 間合い適性を育成中に上げる(修行のくじ・間合いの自慢の大会・出来事。2026-11-13)/6 = 助手1人分のストーリー(固有イベント・相手えらび・エンディングとお祝い・2026-11-13)/2 = アシスト能力を第2版の表(段1〜5・数字)で効かせる(2026-11-12)/3 = 第2版の訓練に効く11種を足す/4 = いるだけ型(体力・ようす・編成の7つ)を足す/5 = いるだけ型(大会・出来事の8つ)を足す(2026-11-12)
+  const VERSION = 9;   // 計算を変えたら上げる(ランキングの行に残る)。9 = 覚醒・超覚醒(2026-11-13)/8 = 修行の作り直し(技のランク1〜5・仕上がりで率・技ごとの外した回数・超修行。2026-11-13)/7 = 間合い適性を育成中に上げる(修行のくじ・間合いの自慢の大会・出来事。2026-11-13)/6 = 助手1人分のストーリー(固有イベント・相手えらび・エンディングとお祝い・2026-11-13)/2 = アシスト能力を第2版の表(段1〜5・数字)で効かせる(2026-11-12)/3 = 第2版の訓練に効く11種を足す/4 = いるだけ型(体力・ようす・編成の7つ)を足す/5 = いるだけ型(大会・出来事の8つ)を足す(2026-11-12)
   const KEYS = ['life', 'pow', 'wise', 'hit', 'eva', 'tough'];
   const STAT_NAMES = Object.freeze({ life: 'ライフ', pow: 'ちから', wise: 'かしこさ', hit: '命中', eva: '回避', tough: '丈夫さ' });
   const STAT_MAX = 999;
@@ -229,6 +229,15 @@
     //   + 2体とも同じ間合いを same 段以上伸ばしていたら bonus。継げる合計は total まで(超えたら小さい間合いから削る)。1体の最大は 12 + 6 = 18
     inherit: Object.freeze({ same: 2, bonus: 2, total: 6 }),
   });
+  // ---- 覚醒・超覚醒(2026-11-13 社長)。k = 1 覚醒・2 超覚醒 ----
+  //   rate … 毎ターンのくじ(覚醒: ジュニア〜プロ期の毎ターン 0.5% ≒ 1回の育成で約16%・超覚醒: 覚醒したあとの毎ターン 1.6%)
+  //   add … 全能力に足す値 / apt … いちばん高い間合い適性から何個を +1段するか / aptMax … 覚醒で上げる段の合計(育成の上限 +12 とは別)
+  //   当たったターンは前触れ(s.omen)だけを見せ、次のターンのはじめに必ず起きる。最後の期に当たったら同じターンの終わりに起きる
+  const AWAKE = Object.freeze({
+    rate: Object.freeze([0.005, 0.016]), add: Object.freeze([30, 40]), apt: Object.freeze([1, 2]), aptMax: 3,
+    periods: Object.freeze([Object.freeze(['junior', 'middle', 'pro']), Object.freeze(['junior', 'middle', 'pro', 'final'])]),
+    order: Object.freeze([1, 2, 3, 0]), // 同じ段・同じ技の数なら 近・中・遠・零 の順
+  });
 
   // ---- 修行(社長 2026-11-12: 参考と同じ形。チケット・2段で能力2つずつ・最後に技を覚えるくじ・外すと次の率が上がる) ----
   // 行き先は4つ(段ごとに上がる能力の組)。覚えられる技は助手マスモンの技表(ASSISTANT_MASMON_TECHS)のその種の技で、
@@ -424,6 +433,12 @@
       for (let i = 3; i >= 0 && over > 0; i--) { const cut = Math.min(o[i], over); o[i] -= cut; over -= cut; }
       return o;
     };
+    // 覚醒で上げた間合い適性の段数 [零,近,中,遠](各 0〜3・合計 AWAKE.aptMax まで。超えたら後ろの間合いから削る)
+    const aptAwakeNorm = (v) => {
+      const o = [0, 1, 2, 3].map(i => clamp(Math.round(num(Array.isArray(v) ? v[i] : 0)), 0, AWAKE.aptMax)); let over = o.reduce((a, b) => a + b, 0) - AWAKE.aptMax;
+      for (let i = 3; i >= 0 && over > 0; i--) { const cut = Math.min(o[i], over); o[i] -= cut; over -= cut; }
+      return o;
+    };
     const initStats = (sp) => { const a = Array.isArray(INIT[sp]) ? INIT[sp] : [100, 100, 100, 100, 100, 100]; const o = {}; KEYS.forEach((k, i) => { o[k] = clamp(Math.round(num(a[i], 100)), 0, STAT_MAX); }); return o; };
     const normStats = (st, sp) => { const base = initStats(sp); const o = {}; KEYS.forEach(k => { o[k] = clamp(Math.round(num(st && st[k], base[k])), 0, STAT_MAX); }); return o; };
     const sumOf = (st) => KEYS.reduce((a, k) => a + num(st[k]), 0);
@@ -505,7 +520,7 @@
         v: VERSION, id, species, aid, type: typeIdx, turn: 1, stats, hpMax, hp: hpMax, stress: 0, carry, bag, good, issaForce, issaSure: false, itemTurn: 0,
         ama: LOYAL.start[0], fear: LOYAL.start[1], pol: clamp(Math.round(num(src.pol)), -3, 3), pp: 0, pop: 0, pts: 0, ptsLost: 0, lv: 1, xp: 0,
         team, bond: team.map(m => m.bond0), story: team.map(() => 0), aidBond: clamp(aidLv * BOND.aidPerLv + (hn ? aOf('hitonatsu', 'start', hn) : 0), 0, BOND.max),
-        techs: startTechs(species), mastery: Object.fromEntries(startTechs(species).map(t => [t, 0])), tickets: SHUGYO.ticket0, shugyoUsed: {}, pity: 0, techMiss: {}, superLeft: SHUGYO.superMax, fame: 0, fameTotal: 0, mealReady: false, trainXp: {}, aidLv, astory: { ep: 0, path: null, done: false }, rivalMet: null, ending: null, aptUp: [0, 0, 0, 0], aptLog: { quest: 0, cup: 0, event: 0 }, aptBase: aptBaseNorm(src.aptBase),
+        techs: startTechs(species), mastery: Object.fromEntries(startTechs(species).map(t => [t, 0])), tickets: SHUGYO.ticket0, shugyoUsed: {}, pity: 0, techMiss: {}, superLeft: SHUGYO.superMax, fame: 0, fameTotal: 0, mealReady: false, trainXp: {}, aidLv, astory: { ep: 0, path: null, done: false }, rivalMet: null, ending: null, aptUp: [0, 0, 0, 0], aptLog: { quest: 0, cup: 0, event: 0 }, aptBase: aptBaseNorm(src.aptBase), awake: 0, awakeTurn: 0, aptAwake: [0, 0, 0, 0], omen: null,
         items: { sand: clamp(Math.round(num(src.items && src.items.sand)), 0, REMATCH.carry), rainbow: clamp(Math.round(num(src.items && src.items.rainbow)), 0, REMATCH.carry) }, rematchUsed: 0, wonBefore: Array.isArray(src.wonBefore) ? src.wonBefore.filter(k => typeof k === 'string').slice(0, 64) : [], wonNow: [], rivals: (Array.isArray(src.rivals) ? src.rivals : []).filter(RIVALS_OK0).slice(0, 8).map(r => ({ name: String(r.name || '').slice(0, 24), breeder: typeof r.breeder === 'string' ? r.breeder.slice(0, 24) : null, kind: r.kind === 'friend' ? 'friend' : 'aid', species: r.species, stats: normStats(r.stats, r.species) })),
         cond: null, yosu: {}, hirameki: false, idle: 0, issaMet: 0, issaWon: 0, issaDone: false,
         debutLoss: 0, debutWon: false, crowns: 0, titles: [], battle: null, over: null, last: null, acted: false, reacted: false,
@@ -916,6 +931,9 @@
       out.aidLv = Math.round(n(raw.aidLv, out.aidLv, 1, 10));
       out.aptBase = aptBaseNorm(raw.aptBase); // 合体円盤石から継いだ段数(無い → 0)
       out.aptUp = aptUpOf({ aptUp: raw.aptUp }); // 上げた段数(無い・壊れている → 0)。上げ方ごとの数も上限で切りそろえる
+      // 覚醒・超覚醒(2026-11-13): 印 awake 0〜2・起きたターン・覚醒で上げた段・前触れ { k, turn }(無い・壊れている → 起きていない)
+      out.awake = Math.round(n(raw.awake, 0, 0, 2)); out.awakeTurn = Math.round(n(raw.awakeTurn, 0, 0, TOTAL_TURNS + 1)); out.aptAwake = aptAwakeNorm(raw.aptAwake);
+      out.omen = raw.omen && typeof raw.omen === 'object' && (raw.omen.k === 1 || raw.omen.k === 2) && raw.omen.k === out.awake + 1 ? { k: raw.omen.k, turn: Math.round(n(raw.omen.turn, out.turn, 1, TOTAL_TURNS)) } : null;
       out.aptLog = Object.fromEntries(Object.keys(DIST_UP.src).map(k => [k, Math.round(n(raw.aptLog && raw.aptLog[k], 0, 0, DIST_UP.src[k]))]));
       out.astory = raw.astory && typeof raw.astory === 'object' ? { ep: Math.round(n(raw.astory.ep, 0, 0, 4)), path: ['good', 'bitter'].includes(raw.astory.path) ? raw.astory.path : null, done: raw.astory.done === true } : out.astory;
       out.hints = Array.isArray(raw.hints) ? raw.hints.filter(h => h && typeof h === 'object' && typeof h.name === 'string').slice(0, 8).map(h => ({ aid: String(h.aid || ''), type: h.type === 'tech' ? 'tech' : 'assist', name: h.name.slice(0, 24) })) : [];
@@ -1088,13 +1106,13 @@
     const aptGradesOf = (s) => {
       const G = DIST_UP.grades; const base = DIST_OF(s.species) || ['C', 'C', 'C', 'C']; const up = aptUpOf(s); let m = 0;
       return [0, 1, 2, 3].map(i => {
-        const b = G.indexOf(base[i]); let k = Math.min(G.length - 1, (b < 0 ? G.indexOf('C') : b) + up[i] + aptBaseNorm(s.aptBase)[i]);
-        if (k === G.length - 1 && up[i] > 0) { if (m >= DIST_UP.mMax) k -= 1; else m += 1; }
+        const b = G.indexOf(base[i]); const aw = aptAwakeNorm(s.aptAwake)[i]; let k = Math.min(G.length - 1, (b < 0 ? G.indexOf('C') : b) + up[i] + aptBaseNorm(s.aptBase)[i] + aw);
+        if (k === G.length - 1 && up[i] + aw > 0) { if (m >= DIST_UP.mMax) k -= 1; else m += 1; }
         return G[k];
       });
     };
-    // 試合の芯へ渡す段数(継いだ分 + 育成で上げた分)。芯がもう一度、上限で切りそろえる
-    const aptSendOf = (s) => { const b = aptBaseNorm(s && s.aptBase); return aptUpOf(s).map((n, i) => n + b[i]); };
+    // 試合の芯へ渡す段数(継いだ分 + 育成で上げた分 + 覚醒の分)。芯がもう一度、上限で切りそろえる。合体で継ぐ段数もこれで数える(親の覚醒の分も入る)
+    const aptSendOf = (s) => { const b = aptBaseNorm(s && s.aptBase); const w = aptAwakeNorm(s && s.aptAwake); return aptUpOf(s).map((n, i) => n + b[i] + w[i]); };
     // 合体で継ぐ段数(親2体は保存枠のマスモンの行。aptBase・aptUp が無ければ 0)
     const aptInherit = (a, b) => {
       const H = DIST_UP.inherit; const pa = aptSendOf(a || {}); const pb = aptSendOf(b || {});
@@ -1119,6 +1137,46 @@
       const up = aptUpOf(s); up[d] += 1; s.aptUp = up;
       s.aptLog = { ...(s.aptLog || {}), [src]: num((s.aptLog || {})[src]) + 1 };
       return true;
+    };
+
+    // ---- 覚醒・超覚醒(2026-11-13 社長)。画面はターンのはじめに awakeOpen(s, 'start')、ターンを閉じる前に awakeOpen(s, 'end') を呼ぶ ----
+    //   くじ・起きる中身は決まった乱数(育成の id + ターン + 段)。何度呼んでも同じ結果(前触れ・起きたターンは保存に残る)
+    const awakeNext = (s) => (num(s.awake) >= 2 ? 0 : Math.round(num(s.awake)) + 1);
+    const awakeCanRoll = (s) => {
+      const k = awakeNext(s); if (!k || s.over || s.omen) return false;
+      if (!AWAKE.periods[k - 1].includes(periodOf(s.turn).key)) return false;
+      return !(k === 2 && num(s.awakeTurn) >= s.turn); // 覚醒したターンには超覚醒のくじを引かない
+    };
+    // 上げる間合い: いまの適性が高い順 → 覚えている技が多く届く順 → 近・中・遠・零。M の間合いは飛ばす
+    const awakePick = (s, n) => {
+      const G = DIST_UP.grades; const g = aptGradesOf(s); const own = techsOf(s.species).filter(t => (s.techs || []).includes(t.id));
+      const reach = [0, 1, 2, 3].map(d => own.filter(t => Array.isArray(t.dist) && t.dist.includes(d)).length);
+      const room = AWAKE.aptMax - aptAwakeNorm(s.aptAwake).reduce((a, b) => a + b, 0);
+      return AWAKE.order.filter(d => g[d] !== 'M').sort((a, b) => (G.indexOf(g[b]) - G.indexOf(g[a])) || (reach[b] - reach[a]) || (AWAKE.order.indexOf(a) - AWAKE.order.indexOf(b))).slice(0, Math.max(0, Math.min(n, room)));
+    };
+    const awakeApply = (s, k) => {
+      const add = AWAKE.add[k - 1]; const ups = {};
+      KEYS.forEach(key => { const was = s.stats[key]; s.stats[key] = clamp(was + add, 0, STAT_MAX); ups[key] = s.stats[key] - was; });
+      const before = aptGradesOf(s); const picks = awakePick(s, AWAKE.apt[k - 1]); const w = aptAwakeNorm(s.aptAwake);
+      picks.forEach(d => { w[d] += 1; }); s.aptAwake = w;
+      const after = aptGradesOf(s);
+      s.awake = k; s.awakeTurn = s.turn; s.omen = null;
+      return { kind: k, add, ups, apt: picks.map(d => ({ dist: d, from: before[d], to: after[d] })) };
+    };
+    // when = 'start'(ターンのはじめ: 前のターンの前触れなら起きる・くじを引く)/ 'end'(最後の期で当たった前触れを、そのターンの終わりに起こす)
+    //   out.fire … 起きた中身(画面は演出を出す)/ out.omen … 前触れが出た段(1・2)/ 何もなければ {}
+    const awakeOpen = (s0, when = 'start') => {
+      const s = clone(s0); if (!s.stats) return { state: s, out: {} };
+      if (s.omen && s.omen.k === awakeNext(s)) {
+        if (when === 'start' && s.omen.turn < s.turn) return { state: s, out: { fire: awakeApply(s, s.omen.k) } };
+        if (when === 'end' && s.omen.turn === s.turn && periodOf(s.turn).key === 'final') return { state: s, out: { fire: awakeApply(s, s.omen.k) } };
+        return { state: s, out: { omen: s.omen.k } };
+      }
+      if (s.omen) s.omen = null; // 段が合わない前触れ(壊れた保存)は捨てる
+      if (when !== 'start' || !awakeCanRoll(s)) return { state: s, out: {} };
+      const k = awakeNext(s);
+      if (rngOf(s.id, s.turn, 'awake', k)() < AWAKE.rate[k - 1]) { s.omen = { k, turn: s.turn }; return { state: s, out: { omen: k } }; }
+      return { state: s, out: {} };
     };
 
     // その月の大会の並び(札)。ライバルは月のはじめ(並びを見せる時)に決まる
@@ -1400,6 +1458,7 @@
       act, react, issa, issaComes, issaRate, endTurn, opponents: opponentsOf, settle, cupsOf, canEnter, bracketOf, gradeOf, GRADE_STEP, stayV, SC_CUPS, SC_NAME, ASST_STORY, storyEnd, markSpecial, battleMods, battleBuffs, peakTurn, ASTORY, storyDue, storyStep, preview, restore, ARC, PARTY, summitPick, endingOf, endingSeen, CUP_SYS, YEAR, RIVAL, CUP_PRIZE, spendPts, autoPts, ptsCost, evaluate, assistPointsOf, loyalOf, loyalMult, top3Of, sumOf,
       FUSE, fuseOk, fuseKinds, fusePlan, fuseId,
       DIST_UP, aptUpOf, aptGradesOf, aptUpRoom, addAptUp, aptSendOf, aptInherit, aptBaseNorm,
+      AWAKE, aptAwakeNorm, awakeOpen, awakePick,
     });
   };
 
