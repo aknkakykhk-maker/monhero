@@ -611,6 +611,8 @@
     {"id":"turn.awake.fire.mua1b","who":"mua","e":"surprise","bond":[1,2],"t":"えっ…{mon}がまぶしくて、見えません…！"},
     {"id":"turn.awake.fire2.mua1","who":"mua","e":"excited","t":"うそでしょ…虹色の光、まだ強くなってる！ {mon}すごすぎｗ"},
     {"id":"turn.awake.fire2.mua1b","who":"mua","e":"excited","bond":[1,2],"t":"うそ…虹色の光が、まだ強くなっています…！ {mon}、すごいです！"},
+    {"id":"turn.peak.soon.mua1","who":"mua","e":"wink","t":"{mon}、最近なんかいい感じ！ もうすぐ伸びどき来そうな予感♪"},
+    {"id":"turn.peak.soon.mua1b","who":"mua","e":"wink","bond":[1,2],"t":"{mon}、最近いい感じです！ もうすぐ伸びどきが来そうですよ"},
   ];
   const heads = null;
   const part = Object.freeze({ rows: Object.freeze(rows), heads });

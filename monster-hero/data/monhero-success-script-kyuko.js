@@ -250,6 +250,7 @@
     {"id":"turn.awake.omen2.kyuko1","who":"kyuko","e":"surprise","t":"また光ってる。虹色…これは見立て以上かもねぇ"},
     {"id":"turn.awake.fire.kyuko1","who":"kyuko","e":"surprise","t":"ちょ、まぶしっ！ {mon}、なにが起きてるのぉ！？"},
     {"id":"turn.awake.fire2.kyuko1","who":"kyuko","e":"excited","t":"虹色の光、まだ強くなる…見立て、超えてきたねぇ笑"},
+    {"id":"turn.peak.soon.kyuko1","who":"kyuko","e":"normal","t":"見立てだと、もうすぐ伸びどき。今は体をととのえとこぉ"},
   ];
   const heads = null;
   const part = Object.freeze({ rows: Object.freeze(rows), heads });

@@ -106,16 +106,21 @@ const unitOf = (sp0, stats, techs, mastery) => {
   const ms = {}; ts.forEach(t => { ms[t] = mastery; });
   return { species: sp, name: sp, lv: 1, stats, techs: ts, mastery: ms };
 };
+let LAST_USE = null;
+const TECH_BOOST_ON = Boolean(engine && (engine.TECH_BOOST || (engine.FEATURES && engine.FEATURES.techBoost)));
 const fight = (s, opp, idx) => {
   const g = GEAR[SUC.periodOf(s.turn).key];
   const loy = SUC.loyalOf(s);
   // 育てる子は、修行と連続イベントで覚えた技・熟練そのままで戦う
   const sp = battleSp(s.species); const own = catalog.species[sp].techs.map(t => t.id);
   const ts = s.techs.filter(t => own.includes(t));
-  const a = { species: sp, name: sp, lv: 1, stats: s.stats, techs: ts.length ? ts : undefined, mastery: Object.fromEntries(ts.map(t => [t, s.mastery[t] || 0])), loy, pop: s.pop };
+  // 熟練の効き目: 芯に techBoost の口があればそこへ(芯の熟練は空に)。無ければ今までどおり mastery で渡す
+  const boost = TECH_BOOST_ON && typeof SUC.techBoostOf === 'function';
+  const a = { species: sp, name: sp, lv: 1, stats: s.stats, techs: ts.length ? ts : undefined, ...(boost ? { mastery: {}, techBoost: SUC.techBoostOf(s) } : { mastery: Object.fromEntries(ts.map(t => [t, s.mastery[t] || 0])) }), loy, pop: s.pop };
   const b = { ...unitOf(opp.species, opp.stats, opp.techs, opp.mastery), ...(Number.isFinite(opp.loy) ? { loy: opp.loy } : {}), ...(Number.isFinite(opp.pop) ? { pop: opp.pop } : {}) }; // 相手の人気・忠誠(2026-11-12 社長)
   const r = engine.simulate({ seed: `${s.id}:${s.turn}:${s.battle.kind}:${s.battle.retry || 0}:${s.battle.round}:${idx}:${s.battle.again || 0}`, catalog,
     teamA: { assistantId: s.aid, tactics: g[2], members: [a] }, teamB: { assistantId: 'kiki', tactics: opp.tactics, members: [b] }, buffs: SUC.battleBuffs(s) });
+  LAST_USE = typeof SUC.techUseOf === 'function' ? SUC.techUseOf(r.log, 'A') : null; // 熟練: 技ごとに使った回数
   return r.winner === 'A';
 };
 
@@ -190,7 +195,7 @@ const playRun = (id, preset, aidLv, species, aid, rematch, carry, bag, rivals) =
       }
       trace.battles = trace.battles || []; trace.battles.push({ kind: s.battle.kind, round: s.battle.round, won: wins.every(Boolean) && wins.length === opps.length });
       const bk = s.battle.kind; const rv = Boolean(s.battle.rival);
-      const st = SUC.settle(s, wins); s = st.state;
+      const st = SUC.settle(s, wins, LAST_USE); s = st.state;
       s = runEvent(s, 'cup', { won: st.out.won, kind: bk });
       if (bk === 'cup') { trace.cups = (trace.cups || 0) + 1; if (rv) { trace.rivalCups = (trace.rivalCups || 0) + 1; if (st.out.won) trace.rivalWins = (trace.rivalWins || 0) + 1; } }
       // 大会のあとのごはん: 名声があれば 能力 → 体力(少ないとき)→ 忠誠(60未満)の順
