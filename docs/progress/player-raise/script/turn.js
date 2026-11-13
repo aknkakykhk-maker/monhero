@@ -103,7 +103,7 @@ const MONSUC_SCRIPT_TURN = Object.freeze([
   { id:'turn.food.cheap.mua1', who:'mua', e:'normal', t:'今日は節約ごはん！ でも{mon}、文句言わずに食べててえらい♪' },
   { id:'turn.food.normal.mua1', who:'mua', e:'happy', t:'いつものごはん、おいしそーに食べるよね♪' },
   { id:'turn.food.feast.mua1', who:'mua', e:'excited', t:'ごちそうきたーー！ {mon}、目がハートになってるｗ' },
-  { id:'turn.food.cheap.atsu1', who:'atsu', e:'normal', t:'今月は節約な。名声は大事なとこで使お笑' },
+  { id:'turn.food.cheap.atsu1', who:'atsu', e:'normal', t:'今月は節約な。賞金は大事なとこで使お笑' },
   { id:'turn.food.normal.atsu1', who:'atsu', e:'normal', t:'ふつうのでいいよ。食べてりゃ育つ笑' },
   { id:'turn.food.feast.atsu1', who:'atsu', e:'happy', t:'ごちそうじゃん。いい食いっぷりだわ笑' },
 

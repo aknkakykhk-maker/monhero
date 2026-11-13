@@ -444,7 +444,7 @@ const MSX_CSS = `
 .msx.s320 .v-chips .bad{display:none}.msx.s320 .v-side{bottom:48px}
 .msx.s320 .v-yousu{bottom:auto;top:52px;left:auto;right:7px;transform:none}
 .msx .v-scene.low{flex:0 0 220px}
-.msx .v-cups{display:flex;flex-direction:column;gap:5px;margin-top:6px;flex:1 1 0!important;min-height:0;justify-content:space-evenly}
+.msx .v-cups{display:flex;flex-direction:column;gap:6px;margin-top:6px;flex:1 1 0!important;min-height:0;justify-content:flex-start;overflow-y:auto}
 .msx .v-cup{display:flex;align-items:center;gap:8px;background:#1e1a36;border:1.5px solid #475569;border-bottom-width:3px;border-radius:14px;padding:6px 9px;position:relative;min-width:0}
 .msx .v-cup .e{font-size:26px;flex:none;width:34px;text-align:center}
 .msx .v-cup .tx{flex:1;min-width:0;line-height:1.3}.msx .v-cup .tx b{display:block;font-size:13.5px;white-space:nowrap}
@@ -498,7 +498,7 @@ const MSX_CSS = `
 .msx .v-stg div.last{flex:.7;border-color:#fde047;background:#3b2f0b}.msx .v-stg div.last small{color:#fde047}
 .msx .v-pick2{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:4px}
 .msx .v-pick2 div{background:#3b2f0b;border:1.5px solid #fde047;border-radius:11px;padding:5px 8px;font-size:12px;font-weight:900;white-space:nowrap;display:flex;align-items:center;gap:5px;min-width:0}
-.msx .v-pick2 small{background:#fde047;color:#422006;border-radius:6px;padding:0 5px;font-size:10px}.msx .v-pick2 b{margin-left:auto;color:#fde047}
+.msx .v-pick2 small{background:#fde047;color:#422006;border-radius:6px;padding:0 5px;font-size:10px}.msx .v-pick2 b{margin-left:auto;color:#fde047}.v-pick2 div.none{grid-column:1/-1;justify-content:center;background:#1e1a36;border-style:dashed;border-color:#64748b;color:#cbd5e1;font-size:11px}
 .msx .v-tk{display:flex;align-items:center;gap:5px}
 .msx .v-tk>i{flex:none;width:24px;height:24px;border-radius:7px;background:#9d174d;font-style:normal;font-size:11.5px;font-weight:900;display:flex;align-items:center;justify-content:center}
 .msx .v-tk span{flex:1;min-width:0;background:#0f172a;border:1px solid #475569;border-radius:9px;padding:4px 7px;font-size:10.5px;font-weight:900;white-space:nowrap;display:flex;justify-content:space-between;gap:4px}

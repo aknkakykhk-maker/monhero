@@ -161,7 +161,7 @@ const monsucLendUse = async (friendId) => {
   return r.ok ? { ok: true } : { ok: false, reason: r.reason };
 };
 
-// 自分の子が借りられた回数(前に聞いてから)と、もらえる名声(1日の上限はサーバがかける)。名声の加算と知らせは画面側で
+// 自分の子が借りられた回数(前に聞いてから)と、もらえる賞金(保存の項目は fame・1日の上限はサーバがかける)。賞金の加算と知らせは画面側で
 const monsucLendClaim = async () => {
   if (!monsucLendOn()) return { ok: false, reason: 'off', n: 0, fame: 0 };
   const me = await masmonPvpSelf(false);

@@ -34,7 +34,7 @@ const MONSUC_SCRIPT_RANDOM = Object.freeze([
 
   { id:'ev.daily.sweets.narr1', who:'narr', t:'おやつ屋さんの前に「新作」の札。甘いにおいがただよってくる。' },
   { id:'ev.daily.sweets.mua1', who:'mua', e:'excited', t:'新作！？ あたしも食べたいんだけどｗ 買っちゃう？' },
-  { id:'ev.daily.sweets.atsu1', who:'atsu', e:'normal', t:'{mon}、よだれ出てるぞ笑 名声と相談な！' },
+  { id:'ev.daily.sweets.atsu1', who:'atsu', e:'normal', t:'{mon}、よだれ出てるぞ笑 賞金と相談な！' },
   { id:'ev.daily.sweets.choice.a', who:'choice', c:'a', t:'買ってあげる' },
   { id:'ev.daily.sweets.choice.b', who:'choice', c:'b', t:'今日はがまん' },
 
@@ -278,7 +278,7 @@ const MONSUC_SCRIPT_RANDOM = Object.freeze([
   { id:'ev.small.nut.narr1', who:'narr', t:'旅の行商人が、見たこともない色の木の実を差し出してきた。「食べると強くなるよ、たぶんね」。' },
   { id:'ev.small.nut.mua1', who:'mua', e:'troubled', t:'色やばくない？ でも強くなるなら…どうする？' },
   { id:'ev.small.nut.atsu1', who:'atsu', e:'normal', t:'あやしいな笑 当たればでかいけど…' },
-  { id:'ev.small.nut.choice.a', who:'choice', c:'a', t:'名声で買う' },
+  { id:'ev.small.nut.choice.a', who:'choice', c:'a', t:'賞金で買う' },
   { id:'ev.small.nut.choice.b', who:'choice', c:'b', t:'買わない' },
   { id:'ev.small.nut.ok.narr1', who:'narr', c:'a', t:'木の実を食べた{mon}の体に、力がみなぎった！' },
   { id:'ev.small.nut.ng.narr1', who:'narr', c:'a', t:'…{mon}がおなかを押さえてうずくまった。どうやら合わなかったらしい。' },

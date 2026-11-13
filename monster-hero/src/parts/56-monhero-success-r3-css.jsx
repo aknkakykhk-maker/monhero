@@ -145,6 +145,7 @@ const MSX_R3_CSS = `
 .msx .r3 .r3-chip{flex:1 1 auto;min-height:36px;border-radius:99px;background:#1e1a36;border:1.5px solid #475569;color:#cbd5e1;font-size:11.5px;font-weight:900;padding:4px 10px;white-space:nowrap}
 .msx .r3 .r3-chip.on{border-color:#fde047;background:#3b2f0b;color:#fde047}
 .msx .r3 .r3-chip:disabled{opacity:.4}
+.msx .r3-chip{text-align:center} /* .msx button の text-align:inherit に負けて左へ寄るのを止める(札・タブは中央) */
 .msx .r3 .v-cup{cursor:pointer;text-align:left;width:100%;font:inherit;color:inherit}
 .msx .r3 .v-cup.ng{cursor:default}
 .msx .r3 .v-pa button{width:26px;height:26px;border-radius:50%;background:#334155;color:#fff;font-weight:900;border:0}
