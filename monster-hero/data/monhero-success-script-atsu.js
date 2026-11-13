@@ -73,7 +73,7 @@
     {"id":"ev.team.tagwake.atsu1","who":"atsu","e":"excited","t":"きたな、友情タッグ。ここから一気に伸びるよ笑"},
     {"id":"ev.self.peakin.atsu1","who":"atsu","e":"excited","t":"いい時期に入ったな。今は攻めよ笑"},
     {"id":"ev.self.peakout.atsu1","who":"atsu","e":"normal","t":"無理はしないでいこ。とはいえ、まだやれるけど笑"},
-    {"id":"ev.self.anniv.atsu1","who":"atsu","e":"happy","t":"{mon}、1年おめでとう。ここまでよくやったな。次の1年はもっと強くなれよ笑"},
+    {"id":"ev.self.anniv.atsu1","who":"atsu","e":"happy","t":"{mon}、1年おめでとう！ もっと強くなれよ笑"},
     {"id":"ev.self.slump.atsu1","who":"atsu","e":"normal","t":"こういうときは、流れを変えるか、我慢して続けるか笑"},
     {"id":"ev.self.favtrain.atsu1","who":"atsu","e":"happy","t":"好きこそ物の上手なれってやつだな笑"},
     {"id":"ev.self.selfish.atsu1","who":"atsu","e":"angry","t":"わがままだな。言うこと聞かせる？ それとも合わせる？"},
