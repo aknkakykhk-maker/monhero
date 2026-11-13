@@ -45,9 +45,13 @@ const mlabReadMasmon = async () => {
   try {
     if (typeof msxR3ReadBox !== 'function') return [];
     const box = await msxR3ReadBox();
-    return (box.mons || []).filter((m) => m && typeof m.species === 'string' && mlabMon(m.species) && m.raised !== false)
-      .sort((a, b) => (Number(b.score) || 0) - (Number(a.score) || 0));
-  } catch (_) { return []; }
+    const all = (box.mons || []).filter((m) => m && typeof m.species === 'string' && mlabMon(m.species));
+    // 育成を終えたマスモン(総合力の高い順)と、合体で生まれたまだ育成していない合体円盤石(新しい順 = 保存枠の並びのまま)
+    return {
+      mas: all.filter((m) => m.raised !== false).sort((a, b) => (Number(b.score) || 0) - (Number(a.score) || 0)),
+      fuse: all.filter((m) => m.raised === false),
+    };
+  } catch (_) { return { mas: [], fuse: [] }; }
 };
 
 const MlabBtn = ({ on, onClick, children, cls = '' }) => (
@@ -58,49 +62,51 @@ const MlabBox = ({ title, children }) => (
 );
 const MlabWait = () => <span className="text-[11px] font-bold text-indigo-300/70">{MLAB_WAIT}</span>;
 
-function MlabCard({ sp, mon, onClick }) {
+function MlabCard({ sp, mon, fuse, onClick }) {
   const m = mlabMon(sp);
   return (
-    <button type="button" onClick={onClick} className={`relative rounded-xl border-2 bg-indigo-900/60 p-1 text-center active:scale-95 ${mon ? 'border-indigo-400/60' : 'border-dashed border-sky-300/70'}`}>
-      {mon ? <span className="absolute right-1 top-0.5 text-[11px] font-black text-pink-300">{mon.rank || ''}</span> : <span className="absolute left-0.5 top-0.5 rounded bg-sky-500 px-1 text-[9px] font-black text-white">ベース</span>}
+    <button type="button" onClick={onClick} className={`relative rounded-xl border-2 bg-indigo-900/60 p-1 text-center active:scale-95 ${fuse ? 'border-purple-400/80' : mon ? 'border-indigo-400/60' : 'border-dashed border-sky-300/70'}`}>
+      {fuse ? <span className="absolute left-0.5 top-0.5 rounded bg-purple-500 px-1 text-[9px] font-black text-white">合体</span> : mon ? <span className="absolute right-1 top-0.5 text-[11px] font-black text-pink-300">{mon.rank || ''}</span> : <span className="absolute left-0.5 top-0.5 rounded bg-sky-500 px-1 text-[9px] font-black text-white">ベース</span>}
       <img src={mlabThumb(sp)} alt="" className="mx-auto h-16 w-full object-contain" draggable={false}/>
       <div className="truncate text-[10px] font-bold text-white">{mon ? (mon.nick || (m && m.name)) : (m && m.name)}</div>
-      <div className="text-[9px] font-bold text-amber-200">{mon ? `Lv.${Math.round(Number(mon.lv) || 1)}` : 'もとの値'}</div>
+      <div className="text-[9px] font-bold text-amber-200">{fuse ? '未育成' : mon ? `Lv.${Math.round(Number(mon.lv) || 1)}` : 'もとの値'}</div>
     </button>
   );
 }
 
 // 詳細。mon があればマスモン(能力の横に ベースモンからの伸び ▲)、無ければベースモン
-function MlabDetail({ sp, mon, engine, onBack }) {
+function MlabDetail({ sp, mon, fuse, engine, onBack }) {
   const [tab, setTab] = useState('basic');
   const [sub, setSub] = useState('tech');
   const m = mlabMon(sp);
   const base = mlabBaseStats(sp); const apt = mlabApt(sp); const tr = mlabTraits(engine, sp);
   const dist = m && Array.isArray(m.distAptitude) && m.distAptitude.length === 4 ? m.distAptitude : null; // 零・近・中・遠の順
   const techs = mlabTechs(sp);
-  const own = mon && Array.isArray(mon.techs) ? mon.techs : null;
-  const vals = mon ? MLAB_STATS.map(([k]) => Number(mon.st && mon.st[k]) || 0) : base;
+  const own = mon && !fuse && Array.isArray(mon.techs) ? mon.techs : null;
+  const mine = mon && !fuse ? MLAB_STATS.map(([k]) => Number(mon.st && mon.st[k]) || 0) : null;           // マスモンだけ自分の値と ▲ を出す
+  const fuseVals = fuse && mon && mon.st && MLAB_STATS.some(([k]) => Number(mon.st[k]) > 0) ? MLAB_STATS.map(([k]) => Number(mon.st[k]) || 0) : null; // 合体円盤石は ベースモンと同じ形(▲なし)
+  const vals = mine || fuseVals || base;
   return (
     <div className="flex h-full flex-col overflow-y-auto">
       <div className="flex gap-2 px-2.5 pt-2">
         <img src={mlabFull(sp)} alt="" className="h-32 w-28 shrink-0 rounded-xl bg-indigo-800/60 object-contain" draggable={false}/>
         <div className="min-w-0 flex-1">
           <div className="truncate text-[15px] font-black text-white">{mon ? (mon.nick || (m && m.name)) : (m && m.name)}</div>
-          <div className="mb-1.5 text-[10px] font-bold text-indigo-300">{mon ? `${m && m.name}${mon.rank ? ` / ランク ${mon.rank}` : ''}${mon.score ? ` / 総合力 ${Math.round(mon.score).toLocaleString('ja-JP')}` : ''}` : 'ベースモン(種類ごとのもとの値)'}</div>
+          <div className="mb-1.5 text-[10px] font-bold text-indigo-300">{fuse ? `${m && m.name} / 合体円盤石(未育成)` : mon ? `${m && m.name}${mon.rank ? ` / ランク ${mon.rank}` : ''}${mon.score ? ` / 総合力 ${Math.round(mon.score).toLocaleString('ja-JP')}` : ''}` : 'ベースモン(種類ごとのもとの値)'}</div>
           <div className="flex gap-1">{[['basic', '基礎'], ['feature', '特徴'], ['apt', '適性']].map(([id, t]) => <MlabBtn key={id} on={tab === id} onClick={() => setTab(id)}>{t}</MlabBtn>)}</div>
         </div>
       </div>
       {tab === 'basic' && (
-        <MlabBox title={mon ? '基礎ステータス(青い線 = ベースモン)' : '基礎ステータス'}>
+        <MlabBox title={mine ? '基礎ステータス(青い線 = ベースモン)' : '基礎ステータス'}>
           {!vals ? <MlabWait/> : MLAB_STATS.map(([k, label], i) => (
             <div key={k} className="my-1">
               <div className="grid grid-cols-[62px_1fr_40px_20px] items-center gap-1.5">
                 <span>{label}</span>
-                <span className="relative h-[7px] overflow-hidden rounded bg-indigo-950"><i className="block h-full bg-emerald-400" style={{ width: `${Math.min(100, vals[i] / 9.99)}%` }}/>{mon && base && <u className="absolute top-0 h-full w-[2px] bg-sky-300" style={{ left: `${Math.min(100, base[i] / 9.99)}%` }}/>}</span>
+                <span className="relative h-[7px] overflow-hidden rounded bg-indigo-950"><i className="block h-full bg-emerald-400" style={{ width: `${Math.min(100, vals[i] / 9.99)}%` }}/>{mine && base && <u className="absolute top-0 h-full w-[2px] bg-sky-300" style={{ left: `${Math.min(100, base[i] / 9.99)}%` }}/>}</span>
                 <b className="text-right">{vals[i]}</b>
                 <span className="text-center font-black text-pink-300" title="素質">{apt ? apt[i] : ''}</span>
               </div>
-              {mon && base && <div className="text-right text-[10px] text-indigo-300">ベースモン {base[i]} → <b className={vals[i] >= base[i] ? 'text-emerald-300' : 'text-rose-300'}>{vals[i] >= base[i] ? '▲' : '▼'}{Math.abs(vals[i] - base[i])}</b></div>}
+              {mine && base && <div className="text-right text-[10px] text-indigo-300">ベースモン {base[i]} → <b className={vals[i] >= base[i] ? 'text-emerald-300' : 'text-rose-300'}>{vals[i] >= base[i] ? '▲' : '▼'}{Math.abs(vals[i] - base[i])}</b></div>}
             </div>
           ))}
           <div className="mt-1 text-[10px] text-indigo-300/80">右の文字は素質(種類ごとの伸びやすさ)</div>
@@ -124,9 +130,9 @@ function MlabDetail({ sp, mon, engine, onBack }) {
           <MlabBox title="地形適性"><MlabWait/></MlabBox>
         </>
       )}
-      <div className="mx-2.5 mt-1 flex gap-1">{(mon ? [['tech', '技'], ['skill', '能力'], ['nature', '性格'], ['history', '経歴']] : [['tech', '技'], ['skill', '能力'], ['nature', '性格'], ['event', 'イベント']]).map(([id, t]) => <MlabBtn key={id} on={sub === id} onClick={() => setSub(id)}>{t}</MlabBtn>)}</div>
+      <div className="mx-2.5 mt-1 flex gap-1">{(mon && !fuse ? [['tech', '技'], ['skill', '能力'], ['nature', '性格'], ['history', '経歴']] : [['tech', '技'], ['skill', '能力'], ['nature', '性格'], ['event', 'イベント']]).map(([id, t]) => <MlabBtn key={id} on={sub === id} onClick={() => setSub(id)}>{t}</MlabBtn>)}</div>
       {sub === 'tech' && (
-        <MlabBox title={mon ? '技(覚えている技に ● )' : '技'}>
+        <MlabBox title={mon && !fuse ? '技(覚えている技に ● )' : '技'}>
           {!techs.length ? <MlabWait/> : <div className="grid grid-cols-2 gap-1.5">{techs.map((t) => (
             <div key={t.id} className="rounded-lg bg-indigo-900/70 px-2 py-1 text-[11px]"><b>{own && own.includes(t.id) ? '● ' : ''}{t.name}</b><div className="text-[10px] text-indigo-300">{t.kind === 'wise' ? 'かしこさ' : 'ちから'} / ガッツ {t.guts}</div></div>
           ))}</div>}
@@ -153,7 +159,7 @@ function MonsterLabScreen({ onClose, onOpenDex }) {
   const [view, setView] = useState('door'); // door | mas | base | detail
   const [from, setFrom] = useState('door');
   const [sel, setSel] = useState(null);     // { sp, mon }
-  const [box, setBox] = useState(null);
+  const [box, setBox] = useState(null); // { mas, fuse }
   const [engine, setEngine] = useState(null);
   useEffect(() => {
     let alive = true;
@@ -161,11 +167,11 @@ function MonsterLabScreen({ onClose, onOpenDex }) {
     if (typeof ambwLoadEngine === 'function') ambwLoadEngine().then((e) => { if (alive && e) setEngine(e); }).catch(() => {});
     return () => { alive = false; };
   }, []);
-  const title = view === 'door' ? '研究所' : view === 'mas' ? 'マスモン一覧' : view === 'base' ? 'ベースモン一覧' : (sel && sel.mon ? 'マスモン詳細' : 'ベースモン詳細');
+  const title = view === 'door' ? '研究所' : view === 'mas' ? 'マスモン一覧' : view === 'base' ? 'ベースモン一覧' : (sel && sel.fuse ? '合体円盤石詳細' : sel && sel.mon ? 'マスモン詳細' : 'ベースモン詳細');
   const back = () => { if (view === 'detail') setView(from); else if (view === 'door') onClose(); else setView('door'); };
   const species = mlabSpeciesList();
   return (
-    <div className="fixed inset-0 z-[300] flex flex-col bg-[#141a33] text-white" data-monster-lab>
+    <div className="fixed inset-0 z-[300] flex flex-col bg-[#141a33] text-white" style={{ wordBreak: 'keep-all', overflowWrap: 'anywhere' }} data-monster-lab>
       <div className="flex items-center justify-between border-b-2 border-indigo-500/60 bg-indigo-950 px-3 py-2.5">
         <button type="button" onClick={back} className="text-[13px] font-black text-pink-200 active:scale-95">← もどる</button>
         <span className="text-[15px] font-black">{title}</span>
@@ -176,19 +182,27 @@ function MonsterLabScreen({ onClose, onOpenDex }) {
           <>
             <div className="m-2.5 rounded-xl bg-[#f5ead0] p-2.5 text-[13px] font-bold text-[#3b2a10]">研究所へようこそ。どちらを見ますか?</div>
             <div className="grid grid-cols-2 gap-2.5 px-2.5">
-              <button type="button" onClick={() => setView('mas')} className="rounded-2xl border-2 border-pink-400 bg-[#7c3a6b] px-2 py-5 text-[15px] font-black active:scale-95">マスモン<small className="mt-1 block text-[11px] font-bold">育成を終えて保存枠に入った1体</small></button>
+              <button type="button" onClick={() => setView('mas')} className="rounded-2xl border-2 border-pink-400 bg-[#7c3a6b] px-2 py-5 text-[15px] font-black active:scale-95">マスモン<small className="mt-1 block text-[11px] font-bold">育成を終えた1体</small></button>
               <button type="button" onClick={() => setView('base')} className="rounded-2xl border-2 border-sky-300 bg-[#1d4e7a] px-2 py-5 text-[15px] font-black active:scale-95">ベースモン<small className="mt-1 block text-[11px] font-bold">種類ごとのもとの値</small></button>
               <button type="button" onClick={() => { if (onOpenDex) onOpenDex(); }} disabled={!onOpenDex} className="col-span-2 rounded-2xl border-2 border-indigo-400/70 bg-indigo-900/70 px-2 py-3 text-[14px] font-black opacity-70 active:scale-95">図鑑<small className="ml-2 text-[11px] font-bold">いまのまま</small></button>
             </div>
           </>
         )}
-        {view === 'mas' && (box === null ? <div className="p-6 text-center text-[12px] text-indigo-300">読み込み中…</div> : !box.length
+        {view === 'mas' && (box === null ? <div className="p-6 text-center text-[12px] text-indigo-300">読み込み中…</div> : !box.mas.length && !box.fuse.length
           ? <div className="p-6 text-center text-[12px] font-bold text-indigo-300">まだマスモンがいません。モンヒロサクセスで育成を終えると、ここに並びます。</div>
-          : <><div className="grid grid-cols-4 gap-2 p-2.5">{box.map((mm) => <MlabCard key={mm.id} sp={mm.species} mon={mm} onClick={() => { setSel({ sp: mm.species, mon: mm }); setFrom('mas'); setView('detail'); }}/>)}</div><div className="p-2 text-center text-[11px] text-indigo-300">保存枠 {box.length}体</div></>)}
+          : <>
+            <div className="px-3 pt-2.5 text-[12px] font-black text-amber-300">マスモン ({box.mas.length})</div>
+            {box.mas.length ? <div className="grid grid-cols-4 gap-2 p-2.5">{box.mas.map((mm) => <MlabCard key={mm.id} sp={mm.species} mon={mm} onClick={() => { setSel({ sp: mm.species, mon: mm, fuse: false }); setFrom('mas'); setView('detail'); }}/>)}</div> : <div className="px-3 py-2 text-[11px] text-indigo-300">まだいません</div>}
+            {box.fuse.length > 0 && <>
+              <div className="px-3 pt-2 text-[12px] font-black text-amber-300">合体円盤石 ({box.fuse.length})</div>
+              <div className="grid grid-cols-4 gap-2 p-2.5">{box.fuse.map((mm) => <MlabCard key={mm.id} sp={mm.species} mon={mm} fuse onClick={() => { setSel({ sp: mm.species, mon: mm, fuse: true }); setFrom('mas'); setView('detail'); }}/>)}</div>
+            </>}
+            <div className="p-2 text-center text-[11px] text-indigo-300">保存枠 {box.mas.length + box.fuse.length}体</div>
+          </>)}
         {view === 'base' && (
           <><div className="grid grid-cols-4 gap-2 p-2.5">{species.map((sp) => <MlabCard key={sp} sp={sp} onClick={() => { setSel({ sp, mon: null }); setFrom('base'); setView('detail'); }}/>)}</div><div className="p-2 text-center text-[11px] text-indigo-300">図鑑とは別。ベースモンは種類ごとのもとの値です</div></>
         )}
-        {view === 'detail' && sel && <MlabDetail sp={sel.sp} mon={sel.mon} engine={engine} onBack={back}/>}
+        {view === 'detail' && sel && <MlabDetail sp={sel.sp} mon={sel.mon} fuse={sel.fuse} engine={engine} onBack={back}/>}
       </div>
     </div>
   );
