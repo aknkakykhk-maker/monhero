@@ -281,7 +281,13 @@ const seed = () => {
     check('段3: 相手の札を押すと、その間合いの一覧(見るだけ・代表は決められない)', foeSheet.rows > 0 && foeSheet.use === 0 && foeSheet.star === 0, JSON.stringify(foeSheet));
     await page.evaluate(() => { const b = document.querySelector('[data-ambb-techlist] [data-msa-sheet-close]'); if (b) b.click(); });
     // 全部の技(帯のボタン)。相手の手を見せている間は帯が出ないので、帯が出るまで待つ
-    await page.waitForFunction(() => !!document.querySelector('[data-ambb-manual] [data-msxm-all]') || !!document.querySelector('[data-ambb-review]'), { timeout: 30000 }).catch(() => {});
+    //   試合の種は時刻から作るので、先に決着して振り返りになっていたら、手動の試合をやり直して帯を待つ(ミハリ6: 5回中2回落ちた)
+    for (let k = 0; k < 3; k++) {
+      await page.waitForFunction(() => !!document.querySelector('[data-ambb-manual] [data-msxm-all]') || !!document.querySelector('[data-ambb-review]'), { timeout: 30000 }).catch(() => {});
+      if (await page.evaluate(() => !!document.querySelector('[data-ambb-manual] [data-msxm-all]'))) break;
+      await clickSel('[data-ambb-again]'); await page.waitForTimeout(300);
+      await clickSel('[data-ambb-start]');
+    }
     await clickSel('[data-msxm-all]');
     await page.waitForTimeout(300);
     check('段3: 帯の「全部の技」で全部の技の一覧が開く', await page.evaluate(() => document.querySelectorAll('[data-msa-sheet="all"] [data-msa-sheet-row]').length > 0));
