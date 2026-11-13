@@ -517,6 +517,10 @@
       "role": "部品: モンヒロサクセスの見た出来事(新しいキー mh_monsuc_event_seen_v1 = { v:1, ch, ev }・msxSeenMark)・選択肢の詳細ボタンの中身 MsxChoiceInfo(芯の出来事の表から効果の文を作る・まだは「？？？」)・イベント図鑑 MsxDex(全体と種類ごとの ◯/◯・見たものは読み直せる)。公開の印 monheroSuccess の後ろ"
     },
     {
+      "file": "56-monsuc-tevent.jsx",
+      "role": "部品: モンヒロサクセスの訓練のあとの出来事(編成のモンスターとのお話・小さな出来事)を1枚の場面で見せる MsxTrainEvent(背景・2体の立ち絵・見出し・台詞・変わった数字・入り方)。何も保存しない・公開の印 monheroSuccess の後ろ"
+    },
+    {
       "file": "56-assistant-life-friend.jsx",
       "role": "助手ライフのフレンドの家との行き来(助手が自分で行く go・フレンドの助手が来る come・プレイヤーが訪ねる look)。家の控えを送る/読む・行き来の記録・置き手紙・お礼・設定・「🏘 フレンド」のページと HOME の印。公開の印 assistantLifeFriend の後ろ。保存は mh_assistant_life_friend_v1・_settings_v1・_known_v1・_intro_v1 の新しいキーだけ。表は assistant_life_friend_switch/_houses/_visits"
     },
