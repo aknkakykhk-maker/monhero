@@ -298,6 +298,9 @@ const MONSUC_SCRIPT_ERUBIN = Object.freeze([
   { id:'turn.awake.omen2.erubin1', who:'erubin', e:'surprise', t:'また光ってるね。今度は虹色……すごいことが起きそうかな' },
   { id:'turn.awake.fire.erubin1', who:'erubin', e:'surprise', t:'えっ……{mon}が光に包まれてる！？ だいじょうぶかな……' },
   { id:'turn.awake.fire2.erubin1', who:'erubin', e:'excited', t:'虹色の光……まだ強くなるんだね。すごい……' },
+
+  // 成長のピークの予告(2026-11-13): 始まる2〜3ターン前
+  { id:'turn.peak.soon.erubin1', who:'erubin', e:'normal', t:'もうすぐ伸びどきが来そうかな。今のうちに体をととのえておこうね' },
 ]);
 
 if (typeof module !== 'undefined') module.exports = { MONSUC_SCRIPT_ERUBIN };

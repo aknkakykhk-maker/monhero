@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9cc9ad3cbc5b8886
+// source-sha256: 0b4daa51e31ecb8b
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -154606,6 +154606,36 @@ function MsxOmenFx({
     }
   })));
 }
+function MsxPeakFx({
+  layer
+}) {
+  msxAwEnsureCss();
+  const calm = msxAwCalm();
+  if (layer === 'back') return React.createElement("span", {
+    className: `msx-peakfx back${calm ? ' calm' : ''}`,
+    "aria-hidden": "true",
+    "data-msx-peak": "back"
+  }, [0, 1, 2, 3, 4].map(i => React.createElement("i", {
+    key: i,
+    className: "fl",
+    style: {
+      '--i': i
+    }
+  })), React.createElement("i", {
+    className: "base"
+  }));
+  if (calm) return null;
+  return React.createElement("span", {
+    className: "msx-peakfx front",
+    "aria-hidden": "true"
+  }, [0, 1, 2, 3, 4, 5].map(i => React.createElement("i", {
+    key: i,
+    className: "em",
+    style: {
+      '--i': i
+    }
+  })));
+}
 function MsxAwakeShow({
   run,
   fire,
@@ -154741,7 +154771,24 @@ const MSX_AW_CSS = `
 @keyframes msxAwRay{0%{opacity:0;transform:translateX(-50%) scaleX(.2)}100%{opacity:1;transform:translateX(-50%) scaleX(1)}}
 @keyframes msxAwHold2{from{opacity:.7}to{opacity:1}}
 @keyframes msxAwFlash{0%{opacity:0}12%{opacity:1}100%{opacity:0}}
+.msx-peakfx{position:absolute;pointer-events:none}
+.msx-peakfx.back{left:-24%;right:-24%;bottom:-6%;height:96%;z-index:0}
+.msx-peakfx.front{left:-8%;right:-8%;bottom:0;height:90%;z-index:4}
+.msx-peakfx>i{position:absolute;font-style:normal}
+.msx-peakfx .base{left:10%;right:10%;bottom:0;height:22%;border-radius:50%;background:radial-gradient(ellipse at 50% 60%,rgba(255,220,90,.85),rgba(255,120,30,.55) 45%,rgba(255,60,0,0) 72%);animation:msxPeakBase 1.2s ease-in-out infinite alternate}
+.msx-peakfx .fl{bottom:4%;left:calc(14% + var(--i) * 15%);width:22%;height:72%;border-radius:50% 50% 35% 35% / 70% 70% 30% 30%;transform-origin:50% 100%;background:radial-gradient(ellipse 50% 62% at 50% 74%,rgba(255,250,190,1),rgba(255,180,40,.95) 30%,rgba(255,90,10,.75) 55%,rgba(230,40,0,0) 80%);animation:msxPeakFlame calc(.9s + var(--i) * .13s) ease-in-out infinite alternate;animation-delay:calc(var(--i) * -.37s)}
+.msx-peakfx .fl:nth-child(1),.msx-peakfx .fl:nth-child(5){height:52%}
+.msx-peakfx .fl:nth-child(2),.msx-peakfx .fl:nth-child(4){height:80%}
+.msx-peakfx .fl:nth-child(3){height:100%}
+.msx-peakfx .em{bottom:8%;left:calc(10% + var(--i) * 15%);width:5px;height:5px;border-radius:50%;background:#ffe08a;box-shadow:0 0 6px 2px rgba(255,140,30,.95);opacity:0;animation:msxPeakEmber 2.2s linear infinite;animation-delay:calc(var(--i) * .37s)}
+.msx-peakfx.calm .fl,.msx-peakfx.calm .base{animation:none}
+@keyframes msxPeakFlame{0%{transform:scaleY(.82) scaleX(1.04) skewX(-3deg);opacity:.75}100%{transform:scaleY(1.08) scaleX(.94) skewX(3deg);opacity:1}}
+@keyframes msxPeakBase{from{opacity:.7}to{opacity:1}}
+@keyframes msxPeakEmber{0%{opacity:0;transform:translate(0,0)}15%{opacity:1}100%{opacity:0;transform:translate(calc((var(--i) - 2.5) * 6px),-150px)}}
+.msx-peakon>.msx-kira{position:relative;z-index:1;filter:drop-shadow(0 0 3px rgba(255,170,40,.95)) drop-shadow(0 0 9px rgba(255,90,10,.7))}
+.msx-peak-card{position:absolute;left:0;right:0;top:12%;z-index:5;text-align:center;font-size:26px;font-weight:900;font-style:italic;color:#fff7cc;-webkit-text-stroke:3px #c2410c;paint-order:stroke fill;text-shadow:0 0 14px #fb923c,0 3px 0 #7c2d12;white-space:nowrap}
 @media (prefers-reduced-motion: reduce){
+  .msx-peakfx .fl,.msx-peakfx .base{animation:none}.msx-peakfx.front{display:none}
   .msx-omen .g,.msx-omen .p,.msx-omen-on>.msx-kira,.msx-aw .msx-aw-wrap,.msx-aw-flash{animation:none}
   .msx-omen .p,.msx-aw-flash{display:none}
   .msx-aw .msx-aw-ray{animation:none}
@@ -162365,9 +162412,33 @@ function MsxBand({
   const after = Math.max(0, hp - use);
   const P = msxSuc && msxSuc.core.PERIODS || [];
   const now = v.period.index;
+  const pk = msxSuc && typeof msxSuc.SUC.peakInfo === 'function' && !s.over ? msxSuc.SUC.peakInfo(s) : {
+    state: null
+  };
   return React.createElement("div", {
-    className: "v-band"
-  }, React.createElement("div", {
+    className: "v-band",
+    style: pk.state === 'in' ? {
+      position: 'relative'
+    } : undefined
+  }, pk.state === 'in' ? React.createElement("span", {
+    className: "v-peakb",
+    "data-msx-peak-band": pk.left,
+    style: {
+      position: 'absolute',
+      left: '50%',
+      top: -7,
+      transform: 'translateX(-50%)',
+      zIndex: 2,
+      whiteSpace: 'nowrap',
+      padding: '1px 9px',
+      borderRadius: 999,
+      fontSize: 10.5,
+      fontWeight: 900,
+      color: '#fff7cc',
+      background: 'linear-gradient(90deg,#ea580c,#f59e0b)',
+      boxShadow: '0 0 8px #fb923c'
+    }
+  }, "🔥 ピーク中(あと", pk.left, "ターン)") : null, React.createElement("div", {
     className: "v-b1"
   }, React.createElement("div", {
     className: "v-turn"
@@ -162508,7 +162579,8 @@ function MsxMonArt({
   const sp = run.s.species;
   const kira = typeof msxKiraOf === 'function' ? msxKiraOf(run.s.awake) : null;
   const omen = run.s.omen && typeof MsxOmenFx === 'function' ? run.s.omen.k : 0;
-  if ((kira || omen) && typeof MsxKira === 'function') {
+  const peak = typeof MsxPeakFx === 'function' && msxSuc && typeof msxSuc.SUC.peakInfo === 'function' && !run.s.over && msxSuc.SUC.peakInfo(run.s).state === 'in';
+  if ((kira || omen || peak) && typeof MsxKira === 'function') {
     const scn = msxSceneBg(run.s.turn);
     const inner = live && typeof MsxLiveMon === 'function' ? React.createElement(MsxLiveMon, {
       species: sp,
@@ -162540,16 +162612,20 @@ function MsxMonArt({
       }
     });
     return React.createElement("span", {
-      className: `${className || ''}${live ? ' msx-live' : ''}${omen ? ` msx-omen-on k${omen}` : ''}`,
+      className: `${className || ''}${live ? ' msx-live' : ''}${omen ? ` msx-omen-on k${omen}` : ''}${peak ? ' msx-peakon' : ''}`,
       style: style,
       "data-msx-mon-kira": kira || ''
-    }, React.createElement(MsxKira, {
+    }, peak ? React.createElement(MsxPeakFx, {
+      layer: "back"
+    }) : null, React.createElement(MsxKira, {
       kind: kira,
       src: msxMonImg(sp),
       fill: true
     }, inner), React.createElement(MsxOmenFx, {
       k: omen
-    }));
+    }), peak ? React.createElement(MsxPeakFx, {
+      layer: "front"
+    }) : null);
   }
   if (live && typeof MsxLiveMon === 'function') {
     const scn = msxSceneBg(run.s.turn);
@@ -163838,7 +163914,10 @@ function MsxPlay({
     });
     const yosu = s.yosu && (s.yosu.sabori || s.yosu.utsu);
     const omenK = s.omen && (s.omen.k === 1 || s.omen.k === 2) ? s.omen.k : 0;
-    const sayL = omenK ? line(omenK === 2 ? 'turn.awake.omen2' : 'turn.awake.omen', omenK === 2 ? 'あれ…また体が光ってる？ 虹色だ…' : 'あれ？ 体がうっすら光ってない…？') : yosu ? line(s.yosu.sabori ? 'turn.mood.sabori' : 'turn.mood.utsu', 'ようすが気になるね…') : s.cond ? line(`turn.cond.${s.cond.kind === 'away' ? 'runaway' : s.cond.kind === 'ill' ? 'sick' : 'injury'}.in`, '今日は休ませてあげよ') : line(msxStartScene(s), '今月はどうする?');
+    const pkI = typeof SUC.peakInfo === 'function' ? SUC.peakInfo(s) : {
+      state: null
+    };
+    const sayL = omenK ? line(omenK === 2 ? 'turn.awake.omen2' : 'turn.awake.omen', omenK === 2 ? 'あれ…また体が光ってる？ 虹色だ…' : 'あれ？ 体がうっすら光ってない…？') : pkI.state === 'soon' && pkI.in >= 2 && !yosu && !s.cond ? line('turn.peak.soon', 'もうすぐ伸びどきが来そうだよ！') : yosu ? line(s.yosu.sabori ? 'turn.mood.sabori' : 'turn.mood.utsu', 'ようすが気になるね…') : s.cond ? line(`turn.cond.${s.cond.kind === 'away' ? 'runaway' : s.cond.kind === 'ill' ? 'sick' : 'injury'}.in`, '今日は休ませてあげよ') : line(msxStartScene(s), '今月はどうする?');
     const cal = msxCalendar(s.turn);
     const scn = msxSceneBg(s.turn);
     const low = s.hp < s.hpMax * 0.3;
@@ -163884,7 +163963,13 @@ function MsxPlay({
       className: "v-chip hot"
     }, "🏆 期末の大会まで ", v.period.left, "ターン") : React.createElement("span", {
       className: "v-chip hot"
-    }, "🏆 頂への道"), s.yosu && s.yosu.sabori ? React.createElement("span", {
+    }, "🏆 頂への道"), pkI.state === 'in' ? React.createElement("span", {
+      className: "v-chip hot",
+      "data-msx-peak-chip": true
+    }, "🔥 ピーク中 あと", pkI.left, "ターン") : pkI.state === 'soon' ? React.createElement("span", {
+      className: "v-chip ylw",
+      "data-msx-peak-chip": true
+    }, "🔥 もうすぐ伸びどき") : null, s.yosu && s.yosu.sabori ? React.createElement("span", {
       className: "v-chip bad"
     }, "😪 ようす: サボりグセ") : null, s.yosu && s.yosu.utsu ? React.createElement("span", {
       className: "v-chip bad"
@@ -164330,7 +164415,19 @@ function MsxStats({
     className: "sub"
   }, "(甘え度 ", s.ama, "+恐れ度 ", s.fear, ")")), React.createElement("div", {
     className: "sub"
-  }, "方針: ", MSX_POLICY_SCALE[Math.max(-3, Math.min(3, s.pol || 0)) + 3], "・人気 ", s.pop, "・Lv ", s.lv, "・成長の型: ", typeof MASMON_CALC !== 'undefined' ? MASMON_CALC.typeOf(s.type).name : '—')), s.omen || s.awake ? React.createElement("div", {
+  }, "方針: ", MSX_POLICY_SCALE[Math.max(-3, Math.min(3, s.pol || 0)) + 3], "・人気 ", s.pop, "・Lv ", s.lv, "・成長の型: ", typeof MASMON_CALC !== 'undefined' ? MASMON_CALC.typeOf(s.type).name : '—')), (() => {
+    const pk = typeof SUC.peakInfo === 'function' ? SUC.peakInfo(s) : {
+      state: null
+    };
+    return pk.state ? React.createElement("div", {
+      className: "v-card",
+      "data-msx-peak-stats": true
+    }, React.createElement("div", {
+      className: "h2"
+    }, "🔥 成長のピーク"), React.createElement("div", {
+      className: "sub"
+    }, pk.state === 'in' ? `ピーク中(あと${pk.left}ターン)。訓練がよく伸びる` : `あと${pk.in}ターンでピーク(伸びどき)が始まる`)) : null;
+  })(), s.omen || s.awake ? React.createElement("div", {
     className: "v-card",
     "data-msx-yosu": true
   }, React.createElement("div", {
@@ -164770,7 +164867,10 @@ function MsxEvent({
       objectFit: 'contain',
       objectPosition: 'right bottom'
     }
-  }) : null, (() => {
+  }) : null, view && view.id === 'ev.self.peakin' && !picked ? React.createElement("div", {
+    className: "msx-peak-card msx-pop",
+    "data-msx-peak-start": true
+  }, "🔥 ピークが始まった!") : null, (() => {
     const cat = isStory || isUniq ? 'メインのお話' : view && view.kind === 'team' ? '編成のモンスターのイベント' : '育成イベント';
     return React.createElement("div", {
       className: "v-ev-h"

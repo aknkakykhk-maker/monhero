@@ -3134,6 +3134,18 @@ const HELP_CATEGORIES = [
         ],
       },
       {
+        id: 'success-peak', emoji: '🔥', title: '成長のピーク', releaseFlag: 'monheroSuccess',
+        assistant: 'ピーク中は燃えてるみたいに見えるよ！ 訓練のチャンス！', expression: 'excited',
+        blocks: [
+          { t:'p', text:'サクセスモンには、成長の型ごとに「ピーク(伸びどき)」の時期があります。ピーク中は訓練がよく伸びます。' },
+          { t:'list', items:[
+            'ピークが始まる2〜3ターン前に、助手が教えてくれます(「🔥 もうすぐ伸びどき」の札も出ます)',
+            '始まったターンには「ピークが始まった!」の札が出ます。終わるときも助手がひとこと教えてくれます',
+            'ピーク中はサクセスモンが燃え上がるように見え、画面の上と「🔍くわしく」に「ピーク中(あと◯ターン)」と出ます',
+          ] },
+        ],
+      },
+      {
         id: 'success-train', emoji: '💪', title: '訓練と訓練Lv', releaseFlag: 'monheroSuccess',
         assistant: '同じ訓練を続けるとLvが上がって、伸びも大きくなるんだ♪', expression: 'happy',
         blocks: [
