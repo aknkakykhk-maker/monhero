@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d164646d450449b2
+// source-sha256: db51a84ae6558aa2
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -155600,7 +155600,8 @@ function MsxTrainAct({
   onDone
 }) {
   msxActEnsureCss();
-  const k = o && o.card && MSX_TRAIN_NAME[o.card.stat] ? o.card.stat : 'pow';
+  const k = o && o.card && MSX_TRAIN_LV[o.card.stat] ? o.card.stat : 'pow';
+  const lv = msxTrainLvAt(o && Number.isFinite(o.trainLv) ? o.trainLv - (o.lvUp ? 1 : 0) : 1);
   const done = React.useRef(false);
   const finish = () => {
     if (done.current) return;
@@ -155619,67 +155620,157 @@ function MsxTrainAct({
   const n = c => Array.from({
     length: c
   }, (_, i) => i);
-  const prop = k === 'pow' ? React.createElement("div", {
-    className: "pr logs"
-  }, n(3).map(i => React.createElement("i", {
-    key: i,
-    style: {
-      '--i': i
-    }
-  }, React.createElement("b", null))), React.createElement("em", {
-    className: "boom"
-  }, "💥")) : k === 'tough' ? React.createElement("div", {
-    className: "pr rock"
-  }, React.createElement("i", null, "🪨"), React.createElement("em", {
-    className: "ring"
-  })) : k === 'hit' ? React.createElement("div", {
-    className: "pr tgt"
-  }, React.createElement("i", null), React.createElement("em", {
-    className: "shot"
-  }, "⭐"), React.createElement("em", {
-    className: "boom"
-  }, "💥")) : k === 'eva' ? React.createElement("div", {
-    className: "pr leaves"
-  }, n(8).map(i => React.createElement("i", {
-    key: i,
-    style: {
-      '--i': i
-    }
-  }, i % 3 === 1 ? '🍃' : '🍂'))) : k === 'wise' ? React.createElement("div", {
-    className: "pr blocks"
-  }, n(5).map(i => React.createElement("i", {
-    key: i,
-    style: {
-      '--i': i
-    }
-  })), React.createElement("em", {
-    className: "idea"
-  }, "💡")) : React.createElement("div", {
-    className: "pr run"
-  }, React.createElement("span", {
-    className: "spd"
-  }), n(3).map(i => React.createElement("i", {
-    key: i,
-    style: {
-      '--i': i
-    }
-  }, "💨")));
+  let prop = null;
+  if (k === 'pow') {
+    prop = lv <= 2 ? React.createElement("div", {
+      className: "pr logs"
+    }, n(lv === 1 ? 3 : 4).map(i => React.createElement("i", {
+      key: i,
+      style: {
+        '--i': i
+      }
+    }, React.createElement("b", null))), React.createElement("em", {
+      className: "boom"
+    }, "💥")) : React.createElement("div", {
+      className: `pr hard v${lv}`
+    }, React.createElement("i", {
+      className: "obj"
+    }, lv === 5 ? '' : '🪨'), lv === 4 ? React.createElement("i", {
+      className: "obj b"
+    }, "🪨") : null, React.createElement("em", {
+      className: "boom"
+    }, "💥"), n(lv + 2).map(i => React.createElement("em", {
+      key: i,
+      className: "chip",
+      style: {
+        '--a': `${i * (360 / (lv + 2))}deg`
+      }
+    })));
+  } else if (k === 'tough') {
+    prop = lv === 3 ? React.createElement("div", {
+      className: "pr fall"
+    }, React.createElement("span", {
+      className: "water"
+    }), n(6).map(i => React.createElement("i", {
+      key: i,
+      className: "drop",
+      style: {
+        '--i': i
+      }
+    }, "💧"))) : React.createElement("div", {
+      className: `pr rock v${lv}`
+    }, n(lv === 4 ? 3 : 1).map(i => React.createElement("i", {
+      key: i,
+      style: {
+        '--i': i
+      }
+    }, lv === 5 ? '☄️' : '🪨')), React.createElement("em", {
+      className: "ring"
+    }));
+  } else if (k === 'hit') {
+    prop = React.createElement("div", {
+      className: `pr tgt v${lv}`
+    }, n(lv === 4 ? 3 : 1).map(i => React.createElement("i", {
+      key: i,
+      className: "t",
+      style: lv === 4 ? {
+        top: `${14 + i * 20}%`,
+        right: `${i === 1 ? 20 : 5}%`
+      } : undefined
+    })), n(lv === 4 ? 3 : 1).map(i => React.createElement("em", {
+      key: i,
+      className: "shot",
+      style: {
+        '--i': i
+      }
+    }, lv === 5 ? '🌠' : '⭐')), React.createElement("em", {
+      className: "boom"
+    }, "💥"));
+  } else if (k === 'eva') {
+    const it = [['🍂', '🍃'], ['🌰', '🍂'], ['❄️', '⚪'], ['🪨', '🪨'], ['🌠', '✨']][lv - 1];
+    prop = React.createElement("div", {
+      className: `pr leaves v${lv}`
+    }, n(6 + lv * 2).map(i => React.createElement("i", {
+      key: i,
+      style: {
+        '--i': i
+      }
+    }, it[i % 2])));
+  } else if (k === 'wise') {
+    prop = lv === 1 ? React.createElement("div", {
+      className: "pr blocks"
+    }, n(5).map(i => React.createElement("i", {
+      key: i,
+      style: {
+        '--i': i
+      }
+    })), React.createElement("em", {
+      className: "idea"
+    }, "💡")) : React.createElement("div", {
+      className: `pr think v${lv}`
+    }, React.createElement("span", {
+      className: "board"
+    }, lv === 2 ? n(4).map(i => React.createElement("i", {
+      key: i,
+      style: {
+        '--i': i,
+        left: `${8 + i % 2 * 46}%`,
+        top: `${10 + Math.floor(i / 2) * 42}%`
+      }
+    }, "🧩")) : lv === 3 ? React.createElement("b", {
+      className: "maze"
+    }) : lv === 4 ? n(7).map(i => React.createElement("i", {
+      key: i,
+      className: "star",
+      style: {
+        '--i': i,
+        left: `${8 + i * 12}%`,
+        top: `${[20, 58, 34, 72, 26, 52, 40][i]}%`
+      }
+    }, "✦")) : React.createElement("i", {
+      className: "scroll"
+    }, "📜")), React.createElement("em", {
+      className: "idea"
+    }, "💡"));
+  } else {
+    prop = React.createElement("div", {
+      className: `pr run v${lv}`
+    }, React.createElement("span", {
+      className: "land"
+    }), lv >= 4 ? n(8).map(i => React.createElement("i", {
+      key: `f${i}`,
+      className: "fx",
+      style: {
+        '--i': i
+      }
+    }, lv === 5 ? '🔥' : '❄️')) : null, n(3).map(i => React.createElement("i", {
+      key: i,
+      style: {
+        '--i': i
+      }
+    }, "💨")));
+  }
+  const front = k === 'tough' || k === 'eva';
   return React.createElement("div", {
-    className: `msx-act t-${k}`,
+    className: `msx-act t-${k} lv${lv}`,
     onClick: finish,
-    "data-msx-act": k
+    "data-msx-act": k,
+    "data-msx-act-lv": lv
   }, React.createElement("span", {
     className: k === 'life' ? 'lines h' : 'lines',
     "aria-hidden": "true"
-  }), k === 'tough' || k === 'eva' ? null : prop, React.createElement("div", {
+  }), front ? null : prop, React.createElement("div", {
     className: "me"
   }, React.createElement(MsxMonArt, {
     run: run,
     className: "mon",
     live: true
-  })), k === 'tough' || k === 'eva' ? prop : null, React.createElement("div", {
+  })), front ? prop : null, lv === 5 ? React.createElement("span", {
+    className: "flash5",
+    "aria-hidden": "true"
+  }) : null, React.createElement("div", {
     className: "ban"
-  }, React.createElement("small", null, MSX_STAT_NAME[k], "の訓練"), MSX_TRAIN_ICON[k], " ", MSX_TRAIN_NAME[k], "!"));
+  }, React.createElement("small", null, MSX_STAT_NAME[k], "の訓練 ", React.createElement("b", null, "Lv.", lv)), msxTrainIcon(k, lv), " ", msxTrainName(k, lv), "!"));
 }
 function MsxShugyoStages({
   run,
@@ -155762,6 +155853,56 @@ function MsxShugyoStages({
   }, "タップでとばす"));
 }
 const MSX_ACT_CSS = `
+.msx .msx-act .ban small b{display:inline-block;margin-left:4px;padding:0 6px;border-radius:8px;background:#fde047;color:#7c2d12;font-size:11px;font-style:normal}
+.msx .msx-act.lv3 .ban{background:linear-gradient(90deg,transparent,#1e3a8acc 18%,#1e3a8acc 82%,transparent);-webkit-text-stroke-color:#1e3a8a;text-shadow:0 3px 0 #1e3a8a}
+.msx .msx-act.lv4 .ban{background:linear-gradient(90deg,transparent,#6d28d9cc 18%,#6d28d9cc 82%,transparent);-webkit-text-stroke-color:#4c1d95;text-shadow:0 3px 0 #4c1d95,0 0 14px #c4b5fd}
+.msx .msx-act.lv5 .ban{background:linear-gradient(90deg,transparent,#b45309dd 15%,#f59e0bdd 50%,#b45309dd 85%,transparent);color:#fff7c2;-webkit-text-stroke-color:#7c2d12;text-shadow:0 3px 0 #7c2d12,0 0 18px #fde047}
+.msx .msx-act.lv4 .lines,.msx .msx-act.lv5 .lines{background:repeating-conic-gradient(from 0deg at 50% 55%,rgba(255,255,255,.7) 0 1.6deg,transparent 1.6deg 7deg)}
+.msx .msx-act.lv5 .lines:not(.h){background:repeating-conic-gradient(from 0deg at 50% 55%,rgba(253,224,71,.8) 0 1.6deg,transparent 1.6deg 7deg)}
+.msx .msx-act .flash5{position:absolute;inset:0;z-index:5;pointer-events:none;background:radial-gradient(circle at 50% 50%,#fff,#fde04700 60%);opacity:0;animation:msxActFlash .5s ease-out .6s both}
+.msx .msx-act .hard .obj{position:absolute;left:4%;bottom:18%;font-style:normal;font-size:110px;line-height:1;animation:msxActCrack .45s ease-in .7s both}
+.msx .msx-act .hard.v4 .obj{font-size:130px}.msx .msx-act .hard.v4 .obj.b{left:22%;bottom:30%;font-size:90px}
+.msx .msx-act .hard.v5 .obj{width:120px;height:120px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#94a3b8,#334155 45%,#0f172a 80%);box-shadow:0 8px 12px #0009,inset -8px -10px 0 #0006}
+.msx .msx-act .hard .boom{left:22%;top:30%;font-size:70px;animation:msxActHit .5s ease-out .55s both}
+.msx .msx-act .hard.v5 .boom{font-size:96px}
+.msx .msx-act .hard .chip{left:20%;top:50%;width:10px;height:10px;border-radius:2px;background:#d6d3d1;box-shadow:0 0 0 1px #57534e;animation:msxActChip .6s ease-out .6s both}
+.msx .msx-act .hard.v5 .chip{background:#64748b;box-shadow:0 0 6px #fde047}
+.msx .msx-act .rock.v2 i{font-size:170px}
+.msx .msx-act .rock.v4 i{font-size:90px;left:calc(28% + var(--i) * 22%);animation-delay:calc(.05s + var(--i) * .12s)}
+.msx .msx-act .rock.v5 i{font-size:150px;filter:drop-shadow(0 0 14px #f97316) drop-shadow(0 0 30px #fde047)}
+.msx .msx-act .fall .water{position:absolute;left:30%;right:30%;top:0;bottom:30%;background:repeating-linear-gradient(90deg,#bae6fdcc 0 6px,#38bdf8aa 6px 14px,#e0f2fecc 14px 18px);opacity:.85;animation:msxActWater .25s linear infinite;-webkit-mask:linear-gradient(180deg,#000 70%,transparent);mask:linear-gradient(180deg,#000 70%,transparent)}
+.msx .msx-act .fall .drop{position:absolute;font-style:normal;font-size:24px;left:calc(26% + var(--i) * 9%);top:52%;animation:msxActPuff2 .6s ease-out infinite;animation-delay:calc(var(--i) * .1s)}
+.msx .msx-act .tgt.v2 .t{transform:scale(.7);right:3%;top:24%}
+.msx .msx-act .tgt.v3 .t{animation:msxActMove .7s ease-in-out infinite alternate}
+.msx .msx-act .tgt .t{position:absolute;right:6%;top:30%;width:96px;height:96px;border-radius:50%;background:radial-gradient(circle,#dc2626 0 12%,#fff 12% 26%,#dc2626 26% 40%,#fff 40% 55%,#dc2626 55% 70%,#fff 70%);border:3px solid #7f1d1d;box-shadow:0 6px 0 #0006}
+.msx .msx-act .tgt.v4 .t{width:64px;height:64px}
+.msx .msx-act .tgt.v5 .t{background:radial-gradient(circle,#f59e0b 0 12%,#fff7c2 12% 26%,#f59e0b 26% 40%,#fff7c2 40% 55%,#f59e0b 55% 70%,#fff7c2 70%);border-color:#92400e;box-shadow:0 0 18px #fde047}
+.msx .msx-act .tgt.v4 .shot{animation-delay:calc(.3s + var(--i) * .12s)}
+.msx .msx-act .tgt.v5 .shot{font-size:44px;filter:drop-shadow(0 0 10px #fde047)}
+.msx .msx-act .leaves.v3 i,.msx .msx-act .leaves.v4 i{font-size:26px}
+.msx .msx-act .leaves.v5 i{filter:drop-shadow(0 0 8px #fde047)}
+.msx .msx-act .think .board{position:absolute;left:4%;bottom:16%;width:38%;height:44%;border-radius:12px;background:#1e1b4bcc;border:2px solid #a5b4fc;box-shadow:0 0 16px #818cf855;animation:msxActBlock .3s ease-out .1s both}
+.msx .msx-act .think .board i{position:absolute;font-style:normal;font-size:34px;animation:msxActBlock .28s cubic-bezier(.3,1.5,.6,1) both;animation-delay:calc(.3s + var(--i) * .16s)}
+.msx .msx-act .think .maze{position:absolute;inset:12%;border:3px solid #fde68a;background:repeating-linear-gradient(90deg,transparent 0 14px,#fde68a 14px 17px),repeating-linear-gradient(0deg,transparent 0 22px,#fde68a 22px 25px);-webkit-mask:linear-gradient(90deg,#000 0 40%,transparent 40% 48%,#000 48%);mask:linear-gradient(90deg,#000 0 40%,transparent 40% 48%,#000 48%);animation:msxActOn .05s linear .3s both}
+.msx .msx-act .think .star{color:#fde047;font-size:22px!important;text-shadow:0 0 8px #fde047}
+.msx .msx-act .think .scroll{left:14%!important;top:14%!important;font-size:80px!important;filter:drop-shadow(0 0 14px #fde047)}
+.msx .msx-act .think .idea{left:56%;top:12%;font-size:46px;animation:msxActHit .6s ease-out 1.1s both}
+.msx .msx-act .run .land{position:absolute;left:-10%;right:-10%;bottom:0;height:22%;border-radius:50% 50% 0 0;background:#4d7c0f;opacity:.0}
+.msx .msx-act .run.v2 .land{opacity:.8;height:34%;background:radial-gradient(ellipse 70% 100% at 30% 100%,#65a30d 60%,transparent 61%)}
+.msx .msx-act .run.v3 .land{opacity:.8;height:30%;border-radius:0;background:linear-gradient(160deg,transparent 40%,#78716c 40%)}
+.msx .msx-act .run.v4 .land{opacity:.9;height:30%;border-radius:0;background:linear-gradient(160deg,transparent 40%,#f1f5f9 40%)}
+.msx .msx-act .run.v5 .land{opacity:.9;height:32%;border-radius:0;background:linear-gradient(160deg,transparent 40%,#7f1d1d 40%,#b91c1c)}
+.msx .msx-act.t-life.lv4{background:radial-gradient(circle at 50% 55%,rgba(255,255,255,.12),rgba(30,58,138,.6))}
+.msx .msx-act.t-life.lv5{background:radial-gradient(circle at 50% 55%,rgba(255,200,120,.1),rgba(127,29,29,.7))}
+.msx .msx-act .run .fx{position:absolute;font-style:normal;font-size:20px;left:calc(var(--i) * 13%);top:-8%;animation:msxActLeaf 1.2s linear both;animation-delay:calc(var(--i) * .1s)}
+.msx .msx-act .run.v5 .fx{top:auto;bottom:-6%;animation-name:msxActRise}
+@keyframes msxActFlash{0%{opacity:0}30%{opacity:.85}100%{opacity:0}}
+@keyframes msxActCrack{0%{transform:none}30%{transform:translateX(-4px) rotate(-3deg)}100%{opacity:0;transform:scale(1.15) rotate(8deg);filter:brightness(1.6)}}
+@keyframes msxActChip{from{opacity:1;transform:none}to{opacity:0;transform:rotate(var(--a)) translateY(-80px)}}
+@keyframes msxActWater{to{background-position:0 18px}}
+@keyframes msxActPuff2{0%{opacity:0;transform:none}30%{opacity:1}100%{opacity:0;transform:translate(calc((var(--i) - 2.5) * 14px),40px)}}
+@keyframes msxActMove{from{transform:translateY(-30px)}to{transform:translateY(40px)}}
+@keyframes msxActRise{from{transform:translate(0,0)}to{transform:translate(-20px,-640px)}}
 .msx .msx-act{position:absolute;inset:0;z-index:8;overflow:hidden;cursor:pointer;background:radial-gradient(circle at 50% 55%,rgba(255,255,255,.05),rgba(10,8,30,.72))}
 .msx .msx-act .lines{position:absolute;inset:-20%;background:repeating-conic-gradient(from 0deg at 50% 55%,rgba(255,255,255,.5) 0 1.2deg,transparent 1.2deg 9deg);-webkit-mask:radial-gradient(circle at 50% 55%,transparent 26%,#000 48%);mask:radial-gradient(circle at 50% 55%,transparent 26%,#000 48%);animation:msxActLines .35s linear infinite}
 .msx .msx-act .lines.h{inset:0;background:repeating-linear-gradient(180deg,transparent 0 13px,rgba(255,255,255,.45) 13px 15px,transparent 15px 31px);-webkit-mask:linear-gradient(90deg,#000,transparent 30%,transparent 70%,#000);mask:linear-gradient(90deg,#000,transparent 30%,transparent 70%,#000);animation:msxActRunL .25s linear infinite}
@@ -155782,13 +155923,12 @@ const MSX_ACT_CSS = `
 .msx .msx-act .rock .ring{left:50%;top:22%;width:60%;height:14%;margin-left:-30%;border:4px solid #fde68a;border-radius:50%;opacity:0;animation:msxActRing .5s ease-out .62s both}
 .msx .msx-act.t-tough .lines{animation:msxActLines .35s linear infinite,msxActShake .3s linear .62s 1}
 .msx .msx-act.t-hit .me .mon{left:32%}
-.msx .msx-act .tgt i{position:absolute;right:6%;top:30%;width:96px;height:96px;border-radius:50%;background:radial-gradient(circle,#dc2626 0 12%,#fff 12% 26%,#dc2626 26% 40%,#fff 40% 55%,#dc2626 55% 70%,#fff 70%);border:3px solid #7f1d1d;box-shadow:0 6px 0 #0006;animation:msxActTgt .3s ease-out .78s both}
 .msx .msx-act .tgt .shot{left:36%;top:46%;font-size:34px;animation:msxActShot .4s cubic-bezier(.4,0,.8,.6) .35s both}
 .msx .msx-act .tgt .boom{right:9%;top:32%;font-size:48px;animation:msxActHit .5s ease-out .74s both}
 .msx .msx-act.t-eva .me{animation:msxActDodge .9s ease-in-out .2s both}
 .msx .msx-act .leaves i{position:absolute;font-style:normal;font-size:30px;top:-12%;left:calc(4% + var(--i) * 12%);animation:msxActLeaf 1.1s linear both;animation-delay:calc(var(--i) * .09s)}
 .msx .msx-act.t-wise .me .mon{left:64%}
-.msx .msx-act .blocks i{position:absolute;left:12%;width:52px;height:40px;border-radius:6px;border:2px solid #0006;bottom:calc(14% + var(--i) * 40px);margin-left:calc((var(--i) % 2) * 10px);background:hsl(calc(var(--i) * 62 + 10),85%,60%);box-shadow:inset 0 -6px 0 #0002;animation:msxActBlock .28s cubic-bezier(.3,1.5,.6,1) both;animation-delay:calc(.15s + var(--i) * .18s)}
+.msx .msx-act .blocks i{position:absolute;left:12%;width:52px;height:40px;border-radius:6px;border:2px solid #0006;bottom:calc(14% + var(--i) * 40px);background:hsl(calc(var(--i) * 62 + 10),85%,60%);box-shadow:inset 0 -6px 0 #0002;animation:msxActBlock .28s cubic-bezier(.3,1.5,.6,1) both;animation-delay:calc(.15s + var(--i) * .18s)}
 .msx .msx-act .blocks .idea{left:56%;top:12%;font-size:46px;animation:msxActHit .6s ease-out 1.1s both}
 .msx .msx-act.t-life .me{animation:msxActBob .22s ease-in-out infinite alternate}
 .msx .msx-act .run i{position:absolute;font-style:normal;font-size:34px;left:56%;bottom:12%;animation:msxActPuff .5s linear infinite;animation-delay:calc(var(--i) * .17s)}
@@ -161782,6 +161922,23 @@ const MSX_TRAIN_ICON = Object.freeze({
   eva: '🍂',
   tough: '🪨'
 });
+const MSX_TRAIN_LV = Object.freeze({
+  life: [['坂道ダッシュ', '🏃'], ['丘越えダッシュ', '🏃'], ['山道かけ登り', '⛰️'], ['雪山かけ登り', '🏔️'], ['火山かけ登り', '🌋']],
+  pow: [['丸太割り', '🪵'], ['大丸太割り', '🪵'], ['岩割り', '🪨'], ['大岩くだき', '🪨'], ['鉄球くだき', '⚫']],
+  wise: [['積み木パズル', '🧱'], ['絵合わせパズル', '🧩'], ['迷路ときあかし', '🌀'], ['星図よみ', '✨'], ['古文書ときあかし', '📜']],
+  hit: [['的当て', '🎯'], ['遠くの的当て', '🎯'], ['動く的当て', '🎯'], ['三つ的当て', '🎯'], ['流星の的当て', '🌠']],
+  eva: [['落ち葉よけ', '🍂'], ['木の実よけ', '🌰'], ['雪玉よけ', '❄️'], ['落石よけ', '🪨'], ['流れ星よけ', '🌠']],
+  tough: [['岩受け止め', '🪨'], ['大岩受け止め', '🪨'], ['滝打たれ', '💧'], ['落石受け止め', '🪨'], ['隕石受け止め', '☄️']]
+});
+const msxTrainLvAt = lv => Math.max(1, Math.min(5, Math.round(Number(lv)) || 1));
+const msxTrainName = (stat, lv) => {
+  const t = MSX_TRAIN_LV[stat];
+  return t ? t[msxTrainLvAt(lv) - 1][0] : '';
+};
+const msxTrainIcon = (stat, lv) => {
+  const t = MSX_TRAIN_LV[stat];
+  return t ? t[msxTrainLvAt(lv) - 1][1] : '💪';
+};
 const MSX_STATS = Object.freeze(['life', 'pow', 'wise', 'hit', 'eva', 'tough']);
 const MSX_BOX_CAP0 = 30;
 let msxDebugOpened = false;
@@ -163859,6 +164016,7 @@ function MsxPlay({
   const [sub, setSub] = useState('main');
   const [sel, setSel] = useState(null);
   const [kiAt, setKiAt] = useState(null);
+  const [actAt, setActAt] = useState(null);
   const [sheet, setSheet] = useState(null);
   const [, setScriptTick] = useState(0);
   useEffect(() => {
@@ -164044,7 +164202,8 @@ function MsxPlay({
       s: r.state,
       out: {
         ...r.out,
-        kind: a.kind
+        kind: a.kind,
+        hpFrom: Number.isFinite(s.hp) ? s.hp : null
       }
     };
     if (a.kind === 'retry') {
@@ -164053,6 +164212,7 @@ function MsxPlay({
     }
     const text = r.out.result ? `${MSX_STAT_NAME[a.stat] || ''}の訓練: ${MSX_RES[r.out.result].word}` : a.kind === 'rest' ? '休んだ' : a.kind === 'play' ? '遊んだ' : a.kind === 'clinic' ? '通院した' : '休み';
     next = pushLog(next, text);
+    if (r.out.result && typeof MsxTrainAct === 'function') setActAt(r.state.turn);
     setRun({
       ...next,
       phase: 'result'
@@ -164101,6 +164261,9 @@ function MsxPlay({
     const o = run.out;
     const isTrain = !!o.result;
     const R = isTrain ? MSX_RES[o.result] : null;
+    const acting = isTrain && actAt === s.turn && typeof MsxTrainAct === 'function';
+    const hpLost = isTrain && Number.isFinite(o.hpFrom) && Number.isFinite(s.hp) ? Math.max(0, Math.round(o.hpFrom - s.hp)) : 0;
+    const tlv = isTrain && Number.isFinite(o.trainLv) ? o.trainLv - (o.lvUp ? 1 : 0) : 1;
     const gains = o.gain || {};
     const members = o.card && Array.isArray(o.card.members) ? o.card.members.map(i => s.team[i]).filter(Boolean) : [];
     const restName = o.rest && SUC.REST ? (SUC.REST.find(x => x.key === o.rest) || {}).name : null;
@@ -164134,7 +164297,12 @@ function MsxPlay({
       alt: ""
     }), React.createElement("div", {
       className: "sh"
-    }), isTrain && o.result === 'great' ? React.createElement("div", {
+    }), acting ? React.createElement(MsxTrainAct, {
+      key: `act-${s.turn}`,
+      run: run,
+      o: o,
+      onDone: () => setActAt(null)
+    }) : null, acting ? null : isTrain && o.result === 'great' ? React.createElement("div", {
       className: "v-burst"
     }) : isTrain && o.result === 'ok' ? React.createElement("div", {
       className: "v-burst b2"
@@ -164144,7 +164312,7 @@ function MsxPlay({
         left: '62%',
         bottom: 'calc(14% - 5px)'
       }
-    }), React.createElement(MsxMonArt, {
+    }), acting ? null : React.createElement(MsxMonArt, {
       run: run,
       className: "mon",
       live: typeof MsxLiveMon === 'function',
@@ -164159,9 +164327,9 @@ function MsxPlay({
         transform: o.result === 'sab' ? 'translateX(-50%) rotate(84deg)' : o.result === 'fail' ? 'translateX(-50%) rotate(-12deg)' : 'translateX(-50%) rotate(6deg)',
         filter: o.result === 'fail' ? 'grayscale(.5) drop-shadow(0 8px 5px #0009)' : undefined
       }
-    }), React.createElement("div", {
+    }), acting ? null : React.createElement("div", {
       className: `v-stamp msx-pop ${isTrain ? R.cls : 'ok'}`
-    }, isTrain ? R.word : o.kind === 'rest' ? restName || '休んだ' : o.kind === 'play' ? '遊んだ!' : o.kind === 'clinic' ? '通院' : '休み', isTrain && o.card && o.card.tags && o.card.tags.length ? React.createElement("small", null, "🤝 友情タッグ ×", o.card.tags.length, o.result === 'great' ? '・伸び ×1.5' : '') : null), members.length ? React.createElement("div", {
+    }, isTrain ? R.word : o.kind === 'rest' ? restName || '休んだ' : o.kind === 'play' ? '遊んだ!' : o.kind === 'clinic' ? '通院' : '休み', isTrain && o.card && o.card.tags && o.card.tags.length ? React.createElement("small", null, "🤝 友情タッグ ×", o.card.tags.length, o.result === 'great' ? '・伸び ×1.5' : '') : null), !acting && members.length ? React.createElement("div", {
       className: "v-chips",
       style: {
         top: 'auto',
@@ -164172,19 +164340,32 @@ function MsxPlay({
       className: "v-chip"
     }, msxMemberName(m), " 親密度 +", SUC.BOND && SUC.BOND.train || 8))) : null), isTrain ? React.createElement(MsxStRow, {
       stats: s.stats,
-      ups: gains,
+      ups: acting ? null : gains,
       main: o.card && o.card.stat
-    }) : null, React.createElement("div", {
+    }) : null, acting ? React.createElement("div", {
+      className: "v-log",
+      style: {
+        opacity: .35
+      }
+    }, React.createElement("span", {
+      className: "hd2"
+    }, msxTrainIcon(o.card.stat, tlv), " ", msxTrainName(o.card.stat, tlv), "をしている…")) : React.createElement("div", {
       className: "v-log"
     }, isTrain && o.lvUp ? React.createElement("div", {
       className: "v-lvup"
     }, "⬆ 訓練Lvアップ! ", MSX_STAT_ICON[o.card.stat], " ", MSX_STAT_NAME[o.card.stat], " ", React.createElement("b", null, "Lv.", o.trainLv - 1, " → Lv.", o.trainLv), React.createElement("small", null, "次から、", MSX_STAT_NAME[o.card.stat], "の訓練の基本の伸びが上がる")) : null, isTrain ? React.createElement(React.Fragment, null, React.createElement("span", {
       className: "hd2"
-    }, MSX_STAT_ICON[o.card.stat], " ", MSX_STAT_NAME[o.card.stat], "の訓練"), React.createElement("br", null), Object.keys(gains).length ? React.createElement(React.Fragment, null, Object.entries(gains).map(([k, g], i) => React.createElement("span", {
+    }, msxTrainIcon(o.card.stat, tlv), " ", msxTrainName(o.card.stat, tlv), "(", MSX_STAT_NAME[o.card.stat], "の訓練)"), React.createElement("br", null), Object.keys(gains).length ? React.createElement(React.Fragment, null, Object.entries(gains).map(([k, g], i) => React.createElement("span", {
       key: k
     }, i ? '・' : '', MSX_STAT_NAME[k], " ", React.createElement("b", {
       className: "gu"
-    }, g > 0 ? `+${g}` : g)))) : '能力は上がらなかった') : o.kind === 'rest' || o.kind === 'play' ? React.createElement(React.Fragment, null, React.createElement("span", {
+    }, g > 0 ? `+${g}` : g)))) : '能力は上がらなかった', hpLost ? React.createElement(React.Fragment, null, React.createElement("br", null), React.createElement("span", {
+      "data-msx-hp-lost": true
+    }, "体力が ", React.createElement("b", {
+      style: {
+        color: '#dc2626'
+      }
+    }, hpLost), " 下がった")) : null) : o.kind === 'rest' || o.kind === 'play' ? React.createElement(React.Fragment, null, React.createElement("span", {
       className: "hd2"
     }, o.kind === 'rest' ? '🛌 休む' : '🎈 遊ぶ'), React.createElement("br", null), "体力が回復した", (o.cured || []).includes('utsu') ? '。ようす「うつ病」が治った' : '') : o.kind === 'clinic' ? React.createElement(React.Fragment, null, React.createElement("span", {
       className: "hd2"
@@ -164196,7 +164377,7 @@ function MsxPlay({
       style: {
         color: '#fca5a5'
       }
-    }, MSX_COND[o.cond]), "をしてしまった…しばらく休み") : null), say && say.t ? React.createElement(MsxSay, {
+    }, MSX_COND[o.cond]), "をしてしまった…しばらく休み") : null), !acting && say && say.t ? React.createElement(MsxSay, {
       aid: s.aid,
       ex: say.e || 'normal',
       text: say.t
@@ -164700,7 +164881,7 @@ function MsxPlay({
       }
     }, React.createElement("span", {
       className: "v-chip ylw"
-    }, MSX_STAT_ICON[stat], " ", MSX_STAT_NAME[stat], "の訓練", trainLv ? ` Lv${trainLv}` : '')), React.createElement("div", {
+    }, msxTrainIcon(stat, trainLv), " ", msxTrainName(stat, trainLv), "(", MSX_STAT_NAME[stat], "の訓練", trainLv ? ` Lv${trainLv}` : '', ")")), React.createElement("div", {
       className: "v-come"
     }, members.map(i => {
       const m = s.team[i];
@@ -164775,7 +164956,9 @@ function MsxPlay({
         className: "o"
       }, MSX_STAT_ICON[k]), React.createElement("b", {
         className: "nm"
-      }, MSX_STAT_NAME[k]), lv ? React.createElement("i", {
+      }, MSX_STAT_NAME[k]), React.createElement("small", {
+        className: "tn"
+      }, msxTrainName(k, lv)), lv ? React.createElement("i", {
         className: "lv"
       }, "Lv.", lv) : null);
     })));
@@ -164795,7 +164978,7 @@ function MsxPlay({
         kind: card.kind,
         stat
       })
-    }, MSX_STAT_ICON[stat], " ", MSX_STAT_NAME[stat], "の訓練をする"));
+    }, msxTrainIcon(stat, trainLv), " ", msxTrainName(stat, trainLv), "をする"));
   } else {
     const can = v.can || [];
     const anyTag = MSX_STATS.some(k => {

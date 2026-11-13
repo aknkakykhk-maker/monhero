@@ -15,26 +15,42 @@ const msxActCalm = () => typeof msxFxCalm === 'function' && msxFxCalm();
 
 function MsxTrainAct({ run, o, onDone }) {
   msxActEnsureCss();
-  const k = o && o.card && MSX_TRAIN_NAME[o.card.stat] ? o.card.stat : 'pow';
+  const k = o && o.card && MSX_TRAIN_LV[o.card.stat] ? o.card.stat : 'pow';
+  // 行動の前の訓練Lv(Lvアップした回は上がる前の段で見せる)
+  const lv = msxTrainLvAt(o && Number.isFinite(o.trainLv) ? o.trainLv - (o.lvUp ? 1 : 0) : 1);
   const done = React.useRef(false);
   const finish = () => { if (done.current) return; done.current = true; onDone(); };
   React.useEffect(() => { if (msxActCalm()) { finish(); return undefined; } const id = setTimeout(finish, MSX_ACT_MS); return () => clearTimeout(id); }, []);
   if (msxActCalm()) return null;
   const n = (c) => Array.from({ length: c }, (_, i) => i);
-  // 訓練ごとの小物(絵は使わず CSS と絵文字で描く)
-  const prop = k === 'pow' ? <div className="pr logs">{n(3).map((i) => <i key={i} style={{ '--i': i }}><b/></i>)}<em className="boom">💥</em></div>
-    : k === 'tough' ? <div className="pr rock"><i>🪨</i><em className="ring"/></div>
-    : k === 'hit' ? <div className="pr tgt"><i/><em className="shot">⭐</em><em className="boom">💥</em></div>
-    : k === 'eva' ? <div className="pr leaves">{n(8).map((i) => <i key={i} style={{ '--i': i }}>{i % 3 === 1 ? '🍃' : '🍂'}</i>)}</div>
-    : k === 'wise' ? <div className="pr blocks">{n(5).map((i) => <i key={i} style={{ '--i': i }}/>)}<em className="idea">💡</em></div>
-    : <div className="pr run"><span className="spd"/>{n(3).map((i) => <i key={i} style={{ '--i': i }}>💨</i>)}</div>;
+  // 訓練ごと・段ごとの小物(絵は使わず CSS と絵文字で描く。段が上がるほど大きく・多く)
+  let prop = null;
+  if (k === 'pow') {
+    prop = lv <= 2 ? <div className="pr logs">{n(lv === 1 ? 3 : 4).map((i) => <i key={i} style={{ '--i': i }}><b/></i>)}<em className="boom">💥</em></div>
+      : <div className={`pr hard v${lv}`}><i className="obj">{lv === 5 ? '' : '🪨'}</i>{lv === 4 ? <i className="obj b">🪨</i> : null}<em className="boom">💥</em>{n(lv + 2).map((i) => <em key={i} className="chip" style={{ '--a': `${i * (360 / (lv + 2))}deg` }}/>)}</div>;
+  } else if (k === 'tough') {
+    prop = lv === 3 ? <div className="pr fall"><span className="water"/>{n(6).map((i) => <i key={i} className="drop" style={{ '--i': i }}>💧</i>)}</div>
+      : <div className={`pr rock v${lv}`}>{n(lv === 4 ? 3 : 1).map((i) => <i key={i} style={{ '--i': i }}>{lv === 5 ? '☄️' : '🪨'}</i>)}<em className="ring"/></div>;
+  } else if (k === 'hit') {
+    prop = <div className={`pr tgt v${lv}`}>{n(lv === 4 ? 3 : 1).map((i) => <i key={i} className="t" style={lv === 4 ? { top: `${14 + i * 20}%`, right: `${i === 1 ? 20 : 5}%` } : undefined}/>)}{n(lv === 4 ? 3 : 1).map((i) => <em key={i} className="shot" style={{ '--i': i }}>{lv === 5 ? '🌠' : '⭐'}</em>)}<em className="boom">💥</em></div>;
+  } else if (k === 'eva') {
+    const it = [['🍂', '🍃'], ['🌰', '🍂'], ['❄️', '⚪'], ['🪨', '🪨'], ['🌠', '✨']][lv - 1];
+    prop = <div className={`pr leaves v${lv}`}>{n(6 + lv * 2).map((i) => <i key={i} style={{ '--i': i }}>{it[i % 2]}</i>)}</div>;
+  } else if (k === 'wise') {
+    prop = lv === 1 ? <div className="pr blocks">{n(5).map((i) => <i key={i} style={{ '--i': i }}/>)}<em className="idea">💡</em></div>
+      : <div className={`pr think v${lv}`}><span className="board">{lv === 2 ? n(4).map((i) => <i key={i} style={{ '--i': i, left: `${8 + (i % 2) * 46}%`, top: `${10 + Math.floor(i / 2) * 42}%` }}>🧩</i>) : lv === 3 ? <b className="maze"/> : lv === 4 ? n(7).map((i) => <i key={i} className="star" style={{ '--i': i, left: `${8 + i * 12}%`, top: `${[20, 58, 34, 72, 26, 52, 40][i]}%` }}>✦</i>) : <i className="scroll">📜</i>}</span><em className="idea">💡</em></div>;
+  } else {
+    prop = <div className={`pr run v${lv}`}><span className="land"/>{lv >= 4 ? n(8).map((i) => <i key={`f${i}`} className="fx" style={{ '--i': i }}>{lv === 5 ? '🔥' : '❄️'}</i>) : null}{n(3).map((i) => <i key={i} style={{ '--i': i }}>💨</i>)}</div>;
+  }
+  const front = k === 'tough' || k === 'eva';
   return (
-    <div className={`msx-act t-${k}`} onClick={finish} data-msx-act={k}>
+    <div className={`msx-act t-${k} lv${lv}`} onClick={finish} data-msx-act={k} data-msx-act-lv={lv}>
       <span className={k === 'life' ? 'lines h' : 'lines'} aria-hidden="true"/>
-      {k === 'tough' || k === 'eva' ? null : prop}
+      {front ? null : prop}
       <div className="me"><MsxMonArt run={run} className="mon" live/></div>
-      {k === 'tough' || k === 'eva' ? prop : null}
-      <div className="ban"><small>{MSX_STAT_NAME[k]}の訓練</small>{MSX_TRAIN_ICON[k]} {MSX_TRAIN_NAME[k]}!</div>
+      {front ? prop : null}
+      {lv === 5 ? <span className="flash5" aria-hidden="true"/> : null}
+      <div className="ban"><small>{MSX_STAT_NAME[k]}の訓練 <b>Lv.{lv}</b></small>{msxTrainIcon(k, lv)} {msxTrainName(k, lv)}!</div>
     </div>
   );
 }
@@ -76,6 +92,56 @@ function MsxShugyoStages({ run, o, line, onDone }) {
 }
 
 const MSX_ACT_CSS = `
+.msx .msx-act .ban small b{display:inline-block;margin-left:4px;padding:0 6px;border-radius:8px;background:#fde047;color:#7c2d12;font-size:11px;font-style:normal}
+.msx .msx-act.lv3 .ban{background:linear-gradient(90deg,transparent,#1e3a8acc 18%,#1e3a8acc 82%,transparent);-webkit-text-stroke-color:#1e3a8a;text-shadow:0 3px 0 #1e3a8a}
+.msx .msx-act.lv4 .ban{background:linear-gradient(90deg,transparent,#6d28d9cc 18%,#6d28d9cc 82%,transparent);-webkit-text-stroke-color:#4c1d95;text-shadow:0 3px 0 #4c1d95,0 0 14px #c4b5fd}
+.msx .msx-act.lv5 .ban{background:linear-gradient(90deg,transparent,#b45309dd 15%,#f59e0bdd 50%,#b45309dd 85%,transparent);color:#fff7c2;-webkit-text-stroke-color:#7c2d12;text-shadow:0 3px 0 #7c2d12,0 0 18px #fde047}
+.msx .msx-act.lv4 .lines,.msx .msx-act.lv5 .lines{background:repeating-conic-gradient(from 0deg at 50% 55%,rgba(255,255,255,.7) 0 1.6deg,transparent 1.6deg 7deg)}
+.msx .msx-act.lv5 .lines:not(.h){background:repeating-conic-gradient(from 0deg at 50% 55%,rgba(253,224,71,.8) 0 1.6deg,transparent 1.6deg 7deg)}
+.msx .msx-act .flash5{position:absolute;inset:0;z-index:5;pointer-events:none;background:radial-gradient(circle at 50% 50%,#fff,#fde04700 60%);opacity:0;animation:msxActFlash .5s ease-out .6s both}
+.msx .msx-act .hard .obj{position:absolute;left:4%;bottom:18%;font-style:normal;font-size:110px;line-height:1;animation:msxActCrack .45s ease-in .7s both}
+.msx .msx-act .hard.v4 .obj{font-size:130px}.msx .msx-act .hard.v4 .obj.b{left:22%;bottom:30%;font-size:90px}
+.msx .msx-act .hard.v5 .obj{width:120px;height:120px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#94a3b8,#334155 45%,#0f172a 80%);box-shadow:0 8px 12px #0009,inset -8px -10px 0 #0006}
+.msx .msx-act .hard .boom{left:22%;top:30%;font-size:70px;animation:msxActHit .5s ease-out .55s both}
+.msx .msx-act .hard.v5 .boom{font-size:96px}
+.msx .msx-act .hard .chip{left:20%;top:50%;width:10px;height:10px;border-radius:2px;background:#d6d3d1;box-shadow:0 0 0 1px #57534e;animation:msxActChip .6s ease-out .6s both}
+.msx .msx-act .hard.v5 .chip{background:#64748b;box-shadow:0 0 6px #fde047}
+.msx .msx-act .rock.v2 i{font-size:170px}
+.msx .msx-act .rock.v4 i{font-size:90px;left:calc(28% + var(--i) * 22%);animation-delay:calc(.05s + var(--i) * .12s)}
+.msx .msx-act .rock.v5 i{font-size:150px;filter:drop-shadow(0 0 14px #f97316) drop-shadow(0 0 30px #fde047)}
+.msx .msx-act .fall .water{position:absolute;left:30%;right:30%;top:0;bottom:30%;background:repeating-linear-gradient(90deg,#bae6fdcc 0 6px,#38bdf8aa 6px 14px,#e0f2fecc 14px 18px);opacity:.85;animation:msxActWater .25s linear infinite;-webkit-mask:linear-gradient(180deg,#000 70%,transparent);mask:linear-gradient(180deg,#000 70%,transparent)}
+.msx .msx-act .fall .drop{position:absolute;font-style:normal;font-size:24px;left:calc(26% + var(--i) * 9%);top:52%;animation:msxActPuff2 .6s ease-out infinite;animation-delay:calc(var(--i) * .1s)}
+.msx .msx-act .tgt.v2 .t{transform:scale(.7);right:3%;top:24%}
+.msx .msx-act .tgt.v3 .t{animation:msxActMove .7s ease-in-out infinite alternate}
+.msx .msx-act .tgt .t{position:absolute;right:6%;top:30%;width:96px;height:96px;border-radius:50%;background:radial-gradient(circle,#dc2626 0 12%,#fff 12% 26%,#dc2626 26% 40%,#fff 40% 55%,#dc2626 55% 70%,#fff 70%);border:3px solid #7f1d1d;box-shadow:0 6px 0 #0006}
+.msx .msx-act .tgt.v4 .t{width:64px;height:64px}
+.msx .msx-act .tgt.v5 .t{background:radial-gradient(circle,#f59e0b 0 12%,#fff7c2 12% 26%,#f59e0b 26% 40%,#fff7c2 40% 55%,#f59e0b 55% 70%,#fff7c2 70%);border-color:#92400e;box-shadow:0 0 18px #fde047}
+.msx .msx-act .tgt.v4 .shot{animation-delay:calc(.3s + var(--i) * .12s)}
+.msx .msx-act .tgt.v5 .shot{font-size:44px;filter:drop-shadow(0 0 10px #fde047)}
+.msx .msx-act .leaves.v3 i,.msx .msx-act .leaves.v4 i{font-size:26px}
+.msx .msx-act .leaves.v5 i{filter:drop-shadow(0 0 8px #fde047)}
+.msx .msx-act .think .board{position:absolute;left:4%;bottom:16%;width:38%;height:44%;border-radius:12px;background:#1e1b4bcc;border:2px solid #a5b4fc;box-shadow:0 0 16px #818cf855;animation:msxActBlock .3s ease-out .1s both}
+.msx .msx-act .think .board i{position:absolute;font-style:normal;font-size:34px;animation:msxActBlock .28s cubic-bezier(.3,1.5,.6,1) both;animation-delay:calc(.3s + var(--i) * .16s)}
+.msx .msx-act .think .maze{position:absolute;inset:12%;border:3px solid #fde68a;background:repeating-linear-gradient(90deg,transparent 0 14px,#fde68a 14px 17px),repeating-linear-gradient(0deg,transparent 0 22px,#fde68a 22px 25px);-webkit-mask:linear-gradient(90deg,#000 0 40%,transparent 40% 48%,#000 48%);mask:linear-gradient(90deg,#000 0 40%,transparent 40% 48%,#000 48%);animation:msxActOn .05s linear .3s both}
+.msx .msx-act .think .star{color:#fde047;font-size:22px!important;text-shadow:0 0 8px #fde047}
+.msx .msx-act .think .scroll{left:14%!important;top:14%!important;font-size:80px!important;filter:drop-shadow(0 0 14px #fde047)}
+.msx .msx-act .think .idea{left:56%;top:12%;font-size:46px;animation:msxActHit .6s ease-out 1.1s both}
+.msx .msx-act .run .land{position:absolute;left:-10%;right:-10%;bottom:0;height:22%;border-radius:50% 50% 0 0;background:#4d7c0f;opacity:.0}
+.msx .msx-act .run.v2 .land{opacity:.8;height:34%;background:radial-gradient(ellipse 70% 100% at 30% 100%,#65a30d 60%,transparent 61%)}
+.msx .msx-act .run.v3 .land{opacity:.8;height:30%;border-radius:0;background:linear-gradient(160deg,transparent 40%,#78716c 40%)}
+.msx .msx-act .run.v4 .land{opacity:.9;height:30%;border-radius:0;background:linear-gradient(160deg,transparent 40%,#f1f5f9 40%)}
+.msx .msx-act .run.v5 .land{opacity:.9;height:32%;border-radius:0;background:linear-gradient(160deg,transparent 40%,#7f1d1d 40%,#b91c1c)}
+.msx .msx-act.t-life.lv4{background:radial-gradient(circle at 50% 55%,rgba(255,255,255,.12),rgba(30,58,138,.6))}
+.msx .msx-act.t-life.lv5{background:radial-gradient(circle at 50% 55%,rgba(255,200,120,.1),rgba(127,29,29,.7))}
+.msx .msx-act .run .fx{position:absolute;font-style:normal;font-size:20px;left:calc(var(--i) * 13%);top:-8%;animation:msxActLeaf 1.2s linear both;animation-delay:calc(var(--i) * .1s)}
+.msx .msx-act .run.v5 .fx{top:auto;bottom:-6%;animation-name:msxActRise}
+@keyframes msxActFlash{0%{opacity:0}30%{opacity:.85}100%{opacity:0}}
+@keyframes msxActCrack{0%{transform:none}30%{transform:translateX(-4px) rotate(-3deg)}100%{opacity:0;transform:scale(1.15) rotate(8deg);filter:brightness(1.6)}}
+@keyframes msxActChip{from{opacity:1;transform:none}to{opacity:0;transform:rotate(var(--a)) translateY(-80px)}}
+@keyframes msxActWater{to{background-position:0 18px}}
+@keyframes msxActPuff2{0%{opacity:0;transform:none}30%{opacity:1}100%{opacity:0;transform:translate(calc((var(--i) - 2.5) * 14px),40px)}}
+@keyframes msxActMove{from{transform:translateY(-30px)}to{transform:translateY(40px)}}
+@keyframes msxActRise{from{transform:translate(0,0)}to{transform:translate(-20px,-640px)}}
 .msx .msx-act{position:absolute;inset:0;z-index:8;overflow:hidden;cursor:pointer;background:radial-gradient(circle at 50% 55%,rgba(255,255,255,.05),rgba(10,8,30,.72))}
 .msx .msx-act .lines{position:absolute;inset:-20%;background:repeating-conic-gradient(from 0deg at 50% 55%,rgba(255,255,255,.5) 0 1.2deg,transparent 1.2deg 9deg);-webkit-mask:radial-gradient(circle at 50% 55%,transparent 26%,#000 48%);mask:radial-gradient(circle at 50% 55%,transparent 26%,#000 48%);animation:msxActLines .35s linear infinite}
 .msx .msx-act .lines.h{inset:0;background:repeating-linear-gradient(180deg,transparent 0 13px,rgba(255,255,255,.45) 13px 15px,transparent 15px 31px);-webkit-mask:linear-gradient(90deg,#000,transparent 30%,transparent 70%,#000);mask:linear-gradient(90deg,#000,transparent 30%,transparent 70%,#000);animation:msxActRunL .25s linear infinite}
@@ -96,13 +162,12 @@ const MSX_ACT_CSS = `
 .msx .msx-act .rock .ring{left:50%;top:22%;width:60%;height:14%;margin-left:-30%;border:4px solid #fde68a;border-radius:50%;opacity:0;animation:msxActRing .5s ease-out .62s both}
 .msx .msx-act.t-tough .lines{animation:msxActLines .35s linear infinite,msxActShake .3s linear .62s 1}
 .msx .msx-act.t-hit .me .mon{left:32%}
-.msx .msx-act .tgt i{position:absolute;right:6%;top:30%;width:96px;height:96px;border-radius:50%;background:radial-gradient(circle,#dc2626 0 12%,#fff 12% 26%,#dc2626 26% 40%,#fff 40% 55%,#dc2626 55% 70%,#fff 70%);border:3px solid #7f1d1d;box-shadow:0 6px 0 #0006;animation:msxActTgt .3s ease-out .78s both}
 .msx .msx-act .tgt .shot{left:36%;top:46%;font-size:34px;animation:msxActShot .4s cubic-bezier(.4,0,.8,.6) .35s both}
 .msx .msx-act .tgt .boom{right:9%;top:32%;font-size:48px;animation:msxActHit .5s ease-out .74s both}
 .msx .msx-act.t-eva .me{animation:msxActDodge .9s ease-in-out .2s both}
 .msx .msx-act .leaves i{position:absolute;font-style:normal;font-size:30px;top:-12%;left:calc(4% + var(--i) * 12%);animation:msxActLeaf 1.1s linear both;animation-delay:calc(var(--i) * .09s)}
 .msx .msx-act.t-wise .me .mon{left:64%}
-.msx .msx-act .blocks i{position:absolute;left:12%;width:52px;height:40px;border-radius:6px;border:2px solid #0006;bottom:calc(14% + var(--i) * 40px);margin-left:calc((var(--i) % 2) * 10px);background:hsl(calc(var(--i) * 62 + 10),85%,60%);box-shadow:inset 0 -6px 0 #0002;animation:msxActBlock .28s cubic-bezier(.3,1.5,.6,1) both;animation-delay:calc(.15s + var(--i) * .18s)}
+.msx .msx-act .blocks i{position:absolute;left:12%;width:52px;height:40px;border-radius:6px;border:2px solid #0006;bottom:calc(14% + var(--i) * 40px);background:hsl(calc(var(--i) * 62 + 10),85%,60%);box-shadow:inset 0 -6px 0 #0002;animation:msxActBlock .28s cubic-bezier(.3,1.5,.6,1) both;animation-delay:calc(.15s + var(--i) * .18s)}
 .msx .msx-act .blocks .idea{left:56%;top:12%;font-size:46px;animation:msxActHit .6s ease-out 1.1s both}
 .msx .msx-act.t-life .me{animation:msxActBob .22s ease-in-out infinite alternate}
 .msx .msx-act .run i{position:absolute;font-style:normal;font-size:34px;left:56%;bottom:12%;animation:msxActPuff .5s linear infinite;animation-delay:calc(var(--i) * .17s)}
