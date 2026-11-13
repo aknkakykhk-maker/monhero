@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ea3bc2a63a80345f
+// source-sha256: 5686825fcdba70f2
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -5806,7 +5806,7 @@ const BGM_TRACKS = [{
   legacyKey: 'home'
 }, {
   id: 'original_home_2',
-  name: 'HOMEテーマ2',
+  name: 'モンヒロサクセス ホーム',
   creator: 'オリジナル',
   src: 'audio/bgm-home-2.mp3',
   gain: 1,
