@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 522a0b988d3faf6c
+// source-sha256: ea3bc2a63a80345f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -5805,6 +5805,13 @@ const BGM_TRACKS = [{
   loop: true,
   legacyKey: 'home'
 }, {
+  id: 'original_home_2',
+  name: 'HOMEテーマ2',
+  creator: 'オリジナル',
+  src: 'audio/bgm-home-2.mp3',
+  gain: 1,
+  loop: true
+}, {
   id: 'original_prep',
   name: '強化テーマ',
   creator: 'オリジナル',
@@ -8060,6 +8067,7 @@ const Audio_ = (() => {
     "audio/bgm-game-over.mp3": "d9fb75a7c827",
     "audio/bgm-grievous-lady.mp3": "28bfeda8d534",
     "audio/bgm-haruka.mp3": "7a7164dbf152",
+    "audio/bgm-home-2.mp3": "71bf51ba1f71",
     "audio/bgm-home-ichika.mp3": "29295336d1af",
     "audio/bgm-humanoid.mp3": "763466fbbf97",
     "audio/bgm-journey.mp3": "816f0cdab93e",
