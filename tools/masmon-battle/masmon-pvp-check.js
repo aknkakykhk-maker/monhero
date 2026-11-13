@@ -100,8 +100,9 @@ const check = (name, ok, extra) => {
       const sp = SPEC[0];
       const ts = catalog.species[sp].techs;
       const start = ts.filter((t) => t.start).map((t) => t.id);
-      const later = ts.find((t) => !t.start && learn[t.id] && learn[t.id].st && !learn[t.id].need);
-      const needT = ts.find((t) => learn[t.id] && learn[t.id].need);
+      const L = learn[sp] || {};
+      const later = ts.find((t) => !t.start && L[t.id] && L[t.id].st && !L[t.id].need);
+      const needT = ts.find((t) => L[t.id] && L[t.id].need);
       const P = (o) => core.parseTeam({ tactics: 0, members: [{ ...member(0, sp), ...o }] }, engine, catalog, learn);
       const def = P({});
       check('C 技を送らなければ初めからの技になる', !def.error && def.team.members[0].techs.join() === start.join());
@@ -110,11 +111,19 @@ const check = (name, ok, extra) => {
       const lowSt = Object.fromEntries(K.map((k) => [k, 0]));
       check('C 能力の下限に届かない技ははじく(技の習得条件)', P({ techs: [...start, later.id], stats: lowSt }).error === 'learn');
       check('C 能力の下限に届いていれば通る', !P({ techs: [...start, later.id], stats: st(999) }).error);
-      const needOk = Object.entries(learn[needT.id].need).every(([tid]) => true);
-      const pre = Object.keys(learn[needT.id].need);
+      const needOk = Object.entries(L[needT.id].need).every(([tid]) => true);
+      const pre = Object.keys(L[needT.id].need);
       check('C 前の技の熟練が足りない技ははじく', needOk && P({ techs: [...new Set([...start, ...pre, needT.id])], stats: st(999) }).error === 'learn');
       check('C 前の技の熟練が足りていれば通る', !P({ techs: [...new Set([...start, ...pre, needT.id])], stats: st(999),
         mastery: Object.fromEntries(pre.map((t) => [t, 100])) }).error);
+      { // 第1版の技 id(古い端末・登録ずみの編成)は新しい id に読み替えて通す
+        const im = catalog.idmap || {}; const oldId = Object.keys(im).find((k) => ts.some((x) => x.id === im[k] && x.start));
+        const oldNeed = Object.keys(im).find((k) => im[k] === start[0]);
+        check('C 古い技 id は読み替えて通る(登録の中身は新しい id になる)', !!oldNeed && P({ techs: [oldNeed] }).team && P({ techs: [oldNeed] }).team.members[0].techs[0] === start[0], String(oldNeed));
+        check('C 古い id と新しい id が同じ技を指していても1回に数える', !oldNeed || (P({ techs: [oldNeed, start[0]] }).team && P({ techs: [oldNeed, start[0]] }).team.members[0].techs.length === 1));
+        const bt = core.battleTeam({ assistantId: 'kiki', team: { tactics: 0, members: [{ slot: 0, species: sp, name: 'x', lv: 1, stats: st(100), techs: [oldNeed], mastery: { [oldNeed]: 30 } }] }, division: 'raw', size: 1, engine, idmap: catalog.idmap });
+        check('C 登録ずみの古い id も、試合の編成では新しい id になる(熟練もついてくる)', bt.members[0].techs[0] === start[0] && bt.members[0].mastery[start[0]] === 30);
+      }
       check('C 覚えていない技の熟練・101 ははじく', P({ mastery: { [later.id]: 10 } }).error === 'mastery' && P({ mastery: { guard: 101 } }).error === 'mastery');
     }
     check('C 実装されていない種ははじく', bad({ tactics: 0, members: [member(0, 'NotAMonster')] }, 'species'));

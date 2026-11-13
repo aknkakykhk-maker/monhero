@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: c3b36af556276e29
+// generated-sha256: 4c63fc20418f5d5b
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -75673,7 +75673,10 @@ const amgtRngOf = (text) => {
 const amgtRange = (rnd, lo, hi) => lo + Math.floor(rnd() * (hi - lo + 1));
 // 技表
 const amgtTechsOf = (monster) => (typeof ASSISTANT_MASMON_TECHS !== 'undefined' && ASSISTANT_MASMON_TECHS.species && Array.isArray(ASSISTANT_MASMON_TECHS.species[monster]) ? ASSISTANT_MASMON_TECHS.species[monster] : []);
-const amgtTechIdOk = (id) => typeof id === 'string' && /^[a-z]{2,20}_\d{2}$/.test(id);
+// 技 id: 第2版(sk-0260 の形と、オリジナル5種の pandora_o01 の形)と、第1版(mocchi_01 の形)の全部を受ける。第1版の id は読むときに第2版へ読み替える(消さない)
+const amgtTechIdOk = (id) => typeof id === 'string' && /^(?:sk-\d{4}|[a-z]{2,20}_o?\d{2})$/.test(id);
+const amgtCanon = (id) => (typeof ASSISTANT_MASMON_TECHS !== 'undefined' && ASSISTANT_MASMON_TECHS && typeof ASSISTANT_MASMON_TECHS.canon === 'function' ? ASSISTANT_MASMON_TECHS.canon(id) : id);
+const AMGT_TECH_MAX = 64; // 1体が覚えられる技の数の上限(第2版は種類ごとに12〜21技・8技の上限はなくした)
 
 const normalizeAssistantMasmonTrain = (raw) => {
   const out = { v: 1, mons: {}, br: {}, ask: {}, ev: {}, at: {} };
@@ -75685,10 +75688,11 @@ const normalizeAssistantMasmonTrain = (raw) => {
       if (!/^[1-8]:\w{2,40}$/.test(key) || !e || typeof e !== 'object' || !e.m || typeof e.m !== 'object') continue;
       const m = {};
       for (const k of AMGT_SENSE_KEYS) m[k] = amgtNum(e.m[k], 0, 0, 100);
-      for (const [k, v] of Object.entries(e.m).slice(0, 24)) if (amgtTechIdOk(k)) m[k] = amgtNum(v, 0, 0, 100);
-      const learn = [...new Set((Array.isArray(e.learn) ? e.learn : []).filter(amgtTechIdOk))].slice(0, 16);
+      // 熟練: 第1版の id は第2版へ読み替える。2つが1つに当たるときは大きい方(足さない)
+      for (const [k, v] of Object.entries(e.m).slice(0, AMGT_TECH_MAX + AMGT_SENSE_KEYS.length)) if (amgtTechIdOk(k)) { const c = amgtCanon(k); m[c] = Math.max(m[c] || 0, amgtNum(v, 0, 0, 100)); }
+      const learn = [...new Set((Array.isArray(e.learn) ? e.learn : []).filter(amgtTechIdOk).map(amgtCanon))].slice(0, AMGT_TECH_MAX);
       const log = (Array.isArray(e.log) ? e.log : []).filter(x => x && typeof x === 'object' && Number.isInteger(x.s) && AMGT_KIND_KEYS.includes(x.k)).slice(-AMGT_LOG)
-        .map(x => ({ s: x.s, k: x.k, g: Object.fromEntries(Object.entries(x.g && typeof x.g === 'object' ? x.g : {}).filter(([k, n]) => (AMGT_SENSE_KEYS.includes(k) || amgtTechIdOk(k)) && Number.isFinite(n)).map(([k, n]) => [k, amgtClamp(Math.round(n), 0, 99)])), ...(amgtTechIdOk(x.l) ? { l: x.l } : {}), ...(x.f ? { f: 1 } : {}) }));
+        .map(x => ({ s: x.s, k: x.k, g: Object.fromEntries(Object.entries(x.g && typeof x.g === 'object' ? x.g : {}).filter(([k, n]) => (AMGT_SENSE_KEYS.includes(k) || amgtTechIdOk(k)) && Number.isFinite(n)).map(([k, n]) => [amgtTechIdOk(k) ? amgtCanon(k) : k, amgtClamp(Math.round(n), 0, 99)])), ...(amgtTechIdOk(x.l) ? { l: amgtCanon(x.l) } : {}), ...(x.f ? { f: 1 } : {}) }));
       one[key] = { m, learn, day: { d: amgtNum(e.day && e.day.d, -1, -1, 1e7), n: amgtNum(e.day && e.day.n, 0, 0, 9) }, log, src: 'init_v1' };
     }
     out.mons[aid] = one;
@@ -75769,12 +75773,30 @@ const amgtPickKind = (aid, me, techs, st, rnd, askK) => {
 };
 
 // ---------- 店(保存) ----------
+// 技表が第2版になるとき、古い id(mocchi_01 の形)が入った保存を1回だけそのままコピーしておく(戻せるように・CLAUDE.md ⑦)。
+//   コピー先は新しいキー mh_assistant_masmon_train_v1_pre_tech2・一度きりの印は mh_assistant_masmon_tech2_migrated_v1。元のキーは消さない
+const AMGT_PRE_TECH2_KEY = 'mh_assistant_masmon_train_v1_pre_tech2';
+const AMGT_SLEEP_PRE_TECH2_KEY = 'mh_assistant_masmon_sleep_v1_pre_tech2';
+const AMGT_TECH2_FLAG = 'mh_assistant_masmon_tech2_migrated_v1';
+const amgtHasOldTechId = (raw) => { try { const im = (ASSISTANT_MASMON_TECHS && ASSISTANT_MASMON_TECHS.idmap) || {}; if (!raw || typeof raw !== 'object') return false; const txt = JSON.stringify(raw); return Object.keys(im).some((k) => txt.includes(`"${k}"`)); } catch (_) { return false; } };
+const amgtBackupBeforeTech2 = async (trainRaw) => {
+  try {
+    if (typeof storeGet !== 'function' || typeof storeSet !== 'function') return;
+    if (typeof ASSISTANT_MASMON_TECHS === 'undefined' || !ASSISTANT_MASMON_TECHS || !(ASSISTANT_MASMON_TECHS.version >= 2)) return; // 第2版の技表になってから
+    if (await storeGet(AMGT_TECH2_FLAG, false, false)) return;
+    const sleepRaw = await storeGet('mh_assistant_masmon_sleep_v1', null, false);   // 冬眠中の子の修行の写しにも古い id が入る(読むだけ)
+    const copies = [[AMGT_PRE_TECH2_KEY, trainRaw], [AMGT_SLEEP_PRE_TECH2_KEY, sleepRaw]].filter(([, r]) => amgtHasOldTechId(r));
+    for (const [key, r] of copies) { const had = await storeGet(key, null, false); if (had == null) await storeSet(key, r, false); } // すでにあれば上書きしない
+    await storeSet(AMGT_TECH2_FLAG, true, false);
+  } catch (_) { /* 写せなかったときは印を付けない(次に開いたときもう一度やる) */ }
+};
 const AMGT_STORE = { state: normalizeAssistantMasmonTrain(null), loaded: false, subs: new Set(), dirty: false,
   set(next) { this.state = next; this.subs.forEach(f => { try { f(next); } catch (_) {} }); },
   load() { // 読み込みは1回だけ(同時に呼ばれても、あとから終わった方が古い値で戻さない・ミハリ 11-11)
     if (this.loaded) return Promise.resolve(this.state);
     this._p = this._p || (async () => {
       let raw = null; try { raw = typeof storeGet === 'function' ? await storeGet(ASSISTANT_MASMON_TRAIN_KEY, null, false) : null; } catch (_) {}
+      await amgtBackupBeforeTech2(raw);
       this.loaded = true; this.set(normalizeAssistantMasmonTrain(raw)); return this.state;
     })();
     return this._p;
@@ -80288,7 +80310,7 @@ const amgsFusePlan = (main, mat) => {
   const m = {};
   for (const k of (typeof AMGT_SENSE_KEYS !== 'undefined' ? AMGT_SENSE_KEYS : [])) m[k] = Math.floor(Math.max(Number(mt.m[k]) || 0, Number(xt.m[k]) || 0) / 2);
   for (const id of learn) m[id] = Math.floor(Math.max(Number(mt.m[id]) || 0, from[id] || 0) / 2);
-  return { base, add, st, learn: learn.slice(0, 16), m, carried };
+  return { base, add, st, learn: learn.slice(0, typeof AMGT_TECH_MAX === 'number' ? AMGT_TECH_MAX : 64), m, carried };
 };
 let amgsFuseBusy = false;
 // 合体する: 主(mainId)に素材(matId)を合わせる。素材は箱からいなくなる。だめなら理由の文字、できたら true
@@ -81023,6 +81045,103 @@ const msxDexEnsureCss = () => {
   if (msxDexCssDone || typeof document === 'undefined') return;
   msxDexCssDone = true;
   const el = document.createElement('style'); el.setAttribute('data-msx-dex-css', '1'); el.textContent = MSX_DEX_CSS; document.head.appendChild(el);
+};
+
+// ---- part: 56-monsuc-tevent.jsx ----
+// ===== モンヒロサクセスの「訓練のあとの出来事」を1枚の場面で見せる(2026-11-13 社長「ターン後のイベントが下部にぽつんとで地味」) =====
+// 訓練の結果のあと、編成のモンスターとの出来事(芯の trainEvent: out.event = { who, story } か { who, lottery })があったときだけ挟む。
+// 中身は芯がもう足し終えている(ここは見せるだけ・何も保存しない)。入り方は MSX_TEV_STYLE(社長の決めで 'b' カットイン。'a' 暗転 / 'c' 「EVENT」の帯 は案のときの形)
+//   画面 MsxTrainEvent({ run, o, ctx, style }) … o = 訓練の結果(run.out)。台詞は台本の cheer.base.ep<N>(お話)/ cheer.lot.<種類>(小さな出来事)
+
+const MSX_TEV_STYLE = 'b'; // 社長の決め(2026-11-13): B カットイン(2体の顔と「◯◯との出来事!」の斜めの帯)
+const MSX_TEV_LOT = Object.freeze({ self: 'drill', rest: 'rest', talk: 'chat', tip: 'tip', pal: 'friend', friend: 'friend' });
+const MSX_TEV_LOT_NAME = Object.freeze({ self: 'いっしょに自主練', rest: 'ひと休み', talk: 'おしゃべり', tip: 'コツを教わる', pal: 'なかよし', friend: 'なかよし' });
+
+// 変わったこと(芯の trainEvent と同じ中身を文にする)
+const msxTevChanges = (s, o) => {
+  const e = o && o.event; if (!e) return [];
+  const SUC = msxSuc && msxSuc.SUC; const m = s.team[e.who]; const fk = m && Array.isArray(m.top) ? m.top[0] : null;
+  const stat = fk && typeof MSX_STAT_NAME !== 'undefined' ? MSX_STAT_NAME[fk] : '能力';
+  const out = [];
+  if (e.story) {
+    const st = SUC && SUC.STORY ? SUC.STORY[e.story - 1] : null;
+    out.push(`🤝 親密度 +${st ? st.bond : 10}`);
+    if (e.story === 1) out.push(`${stat} 小アップ`);
+    else if (e.story === 2) { out.push(`${stat} 中アップ`); out.push('❤️ 体力 −10'); }
+    else { out.push(`${stat} 中アップ`); out.push(o.taught ? `⚔ 技「${(SUC.techsOf(s.species).find((t) => t.id === o.taught) || {}).name || '新しい技'}」を覚えた!` : '⚔ 技の熟練 +10'); }
+  } else {
+    const k = e.lottery;
+    if (k === 'self') { out.push(`${stat} 小アップ`); out.push('🤝 親密度 +5'); }
+    else if (k === 'rest') out.push('❤️ 体力 +10');
+    else if (k === 'talk') { out.push('💢 ストレス −10'); out.push('🤝 親密度 +5'); }
+    else if (k === 'tip') out.push('✨ ひらめき(次の修行で技を覚えやすい)');
+    else out.push('🤝 親密度 +10');
+  }
+  return out;
+};
+
+function MsxTrainEvent({ run, o, ctx, style = MSX_TEV_STYLE }) {
+  msxTevEnsureCss();
+  const s = run.s; const e = o.event; const m = s.team[e.who];
+  const name = typeof msxMemberName === 'function' ? msxMemberName(m) : '編成のモンスター';
+  const line = e.story ? msxPickLine({ ...ctx, cheer: name }, `cheer.base.ep${e.story}`, { who: 'narr' }) : msxPickLine({ ...ctx, cheer: name }, `cheer.lot.${MSX_TEV_LOT[e.lottery] || 'friend'}`, { who: '*' });
+  const title = e.story ? `${name}との出来事 第${e.story}話` : `${name}と${MSX_TEV_LOT_NAME[e.lottery] || '小さな出来事'}`;
+  const ch = msxTevChanges(s, o);
+  const calm = typeof msxFxCalm === 'function' && msxFxCalm();
+  const bondNow = s.bond[e.who];
+  return (<>
+    <div className={`v-scene msx-tev s-${style}${calm ? ' calm' : ''}`} style={{ flex: '1 1 0' }} data-msx-tev={style}>
+      <img className="bg" src={msxSceneBg(s.turn).bg} alt=""/><div className="sh"/>
+      <div className="gr" style={{ left: '29%', bottom: 'calc(40% - 5px)' }}/>
+      <MsxMonArt run={run} className="mon" style={{ left: '29%', bottom: '40%', height: '22%' }} live/>
+      <div className="gr" style={{ left: '71%', bottom: 'calc(40% - 5px)' }}/>
+      {m ? <img className="mon tev-pal" src={msxMonImg(m.species)} alt="" style={{ left: '71%', bottom: '40%', height: '25%' }}/> : null}
+      <div className="v-talk tev-talk">{line && line.t ? (line.who && line.who !== 'narr' ? <div><span className="who">{line.who === 'mon' ? run.nick : msxAidName(line.who)}</span>「{line.t}」</div> : <div>{line.t}</div>) : <div>{name}と、すこし特別な時間をすごした。</div>}</div>
+      <div className="v-ev-h"><small>編成のモンスターのイベント</small>{title}</div>
+      <div className="tev-bond"><span>🤝 {name}との親密度</span><i><b style={{ width: `${Math.max(0, Math.min(100, bondNow))}%` }}/></i><em>{bondNow}</em></div>
+      {/* 入り方 */}
+      {style === 'a' ? <span className="tev-in-a" aria-hidden="true"/> : null}
+      {style === 'b' ? <div className="tev-in-b" aria-hidden="true"><div className="band"><img src={msxMonThumb(s.species)} alt=""/><b>{name}との出来事!</b><img src={m ? msxMonThumb(m.species) : ''} alt=""/></div></div> : null}
+      {style === 'c' ? <div className="tev-in-c" aria-hidden="true"><span className="fl"/><div className="rb">EVENT</div></div> : null}
+    </div>
+    <div className="v-log tev-ch">{ch.map((t, i) => <span key={i} className="v-chip ylw" style={{ position: 'static', animationDelay: `${0.9 + i * 0.15}s` }}>{t}</span>)}</div>
+  </>);
+}
+
+const MSX_TEV_CSS = `
+.msx .msx-tev .tev-pal{transform:translateX(-50%) scaleX(-1)}
+.msx .msx-tev .tev-bond{position:absolute;left:8px;right:8px;top:48px;display:flex;align-items:center;gap:6px;font-size:10.5px;font-weight:900;color:#fbcfe8;background:#0f0d24cc;border-radius:999px;padding:3px 10px;z-index:3}
+.msx .msx-tev .tev-bond i{flex:1;height:6px;border-radius:6px;background:#334155;overflow:hidden}
+.msx .msx-tev .tev-bond i b{display:block;height:100%;background:linear-gradient(90deg,#f472b6,#fb7185)}
+.msx .msx-tev .tev-bond em{font-style:normal;color:#fff}
+.msx .msx-tev .tev-talk{bottom:8px;z-index:4}
+.msx .tev-ch{display:flex;flex-wrap:wrap;gap:4px}
+.msx .tev-ch .v-chip{animation:msx-popin .35s cubic-bezier(.2,1.4,.4,1) both}
+.msx .tev-in-a{position:absolute;inset:0;z-index:6;background:#000;pointer-events:none;animation:tevA 1.1s ease-out both}
+@keyframes tevA{0%{opacity:1}35%{opacity:1}100%{opacity:0}}
+.msx .msx-tev.s-a .v-ev-h{animation:tevTitle .5s .6s ease-out both}
+@keyframes tevTitle{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
+.msx .tev-in-b{position:absolute;inset:0;z-index:6;pointer-events:none;display:flex;align-items:center;animation:tevBfade 1.4s ease-in both}
+.msx .tev-in-b .band{width:120%;margin-left:-10%;transform:skewY(-6deg);display:flex;align-items:center;justify-content:center;gap:10px;padding:10px 0;background:linear-gradient(90deg,#db2777,#f472b6 30%,#fbcfe8 50%,#f472b6 70%,#db2777);box-shadow:0 0 0 3px #fff,0 0 30px #f472b6;animation:tevBand 1.4s cubic-bezier(.2,.9,.3,1) both}
+.msx .tev-in-b .band img{width:54px;height:54px;border-radius:50%;background:#fff;border:3px solid #fff;object-fit:contain}
+.msx .tev-in-b .band b{font-size:20px;font-weight:900;font-style:italic;color:#fff;-webkit-text-stroke:2px #9d174d;paint-order:stroke fill;white-space:nowrap}
+@keyframes tevBand{0%{transform:skewY(-6deg) translateX(110%)}25%,75%{transform:skewY(-6deg) translateX(0)}100%{transform:skewY(-6deg) translateX(-110%)}}
+@keyframes tevBfade{0%,80%{opacity:1}100%{opacity:0}}
+.msx .tev-in-c{position:absolute;inset:0;z-index:6;pointer-events:none}
+.msx .tev-in-c .fl{position:absolute;inset:0;background:#fff;animation:tevCfl .7s ease-out both}
+.msx .tev-in-c .rb{position:absolute;left:0;right:0;top:36%;text-align:center;font-size:44px;font-weight:900;font-style:italic;letter-spacing:.2em;color:#fff7cc;-webkit-text-stroke:3px #b45309;paint-order:stroke fill;text-shadow:0 0 18px #fde047,0 4px 0 #78350f;background:linear-gradient(90deg,transparent,#0f0d24dd 15%,#0f0d24dd 85%,transparent);padding:6px 0;animation:tevCrb 1.5s ease-out both}
+@keyframes tevCfl{0%{opacity:.95}100%{opacity:0}}
+@keyframes tevCrb{0%{opacity:0;transform:scaleX(.2)}18%{opacity:1;transform:scaleX(1.05)}26%{transform:scaleX(1)}75%{opacity:1}100%{opacity:0;transform:translateY(-10px)}}
+.msx .msx-tev.s-c .bg{animation:tevZoom 1.6s ease-out both}
+@keyframes tevZoom{from{transform:scale(1.12)}to{transform:scale(1)}}
+.msx .msx-tev.calm .tev-in-a,.msx .msx-tev.calm .tev-in-b,.msx .msx-tev.calm .tev-in-c{display:none}
+@media (prefers-reduced-motion: reduce){.msx .tev-in-a,.msx .tev-in-b,.msx .tev-in-c{display:none}.msx .msx-tev .bg,.msx .msx-tev .v-ev-h{animation:none}}
+`;
+let msxTevCssDone = false;
+const msxTevEnsureCss = () => {
+  if (msxTevCssDone || typeof document === 'undefined') return;
+  msxTevCssDone = true;
+  const el = document.createElement('style'); el.setAttribute('data-msx-tev-css', '1'); el.textContent = MSX_TEV_CSS; document.head.appendChild(el);
 };
 
 // ---- part: 56-assistant-life-friend.jsx ----
@@ -84131,7 +84250,7 @@ const msxNormRun = (raw, SUC) => {
     from: msxIsObj(raw.from) && typeof raw.from.box === 'string' ? { box: raw.from.box.slice(0, 64) } : { base: msxStr(raw.from && raw.from.base, 24, s.species) },
     items: Array.isArray(raw.items) ? raw.items.filter((x) => typeof x === 'string').slice(0, 2) : [],
     used: msxNum(raw.used, 0), // 持ち物を使ったターン(1ターン1個まで)
-    phase: ['main', 'result', 'react', 'issa', 'battle', 'turn', 'over', 'event', 'story', 'awake'].includes(raw.phase) ? raw.phase : 'main',
+    phase: ['main', 'result', 'react', 'issa', 'battle', 'turn', 'over', 'event', 'story', 'awake', 'tevent'].includes(raw.phase) ? raw.phase : 'main',
     out: msxIsObj(raw.out) ? raw.out : null, // 直前の結果(中断して戻ったときに結果の画面から続ける)
     log: Array.isArray(raw.log) ? raw.log.filter(msxIsObj).slice(-20) : [],
     startAt: msxNum(raw.startAt, 0),
@@ -84936,12 +85055,19 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug }) 
           : o.kind === 'rest' || o.kind === 'play' ? <><span className="hd2">{o.kind === 'rest' ? '🛌 休む' : '🎈 遊ぶ'}</span><br/>体力が回復した{(o.cured || []).includes('utsu') ? '。ようす「うつ病」が治った' : ''}</>
           : o.kind === 'clinic' ? <><span className="hd2">🏥 通院</span><br/>{(o.cured || []).length ? 'ようすが治った' : '今回は治らなかった。もう1回来れば治る'}</>
           : <><span className="hd2">🛌 休み</span><br/>{MSX_COND[o.cond] || '体調'}のため、このターンは休んだ</>}
-        {o.event ? <><br/><b className="ga">{msxMemberName(evMember)}</b>{o.event.story ? `との出来事 第${o.event.story}話` : 'との小さな出来事'}{evLine ? `: ${evLine.t}` : ''}</> : null}
+        {o.event && typeof MsxTrainEvent !== 'function' ? <><br/><b className="ga">{msxMemberName(evMember)}</b>{o.event.story ? `との出来事 第${o.event.story}話` : 'との小さな出来事'}{evLine ? `: ${evLine.t}` : ''}</> : null}
         {o.cond && isTrain ? <><br/><b style={{ color: '#fca5a5' }}>{MSX_COND[o.cond]}</b>をしてしまった…しばらく休み</> : null}
       </div>
       {say && say.t ? <MsxSay aid={s.aid} ex={say.e || 'normal'} text={say.t}/> : null}
     </>);
-    foot = <div className="v-ft"><button type="button" onClick={() => (isTrain ? afterAct({ ...run, phase: 'main' }) : afterAct(run))}>⏩ とばす</button><button type="button" className="go" onClick={() => (isTrain ? setRun({ ...run, phase: 'react' }) : afterAct(run))}>つぎへ ▶</button></div>;
+    // 編成のモンスターとの出来事があれば、結果のあとに場面を1枚挟む(56-monsuc-tevent.jsx。とばすと飛ぶ)
+    const tev = isTrain && o.event && typeof MsxTrainEvent === 'function';
+    foot = <div className="v-ft"><button type="button" onClick={() => (isTrain ? afterAct({ ...run, phase: 'main' }) : afterAct(run))}>⏩ とばす</button><button type="button" className="go" onClick={() => (tev ? setRun({ ...run, phase: 'tevent' }) : isTrain ? setRun({ ...run, phase: 'react' }) : afterAct(run))}>つぎへ ▶</button></div>;
+  }
+  // ---- 訓練のあとの出来事の場面(56-monsuc-tevent.jsx) ----
+  else if (phase === 'tevent' && run.out && run.out.event && typeof MsxTrainEvent === 'function') {
+    body = <><MsxBand s={s} v={v} ev={ev}/><MsxTrainEvent key={`${s.turn}-tev`} run={run} o={run.out} ctx={ctx}/></>;
+    foot = <div className="v-ft"><button type="button" onClick={() => afterAct({ ...run, phase: 'main' })}>⏩ とばす</button><button type="button" className="go" onClick={() => setRun({ ...run, phase: 'react' })} data-msx-tev-next>つぎへ ▶</button></div>;
   }
   // ---- 覚醒・超覚醒(56-monsuc-awake.jsx の演出)。終わったら、ターンのはじめならメインへ・ターンの終わりなら閉じる ----
   else if (phase === 'awake' && run.out && run.out.fire && typeof MsxAwakeShow === 'function') {

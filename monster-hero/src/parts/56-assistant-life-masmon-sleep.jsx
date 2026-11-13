@@ -165,7 +165,7 @@ const amgsFusePlan = (main, mat) => {
   const m = {};
   for (const k of (typeof AMGT_SENSE_KEYS !== 'undefined' ? AMGT_SENSE_KEYS : [])) m[k] = Math.floor(Math.max(Number(mt.m[k]) || 0, Number(xt.m[k]) || 0) / 2);
   for (const id of learn) m[id] = Math.floor(Math.max(Number(mt.m[id]) || 0, from[id] || 0) / 2);
-  return { base, add, st, learn: learn.slice(0, 16), m, carried };
+  return { base, add, st, learn: learn.slice(0, typeof AMGT_TECH_MAX === 'number' ? AMGT_TECH_MAX : 64), m, carried };
 };
 let amgsFuseBusy = false;
 // 合体する: 主(mainId)に素材(matId)を合わせる。素材は箱からいなくなる。だめなら理由の文字、できたら true

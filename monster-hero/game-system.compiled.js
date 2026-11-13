@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3c96dabfd6dffde1
+// source-sha256: cd00ff0090685437
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -143990,7 +143990,9 @@ const amgtRngOf = text => {
 };
 const amgtRange = (rnd, lo, hi) => lo + Math.floor(rnd() * (hi - lo + 1));
 const amgtTechsOf = monster => typeof ASSISTANT_MASMON_TECHS !== 'undefined' && ASSISTANT_MASMON_TECHS.species && Array.isArray(ASSISTANT_MASMON_TECHS.species[monster]) ? ASSISTANT_MASMON_TECHS.species[monster] : [];
-const amgtTechIdOk = id => typeof id === 'string' && /^[a-z]{2,20}_\d{2}$/.test(id);
+const amgtTechIdOk = id => typeof id === 'string' && /^(?:sk-\d{4}|[a-z]{2,20}_o?\d{2})$/.test(id);
+const amgtCanon = id => typeof ASSISTANT_MASMON_TECHS !== 'undefined' && ASSISTANT_MASMON_TECHS && typeof ASSISTANT_MASMON_TECHS.canon === 'function' ? ASSISTANT_MASMON_TECHS.canon(id) : id;
+const AMGT_TECH_MAX = 64;
 const normalizeAssistantMasmonTrain = raw => {
   const out = {
     v: 1,
@@ -144008,14 +144010,17 @@ const normalizeAssistantMasmonTrain = raw => {
       if (!/^[1-8]:\w{2,40}$/.test(key) || !e || typeof e !== 'object' || !e.m || typeof e.m !== 'object') continue;
       const m = {};
       for (const k of AMGT_SENSE_KEYS) m[k] = amgtNum(e.m[k], 0, 0, 100);
-      for (const [k, v] of Object.entries(e.m).slice(0, 24)) if (amgtTechIdOk(k)) m[k] = amgtNum(v, 0, 0, 100);
-      const learn = [...new Set((Array.isArray(e.learn) ? e.learn : []).filter(amgtTechIdOk))].slice(0, 16);
+      for (const [k, v] of Object.entries(e.m).slice(0, AMGT_TECH_MAX + AMGT_SENSE_KEYS.length)) if (amgtTechIdOk(k)) {
+        const c = amgtCanon(k);
+        m[c] = Math.max(m[c] || 0, amgtNum(v, 0, 0, 100));
+      }
+      const learn = [...new Set((Array.isArray(e.learn) ? e.learn : []).filter(amgtTechIdOk).map(amgtCanon))].slice(0, AMGT_TECH_MAX);
       const log = (Array.isArray(e.log) ? e.log : []).filter(x => x && typeof x === 'object' && Number.isInteger(x.s) && AMGT_KIND_KEYS.includes(x.k)).slice(-AMGT_LOG).map(x => ({
         s: x.s,
         k: x.k,
-        g: Object.fromEntries(Object.entries(x.g && typeof x.g === 'object' ? x.g : {}).filter(([k, n]) => (AMGT_SENSE_KEYS.includes(k) || amgtTechIdOk(k)) && Number.isFinite(n)).map(([k, n]) => [k, amgtClamp(Math.round(n), 0, 99)])),
+        g: Object.fromEntries(Object.entries(x.g && typeof x.g === 'object' ? x.g : {}).filter(([k, n]) => (AMGT_SENSE_KEYS.includes(k) || amgtTechIdOk(k)) && Number.isFinite(n)).map(([k, n]) => [amgtTechIdOk(k) ? amgtCanon(k) : k, amgtClamp(Math.round(n), 0, 99)])),
         ...(amgtTechIdOk(x.l) ? {
-          l: x.l
+          l: amgtCanon(x.l)
         } : {}),
         ...(x.f ? {
           f: 1
@@ -144148,6 +144153,33 @@ const amgtPickKind = (aid, me, techs, st, rnd, askK) => {
   }
   return best;
 };
+const AMGT_PRE_TECH2_KEY = 'mh_assistant_masmon_train_v1_pre_tech2';
+const AMGT_SLEEP_PRE_TECH2_KEY = 'mh_assistant_masmon_sleep_v1_pre_tech2';
+const AMGT_TECH2_FLAG = 'mh_assistant_masmon_tech2_migrated_v1';
+const amgtHasOldTechId = raw => {
+  try {
+    const im = ASSISTANT_MASMON_TECHS && ASSISTANT_MASMON_TECHS.idmap || {};
+    if (!raw || typeof raw !== 'object') return false;
+    const txt = JSON.stringify(raw);
+    return Object.keys(im).some(k => txt.includes(`"${k}"`));
+  } catch (_) {
+    return false;
+  }
+};
+const amgtBackupBeforeTech2 = async trainRaw => {
+  try {
+    if (typeof storeGet !== 'function' || typeof storeSet !== 'function') return;
+    if (typeof ASSISTANT_MASMON_TECHS === 'undefined' || !ASSISTANT_MASMON_TECHS || !(ASSISTANT_MASMON_TECHS.version >= 2)) return;
+    if (await storeGet(AMGT_TECH2_FLAG, false, false)) return;
+    const sleepRaw = await storeGet('mh_assistant_masmon_sleep_v1', null, false);
+    const copies = [[AMGT_PRE_TECH2_KEY, trainRaw], [AMGT_SLEEP_PRE_TECH2_KEY, sleepRaw]].filter(([, r]) => amgtHasOldTechId(r));
+    for (const [key, r] of copies) {
+      const had = await storeGet(key, null, false);
+      if (had == null) await storeSet(key, r, false);
+    }
+    await storeSet(AMGT_TECH2_FLAG, true, false);
+  } catch (_) {}
+};
 const AMGT_STORE = {
   state: normalizeAssistantMasmonTrain(null),
   loaded: false,
@@ -144168,6 +144200,7 @@ const AMGT_STORE = {
       try {
         raw = typeof storeGet === 'function' ? await storeGet(ASSISTANT_MASMON_TRAIN_KEY, null, false) : null;
       } catch (_) {}
+      await amgtBackupBeforeTech2(raw);
       this.loaded = true;
       this.set(normalizeAssistantMasmonTrain(raw));
       return this.state;
@@ -153727,7 +153760,7 @@ const amgsFusePlan = (main, mat) => {
     base,
     add,
     st,
-    learn: learn.slice(0, 16),
+    learn: learn.slice(0, typeof AMGT_TECH_MAX === 'number' ? AMGT_TECH_MAX : 64),
     m,
     carried
   };
@@ -155305,6 +155338,203 @@ const msxDexEnsureCss = () => {
   const el = document.createElement('style');
   el.setAttribute('data-msx-dex-css', '1');
   el.textContent = MSX_DEX_CSS;
+  document.head.appendChild(el);
+};
+const MSX_TEV_STYLE = 'b';
+const MSX_TEV_LOT = Object.freeze({
+  self: 'drill',
+  rest: 'rest',
+  talk: 'chat',
+  tip: 'tip',
+  pal: 'friend',
+  friend: 'friend'
+});
+const MSX_TEV_LOT_NAME = Object.freeze({
+  self: 'いっしょに自主練',
+  rest: 'ひと休み',
+  talk: 'おしゃべり',
+  tip: 'コツを教わる',
+  pal: 'なかよし',
+  friend: 'なかよし'
+});
+const msxTevChanges = (s, o) => {
+  const e = o && o.event;
+  if (!e) return [];
+  const SUC = msxSuc && msxSuc.SUC;
+  const m = s.team[e.who];
+  const fk = m && Array.isArray(m.top) ? m.top[0] : null;
+  const stat = fk && typeof MSX_STAT_NAME !== 'undefined' ? MSX_STAT_NAME[fk] : '能力';
+  const out = [];
+  if (e.story) {
+    const st = SUC && SUC.STORY ? SUC.STORY[e.story - 1] : null;
+    out.push(`🤝 親密度 +${st ? st.bond : 10}`);
+    if (e.story === 1) out.push(`${stat} 小アップ`);else if (e.story === 2) {
+      out.push(`${stat} 中アップ`);
+      out.push('❤️ 体力 −10');
+    } else {
+      out.push(`${stat} 中アップ`);
+      out.push(o.taught ? `⚔ 技「${(SUC.techsOf(s.species).find(t => t.id === o.taught) || {}).name || '新しい技'}」を覚えた!` : '⚔ 技の熟練 +10');
+    }
+  } else {
+    const k = e.lottery;
+    if (k === 'self') {
+      out.push(`${stat} 小アップ`);
+      out.push('🤝 親密度 +5');
+    } else if (k === 'rest') out.push('❤️ 体力 +10');else if (k === 'talk') {
+      out.push('💢 ストレス −10');
+      out.push('🤝 親密度 +5');
+    } else if (k === 'tip') out.push('✨ ひらめき(次の修行で技を覚えやすい)');else out.push('🤝 親密度 +10');
+  }
+  return out;
+};
+function MsxTrainEvent({
+  run,
+  o,
+  ctx,
+  style = MSX_TEV_STYLE
+}) {
+  msxTevEnsureCss();
+  const s = run.s;
+  const e = o.event;
+  const m = s.team[e.who];
+  const name = typeof msxMemberName === 'function' ? msxMemberName(m) : '編成のモンスター';
+  const line = e.story ? msxPickLine({
+    ...ctx,
+    cheer: name
+  }, `cheer.base.ep${e.story}`, {
+    who: 'narr'
+  }) : msxPickLine({
+    ...ctx,
+    cheer: name
+  }, `cheer.lot.${MSX_TEV_LOT[e.lottery] || 'friend'}`, {
+    who: '*'
+  });
+  const title = e.story ? `${name}との出来事 第${e.story}話` : `${name}と${MSX_TEV_LOT_NAME[e.lottery] || '小さな出来事'}`;
+  const ch = msxTevChanges(s, o);
+  const calm = typeof msxFxCalm === 'function' && msxFxCalm();
+  const bondNow = s.bond[e.who];
+  return React.createElement(React.Fragment, null, React.createElement("div", {
+    className: `v-scene msx-tev s-${style}${calm ? ' calm' : ''}`,
+    style: {
+      flex: '1 1 0'
+    },
+    "data-msx-tev": style
+  }, React.createElement("img", {
+    className: "bg",
+    src: msxSceneBg(s.turn).bg,
+    alt: ""
+  }), React.createElement("div", {
+    className: "sh"
+  }), React.createElement("div", {
+    className: "gr",
+    style: {
+      left: '29%',
+      bottom: 'calc(40% - 5px)'
+    }
+  }), React.createElement(MsxMonArt, {
+    run: run,
+    className: "mon",
+    style: {
+      left: '29%',
+      bottom: '40%',
+      height: '22%'
+    },
+    live: true
+  }), React.createElement("div", {
+    className: "gr",
+    style: {
+      left: '71%',
+      bottom: 'calc(40% - 5px)'
+    }
+  }), m ? React.createElement("img", {
+    className: "mon tev-pal",
+    src: msxMonImg(m.species),
+    alt: "",
+    style: {
+      left: '71%',
+      bottom: '40%',
+      height: '25%'
+    }
+  }) : null, React.createElement("div", {
+    className: "v-talk tev-talk"
+  }, line && line.t ? line.who && line.who !== 'narr' ? React.createElement("div", null, React.createElement("span", {
+    className: "who"
+  }, line.who === 'mon' ? run.nick : msxAidName(line.who)), "「", line.t, "」") : React.createElement("div", null, line.t) : React.createElement("div", null, name, "と、すこし特別な時間をすごした。")), React.createElement("div", {
+    className: "v-ev-h"
+  }, React.createElement("small", null, "編成のモンスターのイベント"), title), React.createElement("div", {
+    className: "tev-bond"
+  }, React.createElement("span", null, "🤝 ", name, "との親密度"), React.createElement("i", null, React.createElement("b", {
+    style: {
+      width: `${Math.max(0, Math.min(100, bondNow))}%`
+    }
+  })), React.createElement("em", null, bondNow)), style === 'a' ? React.createElement("span", {
+    className: "tev-in-a",
+    "aria-hidden": "true"
+  }) : null, style === 'b' ? React.createElement("div", {
+    className: "tev-in-b",
+    "aria-hidden": "true"
+  }, React.createElement("div", {
+    className: "band"
+  }, React.createElement("img", {
+    src: msxMonThumb(s.species),
+    alt: ""
+  }), React.createElement("b", null, name, "との出来事!"), React.createElement("img", {
+    src: m ? msxMonThumb(m.species) : '',
+    alt: ""
+  }))) : null, style === 'c' ? React.createElement("div", {
+    className: "tev-in-c",
+    "aria-hidden": "true"
+  }, React.createElement("span", {
+    className: "fl"
+  }), React.createElement("div", {
+    className: "rb"
+  }, "EVENT")) : null), React.createElement("div", {
+    className: "v-log tev-ch"
+  }, ch.map((t, i) => React.createElement("span", {
+    key: i,
+    className: "v-chip ylw",
+    style: {
+      position: 'static',
+      animationDelay: `${0.9 + i * 0.15}s`
+    }
+  }, t))));
+}
+const MSX_TEV_CSS = `
+.msx .msx-tev .tev-pal{transform:translateX(-50%) scaleX(-1)}
+.msx .msx-tev .tev-bond{position:absolute;left:8px;right:8px;top:48px;display:flex;align-items:center;gap:6px;font-size:10.5px;font-weight:900;color:#fbcfe8;background:#0f0d24cc;border-radius:999px;padding:3px 10px;z-index:3}
+.msx .msx-tev .tev-bond i{flex:1;height:6px;border-radius:6px;background:#334155;overflow:hidden}
+.msx .msx-tev .tev-bond i b{display:block;height:100%;background:linear-gradient(90deg,#f472b6,#fb7185)}
+.msx .msx-tev .tev-bond em{font-style:normal;color:#fff}
+.msx .msx-tev .tev-talk{bottom:8px;z-index:4}
+.msx .tev-ch{display:flex;flex-wrap:wrap;gap:4px}
+.msx .tev-ch .v-chip{animation:msx-popin .35s cubic-bezier(.2,1.4,.4,1) both}
+.msx .tev-in-a{position:absolute;inset:0;z-index:6;background:#000;pointer-events:none;animation:tevA 1.1s ease-out both}
+@keyframes tevA{0%{opacity:1}35%{opacity:1}100%{opacity:0}}
+.msx .msx-tev.s-a .v-ev-h{animation:tevTitle .5s .6s ease-out both}
+@keyframes tevTitle{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
+.msx .tev-in-b{position:absolute;inset:0;z-index:6;pointer-events:none;display:flex;align-items:center;animation:tevBfade 1.4s ease-in both}
+.msx .tev-in-b .band{width:120%;margin-left:-10%;transform:skewY(-6deg);display:flex;align-items:center;justify-content:center;gap:10px;padding:10px 0;background:linear-gradient(90deg,#db2777,#f472b6 30%,#fbcfe8 50%,#f472b6 70%,#db2777);box-shadow:0 0 0 3px #fff,0 0 30px #f472b6;animation:tevBand 1.4s cubic-bezier(.2,.9,.3,1) both}
+.msx .tev-in-b .band img{width:54px;height:54px;border-radius:50%;background:#fff;border:3px solid #fff;object-fit:contain}
+.msx .tev-in-b .band b{font-size:20px;font-weight:900;font-style:italic;color:#fff;-webkit-text-stroke:2px #9d174d;paint-order:stroke fill;white-space:nowrap}
+@keyframes tevBand{0%{transform:skewY(-6deg) translateX(110%)}25%,75%{transform:skewY(-6deg) translateX(0)}100%{transform:skewY(-6deg) translateX(-110%)}}
+@keyframes tevBfade{0%,80%{opacity:1}100%{opacity:0}}
+.msx .tev-in-c{position:absolute;inset:0;z-index:6;pointer-events:none}
+.msx .tev-in-c .fl{position:absolute;inset:0;background:#fff;animation:tevCfl .7s ease-out both}
+.msx .tev-in-c .rb{position:absolute;left:0;right:0;top:36%;text-align:center;font-size:44px;font-weight:900;font-style:italic;letter-spacing:.2em;color:#fff7cc;-webkit-text-stroke:3px #b45309;paint-order:stroke fill;text-shadow:0 0 18px #fde047,0 4px 0 #78350f;background:linear-gradient(90deg,transparent,#0f0d24dd 15%,#0f0d24dd 85%,transparent);padding:6px 0;animation:tevCrb 1.5s ease-out both}
+@keyframes tevCfl{0%{opacity:.95}100%{opacity:0}}
+@keyframes tevCrb{0%{opacity:0;transform:scaleX(.2)}18%{opacity:1;transform:scaleX(1.05)}26%{transform:scaleX(1)}75%{opacity:1}100%{opacity:0;transform:translateY(-10px)}}
+.msx .msx-tev.s-c .bg{animation:tevZoom 1.6s ease-out both}
+@keyframes tevZoom{from{transform:scale(1.12)}to{transform:scale(1)}}
+.msx .msx-tev.calm .tev-in-a,.msx .msx-tev.calm .tev-in-b,.msx .msx-tev.calm .tev-in-c{display:none}
+@media (prefers-reduced-motion: reduce){.msx .tev-in-a,.msx .tev-in-b,.msx .tev-in-c{display:none}.msx .msx-tev .bg,.msx .msx-tev .v-ev-h{animation:none}}
+`;
+let msxTevCssDone = false;
+const msxTevEnsureCss = () => {
+  if (msxTevCssDone || typeof document === 'undefined') return;
+  msxTevCssDone = true;
+  const el = document.createElement('style');
+  el.setAttribute('data-msx-tev-css', '1');
+  el.textContent = MSX_TEV_CSS;
   document.head.appendChild(el);
 };
 const ALF_KEY = 'mh_assistant_life_friend_v1';
@@ -161180,7 +161410,7 @@ const msxNormRun = (raw, SUC) => {
     },
     items: Array.isArray(raw.items) ? raw.items.filter(x => typeof x === 'string').slice(0, 2) : [],
     used: msxNum(raw.used, 0),
-    phase: ['main', 'result', 'react', 'issa', 'battle', 'turn', 'over', 'event', 'story', 'awake'].includes(raw.phase) ? raw.phase : 'main',
+    phase: ['main', 'result', 'react', 'issa', 'battle', 'turn', 'over', 'event', 'story', 'awake', 'tevent'].includes(raw.phase) ? raw.phase : 'main',
     out: msxIsObj(raw.out) ? raw.out : null,
     log: Array.isArray(raw.log) ? raw.log.filter(msxIsObj).slice(-20) : [],
     startAt: msxNum(raw.startAt, 0)
@@ -163444,7 +163674,7 @@ function MsxPlay({
       className: "hd2"
     }, "🏥 通院"), React.createElement("br", null), (o.cured || []).length ? 'ようすが治った' : '今回は治らなかった。もう1回来れば治る') : React.createElement(React.Fragment, null, React.createElement("span", {
       className: "hd2"
-    }, "🛌 休み"), React.createElement("br", null), MSX_COND[o.cond] || '体調', "のため、このターンは休んだ"), o.event ? React.createElement(React.Fragment, null, React.createElement("br", null), React.createElement("b", {
+    }, "🛌 休み"), React.createElement("br", null), MSX_COND[o.cond] || '体調', "のため、このターンは休んだ"), o.event && typeof MsxTrainEvent !== 'function' ? React.createElement(React.Fragment, null, React.createElement("br", null), React.createElement("b", {
       className: "ga"
     }, msxMemberName(evMember)), o.event.story ? `との出来事 第${o.event.story}話` : 'との小さな出来事', evLine ? `: ${evLine.t}` : '') : null, o.cond && isTrain ? React.createElement(React.Fragment, null, React.createElement("br", null), React.createElement("b", {
       style: {
@@ -163455,6 +163685,7 @@ function MsxPlay({
       ex: say.e || 'normal',
       text: say.t
     }) : null);
+    const tev = isTrain && o.event && typeof MsxTrainEvent === 'function';
     foot = React.createElement("div", {
       className: "v-ft"
     }, React.createElement("button", {
@@ -163466,10 +163697,41 @@ function MsxPlay({
     }, "⏩ とばす"), React.createElement("button", {
       type: "button",
       className: "go",
-      onClick: () => isTrain ? setRun({
+      onClick: () => tev ? setRun({
+        ...run,
+        phase: 'tevent'
+      }) : isTrain ? setRun({
         ...run,
         phase: 'react'
       }) : afterAct(run)
+    }, "つぎへ ▶"));
+  } else if (phase === 'tevent' && run.out && run.out.event && typeof MsxTrainEvent === 'function') {
+    body = React.createElement(React.Fragment, null, React.createElement(MsxBand, {
+      s: s,
+      v: v,
+      ev: ev
+    }), React.createElement(MsxTrainEvent, {
+      key: `${s.turn}-tev`,
+      run: run,
+      o: run.out,
+      ctx: ctx
+    }));
+    foot = React.createElement("div", {
+      className: "v-ft"
+    }, React.createElement("button", {
+      type: "button",
+      onClick: () => afterAct({
+        ...run,
+        phase: 'main'
+      })
+    }, "⏩ とばす"), React.createElement("button", {
+      type: "button",
+      className: "go",
+      onClick: () => setRun({
+        ...run,
+        phase: 'react'
+      }),
+      "data-msx-tev-next": true
     }, "つぎへ ▶"));
   } else if (phase === 'awake' && run.out && run.out.fire && typeof MsxAwakeShow === 'function') {
     const f = run.out.fire;
