@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e2a03ee60182ddf7
+// source-sha256: e6c09fcfcba83759
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -149406,7 +149406,10 @@ const monsucTeams = (catalog, suc, s, info) => {
     techs: Array.isArray(s.techs) ? s.techs.slice() : undefined,
     mastery: s.mastery || {},
     loy,
-    pop: mscNum(s.pop)
+    pop: mscNum(s.pop),
+    ...(s.awake ? {
+      awake: s.awake
+    } : {})
   };
   const o = info.opp || {
     species: s.species,
@@ -149869,10 +149872,17 @@ function MonsucBattleCard({
     className: "cap"
   }, info.title, " ", MSC_STARS(info.star), "・1戦"), React.createElement("div", {
     className: "mon a"
-  }, React.createElement("img", {
-    src: mscMonImg(s.species),
-    alt: ""
-  })), React.createElement("div", {
+  }, (() => {
+    const im = React.createElement("img", {
+      src: mscMonImg(s.species),
+      alt: ""
+    });
+    const k = s.awake && typeof msxKiraOf === 'function' ? msxKiraOf(s.awake) : null;
+    return k && typeof cardKiraWrap === 'function' ? cardKiraWrap(k, im, {
+      src: mscMonImg(s.species),
+      calm: typeof msxAwCalm === 'function' && msxAwCalm()
+    }) : im;
+  })()), React.createElement("div", {
     className: "mon b"
   }, React.createElement("img", {
     src: mscMonImg(o.species),
@@ -150149,10 +150159,17 @@ function MonsucCupWin({
     className: "sub"
   }, info.title, " ", MSC_STARS(info.star), "・1戦: ", o.name || mscMonName(o.species), " に 勝ち", match && match.r ? `(${match.r.rounds} ラウンド)` : ''), React.createElement("div", {
     className: "who"
-  }, React.createElement("img", {
-    src: mscMonImg(s.species),
-    alt: ""
-  })), info.rival && React.createElement("div", {
+  }, (() => {
+    const im = React.createElement("img", {
+      src: mscMonImg(s.species),
+      alt: ""
+    });
+    const k = s.awake && typeof msxKiraOf === 'function' ? msxKiraOf(s.awake) : null;
+    return k && typeof cardKiraWrap === 'function' ? cardKiraWrap(k, im, {
+      src: mscMonImg(s.species),
+      calm: typeof msxAwCalm === 'function' && msxAwCalm()
+    }) : im;
+  })()), info.rival && React.createElement("div", {
     className: "rival"
   }, React.createElement("span", null, "ライバルの ", o.name || mscMonName(o.species), " にも 勝った!"), React.createElement("em", null, "ごほうび大"))), rows.map((r, k) => React.createElement("div", {
     key: k,
@@ -150220,10 +150237,17 @@ function MonsucCupLose({
     className: "sub"
   }, info.title, " ", MSC_STARS(info.star), "・", o.name || mscMonName(o.species), " に 負け"), React.createElement("div", {
     className: "who"
-  }, React.createElement("img", {
-    src: mscMonImg(s.species),
-    alt: ""
-  }))), React.createElement("div", {
+  }, (() => {
+    const im = React.createElement("img", {
+      src: mscMonImg(s.species),
+      alt: ""
+    });
+    const k = s.awake && typeof msxKiraOf === 'function' ? msxKiraOf(s.awake) : null;
+    return k && typeof cardKiraWrap === 'function' ? cardKiraWrap(k, im, {
+      src: mscMonImg(s.species),
+      calm: typeof msxAwCalm === 'function' && msxAwCalm()
+    }) : im;
+  })())), React.createElement("div", {
     className: "msc-again"
   }, React.createElement("h3", null, "時をもどして、やり直す?"), React.createElement("p", null, "やり直せるのは 1回の育成で", mscNum(suc.REMATCH && suc.REMATCH.max, 3), "回まで・", React.createElement("em", null, "のこり ", left, "/", mscNum(suc.REMATCH && suc.REMATCH.max, 3))), React.createElement("button", {
     className: "msc-pick sand",
@@ -154507,6 +154531,231 @@ function MonsucFuseSheet({
     className: "mt-2 min-h-[44px] w-full rounded-xl bg-slate-700 text-[13px] font-black"
   }, "やめる")));
 }
+const MSX_AW_DIST = Object.freeze(['零', '近', '中', '遠']);
+const MSX_AW_NAME = Object.freeze({
+  1: '覚醒',
+  2: '超覚醒'
+});
+const MSX_AW_STEPS = Object.freeze({
+  1: Object.freeze([1300, 2500, 4000]),
+  2: Object.freeze([1600, 3000, 4700])
+});
+const msxKiraOf = awake => Number(awake) >= 2 ? 'rare' : Number(awake) >= 1 ? 'kira' : null;
+const msxAwCalm = () => typeof msxFxCalm === 'function' ? Boolean(msxFxCalm()) : false;
+function MsxKira({
+  kind,
+  src = '',
+  fill = false,
+  small = false,
+  className = '',
+  style = null,
+  children
+}) {
+  msxAwEnsureCss();
+  const box = `msx-kira${fill ? ' fill' : ''}${className ? ` ${className}` : ''}`;
+  if (!kind) return fill || className ? React.createElement("span", {
+    className: box,
+    style: style || undefined
+  }, React.createElement("span", {
+    className: "msx-kira-in"
+  }, children)) : children;
+  const rim = kind === 'rare' ? 'mh-rare-rim' : 'mh-kira-rim';
+  const aura = !small && !msxAwCalm() && typeof CardKiraAura === 'function';
+  return React.createElement("span", {
+    className: box,
+    style: style || undefined,
+    "data-msx-kira": kind
+  }, aura ? React.createElement(CardKiraAura, {
+    kind: kind,
+    src: src,
+    layer: "back",
+    style: {
+      inset: 0
+    }
+  }) : null, React.createElement("span", {
+    className: `msx-kira-in ${rim}`,
+    "data-card-kira": kind
+  }, children), aura ? React.createElement(CardKiraAura, {
+    kind: kind,
+    src: src,
+    layer: "front",
+    style: {
+      inset: 0
+    }
+  }) : null, small ? React.createElement("i", {
+    className: `msx-kira-badge ${kind}`,
+    "aria-hidden": "true"
+  }, kind === 'rare' ? '🌈' : '✨') : null);
+}
+function MsxOmenFx({
+  k
+}) {
+  if (k !== 1 && k !== 2) return null;
+  msxAwEnsureCss();
+  return React.createElement("span", {
+    className: `msx-omen k${k}${msxAwCalm() ? ' calm' : ''}`,
+    "aria-hidden": "true",
+    "data-msx-omen": k
+  }, React.createElement("i", {
+    className: "g"
+  }), [0, 1, 2, 3].map(i => React.createElement("i", {
+    key: i,
+    className: "p",
+    style: {
+      '--i': i
+    }
+  })));
+}
+function MsxAwakeShow({
+  run,
+  fire,
+  v,
+  ev,
+  line
+}) {
+  msxAwEnsureCss();
+  const k = fire && fire.kind === 2 ? 2 : 1;
+  const calm = msxAwCalm();
+  const [st, setSt] = React.useState(calm ? 3 : 0);
+  React.useEffect(() => {
+    if (calm) return undefined;
+    const ids = MSX_AW_STEPS[k].map((ms, i) => setTimeout(() => setSt(n => Math.max(n, i + 1)), ms));
+    return () => ids.forEach(clearTimeout);
+  }, []);
+  const s = run.s;
+  const shown = {
+    ...run,
+    s: {
+      ...s,
+      awake: st >= 3 ? k : k - 1,
+      omen: null
+    }
+  };
+  const say = line(k === 2 ? 'turn.awake.fire2' : 'turn.awake.fire', k === 2 ? 'うそ…まだ光が強くなっていく！' : 'えっ…この光、なに！？');
+  const apt = Array.isArray(fire && fire.apt) ? fire.apt : [];
+  return React.createElement(React.Fragment, null, typeof MsxBand === 'function' ? React.createElement(MsxBand, {
+    s: s,
+    v: v,
+    ev: ev
+  }) : null, React.createElement("div", {
+    className: `v-scene msx-aw k${k} st${st}`,
+    style: {
+      flex: '1 1 0'
+    },
+    onClick: () => setSt(3),
+    "data-msx-awake": k,
+    "data-msx-awake-step": st
+  }, React.createElement("img", {
+    className: "bg",
+    src: msxSceneBg(s.turn).bg,
+    alt: ""
+  }), React.createElement("div", {
+    className: "sh"
+  }), st < 3 ? React.createElement(React.Fragment, null, React.createElement("span", {
+    className: "msx-aw-ray",
+    "aria-hidden": "true"
+  }), React.createElement("span", {
+    className: "msx-aw-wrap",
+    "aria-hidden": "true"
+  })) : React.createElement("span", {
+    className: "msx-aw-after",
+    "aria-hidden": "true"
+  }), React.createElement("div", {
+    className: "gr",
+    style: {
+      bottom: 'calc(16% - 5px)'
+    }
+  }), React.createElement(MsxMonArt, {
+    run: shown,
+    className: "mon",
+    style: {
+      bottom: '16%',
+      height: '40%'
+    },
+    live: st >= 3
+  }), st === 2 ? React.createElement("span", {
+    className: "msx-aw-flash",
+    "aria-hidden": "true"
+  }) : null, st >= 2 ? React.createElement("div", {
+    className: `msx-aw-stamp k${k} msx-pop`
+  }, k === 2 ? '超覚醒!!' : '覚醒!', React.createElement("small", null, "全能力 +", fire.add)) : null), st >= 2 ? React.createElement(MsxStRow, {
+    stats: s.stats,
+    ups: fire.ups
+  }) : null, React.createElement("div", {
+    className: "v-log"
+  }, st < 2 ? React.createElement(React.Fragment, null, run.nick, "の体が、", k === 2 ? '虹色の' : 'まぶしい', "光に包まれていく…") : React.createElement(React.Fragment, null, React.createElement("span", {
+    className: "hd2"
+  }, k === 2 ? '🌈 超覚醒' : '✨ 覚醒'), React.createElement("br", null), "全能力 ", React.createElement("b", {
+    className: "gu"
+  }, "+", fire.add), apt.map(a => React.createElement("span", {
+    key: a.dist
+  }, React.createElement("br", null), "📏 「", MSX_AW_DIST[a.dist], "」の間合い適性が ", a.from, " → ", React.createElement("b", {
+    className: "ga"
+  }, a.to), " に上がった!")), st >= 3 ? React.createElement(React.Fragment, null, React.createElement("br", null), run.nick, "は", k === 2 ? 'レアキラ' : 'キラ', "の光をまとった!") : null)), st >= 1 && say && say.t ? React.createElement(MsxSay, {
+    aid: s.aid,
+    ex: say.e || 'surprise',
+    text: say.t
+  }) : null);
+}
+const MSX_AW_CSS = `
+.msx-kira{position:relative;display:inline-flex;align-items:flex-end;justify-content:center;isolation:isolate}
+.msx-kira.fill{display:block;width:100%;height:100%}
+.msx-kira-in{display:inline-flex;align-items:flex-end;justify-content:center}
+.msx-kira.fill>.msx-kira-in{display:block;width:100%;height:100%}
+.msx-kira.fill>.msx-kira-in>img{width:100%;height:100%;object-fit:contain}
+.msx-kira-badge{position:absolute;right:-5px;top:-5px;font-style:normal;font-size:11px;line-height:1;z-index:3;filter:drop-shadow(0 1px 1px #0009)}
+.msx-omen{position:absolute;inset:-14% -14% -4%;pointer-events:none;z-index:3}
+.msx-omen>i{position:absolute;font-style:normal}
+.msx-omen .g{inset:6% 6% 0;border-radius:50%;mix-blend-mode:screen;animation:msxOmenPulse 2.6s ease-in-out infinite;background:radial-gradient(ellipse 50% 52% at 50% 58%,rgba(255,255,255,.62),rgba(255,255,255,.22) 48%,rgba(255,255,255,0) 72%)}
+.msx-omen.k2 .g{background:conic-gradient(from 0deg,rgba(255,110,210,.55),rgba(110,210,255,.55),rgba(255,235,110,.55),rgba(150,255,170,.5),rgba(255,110,210,.55));-webkit-mask:radial-gradient(ellipse 50% 52% at 50% 58%,#000 30%,transparent 72%);mask:radial-gradient(ellipse 50% 52% at 50% 58%,#000 30%,transparent 72%);animation:msxOmenPulse 2.6s ease-in-out infinite,msxOmenSpin 8s linear infinite}
+.msx-omen .p{width:6px;height:6px;border-radius:50%;bottom:16%;left:calc(26% + var(--i) * 16%);background:#fff;box-shadow:0 0 6px 2px rgba(255,255,255,.9);opacity:0;animation:msxOmenMote 3s linear infinite;animation-delay:calc(var(--i) * .75s)}
+.msx-omen.k2 .p:nth-child(2){background:#ffd6f4;box-shadow:0 0 6px 2px rgba(255,120,220,.9)}
+.msx-omen.k2 .p:nth-child(3){background:#d6f4ff;box-shadow:0 0 6px 2px rgba(120,210,255,.9)}
+.msx-omen.k2 .p:nth-child(4){background:#fff6c8;box-shadow:0 0 6px 2px rgba(255,214,102,.95)}
+.msx-omen.k2 .p:nth-child(5){background:#d9ffe0;box-shadow:0 0 6px 2px rgba(130,255,160,.9)}
+.msx-omen-on>.msx-kira{animation:msxOmenShake 4.6s ease-in-out infinite}
+.msx-omen-on.k1>.msx-kira>.msx-kira-in{filter:drop-shadow(0 0 4px rgba(255,255,255,.9)) drop-shadow(0 0 10px rgba(255,255,255,.55))}
+@keyframes msxOmenPulse{0%,100%{opacity:.45}50%{opacity:.95}}
+@keyframes msxOmenSpin{to{transform:rotate(360deg)}}
+@keyframes msxOmenMote{0%{opacity:0;transform:translateY(0)}15%{opacity:1}100%{opacity:0;transform:translateY(-120px)}}
+@keyframes msxOmenShake{0%,82%,100%{transform:none}84%{transform:translateX(-2px) rotate(-2deg)}86%{transform:translateX(2px) rotate(2deg)}88%{transform:translateX(-2px) rotate(-1.5deg)}90%{transform:translateX(1px) rotate(1deg)}92%{transform:none}}
+.msx-omen.calm .g,.msx-omen.calm .p{animation:none}.msx-omen.calm .g{opacity:.7}.msx-omen.calm .p{display:none}
+.msx-aw .msx-aw-ray{position:absolute;left:50%;top:-5%;bottom:12%;width:46%;transform:translateX(-50%);pointer-events:none;z-index:3;mix-blend-mode:screen;background:linear-gradient(180deg,rgba(255,255,255,0),rgba(255,255,255,.55) 40%,rgba(255,250,215,.85));-webkit-mask:linear-gradient(90deg,transparent,#000 30%,#000 70%,transparent);mask:linear-gradient(90deg,transparent,#000 30%,#000 70%,transparent);animation:msxAwRay 1.3s ease-out both}
+.msx-aw.k2 .msx-aw-ray{background:linear-gradient(180deg,rgba(255,255,255,0),rgba(255,160,230,.5) 30%,rgba(150,220,255,.6) 60%,rgba(255,240,150,.85))}
+.msx-aw.st1 .msx-aw-ray,.msx-aw.st2 .msx-aw-ray{animation:msxAwHold2 .8s ease-in-out infinite alternate}
+.msx-aw .msx-aw-wrap{position:absolute;left:50%;bottom:8%;width:92%;aspect-ratio:1;transform:translateX(-50%);border-radius:50%;pointer-events:none;z-index:3;mix-blend-mode:screen;animation:msxAwWrap 1.3s ease-out both;background:radial-gradient(circle at 50% 58%,rgba(255,255,255,.95),rgba(255,250,220,.6) 30%,rgba(255,255,255,0) 66%)}
+.msx-aw.k2 .msx-aw-wrap{animation-duration:1.6s;z-index:1;mix-blend-mode:normal;background:conic-gradient(rgba(255,80,200,.62),rgba(80,190,255,.62),rgba(255,225,70,.62),rgba(110,240,140,.58),rgba(170,110,255,.62),rgba(255,80,200,.62));-webkit-mask:radial-gradient(circle,transparent 14%,#000 26%,#000 44%,transparent 68%);mask:radial-gradient(circle,transparent 14%,#000 26%,#000 44%,transparent 68%)}
+.msx-aw.st1 .msx-aw-wrap,.msx-aw.st2 .msx-aw-wrap{animation:msxAwHold 1s ease-in-out infinite alternate}
+.msx-aw.k2.st1 .msx-aw-wrap,.msx-aw.k2.st2 .msx-aw-wrap{animation:msxAwHold 1s ease-in-out infinite alternate,msxOmenSpin 3s linear infinite}
+.msx-aw.st0 .mon,.msx-aw.st1 .mon,.msx-aw.st2 .mon{filter:brightness(1.5) drop-shadow(0 0 10px #fff) drop-shadow(0 0 24px rgba(255,255,255,.9))}
+.msx-aw.k2.st0 .mon,.msx-aw.k2.st1 .mon,.msx-aw.k2.st2 .mon{filter:brightness(1.12) drop-shadow(0 0 6px #ff7ad9) drop-shadow(0 0 14px rgba(110,200,255,.95)) drop-shadow(0 0 26px rgba(255,220,90,.85))}
+.msx-aw .msx-aw-after{position:absolute;inset:0;pointer-events:none;z-index:1;background:radial-gradient(circle at 50% 62%,rgba(255,240,200,.35),transparent 60%)}
+.msx-aw.k2 .msx-aw-after{background:radial-gradient(circle at 50% 62%,rgba(255,180,240,.32),rgba(150,220,255,.18) 40%,transparent 64%)}
+.msx-aw-flash{position:absolute;inset:0;z-index:4;pointer-events:none;background:#fff;animation:msxAwFlash .9s ease-out both}
+.msx-aw.k2 .msx-aw-flash{background:linear-gradient(120deg,#ffd1f2,#fff 30%,#d1f1ff 55%,#fff7c2 80%,#d9ffe0)}
+.msx-aw-stamp{position:absolute;left:0;right:0;top:9%;z-index:5;text-align:center;white-space:nowrap;font-size:34px;font-weight:900;font-style:italic;color:#fff;-webkit-text-stroke:3px #b45309;paint-order:stroke fill;text-shadow:0 0 14px #fff,0 4px 0 #78350f}
+.msx-aw-stamp.k2{font-size:36px;-webkit-text-stroke:3px #9d174d;text-shadow:0 0 14px #fff,0 0 26px rgba(255,120,220,.9),0 4px 0 #581c87}
+.msx-aw-stamp small{display:table;margin:2px auto 0;font-size:15px;font-style:normal;-webkit-text-stroke:0;color:#7c2d12;background:#fff;border-radius:999px;padding:1px 12px;text-shadow:none}
+@keyframes msxAwWrap{0%{opacity:0;transform:translateX(-50%) scale(.4)}100%{opacity:1;transform:translateX(-50%) scale(1)}}
+@keyframes msxAwHold{from{opacity:.75;transform:translateX(-50%) scale(.96)}to{opacity:1;transform:translateX(-50%) scale(1.06)}}
+@keyframes msxAwRay{0%{opacity:0;transform:translateX(-50%) scaleX(.2)}100%{opacity:1;transform:translateX(-50%) scaleX(1)}}
+@keyframes msxAwHold2{from{opacity:.7}to{opacity:1}}
+@keyframes msxAwFlash{0%{opacity:0}12%{opacity:1}100%{opacity:0}}
+@media (prefers-reduced-motion: reduce){
+  .msx-omen .g,.msx-omen .p,.msx-omen-on>.msx-kira,.msx-aw .msx-aw-wrap,.msx-aw-flash{animation:none}
+  .msx-omen .p,.msx-aw-flash{display:none}
+  .msx-aw .msx-aw-ray{animation:none}
+}
+`;
+let msxAwCssDone = false;
+const msxAwEnsureCss = () => {
+  if (msxAwCssDone || typeof document === 'undefined') return;
+  msxAwCssDone = true;
+  const el = document.createElement('style');
+  el.setAttribute('data-msx-awake-css', '1');
+  el.textContent = MSX_AW_CSS;
+  document.head.appendChild(el);
+};
 const ALF_KEY = 'mh_assistant_life_friend_v1';
 const ALF_SETTINGS_KEY = 'mh_assistant_life_friend_settings_v1';
 const ALF_KNOWN_KEY = 'mh_assistant_life_friend_known_v1';
@@ -160370,7 +160619,7 @@ const msxNormRun = (raw, SUC) => {
     },
     items: Array.isArray(raw.items) ? raw.items.filter(x => typeof x === 'string').slice(0, 2) : [],
     used: msxNum(raw.used, 0),
-    phase: ['main', 'result', 'react', 'issa', 'battle', 'turn', 'over', 'event', 'story'].includes(raw.phase) ? raw.phase : 'main',
+    phase: ['main', 'result', 'react', 'issa', 'battle', 'turn', 'over', 'event', 'story', 'awake'].includes(raw.phase) ? raw.phase : 'main',
     out: msxIsObj(raw.out) ? raw.out : null,
     log: Array.isArray(raw.log) ? raw.log.filter(msxIsObj).slice(-20) : [],
     startAt: msxNum(raw.startAt, 0)
@@ -160431,7 +160680,9 @@ const msxNormBoxMon = m => {
     coach: msxStr(m.coach, 16),
     endAt: msxNum(m.endAt, 0),
     aptUp: [0, 1, 2, 3].map(i => Math.max(0, Math.min(11, Math.round(msxNum(Array.isArray(m.aptUp) ? m.aptUp[i] : 0, 0))))),
-    aptBase: [0, 1, 2, 3].map(i => Math.max(0, Math.min(11, Math.round(msxNum(Array.isArray(m.aptBase) ? m.aptBase[i] : 0, 0)))))
+    aptBase: [0, 1, 2, 3].map(i => Math.max(0, Math.min(11, Math.round(msxNum(Array.isArray(m.aptBase) ? m.aptBase[i] : 0, 0))))),
+    awake: Math.max(0, Math.min(2, Math.round(msxNum(m.awake, 0)))),
+    aptAwake: [0, 1, 2, 3].map(i => Math.max(0, Math.min(3, Math.round(msxNum(Array.isArray(m.aptAwake) ? m.aptAwake[i] : 0, 0)))))
   };
 };
 const msxNormBox = raw => {
@@ -161025,10 +161276,17 @@ function MsxStart({
       className: `v-sl${m.kind === 'base' ? ' base' : ''}${m.friend ? ' fr' : ''}`
     }, React.createElement("span", {
       className: `v-pf lg r${m.rank === 'base' ? 'G' : m.rank}${m.kind === 'base' ? ' base' : ''}`
-    }, React.createElement("img", {
-      src: msxMonThumb(m.species),
-      alt: ""
-    })), m.name, " ", m.kind !== 'base' && React.createElement("i", {
+    }, (() => {
+      const img = React.createElement("img", {
+        src: msxMonThumb(m.species),
+        alt: ""
+      });
+      const bm = m.boxId && box && Array.isArray(box.mons) ? box.mons.find(x => x.id === m.boxId) : null;
+      return bm && bm.awake && typeof MsxKira === 'function' && typeof msxKiraOf === 'function' ? React.createElement(MsxKira, {
+        kind: msxKiraOf(bm.awake),
+        small: true
+      }, img) : img;
+    })()), m.name, " ", m.kind !== 'base' && React.createElement("i", {
       className: msxRankCls(m.rank)
     }, m.rank), React.createElement("div", {
       className: "t3"
@@ -161071,7 +161329,20 @@ function MsxStart({
         width: '100%'
       },
       onClick: () => toggleBox(m.id)
+    }, m.awake && typeof MsxKira === 'function' && typeof msxKiraOf === 'function' ? React.createElement(MsxKira, {
+      kind: msxKiraOf(m.awake),
+      small: true
     }, React.createElement("img", {
+      src: msxMonThumb(m.species),
+      alt: "",
+      style: {
+        width: 30,
+        height: 30,
+        borderRadius: 9,
+        objectFit: 'contain',
+        background: '#0f172a'
+      }
+    })) : React.createElement("img", {
       src: msxMonThumb(m.species),
       alt: "",
       style: {
@@ -161083,7 +161354,7 @@ function MsxStart({
       }
     }), React.createElement("div", null, m.nick || msxMonName(m.species), " ", m.rank ? React.createElement("i", {
       className: msxRankCls(m.rank)
-    }, m.rank) : null, React.createElement("small", null, msxMonName(m.species))), React.createElement("span", {
+    }, m.rank) : null, React.createElement("small", null, msxMonName(m.species), m.awake ? m.awake >= 2 ? '・超覚醒' : '・覚醒' : '')), React.createElement("span", {
       className: "pr"
     }, teamBox.includes(m.id) ? '✅ 入れている' : '入れる'))) : React.createElement("div", {
       className: "msx-note",
@@ -161732,6 +162003,51 @@ function MsxMonArt({
   react = null
 }) {
   const sp = run.s.species;
+  const kira = typeof msxKiraOf === 'function' ? msxKiraOf(run.s.awake) : null;
+  const omen = run.s.omen && typeof MsxOmenFx === 'function' ? run.s.omen.k : 0;
+  if ((kira || omen) && typeof MsxKira === 'function') {
+    const scn = msxSceneBg(run.s.turn);
+    const inner = live && typeof MsxLiveMon === 'function' ? React.createElement(MsxLiveMon, {
+      species: sp,
+      colors: run.colors,
+      mood: msxMoodOf(run.s),
+      season: scn.season,
+      time: scn.time === '昼' ? 'day' : scn.time === '夕方' ? 'evening' : 'night',
+      react: react,
+      seed: run.id,
+      pyoko: true
+    }) : run.colors && run.colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? React.createElement(DyedMonsterImage, {
+      baseId: sp,
+      src: msxMonImg(sp),
+      masuColors: run.colors,
+      alt: "",
+      draggable: false,
+      style: {
+        width: '100%',
+        height: '100%',
+        objectFit: 'contain'
+      }
+    }) : React.createElement("img", {
+      src: msxMonImg(sp),
+      alt: "",
+      style: {
+        width: '100%',
+        height: '100%',
+        objectFit: 'contain'
+      }
+    });
+    return React.createElement("span", {
+      className: `${className || ''}${live ? ' msx-live' : ''}${omen ? ` msx-omen-on k${omen}` : ''}`,
+      style: style,
+      "data-msx-mon-kira": kira || ''
+    }, React.createElement(MsxKira, {
+      kind: kira,
+      src: msxMonImg(sp),
+      fill: true
+    }, inner), React.createElement(MsxOmenFx, {
+      k: omen
+    }));
+  }
   if (live && typeof MsxLiveMon === 'function') {
     const scn = msxSceneBg(run.s.turn);
     return React.createElement("span", {
@@ -162148,7 +162464,7 @@ function MsxPlay({
       alive = false;
     };
   }, [s.aid]);
-  const soundId = run.phase === 'result' && run.out && run.out.result ? run.out.lvUp ? 'trainLvUp' : MSX_RES_SOUND[run.out.result] : run.phase === 'issa' ? 'issa' : s.over === 'gameover' ? 'gameOver' : 'main';
+  const soundId = run.phase === 'awake' && run.out && run.out.fire ? run.out.fire.kind === 2 ? 'trainGreat' : 'trainLvUp' : run.phase === 'result' && run.out && run.out.result ? run.out.lvUp ? 'trainLvUp' : MSX_RES_SOUND[run.out.result] : run.phase === 'issa' ? 'issa' : s.over === 'gameover' ? 'gameOver' : 'main';
   msxUseSound(soundId, {
     season: msxCalendar(s.turn).season
   });
@@ -162182,6 +162498,21 @@ function MsxPlay({
     }].slice(-20)
   });
   const endTurnFlow = r0 => {
+    if (typeof SUC.awakeOpen === 'function') {
+      const a = SUC.awakeOpen(r0.s, 'end');
+      if (a.out.fire) {
+        setRun({
+          ...r0,
+          s: a.state,
+          phase: 'awake',
+          out: {
+            fire: a.out.fire,
+            then: 'end'
+          }
+        });
+        return;
+      }
+    }
     const r = SUC.endTurn(r0.s);
     if (!r.out.ok) {
       setRun({
@@ -162242,6 +162573,25 @@ function MsxPlay({
     afterIssa(r0);
   };
   const toMain = (r0, skipStory = false) => {
+    if (typeof SUC.awakeOpen === 'function' && !r0.s.over) {
+      const a = SUC.awakeOpen(r0.s, 'start');
+      if (a.out.fire) {
+        setRun({
+          ...r0,
+          s: a.state,
+          phase: 'awake',
+          out: {
+            fire: a.out.fire,
+            then: 'main'
+          }
+        });
+        return;
+      }
+      r0 = {
+        ...r0,
+        s: a.state
+      };
+    }
     const p = SUC.peek(r0.s);
     if (!skipStory && p.story != null && typeof SUC.storyStep === 'function') {
       setRun({
@@ -162455,6 +162805,35 @@ function MsxPlay({
         ...run,
         phase: 'react'
       }) : afterAct(run)
+    }, "つぎへ ▶"));
+  } else if (phase === 'awake' && run.out && run.out.fire && typeof MsxAwakeShow === 'function') {
+    const f = run.out.fire;
+    const then = run.out.then;
+    const done = () => {
+      const next = pushLog({
+        ...run,
+        out: null
+      }, f.kind === 2 ? '超覚醒した!' : '覚醒した!');
+      if (then === 'end') endTurnFlow({
+        ...next,
+        phase: 'main'
+      });else toMain(next);
+    };
+    body = React.createElement(MsxAwakeShow, {
+      key: `${s.turn}-${f.kind}`,
+      run: run,
+      fire: f,
+      v: v,
+      ev: ev,
+      line: line
+    });
+    foot = React.createElement("div", {
+      className: "v-ft"
+    }, React.createElement("button", {
+      type: "button",
+      className: "go",
+      onClick: done,
+      "data-msx-awake-next": true
     }, "つぎへ ▶"));
   } else if (phase === 'event' && run.out && run.out.ev || phase === 'story' && run.out && run.out.ep != null) {
     body = React.createElement(MsxEvent, {
@@ -162944,7 +163323,8 @@ function MsxPlay({
       return c && c.tags.length;
     });
     const yosu = s.yosu && (s.yosu.sabori || s.yosu.utsu);
-    const sayL = yosu ? line(s.yosu.sabori ? 'turn.mood.sabori' : 'turn.mood.utsu', 'ようすが気になるね…') : s.cond ? line(`turn.cond.${s.cond.kind === 'away' ? 'runaway' : s.cond.kind === 'ill' ? 'sick' : 'injury'}.in`, '今日は休ませてあげよ') : line(msxStartScene(s), '今月はどうする?');
+    const omenK = s.omen && (s.omen.k === 1 || s.omen.k === 2) ? s.omen.k : 0;
+    const sayL = omenK ? line(omenK === 2 ? 'turn.awake.omen2' : 'turn.awake.omen', omenK === 2 ? 'あれ…また体が光ってる？ 虹色だ…' : 'あれ？ 体がうっすら光ってない…？') : yosu ? line(s.yosu.sabori ? 'turn.mood.sabori' : 'turn.mood.utsu', 'ようすが気になるね…') : s.cond ? line(`turn.cond.${s.cond.kind === 'away' ? 'runaway' : s.cond.kind === 'ill' ? 'sick' : 'injury'}.in`, '今日は休ませてあげよ') : line(msxStartScene(s), '今月はどうする?');
     const cal = msxCalendar(s.turn);
     const scn = msxSceneBg(s.turn);
     const low = s.hp < s.hpMax * 0.3;
@@ -162955,7 +163335,7 @@ function MsxPlay({
       ev: ev
     }), React.createElement(MsxSay, {
       aid: s.aid,
-      ex: yosu || low ? 'troubled' : sayL.e || 'happy',
+      ex: omenK ? sayL.e || 'surprise' : yosu || low ? 'troubled' : sayL.e || 'happy',
       text: sayL.t
     }), React.createElement("div", {
       className: "v-scene home"
@@ -163427,7 +163807,20 @@ function MsxStats({
     className: "sub"
   }, "(甘え度 ", s.ama, "+恐れ度 ", s.fear, ")")), React.createElement("div", {
     className: "sub"
-  }, "方針: ", MSX_POLICY_SCALE[Math.max(-3, Math.min(3, s.pol || 0)) + 3], "・人気 ", s.pop, "・Lv ", s.lv, "・成長の型: ", typeof MASMON_CALC !== 'undefined' ? MASMON_CALC.typeOf(s.type).name : '—')), React.createElement("div", {
+  }, "方針: ", MSX_POLICY_SCALE[Math.max(-3, Math.min(3, s.pol || 0)) + 3], "・人気 ", s.pop, "・Lv ", s.lv, "・成長の型: ", typeof MASMON_CALC !== 'undefined' ? MASMON_CALC.typeOf(s.type).name : '—')), s.omen || s.awake ? React.createElement("div", {
+    className: "v-card",
+    "data-msx-yosu": true
+  }, React.createElement("div", {
+    className: "h2"
+  }, "🔎 様子"), s.omen ? React.createElement("div", {
+    className: "sub"
+  }, "様子: ", React.createElement("b", {
+    style: {
+      color: '#fde047'
+    }
+  }, "なにか起きそう"), "(体がうっすら", s.omen.k === 2 ? '虹色に' : '', "光っている)") : null, s.awake ? React.createElement("div", {
+    className: "sub"
+  }, s.awake >= 2 ? '🌈 超覚醒している(全能力 +70・レアキラ)' : '✨ 覚醒している(全能力 +30・キラ)') : null) : null, React.createElement("div", {
     className: "v-card"
   }, React.createElement("div", {
     className: "h2"
@@ -164163,6 +164556,9 @@ const msxR3Fight = (engine, SUC, run) => {
     stats: s.stats,
     loy,
     pop: s.pop,
+    ...(s.awake ? {
+      awake: s.awake
+    } : {}),
     ...(typeof SUC.aptSendOf === 'function' ? {
       aptUp: SUC.aptSendOf(s)
     } : {}),
@@ -164334,6 +164730,12 @@ const msxR3BoxMonOf = (run, s, ev, assists, parent) => ({
   } : {}),
   ...(Array.isArray(s.aptBase) && s.aptBase.some(n => n > 0) ? {
     aptBase: s.aptBase.slice(0, 4)
+  } : {}),
+  ...(s.awake ? {
+    awake: Math.max(0, Math.min(2, Math.round(s.awake)))
+  } : {}),
+  ...(Array.isArray(s.aptAwake) && s.aptAwake.some(n => n > 0) ? {
+    aptAwake: s.aptAwake.slice(0, 4)
   } : {}),
   titles: msxR3FinalTitles(s, ev),
   from: run.from || null
@@ -165587,7 +165989,18 @@ function MsxR3Battle({
       className: "sh"
     }), React.createElement("div", {
       className: "ttl"
-    }, name, " ・ 1戦"), React.createElement("img", {
+    }, name, " ・ 1戦"), s.awake && typeof MsxKira === 'function' && typeof msxKiraOf === 'function' ? React.createElement(MsxKira, {
+      kind: msxKiraOf(s.awake),
+      src: msxMonImg(s.species),
+      className: "ml"
+    }, React.createElement("img", {
+      src: msxMonImg(s.species),
+      alt: "",
+      style: {
+        height: '100%',
+        objectFit: 'contain'
+      }
+    })) : React.createElement("img", {
       className: "ml",
       src: msxMonImg(s.species),
       alt: ""
@@ -167216,29 +167629,41 @@ function MsxR3Box({
       setEdit(null);
     },
     "data-msx-r3-boxmon": m.id
-  }, Array.isArray(m.colors) && m.colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? React.createElement("span", {
-    style: {
-      width: 38,
-      height: 38,
-      flex: 'none'
-    }
-  }, React.createElement(DyedMonsterImage, {
-    baseId: m.species,
-    src: msxMonImg(m.species),
-    masuColors: m.colors,
-    alt: "",
-    draggable: false,
-    style: {
-      width: '100%',
-      height: '100%',
-      objectFit: 'contain'
-    }
+  }, Array.isArray(m.colors) && m.colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? (() => {
+    const dy = React.createElement("span", {
+      style: {
+        width: 38,
+        height: 38,
+        flex: 'none'
+      }
+    }, React.createElement(DyedMonsterImage, {
+      baseId: m.species,
+      src: msxMonImg(m.species),
+      masuColors: m.colors,
+      alt: "",
+      draggable: false,
+      style: {
+        width: '100%',
+        height: '100%',
+        objectFit: 'contain'
+      }
+    }));
+    return m.awake && typeof MsxKira === 'function' && typeof msxKiraOf === 'function' ? React.createElement(MsxKira, {
+      kind: msxKiraOf(m.awake),
+      small: true
+    }, dy) : dy;
+  })() : m.awake && typeof MsxKira === 'function' && typeof msxKiraOf === 'function' ? React.createElement(MsxKira, {
+    kind: msxKiraOf(m.awake),
+    small: true
+  }, React.createElement("img", {
+    src: msxMonThumb(m.species),
+    alt: ""
   })) : React.createElement("img", {
     src: msxMonThumb(m.species),
     alt: ""
   }), React.createElement("div", {
     className: "nm"
-  }, React.createElement("b", null, m.nick || msxMonName(m.species)), React.createElement("small", null, msxMonName(m.species), "・", m.raised === false ? '未育成' : `評価 ${m.grade || m.rank || '—'}`, m.gen > 1 ? `・${m.gen}代目` : '')), React.createElement("span", {
+  }, React.createElement("b", null, m.nick || msxMonName(m.species)), React.createElement("small", null, m.awake ? m.awake >= 2 ? '🌈 超覚醒・' : '✨ 覚醒・' : '', msxMonName(m.species), "・", m.raised === false ? '未育成' : `評価 ${m.grade || m.rank || '—'}`, m.gen > 1 ? `・${m.gen}代目` : '')), React.createElement("span", {
     className: "pw"
   }, m.raised === false ? '' : msxFmt(m.score || 0)))) : React.createElement("div", {
     className: "msx-note"
@@ -167346,7 +167771,37 @@ function MsxR3Box({
     "data-msx-r3-editsave": true
   }, "これで決める"))) : cur ? React.createElement("div", {
     className: "v-card"
-  }, React.createElement("button", {
+  }, cur.awake && typeof MsxKira === 'function' && typeof msxKiraOf === 'function' ? React.createElement("div", {
+    style: {
+      display: 'flex',
+      justifyContent: 'center',
+      height: 110,
+      margin: '4px 0 8px'
+    },
+    "data-msx-r3-boxkira": cur.awake
+  }, React.createElement(MsxKira, {
+    kind: msxKiraOf(cur.awake),
+    src: msxMonImg(cur.species)
+  }, Array.isArray(cur.colors) && cur.colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? React.createElement(DyedMonsterImage, {
+    baseId: cur.species,
+    src: msxMonImg(cur.species),
+    masuColors: cur.colors,
+    alt: "",
+    draggable: false,
+    style: {
+      height: 110,
+      objectFit: 'contain'
+    }
+  }) : React.createElement("img", {
+    src: msxMonImg(cur.species),
+    alt: "",
+    style: {
+      height: 110,
+      objectFit: 'contain'
+    }
+  }))) : null, cur.awake ? React.createElement("div", {
+    className: "v-kv"
+  }, React.createElement("b", null, "覚醒"), React.createElement("span", null, cur.awake >= 2 ? '🌈 超覚醒(全能力 +70・レアキラ)' : '✨ 覚醒(全能力 +30・キラ)')) : null, React.createElement("button", {
     type: "button",
     className: "msx-btn sub",
     onClick: () => setEdit({
@@ -168976,7 +169431,12 @@ function MsaFighter({
     }, "ガッツ ", n > 0 ? `+${n}` : `−${-n}`));
   }
   if (!body) {
-    const still = !cls && !down && idleOk && !reduce && typeof withMonsterIdleArt === 'function' ? withMonsterIdleArt(sp, img) : img;
+    const still0 = !cls && !down && idleOk && !reduce && typeof withMonsterIdleArt === 'function' ? withMonsterIdleArt(sp, img) : img;
+    const kira = side === 'A' && member && member.awake && !down && typeof msxKiraOf === 'function' ? msxKiraOf(member.awake) : null;
+    const still = kira && typeof cardKiraWrap === 'function' ? cardKiraWrap(kira, still0, {
+      src,
+      calm: reduce
+    }) : still0;
     body = React.createElement("div", {
       key: `b-${e ? e.k : 0}-${cls}`,
       className: `flex items-end justify-center ${cls}`

@@ -247,6 +247,10 @@
     {"id":"item.akuyosan.kiki1","who":"kiki","e":"normal","t":"苦いでつけど、よく効きまつ。これで、すっきりでつね"},
     {"id":"item.license.kiki1","who":"kiki","e":"happy","t":"ライセンスを見せたら、{mon}がじっと{name}を見てまつ。信じてまつね"},
     {"id":"item.oily.kiki1","who":"kiki","e":"normal","t":"オイリーパックでつね。中身は大事に使いましょ"},
+    {"id":"turn.awake.omen.kiki1","who":"kiki","e":"surprise","t":"{mon}の体、うっすら光っていまつ……なにか起きそうな気配でつ"},
+    {"id":"turn.awake.omen2.kiki1","who":"kiki","e":"surprise","t":"また光っていまつ。今度は虹色……ただごとじゃないでつ"},
+    {"id":"turn.awake.fire.kiki1","who":"kiki","e":"surprise","t":"あれま……{mon}が光に包まれていきまつ！？"},
+    {"id":"turn.awake.fire2.kiki1","who":"kiki","e":"excited","t":"あれまあれま……虹の光が、どんどん強くなっていきまつ！"},
   ];
   const heads = null;
   const part = Object.freeze({ rows: Object.freeze(rows), heads });

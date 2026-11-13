@@ -289,6 +289,12 @@ const MONSUC_SCRIPT_MOMOSUKE = Object.freeze([
   { id:'item.akuyosan.momosuke1', who:'momosuke', e:'troubled', t:'にがっ w でも効くやつだから、がまんね' },
   { id:'item.license.momosuke1', who:'momosuke', e:'happy', t:'ライセンス見せたら、{mon}がキラキラした目で{name}見てる！！ 信じてるじゃん♡' },
   { id:'item.oily.momosuke1', who:'momosuke', e:'normal', t:'オイリーパックね w 中身は大事に使お' },
+
+  // 覚醒・超覚醒(2026-11-13): 前触れ(omen・omen2)と起きた瞬間(fire・fire2)
+  { id:'turn.awake.omen.momosuke1', who:'momosuke', e:'surprise', t:'ねえ見て！！ {mon}、ちょっと光ってない！？' },
+  { id:'turn.awake.omen2.momosuke1', who:'momosuke', e:'surprise', t:'{mon}がまた光ってる！！ しかも虹色だよ♡' },
+  { id:'turn.awake.fire.momosuke1', who:'momosuke', e:'surprise', t:'わわわっ！！ {mon}がピカーってなってる！！' },
+  { id:'turn.awake.fire2.momosuke1', who:'momosuke', e:'excited', t:'すごいすごい！！ 虹色がとまらないよ♡' },
 ]);
 
 if (typeof module !== 'undefined') module.exports = { MONSUC_SCRIPT_MOMOSUKE };
