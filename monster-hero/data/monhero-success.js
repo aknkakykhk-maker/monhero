@@ -74,6 +74,12 @@
   const DEBUT_LOSS_MAX = 3;        // デビュー戦に3回負けたらゲームオーバー(§12 E)
   const DEBUT_RETRY_WEAKEN = 0.1;  // 負けるたびに相手が1割ずつ弱く(§12 D)
   const DEBUT_RETRY_FLOOR = 0.6;   // はじめの6割まで
+  // 技表の第2版(2026-11-13)で、種によって初めの技の威力が2倍ちがい、能力に合わない種類の技しか届かない間合いもできた。
+  //   デビュー戦が技の差だけで決まらないよう、相手は「初めの技の強さ」の差のぶん能力を下げる(下げるだけ・この割合まで)
+  const DEBUT_TECH_FLOOR = 0.6;
+  // 初めの技がその子の能力に合わない(その種類の能力が、もう一方の攻撃の能力のこの割合より低い)ときは、
+  //   同じ間合いに届く別の種類の技(はじめから覚える条件を満たしているもの)を1つ足して始める
+  const START_TECH_FIT = 0.6;
 
   // ---- 基礎数値(試算 tools/success/success-sim.js で合わせる。ASSIST.md §4 の「基礎数値」) ----
   const BASE = Object.freeze({
@@ -413,6 +419,21 @@
     const canonMastery = (m) => { const o = {}; if (m && typeof m === 'object' && !Array.isArray(m)) for (const [k, v] of Object.entries(m)) { const c = techCanon(k); const x = Number(v); if (Number.isFinite(x)) o[c] = Math.max(o[c] == null ? -Infinity : o[c], x); } return o; };
     const techsOf = (sp) => (Array.isArray(TECHS[sp]) ? TECHS[sp] : []);
     const startTechs = (sp) => techsOf(sp).filter(t => t && t.learn && t.learn.start).map(t => t.id);
+    // 育成を始めるときの技(START_TECH_FIT)。表の「初めの技」+ 能力に合わない技の間合いを埋める技(1つの技につき1つまで)
+    const startTechsRun = (sp) => {
+      const base = startTechs(sp); const st = initStats(sp); const own = techsOf(sp); const out = base.slice();
+      base.forEach((id) => {
+        const t = own.find(x => x && x.id === id); if (!t || (t.kind !== 'pow' && t.kind !== 'wise')) return;
+        const other = t.kind === 'pow' ? 'wise' : 'pow';
+        if (num(st[t.kind]) >= num(st[other]) * START_TECH_FIT) return;
+        const dist = Array.isArray(t.dist) ? t.dist : [];
+        const ready = (x) => x && x.kind === other && !out.includes(x.id) && Array.isArray(x.dist) && x.dist.some(d => dist.includes(d))
+          && !(x.need && Object.keys(x.need).length) && Object.entries((x.learn && x.learn.st) || {}).every(([k, v]) => num(st[k]) >= num(v));
+        const alt = own.filter(ready).sort((x, y) => num(x.rank) - num(y.rank) || num(y.power) - num(x.power))[0];
+        if (alt && out.length < TECH_MAX) out.push(alt.id);
+      });
+      return out;
+    };
     const APT_MULT = Object.freeze({ A: 1.3, B: 1.15, C: 1, D: 0.85, E: 0.7 }); // AMG_APT_MULT と同じ値
     const speciesList = Object.keys(INIT).filter(k => Array.isArray(INIT[k])).filter(k => !(deps && deps.monsters && deps.monsters[k] && deps.monsters[k].draft)); // 下書きの子は出さない
     const RIVALS_OK0 = (x) => x && typeof x === 'object' && speciesList.includes(x.species);
@@ -505,7 +526,7 @@
         v: VERSION, id, species, aid, type: typeIdx, turn: 1, stats, hpMax, hp: hpMax, stress: 0, carry, bag, good, issaForce, issaSure: false, itemTurn: 0,
         ama: LOYAL.start[0], fear: LOYAL.start[1], pol: clamp(Math.round(num(src.pol)), -3, 3), pp: 0, pop: 0, pts: 0, ptsLost: 0, lv: 1, xp: 0,
         team, bond: team.map(m => m.bond0), story: team.map(() => 0), aidBond: clamp(aidLv * BOND.aidPerLv + (hn ? aOf('hitonatsu', 'start', hn) : 0), 0, BOND.max),
-        techs: startTechs(species), mastery: Object.fromEntries(startTechs(species).map(t => [t, 0])), tickets: SHUGYO.ticket0, shugyoUsed: {}, pity: 0, techMiss: {}, superLeft: SHUGYO.superMax, fame: 0, fameTotal: 0, mealReady: false, trainXp: {}, aidLv, astory: { ep: 0, path: null, done: false }, rivalMet: null, ending: null, aptUp: [0, 0, 0, 0], aptLog: { quest: 0, cup: 0, event: 0 }, aptBase: aptBaseNorm(src.aptBase),
+        techs: startTechsRun(species), mastery: Object.fromEntries(startTechsRun(species).map(t => [t, 0])), tickets: SHUGYO.ticket0, shugyoUsed: {}, pity: 0, techMiss: {}, superLeft: SHUGYO.superMax, fame: 0, fameTotal: 0, mealReady: false, trainXp: {}, aidLv, astory: { ep: 0, path: null, done: false }, rivalMet: null, ending: null, aptUp: [0, 0, 0, 0], aptLog: { quest: 0, cup: 0, event: 0 }, aptBase: aptBaseNorm(src.aptBase),
         items: { sand: clamp(Math.round(num(src.items && src.items.sand)), 0, REMATCH.carry), rainbow: clamp(Math.round(num(src.items && src.items.rainbow)), 0, REMATCH.carry) }, rematchUsed: 0, wonBefore: Array.isArray(src.wonBefore) ? src.wonBefore.filter(k => typeof k === 'string').slice(0, 64) : [], wonNow: [], rivals: (Array.isArray(src.rivals) ? src.rivals : []).filter(RIVALS_OK0).slice(0, 8).map(r => ({ name: String(r.name || '').slice(0, 24), breeder: typeof r.breeder === 'string' ? r.breeder.slice(0, 24) : null, kind: r.kind === 'friend' ? 'friend' : 'aid', species: r.species, stats: normStats(r.stats, r.species) })),
         cond: null, yosu: {}, hirameki: false, idle: 0, issaMet: 0, issaWon: 0, issaDone: false,
         debutLoss: 0, debutWon: false, crowns: 0, titles: [], battle: null, over: null, last: null, acted: false, reacted: false,
@@ -1041,6 +1062,18 @@
     const RIVALS_OK = (x) => x && typeof x === 'object' && speciesList.includes(x.species);
     const regularsOf = (cup) => REG.filter(r => r.cup === cup);
     const champOf = (cup) => REG.find(r => r.cup === cup && r.champ) || null;
+    // 技の強さの目安: 威力 ×(1 + 命中/100)の上位2つの平均(DEBUT_TECH_FLOOR)
+    const techPunch = (sp, ids) => {
+      const own = techsOf(sp);
+      const v = (Array.isArray(ids) ? ids : []).map(id => own.find(t => t && t.id === id)).filter(Boolean)
+        .map(t => Math.max(0, num(t.power)) * Math.max(0.5, 1 + num(t.hit) / 100)).sort((x, y) => y - x).slice(0, 2);
+      return v.length ? v.reduce((x, y) => x + y, 0) / v.length : 0;
+    };
+    // デビュー戦の相手の手かげん(相手は表の先頭から n 個の技で戦う。試合の画面と同じ)
+    const debutEase = (s, sp, n) => {
+      const mine = techPunch(s.species, s.techs); const foe = techPunch(sp, techsOf(sp).slice(0, n).map(t => t.id));
+      return mine > 0 && foe > 0 ? clamp(mine / foe, DEBUT_TECH_FLOOR, 1) : 1;
+    };
     // ---- 助手1人分のストーリー(data/monhero-success-arc.js・STORY-ARC.md) ----
     const ARCX = (deps && deps.arc) || (root && root.MONHERO_SUCCESS_ARC) || null;
     const ARC = ARCX && ARCX.ARC && typeof ARCX.ARC === 'object' ? ARCX.ARC : {};
@@ -1192,7 +1225,8 @@
       const sy = CUP_SYS[cup] || {};
       const w = KEYS.map(k => (rv && rv.stats ? Math.max(1, num(rv.stats[k], 100)) : aptMult(sp, k) * (0.85 + rng() * 0.3)) * (sy.stat === k ? 1.15 : 1));
       const ws = w.reduce((a, x) => a + x, 0);
-      const stats = {}; KEYS.forEach((k, i) => { stats[k] = clamp(Math.round(total * w[i] / ws), 1, STAT_MAX); });
+      const ease = b.kind === 'debut' ? debutEase(s, sp, gear.techs) : 1; // 初めの技の強さの差(DEBUT_TECH_FLOOR)
+      const stats = {}; KEYS.forEach((k, i) => { stats[k] = clamp(Math.round(total * ease * w[i] / ws), 1, STAT_MAX); });
       // 人気と忠誠度(社長 2026-11-12「敵も人気と忠誠度を設定して」): 期の基準 + 王者/ライバル/頂への道の上乗せ + ±5 のくじ。
       //   忠誠度は試合の「言うことを聞かない番」、人気は会心に効く(育てる子と同じ)。乱数は能力を決めたあとに引く(能力は今までと同じ)
       const pk0 = b.kind === 'summit' ? 'final' : b.kind === 'cup' ? periodOf(s.turn).key : b.kind;
