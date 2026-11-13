@@ -195,8 +195,10 @@ function MsxHome({ data, run, debug, onClose, onContinue, onNew, setMeta, onWipe
   const SUC = msxSuc.SUC;
   const s = run && run.s;
   const v = s ? SUC.peek(s) : null;
+  const [dex, setDex] = useState(false);
   return (
     <>
+      {dex && typeof MsxDex === 'function' ? <MsxDex aid={s ? s.aid : 'mua'} nick={run ? run.nick : ''} onClose={() => setDex(false)}/> : null}
       <MsxHd back="とじる" onBack={onClose} right={`保存枠 ${data.box.mons.length}/${data.box.cap}`}/>
       <div className="v-body">
         <div className="v-scene" style={{ flex: '1 1 0' }}>
@@ -214,6 +216,7 @@ function MsxHome({ data, run, debug, onClose, onContinue, onNew, setMeta, onWipe
         <button type="button" className="v-big" onClick={onNew}>🌱 新しく育成をはじめる</button>
         {onBox ? <button type="button" className="msx-btn sub" onClick={onBox} data-msx-r3-openbox>📦 保存枠({data.box.mons.length}/{data.box.cap})</button> : null}
         {typeof MonsucRankScreen === 'function' ? <button type="button" className="msx-btn sub" onClick={onRank}>🏆 ランキング</button> : null}
+        {typeof MsxDex === 'function' ? <button type="button" className="msx-btn sub" onClick={() => setDex(true)} data-msx-dex-home>📖 イベント図鑑</button> : null}
         {debug && (
           <div className="v-card" style={{ borderColor: '#a3e63566' }}>
             <div className="msx-dbg">デバッグ(公開の印が偽のあいだだけ・通常のプレイには出ない)</div>
@@ -347,7 +350,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug }) 
   // ---- 覚醒・超覚醒(56-monsuc-awake.jsx の演出)。終わったら、ターンのはじめならメインへ・ターンの終わりなら閉じる ----
   else if (phase === 'awake' && run.out && run.out.fire && typeof MsxAwakeShow === 'function') {
     const f = run.out.fire; const then = run.out.then;
-    const done = () => { const next = pushLog({ ...run, out: null }, f.kind === 2 ? '超覚醒した!' : '覚醒した!'); if (then === 'end') endTurnFlow({ ...next, phase: 'main' }); else toMain(next); };
+    const done = () => { if (typeof msxSeenMark === 'function') msxSeenMark(f.kind === 2 ? 'aw.super' : 'aw.awake'); const next = pushLog({ ...run, out: null }, f.kind === 2 ? '超覚醒した!' : '覚醒した!'); if (then === 'end') endTurnFlow({ ...next, phase: 'main' }); else toMain(next); };
     body = <MsxAwakeShow key={`${s.turn}-${f.kind}`} run={run} fire={f} v={v} ev={ev} line={line}/>;
     foot = <div className="v-ft"><button type="button" className="go" onClick={done} data-msx-awake-next>つぎへ ▶</button></div>;
   }
@@ -537,13 +540,15 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug }) 
       <MsxHd back="中断" onBack={onPause} sub={`${msxAidName(s.aid)}編`} right={`${s.turn} / ${msxSuc.core.TOTAL_TURNS}ターン`}/>
       <div className="v-body">{body}</div>
       {foot}
-      {sheet && (
+      {sheet === 'dex' && typeof MsxDex === 'function' ? <MsxDex aid={s.aid} nick={run.nick} onClose={() => setSheet(null)}/> : null}
+      {sheet && sheet !== 'dex' && (
         <div className="msx-ov msx-fade" onClick={() => setSheet(null)}>
           <div className="msx-sheet" onClick={(e) => e.stopPropagation()}>
             {sheet === 'log' ? <><h3>📖 きろく</h3>{(run.log || []).length ? run.log.slice().reverse().map((l, i) => <div key={i} className="msx-note">{l.turn}ターン目: {l.t}</div>) : <div className="msx-note">まだありません</div>}</>
               : sheet === 'menu' ? <><h3>☰ メニュー</h3>
                 <div className="msx-note">育成方針: {MSX_POLICY_SCALE[Math.max(-3, Math.min(3, s.pol || 0)) + 3]}(褒めると甘く・叱ると厳しくなる)</div>
                 <div className="msx-note">成長の型: {typeof MASMON_CALC !== 'undefined' ? MASMON_CALC.typeOf(s.type).name : '—'}</div>
+                {typeof MsxDex === 'function' ? <button type="button" className="msx-btn sub" onClick={() => setSheet('dex')} data-msx-dex-open>📖 イベント図鑑</button> : null}
                 <button type="button" className="msx-btn sub" onClick={() => { setSheet(null); onPause(); }}>中断する(続きから遊べる)</button>
                 <button type="button" className="msx-btn sub" onClick={() => { setSheet(null); onQuit(); }}>この育成をやめる</button></>
               : <><h3>{sheet.soon}<span className="msx-soon">準備中</span></h3><div className="msx-note">{sheet.text}</div></>}
@@ -637,12 +642,14 @@ function MsxStats({ run, setRun, v, ev, onClose }) {
 // ---- イッサ博士(6つから1つ・結果) ----
 function MsxIssa({ run, setRun, v, ev, ctx, bondLv, onDone }) {
   const { SUC } = msxSuc;
+  useEffect(() => { if (typeof msxSeenMark === 'function') msxSeenMark('issa'); }, []);
   const s = run.s;
   const [pick, setPick] = useState('hp');
   const res = run.out && run.out.issa ? run.out.issa : null;
   const metScene = s.issaMet > 0 ? 'issa.meet.again' : 'issa.meet.first';
   const meet = msxPickLine(ctx, metScene, { who: 'issa' });
   const choose = () => {
+    if (typeof msxSeenMark === 'function') msxSeenMark('issa', pick);
     const r = SUC.issa(s, pick);
     if (!r.out.ok) { onDone(run); return; }
     setRun({ ...run, s: r.state, out: { issa: r.out, before: s.stats }, log: [...(run.log || []), { turn: s.turn, t: `イッサ博士: ${pick === 'none' ? 'ことわった' : r.out.win ? '成功' : '失敗'}` }].slice(-20) });
@@ -693,6 +700,10 @@ function MsxEvent({ run, setRun, v, ev, ctx, bondLv, onDone }) {
   const isStory = run.phase === 'story';
   const o = run.out || {};
   const view = o.ev || null;
+  // 図鑑の id(56-monsuc-dex.jsx): 助手のお話は story.<助手>.ep1〜4 / special、ほかは表の id
+  const seenId = isStory ? `story.${s.aid}.${o.ep === 'special' ? 'special' : `ep${o.ep}`}` : view ? view.id : null;
+  const [info, setInfo] = useState(null); // 「ℹ」で開いている選択肢
+  useEffect(() => { if (seenId && typeof msxSeenMark === 'function') msxSeenMark(seenId); }, [seenId]);
   const isUniq = !isStory && !!view && view.kind === 'uniq'; // 助手の固有イベント(56-monhero-success-arc.jsx・data/monhero-success-arc.js)
   const scene = isStory ? (se && se.SCENE ? se.SCENE.story(s.aid, o.ep) : `scn.${s.aid}.ep${o.ep}`) : view && view.lines;
   const c2 = { ...ctx, bond: bondLv, cheer: view && view.cheerName, cheer2: view && view.cheer2Name, train: view && view.train ? MSX_STAT_NAME[view.train] : undefined };
@@ -702,6 +713,7 @@ function MsxEvent({ run, setRun, v, ev, ctx, bondLv, onDone }) {
   const choices = isStory ? (main.choices.length ? main.choices : [{ c: 'a', t: 'いっしょにがんばる' }, { c: 'b', t: 'ゆっくりいこう' }])
     : (view && view.choices ? view.choices.map((ch) => ({ ...ch, t: (main.choices.find((x) => x.c === ch.c) || {}).t || ch.c })) : []);
   const choose = (c) => {
+    if (seenId && c && typeof msxSeenMark === 'function') msxSeenMark(seenId, c);
     if (isStory) {
       const r = SUC.storyStep(s, c); if (!r.out || !r.out.ok) { onDone(run); return; }
       const tail = r.out.ep === 4 && r.out.end ? `${scene}.${r.out.end}` : `${scene}.${c}`;
@@ -733,7 +745,11 @@ function MsxEvent({ run, setRun, v, ev, ctx, bondLv, onDone }) {
       {picked.apt ? <div className="v-log" data-msx-ev-apt>📏 「{['零', '近', '中', '遠'][picked.apt.dist]}」の間合い適性が <b className="ga">{picked.apt.from} → {picked.apt.grade}</b> に上がった!</div> : null}
       <div className="v-ft" style={{ marginTop: 6 }}><button type="button" className="go" onClick={() => onDone(run)}>つぎへ ▶</button></div>
     </>) : choices.length ? (
-      <div className="v-opts">{choices.map((ch) => <button type="button" key={ch.c} className="v-opt" disabled={ch.ok === false} onClick={() => choose(ch.c)}>{ch.t}{MSX_LOOK[ch.look] ? <small>{MSX_LOOK[ch.look]}</small> : null}</button>)}</div>
+      <div className="v-opts">{choices.map((ch) => (typeof MsxChoiceInfo === 'function' && seenId ? <React.Fragment key={ch.c}>
+        <div className="msx-optrow"><button type="button" className="v-opt" disabled={ch.ok === false} onClick={() => choose(ch.c)}>{ch.t}{MSX_LOOK[ch.look] ? <small>{MSX_LOOK[ch.look]}</small> : null}</button>
+          <button type="button" className={`msx-info${info === ch.c ? ' on' : ''}`} aria-label="詳細" onClick={() => setInfo(info === ch.c ? null : ch.c)} data-msx-info={ch.c}>ℹ</button></div>
+        <MsxChoiceInfo evId={seenId} c={ch.c} open={info === ch.c}/></React.Fragment>
+        : <button type="button" key={ch.c} className="v-opt" disabled={ch.ok === false} onClick={() => choose(ch.c)}>{ch.t}{MSX_LOOK[ch.look] ? <small>{MSX_LOOK[ch.look]}</small> : null}</button>))}</div>
     ) : (
       <div className="v-ft" style={{ marginTop: 6 }}><button type="button" className="go" onClick={() => (isStory ? choose('a') : choose(null))}>つぎへ ▶</button></div>
     )}
