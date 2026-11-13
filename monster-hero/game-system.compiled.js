@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 262ee36c3d486b31
+// source-sha256: 820134d3c63955b0
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -148991,8 +148991,8 @@ const monsucTeams = (catalog, suc, s, info) => {
     name: info.meName,
     lv: mscNum(s.lv, 1),
     stats: s.stats,
-    ...(typeof suc.aptUpOf === 'function' ? {
-      aptUp: suc.aptUpOf(s)
+    ...(typeof suc.aptSendOf === 'function' ? {
+      aptUp: suc.aptSendOf(s)
     } : {}),
     techs: Array.isArray(s.techs) ? s.techs.slice() : undefined,
     mastery: s.mastery || {},
@@ -154055,7 +154055,10 @@ function MonsucFuseSheet({
   }, "受け継ぐ技: ", plan.child.techs.length ? plan.child.techs.map(t => {
     const x = SUC.techsOf(plan.child.species).find(y => y.id === t);
     return x ? x.name : t;
-  }).join('・') + '(熟練は 0 から)' : 'なし'), React.createElement("div", {
+  }).join('・') + '(熟練は 0 から)' : 'なし'), React.createElement("p", {
+    className: "mt-1 text-[11px] font-bold text-slate-200",
+    "data-monsuc-fuse-apt": true
+  }, "受け継ぐ間合い適性: ", Array.isArray(plan.child.aptBase) && plan.child.aptBase.some(n => n > 0) ? plan.child.aptBase.map((n, i) => n > 0 ? `${['零', '近', '中', '遠'][i]} +${n}段` : null).filter(Boolean).join('・') : 'なし'), React.createElement("div", {
     className: "mt-2 rounded-xl border-2 border-rose-400 bg-rose-950/70 p-2",
     "data-monsuc-fuse-lose": true
   }, React.createElement("p", {
@@ -159987,7 +159990,8 @@ const msxNormBoxMon = m => {
     masteries: Array.isArray(m.mast) ? m.mast.filter(Number.isFinite).slice(0, 8) : [],
     coach: msxStr(m.coach, 16),
     endAt: msxNum(m.endAt, 0),
-    aptUp: [0, 1, 2, 3].map(i => Math.max(0, Math.min(11, Math.round(msxNum(Array.isArray(m.aptUp) ? m.aptUp[i] : 0, 0)))))
+    aptUp: [0, 1, 2, 3].map(i => Math.max(0, Math.min(11, Math.round(msxNum(Array.isArray(m.aptUp) ? m.aptUp[i] : 0, 0))))),
+    aptBase: [0, 1, 2, 3].map(i => Math.max(0, Math.min(11, Math.round(msxNum(Array.isArray(m.aptBase) ? m.aptBase[i] : 0, 0)))))
   };
 };
 const msxNormBox = raw => {
@@ -161407,6 +161411,7 @@ function MonheroSuccessScreen({
     cfg.items.filter(k => MSX_ITEM_BY_ID[k] && MSX_ITEM_BY_ID[k].when === 'both').forEach(k => {
       bag[k] = 1;
     });
+    const fromMon = cfg.from && typeof cfg.from.box === 'string' ? data.box.mons.find(m => m.id === cfg.from.box) : null;
     const s = SUC.newRun({
       id,
       species: cfg.species,
@@ -161415,6 +161420,9 @@ function MonheroSuccessScreen({
       aidBondLv: cfg.aidBondLv,
       carry,
       bag,
+      ...(fromMon && Array.isArray(fromMon.aptBase) ? {
+        aptBase: fromMon.aptBase
+      } : {}),
       wonBefore: Array.isArray(data.meta.wonCups) ? data.meta.wonCups : []
     });
     const r = {
@@ -163693,8 +163701,8 @@ const msxR3Fight = (engine, SUC, run) => {
     stats: s.stats,
     loy,
     pop: s.pop,
-    ...(typeof SUC.aptUpOf === 'function' ? {
-      aptUp: SUC.aptUpOf(s)
+    ...(typeof SUC.aptSendOf === 'function' ? {
+      aptUp: SUC.aptSendOf(s)
     } : {}),
     ...(ts.length ? {
       techs: ts,
@@ -163861,6 +163869,9 @@ const msxR3BoxMonOf = (run, s, ev, assists, parent) => ({
   } : {}),
   ...(Array.isArray(s.aptUp) && s.aptUp.some(n => n > 0) ? {
     aptUp: s.aptUp.slice(0, 4)
+  } : {}),
+  ...(Array.isArray(s.aptBase) && s.aptBase.some(n => n > 0) ? {
+    aptBase: s.aptBase.slice(0, 4)
   } : {}),
   titles: msxR3FinalTitles(s, ev),
   from: run.from || null

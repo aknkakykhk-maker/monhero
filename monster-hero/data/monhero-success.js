@@ -225,6 +225,9 @@
     src: Object.freeze({ quest: 5, cup: 4, event: 3 }),
     questRate: 0.1,
     course: Object.freeze({ fire: 1, ice: 2, wind: 3, star: 0 }),
+    // 合体で継ぐ段数(2026-11-13 社長の答え 案 B): 間合いごとに「親2体の段数(継いだ分 + 育成で上げた分)の平均の半分(切り捨て)」
+    //   + 2体とも同じ間合いを same 段以上伸ばしていたら bonus。継げる合計は total まで(超えたら小さい間合いから削る)。1体の最大は 12 + 6 = 18
+    inherit: Object.freeze({ same: 2, bonus: 2, total: 6 }),
   });
 
   // ---- 修行(社長 2026-11-12: 参考と同じ形。チケット・2段で能力2つずつ・最後に技を覚えるくじ・外すと次の率が上がる) ----
@@ -403,6 +406,12 @@
     const RIVALS_OK0 = (x) => x && typeof x === 'object' && speciesList.includes(x.species);
     const aptStr = (sp) => (typeof APT[sp] === 'string' && APT[sp].length === 6 ? APT[sp] : 'CCCCCC');
     const aptMult = (sp, k) => APT_MULT[aptStr(sp)[KEYS.indexOf(k)]] || 1;
+    // 合体で継いだ間合い適性の段数 [零,近,中,遠](各 0〜11 の整数・合計は DIST_UP.inherit.total まで。超えたら後ろの間合いから削る)
+    const aptBaseNorm = (v) => {
+      const o = [0, 1, 2, 3].map(i => clamp(Math.round(num(Array.isArray(v) ? v[i] : 0)), 0, DIST_UP.grades.length - 1)); let over = o.reduce((a, b) => a + b, 0) - DIST_UP.inherit.total;
+      for (let i = 3; i >= 0 && over > 0; i--) { const cut = Math.min(o[i], over); o[i] -= cut; over -= cut; }
+      return o;
+    };
     const initStats = (sp) => { const a = Array.isArray(INIT[sp]) ? INIT[sp] : [100, 100, 100, 100, 100, 100]; const o = {}; KEYS.forEach((k, i) => { o[k] = clamp(Math.round(num(a[i], 100)), 0, STAT_MAX); }); return o; };
     const normStats = (st, sp) => { const base = initStats(sp); const o = {}; KEYS.forEach(k => { o[k] = clamp(Math.round(num(st && st[k], base[k])), 0, STAT_MAX); }); return o; };
     const sumOf = (st) => KEYS.reduce((a, k) => a + num(st[k]), 0);
@@ -484,7 +493,7 @@
         v: VERSION, id, species, aid, type: typeIdx, turn: 1, stats, hpMax, hp: hpMax, stress: 0, carry, bag, good, issaForce, issaSure: false, itemTurn: 0,
         ama: LOYAL.start[0], fear: LOYAL.start[1], pol: clamp(Math.round(num(src.pol)), -3, 3), pp: 0, pop: 0, pts: 0, ptsLost: 0, lv: 1, xp: 0,
         team, bond: team.map(m => m.bond0), story: team.map(() => 0), aidBond: clamp(aidLv * BOND.aidPerLv + (hn ? aOf('hitonatsu', 'start', hn) : 0), 0, BOND.max),
-        techs: startTechs(species), mastery: Object.fromEntries(startTechs(species).map(t => [t, 0])), tickets: SHUGYO.ticket0, shugyoUsed: {}, pity: 0, fame: 0, fameTotal: 0, mealReady: false, trainXp: {}, aidLv, astory: { ep: 0, path: null, done: false }, rivalMet: null, ending: null, aptUp: [0, 0, 0, 0], aptLog: { quest: 0, cup: 0, event: 0 },
+        techs: startTechs(species), mastery: Object.fromEntries(startTechs(species).map(t => [t, 0])), tickets: SHUGYO.ticket0, shugyoUsed: {}, pity: 0, fame: 0, fameTotal: 0, mealReady: false, trainXp: {}, aidLv, astory: { ep: 0, path: null, done: false }, rivalMet: null, ending: null, aptUp: [0, 0, 0, 0], aptLog: { quest: 0, cup: 0, event: 0 }, aptBase: aptBaseNorm(src.aptBase),
         items: { sand: clamp(Math.round(num(src.items && src.items.sand)), 0, REMATCH.carry), rainbow: clamp(Math.round(num(src.items && src.items.rainbow)), 0, REMATCH.carry) }, rematchUsed: 0, wonBefore: Array.isArray(src.wonBefore) ? src.wonBefore.filter(k => typeof k === 'string').slice(0, 64) : [], wonNow: [], rivals: (Array.isArray(src.rivals) ? src.rivals : []).filter(RIVALS_OK0).slice(0, 8).map(r => ({ name: String(r.name || '').slice(0, 24), breeder: typeof r.breeder === 'string' ? r.breeder.slice(0, 24) : null, kind: r.kind === 'friend' ? 'friend' : 'aid', species: r.species, stats: normStats(r.stats, r.species) })),
         cond: null, yosu: {}, hirameki: false, idle: 0, issaMet: 0, issaWon: 0, issaDone: false,
         debutLoss: 0, debutWon: false, crowns: 0, titles: [], battle: null, over: null, last: null, acted: false, reacted: false,
@@ -869,6 +878,7 @@
       out.rivalMet = typeof raw.rivalMet === 'string' ? raw.rivalMet.slice(0, 24) : null;
       out.ending = raw.ending && typeof raw.ending === 'object' && ['bad', 'good', 'super'].includes(raw.ending.kind) ? { kind: raw.ending.kind, parties: partiesOf(raw.ending.kind), seen: raw.ending.seen === true } : null;
       out.aidLv = Math.round(n(raw.aidLv, out.aidLv, 1, 10));
+      out.aptBase = aptBaseNorm(raw.aptBase); // 合体円盤石から継いだ段数(無い → 0)
       out.aptUp = aptUpOf({ aptUp: raw.aptUp }); // 上げた段数(無い・壊れている → 0)。上げ方ごとの数も上限で切りそろえる
       out.aptLog = Object.fromEntries(Object.keys(DIST_UP.src).map(k => [k, Math.round(n(raw.aptLog && raw.aptLog[k], 0, 0, DIST_UP.src[k]))]));
       out.astory = raw.astory && typeof raw.astory === 'object' ? { ep: Math.round(n(raw.astory.ep, 0, 0, 4)), path: ['good', 'bitter'].includes(raw.astory.path) ? raw.astory.path : null, done: raw.astory.done === true } : out.astory;
@@ -1039,10 +1049,20 @@
     const aptGradesOf = (s) => {
       const G = DIST_UP.grades; const base = DIST_OF(s.species) || ['C', 'C', 'C', 'C']; const up = aptUpOf(s); let m = 0;
       return [0, 1, 2, 3].map(i => {
-        const b = G.indexOf(base[i]); let k = Math.min(G.length - 1, (b < 0 ? G.indexOf('C') : b) + up[i]);
+        const b = G.indexOf(base[i]); let k = Math.min(G.length - 1, (b < 0 ? G.indexOf('C') : b) + up[i] + aptBaseNorm(s.aptBase)[i]);
         if (k === G.length - 1 && up[i] > 0) { if (m >= DIST_UP.mMax) k -= 1; else m += 1; }
         return G[k];
       });
+    };
+    // 試合の芯へ渡す段数(継いだ分 + 育成で上げた分)。芯がもう一度、上限で切りそろえる
+    const aptSendOf = (s) => { const b = aptBaseNorm(s && s.aptBase); return aptUpOf(s).map((n, i) => n + b[i]); };
+    // 合体で継ぐ段数(親2体は保存枠のマスモンの行。aptBase・aptUp が無ければ 0)
+    const aptInherit = (a, b) => {
+      const H = DIST_UP.inherit; const pa = aptSendOf(a || {}); const pb = aptSendOf(b || {});
+      const o = [0, 1, 2, 3].map(i => Math.floor((pa[i] + pb[i]) / 4) + (pa[i] >= H.same && pb[i] >= H.same ? H.bonus : 0));
+      let over = o.reduce((x, y) => x + y, 0) - H.total;
+      while (over > 0) { const i = [0, 1, 2, 3].filter(d => o[d] > 0).sort((x, y) => o[x] - o[y] || y - x)[0]; o[i] -= 1; over -= 1; } // 小さい間合いから削る
+      return o;
     };
     // 1段上げられるか(上げ方 src = 'quest' | 'cup' | 'event' ごとの上限も見る)
     const aptUpRoom = (s, d, src) => {
@@ -1311,7 +1331,7 @@
         ok: true, kinds, sub: kind.sub, base, add,
         typeChanged: changed && gt !== t0,
         parentInfo: [parentOf(a), parentOf(b)],
-        child: { id: fuseId(a.id, b.id), species, nick: species === a.species && typeof a.nick === 'string' ? a.nick.slice(0, 16) : '', gen, st, techs, mast: techs.map(() => 0), gt, lv: 1, raised: false, parents: [String(a.id), String(b.id)] },
+        child: { id: fuseId(a.id, b.id), species, nick: species === a.species && typeof a.nick === 'string' ? a.nick.slice(0, 16) : '', gen, st, techs, mast: techs.map(() => 0), gt, lv: 1, raised: false, parents: [String(a.id), String(b.id)], ...(aptInherit(a, b).some(n => n > 0) ? { aptBase: aptInherit(a, b) } : {}) },
       };
     };
 
@@ -1340,7 +1360,7 @@
       rngOf, periodOf, aptMult, initStats, memberOf, memberEffect, newRun, gatherOf, cardMult, peek, failRateOf, sabRateOf, greatRateOf,
       act, react, issa, issaComes, issaRate, endTurn, opponents: opponentsOf, settle, cupsOf, canEnter, bracketOf, gradeOf, GRADE_STEP, stayV, SC_CUPS, SC_NAME, ASST_STORY, storyEnd, markSpecial, battleMods, battleBuffs, peakTurn, ASTORY, storyDue, storyStep, preview, restore, ARC, PARTY, summitPick, endingOf, endingSeen, CUP_SYS, YEAR, RIVAL, CUP_PRIZE, spendPts, autoPts, ptsCost, evaluate, assistPointsOf, loyalOf, loyalMult, top3Of, sumOf,
       FUSE, fuseOk, fuseKinds, fusePlan, fuseId,
-      DIST_UP, aptUpOf, aptGradesOf, aptUpRoom, addAptUp,
+      DIST_UP, aptUpOf, aptGradesOf, aptUpRoom, addAptUp, aptSendOf, aptInherit, aptBaseNorm,
     });
   };
 
