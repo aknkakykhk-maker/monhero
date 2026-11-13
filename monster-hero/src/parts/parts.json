@@ -509,6 +509,10 @@
       "role": "部品: モンヒロサクセスの合体(保存枠の育て終えた子どうし)。計算は芯 MONHERO_SUCCESS の fusePlan。画面 MonsucFuseSheet({ box, saveBox, locked, onDone, onClose })・口 monsucFuse・monsucFuseApply。箱 mh_monsuc_box_v1 の読み書きは保存枠の部品から受け取る。記録は新しいキー mh_monsuc_fuse_v1 を先に書く。公開の印 monheroSuccess。案 docs/progress/player-raise/PLAN.md §3"
     },
     {
+      "file": "56-monsuc-awake.jsx",
+      "role": "部品: モンヒロサクセスの覚醒・超覚醒の見せる部分(バトルカードのキラで絵を包む MsxKira・前触れの光 MsxOmenFx・起きたときの演出 MsxAwakeShow・印 msxKiraOf)。計算は芯 MONHERO_SUCCESS の awakeOpen。何も保存しない・公開の印 monheroSuccess の後ろ"
+    },
+    {
       "file": "56-assistant-life-friend.jsx",
       "role": "助手ライフのフレンドの家との行き来(助手が自分で行く go・フレンドの助手が来る come・プレイヤーが訪ねる look)。家の控えを送る/読む・行き来の記録・置き手紙・お礼・設定・「🏘 フレンド」のページと HOME の印。公開の印 assistantLifeFriend の後ろ。保存は mh_assistant_life_friend_v1・_settings_v1・_known_v1・_intro_v1 の新しいキーだけ。表は assistant_life_friend_switch/_houses/_visits"
     },
