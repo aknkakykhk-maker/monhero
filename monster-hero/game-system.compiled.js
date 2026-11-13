@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e85022dca8e406ee
+// source-sha256: d275614126b56feb
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -159985,8 +159985,8 @@ const msxNormBoxMon = m => {
   return {
     ...m,
     gen: Math.max(1, Math.min(999, Math.floor(msxNum(m.gen, 1)))),
-    techs: Array.isArray(m.techs) ? m.techs.filter(x => typeof x === 'string').slice(0, 8) : [],
-    mast: Array.isArray(m.mast) ? m.mast.filter(Number.isFinite).slice(0, 8) : [],
+    techs: Array.isArray(m.techs) ? m.techs.filter(x => typeof x === 'string').slice(0, 99) : [],
+    mast: Array.isArray(m.mast) ? m.mast.filter(Number.isFinite).slice(0, 99) : [],
     fav: Array.isArray(m.fav) ? m.fav.filter(k => MSX_STATS.includes(k)).slice(0, 3) : [],
     titles: Array.isArray(m.titles) ? m.titles.filter(x => typeof x === 'string').slice(0, 64) : [],
     id: m.id.slice(0, 64),
@@ -160001,7 +160001,7 @@ const msxNormBoxMon = m => {
     score: msxNum(m.score, 0),
     raised: m.raised !== false,
     assists: Array.isArray(m.assists) ? m.assists.filter(msxIsObj).slice(0, 4) : [],
-    masteries: Array.isArray(m.mast) ? m.mast.filter(Number.isFinite).slice(0, 8) : [],
+    masteries: Array.isArray(m.mast) ? m.mast.filter(Number.isFinite).slice(0, 99) : [],
     coach: msxStr(m.coach, 16),
     endAt: msxNum(m.endAt, 0),
     aptUp: [0, 1, 2, 3].map(i => Math.max(0, Math.min(11, Math.round(msxNum(Array.isArray(m.aptUp) ? m.aptUp[i] : 0, 0))))),
@@ -163862,8 +163862,8 @@ const msxR3BoxMonOf = (run, s, ev, assists, parent) => ({
   st: {
     ...s.stats
   },
-  techs: Array.isArray(s.techs) ? s.techs.slice(0, 8) : [],
-  mast: (Array.isArray(s.techs) ? s.techs : []).slice(0, 8).map(t => Math.round(s.mastery && s.mastery[t] || 0)),
+  techs: Array.isArray(s.techs) ? s.techs.slice(0, 99) : [],
+  mast: (Array.isArray(s.techs) ? s.techs : []).slice(0, 99).map(t => Math.round(s.mastery && s.mastery[t] || 0)),
   loy: ev.loyal,
   pop: s.pop,
   lv: s.lv,
@@ -165625,9 +165625,10 @@ function MsxR3Shugyo({
   const cur = SH.courses[course] || {
     stages: []
   };
+  const tkOrder = t => ((s0.techs || []).includes(t.id) ? 2 : rateOf[t.id] != null ? 0 : 1) * 10 + (rankOf[t.id] || 5);
   const groups = MSX_R3_DIST.map((dn, d) => ({
     dn,
-    list: all.filter(t => Math.min(...(Array.isArray(t.dist) && t.dist.length ? t.dist : [1])) === d)
+    list: all.filter(t => Math.min(...(Array.isArray(t.dist) && t.dist.length ? t.dist : [1])) === d).sort((x, y) => tkOrder(x) - tkOrder(y))
   }));
   const body = React.createElement(React.Fragment, null, React.createElement(MsxBand, {
     s: s0,
@@ -165720,9 +165721,11 @@ function MsxR3Shugyo({
       minHeight: 0,
       display: 'flex',
       flexDirection: 'column',
-      justifyContent: 'space-evenly',
+      gap: 6,
+      overflowY: 'auto',
       padding: '6px 8px'
-    }
+    },
+    "data-msx-r3-techlist": true
   }, React.createElement("div", {
     className: "sub",
     style: {
@@ -165731,8 +165734,19 @@ function MsxR3Shugyo({
     }
   }, "覚えられる技(間合いごと・ランク・覚える率)"), all.length ? groups.filter(g => g.list.length).map(g => React.createElement("div", {
     key: g.dn,
-    className: "v-tk"
-  }, React.createElement("i", null, g.dn), g.list.map(t => {
+    className: "v-tk",
+    style: {
+      alignItems: 'flex-start'
+    }
+  }, React.createElement("i", null, g.dn), React.createElement("div", {
+    style: {
+      flex: 1,
+      minWidth: 0,
+      display: 'grid',
+      gridTemplateColumns: '1fr 1fr',
+      gap: 4
+    }
+  }, g.list.map(t => {
     const got = (s0.techs || []).includes(t.id);
     const ok = rateOf[t.id] != null;
     return React.createElement("span", {
@@ -165750,7 +165764,7 @@ function MsxR3Shugyo({
         marginRight: 2
       }
     }, "R", rankOf[t.id]) : null, t.name, React.createElement("b", null, got ? '覚えた' : ok ? `${Math.round(rateOf[t.id] * 100)}%` : 'まだ'));
-  }))) : React.createElement("div", {
+  })))) : React.createElement("div", {
     className: "sub"
   }, "このモンスターの技の表がまだありません(能力だけ上がる)"), React.createElement("div", {
     className: "sub"
