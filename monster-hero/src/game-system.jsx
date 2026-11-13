@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 037da79cdd342074
+// generated-sha256: b10784a2400fe55a
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -86474,7 +86474,18 @@ function MsxR3Battle({ run, setRun, v, ev, ctx, bondLv, onPause, debug }) {
     const free = s.freeMeal === true;
     const keys = Object.keys(M);
     const can = (k) => s.mealReady && !s.over && (free || s.fame >= M[k].cost);
-    const fx = (k) => { const m = M[k]; return m.hp ? `体力 +${Math.round(m.hp * 100)}%` : m.ama || m.fear ? `忠誠 +${(m.ama || 0) + (m.fear || 0)}` : m.all ? '全能力 少し +' : ''; };
+    // 効き目は芯の meal を写しで試しに呼んで、実際に増える量を出す(食いしん坊・うつ・上限まで含めて本当の数。2026-11-13 社長「ごはんの効果が全然わからない」)
+    const tryMeal = (k) => { try { const r = SUC.meal({ ...s, fame: Math.max(Number(s.fame) || 0, M[k].cost), freeMeal: false }, k); return r && r.out && r.out.ok ? r.state : null; } catch (e) { return null; } };
+    const loyOf = (x) => Math.max(0, Math.min(100, (Number(x.ama) || 0) + (Number(x.fear) || 0)));
+    const fx = (k) => {
+      const m = M[k]; const t = tryMeal(k); if (!t) return '';
+      if (m.hp) { const d = t.hp - s.hp; return d > 0 ? `体力 +${d}(上限の${Math.round(m.hp * 100)}%)` : '体力はもう満タン'; }
+      if (m.ama || m.fear) { const a = loyOf(s); const b = loyOf(t); return b > a ? `忠誠 +${b - a}(いま ${a}→${b})` : '忠誠はもう上がらない'; }
+      if (m.all) { const ds = MSX_STATS.map((x) => (t.stats[x] || 0) - (s.stats[x] || 0)); const lo = Math.min(...ds); const hi = Math.max(...ds); const sum = ds.reduce((p, q) => p + q, 0); return `全能力 +${lo === hi ? lo : `${lo}〜${hi}`}(合計 +${sum})`; }
+      return '';
+    };
+    const LY = SUC.LOYAL || {}; const RT = SUC.RATE || {};
+    const loyNote = `忠誠度が高いほど、訓練と修行の伸びが上がる(${LY.capBoost || 60}で最大 ×${1 + (LY.capBoost || 60) / 100})。80以上で大成功が少し出やすい(+${Math.round((RT.greatLoyal80 || 0.03) * 100)}%)`;
     const give = () => { if (!mealPick || !can(mealPick)) return; const r = SUC.meal(s, mealPick); if (r.out.ok) finish(r.state); };
     const body = (<>
       <MsxBand s={s} v={v} ev={ev}/>
@@ -86485,7 +86496,8 @@ function MsxR3Battle({ run, setRun, v, ev, ctx, bondLv, onPause, debug }) {
           <div className="v-meal"><div className="t">🍽 がんばったごほうびに、ごはんをあげよう<small>大会のあとだけあげられる(1回){free ? '・今回はただ' : ''}</small></div>
             <div className="ms">{keys.map((k) => (
               <button type="button" key={k} className={`v-ml ${mealPick === k ? 'sel' : ''}`} disabled={!can(k)} onClick={() => setMealPick(k)} style={{ opacity: can(k) ? 1 : 0.45 }} data-msx-r3-meal={k}>
-                <div className="e">{k === 'hp' ? '🍙' : k === 'loyal' ? '🍛' : '🍖'}</div><b>{M[k].name}</b><span className="g">{free ? 'ただ' : `💰 ${M[k].cost}G`}</span><small>{fx(k)}</small></button>))}</div>
+                <div className="e">{k === 'hp' ? '🍙' : k === 'loyal' ? '🍛' : '🍖'}</div><b>{M[k].name}</b><span className="g">{free ? 'ただ' : `💰 ${msxFmt(M[k].cost)}G`}</span><small data-msx-r3-mealfx={k}>{fx(k)}</small></button>))}</div>
+            <div className="msx-note" data-msx-r3-loynote style={{ marginTop: 4, fontSize: 10.5, lineHeight: 1.5, textAlign: 'left' }}>💡 {loyNote}</div>
             <div className="row" style={{ marginTop: 6 }}><img className="fc" src={msxFace(s.aid, st3.won ? 'excited' : 'troubled')} alt=""/><div className="bub f1">{st3.won ? '「優勝だもん、今日は ごちそう にしちゃお!」' : '「おつかれさま。おいしいもの食べて、また がんばろ!」'}</div></div></div>
         ) : null}
       </div>

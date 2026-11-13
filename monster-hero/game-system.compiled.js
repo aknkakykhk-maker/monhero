@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3925ce1b09beb687
+// source-sha256: a8875b2ac60324b7
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -167192,10 +167192,44 @@ function MsxR3Battle({
     const free = s.freeMeal === true;
     const keys = Object.keys(M);
     const can = k => s.mealReady && !s.over && (free || s.fame >= M[k].cost);
+    const tryMeal = k => {
+      try {
+        const r = SUC.meal({
+          ...s,
+          fame: Math.max(Number(s.fame) || 0, M[k].cost),
+          freeMeal: false
+        }, k);
+        return r && r.out && r.out.ok ? r.state : null;
+      } catch (e) {
+        return null;
+      }
+    };
+    const loyOf = x => Math.max(0, Math.min(100, (Number(x.ama) || 0) + (Number(x.fear) || 0)));
     const fx = k => {
       const m = M[k];
-      return m.hp ? `体力 +${Math.round(m.hp * 100)}%` : m.ama || m.fear ? `忠誠 +${(m.ama || 0) + (m.fear || 0)}` : m.all ? '全能力 少し +' : '';
+      const t = tryMeal(k);
+      if (!t) return '';
+      if (m.hp) {
+        const d = t.hp - s.hp;
+        return d > 0 ? `体力 +${d}(上限の${Math.round(m.hp * 100)}%)` : '体力はもう満タン';
+      }
+      if (m.ama || m.fear) {
+        const a = loyOf(s);
+        const b = loyOf(t);
+        return b > a ? `忠誠 +${b - a}(いま ${a}→${b})` : '忠誠はもう上がらない';
+      }
+      if (m.all) {
+        const ds = MSX_STATS.map(x => (t.stats[x] || 0) - (s.stats[x] || 0));
+        const lo = Math.min(...ds);
+        const hi = Math.max(...ds);
+        const sum = ds.reduce((p, q) => p + q, 0);
+        return `全能力 +${lo === hi ? lo : `${lo}〜${hi}`}(合計 +${sum})`;
+      }
+      return '';
     };
+    const LY = SUC.LOYAL || {};
+    const RT = SUC.RATE || {};
+    const loyNote = `忠誠度が高いほど、訓練と修行の伸びが上がる(${LY.capBoost || 60}で最大 ×${1 + (LY.capBoost || 60) / 100})。80以上で大成功が少し出やすい(+${Math.round((RT.greatLoyal80 || 0.03) * 100)}%)`;
     const give = () => {
       if (!mealPick || !can(mealPick)) return;
       const r = SUC.meal(s, mealPick);
@@ -167260,7 +167294,18 @@ function MsxR3Battle({
       className: "e"
     }, k === 'hp' ? '🍙' : k === 'loyal' ? '🍛' : '🍖'), React.createElement("b", null, M[k].name), React.createElement("span", {
       className: "g"
-    }, free ? 'ただ' : `💰 ${M[k].cost}G`), React.createElement("small", null, fx(k))))), React.createElement("div", {
+    }, free ? 'ただ' : `💰 ${msxFmt(M[k].cost)}G`), React.createElement("small", {
+      "data-msx-r3-mealfx": k
+    }, fx(k))))), React.createElement("div", {
+      className: "msx-note",
+      "data-msx-r3-loynote": true,
+      style: {
+        marginTop: 4,
+        fontSize: 10.5,
+        lineHeight: 1.5,
+        textAlign: 'left'
+      }
+    }, "💡 ", loyNote), React.createElement("div", {
       className: "row",
       style: {
         marginTop: 6
