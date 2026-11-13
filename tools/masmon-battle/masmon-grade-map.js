@@ -121,11 +121,12 @@ if (TUNE) {
       const tgt = Math.max(band[0], Math.min(band[1], w));
       const want = fx.mul * (1 + (tgt - w) * 0.8);
       fx.mul = Math.max(0.8, Math.min(1.25, want));
-      // オリジナル5種は倍率が上限・下限に当たったら、命中とガッツの重さで足りない分を足す(社長「オリジナル5種をまん中へ」)
+      // オリジナル5種は倍率が上限・下限に当たったら、ガッツの重さで足りない分を足す(社長「オリジナル5種をまん中へ」)
       if (isOrig && want !== fx.mul) {
         const up = want > fx.mul ? 1 : -1;
-        table[sp].forEach(t => { t.hit = clampK('hit', t.hit + 2 * up); t.guts = clampK('guts', t.guts * (1 - 0.04 * up)); });
-        fx.hitAdd = (fx.hitAdd || 0) + 2 * up; fx.gutsMul = (fx.gutsMul || 1) * (1 - 0.04 * up);
+        // 命中では足さない(命中の順位はゴースト系・オリヒメのまま。社長 2026-11-13)。ガッツを軽くして技をたくさん撃てる形にする
+        table[sp].forEach(t => { t.guts = clampK('guts', t.guts * (1 - 0.06 * up)); });
+        fx.gutsMul = (fx.gutsMul || 1) * (1 - 0.06 * up);
       }
       table[sp].forEach((t, i) => { t.power = clampK('power', base[sp][i] * fx.mul); });
     }
