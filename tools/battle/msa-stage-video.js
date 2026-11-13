@@ -60,7 +60,7 @@ const server = http.createServer((req, res) => {
         if (big && crit && ko && mv && r.winner === 'A' && log.length >= 14 && log.length <= 34) pick = { k, r };
       }
       if (!pick) return null;
-      window.__v = { r: pick.r, teamA, teamB };
+      window.__v = { r: pick.r, teamA, teamB, catalog };
       return { k: pick.k, rows: pick.r.log.length };
     });
     if (!info) throw new Error('そろう試合が見つからない');
@@ -113,7 +113,7 @@ const server = http.createServer((req, res) => {
       const root = ReactDOM.createRoot(d);
       const st = r.log[0] || {}; const maxHp = { A: st.aHp || [], B: st.bHp || [] };
       const h = React.createElement;
-      const panel = (side, f, e) => (typeof AmbwPanel === 'function' ? h(AmbwPanel, { side, team: side === 'A' ? teamA : teamB, frame: f, maxHp, moves: side === 'A' ? st.aMoves || [] : st.bMoves || [], lastMove: e.side === side && e.ev === 'tech' ? e.move : null, mine: side === 'A' }) : null);
+      const panel = (side, f, e) => (typeof AmbwPanel === 'function' ? h(AmbwPanel, { side, team: side === 'A' ? teamA : teamB, frame: f, maxHp, moves: side === 'A' ? st.aMoves || [] : st.bMoves || [], lastMove: e.side === side && e.ev === 'tech' ? e.move : null, mine: side === 'A', catalog: window.__v.catalog, teams: { A: teamA, B: teamB } }) : null);
       const teams = { A: teamA, B: teamB };
       function Wrap({ pos, ended }) {
         // 上下の欄は β と同じく、技が当たる瞬間までは前のコマ(前の版には無い)
