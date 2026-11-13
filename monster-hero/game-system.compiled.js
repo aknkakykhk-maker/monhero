@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c6adc7f9fe9f0b2f
+// source-sha256: ffcd6f9b2cd46a6c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -168273,6 +168273,7 @@ const MSX_MANUAL_CSS = `
 .msxm-foot{display:flex;justify-content:space-between;align-items:center;margin-top:8px;gap:8px}
 .msxm-auto{border-radius:99px;border:1px solid #64748b;background:#0f172a;color:#e2e8f0;font-size:12px;padding:6px 14px;font-weight:900}
 .msxm-swap{font-size:11px}
+.msxm-all{border-radius:99px;border:1px solid #64748b;background:#0f172a;color:#e2e8f0;font-size:11px;padding:3px 10px;font-weight:900}
 `;
 const msxManualOpen = (engine, input, choices) => {
   if (!engine || typeof engine.createMatch !== 'function' || !input) return null;
@@ -168381,11 +168382,7 @@ function MsxManualBar({
     }
   }, React.createElement("span", null, "⚔ 攻撃", reachN ? `(届く技 ${reachN})` : '(この間合いでは届く技がありません)'), opt.tech.length > reachN ? React.createElement("button", {
     type: "button",
-    className: "msxm-auto",
-    style: {
-      padding: '3px 10px',
-      fontSize: 11
-    },
+    className: "msxm-all",
     "data-msxm-all": true,
     onClick: () => setAllOpen(v => !v)
   }, allOpen ? '届く技だけ' : `全部の技(${opt.tech.length})`) : null), React.createElement("div", {

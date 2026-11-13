@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 686803780c834a1b
+// generated-sha256: bbf8aaabd47aa0ed
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -86505,6 +86505,7 @@ const MSX_MANUAL_CSS = `
 .msxm-foot{display:flex;justify-content:space-between;align-items:center;margin-top:8px;gap:8px}
 .msxm-auto{border-radius:99px;border:1px solid #64748b;background:#0f172a;color:#e2e8f0;font-size:12px;padding:6px 14px;font-weight:900}
 .msxm-swap{font-size:11px}
+.msxm-all{border-radius:99px;border:1px solid #64748b;background:#0f172a;color:#e2e8f0;font-size:11px;padding:3px 10px;font-weight:900}
 `;
 
 // 試合を作る(手の列があれば、その所まで進めた試合)。芯が無い・古いときは null
@@ -86572,7 +86573,7 @@ function MsxManualBar({ opt, onPick, onAuto, busy, allInit = false }) {
       <div className="msxm-sec">
         <div className="msxm-h" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 6 }}>
           <span>⚔ 攻撃{reachN ? `(届く技 ${reachN})` : '(この間合いでは届く技がありません)'}</span>
-          {opt.tech.length > reachN ? <button type="button" className="msxm-auto" style={{ padding: '3px 10px', fontSize: 11 }} data-msxm-all onClick={() => setAllOpen((v) => !v)}>{allOpen ? '届く技だけ' : `全部の技(${opt.tech.length})`}</button> : null}
+          {opt.tech.length > reachN ? <button type="button" className="msxm-all" data-msxm-all onClick={() => setAllOpen((v) => !v)}>{allOpen ? '届く技だけ' : `全部の技(${opt.tech.length})`}</button> : null}
         </div>
         <div className="msxm-row">{techs.map((t) => (
           <button key={t.key} type="button" className={`msxm-btn atk ${isHint(t) ? 'hint' : ''} ${t.reach ? '' : 'far'}`} disabled={!t.ok || busy} data-msxm-tech={t.key} data-msxm-reach={t.reach ? '1' : '0'} onClick={() => go({ type: 'tech', key: t.key })}>
