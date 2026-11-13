@@ -9,9 +9,11 @@
 //   使い方: node tools/assistant/assistant-masmon-techs-build.js [--shot]
 //
 // ★技の rank(1〜5)が正本(この1か所)。助手の修行の「覚える段」とモンヒロサクセスの修行の覚える率(rank1=70/2=55/3=40/4=25/5=15%)が、
-//   どちらもこの rank を読む。決め方: 初めからの技(tuned-draft の learn.start)は rank 1。残りを、その種類の中で威力の小さい順に
-//   4つの段(rank 2〜5)へ同じ数ずつ分ける(威力が同じなら消費ガッツの小さい方が先)。
-// ★learn の付け方(助手の修行): rank 2 = その技種の能力 150 以上 / rank 3 = 250 以上+ひとつ下の技を熟練 25 / rank 4 = 350 以上+熟練 40 /
+//   どちらもこの rank を読む。決め方(資料にランクがあるので資料を使う。バトル部ジンくん2・モンサク クラフトくん2と合意):
+//   ・資料の技ランク(docs/reference/line-mf/monster-skill-data/monster-skills-by-blood/*.json の rank 1〜6)をそのまま使う。6 は 5 にそろえる
+//   ・初めからの技(tuned-draft の learn.start)は rank 1
+//   ・資料に無い技(オリジナル5種の90技)は、消費ガッツの軽い順に並べて、同じ数ずつ rank 1〜5 に分ける(同じガッツなら威力の小さい方が先)
+// ★learn の付け方(助手の修行): rank 1(初めからでない技)= 100 以上 / rank 2 = その技種の能力 150 以上 / rank 3 = 250 以上+ひとつ下の技を熟練 25 / rank 4 = 350 以上+熟練 40 /
 //   rank 5 = 450 以上+熟練 50。「ひとつ下の技」は、同じ技種で rank がちょうどひとつ下の技(無ければ、同じ技種でいちばん近い下の rank)。
 const fs = require('fs');
 const path = require('path');
@@ -20,7 +22,14 @@ const SRC = path.join(__dirname, 'techs2');
 const draft = JSON.parse(fs.readFileSync(path.join(SRC, 'tuned-draft.json'), 'utf8'));
 const idmap = JSON.parse(fs.readFileSync(path.join(SRC, 'tech-idmap.json'), 'utf8'));
 
-const LEARN_ST = { 2: 150, 3: 250, 4: 350, 5: 450 };   // その技種(pow か wise)の能力の下限
+// 資料の技ランク: skillId → rank(1〜5)
+const RES_DIR = path.join(root, 'docs/reference/line-mf/monster-skill-data/monster-skills-by-blood');
+const resRank = {};
+for (const f of fs.readdirSync(RES_DIR).filter((x) => x.endsWith('.json'))) {
+  const j = JSON.parse(fs.readFileSync(path.join(RES_DIR, f), 'utf8'));
+  for (const sk of j.skills || []) if (sk && sk.skillId && Number.isFinite(sk.rank)) resRank[sk.skillId] = Math.min(5, Math.max(1, Math.round(sk.rank)));
+}
+const LEARN_ST = { 1: 100, 2: 150, 3: 250, 4: 350, 5: 450 };   // その技種(pow か wise)の能力の下限
 const LEARN_NEED = { 3: 25, 4: 40, 5: 50 };            // ひとつ下の技の熟練
 const KEEP = ['id', 'name', 'kind', 'dist', 'power', 'hit', 'guts', 'crit', 'gd'];
 
@@ -38,16 +47,17 @@ for (const [sp, list0] of Object.entries(draft.species)) {
     else if (!dupNote.has(sp)) { dupNote.add(sp); console.error(`注意: ${sp} は同じ技が重複していたので1つにまとめた(${list0.length}技 → ${list0.length - list0.filter((x, i) => list0.findIndex((y) => y.id === x.id) !== i).length}技)`); }
   }
   const base = list.map((t) => { const o = {}; for (const k of KEEP) o[k] = t[k]; if (t.moveTo != null) o.moveTo = t.moveTo; if (t.learn && t.learn.start) o.start = true; return o; });
-  const rest = base.filter((t) => !t.start).sort((a, b) => (a.power - b.power) || (a.guts - b.guts) || a.id.localeCompare(b.id));
   const rank = new Map();
-  base.filter((t) => t.start).forEach((t) => rank.set(t.id, 1));
-  rest.forEach((t, i) => rank.set(t.id, 2 + Math.min(3, Math.floor((i * 4) / Math.max(1, rest.length)))));
+  for (const t of base) { if (t.start) rank.set(t.id, 1); else if (resRank[t.id]) rank.set(t.id, resRank[t.id]); }
+  // 資料に無い技(オリジナル5種)は、消費ガッツの軽い順に同じ数ずつ rank 1〜5 へ
+  const noRes = base.filter((t) => !rank.has(t.id)).sort((a, b) => (a.guts - b.guts) || (a.power - b.power) || a.id.localeCompare(b.id));
+  noRes.forEach((t, i) => rank.set(t.id, 1 + Math.min(4, Math.floor((i * 5) / Math.max(1, noRes.length)))));
   const out = base.map((t) => {
     const r = rank.get(t.id);
     const o = { id: t.id, name: t.name, kind: t.kind, dist: t.dist, power: t.power, hit: t.hit, guts: t.guts, crit: t.crit, gd: t.gd };
     if (t.moveTo != null) o.moveTo = t.moveTo;
     o.rank = r;
-    if (r === 1) o.learn = { start: true };
+    if (base.find((x) => x.id === t.id).start) o.learn = { start: true }; // 初めからの技(各種類2つ)
     else {
       const st = { [t.kind]: LEARN_ST[r] };
       o.learn = { by: t.kind, st };
