@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 3d4e79220ac6042d
+// generated-sha256: 62c28ee90ec27915
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -81187,6 +81187,8 @@ const MSX_QSTAGE_BG = Object.freeze({
   star: [['monhero_night', 'rgba(150,120,255,.3)'], ['dark_void', 'rgba(200,170,255,.3)']],
 });
 const msxActCalm = () => typeof msxFxCalm === 'function' && msxFxCalm();
+// 修行の段の背景(行き先ごとの表 MSX_QSTAGE_BG の名前から作る。どれも story-bg の絵)
+const msxQstageBgUrl = (name) => 'images/story-bg/' + String(name || 'forest_evening') + '.jpg';
 
 function MsxTrainAct({ run, o, onDone }) {
   msxActEnsureCss();
@@ -81252,7 +81254,7 @@ function MsxShugyoStages({ run, o, line, onDone }) {
   const [bg, tint] = bgs[Math.max(0, st - 1)] || bgs[0];
   return (
     <div className={`msx-qst st${st}`} onClick={finish} data-msx-qstage={st}>
-      <img key={`bg${st}`} className="bg" src={`images/story-bg/${bg}.jpg`} alt=""/>
+      <img key={`bg${st}`} className="bg" src={msxQstageBgUrl(bg)} alt=""/>
       <span className="tint" style={{ background: st ? tint : 'rgba(15,13,36,.55)' }}/>
       {st === 0 ? (<div className="say">
         {typeof msxFace === 'function' ? <img className="fc" src={msxFace(s.aid, 'excited')} alt=""/> : null}
@@ -84082,9 +84084,9 @@ const MSX_CSS = `
 .msx .v-st.gs-a.zin u.g i,.msx .v-st.gs-a.zin u.g s.gu{transition:none}
 .msx .v-st.gs-a:not(.zin) u.g i,.msx .v-st.gs-a:not(.zin) u.g s{transition:left .45s ease-in-out,width .45s ease-in-out}
 .msx .v-st.gs-a.zin.many div.up{transform:none;box-shadow:0 0 8px #fde04766}
-.msx .v-st.gs-a.zin div.up u.g{height:12px;margin:2px 3px 9px;background-color:#334155;background-image:linear-gradient(90deg,transparent calc(100% - 1px),#cbd5e1aa 0)}
+.msx .v-st.gs-a.zin div.up u.g{height:12px;margin:2px 3px 12px;background-color:#334155;background-image:linear-gradient(90deg,transparent calc(100% - 1px),#cbd5e1aa 0)}
 .msx .v-st.gs-a.zin div.up u.g i,.msx .v-st.gs-a.zin div.up u.g s{border-radius:2px}
-.msx .v-st.gs-a u.g q{quotes:none;position:absolute;left:0;right:0;top:100%;display:flex;justify-content:space-between;font-size:7.5px;font-weight:800;color:#fde68a;line-height:9px;pointer-events:none}
+.msx .v-st.gs-a u.g q{quotes:none;position:absolute;left:0;right:0;top:100%;display:flex;justify-content:space-between;font-size:10px;font-weight:800;color:#fde68a;line-height:11px;pointer-events:none}
 .msx .v-st.gs-a u.g q::before,.msx .v-st.gs-a u.g q::after{content:none}
 @media (prefers-reduced-motion: reduce){.msx .v-st u.g i,.msx .v-st u.g s.gu{transition:none}.msx .v-st.grow.on u.g s.gu{animation:none}}
 .msx .v-act{display:grid;gap:5px;margin-top:6px}
@@ -84621,6 +84623,8 @@ const msxColors = (v) => (Array.isArray(v) ? v.slice(0, 6).map((c) => (typeof c 
 const msxNormRun = (raw, SUC) => {
   if (!msxIsObj(raw) || raw.v !== 1 || !msxIsObj(raw.s)) return null;
   let s = raw.s;
+  // 賞金の桁を上げる前(印 fameV が芯の FAME_V と違う)の途中の育成は、芯が賞金を ×FAME_SCALE する。期のはじめの控え ki の賞金にも同じ倍率を掛けてそろえる
+  const kiFameMul = SUC && Number.isFinite(SUC.FAME_SCALE) && SUC.FAME_V != null && raw.s.fameV !== SUC.FAME_V ? SUC.FAME_SCALE : 1;
   if (SUC && typeof SUC.restore === 'function') { try { s = SUC.restore(s); } catch (e) { s = null; } if (!s) return null; }
   else {
     const okStats = msxIsObj(s.stats) && MSX_STATS.every((k) => Number.isFinite(s.stats[k]));
@@ -84639,7 +84643,7 @@ const msxNormRun = (raw, SUC) => {
     log: Array.isArray(raw.log) ? raw.log.filter(msxIsObj).slice(-20) : [],
     startAt: msxNum(raw.startAt, 0),
     // 期のはじめの控え(期の区切りの演出で増えた分を出す。2026-11-13 足した項目・無い保存は null のまま)
-    ki: msxIsObj(raw.ki) && Number.isInteger(raw.ki.p) && Number.isFinite(raw.ki.fame) && Number.isFinite(raw.ki.power) ? { p: Math.max(0, Math.min(9, raw.ki.p)), fame: raw.ki.fame, power: raw.ki.power } : null,
+    ki: msxIsObj(raw.ki) && Number.isInteger(raw.ki.p) && Number.isFinite(raw.ki.fame) && Number.isFinite(raw.ki.power) ? { p: Math.max(0, Math.min(9, raw.ki.p)), fame: Math.round(Math.min(1e7, raw.ki.fame * kiFameMul)), power: raw.ki.power } : null,
   };
 };
 // 技表の第2版(2026-11-13): 古い技 id を新しい id へ読み替える(表に canon が無ければそのまま)。techs と mast は同じ並びなので、

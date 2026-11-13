@@ -105,6 +105,8 @@ const msxColors = (v) => (Array.isArray(v) ? v.slice(0, 6).map((c) => (typeof c 
 const msxNormRun = (raw, SUC) => {
   if (!msxIsObj(raw) || raw.v !== 1 || !msxIsObj(raw.s)) return null;
   let s = raw.s;
+  // 賞金の桁を上げる前(印 fameV が芯の FAME_V と違う)の途中の育成は、芯が賞金を ×FAME_SCALE する。期のはじめの控え ki の賞金にも同じ倍率を掛けてそろえる
+  const kiFameMul = SUC && Number.isFinite(SUC.FAME_SCALE) && SUC.FAME_V != null && raw.s.fameV !== SUC.FAME_V ? SUC.FAME_SCALE : 1;
   if (SUC && typeof SUC.restore === 'function') { try { s = SUC.restore(s); } catch (e) { s = null; } if (!s) return null; }
   else {
     const okStats = msxIsObj(s.stats) && MSX_STATS.every((k) => Number.isFinite(s.stats[k]));
@@ -123,7 +125,7 @@ const msxNormRun = (raw, SUC) => {
     log: Array.isArray(raw.log) ? raw.log.filter(msxIsObj).slice(-20) : [],
     startAt: msxNum(raw.startAt, 0),
     // 期のはじめの控え(期の区切りの演出で増えた分を出す。2026-11-13 足した項目・無い保存は null のまま)
-    ki: msxIsObj(raw.ki) && Number.isInteger(raw.ki.p) && Number.isFinite(raw.ki.fame) && Number.isFinite(raw.ki.power) ? { p: Math.max(0, Math.min(9, raw.ki.p)), fame: raw.ki.fame, power: raw.ki.power } : null,
+    ki: msxIsObj(raw.ki) && Number.isInteger(raw.ki.p) && Number.isFinite(raw.ki.fame) && Number.isFinite(raw.ki.power) ? { p: Math.max(0, Math.min(9, raw.ki.p)), fame: Math.round(Math.min(1e7, raw.ki.fame * kiFameMul)), power: raw.ki.power } : null,
   };
 };
 // 技表の第2版(2026-11-13): 古い技 id を新しい id へ読み替える(表に canon が無ければそのまま)。techs と mast は同じ並びなので、

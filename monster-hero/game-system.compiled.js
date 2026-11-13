@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: db51a84ae6558aa2
+// source-sha256: a6405673fae58cac
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -155594,6 +155594,7 @@ const MSX_QSTAGE_BG = Object.freeze({
   star: [['monhero_night', 'rgba(150,120,255,.3)'], ['dark_void', 'rgba(200,170,255,.3)']]
 });
 const msxActCalm = () => typeof msxFxCalm === 'function' && msxFxCalm();
+const msxQstageBgUrl = name => 'images/story-bg/' + String(name || 'forest_evening') + '.jpg';
 function MsxTrainAct({
   run,
   o,
@@ -155813,7 +155814,7 @@ function MsxShugyoStages({
   }, React.createElement("img", {
     key: `bg${st}`,
     className: "bg",
-    src: `images/story-bg/${bg}.jpg`,
+    src: msxQstageBgUrl(bg),
     alt: ""
   }), React.createElement("span", {
     className: "tint",
@@ -161429,9 +161430,9 @@ const MSX_CSS = `
 .msx .v-st.gs-a.zin u.g i,.msx .v-st.gs-a.zin u.g s.gu{transition:none}
 .msx .v-st.gs-a:not(.zin) u.g i,.msx .v-st.gs-a:not(.zin) u.g s{transition:left .45s ease-in-out,width .45s ease-in-out}
 .msx .v-st.gs-a.zin.many div.up{transform:none;box-shadow:0 0 8px #fde04766}
-.msx .v-st.gs-a.zin div.up u.g{height:12px;margin:2px 3px 9px;background-color:#334155;background-image:linear-gradient(90deg,transparent calc(100% - 1px),#cbd5e1aa 0)}
+.msx .v-st.gs-a.zin div.up u.g{height:12px;margin:2px 3px 12px;background-color:#334155;background-image:linear-gradient(90deg,transparent calc(100% - 1px),#cbd5e1aa 0)}
 .msx .v-st.gs-a.zin div.up u.g i,.msx .v-st.gs-a.zin div.up u.g s{border-radius:2px}
-.msx .v-st.gs-a u.g q{quotes:none;position:absolute;left:0;right:0;top:100%;display:flex;justify-content:space-between;font-size:7.5px;font-weight:800;color:#fde68a;line-height:9px;pointer-events:none}
+.msx .v-st.gs-a u.g q{quotes:none;position:absolute;left:0;right:0;top:100%;display:flex;justify-content:space-between;font-size:10px;font-weight:800;color:#fde68a;line-height:11px;pointer-events:none}
 .msx .v-st.gs-a u.g q::before,.msx .v-st.gs-a u.g q::after{content:none}
 @media (prefers-reduced-motion: reduce){.msx .v-st u.g i,.msx .v-st u.g s.gu{transition:none}.msx .v-st.grow.on u.g s.gu{animation:none}}
 .msx .v-act{display:grid;gap:5px;margin-top:6px}
@@ -162030,6 +162031,7 @@ const msxColors = v => Array.isArray(v) ? v.slice(0, 6).map(c => typeof c === 's
 const msxNormRun = (raw, SUC) => {
   if (!msxIsObj(raw) || raw.v !== 1 || !msxIsObj(raw.s)) return null;
   let s = raw.s;
+  const kiFameMul = SUC && Number.isFinite(SUC.FAME_SCALE) && SUC.FAME_V != null && raw.s.fameV !== SUC.FAME_V ? SUC.FAME_SCALE : 1;
   if (SUC && typeof SUC.restore === 'function') {
     try {
       s = SUC.restore(s);
@@ -162062,7 +162064,7 @@ const msxNormRun = (raw, SUC) => {
     startAt: msxNum(raw.startAt, 0),
     ki: msxIsObj(raw.ki) && Number.isInteger(raw.ki.p) && Number.isFinite(raw.ki.fame) && Number.isFinite(raw.ki.power) ? {
       p: Math.max(0, Math.min(9, raw.ki.p)),
-      fame: raw.ki.fame,
+      fame: Math.round(Math.min(1e7, raw.ki.fame * kiFameMul)),
       power: raw.ki.power
     } : null
   };
