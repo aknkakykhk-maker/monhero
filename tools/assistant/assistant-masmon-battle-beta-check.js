@@ -184,6 +184,33 @@ const seed = () => {
     await clickSel('[data-ambb-close]'); await page.waitForTimeout(200); await clickSel('[data-ambb-close]');
     await page.waitForTimeout(300);
     check('「もどる」で閉じる', await page.evaluate(() => !document.querySelector('[data-ambb-root]')));
+    // 段2(バトル部 2026-11-13): 試合前の比べっこ・試合の設定(この端末の練習だけ)・観戦は場が画面いっぱい
+    await page.evaluate((a) => assistantMasmonBattleOpen({ assistantId: a, from: 'room' }), aid);
+    await page.waitForFunction(() => !!document.querySelector('[data-ambb-prep]'), { timeout: 20000 }).catch(() => {});
+    const cmp = await page.evaluate(() => ({ rows: document.querySelectorAll('[data-ambb-compare] [data-ambb-cmp-row]').length, set: !!document.querySelector('[data-ambb-settings]'), crash: /画面の表示でエラーが起きました/.test(document.body.innerText) }));
+    check('段2: 比べっこ(能力6・等級3・間合い4)と試合の設定が出る', cmp.rows === 13 && cmp.set && !cmp.crash, JSON.stringify(cmp));
+    for (const sel of ['[data-ambb-set="team:ko"]', '[data-ambb-set="rounds:30"]', '[data-ambb-set="dist:3"]', '[data-ambb-set="guts:100"]', '[data-ambb-set="fx:lite"]']) await clickSel(sel);
+    await page.waitForTimeout(200);
+    const savedSet = await page.evaluate(() => JSON.parse(localStorage.getItem('mh_assistant_masmon_battle_v1')).set);
+    check('段2: 設定はこの画面のキーに覚える', savedSet && savedSet.team === 'ko' && savedSet.rounds === 30 && savedSet.dist === 3 && savedSet.guts === 100 && savedSet.fx === 'lite', JSON.stringify(savedSet));
+    await clickSel('[data-ambb-start]');
+    await page.waitForFunction(() => !!document.querySelector('[data-ambb-watch] [data-msa-stage]'), { timeout: 10000 }).catch(() => {});
+    await page.waitForTimeout(600);
+    const full = await page.evaluate(() => { const st = document.querySelector('[data-msa-stage]').getBoundingClientRect(); const r = document.querySelector('[data-ambb-root]'); return { h: Math.round(st.height), scroll: r.scrollHeight - r.clientHeight, full: r.classList.contains('ambb-full') }; });
+    check('段2: 観戦は場が画面いっぱい(縦にはみ出さない)', full.full && full.h >= 380 && full.scroll <= 0, JSON.stringify(full));
+    await clickSel('[data-ambb-skip]');
+    await page.waitForFunction(() => !!document.querySelector('[data-ambb-review]'), { timeout: 10000 }).catch(() => {});
+    const rounds = await page.evaluate(() => Number((/(\d+) ラウンド/.exec(document.querySelector('.ambw-res').textContent) || [])[1]));
+    check('段2: ラウンド上限が試合に効く(30 まで)', rounds >= 1 && rounds <= 30, String(rounds));
+    await clickSel('[data-ambb-again]');
+    await page.waitForTimeout(300);
+    await clickSel('[data-ambb-set-reset]');
+    await page.waitForTimeout(200);
+    const back = await page.evaluate(() => JSON.parse(localStorage.getItem('mh_assistant_masmon_battle_v1')).set);
+    check('段2: 「いつもの決まりに戻す」(演出の量は残す)', back.team === 'team' && back.rounds === 150 && back.dist === 'auto' && back.guts === 50 && back.fx === 'lite', JSON.stringify(back));
+    await clickSel('[data-ambb-set="fx:full"]');
+    await clickSel('[data-ambb-close]');
+    await page.waitForTimeout(300);
     // 相手がいない(マスモンを持つ助手が1人だけ)ときは、練習相手を出さず案内だけ(社長 2026-11-11 B)
     const solo = await page.evaluate(async (a) => {
       const st = ASSISTANT_MASMON_STORE.state;
