@@ -106,6 +106,10 @@ const FORMATS = [[1, 1], [2, 2], [3, 3], [1, 2], [2, 3], [3, 1]];
           f.guts -= e.gd || 0;
           if (e.foeGuts != null && f.guts !== e.foeGuts) { ng.guts.push(`${tag} r${e.r} ガッツダウン ${f.guts}≠${e.foeGuts}`); bad = 1; }
           if (f.hp !== e.foeHp) { ng.hp.push(`${tag} r${e.r} ${f.hp}≠${e.foeHp}`); bad = 1; }
+        } else if (e.ev === 'move' && e.why === 'techMove') {
+          // 技の勢いで移った行(技表の moveTo): 1歩ずつでなくてよい・ガッツは増えない
+          if (e.to < 0 || e.to > 3 || !e.byTech) { ng.dist.push(`${tag} r${e.r} 技の移動 ${dist}→${e.to}`); bad = 1; }
+          dist = e.to;
         } else if (e.ev === 'move') {
           if (Math.abs(e.to - dist) !== 1 || e.to < 0 || e.to > 3) { ng.dist.push(`${tag} r${e.r} ${dist}→${e.to}`); bad = 1; }
           dist = e.to;
@@ -442,15 +446,13 @@ const FORMATS = [[1, 1], [2, 2], [3, 3], [1, 2], [2, 3], [3, 1]];
 // ⑱ 技の移動先(moveTo・資料の血統別の技): 使ったあと、その間合いへ移る(移動の行 why=techMove)/無い・壊れた値は今と同じ
 {
   const sp0 = Object.keys(catalog.species)[0];
-  const withMove = (mt) => {
-    const c = JSON.parse(JSON.stringify(catalog));
-    c.species[sp0].techs = c.species[sp0].techs.map((t) => { const x = { ...t }; delete x.moveTo; if (mt !== undefined) x.moveTo = mt; return x; });
-    return c;
-  };
   check('⑱ moveTo: 技表の 0〜3 の整数だけ写しに入る(-1・"2"・9 は持たない)', engine._internal.normTech({ moveTo: 3 }, 0).moveTo === 3 && !('moveTo' in engine._internal.normTech({ moveTo: '2' }, 0)) && !('moveTo' in engine._internal.normTech({ moveTo: 9 }, 0)) && !('moveTo' in engine._internal.normTech({ moveTo: -1 }, 0)));
   const mem = { species: sp0, name: 'x', stats: { life: 400, pow: 400, wise: 400, hit: 400, eva: 400, tough: 400 } };
   const run = (c) => engine.simulate({ seed: 'mt', catalog: c, teamA: { assistantId: 'atsu', members: [mem] }, teamB: { assistantId: 'atsu', members: [mem] } });
-  const r0 = run(catalog), rn = run(withMove(undefined)), r3 = run(withMove(3));
+  // 技表に moveTo が入っていても確かめられるよう、どの種類の技からも moveTo を外した写しを基準にする
+  const strip = JSON.parse(JSON.stringify(catalog)); for (const sp of Object.values(strip.species)) for (const t of sp.techs) delete t.moveTo;
+  const withMove = (mt) => { const c = JSON.parse(JSON.stringify(strip)); c.species[sp0].techs = c.species[sp0].techs.map((t) => (mt !== undefined ? { ...t, moveTo: mt } : t)); return c; };
+  const r0 = run(strip), rn = run(withMove(undefined)), r3 = run(withMove(3));
   const tm = r3.log.filter((e) => e.why === 'techMove');
   check('⑱ moveTo: 無い技表は今と同じ試合', r0.digest === rn.digest, `${r0.digest}/${rn.digest}`);
   check('⑱ moveTo: 遠へ移る技を使うと、その直後に移動の行(why=techMove・to=3)が残る', tm.length > 0 && tm.every((e) => e.to === 3 && e.byTech), `${tm.length} 回`);
