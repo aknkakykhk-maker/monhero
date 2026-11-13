@@ -88,6 +88,10 @@ const __mod = { exports: {} };
   const MASTERY_HIT_MAX = 0.06;    // 熟練100で命中 +6%
   const MASTERY_GUTS_CUT = 0.15;   // 熟練100でガッツ消費 −15%(四捨五入)
   const MASTERY_GUARD_ADD = 0.08;  // ガードの熟練100で受けるダメージがさらに −8%
+  // 技ごとの強化 techBoost(2026-11-13 社長の決め・モンサクの熟練から作る。フレンド対戦・ランキングにも効く)。
+  //   members[].techBoost = { 技id: { pow, hit, guts } }。pow=威力 ×(1+pow)・hit=命中に足す・guts=消費ガッツ ×(1−guts)
+  //   端末から来た値をそのまま信じず、ここで切りそろえる(サーバも同じ芯なので同じ結果): 数でない・負は 0/上限を超えたら上限/覚えていない技は無視
+  const TECH_BOOST_LIMITS = Object.freeze({ pow: 0.20, hit: 0.10, guts: 0.15 });
   // 能力の差の効き方のつまみ(2026-11-11 社長「実際バトルをしてほしい。それを観戦できるようにしたい」。決めるのは観戦してから)。
   //   1体ごとの6能力の合計と、出る全員の平均の合計との差を k 倍にする(6能力の配分=個性はそのまま)。
   //   A=いまのまま(本番の技表で合計+10%の側が約75%勝つ)/B=差を半分に(約62%)/C=差を1.5倍に(約85%)
@@ -246,14 +250,32 @@ const __mod = { exports: {} };
   // 覚えた技の記録が無い(古い入れ物)ときは、はじめから覚えている技(learn.start)だけ。それも無い種は全部。
   // 記録があって1つも当てはまらなければ、はじめの技(無ければ最初の技)
   const startTechs = (sp) => { const st = sp.techs.filter(t => t.start); return st.length ? st : sp.techs.slice(); };
-  const buildMoves = (catalog, speciesId, techIds, mastery) => {
+  const normTechBoost = (raw, techIds) => {
+    const out = {};
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return out;
+    for (const id of Array.isArray(techIds) ? techIds : []) {
+      const b = Object.prototype.hasOwnProperty.call(raw, id) ? raw[id] : null;
+      if (!b || typeof b !== 'object' || Array.isArray(b)) continue;
+      const v = {};
+      for (const k of Object.keys(TECH_BOOST_LIMITS)) {
+        const x = b[k];
+        const c = typeof x === 'number' && Number.isFinite(x) && x > 0 ? Math.min(TECH_BOOST_LIMITS[k], x) : 0;
+        if (c > 0) v[k] = Math.round(c * 10000) / 10000;
+      }
+      if (Object.keys(v).length) out[id] = v;
+    }
+    return out;
+  };
+  const buildMoves = (catalog, speciesId, techIds, mastery, techBoost) => {
     const sp = catalog.species[speciesId];
     const known = Array.isArray(techIds) ? sp.techs.filter(t => techIds.includes(t.id)) : startTechs(sp);
     const list = known.length ? known : (sp.techs.some(t => t.start) ? startTechs(sp) : [sp.techs[0]]);
     return list.map(t => {
       const m = clamp(Number(mastery && mastery[t.id]) || 0, 0, 100);
-      return { key: t.id, name: t.name, kind: t.kind, dist: t.dist, power: t.power / 20,
-        hit: t.hit / 100 + m / 100 * MASTERY_HIT_MAX, guts: Math.round(t.guts * (1 - m / 100 * MASTERY_GUTS_CUT)),
+      const b = (techBoost && techBoost[t.id]) || null;   // normalizeUnit で切りそろえ済み。無ければ今までと同じ数(同じ指紋)
+      return { key: t.id, name: t.name, kind: t.kind, dist: t.dist, power: b && b.pow ? t.power / 20 * (1 + b.pow) : t.power / 20,
+        hit: t.hit / 100 + m / 100 * MASTERY_HIT_MAX + (b && b.hit ? b.hit : 0),
+        guts: b && b.guts ? Math.round(t.guts * (1 - m / 100 * MASTERY_GUTS_CUT) * (1 - b.guts)) : Math.round(t.guts * (1 - m / 100 * MASTERY_GUTS_CUT)),
         crit: t.crit / 100, gd: t.gd, big: t.power >= 30, ...(t.moveTo != null ? { moveTo: t.moveTo } : {}) };
     });
   };
@@ -312,7 +334,10 @@ const __mod = { exports: {} };
     const loy = toInt(src.loy, 0, 100, 100); // 忠誠度(無ければ100)
     const pop = toInt(src.pop, 0, 100, 0);   // 人気(無ければ0)
     const aptUp = normAptUp(src.aptUp);        // 上げた間合い適性(無ければ 0 段)
-    return { species, name: typeof src.name === 'string' && src.name ? src.name.slice(0, 24) : catalog.species[species].name, lv, stats, techs, mastery, loy, pop, aptUp };
+    // 技ごとの強化(覚えている技だけ。techs が無ければはじめの技)
+    const known = techs || startTechs(catalog.species[species]).map(t => t.id);
+    const techBoost = normTechBoost(src.techBoost, catalog.species[species].techs.map(t => t.id).filter(id => known.includes(id)));
+    return { species, name: typeof src.name === 'string' && src.name ? src.name.slice(0, 24) : catalog.species[species].name, lv, stats, techs, mastery, loy, pop, aptUp, techBoost };
   };
   const normalizeTeam = (t, catalog) => {
     const src = t && typeof t === 'object' ? t : {};
@@ -515,7 +540,7 @@ const __mod = { exports: {} };
         units: nt.members.map(m => {
           const maxHp = maxHpOf(m.stats);
           return { species: m.species, name: m.name, lv: m.lv, stats: m.stats, apt: applyAptUp(catalog.species[m.species].apt, m.aptUp || [0, 0, 0, 0]),
-            moves: buildMoves(catalog, m.species, m.techs, m.mastery), mastery: m.mastery, maxHp, hp: maxHp, guts: GUTS_START, regen: catalog.species[m.species].regen, dmgMul: catalog.species[m.species].dmgMul || 1, first: catalog.species[m.species].first || 0, taken: catalog.species[m.species].taken || 1, size: catalog.species[m.species].size || 'M',
+            moves: buildMoves(catalog, m.species, m.techs, m.mastery, m.techBoost), mastery: m.mastery, maxHp, hp: maxHp, guts: GUTS_START, regen: catalog.species[m.species].regen, dmgMul: catalog.species[m.species].dmgMul || 1, first: catalog.species[m.species].first || 0, taken: catalog.species[m.species].taken || 1, size: catalog.species[m.species].size || 'M',
             guarding: false, swapCooldown: SWAP_COOLDOWN, moveStreak: 0, loy: m.loy, pop: m.pop };
         }),
       };
@@ -924,14 +949,16 @@ const __mod = { exports: {} };
   }))).toString(16).padStart(8, '0');
 
   const api = Object.freeze({
+    // 芯が持っている口の印(呼ぶ側が古い芯を見分ける。モンサクは techBoost があるときだけ渡す)
+    FEATURES: Object.freeze({ techBoost: true }),
     VERSION, VERSION_PLAIN, STAT_KEYS, STAT_MAX, DIST_NAMES, TEAM_MAX, GUTS_MAX, GUTS_REGEN_MIN, GUTS_REGEN_MAX, GUTS_REGEN_GRADES, GUTS_REGEN_GRADES_UP, SPECIES_TRAITS, MOVE_SPEED_FIRST, MOVE_SPEED_TAKEN, APT_UP_LIMITS, SIZE_SMALL_EVADE, APT_DMG, APT_DEF, APT_HIT, APT_EVA, APT_ABOVE_A, SIZE_LARGE_CUT, GUTS_CHARGE, GUTS_MOVE, REGEN_DMG_SWING, ROUND_LIMIT, STYLES, TECH_LIMITS,
-    MASTERY_HIT_MAX, MASTERY_GUTS_CUT, MASTERY_GUARD_ADD, BALANCE, PLANS, SWAP_PACES, STYLE_RANGE,
-    LV_MAX, BUFF_LIMITS, RULE_LIMITS, unitTraits, buildCatalog, simulate, hitPreviewer, createMatch, replay, firstAction, unitFromGrow, makeRng, hashSeed,
+    MASTERY_HIT_MAX, MASTERY_GUTS_CUT, MASTERY_GUARD_ADD, TECH_BOOST_LIMITS, BALANCE, PLANS, SWAP_PACES, STYLE_RANGE,
+    LV_MAX, BUFF_LIMITS, RULE_LIMITS, unitTraits, normTechBoost, buildCatalog, simulate, hitPreviewer, createMatch, replay, firstAction, unitFromGrow, makeRng, hashSeed,
     WHY: Object.freeze({ sulk: 'そっぽを向いて、言うことを聞かない…', finish: '倒しきれる', gutsDown: 'ガッツを削る', big: '大技', attack: '攻める', reach: '技が届く所へ', better: '有利な間合いへ',
       safer: '危ない間合いから離れる', lowHp: 'ライフが少ないので守る', block: '相手の大きい一撃にそなえる', noGuts: 'ガッツが足りない', saveUp: '大技のためにためる',
       rescue: '倒されそうなので下げる', matchup: '相性のよい仲間へ', player: 'あなたの指示', techMove: '技の勢いで間合いが変わった' }),
     // 検査用(計算の部品)
-    _internal: Object.freeze({ setupState, aptMult, aptSteps, normAptUp, applyAptUp, normTech, buildMoves, normalizeUnit, normalizeTeam, normalizeBuffs, buffedHit, styleOf, hitChance, rawDamage, chooseAction, maxHpOf }),
+    _internal: Object.freeze({ setupState, aptMult, aptSteps, normAptUp, applyAptUp, normTech, normTechBoost, buildMoves, normalizeUnit, normalizeTeam, normalizeBuffs, buffedHit, styleOf, hitChance, rawDamage, chooseAction, maxHpOf }),
   });
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   if (root) root.ASSISTANT_MASMON_BATTLE = api;
