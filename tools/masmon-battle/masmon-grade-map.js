@@ -19,6 +19,8 @@ const ATTR = { damage: 'power', accuracy: 'hit', gutsDown: 'gd', critical: 'crit
 
 const all = [];
 for (const f of fs.readdirSync(path.join(REF, 'monster-skills-by-blood')).sort()) all.push(...JSON.parse(fs.readFileSync(path.join(REF, 'monster-skills-by-blood', f), 'utf8')).skills);
+// 同じ技 id が版違い(version 1・2)で2回ある技は、新しい版だけを残す(資料に28件。キズナの指摘 2026-11-13)
+{ const best = {}; for (const t of all) if (!best[t.skillId] || (Number(t.version) || 0) > (Number(best[t.skillId].version) || 0)) best[t.skillId] = t; all.splice(0, all.length, ...Object.values(best)); }
 const mons = JSON.parse(fs.readFileSync(path.join(REF, '1_monsters.json'), 'utf8')).monsters;
 const { engine, data } = load();
 const NOW = data.ASSISTANT_MASMON_TECHS;
@@ -47,7 +49,7 @@ for (const [sp, m] of Object.entries(A)) {
   const mo = mons.find(x => x.name === m.name);
   if (mo) {
     const list = all.filter(s => (s.blood === mo.mainBlood && !s.unique && !(s.owners || []).length) || (s.owners || []).includes(mo.id)).sort((a, b) => a.rank - b.rank || a.guts - b.guts);
-    table[sp] = list.map((s, i) => techOf({ name: s.name, kind: s.skillType === 'かしこさ' ? 'wise' : 'pow', dist: DIST[s.range] ?? 1, guts: s.guts, dmg: s.damage, acc: s.accuracy, gd: s.gutsDown, cri: s.critical, moveTo: s.moveTo != null ? DIST[s.moveTo] : null, rank: Math.max(1, Math.min(5, Number(s.rank) || 1)), start: i < 2 }, s.skillId));
+    table[sp] = list.map((s, i) => techOf({ name: s.name, kind: s.skillType === 'かしこさ' ? 'wise' : 'pow', dist: DIST[s.range] ?? 1, guts: s.guts, dmg: s.damage, acc: s.accuracy, gd: s.gutsDown, cri: s.critical, moveTo: s.moveTo != null ? DIST[s.moveTo] : null, rank: i < 2 ? 1 : Math.max(1, Math.min(5, Number(s.rank) || 1)), start: i < 2 }, s.skillId));
   }
 }
 // 技のランク 1〜5(モンサクの修行の覚えやすさ・開発部 SHUGYO)。資料はそのまま(6 は 5 にそろえる)。オリジナル5種は資料に無いので、種類の中で消費ガッツの軽い順に5段
