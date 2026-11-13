@@ -37,21 +37,25 @@ const WISE=/レイ|ライト|サンダー|ライトニング|ビッグバン|コ
 const NEAR=/頭突き|キック|スラップ|キッス|爪|牙|鼻|耳|プレス|エッジ|もんた|撃/;
 const FAR=/レイ$|メテオ|大雨|レイン|オーロラ|コズミック|ノヴァ|アーチ|ライト$/;
 const MOVE=[[/リープ|突撃|転がし|空中落下|ソニック|レイド|花霞斬|絶影/,'零'],[/ムーンサルト|ウィング/,'遠']];
+// 社長が1つずつ決めた技種(台帳 2026-11-13「オリジナル5種の技種」)。動きの点より優先する
+const OVERRIDE={'アビスレイド':'ちから','デュアルキッス':'かしこさ','ダークライトニング':'かしこさ','桜嵐刃':'かしこさ','千華氷嵐':'かしこさ',
+  'ヴォーパル・ストライク':'ちから','ブラック・テンペスト':'かしこさ','ムーンサルトメロディー':'ちから','ドリームパワー':'かしこさ','キャンディレイン':'かしこさ'};
 const rows=[];
 for(const [id,sp] of Object.entries(SP)){
   const list=[...sp.n.map((nm,i)=>({nm,i,u:false,mo:MOT[id].n[i]})),...sp.u.map((nm,i)=>({nm,i,u:true,mo:MOT[id].u[i]}))];
   const [bp,bw]=BASE[id]; const target=Math.round(18*bp/(bp+bw));
   list.forEach((t,k)=>{const [sc,why]=motionScore(t.mo); t.sc=sc+(k*0.001); t.why=why;});
-  // 動きを先に: 体で当てる(+)はちから・放つ(−)はかしこさ。どちらとも言えない(0)は能力の比に近づくように。比からの数の ±2 に収める
-  const byMotion=list.filter(t=>t.sc>0.5).length; const zeros=list.filter(t=>Math.abs(t.sc)<0.5).length;
-  // 動きと逆の技種は付けない。どちらとも言えない動き(瞬間移動・回転など)だけ、能力の比に近づくように割り振る
-  const nPow=Math.max(byMotion, Math.min(byMotion+zeros, target));
-  const powSet=new Set([...list].sort((a,b)=>b.sc-a.sc).slice(0,nPow));
-  sp.ratio=`ちから ${bp}・かしこさ ${bw}(比で ちから技 ${target})→ ちから技 ${nPow}・かしこさ技 ${18-nPow}`;
+  // 技種は動きで決める(社長 2026-11-13「オリジナル5種の技種」: 体で当てる=ちから・放つ/投げる=かしこさ。能力の比には合わせない)。
+  //   迷う技(社長に1つずつ聞いて決めた10技)は OVERRIDE のとおり。動きの点が 0 で OVERRIDE にも無い技があれば止める
+  const powSet=new Set(list.filter(t=>OVERRIDE[t.nm]? OVERRIDE[t.nm]==='ちから' : t.sc>0.5));
+  const undecided=list.filter(t=>!OVERRIDE[t.nm] && Math.abs(t.sc)<0.5).map(t=>t.nm);
+  if(undecided.length) throw new Error(`${sp.jp}: 技種が決まっていない技 ${undecided.join('・')}(社長に1つずつ聞く)`);
+  const nPow=powSet.size;
+  sp.ratio=`ちから ${bp}・かしこさ ${bw}(参考)→ ちから技 ${nPow}・かしこさ技 ${18-nPow}(動きで決定)`;
   for(const t of list){
     const lv=(t.u?3:0)+t.i*(t.u?0.62:0.62); // 0〜8.5(ふつうの技 0〜5・固有技 3〜8)
     const kind = powSet.has(t)?'ちから':'かしこさ';
-    const why = (Math.abs(t.sc)<0.5 ? 'どちらとも言えない動き → 能力の比で'+kind+': ' : kind==='ちから'?'体で当てる: ':'放つ: ')+(t.why||'');
+    const why = (OVERRIDE[t.nm] ? '社長が決めた: ' : kind==='ちから'?'体で当てる: ':'放つ: ')+(t.why||'');
     const ranges = kind==='ちから' ? (NEAR.test(t.nm)?['零','近']:['近','中']) : (FAR.test(t.nm)?['中','遠']:['中','遠']);
     const range = ranges[(t.i+(t.u?1:0))%2];
     const mv = MOVE.find(([re])=>re.test(t.nm)); const moveTo = mv? mv[1] : null;
