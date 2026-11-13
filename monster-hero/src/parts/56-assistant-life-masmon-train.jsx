@@ -483,22 +483,23 @@ function AmgtCard({ who, t, e }) {
     <div className="mt-2 space-y-2" data-amgt-card>
       <div className="mhm-card">
         <p className="text-[10px] font-black text-slate-400">⚔ 技と熟練(モンヒロバトルの修行で覚える・磨く)</p>
-        <div className="mt-1 grid grid-cols-1 gap-y-0.5">
+        {/* 列をそろえる1つの格子(名前は1行で全部・間合い・棒・段階)。社長「文字列が悪い」2026-11-13: 名前が2行に折れて列と行の高さがずれていた */}
+        <div className="mt-1 grid items-center gap-x-1.5 gap-y-1" style={{ gridTemplateColumns: 'max-content 40px minmax(24px,1fr) 34px' }} data-amgt-grid>
           {techs.map(x => {
             const has = me.learn.includes(x.id);
             return (
-              <div key={x.id} className={`flex items-center gap-1.5 text-[10.5px] font-bold ${has ? 'text-slate-100' : 'text-slate-500'}`} data-amgt-tech={x.id}>
-                <span className={`w-[96px] shrink-0 break-words leading-tight ${has ? (x.kind === 'wise' ? 'text-sky-200' : 'text-rose-200') : ''}`}>{has ? x.name : '???'}</span>
-                <span className="w-[46px] shrink-0 whitespace-nowrap text-[9px]">{[0, 1, 2, 3].map(d => <i key={d} className={`not-italic ${x.dist.includes(d) && has ? 'text-amber-300' : 'text-slate-600'}`}>{AMGT_DIST[d]}</i>)}</span>
+              <div key={x.id} style={{ display: 'contents' }} className={`text-[10.5px] font-bold ${has ? 'text-slate-100' : 'text-slate-500'}`} data-amgt-tech={x.id}>
+                <span className={`whitespace-nowrap text-left leading-[16px] tracking-tight ${has ? (x.kind === 'wise' ? 'text-sky-200' : 'text-rose-200') : ''}`} data-amgt-tech-name>{has ? x.name : '???'}</span>
+                <span className="whitespace-nowrap text-center text-[9px] leading-[16px]">{[0, 1, 2, 3].map(d => <i key={d} className={`not-italic ${x.dist.includes(d) && has ? 'text-amber-300' : 'text-slate-600'}`}>{AMGT_DIST[d]}</i>)}</span>
                 <span className="mhm-bar"><i style={{ width: `${has ? me.m[x.id] || 0 : 0}%`, background: 'linear-gradient(90deg,#fbbf24,#f472b6)' }}/></span>
-                <b className="w-[40px] shrink-0 text-right text-[9.5px] text-amber-200">{has ? amgtRankOf(me.m[x.id] || 0) : 'まだ'}</b>
+                <b className="whitespace-nowrap text-center text-[9.5px] leading-[16px] text-amber-200">{has ? amgtRankOf(me.m[x.id] || 0) : 'まだ'}</b>
               </div>);
           })}
           {AMGT_SENSE.map(([k, label]) => (
-            <div key={k} className="flex items-center gap-1.5 text-[10.5px] font-bold text-slate-200" data-amgt-sense={k}>
-              <span className="w-[148px] shrink-0 truncate">{label}</span>
+            <div key={k} style={{ display: 'contents' }} className="text-[10.5px] font-bold text-slate-200" data-amgt-sense={k}>
+              <span className="whitespace-nowrap text-left leading-[16px]" style={{ gridColumn: 'span 2' }}>{label}</span>
               <span className="mhm-bar"><i style={{ width: `${me.m[k] || 0}%`, background: 'linear-gradient(90deg,#a78bfa,#f472b6)' }}/></span>
-              <b className="w-[40px] shrink-0 text-right text-[9.5px] text-amber-200">{amgtRankOf(me.m[k] || 0)}</b>
+              <b className="whitespace-nowrap text-center text-[9.5px] leading-[16px] text-amber-200">{amgtRankOf(me.m[k] || 0)}</b>
             </div>))}
         </div>
       </div>
