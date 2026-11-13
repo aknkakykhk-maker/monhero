@@ -1027,7 +1027,7 @@
     const APT_RANK = Object.fromEntries(DIST_UP.grades.map((g, i) => [g, i]));
 
     // ---- 間合い適性を育成中に上げる(2026-11-13 社長: 修行のくじ・大会のごほうび・出来事の選択肢の全部) ----
-    //   種類の表は書き換えず、育成モンスターに「上げた段数」s.aptUp = [零, 近, 中, 遠] を持たせる。試合と大会の出る条件は種類の段 + 上げた段数で見る
+    //   種類の表は書き換えず、サクセスモンに「上げた段数」s.aptUp = [零, 近, 中, 遠] を持たせる。試合と大会の出る条件は種類の段 + 上げた段数で見る
     //   上限は DIST_UP(1回の育成の合計・1つの間合い・M にできる数・上げ方ごと)。端末の値はそのまま信じず、ここと芯で切りそろえる
     const aptUpNorm = (v) => [0, 1, 2, 3].map(i => clamp(Math.round(num(Array.isArray(v) ? v[i] : 0)), 0, DIST_UP.per));
     const aptUpOf = (s) => {
@@ -1035,7 +1035,7 @@
       for (let i = 3; i >= 0 && over > 0; i--) { const cut = Math.min(up[i], over); up[i] -= cut; over -= cut; } // 合計が上限を超えたら後ろの間合いから削る
       return up;
     };
-    // 育成モンスターのいまの間合い適性(G〜M の4つ)。M にできる数を超えた分は M の1つ下
+    // サクセスモンのいまの間合い適性(G〜M の4つ)。M にできる数を超えた分は M の1つ下
     const aptGradesOf = (s) => {
       const G = DIST_UP.grades; const base = DIST_OF(s.species) || ['C', 'C', 'C', 'C']; const up = aptUpOf(s); let m = 0;
       return [0, 1, 2, 3].map(i => {
