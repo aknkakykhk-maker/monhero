@@ -35,7 +35,7 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
-    date: "2026-11-13 16:36", type:'update', group:'assistant', title:'マスモンの対戦(β)を、自分で操作して戦えるようになりました', status:'new', releaseFlag:'assistantMasmonBattleBeta',
+    date: "2026-11-13 14:16", type:'update', group:'assistant', title:'マスモンの対戦(β)を、自分で操作して戦えるようになりました', status:'new', releaseFlag:'assistantMasmonBattleBeta',
     items:[
       '試合の設定の「操作」で「手動」を選ぶと、自分のマスモンの手番ごとに、技・ガード・ためる・前へ/後ろへ・交代を選べます。「オートにする」で途中からおまかせにもできます。',
       '技の札は、零・近・中・遠の間合いごとに1枚ずつ並び、それぞれの間合いの代表の技と命中・使うガッツが見られます。いまの間合いの札が黄色く光ります。',
