@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 60c7005cc6b336c7
+// generated-sha256: 55323a9395a4a3cc
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -75673,7 +75673,10 @@ const amgtRngOf = (text) => {
 const amgtRange = (rnd, lo, hi) => lo + Math.floor(rnd() * (hi - lo + 1));
 // 技表
 const amgtTechsOf = (monster) => (typeof ASSISTANT_MASMON_TECHS !== 'undefined' && ASSISTANT_MASMON_TECHS.species && Array.isArray(ASSISTANT_MASMON_TECHS.species[monster]) ? ASSISTANT_MASMON_TECHS.species[monster] : []);
-const amgtTechIdOk = (id) => typeof id === 'string' && /^[a-z]{2,20}_\d{2}$/.test(id);
+// 技 id: 第2版(sk-0260 の形と、オリジナル5種の pandora_o01 の形)と、第1版(mocchi_01 の形)の全部を受ける。第1版の id は読むときに第2版へ読み替える(消さない)
+const amgtTechIdOk = (id) => typeof id === 'string' && /^(?:sk-\d{4}|[a-z]{2,20}_o?\d{2})$/.test(id);
+const amgtCanon = (id) => (typeof ASSISTANT_MASMON_TECHS !== 'undefined' && ASSISTANT_MASMON_TECHS && typeof ASSISTANT_MASMON_TECHS.canon === 'function' ? ASSISTANT_MASMON_TECHS.canon(id) : id);
+const AMGT_TECH_MAX = 64; // 1体が覚えられる技の数の上限(第2版は種類ごとに12〜21技・8技の上限はなくした)
 
 const normalizeAssistantMasmonTrain = (raw) => {
   const out = { v: 1, mons: {}, br: {}, ask: {}, ev: {}, at: {} };
@@ -75685,10 +75688,11 @@ const normalizeAssistantMasmonTrain = (raw) => {
       if (!/^[1-8]:\w{2,40}$/.test(key) || !e || typeof e !== 'object' || !e.m || typeof e.m !== 'object') continue;
       const m = {};
       for (const k of AMGT_SENSE_KEYS) m[k] = amgtNum(e.m[k], 0, 0, 100);
-      for (const [k, v] of Object.entries(e.m).slice(0, 24)) if (amgtTechIdOk(k)) m[k] = amgtNum(v, 0, 0, 100);
-      const learn = [...new Set((Array.isArray(e.learn) ? e.learn : []).filter(amgtTechIdOk))].slice(0, 16);
+      // 熟練: 第1版の id は第2版へ読み替える。2つが1つに当たるときは大きい方(足さない)
+      for (const [k, v] of Object.entries(e.m).slice(0, AMGT_TECH_MAX + AMGT_SENSE_KEYS.length)) if (amgtTechIdOk(k)) { const c = amgtCanon(k); m[c] = Math.max(m[c] || 0, amgtNum(v, 0, 0, 100)); }
+      const learn = [...new Set((Array.isArray(e.learn) ? e.learn : []).filter(amgtTechIdOk).map(amgtCanon))].slice(0, AMGT_TECH_MAX);
       const log = (Array.isArray(e.log) ? e.log : []).filter(x => x && typeof x === 'object' && Number.isInteger(x.s) && AMGT_KIND_KEYS.includes(x.k)).slice(-AMGT_LOG)
-        .map(x => ({ s: x.s, k: x.k, g: Object.fromEntries(Object.entries(x.g && typeof x.g === 'object' ? x.g : {}).filter(([k, n]) => (AMGT_SENSE_KEYS.includes(k) || amgtTechIdOk(k)) && Number.isFinite(n)).map(([k, n]) => [k, amgtClamp(Math.round(n), 0, 99)])), ...(amgtTechIdOk(x.l) ? { l: x.l } : {}), ...(x.f ? { f: 1 } : {}) }));
+        .map(x => ({ s: x.s, k: x.k, g: Object.fromEntries(Object.entries(x.g && typeof x.g === 'object' ? x.g : {}).filter(([k, n]) => (AMGT_SENSE_KEYS.includes(k) || amgtTechIdOk(k)) && Number.isFinite(n)).map(([k, n]) => [amgtTechIdOk(k) ? amgtCanon(k) : k, amgtClamp(Math.round(n), 0, 99)])), ...(amgtTechIdOk(x.l) ? { l: amgtCanon(x.l) } : {}), ...(x.f ? { f: 1 } : {}) }));
       one[key] = { m, learn, day: { d: amgtNum(e.day && e.day.d, -1, -1, 1e7), n: amgtNum(e.day && e.day.n, 0, 0, 9) }, log, src: 'init_v1' };
     }
     out.mons[aid] = one;
@@ -75769,12 +75773,30 @@ const amgtPickKind = (aid, me, techs, st, rnd, askK) => {
 };
 
 // ---------- 店(保存) ----------
+// 技表が第2版になるとき、古い id(mocchi_01 の形)が入った保存を1回だけそのままコピーしておく(戻せるように・CLAUDE.md ⑦)。
+//   コピー先は新しいキー mh_assistant_masmon_train_v1_pre_tech2・一度きりの印は mh_assistant_masmon_tech2_migrated_v1。元のキーは消さない
+const AMGT_PRE_TECH2_KEY = 'mh_assistant_masmon_train_v1_pre_tech2';
+const AMGT_SLEEP_PRE_TECH2_KEY = 'mh_assistant_masmon_sleep_v1_pre_tech2';
+const AMGT_TECH2_FLAG = 'mh_assistant_masmon_tech2_migrated_v1';
+const amgtHasOldTechId = (raw) => { try { const im = (ASSISTANT_MASMON_TECHS && ASSISTANT_MASMON_TECHS.idmap) || {}; if (!raw || typeof raw !== 'object') return false; const txt = JSON.stringify(raw); return Object.keys(im).some((k) => txt.includes(`"${k}"`)); } catch (_) { return false; } };
+const amgtBackupBeforeTech2 = async (trainRaw) => {
+  try {
+    if (typeof storeGet !== 'function' || typeof storeSet !== 'function') return;
+    if (typeof ASSISTANT_MASMON_TECHS === 'undefined' || !ASSISTANT_MASMON_TECHS || !(ASSISTANT_MASMON_TECHS.version >= 2)) return; // 第2版の技表になってから
+    if (await storeGet(AMGT_TECH2_FLAG, false, false)) return;
+    const sleepRaw = await storeGet('mh_assistant_masmon_sleep_v1', null, false);   // 冬眠中の子の修行の写しにも古い id が入る(読むだけ)
+    const copies = [[AMGT_PRE_TECH2_KEY, trainRaw], [AMGT_SLEEP_PRE_TECH2_KEY, sleepRaw]].filter(([, r]) => amgtHasOldTechId(r));
+    for (const [key, r] of copies) { const had = await storeGet(key, null, false); if (had == null) await storeSet(key, r, false); } // すでにあれば上書きしない
+    await storeSet(AMGT_TECH2_FLAG, true, false);
+  } catch (_) { /* 写せなかったときは印を付けない(次に開いたときもう一度やる) */ }
+};
 const AMGT_STORE = { state: normalizeAssistantMasmonTrain(null), loaded: false, subs: new Set(), dirty: false,
   set(next) { this.state = next; this.subs.forEach(f => { try { f(next); } catch (_) {} }); },
   load() { // 読み込みは1回だけ(同時に呼ばれても、あとから終わった方が古い値で戻さない・ミハリ 11-11)
     if (this.loaded) return Promise.resolve(this.state);
     this._p = this._p || (async () => {
       let raw = null; try { raw = typeof storeGet === 'function' ? await storeGet(ASSISTANT_MASMON_TRAIN_KEY, null, false) : null; } catch (_) {}
+      await amgtBackupBeforeTech2(raw);
       this.loaded = true; this.set(normalizeAssistantMasmonTrain(raw)); return this.state;
     })();
     return this._p;
@@ -80287,7 +80309,7 @@ const amgsFusePlan = (main, mat) => {
   const m = {};
   for (const k of (typeof AMGT_SENSE_KEYS !== 'undefined' ? AMGT_SENSE_KEYS : [])) m[k] = Math.floor(Math.max(Number(mt.m[k]) || 0, Number(xt.m[k]) || 0) / 2);
   for (const id of learn) m[id] = Math.floor(Math.max(Number(mt.m[id]) || 0, from[id] || 0) / 2);
-  return { base, add, st, learn: learn.slice(0, 16), m, carried };
+  return { base, add, st, learn: learn.slice(0, typeof AMGT_TECH_MAX === 'number' ? AMGT_TECH_MAX : 64), m, carried };
 };
 let amgsFuseBusy = false;
 // 合体する: 主(mainId)に素材(matId)を合わせる。素材は箱からいなくなる。だめなら理由の文字、できたら true

@@ -80,16 +80,16 @@ const drive = (T, aid, days, opt = {}) => {
   Object.assign(M, c.M);
   const S = T.ASSISTANT_MASMON_TECHS.species;
   const ids = Object.keys(M);
-  check('⓪ 技表に全部の種族がある(1種族8つ)', ids.every(id => Array.isArray(S[id]) && S[id].length === 8), ids.filter(id => !S[id] || S[id].length !== 8).join(','));
+  check('⓪ 技表は第2版で、全部の種族に12〜24技ある(資料の血統別の技)', T.ASSISTANT_MASMON_TECHS.version === 2 && ids.filter(id => !M[id].debugOnly).every(id => Array.isArray(S[id]) && S[id].length >= 12 && S[id].length <= 24), ids.filter(id => !M[id].debugOnly && (!S[id] || S[id].length < 12 || S[id].length > 24)).join(','));
   const allT = Object.values(S).flat();
-  check('⓪ 技の id はかぶらない', new Set(allT.map(t => t.id)).size === allT.length);
-  const inRange = (t) => t.power >= 4 && t.power <= 70 && t.hit >= -25 && t.hit <= 22 && t.guts >= 10 && t.guts <= 55 && t.crit >= 5 && t.crit <= 30 && t.gd >= 0 && t.gd <= 45 && ['pow', 'wise'].includes(t.kind) && Array.isArray(t.dist) && t.dist.length >= 1 && t.dist.length <= 2 && t.dist.every(d => d >= 0 && d <= 3);
-  check('⓪ 数字はモンスターファーム2の幅の中', allT.every(inRange), allT.filter(t => !inRange(t)).map(t => t.id).join(','));
-  check('⓪ どの種族も零・近・中・遠のどこにでも届く技がある', ids.every(id => [0, 1, 2, 3].every(d => S[id].some(t => t.dist.includes(d)))));
-  check('⓪ 初めから使える技が2つ・近くに届く', ids.every(id => S[id].filter(t => t.learn.start).length === 2 && S[id].some(t => t.learn.start && (t.dist.includes(0) || t.dist.includes(1)))));
-  const names = (id) => [...(c.N[id] || []), ...((M[id].unique && M[id].unique.names) || [])];
-  check('⓪ 名前はその種族がいまゲームで持っている技の名前', ids.every(id => S[id].every(t => names(id).includes(t.name))));
-  check('⓪ 先に磨く技は同じ種族の・先の技', ids.every(id => S[id].every((t, i) => !t.learn.need || Object.keys(t.learn.need).every(n => S[id].slice(0, i).some(x => x.id === n)))));
+  check('⓪ 技の id は同じ種族の中でかぶらない・sk-0000 の形', Object.values(S).every(l => new Set(l.map(t => t.id)).size === l.length) && allT.every(t => /^(?:sk-\d{4}|[a-z]{2,20}_o\d{2})$/.test(t.id)));
+  const inRange = (t) => t.power >= 1 && t.power <= 70 && t.hit >= -25 && t.hit <= 22 && t.guts >= 5 && t.guts <= 60 && t.crit >= 0 && t.crit <= 30 && t.gd >= 0 && t.gd <= 45 && ['pow', 'wise'].includes(t.kind) && Array.isArray(t.dist) && t.dist.length >= 1 && t.dist.length <= 2 && t.dist.every(d => d >= 0 && d <= 3);
+  check('⓪ 数字は芯の幅の中(TECH_LIMITS)', allT.every(inRange), allT.filter(t => !inRange(t)).map(t => t.id).join(','));
+  check('⓪ どの種族も零・近・中・遠のどこにでも届く技がある(資料どおりに届かない種族は数に入れない)', ids.filter(id => !M[id].debugOnly && !['Zan', 'Ghost'].includes(id)).every(id => [0, 1, 2, 3].every(d => S[id].some(t => t.dist.includes(d)))));
+  check('⓪ 初めから使える技が2つ・近くに届く', ids.filter(id => !M[id].debugOnly).every(id => S[id].filter(t => t.learn.start).length === 2 && S[id].some(t => t.learn.start && (t.dist.includes(0) || t.dist.includes(1)))));
+  // 技名は資料のまま使ってよい(社長 2026-11-13)ので、いまゲームで持っている技の名前との照合はしない
+  check('⓪ 先に磨く技は同じ種族の・rank がそれより低い技', Object.values(S).every(l => l.every(t => !t.learn.need || Object.keys(t.learn.need).every(n => l.some(x => x.id === n && x.rank < t.rank)))));
+  check('⓪ 技ごとに rank(1〜5)が1つ・初めからの技は rank 1', allT.every(t => Number.isInteger(t.rank) && t.rank >= 1 && t.rank <= 5 && (!t.learn.start || t.rank === 1)) && T.ASSISTANT_MASMON_TECHS.rankRates[1] === 70 && T.ASSISTANT_MASMON_TECHS.rankRates[5] === 15);
   check('⓪ 覚える修行の系統は決まった6つのどれか', allT.every(t => t.learn.start || T.AMGT_KINDS[t.learn.by]));
   check('⓪ 距離撃という技は無い', !allT.some(t => /距離撃/.test(t.name)));
 }
@@ -131,7 +131,7 @@ const drive = (T, aid, days, opt = {}) => {
   const g = T.amgtInitMon('Golem', 30, { pow: 220, wise: 100, hit: 80 }); const p = T.amgtInitMon('Pixie', 12, { pow: 80, wise: 120, hit: 150 });
   check('② 初めからの技は覚えている', T.amgtTechsOf('Golem').filter(t => t.learn.start).every(t => g.learn.includes(t.id)));
   check('② 初めは「初めから」の技の2つだけ(能力が高くても先に覚えない・ヘルプ「初めは2つだけ」)', g.learn.length === 2 && p.learn.length === 2, g.learn.join(','));
-  check('② 熟練の初めの値は育成 Lv×0.3(最大30)', g.m.golem_01 === 9 && p.m.pixie_01 === 4 && T.amgtInitMon('Golem', 99, null).m.guard === 30);
+  check('② 熟練の初めの値は育成 Lv×0.3(最大30)', g.m[T.amgtTechsOf('Golem').find(t => t.learn.start).id] === 9 && p.m[T.amgtTechsOf('Pixie').find(t => t.learn.start).id] === 4 && T.amgtInitMon('Golem', 99, null).m.guard === 30);
 }
 
 // ③ 同じ種なら同じ結果・モンヒロバトルにいた回だけ・1日3回まで・下がらない・上限
@@ -221,7 +221,18 @@ const drive = (T, aid, days, opt = {}) => {
   check('⑥ 何も無いときは空の形', JSON.stringify(n0) === JSON.stringify({ v: 1, mons: {}, br: {}, ask: {}, ev: {}, at: {} }));
   const bad = T.normalizeAssistantMasmonTrain({ mons: { kiki: { '1:Golem': { m: { golem_01: 500, guard: -3, dist: 'x', 'bad id': 4 }, learn: ['golem_01', 'golem_01', 7, 'x y'], log: [{ s: 1, k: 'zzz' }, { s: 2, k: 'pow', g: { golem_01: 4, life: 9 } }] }, 'bad key': { m: {} } }, 'BAD': {} }, br: { kiki: { ab: { know: 300 } } }, ask: { kiki: { d: 'x' } }, at: { kiki: [3, 3, -1, 'x', 2] } });
   const me = bad.mons.kiki['1:Golem'];
-  check('⑥ 壊れた値は範囲に収める・知らない項目は捨てる', me.m.golem_01 === 100 && me.m.guard === 0 && me.m.dist === 0 && !('bad id' in me.m) && me.learn.join() === 'golem_01' && me.log.length === 1 && !('life' in me.log[0].g) && !bad.mons.BAD && !bad.mons.kiki['bad key'] && bad.br.kiki.ab.know === 100 && !bad.ask.kiki && bad.at.kiki.join() === '2,3');
+  check('⑥ 壊れた値は範囲に収める・知らない項目は捨てる', me.m[T.ASSISTANT_MASMON_TECHS.canon('golem_01')] === 100 && me.m.guard === 0 && me.m.dist === 0 && !('bad id' in me.m) && me.learn.join() === T.ASSISTANT_MASMON_TECHS.canon('golem_01') && me.log.length === 1 && !('life' in me.log[0].g) && !bad.mons.BAD && !bad.mons.kiki['bad key'] && bad.br.kiki.ab.know === 100 && !bad.ask.kiki && bad.at.kiki.join() === '2,3');
+  { // ⑥b 第1版の技 id は第2版へ読み替える(消さない・2つが1つに当たるときは熟練は大きい方・何度かけても同じ)
+    const CN = T.ASSISTANT_MASMON_TECHS.canon; const im = T.ASSISTANT_MASMON_TECHS.idmap;
+    const k1 = Object.keys(im).find(k => k.startsWith('mocchi_')); const two = Object.entries(im).filter(([k]) => k.startsWith('mocchi_')).map(([k, v]) => [v, k]).reduce((a, [v, k]) => { (a[v] = a[v] || []).push(k); return a; }, {});
+    const dupNew = Object.keys(two).find(v => two[v].length > 1);
+    const sp = T.ASSISTANT_MASMON_TECHS.species.Mocchi.map(t => t.id);
+    const old = { mons: { kiki: { '1:Mocchi': { m: { [k1]: 40, ...(dupNew ? { [two[dupNew][0]]: 10, [two[dupNew][1]]: 70 } : {}) }, learn: [k1, ...(dupNew ? two[dupNew] : [])] } } } };
+    const r = T.normalizeAssistantMasmonTrain(old).mons.kiki['1:Mocchi']; const r2 = T.normalizeAssistantMasmonTrain({ mons: { kiki: { '1:Mocchi': r } } }).mons.kiki['1:Mocchi'];
+    check('⑥b 古い技 id は新しい id へ読み替える(新しい表にある id だけになる)', r.learn.length > 0 && r.learn.every(id => sp.includes(id)) && Object.keys(r.m).filter(k => /^(sk-|mocchi_)/.test(k)).every(id => sp.includes(id)));
+    check('⑥b 2つが1つに当たるときは熟練の大きい方・覚えた技は重ねない', !dupNew || (r.m[dupNew] === 70 && r.learn.filter(id => id === dupNew).length === 1));
+    check('⑥b 読み替えは何度かけても同じ・新しい id はそのまま通る', JSON.stringify(r) === JSON.stringify(r2) && CN('sk-0402') === 'sk-0402' && CN('x') === 'x');
+  }
   const a = make(true); drive(a.T, 'erubin', 20);
   const round = a.T.normalizeAssistantMasmonTrain(JSON.parse(JSON.stringify(a.T.AMGT_STORE.state)));
   check('⑥ 正規化しても中身が変わらない(行って戻る)', JSON.stringify(round) === JSON.stringify(a.T.AMGT_STORE.state));
@@ -260,7 +271,7 @@ const drive = (T, aid, days, opt = {}) => {
   const S = T.ASSISTANT_MASMON_TECHS.species.Golem.map(t => t.id);
   check('⑧ 1体: techs(覚えた技の id)と mastery(0〜100の整数)', Array.isArray(u.techs) && u.techs.every(id => S.includes(id)) && Object.values(u.mastery).every(v => Number.isInteger(v) && v >= 0 && v <= 100) && ['guard', 'dist', 'swap'].every(k => k in u.mastery));
   const none = T.amgtBattleOf('dra', { slot: 5, monster: 'Ark' }, 10);
-  check('⑧ 入れ物が無いマスモンは初めからの技だけ', none.techs.join() === 'ark_01,ark_02' && none.mastery.ark_01 === 3);
+  check('⑧ 入れ物が無いマスモンは初めからの技だけ', none.techs.join() === T.amgtTechsOf('Ark').filter(t => t.learn.start).map(t => t.id).join() && none.mastery[none.techs[0]] === 3);
   const tac = T.amgtTacticsOf('dra', rows);
   check('⑧ 戦術経験は 0〜100 の整数', Number.isInteger(tac) && tac >= 0 && tac <= 100, String(tac));
 }

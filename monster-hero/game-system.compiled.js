@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: afc322f8cd171cf3
+// source-sha256: b97bd85a259658c2
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -143990,7 +143990,9 @@ const amgtRngOf = text => {
 };
 const amgtRange = (rnd, lo, hi) => lo + Math.floor(rnd() * (hi - lo + 1));
 const amgtTechsOf = monster => typeof ASSISTANT_MASMON_TECHS !== 'undefined' && ASSISTANT_MASMON_TECHS.species && Array.isArray(ASSISTANT_MASMON_TECHS.species[monster]) ? ASSISTANT_MASMON_TECHS.species[monster] : [];
-const amgtTechIdOk = id => typeof id === 'string' && /^[a-z]{2,20}_\d{2}$/.test(id);
+const amgtTechIdOk = id => typeof id === 'string' && /^(?:sk-\d{4}|[a-z]{2,20}_o?\d{2})$/.test(id);
+const amgtCanon = id => typeof ASSISTANT_MASMON_TECHS !== 'undefined' && ASSISTANT_MASMON_TECHS && typeof ASSISTANT_MASMON_TECHS.canon === 'function' ? ASSISTANT_MASMON_TECHS.canon(id) : id;
+const AMGT_TECH_MAX = 64;
 const normalizeAssistantMasmonTrain = raw => {
   const out = {
     v: 1,
@@ -144008,14 +144010,17 @@ const normalizeAssistantMasmonTrain = raw => {
       if (!/^[1-8]:\w{2,40}$/.test(key) || !e || typeof e !== 'object' || !e.m || typeof e.m !== 'object') continue;
       const m = {};
       for (const k of AMGT_SENSE_KEYS) m[k] = amgtNum(e.m[k], 0, 0, 100);
-      for (const [k, v] of Object.entries(e.m).slice(0, 24)) if (amgtTechIdOk(k)) m[k] = amgtNum(v, 0, 0, 100);
-      const learn = [...new Set((Array.isArray(e.learn) ? e.learn : []).filter(amgtTechIdOk))].slice(0, 16);
+      for (const [k, v] of Object.entries(e.m).slice(0, AMGT_TECH_MAX + AMGT_SENSE_KEYS.length)) if (amgtTechIdOk(k)) {
+        const c = amgtCanon(k);
+        m[c] = Math.max(m[c] || 0, amgtNum(v, 0, 0, 100));
+      }
+      const learn = [...new Set((Array.isArray(e.learn) ? e.learn : []).filter(amgtTechIdOk).map(amgtCanon))].slice(0, AMGT_TECH_MAX);
       const log = (Array.isArray(e.log) ? e.log : []).filter(x => x && typeof x === 'object' && Number.isInteger(x.s) && AMGT_KIND_KEYS.includes(x.k)).slice(-AMGT_LOG).map(x => ({
         s: x.s,
         k: x.k,
-        g: Object.fromEntries(Object.entries(x.g && typeof x.g === 'object' ? x.g : {}).filter(([k, n]) => (AMGT_SENSE_KEYS.includes(k) || amgtTechIdOk(k)) && Number.isFinite(n)).map(([k, n]) => [k, amgtClamp(Math.round(n), 0, 99)])),
+        g: Object.fromEntries(Object.entries(x.g && typeof x.g === 'object' ? x.g : {}).filter(([k, n]) => (AMGT_SENSE_KEYS.includes(k) || amgtTechIdOk(k)) && Number.isFinite(n)).map(([k, n]) => [amgtTechIdOk(k) ? amgtCanon(k) : k, amgtClamp(Math.round(n), 0, 99)])),
         ...(amgtTechIdOk(x.l) ? {
-          l: x.l
+          l: amgtCanon(x.l)
         } : {}),
         ...(x.f ? {
           f: 1
@@ -144148,6 +144153,33 @@ const amgtPickKind = (aid, me, techs, st, rnd, askK) => {
   }
   return best;
 };
+const AMGT_PRE_TECH2_KEY = 'mh_assistant_masmon_train_v1_pre_tech2';
+const AMGT_SLEEP_PRE_TECH2_KEY = 'mh_assistant_masmon_sleep_v1_pre_tech2';
+const AMGT_TECH2_FLAG = 'mh_assistant_masmon_tech2_migrated_v1';
+const amgtHasOldTechId = raw => {
+  try {
+    const im = ASSISTANT_MASMON_TECHS && ASSISTANT_MASMON_TECHS.idmap || {};
+    if (!raw || typeof raw !== 'object') return false;
+    const txt = JSON.stringify(raw);
+    return Object.keys(im).some(k => txt.includes(`"${k}"`));
+  } catch (_) {
+    return false;
+  }
+};
+const amgtBackupBeforeTech2 = async trainRaw => {
+  try {
+    if (typeof storeGet !== 'function' || typeof storeSet !== 'function') return;
+    if (typeof ASSISTANT_MASMON_TECHS === 'undefined' || !ASSISTANT_MASMON_TECHS || !(ASSISTANT_MASMON_TECHS.version >= 2)) return;
+    if (await storeGet(AMGT_TECH2_FLAG, false, false)) return;
+    const sleepRaw = await storeGet('mh_assistant_masmon_sleep_v1', null, false);
+    const copies = [[AMGT_PRE_TECH2_KEY, trainRaw], [AMGT_SLEEP_PRE_TECH2_KEY, sleepRaw]].filter(([, r]) => amgtHasOldTechId(r));
+    for (const [key, r] of copies) {
+      const had = await storeGet(key, null, false);
+      if (had == null) await storeSet(key, r, false);
+    }
+    await storeSet(AMGT_TECH2_FLAG, true, false);
+  } catch (_) {}
+};
 const AMGT_STORE = {
   state: normalizeAssistantMasmonTrain(null),
   loaded: false,
@@ -144168,6 +144200,7 @@ const AMGT_STORE = {
       try {
         raw = typeof storeGet === 'function' ? await storeGet(ASSISTANT_MASMON_TRAIN_KEY, null, false) : null;
       } catch (_) {}
+      await amgtBackupBeforeTech2(raw);
       this.loaded = true;
       this.set(normalizeAssistantMasmonTrain(raw));
       return this.state;
@@ -153726,7 +153759,7 @@ const amgsFusePlan = (main, mat) => {
     base,
     add,
     st,
-    learn: learn.slice(0, 16),
+    learn: learn.slice(0, typeof AMGT_TECH_MAX === 'number' ? AMGT_TECH_MAX : 64),
     m,
     carried
   };
