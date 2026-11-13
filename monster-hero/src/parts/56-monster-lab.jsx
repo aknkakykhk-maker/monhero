@@ -68,7 +68,7 @@ function MlabCard({ sp, mon, fuse, onClick }) {
       {fuse ? <span className="absolute left-0.5 top-0.5 rounded bg-purple-500 px-1 text-[9px] font-black text-white">合体</span> : mon ? <span className="absolute right-1 top-0.5 text-[11px] font-black text-pink-300">{mon.rank || ''}</span> : <span className="absolute left-0.5 top-0.5 rounded bg-sky-500 px-1 text-[9px] font-black text-white">ベース</span>}
       <img src={mlabThumb(sp)} alt="" className="mx-auto h-16 w-full object-contain" draggable={false}/>
       <div className="truncate text-[10px] font-bold text-white">{mon ? (mon.nick || (m && m.name)) : (m && m.name)}</div>
-      <div className="text-[9px] font-bold text-amber-200">{fuse ? '未育成' : mon ? `Lv.${Math.round(Number(mon.lv) || 1)}` : 'もとの値'}</div>
+      <div className="text-[9px] font-bold text-amber-200">{fuse ? '育成前' : mon ? `Lv.${Math.round(Number(mon.lv) || 1)}` : 'もとの値'}</div>
     </button>
   );
 }
@@ -91,7 +91,7 @@ function MlabDetail({ sp, mon, fuse, engine, onBack }) {
         <img src={mlabFull(sp)} alt="" className="h-32 w-28 shrink-0 rounded-xl bg-indigo-800/60 object-contain" draggable={false}/>
         <div className="min-w-0 flex-1">
           <div className="truncate text-[15px] font-black text-white">{mon ? (mon.nick || (m && m.name)) : (m && m.name)}</div>
-          <div className="mb-1.5 text-[10px] font-bold text-indigo-300">{fuse ? `${m && m.name} / 合体円盤石(未育成)` : mon ? `${m && m.name}${mon.rank ? ` / ランク ${mon.rank}` : ''}${mon.score ? ` / 総合力 ${Math.round(mon.score).toLocaleString('ja-JP')}` : ''}` : 'ベースモン(種類ごとのもとの値)'}</div>
+          <div className="mb-1.5 text-[10px] font-bold text-indigo-300">{fuse ? `${m && m.name} / 合体円盤石(育成前)` : mon ? `${m && m.name}${mon.rank ? ` / ランク ${mon.rank}` : ''}${mon.score ? ` / 総合力 ${Math.round(mon.score).toLocaleString('ja-JP')}` : ''}` : 'ベースモン(種類ごとのもとの値)'}</div>
           <div className="flex gap-1">{[['basic', '基礎'], ['feature', '特徴'], ['apt', '適性']].map(([id, t]) => <MlabBtn key={id} on={tab === id} onClick={() => setTab(id)}>{t}</MlabBtn>)}</div>
         </div>
       </div>
