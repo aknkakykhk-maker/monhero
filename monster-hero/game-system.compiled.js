@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 39962f265eb8d3bc
+// source-sha256: fd0ad888f7274296
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -161752,6 +161752,10 @@ const msxTeamSrc = (slot, box) => {
       pop: m.pop,
       lv: m.lv,
       masteries: m.masteries,
+      techs: m.techs,
+      aptUp: m.aptUp,
+      aptBase: m.aptBase,
+      aptAwake: m.aptAwake,
       assists: m.assists,
       boxId: m.id
     };
@@ -165472,6 +165476,16 @@ const msxR3Catalog = engine => {
   return msxR3CatCache;
 };
 const msxR3LoadEngine = () => typeof ambwLoadEngine === 'function' ? ambwLoadEngine() : Promise.resolve(null);
+const msxR3BoostOn = engine => Boolean(engine && (engine.TECH_BOOST || engine.FEATURES && engine.FEATURES.techBoost));
+const msxR3TechGear = (engine, SUC, s, ts) => msxR3BoostOn(engine) && typeof SUC.techBoostOf === 'function' ? {
+  mastery: {},
+  techBoost: SUC.techBoostOf({
+    techs: ts,
+    mastery: s.mastery
+  })
+} : {
+  mastery: Object.fromEntries(ts.map(t => [t, s.mastery && s.mastery[t] || 0]))
+};
 const msxR3Fight = (engine, SUC, run) => {
   const s = run.s;
   const b = s.battle;
@@ -165500,7 +165514,7 @@ const msxR3Fight = (engine, SUC, run) => {
     } : {}),
     ...(ts.length ? {
       techs: ts,
-      mastery: Object.fromEntries(ts.map(t => [t, s.mastery && s.mastery[t] || 0]))
+      ...msxR3TechGear(engine, SUC, s, ts)
     } : {})
   };
   const osp = spOf(opp.species);
@@ -165552,12 +165566,14 @@ const msxR3Fight = (engine, SUC, run) => {
     return null;
   }
   const st = r.log && r.log[0] || {};
+  const use = typeof SUC.techUseOf === 'function' ? SUC.techUseOf(r.log, 'A') : null;
   return {
     r,
     input,
     opp,
     teamA,
     teamB,
+    use,
     won: r.winner === 'A',
     frames: typeof ambwFramesOf === 'function' ? ambwFramesOf(r.log) : [],
     maxHp: {
@@ -165658,6 +165674,9 @@ const msxR3BoxMonOf = (run, s, ev, assists, parent) => ({
   paid: true,
   over: s.over || 'done',
   assists: (assists || []).slice(0, 4),
+  ...(s.masterySpent && (Array.isArray(s.techs) ? s.techs : []).some(t => s.masterySpent[t] > 0) ? {
+    mastSpent: s.techs.slice(0, 99).map(t => Math.round(s.masterySpent[t] || 0))
+  } : {}),
   ...(s.ending && ['bad', 'good', 'super'].includes(s.ending.kind) ? {
     ending: s.ending.kind
   } : {}),
@@ -166292,7 +166311,7 @@ function MsxR3Battle({
   const name = b ? msxR3BattleName(SUC, b) : st3 ? st3.name : '';
   const settle = won => {
     const before = s;
-    const r = SUC.settle(s, won);
+    const r = SUC.settle(s, won, fight && fight.use);
     const d = msxR3Diff(before, r.state);
     const out = {
       r3: {
@@ -166381,9 +166400,9 @@ function MsxR3Battle({
       }
     });
   };
-  const settleShow = won => {
+  const settleShow = (won, use) => {
     const before = s;
-    const r = SUC.settle(s, won);
+    const r = SUC.settle(s, won, use || fight && fight.use);
     const d = msxR3Diff(before, r.state);
     pendRef.current = {
       r,
@@ -168059,7 +168078,10 @@ function MsxR3Retire({
     pop: ws.pop,
     lv: ws.lv,
     masteries: (ws.techs || []).map(t => ws.mastery && ws.mastery[t] || 0),
-    techs: ws.techs
+    techs: ws.techs,
+    aptUp: ws.aptUp,
+    aptBase: ws.aptBase,
+    aptAwake: ws.aptAwake
   }) : null;
   if (step === 'e1') {
     const cupWins = ws.log && ws.log.wins || 0;
@@ -171299,6 +171321,7 @@ const monsucRankQueueSave = async list => {
     await storeSet(MONSUC_RANK_QUEUE_KEY, list.slice(-MONSUC_RANK_QUEUE_MAX), false);
   } catch (_) {}
 };
+const MONSUC_RANK_APT = ['G', 'F', 'E', 'D', 'C', 'B', 'A', 'S', 'S+', 'SS', 'SS+', 'M'];
 const monsucRankRowOf = ({
   owner,
   run,
@@ -171315,7 +171338,11 @@ const monsucRankRowOf = ({
   MONSUC_RANK_STAT_KEYS.forEach(k => {
     stats[k] = monsucRankClamp(Math.round(monsucRankNum(st[k])), 0, 999);
   });
-  const techs = (Array.isArray(run.techs) ? run.techs : []).slice(0, 8).map(t => monsucRankClamp(Math.round(monsucRankNum(run.mastery && run.mastery[t])), 0, 100));
+  const rows = ev && Array.isArray(ev.techRows) ? ev.techRows : null;
+  const techs = rows ? rows.slice(0, 99).map(x => ({
+    r: monsucRankClamp(Math.round(monsucRankNum(x && x.r, 1)), 1, 5),
+    a: MONSUC_RANK_APT.includes(x && x.a) ? x.a : 'C'
+  })) : (Array.isArray(run.techs) ? run.techs : []).slice(0, 8).map(t => monsucRankClamp(Math.round(monsucRankNum(run.mastery && run.mastery[t])), 0, 100));
   const species = typeof run.species === 'string' && /^[A-Za-z]{2,32}$/.test(run.species) ? run.species : null;
   if (!species) return null;
   const e = ev && typeof ev === 'object' ? ev : {};
