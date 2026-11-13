@@ -1,0 +1,1047 @@
+{
+  "blood": "イルミネ",
+  "counts": {
+    "skills": 26
+  },
+  "skills": [
+    {
+      "skillId": "sk-0039",
+      "name": "ヴェノムエッジ",
+      "version": 1,
+      "blood": "イルミネ",
+      "range": "中",
+      "rank": 1,
+      "moveTo": null,
+      "aura": "黒",
+      "skillType": "ちから",
+      "guts": 17,
+      "damage": "D",
+      "accuracy": "C",
+      "gutsDown": "G",
+      "critical": "C",
+      "abilities": [
+        {
+          "abilityId": "sab-0058",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0059",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "3219",
+          "rarity": 2
+        }
+      ],
+      "note": "",
+      "sortOrder": 338,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0040",
+      "name": "プラズマ",
+      "version": 1,
+      "blood": "イルミネ",
+      "range": "零",
+      "rank": 1,
+      "moveTo": null,
+      "aura": "白",
+      "skillType": "ちから",
+      "guts": 13,
+      "damage": "G+",
+      "accuracy": "S",
+      "gutsDown": "G",
+      "critical": "D",
+      "abilities": [
+        {
+          "abilityId": "sab-0060",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "3251",
+          "rarity": 2
+        }
+      ],
+      "note": "",
+      "sortOrder": 339,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0041",
+      "name": "エーテルアイス",
+      "version": 1,
+      "blood": "イルミネ",
+      "range": "遠",
+      "rank": 2,
+      "moveTo": "零",
+      "aura": "青",
+      "skillType": "かしこさ",
+      "guts": 25,
+      "damage": "F",
+      "accuracy": "B",
+      "gutsDown": "B",
+      "critical": "G",
+      "abilities": [
+        {
+          "abilityId": "sab-0061",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0059",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "3219",
+          "rarity": 3
+        }
+      ],
+      "note": "",
+      "sortOrder": 340,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0042",
+      "name": "モーニングスター",
+      "version": 1,
+      "blood": "イルミネ",
+      "range": "中",
+      "rank": 2,
+      "moveTo": "零",
+      "aura": "赤",
+      "skillType": "ちから",
+      "guts": 27,
+      "damage": "B",
+      "accuracy": "D",
+      "gutsDown": "G",
+      "critical": "D",
+      "abilities": [
+        {
+          "abilityId": "sab-0062",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0059",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "3209",
+          "rarity": 3
+        },
+        {
+          "monsterId": "3250",
+          "rarity": 3
+        }
+      ],
+      "note": "",
+      "sortOrder": 341,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0043",
+      "name": "アサルトアロー",
+      "version": 1,
+      "blood": "イルミネ",
+      "range": "遠",
+      "rank": 3,
+      "moveTo": null,
+      "aura": "黒",
+      "skillType": "ちから",
+      "guts": 33,
+      "damage": "B",
+      "accuracy": "C+",
+      "gutsDown": "F",
+      "critical": "B",
+      "abilities": [
+        {
+          "abilityId": "sab-0063",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0059",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "3232",
+          "rarity": 4
+        },
+        {
+          "monsterId": "3250",
+          "rarity": 4
+        }
+      ],
+      "note": "",
+      "sortOrder": 342,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0044",
+      "name": "アルカナフレア",
+      "version": 1,
+      "blood": "イルミネ",
+      "range": "中",
+      "rank": 3,
+      "moveTo": null,
+      "aura": "赤",
+      "skillType": "かしこさ",
+      "guts": 29,
+      "damage": "C",
+      "accuracy": "D",
+      "gutsDown": "A",
+      "critical": "D",
+      "abilities": [
+        {
+          "abilityId": "sab-0064",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0059",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0021",
+          "unlock": {
+            "monsterId": "3219",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0022",
+          "unlock": {
+            "monsterId": "3219",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "3219",
+          "rarity": 4
+        }
+      ],
+      "note": "",
+      "sortOrder": 343,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0045",
+      "name": "ストレート",
+      "version": 1,
+      "blood": "イルミネ",
+      "range": "近",
+      "rank": 3,
+      "moveTo": null,
+      "aura": "黄",
+      "skillType": "ちから",
+      "guts": 24,
+      "damage": "C",
+      "accuracy": "B+",
+      "gutsDown": "D",
+      "critical": "G",
+      "abilities": [
+        {
+          "abilityId": "sab-0065",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0059",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "3209",
+          "rarity": 4
+        }
+      ],
+      "note": "",
+      "sortOrder": 344,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0046",
+      "name": "アサシンクロウ",
+      "version": 1,
+      "blood": "イルミネ",
+      "range": "零",
+      "rank": 3,
+      "moveTo": "中",
+      "aura": "黒",
+      "skillType": "ちから",
+      "guts": 28,
+      "damage": "C",
+      "accuracy": "B",
+      "gutsDown": "C",
+      "critical": "B",
+      "abilities": [
+        {
+          "abilityId": "sab-0066",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0059",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "3213",
+          "rarity": 4
+        }
+      ],
+      "note": "",
+      "sortOrder": 345,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0047",
+      "name": "アルスマグナ",
+      "version": 1,
+      "blood": "イルミネ",
+      "range": "遠",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "白",
+      "skillType": "ちから",
+      "guts": 35,
+      "damage": "B",
+      "accuracy": "A",
+      "gutsDown": "G",
+      "critical": "D",
+      "abilities": [
+        {
+          "abilityId": "sab-0060",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0067",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0068",
+          "unlock": {
+            "monsterId": "3213",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0069",
+          "unlock": {
+            "monsterId": "3213",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "3213",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 346,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0048",
+      "name": "ノクターン",
+      "version": 1,
+      "blood": "イルミネ",
+      "range": "中",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "黒",
+      "skillType": "ちから",
+      "guts": 37,
+      "damage": "C",
+      "accuracy": "A+",
+      "gutsDown": "A",
+      "critical": "B",
+      "abilities": [
+        {
+          "abilityId": "sab-0070",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0071",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "3251",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 347,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0049",
+      "name": "ブレードダンス",
+      "version": 1,
+      "blood": "イルミネ",
+      "range": "零",
+      "rank": 4,
+      "moveTo": "遠",
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 38,
+      "damage": "C",
+      "accuracy": "A",
+      "gutsDown": "A",
+      "critical": "C+",
+      "abilities": [
+        {
+          "abilityId": "sab-0072",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0073",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "3232",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 348,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0050",
+      "name": "クリムゾンノヴァ",
+      "version": 1,
+      "blood": "イルミネ",
+      "range": "遠",
+      "rank": 5,
+      "moveTo": null,
+      "aura": "赤",
+      "skillType": "ちから",
+      "guts": 43,
+      "damage": "C+",
+      "accuracy": "B",
+      "gutsDown": "D",
+      "critical": "C",
+      "abilities": [
+        {
+          "abilityId": "sab-0074",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "3250",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 349,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0051",
+      "name": "レクイエムエンド",
+      "version": 1,
+      "blood": "イルミネ",
+      "range": "中",
+      "rank": 5,
+      "moveTo": null,
+      "aura": "黒",
+      "skillType": "ちから",
+      "guts": 46,
+      "damage": "S",
+      "accuracy": "C+",
+      "gutsDown": "C",
+      "critical": "B+",
+      "abilities": [
+        {
+          "abilityId": "sab-0075",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0076",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0004",
+          "unlock": {
+            "monsterId": "3232",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0005",
+          "unlock": {
+            "monsterId": "3232",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "3232",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 350,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0052",
+      "name": "ミラージュクロウ",
+      "version": 1,
+      "blood": "イルミネ",
+      "range": "零",
+      "rank": 5,
+      "moveTo": "近",
+      "aura": "青",
+      "skillType": "ちから",
+      "guts": 45,
+      "damage": "B+",
+      "accuracy": "A+",
+      "gutsDown": "A",
+      "critical": "B",
+      "abilities": [
+        {
+          "abilityId": "sab-0077",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0078",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0004",
+          "unlock": {
+            "monsterId": "3209",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0005",
+          "unlock": {
+            "monsterId": "3209",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "3209",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 351,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0053",
+      "name": "グレネード",
+      "version": 1,
+      "blood": "イルミネ",
+      "range": "遠",
+      "rank": 1,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 23,
+      "damage": "C",
+      "accuracy": "E",
+      "gutsDown": "E",
+      "critical": "C",
+      "abilities": [
+        {
+          "abilityId": "sab-0079",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0059",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 352,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0054",
+      "name": "バスターソード",
+      "version": 1,
+      "blood": "イルミネ",
+      "range": "近",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "緑",
+      "skillType": "ちから",
+      "guts": 41,
+      "damage": "D",
+      "accuracy": "B",
+      "gutsDown": "D",
+      "critical": "A",
+      "abilities": [
+        {
+          "abilityId": "sab-0080",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0081",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 353,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0055",
+      "name": "おもちゃの爆弾",
+      "version": 1,
+      "blood": "イルミネ",
+      "range": "遠",
+      "rank": 1,
+      "moveTo": null,
+      "aura": "白",
+      "skillType": "ちから",
+      "guts": 23,
+      "damage": "C",
+      "accuracy": "D",
+      "gutsDown": "E",
+      "critical": "C",
+      "abilities": [
+        {
+          "abilityId": "sab-0079",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0059",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "3213"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 354,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0056",
+      "name": "シールドバッシュ・氷",
+      "version": 1,
+      "blood": "イルミネ",
+      "range": "近",
+      "rank": 2,
+      "moveTo": "零",
+      "aura": "青",
+      "skillType": "ちから",
+      "guts": 22,
+      "damage": "D",
+      "accuracy": "C+",
+      "gutsDown": "G",
+      "critical": "C",
+      "abilities": [
+        {
+          "abilityId": "sab-0082",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0059",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "3209"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 355,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0057",
+      "name": "アサシンクロウ・氷",
+      "version": 1,
+      "blood": "イルミネ",
+      "range": "零",
+      "rank": 3,
+      "moveTo": "中",
+      "aura": "青",
+      "skillType": "ちから",
+      "guts": 32,
+      "damage": "B",
+      "accuracy": "B",
+      "gutsDown": "E",
+      "critical": "B",
+      "abilities": [
+        {
+          "abilityId": "sab-0083",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0059",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "3209"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 356,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0058",
+      "name": "朱の新星",
+      "version": 1,
+      "blood": "イルミネ",
+      "range": "近",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "赤",
+      "skillType": "ちから",
+      "guts": 35,
+      "damage": "A",
+      "accuracy": "B",
+      "gutsDown": "C",
+      "critical": "D",
+      "abilities": [
+        {
+          "abilityId": "sab-0084",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0085",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "3250"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 357,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0059",
+      "name": "清浄投擲槍",
+      "version": 1,
+      "blood": "イルミネ",
+      "range": "中",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "白",
+      "skillType": "ちから",
+      "guts": 34,
+      "damage": "A",
+      "accuracy": "S",
+      "gutsDown": "F",
+      "critical": "A",
+      "abilities": [
+        {
+          "abilityId": "sab-0086",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0087",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "3250"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 358,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0060",
+      "name": "ファイトFC",
+      "version": 1,
+      "blood": "イルミネ",
+      "range": "遠",
+      "rank": 3,
+      "moveTo": "近",
+      "aura": "黄",
+      "skillType": "ちから",
+      "guts": 34,
+      "damage": "E+",
+      "accuracy": "C",
+      "gutsDown": "B",
+      "critical": "D",
+      "abilities": [
+        {
+          "abilityId": "sab-0088",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0089",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "3251"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 359,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0061",
+      "name": "エミットハンマー",
+      "version": 1,
+      "blood": "イルミネ",
+      "range": "近",
+      "rank": 5,
+      "moveTo": null,
+      "aura": "黒",
+      "skillType": "ちから",
+      "guts": 42,
+      "damage": "A",
+      "accuracy": "A+",
+      "gutsDown": "B",
+      "critical": "S",
+      "abilities": [
+        {
+          "abilityId": "sab-0090",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0091",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0004",
+          "unlock": {
+            "monsterId": "3251",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0005",
+          "unlock": {
+            "monsterId": "3251",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "3251"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 360,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0062",
+      "name": "王武天覇",
+      "version": 1,
+      "blood": "イルミネ",
+      "range": "零",
+      "rank": 6,
+      "moveTo": null,
+      "aura": "白",
+      "skillType": "ちから",
+      "guts": 45,
+      "damage": "S",
+      "accuracy": "B",
+      "gutsDown": "B",
+      "critical": "SS",
+      "abilities": [
+        {
+          "abilityId": "sab-0092",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0093",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0004",
+          "unlock": {
+            "monsterId": "3290",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0005",
+          "unlock": {
+            "monsterId": "3290",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "3290"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 361,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0063",
+      "name": "王武星",
+      "version": 1,
+      "blood": "イルミネ",
+      "range": "中",
+      "rank": 2,
+      "moveTo": "零",
+      "aura": "白",
+      "skillType": "ちから",
+      "guts": 23,
+      "damage": "B",
+      "accuracy": "D+",
+      "gutsDown": "G",
+      "critical": "B",
+      "abilities": [
+        {
+          "abilityId": "sab-0094",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0059",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "3290"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 362,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0064",
+      "name": "シールドバッシュ",
+      "version": 1,
+      "blood": "イルミネ",
+      "range": "近",
+      "rank": 2,
+      "moveTo": "零",
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 20,
+      "damage": "D",
+      "accuracy": "D",
+      "gutsDown": "G",
+      "critical": "C",
+      "abilities": [
+        {
+          "abilityId": "sab-0095",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0059",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "3213",
+          "rarity": 3
+        },
+        {
+          "monsterId": "3251",
+          "rarity": 3
+        }
+      ],
+      "note": "",
+      "sortOrder": 363,
+      "status": "verified"
+    }
+  ]
+}

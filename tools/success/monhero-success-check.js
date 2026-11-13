@@ -186,7 +186,10 @@ ok(near(SUC.failRateOf({ ...base, yosu: { sabori: { visits: 0 } } }) - fFull, 0.
   ok(w.battle.round === 2 && w.turn === 46, '頂への道の決勝が46ターン目に来ない');
   const pre = { ...w.stats };
   w = SUC.settle(w, [true]).state;
-  ok(w.over === 'done' && w.titles.includes('ヒーローの頂') && w.stats.life === Math.min(999, pre.life + 15), '決勝の大きいほうのごほうび(👑 を勝っていれば全能力+15)が付かない');
+  // 決勝の全能力の上乗せは、エンディングのお祝いへ置きかえた(2026-11-13)。称号・能力ポイントはそのまま
+  ok(w.over === 'done' && w.titles.includes('ヒーローの頂') && w.ending && ['good', 'super'].includes(w.ending.kind)
+    && w.stats.life === Math.min(999, pre.life + SUC.PARTY[w.ending.kind].reduce((a, n) => a + n, 0)), `決勝に勝ったあとのエンディングとお祝いがずれている: ${JSON.stringify(w.ending)}`);
+  ok(lose.ending && lose.ending.kind === 'bad' && lose.ending.parties.length === 1, '頂への道で負けてもバッドエンディングが付かない');
   const ev = SUC.evaluate(w); ok(Number.isFinite(ev.power) && ev.points === SUC.assistPointsOf(ev.power), '評価(総合力・アシストポイント)が出ない');
 }
 
@@ -422,11 +425,44 @@ ok(near(SUC.failRateOf({ ...base, yosu: { sabori: { visits: 0 } } }) - fFull, 0.
   s = SUC.storyStep({ ...s, turn: sp.t }, 'a').state; ok(s.special && s.astory.done && due(s, range(42, 46)) === null, '特別な1話のあとがずれている');
   // 仲良し度の段で見られる話が変わる・親密度が足りないと出ない
   const lv1 = { ...SUC.newRun({ id: 'astory', species: 'Mocchi', aid: 'atsu', aidBondLv: 1 }), aidBond: 100, astory: { ep: 1, path: null, done: false } };
-  ok(due(lv1, range(6, 17)) === null, '仲良し度 Lv1〜2 で2話が出る');
+  ok(due(lv1, range(6, 17)) !== null, '仲良し度 Lv1 で2話が出ない(1〜4話は Lv に関係なく見られる・2026-11-13)');
+  const lv1sp = { ...lv1, astory: { ep: 4, path: 'good', done: false }, storyEnd: 'good' };
+  ok(due(lv1sp, range(42, 43)) === null, '仲良し度 Lv1 で特別な1話が出る(Lv5〜 だけ)');
   const low = { ...SUC.newRun({ id: 'astory', species: 'Mocchi', aid: 'atsu', aidBondLv: 5 }), aidBond: 10, astory: { ep: 1, path: null, done: false } };
   ok(due(low, range(6, 17)) === null, '親密度 30 未満で2話が出る');
   const bit = { ...SUC.newRun({ id: 'astory', species: 'Mocchi', aid: 'atsu', aidBondLv: 5 }), aidBond: 100, astory: { ep: 3, path: 'bitter', done: false } };
   const b4 = due(bit, range(30, 41)); const bs = SUC.storyStep({ ...bit, turn: b4.t }, 'a').state; ok(bs.storyEnd === 'bitter' && bs.astory.done, 'ほろ苦い結末のあと特別な1話へつながってしまう');
+}
+
+// ---- 助手1人分のストーリー(固有イベント・頂への道の相手えらび・エンディング。STORY-ARC.md) ----
+{
+  const A = SUC.ARC.mua; ok(A && A.uniq.length === 4 && A.summit.length === 3, 'みゅあの表(固有イベント4つ・相手えらび3つ)がない');
+  // 固有イベントは決まった期に1回ずつ出る(to のターンで必ず)・ほかの助手には出ない
+  for (const u of A.uniq) {
+    let s = { ...SUC.newRun({ id: 'uq', species: 'Mocchi', aid: 'mua' }), turn: u.to };
+    const v = SUC.events.due(s, 'start'); ok(v && v.id === u.id, `固有イベント ${u.id} が ${u.to} ターン目に出ない: ${v && v.id}`);
+    s = SUC.events.open(s, 'start').state; s = SUC.events.pick(s, 'a').state;
+    ok(!(SUC.events.due({ ...s, turn: u.to + 1, ev: { ...s.ev, rolled: {} } }, 'start') || {}).id?.startsWith(u.id), `固有イベント ${u.id} が2回出る`);
+    const at = { ...SUC.newRun({ id: 'uq', species: 'Mocchi', aid: 'atsu' }), turn: u.to };
+    ok(!((SUC.events.due(at, 'start') || {}).id || '').startsWith('scn.mua'), 'みゅあの固有イベントがほかの助手に出る');
+  }
+  // 頂への道: みゅあが選ぶ相手(1回戦 人気者・準決勝 ライバル・決勝 王者)
+  const rv = { name: 'ライバルくん', kind: 'aid', species: 'Golem', stats: { life: 300, pow: 300, wise: 300, hit: 300, eva: 300, tough: 300 } };
+  let s = { ...SUC.newRun({ id: 'pick', species: 'Mocchi', aid: 'mua', rivals: [rv] }), turn: 44 };
+  const op = (round) => SUC.opponents({ ...s, battle: { kind: 'summit', round } })[0];
+  ok(op(0).pick === 'pop' && op(0).pop >= 80, `1回戦の相手が人気者になっていない: ${op(0).pick} ${op(0).pop}`);
+  ok(op(1).pick === 'rival' && op(1).name === 'ライバルくん', `準決勝の相手がライバルになっていない: ${op(1).pick} ${op(1).name}`);
+  ok(op(2).pick === 'champ' && op(2).champ, '決勝の相手が王者になっていない');
+  const noRival = { ...SUC.newRun({ id: 'pick', species: 'Mocchi', aid: 'mua' }), turn: 45, battle: { kind: 'summit', round: 1 } };
+  ok(SUC.opponents(noRival)[0].pick === 'strong', 'ライバルがいないとき、準決勝の相手が強い常連にならない');
+  // エンディング: 親密度 100・4話まで見た → 超グッド(お祝い3回 +15・+17・+20)/どちらか欠けるとグッド/負けるとバッド
+  const fin = (o) => SUC.settle({ ...SUC.newRun({ id: 'end', species: 'Mocchi', aid: 'mua' }), turn: 46, battle: { kind: 'summit', round: 2 }, ...o }, [true]);
+  const sup = fin({ aidBond: 100, astory: { ep: 4, path: 'good', done: false } });
+  ok(sup.out.ending === 'super' && sup.state.titles.includes('みゅあの最高のチーム') && sup.out.party.life === 52, `超グッドにならない: ${sup.out.ending} ${JSON.stringify(sup.out.party)}`);
+  ok(fin({ aidBond: 99, astory: { ep: 4, path: 'good', done: false } }).out.ending === 'good', '親密度 99 で超グッドになる');
+  ok(fin({ aidBond: 100, astory: { ep: 3, path: 'good', done: false } }).out.ending === 'good', '連続イベントを完走していないのに超グッドになる');
+  const r = SUC.restore(JSON.parse(JSON.stringify(sup.state))); ok(r && r.ending && r.ending.kind === 'super' && !r.ending.seen && SUC.endingSeen(r).state.ending.seen, 'エンディングが保存から戻らない');
+  ok(SUC.restore({ ...JSON.parse(JSON.stringify(sup.state)), ending: { kind: 'zzz' } }).ending === null, '壊れたエンディングの値を既定に直さない');
 }
 
 // ---- 評価の表示(gradeOf)・ひらめきのアシスト5つ ----

@@ -178,7 +178,7 @@ const rhythmAssistSessionWrapBrain = (brain, songs) => ({
   pair(a, b) { return rhythmAssistSessionIdOf(a) || rhythmAssistSessionIdOf(b) ? 'banter' : brain.pair(a, b); },
   pick(catalog, masuId) {
     const aid = rhythmAssistSessionIdOf(masuId);
-    return aid ? rhythmAssistSessionChooseSong(RHYTHM_ASSIST_SESSION_STORE.get(), aid, catalog) : brain.pick(catalog, masuId);
+    return aid ? rhythmAssistSessionChooseSong(RHYTHM_ASSIST_SESSION_STORE.get(), aid, typeof rhythmSongPickable === 'function' ? rhythmSongPickable(catalog) : catalog) : brain.pick(catalog, masuId);
   },
 });
 

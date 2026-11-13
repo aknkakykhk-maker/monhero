@@ -1,0 +1,998 @@
+{
+  "blood": "キジン",
+  "counts": {
+    "skills": 26
+  },
+  "skills": [
+    {
+      "skillId": "sk-0085",
+      "name": "強打",
+      "version": 1,
+      "blood": "キジン",
+      "range": "近",
+      "rank": 1,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 15,
+      "damage": "E",
+      "accuracy": "D",
+      "gutsDown": "G",
+      "critical": "G",
+      "abilities": [],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "3027",
+          "rarity": 2
+        },
+        {
+          "monsterId": "3052",
+          "rarity": 2
+        }
+      ],
+      "note": "",
+      "sortOrder": 408,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0086",
+      "name": "殴打",
+      "version": 1,
+      "blood": "キジン",
+      "range": "零",
+      "rank": 1,
+      "moveTo": null,
+      "aura": "黒",
+      "skillType": "ちから",
+      "guts": 18,
+      "damage": "E",
+      "accuracy": "C",
+      "gutsDown": "G",
+      "critical": "E",
+      "abilities": [
+        {
+          "abilityId": "sab-0012",
+          "unlock": {
+            "monsterId": "3024",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0118",
+          "unlock": {
+            "monsterId": "3024",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "3024",
+          "rarity": 2
+        }
+      ],
+      "note": "",
+      "sortOrder": 409,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0087",
+      "name": "羅刹",
+      "version": 1,
+      "blood": "キジン",
+      "range": "遠",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "赤",
+      "skillType": "ちから",
+      "guts": 25,
+      "damage": "B",
+      "accuracy": "E",
+      "gutsDown": "G",
+      "critical": "G",
+      "abilities": [
+        {
+          "abilityId": "sab-0016",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "3016",
+          "rarity": 3
+        },
+        {
+          "monsterId": "3050",
+          "rarity": 3
+        }
+      ],
+      "note": "",
+      "sortOrder": 410,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0088",
+      "name": "殴りかかり",
+      "version": 1,
+      "blood": "キジン",
+      "range": "中",
+      "rank": 2,
+      "moveTo": "零",
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 20,
+      "damage": "D",
+      "accuracy": "C",
+      "gutsDown": "G",
+      "critical": "D",
+      "abilities": [
+        {
+          "abilityId": "sab-0023",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "3027",
+          "rarity": 3
+        }
+      ],
+      "note": "",
+      "sortOrder": 411,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0089",
+      "name": "雷鳴",
+      "version": 1,
+      "blood": "キジン",
+      "range": "近",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "黄",
+      "skillType": "かしこさ",
+      "guts": 27,
+      "damage": "D",
+      "accuracy": "A",
+      "gutsDown": "C",
+      "critical": "E",
+      "abilities": [
+        {
+          "abilityId": "sab-0108",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "3051",
+          "rarity": 3
+        }
+      ],
+      "note": "",
+      "sortOrder": 412,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0090",
+      "name": "投げ飛ばし",
+      "version": 1,
+      "blood": "キジン",
+      "range": "零",
+      "rank": 2,
+      "moveTo": "中",
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 22,
+      "damage": "D",
+      "accuracy": "D",
+      "gutsDown": "C",
+      "critical": "E",
+      "abilities": [
+        {
+          "abilityId": "sab-0108",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "3030",
+          "rarity": 3
+        }
+      ],
+      "note": "",
+      "sortOrder": 413,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0091",
+      "name": "大焦熱",
+      "version": 1,
+      "blood": "キジン",
+      "range": "遠",
+      "rank": 3,
+      "moveTo": null,
+      "aura": "赤",
+      "skillType": "かしこさ",
+      "guts": 32,
+      "damage": "C",
+      "accuracy": "B",
+      "gutsDown": "D",
+      "critical": "F",
+      "abilities": [
+        {
+          "abilityId": "sab-0119",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0120",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "3024",
+          "rarity": 4
+        }
+      ],
+      "note": "",
+      "sortOrder": 414,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0092",
+      "name": "阿修羅",
+      "version": 1,
+      "blood": "キジン",
+      "range": "近",
+      "rank": 3,
+      "moveTo": null,
+      "aura": "赤",
+      "skillType": "ちから",
+      "guts": 35,
+      "damage": "C+",
+      "accuracy": "A",
+      "gutsDown": "F",
+      "critical": "B",
+      "abilities": [
+        {
+          "abilityId": "sab-0121",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0122",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "3030",
+          "rarity": 4
+        }
+      ],
+      "note": "",
+      "sortOrder": 415,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0093",
+      "name": "金棒",
+      "version": 1,
+      "blood": "キジン",
+      "range": "零",
+      "rank": 3,
+      "moveTo": "遠",
+      "aura": "黄",
+      "skillType": "ちから",
+      "guts": 26,
+      "damage": "B",
+      "accuracy": "C+",
+      "gutsDown": "G",
+      "critical": "B",
+      "abilities": [
+        {
+          "abilityId": "sab-0123",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0124",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "3016",
+          "rarity": 4
+        },
+        {
+          "monsterId": "3050",
+          "rarity": 4
+        },
+        {
+          "monsterId": "3051",
+          "rarity": 4
+        }
+      ],
+      "note": "",
+      "sortOrder": 416,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0094",
+      "name": "羅生門",
+      "version": 1,
+      "blood": "キジン",
+      "range": "遠",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "黄",
+      "skillType": "ちから",
+      "guts": 38,
+      "damage": "S",
+      "accuracy": "E",
+      "gutsDown": "G",
+      "critical": "B",
+      "abilities": [
+        {
+          "abilityId": "sab-0120",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0125",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0068",
+          "unlock": {
+            "monsterId": "3030",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0069",
+          "unlock": {
+            "monsterId": "3030",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "3030",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 417,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0095",
+      "name": "不動明王",
+      "version": 1,
+      "blood": "キジン",
+      "range": "中",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "青",
+      "skillType": "ちから",
+      "guts": 27,
+      "damage": "A+",
+      "accuracy": "B",
+      "gutsDown": "D",
+      "critical": "A",
+      "abilities": [
+        {
+          "abilityId": "sab-0126",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0127",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "3052",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 418,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0096",
+      "name": "天網恢恢",
+      "version": 1,
+      "blood": "キジン",
+      "range": "零",
+      "rank": 4,
+      "moveTo": "遠",
+      "aura": "赤",
+      "skillType": "ちから",
+      "guts": 30,
+      "damage": "A",
+      "accuracy": "S+",
+      "gutsDown": "G",
+      "critical": "D",
+      "abilities": [
+        {
+          "abilityId": "sab-0123",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0128",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0021",
+          "unlock": {
+            "monsterId": "3016",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0039",
+          "unlock": {
+            "monsterId": "3016",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "3016",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 419,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0097",
+      "name": "帝釈崩天",
+      "version": 1,
+      "blood": "キジン",
+      "range": "遠",
+      "rank": 5,
+      "moveTo": null,
+      "aura": "白",
+      "skillType": "ちから",
+      "guts": 45,
+      "damage": "B+",
+      "accuracy": "B+",
+      "gutsDown": "A",
+      "critical": "B",
+      "abilities": [
+        {
+          "abilityId": "sab-0129",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0130",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0004",
+          "unlock": {
+            "monsterId": "3027",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0005",
+          "unlock": {
+            "monsterId": "3027",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "3027",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 420,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0098",
+      "name": "倶利伽羅剣",
+      "version": 1,
+      "blood": "キジン",
+      "range": "中",
+      "rank": 5,
+      "moveTo": null,
+      "aura": "黄",
+      "skillType": "ちから",
+      "guts": 40,
+      "damage": "S+",
+      "accuracy": "C",
+      "gutsDown": "A",
+      "critical": "D",
+      "abilities": [
+        {
+          "abilityId": "sab-0131",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0127",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "3050",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 421,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0099",
+      "name": "阿鼻地獄",
+      "version": 1,
+      "blood": "キジン",
+      "range": "近",
+      "rank": 5,
+      "moveTo": null,
+      "aura": "緑",
+      "skillType": "ちから",
+      "guts": 37,
+      "damage": "B+",
+      "accuracy": "B",
+      "gutsDown": "G",
+      "critical": "A+",
+      "abilities": [
+        {
+          "abilityId": "sab-0132",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0133",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0004",
+          "unlock": {
+            "monsterId": "3051",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0005",
+          "unlock": {
+            "monsterId": "3051",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "3051",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 422,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0100",
+      "name": "天地返し",
+      "version": 1,
+      "blood": "キジン",
+      "range": "零",
+      "rank": 5,
+      "moveTo": "遠",
+      "aura": "黒",
+      "skillType": "ちから",
+      "guts": 45,
+      "damage": "S",
+      "accuracy": "E",
+      "gutsDown": "G",
+      "critical": "S",
+      "abilities": [
+        {
+          "abilityId": "sab-0134",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "3052",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 423,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0101",
+      "name": "威圧",
+      "version": 1,
+      "blood": "キジン",
+      "range": "中",
+      "rank": 1,
+      "moveTo": "遠",
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 13,
+      "damage": "E",
+      "accuracy": "E",
+      "gutsDown": "E",
+      "critical": "E",
+      "abilities": [],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [],
+      "note": "血統技図鑑に未掲載（技登録不可）",
+      "sortOrder": 424,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0102",
+      "name": "回し蹴り",
+      "version": 1,
+      "blood": "キジン",
+      "range": "零",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 20,
+      "damage": "D+",
+      "accuracy": "D",
+      "gutsDown": "G",
+      "critical": "E+",
+      "abilities": [
+        {
+          "abilityId": "sab-0108",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "3050"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 425,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0103",
+      "name": "硬質化パンチ",
+      "version": 1,
+      "blood": "キジン",
+      "range": "近",
+      "rank": 2,
+      "moveTo": "中",
+      "aura": "青",
+      "skillType": "ちから",
+      "guts": 24,
+      "damage": "C",
+      "accuracy": "C",
+      "gutsDown": "E",
+      "critical": "C",
+      "abilities": [
+        {
+          "abilityId": "sab-0108",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "3050"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 426,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0104",
+      "name": "硬質化キック",
+      "version": 1,
+      "blood": "キジン",
+      "range": "中",
+      "rank": 3,
+      "moveTo": null,
+      "aura": "緑",
+      "skillType": "ちから",
+      "guts": 30,
+      "damage": "C",
+      "accuracy": "C",
+      "gutsDown": "F",
+      "critical": "S",
+      "abilities": [
+        {
+          "abilityId": "sab-0135",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0100",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "3050"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 427,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0105",
+      "name": "ウォール",
+      "version": 1,
+      "blood": "キジン",
+      "range": "遠",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "緑",
+      "skillType": "ちから",
+      "guts": 36,
+      "damage": "S",
+      "accuracy": "B",
+      "gutsDown": "G",
+      "critical": "C",
+      "abilities": [
+        {
+          "abilityId": "sab-0136",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0137",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "3050"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 428,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0106",
+      "name": "闘魔解放",
+      "version": 1,
+      "blood": "キジン",
+      "range": "遠",
+      "rank": 3,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 24,
+      "damage": "C",
+      "accuracy": "B",
+      "gutsDown": "B",
+      "critical": "G",
+      "abilities": [
+        {
+          "abilityId": "sab-0138",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "3052"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 429,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0107",
+      "name": "断頭鬼刃",
+      "version": 1,
+      "blood": "キジン",
+      "range": "近",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "黒",
+      "skillType": "ちから",
+      "guts": 50,
+      "damage": "S+",
+      "accuracy": "B",
+      "gutsDown": "G",
+      "critical": "S",
+      "abilities": [
+        {
+          "abilityId": "sab-0139",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0140",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0141",
+          "unlock": {
+            "monsterId": "3052",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0142",
+          "unlock": {
+            "monsterId": "3052",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "3052"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 430,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0108",
+      "name": "ネビュラ",
+      "version": 1,
+      "blood": "キジン",
+      "range": "中",
+      "rank": 1,
+      "moveTo": "遠",
+      "aura": "白",
+      "skillType": "ちから",
+      "guts": 16,
+      "damage": "E",
+      "accuracy": "B",
+      "gutsDown": "C",
+      "critical": "G",
+      "abilities": [
+        {
+          "abilityId": "sab-0143",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "3027"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 431,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0494",
+      "name": "南瓜門",
+      "version": 1,
+      "blood": "キジン",
+      "range": "遠",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "緑",
+      "skillType": "ちから",
+      "guts": 35,
+      "damage": "S",
+      "accuracy": "C+",
+      "gutsDown": "A",
+      "critical": "B",
+      "abilities": [
+        {
+          "abilityId": "sab-0350",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0311",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "3051"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 432,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0495",
+      "name": "悪戯",
+      "version": 1,
+      "blood": "キジン",
+      "range": "遠",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "黒",
+      "skillType": "ちから",
+      "guts": 27,
+      "damage": "B",
+      "accuracy": "B",
+      "gutsDown": "D",
+      "critical": "D",
+      "abilities": [
+        {
+          "abilityId": "sab-0475",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "3051"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 433,
+      "status": "verified"
+    }
+  ]
+}

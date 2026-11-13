@@ -1,0 +1,559 @@
+{
+  "blood": "ザン",
+  "counts": {
+    "skills": 14
+  },
+  "skills": [
+    {
+      "skillId": "sk-0591",
+      "name": "ミラージュシフト",
+      "version": 1,
+      "blood": "ザン",
+      "range": "遠",
+      "rank": 1,
+      "moveTo": "近",
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 21,
+      "damage": "D",
+      "accuracy": "B",
+      "gutsDown": "G",
+      "critical": "D+",
+      "abilities": [
+        {
+          "abilityId": "sab-0566",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "3406",
+          "rarity": 2
+        }
+      ],
+      "note": "",
+      "sortOrder": 839,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0592",
+      "name": "レッグアーク",
+      "version": 1,
+      "blood": "ザン",
+      "range": "零",
+      "rank": 1,
+      "moveTo": null,
+      "aura": "黒",
+      "skillType": "ちから",
+      "guts": 23,
+      "damage": "E",
+      "accuracy": "D+",
+      "gutsDown": "C",
+      "critical": "D",
+      "abilities": [
+        {
+          "abilityId": "sab-0554",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "3408",
+          "rarity": 2
+        }
+      ],
+      "note": "",
+      "sortOrder": 840,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0593",
+      "name": "スタナーブリッツ",
+      "version": 1,
+      "blood": "ザン",
+      "range": "遠",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "黄",
+      "skillType": "かしこさ",
+      "guts": 26,
+      "damage": "C",
+      "accuracy": "B",
+      "gutsDown": "C",
+      "critical": "E",
+      "abilities": [
+        {
+          "abilityId": "sab-0555",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "3434",
+          "rarity": 3
+        }
+      ],
+      "note": "",
+      "sortOrder": 841,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0594",
+      "name": "ソニックナイフ",
+      "version": 1,
+      "blood": "ザン",
+      "range": "中",
+      "rank": 2,
+      "moveTo": "零",
+      "aura": "黒",
+      "skillType": "ちから",
+      "guts": 25,
+      "damage": "D",
+      "accuracy": "C+",
+      "gutsDown": "G",
+      "critical": "B",
+      "abilities": [
+        {
+          "abilityId": "sab-0556",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0554",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "3408",
+          "rarity": 3
+        }
+      ],
+      "note": "",
+      "sortOrder": 842,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0595",
+      "name": "ダブルサマー",
+      "version": 1,
+      "blood": "ザン",
+      "range": "零",
+      "rank": 2,
+      "moveTo": "近",
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 28,
+      "damage": "C+",
+      "accuracy": "C",
+      "gutsDown": "G",
+      "critical": "C",
+      "abilities": [
+        {
+          "abilityId": "sab-0557",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0554",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "3406",
+          "rarity": 3
+        }
+      ],
+      "note": "",
+      "sortOrder": 843,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0596",
+      "name": "アサルトレイド",
+      "version": 1,
+      "blood": "ザン",
+      "range": "中",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 44,
+      "damage": "B+",
+      "accuracy": "A",
+      "gutsDown": "E",
+      "critical": "C",
+      "abilities": [
+        {
+          "abilityId": "sab-0558",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0559",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "3434",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 844,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0597",
+      "name": "ライジングレイヴ",
+      "version": 1,
+      "blood": "ザン",
+      "range": "零",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "黄",
+      "skillType": "ちから",
+      "guts": 42,
+      "damage": "A",
+      "accuracy": "B",
+      "gutsDown": "A",
+      "critical": "A",
+      "abilities": [
+        {
+          "abilityId": "sab-0560",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0561",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0042",
+          "unlock": {
+            "monsterId": "3406",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0039",
+          "unlock": {
+            "monsterId": "3406",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "3406",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 845,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0598",
+      "name": "アクシズバレット",
+      "version": 1,
+      "blood": "ザン",
+      "range": "遠",
+      "rank": 5,
+      "moveTo": null,
+      "aura": "赤",
+      "skillType": "ちから",
+      "guts": 50,
+      "damage": "B",
+      "accuracy": "D",
+      "gutsDown": "F",
+      "critical": "S",
+      "abilities": [
+        {
+          "abilityId": "sab-0562",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0563",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0004",
+          "unlock": {
+            "monsterId": "3408",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0005",
+          "unlock": {
+            "monsterId": "3408",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "3408",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 846,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0599",
+      "name": "ダークホウスト",
+      "version": 1,
+      "blood": "ザン",
+      "range": "近",
+      "rank": 5,
+      "moveTo": null,
+      "aura": "黒",
+      "skillType": "ちから",
+      "guts": 48,
+      "damage": "A",
+      "accuracy": "S",
+      "gutsDown": "G",
+      "critical": "B+",
+      "abilities": [
+        {
+          "abilityId": "sab-0564",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0565",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0004",
+          "unlock": {
+            "monsterId": "3434",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0005",
+          "unlock": {
+            "monsterId": "3434",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "3434",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 847,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0795",
+      "name": "王惨刀",
+      "version": 1,
+      "blood": "ザン",
+      "range": "中",
+      "rank": 2,
+      "moveTo": "零",
+      "aura": "緑",
+      "skillType": "ちから",
+      "guts": 19,
+      "damage": "D",
+      "accuracy": "B+",
+      "gutsDown": "G",
+      "critical": "A",
+      "abilities": [
+        {
+          "abilityId": "sab-0701",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0554",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "3490"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 848,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0796",
+      "name": "王惨翠斬",
+      "version": 1,
+      "blood": "ザン",
+      "range": "零",
+      "rank": 6,
+      "moveTo": null,
+      "aura": "緑",
+      "skillType": "ちから",
+      "guts": 46,
+      "damage": "A+",
+      "accuracy": "SS",
+      "gutsDown": "A",
+      "critical": "B",
+      "abilities": [
+        {
+          "abilityId": "sab-0702",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0703",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0004",
+          "unlock": {
+            "monsterId": "3490",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0005",
+          "unlock": {
+            "monsterId": "3490",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "3490"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 849,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0797",
+      "name": "シングルショット",
+      "version": 1,
+      "blood": "ザン",
+      "range": "近",
+      "rank": 1,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 20,
+      "damage": "C",
+      "accuracy": "B",
+      "gutsDown": "G",
+      "critical": "E",
+      "abilities": [
+        {
+          "abilityId": "sab-0566",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 850,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0798",
+      "name": "メテオドライブ",
+      "version": 1,
+      "blood": "ザン",
+      "range": "遠",
+      "rank": 3,
+      "moveTo": null,
+      "aura": "赤",
+      "skillType": "ちから",
+      "guts": 35,
+      "damage": "C",
+      "accuracy": "C",
+      "gutsDown": "E",
+      "critical": "A",
+      "abilities": [
+        {
+          "abilityId": "sab-0704",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0705",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 851,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0799",
+      "name": "フォルターブリッツ",
+      "version": 1,
+      "blood": "ザン",
+      "range": "近",
+      "rank": 3,
+      "moveTo": null,
+      "aura": "黄",
+      "skillType": "かしこさ",
+      "guts": 31,
+      "damage": "C",
+      "accuracy": "B+",
+      "gutsDown": "B+",
+      "critical": "D",
+      "abilities": [
+        {
+          "abilityId": "sab-0555",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0706",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 852,
+      "status": "verified"
+    }
+  ]
+}

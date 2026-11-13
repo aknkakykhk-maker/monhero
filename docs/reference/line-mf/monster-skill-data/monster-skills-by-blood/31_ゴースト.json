@@ -1,0 +1,799 @@
+{
+  "blood": "ゴースト",
+  "counts": {
+    "skills": 21
+  },
+  "skills": [
+    {
+      "skillId": "sk-0065",
+      "name": "ソウルビーム",
+      "version": 1,
+      "blood": "ゴースト",
+      "range": "近",
+      "rank": 1,
+      "moveTo": null,
+      "aura": "白",
+      "skillType": "かしこさ",
+      "guts": 13,
+      "damage": "E+",
+      "accuracy": "A",
+      "gutsDown": "E",
+      "critical": "E",
+      "abilities": [],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "3117",
+          "rarity": 2
+        }
+      ],
+      "note": "",
+      "sortOrder": 183,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0066",
+      "name": "ピコピコハンマー",
+      "version": 1,
+      "blood": "ゴースト",
+      "range": "零",
+      "rank": 1,
+      "moveTo": null,
+      "aura": "黄",
+      "skillType": "ちから",
+      "guts": 13,
+      "damage": "D",
+      "accuracy": "E",
+      "gutsDown": "G",
+      "critical": "F",
+      "abilities": [],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "3150",
+          "rarity": 2
+        }
+      ],
+      "note": "",
+      "sortOrder": 184,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0067",
+      "name": "すてきステッキ",
+      "version": 1,
+      "blood": "ゴースト",
+      "range": "中",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "かしこさ",
+      "guts": 20,
+      "damage": "F+",
+      "accuracy": "D",
+      "gutsDown": "G",
+      "critical": "B",
+      "abilities": [
+        {
+          "abilityId": "sab-0096",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "3113",
+          "rarity": 3
+        }
+      ],
+      "note": "",
+      "sortOrder": 185,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0068",
+      "name": "びっくり",
+      "version": 1,
+      "blood": "ゴースト",
+      "range": "近",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "かしこさ",
+      "guts": 15,
+      "damage": "E",
+      "accuracy": "B",
+      "gutsDown": "C+",
+      "critical": "E",
+      "abilities": [
+        {
+          "abilityId": "sab-0097",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "3131",
+          "rarity": 3
+        }
+      ],
+      "note": "",
+      "sortOrder": 186,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0069",
+      "name": "体当たり",
+      "version": 1,
+      "blood": "ゴースト",
+      "range": "零",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 19,
+      "damage": "C+",
+      "accuracy": "B+",
+      "gutsDown": "D",
+      "critical": "D",
+      "abilities": [
+        {
+          "abilityId": "sab-0098",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "3117",
+          "rarity": 3
+        }
+      ],
+      "note": "",
+      "sortOrder": 187,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0070",
+      "name": "連続カード",
+      "version": 1,
+      "blood": "ゴースト",
+      "range": "遠",
+      "rank": 3,
+      "moveTo": null,
+      "aura": "黄",
+      "skillType": "かしこさ",
+      "guts": 23,
+      "damage": "D+",
+      "accuracy": "B",
+      "gutsDown": "C",
+      "critical": "A",
+      "abilities": [
+        {
+          "abilityId": "sab-0099",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "3113",
+          "rarity": 4
+        }
+      ],
+      "note": "",
+      "sortOrder": 188,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0071",
+      "name": "ドクロビーム",
+      "version": 1,
+      "blood": "ゴースト",
+      "range": "中",
+      "rank": 3,
+      "moveTo": null,
+      "aura": "黒",
+      "skillType": "かしこさ",
+      "guts": 29,
+      "damage": "C",
+      "accuracy": "A",
+      "gutsDown": "D",
+      "critical": "B",
+      "abilities": [
+        {
+          "abilityId": "sab-0017",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0100",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "3131",
+          "rarity": 4
+        }
+      ],
+      "note": "",
+      "sortOrder": 189,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0072",
+      "name": "大パンチ",
+      "version": 1,
+      "blood": "ゴースト",
+      "range": "零",
+      "rank": 3,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 29,
+      "damage": "A+",
+      "accuracy": "B",
+      "gutsDown": "C",
+      "critical": "B",
+      "abilities": [
+        {
+          "abilityId": "sab-0101",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0023",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "3150",
+          "rarity": 4
+        }
+      ],
+      "note": "",
+      "sortOrder": 190,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0073",
+      "name": "大きなおとしもの",
+      "version": 1,
+      "blood": "ゴースト",
+      "range": "中",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "黄",
+      "skillType": "かしこさ",
+      "guts": 31,
+      "damage": "S",
+      "accuracy": "B",
+      "gutsDown": "A",
+      "critical": "B",
+      "abilities": [
+        {
+          "abilityId": "sab-0102",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0032",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0068",
+          "unlock": {
+            "monsterId": "3131",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0049",
+          "unlock": {
+            "monsterId": "3131",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "3131",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 191,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0074",
+      "name": "コンビネーション",
+      "version": 1,
+      "blood": "ゴースト",
+      "range": "零",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "白",
+      "skillType": "ちから",
+      "guts": 41,
+      "damage": "C+",
+      "accuracy": "S",
+      "gutsDown": "C",
+      "critical": "B",
+      "abilities": [
+        {
+          "abilityId": "sab-0103",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0042",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0021",
+          "unlock": {
+            "monsterId": "3113",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0039",
+          "unlock": {
+            "monsterId": "3113",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "3113",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 192,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0075",
+      "name": "Woフォーチュン",
+      "version": 1,
+      "blood": "ゴースト",
+      "range": "遠",
+      "rank": 5,
+      "moveTo": null,
+      "aura": "緑",
+      "skillType": "かしこさ",
+      "guts": 30,
+      "damage": "S+",
+      "accuracy": "S+",
+      "gutsDown": "B+",
+      "critical": "C",
+      "abilities": [
+        {
+          "abilityId": "sab-0104",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0105",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0004",
+          "unlock": {
+            "monsterId": "3150",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0005",
+          "unlock": {
+            "monsterId": "3150",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "3150",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 193,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0076",
+      "name": "運命のコイン",
+      "version": 1,
+      "blood": "ゴースト",
+      "range": "中",
+      "rank": 5,
+      "moveTo": null,
+      "aura": "黒",
+      "skillType": "かしこさ",
+      "guts": 39,
+      "damage": "S",
+      "accuracy": "A+",
+      "gutsDown": "D",
+      "critical": "A",
+      "abilities": [
+        {
+          "abilityId": "sab-0106",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0107",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0004",
+          "unlock": {
+            "monsterId": "3117",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0005",
+          "unlock": {
+            "monsterId": "3117",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "3117",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 194,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0077",
+      "name": "ハトのおとしもの",
+      "version": 1,
+      "blood": "ゴースト",
+      "range": "中",
+      "rank": 1,
+      "moveTo": null,
+      "aura": "緑",
+      "skillType": "かしこさ",
+      "guts": 22,
+      "damage": "C",
+      "accuracy": "E",
+      "gutsDown": "D",
+      "critical": "C",
+      "abilities": [],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 195,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0078",
+      "name": "カード",
+      "version": 1,
+      "blood": "ゴースト",
+      "range": "遠",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "黒",
+      "skillType": "かしこさ",
+      "guts": 19,
+      "damage": "C",
+      "accuracy": "B",
+      "gutsDown": "D",
+      "critical": "C",
+      "abilities": [
+        {
+          "abilityId": "sab-0108",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "3151",
+          "rarity": 3
+        }
+      ],
+      "note": "",
+      "sortOrder": 196,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0079",
+      "name": "スリーセブン",
+      "version": 1,
+      "blood": "ゴースト",
+      "range": "遠",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "赤",
+      "skillType": "かしこさ",
+      "guts": 37,
+      "damage": "B",
+      "accuracy": "C",
+      "gutsDown": "E",
+      "critical": "S+",
+      "abilities": [
+        {
+          "abilityId": "sab-0109",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0110",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "3151",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 197,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0080",
+      "name": "びっくりドクロ",
+      "version": 1,
+      "blood": "ゴースト",
+      "range": "近",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "黒",
+      "skillType": "かしこさ",
+      "guts": 31,
+      "damage": "A",
+      "accuracy": "A",
+      "gutsDown": "A",
+      "critical": "A",
+      "abilities": [
+        {
+          "abilityId": "sab-0111",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0112",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 198,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0081",
+      "name": "トリックパンチ",
+      "version": 1,
+      "blood": "ゴースト",
+      "range": "零",
+      "rank": 3,
+      "moveTo": "中",
+      "aura": "白",
+      "skillType": "かしこさ",
+      "guts": 26,
+      "damage": "B",
+      "accuracy": "B",
+      "gutsDown": "B",
+      "critical": "D+",
+      "abilities": [
+        {
+          "abilityId": "sab-0113",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "3117"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 199,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0082",
+      "name": "カード・クラブ",
+      "version": 1,
+      "blood": "ゴースト",
+      "range": "遠",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "緑",
+      "skillType": "かしこさ",
+      "guts": 26,
+      "damage": "D+",
+      "accuracy": "B",
+      "gutsDown": "D",
+      "critical": "C",
+      "abilities": [
+        {
+          "abilityId": "sab-0108",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0114",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "3150"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 200,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0083",
+      "name": "グリンネーション",
+      "version": 1,
+      "blood": "ゴースト",
+      "range": "零",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "緑",
+      "skillType": "ちから",
+      "guts": 46,
+      "damage": "C+",
+      "accuracy": "S+",
+      "gutsDown": "B",
+      "critical": "B+",
+      "abilities": [
+        {
+          "abilityId": "sab-0115",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0042",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "3150"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 201,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0084",
+      "name": "RSF",
+      "version": 1,
+      "blood": "ゴースト",
+      "range": "近",
+      "rank": 5,
+      "moveTo": null,
+      "aura": "赤",
+      "skillType": "かしこさ",
+      "guts": 35,
+      "damage": "B",
+      "accuracy": "S",
+      "gutsDown": "B",
+      "critical": "A",
+      "abilities": [
+        {
+          "abilityId": "sab-0116",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0117",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0004",
+          "unlock": {
+            "monsterId": "3151",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0005",
+          "unlock": {
+            "monsterId": "3151",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "3151",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 202,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0109",
+      "name": "ホイップハンマー",
+      "version": 1,
+      "blood": "ゴースト",
+      "range": "零",
+      "rank": 1,
+      "moveTo": null,
+      "aura": "白",
+      "skillType": "かしこさ",
+      "guts": 17,
+      "damage": "C",
+      "accuracy": "C",
+      "gutsDown": "G",
+      "critical": "G",
+      "abilities": [
+        {
+          "abilityId": "sab-0144",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "3151"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 203,
+      "status": "verified"
+    }
+  ]
+}
