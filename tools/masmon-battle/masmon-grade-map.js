@@ -40,8 +40,16 @@ for (const [g, k] of Object.entries(ATTR)) {
 // 威力の上の段は、30 を超える分を ×0.75 に縮める(資料のまま写すと一撃でライフ6割以上が 3.7%→6.0% に増え、1ラウンドで決着しやすい。縮めると 3.6%・ラウンドの中央 7 でいまと同じ。2026-11-13)
 const POWER_KNEE = 30, POWER_TOP = 0.75;
 for (const g of Object.keys(MAP.power)) if (MAP.power[g] > POWER_KNEE) MAP.power[g] = Math.round(POWER_KNEE + (MAP.power[g] - POWER_KNEE) * POWER_TOP);
+// --gd=strong(2026-11-13 社長「ガッツダウンの数値が弱く見える」→ 技表の値そのものを強くする): 等級→ガッツダウンを決め打ちの表に引き上げる。
+//   上位は 30〜40(S 32・S+ 36・SS 40)・ふつうの技も一段上・芯の上限 45 の内。
+//   等級 G は 3。ただし威力か命中が A 以上の技だけ 0(「ガッツを削らない代わりに威力や命中が良い」理由のある技だけ 0 を残す)
+const GD_STRONG = process.argv.includes('--gd=strong');
+const GD_STRONG_MAP = { G: 3, 'G+': 4, F: 6, 'F+': 7, E: 9, 'E+': 10, D: 12, 'D+': 13, C: 15, 'C+': 17, B: 19, 'B+': 21, A: 24, 'A+': 27, S: 32, 'S+': 36, SS: 40 };
+if (GD_STRONG) MAP.gd = { ...GD_STRONG_MAP };
+const GD_ZERO_FROM = GR.indexOf('A');
+const gdOf = (s) => (GD_STRONG && String(s.gd || '').trim() === 'G' && (GR.indexOf(String(s.dmg || '').trim()) >= GD_ZERO_FROM || GR.indexOf(String(s.acc || '').trim()) >= GD_ZERO_FROM) ? 0 : gv('gd', s.gd));
 const gv = (k, g) => { const x = String(g || '').trim(); return MAP[k][x] != null ? MAP[k][x] : MAP[k].C; };
-const techOf = (s, id) => ({ id, name: s.name, kind: s.kind, dist: [s.dist], power: gv('power', s.dmg), hit: gv('hit', s.acc), guts: s.guts, crit: gv('crit', s.cri), gd: gv('gd', s.gd), ...(s.rank ? { rank: s.rank } : {}), ...(s.moveTo != null ? { moveTo: s.moveTo } : {}), ...(s.start ? { learn: { start: true } } : {}) });
+const techOf = (s, id) => ({ id, name: s.name, kind: s.kind, dist: [s.dist], power: gv('power', s.dmg), hit: gv('hit', s.acc), guts: s.guts, crit: gv('crit', s.cri), gd: gdOf(s), ...(s.rank ? { rank: s.rank } : {}), ...(s.moveTo != null ? { moveTo: s.moveTo } : {}), ...(s.start ? { learn: { start: true } } : {}) });
 
 // 仮の技表
 const ORIG = JSON.parse(fs.readFileSync(path.join(ROOT, 'docs/progress/msa-tech/originals-draft.json'), 'utf8'));
