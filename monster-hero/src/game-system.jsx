@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: e72156e7b3caa06e
+// generated-sha256: 72dd64a413545ce5
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -76073,22 +76073,23 @@ function AmgtCard({ who, t, e }) {
     <div className="mt-2 space-y-2" data-amgt-card>
       <div className="mhm-card">
         <p className="text-[10px] font-black text-slate-400">⚔ 技と熟練(モンヒロバトルの修行で覚える・磨く)</p>
-        <div className="mt-1 grid grid-cols-1 gap-y-0.5">
+        {/* 列をそろえる1つの格子(名前は1行で全部・間合い・棒・段階)。社長「文字列が悪い」2026-11-13: 名前が2行に折れて列と行の高さがずれていた */}
+        <div className="mt-1 grid items-center gap-x-1.5 gap-y-1" style={{ gridTemplateColumns: 'max-content 40px minmax(24px,1fr) 34px' }} data-amgt-grid>
           {techs.map(x => {
             const has = me.learn.includes(x.id);
             return (
-              <div key={x.id} className={`flex items-center gap-1.5 text-[10.5px] font-bold ${has ? 'text-slate-100' : 'text-slate-500'}`} data-amgt-tech={x.id}>
-                <span className={`w-[96px] shrink-0 break-words leading-tight ${has ? (x.kind === 'wise' ? 'text-sky-200' : 'text-rose-200') : ''}`}>{has ? x.name : '???'}</span>
-                <span className="w-[46px] shrink-0 whitespace-nowrap text-[9px]">{[0, 1, 2, 3].map(d => <i key={d} className={`not-italic ${x.dist.includes(d) && has ? 'text-amber-300' : 'text-slate-600'}`}>{AMGT_DIST[d]}</i>)}</span>
+              <div key={x.id} style={{ display: 'contents' }} className={`text-[10.5px] font-bold ${has ? 'text-slate-100' : 'text-slate-500'}`} data-amgt-tech={x.id}>
+                <span className={`whitespace-nowrap text-left leading-[16px] tracking-tight ${has ? (x.kind === 'wise' ? 'text-sky-200' : 'text-rose-200') : ''}`} data-amgt-tech-name>{has ? x.name : '???'}</span>
+                <span className="whitespace-nowrap text-center text-[9px] leading-[16px]">{[0, 1, 2, 3].map(d => <i key={d} className={`not-italic ${x.dist.includes(d) && has ? 'text-amber-300' : 'text-slate-600'}`}>{AMGT_DIST[d]}</i>)}</span>
                 <span className="mhm-bar"><i style={{ width: `${has ? me.m[x.id] || 0 : 0}%`, background: 'linear-gradient(90deg,#fbbf24,#f472b6)' }}/></span>
-                <b className="w-[40px] shrink-0 text-right text-[9.5px] text-amber-200">{has ? amgtRankOf(me.m[x.id] || 0) : 'まだ'}</b>
+                <b className="whitespace-nowrap text-center text-[9.5px] leading-[16px] text-amber-200">{has ? amgtRankOf(me.m[x.id] || 0) : 'まだ'}</b>
               </div>);
           })}
           {AMGT_SENSE.map(([k, label]) => (
-            <div key={k} className="flex items-center gap-1.5 text-[10.5px] font-bold text-slate-200" data-amgt-sense={k}>
-              <span className="w-[148px] shrink-0 truncate">{label}</span>
+            <div key={k} style={{ display: 'contents' }} className="text-[10.5px] font-bold text-slate-200" data-amgt-sense={k}>
+              <span className="whitespace-nowrap text-left leading-[16px]" style={{ gridColumn: 'span 2' }}>{label}</span>
               <span className="mhm-bar"><i style={{ width: `${me.m[k] || 0}%`, background: 'linear-gradient(90deg,#a78bfa,#f472b6)' }}/></span>
-              <b className="w-[40px] shrink-0 text-right text-[9.5px] text-amber-200">{amgtRankOf(me.m[k] || 0)}</b>
+              <b className="whitespace-nowrap text-center text-[9.5px] leading-[16px] text-amber-200">{amgtRankOf(me.m[k] || 0)}</b>
             </div>))}
         </div>
       </div>
@@ -79802,10 +79803,11 @@ const amgpForecastDay = (aid, row, e, codes, fat0, str0, opt = {}) => {
     const sab = !auto && /^[LHS]/.test(code) ? amgpSabChance(fat, str) : 0;
     const g0 = bm > 0 ? amgpGainOf(row, e, code, fat, (auto ? 1 : AMG_CARE.pickMult) * bm) : {}; const g = {}; // 絆: 育ちの速さ・型と年齢・方針(印が偽なら ×1)
     for (const [k, [a, b]] of Object.entries(g0)) { const bb = Math.min(b, leftHi); if (bb > 0) { const aa = Math.min(a, bb, leftLo); g[k] = [aa, bb]; leftHi -= bb; leftLo -= aa; } }
+    const capped = Object.entries(g0).some(([k, [, b]]) => !g[k] || g[k][1] < b); // 1日の上限で伸びが削られた回(画面で「上限で止まる」と出す)
     const [df, ds] = AMGP_FS[code[0]] || [0, 0];
     fat = amgClamp(fat + df, 0, 100); str = amgClamp(str + ds, 0, 100);
     const a = code[0] === 'H' ? 'heavy' : code[0] === 'S' ? 'shugyo' : code[0] === 'R' ? 'rest' : code[0] === 'P' ? 'play' : 'light';
-    out.push({ code: c0, as: code, auto, fat, str, sab, hurt: auto ? 0 : amgpHurtChance(a, fat), sick: auto ? 0 : amgpSickChance(a, str), away: auto ? 0 : amgpAwayChance(str), g });
+    out.push({ code: c0, as: code, auto, capped, fat, str, sab, hurt: auto ? 0 : amgpHurtChance(a, fat), sick: auto ? 0 : amgpSickChance(a, str), away: auto ? 0 : amgpAwayChance(str), g });
   }
   return out;
 };
@@ -79905,6 +79907,102 @@ function AmgpBars({ st, add = null }) {
           {add && <span className="w-[54px] shrink-0 text-right text-[10px] text-amber-300" data-amgp-gain={k}>{g ? `+${g[0]}〜${g[1]}` : ''}</span>}
         </div>); })}
     </div>);
+}
+// ---- 計画タブの「1日」の画面(社長 2026-11-13「育成ノートがわかりにくい」「疲れとストレスも一緒にゲージにして」) ----
+//   上: この日の予定(朝・昼・夜の3枚の札。押すと選ぶ一覧)→ 下: 6能力の見通し・疲れとストレスのゲージ(危ない線つき)→ ほかの曜日へ写す
+//   長い説明は「？」で開く。保存の形・計算は変えない(見せ方だけ)
+const AMGP_FS_LINES = Object.freeze({ fat: Object.freeze([[60, '#fbbf24', 'サボりやすい'], [70, '#fb7185', 'けが']]), str: Object.freeze([[50, '#fbbf24', 'サボりやすい'], [60, '#fb923c', '病気'], [80, '#f43f5e', '家出']]) });
+const amgpOptionSub = (c) => (c === 'A' ? '助手が決める' : c === 'R' ? '疲れがとれる' : c === 'P' ? 'ストレスがとれる' : c === 'S' ? 'いなければ軽い訓練' : `${amgpStatName(c.slice(2))}・${c[0] === 'H' ? '重い' : '軽い'}`);
+const amgpDayCapNow = () => Math.round(AMG_CARE.viewCap * (typeof amgbPace === 'function' ? amgbPace() : 1)); // 計画の回の1日の伸びの上限(育成の計算と同じ)
+const amgpRiskOf = (f) => (f && !f.auto && !f.cond ? [['サボり', f.sab], ['けが', f.hurt], ['病気', f.sick], ['家出', f.away]].filter(([, v]) => v > 0) : []);
+function AmgpFsGauge({ kind, start, ends }) {
+  const label = kind === 'fat' ? '疲れ' : 'ストレス';
+  const vals = ends.filter(v => Number.isFinite(v));
+  const peak = vals.length ? Math.max(start, ...vals) : start;
+  const last = vals.length ? vals[vals.length - 1] : start;
+  const pct = (v) => `${Math.max(0, Math.min(100, v))}%`;
+  const lines = AMGP_FS_LINES[kind];
+  const over = lines.filter(([v]) => peak >= v).pop();
+  return (
+    <div className="mt-1.5" data-amgp-gauge={kind}>
+      <div className="flex items-baseline gap-1.5 text-[11px] font-black">
+        <span className="w-[56px] shrink-0 text-left">{label}</span>
+        <span className="flex-1 text-left text-[10px] font-bold" style={{ color: over ? over[1] : '#94a3b8' }}>{over ? `⚠ ${over[2]}の線をこえる` : 'だいじょうぶ'}</span>
+        <b className="shrink-0 text-right text-amber-200" data-amgp-gauge-num>{start} → {last}{peak > last ? `(いちばん高い ${peak})` : ''}</b>
+      </div>
+      <div className="relative mt-1 h-3 overflow-hidden rounded-full bg-slate-700">
+        <i className="absolute inset-y-0 left-0 bg-slate-300" style={{ width: pct(Math.min(start, peak)) }}/>
+        {peak > start && <i className="absolute inset-y-0" style={{ left: pct(start), width: pct(peak - start), background: kind === 'fat' ? '#f59e0b' : '#f472b6' }} data-amgp-gauge-add/>}
+        {lines.map(([v, c]) => <i key={v} className="absolute inset-y-0 w-[2px]" style={{ left: `calc(${pct(v)} - 1px)`, background: c }}/>)}
+      </div>
+      <div className="relative h-3 text-[8.5px] font-black">
+        {lines.map(([v, c]) => <span key={v} className="absolute -translate-x-1/2" style={{ left: pct(v), color: c }}>{v}</span>)}
+      </div>
+    </div>);
+}
+function AmgpDayPlan({ x, d, di, setDi, w }) {
+  const [open, setOpen] = React.useState(null); // 選んでいる回(0 朝・1 昼・2 夜)
+  const [help, setHelp] = React.useState(false);
+  const [copied, setCopied] = React.useState('');
+  const wd = d.wd;
+  const g = {}; for (const f of d.f) if (f) for (const [k, [a, b]] of Object.entries(f.g)) g[k] = [(g[k] ? g[k][0] : 0) + a, (g[k] ? g[k][1] : 0) + b];
+  const risks = [0, 1, 2].flatMap(p => amgpRiskOf(d.f[p]).map(([n, v]) => `${AMG_PERIOD_NAME[p]}: ${n} ${amgpPct(v)}`));
+  const copy = (mode, msg) => { amgpCopyDay(x.key, wd, mode); setCopied(msg); };
+  return (<div data-amgp-dayplan>
+    <div className="mt-2 flex items-center gap-1.5">
+      <button type="button" disabled={di <= 0} onClick={() => { setDi(di - 1); setOpen(null); setCopied(''); }} className="min-h-[36px] rounded-full bg-slate-800 px-3 text-[12px] font-black disabled:opacity-40" aria-label="前の日">‹</button>
+      <span className="flex-1 text-center text-[13px] font-black">{AMGP_DAY_NAME[wd]}曜日{di === 0 ? '(今日)' : ''}</span>
+      <button type="button" disabled={di >= 6} onClick={() => { setDi(di + 1); setOpen(null); setCopied(''); }} className="min-h-[36px] rounded-full bg-slate-800 px-3 text-[12px] font-black disabled:opacity-40" aria-label="次の日">›</button>
+    </div>
+    <div className="mt-2 flex items-center gap-1.5">
+      <p className="flex-1 text-left text-[12px] font-black text-emerald-200">📅 この日の予定(押して変える)</p>
+      <button type="button" onClick={() => setHelp(!help)} className={`min-h-[30px] min-w-[30px] rounded-full text-[12px] font-black ${help ? 'bg-sky-400 text-sky-950' : 'bg-slate-700'}`} aria-label="説明" data-amgp-help-btn>？</button>
+    </div>
+    {help && <div className="mt-1 space-y-1 rounded-xl bg-slate-800 p-2 text-left text-[10.5px] font-bold text-slate-200" data-amgp-help>
+      <p>朝(4:00)・昼(12:00)・夜(18:00)に何をするかを決めます。決めた予定は毎週くり返します。</p>
+      <p>計画の回はよく伸びて(1.3倍)、失敗しにくくなります。1日に伸びるのは{amgpDayCapNow()}までで、こえる分は伸びません。「🍃 まかせる」の回は{amgpWhoName(x.aid)}が様子を見て決めます。</p>
+      <p>疲れ60・ストレス50からサボりやすく、疲れ70で重い訓練・修行のけが、ストレス60で病気、80で家出が起きることがあります。計画のマスモンは自動では休まないので、「😴 休み」「🎈 遊び」を入れてください。</p>
+    </div>}
+    <div className="mt-1.5 grid grid-cols-3 gap-1.5" data-amgp-slots>
+      {[0, 1, 2].map(p => { const f = d.f[p]; const code = w[wd * 3 + p]; const cond = f && f.cond && AMGP_COND[f.cond]; const rk = amgpRiskOf(f); return (
+        <button key={p} type="button" disabled={!f} onClick={() => setOpen(open === p ? null : p)} data-amgp-slot={p}
+          className={`flex min-h-[96px] flex-col items-center justify-start rounded-xl border-2 px-1 py-1.5 text-center disabled:opacity-40 ${open === p ? 'border-emerald-300 bg-emerald-950/70' : rk.length ? 'border-rose-300/70 bg-slate-800' : 'border-white/10 bg-slate-800'}`}>
+          <span className="text-[10px] font-black text-slate-300">{AMG_PERIOD_NAME[p]} {['4:00', '12:00', '18:00'][p]}</span>
+          <span className="mt-0.5 text-[24px] leading-none">{cond ? cond.icon : amgpCodeIcon(code)}</span>
+          <span className="mt-1 whitespace-nowrap text-[11.5px] font-black">{cond ? cond.name : amgpCodeName(code)}</span>
+          <span className="whitespace-nowrap text-[9.5px] font-bold text-slate-300">{!f ? 'もう過ぎた' : cond ? '休みになる' : amgpOptionSub(code)}</span>
+          {f && f.capped && <span className="mt-0.5 whitespace-nowrap rounded bg-amber-700 px-1 text-[9px] font-black" data-amgp-slot-capped>⏸ 上限で止まる</span>}
+          {rk.length > 0 && <span className="mt-0.5 rounded bg-rose-700 px-1 text-[9px] font-black" data-amgp-slot-risk>⚠ {rk[0][0]} {amgpPct(rk[0][1])}</span>}
+        </button>); })}
+    </div>
+    {open !== null && d.f[open] && <div className="mt-1.5 rounded-xl border border-emerald-300/50 bg-slate-950 p-2" data-amgp-picker>
+      <p className="text-left text-[11px] font-black text-emerald-200">{AMG_PERIOD_NAME[open]}にすること</p>
+      <div className="mt-1 grid grid-cols-2 gap-1">
+        {AMGP_OPTIONS.map(c => { const full = c.length > 2 && x.e.st[c.slice(2)] >= AMG_MAX; const on = w[wd * 3 + open] === c; return (
+          <button key={c} type="button" disabled={full} onClick={() => { amgpSetCells(x.key, { [wd * 3 + open]: c }); setOpen(null); setCopied(''); }} data-amgp-opt={c}
+            className={`flex min-h-[40px] items-center gap-1.5 rounded-lg px-1.5 text-left disabled:opacity-40 ${on ? 'bg-emerald-400 text-emerald-950' : c[0] === 'H' ? 'bg-violet-800' : c[0] === 'L' ? 'bg-blue-800' : 'bg-slate-700'}`}>
+            <span className="text-[16px] leading-none">{amgpCodeIcon(c)}</span>
+            <span className="min-w-0 leading-tight"><b className="block whitespace-nowrap text-[11px] font-black">{amgpCodeName(c)}</b><span className="block whitespace-nowrap text-[9px] font-bold opacity-80">{full ? 'もう上限' : amgpOptionSub(c)}</span></span>
+          </button>); })}
+      </div>
+    </div>}
+    <p className="mt-3 text-left text-[11px] font-black text-slate-200">📈 この日で伸びる見通し(黄色が伸びる分)</p>
+    <div className="mt-1"><AmgpBars st={x.e.st} add={g}/></div>
+    {d.f.some(f => f && f.capped) && <p className="mt-1 rounded-xl bg-amber-950/70 p-2 text-left text-[10.5px] font-bold text-amber-100" data-amgp-capped>⏸ 1日に伸びるのは{amgpDayCapNow()}まで。{[0, 1, 2].filter(p => d.f[p] && d.f[p].capped).map(p => AMG_PERIOD_NAME[p]).join('・')}の訓練は、上限で伸びが止まります(疲れ・ストレスはたまります)</p>}
+    <p className="mt-3 text-left text-[11px] font-black text-slate-200">🔋 疲れとストレスの見通し(色が、この日に増える分)</p>
+    <div data-amgp-fs>
+      <AmgpFsGauge kind="fat" start={d.startFat} ends={d.f.map(f => (f ? f.fat : NaN))}/>
+      <AmgpFsGauge kind="str" start={d.startStr} ends={d.f.map(f => (f ? f.str : NaN))}/>
+    </div>
+    {risks.length > 0 && <p className="mt-1 rounded-xl border border-rose-300/60 bg-rose-950/60 p-2 text-left text-[10.5px] font-bold text-rose-100" data-amgp-day-risk>⚠ {risks.join(' ・ ')}</p>}
+    <p className="mt-3 text-left text-[11px] font-black text-slate-200">📄 この日と同じ予定にする</p>
+    <div className="mt-1 grid grid-cols-3 gap-1.5" data-amgp-copy>
+      <button type="button" onClick={() => copy('all', '毎日')} className="min-h-[40px] rounded-xl bg-slate-700 px-1 text-center text-[11px] font-black">毎日(7日)</button>
+      <button type="button" onClick={() => copy('weekday', '平日')} className="min-h-[40px] rounded-xl bg-slate-700 px-1 text-center text-[11px] font-black">平日(月〜金)</button>
+      <button type="button" onClick={() => copy('holiday', '土日')} className="min-h-[40px] rounded-xl bg-slate-700 px-1 text-center text-[11px] font-black">土日</button>
+    </div>
+    {copied && <p className="mt-1 text-left text-[10.5px] font-bold text-emerald-200" data-amgp-copied>✓ {copied}を{AMGP_DAY_NAME[wd]}曜日と同じ予定にしました</p>}
+  </div>);
 }
 const amgpLevelColor = (v) => (v >= 70 ? 'text-rose-300' : v >= 60 ? 'text-amber-300' : 'text-slate-200');
 function AssistantMasmonNote({ readOnly = false, data = null, ownerName = '', onClose, aid = null, land = false }) {
@@ -80022,7 +80120,6 @@ function AmgpPlanTab({ x, nameOf, pickSel }) {
   const once = AMGP_STORE.state.once[x.key] && AMGP_STORE.state.once[x.key].s === s0 + 1 ? AMGP_STORE.state.once[x.key].c : '';
   const d = fw.days[di]; const wd = d.wd;
   const sel = (code, onChange, attr) => <select className="min-w-0 rounded-lg bg-slate-800 px-1.5 py-1 text-[11px] font-black text-white" value={code} onChange={ev => onChange(ev.target.value)} {...attr}>{AMGP_OPTIONS.map(c => <option key={c} value={c} disabled={c.length > 2 && x.e.st[c.slice(2)] >= AMG_MAX}>{amgpOptionLabel(c)}</option>)}</select>;
-  const fsTxt = (f) => (f ? `疲れ${f.fat}・ス${f.str}` : '');
   const warn = fw.days.flatMap(dd => (dd.f || []).map((f, p) => (f && !f.auto && (f.fat >= 70 || f.str >= 60 || f.sab > 0) ? { dd, p, f } : null))).filter(Boolean)[0];
   return (<>
     {pickSel}
@@ -80047,33 +80144,8 @@ function AmgpPlanTab({ x, nameOf, pickSel }) {
       {warn && <p className="mt-2 rounded-xl border border-rose-300/60 bg-rose-950/60 p-2 text-[11px] font-bold text-rose-100" data-amgp-warn>⚠ {AMGP_DAY_NAME[warn.dd.wd]}の{AMG_PERIOD_NAME[warn.p]}: 疲れ{warn.f.fat}・ストレス{warn.f.str}{warn.f.sab > 0 ? ` → サボり ${amgpPct(warn.f.sab)}` : ''}{warn.f.hurt > 0 ? ` ・ けが ${amgpPct(warn.f.hurt)}` : ''}{warn.f.sick > 0 ? ` ・ 病気 ${amgpPct(warn.f.sick)}` : ''}{warn.f.away > 0 ? ` ・ 家出 ${amgpPct(warn.f.away)}` : ''}</p>}
       <p className="mt-1 text-[10px] font-bold text-slate-400">疲/ス = その日の終わりの疲れ/ストレス(60で黄・70で赤)。マスを押すとその日の「1日」の画面へ。7日でくり返します</p>
       <p className="mt-2 rounded-xl bg-slate-800 p-2 text-[11px] font-bold text-slate-100" data-amgp-week-total>見通し(この7日): {Object.entries(fw.total).map(([k, [a, b]]) => `${amgpStatName(k)} +${a}〜${b}`).join(' ・ ') || '伸びなし'}</p>
-    </>) : (<>
-      <div className="mt-2 flex items-center gap-1.5">
-        <button type="button" disabled={di <= 0} onClick={() => setDi(di - 1)} className="min-h-[36px] rounded-full bg-slate-800 px-3 text-[12px] font-black disabled:opacity-40">‹</button>
-        <span className="flex-1 text-center text-[13px] font-black">{AMGP_DAY_NAME[wd]}曜日{di === 0 ? '(今日)' : ''}</span>
-        <button type="button" disabled={di >= 6} onClick={() => setDi(di + 1)} className="min-h-[36px] rounded-full bg-slate-800 px-3 text-[12px] font-black disabled:opacity-40">›</button>
-      </div>
-      {[0, 1, 2].map(p => { const f = d.f[p]; const code = w[wd * 3 + p]; return (
-        <div key={p} className={`mt-1.5 rounded-xl border p-2 ${f && !f.auto && (f.sab > 0 || f.hurt > 0 || f.sick > 0) ? 'border-rose-300/70' : 'border-white/10'} bg-slate-800/70`} data-amgp-slot={p}>
-          <div className="flex items-center gap-2"><b className="w-[64px] shrink-0 text-[12px]">{AMG_PERIOD_NAME[p]} {['4:00', '12:00', '18:00'][p]}</b>
-            <span className="min-w-0 flex-1">{sel(code, (c) => amgpSetCells(x.key, { [wd * 3 + p]: c }), { 'data-amgp-slot-select': p })}</span></div>
-          <p className="mt-0.5 text-[10.5px] font-bold text-slate-300">{f && f.cond && AMGP_COND[f.cond] ? `${AMGP_COND[f.cond].icon} ${AMGP_COND[f.cond].name}のあいだは訓練しません(休み) ・ ${fsTxt(f)}` : f ? `${f.auto ? '助手の判断(見込み) ・ ' : ''}${fsTxt(f)}${f.sab > 0 ? ` ・ サボり ${amgpPct(f.sab)}` : ''}${f.hurt > 0 ? ` ・ けが ${amgpPct(f.hurt)}` : ''}${f.sick > 0 ? ` ・ 病気 ${amgpPct(f.sick)}` : ''}${f.away > 0 ? ` ・ 家出 ${amgpPct(f.away)}` : ''}` : 'もう過ぎた回'}</p>
-        </div>); })}
-      <p className="mt-2 text-[11px] font-black text-slate-300">6能力と、この日の見通し(黄=伸びる分)</p>
-      {(() => { const g = {}; for (const f of d.f) if (f) for (const [k, [a, b]] of Object.entries(f.g)) g[k] = [(g[k] ? g[k][0] : 0) + a, (g[k] ? g[k][1] : 0) + b]; return <div className="mt-1"><AmgpBars st={x.e.st} add={g}/></div>; })()}
-      <p className="mt-2 text-[11px] font-black text-slate-300">疲れ・ストレスの見通し(回の終わり)</p>
-      <div className="mt-1 grid grid-cols-4 gap-1 text-center text-[10.5px] font-black" data-amgp-fs>
-        <span className="rounded-lg bg-slate-700 py-1">はじめ<br/>{d.startFat}/{d.startStr}</span>
-        {d.f.map((f, p) => <span key={p} className={`rounded-lg py-1 ${f && (f.fat >= 70 || f.str >= 70) ? 'bg-rose-700' : f && (f.fat >= 60 || f.str >= 60) ? 'bg-amber-700' : 'bg-slate-700'}`}>{AMG_PERIOD_NAME[p]}<br/>{f ? `${f.fat}/${f.str}` : '—'}</span>)}
-      </div>
-      <p className="mt-1 text-[10px] font-bold text-slate-400">疲れ60・ストレス50からサボりやすく、疲れ70で重い訓練・修行のけが、ストレス60で病気、80で家出が起きることがあります。計画のマスモンは自動では休みません</p>
-      <div className="mt-2 flex flex-wrap gap-1.5" data-amgp-copy>
-        <button type="button" onClick={() => amgpCopyDay(x.key, wd, 'all')} className="min-h-[36px] rounded-xl bg-slate-700 px-3 text-[11px] font-black">📄 この日を毎日に</button>
-        <button type="button" onClick={() => amgpCopyDay(x.key, wd, 'weekday')} className="min-h-[36px] rounded-xl bg-slate-700 px-3 text-[11px] font-black">🗓 平日(月〜金)ぜんぶに</button>
-        <button type="button" onClick={() => amgpCopyDay(x.key, wd, 'holiday')} className="min-h-[36px] rounded-xl bg-slate-700 px-3 text-[11px] font-black">🌴 休日(土日)に</button>
-      </div>
-    </>)}
-    <p className="mt-2 text-[10px] font-bold text-slate-400">計画の回はよく伸びて(1.3倍)、失敗しにくくなります。1日の伸びは20まで。「🍃 まかせる」の回は{amgpWhoName(x.aid)}が様子を見て決めます</p>
+    </>) : <AmgpDayPlan x={x} d={d} di={di} setDi={setDi} w={w}/>}
+    {mode === 'week' && <p className="mt-2 text-[10px] font-bold text-slate-400">計画の回はよく伸びて(1.3倍)、失敗しにくくなります。1日に伸びるのは{amgpDayCapNow()}まで。「🍃 まかせる」の回は{amgpWhoName(x.aid)}が様子を見て決めます</p>}
   </>);
 }
 function AmgpLogTab({ x, nameOf, pickSel }) {

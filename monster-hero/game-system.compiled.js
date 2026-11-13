@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 19001e8ca4508909
+// source-sha256: e7f6be67190e7e24
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -144648,17 +144648,25 @@ function AmgtCard({
   }, React.createElement("p", {
     className: "text-[10px] font-black text-slate-400"
   }, "⚔ 技と熟練(モンヒロバトルの修行で覚える・磨く)"), React.createElement("div", {
-    className: "mt-1 grid grid-cols-1 gap-y-0.5"
+    className: "mt-1 grid items-center gap-x-1.5 gap-y-1",
+    style: {
+      gridTemplateColumns: 'max-content 40px minmax(24px,1fr) 34px'
+    },
+    "data-amgt-grid": true
   }, techs.map(x => {
     const has = me.learn.includes(x.id);
     return React.createElement("div", {
       key: x.id,
-      className: `flex items-center gap-1.5 text-[10.5px] font-bold ${has ? 'text-slate-100' : 'text-slate-500'}`,
+      style: {
+        display: 'contents'
+      },
+      className: `text-[10.5px] font-bold ${has ? 'text-slate-100' : 'text-slate-500'}`,
       "data-amgt-tech": x.id
     }, React.createElement("span", {
-      className: `w-[96px] shrink-0 break-words leading-tight ${has ? x.kind === 'wise' ? 'text-sky-200' : 'text-rose-200' : ''}`
+      className: `whitespace-nowrap text-left leading-[16px] tracking-tight ${has ? x.kind === 'wise' ? 'text-sky-200' : 'text-rose-200' : ''}`,
+      "data-amgt-tech-name": true
     }, has ? x.name : '???'), React.createElement("span", {
-      className: "w-[46px] shrink-0 whitespace-nowrap text-[9px]"
+      className: "whitespace-nowrap text-center text-[9px] leading-[16px]"
     }, [0, 1, 2, 3].map(d => React.createElement("i", {
       key: d,
       className: `not-italic ${x.dist.includes(d) && has ? 'text-amber-300' : 'text-slate-600'}`
@@ -144670,14 +144678,20 @@ function AmgtCard({
         background: 'linear-gradient(90deg,#fbbf24,#f472b6)'
       }
     })), React.createElement("b", {
-      className: "w-[40px] shrink-0 text-right text-[9.5px] text-amber-200"
+      className: "whitespace-nowrap text-center text-[9.5px] leading-[16px] text-amber-200"
     }, has ? amgtRankOf(me.m[x.id] || 0) : 'まだ'));
   }), AMGT_SENSE.map(([k, label]) => React.createElement("div", {
     key: k,
-    className: "flex items-center gap-1.5 text-[10.5px] font-bold text-slate-200",
+    style: {
+      display: 'contents'
+    },
+    className: "text-[10.5px] font-bold text-slate-200",
     "data-amgt-sense": k
   }, React.createElement("span", {
-    className: "w-[148px] shrink-0 truncate"
+    className: "whitespace-nowrap text-left leading-[16px]",
+    style: {
+      gridColumn: 'span 2'
+    }
   }, label), React.createElement("span", {
     className: "mhm-bar"
   }, React.createElement("i", {
@@ -144686,7 +144700,7 @@ function AmgtCard({
       background: 'linear-gradient(90deg,#a78bfa,#f472b6)'
     }
   })), React.createElement("b", {
-    className: "w-[40px] shrink-0 text-right text-[9.5px] text-amber-200"
+    className: "whitespace-nowrap text-center text-[9.5px] leading-[16px] text-amber-200"
   }, amgtRankOf(me.m[k] || 0)))))), ask && ask.slot === t.slot && React.createElement("div", {
     className: "mhm-card",
     "data-amgt-ask": ask.q
@@ -152480,6 +152494,7 @@ const amgpForecastDay = (aid, row, e, codes, fat0, str0, opt = {}) => {
         leftLo -= aa;
       }
     }
+    const capped = Object.entries(g0).some(([k, [, b]]) => !g[k] || g[k][1] < b);
     const [df, ds] = AMGP_FS[code[0]] || [0, 0];
     fat = amgClamp(fat + df, 0, 100);
     str = amgClamp(str + ds, 0, 100);
@@ -152488,6 +152503,7 @@ const amgpForecastDay = (aid, row, e, codes, fat0, str0, opt = {}) => {
       code: c0,
       as: code,
       auto,
+      capped,
       fat,
       str,
       sab,
@@ -152768,6 +152784,239 @@ function AmgpBars({
       "data-amgp-gain": k
     }, g ? `+${g[0]}〜${g[1]}` : ''));
   }));
+}
+const AMGP_FS_LINES = Object.freeze({
+  fat: Object.freeze([[60, '#fbbf24', 'サボりやすい'], [70, '#fb7185', 'けが']]),
+  str: Object.freeze([[50, '#fbbf24', 'サボりやすい'], [60, '#fb923c', '病気'], [80, '#f43f5e', '家出']])
+});
+const amgpOptionSub = c => c === 'A' ? '助手が決める' : c === 'R' ? '疲れがとれる' : c === 'P' ? 'ストレスがとれる' : c === 'S' ? 'いなければ軽い訓練' : `${amgpStatName(c.slice(2))}・${c[0] === 'H' ? '重い' : '軽い'}`;
+const amgpDayCapNow = () => Math.round(AMG_CARE.viewCap * (typeof amgbPace === 'function' ? amgbPace() : 1));
+const amgpRiskOf = f => f && !f.auto && !f.cond ? [['サボり', f.sab], ['けが', f.hurt], ['病気', f.sick], ['家出', f.away]].filter(([, v]) => v > 0) : [];
+function AmgpFsGauge({
+  kind,
+  start,
+  ends
+}) {
+  const label = kind === 'fat' ? '疲れ' : 'ストレス';
+  const vals = ends.filter(v => Number.isFinite(v));
+  const peak = vals.length ? Math.max(start, ...vals) : start;
+  const last = vals.length ? vals[vals.length - 1] : start;
+  const pct = v => `${Math.max(0, Math.min(100, v))}%`;
+  const lines = AMGP_FS_LINES[kind];
+  const over = lines.filter(([v]) => peak >= v).pop();
+  return React.createElement("div", {
+    className: "mt-1.5",
+    "data-amgp-gauge": kind
+  }, React.createElement("div", {
+    className: "flex items-baseline gap-1.5 text-[11px] font-black"
+  }, React.createElement("span", {
+    className: "w-[56px] shrink-0 text-left"
+  }, label), React.createElement("span", {
+    className: "flex-1 text-left text-[10px] font-bold",
+    style: {
+      color: over ? over[1] : '#94a3b8'
+    }
+  }, over ? `⚠ ${over[2]}の線をこえる` : 'だいじょうぶ'), React.createElement("b", {
+    className: "shrink-0 text-right text-amber-200",
+    "data-amgp-gauge-num": true
+  }, start, " → ", last, peak > last ? `(いちばん高い ${peak})` : '')), React.createElement("div", {
+    className: "relative mt-1 h-3 overflow-hidden rounded-full bg-slate-700"
+  }, React.createElement("i", {
+    className: "absolute inset-y-0 left-0 bg-slate-300",
+    style: {
+      width: pct(Math.min(start, peak))
+    }
+  }), peak > start && React.createElement("i", {
+    className: "absolute inset-y-0",
+    style: {
+      left: pct(start),
+      width: pct(peak - start),
+      background: kind === 'fat' ? '#f59e0b' : '#f472b6'
+    },
+    "data-amgp-gauge-add": true
+  }), lines.map(([v, c]) => React.createElement("i", {
+    key: v,
+    className: "absolute inset-y-0 w-[2px]",
+    style: {
+      left: `calc(${pct(v)} - 1px)`,
+      background: c
+    }
+  }))), React.createElement("div", {
+    className: "relative h-3 text-[8.5px] font-black"
+  }, lines.map(([v, c]) => React.createElement("span", {
+    key: v,
+    className: "absolute -translate-x-1/2",
+    style: {
+      left: pct(v),
+      color: c
+    }
+  }, v))));
+}
+function AmgpDayPlan({
+  x,
+  d,
+  di,
+  setDi,
+  w
+}) {
+  const [open, setOpen] = React.useState(null);
+  const [help, setHelp] = React.useState(false);
+  const [copied, setCopied] = React.useState('');
+  const wd = d.wd;
+  const g = {};
+  for (const f of d.f) if (f) for (const [k, [a, b]] of Object.entries(f.g)) g[k] = [(g[k] ? g[k][0] : 0) + a, (g[k] ? g[k][1] : 0) + b];
+  const risks = [0, 1, 2].flatMap(p => amgpRiskOf(d.f[p]).map(([n, v]) => `${AMG_PERIOD_NAME[p]}: ${n} ${amgpPct(v)}`));
+  const copy = (mode, msg) => {
+    amgpCopyDay(x.key, wd, mode);
+    setCopied(msg);
+  };
+  return React.createElement("div", {
+    "data-amgp-dayplan": true
+  }, React.createElement("div", {
+    className: "mt-2 flex items-center gap-1.5"
+  }, React.createElement("button", {
+    type: "button",
+    disabled: di <= 0,
+    onClick: () => {
+      setDi(di - 1);
+      setOpen(null);
+      setCopied('');
+    },
+    className: "min-h-[36px] rounded-full bg-slate-800 px-3 text-[12px] font-black disabled:opacity-40",
+    "aria-label": "前の日"
+  }, "‹"), React.createElement("span", {
+    className: "flex-1 text-center text-[13px] font-black"
+  }, AMGP_DAY_NAME[wd], "曜日", di === 0 ? '(今日)' : ''), React.createElement("button", {
+    type: "button",
+    disabled: di >= 6,
+    onClick: () => {
+      setDi(di + 1);
+      setOpen(null);
+      setCopied('');
+    },
+    className: "min-h-[36px] rounded-full bg-slate-800 px-3 text-[12px] font-black disabled:opacity-40",
+    "aria-label": "次の日"
+  }, "›")), React.createElement("div", {
+    className: "mt-2 flex items-center gap-1.5"
+  }, React.createElement("p", {
+    className: "flex-1 text-left text-[12px] font-black text-emerald-200"
+  }, "📅 この日の予定(押して変える)"), React.createElement("button", {
+    type: "button",
+    onClick: () => setHelp(!help),
+    className: `min-h-[30px] min-w-[30px] rounded-full text-[12px] font-black ${help ? 'bg-sky-400 text-sky-950' : 'bg-slate-700'}`,
+    "aria-label": "説明",
+    "data-amgp-help-btn": true
+  }, "？")), help && React.createElement("div", {
+    className: "mt-1 space-y-1 rounded-xl bg-slate-800 p-2 text-left text-[10.5px] font-bold text-slate-200",
+    "data-amgp-help": true
+  }, React.createElement("p", null, "朝(4:00)・昼(12:00)・夜(18:00)に何をするかを決めます。決めた予定は毎週くり返します。"), React.createElement("p", null, "計画の回はよく伸びて(1.3倍)、失敗しにくくなります。1日に伸びるのは", amgpDayCapNow(), "までで、こえる分は伸びません。「🍃 まかせる」の回は", amgpWhoName(x.aid), "が様子を見て決めます。"), React.createElement("p", null, "疲れ60・ストレス50からサボりやすく、疲れ70で重い訓練・修行のけが、ストレス60で病気、80で家出が起きることがあります。計画のマスモンは自動では休まないので、「😴 休み」「🎈 遊び」を入れてください。")), React.createElement("div", {
+    className: "mt-1.5 grid grid-cols-3 gap-1.5",
+    "data-amgp-slots": true
+  }, [0, 1, 2].map(p => {
+    const f = d.f[p];
+    const code = w[wd * 3 + p];
+    const cond = f && f.cond && AMGP_COND[f.cond];
+    const rk = amgpRiskOf(f);
+    return React.createElement("button", {
+      key: p,
+      type: "button",
+      disabled: !f,
+      onClick: () => setOpen(open === p ? null : p),
+      "data-amgp-slot": p,
+      className: `flex min-h-[96px] flex-col items-center justify-start rounded-xl border-2 px-1 py-1.5 text-center disabled:opacity-40 ${open === p ? 'border-emerald-300 bg-emerald-950/70' : rk.length ? 'border-rose-300/70 bg-slate-800' : 'border-white/10 bg-slate-800'}`
+    }, React.createElement("span", {
+      className: "text-[10px] font-black text-slate-300"
+    }, AMG_PERIOD_NAME[p], " ", ['4:00', '12:00', '18:00'][p]), React.createElement("span", {
+      className: "mt-0.5 text-[24px] leading-none"
+    }, cond ? cond.icon : amgpCodeIcon(code)), React.createElement("span", {
+      className: "mt-1 whitespace-nowrap text-[11.5px] font-black"
+    }, cond ? cond.name : amgpCodeName(code)), React.createElement("span", {
+      className: "whitespace-nowrap text-[9.5px] font-bold text-slate-300"
+    }, !f ? 'もう過ぎた' : cond ? '休みになる' : amgpOptionSub(code)), f && f.capped && React.createElement("span", {
+      className: "mt-0.5 whitespace-nowrap rounded bg-amber-700 px-1 text-[9px] font-black",
+      "data-amgp-slot-capped": true
+    }, "⏸ 上限で止まる"), rk.length > 0 && React.createElement("span", {
+      className: "mt-0.5 rounded bg-rose-700 px-1 text-[9px] font-black",
+      "data-amgp-slot-risk": true
+    }, "⚠ ", rk[0][0], " ", amgpPct(rk[0][1])));
+  })), open !== null && d.f[open] && React.createElement("div", {
+    className: "mt-1.5 rounded-xl border border-emerald-300/50 bg-slate-950 p-2",
+    "data-amgp-picker": true
+  }, React.createElement("p", {
+    className: "text-left text-[11px] font-black text-emerald-200"
+  }, AMG_PERIOD_NAME[open], "にすること"), React.createElement("div", {
+    className: "mt-1 grid grid-cols-2 gap-1"
+  }, AMGP_OPTIONS.map(c => {
+    const full = c.length > 2 && x.e.st[c.slice(2)] >= AMG_MAX;
+    const on = w[wd * 3 + open] === c;
+    return React.createElement("button", {
+      key: c,
+      type: "button",
+      disabled: full,
+      onClick: () => {
+        amgpSetCells(x.key, {
+          [wd * 3 + open]: c
+        });
+        setOpen(null);
+        setCopied('');
+      },
+      "data-amgp-opt": c,
+      className: `flex min-h-[40px] items-center gap-1.5 rounded-lg px-1.5 text-left disabled:opacity-40 ${on ? 'bg-emerald-400 text-emerald-950' : c[0] === 'H' ? 'bg-violet-800' : c[0] === 'L' ? 'bg-blue-800' : 'bg-slate-700'}`
+    }, React.createElement("span", {
+      className: "text-[16px] leading-none"
+    }, amgpCodeIcon(c)), React.createElement("span", {
+      className: "min-w-0 leading-tight"
+    }, React.createElement("b", {
+      className: "block whitespace-nowrap text-[11px] font-black"
+    }, amgpCodeName(c)), React.createElement("span", {
+      className: "block whitespace-nowrap text-[9px] font-bold opacity-80"
+    }, full ? 'もう上限' : amgpOptionSub(c))));
+  }))), React.createElement("p", {
+    className: "mt-3 text-left text-[11px] font-black text-slate-200"
+  }, "📈 この日で伸びる見通し(黄色が伸びる分)"), React.createElement("div", {
+    className: "mt-1"
+  }, React.createElement(AmgpBars, {
+    st: x.e.st,
+    add: g
+  })), d.f.some(f => f && f.capped) && React.createElement("p", {
+    className: "mt-1 rounded-xl bg-amber-950/70 p-2 text-left text-[10.5px] font-bold text-amber-100",
+    "data-amgp-capped": true
+  }, "⏸ 1日に伸びるのは", amgpDayCapNow(), "まで。", [0, 1, 2].filter(p => d.f[p] && d.f[p].capped).map(p => AMG_PERIOD_NAME[p]).join('・'), "の訓練は、上限で伸びが止まります(疲れ・ストレスはたまります)"), React.createElement("p", {
+    className: "mt-3 text-left text-[11px] font-black text-slate-200"
+  }, "🔋 疲れとストレスの見通し(色が、この日に増える分)"), React.createElement("div", {
+    "data-amgp-fs": true
+  }, React.createElement(AmgpFsGauge, {
+    kind: "fat",
+    start: d.startFat,
+    ends: d.f.map(f => f ? f.fat : NaN)
+  }), React.createElement(AmgpFsGauge, {
+    kind: "str",
+    start: d.startStr,
+    ends: d.f.map(f => f ? f.str : NaN)
+  })), risks.length > 0 && React.createElement("p", {
+    className: "mt-1 rounded-xl border border-rose-300/60 bg-rose-950/60 p-2 text-left text-[10.5px] font-bold text-rose-100",
+    "data-amgp-day-risk": true
+  }, "⚠ ", risks.join(' ・ ')), React.createElement("p", {
+    className: "mt-3 text-left text-[11px] font-black text-slate-200"
+  }, "📄 この日と同じ予定にする"), React.createElement("div", {
+    className: "mt-1 grid grid-cols-3 gap-1.5",
+    "data-amgp-copy": true
+  }, React.createElement("button", {
+    type: "button",
+    onClick: () => copy('all', '毎日'),
+    className: "min-h-[40px] rounded-xl bg-slate-700 px-1 text-center text-[11px] font-black"
+  }, "毎日(7日)"), React.createElement("button", {
+    type: "button",
+    onClick: () => copy('weekday', '平日'),
+    className: "min-h-[40px] rounded-xl bg-slate-700 px-1 text-center text-[11px] font-black"
+  }, "平日(月〜金)"), React.createElement("button", {
+    type: "button",
+    onClick: () => copy('holiday', '土日'),
+    className: "min-h-[40px] rounded-xl bg-slate-700 px-1 text-center text-[11px] font-black"
+  }, "土日")), copied && React.createElement("p", {
+    className: "mt-1 text-left text-[10.5px] font-bold text-emerald-200",
+    "data-amgp-copied": true
+  }, "✓ ", copied, "を", AMGP_DAY_NAME[wd], "曜日と同じ予定にしました"));
 }
 const amgpLevelColor = v => v >= 70 ? 'text-rose-300' : v >= 60 ? 'text-amber-300' : 'text-slate-200';
 function AssistantMasmonNote({
@@ -153069,7 +153318,6 @@ function AmgpPlanTab({
     value: c,
     disabled: c.length > 2 && x.e.st[c.slice(2)] >= AMG_MAX
   }, amgpOptionLabel(c))));
-  const fsTxt = f => f ? `疲れ${f.fat}・ス${f.str}` : '';
   const warn = fw.days.flatMap(dd => (dd.f || []).map((f, p) => f && !f.auto && (f.fat >= 70 || f.str >= 60 || f.sab > 0) ? {
     dd,
     p,
@@ -153134,81 +153382,15 @@ function AmgpPlanTab({
   }, "疲/ス = その日の終わりの疲れ/ストレス(60で黄・70で赤)。マスを押すとその日の「1日」の画面へ。7日でくり返します"), React.createElement("p", {
     className: "mt-2 rounded-xl bg-slate-800 p-2 text-[11px] font-bold text-slate-100",
     "data-amgp-week-total": true
-  }, "見通し(この7日): ", Object.entries(fw.total).map(([k, [a, b]]) => `${amgpStatName(k)} +${a}〜${b}`).join(' ・ ') || '伸びなし')) : React.createElement(React.Fragment, null, React.createElement("div", {
-    className: "mt-2 flex items-center gap-1.5"
-  }, React.createElement("button", {
-    type: "button",
-    disabled: di <= 0,
-    onClick: () => setDi(di - 1),
-    className: "min-h-[36px] rounded-full bg-slate-800 px-3 text-[12px] font-black disabled:opacity-40"
-  }, "‹"), React.createElement("span", {
-    className: "flex-1 text-center text-[13px] font-black"
-  }, AMGP_DAY_NAME[wd], "曜日", di === 0 ? '(今日)' : ''), React.createElement("button", {
-    type: "button",
-    disabled: di >= 6,
-    onClick: () => setDi(di + 1),
-    className: "min-h-[36px] rounded-full bg-slate-800 px-3 text-[12px] font-black disabled:opacity-40"
-  }, "›")), [0, 1, 2].map(p => {
-    const f = d.f[p];
-    const code = w[wd * 3 + p];
-    return React.createElement("div", {
-      key: p,
-      className: `mt-1.5 rounded-xl border p-2 ${f && !f.auto && (f.sab > 0 || f.hurt > 0 || f.sick > 0) ? 'border-rose-300/70' : 'border-white/10'} bg-slate-800/70`,
-      "data-amgp-slot": p
-    }, React.createElement("div", {
-      className: "flex items-center gap-2"
-    }, React.createElement("b", {
-      className: "w-[64px] shrink-0 text-[12px]"
-    }, AMG_PERIOD_NAME[p], " ", ['4:00', '12:00', '18:00'][p]), React.createElement("span", {
-      className: "min-w-0 flex-1"
-    }, sel(code, c => amgpSetCells(x.key, {
-      [wd * 3 + p]: c
-    }), {
-      'data-amgp-slot-select': p
-    }))), React.createElement("p", {
-      className: "mt-0.5 text-[10.5px] font-bold text-slate-300"
-    }, f && f.cond && AMGP_COND[f.cond] ? `${AMGP_COND[f.cond].icon} ${AMGP_COND[f.cond].name}のあいだは訓練しません(休み) ・ ${fsTxt(f)}` : f ? `${f.auto ? '助手の判断(見込み) ・ ' : ''}${fsTxt(f)}${f.sab > 0 ? ` ・ サボり ${amgpPct(f.sab)}` : ''}${f.hurt > 0 ? ` ・ けが ${amgpPct(f.hurt)}` : ''}${f.sick > 0 ? ` ・ 病気 ${amgpPct(f.sick)}` : ''}${f.away > 0 ? ` ・ 家出 ${amgpPct(f.away)}` : ''}` : 'もう過ぎた回'));
-  }), React.createElement("p", {
-    className: "mt-2 text-[11px] font-black text-slate-300"
-  }, "6能力と、この日の見通し(黄=伸びる分)"), (() => {
-    const g = {};
-    for (const f of d.f) if (f) for (const [k, [a, b]] of Object.entries(f.g)) g[k] = [(g[k] ? g[k][0] : 0) + a, (g[k] ? g[k][1] : 0) + b];
-    return React.createElement("div", {
-      className: "mt-1"
-    }, React.createElement(AmgpBars, {
-      st: x.e.st,
-      add: g
-    }));
-  })(), React.createElement("p", {
-    className: "mt-2 text-[11px] font-black text-slate-300"
-  }, "疲れ・ストレスの見通し(回の終わり)"), React.createElement("div", {
-    className: "mt-1 grid grid-cols-4 gap-1 text-center text-[10.5px] font-black",
-    "data-amgp-fs": true
-  }, React.createElement("span", {
-    className: "rounded-lg bg-slate-700 py-1"
-  }, "はじめ", React.createElement("br", null), d.startFat, "/", d.startStr), d.f.map((f, p) => React.createElement("span", {
-    key: p,
-    className: `rounded-lg py-1 ${f && (f.fat >= 70 || f.str >= 70) ? 'bg-rose-700' : f && (f.fat >= 60 || f.str >= 60) ? 'bg-amber-700' : 'bg-slate-700'}`
-  }, AMG_PERIOD_NAME[p], React.createElement("br", null), f ? `${f.fat}/${f.str}` : '—'))), React.createElement("p", {
-    className: "mt-1 text-[10px] font-bold text-slate-400"
-  }, "疲れ60・ストレス50からサボりやすく、疲れ70で重い訓練・修行のけが、ストレス60で病気、80で家出が起きることがあります。計画のマスモンは自動では休みません"), React.createElement("div", {
-    className: "mt-2 flex flex-wrap gap-1.5",
-    "data-amgp-copy": true
-  }, React.createElement("button", {
-    type: "button",
-    onClick: () => amgpCopyDay(x.key, wd, 'all'),
-    className: "min-h-[36px] rounded-xl bg-slate-700 px-3 text-[11px] font-black"
-  }, "📄 この日を毎日に"), React.createElement("button", {
-    type: "button",
-    onClick: () => amgpCopyDay(x.key, wd, 'weekday'),
-    className: "min-h-[36px] rounded-xl bg-slate-700 px-3 text-[11px] font-black"
-  }, "🗓 平日(月〜金)ぜんぶに"), React.createElement("button", {
-    type: "button",
-    onClick: () => amgpCopyDay(x.key, wd, 'holiday'),
-    className: "min-h-[36px] rounded-xl bg-slate-700 px-3 text-[11px] font-black"
-  }, "🌴 休日(土日)に"))), React.createElement("p", {
+  }, "見通し(この7日): ", Object.entries(fw.total).map(([k, [a, b]]) => `${amgpStatName(k)} +${a}〜${b}`).join(' ・ ') || '伸びなし')) : React.createElement(AmgpDayPlan, {
+    x: x,
+    d: d,
+    di: di,
+    setDi: setDi,
+    w: w
+  }), mode === 'week' && React.createElement("p", {
     className: "mt-2 text-[10px] font-bold text-slate-400"
-  }, "計画の回はよく伸びて(1.3倍)、失敗しにくくなります。1日の伸びは20まで。「🍃 まかせる」の回は", amgpWhoName(x.aid), "が様子を見て決めます"));
+  }, "計画の回はよく伸びて(1.3倍)、失敗しにくくなります。1日に伸びるのは", amgpDayCapNow(), "まで。「🍃 まかせる」の回は", amgpWhoName(x.aid), "が様子を見て決めます"));
 }
 function AmgpLogTab({
   x,
