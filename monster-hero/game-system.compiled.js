@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e7f6be67190e7e24
+// source-sha256: 436e47591e631a23
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -165070,8 +165070,24 @@ function MsxPlay({
         left: 7
       }
     }, React.createElement("span", {
-      className: "v-chip ylw"
-    }, msxTrainIcon(stat, trainLv), " ", msxTrainName(stat, trainLv), "(", MSX_STAT_NAME[stat], "の訓練", trainLv ? ` Lv${trainLv}` : '', ")")), React.createElement("div", {
+      className: "v-chip ylw",
+      "data-msx-train-chip": true,
+      style: {
+        display: 'block',
+        width: 'max-content',
+        maxWidth: 'calc(50vw - 24px)',
+        whiteSpace: 'normal',
+        lineHeight: 1.2,
+        textAlign: 'left'
+      }
+    }, msxTrainIcon(stat, trainLv), " ", msxTrainName(stat, trainLv), React.createElement("small", {
+      style: {
+        display: 'block',
+        fontSize: 10,
+        fontWeight: 800,
+        opacity: .85
+      }
+    }, MSX_STAT_NAME[stat], "の訓練", trainLv ? ` Lv${trainLv}` : ''))), React.createElement("div", {
       className: "v-come"
     }, members.map(i => {
       const m = s.team[i];
