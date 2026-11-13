@@ -47,7 +47,7 @@ const tech=`<div class="box"><h4>技(血統の技+オリジナル技)　<span cl
 const feat=(extra='')=>`<div class="box"><h4>特徴</h4><div class="kv"><div>ガッツ回復力<b class="wait">資料待ち</b></div><div>移動速度<b class="wait">資料待ち</b></div><div>サイズ<b class="wait">資料待ち</b></div><div>血統<b>ピクシー系</b></div>${extra}</div></div>`;
 const ph=(t,body,foot='')=>`<div class="ph"><div class="hd"><span>${t}</span><i>●</i></div>${body}${foot}</div>`;
 
-const door=()=>`<div class="bub">研究所へようこそ。どちらを見ますか?</div><div class="door3"><div class="m">マスモン<br><small>モンヒロサクセスで育てたモンスター</small></div><div class="b">ベースモン<br><small>種類ごとのもとの値</small></div><div class="dim">図鑑<br><small>いまのまま</small></div></div>`;
+const door=()=>`<div class="bub">研究所へようこそ。どちらを見ますか?</div><div class="door3"><div class="m">マスモン<br><small>育成を終えて保存枠に入った1体</small></div><div class="b">ベースモン<br><small>種類ごとのもとの値</small></div><div class="dim">図鑑<br><small>いまのまま</small></div></div>`;
 const zero=['G','F','B','A'];/* 保存の並び=零・近・中・遠 */
 const upl=(n,v,base,g)=>`<div class="st"><span>${n}</span><span class="bar"><i style="width:${v/9.99}%"></i><u style="left:${base/9.99}%"></u></span><b>${v}</b><span class="g">${g}</span></div><div class="upl">ベースモン ${base} → <b class="up">▲${v-base}</b></div>`;
 const detTabs=(on)=>['基礎','特徴','適性'].map((t,i)=>`<b class="${i==on?'on':''}">${t}</b>`).join('');
