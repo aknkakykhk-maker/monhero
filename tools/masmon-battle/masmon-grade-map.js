@@ -61,6 +61,8 @@ ORIG.rows.forEach((r) => {
 //   ③ 種類ごとの威力の倍率を、試算の勝率から少しずつ決める(0.8〜1.25)。直した所は FIX に残して一覧に出す
 const TUNE = process.argv.includes('--tune');
 const SHRINK = 0.5;
+const BAND = [0.38, 0.70]; // 勝率をこの中へ(社長「いまと同じくらいの幅」・ゴースト系は70%前後)
+const SHRINK_HIT = 0.7; // 命中だけ7割寄せる(社長 2026-11-13「ゴースト系はもう少し下げる。削りの強さは個性として残す」)
 const FIX = {};
 const N_TUNE = Number((process.argv.find(a => a.startsWith('--tn=')) || '--tn=4').slice(5));
 const meanOf = (list, f) => list.reduce((a, t) => a + f(t), 0) / Math.max(1, list.length);
@@ -73,11 +75,12 @@ if (TUNE) {
   for (const [sp, list] of Object.entries(table)) {
     const fx = FIX[sp] = { notes: [] };
     for (const k of ['hit', 'gd', 'crit']) {
-      const d = (meanOf(list, t => t[k]) - g[k]) * SHRINK;
+      const d = (meanOf(list, t => t[k]) - g[k]) * (k === 'hit' ? SHRINK_HIT : SHRINK);
       if (Math.abs(d) >= 1) { list.forEach(t => { t[k] = clampK(k, t[k] - d); }); fx.notes.push(`${{ hit: '命中', gd: '削り', crit: '会心' }[k]} ${d > 0 ? '−' : '+'}${Math.abs(Math.round(d))}`); }
     }
     const e = meanOf(list, t => t.power / t.guts), r = (g.eff + (e - g.eff) * (1 - SHRINK)) / e;
-    if (Math.abs(r - 1) >= 0.03) { list.forEach(t => { t.guts = clampK('guts', t.guts * r); }); fx.notes.push(`ガッツ ×${Math.round(r * 100) / 100}`); }
+    // 威力/ガッツ を target に寄せる = ガッツを e/target 倍(効率がよすぎる種類ほど重くする)
+    if (Math.abs(r - 1) >= 0.03) { list.forEach(t => { t.guts = clampK('guts', t.guts / r); }); fx.notes.push(`ガッツ ×${Math.round(100 / r) / 100}`); }
     for (const d of [0, 1]) if (!list.some(t => t.dist.includes(d))) {
       const near = list.filter(t => t.dist.every(x => x > d)).sort((a, b) => Math.min(...a.dist) - Math.min(...b.dist) || a.guts - b.guts)[0];
       if (near) { near.dist = [...new Set([d, ...near.dist])].sort(); fx.notes.push(`${near.name} を${['零', '近'][d]}にも届く`); }
@@ -111,7 +114,9 @@ if (TUNE) {
   for (let it = 0; it < N_TUNE; it++) {
     for (const sp of Object.keys(table)) {
       const fx = FIX[sp]; const w = r1[sp] / 100;
-      fx.mul = Math.max(0.8, Math.min(1.25, fx.mul * (1 + (0.5 - w) * 0.6)));
+      // 帯(BAND)の外に出た種類だけ、帯の端へ戻す(真ん中へ寄せきらない=強い・弱いの順は残す)
+      const tgt = Math.max(BAND[0], Math.min(BAND[1], w));
+      fx.mul = Math.max(0.8, Math.min(1.25, fx.mul * (1 + (tgt - w) * 0.8)));
       table[sp].forEach((t, i) => { t.power = clampK('power', base[sp][i] * fx.mul); });
     }
     r1 = rate(table);
