@@ -2,7 +2,7 @@
 // 助手のマスモンのフレンド対戦(非同期PvP)のサーバの関数の検査(2026-11-11 タイセン)。本番の表には触らない(偽物の表で動かす)。
 //   A. 計算の写し(masmon-pvp/engine.js)が、いまの計算と技データと合っている
 //   B. 写しで回した試合と、端末の計算(monster-hero/data/assistant-masmon-battle.js)で見返した試合の指紋(digest)が同じ
-//   C. 登録の形の見張り(種・Lv・能力・名前・枠・体数・戦術経験)
+//   C. 登録の形の見張り(種・Lv・能力・名前・枠・体数・戦術経験・技ごとの強化 techBoost)
 //   D. 上限の見張り(初めての登録・日数 × 1日の成長上限・能力ごと・合計・Lv・戦術経験)
 //   E. 公平の区分(合計がそろう・比が保たれる・999 を超えない・Lv がそろう)
 //   F. 頼みの流れ(鍵・フレンドだけ・登録が要る・回数・端末の勝ち負けは受け取らない・種はサーバが作る)
@@ -83,6 +83,19 @@ const check = (name, ok, extra) => {
   {
     const bad = (t, why) => core.parseTeam(t, engine, catalog, learn).error === why;
     check('C 正しい3体は通る', !core.parseTeam(team3(), engine, catalog, learn).error);
+    {
+      // techBoost(2026-11-13 社長「フレンド対戦とランキングにも効かせる」): 形が違えば断る・数は芯と同じ切りそろえ・計算に渡る
+      const sp = SPEC[0], start = catalog.species[sp].techs.filter((t) => t.start).map((t) => t.id);
+      const P = (o) => core.parseTeam({ tactics: 0, members: [{ ...member(0, sp), ...o }] }, engine, catalog, learn);
+      check('C techBoost: 配列・文字ははじく', P({ techBoost: [] }).error === 'techBoost' && P({ techBoost: 'x' }).error === 'techBoost');
+      const ok = P({ techBoost: { [start[0]]: { pow: 0.9, hit: 0.05, guts: -1 }, nope: { pow: 0.1 } } });
+      const tb = !ok.error && ok.team.members[0].techBoost;
+      check('C techBoost: 上限で切り・負は 0・覚えていない技は捨てる', !!tb && tb[start[0]].pow === 0.2 && tb[start[0]].hit === 0.05 && !('guts' in tb[start[0]]) && !('nope' in tb), JSON.stringify(tb));
+      check('C techBoost: 無ければ持たない(今までの登録と同じ形)', !('techBoost' in P({}).team.members[0]));
+      const bt = core.battleTeam({ assistantId: 'atsu', team: ok.team, division: 'open', size: 1, engine });
+      const bf = core.battleTeam({ assistantId: 'atsu', team: ok.team, division: 'fair', size: 1, engine });
+      check('C techBoost: 計算に渡す編成に入る(公平の区分でも)', JSON.stringify(bt.members[0].techBoost) === JSON.stringify(tb) && JSON.stringify(bf.members[0].techBoost) === JSON.stringify(tb));
+    }
     {
       const sp = SPEC[0];
       const ts = catalog.species[sp].techs;
