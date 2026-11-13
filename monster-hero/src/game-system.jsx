@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 122fa57828f89d7f
+// generated-sha256: 8cf019cbaaa85619
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -77095,11 +77095,13 @@ const ambwHitPct = (catalog, teams, side, frame, id) => {
   return Number.isFinite(v) ? v : null;
 };
 // 技の札の形にそろえる(56-monhero-success-manual.jsx の MsaDistCards・MsaTechSheet が読む形)。
-//   命中の目安 hit と威力 power は技表から(代表の技を「命中×威力」で決めるため)。技表に無い技は 0
+//   命中の目安 hit と威力 power は技表から(代表の技を「命中×威力」で決めるため)。技表の hit は基本の命中 75% に足す補正なので、目安は 75+補正
+//   (能力の差はどの技にも同じだけ効くので、目安には入れない。札と一覧に出す命中%は hitPreviewer のいまの値)。技表に無い技は 0
+const AMBW_HIT_BASE = 75;
 const ambwTechItems = (catalog, member, list) => {
   const sp = catalog && member && catalog.species && catalog.species[member.species];
   const byId = {}; if (sp && Array.isArray(sp.techs)) for (const t of sp.techs) byId[t.id] = t;
-  return (Array.isArray(list) ? list : []).map((mv) => ({ ...mv, dist: Array.isArray(mv.dist) ? mv.dist : [], hit: Number((byId[mv.id] || {}).hit) || 0, power: Number((byId[mv.id] || {}).power) || 0 }));
+  return (Array.isArray(list) ? list : []).map((mv) => { const t = byId[mv.id]; return { ...mv, dist: Array.isArray(mv.dist) ? mv.dist : [], hit: t ? AMBW_HIT_BASE + (Number(t.hit) || 0) : 0, power: t ? Number(t.power) || 0 : 0 }; });
 };
 // cards … 技の札を間合いごとの4枚にする(2026-11-13 社長)。rep … [零,近,中,遠] の代表の技 id/onOpen(side, d) … 札を押すと一覧
 function AmbwPanel({ side, team, frame, maxHp, moves, lastMove, mine, catalog = null, teams = null, cards = false, rep = null, onOpen = null }) {
@@ -77583,7 +77585,8 @@ const ambbUnitTechItems = (engine, catalog, unit) => {
   const hitMax = engine && Number.isFinite(engine.MASTERY_HIT_MAX) ? engine.MASTERY_HIT_MAX : 0, cut = engine && Number.isFinite(engine.MASTERY_GUTS_CUT) ? engine.MASTERY_GUTS_CUT : 0;
   return list.map(t => {
     const m = Math.max(0, Math.min(100, Number(unit.mastery && unit.mastery[t.id]) || 0));
-    return { id: t.id, name: t.name, kind: t.kind, dist: t.dist, power: t.power, hit: Math.round((t.hit + m * hitMax) * 10) / 10, guts: Math.round(t.guts * (1 - m / 100 * cut)) };
+    // 技表の hit は基本の命中に足す補正。代表を決める目安は 75+補正(観戦の札 ambwTechItems と同じ決め方にそろえる)。一覧に出す命中%は熟練の分を足す
+    return { id: t.id, name: t.name, kind: t.kind, dist: t.dist, power: t.power, hit: 75 + t.hit, shown: Math.round((75 + t.hit + m * hitMax) * 10) / 10, guts: Math.round(t.guts * (1 - m / 100 * cut)) };
   });
 };
 const ambbTacticsOf = (aid, rows) => { try { return typeof amgtTacticsOf === 'function' ? amgtTacticsOf(aid, rows) : 40; } catch (_) { return 40; } };
@@ -78022,7 +78025,7 @@ function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, preview, tryPv
         {chosen.length > 0 && typeof MsaDistCards === 'function' && (
           <div className="ambw-card" data-ambb-rep-card>
             <div className="ambw-small" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
-              <span>技の札は、間合いごとに代表の技を1つずつ出します</span>
+              <span>技の札(間合いごとの代表の技)</span>
               <button type="button" className="ambw-btn2" data-ambb-rep-open style={{ minHeight: 32, padding: '2px 12px', fontSize: 12, flex: 'none' }} onClick={() => setRepEdit(ambbRowKey(chosen[0].row))}>🃏 技の札を決める</button>
             </div>
           </div>
@@ -78246,11 +78249,11 @@ function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, preview, tryPv
                 <div className="ambb-tabs" style={{ flexWrap: 'wrap', marginTop: 6 }}>{units.map(x => (
                   <button key={ambbRowKey(x.row)} type="button" data-ambb-rep-unit={ambbRowKey(x.row)} className={ambbRowKey(x.row) === k ? 'on' : ''} onClick={() => { setRepEdit(ambbRowKey(x.row)); setRepSheet(null); }}>{chosen.includes(x) ? '⚔ ' : ''}{nm(x)}</button>
                 ))}</div>
-                <div style={{ marginTop: 8 }}><MsaDistCards list={items} rep={ids} onOpen={(d) => setRepSheet(d)} dataSide="prep"/></div>
+                <div style={{ marginTop: 8 }}><MsaDistCards list={items} rep={ids} hitAt={(t) => t.shown} onOpen={(d) => setRepSheet(d)} dataSide="prep"/></div>
                 {repOf(k) ? <div style={{ textAlign: 'right', marginTop: 8 }}><button type="button" className="ambw-btn2" data-ambb-rep-reset style={{ minHeight: 30, padding: '2px 12px', fontSize: 12 }} onClick={() => putRep(k, null)}>このモンスターをおまかせに戻す</button></div> : null}
               </div>
             </div>
-            {repSheet != null && <MsaTechSheet title={`${nm(u)} の${AMBW_DIST[repSheet]}の技`} list={items} d={repSheet} rep={ids} onRep={(d, id) => setRep(k, d, id)} onClose={() => setRepSheet(null)}/>}
+            {repSheet != null && <MsaTechSheet title={`${nm(u)} の${AMBW_DIST[repSheet]}の技`} list={items} d={repSheet} rep={ids} hitAt={(t) => t.shown} onRep={(d, id) => setRep(k, d, id)} onClose={() => setRepSheet(null)}/>}
           </>
         );
       })()}
@@ -86687,6 +86690,8 @@ const msaRepIds = (list, chosen) => [0, 1, 2, 3].map((d) => { const t = msaRepOf
 const msaSheetOrder = (list, d, repId) => msaTechsAt(list, d).slice().sort((a, b) => (a.id === repId ? -1 : b.id === repId ? 1 : msaRepScore(b) - msaRepScore(a) || (a.guts - b.guts)));
 const MSA_DC_CSS = `
 .msa-dc{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px}
+/* 幅360未満は2列×2段(1語の長い技名が4列の札に入りきらない。技名は言葉の途中で折らない) */
+@media (max-width:359.98px){.msa-dc{grid-template-columns:repeat(2,minmax(0,1fr))}.msa-dc-c{min-height:52px}}
 .msa-dc-c{position:relative;min-width:0;min-height:58px;border-radius:10px;border:1px solid #4c4680;background:#1b1733;color:#94a3b8;font-weight:800;font-size:10.5px;padding:3px 4px 4px;text-align:left;line-height:1.2;font-family:inherit;display:flex;flex-direction:column;gap:1px}
 .msa-dc-c .msa-dc-h{display:flex;align-items:center;gap:3px;font-size:10px;color:#a5b4fc}
 .msa-dc-c .msa-dc-h em{font-style:normal;font-size:9px;background:#fde047;color:#422006;border-radius:6px;padding:0 4px;font-weight:900}
@@ -86713,6 +86718,7 @@ const MSA_DC_CSS = `
 .msa-sh-use.view{background:transparent;border-color:transparent;padding-left:2px}
 .msa-sh-use.hint{border-color:#fde047}
 .msa-sh-use:disabled{opacity:.45}
+.msa-sh-use.view:disabled{opacity:1}
 .msa-sh-use small{display:block;font-size:10.5px;color:#cbd5e1;font-weight:700}
 .msa-sh-use small.p{color:#fde68a}
 .msa-sh-rep{flex:none;border-radius:99px;border:1px solid #a78bfa;background:#1e1b4b;color:#ddd6fe;font-size:11px;padding:5px 9px;font-weight:900;font-family:inherit;white-space:nowrap}

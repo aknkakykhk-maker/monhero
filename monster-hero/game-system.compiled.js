@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 051b1782d2a77c84
+// source-sha256: 740235deca95da77
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -146485,16 +146485,20 @@ const ambwHitPct = (catalog, teams, side, frame, id) => {
   const v = st.f(side, frame.act.A, frame.act.B, frame.g[side], frame.d)[id];
   return Number.isFinite(v) ? v : null;
 };
+const AMBW_HIT_BASE = 75;
 const ambwTechItems = (catalog, member, list) => {
   const sp = catalog && member && catalog.species && catalog.species[member.species];
   const byId = {};
   if (sp && Array.isArray(sp.techs)) for (const t of sp.techs) byId[t.id] = t;
-  return (Array.isArray(list) ? list : []).map(mv => ({
-    ...mv,
-    dist: Array.isArray(mv.dist) ? mv.dist : [],
-    hit: Number((byId[mv.id] || {}).hit) || 0,
-    power: Number((byId[mv.id] || {}).power) || 0
-  }));
+  return (Array.isArray(list) ? list : []).map(mv => {
+    const t = byId[mv.id];
+    return {
+      ...mv,
+      dist: Array.isArray(mv.dist) ? mv.dist : [],
+      hit: t ? AMBW_HIT_BASE + (Number(t.hit) || 0) : 0,
+      power: t ? Number(t.power) || 0 : 0
+    };
+  });
 };
 function AmbwPanel({
   side,
@@ -147522,7 +147526,8 @@ const ambbUnitTechItems = (engine, catalog, unit) => {
       kind: t.kind,
       dist: t.dist,
       power: t.power,
-      hit: Math.round((t.hit + m * hitMax) * 10) / 10,
+      hit: 75 + t.hit,
+      shown: Math.round((75 + t.hit + m * hitMax) * 10) / 10,
       guts: Math.round(t.guts * (1 - m / 100 * cut))
     };
   });
@@ -148398,7 +148403,7 @@ function AssistantMasmonBattleBeta({
         alignItems: 'center',
         gap: 8
       }
-    }, React.createElement("span", null, "技の札は、間合いごとに代表の技を1つずつ出します"), React.createElement("button", {
+    }, React.createElement("span", null, "技の札(間合いごとの代表の技)"), React.createElement("button", {
       type: "button",
       className: "ambw-btn2",
       "data-ambb-rep-open": true,
@@ -148954,6 +148959,7 @@ function AssistantMasmonBattleBeta({
     }, React.createElement(MsaDistCards, {
       list: items,
       rep: ids,
+      hitAt: t => t.shown,
       onOpen: d => setRepSheet(d),
       dataSide: "prep"
     })), repOf(k) ? React.createElement("div", {
@@ -148976,6 +148982,7 @@ function AssistantMasmonBattleBeta({
       list: items,
       d: repSheet,
       rep: ids,
+      hitAt: t => t.shown,
       onRep: (d, id) => setRep(k, d, id),
       onClose: () => setRepSheet(null)
     }));
@@ -168621,6 +168628,8 @@ const msaRepIds = (list, chosen) => [0, 1, 2, 3].map(d => {
 const msaSheetOrder = (list, d, repId) => msaTechsAt(list, d).slice().sort((a, b) => a.id === repId ? -1 : b.id === repId ? 1 : msaRepScore(b) - msaRepScore(a) || a.guts - b.guts);
 const MSA_DC_CSS = `
 .msa-dc{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px}
+/* 幅360未満は2列×2段(1語の長い技名が4列の札に入りきらない。技名は言葉の途中で折らない) */
+@media (max-width:359.98px){.msa-dc{grid-template-columns:repeat(2,minmax(0,1fr))}.msa-dc-c{min-height:52px}}
 .msa-dc-c{position:relative;min-width:0;min-height:58px;border-radius:10px;border:1px solid #4c4680;background:#1b1733;color:#94a3b8;font-weight:800;font-size:10.5px;padding:3px 4px 4px;text-align:left;line-height:1.2;font-family:inherit;display:flex;flex-direction:column;gap:1px}
 .msa-dc-c .msa-dc-h{display:flex;align-items:center;gap:3px;font-size:10px;color:#a5b4fc}
 .msa-dc-c .msa-dc-h em{font-style:normal;font-size:9px;background:#fde047;color:#422006;border-radius:6px;padding:0 4px;font-weight:900}
@@ -168647,6 +168656,7 @@ const MSA_DC_CSS = `
 .msa-sh-use.view{background:transparent;border-color:transparent;padding-left:2px}
 .msa-sh-use.hint{border-color:#fde047}
 .msa-sh-use:disabled{opacity:.45}
+.msa-sh-use.view:disabled{opacity:1}
 .msa-sh-use small{display:block;font-size:10.5px;color:#cbd5e1;font-weight:700}
 .msa-sh-use small.p{color:#fde68a}
 .msa-sh-rep{flex:none;border-radius:99px;border:1px solid #a78bfa;background:#1e1b4b;color:#ddd6fe;font-size:11px;padding:5px 9px;font-weight:900;font-family:inherit;white-space:nowrap}

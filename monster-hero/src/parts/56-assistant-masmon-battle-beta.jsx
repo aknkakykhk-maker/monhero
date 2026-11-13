@@ -181,7 +181,8 @@ const ambbUnitTechItems = (engine, catalog, unit) => {
   const hitMax = engine && Number.isFinite(engine.MASTERY_HIT_MAX) ? engine.MASTERY_HIT_MAX : 0, cut = engine && Number.isFinite(engine.MASTERY_GUTS_CUT) ? engine.MASTERY_GUTS_CUT : 0;
   return list.map(t => {
     const m = Math.max(0, Math.min(100, Number(unit.mastery && unit.mastery[t.id]) || 0));
-    return { id: t.id, name: t.name, kind: t.kind, dist: t.dist, power: t.power, hit: Math.round((t.hit + m * hitMax) * 10) / 10, guts: Math.round(t.guts * (1 - m / 100 * cut)) };
+    // 技表の hit は基本の命中に足す補正。代表を決める目安は 75+補正(観戦の札 ambwTechItems と同じ決め方にそろえる)。一覧に出す命中%は熟練の分を足す
+    return { id: t.id, name: t.name, kind: t.kind, dist: t.dist, power: t.power, hit: 75 + t.hit, shown: Math.round((75 + t.hit + m * hitMax) * 10) / 10, guts: Math.round(t.guts * (1 - m / 100 * cut)) };
   });
 };
 const ambbTacticsOf = (aid, rows) => { try { return typeof amgtTacticsOf === 'function' ? amgtTacticsOf(aid, rows) : 40; } catch (_) { return 40; } };
@@ -620,7 +621,7 @@ function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, preview, tryPv
         {chosen.length > 0 && typeof MsaDistCards === 'function' && (
           <div className="ambw-card" data-ambb-rep-card>
             <div className="ambw-small" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
-              <span>技の札は、間合いごとに代表の技を1つずつ出します</span>
+              <span>技の札(間合いごとの代表の技)</span>
               <button type="button" className="ambw-btn2" data-ambb-rep-open style={{ minHeight: 32, padding: '2px 12px', fontSize: 12, flex: 'none' }} onClick={() => setRepEdit(ambbRowKey(chosen[0].row))}>🃏 技の札を決める</button>
             </div>
           </div>
@@ -844,11 +845,11 @@ function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, preview, tryPv
                 <div className="ambb-tabs" style={{ flexWrap: 'wrap', marginTop: 6 }}>{units.map(x => (
                   <button key={ambbRowKey(x.row)} type="button" data-ambb-rep-unit={ambbRowKey(x.row)} className={ambbRowKey(x.row) === k ? 'on' : ''} onClick={() => { setRepEdit(ambbRowKey(x.row)); setRepSheet(null); }}>{chosen.includes(x) ? '⚔ ' : ''}{nm(x)}</button>
                 ))}</div>
-                <div style={{ marginTop: 8 }}><MsaDistCards list={items} rep={ids} onOpen={(d) => setRepSheet(d)} dataSide="prep"/></div>
+                <div style={{ marginTop: 8 }}><MsaDistCards list={items} rep={ids} hitAt={(t) => t.shown} onOpen={(d) => setRepSheet(d)} dataSide="prep"/></div>
                 {repOf(k) ? <div style={{ textAlign: 'right', marginTop: 8 }}><button type="button" className="ambw-btn2" data-ambb-rep-reset style={{ minHeight: 30, padding: '2px 12px', fontSize: 12 }} onClick={() => putRep(k, null)}>このモンスターをおまかせに戻す</button></div> : null}
               </div>
             </div>
-            {repSheet != null && <MsaTechSheet title={`${nm(u)} の${AMBW_DIST[repSheet]}の技`} list={items} d={repSheet} rep={ids} onRep={(d, id) => setRep(k, d, id)} onClose={() => setRepSheet(null)}/>}
+            {repSheet != null && <MsaTechSheet title={`${nm(u)} の${AMBW_DIST[repSheet]}の技`} list={items} d={repSheet} rep={ids} hitAt={(t) => t.shown} onRep={(d, id) => setRep(k, d, id)} onClose={() => setRepSheet(null)}/>}
           </>
         );
       })()}
