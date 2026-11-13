@@ -589,6 +589,10 @@
       "role": "モンヒロサクセスの育成完了時の総合力ランキング(クラフト・設計 docs/progress/player-raise/RANKING.md)。送る口 monsucRankSubmit(引退で完了したとき1回)・送り直し monsucRankFlush・読む口 monsucRankRead・画面 MonsucRankScreen(全モンスター/血統別・行を押すと6能力)。サーバは表 monsuc_finishes と関数 monsuc_rank_submit(SQL 202611120003)。持ち主の鍵は masmonPvpSelf を使い回す。保存は新しいキー mh_monsuc_rank_sent_v1・mh_monsuc_rank_queue_v1 だけ。公開の印 monheroSuccess"
     },
     {
+      "file": "56-monster-lab.jsx",
+      "role": "モンスター画面(研究所: 入口でマスモン/ベースモン/図鑑 → 一覧 → 詳細。値は読むだけ・保存なし・設計 docs/progress/monster-screen)。マスモンの詳細に能力の横のベースモンからの伸び▲。入口はデバッグ設定の「🔬 モンスター(試す)」(公開の印はまだ無い)"
+    },
+    {
       "file": "82-card-battle-core.jsx",
       "role": "MFバトルカードのルールの本体とコンピューターの考え方(ゲームの始まり・できる操作・操作を進める・守り・勝ち負け・くせと難易度)。カードの表は data/card-battle-cards.js",
       "pure": true
