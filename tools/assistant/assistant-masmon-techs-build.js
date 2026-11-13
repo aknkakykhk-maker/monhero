@@ -31,6 +31,7 @@ for (const f of fs.readdirSync(RES_DIR).filter((x) => x.endsWith('.json'))) {
 }
 const LEARN_ST = { 1: 100, 2: 150, 3: 250, 4: 350, 5: 450 };   // その技種(pow か wise)の能力の下限
 const LEARN_NEED = { 3: 25, 4: 40, 5: 50 };            // ひとつ下の技の熟練
+const ROLE_OF_RANK = { 1: 'light', 2: 'mid', 3: 'skill', 4: 'heavy', 5: 'big' };
 const KEEP = ['id', 'name', 'kind', 'dist', 'power', 'hit', 'guts', 'crit', 'gd'];
 
 const problems = [];
@@ -57,6 +58,7 @@ for (const [sp, list0] of Object.entries(draft.species)) {
     const o = { id: t.id, name: t.name, kind: t.kind, dist: t.dist, power: t.power, hit: t.hit, guts: t.guts, crit: t.crit, gd: t.gd };
     if (t.moveTo != null) o.moveTo = t.moveTo;
     o.rank = r;
+    o.role = ROLE_OF_RANK[r]; // 第1版の role(モンサクの修行の古い読み方が使う)。rank から決める。rank が正本
     if (base.find((x) => x.id === t.id).start) o.learn = { start: true }; // 初めからの技(各種類2つ)
     else {
       const st = { [t.kind]: LEARN_ST[r] };
@@ -91,6 +93,7 @@ const out = `// 助手のマスモンの技表 第2版(2026-11-13・社長「技
 //   技 = { id(種の中で一意・変えない・sk-0000 の形), name, kind:'pow'(ちから技)|'wise'(かしこさ技), dist:[届く間合い 0零 1近 2中 3遠],
 //          power(20 ≒ 通常攻撃1回), hit(命中の補正 %), guts(消費ガッツ), crit(クリティカル %), gd(当たったら相手のガッツを減らす),
 //          moveTo(当たったあと間合いを動かす。あれば), rank(1〜5・覚えやすさの正本。モンサクの修行の覚える率もこれを読む),
+//          role(第1版の呼び方。rank から決めた light/mid/skill/heavy/big。古い読み方のため。新しい所は rank を読む),
 //          learn:{ start:true }(初めから) か { by:覚える修行の系統, st:{ 能力: 下限 }, need?:{ 技id: 熟練 } } }
 //   idmap … 第1版の技 id(mocchi_01 など)→ 第2版の技 id。保存データの読み替えに使う(canon)。古い id は消さずに読み替える
 //   対戦の計算(タタカイ assistant-masmon-battle.js)は learn・rank を読まない。習得は修行(56-assistant-life-masmon-train.jsx)が決める
@@ -98,6 +101,7 @@ const ASSISTANT_MASMON_TECHS = (() => {
   const idmap = ${JSON.stringify(flatMap)};
   return Object.freeze({
   version: 2,
+  roles: { light: '小技', mid: '中技', skill: '得意技', heavy: '重い技', big: '大技' },
   rankRates: { 1: 70, 2: 55, 3: 40, 4: 25, 5: 15 },
   idmap: Object.freeze(idmap),
   canon: (id) => (typeof id === 'string' && Object.prototype.hasOwnProperty.call(idmap, id) ? idmap[id] : id),
