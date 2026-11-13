@@ -35,6 +35,22 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    // 2026-11-13 社長「第3弾のモンサク紹介告知で育成中の動画とかあげれない？開発中のくだりは忘れずに」。動画は実際の画面を本物のブラウザで録った(訓練 → 修行 → 大会)
+    date: "2026-11-13 12:42", type:'content', title:'新コンテンツ「モンヒロサクセス」開発中・第3弾', status:'new', group:'success',
+    video: 'movies/monsaku-teaser3.mp4?v=350f97c0c020',
+    videoPoster: 'images/events/monsaku-teaser3-poster.jpg?v=0925455f1a62',
+    items:[
+      '開発中の新コンテンツ「モンヒロサクセス」の、育てている途中の様子を動画でお見せします。',
+      '訓練では、選んだ能力のほかに、関わりのある能力もいっしょに伸びます。編成のモンスターが集まると「友情タッグ」になり、伸びがさらに大きくなります。',
+      '大会には、自慢の能力・間合い・タイプなど、いろいろな種類があります。出られる大会は月ごとに変わります。',
+      '修行で覚えた技は、そのまま大会の試合で使えます。',
+      '画像・動画は開発中の画面です。公開までに変わることがあります。',
+      '近日公開予定です。お楽しみに！',
+    ],
+    assistantNotice:{ id:'update_notice_monsaku_soon3_v1', type:'content' },
+    unreleasedFlag:'monheroSuccess', // 公開したら消える(第1弾・第2弾の予告と同じ)
+  },
+  {
     date: "2026-11-13 12:37", type:'update', group:'assistant', title:'マスモンの対戦(β)で、試合前に見くらべて設定を選べるようになりました', status:'new', releaseFlag:'assistantMasmonBattleBeta',
     items:[
       '対戦のじゅんびで、出るマスモンどうしの能力・ガッツ回復力・移動速度・サイズ・間合い適性を、左右の棒で見くらべられます。',
