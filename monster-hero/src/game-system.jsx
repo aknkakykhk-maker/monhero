@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: c29385c77a549f24
+// generated-sha256: 8d4f473dd9fa3f2a
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -86944,9 +86944,9 @@ ${MSA_TN_CSS}
 `;
 // 技の性能の段(2026-11-13 社長「MF みたいにダメージ・命中・ガッツダウン・クリティカルを文字の段で。消費ガッツは数値・実際の命中率は計算から数値で」)
 //   技表の元の数(base: power・hit(命中の補正)・gd・crit)を G〜SS の9段に(社長「最低は G、上は SS まで」)。
-//   区切りは技表 第2版の全515技の分布(下から 5%・12%・22%・36%・52%・70%・86%・97% にいちばん近い値の境目。SS は上位3%ほど)。
+//   区切りは技表 第2版(ガッツダウンを強くした版・battle/msa-orig-techs 8c2c7ae2 の tuned-draft)の全515技の分布(下から 5%・12%・22%・36%・52%・70%・86%・97% にいちばん近い値の境目。SS は上位3%ほど)。
 //   作り直し: node tools/masmon-battle/masmon-tech-grades.js。ガッツダウンが 0 の技は「−」
-const MSA_TECH_GRADE_CUTS = Object.freeze({ power: [8, 11, 16, 21, 27, 33, 39, 51], hit: [-21, -18, -12, -8, -2, 2, 8, 13], gd: [3, 5, 6, 7, 10, 15, 24, 27], crit: [7, 8, 9, 11, 12, 18, 19, 26] });
+const MSA_TECH_GRADE_CUTS = Object.freeze({ power: [8, 11, 16, 21, 26, 33, 39, 51], hit: [-21, -18, -12, -8, -2, 2, 8, 13], gd: [3, 6, 8, 10, 12, 16, 21, 27], crit: [7, 8, 9, 11, 12, 18, 19, 26] });
 const MSA_TECH_GRADES = ['G', 'F', 'E', 'D', 'C', 'B', 'A', 'S', 'SS'];
 const msaTechGrade = (key, v) => {
   const c = MSA_TECH_GRADE_CUTS[key], n = Number(v);

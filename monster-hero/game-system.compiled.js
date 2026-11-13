@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 634f1c1a4eac62d0
+// source-sha256: ed7eeef0ebd7dde6
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -169187,9 +169187,9 @@ const MSA_DC_CSS = `
 ${MSA_TN_CSS}
 `;
 const MSA_TECH_GRADE_CUTS = Object.freeze({
-  power: [8, 11, 16, 21, 27, 33, 39, 51],
+  power: [8, 11, 16, 21, 26, 33, 39, 51],
   hit: [-21, -18, -12, -8, -2, 2, 8, 13],
-  gd: [3, 5, 6, 7, 10, 15, 24, 27],
+  gd: [3, 6, 8, 10, 12, 16, 21, 27],
   crit: [7, 8, 9, 11, 12, 18, 19, 26]
 });
 const MSA_TECH_GRADES = ['G', 'F', 'E', 'D', 'C', 'B', 'A', 'S', 'SS'];
