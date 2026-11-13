@@ -67,6 +67,23 @@ export const nameProblem = (s) => {
 };
 
 // 登録の形を確かめる(数字の上限はまだ見ない)。返り値 { team } か { error }
+// 第1版の技 id(mocchi_01 など)を第2版の id へ読み替える(catalog.idmap・2つが1つに当たるときは熟練は大きい方・覚えた技は重ねない)。第2版の id・知らない id はそのまま
+export const canonTech = (idmap, id) => (idmap && typeof id === 'string' && Object.prototype.hasOwnProperty.call(idmap, id) ? idmap[id] : id);
+export const canonMember = (idmap, m) => {
+  if (!m || typeof m !== 'object' || !idmap) return m;
+  const out = { ...m };
+  if (Array.isArray(m.techs)) { // 読み替えて同じ技になったものだけまとめる(送られた2回重ねはそのまま残してはじく)
+    const done = new Set(); out.techs = [];
+    for (const id of m.techs) { const c = canonTech(idmap, id); if (c !== id) { if (done.has(c) || m.techs.includes(c)) continue; done.add(c); } out.techs.push(c); }
+  }
+  if (m.mastery && typeof m.mastery === 'object' && !Array.isArray(m.mastery)) {
+    const ms = {};
+    for (const [k, v] of Object.entries(m.mastery)) { const c = canonTech(idmap, k); ms[c] = typeof ms[c] === 'number' && typeof v === 'number' ? Math.max(ms[c], v) : v; }
+    out.mastery = ms;
+  }
+  return out;
+};
+
 export const parseTeam = (raw, engine, catalog, learn = {}) => {
   const keys = engine.STAT_KEYS;
   if (!raw || typeof raw !== 'object' || !Array.isArray(raw.members)) return { error: 'shape' };
@@ -75,8 +92,9 @@ export const parseTeam = (raw, engine, catalog, learn = {}) => {
   if (!isInt(raw.tactics) || raw.tactics < 0 || raw.tactics > 100) return { error: 'tactics' };
   const members = [];
   const slots = new Set();
-  for (const m of ms) {
-    if (!m || typeof m !== 'object') return { error: 'shape' };
+  for (const m0 of ms) {
+    if (!m0 || typeof m0 !== 'object') return { error: 'shape' };
+    const m = canonMember(catalog.idmap, m0); // 古い端末が古い技 id を送ってきても、新しい id に読み替えてから確かめる
     if (!isInt(m.slot) || m.slot < 0 || m.slot >= SLOT_MAX || slots.has(m.slot)) return { error: 'slot' };
     slots.add(m.slot);
     if (typeof m.species !== 'string' || !SPECIES_RE.test(m.species) || !catalog.species[m.species]) return { error: 'species' };
@@ -104,7 +122,7 @@ export const parseTeam = (raw, engine, catalog, learn = {}) => {
       if (v > 0) mastery[k] = v;
     }
     for (const id of techs) {
-      const l = learn[id];
+      const l = (learn[m.species] || {})[id];
       if (!l || l.start) continue;
       if (l.st && Object.entries(l.st).some(([k, min]) => !(stats[k] >= min))) return { error: 'learn' };
       if (l.need && Object.entries(l.need).some(([tid, min]) => !techs.includes(tid) || !((mastery[tid] || 0) >= min))) return { error: 'learn' };
@@ -193,8 +211,9 @@ export const popFromRecord = (rows) => {
 // 忠誠度が無い編成(絆の前の端末・絆を送ってこない登録)は、はじめの忠誠度 50 とみなす(窓口 2026-11-12・助手の絆の既定と同じ)。
 //   試合の行には battleTeam のあとの編成(loy 50 入り)を残すので、過去の試合の見返しは食い違わない
 export const LOY_DEFAULT = 50;
-export const battleTeam = ({ assistantId, team, division, size, engine, pop = 0 }) => {
-  const list = team.members.slice(0, size).map((m) => ({ species: m.species, name: m.name, lv: m.lv, stats: { ...m.stats },
+export const battleTeam = ({ assistantId, team, division, size, engine, pop = 0, idmap = null }) => {
+  // 登録ずみの編成には古い技 id が残っていることがある。ここでも新しい id に読み替える(消さずに読み替えるだけ・登録の中身は変えない)
+  const list = team.members.slice(0, size).map((m0) => canonMember(idmap, m0)).map((m) => ({ species: m.species, name: m.name, lv: m.lv, stats: { ...m.stats },
     techs: Array.isArray(m.techs) ? [...m.techs] : undefined, mastery: m.mastery ? { ...m.mastery } : undefined,
     loy: m.loy != null ? m.loy : LOY_DEFAULT, ...(m.pop != null && pop > 0 ? { pop: Math.min(m.pop, pop) } : {}) }));
   return {
@@ -283,8 +302,8 @@ const doChallenge = async ({ body, db, engine, catalog, newSeed, log, limits, ba
   const took = await db.take(owner, limits.challengeDaily);
   if (!took || !took.ok) return fail(429, 'limit', { remaining: 0 });
   const popOf = async (o, a) => { try { return typeof db.getRecords === 'function' ? popFromRecord(await db.getRecords(o, a)) : 0; } catch (_) { return 0; } };
-  const teamA = battleTeam({ assistantId: assistant, team: mine.team, division, size, engine, pop: await popOf(owner, assistant) });
-  const teamB = battleTeam({ assistantId: oppAssistant, team: theirs.team, division, size, engine, pop: await popOf(oppOwner, oppAssistant) });
+  const teamA = battleTeam({ assistantId: assistant, team: mine.team, division, size, engine, idmap: catalog.idmap, pop: await popOf(owner, assistant) });
+  const teamB = battleTeam({ assistantId: oppAssistant, team: theirs.team, division, size, engine, idmap: catalog.idmap, pop: await popOf(oppOwner, oppAssistant) });
   const seed = newSeed();
   let r;
   try {
