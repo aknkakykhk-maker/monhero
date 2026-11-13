@@ -171,6 +171,7 @@ const MONSUC_SCRIPT_MOMOSUKE = Object.freeze([
   { id:'ev.daily.chase.momosuke1', who:'momosuke', e:'happy', t:'ちょうちょ追いかけるの、かわいすぎじゃん♡' },
   { id:'ev.daily.juggler.momosuke1', who:'momosuke', e:'normal', t:'あの手元、魅せ方の勉強になるね w' },
   { id:'ev.daily.arm.momosuke1', who:'momosuke', e:'excited', t:'力くらべ？ 受けて立つしかなくない？ w' },
+  { id:'ev.daily.range.momosuke1', who:'momosuke', e:'excited', t:'間合いの練習してるの、真剣でかっこいいじゃん♡' },
   { id:'ev.daily.dream.momosuke1', who:'momosuke', e:'normal', t:'こわかったね。ももがいるから平気だよ♡ どうする？' },
   { id:'ev.daily.picky.momosuke1', who:'momosuke', e:'normal', t:'{food}だけよけてる w 直すなら今だけど' },
   { id:'ev.daily.mirror.momosuke1', who:'momosuke', e:'excited', t:'まって、ポーズの練習してる！？ ももの弟子じゃん w' },

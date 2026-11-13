@@ -11,6 +11,7 @@ const MONSUC_SCRIPT_EVENTS_BOND12 = Object.freeze([
   { id:'ev.daily.chase.mua1b', who:'mua', e:'happy', bond:[1,2], t:'{mon}、追いかけたくてうずうずしてますね' },
   { id:'ev.daily.juggler.mua1b', who:'mua', e:'excited', bond:[1,2], t:'すごいです！ {mon}もやってみたらどうですか？' },
   { id:'ev.daily.arm.mua1b', who:'mua', e:'troubled', bond:[1,2], t:'えっ、急にですか！？ 相手が大きいけど、大丈夫でしょうか💦' },
+  { id:'ev.daily.range.mua1b', who:'mua', e:'excited', bond:[1,2], t:'{mon}、ひとりで間合いの練習をしてますね。つきあってあげましょうか？' },
   { id:'ev.daily.dream.mua1b', who:'mua', e:'troubled', bond:[1,2], t:'よしよし、こわかったですね…。あたしたちがいるから大丈夫ですよ' },
   { id:'ev.daily.picky.mua1b', who:'mua', e:'happy', bond:[1,2], t:'{food}が苦手なんですね。気持ちは分かりますけど、どうしますか？' },
   { id:'ev.daily.mirror.mua1b', who:'mua', e:'excited', bond:[1,2], t:'かわいいです！ 決めポーズの練習でしょうか？' },

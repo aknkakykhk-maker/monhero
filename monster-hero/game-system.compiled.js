@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d33c4cfc174f0178
+// source-sha256: fd9f726eb2803135
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -149005,6 +149005,9 @@ const monsucTeams = (catalog, suc, s, info) => {
     name: info.meName,
     lv: mscNum(s.lv, 1),
     stats: s.stats,
+    ...(typeof suc.aptSendOf === 'function' ? {
+      aptUp: suc.aptSendOf(s)
+    } : {}),
     techs: Array.isArray(s.techs) ? s.techs.slice() : undefined,
     mastery: s.mastery || {},
     loy,
@@ -149420,7 +149423,7 @@ function MonsucBattleCard({
   const op = o.stats || {};
   const mx = Math.max(1, ...MSC_STAT_KEYS.map(k => Math.max(mscNum(me[k]), mscNum(op[k])))) * 1.08;
   const venue = MSC_VENUE_IMG[info.venue] || MSC_VENUE_IMG.cup;
-  const aptOf = sp => catalog && catalog.species[sp] && catalog.species[sp].apt || ['C', 'C', 'C', 'C'];
+  const aptOf = (sp, me) => me && typeof suc.aptGradesOf === 'function' ? suc.aptGradesOf(s) : catalog && catalog.species[sp] && catalog.species[sp].apt || ['C', 'C', 'C', 'C'];
   const techsOf = (sp, ids) => {
     const all = catalog && catalog.species[sp] && catalog.species[sp].techs || [];
     return ids.map(id => all.find(t => t.id === id)).filter(Boolean);
@@ -149433,8 +149436,8 @@ function MonsucBattleCard({
     k,
     d: mscNum(me[k]) - mscNum(op[k])
   })).filter(x => x.d > 0).sort((a, b) => b.d - a.d).slice(0, 2);
-  const apt = aptOf(s.species);
-  const rankOf = g => ['S', 'A', 'B', 'C', 'D', 'E'].indexOf(g) < 0 ? 9 : ['S', 'A', 'B', 'C', 'D', 'E'].indexOf(g);
+  const apt = aptOf(s.species, true);
+  const rankOf = g => ['M', 'SS+', 'SS', 'S+', 'S', 'A', 'B', 'C', 'D', 'E', 'F', 'G'].indexOf(g) < 0 ? 99 : ['M', 'SS+', 'SS', 'S+', 'S', 'A', 'B', 'C', 'D', 'E', 'F', 'G'].indexOf(g);
   const bestD = apt.map((g, d) => ({
     g,
     d
@@ -149443,11 +149446,11 @@ function MonsucBattleCard({
   };
   const distWord = ['くっついた間合い', '近い間合い', '中くらいの間合い', '遠い間合い'][bestD.d];
   const hint = ahead.length ? React.createElement(React.Fragment, null, ahead.map(x => MSC_STAT_JP[x.k]).join('と'), "は 勝ってる! ", React.createElement("em", null, distWord), " で押していこう!") : React.createElement(React.Fragment, null, "能力は 相手が上…。", React.createElement("em", null, distWord), " で 技を当てていこう!");
-  const aptRow = sp => React.createElement("div", {
+  const aptRow = (sp, me) => React.createElement("div", {
     className: "msc-apt"
-  }, aptOf(sp).map((g, d) => React.createElement("span", {
+  }, aptOf(sp, me).map((g, d) => React.createElement("span", {
     key: d,
-    className: g
+    className: ['S+', 'SS', 'SS+', 'M'].includes(g) ? 'S' : g
   }, AMBW_DIST[d])));
   return React.createElement("div", {
     className: "msc-wrap",
@@ -149564,7 +149567,7 @@ function MonsucBattleCard({
     className: o.loy > loy ? 'up' : ''
   }, o.loy)) : React.createElement(React.Fragment, null, React.createElement("div", null), React.createElement("b", null))), React.createElement("div", {
     className: "msc-aptrow"
-  }, aptRow(s.species), React.createElement("span", {
+  }, aptRow(s.species, true), React.createElement("span", {
     className: "lab"
   }, "間合いの適性"), aptRow(o.species))), tab === 'tech' && React.createElement("div", {
     className: "msc-tl"
@@ -149574,7 +149577,7 @@ function MonsucBattleCard({
     key: t.id
   }, t.kind === 'pow' ? '💪' : '🧠', t.name, React.createElement("small", null, (t.dist || []).map(d => AMBW_DIST[d]).join('')))) : React.createElement("span", null, "—"))), tab === 'abl' && React.createElement("div", {
     className: "msc-tl"
-  }, React.createElement("div", null, React.createElement("span", null, "能力の合計 ", sumMe), React.createElement("span", null, "技 ", myTechs.length, "つ"), React.createElement("span", null, "Lv ", mscNum(s.lv, 1)), React.createElement("span", null, "間合い"), aptRow(s.species)), React.createElement("div", null, React.createElement("span", null, o.champ ? '大会の王者' : o.rival ? 'ライバル' : '大会の常連'), React.createElement("span", null, "技 ", foeTechs.length, "つ"), React.createElement("span", null, o.breeder ? `育てた人 ${o.breeder}` : '育てた人 —'), React.createElement("span", null, "間合い"), aptRow(o.species)))), React.createElement("div", {
+  }, React.createElement("div", null, React.createElement("span", null, "能力の合計 ", sumMe), React.createElement("span", null, "技 ", myTechs.length, "つ"), React.createElement("span", null, "Lv ", mscNum(s.lv, 1)), React.createElement("span", null, "間合い"), aptRow(s.species, true)), React.createElement("div", null, React.createElement("span", null, o.champ ? '大会の王者' : o.rival ? 'ライバル' : '大会の常連'), React.createElement("span", null, "技 ", foeTechs.length, "つ"), React.createElement("span", null, o.breeder ? `育てた人 ${o.breeder}` : '育てた人 —'), React.createElement("span", null, "間合い"), aptRow(o.species)))), React.createElement("div", {
     className: "msc-hint"
   }, React.createElement("img", {
     src: mscFace(s.aid),
@@ -154066,7 +154069,10 @@ function MonsucFuseSheet({
   }, "受け継ぐ技: ", plan.child.techs.length ? plan.child.techs.map(t => {
     const x = SUC.techsOf(plan.child.species).find(y => y.id === t);
     return x ? x.name : t;
-  }).join('・') + '(熟練は 0 から)' : 'なし'), React.createElement("div", {
+  }).join('・') + '(熟練は 0 から)' : 'なし'), React.createElement("p", {
+    className: "mt-1 text-[11px] font-bold text-slate-200",
+    "data-monsuc-fuse-apt": true
+  }, "受け継ぐ間合い適性: ", Array.isArray(plan.child.aptBase) && plan.child.aptBase.some(n => n > 0) ? plan.child.aptBase.map((n, i) => n > 0 ? `${['零', '近', '中', '遠'][i]} +${n}段` : null).filter(Boolean).join('・') : 'なし'), React.createElement("div", {
     className: "mt-2 rounded-xl border-2 border-rose-400 bg-rose-950/70 p-2",
     "data-monsuc-fuse-lose": true
   }, React.createElement("p", {
@@ -159997,7 +160003,9 @@ const msxNormBoxMon = m => {
     assists: Array.isArray(m.assists) ? m.assists.filter(msxIsObj).slice(0, 4) : [],
     masteries: Array.isArray(m.mast) ? m.mast.filter(Number.isFinite).slice(0, 8) : [],
     coach: msxStr(m.coach, 16),
-    endAt: msxNum(m.endAt, 0)
+    endAt: msxNum(m.endAt, 0),
+    aptUp: [0, 1, 2, 3].map(i => Math.max(0, Math.min(11, Math.round(msxNum(Array.isArray(m.aptUp) ? m.aptUp[i] : 0, 0))))),
+    aptBase: [0, 1, 2, 3].map(i => Math.max(0, Math.min(11, Math.round(msxNum(Array.isArray(m.aptBase) ? m.aptBase[i] : 0, 0)))))
   };
 };
 const msxNormBox = raw => {
@@ -161417,6 +161425,7 @@ function MonheroSuccessScreen({
     cfg.items.filter(k => MSX_ITEM_BY_ID[k] && MSX_ITEM_BY_ID[k].when === 'both').forEach(k => {
       bag[k] = 1;
     });
+    const fromMon = cfg.from && typeof cfg.from.box === 'string' ? data.box.mons.find(m => m.id === cfg.from.box) : null;
     const s = SUC.newRun({
       id,
       species: cfg.species,
@@ -161425,6 +161434,9 @@ function MonheroSuccessScreen({
       aidBondLv: cfg.aidBondLv,
       carry,
       bag,
+      ...(fromMon && Array.isArray(fromMon.aptBase) ? {
+        aptBase: fromMon.aptBase
+      } : {}),
       wonBefore: Array.isArray(data.meta.wonCups) ? data.meta.wonCups : []
     });
     const r = {
@@ -163313,7 +163325,8 @@ function MsxEvent({
         picked: {
           scenes: [r.out.next, r.out.scene].filter(Boolean),
           before: s.stats,
-          res: r.out.res
+          res: r.out.res,
+          apt: r.out.delta && r.out.delta.apt ? r.out.delta.apt : null
         }
       }
     });
@@ -163397,7 +163410,12 @@ function MsxEvent({
   }, who(l)) : null, who(l) ? `「${l.t}」` : l.t)) : React.createElement("div", null, picked ? 'いい時間になった。' : 'なにか起きそうだ…'))), picked ? React.createElement(React.Fragment, null, Object.keys(ups).length ? React.createElement(MsxStRow, {
     stats: s.stats,
     ups: ups
-  }) : null, React.createElement("div", {
+  }) : null, picked.apt ? React.createElement("div", {
+    className: "v-log",
+    "data-msx-ev-apt": true
+  }, "📏 「", ['零', '近', '中', '遠'][picked.apt.dist], "」の間合い適性が ", React.createElement("b", {
+    className: "ga"
+  }, picked.apt.from, " → ", picked.apt.grade), " に上がった!") : null, React.createElement("div", {
     className: "v-ft",
     style: {
       marginTop: 6
@@ -163697,6 +163715,9 @@ const msxR3Fight = (engine, SUC, run) => {
     stats: s.stats,
     loy,
     pop: s.pop,
+    ...(typeof SUC.aptSendOf === 'function' ? {
+      aptUp: SUC.aptSendOf(s)
+    } : {}),
     ...(ts.length ? {
       techs: ts,
       mastery: Object.fromEntries(ts.map(t => [t, s.mastery && s.mastery[t] || 0]))
@@ -163859,6 +163880,12 @@ const msxR3BoxMonOf = (run, s, ev, assists, parent) => ({
   assists: (assists || []).slice(0, 4),
   ...(s.ending && ['bad', 'good', 'super'].includes(s.ending.kind) ? {
     ending: s.ending.kind
+  } : {}),
+  ...(Array.isArray(s.aptUp) && s.aptUp.some(n => n > 0) ? {
+    aptUp: s.aptUp.slice(0, 4)
+  } : {}),
+  ...(Array.isArray(s.aptBase) && s.aptBase.some(n => n > 0) ? {
+    aptBase: s.aptBase.slice(0, 4)
   } : {}),
   titles: msxR3FinalTitles(s, ev),
   from: run.from || null
@@ -164409,6 +164436,7 @@ function MsxR3Watch({
 }
 const msxR3Diff = (a, b) => {
   const d = {
+    apt: [0, 1, 2, 3].filter(i => ((b.aptUp || [])[i] || 0) > ((a.aptUp || [])[i] || 0)),
     fame: b.fame - a.fame,
     pts: b.pts - a.pts,
     tickets: b.tickets - a.tickets,
@@ -164426,6 +164454,7 @@ const msxR3Diff = (a, b) => {
 const msxR3PrizeRows = (d, s) => {
   const rows = [];
   (d.titles || []).forEach(t => rows.push(['🏅', '称号', `「${typeof msxR3TitleName === 'function' ? msxR3TitleName(t) : t}」を手に入れた!`, 'new', 'NEW']));
+  (d.apt || []).forEach(i => rows.push(['📏', '間合い適性', `「${['零', '近', '中', '遠'][i]}」の間合い適性が1段上がった!`, 'new', 'UP']));
   if (d.pts) rows.push(['🔷', '能力ポイント', `+${d.pts}(いま ${s.pts})`, '', '']);
   if (d.tickets) rows.push(['🎫', '修行チケット', `+${d.tickets}(${s.tickets - d.tickets}枚 → ${s.tickets}枚)`, '', '']);
   if (d.fame) rows.push(['💰', '賞金', `+${msxFmt(d.fame)}(名声 ${msxFmt(s.fame - d.fame)} → ${msxFmt(s.fame)})`, '', '']);
@@ -165080,9 +165109,13 @@ function MsxR3Battle({
     const loyA = SUC.loyalOf(s);
     const rowsSt = MSX_STATS.map(k => [`${MSX_STAT_ICON[k]} ${MSX_STAT_NAME[k]}`, s.stats[k], opp.stats[k]]);
     const better = MSX_STATS.filter(k => s.stats[k] >= opp.stats[k]).map(k => MSX_STAT_NAME[k]);
-    const distA = (msxMon(s.species) || {}).distAptitude || [];
+    const distA = typeof SUC.aptGradesOf === 'function' ? SUC.aptGradesOf(s) : (msxMon(s.species) || {}).distAptitude || [];
     const distB = (msxMon(opp.species) || {}).distAptitude || [];
     const lvA = g => ({
+      M: 3,
+      'SS+': 3,
+      SS: 3,
+      'S+': 3,
       S: 3,
       A: 3,
       B: 2,
@@ -165534,7 +165567,9 @@ function MsxR3Shugyo({
       className: "gd"
     }, Math.max(0, res.hp0 - s.hp)), " 下がった", learned ? React.createElement(React.Fragment, null, "/技「", React.createElement("b", {
       className: "ga"
-    }, learned.name), "」を覚えた!") : null, missed.length ? React.createElement(React.Fragment, null, "/", missed.join('・'), "は覚えられなかった") : null), !learned && want.length ? React.createElement("div", {
+    }, learned.name), "」を覚えた!") : null, missed.length ? React.createElement(React.Fragment, null, "/", missed.join('・'), "は覚えられなかった") : null, o.aptUp ? React.createElement(React.Fragment, null, React.createElement("br", null), "📏 「", MSX_R3_DIST[o.aptUp.dist], "」の間合い適性が ", React.createElement("b", {
+      className: "ga"
+    }, o.aptUp.grade), " に上がった!") : null), !learned && want.length ? React.createElement("div", {
       className: "v-card",
       style: {
         borderColor: '#94a3b8',
@@ -165635,7 +165670,15 @@ function MsxR3Shugyo({
     key: i
   }, React.createElement("div", null, React.createElement("small", null, "第", i + 1, "段・", cur.name), pair.map(k => `${MSX_STAT_ICON[k]} ${MSX_STAT_NAME[k]}`).join(' & ')), React.createElement("i", null, "▶"))), React.createElement("div", {
     className: "last"
-  }, React.createElement("small", null, "さいごに"), "✨ 技のくじ")), React.createElement("div", {
+  }, React.createElement("small", null, "さいごに"), "✨ 技のくじ")), SUC.DIST_UP && SUC.DIST_UP.course && Number.isInteger(SUC.DIST_UP.course[course]) ? React.createElement("div", {
+    className: "sub",
+    style: {
+      fontSize: 11,
+      color: '#cbd5e1',
+      padding: '0 4px'
+    },
+    "data-msx-r3-qapt": true
+  }, "📏 ", cur.name, "は「", MSX_R3_DIST[SUC.DIST_UP.course[course]], "」の間合いの修行。ときどき、その間合い適性が1段上がる", typeof SUC.aptUpRoom === 'function' && !SUC.aptUpRoom(s0, SUC.DIST_UP.course[course], 'quest') ? '(この育成では、もう上がらない)' : '') : null, React.createElement("div", {
     className: "v-card pk",
     style: {
       padding: '6px 8px'

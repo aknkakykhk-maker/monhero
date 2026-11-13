@@ -174,6 +174,7 @@ const MONSUC_SCRIPT_ERUBIN = Object.freeze([
   { id:'ev.daily.chase.erubin1', who:'erubin', e:'happy', t:'ちょうちょだね。楽しそうだなー☺️' },
   { id:'ev.daily.juggler.erubin1', who:'erubin', e:'normal', t:'すごいね。見てるだけでも楽しいよね' },
   { id:'ev.daily.arm.erubin1', who:'erubin', e:'troubled', t:'力くらべかぁ。けがしないなら、いいかな？' },
+  { id:'ev.daily.range.erubin1', who:'erubin', e:'normal', t:'ひとりで間合いの練習してるね。いっしょに見ててあげよっか☺️' },
   { id:'ev.daily.dream.erubin1', who:'erubin', e:'normal', t:'こわかったね。大丈夫、ここにいるからね。どうしよっか？' },
   { id:'ev.daily.picky.erubin1', who:'erubin', e:'normal', t:'{food}だけ残してるね笑 次は味付け、変えてみようかな' },
   { id:'ev.daily.mirror.erubin1', who:'erubin', e:'happy', t:'かっこいいね。いいと思うよ☺️' },
