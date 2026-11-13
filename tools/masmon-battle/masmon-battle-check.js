@@ -2,6 +2,7 @@
 // 助手のマスモンの完全オートバトルの計算(monster-hero/data/assistant-masmon-battle.js)の検査(2026-11-11 タタカイ)。
 //   node tools/masmon-battle/masmon-battle-check.js
 // 見るもの:
+//   ⑲ 技ごとの強化 techBoost の切りそろえと効き目(無ければ今と同じ)
 //   ① 同じ種・同じ編成なら同じ結果(指紋 digest も同じ)/技データを JSON にして持っていっても同じ(サーバで回す前提)
 //   ② 全滅で決着(負けた側は全員ライフ 0・勝った側に立っている者がいる)
 //   ③ 無限に続かない(ラウンドの上限を超えない・上限に届いたら判定で必ず終わる)
@@ -457,6 +458,35 @@ const FORMATS = [[1, 1], [2, 2], [3, 3], [1, 2], [2, 3], [3, 1]];
   check('⑱ moveTo: 無い技表は今と同じ試合', r0.digest === rn.digest, `${r0.digest}/${rn.digest}`);
   check('⑱ moveTo: 遠へ移る技を使うと、その直後に移動の行(why=techMove・to=3)が残る', tm.length > 0 && tm.every((e) => e.to === 3 && e.byTech), `${tm.length} 回`);
   check('⑱ moveTo: 手動の試合でも同じ(オートとそろう)', (() => { const m = engine.createMatch({ seed: 'mt', catalog: withMove(3), teamA: { assistantId: 'atsu', members: [mem] }, teamB: { assistantId: 'atsu', members: [mem] }, control: {} }); return m.result() && m.result().digest === r3.digest; })());
+}
+
+// ⑲ 技ごとの強化 techBoost(2026-11-13 社長・モンサクの熟練から): 芯で切りそろえる(pow 0〜0.20・hit 0〜0.10・guts 0〜0.15)/無ければ今と同じ試合
+{
+  const sp0 = Object.keys(catalog.species)[0], ts = catalog.species[sp0].techs, ids = ts.map((t) => t.id), id = ids[0];
+  const nb = engine.normTechBoost;
+  check('⑲ techBoost: 芯が口の印 FEATURES.techBoost を出す', !!(engine.FEATURES && engine.FEATURES.techBoost === true));
+  const c1 = nb({ [id]: { pow: 0.5, hit: 0.3, guts: 0.9 } }, ids)[id] || {};
+  check('⑲ techBoost: 上限で切る(pow 0.20・hit 0.10・guts 0.15)', c1.pow === 0.2 && c1.hit === 0.1 && c1.guts === 0.15, JSON.stringify(c1));
+  const c2 = nb({ [id]: { pow: -0.1, hit: '0.05', guts: NaN }, nope: { pow: 0.1 }, [ids[1]]: [0.1] }, ids);
+  check('⑲ techBoost: 負・数でない・覚えていない技・形の違うものは入れない', Object.keys(c2).length === 0, JSON.stringify(c2));
+  check('⑲ techBoost: 形が違う全体(配列・文字・null)は空', [null, [], 'x', 3].every((x) => Object.keys(nb(x, ids)).length === 0));
+  const mem = { species: sp0, name: 'x', techs: ids, stats: { life: 400, pow: 400, wise: 400, hit: 400, eva: 400, tough: 400 } };
+  const run = (m) => engine.simulate({ seed: 'tb', catalog, teamA: { assistantId: 'atsu', members: [m] }, teamB: { assistantId: 'atsu', members: [mem] } });
+  const r0 = run(mem), rE = run({ ...mem, techBoost: {} }), rZ = run({ ...mem, techBoost: { [id]: { pow: 0, hit: 0, guts: 0 } } });
+  check('⑲ techBoost: 無い・空・0 は今と同じ試合(同じ指紋)', r0.digest === rE.digest && r0.digest === rZ.digest, `${r0.digest}/${rE.digest}/${rZ.digest}`);
+  const all = Object.fromEntries(ids.map((x) => [x, { pow: 0.2, hit: 0.1, guts: 0.15 }]));
+  const u = engine._internal.normalizeUnit({ ...mem, techBoost: all }, catalog);
+  const mv0 = engine._internal.buildMoves(catalog, sp0, ids, u.mastery), mv1 = engine._internal.buildMoves(catalog, sp0, ids, u.mastery, u.techBoost);
+  check('⑲ techBoost: 威力 ×1.2・命中 +0.10・ガッツ ×0.85(四捨五入)', mv1.every((m, i) => Math.abs(m.power - mv0[i].power * 1.2) < 1e-9 && Math.abs(m.hit - mv0[i].hit - 0.1) < 1e-9
+    && m.guts === Math.round(ts.find((t) => t.id === m.key).guts * 0.85)));
+  // 強化した側は勝ちやすくなる(同じ相手・種を変えて40戦)
+  let w0 = 0, w1 = 0;
+  for (let i = 0; i < 40; i++) {
+    const sim = (m) => engine.simulate({ seed: `tb-${i}`, catalog, teamA: { assistantId: 'atsu', members: [m] }, teamB: { assistantId: 'atsu', members: [mem] } }).winner === 'A';
+    if (sim(mem)) w0++; if (sim({ ...mem, techBoost: all })) w1++;
+  }
+  check('⑲ techBoost: 上限まで強化した側は勝ちが増える', w1 > w0, `${w0}→${w1} / 40`);
+  check('⑲ techBoost: 手動の試合でもオートと同じ', (() => { const m = engine.createMatch({ seed: 'tb', catalog, teamA: { assistantId: 'atsu', members: [{ ...mem, techBoost: all }] }, teamB: { assistantId: 'atsu', members: [mem] }, control: {} }); return m.result() && m.result().digest === run({ ...mem, techBoost: all }).digest; })());
 }
 
 console.log(failed ? `\nNG が ${failed} 件` : '\nすべてOK');
