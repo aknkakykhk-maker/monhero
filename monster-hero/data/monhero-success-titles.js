@@ -73,9 +73,12 @@
 
   // ---- 頂への道(芯の SUMMIT_FINAL) ----
   add({ id: 'summit', group: 'summit', name: '頂に立った子', how: '頂への道で優勝する', reward: '全能力 +8・能力ポイント +30・人気 +10', match: '頂に立った子', rare: 3 });
-  add({ id: 'summit-big', group: 'summit', name: 'ヒーローの頂', how: '👑 を1つ以上勝つか制覇を2つ以上したうえで、頂への道で優勝する', reward: '全能力 +15・能力ポイント +60・人気 +20', match: 'ヒーローの頂', rare: 3 });
+  add({ id: 'summit-big', group: 'summit', name: 'ヒーローの頂', how: '👑 を1つ以上勝つか四大大会を2つ以上勝ったうえで、頂への道で優勝する', reward: '全能力 +15・能力ポイント +60・人気 +20', match: 'ヒーローの頂', rare: 3 });
 
   // ---- ライバル(芯の RIVAL) ----
+  // 大会の第2版(2026-11-13)
+  add({ id: 'derby', group: 'cup', name: '若き挑戦者', how: 'ジュニア期の大一番「ルーキーズ・クラウン」で優勝する', reward: '体力の最大値 +15・能力ポイント +15・人気 +6', match: '若き挑戦者', rare: 3 });
+  add({ id: 'four-done', group: 'conquer', name: '四大の覇者', how: '四大大会(暁の大杯・蒼天杯・獅子王杯・天頂杯)を4つとも優勝する', reward: '全能力 +15・能力ポイント +40・人気 +15', match: '四大の覇者', rare: 3 });
   add({ id: 'rival', group: 'rival', name: 'ライバルに勝った', how: 'ライバルが出ている大会で優勝する', reward: '全能力 +12・賞金 1.5倍・修行チケット +1', match: 'ライバルに勝った', rare: 2 });
 
   // ---- 助手のお話(芯: '<aid>:お話の結末(いい結末)' / '(ほろ苦い結末)') ----
