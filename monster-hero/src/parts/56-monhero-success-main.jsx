@@ -73,6 +73,16 @@ function MsxStRow({ stats, ups, main, preview = false }) {
     a = requestAnimationFrame(() => { b = requestAnimationFrame(() => setOn(true)); });
     return () => { cancelAnimationFrame(a); cancelAnimationFrame(b); };
   }, [sig]);
+  // 数字も上がる前から数え上げる(0.25秒待って0.9秒で)
+  const [t, setT] = useState(grow && !calm ? 0 : 1);
+  useEffect(() => {
+    if (!grow || calm) { setT(1); return undefined; }
+    setT(0); let id = 0; const t0 = performance.now() + 250;
+    const step = (now) => { const x = Math.max(0, Math.min(1, (now - t0) / 900)); setT(x); if (x < 1) id = requestAnimationFrame(step); };
+    id = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(id);
+  }, [sig]);
+  const ease = (x) => 1 - Math.pow(1 - x, 3);
   const pct = (n) => `${Math.max(0, Math.min(100, n / 9.99))}%`;
   return (
     <div className={`v-st${grow ? ' grow' : ''}${grow && on ? ' on' : ''}`} data-msx-st-grow={grow ? (on ? 'on' : 'pre') : undefined}>
@@ -80,8 +90,8 @@ function MsxStRow({ stats, ups, main, preview = false }) {
         const u = ups ? (ups[k] || 0) : 0;
         const after = stats[k]; const before = Math.max(0, after - (grow ? u : 0));
         return (<div key={k} className={`${u > 0 ? 'up' : u < 0 ? 'dn' : ''}${k === main ? ' main' : ''}`}>
-          <small>{MSX_STAT_ICON[k]}{MSX_STAT_NAME[k]}</small><b>{stats[k]}</b>
-          {grow && u ? <u className="g"><i style={{ width: pct(on ? after : before) }}/>{u > 0 ? <s className="gu" style={{ left: pct(before), width: on ? `max(4px, calc(${pct(after)} - ${pct(before)}))` : 0 }}/> : <s className="gd" style={{ left: pct(after), width: `max(4px, calc(${pct(before)} - ${pct(after)}))` }}/>}</u>
+          <small>{MSX_STAT_ICON[k]}{MSX_STAT_NAME[k]}</small><b>{grow && u ? Math.round(before + (after - before) * ease(t)) : stats[k]}</b>
+          {grow && u ? <u className="g"><i style={{ width: pct(on ? after : before) }}/>{u > 0 ? <s className="gu" style={{ left: pct(before), width: on ? `max(7px, calc(${pct(after)} - ${pct(before)}))` : 0 }}/> : <s className="gd" style={{ left: pct(after), width: `max(4px, calc(${pct(before)} - ${pct(after)}))` }}/>}</u>
             : <u><i style={{ width: pct(after) }}/></u>}
           {ups ? <em>{u > 0 ? `+${u}` : u < 0 ? `−${-u}` : ''}</em> : null}</div>);
       })}

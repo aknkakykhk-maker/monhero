@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 31c33ed25912340b
+// generated-sha256: 70e5ffcc9ea4480d
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -83686,7 +83686,7 @@ const MSX_CSS = `
 .msx .v-st div.up{border-color:#fde047;background:#3b2f0b;box-shadow:0 0 8px #fde04766}.msx .v-st div.up b{color:#fde047}
 .msx .v-st div.up.main em{font-size:13px;color:#fde047}
 .msx .v-st div.dn{border-color:#f87171;background:#3b1220}.msx .v-st div.dn em{color:#fca5a5}
-.msx .v-st u.g{position:relative;height:5px;overflow:visible}
+.msx .v-st u.g{position:relative;height:6px;overflow:visible}
 .msx .v-st u.g i{border-radius:3px;transition:width .9s cubic-bezier(.2,.8,.3,1) .25s}
 .msx .v-st u.g s{position:absolute;top:0;bottom:0;border-radius:3px;text-decoration:none}
 .msx .v-st u.g s.gu{background:linear-gradient(90deg,#fff7c2,#fde047);box-shadow:0 0 6px 1px #fde047,0 0 12px #fbbf24;transition:width .9s cubic-bezier(.2,.8,.3,1) .25s}
@@ -84734,6 +84734,16 @@ function MsxStRow({ stats, ups, main, preview = false }) {
     a = requestAnimationFrame(() => { b = requestAnimationFrame(() => setOn(true)); });
     return () => { cancelAnimationFrame(a); cancelAnimationFrame(b); };
   }, [sig]);
+  // 数字も上がる前から数え上げる(0.25秒待って0.9秒で)
+  const [t, setT] = useState(grow && !calm ? 0 : 1);
+  useEffect(() => {
+    if (!grow || calm) { setT(1); return undefined; }
+    setT(0); let id = 0; const t0 = performance.now() + 250;
+    const step = (now) => { const x = Math.max(0, Math.min(1, (now - t0) / 900)); setT(x); if (x < 1) id = requestAnimationFrame(step); };
+    id = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(id);
+  }, [sig]);
+  const ease = (x) => 1 - Math.pow(1 - x, 3);
   const pct = (n) => `${Math.max(0, Math.min(100, n / 9.99))}%`;
   return (
     <div className={`v-st${grow ? ' grow' : ''}${grow && on ? ' on' : ''}`} data-msx-st-grow={grow ? (on ? 'on' : 'pre') : undefined}>
@@ -84741,8 +84751,8 @@ function MsxStRow({ stats, ups, main, preview = false }) {
         const u = ups ? (ups[k] || 0) : 0;
         const after = stats[k]; const before = Math.max(0, after - (grow ? u : 0));
         return (<div key={k} className={`${u > 0 ? 'up' : u < 0 ? 'dn' : ''}${k === main ? ' main' : ''}`}>
-          <small>{MSX_STAT_ICON[k]}{MSX_STAT_NAME[k]}</small><b>{stats[k]}</b>
-          {grow && u ? <u className="g"><i style={{ width: pct(on ? after : before) }}/>{u > 0 ? <s className="gu" style={{ left: pct(before), width: on ? `max(4px, calc(${pct(after)} - ${pct(before)}))` : 0 }}/> : <s className="gd" style={{ left: pct(after), width: `max(4px, calc(${pct(before)} - ${pct(after)}))` }}/>}</u>
+          <small>{MSX_STAT_ICON[k]}{MSX_STAT_NAME[k]}</small><b>{grow && u ? Math.round(before + (after - before) * ease(t)) : stats[k]}</b>
+          {grow && u ? <u className="g"><i style={{ width: pct(on ? after : before) }}/>{u > 0 ? <s className="gu" style={{ left: pct(before), width: on ? `max(7px, calc(${pct(after)} - ${pct(before)}))` : 0 }}/> : <s className="gd" style={{ left: pct(after), width: `max(4px, calc(${pct(before)} - ${pct(after)}))` }}/>}</u>
             : <u><i style={{ width: pct(after) }}/></u>}
           {ups ? <em>{u > 0 ? `+${u}` : u < 0 ? `−${-u}` : ''}</em> : null}</div>);
       })}
