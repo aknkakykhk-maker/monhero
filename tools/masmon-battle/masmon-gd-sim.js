@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // ガッツダウン(技の gd)を強くしたときの試合の釣り合いの見積もり(2026-11-13 バトル部・社長「ガッツダウンの数値が弱く見える」→ 技表の値そのものを強くする)。
-//   node tools/masmon-battle/masmon-gd-sim.js <技表の js> <戦数> <倍率 or 式>...   例: ... tech2.js 1500 1 1.5 2 '+5'
+//   node tools/masmon-battle/masmon-gd-sim.js <技表の js か tuned-draft.json> <戦数> <倍率 or 式>...   例: ... tech2.js 1500 1 1.5 2 '+5'
 //   倍率: gd を k 倍(四捨五入・0 の技は 0 のまま・芯の上限 45 で切る)/'+n': 0 でない技に n を足す
 //   出すもの(小さく): 3対3 の平均ラウンド・判定(ラウンド上限)の割合・手のうち「ためる」の割合・1試合のガッツを削った量・
 //   ガッツが技に足りない手番の割合/1対1 の種ごとの勝率(同じ能力・左右入れ替え)の幅(最低〜最高)と 38〜70% の外の種の数
@@ -11,7 +11,8 @@ const [file, nArg, ...cfgs] = process.argv.slice(2);
 if (!file || !cfgs.length) { console.log('使い方: masmon-gd-sim.js <技表の js> <戦数> <倍率|+n>...'); process.exit(0); }
 const N = Number(nArg) || 1000;
 const { engine, data } = load();
-const T = new Function(`${fs.readFileSync(file, 'utf8')};return ASSISTANT_MASMON_TECHS;`)();
+// 技表は js(ASSISTANT_MASMON_TECHS)でも、調整の書き出し json(tuned-draft.json の { map, species })でもよい
+const T = file.endsWith('.json') ? { species: JSON.parse(fs.readFileSync(file, 'utf8')).species } : new Function(`${fs.readFileSync(file, 'utf8')};return ASSISTANT_MASMON_TECHS;`)();
 const GD_MAX = (engine.TECH_LIMITS && engine.TECH_LIMITS.gd) ? engine.TECH_LIMITS.gd[1] : 45;
 const scaled = (cfg) => {
   const t = JSON.parse(JSON.stringify(T));

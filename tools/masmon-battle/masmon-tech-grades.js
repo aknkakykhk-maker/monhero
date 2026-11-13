@@ -6,7 +6,7 @@
 'use strict';
 const fs = require('fs'); const path = require('path');
 const file = process.argv[2] || path.join(__dirname, '..', '..', 'monster-hero', 'data', 'assistant-masmon-techs.js');
-const T = new Function(`${fs.readFileSync(file, 'utf8')};return ASSISTANT_MASMON_TECHS;`)();
+const T = file.endsWith('.json') ? { species: JSON.parse(fs.readFileSync(file, 'utf8')).species } : new Function(`${fs.readFileSync(file, 'utf8')};return ASSISTANT_MASMON_TECHS;`)();
 const sp = T.species || T; const all = [];
 for (const v of Object.values(sp)) for (const t of (Array.isArray(v) ? v : (v.techs || []))) all.push(t);
 // 2026-11-13 社長「最低は G にして、上は SS まで」: 9段。SS は上位3%・S は次の11%(札に S が並びすぎないように)
