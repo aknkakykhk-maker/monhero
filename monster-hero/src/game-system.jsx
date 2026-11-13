@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 064d1d92316adad5
+// generated-sha256: 17c0c63db8abcf3b
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -84320,7 +84320,7 @@ const msxNameGuard = (raw) => {
 const msxAptOf = (sp) => { const a = typeof AMG_APT !== 'undefined' && AMG_APT && typeof AMG_APT[sp] === 'string' && AMG_APT[sp].length === 6 ? AMG_APT[sp] : 'CCCCCC'; return a.split(''); };
 // 編成の1体の元 → 芯の memberOf に渡す形
 const msxTeamSrc = (slot, box) => {
-  if (slot && slot.box) { const m = box.mons.find((x) => x.id === slot.box); if (m) return { kind: 'raised', species: m.species, name: m.nick || msxMonName(m.species), stats: m.st, loy: m.loy, pop: m.pop, lv: m.lv, masteries: m.masteries, assists: m.assists, boxId: m.id }; }
+  if (slot && slot.box) { const m = box.mons.find((x) => x.id === slot.box); if (m) return { kind: 'raised', species: m.species, name: m.nick || msxMonName(m.species), stats: m.st, loy: m.loy, pop: m.pop, lv: m.lv, masteries: m.masteries, techs: m.techs, aptUp: m.aptUp, aptBase: m.aptBase, aptAwake: m.aptAwake, assists: m.assists, boxId: m.id }; }
   const sp = slot && slot.base ? slot.base : 'Mocchi';
   return { kind: 'base', species: sp, name: msxMonName(sp) };
 };
@@ -85571,6 +85571,12 @@ const msxR3Catalog = (engine) => {
   return msxR3CatCache;
 };
 const msxR3LoadEngine = () => (typeof ambwLoadEngine === 'function' ? ambwLoadEngine() : Promise.resolve(null));
+// 熟練の効き目の渡し方(2026-11-13 社長): 芯に techBoost の口があれば、熟練から作った補正をそこへ渡し、芯の熟練は空にする(二重にしない)。
+//   口がまだ無い芯なら今までどおり mastery で渡す
+const msxR3BoostOn = (engine) => Boolean(engine && (engine.TECH_BOOST || (engine.FEATURES && engine.FEATURES.techBoost)));
+const msxR3TechGear = (engine, SUC, s, ts) => (msxR3BoostOn(engine) && typeof SUC.techBoostOf === 'function'
+  ? { mastery: {}, techBoost: SUC.techBoostOf({ techs: ts, mastery: s.mastery }) }
+  : { mastery: Object.fromEntries(ts.map((t) => [t, (s.mastery && s.mastery[t]) || 0])) });
 const msxR3Fight = (engine, SUC, run) => {
   const s = run.s; const b = s.battle; if (!engine || !b) return null;
   const cat = msxR3Catalog(engine); if (!cat || !cat.species) return null;
@@ -85580,7 +85586,7 @@ const msxR3Fight = (engine, SUC, run) => {
   const ts = (Array.isArray(s.techs) ? s.techs : []).filter((t) => own.includes(t));
   const loy = typeof SUC.loyalOf === 'function' ? SUC.loyalOf(s) : 100;
   const a = { species: sp, name: run.nick || msxMonName(sp), lv: 1, stats: s.stats, loy, pop: s.pop, ...(s.awake ? { awake: s.awake } : {}), ...(typeof SUC.aptSendOf === 'function' ? { aptUp: SUC.aptSendOf(s) } : {}),
-    ...(ts.length ? { techs: ts, mastery: Object.fromEntries(ts.map((t) => [t, (s.mastery && s.mastery[t]) || 0])) } : {}) };
+    ...(ts.length ? { techs: ts, ...msxR3TechGear(engine, SUC, s, ts) } : {}) };
   const osp = spOf(opp.species); const ots = (cat.species[osp].techs || []).slice(0, Math.max(1, opp.techs || 2)).map((t) => t.id);
   const o = { species: osp, name: opp.name || msxMonName(osp), lv: 1, stats: opp.stats, techs: ots, ...(Number.isFinite(opp.loy) ? { loy: opp.loy } : {}), ...(Number.isFinite(opp.pop) ? { pop: opp.pop } : {}), mastery: Object.fromEntries(ots.map((t) => [t, opp.mastery || 0])) };
   const teamA = { assistantId: s.aid, tactics: MSX_R3_GEAR[SUC.periodOf(s.turn).key] || 10, members: [a] };
@@ -85593,7 +85599,8 @@ const msxR3Fight = (engine, SUC, run) => {
   let r = null;
   try { r = engine.simulate({ ...input, trace: true }); } catch (e) { return null; }
   const st = (r.log && r.log[0]) || {};
-  return { r, input, opp, teamA, teamB, won: r.winner === 'A', frames: typeof ambwFramesOf === 'function' ? ambwFramesOf(r.log) : [], maxHp: { A: st.aHp || [], B: st.bHp || [] }, moves: { A: st.aMoves || [], B: st.bMoves || [] } };
+  const use = typeof SUC.techUseOf === 'function' ? SUC.techUseOf(r.log, 'A') : null; // 熟練: この試合で技ごとに使った回数(settle へ渡す)
+  return { r, input, opp, teamA, teamB, use, won: r.winner === 'A', frames: typeof ambwFramesOf === 'function' ? ambwFramesOf(r.log) : [], maxHp: { A: st.aHp || [], B: st.bHp || [] }, moves: { A: st.aMoves || [], B: st.bMoves || [] } };
 };
 
 // ---- 保存(足すだけ) ----
@@ -85628,6 +85635,7 @@ const msxR3BoxMonOf = (run, s, ev, assists, parent) => ({
   st: { ...s.stats }, techs: Array.isArray(s.techs) ? s.techs.slice(0, 99) : [], mast: (Array.isArray(s.techs) ? s.techs : []).slice(0, 99).map((t) => Math.round((s.mastery && s.mastery[t]) || 0)),
   loy: ev.loyal, pop: s.pop, lv: s.lv, gt: s.type, rank: ev.rank, grade: msxR3Grade(ev.power).label, score: ev.power, fav: Array.isArray(ev.top) ? ev.top.slice(0, 3) : [],
   raised: true, coach: s.aid, endAt: Date.now(), paid: true, over: s.over || 'done', assists: (assists || []).slice(0, 4),
+  ...(s.masterySpent && (Array.isArray(s.techs) ? s.techs : []).some((t) => s.masterySpent[t] > 0) ? { mastSpent: s.techs.slice(0, 99).map((t) => Math.round(s.masterySpent[t] || 0)) } : {}), // 熟練の使った量(techs と同じ並び・あとでポイントに変える分。2026-11-13・足すだけ)
   ...(s.ending && ['bad', 'good', 'super'].includes(s.ending.kind) ? { ending: s.ending.kind } : {}), // どのエンディングだったか(2026-11-13・足すだけ)
   ...(Array.isArray(s.aptUp) && s.aptUp.some((n) => n > 0) ? { aptUp: s.aptUp.slice(0, 4) } : {}),
   ...(Array.isArray(s.aptBase) && s.aptBase.some((n) => n > 0) ? { aptBase: s.aptBase.slice(0, 4) } : {}),
@@ -85942,7 +85950,7 @@ function MsxR3Battle({ run, setRun, v, ev, ctx, bondLv, onPause, debug }) {
   const name = b ? msxR3BattleName(SUC, b) : st3 ? st3.name : '';
   // 勝ち負けを付ける(負けのときは、やり直さないと決めたあと)
   const settle = (won) => {
-    const before = s; const r = SUC.settle(s, won);
+    const before = s; const r = SUC.settle(s, won, fight && fight.use);
     const d = msxR3Diff(before, r.state);
     const out = { r3: { stage: won ? 'prize' : 'meal', won, name, icon: msxR3BattleIcon(b), d, foe: fight ? fight.opp : null, rival: !!(b && b.rival), rivalName: b && b.rival ? b.rival.name : null, from: before.turn, gameover: !!r.out.gameover } };
     setRun({ ...run, s: r.state, phase: 'battle', out, r3skip: undefined, arcAfter: msxArcAfterOf(SUC, s, b, won, fight && fight.opp) || undefined, log: [...(run.log || []), { turn: before.turn, t: `${name}: ${won ? '優勝' : '負け'}` }].slice(-20) });
@@ -85957,7 +85965,7 @@ function MsxR3Battle({ run, setRun, v, ev, ctx, bondLv, onPause, debug }) {
     const base = { ...run, s: s2, r3skip: undefined, arcAfter, log, out: null };
     if (s2.battle) setRun({ ...base, phase: 'battle' }); else if (s2.over) setRun({ ...base, phase: 'over' }); else setRun({ ...base, phase: 'turn', out: { from: before.turn } });
   };
-  const settleShow = (won) => { const before = s; const r = SUC.settle(s, won); const d = msxR3Diff(before, r.state); pendRef.current = { r, d, won, before }; return { rows: msxR3PrizeRows(d, r.state).map(([i, k, vv, c]) => ({ i, k, v: vv, big: c === 'new' })), prize: d.fame, tickets: d.tickets }; };
+  const settleShow = (won, use) => { const before = s; const r = SUC.settle(s, won, use || (fight && fight.use)); /* use: 自分で操作した試合なら、その試合の技ごとの使った回数 */ const d = msxR3Diff(before, r.state); pendRef.current = { r, d, won, before }; return { rows: msxR3PrizeRows(d, r.state).map(([i, k, vv, c]) => ({ i, k, v: vv, big: c === 'new' })), prize: d.fame, tickets: d.tickets }; };
   const nextShow = () => { const p = pendRef.current; if (!p) return; pendRef.current = null; commitSettle(p); };
   const rematchWith = (item) => { const r = SUC.rematch(s, item); if (!r.out.ok) return; setRun({ ...run, s: r.state, log: [...(run.log || []), { turn: s.turn, t: `${item === 'rainbow' ? '虹の時渡りの砂時計' : '時渡りの砂時計'}でやり直した` }].slice(-20) }); setStep('card'); };
   // 次へ(ごはんのあと): 続けて強制大会 → もう一度 / 終わり → 引退 / ふつう → ターンが進む
@@ -86389,7 +86397,7 @@ function MsxR3Retire({ run, setRun, onPause, debug, SUC }) {
   }
 
   // ---- E1 振り返り ----
-  const mem = typeof SUC.memberOf === 'function' ? SUC.memberOf({ kind: 'raised', species: ws.species, stats: ws.stats, loy: ev.loyal, pop: ws.pop, lv: ws.lv, masteries: (ws.techs || []).map((t) => (ws.mastery && ws.mastery[t]) || 0), techs: ws.techs }) : null;
+  const mem = typeof SUC.memberOf === 'function' ? SUC.memberOf({ kind: 'raised', species: ws.species, stats: ws.stats, loy: ev.loyal, pop: ws.pop, lv: ws.lv, masteries: (ws.techs || []).map((t) => (ws.mastery && ws.mastery[t]) || 0), techs: ws.techs, aptUp: ws.aptUp, aptBase: ws.aptBase, aptAwake: ws.aptAwake }) : null;
   if (step === 'e1') {
     const cupWins = (ws.log && ws.log.wins) || 0; const cupLoss = (ws.log && ws.log.losses) || 0;
     const sc = (typeof MSX_SCENARIOS !== 'undefined' ? MSX_SCENARIOS : []).find((x) => x.aid === ws.aid);
@@ -87950,6 +87958,7 @@ const monsucRankQueue = async () => {
 const monsucRankQueueSave = async (list) => { try { await storeSet(MONSUC_RANK_QUEUE_KEY, list.slice(-MONSUC_RANK_QUEUE_MAX), false); } catch (_) {} };
 
 // 送る中身(サーバの monsuc_rank_submit の p_row の形)。送らない育成は null
+const MONSUC_RANK_APT = ['G', 'F', 'E', 'D', 'C', 'B', 'A', 'S', 'S+', 'SS', 'SS+', 'M']; // 間合い適性の段(サーバの式と同じ並び)
 const monsucRankRowOf = ({ owner, run, ev, name, colors, userName }) => {
   if (!run || typeof run !== 'object') return null;
   if (!['done', 'lost'].includes(run.over) && run.retired !== true) return null; // まだ終わっていない・デビュー戦のゲームオーバーは送らない
@@ -87957,7 +87966,12 @@ const monsucRankRowOf = ({ owner, run, ev, name, colors, userName }) => {
   const st = run.stats && typeof run.stats === 'object' ? run.stats : {};
   const stats = {};
   MONSUC_RANK_STAT_KEYS.forEach(k => { stats[k] = monsucRankClamp(Math.round(monsucRankNum(st[k])), 0, 999); });
-  const techs = (Array.isArray(run.techs) ? run.techs : []).slice(0, 8).map(t => monsucRankClamp(Math.round(monsucRankNum(run.mastery && run.mastery[t])), 0, 100));
+  // 技(2026-11-13 社長): 技ごとに { r: ランク 1〜5, a: 届く間合いのいちばん高い適性の段 }。サーバが同じ式で総合力を出し直す(MONSUC_RANK_V2_TECHS.sql)。
+  //   芯の evaluate が techRows を返さない古い形なら、今までどおり熟練の並び(8つまで)
+  const rows = ev && Array.isArray(ev.techRows) ? ev.techRows : null;
+  const techs = rows
+    ? rows.slice(0, 99).map(x => ({ r: monsucRankClamp(Math.round(monsucRankNum(x && x.r, 1)), 1, 5), a: MONSUC_RANK_APT.includes(x && x.a) ? x.a : 'C' }))
+    : (Array.isArray(run.techs) ? run.techs : []).slice(0, 8).map(t => monsucRankClamp(Math.round(monsucRankNum(run.mastery && run.mastery[t])), 0, 100));
   const species = typeof run.species === 'string' && /^[A-Za-z]{2,32}$/.test(run.species) ? run.species : null;
   if (!species) return null;
   const e = ev && typeof ev === 'object' ? ev : {};

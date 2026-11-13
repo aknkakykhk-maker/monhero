@@ -268,7 +268,26 @@ ok(near(SUC.failRateOf({ ...base, yosu: { sabori: { visits: 0 } } }) - fFull, 0.
   const ml = SUC.meal({ ...pro, ama: 10, fear: 10 }, 'loyal').state; ok(SUC.loyalOf(ml) === 25, `忠誠のごはんで忠誠 +5 にならない: ${SUC.loyalOf(ml)}`);
   const ms = SUC.meal(pro, 'stat').state; ok(K.every(k => ms.stats[k] > pro.stats[k] || pro.stats[k] >= 999), '能力のごはんで6能力が上がらない');
   ok(!SUC.meal({ ...pro, fame: 10 }, 'hp').out.ok && !SUC.meal(s0, 'hp').out.ok, '名声が足りない・大会のあとでないのに食べられる');
-  ok(SUC.evaluate({ ...s0, techs: ['a', 'b', 'c'], mastery: { a: 50, b: 0, c: 100 } }).power > SUC.evaluate(s0).power, '覚えた技と熟練が総合力に入っていない');
+  { // 総合力の技の分(2026-11-13 社長): 覚えた技は全部数える・熟練は入れない・ランクの値 × 間合い適性の補正
+    const all = SUC.techsOf(s0.species).map(t => t.id);
+    ok(SUC.evaluate({ ...s0, techs: all.slice(0, 4), mastery: {} }).power > SUC.evaluate({ ...s0, techs: all.slice(0, 2), mastery: {} }).power, '覚えた技が総合力に入っていない');
+    ok(SUC.evaluate({ ...s0, techs: all.slice(0, 3), mastery: Object.fromEntries(all.map(t => [t, 100])) }).power === SUC.evaluate({ ...s0, techs: all.slice(0, 3), mastery: {} }).power, '熟練が総合力に入っている(入れない決め)');
+    ok(SUC.techPowerOfRows([{ r: 1, a: 'C' }, { r: 5, a: 'A' }, { r: 3, a: 'G' }, { r: 2, a: 'M' }]) === 40 + 640 * 1.2 + 160 * 0.6 + 80 * 1.7, '技の分の式(ランクの値 ×(1 +(段 − C)× 0.1))がずれている');
+    ok(SUC.evaluate(s0).techRows.length === s0.techs.length, '評価に技ごとの { r, a } が無い(ランキングに送る形)');
+  }
+  { // 熟練(2026-11-13 社長): 修行では上がらない・試合で使うごと +2(1試合1技 +6 まで)・大会に出るたび全部の技 +2・効き目は熟練100で威力 +10%・命中 +5%
+    const b0 = { ...s0, turn: 5, acted: false, battle: { kind: 'debut', round: 0 }, techs: s0.techs.slice(0, 2), mastery: {} };
+    const [t1, t2] = b0.techs;
+    const g = SUC.settle(b0, [true], { [t1]: 5, [t2]: 1 }).state;
+    ok(g.mastery[t1] === 2 + 6 && g.mastery[t2] === 2 + 2, `試合の熟練の付き方がずれている: ${JSON.stringify(g.mastery)}`);
+    ok(SUC.settle(b0, [false]).state.mastery[t1] === 2, '大会に出ただけで全部の技 +2 にならない');
+    const tb = SUC.techBoostOf({ techs: [t1, t2], mastery: { [t1]: 100, [t2]: 50 } });
+    ok(tb[t1].pow === 0.1 && tb[t1].hit === 0.05 && tb[t2].pow === 0.05 && tb[t2].hit === 0.025 && tb[t1].guts === 0, `熟練の効き目がずれている: ${JSON.stringify(tb)}`);
+    ok(SUC.SHUGYO.mastery === 0, '修行で熟練が上がる(上げない決め)');
+    ok(JSON.stringify(SUC.techUseOf([{ ev: 'tech', side: 'A', move: 'x' }, { ev: 'tech', side: 'B', move: 'x' }, { ev: 'tech', side: 'A', move: 'x' }, { ev: 'move', side: 'A' }], 'A')) === '{"x":2}', '試合の記録から技の使った回数を数えられない');
+    const sp = SUC.restore(JSON.parse(JSON.stringify({ ...b0, masterySpent: { [t1]: 7, zz: 3 } })));
+    ok(sp && sp.masterySpent && sp.masterySpent[t1] === 7 && !('zz' in sp.masterySpent), '熟練の使った量(masterySpent)が保存から戻らない');
+  }
 }
 
 // ---- 訓練で能力が下がらない・訓練Lv(社長 2026-11-12) ----
