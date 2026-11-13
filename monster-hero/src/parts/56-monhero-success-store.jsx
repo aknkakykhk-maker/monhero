@@ -25,6 +25,9 @@ const MSX_SCENARIOS = Object.freeze([
 const MSX_SOON_AIDS = Object.freeze(['kiki', 'momosuke', 'dra', 'kyuko', 'sorashido', 'erubin']);
 const MSX_STAT_ICON = Object.freeze({ life: '❤️', pow: '💪', wise: '🧠', hit: '🎯', eva: '💨', tough: '🛡️' });
 const MSX_STAT_NAME = Object.freeze({ life: 'ライフ', pow: 'ちから', wise: 'かしこさ', hit: '命中', eva: '回避', tough: '丈夫さ' });
+// 訓練の名前(2026-11-13 社長「トレごとに特色を」。うちのオリジナル)と、その場面の小物
+const MSX_TRAIN_NAME = Object.freeze({ life: '坂道ダッシュ', pow: '丸太割り', wise: '積み木パズル', hit: '的当て', eva: '落ち葉よけ', tough: '岩受け止め' });
+const MSX_TRAIN_ICON = Object.freeze({ life: '🏃', pow: '🪵', wise: '🧩', hit: '🎯', eva: '🍂', tough: '🪨' });
 const MSX_STATS = Object.freeze(['life', 'pow', 'wise', 'hit', 'eva', 'tough']);
 const MSX_BOX_CAP0 = 30;
 
