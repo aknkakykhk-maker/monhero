@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 64e40c59c3b57b51
+// source-sha256: 7e85c7def9501706
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -81554,7 +81554,8 @@ function HomeScreen({
   onOpenCardTeaser = null,
   cardTourVisible = false,
   onOpenCardTour = null,
-  nextStep = null
+  nextStep = null,
+  successEntry = null
 }) {
   React.useEffect(() => {
     if (typeof ASSISTANT_LIFE_LINKS !== 'undefined' && ASSISTANT_LIFE_LINKS) ASSISTANT_LIFE_LINKS.goPlace = {
@@ -81894,7 +81895,7 @@ function HomeScreen({
     className: `mh-home-card-battle soon${homeEventCampaign ? '' : ' raised'}`,
     onClick: onOpenCardTeaser,
     "aria-label": "MFバトルカード 近日公開"
-  }, React.createElement("span", null, "🃏 MFバトルカード", React.createElement("small", null, "近日公開"))), React.createElement("div", {
+  }, React.createElement("span", null, "🃏 MFバトルカード", React.createElement("small", null, "近日公開"))), successEntry, React.createElement("div", {
     className: `mh-home-assistant${spotClass('assistant')}`
   }, React.createElement(AssistantBubble, {
     scene: "home",
@@ -162340,6 +162341,44 @@ const msxStartScene = s => {
   const se = msxSuc && msxSuc.script;
   return se && se.SCENE && typeof se.SCENE.start === 'function' ? se.SCENE.start(s) : 'turn.start.normal';
 };
+const MSX_HOME_CSS = `
+.mh-home-success{position:absolute;z-index:5;left:9px;bottom:calc(min(calc(33% - 40px),calc(44.75% - 126px)) - 60px);padding:0;translate:0 var(--mh-home-left-push,0px)}
+.mh-home-scene:has(.mh-home-card-battle.raised) .mh-home-success{bottom:calc(min(calc(33% + 4px),calc(44.75% - 82px)) - 60px)}
+.mh-home-scene:has(.mh-home-card-battle.below-tour) .mh-home-success{bottom:calc(min(calc(33% - 84px),calc(44.75% - 170px)) - 60px)}
+.mh-home-success>span{display:flex;align-items:center;gap:4px;padding:8px 12px;border:1.5px solid #f9a8d4dd;border-radius:13px;background:linear-gradient(135deg,#831843ee,#4c1d95ee);color:#fff;font-size:12px;font-weight:900;line-height:1.2;box-shadow:0 3px 10px #0007;white-space:nowrap}
+.mh-home-success b.beta{margin-left:2px;padding:1px 6px;border-radius:6px;background:#f472b6;color:#fff;font-size:11px;line-height:1.4}
+.mh-home-success:active>span{transform:scale(.96)}
+@media (orientation:landscape){.mh-home-success,.mh-home-scene:has(.mh-home-card-battle.raised) .mh-home-success,.mh-home-scene:has(.mh-home-card-battle.below-tour) .mh-home-success{left:146px;bottom:12px}
+.mh-home-scene:has(.mh-home-facility.life) .mh-home-success{bottom:32px}}
+`;
+function MonheroSuccessHomeEntry({
+  callNameOf,
+  bondLvOf,
+  onOpenChange
+}) {
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    try {
+      if (onOpenChange) onOpenChange(open);
+    } catch (e) {}
+  }, [open]);
+  if (!msxReleased()) return null;
+  return React.createElement(React.Fragment, null, React.createElement("style", null, MSX_HOME_CSS), React.createElement("button", {
+    type: "button",
+    className: "mh-home-success",
+    "data-home-monhero-success": true,
+    onClick: () => setOpen(true),
+    "aria-label": "モンヒロサクセス β"
+  }, React.createElement("span", null, React.createElement("span", {
+    "aria-hidden": "true"
+  }, "🌱"), "モンヒロサクセス", React.createElement("b", {
+    className: "beta"
+  }, "β"))), open && React.createElement(MonheroSuccessScreen, {
+    onClose: () => setOpen(false),
+    callNameOf: callNameOf,
+    bondLvOf: bondLvOf
+  }));
+}
 function MonheroSuccessDebugEntry({
   callNameOf,
   bondLvOf,
@@ -237751,7 +237790,12 @@ function MonsterHeroGame() {
         });
         setCardOrigin('home');
         setGameState('CARD_TOP');
-      }
+      },
+      successEntry: typeof MonheroSuccessHomeEntry === 'function' ? React.createElement(MonheroSuccessHomeEntry, {
+        onOpenChange: setSuccessScreenOpen,
+        callNameOf: id => assistantCallName(breederName, assistantBondLevelOf(normalizeAssistantBond(assistantBondsRef.current[id]).points), assistantCallStyles[id] || null, id),
+        bondLvOf: id => assistantBondLevelOf(normalizeAssistantBond(assistantBondsRef.current[id]).points)
+      }) : null
     }), masmonBattleWatchOpen && typeof AssistantMasmonBattleWatch === 'function' && React.createElement(AssistantMasmonBattleWatch, {
       onClose: () => setMasmonBattleWatchOpen(false)
     }), typeof AssistantMasmonBattleHost === 'function' && React.createElement(AssistantMasmonBattleHost, null), assistantChatOpen && activeAssistant && (() => {
