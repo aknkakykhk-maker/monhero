@@ -319,7 +319,7 @@ function MsxR3Battle({ run, setRun, v, ev, ctx, bondLv, onPause, debug }) {
       <MsxBand s={s} v={v} ev={ev}/>
       <div className="v-bcs"><img className="bg" src="images/story-bg/monhero_plaza_evening.jpg" alt=""/><div className="sh"/>
         <div className="ttl">{name} ・ 1戦</div>
-        <img className="ml" src={msxMonImg(s.species)} alt=""/><img className="mr" src={msxMonImg(opp.species)} alt=""/><div className="vsw">VS</div>
+        {s.awake && typeof MsxKira === 'function' && typeof msxKiraOf === 'function' ? <MsxKira kind={msxKiraOf(s.awake)} src={msxMonImg(s.species)} className="ml"><img src={msxMonImg(s.species)} alt="" style={{ height: '100%', objectFit: 'contain' }}/></MsxKira> : <img className="ml" src={msxMonImg(s.species)} alt=""/>}<img className="mr" src={msxMonImg(opp.species)} alt=""/><div className="vsw">VS</div>
         <div className="nb l"><b>{run.nick}</b><small><i className={msxRankCls(ev.rank)}>{ev.rank}</i> {msxFmt(ev.power)}</small></div>
         <div className="nb r"><b>{foeName}</b><small>{opp.champ ? '👑王者' : opp.rival ? 'ライバル' : msxMonName(opp.species)}</small></div></div>
       <div className="v-tabs t3">{[['st', 'ステータス'], ['tech', '技'], ['etc', '能力']].map(([k, n]) => <button type="button" key={k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)} style={{ textAlign: 'center', background: tab === k ? '#3b2f0b' : '#1e1a36', border: `1.5px solid ${tab === k ? '#fde047' : '#475569'}`, borderRadius: 99, padding: 4, fontSize: 12, fontWeight: 900, color: tab === k ? '#fde047' : '#cbd5e1' }}>{n}</button>)}</div>

@@ -66,7 +66,7 @@ const msxR3Fight = (engine, SUC, run) => {
   const sp = spOf(s.species); const own = (cat.species[sp].techs || []).map((t) => t.id);
   const ts = (Array.isArray(s.techs) ? s.techs : []).filter((t) => own.includes(t));
   const loy = typeof SUC.loyalOf === 'function' ? SUC.loyalOf(s) : 100;
-  const a = { species: sp, name: run.nick || msxMonName(sp), lv: 1, stats: s.stats, loy, pop: s.pop, ...(typeof SUC.aptSendOf === 'function' ? { aptUp: SUC.aptSendOf(s) } : {}),
+  const a = { species: sp, name: run.nick || msxMonName(sp), lv: 1, stats: s.stats, loy, pop: s.pop, ...(s.awake ? { awake: s.awake } : {}), ...(typeof SUC.aptSendOf === 'function' ? { aptUp: SUC.aptSendOf(s) } : {}),
     ...(ts.length ? { techs: ts, ...msxR3TechGear(engine, SUC, s, ts) } : {}) };
   const osp = spOf(opp.species); const ots = (cat.species[osp].techs || []).slice(0, Math.max(1, opp.techs || 2)).map((t) => t.id);
   const o = { species: osp, name: opp.name || msxMonName(osp), lv: 1, stats: opp.stats, techs: ots, ...(Number.isFinite(opp.loy) ? { loy: opp.loy } : {}), ...(Number.isFinite(opp.pop) ? { pop: opp.pop } : {}), mastery: Object.fromEntries(ots.map((t) => [t, opp.mastery || 0])) };
@@ -119,7 +119,9 @@ const msxR3BoxMonOf = (run, s, ev, assists, parent) => ({
   ...(s.masterySpent && (Array.isArray(s.techs) ? s.techs : []).some((t) => s.masterySpent[t] > 0) ? { mastSpent: s.techs.slice(0, 99).map((t) => Math.round(s.masterySpent[t] || 0)) } : {}), // 熟練の使った量(techs と同じ並び・あとでポイントに変える分。2026-11-13・足すだけ)
   ...(s.ending && ['bad', 'good', 'super'].includes(s.ending.kind) ? { ending: s.ending.kind } : {}), // どのエンディングだったか(2026-11-13・足すだけ)
   ...(Array.isArray(s.aptUp) && s.aptUp.some((n) => n > 0) ? { aptUp: s.aptUp.slice(0, 4) } : {}),
-  ...(Array.isArray(s.aptBase) && s.aptBase.some((n) => n > 0) ? { aptBase: s.aptBase.slice(0, 4) } : {}), // 合体円盤石から継いだ段数(2026-11-13・足すだけ) // 育成中に上げた間合い適性の段数 [零,近,中,遠](2026-11-13・足すだけ。種の表は変えない)
+  ...(Array.isArray(s.aptBase) && s.aptBase.some((n) => n > 0) ? { aptBase: s.aptBase.slice(0, 4) } : {}),
+  ...(s.awake ? { awake: Math.max(0, Math.min(2, Math.round(s.awake))) } : {}), // 覚醒の印 1 覚醒・2 超覚醒(2026-11-13・足すだけ。合体円盤石には継がない・ランキングの行には送らない)
+  ...(Array.isArray(s.aptAwake) && s.aptAwake.some((n) => n > 0) ? { aptAwake: s.aptAwake.slice(0, 4) } : {}), // 覚醒で上げた間合い適性の段数(合体で継ぐ段数を数えるときに入る) // 合体円盤石から継いだ段数(2026-11-13・足すだけ) // 育成中に上げた間合い適性の段数 [零,近,中,遠](2026-11-13・足すだけ。種の表は変えない)
   titles: msxR3FinalTitles(s, ev), from: run.from || null,
 });
 // 引退した子を保存枠へ。{ ok, full, box, meta }。同じ id がもうあれば足さない(二度押し・中断のあとでも1回)

@@ -292,6 +292,12 @@ const MONSUC_SCRIPT_ERUBIN = Object.freeze([
   { id:'item.akuyosan.erubin1', who:'erubin', e:'normal', t:'苦いけど、よく効くんだよね。がんばって飲もうね' },
   { id:'item.license.erubin1', who:'erubin', e:'happy', t:'ライセンスだね。{mon}、{name}のこと信じてるよね☺️' },
   { id:'item.oily.erubin1', who:'erubin', e:'normal', t:'オイリーパックだね。……あ、石油じゃないよね？笑' },
+
+  // 覚醒・超覚醒(2026-11-13): 前触れ(omen・omen2)と起きた瞬間(fire・fire2)
+  { id:'turn.awake.omen.erubin1', who:'erubin', e:'surprise', t:'{mon}の体、うっすら光ってるね……なにか起きるのかな' },
+  { id:'turn.awake.omen2.erubin1', who:'erubin', e:'surprise', t:'また光ってるね。今度は虹色……すごいことが起きそうかな' },
+  { id:'turn.awake.fire.erubin1', who:'erubin', e:'surprise', t:'えっ……{mon}が光に包まれてる！？ だいじょうぶかな……' },
+  { id:'turn.awake.fire2.erubin1', who:'erubin', e:'excited', t:'虹色の光……まだ強くなるんだね。すごい……' },
 ]);
 
 if (typeof module !== 'undefined') module.exports = { MONSUC_SCRIPT_ERUBIN };

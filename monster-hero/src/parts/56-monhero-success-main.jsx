@@ -89,6 +89,19 @@ const msxMoodOf = (s) => {
 };
 function MsxMonArt({ run, className, style, live = false, react = null }) {
   const sp = run.s.species;
+  // 覚醒・超覚醒のキラ(56-monsuc-awake.jsx)と前触れの光。どちらも無ければ前と同じ形のまま
+  const kira = typeof msxKiraOf === 'function' ? msxKiraOf(run.s.awake) : null;
+  const omen = run.s.omen && typeof MsxOmenFx === 'function' ? run.s.omen.k : 0;
+  if ((kira || omen) && typeof MsxKira === 'function') {
+    const scn = msxSceneBg(run.s.turn);
+    const inner = live && typeof MsxLiveMon === 'function'
+      ? <MsxLiveMon species={sp} colors={run.colors} mood={msxMoodOf(run.s)} season={scn.season} time={scn.time === '昼' ? 'day' : scn.time === '夕方' ? 'evening' : 'night'} react={react} seed={run.id} pyoko/>
+      : run.colors && run.colors.some(Boolean) && typeof DyedMonsterImage === 'function'
+        ? <DyedMonsterImage baseId={sp} src={msxMonImg(sp)} masuColors={run.colors} alt="" draggable={false} style={{ width: '100%', height: '100%', objectFit: 'contain' }}/>
+        : <img src={msxMonImg(sp)} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }}/>;
+    return <span className={`${className || ''}${live ? ' msx-live' : ''}${omen ? ` msx-omen-on k${omen}` : ''}`} style={style} data-msx-mon-kira={kira || ''}>
+      <MsxKira kind={kira} src={msxMonImg(sp)} fill>{inner}</MsxKira><MsxOmenFx k={omen}/></span>;
+  }
   if (live && typeof MsxLiveMon === 'function') {
     const scn = msxSceneBg(run.s.turn);
     return <span className={`${className || ''} msx-live`} style={style}><MsxLiveMon species={sp} colors={run.colors} mood={msxMoodOf(run.s)} season={scn.season} time={scn.time === '昼' ? 'day' : scn.time === '夕方' ? 'evening' : 'night'} react={react} seed={run.id} pyoko/></span>;
@@ -225,7 +238,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug }) 
   const [, setScriptTick] = useState(0);
   // 台本(共通 + 助手の分)を読む。読み終わったら描き直して台詞を出す
   useEffect(() => { let alive = true; msxScriptLoad(s.aid).then(() => { if (alive) setScriptTick((n) => n + 1); }); return () => { alive = false; }; }, [s.aid]);
-  const soundId = run.phase === 'result' && run.out && run.out.result ? (run.out.lvUp ? 'trainLvUp' : MSX_RES_SOUND[run.out.result]) : run.phase === 'issa' ? 'issa' : s.over === 'gameover' ? 'gameOver' : 'main';
+  const soundId = run.phase === 'awake' && run.out && run.out.fire ? (run.out.fire.kind === 2 ? 'trainGreat' : 'trainLvUp') : run.phase === 'result' && run.out && run.out.result ? (run.out.lvUp ? 'trainLvUp' : MSX_RES_SOUND[run.out.result]) : run.phase === 'issa' ? 'issa' : s.over === 'gameover' ? 'gameOver' : 'main';
   msxUseSound(soundId, { season: msxCalendar(s.turn).season });
   const tagAt = (SUC.BOND && SUC.BOND.tag) || 80;
   const bondLv = bondLvOf ? Number(bondLvOf(s.aid)) || 1 : 1;
@@ -235,6 +248,8 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug }) 
 
   // 次の段へ
   const endTurnFlow = (r0) => {
+    // 最後の期に当たった覚醒の前触れは、ターンを閉じる前に起きる(芯の awakeOpen 'end')
+    if (typeof SUC.awakeOpen === 'function') { const a = SUC.awakeOpen(r0.s, 'end'); if (a.out.fire) { setRun({ ...r0, s: a.state, phase: 'awake', out: { fire: a.out.fire, then: 'end' } }); return; } }
     const r = SUC.endTurn(r0.s);
     if (!r.out.ok) { setRun({ ...r0, phase: 'main', out: null }); return; }
     const st = r.state;
@@ -254,6 +269,12 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug }) 
   };
   // ターンのはじめ: 助手の連続イベント(芯の peek().story)→ ランダムイベント('start')→ メイン
   const toMain = (r0, skipStory = false) => {
+    // 覚醒・超覚醒: 前のターンの前触れならここで起きる・このターンのくじを引く(前触れは保存に残る。芯の awakeOpen 'start')
+    if (typeof SUC.awakeOpen === 'function' && !r0.s.over) {
+      const a = SUC.awakeOpen(r0.s, 'start');
+      if (a.out.fire) { setRun({ ...r0, s: a.state, phase: 'awake', out: { fire: a.out.fire, then: 'main' } }); return; }
+      r0 = { ...r0, s: a.state };
+    }
     const p = SUC.peek(r0.s);
     if (!skipStory && p.story != null && typeof SUC.storyStep === 'function') { setRun({ ...r0, phase: 'story', out: { ep: p.story } }); return; }
     if (SUC.events && !r0.s.over) {
@@ -322,6 +343,13 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug }) 
       {say && say.t ? <MsxSay aid={s.aid} ex={say.e || 'normal'} text={say.t}/> : null}
     </>);
     foot = <div className="v-ft"><button type="button" onClick={() => (isTrain ? afterAct({ ...run, phase: 'main' }) : afterAct(run))}>⏩ とばす</button><button type="button" className="go" onClick={() => (isTrain ? setRun({ ...run, phase: 'react' }) : afterAct(run))}>つぎへ ▶</button></div>;
+  }
+  // ---- 覚醒・超覚醒(56-monsuc-awake.jsx の演出)。終わったら、ターンのはじめならメインへ・ターンの終わりなら閉じる ----
+  else if (phase === 'awake' && run.out && run.out.fire && typeof MsxAwakeShow === 'function') {
+    const f = run.out.fire; const then = run.out.then;
+    const done = () => { const next = pushLog({ ...run, out: null }, f.kind === 2 ? '超覚醒した!' : '覚醒した!'); if (then === 'end') endTurnFlow({ ...next, phase: 'main' }); else toMain(next); };
+    body = <MsxAwakeShow key={`${s.turn}-${f.kind}`} run={run} fire={f} v={v} ev={ev} line={line}/>;
+    foot = <div className="v-ft"><button type="button" className="go" onClick={done} data-msx-awake-next>つぎへ ▶</button></div>;
   }
   // ---- 出来事(ランダムイベント・助手の連続イベント) ----
   else if ((phase === 'event' && run.out && run.out.ev) || (phase === 'story' && run.out && run.out.ep != null)) {
@@ -456,13 +484,14 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug }) 
     const can = v.can || [];
     const anyTag = MSX_STATS.some((k) => { const c = msxCardOf(v, k); return c && c.tags.length; });
     const yosu = s.yosu && (s.yosu.sabori || s.yosu.utsu);
-    const sayL = yosu ? line(s.yosu.sabori ? 'turn.mood.sabori' : 'turn.mood.utsu', 'ようすが気になるね…') : s.cond ? line(`turn.cond.${s.cond.kind === 'away' ? 'runaway' : s.cond.kind === 'ill' ? 'sick' : 'injury'}.in`, '今日は休ませてあげよ') : line(msxStartScene(s), '今月はどうする?');
+    const omenK = s.omen && (s.omen.k === 1 || s.omen.k === 2) ? s.omen.k : 0; // 覚醒の前触れ(助手が気づく)
+    const sayL = omenK ? line(omenK === 2 ? 'turn.awake.omen2' : 'turn.awake.omen', omenK === 2 ? 'あれ…また体が光ってる？ 虹色だ…' : 'あれ？ 体がうっすら光ってない…？') : yosu ? line(s.yosu.sabori ? 'turn.mood.sabori' : 'turn.mood.utsu', 'ようすが気になるね…') : s.cond ? line(`turn.cond.${s.cond.kind === 'away' ? 'runaway' : s.cond.kind === 'ill' ? 'sick' : 'injury'}.in`, '今日は休ませてあげよ') : line(msxStartScene(s), '今月はどうする?');
     const cal = msxCalendar(s.turn); const scn = msxSceneBg(s.turn);
     const low = s.hp < s.hpMax * 0.3;
     const bag = Object.keys(s.bag || {}).filter((k) => s.bag[k] > 0);
     body = (<>
       <MsxBand s={s} v={v} ev={ev}/>
-      <MsxSay aid={s.aid} ex={yosu || low ? 'troubled' : (sayL.e || 'happy')} text={sayL.t}/>
+      <MsxSay aid={s.aid} ex={omenK ? (sayL.e || 'surprise') : yosu || low ? 'troubled' : (sayL.e || 'happy')} text={sayL.t}/>
       <div className="v-scene home">
         <img className="bg" src={scn.bg} alt=""/><div className="sh"/>
         <div className="gr"/><MsxMonArt run={run} className={`mon${low ? ' low' : ''}`} live/>
@@ -591,6 +620,9 @@ function MsxStats({ run, setRun, v, ev, onClose }) {
       </div>
       <div className="v-card"><div className="h2">🤝 忠誠度 {SUC.loyalOf(s)}<span className="sub">(甘え度 {s.ama}+恐れ度 {s.fear})</span></div>
         <div className="sub">方針: {MSX_POLICY_SCALE[Math.max(-3, Math.min(3, s.pol || 0)) + 3]}・人気 {s.pop}・Lv {s.lv}・成長の型: {typeof MASMON_CALC !== 'undefined' ? MASMON_CALC.typeOf(s.type).name : '—'}</div></div>
+      {s.omen || s.awake ? <div className="v-card" data-msx-yosu><div className="h2">🔎 様子</div>
+        {s.omen ? <div className="sub">様子: <b style={{ color: '#fde047' }}>なにか起きそう</b>(体がうっすら{s.omen.k === 2 ? '虹色に' : ''}光っている)</div> : null}
+        {s.awake ? <div className="sub">{s.awake >= 2 ? '🌈 超覚醒している(全能力 +70・レアキラ)' : '✨ 覚醒している(全能力 +30・キラ)'}</div> : null}</div> : null}
       <div className="v-card"><div className="h2">編成の親密度<span className="sub">(80で友情タッグ)</span></div>
         {s.team.map((m, i) => (
           <div key={i} className="msx-row" style={{ marginTop: 4 }}><MsxPf m={m} bond={s.bond[i]} tagAt={tagAt} cls="sm"/><span style={{ flex: 1, fontSize: 11, fontWeight: 900 }}>{msxMemberName(m)}<small className="sub">{m.kind === 'base' ? ' ベースモン' : ` ${m.rank}`}・得意 {m.top.map((k) => MSX_STAT_NAME[k]).join('・')}</small></span><b>{s.bond[i]}</b></div>
