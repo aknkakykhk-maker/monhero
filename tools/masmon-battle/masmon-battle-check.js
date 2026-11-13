@@ -464,6 +464,7 @@ const FORMATS = [[1, 1], [2, 2], [3, 3], [1, 2], [2, 3], [3, 1]];
 {
   const sp0 = Object.keys(catalog.species)[0], ts = catalog.species[sp0].techs, ids = ts.map((t) => t.id), id = ids[0];
   const nb = engine.normTechBoost;
+  check('⑲ techBoost: 芯が口の印 FEATURES.techBoost を出す', !!(engine.FEATURES && engine.FEATURES.techBoost === true));
   const c1 = nb({ [id]: { pow: 0.5, hit: 0.3, guts: 0.9 } }, ids)[id] || {};
   check('⑲ techBoost: 上限で切る(pow 0.20・hit 0.10・guts 0.15)', c1.pow === 0.2 && c1.hit === 0.1 && c1.guts === 0.15, JSON.stringify(c1));
   const c2 = nb({ [id]: { pow: -0.1, hit: '0.05', guts: NaN }, nope: { pow: 0.1 }, [ids[1]]: [0.1] }, ids);
