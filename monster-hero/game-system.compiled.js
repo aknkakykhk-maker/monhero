@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d6d165f904c15046
+// source-sha256: 4f2f9e86836cfbe5
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -169952,7 +169952,7 @@ function MlabCard({
     className: "truncate text-[10px] font-bold text-white"
   }, mon ? mon.nick || m && m.name : m && m.name), React.createElement("div", {
     className: "text-[9px] font-bold text-amber-200"
-  }, fuse ? '未育成' : mon ? `Lv.${Math.round(Number(mon.lv) || 1)}` : 'もとの値'));
+  }, fuse ? '育成前' : mon ? `Lv.${Math.round(Number(mon.lv) || 1)}` : 'もとの値'));
 }
 function MlabDetail({
   sp,
@@ -169988,7 +169988,7 @@ function MlabDetail({
     className: "truncate text-[15px] font-black text-white"
   }, mon ? mon.nick || m && m.name : m && m.name), React.createElement("div", {
     className: "mb-1.5 text-[10px] font-bold text-indigo-300"
-  }, fuse ? `${m && m.name} / 合体円盤石(未育成)` : mon ? `${m && m.name}${mon.rank ? ` / ランク ${mon.rank}` : ''}${mon.score ? ` / 総合力 ${Math.round(mon.score).toLocaleString('ja-JP')}` : ''}` : 'ベースモン(種類ごとのもとの値)'), React.createElement("div", {
+  }, fuse ? `${m && m.name} / 合体円盤石(育成前)` : mon ? `${m && m.name}${mon.rank ? ` / ランク ${mon.rank}` : ''}${mon.score ? ` / 総合力 ${Math.round(mon.score).toLocaleString('ja-JP')}` : ''}` : 'ベースモン(種類ごとのもとの値)'), React.createElement("div", {
     className: "flex gap-1"
   }, [['basic', '基礎'], ['feature', '特徴'], ['apt', '適性']].map(([id, t]) => React.createElement(MlabBtn, {
     key: id,
