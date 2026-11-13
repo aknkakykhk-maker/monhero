@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 20db3d9847fc2e08
+// generated-sha256: 44093b4f37cb18cd
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -87135,7 +87135,9 @@ function MsaStage({ log, frames, pos, teams, venueImg, ended = false, win = null
   const e0 = log[pos] || {};
   const memberOf = (side, i) => { const t = teams[side]; const ms = (t && t.members) || []; return ms[Number.isFinite(i) ? i : (f ? f.act[side] : 0)] || ms[0] || null; };
   const e = { ...e0, k: pos, atkSp: e0.side ? (memberOf(e0.side, e0.i) || {}).species : '', tech: msaTechInfo(log, e0) };
-  const gap = f && MSA_GAP[f.d] != null ? MSA_GAP[f.d] : MSA_GAP[1];
+  // 零でも2体の体と顔が見えるように、絵の幅の6割はあける(2026-11-13 社長「重なりを直して」。小さい子が大きい子の後ろに隠れた)
+  const gapOf = (d) => { const g = MSA_GAP[d] != null ? MSA_GAP[d] : MSA_GAP[1]; return d === 0 ? Math.max(g, Math.min(MSA_GAP[1] - 0.04, ((fill ? 140 : 96) * 0.6) / Math.max(200, stageW))) : g; };
+  const gap = gapOf(f ? f.d : 1);
   const xA = 0.5 - gap / 2; const xB = 0.5 + gap / 2;
   const fx = msaFxOf(log, e0, reduce, Number(speedF) || 1);
   const hitMs = e.ev === 'tech' && !reduce ? fx.pre + msaMotionMs(msaMotionKind(e.atkSp, e.tech)).hit : 0;
@@ -87169,7 +87171,7 @@ function MsaStage({ log, frames, pos, teams, venueImg, ended = false, win = null
   }, [pos, ended]);
   const regen = useMemo(() => msaRegenOf(log, frames), [log, frames]);
   if (!f) return null;
-  const spots = MSA_GAP.map(g => [0.5 - g / 2, 0.5 + g / 2]);
+  const spots = MSA_GAP.map((_, d) => { const g = gapOf(d); return [0.5 - g / 2, 0.5 + g / 2]; });
   const hpOf = (side) => (f.hp[side] || [])[f.act[side]];
   // ガッツの増減(足元の小さい札)は、ためた行だけ。技で使った分は技の札・削られた分は DAMAGE の下に出す
   const gdOf = (side) => {

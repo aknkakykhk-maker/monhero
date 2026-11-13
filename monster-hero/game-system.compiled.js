@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: dea18bc8310682d5
+// source-sha256: 22561de47f0334e9
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -169219,7 +169219,11 @@ function MsaStage({
     atkSp: e0.side ? (memberOf(e0.side, e0.i) || {}).species : '',
     tech: msaTechInfo(log, e0)
   };
-  const gap = f && MSA_GAP[f.d] != null ? MSA_GAP[f.d] : MSA_GAP[1];
+  const gapOf = d => {
+    const g = MSA_GAP[d] != null ? MSA_GAP[d] : MSA_GAP[1];
+    return d === 0 ? Math.max(g, Math.min(MSA_GAP[1] - 0.04, (fill ? 140 : 96) * 0.6 / Math.max(200, stageW))) : g;
+  };
+  const gap = gapOf(f ? f.d : 1);
   const xA = 0.5 - gap / 2;
   const xB = 0.5 + gap / 2;
   const fx = msaFxOf(log, e0, reduce, Number(speedF) || 1);
@@ -169262,7 +169266,10 @@ function MsaStage({
   }, [pos, ended]);
   const regen = useMemo(() => msaRegenOf(log, frames), [log, frames]);
   if (!f) return null;
-  const spots = MSA_GAP.map(g => [0.5 - g / 2, 0.5 + g / 2]);
+  const spots = MSA_GAP.map((_, d) => {
+    const g = gapOf(d);
+    return [0.5 - g / 2, 0.5 + g / 2];
+  });
   const hpOf = side => (f.hp[side] || [])[f.act[side]];
   const gdOf = side => {
     if (!pos || !e.side) return null;
