@@ -21,7 +21,7 @@
 //   ['st', 対象, 訓練の回数]  対象 = 能力のキー / main(素質のいちばん高い能力)/ all / rand / cheer(編成の子の1位の能力)/ type(編成の子のタイプの能力)
 //   ['loy', n] 忠誠(甘え・恐れに半分ずつ)/ ['fear', n] 恐れ度だけ / ['pop', n] 人気 / ['popHi', n] 人気60〜のときだけ足す
 //   ['hp', n] 体力(上限を100とした目盛り)/ ['str', n] ストレス / ['bond', 'cheer'|'cheer2'|'aid'|'team', n] 親密度
-//   ['buff', 状態] / ['fame', n] 名声 / ['pts', n] 能力ポイント / ['mas', n] 熟練 / ['flag', 名前] / ['goal', 目標]
+//   ['buff', 状態] / ['fame', n] 賞金(G) / ['pts', n] 能力ポイント / ['mas', n] 熟練 / ['flag', 名前] / ['goal', 目標]
 //   確率で分かれるとき: 選択肢に p・ok・ng(ok/ng の台本の場面は scene に書く)
 (function (root) {
   'use strict';

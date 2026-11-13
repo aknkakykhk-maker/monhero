@@ -57,7 +57,7 @@ const msxFxText = (f) => {
   if (k === 'str') return `ストレス ${msxSigned(a)}`;
   if (k === 'bond') return `${a === 'aid' ? '助手' : a === 'team' ? '編成みんな' : '編成のモンスター'}の親密度 ${msxSigned(b)}`;
   if (k === 'buff') return BUFFS[a] ? `${BUFFS[a].icon} ${BUFFS[a].name}` : 'いい調子になる';
-  if (k === 'fame') return `名声 ${msxSigned(a)}`;
+  if (k === 'fame') return `賞金 ${msxSigned(a)}G`;
   if (k === 'pts') return `能力ポイント ${msxSigned(a)}`;
   if (k === 'mas') return '技の熟練 +';
   if (k === 'flag') return MSX_FX_FLAG[a] || 'いいことがある';
@@ -70,8 +70,8 @@ const msxFxLine = (list) => { const t = (Array.isArray(list) ? list : []).map(ms
 const msxChoiceLines = (ch) => {
   if (!ch || typeof ch !== 'object') return ['お話の続きが変わる'];
   const out = [];
-  if (ch.need && ch.need.fame) out.push(`名声 ${ch.need.fame} が要る`);
-  if (ch.pay) out.push(`名声 −${ch.pay}`);
+  if (ch.need && ch.need.fame) out.push(`賞金 ${ch.need.fame}G が要る`);
+  if (ch.pay) out.push(`賞金 −${ch.pay}G`);
   if (ch.lottery) out.push('おみくじを引く(大吉・吉・…)');
   if (ch.p) { out.push(`成功 ${Math.round(ch.p * 100)}%: ${msxFxLine(ch.ok)}`); out.push(`失敗: ${msxFxLine(ch.ng)}`); }
   else if (ch.fx) out.push(msxFxLine(ch.fx));

@@ -300,7 +300,7 @@
     {"id":"ev.season.finaljan.narr1","who":"narr","t":"最後の初もうで。いつもより長く、手を合わせた。"},
     {"id":"ev.season.finalapr.narr1","who":"narr","t":"最後の花見。はじめての春から、ずいぶん遠くまで来た。"},
     {"id":"ev.small.nut.narr1","who":"narr","t":"旅の行商人が、見たこともない色の木の実を差し出してきた。「食べると強くなるよ、たぶんね」。"},
-    {"id":"ev.small.nut.choice.a","who":"choice","c":"a","t":"名声で買う"},
+    {"id":"ev.small.nut.choice.a","who":"choice","c":"a","t":"賞金で買う"},
     {"id":"ev.small.nut.choice.b","who":"choice","c":"b","t":"買わない"},
     {"id":"ev.small.nut.ok.narr1","who":"narr","c":"a","t":"木の実を食べた{mon}の体に、力がみなぎった！"},
     {"id":"ev.small.nut.ng.narr1","who":"narr","c":"a","t":"…{mon}がおなかを押さえてうずくまった。どうやら合わなかったらしい。"},
