@@ -112,7 +112,11 @@ export const parseTeam = (raw, engine, catalog, learn = {}) => {
     // 忠誠度・人気(助手の絆・無くてよい)。0〜100 の整数だけ。忠誠度はそのまま使う(低いほど不利)・人気は戦績から出す値を超えては使わない(battleTeam)
     if (m.loy != null && (!isInt(m.loy) || m.loy < 0 || m.loy > 100)) return { error: 'loy' };
     if (m.pop != null && (!isInt(m.pop) || m.pop < 0 || m.pop > 100)) return { error: 'pop' };
-    members.push({ slot: m.slot, species: m.species, name: m.name.trim(), lv: m.lv, stats, techs: [...techs], mastery, ...(m.loy != null ? { loy: m.loy } : {}), ...(m.pop != null ? { pop: m.pop } : {}) });
+    // 技ごとの強化 techBoost(モンサクの熟練から作る・無くてよい。2026-11-13 社長「フレンド対戦とランキングにも効かせる」)。
+    //   形が違う(オブジェクトでない)ものは断る。数の上限・覚えていない技は計算の芯と同じ切りそろえ(normTechBoost)で切る
+    if (m.techBoost != null && (typeof m.techBoost !== 'object' || Array.isArray(m.techBoost))) return { error: 'techBoost' };
+    const techBoost = m.techBoost != null && typeof engine.normTechBoost === 'function' ? engine.normTechBoost(m.techBoost, techs) : {};
+    members.push({ slot: m.slot, species: m.species, name: m.name.trim(), lv: m.lv, stats, techs: [...techs], mastery, ...(Object.keys(techBoost).length ? { techBoost } : {}), ...(m.loy != null ? { loy: m.loy } : {}), ...(m.pop != null ? { pop: m.pop } : {}) });
   }
   // 作戦(plan)・交代の早さ(swapPace)。無くてよい。計算の表にある名前だけ
   const team = { tactics: raw.tactics, members };
@@ -178,7 +182,7 @@ export const fairUnit = (u, keys) => {
   const stats = {};
   keys.forEach((k, i) => { stats[k] = base[i]; });
   // 覚えた技と熟練はそのまま(育てた戦い方で勝負)。能力と Lv だけそろえる
-  return { species: u.species, name: u.name, lv: FAIR_LV, stats, techs: u.techs, mastery: u.mastery, ...(u.loy != null ? { loy: u.loy } : {}), ...(u.pop != null ? { pop: u.pop } : {}) };
+  return { species: u.species, name: u.name, lv: FAIR_LV, stats, techs: u.techs, mastery: u.mastery, ...(u.techBoost ? { techBoost: u.techBoost } : {}), ...(u.loy != null ? { loy: u.loy } : {}), ...(u.pop != null ? { pop: u.pop } : {}) };
 };
 
 // 計算に渡す編成(区分と体数で作る)。登録の team はそのまま変えない
@@ -196,6 +200,7 @@ export const LOY_DEFAULT = 50;
 export const battleTeam = ({ assistantId, team, division, size, engine, pop = 0 }) => {
   const list = team.members.slice(0, size).map((m) => ({ species: m.species, name: m.name, lv: m.lv, stats: { ...m.stats },
     techs: Array.isArray(m.techs) ? [...m.techs] : undefined, mastery: m.mastery ? { ...m.mastery } : undefined,
+    ...(m.techBoost && typeof m.techBoost === 'object' && Object.keys(m.techBoost).length ? { techBoost: JSON.parse(JSON.stringify(m.techBoost)) } : {}),
     loy: m.loy != null ? m.loy : LOY_DEFAULT, ...(m.pop != null && pop > 0 ? { pop: Math.min(m.pop, pop) } : {}) }));
   return {
     assistantId,
