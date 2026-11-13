@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 997fea9439c9f487
+// source-sha256: 27556ba4e2fd57c0
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -147124,6 +147124,7 @@ function AssistantMasmonBattleWatch({
 }
 const ASSISTANT_MASMON_BATTLE_KEY = 'mh_assistant_masmon_battle_v1';
 const ambbInt = (v, lo, hi, d) => {
+  if (v === null || v === '' || typeof v === 'boolean') return d;
   const n = Number(v);
   return Number.isFinite(n) ? Math.max(lo, Math.min(hi, Math.round(n))) : d;
 };

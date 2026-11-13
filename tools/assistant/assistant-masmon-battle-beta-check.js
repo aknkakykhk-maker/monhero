@@ -153,6 +153,8 @@ const seed = () => {
     await shot('3-watch');
     await clickSel('[data-ambb-skip]');
     await page.waitForFunction(() => !!document.querySelector('[data-ambb-review]') && !!document.querySelector('[data-ambb-if] .ambb-if'), { timeout: 30000 }).catch(() => {});
+    // 決着の印(.msa-end b)は大きく出てから縮むアニメ(0.55秒)。動いている最中を測るとはみ出して見えるので、止まってから測る(ミハリ6 #5878)
+    await page.waitForTimeout(700);
     const rv = await page.evaluate(() => ({
       gains: document.querySelectorAll('[data-ambb-gain] .ambb-gain').length, ifs: !!document.querySelector('[data-ambb-if] .ambb-if'), ask: !!document.querySelector('[data-ambb-ask]'),
       wide: document.documentElement.scrollWidth > window.innerWidth + 1 || [...document.querySelectorAll('.ambw-in *')].some(x => x.getBoundingClientRect().right > window.innerWidth + 1),

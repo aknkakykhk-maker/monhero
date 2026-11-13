@@ -10,7 +10,8 @@
 // ・観戦の部品(ambwLoadEngine・ambwFramesOf・ambwIsHighlight・AmbwPanel・AMBW_CSS)は 56-assistant-masmon-battle-view.jsx を使い回す
 // 作戦・交代の早さの数字: docs/progress/assistant-peer/masmon-battle/beta/STYLE-PLAN.md
 const ASSISTANT_MASMON_BATTLE_KEY = 'mh_assistant_masmon_battle_v1';
-const ambbInt = (v, lo, hi, d) => { const n = Number(v); return Number.isFinite(n) ? Math.max(lo, Math.min(hi, Math.round(n))) : d; };
+// null・空の文字・真偽は値が無いものとして既定値へ(Number(null)=0 で 0 にしない。ミハリ6 #5878)
+const ambbInt = (v, lo, hi, d) => { if (v === null || v === '' || typeof v === 'boolean') return d; const n = Number(v); return Number.isFinite(n) ? Math.max(lo, Math.min(hi, Math.round(n))) : d; };
 const AMBB_V = 1;
 // 作戦・交代の早さ: 名前だけを計算へ渡す(team.plan・team.swapPace)。倍率は計算側の表 ASSISTANT_MASMON_BATTLE.PLANS・SWAP_PACES(タタカイ #5286)。おまかせは渡さない
 const AMBB_PLANS = Object.freeze([
