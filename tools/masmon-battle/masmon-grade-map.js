@@ -55,6 +55,36 @@ ORIG.rows.forEach((r) => {
   table[sp].push(techOf({ name: r.nm, kind: r.kind === 'かしこさ' ? 'wise' : 'pow', dist: DIST[r.range] ?? 1, guts: r.guts, dmg: r.dmg, acc: r.acc, gd: r.gd, cri: r.cri, moveTo: r.moveTo ? DIST[r.moveTo] : null, start: table[sp].length < 2 }, `${sp.toLowerCase()}_o${String(table[sp].length + 1).padStart(2, '0')}`));
 });
 
+// ── --tune: 釣り合いの調整(2026-11-13 社長「技性能は結構差があるからしっかり精査してバランス調整していいよ。ただ個性がなくならないように」)
+//   ① 種類ごとの平均(命中・削り・会心・威力あたりのガッツ)を、全体の平均へ SHRINK の分だけ寄せる(種類の順位は変わらない=得意は残る)
+//   ② 零・近の技が1つも無い種類は、いちばん近い間合いの技を1つずつ広げる(届かない間合いで何もできない時間を減らす)
+//   ③ 種類ごとの威力の倍率を、試算の勝率から少しずつ決める(0.8〜1.25)。直した所は FIX に残して一覧に出す
+const TUNE = process.argv.includes('--tune');
+const SHRINK = 0.5;
+const FIX = {};
+const N_TUNE = Number((process.argv.find(a => a.startsWith('--tn=')) || '--tn=4').slice(5));
+const meanOf = (list, f) => list.reduce((a, t) => a + f(t), 0) / Math.max(1, list.length);
+const LIM = engine.TECH_LIMITS;
+const clampK = (k, v) => Math.max(LIM[k][0], Math.min(LIM[k][1], Math.round(v)));
+if (TUNE) {
+  globalThis.__before = Object.fromEntries(['hit', 'gd', 'crit'].map(k => [k, Object.fromEntries(Object.entries(table).map(([sp, l]) => [sp, meanOf(l, t => t[k])]))]));
+  const allT = Object.values(table).flat();
+  const g = { hit: meanOf(allT, t => t.hit), gd: meanOf(allT, t => t.gd), crit: meanOf(allT, t => t.crit), eff: meanOf(allT, t => t.power / t.guts) };
+  for (const [sp, list] of Object.entries(table)) {
+    const fx = FIX[sp] = { notes: [] };
+    for (const k of ['hit', 'gd', 'crit']) {
+      const d = (meanOf(list, t => t[k]) - g[k]) * SHRINK;
+      if (Math.abs(d) >= 1) { list.forEach(t => { t[k] = clampK(k, t[k] - d); }); fx.notes.push(`${{ hit: '命中', gd: '削り', crit: '会心' }[k]} ${d > 0 ? '−' : '+'}${Math.abs(Math.round(d))}`); }
+    }
+    const e = meanOf(list, t => t.power / t.guts), r = (g.eff + (e - g.eff) * (1 - SHRINK)) / e;
+    if (Math.abs(r - 1) >= 0.03) { list.forEach(t => { t.guts = clampK('guts', t.guts * r); }); fx.notes.push(`ガッツ ×${Math.round(r * 100) / 100}`); }
+    for (const d of [0, 1]) if (!list.some(t => t.dist.includes(d))) {
+      const near = list.filter(t => t.dist.every(x => x > d)).sort((a, b) => Math.min(...a.dist) - Math.min(...b.dist) || a.guts - b.guts)[0];
+      if (near) { near.dist = [...new Set([d, ...near.dist])].sort(); fx.notes.push(`${near.name} を${['零', '近'][d]}にも届く`); }
+    }
+    fx.mul = 1;
+  }
+}
 const jsonArg = process.argv.find(a => a.startsWith('--json='));
 if (jsonArg) { fs.writeFileSync(jsonArg.slice(7), JSON.stringify({ map: MAP, species: table }, null, 1)); console.log('書き出し:', jsonArg.slice(7)); }
 
@@ -74,7 +104,22 @@ const rate = (techs) => {
   }
   return Object.fromEntries(ids.map(i => [i, Math.round(w[i] / g[i] * 1000) / 10]));
 };
-const r0 = rate(NOW.species), r1 = rate(table);
+const r0 = rate(NOW.species);
+let r1 = rate(table);
+if (TUNE) {
+  const base = Object.fromEntries(Object.entries(table).map(([sp, l]) => [sp, l.map(t => t.power)]));
+  for (let it = 0; it < N_TUNE; it++) {
+    for (const sp of Object.keys(table)) {
+      const fx = FIX[sp]; const w = r1[sp] / 100;
+      fx.mul = Math.max(0.8, Math.min(1.25, fx.mul * (1 + (0.5 - w) * 0.6)));
+      table[sp].forEach((t, i) => { t.power = clampK('power', base[sp][i] * fx.mul); });
+    }
+    r1 = rate(table);
+    const v = Object.values(r1); console.log(`  調整 ${it + 1}回目: ${Math.min(...v)}〜${Math.max(...v)}%`);
+  }
+  for (const fx of Object.values(FIX)) if (Math.abs(fx.mul - 1) >= 0.02) fx.notes.push(`威力 ×${Math.round(fx.mul * 100) / 100}`);
+}
+if (jsonArg && TUNE) fs.writeFileSync(jsonArg.slice(7), JSON.stringify({ map: MAP, fix: FIX, species: table }, null, 1));
 const P = (k, list) => `${k}: ` + GR.filter(x => all.some(s => s[Object.keys(ATTR).find(a => ATTR[a] === list)] === x)).map(x => `${x}=${MAP[list][x]}`).join(' ');
 console.log('■ 等級 → 数(資料の並びを、いまの技表の幅へ分位で写す)');
 for (const k of Object.values(ATTR)) console.log(' ', P(k, k));
@@ -86,3 +131,9 @@ const line = (i) => `${orig.has(i) ? '★' : ' '}${A[i].name} ${r0[i]}→${r1[i]
 console.log('  上位5:', ids.slice(0, 5).map(line).join(' / '));
 console.log('  下位5:', ids.slice(-5).map(line).join(' / '));
 console.log('  オリジナル5種:', ids.filter(i => orig.has(i)).map(line).join(' / '));
+if (TUNE) { console.log('■ 直した所'); for (const i of ids) console.log(`  ${orig.has(i) ? '★' : ' '}${A[i].name} ${r1[i]}%: ${FIX[i].notes.join('・') || 'なし'}`); }
+// 個性(種類の得意)が残っているか: 種類ごとの平均の順位を、直す前と比べる
+if (TUNE && globalThis.__before) {
+  const rk = (o) => Object.keys(o).sort((a, b) => o[b] - o[a]);
+  for (const k of ['hit', 'gd', 'crit']) { const after = Object.fromEntries(Object.entries(table).map(([sp, l]) => [sp, meanOf(l, t => t[k])])); const b = rk(globalThis.__before[k]), a2 = rk(after); const same = b.filter((x, i) => a2[i] === x).length; console.log(`  ${k} の種類の順位: ${same}/${b.length} が同じ(上位3 ${b.slice(0, 3).map(x => A[x].name).join('・')} → ${a2.slice(0, 3).map(x => A[x].name).join('・')})`); }
+}

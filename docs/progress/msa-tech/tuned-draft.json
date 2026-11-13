@@ -1,0 +1,7559 @@
+{
+ "map": {
+  "power": {
+   "G": 6,
+   "G+": 7,
+   "F": 8,
+   "F+": 9,
+   "E": 11,
+   "E+": 13,
+   "D": 16,
+   "D+": 21,
+   "C": 24,
+   "C+": 27,
+   "B": 30,
+   "B+": 34,
+   "A": 42,
+   "A+": 47,
+   "S": 55,
+   "S+": 58,
+   "SS": 60
+  },
+  "hit": {
+   "G": -25,
+   "G+": -25,
+   "F": -24,
+   "F+": -24,
+   "E": -22,
+   "E+": -21,
+   "D": -19,
+   "D+": -15,
+   "C": -9,
+   "C+": -3,
+   "B": 1,
+   "B+": 4,
+   "A": 6,
+   "A+": 11,
+   "S": 14,
+   "S+": 17,
+   "SS": 17
+  },
+  "gd": {
+   "G": 0,
+   "G+": 0,
+   "F": 0,
+   "F+": 2,
+   "E": 4,
+   "E+": 6,
+   "D": 7,
+   "D+": 9,
+   "C": 12,
+   "C+": 13,
+   "B": 14,
+   "B+": 19,
+   "A": 24,
+   "A+": 26,
+   "S": 27,
+   "S+": 27,
+   "SS": 27
+  },
+  "crit": {
+   "G": 6,
+   "G+": 8,
+   "F": 8,
+   "F+": 8,
+   "E": 8,
+   "E+": 9,
+   "D": 10,
+   "D+": 11,
+   "C": 12,
+   "C+": 15,
+   "B": 18,
+   "B+": 21,
+   "A": 24,
+   "A+": 26,
+   "S": 27,
+   "S+": 28,
+   "SS": 28
+  }
+ },
+ "fix": {
+  "Mocchi": {
+   "notes": [
+    "ガッツ ×0.92",
+    "威力 ×0.8"
+   ],
+   "mul": 0.8
+  },
+  "Suezo": {
+   "notes": [
+    "命中 +2",
+    "ガッツ ×1.14",
+    "威力 ×1.25"
+   ],
+   "mul": 1.25
+  },
+  "Golem": {
+   "notes": [
+    "命中 +5",
+    "ガッツ ×0.85",
+    "威力 ×0.8"
+   ],
+   "mul": 0.8
+  },
+  "Tiger": {
+   "notes": [
+    "削り +2",
+    "威力 ×1.06"
+   ],
+   "mul": 1.058061523424224
+  },
+  "Ham": {
+   "notes": [
+    "命中 +2",
+    "削り +2",
+    "ガッツ ×1.06",
+    "威力 ×1.23"
+   ],
+   "mul": 1.232120374209616
+  },
+  "Pixie": {
+   "notes": [],
+   "mul": 1.006593663971584
+  },
+  "Mia": {
+   "notes": [
+    "威力 ×0.96"
+   ],
+   "mul": 0.9624050300800001
+  },
+  "Monol": {
+   "notes": [
+    "会心 +1",
+    "威力 ×1.09"
+   ],
+   "mul": 1.0852513494630398
+  },
+  "Oboro": {
+   "notes": [
+    "命中 −2",
+    "ガッツ ×1.09",
+    "威力 ×1.22"
+   ],
+   "mul": 1.2233924561470533
+  },
+  "Plant": {
+   "notes": [
+    "命中 −2",
+    "ガッツ ×1.09",
+    "威力 ×1.25"
+   ],
+   "mul": 1.2495663142668163
+  },
+  "Zan": {
+   "notes": [
+    "命中 −1",
+    "削り +1",
+    "ガッツ ×1.05",
+    "威力 ×1.08"
+   ],
+   "mul": 1.076314905667456
+  },
+  "Mitarashi": {
+   "notes": [
+    "ガッツ ×0.92",
+    "威力 ×0.8"
+   ],
+   "mul": 0.8
+  },
+  "Ark": {
+   "notes": [
+    "削り −3"
+   ],
+   "mul": 0.9854071689394241
+  },
+  "Iblis": {
+   "notes": [
+    "削り −3"
+   ],
+   "mul": 0.996035369335552
+  },
+  "Snegurochka": {
+   "notes": [
+    "命中 +1",
+    "ガッツ ×1.09",
+    "威力 ×1.17"
+   ],
+   "mul": 1.1693707824332802
+  },
+  "Undine": {
+   "notes": [
+    "ガッツ ×1.11",
+    "威力 ×1.17"
+   ],
+   "mul": 1.1663323191432642
+  },
+  "Yaobikuni": {
+   "notes": [
+    "ガッツ ×1.11",
+    "威力 ×1.14"
+   ],
+   "mul": 1.14101114697257
+  },
+  "Yggdrasil": {
+   "notes": [
+    "会心 −2",
+    "威力 ×0.86"
+   ],
+   "mul": 0.8642726752608639
+  },
+  "MelWhip": {
+   "notes": [
+    "会心 −2",
+    "威力 ×0.84"
+   ],
+   "mul": 0.83559531681664
+  },
+  "Ghost": {
+   "notes": [
+    "命中 −2",
+    "会心 −2",
+    "ガッツ ×0.89",
+    "威力 ×0.8"
+   ],
+   "mul": 0.8
+  },
+  "Spooky": {
+   "notes": [
+    "命中 −3",
+    "会心 −2",
+    "ガッツ ×0.91",
+    "威力 ×0.8"
+   ],
+   "mul": 0.8
+  },
+  "Illumine": {
+   "notes": [
+    "命中 −1",
+    "ガッツ ×1.06",
+    "威力 ×1.03"
+   ],
+   "mul": 1.0333736423223139
+  },
+  "Dreamy": {
+   "notes": [
+    "ガッツ ×1.05",
+    "威力 ×1.16"
+   ],
+   "mul": 1.16207700805636
+  },
+  "Kyubi": {
+   "notes": [
+    "命中 −2",
+    "威力 ×0.97"
+   ],
+   "mul": 0.9720818000607999
+  },
+  "Orihime": {
+   "notes": [
+    "命中 −3",
+    "威力 ×0.87"
+   ],
+   "mul": 0.8667314240273921
+  },
+  "Pandora": {
+   "notes": [
+    "命中 +5",
+    "削り +2",
+    "ガッツ ×0.97",
+    "威力 ×1.1"
+   ],
+   "mul": 1.097839209656877
+  },
+  "Eiki": {
+   "notes": [
+    "命中 −2",
+    "削り +3",
+    "会心 −2",
+    "ガッツ ×1.04",
+    "威力 ×1.11"
+   ],
+   "mul": 1.11397897732
+  },
+  "KenshiMocchi": {
+   "notes": [
+    "命中 −2",
+    "削り +1"
+   ],
+   "mul": 0.9817968493404161
+  },
+  "Melody": {
+   "notes": [
+    "命中 +1",
+    "削り −2",
+    "会心 +2",
+    "ガッツ ×1.07",
+    "威力 ×1.25"
+   ],
+   "mul": 1.25
+  },
+  "Kuromy": {
+   "notes": [
+    "命中 +4",
+    "威力 ×1.15"
+   ],
+   "mul": 1.1497380374702848
+  }
+ },
+ "species": {
+  "Mocchi": [
+   {
+    "id": "sk-0402",
+    "name": "もんた",
+    "kind": "pow",
+    "dist": [
+     0
+    ],
+    "power": 13,
+    "hit": -9,
+    "guts": 14,
+    "crit": 6,
+    "gd": 0,
+    "learn": {
+     "start": true
+    }
+   },
+   {
+    "id": "sk-0400",
+    "name": "ローリンモッチ",
+    "kind": "pow",
+    "dist": [
+     2
+    ],
+    "power": 13,
+    "hit": -19,
+    "guts": 18,
+    "crit": 18,
+    "gd": 4,
+    "moveTo": 0,
+    "learn": {
+     "start": true
+    }
+   },
+   {
+    "id": "sk-0401",
+    "name": "もちき",
+    "kind": "pow",
+    "dist": [
+     1
+    ],
+    "power": 19,
+    "hit": -19,
+    "guts": 20,
+    "crit": 8,
+    "gd": 0
+   },
+   {
+    "id": "sk-0405",
+    "name": "ぺろりん",
+    "kind": "wise",
+    "dist": [
+     1
+    ],
+    "power": 5,
+    "hit": -9,
+    "guts": 18,
+    "crit": 10,
+    "gd": 24
+   },
+   {
+    "id": "sk-0406",
+    "name": "ガッチョ",
+    "kind": "pow",
+    "dist": [
+     0
+    ],
+    "power": 17,
+    "hit": 1,
+    "guts": 18,
+    "crit": 8,
+    "gd": 0
+   },
+   {
+    "id": "sk-0403",
+    "name": "モッチ砲",
+    "kind": "wise",
+    "dist": [
+     3
+    ],
+    "power": 22,
+    "hit": -3,
+    "guts": 21,
+    "crit": 6,
+    "gd": 0
+   },
+   {
+    "id": "sk-0404",
+    "name": "さくら吹雪",
+    "kind": "wise",
+    "dist": [
+     2
+    ],
+    "power": 13,
+    "hit": -9,
+    "guts": 22,
+    "crit": 18,
+    "gd": 4
+   },
+   {
+    "id": "sk-0409",
+    "name": "ガッチャー",
+    "kind": "pow",
+    "dist": [
+     0
+    ],
+    "power": 19,
+    "hit": 6,
+    "guts": 20,
+    "crit": 8,
+    "gd": 7
+   },
+   {
+    "id": "sk-0408",
+    "name": "もっちゃん",
+    "kind": "pow",
+    "dist": [
+     1
+    ],
+    "power": 19,
+    "hit": -24,
+    "guts": 22,
+    "crit": 6,
+    "gd": 4
+   },
+   {
+    "id": "sk-0407",
+    "name": "超ローリンモッチ",
+    "kind": "pow",
+    "dist": [
+     2
+    ],
+    "power": 22,
+    "hit": -9,
+    "guts": 30,
+    "crit": 24,
+    "gd": 7,
+    "moveTo": 0
+   },
+   {
+    "id": "sk-0413",
+    "name": "超ガッチョ",
+    "kind": "pow",
+    "dist": [
+     0
+    ],
+    "power": 27,
+    "hit": 1,
+    "guts": 30,
+    "crit": 10,
+    "gd": 14
+   },
+   {
+    "id": "sk-0410",
+    "name": "大モッチ砲",
+    "kind": "wise",
+    "dist": [
+     3
+    ],
+    "power": 44,
+    "hit": 1,
+    "guts": 35,
+    "crit": 10,
+    "gd": 4
+   },
+   {
+    "id": "sk-0411",
+    "name": "枝垂ざくら",
+    "kind": "wise",
+    "dist": [
+     2
+    ],
+    "power": 38,
+    "hit": 6,
+    "guts": 37,
+    "crit": 12,
+    "gd": 0
+   },
+   {
+    "id": "sk-0412",
+    "name": "もっさま",
+    "kind": "pow",
+    "dist": [
+     1
+    ],
+    "power": 44,
+    "hit": -9,
+    "guts": 37,
+    "crit": 12,
+    "gd": 12
+   },
+   {
+    "id": "sk-0416",
+    "name": "もっさまん",
+    "kind": "pow",
+    "dist": [
+     1
+    ],
+    "power": 44,
+    "hit": -3,
+    "guts": 39,
+    "crit": 28,
+    "gd": 19
+   },
+   {
+    "id": "sk-0415",
+    "name": "宵闇ざくら",
+    "kind": "wise",
+    "dist": [
+     2
+    ],
+    "power": 44,
+    "hit": 6,
+    "guts": 42,
+    "crit": 12,
+    "gd": 0
+   },
+   {
+    "id": "sk-0414",
+    "name": "超モッチ砲",
+    "kind": "wise",
+    "dist": [
+     3
+    ],
+    "power": 46,
+    "hit": -9,
+    "guts": 43,
+    "crit": 18,
+    "gd": 14
+   }
+  ],
+  "Suezo": [
+   {
+    "id": "sk-0461",
+    "name": "ツバはき",
+    "kind": "wise",
+    "dist": [
+     1
+    ],
+    "power": 10,
+    "hit": -20,
+    "guts": 17,
+    "crit": 6,
+    "gd": 4,
+    "learn": {
+     "start": true
+    }
+   },
+   {
+    "id": "sk-0462",
+    "name": "しっぽアタック",
+    "kind": "pow",
+    "dist": [
+     0
+    ],
+    "power": 10,
+    "hit": -17,
+    "guts": 18,
+    "crit": 6,
+    "gd": 0,
+    "learn": {
+     "start": true
+    }
+   },
+   {
+    "id": "sk-0460",
+    "name": "テレポート",
+    "kind": "pow",
+    "dist": [
+     2
+    ],
+    "power": 10,
+    "hit": 8,
+    "guts": 23,
+    "crit": 8,
+    "gd": 0,
+    "moveTo": 0
+   },
+   {
+    "id": "sk-0463",
+    "name": "テレパシー",
+    "kind": "wise",
+    "dist": [
+     2
+    ],
+    "power": 14,
+    "hit": -7,
+    "guts": 26,
+    "crit": 18,
+    "gd": 12
+   },
+   {
+    "id": "sk-0464",
+    "name": "かみつき",
+    "kind": "pow",
+    "dist": [
+     1
+    ],
+    "power": 30,
+    "hit": -20,
+    "guts": 29,
+    "crit": 8,
+    "gd": 7
+   },
+   {
+    "id": "sk-0465",
+    "name": "キッス",
+    "kind": "wise",
+    "dist": [
+     0
+    ],
+    "power": 20,
+    "hit": -7,
+    "guts": 35,
+    "crit": 8,
+    "gd": 14
+   },
+   {
+    "id": "sk-0468",
+    "name": "なめる",
+    "kind": "wise",
+    "dist": [
+     1
+    ],
+    "power": 14,
+    "hit": 3,
+    "guts": 25,
+    "crit": 10,
+    "gd": 14
+   },
+   {
+    "id": "sk-0467",
+    "name": "サイコキネシス",
+    "kind": "wise",
+    "dist": [
+     2
+    ],
+    "power": 20,
+    "hit": 8,
+    "guts": 29,
+    "crit": 8,
+    "gd": 4
+   },
+   {
+    "id": "sk-0466",
+    "name": "熱視線",
+    "kind": "wise",
+    "dist": [
+     3
+    ],
+    "power": 30,
+    "hit": -17,
+    "guts": 38,
+    "crit": 24,
+    "gd": 7
+   },
+   {
+    "id": "sk-0469",
+    "name": "ベロビンタ",
+    "kind": "pow",
+    "dist": [
+     0
+    ],
+    "power": 53,
+    "hit": -22,
+    "guts": 40,
+    "crit": 10,
+    "gd": 14
+   },
+   {
+    "id": "sk-0470",
+    "name": "歌う",
+    "kind": "wise",
+    "dist": [
+     3
+    ],
+    "power": 30,
+    "hit": -7,
+    "guts": 34,
+    "crit": 6,
+    "gd": 27
+   },
+   {
+    "id": "sk-0471",
+    "name": "クロノキネシス",
+    "kind": "wise",
+    "dist": [
+     2
+    ],
+    "power": 30,
+    "hit": 3,
+    "guts": 43,
+    "crit": 24,
+    "gd": 4
+   },
+   {
+    "id": "sk-0473",
+    "name": "ラブインパクト",
+    "kind": "wise",
+    "dist": [
+     0
+    ],
+    "power": 38,
+    "hit": 3,
+    "guts": 43,
+    "crit": 10,
+    "gd": 24
+   },
+   {
+    "id": "sk-0472",
+    "name": "食う",
+    "kind": "pow",
+    "dist": [
+     1
+    ],
+    "power": 38,
+    "hit": 8,
+    "guts": 53,
+    "crit": 12,
+    "gd": 12
+   },
+   {
+    "id": "sk-0474",
+    "name": "超熱視線",
+    "kind": "wise",
+    "dist": [
+     3
+    ],
+    "power": 59,
+    "hit": 3,
+    "guts": 51,
+    "crit": 27,
+    "gd": 7
+   }
+  ],
+  "Golem": [
+   {
+    "id": "sk-0293",
+    "name": "でこぴん",
+    "kind": "pow",
+    "dist": [
+     1
+    ],
+    "power": 17,
+    "hit": -14,
+    "guts": 14,
+    "crit": 12,
+    "gd": 0,
+    "learn": {
+     "start": true
+    }
+   },
+   {
+    "id": "sk-0294",
+    "name": "キック",
+    "kind": "pow",
+    "dist": [
+     0
+    ],
+    "power": 19,
+    "hit": -10,
+    "guts": 14,
+    "crit": 6,
+    "gd": 0,
+    "learn": {
+     "start": true
+    }
+   },
+   {
+    "id": "sk-0292",
+    "name": "のびーるパンチ",
+    "kind": "pow",
+    "dist": [
+     2
+    ],
+    "power": 13,
+    "hit": -14,
+    "guts": 17,
+    "crit": 6,
+    "gd": 14
+   },
+   {
+    "id": "sk-0298",
+    "name": "ビンタ",
+    "kind": "pow",
+    "dist": [
+     0
+    ],
+    "power": 13,
+    "hit": 6,
+    "guts": 15,
+    "crit": 8,
+    "gd": 0
+   },
+   {
+    "id": "sk-0295",
+    "name": "地震",
+    "kind": "wise",
+    "dist": [
+     3
+    ],
+    "power": 19,
+    "hit": -14,
+    "guts": 22,
+    "crit": 8,
+    "gd": 12
+   },
+   {
+    "id": "sk-0296",
+    "name": "大ビンタ",
+    "kind": "pow",
+    "dist": [
+     2
+    ],
+    "power": 19,
+    "hit": 11,
+    "guts": 22,
+    "crit": 6,
+    "gd": 0
+   },
+   {
+    "id": "sk-0297",
+    "name": "アッパー",
+    "kind": "pow",
+    "dist": [
+     1
+    ],
+    "power": 24,
+    "hit": -14,
+    "guts": 22,
+    "crit": 11,
+    "gd": 0
+   },
+   {
+    "id": "sk-0302",
+    "name": "ハエたたき",
+    "kind": "pow",
+    "dist": [
+     0
+    ],
+    "power": 24,
+    "hit": -4,
+    "guts": 16,
+    "crit": 8,
+    "gd": 12
+   },
+   {
+    "id": "sk-0301",
+    "name": "合掌",
+    "kind": "pow",
+    "dist": [
+     1
+    ],
+    "power": 27,
+    "hit": -10,
+    "guts": 19,
+    "crit": 18,
+    "gd": 0
+   },
+   {
+    "id": "sk-0300",
+    "name": "フライングプレス",
+    "kind": "pow",
+    "dist": [
+     2
+    ],
+    "power": 44,
+    "hit": -19,
+    "guts": 25,
+    "crit": 18,
+    "gd": 14,
+    "moveTo": 0
+   },
+   {
+    "id": "sk-0299",
+    "name": "大でこぴん",
+    "kind": "pow",
+    "dist": [
+     3
+    ],
+    "power": 34,
+    "hit": -17,
+    "guts": 26,
+    "crit": 24,
+    "gd": 4
+   },
+   {
+    "id": "sk-0303",
+    "name": "竜巻アタック",
+    "kind": "pow",
+    "dist": [
+     3
+    ],
+    "power": 44,
+    "hit": -16,
+    "guts": 33,
+    "crit": 18,
+    "gd": 12
+   },
+   {
+    "id": "sk-0305",
+    "name": "大ハエタタキ",
+    "kind": "pow",
+    "dist": [
+     1
+    ],
+    "power": 44,
+    "hit": -4,
+    "guts": 35,
+    "crit": 6,
+    "gd": 27
+   },
+   {
+    "id": "sk-0306",
+    "name": "大キック",
+    "kind": "pow",
+    "dist": [
+     0
+    ],
+    "power": 46,
+    "hit": 6,
+    "guts": 36,
+    "crit": 18,
+    "gd": 0
+   },
+   {
+    "id": "sk-0304",
+    "name": "ぐるぐるアタック",
+    "kind": "pow",
+    "dist": [
+     2
+    ],
+    "power": 46,
+    "hit": -10,
+    "guts": 39,
+    "crit": 15,
+    "gd": 24
+   },
+   {
+    "id": "sk-0307",
+    "name": "掌打",
+    "kind": "pow",
+    "dist": [
+     1
+    ],
+    "power": 46,
+    "hit": -14,
+    "guts": 41,
+    "crit": 18,
+    "gd": 12
+   }
+  ],
+  "Tiger": [
+   {
+    "id": "sk-0386",
+    "name": "かみつき",
+    "kind": "pow",
+    "dist": [
+     0
+    ],
+    "power": 12,
+    "hit": -3,
+    "guts": 13,
+    "crit": 8,
+    "gd": 2,
+    "learn": {
+     "start": true
+    }
+   },
+   {
+    "id": "sk-0385",
+    "name": "ひっかき",
+    "kind": "pow",
+    "dist": [
+     1
+    ],
+    "power": 8,
+    "hit": -15,
+    "guts": 14,
+    "crit": 6,
+    "gd": 2,
+    "learn": {
+     "start": true
+    }
+   },
+   {
+    "id": "sk-0384",
+    "name": "体当たり",
+    "kind": "pow",
+    "dist": [
+     2
+    ],
+    "power": 22,
+    "hit": 6,
+    "guts": 17,
+    "crit": 8,
+    "gd": 2
+   },
+   {
+    "id": "sk-0390",
+    "name": "雷撃",
+    "kind": "wise",
+    "dist": [
+     0
+    ],
+    "power": 12,
+    "hit": -9,
+    "guts": 18,
+    "crit": 11,
+    "gd": 16
+   },
+   {
+    "id": "sk-0389",
+    "name": "ワンツー",
+    "kind": "pow",
+    "dist": [
+     1
+    ],
+    "power": 29,
+    "hit": -15,
+    "guts": 19,
+    "crit": 8,
+    "gd": 2
+   },
+   {
+    "id": "sk-0387",
+    "name": "影撃",
+    "kind": "pow",
+    "dist": [
+     3
+    ],
+    "power": 12,
+    "hit": 1,
+    "guts": 23,
+    "crit": 18,
+    "gd": 2,
+    "moveTo": 0
+   },
+   {
+    "id": "sk-0388",
+    "name": "冷気弾",
+    "kind": "wise",
+    "dist": [
+     2
+    ],
+    "power": 17,
+    "hit": -22,
+    "guts": 24,
+    "crit": 18,
+    "gd": 2
+   },
+   {
+    "id": "sk-0393",
+    "name": "超雷撃",
+    "kind": "wise",
+    "dist": [
+     1
+    ],
+    "power": 29,
+    "hit": -9,
+    "guts": 19,
+    "crit": 8,
+    "gd": 26
+   },
+   {
+    "id": "sk-0392",
+    "name": "コンビネーション",
+    "kind": "pow",
+    "dist": [
+     2
+    ],
+    "power": 32,
+    "hit": -19,
+    "guts": 22,
+    "crit": 12,
+    "gd": 2
+   },
+   {
+    "id": "sk-0391",
+    "name": "空中回転アタック",
+    "kind": "pow",
+    "dist": [
+     3
+    ],
+    "power": 29,
+    "hit": 14,
+    "guts": 26,
+    "crit": 15,
+    "gd": 2,
+    "moveTo": 1
+   },
+   {
+    "id": "sk-0394",
+    "name": "雷撃コンボ",
+    "kind": "pow",
+    "dist": [
+     0
+    ],
+    "power": 29,
+    "hit": -9,
+    "guts": 29,
+    "crit": 21,
+    "gd": 14
+   },
+   {
+    "id": "sk-0395",
+    "name": "ブリザード",
+    "kind": "wise",
+    "dist": [
+     3
+    ],
+    "power": 25,
+    "hit": -9,
+    "guts": 30,
+    "crit": 18,
+    "gd": 2
+   },
+   {
+    "id": "sk-0396",
+    "name": "突き刺し",
+    "kind": "pow",
+    "dist": [
+     2
+    ],
+    "power": 36,
+    "hit": -9,
+    "guts": 32,
+    "crit": 21,
+    "gd": 2
+   },
+   {
+    "id": "sk-0397",
+    "name": "落雷共鳴",
+    "kind": "pow",
+    "dist": [
+     0
+    ],
+    "power": 58,
+    "hit": 1,
+    "guts": 48,
+    "crit": 18,
+    "gd": 2
+   },
+   {
+    "id": "sk-0399",
+    "name": "終狼咆哮",
+    "kind": "pow",
+    "dist": [
+     0
+    ],
+    "power": 36,
+    "hit": 6,
+    "guts": 45,
+    "crit": 18,
+    "gd": 26
+   },
+   {
+    "id": "sk-0398",
+    "name": "ライジングブースト",
+    "kind": "wise",
+    "dist": [
+     1
+    ],
+    "power": 36,
+    "hit": 1,
+    "guts": 49,
+    "crit": 21,
+    "gd": 2
+   }
+  ],
+  "Ham": [
+   {
+    "id": "sk-0339",
+    "name": "ワン・ツー",
+    "kind": "pow",
+    "dist": [
+     2
+    ],
+    "power": 10,
+    "hit": -7,
+    "guts": 15,
+    "crit": 6,
+    "gd": 2,
+    "learn": {
+     "start": true
+    }
+   },
+   {
+    "id": "sk-0340",
+    "name": "正拳",
+    "kind": "pow",
+    "dist": [
+     0
+    ],
+    "power": 14,
+    "hit": -7,
+    "guts": 21,
+    "crit": 10,
+    "gd": 2,
+    "learn": {
+     "start": true
+    }
+   },
+   {
+    "id": "sk-0338",
+    "name": "飛び蹴り",
+    "kind": "pow",
+    "dist": [
+     3
+    ],
+    "power": 14,
+    "hit": -17,
+    "guts": 23,
+    "crit": 12,
+    "gd": 2,
+    "moveTo": 0
+   },
+   {
+    "id": "sk-0343",
+    "name": "おなら",
+    "kind": "wise",
+    "dist": [
+     2
+    ],
+    "power": 7,
+    "hit": 3,
+    "guts": 14,
+    "crit": 6,
+    "gd": 9
+   },
+   {
+    "id": "sk-0341",
+    "name": "バックナックル",
+    "kind": "pow",
+    "dist": [
+     1
+    ],
+    "power": 30,
+    "hit": -22,
+    "guts": 21,
+    "crit": 10,
+    "gd": 2,
+    "moveTo": 0
+   },
+   {
+    "id": "sk-0342",
+    "name": "後ろ蹴り",
+    "kind": "pow",
+    "dist": [
+     0
+    ],
+    "power": 20,
+    "hit": 8,
+    "guts": 32,
+    "crit": 10,
+    "gd": 2
+   },
+   {
+    "id": "sk-0346",
+    "name": "ドラゴンパンチ",
+    "kind": "pow",
+    "dist": [
+     0
+    ],
+    "power": 20,
+    "hit": -17,
+    "guts": 19,
+    "crit": 18,
+    "gd": 2
+   },
+   {
+    "id": "sk-0347",
+    "name": "大砲屁",
+    "kind": "wise",
+    "dist": [
+     2
+    ],
+    "power": 10,
+    "hit": 3,
+    "guts": 25,
+    "crit": 10,
+    "gd": 26
+   },
+   {
+    "id": "sk-0344",
+    "name": "超飛び蹴り",
+    "kind": "pow",
+    "dist": [
+     3
+    ],
+    "power": 37,
+    "hit": -13,
+    "guts": 30,
+    "crit": 18,
+    "gd": 2,
+    "moveTo": 0
+   },
+   {
+    "id": "sk-0345",
+    "name": "回し蹴り",
+    "kind": "pow",
+    "dist": [
+     1
+    ],
+    "power": 37,
+    "hit": 3,
+    "guts": 42,
+    "crit": 12,
+    "gd": 6,
+    "moveTo": 0
+   },
+   {
+    "id": "sk-0350",
+    "name": "超バックナックル",
+    "kind": "pow",
+    "dist": [
+     1
+    ],
+    "power": 52,
+    "hit": -23,
+    "guts": 26,
+    "crit": 10,
+    "gd": 2,
+    "moveTo": 0
+   },
+   {
+    "id": "sk-0348",
+    "name": "瞬撃",
+    "kind": "pow",
+    "dist": [
+     3
+    ],
+    "power": 52,
+    "hit": 3,
+    "guts": 46,
+    "crit": 8,
+    "gd": 9,
+    "moveTo": 0
+   },
+   {
+    "id": "sk-0349",
+    "name": "ドラゴンキック",
+    "kind": "pow",
+    "dist": [
+     2
+    ],
+    "power": 52,
+    "hit": -17,
+    "guts": 47,
+    "crit": 24,
+    "gd": 9
+   },
+   {
+    "id": "sk-0351",
+    "name": "暗けい",
+    "kind": "pow",
+    "dist": [
+     0
+    ],
+    "power": 37,
+    "hit": 8,
+    "guts": 48,
+    "crit": 10,
+    "gd": 14
+   }
+  ],
+  "Pixie": [
+   {
+    "id": "sk-0260",
+    "name": "はり手",
+    "kind": "pow",
+    "dist": [
+     0
+    ],
+    "power": 8,
+    "hit": 1,
+    "guts": 10,
+    "crit": 6,
+    "gd": 0,
+    "learn": {
+     "start": true
+    }
+   },
+   {
+    "id": "sk-0259",
+    "name": "サンダー",
+    "kind": "wise",
+    "dist": [
+     2
+    ],
+    "power": 8,
+    "hit": 1,
+    "guts": 13,
+    "crit": 6,
+    "gd": 7,
+    "learn": {
+     "start": true
+    }
+   },
+   {
+    "id": "sk-0258",
+    "name": "レイ",
+    "kind": "wise",
+    "dist": [
+     3
+    ],
+    "power": 11,
+    "hit": -19,
+    "guts": 17,
+    "crit": 18,
+    "gd": 0
+   },
+   {
+    "id": "sk-0263",
+    "name": "ハイキック",
+    "kind": "pow",
+    "dist": [
+     1
+    ],
+    "power": 24,
+    "hit": -3,
+    "guts": 15,
+    "crit": 8,
+    "gd": 0
+   },
+   {
+    "id": "sk-0262",
+    "name": "ライトニング",
+    "kind": "wise",
+    "dist": [
+     2
+    ],
+    "power": 11,
+    "hit": 6,
+    "guts": 20,
+    "crit": 8,
+    "gd": 0
+   },
+   {
+    "id": "sk-0261",
+    "name": "メガレイ",
+    "kind": "wise",
+    "dist": [
+     3
+    ],
+    "power": 16,
+    "hit": -15,
+    "guts": 24,
+    "crit": 21,
+    "gd": 0
+   },
+   {
+    "id": "sk-0264",
+    "name": "なげキッス",
+    "kind": "wise",
+    "dist": [
+     2
+    ],
+    "power": 6,
+    "hit": 6,
+    "guts": 21,
+    "crit": 8,
+    "gd": 24
+   },
+   {
+    "id": "sk-0266",
+    "name": "ヒールレイド",
+    "kind": "pow",
+    "dist": [
+     0
+    ],
+    "power": 30,
+    "hit": -9,
+    "guts": 21,
+    "crit": 8,
+    "gd": 14
+   },
+   {
+    "id": "sk-0265",
+    "name": "バン",
+    "kind": "wise",
+    "dist": [
+     1
+    ],
+    "power": 30,
+    "hit": -19,
+    "guts": 30,
+    "crit": 12,
+    "gd": 12
+   },
+   {
+    "id": "sk-0267",
+    "name": "ギガレイ",
+    "kind": "wise",
+    "dist": [
+     3
+    ],
+    "power": 24,
+    "hit": 1,
+    "guts": 28,
+    "crit": 24,
+    "gd": 4
+   },
+   {
+    "id": "sk-0270",
+    "name": "投げ飛ばし",
+    "kind": "pow",
+    "dist": [
+     0
+    ],
+    "power": 30,
+    "hit": -9,
+    "guts": 30,
+    "crit": 8,
+    "gd": 24,
+    "moveTo": 3
+   },
+   {
+    "id": "sk-0268",
+    "name": "ギガサンダー",
+    "kind": "wise",
+    "dist": [
+     2
+    ],
+    "power": 30,
+    "hit": 6,
+    "guts": 38,
+    "crit": 10,
+    "gd": 13
+   },
+   {
+    "id": "sk-0269",
+    "name": "ビッグバン",
+    "kind": "wise",
+    "dist": [
+     1
+    ],
+    "power": 42,
+    "hit": -19,
+    "guts": 38,
+    "crit": 18,
+    "gd": 14
+   },
+   {
+    "id": "sk-0274",
+    "name": "ギガライトニング",
+    "kind": "wise",
+    "dist": [
+     2
+    ],
+    "power": 34,
+    "hit": 14,
+    "guts": 35,
+    "crit": 12,
+    "gd": 24
+   },
+   {
+    "id": "sk-0273",
+    "name": "ファイトクラウド",
+    "kind": "pow",
+    "dist": [
+     0
+    ],
+    "power": 42,
+    "hit": 1,
+    "guts": 40,
+    "crit": 18,
+    "gd": 14
+   },
+   {
+    "id": "sk-0272",
+    "name": "コズミックバン",
+    "kind": "wise",
+    "dist": [
+     1
+    ],
+    "power": 42,
+    "hit": -3,
+    "guts": 45,
+    "crit": 12,
+    "gd": 24
+   },
+   {
+    "id": "sk-0271",
+    "name": "アストラルレイ",
+    "kind": "wise",
+    "dist": [
+     3
+    ],
+    "power": 58,
+    "hit": -9,
+    "guts": 52,
+    "crit": 24,
+    "gd": 0
+   }
+  ],
+  "Mia": [
+   {
+    "id": "sk-0260",
+    "name": "はり手",
+    "kind": "pow",
+    "dist": [
+     0
+    ],
+    "power": 8,
+    "hit": 1,
+    "guts": 10,
+    "crit": 6,
+    "gd": 0,
+    "learn": {
+     "start": true
+    }
+   },
+   {
+    "id": "sk-0259",
+    "name": "サンダー",
+    "kind": "wise",
+    "dist": [
+     2
+    ],
+    "power": 8,
+    "hit": 1,
+    "guts": 13,
+    "crit": 6,
+    "gd": 7,
+    "learn": {
+     "start": true
+    }
+   },
+   {
+    "id": "sk-0258",
+    "name": "レイ",
+    "kind": "wise",
+    "dist": [
+     3
+    ],
+    "power": 11,
+    "hit": -19,
+    "guts": 17,
+    "crit": 18,
+    "gd": 0
+   },
+   {
+    "id": "sk-0263",
+    "name": "ハイキック",
+    "kind": "pow",
+    "dist": [
+     1
+    ],
+    "power": 23,
+    "hit": -3,
+    "guts": 15,
+    "crit": 8,
+    "gd": 0
+   },
+   {
+    "id": "sk-0262",
+    "name": "ライトニング",
+    "kind": "wise",
+    "dist": [
+     2
+    ],
+    "power": 11,
+    "hit": 6,
+    "guts": 20,
+    "crit": 8,
+    "gd": 0
+   },
+   {
+    "id": "sk-0261",
+    "name": "メガレイ",
+    "kind": "wise",
+    "dist": [
+     3
+    ],
+    "power": 15,
+    "hit": -15,
+    "guts": 24,
+    "crit": 21,
+    "gd": 0
+   },
+   {
+    "id": "sk-0264",
+    "name": "なげキッス",
+    "kind": "wise",
+    "dist": [
+     2
+    ],
+    "power": 6,
+    "hit": 6,
+    "guts": 21,
+    "crit": 8,
+    "gd": 24
+   },
+   {
+    "id": "sk-0266",
+    "name": "ヒールレイド",
+    "kind": "pow",
+    "dist": [
+     0
+    ],
+    "power": 29,
+    "hit": -9,
+    "guts": 21,
+    "crit": 8,
+    "gd": 14
+   },
+   {
+    "id": "sk-0265",
+    "name": "バン",
+    "kind": "wise",
+    "dist": [
+     1
+    ],
+    "power": 29,
+    "hit": -19,
+    "guts": 30,
+    "crit": 12,
+    "gd": 12
+   },
+   {
+    "id": "sk-0267",
+    "name": "ギガレイ",
+    "kind": "wise",
+    "dist": [
+     3
+    ],
+    "power": 23,
+    "hit": 1,
+    "guts": 28,
+    "crit": 24,
+    "gd": 4
+   },
+   {
+    "id": "sk-0270",
+    "name": "投げ飛ばし",
+    "kind": "pow",
+    "dist": [
+     0
+    ],
+    "power": 29,
+    "hit": -9,
+    "guts": 30,
+    "crit": 8,
+    "gd": 24,
+    "moveTo": 3
+   },
+   {
+    "id": "sk-0268",
+    "name": "ギガサンダー",
+    "kind": "wise",
+    "dist": [
+     2
+    ],
+    "power": 29,
+    "hit": 6,
+    "guts": 38,
+    "crit": 10,
+    "gd": 13
+   },
+   {
+    "id": "sk-0269",
+    "name": "ビッグバン",
+    "kind": "wise",
+    "dist": [
+     1
+    ],
+    "power": 40,
+    "hit": -19,
+    "guts": 38,
+    "crit": 18,
+    "gd": 14
+   },
+   {
+    "id": "sk-0274",
+    "name": "ギガライトニング",
+    "kind": "wise",
+    "dist": [
+     2
+    ],
+    "power": 33,
+    "hit": 14,
+    "guts": 35,
+    "crit": 12,
+    "gd": 24
+   },
+   {
+    "id": "sk-0273",
+    "name": "ファイトクラウド",
+    "kind": "pow",
+    "dist": [
+     0
+    ],
+    "power": 40,
+    "hit": 1,
+    "guts": 40,
+    "crit": 18,
+    "gd": 14
+   },
+   {
+    "id": "sk-0272",
+    "name": "コズミックバン",
+    "kind": "wise",
+    "dist": [
+     1
+    ],
+    "power": 40,
+    "hit": -3,
+    "guts": 45,
+    "crit": 12,
+    "gd": 24
+   },
+   {
+    "id": "sk-0271",
+    "name": "アストラルレイ",
+    "kind": "wise",
+    "dist": [
+     3
+    ],
+    "power": 56,
+    "hit": -9,
+    "guts": 52,
+    "crit": 24,
+    "gd": 0
+   }
+  ],
+  "Monol": [
+   {
+    "id": "sk-0513",
+    "name": "体当たり",
+    "kind": "pow",
+    "dist": [
+     0
+    ],
+    "power": 9,
+    "hit": -9,
+    "guts": 9,
+    "crit": 7,
+    "gd": 0,
+    "learn": {
+     "start": true
+    }
+   },
+   {
+    "id": "sk-0512",
+    "name": "たおれこみ",
+    "kind": "pow",
+    "dist": [
+     1
+    ],
+    "power": 12,
+    "hit": -19,
+    "guts": 12,
+    "crit": 7,
+    "gd": 0,
+    "learn": {
+     "start": true
+    }
+   },
+   {
+    "id": "sk-0511",
+    "name": "おんば",
+    "kind": "wise",
+    "dist": [
+     3
+    ],
+    "power": 9,
+    "hit": 6,
+    "guts": 17,
+    "crit": 9,
+    "gd": 0
+   },
+   {
+    "id": "sk-0516",
+    "name": "ひっかき",
+    "kind": "pow",
+    "dist": [
+     1
+    ],
+    "power": 12,
+    "hit": -19,
+    "guts": 14,
+    "crit": 9,
+    "gd": 14
+   },
+   {
+    "id": "sk-0517",
+    "name": "針ぶっさし",
+    "kind": "pow",
+    "dist": [
+     0
+    ],
+    "power": 26,
+    "hit": -19,
+    "guts": 23,
+    "crit": 11,
+    "gd": 12
+   },
+   {
+    "id": "sk-0514",
+    "name": "わらわら",
+    "kind": "pow",
+    "dist": [
+     3
+    ],
+    "power": 26,
+    "hit": -9,
+    "guts": 25,
+    "crit": 9,
+    "gd": 24
+   },
+   {
+    "id": "sk-0515",
+    "name": "トリオビームX",
+    "kind": "wise",
+    "dist": [
+     2
+    ],
+    "power": 17,
+    "hit": -9,
+    "guts": 25,
+    "crit": 13,
+    "gd": 12
+   },
+   {
+    "id": "sk-0519",
+    "name": "大たおれこみ",
+    "kind": "pow",
+    "dist": [
+     2
+    ],
+    "power": 23,
+    "hit": 1,
+    "guts": 18,
+    "crit": 7,
+    "gd": 0
+   },
+   {
+    "id": "sk-0520",
+    "name": "超おんば",
+    "kind": "wise",
+    "dist": [
+     1
+    ],
+    "power": 17,
+    "hit": 6,
+    "guts": 21,
+    "crit": 9,
+    "gd": 4,
+    "moveTo": 2
+   },
+   {
+    "id": "sk-0518",
+    "name": "トリオビームY",
+    "kind": "wise",
+    "dist": [
+     3
+    ],
+    "power": 33,
+    "hit": -9,
+    "guts": 30,
+    "crit": 13,
+    "gd": 14
+   },
+   {
+    "id": "sk-0521",
+    "name": "超針ぶっさし",
+    "kind": "pow",
+    "dist": [
+     0
+    ],
+    "power": 60,
+    "hit": -22,
+    "guts": 43,
+    "crit": 13,
+    "gd": 0
+   },
+   {
+    "id": "sk-0524",
+    "name": "オーロラゲート",
+    "kind": "wise",
+    "dist": [
+     0
+    ],
+    "power": 33,
+    "hit": 14,
+    "guts": 34,
+    "crit": 9,
+    "gd": 12,
+    "moveTo": 3
+   },
+   {
+    "id": "sk-0522",
+    "name": "トリオビームZ",
+    "kind": "wise",
+    "dist": [
+     3
+    ],
+    "power": 60,
+    "hit": -9,
+    "guts": 37,
+    "crit": 19,
+    "gd": 7
+   },
+   {
+    "id": "sk-0523",
+    "name": "ドリルアタック",
+    "kind": "pow",
+    "dist": [
+     2
+    ],
+    "power": 33,
+    "hit": 4,
+    "guts": 45,
+    "crit": 19,
+    "gd": 14
+   },
+   {
+    "id": "sk-0526",
+    "name": "クリムゾンブレイク",
+    "kind": "pow",
+    "dist": [
+     2
+    ],
+    "power": 37,
+    "hit": -9,
+    "guts": 41,
+    "crit": 19,
+    "gd": 7
+   },
+   {
+    "id": "sk-0525",
+    "name": "トリオビーム∞",
+    "kind": "wise",
+    "dist": [
+     3
+    ],
+    "power": 37,
+    "hit": 4,
+    "guts": 45,
+    "crit": 19,
+    "gd": 24
+   }
+  ],
+  "Oboro": [
+   {
+    "id": "sk-0447",
+    "name": "つっつき",
+    "kind": "pow",
+    "dist": [
+     1
+    ],
+    "power": 29,
+    "hit": -1,
+    "guts": 14,
+    "crit": 6,
+    "gd": 0,
+    "learn": {
+     "start": true
+    }
+   },
+   {
+    "id": "sk-0448",
+    "name": "根っこ",
+    "kind": "pow",
+    "dist": [
+     0
+    ],
+    "power": 10,
+    "hit": 4,
+    "guts": 15,
+    "crit": 6,
+    "gd": 0,
+    "learn": {
+     "start": true
+    }
+   },
+   {
+    "id": "sk-0447",
+    "name": "つっつき",
+    "kind": "pow",
+    "dist": [
+     1
+    ],
+    "power": 10,
+    "hit": -21,
+    "guts": 16,
+    "crit": 6,
+    "gd": 0
+   },
+   {
+    "id": "sk-0448",
+    "name": "根っこ",
+    "kind": "pow",
+    "dist": [
+     0
+    ],
+    "power": 10,
+    "hit": 4,
+    "guts": 17,
+    "crit": 6,
+    "gd": 0
+   },
+   {
+    "id": "sk-0446",
+    "name": "種ガン",
+    "kind": "wise",
+    "dist": [
+     3
+    ],
+    "power": 13,
+    "hit": -21,
+    "guts": 25,
+    "crit": 12,
+    "gd": 0
+   },
+   {
+    "id": "sk-0452",
+    "name": "連続根っこ",
+    "kind": "pow",
+    "dist": [
+     0
+    ],
+    "power": 13,
+    "hit": 12,
+    "guts": 20,
+    "crit": 8,
+    "gd": 0,
+    "moveTo": 1
+   },
+   {
+    "id": "sk-0452",
+    "name": "連続根っこ",
+    "kind": "pow",
+    "dist": [
+     0
+    ],
+    "power": 13,
+    "hit": 12,
+    "guts": 22,
+    "crit": 8,
+    "gd": 0,
+    "moveTo": 1
+   },
+   {
+    "id": "sk-0449",
+    "name": "種マシンガン",
+    "kind": "wise",
+    "dist": [
+     3
+    ],
+    "power": 20,
+    "hit": -1,
+    "guts": 22,
+    "crit": 24,
+    "gd": 4,
+    "moveTo": 2
+   },
+   {
+    "id": "sk-0451",
+    "name": "葉っぱブレード",
+    "kind": "wise",
+    "dist": [
+     1
+    ],
+    "power": 29,
+    "hit": -25,
+    "guts": 24,
+    "crit": 8,
+    "gd": 0
+   },
+   {
+    "id": "sk-0450",
+    "name": "ミツ",
+    "kind": "wise",
+    "dist": [
+     2
+    ],
+    "power": 10,
+    "hit": 4,
+    "guts": 24,
+    "crit": 6,
+    "gd": 14
+   },
+   {
+    "id": "sk-0449",
+    "name": "種マシンガン",
+    "kind": "wise",
+    "dist": [
+     3
+    ],
+    "power": 20,
+    "hit": -24,
+    "guts": 28,
+    "crit": 24,
+    "gd": 4,
+    "moveTo": 2
+   },
+   {
+    "id": "sk-0450",
+    "name": "ミツ",
+    "kind": "wise",
+    "dist": [
+     2
+    ],
+    "power": 10,
+    "hit": 4,
+    "guts": 28,
+    "crit": 6,
+    "gd": 14
+   },
+   {
+    "id": "sk-0455",
+    "name": "連続つっつき",
+    "kind": "pow",
+    "dist": [
+     1
+    ],
+    "power": 33,
+    "hit": -1,
+    "guts": 21,
+    "crit": 15,
+    "gd": 13
+   },
+   {
+    "id": "sk-0455",
+    "name": "連続つっつき",
+    "kind": "pow",
+    "dist": [
+     1
+    ],
+    "power": 29,
+    "hit": -11,
+    "guts": 26,
+    "crit": 10,
+    "gd": 0
+   },
+   {
+    "id": "sk-0454",
+    "name": "花吹雪",
+    "kind": "wise",
+    "dist": [
+     2
+    ],
+    "power": 51,
+    "hit": -21,
+    "guts": 43,
+    "crit": 10,
+    "gd": 0
+   },
+   {
+    "id": "sk-0453",
+    "name": "フラワービーム",
+    "kind": "wise",
+    "dist": [
+     3
+    ],
+    "power": 37,
+    "hit": -1,
+    "guts": 46,
+    "crit": 8,
+    "gd": 12
+   },
+   {
+    "id": "sk-0459",
+    "name": "蒼花爆散",
+    "kind": "wise",
+    "dist": [
+     0
+    ],
+    "power": 20,
+    "hit": 4,
+    "guts": 35,
+    "crit": 12,
+    "gd": 24
+   },
+   {
+    "id": "sk-0459",
+    "name": "蒼花爆散",
+    "kind": "wise",
+    "dist": [
+     0
+    ],
+    "power": 20,
+    "hit": 12,
+    "guts": 35,
+    "crit": 12,
+    "gd": 26
+   },
+   {
+    "id": "sk-0458",
+    "name": "コンビネーション",
+    "kind": "pow",
+    "dist": [
+     1
+    ],
+    "power": 37,
+    "hit": -11,
+    "guts": 36,
+    "crit": 8,
+    "gd": 0
+   },
+   {
+    "id": "sk-0456",
+    "name": "乱れ咲き",
+    "kind": "wise",
+    "dist": [
+     3
+    ],
+    "power": 29,
+    "hit": 15,
+    "guts": 38,
+    "crit": 24,
+    "gd": 4
+   },
+   {
+    "id": "sk-0457",
+    "name": "捕食",
+    "kind": "pow",
+    "dist": [
+     2
+    ],
+    "power": 37,
+    "hit": 4,
+    "guts": 42,
+    "crit": 18,
+    "gd": 24
+   },
+   {
+    "id": "sk-0456",
+    "name": "乱れ咲き",
+    "kind": "wise",
+    "dist": [
+     3
+    ],
+    "power": 29,
+    "hit": 4,
+    "guts": 47,
+    "crit": 24,
+    "gd": 4
+   },
+   {
+    "id": "sk-0457",
+    "name": "捕食",
+    "kind": "pow",
+    "dist": [
+     2
+    ],
+    "power": 37,
+    "hit": -1,
+    "guts": 48,
+    "crit": 8,
+    "gd": 24
+   },
+   {
+    "id": "sk-0824",
+    "name": "デスブルーム",
+    "kind": "pow",
+    "dist": [
+     1
+    ],
+    "power": 42,
+    "hit": 15,
+    "guts": 44,
+    "crit": 21,
+    "gd": 24
+   }
+  ],
+  "Plant": [
+   {
+    "id": "sk-0447",
+    "name": "つっつき",
+    "kind": "pow",
+    "dist": [
+     1
+    ],
+    "power": 30,
+    "hit": -1,
+    "guts": 14,
+    "crit": 6,
+    "gd": 0,
+    "learn": {
+     "start": true
+    }
+   },
+   {
+    "id": "sk-0448",
+    "name": "根っこ",
+    "kind": "pow",
+    "dist": [
+     0
+    ],
+    "power": 10,
+    "hit": 4,
+    "guts": 15,
+    "crit": 6,
+    "gd": 0,
+    "learn": {
+     "start": true
+    }
+   },
+   {
+    "id": "sk-0447",
+    "name": "つっつき",
+    "kind": "pow",
+    "dist": [
+     1
+    ],
+    "power": 10,
+    "hit": -21,
+    "guts": 16,
+    "crit": 6,
+    "gd": 0
+   },
+   {
+    "id": "sk-0448",
+    "name": "根っこ",
+    "kind": "pow",
+    "dist": [
+     0
+    ],
+    "power": 10,
+    "hit": 4,
+    "guts": 17,
+    "crit": 6,
+    "gd": 0
+   },
+   {
+    "id": "sk-0446",
+    "name": "種ガン",
+    "kind": "wise",
+    "dist": [
+     3
+    ],
+    "power": 14,
+    "hit": -21,
+    "guts": 25,
+    "crit": 12,
+    "gd": 0
+   },
+   {
+    "id": "sk-0452",
+    "name": "連続根っこ",
+    "kind": "pow",
+    "dist": [
+     0
+    ],
+    "power": 14,
+    "hit": 12,
+    "guts": 20,
+    "crit": 8,
+    "gd": 0,
+    "moveTo": 1
+   },
+   {
+    "id": "sk-0452",
+    "name": "連続根っこ",
+    "kind": "pow",
+    "dist": [
+     0
+    ],
+    "power": 14,
+    "hit": 12,
+    "guts": 22,
+    "crit": 8,
+    "gd": 0,
+    "moveTo": 1
+   },
+   {
+    "id": "sk-0449",
+    "name": "種マシンガン",
+    "kind": "wise",
+    "dist": [
+     3
+    ],
+    "power": 20,
+    "hit": -1,
+    "guts": 22,
+    "crit": 24,
+    "gd": 4,
+    "moveTo": 2
+   },
+   {
+    "id": "sk-0451",
+    "name": "葉っぱブレード",
+    "kind": "wise",
+    "dist": [
+     1
+    ],
+    "power": 30,
+    "hit": -25,
+    "guts": 24,
+    "crit": 8,
+    "gd": 0
+   },
+   {
+    "id": "sk-0450",
+    "name": "ミツ",
+    "kind": "wise",
+    "dist": [
+     2
+    ],
+    "power": 10,
+    "hit": 4,
+    "guts": 24,
+    "crit": 6,
+    "gd": 14
+   },
+   {
+    "id": "sk-0449",
+    "name": "種マシンガン",
+    "kind": "wise",
+    "dist": [
+     3
+    ],
+    "power": 20,
+    "hit": -24,
+    "guts": 28,
+    "crit": 24,
+    "gd": 4,
+    "moveTo": 2
+   },
+   {
+    "id": "sk-0450",
+    "name": "ミツ",
+    "kind": "wise",
+    "dist": [
+     2
+    ],
+    "power": 10,
+    "hit": 4,
+    "guts": 28,
+    "crit": 6,
+    "gd": 14
+   },
+   {
+    "id": "sk-0455",
+    "name": "連続つっつき",
+    "kind": "pow",
+    "dist": [
+     1
+    ],
+    "power": 34,
+    "hit": -1,
+    "guts": 21,
+    "crit": 15,
+    "gd": 13
+   },
+   {
+    "id": "sk-0455",
+    "name": "連続つっつき",
+    "kind": "pow",
+    "dist": [
+     1
+    ],
+    "power": 30,
+    "hit": -11,
+    "guts": 26,
+    "crit": 10,
+    "gd": 0
+   },
+   {
+    "id": "sk-0454",
+    "name": "花吹雪",
+    "kind": "wise",
+    "dist": [
+     2
+    ],
+    "power": 52,
+    "hit": -21,
+    "guts": 43,
+    "crit": 10,
+    "gd": 0
+   },
+   {
+    "id": "sk-0453",
+    "name": "フラワービーム",
+    "kind": "wise",
+    "dist": [
+     3
+    ],
+    "power": 37,
+    "hit": -1,
+    "guts": 46,
+    "crit": 8,
+    "gd": 12
+   },
+   {
+    "id": "sk-0459",
+    "name": "蒼花爆散",
+    "kind": "wise",
+    "dist": [
+     0
+    ],
+    "power": 20,
+    "hit": 4,
+    "guts": 35,
+    "crit": 12,
+    "gd": 24
+   },
+   {
+    "id": "sk-0459",
+    "name": "蒼花爆散",
+    "kind": "wise",
+    "dist": [
+     0
+    ],
+    "power": 20,
+    "hit": 12,
+    "guts": 35,
+    "crit": 12,
+    "gd": 26
+   },
+   {
+    "id": "sk-0458",
+    "name": "コンビネーション",
+    "kind": "pow",
+    "dist": [
+     1
+    ],
+    "power": 37,
+    "hit": -11,
+    "guts": 36,
+    "crit": 8,
+    "gd": 0
+   },
+   {
+    "id": "sk-0456",
+    "name": "乱れ咲き",
+    "kind": "wise",
+    "dist": [
+     3
+    ],
+    "power": 30,
+    "hit": 15,
+    "guts": 38,
+    "crit": 24,
+    "gd": 4
+   },
+   {
+    "id": "sk-0457",
+    "name": "捕食",
+    "kind": "pow",
+    "dist": [
+     2
+    ],
+    "power": 37,
+    "hit": 4,
+    "guts": 42,
+    "crit": 18,
+    "gd": 24
+   },
+   {
+    "id": "sk-0456",
+    "name": "乱れ咲き",
+    "kind": "wise",
+    "dist": [
+     3
+    ],
+    "power": 30,
+    "hit": 4,
+    "guts": 47,
+    "crit": 24,
+    "gd": 4
+   },
+   {
+    "id": "sk-0457",
+    "name": "捕食",
+    "kind": "pow",
+    "dist": [
+     2
+    ],
+    "power": 37,
+    "hit": -1,
+    "guts": 48,
+    "crit": 8,
+    "gd": 24
+   },
+   {
+    "id": "sk-0824",
+    "name": "デスブルーム",
+    "kind": "pow",
+    "dist": [
+     1
+    ],
+    "power": 42,
+    "hit": 15,
+    "guts": 44,
+    "crit": 21,
+    "gd": 24
+   }
+  ],
+  "Zan": [
+   {
+    "id": "sk-0797",
+    "name": "シングルショット",
+    "kind": "pow",
+    "dist": [
+     1
+    ],
+    "power": 26,
+    "hit": 0,
+    "guts": 21,
+    "crit": 8,
+    "gd": 1,
+    "learn": {
+     "start": true
+    }
+   },
+   {
+    "id": "sk-0591",
+    "name": "ミラージュシフト",
+    "kind": "pow",
+    "dist": [
+     3
+    ],
+    "power": 17,
+    "hit": 0,
+    "guts": 22,
+    "crit": 11,
+    "gd": 1,
+    "moveTo": 1,
+    "learn": {
+     "start": true
+    }
+   },
+   {
+    "id": "sk-0592",
+    "name": "レッグアーク",
+    "kind": "pow",
+    "dist": [
+     0
+    ],
+    "power": 12,
+    "hit": -16,
+    "guts": 24,
+    "crit": 10,
+    "gd": 13
+   },
+   {
+    "id": "sk-0594",
+    "name": "ソニックナイフ",
+    "kind": "pow",
+    "dist": [
+     2
+    ],
+    "power": 17,
+    "hit": -4,
+    "guts": 26,
+    "crit": 18,
+    "gd": 1,
+    "moveTo": 0
+   },
+   {
+    "id": "sk-0593",
+    "name": "スタナーブリッツ",
+    "kind": "wise",
+    "dist": [
+     3
+    ],
+    "power": 26,
+    "hit": 0,
+    "guts": 27,
+    "crit": 8,
+    "gd": 13
+   },
+   {
+    "id": "sk-0595",
+    "name": "ダブルサマー",
+    "kind": "pow",
+    "dist": [
+     0
+    ],
+    "power": 29,
+    "hit": -10,
+    "guts": 29,
+    "crit": 12,
+    "gd": 1,
+    "moveTo": 1
+   },
+   {
+    "id": "sk-0799",
+    "name": "フォルターブリッツ",
+    "kind": "wise",
+    "dist": [
+     1
+    ],
+    "power": 26,
+    "hit": 3,
+    "guts": 33,
+    "crit": 10,
+    "gd": 20
+   },
+   {
+    "id": "sk-0798",
+    "name": "メテオドライブ",
+    "kind": "pow",
+    "dist": [
+     3
+    ],
+    "power": 26,
+    "hit": -10,
+    "guts": 37,
+    "crit": 24,
+    "gd": 5
+   },
+   {
+    "id": "sk-0597",
+    "name": "ライジングレイヴ",
+    "kind": "pow",
+    "dist": [
+     0
+    ],
+    "power": 45,
+    "hit": 0,
+    "guts": 44,
+    "crit": 24,
+    "gd": 25
+   },
+   {
+    "id": "sk-0596",
+    "name": "アサルトレイド",
+    "kind": "pow",
+    "dist": [
+     2
+    ],
+    "power": 37,
+    "hit": 5,
+    "guts": 46,
+    "crit": 12,
+    "gd": 5
+   },
+   {
+    "id": "sk-0599",
+    "name": "ダークホウスト",
+    "kind": "pow",
+    "dist": [
+     1
+    ],
+    "power": 45,
+    "hit": 13,
+    "guts": 50,
+    "crit": 21,
+    "gd": 1
+   },
+   {
+    "id": "sk-0598",
+    "name": "アクシズバレット",
+    "kind": "pow",
+    "dist": [
+     3
+    ],
+    "power": 32,
+    "hit": -20,
+    "guts": 53,
+    "crit": 27,
+    "gd": 1
+   }
+  ],
+  "Mitarashi": [
+   {
+    "id": "sk-0402",
+    "name": "もんた",
+    "kind": "pow",
+    "dist": [
+     0
+    ],
+    "power": 13,
+    "hit": -9,
+    "guts": 14,
+    "crit": 6,
+    "gd": 0,
+    "learn": {
+     "start": true
+    }
+   },
+   {
+    "id": "sk-0400",
+    "name": "ローリンモッチ",
+    "kind": "pow",
+    "dist": [
+     2
+    ],
+    "power": 13,
+    "hit": -19,
+    "guts": 18,
+    "crit": 18,
+    "gd": 4,
+    "moveTo": 0,
+    "learn": {
+     "start": true
+    }
+   },
+   {
+    "id": "sk-0401",
+    "name": "もちき",
+    "kind": "pow",
+    "dist": [
+     1
+    ],
+    "power": 19,
+    "hit": -19,
+    "guts": 20,
+    "crit": 8,
+    "gd": 0
+   },
+   {
+    "id": "sk-0405",
+    "name": "ぺろりん",
+    "kind": "wise",
+    "dist": [
+     1
+    ],
+    "power": 5,
+    "hit": -9,
+    "guts": 18,
+    "crit": 10,
+    "gd": 24
+   },
+   {
+    "id": "sk-0406",
+    "name": "ガッチョ",
+    "kind": "pow",
+    "dist": [
+     0
+    ],
+    "power": 17,
+    "hit": 1,
+    "guts": 18,
+    "crit": 8,
+    "gd": 0
+   },
+   {
+    "id": "sk-0403",
+    "name": "モッチ砲",
+    "kind": "wise",
+    "dist": [
+     3
+    ],
+    "power": 22,
+    "hit": -3,
+    "guts": 21,
+    "crit": 6,
+    "gd": 0
+   },
+   {
+    "id": "sk-0404",
+    "name": "さくら吹雪",
+    "kind": "wise",
+    "dist": [
+     2
+    ],
+    "power": 13,
+    "hit": -9,
+    "guts": 22,
+    "crit": 18,
+    "gd": 4
+   },
+   {
+    "id": "sk-0409",
+    "name": "ガッチャー",
+    "kind": "pow",
+    "dist": [
+     0
+    ],
+    "power": 19,
+    "hit": 6,
+    "guts": 20,
+    "crit": 8,
+    "gd": 7
+   },
+   {
+    "id": "sk-0408",
+    "name": "もっちゃん",
+    "kind": "pow",
+    "dist": [
+     1
+    ],
+    "power": 19,
+    "hit": -24,
+    "guts": 22,
+    "crit": 6,
+    "gd": 4
+   },
+   {
+    "id": "sk-0407",
+    "name": "超ローリンモッチ",
+    "kind": "pow",
+    "dist": [
+     2
+    ],
+    "power": 22,
+    "hit": -9,
+    "guts": 30,
+    "crit": 24,
+    "gd": 7,
+    "moveTo": 0
+   },
+   {
+    "id": "sk-0413",
+    "name": "超ガッチョ",
+    "kind": "pow",
+    "dist": [
+     0
+    ],
+    "power": 27,
+    "hit": 1,
+    "guts": 30,
+    "crit": 10,
+    "gd": 14
+   },
+   {
+    "id": "sk-0410",
+    "name": "大モッチ砲",
+    "kind": "wise",
+    "dist": [
+     3
+    ],
+    "power": 44,
+    "hit": 1,
+    "guts": 35,
+    "crit": 10,
+    "gd": 4
+   },
+   {
+    "id": "sk-0411",
+    "name": "枝垂ざくら",
+    "kind": "wise",
+    "dist": [
+     2
+    ],
+    "power": 38,
+    "hit": 6,
+    "guts": 37,
+    "crit": 12,
+    "gd": 0
+   },
+   {
+    "id": "sk-0412",
+    "name": "もっさま",
+    "kind": "pow",
+    "dist": [
+     1
+    ],
+    "power": 44,
+    "hit": -9,
+    "guts": 37,
+    "crit": 12,
+    "gd": 12
+   },
+   {
+    "id": "sk-0416",
+    "name": "もっさまん",
+    "kind": "pow",
+    "dist": [
+     1
+    ],
+    "power": 44,
+    "hit": -3,
+    "guts": 39,
+    "crit": 28,
+    "gd": 19
+   },
+   {
+    "id": "sk-0415",
+    "name": "宵闇ざくら",
+    "kind": "wise",
+    "dist": [
+     2
+    ],
+    "power": 44,
+    "hit": 6,
+    "guts": 42,
+    "crit": 12,
+    "gd": 0
+   },
+   {
+    "id": "sk-0414",
+    "name": "超モッチ砲",
+    "kind": "wise",
+    "dist": [
+     3
+    ],
+    "power": 46,
+    "hit": -9,
+    "guts": 43,
+    "crit": 18,
+    "gd": 14
+   }
+  ],
+  "Ark": [
+   {
+    "id": "sk-0125",
+    "name": "神剣よ断罪を下せ",
+    "kind": "wise",
+    "dist": [
+     2
+    ],
+    "power": 13,
+    "hit": -3,
+    "guts": 16,
+    "crit": 8,
+    "gd": 4,
+    "learn": {
+     "start": true
+    }
+   },
+   {
+    "id": "sk-0111",
+    "name": "我が瞳の真理を見よ",
+    "kind": "wise",
+    "dist": [
+     0
+    ],
+    "power": 6,
+    "hit": 1,
+    "guts": 17,
+    "crit": 8,
+    "gd": 9,
+    "moveTo": 3,
+    "learn": {
+     "start": true
+    }
+   },
+   {
+    "id": "sk-0110",
+    "name": "世界を揺らせ",
+    "kind": "pow",
+    "dist": [
+     3
+    ],
+    "power": 21,
+    "hit": -15,
+    "guts": 18,
+    "crit": 8,
+    "gd": 0,
+    "moveTo": 1
+   },
+   {
+    "id": "sk-0113",
+    "name": "翔べ震律の刃よ",
+    "kind": "wise",
+    "dist": [
+     1
+    ],
+    "power": 8,
+    "hit": -9,
+    "guts": 21,
+    "crit": 10,
+    "gd": 4
+   },
+   {
+    "id": "sk-0114",
+    "name": "白き誓い切なる願い",
+    "kind": "wise",
+    "dist": [
+     0
+    ],
+    "power": 16,
+    "hit": -9,
+    "guts": 22,
+    "crit": 15,
+    "gd": 11
+   },
+   {
+    "id": "sk-0112",
+    "name": "神光よ汚れを祓え",
+    "kind": "wise",
+    "dist": [
+     2
+    ],
+    "power": 30,
+    "hit": -15,
+    "guts": 26,
+    "crit": 8,
+    "gd": 9
+   },
+   {
+    "id": "sk-0115",
+    "name": "今こそ真なる目醒め",
+    "kind": "wise",
+    "dist": [
+     3
+    ],
+    "power": 30,
+    "hit": -9,
+    "guts": 30,
+    "crit": 10,
+    "gd": 9
+   },
+   {
+    "id": "sk-0118",
+    "name": "蒼き荊よ咎を穿て",
+    "kind": "wise",
+    "dist": [
+     0
+    ],
+    "power": 24,
+    "hit": 1,
+    "guts": 31,
+    "crit": 10,
+    "gd": 21
+   },
+   {
+    "id": "sk-0117",
+    "name": "導け神光の道標",
+    "kind": "wise",
+    "dist": [
+     1
+    ],
+    "power": 41,
+    "hit": -15,
+    "guts": 33,
+    "crit": 12,
+    "gd": 9
+   },
+   {
+    "id": "sk-0116",
+    "name": "裁きの光よ下れ",
+    "kind": "wise",
+    "dist": [
+     2
+    ],
+    "power": 41,
+    "hit": -9,
+    "guts": 36,
+    "crit": 18,
+    "gd": 11
+   },
+   {
+    "id": "sk-0120",
+    "name": "熾天の剣よ降り立て",
+    "kind": "wise",
+    "dist": [
+     1
+    ],
+    "power": 30,
+    "hit": 1,
+    "guts": 42,
+    "crit": 12,
+    "gd": 11
+   },
+   {
+    "id": "sk-0119",
+    "name": "祈れ輪廻の環よ",
+    "kind": "wise",
+    "dist": [
+     2
+    ],
+    "power": 41,
+    "hit": 1,
+    "guts": 45,
+    "crit": 11,
+    "gd": 21
+   },
+   {
+    "id": "sk-0122",
+    "name": "聖光よ奇跡を灯せ",
+    "kind": "wise",
+    "dist": [
+     2
+    ],
+    "power": 34,
+    "hit": 17,
+    "guts": 42,
+    "crit": 12,
+    "gd": 9
+   },
+   {
+    "id": "sk-0124",
+    "name": "灰よ還りて聖火となれ",
+    "kind": "wise",
+    "dist": [
+     0
+    ],
+    "power": 41,
+    "hit": 1,
+    "guts": 44,
+    "crit": 27,
+    "gd": 16
+   },
+   {
+    "id": "sk-0123",
+    "name": "天の慈悲よ示されよ",
+    "kind": "wise",
+    "dist": [
+     1
+    ],
+    "power": 54,
+    "hit": 6,
+    "guts": 48,
+    "crit": 15,
+    "gd": 11
+   },
+   {
+    "id": "sk-0121",
+    "name": "終焉に救いを与えよ",
+    "kind": "wise",
+    "dist": [
+     3
+    ],
+    "power": 54,
+    "hit": 1,
+    "guts": 50,
+    "crit": 24,
+    "gd": 21
+   },
+   {
+    "id": "sk-0129",
+    "name": "黎明よ終焉を照らせ",
+    "kind": "wise",
+    "dist": [
+     3
+    ],
+    "power": 54,
+    "hit": 1,
+    "guts": 50,
+    "crit": 24,
+    "gd": 21
+   }
+  ],
+  "Iblis": [
+   {
+    "id": "sk-0125",
+    "name": "神剣よ断罪を下せ",
+    "kind": "wise",
+    "dist": [
+     2
+    ],
+    "power": 13,
+    "hit": -3,
+    "guts": 16,
+    "crit": 8,
+    "gd": 4,
+    "learn": {
+     "start": true
+    }
+   },
+   {
+    "id": "sk-0111",
+    "name": "我が瞳の真理を見よ",
+    "kind": "wise",
+    "dist": [
+     0
+    ],
+    "power": 6,
+    "hit": 1,
+    "guts": 17,
+    "crit": 8,
+    "gd": 9,
+    "moveTo": 3,
+    "learn": {
+     "start": true
+    }
+   },
+   {
+    "id": "sk-0110",
+    "name": "世界を揺らせ",
+    "kind": "pow",
+    "dist": [
+     3
+    ],
+    "power": 21,
+    "hit": -15,
+    "guts": 18,
+    "crit": 8,
+    "gd": 0,
+    "moveTo": 1
+   },
+   {
+    "id": "sk-0113",
+    "name": "翔べ震律の刃よ",
+    "kind": "wise",
+    "dist": [
+     1
+    ],
+    "power": 8,
+    "hit": -9,
+    "guts": 21,
+    "crit": 10,
+    "gd": 4
+   },
+   {
+    "id": "sk-0114",
+    "name": "白き誓い切なる願い",
+    "kind": "wise",
+    "dist": [
+     0
+    ],
+    "power": 16,
+    "hit": -9,
+    "guts": 22,
+    "crit": 15,
+    "gd": 11
+   },
+   {
+    "id": "sk-0112",
+    "name": "神光よ汚れを祓え",
+    "kind": "wise",
+    "dist": [
+     2
+    ],
+    "power": 30,
+    "hit": -15,
+    "guts": 26,
+    "crit": 8,
+    "gd": 9
+   },
+   {
+    "id": "sk-0115",
+    "name": "今こそ真なる目醒め",
+    "kind": "wise",
+    "dist": [
+     3
+    ],
+    "power": 30,
+    "hit": -9,
+    "guts": 30,
+    "crit": 10,
+    "gd": 9
+   },
+   {
+    "id": "sk-0118",
+    "name": "蒼き荊よ咎を穿て",
+    "kind": "wise",
+    "dist": [
+     0
+    ],
+    "power": 24,
+    "hit": 1,
+    "guts": 31,
+    "crit": 10,
+    "gd": 21
+   },
+   {
+    "id": "sk-0117",
+    "name": "導け神光の道標",
+    "kind": "wise",
+    "dist": [
+     1
+    ],
+    "power": 42,
+    "hit": -15,
+    "guts": 33,
+    "crit": 12,
+    "gd": 9
+   },
+   {
+    "id": "sk-0116",
+    "name": "裁きの光よ下れ",
+    "kind": "wise",
+    "dist": [
+     2
+    ],
+    "power": 42,
+    "hit": -9,
+    "guts": 36,
+    "crit": 18,
+    "gd": 11
+   },
+   {
+    "id": "sk-0120",
+    "name": "熾天の剣よ降り立て",
+    "kind": "wise",
+    "dist": [
+     1
+    ],
+    "power": 30,
+    "hit": 1,
+    "guts": 42,
+    "crit": 12,
+    "gd": 11
+   },
+   {
+    "id": "sk-0119",
+    "name": "祈れ輪廻の環よ",
+    "kind": "wise",
+    "dist": [
+     2
+    ],
+    "power": 42,
+    "hit": 1,
+    "guts": 45,
+    "crit": 11,
+    "gd": 21
+   },
+   {
+    "id": "sk-0122",
+    "name": "聖光よ奇跡を灯せ",
+    "kind": "wise",
+    "dist": [
+     2
+    ],
+    "power": 34,
+    "hit": 17,
+    "guts": 42,
+    "crit": 12,
+    "gd": 9
+   },
+   {
+    "id": "sk-0124",
+    "name": "灰よ還りて聖火となれ",
+    "kind": "wise",
+    "dist": [
+     0
+    ],
+    "power": 42,
+    "hit": 1,
+    "guts": 44,
+    "crit": 27,
+    "gd": 16
+   },
+   {
+    "id": "sk-0123",
+    "name": "天の慈悲よ示されよ",
+    "kind": "wise",
+    "dist": [
+     1
+    ],
+    "power": 55,
+    "hit": 6,
+    "guts": 48,
+    "crit": 15,
+    "gd": 11
+   },
+   {
+    "id": "sk-0121",
+    "name": "終焉に救いを与えよ",
+    "kind": "wise",
+    "dist": [
+     3
+    ],
+    "power": 55,
+    "hit": 1,
+    "guts": 50,
+    "crit": 24,
+    "gd": 21
+   },
+   {
+    "id": "sk-0129",
+    "name": "黎明よ終焉を照らせ",
+    "kind": "wise",
+    "dist": [
+     3
+    ],
+    "power": 55,
+    "hit": 1,
+    "guts": 50,
+    "crit": 24,
+    "gd": 21
+   }
+  ],
+  "Snegurochka": [
+   {
+    "id": "sk-0477",
+    "name": "アイスブレード",
+    "kind": "pow",
+    "dist": [
+     0
+    ],
+    "power": 9,
+    "hit": -18,
+    "guts": 15,
+    "crit": 6,
+    "gd": 0,
+    "learn": {
+     "start": true
+    }
+   },
+   {
+    "id": "sk-0475",
+    "name": "アクアウェイブ",
+    "kind": "wise",
+    "dist": [
+     2
+    ],
+    "power": 9,
+    "hit": 2,
+    "guts": 21,
+    "crit": 8,
+    "gd": 0,
+    "learn": {
+     "start": true
+    }
+   },
+   {
+    "id": "sk-0476",
+    "name": "アクアウィップ",
+    "kind": "pow",
+    "dist": [
+     1
+    ],
+    "power": 9,
+    "hit": -8,
+    "guts": 25,
+    "crit": 8,
+    "gd": 14
+   },
+   {
+    "id": "sk-0481",
+    "name": "スプラッシュ",
+    "kind": "wise",
+    "dist": [
+     0
+    ],
+    "power": 13,
+    "hit": -18,
+    "guts": 20,
+    "crit": 8,
+    "gd": 12
+   },
+   {
+    "id": "sk-0478",
+    "name": "ダブルバレッド",
+    "kind": "wise",
+    "dist": [
+     3
+    ],
+    "power": 13,
+    "hit": 2,
+    "guts": 23,
+    "crit": 10,
+    "gd": 0
+   },
+   {
+    "id": "sk-0742",
+    "name": "プレゼントキッス",
+    "kind": "wise",
+    "dist": [
+     1
+    ],
+    "power": 13,
+    "hit": 2,
+    "guts": 24,
+    "crit": 24,
+    "gd": 0
+   },
+   {
+    "id": "sk-0479",
+    "name": "アイスアロー",
+    "kind": "wise",
+    "dist": [
+     2
+    ],
+    "power": 19,
+    "hit": -8,
+    "guts": 28,
+    "crit": 18,
+    "gd": 7
+   },
+   {
+    "id": "sk-0480",
+    "name": "アクアキッス",
+    "kind": "wise",
+    "dist": [
+     1
+    ],
+    "power": 7,
+    "hit": 7,
+    "guts": 30,
+    "crit": 18,
+    "gd": 14
+   },
+   {
+    "id": "sk-0484",
+    "name": "ドルフィンブロー",
+    "kind": "pow",
+    "dist": [
+     1
+    ],
+    "power": 28,
+    "hit": -18,
+    "guts": 25,
+    "crit": 8,
+    "gd": 7,
+    "moveTo": 0
+   },
+   {
+    "id": "sk-0483",
+    "name": "アイスコフィン",
+    "kind": "wise",
+    "dist": [
+     2
+    ],
+    "power": 35,
+    "hit": -23,
+    "guts": 28,
+    "crit": 10,
+    "gd": 4
+   },
+   {
+    "id": "sk-0485",
+    "name": "ブラッドミスト",
+    "kind": "wise",
+    "dist": [
+     0
+    ],
+    "power": 13,
+    "hit": -18,
+    "guts": 31,
+    "crit": 18,
+    "gd": 26
+   },
+   {
+    "id": "sk-0743",
+    "name": "ジングルベル",
+    "kind": "wise",
+    "dist": [
+     2
+    ],
+    "power": 35,
+    "hit": -18,
+    "guts": 31,
+    "crit": 8,
+    "gd": 4
+   },
+   {
+    "id": "sk-0482",
+    "name": "クリスタルレイン",
+    "kind": "wise",
+    "dist": [
+     3
+    ],
+    "power": 28,
+    "hit": 2,
+    "guts": 38,
+    "crit": 18,
+    "gd": 0
+   },
+   {
+    "id": "sk-0487",
+    "name": "アクアブラスト",
+    "kind": "wise",
+    "dist": [
+     2
+    ],
+    "power": 19,
+    "hit": 15,
+    "guts": 32,
+    "crit": 10,
+    "gd": 14
+   },
+   {
+    "id": "sk-0488",
+    "name": "ホワイトストーム",
+    "kind": "wise",
+    "dist": [
+     1
+    ],
+    "power": 49,
+    "hit": 2,
+    "guts": 39,
+    "crit": 8,
+    "gd": 14,
+    "moveTo": 3
+   },
+   {
+    "id": "sk-0486",
+    "name": "クリスタルアロー",
+    "kind": "wise",
+    "dist": [
+     3
+    ],
+    "power": 49,
+    "hit": -8,
+    "guts": 41,
+    "crit": 27,
+    "gd": 4
+   },
+   {
+    "id": "sk-0489",
+    "name": "アクアウォール",
+    "kind": "wise",
+    "dist": [
+     0
+    ],
+    "power": 49,
+    "hit": -8,
+    "guts": 42,
+    "crit": 12,
+    "gd": 0
+   },
+   {
+    "id": "sk-0744",
+    "name": "メリークリスマス",
+    "kind": "wise",
+    "dist": [
+     3
+    ],
+    "power": 49,
+    "hit": -8,
+    "guts": 44,
+    "crit": 18,
+    "gd": 4
+   },
+   {
+    "id": "sk-0491",
+    "name": "アクアドーム",
+    "kind": "wise",
+    "dist": [
+     1
+    ],
+    "power": 35,
+    "hit": 7,
+    "guts": 42,
+    "crit": 18,
+    "gd": 27,
+    "moveTo": 3
+   },
+   {
+    "id": "sk-0490",
+    "name": "ホワイトエレジー",
+    "kind": "wise",
+    "dist": [
+     2
+    ],
+    "power": 55,
+    "hit": 5,
+    "guts": 53,
+    "crit": 12,
+    "gd": 14
+   }
+  ],
+  "Undine": [
+   {
+    "id": "sk-0477",
+    "name": "アイスブレード",
+    "kind": "pow",
+    "dist": [
+     0
+    ],
+    "power": 9,
+    "hit": -19,
+    "guts": 16,
+    "crit": 6,
+    "gd": 0,
+    "learn": {
+     "start": true
+    }
+   },
+   {
+    "id": "sk-0475",
+    "name": "アクアウェイブ",
+    "kind": "wise",
+    "dist": [
+     2
+    ],
+    "power": 9,
+    "hit": 1,
+    "guts": 21,
+    "crit": 8,
+    "gd": 0,
+    "learn": {
+     "start": true
+    }
+   },
+   {
+    "id": "sk-0476",
+    "name": "アクアウィップ",
+    "kind": "pow",
+    "dist": [
+     1
+    ],
+    "power": 9,
+    "hit": -9,
+    "guts": 26,
+    "crit": 8,
+    "gd": 14
+   },
+   {
+    "id": "sk-0481",
+    "name": "スプラッシュ",
+    "kind": "wise",
+    "dist": [
+     0
+    ],
+    "power": 13,
+    "hit": -19,
+    "guts": 20,
+    "crit": 8,
+    "gd": 12
+   },
+   {
+    "id": "sk-0478",
+    "name": "ダブルバレッド",
+    "kind": "wise",
+    "dist": [
+     3
+    ],
+    "power": 13,
+    "hit": 1,
+    "guts": 23,
+    "crit": 10,
+    "gd": 0
+   },
+   {
+    "id": "sk-0479",
+    "name": "アイスアロー",
+    "kind": "wise",
+    "dist": [
+     2
+    ],
+    "power": 19,
+    "hit": -9,
+    "guts": 29,
+    "crit": 18,
+    "gd": 7
+   },
+   {
+    "id": "sk-0480",
+    "name": "アクアキッス",
+    "kind": "wise",
+    "dist": [
+     1
+    ],
+    "power": 7,
+    "hit": 6,
+    "guts": 30,
+    "crit": 18,
+    "gd": 14
+   },
+   {
+    "id": "sk-0484",
+    "name": "ドルフィンブロー",
+    "kind": "pow",
+    "dist": [
+     1
+    ],
+    "power": 28,
+    "hit": -19,
+    "guts": 26,
+    "crit": 8,
+    "gd": 7,
+    "moveTo": 0
+   },
+   {
+    "id": "sk-0483",
+    "name": "アイスコフィン",
+    "kind": "wise",
+    "dist": [
+     2
+    ],
+    "power": 35,
+    "hit": -24,
+    "guts": 29,
+    "crit": 10,
+    "gd": 4
+   },
+   {
+    "id": "sk-0485",
+    "name": "ブラッドミスト",
+    "kind": "wise",
+    "dist": [
+     0
+    ],
+    "power": 13,
+    "hit": -19,
+    "guts": 31,
+    "crit": 18,
+    "gd": 26
+   },
+   {
+    "id": "sk-0482",
+    "name": "クリスタルレイン",
+    "kind": "wise",
+    "dist": [
+     3
+    ],
+    "power": 28,
+    "hit": 1,
+    "guts": 39,
+    "crit": 18,
+    "gd": 0
+   },
+   {
+    "id": "sk-0487",
+    "name": "アクアブラスト",
+    "kind": "wise",
+    "dist": [
+     2
+    ],
+    "power": 19,
+    "hit": 14,
+    "guts": 32,
+    "crit": 10,
+    "gd": 14
+   },
+   {
+    "id": "sk-0488",
+    "name": "ホワイトストーム",
+    "kind": "wise",
+    "dist": [
+     1
+    ],
+    "power": 49,
+    "hit": 1,
+    "guts": 40,
+    "crit": 8,
+    "gd": 14,
+    "moveTo": 3
+   },
+   {
+    "id": "sk-0486",
+    "name": "クリスタルアロー",
+    "kind": "wise",
+    "dist": [
+     3
+    ],
+    "power": 49,
+    "hit": -9,
+    "guts": 41,
+    "crit": 27,
+    "gd": 4
+   },
+   {
+    "id": "sk-0489",
+    "name": "アクアウォール",
+    "kind": "wise",
+    "dist": [
+     0
+    ],
+    "power": 49,
+    "hit": -9,
+    "guts": 42,
+    "crit": 12,
+    "gd": 0
+   },
+   {
+    "id": "sk-0491",
+    "name": "アクアドーム",
+    "kind": "wise",
+    "dist": [
+     1
+    ],
+    "power": 35,
+    "hit": 6,
+    "guts": 42,
+    "crit": 18,
+    "gd": 27,
+    "moveTo": 3
+   },
+   {
+    "id": "sk-0490",
+    "name": "ホワイトエレジー",
+    "kind": "wise",
+    "dist": [
+     2
+    ],
+    "power": 55,
+    "hit": 4,
+    "guts": 53,
+    "crit": 12,
+    "gd": 14
+   }
+  ],
+  "Yaobikuni": [
+   {
+    "id": "sk-0477",
+    "name": "アイスブレード",
+    "kind": "pow",
+    "dist": [
+     0
+    ],
+    "power": 9,
+    "hit": -19,
+    "guts": 16,
+    "crit": 6,
+    "gd": 0,
+    "learn": {
+     "start": true
+    }
+   },
+   {
+    "id": "sk-0475",
+    "name": "アクアウェイブ",
+    "kind": "wise",
+    "dist": [
+     2
+    ],
+    "power": 9,
+    "hit": 1,
+    "guts": 21,
+    "crit": 8,
+    "gd": 0,
+    "learn": {
+     "start": true
+    }
+   },
+   {
+    "id": "sk-0476",
+    "name": "アクアウィップ",
+    "kind": "pow",
+    "dist": [
+     1
+    ],
+    "power": 9,
+    "hit": -9,
+    "guts": 26,
+    "crit": 8,
+    "gd": 14
+   },
+   {
+    "id": "sk-0481",
+    "name": "スプラッシュ",
+    "kind": "wise",
+    "dist": [
+     0
+    ],
+    "power": 13,
+    "hit": -19,
+    "guts": 20,
+    "crit": 8,
+    "gd": 12
+   },
+   {
+    "id": "sk-0478",
+    "name": "ダブルバレッド",
+    "kind": "wise",
+    "dist": [
+     3
+    ],
+    "power": 13,
+    "hit": 1,
+    "guts": 23,
+    "crit": 10,
+    "gd": 0
+   },
+   {
+    "id": "sk-0479",
+    "name": "アイスアロー",
+    "kind": "wise",
+    "dist": [
+     2
+    ],
+    "power": 18,
+    "hit": -9,
+    "guts": 29,
+    "crit": 18,
+    "gd": 7
+   },
+   {
+    "id": "sk-0480",
+    "name": "アクアキッス",
+    "kind": "wise",
+    "dist": [
+     1
+    ],
+    "power": 7,
+    "hit": 6,
+    "guts": 30,
+    "crit": 18,
+    "gd": 14
+   },
+   {
+    "id": "sk-0484",
+    "name": "ドルフィンブロー",
+    "kind": "pow",
+    "dist": [
+     1
+    ],
+    "power": 27,
+    "hit": -19,
+    "guts": 26,
+    "crit": 8,
+    "gd": 7,
+    "moveTo": 0
+   },
+   {
+    "id": "sk-0483",
+    "name": "アイスコフィン",
+    "kind": "wise",
+    "dist": [
+     2
+    ],
+    "power": 34,
+    "hit": -24,
+    "guts": 29,
+    "crit": 10,
+    "gd": 4
+   },
+   {
+    "id": "sk-0485",
+    "name": "ブラッドミスト",
+    "kind": "wise",
+    "dist": [
+     0
+    ],
+    "power": 13,
+    "hit": -19,
+    "guts": 31,
+    "crit": 18,
+    "gd": 26
+   },
+   {
+    "id": "sk-0482",
+    "name": "クリスタルレイン",
+    "kind": "wise",
+    "dist": [
+     3
+    ],
+    "power": 27,
+    "hit": 1,
+    "guts": 39,
+    "crit": 18,
+    "gd": 0
+   },
+   {
+    "id": "sk-0487",
+    "name": "アクアブラスト",
+    "kind": "wise",
+    "dist": [
+     2
+    ],
+    "power": 18,
+    "hit": 14,
+    "guts": 32,
+    "crit": 10,
+    "gd": 14
+   },
+   {
+    "id": "sk-0488",
+    "name": "ホワイトストーム",
+    "kind": "wise",
+    "dist": [
+     1
+    ],
+    "power": 48,
+    "hit": 1,
+    "guts": 40,
+    "crit": 8,
+    "gd": 14,
+    "moveTo": 3
+   },
+   {
+    "id": "sk-0486",
+    "name": "クリスタルアロー",
+    "kind": "wise",
+    "dist": [
+     3
+    ],
+    "power": 48,
+    "hit": -9,
+    "guts": 41,
+    "crit": 27,
+    "gd": 4
+   },
+   {
+    "id": "sk-0489",
+    "name": "アクアウォール",
+    "kind": "wise",
+    "dist": [
+     0
+    ],
+    "power": 48,
+    "hit": -9,
+    "guts": 42,
+    "crit": 12,
+    "gd": 0
+   },
+   {
+    "id": "sk-0491",
+    "name": "アクアドーム",
+    "kind": "wise",
+    "dist": [
+     1
+    ],
+    "power": 34,
+    "hit": 6,
+    "guts": 42,
+    "crit": 18,
+    "gd": 27,
+    "moveTo": 3
+   },
+   {
+    "id": "sk-0490",
+    "name": "ホワイトエレジー",
+    "kind": "wise",
+    "dist": [
+     2
+    ],
+    "power": 54,
+    "hit": 4,
+    "guts": 53,
+    "crit": 12,
+    "gd": 14
+   }
+  ],
+  "Yggdrasil": [
+   {
+    "id": "sk-0576",
+    "name": "頭突き",
+    "kind": "pow",
+    "dist": [
+     0
+    ],
+    "power": 14,
+    "hit": -19,
+    "guts": 13,
+    "crit": 10,
+    "gd": 0,
+    "moveTo": 2,
+    "learn": {
+     "start": true
+    }
+   },
+   {
+    "id": "sk-0573",
+    "name": "空中脳天撃",
+    "kind": "pow",
+    "dist": [
+     3
+    ],
+    "power": 14,
+    "hit": -3,
+    "guts": 16,
+    "crit": 10,
+    "gd": 4,
+    "moveTo": 1,
+    "learn": {
+     "start": true
+    }
+   },
+   {
+    "id": "sk-0575",
+    "name": "スターボム",
+    "kind": "wise",
+    "dist": [
+     1
+    ],
+    "power": 10,
+    "hit": -9,
+    "guts": 17,
+    "crit": 9,
+    "gd": 12
+   },
+   {
+    "id": "sk-0574",
+    "name": "グリーンライト",
+    "kind": "wise",
+    "dist": [
+     2
+    ],
+    "power": 7,
+    "hit": 6,
+    "guts": 19,
+    "crit": 6,
+    "gd": 4
+   },
+   {
+    "id": "sk-0577",
+    "name": "ワンダーブレイズ",
+    "kind": "wise",
+    "dist": [
+     2
+    ],
+    "power": 10,
+    "hit": -19,
+    "guts": 15,
+    "crit": 16,
+    "gd": 4
+   },
+   {
+    "id": "sk-0578",
+    "name": "ぴろぴろ舌",
+    "kind": "pow",
+    "dist": [
+     1
+    ],
+    "power": 14,
+    "hit": -19,
+    "guts": 21,
+    "crit": 10,
+    "gd": 0
+   },
+   {
+    "id": "sk-0579",
+    "name": "メニーウィング",
+    "kind": "wise",
+    "dist": [
+     0
+    ],
+    "power": 10,
+    "hit": 1,
+    "guts": 22,
+    "crit": 16,
+    "gd": 7
+   },
+   {
+    "id": "sk-0580",
+    "name": "月面水爆",
+    "kind": "pow",
+    "dist": [
+     3
+    ],
+    "power": 21,
+    "hit": -15,
+    "guts": 26,
+    "crit": 16,
+    "gd": 4
+   },
+   {
+    "id": "sk-0581",
+    "name": "大玉転がし",
+    "kind": "pow",
+    "dist": [
+     2
+    ],
+    "power": 21,
+    "hit": -22,
+    "guts": 26,
+    "crit": 22,
+    "gd": 12,
+    "moveTo": 0
+   },
+   {
+    "id": "sk-0582",
+    "name": "メテオストーム",
+    "kind": "wise",
+    "dist": [
+     1
+    ],
+    "power": 21,
+    "hit": 1,
+    "guts": 32,
+    "crit": 10,
+    "gd": 7
+   },
+   {
+    "id": "sk-0585",
+    "name": "キャンディボム",
+    "kind": "pow",
+    "dist": [
+     1
+    ],
+    "power": 21,
+    "hit": 11,
+    "guts": 32,
+    "crit": 8,
+    "gd": 27
+   },
+   {
+    "id": "sk-0586",
+    "name": "苺大噴",
+    "kind": "pow",
+    "dist": [
+     0
+    ],
+    "power": 36,
+    "hit": 4,
+    "guts": 35,
+    "crit": 25,
+    "gd": 4
+   },
+   {
+    "id": "sk-0584",
+    "name": "パピヨンバースト",
+    "kind": "wise",
+    "dist": [
+     2
+    ],
+    "power": 36,
+    "hit": 6,
+    "guts": 38,
+    "crit": 16,
+    "gd": 7
+   },
+   {
+    "id": "sk-0583",
+    "name": "ヘビーレイン",
+    "kind": "wise",
+    "dist": [
+     3
+    ],
+    "power": 36,
+    "hit": 1,
+    "guts": 40,
+    "crit": 25,
+    "gd": 0
+   },
+   {
+    "id": "sk-0588",
+    "name": "エターナルアーク",
+    "kind": "wise",
+    "dist": [
+     2
+    ],
+    "power": 29,
+    "hit": 1,
+    "guts": 39,
+    "crit": 10,
+    "gd": 27
+   },
+   {
+    "id": "sk-0590",
+    "name": "オーロラハック",
+    "kind": "wise",
+    "dist": [
+     0
+    ],
+    "power": 50,
+    "hit": -9,
+    "guts": 40,
+    "crit": 25,
+    "gd": 24
+   },
+   {
+    "id": "sk-0589",
+    "name": "コスモフルーツ",
+    "kind": "wise",
+    "dist": [
+     1
+    ],
+    "power": 50,
+    "hit": 1,
+    "guts": 41,
+    "crit": 13,
+    "gd": 4
+   },
+   {
+    "id": "sk-0587",
+    "name": "シャドウレギオン",
+    "kind": "pow",
+    "dist": [
+     3
+    ],
+    "power": 36,
+    "hit": 11,
+    "guts": 42,
+    "crit": 16,
+    "gd": 12
+   }
+  ],
+  "MelWhip": [
+   {
+    "id": "sk-0576",
+    "name": "頭突き",
+    "kind": "pow",
+    "dist": [
+     0
+    ],
+    "power": 13,
+    "hit": -19,
+    "guts": 13,
+    "crit": 10,
+    "gd": 0,
+    "moveTo": 2,
+    "learn": {
+     "start": true
+    }
+   },
+   {
+    "id": "sk-0573",
+    "name": "空中脳天撃",
+    "kind": "pow",
+    "dist": [
+     3
+    ],
+    "power": 13,
+    "hit": -3,
+    "guts": 16,
+    "crit": 10,
+    "gd": 4,
+    "moveTo": 1,
+    "learn": {
+     "start": true
+    }
+   },
+   {
+    "id": "sk-0575",
+    "name": "スターボム",
+    "kind": "wise",
+    "dist": [
+     1
+    ],
+    "power": 9,
+    "hit": -9,
+    "guts": 17,
+    "crit": 9,
+    "gd": 12
+   },
+   {
+    "id": "sk-0574",
+    "name": "グリーンライト",
+    "kind": "wise",
+    "dist": [
+     2
+    ],
+    "power": 7,
+    "hit": 6,
+    "guts": 19,
+    "crit": 6,
+    "gd": 4
+   },
+   {
+    "id": "sk-0577",
+    "name": "ワンダーブレイズ",
+    "kind": "wise",
+    "dist": [
+     2
+    ],
+    "power": 9,
+    "hit": -19,
+    "guts": 15,
+    "crit": 16,
+    "gd": 4
+   },
+   {
+    "id": "sk-0578",
+    "name": "ぴろぴろ舌",
+    "kind": "pow",
+    "dist": [
+     1
+    ],
+    "power": 13,
+    "hit": -19,
+    "guts": 21,
+    "crit": 10,
+    "gd": 0
+   },
+   {
+    "id": "sk-0579",
+    "name": "メニーウィング",
+    "kind": "wise",
+    "dist": [
+     0
+    ],
+    "power": 9,
+    "hit": 1,
+    "guts": 22,
+    "crit": 16,
+    "gd": 7
+   },
+   {
+    "id": "sk-0785",
+    "name": "メニーウィング・翠",
+    "kind": "wise",
+    "dist": [
+     0
+    ],
+    "power": 13,
+    "hit": 4,
+    "guts": 22,
+    "crit": 16,
+    "gd": 7
+   },
+   {
+    "id": "sk-0787",
+    "name": "ライスシャワー",
+    "kind": "wise",
+    "dist": [
+     3
+    ],
+    "power": 7,
+    "hit": -3,
+    "guts": 26,
+    "crit": 10,
+    "gd": 14
+   },
+   {
+    "id": "sk-0580",
+    "name": "月面水爆",
+    "kind": "pow",
+    "dist": [
+     3
+    ],
+    "power": 20,
+    "hit": -15,
+    "guts": 26,
+    "crit": 16,
+    "gd": 4
+   },
+   {
+    "id": "sk-0581",
+    "name": "大玉転がし",
+    "kind": "pow",
+    "dist": [
+     2
+    ],
+    "power": 20,
+    "hit": -22,
+    "guts": 26,
+    "crit": 22,
+    "gd": 12,
+    "moveTo": 0
+   },
+   {
+    "id": "sk-0582",
+    "name": "メテオストーム",
+    "kind": "wise",
+    "dist": [
+     1
+    ],
+    "power": 20,
+    "hit": 1,
+    "guts": 32,
+    "crit": 10,
+    "gd": 7
+   },
+   {
+    "id": "sk-0585",
+    "name": "キャンディボム",
+    "kind": "pow",
+    "dist": [
+     1
+    ],
+    "power": 20,
+    "hit": 11,
+    "guts": 32,
+    "crit": 8,
+    "gd": 27
+   },
+   {
+    "id": "sk-0586",
+    "name": "苺大噴",
+    "kind": "pow",
+    "dist": [
+     0
+    ],
+    "power": 35,
+    "hit": 4,
+    "guts": 35,
+    "crit": 25,
+    "gd": 4
+   },
+   {
+    "id": "sk-0584",
+    "name": "パピヨンバースト",
+    "kind": "wise",
+    "dist": [
+     2
+    ],
+    "power": 35,
+    "hit": 6,
+    "guts": 38,
+    "crit": 16,
+    "gd": 7
+   },
+   {
+    "id": "sk-0583",
+    "name": "ヘビーレイン",
+    "kind": "wise",
+    "dist": [
+     3
+    ],
+    "power": 35,
+    "hit": 1,
+    "guts": 40,
+    "crit": 25,
+    "gd": 0
+   },
+   {
+    "id": "sk-0788",
+    "name": "ケーキ入刀",
+    "kind": "pow",
+    "dist": [
+     0
+    ],
+    "power": 39,
+    "hit": 1,
+    "guts": 42,
+    "crit": 25,
+    "gd": 4
+   },
+   {
+    "id": "sk-0588",
+    "name": "エターナルアーク",
+    "kind": "wise",
+    "dist": [
+     2
+    ],
+    "power": 28,
+    "hit": 1,
+    "guts": 39,
+    "crit": 10,
+    "gd": 27
+   },
+   {
+    "id": "sk-0590",
+    "name": "オーロラハック",
+    "kind": "wise",
+    "dist": [
+     0
+    ],
+    "power": 48,
+    "hit": -9,
+    "guts": 40,
+    "crit": 25,
+    "gd": 24
+   },
+   {
+    "id": "sk-0589",
+    "name": "コスモフルーツ",
+    "kind": "wise",
+    "dist": [
+     1
+    ],
+    "power": 48,
+    "hit": 1,
+    "guts": 41,
+    "crit": 13,
+    "gd": 4
+   },
+   {
+    "id": "sk-0587",
+    "name": "シャドウレギオン",
+    "kind": "pow",
+    "dist": [
+     3
+    ],
+    "power": 35,
+    "hit": 11,
+    "guts": 42,
+    "crit": 16,
+    "gd": 12
+   }
+  ],
+  "Ghost": [
+   {
+    "id": "sk-0065",
+    "name": "ソウルビーム",
+    "kind": "wise",
+    "dist": [
+     1
+    ],
+    "power": 10,
+    "hit": 4,
+    "guts": 12,
+    "crit": 6,
+    "gd": 4,
+    "learn": {
+     "start": true
+    }
+   },
+   {
+    "id": "sk-0066",
+    "name": "ピコピコハンマー",
+    "kind": "pow",
+    "dist": [
+     0
+    ],
+    "power": 13,
+    "hit": -24,
+    "guts": 12,
+    "crit": 6,
+    "gd": 0,
+    "learn": {
+     "start": true
+    }
+   },
+   {
+    "id": "sk-0077",
+    "name": "ハトのおとしもの",
+    "kind": "wise",
+    "dist": [
+     2
+    ],
+    "power": 19,
+    "hit": -24,
+    "guts": 20,
+    "crit": 10,
+    "gd": 7
+   },
+   {
+    "id": "sk-0068",
+    "name": "びっくり",
+    "kind": "wise",
+    "dist": [
+     1
+    ],
+    "power": 9,
+    "hit": -1,
+    "guts": 13,
+    "crit": 6,
+    "gd": 13
+   },
+   {
+    "id": "sk-0069",
+    "name": "体当たり",
+    "kind": "pow",
+    "dist": [
+     0
+    ],
+    "power": 22,
+    "hit": 2,
+    "guts": 17,
+    "crit": 8,
+    "gd": 7
+   },
+   {
+    "id": "sk-0078",
+    "name": "カード",
+    "kind": "wise",
+    "dist": [
+     3
+    ],
+    "power": 19,
+    "hit": -1,
+    "guts": 17,
+    "crit": 10,
+    "gd": 7
+   },
+   {
+    "id": "sk-0067",
+    "name": "すてきステッキ",
+    "kind": "wise",
+    "dist": [
+     2
+    ],
+    "power": 7,
+    "hit": -21,
+    "guts": 18,
+    "crit": 16,
+    "gd": 0
+   },
+   {
+    "id": "sk-0070",
+    "name": "連続カード",
+    "kind": "wise",
+    "dist": [
+     3
+    ],
+    "power": 17,
+    "hit": -1,
+    "guts": 20,
+    "crit": 22,
+    "gd": 12
+   },
+   {
+    "id": "sk-0071",
+    "name": "ドクロビーム",
+    "kind": "wise",
+    "dist": [
+     2
+    ],
+    "power": 19,
+    "hit": 4,
+    "guts": 26,
+    "crit": 16,
+    "gd": 7
+   },
+   {
+    "id": "sk-0072",
+    "name": "大パンチ",
+    "kind": "pow",
+    "dist": [
+     0
+    ],
+    "power": 38,
+    "hit": -1,
+    "guts": 26,
+    "crit": 16,
+    "gd": 12
+   },
+   {
+    "id": "sk-0073",
+    "name": "大きなおとしもの",
+    "kind": "wise",
+    "dist": [
+     2
+    ],
+    "power": 44,
+    "hit": -1,
+    "guts": 28,
+    "crit": 16,
+    "gd": 24
+   },
+   {
+    "id": "sk-0080",
+    "name": "びっくりドクロ",
+    "kind": "wise",
+    "dist": [
+     1
+    ],
+    "power": 34,
+    "hit": 4,
+    "guts": 28,
+    "crit": 22,
+    "gd": 24
+   },
+   {
+    "id": "sk-0079",
+    "name": "スリーセブン",
+    "kind": "wise",
+    "dist": [
+     3
+    ],
+    "power": 24,
+    "hit": -11,
+    "guts": 33,
+    "crit": 26,
+    "gd": 4
+   },
+   {
+    "id": "sk-0074",
+    "name": "コンビネーション",
+    "kind": "pow",
+    "dist": [
+     0
+    ],
+    "power": 22,
+    "hit": 12,
+    "guts": 36,
+    "crit": 16,
+    "gd": 12
+   },
+   {
+    "id": "sk-0075",
+    "name": "Woフォーチュン",
+    "kind": "wise",
+    "dist": [
+     3
+    ],
+    "power": 46,
+    "hit": 15,
+    "guts": 27,
+    "crit": 10,
+    "gd": 19
+   },
+   {
+    "id": "sk-0084",
+    "name": "RSF",
+    "kind": "wise",
+    "dist": [
+     1
+    ],
+    "power": 24,
+    "hit": 12,
+    "guts": 31,
+    "crit": 22,
+    "gd": 14
+   },
+   {
+    "id": "sk-0076",
+    "name": "運命のコイン",
+    "kind": "wise",
+    "dist": [
+     2
+    ],
+    "power": 44,
+    "hit": 9,
+    "guts": 35,
+    "crit": 22,
+    "gd": 7
+   }
+  ],
+  "Spooky": [
+   {
+    "id": "sk-0065",
+    "name": "ソウルビーム",
+    "kind": "wise",
+    "dist": [
+     1
+    ],
+    "power": 10,
+    "hit": 3,
+    "guts": 12,
+    "crit": 6,
+    "gd": 4,
+    "learn": {
+     "start": true
+    }
+   },
+   {
+    "id": "sk-0066",
+    "name": "ピコピコハンマー",
+    "kind": "pow",
+    "dist": [
+     0
+    ],
+    "power": 13,
+    "hit": -25,
+    "guts": 12,
+    "crit": 6,
+    "gd": 0,
+    "learn": {
+     "start": true
+    }
+   },
+   {
+    "id": "sk-0077",
+    "name": "ハトのおとしもの",
+    "kind": "wise",
+    "dist": [
+     2
+    ],
+    "power": 19,
+    "hit": -25,
+    "guts": 20,
+    "crit": 10,
+    "gd": 7
+   },
+   {
+    "id": "sk-0068",
+    "name": "びっくり",
+    "kind": "wise",
+    "dist": [
+     1
+    ],
+    "power": 9,
+    "hit": -2,
+    "guts": 14,
+    "crit": 6,
+    "gd": 13
+   },
+   {
+    "id": "sk-0069",
+    "name": "体当たり",
+    "kind": "pow",
+    "dist": [
+     0
+    ],
+    "power": 22,
+    "hit": 1,
+    "guts": 17,
+    "crit": 8,
+    "gd": 7
+   },
+   {
+    "id": "sk-0078",
+    "name": "カード",
+    "kind": "wise",
+    "dist": [
+     3
+    ],
+    "power": 19,
+    "hit": -2,
+    "guts": 17,
+    "crit": 10,
+    "gd": 7
+   },
+   {
+    "id": "sk-0067",
+    "name": "すてきステッキ",
+    "kind": "wise",
+    "dist": [
+     2
+    ],
+    "power": 7,
+    "hit": -22,
+    "guts": 18,
+    "crit": 16,
+    "gd": 0
+   },
+   {
+    "id": "sk-0082",
+    "name": "カード・クラブ",
+    "kind": "wise",
+    "dist": [
+     3
+    ],
+    "power": 17,
+    "hit": -2,
+    "guts": 24,
+    "crit": 10,
+    "gd": 7
+   },
+   {
+    "id": "sk-0070",
+    "name": "連続カード",
+    "kind": "wise",
+    "dist": [
+     3
+    ],
+    "power": 17,
+    "hit": -2,
+    "guts": 21,
+    "crit": 22,
+    "gd": 12
+   },
+   {
+    "id": "sk-0071",
+    "name": "ドクロビーム",
+    "kind": "wise",
+    "dist": [
+     2
+    ],
+    "power": 19,
+    "hit": 3,
+    "guts": 26,
+    "crit": 16,
+    "gd": 7
+   },
+   {
+    "id": "sk-0072",
+    "name": "大パンチ",
+    "kind": "pow",
+    "dist": [
+     0
+    ],
+    "power": 38,
+    "hit": -2,
+    "guts": 26,
+    "crit": 16,
+    "gd": 12
+   },
+   {
+    "id": "sk-0073",
+    "name": "大きなおとしもの",
+    "kind": "wise",
+    "dist": [
+     2
+    ],
+    "power": 44,
+    "hit": -2,
+    "guts": 28,
+    "crit": 16,
+    "gd": 24
+   },
+   {
+    "id": "sk-0080",
+    "name": "びっくりドクロ",
+    "kind": "wise",
+    "dist": [
+     1
+    ],
+    "power": 34,
+    "hit": 3,
+    "guts": 28,
+    "crit": 22,
+    "gd": 24
+   },
+   {
+    "id": "sk-0079",
+    "name": "スリーセブン",
+    "kind": "wise",
+    "dist": [
+     3
+    ],
+    "power": 24,
+    "hit": -12,
+    "guts": 34,
+    "crit": 26,
+    "gd": 4
+   },
+   {
+    "id": "sk-0074",
+    "name": "コンビネーション",
+    "kind": "pow",
+    "dist": [
+     0
+    ],
+    "power": 22,
+    "hit": 11,
+    "guts": 37,
+    "crit": 16,
+    "gd": 12
+   },
+   {
+    "id": "sk-0083",
+    "name": "グリンネーション",
+    "kind": "pow",
+    "dist": [
+     0
+    ],
+    "power": 22,
+    "hit": 14,
+    "guts": 42,
+    "crit": 19,
+    "gd": 14
+   },
+   {
+    "id": "sk-0075",
+    "name": "Woフォーチュン",
+    "kind": "wise",
+    "dist": [
+     3
+    ],
+    "power": 46,
+    "hit": 14,
+    "guts": 27,
+    "crit": 10,
+    "gd": 19
+   },
+   {
+    "id": "sk-0084",
+    "name": "RSF",
+    "kind": "wise",
+    "dist": [
+     1
+    ],
+    "power": 24,
+    "hit": 11,
+    "guts": 32,
+    "crit": 22,
+    "gd": 14
+   },
+   {
+    "id": "sk-0076",
+    "name": "運命のコイン",
+    "kind": "wise",
+    "dist": [
+     2
+    ],
+    "power": 44,
+    "hit": 8,
+    "guts": 35,
+    "crit": 22,
+    "gd": 7
+   }
+  ],
+  "Illumine": [
+   {
+    "id": "sk-0040",
+    "name": "プラズマ",
+    "kind": "pow",
+    "dist": [
+     0
+    ],
+    "power": 7,
+    "hit": 13,
+    "guts": 14,
+    "crit": 10,
+    "gd": 0,
+    "learn": {
+     "start": true
+    }
+   },
+   {
+    "id": "sk-0039",
+    "name": "ヴェノムエッジ",
+    "kind": "pow",
+    "dist": [
+     2
+    ],
+    "power": 17,
+    "hit": -10,
+    "guts": 18,
+    "crit": 12,
+    "gd": 0,
+    "learn": {
+     "start": true
+    }
+   },
+   {
+    "id": "sk-0053",
+    "name": "グレネード",
+    "kind": "pow",
+    "dist": [
+     3
+    ],
+    "power": 25,
+    "hit": -23,
+    "guts": 24,
+    "crit": 12,
+    "gd": 4
+   },
+   {
+    "id": "sk-0064",
+    "name": "シールドバッシュ",
+    "kind": "pow",
+    "dist": [
+     1
+    ],
+    "power": 17,
+    "hit": -20,
+    "guts": 21,
+    "crit": 12,
+    "gd": 0,
+    "moveTo": 0
+   },
+   {
+    "id": "sk-0041",
+    "name": "エーテルアイス",
+    "kind": "wise",
+    "dist": [
+     3
+    ],
+    "power": 8,
+    "hit": 0,
+    "guts": 27,
+    "crit": 6,
+    "gd": 14,
+    "moveTo": 0
+   },
+   {
+    "id": "sk-0042",
+    "name": "モーニングスター",
+    "kind": "pow",
+    "dist": [
+     2
+    ],
+    "power": 31,
+    "hit": -20,
+    "guts": 29,
+    "crit": 10,
+    "gd": 0,
+    "moveTo": 0
+   },
+   {
+    "id": "sk-0045",
+    "name": "ストレート",
+    "kind": "pow",
+    "dist": [
+     1
+    ],
+    "power": 25,
+    "hit": 3,
+    "guts": 25,
+    "crit": 6,
+    "gd": 7
+   },
+   {
+    "id": "sk-0046",
+    "name": "アサシンクロウ",
+    "kind": "pow",
+    "dist": [
+     0
+    ],
+    "power": 25,
+    "hit": 0,
+    "guts": 30,
+    "crit": 18,
+    "gd": 12,
+    "moveTo": 2
+   },
+   {
+    "id": "sk-0044",
+    "name": "アルカナフレア",
+    "kind": "wise",
+    "dist": [
+     2
+    ],
+    "power": 25,
+    "hit": -20,
+    "guts": 31,
+    "crit": 10,
+    "gd": 24
+   },
+   {
+    "id": "sk-0043",
+    "name": "アサルトアロー",
+    "kind": "pow",
+    "dist": [
+     3
+    ],
+    "power": 31,
+    "hit": -4,
+    "guts": 35,
+    "crit": 18,
+    "gd": 0
+   },
+   {
+    "id": "sk-0047",
+    "name": "アルスマグナ",
+    "kind": "pow",
+    "dist": [
+     3
+    ],
+    "power": 31,
+    "hit": 5,
+    "guts": 37,
+    "crit": 10,
+    "gd": 0
+   },
+   {
+    "id": "sk-0048",
+    "name": "ノクターン",
+    "kind": "pow",
+    "dist": [
+     2
+    ],
+    "power": 25,
+    "hit": 10,
+    "guts": 39,
+    "crit": 18,
+    "gd": 24
+   },
+   {
+    "id": "sk-0049",
+    "name": "ブレードダンス",
+    "kind": "pow",
+    "dist": [
+     0
+    ],
+    "power": 25,
+    "hit": 5,
+    "guts": 40,
+    "crit": 15,
+    "gd": 24,
+    "moveTo": 3
+   },
+   {
+    "id": "sk-0054",
+    "name": "バスターソード",
+    "kind": "pow",
+    "dist": [
+     1
+    ],
+    "power": 17,
+    "hit": 0,
+    "guts": 44,
+    "crit": 24,
+    "gd": 7
+   },
+   {
+    "id": "sk-0050",
+    "name": "クリムゾンノヴァ",
+    "kind": "pow",
+    "dist": [
+     3
+    ],
+    "power": 28,
+    "hit": 0,
+    "guts": 46,
+    "crit": 12,
+    "gd": 7
+   },
+   {
+    "id": "sk-0052",
+    "name": "ミラージュクロウ",
+    "kind": "pow",
+    "dist": [
+     0
+    ],
+    "power": 35,
+    "hit": 10,
+    "guts": 48,
+    "crit": 18,
+    "gd": 24,
+    "moveTo": 1
+   },
+   {
+    "id": "sk-0051",
+    "name": "レクイエムエンド",
+    "kind": "pow",
+    "dist": [
+     2
+    ],
+    "power": 57,
+    "hit": -4,
+    "guts": 49,
+    "crit": 21,
+    "gd": 12
+   }
+  ],
+  "Dreamy": [
+   {
+    "id": "sk-0040",
+    "name": "プラズマ",
+    "kind": "pow",
+    "dist": [
+     0
+    ],
+    "power": 8,
+    "hit": 14,
+    "guts": 14,
+    "crit": 10,
+    "gd": 0,
+    "learn": {
+     "start": true
+    }
+   },
+   {
+    "id": "sk-0039",
+    "name": "ヴェノムエッジ",
+    "kind": "pow",
+    "dist": [
+     2
+    ],
+    "power": 19,
+    "hit": -9,
+    "guts": 18,
+    "crit": 12,
+    "gd": 0,
+    "learn": {
+     "start": true
+    }
+   },
+   {
+    "id": "sk-0053",
+    "name": "グレネード",
+    "kind": "pow",
+    "dist": [
+     3
+    ],
+    "power": 28,
+    "hit": -22,
+    "guts": 24,
+    "crit": 12,
+    "gd": 4
+   },
+   {
+    "id": "sk-0055",
+    "name": "おもちゃの爆弾",
+    "kind": "pow",
+    "dist": [
+     3
+    ],
+    "power": 28,
+    "hit": -19,
+    "guts": 24,
+    "crit": 12,
+    "gd": 4
+   },
+   {
+    "id": "sk-0064",
+    "name": "シールドバッシュ",
+    "kind": "pow",
+    "dist": [
+     1
+    ],
+    "power": 19,
+    "hit": -19,
+    "guts": 21,
+    "crit": 12,
+    "gd": 0,
+    "moveTo": 0
+   },
+   {
+    "id": "sk-0041",
+    "name": "エーテルアイス",
+    "kind": "wise",
+    "dist": [
+     3
+    ],
+    "power": 9,
+    "hit": 1,
+    "guts": 26,
+    "crit": 6,
+    "gd": 14,
+    "moveTo": 0
+   },
+   {
+    "id": "sk-0042",
+    "name": "モーニングスター",
+    "kind": "pow",
+    "dist": [
+     2
+    ],
+    "power": 35,
+    "hit": -19,
+    "guts": 28,
+    "crit": 10,
+    "gd": 0,
+    "moveTo": 0
+   },
+   {
+    "id": "sk-0045",
+    "name": "ストレート",
+    "kind": "pow",
+    "dist": [
+     1
+    ],
+    "power": 28,
+    "hit": 4,
+    "guts": 25,
+    "crit": 6,
+    "gd": 7
+   },
+   {
+    "id": "sk-0046",
+    "name": "アサシンクロウ",
+    "kind": "pow",
+    "dist": [
+     0
+    ],
+    "power": 28,
+    "hit": 1,
+    "guts": 29,
+    "crit": 18,
+    "gd": 12,
+    "moveTo": 2
+   },
+   {
+    "id": "sk-0044",
+    "name": "アルカナフレア",
+    "kind": "wise",
+    "dist": [
+     2
+    ],
+    "power": 28,
+    "hit": -19,
+    "guts": 30,
+    "crit": 10,
+    "gd": 24
+   },
+   {
+    "id": "sk-0043",
+    "name": "アサルトアロー",
+    "kind": "pow",
+    "dist": [
+     3
+    ],
+    "power": 35,
+    "hit": -3,
+    "guts": 35,
+    "crit": 18,
+    "gd": 0
+   },
+   {
+    "id": "sk-0047",
+    "name": "アルスマグナ",
+    "kind": "pow",
+    "dist": [
+     3
+    ],
+    "power": 35,
+    "hit": 6,
+    "guts": 37,
+    "crit": 10,
+    "gd": 0
+   },
+   {
+    "id": "sk-0048",
+    "name": "ノクターン",
+    "kind": "pow",
+    "dist": [
+     2
+    ],
+    "power": 28,
+    "hit": 11,
+    "guts": 39,
+    "crit": 18,
+    "gd": 24
+   },
+   {
+    "id": "sk-0049",
+    "name": "ブレードダンス",
+    "kind": "pow",
+    "dist": [
+     0
+    ],
+    "power": 28,
+    "hit": 6,
+    "guts": 40,
+    "crit": 15,
+    "gd": 24,
+    "moveTo": 3
+   },
+   {
+    "id": "sk-0054",
+    "name": "バスターソード",
+    "kind": "pow",
+    "dist": [
+     1
+    ],
+    "power": 19,
+    "hit": 1,
+    "guts": 43,
+    "crit": 24,
+    "gd": 7
+   },
+   {
+    "id": "sk-0050",
+    "name": "クリムゾンノヴァ",
+    "kind": "pow",
+    "dist": [
+     3
+    ],
+    "power": 31,
+    "hit": 1,
+    "guts": 45,
+    "crit": 12,
+    "gd": 7
+   },
+   {
+    "id": "sk-0052",
+    "name": "ミラージュクロウ",
+    "kind": "pow",
+    "dist": [
+     0
+    ],
+    "power": 40,
+    "hit": 11,
+    "guts": 47,
+    "crit": 18,
+    "gd": 24,
+    "moveTo": 1
+   },
+   {
+    "id": "sk-0051",
+    "name": "レクイエムエンド",
+    "kind": "pow",
+    "dist": [
+     2
+    ],
+    "power": 64,
+    "hit": -3,
+    "guts": 48,
+    "crit": 21,
+    "gd": 12
+   }
+  ],
+  "Kyubi": [
+   {
+    "id": "sk-0005",
+    "name": "ひっかき",
+    "kind": "pow",
+    "dist": [
+     0
+    ],
+    "power": 8,
+    "hit": -21,
+    "guts": 14,
+    "crit": 6,
+    "gd": 0,
+    "learn": {
+     "start": true
+    }
+   },
+   {
+    "id": "sk-0003",
+    "name": "狐火",
+    "kind": "wise",
+    "dist": [
+     2
+    ],
+    "power": 13,
+    "hit": 4,
+    "guts": 15,
+    "crit": 8,
+    "gd": 0,
+    "learn": {
+     "start": true
+    }
+   },
+   {
+    "id": "sk-0001",
+    "name": "神域移動",
+    "kind": "wise",
+    "dist": [
+     3
+    ],
+    "power": 8,
+    "hit": -11,
+    "guts": 16,
+    "crit": 8,
+    "gd": 0,
+    "moveTo": 0
+   },
+   {
+    "id": "sk-0004",
+    "name": "ひのこ",
+    "kind": "wise",
+    "dist": [
+     1
+    ],
+    "power": 23,
+    "hit": -21,
+    "guts": 19,
+    "crit": 6,
+    "gd": 4
+   },
+   {
+    "id": "sk-0010",
+    "name": "下駄蹴り",
+    "kind": "pow",
+    "dist": [
+     1
+    ],
+    "power": 11,
+    "hit": -11,
+    "guts": 17,
+    "crit": 10,
+    "gd": 12
+   },
+   {
+    "id": "sk-0008",
+    "name": "提灯落とし",
+    "kind": "pow",
+    "dist": [
+     3
+    ],
+    "power": 29,
+    "hit": -11,
+    "guts": 19,
+    "crit": 10,
+    "gd": 0
+   },
+   {
+    "id": "sk-0009",
+    "name": "提灯投げ",
+    "kind": "pow",
+    "dist": [
+     2
+    ],
+    "power": 16,
+    "hit": -1,
+    "guts": 20,
+    "crit": 10,
+    "gd": 4
+   },
+   {
+    "id": "sk-0018",
+    "name": "ゆうわく",
+    "kind": "wise",
+    "dist": [
+     0
+    ],
+    "power": 8,
+    "hit": -1,
+    "guts": 24,
+    "crit": 18,
+    "gd": 27,
+    "moveTo": 2
+   },
+   {
+    "id": "sk-0015",
+    "name": "超狐火",
+    "kind": "wise",
+    "dist": [
+     3
+    ],
+    "power": 16,
+    "hit": 12,
+    "guts": 25,
+    "crit": 8,
+    "gd": 0
+   },
+   {
+    "id": "sk-0017",
+    "name": "なめろう",
+    "kind": "wise",
+    "dist": [
+     1
+    ],
+    "power": 26,
+    "hit": -1,
+    "guts": 25,
+    "crit": 8,
+    "gd": 24
+   },
+   {
+    "id": "sk-0016",
+    "name": "火炎車",
+    "kind": "wise",
+    "dist": [
+     2
+    ],
+    "power": 41,
+    "hit": -11,
+    "guts": 27,
+    "crit": 10,
+    "gd": 12
+   },
+   {
+    "id": "sk-0026",
+    "name": "陽炎",
+    "kind": "pow",
+    "dist": [
+     2
+    ],
+    "power": 41,
+    "hit": -1,
+    "guts": 34,
+    "crit": 10,
+    "gd": 0
+   },
+   {
+    "id": "sk-0027",
+    "name": "神光石火",
+    "kind": "wise",
+    "dist": [
+     1
+    ],
+    "power": 41,
+    "hit": 4,
+    "guts": 38,
+    "crit": 18,
+    "gd": 0
+   },
+   {
+    "id": "sk-0028",
+    "name": "九重神眼",
+    "kind": "wise",
+    "dist": [
+     0
+    ],
+    "power": 29,
+    "hit": 12,
+    "guts": 38,
+    "crit": 10,
+    "gd": 12,
+    "moveTo": 2
+   },
+   {
+    "id": "sk-0025",
+    "name": "神狐蒼火",
+    "kind": "wise",
+    "dist": [
+     3
+    ],
+    "power": 41,
+    "hit": 12,
+    "guts": 44,
+    "crit": 18,
+    "gd": 7
+   },
+   {
+    "id": "sk-0037",
+    "name": "煉獄九尾陣",
+    "kind": "wise",
+    "dist": [
+     0
+    ],
+    "power": 33,
+    "hit": 4,
+    "guts": 40,
+    "crit": 24,
+    "gd": 14
+   },
+   {
+    "id": "sk-0036",
+    "name": "天河天翔",
+    "kind": "wise",
+    "dist": [
+     1
+    ],
+    "power": 53,
+    "hit": 4,
+    "guts": 41,
+    "crit": 12,
+    "gd": 0
+   },
+   {
+    "id": "sk-0002",
+    "name": "八嵐天衝",
+    "kind": "wise",
+    "dist": [
+     2
+    ],
+    "power": 41,
+    "hit": -1,
+    "guts": 42,
+    "crit": 10,
+    "gd": 0
+   },
+   {
+    "id": "sk-0035",
+    "name": "炸裂気泡陣",
+    "kind": "wise",
+    "dist": [
+     3
+    ],
+    "power": 23,
+    "hit": 2,
+    "guts": 45,
+    "crit": 27,
+    "gd": 12
+   }
+  ],
+  "Orihime": [
+   {
+    "id": "sk-0005",
+    "name": "ひっかき",
+    "kind": "pow",
+    "dist": [
+     0
+    ],
+    "power": 7,
+    "hit": -22,
+    "guts": 14,
+    "crit": 6,
+    "gd": 0,
+    "learn": {
+     "start": true
+    }
+   },
+   {
+    "id": "sk-0003",
+    "name": "狐火",
+    "kind": "wise",
+    "dist": [
+     2
+    ],
+    "power": 11,
+    "hit": 3,
+    "guts": 15,
+    "crit": 8,
+    "gd": 0,
+    "learn": {
+     "start": true
+    }
+   },
+   {
+    "id": "sk-0001",
+    "name": "神域移動",
+    "kind": "wise",
+    "dist": [
+     3
+    ],
+    "power": 7,
+    "hit": -12,
+    "guts": 16,
+    "crit": 8,
+    "gd": 0,
+    "moveTo": 0
+   },
+   {
+    "id": "sk-0004",
+    "name": "ひのこ",
+    "kind": "wise",
+    "dist": [
+     1
+    ],
+    "power": 21,
+    "hit": -22,
+    "guts": 19,
+    "crit": 6,
+    "gd": 4
+   },
+   {
+    "id": "sk-0010",
+    "name": "下駄蹴り",
+    "kind": "pow",
+    "dist": [
+     1
+    ],
+    "power": 10,
+    "hit": -12,
+    "guts": 17,
+    "crit": 10,
+    "gd": 12
+   },
+   {
+    "id": "sk-0008",
+    "name": "提灯落とし",
+    "kind": "pow",
+    "dist": [
+     3
+    ],
+    "power": 26,
+    "hit": -12,
+    "guts": 19,
+    "crit": 10,
+    "gd": 0
+   },
+   {
+    "id": "sk-0009",
+    "name": "提灯投げ",
+    "kind": "pow",
+    "dist": [
+     2
+    ],
+    "power": 14,
+    "hit": -2,
+    "guts": 20,
+    "crit": 10,
+    "gd": 4
+   },
+   {
+    "id": "sk-0496",
+    "name": "求愛",
+    "kind": "wise",
+    "dist": [
+     0
+    ],
+    "power": 14,
+    "hit": 11,
+    "guts": 18,
+    "crit": 6,
+    "gd": 24,
+    "moveTo": 2
+   },
+   {
+    "id": "sk-0023",
+    "name": "超狐火・星",
+    "kind": "wise",
+    "dist": [
+     3
+    ],
+    "power": 21,
+    "hit": 11,
+    "guts": 22,
+    "crit": 9,
+    "gd": 0
+   },
+   {
+    "id": "sk-0018",
+    "name": "ゆうわく",
+    "kind": "wise",
+    "dist": [
+     0
+    ],
+    "power": 7,
+    "hit": -2,
+    "guts": 24,
+    "crit": 18,
+    "gd": 27,
+    "moveTo": 2
+   },
+   {
+    "id": "sk-0015",
+    "name": "超狐火",
+    "kind": "wise",
+    "dist": [
+     3
+    ],
+    "power": 14,
+    "hit": 11,
+    "guts": 25,
+    "crit": 8,
+    "gd": 0
+   },
+   {
+    "id": "sk-0017",
+    "name": "なめろう",
+    "kind": "wise",
+    "dist": [
+     1
+    ],
+    "power": 23,
+    "hit": -2,
+    "guts": 25,
+    "crit": 8,
+    "gd": 24
+   },
+   {
+    "id": "sk-0016",
+    "name": "火炎車",
+    "kind": "wise",
+    "dist": [
+     2
+    ],
+    "power": 36,
+    "hit": -12,
+    "guts": 27,
+    "crit": 10,
+    "gd": 12
+   },
+   {
+    "id": "sk-0026",
+    "name": "陽炎",
+    "kind": "pow",
+    "dist": [
+     2
+    ],
+    "power": 36,
+    "hit": -2,
+    "guts": 34,
+    "crit": 10,
+    "gd": 0
+   },
+   {
+    "id": "sk-0027",
+    "name": "神光石火",
+    "kind": "wise",
+    "dist": [
+     1
+    ],
+    "power": 36,
+    "hit": 3,
+    "guts": 38,
+    "crit": 18,
+    "gd": 0
+   },
+   {
+    "id": "sk-0028",
+    "name": "九重神眼",
+    "kind": "wise",
+    "dist": [
+     0
+    ],
+    "power": 26,
+    "hit": 11,
+    "guts": 38,
+    "crit": 10,
+    "gd": 12,
+    "moveTo": 2
+   },
+   {
+    "id": "sk-0025",
+    "name": "神狐蒼火",
+    "kind": "wise",
+    "dist": [
+     3
+    ],
+    "power": 36,
+    "hit": 11,
+    "guts": 44,
+    "crit": 18,
+    "gd": 7
+   },
+   {
+    "id": "sk-0037",
+    "name": "煉獄九尾陣",
+    "kind": "wise",
+    "dist": [
+     0
+    ],
+    "power": 29,
+    "hit": 3,
+    "guts": 40,
+    "crit": 24,
+    "gd": 14
+   },
+   {
+    "id": "sk-0036",
+    "name": "天河天翔",
+    "kind": "wise",
+    "dist": [
+     1
+    ],
+    "power": 48,
+    "hit": 3,
+    "guts": 41,
+    "crit": 12,
+    "gd": 0
+   },
+   {
+    "id": "sk-0002",
+    "name": "八嵐天衝",
+    "kind": "wise",
+    "dist": [
+     2
+    ],
+    "power": 36,
+    "hit": -2,
+    "guts": 42,
+    "crit": 10,
+    "gd": 0
+   },
+   {
+    "id": "sk-0035",
+    "name": "炸裂気泡陣",
+    "kind": "wise",
+    "dist": [
+     3
+    ],
+    "power": 21,
+    "hit": 1,
+    "guts": 45,
+    "crit": 27,
+    "gd": 12
+   }
+  ],
+  "Pandora": [
+   {
+    "id": "pandora_o01",
+    "name": "デュアルスラップ",
+    "kind": "pow",
+    "dist": [
+     0
+    ],
+    "power": 9,
+    "hit": 6,
+    "guts": 12,
+    "crit": 10,
+    "gd": 2,
+    "learn": {
+     "start": true
+    }
+   },
+   {
+    "id": "pandora_o02",
+    "name": "ルミナスレイ",
+    "kind": "wise",
+    "dist": [
+     3
+    ],
+    "power": 12,
+    "hit": -4,
+    "guts": 14,
+    "crit": 12,
+    "gd": 2,
+    "learn": {
+     "start": true
+    }
+   },
+   {
+    "id": "pandora_o03",
+    "name": "ナイトサンダー",
+    "kind": "wise",
+    "dist": [
+     2
+    ],
+    "power": 18,
+    "hit": -4,
+    "guts": 16,
+    "crit": 12,
+    "gd": 6
+   },
+   {
+    "id": "pandora_o04",
+    "name": "セラフキック",
+    "kind": "pow",
+    "dist": [
+     1
+    ],
+    "power": 18,
+    "hit": -4,
+    "guts": 19,
+    "crit": 12,
+    "gd": 6
+   },
+   {
+    "id": "pandora_o05",
+    "name": "アビスレイド",
+    "kind": "pow",
+    "dist": [
+     1
+    ],
+    "power": 18,
+    "hit": -4,
+    "guts": 22,
+    "crit": 12,
+    "gd": 6,
+    "moveTo": 0
+   },
+   {
+    "id": "pandora_o06",
+    "name": "ホーリーライトニング",
+    "kind": "wise",
+    "dist": [
+     3
+    ],
+    "power": 26,
+    "hit": -14,
+    "guts": 25,
+    "crit": 12,
+    "gd": 6
+   },
+   {
+    "id": "pandora_o07",
+    "name": "カオスメガレイ",
+    "kind": "wise",
+    "dist": [
+     2
+    ],
+    "power": 26,
+    "hit": -4,
+    "guts": 27,
+    "crit": 12,
+    "gd": 6
+   },
+   {
+    "id": "pandora_o08",
+    "name": "エクリプスキッス",
+    "kind": "wise",
+    "dist": [
+     3
+    ],
+    "power": 33,
+    "hit": -14,
+    "guts": 30,
+    "crit": 18,
+    "gd": 6
+   },
+   {
+    "id": "pandora_o09",
+    "name": "デュアルキッス",
+    "kind": "wise",
+    "dist": [
+     2
+    ],
+    "power": 33,
+    "hit": -14,
+    "guts": 33,
+    "crit": 18,
+    "gd": 6
+   },
+   {
+    "id": "pandora_o10",
+    "name": "デュアルバン",
+    "kind": "wise",
+    "dist": [
+     3
+    ],
+    "power": 26,
+    "hit": -14,
+    "guts": 24,
+    "crit": 12,
+    "gd": 6
+   },
+   {
+    "id": "pandora_o11",
+    "name": "セイクリッドレイ",
+    "kind": "wise",
+    "dist": [
+     2
+    ],
+    "power": 26,
+    "hit": -4,
+    "guts": 27,
+    "crit": 12,
+    "gd": 6
+   },
+   {
+    "id": "pandora_o12",
+    "name": "アビスサンダー",
+    "kind": "wise",
+    "dist": [
+     3
+    ],
+    "power": 33,
+    "hit": -14,
+    "guts": 30,
+    "crit": 12,
+    "gd": 6
+   },
+   {
+    "id": "pandora_o13",
+    "name": "ツインビッグバン",
+    "kind": "wise",
+    "dist": [
+     2
+    ],
+    "power": 33,
+    "hit": -14,
+    "guts": 32,
+    "crit": 12,
+    "gd": 6
+   },
+   {
+    "id": "pandora_o14",
+    "name": "ダークライトニング",
+    "kind": "wise",
+    "dist": [
+     3
+    ],
+    "power": 46,
+    "hit": -14,
+    "guts": 35,
+    "crit": 12,
+    "gd": 6
+   },
+   {
+    "id": "pandora_o15",
+    "name": "カオスコズミック",
+    "kind": "wise",
+    "dist": [
+     2
+    ],
+    "power": 46,
+    "hit": -14,
+    "guts": 38,
+    "crit": 18,
+    "gd": 6
+   },
+   {
+    "id": "pandora_o16",
+    "name": "アストラルクロスレイ",
+    "kind": "wise",
+    "dist": [
+     3
+    ],
+    "power": 60,
+    "hit": -17,
+    "guts": 41,
+    "crit": 24,
+    "gd": 6
+   },
+   {
+    "id": "pandora_o17",
+    "name": "エクリプスノヴァ",
+    "kind": "wise",
+    "dist": [
+     2
+    ],
+    "power": 60,
+    "hit": -14,
+    "guts": 43,
+    "crit": 18,
+    "gd": 9
+   },
+   {
+    "id": "pandora_o18",
+    "name": "ダイスキライライ",
+    "kind": "wise",
+    "dist": [
+     3
+    ],
+    "power": 60,
+    "hit": -17,
+    "guts": 45,
+    "crit": 18,
+    "gd": 9
+   }
+  ],
+  "Eiki": [
+   {
+    "id": "eiki_o01",
+    "name": "桜牙",
+    "kind": "pow",
+    "dist": [
+     0
+    ],
+    "power": 9,
+    "hit": 4,
+    "guts": 13,
+    "crit": 16,
+    "gd": 3,
+    "learn": {
+     "start": true
+    }
+   },
+   {
+    "id": "eiki_o02",
+    "name": "花裂き",
+    "kind": "pow",
+    "dist": [
+     2
+    ],
+    "power": 9,
+    "hit": 4,
+    "guts": 16,
+    "crit": 10,
+    "gd": 3,
+    "learn": {
+     "start": true
+    }
+   },
+   {
+    "id": "eiki_o03",
+    "name": "桜風刃",
+    "kind": "wise",
+    "dist": [
+     2
+    ],
+    "power": 12,
+    "hit": 4,
+    "guts": 18,
+    "crit": 16,
+    "gd": 3
+   },
+   {
+    "id": "eiki_o04",
+    "name": "花霞斬",
+    "kind": "pow",
+    "dist": [
+     2
+    ],
+    "power": 12,
+    "hit": -1,
+    "guts": 21,
+    "crit": 16,
+    "gd": 3,
+    "moveTo": 0
+   },
+   {
+    "id": "eiki_o05",
+    "name": "桜月輪",
+    "kind": "pow",
+    "dist": [
+     1
+    ],
+    "power": 18,
+    "hit": -1,
+    "guts": 24,
+    "crit": 10,
+    "gd": 3
+   },
+   {
+    "id": "eiki_o06",
+    "name": "桜嵐刃",
+    "kind": "wise",
+    "dist": [
+     3
+    ],
+    "power": 18,
+    "hit": -1,
+    "guts": 27,
+    "crit": 16,
+    "gd": 7
+   },
+   {
+    "id": "eiki_o07",
+    "name": "千花連刃",
+    "kind": "pow",
+    "dist": [
+     1
+    ],
+    "power": 27,
+    "hit": -1,
+    "guts": 29,
+    "crit": 16,
+    "gd": 7
+   },
+   {
+    "id": "eiki_o08",
+    "name": "桜閃爪",
+    "kind": "pow",
+    "dist": [
+     1
+    ],
+    "power": 27,
+    "hit": -1,
+    "guts": 32,
+    "crit": 16,
+    "gd": 7
+   },
+   {
+    "id": "eiki_o09",
+    "name": "桜華絶閃爪",
+    "kind": "pow",
+    "dist": [
+     0
+    ],
+    "power": 33,
+    "hit": -1,
+    "guts": 35,
+    "crit": 16,
+    "gd": 7
+   },
+   {
+    "id": "eiki_o10",
+    "name": "華影緋閃",
+    "kind": "pow",
+    "dist": [
+     2
+    ],
+    "power": 18,
+    "hit": -1,
+    "guts": 26,
+    "crit": 16,
+    "gd": 7
+   },
+   {
+    "id": "eiki_o11",
+    "name": "氷花一閃",
+    "kind": "pow",
+    "dist": [
+     1
+    ],
+    "power": 27,
+    "hit": -1,
+    "guts": 29,
+    "crit": 16,
+    "gd": 7
+   },
+   {
+    "id": "eiki_o12",
+    "name": "桜月斬華",
+    "kind": "pow",
+    "dist": [
+     2
+    ],
+    "power": 27,
+    "hit": -1,
+    "guts": 32,
+    "crit": 16,
+    "gd": 7
+   },
+   {
+    "id": "eiki_o13",
+    "name": "緋雪乱刃",
+    "kind": "pow",
+    "dist": [
+     1
+    ],
+    "power": 33,
+    "hit": -1,
+    "guts": 34,
+    "crit": 16,
+    "gd": 7
+   },
+   {
+    "id": "eiki_o14",
+    "name": "花氷双牙",
+    "kind": "pow",
+    "dist": [
+     1
+    ],
+    "power": 33,
+    "hit": -11,
+    "guts": 38,
+    "crit": 22,
+    "gd": 7
+   },
+   {
+    "id": "eiki_o15",
+    "name": "千華氷嵐",
+    "kind": "wise",
+    "dist": [
+     2
+    ],
+    "power": 47,
+    "hit": -11,
+    "guts": 41,
+    "crit": 16,
+    "gd": 7
+   },
+   {
+    "id": "eiki_o16",
+    "name": "緋桜六華閃",
+    "kind": "pow",
+    "dist": [
+     2
+    ],
+    "power": 47,
+    "hit": -11,
+    "guts": 44,
+    "crit": 22,
+    "gd": 7
+   },
+   {
+    "id": "eiki_o17",
+    "name": "絶影桜華乱舞",
+    "kind": "pow",
+    "dist": [
+     1
+    ],
+    "power": 61,
+    "hit": -11,
+    "guts": 46,
+    "crit": 16,
+    "gd": 7,
+    "moveTo": 0
+   },
+   {
+    "id": "eiki_o18",
+    "name": "絶華緋閃・零桜",
+    "kind": "pow",
+    "dist": [
+     2
+    ],
+    "power": 61,
+    "hit": -11,
+    "guts": 49,
+    "crit": 22,
+    "gd": 7
+   }
+  ],
+  "KenshiMocchi": [
+   {
+    "id": "kenshimocchi_o01",
+    "name": "エッジもんた",
+    "kind": "pow",
+    "dist": [
+     0
+    ],
+    "power": 8,
+    "hit": 4,
+    "guts": 11,
+    "crit": 10,
+    "gd": 5,
+    "learn": {
+     "start": true
+    }
+   },
+   {
+    "id": "kenshimocchi_o02",
+    "name": "もちき・リープ",
+    "kind": "pow",
+    "dist": [
+     2
+    ],
+    "power": 8,
+    "hit": 4,
+    "guts": 13,
+    "crit": 10,
+    "gd": 5,
+    "moveTo": 0,
+    "learn": {
+     "start": true
+    }
+   },
+   {
+    "id": "kenshimocchi_o03",
+    "name": "ガッチョスラント",
+    "kind": "pow",
+    "dist": [
+     1
+    ],
+    "power": 11,
+    "hit": 4,
+    "guts": 16,
+    "crit": 10,
+    "gd": 5
+   },
+   {
+    "id": "kenshimocchi_o04",
+    "name": "エアリアルもっちゃん",
+    "kind": "pow",
+    "dist": [
+     2
+    ],
+    "power": 11,
+    "hit": 4,
+    "guts": 18,
+    "crit": 10,
+    "gd": 5
+   },
+   {
+    "id": "kenshimocchi_o05",
+    "name": "ガッチャー・クロス",
+    "kind": "pow",
+    "dist": [
+     1
+    ],
+    "power": 16,
+    "hit": -1,
+    "guts": 21,
+    "crit": 12,
+    "gd": 5
+   },
+   {
+    "id": "kenshimocchi_o06",
+    "name": "黒桜吹雪",
+    "kind": "wise",
+    "dist": [
+     3
+    ],
+    "power": 16,
+    "hit": -1,
+    "guts": 23,
+    "crit": 12,
+    "gd": 5
+   },
+   {
+    "id": "kenshimocchi_o07",
+    "name": "もっさんスピン",
+    "kind": "pow",
+    "dist": [
+     1
+    ],
+    "power": 24,
+    "hit": -1,
+    "guts": 26,
+    "crit": 12,
+    "gd": 5
+   },
+   {
+    "id": "kenshimocchi_o08",
+    "name": "枝垂れクロス",
+    "kind": "wise",
+    "dist": [
+     3
+    ],
+    "power": 24,
+    "hit": -11,
+    "guts": 28,
+    "crit": 18,
+    "gd": 5
+   },
+   {
+    "id": "kenshimocchi_o09",
+    "name": "バーストもっさま",
+    "kind": "pow",
+    "dist": [
+     1
+    ],
+    "power": 29,
+    "hit": -1,
+    "guts": 30,
+    "crit": 12,
+    "gd": 15
+   },
+   {
+    "id": "kenshimocchi_o10",
+    "name": "ソニック・リープ",
+    "kind": "pow",
+    "dist": [
+     2
+    ],
+    "power": 16,
+    "hit": -1,
+    "guts": 23,
+    "crit": 12,
+    "gd": 5,
+    "moveTo": 0
+   },
+   {
+    "id": "kenshimocchi_o11",
+    "name": "ホリゾンタル・スクエア",
+    "kind": "pow",
+    "dist": [
+     1
+    ],
+    "power": 24,
+    "hit": -1,
+    "guts": 25,
+    "crit": 12,
+    "gd": 5
+   },
+   {
+    "id": "kenshimocchi_o12",
+    "name": "ヴォーパル・ストライク",
+    "kind": "pow",
+    "dist": [
+     2
+    ],
+    "power": 24,
+    "hit": -1,
+    "guts": 28,
+    "crit": 18,
+    "gd": 5
+   },
+   {
+    "id": "kenshimocchi_o13",
+    "name": "デュアル・サーキュラー",
+    "kind": "pow",
+    "dist": [
+     1
+    ],
+    "power": 29,
+    "hit": -1,
+    "guts": 30,
+    "crit": 12,
+    "gd": 5
+   },
+   {
+    "id": "kenshimocchi_o14",
+    "name": "ブラック・テンペスト",
+    "kind": "wise",
+    "dist": [
+     3
+    ],
+    "power": 29,
+    "hit": -11,
+    "guts": 33,
+    "crit": 12,
+    "gd": 5
+   },
+   {
+    "id": "kenshimocchi_o15",
+    "name": "ブラック・チェイン",
+    "kind": "pow",
+    "dist": [
+     1
+    ],
+    "power": 29,
+    "hit": -11,
+    "guts": 35,
+    "crit": 12,
+    "gd": 8
+   },
+   {
+    "id": "kenshimocchi_o16",
+    "name": "ナイトメア・レイド",
+    "kind": "pow",
+    "dist": [
+     2
+    ],
+    "power": 41,
+    "hit": -11,
+    "guts": 37,
+    "crit": 12,
+    "gd": 8,
+    "moveTo": 0
+   },
+   {
+    "id": "kenshimocchi_o17",
+    "name": "ジ・エクリプス",
+    "kind": "pow",
+    "dist": [
+     1
+    ],
+    "power": 41,
+    "hit": -11,
+    "guts": 40,
+    "crit": 12,
+    "gd": 8
+   },
+   {
+    "id": "kenshimocchi_o18",
+    "name": "スターバースト・ストリーム",
+    "kind": "pow",
+    "dist": [
+     2
+    ],
+    "power": 54,
+    "hit": -11,
+    "guts": 42,
+    "crit": 18,
+    "gd": 15
+   }
+  ],
+  "Melody": [
+   {
+    "id": "melody_o01",
+    "name": "ぞうさん頭突き",
+    "kind": "pow",
+    "dist": [
+     0
+    ],
+    "power": 10,
+    "hit": 7,
+    "guts": 13,
+    "crit": 10,
+    "gd": 5,
+    "learn": {
+     "start": true
+    }
+   },
+   {
+    "id": "melody_o02",
+    "name": "ピアノパラソル脳天撃",
+    "kind": "pow",
+    "dist": [
+     1
+    ],
+    "power": 10,
+    "hit": 2,
+    "guts": 16,
+    "crit": 10,
+    "gd": 5,
+    "learn": {
+     "start": true
+    }
+   },
+   {
+    "id": "melody_o03",
+    "name": "メロディタクトライト",
+    "kind": "wise",
+    "dist": [
+     2
+    ],
+    "power": 14,
+    "hit": 2,
+    "guts": 18,
+    "crit": 10,
+    "gd": 5
+   },
+   {
+    "id": "melody_o04",
+    "name": "ぞうさんぴろぴろ鼻",
+    "kind": "pow",
+    "dist": [
+     1
+    ],
+    "power": 14,
+    "hit": 2,
+    "guts": 21,
+    "crit": 12,
+    "gd": 12
+   },
+   {
+    "id": "melody_o05",
+    "name": "マリーランド大玉転がし",
+    "kind": "pow",
+    "dist": [
+     1
+    ],
+    "power": 20,
+    "hit": 2,
+    "guts": 25,
+    "crit": 12,
+    "gd": 5,
+    "moveTo": 0
+   },
+   {
+    "id": "melody_o06",
+    "name": "ムーンサルトメロディー",
+    "kind": "pow",
+    "dist": [
+     2
+    ],
+    "power": 20,
+    "hit": 2,
+    "guts": 28,
+    "crit": 12,
+    "gd": 5,
+    "moveTo": 3
+   },
+   {
+    "id": "melody_o07",
+    "name": "メロディキャンディボム",
+    "kind": "wise",
+    "dist": [
+     2
+    ],
+    "power": 30,
+    "hit": -8,
+    "guts": 30,
+    "crit": 12,
+    "gd": 12
+   },
+   {
+    "id": "melody_o08",
+    "name": "メロディ苺クッキー",
+    "kind": "wise",
+    "dist": [
+     3
+    ],
+    "power": 30,
+    "hit": -8,
+    "guts": 33,
+    "crit": 12,
+    "gd": 12
+   },
+   {
+    "id": "melody_o09",
+    "name": "ドリームパワー",
+    "kind": "wise",
+    "dist": [
+     2
+    ],
+    "power": 38,
+    "hit": -8,
+    "guts": 36,
+    "crit": 12,
+    "gd": 5
+   },
+   {
+    "id": "melody_o10",
+    "name": "メロメロハート",
+    "kind": "wise",
+    "dist": [
+     3
+    ],
+    "power": 20,
+    "hit": -8,
+    "guts": 27,
+    "crit": 12,
+    "gd": 12
+   },
+   {
+    "id": "melody_o11",
+    "name": "ピアノワルツ",
+    "kind": "wise",
+    "dist": [
+     2
+    ],
+    "power": 30,
+    "hit": -8,
+    "guts": 30,
+    "crit": 12,
+    "gd": 12
+   },
+   {
+    "id": "melody_o12",
+    "name": "リボンウィング",
+    "kind": "wise",
+    "dist": [
+     3
+    ],
+    "power": 30,
+    "hit": -8,
+    "guts": 33,
+    "crit": 12,
+    "gd": 5,
+    "moveTo": 3
+   },
+   {
+    "id": "melody_o13",
+    "name": "パウンドメテオ",
+    "kind": "wise",
+    "dist": [
+     2
+    ],
+    "power": 38,
+    "hit": -8,
+    "guts": 35,
+    "crit": 12,
+    "gd": 22
+   },
+   {
+    "id": "melody_o14",
+    "name": "ピンクバースト",
+    "kind": "wise",
+    "dist": [
+     3
+    ],
+    "power": 38,
+    "hit": -8,
+    "guts": 38,
+    "crit": 12,
+    "gd": 22
+   },
+   {
+    "id": "melody_o15",
+    "name": "キャンディレイン",
+    "kind": "wise",
+    "dist": [
+     2
+    ],
+    "power": 38,
+    "hit": -8,
+    "guts": 42,
+    "crit": 12,
+    "gd": 22
+   },
+   {
+    "id": "melody_o16",
+    "name": "マリーランドアーチ",
+    "kind": "wise",
+    "dist": [
+     3
+    ],
+    "power": 53,
+    "hit": -18,
+    "guts": 45,
+    "crit": 14,
+    "gd": 10
+   },
+   {
+    "id": "melody_o17",
+    "name": "メロディタクト",
+    "kind": "wise",
+    "dist": [
+     2
+    ],
+    "power": 53,
+    "hit": -18,
+    "guts": 47,
+    "crit": 14,
+    "gd": 10
+   },
+   {
+    "id": "melody_o18",
+    "name": "スウィートパレード",
+    "kind": "wise",
+    "dist": [
+     3
+    ],
+    "power": 69,
+    "hit": -18,
+    "guts": 50,
+    "crit": 14,
+    "gd": 22
+   }
+  ],
+  "Kuromy": [
+   {
+    "id": "kuromy_o01",
+    "name": "バク頭突き",
+    "kind": "pow",
+    "dist": [
+     0
+    ],
+    "power": 9,
+    "hit": 5,
+    "guts": 12,
+    "crit": 10,
+    "gd": 4,
+    "learn": {
+     "start": true
+    }
+   },
+   {
+    "id": "kuromy_o02",
+    "name": "バク空中落下プレス",
+    "kind": "pow",
+    "dist": [
+     1
+    ],
+    "power": 13,
+    "hit": 5,
+    "guts": 15,
+    "crit": 10,
+    "gd": 4,
+    "moveTo": 0,
+    "learn": {
+     "start": true
+    }
+   },
+   {
+    "id": "kuromy_o03",
+    "name": "ブラックノートライト",
+    "kind": "wise",
+    "dist": [
+     2
+    ],
+    "power": 13,
+    "hit": -5,
+    "guts": 17,
+    "crit": 10,
+    "gd": 12
+   },
+   {
+    "id": "kuromy_o04",
+    "name": "バクパタパタ耳",
+    "kind": "pow",
+    "dist": [
+     1
+    ],
+    "power": 18,
+    "hit": -5,
+    "guts": 20,
+    "crit": 12,
+    "gd": 12
+   },
+   {
+    "id": "kuromy_o05",
+    "name": "巨大雪だるま転がし",
+    "kind": "pow",
+    "dist": [
+     1
+    ],
+    "power": 18,
+    "hit": -5,
+    "guts": 23,
+    "crit": 12,
+    "gd": 4,
+    "moveTo": 0
+   },
+   {
+    "id": "kuromy_o06",
+    "name": "KUROMI'S5アタック",
+    "kind": "pow",
+    "dist": [
+     2
+    ],
+    "power": 28,
+    "hit": -5,
+    "guts": 26,
+    "crit": 12,
+    "gd": 4
+   },
+   {
+    "id": "kuromy_o07",
+    "name": "ナイトメアらっきょうボム",
+    "kind": "wise",
+    "dist": [
+     2
+    ],
+    "power": 28,
+    "hit": -5,
+    "guts": 28,
+    "crit": 12,
+    "gd": 14
+   },
+   {
+    "id": "kuromy_o08",
+    "name": "バコ・ベリースプラッシュ",
+    "kind": "wise",
+    "dist": [
+     3
+    ],
+    "power": 34,
+    "hit": -15,
+    "guts": 31,
+    "crit": 12,
+    "gd": 14
+   },
+   {
+    "id": "kuromy_o09",
+    "name": "ダークパワー",
+    "kind": "wise",
+    "dist": [
+     2
+    ],
+    "power": 34,
+    "hit": -15,
+    "guts": 34,
+    "crit": 12,
+    "gd": 7
+   },
+   {
+    "id": "kuromy_o10",
+    "name": "ドクロボム",
+    "kind": "wise",
+    "dist": [
+     3
+    ],
+    "power": 28,
+    "hit": -5,
+    "guts": 25,
+    "crit": 12,
+    "gd": 14
+   },
+   {
+    "id": "kuromy_o11",
+    "name": "クロミーズ5突撃",
+    "kind": "pow",
+    "dist": [
+     0
+    ],
+    "power": 28,
+    "hit": -5,
+    "guts": 28,
+    "crit": 12,
+    "gd": 7,
+    "moveTo": 0
+   },
+   {
+    "id": "kuromy_o12",
+    "name": "夢くいウィング",
+    "kind": "wise",
+    "dist": [
+     3
+    ],
+    "power": 34,
+    "hit": -15,
+    "guts": 31,
+    "crit": 12,
+    "gd": 7,
+    "moveTo": 3
+   },
+   {
+    "id": "kuromy_o13",
+    "name": "恨み帳メテオ",
+    "kind": "wise",
+    "dist": [
+     2
+    ],
+    "power": 34,
+    "hit": -15,
+    "guts": 33,
+    "crit": 12,
+    "gd": 14
+   },
+   {
+    "id": "kuromy_o14",
+    "name": "黒音符バースト",
+    "kind": "wise",
+    "dist": [
+     3
+    ],
+    "power": 48,
+    "hit": -15,
+    "guts": 36,
+    "crit": 12,
+    "gd": 14
+   },
+   {
+    "id": "kuromy_o15",
+    "name": "らっきょう大雨",
+    "kind": "wise",
+    "dist": [
+     2
+    ],
+    "power": 48,
+    "hit": -15,
+    "guts": 39,
+    "crit": 12,
+    "gd": 7
+   },
+   {
+    "id": "kuromy_o16",
+    "name": "ナイトメアアーク",
+    "kind": "wise",
+    "dist": [
+     3
+    ],
+    "power": 48,
+    "hit": -15,
+    "guts": 42,
+    "crit": 18,
+    "gd": 7
+   },
+   {
+    "id": "kuromy_o17",
+    "name": "ダークオーロラ",
+    "kind": "wise",
+    "dist": [
+     2
+    ],
+    "power": 63,
+    "hit": -15,
+    "guts": 44,
+    "crit": 18,
+    "gd": 7
+   },
+   {
+    "id": "kuromy_o18",
+    "name": "悪夢フィナーレ",
+    "kind": "wise",
+    "dist": [
+     3
+    ],
+    "power": 63,
+    "hit": -18,
+    "guts": 47,
+    "crit": 18,
+    "gd": 7
+   }
+  ]
+ }
+}
