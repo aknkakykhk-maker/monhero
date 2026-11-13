@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: afafac0404e8f30c
+// generated-sha256: 655d94b9179d43b7
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -77101,7 +77101,8 @@ const AMBW_HIT_BASE = 75;
 const ambwTechItems = (catalog, member, list) => {
   const sp = catalog && member && catalog.species && catalog.species[member.species];
   const byId = {}; if (sp && Array.isArray(sp.techs)) for (const t of sp.techs) byId[t.id] = t;
-  return (Array.isArray(list) ? list : []).map((mv) => { const t = byId[mv.id]; return { ...mv, dist: Array.isArray(mv.dist) ? mv.dist : [], hit: t ? AMBW_HIT_BASE + (Number(t.hit) || 0) : 0, power: t ? Number(t.power) || 0 : 0 }; });
+  return (Array.isArray(list) ? list : []).map((mv) => { const t = byId[mv.id]; return { ...mv, dist: Array.isArray(mv.dist) ? mv.dist : [], hit: t ? AMBW_HIT_BASE + (Number(t.hit) || 0) : 0, power: t ? Number(t.power) || 0 : 0,
+    ...(t ? { base: { power: t.power, hit: t.hit, gd: t.gd, crit: t.crit } } : {}) }; });
 };
 // cards … 技の札を間合いごとの4枚にする(2026-11-13 社長)。rep … [零,近,中,遠] の代表の技 id/onOpen(side, d) … 札を押すと一覧
 function AmbwPanel({ side, team, frame, maxHp, moves, lastMove, mine, catalog = null, teams = null, cards = false, rep = null, onOpen = null }) {
@@ -77586,7 +77587,7 @@ const ambbUnitTechItems = (engine, catalog, unit) => {
   return list.map(t => {
     const m = Math.max(0, Math.min(100, Number(unit.mastery && unit.mastery[t.id]) || 0));
     // 技表の hit は基本の命中に足す補正。代表を決める目安は 75+補正(観戦の札 ambwTechItems と同じ決め方にそろえる)。一覧に出す命中%は熟練の分を足す
-    return { id: t.id, name: t.name, kind: t.kind, dist: t.dist, power: t.power, hit: 75 + t.hit, shown: Math.round((75 + t.hit + m * hitMax) * 10) / 10, guts: Math.round(t.guts * (1 - m / 100 * cut)) };
+    return { id: t.id, name: t.name, kind: t.kind, dist: t.dist, power: t.power, hit: 75 + t.hit, base: { power: t.power, hit: t.hit, gd: t.gd, crit: t.crit }, shown: Math.round((75 + t.hit + m * hitMax) * 10) / 10, guts: Math.round(t.guts * (1 - m / 100 * cut)) };
   });
 };
 const ambbTacticsOf = (aid, rows) => { try { return typeof amgtTacticsOf === 'function' ? amgtTacticsOf(aid, rows) : 40; } catch (_) { return 40; } };
@@ -86879,7 +86880,7 @@ const msaFitTechNames = () => {
 };
 
 // ---- 技の札(間合いごとに1枚・2026-11-13 社長「技の札は間合いごとに1つずつ」「押したら必ずその間合いの一覧」) ----
-//   技の形はそろえて渡す: { id, name, kind('pow'|'int'), guts, dist:[届く間合い], hit(命中の目安 0〜100), power(威力) }
+//   技の形はそろえて渡す: { id, name, kind('pow'|'int'), guts, dist:[届く間合い], hit(命中の目安 0〜100), power(威力), base?(技表の元の数 power・hit・gd・crit。性能の段) }
 //   代表の技: 決めた技(chosen[d])がその間合いで届けばそれ。決めていない・覚えていない・届かないときは
 //   「命中×威力」がいちばん大きい技(同じならガッツの軽いほう・それも同じなら並びの先)。
 const MSA_DC_DIST = ['零', '近', '中', '遠'];
@@ -86931,10 +86932,36 @@ const MSA_DC_CSS = `
 .msa-sh-use.view:disabled{opacity:1}
 .msa-sh-use small{display:block;font-size:10.5px;color:#cbd5e1;font-weight:700}
 .msa-sh-use small.p{color:#fde68a}
+.msa-tg{display:flex;flex-wrap:wrap;gap:3px 8px;margin:2px 0 1px;font-size:10.5px;color:#cbd5e1;font-weight:800}
+.msa-tg-i{white-space:nowrap}.msa-tg-i b{display:inline-block;min-width:14px;margin-left:3px;text-align:center;font-weight:900;color:#e2e8f0}
+.msa-tg-i.gS b{color:#fde047}.msa-tg-i.gA b{color:#fb923c}.msa-tg-i.gB b{color:#86efac}.msa-tg-i.gC b{color:#e2e8f0}.msa-tg-i.gD b,.msa-tg-i.gE b,.msa-tg-i.gx b{color:#94a3b8}
+.msa-dc-c small.dmg b{color:#fde047;margin-left:2px}
 .msa-sh-rep{flex:none;border-radius:99px;border:1px solid #a78bfa;background:#1e1b4b;color:#ddd6fe;font-size:11px;padding:5px 9px;font-weight:900;font-family:inherit;white-space:nowrap}
 .msa-sh-rep.on{border-color:#fde047;background:#3b2f0b;color:#fde047}
 ${MSA_TN_CSS}
 `;
+// 技の性能の段(2026-11-13 社長「MF みたいにダメージ・命中・ガッツダウン・クリティカルを文字の段で。消費ガッツは数値・実際の命中率は計算から数値で」)
+//   技表の元の数(base: power・hit(命中の補正)・gd・crit)を E・D・C・B・A・S に。区切りは技表 第2版の全515技の分布(下から 10%・30%・55%・80%・95%)。
+//   作り直し: node tools/masmon-battle/masmon-tech-grades.js。ガッツダウンが 0 の技は「−」
+const MSA_TECH_GRADE_CUTS = Object.freeze({ power: [8, 16, 27, 38, 49], hit: [-19, -9, -2, 4, 12], gd: [5, 7, 12, 15, 24], crit: [8, 10, 12, 18, 25] });
+const MSA_TECH_GRADES = ['E', 'D', 'C', 'B', 'A', 'S'];
+const msaTechGrade = (key, v) => {
+  const c = MSA_TECH_GRADE_CUTS[key], n = Number(v);
+  if (!c || !Number.isFinite(n)) return '';
+  if (key === 'gd' && n <= 0) return '−';
+  let i = 0; while (i < c.length && n >= c[i]) i++;
+  return MSA_TECH_GRADES[i];
+};
+const MSA_TECH_GRADE_ROWS = [['power', 'ダメージ'], ['hit', '命中'], ['gd', 'ガッツダウン'], ['crit', 'クリティカル']];
+function MsaTechGrades({ base }) {
+  if (!base) return null;
+  return (
+    <span className="msa-tg" data-msa-tg>{MSA_TECH_GRADE_ROWS.map(([k, label]) => {
+      const g = msaTechGrade(k, base[k]);
+      return <span key={k} className={`msa-tg-i g${g === '−' ? 'x' : g}`}>{label}<b>{g || '−'}</b></span>;
+    })}</span>
+  );
+}
 const msaKindIcon = (t) => (t && t.kind === 'pow' ? '💪' : '🧠');
 // 4枚の札。dist … いまの間合い(無ければどれも「いま」にしない)/guts … いまのガッツ(足りない札は命中を赤く)
 //   hitAt(t, d) … その間合いで撃つ前の命中%(無ければ t.hit)/lastMove … いま使った技(その札を光らせる)/hintId … 助手のおすすめの技
@@ -86957,6 +86984,7 @@ function MsaDistCards({ list, rep, dist = null, guts = null, hitAt = null, lastM
             {t ? <MsaTechName name={t.name} icon={msaKindIcon(t)}/> : <span className="msa-dc-none">届く技なし</span>}
             {t ? <small className="p">{Number.isFinite(hp) ? `命中 ${Math.round(hp)}%` : '命中 —'}</small> : null}
             {t ? <small>ガッツ {t.guts}</small> : null}
+            {t && t.base ? <small className="dmg">ダメージ<b>{msaTechGrade('power', t.base.power)}</b></small> : null}
           </button>
         );
       })}
@@ -86989,7 +87017,8 @@ function MsaTechSheet({ title, list, d = null, dist = null, rep = null, hitAt = 
               <button type="button" className={`msa-sh-use ${onUse ? '' : 'view'} ${hintId === t.id ? 'hint' : ''}`} disabled={!can} data-msxm-tech={onUse ? t.id : undefined}
                 onClick={() => { if (can) onUse(t); }}>
                 <MsaTechName name={t.name} icon={`${isRep ? '★ ' : ''}${msaKindIcon(t)}`}/>
-                <small className="p">{Number.isFinite(hp) ? `命中 ${Math.round(hp)}%` : '命中 —'}・ガッツ {t.guts}{Number.isFinite(t.power) ? `・威力 ${Math.round(t.power)}` : ''}{onUse && useNote && !can ? useNote(t) : ''}</small>
+                <MsaTechGrades base={t.base}/>
+                <small className="p">{Number.isFinite(hp) ? `命中 ${Math.round(hp)}%` : '命中 —'}・ガッツ {t.guts}{!t.base && Number.isFinite(t.power) ? `・威力 ${Math.round(t.power)}` : ''}{onUse && useNote && !can ? useNote(t) : ''}</small>
                 <small>届く {distOf(t)}</small>
               </button>
               {onRep && d != null ? (isRep ? <span className="msa-sh-rep on" data-msa-rep-on={t.id}>★ 代表</span>

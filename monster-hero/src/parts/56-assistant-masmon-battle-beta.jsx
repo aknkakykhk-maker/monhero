@@ -182,7 +182,7 @@ const ambbUnitTechItems = (engine, catalog, unit) => {
   return list.map(t => {
     const m = Math.max(0, Math.min(100, Number(unit.mastery && unit.mastery[t.id]) || 0));
     // 技表の hit は基本の命中に足す補正。代表を決める目安は 75+補正(観戦の札 ambwTechItems と同じ決め方にそろえる)。一覧に出す命中%は熟練の分を足す
-    return { id: t.id, name: t.name, kind: t.kind, dist: t.dist, power: t.power, hit: 75 + t.hit, shown: Math.round((75 + t.hit + m * hitMax) * 10) / 10, guts: Math.round(t.guts * (1 - m / 100 * cut)) };
+    return { id: t.id, name: t.name, kind: t.kind, dist: t.dist, power: t.power, hit: 75 + t.hit, base: { power: t.power, hit: t.hit, gd: t.gd, crit: t.crit }, shown: Math.round((75 + t.hit + m * hitMax) * 10) / 10, guts: Math.round(t.guts * (1 - m / 100 * cut)) };
   });
 };
 const ambbTacticsOf = (aid, rows) => { try { return typeof amgtTacticsOf === 'function' ? amgtTacticsOf(aid, rows) : 40; } catch (_) { return 40; } };

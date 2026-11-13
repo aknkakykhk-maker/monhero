@@ -199,7 +199,8 @@ const AMBW_HIT_BASE = 75;
 const ambwTechItems = (catalog, member, list) => {
   const sp = catalog && member && catalog.species && catalog.species[member.species];
   const byId = {}; if (sp && Array.isArray(sp.techs)) for (const t of sp.techs) byId[t.id] = t;
-  return (Array.isArray(list) ? list : []).map((mv) => { const t = byId[mv.id]; return { ...mv, dist: Array.isArray(mv.dist) ? mv.dist : [], hit: t ? AMBW_HIT_BASE + (Number(t.hit) || 0) : 0, power: t ? Number(t.power) || 0 : 0 }; });
+  return (Array.isArray(list) ? list : []).map((mv) => { const t = byId[mv.id]; return { ...mv, dist: Array.isArray(mv.dist) ? mv.dist : [], hit: t ? AMBW_HIT_BASE + (Number(t.hit) || 0) : 0, power: t ? Number(t.power) || 0 : 0,
+    ...(t ? { base: { power: t.power, hit: t.hit, gd: t.gd, crit: t.crit } } : {}) }; });
 };
 // cards … 技の札を間合いごとの4枚にする(2026-11-13 社長)。rep … [零,近,中,遠] の代表の技 id/onOpen(side, d) … 札を押すと一覧
 function AmbwPanel({ side, team, frame, maxHp, moves, lastMove, mine, catalog = null, teams = null, cards = false, rep = null, onOpen = null }) {
