@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e56693b29cd7e6c2
+// source-sha256: afc322f8cd171cf3
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -160581,7 +160581,7 @@ const MSX_CSS = `
 .msx .v-st div.up{border-color:#fde047;background:#3b2f0b;box-shadow:0 0 8px #fde04766}.msx .v-st div.up b{color:#fde047}
 .msx .v-st div.up.main em{font-size:13px;color:#fde047}
 .msx .v-st div.dn{border-color:#f87171;background:#3b1220}.msx .v-st div.dn em{color:#fca5a5}
-.msx .v-st u.g{position:relative;height:5px;overflow:visible}
+.msx .v-st u.g{position:relative;height:6px;overflow:visible}
 .msx .v-st u.g i{border-radius:3px;transition:width .9s cubic-bezier(.2,.8,.3,1) .25s}
 .msx .v-st u.g s{position:absolute;top:0;bottom:0;border-radius:3px;text-decoration:none}
 .msx .v-st u.g s.gu{background:linear-gradient(90deg,#fff7c2,#fde047);box-shadow:0 0 6px 1px #fde047,0 0 12px #fbbf24;transition:width .9s cubic-bezier(.2,.8,.3,1) .25s}
@@ -162541,6 +162541,24 @@ function MsxStRow({
       cancelAnimationFrame(b);
     };
   }, [sig]);
+  const [t, setT] = useState(grow && !calm ? 0 : 1);
+  useEffect(() => {
+    if (!grow || calm) {
+      setT(1);
+      return undefined;
+    }
+    setT(0);
+    let id = 0;
+    const t0 = performance.now() + 250;
+    const step = now => {
+      const x = Math.max(0, Math.min(1, (now - t0) / 900));
+      setT(x);
+      if (x < 1) id = requestAnimationFrame(step);
+    };
+    id = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(id);
+  }, [sig]);
+  const ease = x => 1 - Math.pow(1 - x, 3);
   const pct = n => `${Math.max(0, Math.min(100, n / 9.99))}%`;
   return React.createElement("div", {
     className: `v-st${grow ? ' grow' : ''}${grow && on ? ' on' : ''}`,
@@ -162552,7 +162570,7 @@ function MsxStRow({
     return React.createElement("div", {
       key: k,
       className: `${u > 0 ? 'up' : u < 0 ? 'dn' : ''}${k === main ? ' main' : ''}`
-    }, React.createElement("small", null, MSX_STAT_ICON[k], MSX_STAT_NAME[k]), React.createElement("b", null, stats[k]), grow && u ? React.createElement("u", {
+    }, React.createElement("small", null, MSX_STAT_ICON[k], MSX_STAT_NAME[k]), React.createElement("b", null, grow && u ? Math.round(before + (after - before) * ease(t)) : stats[k]), grow && u ? React.createElement("u", {
       className: "g"
     }, React.createElement("i", {
       style: {
@@ -162562,7 +162580,7 @@ function MsxStRow({
       className: "gu",
       style: {
         left: pct(before),
-        width: on ? `max(4px, calc(${pct(after)} - ${pct(before)}))` : 0
+        width: on ? `max(7px, calc(${pct(after)} - ${pct(before)}))` : 0
       }
     }) : React.createElement("s", {
       className: "gd",
