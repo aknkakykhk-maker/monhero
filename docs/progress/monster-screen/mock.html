@@ -29,7 +29,7 @@ h2{font-size:20px;margin:0 0 6px;color:#fbbf24}p.n{font-size:13px;color:#aab;mar
 .cmp{display:grid;grid-template-columns:62px 1fr 1fr 40px;gap:4px;font-size:12px;margin:5px 0;align-items:center}
 .up{color:#34d399;font-weight:800}.hdr{color:#8b95c9;font-size:11px}
 .door{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:10px}.door div{background:#2a356c;border:2px solid #4a5cb0;border-radius:14px;padding:18px 6px;text-align:center;font-weight:800;font-size:14px}
-.door .dim{opacity:.55}
+.door .dim{opacity:.55}.door3{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:10px}.door3 div{border-radius:14px;padding:22px 6px;text-align:center;font-weight:800;font-size:15px;border:2px solid #4a5cb0;background:#2a356c}.door3 .m{background:#7c3a6b;border-color:#f472b6}.door3 .b{background:#1d4e7a;border-color:#7dd3fc}.door3 .dim{grid-column:1/3;opacity:.55;padding:12px}.upl{font-size:10px;color:#8b95c9;text-align:right;margin:-2px 0 4px}
 .bub{margin:10px;background:#f5ead0;color:#3b2a10;border-radius:12px;padding:10px;font-size:13px}
 .foot{margin-top:auto;padding:10px;text-align:center;background:#1d2650;font-size:13px}
 .tag{font-size:10px;background:#7c3aed;border-radius:6px;padding:1px 5px;margin-left:4px}
@@ -42,23 +42,26 @@ const stat=(n,v,w,g,mark)=>`<div class="st"><span>${n}</span><span class="bar"><
 const grid=(items)=>`<div class="grid">${items.map(i=>`<div class="cd ${i.b?'base':''}">${i.b?'<span class="bd">ベース</span>':'<span class="gr">'+i.r+'</span>'}<img src="${T(i.t)}"><span>${i.n}</span><span class="lv">${i.b?'もとの値':'Lv.'+i.lv}</span></div>`).join('')}</div>`;
 const mons=[['pixie','ぴくりん','A',50],['tiger','らいが','B',42],['golem','がんてつ','C',38],['undine','しずく','S',50],['kyubi','こんこ','M',50],['mocchi','もっち','D',31],['ham','はむ','E',27],['suezo','すえぞ','G',12]].map(a=>({t:a[0],n:a[1],r:a[2],lv:a[3]}));
 const bases=['pixie','tiger','golem','undine','kyubi','mocchi','ham','suezo'].map(t=>({t,n:{pixie:'ピクシー',tiger:'ライガー',golem:'ゴーレム',undine:'ウンディーネ',kyubi:'キュービ',mocchi:'モッチー',ham:'ハム',suezo:'スエゾー'}[t],b:1}));
-const apt=(a)=>`<div class="box"><h4>間合い適性</h4><div style="display:flex;justify-content:space-around">${['遠','中','近','零'].map((l,i)=>`<div style="text-align:center"><span class="chip ${['far','mid','near','zero'][i]}">${l}</span><br><span class="g" style="font-size:22px">${a[i]}</span></div>`).join('')}</div></div>`;
+const apt=(d)=>{const a=[...d].reverse();return `<div class="box"><h4>間合い適性</h4><div style="display:flex;justify-content:space-around">${['遠','中','近','零'].map((l,i)=>`<div style="text-align:center"><span class="chip ${['far','mid','near','zero'][i]}">${l}</span><br><span class="g" style="font-size:22px">${a[i]}</span></div>`).join('')}</div></div>`};
 const tech=`<div class="box"><h4>技(血統の技+オリジナル技)　<span class="wait">資料待ち</span></h4><div class="tech">${'<div>技1</div><div>技2</div><div>技3</div><div>技4</div><div>技5</div><div>技6</div><div class="x">×</div><div class="x">×</div>'}</div></div>`;
 const feat=(extra='')=>`<div class="box"><h4>特徴</h4><div class="kv"><div>ガッツ回復力<b class="wait">資料待ち</b></div><div>移動速度<b class="wait">資料待ち</b></div><div>サイズ<b class="wait">資料待ち</b></div><div>血統<b>ピクシー系</b></div>${extra}</div></div>`;
 const ph=(t,body,foot='')=>`<div class="ph"><div class="hd"><span>${t}</span><i>●</i></div>${body}${foot}</div>`;
-const door=()=>`<div class="bub">研究所へようこそ。どちらを見ますか?</div><div class="door"><div>モンスター<br><small>育てた子とベースモン</small></div><div class="dim">図鑑<br><small>いまのまま</small></div></div>`;
-const A=[
+
+const door=()=>`<div class="bub">研究所へようこそ。どちらを見ますか?</div><div class="door3"><div class="m">マスモン<br><small>モンサクで育てた子</small></div><div class="b">ベースモン<br><small>種のもとの値</small></div><div class="dim">図鑑<br><small>いまのまま</small></div></div>`;
+const zero=['G','F','B','A'];/* 保存の並び=零・近・中・遠 */
+const upl=(n,v,base,g)=>`<div class="st"><span>${n}</span><span class="bar"><i style="width:${v/9.99}%"></i><u style="left:${base/9.99}%"></u></span><b>${v}</b><span class="g">${g}</span></div><div class="upl">ベースモン ${base} → <b class="up">▲${v-base}</b></div>`;
+const detTabs=(on)=>['基礎','特徴','適性'].map((t,i)=>`<b class="${i==on?'on':''}">${t}</b>`).join('');
+const sub=`<div class="tabs"><b class="on">技</b><b>能力</b><b>性格</b><b>経歴</b></div>`;
+const subB=`<div class="tabs"><b class="on">技</b><b>能力</b><b>性格</b><b>イベント</b></div>`;
+const P=[
  ph('研究所',door()),
- ph('モンスター一覧',`<div class="tabs"><b class="on">育てた子 (8)</b><b>ベースモン (30)</b></div>${grid(mons)}${grid(mons.slice(0,4))}`),
- ph('モンスター詳細',`<div class="pic"><img src="${T('pixie')}"><div style="flex:1"><div style="font-weight:800">ぴくりん</div><div class="wait">ピクシー / 引退 A</div><div class="tabs" style="padding:6px 0"><b class="on">基礎</b><b>特徴</b><b>適性</b></div></div></div><div class="box"><h4>基礎ステータス</h4>${stat('ライフ',640,0,'D')}${stat('ちから',512,0,'E')}${stat('かしこさ',802,0,'B')}${stat('命中',455,0,'E')}${stat('回避',590,0,'D')}${stat('丈夫さ',210,0,'G')}</div><div class="tabs"><b class="on">技</b><b>能力</b><b>性格</b><b>経歴</b></div>${tech}`)];
-const B=[
- ph('モンスター',`<div class="sw"><b class="on">育てた子</b><b>ベースモン</b></div><div class="box"><h4>ピクシー系統(3体)</h4><div style="display:flex;gap:8px"><div class="cd" style="width:84px"><span class="gr">A</span><img src="${T('pixie')}">ぴくりん</div><div class="cd" style="width:84px"><span class="gr">C</span><img src="${T('pixie')}">ぴこ</div><div class="cd" style="width:84px"><span class="gr">F</span><img src="${T('pixie')}">ぴぴ</div></div></div><div class="box"><h4>ライガー系統(2体)</h4><div style="display:flex;gap:8px"><div class="cd" style="width:84px"><span class="gr">B</span><img src="${T('tiger')}">らいが</div><div class="cd" style="width:84px"><span class="gr">D</span><img src="${T('tiger')}">とら</div></div></div>`),
- ph('ぴくりん と ベースモン',`<div class="pic"><img src="${T('pixie')}"><div style="flex:1"><div style="font-weight:800">ぴくりん</div><div class="wait">ピクシー / 引退 A</div></div></div><div class="box"><h4>能力くらべ</h4><div class="cmp hdr"><span></span><span>ベースモン</span><span>ぴくりん</span><span></span></div>${[['ライフ',250,640],['ちから',160,512],['かしこさ',50,802],['命中',100,455],['回避',90,590],['丈夫さ',50,210]].map(r=>`<div class="cmp"><span>${r[0]}</span><b>${r[1]}</b><b class="up">${r[2]} ▲${r[2]-r[1]}</b><span class="g">D</span></div>`).join('')}</div>${apt(['G','F','B','A'])}${feat()}`),
- ph('ぴくりん の技',`<div class="sw"><b class="on">育てた子</b><b>ベースモン</b></div>${tech}<div class="box"><h4>技能力</h4><div class="wait">資料待ち(小さい効果が一部の技に付く)</div></div>`)];
-const C=[
- ph('モンスター',`<div class="tabs"><b class="on">ベースモン</b><b>育てた子</b></div>${grid(bases)}${grid(bases.slice(0,4))}`),
- ph('ピクシー(ベースモン)',`<div class="pic"><img src="${T('pixie')}"><div style="flex:1"><div style="font-weight:800">ピクシー</div><div class="wait">種のもとの値</div></div></div><div class="box"><h4>基礎ステータス</h4>${stat('ライフ',250,0,'F')}${stat('ちから',160,0,'F')}${stat('かしこさ',50,0,'G')}${stat('ガッツ',170,0,'F')}${stat('丈夫さ',50,0,'G')}</div>${apt(['G','F','B','A'])}<div class="box"><h4>この種で育てた子</h4><div style="display:flex;gap:6px"><div class="cd" style="width:78px"><span class="gr">A</span><img src="${T('pixie')}">ぴくりん</div><div class="cd" style="width:78px"><span class="gr">C</span><img src="${T('pixie')}">ぴこ</div><div class="cd" style="width:78px"><span class="gr">F</span><img src="${T('pixie')}">ぴぴ</div></div></div>`),
- ph('ぴくりん(育てた子)',`<div class="sw"><b>ベース</b><b class="on">ぴくりん</b><b>ぴこ</b></div><div class="pic"><img src="${T('pixie')}"><div style="flex:1"><div style="font-weight:800">ぴくりん</div><div class="wait">引退 A / 総合 14,200</div></div></div><div class="box"><h4>基礎ステータス(青い線=ベースモン)</h4>${stat('ライフ',640,0,'D',250)}${stat('ちから',512,0,'E',160)}${stat('かしこさ',802,0,'B',50)}${stat('命中',455,0,'E',100)}${stat('回避',590,0,'D',90)}${stat('丈夫さ',210,0,'G',50)}</div>${feat()}`)];
-const sec=(t,n,a)=>`<h2>${t}</h2><p class="n">${n}</p><div class="row">${a.join('')}</div>`;
-document.body.innerHTML=sec('案A 参考ゲーム型: 入口 → 一覧 → 詳細タブ','研究所の入口から「モンスター」。一覧の上のタブで「育てた子/ベースモン」を切替。詳細は参考どおり 基礎・特徴・適性 のタブ+下に 技・能力・性格・経歴。いちばん参考に近く、迷いにくい。育てた子とベースモンの比較は別画面。',A)+sec('案B 比べる型: 育てた子とベースモンを並べる','一覧は血統ごとにまとめる。詳細の主役は「ベースモン vs 育てた子」の能力くらべ(伸びが▲で見える)。上のスイッチで技も2つを行き来。育てた子がどれだけ伸びたかが一目で分かる。',B)+sec('案C ベースモン起点: 種のページに育てた子がぶら下がる','まず種(ベースモン)を選ぶ。種のページに「この種で育てた子」が並び、子を選ぶと同じ画面が育てた子の値に変わる(青い線がベースモンの位置)。図鑑に近い歩き方で、種を集める楽しさが出る。',C);
+ ph('マスモン一覧',`<div class="tabs"><b class="on">全部 (8)</b><b>血統</b><b>評価順</b></div>${grid(mons)}${grid(mons.slice(0,4))}<div class="foot">所持数 8 / 20</div>`),
+ ph('ベースモン一覧',`<div class="tabs"><b class="on">全部 (30)</b><b>血統</b><b>等級順</b></div>${grid(bases)}${grid(bases.slice(0,4))}<div class="foot">図鑑とは別。種のもとの値です</div>`),
+];
+const Q=[
+ ph('マスモン詳細 (基礎)',`<div class="pic"><img src="${T('pixie')}"><div style="flex:1"><div style="font-weight:800">ぴくりん</div><div class="wait">ピクシー / 引退 A / 総合 14,200</div><div class="tabs" style="padding:6px 0">${detTabs(0)}</div></div></div><div class="box"><h4>基礎ステータス (青い線=ベースモン)</h4>${upl('ライフ',640,250,'D')}${upl('ちから',512,160,'E')}${upl('かしこさ',802,50,'B')}${upl('命中',455,100,'E')}${upl('回避',590,90,'D')}${upl('丈夫さ',210,50,'G')}</div>`,`<div style="margin-top:auto">${sub}</div>`),
+ ph('マスモン詳細 (適性)',`<div class="pic"><img src="${T('pixie')}"><div style="flex:1"><div style="font-weight:800">ぴくりん</div><div class="wait">ピクシー / 引退 A</div><div class="tabs" style="padding:6px 0">${detTabs(2)}</div></div></div>${apt(zero)}<div class="box"><h4>地形適性</h4><div class="wait">資料待ち</div></div>${sub}${tech}`),
+ ph('ベースモン詳細 (特徴)',`<div class="pic"><img src="${T('pixie')}"><div style="flex:1"><div style="font-weight:800">ピクシー</div><div class="wait">種のもとの値<span class="tag">ベース</span></div><div class="tabs" style="padding:6px 0">${detTabs(1)}</div></div></div>${feat()}${apt(zero)}${subB}${tech}`),
+];
+document.body.innerHTML=`<h2>案A改: 入口で「マスモン」「ベースモン」「図鑑」の3つに分ける</h2><p class="n">社長の指示「ベースモンとマスモンは別枠」。研究所の入口が3つのボタン。マスモンの詳細は能力の横にベースモンからの伸び▲。間合い適性は遠・中・近・零の順(ピクシーは 遠A・中B・近F・零G)。資料待ちの値は枠だけ。</p><div class="row">${P.join('')}</div><div class="row">${Q.join('')}</div>`;
 </script>
