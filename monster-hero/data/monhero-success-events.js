@@ -80,7 +80,7 @@
     { id: 'ev.daily.mirror', kind: 'daily', slot: 'start', w: (s) => (s.pop >= 60 ? 14 : 8), ch: { a: { fx: [['pop', 3], ['loy', 3]] }, b: { fx: [['st', 'hit', S]] } } },
     { id: 'ev.daily.lost', kind: 'daily', slot: 'start', w: 8, ch: { a: { fx: [['pop', 3], ['hp', -10]] }, b: { fx: [] } } },
     // 間合いの稽古(2026-11-13 社長: 間合い適性を出来事の選択肢でも上げる)。上げられる間合いが残っていて、出来事で上げた数が上限より少ないときだけ
-    { id: 'ev.daily.range', kind: 'daily', slot: 'start', w: 8, when: (s, x) => s.turn >= 3 && x.aptRoom(s), ch: { a: { fx: [['apt', 'best'], ['hp', -10]] }, b: { fx: [['apt', 'low'], ['hp', -10]] } } },
+    { id: 'ev.daily.range', kind: 'daily', slot: 'start', w: 8, repeat: true, when: (s, x) => s.turn >= 3 && x.aptRoom(s), ch: { a: { fx: [['apt', 'best'], ['hp', -10]] }, b: { fx: [['apt', 'low'], ['hp', -10]] } } },
     { id: 'ev.daily.map', kind: 'daily', slot: 'start', w: 6, when: per(...L_OK), ch: { fx: [['buff', 'hirameki']] } },
     { id: 'ev.daily.gift', kind: 'daily', slot: 'start', w: (s) => (s.pop >= 60 ? 14 : 6), ch: { fx: [['hp', 20]] } },
     { id: 'ev.daily.alone', kind: 'daily', slot: 'start', w: (s, x) => (x.loyal(s) >= 70 ? 14 : 4), when: (s, x) => x.loyal(s) >= 50, ch: { fx: [['st', 'main', S]] } },

@@ -216,13 +216,13 @@
     upLoyal: 80, upHp: 0.7, upAgain: 0.05, up: 0.05, downHp: 0.3, downHpV: -0.10, downStress: 50, downStressV: -0.05, band: 0.10, top: 0.95,
   });
 
-  // ---- 間合い適性を育成中に上げる上限(2026-11-13。案 A: 合計 +6・1つの間合い +3・M にできる数 0。窓口の答えで差し替える) ----
+  // ---- 間合い適性を育成中に上げる上限(2026-11-13 社長の答え 案 C: 1回の育成で合計 +12・1つの間合いの上限なし・どの間合いも M まで) ----
   //   src … 上げ方ごとの上限(quest 修行のくじ・cup 間合いの自慢の大会の優勝・event 出来事の選択肢)
   //   questRate … 修行1回で、その行き先の間合いが1段上がる率。course … 修行の行き先 → 間合い(0 零・1 近・2 中・3 遠)
   const DIST_UP = Object.freeze({
     grades: Object.freeze(['G', 'F', 'E', 'D', 'C', 'B', 'A', 'S', 'S+', 'SS', 'SS+', 'M']),
-    total: 6, per: 3, mMax: 0,
-    src: Object.freeze({ quest: 3, cup: 2, event: 1 }),
+    total: 12, per: 11, mMax: 4,   // per 11 = G から M まで(1つの間合いの上限なし)・mMax 4 = どの間合いも M にできる
+    src: Object.freeze({ quest: 5, cup: 4, event: 3 }),
     questRate: 0.1,
     course: Object.freeze({ fire: 1, ice: 2, wind: 3, star: 0 }),
   });
