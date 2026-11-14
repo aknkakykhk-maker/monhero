@@ -227,7 +227,7 @@ function MsxR3Box({ onClose }) {
           Array.isArray(cur.titles) && cur.titles.length ? ['称号', cur.titles.slice(0, 4).map((t) => `「${msxR3TitleName(t)}」`).join('')] : null,
           cur.coach ? ['育てた助手', msxAidName(cur.coach)] : null,
           ['世代', `第${Math.max(1, Math.round(Number(cur.gen) || 1))}世代`],
-          endAt ? ['育成を終えた日', `${endAt.getFullYear()}/${endAt.getMonth() + 1}/${endAt.getDate()}`] : null,
+          endAt ? ['育成完了日', `${endAt.getFullYear()}/${endAt.getMonth() + 1}/${endAt.getDate()}`] : null,
           cur.ending ? ['エンディング', { super: 'スーパー', good: 'グッド', bad: 'ふつう' }[cur.ending] || cur.ending] : null,
           lendId === cur.id ? ['フレンド', '🤝 貸し出し中'] : null,
         ];

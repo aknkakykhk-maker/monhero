@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e19a7639e8b95c91
+// source-sha256: c730b20234a0b0b7
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -174684,7 +174684,7 @@ function MsxR3Box({
         return T3 && T3.VERSION === 3 && T3.BY_ID[a.id] ? `${T3.BY_ID[a.id].name} ${T3.valueText(a.id, T3.valueOf ? T3.valueOf(a) : a.v)}` : a.name || a.id;
       }).join('・') : '';
       const endAt = Number.isFinite(cur.endAt) ? new Date(cur.endAt) : null;
-      const more = [['忠誠 / 人気', `${Math.round(cur.loy || 0)} / ${Math.round(cur.pop || 0)}`], Array.isArray(cur.fav) && cur.fav.length ? ['得意な能力', cur.fav.map(k => MSX_STAT_NAME[k] || k).join('・')] : null, cur.awake ? ['覚醒', cur.awake >= 2 ? '🌈 超覚醒' : '✨ 覚醒'] : null, assistText ? ['アシスト', assistText] : null, Array.isArray(cur.titles) && cur.titles.length ? ['称号', cur.titles.slice(0, 4).map(t => `「${msxR3TitleName(t)}」`).join('')] : null, cur.coach ? ['育てた助手', msxAidName(cur.coach)] : null, ['世代', `第${Math.max(1, Math.round(Number(cur.gen) || 1))}世代`], endAt ? ['育成を終えた日', `${endAt.getFullYear()}/${endAt.getMonth() + 1}/${endAt.getDate()}`] : null, cur.ending ? ['エンディング', {
+      const more = [['忠誠 / 人気', `${Math.round(cur.loy || 0)} / ${Math.round(cur.pop || 0)}`], Array.isArray(cur.fav) && cur.fav.length ? ['得意な能力', cur.fav.map(k => MSX_STAT_NAME[k] || k).join('・')] : null, cur.awake ? ['覚醒', cur.awake >= 2 ? '🌈 超覚醒' : '✨ 覚醒'] : null, assistText ? ['アシスト', assistText] : null, Array.isArray(cur.titles) && cur.titles.length ? ['称号', cur.titles.slice(0, 4).map(t => `「${msxR3TitleName(t)}」`).join('')] : null, cur.coach ? ['育てた助手', msxAidName(cur.coach)] : null, ['世代', `第${Math.max(1, Math.round(Number(cur.gen) || 1))}世代`], endAt ? ['育成完了日', `${endAt.getFullYear()}/${endAt.getMonth() + 1}/${endAt.getDate()}`] : null, cur.ending ? ['エンディング', {
         super: 'スーパー',
         good: 'グッド',
         bad: 'ふつう'
