@@ -93,6 +93,8 @@ function AssistantLifeMapFig({ who, h, sleep, spent = false }) {
         {/* 寝ているときは目を閉じた形を重ねる(2026-11-11 社長「目を開けっぱなしの人がいる」) */}
         {sleep && typeof AssistantLifeSleepEyes === 'function' && <AssistantLifeSleepEyes pid={who && who.id} src={src} w={iw} h={ih} style={{ left: w / 2 - cx, top, filter: 'brightness(.62) saturate(.7)' }}/>}
       </span>
+      {/* 眼鏡の人は、外した眼鏡を足もとに置く(ぼかしの外側) */}
+      {sleep && typeof AssistantLifeSleepGlassesPut === 'function' && <AssistantLifeSleepGlassesPut pid={who && who.id} src={src} gw={w * 0.42} style={{ left: w * 0.72, top: h * 0.56, filter: 'brightness(.7) saturate(.8)' }}/>}
       {sleep && <span className="absolute right-0 top-0 text-[10px]" aria-hidden="true">💤</span>}
       {spent && typeof AssistantLifeSpentMark === 'function' && <AssistantLifeSpentMark size={Math.round(h * 0.5)}/>}
     </span>);
