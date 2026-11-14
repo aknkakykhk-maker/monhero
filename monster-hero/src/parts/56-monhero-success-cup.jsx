@@ -27,6 +27,54 @@ const MSC_STAT_KEYS = ['life', 'pow', 'wise', 'hit', 'eva', 'tough'];
 const MSC_STAT_JP = Object.freeze({ life: 'ライフ', pow: 'ちから', wise: 'かしこさ', hit: '命中', eva: '回避', tough: '丈夫さ' });
 const MSC_STAT_ICON = Object.freeze({ life: '❤️', pow: '💪', wise: '🧠', hit: '🎯', eva: '💨', tough: '🛡️' });
 const MSC_STARS = (n) => (n >= 4 ? '👑' : '★'.repeat(Math.max(1, Math.min(3, n || 1))));
+// ---- 試合の読み取り(Fable の点検①-7・2026-11-14 窓口の案) ----
+//   予想は、実際の試合の式(芯 simulate)を種だけ変えて数十回まわした勝ち数から出す(能力の合計の比では、比べと試合がつながらなかった)
+//   負けたら「なぜ負けたか」を1行(そっぽを向いた・技の届かない間合い・当たらなかった・相手の技)
+const MSC_FORECAST = Object.freeze([[0.85, 'easy', '楽勝'], [0.65, 'good', '有利'], [0.4, 'even', '互角'], [0.15, 'hard', '苦戦'], [0, 'none', '勝ち目なし…']]);
+const MSC_ODDS_N = 40; // 1試合 0.2ms ほど。40回で 10ms 前後
+const mscOddsCache = new Map();
+const monsucOdds = (engine, input, n) => {
+  if (!engine || typeof engine.simulate !== 'function' || !input || !input.teamA || !input.teamB) return null;
+  const N = Math.max(1, Math.round(n || MSC_ODDS_N));
+  let key = null;
+  try { key = JSON.stringify([input.seed, input.teamA, input.teamB, input.buffs || null, input.rules || null, N]); } catch (_) { key = null; }
+  if (key && mscOddsCache.has(key)) return mscOddsCache.get(key);
+  let win = 0;
+  for (let i = 0; i < N; i++) {
+    try { const r = engine.simulate({ ...input, trace: false, seed: `${input.seed}:odds${i}` }); if (r && r.winner === 'A') win++; } catch (_) { return null; }
+  }
+  const rate = win / N; const f = MSC_FORECAST.find(([m]) => rate >= m) || MSC_FORECAST[MSC_FORECAST.length - 1];
+  const out = Object.freeze({ win, n: N, rate, key: f[1], label: f[2] });
+  if (key) { if (mscOddsCache.size > 64) mscOddsCache.clear(); mscOddsCache.set(key, out); }
+  return out;
+};
+// 試合の記録(芯の log)から、こちら(A)が負けたわけを1行で。敵の数字は書かない
+const monsucLossWhy = (log, meName) => {
+  if (!Array.isArray(log) || !log.length) return null;
+  const st = log[0] || {}; const aMoves = Array.isArray(st.aMoves) ? st.aMoves : [];
+  const reach = (i, d) => (aMoves[i] || aMoves[0] || []).some((m) => m && Array.isArray(m.dist) && m.dist.includes(d));
+  let acts = 0; let sulk = 0; let stuck = 0; let tries = 0; let hits = 0; const foe = {};
+  for (const e of log) {
+    if (!e || !e.ev) continue;
+    if (e.side === 'A') {
+      if (e.ev === 'tech' || e.ev === 'guard' || e.ev === 'charge' || (e.ev === 'move' && e.why !== 'techMove')) acts++;
+      if (e.ev === 'charge' && e.why === 'sulk') sulk++;
+      if (e.ev === 'move' && e.why !== 'techMove' && Number.isInteger(e.to) && Number.isInteger(e.step) && !reach(e.i || 0, e.to - e.step)) stuck++;
+      if (e.ev === 'tech') { tries++; if (e.hit) hits++; }
+    } else if (e.side === 'B' && e.ev === 'tech' && e.hit && e.name) foe[e.name] = (foe[e.name] || 0) + 1;
+  }
+  const me = meName || 'こちら';
+  if (sulk >= 2 && sulk / Math.max(1, acts) >= 0.15) return `${me}が そっぽを向いて、${sulk}回 技を出さなかった(忠誠が低いと 言うことを聞かない)`;
+  if (stuck >= 2 && stuck / Math.max(1, acts) >= 0.15) return `技の届く間合いへ動くのに ${stuck}回 番を使って、そのあいだ 技を撃てなかった`;
+  const foeAll = Object.values(foe).reduce((x, y) => x + y, 0);
+  if (foeAll > 0 && foeAll <= 5) return `相手の技が重く、${foeAll}回 受けただけで 倒れた`;
+  if (tries <= 2) return `技を ${tries}回しか 撃てなかった`;
+  if (hits / tries < 0.45) return `技が ${tries}回中 ${hits}回しか 当たらなかった`;
+  const top = Object.entries(foe).sort((a, b) => b[1] - a[1])[0];
+  return top ? `相手の「${top[0]}」を ${top[1]}回 受けたのが 大きかった` : 'あと少しの 差だった';
+};
+// 技が届く間合い(0〜3 のどれに届く技があるか)
+const monsucReachOf = (techs) => [0, 1, 2, 3].map((d) => (Array.isArray(techs) ? techs : []).some((t) => t && Array.isArray(t.dist) && t.dist.includes(d)));
 const MSC_VENUE_IMG = Object.freeze({
   debut: 'images/success/scenes/venue-debut.png', cup: 'images/success/scenes/venue-cup.png',
   hero: 'images/success/scenes/venue-hero.png', summit: 'images/success/scenes/venue-summit.png',
@@ -69,6 +117,11 @@ const monsucBuffsOf = (mods) => {
 const mscNum = (v, d = 0) => (Number.isFinite(Number(v)) ? Number(v) : d);
 const mscMonName = (sp) => ((typeof ALL_PLAYER_MONSTERS !== 'undefined' && ALL_PLAYER_MONSTERS[sp]) ? ALL_PLAYER_MONSTERS[sp].name : sp) || '';
 const mscMonImg = (sp) => ((typeof ALL_PLAYER_MONSTERS !== 'undefined' && ALL_PLAYER_MONSTERS[sp]) ? ALL_PLAYER_MONSTERS[sp].imgUrl : '') || '';
+// 育てるモンスターの絵は、染めた色で出す(2026-11-14 Fable の点検・窓口経由)。colors は育成の run.colors(回3が me.colors で渡す)
+const mscDyed = (colors) => Array.isArray(colors) && colors.some(Boolean) && typeof DyedMonsterImage === 'function';
+const MscMyMon = ({ sp, colors, className }) => (mscDyed(colors)
+  ? <DyedMonsterImage baseId={sp} src={mscMonImg(sp)} masuColors={colors} alt="" draggable={false} className={className}/>
+  : <img className={className} src={mscMonImg(sp)} alt=""/>);
 const mscAssistant = (id) => (typeof ASSISTANT_LIST !== 'undefined' ? (ASSISTANT_LIST.find(a => a.id === id) || ASSISTANT_LIST[0]) : null);
 const mscFace = (id, ex) => { const a = mscAssistant(id); return a && typeof assistantFaceSrc === 'function' ? assistantFaceSrc(a, ex || 'normal') : ''; };
 
@@ -193,6 +246,7 @@ const MSC_CSS = `
 .msc-tabs button.on{background:#fde047;border-color:#fde047;color:#3b2a05}
 .msx .msc-tabs button{text-align:center}
 .msc-sheet{background:rgba(15,12,34,.85);border:1.5px solid #3f3a6b;border-radius:14px;padding:10px 8px}
+.msc-sheet.grow{flex:1 1 auto;display:flex;flex-direction:column;justify-content:space-evenly}
 .msc-st{display:grid;grid-template-columns:34px 1fr 74px 1fr 34px;align-items:center;gap:4px;height:30px;font-size:12.5px}
 .msc-st b{text-align:center;font-weight:900;color:#cbd5e1}.msc-st b.up{color:#fde047}
 .msc-st .lab{text-align:center;font-size:11.5px;font-weight:800;color:#e2e8f0;white-space:nowrap}
@@ -216,6 +270,14 @@ const MSC_CSS = `
 .msc-tl span{display:block;border-radius:8px;padding:5px 7px;background:#1e1b3a;font-size:12px;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .msc-tl small{color:#94a3b8;font-size:10.5px;margin-left:4px}
 .msc-hint{display:flex;gap:8px;align-items:center;font-size:12.5px;font-weight:800;color:#fff}
+.msc-fc{display:flex;gap:6px}
+.msc-fc>span{flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;padding:5px 4px;border-radius:12px;background:#1e1a36;border:1.5px solid #475569;color:#e2e8f0}
+.msc-fc small{font-size:10.5px;font-weight:800;color:#cbd5e1;white-space:nowrap}
+.msc-fc b{font-size:15px;font-weight:900;color:#fff;white-space:nowrap}
+.msc-fc .p.easy{border-color:#fde047}.msc-fc .p.easy b,.msc-fc .p.good b{color:#fde047}.msc-fc .p.hard b{color:#fb923c}.msc-fc .p.none b{color:#f87171}
+.msc-fc b.r{display:flex;gap:2px}.msc-fc b.r i{font-style:normal;font-size:11px;width:19px;height:19px;border-radius:5px;display:grid;place-items:center;background:#1e293b;color:#64748b}.msc-fc b.r i.y{background:#fde047;color:#3b2a05}
+.msc-why{display:flex;gap:8px;align-items:center;padding:8px 10px;border-radius:12px;background:#2a1530;border:1.5px solid #be123c;color:#fff;font-size:12.5px;font-weight:800}
+.msc-why b{flex:0 0 auto;font-size:11px;padding:2px 7px;border-radius:99px;background:#be123c;color:#fff;white-space:nowrap}
 .msc-hint img{width:32px;height:32px;border-radius:50%;object-fit:cover;flex:0 0 auto}
 .msc-hint em{font-style:normal;color:#fde047}
 .msc-stage{position:relative;border-radius:16px;overflow:hidden;background:#2a2147 center/cover no-repeat}
@@ -253,6 +315,16 @@ const MSC_CSS = `
 .msc-hero.win .who img{animation:msc-hop 1.1s ease-in-out infinite}
 .msc-hero.lose .who img{filter:grayscale(.65) brightness(.8) drop-shadow(0 8px 8px rgba(0,0,0,.5))}
 @keyframes msc-hop{0%,100%{transform:translateY(0)}45%{transform:translateY(-14px)}}
+/* 優勝の画面(2026-11-14 社長): 勝ったモンスターを大きく・明るく、字と帯に隠れない所へ。上から 優勝! → モンスター → 大会の帯 → ライバルの帯 と縦に並べて重ねない */
+.msc-hero.hi{display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 8px 10px}
+.msc-hero.hi::after{content:'';position:absolute;inset:0;z-index:1;pointer-events:none;background:radial-gradient(ellipse 58% 42% at 50% 52%,rgba(255,251,225,.62),rgba(255,236,170,.18) 58%,rgba(24,14,48,.5) 100%)}
+.msc-hero.hi .big{position:relative;top:auto;left:auto;right:auto;z-index:3;font-size:50px;line-height:1.05}
+.msc-hero.hi .who{position:relative;z-index:2;left:auto;bottom:auto;transform:none;width:92%;height:clamp(200px,44vh,340px);flex:none}
+.msc-hero.hi .who img{filter:brightness(1.1) saturate(1.08) drop-shadow(0 0 16px rgba(255,236,150,.95)) drop-shadow(0 10px 10px rgba(0,0,0,.45))}
+.msc-hero.hi .who::after{content:'';position:absolute;left:33%;right:33%;bottom:-6px;height:18px;border-radius:50%;background:rgba(0,0,0,.35);z-index:-1}
+.msc-hero.hi .sub{position:relative;top:auto;left:auto;right:auto;z-index:3;max-width:100%;border-radius:999px;background:rgba(15,23,42,.82);border:1.5px solid #fde04799;padding:4px 14px;text-shadow:none}
+.msc-hero.hi .rival{position:relative;left:auto;right:auto;bottom:auto;width:100%;box-sizing:border-box}
+@media (max-height:500px) and (orientation:landscape){.msc-hero.hi .who{height:clamp(190px,58vh,260px)}.msc-hero.hi .big{font-size:42px}}
 .msc-hero .rival{position:absolute;z-index:3;left:8px;right:8px;bottom:10px;display:flex;align-items:center;gap:6px;border-radius:999px;background:rgba(76,5,25,.9);border:1.5px solid #fb7185;padding:5px 10px;font-size:12.5px;font-weight:900}
 .msc-hero .rival span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .msc-hero .rival em{font-style:normal;background:#fde047;color:#3b2a05;border-radius:999px;padding:1px 8px;font-size:11px}
@@ -354,7 +426,7 @@ function MonsucBracket({ suc, s, info, result, onFight, onResultOnly, onClose, c
                 {e.rival && <i className="msc-tag rv">ライバル</i>}
                 {e.champ && <i className="msc-tag ch">👑王者</i>}
               </span>
-              <span className={`msc-face ${e.you ? 'you' : i === 4 ? 'foe' : ''}`}><img src={mscMonImg(e.species)} alt=""/></span>
+              <span className={`msc-face ${e.you ? 'you' : i === 4 ? 'foe' : ''}`}>{e.you ? <MscMyMon sp={e.species} colors={info.colors}/> : <img src={mscMonImg(e.species)} alt=""/>}</span>
             </div>
           ))}
           <svg className="msc-lines" width={W} height={H * 8} viewBox={`0 0 ${W} ${H * 8}`} style={{ width: W, height: H * 8 }}>
@@ -375,7 +447,7 @@ function MonsucBracket({ suc, s, info, result, onFight, onResultOnly, onClose, c
 }
 
 // ---- バトルカード(C2)。2体と VS・タブ・6能力の棒が伸びる ----
-function MonsucBattleCard({ suc, s, info, catalog, onReady, onResultOnly, onBack }) {
+function MonsucBattleCard({ suc, s, info, catalog, odds, onReady, onResultOnly, onBack }) {
   const [tab, setTab] = useState('st');
   const o = info.opp || {};
   const me = s.stats || {}; const op = o.stats || {};
@@ -392,23 +464,44 @@ function MonsucBattleCard({ suc, s, info, catalog, onReady, onResultOnly, onBack
   const apt = aptOf(s.species, true); const rankOf = (g) => ['M', 'SS+', 'SS', 'S+', 'S', 'A', 'B', 'C', 'D', 'E', 'F', 'G'].indexOf(g) < 0 ? 99 : ['M', 'SS+', 'SS', 'S+', 'S', 'A', 'B', 'C', 'D', 'E', 'F', 'G'].indexOf(g);
   const bestD = apt.map((g, d) => ({ g, d })).sort((a, b) => rankOf(a.g) - rankOf(b.g))[0] || { d: 1 };
   const distWord = ['くっついた間合い', '近い間合い', '中くらいの間合い', '遠い間合い'][bestD.d];
-  const hint = ahead.length
-    ? <>{ahead.map(x => MSC_STAT_JP[x.k]).join('と')}は 勝ってる! <em>{distWord}</em> で押していこう!</>
-    : <>能力は 相手が上…。<em>{distWord}</em> で 技を当てていこう!</>;
+  const allAhead = MSC_STAT_KEYS.every(k => mscNum(me[k]) > mscNum(op[k]));
+  // 技が届く間合い(こちら)と、相手の得意な間合い(Fable の点検①-7: 比べに出す)
+  const reach = monsucReachOf(myTechs.length ? myTechs : ((catalog && catalog.species[s.species] && catalog.species[s.species].techs) || []).filter(t => t.start));
+  const foeApt = aptOf(o.species); const foeBest = foeApt.map((g, d) => ({ g, d })).sort((a, b) => rankOf(a.g) - rankOf(b.g))[0] || { d: 1 };
+  const noReach = [0, 1, 2, 3].filter(d => !reach[d]);
+  // 技の種類と能力の釣り合い(能力が互角に見えても、技の種類の能力が低いと痛手が小さい。窓口 2026-11-14「互角なのに楽勝」の理由)
+  const kindOf = (ts) => { const p = ts.filter(x => x.kind === 'pow').length; const w = ts.filter(x => x.kind === 'wise').length; return p === w ? null : p > w ? 'pow' : 'wise'; };
+  const other = (k) => (k === 'pow' ? 'wise' : 'pow');
+  const foeKind = kindOf(foeTechs); const myKind = kindOf(myTechs);
+  const kindWhy = foeKind && mscNum(op[foeKind]) < mscNum(op[other(foeKind)]) * 0.7
+    ? <>相手の技は <em>{MSC_STAT_JP[foeKind]}技</em>が中心。相手の{MSC_STAT_JP[foeKind]}は低めで、こちらへの痛手は小さいよ!</>
+    : myKind && mscNum(me[myKind]) < mscNum(me[other(myKind)]) * 0.7
+      ? <>こちらの技は <em>{MSC_STAT_JP[myKind]}技</em>が中心。{MSC_STAT_JP[myKind]}が低めで、痛手を与えにくいよ…</>
+      : null;
+  const hint = loy < 40
+    ? <>忠誠が {loy} だと、<em>そっぽを向いて</em> 技を出さない番が あるよ…</>
+    : kindWhy ? kindWhy
+    : noReach.includes(foeBest.d)
+      ? <>相手の得意な{AMBW_DIST[foeBest.d]}の間合いに、<em>届く技が無い</em>よ。入られたら 動いて離れよう!</>
+      : allAhead
+        ? <>6つの能力は <em>どれも</em> 勝ってる! {distWord}で 押していこう!</>
+        : ahead.length
+          ? <>{ahead.map(x => MSC_STAT_JP[x.k]).join('と')}は 勝ってる! <em>{distWord}</em> で押していこう!</>
+          : <>能力は 相手が上…。<em>{distWord}</em> で 技を当てていこう!</>;
   const aptRow = (sp, me) => <div className="msc-apt">{aptOf(sp, me).map((g, d) => <span key={d} className={['S+', 'SS', 'SS+', 'M'].includes(g) ? 'S' : g}>{AMBW_DIST[d]}</span>)}</div>;
   return (
     <div className="msc-wrap" data-msc-card>
       <div className="msc-top"><button className="msc-btn g s" onClick={onBack}>← 表へ</button><b>{info.title} {MSC_STARS(info.star)}・1戦</b></div>
       <div className="msc-vs" style={{ backgroundImage: `url(${venue})` }}>
         <div className="cap">{info.title} {MSC_STARS(info.star)}・1戦</div>
-        <div className="mon a">{(() => { const im = <img src={mscMonImg(s.species)} alt=""/>; const k = s.awake && typeof msxKiraOf === 'function' ? msxKiraOf(s.awake) : null; return k && typeof cardKiraWrap === 'function' ? cardKiraWrap(k, im, { src: mscMonImg(s.species), calm: typeof msxAwCalm === 'function' && msxAwCalm() }) : im; })()}</div>
+        <div className="mon a">{(() => { const im = <MscMyMon sp={s.species} colors={info.colors}/>; const k = s.awake && typeof msxKiraOf === 'function' ? msxKiraOf(s.awake) : null; return k && typeof cardKiraWrap === 'function' ? cardKiraWrap(k, im, { src: mscMonImg(s.species), calm: typeof msxAwCalm === 'function' && msxAwCalm() }) : im; })()}</div>
         <div className="mon b"><img src={mscMonImg(o.species)} alt=""/></div>
         <div className="vs">VS</div>
         <div className="nm a"><span>{info.meName}</span></div>
         <div className="nm b"><span>{o.name || mscMonName(o.species)}</span>{o.champ && <i className="msc-tag ch">👑王者</i>}{o.rival && <i className="msc-tag rv">ライバル</i>}</div>
       </div>
       <div className="msc-tabs">{[['st', 'ステータス'], ['tech', '技'], ['abl', '能力']].map(([k, l]) => <button key={k} data-msc-tab={k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)}>{l}</button>)}</div>
-      <div className="msc-sheet" key={tab}>
+      <div className="msc-sheet grow" key={tab}>
         {tab === 'st' && <>
           {MSC_STAT_KEYS.map((k, j) => {
             const a = mscNum(me[k]); const b = mscNum(op[k]);
@@ -434,7 +527,12 @@ function MonsucBattleCard({ suc, s, info, catalog, onReady, onResultOnly, onBack
           <div><span>{o.champ ? '大会の王者' : o.rival ? 'ライバル' : '大会の常連'}</span><span>技 {foeTechs.length}つ</span><span>{o.breeder ? `育てた人 ${o.breeder}` : '育てた人 —'}</span><span>間合い</span>{aptRow(o.species)}</div>
         </div>}
       </div>
-      <div className="msc-hint"><img src={mscFace(s.aid)} alt=""/><span>{hint}</span></div>
+      <div className="msc-fc" data-msc-forecast>
+        <span className={`p ${odds ? odds.key : ''}`} data-msc-odds={odds ? odds.win : ''}><small>予想</small><b>{odds ? odds.label : '…'}</b>{odds ? <small>{odds.n}回中 {odds.win}勝</small> : null}</span>
+        <span><small>相手の得意</small><b>{AMBW_DIST[foeBest.d]}</b></span>
+        <span data-msc-reach={reach.map(x => (x ? 1 : 0)).join('')}><small>技が届く</small><b className="r">{AMBW_DIST.map((dn, d) => <i key={dn} className={reach[d] ? 'y' : ''}>{dn}</i>)}</b></span>
+      </div>
+      <div className="msc-hint"><img src={mscFace(s.aid)} alt=""/><span style={typeof JA_LABEL_STYLE !== 'undefined' ? JA_LABEL_STYLE : undefined}>{hint}</span></div>
       <div className="msc-foot">
         <button className="msc-btn y s" data-msc-quick onClick={onResultOnly}>⏩ 結果だけ見る</button>
         <button className="msc-btn" data-msc-ready onClick={onReady}>準備完了</button>
@@ -454,7 +552,7 @@ function MonsucCutin({ s, info, onGo }) {
         <div className="msc-rays"/>
         <div className="word">{sp.word}</div>
         <div className="sub">{sp.sub}</div>
-        <div className="duo"><img className="a" src={mscMonImg(s.species)} alt=""/><img src={mscMonImg(o.species)} alt=""/></div>
+        <div className="duo"><MscMyMon className="a" sp={s.species} colors={info.colors}/><img src={mscMonImg(o.species)} alt=""/></div>
         <div className="say"><img src={mscFace(s.aid, 'happy')} alt=""/><div><b>{coach ? coach.name : ''}</b><p>{MSC_LINE[s.aid] || '「いっしょに がんばろう!」'}</p></div></div>
       </div>
       <div className="msc-eff">
@@ -504,11 +602,11 @@ function MonsucCupWin({ s, info, match, out, onNext }) {
   const coach = mscAssistant(s.aid);
   return (
     <div className="msc-wrap" data-msc-win>
-      <div className="msc-hero win" style={{ backgroundImage: `url(${MSC_VENUE_IMG[info.venue] || MSC_VENUE_IMG.cup})` }}>
+      <div className="msc-hero win hi" data-msc-win-hero style={{ backgroundImage: `url(${MSC_VENUE_IMG[info.venue] || MSC_VENUE_IMG.cup})` }}>
         <div className="msc-rays"/>
         <div className="big">優勝!</div>
+        <div className="who">{(() => { const im = <MscMyMon sp={s.species} colors={info.colors}/>; const k = s.awake && typeof msxKiraOf === 'function' ? msxKiraOf(s.awake) : null; return k && typeof cardKiraWrap === 'function' ? cardKiraWrap(k, im, { src: mscMonImg(s.species), calm: typeof msxAwCalm === 'function' && msxAwCalm() }) : im; })()}</div>
         <div className="sub">{info.title} {MSC_STARS(info.star)}・1戦: {o.name || mscMonName(o.species)} に 勝ち{match && match.r ? `(${match.r.rounds} ラウンド)` : ''}</div>
-        <div className="who">{(() => { const im = <img src={mscMonImg(s.species)} alt=""/>; const k = s.awake && typeof msxKiraOf === 'function' ? msxKiraOf(s.awake) : null; return k && typeof cardKiraWrap === 'function' ? cardKiraWrap(k, im, { src: mscMonImg(s.species), calm: typeof msxAwCalm === 'function' && msxAwCalm() }) : im; })()}</div>
         {info.rival && <div className="rival"><span>ライバルの {o.name || mscMonName(o.species)} にも 勝った!</span><em>ごほうび大</em></div>}
       </div>
       {rows.map((r, k) => <div key={k} className={`msc-rw ${r.big ? 'big' : ''}`} style={{ animationDelay: `${0.3 + k * 0.12}s` }}><span className="i">{r.i}</span><span className="k">{r.k}</span><span className="v">{r.v}</span></div>)}
@@ -532,13 +630,16 @@ function MonsucCupLose({ suc, s, info, match, onRematch, onGiveUp, onSkipAnim })
     const t = match.r.log.filter(x => x.ev === 'tech' && x.side === 'B' && x.hit);
     return t.length ? `${t[t.length - 1].name}が 効いてたね…` : 'あと少しだったね…';
   })();
+  // なぜ負けたか(1行・Fable の点検①-7)
+  const lossWhy = match && match.r ? monsucLossWhy(match.r.log, info.meName) : null;
   return (
     <div className="msc-wrap" data-msc-lose>
       <div className="msc-hero lose" style={{ backgroundImage: `url(${MSC_VENUE_IMG[info.venue] || MSC_VENUE_IMG.cup})` }}>
         <div className="big">負けた…</div>
         <div className="sub">{info.title} {MSC_STARS(info.star)}・{o.name || mscMonName(o.species)} に 負け</div>
-        <div className="who">{(() => { const im = <img src={mscMonImg(s.species)} alt=""/>; const k = s.awake && typeof msxKiraOf === 'function' ? msxKiraOf(s.awake) : null; return k && typeof cardKiraWrap === 'function' ? cardKiraWrap(k, im, { src: mscMonImg(s.species), calm: typeof msxAwCalm === 'function' && msxAwCalm() }) : im; })()}</div>
+        <div className="who">{(() => { const im = <MscMyMon sp={s.species} colors={info.colors}/>; const k = s.awake && typeof msxKiraOf === 'function' ? msxKiraOf(s.awake) : null; return k && typeof cardKiraWrap === 'function' ? cardKiraWrap(k, im, { src: mscMonImg(s.species), calm: typeof msxAwCalm === 'function' && msxAwCalm() }) : im; })()}</div>
       </div>
+      {lossWhy ? <div className="msc-why" data-msc-loss-why><b>負けたわけ</b><span style={typeof JA_LABEL_STYLE !== 'undefined' ? JA_LABEL_STYLE : undefined}>{typeof jaWrap === 'function' ? jaWrap(lossWhy) : lossWhy}</span></div> : null}
       <div className="msc-again">
         <h3>時をもどして、やり直す?</h3>
         <p>やり直せるのは 1回の育成で{mscNum(suc.REMATCH && suc.REMATCH.max, 3)}回まで・<em>のこり {left}/{mscNum(suc.REMATCH && suc.REMATCH.max, 3)}</em></p>
@@ -576,7 +677,8 @@ function MonsucCupShowInner({ suc, s, me, settle, onRematch, onNext, onClose, st
   // opp: 回3の流れが決めた相手の値(loy・pop など)を上書きする。fight: 回3の試合の計算(msxR3Fight)。渡されたら、こちらの計算は使わない
   const info = useMemo(() => {
     if (!s || !s.battle) return null;
-    const i0 = monsucCupInfo(suc, s, me); const i = title ? { ...i0, title } : i0; // title: 回3が大会の名前を渡せる
+    const i1 = monsucCupInfo(suc, s, me); const i0 = me && Array.isArray(me.colors) ? { ...i1, colors: me.colors.slice(0, 6) } : i1;
+    const i = title ? { ...i0, title } : i0; // title: 回3が大会の名前を渡せる
     return opp && typeof opp === 'object' ? { ...i, opp: { ...(i.opp || {}), ...opp } } : i;
   }, [suc, s]);
   const catalog = useMemo(() => {
@@ -603,6 +705,9 @@ function MonsucCupShowInner({ suc, s, me, settle, onRematch, onNext, onClose, st
       return { ...m, won: m.r.winner === 'A', input };
     } catch (_) { return null; }
   }, [engine, catalog, info, fightRes]);
+  // 予想(バトルカード): 実際の試合の式で数十回まわした勝ち数(Fable の点検①-7)
+  const oddsInput = (fightRes && fightRes.input) || (match && match.input) || null;
+  const odds = useMemo(() => (engine && oddsInput ? monsucOdds(engine, oddsInput) : null), [engine, oddsInput]);
   // 自分で操作した試合の結果(負けの画面の「何が効いたか」に使う)
   const [played, setPlayed] = useState(null);
   const shown = played && played.result ? { ...match, r: played.result } : match;
@@ -614,7 +719,7 @@ function MonsucCupShowInner({ suc, s, me, settle, onRematch, onNext, onClose, st
   let body = null;
   if (!info) body = <p className="msc-note">大会が見つかりませんでした</p>;
   else if (phase === 'bracket') body = <MonsucBracket suc={suc} s={s} info={info} canSkip={canSkip} onClose={onClose} onFight={() => setPhase('card')} onResultOnly={() => match && finish(match.won)}/>;
-  else if (phase === 'card') body = <MonsucBattleCard suc={suc} s={s} info={info} catalog={catalog} onBack={() => setPhase('bracket')} onReady={() => setPhase(info.buffs || info.buffRows.length ? 'cutin' : 'match')} onResultOnly={() => match && finish(match.won)}/>;
+  else if (phase === 'card') body = <MonsucBattleCard suc={suc} s={s} info={info} catalog={catalog} odds={odds} onBack={() => setPhase('bracket')} onReady={() => setPhase(info.buffs || info.buffRows.length ? 'cutin' : 'match')} onResultOnly={() => match && finish(match.won)}/>;
   else if (phase === 'cutin') body = <MonsucCutin s={s} info={info} onGo={() => setPhase('match')}/>;
   else if (phase === 'match') {
     const canPlay = match && match.input && engine && typeof engine.createMatch === 'function';

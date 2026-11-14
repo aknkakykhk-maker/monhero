@@ -167,7 +167,7 @@ const msxR3GameOver = async (s) => {
   await storeSet(MSX_KEYS.meta, meta);
   return meta;
 };
-const msxR3ClearRun = () => storeSet(MSX_KEYS.run, null);
+const msxR3ClearRun = () => (typeof msxClearRun === 'function' ? msxClearRun() : storeSet(MSX_KEYS.run, null));
 // 保存枠から外す(お別れ)。「思い出」に名前・種・ランクだけ残す(新しい100件)
 const msxR3Farewell = async (id) => {
   const box = await msxR3ReadBox(); const m = box.mons.find((x) => x.id === id); if (!m) return box;
