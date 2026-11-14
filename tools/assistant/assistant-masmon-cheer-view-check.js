@@ -52,6 +52,15 @@ const seed = () => {
         ASSISTANT_MASMON_STORE.set({ ...st, draw: { ...st.draw, welcomed: w } });
         await AMGT_STORE.load(); await AMGC_STORE.load();
         const aid = ambbAssistantsWithRows()[0].id;
+        // 今日の修行の記録を作る(技を1つ覚え、技の熟練が伸びた形)。保存はこのブラウザの中だけ
+        {
+          const row = amgcRowsOf(aid)[0]; const e = typeof amgEntryOf === 'function' ? amgEntryOf(aid, row) : null;
+          const { next, me } = amgtEnsure(AMGT_STORE.state, aid, row, e);
+          const t0 = me.learn[0], t1 = me.learn[1];
+          if (t0) me.m[t0] = 18; if (t1) me.m[t1] = 30;
+          me.log = [...me.log, { s: amgtSlotOf(Date.now()), k: 'real', g: { [t0]: 12, ...(t1 ? { [t1]: 7 } : {}) }, ...(t1 ? { l: t1 } : {}) }];
+          amgtSave(next);
+        }
         const d = document.createElement('div'); d.id = 'cv-host'; document.body.appendChild(d);
         ReactDOM.createRoot(d).render(React.createElement(AssistantMasmonTrainWatchHost));
         await new Promise(r => setTimeout(r, 300));
@@ -85,9 +94,14 @@ const seed = () => {
         await page.evaluate(() => document.querySelector('[data-amgc-pause]').click());
       }
       await page.evaluate(() => { const b = document.querySelector('[data-amgc-skip]'); if (b) b.click(); });
+      await page.waitForTimeout(700);
+      if (SHOTS) await page.screenshot({ path: path.join(shotDir, `cheer-end-${width}.png`) });
+      // 倒れた子・勝った子が、場の左右の端から切れない(2026-11-14 社長)
+      const clip = await page.evaluate(() => { const st = document.querySelector('[data-msa-stage]'); if (!st) return null; const R = st.getBoundingClientRect(); return [...st.querySelectorAll('[data-msa-fighter] img')].map((i) => { const r = i.getBoundingClientRect(); return { l: Math.round(r.left - R.left), r: Math.round(R.right - r.right) }; }); });
+      if (clip) check(`(幅${width}) 倒れた子・勝った子が場の左右の端から切れない`, clip.every((c) => c.l >= -2 && c.r >= -2), JSON.stringify(clip));
       await page.waitForTimeout(1200);
       const res = await page.evaluate(() => { const r = document.querySelector('[data-amgc-result]'); return r ? r.innerText.replace(/\s+/g, ' ') : ''; });
-      check(`(幅${width}) 最後に「今日の修行の結果」が出る`, /(今日|前回)の修行の結果|まだ修行していません/.test(res), res.slice(0, 80));
+      check(`(幅${width}) 最後に「今日の修行の結果」(覚えた技・熟練の伸び)が出る`, /今日の修行の結果/.test(res) && /NEW/.test(res) && /→/.test(res), res.slice(0, 120));
       if (SHOTS && width === 390) await page.screenshot({ path: path.join(shotDir, 'cheer-result-390.png') });
       await page.close();
     }

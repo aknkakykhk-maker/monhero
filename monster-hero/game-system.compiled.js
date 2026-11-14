@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 95e0fcc988cf2f37
+// source-sha256: c5d6328833657e75
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -153236,7 +153236,9 @@ function AssistantMasmonTrainWatch({
   const gains = Object.entries(g).filter(([, n]) => n > 0).sort((a, b) => b[1] - a[1]).slice(0, 3);
   const me = last ? last.me : null;
   const aimNames = gains.map(([k]) => amgcTechName(row.monster, k));
-  const aim = last ? last.log.l ? `新しい技「${amgcTechName(row.monster, last.log.l)}」を覚えるための練習試合` : aimNames.length ? `${aimNames.join('・')}の熟練(見習い→熟練)を伸ばす練習試合` : '技の熟練を伸ばす練習試合' : '技の熟練を伸ばす練習試合';
+  const learnedName = last && last.log.l ? amgcTechName(row.monster, last.log.l) : '';
+  const growNames = aimNames.filter(n => n && n !== learnedName);
+  const aim = learnedName ? `新しい技「${learnedName}」を覚えるための練習試合${growNames.length ? `(${growNames.join('・')}の熟練も伸ばします)` : ''}` : growNames.length ? `「${growNames.join('」「')}」の熟練(見習い→熟練)を伸ばす練習試合` : '技の熟練を伸ばす練習試合';
   const faceOf = aId => {
     const a = typeof ASSISTANT_LIST !== 'undefined' ? ASSISTANT_LIST.find(x => x.id === aId) : null;
     return a ? {
@@ -153344,6 +153346,7 @@ function AssistantMasmonTrainWatch({
       introTitle: "練習試合",
       speedF: sf,
       fill: true,
+      wide: true,
       lite: speed === 'hl'
     })), React.createElement("div", {
       className: "amgc-side me",
@@ -153445,7 +153448,18 @@ function AssistantMasmonTrainWatch({
     style: {
       textAlign: 'center'
     }
-  }, "いまはひとりで稽古中なので、修行の伸びが半分になります。👀で見るか、マスモンをもう1体迎えると相手ができます(フレンドが相手になるのは、編成を見つけてから7日間です)"), React.createElement("div", {
+  }, "いまはひとりで稽古中なので、修行の伸びが半分になります。👀で見るか、マスモンをもう1体迎えると相手ができます(フレンドが相手になるのは、編成を見つけてから7日間です)"), !done && battle && !failed ? React.createElement("div", {
+    className: "ambw-card",
+    "data-amgc-result-wait": true,
+    style: {
+      textAlign: 'center'
+    }
+  }, React.createElement("b", {
+    style: {
+      color: '#fde68a',
+      fontSize: 12.5
+    }
+  }, "🥋 試合が終わると、今日の修行の結果が出ます")) : React.createElement("div", {
     className: "ambw-card",
     "data-amgc-result": true
   }, React.createElement("b", {
@@ -153481,7 +153495,7 @@ function AssistantMasmonTrainWatch({
       style: {
         color: '#fde68a'
       }
-    }, amgtRankOf(from), "→", amgtRankOf(to)));
+    }, amgtRankOf(from) === amgtRankOf(to) ? amgtRankOf(to) : `${amgtRankOf(from)}→${amgtRankOf(to)}`));
   }), gift && gift.ok && React.createElement("p", {
     "data-amgc-gift": true,
     style: {

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 2e9a724f1a608b45
+// generated-sha256: 74021754a69bf0ce
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -80227,7 +80227,11 @@ function AssistantMasmonTrainWatch({ assistantId, onClose }) {
   const me = last ? last.me : null;
   // ねらい(この修行で何を伸ばす試合か)。結果は修行の記録に決まっている。ここでは「何のための練習試合か」を最初に出す
   const aimNames = gains.map(([k]) => amgcTechName(row.monster, k));
-  const aim = last ? (last.log.l ? `新しい技「${amgcTechName(row.monster, last.log.l)}」を覚えるための練習試合` : aimNames.length ? `${aimNames.join('・')}の熟練(見習い→熟練)を伸ばす練習試合` : '技の熟練を伸ばす練習試合') : '技の熟練を伸ばす練習試合';
+  // 覚える技があればその名前(「覚えた技」と「伸びた技」を両方)・伸ばす技があればその名前。決まっていない回だけ「技の熟練」
+  const learnedName = last && last.log.l ? amgcTechName(row.monster, last.log.l) : '';
+  const growNames = aimNames.filter(n => n && n !== learnedName);
+  const aim = learnedName ? `新しい技「${learnedName}」を覚えるための練習試合${growNames.length ? `(${growNames.join('・')}の熟練も伸ばします)` : ''}`
+    : growNames.length ? `「${growNames.join('」「')}」の熟練(見習い→熟練)を伸ばす練習試合` : '技の熟練を伸ばす練習試合';
   const faceOf = (aId) => { const a = typeof ASSISTANT_LIST !== 'undefined' ? ASSISTANT_LIST.find(x => x.id === aId) : null; return a ? { a, src: assistantFaceSrc(a, 'normal') } : null; };
   const stageBlock = () => {
     if (failed) return <p className="ambw-small" style={{ padding: 24, textAlign: 'center' }}>練習試合を読み込めませんでした。もう一度開いてください</p>;
@@ -80255,7 +80259,7 @@ function AssistantMasmonTrainWatch({ assistantId, onClose }) {
         <style>{MSA_CSS}{typeof MSA_SHOW_CSS === 'string' ? MSA_SHOW_CSS : ''}</style>
         <div className="amgc-side foe" data-amgc-side="foe">{foeFace ? <img src={foeFace.src} alt=""/> : null}<span><small>練習相手</small><b>{foeLine}</b></span></div>
         <div className="msa-stagebox amgc-stagebox" data-msa-stagebox>
-          <MsaStage log={log} frames={frames} pos={pos} teams={teams} venueImg={venue} ended={done} win={battle.r.winner} introTitle="練習試合" speedF={sf} fill lite={speed === 'hl'}/>
+          <MsaStage log={log} frames={frames} pos={pos} teams={teams} venueImg={venue} ended={done} win={battle.r.winner} introTitle="練習試合" speedF={sf} fill wide lite={speed === 'hl'}/>
         </div>
         <div className="amgc-side me" data-amgc-side="me">{meFace ? <img src={meFace.src} alt=""/> : null}<span><small>修行中</small><b>{who ? who.name : ''}の{row.nick}</b></span></div>
         <div className="msa-say" data-msa-say>{call ? <div key={`call-${call.at}`} className={`msa-call ${call.k}`} data-msa-call={call.k}>🎙 {call.t}</div> : msaSay(e, nm)}</div>
@@ -80288,13 +80292,17 @@ function AssistantMasmonTrainWatch({ assistantId, onClose }) {
       </div>
       {battle && !battle.solo && battle.foe && battle.foe.kind === 'friend' && <p className="ambw-small" style={{ textAlign: 'center' }}>フレンドが練習相手です(編成を見つけてから7日間は、この相手として数えます)</p>}
       {battle && battle.solo && <p className="ambw-small" style={{ textAlign: 'center' }}>いまはひとりで稽古中なので、修行の伸びが半分になります。👀で見るか、マスモンをもう1体迎えると相手ができます(フレンドが相手になるのは、編成を見つけてから7日間です)</p>}
+      {!done && battle && !failed ? (
+        <div className="ambw-card" data-amgc-result-wait style={{ textAlign: 'center' }}><b style={{ color: '#fde68a', fontSize: 12.5 }}>🥋 試合が終わると、今日の修行の結果が出ます</b></div>
+      ) : (
       <div className="ambw-card" data-amgc-result>
         <b style={{ color: '#fde68a' }}>🥋 {last ? (last.today ? '今日の修行の結果' : '前回の修行の結果') : 'まだ修行していません'}{last ? ` ${row.nick}(${(AMGT_KINDS[last.log.k] || {}).name || ''})` : ''}</b>
         {last && last.log.l && <p data-amgc-learned style={{ margin: '4px 0 0', fontWeight: 800 }}><span style={{ background: '#fbbf24', color: '#111', borderRadius: 6, padding: '0 4px', fontSize: 10 }}>NEW</span> {amgcTechName(row.monster, last.log.l)} を覚えた</p>}
-        {gains.map(([k, n]) => { const to = me ? me.m[k] || 0 : 0; const from = Math.max(0, to - n); return <p key={k} data-amgc-gain={k} style={{ margin: '3px 0 0', fontSize: 12, fontWeight: 800 }}>{amgcTechName(row.monster, k)} {from}→{to}(+{n}) <span style={{ color: '#fde68a' }}>{amgtRankOf(from)}→{amgtRankOf(to)}</span></p>; })}
+        {gains.map(([k, n]) => { const to = me ? me.m[k] || 0 : 0; const from = Math.max(0, to - n); return <p key={k} data-amgc-gain={k} style={{ margin: '3px 0 0', fontSize: 12, fontWeight: 800 }}>{amgcTechName(row.monster, k)} {from}→{to}(+{n}) <span style={{ color: '#fde68a' }}>{amgtRankOf(from) === amgtRankOf(to) ? amgtRankOf(to) : `${amgtRankOf(from)}→${amgtRankOf(to)}`}</span></p>; })}
         {gift && gift.ok && <p data-amgc-gift style={{ margin: '6px 0 0', color: '#fdba74', fontWeight: 900 }}>{who ? who.name : ''}「見に来てくれてうれしいです！」 🥋 {gift.nick} {gift.tech} 熟練 +{gift.to - gift.from} ・ 💗 +{gift.bond}</p>}
         {done && gift && !gift.ok && info && info.why && <p className="ambw-small" style={{ marginTop: 6 }} data-amgc-nogift>{info.why}</p>}
       </div>
+      )}
     </div>
   );
 }
