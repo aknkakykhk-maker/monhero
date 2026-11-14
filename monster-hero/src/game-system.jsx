@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: ae9e3deb3de8001b
+// generated-sha256: 2ff397505c5bc7dc
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -89467,6 +89467,16 @@ const MSA_CSS = `
 @keyframes msaFocus{0%{opacity:0;transform:scale(1.25)}40%{opacity:1}85%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(1)}}
 @keyframes msaAim{0%{opacity:0;transform:scale(2.2) rotate(-60deg)}45%{opacity:1;transform:scale(1) rotate(0)}80%{opacity:1;transform:scale(.92)}100%{opacity:0;transform:scale(.6)}}
 .msa-stage.fill{height:100%;min-height:220px}
+/* モンサクの試合の場の入れ物(2026-11-14 社長「バトルの画面が小さい」)。オートは縦の6割ほど、手動は手番の帯が入るぶんだけ低く(それでも画面の半分ほど) */
+.msa-stagebox{height:clamp(300px,calc(100vh - 240px),680px)}
+.msa[data-msa-mode=manual] .msa-stagebox{height:clamp(280px,calc(100vh - 430px),560px)}
+.msa-stagebox .msa-stage.fill .msa-f,.msa-stagebox .msa-stage.fill .msa-dmgwrap{width:168px;margin-left:-84px;height:206px}
+.msa-stagebox .msa-stage.fill .msa-f img.msa-img{max-width:168px;max-height:196px}
+.msa-stagebox .msa-stage.fill .msa-f .msa-shadow{width:96px;margin-left:-48px}
+.msa-topline{flex-wrap:wrap;row-gap:2px}
+.msa-topline .msc-buff{font-style:normal;font-size:10.5px}
+.msa-topline .msa-breeder{font-size:11px;color:#cbd5e1;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:55%}
+@media (max-height:500px) and (orientation:landscape){.msa-stagebox,.msa[data-msa-mode=manual] .msa-stagebox{height:calc(100vh - 70px);min-height:240px}.msa-stagebox .msa-stage.fill .msa-f,.msa-stagebox .msa-stage.fill .msa-dmgwrap{width:130px;margin-left:-65px;height:150px}.msa-stagebox .msa-stage.fill .msa-f img.msa-img{max-width:130px;max-height:142px}}
 .msa-stage.fill .msa-f,.msa-stage.fill .msa-dmgwrap{width:140px;margin-left:-70px;height:176px}
 .msa-stage.fill .msa-f img.msa-img{max-width:140px;max-height:166px}
 .msa-stage.fill .msa-f .msa-shadow{width:80px;margin-left:-40px}
@@ -90083,10 +90093,13 @@ function MonsucArena({ s, info, engine, input, watch, onEnd }) {
   return (
     <div className="msc-wrap msa" data-msc-match data-msa-pos={pos} data-msa-mode={manual ? (auto ? 'auto' : 'manual') : 'watch'}>
       <style>{MSA_CSS}</style>
-      <div className="msc-top"><b>{info.title} {MSC_STARS(info.star)}</b></div>
-      <MscPanel side="B" team={teams.B} frame={fShow} maxHp={maxHp} info={info} s={s}/>
-      <MsaStage log={log} frames={frames} pos={pos} teams={stageTeams} venueImg={msaVenueBg(info.venue, bg)} ended={ended} win={result ? result.winner : null} introTitle={info.title} speedF={(MSA_SPEEDS.find(x => x.id === speed) || MSA_SPEEDS[0]).f}/>
-      <MscPanel side="A" team={teams.A} frame={fShow} maxHp={maxHp} info={info} s={s} buffed={Boolean(info.buffs)}/>
+      {/* 2026-11-14 社長「肝心のバトルの画面が小さい」: 上下の大きな札をやめ、試合の場を主役に。名前・体力・ガッツ・ラウンドは場の上の帯(MsaStage)にある */}
+      <div className="msc-top msa-topline"><b>{info.title} {MSC_STARS(info.star)}</b>
+        {info.buffs ? <i className="msc-buff">✨ 特別な1話</i> : null}
+        {(info.opp || {}).breeder ? <small className="msa-breeder">相手 {nm('B')}・{info.opp.breeder}</small> : null}</div>
+      <div className="msa-stagebox" data-msa-stagebox>
+        <MsaStage log={log} frames={frames} pos={pos} teams={stageTeams} venueImg={msaVenueBg(info.venue, bg)} ended={ended} win={result ? result.winner : null} introTitle={info.title} speedF={(MSA_SPEEDS.find(x => x.id === speed) || MSA_SPEEDS[0]).f} fill/>
+      </div>
       <div className="msa-say" data-msa-say>{msaSay(e, nm)}</div>
       <div ref={barRef}>{showBar ? <MsxManualBar opt={mm.pending} onPick={pick} onAuto={goAuto} busy={busy}/> : null}</div>
       {manual && !auto && busy && !ended ? <div className="msa-wait">{e.side === 'B' ? '相手の番…' : ' '}</div> : null}

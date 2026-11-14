@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 21727800cfa6b418
+// source-sha256: 172e1d6b92983190
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -174255,6 +174255,16 @@ const MSA_CSS = `
 @keyframes msaFocus{0%{opacity:0;transform:scale(1.25)}40%{opacity:1}85%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(1)}}
 @keyframes msaAim{0%{opacity:0;transform:scale(2.2) rotate(-60deg)}45%{opacity:1;transform:scale(1) rotate(0)}80%{opacity:1;transform:scale(.92)}100%{opacity:0;transform:scale(.6)}}
 .msa-stage.fill{height:100%;min-height:220px}
+/* モンサクの試合の場の入れ物(2026-11-14 社長「バトルの画面が小さい」)。オートは縦の6割ほど、手動は手番の帯が入るぶんだけ低く(それでも画面の半分ほど) */
+.msa-stagebox{height:clamp(300px,calc(100vh - 240px),680px)}
+.msa[data-msa-mode=manual] .msa-stagebox{height:clamp(280px,calc(100vh - 430px),560px)}
+.msa-stagebox .msa-stage.fill .msa-f,.msa-stagebox .msa-stage.fill .msa-dmgwrap{width:168px;margin-left:-84px;height:206px}
+.msa-stagebox .msa-stage.fill .msa-f img.msa-img{max-width:168px;max-height:196px}
+.msa-stagebox .msa-stage.fill .msa-f .msa-shadow{width:96px;margin-left:-48px}
+.msa-topline{flex-wrap:wrap;row-gap:2px}
+.msa-topline .msc-buff{font-style:normal;font-size:10.5px}
+.msa-topline .msa-breeder{font-size:11px;color:#cbd5e1;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:55%}
+@media (max-height:500px) and (orientation:landscape){.msa-stagebox,.msa[data-msa-mode=manual] .msa-stagebox{height:calc(100vh - 70px);min-height:240px}.msa-stagebox .msa-stage.fill .msa-f,.msa-stagebox .msa-stage.fill .msa-dmgwrap{width:130px;margin-left:-65px;height:150px}.msa-stagebox .msa-stage.fill .msa-f img.msa-img{max-width:130px;max-height:142px}}
 .msa-stage.fill .msa-f,.msa-stage.fill .msa-dmgwrap{width:140px;margin-left:-70px;height:176px}
 .msa-stage.fill .msa-f img.msa-img{max-width:140px;max-height:166px}
 .msa-stage.fill .msa-f .msa-shadow{width:80px;margin-left:-40px}
@@ -175484,15 +175494,15 @@ function MonsucArena({
     "data-msa-pos": pos,
     "data-msa-mode": manual ? auto ? 'auto' : 'manual' : 'watch'
   }, React.createElement("style", null, MSA_CSS), React.createElement("div", {
-    className: "msc-top"
-  }, React.createElement("b", null, info.title, " ", MSC_STARS(info.star))), React.createElement(MscPanel, {
-    side: "B",
-    team: teams.B,
-    frame: fShow,
-    maxHp: maxHp,
-    info: info,
-    s: s
-  }), React.createElement(MsaStage, {
+    className: "msc-top msa-topline"
+  }, React.createElement("b", null, info.title, " ", MSC_STARS(info.star)), info.buffs ? React.createElement("i", {
+    className: "msc-buff"
+  }, "✨ 特別な1話") : null, (info.opp || {}).breeder ? React.createElement("small", {
+    className: "msa-breeder"
+  }, "相手 ", nm('B'), "・", info.opp.breeder) : null), React.createElement("div", {
+    className: "msa-stagebox",
+    "data-msa-stagebox": true
+  }, React.createElement(MsaStage, {
     log: log,
     frames: frames,
     pos: pos,
@@ -175501,16 +175511,9 @@ function MonsucArena({
     ended: ended,
     win: result ? result.winner : null,
     introTitle: info.title,
-    speedF: (MSA_SPEEDS.find(x => x.id === speed) || MSA_SPEEDS[0]).f
-  }), React.createElement(MscPanel, {
-    side: "A",
-    team: teams.A,
-    frame: fShow,
-    maxHp: maxHp,
-    info: info,
-    s: s,
-    buffed: Boolean(info.buffs)
-  }), React.createElement("div", {
+    speedF: (MSA_SPEEDS.find(x => x.id === speed) || MSA_SPEEDS[0]).f,
+    fill: true
+  })), React.createElement("div", {
     className: "msa-say",
     "data-msa-say": true
   }, msaSay(e, nm)), React.createElement("div", {
