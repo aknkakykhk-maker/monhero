@@ -83,7 +83,7 @@ const makeRun = async (kind) => {
     ['G1', 'gameover', ['cont']],
     // マスモン一覧(モンサク)の画面(2026-11-14 作り直し): X0 入口・X3 一覧・X4 詳細(基礎・技)・X5 特徴と育成情報・X6 適性とアシスト・X7 お別れのタブ・X8 表示の切り替えの小窓
     ['X0', 'box', ['@openbox']], ['X3', 'box', ['@openbox', '@mmlist']], ['X4', 'box', ['@openbox', '@mmlist', '@boxmon=b1']],
-    ['X5', 'box', ['@openbox', '@mmlist', '@boxmon=b1', '@mmtop=feat', '@mmlow=info']], ['X6', 'box', ['@openbox', '@mmlist', '@boxmon=b1', '@mmtop=apt', '@mmlow=assist']],
+    ['X5', 'box', ['@openbox', '@mmlist', '@boxmon=b1', '#detail-tab=feat']], ['X6', 'box', ['@openbox', '@mmlist', '@boxmon=b1', '#detail-tab=apt']],
     ['X7', 'box', ['@openbox', '@mmlist', '@mmbye']], ['X8', 'box', ['@openbox', '@mmlist', '@mmlabel']],
     ['X1', 'box', ['@openbox', '@mmlist', '@boxmon=b1', '@edit']], ['X2', 'box', ['@openbox', '@mmlist', '@boxmon=b1', '@edit', '@editsave']],
     ['E0', 'retire', ['cont']], ['E3', 'retire', ['cont', '@e0']], ['E3b', 'retire', ['cont', '@e0', '@bal']], ['E1', 'retire', ['cont', '@e0', '@bal', '@e3']],
@@ -125,7 +125,7 @@ const makeRun = async (kind) => {
             if (st.re) { const re = new RegExp(st.re); const b = [...document.querySelectorAll('.msx button')].find((x) => re.test((x.innerText || '').replace(/\s+/g, '')) && !x.disabled); if (b) b.click(); return !!b; }
             if (st === 'cont') { const b = [...document.querySelectorAll('.msx button')].find((x) => /続きから|結果を見る/.test(x.innerText || '')); if (b) b.click(); return !!b; }
             const [k, val] = st.slice(1).split('=');
-            const pre = st[0] === '%' ? 'data-msc-' : 'data-msx-r3-';
+            const pre = st[0] === '%' ? 'data-msc-' : st[0] === '#' ? 'data-msx-' : 'data-msx-r3-'; // '#x' は [data-msx-x](詳細の窓 MsxMonDetail のタブなど)
             const b = document.querySelector(`[${pre}${k}${val ? `="${val}"` : ''}]`);
             if (b && !b.disabled) b.click(); return !!(b && !b.disabled);
           }, st instanceof RegExp ? { re: st.source } : st);

@@ -102,7 +102,8 @@ const msxLineName = (id) => (id && typeof MONSTER_LINEAGES === 'object' && MONST
 //   見るだけ。選ぶ画面の「くわしく」と、育成中の場面の「くわしく」で同じ部品を使う。絵・用語・見た目はうちの物
 //   st 能力6つ / apt 伸びやすさの字 / type 成長の型 / peak ピークの期 / grades 間合い適性 [零,近,中,遠] / known 覚えている技の id(無ければ はじめから使える技) / power・rank 総合力
 const MSX_STAT_COLOR = Object.freeze({ life: '#facc15', pow: '#f87171', wise: '#4ade80', hit: '#f472b6', eva: '#60a5fa', tough: '#818cf8' });
-function MsxMonDetail({ species, name, art, st, apt, type, peak, grades, known, power, rank, sub, onClose, SUC }) {
+// head … 名前の横に置く物(マスモンボックスのハート・✏)/ more … 特徴のタブの下に足す行 [[見出し, 中身], …] / foot … 「とじる」の上に置くボタン(貸し出し・お別れ)/ grade … 総合力の横の評価(A2 など)
+function MsxMonDetail({ species, name, art, st, apt, type, peak, grades, known, power, rank, sub, onClose, SUC, head = null, more = null, foot = null, grade: gradeLabel = null }) {
   const [tab, setTab] = useState('base');
   const [dist, setDist] = useState(-1); // 技の一覧の間合いのしぼり(-1 = 全部)
   const line = typeof MONSTER_LINEAGE_MAP === 'object' && MONSTER_LINEAGE_MAP ? MONSTER_LINEAGE_MAP[species] : null;
@@ -124,9 +125,9 @@ function MsxMonDetail({ species, name, art, st, apt, type, peak, grades, known, 
         <div className="msx-md-scroll">
           <div className="msx-md-top">
             <div className="msx-md-art">
-              <div className="nm">{name || msxMonName(species)}{sub ? <small>{sub}</small> : null}</div>
+              <div className="nm">{head ? <span className="msx-md-head">{head}</span> : null}{name || msxMonName(species)}{sub ? <small>{sub}</small> : null}</div>
               {art || <img src={msxMonImg(species)} alt=""/>}
-              {power != null ? <div className="pw"><small>総合力</small><b>{msxFmt(power)}</b>{rank ? <i className={msxRankCls(rank)}>{rank}</i> : null}</div> : null}
+              {power != null ? <div className="pw"><small>総合力</small><b>{msxFmt(power)}</b>{rank ? <i className={msxRankCls(rank)}>{rank}</i> : null}{gradeLabel ? <i className="msx-md-grade">{gradeLabel}</i> : null}</div> : null}
             </div>
             <div className="msx-md-panel">
               <div className="msx-md-tabs">{TOP.map(([k, n]) => <button type="button" key={k} className={tab === k ? 'on' : ''} data-msx-detail-tab={k} onClick={() => setTab(k)}>{n}</button>)}</div>
@@ -140,6 +141,7 @@ function MsxMonDetail({ species, name, art, st, apt, type, peak, grades, known, 
                 <div className="msx-md-kv"><b>成長の型</b><span className="yel">{typeName}</span></div>
                 <div className="msx-md-kv"><b>伸びどき</b><span>{peak || '—'}</span></div>
                 <div className="msx-md-kv"><b>血統</b><span>{main ? `${main}${subL && subL !== main ? ` × ${subL}` : '(純血)'}` : '—'}</span></div>
+                {Array.isArray(more) ? more.filter(Boolean).map(([k, v], i) => <div key={`m${i}`} className="msx-md-kv"><b>{k}</b><span>{v}</span></div>) : null}
                 <div className="msx-md-dex">{dex || 'このモンスターの図鑑は調査中'}</div></div>) : null}
               {tab === 'apt' ? (<div className="msx-md-box"><div className="cap">間合い適性</div>
                 <div className="msx-dt-dist">{MSX_DIST_NAMES.map((d, i) => <div key={d}><span>{d}</span><b>{grades ? grades[i] : '—'}</b></div>)}</div>
@@ -168,6 +170,7 @@ function MsxMonDetail({ species, name, art, st, apt, type, peak, grades, known, 
             </div>
           </div>
         </div>
+        {foot ? <div className="msx-md-foot">{foot}</div> : null}
         <button type="button" className="msx-dt-close" data-msx-detail-close onClick={onClose}>とじる</button>
       </div>
     </div>

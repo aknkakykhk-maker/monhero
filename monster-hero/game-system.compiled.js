@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: cda70da91143c381
+// source-sha256: e19a7639e8b95c91
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -165723,7 +165723,11 @@ function MsxMonDetail({
   rank,
   sub,
   onClose,
-  SUC
+  SUC,
+  head = null,
+  more = null,
+  foot = null,
+  grade: gradeLabel = null
 }) {
   const [tab, setTab] = useState('base');
   const [dist, setDist] = useState(-1);
@@ -165757,14 +165761,18 @@ function MsxMonDetail({
     className: "msx-md-art"
   }, React.createElement("div", {
     className: "nm"
-  }, name || msxMonName(species), sub ? React.createElement("small", null, sub) : null), art || React.createElement("img", {
+  }, head ? React.createElement("span", {
+    className: "msx-md-head"
+  }, head) : null, name || msxMonName(species), sub ? React.createElement("small", null, sub) : null), art || React.createElement("img", {
     src: msxMonImg(species),
     alt: ""
   }), power != null ? React.createElement("div", {
     className: "pw"
   }, React.createElement("small", null, "総合力"), React.createElement("b", null, msxFmt(power)), rank ? React.createElement("i", {
     className: msxRankCls(rank)
-  }, rank) : null) : null), React.createElement("div", {
+  }, rank) : null, gradeLabel ? React.createElement("i", {
+    className: "msx-md-grade"
+  }, gradeLabel) : null) : null), React.createElement("div", {
     className: "msx-md-panel"
   }, React.createElement("div", {
     className: "msx-md-tabs"
@@ -165804,7 +165812,10 @@ function MsxMonDetail({
     className: "msx-md-kv"
   }, React.createElement("b", null, "伸びどき"), React.createElement("span", null, peak || '—')), React.createElement("div", {
     className: "msx-md-kv"
-  }, React.createElement("b", null, "血統"), React.createElement("span", null, main ? `${main}${subL && subL !== main ? ` × ${subL}` : '(純血)'}` : '—')), React.createElement("div", {
+  }, React.createElement("b", null, "血統"), React.createElement("span", null, main ? `${main}${subL && subL !== main ? ` × ${subL}` : '(純血)'}` : '—')), Array.isArray(more) ? more.filter(Boolean).map(([k, v], i) => React.createElement("div", {
+    key: `m${i}`,
+    className: "msx-md-kv"
+  }, React.createElement("b", null, k), React.createElement("span", null, v))) : null, React.createElement("div", {
     className: "msx-md-dex"
   }, dex || 'このモンスターの図鑑は調査中')) : null, tab === 'apt' ? React.createElement("div", {
     className: "msx-md-box"
@@ -165871,7 +165882,9 @@ function MsxMonDetail({
     className: "gd"
   }, grade('crit', tech.crit))), React.createElement("div", {
     className: "msx-md-kv"
-  }, React.createElement("b", null, "覚え方"), React.createElement("span", null, has(tech) ? Array.isArray(known) ? '覚えている' : 'はじめから' : '修行で覚える'))) : null))), React.createElement("button", {
+  }, React.createElement("b", null, "覚え方"), React.createElement("span", null, has(tech) ? Array.isArray(known) ? '覚えている' : 'はじめから' : '修行で覚える'))) : null))), foot ? React.createElement("div", {
+    className: "msx-md-foot"
+  }, foot) : null, React.createElement("button", {
     type: "button",
     className: "msx-dt-close",
     "data-msx-detail-close": true,
@@ -174317,23 +174330,23 @@ function MsxMmGrid({
       disabled: !!lock,
       onClick: () => onPick && onPick(m)
     }, attrs ? attrs(m) : {}), React.createElement("span", {
-      className: "fc"
+      className: "mmg-fc"
     }, React.createElement(MsxMmArt, {
       m: m,
       size: "100%",
       thumb: true
     })), m.grade || m.rank ? React.createElement("i", {
-      className: "gd"
+      className: "mmg-gd"
     }, m.grade || m.rank) : null, fv.includes(m.id) ? React.createElement("i", {
-      className: "hr",
+      className: "mmg-hr",
       "aria-label": "お気に入り"
     }, "❤") : null, on ? React.createElement("i", {
-      className: "ck",
+      className: "mmg-ck",
       "aria-hidden": "true"
     }, "✓") : null, lock ? React.createElement("i", {
-      className: "lk2"
+      className: "mmg-lk"
     }, lock) : null, React.createElement("span", {
-      className: "lb"
+      className: "mmg-lb"
     }, msxMmLabelOf(m, lb)));
   }));
 }
@@ -174341,15 +174354,16 @@ const MSX_MM_GRID_CSS = `
 .mmg{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px 6px;align-content:start;padding:8px 2px 6px}
 .mmg .mmg-c{position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;min-width:0;min-height:44px;text-align:center;background:none;border:0;padding:0;margin:0;color:#fff;font:inherit;cursor:pointer}
 .mmg .mmg-c:disabled{cursor:default}
-.mmg .fc{display:block;width:100%;aspect-ratio:1;border-radius:50%;overflow:hidden;background:radial-gradient(circle at 50% 35%,#e0e7ff 0,#a5b4fc 75%);border:2.5px solid #fde047;box-shadow:0 2px 0 #0006}
-.mmg .mmg-c.on .fc{border-color:#f472b6;box-shadow:0 0 0 3px #f472b6}
+.mmg .mmg-fc{display:block;width:100%;height:auto;aspect-ratio:1/1;min-height:0;max-height:none;border-radius:50%;overflow:hidden;background:radial-gradient(circle at 50% 35%,#e0e7ff 0,#a5b4fc 75%);border:2.5px solid #fde047;box-shadow:0 2px 0 #0006}
+.mmg .mmg-c.on .mmg-fc{border-color:#f472b6;box-shadow:0 0 0 3px #f472b6}
 .mmg .mmg-c.lk{opacity:.5}
-.mmg .gd{position:absolute;right:-2px;top:-2px;font-style:normal;font-size:10px;font-weight:900;color:#fff;background:#7c3aed;border:1.5px solid #fde047;border-radius:8px;padding:0 4px;line-height:15px}
-.mmg .hr{position:absolute;left:-1px;top:-2px;font-style:normal;font-size:14px;color:#f43f5e;text-shadow:0 1px 0 #fff}
-.mmg .ck{position:absolute;left:50%;top:22%;transform:translateX(-50%);font-style:normal;font-size:22px;font-weight:900;color:#fff;text-shadow:0 2px 4px #000}
-.mmg .lk2{position:absolute;left:50%;top:30%;transform:translateX(-50%);font-style:normal;font-size:10px;font-weight:900;background:#0f0d24e0;border-radius:6px;padding:0 4px;white-space:nowrap}
-.mmg .lb{max-width:100%;font-size:10.5px;font-weight:900;background:#0f0d24;border-radius:8px;padding:1px 5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.mmg .mm-art{display:block;position:relative}
+.mmg .mmg-gd{position:absolute;right:-2px;top:-2px;font-style:normal;font-size:10px;font-weight:900;color:#fff;background:#7c3aed;border:1.5px solid #fde047;border-radius:8px;padding:0 4px;line-height:15px}
+.mmg .mmg-hr{position:absolute;left:-1px;top:-2px;font-style:normal;font-size:14px;color:#f43f5e;text-shadow:0 1px 0 #fff}
+.mmg .mmg-ck{position:absolute;left:50%;top:22%;transform:translateX(-50%);font-style:normal;font-size:22px;font-weight:900;color:#fff;text-shadow:0 2px 4px #000}
+.mmg .mmg-lk{position:absolute;left:50%;top:30%;transform:translateX(-50%);font-style:normal;font-size:10px;font-weight:900;background:#0f0d24e0;border-radius:6px;padding:0 4px;white-space:nowrap}
+.mmg .mmg-lb{max-width:100%;font-size:10.5px;font-weight:900;background:#0f0d24;border-radius:8px;padding:1px 5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mmg .mm-art{display:block;position:relative;width:100%;height:100%}
+.mmg .mmg-fc img{width:100%!important;height:100%!important;object-fit:cover;object-position:50% 30%}
 `;
 function MsxR3Box({
   onClose
@@ -174503,6 +174517,10 @@ function MsxR3Box({
     }, React.createElement("div", {
       className: "mm-desk"
     }, React.createElement("img", {
+      className: "mm-bg",
+      src: "images/story-bg/monhero_town.jpg",
+      alt: ""
+    }), React.createElement("img", {
       className: "mm-aid",
       src: msxFace(aid, 'happy'),
       alt: ""
@@ -174541,7 +174559,7 @@ function MsxR3Box({
       type: "button",
       onClick: onClose
     }, "← もどる"));
-  } else if (page === 'list') {
+  } else if (page === 'list' || page === 'detail' && cur) {
     const list = msxMmSorted(box.mons, view.sort);
     const sortName = (MSX_MM_SORTS.find(([k]) => k === view.sort) || [])[1];
     const labelName = (MSX_MM_LABELS.find(([k]) => k === view.label) || [])[1];
@@ -174643,7 +174661,7 @@ function MsxR3Box({
         fontWeight: 900,
         lineHeight: 1.6
       }
-    }, byeAsk.ids.length, "体とお別れしますか? お別れしたマスモンは元に戻せません(思い出に名前とランクだけ残ります)"), React.createElement("div", {
+    }, byeAsk.ids.length === 1 && box.mons.find(x => x.id === byeAsk.ids[0]) ? msxMmName(box.mons.find(x => x.id === byeAsk.ids[0])) : `${byeAsk.ids.length}体`, "とお別れしますか? お別れしたマスモンは元に戻せません(思い出に名前とランクだけ残ります)"), React.createElement("div", {
       className: "mm-byelist"
     }, byeAsk.ids.map(id => {
       const m = box.mons.find(x => x.id === id);
@@ -174659,7 +174677,90 @@ function MsxR3Box({
       type: "button",
       className: "msx-btn sub",
       onClick: () => setByeAsk(null)
-    }, "やめておく"))) : null);
+    }, "やめておく"))) : null, page === 'detail' && cur && typeof MsxMonDetail === 'function' ? (() => {
+      const lock = byeLock(cur);
+      const assistText = Array.isArray(cur.assists) && cur.assists.length ? cur.assists.map(a => {
+        const T3 = msxR3T().assist;
+        return T3 && T3.VERSION === 3 && T3.BY_ID[a.id] ? `${T3.BY_ID[a.id].name} ${T3.valueText(a.id, T3.valueOf ? T3.valueOf(a) : a.v)}` : a.name || a.id;
+      }).join('・') : '';
+      const endAt = Number.isFinite(cur.endAt) ? new Date(cur.endAt) : null;
+      const more = [['忠誠 / 人気', `${Math.round(cur.loy || 0)} / ${Math.round(cur.pop || 0)}`], Array.isArray(cur.fav) && cur.fav.length ? ['得意な能力', cur.fav.map(k => MSX_STAT_NAME[k] || k).join('・')] : null, cur.awake ? ['覚醒', cur.awake >= 2 ? '🌈 超覚醒' : '✨ 覚醒'] : null, assistText ? ['アシスト', assistText] : null, Array.isArray(cur.titles) && cur.titles.length ? ['称号', cur.titles.slice(0, 4).map(t => `「${msxR3TitleName(t)}」`).join('')] : null, cur.coach ? ['育てた助手', msxAidName(cur.coach)] : null, ['世代', `第${Math.max(1, Math.round(Number(cur.gen) || 1))}世代`], endAt ? ['育成を終えた日', `${endAt.getFullYear()}/${endAt.getMonth() + 1}/${endAt.getDate()}`] : null, cur.ending ? ['エンディング', {
+        super: 'スーパー',
+        good: 'グッド',
+        bad: 'ふつう'
+      }[cur.ending] || cur.ending] : null, lendId === cur.id ? ['フレンド', '🤝 貸し出し中'] : null];
+      return React.createElement(MsxMonDetail, {
+        species: cur.species,
+        name: msxMmName(cur),
+        sub: `Lv.${Math.round(Number(cur.lv) || 1)}・${msxMonName(cur.species)}`,
+        art: React.createElement(MsxMmArt, {
+          m: cur,
+          size: "100%"
+        }),
+        st: MSX_STATS.reduce((o, k) => ({
+          ...o,
+          [k]: Math.round(cur.st && cur.st[k] || 0)
+        }), {}),
+        apt: typeof msxAptOf === 'function' ? msxAptOf(cur.species) : ['C', 'C', 'C', 'C', 'C', 'C'],
+        type: cur.gt,
+        grades: SUC && typeof SUC.aptGradesOf === 'function' ? (() => {
+          try {
+            return SUC.aptGradesOf(cur);
+          } catch (e) {
+            return null;
+          }
+        })() : null,
+        known: Array.isArray(cur.techs) ? cur.techs : [],
+        power: cur.raised === false ? null : msxMmPow(cur),
+        rank: cur.grade ? null : cur.rank,
+        grade: cur.grade,
+        SUC: SUC,
+        head: React.createElement(React.Fragment, null, React.createElement("button", {
+          type: "button",
+          className: `mm-fav${fav.includes(cur.id) ? ' on' : ''}`,
+          onClick: () => toggleFav(cur.id),
+          "aria-label": "お気に入り",
+          "data-msx-mm-fav": true
+        }, fav.includes(cur.id) ? '❤' : '♡'), React.createElement("button", {
+          type: "button",
+          className: "mm-ed",
+          "aria-label": "名前と染色を変える",
+          onClick: () => {
+            setEdit({
+              nick: cur.nick || msxMonName(cur.species),
+              colors: Array.isArray(cur.colors) ? cur.colors.slice(0, 6) : [],
+              err: ''
+            });
+            setPage('edit');
+          },
+          "data-msx-r3-edit": true
+        }, "✏")),
+        more: more,
+        foot: React.createElement(React.Fragment, null, msg ? React.createElement("div", {
+          className: "mm-hint ok"
+        }, msg) : null, React.createElement("div", {
+          className: "mm-acts"
+        }, lendOn && cur.raised !== false ? lendId === cur.id ? React.createElement("button", {
+          type: "button",
+          onClick: unlend
+        }, "🤝 貸し出しをやめる") : React.createElement("button", {
+          type: "button",
+          onClick: lend
+        }, "🤝 貸し出す") : null, React.createElement("button", {
+          type: "button",
+          disabled: !!lock,
+          onClick: () => setByeAsk({
+            ids: [cur.id]
+          }),
+          "data-msx-r3-bye": true
+        }, lock ? `お別れ(${lock})` : 'お別れ'))),
+        onClose: () => {
+          setSel(null);
+          setPage('list');
+          setMsg('');
+        }
+      });
+    })() : null);
     foot = tab === 'bye' ? React.createElement("div", {
       className: "v-ft"
     }, React.createElement("button", {
@@ -174777,202 +174878,6 @@ function MsxR3Box({
       onClick: saveEdit,
       "data-msx-r3-editsave": true
     }, "これで決める"));
-  } else if (cur) {
-    title = 'マスモンの詳細';
-    const pow = msxMmPow(cur);
-    const st = MSX_STATS.reduce((o, k) => ({
-      ...o,
-      [k]: Math.round(cur.st && cur.st[k] || 0)
-    }), {});
-    const stMax = Math.max(1000, ...Object.values(st));
-    const typeName = cur.gt && typeof MASMON_CALC !== 'undefined' && typeof MASMON_CALC.typeOf === 'function' ? (MASMON_CALC.typeOf(cur.gt) || {}).name : '';
-    const apt = SUC && typeof SUC.aptGradesOf === 'function' ? (() => {
-      try {
-        return SUC.aptGradesOf(cur);
-      } catch (e) {
-        return null;
-      }
-    })() : null;
-    const all = SUC && typeof SUC.techsOf === 'function' ? SUC.techsOf(cur.species) : [];
-    const got = Array.isArray(cur.techs) ? cur.techs : [];
-    const mastOf = id => {
-      const i = got.indexOf(id);
-      return i >= 0 && Array.isArray(cur.mast) ? Math.round(cur.mast[i] || 0) : 0;
-    };
-    const cols = MSX_MM_DIST.map((_, d) => all.filter(t => Array.isArray(t.dist) && t.dist.includes(d)));
-    const rows = Math.max(3, ...cols.map(c => c.length));
-    const tsel = all.find(t => t.id === techSel) || all.find(t => got.includes(t.id)) || null;
-    const assistText = Array.isArray(cur.assists) && cur.assists.length ? cur.assists.map(a => {
-      const T3 = msxR3T().assist;
-      return T3 && T3.VERSION === 3 && T3.BY_ID[a.id] ? `${T3.BY_ID[a.id].name} ${T3.valueText(a.id, T3.valueOf ? T3.valueOf(a) : a.v)}` : a.name || a.id;
-    }) : [];
-    const endAt = Number.isFinite(cur.endAt) ? new Date(cur.endAt) : null;
-    body = React.createElement(React.Fragment, null, React.createElement("div", {
-      className: "mm-top"
-    }, React.createElement("div", {
-      className: "mm-l"
-    }, React.createElement("div", {
-      className: "mm-nm"
-    }, React.createElement("button", {
-      type: "button",
-      className: `mm-fav${fav.includes(cur.id) ? ' on' : ''}`,
-      onClick: () => toggleFav(cur.id),
-      "aria-label": "お気に入り",
-      "data-msx-mm-fav": true
-    }, fav.includes(cur.id) ? '❤' : '♡'), React.createElement("b", null, msxMmName(cur)), React.createElement("button", {
-      type: "button",
-      className: "mm-ed",
-      "aria-label": "名前と染色を変える",
-      onClick: () => {
-        setEdit({
-          nick: cur.nick || msxMonName(cur.species),
-          colors: Array.isArray(cur.colors) ? cur.colors.slice(0, 6) : [],
-          err: ''
-        });
-        setPage('edit');
-      },
-      "data-msx-r3-edit": true
-    }, "✏")), React.createElement("div", {
-      className: "mm-sub"
-    }, "Lv.", Math.round(Number(cur.lv) || 1), "・", msxMonName(cur.species)), React.createElement("div", {
-      className: "mm-big"
-    }, React.createElement(MsxMmArt, {
-      m: cur,
-      size: "100%"
-    })), React.createElement("div", {
-      className: "mm-pw"
-    }, React.createElement("i", {
-      className: "gd"
-    }, cur.grade || cur.rank || '—'), React.createElement("small", null, "総合力"), React.createElement("b", {
-      className: "v-num"
-    }, cur.raised === false ? '—' : msxFmt(pow)))), React.createElement("div", {
-      className: "mm-r"
-    }, React.createElement("div", {
-      className: "mm-tabs sm"
-    }, [['base', '基礎'], ['feat', '特徴'], ['apt', '適性']].map(([k, n]) => React.createElement("button", {
-      type: "button",
-      key: k,
-      className: top === k ? 'on' : '',
-      onClick: () => setTop(k),
-      "data-msx-r3-mmtop": k
-    }, n))), top === 'base' ? React.createElement("div", {
-      className: "mm-st"
-    }, MSX_STATS.map(k => React.createElement("div", {
-      key: k,
-      className: "row"
-    }, React.createElement("span", {
-      className: "k"
-    }, MSX_STAT_ICON[k], MSX_STAT_NAME[k]), React.createElement("span", {
-      className: "v"
-    }, st[k]), React.createElement("span", {
-      className: "bar"
-    }, React.createElement("i", {
-      style: {
-        width: `${Math.min(100, st[k] / stMax * 100)}%`
-      }
-    }))))) : top === 'feat' ? React.createElement("div", {
-      className: "mm-kv"
-    }, typeName ? React.createElement("div", null, React.createElement("b", null, "成長の型"), React.createElement("span", null, typeName)) : null, Array.isArray(cur.fav) && cur.fav.length ? React.createElement("div", null, React.createElement("b", null, "得意な能力"), React.createElement("span", null, cur.fav.map(k => MSX_STAT_NAME[k] || k).join('・'))) : null, React.createElement("div", null, React.createElement("b", null, "忠誠 / 人気"), React.createElement("span", null, Math.round(cur.loy || 0), " / ", Math.round(cur.pop || 0))), cur.awake ? React.createElement("div", null, React.createElement("b", null, "覚醒"), React.createElement("span", null, cur.awake >= 2 ? '🌈 超覚醒' : '✨ 覚醒')) : null, Array.isArray(cur.titles) && cur.titles.length ? React.createElement("div", null, React.createElement("b", null, "称号"), React.createElement("span", null, cur.titles.slice(0, 4).map(t => `「${msxR3TitleName(t)}」`).join(''))) : null) : React.createElement("div", {
-      className: "mm-apt"
-    }, MSX_MM_DIST.map((d, i) => React.createElement("div", {
-      key: d
-    }, React.createElement("small", null, d), React.createElement("b", null, apt && apt[i] ? apt[i] : '—'))), React.createElement("div", {
-      className: "note"
-    }, "間合いの適性(試合で、その間合いの技の当たりやすさ)")))), React.createElement("div", {
-      className: "mm-tabs"
-    }, [['tech', '技'], ['assist', 'アシスト'], ['info', '育成情報']].map(([k, n]) => React.createElement("button", {
-      type: "button",
-      key: k,
-      className: low === k ? 'on' : '',
-      onClick: () => setLow(k),
-      "data-msx-r3-mmlow": k
-    }, n))), React.createElement("div", {
-      className: "mm-low"
-    }, low === 'tech' ? React.createElement("div", {
-      className: "mm-tech"
-    }, React.createElement("div", {
-      className: "mm-tg"
-    }, MSX_MM_DIST.map(d => React.createElement("span", {
-      key: d,
-      className: "hd"
-    }, d)), Array.from({
-      length: rows
-    }).map((_, r) => MSX_MM_DIST.map((d, c) => {
-      const t = cols[c][r];
-      if (!t) return React.createElement("span", {
-        key: `${r}-${c}`,
-        className: "no"
-      });
-      const has = got.includes(t.id);
-      return React.createElement("button", {
-        type: "button",
-        key: `${r}-${c}`,
-        className: `tc${has ? '' : ' lk'}${tsel && tsel.id === t.id ? ' on' : ''}`,
-        onClick: () => setTechSel(t.id),
-        "aria-label": t.name
-      }, has ? t.kind === 'wise' ? '🧠' : '💪' : '🔒');
-    }))), React.createElement("div", {
-      className: "mm-td"
-    }, tsel ? React.createElement(React.Fragment, null, React.createElement("b", null, got.includes(tsel.id) ? '' : '🔒 ', tsel.name), React.createElement("div", null, React.createElement("span", null, "技の種類"), React.createElement("em", null, tsel.kind === 'wise' ? 'かしこさ' : 'ちから')), React.createElement("div", null, React.createElement("span", null, "間合い"), React.createElement("em", null, (tsel.dist || []).map(d => MSX_MM_DIST[d]).join('・'))), React.createElement("div", null, React.createElement("span", null, "威力"), React.createElement("em", null, tsel.power)), React.createElement("div", null, React.createElement("span", null, "消費ガッツ"), React.createElement("em", null, tsel.guts)), React.createElement("div", null, React.createElement("span", null, "命中"), React.createElement("em", null, tsel.hit > 0 ? `+${tsel.hit}` : tsel.hit)), React.createElement("div", null, React.createElement("span", null, "クリティカル"), React.createElement("em", null, tsel.crit)), React.createElement("div", null, React.createElement("span", null, "ガッツダウン"), React.createElement("em", null, tsel.gd)), got.includes(tsel.id) ? React.createElement("div", null, React.createElement("span", null, "熟練"), React.createElement("em", null, mastOf(tsel.id))) : React.createElement("div", {
-      className: "nt"
-    }, "まだ覚えていない技")) : React.createElement("div", {
-      className: "nt"
-    }, "技がありません"))) : low === 'assist' ? React.createElement("div", {
-      className: "mm-kv"
-    }, assistText.length ? assistText.map((t, i) => React.createElement("div", {
-      key: i
-    }, React.createElement("b", null, "アシスト", i + 1), React.createElement("span", null, t))) : React.createElement("div", null, React.createElement("span", null, "アシスト効果はありません"))) : React.createElement("div", {
-      className: "mm-kv"
-    }, cur.coach ? React.createElement("div", null, React.createElement("b", null, "育てた助手"), React.createElement("span", null, msxAidName(cur.coach))) : null, React.createElement("div", null, React.createElement("b", null, "世代"), React.createElement("span", null, "第", Math.max(1, Math.round(Number(cur.gen) || 1)), "世代", cur.raised === false ? '(未育成)' : '')), endAt ? React.createElement("div", null, React.createElement("b", null, "育成を終えた日"), React.createElement("span", null, endAt.getFullYear(), "/", endAt.getMonth() + 1, "/", endAt.getDate())) : null, cur.ending ? React.createElement("div", null, React.createElement("b", null, "エンディング"), React.createElement("span", null, {
-      super: 'スーパー',
-      good: 'グッド',
-      bad: 'ふつう'
-    }[cur.ending] || cur.ending)) : null, lendId === cur.id ? React.createElement("div", null, React.createElement("b", null, "フレンド"), React.createElement("span", null, "🤝 貸し出し中")) : null)), msg ? React.createElement("div", {
-      className: "mm-hint ok"
-    }, msg) : null, byeAsk ? React.createElement("div", {
-      className: "msx-ov msx-fade"
-    }, React.createElement("div", {
-      className: "msx-sheet"
-    }, React.createElement("div", {
-      style: {
-        fontSize: 13,
-        fontWeight: 900,
-        lineHeight: 1.6
-      }
-    }, msxMmName(cur), "とお別れしますか? 元に戻せません(思い出に名前とランクだけ残ります)"), React.createElement("button", {
-      type: "button",
-      className: "msx-btn go",
-      onClick: () => farewell([cur.id]),
-      "data-msx-mm-bye-yes": true
-    }, "お別れする"), React.createElement("button", {
-      type: "button",
-      className: "msx-btn sub",
-      onClick: () => setByeAsk(null)
-    }, "やめておく"))) : null);
-    const lock = byeLock(cur);
-    foot = React.createElement("div", {
-      className: "v-ft"
-    }, React.createElement("button", {
-      type: "button",
-      onClick: () => {
-        setSel(null);
-        setPage('list');
-        setMsg('');
-      }
-    }, "← とじる"), lendOn && cur.raised !== false ? lendId === cur.id ? React.createElement("button", {
-      type: "button",
-      onClick: unlend
-    }, "🤝 貸し出しをやめる") : React.createElement("button", {
-      type: "button",
-      onClick: lend
-    }, "🤝 貸し出す") : null, React.createElement("button", {
-      type: "button",
-      disabled: !!lock,
-      onClick: () => setByeAsk({
-        ids: [cur.id]
-      }),
-      "data-msx-r3-bye": true
-    }, lock ? `お別れ(${lock})` : 'お別れ'));
   } else {
     body = React.createElement("div", {
       className: "msx-note"
@@ -174999,12 +174904,13 @@ function MsxR3Box({
 const MSX_MM_CSS = `
 .msx .mm{gap:0}
 .msx .mm-gate{flex:1 1 0;min-height:0;display:flex;flex-direction:column;gap:12px;padding-top:8px}
-.msx .mm-desk{position:relative;flex:1 1 0;min-height:200px;max-height:470px;border-radius:16px;overflow:hidden;background:radial-gradient(circle at 70% 40%,#4c3a8a 0,#1e1a36 70%);border:1px solid #3b3566}
+.msx .mm-desk{position:relative;flex:1 1 0;min-height:200px;border-radius:16px;overflow:hidden;background:radial-gradient(circle at 70% 40%,#4c3a8a 0,#1e1a36 70%);border:1px solid #3b3566}
 /* 参考 mm-02 の組み立て: 右に助手の上半身、左に吹き出し。場面の高さに上限を付けて、助手が下に寄って上が大きく空かないようにする */
-.msx .mm-aid{position:absolute;right:0;bottom:0;height:100%;width:100%;object-fit:contain;object-position:right bottom}
-.msx .mm-bub{position:absolute;z-index:1;left:10px;top:7%;max-width:62%;background:#fff;color:#1e1b4b;border-radius:14px;padding:10px 12px;font-size:13px;font-weight:900;line-height:1.5;box-shadow:0 4px 0 #0005}
-.msx .mm-cards{display:grid;grid-template-columns:1fr 1fr;gap:10px;flex:1 1 auto;max-height:240px}
-.msx .mm-card{min-height:96px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;border-radius:16px;background:linear-gradient(180deg,#43307a,#2a2052);border:2px solid #fde047;border-bottom-width:5px;padding:8px 6px;text-align:center}
+.msx .mm-bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 60%;opacity:.85}
+.msx .mm-aid{position:absolute;right:0;bottom:0;height:100%;width:100%;object-fit:contain;object-position:right bottom;filter:drop-shadow(0 4px 8px #0008)}
+.msx .mm-bub{position:absolute;z-index:1;left:10px;top:30%;max-width:62%;background:#fff;color:#1e1b4b;border-radius:14px;padding:10px 12px;font-size:13px;font-weight:900;line-height:1.5;box-shadow:0 4px 0 #0005}
+.msx .mm-cards{display:grid;grid-template-columns:1fr 1fr;gap:10px;flex:none}
+.msx .mm-card{min-height:88px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;border-radius:16px;background:linear-gradient(180deg,#43307a,#2a2052);border:2px solid #fde047;border-bottom-width:5px;padding:8px 6px;text-align:center}
 .msx .mm-card .e{font-size:30px;line-height:1.1}
 .msx .mm-card b{font-size:15px;font-weight:900}
 .msx .mm-card small{font-size:10.5px;font-weight:800;color:#fde68a}
@@ -175056,6 +174962,11 @@ const MSX_MM_CSS = `
 .msx .mm-td b{font-size:12.5px;font-weight:900;color:#fde047;line-height:1.3}
 .msx .mm-td div{display:flex;justify-content:space-between;gap:4px;font-size:10.5px;font-weight:800}.msx .mm-td em{font-style:normal;color:#fff}
 .msx .mm-td .nt{color:#94a3b8;font-size:10.5px}
+.msx .msx-md-head{display:inline-flex;gap:4px;margin-right:4px;vertical-align:middle}
+.msx .msx-md-grade{font-style:normal;font-size:10px;font-weight:900;color:#fff;background:#7c3aed;border:1.5px solid #fde047;border-radius:8px;padding:0 5px;margin-left:3px}
+.msx .mm-acts{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:6px;margin-top:6px}
+.msx .mm-acts button{min-height:44px;border-radius:12px;background:#2b3348;font-size:12.5px;font-weight:900;text-align:center}
+.msx .mm-acts button:disabled{opacity:.5}
 `;
 const MSX_BOX_HOST = {
   open: null,

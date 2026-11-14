@@ -71,12 +71,12 @@ function MsxMmGrid({ mons, onPick, isOn, lockOf, label, attrs, fav }) {
     {mons.map((m) => { const lock = lockOf ? lockOf(m) : null; const on = isOn ? isOn(m) : false;
       return (
         <button type="button" key={m.id} className={`mmg-c${on ? ' on' : ''}${lock ? ' lk' : ''}`} disabled={!!lock} onClick={() => onPick && onPick(m)} {...(attrs ? attrs(m) : {})}>
-          <span className="fc"><MsxMmArt m={m} size="100%" thumb/></span>
-          {m.grade || m.rank ? <i className="gd">{m.grade || m.rank}</i> : null}
-          {fv.includes(m.id) ? <i className="hr" aria-label="お気に入り">❤</i> : null}
-          {on ? <i className="ck" aria-hidden="true">✓</i> : null}
-          {lock ? <i className="lk2">{lock}</i> : null}
-          <span className="lb">{msxMmLabelOf(m, lb)}</span>
+          <span className="mmg-fc"><MsxMmArt m={m} size="100%" thumb/></span>
+          {m.grade || m.rank ? <i className="mmg-gd">{m.grade || m.rank}</i> : null}
+          {fv.includes(m.id) ? <i className="mmg-hr" aria-label="お気に入り">❤</i> : null}
+          {on ? <i className="mmg-ck" aria-hidden="true">✓</i> : null}
+          {lock ? <i className="mmg-lk">{lock}</i> : null}
+          <span className="mmg-lb">{msxMmLabelOf(m, lb)}</span>
         </button>);
     })}
   </div>);
@@ -85,15 +85,16 @@ const MSX_MM_GRID_CSS = `
 .mmg{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px 6px;align-content:start;padding:8px 2px 6px}
 .mmg .mmg-c{position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;min-width:0;min-height:44px;text-align:center;background:none;border:0;padding:0;margin:0;color:#fff;font:inherit;cursor:pointer}
 .mmg .mmg-c:disabled{cursor:default}
-.mmg .fc{display:block;width:100%;aspect-ratio:1;border-radius:50%;overflow:hidden;background:radial-gradient(circle at 50% 35%,#e0e7ff 0,#a5b4fc 75%);border:2.5px solid #fde047;box-shadow:0 2px 0 #0006}
-.mmg .mmg-c.on .fc{border-color:#f472b6;box-shadow:0 0 0 3px #f472b6}
+.mmg .mmg-fc{display:block;width:100%;height:auto;aspect-ratio:1/1;min-height:0;max-height:none;border-radius:50%;overflow:hidden;background:radial-gradient(circle at 50% 35%,#e0e7ff 0,#a5b4fc 75%);border:2.5px solid #fde047;box-shadow:0 2px 0 #0006}
+.mmg .mmg-c.on .mmg-fc{border-color:#f472b6;box-shadow:0 0 0 3px #f472b6}
 .mmg .mmg-c.lk{opacity:.5}
-.mmg .gd{position:absolute;right:-2px;top:-2px;font-style:normal;font-size:10px;font-weight:900;color:#fff;background:#7c3aed;border:1.5px solid #fde047;border-radius:8px;padding:0 4px;line-height:15px}
-.mmg .hr{position:absolute;left:-1px;top:-2px;font-style:normal;font-size:14px;color:#f43f5e;text-shadow:0 1px 0 #fff}
-.mmg .ck{position:absolute;left:50%;top:22%;transform:translateX(-50%);font-style:normal;font-size:22px;font-weight:900;color:#fff;text-shadow:0 2px 4px #000}
-.mmg .lk2{position:absolute;left:50%;top:30%;transform:translateX(-50%);font-style:normal;font-size:10px;font-weight:900;background:#0f0d24e0;border-radius:6px;padding:0 4px;white-space:nowrap}
-.mmg .lb{max-width:100%;font-size:10.5px;font-weight:900;background:#0f0d24;border-radius:8px;padding:1px 5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.mmg .mm-art{display:block;position:relative}
+.mmg .mmg-gd{position:absolute;right:-2px;top:-2px;font-style:normal;font-size:10px;font-weight:900;color:#fff;background:#7c3aed;border:1.5px solid #fde047;border-radius:8px;padding:0 4px;line-height:15px}
+.mmg .mmg-hr{position:absolute;left:-1px;top:-2px;font-style:normal;font-size:14px;color:#f43f5e;text-shadow:0 1px 0 #fff}
+.mmg .mmg-ck{position:absolute;left:50%;top:22%;transform:translateX(-50%);font-style:normal;font-size:22px;font-weight:900;color:#fff;text-shadow:0 2px 4px #000}
+.mmg .mmg-lk{position:absolute;left:50%;top:30%;transform:translateX(-50%);font-style:normal;font-size:10px;font-weight:900;background:#0f0d24e0;border-radius:6px;padding:0 4px;white-space:nowrap}
+.mmg .mmg-lb{max-width:100%;font-size:10.5px;font-weight:900;background:#0f0d24;border-radius:8px;padding:1px 5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mmg .mm-art{display:block;position:relative;width:100%;height:100%}
+.mmg .mmg-fc img{width:100%!important;height:100%!important;object-fit:cover;object-position:50% 30%}
 `;
 
 function MsxR3Box({ onClose }) {
@@ -171,7 +172,7 @@ function MsxR3Box({ onClose }) {
   else if (page === 'gate') {
     title = 'マスモンボックス(モンサク)';
     body = (<div className="mm-gate">
-      <div className="mm-desk"><img className="mm-aid" src={msxFace(aid, 'happy')} alt=""/>
+      <div className="mm-desk"><img className="mm-bg" src="images/story-bg/monhero_town.jpg" alt=""/><img className="mm-aid" src={msxFace(aid, 'happy')} alt=""/>
         <div className="mm-bub">{box.mons.length ? '育てたマスモンの様子を見にきたの?' : 'まだマスモンはいないみたい。育成を最後まで終えると、ここに来るよ!'}</div></div>
       <div className="mm-cards">
         <button type="button" className="mm-card" onClick={() => { setPage('list'); setTab('list'); setMsg(''); }} data-msx-mm-open-list data-msx-r3-mmlist>
@@ -184,7 +185,7 @@ function MsxR3Box({ onClose }) {
     foot = <div className="v-ft"><button type="button" onClick={onClose}>← もどる</button></div>;
   }
   // ---- 一覧(mm-03) ----
-  else if (page === 'list') {
+  else if (page === 'list' || (page === 'detail' && cur)) {
     const list = msxMmSorted(box.mons, view.sort);
     const sortName = (MSX_MM_SORTS.find(([k]) => k === view.sort) || [])[1];
     const labelName = (MSX_MM_LABELS.find(([k]) => k === view.label) || [])[1];
@@ -209,10 +210,39 @@ function MsxR3Box({ onClose }) {
           <button type="button" key={k} className={(menu === 'sort' ? view.sort : view.label) === k ? 'on' : ''} onClick={() => { setView(menu === 'sort' ? { ...view, sort: k } : { ...view, label: k }); setMenu(null); }}>{n}</button>))}</div>
         <button type="button" className="msx-btn" onClick={() => setMenu(null)}>とじる</button></div></div> : null}
       {byeAsk ? <div className="msx-ov msx-fade"><div className="msx-sheet">
-        <div style={{ fontSize: 13, fontWeight: 900, lineHeight: 1.6 }}>{byeAsk.ids.length}体とお別れしますか? お別れしたマスモンは元に戻せません(思い出に名前とランクだけ残ります)</div>
+        <div style={{ fontSize: 13, fontWeight: 900, lineHeight: 1.6 }}>{byeAsk.ids.length === 1 && box.mons.find((x) => x.id === byeAsk.ids[0]) ? msxMmName(box.mons.find((x) => x.id === byeAsk.ids[0])) : `${byeAsk.ids.length}体`}とお別れしますか? お別れしたマスモンは元に戻せません(思い出に名前とランクだけ残ります)</div>
         <div className="mm-byelist">{byeAsk.ids.map((id) => { const m = box.mons.find((x) => x.id === id); return m ? <span key={id}>{msxMmName(m)}</span> : null; })}</div>
         <button type="button" className="msx-btn go" onClick={() => farewell(byeAsk.ids)} data-msx-mm-bye-yes>お別れする</button>
         <button type="button" className="msx-btn sub" onClick={() => setByeAsk(null)}>やめておく</button></div></div> : null}
+      {page === 'detail' && cur && typeof MsxMonDetail === 'function' ? (() => {
+        // 詳細は、はじめる画面・育成中の「くわしく」と同じ部品 MsxMonDetail(社長の手本 monster-detail-basic・r1114-039/046)。マスモンボックスの分だけ差し込む
+        const lock = byeLock(cur);
+        const assistText = Array.isArray(cur.assists) && cur.assists.length ? cur.assists.map((a) => { const T3 = msxR3T().assist; return T3 && T3.VERSION === 3 && T3.BY_ID[a.id] ? `${T3.BY_ID[a.id].name} ${T3.valueText(a.id, T3.valueOf ? T3.valueOf(a) : a.v)}` : (a.name || a.id); }).join('・') : '';
+        const endAt = Number.isFinite(cur.endAt) ? new Date(cur.endAt) : null;
+        const more = [
+          ['忠誠 / 人気', `${Math.round(cur.loy || 0)} / ${Math.round(cur.pop || 0)}`],
+          Array.isArray(cur.fav) && cur.fav.length ? ['得意な能力', cur.fav.map((k) => MSX_STAT_NAME[k] || k).join('・')] : null,
+          cur.awake ? ['覚醒', cur.awake >= 2 ? '🌈 超覚醒' : '✨ 覚醒'] : null,
+          assistText ? ['アシスト', assistText] : null,
+          Array.isArray(cur.titles) && cur.titles.length ? ['称号', cur.titles.slice(0, 4).map((t) => `「${msxR3TitleName(t)}」`).join('')] : null,
+          cur.coach ? ['育てた助手', msxAidName(cur.coach)] : null,
+          ['世代', `第${Math.max(1, Math.round(Number(cur.gen) || 1))}世代`],
+          endAt ? ['育成を終えた日', `${endAt.getFullYear()}/${endAt.getMonth() + 1}/${endAt.getDate()}`] : null,
+          cur.ending ? ['エンディング', { super: 'スーパー', good: 'グッド', bad: 'ふつう' }[cur.ending] || cur.ending] : null,
+          lendId === cur.id ? ['フレンド', '🤝 貸し出し中'] : null,
+        ];
+        return (<MsxMonDetail species={cur.species} name={msxMmName(cur)} sub={`Lv.${Math.round(Number(cur.lv) || 1)}・${msxMonName(cur.species)}`}
+          art={<MsxMmArt m={cur} size="100%"/>} st={MSX_STATS.reduce((o, k) => ({ ...o, [k]: Math.round((cur.st && cur.st[k]) || 0) }), {})}
+          apt={typeof msxAptOf === 'function' ? msxAptOf(cur.species) : ['C', 'C', 'C', 'C', 'C', 'C']} type={cur.gt} grades={SUC && typeof SUC.aptGradesOf === 'function' ? (() => { try { return SUC.aptGradesOf(cur); } catch (e) { return null; } })() : null}
+          known={Array.isArray(cur.techs) ? cur.techs : []} power={cur.raised === false ? null : msxMmPow(cur)} rank={cur.grade ? null : cur.rank} grade={cur.grade} SUC={SUC}
+          head={<><button type="button" className={`mm-fav${fav.includes(cur.id) ? ' on' : ''}`} onClick={() => toggleFav(cur.id)} aria-label="お気に入り" data-msx-mm-fav>{fav.includes(cur.id) ? '❤' : '♡'}</button>
+            <button type="button" className="mm-ed" aria-label="名前と染色を変える" onClick={() => { setEdit({ nick: cur.nick || msxMonName(cur.species), colors: Array.isArray(cur.colors) ? cur.colors.slice(0, 6) : [], err: '' }); setPage('edit'); }} data-msx-r3-edit>✏</button></>}
+          more={more}
+          foot={<>{msg ? <div className="mm-hint ok">{msg}</div> : null}<div className="mm-acts">
+            {lendOn && cur.raised !== false ? (lendId === cur.id ? <button type="button" onClick={unlend}>🤝 貸し出しをやめる</button> : <button type="button" onClick={lend}>🤝 貸し出す</button>) : null}
+            <button type="button" disabled={!!lock} onClick={() => setByeAsk({ ids: [cur.id] })} data-msx-r3-bye>{lock ? `お別れ(${lock})` : 'お別れ'}</button></div></>}
+          onClose={() => { setSel(null); setPage('list'); setMsg(''); }}/>);
+      })() : null}
     </>);
     foot = tab === 'bye'
       ? <div className="v-ft"><button type="button" onClick={() => { setTab('list'); setPick([]); }}>← やめる</button><button type="button" className="go" disabled={!pick.length} onClick={() => setByeAsk({ ids: pick.slice() })} data-msx-mm-bye>お別れする({pick.length}体)</button></div>
@@ -238,86 +268,7 @@ function MsxR3Box({ onClose }) {
     </div>);
     foot = <div className="v-ft"><button type="button" onClick={() => { setEdit(null); setPage('detail'); }}>やめる</button><button type="button" className="go" onClick={saveEdit} data-msx-r3-editsave>これで決める</button></div>;
   }
-  // ---- 詳細(mm-04) ----
-  else if (cur) {
-    title = 'マスモンの詳細';
-    const pow = msxMmPow(cur); const st = MSX_STATS.reduce((o, k) => ({ ...o, [k]: Math.round((cur.st && cur.st[k]) || 0) }), {});
-    const stMax = Math.max(1000, ...Object.values(st));
-    const typeName = cur.gt && typeof MASMON_CALC !== 'undefined' && typeof MASMON_CALC.typeOf === 'function' ? (MASMON_CALC.typeOf(cur.gt) || {}).name : '';
-    const apt = SUC && typeof SUC.aptGradesOf === 'function' ? (() => { try { return SUC.aptGradesOf(cur); } catch (e) { return null; } })() : null;
-    const all = SUC && typeof SUC.techsOf === 'function' ? SUC.techsOf(cur.species) : [];
-    const got = Array.isArray(cur.techs) ? cur.techs : [];
-    const mastOf = (id) => { const i = got.indexOf(id); return i >= 0 && Array.isArray(cur.mast) ? Math.round(cur.mast[i] || 0) : 0; };
-    const cols = MSX_MM_DIST.map((_, d) => all.filter((t) => Array.isArray(t.dist) && t.dist.includes(d)));
-    const rows = Math.max(3, ...cols.map((c) => c.length));
-    const tsel = all.find((t) => t.id === techSel) || all.find((t) => got.includes(t.id)) || null;
-    const assistText = Array.isArray(cur.assists) && cur.assists.length ? cur.assists.map((a) => { const T3 = msxR3T().assist; return T3 && T3.VERSION === 3 && T3.BY_ID[a.id] ? `${T3.BY_ID[a.id].name} ${T3.valueText(a.id, T3.valueOf ? T3.valueOf(a) : a.v)}` : (a.name || a.id); }) : [];
-    const endAt = Number.isFinite(cur.endAt) ? new Date(cur.endAt) : null;
-    body = (<>
-      <div className="mm-top">
-        <div className="mm-l">
-          <div className="mm-nm"><button type="button" className={`mm-fav${fav.includes(cur.id) ? ' on' : ''}`} onClick={() => toggleFav(cur.id)} aria-label="お気に入り" data-msx-mm-fav>{fav.includes(cur.id) ? '❤' : '♡'}</button><b>{msxMmName(cur)}</b><button type="button" className="mm-ed" aria-label="名前と染色を変える" onClick={() => { setEdit({ nick: cur.nick || msxMonName(cur.species), colors: Array.isArray(cur.colors) ? cur.colors.slice(0, 6) : [], err: '' }); setPage('edit'); }} data-msx-r3-edit>✏</button></div>
-          <div className="mm-sub">Lv.{Math.round(Number(cur.lv) || 1)}・{msxMonName(cur.species)}</div>
-          <div className="mm-big"><MsxMmArt m={cur} size="100%"/></div>
-          <div className="mm-pw"><i className="gd">{cur.grade || cur.rank || '—'}</i><small>総合力</small><b className="v-num">{cur.raised === false ? '—' : msxFmt(pow)}</b></div>
-        </div>
-        <div className="mm-r">
-          <div className="mm-tabs sm">{[['base', '基礎'], ['feat', '特徴'], ['apt', '適性']].map(([k, n]) => <button type="button" key={k} className={top === k ? 'on' : ''} onClick={() => setTop(k)} data-msx-r3-mmtop={k}>{n}</button>)}</div>
-          {top === 'base' ? <div className="mm-st">{MSX_STATS.map((k) => (
-            <div key={k} className="row"><span className="k">{MSX_STAT_ICON[k]}{MSX_STAT_NAME[k]}</span><span className="v">{st[k]}</span><span className="bar"><i style={{ width: `${Math.min(100, st[k] / stMax * 100)}%` }}/></span></div>))}</div>
-            : top === 'feat' ? <div className="mm-kv">
-              {typeName ? <div><b>成長の型</b><span>{typeName}</span></div> : null}
-              {Array.isArray(cur.fav) && cur.fav.length ? <div><b>得意な能力</b><span>{cur.fav.map((k) => MSX_STAT_NAME[k] || k).join('・')}</span></div> : null}
-              <div><b>忠誠 / 人気</b><span>{Math.round(cur.loy || 0)} / {Math.round(cur.pop || 0)}</span></div>
-              {cur.awake ? <div><b>覚醒</b><span>{cur.awake >= 2 ? '🌈 超覚醒' : '✨ 覚醒'}</span></div> : null}
-              {Array.isArray(cur.titles) && cur.titles.length ? <div><b>称号</b><span>{cur.titles.slice(0, 4).map((t) => `「${msxR3TitleName(t)}」`).join('')}</span></div> : null}
-            </div>
-              : <div className="mm-apt">{MSX_MM_DIST.map((d, i) => <div key={d}><small>{d}</small><b>{apt && apt[i] ? apt[i] : '—'}</b></div>)}<div className="note">間合いの適性(試合で、その間合いの技の当たりやすさ)</div></div>}
-        </div>
-      </div>
-      <div className="mm-tabs">{[['tech', '技'], ['assist', 'アシスト'], ['info', '育成情報']].map(([k, n]) => <button type="button" key={k} className={low === k ? 'on' : ''} onClick={() => setLow(k)} data-msx-r3-mmlow={k}>{n}</button>)}</div>
-      <div className="mm-low">
-        {low === 'tech' ? <div className="mm-tech">
-          <div className="mm-tg">
-            {MSX_MM_DIST.map((d) => <span key={d} className="hd">{d}</span>)}
-            {Array.from({ length: rows }).map((_, r) => MSX_MM_DIST.map((d, c) => { const t = cols[c][r]; if (!t) return <span key={`${r}-${c}`} className="no"/>;
-              const has = got.includes(t.id);
-              return <button type="button" key={`${r}-${c}`} className={`tc${has ? '' : ' lk'}${tsel && tsel.id === t.id ? ' on' : ''}`} onClick={() => setTechSel(t.id)} aria-label={t.name}>{has ? (t.kind === 'wise' ? '🧠' : '💪') : '🔒'}</button>; }))}
-          </div>
-          <div className="mm-td">{tsel ? (<>
-            <b>{got.includes(tsel.id) ? '' : '🔒 '}{tsel.name}</b>
-            <div><span>技の種類</span><em>{tsel.kind === 'wise' ? 'かしこさ' : 'ちから'}</em></div>
-            <div><span>間合い</span><em>{(tsel.dist || []).map((d) => MSX_MM_DIST[d]).join('・')}</em></div>
-            <div><span>威力</span><em>{tsel.power}</em></div>
-            <div><span>消費ガッツ</span><em>{tsel.guts}</em></div>
-            <div><span>命中</span><em>{tsel.hit > 0 ? `+${tsel.hit}` : tsel.hit}</em></div>
-            <div><span>クリティカル</span><em>{tsel.crit}</em></div>
-            <div><span>ガッツダウン</span><em>{tsel.gd}</em></div>
-            {got.includes(tsel.id) ? <div><span>熟練</span><em>{mastOf(tsel.id)}</em></div> : <div className="nt">まだ覚えていない技</div>}
-          </>) : <div className="nt">技がありません</div>}</div>
-        </div>
-          : low === 'assist' ? <div className="mm-kv">{assistText.length ? assistText.map((t, i) => <div key={i}><b>アシスト{i + 1}</b><span>{t}</span></div>) : <div><span>アシスト効果はありません</span></div>}</div>
-            : <div className="mm-kv">
-              {cur.coach ? <div><b>育てた助手</b><span>{msxAidName(cur.coach)}</span></div> : null}
-              <div><b>世代</b><span>第{Math.max(1, Math.round(Number(cur.gen) || 1))}世代{cur.raised === false ? '(未育成)' : ''}</span></div>
-              {endAt ? <div><b>育成を終えた日</b><span>{endAt.getFullYear()}/{endAt.getMonth() + 1}/{endAt.getDate()}</span></div> : null}
-              {cur.ending ? <div><b>エンディング</b><span>{{ super: 'スーパー', good: 'グッド', bad: 'ふつう' }[cur.ending] || cur.ending}</span></div> : null}
-              {lendId === cur.id ? <div><b>フレンド</b><span>🤝 貸し出し中</span></div> : null}
-            </div>}
-      </div>
-      {msg ? <div className="mm-hint ok">{msg}</div> : null}
-      {byeAsk ? <div className="msx-ov msx-fade"><div className="msx-sheet">
-        <div style={{ fontSize: 13, fontWeight: 900, lineHeight: 1.6 }}>{msxMmName(cur)}とお別れしますか? 元に戻せません(思い出に名前とランクだけ残ります)</div>
-        <button type="button" className="msx-btn go" onClick={() => farewell([cur.id])} data-msx-mm-bye-yes>お別れする</button>
-        <button type="button" className="msx-btn sub" onClick={() => setByeAsk(null)}>やめておく</button></div></div> : null}
-    </>);
-    const lock = byeLock(cur);
-    foot = (<div className="v-ft">
-      <button type="button" onClick={() => { setSel(null); setPage('list'); setMsg(''); }}>← とじる</button>
-      {lendOn && cur.raised !== false ? (lendId === cur.id ? <button type="button" onClick={unlend}>🤝 貸し出しをやめる</button> : <button type="button" onClick={lend}>🤝 貸し出す</button>) : null}
-      <button type="button" disabled={!!lock} onClick={() => setByeAsk({ ids: [cur.id] })} data-msx-r3-bye>{lock ? `お別れ(${lock})` : 'お別れ'}</button>
-    </div>);
-  } else { body = <div className="msx-note">見つかりませんでした</div>; foot = <div className="v-ft"><button type="button" onClick={() => setPage('list')}>← もどる</button></div>; }
+  else { body = <div className="msx-note">見つかりませんでした</div>; foot = <div className="v-ft"><button type="button" onClick={() => setPage('list')}>← もどる</button></div>; }
   return (<>
     <style>{MSX_R3_CSS}</style><style>{MSX_MM_CSS}</style>
     <MsxHd back="もどる" onBack={page === 'gate' ? onClose : page === 'list' ? () => setPage('gate') : page === 'edit' ? () => { setEdit(null); setPage('detail'); } : () => setPage('list')} title={title}/>
@@ -329,12 +280,13 @@ function MsxR3Box({ onClose }) {
 const MSX_MM_CSS = `
 .msx .mm{gap:0}
 .msx .mm-gate{flex:1 1 0;min-height:0;display:flex;flex-direction:column;gap:12px;padding-top:8px}
-.msx .mm-desk{position:relative;flex:1 1 0;min-height:200px;max-height:470px;border-radius:16px;overflow:hidden;background:radial-gradient(circle at 70% 40%,#4c3a8a 0,#1e1a36 70%);border:1px solid #3b3566}
+.msx .mm-desk{position:relative;flex:1 1 0;min-height:200px;border-radius:16px;overflow:hidden;background:radial-gradient(circle at 70% 40%,#4c3a8a 0,#1e1a36 70%);border:1px solid #3b3566}
 /* 参考 mm-02 の組み立て: 右に助手の上半身、左に吹き出し。場面の高さに上限を付けて、助手が下に寄って上が大きく空かないようにする */
-.msx .mm-aid{position:absolute;right:0;bottom:0;height:100%;width:100%;object-fit:contain;object-position:right bottom}
-.msx .mm-bub{position:absolute;z-index:1;left:10px;top:7%;max-width:62%;background:#fff;color:#1e1b4b;border-radius:14px;padding:10px 12px;font-size:13px;font-weight:900;line-height:1.5;box-shadow:0 4px 0 #0005}
-.msx .mm-cards{display:grid;grid-template-columns:1fr 1fr;gap:10px;flex:1 1 auto;max-height:240px}
-.msx .mm-card{min-height:96px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;border-radius:16px;background:linear-gradient(180deg,#43307a,#2a2052);border:2px solid #fde047;border-bottom-width:5px;padding:8px 6px;text-align:center}
+.msx .mm-bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 60%;opacity:.85}
+.msx .mm-aid{position:absolute;right:0;bottom:0;height:100%;width:100%;object-fit:contain;object-position:right bottom;filter:drop-shadow(0 4px 8px #0008)}
+.msx .mm-bub{position:absolute;z-index:1;left:10px;top:30%;max-width:62%;background:#fff;color:#1e1b4b;border-radius:14px;padding:10px 12px;font-size:13px;font-weight:900;line-height:1.5;box-shadow:0 4px 0 #0005}
+.msx .mm-cards{display:grid;grid-template-columns:1fr 1fr;gap:10px;flex:none}
+.msx .mm-card{min-height:88px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;border-radius:16px;background:linear-gradient(180deg,#43307a,#2a2052);border:2px solid #fde047;border-bottom-width:5px;padding:8px 6px;text-align:center}
 .msx .mm-card .e{font-size:30px;line-height:1.1}
 .msx .mm-card b{font-size:15px;font-weight:900}
 .msx .mm-card small{font-size:10.5px;font-weight:800;color:#fde68a}
@@ -386,6 +338,11 @@ const MSX_MM_CSS = `
 .msx .mm-td b{font-size:12.5px;font-weight:900;color:#fde047;line-height:1.3}
 .msx .mm-td div{display:flex;justify-content:space-between;gap:4px;font-size:10.5px;font-weight:800}.msx .mm-td em{font-style:normal;color:#fff}
 .msx .mm-td .nt{color:#94a3b8;font-size:10.5px}
+.msx .msx-md-head{display:inline-flex;gap:4px;margin-right:4px;vertical-align:middle}
+.msx .msx-md-grade{font-style:normal;font-size:10px;font-weight:900;color:#fff;background:#7c3aed;border:1.5px solid #fde047;border-radius:8px;padding:0 5px;margin-left:3px}
+.msx .mm-acts{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:6px;margin-top:6px}
+.msx .mm-acts button{min-height:44px;border-radius:12px;background:#2b3348;font-size:12.5px;font-weight:900;text-align:center}
+.msx .mm-acts button:disabled{opacity:.5}
 `;
 
 // ---- 本編の M/B管理 から開く口(2026-11-14 社長「M/B管理からもマスモンボックス(モンサク)を開けるように」) ----
