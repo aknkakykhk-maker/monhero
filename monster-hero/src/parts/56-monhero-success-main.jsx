@@ -500,7 +500,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
         {acting ? null : <MsxMonArt run={run} className="mon" live={typeof MsxLiveMon === 'function'} react={isTrain ? { kind: o.result, id: s.turn } : null} style={{ left: '62%', bottom: '14%', height: '46%', transform: o.result === 'sab' ? 'translateX(-50%) rotate(84deg)' : o.result === 'fail' ? 'translateX(-50%) rotate(-12deg)' : 'translateX(-50%) rotate(6deg)', filter: o.result === 'fail' ? 'grayscale(.5) drop-shadow(0 8px 5px #0009)' : undefined }}/>}
         {acting ? null : <div className={`v-stamp msx-pop ${isTrain ? R.cls : 'ok'}`}>{isTrain ? R.word : o.kind === 'rest' ? (restName || '休んだ') : o.kind === 'play' ? '遊んだ!' : o.kind === 'clinic' ? '通院' : '休み'}
           {isTrain && o.card && o.card.tags && o.card.tags.length ? <small>🤝 友情タッグ ×{o.card.tags.length}{o.result === 'great' ? '・伸び ×1.5' : ''}</small> : null}</div>}
-        {!acting && members.length ? <div className="v-chips" style={{ top: 'auto', bottom: 8 }}>{members.map((m, i) => <span key={i} className="v-chip">{msxMemberName(m)} 親密度 +{(SUC.BOND && SUC.BOND.train) || 8}</span>)}</div> : null}
+        {!acting && typeof MsxBondChips === 'function' ? <MsxBondChips s={s} card={o.card} add={(SUC.BOND && SUC.BOND.train) || 8}/> : !acting && members.length ? <div className="v-chips" style={{ top: 'auto', bottom: 8 }}>{members.map((m, i) => <span key={i} className="v-chip">{msxMemberName(m)} 親密度 +{(SUC.BOND && SUC.BOND.train) || 8}</span>)}</div> : null}
       </div>
       {isTrain ? <MsxStRow stats={s.stats} ups={acting ? null : gains} main={o.card && o.card.stat}/> : null}
       {acting ? <div className="v-log" style={{ opacity: .35 }}><span className="hd2">{msxTrainIcon(o.card.stat, tlv)} {msxTrainName(o.card.stat, tlv)}をしている…</span></div> : <div className="v-log">
@@ -887,7 +887,7 @@ function MsxEvent({ run, setRun, v, ev, ctx, bondLv, onDone }) {
       return;
     }
     const r = SUC.events.pick(s, c); if (!r.out || !r.out.ok) return;
-    setRun({ ...run, s: r.state, out: { ...o, picked: { scenes: [r.out.next, r.out.scene].filter(Boolean), before: s.stats, res: r.out.res, apt: r.out.delta && r.out.delta.apt ? r.out.delta.apt : null } } });
+    setRun({ ...run, s: r.state, out: { ...o, picked: { scenes: [r.out.next || (view && view.id ? `${view.id}.res` : null), r.out.scene].filter(Boolean), before: s.stats, res: r.out.res, delta: r.out.delta || null, apt: r.out.delta && r.out.delta.apt ? r.out.delta.apt : null } } });
   };
   const ups = {}; if (picked && picked.before) MSX_STATS.forEach((k) => { const d = s.stats[k] - picked.before[k]; if (d) ups[k] = d; });
   const afterLines = picked ? picked.scenes.flatMap((sc) => (evOf(sc) || { lines: [] }).lines.concat((evOf(sc) || { after: [] }).after)) : [];
@@ -905,10 +905,11 @@ function MsxEvent({ run, setRun, v, ev, ctx, bondLv, onDone }) {
         : isStory || isUniq || (view && view.id === 'ev.self.anniv') ? <img src={msxBody(s.aid, 'happy')} alt="" style={{ position: 'absolute', right: '-4%', bottom: 0, height: '70%', width: '46%', objectFit: 'contain', objectPosition: 'right bottom' }}/> : null}
       {view && view.id === 'ev.self.peakin' && !picked ? <div className="msx-peak-card msx-pop" data-msx-peak-start>🔥 ピークが始まった!</div> : null}
       {(() => { const cat = isStory || isUniq ? 'メインのお話' : (view && view.kind === 'team' ? '編成のモンスターのイベント' : '育成イベント'); return <div className="v-ev-h">{head !== cat ? <small>{cat}</small> : null}{head}</div>; })()}
-      <div className="v-talk">{shown.length ? shown.map((l, i) => <div key={i}>{who(l) ? <span className="who">{who(l)}</span> : null}{who(l) ? `「${l.t}」` : l.t}</div>) : <div>{picked ? 'いい時間になった。' : 'なにか起きそうだ…'}</div>}</div>
+      <div className="v-talk">{shown.length ? shown.map((l, i) => <div key={i}>{who(l) ? <span className="who">{who(l)}</span> : null}{who(l) ? `「${l.t}」` : l.t}</div>) : <div>{picked ? '…' : 'なにか起きそうだ…'}</div>}</div>
     </div>
     {picked ? (<>
       {Object.keys(ups).length ? <MsxStRow stats={s.stats} ups={ups}/> : null}
+      {!isStory && typeof MsxEvResult === 'function' ? <MsxEvResult delta={picked.delta} hasStats={Object.keys(ups).length > 0}/> : null}
       {gotGift ? <div className="v-log" data-msx-ev-gift>{giftItem.e} <b className="gu">{giftItem.name}</b> を手に入れた!(🎒持ち物に入った)<br/><small>{giftItem.desc}</small></div> : null}
       {picked.apt ? <div className="v-log" data-msx-ev-apt>📏 「{['零', '近', '中', '遠'][picked.apt.dist]}」の間合い適性が <b className="ga">{picked.apt.from} → {picked.apt.grade}</b> に上がった!</div> : null}
       <div className="v-ft" style={{ marginTop: 6 }}><button type="button" className="go" onClick={() => onDone(run)}>つぎへ ▶</button></div>
