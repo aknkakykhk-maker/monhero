@@ -208,7 +208,13 @@ function MsxR3Battle({ run, setRun, v, ev, ctx, bondLv, onPause, debug }) {
   const [tab, setTab] = useState('st');
   const [mealPick, setMealPick] = useState(null);
   useMsxR3Lines(s.aid);
-  useSuccessSound(st3 ? (st3.won ? 'cupWin' : 'cupLose') : 'cupMatch', { season: msxCalendar(s.turn).season });
+  // 大会の曲(2026-11-14 社長の曲・ビート部の表): 組み合わせ表と札=cupPre / 試合=cupMatch / 決着=cupWin・cupLose
+  //   バトル部の見せる部品(MonsucCupShow)は段を onPhase で知らせてくる。部品が無いときは、ここの step で決める
+  const [showPh, setShowPh] = useState('bracket');
+  const cupSound = st3 ? (st3.won ? 'cupWin' : 'cupLose')
+    : showOn ? (showPh === 'win' ? 'cupWin' : showPh === 'lose' ? 'cupLose' : showPh === 'cutin' || showPh === 'match' ? 'cupMatch' : 'cupPre')
+      : step === 'lost' ? 'cupLose' : step === 'bracket' || step === 'card' ? 'cupPre' : 'cupMatch';
+  useSuccessSound(cupSound, { season: msxCalendar(s.turn).season });
   useEffect(() => {
     let alive = true;
     // 試合型のアシストの表を読み終えてから試合を作る(読む前と後で同じ試合の結果が変わらないように)
@@ -354,7 +360,7 @@ function MsxR3Battle({ run, setRun, v, ev, ctx, bondLv, onPause, debug }) {
   if (showOn) {
     return <MsxR3Frame run={run} back="中断" onBack={onPause} body={
       <MonsucCupShow suc={SUC} s={s} me={{ name: run.nick || msxMonName(s.species) }} title={b.kind === 'cup' ? msxR3CupName(b.sys) : name} opp={{ loy: opp.loy, pop: opp.pop }}
-        fight={() => fight} settle={settleShow} onRematch={rematchWith} onNext={nextShow} onClose={onPause}/>} foot={null}/>;
+        fight={() => fight} settle={settleShow} onRematch={rematchWith} onNext={nextShow} onClose={onPause} onPhase={setShowPh}/>} foot={null}/>;
   }
   // ---- 負けた(C4): やり直す/あきらめる ----
   if (step === 'lost') {

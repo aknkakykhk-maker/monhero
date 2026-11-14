@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 87135cd015c8fa0a
+// source-sha256: c1381b5f24eac4ae
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -151588,14 +151588,18 @@ function MonsucCupShowInner({
   fight,
   opp,
   title,
-  autoOnly
+  autoOnly,
+  onPhase
 }) {
   const [engine, setEngine] = useState(typeof window !== 'undefined' ? window.ASSISTANT_MASMON_BATTLE || null : null);
   const [failed, setFailed] = useState(false);
   const [phase, setPhase] = useState(startAt || 'bracket');
   const [out, setOut] = useState(startAt === 'win' ? previewOut || {} : null);
   const rootRef = useRef(null);
-  if (typeof useMhBattleBgmHold === 'function') useMhBattleBgmHold(true);
+  if (typeof useMhBattleBgmHold === 'function') useMhBattleBgmHold(phase === 'cutin' || phase === 'match');
+  useEffect(() => {
+    if (typeof onPhase === 'function') onPhase(phase);
+  }, [phase]);
   useEffect(() => {
     let alive = true;
     if (!engine && typeof ambwLoadEngine === 'function') ambwLoadEngine().then(x => {
@@ -165976,7 +165980,8 @@ function MsxPlay({
   }, [s.aid]);
   const actOn = run.phase === 'result' && actAt === s.turn && typeof MsxTrainAct === 'function';
   const kiOn = run.phase === 'turn' && typeof MsxKiShow === 'function' && v.period && v.period.at === 1 && v.period.index > 0 && kiAt !== s.turn;
-  const soundId = actOn ? 'trainAct' : kiOn ? 'kiShow' : run.phase === 'awake' && run.out && run.out.fire && typeof MsxAwakeShow === 'function' ? 'awakeShow' : run.phase === 'awake' && run.out && run.out.fire ? run.out.fire.kind === 2 ? 'trainGreat' : 'trainLvUp' : run.phase === 'result' && run.out && MSX_REST_SOUND[run.out.kind] ? MSX_REST_SOUND[run.out.kind] : run.phase === 'result' && run.out && run.out.result ? MSX_RES_SOUND[run.out.result] : run.phase === 'issa' ? 'issa' : s.over === 'gameover' ? 'gameOver' : sub === 'train' ? 'training' : 'main';
+  const childSound = typeof MsxR3 === 'function' && (run.phase === 'battle' || run.phase === 'over' || !!s.over || sub === 'cup' || sub === 'shugyo');
+  const soundId = childSound ? null : actOn ? 'trainAct' : kiOn ? 'kiShow' : run.phase === 'awake' && run.out && run.out.fire && typeof MsxAwakeShow === 'function' ? 'awakeShow' : run.phase === 'awake' && run.out && run.out.fire ? run.out.fire.kind === 2 ? 'trainGreat' : 'trainLvUp' : run.phase === 'result' && run.out && MSX_REST_SOUND[run.out.kind] ? MSX_REST_SOUND[run.out.kind] : run.phase === 'result' && run.out && run.out.result ? MSX_RES_SOUND[run.out.result] : run.phase === 'issa' ? 'issa' : s.over === 'gameover' ? 'gameOver' : sub === 'train' ? 'training' : 'main';
   msxUseSound(soundId, {
     season: msxCalendar(s.turn).season
   });
@@ -169265,7 +169270,9 @@ function MsxR3Battle({
   const [tab, setTab] = useState('st');
   const [mealPick, setMealPick] = useState(null);
   useMsxR3Lines(s.aid);
-  useSuccessSound(st3 ? st3.won ? 'cupWin' : 'cupLose' : 'cupMatch', {
+  const [showPh, setShowPh] = useState('bracket');
+  const cupSound = st3 ? st3.won ? 'cupWin' : 'cupLose' : showOn ? showPh === 'win' ? 'cupWin' : showPh === 'lose' ? 'cupLose' : showPh === 'cutin' || showPh === 'match' ? 'cupMatch' : 'cupPre' : step === 'lost' ? 'cupLose' : step === 'bracket' || step === 'card' ? 'cupPre' : 'cupMatch';
+  useSuccessSound(cupSound, {
     season: msxCalendar(s.turn).season
   });
   useEffect(() => {
@@ -169892,7 +169899,8 @@ function MsxR3Battle({
         settle: settleShow,
         onRematch: rematchWith,
         onNext: nextShow,
-        onClose: onPause
+        onClose: onPause,
+        onPhase: setShowPh
       }),
       foot: null
     });
@@ -222242,6 +222250,7 @@ function MonsterHeroGame() {
   }, [eventLineFadeOut]);
   const eventBgmPlayedRef = useRef(null);
   const bgmSuspendedByRhythmRef = useRef(false);
+  const [successScreenOpen, setSuccessScreenOpen] = useState(false);
   const bgmKeyForState = (state, currentWave, enemyId, wavesDone, isGameOver, allowKeep = true) => {
     if (eventLineBgm) return eventLineBgm;
     if (eventBgmScene) return bgmArrangementWithEventDefault(bgmArrangement, eventBgmScene);
@@ -222319,6 +222328,7 @@ function MonsterHeroGame() {
   };
   useEffect(() => {
     if (gameState === 'RHYTHM_PLAY') return;
+    if (successScreenOpen) return;
     let key = bootPhase === 'GAME' ? bgmKeyForState(gameState, wave, enemy?.id, (waveHistory || []).length > 0, hp <= 0 || gaveUp) : bootPhase === 'TITLE' || bootPhase === 'ENTERING_GAME' ? bgmArrangement.title : null;
     if (key === '__keep_battle_bgm__' && bgmSuspendedByRhythmRef.current) {
       key = bgmKeyForState(gameState, wave, enemy?.id, (waveHistory || []).length > 0, hp <= 0 || gaveUp, false);
@@ -222345,7 +222355,7 @@ function MonsterHeroGame() {
       key
     } : null;
     if (key && eventId && prev && prev.id === eventId && prev.key !== key) Audio_.fadeToBGM(key, EVENT_BGM_FADE_MS);else if (key) Audio_.playBGM(key);else Audio_.stopBGM();
-  }, [bootPhase, gameState, wave, enemy?.id, hp, gaveUp, audioOn, waveHistory.length, bgmArrangement, runMode, eventBgmScene, mainHero?.id, autoBattle, autoBgmOverride, rhythmScreenOpen, cardScreenOpen, eventLineBgm, cardBgm, assistantLifeOpenNow, battleBgmOverlay]);
+  }, [bootPhase, gameState, wave, enemy?.id, hp, gaveUp, audioOn, waveHistory.length, bgmArrangement, runMode, eventBgmScene, mainHero?.id, autoBattle, autoBgmOverride, rhythmScreenOpen, successScreenOpen, cardScreenOpen, eventLineBgm, cardBgm, assistantLifeOpenNow, battleBgmOverlay]);
   const assistantLifeRunMuted = assistantLifeScreenOpen && runStage !== null;
   useEffect(() => {
     Audio_.setSeVolume(ultraEcoSession && !cardScreenOpen || rhythmScreenOpen || assistantLifeRunMuted ? 0 : seVolume);
@@ -222358,7 +222368,6 @@ function MonsterHeroGame() {
     };
   }, [beatRankFx, beatRankBarPlaying, seVolume]);
   const rhythmRunBackgroundQuiet = rhythmScreenOpen && runStage !== null;
-  const [successScreenOpen, setSuccessScreenOpen] = useState(false);
   useEffect(() => {
     if (Audio_.setBackgroundSeQuiet) Audio_.setBackgroundSeQuiet(cardScreenOpen || quickAnywhereScreenOpen || rhythmRunBackgroundQuiet || successScreenOpen);
   }, [cardScreenOpen, quickAnywhereScreenOpen, rhythmRunBackgroundQuiet, successScreenOpen]);

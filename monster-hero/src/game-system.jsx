@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: e649ba2382684923
+// generated-sha256: 319d017804e23f02
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -79478,13 +79478,16 @@ function MonsucCupShow(props) {
   const b = (s && s.battle) || {};
   return <MonsucCupShowInner key={[s && s.id, s && s.turn, b.kind, b.id, b.round, b.retry, b.again, b.reroll].join('|')} {...props}/>;
 }
-function MonsucCupShowInner({ suc, s, me, settle, onRematch, onNext, onClose, startAt, previewOut, fight, opp, title, autoOnly }) {
+function MonsucCupShowInner({ suc, s, me, settle, onRematch, onNext, onClose, startAt, previewOut, fight, opp, title, autoOnly, onPhase }) {
   const [engine, setEngine] = useState(typeof window !== 'undefined' ? window.ASSISTANT_MASMON_BATTLE || null : null);
   const [failed, setFailed] = useState(false);
   const [phase, setPhase] = useState(startAt || 'bracket'); // bracket → card → cutin → match → win / lose
   const [out, setOut] = useState(startAt === 'win' ? (previewOut || {}) : null); // startAt・previewOut は止め絵を撮るときだけ
   const rootRef = useRef(null);
-  if (typeof useMhBattleBgmHold === 'function') useMhBattleBgmHold(true); // 大会のあいだはバトルの曲(組み合わせ表〜優勝/負け)
+  // バトルの曲は試合のあいだ(cutin・match)だけ。組み合わせ表・札・決着はモンサクの曲(cupPre・cupWin・cupLose。2026-11-14 社長の曲)
+  if (typeof useMhBattleBgmHold === 'function') useMhBattleBgmHold(phase === 'cutin' || phase === 'match');
+  // 段を呼ぶ側へ知らせる(回3の MsxR3Battle が場面の音の id を切り替える)
+  useEffect(() => { if (typeof onPhase === 'function') onPhase(phase); }, [phase]);
   useEffect(() => {
     let alive = true;
     if (!engine && typeof ambwLoadEngine === 'function') ambwLoadEngine().then((x) => { if (!alive) return; if (x) setEngine(x); else setFailed(true); });
@@ -86339,7 +86342,9 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
   // 演出のあいだは演出の場面の音(2026-11-14 社長「演出に音を」)。トレーニングの結果の音は、演出が終わって結果の字が出たときに鳴らす
   const actOn = run.phase === 'result' && actAt === s.turn && typeof MsxTrainAct === 'function';
   const kiOn = run.phase === 'turn' && typeof MsxKiShow === 'function' && v.period && v.period.at === 1 && v.period.index > 0 && kiAt !== s.turn;
-  const soundId = actOn ? 'trainAct' : kiOn ? 'kiShow' : run.phase === 'awake' && run.out && run.out.fire && typeof MsxAwakeShow === 'function' ? 'awakeShow' : run.phase === 'awake' && run.out && run.out.fire ? (run.out.fire.kind === 2 ? 'trainGreat' : 'trainLvUp') : run.phase === 'result' && run.out && MSX_REST_SOUND[run.out.kind] ? MSX_REST_SOUND[run.out.kind] : run.phase === 'result' && run.out && run.out.result ? MSX_RES_SOUND[run.out.result] : run.phase === 'issa' ? 'issa' : s.over === 'gameover' ? 'gameOver' : sub === 'train' ? 'training' : 'main';
+  // 大会(試合)・修行・決着・引退は、その画面(56-monhero-success-r3-*.jsx)が自分で場面の音を鳴らす。ここで main を鳴らすと後から上書きするので何もしない
+  const childSound = typeof MsxR3 === 'function' && (run.phase === 'battle' || run.phase === 'over' || !!s.over || sub === 'cup' || sub === 'shugyo');
+  const soundId = childSound ? null : actOn ? 'trainAct' : kiOn ? 'kiShow' : run.phase === 'awake' && run.out && run.out.fire && typeof MsxAwakeShow === 'function' ? 'awakeShow' : run.phase === 'awake' && run.out && run.out.fire ? (run.out.fire.kind === 2 ? 'trainGreat' : 'trainLvUp') : run.phase === 'result' && run.out && MSX_REST_SOUND[run.out.kind] ? MSX_REST_SOUND[run.out.kind] : run.phase === 'result' && run.out && run.out.result ? MSX_RES_SOUND[run.out.result] : run.phase === 'issa' ? 'issa' : s.over === 'gameover' ? 'gameOver' : sub === 'train' ? 'training' : 'main';
   msxUseSound(soundId, { season: msxCalendar(s.turn).season });
   // トレーニングLvが上がった回は、結果の音のあとに Lv アップの音を続ける(演出が終わって結果の字が出てから)
   const lvUpSe = run.phase === 'result' && !actOn && run.out && run.out.result && run.out.lvUp;
@@ -87540,7 +87545,13 @@ function MsxR3Battle({ run, setRun, v, ev, ctx, bondLv, onPause, debug }) {
   const [tab, setTab] = useState('st');
   const [mealPick, setMealPick] = useState(null);
   useMsxR3Lines(s.aid);
-  useSuccessSound(st3 ? (st3.won ? 'cupWin' : 'cupLose') : 'cupMatch', { season: msxCalendar(s.turn).season });
+  // 大会の曲(2026-11-14 社長の曲・ビート部の表): 組み合わせ表と札=cupPre / 試合=cupMatch / 決着=cupWin・cupLose
+  //   バトル部の見せる部品(MonsucCupShow)は段を onPhase で知らせてくる。部品が無いときは、ここの step で決める
+  const [showPh, setShowPh] = useState('bracket');
+  const cupSound = st3 ? (st3.won ? 'cupWin' : 'cupLose')
+    : showOn ? (showPh === 'win' ? 'cupWin' : showPh === 'lose' ? 'cupLose' : showPh === 'cutin' || showPh === 'match' ? 'cupMatch' : 'cupPre')
+      : step === 'lost' ? 'cupLose' : step === 'bracket' || step === 'card' ? 'cupPre' : 'cupMatch';
+  useSuccessSound(cupSound, { season: msxCalendar(s.turn).season });
   useEffect(() => {
     let alive = true;
     // 試合型のアシストの表を読み終えてから試合を作る(読む前と後で同じ試合の結果が変わらないように)
@@ -87686,7 +87697,7 @@ function MsxR3Battle({ run, setRun, v, ev, ctx, bondLv, onPause, debug }) {
   if (showOn) {
     return <MsxR3Frame run={run} back="中断" onBack={onPause} body={
       <MonsucCupShow suc={SUC} s={s} me={{ name: run.nick || msxMonName(s.species) }} title={b.kind === 'cup' ? msxR3CupName(b.sys) : name} opp={{ loy: opp.loy, pop: opp.pop }}
-        fight={() => fight} settle={settleShow} onRematch={rematchWith} onNext={nextShow} onClose={onPause}/>} foot={null}/>;
+        fight={() => fight} settle={settleShow} onRematch={rematchWith} onNext={nextShow} onClose={onPause} onPhase={setShowPh}/>} foot={null}/>;
   }
   // ---- 負けた(C4): やり直す/あきらめる ----
   if (step === 'lost') {
@@ -118741,6 +118752,9 @@ function MonsterHeroGame() {
   // (2026-09-07・ユーザー報告「勇者モン選択時のデフォ曲が変わってる」)
   // モンビーを開いていてバトルのBGMを止めたかどうか。戻ってきたときに鳴らし直す判断に使う
   const bgmSuspendedByRhythmRef = useRef(false);
+  // モンヒロサクセスを開いているあいだは、曲はモンサクの鳴らす口(14-success-sound.jsx の SuccessSound)が決める。
+  // 下の BGM の effect はそのあいだ曲を替えない(大会の試合の画面の「バトルの曲」も含む)。閉じたら SuccessSound が入る前の曲へ戻し、ここも鳴らし直す
+  const [successScreenOpen, setSuccessScreenOpen] = useState(false);
   const bgmKeyForState = (state, currentWave, enemyId, wavesDone, isGameOver, allowKeep = true) => {
     // 会話イベント中は画面(HOME/PROFILE)より優先してイベントBGMを鳴らす。
     // 通常再生(きき加入)も、プロフィールからのイベント回想も同じ設定を使う。
@@ -118842,6 +118856,7 @@ function MonsterHeroGame() {
   useEffect(() => {
     // 専用sourceの開始・停止はRhythmTapTestが管理する。通常BGM effectから触ると二重再生や途中停止になる。
     if (gameState === 'RHYTHM_PLAY') return;
+    if (successScreenOpen) return;
     let key = bootPhase === 'GAME' ? bgmKeyForState(gameState, wave, enemy?.id, (waveHistory||[]).length > 0, hp <= 0 || gaveUp) : (bootPhase === 'TITLE' || bootPhase === 'ENTERING_GAME' ? bgmArrangement.title : null);
     // ★モンビーを開いているあいだ、バトルのBGMは止まっている(この画面はキーを持たない)。
     //   戻ってきた最初の1回で「直前のBGMを維持」を選ぶと、維持すべき曲が無いので
@@ -118872,7 +118887,7 @@ function MonsterHeroGame() {
     if (key && eventId && prev && prev.id === eventId && prev.key !== key) Audio_.fadeToBGM(key, EVENT_BGM_FADE_MS);
     else if (key) Audio_.playBGM(key);
     else Audio_.stopBGM();
-  }, [bootPhase, gameState, wave, enemy?.id, hp, gaveUp, audioOn, waveHistory.length, bgmArrangement, runMode, eventBgmScene, mainHero?.id, autoBattle, autoBgmOverride, rhythmScreenOpen, cardScreenOpen, eventLineBgm, cardBgm, assistantLifeOpenNow, battleBgmOverlay]);
+  }, [bootPhase, gameState, wave, enemy?.id, hp, gaveUp, audioOn, waveHistory.length, bgmArrangement, runMode, eventBgmScene, mainHero?.id, autoBattle, autoBgmOverride, rhythmScreenOpen, successScreenOpen, cardScreenOpen, eventLineBgm, cardBgm, assistantLifeOpenNow, battleBgmOverlay]);
 
   // SE/BGMそれぞれの音量をAudioエンジンへ反映
   // 超省エネではBGMを選んで鳴らしてもSEだけは常に0。保存済みSE音量そのものは変更しない。
@@ -118900,7 +118915,6 @@ function MonsterHeroGame() {
   //   (2026-11-12 社長「モンビー中の演奏後に裏クイックの音が表に出てきてる」。演出の音は fgSe から鳴るので、モンビーで周回が残っているあいだも裏の音だけ止める印を立てる)
   const rhythmRunBackgroundQuiet = rhythmScreenOpen && runStage !== null;
   // モンヒロサクセスの育成の画面(デバッグの入口から開く・56-monhero-success-*.jsx)を開いているあいだも、裏の周回のバトルの効果音を止める(14-success-sound.jsx の決まり)
-  const [successScreenOpen, setSuccessScreenOpen] = useState(false);
   useEffect(() => { if (Audio_.setBackgroundSeQuiet) Audio_.setBackgroundSeQuiet(cardScreenOpen || quickAnywhereScreenOpen || rhythmRunBackgroundQuiet || successScreenOpen); }, [cardScreenOpen, quickAnywhereScreenOpen, rhythmRunBackgroundQuiet, successScreenOpen]);
   quickAnywhereSeQuietRef.current = quickAnywhereScreenOpen && !cardScreenOpen;
   useEffect(() => { Audio_.setBgmVolume(bgmVolume); }, [bgmVolume]);
