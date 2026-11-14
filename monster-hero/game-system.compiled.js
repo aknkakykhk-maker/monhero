@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8d0f8598e9bbfada
+// source-sha256: f350e043422c4a9c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -118087,6 +118087,7 @@ const ASSISTANT_LIFE_ROOM_STAND_DEF = Object.freeze({
     fade: 0.45
   })
 });
+const ASSISTANT_LIFE_ROOM_STAND_EXT = 0.6;
 const assistantLifeRoomVisH = (face, F) => {
   try {
     if (typeof assistantLifeStandVisH === 'function') {
@@ -118151,23 +118152,26 @@ const assistantLifeRoomStandLayout = (items, W, usable, deskTop, land, bed = fal
     if (w1 > 0) F = Math.min(F, sw * 0.98 / w1);
   }
   const U = F * D.len;
-  const topY = bed ? deskTop + 0.15 * U - U : deskTop + 0.2 * U - D.cut.below * U;
+  const topY = bed ? deskTop + 0.15 * U - U : deskTop + 0.2 * U - 1.8 * U;
   return items.map((x, i) => {
     const cx = x0 + sw * (i + 0.5);
     const r = assistantLifeRoomPlace(x, F, topY, cx);
+    const ext = bed ? 0 : ASSISTANT_LIFE_ROOM_STAND_EXT * U,
+      ih = Math.max(1, r.height);
     return {
       left: r.left,
       top: r.top,
       width: r.width,
       height: r.height,
-      clip: r.clip,
-      fade: r.fade,
+      clip: [r.clip[0], Math.max(0, r.clip[1] - ext)],
+      fade: r.fade ? [r.fade[0] + ext / ih, Math.min(1, r.fade[1] + ext / ih)] : r.fade,
       cx,
       face: F,
       visTop: r.visTop,
       headTop: topY,
-      frameBottom: r.frameBottom,
-      w: visW(x, F)
+      frameBottom: r.frameBottom + ext,
+      w: visW(x, F),
+      U
     };
   });
 };
@@ -118181,7 +118185,7 @@ function AssistantLifeRoomFigure({
 }) {
   const night = look === 'night' && sleep,
     evening = look === 'evening';
-  const tone = night ? 'linear-gradient(100deg,#ffd08a 0%,#c9c2ee 45%,#8a86c0 100%)' : evening ? 'linear-gradient(100deg,#ffe0b0 0%,#f2c9b0 60%,#c99a90 100%)' : 'linear-gradient(100deg,#ffffff 0%,#f6ece8 60%,#d9c2bc 100%)';
+  const tone = night ? 'linear-gradient(100deg,#ffd08a 0%,#c9c2ee 45%,#8a86c0 100%)' : evening ? 'linear-gradient(100deg,#fff6ec 0%,#fbeee4 60%,#f0dcd4 100%)' : 'linear-gradient(100deg,#ffffff 0%,#fbf5f3 60%,#efe3df 100%)';
   const fadeMask = p.fade ? `linear-gradient(to bottom,#000 ${(p.fade[0] * 100).toFixed(1)}%,transparent ${(p.fade[1] * 100).toFixed(1)}%)` : null;
   const box = {
     position: 'absolute',
@@ -118206,7 +118210,7 @@ function AssistantLifeRoomFigure({
     style: {
       position: 'absolute',
       left: p.cx - p.w * 0.45,
-      top: p.frameBottom - 16,
+      top: p.frameBottom - 30,
       width: p.w * 0.9,
       height: 26,
       borderRadius: '50%',
@@ -118230,7 +118234,7 @@ function AssistantLifeRoomFigure({
       width: '100%',
       height: '100%',
       maxWidth: 'none',
-      filter: `drop-shadow(0 0 .6px #2a1414cc) saturate(.92) sepia(.1)${sleep ? ' brightness(.6)' : ''}`,
+      filter: `drop-shadow(0 0 .6px #2a1414cc)${sleep ? ' brightness(.6)' : ''}`,
       cursor: onPress ? 'pointer' : undefined
     }
   }), React.createElement("span", {
@@ -119170,7 +119174,58 @@ function AssistantLifeRoomScene({
       border: '6px solid #ffffff99',
       background: night ? 'radial-gradient(circle at 70% 30%,#fff 0 5px,transparent 6px),linear-gradient(#0b1030,#1e2a5a)' : evening ? 'linear-gradient(#f59e0b,#fb7185)' : look === 'morning' ? 'linear-gradient(#93c5fd,#fde68a)' : 'linear-gradient(#7cc4ff,#d6f0ff)'
     }
-  }), layoutOn && React.createElement(AssistantLifeRoomLayoutLayer, {
+  }, React.createElement("span", {
+    style: {
+      position: 'absolute',
+      left: '50%',
+      top: 0,
+      bottom: 0,
+      width: 4,
+      marginLeft: -2,
+      background: '#ffffffcc'
+    }
+  }), React.createElement("span", {
+    style: {
+      position: 'absolute',
+      top: '50%',
+      left: 0,
+      right: 0,
+      height: 4,
+      marginTop: -2,
+      background: '#ffffffcc'
+    }
+  }), React.createElement("span", {
+    style: {
+      position: 'absolute',
+      left: -10,
+      right: -10,
+      bottom: -13,
+      height: 8,
+      borderRadius: 3,
+      background: '#ffffffd9',
+      boxShadow: '0 2px 3px #0003'
+    }
+  }), React.createElement("span", {
+    style: {
+      position: 'absolute',
+      left: -9,
+      top: -6,
+      bottom: -4,
+      width: 14,
+      borderRadius: '4px 8px 8px 4px',
+      background: 'linear-gradient(90deg,#f9a8d4,#f472b6)'
+    }
+  }), React.createElement("span", {
+    style: {
+      position: 'absolute',
+      right: -9,
+      top: -6,
+      bottom: -4,
+      width: 14,
+      borderRadius: '8px 4px 4px 8px',
+      background: 'linear-gradient(90deg,#f472b6,#f9a8d4)'
+    }
+  })), layoutOn && React.createElement(AssistantLifeRoomLayoutLayer, {
     who: layoutWho,
     items: layoutEdit ? layoutEdit.items : layoutItems,
     geom: layoutGeom,
@@ -119209,7 +119264,7 @@ function AssistantLifeRoomScene({
   }) : null), people.length > 0 && !asleep && React.createElement(AssistantLifeRoomFront, {
     kind: frontKind,
     cx: W / 2,
-    top: deskTop,
+    top: lay && !asleep ? Math.max(...lay.map(p => p.frameBottom - 4)) : deskTop,
     w: frontW,
     items: ASSISTANT_LIFE_ROOM_DESK_ITEMS[id] || []
   }), layoutOn && React.createElement(AssistantLifeRoomLayoutLayer, {
@@ -164959,7 +165014,7 @@ const MSX_CSS = `
 .msx-gt-mon{display:flex;align-items:center;gap:5px;margin-top:3px;font-size:11px}
 .msx-gt-mon img{flex:none;width:24px;height:24px;border-radius:7px;object-fit:contain;background:#1e1a36}.msx-gt-mon .nm{flex:1;min-width:0;overflow-wrap:anywhere}.msx-gt-mon .v{flex:0 1 auto;font-size:10px;color:#cbd5e1;text-align:right}
 .msx-gt-none{font-size:10.5px;color:#94a3b8;margin-top:2px}
-/* 選ぶ画面: はじめの能力(数字を大きく・伸びやすさは小さく)と「くわしく」の窓(2026-11-14) */
+/* 選ぶ画面: はじめの能力(数字を大きく・素質は小さく)と「くわしく」の窓(2026-11-14) */
 .msx-dt-hd{display:flex;align-items:center;gap:6px}.msx-dt-hd .h1{flex:1;min-width:0}
 .msx .msx-dt-more{flex:none;border-radius:999px;padding:3px 10px;font-size:11px;font-weight:900;background:#f472b6;color:#fff;box-shadow:0 2px 0 #9d174d}
 .msx-dt-sm{font-size:10px;font-weight:700;color:#cbd5e1}
@@ -165988,7 +166043,7 @@ function MsxMonDetail({
     className: "msx-md-box"
   }, React.createElement("div", {
     className: "cap"
-  }, "能力", React.createElement("span", null, "伸び")), MSX_STATS.map((k, i) => React.createElement("div", {
+  }, "能力", React.createElement("span", null, "素質")), MSX_STATS.map((k, i) => React.createElement("div", {
     key: k,
     className: "msx-md-st"
   }, React.createElement("span", {
@@ -166526,7 +166581,7 @@ function MsxStart({
       }
     }, "はじめの能力", React.createElement("span", {
       className: "msx-dt-sm"
-    }, "(小さい字は伸びやすさ)")), React.createElement("div", {
+    }, "(小さい字は素質)")), React.createElement("div", {
       className: "msx-st6",
       "data-msx-start-stats": true
     }, MSX_STATS.map((k, i) => React.createElement("div", {
@@ -166535,7 +166590,7 @@ function MsxStart({
       className: "n"
     }, MSX_STAT_NAME[k]), React.createElement("b", null, startSt[k]), React.createElement("i", {
       className: apt[i] > 'B' ? 'lo' : ''
-    }, "伸び ", apt[i]))))), detail && React.createElement(MsxMonDetail, {
+    }, "素質 ", apt[i]))))), detail && React.createElement(MsxMonDetail, {
       species: species,
       name: fromMon && fromMon.nick ? fromMon.nick : msxMonName(species),
       sub: fromMon ? '合体で生まれたモンスター' : 'ベースモン',
