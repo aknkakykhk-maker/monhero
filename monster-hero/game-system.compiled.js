@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ec14b3662fed66db
+// source-sha256: 528db1fea2640dad
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -224001,6 +224001,10 @@ function MonsterHeroGame() {
   const [rhythmSettings, setRhythmSettings] = useState(DEFAULT_RHYTHM_SETTINGS);
   const [rhythmBestRecords, setRhythmBestRecords] = useState(() => normalizeRhythmBestRecords(null));
   const [rhythmPlay, setRhythmPlayState] = useState(null);
+  const tasteLoseRef = useRef({
+    day: '',
+    n: 0
+  });
   rhythmPlayGuardRef.current = rhythmPlay;
   const setRhythmPlay = next => {
     if (next && typeof next === 'object' && next.from !== 'multi' && typeof RHYTHM_MULTI !== 'undefined' && RHYTHM_MULTI.view()) {
@@ -253079,6 +253083,32 @@ function MonsterHeroGame() {
         if (rhythmPlay.from === 'multi') RHYTHM_MULTI.reportResult(rhythmPlay.multiStartId, result, false, {
           diffId: rhythmPlay.difficulty.id
         });
+        if (rhythmPlay.from === 'multi' && typeof assistantLifeTasteBump === 'function') {
+          try {
+            const tasteMons = [...new Set((rhythmMonsterNoteEntries || []).map(e => e && e.baseId).filter(Boolean))];
+            const tasteAssistants = [...new Set(((typeof RHYTHM_MULTI !== 'undefined' && RHYTHM_MULTI.view && RHYTHM_MULTI.view() || {}).members || []).filter(m => m && m.cpu && m.as).map(m => m.as))];
+            if (tasteMons.length && tasteAssistants.length) {
+              const tasteDay = typeof assistantLifeDayKey === 'function' ? assistantLifeDayKey(Date.now()) : '';
+              const wonThis = result?.cleared !== false;
+              if (tasteLoseRef.current.day !== tasteDay) tasteLoseRef.current = {
+                day: tasteDay,
+                n: 0
+              };
+              let kind = null;
+              if (wonThis) {
+                tasteLoseRef.current.n = 0;
+                kind = 'win';
+              } else {
+                tasteLoseRef.current.n += 1;
+                if (tasteLoseRef.current.n >= 3) {
+                  tasteLoseRef.current.n = 0;
+                  kind = 'lose';
+                }
+              }
+              if (kind) for (const aid of tasteAssistants) for (const mon of tasteMons) assistantLifeTasteBump(aid, mon, kind);
+            }
+          } catch (_) {}
+        }
         if (rhythmPlay.from !== 'tutorial') {
           const baseLoops = Math.floor(rhythmPlayLoopsFor(rhythmPlay.song, rhythmPlay.difficulty) * multiScale + 1e-9);
           const loopScale = rhythmPlayRunLoopScaleFor(rhythmPlay.song);

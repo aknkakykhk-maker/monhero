@@ -197,6 +197,7 @@ function MonsterHeroGame() {
   const [rhythmSettings, setRhythmSettings] = useState(DEFAULT_RHYTHM_SETTINGS);
   const [rhythmBestRecords, setRhythmBestRecords] = useState(()=>normalizeRhythmBestRecords(null));
   const [rhythmPlay,setRhythmPlayState]=useState(null);
+  const tasteLoseRef=useRef({day:'',n:0}); // マルチでの連敗の数(同じ日。保存しない)。3連敗で好き・苦手の 'lose'
   rhythmPlayGuardRef.current = rhythmPlay; // マルチの演奏中の守り(setGameState)が見る控え
   // 招待の部屋を開いたままほかの画面へ出られる(2026-10-29・案A)ので、部屋にいるまま対戦でない曲を始めるときは、先に部屋を抜けるかを聞く
   // (部屋の中の曲と、ひとりの曲を同時には鳴らせない)。曲を始める入口が多いので、ここ1か所で見る
@@ -21892,6 +21893,23 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const assistBonus=rhythmPlay.from==='multi'&&rhythmAssistSessionEnabled()?rhythmAssistSessionRewardBonusNow():0;
           const multiScale=rhythmPlay.from==='multi'?Math.round(rhythmMultiTotalScale(rhythmPlay.multiCount,rhythmPlay.multiStreak,rhythmPlay.multiCpus)*(1+assistBonus)*100)/100:1;
           if(rhythmPlay.from==='multi')RHYTHM_MULTI.reportResult(rhythmPlay.multiStartId,result,false,{diffId:rhythmPlay.difficulty.id});
+          // 助手の好き・苦手が遊ぶうちに変わる(r1115-007・2026-11-15 窓口の頼み)。マルチで助手(CPU)と一緒に、マスモン(モンスターノーツ)を入れた曲を遊んだとき、
+          // クリアなら 'win'(+3)・同じ日に3連敗したら 'lose'(-2)。印 assistantLifeTaste が偽・読み込み前は assistantLifeTasteBump が何もしない。1日の上限は呼ぶ先が見る
+          if(rhythmPlay.from==='multi'&&typeof assistantLifeTasteBump==='function'){
+            try{
+              const tasteMons=[...new Set((rhythmMonsterNoteEntries||[]).map(e=>e&&e.baseId).filter(Boolean))];
+              const tasteAssistants=[...new Set((((typeof RHYTHM_MULTI!=='undefined'&&RHYTHM_MULTI.view&&RHYTHM_MULTI.view())||{}).members||[]).filter(m=>m&&m.cpu&&m.as).map(m=>m.as))];
+              if(tasteMons.length&&tasteAssistants.length){
+                const tasteDay=typeof assistantLifeDayKey==='function'?assistantLifeDayKey(Date.now()):'';
+                const wonThis=result?.cleared!==false;
+                if(tasteLoseRef.current.day!==tasteDay)tasteLoseRef.current={day:tasteDay,n:0};
+                let kind=null;
+                if(wonThis){tasteLoseRef.current.n=0;kind='win';}
+                else{tasteLoseRef.current.n+=1;if(tasteLoseRef.current.n>=3){tasteLoseRef.current.n=0;kind='lose';}}
+                if(kind)for(const aid of tasteAssistants)for(const mon of tasteMons)assistantLifeTasteBump(aid,mon,kind);
+              }
+            }catch(_){/* 好き・苦手の配線が落ちても、演奏の結果は今までどおり */}
+          }
           // ===== 演奏1曲ぶんを、裏の∞周回の周回クリアとして反映する(2026-09-07・ユーザー提案) =====
           // 最後まで演奏したこの場でだけ行う。途中でやめたときは onComplete を通らないので何も入らない
           // (1秒だけ演奏してやめる、で稼げないようにするため)。
