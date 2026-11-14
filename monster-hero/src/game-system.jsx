@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: c468e26a779fba44
+// generated-sha256: 5691d2a037987412
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -103611,6 +103611,9 @@ const CardAssistantArt = ({ src, alt, className = '', style = null, knownBox = n
       const U = Math.min(H * 0.44, W * 0.95);
       const r = assistantLifeStandRule({ face, box: lb, F: U / ASSISTANT_LIFE_STAND_FACE_LEN, topY: H * Math.max(0.18, Math.min(0.3, (face.above || 0) * 0.32)), cx: W / 2 }); // 魔女の帽子・大きな耳の着替え(above のある絵)は、頭を少し下げて飾りを入れる
       if (r && r.width > box.nw * sc * 1.02) {
+        // 頭の上に飾りのない絵(きゅうこ)は、頭を上から18%に置くと上が空き、下は枠の外へ切れる。体が枠の下を越えているぶんだけ、上の空きが8%になるまで上げる
+        const up = Math.min(Math.max(0, r.visTop - H * 0.08), Math.max(0, r.visBottom - H));
+        r.top -= up; r.visTop -= up; r.visBottom -= up;
         const dy = Math.max(0, H - r.visBottom); // 体が枠の下まで届かない絵は、下の端にそろえる
         const visW = (lb.r - lb.l) * r.width;
         return { width: r.width, left: r.left, top: r.top + dy, artH: Math.round(Math.min(H, r.visBottom + dy) - Math.max(0, r.visTop + dy)), artW: Math.round(Math.min(W, visW)), byFace: true };
