@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ab8b987313a9bb87
+// source-sha256: 653018efef2582ee
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -113987,18 +113987,18 @@ function AssistantLifeRoom({
     }, React.createElement(AssistantLifeNames, {
       text: names
     })), React.createElement("b", {
-      style: w < 150 ? tagFit >= 8.6 ? {
+      style: w < 150 ? tagFit >= 10.5 ? {
         whiteSpace: 'nowrap',
-        fontSize: tagFit
+        fontSize: 10.5
       } : {
         whiteSpace: 'normal',
-        fontSize: 9,
-        lineHeight: '11px'
+        fontSize: Math.max(9, Math.min(10.5, Math.floor((w - 26) / 5.2 * 10) / 10)),
+        lineHeight: '12px'
       } : undefined
     }, v2 && w >= 150 ? React.createElement("span", {
       "data-assistant-life-room-out": true,
       className: "mr-1 rounded bg-slate-600 px-1 text-white"
-    }, "留守") : null, w < 150 && tagFit < 8.6 ? assistantLifeTagChunks(t[0]) : t[0], React.createElement("i", {
+    }, "留守") : null, w < 150 && tagFit < 10.5 ? assistantLifeTagChunks(t[0]) : t[0], React.createElement("i", {
       "data-assistant-life-room-tag-short": true
     }, n > 1 && short ? `・${n}人` : '', mark ? ` ${[...t[1]][0]}` : '')));
   })(), !met && React.createElement("span", {
