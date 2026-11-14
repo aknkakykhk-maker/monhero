@@ -55,7 +55,7 @@ check('画面が変わるだけでは鳴らし直さない(依存にgameStateを
   && !/\},\[[^\]]*gameState[^\]]*rhythmPreviewTrackId/.test(game));
 check('曲えらびの中では鳴らしていない',
   !/Audio_\.startRhythmTrack\(previewTrackId/.test(game));
-check('鳴らすかどうかは「曲えらびで試聴する」の設定に従う',
+check('鳴らすかどうかは「曲選びで試聴する」の設定に従う',
   effect.includes('rhythmSettings.songPreviewEnabled'));
 check('音量は音ゲー専用のBGM音量を使う', effect.includes('rhythmSettings.bgmVolume'));
 check('画面を離れたら止める', effect.includes('if(handle)handle.stop();'));

@@ -60,7 +60,7 @@ const view = p84.slice(p84.indexOf("if (view === 'deckPick' && deckPick)"), p84.
 check('③ 選んだら active だけを書き換える(保存の形は変えない)', /persist\(\{ decks: \{ \.\.\.save\.decks, active: deck\.id \} \}\)/.test(view));
 check('③ 保存できなかったら始めない', /if \(!ok\) \{ setNotice\('保存できませんでした'\); return; \}/.test(view));
 check('③ 助手と対戦は選んだデッキで始める', /startBattle\(next\.pick, deck[,)]/.test(view) && /const startBattle = \(pick = foe, deck = activeDeck(, opts = \{\})?\) =>/.test(p84));
-check('③ 戻るは、助手と対戦なら相手えらび・ほかのブリーダーなら元の画面・マルチならモードえらび', /setView\(toPvp \? 'mode' : back \|\| 'foe'\)/.test(view));
+check('③ 戻るは、助手と対戦なら相手えらび・ほかのブリーダーなら元の画面・マルチならモード選び', /setView\(toPvp \? 'mode' : back \|\| 'foe'\)/.test(view));
 
 if (failed) { console.log(`\nNG ${failed} 件`); process.exit(1); }
 console.log('\nすべてOK');

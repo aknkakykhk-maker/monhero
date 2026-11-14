@@ -728,7 +728,7 @@ function RhythmAssistSessionGuide({ assistantId = '' }) {
     <div data-rhythm-assist-guide className="mb-2 flex shrink-0 items-start gap-2 rounded-2xl border border-pink-300/50 bg-pink-950/60 p-2">
       <AssistantFace who={who} size={40} accent={who.accent} expression="happy" />
       <p className="min-w-0 flex-1 text-[11px] font-bold leading-snug text-pink-50" style={JA_WRAP_STYLE}>{jaWrap(rhythmAssistSessionSpeak(id, RHYTHM_ASSIST_SESSION_GUIDE_LINES[id]))}</p>
-      <button type="button" data-rhythm-assist-guide-close aria-label="閉じる" onClick={close} className="min-h-[36px] shrink-0 rounded-lg bg-slate-800 px-2 text-[11px] font-black">わかった</button>
+      <button type="button" data-rhythm-assist-guide-close aria-label="閉じる" onClick={close} className="min-h-[36px] shrink-0 rounded-lg bg-slate-800 px-2 text-[11px] font-black">分かった</button>
     </div>
   );
 }

@@ -162,7 +162,7 @@ ok('マスモン設定へ入れる',game.includes('data-rhythm-demo-monsters')&&
 ok('体験版から始めたプレイは体験版ホームへ戻る',
   game.includes("setRhythmPlay({song,difficulty,from:'demo'})")
   &&/const back=[^;]*rhythmPlay\.from==='debug'\|\|rhythmPlay\.from==='proto'\?'RHYTHM_DEBUG':'RHYTHM_DEMO_HOME'/.test(game));
-ok('あそびかた練習も曲えらびへ戻る',
+ok('あそびかた練習も曲選びへ戻る',
   game.includes("from:'tutorial' }")&&!game.includes("from:'tutorial'?'RHYTHM_DEBUG'"));
 ok('設定を閉じたとき、開いた画面へ戻る',
   game.includes('const [rhythmOptionsBack,setRhythmOptionsBack]')
