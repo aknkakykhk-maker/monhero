@@ -37,7 +37,7 @@ const CHANGELOG = [
   {
     // 2026-11-14 社長「β近日公開予定のお知らせと、そこに紹介動画と、作ったストーリーを出そう。紹介動画はイッサ博士と覚醒のシーン」。動画は実際の画面を本物のブラウザで録った(博士の大きな賭け → 覚醒の前触れ → 覚醒 → 超覚醒)。
     // 第1話のお知らせ(releaseFlag monsucStoryEp1)と同じ日に出す。みゅあの告知は第1話の側の1つにまとめ、ここには付けない(2回続けて話さないように)
-    date: "2026-11-14 15:00", type:'content', title:'モンヒロサクセス β版 近日公開予定', status:'new', group:'success',
+    date: "2026-11-14 15:40", type:'content', title:'モンヒロサクセス β版 近日公開予定', status:'new', group:'success',
     video: 'movies/monsaku-beta-soon.mp4?v=ae3bd9d1a25c',
     videoPoster: 'images/events/monsaku-beta-soon-poster.jpg?v=e937fb4bc03b',
     items:[
