@@ -883,6 +883,7 @@
         const pS = sabRateOf(s); const pF = failRateOf(s, null); const pG = greatRateOf(s, null);
         const x = rng(); const res = x < pS ? 'sab' : x < pS + pF ? 'fail' : x < pS + pF + pG ? 'great' : 'ok';
         const R = RESULTS[res]; const pol = C.policyOf(s.pol);
+        // ⚔修行効果アップ: 修行の上がりの合計の最後にかける倍率 ×(1 + v%)(窓口 2026-11-14。修行の式を作り直すときもいちばん最後にかける)
         const sl = stayLv(s.team, 'shugyo'); const boost = 1 + (sl ? aOf('shugyo', 'v', sl) / 100 : 0);
         // 📚技習得効果アップ(覚えた技1つにつき)・🔮修行チャンスの「修行の気合い」(1回で消える)
         const boost2 = (1 + stayNum(s, 'wazakazu') * s.techs.length / 100) * (s.shBoost ? 1.2 : 1); s.shBoost = false;
@@ -897,7 +898,7 @@
           pair.forEach(k => {
             const card = { kind: 'shugyo', stat: k, members: who, aid: false };
             const cm = cardMult(s, card);
-            addStat(s, k, BASE.light * SHUGYO.gain * (1 + (s.good && s.good.shugyoGood ? GOOD.shugyoGood.shugyo : 0)) * pol.gain * ageOf(s) * R.mult * boost * boost2 * (1 + cm.add) * (1 + cm.tag) * aptMult(s.species, k) * loyalMult(loyalOf(s)) + (res === 'sab' ? 0 : toku));
+            addStat(s, k, (BASE.light * SHUGYO.gain * (1 + (s.good && s.good.shugyoGood ? GOOD.shugyoGood.shugyo : 0)) * pol.gain * ageOf(s) * R.mult * boost2 * (1 + cm.add) * (1 + cm.tag) * aptMult(s.species, k) * loyalMult(loyalOf(s)) + (res === 'sab' ? 0 : toku)) * boost); // 🗡特別効果は足してから ⚔をかける
           });
           who.forEach(i => addBond(s, i, BOND.train / 2));
         });

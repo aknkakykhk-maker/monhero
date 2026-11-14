@@ -88,8 +88,9 @@
   add({ id: 'genki', icon: '🍀', name: '元気のお守り', ref: false, type: 'stay', scene: 'care', unit: 2, max: 25, pt: 2, u: '%', v2: [10, 20, 30, 40, 50], text: '編成にいるだけで、けがや悪いようすになりにくくなる(なる率 −{v}%)' });
 
   // ---- 修行 ----
-  add({ id: 'shugyo', icon: '⚔', name: '修行効果アップ', type: 'stay', scene: 'shugyo', unit: 1, max: 25, pt: 3, u: '%', v2: [5, 10, 15, 20, 25], text: '編成にいるだけで、修行の伸びと熟練の上がりが{v}%上がる' });
-  add({ id: 'shugyotoku', icon: '🗡', name: '修行特別効果アップ', type: 'stay', scene: 'shugyo', unit: 1, max: 10, pt: 5, u: '', text: '編成にいるだけで、修行で上がる能力がそれぞれ +{v}' });
+  add({ id: 'shugyo', icon: '⚔', name: '修行効果アップ', type: 'stay', scene: 'shugyo', unit: 1, max: 25, pt: 3, u: '%', v2: [5, 10, 15, 20, 25], text: '編成にいるだけで、修行で上がる能力が合計のあと{v}%増える(熟練の上がりも同じだけ増える)' });
+  // ↑ 修行の上がり =(行き先の基礎の数値 + 編成の子の得意な能力の分)×(1 + 修行効果アップ%)。最後にかける倍率(窓口 2026-11-14)
+  add({ id: 'shugyotoku', icon: '🗡', name: '修行特別効果アップ', type: 'stay', scene: 'shugyo', unit: 1, max: 10, pt: 5, u: '', text: '編成にいるだけで、修行で上がる能力がそれぞれ +{v}(修行効果アップの前に足す)' });
   add({ id: 'waza', icon: '📖', name: '技習得率アップ', type: 'stay', scene: 'shugyo', unit: 1, max: 10, pt: 5, u: '%', text: '編成にいるだけで、修行で技を覚える率が +{v}%' });
   add({ id: 'chokyo', icon: '🌋', name: '超修行アップ', type: 'stay', scene: 'shugyo', unit: 1, max: 1, pt: 50, u: '回', text: '編成にいるだけで、超修行できる回数が +{v}回' });
   add({ id: 'wazakazu', icon: '📚', name: '技習得効果アップ', type: 'stay', scene: 'shugyo', unit: 0.5, max: 4, pt: 10, u: '%', text: '編成にいるだけで、覚えた技1つにつき修行の伸びが +{v}%' });
