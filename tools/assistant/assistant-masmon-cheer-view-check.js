@@ -82,7 +82,7 @@ const seed = () => {
         check(`(幅${width}) 名前が切れない`, !!m.foe && !m.foe.cut && !m.me.cut);
         check(`(幅${width}) 「奥」「手前」の字が無い・「きょうの」ではなく「今日」`, !m.okuTemae && !m.kyou, JSON.stringify({ oku: m.okuTemae, kyou: m.kyou }));
         check(`(幅${width}) 場がモンサクの試合と同じ部品で、高さがある`, m.hasStage && m.stageH >= (width < 360 ? 220 : 300), `${m.stageH}px`);
-        check(`(幅${width}) 最初に「ねらい」が出る`, /ねらい/.test(m.aim) && /練習試合/.test(m.aim), m.aim);
+        check(`(幅${width}) 最初に「狙い」が出る`, /狙い/.test(m.aim) && /練習試合/.test(m.aim), m.aim);
       }
       check(`(幅${width}) 横にはみ出さない`, !m.over);
       if (SHOTS) { fs.mkdirSync(shotDir, { recursive: true }); await page.screenshot({ path: path.join(shotDir, `cheer-watch-${width}.png`) }); }

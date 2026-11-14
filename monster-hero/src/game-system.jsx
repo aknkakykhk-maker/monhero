@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 47e8ad4228c857ec
+// generated-sha256: f3a765a54ab334fa
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -80308,7 +80308,7 @@ function AssistantMasmonTrainWatch({ assistantId, onClose }) {
         <b style={{ flex: 1, fontSize: 15, color: '#a5f3fc' }}>👀 {who ? who.name : ''}の修行</b>
         <span className="ambw-small" data-amgc-foe={battle ? (battle.solo ? 'solo' : battle.foe.kind) : ''}>{battle ? (battle.solo ? 'ひとりで稽古' : '練習試合') : '練習試合'}</span>
       </div>
-      <div className="amgc-aim" data-amgc-aim>🎯 <b>ねらい</b>: {row ? `${row.nick}の${aim}` : aim}</div>
+      <div className="amgc-aim" data-amgc-aim>🎯 <b>狙い</b>: {row ? `${row.nick}の${aim}` : aim}</div>
       {stageBlock()}
       <div className="ambw-ctl" style={{ marginTop: 6 }}>
         <button className="ambw-btn2" data-amgc-pause onClick={() => setPaused(v => !v)}>{paused ? '▶' : '⏸'}</button>
