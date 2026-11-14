@@ -198,7 +198,7 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
           wrongShown = /光ってる所/.test(await page.locator('[data-card-battle]').innerText());
           if (wrongShown) await shot(page, '12-tutorial-wrong');
         }
-        const b = page.getByRole('button', { name: '攻撃おわり → ガッツへ' }); if (await b.isEnabled()) await b.click(); await page.waitForTimeout(250); continue;
+        const b = page.getByRole('button', { name: '攻撃終わり → ガッツへ' }); if (await b.isEnabled()) await b.click(); await page.waitForTimeout(250); continue;
       }
       if (stageId === 'guts' && mode === 'guts') { if (!(await page.locator('[data-card-tutor-focus]').count()) && !(await page.getByRole('button', { name: /ターン終了$/ }).isEnabled())) { await page.waitForTimeout(250); continue; } await handCard('キック').click(); await handCard('チョップ').click(); await page.getByRole('button', { name: /ターン終了$/ }).click(); await page.waitForTimeout(300); continue; }
       if (stageId === 'guard' && mode === 'guard') {
@@ -216,7 +216,7 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
         if (await tgt.count()) await tgt.click();
         await page.waitForTimeout(400); continue;
       }
-      if (stageId === 'deckEnd' && mode === 'attack') { const b = page.getByRole('button', { name: '攻撃おわり → ガッツへ' }); if (await b.isEnabled()) await b.click(); await page.waitForTimeout(250); continue; }
+      if (stageId === 'deckEnd' && mode === 'attack') { const b = page.getByRole('button', { name: '攻撃終わり → ガッツへ' }); if (await b.isEnabled()) await b.click(); await page.waitForTimeout(250); continue; }
       if (stageId === 'deckTurn' && mode === 'guts') { const b = page.getByRole('button', { name: /ターン終了$/ }); if (await b.isEnabled()) await b.click(); await page.waitForTimeout(400); continue; }
       await page.waitForTimeout(250);
     }
@@ -484,7 +484,7 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
             }
             if (tried) break;
           }
-          if (dragAttack === null) { dragTries += 1; if (dragTries >= 6) dragAttack = false; else { await page.getByRole('button', { name: '攻撃おわり → ガッツへ' }).click().catch(() => {}); } }
+          if (dragAttack === null) { dragTries += 1; if (dragTries >= 6) dragAttack = false; else { await page.getByRole('button', { name: '攻撃終わり → ガッツへ' }).click().catch(() => {}); } }
           continue;
         }
         for (const i of usable) {
@@ -511,7 +511,7 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
         if (acted) { myActions += 1; await page.waitForTimeout(400); continue; }
         // 使えない札を2回続けて押すと、2回タップで詳しい画面が開く(本体の決まりどおり)。開いていたら閉じてから「攻撃おわり」を押す(2026-11-11)
         if (await page.locator('[data-card-detail]').count()) { await page.locator('[data-card-detail]').click({ position: { x: 4, y: 4 } }).catch(() => {}); await page.waitForTimeout(250); }
-        await page.getByRole('button', { name: '攻撃おわり → ガッツへ' }).click();
+        await page.getByRole('button', { name: '攻撃終わり → ガッツへ' }).click();
         continue;
       }
       await page.waitForTimeout(300);
@@ -1032,7 +1032,7 @@ const shot = async (page, name) => { if (SHOT) { fs.mkdirSync(SHOT, { recursive:
       await page.locator('[data-card-top="foe"]').waitFor({ timeout: 10000 });
       if (SHOT) await shot(page, '34-foe');
       const brokenFoe = await page.evaluate(() => [...document.querySelectorAll('[data-card-top="foe"] span.whitespace-nowrap')].filter((el) => el.getClientRects().length > 1).map((el) => el.textContent));
-      check('⑰ 助手と対戦の画面で、印を付けた言葉(今日はじめての勝ちで +50 など)が途中で折れていない', brokenFoe.length === 0, brokenFoe.join('・'));
+      check('⑰ 助手と対戦の画面で、印を付けた言葉(今日初めての勝ちで +50 など)が途中で折れていない', brokenFoe.length === 0, brokenFoe.join('・'));
     }
     check('どこでも実行時エラーが出ない', errors.length === 0, errors.slice(0, 3).join(' / '));
   } catch (e) {

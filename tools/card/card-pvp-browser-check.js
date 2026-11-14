@@ -293,7 +293,7 @@ const pvpGo = async (page, sel) => { await page.locator(sel).first().click(); aw
     const pointAfter = [await beatP(A), await beatP(B)];
     check('⑥ 終わったら、2台とも報酬が出る', /ビートP|ごほうびはありません/.test(rewardA) && /ビートP|ごほうびはありません/.test(rewardB), `${rewardA} / ${rewardB}`);
     // 2台は保存先が別なので、それぞれに入る(2026-10-26 社長: 勝ち +400 は MASTER の2倍・負け +150 は MASTER と同じで勝ちの 3/4。2026-10-27 社長: マルチはさらに2倍で +800・+300)。
-    // 勝ちは、その日はじめての勝ちなら +50(助手と対戦と合わせて1日1回・2倍にしない)。この検査の端末はその日まだ勝っていないので +850
+    // 勝ちは、その日初めての勝ちなら +50(助手と対戦と合わせて1日1回・2倍にしない)。この検査の端末はその日まだ勝っていないので +850
     // ランクが上がったぶん(本体の playerRankBeatPointsFor で数える)は引いてから、勝ち負けのぶんを見る
     const rankAfter = [await rankGot(A), await rankGot(B)];
     const rankPts = await Promise.all([A, B].map((page, i) => page.evaluate((lvs) => (typeof playerRankBeatPointsFor === 'function' ? lvs.reduce((a, lv) => a + playerRankBeatPointsFor(lv), 0) : null), rankAfter[i].filter((lv) => !rankBefore[i].includes(lv)))));

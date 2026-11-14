@@ -148,7 +148,7 @@ function MlabDetail({ sp, mon, fuse, engine, onBack }) {
           <div>称号: {mon && Array.isArray(mon.titles) && mon.titles.length ? `${mon.titles.length}個` : 'なし'}</div>
         </MlabBox>
       )}
-      <div className="mt-auto p-2.5 text-center"><button type="button" onClick={onBack} className="rounded-xl bg-amber-400 px-8 py-2 text-[13px] font-black text-amber-950 active:scale-95">もどる</button></div>
+      <div className="mt-auto p-2.5 text-center"><button type="button" onClick={onBack} className="rounded-xl bg-amber-400 px-8 py-2 text-[13px] font-black text-amber-950 active:scale-95">戻る</button></div>
     </div>
   );
 }
@@ -172,7 +172,7 @@ function MonsterLabScreen({ onClose, onOpenDex }) {
   return (
     <div className="fixed inset-0 z-[300] flex flex-col bg-[#141a33] text-white" style={{ wordBreak: 'keep-all', overflowWrap: 'anywhere' }} data-monster-lab>
       <div className="flex items-center justify-between border-b-2 border-indigo-500/60 bg-indigo-950 px-3 py-2.5">
-        <button type="button" onClick={back} className="text-[13px] font-black text-pink-200 active:scale-95">← もどる</button>
+        <button type="button" onClick={back} className="text-[13px] font-black text-pink-200 active:scale-95">← 戻る</button>
         <span className="text-[15px] font-black">{title}</span>
         <button type="button" onClick={onClose} className="text-[13px] font-black text-indigo-200 active:scale-95">✕</button>
       </div>
@@ -190,10 +190,10 @@ function MonsterLabScreen({ onClose, onOpenDex }) {
         )}
         {view === 'mas' && (box === null ? <div className="p-6 text-center text-[12px] text-indigo-300">読み込み中…</div> : !box.mas.length
           ? <div className="p-6 text-center text-[12px] font-bold text-indigo-300">まだマスモンがいません。モンヒロサクセスで育成を終えると、ここに並びます。</div>
-          : <><div className="grid grid-cols-4 gap-2 p-2.5">{box.mas.map((mm) => <MlabCard key={mm.id} sp={mm.species} mon={mm} onClick={() => { setSel({ sp: mm.species, mon: mm, fuse: false }); setFrom('mas'); setView('detail'); }}/>)}</div><div className="p-2 text-center text-[11px] text-indigo-300">保存枠 {box.mas.length + box.fuse.length}体のうち マスモン {box.mas.length}体</div></>)}
+          : <><div className="grid grid-cols-4 gap-2 p-2.5">{box.mas.map((mm) => <MlabCard key={mm.id} sp={mm.species} mon={mm} onClick={() => { setSel({ sp: mm.species, mon: mm, fuse: false }); setFrom('mas'); setView('detail'); }}/>)}</div><div className="p-2 text-center text-[11px] text-indigo-300">マスモンボックス {box.mas.length + box.fuse.length}体のうち マスモン {box.mas.length}体</div></>)}
         {view === 'fuse' && (box === null ? <div className="p-6 text-center text-[12px] text-indigo-300">読み込み中…</div> : !box.fuse.length
-          ? <div className="p-6 text-center text-[12px] font-bold text-indigo-300">合体円盤石はまだありません。保存枠のマスモン2体を合体させると生まれます。</div>
-          : <><div className="grid grid-cols-4 gap-2 p-2.5">{box.fuse.map((mm) => <MlabCard key={mm.id} sp={mm.species} mon={mm} fuse onClick={() => { setSel({ sp: mm.species, mon: mm, fuse: true }); setFrom('fuse'); setView('detail'); }}/>)}</div><div className="p-2 text-center text-[11px] text-indigo-300">保存枠 {box.mas.length + box.fuse.length}体のうち 合体円盤石 {box.fuse.length}体</div></>)}
+          ? <div className="p-6 text-center text-[12px] font-bold text-indigo-300">合体円盤石はまだありません。マスモンボックスのマスモン2体を合体させると生まれます。</div>
+          : <><div className="grid grid-cols-4 gap-2 p-2.5">{box.fuse.map((mm) => <MlabCard key={mm.id} sp={mm.species} mon={mm} fuse onClick={() => { setSel({ sp: mm.species, mon: mm, fuse: true }); setFrom('fuse'); setView('detail'); }}/>)}</div><div className="p-2 text-center text-[11px] text-indigo-300">マスモンボックス {box.mas.length + box.fuse.length}体のうち 合体円盤石 {box.fuse.length}体</div></>)}
         {view === 'base' && (
           <><div className="grid grid-cols-4 gap-2 p-2.5">{species.map((sp) => <MlabCard key={sp} sp={sp} onClick={() => { setSel({ sp, mon: null }); setFrom('base'); setView('detail'); }}/>)}</div><div className="p-2 text-center text-[11px] text-indigo-300">図鑑とは別。ベースモンは種類ごとのもとの値です</div></>
         )}

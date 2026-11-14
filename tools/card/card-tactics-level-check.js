@@ -4,7 +4,7 @@
 //
 // 見るもの
 //   A. カードランク: 次のランクまで 20+3×ランク(ビートランクと同じ式)・上限なし・壊れた経験値は0・
-//      強さ別の経験値(ビートと同じ物差し: 勝ち 6/8/10/14/18・マルチ60、負けは3分の1切り上げ)・投了は0・その日はじめての勝ち +30(1日1回)
+//      強さ別の経験値(ビートと同じ物差し: 勝ち 6/8/10/14/18・マルチ60、負けは3分の1切り上げ)・投了は0・その日初めての勝ち +30(1日1回)
 //   B. 枠: Lv1 基本1・ブリーダー1・各モンスター2 → Lv5・10・15・20・25・30 で開く
 //   C. ごほうび: 1つ上がるたびビートP ランク×100、5ランクごとにさらにランク×200+カードパック券1枚。一度に何ランク上がっても全部。二度は配らない・さかのぼらない
 //   D. 保存の形: 壊れた値・知らないカードid(残す)・はじめの10枚は持っている扱い・戦いに使う枠は持っていない/開いていない物を外す
@@ -43,10 +43,10 @@ check('A 壊れた経験値は0', ['x', NaN, Infinity, -5, null].every((v) => E.
   const lose = (level) => E.cardLevelAfter(null, { kind: 'cpu', level, outcome: 'lose', today: t }).add;
   check('A 負けは勝ちの3分の1(切り上げ)', J(['easy', 'normal', 'hard', 'expert', 'master'].map(lose)) === J([2, 3, 4, 5, 6]), J(['easy', 'normal', 'hard', 'expert', 'master'].map(lose)));
   check('A マルチ(勝ち60 負け20)', E.cardLevelAfter(null, { kind: 'pvp', outcome: 'lose', today: t }).add === 20 && E.cardLevelAfter(w.next, { kind: 'pvp', outcome: 'win', today: t }).add === 60);
-  check('A 結果に出す内わけ', J(w.parts) === J([{ label: '勝ち', xp: 18 }, { label: 'その日はじめての勝ち', xp: 30 }]), J(w.parts));
+  check('A 結果に出す内わけ', J(w.parts) === J([{ label: '勝ち', xp: 18 }, { label: 'その日初めての勝ち', xp: 30 }]), J(w.parts));
   const s = E.cardLevelAfter(null, { kind: 'cpu', level: 'master', outcome: 'surrender', today: t });
   check('A 投了は0で書かない', s.add === 0 && s.next.xp === 0);
-  check('A 負けではその日はじめての勝ちの印をつけない', E.cardLevelAfter(null, { kind: 'cpu', level: 'easy', outcome: 'lose', today: t }).next.dayWin === false);
+  check('A 負けではその日初めての勝ちの印をつけない', E.cardLevelAfter(null, { kind: 'cpu', level: 'easy', outcome: 'lose', today: t }).next.dayWin === false);
 }
 
 // ---- B ----

@@ -47,7 +47,7 @@ check('台本を読めた(200本以上)', rows.length >= 200, `${rows.length}本
 const ASSTS = new Set(['mua', 'atsu', 'kiki', 'momosuke', 'dra', 'kyuko', 'sorashido', 'erubin']);
 const WHO = new Set([...ASSTS, 'issa', 'narr', 'choice', 'mon']);
 const EXPR = new Set(['normal', 'happy', 'wink', 'surprise', 'troubled', 'angry', 'crying', 'excited']);
-const SLOTS = new Set(['name', 'mon', 'cheer', 'cheer2', 'stat', 'train', 'tech', 'cup', 'food', 'rival', 'owner', 'cry']);
+const SLOTS = new Set(['name', 'mon', 'cheer', 'cheer2', 'stat', 'train', 'tech', 'cup', 'food', 'rival', 'owner', 'cry', 'item']);
 const seen = new Set();
 for (const r of rows) {
   if (!r.id || !/^[a-z0-9]+(\.[a-z0-9]+)+$/.test(r.id)) bad('id の形', r);
@@ -253,10 +253,10 @@ if (problems.length > 15) console.log(`  … ほか ${problems.length - 15}件`)
   for (const f of files) {
     fs.readFileSync(f, 'utf8').split('\n').forEach((line, i) => {
       const code = line.replace(/^\s*\/\/.*$/, '').replace(/\s\/\/ .*$/, '').replace(/\/\*.*?\*\//g, '');
-      if (/頂(?!杯)|てっぺん/.test(code)) hits.push(`${path.basename(f)}:${i + 1}`);
+      if (/頂(?!杯)|てっぺん|保存枠/.test(code)) hits.push(`${path.basename(f)}:${i + 1}`);
     });
   }
-  check('モンサクの文に「頂」「てっぺん」が出ない(ヒーローズファイナル・達成した物で言う)', hits.length === 0, hits.slice(0, 6).join(' / '));
+  check('モンサクの文に「頂」「てっぺん」「保存枠」が出ない(ヒーローズファイナル・達成した物で言う・置き場はマスモンボックス)', hits.length === 0, hits.slice(0, 6).join(' / '));
 }
 
 if (SHOW_COUNT) {

@@ -6,11 +6,11 @@
 // 見るもの
 //   ① 壊れた保存・無い保存でも既定値(0・空)で読める(90 の cardNormalizeRecordDetail)
 //   ② 前からの記録(mh_card_record_v1 の最近の30戦)から助手ごとの数を1回だけ起こす。起こした印があれば二度は足さない
-//   ③ 1試合足す: 勝ち・負け・投了・連勝・いちばん早い勝ち・今日の勝ち(日付が変わったら1から)・デッキ(20まで)・モンスター・技
+//   ③ 1試合足す: 勝ち・負け・投了・連勝・一番早い勝ち・今日の勝ち(日付が変わったら1から)・デッキ(20まで)・モンスター・技
 //   ④ 使った技を、試合のなぞり直しから数える(場の記録が古いものから捨てられても、全部数える)。技(ちから・かしこさ・特殊)だけ
 //   ⑤ 途中で閉じた対戦を投了として数えるとき、助手ごとの投了にも同じ取引で入る。mh_card_record_v1 の形は変えない
 //   ⑥ 記録の画面: 3つのタブ。「全体」に前からの表、「助手ごと」は押すと開く、「マルチ」は強さ・移り・最近の試合と「マルチの履歴」へ
-//   ⑦ いちばん高かった強さは、マルチの履歴といまの点数から残す(新しいキーだけに書く)。本物へは何も送らない。実行時エラーが無い
+//   ⑦ 一番高かった強さは、マルチの履歴といまの点数から残す(新しいキーだけに書く)。本物へは何も送らない。実行時エラーが無い
 const http = require('http');
 const path = require('path');
 const fs = require('fs');
@@ -157,7 +157,7 @@ const HISTORY = [
     check('② 最近の30戦から助手ごとの数を起こす(古い順に連勝を数える)', m.win === 2 && m.lose === 1 && m.now === 0 && m.best === 2 && m.levels.easy === 1 && m.levels.normal === 1 && calc.seed.kiki.surrender === 1 && calc.seed.seeded, JSON.stringify(calc.seed));
     check('② 起こした印があれば、二度は足さない', calc.seed.twice);
     const a = calc.after;
-    check('③ 勝ち・連勝・いちばん早い勝ち・投了で連勝が切れる', a.mua.win === 5 && a.mua.surrender === 1 && a.mua.now === 0 && a.mua.best === 3 && a.mua.fastest === 7 && a.mua.levels.hard === 3, JSON.stringify(a.mua));
+    check('③ 勝ち・連勝・一番早い勝ち・投了で連勝が切れる', a.mua.win === 5 && a.mua.surrender === 1 && a.mua.now === 0 && a.mua.best === 3 && a.mua.fastest === 7 && a.mua.levels.hard === 3, JSON.stringify(a.mua));
     check('③ 勝つまでの平均(自分の番の合計と勝ち数)', a.wins.n === 3 && a.wins.turns === 28 && a.wins.fastest === 7, JSON.stringify(a.wins));
     check('③ 今日の勝ちは日付が変わると1から', a.sameDay === 2 && a.nextDay.key === '2026-10-28' && a.nextDay.win === 1, JSON.stringify({ sameDay: a.sameDay, nextDay: a.nextDay }));
     check('③ デッキ・モンスター・技を足す', a.deck.n === 2 && a.deck.name === 'はやい' && a.mons['C-1'] === 2 && a.moves['001'] === 3 && a.moves['002'] === 4, JSON.stringify({ deck: a.deck, mons: a.mons, moves: a.moves }));
@@ -220,7 +220,7 @@ const HISTORY = [
     check('⑥ マルチ: いまの強さと順位(自分より高い人の数 + 1)', multiText.includes('1531') && multiText.includes('3位'), multiText);
     check('⑥ マルチ: 強さの移り(履歴の点数の分だけ棒)と最近の試合', (await page.locator('[data-card-record-trend] i').count()) === 3 && (await page.locator('[data-card-record-recent]').innerText()).includes('たろう'));
     const best = await page.evaluate(() => (JSON.parse(localStorage.getItem('mh_card_record_detail_v1') || 'null') || {}).pvpBest);
-    check('⑦ いちばん高かった強さを履歴から残す(新しいキーだけ)', best === 1549 && (await page.locator('[data-card-record-multi]').innerText()).includes('1549'), `pvpBest ${best}`);
+    check('⑦ 一番高かった強さを履歴から残す(新しいキーだけ)', best === 1549 && (await page.locator('[data-card-record-multi]').innerText()).includes('1549'), `pvpBest ${best}`);
     await page.locator('[data-card-record-pvp-history]').click(); await sleep(600);
     check('⑥ 「マルチの履歴」へ行けて、戻ると記録に戻る', (await page.locator('text=マルチの履歴').count()) > 0);
     await page.getByRole('button', { name: /戻る|もどる/ }).first().click().catch(async () => { await page.locator('[data-mh-screen] button').first().click(); });

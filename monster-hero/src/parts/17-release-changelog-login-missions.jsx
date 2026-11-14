@@ -993,7 +993,7 @@ const NEW_PLAYER_CAMPAIGN_KEY = 'mh_monhiro_beat_preopen_new_player_campaign_v1'
 const NEW_PLAYER_CAMPAIGN_GIFT = Object.freeze({
   id: 'monhiro_beat_preopen_new_player_v1',
   title: 'モンヒロビート プレオープン記念',
-  description: '新規プレイヤーキャンペーンのプレゼントです。モンヒロビートのプレオープンを記念して、はじめた方へお贈りします。',
+  description: '新規プレイヤーキャンペーンのプレゼントです。モンヒロビートのプレオープンを記念して、始めた方へお贈りします。',
   rewards: [
     { type:'diamond', amount:100000 },
     { type:'rainbowPsyche', amount:100 },
@@ -1006,7 +1006,7 @@ const NEW_PLAYER_CAMPAIGN_GIFT = Object.freeze({
 const NEW_PLAYER_CAMPAIGN_GIFT_GRAND = Object.freeze({
   id: 'monhiro_beat_grand_open_new_player_v1',
   title: 'モンヒロビート 本オープン記念',
-  description: '新規プレイヤーキャンペーンのプレゼントです。モンヒロビートの本オープンを記念して、はじめた方へお贈りします。',
+  description: '新規プレイヤーキャンペーンのプレゼントです。モンヒロビートの本オープンを記念して、始めた方へお贈りします。',
   rewards: [
     { type:'diamond', amount:149000 },
     { type:'rainbowPsyche', amount:150 },

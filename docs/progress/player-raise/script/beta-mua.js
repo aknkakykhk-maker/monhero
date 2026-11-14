@@ -21,7 +21,7 @@
 //   tut.rematch            … はじめて大会で負けたとき(砂時計でやり直す)
 //   tut.event              … はじめての出来事(選択肢・見出し)
 //   tut.awake              … はじめての覚醒の前触れ(体が光った)
-//   tut.retire             … はじめての引退(評価・アシスト能力・保存枠・次の育成の編成)
+//   tut.retire             … はじめての引退(評価・アシスト能力・マスモンボックス・次の育成の編成)
 // 読み方: SE.event('tut.train', ctx) の lines を順に出す(tut.* は2択なし)。tut.lock だけは SE.say で1本。
 const MONSUC_SCRIPT_BETA_MUA = Object.freeze([
   // ═══════════ β版の始まりの話 ═══════════
@@ -56,8 +56,8 @@ const MONSUC_SCRIPT_BETA_MUA = Object.freeze([
   { id:'scn.mua.beta.firstend.narr1', who:'narr', t:'育成場からの帰り道。みゅあは、{mon}といっしょに撮った写真を何度も見返している。' },
   { id:'scn.mua.beta.firstend.mua1', who:'mua', e:'happy', t:'おつかれさま〜！ デビューから引退まで、ほんとにいっしょに走りきっちゃったね' },
   { id:'scn.mua.beta.firstend.mua1b', who:'mua', e:'happy', bond:[1,2], t:'おつかれさまでした！ デビューから引退まで、いっしょに走りきりましたね。' },
-  { id:'scn.mua.beta.firstend.mua2', who:'mua', e:'excited', t:'{mon}は保存枠でひと休み。次の育成では、編成で力を貸してくれるんだって！ まぢ頼もしい✨' },
-  { id:'scn.mua.beta.firstend.mua2b', who:'mua', e:'excited', bond:[1,2], t:'{mon}は保存枠でひと休みです。次の育成では、編成で力を貸してくれるそうですよ。' },
+  { id:'scn.mua.beta.firstend.mua2', who:'mua', e:'excited', t:'{mon}はマスモンボックスでひと休み。次の育成では、編成で力を貸してくれるんだって！ まぢ頼もしい✨' },
+  { id:'scn.mua.beta.firstend.mua2b', who:'mua', e:'excited', bond:[1,2], t:'{mon}はマスモンボックスでひと休みです。次の育成では、編成で力を貸してくれるそうですよ。' },
   { id:'scn.mua.beta.firstend.mua3', who:'mua', e:'wink', t:'β版はまだまだこれから。新しいことが増えたら、また{name}といっしょに育てたいな♪' },
   { id:'scn.mua.beta.firstend.mua3b', who:'mua', e:'wink', bond:[1,2], t:'β版は、まだまだこれからです。新しいことが増えたら、また{name}といっしょに育てたいです。' },
 
@@ -163,8 +163,8 @@ const MONSUC_SCRIPT_BETA_MUA = Object.freeze([
   { id:'tut.retire.mua1b', who:'mua', e:'happy', bond:[1,2], t:'育成はここまでです。最後の総合力で、評価が決まります。' },
   { id:'tut.retire.mua2', who:'mua', e:'normal', t:'もらったポイントでアシスト効果を選んでね。次の育成でこのモンスターを編成に連れていくと、効いてくれるの' },
   { id:'tut.retire.mua2b', who:'mua', e:'normal', bond:[1,2], t:'もらったポイントで、アシスト効果を選んでください。次の育成でこのモンスターを編成に連れていくと、効いてくれます。' },
-  { id:'tut.retire.mua3', who:'mua', e:'wink', t:'引退しても、いなくなるわけぢゃないよ！ 保存枠に入って、名前や色もあとから変えられるからね' },
-  { id:'tut.retire.mua3b', who:'mua', e:'wink', bond:[1,2], t:'引退しても、いなくなるわけではありません。保存枠に入って、名前や色もあとから変えられますよ。' },
+  { id:'tut.retire.mua3', who:'mua', e:'wink', t:'引退しても、いなくなるわけぢゃないよ！ マスモンボックスに入って、名前や色もあとから変えられるからね' },
+  { id:'tut.retire.mua3b', who:'mua', e:'wink', bond:[1,2], t:'引退しても、いなくなるわけではありません。マスモンボックスに入って、名前や色もあとから変えられますよ。' },
 ]);
 
 if (typeof module !== 'undefined') module.exports = { MONSUC_SCRIPT_BETA_MUA };

@@ -105,28 +105,81 @@ const rhythmSongBuyReasonText = (reason) => (reason === 'points' ? 'ビートP�
     : reason === 'save' ? '買うのを保存できませんでした。ビートPと持っている曲は変わっていません。'
       : '買えませんでした。');
 
-// ビートP交換所の「曲」の売り場に並べる札(曲の絵・名前・値段)。有料の曲が1曲もなければ何も並ばない(タブも出ない)
+// ビートP交換所の「曲」の売り場に並べる札(曲の絵・名前・作者と長さ・Lv.の幅・試し聴き・値段)。有料の曲が1曲もなければ何も並ばない(タブも出ない)
+// 2026-11-14 社長「ジャケットがアップで見れない。視聴ができない」: 絵を大きくして押すと拡大・試し聴きのボタンを付け、札の空きに作者・長さ・難易度の幅を入れた。
+// 試し聴きは、オプションの「BGM試聴」と同じ Audio_.previewBGM(BGM は止まり、止めると元の BGM に戻る・音量は BGM の音量)
+const rhythmSongShopMeta = (song) => {
+  const charts = song && song.difficulties ? Object.values(song.difficulties) : [];
+  const hell = typeof RHYTHM_HELL_CHARTS !== 'undefined' && song ? RHYTHM_HELL_CHARTS[song.songId] : null;
+  const levels = [...charts, hell].map((c) => Number(c && c.level)).filter((n) => Number.isFinite(n) && n > 0);
+  const track = typeof BGM_TRACK_BY_ID !== 'undefined' && song ? BGM_TRACK_BY_ID[song.bgmTrackId] : null;
+  const first = charts.find((c) => c && Number(c.durationMs) > 0) || null;
+  return {
+    creator: track && typeof track.creator === 'string' ? track.creator : '',
+    length: typeof rhythmSongLengthLabel === 'function' ? rhythmSongLengthLabel(song, first) : '',
+    levels: levels.length ? (Math.min(...levels) === Math.max(...levels) ? `Lv.${levels[0]}` : `Lv.${Math.min(...levels)}〜${Math.max(...levels)}`) : '',
+  };
+};
 function RhythmSongShopList({ points = 0, busy = false, disabled = false, openSheet, onExchange, onZoomIcon = null }) {
   const owned = useRhythmOwnedSongs();
   const songs = rhythmPaidSongList();
+  const [playingId, setPlayingId] = React.useState('');
+  // 売り場を離れる(タブを替える・交換所を出る)と、試し聴きを止めて元の BGM へ戻す
+  React.useEffect(() => () => { try { Audio_.stopPreview(); } catch (_) { /* 音が無い環境 */ } }, []);
   if (!songs.length) return null;
+  const toggleListen = async (song) => {
+    try {
+      await Audio_.unlock();
+      const started = await Audio_.previewBGM(song.bgmTrackId);
+      setPlayingId(started ? song.songId : '');
+    } catch (_) { setPlayingId(''); }
+  };
+  const anyBundle = songs.some((song) => rhythmSongHasBundle(song.songId));
   return <>
+    {/* 文は、言葉のまとまりごとに折れるようにする(語の途中・「short ver.」の途中で折れない) */}
     <p data-rhythm-song-shop-note className="col-span-full -mt-1 text-[11px] font-bold leading-snug text-slate-300" style={{ wordBreak: 'keep-all', overflowWrap: 'anywhere' }}>
-      買うと、その曲を全部の難易度で遊べます(short ver. がある曲は、short ver. もいっしょに遊べます)。みんなで対戦なら、持っていなくてもその回だけ遊べます
+      <span className="inline-block">買うと、その曲を全部の難易度で遊べます。</span>{' '}
+      {anyBundle && <><span className="inline-block">short ver. も一緒に遊べます。</span>{' '}</>}
+      <span className="inline-block">みんなで対戦なら、</span><span className="inline-block">持っていなくてもその回だけ遊べます</span>
     </p>
     {songs.map((song) => {
       const price = rhythmSongPrice(song.songId);
       const has = owned.includes(song.songId);
       const src = typeof rhythmSongArtSrc === 'function' ? rhythmSongArtSrc(song) : '';
-      const item = { id: `song_${song.songId}`, name: rhythmSongFullName(song), emoji: '🎵', icon: src || undefined, type: 'song', currency: 'beatPoint', cost: price, desc: rhythmSongHasBundle(song.songId) ? '新曲(全難易度・short ver. もセット)' : '新曲(全難易度で遊べます)' };
+      const meta = rhythmSongShopMeta(song);
+      const bundle = rhythmSongHasBundle(song.songId);
+      const item = { id: `song_${song.songId}`, name: rhythmSongFullName(song), emoji: '🎵', icon: src || undefined, type: 'song', currency: 'beatPoint', cost: price, desc: bundle ? '新曲(全難易度・short ver. もセット)' : '新曲(全難易度で遊べます)' };
       const offer = { id: `song_${song.songId}`, kind: 'song', songId: song.songId, cost: price };
-      return <MarketProductCard key={song.songId} dataAttrs={{ 'data-rhythm-song-offer': song.songId }}
-        item={item} owned={has} comingSoon={false}
-        canBuy={!has && points >= price && !busy}
-        disabled={disabled}
-        onZoom={() => onZoomIcon && src && onZoomIcon(item)}
-        onBuy={() => openSheet({ item, confirm: () => (onExchange ? onExchange(offer, 1) : false) })}
-      />;
+      const canBuy = !has && points >= price && !busy && !disabled;
+      const listening = playingId === song.songId;
+      return <div key={song.songId} data-rhythm-song-offer={song.songId}
+        className={`relative flex min-w-0 flex-col items-center gap-1 rounded-2xl border p-2 ${has ? 'border-emerald-500/60 bg-emerald-900/30' : 'border-white/10 bg-slate-900'}`}>
+        <div className="w-full [container-type:inline-size]">
+          {typeof RhythmSongArt === 'function'
+            ? <RhythmSongArt song={song} large onZoom={src && onZoomIcon ? () => onZoomIcon(item) : null} />
+            : null}
+        </div>
+        <b data-rhythm-song-offer-name className="w-full text-center text-[11px] font-black leading-tight text-white" style={{ wordBreak: 'keep-all', overflowWrap: 'anywhere' }}>{item.name}</b>
+        <small data-rhythm-song-offer-meta className="w-full text-center text-[9px] font-bold leading-tight text-slate-300" style={{ wordBreak: 'keep-all', overflowWrap: 'anywhere' }}>
+          {meta.creator && <span className="block">{meta.creator}</span>}
+          <span className="block">{[meta.length, meta.levels].filter(Boolean).join(' ／ ')}</span>
+          {bundle && <span className="block text-lime-300">short ver. つき</span>}
+        </small>
+        <button type="button" data-rhythm-song-listen={song.songId} onClick={() => toggleListen(song)} aria-pressed={listening}
+          aria-label={`${item.name}を試し聴き${listening ? '(止める)' : ''}`}
+          className={`mh-hit-expand relative min-h-[32px] w-full rounded-lg border px-1 text-[11px] font-black active:scale-95 ${listening ? 'border-lime-300/70 bg-lime-500/25 text-lime-100' : 'border-white/20 bg-white/10 text-white'}`}>
+          {listening ? '■ とめる' : '▶ 試し聴き'}
+        </button>
+        <div className="mt-auto flex w-full items-center justify-center pt-1">
+          {has
+            ? <div className="whitespace-nowrap rounded-full bg-emerald-950/50 px-2 py-1 text-[10px] font-black text-emerald-400">所持済み</div>
+            : <button type="button" data-rhythm-song-buy={song.songId} onClick={() => openSheet({ item, confirm: () => (onExchange ? onExchange(offer, 1) : false) })} disabled={!canBuy}
+              aria-label={`${item.name}を${price}ビートPで交換`}
+              className={`mh-button mh-button-primary flex min-h-[44px] w-full max-w-full items-center justify-center gap-1 whitespace-nowrap rounded-xl px-2 text-[11px] font-black ${canBuy ? 'bg-violet-500 text-white active:scale-95' : 'bg-slate-800 text-slate-500'}`}>
+              <span aria-hidden="true">🎟️</span><span>{price.toLocaleString()}</span>
+            </button>}
+        </div>
+      </div>;
     })}
   </>;
 }
