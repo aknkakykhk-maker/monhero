@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 33e682d96fcc8749
+// source-sha256: 2b186805055898d2
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -166076,7 +166076,7 @@ function MsxSlotPicker({
     style: {
       marginTop: 8
     }
-  }, "保存枠のモンスター(5体まで)"), raised.length ? raised.map(m => {
+  }, "マスモンボックスのモンスター(5体まで)"), raised.length ? raised.map(m => {
     const on = cur && cur.box === m.id;
     const used = !on && teamBox.includes(m.id);
     return React.createElement("button", {
@@ -166503,7 +166503,7 @@ function MsxStart({
     });
     body = React.createElement(React.Fragment, null, React.createElement("div", {
       className: "v-h"
-    }, "編成の6体", React.createElement("small", null, "枠を押すと、ベースモンか保存枠のモンスターから選べる(保存枠は5体まで)+フレンドから1体。強いモンスターほどトレーニングがよく伸びる")), React.createElement("div", {
+    }, "編成の6体", React.createElement("small", null, "枠を押すと、ベースモンかマスモンボックスのモンスターから選べる(マスモンボックスからは5体まで)+フレンドから1体。強いモンスターほどトレーニングがよく伸びる")), React.createElement("div", {
       className: "v-slots"
     }, members.map((m, i) => React.createElement("div", _extends({
       key: i,
@@ -166572,7 +166572,7 @@ function MsxStart({
         color: '#f9a8d4',
         fontWeight: 900
       }
-    }, "保存枠から選ぶ(", teamBox.length, "/5)"), raised.length ? raised.map(m => React.createElement("button", {
+    }, "マスモンボックスから選ぶ(", teamBox.length, "/5)"), raised.length ? raised.map(m => React.createElement("button", {
       type: "button",
       key: m.id,
       className: `v-item${teamBox.includes(m.id) ? ' sel' : ''}`,
@@ -166613,7 +166613,7 @@ function MsxStart({
       style: {
         marginTop: 4
       }
-    }, "保存枠はまだ空です。上の枠を押すと、入れるベースモンを選べます。育て終えたモンスターは、ここに入ります"), React.createElement("div", {
+    }, "マスモンボックスはまだ空です。上の枠を押すと、入れるベースモンを選べます。育て終えたモンスターは、ここに入ります"), React.createElement("div", {
       className: "sub",
       style: {
         color: '#7dd3fc',
@@ -167044,7 +167044,7 @@ function MsxStart({
     }, "🌱 育成をはじめる"));
   }
   return React.createElement(React.Fragment, null, React.createElement(MsxHd, {
-    back: step ? 'もどる' : 'やめる',
+    back: step ? '戻る' : 'やめる',
     onBack: back,
     right: `${step + 1} / 6`
   }), React.createElement("div", {
@@ -167056,7 +167056,7 @@ function MsxStart({
   }, React.createElement("button", {
     type: "button",
     onClick: back
-  }, step ? '← もどる' : '← やめる'), React.createElement("button", {
+  }, step ? '← 戻る' : '← やめる'), React.createElement("button", {
     type: "button",
     className: "go",
     onClick: next
