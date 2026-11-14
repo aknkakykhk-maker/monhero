@@ -1,7 +1,7 @@
 // ===== モンヒロサクセスの期の区切りの演出(2026-11-13 窓口の頼み・参考画像 40・41・112・113・173・176 の流れだけを取り入れる) =====
 // 新しい期の1ターン目のターンの区切りで、ふだんの「◯月」の画面の前に1回だけ出す。押すと次の段・とばすで終わり
 //   段 0「第◯章 終了/◯◯期」の大きな字・子が大きく立つ(覚醒なら気をまとう)・下に獲得賞金と総合力(期のはじめからの増えた分)
-//   段 1「NEXT あと◯ターン」と期のはしご(終わった期 ✓・次 ▶・最上段は最後の大会「頂への道」で金色)
+//   段 1「NEXT あと◯ターン」と期のはしご(終わった期 ✓・次 ▶・最上段は最後の大会「ヒーローズファイナル」で金色)
 // ki = 期のはじめの控え { p, fame, power }(run.ki・無ければ増えた分を出さない)。何も保存しない(控えの書きかえは呼ぶ側)
 // 「動きを減らす」設定では動かさず、段は押して進める
 const MSX_KI_CHAPTER = Object.freeze(['第一章', '第二章', '第三章', '第四章', '最終章']);
@@ -29,11 +29,11 @@ function MsxKiShow({ run, v, ev, ki, onDone }) {
   const has = ki && ki.p === prev && Number.isFinite(ki.fame) && Number.isFinite(ki.power);
   const dFame = has ? fame - ki.fame : null; const dPow = has ? ev.power - ki.power : null;
   const isFinal = P[now] && P[now].key === 'final';
-  // 次の段までのターン: ふつうの期は期の長さ・最後の期は頂への道(3ターン目から)まで
+  // 次の段までのターン: ふつうの期は期の長さ・最後の期はヒーローズファイナル(3ターン目から)まで
   const left = isFinal ? 2 : v.period.left;
   const sign = (n) => (n >= 0 ? `+${msxFmt(n)}` : `−${msxFmt(-n)}`);
-  // はしご: 上から 頂への道(金)→ プロ期 → … → デビュー期
-  const rungs = P.map((p, i) => ({ i, name: p.key === 'final' ? '頂への道' : p.name, gold: p.key === 'final', state: i < now ? 'done' : i === now ? 'next' : 'later' })).reverse();
+  // はしご: 上から ヒーローズファイナル(金)→ プロ期 → … → デビュー期
+  const rungs = P.map((p, i) => ({ i, name: p.key === 'final' ? 'ヒーローズファイナル' : p.name, gold: p.key === 'final', state: i < now ? 'done' : i === now ? 'next' : 'later' })).reverse();
   return (
     <div className={`v-scene msx-ki st${st}`} style={{ flex: '1 1 0' }} onClick={step} data-msx-ki={st}>
       <img className="bg" src={msxSceneBg(s.turn).bg} alt=""/><div className="sh"/>

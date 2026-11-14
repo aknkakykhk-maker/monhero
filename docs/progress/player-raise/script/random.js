@@ -208,7 +208,7 @@ const MONSUC_SCRIPT_RANDOM = Object.freeze([
   { id:'ev.season.jan2.choice.b', who:'choice', c:'b', t:'{mon}の健康を願う' },
   { id:'ev.season.jan3.narr1', who:'narr', t:'3度目の初もうで。お参りのあと、助手がぽつりと口を開いた。' },
   { id:'ev.season.jan3.mua1', who:'mua', e:'wink', t:'あたしの願い事、教えてあげる。「{mon}とずっといっしょに笑ってたい」…てへｗ' },
-  { id:'ev.season.jan3.atsu1', who:'atsu', e:'normal', t:'俺の願い？ …{mon}がてっぺんに立つとこを見る。それだけ笑' },
+  { id:'ev.season.jan3.atsu1', who:'atsu', e:'normal', t:'俺の願い？ …{mon}がヒーローズファイナルで優勝するとこを見る。それだけ笑' },
   // 4月 花見
   { id:'ev.season.apr1.narr1', who:'narr', t:'桜が満開。編成のみんなとお弁当を広げた。' },
   { id:'ev.season.apr1.mua1', who:'mua', e:'excited', t:'お花見さいこー！ みんなで食べるとおいしさ倍ぢゃん！' },

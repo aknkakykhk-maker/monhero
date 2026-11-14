@@ -24,7 +24,7 @@
 //                                                  計算外も楽しもう(→ いい結末へ)/計算外をゼロにしよう(→ ほろ苦い結末へ)
 //   シナリオの大会          3話の翌月の{cup}(ミドルの2月の計算どおりの大会)
 //   4話「なんくるないさ」   プロ期・親密度70〜      いい結末: 表がくずれても笑って組み直す・アシスト能力「検証」系のひらめき+全能力 特大/ほろ苦い: 能力ポイント +10・称号
-//   特別な1話「浜の夜」     最後の期・仲良し度Lv5〜・4話がいい結末  攻略まとめの最後のページ。見るだけ(頂への道の1回戦に「計算どおり」の案)
+//   特別な1話「浜の夜」     最後の期・仲良し度Lv5〜・4話がいい結末  攻略まとめの最後のページ。見るだけ(ヒーローズファイナルの1回戦に「計算どおり」の案)
 const MONSUC_SCRIPT_SORASHIDO = Object.freeze([
   // ═══════════ シナリオ ═══════════
   // ── 1話「攻略まとめ」(デビュー期・必ず出る) ──
@@ -138,7 +138,7 @@ const MONSUC_SCRIPT_SORASHIDO = Object.freeze([
   { id:'scn.sorashido.cup2.lose.sorashido1d', who:'sorashido', e:'troubled', bond:16, t:'悔しいな笑 でも、なんくるないさ〜。この負けも、次の表のいちばん大事な1行です' },
 
   // ── 特別な1話「浜の夜」(最後の期・仲良し度Lv5〜・4話がいい結末) ──
-  { id:'scn.sorashido.sp.narr1', who:'narr', t:'頂への道の前の夜。ソラシドに誘われて、{mon}と浜へ出た。波の音に、三線の音がまじる。' },
+  { id:'scn.sorashido.sp.narr1', who:'narr', t:'ヒーローズファイナルの前の夜。ソラシドに誘われて、{mon}と浜へ出た。波の音に、三線の音がまじる。' },
   { id:'scn.sorashido.sp.sorashido1', who:'sorashido', e:'normal', t:'攻略まとめ、最後のページだけ、まだ書いてないんです' },
   { id:'scn.sorashido.sp.sorashido1c', who:'sorashido', e:'normal', bond:[9,15], t:'攻略まとめ、最後のページだけ、まだ書いてないんすよ' },
   { id:'scn.sorashido.sp.sorashido1d', who:'sorashido', e:'normal', bond:16, t:'攻略まとめ、最後のページだけ、まだ書いてないんです。わざと空けてあるんだ' },
@@ -348,9 +348,9 @@ const MONSUC_SCRIPT_SORASHIDO = Object.freeze([
   { id:'turn.retire.r3.sorashido1b', who:'sorashido', e:'excited', bond:[1,3], t:'なるほど！ 強いですね・・・！ {name}、育て方をまとめさせてください笑' },
   { id:'turn.retire.r3.sorashido1c', who:'sorashido', e:'excited', bond:[9,15], t:'ほほー！ 強いっすね・・・！ {name}、育て方をまとめさせてほしいっす笑' },
   { id:'turn.retire.r3.sorashido1d', who:'sorashido', e:'excited', bond:16, t:'ほほー！ 強い・・・！ {name}、育て方をまとめさせてくださいねー笑' },
-  { id:'turn.retire.r4.sorashido1', who:'sorashido', e:'excited', t:'てっぺんです・・・！ {mon}、自分の計算をこえていきましたね' },
-  { id:'turn.retire.r4.sorashido1c', who:'sorashido', e:'excited', bond:[9,15], t:'てっぺんっす・・・！ {mon}、俺の計算をこえていったな' },
-  { id:'turn.retire.r4.sorashido1d', who:'sorashido', e:'excited', bond:16, t:'てっぺんだ・・・！ {mon}、俺の計算をこえていきましたね' },
+  { id:'turn.retire.r4.sorashido1', who:'sorashido', e:'excited', t:'ヒーローズファイナル優勝です・・・！ {mon}、自分の計算をこえていきましたね' },
+  { id:'turn.retire.r4.sorashido1c', who:'sorashido', e:'excited', bond:[9,15], t:'ヒーローズファイナル優勝っす・・・！ {mon}、俺の計算をこえていったな' },
+  { id:'turn.retire.r4.sorashido1d', who:'sorashido', e:'excited', bond:16, t:'ヒーローズファイナル優勝だ・・・！ {mon}、俺の計算をこえていきましたね' },
   { id:'turn.cond.injury.in.sorashido1', who:'sorashido', e:'troubled', t:'けがをしちゃいましたね・・・。今は治すことだけ考えましょう' },
   { id:'turn.cond.injury.in.sorashido1c', who:'sorashido', e:'troubled', bond:[9,15], t:'けがしちゃったっすね・・・。今は治すことだけ考えるしかないや' },
   { id:'turn.cond.injury.in.sorashido1d', who:'sorashido', e:'troubled', bond:16, t:'けがしちゃいましたね・・・。今は治すことだけ考えなきゃ' },

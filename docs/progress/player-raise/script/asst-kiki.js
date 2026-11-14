@@ -15,7 +15,7 @@
 //                                                    迷わず押し切ろう(→ いい結末へ)/無理に押さなくていい(→ ほろ苦い結末へ)
 //   シナリオの大会        3話の翌月の{cup}(ミドルの10月の静かな一撃の大会)
 //   4話「静かな一撃」     プロ期・親密度70〜        いい結末: 技「静かな一撃」系のひらめき+全能力 特大/ほろ苦い: 丈夫さ 大+・称号
-//   特別な1話「あったかいスープ」 最後の期・仲良し度Lv5〜・4話がいい結末  頂への道の前の夜。見るだけ(頂への道の1回戦に「集中」の案)
+//   特別な1話「あったかいスープ」 最後の期・仲良し度Lv5〜・4話がいい結末  ヒーローズファイナルの前の夜。見るだけ(ヒーローズファイナルの1回戦に「集中」の案)
 const MONSUC_SCRIPT_KIKI = Object.freeze([
   // ═══════════ シナリオ ═══════════
   // ── 1話「静かな特訓」(デビュー期・必ず出る) ──
@@ -73,7 +73,7 @@ const MONSUC_SCRIPT_KIKI = Object.freeze([
   { id:'scn.kiki.cup2.lose.kiki1', who:'kiki', e:'troubled', t:'そなのか……。でも、あの日の私より、ずっとまっすぐでした' },
 
   // ── 特別な1話「あったかいスープ」(最後の期・仲良し度Lv5〜・4話がいい結末) ──
-  { id:'scn.kiki.sp.narr1', who:'narr', t:'頂への道の前の夜。ききが、湯気の立つスープを運んできた。' },
+  { id:'scn.kiki.sp.narr1', who:'narr', t:'ヒーローズファイナルの前の夜。ききが、湯気の立つスープを運んできた。' },
   { id:'scn.kiki.sp.kiki1', who:'kiki', e:'happy', t:'寒い日は、これがいちばんでつ。{mon}も、{name}も、どうぞ' },
   { id:'scn.kiki.sp.narr2', who:'narr', t:'しばらく、スプーンの音だけが静かにひびいた。' },
   { id:'scn.kiki.sp.kiki2', who:'kiki', e:'normal', t:'私、静かにしているほうが楽だと思ってました。でも{mon}の一撃を見るたびに、声が出ちゃうんでつ' },
@@ -140,7 +140,7 @@ const MONSUC_SCRIPT_KIKI = Object.freeze([
   { id:'turn.retire.r1.kiki1', who:'kiki', e:'normal', t:'おつかれさまでした、{mon}。次はもっと遠くまで行けまつよ' },
   { id:'turn.retire.r2.kiki1', who:'kiki', e:'happy', t:'いい仕上がりでつ。胸を張っていいでつよ、{mon}♪♪' },
   { id:'turn.retire.r3.kiki1', who:'kiki', e:'excited', t:'とても強いでつ……。{name}、いい育て方でした ( ˘ω˘)9グッ!' },
-  { id:'turn.retire.r4.kiki1', who:'kiki', e:'excited', t:'てっぺんでつ……。{mon}、最高の一撃を見せてもらいました' },
+  { id:'turn.retire.r4.kiki1', who:'kiki', e:'excited', t:'ヒーローズファイナル優勝でつ……。{mon}、最高の一撃を見せてもらいました' },
   { id:'turn.cond.injury.in.kiki1', who:'kiki', e:'troubled', t:'けがをしちゃいましたね……。今は治すことだけ考えましょ' },
   { id:'turn.cond.injury.out.kiki1', who:'kiki', e:'happy', t:'もう平気そうでつ。少しずつ取り返しましょうね' },
   { id:'turn.cond.sick.in.kiki1', who:'kiki', e:'troubled', t:'具合が悪そうでつ……。今日はあったかくして寝かせまつ' },

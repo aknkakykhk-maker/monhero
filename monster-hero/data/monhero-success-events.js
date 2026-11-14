@@ -225,7 +225,7 @@
       return null;
     };
     const favCand = (s) => { const k = KEYS.find(k => num(s.trainXp && s.trainXp[`train:${k}`]) >= 4); return evOf(s).fav ? null : (k || null); };
-    // ★★★・👑 の前の晩: 期の最後のターン(強制大会が星3以上)か、最後の期の頂への道の前
+    // ★★★・👑 の前の晩: 期の最後のターン(強制大会が星3以上)か、最後の期のヒーローズファイナルの前
     const bigCupTonight = (s) => { const p = periodOf(s.turn); if (p.left !== 1) return false; if (p.key === 'final') return true; const f = FORCED[p.key]; return Boolean(f && f.star >= 3); };
     const X = { aptRoom: (s) => typeof h.aptUpRoom === 'function' && [0, 1, 2, 3].some(d => h.aptUpRoom(s, d, 'event')), hpRatio, loyal: loyalOf, period: (s) => periodOf(s.turn), team, pair, rankAtLeast, typeOf: tOf, peakEdge, favCand, bigCupTonight, BOND };
 

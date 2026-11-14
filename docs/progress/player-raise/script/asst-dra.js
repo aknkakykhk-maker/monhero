@@ -18,7 +18,7 @@
 //                                                  最後までまじめに教えて(→ いい結末へ)/冗談まじりのままでいい(→ ほろ苦い結末へ)
 //   シナリオの大会          3話の翌月の{cup}(ミドルの7月の技くらべの大会)
 //   4話「直伝」             プロ期・親密度70〜      いい結末: 技「ドラ直伝」系のひらめき+全能力 特大/ほろ苦い: 技の素質が出やすい・称号
-//   特別な1話「膝と約束」   最後の期・仲良し度Lv5〜・4話がいい結末  冗談なしのお礼。見るだけ(頂への道の1回戦に「技の失敗が出にくい」の案)
+//   特別な1話「膝と約束」   最後の期・仲良し度Lv5〜・4話がいい結末  冗談なしのお礼。見るだけ(ヒーローズファイナルの1回戦に「技の失敗が出にくい」の案)
 const MONSUC_SCRIPT_DRA = Object.freeze([
   // ═══════════ シナリオ ═══════════
   // ── 1話「技は間だよ」(デビュー期・必ず出る) ──
@@ -76,7 +76,7 @@ const MONSUC_SCRIPT_DRA = Object.freeze([
   { id:'scn.dra.cup2.lose.dra1', who:'dra', e:'troubled', t:'残念だったな。でも、教えたことは全部出てた。……それで十分だよ' },
 
   // ── 特別な1話「膝と約束」(最後の期・仲良し度Lv5〜・4話がいい結末) ──
-  { id:'scn.dra.sp.narr1', who:'narr', t:'頂への道の前の夜。ドラはトレーニング場のベンチで、膝に湿布をはっていた。' },
+  { id:'scn.dra.sp.narr1', who:'narr', t:'ヒーローズファイナルの前の夜。ドラはトレーニング場のベンチで、膝に湿布をはっていた。' },
   { id:'scn.dra.sp.dra1', who:'dra', e:'normal', t:'お、{name}。……ちょうどよかった。たまには、おでの話を聞いてくれ' },
   { id:'scn.dra.sp.dra2', who:'dra', e:'normal', t:'おで、ずっと冗談に逃げてたんだよ。まじめに言うと、照れくさくてな' },
   { id:'scn.dra.sp.narr2', who:'narr', t:'ドラは少し黙ってから、{mon}の頭に手をのせた。' },
@@ -143,7 +143,7 @@ const MONSUC_SCRIPT_DRA = Object.freeze([
   { id:'turn.retire.r1.dra1', who:'dra', e:'normal', t:'おつかれ、{mon}。次はもっと上にいけるよ' },
   { id:'turn.retire.r2.dra1', who:'dra', e:'happy', t:'いい仕上がりだ。胸張っていいぞ、{mon}' },
   { id:'turn.retire.r3.dra1', who:'dra', e:'excited', t:'強いな、これ。{name}、いい育て方したわ' },
-  { id:'turn.retire.r4.dra1', who:'dra', e:'excited', t:'てっぺんか……。{mon}、おでが教えた中でいちばんだよ' },
+  { id:'turn.retire.r4.dra1', who:'dra', e:'excited', t:'ヒーローズファイナル優勝か……。{mon}、おでが教えた中でいちばんだよ' },
   { id:'turn.cond.injury.in.dra1', who:'dra', e:'troubled', t:'けがしたか……。今は治すことだけ考えよう。膝の痛みは、おでがいちばん分かるからな' },
   { id:'turn.cond.injury.out.dra1', who:'dra', e:'happy', t:'もう平気そうだな。取り返していこう' },
   { id:'turn.cond.sick.in.dra1', who:'dra', e:'troubled', t:'具合悪そうだな。今日はあったかくして寝かせとこう' },
@@ -202,7 +202,7 @@ const MONSUC_SCRIPT_DRA = Object.freeze([
   { id:'ev.goal.miss.dra1', who:'dra', e:'normal', t:'届かなかったな。次の期で取り返そう' },
   { id:'ev.season.jan1.dra1', who:'dra', e:'happy', t:'おみくじか。凶でも話のネタになるからな' },
   { id:'ev.season.jan2.dra1', who:'dra', e:'normal', t:'願い札か。おでは毎年「膝」って書いてる。くさ' },
-  { id:'ev.season.jan3.dra1', who:'dra', e:'normal', t:'おでの願い？ ……{mon}が、おでの教えた技でてっぺんに立つとこを見ることだよ' },
+  { id:'ev.season.jan3.dra1', who:'dra', e:'normal', t:'おでの願い？ ……{mon}が、おでの教えた技でヒーローズファイナルに勝つとこを見ることだよ' },
   { id:'ev.season.apr1.dra1', who:'dra', e:'happy', t:'花見か。おでは桜より団子派だわ' },
   { id:'ev.season.apr2.dra1', who:'dra', e:'happy', t:'顔が売れてきたな。悪くないぞ' },
   { id:'ev.season.apr3.dra1', who:'dra', e:'happy', t:'並べると全然違うな。ちゃんと積んできた証拠だよ' },
