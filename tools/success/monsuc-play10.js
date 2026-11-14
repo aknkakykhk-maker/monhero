@@ -224,10 +224,10 @@ if (require.main === module) (async () => {
         const key = sanitize(info.text.replace(/^← 中断 みゅあ編 \d+ \/ 46ターン /, ''));
         if (!log.screens[key]) {
           log.screens[key] = info.text.slice(0, 900);
-          if (info.over.length) note('はみ出し', `T${turn} ${info.over.slice(0, 3).join('/')}`);
+          if (info.over.length) { note('はみ出し', `T${turn} ${info.over.slice(0, 3).join('/')}`); await page.screenshot({ path: path.join(OUT, 'shots', `lap${lap}-over-t${turn}-${log.findings.length}.png`) }); }
           if (info.clip.length) note('字の切れ', `T${turn} ${info.clip.slice(0, 3).join('/')}`);
           if (info.imgs.length) note('画像が読めない', `T${turn} ${info.imgs.slice(0, 2).join('/')}`);
-          if (info.stretch.length) note('画像の伸び', `T${turn} ${info.stretch.slice(0, 2).join('/')}`);
+          if (info.stretch.length) { note('画像の伸び', `T${turn} ${info.stretch.slice(0, 2).join('/')}`); await page.screenshot({ path: path.join(OUT, 'shots', `lap${lap}-stretch-t${turn}-${log.findings.length}.png`) }); }
           if (info.hscroll) note('横スクロール', `T${turn}`);
           if (shotSeen.size < 40 && !shotSeen.has(key.slice(0, 20))) { shotSeen.add(key.slice(0, 20)); await page.screenshot({ path: path.join(OUT, 'shots', `lap${lap}-t${String(turn).padStart(2, '0')}-${shotSeen.size}.png`) }); }
         }
