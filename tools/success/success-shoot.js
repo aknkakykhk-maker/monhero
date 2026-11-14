@@ -70,6 +70,9 @@ const makeRun = async (kind) => {
     ['K1', 'mid', ['cont', 'train', 'go']], ['K3', 'mid', ['cont', 'train', 'go', 'next']], ['K5', 'mid', ['cont', 'train', 'go', 'next', 'praise']],
     ['I1', 'mid', ['cont', 'issa']], ['P1', 'mid', ['cont', 'stats']],
     ['E1', 'mid', ['cont', 'event']],
+    // 叱る・褒める(2026-11-14 場面ごとの選択肢と、選んだあとの札)
+    ['R1', 'mid', ['react:great']], ['R1b', 'mid', ['react:great', 'how:praise']], ['R2', 'mid', ['react:fail']], ['R2b', 'mid', ['react:fail', 'how:scold']],
+    ['R3', 'mid', ['react:sab']], ['R3b', 'mid', ['react:sab', 'how:scold']], ['R4', 'mid', ['react:shugyo']], ['R4b', 'mid', ['react:shugyo', 'how:praise']],
   ];
   try {
     const page0 = await browser.newPage({ viewport: { width: 390, height: 844 } });
@@ -103,7 +106,7 @@ const makeRun = async (kind) => {
             if (st === 'stats') return click(/^📊/);
             if (st === 'train') return click(/^💪 トレーニング/);
             if (st === 'go') return click(/をする$/); // 2026-11-14 トレーニングのボタンは「丸太割りをする」のようにトレーニングの名前になった
-            if (st === 'praise') return click(/褒める/);
+            if (st === 'praise') { const b = document.querySelector('[data-msx-react-how="praise"]'); if (b) { b.click(); return true; } return !document.querySelector('[data-msx-react]'); } // 2026-11-14 成功のあとは叱る・褒めるの段が出ない
             if (st === 'event') {
               // ランダムイベントが出るターンを芯で探して、その場面を開く(撮るときだけ id を変えて探す)
               const SUC = msxSuc.SUC; const raw = JSON.parse(localStorage.getItem(MSX_KEYS.run));
@@ -117,6 +120,16 @@ const makeRun = async (kind) => {
               await new Promise((r) => setTimeout(r, 600));
               return click(/続きから/);
             }
+            if (st.startsWith('react:')) {
+              const res = st.slice(6); const raw = JSON.parse(localStorage.getItem(MSX_KEYS.run));
+              raw.s = { ...raw.s, last: res === 'shugyo' ? { kind: 'shugyo' } : { kind: 'train', res }, reacted: false, acted: true }; raw.phase = 'react'; raw.out = res === 'shugyo' ? { kind: 'shugyo' } : { kind: 'train', result: res };
+              localStorage.setItem(MSX_KEYS.run, JSON.stringify(raw));
+              window.__msxRoot.unmount(); const el = document.getElementById('msx-shot'); window.__msxRoot = ReactDOM.createRoot(el);
+              window.__msxRoot.render(React.createElement(MonheroSuccessScreen, { onClose() {}, callNameOf: () => 'けんささん', bondLvOf: () => 4 }));
+              await new Promise((r) => setTimeout(r, 600));
+              return click(/続きから/);
+            }
+            if (st.startsWith('how:')) { const b = document.querySelector(`[data-msx-react-how="${st.slice(4)}"]`); if (b) b.click(); return !!b; }
             if (st === 'issa') {
               // 博士が来るターンを芯で探して、その場面を開く(ふだんは 3% なので、撮るときだけ id を変えて探す)
               const SUC = msxSuc.SUC; const raw = JSON.parse(localStorage.getItem(MSX_KEYS.run));

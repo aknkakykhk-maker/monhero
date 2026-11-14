@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5506c09729dc3611
+// source-sha256: 7382eaf3789ca007
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -165260,6 +165260,79 @@ const MSX_RES = Object.freeze({
     icon: '💤'
   }
 });
+const MSX_REACT = Object.freeze({
+  great: {
+    ask: '大成功! {mon}に、どう声をかける?',
+    order: ['praise', 'scold'],
+    praise: {
+      t: '🎉 思いきりほめる',
+      after: '{mon}は、うれしそうに胸を張った!'
+    },
+    scold: {
+      t: '🫡 調子に乗らないよう引きしめる',
+      after: '{mon}は、きりっと表情を引きしめた。'
+    }
+  },
+  fail: {
+    ask: 'うまくいかなかった…。{mon}に、どう声をかける?',
+    order: ['praise', 'scold'],
+    praise: {
+      t: '🤗 なぐさめる',
+      after: '{mon}は、少し元気を取り戻したようだ。'
+    },
+    scold: {
+      t: '🔥 しかって奮い立たせる',
+      after: '{mon}の目に、くやしさの火がともった。'
+    }
+  },
+  sab: {
+    ask: '{mon}がサボってしまった。どうする?',
+    order: ['scold', 'praise'],
+    scold: {
+      t: '📣 しかる',
+      after: '{mon}は、しゅんとして反省している。'
+    },
+    praise: {
+      t: '👀 見のがす',
+      after: '{mon}は、ほっとしたように甘えてきた。'
+    }
+  },
+  shugyo: {
+    ask: '修行から帰ってきた{mon}に、どう声をかける?',
+    order: ['praise', 'scold'],
+    praise: {
+      t: '🍵 ねぎらう',
+      after: '{mon}は、満足そうにひと息ついた。'
+    },
+    scold: {
+      t: '💪 次へ向けて気合いを入れる',
+      after: '{mon}は、もう次の修行を見すえている。'
+    }
+  }
+});
+const msxReactChips = (d, polFrom, polTo) => {
+  if (!d || typeof d !== 'object') return [];
+  const out = [];
+  const sg = n => n > 0 ? `+${n}` : `−${Math.abs(n)}`;
+  [['ama', '🥰 甘え度'], ['fear', '😨 恐れ度'], ['loy', '忠誠度']].forEach(([k, name]) => {
+    const n = Math.round(Number(d[k]));
+    if (Number.isFinite(n) && n) out.push({
+      k,
+      name,
+      val: sg(n),
+      good: n > 0
+    });
+  });
+  const a = Math.max(-3, Math.min(3, Number(polFrom) || 0));
+  const b = Math.max(-3, Math.min(3, Number(polTo) || 0));
+  if (a !== b && typeof MSX_POLICY_SCALE !== 'undefined') out.push({
+    k: 'pol',
+    name: `方針 ${MSX_POLICY_SCALE[a + 3]} → ${MSX_POLICY_SCALE[b + 3]}`,
+    val: '',
+    good: true
+  });
+  return out;
+};
 const MSX_COND = Object.freeze({
   injury: 'けが',
   ill: '病気',
@@ -166201,6 +166274,21 @@ function MsxPlay({
       out: null
     });else endTurnFlow(r0);
   };
+  const toReact = r => {
+    if (typeof SUC.reactOf === 'function' && !SUC.reactOf(r.s)) {
+      const x = SUC.react(r.s, null);
+      afterAct({
+        ...r,
+        s: x.out && x.out.ok ? x.state : r.s,
+        phase: 'main'
+      });
+      return;
+    }
+    setRun({
+      ...r,
+      phase: 'react'
+    });
+  };
   const afterAct = r0 => {
     if (SUC.events && r0.s.last && r0.s.last.kind === 'train') {
       const o = SUC.events.open(r0.s, 'after');
@@ -166484,10 +166572,7 @@ function MsxPlay({
       onClick: () => tev ? setRun({
         ...run,
         phase: 'tevent'
-      }) : isTrain ? setRun({
-        ...run,
-        phase: 'react'
-      }) : afterAct(run)
+      }) : isTrain ? toReact(run) : afterAct(run)
     }, "つぎへ ▶"));
   } else if (phase === 'tevent' && run.out && run.out.event && typeof MsxTrainEvent === 'function') {
     body = React.createElement(React.Fragment, null, React.createElement(MsxBand, {
@@ -166511,10 +166596,7 @@ function MsxPlay({
     }, "⏩ とばす"), React.createElement("button", {
       type: "button",
       className: "go",
-      onClick: () => setRun({
-        ...run,
-        phase: 'react'
-      }),
+      onClick: () => toReact(run),
       "data-msx-tev-next": true
     }, "つぎへ ▶"));
   } else if (phase === 'awake' && run.out && run.out.fire && typeof MsxAwakeShow === 'function') {
@@ -166568,18 +166650,38 @@ function MsxPlay({
       }
     });
   } else if (phase === 'react') {
-    const good = s.last && (s.last.res === 'great' || s.last.res === 'ok');
+    const sc = typeof SUC.reactOf === 'function' ? SUC.reactOf(s) : s.last && s.last.kind === 'shugyo' ? 'shugyo' : s.last && s.last.res;
+    const RC = MSX_REACT[sc] || null;
+    const done = run.out && run.out.reacted;
     const loy = SUC.loyalOf(s);
     const pol = Math.max(-3, Math.min(3, s.pol || 0));
     const choose = how => {
       const r = SUC.react(s, how);
-      afterAct({
+      if (!how || !r.out || !r.out.ok) {
+        afterAct({
+          ...run,
+          s: r.out && r.out.ok ? r.state : s,
+          phase: 'main'
+        });
+        return;
+      }
+      setRun({
         ...run,
         s: r.state,
-        phase: 'main'
+        out: {
+          ...(run.out || {}),
+          reacted: {
+            how,
+            d: r.out.d,
+            polFrom: r.out.polFrom,
+            scene: r.out.scene
+          }
+        }
       });
     };
-    const ask = line(good ? 'turn.praise.fit' : 'turn.scold.fit', good ? 'ほめてあげる?' : 'どうする?');
+    const resIcon = sc === 'shugyo' ? '⛰️' : (MSX_RES[sc] || MSX_RES.ok).icon;
+    const resWord = sc === 'shugyo' ? '修行' : (MSX_RES[sc] || MSX_RES.ok).word;
+    const chips = done ? msxReactChips(done.d, done.polFrom, s.pol) : [];
     body = React.createElement(React.Fragment, null, React.createElement(MsxBand, {
       s: s,
       v: v,
@@ -166591,7 +166693,7 @@ function MsxPlay({
       }
     }, React.createElement("img", {
       className: "bg",
-      src: `images/story-bg/${(MSX_RES[s.last && s.last.res] || MSX_RES.ok).bg}.jpg`,
+      src: `images/story-bg/${sc === 'shugyo' ? 'forest_evening' : (MSX_RES[sc] || MSX_RES.ok).bg}.jpg`,
       alt: ""
     }), React.createElement("div", {
       className: "sh"
@@ -166599,31 +166701,45 @@ function MsxPlay({
       className: "v-strip"
     }), React.createElement("img", {
       className: "v-body2",
-      src: msxBody(s.aid, good ? 'happy' : 'troubled'),
+      src: msxBody(s.aid, done ? done.how === 'praise' ? 'happy' : 'normal' : sc === 'great' || sc === 'shugyo' ? 'happy' : 'troubled'),
       alt: ""
     }), React.createElement("div", {
       className: "v-chips"
     }, React.createElement("span", {
       className: "v-chip ylw"
-    }, (MSX_RES[s.last && s.last.res] || MSX_RES.ok).icon, " ", (MSX_RES[s.last && s.last.res] || MSX_RES.ok).word, "のあと")), React.createElement("div", {
-      className: "v-q"
-    }, React.createElement("div", {
+    }, resIcon, " ", resWord, "のあと")), React.createElement("div", {
+      className: "v-q",
+      "data-msx-react": sc || 'none'
+    }, done ? React.createElement("div", {
+      className: "ask",
+      "data-msx-react-done": done.how
+    }, (RC && RC[done.how] ? RC[done.how].after : '').replace('{mon}', run.nick)) : React.createElement("div", {
       className: "ask"
-    }, msxAidName(s.aid), "「", good ? `${run.nick}、ほめてあげる?` : `${run.nick}、どうする?`, "」"), React.createElement("div", {
+    }, RC ? RC.ask.replace('{mon}', run.nick) : `${run.nick}のようすを見守った。`), !done && RC ? React.createElement("div", {
       className: "bt"
-    }, React.createElement("button", {
+    }, RC.order.map(how => React.createElement("button", {
+      key: how,
       type: "button",
-      className: "v-ch",
-      onClick: () => choose('praise')
-    }, "👏 褒める", React.createElement("small", null, "甘え度 +・方針が甘いほうへ")), React.createElement("button", {
-      type: "button",
-      className: "v-ch b",
-      onClick: () => choose('scold')
-    }, "📣 叱る", React.createElement("small", null, "恐れ度 +・方針が厳しいほうへ")), React.createElement("button", {
+      className: `v-ch${how === 'scold' ? ' b' : ''}`,
+      onClick: () => choose(how),
+      "data-msx-react-how": how
+    }, RC[how].t, React.createElement("small", null, how === 'praise' ? '甘え度 +・方針が甘いほうへ' : '恐れ度 +・方針が厳しいほうへ'))), React.createElement("button", {
       type: "button",
       className: "v-ch n",
       onClick: () => choose(null)
-    }, "なにもしない(方針はそのまま)")))), React.createElement("div", {
+    }, "なにもしない(方針はそのまま)")) : null)), done ? React.createElement("div", {
+      className: "v-log",
+      "data-msx-react-res": chips.length
+    }, React.createElement("span", {
+      className: "hd2"
+    }, "📋 結果"), React.createElement("br", null), chips.length ? chips.map((c, i) => React.createElement("span", {
+      key: c.k
+    }, i ? '・' : '', c.name, c.val ? React.createElement(React.Fragment, null, " ", React.createElement("b", {
+      className: c.good ? 'gu' : '',
+      style: c.good ? undefined : {
+        color: '#dc2626'
+      }
+    }, c.val)) : null)) : '変わったことはなかった') : null, React.createElement("div", {
       className: "v-pol"
     }, React.createElement("div", {
       className: "l"
@@ -166663,13 +166779,22 @@ function MsxPlay({
         fontWeight: 700,
         marginTop: 4
       }
-    }, "忠誠度 ", loy, " = 甘え度 ", s.ama, " + 恐れ度 ", s.fear, "。甘すぎるとサボりやすく、厳しすぎるとストレスがたまりやすい"), ask && ask.t && ask.t !== 'ほめてあげる?' && ask.t !== 'どうする?' ? React.createElement("div", {
-      className: "msx-note",
-      style: {
-        marginTop: 4
-      }
-    }, msxAidName(s.aid), "「", ask.t, "」") : null));
-    foot = React.createElement("div", {
+    }, "忠誠度 ", loy, " = 甘え度 ", s.ama, " + 恐れ度 ", s.fear, "。甘すぎるとサボりやすく、厳しすぎるとストレスがたまりやすい")));
+    foot = done || !RC || s.reacted ? React.createElement("div", {
+      className: "v-ft"
+    }, React.createElement("button", {
+      type: "button",
+      className: "go",
+      onClick: () => afterAct({
+        ...run,
+        out: run.out ? {
+          ...run.out,
+          reacted: undefined
+        } : run.out,
+        phase: 'main'
+      }),
+      "data-msx-react-next": true
+    }, "つぎへ ▶")) : React.createElement("div", {
       className: "v-ft"
     }, React.createElement("button", {
       type: "button",
