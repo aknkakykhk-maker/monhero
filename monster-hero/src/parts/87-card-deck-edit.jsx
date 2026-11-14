@@ -729,14 +729,7 @@ const CardPackOpen = ({ db, result, onDone }) => {
       at += cards[i].rarity !== 'normal' ? climbSteps(cards[i]) * CARD_PACK_CLIMB_MS + 380 + spotMs(cards[i]) + CARD_PACK_SPOT_BACK_MS + 120 : 140;
     });
   };
-  // 連続で開けるとき(2パック目から)は、ふつうのカードを自動で一気にめくり、キラ以上だけ残して止まる(2026-11-11 社長「連続で開けるときの早送り」)。
-  //   「とばす」は、残りを演出なしで全部めくる。どちらも出るカードは変わらない
-  const quick = fx && !kit && pi > 0 && result.packs.length > 1;
-  useEffect(() => {
-    if (phase !== 'open' || !quick) return;
-    cards.forEach((c, i) => { if (c.rarity === 'normal') later(() => setFlipped((f) => (f.includes(i) ? f : [...f, i])), 160 + i * 70); });
-    later(() => se('card'), 160);
-  }, [phase, pi]);
+  // 2パック目以降も1パック目と同じく、自分でめくる(2026-11-14 社長「5パック買いで2パック目以降が勝手にめくれる」で、自動めくりをやめた)
   const skipAll = () => { timers.current.forEach(clearTimeout); timers.current = []; se('card'); setSpot(null); setClimb(null); setFlipped(cards.map((_, i) => i)); };
   const next = () => { Audio_.fgSe.tap(); timers.current.forEach(clearTimeout); timers.current = []; setPi((x) => x + 1); setPhase(kit ? 'open' : 'closed'); setFlipped([]); setSpot(null); setClimb(null); };
   // 破るときに一瞬光る色(中のいちばん良いカード。強めのときだけ)
