@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: eeaafcc6886efd7a
+// generated-sha256: b364fd9fdd46de36
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -77219,7 +77219,8 @@ const ambwIsHighlight = (e, maxHp) => {
 
 const AMBW_CSS = `
 .ambw{position:fixed;inset:0;z-index:9500;overflow-y:auto;background:linear-gradient(180deg,#221a44,#141026 40%);color:#fff;font-weight:700;-webkit-overflow-scrolling:touch}
-.ambw-in{max-width:460px;margin:0 auto;padding:10px 12px 28px}
+/* iPhone の時計・電波の帯(上)とホームの棒(下)・横向きの切り欠きにかからないよう、端の安全な余白を足す(2026-11-14 えるびんさん「もどるが押せない」) */
+.ambw-in{max-width:460px;margin:0 auto;padding:max(10px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) max(28px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left))}
 .ambw-top{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12px;font-weight:900;color:#f9a8d4}
 .ambw-top b{color:#fff;background:#3b3566;border-radius:99px;padding:2px 10px;white-space:nowrap}
 .ambw-card{background:#1e1a36;border:1px solid #3b3566;border-radius:14px;padding:9px;margin-top:8px}

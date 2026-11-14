@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: aee6496984529559
+// source-sha256: b03d49942343e25c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -146851,7 +146851,8 @@ const ambwIsHighlight = (e, maxHp) => {
 };
 const AMBW_CSS = `
 .ambw{position:fixed;inset:0;z-index:9500;overflow-y:auto;background:linear-gradient(180deg,#221a44,#141026 40%);color:#fff;font-weight:700;-webkit-overflow-scrolling:touch}
-.ambw-in{max-width:460px;margin:0 auto;padding:10px 12px 28px}
+/* iPhone の時計・電波の帯(上)とホームの棒(下)・横向きの切り欠きにかからないよう、端の安全な余白を足す(2026-11-14 えるびんさん「もどるが押せない」) */
+.ambw-in{max-width:460px;margin:0 auto;padding:max(10px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) max(28px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left))}
 .ambw-top{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12px;font-weight:900;color:#f9a8d4}
 .ambw-top b{color:#fff;background:#3b3566;border-radius:99px;padding:2px 10px;white-space:nowrap}
 .ambw-card{background:#1e1a36;border:1px solid #3b3566;border-radius:14px;padding:9px;margin-top:8px}
