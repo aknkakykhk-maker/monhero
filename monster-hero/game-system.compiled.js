@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a99350ed9c3cd972
+// source-sha256: 0d93d85c6ee7ea5c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -169173,7 +169173,7 @@ function MsxPlay({
       className: "v-chip hot"
     }, "🏆 期末の大会まで ", v.period.left, "ターン") : React.createElement("span", {
       className: "v-chip hot"
-    }, "🏆 頂への道"), pkI.state === 'in' ? React.createElement("span", {
+    }, "🏆 ヒーローズファイナル"), pkI.state === 'in' ? React.createElement("span", {
       className: "v-chip hot",
       "data-msx-peak-chip": true
     }, "🔥 ピーク中 あと", pkI.left, "ターン") : pkI.state === 'soon' ? React.createElement("span", {
@@ -171583,7 +171583,7 @@ function MsxR3CupIntro({
     return () => clearTimeout(id);
   }, []);
   const venue = typeof MSC_VENUE_IMG !== 'undefined' ? MSC_VENUE_IMG[b.kind] || MSC_VENUE_IMG.cup : '';
-  const label = b.kind === 'cup' ? '今月の大会' : b.kind === 'summit' ? '最後の大会' : b.kind === 'debut' ? 'デビュー戦' : '期末の大会';
+  const label = b.kind === 'cup' ? '今月の大会' : b.kind === 'summit' ? 'ヒーローズファイナル' : b.kind === 'debut' ? 'デビュー戦' : '期末の大会';
   return React.createElement(React.Fragment, null, React.createElement("style", null, MSX_R3_INTRO_CSS), React.createElement("div", {
     className: "msx-cupin",
     onClick: go,
@@ -171675,7 +171675,7 @@ function MsxR3PreDesk({
   if (!b) return null;
   const name = msxR3BattleName(SUC, b);
   const star = b.kind === 'summit' ? 4 : ((SUC.FORCED || {})[b.kind] || {}).star || 1;
-  const grade = b.kind === 'summit' ? '最後の大会' : b.kind === 'debut' ? 'デビュー戦' : '期末の大会';
+  const grade = b.kind === 'summit' ? 'ヒーローズファイナル' : b.kind === 'debut' ? 'デビュー戦' : '期末の大会';
   const prizes = msxR3ForcedPrizes(SUC, b);
   const gold = prizes[0] && prizes[0].id === 'g' ? prizes[0].name.replace('賞金 ', '') : '';
   const cal = msxCalendar(s.turn);
