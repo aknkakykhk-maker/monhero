@@ -16,11 +16,11 @@
     { id: 'training', name: 'トレーニング', bgm: 'monsuc_training', se: null },
     // 休む(2026-11-14 社長の「モンサク 休養BGM」)。休むを選んだ場面のあいだこの曲(遊ぶ・通院の曲は決まっていない)
     { id: 'rest', name: '休む', bgm: 'monsuc_rest', se: null },
-    // トレーニングの結果4種(曲は替えない)
-    { id: 'trainGreat', name: 'トレーニング: 大成功', se: 'trainingGoal' },
-    { id: 'trainOk', name: 'トレーニング: 成功', se: 'trainingGood' },
+    // トレーニングの結果4種(曲は替えない)。演出のあと結果の字が出たときに鳴らす。2026-11-14 社長「大成功は派手に・失敗は残念そうに」で 大成功=ファンファーレ・成功=和音・サボり=低いブザーに替えた
+    { id: 'trainGreat', name: 'トレーニング: 大成功', se: 'rankFanfare' },
+    { id: 'trainOk', name: 'トレーニング: 成功', se: 'trainingGoal' },
     { id: 'trainFail', name: 'トレーニング: 失敗', se: 'trainingFail' },
-    { id: 'trainSkip', name: 'トレーニング: サボり', se: 'trainingMove' },
+    { id: 'trainSkip', name: 'トレーニング: サボり', se: 'trainingBad' },
     // 叱る/褒める・トレーニングLvアップ
     { id: 'scold', name: '叱る', se: 'trainingBad' },
     { id: 'praise', name: '褒める', se: 'trainingReward' },
@@ -44,6 +44,10 @@
     { id: 'qStrike', name: '修行の段: 斬る', se: 'zanSlash' },
     { id: 'qLeap', name: '修行の段: 跳ぶ', se: 'enemyMove' },
     { id: 'qSlam', name: '修行の段: 叩きつけ', se: 'crit' },
+    { id: 'qShine', name: '修行の段: 光る(星の湖)', se: 'special' },
+    // 修行の結果(段のあと、結果の字が出たとき)。覚えた=ファンファーレ・覚えなかった=残念そうな音
+    { id: 'qLearn', name: '修行の結果: 技を覚えた', se: 'rankFanfare' },
+    { id: 'qMiss', name: '修行の結果: 覚えなかった', se: 'trainingFail' },
     // 覚醒の入り(56-monsuc-awake.jsx の MsxAwakeShow)。曲は社長の曲が来るまで「合体テーマ」を当てる
     { id: 'awakeShow', name: '覚醒の入り', bgm: 'original_fusion', se: 'enemyCharge' },
     { id: 'awQi', name: '覚醒: 気が噴き出す', se: 'special' },

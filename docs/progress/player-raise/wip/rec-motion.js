@@ -106,12 +106,12 @@ const makeRun = async ({ stat, lv }) => {
         await page.evaluate((c) => { const b = document.querySelector(`[data-msx-r3-course="${c}"]`); if (b) b.click(); }, arg || 'fire'); await page.waitForTimeout(300);
         await page.evaluate(() => { const t = [...document.querySelectorAll('[data-msx-r3-techlist] span')].find((x) => getComputedStyle(x).opacity === '1' && !x.classList.contains('got')); if (t) t.click(); }); await page.waitForTimeout(500);
         tGo = Date.now(); await page.evaluate(() => { const b = document.querySelector('[data-msx-r3-shugyo]'); if (b) b.click(); });
-        await page.waitForTimeout(4200);
+        await page.waitForTimeout(5800);
       } else {
         await click(/^💪\s*(トレーニング|訓練)/); await page.waitForTimeout(500);
         await page.evaluate((i) => { const b = document.querySelectorAll('.v-trs .v-tr')[i]; if (b) b.click(); }, STATS.indexOf(kind)); await page.waitForTimeout(700);
         tGo = Date.now(); await click(/をする$/);
-        await page.waitForTimeout(3000);
+        await page.waitForTimeout(3800);
       }
       if (process.env.REC_DEBUG) console.log(JSON.stringify(await page.evaluate(async () => ({ diag: window.__mhAudioDiagnose ? await window.__mhAudioDiagnose() : null, recs: (window.__recs || []).map((r) => r.chunks.length), en: window.__mhAudioEnabled, cur: Audio_.currentBgmKey(), act: SuccessSound.isActive() }))).slice(0, 900));
       const auds = await page.evaluate(async () => Promise.all((window.__recs || []).map(({ rec, chunks, t0 }) => new Promise((ok) => {
@@ -122,7 +122,7 @@ const makeRun = async ({ stat, lv }) => {
       const webm = await vid.path();
       const aFiles = auds.filter((a) => a.b64).map((a, i) => { const f = path.join(vdir, `a${i}.webm`); fs.writeFileSync(f, Buffer.from(a.b64, 'base64')); return { f, off: (a.t0 - t0) / 1000 + AV }; });
       const ss = Math.max(0, (tGo - t0) / 1000 - 0.5);
-      const dur = isQ ? 4.4 : 3.0;
+      const dur = isQ ? 5.8 : 3.8;
       // 映像と音(録り始めのずれを足して合わせる)を重ね、押した少し前から切り出す
       const ins = ['-i', webm]; aFiles.forEach((a) => { ins.push('-itsoffset', a.off.toFixed(3), '-i', a.f); });
       const mix = aFiles.length ? ['-filter_complex', `${aFiles.map((_, i) => `[${i + 1}:a]`).join('')}amix=inputs=${aFiles.length}:duration=longest:normalize=0[a]`, '-map', '0:v', '-map', '[a]', '-c:a', 'aac', '-b:a', '128k'] : [];

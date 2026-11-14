@@ -127,13 +127,14 @@ const msxMoodOf = (s) => {
   if (r >= 0.85 && s.stress < 20) return 'joy';
   return 'calm';
 };
-function MsxMonArt({ run, className, style, live = false, react = null }) {
+// noPeak … トレーニング・修行の演出の場面では、ピークの炎を出さない(2026-11-14 社長「トレーニング中は炎を消す」。動きが見やすいように)
+function MsxMonArt({ run, className, style, live = false, react = null, noPeak = false }) {
   const sp = run.s.species;
   // 覚醒・超覚醒のキラ(56-monsuc-awake.jsx)と前触れの光。どちらも無ければ前と同じ形のまま
   const kira = typeof msxKiraOf === 'function' ? msxKiraOf(run.s.awake) : null;
   const omen = run.s.omen && typeof MsxOmenFx === 'function' ? run.s.omen.k : 0;
   // 成長のピーク中は燃え上がる(56-monsuc-awake.jsx の MsxPeakFx。キラと重なっても両方見える)
-  const peak = typeof MsxPeakFx === 'function' && msxSuc && typeof msxSuc.SUC.peakInfo === 'function' && !run.s.over && msxSuc.SUC.peakInfo(run.s).state === 'in';
+  const peak = !noPeak && typeof MsxPeakFx === 'function' && msxSuc && typeof msxSuc.SUC.peakInfo === 'function' && !run.s.over && msxSuc.SUC.peakInfo(run.s).state === 'in';
   if ((kira || omen || peak) && typeof MsxKira === 'function') {
     const scn = msxSceneBg(run.s.turn);
     const inner = live && typeof MsxLiveMon === 'function'
@@ -309,8 +310,15 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
   // 演出のあいだは演出の場面の音(2026-11-14 社長「演出に音を」)。トレーニングの結果の音は、演出が終わって結果の字が出たときに鳴らす
   const actOn = run.phase === 'result' && actAt === s.turn && typeof MsxTrainAct === 'function';
   const kiOn = run.phase === 'turn' && typeof MsxKiShow === 'function' && v.period && v.period.at === 1 && v.period.index > 0 && kiAt !== s.turn;
-  const soundId = actOn ? 'trainAct' : kiOn ? 'kiShow' : run.phase === 'awake' && run.out && run.out.fire && typeof MsxAwakeShow === 'function' ? 'awakeShow' : run.phase === 'awake' && run.out && run.out.fire ? (run.out.fire.kind === 2 ? 'trainGreat' : 'trainLvUp') : run.phase === 'result' && run.out && run.out.kind === 'rest' ? 'rest' : run.phase === 'result' && run.out && run.out.result ? (run.out.lvUp ? 'trainLvUp' : MSX_RES_SOUND[run.out.result]) : run.phase === 'issa' ? 'issa' : s.over === 'gameover' ? 'gameOver' : sub === 'train' ? 'training' : 'main';
+  const soundId = actOn ? 'trainAct' : kiOn ? 'kiShow' : run.phase === 'awake' && run.out && run.out.fire && typeof MsxAwakeShow === 'function' ? 'awakeShow' : run.phase === 'awake' && run.out && run.out.fire ? (run.out.fire.kind === 2 ? 'trainGreat' : 'trainLvUp') : run.phase === 'result' && run.out && run.out.kind === 'rest' ? 'rest' : run.phase === 'result' && run.out && run.out.result ? MSX_RES_SOUND[run.out.result] : run.phase === 'issa' ? 'issa' : s.over === 'gameover' ? 'gameOver' : sub === 'train' ? 'training' : 'main';
   msxUseSound(soundId, { season: msxCalendar(s.turn).season });
+  // トレーニングLvが上がった回は、結果の音のあとに Lv アップの音を続ける(演出が終わって結果の字が出てから)
+  const lvUpSe = run.phase === 'result' && !actOn && run.out && run.out.result && run.out.lvUp;
+  useEffect(() => {
+    if (!lvUpSe || typeof SuccessSound === 'undefined') return undefined;
+    const id = setTimeout(() => { try { SuccessSound.se('trainLvUp'); } catch (e) { /* 鳴らせなくても進む */ } }, 650);
+    return () => clearTimeout(id);
+  }, [lvUpSe, s.turn]);
   const tagAt = (SUC.BOND && SUC.BOND.tag) || 80;
   const bondLv = bondLvOf ? Number(bondLvOf(s.aid)) || 1 : 1;
   const ctx = { id: s.id, turn: s.turn, aid: s.aid, mon: run.nick, species: s.species, callName: callNameOf ? callNameOf(s.aid) : '' };

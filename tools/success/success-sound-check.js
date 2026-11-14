@@ -24,7 +24,7 @@ const REQUIRED = ['main', 'training', 'rest', 'trainGreat', 'trainOk', 'trainFai
   'cupEntry', 'cupMatch', 'cupWin', 'cupLose', 'issa', 'gameOver', 'retire',
   // 2026-11-14 演出の音(トレーニングの場面・修行の段・覚醒の入り・期の区切り)
   'trainAct', 'actStep', 'actLeap', 'actHit', 'actDodge', 'actThrow', 'actDrop', 'actGuard', 'actBlock', 'actIdea', 'actFlash',
-  'qStage', 'qCharge', 'qStrike', 'qLeap', 'qSlam', 'awakeShow', 'awQi', 'awFlash', 'awKira', 'kiShow', 'kiNext'];
+  'qStage', 'qCharge', 'qStrike', 'qLeap', 'qSlam', 'qShine', 'qLearn', 'qMiss', 'awakeShow', 'awQi', 'awFlash', 'awKira', 'kiShow', 'kiNext'];
 const trackIds = new Set([...bgmSrc.matchAll(/\{\s*id:'([a-z0-9_]+)'/g)].map((m) => m[1]));
 const fgStart = audioSrc.indexOf('const fgSe = {');
 const fgEnd = audioSrc.indexOf('const se = Object.fromEntries', fgStart);
@@ -94,7 +94,7 @@ eq('入る→メイン(夏・4季節とも同じ曲)', last(), ['quiet:true', 'p
 S.scene('main', { season: 'summer' });
 eq('同じ曲は鳴らし直さない', last(), []);
 S.scene('trainGreat');
-eq('トレーニングの結果は曲を替えず効果音だけ', last(), ['se:trainingGoal']);
+eq('トレーニングの結果は曲を替えず効果音だけ', last(), ['se:rankFanfare']);
 S.scene('cupWin');
 eq('大会の勝ち', last(), ['play:ichika_clear', 'se:rankFanfare']);
 S.scene('trainOk', { delayMs: 500 });
@@ -105,7 +105,7 @@ timers.forEach((t) => t.fn());
 eq('離れたあと待たせた効果音は捨てる', last(), []);
 S.scene('trainOk');
 S.leave();
-eq('曲を替えなかったら曲は触らない', last(), ['quiet:true', 'se:trainingGood', 'quiet:false']);
+eq('曲を替えなかったら曲は触らない', last(), ['quiet:true', 'se:trainingGoal', 'quiet:false']);
 S.leave();
 eq('二重に離れても何も起きない', last(), []);
 curKey = null; S.scene('gameOver'); last(); S.leave();
