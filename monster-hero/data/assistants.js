@@ -11027,7 +11027,7 @@ const ASSISTANT_CARD_BATTLE_INTRO = [
 const ASSISTANT_MONSUC_BETA_EP1 = [
   // ---- 冒頭: 町はずれ。きゅうこが見つける ----
   { who:'kyuko', e:'surprise', bg:'monsuc_gate', bgm:'monsuc_menu', fxText:'とある町に、新しい育成場ができるらしい', holdMs:2500, t:'ほえ〜……こんなとこに、こんなでっかい門あったっけ？' },
-  { who:'kyuko', e:'normal', fxText:'門はまだ閉まっている。向こうから、工事の音とモンスターたちのかけ声', t:'中からすごい音するねぇ。もうすぐ、なにか始まるみたいだよぉ' },
+  { who:'kyuko', e:'normal', fxText:'門の向こうは、まだ準備中らしい。工事の音とモンスターたちのかけ声が聞こえる', t:'中からすごい音するねぇ。もうすぐ、なにか始まるみたいだよぉ' },
   { who:'kyuko', e:'wink', t:'お、チラシ置いてある。……これ、みんなに見せたら大さわぎになるやつだねぇ笑' },
   // ---- 広場: チラシ ----
   { who:'kyuko', e:'happy', bg:'monhero_plaza', t:'ほい、みんな集合〜。町はずれで、おもしろいもん見つけてきたよぉ' },
@@ -12535,9 +12535,9 @@ const EVENT_REPLAYS = [
   // いまは alwaysUnlocked で「公開したら回想からいつでも見られる」形。
   // 本編で1度だけ流す導線は、β版を出すときに告知とセットで足す
   // モンヒロサクセス 第1話(2026-11-14)。β版の前の予告。公開の印 monsucStoryEp1 まで回想にも出さない。
-  //   openingLogo … 幕開けに大きく出す題字(社長のロゴの絵が届いたら image に絵の場所を書く) / endingTeaser … 次のお話がまだ無いときの次回予告の札(押しても何も開かない)
-  { id: 'monsuc_beta_ep1', date: '2026-11-14 11:32', title: 'モンヒロサクセス 第1話 ～一番乗りは、だれだ～', script: ASSISTANT_MONSUC_BETA_EP1, unlockedKey: 'monsucBetaEp1Seen', releaseFlag: 'monsucStoryEp1', group: 'monsuc',
-    openingLogo: { text: 'モンヒロサクセス', badge: 'β' }, endingTeaser: { title: '第2話 ～ヒーローへの道～', note: 'モンヒロサクセス β版 近日公開' } },
+  //   openingLogo … 幕開けに大きく出す題字。art は本体の定数の名前(MSX_LOGO_ART・社長の題字ロゴ)。定数が無いときは text を金色の字で出す / endingTeaser … 次のお話がまだ無いときの次回予告の札(押しても何も開かない)
+  { id: 'monsuc_beta_ep1', date: '2026-11-14 12:12', title: 'モンヒロサクセス 第1話 ～一番乗りは、だれだ～', script: ASSISTANT_MONSUC_BETA_EP1, unlockedKey: 'monsucBetaEp1Seen', releaseFlag: 'monsucStoryEp1', group: 'monsuc',
+    openingLogo: { art: 'MSX_LOGO_ART', text: 'モンヒロサクセス', badge: 'β' }, endingTeaser: { title: '第2話 ～ヒーローへの道～', note: 'モンヒロサクセス β版 近日公開' } },
   // MFバトルカードのはじまり(2026-10-24)。公開の印 cardBattle まで回想にも出さない。見たかは mh_story_card_battle_seen_v1(cardBattleIntroSeen)
   { id: 'card_battle_intro_2026', date: '2026-10-24 12:40', title: 'MFバトルカード ～物置の古い箱～', script: ASSISTANT_CARD_BATTLE_INTRO, unlockedKey: 'cardBattleIntroSeen', releaseFlag: 'cardBattle', group: 'update' },
   // 助手4人がタイプを教える(2026-10-17 作成・2026-10-18 公開)。releaseFlag の tacticsTypes はヘイトとタイプの公開の印(RELEASE_FLAGS.tacticsHate)と一緒

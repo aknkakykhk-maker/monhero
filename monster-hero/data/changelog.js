@@ -36,11 +36,14 @@
 const CHANGELOG = [
   {
     // 2026-11-14 社長「β版公開の前に1話(急ぎ)」「更新履歴は第1話の先出しに1件付ける(案の文で)」(窓口経由)。お話は monsuc_beta_ep1(data/assistants.js)
-    date: "2026-11-14 11:32", type:'update', title:'新しいお話「モンヒロサクセス 第1話 ～一番乗りは、だれだ～」', group:'success', status:'new', releaseFlag:'monsucStoryEp1',
+    // 絵は社長の告知画像「β版 近日公開!」(原本 tools/art-sources/monhero-success-2026-11-14/key-visual-coming-soon-1671x941.png)。第1話と同時に出す(社長の指示・窓口経由)
+    date: "2026-11-14 12:12", type:'update', title:'新しいお話「モンヒロサクセス 第1話 ～一番乗りは、だれだ～」', group:'success', status:'new', releaseFlag:'monsucStoryEp1',
+    image: 'images/events/monsuc-beta-coming-soon.jpg?v=b00d6a250134',
     items:[
       'HOMEで、助手たちのお話が見られます。',
       '見のがしたら、プロフィールの「イベント回想」から見られます。',
     ],
+    assistantNotice:{ id:'update_notice_monsuc_ep1_v1', type:'content' },
   },
   {
     // 2026-11-14 社長「バトル中の背景がサッカー場みたいなのが気になった。参考資料にならって。サッカー場みたいのもオプションで選べるように」。公開前の機能の作業メモなので dev

@@ -8,6 +8,8 @@
 //   読み込みは必ず msxNorm* を通す。壊れていたら「途中の育成なし・保存枠は空」として扱い、元の値は消さない(上書きは新しく始めたときだけ)。
 const MSX_KEYS = Object.freeze({ run: 'mh_monsuc_run_v1', box: 'mh_monsuc_box_v1', meta: 'mh_monsuc_meta_v1' });
 const MSX_CORE_SRC = 'data/monhero-success.js';
+// 題字ロゴ(社長の原本 logo-a を横800×320・減色PNG にした写し・2026-11-14)。お話「モンヒロサクセス 第1話」の幕開けでも使う(写しは1つ)
+const MSX_LOGO_ART = 'images/success/logo-monhero-success.png';
 const MSX_ASSIST_SRC = 'data/monhero-success-assist.js'; // アシスト能力の表(第2版・段1〜5)。芯に渡す(2026-11-12)
 const MSX_SCRIPT_SRC = 'data/monhero-success-script-engine.js'; // 台本エンジン(window.MONHERO_SUCCESS_SCRIPT_ENGINE)
 const MSX_EVENTS_SRC = 'data/monhero-success-events.js'; // ランダムイベントの部品(芯が create のときに window.MONHERO_SUCCESS_EVENTS を拾う)

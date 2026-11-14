@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 3ce7446c7ba5cf10
+// generated-sha256: 3948f40d7b3fbdf6
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -85031,6 +85031,8 @@ const MSX_CSS = `
 //   読み込みは必ず msxNorm* を通す。壊れていたら「途中の育成なし・保存枠は空」として扱い、元の値は消さない(上書きは新しく始めたときだけ)。
 const MSX_KEYS = Object.freeze({ run: 'mh_monsuc_run_v1', box: 'mh_monsuc_box_v1', meta: 'mh_monsuc_meta_v1' });
 const MSX_CORE_SRC = 'data/monhero-success.js';
+// 題字ロゴ(社長の原本 logo-a を横800×320・減色PNG にした写し・2026-11-14)。お話「モンヒロサクセス 第1話」の幕開けでも使う(写しは1つ)
+const MSX_LOGO_ART = 'images/success/logo-monhero-success.png';
 const MSX_ASSIST_SRC = 'data/monhero-success-assist.js'; // アシスト能力の表(第2版・段1〜5)。芯に渡す(2026-11-12)
 const MSX_SCRIPT_SRC = 'data/monhero-success-script-engine.js'; // 台本エンジン(window.MONHERO_SUCCESS_SCRIPT_ENGINE)
 const MSX_EVENTS_SRC = 'data/monhero-success-events.js'; // ランダムイベントの部品(芯が create のときに window.MONHERO_SUCCESS_EVENTS を拾う)
@@ -136925,11 +136927,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               {/* 'iris': 画面の真ん中の鍵穴から、暗がりが丸く開いていく(穴の外を大きな影で塗る) */}
               {iris&&<span aria-hidden="true" data-story-iris-hole style={{position:'absolute',left:'50%',top:'50%',width:0,height:0,borderRadius:'50%',transform:'translate(-50%,-50%)',boxShadow:'0 0 0 300vmax rgba(2,6,23,.97)',animation:`storyIrisHole 1.3s ease-in ${dur}s both`}}/>}
               <div className="relative w-full max-w-sm px-6 text-center" style={iris?{animation:`storyOpenOut .4s ease-in ${dur-.2}s both`}:undefined}>
-                {/* openingLogo(2026-11-14 モンヒロサクセス 第1話): シリーズ名の代わりに大きな題字。image があれば絵、無ければ金色の字+札(β) */}
+                {/* openingLogo(2026-11-14 モンヒロサクセス 第1話): シリーズ名の代わりに大きな題字。art(本体の定数の名前)の絵があれば絵、無ければ金色の字。札(β)を添える */}
                 {event?.openingLogo?<div data-story-opening-logo className="mb-3" style={{animation:'storyOpenTitle 1.3s ease-out .1s both'}}>
-                  {event.openingLogo.image?<img src={event.openingLogo.image} alt={event.openingLogo.text||''} className="mx-auto max-h-[140px] w-auto max-w-full object-contain"/>
+                  {(()=>{const art=event.openingLogo.art==='MSX_LOGO_ART'&&typeof MSX_LOGO_ART!=='undefined'?MSX_LOGO_ART:null;return art;})()?<img data-story-opening-logo-art src={MSX_LOGO_ART} alt={event.openingLogo.text||''} className="mx-auto block w-full max-w-[340px] h-auto object-contain" style={{filter:'drop-shadow(0 0 18px rgba(96,165,250,.45))'}}/>
                   :<p className="relative inline-block text-[34px] font-black leading-tight" style={{background:'linear-gradient(180deg,#fef3c7,#fbbf24 55%,#b45309)',WebkitBackgroundClip:'text',backgroundClip:'text',color:'transparent',filter:'drop-shadow(0 0 14px rgba(251,191,36,.55))'}}>{event.openingLogo.text}</p>}
-                  {event.openingLogo.badge&&<span className="ml-2 inline-block rounded-full border border-amber-300/80 bg-amber-400/20 px-2 align-top text-[13px] font-black text-amber-100">{event.openingLogo.badge}</span>}
+                  {event.openingLogo.badge&&<span data-story-opening-badge className="ml-2 mt-1 inline-block rounded-full border border-amber-300/80 bg-amber-400/20 px-2 align-top text-[13px] font-black text-amber-100">{event.openingLogo.badge}</span>}
                 </div>
                 :parts.series&&<p className="text-[12px] font-black tracking-[.3em] text-fuchsia-200/80" style={{animation:'storyEndCard 1s ease-out .2s both'}}>{parts.series}</p>}
                 <p className="mt-2 text-[30px] font-black leading-tight text-white" style={{animation:'storyOpenTitle 1.3s ease-out .4s both',textShadow:'0 0 18px rgba(192,132,252,.8)'}}>{storyCenter(parts.ep,Math.min(storyBoxW,384)-48,30)}</p>

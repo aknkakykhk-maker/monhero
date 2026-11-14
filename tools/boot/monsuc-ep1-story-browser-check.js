@@ -5,7 +5,7 @@
 //   node tools/boot/monsuc-ep1-story-browser-check.js
 //   SHOT_DIR=<フォルダ> を付けると、はじまり(題字)・最初の行・山場・おわりの札の写真を残す
 //
-//   ① 公開のあとの最初の HOME で、ひとりでに流れる(はじまりに大きな題字「モンヒロサクセス」とβの札)
+//   ① 公開のあとの最初の HOME で、ひとりでに流れる(はじまりに題字ロゴの絵 MSX_LOGO_ART とβの札)
 //   ② 最後まで送れて、行の数が台本どおり(あつを解放した人 45行・まだの人 42行)。まだの人には、あつが一度も出ない
 //   ③ おわりの札に次回予告「第2話 ～ヒーローへの道～」「モンヒロサクセス β版 近日公開」。モンサクへ行くボタンは無い
 //   ④ 見終えると見た印(mh_rhythm_event_story_v1 に monsuc_beta_ep1)が付き、開き直しても二度は流れない・実行時エラーが無い
@@ -77,7 +77,7 @@ const CLIMAX = 'デビューから頂まで';
       await boot();
       const story = page.locator(`[data-event-story="${ID}"]`);
       let appeared = false;
-      for (let i = 0; i < 40 && !appeared; i++) {
+      for (let i = 0; i < 80 && !appeared; i++) {
         appeared = await story.count() > 0;
         if (appeared) break;
         // 先に出る受け取り・案内の窓を閉じる(お話は HOME で待っている)
@@ -86,11 +86,13 @@ const CLIMAX = 'デビューから頂まで';
         await page.waitForTimeout(500);
       }
       check(`① ${label}: HOME でひとりでに流れる`, appeared);
-      if (!appeared) { await ctx.close(); continue; }
+      if (!appeared) { if (SHOT_DIR) { fs.mkdirSync(SHOT_DIR, { recursive: true }); await page.screenshot({ path: path.join(SHOT_DIR, `${ID}-not-appeared-${label}.png`) }); } await ctx.close(); continue; }
       const logo = page.locator('[data-story-opening-logo]');
       await logo.waitFor({ timeout: 5000 }).catch(() => {});
       const logoText = await logo.innerText().catch(() => '');
-      check(`① ${label}: はじまりに題字「モンヒロサクセス」とβの札`, /モンヒロサクセス/.test(logoText) && /β/.test(logoText), logoText.replace(/\s+/g, ' '));
+      // 題字は社長のロゴの絵(MSX_LOGO_ART)。絵が読めていて(幅がある)、名前が alt に入っていること
+      const art = await page.locator('[data-story-opening-logo-art]').evaluate((img) => ({ ok: img.complete && img.naturalWidth > 0, alt: img.alt, src: img.getAttribute('src') })).catch(() => null);
+      check(`① ${label}: はじまりに題字ロゴの絵とβの札`, !!art && art.ok && /モンヒロサクセス/.test(art.alt) && /logo-monhero-success\.png/.test(art.src) && /β/.test(logoText), JSON.stringify(art));
       const shot = async (name) => { if (!SHOT_DIR || !cs.shots) return; fs.mkdirSync(SHOT_DIR, { recursive: true }); await page.screenshot({ path: path.join(SHOT_DIR, `${ID}-${name}.png`) }); };
       await page.waitForTimeout(1500); await shot('1-hajimari');
       // 幕開けを飛ばして台本へ

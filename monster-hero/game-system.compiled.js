@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c2327996f079fc19
+// source-sha256: b260c9939345e213
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -162944,6 +162944,7 @@ const MSX_KEYS = Object.freeze({
   meta: 'mh_monsuc_meta_v1'
 });
 const MSX_CORE_SRC = 'data/monhero-success.js';
+const MSX_LOGO_ART = 'images/success/logo-monhero-success.png';
 const MSX_ASSIST_SRC = 'data/monhero-success-assist.js';
 const MSX_SCRIPT_SRC = 'data/monhero-success-script-engine.js';
 const MSX_EVENTS_SRC = 'data/monhero-success-events.js';
@@ -250684,10 +250685,17 @@ function MonsterHeroGame() {
           style: {
             animation: 'storyOpenTitle 1.3s ease-out .1s both'
           }
-        }, event.openingLogo.image ? React.createElement("img", {
-          src: event.openingLogo.image,
+        }, (() => {
+          const art = event.openingLogo.art === 'MSX_LOGO_ART' && typeof MSX_LOGO_ART !== 'undefined' ? MSX_LOGO_ART : null;
+          return art;
+        })() ? React.createElement("img", {
+          "data-story-opening-logo-art": true,
+          src: MSX_LOGO_ART,
           alt: event.openingLogo.text || '',
-          className: "mx-auto max-h-[140px] w-auto max-w-full object-contain"
+          className: "mx-auto block w-full max-w-[340px] h-auto object-contain",
+          style: {
+            filter: 'drop-shadow(0 0 18px rgba(96,165,250,.45))'
+          }
         }) : React.createElement("p", {
           className: "relative inline-block text-[34px] font-black leading-tight",
           style: {
@@ -250698,7 +250706,8 @@ function MonsterHeroGame() {
             filter: 'drop-shadow(0 0 14px rgba(251,191,36,.55))'
           }
         }, event.openingLogo.text), event.openingLogo.badge && React.createElement("span", {
-          className: "ml-2 inline-block rounded-full border border-amber-300/80 bg-amber-400/20 px-2 align-top text-[13px] font-black text-amber-100"
+          "data-story-opening-badge": true,
+          className: "ml-2 mt-1 inline-block rounded-full border border-amber-300/80 bg-amber-400/20 px-2 align-top text-[13px] font-black text-amber-100"
         }, event.openingLogo.badge)) : parts.series && React.createElement("p", {
           className: "text-[12px] font-black tracking-[.3em] text-fuchsia-200/80",
           style: {
