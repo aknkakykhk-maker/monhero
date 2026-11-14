@@ -86,6 +86,8 @@ const makeRun = async (kind) => {
     // マスモン一覧(モンサク)の画面(2026-11-14 作り直し): X0 入口・X3 一覧・X4 詳細(基礎・技)・X5 特徴と育成情報・X6 適性とアシスト・X7 お別れのタブ・X8 表示の切り替えの小窓
     ['X0', 'box', ['@openbox']], ['X3', 'box', ['@openbox', '@mmlist']], ['X4', 'box', ['@openbox', '@mmlist', '@boxmon=b1']],
     ['X5', 'box', ['@openbox', '@mmlist', '@boxmon=b1', '#detail-tab=feat']], ['X6', 'box', ['@openbox', '@mmlist', '@boxmon=b1', '#detail-tab=apt']],
+    ['X9', 'box', ['@openbox', '@mmlist', '@boxmon=b1', '#tech=sk-0405']],
+    ['X10', 'box', ['@openbox', '@mmlist', '@boxmon=bx0']], // 同じ間合い・同じランクに技が2つある種族(スネグーラチカ): そのランクの段が2行になる // 詳細の技の升目で、覚えていない技を押した所(右の詳細に覚え方の条件)
     ['A1', 'box', ['@openbox', '#mm-open-assist']], ['A2', 'box', ['@openbox', '#mm-open-assist', '#assist-mon=as1', '#assist-mon=as3']], ['A3', 'box', ['@openbox', '#mm-open-assist', '#assist-mon=as1', '#assist-remove']],
     ['F1', 'box', ['@openbox', '@mmlist', '@mmbye', '@boxmon=b2', '#mm-bye']], ['F2', 'box', ['@openbox', '@fuse', '~fuse-pick=b1', '~fuse-pick=b2']],
     ['T1', 'box', [/新しく育成/, /次へ/, /このモンスターにする/, '^assist-head']], ['T2', 'box', [/新しく育成/, /次へ/, /このモンスターにする/, '#team-assist=as1', '#team-assist=as3', '^assist-head']],
@@ -122,7 +124,7 @@ const makeRun = async (kind) => {
             localStorage.setItem('mh_monsuc_box_v1', JSON.stringify({ v: 1, cap: 30, memory: [], mons: [
               { id: 'b1', species: 'Mocchi', nick: 'もちまる', colors: [], gen: 1, st, techs: ['sk-0402', 'sk-0400', 'sk-0401'], mast: [40, 12, 0], fav: ['pow', 'tough'], coach: 'mua', endAt: Date.parse('2026-11-14T12:00:00+09:00'), ending: 'good', loy: 80, pop: 60, lv: 8, rank: 'A', grade: 'A2', score: 11800, raised: true, assists: [], titles: [], keepMe: 'x' },
               { id: 'b2', species: 'Golem', nick: 'いわお', colors: [], gen: 1, st, techs: [], mast: [], loy: 70, pop: 40, lv: 6, rank: 'B', grade: 'B3', score: 9200, raised: true, assists: [], titles: [] },
-              ...['Mocchi', 'Golem', 'Mocchi', 'Golem', 'Mocchi', 'Golem'].map((sp, i) => ({ id: `bx${i}`, species: sp, nick: '', colors: [], gen: 1 + (i % 3), st, techs: [], mast: [], loy: 50, pop: 30, lv: 3 + i, rank: 'C', grade: `C${i + 1}`, score: 6000 + i * 350, raised: true, assists: [], titles: [] }))] }));
+              ...['Snegurochka', 'Golem', 'Mocchi', 'Golem', 'Mocchi', 'Golem'].map((sp, i) => ({ id: `bx${i}`, species: sp, nick: '', colors: [], gen: 1 + (i % 3), st, techs: [], mast: [], loy: 50, pop: 30, lv: 3 + i, rank: 'C', grade: `C${i + 1}`, score: 6000 + i * 350, raised: true, assists: [], titles: [] }))] }));
             // アシスト用に残した子(合体の親・お別れした子)。育成には使えず、編成にだけ入る(2026-11-14 社長)
             localStorage.setItem('mh_monsuc_assist_v1', JSON.stringify({ v: 1, cap: 100, mons: ['Pixie', 'Tiger', 'Ghost', 'Plant'].map((sp, i) => ({ id: `as${i + 1}`, species: sp, nick: i === 0 ? 'ぴくる' : '', colors: [], gen: 1, st, techs: [], mast: [], loy: 60, pop: 40, lv: 5, rank: ['A', 'B', 'S', 'C'][i], grade: ['A1', 'B2', 'S1', 'C3'][i], score: 9000, raised: true, assists: [], titles: [], keep: { from: i % 2 ? 'farewell' : 'fuse', at: 1 } })) }));
             localStorage.removeItem('mh_monsuc_run_v1');
@@ -135,6 +137,9 @@ const makeRun = async (kind) => {
         await page.waitForSelector('[data-msx-view="home"]', { timeout: 30000 });
         const beat0 = name === 'R1' || name === 'E9' ? await page.evaluate(() => loadRhythmEventPoints()) : 0;
         const pend0 = name === 'E9' ? await page.evaluate(async () => { const r = await storeGet(MSX_KEYS.run, null); return r && r.s ? (r.s.beatEarned || 0) - (r.beatSent || 0) : 0; }) : 0; // まだ本編へ渡していない大会の分
+        // 曲の呼び出しを記録する(段C 2026-11-14 社長「バトルに入ったらバトル用の音楽に」: 試合に入ったら大会の曲から original_battle へ)
+        await page.evaluate(() => { window.__bgmLog = []; if (!window.__bgmHooked && typeof SuccessSound !== 'undefined') { window.__bgmHooked = true; const o = SuccessSound.scene; SuccessSound.scene = function (id) { window.__bgmLog.push(id); return o.apply(this, arguments); }; } });
+        const keysSeen = [];
         for (const st of steps) {
           const done = await page.evaluate(async (st) => {
             if (st.re) { const re = new RegExp(st.re); const b = [...document.querySelectorAll('.msx button')].find((x) => re.test((x.innerText || '').replace(/\s+/g, '')) && !x.disabled); if (b) b.click(); return !!b; }
@@ -149,7 +154,13 @@ const makeRun = async (kind) => {
           }, st instanceof RegExp ? { re: st.source } : st);
           if (!done) check(`${label}: 「${st}」が押せる`, false);
           await page.waitForTimeout(st === '%ready' ? 2500 : /^w\d+$/.test(st) ? Number(st.slice(1)) : 700);
+          keysSeen.push(await page.evaluate(() => (window.Audio_ && Audio_.currentBgmKey ? Audio_.currentBgmKey() : null)));
         }
+        if (name === 'W1') { const lg = await page.evaluate(() => window.__bgmLog.slice()); const iC = lg.lastIndexOf('cupPre'), iB = lg.lastIndexOf('cupMatch');
+          check(`${label}: 試合に入ったら、場面の曲が cupPre から cupMatch(バトルの曲 ichika_battle)へ替わる`, iC >= 0 && iB > iC, lg.join('>'));
+          // 場面→曲の表: 試合の前の画面(cupPre=能力を見るバトルカード)と試合(cupMatch)は別の曲で、音源のファイルも別
+          const tb = await page.evaluate(() => ({ pre: successSoundBgm('cupPre'), match: successSoundBgm('cupMatch'), srcPre: (BGM_TRACK_BY_ID[successSoundBgm('cupPre')] || {}).src, srcMatch: (BGM_TRACK_BY_ID[successSoundBgm('cupMatch')] || {}).src }));
+          check(`${label}: 前の画面の曲(${tb.pre})と試合の曲(${tb.match})は別の曲・別の音源`, !!tb.pre && !!tb.match && tb.pre !== tb.match && !!tb.srcPre && tb.srcPre !== tb.srcMatch, JSON.stringify(tb)); }
         await page.waitForTimeout(500 + (Number(process.env.SHOT_WAIT) || 0)); // SHOT_WAIT=<ms> で、動く演出の途中を撮る
         const m = await page.evaluate(() => {
           const root = document.querySelector('.msx'); if (!root) return { ok: false };
