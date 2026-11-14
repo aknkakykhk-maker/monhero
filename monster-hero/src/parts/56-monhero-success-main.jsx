@@ -722,7 +722,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
     foot = <div className="v-ft"><button type="button" onClick={onPause}>← 中断</button><button type="button" onClick={() => setSheet('log')}>📖 きろく</button><button type="button" onClick={() => setSheet('menu')}>☰ メニュー</button></div>;
     if (sub === 'bag') body = <MsxBag run={run} setRun={setRun} v={v} ev={ev} onClose={() => setSub('main')}/>;
     if (sub === 'stats') body = <MsxStats run={run} setRun={setRun} v={v} ev={ev} onClose={() => setSub('main')}/>;
-    if (sub === 'bag' || sub === 'stats') foot = <div className="v-ft"><button type="button" onClick={() => setSub('main')}>← もどる</button></div>;
+    if (sub === 'bag' || sub === 'stats') foot = <div className="v-ft"><button type="button" onClick={() => setSub('main')}>← 戻る</button></div>;
   }
 
   return (
@@ -802,7 +802,7 @@ function MsxBag({ run, setRun, v, ev, onClose }) {
         <div className="v-bgrid">
           {bagList.map((x) => <button type="button" key={x.id} className={pick === x.id ? 'sel' : ''} onClick={() => setPick(x.id)}><span className="e" style={{ fontSize: 22 }}>{x.e}</span><i>×{x.n}</i><small style={JA_LABEL_STYLE}>{msxItemNameNode(x.name.replace('ガロエ印の', ''))}</small></button>)}
           {carryList.map((x) => <button type="button" key={`c-${x.id}`} className={`no${pick === x.id ? ' sel' : ''}`} onClick={() => setPick(x.id)}><span className="e" style={{ fontSize: 22 }}>{x.e}</span><small style={JA_LABEL_STYLE}>{msxItemNameNode(x.name.replace('ガロエ印の', ''))}</small></button>)}
-          <div className="no"><span className="e">⏳</span><i>×{sand}</i><small>時渡りの砂時計</small></div><div className="no"><span className="e">🌈</span><i>×{rainbow}</i><small>虹の時渡りの砂時計</small></div>
+          <div className="no"><span className="e">⏳</span><i>×{sand}</i><small style={JA_LABEL_STYLE}>{msxItemNameNode('時渡りの砂時計')}</small></div><div className="no"><span className="e">🌈</span><i>×{rainbow}</i><small style={JA_LABEL_STYLE}>{msxItemNameNode('虹の時渡りの砂時計')}</small></div>
         </div>
         {!bagList.length && !carryList.length ? <div className="msx-note">持ちこんだ物はありません</div> : null}
         <div className="v-bnote">⏳ 時渡りの砂時計: バトルに敗北したときにやり直せる<br/>🌈 虹の時渡りの砂時計: 敗北したとき相手を変えてやり直せる<br/><span className="dim2" style={JA_WRAP_STYLE}>{jaWrap('色のうすい物は、ここでは使えません(はじめる前から効く物・大会で負けたときの砂時計)')}</span></div>

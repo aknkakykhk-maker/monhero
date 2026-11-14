@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3c6b5a44c6148a2a
+// source-sha256: 7b1e01f8e6e08069
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -165874,7 +165874,7 @@ function MonheroSuccessDebugEntry({
     debug: true
   }));
 }
-const msxItemNameNode = name => String(name || '').split(/(?<=の)|(?<=ー)(?=[ァ-ヶ])/).map((x, i) => React.createElement(React.Fragment, {
+const msxItemNameNode = name => String(name || '').split(/(?<=[の!！])(?=.)|(?<=ブリーダー)(?=ライセンス)|(?<=オイリー)(?=パック|オイル)|(?<=野菜)(?=ジュース)|(?<=スタミナ)(?=だんご)/).map((x, i) => React.createElement(React.Fragment, {
   key: i
 }, i > 0 ? React.createElement("wbr", null) : null, x));
 const MSX_STEP_NAMES = Object.freeze(['育てるモンスター', '編成', '助手', '持ちこみ', '名前と染色', '確認']);
@@ -169717,7 +169717,7 @@ function MsxPlay({
     }, React.createElement("button", {
       type: "button",
       onClick: () => setSub('main')
-    }, "← もどる"));
+    }, "← 戻る"));
   }
   return React.createElement(React.Fragment, null, React.createElement(MsxHd, {
     back: "中断",
@@ -169984,11 +169984,15 @@ function MsxBag({
     className: "no"
   }, React.createElement("span", {
     className: "e"
-  }, "⏳"), React.createElement("i", null, "×", sand), React.createElement("small", null, "時渡りの砂時計")), React.createElement("div", {
+  }, "⏳"), React.createElement("i", null, "×", sand), React.createElement("small", {
+    style: JA_LABEL_STYLE
+  }, msxItemNameNode('時渡りの砂時計'))), React.createElement("div", {
     className: "no"
   }, React.createElement("span", {
     className: "e"
-  }, "🌈"), React.createElement("i", null, "×", rainbow), React.createElement("small", null, "虹の時渡りの砂時計"))), !bagList.length && !carryList.length ? React.createElement("div", {
+  }, "🌈"), React.createElement("i", null, "×", rainbow), React.createElement("small", {
+    style: JA_LABEL_STYLE
+  }, msxItemNameNode('虹の時渡りの砂時計')))), !bagList.length && !carryList.length ? React.createElement("div", {
     className: "msx-note"
   }, "持ちこんだ物はありません") : null, React.createElement("div", {
     className: "v-bnote"

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 4ecd0729071fc714
+// generated-sha256: 144228dcf7304f63
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -86676,7 +86676,8 @@ function MonheroSuccessDebugEntry({ callNameOf, bondLvOf, onOpenChange }) {
 // ===== モンヒロサクセス: 始めるまでの6段(育てるモンスター → 編成 → 助手(シナリオ) → 持ちこみ → 名前と染色 → 確認) =====
 // 見本: docs/progress/player-raise/mock/png/v3-S.png(S1〜S6)。計算は芯の memberOf / newRun を呼ぶだけ
 // 品の名前の折り目: 「の」のあとと、カタカナ語の「ー」のあと(「縁結びの/お守り」「ブリーダー/ライセンス」)。狭い升目で言葉の途中で折れないように(2026-11-14)
-const msxItemNameNode = (name) => String(name || '').split(/(?<=の)|(?<=ー)(?=[ァ-ヶ])/).map((x, i) => <React.Fragment key={i}>{i > 0 ? <wbr/> : null}{x}</React.Fragment>);
+// 折り目は「の」「!」のあとと、決まったカタカナの境目だけ(「ー のあと」で区切ると「トレー|ニング」でも折れた。2026-11-14 窓口)
+const msxItemNameNode = (name) => String(name || '').split(/(?<=[の!！])(?=.)|(?<=ブリーダー)(?=ライセンス)|(?<=オイリー)(?=パック|オイル)|(?<=野菜)(?=ジュース)|(?<=スタミナ)(?=だんご)/).map((x, i) => <React.Fragment key={i}>{i > 0 ? <wbr/> : null}{x}</React.Fragment>);
 const MSX_STEP_NAMES = Object.freeze(['育てるモンスター', '編成', '助手', '持ちこみ', '名前と染色', '確認']);
 // 持ちこみ12種(ITEMS-REF.md・名前と効き目は参考のまま・博士はイッサ博士)。before = はじめる前に効く / both = 育成中にも使える
 const MSX_ITEMS = Object.freeze([
@@ -87926,7 +87927,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
     foot = <div className="v-ft"><button type="button" onClick={onPause}>← 中断</button><button type="button" onClick={() => setSheet('log')}>📖 きろく</button><button type="button" onClick={() => setSheet('menu')}>☰ メニュー</button></div>;
     if (sub === 'bag') body = <MsxBag run={run} setRun={setRun} v={v} ev={ev} onClose={() => setSub('main')}/>;
     if (sub === 'stats') body = <MsxStats run={run} setRun={setRun} v={v} ev={ev} onClose={() => setSub('main')}/>;
-    if (sub === 'bag' || sub === 'stats') foot = <div className="v-ft"><button type="button" onClick={() => setSub('main')}>← もどる</button></div>;
+    if (sub === 'bag' || sub === 'stats') foot = <div className="v-ft"><button type="button" onClick={() => setSub('main')}>← 戻る</button></div>;
   }
 
   return (
@@ -88006,7 +88007,7 @@ function MsxBag({ run, setRun, v, ev, onClose }) {
         <div className="v-bgrid">
           {bagList.map((x) => <button type="button" key={x.id} className={pick === x.id ? 'sel' : ''} onClick={() => setPick(x.id)}><span className="e" style={{ fontSize: 22 }}>{x.e}</span><i>×{x.n}</i><small style={JA_LABEL_STYLE}>{msxItemNameNode(x.name.replace('ガロエ印の', ''))}</small></button>)}
           {carryList.map((x) => <button type="button" key={`c-${x.id}`} className={`no${pick === x.id ? ' sel' : ''}`} onClick={() => setPick(x.id)}><span className="e" style={{ fontSize: 22 }}>{x.e}</span><small style={JA_LABEL_STYLE}>{msxItemNameNode(x.name.replace('ガロエ印の', ''))}</small></button>)}
-          <div className="no"><span className="e">⏳</span><i>×{sand}</i><small>時渡りの砂時計</small></div><div className="no"><span className="e">🌈</span><i>×{rainbow}</i><small>虹の時渡りの砂時計</small></div>
+          <div className="no"><span className="e">⏳</span><i>×{sand}</i><small style={JA_LABEL_STYLE}>{msxItemNameNode('時渡りの砂時計')}</small></div><div className="no"><span className="e">🌈</span><i>×{rainbow}</i><small style={JA_LABEL_STYLE}>{msxItemNameNode('虹の時渡りの砂時計')}</small></div>
         </div>
         {!bagList.length && !carryList.length ? <div className="msx-note">持ちこんだ物はありません</div> : null}
         <div className="v-bnote">⏳ 時渡りの砂時計: バトルに敗北したときにやり直せる<br/>🌈 虹の時渡りの砂時計: 敗北したとき相手を変えてやり直せる<br/><span className="dim2" style={JA_WRAP_STYLE}>{jaWrap('色のうすい物は、ここでは使えません(はじめる前から効く物・大会で負けたときの砂時計)')}</span></div>

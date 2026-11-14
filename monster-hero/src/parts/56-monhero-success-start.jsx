@@ -1,7 +1,8 @@
 // ===== モンヒロサクセス: 始めるまでの6段(育てるモンスター → 編成 → 助手(シナリオ) → 持ちこみ → 名前と染色 → 確認) =====
 // 見本: docs/progress/player-raise/mock/png/v3-S.png(S1〜S6)。計算は芯の memberOf / newRun を呼ぶだけ
 // 品の名前の折り目: 「の」のあとと、カタカナ語の「ー」のあと(「縁結びの/お守り」「ブリーダー/ライセンス」)。狭い升目で言葉の途中で折れないように(2026-11-14)
-const msxItemNameNode = (name) => String(name || '').split(/(?<=の)|(?<=ー)(?=[ァ-ヶ])/).map((x, i) => <React.Fragment key={i}>{i > 0 ? <wbr/> : null}{x}</React.Fragment>);
+// 折り目は「の」「!」のあとと、決まったカタカナの境目だけ(「ー のあと」で区切ると「トレー|ニング」でも折れた。2026-11-14 窓口)
+const msxItemNameNode = (name) => String(name || '').split(/(?<=[の!！])(?=.)|(?<=ブリーダー)(?=ライセンス)|(?<=オイリー)(?=パック|オイル)|(?<=野菜)(?=ジュース)|(?<=スタミナ)(?=だんご)/).map((x, i) => <React.Fragment key={i}>{i > 0 ? <wbr/> : null}{x}</React.Fragment>);
 const MSX_STEP_NAMES = Object.freeze(['育てるモンスター', '編成', '助手', '持ちこみ', '名前と染色', '確認']);
 // 持ちこみ12種(ITEMS-REF.md・名前と効き目は参考のまま・博士はイッサ博士)。before = はじめる前に効く / both = 育成中にも使える
 const MSX_ITEMS = Object.freeze([
