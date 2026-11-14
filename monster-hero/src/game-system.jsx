@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 3692c42d243144be
+// generated-sha256: e17c77ca48880cd7
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -85104,7 +85104,11 @@ function AlfFriendHouseView({ friend, onClose }) {
     ...(typeof AlfBondView === 'function' && typeof albEnabled === 'function' && albEnabled() ? [['bond', '🤝', 'きずな']] : []),
     ...(typeof AssistantLifeProfilePage === 'function' && typeof assistantLifeProfileOn === 'function' && assistantLifeProfileOn() ? [['profile', '📖', '紹介']] : [])];
   const goTab = (k) => { setRoomId(null); setTalk(null); setLeaving(null); setBondOpen(false); setBoardOpen(false); setVtab(k); };
-  const vIcons = (flat) => (vtabs.length > 1 ? (
+  const vIcons = (flat) => (vtabs.length > 1 && land && !flat ? (
+    // 横画面の右の欄は縦が足りないので、1行の小さな札にする(下の帯がはみ出さない)
+    <div className="flex min-w-0 flex-1 gap-1" role="tablist" data-alf-vtabs>
+      {vtabs.map(([k, ic, label]) => <button key={k} type="button" role="tab" aria-selected={vtab === k} data-alf-vtab={k} className={`min-h-[30px] flex-1 whitespace-nowrap rounded-xl border px-1 text-[11px] font-black ${vtab === k ? 'border-pink-300 bg-pink-900/50 text-white' : 'border-white/20 bg-slate-800/80 text-slate-200'}`} aria-label={label} onClick={() => goTab(k)}>{ic}{vw >= 800 ? ` ${label}` : ''}</button>)}
+    </div>) : vtabs.length > 1 ? (
     <div className="mhl-icons" role="tablist" data-alf-vtabs style={flat ? undefined : { flexBasis: '100%' }}>
       {vtabs.map(([k, ic, label]) => <button key={k} type="button" role="tab" aria-selected={vtab === k} data-alf-vtab={k} className={vtab === k ? 'on' : ''} onClick={() => goTab(k)}><i>{ic}</i>{label}</button>)}
     </div>) : null);
@@ -85128,7 +85132,7 @@ function AlfFriendHouseView({ friend, onClose }) {
         </>}
     </div>) : null;
   const header = (
-    <div className="mhl-hdr flex flex-wrap items-start gap-2" style={{ paddingTop: land ? 6 : 'calc(8px + env(safe-area-inset-top))' }}>
+    <div className={`mhl-hdr flex items-start gap-2${land ? '' : ' flex-wrap'}`} style={{ paddingTop: land ? 6 : 'calc(8px + env(safe-area-inset-top))' }}>
       <button type="button" className="h-9 w-8 shrink-0 text-[19px] text-slate-100" aria-label="戻る" data-alf-visit-close onClick={onClose}>←</button>
       {/* 右上は「仲良し度 +10」などの知らせ(44-growth-fx の .mh-gfx-chips)が出る所なので、題は左に寄せて右を空ける */}
       <div className="min-w-0" style={{ maxWidth: land ? '100%' : '48%' }}>
@@ -85137,7 +85141,7 @@ function AlfFriendHouseView({ friend, onClose }) {
         <p className="text-[10px] font-bold text-slate-200"><span className="whitespace-nowrap">📷 {alfAgoText(friend.at)} の様子</span>・<span className="whitespace-nowrap">{friend.name}さんが最後に開いたとき</span></p>
         {now && now.online && <p className={`mt-0.5 inline-block max-w-full truncate rounded-full px-2 py-0.5 text-[10.5px] font-black ${now.auto ? 'bg-amber-950/80 text-amber-200' : 'bg-emerald-950/70 text-emerald-200'}`} data-alf-visit-now>いま {land ? (now.long || now.text) : now.text}</p>}
       </div>
-      {vIcons(false)}
+      {land ? null : vIcons(false)}
     </div>);
   const tiles = (
     <div data-alf-visit-acts>
@@ -85275,7 +85279,7 @@ function AlfFriendHouseView({ friend, onClose }) {
         {land ? (
           <div className="relative z-[2] flex h-full min-h-0" style={{ paddingLeft: 'env(safe-area-inset-left)', paddingRight: 'env(safe-area-inset-right)' }}>
             <div className="mhl-body" style={{ flex: '0 0 64%' }}>{houseView}</div>
-            <div className="flex min-w-0 flex-1 flex-col gap-1.5 overflow-y-auto bg-gradient-to-b from-[#1a0f2e] to-[#0b1020] px-2.5 pb-2" style={{ paddingTop: 88 }} data-alf-visit-side>{header}{board}{tiles}</div>
+            <div className="relative flex min-w-0 flex-1 flex-col gap-1.5 overflow-y-auto bg-gradient-to-b from-[#1a0f2e] to-[#0b1020] px-2.5 pb-2" style={{ paddingTop: 88 }} data-alf-visit-side><div className="absolute z-[3] flex" style={{ left: 10, right: 10, top: 6 }}>{vIcons(false)}</div>{header}{board}{tiles}</div>
           </div>
         ) : (<>
           {header}

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 4aab8ca513fefb13
+// source-sha256: 01118af1de538bca
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -163735,7 +163735,20 @@ function AlfFriendHouseView({
     setBoardOpen(false);
     setVtab(k);
   };
-  const vIcons = flat => vtabs.length > 1 ? React.createElement("div", {
+  const vIcons = flat => vtabs.length > 1 && land && !flat ? React.createElement("div", {
+    className: "flex min-w-0 flex-1 gap-1",
+    role: "tablist",
+    "data-alf-vtabs": true
+  }, vtabs.map(([k, ic, label]) => React.createElement("button", {
+    key: k,
+    type: "button",
+    role: "tab",
+    "aria-selected": vtab === k,
+    "data-alf-vtab": k,
+    className: `min-h-[30px] flex-1 whitespace-nowrap rounded-xl border px-1 text-[11px] font-black ${vtab === k ? 'border-pink-300 bg-pink-900/50 text-white' : 'border-white/20 bg-slate-800/80 text-slate-200'}`,
+    "aria-label": label,
+    onClick: () => goTab(k)
+  }, ic, vw >= 800 ? ` ${label}` : ''))) : vtabs.length > 1 ? React.createElement("div", {
     className: "mhl-icons",
     role: "tablist",
     "data-alf-vtabs": true,
@@ -163828,7 +163841,7 @@ function AlfFriendHouseView({
     }
   })))) : null;
   const header = React.createElement("div", {
-    className: "mhl-hdr flex flex-wrap items-start gap-2",
+    className: `mhl-hdr flex items-start gap-2${land ? '' : ' flex-wrap'}`,
     style: {
       paddingTop: land ? 6 : 'calc(8px + env(safe-area-inset-top))'
     }
@@ -163857,7 +163870,7 @@ function AlfFriendHouseView({
   }, friend.name, "さんが最後に開いたとき")), now && now.online && React.createElement("p", {
     className: `mt-0.5 inline-block max-w-full truncate rounded-full px-2 py-0.5 text-[10.5px] font-black ${now.auto ? 'bg-amber-950/80 text-amber-200' : 'bg-emerald-950/70 text-emerald-200'}`,
     "data-alf-visit-now": true
-  }, "いま ", land ? now.long || now.text : now.text)), vIcons(false));
+  }, "いま ", land ? now.long || now.text : now.text)), land ? null : vIcons(false));
   const tiles = React.createElement("div", {
     "data-alf-visit-acts": true
   }, typeof AlfBondBar === 'function' && React.createElement(AlfBondBar, {
@@ -164348,12 +164361,19 @@ function AlfFriendHouseView({
       flex: '0 0 64%'
     }
   }, houseView), React.createElement("div", {
-    className: "flex min-w-0 flex-1 flex-col gap-1.5 overflow-y-auto bg-gradient-to-b from-[#1a0f2e] to-[#0b1020] px-2.5 pb-2",
+    className: "relative flex min-w-0 flex-1 flex-col gap-1.5 overflow-y-auto bg-gradient-to-b from-[#1a0f2e] to-[#0b1020] px-2.5 pb-2",
     style: {
       paddingTop: 88
     },
     "data-alf-visit-side": true
-  }, header, board, tiles)) : React.createElement(React.Fragment, null, header, React.createElement("div", {
+  }, React.createElement("div", {
+    className: "absolute z-[3] flex",
+    style: {
+      left: 10,
+      right: 10,
+      top: 6
+    }
+  }, vIcons(false)), header, board, tiles)) : React.createElement(React.Fragment, null, header, React.createElement("div", {
     className: "mhl-body"
   }, houseView), React.createElement("div", {
     className: "relative z-[3] bg-gradient-to-t from-[#0b1020] via-[#0b1020ee] to-transparent px-3 pt-1.5",
