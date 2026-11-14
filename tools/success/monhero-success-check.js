@@ -349,7 +349,7 @@ ok(near(SUC.failRateOf({ ...base, yosu: { sabori: { visits: 0 } } }) - fFull, 0.
 
 // ---- 持ちこみアイテム・よいようす(社長 2026-11-12・ITEMS-REF.md) ----
 {
-  ok(Object.values(SUC.ITEMS).filter(x => x.use === 'before').length === 7 && Object.values(SUC.ITEMS).filter(x => x.use === 'during').length === 19, '持ちこみの分け方(始める前 7・育成中 5+詰め合わせの中身 3+大会の賞品 11)がずれている');
+  ok(Object.values(SUC.ITEMS).filter(x => x.use === 'before').length === 7 && Object.values(SUC.ITEMS).filter(x => x.use === 'during').length === 21, '持ちこみの分け方(始める前 7・育成中 5+詰め合わせの中身 3+大会の賞品 11+覚醒の実 2)がずれている');
   ok(Object.keys(SUC.GOOD).sort().join() === 'eventMaker,shugyoGood,star,trainGood,uketsugu', 'よいようすが5つでない');
   const s0 = SUC.newRun({ id: 'it', species: 'Mocchi', aid: 'mua', carry: ['dango', 'mag', 'hachi', 'juice'], bag: { juice: 1, pack: 1 } });
   ok(s0.carry.length === 2 && !s0.carry.includes('juice') && s0.hpMax === 120 && s0.good.trainGood && !s0.good.shugyoGood && Object.keys(s0.bag).length === 0, `持ちこみが2つまでになっていない: ${s0.carry} ${JSON.stringify(s0.bag)}`);
@@ -652,6 +652,26 @@ if (typeof SUC.awakeOpen === 'function') {
   // 合体で継ぐ段数に親の覚醒の分が入る(印そのものは継がない)
   const p = { aptUp: [0, 0, 0, 0], aptBase: [0, 0, 0, 0], aptAwake: [0, 3, 0, 0], awake: 2 };
   ok(SUC.aptInherit(p, p)[1] >= 3, '合体で継ぐ段数に親の覚醒の分が入らない');
+}
+
+// 覚醒の実・超覚醒の実(2026-11-13 社長 r1113-038): 使うとその場で起きる・超覚醒の実は期の条件なしで覚醒→超覚醒まで
+if (SUC.ITEMS.awakeFruit && SUC.ITEMS.superAwakeFruit) {
+  const at = (turn, bag) => { const s = SUC.newRun({ id: 'aw-item', species: 'Mocchi', aid: 'mua' }); s.turn = turn; s.bag = bag; return s; };
+  const d = at(2, { awakeFruit: 1, superAwakeFruit: 1 });
+  ok(SUC.itemUsable(d, 'awakeFruit'), 'デビュー期に覚醒の実が使えない(参考どおり育成中いつでも)');
+  ok(SUC.itemUsable(d, 'superAwakeFruit'), 'デビュー期に超覚醒の実が使えない(期の条件なしのはず)');
+  const r = SUC.useItem(d, 'superAwakeFruit');
+  ok(r.out.ok && r.state.awake === 2 && r.out.fires.length === 2 && r.out.fires[0].kind === 1 && r.out.fires[1].kind === 2 && r.state.bag.superAwakeFruit === 0, '超覚醒の実で覚醒→超覚醒まで進まない');
+  ok(SUC.KEYS.every(k => r.state.stats[k] === Math.min(999, d.stats[k] + 70)), '超覚醒の実(覚醒前)で全能力 +70 にならない');
+  ok(!SUC.itemUsable(r.state, 'superAwakeFruit'), '超覚醒ずみに超覚醒の実が使えてしまう');
+  const j = at(12, { awakeFruit: 1 });
+  const r1 = SUC.useItem(j, 'awakeFruit');
+  ok(r1.out.ok && r1.state.awake === 1 && r1.out.fires.length === 1 && r1.out.fires[0].add === 30, 'ジュニア期に覚醒の実で覚醒しない');
+  ok(!SUC.itemUsable({ ...r1.state, turn: 13 }, 'awakeFruit'), '覚醒ずみに覚醒の実が使えてしまう');
+  const r2 = SUC.useItem({ ...r1.state, turn: 13, bag: { superAwakeFruit: 1 } }, 'superAwakeFruit');
+  ok(r2.out.ok && r2.state.awake === 2 && r2.out.fires.length === 1 && r2.out.fires[0].kind === 2, '覚醒ずみに超覚醒の実で超覚醒だけにならない');
+  const rs = SUC.restore(JSON.parse(JSON.stringify({ ...j, bag: { awakeFruit: 1, superAwakeFruit: 2 } })));
+  ok(rs.bag.awakeFruit === 1 && rs.bag.superAwakeFruit === 2, '覚醒の実が読み直しで消える');
 }
 
 if (errors.length) { console.error(`NG monhero-success-check: ${errors.length}件`); errors.forEach(e => console.error('  - ' + e)); process.exit(1); }

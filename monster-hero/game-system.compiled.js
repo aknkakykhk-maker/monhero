@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f9afd5ec86eb434a
+// source-sha256: ed57d527b0ac984f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -164787,6 +164787,18 @@ const MSX_ITEMS = Object.freeze([{
   desc: '気持ちが落ち着く草',
   when: 'both',
   e: '🌱'
+}, {
+  id: 'awakeFruit',
+  name: '覚醒の実',
+  desc: 'モンスターの力を引き出すといわれる果実',
+  when: 'both',
+  e: '✨'
+}, {
+  id: 'superAwakeFruit',
+  name: '超覚醒の実',
+  desc: 'モンスターの力をさらに引き出すといわれる果実',
+  when: 'both',
+  e: '🌈'
 }]);
 const msxItemFx = id => {
   const S = typeof msxSuc !== 'undefined' && msxSuc ? msxSuc.SUC : null;
@@ -164809,6 +164821,13 @@ const msxItemFx = id => {
     }];
     const up = G.uketsugu.story;
     return `編成のモンスターとの連続の話が進みやすくなる(2話目 ${pc(st[1].p)}→${pc(Math.min(1, st[1].p + up))}・3話目 ${pc(st[2].p)}→${pc(Math.min(1, st[2].p + up))})。3話目の伝授で、そのモンスターの得意な能力の上がりが${G.uketsugu.teach}倍${G.uketsugu.start ? `。編成から受け継ぐはじめの能力も${G.uketsugu.start}倍(例: ちから500のモンスターなら +${Math.floor(500 / 25)}→+${Math.floor(500 / 25) * G.uketsugu.start})` : ''}`;
+  }
+  if (it.awake && S.AWAKE) {
+    const A = S.AWAKE;
+    const a1 = `覚醒(全能力 +${A.add[0]}・間合いの適性 ${A.apt[0]}段)`;
+    const a2 = `超覚醒(全能力 +${A.add[1]}・間合いの適性 ${A.apt[1]}段)`;
+    if (it.awake === 1) return `育成中に使うと、その場でかならず${a1}。覚醒ずみなら使えない`;
+    return `いつ使っても、その場でかならず${a2}。覚醒していなければ、先に${a1}してから超覚醒まで進む(覚醒の実の分も入る)。適性が上がるのは覚醒と合わせて${A.aptMax}段まで`;
   }
   if (it.issaForce) return 'イッサ博士が1度かならず来る';
   if (it.issaSure) return 'その回の博士の実験がかならず成功';
@@ -167530,14 +167549,34 @@ function MsxPlay({
         ...run,
         out: null
       }, f.kind === 2 ? '超覚醒した!' : '覚醒した!');
-      if (then === 'end') endTurnFlow({
+      const rest = Array.isArray(run.out.rest) ? run.out.rest : [];
+      if (rest.length) setRun({
+        ...next,
+        phase: 'awake',
+        out: {
+          fire: rest[0],
+          rest: rest.slice(1),
+          then
+        }
+      });else if (then === 'item') setRun({
+        ...next,
+        phase: 'main'
+      });else if (then === 'end') endTurnFlow({
         ...next,
         phase: 'main'
       });else toMain(next);
     };
+    const later = Array.isArray(run.out.rest) ? run.out.rest : [];
+    const showRun = later.length ? {
+      ...run,
+      s: {
+        ...s,
+        stats: Object.fromEntries(Object.entries(s.stats).map(([k, x]) => [k, x - later.reduce((a, r) => a + (r.ups && r.ups[k] || 0), 0)]))
+      }
+    } : run;
     body = React.createElement(MsxAwakeShow, {
       key: `${s.turn}-${f.kind}`,
-      run: run,
+      run: showRun,
       fire: f,
       v: v,
       ev: ev,
@@ -168512,15 +168551,32 @@ function MsxBag({
     if (!t || t.carry || usedNow || typeof SUC.useItem !== 'function') return;
     const r = SUC.useItem(s, t.id);
     if (!r || !r.out || !r.out.ok) return;
+    const log = [...(run.log || []), {
+      turn: s.turn,
+      t: `${t.name}を使った`
+    }].slice(-20);
+    if (Array.isArray(r.out.fires) && r.out.fires.length && typeof MsxAwakeShow === 'function') {
+      setRun({
+        ...run,
+        s: r.state,
+        log,
+        phase: 'awake',
+        out: {
+          fire: r.out.fires[0],
+          rest: r.out.fires.slice(1),
+          then: 'item'
+        }
+      });
+      onClose();
+      return;
+    }
     setRun({
       ...run,
       s: r.state,
-      log: [...(run.log || []), {
-        turn: s.turn,
-        t: `${t.name}を使った`
-      }].slice(-20)
+      log
     });
   };
+  const blocked = t && !t.carry && typeof SUC.itemUsable === 'function' && !SUC.itemUsable(s, t.id);
   return React.createElement(React.Fragment, null, React.createElement(MsxBand, {
     s: s,
     v: v,
@@ -168599,9 +168655,9 @@ function MsxBag({
       marginTop: 0,
       color: '#fff'
     },
-    disabled: !t || t.carry || usedNow,
+    disabled: !t || t.carry || usedNow || blocked,
     onClick: use
-  }, usedNow ? 'このターンはもう使った' : t && !t.carry ? `${t.e} ${t.name}を使う` : '使う'))), React.createElement(MsxStRow, {
+  }, usedNow ? 'このターンはもう使った' : blocked ? 'いまは使えない' : t && !t.carry ? `${t.e} ${t.name}を使う` : '使う'))), React.createElement(MsxStRow, {
     stats: s.stats
   }));
 }
