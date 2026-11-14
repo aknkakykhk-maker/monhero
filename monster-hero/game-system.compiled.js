@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 7444d1571cb4f745
+// source-sha256: fbd495d616c96711
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -164948,7 +164948,7 @@ function MsxStart({
       className: "v-kv"
     }, React.createElement("b", null, "トレーニングの組み合わせ"), React.createElement("span", null, MSX_STATS.slice(0, 3).map(k => `${MSX_STAT_ICON[k]}${MSX_STAT_NAME[k]} → +${combo[k].map(c => MSX_STAT_ICON[c]).join('+')}`).join(' / '), " …")), React.createElement("div", {
       className: "v-kv"
-    }, React.createElement("b", null, "はじめの親密度"), React.createElement("span", null, Math.min(100, aidLv * (SUC.BOND && SUC.BOND.aidPerLv || 8)), "(仲良し度 Lv", aidLv, ")。助手もトレーニングに来て、タッグになる")), React.createElement("div", {
+    }, React.createElement("b", null, "はじめの親密度"), React.createElement("span", null, Math.min(SUC.BOND && SUC.BOND.aidStartMax || 40, aidLv * (SUC.BOND && SUC.BOND.aidPerLv || 4)), "(仲良し度 Lv", aidLv, ")。助手もトレーニングに来て、タッグになる")), React.createElement("div", {
       className: "v-eps"
     }, sc.eps.map((t, i) => React.createElement("div", {
       key: i
@@ -171912,7 +171912,7 @@ function MsxR3Retire({
         className: "val"
       }, got ? AT.valueText(id, got) : '—')), React.createElement("div", {
         className: "ex"
-      }, a.ex[Math.max(0, (got || 1) - 1)], a.max > 1 ? `(1目盛り ${a.pt}pt・最大 ${AT.valueText(id, a.max)})` : `(${a.pt}pt)`), React.createElement("div", {
+      }, a.ex[Math.max(0, (got || 1) - 1)], a.max > 1 ? `(1目盛り ${AT.valueText(id, 1)}・${a.pt}pt/最大 ${AT.valueText(id, a.max)})` : `(${a.pt}pt)`), React.createElement("div", {
         className: "ctl"
       }, React.createElement("button", {
         type: "button",
