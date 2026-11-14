@@ -26,7 +26,7 @@ const JOIN_ATSU = 'atsu_join_2026_10_22';
 const CARD_CUP_STORY = 'card_cup_2026_10_31';
 // あつを解放した人/まだの人。山場の写真は「デビューから頂まで」の行
 const CASES = [{ atsu: true, lines: 45, shots: true }, { atsu: false, lines: 42, shots: false }];
-const CLIMAX = 'デビューから頂まで';
+const CLIMAX = 'デビュー戦から最後の大会まで';
 (async () => {
   let chromium;
   try { ({ chromium } = require(path.join(ROOT, 'tools', 'node_modules', 'playwright'))); } catch (e) { console.log('SKIP: playwright が入っていないので確かめられません'); process.exit(0); }
@@ -81,8 +81,12 @@ const CLIMAX = 'デビューから頂まで';
         appeared = await story.count() > 0;
         if (appeared) break;
         // 先に出る受け取り・案内の窓を閉じる(お話は HOME で待っている)
-        const b = page.getByRole('button', { name: /受け取る|閉じる|はじめる|OK|スキップ/ }).first();
-        if (await b.count() > 0 && await b.isVisible().catch(() => false)) await b.dispatchEvent('click').catch(() => {});
+        // 見えているボタンを順に探す(ログインボーナスの窓などは後から出る。最初の1つが隠れたボタンのことがある)
+        const bs = page.getByRole('button', { name: /受け取る|閉じる|はじめる|OK|スキップ/ });
+        for (let k = 0, n = await bs.count(); k < n; k++) {
+          const b = bs.nth(k);
+          if (await b.isVisible().catch(() => false)) { await b.dispatchEvent('click').catch(() => {}); break; }
+        }
         await page.waitForTimeout(500);
       }
       check(`① ${label}: HOME でひとりでに流れる`, appeared);
