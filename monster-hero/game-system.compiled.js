@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 2f56427241933456
+// source-sha256: 16c09c8b5a17a61e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -176096,6 +176096,9 @@ const MSA_CSS = `
 .msa-tools button.msa-ctlsw{flex:1.3;font-size:11.5px;white-space:nowrap;background:#3b1d5e;border-color:#a78bfa;line-height:1.05}.msa-tools button.msa-ctlsw small{display:block;font-size:9.5px;color:#ddd6fe}.msa-tools button.msa-ctlsw[data-msa-ctl=auto]{background:#14532d;border-color:#4ade80}
 .msa-tools button.msa-bgsw{flex:1.4;font-size:11px;white-space:nowrap;background:#1e1b3a;border-color:#6b64a8}
 .msa-wait{font-size:11.5px;color:#cbd5e1;text-align:center}
+.msa-tools button.msa-pause{flex:.55;min-width:44px}
+.msa-tools button{min-width:0;padding-left:2px;padding-right:2px}
+.msa-cardsrow{flex:none}
 .msa-gtag{position:absolute;z-index:8;bottom:-16px;left:50%;transform:translateX(-50%);white-space:nowrap;border-radius:99px;padding:0 7px;font-size:10.5px;font-weight:900;line-height:16px;animation:msaPop .45s ease-out both}
 .msa-gtag.up{background:#facc15;color:#422006}.msa-gtag.down{background:#334155;color:#e2e8f0}
 .msa-ko{--msa-tx:-50%;--msa-r:-8deg;position:absolute;z-index:8;top:28%;left:50%;transform:translateX(-50%) rotate(-8deg);font-size:30px;font-weight:900;color:#fff;letter-spacing:.06em;-webkit-text-stroke:2px #b91c1c;text-shadow:0 3px 0 #7f1d1d;animation:msaStamp .5s cubic-bezier(.2,1.6,.4,1) both;pointer-events:none}
@@ -177399,6 +177402,8 @@ function MonsucArena({
   const [ctl, setCtl] = useState(msaCtlRead);
   const auto = !manual || ctl === 'auto';
   const [ended, setEnded] = useState(false);
+  const [paused, setPaused] = useState(false);
+  const [techSheet, setTechSheet] = useState(null);
   const endRef = useRef(false);
   useMhBattleBgmHold(true);
   const frames = useMemo(() => log.length ? ambwFramesOf(log) : [], [log.length, manual ? mm.tick : 0]);
@@ -177407,11 +177412,23 @@ function MonsucArena({
   const result = manual ? mm.result : watch && watch.r || null;
   const busy = pos < last;
   useEffect(() => {
-    if (!log.length || ended) return undefined;
+    if (!log.length || ended || paused) return undefined;
     if (pos < last) {
       const cur = log[pos] || {};
       const sp = MSA_SPEEDS.find(x => x.id === speed) || MSA_SPEEDS[0];
-      const t = setTimeout(() => setPos(p => Math.min(last, p + 1)), Math.round(msaStepMs(cur, teams[cur.side], reduce, log, sp.f) * sp.f));
+      const nextPos = p => {
+        let n = Math.min(last, p + 1);
+        if (speed === 'hl' && typeof ambwIsHighlight === 'function') {
+          const st0 = log[0] || {};
+          const mx = {
+            A: st0.aHp || [],
+            B: st0.bHp || []
+          };
+          while (n < last && !ambwIsHighlight(log[n], mx)) n++;
+        }
+        return n;
+      };
+      const t = setTimeout(() => setPos(nextPos), Math.round(msaStepMs(cur, teams[cur.side], reduce, log, sp.f) * sp.f));
       return () => clearTimeout(t);
     }
     if (done) {
@@ -177419,7 +177436,7 @@ function MonsucArena({
       return () => clearTimeout(t);
     }
     return undefined;
-  }, [pos, last, speed, done, ended]);
+  }, [pos, last, speed, done, ended, paused]);
   const won = Boolean(result && result.winner === 'A');
   const barRef = useRef(null);
   const barOn = Boolean(manual && !auto && pos >= last && !ended && mm.pending);
@@ -177517,12 +177534,32 @@ function MonsucArena({
     setPos(last);
   };
   const showBar = Boolean(manual && !auto && !busy && !ended && mm.pending);
+  let call = null;
+  if (typeof msaCallOf === 'function') for (let k = pos; k >= Math.max(1, pos - 2) && !call; k--) {
+    const c = msaCallOf(log, frames, k, maxHp, nm);
+    if (c) call = {
+      ...c,
+      at: k
+    };
+  }
+  const catalog = input && input.catalog ? input.catalog : null;
+  const mvA = (st.aMoves || [])[f.act.A],
+    mbA = teams.A && teams.A.members ? teams.A.members[f.act.A] : null;
+  const itemsA = typeof ambwTechItems === 'function' && Array.isArray(mvA) ? ambwTechItems(catalog, mbA, mvA) : null;
+  const hitAtA = (t, d) => {
+    const v = catalog && typeof ambwHitPct === 'function' ? ambwHitPct(catalog, teams, 'A', {
+      ...f,
+      d
+    }, t.id) : null;
+    return v != null ? v : t.hit;
+  };
+  const cardsOn = Boolean(itemsA && itemsA.length && typeof MsaDistCards === 'function' && !ended && !showBar);
   return React.createElement("div", {
     className: "msc-wrap msa",
     "data-msc-match": true,
     "data-msa-pos": pos,
     "data-msa-mode": manual ? auto ? 'auto' : 'manual' : 'watch'
-  }, React.createElement("style", null, MSA_CSS), React.createElement("div", {
+  }, React.createElement("style", null, MSA_CSS, typeof MSA_SHOW_CSS === 'string' ? MSA_SHOW_CSS : ''), React.createElement("div", {
     className: "msc-top msa-topline"
   }, React.createElement("b", null, info.title, " ", MSC_STARS(info.star)), info.buffs ? React.createElement("i", {
     className: "msc-buff"
@@ -177546,7 +177583,23 @@ function MonsucArena({
   })), React.createElement("div", {
     className: "msa-say",
     "data-msa-say": true
-  }, msaSay(e, nm)), React.createElement("div", {
+  }, call ? React.createElement("div", {
+    key: `call-${call.at}`,
+    className: `msa-call ${call.k}`,
+    "data-msa-call": call.k
+  }, "🎙 ", call.t) : msaSay(e, nm)), cardsOn ? React.createElement("div", {
+    className: "msa-cardsrow",
+    "data-msa-cards": true
+  }, React.createElement(MsaDistCards, {
+    list: itemsA,
+    rep: msaRepIds(itemsA, null),
+    dist: f.d,
+    guts: f.g.A,
+    lastMove: e.side === 'A' && e.ev === 'tech' ? e.move : null,
+    dataSide: "A",
+    hitAt: hitAtA,
+    onOpen: d => setTechSheet(d)
+  })) : null, React.createElement("div", {
     ref: barRef
   }, showBar ? React.createElement(MsxManualBar, {
     opt: mm.pending,
@@ -177557,7 +177610,16 @@ function MonsucArena({
     className: "msa-wait"
   }, e.side === 'B' ? '相手の番…' : ' ') : null, (!manual || auto) && !ended ? React.createElement("div", {
     className: "msa-tools"
-  }, MSA_SPEEDS.map(x => React.createElement("button", {
+  }, React.createElement("button", {
+    type: "button",
+    className: "msa-pause",
+    "data-msc-pause": true,
+    "aria-label": paused ? 'つづける' : '一時停止',
+    onClick: () => {
+      msaSe('tap');
+      setPaused(v => !v);
+    }
+  }, paused ? '▶' : '⏸'), MSA_SPEEDS.map(x => React.createElement("button", {
     key: x.id,
     type: "button",
     className: speed === x.id ? 'on' : '',
@@ -177567,6 +177629,14 @@ function MonsucArena({
     }
   }, x.label)), React.createElement("button", {
     type: "button",
+    "data-msc-hl": true,
+    className: speed === 'hl' ? 'on' : '',
+    onClick: () => {
+      msaSe('tap');
+      setSpeed(v => v === 'hl' ? 'x1' : 'hl');
+    }
+  }, "★見せ場"), React.createElement("button", {
+    type: "button",
     "data-msc-skip": true,
     onClick: skip
   }, "⏭ とばす"), !manual ? React.createElement(MsaBgToggle, {
@@ -177574,7 +177644,16 @@ function MonsucArena({
     onChange: setBg
   }) : null) : null, manual && !auto && !ended ? React.createElement("div", {
     className: "msa-tools"
-  }, MSA_SPEEDS.slice(0, 2).map(x => React.createElement("button", {
+  }, React.createElement("button", {
+    type: "button",
+    className: "msa-pause",
+    "data-msc-pause": true,
+    "aria-label": paused ? 'つづける' : '一時停止',
+    onClick: () => {
+      msaSe('tap');
+      setPaused(v => !v);
+    }
+  }, paused ? '▶' : '⏸'), MSA_SPEEDS.slice(0, 2).map(x => React.createElement("button", {
     key: x.id,
     type: "button",
     className: speed === x.id ? 'on' : '',
@@ -177591,7 +177670,15 @@ function MonsucArena({
   }), React.createElement(MsaBgToggle, {
     bg: bg,
     onChange: setBg
-  })) : null);
+  })) : null, techSheet != null && itemsA && typeof MsaTechSheet === 'function' ? React.createElement(MsaTechSheet, {
+    title: `${nm('A')} の${AMBW_DIST[techSheet]}の技`,
+    list: itemsA,
+    d: techSheet,
+    dist: f.d,
+    rep: msaRepIds(itemsA, null),
+    hitAt: hitAtA,
+    onClose: () => setTechSheet(null)
+  }) : null);
 }
 const MSA_SHOW_CSS = `
 .msa-next{position:absolute;inset:0;z-index:12;pointer-events:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;background:radial-gradient(circle,#0009,#0003 75%);animation:msaSNext 1.5s ease-in-out both}

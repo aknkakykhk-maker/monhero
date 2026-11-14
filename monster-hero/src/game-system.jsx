@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 6a26b71a158309e6
+// generated-sha256: 23ae6ff36895202a
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -90437,6 +90437,9 @@ const MSA_CSS = `
 .msa-tools button.msa-ctlsw{flex:1.3;font-size:11.5px;white-space:nowrap;background:#3b1d5e;border-color:#a78bfa;line-height:1.05}.msa-tools button.msa-ctlsw small{display:block;font-size:9.5px;color:#ddd6fe}.msa-tools button.msa-ctlsw[data-msa-ctl=auto]{background:#14532d;border-color:#4ade80}
 .msa-tools button.msa-bgsw{flex:1.4;font-size:11px;white-space:nowrap;background:#1e1b3a;border-color:#6b64a8}
 .msa-wait{font-size:11.5px;color:#cbd5e1;text-align:center}
+.msa-tools button.msa-pause{flex:.55;min-width:44px}
+.msa-tools button{min-width:0;padding-left:2px;padding-right:2px}
+.msa-cardsrow{flex:none}
 .msa-gtag{position:absolute;z-index:8;bottom:-16px;left:50%;transform:translateX(-50%);white-space:nowrap;border-radius:99px;padding:0 7px;font-size:10.5px;font-weight:900;line-height:16px;animation:msaPop .45s ease-out both}
 .msa-gtag.up{background:#facc15;color:#422006}.msa-gtag.down{background:#334155;color:#e2e8f0}
 .msa-ko{--msa-tx:-50%;--msa-r:-8deg;position:absolute;z-index:8;top:28%;left:50%;transform:translateX(-50%) rotate(-8deg);font-size:30px;font-weight:900;color:#fff;letter-spacing:.06em;-webkit-text-stroke:2px #b91c1c;text-shadow:0 3px 0 #7f1d1d;animation:msaStamp .5s cubic-bezier(.2,1.6,.4,1) both;pointer-events:none}
@@ -91177,6 +91180,8 @@ function MonsucArena({ s, info, engine, input, watch, onEnd }) {
   const [ctl, setCtl] = useState(msaCtlRead);   // 手動が基本。オートを選んだら保存して次の試合でも使う
   const auto = !manual || ctl === 'auto';
   const [ended, setEnded] = useState(false);
+  const [paused, setPaused] = useState(false);   // ⏸ 試合を止める(段C 2026-11-14: 助手マスモン対戦と同じ操作)
+  const [techSheet, setTechSheet] = useState(null); // 技の札を押して開く、いまの間合いの一覧(見るだけ)
   const endRef = useRef(false);
   useMhBattleBgmHold(true);
   const frames = useMemo(() => (log.length ? ambwFramesOf(log) : []), [log.length, manual ? mm.tick : 0]);
@@ -91186,16 +91191,18 @@ function MonsucArena({ s, info, engine, input, watch, onEnd }) {
   const busy = pos < last;
   // 1行ずつ進める。追いついたら、手番を待つ(自分操作)か、決着を見せる
   useEffect(() => {
-    if (!log.length || ended) return undefined;
+    if (!log.length || ended || paused) return undefined;
     if (pos < last) {
       const cur = log[pos] || {};
       const sp = MSA_SPEEDS.find(x => x.id === speed) || MSA_SPEEDS[0];
-      const t = setTimeout(() => setPos(p => Math.min(last, p + 1)), Math.round(msaStepMs(cur, teams[cur.side], reduce, log, sp.f) * sp.f));
+      // 見せ場だけ: 次の見せ場(技・たおれる)まで飛ばす
+      const nextPos = (p) => { let n = Math.min(last, p + 1); if (speed === 'hl' && typeof ambwIsHighlight === 'function') { const st0 = log[0] || {}; const mx = { A: st0.aHp || [], B: st0.bHp || [] }; while (n < last && !ambwIsHighlight(log[n], mx)) n++; } return n; };
+      const t = setTimeout(() => setPos(nextPos), Math.round(msaStepMs(cur, teams[cur.side], reduce, log, sp.f) * sp.f));
       return () => clearTimeout(t);
     }
     if (done) { const t = setTimeout(() => setEnded(true), reduce ? 300 : 900); return () => clearTimeout(t); }
     return undefined;
-  }, [pos, last, speed, done, ended]);
+  }, [pos, last, speed, done, ended, paused]);
   const won = Boolean(result && result.winner === 'A');
   // 手を選ぶ帯が出たら、帯が見える所まで入れ物(縦にだけ動く)を送る(横向きでは場の下に隠れるため)。横へは動かさない
   const barRef = useRef(null);
@@ -91238,9 +91245,18 @@ function MonsucArena({ s, info, engine, input, watch, onEnd }) {
   // とばす: 手動の試合は残りをオートで決めてから最後へ
   const skip = () => { msaSe('tap'); if (manual && !done) { mm.toAuto(); const n = mm.match ? mm.match.log.length : 0; setPos(Math.max(0, n - 1)); return; } setPos(last); };
   const showBar = Boolean(manual && !auto && !busy && !ended && mm.pending);
+  // 実況: いまから2手前までの見せ場の1行
+  let call = null;
+  if (typeof msaCallOf === 'function') for (let k = pos; k >= Math.max(1, pos - 2) && !call; k--) { const c = msaCallOf(log, frames, k, maxHp, nm); if (c) call = { ...c, at: k }; }
+  // 間合いごとの技の札(自分の側の4枚・いまの間合いに「いま」)。自分で選ぶ帯が出ているあいだは帯の札を使う
+  const catalog = input && input.catalog ? input.catalog : null;
+  const mvA = (st.aMoves || [])[f.act.A], mbA = teams.A && teams.A.members ? teams.A.members[f.act.A] : null;
+  const itemsA = typeof ambwTechItems === 'function' && Array.isArray(mvA) ? ambwTechItems(catalog, mbA, mvA) : null;
+  const hitAtA = (t, d) => { const v = catalog && typeof ambwHitPct === 'function' ? ambwHitPct(catalog, teams, 'A', { ...f, d }, t.id) : null; return v != null ? v : t.hit; };
+  const cardsOn = Boolean(itemsA && itemsA.length && typeof MsaDistCards === 'function' && !ended && !showBar);
   return (
     <div className="msc-wrap msa" data-msc-match data-msa-pos={pos} data-msa-mode={manual ? (auto ? 'auto' : 'manual') : 'watch'}>
-      <style>{MSA_CSS}</style>
+      <style>{MSA_CSS}{typeof MSA_SHOW_CSS === 'string' ? MSA_SHOW_CSS : ''}</style>
       {/* 2026-11-14 社長「肝心のバトルの画面が小さい」: 上下の大きな札をやめ、試合の場を主役に。名前・体力・ガッツ・ラウンドは場の上の帯(MsaStage)にある */}
       <div className="msc-top msa-topline"><b>{info.title} {MSC_STARS(info.star)}</b>
         {info.buffs ? <i className="msc-buff">✨ 特別な1話</i> : null}
@@ -91248,22 +91264,27 @@ function MonsucArena({ s, info, engine, input, watch, onEnd }) {
       <div className="msa-stagebox" data-msa-stagebox>
         <MsaStage log={log} frames={frames} pos={pos} teams={stageTeams} venueImg={msaVenueBg(info.venue, bg)} ended={ended} win={result ? result.winner : null} introTitle={info.title} speedF={(MSA_SPEEDS.find(x => x.id === speed) || MSA_SPEEDS[0]).f} fill wide/>
       </div>
-      <div className="msa-say" data-msa-say>{msaSay(e, nm)}</div>
+      <div className="msa-say" data-msa-say>{call ? <div key={`call-${call.at}`} className={`msa-call ${call.k}`} data-msa-call={call.k}>🎙 {call.t}</div> : msaSay(e, nm)}</div>
+      {cardsOn ? <div className="msa-cardsrow" data-msa-cards><MsaDistCards list={itemsA} rep={msaRepIds(itemsA, null)} dist={f.d} guts={f.g.A} lastMove={e.side === 'A' && e.ev === 'tech' ? e.move : null} dataSide="A" hitAt={hitAtA} onOpen={(d) => setTechSheet(d)}/></div> : null}
       <div ref={barRef}>{showBar ? <MsxManualBar opt={mm.pending} onPick={pick} onAuto={goAuto} busy={busy}/> : null}</div>
       {manual && !auto && busy && !ended ? <div className="msa-wait">{e.side === 'B' ? '相手の番…' : ' '}</div> : null}
       {(!manual || auto) && !ended ? (
         <div className="msa-tools">
+          <button type="button" className="msa-pause" data-msc-pause aria-label={paused ? 'つづける' : '一時停止'} onClick={() => { msaSe('tap'); setPaused(v => !v); }}>{paused ? '▶' : '⏸'}</button>
           {MSA_SPEEDS.map(x => <button key={x.id} type="button" className={speed === x.id ? 'on' : ''} onClick={() => { msaSe('tap'); setSpeed(x.id); }}>{x.label}</button>)}
+          <button type="button" data-msc-hl className={speed === 'hl' ? 'on' : ''} onClick={() => { msaSe('tap'); setSpeed(v => (v === 'hl' ? 'x1' : 'hl')); }}>★見せ場</button>
           <button type="button" data-msc-skip onClick={skip}>⏭ とばす</button>
           {!manual ? <MsaBgToggle bg={bg} onChange={setBg}/> : null}
         </div>
       ) : null}
       {manual && !auto && !ended ? (
         <div className="msa-tools">
+          <button type="button" className="msa-pause" data-msc-pause aria-label={paused ? 'つづける' : '一時停止'} onClick={() => { msaSe('tap'); setPaused(v => !v); }}>{paused ? '▶' : '⏸'}</button>
           {MSA_SPEEDS.slice(0, 2).map(x => <button key={x.id} type="button" className={speed === x.id ? 'on' : ''} onClick={() => { msaSe('tap'); setSpeed(x.id); }}>見せる速さ {x.label}</button>)}
         </div>
       ) : null}
       {manual && !ended ? <div className="msa-tools" data-msa-tools2><MsaCtlToggle ctl={ctl} onChange={setCtl}/><MsaBgToggle bg={bg} onChange={setBg}/></div> : null}
+      {techSheet != null && itemsA && typeof MsaTechSheet === 'function' ? <MsaTechSheet title={`${nm('A')} の${AMBW_DIST[techSheet]}の技`} list={itemsA} d={techSheet} dist={f.d} rep={msaRepIds(itemsA, null)} hitAt={hitAtA} onClose={() => setTechSheet(null)}/> : null}
     </div>
   );
 }
