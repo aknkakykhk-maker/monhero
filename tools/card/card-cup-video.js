@@ -106,7 +106,7 @@ const seed = (page, extra = {}) => page.addInitScript((x) => {
 // 前に出る窓(お知らせ・ログインのごほうびなど)を閉じる
 const dismiss = async (page) => { for (let i = 0; i < 16; i++) {
   const did = await page.evaluate(() => { const inOverlay = (el) => { for (let e = el; e && e !== document.body; e = e.parentElement) { const st = getComputedStyle(e); if (st.position === 'fixed' || (st.position === 'absolute' && Number(st.zIndex) >= 40)) return true; } return false; };
-    const l = [...document.querySelectorAll('button')].filter((b) => inOverlay(b) && /^(確認|閉じる|OK|受け取る|次へ|わかった|はい|スキップ|あとで読む|あとで)$/.test((b.innerText || '').replace(/\s+/g, ' ').trim()));
+    const l = [...document.querySelectorAll('button')].filter((b) => inOverlay(b) && /^(確認|閉じる|OK|受け取る|次へ|(?:分|わ)かった|はい|スキップ|あとで読む|あとで)$/.test((b.innerText || '').replace(/\s+/g, ' ').trim()));
     if (!l.length) return false; l[0].click(); return true; }).catch(() => false);
   if (!did) return; await page.waitForTimeout(400); } };
 const boot = async (page) => {

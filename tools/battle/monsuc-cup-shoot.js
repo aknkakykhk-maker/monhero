@@ -75,7 +75,7 @@ const SCENES = [
           if (sc.state === 'rival') s.battle = { kind: 'cup', id: 'middle:4:spring:3', sys: 'spring', star: 3, rival: { name: 'こんこ' }, round: 0 };
           if (sc.state === 'champ') { s.battle = { kind: 'cup', id: 'middle:4:str:2', sys: 'str', star: 2, rival: null, round: 0 }; s.rematchUsed = 1; }
           if (sc.state === 'summit') { s.turn = 44; s.special = true; s.battle = { kind: 'summit', round: 0 }; s.stats = { life: 812, pow: 906, wise: 433, hit: 780, eva: 598, tough: 841 }; }
-          try { localStorage.setItem('mh_monsuc_arena_ctl_v1', sc.ctl === 'auto' ? 'auto' : 'manual'); } catch (_) {}   // 試合の操作(既定は手動)
+          try { localStorage.setItem('mh_monsuc_arena_ctl_run_v1', JSON.stringify({ id: 'shoot-' + sc.state, ctl: sc.ctl === 'auto' ? 'auto' : 'manual' })); } catch (_) {}   // 試合の操作(既定は手動)
           const old = document.getElementById('msc-shoot'); if (old && old.__root) old.__root.unmount(); if (old) old.remove();
           const div = document.createElement('div'); div.id = 'msc-shoot'; document.body.appendChild(div);
           const root = ReactDOM.createRoot(div); div.__root = root;

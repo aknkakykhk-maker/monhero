@@ -74,7 +74,7 @@ const LABEL = { portrait: '縦', landscape: '横', rotated: '🔄横' };
         await page.getByRole('button', { name: 'TAP TO START' }).click({ timeout: 120000 });
         await page.getByRole('button', { name: 'トップ画面へ進む' }).click({ timeout: 30000 });
         await page.locator('[data-home-card-battle]').waitFor({ timeout: 30000 });
-        for (let i = 0; i < 6; i++) { const x = page.getByRole('button', { name: /受け取る|閉じる|はじめる|OK/ }).first(); if (!(await x.count()) || !(await x.isVisible().catch(() => false))) break; await x.dispatchEvent('click').catch(() => {}); await page.waitForTimeout(250); }
+        for (let i = 0; i < 6; i++) { const x = page.getByRole('button', { name: /受け取る|閉じる|(?:始|はじ)める|OK/ }).first(); if (!(await x.count()) || !(await x.isVisible().catch(() => false))) break; await x.dispatchEvent('click').catch(() => {}); await page.waitForTimeout(250); }
         await page.waitForTimeout(800);
         await page.locator('[data-home-card-battle]').first().dispatchEvent('click');
         await page.locator('[data-card-top="starter"]').waitFor({ timeout: 20000 });
@@ -93,7 +93,7 @@ const LABEL = { portrait: '縦', landscape: '横', rotated: '🔄横' };
         const d0 = decks.decks[0];
         shareRow = { owner_id: 'check-breeder-1', user_name: '検査の相手', icon: null, profile_frame: null, deck: { monsters: d0.monsters, cards: d0.cards }, tactics: {}, version: 1, active: true, battles: 3, deck_wins: 2, rents: 0, updated_at: new Date().toISOString() };
         await page.locator('[data-card-cpu]').click();
-        await page.getByRole('button', { name: /^(分かった|わかった)$/ }).click({ timeout: 2500 }).catch(() => {});
+        await page.getByRole('button', { name: /^(分かった|(?:分|わ)かった)$/ }).click({ timeout: 2500 }).catch(() => {});
         await page.locator('[data-card-mode-assistant]').click();
         await page.locator('[data-card-foe-tab="breeder"]').click();
         await page.locator('[data-card-share-fight="check-breeder-1"]').click({ timeout: 15000 });

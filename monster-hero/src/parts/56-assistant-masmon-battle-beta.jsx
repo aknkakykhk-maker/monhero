@@ -467,7 +467,7 @@ function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, preview, tryPv
   const finSeenRef = useRef('');
   const [bg, setBg] = useState(() => (typeof msaBgRead === 'function' ? msaBgRead() : 'arena'));   // 試合の背景(モンサクの試合と同じ保存・闘技場 ⇄ スタジアム)                  // 決着の大写しは1戦に1回だけ(見返したあとは結果へ直行)
   // 観戦・振り返りのあいだはバトルの曲(56-monhero-success-arena.jsx の口)
-  if (typeof useMhBattleBgmHold === 'function') useMhBattleBgmHold(phase === 'watch' || phase === 'finish' || phase === 'review');
+  if (typeof useMhBattleBgmHold === 'function') useMhBattleBgmHold(phase === 'watch' || phase === 'finish' || phase === 'review', typeof successSoundBgm === 'function' ? successSoundBgm('cupMatch') : null); // 試合の曲はモンサクの試合(cupMatch)と同じ(2026-11-14 社長)
   const [battle, setBattle] = useState(null);
   const [pos, setPos] = useState(0);
   const [paused, setPaused] = useState(false);
@@ -968,8 +968,8 @@ function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, preview, tryPv
           <div className="ambw-card ambw-log">
             {call && <div key={`call-${call.at}`} className={`msa-call ${call.k}`} data-msa-call={call.k}>🎙 {call.t}</div>}
             {recent.map(x => <p key={x.k} className={x.side}><small>R{x.r}</small>{x.t}</p>)}
-            {actor && e.why && WHY[e.why] && (
-              <div className="ambw-row ambb-why" style={{ marginTop: 6 }}><img className="ambw-face" src={assistantFaceSrc(actor, 'normal')} alt=""/><div className="ambw-bubble">{actor.name}「{WHY[e.why]}」</div></div>
+            {actor && e.why && ambwWhyOf(e.why, WHY) && (
+              <div className="ambw-row ambb-why" style={{ marginTop: 6 }}><img className="ambw-face" src={assistantFaceSrc(actor, 'normal')} alt=""/><div className="ambw-bubble">{actor.name}「{ambwWhyOf(e.why, WHY)}」</div></div>
             )}
           </div>
         )}

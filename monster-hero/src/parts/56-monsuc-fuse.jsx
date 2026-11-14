@@ -98,9 +98,10 @@ const monsucFuse = async ({ box, saveBox: saveBox0, onSave, readBox, mainId, mat
   } finally { monsucFuseBusy = false; }
 };
 
-function MonsucFuseSheet({ box, saveBox, onSave, readBox, locked = [], onDone, onClose, suc = null }) {
+function MonsucFuseSheet({ box, saveBox, onSave, readBox, locked = [], onDone, onClose, suc = null, keepNote = '', keptOf = null, onName = null }) {
   const SUC = suc || monsucFuseCore();
   const [mainId, setMain] = React.useState(null); const [matId, setMat] = React.useState(null); const [sure, setSure] = React.useState(0);
+  const [nm, setNm] = React.useState(''); const [nmErr, setNmErr] = React.useState(''); const [named, setNamed] = React.useState(null); // 生まれた子の名前(合体したその場で決める・2026-11-14 社長 r1114-126)
   const [err, setErr] = React.useState(''); const [done, setDone] = React.useState(null); const [ready, setReady] = React.useState(true); const [busy, setBusy] = React.useState(false);
   const lock = new Set(Array.isArray(locked) ? locked : []);
   const mons = monsucBoxMons(box);
@@ -122,7 +123,7 @@ function MonsucFuseSheet({ box, saveBox, onSave, readBox, locked = [], onDone, o
     setBusy(true);
     const r = await monsucFuse({ box, saveBox, onSave, readBox, mainId: main.id, matId: mat.id, locked, suc: SUC });
     setBusy(false);
-    if (r === true) { setDone({ child: plan.child, lost: [monsucFuseNick(main), monsucFuseNick(mat)] }); setErr(''); if (typeof onDone === 'function') onDone(plan.child); }
+    if (r === true) { setDone({ child: plan.child, lost: [monsucFuseNick(main), monsucFuseNick(mat)] }); setNm(typeof plan.child.nick === 'string' ? plan.child.nick : ''); setNmErr(''); setNamed(null); setErr(''); if (typeof onDone === 'function') onDone(plan.child); }
     else { setErr(r); setSure(0); }
   };
   return (
@@ -132,11 +133,25 @@ function MonsucFuseSheet({ box, saveBox, onSave, readBox, locked = [], onDone, o
         {!SUC ? <p className="mt-2 text-[11px] font-bold text-slate-400">まだ使えません</p>
         : done ? (<>
           <div className="mt-2 rounded-xl bg-fuchsia-950 p-3" data-monsuc-fuse-done>
+            <p className="msx-pop text-center text-[26px] font-black text-fuchsia-200" data-monsuc-fuse-stamp>合体完了!</p>{/* 2026-11-14 社長(台帳 #6112): 育成の終わりの「育成完了!」とそろえる */}
             <p className="flex items-center gap-2 text-[14px] font-black">{typeof amgpMonIcon === 'function' ? amgpMonIcon(done.child.species) : null}{monsucFuseSpName(done.child.species)}が生まれました({done.child.gen}代目)</p>
             <p className="mt-1 text-[11px] font-bold text-slate-200">マスモンボックスに入りました。まだ育てていないので、このまま育成を始められます</p>
-            <small className="mt-1 block text-[11px] font-bold text-slate-300">{done.lost.join('と')}は、思い出に名前・ランク・代が残ります</small>
+            <small className="mt-1 block text-[11px] font-bold text-slate-300" style={{ wordBreak: 'keep-all', overflowWrap: 'anywhere' }}>{(() => { const k = typeof keptOf === 'function' ? keptOf() : null; return k === 0 ? `${done.lost.join('と')}は、メモリアルモンスターがいっぱいなので、メモリアルモンスターには残りませんでした。思い出に名前・ランク・代が残ります` : k === 1 ? `${done.lost.join('と')}のうち1体は、メモリアルモンスターとして残ります。思い出の記録(名前・ランク・代)も残ります` : `${done.lost.join('と')}は、メモリアルモンスターとして残ります。思い出の記録(名前・ランク・代)も残ります`; })()}</small>
           </div>
-          <button type="button" onClick={onClose} data-mhl-sheet-close className="mt-3 min-h-[44px] w-full rounded-xl bg-slate-700 text-[13px] font-black">閉じる</button>
+          {typeof onName === 'function' ? (
+            <div className="mt-2 rounded-xl border border-amber-300/60 bg-amber-950/40 p-3" data-monsuc-fuse-name>
+              <p className="text-[13px] font-black">生まれたモンスターに名前をつけましょう</p>
+              <p className="mt-0.5 text-[10.5px] font-bold text-slate-300" style={{ wordBreak: 'keep-all', overflowWrap: 'anywhere' }}>育成を始めるときも、この名前が入っています。{'\u200b'}そこで変えることもできます</p>
+              {named ? <p className="mt-2 text-[13px] font-black text-amber-200" data-monsuc-fuse-named>「{named}」と名づけました</p> : (<>
+                <input type="text" value={nm} maxLength={8} placeholder={monsucFuseSpName(done.child.species).slice(0, 8)} onChange={e => { setNm(e.target.value.slice(0, 8)); setNmErr(''); }} data-monsuc-fuse-nameinput className="mt-2 w-full rounded-lg bg-slate-800 px-3 py-2 text-[14px] font-black text-white"/>
+                <small className="mt-0.5 block text-[10px] font-bold text-slate-400">{(nm || '').length} / 8文字</small>
+                {nmErr && <p className="mt-1 text-[11px] font-bold text-rose-200" data-monsuc-fuse-nameerr>{nmErr}</p>}
+                <button type="button" data-monsuc-fuse-namego onClick={async () => {
+                  const r = await onName(done.child.id, nm || monsucFuseSpName(done.child.species).slice(0, 8), Array.isArray(done.child.colors) ? done.child.colors : []);
+                  if (r && r.ok) { setNamed(r.mon && r.mon.nick ? r.mon.nick : nm); setNmErr(''); } else setNmErr(r && r.why === 'name' ? 'その名前は使えません。ほかの名前にしてね' : '名前を保存できませんでした');
+                }} className="mt-2 min-h-[44px] w-full text-center rounded-xl bg-amber-400 text-[14px] font-black text-slate-900">この名前にする</button></>)}
+            </div>) : null}
+          <button type="button" onClick={onClose} data-mhl-sheet-close className="mt-3 min-h-[44px] w-full text-center rounded-xl bg-slate-700 text-[13px] font-black">閉じる</button>
         </>) : !main ? (<>
           <p className="text-[11px] font-bold text-slate-300">① 主の親を選んでください。生まれるモンスターの主血統は、主の親から受け継ぎます。成長の型は、生まれたモンスターの種類で決まります</p>
           {typeof MsxMmGrid === 'function' ? <MsxMmGrid mons={usable} onPick={m => setMain(m.id)} attrs={m => ({ 'data-monsuc-fuse-pick': m.id })}/> : usable.map(m => card(m, () => setMain(m.id), 'border-white/15 bg-slate-800'))}
@@ -161,14 +176,14 @@ function MonsucFuseSheet({ box, saveBox, onSave, readBox, locked = [], onDone, o
           <p className="mt-1 text-[11px] font-bold text-slate-200" data-monsuc-fuse-techs>受け継ぐ技: {plan.child.techs.length ? plan.child.techs.map(t => { const x = SUC.techsOf(plan.child.species).find(y => y.id === t); return x ? x.name : t; }).join('・') + '(熟練は 0 から)' : 'なし'}</p>
           <p className="mt-1 text-[11px] font-bold text-slate-200" data-monsuc-fuse-apt>受け継ぐ間合い適性: {Array.isArray(plan.child.aptBase) && plan.child.aptBase.some(n => n > 0) ? plan.child.aptBase.map((n, i) => (n > 0 ? `${['零', '近', '中', '遠'][i]} +${n}段` : null)).filter(Boolean).join('・') : 'なし'}</p>
           <div className="mt-2 rounded-xl border-2 border-rose-400 bg-rose-950/70 p-2" data-monsuc-fuse-lose>
-            <p className="text-[12px] font-black text-rose-100">{monsucFuseNick(main)}と{monsucFuseNick(mat)}は、マスモンボックスからいなくなります。元に戻せません</p>
-            <p className="mt-0.5 text-[10.5px] font-bold text-rose-200">思い出に名前・ランク・代が残ります</p>
+            <p className="text-[12px] font-black text-rose-100" style={{ wordBreak: 'keep-all', overflowWrap: 'anywhere' }}>{monsucFuseNick(main)}と{monsucFuseNick(mat)}は、マスモンボックスからいなくなります。{keepNote ? keepNote : '元に戻せません'}</p>
+            {!keepNote ? <p className="mt-0.5 text-[10.5px] font-bold text-rose-200">思い出に名前・ランク・代が残ります</p> : keepNote.includes('思い出') ? null : <p className="mt-0.5 text-[10.5px] font-bold text-rose-200" data-monsuc-fuse-keep>思い出の記録(名前・ランク・代)もそのまま残ります</p>}
           </div>
           {err && <p className="mt-1 text-[11px] font-bold text-rose-200" data-monsuc-fuse-err>{err}</p>}
-          <button type="button" onClick={go} disabled={!ready || busy} data-monsuc-fuse-go={sure} data-monsuc-fuse-ready={ready ? 1 : 0} className={`mt-3 disabled:opacity-50 min-h-[48px] w-full rounded-xl text-[14px] font-black ${sure ? 'bg-rose-500 text-white' : 'bg-fuchsia-500 text-white'}`}>{busy ? '合体しています…' : sure ? '本当に合体する' : '🧬 合体する'}</button>
-          <button type="button" onClick={() => { setMat(null); setSure(0); setErr(''); }} className="mt-2 min-h-[44px] w-full rounded-xl bg-slate-700 text-[13px] font-black">選び直す</button>
+          <button type="button" onClick={go} disabled={!ready || busy} data-monsuc-fuse-go={sure} data-monsuc-fuse-ready={ready ? 1 : 0} className={`mt-3 disabled:opacity-50 min-h-[48px] w-full text-center rounded-xl text-[14px] font-black ${sure ? 'bg-rose-500 text-white' : 'bg-fuchsia-500 text-white'}`}>{busy ? '合体しています…' : sure ? '本当に合体する' : '🧬 合体する'}</button>
+          <button type="button" onClick={() => { setMat(null); setSure(0); setErr(''); }} className="mt-2 min-h-[44px] w-full text-center rounded-xl bg-slate-700 text-[13px] font-black">選び直す</button>
         </>) : <p className="mt-2 text-[11px] font-bold text-slate-400" data-monsuc-fuse-err>{(plan && plan.why) || 'この2体では合体できません'}</p>}
-        {!done && <button type="button" onClick={onClose} data-mhl-sheet-close className="mt-2 min-h-[44px] w-full rounded-xl bg-slate-700 text-[13px] font-black">やめる</button>}
+        {!done && <button type="button" onClick={onClose} data-mhl-sheet-close className="mt-2 min-h-[44px] w-full text-center rounded-xl bg-slate-700 text-[13px] font-black">やめる</button>}
       </div>
     </div>);
 }

@@ -113,7 +113,7 @@ const masuOf = (id) => (JSON.parse(localStorage.getItem('mh_masu_mons')) || []).
         }).pop();
         if (!overlay) return false;
         const buttons = [...overlay.querySelectorAll('button')];
-        const b = buttons.find(x => /閉じる|次へ|確認|わかった|OK|はい|あとで|スキップ/.test(x.textContent))
+        const b = buttons.find(x => /閉じる|次へ|確認|(?:分|わ)かった|OK|はい|あとで|スキップ/.test(x.textContent))
           || buttons.find(x => x.querySelector('svg')) || buttons[buttons.length - 1];
         if (b) b.click();
         return !!b;
@@ -165,7 +165,7 @@ const masuOf = (id) => (JSON.parse(localStorage.getItem('mh_masu_mons')) || []).
           return cs.position === 'fixed' && Number(cs.zIndex || 0) >= 40000 && el.getBoundingClientRect().height > innerHeight * 0.3;
         }).pop();
         if (!overlay) return false;
-        const b = [...overlay.querySelectorAll('button')].find(x => /閉じる|わかった|OK|はい|あとで/.test(x.textContent));
+        const b = [...overlay.querySelectorAll('button')].find(x => /閉じる|(?:分|わ)かった|OK|はい|あとで/.test(x.textContent));
         if (b) b.click();
         return !!b;
       });

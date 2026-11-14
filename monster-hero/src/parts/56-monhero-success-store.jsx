@@ -14,12 +14,12 @@ const MSX_ASSIST_SRC = 'data/monhero-success-assist.js'; // アシスト能力�
 const MSX_SCRIPT_SRC = 'data/monhero-success-script-engine.js'; // 台本エンジン(window.MONHERO_SUCCESS_SCRIPT_ENGINE)
 const MSX_EVENTS_SRC = 'data/monhero-success-events.js'; // ランダムイベントの部品(芯が create のときに window.MONHERO_SUCCESS_EVENTS を拾う)
 const MSX_SCENES_SRC = 'data/success-scenes.js'; // 住む場所の景色(季節×時間)・大会の会場・修行の景色。window に successHomeScene などを置く
-const MSX_ARC_SRC = 'data/monhero-success-arc.js'; // 助手1人分のストーリーの表(固有イベント・頂への道の相手えらび・お祝い。2026-11-13)。芯が create のときに拾う
+const MSX_ARC_SRC = 'data/monhero-success-arc.js'; // 助手1人分のストーリーの表(固有イベント・ヒーローズファイナルの相手えらび・お祝い。2026-11-13)。芯が create のときに拾う
 const MSX_REGULARS_SRC = 'data/monhero-success-regulars.js'; // 大会の常連の表(const だけの形なので typeof で見る)
 const MSX_ISSA_ART = 'images/success/issa-hakase.png';
 // シナリオ(助手)。台本があるのは みゅあ・あつ(第1弾)。ほかは準備中。β版で選べるのはみゅあだけ(56-monsuc-beta.jsx の MSX_BETA_AIDS)
 const MSX_SCENARIOS = Object.freeze([
-  { aid: 'mua', no: 1, title: 'いっしょに、てっぺんへ!', lead: '明るく元気なムードメーカーと、笑いながら頂点をめざす物語。はじめての育成におすすめ', tag: 'やさしい',
+  { aid: 'mua', no: 1, title: 'いっしょに、ヒーローズファイナルへ!', lead: '明るく元気なムードメーカーと、笑いながらヒーローズファイナルの優勝をめざす物語。はじめての育成におすすめ', tag: 'やさしい',
     perk: '遊ぶ・休むでストレスが 1.3倍 減る。褒めたときの忠誠 +1', eps: ['はじめての おでかけ', 'はげまし合う夜', 'ふたりの約束'] },
   { aid: 'atsu', no: 2, title: '仕上げて、勝ちに行く', lead: '面倒見のいい兄貴分と、コツコツ仕上げて大会をとりにいく物語', tag: 'ふつう',
     perk: 'トレーニングの組み合わせが あつ流(ちから → ライフ・回避 など)', eps: ['はじめての特訓', '雨の日の作戦会議', '仕上げの約束'] },
@@ -178,12 +178,53 @@ const msxNormBox = (raw) => {
   const mons = (Array.isArray(o.mons) ? o.mons : []).map(msxNormBoxMon).filter(Boolean);
   return { ...o, v: 1, cap: Math.max(MSX_BOX_CAP0, Math.min(MSX_BOX_CAP_MAX, msxNum(o.cap, MSX_BOX_CAP0))), mons, memory: Array.isArray(o.memory) ? o.memory.filter(msxIsObj).slice(-100) : [] };
 };
+// ---- アシスト用の置き場(2026-11-14 社長「合体とかお別れするときに編成アシスト用には使える機能をつけてほしい。100ぐらいは保存可能」・r1114-124) ----
+//   合体の親にした子・お別れした子を、消さずに残す。育成(育てる子)には使えない。編成(アシストの枠・6体)に入れると、その子のアシスト効果と得意な能力が効く。
+//   新しいキー mh_monsuc_assist_v1 = { v:1, cap:100, mons:[ マスモンボックスの子をそのまま写したもの + keep:{ from:'fuse'|'farewell', at } ] }。
+//   マスモンボックス mh_monsuc_box_v1 の形・既存のキーは変えない。別枠で数える(マスモンボックスの上限には入らない)。読めない値は _broken へ写して空で始める
+const MSX_ASSIST_KEY = 'mh_monsuc_assist_v1';
+const MSX_ASSIST_CAP = 100;
+const msxNormAssist = (raw) => {
+  const o = msxIsObj(raw) ? raw : {};
+  const seen = new Set(); const mons = [];
+  (Array.isArray(o.mons) ? o.mons : []).forEach((x) => {
+    const m = msxNormBoxMon(x); if (!m || seen.has(m.id) || mons.length >= MSX_ASSIST_CAP) return;
+    seen.add(m.id); mons.push({ ...m, keep: msxIsObj(x.keep) ? { from: x.keep.from === 'fuse' ? 'fuse' : 'farewell', at: Math.floor(msxNum(x.keep.at, 0)) } : { from: 'farewell', at: 0 } });
+  });
+  return { v: 1, cap: MSX_ASSIST_CAP, mons };
+};
+const msxReadAssist = async () => {
+  let raw = null; try { raw = await storeGet(MSX_ASSIST_KEY, null); } catch (e) { raw = null; }
+  if (raw != null && (!msxIsObj(raw) || !Array.isArray(raw.mons))) { try { await storeSet(MSX_ASSIST_KEY + '_broken', raw); } catch (e) {} }
+  return msxNormAssist(raw);
+};
+// 残す: 入る分だけ入れる(同じ id は足さない・いっぱいなら入れない)。返り値 { kept, full, left, assist }
+const msxAssistKeep = async (mons, from) => {
+  const cur = await msxReadAssist();
+  const list = (Array.isArray(mons) ? mons : []).filter((m) => msxIsObj(m) && typeof m.id === 'string');
+  let kept = 0; let full = 0; const next = cur.mons.slice();
+  list.forEach((m) => {
+    if (next.some((x) => x.id === m.id)) return;
+    if (next.length >= MSX_ASSIST_CAP) { full += 1; return; }
+    const c = msxNormBoxMon(JSON.parse(JSON.stringify(m))); if (!c) return;
+    next.push({ ...c, keep: { from: from === 'fuse' ? 'fuse' : 'farewell', at: Date.now() } }); kept += 1;
+  });
+  const out = { v: 1, cap: MSX_ASSIST_CAP, mons: next };
+  if (kept > 0) { try { await storeSet(MSX_ASSIST_KEY, out); } catch (e) { return { kept: 0, full, left: MSX_ASSIST_CAP - cur.mons.length, assist: cur }; } }
+  return { kept, full, left: MSX_ASSIST_CAP - out.mons.length, assist: out };
+};
+// 外す(置き場から消す)
+const msxAssistRemove = async (ids) => {
+  const cur = await msxReadAssist(); const drop = new Set(Array.isArray(ids) ? ids : []);
+  const out = { ...cur, mons: cur.mons.filter((m) => !drop.has(m.id)) };
+  await storeSet(MSX_ASSIST_KEY, out); return out;
+};
 const MSX_ITEM_IDS = Object.freeze(['guide', 'loupe', 'band', 'mag', 'hachi', 'omamori', 'dango', 'grass', 'juice', 'powder', 'license', 'pack', 'oil', 'oilyoil', 'herb', 'hourglass', 'hourglass2', 'ticket', 'awakeFruit', 'superAwakeFruit']); // 覚醒の実・超覚醒の実(2026-11-14 #6147)は足すだけ
 const msxNormMeta = (raw) => {
   const o = msxIsObj(raw) ? raw : {};
   const items = {}; const src = msxIsObj(o.items) ? o.items : {};
   MSX_ITEM_IDS.forEach((k) => { const n = Math.floor(msxNum(src[k], 0)); if (n > 0) items[k] = Math.min(999, n); });
-  const team = (Array.isArray(o.team) ? o.team : []).slice(0, 6).map((t) => (msxIsObj(t) && typeof t.box === 'string' ? { box: t.box.slice(0, 64) } : msxIsObj(t) && typeof t.base === 'string' ? { base: t.base.slice(0, 24) } : null));
+  const team = (Array.isArray(o.team) ? o.team : []).slice(0, 6).map((t) => (msxIsObj(t) && typeof t.box === 'string' ? { box: t.box.slice(0, 64) } : msxIsObj(t) && typeof t.assist === 'string' ? { assist: t.assist.slice(0, 64) } : msxIsObj(t) && typeof t.base === 'string' ? { base: t.base.slice(0, 24) } : null));
   return {
     ...o, // 回3が足す retired(引退の回数)などを消さずに持つ
     v: 1, best: msxIsObj(o.best) ? o.best : {}, titles: Array.isArray(o.titles) ? o.titles.filter((x) => typeof x === 'string').slice(0, 200) : [],
@@ -212,14 +253,14 @@ const msxTech2Backup = async (run, box) => {
   } catch (e) { return false; }
 };
 const msxReadAll = async (SUC) => {
-  const [run, box, meta, unlocked] = await Promise.all([
-    storeGet(MSX_KEYS.run, null), storeGet(MSX_KEYS.box, null), storeGet(MSX_KEYS.meta, null), storeGet('mh_unlocked_monsters', null),
+  const [run, box, meta, unlocked, assistRaw] = await Promise.all([
+    storeGet(MSX_KEYS.run, null), storeGet(MSX_KEYS.box, null), storeGet(MSX_KEYS.meta, null), storeGet('mh_unlocked_monsters', null), storeGet(MSX_ASSIST_KEY, null).catch(() => null),
   ]);
   await msxTech2Backup(run, box);
   const all = typeof ALL_PLAYER_MONSTERS === 'object' && ALL_PLAYER_MONSTERS ? ALL_PLAYER_MONSTERS : {};
   const list = SUC && Array.isArray(SUC.speciesList) ? SUC.speciesList : Object.keys(all);
   const un = (Array.isArray(unlocked) ? unlocked : []).filter((id) => typeof id === 'string' && all[id] && list.includes(id));
-  return { run: msxNormRun(run, SUC), box: msxNormBox(box), meta: msxNormMeta(meta), unlocked: un.length ? Array.from(new Set(un)) : list.filter((id) => all[id]).slice(0, 1) };
+  return { run: msxNormRun(run, SUC), box: msxNormBox(box), assist: msxNormAssist(assistRaw), meta: msxNormMeta(meta), unlocked: un.length ? Array.from(new Set(un)) : list.filter((id) => all[id]).slice(0, 1) };
 };
 // ---- ビートP(2026-11-14 社長「大会の賞品のコインは、うちではビートP」) ----
 // 芯が大会の優勝のたびに s.beatEarned を増やす。本編のビートP(mh_rhythm_event_points_v1・既存のキーにそのまま足す)へは、

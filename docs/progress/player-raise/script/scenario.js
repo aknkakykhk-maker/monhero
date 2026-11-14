@@ -156,13 +156,13 @@ const MONSUC_SCRIPT_SCENARIO = Object.freeze([
   { id:'scn.atsu.cup2.win.atsu1', who:'atsu', e:'excited', t:'…勝った。勝ったな！ {mon}、最高だよ( *˘ω˘*)ノ' },
   { id:'scn.atsu.cup2.lose.atsu1', who:'atsu', e:'troubled', t:'残念笑 …でも、あの日の俺よりずっと強かったよ…！' },
 
-  // ── 特別な1話「頂への道の前に」(最後の期・仲良し度Lv5〜・4話がいい結末) ──
-  { id:'scn.atsu.sp.narr1', who:'narr', t:'頂への道の前の晩。あつは珍しく、作戦の話をしなかった。' },
+  // ── 特別な1話「ヒーローズファイナルの前に」(最後の期・仲良し度Lv5〜・4話がいい結末) ──
+  { id:'scn.atsu.sp.narr1', who:'narr', t:'ヒーローズファイナルの前の晩。あつは珍しく、作戦の話をしなかった。' },
   { id:'scn.atsu.sp.atsu1', who:'atsu', e:'normal', t:'もう教えることないわ。てか、最初から{mon}は強かったんだよ笑' },
   { id:'scn.atsu.sp.narr2', who:'narr', t:'しばらく黙ってから、あつは{mon}の目をまっすぐ見た。' },
   { id:'scn.atsu.sp.atsu2', who:'atsu', e:'excited', t:'{mon}、おまえなら行ける…！' },
   { id:'scn.atsu.sp.atsu3', who:'atsu', e:'happy', t:'…以上。寝よ寝よ、明日早いから笑' },
-  { id:'scn.atsu.sp.retire.atsu1', who:'atsu', e:'happy', t:'てっぺんまで付き合ってくれてありがとな。{mon}、おまえは俺の自慢だよ笑' },
+  { id:'scn.atsu.sp.retire.atsu1', who:'atsu', e:'happy', t:'ヒーローズファイナルの優勝まで付き合ってくれてありがとな。{mon}、おまえは俺の自慢だよ笑' },
 ]);
 
 if (typeof module !== 'undefined') module.exports = { MONSUC_SCRIPT_SCENARIO };

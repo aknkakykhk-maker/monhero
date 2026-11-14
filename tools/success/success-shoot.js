@@ -124,7 +124,7 @@ const makeRun = async (kind) => {
           const done = await page.evaluate(async (st) => {
             const btn = (re) => [...document.querySelectorAll('.msx button')].find((b) => re.test(b.innerText || '') && !b.disabled);
             const click = (re) => { const b = btn(re); if (b) b.click(); return !!b; };
-            if (st === 'new') return click(/新しく育成をはじめる/);
+            if (st === 'new') return click(/新しく育成を(?:始|はじ)める/);
             if (st === 'next') return click(/▶$/);
             if (st === 'seedfuse') { // 合体で生まれた未育成のモンスターを保存枠に1体置いて開き直す(2026-11-14 合体の能力から始まる)
               localStorage.setItem(MSX_KEYS.box, JSON.stringify({ v: 1, mons: [{ id: 'shot-fz-1', species: 'Mitarashi', nick: 'ミタ', gen: 2, st: { life: 260, pow: 240, wise: 150, hit: 230, eva: 210, tough: 200 }, techs: [], mast: [], gt: 1, lv: 1, raised: false, parents: ['a', 'b'] }] }));
@@ -148,7 +148,7 @@ const makeRun = async (kind) => {
             if (st === 'go') return click(/をする$/); // 2026-11-14 トレーニングのボタンは「丸太割りをする」のようにトレーニングの名前になった
             if (st === 'praise') { const b = document.querySelector('[data-msx-react-how="praise"]'); if (b) { b.click(); return true; } return !document.querySelector('[data-msx-react]'); } // 2026-11-14 成功のあとは叱る・褒めるの段が出ない
             if (st === 'clinic') return click(/通院/);
-            if (st === 'begin') return click(/育成をはじめる/);
+            if (st === 'begin') return click(/育成を(?:始|はじ)める/);
             if (st === 'birthSkip') { // 円盤石から生まれる演出(56-monsuc-birth.jsx)を飛ばして「育成をはじめる」
               const k = document.querySelector('[data-msx-birth-skip]'); if (k) k.click(); await new Promise((r) => setTimeout(r, 400));
               const b = document.querySelector('[data-msx-birth-next]'); if (b) b.click(); return !!(k || b);

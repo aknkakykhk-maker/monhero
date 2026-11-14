@@ -494,7 +494,7 @@ async function rhythmScenario(s, { maxSongMs = 330000 } = {}) {
   const picked = await openSoloLive(s, { songName: process.env.PLAYBOT_SONG || '', difficulty: process.env.PLAYBOT_DIFFICULTY || '', harder: true });
   if (!picked) return { ok: false, stats };
   Object.assign(stats, picked);
-  const started = await s.tapLabel(/^(▶\s*)?(決定|START|スタート|演奏する|演奏開始|PLAY|はじめる)$/i, 2500);
+  const started = await s.tapLabel(/^(▶\s*)?(決定|START|スタート|演奏する|演奏開始|PLAY|(?:始|はじ)める)$/i, 2500);
   if (!started) { await s.addIssue('進めない', '曲えらびから演奏を始めるボタンが見つからない', { buttons: (await s.listButtons()).map((b) => b.label).slice(0, 30) }); return { ok: false, stats }; }
   await s.dismissOverlays(4);
   // 演奏画面が出て、参照が使えるまで待つ

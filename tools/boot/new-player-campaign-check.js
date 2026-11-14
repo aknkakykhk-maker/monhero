@@ -81,7 +81,7 @@ check('名前やアイコンが欠けた既存プレイヤーを新規と誤認�
   // everOnboarded を「未完了へ戻す行」より前で決めていること
   source.indexOf('const everOnboarded = wasOnboarded === true;')
     < source.indexOf('if (wasOnboarded && !(hasSavedName && hasSavedIcon)) wasOnboarded = false;'));
-check('発行は、はじめての設定を終えたときだけ',
+check('発行は、初めての設定を終えたときだけ',
   source.includes('newPlayerCampaignEligible') && source.includes('grantNewPlayerCampaignGift('));
 check('完了フラグ(mh_onboarded)より前に配っている',
   source.indexOf('grantNewPlayerCampaignGift(Array.isArray(savedGifts)') < source.indexOf("await storeSet('mh_onboarded',true,false);"));

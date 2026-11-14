@@ -253,7 +253,7 @@ function MsxFxMoment({ kind, title, sub, species, colors, skill, onDone, calm })
         {title ? <div className="msxfx-title">{title}</div> : null}
         {sub ? <div className="msxfx-sub">{sub}</div> : null}
       </div>
-      <div className="msxfx-skip">タップでとばす</div>
+      <div className="msxfx-skip">タップで飛ばす</div>
     </div>
   );
 }

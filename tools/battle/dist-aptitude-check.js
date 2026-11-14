@@ -98,7 +98,7 @@ check('詳細に補正値(%)を出す', has('{formatAptPct(pct)}'));
 check('詳細に「現在 → 合流後」を出す', has('現在 {formatAptPct(cur)}') && has('→ {formatAptPct(cur+pct)}'));
 // タクティクスの合流では距離の補正を使わないので 0 を渡す分岐が足された。ふだんのバトルはいまの補正値を渡す
 check('勇者モン選択・供モン合流でいまの補正値を渡す', has('aptCurrentPct: [0,1,2,3].map(i=>distTotalBonus(i)),') || has('aptCurrentPct: joinPreview?.tactics ? [0,0,0,0] : [0,1,2,3].map(i=>distTotalBonus(i)),'));
-check('全距離にかかることを詳細で説明する', has('置く距離に関係なく、このモンスターの補正が4つの距離すべてに加算されます'));
+check('全距離にかかることを詳細で説明する', has('置く距離に関係なく、このモンスターの補正が4つの距離全てに加算されます'));
 check('スロットのバッジも合計補正を出す', has('const totalBonus=distTotalBonus(i);'));
 // 補正0%も「補正が無い」という情報なので、枠ごとに常に出す
 check('補正0%でもバッジを出す', has('const totalBonus=distTotalBonus(i); return(<div') && !has('return totalBonus!==0&&'));
@@ -108,7 +108,7 @@ check('マスモン強化でも補正値(%)を出す', ((source.match(/formatApt
 // ヘルプの本文は data/help.js にデータとして持っている
 const helpSrc = fs.readFileSync(path.join(root, 'monster-hero/data/help.js'), 'utf8');
 check('ヘルプが新しい仕様を説明している',
-  helpSrc.includes('置いた距離だけでなく4つの距離すべて') && helpSrc.includes('零距離の補正は+31%になります'));
+  helpSrc.includes('置いた距離だけでなく4つの距離全て') && helpSrc.includes('零距離の補正は+31%になります'));
 check('ヘルプから旧仕様の段階表記を消した', !helpSrc.includes('Aなら+2段階、Eなら-2段階') && !has('Aなら+2段階、Eなら-2段階'));
 
 console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');

@@ -23,6 +23,8 @@ const PORT = 9321;
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.PNG': 'image/png', '.jpg': 'image/jpeg', '.webp': 'image/webp', '.json': 'application/json', '.mp3': 'audio/mpeg', '.svg': 'image/svg+xml', '.woff2': 'font/woff2' };
 const POSTURES = [
   ['tate-390', 390, 844, false, { top: 59, bottom: 34, left: 0, right: 0 }],
+  ['tate-320', 320, 568, false, { top: 20, bottom: 0, left: 0, right: 0 }],
+  ['rot-320', 320, 568, true, { top: 20, bottom: 0, left: 0, right: 0 }],
   ['yoko-844', 844, 390, false, { top: 0, bottom: 21, left: 47, right: 47 }],
   ['yoko-667', 667, 375, false, { top: 0, bottom: 21, left: 47, right: 47 }],
   ['rot-390', 390, 844, true, { top: 59, bottom: 34, left: 0, right: 0 }],
@@ -32,7 +34,7 @@ const POSTURES = [
 const MEASURE = () => {
   const R = (e) => e && e.getBoundingClientRect();
   const hit = (a, b) => a && b && Math.min(a.right, b.right) - Math.max(a.left, b.left) > 1 && Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > 1;
-  const bad = { bubble: [], overlap: [], inside: [] };
+  const bad = { bubble: [], overlap: [], inside: [], header: '' };
   // ① 吹き出し: 白い箱の中身(字)が箱の外へはみ出していない(scroll の大きさが箱の大きさを超えない)。回しているときは offset 系で比べる
   document.querySelectorAll('[data-rhythm-multi-chat-bubble] > span').forEach((s) => {
     const text = (s.innerText || '').trim(); if (!text) return;
@@ -56,7 +58,35 @@ const MEASURE = () => {
     const a = R(act);
     if (!(main && a.left >= main.left - 1 && a.right <= main.right + 1 && a.top >= main.top - 1 && a.bottom <= main.bottom + 1)) bad.inside.push('決定の帯が画面の外');
   }
-  return { bubble: bad.bubble.join(' / '), overlap: bad.overlap.join(' / '), inside: bad.inside.join(' / '), detail: detail ? `詳しい欄 高さ${detail.clientHeight}・中身${detail.scrollHeight}` : '' };
+  // ④ 上の帯が1段に収まり、💬が下の段へ落ちない(2026-11-14 社長「吹き出しのコメントのやつが押し出されて下に来る」・🏆は曲の側へ移した)
+  const head = document.querySelector('[data-rhythm-multi] > header');
+  const hbtn = head ? [...head.querySelectorAll('button')].filter((b) => b.getBoundingClientRect().width > 0) : [];
+  // 🔄横は器を90度回してあるので、帯の「段」は画面の左右の位置で分かれる。向きに合わせて軸を替える
+  const rotOn = !!document.querySelector('[data-mh-view-rotation="true"]');
+  const tops = hbtn.map((b) => (rotOn ? R(b).left : R(b).top));
+  const rowsN = tops.length ? tops.filter((t, i) => tops.findIndex((u) => Math.abs(u - t) < 20) === i).length : 0;
+  const chatBtn = head && head.querySelector('[data-rhythm-multi-chat-open]');
+  const portraitOnly = !rotOn && innerHeight > innerWidth;
+  if (!head) bad.inside.push('上の帯が無い');
+  else {
+    // 横・🔄横は1段。縦は細くて入りきらないので、ボタンが2段目へ回るのはもとの作り(題字の下)で、2段までなら良い
+    if (rowsN > (portraitOnly ? 2 : 1)) bad.header = `上の帯のボタンが${rowsN}段に分かれる`;
+    const out = rotOn ? R(chatBtn || head).left < R(head).left - 1 : (chatBtn && R(chatBtn).bottom > R(head).bottom + 1);
+    if (chatBtn && out) bad.header = (bad.header ? bad.header + ' / ' : '') + '💬が上の帯の外(下の段)へ落ちる';
+    if (head.querySelector('[data-rhythm-multi-ranking]')) bad.header = (bad.header ? bad.header + ' / ' : '') + '🏆が上の帯に残っている';
+  }
+  // 帯の空き(裏クイックの「WAVE」の札が出ると、幅の24%ぶん使う。その余裕が残っているかを INFO で出す)
+  let slack = '';
+  if (head) { const w = (r) => (rotOn ? r.height : r.width); const kids = [...head.children].filter((e) => R(e).width > 0 || R(e).height > 0); const titleEl = kids.find((e) => e.querySelector('b') && /MULTI LIVE/.test(e.innerText || '')); const minTitle = titleEl ? (parseFloat(getComputedStyle(titleEl).minWidth) || 120) : 0; const used = kids.reduce((n, e) => n + (e === titleEl ? minTitle : w(R(e))), 0) + 4 * Math.max(0, kids.length - 1); slack = `帯の幅${Math.round(w(R(head)))}・ボタンと題字(最小幅)${Math.round(used)}・空き${Math.round(w(R(head)) - used)}`; if (!bad.header && !portraitOnly && w(R(head)) - used < 0) bad.header = slack; }
+  const rankSong = document.querySelector('[data-rhythm-song-detail] [data-rhythm-multi-ranking]');
+  if (!rankSong) bad.header = (bad.header ? bad.header + ' / ' : '') + '🏆が曲の側(詳しい欄)に無い';
+  else {
+    // 高さ380px以下の横(667×375 など)は、詳しい欄の下の段なので送って見る(欄の中にあれば良い)。それより広い画面は、画面の中に見えていること
+    const shortScreen = !rotOn && innerHeight <= 380;
+    if (!(R(rankSong).width > 0)) bad.header = (bad.header ? bad.header + ' / ' : '') + '🏆(曲の側)が見えない';
+    else if (!shortScreen && R(rankSong).bottom > (main ? main.bottom : 1e9) + 1) bad.header = (bad.header ? bad.header + ' / ' : '') + '🏆(曲の側)が画面の外';
+  }
+  return { bubble: bad.bubble.join(' / '), overlap: bad.overlap.join(' / '), inside: bad.inside.join(' / '), header: bad.header, detail: (detail ? `詳しい欄 高さ${detail.clientHeight}・中身${detail.scrollHeight}` : '') + ' / ' + slack };
 };
 
 (async () => {
@@ -107,10 +137,10 @@ const MEASURE = () => {
       await page.waitForTimeout(1200);
       await page.waitForTimeout(2500);
       // 助手が話しているあいだに測る(話は数秒で消えるので、何回か測って、いちばん悪いときを見る)
-      let worst = { bubble: '', overlap: '', inside: '', detail: '' };
+      let worst = { bubble: '', overlap: '', inside: '', header: '', detail: '' };
       for (let i = 0; i < 6; i++) {
         const m = await page.evaluate(MEASURE);
-        for (const k of ['bubble', 'overlap', 'inside']) if (m[k] && !worst[k]) worst[k] = m[k];
+        for (const k of ['bubble', 'overlap', 'inside', 'header']) if (m[k] && !worst[k]) worst[k] = m[k];
         worst.detail = m.detail || worst.detail;
         const n = await page.evaluate(() => document.querySelectorAll('[data-rhythm-multi-chat-bubble]').length);
         if (i === 1) console.log(`INFO: ${name}: 吹き出し ${n}個 / ${m.detail} / ${await page.evaluate(() => { const R = (e) => e.getBoundingClientRect(); const d = document.querySelector('[data-rhythm-song-detail]'); return [...document.querySelectorAll('[data-rhythm-song-detail-grid] > *')].map((e) => `${e.style.gridArea || e.tagName}:${Math.round(R(e).top)}+${Math.round(R(e).height)}`).join(' ') + ' aside=' + (d ? Math.round(R(d).top) + '+' + Math.round(R(d).height) : ''); })}`);
@@ -121,6 +151,7 @@ const MEASURE = () => {
       check(`${name}: 席の上の吹き出しの字が、吹き出しの中に収まる`, !worst.bubble, worst.bubble);
       check(`${name}: 「この曲で決定」の帯が、難易度の札に重ならない`, !worst.overlap, worst.overlap);
       check(`${name}: 「この曲で決定」が画面の中に見える`, !worst.inside, worst.inside);
+      check(`${name}: 上の帯が1段に収まり、💬が落ちない(🏆は曲の側)`, !worst.header, worst.header);
       await page.close();
     }
     check('画面のエラーが無い', errors.length === 0, errors.slice(0, 3).join(' / '));

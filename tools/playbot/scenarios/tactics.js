@@ -47,7 +47,7 @@ async function openUnlockAll(s) {
     await page.getByRole('button', { name: '設定' }).first().dispatchEvent('click');
     await page.getByRole('button', { name: 'ヘルプ' }).first().waitFor({ timeout: 20000 });
     await page.getByRole('button', { name: 'ヘルプ' }).first().dispatchEvent('click');
-    await page.getByRole('button', { name: 'わかった！冒険に戻る' }).waitFor({ timeout: 20000 });
+    await page.getByRole('button', { name: '分かった！冒険に戻る' }).waitFor({ timeout: 20000 });
     await page.locator('footer button[aria-label=""]').dispatchEvent('click');
     await page.getByText('DEBUG MENU').first().waitFor({ timeout: 20000 });
     await page.locator('summary').filter({ hasText: '⚔️ バトル' }).first().click();
@@ -237,7 +237,7 @@ async function enterTactics(s, { mode, difficulty = 'keep', stats = {}, ctx = nu
         const at = (window.__pbWant || []).findIndex((name) => !!wantBtnEarly(name));
         if (at >= 0) { const name = window.__pbWant.splice(at, 1)[0]; wantBtnEarly(name).click(); window.__pbJustPicked = true; return `mon:${name}`; }
       }
-      const go = pick(/出撃|バトル開始|この編成で|この子で挑む|供モン\d*にする|はじめる|^決定$|^確定$/); if (go) { window.__pbJustPicked = false; go.click(); return go.textContent.trim(); }
+      const go = pick(/出撃|バトル開始|この編成で|この子で挑む|供モン\d*にする|(?:始|はじ)める|^決定$|^確定$/); if (go) { window.__pbJustPicked = false; go.click(); return go.textContent.trim(); }
       const confirm = pick(/^(習得する|強化する)$/); if (confirm) { confirm.click(); return 'confirm'; }
       const teaching = pick(/新規習得|強化後/); if (teaching) { teaching.click(); return 'teach'; }
       const slot = pick(/^(零|近|中|遠)距離/); if (slot) { slot.click(); return 'slot'; }
