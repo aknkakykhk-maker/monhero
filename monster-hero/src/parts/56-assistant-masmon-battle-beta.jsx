@@ -922,7 +922,7 @@ function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, preview, tryPv
     const gains = battle.units.map(u => ({ u, g: typeof amgCareGainOf === 'function' ? amgCareGainOf(u.entry) : { total: 0 } }));
     const bestStat = ifs && ifs.best;
     const stars = ambbStarsOf(log, 'A', battle.teamA.members.length), mvp = ambbMvpOf(stars), mvpM = battle.teamA.members[mvp] || null;
-    const venue = typeof MSC_VENUE_IMG !== 'undefined' ? MSC_VENUE_IMG.cup : null;
+    const venue = typeof msaVenueBg === 'function' ? msaVenueBg('cup', msaBgRead()) : (typeof MSC_VENUE_IMG !== 'undefined' ? MSC_VENUE_IMG.cup : null);
     // 実況: いまから2手前までの見せ場の1行(場の下の記録の頭に出す)
     let call = null;
     for (let k = pos; k >= Math.max(1, pos - 2) && !call; k--) { const c = ambbCallOf(log, battle.frames, k, battle.maxHp, who); if (c) call = { ...c, at: k }; }
