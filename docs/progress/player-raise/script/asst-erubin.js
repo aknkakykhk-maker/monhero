@@ -19,7 +19,7 @@
 //   3話「光の向こう」       ミドル期・親密度50〜    光の向こうから来て、帰れなくなった話
 //                                                  ここが帰る場所だよ(→ いい結末へ)/いつか帰れるといいね(→ ほろ苦い結末へ)
 //   4話「ふたつの世界の食卓」 プロ期・親密度70〜    プロの5月の見守りの大会 ★★。いい結末: アシスト能力「見守り」系のひらめき+全能力 特大/ほろ苦い: 忠誠 大+・称号
-//   特別な1話「おかわり」   最後の期・仲良し度Lv5〜・4話がいい結末  頂への道の前の夜のごはん。見るだけ(頂への道の1回戦に「安心」の案)
+//   特別な1話「おかわり」   最後の期・仲良し度Lv5〜・4話がいい結末  ヒーローズファイナルの前の夜のごはん。見るだけ(ヒーローズファイナルの1回戦に「安心」の案)
 const MONSUC_SCRIPT_ERUBIN = Object.freeze([
   // ═══════════ シナリオ ═══════════
   // ── 1話「いただきます」(デビュー期・必ず出る) ──
@@ -76,7 +76,7 @@ const MONSUC_SCRIPT_ERUBIN = Object.freeze([
   { id:'scn.erubin.cup2.lose.erubin1', who:'erubin', e:'troubled', t:'悔しいよね。でも、最後まであきらめなかったの、ちゃんと見てたよ' },
 
   // ── 特別な1話「おかわり」(最後の期・仲良し度Lv5〜・4話がいい結末) ──
-  { id:'scn.erubin.sp.narr1', who:'narr', t:'頂への道の前の夜。えるびんの食卓は、いつもより少しだけ静かだった。' },
+  { id:'scn.erubin.sp.narr1', who:'narr', t:'ヒーローズファイナルの前の夜。えるびんの食卓は、いつもより少しだけ静かだった。' },
   { id:'scn.erubin.sp.erubin1', who:'erubin', e:'normal', t:'明日で最後かぁ。……なんか、まだ実感ないね笑' },
   { id:'scn.erubin.sp.narr2', who:'narr', t:'{mon}がからっぽのお皿を、そっとえるびんの前に差し出した。' },
   { id:'scn.erubin.sp.erubin2', who:'erubin', e:'happy', t:'おかわり？ もちろん、あるよ。いくらでもあるからね☺️' },
@@ -143,7 +143,7 @@ const MONSUC_SCRIPT_ERUBIN = Object.freeze([
   { id:'turn.retire.r1.erubin1', who:'erubin', e:'normal', t:'おつかれさま、{mon}。よくがんばったね' },
   { id:'turn.retire.r2.erubin1', who:'erubin', e:'happy', t:'いい仕上がりだね。胸を張っていいよ☺️' },
   { id:'turn.retire.r3.erubin1', who:'erubin', e:'excited', t:'すごく強くなったね。{name}、さすがだね' },
-  { id:'turn.retire.r4.erubin1', who:'erubin', e:'excited', t:'てっぺんだね……。{mon}、ずっと見てたよ。ほんとにおめでとう' },
+  { id:'turn.retire.r4.erubin1', who:'erubin', e:'excited', t:'ヒーローズファイナル優勝だね……。{mon}、ずっと見てたよ。ほんとにおめでとう' },
   { id:'turn.cond.injury.in.erubin1', who:'erubin', e:'troubled', t:'けがしちゃったね……。大丈夫、すぐ治るように俺も見てるから' },
   { id:'turn.cond.injury.out.erubin1', who:'erubin', e:'happy', t:'もう平気そうだね。よかったー☺️' },
   { id:'turn.cond.sick.in.erubin1', who:'erubin', e:'troubled', t:'具合悪そうだね。あったかいスープ作っておくね' },

@@ -33,7 +33,7 @@ const pickScene = () => {
   const bw = 150, bgap = 14, bx0 = 48, by = 350;
   const flow = periods.map((p, i) => {
     const x = bx0 + i * (bw + bgap), last = i === periods.length - 1;
-    const sub = last ? '頂への道' : p[1] + 'ターン';
+    const sub = last ? 'ヒーローズファイナル' : p[1] + 'ターン';
     return `<rect x="${x}" y="${by}" width="${bw}" height="78" rx="14" fill="#0f1b3d" fill-opacity=".92" stroke="${last ? '#ffd54a' : '#fb7185'}" stroke-width="3"/>
     <text x="${x + bw / 2}" y="${by + 34}" font-size="23" font-weight="700" fill="#fff" text-anchor="middle">${p[0]}</text>
     <text x="${x + bw / 2}" y="${by + 64}" font-size="20" fill="${last ? '#ffd54a' : '#ffb4cf'}" text-anchor="middle">${sub}</text>` + (last ? '' : `<text x="${x + bw + bgap / 2}" y="${by + 48}" font-size="18" fill="#ffd54a" text-anchor="middle">▶</text>`);
