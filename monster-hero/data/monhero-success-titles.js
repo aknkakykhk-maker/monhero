@@ -72,8 +72,8 @@
   add({ id: 'conquer-dist', group: 'conquer', name: '間合いの達人', how: '零・近・中・遠の間合いの大会をどれも1回は優勝する', reward: '全能力 +3・能力ポイント +15・いちばん低い間合いの適性が1段上がる', rare: 3 });
 
   // ---- ヒーローズファイナル(芯の SUMMIT_FINAL) ----
-  add({ id: 'summit', group: 'summit', name: 'ヒーローズファイナル王者', how: 'ヒーローズファイナルで優勝する', reward: '全能力 +8・能力ポイント +30・人気 +10', match: '頂に立った子', rare: 3 });
-  add({ id: 'summit-big', group: 'summit', name: '真のヒーロー', how: '👑 を1つ以上勝つか四大大会を2つ以上勝ったうえで、ヒーローズファイナルで優勝する', reward: '全能力 +15・能力ポイント +60・人気 +20', match: 'ヒーローの頂', rare: 3 });
+  add({ id: 'summit', group: 'summit', name: 'ヒーローズファイナル王者', how: 'ヒーローズファイナルで優勝する', reward: '全能力 +8・能力ポイント +30・人気 +10', match: 'ヒーローズファイナル王者', oldMatch: ['頂に立った子'], rare: 3 }); // 2026-11-14 名前を直した。前の育成・保存枠に積まれた古い文字(oldMatch)も同じ行に引き当てる
+  add({ id: 'summit-big', group: 'summit', name: '真のヒーロー', how: '👑 を1つ以上勝つか四大大会を2つ以上勝ったうえで、ヒーローズファイナルで優勝する', reward: '全能力 +15・能力ポイント +60・人気 +20', match: '真のヒーロー', oldMatch: ['ヒーローの頂'], rare: 3 });
 
   // ---- ライバル(芯の RIVAL) ----
   // 大会の第2版(2026-11-13)
@@ -102,7 +102,7 @@
 
   const TITLES = Object.freeze(rows);
   const BY_ID = Object.freeze(Object.fromEntries(TITLES.map(t => [t.id, t])));
-  const BY_MATCH = Object.freeze(Object.fromEntries(TITLES.filter(t => t.match).map(t => [t.match, t])));
+  const BY_MATCH = Object.freeze(Object.fromEntries(TITLES.filter(t => t.match).flatMap(t => [[t.match, t], ...(Array.isArray(t.oldMatch) ? t.oldMatch.map(m => [m, t]) : [])])));
   const GROUPS = Object.freeze([
     ['cup', '大会'], ['crown', 'ヒーロー記念'], ['conquer', '制覇'], ['summit', 'ヒーローズファイナル'], ['rival', 'ライバル'],
     ['story', '助手のお話'], ['issa', 'イッサ博士'], ['grade', '評価'], ['feat', '育成の記録'],
