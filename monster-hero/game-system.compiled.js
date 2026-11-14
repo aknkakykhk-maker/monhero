@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: cac551d70ef33305
+// source-sha256: 0512183d265bf783
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -142013,6 +142013,8 @@ const MASMON_CALC = (() => {
   const STAT_MAX = 999;
   const POWER_W = Object.freeze({
     stat: 2.5,
+    statUp: 2,
+    statAt: 900,
     tech: 100,
     mastery: 1,
     lv: 15,
@@ -142020,7 +142022,24 @@ const MASMON_CALC = (() => {
     pop: 10,
     techMax: 8
   });
+  const statPower = v => {
+    const x = clamp(num(v), 0, STAT_MAX);
+    return x * (POWER_W.stat + POWER_W.statUp * x / POWER_W.statAt);
+  };
   const power = o => {
+    const {
+      stats,
+      masteries,
+      lv = 1,
+      loyal = 0,
+      pop = 0
+    } = o && typeof o === 'object' ? o : {};
+    const st = stats && typeof stats === 'object' ? stats : {};
+    const sum = KEYS.reduce((a, k) => a + statPower(st[k]), 0);
+    const tech = (Array.isArray(masteries) ? masteries : []).slice(0, POWER_W.techMax).reduce((a, m) => a + POWER_W.tech + clamp(num(m), 0, 100) * POWER_W.mastery, 0);
+    return Math.round(sum + tech + clamp(num(lv, 1), 1, 99) * POWER_W.lv + clamp(num(loyal), 0, 100) * POWER_W.loyal + clamp(num(pop), 0, 100) * POWER_W.pop);
+  };
+  const powerClassic = o => {
     const {
       stats,
       masteries,
@@ -142033,18 +142052,46 @@ const MASMON_CALC = (() => {
     const tech = (Array.isArray(masteries) ? masteries : []).slice(0, POWER_W.techMax).reduce((a, m) => a + POWER_W.tech + clamp(num(m), 0, 100) * POWER_W.mastery, 0);
     return Math.round(sum * POWER_W.stat + tech + clamp(num(lv, 1), 1, 99) * POWER_W.lv + clamp(num(loyal), 0, 100) * POWER_W.loyal + clamp(num(pop), 0, 100) * POWER_W.pop);
   };
-  const RANKS = Object.freeze([['G', 0], ['F', 2000], ['E', 3000], ['D', 4500], ['C', 6000], ['B', 8000], ['A', 11000], ['S', 14000], ['SS', 16000], ['SSS', 18000], ['M', 19500]]);
+  const RANKS_CLASSIC = Object.freeze([['G', 0], ['F', 2000], ['E', 3000], ['D', 4500], ['C', 6000], ['B', 8000], ['A', 11000], ['S', 14000], ['SS', 16000], ['SSS', 18000], ['M', 19500]]);
+  const rankClassicOf = p => {
+    const v = num(p);
+    let i = 0;
+    RANKS_CLASSIC.forEach(([, min], j) => {
+      if (v >= min) i = j;
+    });
+    return RANKS_CLASSIC[i][0];
+  };
+  const RANKS = Object.freeze([['G', 0], ['F', 2000], ['E', 3000], ['D', 4500], ['C', 6000], ['B', 8000], ['A', 11000], ['S', 14000], ['SS', 16000], ['SSS', 18000], ['M', 20000]]);
+  const M_STEP = 500;
+  const M_LETTERS = Object.freeze(['', 'G', 'F', 'E', 'D', 'C', 'B', 'A']);
+  const mLabelOf = v => {
+    const i = Math.min(M_LETTERS.length * 10 - 1, Math.max(0, Math.floor((v - RANKS[RANKS.length - 1][1]) / M_STEP)));
+    const b = Math.floor(i / 10),
+      n = i % 10;
+    return {
+      label: `M${M_LETTERS[b]}${n ? n : ''}`,
+      labelMin: RANKS[RANKS.length - 1][1] + i * M_STEP,
+      labelNext: i + 1 < M_LETTERS.length * 10 ? RANKS[RANKS.length - 1][1] + (i + 1) * M_STEP : null
+    };
+  };
   const rankOf = p => {
     const v = num(p);
     let i = 0;
     RANKS.forEach(([, min], j) => {
       if (v >= min) i = j;
     });
+    const key = RANKS[i][0];
+    const m = key === 'M' ? mLabelOf(v) : {
+      label: key,
+      labelMin: RANKS[i][1],
+      labelNext: RANKS[i + 1] ? RANKS[i + 1][1] : null
+    };
     return {
-      key: RANKS[i][0],
+      key,
       min: RANKS[i][1],
       next: RANKS[i + 1] ? RANKS[i + 1][1] : null,
-      index: i
+      index: i,
+      ...m
     };
   };
   const FUSE = Object.freeze({
@@ -142304,8 +142351,14 @@ const MASMON_CALC = (() => {
     KEYS,
     STAT_MAX,
     POWER_W,
+    statPower,
     power,
+    powerClassic,
+    RANKS_CLASSIC,
+    rankClassicOf,
     RANKS,
+    M_STEP,
+    M_LETTERS,
     rankOf,
     FUSE,
     fuseBonus,
@@ -142825,7 +142878,7 @@ function AmgbRankChip({
       boxShadow: frame ? `0 0 0 2px #fde68a` : 'none'
     },
     "data-amgb-rank": rank.key
-  }, rank.key);
+  }, rank.label || rank.key);
 }
 function AmgbPowerTag({
   aid,
@@ -143003,9 +143056,9 @@ function AmgbPanel({
     rank: p.rank
   }), p.power.toLocaleString()) : React.createElement("p", {
     className: "text-[12px] font-bold text-slate-400"
-  }, "—")), p && p.rank.next && React.createElement("p", {
+  }, "—")), p && (p.rank.labelNext || p.rank.next) && React.createElement("p", {
     className: "text-right text-[9.5px] font-bold text-slate-400"
-  }, "次のランクまで ", (p.rank.next - p.power).toLocaleString()), React.createElement("div", {
+  }, "次のランクまで ", ((p.rank.labelNext || p.rank.next) - p.power).toLocaleString()), React.createElement("div", {
     className: "mt-1.5 grid grid-cols-2 gap-x-3 gap-y-1"
   }, React.createElement("div", {
     className: "flex items-center gap-1.5 text-[10.5px] font-bold text-slate-200"
@@ -156751,7 +156804,7 @@ const msxDexEnsureCss = () => {
 const MSX_BETA_KEY = 'mh_monsuc_beta_v1';
 const MSX_BETA_AIDS = Object.freeze(['mua']);
 const msxBetaAidOk = aid => MSX_BETA_AIDS.includes(aid);
-const MSX_BETA_TUT = Object.freeze(['prep', 'turn', 'train', 'result', 'rest', 'shugyo', 'cup', 'rank', 'meal', 'match', 'rematch', 'event', 'awake', 'retire']);
+const MSX_BETA_TUT = Object.freeze(['scn', 'prep', 'turn', 'train', 'result', 'rest', 'shugyo', 'cup', 'rank', 'meal', 'match', 'rematch', 'event', 'awake', 'retire']);
 const MSX_BETA_STORY = Object.freeze(['open', 'firstend']);
 const msxBetaScene = k => MSX_BETA_STORY.includes(k) ? `scn.mua.beta.${k}` : `tut.${k}`;
 const msxBetaKnown = k => MSX_BETA_TUT.includes(k) || MSX_BETA_STORY.includes(k);
@@ -156985,7 +157038,8 @@ const MSX_SCN_CSS = `
 function MsxScenarioSelect({
   value,
   onBack,
-  onNext
+  onNext,
+  ctx
 }) {
   const [idx, setIdx] = useState(() => Math.max(0, MSX_STORIES.findIndex(x => x.id === msxScenarioId(value))));
   const [detail, setDetail] = useState(false);
@@ -157101,7 +157155,10 @@ function MsxScenarioSelect({
     type: "button",
     className: "cl",
     onClick: () => setDetail(false)
-  }, "とじる"))) : null);
+  }, "とじる"))) : null, typeof MsxBetaTalk === 'function' ? React.createElement(MsxBetaTalk, {
+    keys: ['scn'],
+    ctx: ctx
+  }) : null);
 }
 const MSX_TEV_STYLE = 'b';
 const MSX_TEV_LOT = Object.freeze({
@@ -164682,6 +164739,7 @@ function MsxStart({
   }), inner);
   if (scn == null && typeof MsxScenarioSelect === 'function') return React.createElement(MsxScenarioSelect, {
     value: scn,
+    ctx: betaCtx,
     onBack: onCancel,
     onNext: id => {
       setScn(id);
@@ -164994,7 +165052,7 @@ function MsxStart({
       className: "v-kv"
     }, React.createElement("b", null, "トレーニングの組み合わせ"), React.createElement("span", null, MSX_STATS.slice(0, 3).map(k => `${MSX_STAT_ICON[k]}${MSX_STAT_NAME[k]} → +${combo[k].map(c => MSX_STAT_ICON[c]).join('+')}`).join(' / '), " …")), React.createElement("div", {
       className: "v-kv"
-    }, React.createElement("b", null, "はじめの親密度"), React.createElement("span", null, Math.min(100, aidLv * (SUC.BOND && SUC.BOND.aidPerLv || 8)), "(仲良し度 Lv", aidLv, ")。助手もトレーニングに来て、タッグになる")), React.createElement("div", {
+    }, React.createElement("b", null, "はじめの親密度"), React.createElement("span", null, Math.min(SUC.BOND && SUC.BOND.aidStartMax || 40, aidLv * (SUC.BOND && SUC.BOND.aidPerLv || 4)), "(仲良し度 Lv", aidLv, ")。助手もトレーニングに来て、タッグになる")), React.createElement("div", {
       className: "v-eps"
     }, sc.eps.map((t, i) => React.createElement("div", {
       key: i
@@ -168388,7 +168446,7 @@ const MSX_R3_GEAR = Object.freeze({
   pro: 30,
   final: 40
 });
-const MSX_R3_RANKS = Object.freeze([['G', 0], ['F', 2000], ['E', 3000], ['D', 4500], ['C', 6000], ['B', 8000], ['A', 11000], ['S', 14000], ['SS', 16000], ['SSS', 18000], ['M', 19500]]);
+const MSX_R3_RANKS = Object.freeze([['G', 0], ['F', 2000], ['E', 3000], ['D', 4500], ['C', 6000], ['B', 8000], ['A', 11000], ['S', 14000], ['SS', 16000], ['SSS', 18000], ['M', 20000]]);
 const msxR3Ranks = () => typeof MASMON_CALC !== 'undefined' && MASMON_CALC && Array.isArray(MASMON_CALC.RANKS) ? MASMON_CALC.RANKS : MSX_R3_RANKS;
 const MSX_R3_CUP_ICON = Object.freeze({
   str: '💪',
@@ -170140,7 +170198,7 @@ function MsxR3Battle({
       className: "bub f1"
     }, msxR3Line('turn.cup.lose', run, {
       cup: st3.name
-    }, '「おつかれさま。負けちゃったけど、ここまでよくがんばったよ。次、いこ!」')))) : null));
+    }, '「おつかれさま。負けちゃったけど、ここまでよくがんばったよ。次、いこ!」').t))) : null));
     const foot = !(s.mealReady && !s.over) ? React.createElement("div", {
       className: "v-ft"
     }, React.createElement("button", {
@@ -171961,7 +172019,7 @@ function MsxR3Retire({
         className: "val"
       }, got ? AT.valueText(id, got) : '—')), React.createElement("div", {
         className: "ex"
-      }, a.ex[Math.max(0, (got || 1) - 1)], a.max > 1 ? `(1目盛り ${a.pt}pt・最大 ${AT.valueText(id, a.max)})` : `(${a.pt}pt)`), React.createElement("div", {
+      }, a.ex[Math.max(0, (got || 1) - 1)], a.max > 1 ? `(1目盛り ${AT.valueText(id, 1)}・${a.pt}pt/最大 ${AT.valueText(id, a.max)})` : `(${a.pt}pt)`), React.createElement("div", {
         className: "ctl"
       }, React.createElement("button", {
         type: "button",
@@ -175923,7 +175981,7 @@ function MonsucRankGrade({
   grade
 }) {
   const g = typeof grade === 'string' && /^[A-Z]{1,3}[0-9]{0,3}$/.test(grade) ? grade : 'G';
-  const letter = g.replace(/[0-9]+$/, '');
+  const letter = /^M/.test(g) ? 'M' : g.replace(/[0-9]+$/, '');
   return React.createElement("span", {
     className: "inline-flex items-center justify-center min-w-[26px] h-[22px] px-1 rounded-md text-[12px] font-black text-slate-900",
     style: {
