@@ -1781,10 +1781,12 @@ function RhythmMultiChatBubble({ text: raw }) {
   const stamp = rhythmMultiBubbleStamp(raw);
   const text = rhythmMultiBubbleText(raw);
   if (stamp) return (
-    <span data-rhythm-multi-chat-bubble data-rhythm-multi-stamp-bubble className="pointer-events-none absolute inset-x-0.5 bottom-0.5 top-3 z-40 flex items-start justify-center overflow-hidden">
-      <span className="flex max-h-full max-w-full flex-col items-center rounded-xl bg-white p-0.5 shadow-lg">
-        <img src={multiStampFaceSrc(stamp.sf) || undefined} alt="" draggable={false} decoding="async" className="block aspect-square min-h-0 w-14 max-w-full shrink rounded-lg object-cover" />
-        <b className="block max-w-full truncate text-[10px] font-black leading-tight text-slate-900">{text}</b>
+    <span data-rhythm-multi-chat-bubble data-rhythm-multi-stamp-bubble className="pointer-events-none absolute inset-x-0.5 bottom-0.5 top-3 z-40 flex items-start justify-center overflow-hidden landscape:top-0.5 [[data-mh-view-rotation=true]_&]:top-0.5 [container-type:size]">
+      {/* 席のカードの高さに合わせて、絵の大きさを決める(CSS は index.html の mh-seat-stamp)。絵が大きすぎると下の言葉が切れ、
+          横・🔄横の低いカードでは名前に重なっていた(2026-11-15 r1115-025)。縦は「絵の下に言葉」、横・🔄横は「絵の右に言葉」 */}
+      <span className="mh-seat-stamp flex max-h-full max-w-full items-center rounded-xl bg-white p-0.5 shadow-lg">
+        <img src={multiStampFaceSrc(stamp.sf) || undefined} alt="" draggable={false} decoding="async" className="mh-seat-stamp-img block shrink-0 rounded-lg object-cover" />
+        <b className="mh-seat-stamp-word block min-w-0 truncate text-[10px] font-black leading-tight text-slate-900">{text}</b>
       </span>
     </span>
   );
@@ -3686,6 +3688,25 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
     if (modeSelect) { if (inRoom && onRoomEntered) onRoomEntered(); return; }
     if (!inRoom && !searching && onBack) onBack();
   }, [inRoom, !!searching]);
+  // チャットを開いて文字を打つとき(キーボードが出たとき)、チャットの板を「いま見えている範囲(visualViewport)」へ合わせる(2026-11-15 r1115-024)。
+  // iPhone はキーボードが出ると、画面の大きさは変えずに、ページを上へずらして入力欄を見せる。そのせいで板の見出し・やりとりが画面の外へ出ていた。
+  // 縦画面(🔄横でない)だけ。キーボードが出ていない・横画面のときは null(今までの置き方のまま)
+  const [chatVV, setChatVV] = React.useState(null);
+  React.useEffect(() => {
+    if (!chatOpen) { setChatVV(null); return undefined; }
+    const vv = typeof window !== 'undefined' ? window.visualViewport : null;
+    if (!vv || typeof vv.addEventListener !== 'function') return undefined;
+    const update = () => {
+      const rotated = !!document.querySelector('[data-mh-view-rotation="true"]');
+      const portrait = window.innerHeight >= window.innerWidth;
+      const lost = window.innerHeight - vv.height;
+      setChatVV(!rotated && portrait && Number.isFinite(lost) && lost > 100
+        ? { top: Math.max(0, vv.offsetTop || 0), left: Math.max(0, vv.offsetLeft || 0), width: vv.width, height: vv.height } : null);
+    };
+    update();
+    vv.addEventListener('resize', update); vv.addEventListener('scroll', update);
+    return () => { vv.removeEventListener('resize', update); vv.removeEventListener('scroll', update); };
+  }, [chatOpen]);
   // 「フレンドに送る」: 押すとゲームが開いてこの部屋に入れるリンクを送る(2026-11-11)。コードも添える(ホーム画面のアプリでは、コードを打って入れる)
   const shareCode = async () => {
     if (!view) return;
@@ -3903,9 +3924,9 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
   const askBuddy = view ? (view.myCpus || []).map((c) => view.members.find((m) => m.id === c.id)).find((m) => m && !m.as) : null;
   const askBuddyName = askBuddy ? (askBuddy.name || 'マスモン') : '';
   const chatSheet = chatOpen && view && (
-    <div className="absolute inset-0 z-[80000]">
+    <div data-rhythm-multi-chat-layer {...(chatVV ? { 'data-kb': '1' } : {})} className="absolute inset-0 z-[80000]" style={chatVV ? { position: 'fixed', top: chatVV.top, left: chatVV.left, width: chatVV.width, height: chatVV.height, right: 'auto', bottom: 'auto' } : undefined}>
       <button type="button" aria-label="チャットを閉じる" className="absolute inset-0 bg-slate-950/55" onClick={() => setChatOpen(false)} />
-      <div data-rhythm-multi-chat-sheet className="absolute inset-x-0 bottom-0 flex h-[80%] flex-col rounded-t-2xl border-t border-cyan-400/40 bg-slate-900 p-2.5 shadow-2xl landscape:inset-y-0 [[data-mh-view-rotation=true]_&]:inset-y-0 landscape:left-auto [[data-mh-view-rotation=true]_&]:left-auto landscape:right-0 [[data-mh-view-rotation=true]_&]:right-0 landscape:h-full [[data-mh-view-rotation=true]_&]:h-full landscape:w-[50%] [[data-mh-view-rotation=true]_&]:w-[50%] landscape:rounded-none [[data-mh-view-rotation=true]_&]:rounded-none landscape:rounded-l-2xl [[data-mh-view-rotation=true]_&]:rounded-l-2xl landscape:border-l [[data-mh-view-rotation=true]_&]:border-l landscape:border-t-0 [[data-mh-view-rotation=true]_&]:border-t-0 landscape:pt-[calc(.6rem+var(--mh-sa-top))] [[data-mh-view-rotation=true]_&]:pt-[calc(.6rem+var(--mh-sa-top))]" style={{ paddingBottom: 'calc(.6rem + var(--mh-sa-bottom))' }}>
+      <div data-rhythm-multi-chat-sheet style={chatVV ? { height: '100%', maxHeight: '100%', borderRadius: 0 } : undefined} className="absolute inset-x-0 bottom-0 flex h-[80%] flex-col rounded-t-2xl border-t border-cyan-400/40 bg-slate-900 p-2.5 shadow-2xl landscape:inset-y-0 [[data-mh-view-rotation=true]_&]:inset-y-0 landscape:left-auto [[data-mh-view-rotation=true]_&]:left-auto landscape:right-0 [[data-mh-view-rotation=true]_&]:right-0 landscape:h-full [[data-mh-view-rotation=true]_&]:h-full landscape:w-[50%] [[data-mh-view-rotation=true]_&]:w-[50%] landscape:rounded-none [[data-mh-view-rotation=true]_&]:rounded-none landscape:rounded-l-2xl [[data-mh-view-rotation=true]_&]:rounded-l-2xl landscape:border-l [[data-mh-view-rotation=true]_&]:border-l landscape:border-t-0 [[data-mh-view-rotation=true]_&]:border-t-0 landscape:pt-[calc(.6rem+var(--mh-sa-top))] [[data-mh-view-rotation=true]_&]:pt-[calc(.6rem+var(--mh-sa-top))]" style={{ paddingBottom: 'calc(.6rem + var(--mh-sa-bottom))' }}>
         <RhythmMultiChatPanel view={view} phase={room ? room.phase : ''} members={view.members} resolveIconUrl={resolveIconUrl} onClose={() => setChatOpen(false)} askName={askBuddyName} talkTip={!talkTipSeen && askBuddyName ? askBuddyName : ''} onTalkTipClose={closeTalkTip} />
       </div>
     </div>
@@ -4625,12 +4646,14 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
           </div>
         )}
         footer={() => (
-          <div className="grid grid-cols-3 gap-1.5">
-            {rankingWideButton()}
+          // 幅のせまい欄(🔄横・横画面・幅320)では2列にして、おまかせを下の1行まるごとにする(3つ並べると「ラン/キン/グ」「おまか/せ」と言葉の途中で折れた。2026-11-15 r1115-020)
+          <div className="mh-multi-select-footer-box"><div data-rhythm-multi-select-footer className="mh-multi-select-footer">
+            {rankingWideButton('whitespace-nowrap')}
             <button data-rhythm-multi-omakase type="button" aria-pressed={myPick === RHYTHM_MULTI_OMAKASE} onClick={() => RHYTHM_MULTI.pick(RHYTHM_MULTI_OMAKASE)}
-              className={`flex min-h-[44px] flex-col items-center justify-center rounded-xl border px-1 text-[11px] font-black leading-tight ${myPick === RHYTHM_MULTI_OMAKASE ? 'border-amber-300 bg-amber-600/80 text-white' : 'border-white/15 bg-slate-900/80 text-slate-300'}`}>🔀 おまかせ{myPick === RHYTHM_MULTI_OMAKASE ? '(選曲済)' : ''}<small data-rhythm-multi-omakase-note className="block text-[8px] font-bold opacity-80">{members.some((m) => m.cpu) ? (members.some((m) => m.cpu && m.as) ? '助手・マスモンの希望の曲に' : 'マスモンの希望の曲に') : 'ほかの人の曲が優先'}</small></button>
+              className={`mh-multi-select-omakase flex min-h-[44px] flex-col items-center justify-center rounded-xl border px-1 text-[11px] font-black leading-tight landscape:min-h-[34px] ${myPick === RHYTHM_MULTI_OMAKASE ? 'border-amber-300 bg-amber-600/80 text-white' : 'border-white/15 bg-slate-900/80 text-slate-300'}`}>🔀 おまかせ{myPick === RHYTHM_MULTI_OMAKASE ? '(選曲済)' : ''}<small data-rhythm-multi-omakase-note className="block text-[8px] font-bold opacity-80">{members.some((m) => m.cpu) ? (members.some((m) => m.cpu && m.as) ? '助手・マスモンの希望の曲に' : 'マスモンの希望の曲に') : 'ほかの人の曲が優先'}</small></button>
             <button data-rhythm-multi-leave type="button" onClick={leaveRoom}
-              className="flex min-h-[44px] items-center justify-center rounded-xl border border-white/15 bg-slate-900/80 px-1 text-[11px] font-black text-slate-300">ルームを出る</button>
+              className="flex min-h-[44px] items-center justify-center whitespace-nowrap rounded-xl border border-white/15 bg-slate-900/80 px-1 text-[11px] font-black text-slate-300 landscape:min-h-[34px]">ルームを出る</button>
+          </div>
           </div>
         )} />
       {chatSheet}{inviteSheetLayer}{rankingLayer}{buddyInfoLayer}{buddySheetLayer}

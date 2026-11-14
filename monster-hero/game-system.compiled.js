@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 0da1e9a31ba0a541
+// source-sha256: 77a9403440ccb26a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -96263,17 +96263,17 @@ function RhythmMultiChatBubble({
   if (stamp) return React.createElement("span", {
     "data-rhythm-multi-chat-bubble": true,
     "data-rhythm-multi-stamp-bubble": true,
-    className: "pointer-events-none absolute inset-x-0.5 bottom-0.5 top-3 z-40 flex items-start justify-center overflow-hidden"
+    className: "pointer-events-none absolute inset-x-0.5 bottom-0.5 top-3 z-40 flex items-start justify-center overflow-hidden landscape:top-0.5 [[data-mh-view-rotation=true]_&]:top-0.5 [container-type:size]"
   }, React.createElement("span", {
-    className: "flex max-h-full max-w-full flex-col items-center rounded-xl bg-white p-0.5 shadow-lg"
+    className: "mh-seat-stamp flex max-h-full max-w-full items-center rounded-xl bg-white p-0.5 shadow-lg"
   }, React.createElement("img", {
     src: multiStampFaceSrc(stamp.sf) || undefined,
     alt: "",
     draggable: false,
     decoding: "async",
-    className: "block aspect-square min-h-0 w-14 max-w-full shrink rounded-lg object-cover"
+    className: "mh-seat-stamp-img block shrink-0 rounded-lg object-cover"
   }), React.createElement("b", {
-    className: "block max-w-full truncate text-[10px] font-black leading-tight text-slate-900"
+    className: "mh-seat-stamp-word block min-w-0 truncate text-[10px] font-black leading-tight text-slate-900"
   }, text)));
   return React.createElement("span", {
     "data-rhythm-multi-chat-bubble": true,
@@ -99382,6 +99382,33 @@ function RhythmMultiScreenBody({
     }
     if (!inRoom && !searching && onBack) onBack();
   }, [inRoom, !!searching]);
+  const [chatVV, setChatVV] = React.useState(null);
+  React.useEffect(() => {
+    if (!chatOpen) {
+      setChatVV(null);
+      return undefined;
+    }
+    const vv = typeof window !== 'undefined' ? window.visualViewport : null;
+    if (!vv || typeof vv.addEventListener !== 'function') return undefined;
+    const update = () => {
+      const rotated = !!document.querySelector('[data-mh-view-rotation="true"]');
+      const portrait = window.innerHeight >= window.innerWidth;
+      const lost = window.innerHeight - vv.height;
+      setChatVV(!rotated && portrait && Number.isFinite(lost) && lost > 100 ? {
+        top: Math.max(0, vv.offsetTop || 0),
+        left: Math.max(0, vv.offsetLeft || 0),
+        width: vv.width,
+        height: vv.height
+      } : null);
+    };
+    update();
+    vv.addEventListener('resize', update);
+    vv.addEventListener('scroll', update);
+    return () => {
+      vv.removeEventListener('resize', update);
+      vv.removeEventListener('scroll', update);
+    };
+  }, [chatOpen]);
   const shareCode = async () => {
     if (!view) return;
     const url = mhRoomLinkUrl('beat', view.code);
@@ -99682,15 +99709,33 @@ function RhythmMultiScreenBody({
   }, "✕")), inviteListBody));
   const askBuddy = view ? (view.myCpus || []).map(c => view.members.find(m => m.id === c.id)).find(m => m && !m.as) : null;
   const askBuddyName = askBuddy ? askBuddy.name || 'マスモン' : '';
-  const chatSheet = chatOpen && view && React.createElement("div", {
-    className: "absolute inset-0 z-[80000]"
-  }, React.createElement("button", {
+  const chatSheet = chatOpen && view && React.createElement("div", _extends({
+    "data-rhythm-multi-chat-layer": true
+  }, chatVV ? {
+    'data-kb': '1'
+  } : {}, {
+    className: "absolute inset-0 z-[80000]",
+    style: chatVV ? {
+      position: 'fixed',
+      top: chatVV.top,
+      left: chatVV.left,
+      width: chatVV.width,
+      height: chatVV.height,
+      right: 'auto',
+      bottom: 'auto'
+    } : undefined
+  }), React.createElement("button", {
     type: "button",
     "aria-label": "チャットを閉じる",
     className: "absolute inset-0 bg-slate-950/55",
     onClick: () => setChatOpen(false)
   }), React.createElement("div", {
     "data-rhythm-multi-chat-sheet": true,
+    style: chatVV ? {
+      height: '100%',
+      maxHeight: '100%',
+      borderRadius: 0
+    } : undefined,
     className: "absolute inset-x-0 bottom-0 flex h-[80%] flex-col rounded-t-2xl border-t border-cyan-400/40 bg-slate-900 p-2.5 shadow-2xl landscape:inset-y-0 [[data-mh-view-rotation=true]_&]:inset-y-0 landscape:left-auto [[data-mh-view-rotation=true]_&]:left-auto landscape:right-0 [[data-mh-view-rotation=true]_&]:right-0 landscape:h-full [[data-mh-view-rotation=true]_&]:h-full landscape:w-[50%] [[data-mh-view-rotation=true]_&]:w-[50%] landscape:rounded-none [[data-mh-view-rotation=true]_&]:rounded-none landscape:rounded-l-2xl [[data-mh-view-rotation=true]_&]:rounded-l-2xl landscape:border-l [[data-mh-view-rotation=true]_&]:border-l landscape:border-t-0 [[data-mh-view-rotation=true]_&]:border-t-0 landscape:pt-[calc(.6rem+var(--mh-sa-top))] [[data-mh-view-rotation=true]_&]:pt-[calc(.6rem+var(--mh-sa-top))]",
     style: {
       paddingBottom: 'calc(.6rem + var(--mh-sa-bottom))'
@@ -101141,13 +101186,16 @@ function RhythmMultiScreenBody({
       style: JA_WRAP_STYLE
     }, jaWrap('全員が選ぶか時間になると、全員の選曲からシャッフルで1曲が決まります。'), !room.deadline && jaWrap('いまは人があなたひとりなので、制限時間はありません。ゆっくり選べます。')), isHost && selectTimeButton('min-[481px]:hidden', true)),
     footer: () => React.createElement("div", {
-      className: "grid grid-cols-3 gap-1.5"
-    }, rankingWideButton(), React.createElement("button", {
+      className: "mh-multi-select-footer-box"
+    }, React.createElement("div", {
+      "data-rhythm-multi-select-footer": true,
+      className: "mh-multi-select-footer"
+    }, rankingWideButton('whitespace-nowrap'), React.createElement("button", {
       "data-rhythm-multi-omakase": true,
       type: "button",
       "aria-pressed": myPick === RHYTHM_MULTI_OMAKASE,
       onClick: () => RHYTHM_MULTI.pick(RHYTHM_MULTI_OMAKASE),
-      className: `flex min-h-[44px] flex-col items-center justify-center rounded-xl border px-1 text-[11px] font-black leading-tight ${myPick === RHYTHM_MULTI_OMAKASE ? 'border-amber-300 bg-amber-600/80 text-white' : 'border-white/15 bg-slate-900/80 text-slate-300'}`
+      className: `mh-multi-select-omakase flex min-h-[44px] flex-col items-center justify-center rounded-xl border px-1 text-[11px] font-black leading-tight landscape:min-h-[34px] ${myPick === RHYTHM_MULTI_OMAKASE ? 'border-amber-300 bg-amber-600/80 text-white' : 'border-white/15 bg-slate-900/80 text-slate-300'}`
     }, "🔀 おまかせ", myPick === RHYTHM_MULTI_OMAKASE ? '(選曲済)' : '', React.createElement("small", {
       "data-rhythm-multi-omakase-note": true,
       className: "block text-[8px] font-bold opacity-80"
@@ -101155,8 +101203,8 @@ function RhythmMultiScreenBody({
       "data-rhythm-multi-leave": true,
       type: "button",
       onClick: leaveRoom,
-      className: "flex min-h-[44px] items-center justify-center rounded-xl border border-white/15 bg-slate-900/80 px-1 text-[11px] font-black text-slate-300"
-    }, "ルームを出る"))
+      className: "flex min-h-[44px] items-center justify-center whitespace-nowrap rounded-xl border border-white/15 bg-slate-900/80 px-1 text-[11px] font-black text-slate-300 landscape:min-h-[34px]"
+    }, "ルームを出る")))
   }), chatSheet, inviteSheetLayer, rankingLayer, buddyInfoLayer, buddySheetLayer, countdownLayer);
 }
 const RHYTHM_BUDDY_STORE = (() => {
