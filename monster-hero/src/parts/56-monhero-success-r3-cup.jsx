@@ -271,7 +271,7 @@ function MsxR3Battle({ run, setRun, v, ev, ctx, bondLv, onPause, debug }) {
         <div className="gr" style={{ bottom: 'calc(40% - 5px)' }}/><MsxMonArt run={run} className="mon" style={{ bottom: '40%', height: '34%', ...(st3.won ? {} : { filter: 'grayscale(.5) drop-shadow(0 8px 5px #0009)' }) }}/>
         <div className={`v-stamp ${st3.won ? '' : 'ng'}`} style={{ top: '4%', fontSize: st3.won ? 42 : 34 }}>{st3.won ? '優勝!' : '負けた…'}<small>{cardIconNode(st3.icon, 16)} {st3.name}{d.fame ? `・賞金 💰${msxFmt(d.fame)}` : ''}</small></div>
         {s.mealReady && !s.over ? (
-          <div className="v-meal"><div className="t">🍽 がんばったごほうびに、ごはんをあげよう<small>大会のあとだけあげられる(1回){free ? '・今回はただ' : ''}</small></div>
+          <div className="v-meal"><div className="t">🍽 がんばったごほうびに、ごはんをあげよう<small>優勝したときだけ あげられる(1回){free ? '・今回はただ' : ''}</small></div>
             <div className="ms">{keys.map((k) => (
               <button type="button" key={k} className={`v-ml ${mealPick === k ? 'sel' : ''}`} disabled={!can(k)} onClick={() => setMealPick(k)} style={{ opacity: can(k) ? 1 : 0.45 }} data-msx-r3-meal={k}>
                 <div className="e">{MEAL_ICON[k] || '🍙'}</div><b>{M[k].name}</b><span className="g">{free ? 'ただ' : `💰 ${msxFmt(M[k].cost)}G`}</span><small data-msx-r3-mealfx={k}>{fx(k)}</small></button>))}</div>

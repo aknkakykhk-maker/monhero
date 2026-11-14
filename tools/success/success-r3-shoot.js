@@ -46,7 +46,7 @@ const makeRun = async (kind) => {
   s = { ...s, acted: false, battle: null, over: null, tickets: 3, items: { sand: 2, rainbow: 1 } };
   let phase = 'main';
   const stats = (n) => ({ life: n, pow: n, wise: n, hit: n, eva: n, tough: n });
-  if (kind === 'win' || kind === 'lose') { s = { ...s, stats: stats(kind === 'win' ? 999 : 40), battle: { kind: 'cup', id: 'x', sys: 'str', star: 2, rival: null, round: 0 } }; phase = 'battle'; }
+  if (kind === 'win' || kind === 'lose') { s = { ...s, stats: stats(kind === 'win' ? 700 : 40), battle: { kind: 'cup', id: 'x', sys: 'str', star: 2, rival: null, round: 0 } }; phase = 'battle'; }
   if (kind === 'debutlose') { s = { ...s, turn: 5, wonNow: [], wonBefore: [], stats: stats(30), debutLoss: 2, debutWon: false, rematchUsed: 3, battle: { kind: 'debut', round: 0, retry: 2 } }; phase = 'battle'; }
   if (kind === 'gameover') { s = { ...s, turn: 7, debutLoss: 3, over: 'gameover' }; phase = 'over'; }
   if (kind === 'retire') { s = { ...s, turn: 46, pts: 34, over: 'done' }; phase = 'over'; }
