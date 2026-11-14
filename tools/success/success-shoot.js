@@ -335,6 +335,8 @@ const makeRun = async (kind) => {
             if (x < 0 || y < 0 || x >= innerWidth || y >= innerHeight) continue;
             const at = document.elementFromPoint(x, y); const b = at && at.closest('button, [role=button]');
             if (!b || b === e || e.contains(b) || b.contains(e)) continue;
+            // 重なった窓(.msx-ov)の中のボタンが取ったとき、その窓の外のボタンは窓の下に隠れていて押せない(窓の外を押すと窓が閉じるだけ)ので数えない
+            { const ov = b.closest('.msx-ov'); if (ov && !ov.contains(e)) continue; }
             const q = b.getBoundingClientRect();
             // 取ったボタンの見た目の枠の外で、広げた範囲(枠から 22px まで)の中 = ::after の横取り。それより遠いのは上に重なった窓などで、正しく隠れているだけ
             const dx = Math.max(q.left - x, 0, x - q.right), dy = Math.max(q.top - y, 0, y - q.bottom);
