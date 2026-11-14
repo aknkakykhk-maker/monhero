@@ -17,52 +17,60 @@ const RB = require(path.join(ROOT, 'monster-hero', 'data', 'monhero-success-reco
 const errors = [];
 const ok = (cond, msg) => { if (!cond) errors.push(msg); };
 
-// ---- アシスト能力(第2版: 40種類・5段。芯はまだ第1版なので、芯とは id・名前・型だけ比べる) ----
+// ---- アシスト能力(第3版・2026-11-14: 参考から + オリジナル・目盛り・1体8種類) ----
 const core = SUC.ASSISTS;
 for (const id of Object.keys(core)) {
   const a = AS.BY_ID[id];
-  // 芯の ASSISTS に hint(助手)が付いた物は、お話のひらめきで取れる5つ(表では from:'hint'・aid が同じ)
   const want = core[id].hint ? 'hint' : 'core';
   ok(a && a.from === want && (want === 'core' || a.aid === core[id].hint), `芯のアシスト ${id} が表にない(または from が ${want} でない)`);
   if (!a) continue;
-  ok(a.name === core[id].name, `${id} の名前が芯と違う: ${a.name} / ${core[id].name}`);
-  // お話のひらめき5つは表(第2版)では試合型。芯はまだ第1版の「いるだけ型」で持っている(芯が表を読むように直すまで)
-  ok(a.type === core[id].type || (a.type === 'battle' && core[id].type === 'stay'), `${id} の型が芯と違う: ${a.type} / ${core[id].type}`);
+  // 芯は表の名前を使う(試合型5つは第1版の数字のまま・名前も第1版)
+  if (a.type !== 'battle') ok(a.name === core[id].name, `${id} の名前が芯と違う: ${a.name} / ${core[id].name}`);
+  ok(a.type === core[id].type || (a.type === 'battle' && core[id].type === 'battle'), `${id} の型が芯と違う: ${a.type} / ${core[id].type}`);
 }
-ok(AS.LIST.length >= 30 && AS.LIST.length <= 40, `アシスト能力の数が30〜40でない(社長 2026-11-12): ${AS.LIST.length}`);
+ok(AS.VERSION === 3, '表の版が3でない');
+ok(AS.LIST.length >= 60 && AS.LIST.length <= 80, `アシスト効果の数が60〜80でない(社長 2026-11-14「使えそうなのは全部」): ${AS.LIST.length}`);
+ok(AS.LIST.filter(a => a.ref).length >= 40 && AS.LIST.filter(a => !a.ref).length === 22, `参考から/オリジナルの数がおかしい: ${AS.LIST.filter(a => a.ref).length} / ${AS.LIST.filter(a => !a.ref).length}`);
+const V2_IDS = ['sokoji', 'kizuna', 'atooshi', 'hirameki', 'ochitsuki', 'itawari', 'miharu', 'kibarashi', 'kunpow', 'kunwise', 'kunhit', 'kuneva', 'kuntough', 'kunlife',
+  'kaketsuke', 'hitonatsu', 'shitashi', 'nakayoshi', 'tagpow', 'shitsuke', 'gussuri', 'asobi', 'kuishinbo', 'tsukisoi', 'genki', 'tairyoku', 'shugyo',
+  'shokin', 'kokoroe', 'ticket', 'rivaldamashii', 'ninki', 'yobimizu', 'mejirushi', 'joshu', 'gatsu', 'miseba', 'mitate', 'kensho', 'mimamori'];
+ok(V2_IDS.every(id => AS.BY_ID[id] && Array.isArray(AS.BY_ID[id].v2) && AS.BY_ID[id].v2.length === 5), '第2版の40種類が残っていない(id は変えない・v2 で読み替える)');
 for (const a of AS.LIST) {
-  ok(/^[a-z]+$/.test(a.id), `アシストの id は英小文字だけ: ${a.id}`);
+  ok(/^[a-z0-9]+$/.test(a.id) && /^[a-z]/.test(a.id), `アシストの id は英小文字(と数字)だけ: ${a.id}`);
   if (a.from !== 'core') ok(a.from === 'hint' && TT.ASSIST_NAMES[a.aid], `${a.id} の from / aid がおかしい`);
-  ok(a.v.length === AS.LV_MAX && a.cost.length === AS.LV_MAX, `${a.id} の段が${AS.LV_MAX}つでない`);
-  ok(a.v.every((x, i) => i === 0 || x >= a.v[i - 1]), `${a.id} の効き目が段の順に上がっていない`);
-  ok(a.cost.every((x, i) => i === 0 || x > a.cost[i - 1]), `${a.id} の値段が段の順に上がっていない`);
-  ok(Object.values(AS.COST).some(c => c === a.cost), `${a.id} の値段が値段の組(COST)のどれでもない`);
+  ok(Number.isInteger(a.max) && a.max >= 1 && a.v.length === a.max && a.cost.length === a.max && a.max <= AS.LV_MAX, `${a.id} の目盛りの数がおかしい`);
+  ok(a.v.every((x, i) => Number.isFinite(x) && (i === 0 || x > a.v[i - 1])), `${a.id} の効き目が目盛りの順に上がっていない`);
+  ok(a.cost.every((x, i) => x === a.pt * (i + 1)), `${a.id} の値段が 1目盛り ${a.pt}pt の積み上げでない`);
+  ok(a.cost[a.max - 1] <= 110, `${a.id} の満タンの値段が高すぎる(第2版の約半分・110pt まで): ${a.cost[a.max - 1]}`);
   ok(AS.SCENES.some(g => g.key === a.scene), `${a.id} の scene が知らないもの: ${a.scene}`);
-  ok(a.text.includes('{v}'), `${a.id} の説明に {v} がない`);
-  for (let lv = 1; lv <= AS.LV_MAX; lv++) ok(!AS.describe(a.id, lv).includes('{'), `${a.id} 段${lv} の説明に { が残る`);
+  ok(a.text.includes('{v}') || a.max === 1, `${a.id} の説明に {v} がない`);
+  for (let n = 1; n <= a.max; n++) ok(!AS.describe(a.id, n).includes('{'), `${a.id} 目盛り${n} の説明に { が残る`);
+  ok(!/訓練/.test(a.text) && !/訓練/.test(a.name), `${a.id}: 画面の呼び名は「トレーニング」(社長 2026-11-13)`);
   ok(['with', 'self', 'stay', 'battle'].includes(a.type), `${a.id} の型が知らないもの: ${a.type}`);
   ok((a.type === 'battle') === (a.from === 'hint'), `${a.id}: お話のひらめきは試合型、ほかは試合型でない(社長 2026-11-12)`);
-  if (a.type === 'battle') ok(Array.isArray(a.buff) && a.buff.length === AS.LV_MAX, `${a.id} に段ごとの buff がない`);
+  if (a.type === 'battle') ok(Array.isArray(a.buff) && a.buff.length === a.max, `${a.id} に目盛りごとの buff がない`);
+  // 古い子の段1〜5は、同じ効き目の目盛りに読み替わる(CLAUDE.md ⑦)
+  if (a.v2) for (let lv = 1; lv <= 5; lv++) { const n = AS.fromSaved({ id: a.id, lv }); ok(Math.abs(a.v[n - 1] - a.v2[lv - 1]) < 1e-9, `${a.id} 段${lv} が同じ効き目の目盛りに読み替わらない: ${a.v[n - 1]} / ${a.v2[lv - 1]}`); const sv = AS.toSaved(a.id, n); ok(sv.lv === lv && sv.n === n, `${a.id} 段${lv} の書き戻し(lv)がずれる`); }
 }
-ok(new Set(AS.LIST.map(a => a.name)).size === AS.LIST.length, 'アシスト能力の名前が重なる');
-// 値段: いちばん安い段1はポイントの最低(20)で取れる / 高の段5は M でないと取れないほど高くない・G では取れない
+ok(new Set(AS.LIST.map(a => a.name)).size === AS.LIST.length, 'アシスト効果の名前が重なる');
 ok(Math.min(...AS.LIST.map(a => a.cost[0])) <= AS.POINTS_MIN, 'ポイント最低の子が1つも取れない');
-ok(AS.COST.high[4] <= AS.POINTS_MAX && AS.COST.high[4] > 160, '高の段5の値段が物差しから外れる(B では届かず A から届く)');
 const hintNames = Object.values(SUC.ASST_STORY).filter(s => s.good.hint === 'assist').map(s => s.good.name);
 for (const n of hintNames) ok(AS.LIST.some(a => a.name === n && a.from === 'hint'), `お話のひらめき「${n}」が表にない`);
-ok(AS.MAX_KINDS === 4, '1体に持てる数が4でない');
+ok(AS.MAX_KINDS === 8, '1体に持てる数が8でない(社長 2026-11-14)');
 for (const p of [0, 999, 2000, 8000, 14000, 19500, 20070, 99999]) ok(AS.pointsOf(p) === SUC.assistPointsOf(p), `ポイントの式が芯と違う(総合力 ${p})`);
-ok(AS.describe('sokoji', 2) === 'この子がいっしょにトレーニングすると、伸びが10%上がる', '説明の差しこみがおかしい');
+ok(AS.describe('sokoji', 10) === 'いっしょにトレーニングすると、伸びが10%上がる', '説明の差しこみがおかしい');
+ok(AS.valueText('sokoji', 12) === '+12%' && AS.valueText('hitonatsu', 2) === '×1.1', `効き目の短い字がおかしい: ${AS.valueText('sokoji', 12)} ${AS.valueText('hitonatsu', 2)}`);
 for (const pts of [20, 40, 160, 288, 400]) {
   const r = AS.autoPick(pts, []);
-  ok(r.picks.length <= 4 && r.used <= pts && r.used > 0, `おまかせ(${pts})がポイント・4種類を超える/何も取らない`);
+  ok(r.picks.length <= 8 && r.used <= pts && r.used > 0 && r.left < 13, `おまかせ(${pts})がポイント・8種類を超える/何も取らない/余りが多い: ${r.used}`);
 }
 const hinted = AS.autoPick(400, [{ type: 'assist', name: '見せ場' }]);
 ok(hinted.picks[0] && hinted.picks[0].id === 'miseba', 'おまかせがひらめきの候補を先に取っていない');
 ok(!AS.candidates([]).some(a => a.from === 'hint'), 'ひらめきが無いのに、お話の能力が候補に出る');
-const np = AS.normPicks([{ id: 'sokoji', lv: 9 }, { id: 'nai' }, { id: 'sokoji', lv: 1 }, { id: 'hirameki', lv: 3 }, { id: 'itawari', lv: 1 }, { id: 'ochitsuki', lv: 1 }, { id: 'atooshi', lv: 1 }], 400);
-ok(np.picks.length === 4 && np.picks[0].lv === 5 && np.used <= 400, '確かめ方(段の丸め・知らない id・4種類)がおかしい');
-ok(AS.normPicks([{ id: 'sokoji', lv: 5 }], 200).picks.length === 0, 'ポイントを超えた能力が残る');
+const np = AS.normPicks([{ id: 'sokoji', lv: 9 }, { id: 'nai' }, { id: 'sokoji', lv: 1 }, { id: 'hirameki', n: 3 }, { id: 'itawari', n: 1 }, { id: 'ochitsuki', n: 1 }, { id: 'atooshi', n: 1 },
+  { id: 'miharu', n: 1 }, { id: 'kibarashi', n: 1 }, { id: 'ninzu', n: 1 }, { id: 'tsuika', n: 1 }], 400);
+ok(np.picks.length === 8 && np.picks[0].n === 25 && np.used <= 400, '確かめ方(段の読み替え・知らない id・8種類)がおかしい');
+ok(AS.normPicks([{ id: 'sokoji', n: 25 }], 99).picks.length === 0, 'ポイントを超えた効果が残る');
 
 // 試合型は対戦の芯の buffs に入る形・いちばん高い段だけ・範囲の中
 const BUFF_KEYS = ['guts', 'hit1', 'crit', 'missCut', 'eva', 'noSulk'];
@@ -70,7 +78,7 @@ for (const a of AS.LIST.filter(x => x.type === 'battle')) for (const b of a.buff
 const bb = AS.battleBuffs([[{ id: 'gatsu', lv: 1 }], [{ id: 'gatsu', lv: 3 }, { id: 'sokoji', lv: 3 }], [{ id: 'mimamori', lv: 5 }]], { guts: 10, crit: 0.1 });
 ok(JSON.stringify(bb) === JSON.stringify({ guts: 16, hit1: 0.2, noSulk: true, crit: 0.1 }), `battleBuffs のまとめ方がおかしい: ${JSON.stringify(bb)}`);
 ok(JSON.stringify(AS.battleBuffs(null, null)) === '{}' && JSON.stringify(AS.battleBuffs([[{ id: 'sokoji', lv: 3 }]])) === '{}', '試合型が無いのに buffs が付く');
-ok(AS.stayValue([[{ id: 'gussuri', lv: 2 }], [{ id: 'gussuri', lv: 4 }]], 'gussuri') === 20 && AS.stayValue([], 'gussuri') === 0, 'stayValue がいちばん高い段を返さない');
+ok(AS.stayValue([[{ id: 'gussuri', lv: 2 }], [{ id: 'gussuri', lv: 4 }]], 'gussuri') === 20 && AS.stayValue([[{ id: 'gussuri', n: 23 }]], 'gussuri') === 23 && AS.stayValue([], 'gussuri') === 0, 'stayValue がいちばん高い段を返さない');
 ok(AS.battleBuffs([[{ id: 'kensho', lv: 5 }]], { missCut: 0.9 }).missCut === 1, 'buffs が芯の範囲で切られていない');
 
 // ---- 称号 ----
