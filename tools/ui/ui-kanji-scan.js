@@ -60,6 +60,8 @@ function findInText(t) {
 
 // 保存に書く値(戦術カードの段 = mh_card_tactics_v1 の id。tools/boot/saved-value-lock.json の cardTacticIds)
 const SAVED_KEY = /^tiers$/;
+// プレイヤーが送る定型文・スタンプの言葉(プレイヤーの台詞なので見ない)
+const SPEECH_VAR = /STAMP/;
 const SKIP_ATTR = /^(?:data-|className$|class$|key$|id$|style$|type$|name$|ref$|role$|htmlFor$|src$|href$|value$)/;
 function skipByParent(node, parent, grand) {
   if (!parent) return false;
@@ -89,6 +91,7 @@ function scanFile(rel, opts = {}) {
     if (!n || typeof n !== 'object') return;
     if (Array.isArray(n)) { n.forEach(x => visit(x, parent, grand, saved)); return; }
     if (n.type === 'ObjectProperty' && n.key && SAVED_KEY.test(n.key.name || n.key.value || '')) saved = true;
+    if (n.type === 'VariableDeclarator' && n.id && SPEECH_VAR.test(n.id.name || '')) saved = true;
     if (saved) return;
     if (n.type === 'StringLiteral' || n.type === 'TemplateElement' || n.type === 'JSXText') {
       const text = n.type === 'TemplateElement' ? (n.value.cooked || '') : n.value;

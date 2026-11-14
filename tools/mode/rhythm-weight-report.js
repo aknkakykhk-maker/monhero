@@ -191,7 +191,7 @@ if(require.main===module)(async()=>{
   // おまかせの値は本体(RHYTHM_LOOK_PRESETS)から読む(道具へ書き写さない)
   const server=await serve(ROOT,PORT);
   const compareRef=arg('compare',null);let baseRoot=null,baseServer=null;
-  const out={scene:SELECT?`${MODE?'モードえらび':'曲えらび'}(止まったまま ${SECONDS}秒)・dpr${DPR}`:`${SONG} ${DIFF} ${FROM} から ${SECONDS}秒・${DRAW}・dpr${DPR}`,rows:[]};let ng=[];
+  const out={scene:SELECT?`${MODE?'モード選び':'曲えらび'}(止まったまま ${SECONDS}秒)・dpr${DPR}`:`${SONG} ${DIFF} ${FROM} から ${SECONDS}秒・${DRAW}・dpr${DPR}`,rows:[]};let ng=[];
   try{
     const b=await playwright.chromium.launch({executablePath:'/opt/pw-browsers/chromium'});const probe=await b.newPage();
     await probe.goto(`http://localhost:${PORT}/monster-hero/index.html`,{waitUntil:'load',timeout:60000});await probe.waitForFunction(()=>typeof RHYTHM_LOOK_PRESETS!=='undefined',{timeout:60000});

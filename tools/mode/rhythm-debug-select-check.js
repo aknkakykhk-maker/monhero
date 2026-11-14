@@ -147,7 +147,7 @@ const snapshot=page=>page.evaluate(()=>{const o={};for(let i=0;i<localStorage.le
       }
     }
     await page.waitForTimeout(1500);
-    check('演奏のあと全解放の曲えらびへ戻る',await page.locator('[data-rhythm-debug-select]').count()===1,await page.evaluate(()=>document.querySelector('main')?.getAttribute('class')?.slice(0,40)||''));
+    check('演奏のあと全解放の曲選びへ戻る',await page.locator('[data-rhythm-debug-select]').count()===1,await page.evaluate(()=>document.querySelector('main')?.getAttribute('class')?.slice(0,40)||''));
     const after=await snapshot(page);
     const changed=[...new Set([...Object.keys(before),...Object.keys(after)])].filter(k=>before[k]!==after[k]);
     check('演奏の前後で保存値(localStorage)が1つも変わらない',changed.length===0,changed.join(', '));

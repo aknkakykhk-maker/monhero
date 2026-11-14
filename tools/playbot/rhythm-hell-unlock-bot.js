@@ -76,7 +76,7 @@ async function playMaster(s, title) {
   const t0 = Date.now();
   while (Date.now() - t0 < 330000) {
     await s.wait(1500);
-    if (await s.page.evaluate(() => !![...document.querySelectorAll('button')].find((b) => /曲えらびへ戻る/.test(b.innerText || '')))) break;
+    if (await s.page.evaluate(() => !![...document.querySelectorAll('button')].find((b) => /曲選びへ戻る/.test(b.innerText || '')))) break;
   }
   await s.wait(1200);
   const result = await s.page.evaluate(() => ({ unlock: document.querySelector('[data-rhythm-result-unlock]')?.getAttribute('data-rhythm-result-unlock') || '',
@@ -86,7 +86,7 @@ async function playMaster(s, title) {
 }
 // 結果画面から曲えらびへ戻り、出てきたものを見る
 async function backFromResult(s) {
-  await s.page.evaluate(() => [...document.querySelectorAll('button')].find((b) => /曲えらびへ戻る/.test(b.innerText || ''))?.click());
+  await s.page.evaluate(() => [...document.querySelectorAll('button')].find((b) => /曲選びへ戻る/.test(b.innerText || ''))?.click());
   await s.wait(1500);
   return s.page.evaluate(() => ({ story: !!document.querySelector('[role="dialog"][aria-label^="イベント回想: 空まで届くビート"]'), guide: !!document.querySelector('[data-rhythm-hell-guide]') }));
 }
@@ -177,7 +177,7 @@ async function storyScenario(s) {
     const trigger = await s.page.evaluate(() => RHYTHM_HELL_STORY_TRIGGER);
     const after = await backFromResult(s);
     if (trigger === 'after-result') {
-      ok('曲えらびへ戻ると、お話「空まで届くビート」が出る', after.story, JSON.stringify(after));
+      ok('曲選びへ戻ると、お話「空まで届くビート」が出る', after.story, JSON.stringify(after));
       await s.page.screenshot({ path: path.join(OUT, 'story.png') });
       await s.page.evaluate(() => [...document.querySelectorAll('button')].find((b) => (b.innerText || '').trim() === 'スキップ')?.click());
       await s.wait(800);
@@ -190,7 +190,7 @@ async function storyScenario(s) {
       }
       ok('説明を最後まで進めると閉じる', !(await s.page.evaluate(() => !!document.querySelector('[data-rhythm-hell-guide]'))));
     } else {
-      ok(`お話の流し方が「${trigger}」なので、曲えらびへ戻ってもお話も説明も出ない(HOME で流す・--story で確かめる)`, !after.story && !after.guide, JSON.stringify(after));
+      ok(`お話の流し方が「${trigger}」なので、曲選びへ戻ってもお話も説明も出ない(HOME で流す・--story で確かめる)`, !after.story && !after.guide, JSON.stringify(after));
     }
     const st1 = await storage(s);
     if (trigger === 'after-result') ok('既読は試し用のキーに付く', st1.preview === 'true', String(st1.preview));
