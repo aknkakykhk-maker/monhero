@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c64aac195cb717d1
+// source-sha256: 4e5e6834f9e8adbd
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -148283,9 +148283,12 @@ const AMBB_CSS = `
 .ambw.ambb-full .ambb-stagewrap{flex:1;min-height:0;display:flex;flex-direction:column;margin-top:6px!important}
 .ambw.ambb-full .ambb-stagewrap .msa-stage{flex:1}
 .ambw.ambb-full [data-ambb-watch]>*:not(.ambb-stagewrap){flex-shrink:0}
-.ambw.ambb-full .ambw-log{margin-top:6px;padding:5px 8px;min-height:44px}
-.ambw.ambb-full .ambw-log p:nth-last-child(n+3){display:none}
-.ambw.ambb-full .ambw-seek{margin-top:8px}
+.ambw.ambb-full .ambw-log{margin-top:4px;padding:4px 8px;min-height:0}
+.ambw.ambb-full .ambw-log p:not(:last-of-type){display:none}
+.ambw.ambb-full .ambw-log .ambb-why{margin-top:3px;gap:6px}
+.ambw.ambb-full .ambw-log .ambb-why .ambw-face{width:22px;height:22px}
+.ambw.ambb-full .ambw-log .ambb-why .ambw-bubble{padding:3px 8px;font-size:11.5px;line-height:1.35}
+.ambw.ambb-full .ambw-seek{margin-top:10px}
 .ambw.ambb-full .ambw-ctl{margin-top:8px;flex-wrap:nowrap;gap:4px;justify-content:center}
 .ambw.ambb-full .ambw-ctl button{min-height:38px;padding:4px 8px;font-size:12px;white-space:nowrap;min-width:0}
 .ambw.ambb-full .ambw-top{min-height:34px}
@@ -148296,9 +148299,9 @@ const AMBB_CSS = `
 .ambw.ambb-full .ambb-bar-wrap .msxm-btn small{white-space:nowrap}
 .ambw.ambb-full .ambb-bar-wrap .msxm-sec{margin-top:5px}
 .ambw.ambb-full .ambb-bar-wrap .msxm-foot{margin-top:5px}
-.ambw.ambb-full [data-ambw-panel]{padding:6px 8px;margin-top:6px}
+.ambw.ambb-full [data-ambw-panel]{padding:5px 8px;margin-top:4px}
 .ambw.ambb-full [data-ambw-panel]>.ambw-row+.ambw-row{display:none}
-.ambw.ambb-full [data-ambw-panel] .ambw-face{width:28px;height:28px}
+.ambw.ambb-full [data-ambw-panel] .ambw-face{width:24px;height:24px}
 .ambw.ambb-full [data-ambw-panel] .ambw-small{display:none}
 .ambw.ambb-full [data-ambw-panel] .ambw-chips{margin-top:5px}
 /* 背の低い画面(高さ740以下)では全画面の詰め方をやめ、場は決まった高さ・画面ごと縦にスクロール(ミハリ6 #5891: 場が手動の帯に重なった) */
@@ -149796,7 +149799,7 @@ function AssistantMasmonBattleBeta({
       key: x.k,
       className: x.side
     }, React.createElement("small", null, "R", x.r), x.t)), actor && e.why && WHY[e.why] && React.createElement("div", {
-      className: "ambw-row",
+      className: "ambw-row ambb-why",
       style: {
         marginTop: 6
       }
