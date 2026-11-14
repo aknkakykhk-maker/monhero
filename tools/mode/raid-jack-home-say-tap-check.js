@@ -88,7 +88,7 @@ const LINES_PER_SIZE = 6;
     await page.getByRole('button', { name: 'トップ画面へ進む' }).click({ timeout: 30000 });
     await page.getByRole('button', { name: 'モンヒロバトル' }).waitFor({ timeout: 30000 });
     for (let i = 0; i < 6; i++) {
-      const btn = page.getByRole('button', { name: /受け取る|閉じる|はじめる|OK/ }).first();
+      const btn = page.getByRole('button', { name: /受け取る|閉じる|(?:始|はじ)める|OK/ }).first();
       if (await btn.count() === 0 || !(await btn.isVisible().catch(() => false))) break;
       await btn.dispatchEvent('click').catch(() => {});
       await page.waitForTimeout(250);
@@ -113,7 +113,7 @@ const LINES_PER_SIZE = 6;
       await page.waitForTimeout(300);
     }
     for (let i = 0; i < 60; i++) {
-      const next = page.locator('button[aria-label="次へ"], button:has-text("次へ"), button:has-text("はじめる"), button:has-text("閉じる"), button:has-text("あとで")').filter({ visible: true }).first();
+      const next = page.locator('button[aria-label="次へ"], button:has-text("次へ"), button:has-text("はじめる"), button:has-text("始める"), button:has-text("閉じる"), button:has-text("あとで")').filter({ visible: true }).first();
       if (await next.count() === 0) break;
       await next.click({ timeout: 3000, force: true }).catch(() => {});
       await page.waitForTimeout(250);
@@ -140,9 +140,9 @@ const LINES_PER_SIZE = 6;
             const top = document.elementFromPoint(x, y);
             if (!top || !say.contains(top)) bad.push(`(${Math.round(x)},${Math.round(y)})→${top ? (top.getAttribute('aria-label') || top.className || top.tagName) : 'なし'}`);
           }
-          const next = [...say.querySelectorAll('span')].find((s) => /つぎ/.test(s.textContent) && s.getBoundingClientRect().width > 0);   // 狭い吹き出しでは枠線の上の「▶ つぎ」、ふだんは下の行
+          const next = [...say.querySelectorAll('span')].find((s) => /つぎ|次/.test(s.textContent) && s.getBoundingClientRect().width > 0);   // 狭い吹き出しでは枠線の上の「▶ つぎ」、ふだんは下の行
           const nr = next.getBoundingClientRect();
-          return { side: say.getAttribute('data-say-side'), text: say.innerText.replace('▶ つぎ', '').trim(), bad, nx: nr.left + nr.width - 10, ny: nr.top + nr.height / 2,
+          return { side: say.getAttribute('data-say-side'), text: say.innerText.replace(/▶ (?:つぎ|次)/, '').trim(), bad, nx: nr.left + nr.width - 10, ny: nr.top + nr.height / 2,
             box: [Math.round(r.left), Math.round(r.top), Math.round(r.width), Math.round(r.height)] };
         });
         if (!probe) { tapBad.push('吹き出しが見つからない(HOMEへ戻れなかった)'); break; }
@@ -157,7 +157,7 @@ const LINES_PER_SIZE = 6;
         await page.waitForTimeout(250);
         const after = await page.evaluate(() => ({
           home: !!document.querySelector('.mh-home-scene') && !!document.querySelector('[data-home-raid-say]'),
-          text: (document.querySelector('[data-home-raid-say]') || { innerText: '' }).innerText.replace('▶ つぎ', '').trim(),
+          text: (document.querySelector('[data-home-raid-say]') || { innerText: '' }).innerText.replace(/▶ (?:つぎ|次)/, '').trim(),
         }));
         if (!after.home || after.text === probe.text) {
           tapBad.push(`${probe.side}「${probe.text.slice(0, 12)}」→ ${after.home ? 'セリフが変わらない' : 'HOMEから別の画面へ移った'}`);

@@ -137,7 +137,7 @@ async function claimMissions(s, { double = false } = {}) {
   for (const tab of ['デイリー', 'ウィークリー', 'マンスリー']) {
     await s.tapLabel(new RegExp(`^${tab}`), 800);
     for (let k = 0; k < 6; k++) {
-      const b = (await s.listButtons()).find((x) => /^(受け取る|まとめて受け取る|すべて受け取る)$/.test(x.label));
+      const b = (await s.listButtons()).find((x) => /^(受け取る|まとめて受け取る|全て受け取る)$/.test(x.label));
       if (!b) break;
       await press(s, b, `ミッションの報酬${double ? '(二度押し)' : ''}`, double);
       await s.wait(1200);

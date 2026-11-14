@@ -66,7 +66,7 @@ const serve = () => new Promise((resolve) => {
     await page.getByRole('button', { name: 'モンヒロバトル' }).waitFor({ timeout: 30000 });
     // 配布物やお知らせが重なっていると先へ進めないので、出ているぶんだけ閉じる
     for (let i = 0; i < 6; i++) {
-      const btn = page.getByRole('button', { name: /受け取る|閉じる|はじめる|OK/ }).first();
+      const btn = page.getByRole('button', { name: /受け取る|閉じる|(?:始|はじ)める|OK/ }).first();
       if (await btn.count() === 0 || !(await btn.isVisible().catch(() => false))) break;
       await btn.dispatchEvent('click').catch(() => {});
       await page.waitForTimeout(250);
