@@ -310,7 +310,7 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf }) {
     </div>
   );
 
-  if (scn == null && typeof MsxScenarioSelect === 'function') return <MsxScenarioSelect value={scn} onBack={onCancel} onNext={(id) => { setScn(id); setStep(0); }}/>;
+  if (scn == null && typeof MsxScenarioSelect === 'function') return <MsxScenarioSelect value={scn} ctx={betaCtx} onBack={onCancel} onNext={(id) => { setScn(id); setStep(0); }}/>;
   let body = null; let go = null;
   if (step === 0) {
     const list = tab === 'base' ? unlocked.map((id) => ({ key: id, sp: id, on: !pick.box && pick.base === id, pick: { base: id } }))
