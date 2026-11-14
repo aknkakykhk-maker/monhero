@@ -57,7 +57,7 @@ const AMGT_TRAIT = Object.freeze({
 });
 // ブリーダー能力の効き目(能力100のとき・社長 11-11「大きく」: 伸び×1.20・失敗とストレスの軽減も合わせて)
 const AMGT_BR_EFFECT = Object.freeze({ lead: 0.20, know: 0.60, trust: 0.60, obs: 10 });
-const AMGT_BR_RANKS = Object.freeze([[80, 'ベテラン'], [60, '一人前'], [40, 'なかなか'], [20, '駆け出し'], [0, 'はじめたて']]);
+const AMGT_BR_RANKS = Object.freeze([[80, 'ベテラン'], [60, '一人前'], [40, 'なかなか'], [20, '駆け出し'], [0, '始めたて']]);
 const amgtBrRankOf = (v) => (AMGT_BR_RANKS.find(r => v >= r[0]) || AMGT_BR_RANKS[AMGT_BR_RANKS.length - 1])[1];
 // 行動ごとに経験が入るブリーダー能力
 const AMGT_BR_XP = Object.freeze({

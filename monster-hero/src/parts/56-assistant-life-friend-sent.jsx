@@ -99,7 +99,7 @@ function AlfSentNotes({ s, card, sec, onVisit }) {
           <AlfSentRow n={n}/>
           <p className="mt-0.5 text-[10px] text-slate-400">{f ? <span className="text-amber-200">🚪 この家へ遊びに行く ›</span> : 'いまはこの家へ行けません(家がまだ届いていません)'}</p>
         </button>); })}
-      {list.length > 5 && <button type="button" className="mt-1 w-full rounded-xl border border-slate-500 py-1 text-[11px] text-slate-200" data-alf-sent-more onClick={() => setMore(!more)}>{more ? '少なく見る' : `ぜんぶ見る(${list.length}通)`}</button>}
+      {list.length > 5 && <button type="button" className="mt-1 w-full rounded-xl border border-slate-500 py-1 text-[11px] text-slate-200" data-alf-sent-more onClick={() => setMore(!more)}>{more ? '少なく見る' : `全部見る(${list.length}通)`}</button>}
       <p className="mt-1 text-[9.5px] leading-snug text-slate-400">この端末に{ALF_SENT_MAX.days}日・{ALF_SENT_MAX.count}通まで残ります(古いものから消えます)</p>
     </div>
   </>);

@@ -13,6 +13,6 @@ check('② battle の行だけ', /let ti = null; if \(place === 'battle'\)/.test
 const acts = s.slice(s.indexOf('data-assistant-life-map-train-acts'), s.indexOf('data-assistant-life-map-cheer-why'));
 check('② ボタンは 44px 以上・応援は canCheer が偽なら押せない', (acts.match(/min-h-\[44px\]/g) || []).length >= 2 && /disabled=\{!ti\.canCheer\}/.test(acts) && /data-assistant-life-map-cheer-why/.test(s));
 check('③ 対戦(β)は修行の列が無いときだけ右の列', /\{place === 'battle' && !ti && battleBtn\}/.test(s) && (s.match(/\{battleBtn\}/g) || []).length === 1);
-check('④ 見る画面の入れ物を地図の根元に1つ', (s.match(/<AssistantMasmonTrainWatchHost\/>/g) || []).length === 1);
+check('④ 見る画面の入れ物を地図の根元に1つ(+モンヒロバトルの選択画面の枠に1つ)', (s.match(/<AssistantMasmonTrainWatchHost\/>/g) || []).length === 2 && /function AssistantLifeBattleHall[\s\S]*?<AssistantMasmonTrainWatchHost\/>/.test(s));
 console.log(failed ? `\n${failed} 件 NG` : '\nすべてOK');
 process.exit(failed ? 1 : 0);

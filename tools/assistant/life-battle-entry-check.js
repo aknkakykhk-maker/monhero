@@ -30,7 +30,7 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
   check('① 開いたままの地図も、initialKey が変われば窓を出し直す', /initialKey = 0 \}\) \{/.test(map) && /setSheet\(initialPlace\); \}, \[initialKey\]\)/.test(map));
   const room = house.slice(house.indexOf('data-assistant-life-room-train'), house.indexOf('data-assistant-life-room-cheer-msg'));
   check('② 部屋に 👀 修行を見る・📣 応援する(battle のときだけ・口は typeof で)', /if \(!w \|\| w\.place !== 'battle'\) return null;/.test(house) && /k="train-watch"/.test(room) && /k="cheer"/.test(room) && /disabled=\{!ti\.canCheer\}/.test(room) && /typeof assistantMasmonTrainRowInfo === 'function'/.test(house));
-  check('② 見る画面の入れ物は、地図が出ていないときだけ家の画面にも(2つ重ねない)', /\{roomId && tab !== 'where' && typeof AssistantMasmonTrainWatchHost === 'function' && <AssistantMasmonTrainWatchHost\/>\}/.test(house) && (map.match(/<AssistantMasmonTrainWatchHost\/>/g) || []).length === 1);
+  check('② 見る画面の入れ物は、地図が出ていないときだけ家の画面にも(2つ重ねない)', /\{roomId && tab !== 'where' && typeof AssistantMasmonTrainWatchHost === 'function' && <AssistantMasmonTrainWatchHost\/>\}/.test(house) && (map.match(/<AssistantMasmonTrainWatchHost\/>/g) || []).length === 2); // 地図の根元に1つ+モンヒロバトルの選択画面の枠(AssistantLifeBattleHall)に1つ。選択画面では家も地図も出ない
   const cheer = read('monster-hero/src/parts/56-assistant-life-masmon-cheer.jsx');
   check('⑤ 練習試合の入れ物が消えるときは「開いている」も消す(残ると次に地図を開いたとき勝手に始まる)', /AMGC_HOST\.subs\.delete\(f\); if \(!AMGC_HOST\.subs\.size\) AMGC_HOST\.open = null;/.test(cheer));
   check('③ HOME の顔: 下のすき間が狭い札では上へ', /const above = r\.gap < 16 && Number\.isFinite\(r\.up\) && r\.up >= 19;/.test(house) && /above \? r\.y - size - 1 : r\.y \+ r\.h \+ 1/.test(house));
