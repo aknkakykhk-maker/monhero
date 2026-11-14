@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ca91b4903cb901d9
+// source-sha256: 3afa2b67138a787d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -166474,6 +166474,7 @@ const MSX_CSS = `
 .msx .v-tr .o{transition:transform .14s ease-out,box-shadow .14s}
 .msx .v-tr:not(.sel) .o{transform:translateY(2px) scale(.96)}
 .msx .v-trs{position:relative;padding-top:17px;padding-bottom:12px;touch-action:pan-y}
+.msx .v-tr .tn.one{white-space:nowrap;letter-spacing:-.06em;margin:0 -4px;display:flex;align-items:flex-start;justify-content:center}
 .msx .v-tr .fb{position:absolute;left:50%;top:-17px;transform:translateX(-50%);background:#fff;color:#7f1d1d;border-radius:8px;padding:1px 6px;font-size:10px;font-weight:900;white-space:nowrap;line-height:1.4;z-index:3;box-shadow:0 1px 4px #0006}
 .msx .v-tr .fb::after{content:'';position:absolute;left:50%;bottom:-4px;margin-left:-4px;border:4px solid transparent;border-bottom:0;border-top-color:#fff}
 .msx .v-tr .ke{position:absolute;left:50%;bottom:-13px;transform:translateX(-50%);color:#fde047;font-size:11px;font-weight:900;text-shadow:0 1px 2px #000;white-space:nowrap}
@@ -171570,8 +171571,8 @@ function MsxPlay({
       }, MSX_STAT_ICON[k]), React.createElement("b", {
         className: "nm"
       }, MSX_STAT_NAME[k]), React.createElement("small", {
-        className: "tn"
-      }, msxTrainNameParts(k, lv).map((x, i) => React.createElement(React.Fragment, {
+        className: `tn${msxTrainName(k, lv).length <= 5 ? ' one' : ''}`
+      }, msxTrainName(k, lv).length <= 5 ? msxTrainName(k, lv) : msxTrainNameParts(k, lv).map((x, i) => React.createElement(React.Fragment, {
         key: i
       }, i ? React.createElement("wbr", null) : null, x))), lv ? React.createElement("i", {
         className: "lv"

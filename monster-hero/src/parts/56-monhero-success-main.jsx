@@ -735,7 +735,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
         {MSX_STATS.map((k) => { const c = msxCardOf(v, k); const lv = lvOf(c); return (
           <button type="button" key={k} className={`v-tr${c && c.tags.length ? ' tag' : ''}${k === stat ? ' sel' : ''}`} onClick={() => { if (k === stat && c) doAct({ kind: c.kind, stat: k }); else setSel(k); }}>
             {k === stat && c ? <span className="fb" data-msx-train-fail>失敗率 {Math.round(c.fail * 100)}%</span> : null}
-            <div className="o">{MSX_STAT_ICON[k]}</div><b className="nm">{MSX_STAT_NAME[k]}</b><small className="tn">{msxTrainNameParts(k, lv).map((x, i) => <React.Fragment key={i}>{i ? <wbr/> : null}{x}</React.Fragment>)}</small>{lv ? <i className="lv">Lv.{lv}</i> : null}{k === stat && c ? <span className="ke" data-msx-train-ok>決定</span> : null}</button>); })}
+            <div className="o">{MSX_STAT_ICON[k]}</div><b className="nm">{MSX_STAT_NAME[k]}</b><small className={`tn${msxTrainName(k, lv).length <= 5 ? ' one' : ''}`}>{msxTrainName(k, lv).length <= 5 ? msxTrainName(k, lv) : msxTrainNameParts(k, lv).map((x, i) => <React.Fragment key={i}>{i ? <wbr/> : null}{x}</React.Fragment>)}</small>{lv ? <i className="lv">Lv.{lv}</i> : null}{k === stat && c ? <span className="ke" data-msx-train-ok>決定</span> : null}</button>); })}
       </div>
     </>);
     foot = <div className="v-ft"><button type="button" onClick={() => { setSub('main'); setSel(null); }}>← 戻る</button><button type="button" className="go" disabled={!card} onClick={() => doAct({ kind: card.kind, stat })}>{msxTrainIcon(stat, trainLv)} {msxTrainName(stat, trainLv)}をする</button></div>;
