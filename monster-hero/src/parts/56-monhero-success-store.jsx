@@ -20,15 +20,15 @@ const MSX_SCENARIOS = Object.freeze([
   { aid: 'mua', no: 1, title: 'いっしょに、てっぺんへ!', lead: '明るく元気なムードメーカーと、笑いながら頂点をめざす物語。はじめての育成におすすめ', tag: 'やさしい',
     perk: '遊ぶ・休むでストレスが 1.3倍 減る。褒めたときの忠誠 +1', eps: ['はじめての おでかけ', 'はげまし合う夜', 'ふたりの約束'] },
   { aid: 'atsu', no: 2, title: '仕上げて、勝ちに行く', lead: '面倒見のいい兄貴分と、コツコツ仕上げて大会をとりにいく物語', tag: 'ふつう',
-    perk: '訓練の組み合わせが あつ流(ちから → ライフ・回避 など)', eps: ['はじめての特訓', '雨の日の作戦会議', '仕上げの約束'] },
+    perk: 'トレーニングの組み合わせが あつ流(ちから → ライフ・回避 など)', eps: ['はじめての特訓', '雨の日の作戦会議', '仕上げの約束'] },
 ]);
 const MSX_SOON_AIDS = Object.freeze(['kiki', 'momosuke', 'dra', 'kyuko', 'sorashido', 'erubin']);
 const MSX_STAT_ICON = Object.freeze({ life: '❤️', pow: '💪', wise: '🧠', hit: '🎯', eva: '💨', tough: '🛡️' });
 const MSX_STAT_NAME = Object.freeze({ life: 'ライフ', pow: 'ちから', wise: 'かしこさ', hit: '命中', eva: '回避', tough: '丈夫さ' });
-// 訓練の名前(2026-11-13 社長「トレごとに特色を」。うちのオリジナル)と、その場面の小物
+// トレーニングの名前(2026-11-13 社長「トレごとに特色を」。うちのオリジナル)と、その場面の小物
 const MSX_TRAIN_NAME = Object.freeze({ life: '坂道ダッシュ', pow: '丸太割り', wise: '積み木パズル', hit: '的当て', eva: '落ち葉よけ', tough: '岩受け止め' });
 const MSX_TRAIN_ICON = Object.freeze({ life: '🏃', pow: '🪵', wise: '🧩', hit: '🎯', eva: '🍂', tough: '🪨' });
-// 訓練Lv(1〜5)ごとの名前と見出しの絵(2026-11-13 社長「トレーニング名はレベルごとに名前を変えて」。段が上がるほど大きく・強そうに)
+// トレーニングLv(1〜5)ごとの名前と見出しの絵(2026-11-13 社長「トレーニング名はレベルごとに名前を変えて」。段が上がるほど大きく・強そうに)
 const MSX_TRAIN_LV = Object.freeze({
   life: [['坂道ダッシュ', '🏃'], ['丘越えダッシュ', '🏃'], ['山道かけ登り', '⛰️'], ['雪山かけ登り', '🏔️'], ['火山かけ登り', '🌋']],
   pow: [['丸太割り', '🪵'], ['大丸太割り', '🪵'], ['岩割り', '🪨'], ['大岩くだき', '🪨'], ['鉄球くだき', '⚫']],
@@ -170,7 +170,7 @@ const msxNormBox = (raw) => {
   const mons = (Array.isArray(o.mons) ? o.mons : []).map(msxNormBoxMon).filter(Boolean);
   return { ...o, v: 1, cap: Math.max(MSX_BOX_CAP0, Math.min(60, msxNum(o.cap, MSX_BOX_CAP0))), mons, memory: Array.isArray(o.memory) ? o.memory.filter(msxIsObj).slice(-100) : [] };
 };
-const MSX_ITEM_IDS = Object.freeze(['guide', 'loupe', 'band', 'mag', 'hachi', 'omamori', 'dango', 'grass', 'juice', 'powder', 'license', 'pack', 'hourglass', 'hourglass2', 'ticket']);
+const MSX_ITEM_IDS = Object.freeze(['guide', 'loupe', 'band', 'mag', 'hachi', 'omamori', 'dango', 'grass', 'juice', 'powder', 'license', 'pack', 'oil', 'oilyoil', 'herb', 'hourglass', 'hourglass2', 'ticket']);
 const msxNormMeta = (raw) => {
   const o = msxIsObj(raw) ? raw : {};
   const items = {}; const src = msxIsObj(o.items) ? o.items : {};

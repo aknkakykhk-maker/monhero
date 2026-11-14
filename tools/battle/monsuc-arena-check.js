@@ -69,13 +69,26 @@ const open = async (browser, reducedMotion) => {
       const { page, errs } = await open(browser, 'no-preference');
       await page.waitForFunction(() => document.querySelector('[data-msxm="act"]'), null, { timeout: 30000 });
       check('② 試合の画面を開くと、バトルの曲の口が立つ', await page.evaluate(() => MH_BATTLE_BGM.on === true));
-      const pShown = await page.evaluate(() => [...document.querySelectorAll('[data-msxm-tech]')].every((b) => /命中 \d+%/.test(b.textContent) && /ガッツ \d+/.test(b.textContent) && /届く/.test(b.textContent)));
-      check('④ 帯の技ボタンに撃つ前の命中%・ガッツ・届く距離', pShown);
+      // 技の札は間合いごとの4枚(2026-11-13 社長)。札に命中%・ガッツ、押すと一覧(撃つ前の命中%・ガッツ・届く距離)
+      const pShown = await page.evaluate(async () => {
+        const cards = [...document.querySelectorAll('[data-msa-dc="manual"] [data-msa-dc-card]')];
+        const cardOk = cards.length === 4 && cards.filter((c) => !c.disabled).every((c) => /命中 \d+%/.test(c.textContent) && /ガッツ \d+/.test(c.textContent));
+        const now = cards.find((c) => c.classList.contains('now') && !c.disabled);
+        if (!now) return cardOk;
+        now.click(); await new Promise((r) => setTimeout(r, 150));
+        const rows = [...document.querySelectorAll('[data-msa-sheet] [data-msxm-tech]')];
+        const ok = cardOk && rows.length > 0 && rows.every((b) => /命中 \d+%/.test(b.textContent) && /ガッツ \d+/.test(b.textContent) && /届く/.test(b.textContent));
+        const x = document.querySelector('[data-msa-sheet-close]'); if (x) x.click();
+        return ok;
+      });
+      check('④ 技の札(4枚)と、押して開く一覧に撃つ前の命中%・ガッツ・届く距離', pShown);
       // 自分で3手(届く技があれば技・無ければ前へ)
       let cutP = false;
       for (let k = 0; k < 3; k++) {
         await page.waitForFunction(() => document.querySelector('[data-msxm="act"]'), null, { timeout: 30000 });
-        await page.evaluate(() => { const t = document.querySelector('[data-msxm-tech]:not([disabled])'); const f = [...document.querySelectorAll('.msxm-btn:not([disabled])')].find((x) => /前へ/.test(x.textContent)); (t || f || document.querySelector('.msxm-btn:not([disabled])')).click(); });
+        await page.evaluate(() => { const c = document.querySelector('[data-msa-dc="manual"] [data-msa-dc-card].now:not([disabled])'); if (c) c.click(); });
+        await page.waitForTimeout(150);
+        await page.evaluate(() => { const t = document.querySelector('[data-msxm-tech]:not([disabled])'); if (!t) { const x = document.querySelector('[data-msa-sheet-close]'); if (x) x.click(); } const f = [...document.querySelectorAll('.msxm-btn:not([disabled])')].find((x) => /前へ/.test(x.textContent)); (t || f || document.querySelector('.msxm-btn:not([disabled])')).click(); });
         for (let w = 0; w < 30 && !cutP; w++) { await page.waitForTimeout(100); cutP = await page.evaluate(() => { const c = document.querySelector('[data-msa-cut]'); return !!c && /命中 \d+%/.test(c.textContent); }); }
       }
       check('④ 技の名前の帯に命中%', cutP);

@@ -6,7 +6,7 @@
 //   SHOT_DIR=<フォルダ> node tools/success/success-fx-shoot.js … 縦390×844・横844×390・幅320×568 で撮る
 //
 // 撮るもの(1つの大きさにつき3枚): 気分8つ(しぐさを出したまま・季節と時間の光をそれぞれ替える)/
-// 訓練の結果・叱る・褒めるの反応7つ(動きの途中で止める)/ 節目の短い演出6つ /
+// トレーニングの結果・叱る・褒めるの反応7つ(動きの途中で止める)/ 節目の短い演出6つ /
 // ぴょこぴょこ(小さく置いて、小さく弾んだ所と大きく跳ねた所)/ 図鑑の攻撃アクションの通常技(大成功・修行)と固有技(優勝)
 'use strict';
 const fs = require('fs');
@@ -62,7 +62,7 @@ const mount = (sheet) => {
     cells = rs.map(([k, name], i) => cell(k, 'images/story-bg/forest_morning.jpg', [label(name),
       monBox({ key: 'm', species: SP[i], mood: 'calm', react: { kind: k, id: 1 }, seed: 'shot' })]));
   } else {
-    const ms = [['lvup', 'ちから Lv3', '訓練の効果が上がった'], ['tech', 'ローリングアタック', '修行で覚えた'], ['win', 'ルーキーカップ', ''], ['lose', 'ルーキーカップ', 'また挑戦しよう'], ['over', '', 'ここで育成はおわり'], ['retire', 'もちまる', 'おつかれさま']];
+    const ms = [['lvup', 'ちから Lv3', 'トレーニングの効果が上がった'], ['tech', 'ローリングアタック', '修行で覚えた'], ['win', 'ルーキーカップ', ''], ['lose', 'ルーキーカップ', 'また挑戦しよう'], ['over', '', 'ここで育成はおわり'], ['retire', 'もちまる', 'おつかれさま']];
     cells = ms.map(([k, title, sub]) => cell(k, 'images/story-bg/monhero_plaza.jpg', [h(MsxFxMoment, { key: 'x', kind: k, title, sub, species: 'Mocchi', onDone() {} })]));
   }
   window.__fxRoot = ReactDOM.createRoot(el);

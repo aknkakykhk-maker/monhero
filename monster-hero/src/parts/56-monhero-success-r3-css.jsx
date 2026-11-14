@@ -164,6 +164,8 @@ const MSX_R3_CSS = `
 .msx .r3 .v-rm3>button{display:flex;align-items:center;gap:8px;border:1.5px solid #64748b;border-bottom-width:3px;border-radius:13px;padding:6px 9px;font-size:12.5px;font-weight:900;line-height:1.3;min-width:0;text-align:left;color:#fff;font-family:inherit;width:100%}
 .msx .r3 .v-rm3>button.gv{background:#1e293b;display:block;text-align:center;padding:5px;font-size:11.5px;color:#cbd5e1}
 .msx .r3 .v-ml{color:#fff;font-family:inherit}
+/* ごはん9種(2026-11-13 社長)。3列×3段に収める */
+.msx .r3 .v-meal .ms{gap:4px}.msx .r3 .v-ml{padding:4px 2px}.msx .r3 .v-ml .e{font-size:20px}.msx .r3 .v-ml b{font-size:10.5px;overflow:hidden;text-overflow:clip}.msx .r3 .v-ml .g{font-size:10.5px}.msx .r3 .v-ml small{font-size:10px;line-height:1.25}
 .msx .r3 .v-ml.sel{border-color:#fde047;background:#3b2f0b;box-shadow:0 0 10px #fde04788}
 .msx .v-ft button:disabled{opacity:.45}
 `;

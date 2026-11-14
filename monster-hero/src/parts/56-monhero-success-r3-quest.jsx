@@ -2,7 +2,7 @@
 // 見本: docs/progress/player-raise/mock/png/v3-Q.png(v3-phone-Q1・Q2)
 // ・1ターン使う・チケット1枚(芯の act({kind:'shugyo', course, techs}))。2段で能力2つずつ → 最後に技のくじ(選んだ技それぞれ)
 // ・技を2つ選ぶと超修行(2026-11-13 社長: 育成中2回まで・2つとも覚えることがある・率 +15・能力の上がりと疲れは2回分)。技ごとにランク(1〜5)と今の率を出す
-// ・結果のあとは訓練と同じく叱る/褒める(回2の react の段)へ。保存は act のすぐあと(run.phase = 'react')なので、閉じても同じ所から続く
+// ・結果のあとはトレーニングと同じく叱る/褒める(回2の react の段)へ。保存は act のすぐあと(run.phase = 'react')なので、閉じても同じ所から続く
 const MSX_R3_DIST = Object.freeze(['零', '近', '中', '遠']);
 const MSX_R3_COURSE_BG = Object.freeze({ fire: 'forest_evening', ice: 'forest_morning', wind: 'forest_deep', star: 'monhero_night' });
 function MsxR3Shugyo({ run, setRun, v, ev, onBack, onPause }) {

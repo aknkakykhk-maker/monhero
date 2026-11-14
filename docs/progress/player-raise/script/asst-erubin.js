@@ -34,7 +34,7 @@ const MONSUC_SCRIPT_ERUBIN = Object.freeze([
   { id:'scn.erubin.ep1.b.erubin2', who:'erubin', e:'happy', c:'b', t:'おいしそうに食べてくれると、作ったかいがあるよね。うれしいなー笑' },
 
   // ── 2話「叱るのは苦手」(ジュニア期・親密度30〜) ──
-  { id:'scn.erubin.ep2.narr1', who:'narr', t:'もう休む時間なのに、{mon}は訓練場から帰ろうとしない。' },
+  { id:'scn.erubin.ep2.narr1', who:'narr', t:'もう休む時間なのに、{mon}はトレーニング場から帰ろうとしない。' },
   { id:'scn.erubin.ep2.erubin1', who:'erubin', e:'troubled', t:'{mon}、そろそろ休もっか。……ね？ 大丈夫かな、聞こえてるかな💦' },
   { id:'scn.erubin.ep2.narr2', who:'narr', t:'えるびんはしばらく見守っていたが、困った顔で{name}をふり返った。' },
   { id:'scn.erubin.ep2.erubin2', who:'erubin', e:'troubled', t:'俺、叱るの苦手なんだよね。がんばってるのを止めるのって、なんか悪い気がしてさ' },
@@ -86,7 +86,7 @@ const MONSUC_SCRIPT_ERUBIN = Object.freeze([
   // ═══════════ ターンごとのことば(turn.js と同じ場面) ═══════════
   { id:'turn.start.great.erubin1', who:'erubin', e:'excited', t:'{mon}、今日は調子よさそうだね。重いのもいけるかな？' },
   { id:'turn.start.great.erubin2', who:'erubin', e:'happy', t:'いい顔してるね。こういう日は、思いきりやっていいと思うよ☺️' },
-  { id:'turn.start.good.erubin1', who:'erubin', e:'happy', t:'調子いいね。ふつうに訓練で大丈夫かな笑' },
+  { id:'turn.start.good.erubin1', who:'erubin', e:'happy', t:'調子いいね。ふつうにトレーニングで大丈夫かな笑' },
   { id:'turn.start.good.erubin2', who:'erubin', e:'normal', t:'{mon}、動きが軽いね。このままいこっか' },
   { id:'turn.start.normal.erubin1', who:'erubin', e:'normal', t:'ふつうの日だね。{name}、どうしよっか？' },
   { id:'turn.start.normal.erubin2', who:'erubin', e:'normal', t:'可もなく不可もなく、かな。こういう日の積み重ねが大事だしね' },
@@ -229,7 +229,7 @@ const MONSUC_SCRIPT_ERUBIN = Object.freeze([
   { id:'ev.cup.interview.erubin1', who:'erubin', e:'happy', t:'取材だね。{mon}らしく答えたらいいと思うよ☺️' },
   { id:'ev.cup.after.erubin1', who:'erubin', e:'normal', t:'励ますのも、反省会も、どっちも大事だよね' },
 
-  // ═══════════ 編成の子との訓練イベント(cheer.js と同じ場面) ═══════════
+  // ═══════════ 編成の子とのトレーニングイベント(cheer.js と同じ場面) ═══════════
   { id:'cheer.attacker.ep1.erubin1', who:'erubin', e:'happy', t:'{cheer}が相手してくれるって。けがしないようにね' },
   { id:'cheer.attacker.ep2.erubin1', who:'erubin', e:'excited', t:'ここで鍛えてたんだね。強いわけだよね' },
   { id:'cheer.attacker.ep3.erubin1', who:'erubin', e:'normal', t:'あれは{cheer}の全部だね。受け取るかは{mon}しだいかな' },
@@ -284,7 +284,7 @@ const MONSUC_SCRIPT_ERUBIN = Object.freeze([
   { id:'item.guide.erubin1', who:'erubin', e:'normal', t:'博士の書類だね。持ってたら、そのうち取りに来るかな' },
   { id:'item.loupe.erubin1', who:'erubin', e:'happy', t:'博士、ルーペどうぞ。これで安心だね☺️' },
   { id:'item.misanga.erubin1', who:'erubin', e:'normal', t:'ミサンガだね。いい出会いがあるといいね' },
-  { id:'item.weekly.erubin1', who:'erubin', e:'happy', t:'週刊!トレーニング、読んでおいたよ。この世界の訓練、分かりやすく書いてあるね' },
+  { id:'item.weekly.erubin1', who:'erubin', e:'happy', t:'週刊!トレーニング、読んでおいたよ。この世界のトレーニング、分かりやすく書いてあるね' },
   { id:'item.hachimaki.erubin1', who:'erubin', e:'excited', t:'ハチマキ、似合うね。修行もがんばろうね' },
   { id:'item.omamori.erubin1', who:'erubin', e:'happy', t:'縁結びのお守りだね。応援してくれる人、増えるといいね' },
   { id:'item.kibidango.erubin1', who:'erubin', e:'normal', t:'キビダンゴ、食べたね。体力ついたかな笑' },

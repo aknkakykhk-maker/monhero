@@ -7,7 +7,7 @@
 //      計算から外すだけで落ちない/壊れた値は既定へ(CLAUDE.md ⑦)
 //   ④ 効き目: 段 lv の値は表の lv 段目(表より上の段は表のいちばん上の段)
 //   ⑤ 芯の版(VERSION)は 5(ランキングの行に残る)
-//   ⑥ 訓練に効く新しい11種(依頼②): 表を渡すと芯に出て、段1〜5の値どおりに効く。表が無ければ出さない
+//   ⑥ トレーニングに効く新しい11種(依頼②): 表を渡すと芯に出て、段1〜5の値どおりに効く。表が無ければ出さない
 //   ⑦ いるだけ型(体力・ようす・編成の7つ・依頼③の1つ目): 編成でいちばん高い段の1つだけ、段1〜5の値どおりに効く
 //   ⑧ いるだけ型(大会・出来事の8つ・依頼③の2つ目)。これで表の40種類すべてが芯に出る
 'use strict';
@@ -30,7 +30,7 @@ const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 // ①②
 const NEW11 = ['miharu', 'kibarashi', 'kunpow', 'kunwise', 'kunhit', 'kuneva', 'kuntough', 'kunlife', 'nakayoshi', 'tagpow', 'shitashi',
   'shitsuke', 'gussuri', 'asobi', 'kuishinbo', 'tsukisoi', 'genki', 'tairyoku',
-  'shokin', 'kokoroe', 'ticket', 'rivaldamashii', 'ninki', 'yobimizu', 'mejirushi', 'joshu']; // 訓練に効く11種 + いるだけ型15
+  'shokin', 'kokoroe', 'ticket', 'rivaldamashii', 'ninki', 'yobimizu', 'mejirushi', 'joshu']; // トレーニングに効く11種 + いるだけ型15
 check('① 芯の種類は表の種類すべて(試合型5つは第1版の数字・2026-11-14 第3版)', same(Object.keys(S2.ASSISTS).sort(), AT.LIST.map(a => a.id).sort()) && NEW11.every(id => S2.ASSISTS[id]));
 check('② 表なし・壊れた表では新しい種類を出さない', NEW11.every((id) => !S1.ASSISTS[id] && !SB.ASSISTS[id]));
 check('① 第1版の9種類は第3版の目盛りの数字・値段', V1_IDS.every((id) => same(S2.ASSISTS[id].v, AT.BY_ID[id].v) && same(S2.ASSISTS[id].cost, AT.BY_ID[id].cost)));
@@ -64,21 +64,21 @@ const d1 = [1, 2, 3, 4, 5].map((lv) => Math.round((eff(S1, lv) - base1) * 100) /
 check('④ 第2版: 底力 段1〜5 = 表の値', same(d2, AT.BY_ID.sokoji.v2), d2.join('/'));
 check('④ 第1版: 段4・5は段3と同じ値(頭打ち)', same(d1, [...S1.ASSISTS.sokoji.v, S1.ASSISTS.sokoji.v[2], S1.ASSISTS.sokoji.v[2]]), d1.join('/'));
 
-// ⑥ 訓練に効く11種の効き目
+// ⑥ トレーニングに効く11種の効き目
 const L5 = [1, 2, 3, 4, 5];
 const r2 = (x) => Math.round(x * 100) / 100;
-// 能力ごとの特訓: その能力の訓練だけ +v
+// 能力ごとの特訓: その能力のトレーニングだけ +v
 const kunOk = ['pow', 'wise', 'hit', 'eva', 'tough', 'life'].every((k) => {
   const other = k === 'pow' ? 'wise' : 'pow';
   const d = L5.map((lv) => { const m = S2.memberOf(child([{ id: `kun${k}`, lv }])); const m0 = S2.memberOf(child([])); return [r2(S2.memberEffect(m, k, 100) - S2.memberEffect(m0, k, 100)), r2(S2.memberEffect(m, other, 100) - S2.memberEffect(m0, other, 100))]; });
   return same(d.map(x => x[0]), AT.BY_ID[`kun${k}`].v2) && d.every(x => x[1] === 0);
 });
-check('⑥ 能力ごとの特訓6つ: その能力の訓練だけ 段1〜5 = 表の値', kunOk);
+check('⑥ 能力ごとの特訓6つ: その能力のトレーニングだけ 段1〜5 = 表の値', kunOk);
 // はじめの親しさ: bond0 +v
 const b0 = S2.memberOf(child([])).bond0;
 const shi = L5.map((lv) => S2.memberOf(child([{ id: 'shitashi', lv }])).bond0 - b0);
 check('⑥ はじめの親しさ: はじめの親密度 +表の値', same(shi, AT.BY_ID.shitashi.v2), shi.join('/'));
-// 訓練1回で確かめる(編成の0番だけ持たせ、その子が来た札を選ぶ)
+// トレーニング1回で確かめる(編成の0番だけ持たせ、その子が来た札を選ぶ)
 const runWith = (assists, tweak) => {
   for (let t = 0; t < 400; t++) {
     let s = S2.newRun({ id: `chk${t}`, species: sp, aid: 'mua', team: [child(assists), child([])] });
@@ -99,8 +99,8 @@ check('⑥ 見張り役: その札のサボりの率 −表の値%', sb.every((x
 // 気晴らし: 見通しのストレスが減る
 const kb = L5.map((lv) => { const r = runWith([{ id: 'kibarashi', lv }]); return r ? S2.preview(r.s, { kind: 'train', stat: r.c.stat }).stress : null; });
 const kb0 = (() => { const r = runWith([]); return r ? S2.preview(r.s, { kind: 'train', stat: r.c.stat }).stress : null; })();
-check('⑥ 気晴らし: 訓練でたまるストレスが段ごとに減る', kb0 > 0 && kb.every((x, i) => x === Math.round(kb0 * (1 - AT.BY_ID.kibarashi.v2[i] / 100))), `${kb0} → ${kb.join('/')}`);
-// 仲よし特訓: 訓練1回の親密度の上がり +v(サボり等でも親密度は上がる)
+check('⑥ 気晴らし: トレーニングでたまるストレスが段ごとに減る', kb0 > 0 && kb.every((x, i) => x === Math.round(kb0 * (1 - AT.BY_ID.kibarashi.v2[i] / 100))), `${kb0} → ${kb.join('/')}`);
+// 仲よし特訓: トレーニング1回の親密度の上がり +v(サボり等でも親密度は上がる)
 const nk = L5.map((lv) => {
   for (let t = 0; t < 400; t++) {
     const mk = (as) => S2.newRun({ id: `nk${t}`, species: sp, aid: 'mua', team: [child(as), child([])] });
@@ -112,7 +112,7 @@ const nk = L5.map((lv) => {
   }
   return null;
 });
-check('⑥ 仲よし特訓: 訓練1回の親密度の上がり +表の値', same(nk, AT.BY_ID.nakayoshi.v2), nk.join('/'));
+check('⑥ 仲よし特訓: トレーニング1回の親密度の上がり +表の値', same(nk, AT.BY_ID.nakayoshi.v2), nk.join('/'));
 
 // ⑦ いるだけ型(体力・ようす・編成の7つ)。編成の2番目の子に持たせ、いちばん高い段だけ効くことも見る
 const runOf = (as, extra) => S2.newRun({ id: 'stay', species: sp, aid: 'kiki', team: [child([]), child(as), ...(extra ? [child(extra)] : [])] });
@@ -176,7 +176,7 @@ const meet = (as) => { let n = 0, m = 0; for (let t = 0; t < 300; t++) { const s
 const m0 = meet([]); const m5 = meet([{ id: 'mejirushi', lv: 5 }]);
 check('⑧ 博士の目じるし: 博士が来やすくなる', m5 > m0, `${Math.round(m0 * 1000) / 10}% → ${Math.round(m5 * 1000) / 10}%`);
 
-// 出来事の呼び水: 編成の子と訓練したときの出来事が起きやすくなる(段5 で +15点)
+// 出来事の呼び水: 編成の子とトレーニングしたときの出来事が起きやすくなる(段5 で +15点)
 const evRate = (as) => { let n = 0, m = 0; for (let t = 0; t < 800; t++) { const s = S2x.newRun({ id: `yb${t}`, species: sp, aid: 'kiki', team: [child(as), child([])] }); const c = Object.values(S2x.gatherOf(s)).find(z => z.members.length); if (!c) continue; m++; if (S2x.act(s, { kind: 'train', stat: c.stat }).out.event) n++; } return n / m; };
 const y0 = evRate([]); const y5 = evRate([{ id: 'yobimizu', lv: 5 }]);
 check('⑧ 出来事の呼び水: 出来事が起きやすくなる(段5 で +15点 ほど)', y5 - y0 > 0.09 && y5 - y0 < 0.21, `${Math.round(y0 * 100)}% → ${Math.round(y5 * 100)}%`);
