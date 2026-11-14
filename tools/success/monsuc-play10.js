@@ -153,9 +153,9 @@ const step = (page, cfg, mem) => page.evaluate(({ cfg, mem }) => {
   const k = wpick(w); mem.turnKey = (mem.turnKey || 0) + 1; return press(menu[k], 'main-' + k);
 }, { cfg, mem });
 
-module.exports = { LAPS };
+module.exports = { LAPS, boxSeed, lapSeed, serve, isolate, toHome, openEntry, screenInfo, runState, ROOT, chromium, quietBootSeed, updateNoticeSeed, eventStorySeed };
 const sanitize = (t) => t.replace(/[\d,]+/g, '#').slice(0, 60);
-(async () => {
+if (require.main === module) (async () => {
   fs.mkdirSync(path.join(OUT, 'raw'), { recursive: true }); fs.mkdirSync(path.join(OUT, 'shots'), { recursive: true });
   const server = await serve(); const port = server.address().port;
   const browser = await chromium.launch({ executablePath: fs.existsSync('/opt/pw-browsers/chromium') ? '/opt/pw-browsers/chromium' : undefined });
@@ -194,12 +194,13 @@ const sanitize = (t) => t.replace(/[\d,]+/g, '#').slice(0, 60);
           for (let s = 0; s < 5; s++) {
             const opened = await page.evaluate((s) => { const sl = [...document.querySelectorAll('[data-msx-slot]')]; const t = sl[s]; if (t) t.click(); return sl.length; }, s);
             await page.waitForTimeout(250);
-            const picked = await page.evaluate(() => { const p = document.querySelector('[data-msx-slot-picker]'); if (!p) return 'nopicker'; const b = [...p.querySelectorAll('button')].find((x) => !x.disabled && !/閉じる|やめる|ベース/.test(x.innerText) && /箱|ウンディーネ|モッチー|ゴーレム|ピクシー|ライガー|キュービ|スエゾー/.test(x.innerText)); if (b) { b.click(); return 'ok'; } return 'nobtn'; });
+            const picked = await page.evaluate((s) => { const p = document.querySelector('[data-msx-slot-picker]'); if (!p) return 'nopicker'; const bs = [...p.querySelectorAll('button')].filter((x) => !x.disabled && /入れる/.test(x.innerText)); const b = bs[s] || bs[0]; if (b) { b.click(); return 'ok'; } return 'nobtn'; }, s);
             if (picked !== 'ok' && s === 0) note('編成', `箱から選べない(${picked}・slots=${opened})`);
             await page.waitForTimeout(200);
             await page.evaluate(() => { const c = document.querySelector('[data-msx-slot-close]'); if (c) c.click(); });
           }
         }
+        if (i === 1 && cfg.team.startsWith('box')) { const n = await page.evaluate(() => (document.querySelector('.msx').innerText.match(/箱\d/g) || []).length); if (n < 5) note('編成', `箱の子が編成に5体入っていない(${n}体)`); await page.screenshot({ path: path.join(OUT, 'shots', `lap${lap}-team.png`) }); }
         const r = await page.evaluate(() => { const root = document.querySelector('.msx'); const big = [...root.querySelectorAll('button')].find((b) => !b.disabled && /育成を(?:始|はじ)める$/.test(b.innerText.trim()) && b.classList.contains('v-big')); if (big) { big.click(); return 'start'; } const go = root.querySelector('.v-ft button.go:not([disabled])'); if (go) { go.click(); return 'next'; } return null; });
         if (i === 5) log.team = await page.evaluate(() => document.querySelector('.msx').innerText.replace(/\s+/g, ' ').slice(0, 500));
         if (r === 'start') break; if (!r) { note('止まる', `はじめる ${i + 1} 段目で先へ進めない`); break; }
