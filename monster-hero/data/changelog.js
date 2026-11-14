@@ -35,6 +35,14 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    date: "2026-11-14 15:48", type:'update', group:'success', releaseFlag:'monheroSuccess', dev:true,
+    title:'大会で優勝すると、ビートPがもらえるようになりました',
+    items:[
+      'モンヒロサクセスの大会の賞品に、ビートPが入りました。優勝すると、本編のビートPに足されます(負けたときはもらえません)。',
+      'もらえる量は、大会の賞金が多いほど増えます。参加の確認の「賞品」で、大会ごとの量を見られます。',
+    ],
+  },
+  {
     date: "2026-11-14 14:39", type:'update', group:'success', releaseFlag:'monheroSuccess', dev:true,
     title:'修行の画面で、技を選びやすく・覚える条件が分かるようになりました',
     items:[

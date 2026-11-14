@@ -113,6 +113,7 @@ const makeRun = async (kind) => {
           window.__msxRoot.render(React.createElement(MonheroSuccessScreen, { onClose() {}, callNameOf: () => 'けんささん', bondLvOf: () => 4, debug: false }));
         }, { kind, mk: makeRun.toString() });
         await page.waitForSelector('[data-msx-view="home"]', { timeout: 30000 });
+        const beat0 = name === 'R1' ? await page.evaluate(() => loadRhythmEventPoints()) : 0;
         for (const st of steps) {
           const done = await page.evaluate(async (st) => {
             if (st.re) { const re = new RegExp(st.re); const b = [...document.querySelectorAll('.msx button')].find((x) => re.test((x.innerText || '').replace(/\s+/g, '')) && !x.disabled); if (b) b.click(); return !!b; }
@@ -140,6 +141,14 @@ const makeRun = async (kind) => {
           check(`${label}: 名前と染色を決めても、ほかの項目と子は残る`, !!m && m.nick === 'もちまる' && m.keepMe === 'x' && Array.isArray(m.colors) && b.mons.length === 2); }
         if (name === 'K0' || name === 'S0') { const k = await page.evaluate(() => ({ n: document.querySelectorAll('[data-msx-pre-main] button').length, train: [...document.querySelectorAll('.msx .v-act button')].some((b) => /トレーニング|修行/.test(b.innerText || '')), bracket: !!document.querySelector('[data-msc-go], [data-msx-r3-cupintro]') }));
           check(`${label}: 当日のメインのボタンは「能力」と「大会」の2つだけ・まだ表へ飛ばない`, k.n === 2 && !k.train && !k.bracket, JSON.stringify(k)); }
+        if (/^(K[0-3]|S[02]|Q1)$/.test(name) && !tag) { // 画面の決まり(MONSUC_UI): 中身のいちばん下とボタンの列のあいだは 48px まで(縦)
+          const gap = await page.evaluate(() => { const ft = document.querySelector('.msx .v-ft'); const kids = [...document.querySelectorAll('.msx .v-body > *')].filter((e) => getComputedStyle(e).position !== 'absolute' && e.getBoundingClientRect().height > 0); if (!ft || !kids.length) return -1; const rs = kids.map((e) => e.getBoundingClientRect()).sort((x, y) => x.top - y.top); let mid = 0; for (let i = 1; i < rs.length; i++) mid = Math.max(mid, rs[i].top - Math.max(...rs.slice(0, i).map((r) => r.bottom))); return Math.round(Math.max(mid, ft.getBoundingClientRect().top - Math.max(...rs.map((r) => r.bottom)))); });
+          check(`${label}: 下の空き・札のあいだの空きが 48px まで`, gap >= 0 && gap <= 48, `${gap}px`); }
+        if (name === 'K2') { const pz = await page.evaluate(() => { const box = document.querySelector('[data-msx-r3-cupwin] .in'); if (!box) return { ok: false }; const R = box.getBoundingClientRect(); const bs = [...box.querySelectorAll('[data-msx-r3-prize]')]; return { ok: bs.length > 0 && bs.every((b) => { const r = b.getBoundingClientRect(); return r.left >= R.left - 1 && r.right <= R.right + 1; }), n: bs.length }; });
+          check(`${label}: 獲得物の札が全部 枠の中に見える`, pz.ok, `${pz.n}枚`); }
+        if (name === 'R1') { // ビートP: 優勝の分が本編のビートPに1回だけ足される(同じ育成をもう一度保存しても増えない)
+          const bp = await page.evaluate(async (w0) => { const run = await storeGet(MSX_KEYS.run, null); const w1 = await loadRhythmEventPoints(); if (run) await msxSaveRun(run); if (run) await msxSaveRun({ ...run }); const w2 = await loadRhythmEventPoints(); return { sent: run && run.beatSent, earned: run && run.s && run.s.beatEarned, d1: w1 - w0, d2: w2 - w1 }; }, beat0);
+          check(`${label}: 優勝のビートPが本編へ1回だけ足される`, bp.sent > 0 && bp.sent === bp.earned && bp.d1 === bp.sent && bp.d2 === 0, JSON.stringify(bp)); }
         if (name === 'K2c') check(`${label}: キャンセルで受付へ戻る`, await page.evaluate(() => !document.querySelector('[data-msx-r3-cupwin]') && !!document.querySelector('[data-msx-r3-pre-card]')));
         if (name === 'K3') check(`${label}: 「はい」で紋章の入り`, await page.evaluate(() => !!document.querySelector('[data-msx-r3-cupintro="junior"]')));
         if (name === 'E9') check(`${label}: 保存枠に1体入り、途中の育成が消える`, m.boxN === 1 && (m.run === null || m.run === 'null'), `保存枠 ${m.boxN}体`);
