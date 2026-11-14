@@ -28,7 +28,7 @@ E.load(E.ASSTS).then((ok) => {
   const scenes = E.scenes();
   const LVS = [1, 2, 3, 4, 8, 9, 15, 16, 20];
   const ctxFull = { id: 'chk', turn: 7, callName: 'あいな', mon: 'ぷらんと', species: 'Plant', cheer: 'ゴーレム', cheer2: 'メロディ', stat: 'ちから', train: 'ちからトレーニング',
-    tech: 'たいあたり', cup: 'ジュニアしめくくり杯', food: 'にがうり', rival: 'ガルム', owner: 'あつ' };
+    tech: 'たいあたり', cup: 'ジュニアしめくくり杯', food: 'にがうり', rival: 'ガルム', owner: 'あつ', item: 'いのちの実' };
 
   // ② 助手が話す場面(あつの場面を物差しに、助手の名前が入る場面は人ごとに置きかえる)
   const ATSU_ONLY = /^issa\.(tease\.|after\.fire)/; // あつだけのかけ合い・受けて立った
@@ -88,8 +88,8 @@ E.load(E.ASSTS).then((ok) => {
   const SLOT_SRC = fs.readFileSync(path.join(__dirname, '../../monster-hero/data/monhero-success-script-common.js'), 'utf8');
   const unknown = [...new Set([...SLOT_SRC.matchAll(/\{(\w+)\}/g)].map(m => m[1]))].filter(k => !E.SLOTS.includes(k));
   check('差しこみ漏れなし(全部渡したとき・何も渡さないとき)', leak.length === 0 && unknown.length === 0, top([...new Set(leak)]) || (unknown.length ? `知らない差しこみ ${unknown.join(',')}` : ''));
-  const filled = E.fill('{name}{mon}{cheer}{cheer2}{stat}{train}{tech}{cup}{food}{rival}{owner}{cry}', ctxFull);
-  check('差しこみ12種が渡した値で埋まる', !/[{}]/.test(filled) && filled.includes('あいな') && filled.includes('ぷらんと') && filled.includes('ガルム') && filled.includes('ジュニアしめくくり杯') && !filled.endsWith('…'), filled);
+  const filled = E.fill('{name}{mon}{cheer}{cheer2}{stat}{train}{tech}{cup}{food}{rival}{owner}{cry}{item}', ctxFull);
+  check('差しこみ13種が渡した値で埋まる', !/[{}]/.test(filled) && filled.includes('いのちの実') && filled.includes('あいな') && filled.includes('ぷらんと') && filled.includes('ガルム') && filled.includes('ジュニアしめくくり杯') && !filled.endsWith('…'), filled);
   const empty = E.fill('{mon}{cheer}{rival}', {});
   check('差しこみが無いときにモンスターを「子」と呼ばない', !/子/.test(empty), empty);
 

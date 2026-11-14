@@ -56,9 +56,9 @@
   const FORCED = Object.freeze({
     // 大会で戦うのは基本1戦(社長 2026-11-12・TOURNAMENT §15)。組み合わせ表は演出(bracketOf)
     debut: { key: 'debut', name: 'デビュー戦', star: 1, cup: 'debut', all: 0, pts: 5, pop: 3, title: 'はじめの一歩' },
-    junior: { key: 'junior', name: 'ジュニアしめくくり杯', star: 2, cup: 'normal', all: 2, pts: 5, pop: 2, title: 'ジュニアの星' },
-    middle: { key: 'middle', name: 'ミドルしめくくり杯', star: 3, cup: 'normal', all: 3, pts: 10, pop: 4, title: 'ミドルの星' },
-    pro: { key: 'pro', name: '冬のヒーロー記念', star: 4, cup: 'herowinter', all: 4, pts: 20, pop: 8, title: 'ヒーロー記念', crown: true },
+    junior: { key: 'junior', name: 'ヒーローズリーグ', star: 2, cup: 'normal', all: 2, pts: 5, pop: 2, title: 'ジュニアの星' },
+    middle: { key: 'middle', name: 'ヒーローズリーグ', star: 3, cup: 'normal', all: 3, pts: 10, pop: 4, title: 'ミドルの星' },
+    pro: { key: 'pro', name: 'ヒーローズリーグ', star: 4, cup: 'herowinter', all: 4, pts: 20, pop: 8, title: 'ヒーロー記念', crown: true },
   });
   // 頂への道(最後の期の 3・4・5ターン目の終わりに1戦ずつ・負けたら終わり)
   const SUMMIT = Object.freeze([{ round: 1, name: '頂への道 1回戦', mult: 1.2 }, { round: 2, name: '頂への道 準決勝', mult: 1.3 }, { round: 3, name: '頂への道 決勝', mult: 1.4 }]);
@@ -136,15 +136,16 @@
   const COND = Object.freeze({
     injLowHp: 0.3, injTrain: 0.08, injLen: [1, 2],
     illStress: 70, illRate: 0.10, illLen: 1,
-    awayLoyal: 20, awayStress: 80, awayRate: 0.2, awayLen: 1, awayAma: -8, awayFear: -4,
+    awayLoyal: 20, awayStress: 80, awayRate: 0.2, awayLen: 1, awayAma: 0, awayFear: 0, // 家出でも甘え度・恐れ度は下げない(社長 2026-11-14)
+   
     rec: 0.3, sorashido: 0.7,
   });
 
   // ---- 忠誠度 = 甘え度 + 恐れ度(各50まで・ASSIST §4c) ----
   const LOYAL = Object.freeze({
     half: 50, start: [10, 10], capBoost: 60, // 補正 = 1 + min(忠誠,60)/100
-    praiseGood: [4, 0], praiseBad: [2, -2], scoldBad: [0, 4], scoldGood: [-3, 1],
-    win: [2, 0], loseScold: [0, 3], idleTurns: 4, idle: [-1, -1],
+    praiseGood: [4, 0], praiseBad: [2, 0], scoldBad: [0, 4], scoldGood: [0, 1], // 甘え度・恐れ度は下げない(社長 2026-11-14「マイナスになると忠誠度が下がる」)
+    win: [2, 0], loseScold: [0, 3], idleTurns: 4, idle: [0, 0],
     // ターンの終わりに、残りの体力で忠誠度が育つ(2026-11-14 社長・台帳 #6108): 上限の50%以上なら甘え度+1・下なら恐れ度+1。方針の段の補正は addLoyal のまま
     turnHpLine: 0.5, turnAma: 1, turnFear: 1,
   });
@@ -312,7 +313,7 @@
     fruit_life: { name: 'いのちの実', use: 'during', fruit: 'life' }, fruit_pow: { name: 'ちからの実', use: 'during', fruit: 'pow' },
     fruit_wise: { name: 'ちえの実', use: 'during', fruit: 'wise' }, fruit_hit: { name: 'ねらいの実', use: 'during', fruit: 'hit' },
     fruit_eva: { name: 'かわしの実', use: 'during', fruit: 'eva' }, fruit_tough: { name: 'かたさの実', use: 'during', fruit: 'tough' },
-    stamina: { name: 'スタミナだんご', use: 'during', hpMax: 15 }, // ルーキーズ・クラウンの賞品: 使うと体力の最大値 +15(体力も同じだけ回復)
+    stamina: { name: 'スタミナだんご', use: 'during', hpMax: 15 }, // モンスターダービーの賞品: 使うと体力の最大値 +15(体力も同じだけ回復)
   });
   const GOOD = Object.freeze({
     eventMaker: { name: 'イベントメーカー', eventRate: 0.25 },              // 編成の子との出来事 +25%(50% → 75%。2026-11-13 社長)
@@ -374,6 +375,26 @@
     ['str', 'dist0', 'attacker'], ['int', 'dist1', 'normal'], ['aim', 'spring', 'tank'], ['dodge', 'dist2', 'normal'], ['hard', 'dist3', 'supporter'], ['life', 'summer', 'normal', 'herosummer'],
     ['str', 'dist0', 'healer'], ['int', 'dist1', 'normal'], ['aim', 'autumn', 'shadow'], ['dodge', 'dist2', 'normal'], ['hard', 'dist3', 'attacker'], ['life', 'winter', 'normal'],
   ]);
+  // 大会の名前(2026-11-14 社長「名前は基本、参照資料のとおり・四大大会とモンスターダービーはそのまま・ほかは任せる」)
+  //   ふだんの大会は「期・月・並びの順(filter 後の index)」で名前が決まる。sys(id)は変えない(保存・称号・相手の顔ぶれがそのまま)
+  //   系統(タイプ)の大会は、並びに関わらず ◯◯杯(ミドル)・◯◯チャンピオンズ(プロ)
+  const TYPE_CUP_NAME = Object.freeze({
+    attacker: ['アタッカー杯', 'アタッカー・チャンピオンズ'], tank: ['タンク杯', 'タンク・チャンピオンズ'], supporter: ['サポーター杯', 'サポーター・チャンピオンズ'],
+    healer: ['ヒーラー杯', 'ヒーラー・チャンピオンズ'], shadow: ['シャドウ杯', 'シャドウ・チャンピオンズ'],
+  });
+  const CUP_POS_NAMES = Object.freeze({
+    junior: [['マーキュリー杯', 'あらなみ杯'], ['ホップ杯', 'ひまわり杯'], ['ミス・マーメイド杯', 'なないろ杯'], ['ヴィーナス杯', 'あさがお杯'], ['ノーブル杯', 'ひよこ杯'], ['アース杯', 'コオロギ杯'],
+      ['ミレニアムカーニバル', 'すこやか杯'], ['マーズ杯', 'あきかぜ杯'], ['コスモス杯', 'もみじ杯'], ['ステップ杯', 'クローバー杯'], ['ミリオネア杯', 'ジュピター杯'], ['しもつき杯', 'ゆきぞら杯']],
+    middle: [['さざんか杯', 'しもばしら杯'], ['サターン杯', 'つばき杯'], ['ふゆぞら杯', 'ゆきあかり杯'], ['ジャンプ杯', 'ゆきどけ杯'], ['はなびら杯', 'つくし杯'], ['リリー・オブ・ザ・バレー', 'てるてる杯'],
+      ['ネプチューン杯', 'そよかぜ杯'], ['わかば杯', 'ほほえみ杯'], ['はるかぜ杯', 'やまざくら杯'], ['ウラヌス杯', '桜吹雪杯'], ['しらゆり杯', 'あかね杯'], ['きたかぜ杯', 'ふぶき杯']],
+    pro: [['マーキュリー杯', 'あらなみ杯'], ['ホップ杯', 'ひまわり杯'], ['ミス・マーメイド杯', 'なないろ杯'], ['ヴィーナス杯', 'あさがお杯'], ['ノーブル杯', 'ひなた杯'], ['アース杯', 'コオロギ杯', '夏のヒーロー記念'],
+      ['ミレニアムカーニバル', 'すこやか杯'], ['マーズ杯', 'あきかぜ杯'], ['コスモス杯', 'こもれび杯'], ['ミリオネア杯', 'クローバー杯'], ['ジュピター杯', 'しぐれ杯'], ['きらぼし杯', 'ゆきあかり杯']],
+  });
+  const cupNameAt = (pk, m, i, sys) => {
+    const k = pk === 'final' ? 'pro' : pk; // 最後の期の1・2月はプロと同じ並び
+    if (TYPE_CUP_NAME[sys]) return TYPE_CUP_NAME[sys][k === 'pro' ? 1 : 0];
+    const row = (CUP_POS_NAMES[k] || [])[m - 1]; return (row && row[i]) || '';
+  };
   const CUP_STAR = Object.freeze({ junior: 1, middle: 2, pro: 3, final: 3 });       // その期の大会の星(👑 は 4)
   const CUP_COUNT = Object.freeze({ junior: 2, middle: 3, pro: 4, final: 4 });      // その期に並ぶ数(プロの 👑 は6月だけ)
   // ビートP(2026-11-14 社長「参考のコインは、うちではビートP」・台帳 #6129)
@@ -412,37 +433,54 @@
   // 段のほかに、優勝の獲得物に付く修行チケット(期末の大会・頂への道の各戦・★★★以上・四大大会)
   const WIN_TICKET = Object.freeze({ forced: Object.freeze(['junior', 'middle', 'pro']), cupStar: 3, add: 1 });
   const DIST_JA = ['零', '近', '中', '遠'];
+  const DIST_T_NAME = ['インファイト・トーナメント', 'ニアライト・トーナメント', 'ミドルレンジ・トーナメント', 'ロングレール・トーナメント'];
+  const DIST_C_NAME = ['インファイト・チャンピオンズ', 'ニアライト・チャンピオンズ', 'ミドルレンジ・チャンピオンズ', 'ロングレール・チャンピオンズ'];
   const STAT_JA = Object.freeze({ life: 'ライフ', pow: 'ちから', wise: 'かしこさ', hit: '命中', eva: '回避', tough: '丈夫さ' });
-  const SEL_NAME = Object.freeze({ life: 'ライフスター選抜', pow: 'パワースター選抜', wise: 'スマートスター選抜', hit: 'ヒットスター選抜', eva: 'ステップスター選抜', tough: 'ガードスター選抜' });
-  const MEM_NAME = Object.freeze({ life: '命の灯記念', pow: '剛腕記念', wise: '叡智記念', hit: '一矢記念', eva: '疾風記念', tough: '鉄壁記念' });
+  const SEL_NAME = Object.freeze({ life: 'ライフスター選抜', pow: 'パワースター選抜', wise: 'スマートスター選抜', hit: 'ヒットスター選抜', eva: 'トリックスター選抜', tough: 'タンクスター選抜' });
+  const MEM_NAME = Object.freeze({ pow: 'アルテミス記念', wise: 'ミカエル記念', hit: 'アトランタ記念', eva: 'キマイラ記念', tough: 'ガブリエル記念', life: 'アトロポス記念' });
   const GEM = Object.freeze({ attacker: ['ルビー記念', 2], tank: ['サファイア記念', 4], supporter: ['エメラルド記念', 6], healer: ['トパーズ記念', 8], shadow: ['アメジスト記念', 10] });
   // 季節の賞: 同じ月に3つ(同じ賞金・金の格)。名前と賞品(上がる能力)だけ違う(社長「名前だけ別で中身が同じ大会は賞品だけ同等の別物に」)
-  const SEASON_PRIZE = Object.freeze({ 3: ['春', ['life', 'hit', 'eva']], 6: ['夏', ['pow', 'tough', 'life']], 9: ['秋', ['wise', 'hit', 'eva']], 12: ['冬', ['tough', 'pow', 'wise']] });
-  const SEASON_NAMES = ['陽光賞', '月光賞', '星光賞'];
+  const SEASON_PRIZE = Object.freeze([ // [期, 月, 季節, 賞品の能力3つ, 賞金]  月の季節に合わせる(春=3月・夏=6月・秋=9月。ジュニアは夏・ミドルは春・プロは秋)
+    ['junior', 6, '夏', ['pow', 'tough', 'life'], 2750], ['middle', 3, '春', ['life', 'hit', 'eva'], 5500], ['pro', 9, '秋', ['wise', 'hit', 'eva'], 10500],
+  ]);
+  const SEASON_NAMES = ['雪月花賞', '花水木賞', '桔梗賞'];
   const EX_CUPS = Object.freeze((() => {
     const L = [];
     // ジュニア期の大一番(超高難度・1つ): 予想「勝ち目なし…」
-    L.push({ sys: 'derby', name: 'ルーキーズ・クラウン', p: 'junior', m: 10, star: 3, str: 1.5, prize: 8000, tk: 1500, grade: 'rainbow', hard: true, rw: { all: 3, pts: 15, pop: 6, title: '若き挑戦者', bag: { stamina: 1 } } });
-    // 四大大会(ミドル1月・ミドル5月・プロ8月・プロ11月)。4つ全部勝つと「四大大会制覇」
-    [['four1', '暁の大杯', 'middle', 1, 6], ['four2', '蒼天杯', 'middle', 5, 6], ['four3', '獅子王杯', 'pro', 8, 7], ['four4', '天頂杯', 'pro', 11, 7]].forEach(([sys, name, p, m, rank], k) => {
+    L.push({ sys: 'derby', name: 'モンスターダービー', p: 'junior', m: 9, star: 3, str: 1.5, prize: 8000, tk: 1500, grade: 'rainbow', hard: true, rw: { all: 3, pts: 15, pop: 6, title: '若き挑戦者', bag: { stamina: 1 } } });
+    // 四大大会(ミドル3月・ミドル9月・プロ3月・プロ9月。参考の位置・名前のまま)。4つ全部勝つと「四大大会制覇」
+    [['four1', 'グレイテスト4', 'middle', 3, 6], ['four2', 'M-1グランプリ', 'middle', 9, 6], ['four3', 'ウィナーズ杯', 'pro', 3, 7], ['four4', 'ワールドモンスターズ杯', 'pro', 9, 7]].forEach(([sys, name, p, m, rank], k) => {
       L.push({ sys, name, p, m, star: 4, str: 1.35, prize: 12500, tk: 1500, grade: 'four', four: true, hard: k === 3, need: { rank }, rw: { all: 5, pts: 20, pop: 8, fruitTop: 1, bag: { oilyoil: 1 } } });
     });
-    // 間合いの2段: ミドル1月の間合いトーナメント → プロ7月の間合いチャンピオンズ。賞品はその間合いの秘薬
+    // 間合いの2段: ミドル1月の◯◯・トーナメント → プロ1月の◯◯・チャンピオンズ。賞品はその間合いの秘薬
     [0, 1, 2, 3].forEach((d) => {
-      L.push({ sys: `distT${d}`, name: `${DIST_JA[d]}の間合いトーナメント`, p: 'middle', m: 1, star: 2, str: STAR_MULT[2], prize: 3500, tk: 250, grade: 'silver', dist: d, rw: { pts: 10, bag: { [`elixir${d}`]: 1 } } });
-      L.push({ sys: `distC${d}`, name: `${DIST_JA[d]}チャンピオンズ`, p: 'pro', m: 7, star: 3, str: STAR_MULT[3], prize: 7000, tk: 600, grade: 'gold', dist: d, need: { won: `distT${d}:2` }, rw: { pts: 15, bag: { [`elixir${d}`]: 2 }, apt: d } });
+      L.push({ sys: `distT${d}`, name: DIST_T_NAME[d], p: 'middle', m: 1, star: 2, str: STAR_MULT[2], prize: 3500, tk: 250, grade: 'silver', dist: d, rw: { pts: 10, bag: { [`elixir${d}`]: 1 } } });
+      L.push({ sys: `distC${d}`, name: DIST_C_NAME[d], p: 'pro', m: 1, star: 3, str: STAR_MULT[3], prize: 7000, tk: 600, grade: 'gold', dist: d, need: { won: `distT${d}:2` }, rw: { pts: 15, bag: { [`elixir${d}`]: 2 }, apt: d } });
     });
-    // 能力の2段: ミドル6月の選抜(その能力が500以上)→ プロ12月の記念(同じ能力の選抜に優勝)
+    // 能力の2段: ミドル11月の選抜(その能力が500以上)→ プロ11月の記念(同じ能力の選抜に優勝)
     KEYS.forEach((k) => {
-      L.push({ sys: `sel_${k}`, name: SEL_NAME[k], p: 'middle', m: 6, star: 2, str: STAR_MULT[2], prize: 4000, tk: 250, grade: 'green', stat: k, need: { stat: 500 }, rw: { stat: { [k]: 8 }, bag: { [`fruit_${k}`]: 1 } } });
-      L.push({ sys: `mem_${k}`, name: MEM_NAME[k], p: 'pro', m: 12, star: 3, str: STAR_MULT[3], prize: 7500, tk: 600, grade: 'gold', stat: k, need: { won: `sel_${k}:2` }, rw: { stat: { [k]: 15 }, loy: 5, bag: { [`fruit_${k}`]: 2 } } });
+      L.push({ sys: `sel_${k}`, name: SEL_NAME[k], p: 'middle', m: 11, star: 2, str: STAR_MULT[2], prize: 4000, tk: 250, grade: 'green', stat: k, need: { stat: 500 }, rw: { stat: { [k]: 8 }, bag: { [`fruit_${k}`]: 1 } } });
+      L.push({ sys: `mem_${k}`, name: MEM_NAME[k], p: 'pro', m: 11, star: 3, str: STAR_MULT[3], prize: 7500, tk: 600, grade: 'gold', stat: k, need: { won: `sel_${k}:2` }, rw: { stat: { [k]: 15 }, loy: 5, bag: { [`fruit_${k}`]: 2 } } });
     });
     // 宝石の記念(タイプの大会の上の段・プロ期): ミドルの同じタイプの大会に優勝で出られる
     Object.entries(GEM).forEach(([t, [name, m]]) => L.push({ sys: `gem_${t}`, name, p: 'pro', m, star: 3, str: STAR_MULT[3], prize: 6750, tk: 600, grade: 'gold', type: t, need: { won: `${t}:2` }, rw: { all: 3, pts: 10, elixirTop: 1 } }));
-    // 季節の賞(ミドル・プロの 3・6・9・12月に3つずつ。ジュニアは今までの四季の大会1つのまま)
-    ['middle', 'pro'].forEach((p) => Object.entries(SEASON_PRIZE).forEach(([m, [ja, stats]]) => stats.forEach((k, i) => {
-      L.push({ sys: `ssn${m}_${i}`, name: `${SEASON_NAMES[i]}(${ja})`, p, m: Number(m), star: CUP_STAR[p], str: STAR_MULT[CUP_STAR[p]], prize: p === 'pro' ? 7000 : 5500, tk: p === 'pro' ? 600 : 250, grade: 'gold', season: true, rw: { stat: { [k]: 8 }, loy: 3, bag: { [`fruit_${k}`]: 1 } } });
-    })));
+    // 季節の賞(ジュニア6月=夏・ミドル3月=春・プロ9月=秋に3つずつ。同じ賞金・金の格。参考の名前)
+    SEASON_PRIZE.forEach(([p, m, ja, stats, prize]) => stats.forEach((k, i) => {
+      L.push({ sys: `ssn${m}_${i}`, name: `${SEASON_NAMES[i]}(${ja})`, p, m, star: CUP_STAR[p], str: STAR_MULT[CUP_STAR[p]], prize, tk: p === 'pro' ? 600 : 250, grade: 'gold', season: true, rw: { stat: { [k]: 8 }, loy: 3, bag: { [`fruit_${k}`]: 1 } } });
+    }));
+    // 能力の杯(参考: 能力の杯×4。IMa は外したオリジナルの名前)。条件なし・賞品はその能力が上がる。賞金は「参考の比」(ふだんの銀に対する倍率)でそろえた
+    //   [期, 月, 名前, 能力, 賞金, 格]  銀=その能力 +大きめ・実1つ/銅=その半分
+    [['junior', 5, 'バクレツ杯', 'pow', 1500, 'silver'], ['junior', 5, 'シャープネス杯', 'hit', 1500, 'silver'], ['junior', 5, 'パワフル杯', 'tough', 1500, 'bronze'], ['junior', 5, 'ブレーン杯', 'wise', 1500, 'bronze'],
+      ['middle', 5, 'ノックアウトカップ', 'pow', 3250, 'silver'], ['middle', 5, 'インテリジェンスカップ', 'wise', 3250, 'silver'], ['middle', 5, 'エナジー杯', 'life', 2000, 'bronze'], ['middle', 5, 'クレバー杯', 'eva', 2000, 'bronze'],
+      ['pro', 5, 'インパクトカップ', 'pow', 5600, 'silver'], ['pro', 5, 'アナライズカップ', 'wise', 5600, 'silver'], ['pro', 7, 'ヘラクレス杯', 'tough', 7500, 'silver'], ['pro', 7, 'アテナ杯', 'hit', 7500, 'silver'],
+    ].forEach(([p, m, name, k, prize, grade], i) => {
+      const n = { junior: 4, middle: 8, pro: 12 }[p] / (grade === 'bronze' ? 2 : 1);
+      L.push({ sys: `abl_${p}${m}_${i}`, name, p, m, star: CUP_STAR[p], str: STAR_MULT[CUP_STAR[p]], prize, tk: p === 'pro' ? 600 : 250, grade, rw: { stat: { [k]: n }, ...(grade === 'silver' ? { bag: { [`fruit_${k}`]: 1 } } : {}) } });
+    });
+    // 協会会長賞・モンヒロ新聞杯(参考: ミドル期4月後半の春・プロ期11月前半の秋。固有の団体名を外した名前)
+    [['middle', 8, '春'], ['pro', 10, '秋']].forEach(([p, m, ja]) => ['協会会長賞', 'モンヒロ新聞杯'].forEach((nm, i) => {
+      L.push({ sys: `pres_${p}${m}_${i}`, name: `${nm}(${ja})`, p, m, star: CUP_STAR[p], str: STAR_MULT[CUP_STAR[p]], prize: p === 'pro' ? 10500 : 6500, tk: p === 'pro' ? 600 : 250, grade: 'gold', rw: { all: p === 'pro' ? 3 : 2, pts: p === 'pro' ? 15 : 10, pop: p === 'pro' ? 8 : 6, loy: 3 } });
+    }));
     return L.map(Object.freeze);
   })());
   const EX_BY_SYS = Object.freeze(Object.fromEntries(EX_CUPS.map((c) => [c.sys, c])));
@@ -883,8 +921,9 @@
     const addLoyal = (s, ama, fear) => {
       if (s.yosu.utsu) return; // うつ病のあいだ忠誠度(甘え度・恐れ度)は動かない(台帳 2026-11-12)
       const i = clamp(s.pol, -3, 3) + 3;
-      s.ama = clamp(Math.round(num(s.ama) + (ama > 0 ? ama * POL_AMA[i] : ama)), 0, LOYAL.half);
-      s.fear = clamp(Math.round(num(s.fear) + (fear > 0 ? fear * POL_FEAR[i] : fear)), 0, LOYAL.half);
+      // 甘え度・恐れ度は下げない(社長 2026-11-14): 負の値は0として数える
+      s.ama = clamp(Math.round(num(s.ama) + (ama > 0 ? ama * POL_AMA[i] : 0)), 0, LOYAL.half);
+      s.fear = clamp(Math.round(num(s.fear) + (fear > 0 ? fear * POL_FEAR[i] : 0)), 0, LOYAL.half);
     };
     const addXp = (s, x) => { s.xp += x; while (s.lv < LV_MAX && s.xp >= XP.need(s.lv)) { s.xp -= XP.need(s.lv); s.lv += 1; } };
     const recover = (s, frac) => { s.hp = clamp(Math.round(s.hp + s.hpMax * frac), 0, s.hpMax); };
@@ -981,17 +1020,17 @@
         card.members.forEach(i => { const nk = assistLv(s.team[i], 'nakayoshi'); addBond(s, i, BOND.train + (nk ? num(aOf('nakayoshi', 'v', nk)) : 0)); }); if (card.aid) addBond(s, 'aid', BOND.train);
         addXp(s, XP.train);
         s.log.train += 1; s.log[res] += 1; s.log.tagTurns[Math.min(3, card.tags.length)] += 1;
-        out.result = res; out.card = { kind, stat, add: card.add, tag: card.tag, tags: card.tags, members: card.members.slice() };
+        out.result = res; out.card = { kind, stat, add: card.add, tag: card.tag, tags: card.tags, members: card.members.slice(), aid: Boolean(card.aid) };
         out.gain = {}; KEYS.forEach(k => { if (s.stats[k] !== before[k]) out.gain[k] = s.stats[k] - before[k]; });
         trainEvent(s, card, rng, out);
         const cd = condRoll(s, rng, kind); if (cd) { s.cond = cd; out.cond = cd.kind; }
-        s.last = { kind, res }; s.acted = true; s.reacted = false;
+        s.last = { kind, res, members: card.members.slice() }; s.acted = true; s.reacted = false; // members: 来た編成の子(同じ血統の出来事 ev.team.kin)
         return { state: s, out };
       }
       if (kind === 'cup') { // 月の大会に出る(ターンを使う・ターンの終わりに1戦)
         const c = cupsOf(s).find(x => x.id === (a && a.id));
         if (!c || !c.entry.ok) return { state: s0, out: { ok: false, why: c ? c.entry.why : 'no-cup' } };
-        s.acted = true; s.last = { kind: 'cup', cup: { id: c.id, sys: c.sys, star: c.star, rival: c.rival || null } };
+        s.acted = true; s.last = { kind: 'cup', cup: { id: c.id, sys: c.sys, name: c.name || null, star: c.star, rival: c.rival || null } };
         return { state: s, out: { ok: true, cup: c.id } };
       }
       if (kind === 'shugyo') {
@@ -1098,7 +1137,7 @@
       s.reacted = true;
       const shk = 1 + stayNum(s, 'shitsuke') / 100; const up = (x) => (x > 0 ? x * shk : x); // 📏しつけ上手: 上がる分だけ増える
       if (how === 'praise') { const d = good ? LOYAL.praiseGood : LOYAL.praiseBad; addLoyal(s, up(d[0] + (s.aid === 'mua' ? 1 : 0)), up(d[1])); const m = C.policyMove(s.pol, s.pp, -1); s.pol = m.pol; s.pp = m.pp; s.idle = 0; }
-      else if (how === 'scold') { const d = good ? LOYAL.scoldGood : LOYAL.scoldBad; addLoyal(s, up(d[0] + evMod(s, 'scold')), up(d[1])); const m = C.policyMove(s.pol, s.pp, 1); s.pol = m.pol; s.pp = m.pp; s.idle = 0; }
+      else if (how === 'scold') { const d = good ? LOYAL.scoldGood : LOYAL.scoldBad; addLoyal(s, up(d[0]), Math.max(0, up(d[1]) + evMod(s, 'scold'))); const m = C.policyMove(s.pol, s.pp, 1); s.pol = m.pol; s.pp = m.pp; s.idle = 0; }
       else { s.idle += 1; if (s.idle >= LOYAL.idleTurns) { addLoyal(s, LOYAL.idle[0], LOYAL.idle[1]); s.idle = 0; } }
       // 変わった物(画面の結果の札): 甘え度・恐れ度・忠誠度・方針
       const d = { ama: num(s.ama) - num(b0.ama), fear: num(s.fear) - num(b0.fear), loy: loyalOf(s) - b0.loy, pol: num(s.pol) - num(b0.pol) };
@@ -1115,14 +1154,14 @@
       if (key === 'stat') { KEYS.forEach(k => addStat(s, k, win ? 50 : -10)); if (!win) s.yosu.sabori = { visits: 0 }; else if (!s.titles.includes('秘めた力')) s.titles.push('秘めた力'); }
       else if (key === 'hpmax') { if (win) { s.hpMax = Math.min(HP_MAX_CAP, s.hpMax + 20); s.hp = Math.min(s.hpMax, s.hp + 20); } else s.hp = clamp(s.hp - 20, 0, s.hpMax); }
       else if (key === 'hp') { if (win) recover(s, 0.8); else { s.hp = clamp(s.hp - 30, 0, s.hpMax); s.yosu.utsu = { visits: 0 }; } }
-      else if (key === 'loyal') { if (win) { const half = 15 / 2; addLoyalRaw(s, Math.ceil(half), Math.floor(half)); } else addLoyalRaw(s, -3, -2); }
+      else if (key === 'loyal') { if (win) { const half = 15 / 2; addLoyalRaw(s, Math.ceil(half), Math.floor(half)); } } // 負けても甘え度・恐れ度は下げない(社長 2026-11-14)
       else if (key === 'pop') s.pop = clamp(s.pop + (win ? 15 : -5), 0, 100);
       if (win) s.issaWon += 1;
       s.log.issa.push(`${key}:${win ? 'win' : 'lose'}`);
       return { state: s, out: { ok: true, choice: key, win, p: r2(p) } };
     };
     // 博士の忠誠度は甘え度・恐れ度に半分ずつ(方針の倍率はかけない・うつ病なら動かない)
-    const addLoyalRaw = (s, ama, fear) => { if (s.yosu.utsu) return; s.ama = clamp(s.ama + ama, 0, LOYAL.half); s.fear = clamp(s.fear + fear, 0, LOYAL.half); };
+    const addLoyalRaw = (s, ama, fear) => { if (s.yosu.utsu) return; s.ama = clamp(s.ama + Math.max(0, num(ama)), 0, LOYAL.half); s.fear = clamp(s.fear + Math.max(0, num(fear)), 0, LOYAL.half); }; // 下げない(社長 2026-11-14)
 
     // 大会のあとのごほうびのごはん(1回だけ・賞金を使う)
     const meal = (s0, key) => {
@@ -1312,7 +1351,7 @@
       if (EV) EV.tick(s); // 出来事のひとときの状態を1ターン減らす(s.last を消す前)
       if (num(s.hp) >= Math.max(1, num(s.hpMax)) * LOYAL.turnHpLine) addLoyal(s, LOYAL.turnAma, 0); else addLoyal(s, 0, LOYAL.turnFear);
       if (s.last && s.last.kind === 'retry') s.battle = { kind: 'debut', retry: s.debutLoss, round: 0 };
-      else if (s.last && s.last.kind === 'cup') s.battle = { kind: 'cup', id: s.last.cup.id, sys: s.last.cup.sys, star: s.last.cup.star, rival: s.last.cup.rival || null, round: 0 };
+      else if (s.last && s.last.kind === 'cup') s.battle = { kind: 'cup', id: s.last.cup.id, sys: s.last.cup.sys, name: s.last.cup.name || null, star: s.last.cup.star, rival: s.last.cup.rival || null, round: 0 };
       else s.battle = forcedBattle(s);
       s.acted = false; s.reacted = false; s.issaDone = false; s.last = null; s.mealReady = false;
       if (!s.battle) s.turn += 1;
@@ -1523,11 +1562,19 @@
       if (!CUP_STAR[p.key] && !(s.aid === 'kyuko' && peakTurn(s))) return [];
       if (s.over) return [];
       if (p.key === 'final' && p.at > 2) return []; // 最後の期の3〜5ターン目は頂への道だけ
-      const m = monthOf(s.turn); const row = CUP_STAR[p.key] ? YEAR[m - 1].slice(0, CUP_COUNT[p.key]) : [];
+      const m = monthOf(s.turn);
+      // ふだんの大会は銀と銅の2つ(2026-11-14 社長「基本は参考どおり」・参考の並び)。1つ目=銀(その期の星どおりの賞金)・2つ目=銅(銀の半分)
+      //   季節の月(3・6・9・12)の2つ目は、ジュニアは四季の大会・ミドルとプロは「ふつうの大会」。プロ6月だけ夏のヒーロー記念(👑)が加わる。
+      //   系統(タイプ)の大会は、ミドル7月に「うちのタイプの1つ」だけ(宝石の記念の「下の優勝で」はこれを見る)
       const SEASON_SYS = ['spring', 'summer', 'autumn', 'winter'];
-      const list = row.filter(sys => (sys !== 'herosummer' || p.key === 'pro') && !(SEASON_SYS.includes(sys) && (p.key === 'middle' || p.key === 'pro'))).map((sys, i) => {
+      const yrow = CUP_STAR[p.key] ? YEAR[m - 1] : [];
+      const sysList = yrow.length ? [yrow[0], SEASON_SYS.includes(yrow[1]) && p.key !== 'junior' ? 'normal' : yrow[1]] : [];
+      if (yrow.length && p.key === 'pro' && yrow.includes('herosummer')) sysList.push('herosummer');
+      if (yrow.length && p.key === 'middle' && m === 7) { const t = TYPE_OF[s.species]; if (t && t.main && CUP_SYS[t.main]) sysList.push(t.main); }
+      const list = sysList.map((sys, i) => {
         const star = sys === 'herosummer' ? 4 : CUP_STAR[p.key];
-        return { id: `${p.key}:${m}:${sys}:${star}`, sys, star, name: (deps && deps.cupNames && deps.cupNames[sys]) || sys, prize: Math.round(CUP_PRIZE[star] * PERIOD_PRIZE[p.key]), index: i };
+        const base = Math.round(CUP_PRIZE[star] * PERIOD_PRIZE[p.key]);
+        return { id: `${p.key}:${m}:${sys}:${star}`, sys, star, name: cupNameAt(p.key, m, i, sys) || (deps && deps.cupNames && deps.cupNames[sys]) || sys, prize: i === 1 ? Math.round(base / 2 / 50) * 50 : base, index: i };
       });
       // 大会の第2版: 決まった期・月の大会(四大大会・季節の賞・間合いの2段・選抜→記念・宝石の記念・ジュニアの大一番)
       EX_CUPS.forEach((d) => { if (d.p === p.key && d.m === m) list.push({ id: `${p.key}:${m}:${d.sys}:${d.star}`, sys: d.sys, star: d.star, ex: true, name: d.name, grade: d.grade, hard: !!d.hard, prize: d.prize, index: list.length }); });
@@ -1659,22 +1706,37 @@
         name: rv ? rv.name : who ? who.mon : null, breeder: rv ? (rv.breeder || null) : who ? who.breeder : null, champ: Boolean(who && who.champ), rival: Boolean(rv), note: who ? who.note : null, ...(sp0 ? { pick: sp0.pick } : {}) }];
     };
 
-    // 組み合わせ表の演出(8人のトーナメント)。決まった乱数で、ほかの試合の勝ち上がりも決める。戦うのは決勝の1戦だけ
+    // 組み合わせ表の演出(8人のトーナメント・2026-11-14 社長「トーナメントの表示がおかしい」で作り直し)。決まった乱数で、ほかの試合の勝ち上がりも決める。戦うのは決勝の1戦だけ
+    //   並び: 0=自分(いちばん上)。1〜3=自分の山。4〜7=反対の山(決勝の相手 foe が 4〜7 のどこか)。1回戦=(0,1)(2,3)(4,5)(6,7)・準決勝=上の山と下の山の勝ち同士
+    //   pop = 人気の番号(1〜8が1つずつ・王者が1番・ライバルが次)。王者(決勝の相手でないとき)は自分の山。自分と決勝の相手は、かならず勝ち上がる
+    //   rounds = [1回戦の勝ち(4人の番号), 準決勝の勝ち(2人の番号)]・final = [自分, 決勝の相手]
     const bracketOf = (s) => {
       const b = s.battle; if (!b) return null;
       const rng = rngOf(s.id, s.turn, 'bracket', b.kind, b.round || 0, b.retry || 0);
       const cup = cupOfBattle(b); const opp = opponentsOf(s)[0];
       const regs = regularsOf(cup).filter(r => !opp || r.mon !== opp.name);
-      const others = regs.map(r => ({ name: r.mon, breeder: r.breeder, species: r.species }));
+      const champs = regs.filter(r => r.champ).map(r => ({ name: r.mon, breeder: r.breeder, species: r.species, champ: true }));
+      const rest = regs.filter(r => !r.champ).map(r => ({ name: r.mon, breeder: r.breeder, species: r.species }));
+      const others = [...champs, ...rest];
       while (others.length < 6) others.push({ name: null, breeder: null, species: speciesList[Math.floor(rng() * speciesList.length)] || 'Mocchi' });
       const you = { you: true, species: s.species };
       const foe = { name: opp ? opp.name : null, breeder: opp ? opp.breeder : null, species: opp ? opp.species : 'Mocchi', champ: opp ? opp.champ : false, rival: opp ? opp.rival : false };
-      // 左の山に自分、右の山に相手(決勝で当たる)。ほかの6体を並べる
-      const pick = others.slice(0, 6).map(x => ({ x, r: rng() })).sort((p, q) => p.r - q.r).map(o => o.x);
-      const entrants = [you, pick[0], pick[1], pick[2], foe, pick[3], pick[4], pick[5]];
-      const r1 = [0, 2 + (rng() < 0.5 ? 0 : 1), 4, 6 + (rng() < 0.5 ? 0 : 1)]; // 1回戦の勝ち(自分と相手はかならず勝ち上がる)
-      const r2 = [0, 4];
-      return { cup, entrants, rounds: [r1, r2], final: [0, 4] };
+      // ほかの6体: 王者(決勝の相手でないとき)は自分の山の1〜3番、残りはばらばらに
+      const shuf = (arr) => arr.map(x => ({ x, r: rng() })).sort((p, q) => p.r - q.r).map(o => o.x);
+      const ch = others.filter(x => x.champ); const rs = shuf(others.filter(x => !x.champ));
+      const upper = shuf([...ch.slice(0, 1), ...rs.splice(0, 3 - Math.min(1, ch.length))]);
+      const lower = shuf([...ch.slice(1), ...rs]).slice(0, 3);
+      const f = 4 + Math.floor(rng() * 4);
+      const entrants = [you, ...upper.slice(0, 3)]; const low = lower.slice(); const lowRow = []; for (let i = 4; i < 8; i++) lowRow.push(i === f ? foe : low.shift());
+      entrants.push(...lowRow);
+      // 人気の番号(1〜8)
+      const score = entrants.map((e, i) => (e.champ ? 1000 : e.rival ? 900 : e.you ? 300 + Math.min(100, num(s.pop)) * 3 : 100 + rng() * 400));
+      const order = score.map((v, i) => ({ v, i })).sort((p, q) => q.v - p.v); const pop = []; order.forEach((o, k) => { pop[o.i] = k + 1; });
+      // 勝ち上がり: 自分と決勝の相手はかならず。ほかは人気が上の方が7割で勝つ
+      const win = (i, j) => { if (i === 0 || i === f) return i; if (j === 0 || j === f) return j; const hi = pop[i] < pop[j] ? i : j; const lo = hi === i ? j : i; return rng() < 0.7 ? hi : lo; };
+      const r1 = [win(0, 1), win(2, 3), win(4, 5), win(6, 7)];
+      const r2 = [win(r1[0], r1[1]), win(r1[2], r1[3])];
+      return { cup, entrants, rounds: [r1, r2], final: [0, f], pop, foe: f };
     };
 
     // 再戦: 負けた試合の直後(settle の前)に呼ぶ。同じ相手ともう一度(試合の乱数は again で変える)
@@ -1864,7 +1926,7 @@
     const EVX = (deps && deps.events) || (root && root.MONHERO_SUCCESS_EVENTS) || null;
     EV = EVX && typeof EVX.create === 'function' ? EVX.create({
       KEYS, TOTAL_TURNS, FORCED, BOND, rngOf, periodOf, monthOf, clamp, num, r2, unitOf, addStat: (s, k, v) => addStat(s, k, num(v) > 0 ? num(v) * (1 + stayNum(s, 'event') / 100) : v), addLoyalRaw, recover, addStress, addBond, loyalOf, aptMult, gainPts, popGain, addAptUp, aptUpRoom, aptGradesOf, DIST_UP_GRADES: DIST_UP.grades,
-      typeOf: TYPE_OF, peakOf: (type) => C.peakOf(type), arc: ARC,
+      typeOf: TYPE_OF, peakOf: (type) => C.peakOf(type), arc: ARC, lineOf,
     }) : null;
 
     return Object.freeze({

@@ -37,7 +37,7 @@ async function createPrivateRoom(s) {
   if (await s.tapLabel(/^＋ 作成$/, 800)) return true;
   if (!(await s.tapLabel(/プライベート/, 1500))) return false;
   await s.dismissOverlays(3);
-  return s.tapLabel(/^[＋+] ?(部屋をつくる|部屋を作る|作成)$|^作成$/, 2500);
+  return s.tapLabel(/^[＋+] ?(部屋を作る|部屋を作る|作成)$|^作成$/, 2500);
 }
 async function openRoom(s) {
   await s.backHome();

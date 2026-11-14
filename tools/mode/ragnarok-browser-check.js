@@ -128,7 +128,7 @@ const cardsInfo = () => [...document.querySelectorAll('[data-extreme-difficulty-
       check('見出しにRAGNAROKが出る', sheet.includes('RAGNAROK'), sheet.slice(0, 60));
       check('黄昏の説明が出る', sheet.includes('黄昏') && sheet.includes('+20% / +40% / +60% / +80% / +100%'));
       check('不死の説明が出る', sheet.includes('死者の再起') && sheet.includes('WAVE5（1回） / WAVE10（2回）'));
-      check('安全距離なしと書いてある', sheet.includes('なし（4距離すべて弱体化する）'));
+      check('安全距離なしと書いてある', sheet.includes('なし（4距離全て弱体化する）'));
       check('操作中に致命的なJSエラーが出ない', fatal.length === 0, fatal.slice(0, 2).join(' / '));
       await page.close();
     }
@@ -169,7 +169,7 @@ const cardsInfo = () => [...document.querySelectorAll('[data-extreme-difficulty-
       });
       check('HELHEIMのルール詳細が開く', sheet.includes('HELHEIM'), sheet.slice(0, 60));
       check('冥府の説明が出る', sheet.includes('冥府') && sheet.includes('+30% / +60% / +90% / +120% / +150%') && sheet.includes('味方の最大ライフ'));
-      check('敵のライフ10倍とデュラハンが出る', sheet.includes('すべての敵が10倍') && sheet.includes('デュラハン'));
+      check('敵のライフ10倍とデュラハンが出る', sheet.includes('全ての敵が10倍') && sheet.includes('デュラハン'));
       check('距離強化の減衰が出る', sheet.includes('WAVE1で10%') && sheet.includes('WAVE10で1%'));
       check('不死の説明が出る', sheet.includes('WAVE3（1回） / WAVE5（2回） / WAVE7（2回） / WAVE9（1回） / WAVE10（4回）'));
       check('HELHEIM操作中に致命的なJSエラーが出ない', fatal.length === 0, fatal.slice(0, 2).join(' / '));

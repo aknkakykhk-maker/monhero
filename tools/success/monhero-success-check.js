@@ -89,6 +89,21 @@ ok(near(SUC.failRateOf({ ...base, yosu: { sabori: { visits: 0 } } }) - fFull, 0.
   ok(!SUC.act(base, { kind: 'clinic' }).out.ok, 'ようすが無いのに通院できる');
 }
 
+// ---- 甘え度・恐れ度は下がらない(社長 2026-11-14 r1114-115) ----
+{
+  let bad = 0;
+  for (const res of ['great', 'ok', 'fail', 'sab']) for (const how of ['praise', 'scold', null]) for (const pol of [-3, 0, 3]) {
+    for (const buff of [false, true]) {
+      const s0 = { ...base, ama: 20, fear: 20, pol, pp: 0, idle: 3, last: { kind: 'train', res }, reacted: false, buffs: buff ? [{ id: 'futekusare', left: 2 }] : base.buffs };
+      const r = SUC.react(s0, how); if (!r.out.ok) continue;
+      if (r.state.ama < 20 || r.state.fear < 20) bad++;
+    }
+  }
+  ok(bad === 0, `褒める・叱る・ほうっておくで甘え度・恐れ度が下がる経路がある(${bad}件)`);
+  const L = SUC.LOYAL, C = SUC.COND;
+  ok([L.praiseGood, L.praiseBad, L.scoldGood, L.scoldBad, L.win, L.loseScold, L.idle].every(v => v[0] >= 0 && v[1] >= 0) && C.awayAma >= 0 && C.awayFear >= 0, '忠誠度の表に負の値がある');
+}
+
 // ---- 忠誠度 ----
 {
   let s = { ...base, last: { kind: 'train', res: 'great' }, reacted: false };
@@ -385,16 +400,17 @@ ok(near(SUC.failRateOf({ ...base, yosu: { sabori: { visits: 0 } } }) - fFull, 0.
   const cj = SUC.cupsOf(j); ok(cj.length === 2 && cj.every(c => c.star === 1) && cj[0].sys === 'str' && cj[0].entry.ok, `ジュニア1月の大会(ちから自慢・間合い 零 ★)がずれている: ${JSON.stringify(cj.map(c => c.id))}`);
   ok(!SUC.canEnter({ ...j, stats: { ...j.stats, pow: 100 } }, cj[0]).ok, '自慢の大会の能力の条件(ジュニア 150)が効かない');
   const mid = { ...s0, turn: 18, stats: { ...s0.stats, pow: 400 } }; const cm = SUC.cupsOf(mid);
-  // ミドル1月は、月の並び3つ + 第2版(四大大会1つ・間合いトーナメント4つ)
+  // ミドル1月は、月の並び2つ(銀・銅) + 第2版(間合いトーナメント4つ)。四大大会の1つ目(グレイテスト4)はミドル3月
   const cmRow = cm.filter(c => !c.ex);
-  ok(cmRow.length === 3 && cmRow[0].star === 2 && !cmRow[0].entry.ok && cmRow[0].entry.why === 'chain', `ミドルの ★★ がジュニアで優勝していなくても出られる: ${JSON.stringify(cm.map(c => c.id))}`);
+  ok(cmRow.length === 2 && cmRow[0].star === 2 && !cmRow[0].entry.ok && cmRow[0].entry.why === 'chain', `ミドルの ★★ がジュニアで優勝していなくても出られる: ${JSON.stringify(cm.map(c => c.id))}`);
   ok(SUC.cupsOf({ ...mid, wonNow: ['str:1'] }).filter(c => !c.ex)[0].entry.ok, 'ジュニアで優勝したのにミドルの ★★ に出られない');
   // 第2版: 四大大会の出る条件(賞金の段)・間合いトーナメント・制覇
-  const four = cm.find(c => c.sys === 'four1');
+  const mid3 = { ...mid, turn: 20 }; const cm3 = SUC.cupsOf(mid3);
+  const four = cm3.find(c => c.sys === 'four1');
   ok(four && four.ex && four.prize === 12500 && !four.entry.ok && four.entry.why === 'rank', `四大大会の賞金の段の条件が効かない: ${JSON.stringify(four && four.entry)}`);
-  ok(SUC.cupsOf({ ...mid, fameTotal: 8000, log: { ...mid.log, wins: 1 } }).find(c => c.sys === 'four1').entry.ok && !SUC.cupsOf({ ...mid, fameTotal: 7999, log: { ...mid.log, wins: 1 } }).find(c => c.sys === 'four1').entry.ok, '賞金ランクが はなまる(8,000G)で四大大会に出られる、にならない');
+  ok(SUC.cupsOf({ ...mid3, fameTotal: 8000, log: { ...mid.log, wins: 1 } }).find(c => c.sys === 'four1').entry.ok && !SUC.cupsOf({ ...mid3, fameTotal: 7999, log: { ...mid.log, wins: 1 } }).find(c => c.sys === 'four1').entry.ok, '賞金ランクが はなまる(8,000G)で四大大会に出られる、にならない');
   ok(cm.filter(c => c.sys.startsWith('distT')).length === 4, '間合いトーナメント4つが並ばない');
-  const pc = SUC.cupsOf({ ...s0, turn: 36 }).find(c => c.sys === 'distC0'); // プロ期7月(ターン36)
+  const pc = SUC.cupsOf({ ...s0, turn: 30 }).find(c => c.sys === 'distC0'); // プロ期1月(ターン30)
   ok(pc && !pc.entry.ok && pc.entry.why === 'won' && pc.entry.wonSys === 'distT0', `間合いチャンピオンズの「◯◯ 優勝で」が効かない: ${JSON.stringify(pc && pc.entry)}`);
   { // 四大大会を4つ勝つと制覇(一度きり)
     const wonAll = SUC.EX_CUPS.filter(c => c.four).map(c => `${c.sys}:${c.star}`);
@@ -421,7 +437,9 @@ ok(near(SUC.failRateOf({ ...base, yosu: { sabori: { visits: 0 } } }) - fFull, 0.
   // 王者・常連・組み合わせ表
   const d = { ...s0, turn: 5, battle: { kind: 'debut', round: 0 } };
   const od = SUC.opponents(d); ok(od.length === 1 && od[0].champ && od[0].name, 'デビュー戦の相手が王者1体になっていない');
-  const br = SUC.bracketOf(d); ok(br && br.entrants.length === 8 && br.entrants[0].you && br.entrants[4].name === od[0].name && br.final.join() === '0,4', '組み合わせ表(8人・決勝で自分と相手)がずれている');
+  const br = SUC.bracketOf(d); ok(br && br.entrants.length === 8 && br.entrants[0].you && br.final[0] === 0 && br.final[1] >= 4 && br.entrants[br.final[1]].name === od[0].name && br.rounds[1].join() === br.final.join() && br.rounds[0][0] === 0 && br.rounds[0][br.final[1] >> 1] === br.final[1] && br.pop.slice().sort((x, y) => x - y).join() === '1,2,3,4,5,6,7,8', '組み合わせ表(8人・決勝で自分と反対の山の相手・人気の番号が1〜8・勝ち上がり)がずれている');
+  { // どの大会の日でも、人気は1〜8が1つずつ・王者は反対の山の相手か自分の山・勝ち上がりが筋の通る形
+    let bad = 0; for (let t = 1; t <= 40; t++) for (const kind of ['debut', 'junior', 'middle', 'pro']) { const w = { ...d, turn: t, battle: { kind, round: 0 } }; let x; try { x = SUC.bracketOf(w); } catch (e) { bad++; continue; } if (!x) continue; const f = x.final[1]; const okp = x.pop.slice().sort((p, q) => p - q).join() === '1,2,3,4,5,6,7,8'; const okr = x.rounds[0].length === 4 && x.rounds[1].length === 2 && x.rounds[0].every((q, k) => q >> 1 === k) && x.rounds[1].every((q, j) => x.rounds[0].slice(2 * j, 2 * j + 2).includes(q)) && x.rounds[0][0] === 0 && x.rounds[0][f >> 1] === f && f >= 4 && x.rounds[1].join() === `0,${f}`; if (!okp || !okr) bad++; } ok(bad === 0, `組み合わせ表の人気の番号・勝ち上がりが筋に合わない場面 ${bad}件`); }
   ok(JSON.stringify(br) === JSON.stringify(SUC.bracketOf(d)), '組み合わせ表が決まった乱数になっていない');
   const r1 = SUC.opponents(SUC.rematch({ ...d, items: { sand: 0, rainbow: 1 } }, 'rainbow').state)[0]; ok(r1.name !== od[0].name, '虹の砂時計で相手(王者)が変わらない');
   // 月の大会に出る(ターンを使う・ターンの終わりに1戦)
