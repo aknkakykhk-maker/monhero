@@ -61,7 +61,8 @@ ok(SUC.failRateOf({ ...base, hp: 200, hpMax: 200 }) < SUC.failRateOf({ ...base, 
 ok(near(SUC.failRateOf({ ...base, yosu: { sabori: { visits: 0 } } }) - fFull, 0.05, 1e-9), 'サボりグセが失敗率の下限 +5% になっていない');
 // 失敗は上がらない・サボりは3割(同じ札・同じ時期で比べる)
 {
-  let s = SUC.newRun({ id: 'mult', species: 'Mocchi', aid: 'mua', pol: -3 });
+  // 編成は前と同じ全員モッチーで比べる(2026-11-14 から空き枠は育てる子と別の種で埋まり、編成の出来事が混ざるため)
+  let s = SUC.newRun({ id: 'mult', species: 'Mocchi', aid: 'mua', pol: -3, team: Array.from({ length: 6 }, () => ({ kind: 'base', species: 'Mocchi' })) });
   const seen = {};
   for (let i = 0; i < 400 && Object.keys(seen).length < 4; i++) {
     const t = { ...s, id: `mult-${i}`, hp: i % 2 ? 100 : 5 };
@@ -208,7 +209,7 @@ ok(near(SUC.failRateOf({ ...base, yosu: { sabori: { visits: 0 } } }) - fFull, 0.
 
 // ---- 修行(社長 2026-11-12: チケット・2段で能力2つずつ・最後に技のくじ・外すと次の率が上がる) ----
 {
-  const s0 = SUC.newRun({ id: 'shu', species: 'Mocchi', aid: 'mua' });
+  const s0 = SUC.newRun({ id: 'shu', species: 'Mocchi', aid: 'mua', team: Array.from({ length: 6 }, () => ({ kind: 'base', species: 'Mocchi' })) }); // 編成の得意の上乗せを前と同じにそろえる
   ok(s0.techs.length === 2 && s0.tickets === SUC.SHUGYO.ticket0, `はじめの技(はじめから覚えている2つ)・チケットがずれている: ${s0.techs} ${s0.tickets}`);
   ok(SUC.peek(s0).can.includes('shugyo') && SUC.shugyoLeft(s0) === s0.tickets, '修行がチケットの数だけ行けない(期ごとの回数は決めない)');
   const j = { ...s0, turn: 8, tickets: 3 };
@@ -598,9 +599,17 @@ ok(near(SUC.failRateOf({ ...base, yosu: { sabori: { visits: 0 } } }) - fFull, 0.
     ok(tp.child.techs.length === 2 && tp.child.techs.every(t => all.includes(t)) && tp.child.mast.length === 2 && tp.child.mast.every(x => x === 0), '受け継ぐ技が2つまで・熟練0になっていない');
     ok(tp.child.gen === 6, '世代が「親の大きい方 + 1」になっていない');
   }
-  // 型: 主の親の型が多い(くじで少し別)
-  let same = 0; for (let i = 0; i < 200; i++) { const r = SUC.fusePlan(mk('m' + i, 'Mocchi', 500, { gt: 5 }), mk('n' + i, 'Mocchi', 500)); if (r.child.gt === 5) same += 1; }
-  ok(same >= 160 && same < 200, `主の親の型を受け継ぐ割合がおかしい(${same}/200)`);
+  // 型: いつも生まれた種類の決まった型(2026-11-14 社長。親の型は継がない・くじなし)
+  let same = 0; for (let i = 0; i < 200; i++) { const r = SUC.fusePlan(mk('m' + i, 'Mocchi', 500, { gt: 5 }), mk('n' + i, 'Mocchi', 500)); if (r.child.gt === SUC.speciesType(r.child.species)) same += 1; }
+  ok(same === 200, `合体の子の型が種類の決まった型になっていない(${same}/200)`);
+  // 新しく始める育成の型は種族の型・30種すべて表にある・空き枠に育てる子と同じ種を入れない
+  ok(SUC.speciesList.every(sp => Number.isInteger(SUC.GROW_BY_SPECIES[sp]) && [1, 2, 3].includes(SUC.GROW_BY_SPECIES[sp])), '種族の成長の型の表に無い種族がある');
+  ok(SUC.newRun({ id: 'gt', species: 'Golem' }).type === 3 && SUC.newRun({ id: 'gt', species: 'Pixie' }).type === 1 && SUC.newRun({ id: 'gt', species: 'Golem', type: 5 }).type === 5, '新しい育成の型が種族の型でない(または途中の育成の型を書き換えている)');
+  ok(SUC.newRun({ id: 'self', species: 'Pixie' }).team.every(m => m.species !== 'Pixie'), '空いた編成の枠に、育てる子と同じ種が入っている');
+  // 合体で生まれたモンスターから始めるときは、その能力(st)から始まる(2026-11-14 社長・台帳 #6108)。壊れた値なら種族の値
+  { const T6 = Array.from({ length: 6 }, () => ({ kind: 'base', species: 'Mocchi' })); const st = { life: 300, pow: 250, wise: 200, hit: 220, eva: 210, tough: 230 };
+    const a = SUC.newRun({ id: 'fz', species: 'Golem', team: T6, startSt: st }); const b = SUC.newRun({ id: 'fz', species: 'Golem', team: T6 }); const c = SUC.newRun({ id: 'fz', species: 'Golem', team: T6, startSt: 'x' });
+    ok(K.every(k => a.stats[k] - b.stats[k] === st[k] - SUC.initStats('Golem')[k]) && JSON.stringify(c.stats) === JSON.stringify(b.stats), '合体で生まれたモンスターの能力から育成が始まっていない'); }
   // 壊れた保存値でも落ちない
   const bad = SUC.fusePlan({ id: 'x', species: 'Mocchi', raised: true, st: { life: 'abc', pow: -5, wise: 1e9 }, techs: 'zz', gen: NaN }, mk('y', 'Mocchi', 500));
   ok(bad.ok && SUC.KEYS.every(k => Number.isFinite(bad.child.st[k]) && bad.child.st[k] >= 1 && bad.child.st[k] <= 999) && bad.child.gen === 2, '壊れた保存値で合体の値がおかしくなる');
