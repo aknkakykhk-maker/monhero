@@ -198,7 +198,9 @@ const seed = () => {
     check('段2: 設定はこの画面のキーに覚える', savedSet && savedSet.team === 'ko' && savedSet.rounds === 30 && savedSet.dist === 3 && savedSet.guts === 99 && savedSet.fx === 'lite', JSON.stringify(savedSet));
     await clickSel('[data-ambb-start]');
     await page.waitForFunction(() => !!document.querySelector('[data-ambb-watch] [data-msa-stage]'), { timeout: 10000 }).catch(() => {});
-    await page.waitForTimeout(600);
+    // 場が画面いっぱいに広がり終わるまで待つ(決まった時間では入場の重ねや描き直しの途中を測ることがあった・窓口 2026-11-14)。測る条件は下のまま
+    await page.waitForFunction(() => { const st = document.querySelector('[data-msa-stage]'); const r = document.querySelector('[data-ambb-root]'); return !!(st && r && r.classList.contains('ambb-full') && st.getBoundingClientRect().height >= 380 && r.scrollHeight - r.clientHeight <= 0); }, { timeout: 5000 }).catch(() => {});
+    await page.waitForTimeout(200);
     const full = await page.evaluate(() => { const st = document.querySelector('[data-msa-stage]').getBoundingClientRect(); const r = document.querySelector('[data-ambb-root]'); return { h: Math.round(st.height), scroll: r.scrollHeight - r.clientHeight, full: r.classList.contains('ambb-full') }; });
     check('段2: 観戦は場が画面いっぱい(縦にはみ出さない)', full.full && full.h >= 380 && full.scroll <= 0, JSON.stringify(full));
     await clickSel('[data-ambb-skip]');
@@ -232,6 +234,8 @@ const seed = () => {
     await page.waitForTimeout(150);
     await clickSel('[data-ambb-start]');
     await page.waitForFunction(() => !!document.querySelector('[data-ambb-manual] [data-msxm="act"]'), { timeout: 30000 }).catch(() => {});
+    // 帯が出た直後は札がまだ描き直しの途中(0枚)のことがある(main でも 1/5〜1/6 で落ちた)。帯と上の欄の札がそろうまで待ってから測る。測る条件は下のまま
+    await page.waitForFunction(() => document.querySelectorAll('[data-msa-dc="manual"] [data-msa-dc-card]').length === 4 && document.querySelectorAll('[data-ambw-cards="B"] [data-msa-dc-card]').length === 4 && !!document.querySelector('[data-msa-dc="manual"] [data-msa-dc-card].now'), { timeout: 5000 }).catch(() => {});
     // 段3の作り直し(2026-11-13 社長): 技の札は間合いごとの4枚・押したら必ずその間合いの一覧(いちばん上が代表)・「☆ 代表にする」
     const man = await page.evaluate(() => {
       const cards = (sel) => [...document.querySelectorAll(`${sel} [data-msa-dc-card]`)];
