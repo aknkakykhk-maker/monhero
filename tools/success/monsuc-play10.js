@@ -168,7 +168,7 @@ if (require.main === module) (async () => {
   for (let lap = LF; lap <= LAST; lap++) {
     const cfg = { ...LAPS[lap - 1] }; if (cfg.team.startsWith('box')) cfg.box = boxSeed(cfg.team);
     const log = { lap, cfg: { ...cfg, box: undefined }, turns: [], screens: {}, findings: [], pressed: 0, endText: '' };
-    const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 1 });
+    const VW = (process.env.VIEW || '390,844').split(',').map(Number); const ctx = await browser.newContext({ viewport: { width: VW[0], height: VW[1] }, deviceScaleFactor: 1 });
     const page = await ctx.newPage(); const errs = []; const cerr = [];
     page.on('pageerror', (e) => errs.push(String(e && e.message || e).slice(0, 200)));
     page.on('console', (m) => { if (m.type() === 'error') { const t = m.text(); if (!/Failed to load resource|ERR_FAILED|net::|favicon|status of 404|status of 503/i.test(t)) cerr.push(t.slice(0, 160)); } });
