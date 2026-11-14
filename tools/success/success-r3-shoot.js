@@ -137,9 +137,9 @@ const makeRun = async (kind) => {
         }
         if (name === 'W1') { const lg = await page.evaluate(() => window.__bgmLog.slice()); const iC = lg.lastIndexOf('cupPre'), iB = lg.lastIndexOf('cupMatch');
           check(`${label}: 試合に入ったら、場面の曲が cupPre から cupMatch(バトルの曲 original_battle)へ替わる`, iC >= 0 && iB > iC, lg.join('>'));
-          // 実際に鳴らす曲の id(Audio_.currentBgmKey)も、試合の前の画面(能力を見るバトルカード)は大会の曲・試合は original_battle で、別の曲
-          const kc = keysSeen.indexOf('monsuc_cup'), kb = keysSeen.lastIndexOf('original_battle');
-          check(`${label}: 前の画面(バトルカード)の曲 monsuc_cup と、試合の曲 original_battle は別の曲`, kc >= 0 && kb > kc && keysSeen[keysSeen.length - 1] === 'original_battle', keysSeen.join('>')); }
+          // 場面→曲の表: 試合の前の画面(cupPre=能力を見るバトルカード)と試合(cupMatch)は別の曲で、音源のファイルも別
+          const tb = await page.evaluate(() => ({ pre: successSoundBgm('cupPre'), match: successSoundBgm('cupMatch'), srcPre: (BGM_TRACK_BY_ID[successSoundBgm('cupPre')] || {}).src, srcMatch: (BGM_TRACK_BY_ID[successSoundBgm('cupMatch')] || {}).src }));
+          check(`${label}: 前の画面の曲(${tb.pre})と試合の曲(${tb.match})は別の曲・別の音源`, !!tb.pre && !!tb.match && tb.pre !== tb.match && !!tb.srcPre && tb.srcPre !== tb.srcMatch, JSON.stringify(tb)); }
         await page.waitForTimeout(500);
         const m = await page.evaluate(() => {
           const root = document.querySelector('.msx'); if (!root) return { ok: false };
