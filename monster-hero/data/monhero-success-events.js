@@ -54,6 +54,7 @@
   const TYPE_STAT = Object.freeze({ attacker: 'pow', tank: 'tough', supporter: 'wise', healer: 'life', shadow: 'eva' });
   const SEASON_MONTHS = [1, 4, 8, 10, 12];
   const SEASON_KEY = { 1: 'jan', 4: 'apr', 8: 'aug', 10: 'oct', 12: 'dec' };
+  const ANNIV_TURN = 13; // 育成の記念日のターン(ジュニア期8月)
   const SEASON_PER_YEAR = 2; // 1年に2つ(EVENTS §0・§5 の「約15回」に収めるため。§5 の表の3つより1つ少ない)。どの2つかは育成ごとに決まった乱数で選ぶ(くり返し遊んでも同じにならない)
 
   // ---- 出来事の表 ----
@@ -66,11 +67,11 @@
   const L_OK = ['junior', 'middle', 'pro'];
   const EVENTS = [
     // ═══ ① ふだん(16) ═══
-    { id: 'ev.daily.nut', kind: 'daily', slot: 'start', w: 10, ch: { a: { fx: [['pop', 3], ['fame', 30]] }, b: { fx: [['hp', 20], ['loy', -3]] } } },
+    { id: 'ev.daily.nut', kind: 'daily', slot: 'start', w: 10, ch: { a: { fx: [['pop', 3], ['fame', 240]] }, b: { fx: [['hp', 20], ['loy', -3]] } } },
     { id: 'ev.daily.rain', kind: 'daily', slot: 'start', w: 10, ch: { a: { fx: [['st', 'wise', S]] }, b: { p: 0.5, ok: [['st', 'life', M]], ng: [['hp', -10]] } } },
     { id: 'ev.daily.night', kind: 'daily', slot: 'start', w: (s, x) => (x.hpRatio(s) < 0.3 ? 2 : 10), ch: { a: { fx: [] }, b: { fx: [['str', -20], ['buff', 'neboke']] } } },
     { id: 'ev.daily.kids', kind: 'daily', slot: 'start', w: (s) => (s.pop >= 60 ? 18 : 10), ch: { a: { fx: [['pop', 3], ['hp', -10]] }, b: { fx: [['pop', 6], ['popHi', 4]] } } },
-    { id: 'ev.daily.sweets', kind: 'daily', slot: 'start', w: 10, ch: { a: { need: { fame: 50 }, fx: [['fame', -50], ['buff', 'gokigen']] }, b: { fx: [['loy', 3]] } } },
+    { id: 'ev.daily.sweets', kind: 'daily', slot: 'start', w: 10, ch: { a: { need: { fame: 400 }, fx: [['fame', -400], ['buff', 'gokigen']] }, b: { fx: [['loy', 3]] } } },
     { id: 'ev.daily.book', kind: 'daily', slot: 'start', w: 10, ch: { a: { fx: [['st', 'wise', S], ['buff', 'hirameki']] }, b: { fx: [['hp', 20]] } } },
     { id: 'ev.daily.chase', kind: 'daily', slot: 'start', w: (s, x) => (x.hpRatio(s) < 0.3 ? 3 : 10), ch: { a: { fx: [['st', 'eva', S]] }, b: { fx: [['str', -10]] } } },
     { id: 'ev.daily.juggler', kind: 'daily', slot: 'start', w: 10, ch: { a: { fx: [['st', 'hit', S]] }, b: { fx: [['str', -10]] } } },
@@ -110,6 +111,8 @@
     { id: 'ev.self.slump', kind: 'self', slot: 'start', w: 30, when: (s) => (s.ev.bad || 0) >= 3, ch: { a: { fx: [['str', -20], ['hp', 10]] }, b: { fx: [['buff', 'yaruki']] } } },
     { id: 'ev.self.favtrain', kind: 'self', slot: 'start', w: 20, when: (s, x) => Boolean(x.favCand(s)), ch: { fx: [['flag', 'fav']] } },
     { id: 'ev.self.selfish', kind: 'self', slot: 'start', w: 25, when: (s, x) => x.loyal(s) <= 30 && s.turn >= 4, ch: { a: { fx: [['str', -20], ['loy', -3]] }, b: { fx: [['loy', 3], ['buff', 'futekusare']] } } },
+    // 育成の記念日(2026-11-13 社長): 育て始めて1年(ジュニア期8月=ターン13)のはじめに一度きり。体力が上限の50%回復・ストレス −10。ほかの病気などで出せなければ2ターンまで待つ
+    { id: 'ev.self.anniv', kind: 'self', slot: 'fixed', when: (s) => s.turn >= ANNIV_TURN && s.turn <= ANNIV_TURN + 2, ch: { fx: [['hp', 50], ['str', -10]] } },
     { id: 'ev.self.clingy', kind: 'self', slot: 'start', w: 12, when: (s, x) => x.loyal(s) >= 80, ch: { a: { fx: [['loy', 3], ['str', -10]] } } },
 
     // ═══ ⑤ 期の目標(ジュニア・ミドル・プロのはじめ)と季節の行事(決まって起きる) ═══
@@ -128,7 +131,7 @@
     { id: 'ev.season.aug2', kind: 'season', slot: 'fixed', ch: { a: { p: 0.6, ok: [['st', 'pow', M], ['pop', 3]], ng: [['hp', -10]] }, b: { fx: [['str', -10]] } } },
     { id: 'ev.season.aug3', kind: 'season', slot: 'fixed', ch: { fx: [['str', -30]] } },
     { id: 'ev.season.oct1', kind: 'season', slot: 'fixed', ch: { a: { fx: [['pop', 6]] }, b: { fx: [['pop', 3], ['loy', 3]] } } },
-    { id: 'ev.season.oct2', kind: 'season', slot: 'fixed', ch: { a: { fx: [['fame', 100], ['hp', -10]] }, b: { fx: [['fame', 40]] } } },
+    { id: 'ev.season.oct2', kind: 'season', slot: 'fixed', ch: { a: { fx: [['fame', 800], ['hp', -10]] }, b: { fx: [['fame', 320]] } } },
     { id: 'ev.season.oct3', kind: 'season', slot: 'fixed', ch: { fx: [['buff', 'hirameki']] } },
     { id: 'ev.season.dec1', kind: 'season', slot: 'fixed', ch: { a: { fx: [['st', 'life', S], ['hp', -10]] }, b: { fx: [['hp', 20]] } } },
     { id: 'ev.season.dec2', kind: 'season', slot: 'fixed', ch: { a: { fx: [['loy', 6]] }, b: { fx: [['buff', 'yaruki']] } } },
@@ -139,7 +142,7 @@
     // ═══ ⑥ 小さな賭け(2)。おみくじは 1月の初もうで(1年目)の a から ═══
     { id: 'ev.small.omikuji', kind: 'small', slot: 'none', ch: { fx: [] } },
     { id: 'ev.small.nut', kind: 'small', slot: 'start', w: 6, when: per(...L_OK),
-      ch: { a: { need: { fame: 80 }, p: 0.6, pay: 80, ok: [['st', 'rand', M]], ng: [['hp', -20]], scene: { ok: 'ev.small.nut.ok', ng: 'ev.small.nut.ng' } }, b: { fx: [] } } },
+      ch: { a: { need: { fame: 640 }, p: 0.6, pay: 640, ok: [['st', 'rand', M]], ng: [['hp', -20]], scene: { ok: 'ev.small.nut.ok', ng: 'ev.small.nut.ng' } }, b: { fx: [] } } },
 
     // ═══ ⑦ 体調(3+帰ってきた) ═══
     { id: 'ev.body.injury', kind: 'body', slot: 'start', w: 60, when: (s, x) => x.hpRatio(s) <= 0.2 && !s.cond, ch: { a: { fx: [['hp', 30]] }, b: { fx: [['flag', 'injRisk']] } } },
@@ -238,7 +241,7 @@
     const fixedDue = (s) => {
       const ev = evOf(s); const p = periodOf(s.turn); const mo = monthOf(s.turn);
       const seen = (id) => ev.seen.includes(id);
-      for (const id of ['ev.body.home', 'ev.body.healed', 'ev.goal.pick', 'ev.self.peakin', 'ev.self.peakout']) { const e = BYX[id]; if (e.when(s, X, {}) && (e.repeat || !seen(id))) return e; }
+      for (const id of ['ev.self.anniv', 'ev.body.home', 'ev.body.healed', 'ev.goal.pick', 'ev.self.peakin', 'ev.self.peakout']) { const e = BYX[id]; if (e.when(s, X, {}) && (e.repeat || !seen(id))) return e; }
       const uq = uniqDue(s); if (uq) return uq;
       if (p.key === 'final') { for (const [m, id] of [[1, 'ev.season.finaljan'], [4, 'ev.season.finalapr']]) if ((mo === m || mo === m + 1) && !seen(id)) return BYX[id]; return null; }
       const y = yearOf(s); if (!y) return null;

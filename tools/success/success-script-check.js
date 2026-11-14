@@ -21,7 +21,7 @@ const path = require('path');
 const DIR = path.resolve(__dirname, '../../docs/progress/player-raise/script');
 // 第4弾から、残りの助手はひとり1ファイル(asst-<助手>.js)。あるものを全部読む
 const ASST_FILES = fs.readdirSync(DIR).filter(f => /^asst-[a-z]+\.js$/.test(f)).sort();
-const FILES = ['turn.js', 'turn-bond12.js', 'turn2.js', 'scenario.js', 'cheer.js', 'issa.js', 'random.js', 'rival.js', 'rival-owner.js', 'events-bond12.js', 'items.js', 'mon.js', ...ASST_FILES];
+const FILES = ['turn.js', 'turn-bond12.js', 'turn2.js', 'scenario.js', 'cheer.js', 'issa.js', 'random.js', 'rival.js', 'rival-owner.js', 'events-bond12.js', 'items.js', 'mon.js', 'beta-mua.js', ...ASST_FILES];
 const SHOW_COUNT = process.argv.includes('--count');
 
 let failed = 0;

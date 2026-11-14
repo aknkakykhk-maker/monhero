@@ -76,7 +76,7 @@ const makeRun = async (kind) => {
       const page = await browser.newPage({ viewport: { width: w, height: h } });
       page.on('pageerror', (e) => errors.push(String(e && e.message || e)));
       await page.addInitScript(quietBootSeed()); await page.addInitScript(updateNoticeSeed());
-      await page.addInitScript(() => { try { localStorage.setItem('mh_unlocked_monsters', JSON.stringify(['Mocchi', 'Suezo', 'Golem', 'Tiger', 'Pixie', 'Undine', 'Kyubi', 'Hare', 'Plant', 'Ghost'])); localStorage.setItem('mh_monsuc_meta_v1', JSON.stringify({ v: 1, items: { dango: 2, mag: 1, juice: 3, loupe: 1, license: 1 } })); } catch (e) {} });
+      await page.addInitScript(() => { try { localStorage.setItem('mh_monsuc_beta_v1', JSON.stringify({ v: 1, seen: { open: 1, firstend: 1, prep: 1, turn: 1, train: 1, result: 1, rest: 1, shugyo: 1, cup: 1, match: 1, rematch: 1, event: 1, awake: 1, retire: 1 } })); /* β版の説明の窓は monsuc-beta-browser-check.js が見る。ここは画面そのものを測る */ localStorage.setItem('mh_unlocked_monsters', JSON.stringify(['Mocchi', 'Suezo', 'Golem', 'Tiger', 'Pixie', 'Undine', 'Kyubi', 'Hare', 'Plant', 'Ghost'])); localStorage.setItem('mh_monsuc_meta_v1', JSON.stringify({ v: 1, items: { dango: 2, mag: 1, juice: 3, loupe: 1, license: 1 } })); } catch (e) {} });
       await page.goto(`http://localhost:${PORT}/monster-hero/index.html`, { waitUntil: 'load', timeout: 90000 });
       await page.waitForFunction(() => typeof MonheroSuccessScreen === 'function' && typeof msxLoad === 'function' && typeof MASMON_CALC !== 'undefined', undefined, { timeout: 90000 });
       for (const [name, kind, steps] of SHOTS) {
@@ -101,7 +101,7 @@ const makeRun = async (kind) => {
             if (st === 'bag') return click(/持ち物/);
             if (st === 'stats') return click(/^📊/);
             if (st === 'train') return click(/^💪 訓練/);
-            if (st === 'go') return click(/の訓練をする$/);
+            if (st === 'go') return click(/をする$/); // 2026-11-14 訓練のボタンは「丸太割りをする」のように訓練の名前になった
             if (st === 'praise') return click(/褒める/);
             if (st === 'event') {
               // ランダムイベントが出るターンを芯で探して、その場面を開く(撮るときだけ id を変えて探す)
