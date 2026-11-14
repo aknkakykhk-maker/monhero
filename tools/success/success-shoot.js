@@ -73,7 +73,7 @@ const makeRun = async (kind) => {
     ['S0', null, ['new']], // ストーリー選択(2026-11-14)。S1〜S6 はその「次へ」のあと
     ['S1', null, ['new', 'next']], ['S1D', null, ['new', 'next', 'detail']], ['S1A', null, ['new', 'next', 'detail', 'tab:apt']], ['S1F', null, ['new', 'next', 'detail', 'tab:feat']], ['S1Z', null, ['seedfuse', 'new', 'next', 'tabfuse', 'pickfirst']], ['S1ZD', null, ['seedfuse', 'new', 'next', 'tabfuse', 'pickfirst', 'detail']],
     ['S2', null, ['new', 'next', 'next']], ['S2P', null, ['new', 'next', 'next', 'slot:1']], ['S2B', null, ['new', 'next', 'next', 'slot:1', 'base:Golem']], ['S2G', null, ['new', 'next', 'next', 'gather']],
-    ['S3', null, ['new', 'next', 'next', 'next']], ['S4', null, ['new', 'next', 'next', 'next', 'next']],
+    ['S3', null, ['new', 'next', 'next', 'next']], ['S4', null, ['new', 'next', 'next', 'next', 'next']], ['S4L', null, ['new', 'next', 'next', 'next', 'next', 'carry:oil']],
     ['S5', null, ['new', 'next', 'next', 'next', 'next', 'next']], ['S6', null, ['new', 'next', 'next', 'next', 'next', 'next', 'next']],
     ['M1', 'mid', ['cont']], ['M2', 'yosu', ['cont']], ['M3', 'mid', ['cont', 'bag']], ['M3A', 'bagall', ['cont', 'bag']], ['T1', 'mid', ['cont', 'train']], ['T2', 'mid', ['cont', 'train', 'swipe']], ['Q0', 'mid', ['ki']], ['Q1', 'mid', ['ki', 'kitap']], ['R1', 'mid', ['cont', 'rest']],
     ['K1', 'mid', ['cont', 'train', 'go']], ['K3', 'mid', ['cont', 'train', 'go', 'next']], ['K5', 'mid', ['cont', 'train', 'go', 'next', 'praise']],
@@ -125,6 +125,7 @@ const makeRun = async (kind) => {
             if (st.startsWith('base:')) { const d = document.querySelector(`[data-msx-pick-base="${st.slice(5)}"]`); if (d) d.click(); return !!d; }
             if (st === 'gather') { const d = document.querySelector('[data-msx-gather-open]'); if (d) d.click(); return !!d; }
             if (st.startsWith('tab:')) { const d = document.querySelector(`[data-msx-detail-tab="${st.slice(4)}"]`); if (d) d.click(); return !!d; }
+            if (st.startsWith('carry:')) { const d = document.querySelector(`[data-msx-carry-item="${st.slice(6)}"]`); if (d) d.click(); return !!d; } // 持ちこみの升目を押す(持っていない物も・2026-11-14)
             if (st === 'cont') return click(/続きから/);
             if (st === 'bag') return click(/持ち物/);
             if (st === 'stats') return click(/^📊/);

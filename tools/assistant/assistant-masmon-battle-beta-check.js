@@ -301,6 +301,7 @@ const seed = () => {
     await page.evaluate(() => { const c = document.querySelector('[data-ambb-foe-tech]'); if (c) c.click(); });
     await page.waitForTimeout(300);
     const foeSheet = await page.evaluate(() => ({ rows: document.querySelectorAll('[data-ambb-techlist="B"] [data-msa-sheet-row]').length, use: document.querySelectorAll('[data-ambb-techlist="B"] [data-msxm-tech]').length, star: document.querySelectorAll('[data-ambb-techlist="B"] [data-msa-rep]').length }));
+    await shot('8-foe-techs');
     check('段3: 「相手の技」を押すと、相手の技の一覧(見るだけ・代表は決められない)', foeSheet.rows > 0 && foeSheet.use === 0 && foeSheet.star === 0, JSON.stringify(foeSheet));
     await page.evaluate(() => { const b = document.querySelector('[data-ambb-techlist] [data-msa-sheet-close]'); if (b) b.click(); });
     // 全部の技(帯のボタン)。相手の手を見せている間は帯が出ないので、帯が出るまで待つ

@@ -252,6 +252,9 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf }) {
   const [step, setStep] = useState(0);
   const [scn, setScn] = useState(null); // ストーリー選択(56-monsuc-scenario.jsx)。null のあいだは選ぶ段を出す
   const [tab, setTab] = useState('base');
+  const [look, setLook] = useState(null); // 持ちこみの段: 押した升目(持っていない物も)。下の説明の欄に出す(2026-11-14 社長「オイルって何?」)
+  // 小さい画面・横では説明の欄が升目の下に隠れるので、押したら欄が見える所まで送る
+  useEffect(() => { if (!look || typeof document === 'undefined') return; const el = document.querySelector('[data-msx-carry-look]'); if (el && el.scrollIntoView) { try { el.scrollIntoView({ block: 'nearest' }); } catch (e) {} } }, [look]);
   const [pick, setPick] = useState(() => ({ base: unlocked[0] || 'Mocchi' }));
   const species = pick.box ? ((box.mons.find((m) => m.id === pick.box) || {}).species || 'Mocchi') : pick.base;
   // 編成: いつもの編成(meta.team)から、保存枠に残っている子だけ。空きはベースモン(育てるモンスターと同じ種 → 解放済みの種の順)
@@ -442,13 +445,20 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf }) {
       <div className="v-bag">{[0, 1].map((i) => items[i] ? <div key={i} className="in"><span style={{ fontSize: 24 }}>{MSX_ITEM_BY_ID[items[i]].e}</span><small>{MSX_ITEM_BY_ID[items[i]].name}</small></div> : <div key={i}>＋<small style={{ color: '#94a3b8' }}>空き</small></div>)}</div>
       <div className="v-igrid">
         {MSX_ITEMS.map((t) => (
-          <button type="button" key={t.id} className={`${items.includes(t.id) ? 'in' : ''}${t.when === 'both' ? ' bo' : ''}`} onClick={() => toggle(t.id)} disabled={!has(t.id) && !items.includes(t.id)}>
+          <button type="button" key={t.id} className={`${items.includes(t.id) ? 'in' : ''}${t.when === 'both' ? ' bo' : ''}${!has(t.id) && !items.includes(t.id) ? ' none' : ''}${look === t.id ? ' look' : ''}`} onClick={() => { setLook(t.id); toggle(t.id); }} data-msx-carry-item={t.id}>
             <span style={{ fontSize: 22, lineHeight: 1 }}>{t.e}</span><i>×{has(t.id)}</i><small><MsxItemName name={t.name.replace('ガロエ印の', '')}/></small>{items.includes(t.id) ? <u>✔</u> : null}
           </button>
         ))}
       </div>
       <div className="v-ileg"><span><b className="sw1"/>はじめる前に効く物</span><span><b className="sw2"/>育成中にも使える物(1ターン1個まで)</span></div>
-      <div className="msx-scroll" style={{ flex: '1 1 0' }}>
+      <div className="msx-scroll" style={{ flex: '1 1 0', minHeight: 128 }}>
+        {look && MSX_ITEM_BY_ID[look] ? (() => { const t = MSX_ITEM_BY_ID[look]; const n = has(look); return (
+          <div className="v-bsel" style={{ marginBottom: 6 }} data-msx-carry-look={look}><span className="e" style={{ fontSize: 30 }}>{t.e}</span><div style={{ minWidth: 0 }}>
+            <b>{t.name}<span className="yel"> ×{n}</span></b>
+            <small style={JA_WRAP_STYLE}>{jaWrap(msxItemDesc(look))}</small>
+            <small style={{ ...JA_WRAP_STYLE, color: '#7dd3fc' }}>{jaWrap(t.when === 'before' ? 'いつ: 育成をはじめる前に効き、その育成のあいだ続く' : 'いつ: 育成中の自分のターンに使う(1ターン1個まで・ターンは進まない)')}</small>
+            <small style={{ ...JA_WRAP_STYLE, color: '#fcd34d' }}>{jaWrap(n > 0 ? (items.includes(look) ? '持っていく物に入っている(もう一度押すと外す)' : items.length >= 2 ? '持っていけるのは2つまで(ほかを外すと選べる)' : '押すと持っていく物に入る') : '手に入れ方: マーケットのビートP交換所・助手ライフの拾い物や贈り物')}</small>
+          </div></div>); })() : <div className="msx-note" style={{ marginBottom: 6 }}>升目を押すと、効き目と手に入れ方が出ます</div>}
         {items.map((id) => <div key={id} className="v-item sel"><span style={{ fontSize: 22 }}>{MSX_ITEM_BY_ID[id].e}</span><div>{MSX_ITEM_BY_ID[id].name}<small>{msxItemDesc(id)}</small></div><span className="pr">✅ 持っていく・あと{has(id) - 1}</span></div>)}
         {/* 持っている物の効き目も下に並べる(下を空けない。docs/spec/MONSUC_UI.md の 1) */}
         {MSX_ITEMS.filter((t) => has(t.id) > 0 && !items.includes(t.id)).map((t) => <div key={t.id} className="v-item" style={{ opacity: .85 }}><span style={{ fontSize: 22 }}>{t.e}</span><div>{t.name}<small>{msxItemDesc(t.id)}</small></div><span className="pr" style={{ color: '#cbd5e1' }}>×{has(t.id)}</span></div>)}
