@@ -15,7 +15,7 @@ async function openRaid(s) {
   await s.tap(b, 'レイドを開く');
   await s.wait(1200);
   await s.dismissOverlays(6);
-  await s.tapLabel(/^わかった$/, 600);
+  await s.tapLabel(/^(?:分|わ)かった$/, 600);
   await s.inspect();
   return true;
 }

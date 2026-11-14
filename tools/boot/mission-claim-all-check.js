@@ -78,7 +78,7 @@ const seed = () => {
           }).pop();
           if (!overlay) return false;
           const buttons = [...overlay.querySelectorAll('button')];
-          const b = buttons.find(x => /閉じる|次へ|確認|わかった|OK|はい|あとで|スキップ/.test(x.textContent)) || buttons.find(x => x.querySelector('svg')) || buttons[buttons.length - 1];
+          const b = buttons.find(x => /閉じる|次へ|確認|(?:分|わ)かった|OK|はい|あとで|スキップ/.test(x.textContent)) || buttons.find(x => x.querySelector('svg')) || buttons[buttons.length - 1];
           if (b) b.click();
           return !!b;
         });

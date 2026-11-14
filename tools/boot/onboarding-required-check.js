@@ -145,7 +145,7 @@ const check = (name, ok, detail = '') => {
     for (let i = 0; i < 30; i++) {
       if (await page.locator('[aria-label="ログインボーナス"]').count()) break;
       const labels = await page.evaluate(() => { const d = [...document.querySelectorAll('[role=dialog]')].pop(); return d ? [...d.querySelectorAll('button')].map(b => (b.innerText || '').trim()) : []; });
-      const pick = labels.find(t => /^(スキップ|閉じる|あとで|今は見ない|わかった)/.test(t)) || labels.find(t => /^次へ/.test(t));
+      const pick = labels.find(t => /^(スキップ|閉じる|あとで|今は見ない|(?:分|わ)かった)/.test(t)) || labels.find(t => /^次へ/.test(t));
       if (!pick) break;
       await page.evaluate(t => { const d = [...document.querySelectorAll('[role=dialog]')].pop(); const b = [...d.querySelectorAll('button')].find(b => (b.innerText || '').trim() === t); b && b.click(); }, pick);
       await page.waitForTimeout(900);

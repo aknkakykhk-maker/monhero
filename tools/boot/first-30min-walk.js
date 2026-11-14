@@ -52,7 +52,7 @@ const STALE_WORDS = /新しく追加|追加されたよ|新しい.{1,8}ができ
 // 自分で開く窓(重なりに数えない)
 const OWN_SHEETS = /^(アイコンを選ぶ|ブリーダー名を変更)$/;
 // 勝手に開いた窓を閉じるボタン
-const CLOSERS = /^(スキップ|閉じる|とじる|あとで読む|あとで|あとでやる|今はいい|いまはいい|今は見ない|わかった！?|OK|見ない)$/;
+const CLOSERS = /^(スキップ|閉じる|とじる|あとで読む|あとで|あとでやる|今はいい|いまはいい|今は見ない|(?:分|わ)かった！?|OK|見ない)$/;
 
 const startServer = () => new Promise((resolve) => {
   const server = http.createServer((req, res) => {
@@ -232,7 +232,7 @@ async function walk(browser, base, orient) {
   if (tourStart.dialogs.length >= 2) note('隠れ', '村の案内', `案内が HOME の建物を指して話すあいだ、「${tourStart.dialogs.filter((d) => d !== 'はじめての案内').join('・')}」の窓が HOME を隠している`);
   const tour = await talk('村の案内');
   if (tour.taps >= LONG_TALK) note('長い', '村の案内', `「次へ」が${tour.taps}手続く(全${tour.total || tour.taps}話)`);
-  await tap(/^(はじめる！?|わかった！?)$/);
+  await tap(/^(始める！?|(?:分|わ)かった！?)$/);
   await wait(700);
 
   // ---- 5. れんしゅう(バトルのチュートリアル)の誘い ----

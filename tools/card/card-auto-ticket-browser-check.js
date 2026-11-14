@@ -93,7 +93,7 @@ const LABEL = { portrait: '縦', landscape: '横', rotated: '🔄横' };
         const d0 = decks.decks[0];
         shareRow = { owner_id: 'check-breeder-1', user_name: '検査の相手', icon: null, profile_frame: null, deck: { monsters: d0.monsters, cards: d0.cards }, tactics: {}, version: 1, active: true, battles: 3, deck_wins: 2, rents: 0, updated_at: new Date().toISOString() };
         await page.locator('[data-card-cpu]').click();
-        await page.getByRole('button', { name: /^(分かった|わかった)$/ }).click({ timeout: 2500 }).catch(() => {});
+        await page.getByRole('button', { name: /^(分かった|(?:分|わ)かった)$/ }).click({ timeout: 2500 }).catch(() => {});
         await page.locator('[data-card-mode-assistant]').click();
         await page.locator('[data-card-foe-tab="breeder"]').click();
         await page.locator('[data-card-share-fight="check-breeder-1"]').click({ timeout: 15000 });

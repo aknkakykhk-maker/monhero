@@ -39,7 +39,7 @@ const serve = () => new Promise(r => { const s = http.createServer((req, res) =>
     await page.waitForFunction(() => document.body.innerText.includes('モンヒロビート'), { timeout: 40000 });
     const dismiss = async () => { for (let i = 0; i < 14; i++) {
       const did = await page.evaluate(() => { const inOverlay = el => { for (let e = el; e && e !== document.body; e = e.parentElement) { const s = getComputedStyle(e); if (s.position === 'fixed' || (s.position === 'absolute' && Number(s.zIndex) >= 40)) return true; } return false; };
-        const l = [...document.querySelectorAll('button')].filter(b => inOverlay(b) && /^(確認|閉じる|OK|受け取る|次へ|わかった|はい|スキップ)$/.test((b.innerText || '').replace(/\s+/g, ' ').trim()));
+        const l = [...document.querySelectorAll('button')].filter(b => inOverlay(b) && /^(確認|閉じる|OK|受け取る|次へ|(?:分|わ)かった|はい|スキップ)$/.test((b.innerText || '').replace(/\s+/g, ' ').trim()));
         if (!l.length) return false; l[0].click(); return true; });
       if (!did) return; await page.waitForTimeout(300); } };
     await dismiss();

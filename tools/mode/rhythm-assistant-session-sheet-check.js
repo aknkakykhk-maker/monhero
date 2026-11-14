@@ -28,7 +28,7 @@ await page.addInitScript(require(ROOT+'/tools/boot/quiet-boot-seed').eventStoryS
 await page.goto(process.env.MH_BASE_URL?`${process.env.MH_BASE_URL.replace(/\/+$/,'')}/monster-hero/index.html`:`http://localhost:${PORT}/monster-hero/index.html`,{waitUntil:'load',timeout:60000});
 await page.waitForFunction(()=>document.body&&document.body.innerText.includes('TAP TO START'),null,{timeout:60000});
 await page.getByText('TAP TO START').click();await page.waitForTimeout(2500);await page.mouse.click(Number(390)/2,Number(844)/2);await page.waitForTimeout(3000);
-await page.evaluate(()=>{setInterval(()=>{const d=document.querySelector('[role=dialog]');if(!d)return;const b=d.querySelector('button[aria-label="次へ"],button[aria-label="閉じる"]')||[...d.querySelectorAll('button')].find(x=>/受け取|閉じる|とじる|OK|はじめる|わかった|^次へ|あとで|見た/.test(x.innerText));if(b)b.click();},250);});
+await page.evaluate(()=>{setInterval(()=>{const d=document.querySelector('[role=dialog]');if(!d)return;const b=d.querySelector('button[aria-label="次へ"],button[aria-label="閉じる"]')||[...d.querySelectorAll('button')].find(x=>/受け取|閉じる|とじる|OK|はじめる|(?:分|わ)かった|^次へ|あとで|見た/.test(x.innerText));if(b)b.click();},250);});
 await page.waitForFunction(()=>document.querySelector('button.mh-home-facility.rhythm')&&!document.querySelector('[role=dialog]'),null,{timeout:40000});
 if(!process.env.OFF)await page.evaluate(()=>{RELEASE_FLAGS.rhythmAssistantSession=true;});
 // 部屋を作り、呼ぶシートの「助手」のタブを開く

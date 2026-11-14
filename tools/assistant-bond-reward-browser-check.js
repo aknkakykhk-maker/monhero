@@ -142,7 +142,7 @@ const bondGifts = (page) => page.evaluate(() => (JSON.parse(localStorage.getItem
     await page.waitForTimeout(1500);
     // 飾り枠をもらった案内(Lvが上がった扱いで出る)を読み進めて閉じる
     for (let i = 0; i < 12; i++) {
-      const more = await page.evaluate(() => { const b = [...document.querySelectorAll('button')].find(x => /^(次へ|閉じる|とじる|OK|わかった)/.test(x.textContent.trim()) && x.closest('.fixed')); if (b) b.click(); return !!b; });
+      const more = await page.evaluate(() => { const b = [...document.querySelectorAll('button')].find(x => /^(次へ|閉じる|とじる|OK|(?:分|わ)かった)/.test(x.textContent.trim()) && x.closest('.fixed')); if (b) b.click(); return !!b; });
       await page.waitForTimeout(500);
       if (!more) break;
     }

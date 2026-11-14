@@ -13,7 +13,7 @@ const { scanFile, applyFile, targetFiles } = require('./ui-kanji-scan.js');
 
 // まだ置き換えていない部品(r1114-089 で部品ごとに PR を分けて進めている。済んだら消す)
 const PENDING = [
-  /src\/parts\/(?:60-app|70-bootstrap|56-monhero-success|56-monsuc-)/, // まだ: 60-app・起動・モンサク(最後)
+  /src\/parts\/(?:56-monhero-success|56-monsuc-)/, // まだ: モンサク(最後)
   /data\/(?!card-battle-cards\.js)/, // data(help.js・名前の表)
 ];
 

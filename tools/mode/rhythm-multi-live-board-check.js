@@ -97,7 +97,7 @@ const ICONS = ['Mocchi', 'Suezo', 'Pixie', 'Tiger', 'Hare'];
     await page.mouse.click(422, 195);
     await page.waitForTimeout(3000);
     // お知らせ・ギフトなどの吹き出しは閉じ続ける
-    await page.evaluate(() => { setInterval(() => { const d = document.querySelector('[role=dialog]'); if (!d) return; const b = d.querySelector('button[aria-label="次へ"],button[aria-label="閉じる"]') || [...d.querySelectorAll('button')].find((x) => /受け取|閉じる|とじる|OK|はじめる|わかった|^次へ|あとで|見た/.test(x.innerText)); if (b) b.click(); }, 250); });
+    await page.evaluate(() => { setInterval(() => { const d = document.querySelector('[role=dialog]'); if (!d) return; const b = d.querySelector('button[aria-label="次へ"],button[aria-label="閉じる"]') || [...d.querySelectorAll('button')].find((x) => /受け取|閉じる|とじる|OK|はじめる|(?:分|わ)かった|^次へ|あとで|見た/.test(x.innerText)); if (b) b.click(); }, 250); });
     await page.waitForFunction(() => document.querySelector('button.mh-home-facility.rhythm') && !document.querySelector('[role=dialog]'), null, { timeout: 40000 });
     await page.locator('button.mh-home-facility.rhythm').click();
     await page.waitForSelector('[data-rhythm-mode-select]', { timeout: 30000 });

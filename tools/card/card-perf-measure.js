@@ -203,7 +203,7 @@ function summary(name, rows) {
   await page.addInitScript(PROBE);
   const closePops = async () => {
     for (let i = 0; i < 8; i++) {
-      const c = await page.evaluate(() => { const x = [...document.querySelectorAll('button')].find((y) => y.offsetParent && /^(受け取る|閉じる|OK|わかった！?|あとで)$/.test(y.textContent.trim())); if (x) { x.click(); return true; } return false; });
+      const c = await page.evaluate(() => { const x = [...document.querySelectorAll('button')].find((y) => y.offsetParent && /^(受け取る|閉じる|OK|(?:分|わ)かった！?|あとで)$/.test(y.textContent.trim())); if (x) { x.click(); return true; } return false; });
       if (!c) break; await page.waitForTimeout(250);
     }
     for (let i = 0; i < 6; i++) { const fx = page.locator('[data-player-rank-up-fx]').first(); if (!(await fx.count())) break; await fx.click({ force: true }).catch(() => {}); await page.waitForTimeout(400); }

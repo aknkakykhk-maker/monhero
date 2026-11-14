@@ -101,7 +101,7 @@ const serve=()=>new Promise(resolve=>{
       ok('案内が複数ページある',total>=5,`${total}ページ`);
       // --- 本題② 最後まで読むと「あそびかた練習」が始まるか ---
       for(let i=0;i<total+2;i++){
-        const moved=await clickText('^次へ$')||await clickText('^はじめる！$');
+        const moved=await clickText('^次へ$')||await clickText('^始める！$');
         if(!moved)break;
         await page.waitForTimeout(220);
       }
