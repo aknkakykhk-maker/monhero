@@ -190,10 +190,10 @@ function MonsterLabScreen({ onClose, onOpenDex }) {
         )}
         {view === 'mas' && (box === null ? <div className="p-6 text-center text-[12px] text-indigo-300">読み込み中…</div> : !box.mas.length
           ? <div className="p-6 text-center text-[12px] font-bold text-indigo-300">まだマスモンがいません。モンヒロサクセスで育成を終えると、ここに並びます。</div>
-          : <><div className="grid grid-cols-4 gap-2 p-2.5">{box.mas.map((mm) => <MlabCard key={mm.id} sp={mm.species} mon={mm} onClick={() => { setSel({ sp: mm.species, mon: mm, fuse: false }); setFrom('mas'); setView('detail'); }}/>)}</div><div className="p-2 text-center text-[11px] text-indigo-300">保存枠 {box.mas.length + box.fuse.length}体のうち マスモン {box.mas.length}体</div></>)}
+          : <><div className="grid grid-cols-4 gap-2 p-2.5">{box.mas.map((mm) => <MlabCard key={mm.id} sp={mm.species} mon={mm} onClick={() => { setSel({ sp: mm.species, mon: mm, fuse: false }); setFrom('mas'); setView('detail'); }}/>)}</div><div className="p-2 text-center text-[11px] text-indigo-300">マスモンボックス {box.mas.length + box.fuse.length}体のうち マスモン {box.mas.length}体</div></>)}
         {view === 'fuse' && (box === null ? <div className="p-6 text-center text-[12px] text-indigo-300">読み込み中…</div> : !box.fuse.length
-          ? <div className="p-6 text-center text-[12px] font-bold text-indigo-300">合体円盤石はまだありません。保存枠のマスモン2体を合体させると生まれます。</div>
-          : <><div className="grid grid-cols-4 gap-2 p-2.5">{box.fuse.map((mm) => <MlabCard key={mm.id} sp={mm.species} mon={mm} fuse onClick={() => { setSel({ sp: mm.species, mon: mm, fuse: true }); setFrom('fuse'); setView('detail'); }}/>)}</div><div className="p-2 text-center text-[11px] text-indigo-300">保存枠 {box.mas.length + box.fuse.length}体のうち 合体円盤石 {box.fuse.length}体</div></>)}
+          ? <div className="p-6 text-center text-[12px] font-bold text-indigo-300">合体円盤石はまだありません。マスモンボックスのマスモン2体を合体させると生まれます。</div>
+          : <><div className="grid grid-cols-4 gap-2 p-2.5">{box.fuse.map((mm) => <MlabCard key={mm.id} sp={mm.species} mon={mm} fuse onClick={() => { setSel({ sp: mm.species, mon: mm, fuse: true }); setFrom('fuse'); setView('detail'); }}/>)}</div><div className="p-2 text-center text-[11px] text-indigo-300">マスモンボックス {box.mas.length + box.fuse.length}体のうち 合体円盤石 {box.fuse.length}体</div></>)}
         {view === 'base' && (
           <><div className="grid grid-cols-4 gap-2 p-2.5">{species.map((sp) => <MlabCard key={sp} sp={sp} onClick={() => { setSel({ sp, mon: null }); setFrom('base'); setView('detail'); }}/>)}</div><div className="p-2 text-center text-[11px] text-indigo-300">図鑑とは別。ベースモンは種類ごとのもとの値です</div></>
         )}
