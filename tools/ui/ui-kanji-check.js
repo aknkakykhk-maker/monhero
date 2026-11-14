@@ -16,15 +16,13 @@ const PENDING = [
   /src\/parts\/(?!8[2-9]-|9[0-9]-)/, // カードバトル(82〜99)以外の parts
   /data\/(?!card-battle-cards\.js)/, // data(help.js・名前の表)
 ];
-// 物の名前で、窓口の判断を待っている物(技・カードの名前は参考・カードの絵の字のまま。2026-11-14 窓口へ確認中)
-const NAME_HOLD = /^(?:はり手|ツバはき|なげキッス|大たおれこみ|たおれこみ|おとしもの|すてきステッキ|ひのこ|ゆうわく|くし刺し|くしざし|つきさし|かぎづめ|うけとめる|のりうつる|うたうニャ|がまんニャ|にげるニャ|牙きり|まゆ化|こうらで守る|ふみつけ|ほうり上げる|まっぷたつ|たちはだかる|はねかえす|おいのり|ひきずりこむ|きりすて|かま首突き|頭つき|ひざげり|ふせる|夢くいウィング)$/;
 
 const args = process.argv.slice(2);
 if (args[0] === '--fix') {
   const rel = args[1];
   if (!rel) { console.log('使い方: --fix <ファイル>'); process.exit(1); }
-  const n = applyFile(rel, null, { skipNames: true });
-  console.log(`${rel}: ${n} か所を置き換えた(物の名前は除く)`);
+  const n = applyFile(rel, null, {});
+  console.log(`${rel}: ${n} か所を置き換えた`);
   process.exit(0);
 }
 const list = args.includes('--list');
@@ -33,7 +31,6 @@ for (const f of targetFiles()) {
   if (PENDING.some(re => re.test(f))) continue;
   for (const it of scanFile(f)) {
     for (const h of it.hits) {
-      if (NAME_HOLD.test(h.h)) continue;
       found.push(`${f.replace('monster-hero/', '')}:${it.line} 「${h.h}」→「${h.k}」 … ${it.text.replace(/\s+/g, ' ').slice(Math.max(0, h.at - 8), h.at + h.h.length + 8)}`);
     }
   }
