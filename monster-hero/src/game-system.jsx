@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 59bc8564b264249c
+// generated-sha256: e2e5645b7fea5f58
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -79427,8 +79427,18 @@ function MonsucBattleCard({ suc, s, info, catalog, odds, onReady, onResultOnly, 
   const reach = monsucReachOf(myTechs.length ? myTechs : ((catalog && catalog.species[s.species] && catalog.species[s.species].techs) || []).filter(t => t.start));
   const foeApt = aptOf(o.species); const foeBest = foeApt.map((g, d) => ({ g, d })).sort((a, b) => rankOf(a.g) - rankOf(b.g))[0] || { d: 1 };
   const noReach = [0, 1, 2, 3].filter(d => !reach[d]);
+  // 技の種類と能力の釣り合い(能力が互角に見えても、技の種類の能力が低いと痛手が小さい。窓口 2026-11-14「互角なのに楽勝」の理由)
+  const kindOf = (ts) => { const p = ts.filter(x => x.kind === 'pow').length; const w = ts.filter(x => x.kind === 'wise').length; return p === w ? null : p > w ? 'pow' : 'wise'; };
+  const other = (k) => (k === 'pow' ? 'wise' : 'pow');
+  const foeKind = kindOf(foeTechs); const myKind = kindOf(myTechs);
+  const kindWhy = foeKind && mscNum(op[foeKind]) < mscNum(op[other(foeKind)]) * 0.7
+    ? <>相手の技は <em>{MSC_STAT_JP[foeKind]}技</em>が中心。相手の{MSC_STAT_JP[foeKind]}は低めで、こちらへの痛手は小さいよ!</>
+    : myKind && mscNum(me[myKind]) < mscNum(me[other(myKind)]) * 0.7
+      ? <>こちらの技は <em>{MSC_STAT_JP[myKind]}技</em>が中心。{MSC_STAT_JP[myKind]}が低めで、痛手を与えにくいよ…</>
+      : null;
   const hint = loy < 40
     ? <>忠誠が {loy} だと、<em>そっぽを向いて</em> 技を出さない番が あるよ…</>
+    : kindWhy ? kindWhy
     : noReach.includes(foeBest.d)
       ? <>相手の得意な{AMBW_DIST[foeBest.d]}の間合いに、<em>届く技が無い</em>よ。入られたら 動いて離れよう!</>
       : allAhead
