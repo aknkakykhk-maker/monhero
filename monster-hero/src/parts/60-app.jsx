@@ -24895,6 +24895,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const pre=window.__mhStoryScenePreloaded||(window.__mhStoryScenePreloaded=new Set());
           script.forEach(l=>{const src=l&&STORY_SCENE_IMAGES[l.bg];if(src&&!pre.has(src)){pre.add(src);try{const im=new Image();im.src=src;}catch(e){}}});
         }
+        // 出てくる全員の顔(その行の表情と、話していないときの normal)も、開いたときに先に読んでおく
+        //   (2026-11-14 社長「あつだけ顔の絵の表示が遅い」r1114-080。途中から初めて出る話し手は、出た瞬間に読み始めて遅れて見えていた)
+        if(typeof window!=='undefined'&&typeof assistantFaceSrc==='function'){
+          const preFace=window.__mhStoryFacePreloaded||(window.__mhStoryFacePreloaded=new Set());
+          script.forEach(l=>{const w=l&&assistantById(l.who);if(!w)return;[l.e,'normal'].forEach(e=>{const src=assistantFaceSrc(w,e||'normal');if(src&&!preFace.has(src)){preFace.add(src);try{const im=new Image();im.decoding='async';im.src=src;}catch(err){}}});});
+        }
         const finishOpening=()=>setEventReplay(r=>r&&!r.opened?{...r,opened:true,shownAt:Date.now()}:r);
         // ゲスト(ジャック・ぱんぷきん)は、下の助手の列には入れない。初めて話す行(か stage で呼ばれる行)から、画面の上部の「ステージ」に出る
         //  (2026-10-04・ユーザー指示「はじめからジャックやぱんぷきんが会話画面にいるのは違和感。出すタイミングをちゃんと」)
@@ -25124,7 +25130,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               {fx==='unlock'&&<span data-story-unlock><i/></span>}
               {fx==='split'&&<span data-story-crack>{[-160,-118,-72,-28,14,58,104,142].map((deg,i)=><i key={deg} style={{transform:`rotate(${deg}deg)`,animationDelay:`${i%3*40}ms`}}/>)}</span>}
               {/* 場面の説明は、幕開けの札が開いてから出し直す(札の裏で動きが終わって、最初の行の説明が見えなかった) */}
-              {line.fxText&&!storyOpening&&<div key={`banner${step}-${eventReplay.opened?1:0}`} data-story-banner className="px-4 text-center text-[17px] font-black" style={{position:'absolute',top:'42%',left:'50%',width:'100%',maxWidth:'28rem',color:'#fff',textShadow:`0 0 14px rgba(${fxColors[fx]||'255,255,255'},1), 0 2px 0 rgba(0,0,0,.6)`,animation:'storyBanner 2.2s ease-out both'}}>{storyCenter(line.fxText,storyBoxW-32,17)}</div>}
+              {/* 2026-11-14 社長「早く消えて見逃す」「色が見にくい」(r1114-080): 消さずに次へ進むまで残す。暗い帯を敷き、縁取りの影で明るい背景でも読めるようにした。
+                  残すと横向きで台詞の窓に重なって台詞が隠れたので、置き場は「台詞の窓より上の空いている所の真ん中」(窓の高さ --story-sheet-h から) */}
+              {line.fxText&&!storyOpening&&<div key={`banner${step}-${eventReplay.opened?1:0}`} data-story-banner className="px-4 py-2.5 text-center text-[17px] font-black" style={{position:'absolute',top:'max(44px, calc((100% - var(--story-sheet-h, 50%)) / 2))',left:'50%',width:'calc(100% - 32px)',maxWidth:'26rem',color:'#fff',background:'rgba(2,6,23,.74)',border:`1px solid rgba(${fxColors[fx]||'255,255,255'},.45)`,borderRadius:14,boxShadow:'0 4px 18px rgba(0,0,0,.45)',textShadow:`0 0 2px #000, 0 1px 3px rgba(0,0,0,.95), 0 0 12px rgba(${fxColors[fx]||'255,255,255'},.75)`,animation:'storyBanner .7s ease-out both'}}>{storyCenter(line.fxText,storyBoxW-64,17)}</div>}
             </div>
           )}
           {/* ★ボタンの列はいつも窓の中に出す(2026-10-27 844×390 の横向きで、台詞が5行になると「次へ」「スキップ」が画面の外へ出て押せなかった)。
