@@ -119,7 +119,13 @@ const step = (page, cfg, mem) => page.evaluate(({ cfg, mem }) => {
   // 修行の画面: 覚えられる技を1つ(無ければ何も選ばず)→「修行する」。押せないときは戻る
   const shu = root.querySelector('[data-msx-r3-shugyo]');
   const curTurn = ((root.innerText.match(/(\d+)\s*\/\s*46ターン/) || [])[1]) | 0; if (curTurn) mem.curTurn = curTurn;
-  if (shu) { if (!shu.disabled) return press(shu, 'shugyo'); const sel = root.querySelector('[data-msx-r3-tech].sel, [data-msx-r3-tech].on'); const cand = [...root.querySelectorAll('[data-msx-r3-tech].ok:not(.sel)')]; if (cand.length && !mem.shuTry) { mem.shuTry = 1; return press(cand[0], 'shugyo-tech'); } mem.shuTry = 0; mem.noShu = mem.curTurn; const bks = all.filter((b) => /戻る/.test(b.innerText)); return press(bks[bks.length - 1] || root.querySelector('button.bk'), 'shugyo-back'); }
+  if (shu) {
+    const cand = [...root.querySelectorAll('[data-msx-r3-tech].ok')];
+    if (!mem.shuPicked && cand.length && !shu.disabled) { mem.shuPicked = 1; const c = cand[cand.length - 1]; mem.shuTech = c.getAttribute('data-msx-r3-tech') + ' ' + c.innerText.replace(/\s+/g, ' ').slice(0, 30); return press(c, 'shugyo-tech'); }
+    mem.shuPicked = 0;
+    if (!shu.disabled) { (mem.shuLog = mem.shuLog || []).push({ t: mem.curTurn, tech: mem.shuTech || null }); mem.shuTech = null; return press(shu, 'shugyo'); }
+    mem.noShu = mem.curTurn; const bks = all.filter((b) => /戻る/.test(b.innerText)); return press(bks[bks.length - 1] || root.querySelector('button.bk'), 'shugyo-back');
+  }
   mem.shuTry = 0;
   const ask = root.querySelector('.msx-btn.go'); if (ask && /はい|する|使う|やめる/.test(ask.innerText) && ask.closest('[class*="ask"], [class*="modal"], [class*="sheet"]')) return press(ask, 'ask');
   const ch = root.querySelector(`[data-msx-react-how="${mem.react === 'scold' ? 'scold' : 'praise'}"]`); if (ch && !ch.disabled && mem.react !== 'none') return press(ch, 'react');
@@ -239,7 +245,7 @@ if (require.main === module) (async () => {
         if (did === 'wait') { await page.waitForTimeout(500); continue; }
         await page.waitForTimeout(60);
       }
-      log.final = await runState(page);
+      log.final = await runState(page); log.shuLog = await page.evaluate(() => (window.__monsucMem && window.__monsucMem.shuLog) || []);
       log.meta = await page.evaluate(() => { try { return { meta: JSON.parse(localStorage.getItem('mh_monsuc_meta_v1')), box: JSON.parse(localStorage.getItem('mh_monsuc_box_v1')), assist: JSON.parse(localStorage.getItem('mh_monsuc_assist_v1')), fuse: JSON.parse(localStorage.getItem('mh_monsuc_fuse_v1')) }; } catch (e) { return null; } });
     } catch (e) { note('止まる', `台本の例外: ${String(e && e.message || e).split('\n')[0]}`); try { await page.screenshot({ path: path.join(OUT, 'shots', `lap${lap}-exc.png`) }); } catch (_) {} }
     log.errors = errs; log.consoleErrors = cerr; log.sec = Math.round((Date.now() - t0) / 1000);
