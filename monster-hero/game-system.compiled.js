@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1038fdb1cc394d57
+// source-sha256: 4a8b68cbd30c30c3
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -114684,9 +114684,7 @@ function AssistantLifeRoomSheet({
     "data-assistant-life-room-where": true
   }, jaWrap(where), groupNames && (w.group.ids.length <= 2 ? React.createElement(React.Fragment, null, " ・ ", React.createElement("span", {
     className: "whitespace-nowrap"
-  }, w.group.ids.length, "人(", React.createElement(AssistantLifeNames, {
-    text: groupNames
-  }), ")")) : React.createElement(React.Fragment, null, " ・ ", w.group.ids.length, "人(", React.createElement(AssistantLifeNames, {
+  }, w.group.ids.length, "人(", groupNames, ")")) : React.createElement(React.Fragment, null, " ・ ", w.group.ids.length, "人(", React.createElement(AssistantLifeNames, {
     text: groupNames
   }), ")"))), !home && React.createElement("p", {
     className: "text-[11px] font-bold text-violet-200"

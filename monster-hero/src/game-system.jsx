@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: f9510917d1b3a70e
+// generated-sha256: b41ab359b1688d55
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -67615,7 +67615,7 @@ function AssistantLifeRoomSheet({ id, life, peerSt, bondLevelOf, diary, onClose,
         {/* 新UIは部屋の絵の上に名前が出ているので、同じ題を2度出さない */}
         {!uiV2 && <p className="mhl-en">ROOM · {String(who.id).toUpperCase()}</p>}
         {!uiV2 && <p className="text-[21px] font-black">{who.name}の部屋</p>}
-        <p className="mt-1 max-w-[62%] text-[12px] font-bold" style={{ ...JA_WRAP_STYLE, ...(land ? { maxWidth: 'none' } : {}) }} data-assistant-life-room-where>{jaWrap(where)}{groupNames && (w.group.ids.length <= 2 ? <> ・ <span className="whitespace-nowrap">{w.group.ids.length}人(<AssistantLifeNames text={groupNames}/>)</span></> : <> ・ {w.group.ids.length}人(<AssistantLifeNames text={groupNames}/>)</>)}</p>
+        <p className="mt-1 max-w-[62%] text-[12px] font-bold" style={{ ...JA_WRAP_STYLE, ...(land ? { maxWidth: 'none' } : {}) }} data-assistant-life-room-where>{jaWrap(where)}{groupNames && (w.group.ids.length <= 2 ? <> ・ <span className="whitespace-nowrap">{w.group.ids.length}人({groupNames})</span></> : <> ・ {w.group.ids.length}人(<AssistantLifeNames text={groupNames}/>)</>)}</p>
         {!home && <p className="text-[11px] font-bold text-violet-200">⏱ {slotDef ? `${slotDef.to % 24}時まで` : ''}いる</p>}
         {(() => { const sh = assistantLifeRhythmShiftOn(((ASSISTANT_LIFE_STORE.state.rhythm || {})[id]), assistantLifeDayKey()); const rh = ASSISTANT_LIFE_RHYTHM[id]; return <p className="text-[10.5px] font-bold text-sky-200" data-assistant-life-room-rhythm={assistantLifeRhythmLabel(sh)}>🕰 生活のリズム: {rh ? rh.label : ''}{Math.abs(sh) >= 0.3 ? `(いまは ${assistantLifeRhythmLabel(sh)})` : ''}</p>; })()}
         {typeof assistantLifeBodyCondShort === 'function' && assistantLifeBodyCondShort(id) && <p className="text-[11px] font-bold text-rose-200" data-assistant-life-room-cond={id}>{assistantLifeBodyCondShort(id)}</p>}
