@@ -297,17 +297,18 @@
     grass: { name: 'うけつぎ草', use: 'before', good: 'uketsugu' },
     juice: { name: 'ガロエ印の野菜ジュース', use: 'during', hpFull: true },                 // 体力を完全に回復
     powder: { name: '悪様散', use: 'during', cure: true, hp: 0.3 },               // 悪いようすを治して体力を回復
-    license: { name: 'ブリーダーライセンス', use: 'during', loyal: 10 },               // 忠誠度が一定数上がる
-    pack: { name: 'オイリーパック', use: 'during', gives: { oil: 2, herb: 1 } }, // 中身はオイル2個と薬草
-    oil: { name: 'オイル', use: 'during', hp: 0.3 },                                 // 詰め合わせの中身(体力 上限の30%)
+    license: { name: 'ブリーダーライセンス', use: 'during', ama: 10, fear: 10 },       // 甘え度 +10・恐れ度 +10(忠誠度 +20。2026-11-13 社長)
+    pack: { name: 'オイリーパック', use: 'during', gives: { oilyoil: 2, herb: 1 } }, // 中身はオイリーオイル2個と薬草(2026-11-13 社長: 案)
+    oil: { name: 'オイル', use: 'during', hp: 0.2 },                                 // 小さいオイル(体力 上限の20%。2026-11-13 社長)
+    oilyoil: { name: 'オイリーオイル', use: 'during', hp: 0.4 },                     // 大きいオイル(体力 上限の40%。2026-11-13 社長)
     herb: { name: '薬草', use: 'during', stress: -20 },                          // 詰め合わせの中身(ストレス −20)
   });
   const GOOD = Object.freeze({
-    eventMaker: { name: 'イベントメーカー', eventRate: 0.15 },              // 編成の子との出来事 +15%(50% → 65%)
+    eventMaker: { name: 'イベントメーカー', eventRate: 0.25 },              // 編成の子との出来事 +25%(50% → 75%。2026-11-13 社長)
     trainGood: { name: 'トレーニング得意', train: 0.10 },                  // 訓練の伸び +10%
     shugyoGood: { name: '修行得意', shugyo: 0.20, techRate: 10 },          // 修行の伸び +20%・技を覚える率 +10
     star: { name: 'スターの素質○', pop: 1.5, bond: 1.2 },                // 人気の上がり ×1.5・親密度の上がり ×1.2(良縁)
-    uketsugu: { name: 'うけつぐ魂', story: 0.15, teach: 2 },               // 連続の話が進む率 +15%・3話(伝授)の能力が2倍
+    uketsugu: { name: 'うけつぐ魂', story: 0.15, teach: 2, start: 2 },  // start: 編成から受け継ぐはじめの能力 ×2(2026-11-13 社長)               // 連続の話が進む率 +15%・3話(伝授)の能力が2倍
   });
   const CARRY_MAX = 2; // 持ちこみは1回の育成で2つまで(社長 2026-11-12。始める前の物と育成中の袋を合わせて)
 
@@ -323,10 +324,18 @@
 
   // ---- 大会のあとのごほうびのごはん(社長 2026-11-12: 体力・忠誠度・能力の3種類・値段は賞金) ----
   // 大会が終わるたびに1回だけ選べる(選ばなくてもよい)。次の行動かターンの区切りで消える
+  // 2026-11-13 社長: 「いまのごはんは効果が高すぎる」→ 9種に作り直す(体力はどれも回復で、上限は上がらない)。値段なし(社長: 大会後限定なら値段なしでいい)
+  //   前の3種(hp・loyal・stat)は途中の育成に保存されない(大会のあとに選ぶ画面の中だけ)ので、読み替えは要らない。知らない名前は食べられない(ok:false)
   const MEALS = Object.freeze({
-    hp: { name: 'スタミナごはん', cost: 1500, hp: 0.4 },              // 体力を上限の40%ぶん回復
-    loyal: { name: 'なかよしごはん', cost: 3000, ama: 3, fear: 2 },    // 忠誠度 +5(甘え +3・恐れ +2)
-    stat: { name: 'パワーごはん', cost: 5000, all: 0.4 },              // 6能力すべて +「軽い訓練1回ぶん」× 0.4
+    vitamin: { name: 'ビタミンもどき', hp: 0.2, fear: 3 },               // 体力 上限の20%回復・恐れ度 +3
+    gochiso: { name: 'ごちそうもどき', hp: 0.2, ama: 3 },                // 体力 上限の20%回復・甘え度 +3
+    f_life: { name: 'もりもりニンジン', hp: 0.1, stat: 'life', add: 15 }, // 体力 上限の10%回復・その能力 +15(6種)
+    f_pow: { name: 'がっつりお肉', hp: 0.1, stat: 'pow', add: 15 },
+    f_wise: { name: 'ひらめきクルミ', hp: 0.1, stat: 'wise', add: 15 },
+    f_hit: { name: 'ねらいうちベリー', hp: 0.1, stat: 'hit', add: 15 },
+    f_eva: { name: 'ひらりリンゴ', hp: 0.1, stat: 'eva', add: 15 },
+    f_tough: { name: 'かちかちイモ', hp: 0.1, stat: 'tough', add: 15 },
+    prune: { name: 'スタープルーン', hp: 0.05, pop: 5, pts: 10 },        // 体力 上限の5%回復・人気 +5・能力ポイント +10
   });
 
   // ---- 能力ポイント(TOURNAMENT §7b) ----
@@ -544,10 +553,12 @@
       const team = raw.map(memberOf);
       const typeIdx = Number.isInteger(src.type) ? clamp(src.type, 0, 5) : C.typeFromApt(aptStr(species), rngOf(id, 'type')());
       const stats = initStats(species);
-      team.forEach(m => { stats[m.startAdd.stat] = clamp(stats[m.startAdd.stat] + m.startAdd.v, 0, STAT_MAX); });
-      const aidLv = clamp(Math.round(num(src.aidBondLv, 1)), 1, 10);
       // 持ちこみ: carry = 始める前に使う物(3つまで)・bag = 育成中に使う物の数
       const carry = (Array.isArray(src.carry) ? src.carry : []).filter(k => ITEMS[k] && ITEMS[k].use === 'before').filter((k, i, a) => a.indexOf(k) === i).slice(0, CARRY_MAX);
+      // うけつぎ草(うけつぐ魂): 編成から受け継ぐはじめの能力が2倍(2026-11-13 社長)
+      const startMul = carry.some(k => ITEMS[k].good === 'uketsugu') ? GOOD.uketsugu.start : 1;
+      team.forEach(m => { stats[m.startAdd.stat] = clamp(stats[m.startAdd.stat] + m.startAdd.v * startMul, 0, STAT_MAX); });
+      const aidLv = clamp(Math.round(num(src.aidBondLv, 1)), 1, 10);
       const bag = {}; let room = CARRY_MAX - carry.length;
       if (src.bag && typeof src.bag === 'object') for (const [k, v] of Object.entries(src.bag)) if (ITEMS[k] && ITEMS[k].use === 'during' && room > 0) { const n = clamp(Math.round(num(v)), 0, room); if (n > 0) { bag[k] = n; room -= n; } }
       const good = {}; let hpMax = HP_MAX0; let issaForce = false;
@@ -914,13 +925,15 @@
     // 大会のあとのごほうびのごはん(1回だけ・賞金を使う)
     const meal = (s0, key) => {
       const s = clone(s0); const m = MEALS[key];
-      const free = s.freeMeal === true; // えるびんの見守りの大会: 次のごはんが1回ただ
-      if (!s.mealReady || !m || (!free && s.fame < m.cost) || s.over) return { state: s0, out: { ok: false } };
-      if (free) s.freeMeal = false; else s.fame -= m.cost; s.mealReady = false;
+      // 2026-11-14 社長: 勝ったあとのごはんはただ(賞金を使わない)。えるびんの freeMeal は読めるまま残すが、ごはんでは使わない(代わりの効果は案)
+      if (!s.mealReady || !m || s.over) return { state: s0, out: { ok: false } };
+      s.mealReady = false;
       const kui = 1 + stayNum(s, 'kuishinbo') / 100; // 🍙食いしん坊: ごはんの効き目が増える
       if (m.hp) recover(s, m.hp * kui);
       if (m.ama || m.fear) addLoyalRaw(s, Math.round((m.ama || 0) * kui), Math.round((m.fear || 0) * kui));
-      if (m.all) KEYS.forEach(k => addStat(s, k, unitOf(s, k) * m.all * kui));
+      if (m.stat && KEYS.includes(m.stat)) addStat(s, m.stat, Math.round(m.add * kui));
+      if (m.pop) s.pop = clamp(s.pop + popGain(s, Math.round(m.pop * kui)), 0, 100);
+      if (m.pts) gainPts(s, Math.round(m.pts * kui));
       s.log.meal = (s.log.meal || 0) + 1;
       return { state: s, out: { ok: true, meal: key } };
     };
@@ -1072,6 +1085,7 @@
       if (it.hp) recover(s, it.hp);
       if (it.cure) { s.yosu = {}; }
       if (it.loyal) addLoyalRaw(s, Math.ceil(it.loyal / 2), Math.floor(it.loyal / 2));
+      if (it.ama || it.fear) addLoyalRaw(s, num(it.ama), num(it.fear));
       if (it.stress) addStress(s, it.stress);
       if (it.issaSure) s.issaSure = true;
       if (it.gives) for (const [k, n] of Object.entries(it.gives)) s.bag[k] = num(s.bag[k]) + n;
@@ -1428,7 +1442,7 @@
         const tk = stayNum(s, 'ticket') / 100; const extra = tk > 0 && rngOf(s.id, s.turn, 'ticket', b.kind, num(b.round), num(b.retry), num(b.again))() < tk ? 1 : 0; // 🎫チケット運
         const t = ticketsOfPrize(tkFull) + (b.rival ? RIVAL.tickets : 0) + extra; s.tickets += t; out.tickets = t; if (extra) out.ticketLuck = true;
       }
-      s.mealReady = true;
+      s.mealReady = won; // 2026-11-13 社長: 大会に勝ったときだけごはんを選べる(負けたらなし)
       gainMastery(s, use); // 熟練: 出場で全部の技 +2・使った技は1回 +2(1試合で +6 まで)
       s.battle = null;
       if (b.kind === 'debut') {
@@ -1557,7 +1571,7 @@
 
     return Object.freeze({
       events: EV,
-      VERSION, KEYS, STAT_NAMES, PERIODS, TOTAL_TURNS, FORCED, SUMMIT, BASE, RESULTS, RATE, REST, PLAY, CLINIC, COND, LOYAL, GATHER, BOND, STORY, LOTTERY,
+      VERSION, STORY, KEYS, STAT_NAMES, PERIODS, TOTAL_TURNS, FORCED, SUMMIT, BASE, RESULTS, RATE, REST, PLAY, CLINIC, COND, LOYAL, GATHER, BOND, STORY, LOTTERY,
       ASSISTS, ISSA, PTS, XP, SHUGYO, TECH_POWER, MASTERY, techRowsOf, techPowerOfRows, powerOf, techBoostOf, techUseOf, ITEMS, GOOD, CARRY_MAX, useItem, FAME_V, FAME_SCALE, TICKET_BASE, TRAIN_LV, trainLvOf, REMATCH, canRematch, rematch, canSkip, battleKey, PRIZE, MEALS, meal, ticketsOfPrize, TECH_MAX, techsOf, canLearn, techRate, learnable, techRank, shugyoQ, superLeft, techMissOf, techCanon, canonTechList, shugyoLeft, teachFrom, BENCH: BENCH_USE, STAR_MULT, TAG_POWER, BOND_START, RANK_ADD, TRAIN_COMBO, AIDS, speciesList,
       rngOf, periodOf, aptMult, initStats, memberOf, memberEffect, newRun, gatherOf, cardMult, peek, failRateOf, sabRateOf, greatRateOf,
       act, react, issa, issaComes, issaRate, endTurn, opponents: opponentsOf, settle, cupsOf, canEnter, bracketOf, gradeOf, GRADE_STEP, stayV, SC_CUPS, SC_NAME, ASST_STORY, storyEnd, markSpecial, battleMods, battleBuffs, peakTurn, ASTORY, storyDue, storyStep, preview, restore, ARC, PARTY, summitPick, endingOf, endingSeen, CUP_SYS, YEAR, RIVAL, CUP_PRIZE, spendPts, autoPts, ptsCost, evaluate, assistPointsOf, loyalOf, loyalMult, top3Of, sumOf,
