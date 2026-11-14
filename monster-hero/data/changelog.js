@@ -42,12 +42,73 @@ const CHANGELOG = [
     ],
   },
   {
+    // 新曲をビートPで買えるようになった(2026-11-14 社長「1曲500で両方ついてくる」。文はテンポの案)
+    date: "2026-11-14 17:03", type:'update', group:'rhythm', title:'新曲をビートPで買えるようになりました', status:'new',
+    items:[
+      '今日の新曲「departure!」「RPG」「Midnight Studio」から、新しい曲は1曲ビートP500で買って遊ぶ形になります。',
+      '1曲を買うと、通常版と short ver. の両方を、全部の難易度で遊べます。',
+      '曲えらびの「🔒 500P」を押すか、ビートP交換所の「曲」のタブから買えます。買う前でも、曲の試し聴きはできます。',
+      'みんなで対戦なら、持っていない人もその回だけ遊べます。いままでの曲は、これまでどおり無料です。',
+    ],
+  },
+  {
+    // 新曲「Midnight Studio」(2026-11-14 社長「新曲」。通常版と short ver.・Lv.・ノーツ数は作ったあとの値)
+    date: "2026-11-14 17:03", type:'update', group:'rhythm', title:'新曲「Midnight Studio」を追加しました', status:'new',
+    image:'images/song-art/midnight-studio.jpg?v=109978a84b97',
+    items:[
+      'モンヒロビートに「Midnight Studio」（3分35秒）と「Midnight Studio short ver.」（1分12秒）を追加しました。曲えらびからすぐ遊べます。',
+      '【通常版】レベルは EASY Lv.7 ／ NORMAL Lv.8 ／ HARD Lv.12 ／ EXPERT Lv.22 ／ MASTER Lv.27 ／ HELL Lv.45 です。',
+      '【通常版】ノーツ数は 300 ／ 340 ／ 463 ／ 557 ／ 636 ／ 760 です。',
+      '【short ver.】レベルは EASY Lv.7 ／ NORMAL Lv.8 ／ HARD Lv.10 ／ EXPERT Lv.21 ／ MASTER Lv.25 ／ HELL Lv.35 です。',
+      '【short ver.】ノーツ数は 97 ／ 110 ／ 146 ／ 177 ／ 207 ／ 234 です。',
+      'この曲は1曲ビートP500で買って遊びます。買うと通常版と short ver. の両方を、全部の難易度で遊べます。曲えらびの「🔒 500P」か、ビートP交換所の「曲」から買えます。',
+    ],
+    assistantNotice:{ id:'update_notice_midnight_studio_v1', type:'content' },
+  },
+  {
+    // 新曲「RPG」(2026-11-14 社長「新曲」。通常版と short ver.・Lv.・ノーツ数は作ったあとの値)
+    date: "2026-11-14 17:03", type:'update', group:'rhythm', title:'新曲「RPG」を追加しました', status:'new',
+    image:'images/song-art/rpg.jpg?v=00a0d7cf8a5d',
+    items:[
+      'モンヒロビートに「RPG」（4分3秒）と「RPG short ver.」（1分26秒）を追加しました。曲えらびからすぐ遊べます。',
+      '【通常版】レベルは EASY Lv.8 ／ NORMAL Lv.9 ／ HARD Lv.13 ／ EXPERT Lv.22 ／ MASTER Lv.27 ／ HELL Lv.47 です。',
+      '【通常版】ノーツ数は 415 ／ 475 ／ 649 ／ 797 ／ 911 ／ 1044 です。',
+      '【short ver.】レベルは EASY Lv.7 ／ NORMAL Lv.10 ／ HARD Lv.14 ／ EXPERT Lv.21 ／ MASTER Lv.31 ／ HELL Lv.46 です。',
+      '【short ver.】ノーツ数は 152 ／ 178 ／ 244 ／ 292 ／ 338 ／ 399 です。',
+      'この曲は1曲ビートP500で買って遊びます。買うと通常版と short ver. の両方を、全部の難易度で遊べます。曲えらびの「🔒 500P」か、ビートP交換所の「曲」から買えます。',
+    ],
+    assistantNotice:{ id:'update_notice_rpg_v1', type:'content' },
+  },
+  {
+    // 新曲「departure!」(2026-11-14 社長「新曲」。通常版と short ver.・Lv.・ノーツ数は作ったあとの値)
+    date: "2026-11-14 17:03", type:'update', group:'rhythm', title:'新曲「departure!」を追加しました', status:'new',
+    image:'images/song-art/departure.jpg?v=fa45a696f06d',
+    items:[
+      'モンヒロビートに「departure!」（4分56秒）と「departure! short ver.」（1分44秒）を追加しました。曲えらびからすぐ遊べます。',
+      '【通常版】レベルは EASY Lv.5 ／ NORMAL Lv.6 ／ HARD Lv.9 ／ EXPERT Lv.17 ／ MASTER Lv.22 ／ HELL Lv.32 です。',
+      '【通常版】ノーツ数は 333 ／ 380 ／ 502 ／ 621 ／ 708 ／ 840 です。',
+      '【short ver.】レベルは EASY Lv.6 ／ NORMAL Lv.7 ／ HARD Lv.11 ／ EXPERT Lv.16 ／ MASTER Lv.23 ／ HELL Lv.29 です。',
+      '【short ver.】ノーツ数は 117 ／ 133 ／ 182 ／ 222 ／ 250 ／ 289 です。',
+      'この曲は1曲ビートP500で買って遊びます。買うと通常版と short ver. の両方を、全部の難易度で遊べます。曲えらびの「🔒 500P」か、ビートP交換所の「曲」から買えます。',
+    ],
+    assistantNotice:{ id:'update_notice_departure_v1', type:'content' },
+  },
+  {
     date: "2026-11-14 16:05", type:'update', group:'success', releaseFlag:'monheroSuccess', dev:true,
     title:'大会で優勝すると、ビートPがもらえるようになりました',
     items:[
       'モンヒロサクセスの大会の賞品に、ビートPが入りました。優勝すると、本編のビートPに足されます(負けたときはもらえません)。',
       'もらえる量は、その大会の賞金の50分の1です(10P単位。賞金 2,500G の大会なら 50P)。参加の確認の「賞品」で、大会ごとの量を見られます。',
       '育成が終わったとき(引退・完走)にも、総合力のランクに応じてビートPがもらえます。D 50P・C 100P・B 150P・A 250P・S 400P・SS 600P です。',
+    ],
+  },
+  {
+    // 2026-11-14 社長「イッサ博士の演出が弱い。もっと作り込んだほうがいい。ステータスの上がるゲージの変動がへん」。公開前の機能の作業メモなので dev:true(公開の印 monheroSuccess の後ろ)
+    date: "2026-11-14 16:02", type:'update', title:'イッサ博士の大きな賭けに演出が入り、能力のゲージが下がったように見えなくなりました', group:'success', releaseFlag:'monheroSuccess', dev:true,
+    items:[
+      'イッサ博士が飛びこんできて、賭けを選ぶと「のびのび装置」が震えながら光り、結果が出ます。大成功は光の筋と紙吹雪と専用の音、失敗は煙が上がります。',
+      '結果では、能力のほかに動いた体力・忠誠度・人気・ようすも札で出ます。',
+      '能力のゲージは、伸びたあとも拡大した目盛りのまま止まるようになりました(棒が縮んで下がったように見えていたのを直しました)。',
     ],
   },
   {
