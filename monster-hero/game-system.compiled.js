@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 87c5d7c2ca51befc
+// source-sha256: 017464a39dfb311a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -175024,9 +175024,12 @@ function MsxR3Battle({
         fontSize: 11,
         lineHeight: 1.5,
         textAlign: 'left',
-        color: '#fde68a'
+        color: '#fde68a',
+        ...(typeof JA_WRAP_STYLE !== 'undefined' ? JA_WRAP_STYLE : {})
       }
-    }, mealPick && M[mealPick] ? `${M[mealPick].name}: ${fxLong(mealPick)}` : '札を押すと、くわしい効き目が出ます'), React.createElement("div", {
+    }, mealPick && M[mealPick] ? `${M[mealPick].name}: ${fxLong(mealPick)}`.split(/(?<=[・:])/).map((x, i) => React.createElement(React.Fragment, {
+      key: i
+    }, i > 0 ? React.createElement("wbr", null) : null, typeof jaWrap === 'function' ? jaWrap(x) : x)) : '札を押すと、くわしい効き目が出ます'), React.createElement("div", {
       className: "msx-note",
       "data-msx-r3-loynote": true,
       style: {
@@ -175045,8 +175048,18 @@ function MsxR3Battle({
       src: msxFace(s.aid, st3.won ? 'excited' : 'troubled'),
       alt: ""
     }), React.createElement("div", {
-      className: "bub f1"
-    }, st3.won ? '「優勝だもん、今日は ごちそう にしちゃお!」' : '「おつかれさま。おいしいもの食べて、また がんばろ!」'))) : !st3.won && !s.over ? React.createElement("div", {
+      className: "bub f1",
+      style: {
+        wordBreak: 'keep-all',
+        overflowWrap: 'normal'
+      }
+    }, (st3.won ? ['「優勝だもん、', '今日は', 'ごちそうに', 'しちゃお!」'] : ['「おつかれさま。', 'おいしいもの', '食べて、', 'また', 'がんばろ!」']).map((x, i) => React.createElement(React.Fragment, {
+      key: i
+    }, i > 0 ? React.createElement("wbr", null) : null, React.createElement("span", {
+      style: {
+        whiteSpace: 'nowrap'
+      }
+    }, x)))))) : !st3.won && !s.over ? React.createElement("div", {
       className: "v-meal",
       "data-msx-r3-lostnote": true
     }, React.createElement("div", {
