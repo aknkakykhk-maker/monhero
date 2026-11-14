@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ef370d7445e10680
+// source-sha256: ac37471b70ee5a76
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -163469,7 +163469,45 @@ const MSX_CSS = `
 .msx .v-cup .e .gr.g-green{background:#86efac}.msx .v-cup .e .gr.g-four{background:#c4b5fd}.msx .v-cup .e .gr.g-rainbow{background:linear-gradient(90deg,#fda4af,#fde047,#86efac,#93c5fd);color:#1e1b4b}
 .msx .v-cup.ex .e{position:relative}
 .msx .v-cup.ex.g-four{border-color:#a78bfa}.msx .v-cup.ex.g-gold{border-color:#fde047}.msx .v-cup.ex.g-rainbow{border-color:#fda4af}
-.msx .v-cup.hard .tx small{color:#fca5a5}.msx .v-cup.ng .tx small{color:#fca5a5}
+.msx .v-cup.hard .tx small{color:#fca5a5}
+/* 大会の受付(2026-11-13 作り直し): 賞金の帯・月の切り替え・大きな札・確認の窓 */
+.msx .v-cupbar{display:flex;align-items:center;gap:8px;margin-top:6px;background:linear-gradient(90deg,#3b2f0b,#1e1a36);border:1px solid #a16207;border-radius:10px;padding:4px 10px;font-size:11px;font-weight:900;color:#fde68a}
+.msx .v-cupbar b{margin-left:auto;font-size:17px;color:#fde047;text-align:right}.msx .v-cupbar b small{font-size:11px;margin-left:1px}.msx .v-cupbar i{font-style:normal;font-size:10px;background:#0f172a;border-radius:6px;padding:1px 6px;color:#e2e8f0}
+.msx .v-cupmon{display:flex;align-items:center;gap:6px;margin-top:5px}
+.msx .v-cupmon b{flex:1;text-align:center;font-size:13px;font-weight:900}.msx .v-cupmon b small{margin-left:6px;font-size:10px;border-radius:6px;padding:1px 6px;background:#334155;color:#cbd5e1}.msx .v-cupmon b small.now{background:#f472b6;color:#fff}
+.msx .v-cupmon .ar{width:44px;min-height:30px;border-radius:9px;background:#1e293b;border:1px solid #475569;color:#fde047;font-size:13px;text-align:center}
+.msx .v-cup2{align-items:stretch;padding:6px 8px;min-height:66px;flex:none}
+.msx .v-cup2 .lg{flex:none;width:66px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;background:#0f172a;border-radius:10px;padding:3px 0}
+.msx .v-cup2 .lg .e{font-size:26px;line-height:1}
+.msx .v-cup2 .fcst{display:block;width:auto;height:auto;font-size:9px;letter-spacing:-.02em;font-weight:900;border-radius:5px;padding:0 4px;white-space:nowrap;text-align:center;line-height:1.5}
+.msx .v-cup2 .fcst.fc-e{background:#86efac;color:#14532d}.msx .v-cup2 .fcst.fc-g{background:#bef264;color:#365314}.msx .v-cup2 .fcst.fc-v{background:#fde047;color:#713f12}.msx .v-cup2 .fcst.fc-h{background:#fdba74;color:#7c2d12}.msx .v-cup2 .fcst.fc-n{background:#ef4444;color:#fff}
+.msx .v-cup2 .tx{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;gap:1px;text-align:left}
+.msx .v-cup2 .tx .hd{display:flex;align-items:center;gap:4px;font-size:9.5px;font-weight:900;height:16px;line-height:16px}.msx .v-cup2 .tx .hd>span{display:inline-block;height:auto;line-height:1.5}
+.msx .v-cup2 .tx .hd .gr2{background:#475569;border-radius:5px;padding:0 5px;color:#fff}.msx .v-cup2.g-gold .gr2{background:#ca8a04}.msx .v-cup2.g-silver .gr2{background:#64748b}.msx .v-cup2.g-green .gr2{background:#16a34a}.msx .v-cup2.g-four .gr2{background:#7c3aed}.msx .v-cup2.g-rainbow .gr2{background:linear-gradient(90deg,#f43f5e,#eab308,#22c55e,#3b82f6)}
+.msx .v-cup2 .tx .hd .cs{color:#fde047;font-size:11px}.msx .v-cup2 .tx .hd .dn{margin-left:auto;background:#fde047;color:#422006;border-radius:5px;padding:0 5px}
+.msx .v-cup2 .tx>b{font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.msx .v-cup2 .tx .g{display:block;font-size:18px;font-weight:900;color:#fde047;text-align:right;line-height:1.1}.msx .v-cup2 .tx .g small{display:inline;font-size:11px;margin-left:1px;color:#fde047}
+.msx .v-cup2.ng{opacity:1;background:#14121f;border-color:#334155}.msx .v-cup2.ng .lg,.msx .v-cup2.ng .tx>b,.msx .v-cup2.ng .tx .hd,.msx .v-cup2.ng .tx .g{opacity:.45}.msx .v-cup2.later{filter:saturate(.7)}
+.msx .v-cup2 .why{display:block;color:#fca5a5;font-size:10.5px;font-weight:900;line-height:1.3;white-space:normal}
+.msx .v-cupwin{position:absolute;inset:0;z-index:40;background:#0009;display:flex;align-items:center;justify-content:center;padding:16px}
+.msx .v-cupwin .in{position:relative;width:100%;max-width:360px;background:#fffbeb;color:#1e1b4b;border-radius:16px;border:3px solid #f59e0b;padding:10px 12px 12px;box-shadow:0 8px 0 #0006}
+.msx .v-cupwin .h{text-align:center;font-weight:900;font-size:14px;background:#f59e0b;color:#fff;border-radius:10px;padding:3px 0;margin:-2px -2px 8px}
+.msx .v-cupwin .sign{display:flex;flex-direction:column;align-items:center;gap:2px;background:linear-gradient(180deg,#1e1a36,#3b3566);color:#fff;border-radius:12px;padding:8px 6px;text-align:center}
+.msx .v-cupwin .sign .e{font-size:40px;line-height:1}.msx .v-cupwin .sign b{font-size:15px}.msx .v-cupwin .sign small{font-size:10.5px;color:#fde68a}
+.msx .v-cupwin .sign.g-four{background:linear-gradient(180deg,#2e1065,#6d28d9)}.msx .v-cupwin .sign.g-rainbow{background:linear-gradient(180deg,#7f1d1d,#a16207)}
+.msx .v-cupwin .sub{margin-top:8px;font-size:11px;font-weight:900;color:#92400e;text-align:left}
+.msx .v-cupwin .pz{display:flex;gap:6px;overflow-x:auto;padding:4px 0}
+.msx .v-cupwin .pz button{flex:none;width:72px;display:flex;flex-direction:column;align-items:center;gap:2px;background:#fff;border:2px solid #e5e7eb;border-radius:10px;padding:4px 2px;text-align:center}
+.msx .v-cupwin .pz button span{font-size:24px;line-height:1}.msx .v-cupwin .pz button small{font-size:9.5px;font-weight:900;line-height:1.2;color:#1e1b4b}
+.msx .v-cupwin .pz button.rare{border-color:transparent;background:linear-gradient(#fff,#fff) padding-box,linear-gradient(90deg,#f43f5e,#eab308,#22c55e,#3b82f6,#a855f7) border-box}
+.msx .v-cupwin .q{margin-top:8px;text-align:center;font-weight:900;font-size:13px}.msx .v-cupwin .q.ng{color:#dc2626;font-size:12px}
+.msx .v-cupwin .bt{display:flex;gap:8px;margin-top:8px}
+.msx .v-cupwin .bt button{flex:1;min-height:40px;border-radius:99px;background:#e5e7eb;color:#1e1b4b;font-weight:900;font-size:13.5px;text-align:center}
+.msx .v-cupwin .bt button.go{background:linear-gradient(90deg,#f472b6,#fb923c);color:#fff}
+.msx .v-cupwin .det{position:absolute;inset:0;background:#0007;border-radius:14px;display:flex;align-items:center;justify-content:center;padding:12px}
+.msx .v-cupwin .dbox{background:#fff;border-radius:12px;padding:10px;text-align:center;width:100%;border:2px solid #f59e0b}
+.msx .v-cupwin .dbox .e{font-size:38px}.msx .v-cupwin .dbox b{display:block;font-size:14px}.msx .v-cupwin .dbox p{font-size:11.5px;margin:4px 0 8px;text-align:left;line-height:1.45}
+.msx .v-cupwin .dbox button{min-height:36px;width:100%;border-radius:99px;background:#e5e7eb;font-weight:900;text-align:center}.msx .v-cup.ng .tx small{color:#fca5a5}
 .msx .v-vsh{display:flex;align-items:center;gap:4px;margin-top:6px;border-radius:16px;overflow:hidden;border:1px solid #4a4380;background:linear-gradient(100deg,#9d174d 0,#3b2a6b 49%,#0f0d24 50%,#1e3a8a 100%);padding:6px 6px;min-height:104px}
 .msx .v-vsh .sd{flex:1;min-width:0;display:flex;align-items:center;gap:4px;line-height:1.3}.msx .v-vsh .sd.op{justify-content:flex-end;text-align:right}
 .msx .v-vsh .sd img{height:70px;aspect-ratio:1;object-fit:contain;flex:none;filter:drop-shadow(0 5px 3px #0008)}.msx .v-vsh .sd.op img{transform:scaleX(-1)}
@@ -168869,6 +168907,53 @@ const msxR3CupReward = (SUC, c, s) => {
   if (c.scenario) out.push(c.sys === 'scerubin' ? `忠誠度 +5・次のごはんの効き目 ×${SUC.MEAL_WATCH_MULT || 1.5}` : 'シナリオのごほうび');
   return out.length ? out.join('・') : '賞金と修行チケット';
 };
+const msxR3Prizes = (SUC, c) => {
+  const out = [{
+    id: 'g',
+    e: '💰',
+    name: `賞金 ${msxFmt(c.prize)}G`,
+    desc: '勝つともらえる賞金。ごはんや買い物に使える(負けても ★★ 以上は一部もらえる)'
+  }];
+  const ex = SUC.EX_BY_SYS ? SUC.EX_BY_SYS[c.sys] : null;
+  if (ex && ex.rw && ex.rw.bag) Object.entries(ex.rw.bag).forEach(([k, n]) => {
+    const it = typeof msxItemView === 'function' ? msxItemView(k) : {
+      name: k,
+      e: '🎁',
+      desc: ''
+    };
+    out.push({
+      id: k,
+      e: it.e,
+      name: `${it.name} ×${n}`,
+      desc: it.desc,
+      rare: true
+    });
+  });
+  const wtk = ex && ex.four || c.star >= 3 ? 1 : 0;
+  const rtk = c.rival ? 1 : 0;
+  out.push({
+    id: 'tk',
+    e: '🎫',
+    name: '修行チケット',
+    desc: `${wtk + rtk ? `勝つと修行チケット +${wtk + rtk}${rtk ? '(ライバルの分 +1)' : ''}。` : ''}賞金ランクが上がると1段ごとに +1(負けても獲得賞金の合計で上がる)`
+  });
+  const rw = msxR3CupReward(SUC, c);
+  if (rw && rw !== '賞金と修行チケット') out.push({
+    id: 'rw',
+    e: ex && ex.four ? '🏆' : '✨',
+    name: 'ごほうび',
+    desc: rw,
+    rare: !!(ex && (ex.four || ex.hard))
+  });
+  return out;
+};
+const MSX_R3_FC_CLASS = Object.freeze({
+  easy: 'fc-e',
+  good: 'fc-g',
+  even: 'fc-v',
+  hard: 'fc-h',
+  none: 'fc-n'
+});
 function MsxR3Cup({
   run,
   setRun,
@@ -168881,12 +168966,22 @@ function MsxR3Cup({
     SUC
   } = msxSuc;
   const s = run.s;
-  const cups = Array.isArray(v.cups) ? v.cups : [];
+  const P = SUC.periodOf(s.turn);
+  const lastTurn = Math.min(SUC.TOTAL_TURNS || 46, s.turn + (P.key === 'final' ? 0 : Math.max(0, P.left - 1)));
+  const [vt, setVt] = useState(s.turn);
+  const now = vt === s.turn;
+  const cupsNow = Array.isArray(v.cups) ? v.cups : [];
+  const cups = now ? cupsNow : typeof SUC.cupsOf === 'function' ? SUC.cupsOf({
+    ...s,
+    turn: vt
+  }) : [];
   const [pick, setPick] = useState(() => {
-    const c = cups.find(x => x.entry && x.entry.ok);
+    const c = cupsNow.find(x => x.entry && x.entry.ok);
     return c ? c.id : null;
   });
-  const cur = cups.find(c => c.id === pick) || null;
+  const [win, setWin] = useState(null);
+  const [prz, setPrz] = useState(null);
+  const cur = cupsNow.find(c => c.id === pick) || null;
   const go = skip => {
     if (!cur || !cur.entry || !cur.entry.ok) return;
     const r = SUC.act(s, {
@@ -168906,17 +169001,24 @@ function MsxR3Cup({
     };
     onActed(next);
   };
-  const P = SUC.periodOf(s.turn);
   const toForced = P.key === 'final' ? null : P.left;
   const cal = msxCalendar(s.turn);
+  const calV = msxCalendar(vt);
   useMsxR3Lines(s.aid);
   useSuccessSound('cupEntry', {
     season: cal.season
   });
-  const nOk = cups.filter(c => c.entry && c.entry.ok).length;
+  const nOk = cupsNow.filter(c => c.entry && c.entry.ok).length;
   const openLine = msxR3Line('turn.cup.open', run, {
     cup: cur ? msxR3CupName(cur.sys) : ''
   }, nOk ? `「今月は ${nOk}つ 出られるよ! 出ると1ターン使うから、トレーニングとどっちにするか考えてね」` : '「今月は出られる大会がないみたい。トレーニングでじっくり力をつけよ!」');
+  const rankStep = typeof SUC.rankStepOf === 'function' ? SUC.rankStepOf(s) : 0;
+  const rank = rankStep ? {
+    name: SUC.rankNameOf(rankStep)
+  } : null;
+  const kindOf = c => c.scenario ? 'シナリオ' : c.ex ? MSX_R3_CUP_GRADE[c.grade] || '' : (SUC.CUP_SYS[c.sys] || {}).stat ? '自慢' : (SUC.CUP_SYS[c.sys] || {}).dist !== undefined ? '間合い' : (SUC.CUP_SYS[c.sys] || {}).type ? 'タイプ' : ['spring', 'summer', 'autumn', 'winter'].includes(c.sys) ? '四季' : 'ふつう';
+  const wc = win ? cups.find(c => c.id === win) : null;
+  const wcOk = !!(wc && now && wc.entry && wc.entry.ok);
   const body = React.createElement(React.Fragment, null, React.createElement(MsxBand, {
     s: s,
     v: v,
@@ -168926,7 +169028,7 @@ function MsxR3Cup({
     className: "v-scene low",
     style: {
       flex: '0 0 auto',
-      minHeight: 150
+      minHeight: 128
     }
   }, React.createElement("img", {
     className: "bg",
@@ -168950,37 +169052,64 @@ function MsxR3Cup({
     style: {
       left: '38%',
       top: 'auto',
-      bottom: 10
+      bottom: 8
     }
   }, openLine.t)), React.createElement("div", {
+    className: "v-cupbar",
+    "data-msx-r3-fame": true
+  }, React.createElement("span", null, "いまの賞金"), React.createElement("b", null, msxFmt(s.fame), React.createElement("small", null, "G")), rank ? React.createElement("i", null, "賞金の段 ", rank.name) : null), React.createElement("div", {
+    className: "v-cupmon"
+  }, React.createElement("button", {
+    type: "button",
+    className: "ar",
+    disabled: vt <= s.turn,
+    onClick: () => setVt(t => Math.max(s.turn, t - 1)),
+    "aria-label": "前の月"
+  }, "◀"), React.createElement("b", null, calV.year, "年目 ", calV.month, "月", now ? React.createElement("small", {
+    className: "now"
+  }, "今月") : React.createElement("small", null, "予定")), React.createElement("button", {
+    type: "button",
+    className: "ar",
+    disabled: vt >= lastTurn,
+    onClick: () => setVt(t => Math.min(lastTurn, t + 1)),
+    "aria-label": "次の月",
+    "data-msx-r3-next-month": true
+  }, "▶")), React.createElement("div", {
     className: "v-cups"
   }, cups.length ? cups.map(c => {
-    const ok = c.entry && c.entry.ok;
-    const cls = `${!ok ? 'ng' : c.id === pick ? 'sel' : c.rival ? 'rv' : c.done ? 'won' : ''}${c.ex ? ` ex g-${c.grade || 'gold'}` : ''}${c.hard ? ' hard' : ''}`;
+    const ok = now && c.entry && c.entry.ok;
+    const fc = typeof SUC.forecastOf === 'function' ? SUC.forecastOf(s, c) : null;
+    const cls = `${!(c.entry && c.entry.ok) ? 'ng' : now && c.id === pick ? 'sel' : c.rival ? 'rv' : c.done ? 'won' : ''}${c.ex ? ` ex g-${c.grade || 'gold'}` : ''}${c.hard ? ' hard' : ''}${now ? '' : ' later'}`;
     return React.createElement("button", {
       type: "button",
       key: c.id,
-      className: `v-cup ${cls}`,
-      disabled: !ok,
-      onClick: () => setPick(c.id),
+      className: `v-cup v-cup2 ${cls}`,
+      onClick: () => {
+        if (ok) setPick(c.id);
+        setWin(c.id);
+      },
       "data-msx-r3-cup": c.id
     }, React.createElement("div", {
-      className: "e"
-    }, c.scenario ? '📖' : MSX_R3_CUP_ICON[c.sys] || '🏆', c.ex && c.grade ? React.createElement("small", {
-      className: `gr g-${c.grade}`
-    }, MSX_R3_CUP_GRADE[c.grade] || '') : null), React.createElement("div", {
-      className: "tx"
-    }, React.createElement("b", null, c.scenario ? c.name : msxR3CupName(c.sys)), React.createElement("small", null, !ok ? `✖ ${msxR3WhyText(c.entry, s)}` : c.hard ? '🔥 勝ち目なし… 相手がとても強い' : c.rival ? `ライバル: ${c.rival.name}` : c.done ? '👑 優勝したことがある → ⏩ スキップできる' : '出られる ✔'), React.createElement("span", {
-      className: "rw"
-    }, "🎁 ", msxR3CupReward(SUC, c, s))), React.createElement("div", {
-      className: "rt"
+      className: "lg"
     }, React.createElement("span", {
-      className: "st"
-    }, msxR3Stars(c.star)), React.createElement("span", {
+      className: "e"
+    }, c.scenario ? '📖' : MSX_R3_CUP_ICON[c.sys] || '🏆'), fc ? React.createElement("span", {
+      className: `fcst ${MSX_R3_FC_CLASS[fc.key] || ''}`
+    }, fc.label) : null), React.createElement("div", {
+      className: "tx"
+    }, React.createElement("div", {
+      className: "hd"
+    }, React.createElement("span", {
+      className: "gr2"
+    }, kindOf(c)), React.createElement("span", {
+      className: "cs"
+    }, msxR3Stars(c.star)), c.done ? React.createElement("span", {
+      className: "dn"
+    }, "優勝済") : null), React.createElement("b", null, c.scenario ? c.name : msxR3CupName(c.sys)), !(c.entry && c.entry.ok) ? React.createElement("span", {
+      className: "why"
+    }, "✖ ", msxR3WhyText(c.entry, s)) : null, React.createElement("span", {
       className: "g"
-    }, "💰 ", msxFmt(c.prize), "G"), React.createElement("span", {
-      className: "kd"
-    }, c.scenario ? 'シナリオ' : (SUC.CUP_SYS[c.sys] || {}).stat ? '自慢' : (SUC.CUP_SYS[c.sys] || {}).dist !== undefined ? '間合い' : (SUC.CUP_SYS[c.sys] || {}).type ? 'タイプ' : ['spring', 'summer', 'autumn', 'winter'].includes(c.sys) ? '四季' : 'ふつう')), c.rival ? React.createElement(React.Fragment, null, React.createElement("span", {
+    }, msxFmt(c.prize), React.createElement("small", null, "G"))), c.rival ? React.createElement(React.Fragment, null, React.createElement("span", {
       className: "rvi"
     }, React.createElement("img", {
       src: msxMonThumb(c.rival.species),
@@ -168990,19 +169119,92 @@ function MsxR3Cup({
     }, "ごほうび大")) : null);
   }) : React.createElement("div", {
     className: "msx-note"
-  }, "今月の大会はありません")), React.createElement("div", {
+  }, now ? '今月の大会はありません' : 'この月の大会はありません')), React.createElement("div", {
     className: "v-card",
     style: {
-      padding: '6px 9px'
+      padding: '5px 9px'
     }
   }, React.createElement("div", {
     className: "v-kv",
     style: {
       margin: 0
     }
-  }, React.createElement("b", null, "出ると"), React.createElement("span", null, "1戦だけ・1ターン使う・勝つと賞金(G)と修行チケット。", toForced ? React.createElement("span", {
+  }, React.createElement("b", null, "出ると"), React.createElement("span", null, "1戦だけ・1ターン使う・勝つと賞金と賞品。", toForced ? React.createElement("span", {
     className: "yel"
-  }, ` 期末の大会まで あと${toForced}ターン`) : null))));
+  }, ` 期末の大会まで あと${toForced}ターン`) : null))), wc ? React.createElement("div", {
+    className: "v-cupwin",
+    onClick: () => {
+      setWin(null);
+      setPrz(null);
+    },
+    "data-msx-r3-cupwin": true
+  }, React.createElement("div", {
+    className: "in",
+    onClick: e => e.stopPropagation()
+  }, React.createElement("div", {
+    className: "h"
+  }, "大会参加確認"), React.createElement("div", {
+    className: `sign g-${wc.grade || 'n'}`
+  }, React.createElement("span", {
+    className: "e"
+  }, wc.scenario ? '📖' : MSX_R3_CUP_ICON[wc.sys] || '🏆'), React.createElement("b", null, wc.scenario ? wc.name : msxR3CupName(wc.sys)), React.createElement("small", null, kindOf(wc), " ", msxR3Stars(wc.star))), React.createElement("div", {
+    className: "sub"
+  }, "獲得物"), React.createElement("div", {
+    className: "pz"
+  }, msxR3Prizes(SUC, wc).map(x => React.createElement("button", {
+    type: "button",
+    key: x.id,
+    className: x.rare ? 'rare' : '',
+    onClick: () => setPrz(x),
+    "data-msx-r3-prize": x.id
+  }, React.createElement("span", null, x.e), React.createElement("small", null, x.name)))), wcOk ? React.createElement("div", {
+    className: "q"
+  }, "この大会に参加しますか?") : React.createElement("div", {
+    className: "q ng"
+  }, now ? `この大会には出られません(${msxR3WhyText(wc.entry, s)})` : 'この大会は、その月になると出られます'), React.createElement("div", {
+    className: "bt"
+  }, wcOk ? React.createElement(React.Fragment, null, React.createElement("button", {
+    type: "button",
+    onClick: () => setWin(null)
+  }, "キャンセル"), React.createElement("button", {
+    type: "button",
+    className: "go",
+    onClick: () => {
+      setPick(wc.id);
+      setWin(null);
+      if (cur && cur.id === wc.id) go(false);else {
+        const r = SUC.act(s, {
+          kind: 'cup',
+          id: wc.id
+        });
+        if (r.out.ok) onActed({
+          ...run,
+          s: r.state,
+          out: null,
+          log: [...(run.log || []), {
+            turn: s.turn,
+            t: `${msxR3CupName(wc.sys)}に出た`
+          }].slice(-20)
+        });
+      }
+    },
+    "data-msx-r3-yes": true
+  }, "はい")) : React.createElement("button", {
+    type: "button",
+    onClick: () => setWin(null),
+    "data-msx-r3-close": true
+  }, "とじる")), prz ? React.createElement("div", {
+    className: "det",
+    onClick: () => setPrz(null)
+  }, React.createElement("div", {
+    className: "dbox",
+    onClick: e => e.stopPropagation()
+  }, React.createElement("div", {
+    className: "e"
+  }, prz.e), React.createElement("b", null, prz.name), React.createElement("p", null, prz.desc), React.createElement("button", {
+    type: "button",
+    onClick: () => setPrz(null)
+  }, "とじる"))) : null)) : null);
   const foot = React.createElement("div", {
     className: "v-ft"
   }, React.createElement("button", {
@@ -169018,9 +169220,12 @@ function MsxR3Cup({
     type: "button",
     className: "go",
     disabled: !(cur && cur.entry && cur.entry.ok),
-    onClick: () => go(false),
+    onClick: () => {
+      setVt(s.turn);
+      setWin(cur.id);
+    },
     "data-msx-r3-enter": true
-  }, cur ? `${MSX_R3_CUP_ICON[cur.sys] || '🏆'} 出る ▶` : '大会をえらぶ'));
+  }, cur ? '出場 ▶' : '大会をえらぶ'));
   return React.createElement(MsxR3Frame, {
     run: run,
     onBack: onBack,
