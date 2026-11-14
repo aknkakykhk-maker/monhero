@@ -214,6 +214,10 @@ const MSX_CSS = `
 .msx .v-p.hosp{background:linear-gradient(180deg,#0e7490,#155e75);border-color:#67e8f9;box-shadow:0 0 10px #22d3ee88}
 .msx .v-p .bd{position:absolute;right:-2px;top:-6px;background:#fde047;color:#422006;border-radius:99px;font-size:10px;font-weight:900;padding:0 5px;white-space:nowrap;line-height:1.5}
 .msx .v-p .bd.r{background:#ef4444;color:#fff}
+.msx .v-act-pre .v-p{min-height:74px;font-size:15px}.msx .v-act-pre .v-p .e{font-size:24px}
+.msx .v-p.hb{font-size:19px;background:linear-gradient(160deg,#f59e0b,#dc2626);border-color:#fde68a;border-bottom-color:#7f1d1d;box-shadow:0 0 16px #f59e0bb3}
+.msx .v-p.hb small{white-space:normal;font-size:11px}
+.msx .v-p .hbt{position:absolute;left:8px;top:-9px;background:#fff;color:#dc2626;border:2px solid #dc2626;border-radius:6px;font-size:12px;font-weight:900;padding:0 7px;line-height:1.4;transform:rotate(-8deg);box-shadow:0 2px 0 #7f1d1d}
 .msx .v-gather{display:flex;align-items:center;justify-content:center;gap:3px;margin-top:2px;background:#0f0d2466;border-radius:9px;padding:2px 5px;font-size:10px;white-space:nowrap}
 .msx .v-gather .v-pf,.msx .v-gather .v-pf img{width:20px}.msx .v-gather .v-pf img{height:20px;border-radius:6px;border-width:1.5px}
 .msx .v-gather .v-pf.tag::after{display:none}

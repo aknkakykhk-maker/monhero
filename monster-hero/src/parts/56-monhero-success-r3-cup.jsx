@@ -240,42 +240,125 @@ const msxR3PrizeRows = (d, s) => {
   Object.entries(d.items || {}).forEach(([k, n]) => { const S = msxSuc && msxSuc.SUC ? msxSuc.SUC : null; const it = S && S.ITEMS ? S.ITEMS[k] : null; rows.push([(typeof MSX_EXTRA_ITEM !== 'undefined' && MSX_EXTRA_ITEM[k] && MSX_EXTRA_ITEM[k].e) || '🎁', it ? it.name : k, `×${n}(この育成の中で使える)`, 'new', 'GET']); });
   return rows;
 };
-// 大会の知らせの段(2026-11-14 社長「いきなり大会の画面になる」): 組み合わせ表の前に、大会が始まることを知らせる。
-// 大きな帯(期末の大会の日!/今月の大会)・会場の絵・助手のひとこと・「会場へ ▶」。約2.2秒で進む・押せばすぐ進む。何も保存しない
-const MSX_R3_INTRO_MS = 2200;
+// 大会の入り(2026-11-14 社長「参考資料どおりに」・参考 te-33): 組み合わせ表の前に、会場の景色に大会の紋章と名前を大きく出す。
+// 紋章・ロゴの絵はまだ無いので、格の色の六角の紋章(印の字)+大会名の大きな字で代わりにする。約2.4秒で進む・押せばすぐ進む。何も保存しない
+// 期末の大会・最後の大会は、この前に「当日のメイン(能力と大会だけ)→ 受付に1つだけ → 参加の確認」を挟む(MsxR3PreDesk・MsxPlay)
+const MSX_R3_INTRO_MS = 2400;
 const MSX_R3_INTRO_CSS = `
-.msx-cupin{position:relative;flex:1 1 0;min-height:max(260px,calc(var(--mh-vh) - 190px));border-radius:16px;overflow:hidden;cursor:pointer;background:#1e1b4b}
-.msx-cupin .bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;animation:msxCupinBg 2.4s ease-out both}
-.msx-cupin .sh{position:absolute;inset:0;background:linear-gradient(180deg,rgba(15,13,36,.15),rgba(15,13,36,.65))}
-.msx-cupin .band{position:absolute;left:0;right:0;top:20%;text-align:center;padding:8px 0 10px;background:linear-gradient(90deg,transparent,#7c2d12e6 14%,#b45309e6 50%,#7c2d12e6 86%,transparent);animation:msxCupinBand .45s cubic-bezier(.2,1.3,.4,1) .1s both}
-.msx-cupin .band small{display:block;font-size:13px;font-weight:900;color:#fde68a;letter-spacing:.08em}
-.msx-cupin .band b{display:block;font-size:30px;font-weight:900;font-style:italic;color:#fff;-webkit-text-stroke:2px #7c2d12;paint-order:stroke fill;text-shadow:0 3px 0 #7c2d12,0 0 16px #fde047}
-.msx-cupin .say{position:absolute;left:10px;right:10px;bottom:12px;display:flex;gap:8px;align-items:flex-end;animation:msxCupinSay .35s ease-out .5s both}
-.msx-cupin .say img{width:52px;height:52px;border-radius:50%;border:2px solid #fff;background:#fff;object-fit:cover}
-.msx-cupin .say p{flex:1;background:#fffdf5;color:#1e1b4b;border:2px solid #fb923c;border-radius:12px;padding:7px 10px;font-size:13px;font-weight:800;line-height:1.5}
-.msx-cupin .skip{position:absolute;right:10px;top:8px;font-size:10px;font-weight:800;color:#e2e8f0cc}
+.msx-cupin{position:relative;flex:1 1 0;min-height:max(260px,calc(var(--mh-vh) - 190px));border-radius:16px;overflow:hidden;cursor:pointer;background:#1e1b4b;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px}
+.msx-cupin .bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;animation:msxCupinBg 2.6s ease-out both}
+.msx-cupin .sh{position:absolute;inset:0;background:radial-gradient(ellipse at 50% 42%,rgba(15,13,36,.05),rgba(15,13,36,.6))}
+.msx-cupin .crest{position:relative;width:min(46vw,190px);aspect-ratio:1/1.08;display:grid;place-items:center;animation:msxCupinCrest .6s cubic-bezier(.2,1.4,.4,1) .1s both;filter:drop-shadow(0 6px 10px rgba(0,0,0,.55))}
+.msx-cupin .crest::before,.msx-cupin .crest::after{content:"";position:absolute;clip-path:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%)}
+.msx-cupin .crest::before{inset:0;background:var(--c1,#e2e8f0)}
+.msx-cupin .crest::after{inset:9%;background:var(--c2,#64748b)}
+.msx-cupin .crest .e{position:relative;z-index:1;font-size:min(20vw,84px);line-height:1;filter:drop-shadow(0 3px 0 rgba(0,0,0,.35))}
+.msx-cupin .crest.t-debut{--c1:#bbf7d0;--c2:linear-gradient(160deg,#22c55e,#15803d)}
+.msx-cupin .crest.t-s1{--c1:#e2e8f0;--c2:linear-gradient(160deg,#94a3b8,#475569)}
+.msx-cupin .crest.t-s2{--c1:#e0f2fe;--c2:linear-gradient(160deg,#7dd3fc,#2563eb)}
+.msx-cupin .crest.t-s3{--c1:#fed7aa;--c2:linear-gradient(160deg,#fb923c,#b45309)}
+.msx-cupin .crest.t-s4,.msx-cupin .crest.t-final{--c1:#fef08a;--c2:linear-gradient(160deg,#facc15,#a16207)}
+.msx-cupin .logo{position:relative;text-align:center;padding:0 12px;animation:msxCupinLogo .5s ease-out .45s both}
+.msx-cupin .logo small{display:inline-block;font-size:12px;font-weight:900;color:#1e1b4b;background:#fde68a;border-radius:99px;padding:2px 12px;margin-bottom:4px;letter-spacing:.06em}
+.msx-cupin .logo b{display:block;font-size:min(9vw,34px);font-weight:900;color:#fff;line-height:1.15;-webkit-text-stroke:2px #1e293b;paint-order:stroke fill;text-shadow:0 3px 0 #1e293b,0 0 18px rgba(255,255,255,.55);word-break:keep-all;overflow-wrap:anywhere}
 @keyframes msxCupinBg{from{transform:scale(1.12)}to{transform:none}}
-@keyframes msxCupinBand{from{opacity:0;transform:translateX(-40px) scale(.9)}to{opacity:1;transform:none}}
-@keyframes msxCupinSay{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
-@media (prefers-reduced-motion: reduce){.msx-cupin .bg,.msx-cupin .band,.msx-cupin .say{animation:none}}
+@keyframes msxCupinCrest{from{opacity:0;transform:scale(.4) rotate(-12deg)}to{opacity:1;transform:none}}
+@keyframes msxCupinLogo{from{opacity:0;transform:translateY(12px) scale(.92)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion: reduce){.msx-cupin .bg,.msx-cupin .crest,.msx-cupin .logo{animation:none}}
 `;
-function MsxR3CupIntro({ run, b, title, onGo }) {
-  const s = run.s;
+// 紋章の色(格): デビュー戦=緑・★=銀・★★=青・★★★=銅・👑と最後の大会=金
+const msxR3CrestTier = (b) => (!b ? 's1' : b.kind === 'debut' ? 'debut' : b.kind === 'summit' ? 'final' : b.kind === 'cup' ? `s${Math.max(1, Math.min(4, b.star || 1))}` : `s${Math.max(1, Math.min(4, ((msxSuc.SUC.FORCED || {})[b.kind] || {}).star || 2))}`);
+function MsxR3CupIntro({ b, title, onGo }) {
   const done = useRef(false);
   const go = () => { if (done.current) return; done.current = true; onGo(); };
   useEffect(() => { const id = setTimeout(go, MSX_R3_INTRO_MS); return () => clearTimeout(id); }, []);
-  const monthly = b.kind === 'cup';
   const venue = typeof MSC_VENUE_IMG !== 'undefined' ? (MSC_VENUE_IMG[b.kind] || MSC_VENUE_IMG.cup) : '';
-  const l = msxR3Line('turn.cup.intro', run, { cup: title }, `「いよいよ ${title}! ${run.nick || 'このモンスター'}、いってらっしゃい!」`);
+  const label = b.kind === 'cup' ? '今月の大会' : b.kind === 'summit' ? '最後の大会' : b.kind === 'debut' ? 'デビュー戦' : '期末の大会';
   return (<>
     <style>{MSX_R3_INTRO_CSS}</style>
     <div className="msx-cupin" onClick={go} data-msx-r3-cupintro={b.kind}>
       {venue ? <img className="bg" src={venue} alt=""/> : null}<span className="sh"/>
-      <div className="band"><small>{monthly ? '今月の大会' : b.kind === 'summit' ? '頂への道' : '期末の大会の日!'}</small><b>{title}</b></div>
-      <div className="say">{typeof msxFace === 'function' ? <img src={msxFace(s.aid, 'excited')} alt=""/> : null}<p>{l && l.t}</p></div>
-      <div className="skip">タップで すすむ</div>
+      <div className={`crest t-${msxR3CrestTier(b)}`}><span className="e">{msxR3BattleIcon(b)}</span></div>
+      <div className="logo"><small>{label}</small><b>{title}</b></div>
     </div>
   </>);
+}
+
+// ---- 期末の大会・最後の大会の受付(参考 te-31・te-32・te-174・te-175・te-177) ----
+// 当日のメインで「大会(本番)」を押すと開く。受付に並ぶのはその大会1つだけ。札を押す/「出場」で参加の確認 →「はい」で大会の入りへ。
+// 芯の battle(endTurn が立てた期末の大会)はもう決まっているので、ここでは何も保存しない(キャンセルしても当日のメインへ戻るだけ)
+const msxR3ForcedPrizes = (SUC, b) => {
+  const F = b.kind === 'summit' ? null : (SUC.FORCED || {})[b.kind] || {};
+  const P = SUC.PRIZE || {};
+  const g = b.kind === 'summit' ? (Array.isArray(P.summit) ? P.summit[b.round] : 0) : P[b.kind];
+  const out = [];
+  if (Number.isFinite(g) && g > 0) out.push({ id: 'g', e: '💰', name: `賞金 ${msxFmt(g)}G`, desc: '勝つともらえる賞金' });
+  if (F) {
+    if (F.all) out.push({ id: 'all', e: '✨', name: `全能力 +${F.all}`, desc: '勝つと6つの能力がすべて上がる' });
+    if (F.pts) out.push({ id: 'pts', e: '🔷', name: `能力ポイント +${F.pts}`, desc: '勝つと能力ポイントがもらえる' });
+    if (F.pop) out.push({ id: 'pop', e: '⭐', name: `人気 +${F.pop}`, desc: '勝つと人気が上がる' });
+    if (F.title) out.push({ id: 'ttl', e: '🏅', name: '称号', desc: `勝つと称号「${typeof msxR3TitleName === 'function' ? msxR3TitleName(F.title) : F.title}」`, rare: true });
+  }
+  out.push({ id: 'tk', e: '🎫', name: '修行チケット', desc: '賞金ランクが上がると1段ごとに +1(負けても獲得賞金の合計で上がる)' });
+  return out;
+};
+function MsxR3PreDesk({ run, v, ev, onBack, onGo, onPause }) {
+  const { SUC } = msxSuc;
+  const s = run.s; const b = s.battle;
+  const [win, setWin] = useState(false);
+  const [prz, setPrz] = useState(null);
+  useMsxR3Lines(s.aid);
+  useEffect(() => { if (typeof SuccessSound !== 'undefined') SuccessSound.se('cupEntry'); }, []);
+  if (!b) return null;
+  const name = msxR3BattleName(SUC, b);
+  const star = b.kind === 'summit' ? 4 : ((SUC.FORCED || {})[b.kind] || {}).star || 1;
+  const grade = b.kind === 'summit' ? '最後の大会' : b.kind === 'debut' ? 'デビュー戦' : '期末の大会';
+  const prizes = msxR3ForcedPrizes(SUC, b);
+  const gold = prizes[0] && prizes[0].id === 'g' ? prizes[0].name.replace('賞金 ', '') : '';
+  const cal = msxCalendar(s.turn);
+  const openLine = msxR3Line('turn.cup.day', run, { cup: name }, `「いらっしゃいませ! 今日は ${name} の日です。準備ができたら、出場してくださいね」`);
+  const rankStep = typeof SUC.rankStepOf === 'function' ? SUC.rankStepOf(s) : 0; const rank = rankStep ? { name: SUC.rankNameOf(rankStep) } : null;
+  const icon = msxR3BattleIcon(b);
+  const body = (<>
+    <MsxBand s={s} v={v} ev={ev}/>
+    <div className="v-scene low" style={{ flex: '0 0 auto', minHeight: 128 }}><img className="bg" src="images/story-bg/monhero_town.jpg" alt=""/><div className="sh"/>
+      <img src={msxBody(s.aid, 'happy')} alt="" style={{ position: 'absolute', left: '-2%', bottom: '-98%', height: '190%' }}/>
+      <div className="v-ev-h"><small>{cal.year}年目 {cal.month}月・{v.period.name}</small>🏆 大会の受付</div>
+      <div className="v-ibub" style={{ left: '38%', top: 'auto', bottom: 8 }}>{openLine.t}</div>
+    </div>
+    <div className="v-cupbar" data-msx-r3-fame><span>いまの賞金</span><b>{msxFmt(s.fame)}<small>G</small></b>{rank ? <i>賞金の段 {rank.name}</i> : null}</div>
+    <div className="v-cupmon"><span className="ar" aria-hidden="true" style={{ visibility: 'hidden' }}/><b>{cal.year}年目 {cal.month}月<small className="now">当日</small></b><span className="ar" aria-hidden="true" style={{ visibility: 'hidden' }}/></div>
+    <div className="v-cups">
+      <button type="button" className={`v-cup v-cup2 sel ex g-${star >= 4 ? 'gold' : 'n'}`} onClick={() => setWin(true)} data-msx-r3-pre-card={b.kind}>
+        <div className="lg"><span className="e">{icon}</span><span className="fcst fc-h">本番</span></div>
+        <div className="tx">
+          <div className="hd"><span className="gr2">{grade}</span><span className="cs">{msxR3Stars(star)}</span></div>
+          <b>{name}</b>
+          {gold ? <span className="g">{gold.replace('G', '')}<small>G</small></span> : null}
+        </div>
+      </button>
+    </div>
+    <div className="v-card" style={{ padding: '5px 9px' }}><div className="v-kv" style={{ margin: 0 }}><b>今日は</b><span>{grade}の日。トレーニングはできない。出場すると組み合わせ表へ進む</span></div></div>
+    {win ? (
+      <div className="v-cupwin" onClick={() => { setWin(false); setPrz(null); }} data-msx-r3-cupwin>
+        <div className="in" onClick={(e) => e.stopPropagation()}>
+          <div className="h">大会参加確認</div>
+          <div className={`sign g-${star >= 4 ? 'gold' : 'n'}`}><span className="e">{icon}</span><b>{name}</b><small>{grade} {msxR3Stars(star)}</small></div>
+          <div className="sub">獲得物</div>
+          <div className="pz">{prizes.map((x) => <button type="button" key={x.id} className={x.rare ? 'rare' : ''} onClick={() => setPrz(x)} data-msx-r3-prize={x.id}><span>{x.e}</span><small>{x.name}</small></button>)}</div>
+          <div className="q">この大会に参加しますか?</div>
+          <div className="bt"><button type="button" onClick={() => setWin(false)} data-msx-r3-pre-cancel>キャンセル</button><button type="button" className="go" onClick={onGo} data-msx-r3-yes>はい</button></div>
+          {prz ? <div className="det" onClick={() => setPrz(null)}><div className="dbox" onClick={(e) => e.stopPropagation()}><div className="e">{prz.e}</div><b>{prz.name}</b><p>{prz.desc}</p><button type="button" onClick={() => setPrz(null)}>とじる</button></div></div> : null}
+        </div>
+      </div>) : null}
+  </>);
+  const foot = (
+    <div className="v-ft">
+      <button type="button" onClick={onBack}>← もどる</button>
+      <button type="button" className="go" onClick={() => setWin(true)} data-msx-r3-enter>出場 ▶</button>
+    </div>
+  );
+  return <MsxR3Frame run={run} onBack={onBack} body={body} foot={foot}/>;
 }
 function MsxR3Battle({ run, setRun, v, ev, ctx, bondLv, onPause, debug }) {
   const { SUC } = msxSuc;
@@ -439,12 +522,12 @@ function MsxR3Battle({ run, setRun, v, ev, ctx, bondLv, onPause, debug }) {
   const skip = typeof SUC.canSkip === 'function' && SUC.canSkip(s);
   const foeName = opp.name || msxMonName(opp.species);
 
-  // ---- 大会の知らせの段(組み合わせ表の前に1回)。大会の曲 cupPre はここから ----
+  // ---- 大会の入り(紋章と大会名。組み合わせ表の前に1回)。大会の曲 cupPre はここから ----
   const introKey = `${s.turn}|${b.kind}|${b.round || 0}`;
   if (!st3 && step === 'bracket' && introSeen !== introKey && !run.r3skip) {
     const title = b.kind === 'cup' ? msxR3CupName(b.sys) : name;
-    return <MsxR3Frame run={run} back="中断" onBack={onPause} body={<MsxR3CupIntro key={introKey} run={run} b={b} title={title} onGo={() => setIntroSeen(introKey)}/>}
-      foot={<div className="v-ft"><button type="button" className="go" onClick={() => setIntroSeen(introKey)} data-msx-r3-cupintro-go>会場へ ▶</button></div>}/>;
+    return <MsxR3Frame run={run} back="中断" onBack={onPause} body={<MsxR3CupIntro key={introKey} b={b} title={title} onGo={() => setIntroSeen(introKey)}/>}
+      foot={<div className="v-ft"><button type="button" className="go" onClick={() => setIntroSeen(introKey)} data-msx-r3-cupintro-go>SKIP ▸▸</button></div>}/>;
   }
   // ---- バトル部の見せる部品(組み合わせ表・バトルカード・カットイン・観戦・優勝/負け)。試合の計算と勝ち負けの記録は回3 ----
   if (showOn) {

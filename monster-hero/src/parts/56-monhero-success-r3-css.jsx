@@ -2,6 +2,49 @@
 // 見本 docs/progress/player-raise/mock/v3.css の「回3以降の止め絵」の部品を、回3の画面(.msx .r3)の中だけに効くよう切り出したもの。
 // 回2の MSX_CSS(56-monhero-success-css.jsx)はそのまま使い、ここは足りない部品と回3で要った分だけを足す。
 const MSX_R3_CSS = `
+.msx .r3 .q-say{display:flex;gap:8px;align-items:center;margin-top:5px}
+.msx .r3 .q-say img{width:44px;height:44px;border-radius:50%;border:2px solid #fff;background:#fff;object-fit:cover;flex:0 0 auto}
+.msx .r3 .q-say p{flex:1;background:#fffdf5;color:#1e1b4b;border-radius:12px;padding:6px 10px;font-size:12px;font-weight:800;line-height:1.45}
+.msx .r3 .q-sec{margin-top:6px;padding:6px 8px 7px;border-radius:14px;background:#ffffff0d;border:1px solid #ffffff1f}
+.msx .r3 .q-sec h3{font-size:12px;font-weight:900;color:#f9a8d4;margin:0 0 5px;display:flex;align-items:center;gap:6px}
+.msx .r3 .q-sec h3 i{font-style:normal;display:inline-flex;width:18px;height:18px;border-radius:50%;background:#f472b6;color:#fff;font-size:11px;align-items:center;justify-content:center}
+.msx .r3 .q-sec h3 .tk{margin-left:auto;font-size:10.5px;color:#fed7aa;font-weight:800}
+.msx .r3 .q-dest{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}
+.msx .r3 .q-dest .r3-chip{justify-content:center;text-align:center}
+.msx .r3 .q-sec .v-stg{margin-top:5px}
+.msx .r3 .q-note{font-size:10.5px;color:#cbd5e1;font-weight:700;line-height:1.45;margin-top:4px}
+.msx .r3 .q-note.y{color:#fde047}
+.msx .r3 .q-slots{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.msx .r3 .q-slot{min-height:56px;border-radius:12px;padding:5px 8px;border:2px dashed #ffffff40;font-size:11px;font-weight:800;color:#cbd5e1;display:flex;flex-direction:column;justify-content:center;gap:1px;cursor:pointer}
+.msx .r3 .q-slot.on{border:2px solid #fde047;background:#fde04718;color:#fff}
+.msx .r3 .q-slot small{font-size:9.5px;color:#cbd5e1}
+.msx .r3 .q-slot .n{font-size:14px;font-weight:900;line-height:1.2}
+.msx .r3 .q-slot .r{font-size:18px;font-weight:900;color:#fde047;line-height:1.1}
+.msx .r3 .q-slot ul{list-style:none;margin:2px 0 0;padding:0;font-size:9.5px;color:#e2e8f0}
+.msx .r3 .q-slot li{display:flex;gap:4px;align-items:center}
+.msx .r3 .q-slot li i{font-style:normal;color:#94a3b8;flex:0 0 auto}
+.msx .r3 .q-slot li em{font-style:normal;margin-left:auto;background:#16a34a;color:#fff;border-radius:4px;padding:0 4px;font-size:9px}
+.msx .r3 .q-list{flex:1 1 auto;min-height:0;overflow-y:auto}
+.msx .r3 .q-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px}
+.msx .r3 .q-col{display:flex;flex-direction:column;gap:5px;min-width:0}
+.msx .r3 .q-col h4{text-align:center;font-size:12px;font-weight:900;padding:2px 0;margin:0;border-radius:8px;background:#ffffff1a}
+.msx .r3 .q-card{border-radius:10px;padding:5px 3px;text-align:center;font-size:10.5px;font-weight:800;line-height:1.25;background:#ffffff10;border:1px solid #ffffff22;color:#fff;min-height:52px;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:1px;min-width:0}
+.msx .r3 .q-card .nm{overflow-wrap:anywhere;word-break:break-all}
+.msx .r3 .q-card .rk{font-size:9px;color:#cbd5e1}
+.msx .r3 .q-card .p{font-size:15px;font-weight:900;color:#86efac}
+.msx .r3 .q-card .p.g{font-size:10.5px;color:#cbd5e1}
+.msx .r3 .q-card.ok{background:#16a34a2e;border-color:#4ade80}
+.msx .r3 .q-card.sel{background:#fde04722;border:2px solid #fde047}.msx .r3 .q-card.sel .p{color:#fde047}
+.msx .r3 .q-card.got{opacity:.55}
+.msx .r3 .q-card.lock{background:#0f0b2299;border-color:#ffffff1a;color:#94a3b8}
+.msx .r3 .q-card .lk{font-size:9px;color:#fca5a5;line-height:1.2;overflow-wrap:anywhere}
+.msx .q-lock{display:flex;flex-direction:column;gap:5px;font-size:12px;font-weight:800}
+.msx .q-lock>div{display:flex;gap:6px;align-items:center;background:#fee2e2;border-radius:8px;padding:5px 7px}
+.msx .q-lock>div.ok{background:#dcfce7}
+.msx .q-lock>div i{font-style:normal;color:#64748b;font-size:10.5px;flex:0 0 auto}
+.msx .q-lock>div span{flex:1}
+.msx .q-lock>div b{font-size:10.5px;color:#b91c1c}.msx .q-lock>div.ok b{color:#15803d}
+.msx .q-lock p{font-size:11px;color:#475569;margin:2px 0}
 .msx .r3 .v-brh{display:grid;grid-template-columns:1.5fr 1fr 1fr .8fr;gap:5px;margin-top:6px;font-size:9.5px;font-weight:900;color:#cbd5e1;text-align:center}
 .msx .r3 .v-brk{display:grid;grid-template-columns:1.5fr 1fr 1fr .8fr;grid-template-rows:repeat(8,minmax(0,1fr));gap:4px 5px;flex:1 1 0;min-height:0;margin-top:3px}
 .msx .r3 .v-bc{position:relative;display:flex;align-items:center;gap:5px;background:#1e1a36;border:1.5px solid #475569;border-radius:11px;padding:2px 6px;min-width:0}

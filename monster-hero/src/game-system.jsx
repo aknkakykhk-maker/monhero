@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 209e383417369e4d
+// generated-sha256: 2f27d57de9fa045f
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -85070,6 +85070,10 @@ const MSX_CSS = `
 .msx .v-p.hosp{background:linear-gradient(180deg,#0e7490,#155e75);border-color:#67e8f9;box-shadow:0 0 10px #22d3ee88}
 .msx .v-p .bd{position:absolute;right:-2px;top:-6px;background:#fde047;color:#422006;border-radius:99px;font-size:10px;font-weight:900;padding:0 5px;white-space:nowrap;line-height:1.5}
 .msx .v-p .bd.r{background:#ef4444;color:#fff}
+.msx .v-act-pre .v-p{min-height:74px;font-size:15px}.msx .v-act-pre .v-p .e{font-size:24px}
+.msx .v-p.hb{font-size:19px;background:linear-gradient(160deg,#f59e0b,#dc2626);border-color:#fde68a;border-bottom-color:#7f1d1d;box-shadow:0 0 16px #f59e0bb3}
+.msx .v-p.hb small{white-space:normal;font-size:11px}
+.msx .v-p .hbt{position:absolute;left:8px;top:-9px;background:#fff;color:#dc2626;border:2px solid #dc2626;border-radius:6px;font-size:12px;font-weight:900;padding:0 7px;line-height:1.4;transform:rotate(-8deg);box-shadow:0 2px 0 #7f1d1d}
 .msx .v-gather{display:flex;align-items:center;justify-content:center;gap:3px;margin-top:2px;background:#0f0d2466;border-radius:9px;padding:2px 5px;font-size:10px;white-space:nowrap}
 .msx .v-gather .v-pf,.msx .v-gather .v-pf img{width:20px}.msx .v-gather .v-pf img{height:20px;border-radius:6px;border-width:1.5px}
 .msx .v-gather .v-pf.tag::after{display:none}
@@ -86481,6 +86485,14 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
   // トレーニングしている場面(56-monsuc-actfx.jsx)をまだ見せていないターン。押した直後だけ立てる(読み直したときは出さない・保存しない)
   const [actAt, setActAt] = useState(null);
   const [sheet, setSheet] = useState(null); // 'log' | 'menu' | { soon: 名前 }
+  // 期末の大会・最後の大会の当日(2026-11-14 社長「参考資料どおりに」・参考 te-30〜34): 芯が battle を立てても、すぐ組み合わせ表へは行かない。
+  //   ① 当日のメイン(ボタンは「能力」と「大会(本番)」だけ)→ ② 受付に1つだけ → ③ 参加の確認 →「はい」で ④ 紋章の入り → ⑤ 表(MsxR3Battle)
+  //   「はい」を押した大会だけ preAt に持つ(保存しない。読み直したら当日のメインからもう一度)。やり直し・デビュー戦の再挑戦・勝ち負けのあとは挟まない
+  const [preAt, setPreAt] = useState(null);
+  const [preDesk, setPreDesk] = useState(false);
+  const preB = run.phase === 'battle' && s.battle && s.battle.kind !== 'cup' ? s.battle : null;
+  const preKey = preB ? `${s.turn}|${preB.kind}|${preB.round || 0}` : null;
+  const preOn = !!(preB && typeof MsxR3PreDesk === 'function' && !preB.retry && !preB.again && !(run.out && run.out.r3) && !run.r3skip && preAt !== preKey);
   const [, setScriptTick] = useState(0);
   // 台本(共通 + 助手の分)を読む。読み終わったら描き直して台詞を出す
   useEffect(() => { let alive = true; msxScriptLoad(s.aid).then(() => { if (alive) setScriptTick((n) => n + 1); }); return () => { alive = false; }; }, [s.aid]);
@@ -86488,7 +86500,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
   const actOn = run.phase === 'result' && actAt === s.turn && typeof MsxTrainAct === 'function';
   const kiOn = run.phase === 'turn' && typeof MsxKiShow === 'function' && v.period && v.period.at === 1 && v.period.index > 0 && kiAt !== s.turn;
   // 大会(試合)・修行・決着・引退は、その画面(56-monhero-success-r3-*.jsx)が自分で場面の音を鳴らす。ここで main を鳴らすと後から上書きするので何もしない
-  const childSound = typeof MsxR3 === 'function' && (run.phase === 'battle' || run.phase === 'over' || !!s.over || sub === 'cup' || sub === 'shugyo');
+  const childSound = typeof MsxR3 === 'function' && ((run.phase === 'battle' && !preOn) || run.phase === 'over' || !!s.over || sub === 'cup' || sub === 'shugyo');
   // トレーニングを選ぶ画面は育成中の曲のまま。「◯◯をする」を押して動きが始まってからトレーニングの曲(2026-11-14 社長)。結果の場面は曲を替えないので、メインへ戻るまで続く
   const soundId = childSound ? null : actOn ? 'training' : kiOn ? 'kiShow' : run.phase === 'awake' && run.out && run.out.fire && typeof MsxAwakeShow === 'function' ? 'awakeShow' : run.phase === 'awake' && run.out && run.out.fire ? (run.out.fire.kind === 2 ? 'trainGreat' : 'trainLvUp') : run.phase === 'result' && run.out && MSX_REST_SOUND[run.out.kind] ? MSX_REST_SOUND[run.out.kind] : run.phase === 'result' && run.out && run.out.result ? MSX_RES_SOUND[run.out.result] : run.phase === 'issa' ? 'issa' : s.over === 'gameover' ? 'gameOver' : 'main';
   msxUseScene(soundId, { season: msxCalendar(s.turn).season });
@@ -86563,7 +86575,9 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
   if (phase === 'begin') return <><MsxHd back="中断" onBack={onPause}/><div className="v-body"/></>;
   // 回3(大会・修行・引退・ゲームオーバー・保存枠)の画面 MsxR3 が入っていれば、そちらへ渡す(回3の担当と決めた口)。
   //   MsxR3 はヘッダ・帯・v-body・v-ft まで自分で出す。修行・大会の受付は act のあと onActed(next) でこちらの流れ(叱る/褒める・博士・ターンを閉じる)へ戻す
-  const r3 = typeof MsxR3 === 'function' ? (phase === 'battle' ? 'battle' : (phase === 'over' || s.over) ? 'over' : sub === 'cup' ? 'cup' : sub === 'shugyo' ? 'shugyo' : null) : null;
+  const r3 = typeof MsxR3 === 'function' ? (phase === 'battle' && !preOn ? 'battle' : phase === 'battle' ? null : (phase === 'over' || s.over) ? 'over' : sub === 'cup' ? 'cup' : sub === 'shugyo' ? 'shugyo' : null) : null;
+  // 期末の大会の受付と参加の確認(②③)。「はい」で表の画面(MsxR3Battle)へ
+  if (preOn && preDesk) return <MsxR3PreDesk run={run} v={v} ev={ev} onBack={() => setPreDesk(false)} onGo={() => { setPreDesk(false); setPreAt(preKey); }}/>;
   if (r3) return <MsxR3 kind={r3} run={run} setRun={setRun} v={v} ev={ev} ctx={ctx} bondLv={bondLv} debug={debug}
     onBack={() => setSub('main')} onPause={onPause} onQuit={onQuit}
     onActed={(next) => { setSub('main'); afterAct(next); }}/>;
@@ -86685,7 +86699,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
     foot = <div className="v-ft"><button type="button" onClick={onPause}>← 中断</button><button type="button" className="go" onClick={() => toMain({ ...run, out: null })}>つぎへ ▶</button></div>;
   }
   // ---- 大会(中身は回3) ----
-  else if (phase === 'battle' && s.battle) {
+  else if (phase === 'battle' && s.battle && !preOn) {
     const b = s.battle;
     const opp = SUC.opponents(s);
     const name = b.kind === 'summit' ? (SUC.SUMMIT[b.round] || {}).name : b.kind === 'debut' ? 'デビュー戦' : (SUC.FORCED[b.kind] || {}).name;
@@ -86763,7 +86777,8 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
     const yosu = s.yosu && (s.yosu.sabori || s.yosu.utsu);
     const omenK = s.omen && (s.omen.k === 1 || s.omen.k === 2) ? s.omen.k : 0; // 覚醒の前触れ(助手が気づく)
     const pkI = typeof SUC.peakInfo === 'function' ? SUC.peakInfo(s) : { state: null }; // 成長のピーク(予告は2〜3ターン前)
-    const sayL = omenK ? line(omenK === 2 ? 'turn.awake.omen2' : 'turn.awake.omen', omenK === 2 ? 'あれ…また体が光ってる？ 虹色だ…' : 'あれ？ 体がうっすら光ってない…？')
+    const preName = preOn && typeof msxR3BattleName === 'function' ? msxR3BattleName(SUC, preB) : '';
+    const sayL = preOn ? line('turn.cup.before', `ついに今日は ${preName}だね! 準備ができたら「大会」へ行こう`, { cup: preName }) : omenK ? line(omenK === 2 ? 'turn.awake.omen2' : 'turn.awake.omen', omenK === 2 ? 'あれ…また体が光ってる？ 虹色だ…' : 'あれ？ 体がうっすら光ってない…？')
       : pkI.state === 'soon' && pkI.in >= 2 && !yosu && !s.cond ? line('turn.peak.soon', 'もうすぐ伸びどきが来そうだよ！') : yosu ? line(s.yosu.sabori ? 'turn.mood.sabori' : 'turn.mood.utsu', 'ようすが気になるね…') : s.cond ? line(`turn.cond.${s.cond.kind === 'away' ? 'runaway' : s.cond.kind === 'ill' ? 'sick' : 'injury'}.in`, '今日は休ませてあげよ') : line(msxStartScene(s), '今月はどうする?');
     const cal = msxCalendar(s.turn); const scn = msxSceneBg(s.turn);
     const low = s.hp < s.hpMax * 0.3;
@@ -86776,7 +86791,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
         <div className="gr"/><MsxMonArt run={run} className={`mon${low ? ' low' : ''}`} live/>
         <div className="v-party"><small>編成</small>{s.team.map((m, i) => <MsxPf key={i} m={m} bond={s.bond[i]} tagAt={tagAt}/>)}<MsxPf aid={s.aid} bond={s.aidBond} tagAt={tagAt}/></div>
         <div className="v-chips"><span className="v-chip">{MSX_SEASON[cal.season]}・{scn.time}</span>
-          {v.period.key !== 'final' ? <span className="v-chip hot">🏆 期末の大会まで {v.period.left}ターン</span> : <span className="v-chip hot">🏆 頂への道</span>}
+          {preOn ? <span className="v-chip hot" data-msx-pre-chip>🏆 {preName} 当日</span> : v.period.key !== 'final' ? <span className="v-chip hot">🏆 期末の大会まで {v.period.left}ターン</span> : <span className="v-chip hot">🏆 頂への道</span>}
           {pkI.state === 'in' ? <span className="v-chip hot" data-msx-peak-chip>🔥 ピーク中 あと{pkI.left}ターン</span> : pkI.state === 'soon' ? <span className="v-chip ylw" data-msx-peak-chip>🔥 もうすぐ伸びどき</span> : null}
           {s.yosu && s.yosu.sabori ? <span className="v-chip bad">😪 ようす: サボりグセ</span> : null}
           {s.yosu && s.yosu.utsu ? <span className="v-chip bad">😢 ようす: うつ病</span> : null}
@@ -86788,7 +86803,12 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
         <button type="button" className="v-bagb r" onClick={() => setSub('stats')}>🔍<small>くわしく</small></button>
       </div>
       <MsxStRow stats={s.stats}/>
-      {can.includes('retry') ? (
+      {preOn ? (
+        <div className="v-act v-act-pre" style={{ gridTemplateColumns: '1fr 1.5fr' }} data-msx-pre-main>
+          <button type="button" className="v-p" onClick={() => setSub('stats')}><div className="e">📊</div>能力<small>技・型・編成</small>{s.pts ? <span className="bd">能力P {s.pts}</span> : null}</button>
+          <button type="button" className="v-p main hb" onClick={() => setPreDesk(true)} data-msx-r3-precup><span className="hbt">本番</span>🏆 大会<small>{preName}</small></button>
+        </div>
+      ) : can.includes('retry') ? (
         <div className="v-act" style={{ gridTemplateColumns: '1fr' }}><button type="button" className="v-p main" onClick={() => doAct({ kind: 'retry' })}>🏆 デビュー戦に再挑戦<small>勝つまでトレーニングはできない(負けるたび相手が少し弱くなる)</small></button></div>
       ) : can.includes('cond') ? (
         <div className="v-act" style={{ gridTemplateColumns: '1fr' }}><button type="button" className="v-p main" onClick={() => doAct({ kind: 'cond' })}>🛌 休む<small>{MSX_COND[s.cond && s.cond.kind] || '体調'}のため、このターンは休み</small></button></div>
@@ -87052,6 +87072,49 @@ function MsxEvent({ run, setRun, v, ev, ctx, bondLv, onDone }) {
 // 見本 docs/progress/player-raise/mock/v3.css の「回3以降の止め絵」の部品を、回3の画面(.msx .r3)の中だけに効くよう切り出したもの。
 // 回2の MSX_CSS(56-monhero-success-css.jsx)はそのまま使い、ここは足りない部品と回3で要った分だけを足す。
 const MSX_R3_CSS = `
+.msx .r3 .q-say{display:flex;gap:8px;align-items:center;margin-top:5px}
+.msx .r3 .q-say img{width:44px;height:44px;border-radius:50%;border:2px solid #fff;background:#fff;object-fit:cover;flex:0 0 auto}
+.msx .r3 .q-say p{flex:1;background:#fffdf5;color:#1e1b4b;border-radius:12px;padding:6px 10px;font-size:12px;font-weight:800;line-height:1.45}
+.msx .r3 .q-sec{margin-top:6px;padding:6px 8px 7px;border-radius:14px;background:#ffffff0d;border:1px solid #ffffff1f}
+.msx .r3 .q-sec h3{font-size:12px;font-weight:900;color:#f9a8d4;margin:0 0 5px;display:flex;align-items:center;gap:6px}
+.msx .r3 .q-sec h3 i{font-style:normal;display:inline-flex;width:18px;height:18px;border-radius:50%;background:#f472b6;color:#fff;font-size:11px;align-items:center;justify-content:center}
+.msx .r3 .q-sec h3 .tk{margin-left:auto;font-size:10.5px;color:#fed7aa;font-weight:800}
+.msx .r3 .q-dest{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}
+.msx .r3 .q-dest .r3-chip{justify-content:center;text-align:center}
+.msx .r3 .q-sec .v-stg{margin-top:5px}
+.msx .r3 .q-note{font-size:10.5px;color:#cbd5e1;font-weight:700;line-height:1.45;margin-top:4px}
+.msx .r3 .q-note.y{color:#fde047}
+.msx .r3 .q-slots{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.msx .r3 .q-slot{min-height:56px;border-radius:12px;padding:5px 8px;border:2px dashed #ffffff40;font-size:11px;font-weight:800;color:#cbd5e1;display:flex;flex-direction:column;justify-content:center;gap:1px;cursor:pointer}
+.msx .r3 .q-slot.on{border:2px solid #fde047;background:#fde04718;color:#fff}
+.msx .r3 .q-slot small{font-size:9.5px;color:#cbd5e1}
+.msx .r3 .q-slot .n{font-size:14px;font-weight:900;line-height:1.2}
+.msx .r3 .q-slot .r{font-size:18px;font-weight:900;color:#fde047;line-height:1.1}
+.msx .r3 .q-slot ul{list-style:none;margin:2px 0 0;padding:0;font-size:9.5px;color:#e2e8f0}
+.msx .r3 .q-slot li{display:flex;gap:4px;align-items:center}
+.msx .r3 .q-slot li i{font-style:normal;color:#94a3b8;flex:0 0 auto}
+.msx .r3 .q-slot li em{font-style:normal;margin-left:auto;background:#16a34a;color:#fff;border-radius:4px;padding:0 4px;font-size:9px}
+.msx .r3 .q-list{flex:1 1 auto;min-height:0;overflow-y:auto}
+.msx .r3 .q-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px}
+.msx .r3 .q-col{display:flex;flex-direction:column;gap:5px;min-width:0}
+.msx .r3 .q-col h4{text-align:center;font-size:12px;font-weight:900;padding:2px 0;margin:0;border-radius:8px;background:#ffffff1a}
+.msx .r3 .q-card{border-radius:10px;padding:5px 3px;text-align:center;font-size:10.5px;font-weight:800;line-height:1.25;background:#ffffff10;border:1px solid #ffffff22;color:#fff;min-height:52px;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:1px;min-width:0}
+.msx .r3 .q-card .nm{overflow-wrap:anywhere;word-break:break-all}
+.msx .r3 .q-card .rk{font-size:9px;color:#cbd5e1}
+.msx .r3 .q-card .p{font-size:15px;font-weight:900;color:#86efac}
+.msx .r3 .q-card .p.g{font-size:10.5px;color:#cbd5e1}
+.msx .r3 .q-card.ok{background:#16a34a2e;border-color:#4ade80}
+.msx .r3 .q-card.sel{background:#fde04722;border:2px solid #fde047}.msx .r3 .q-card.sel .p{color:#fde047}
+.msx .r3 .q-card.got{opacity:.55}
+.msx .r3 .q-card.lock{background:#0f0b2299;border-color:#ffffff1a;color:#94a3b8}
+.msx .r3 .q-card .lk{font-size:9px;color:#fca5a5;line-height:1.2;overflow-wrap:anywhere}
+.msx .q-lock{display:flex;flex-direction:column;gap:5px;font-size:12px;font-weight:800}
+.msx .q-lock>div{display:flex;gap:6px;align-items:center;background:#fee2e2;border-radius:8px;padding:5px 7px}
+.msx .q-lock>div.ok{background:#dcfce7}
+.msx .q-lock>div i{font-style:normal;color:#64748b;font-size:10.5px;flex:0 0 auto}
+.msx .q-lock>div span{flex:1}
+.msx .q-lock>div b{font-size:10.5px;color:#b91c1c}.msx .q-lock>div.ok b{color:#15803d}
+.msx .q-lock p{font-size:11px;color:#475569;margin:2px 0}
 .msx .r3 .v-brh{display:grid;grid-template-columns:1.5fr 1fr 1fr .8fr;gap:5px;margin-top:6px;font-size:9.5px;font-weight:900;color:#cbd5e1;text-align:center}
 .msx .r3 .v-brk{display:grid;grid-template-columns:1.5fr 1fr 1fr .8fr;grid-template-rows:repeat(8,minmax(0,1fr));gap:4px 5px;flex:1 1 0;min-height:0;margin-top:3px}
 .msx .r3 .v-bc{position:relative;display:flex;align-items:center;gap:5px;background:#1e1a36;border:1.5px solid #475569;border-radius:11px;padding:2px 6px;min-width:0}
@@ -87730,42 +87793,125 @@ const msxR3PrizeRows = (d, s) => {
   Object.entries(d.items || {}).forEach(([k, n]) => { const S = msxSuc && msxSuc.SUC ? msxSuc.SUC : null; const it = S && S.ITEMS ? S.ITEMS[k] : null; rows.push([(typeof MSX_EXTRA_ITEM !== 'undefined' && MSX_EXTRA_ITEM[k] && MSX_EXTRA_ITEM[k].e) || '🎁', it ? it.name : k, `×${n}(この育成の中で使える)`, 'new', 'GET']); });
   return rows;
 };
-// 大会の知らせの段(2026-11-14 社長「いきなり大会の画面になる」): 組み合わせ表の前に、大会が始まることを知らせる。
-// 大きな帯(期末の大会の日!/今月の大会)・会場の絵・助手のひとこと・「会場へ ▶」。約2.2秒で進む・押せばすぐ進む。何も保存しない
-const MSX_R3_INTRO_MS = 2200;
+// 大会の入り(2026-11-14 社長「参考資料どおりに」・参考 te-33): 組み合わせ表の前に、会場の景色に大会の紋章と名前を大きく出す。
+// 紋章・ロゴの絵はまだ無いので、格の色の六角の紋章(印の字)+大会名の大きな字で代わりにする。約2.4秒で進む・押せばすぐ進む。何も保存しない
+// 期末の大会・最後の大会は、この前に「当日のメイン(能力と大会だけ)→ 受付に1つだけ → 参加の確認」を挟む(MsxR3PreDesk・MsxPlay)
+const MSX_R3_INTRO_MS = 2400;
 const MSX_R3_INTRO_CSS = `
-.msx-cupin{position:relative;flex:1 1 0;min-height:max(260px,calc(var(--mh-vh) - 190px));border-radius:16px;overflow:hidden;cursor:pointer;background:#1e1b4b}
-.msx-cupin .bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;animation:msxCupinBg 2.4s ease-out both}
-.msx-cupin .sh{position:absolute;inset:0;background:linear-gradient(180deg,rgba(15,13,36,.15),rgba(15,13,36,.65))}
-.msx-cupin .band{position:absolute;left:0;right:0;top:20%;text-align:center;padding:8px 0 10px;background:linear-gradient(90deg,transparent,#7c2d12e6 14%,#b45309e6 50%,#7c2d12e6 86%,transparent);animation:msxCupinBand .45s cubic-bezier(.2,1.3,.4,1) .1s both}
-.msx-cupin .band small{display:block;font-size:13px;font-weight:900;color:#fde68a;letter-spacing:.08em}
-.msx-cupin .band b{display:block;font-size:30px;font-weight:900;font-style:italic;color:#fff;-webkit-text-stroke:2px #7c2d12;paint-order:stroke fill;text-shadow:0 3px 0 #7c2d12,0 0 16px #fde047}
-.msx-cupin .say{position:absolute;left:10px;right:10px;bottom:12px;display:flex;gap:8px;align-items:flex-end;animation:msxCupinSay .35s ease-out .5s both}
-.msx-cupin .say img{width:52px;height:52px;border-radius:50%;border:2px solid #fff;background:#fff;object-fit:cover}
-.msx-cupin .say p{flex:1;background:#fffdf5;color:#1e1b4b;border:2px solid #fb923c;border-radius:12px;padding:7px 10px;font-size:13px;font-weight:800;line-height:1.5}
-.msx-cupin .skip{position:absolute;right:10px;top:8px;font-size:10px;font-weight:800;color:#e2e8f0cc}
+.msx-cupin{position:relative;flex:1 1 0;min-height:max(260px,calc(var(--mh-vh) - 190px));border-radius:16px;overflow:hidden;cursor:pointer;background:#1e1b4b;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px}
+.msx-cupin .bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;animation:msxCupinBg 2.6s ease-out both}
+.msx-cupin .sh{position:absolute;inset:0;background:radial-gradient(ellipse at 50% 42%,rgba(15,13,36,.05),rgba(15,13,36,.6))}
+.msx-cupin .crest{position:relative;width:min(46vw,190px);aspect-ratio:1/1.08;display:grid;place-items:center;animation:msxCupinCrest .6s cubic-bezier(.2,1.4,.4,1) .1s both;filter:drop-shadow(0 6px 10px rgba(0,0,0,.55))}
+.msx-cupin .crest::before,.msx-cupin .crest::after{content:"";position:absolute;clip-path:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%)}
+.msx-cupin .crest::before{inset:0;background:var(--c1,#e2e8f0)}
+.msx-cupin .crest::after{inset:9%;background:var(--c2,#64748b)}
+.msx-cupin .crest .e{position:relative;z-index:1;font-size:min(20vw,84px);line-height:1;filter:drop-shadow(0 3px 0 rgba(0,0,0,.35))}
+.msx-cupin .crest.t-debut{--c1:#bbf7d0;--c2:linear-gradient(160deg,#22c55e,#15803d)}
+.msx-cupin .crest.t-s1{--c1:#e2e8f0;--c2:linear-gradient(160deg,#94a3b8,#475569)}
+.msx-cupin .crest.t-s2{--c1:#e0f2fe;--c2:linear-gradient(160deg,#7dd3fc,#2563eb)}
+.msx-cupin .crest.t-s3{--c1:#fed7aa;--c2:linear-gradient(160deg,#fb923c,#b45309)}
+.msx-cupin .crest.t-s4,.msx-cupin .crest.t-final{--c1:#fef08a;--c2:linear-gradient(160deg,#facc15,#a16207)}
+.msx-cupin .logo{position:relative;text-align:center;padding:0 12px;animation:msxCupinLogo .5s ease-out .45s both}
+.msx-cupin .logo small{display:inline-block;font-size:12px;font-weight:900;color:#1e1b4b;background:#fde68a;border-radius:99px;padding:2px 12px;margin-bottom:4px;letter-spacing:.06em}
+.msx-cupin .logo b{display:block;font-size:min(9vw,34px);font-weight:900;color:#fff;line-height:1.15;-webkit-text-stroke:2px #1e293b;paint-order:stroke fill;text-shadow:0 3px 0 #1e293b,0 0 18px rgba(255,255,255,.55);word-break:keep-all;overflow-wrap:anywhere}
 @keyframes msxCupinBg{from{transform:scale(1.12)}to{transform:none}}
-@keyframes msxCupinBand{from{opacity:0;transform:translateX(-40px) scale(.9)}to{opacity:1;transform:none}}
-@keyframes msxCupinSay{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
-@media (prefers-reduced-motion: reduce){.msx-cupin .bg,.msx-cupin .band,.msx-cupin .say{animation:none}}
+@keyframes msxCupinCrest{from{opacity:0;transform:scale(.4) rotate(-12deg)}to{opacity:1;transform:none}}
+@keyframes msxCupinLogo{from{opacity:0;transform:translateY(12px) scale(.92)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion: reduce){.msx-cupin .bg,.msx-cupin .crest,.msx-cupin .logo{animation:none}}
 `;
-function MsxR3CupIntro({ run, b, title, onGo }) {
-  const s = run.s;
+// 紋章の色(格): デビュー戦=緑・★=銀・★★=青・★★★=銅・👑と最後の大会=金
+const msxR3CrestTier = (b) => (!b ? 's1' : b.kind === 'debut' ? 'debut' : b.kind === 'summit' ? 'final' : b.kind === 'cup' ? `s${Math.max(1, Math.min(4, b.star || 1))}` : `s${Math.max(1, Math.min(4, ((msxSuc.SUC.FORCED || {})[b.kind] || {}).star || 2))}`);
+function MsxR3CupIntro({ b, title, onGo }) {
   const done = useRef(false);
   const go = () => { if (done.current) return; done.current = true; onGo(); };
   useEffect(() => { const id = setTimeout(go, MSX_R3_INTRO_MS); return () => clearTimeout(id); }, []);
-  const monthly = b.kind === 'cup';
   const venue = typeof MSC_VENUE_IMG !== 'undefined' ? (MSC_VENUE_IMG[b.kind] || MSC_VENUE_IMG.cup) : '';
-  const l = msxR3Line('turn.cup.intro', run, { cup: title }, `「いよいよ ${title}! ${run.nick || 'このモンスター'}、いってらっしゃい!」`);
+  const label = b.kind === 'cup' ? '今月の大会' : b.kind === 'summit' ? '最後の大会' : b.kind === 'debut' ? 'デビュー戦' : '期末の大会';
   return (<>
     <style>{MSX_R3_INTRO_CSS}</style>
     <div className="msx-cupin" onClick={go} data-msx-r3-cupintro={b.kind}>
       {venue ? <img className="bg" src={venue} alt=""/> : null}<span className="sh"/>
-      <div className="band"><small>{monthly ? '今月の大会' : b.kind === 'summit' ? '頂への道' : '期末の大会の日!'}</small><b>{title}</b></div>
-      <div className="say">{typeof msxFace === 'function' ? <img src={msxFace(s.aid, 'excited')} alt=""/> : null}<p>{l && l.t}</p></div>
-      <div className="skip">タップで すすむ</div>
+      <div className={`crest t-${msxR3CrestTier(b)}`}><span className="e">{msxR3BattleIcon(b)}</span></div>
+      <div className="logo"><small>{label}</small><b>{title}</b></div>
     </div>
   </>);
+}
+
+// ---- 期末の大会・最後の大会の受付(参考 te-31・te-32・te-174・te-175・te-177) ----
+// 当日のメインで「大会(本番)」を押すと開く。受付に並ぶのはその大会1つだけ。札を押す/「出場」で参加の確認 →「はい」で大会の入りへ。
+// 芯の battle(endTurn が立てた期末の大会)はもう決まっているので、ここでは何も保存しない(キャンセルしても当日のメインへ戻るだけ)
+const msxR3ForcedPrizes = (SUC, b) => {
+  const F = b.kind === 'summit' ? null : (SUC.FORCED || {})[b.kind] || {};
+  const P = SUC.PRIZE || {};
+  const g = b.kind === 'summit' ? (Array.isArray(P.summit) ? P.summit[b.round] : 0) : P[b.kind];
+  const out = [];
+  if (Number.isFinite(g) && g > 0) out.push({ id: 'g', e: '💰', name: `賞金 ${msxFmt(g)}G`, desc: '勝つともらえる賞金' });
+  if (F) {
+    if (F.all) out.push({ id: 'all', e: '✨', name: `全能力 +${F.all}`, desc: '勝つと6つの能力がすべて上がる' });
+    if (F.pts) out.push({ id: 'pts', e: '🔷', name: `能力ポイント +${F.pts}`, desc: '勝つと能力ポイントがもらえる' });
+    if (F.pop) out.push({ id: 'pop', e: '⭐', name: `人気 +${F.pop}`, desc: '勝つと人気が上がる' });
+    if (F.title) out.push({ id: 'ttl', e: '🏅', name: '称号', desc: `勝つと称号「${typeof msxR3TitleName === 'function' ? msxR3TitleName(F.title) : F.title}」`, rare: true });
+  }
+  out.push({ id: 'tk', e: '🎫', name: '修行チケット', desc: '賞金ランクが上がると1段ごとに +1(負けても獲得賞金の合計で上がる)' });
+  return out;
+};
+function MsxR3PreDesk({ run, v, ev, onBack, onGo, onPause }) {
+  const { SUC } = msxSuc;
+  const s = run.s; const b = s.battle;
+  const [win, setWin] = useState(false);
+  const [prz, setPrz] = useState(null);
+  useMsxR3Lines(s.aid);
+  useEffect(() => { if (typeof SuccessSound !== 'undefined') SuccessSound.se('cupEntry'); }, []);
+  if (!b) return null;
+  const name = msxR3BattleName(SUC, b);
+  const star = b.kind === 'summit' ? 4 : ((SUC.FORCED || {})[b.kind] || {}).star || 1;
+  const grade = b.kind === 'summit' ? '最後の大会' : b.kind === 'debut' ? 'デビュー戦' : '期末の大会';
+  const prizes = msxR3ForcedPrizes(SUC, b);
+  const gold = prizes[0] && prizes[0].id === 'g' ? prizes[0].name.replace('賞金 ', '') : '';
+  const cal = msxCalendar(s.turn);
+  const openLine = msxR3Line('turn.cup.day', run, { cup: name }, `「いらっしゃいませ! 今日は ${name} の日です。準備ができたら、出場してくださいね」`);
+  const rankStep = typeof SUC.rankStepOf === 'function' ? SUC.rankStepOf(s) : 0; const rank = rankStep ? { name: SUC.rankNameOf(rankStep) } : null;
+  const icon = msxR3BattleIcon(b);
+  const body = (<>
+    <MsxBand s={s} v={v} ev={ev}/>
+    <div className="v-scene low" style={{ flex: '0 0 auto', minHeight: 128 }}><img className="bg" src="images/story-bg/monhero_town.jpg" alt=""/><div className="sh"/>
+      <img src={msxBody(s.aid, 'happy')} alt="" style={{ position: 'absolute', left: '-2%', bottom: '-98%', height: '190%' }}/>
+      <div className="v-ev-h"><small>{cal.year}年目 {cal.month}月・{v.period.name}</small>🏆 大会の受付</div>
+      <div className="v-ibub" style={{ left: '38%', top: 'auto', bottom: 8 }}>{openLine.t}</div>
+    </div>
+    <div className="v-cupbar" data-msx-r3-fame><span>いまの賞金</span><b>{msxFmt(s.fame)}<small>G</small></b>{rank ? <i>賞金の段 {rank.name}</i> : null}</div>
+    <div className="v-cupmon"><span className="ar" aria-hidden="true" style={{ visibility: 'hidden' }}/><b>{cal.year}年目 {cal.month}月<small className="now">当日</small></b><span className="ar" aria-hidden="true" style={{ visibility: 'hidden' }}/></div>
+    <div className="v-cups">
+      <button type="button" className={`v-cup v-cup2 sel ex g-${star >= 4 ? 'gold' : 'n'}`} onClick={() => setWin(true)} data-msx-r3-pre-card={b.kind}>
+        <div className="lg"><span className="e">{icon}</span><span className="fcst fc-h">本番</span></div>
+        <div className="tx">
+          <div className="hd"><span className="gr2">{grade}</span><span className="cs">{msxR3Stars(star)}</span></div>
+          <b>{name}</b>
+          {gold ? <span className="g">{gold.replace('G', '')}<small>G</small></span> : null}
+        </div>
+      </button>
+    </div>
+    <div className="v-card" style={{ padding: '5px 9px' }}><div className="v-kv" style={{ margin: 0 }}><b>今日は</b><span>{grade}の日。トレーニングはできない。出場すると組み合わせ表へ進む</span></div></div>
+    {win ? (
+      <div className="v-cupwin" onClick={() => { setWin(false); setPrz(null); }} data-msx-r3-cupwin>
+        <div className="in" onClick={(e) => e.stopPropagation()}>
+          <div className="h">大会参加確認</div>
+          <div className={`sign g-${star >= 4 ? 'gold' : 'n'}`}><span className="e">{icon}</span><b>{name}</b><small>{grade} {msxR3Stars(star)}</small></div>
+          <div className="sub">獲得物</div>
+          <div className="pz">{prizes.map((x) => <button type="button" key={x.id} className={x.rare ? 'rare' : ''} onClick={() => setPrz(x)} data-msx-r3-prize={x.id}><span>{x.e}</span><small>{x.name}</small></button>)}</div>
+          <div className="q">この大会に参加しますか?</div>
+          <div className="bt"><button type="button" onClick={() => setWin(false)} data-msx-r3-pre-cancel>キャンセル</button><button type="button" className="go" onClick={onGo} data-msx-r3-yes>はい</button></div>
+          {prz ? <div className="det" onClick={() => setPrz(null)}><div className="dbox" onClick={(e) => e.stopPropagation()}><div className="e">{prz.e}</div><b>{prz.name}</b><p>{prz.desc}</p><button type="button" onClick={() => setPrz(null)}>とじる</button></div></div> : null}
+        </div>
+      </div>) : null}
+  </>);
+  const foot = (
+    <div className="v-ft">
+      <button type="button" onClick={onBack}>← もどる</button>
+      <button type="button" className="go" onClick={() => setWin(true)} data-msx-r3-enter>出場 ▶</button>
+    </div>
+  );
+  return <MsxR3Frame run={run} onBack={onBack} body={body} foot={foot}/>;
 }
 function MsxR3Battle({ run, setRun, v, ev, ctx, bondLv, onPause, debug }) {
   const { SUC } = msxSuc;
@@ -87929,12 +88075,12 @@ function MsxR3Battle({ run, setRun, v, ev, ctx, bondLv, onPause, debug }) {
   const skip = typeof SUC.canSkip === 'function' && SUC.canSkip(s);
   const foeName = opp.name || msxMonName(opp.species);
 
-  // ---- 大会の知らせの段(組み合わせ表の前に1回)。大会の曲 cupPre はここから ----
+  // ---- 大会の入り(紋章と大会名。組み合わせ表の前に1回)。大会の曲 cupPre はここから ----
   const introKey = `${s.turn}|${b.kind}|${b.round || 0}`;
   if (!st3 && step === 'bracket' && introSeen !== introKey && !run.r3skip) {
     const title = b.kind === 'cup' ? msxR3CupName(b.sys) : name;
-    return <MsxR3Frame run={run} back="中断" onBack={onPause} body={<MsxR3CupIntro key={introKey} run={run} b={b} title={title} onGo={() => setIntroSeen(introKey)}/>}
-      foot={<div className="v-ft"><button type="button" className="go" onClick={() => setIntroSeen(introKey)} data-msx-r3-cupintro-go>会場へ ▶</button></div>}/>;
+    return <MsxR3Frame run={run} back="中断" onBack={onPause} body={<MsxR3CupIntro key={introKey} b={b} title={title} onGo={() => setIntroSeen(introKey)}/>}
+      foot={<div className="v-ft"><button type="button" className="go" onClick={() => setIntroSeen(introKey)} data-msx-r3-cupintro-go>SKIP ▸▸</button></div>}/>;
   }
   // ---- バトル部の見せる部品(組み合わせ表・バトルカード・カットイン・観戦・優勝/負け)。試合の計算と勝ち負けの記録は回3 ----
   if (showOn) {
@@ -88057,7 +88203,7 @@ function MsxR3Battle({ run, setRun, v, ev, ctx, bondLv, onPause, debug }) {
 // ---- part: 56-monhero-success-r3-quest.jsx ----
 // ===== モンヒロサクセス 回3: 修行(Q1 修行に出る → Q2 結果)=====
 // 見本: docs/progress/player-raise/mock/png/v3-Q.png(v3-phone-Q1・Q2)
-// ・1ターン使う・チケット1枚(芯の act({kind:'shugyo', course, techs}))。2段で能力2つずつ → 最後に技のくじ(選んだ技それぞれ)
+// ・1ターン使う・チケット1枚(芯の act({kind:'shugyo', course, techs}))。2段で能力2つずつ → 最後に技を覚える(選んだ技それぞれ・確率)
 // ・技を2つ選ぶと超修行(2026-11-13 社長: 育成中2回まで・2つとも覚えることがある・率 +15・能力の上がりと疲れは2回分)。技ごとにランク(1〜5)と今の率を出す
 // ・結果のあとはトレーニングと同じく叱る/褒める(回2の react の段)へ。保存は act のすぐあと(run.phase = 'react')なので、閉じても同じ所から続く
 const MSX_R3_DIST = Object.freeze(['零', '近', '中', '遠']);
@@ -88074,6 +88220,7 @@ function MsxR3Shugyo({ run, setRun, v, ev, onBack, onPause }) {
   const [fxDone, setFxDone] = useState(false);
   // 結果の前の段(助手の一言 → STAGE 1 → STAGE 2。56-monsuc-actfx.jsx)。押した直後だけ・保存しない
   const [stOn, setStOn] = useState(false);
+  const [lockT, setLockT] = useState(null); // 🔒の札の条件をくわしく(選ぶ画面)
   // 行き先・技を選ぶあいだは育成中の曲のまま。「修行する」を押して修行の段が始まってから修行の曲(2026-11-14 社長)
   useSuccessScene(res ? 'ascetic' : null, { season: msxCalendar(s0.turn).season });
   // 段のあと、結果の字が出たときに 覚えた/覚えなかった の音(2026-11-14 社長「修行の結果にも SE を」)
@@ -88144,34 +88291,65 @@ function MsxR3Shugyo({ run, setRun, v, ev, onBack, onPause }) {
     return <MsxR3Frame run={{ ...run, s }} back="中断" onBack={onPause} body={<>{body}{fx}</>} foot={<div className="v-ft"><button type="button" className="go" onClick={onBack} data-msx-r3-qnext>つぎへ ▶(叱る/褒める)</button></div>}/>;
   }
 
-  // ---- 修行に出る(Q1) ----
+  // ---- 修行に出る(Q1)・案A(2026-11-14 社長が選んだ。参考 v3 20〜32秒・te-67・te-68) ----
+  // ① 行き先(4つ)と、2段で上がる能力 → 技を覚える ② 覚えたい技の枠2つ(2つで超修行。札に覚える条件と「済」)
+  // ③ 覚えられる技を間合いごとの4列の札で(率・覚えた・🔒と覚えられる条件)。🔒の札を押すと条件をくわしく
   const cur = SH.courses[course] || { stages: [] };
-  // 技が多くても選びやすいように: 間合いごとに、覚えられる技(ランクの低い順)→ まだの技 → 覚えた技の順に2列で並べる
-  const tkOrder = (t) => ((s0.techs || []).includes(t.id) ? 2 : rateOf[t.id] != null ? 0 : 1) * 10 + (rankOf[t.id] || 5);
-  const groups = MSX_R3_DIST.map((dn, d) => ({ dn, list: all.filter((t) => Math.min(...(Array.isArray(t.dist) && t.dist.length ? t.dist : [1])) === d).sort((x, y) => tkOrder(x) - tkOrder(y)) }));
+  const tkMax = SUC.TECH_MAX || 99; const full = (s0.techs || []).length >= tkMax;
+  const techName = (id) => (all.find((x) => x.id === id) || {}).name || id;
+  // 覚えられる条件(芯の canLearn と同じ: t.learn.st = 能力の下限・t.learn.need = 前の技の熟練の下限)。ok は満たしているか
+  const condsOf = (t) => {
+    const L = (t && t.learn) || {}; const out = [];
+    if (L.start) return out;
+    Object.entries(L.st || {}).forEach(([k, n]) => out.push({ k: `st-${k}`, short: `${MSX_STAT_NAME[k] || k} ${msxFmt(n)}で`, long: `${MSX_STAT_ICON[k] || ''} ${MSX_STAT_NAME[k] || k}が ${msxFmt(n)} 以上(いま ${msxFmt(Math.round((s0.stats || {})[k] || 0))})`, ok: ((s0.stats || {})[k] || 0) >= n }));
+    Object.entries(L.need || {}).forEach(([id, n]) => out.push({ k: `nd-${id}`, short: `${techName(id)} 熟練${n}で`, long: `「${techName(id)}」の熟練が ${n} 以上(いま ${(s0.techs || []).includes(id) ? ((s0.mastery || {})[id] || 0) : 'まだ覚えていない'})`, ok: ((s0.mastery || {})[id] || 0) >= n }));
+    return out;
+  };
+  const cols = MSX_R3_DIST.map((dn, d) => ({ dn, list: all.filter((t) => Math.min(...(Array.isArray(t.dist) && t.dist.length ? t.dist : [1])) === d).sort((x, y) => ((rankOf[x.id] || (x.rank || 5)) - (rankOf[y.id] || (y.rank || 5)))) }));
+  const say = want.length >= 2 ? '「2つで超修行! 2つとも覚えることもあるよ。能力の上がりも疲れも2回分だからね」' : want.length === 1 ? (superWhy ? `「この技でいこう! (${superWhy}から、技は1つだけ)」` : '「いいね! もう1つ選ぶと超修行になるよ」') : '「覚えたい技を1つ選んでね。2つ選ぶと超修行! 選ばなくても能力は上がるよ」';
+  const slot = (id) => {
+    if (!id) return <div className="q-slot" data-msx-r3-qslot="0">{want.length ? (superWhy ? `超修行は できない(${superWhy})` : '+ もう1つ選ぶと 🔥超修行') : '+ 下の緑の札から 技をえらぶ'}</div>;
+    const t = all.find((x) => x.id === id) || {}; const cs = condsOf(t);
+    return (<div className="q-slot on" onClick={() => toggle(id)} data-msx-r3-qslot={id}>
+      <small>{MSX_R3_DIST[Math.min(...(t.dist || [1]))]}・R{rankOf[id] || '-'}</small><b className="n">{t.name}</b><b className="r">{Math.round((rateOf[id] || 0) * 100)}%</b>
+      {cs.length ? <ul>{cs.slice(0, 4).map((c, i) => <li key={c.k}><i>条件{i + 1}</i>{c.short.replace(/で$/, ' 以上')}<em>済</em></li>)}</ul> : <ul><li><i>条件</i>なし</li></ul>}
+    </div>);
+  };
   const body = (<>
     <MsxBand s={s0} v={v} ev={ev} use={(SH.hp || 30) * (isSuper ? 2 : 1)}/>
-    <div className="v-scene low" style={{ flex: '0 0 auto', minHeight: 140 }}><img className="bg" src={`images/story-bg/${MSX_R3_COURSE_BG[course] || 'forest_deep'}.jpg`} alt=""/><div className="sh"/>
-      <img src={msxBody(s0.aid, 'happy')} alt="" style={{ position: 'absolute', left: '-2%', bottom: '-98%', height: '190%' }}/>
-      <div className="v-ev-h"><small>🎫 チケット {tickets}枚(修行1枚・超修行{superTk}枚)</small>⚔ 修行に出る</div>
-      <div className="v-ibub" style={{ left: '40%', top: 'auto', bottom: 10 }}>「修行は<b>2段</b>! 能力が上がって、最後に<b>技を覚える</b>チャンスだよ。覚えたい技を1つか2つ選んでね。2つなら<b>超修行</b>!」</div>
+    <div className="q-say"><img src={typeof msxFace === 'function' ? msxFace(s0.aid, 'happy') : msxBody(s0.aid, 'happy')} alt=""/><p data-msx-r3-qsay>{say}</p></div>
+    <div className="q-sec"><h3><i>1</i>行き先<span className="tk">🎫 チケット {tickets}枚</span></h3>
+      <div className="r3-bar q-dest">{courses.map((k) => <button type="button" key={k} className={`r3-chip ${k === course ? 'on' : ''}`} onClick={() => setCourse(k)} data-msx-r3-course={k}>{SH.courses[k].name}</button>)}</div>
+      <div className="v-stg">{cur.stages.map((pair, i) => <React.Fragment key={i}><div><small>第{i + 1}段</small>{pair.map((k) => `${MSX_STAT_ICON[k]} ${MSX_STAT_NAME[k]}`).join(' & ')}</div><i>▶</i></React.Fragment>)}<div className="last"><small>さいごに</small>✨ 技を覚える</div></div>
+      {SUC.DIST_UP && SUC.DIST_UP.course && Number.isInteger(SUC.DIST_UP.course[course]) ? <div className="q-note" data-msx-r3-qapt>📏 「{MSX_R3_DIST[SUC.DIST_UP.course[course]]}」の間合いの修行。ときどき、その間合い適性が1段上がる{typeof SUC.aptUpRoom === 'function' && !SUC.aptUpRoom(s0, SUC.DIST_UP.course[course], 'quest') ? '(この育成では、もう上がらない)' : ''}</div> : null}
     </div>
-    <div className="r3-bar">{courses.map((k) => <button type="button" key={k} className={`r3-chip ${k === course ? 'on' : ''}`} onClick={() => setCourse(k)} data-msx-r3-course={k}>{SH.courses[k].name}</button>)}</div>
-    <div className="v-stg">{cur.stages.map((pair, i) => <React.Fragment key={i}><div><small>第{i + 1}段・{cur.name}</small>{pair.map((k) => `${MSX_STAT_ICON[k]} ${MSX_STAT_NAME[k]}`).join(' & ')}</div><i>▶</i></React.Fragment>)}<div className="last"><small>さいごに</small>✨ 技のくじ</div></div>
-    {SUC.DIST_UP && SUC.DIST_UP.course && Number.isInteger(SUC.DIST_UP.course[course]) ? <div className="sub" style={{ fontSize: 11, color: '#cbd5e1', padding: '0 4px' }} data-msx-r3-qapt>📏 {cur.name}は「{MSX_R3_DIST[SUC.DIST_UP.course[course]]}」の間合いの修行。ときどき、その間合い適性が1段上がる{typeof SUC.aptUpRoom === 'function' && !SUC.aptUpRoom(s0, SUC.DIST_UP.course[course], 'quest') ? '(この育成では、もう上がらない)' : ''}</div> : null}
-    <div className="v-card pk" style={{ padding: '6px 8px' }}><div className="sub" style={{ color: '#f9a8d4', fontWeight: 900 }}>えらんだ技(1つ = 修行/2つ = 🔥超修行 のこり{superLeft}回・🎫{superTk}枚)</div>
-      {superWhy && want.length ? <div className="sub" style={{ fontSize: 11, color: '#cbd5e1' }} data-msx-r3-superwhy>🔥 {superWhy}ので、技は1つだけ選べる(別の技を押すと入れ替わる)</div> : null}
-      {isSuper ? <div className="sub" style={{ fontSize: 11, color: '#fde047' }} data-msx-r3-super>🔥 超修行: チケット{superTk}枚・2つとも覚えることがある・覚える率 +{SH.superAdd || 15}%・能力の上がりと疲れは2回分</div> : null}
-      <div className="v-pick2">{want.length ? want.map((id) => { const t = all.find((x) => x.id === id) || {}; return <div key={id} className="on" onClick={() => toggle(id)}><small>{MSX_R3_DIST[Math.min(...(t.dist || [1]))]}・ランク{rankOf[id] || '-'}</small>{t.name}<b>{Math.round((rateOf[id] || 0) * 100)}%</b></div>; }) : <div className="none">技をえらばなくても、能力は上がる</div>}</div></div>
-    <div className="v-card" style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', gap: 4, overflowY: 'auto', padding: '4px 8px 6px' }} data-msx-r3-techlist>
-      <div className="sub" style={{ color: '#f9a8d4', fontWeight: 900 }}>覚えられる技(間合いごと・ランク・覚える率)</div>
-      {all.length ? groups.filter((g) => g.list.length).map((g) => (
-        <div key={g.dn} className="v-tk" style={{ alignItems: 'flex-start' }}><i>{g.dn}</i><div style={{ flex: 1, minWidth: 0, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4 }}>{g.list.map((t) => {
-          const got = (s0.techs || []).includes(t.id); const ok = rateOf[t.id] != null;
-          return <span key={t.id} className={got ? 'got' : want.includes(t.id) ? 'sel' : ''} onClick={() => (ok && !got ? toggle(t.id) : null)} style={{ opacity: got || ok ? 1 : 0.45 }} data-msx-r3-tech={t.id}>{ok && !got && rankOf[t.id] ? <small style={{ fontSize: 9, opacity: 0.8, marginRight: 2 }}>R{rankOf[t.id]}</small> : null}{t.name}<b>{got ? '覚えた' : ok ? `${Math.round(rateOf[t.id] * 100)}%` : 'まだ'}</b></span>;
-        })}</div></div>)) : <div className="sub">このモンスターの技の表がまだありません(能力だけ上がる)</div>}
-      <div className="sub">ランクが高い技ほど覚えにくい。能力・忠誠度・人気がよく仕上がっているほど、行き先の旬の季節ほど覚えやすい。外した技は、その技だけ次から覚えやすくなる。助手がドラだと、さらに覚えやすい</div>
+    <div className="q-sec"><h3><i>2</i>覚えたい技<span className="tk">2つで🔥超修行・のこり{superLeft}回</span></h3>
+      <div className="q-slots">{slot(want[0])}{slot(want[1])}</div>
+      {isSuper ? <div className="q-note y" data-msx-r3-super>🔥 超修行: チケット{superTk}枚・2つとも覚えることがある・覚える率 +{SH.superAdd || 15}%・能力の上がりと疲れは2回分</div> : null}
+      {superWhy && want.length ? <div className="q-note" data-msx-r3-superwhy>🔥 {superWhy}ので、技は1つだけ選べる(別の技を押すと入れ替わる)</div> : null}
     </div>
+    <div className="q-sec q-list" data-msx-r3-techlist><h3><i>3</i>覚えられる技<span className="tk">緑の札をタップ</span></h3>
+      {all.length ? <div className="q-grid">{cols.map((c) => (
+        <div key={c.dn} className="q-col"><h4>{c.dn}</h4>{c.list.map((t) => {
+          const got = (s0.techs || []).includes(t.id); const ok = rateOf[t.id] != null; const sel = want.includes(t.id);
+          const cs = got || ok ? [] : condsOf(t); const ng = cs.find((x) => !x.ok);
+          return (<button type="button" key={t.id} className={`q-card ${sel ? 'sel' : got ? 'got' : ok ? 'ok' : 'lock'}`} onClick={() => (ok && !got ? toggle(t.id) : !got ? setLockT(t) : null)} data-msx-r3-tech={t.id}>
+            <span className="nm">{t.name}</span><span className="rk">R{rankOf[t.id] || t.rank || '-'}</span>
+            {got ? <span className="p g">覚えた</span> : ok ? <span className="p">{Math.round(rateOf[t.id] * 100)}%</span> : <span className="lk">🔒 {full ? '技がいっぱい' : ng ? ng.short : '条件あり'}</span>}
+          </button>);
+        })}</div>))}</div> : <div className="q-note">このモンスターの技の表がまだありません(能力だけ上がる)</div>}
+      <div className="q-note">ランクが高い技ほど覚えにくい。能力・忠誠度・人気がよく仕上がっているほど、行き先の旬の季節ほど覚えやすい。外した技は、その技だけ次から覚えやすくなる。助手がドラだと、さらに覚えやすい</div>
+    </div>
+    {lockT ? (
+      <div className="v-cupwin" onClick={() => setLockT(null)} data-msx-r3-qlock>
+        <div className="in" onClick={(e) => e.stopPropagation()}>
+          <div className="h">🔒 {lockT.name}</div>
+          <div className="q-lock">{full ? <p>覚えられる技は {tkMax}つまで。いまは いっぱいです</p> : null}
+            {condsOf(lockT).map((c, i) => <div key={c.k} className={c.ok ? 'ok' : ''}><i>条件{i + 1}</i><span>{c.long}</span><b>{c.ok ? '済' : 'まだ'}</b></div>)}
+            {!full && condsOf(lockT).length ? <p>条件をすべて満たすと、緑の「覚えられる」札になります</p> : null}</div>
+          <div className="bt"><button type="button" onClick={() => setLockT(null)}>とじる</button></div>
+        </div>
+      </div>) : null}
   </>);
   const foot = <div className="v-ft"><button type="button" onClick={onBack}>← もどる</button><button type="button" className="go" disabled={tickets <= 0} onClick={go} data-msx-r3-shugyo>{isSuper ? '🔥 超修行する' : '⚔ 修行する'}(🎫 {tickets} → {Math.max(0, tickets - (isSuper ? superTk : 1))})</button></div>;
   return <MsxR3Frame run={run} onBack={onBack} body={body} foot={foot}/>;

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: afc15f157e5ab73a
+// source-sha256: 1f6866bb83e30e51
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -163363,6 +163363,10 @@ const MSX_CSS = `
 .msx .v-p.hosp{background:linear-gradient(180deg,#0e7490,#155e75);border-color:#67e8f9;box-shadow:0 0 10px #22d3ee88}
 .msx .v-p .bd{position:absolute;right:-2px;top:-6px;background:#fde047;color:#422006;border-radius:99px;font-size:10px;font-weight:900;padding:0 5px;white-space:nowrap;line-height:1.5}
 .msx .v-p .bd.r{background:#ef4444;color:#fff}
+.msx .v-act-pre .v-p{min-height:74px;font-size:15px}.msx .v-act-pre .v-p .e{font-size:24px}
+.msx .v-p.hb{font-size:19px;background:linear-gradient(160deg,#f59e0b,#dc2626);border-color:#fde68a;border-bottom-color:#7f1d1d;box-shadow:0 0 16px #f59e0bb3}
+.msx .v-p.hb small{white-space:normal;font-size:11px}
+.msx .v-p .hbt{position:absolute;left:8px;top:-9px;background:#fff;color:#dc2626;border:2px solid #dc2626;border-radius:6px;font-size:12px;font-weight:900;padding:0 7px;line-height:1.4;transform:rotate(-8deg);box-shadow:0 2px 0 #7f1d1d}
 .msx .v-gather{display:flex;align-items:center;justify-content:center;gap:3px;margin-top:2px;background:#0f0d2466;border-radius:9px;padding:2px 5px;font-size:10px;white-space:nowrap}
 .msx .v-gather .v-pf,.msx .v-gather .v-pf img{width:20px}.msx .v-gather .v-pf img{height:20px;border-radius:6px;border-width:1.5px}
 .msx .v-gather .v-pf.tag::after{display:none}
@@ -166189,6 +166193,11 @@ function MsxPlay({
   const [kiAt, setKiAt] = useState(null);
   const [actAt, setActAt] = useState(null);
   const [sheet, setSheet] = useState(null);
+  const [preAt, setPreAt] = useState(null);
+  const [preDesk, setPreDesk] = useState(false);
+  const preB = run.phase === 'battle' && s.battle && s.battle.kind !== 'cup' ? s.battle : null;
+  const preKey = preB ? `${s.turn}|${preB.kind}|${preB.round || 0}` : null;
+  const preOn = !!(preB && typeof MsxR3PreDesk === 'function' && !preB.retry && !preB.again && !(run.out && run.out.r3) && !run.r3skip && preAt !== preKey);
   const [, setScriptTick] = useState(0);
   useEffect(() => {
     let alive = true;
@@ -166201,7 +166210,7 @@ function MsxPlay({
   }, [s.aid]);
   const actOn = run.phase === 'result' && actAt === s.turn && typeof MsxTrainAct === 'function';
   const kiOn = run.phase === 'turn' && typeof MsxKiShow === 'function' && v.period && v.period.at === 1 && v.period.index > 0 && kiAt !== s.turn;
-  const childSound = typeof MsxR3 === 'function' && (run.phase === 'battle' || run.phase === 'over' || !!s.over || sub === 'cup' || sub === 'shugyo');
+  const childSound = typeof MsxR3 === 'function' && (run.phase === 'battle' && !preOn || run.phase === 'over' || !!s.over || sub === 'cup' || sub === 'shugyo');
   const soundId = childSound ? null : actOn ? 'training' : kiOn ? 'kiShow' : run.phase === 'awake' && run.out && run.out.fire && typeof MsxAwakeShow === 'function' ? 'awakeShow' : run.phase === 'awake' && run.out && run.out.fire ? run.out.fire.kind === 2 ? 'trainGreat' : 'trainLvUp' : run.phase === 'result' && run.out && MSX_REST_SOUND[run.out.kind] ? MSX_REST_SOUND[run.out.kind] : run.phase === 'result' && run.out && run.out.result ? MSX_RES_SOUND[run.out.result] : run.phase === 'issa' ? 'issa' : s.over === 'gameover' ? 'gameOver' : 'main';
   msxUseScene(soundId, {
     season: msxCalendar(s.turn).season
@@ -166422,7 +166431,17 @@ function MsxPlay({
   }), React.createElement("div", {
     className: "v-body"
   }));
-  const r3 = typeof MsxR3 === 'function' ? phase === 'battle' ? 'battle' : phase === 'over' || s.over ? 'over' : sub === 'cup' ? 'cup' : sub === 'shugyo' ? 'shugyo' : null : null;
+  const r3 = typeof MsxR3 === 'function' ? phase === 'battle' && !preOn ? 'battle' : phase === 'battle' ? null : phase === 'over' || s.over ? 'over' : sub === 'cup' ? 'cup' : sub === 'shugyo' ? 'shugyo' : null : null;
+  if (preOn && preDesk) return React.createElement(MsxR3PreDesk, {
+    run: run,
+    v: v,
+    ev: ev,
+    onBack: () => setPreDesk(false),
+    onGo: () => {
+      setPreDesk(false);
+      setPreAt(preKey);
+    }
+  });
   if (r3) return React.createElement(MsxR3, {
     kind: r3,
     run: run,
@@ -166892,7 +166911,7 @@ function MsxPlay({
         out: null
       })
     }, "つぎへ ▶"));
-  } else if (phase === 'battle' && s.battle) {
+  } else if (phase === 'battle' && s.battle && !preOn) {
     const b = s.battle;
     const opp = SUC.opponents(s);
     const name = b.kind === 'summit' ? (SUC.SUMMIT[b.round] || {}).name : b.kind === 'debut' ? 'デビュー戦' : (SUC.FORCED[b.kind] || {}).name;
@@ -167192,7 +167211,10 @@ function MsxPlay({
     const pkI = typeof SUC.peakInfo === 'function' ? SUC.peakInfo(s) : {
       state: null
     };
-    const sayL = omenK ? line(omenK === 2 ? 'turn.awake.omen2' : 'turn.awake.omen', omenK === 2 ? 'あれ…また体が光ってる？ 虹色だ…' : 'あれ？ 体がうっすら光ってない…？') : pkI.state === 'soon' && pkI.in >= 2 && !yosu && !s.cond ? line('turn.peak.soon', 'もうすぐ伸びどきが来そうだよ！') : yosu ? line(s.yosu.sabori ? 'turn.mood.sabori' : 'turn.mood.utsu', 'ようすが気になるね…') : s.cond ? line(`turn.cond.${s.cond.kind === 'away' ? 'runaway' : s.cond.kind === 'ill' ? 'sick' : 'injury'}.in`, '今日は休ませてあげよ') : line(msxStartScene(s), '今月はどうする?');
+    const preName = preOn && typeof msxR3BattleName === 'function' ? msxR3BattleName(SUC, preB) : '';
+    const sayL = preOn ? line('turn.cup.before', `ついに今日は ${preName}だね! 準備ができたら「大会」へ行こう`, {
+      cup: preName
+    }) : omenK ? line(omenK === 2 ? 'turn.awake.omen2' : 'turn.awake.omen', omenK === 2 ? 'あれ…また体が光ってる？ 虹色だ…' : 'あれ？ 体がうっすら光ってない…？') : pkI.state === 'soon' && pkI.in >= 2 && !yosu && !s.cond ? line('turn.peak.soon', 'もうすぐ伸びどきが来そうだよ！') : yosu ? line(s.yosu.sabori ? 'turn.mood.sabori' : 'turn.mood.utsu', 'ようすが気になるね…') : s.cond ? line(`turn.cond.${s.cond.kind === 'away' ? 'runaway' : s.cond.kind === 'ill' ? 'sick' : 'injury'}.in`, '今日は休ませてあげよ') : line(msxStartScene(s), '今月はどうする?');
     const cal = msxCalendar(s.turn);
     const scn = msxSceneBg(s.turn);
     const low = s.hp < s.hpMax * 0.3;
@@ -167234,7 +167256,10 @@ function MsxPlay({
       className: "v-chips"
     }, React.createElement("span", {
       className: "v-chip"
-    }, MSX_SEASON[cal.season], "・", scn.time), v.period.key !== 'final' ? React.createElement("span", {
+    }, MSX_SEASON[cal.season], "・", scn.time), preOn ? React.createElement("span", {
+      className: "v-chip hot",
+      "data-msx-pre-chip": true
+    }, "🏆 ", preName, " 当日") : v.period.key !== 'final' ? React.createElement("span", {
       className: "v-chip hot"
     }, "🏆 期末の大会まで ", v.period.left, "ターン") : React.createElement("span", {
       className: "v-chip hot"
@@ -167271,7 +167296,28 @@ function MsxPlay({
       onClick: () => setSub('stats')
     }, "🔍", React.createElement("small", null, "くわしく"))), React.createElement(MsxStRow, {
       stats: s.stats
-    }), can.includes('retry') ? React.createElement("div", {
+    }), preOn ? React.createElement("div", {
+      className: "v-act v-act-pre",
+      style: {
+        gridTemplateColumns: '1fr 1.5fr'
+      },
+      "data-msx-pre-main": true
+    }, React.createElement("button", {
+      type: "button",
+      className: "v-p",
+      onClick: () => setSub('stats')
+    }, React.createElement("div", {
+      className: "e"
+    }, "📊"), "能力", React.createElement("small", null, "技・型・編成"), s.pts ? React.createElement("span", {
+      className: "bd"
+    }, "能力P ", s.pts) : null), React.createElement("button", {
+      type: "button",
+      className: "v-p main hb",
+      onClick: () => setPreDesk(true),
+      "data-msx-r3-precup": true
+    }, React.createElement("span", {
+      className: "hbt"
+    }, "本番"), "🏆 大会", React.createElement("small", null, preName))) : can.includes('retry') ? React.createElement("div", {
       className: "v-act",
       style: {
         gridTemplateColumns: '1fr'
@@ -168260,6 +168306,49 @@ function MsxEvent({
   }, "つぎへ ▶")));
 }
 const MSX_R3_CSS = `
+.msx .r3 .q-say{display:flex;gap:8px;align-items:center;margin-top:5px}
+.msx .r3 .q-say img{width:44px;height:44px;border-radius:50%;border:2px solid #fff;background:#fff;object-fit:cover;flex:0 0 auto}
+.msx .r3 .q-say p{flex:1;background:#fffdf5;color:#1e1b4b;border-radius:12px;padding:6px 10px;font-size:12px;font-weight:800;line-height:1.45}
+.msx .r3 .q-sec{margin-top:6px;padding:6px 8px 7px;border-radius:14px;background:#ffffff0d;border:1px solid #ffffff1f}
+.msx .r3 .q-sec h3{font-size:12px;font-weight:900;color:#f9a8d4;margin:0 0 5px;display:flex;align-items:center;gap:6px}
+.msx .r3 .q-sec h3 i{font-style:normal;display:inline-flex;width:18px;height:18px;border-radius:50%;background:#f472b6;color:#fff;font-size:11px;align-items:center;justify-content:center}
+.msx .r3 .q-sec h3 .tk{margin-left:auto;font-size:10.5px;color:#fed7aa;font-weight:800}
+.msx .r3 .q-dest{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}
+.msx .r3 .q-dest .r3-chip{justify-content:center;text-align:center}
+.msx .r3 .q-sec .v-stg{margin-top:5px}
+.msx .r3 .q-note{font-size:10.5px;color:#cbd5e1;font-weight:700;line-height:1.45;margin-top:4px}
+.msx .r3 .q-note.y{color:#fde047}
+.msx .r3 .q-slots{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.msx .r3 .q-slot{min-height:56px;border-radius:12px;padding:5px 8px;border:2px dashed #ffffff40;font-size:11px;font-weight:800;color:#cbd5e1;display:flex;flex-direction:column;justify-content:center;gap:1px;cursor:pointer}
+.msx .r3 .q-slot.on{border:2px solid #fde047;background:#fde04718;color:#fff}
+.msx .r3 .q-slot small{font-size:9.5px;color:#cbd5e1}
+.msx .r3 .q-slot .n{font-size:14px;font-weight:900;line-height:1.2}
+.msx .r3 .q-slot .r{font-size:18px;font-weight:900;color:#fde047;line-height:1.1}
+.msx .r3 .q-slot ul{list-style:none;margin:2px 0 0;padding:0;font-size:9.5px;color:#e2e8f0}
+.msx .r3 .q-slot li{display:flex;gap:4px;align-items:center}
+.msx .r3 .q-slot li i{font-style:normal;color:#94a3b8;flex:0 0 auto}
+.msx .r3 .q-slot li em{font-style:normal;margin-left:auto;background:#16a34a;color:#fff;border-radius:4px;padding:0 4px;font-size:9px}
+.msx .r3 .q-list{flex:1 1 auto;min-height:0;overflow-y:auto}
+.msx .r3 .q-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px}
+.msx .r3 .q-col{display:flex;flex-direction:column;gap:5px;min-width:0}
+.msx .r3 .q-col h4{text-align:center;font-size:12px;font-weight:900;padding:2px 0;margin:0;border-radius:8px;background:#ffffff1a}
+.msx .r3 .q-card{border-radius:10px;padding:5px 3px;text-align:center;font-size:10.5px;font-weight:800;line-height:1.25;background:#ffffff10;border:1px solid #ffffff22;color:#fff;min-height:52px;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:1px;min-width:0}
+.msx .r3 .q-card .nm{overflow-wrap:anywhere;word-break:break-all}
+.msx .r3 .q-card .rk{font-size:9px;color:#cbd5e1}
+.msx .r3 .q-card .p{font-size:15px;font-weight:900;color:#86efac}
+.msx .r3 .q-card .p.g{font-size:10.5px;color:#cbd5e1}
+.msx .r3 .q-card.ok{background:#16a34a2e;border-color:#4ade80}
+.msx .r3 .q-card.sel{background:#fde04722;border:2px solid #fde047}.msx .r3 .q-card.sel .p{color:#fde047}
+.msx .r3 .q-card.got{opacity:.55}
+.msx .r3 .q-card.lock{background:#0f0b2299;border-color:#ffffff1a;color:#94a3b8}
+.msx .r3 .q-card .lk{font-size:9px;color:#fca5a5;line-height:1.2;overflow-wrap:anywhere}
+.msx .q-lock{display:flex;flex-direction:column;gap:5px;font-size:12px;font-weight:800}
+.msx .q-lock>div{display:flex;gap:6px;align-items:center;background:#fee2e2;border-radius:8px;padding:5px 7px}
+.msx .q-lock>div.ok{background:#dcfce7}
+.msx .q-lock>div i{font-style:normal;color:#64748b;font-size:10.5px;flex:0 0 auto}
+.msx .q-lock>div span{flex:1}
+.msx .q-lock>div b{font-size:10.5px;color:#b91c1c}.msx .q-lock>div.ok b{color:#15803d}
+.msx .q-lock p{font-size:11px;color:#475569;margin:2px 0}
 .msx .r3 .v-brh{display:grid;grid-template-columns:1.5fr 1fr 1fr .8fr;gap:5px;margin-top:6px;font-size:9.5px;font-weight:900;color:#cbd5e1;text-align:center}
 .msx .r3 .v-brk{display:grid;grid-template-columns:1.5fr 1fr 1fr .8fr;grid-template-rows:repeat(8,minmax(0,1fr));gap:4px 5px;flex:1 1 0;min-height:0;margin-top:3px}
 .msx .r3 .v-bc{position:relative;display:flex;align-items:center;gap:5px;background:#1e1a36;border:1.5px solid #475569;border-radius:11px;padding:2px 6px;min-width:0}
@@ -169639,30 +169728,35 @@ const msxR3PrizeRows = (d, s) => {
   });
   return rows;
 };
-const MSX_R3_INTRO_MS = 2200;
+const MSX_R3_INTRO_MS = 2400;
 const MSX_R3_INTRO_CSS = `
-.msx-cupin{position:relative;flex:1 1 0;min-height:max(260px,calc(var(--mh-vh) - 190px));border-radius:16px;overflow:hidden;cursor:pointer;background:#1e1b4b}
-.msx-cupin .bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;animation:msxCupinBg 2.4s ease-out both}
-.msx-cupin .sh{position:absolute;inset:0;background:linear-gradient(180deg,rgba(15,13,36,.15),rgba(15,13,36,.65))}
-.msx-cupin .band{position:absolute;left:0;right:0;top:20%;text-align:center;padding:8px 0 10px;background:linear-gradient(90deg,transparent,#7c2d12e6 14%,#b45309e6 50%,#7c2d12e6 86%,transparent);animation:msxCupinBand .45s cubic-bezier(.2,1.3,.4,1) .1s both}
-.msx-cupin .band small{display:block;font-size:13px;font-weight:900;color:#fde68a;letter-spacing:.08em}
-.msx-cupin .band b{display:block;font-size:30px;font-weight:900;font-style:italic;color:#fff;-webkit-text-stroke:2px #7c2d12;paint-order:stroke fill;text-shadow:0 3px 0 #7c2d12,0 0 16px #fde047}
-.msx-cupin .say{position:absolute;left:10px;right:10px;bottom:12px;display:flex;gap:8px;align-items:flex-end;animation:msxCupinSay .35s ease-out .5s both}
-.msx-cupin .say img{width:52px;height:52px;border-radius:50%;border:2px solid #fff;background:#fff;object-fit:cover}
-.msx-cupin .say p{flex:1;background:#fffdf5;color:#1e1b4b;border:2px solid #fb923c;border-radius:12px;padding:7px 10px;font-size:13px;font-weight:800;line-height:1.5}
-.msx-cupin .skip{position:absolute;right:10px;top:8px;font-size:10px;font-weight:800;color:#e2e8f0cc}
+.msx-cupin{position:relative;flex:1 1 0;min-height:max(260px,calc(var(--mh-vh) - 190px));border-radius:16px;overflow:hidden;cursor:pointer;background:#1e1b4b;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px}
+.msx-cupin .bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;animation:msxCupinBg 2.6s ease-out both}
+.msx-cupin .sh{position:absolute;inset:0;background:radial-gradient(ellipse at 50% 42%,rgba(15,13,36,.05),rgba(15,13,36,.6))}
+.msx-cupin .crest{position:relative;width:min(46vw,190px);aspect-ratio:1/1.08;display:grid;place-items:center;animation:msxCupinCrest .6s cubic-bezier(.2,1.4,.4,1) .1s both;filter:drop-shadow(0 6px 10px rgba(0,0,0,.55))}
+.msx-cupin .crest::before,.msx-cupin .crest::after{content:"";position:absolute;clip-path:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%)}
+.msx-cupin .crest::before{inset:0;background:var(--c1,#e2e8f0)}
+.msx-cupin .crest::after{inset:9%;background:var(--c2,#64748b)}
+.msx-cupin .crest .e{position:relative;z-index:1;font-size:min(20vw,84px);line-height:1;filter:drop-shadow(0 3px 0 rgba(0,0,0,.35))}
+.msx-cupin .crest.t-debut{--c1:#bbf7d0;--c2:linear-gradient(160deg,#22c55e,#15803d)}
+.msx-cupin .crest.t-s1{--c1:#e2e8f0;--c2:linear-gradient(160deg,#94a3b8,#475569)}
+.msx-cupin .crest.t-s2{--c1:#e0f2fe;--c2:linear-gradient(160deg,#7dd3fc,#2563eb)}
+.msx-cupin .crest.t-s3{--c1:#fed7aa;--c2:linear-gradient(160deg,#fb923c,#b45309)}
+.msx-cupin .crest.t-s4,.msx-cupin .crest.t-final{--c1:#fef08a;--c2:linear-gradient(160deg,#facc15,#a16207)}
+.msx-cupin .logo{position:relative;text-align:center;padding:0 12px;animation:msxCupinLogo .5s ease-out .45s both}
+.msx-cupin .logo small{display:inline-block;font-size:12px;font-weight:900;color:#1e1b4b;background:#fde68a;border-radius:99px;padding:2px 12px;margin-bottom:4px;letter-spacing:.06em}
+.msx-cupin .logo b{display:block;font-size:min(9vw,34px);font-weight:900;color:#fff;line-height:1.15;-webkit-text-stroke:2px #1e293b;paint-order:stroke fill;text-shadow:0 3px 0 #1e293b,0 0 18px rgba(255,255,255,.55);word-break:keep-all;overflow-wrap:anywhere}
 @keyframes msxCupinBg{from{transform:scale(1.12)}to{transform:none}}
-@keyframes msxCupinBand{from{opacity:0;transform:translateX(-40px) scale(.9)}to{opacity:1;transform:none}}
-@keyframes msxCupinSay{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
-@media (prefers-reduced-motion: reduce){.msx-cupin .bg,.msx-cupin .band,.msx-cupin .say{animation:none}}
+@keyframes msxCupinCrest{from{opacity:0;transform:scale(.4) rotate(-12deg)}to{opacity:1;transform:none}}
+@keyframes msxCupinLogo{from{opacity:0;transform:translateY(12px) scale(.92)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion: reduce){.msx-cupin .bg,.msx-cupin .crest,.msx-cupin .logo{animation:none}}
 `;
+const msxR3CrestTier = b => !b ? 's1' : b.kind === 'debut' ? 'debut' : b.kind === 'summit' ? 'final' : b.kind === 'cup' ? `s${Math.max(1, Math.min(4, b.star || 1))}` : `s${Math.max(1, Math.min(4, ((msxSuc.SUC.FORCED || {})[b.kind] || {}).star || 2))}`;
 function MsxR3CupIntro({
-  run,
   b,
   title,
   onGo
 }) {
-  const s = run.s;
   const done = useRef(false);
   const go = () => {
     if (done.current) return;
@@ -169673,11 +169767,8 @@ function MsxR3CupIntro({
     const id = setTimeout(go, MSX_R3_INTRO_MS);
     return () => clearTimeout(id);
   }, []);
-  const monthly = b.kind === 'cup';
   const venue = typeof MSC_VENUE_IMG !== 'undefined' ? MSC_VENUE_IMG[b.kind] || MSC_VENUE_IMG.cup : '';
-  const l = msxR3Line('turn.cup.intro', run, {
-    cup: title
-  }, `「いよいよ ${title}! ${run.nick || 'このモンスター'}、いってらっしゃい!」`);
+  const label = b.kind === 'cup' ? '今月の大会' : b.kind === 'summit' ? '最後の大会' : b.kind === 'debut' ? 'デビュー戦' : '期末の大会';
   return React.createElement(React.Fragment, null, React.createElement("style", null, MSX_R3_INTRO_CSS), React.createElement("div", {
     className: "msx-cupin",
     onClick: go,
@@ -169689,15 +169780,247 @@ function MsxR3CupIntro({
   }) : null, React.createElement("span", {
     className: "sh"
   }), React.createElement("div", {
-    className: "band"
-  }, React.createElement("small", null, monthly ? '今月の大会' : b.kind === 'summit' ? '頂への道' : '期末の大会の日!'), React.createElement("b", null, title)), React.createElement("div", {
-    className: "say"
-  }, typeof msxFace === 'function' ? React.createElement("img", {
-    src: msxFace(s.aid, 'excited'),
+    className: `crest t-${msxR3CrestTier(b)}`
+  }, React.createElement("span", {
+    className: "e"
+  }, msxR3BattleIcon(b))), React.createElement("div", {
+    className: "logo"
+  }, React.createElement("small", null, label), React.createElement("b", null, title))));
+}
+const msxR3ForcedPrizes = (SUC, b) => {
+  const F = b.kind === 'summit' ? null : (SUC.FORCED || {})[b.kind] || {};
+  const P = SUC.PRIZE || {};
+  const g = b.kind === 'summit' ? Array.isArray(P.summit) ? P.summit[b.round] : 0 : P[b.kind];
+  const out = [];
+  if (Number.isFinite(g) && g > 0) out.push({
+    id: 'g',
+    e: '💰',
+    name: `賞金 ${msxFmt(g)}G`,
+    desc: '勝つともらえる賞金'
+  });
+  if (F) {
+    if (F.all) out.push({
+      id: 'all',
+      e: '✨',
+      name: `全能力 +${F.all}`,
+      desc: '勝つと6つの能力がすべて上がる'
+    });
+    if (F.pts) out.push({
+      id: 'pts',
+      e: '🔷',
+      name: `能力ポイント +${F.pts}`,
+      desc: '勝つと能力ポイントがもらえる'
+    });
+    if (F.pop) out.push({
+      id: 'pop',
+      e: '⭐',
+      name: `人気 +${F.pop}`,
+      desc: '勝つと人気が上がる'
+    });
+    if (F.title) out.push({
+      id: 'ttl',
+      e: '🏅',
+      name: '称号',
+      desc: `勝つと称号「${typeof msxR3TitleName === 'function' ? msxR3TitleName(F.title) : F.title}」`,
+      rare: true
+    });
+  }
+  out.push({
+    id: 'tk',
+    e: '🎫',
+    name: '修行チケット',
+    desc: '賞金ランクが上がると1段ごとに +1(負けても獲得賞金の合計で上がる)'
+  });
+  return out;
+};
+function MsxR3PreDesk({
+  run,
+  v,
+  ev,
+  onBack,
+  onGo,
+  onPause
+}) {
+  const {
+    SUC
+  } = msxSuc;
+  const s = run.s;
+  const b = s.battle;
+  const [win, setWin] = useState(false);
+  const [prz, setPrz] = useState(null);
+  useMsxR3Lines(s.aid);
+  useEffect(() => {
+    if (typeof SuccessSound !== 'undefined') SuccessSound.se('cupEntry');
+  }, []);
+  if (!b) return null;
+  const name = msxR3BattleName(SUC, b);
+  const star = b.kind === 'summit' ? 4 : ((SUC.FORCED || {})[b.kind] || {}).star || 1;
+  const grade = b.kind === 'summit' ? '最後の大会' : b.kind === 'debut' ? 'デビュー戦' : '期末の大会';
+  const prizes = msxR3ForcedPrizes(SUC, b);
+  const gold = prizes[0] && prizes[0].id === 'g' ? prizes[0].name.replace('賞金 ', '') : '';
+  const cal = msxCalendar(s.turn);
+  const openLine = msxR3Line('turn.cup.day', run, {
+    cup: name
+  }, `「いらっしゃいませ! 今日は ${name} の日です。準備ができたら、出場してくださいね」`);
+  const rankStep = typeof SUC.rankStepOf === 'function' ? SUC.rankStepOf(s) : 0;
+  const rank = rankStep ? {
+    name: SUC.rankNameOf(rankStep)
+  } : null;
+  const icon = msxR3BattleIcon(b);
+  const body = React.createElement(React.Fragment, null, React.createElement(MsxBand, {
+    s: s,
+    v: v,
+    ev: ev
+  }), React.createElement("div", {
+    className: "v-scene low",
+    style: {
+      flex: '0 0 auto',
+      minHeight: 128
+    }
+  }, React.createElement("img", {
+    className: "bg",
+    src: "images/story-bg/monhero_town.jpg",
     alt: ""
-  }) : null, React.createElement("p", null, l && l.t)), React.createElement("div", {
-    className: "skip"
-  }, "タップで すすむ")));
+  }), React.createElement("div", {
+    className: "sh"
+  }), React.createElement("img", {
+    src: msxBody(s.aid, 'happy'),
+    alt: "",
+    style: {
+      position: 'absolute',
+      left: '-2%',
+      bottom: '-98%',
+      height: '190%'
+    }
+  }), React.createElement("div", {
+    className: "v-ev-h"
+  }, React.createElement("small", null, cal.year, "年目 ", cal.month, "月・", v.period.name), "🏆 大会の受付"), React.createElement("div", {
+    className: "v-ibub",
+    style: {
+      left: '38%',
+      top: 'auto',
+      bottom: 8
+    }
+  }, openLine.t)), React.createElement("div", {
+    className: "v-cupbar",
+    "data-msx-r3-fame": true
+  }, React.createElement("span", null, "いまの賞金"), React.createElement("b", null, msxFmt(s.fame), React.createElement("small", null, "G")), rank ? React.createElement("i", null, "賞金の段 ", rank.name) : null), React.createElement("div", {
+    className: "v-cupmon"
+  }, React.createElement("span", {
+    className: "ar",
+    "aria-hidden": "true",
+    style: {
+      visibility: 'hidden'
+    }
+  }), React.createElement("b", null, cal.year, "年目 ", cal.month, "月", React.createElement("small", {
+    className: "now"
+  }, "当日")), React.createElement("span", {
+    className: "ar",
+    "aria-hidden": "true",
+    style: {
+      visibility: 'hidden'
+    }
+  })), React.createElement("div", {
+    className: "v-cups"
+  }, React.createElement("button", {
+    type: "button",
+    className: `v-cup v-cup2 sel ex g-${star >= 4 ? 'gold' : 'n'}`,
+    onClick: () => setWin(true),
+    "data-msx-r3-pre-card": b.kind
+  }, React.createElement("div", {
+    className: "lg"
+  }, React.createElement("span", {
+    className: "e"
+  }, icon), React.createElement("span", {
+    className: "fcst fc-h"
+  }, "本番")), React.createElement("div", {
+    className: "tx"
+  }, React.createElement("div", {
+    className: "hd"
+  }, React.createElement("span", {
+    className: "gr2"
+  }, grade), React.createElement("span", {
+    className: "cs"
+  }, msxR3Stars(star))), React.createElement("b", null, name), gold ? React.createElement("span", {
+    className: "g"
+  }, gold.replace('G', ''), React.createElement("small", null, "G")) : null))), React.createElement("div", {
+    className: "v-card",
+    style: {
+      padding: '5px 9px'
+    }
+  }, React.createElement("div", {
+    className: "v-kv",
+    style: {
+      margin: 0
+    }
+  }, React.createElement("b", null, "今日は"), React.createElement("span", null, grade, "の日。トレーニングはできない。出場すると組み合わせ表へ進む"))), win ? React.createElement("div", {
+    className: "v-cupwin",
+    onClick: () => {
+      setWin(false);
+      setPrz(null);
+    },
+    "data-msx-r3-cupwin": true
+  }, React.createElement("div", {
+    className: "in",
+    onClick: e => e.stopPropagation()
+  }, React.createElement("div", {
+    className: "h"
+  }, "大会参加確認"), React.createElement("div", {
+    className: `sign g-${star >= 4 ? 'gold' : 'n'}`
+  }, React.createElement("span", {
+    className: "e"
+  }, icon), React.createElement("b", null, name), React.createElement("small", null, grade, " ", msxR3Stars(star))), React.createElement("div", {
+    className: "sub"
+  }, "獲得物"), React.createElement("div", {
+    className: "pz"
+  }, prizes.map(x => React.createElement("button", {
+    type: "button",
+    key: x.id,
+    className: x.rare ? 'rare' : '',
+    onClick: () => setPrz(x),
+    "data-msx-r3-prize": x.id
+  }, React.createElement("span", null, x.e), React.createElement("small", null, x.name)))), React.createElement("div", {
+    className: "q"
+  }, "この大会に参加しますか?"), React.createElement("div", {
+    className: "bt"
+  }, React.createElement("button", {
+    type: "button",
+    onClick: () => setWin(false),
+    "data-msx-r3-pre-cancel": true
+  }, "キャンセル"), React.createElement("button", {
+    type: "button",
+    className: "go",
+    onClick: onGo,
+    "data-msx-r3-yes": true
+  }, "はい")), prz ? React.createElement("div", {
+    className: "det",
+    onClick: () => setPrz(null)
+  }, React.createElement("div", {
+    className: "dbox",
+    onClick: e => e.stopPropagation()
+  }, React.createElement("div", {
+    className: "e"
+  }, prz.e), React.createElement("b", null, prz.name), React.createElement("p", null, prz.desc), React.createElement("button", {
+    type: "button",
+    onClick: () => setPrz(null)
+  }, "とじる"))) : null)) : null);
+  const foot = React.createElement("div", {
+    className: "v-ft"
+  }, React.createElement("button", {
+    type: "button",
+    onClick: onBack
+  }, "← もどる"), React.createElement("button", {
+    type: "button",
+    className: "go",
+    onClick: () => setWin(true),
+    "data-msx-r3-enter": true
+  }, "出場 ▶"));
+  return React.createElement(MsxR3Frame, {
+    run: run,
+    onBack: onBack,
+    body: body,
+    foot: foot
+  });
 }
 function MsxR3Battle({
   run,
@@ -170343,7 +170666,6 @@ function MsxR3Battle({
       onBack: onPause,
       body: React.createElement(MsxR3CupIntro, {
         key: introKey,
-        run: run,
         b: b,
         title: title,
         onGo: () => setIntroSeen(introKey)
@@ -170355,7 +170677,7 @@ function MsxR3Battle({
         className: "go",
         onClick: () => setIntroSeen(introKey),
         "data-msx-r3-cupintro-go": true
-      }, "会場へ ▶"))
+      }, "SKIP ▸▸"))
     });
   }
   if (showOn) {
@@ -170891,6 +171213,7 @@ function MsxR3Shugyo({
   const [res, setRes] = useState(null);
   const [fxDone, setFxDone] = useState(false);
   const [stOn, setStOn] = useState(false);
+  const [lockT, setLockT] = useState(null);
   useSuccessScene(res ? 'ascetic' : null, {
     season: msxCalendar(s0.turn).season
   });
@@ -171110,48 +171433,69 @@ function MsxR3Shugyo({
   const cur = SH.courses[course] || {
     stages: []
   };
-  const tkOrder = t => ((s0.techs || []).includes(t.id) ? 2 : rateOf[t.id] != null ? 0 : 1) * 10 + (rankOf[t.id] || 5);
-  const groups = MSX_R3_DIST.map((dn, d) => ({
+  const tkMax = SUC.TECH_MAX || 99;
+  const full = (s0.techs || []).length >= tkMax;
+  const techName = id => (all.find(x => x.id === id) || {}).name || id;
+  const condsOf = t => {
+    const L = t && t.learn || {};
+    const out = [];
+    if (L.start) return out;
+    Object.entries(L.st || {}).forEach(([k, n]) => out.push({
+      k: `st-${k}`,
+      short: `${MSX_STAT_NAME[k] || k} ${msxFmt(n)}で`,
+      long: `${MSX_STAT_ICON[k] || ''} ${MSX_STAT_NAME[k] || k}が ${msxFmt(n)} 以上(いま ${msxFmt(Math.round((s0.stats || {})[k] || 0))})`,
+      ok: ((s0.stats || {})[k] || 0) >= n
+    }));
+    Object.entries(L.need || {}).forEach(([id, n]) => out.push({
+      k: `nd-${id}`,
+      short: `${techName(id)} 熟練${n}で`,
+      long: `「${techName(id)}」の熟練が ${n} 以上(いま ${(s0.techs || []).includes(id) ? (s0.mastery || {})[id] || 0 : 'まだ覚えていない'})`,
+      ok: ((s0.mastery || {})[id] || 0) >= n
+    }));
+    return out;
+  };
+  const cols = MSX_R3_DIST.map((dn, d) => ({
     dn,
-    list: all.filter(t => Math.min(...(Array.isArray(t.dist) && t.dist.length ? t.dist : [1])) === d).sort((x, y) => tkOrder(x) - tkOrder(y))
+    list: all.filter(t => Math.min(...(Array.isArray(t.dist) && t.dist.length ? t.dist : [1])) === d).sort((x, y) => (rankOf[x.id] || x.rank || 5) - (rankOf[y.id] || y.rank || 5))
   }));
+  const say = want.length >= 2 ? '「2つで超修行! 2つとも覚えることもあるよ。能力の上がりも疲れも2回分だからね」' : want.length === 1 ? superWhy ? `「この技でいこう! (${superWhy}から、技は1つだけ)」` : '「いいね! もう1つ選ぶと超修行になるよ」' : '「覚えたい技を1つ選んでね。2つ選ぶと超修行! 選ばなくても能力は上がるよ」';
+  const slot = id => {
+    if (!id) return React.createElement("div", {
+      className: "q-slot",
+      "data-msx-r3-qslot": "0"
+    }, want.length ? superWhy ? `超修行は できない(${superWhy})` : '+ もう1つ選ぶと 🔥超修行' : '+ 下の緑の札から 技をえらぶ');
+    const t = all.find(x => x.id === id) || {};
+    const cs = condsOf(t);
+    return React.createElement("div", {
+      className: "q-slot on",
+      onClick: () => toggle(id),
+      "data-msx-r3-qslot": id
+    }, React.createElement("small", null, MSX_R3_DIST[Math.min(...(t.dist || [1]))], "・R", rankOf[id] || '-'), React.createElement("b", {
+      className: "n"
+    }, t.name), React.createElement("b", {
+      className: "r"
+    }, Math.round((rateOf[id] || 0) * 100), "%"), cs.length ? React.createElement("ul", null, cs.slice(0, 4).map((c, i) => React.createElement("li", {
+      key: c.k
+    }, React.createElement("i", null, "条件", i + 1), c.short.replace(/で$/, ' 以上'), React.createElement("em", null, "済")))) : React.createElement("ul", null, React.createElement("li", null, React.createElement("i", null, "条件"), "なし")));
+  };
   const body = React.createElement(React.Fragment, null, React.createElement(MsxBand, {
     s: s0,
     v: v,
     ev: ev,
     use: (SH.hp || 30) * (isSuper ? 2 : 1)
   }), React.createElement("div", {
-    className: "v-scene low",
-    style: {
-      flex: '0 0 auto',
-      minHeight: 140
-    }
+    className: "q-say"
   }, React.createElement("img", {
-    className: "bg",
-    src: `images/story-bg/${MSX_R3_COURSE_BG[course] || 'forest_deep'}.jpg`,
+    src: typeof msxFace === 'function' ? msxFace(s0.aid, 'happy') : msxBody(s0.aid, 'happy'),
     alt: ""
-  }), React.createElement("div", {
-    className: "sh"
-  }), React.createElement("img", {
-    src: msxBody(s0.aid, 'happy'),
-    alt: "",
-    style: {
-      position: 'absolute',
-      left: '-2%',
-      bottom: '-98%',
-      height: '190%'
-    }
-  }), React.createElement("div", {
-    className: "v-ev-h"
-  }, React.createElement("small", null, "🎫 チケット ", tickets, "枚(修行1枚・超修行", superTk, "枚)"), "⚔ 修行に出る"), React.createElement("div", {
-    className: "v-ibub",
-    style: {
-      left: '40%',
-      top: 'auto',
-      bottom: 10
-    }
-  }, "「修行は", React.createElement("b", null, "2段"), "! 能力が上がって、最後に", React.createElement("b", null, "技を覚える"), "チャンスだよ。覚えたい技を1つか2つ選んでね。2つなら", React.createElement("b", null, "超修行"), "!」")), React.createElement("div", {
-    className: "r3-bar"
+  }), React.createElement("p", {
+    "data-msx-r3-qsay": true
+  }, say)), React.createElement("div", {
+    className: "q-sec"
+  }, React.createElement("h3", null, React.createElement("i", null, "1"), "行き先", React.createElement("span", {
+    className: "tk"
+  }, "🎫 チケット ", tickets, "枚")), React.createElement("div", {
+    className: "r3-bar q-dest"
   }, courses.map(k => React.createElement("button", {
     type: "button",
     key: k,
@@ -171162,107 +171506,80 @@ function MsxR3Shugyo({
     className: "v-stg"
   }, cur.stages.map((pair, i) => React.createElement(React.Fragment, {
     key: i
-  }, React.createElement("div", null, React.createElement("small", null, "第", i + 1, "段・", cur.name), pair.map(k => `${MSX_STAT_ICON[k]} ${MSX_STAT_NAME[k]}`).join(' & ')), React.createElement("i", null, "▶"))), React.createElement("div", {
+  }, React.createElement("div", null, React.createElement("small", null, "第", i + 1, "段"), pair.map(k => `${MSX_STAT_ICON[k]} ${MSX_STAT_NAME[k]}`).join(' & ')), React.createElement("i", null, "▶"))), React.createElement("div", {
     className: "last"
-  }, React.createElement("small", null, "さいごに"), "✨ 技のくじ")), SUC.DIST_UP && SUC.DIST_UP.course && Number.isInteger(SUC.DIST_UP.course[course]) ? React.createElement("div", {
-    className: "sub",
-    style: {
-      fontSize: 11,
-      color: '#cbd5e1',
-      padding: '0 4px'
-    },
+  }, React.createElement("small", null, "さいごに"), "✨ 技を覚える")), SUC.DIST_UP && SUC.DIST_UP.course && Number.isInteger(SUC.DIST_UP.course[course]) ? React.createElement("div", {
+    className: "q-note",
     "data-msx-r3-qapt": true
-  }, "📏 ", cur.name, "は「", MSX_R3_DIST[SUC.DIST_UP.course[course]], "」の間合いの修行。ときどき、その間合い適性が1段上がる", typeof SUC.aptUpRoom === 'function' && !SUC.aptUpRoom(s0, SUC.DIST_UP.course[course], 'quest') ? '(この育成では、もう上がらない)' : '') : null, React.createElement("div", {
-    className: "v-card pk",
-    style: {
-      padding: '6px 8px'
-    }
-  }, React.createElement("div", {
-    className: "sub",
-    style: {
-      color: '#f9a8d4',
-      fontWeight: 900
-    }
-  }, "えらんだ技(1つ = 修行/2つ = 🔥超修行 のこり", superLeft, "回・🎫", superTk, "枚)"), superWhy && want.length ? React.createElement("div", {
-    className: "sub",
-    style: {
-      fontSize: 11,
-      color: '#cbd5e1'
-    },
-    "data-msx-r3-superwhy": true
-  }, "🔥 ", superWhy, "ので、技は1つだけ選べる(別の技を押すと入れ替わる)") : null, isSuper ? React.createElement("div", {
-    className: "sub",
-    style: {
-      fontSize: 11,
-      color: '#fde047'
-    },
+  }, "📏 「", MSX_R3_DIST[SUC.DIST_UP.course[course]], "」の間合いの修行。ときどき、その間合い適性が1段上がる", typeof SUC.aptUpRoom === 'function' && !SUC.aptUpRoom(s0, SUC.DIST_UP.course[course], 'quest') ? '(この育成では、もう上がらない)' : '') : null), React.createElement("div", {
+    className: "q-sec"
+  }, React.createElement("h3", null, React.createElement("i", null, "2"), "覚えたい技", React.createElement("span", {
+    className: "tk"
+  }, "2つで🔥超修行・のこり", superLeft, "回")), React.createElement("div", {
+    className: "q-slots"
+  }, slot(want[0]), slot(want[1])), isSuper ? React.createElement("div", {
+    className: "q-note y",
     "data-msx-r3-super": true
-  }, "🔥 超修行: チケット", superTk, "枚・2つとも覚えることがある・覚える率 +", SH.superAdd || 15, "%・能力の上がりと疲れは2回分") : null, React.createElement("div", {
-    className: "v-pick2"
-  }, want.length ? want.map(id => {
-    const t = all.find(x => x.id === id) || {};
-    return React.createElement("div", {
-      key: id,
-      className: "on",
-      onClick: () => toggle(id)
-    }, React.createElement("small", null, MSX_R3_DIST[Math.min(...(t.dist || [1]))], "・ランク", rankOf[id] || '-'), t.name, React.createElement("b", null, Math.round((rateOf[id] || 0) * 100), "%"));
-  }) : React.createElement("div", {
-    className: "none"
-  }, "技をえらばなくても、能力は上がる"))), React.createElement("div", {
-    className: "v-card",
-    style: {
-      flex: 1,
-      minHeight: 0,
-      display: 'flex',
-      flexDirection: 'column',
-      gap: 4,
-      overflowY: 'auto',
-      padding: '4px 8px 6px'
-    },
+  }, "🔥 超修行: チケット", superTk, "枚・2つとも覚えることがある・覚える率 +", SH.superAdd || 15, "%・能力の上がりと疲れは2回分") : null, superWhy && want.length ? React.createElement("div", {
+    className: "q-note",
+    "data-msx-r3-superwhy": true
+  }, "🔥 ", superWhy, "ので、技は1つだけ選べる(別の技を押すと入れ替わる)") : null), React.createElement("div", {
+    className: "q-sec q-list",
     "data-msx-r3-techlist": true
-  }, React.createElement("div", {
-    className: "sub",
-    style: {
-      color: '#f9a8d4',
-      fontWeight: 900
-    }
-  }, "覚えられる技(間合いごと・ランク・覚える率)"), all.length ? groups.filter(g => g.list.length).map(g => React.createElement("div", {
-    key: g.dn,
-    className: "v-tk",
-    style: {
-      alignItems: 'flex-start'
-    }
-  }, React.createElement("i", null, g.dn), React.createElement("div", {
-    style: {
-      flex: 1,
-      minWidth: 0,
-      display: 'grid',
-      gridTemplateColumns: '1fr 1fr',
-      gap: 4
-    }
-  }, g.list.map(t => {
+  }, React.createElement("h3", null, React.createElement("i", null, "3"), "覚えられる技", React.createElement("span", {
+    className: "tk"
+  }, "緑の札をタップ")), all.length ? React.createElement("div", {
+    className: "q-grid"
+  }, cols.map(c => React.createElement("div", {
+    key: c.dn,
+    className: "q-col"
+  }, React.createElement("h4", null, c.dn), c.list.map(t => {
     const got = (s0.techs || []).includes(t.id);
     const ok = rateOf[t.id] != null;
-    return React.createElement("span", {
+    const sel = want.includes(t.id);
+    const cs = got || ok ? [] : condsOf(t);
+    const ng = cs.find(x => !x.ok);
+    return React.createElement("button", {
+      type: "button",
       key: t.id,
-      className: got ? 'got' : want.includes(t.id) ? 'sel' : '',
-      onClick: () => ok && !got ? toggle(t.id) : null,
-      style: {
-        opacity: got || ok ? 1 : 0.45
-      },
+      className: `q-card ${sel ? 'sel' : got ? 'got' : ok ? 'ok' : 'lock'}`,
+      onClick: () => ok && !got ? toggle(t.id) : !got ? setLockT(t) : null,
       "data-msx-r3-tech": t.id
-    }, ok && !got && rankOf[t.id] ? React.createElement("small", {
-      style: {
-        fontSize: 9,
-        opacity: 0.8,
-        marginRight: 2
-      }
-    }, "R", rankOf[t.id]) : null, t.name, React.createElement("b", null, got ? '覚えた' : ok ? `${Math.round(rateOf[t.id] * 100)}%` : 'まだ'));
+    }, React.createElement("span", {
+      className: "nm"
+    }, t.name), React.createElement("span", {
+      className: "rk"
+    }, "R", rankOf[t.id] || t.rank || '-'), got ? React.createElement("span", {
+      className: "p g"
+    }, "覚えた") : ok ? React.createElement("span", {
+      className: "p"
+    }, Math.round(rateOf[t.id] * 100), "%") : React.createElement("span", {
+      className: "lk"
+    }, "🔒 ", full ? '技がいっぱい' : ng ? ng.short : '条件あり'));
   })))) : React.createElement("div", {
-    className: "sub"
+    className: "q-note"
   }, "このモンスターの技の表がまだありません(能力だけ上がる)"), React.createElement("div", {
-    className: "sub"
-  }, "ランクが高い技ほど覚えにくい。能力・忠誠度・人気がよく仕上がっているほど、行き先の旬の季節ほど覚えやすい。外した技は、その技だけ次から覚えやすくなる。助手がドラだと、さらに覚えやすい")));
+    className: "q-note"
+  }, "ランクが高い技ほど覚えにくい。能力・忠誠度・人気がよく仕上がっているほど、行き先の旬の季節ほど覚えやすい。外した技は、その技だけ次から覚えやすくなる。助手がドラだと、さらに覚えやすい")), lockT ? React.createElement("div", {
+    className: "v-cupwin",
+    onClick: () => setLockT(null),
+    "data-msx-r3-qlock": true
+  }, React.createElement("div", {
+    className: "in",
+    onClick: e => e.stopPropagation()
+  }, React.createElement("div", {
+    className: "h"
+  }, "🔒 ", lockT.name), React.createElement("div", {
+    className: "q-lock"
+  }, full ? React.createElement("p", null, "覚えられる技は ", tkMax, "つまで。いまは いっぱいです") : null, condsOf(lockT).map((c, i) => React.createElement("div", {
+    key: c.k,
+    className: c.ok ? 'ok' : ''
+  }, React.createElement("i", null, "条件", i + 1), React.createElement("span", null, c.long), React.createElement("b", null, c.ok ? '済' : 'まだ'))), !full && condsOf(lockT).length ? React.createElement("p", null, "条件をすべて満たすと、緑の「覚えられる」札になります") : null), React.createElement("div", {
+    className: "bt"
+  }, React.createElement("button", {
+    type: "button",
+    onClick: () => setLockT(null)
+  }, "とじる")))) : null);
   const foot = React.createElement("div", {
     className: "v-ft"
   }, React.createElement("button", {

@@ -48,6 +48,11 @@ const makeRun = async (kind) => {
   const stats = (n) => ({ life: n, pow: n, wise: n, hit: n, eva: n, tough: n });
   if (kind === 'win' || kind === 'lose') { s = { ...s, stats: stats(kind === 'win' ? 700 : 40), battle: { kind: 'cup', id: 'x', sys: 'str', star: 2, rival: null, round: 0 } }; phase = 'battle'; }
   if (kind === 'debutlose') { s = { ...s, turn: 5, wonNow: [], wonBefore: [], stats: stats(30), debutLoss: 2, debutWon: false, rematchUsed: 3, battle: { kind: 'debut', round: 0, retry: 2 } }; phase = 'battle'; }
+  if (kind === 'kimatsu' || kind === 'summit') { // 期末の大会・最後の大会の当日(芯が battle を立てた直後。まだ「はい」を押していない)
+    const want = kind === 'kimatsu' ? 'junior' : 'final';
+    let t = 1; while (t < (SUC.TOTAL_TURNS || 46) && !(SUC.periodOf(t).key === want && (kind === 'summit' ? SUC.periodOf(t).at >= 3 : SUC.periodOf(t + 1).key !== want))) t++;
+    s = { ...s, turn: t, battle: kind === 'kimatsu' ? { kind: 'junior', round: 0 } : { kind: 'summit', round: 0 } }; phase = 'battle';
+  }
   if (kind === 'gameover') { s = { ...s, turn: 7, debutLoss: 3, over: 'gameover' }; phase = 'over'; }
   if (kind === 'retire') { s = { ...s, turn: 46, pts: 34, over: 'done' }; phase = 'over'; }
   return { v: 1, id: s.id, s, nick: 'もちまる', colors: [], from: { base: 'Mocchi' }, items: [], used: 0, phase, out: null, log: [{ turn: 3, t: '休んだ' }], startAt: 1 };
@@ -66,11 +71,15 @@ const makeRun = async (kind) => {
     ['C1', 'mid', ['cont', /^🏆大会/]],
     ['C1w', 'mid', ['cont', /^🏆大会/, '@cup']], ['C1p', 'mid', ['cont', /^🏆大会/, '@cup', '@prize=g']], ['C1m', 'mid', ['cont', /^🏆大会/, '@next-month']], // 受付の作り直し(確認の窓・賞品の詳細・次の月)
     // 大会の1戦はバトル部の見せる部品 MonsucCupShow('%x' は [data-msc-x])。賞品のあとのごはんは回3
-    ['B1', 'win', ['cont']], ['C2', 'win', ['cont', '%go']], ['W1', 'win', ['cont', '%go', '%ready']],
-    ['B2', 'win', ['cont', '%quick']], ['R1', 'win', ['cont', '%quick', '%next']], ['C3', 'win', ['cont', '%quick', '%next', '@next']], ['C3b', 'win', ['cont', '%quick', '%next', '@next', '@meal=f_pow']], // R1: 賞金ランク UP!(段が上がったときだけ)
-    ['C4', 'lose', ['cont', '%quick']], ['C4r', 'lose', ['cont', '%quick', '%rematch=sand']], ['C4g', 'lose', ['cont', '%quick', '%giveup']],
-    ['C4d', 'debutlose', ['cont', '%quick']],
+    ['B1', 'win', ['cont', '@cupintro-go']], ['C2', 'win', ['cont', '@cupintro-go', '%go']], ['W1', 'win', ['cont', '@cupintro-go', '%go', '%ready']],
+    ['B2', 'win', ['cont', '@cupintro-go', '%quick']], ['R1', 'win', ['cont', '@cupintro-go', '%quick', '%next']], ['C3', 'win', ['cont', '@cupintro-go', '%quick', '%next', '@next']], ['C3b', 'win', ['cont', '@cupintro-go', '%quick', '%next', '@next', '@meal=f_pow']], // R1: 賞金ランク UP!(段が上がったときだけ)
+    ['C4', 'lose', ['cont', '@cupintro-go', '%quick']], ['C4r', 'lose', ['cont', '@cupintro-go', '%quick', '%rematch=sand']], ['C4g', 'lose', ['cont', '@cupintro-go', '%quick', '%giveup']],
+    ['C4d', 'debutlose', ['cont', '@cupintro-go', '%quick']],
     ['Q1', 'mid', ['cont', /^⚔修行/]], ['Q2', 'mid', ['cont', /^⚔修行/, '@shugyo']], ['Q3', 'mid', ['cont', /^⚔修行/, '@shugyo', '@qnext']],
+    // 期末の大会の当日(参考 te-30〜34): 当日のメイン(能力と大会だけ)→ 受付に1つ → 参加の確認 → 紋章の入り → 表
+    ['K0', 'kimatsu', ['cont']], ['K1', 'kimatsu', ['cont', '@precup']], ['K2', 'kimatsu', ['cont', '@precup', '@enter']], ['K2c', 'kimatsu', ['cont', '@precup', '@enter', '@pre-cancel']],
+    ['K3', 'kimatsu', ['cont', '@precup', '@enter', '@yes']], ['K4', 'kimatsu', ['cont', '@precup', '@enter', '@yes', '@cupintro-go']],
+    ['S0', 'summit', ['cont']], ['S2', 'summit', ['cont', '@precup', '@enter']],
     ['G1', 'gameover', ['cont']],
     ['X1', 'box', ['@openbox', '@boxmon=b1', '@edit']], ['X2', 'box', ['@openbox', '@boxmon=b1', '@edit', '@editsave']],
     ['E0', 'retire', ['cont']], ['E3', 'retire', ['cont', '@e0']], ['E3b', 'retire', ['cont', '@e0', '@bal']], ['E1', 'retire', ['cont', '@e0', '@bal', '@e3']],
@@ -129,6 +138,10 @@ const makeRun = async (kind) => {
         check(`${label}: 枠からはみ出さない`, m.ok && m.over.length === 0, m.over && m.over.slice(0, 3).join(' / '));
         if (name === 'X2') { const b = await page.evaluate(() => JSON.parse(localStorage.getItem('mh_monsuc_box_v1') || 'null')); const m = b && b.mons.find((x) => x.id === 'b1');
           check(`${label}: 名前と染色を決めても、ほかの項目と子は残る`, !!m && m.nick === 'もちまる' && m.keepMe === 'x' && Array.isArray(m.colors) && b.mons.length === 2); }
+        if (name === 'K0' || name === 'S0') { const k = await page.evaluate(() => ({ n: document.querySelectorAll('[data-msx-pre-main] button').length, train: [...document.querySelectorAll('.msx .v-act button')].some((b) => /トレーニング|修行/.test(b.innerText || '')), bracket: !!document.querySelector('[data-msc-go], [data-msx-r3-cupintro]') }));
+          check(`${label}: 当日のメインのボタンは「能力」と「大会」の2つだけ・まだ表へ飛ばない`, k.n === 2 && !k.train && !k.bracket, JSON.stringify(k)); }
+        if (name === 'K2c') check(`${label}: キャンセルで受付へ戻る`, await page.evaluate(() => !document.querySelector('[data-msx-r3-cupwin]') && !!document.querySelector('[data-msx-r3-pre-card]')));
+        if (name === 'K3') check(`${label}: 「はい」で紋章の入り`, await page.evaluate(() => !!document.querySelector('[data-msx-r3-cupintro="junior"]')));
         if (name === 'E9') check(`${label}: 保存枠に1体入り、途中の育成が消える`, m.boxN === 1 && (m.run === null || m.run === 'null'), `保存枠 ${m.boxN}体`);
         if (SHOT_DIR) { fs.mkdirSync(SHOT_DIR, { recursive: true }); await page.screenshot({ path: path.join(SHOT_DIR, `r3-${name}${tag ? `-${tag}` : ''}.png`) }); }
       }
