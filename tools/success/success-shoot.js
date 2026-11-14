@@ -63,8 +63,11 @@ const makeRun = async (kind) => {
   const sizes = process.env.SHOT_QUICK ? [[390, 844, '']] : [[390, 844, ''], [844, 390, 'land'], [667, 375, 'land667'], [320, 568, 's320'], [390, 844, 'big', 1.3], [844, 390, 'landbig', 1.3], [320, 568, 's320big', 1.3]];
   // [名前, 作る育成, 開いたあとの操作]
   const SHOTS = [
-    ['S1', null, ['new']], ['S1D', null, ['new', 'detail']], ['S1A', null, ['new', 'detail', 'tab:apt']], ['S1T', null, ['new', 'detail', 'tab:tech']], ['S1X', null, ['new', 'detail', 'tab:dex']], ['S2', null, ['new', 'next']], ['S2P', null, ['new', 'next', 'slot:1']], ['S2B', null, ['new', 'next', 'slot:1', 'base:Golem']], ['S2G', null, ['new', 'next', 'gather']], ['S3', null, ['new', 'next', 'next']], ['S4', null, ['new', 'next', 'next', 'next']],
-    ['S5', null, ['new', 'next', 'next', 'next', 'next']], ['S6', null, ['new', 'next', 'next', 'next', 'next', 'next']],
+    ['S0', null, ['new']], // ストーリー選択(2026-11-14)。S1〜S6 はその「次へ」のあと
+    ['S1', null, ['new', 'next']], ['S1D', null, ['new', 'next', 'detail']], ['S1A', null, ['new', 'next', 'detail', 'tab:apt']], ['S1T', null, ['new', 'next', 'detail', 'tab:tech']], ['S1X', null, ['new', 'next', 'detail', 'tab:dex']],
+    ['S2', null, ['new', 'next', 'next']], ['S2P', null, ['new', 'next', 'next', 'slot:1']], ['S2B', null, ['new', 'next', 'next', 'slot:1', 'base:Golem']], ['S2G', null, ['new', 'next', 'next', 'gather']],
+    ['S3', null, ['new', 'next', 'next', 'next']], ['S4', null, ['new', 'next', 'next', 'next', 'next']],
+    ['S5', null, ['new', 'next', 'next', 'next', 'next', 'next']], ['S6', null, ['new', 'next', 'next', 'next', 'next', 'next', 'next']],
     ['M1', 'mid', ['cont']], ['M2', 'yosu', ['cont']], ['M3', 'mid', ['cont', 'bag']], ['T1', 'mid', ['cont', 'train']],
     ['K1', 'mid', ['cont', 'train', 'go']], ['K3', 'mid', ['cont', 'train', 'go', 'next']], ['K5', 'mid', ['cont', 'train', 'go', 'next', 'praise']],
     ['I1', 'mid', ['cont', 'issa']], ['P1', 'mid', ['cont', 'stats']],
