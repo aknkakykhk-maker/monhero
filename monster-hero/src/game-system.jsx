@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: aaa3f34f847e35b0
+// generated-sha256: a2fd8a95531fce56
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -87660,7 +87660,7 @@ const msxR3PrizeRows = (d, s) => {
 // 大きな帯(期末の大会の日!/今月の大会)・会場の絵・助手のひとこと・「会場へ ▶」。約2.2秒で進む・押せばすぐ進む。何も保存しない
 const MSX_R3_INTRO_MS = 2200;
 const MSX_R3_INTRO_CSS = `
-.msx-cupin{position:relative;flex:1 1 0;min-height:max(260px,calc(100dvh - 190px));border-radius:16px;overflow:hidden;cursor:pointer;background:#1e1b4b}
+.msx-cupin{position:relative;flex:1 1 0;min-height:max(260px,calc(var(--mh-vh) - 190px));border-radius:16px;overflow:hidden;cursor:pointer;background:#1e1b4b}
 .msx-cupin .bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;animation:msxCupinBg 2.4s ease-out both}
 .msx-cupin .sh{position:absolute;inset:0;background:linear-gradient(180deg,rgba(15,13,36,.15),rgba(15,13,36,.65))}
 .msx-cupin .band{position:absolute;left:0;right:0;top:20%;text-align:center;padding:8px 0 10px;background:linear-gradient(90deg,transparent,#7c2d12e6 14%,#b45309e6 50%,#7c2d12e6 86%,transparent);animation:msxCupinBand .45s cubic-bezier(.2,1.3,.4,1) .1s both}
@@ -119079,7 +119079,7 @@ function MonsterHeroGame() {
     if (key && eventId && prev && prev.id === eventId && prev.key !== key) Audio_.fadeToBGM(key, EVENT_BGM_FADE_MS);
     else if (key) Audio_.playBGM(key);
     else Audio_.stopBGM();
-  }, [bootPhase, gameState, wave, enemy?.id, hp, gaveUp, audioOn, waveHistory.length, bgmArrangement, runMode, eventBgmScene, mainHero?.id, autoBattle, autoBgmOverride, rhythmScreenOpen, successScreenOpen, cardScreenOpen, eventLineBgm, cardBgm, assistantLifeOpenNow, battleBgmOverlay]);
+  }, [bootPhase, gameState, wave, enemy?.id, hp, gaveUp, audioOn, successScreenOpen, waveHistory.length, bgmArrangement, runMode, eventBgmScene, mainHero?.id, autoBattle, autoBgmOverride, rhythmScreenOpen, cardScreenOpen, eventLineBgm, cardBgm, assistantLifeOpenNow, battleBgmOverlay]);
 
   // SE/BGMそれぞれの音量をAudioエンジンへ反映
   // 超省エネではBGMを選んで鳴らしてもSEだけは常に0。保存済みSE音量そのものは変更しない。

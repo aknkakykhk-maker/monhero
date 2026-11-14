@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9e9845d1c965b170
+// source-sha256: 5f2c07c1a639fb59
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -169488,7 +169488,7 @@ const msxR3PrizeRows = (d, s) => {
 };
 const MSX_R3_INTRO_MS = 2200;
 const MSX_R3_INTRO_CSS = `
-.msx-cupin{position:relative;flex:1 1 0;min-height:max(260px,calc(100dvh - 190px));border-radius:16px;overflow:hidden;cursor:pointer;background:#1e1b4b}
+.msx-cupin{position:relative;flex:1 1 0;min-height:max(260px,calc(var(--mh-vh) - 190px));border-radius:16px;overflow:hidden;cursor:pointer;background:#1e1b4b}
 .msx-cupin .bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;animation:msxCupinBg 2.4s ease-out both}
 .msx-cupin .sh{position:absolute;inset:0;background:linear-gradient(180deg,rgba(15,13,36,.15),rgba(15,13,36,.65))}
 .msx-cupin .band{position:absolute;left:0;right:0;top:20%;text-align:center;padding:8px 0 10px;background:linear-gradient(90deg,transparent,#7c2d12e6 14%,#b45309e6 50%,#7c2d12e6 86%,transparent);animation:msxCupinBand .45s cubic-bezier(.2,1.3,.4,1) .1s both}
@@ -222777,7 +222777,7 @@ function MonsterHeroGame() {
       key
     } : null;
     if (key && eventId && prev && prev.id === eventId && prev.key !== key) Audio_.fadeToBGM(key, EVENT_BGM_FADE_MS);else if (key) Audio_.playBGM(key);else Audio_.stopBGM();
-  }, [bootPhase, gameState, wave, enemy?.id, hp, gaveUp, audioOn, waveHistory.length, bgmArrangement, runMode, eventBgmScene, mainHero?.id, autoBattle, autoBgmOverride, rhythmScreenOpen, successScreenOpen, cardScreenOpen, eventLineBgm, cardBgm, assistantLifeOpenNow, battleBgmOverlay]);
+  }, [bootPhase, gameState, wave, enemy?.id, hp, gaveUp, audioOn, successScreenOpen, waveHistory.length, bgmArrangement, runMode, eventBgmScene, mainHero?.id, autoBattle, autoBgmOverride, rhythmScreenOpen, cardScreenOpen, eventLineBgm, cardBgm, assistantLifeOpenNow, battleBgmOverlay]);
   const assistantLifeRunMuted = assistantLifeScreenOpen && runStage !== null;
   useEffect(() => {
     Audio_.setSeVolume(ultraEcoSession && !cardScreenOpen || rhythmScreenOpen || assistantLifeRunMuted ? 0 : seVolume);
