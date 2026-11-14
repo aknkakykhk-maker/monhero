@@ -87,6 +87,7 @@ const makeRun = async (kind) => {
     ['X0', 'box', ['@openbox']], ['X3', 'box', ['@openbox', '@mmlist']], ['X4', 'box', ['@openbox', '@mmlist', '@boxmon=b1']],
     ['X5', 'box', ['@openbox', '@mmlist', '@boxmon=b1', '#detail-tab=feat']], ['X6', 'box', ['@openbox', '@mmlist', '@boxmon=b1', '#detail-tab=apt']],
     ['X9', 'box', ['@openbox', '@mmlist', '@boxmon=b1', '#tech=sk-0405']],
+    ['X11', 'box', ['@openbox', '@mmlist', '@boxmon=bx3']], ['X12', 'box', ['@openbox', '@mmlist', '@boxmon=bx5']], // 資料に無い技(オリジナルの子)の影絵の絵
     ['X10', 'box', ['@openbox', '@mmlist', '@boxmon=bx0']], // 同じ間合い・同じランクに技が2つある種族(スネグーラチカ): そのランクの段が2行になる // 詳細の技の升目で、覚えていない技を押した所(右の詳細に覚え方の条件)
     ['A1', 'box', ['@openbox', '#mm-open-assist']], ['A2', 'box', ['@openbox', '#mm-open-assist', '#assist-mon=as1', '#assist-mon=as3']], ['A3', 'box', ['@openbox', '#mm-open-assist', '#assist-mon=as1', '#assist-remove']],
     ['F1', 'box', ['@openbox', '@mmlist', '@mmbye', '@boxmon=b2', '#mm-bye']], ['F2', 'box', ['@openbox', '@fuse', '~fuse-pick=b1', '~fuse-pick=b2']],
@@ -124,7 +125,7 @@ const makeRun = async (kind) => {
             localStorage.setItem('mh_monsuc_box_v1', JSON.stringify({ v: 1, cap: 30, memory: [], mons: [
               { id: 'b1', species: 'Mocchi', nick: 'もちまる', colors: [], gen: 1, st, techs: ['sk-0402', 'sk-0400', 'sk-0401'], mast: [40, 12, 0], fav: ['pow', 'tough'], coach: 'mua', endAt: Date.parse('2026-11-14T12:00:00+09:00'), ending: 'good', loy: 80, pop: 60, lv: 8, rank: 'A', grade: 'A2', score: 11800, raised: true, assists: [], titles: [], keepMe: 'x' },
               { id: 'b2', species: 'Golem', nick: 'いわお', colors: [], gen: 1, st, techs: [], mast: [], loy: 70, pop: 40, lv: 6, rank: 'B', grade: 'B3', score: 9200, raised: true, assists: [], titles: [] },
-              ...['Snegurochka', 'Golem', 'Mocchi', 'Golem', 'Mocchi', 'Golem'].map((sp, i) => ({ id: `bx${i}`, species: sp, nick: '', colors: [], gen: 1 + (i % 3), st, techs: [], mast: [], loy: 50, pop: 30, lv: 3 + i, rank: 'C', grade: `C${i + 1}`, score: 6000 + i * 350, raised: true, assists: [], titles: [] }))] }));
+              ...['Snegurochka', 'Golem', 'Mocchi', 'Eiki', 'Mocchi', 'KenshiMocchi'].map((sp, i) => ({ id: `bx${i}`, species: sp, nick: '', colors: [], gen: 1 + (i % 3), st, techs: [], mast: [], loy: 50, pop: 30, lv: 3 + i, rank: 'C', grade: `C${i + 1}`, score: 6000 + i * 350, raised: true, assists: [], titles: [] }))] }));
             // アシスト用に残した子(合体の親・お別れした子)。育成には使えず、編成にだけ入る(2026-11-14 社長)
             localStorage.setItem('mh_monsuc_assist_v1', JSON.stringify({ v: 1, cap: 100, mons: ['Pixie', 'Tiger', 'Ghost', 'Plant'].map((sp, i) => ({ id: `as${i + 1}`, species: sp, nick: i === 0 ? 'ぴくる' : '', colors: [], gen: 1, st, techs: [], mast: [], loy: 60, pop: 40, lv: 5, rank: ['A', 'B', 'S', 'C'][i], grade: ['A1', 'B2', 'S1', 'C3'][i], score: 9000, raised: true, assists: [], titles: [], keep: { from: i % 2 ? 'farewell' : 'fuse', at: 1 } })) }));
             localStorage.removeItem('mh_monsuc_run_v1');
