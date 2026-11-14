@@ -6,7 +6,7 @@
 //   SHOT_DIR=<フォルダ> を付けると、はじまり(題字)・最初の行・山場・おわりの札の写真を残す
 //
 //   ① 公開のあとの最初の HOME で、ひとりでに流れる(はじまりに題字ロゴの絵 MSX_LOGO_ART とβの札)
-//   ② 最後まで送れて、行の数が台本どおり(あつを解放した人 45行・まだの人 42行)。まだの人には、あつが一度も出ない
+//   ② 最後まで送れて、行の数が台本どおり(あつを解放した人 46行・まだの人 43行)。まだの人には、あつが一度も出ない
 //   ③ おわりの札に次回予告「第2話 ～ヒーローへの道～」「モンヒロサクセス β版 近日公開」。モンサクへ行くボタンは無い
 //   ④ 見終えると見た印(mh_rhythm_event_story_v1 に monsuc_beta_ep1)が付き、開き直しても二度は流れない・実行時エラーが無い
 const http = require('http'), path = require('path'), fs = require('fs');
@@ -25,8 +25,8 @@ const serve = () => new Promise((r) => { const s = http.createServer((req, res) 
 const JOIN_ATSU = 'atsu_join_2026_10_22';
 const CARD_CUP_STORY = 'card_cup_2026_10_31';
 // あつを解放した人/まだの人。山場の写真は「デビューから頂まで」の行
-const CASES = [{ atsu: true, lines: 45, shots: true }, { atsu: false, lines: 42, shots: false }];
-const CLIMAX = 'デビュー戦から最後の大会まで';
+const CASES = [{ atsu: true, lines: 46, shots: true }, { atsu: false, lines: 43, shots: false }];
+const CLIMAX = 'ヒーローズファイナル';
 (async () => {
   let chromium;
   try { ({ chromium } = require(path.join(ROOT, 'tools', 'node_modules', 'playwright'))); } catch (e) { console.log('SKIP: playwright が入っていないので確かめられません'); process.exit(0); }
