@@ -58,7 +58,15 @@ const hintNames = Object.values(SUC.ASST_STORY).filter(s => s.good.hint === 'ass
 for (const n of hintNames) ok(AS.LIST.some(a => a.name === n && a.from === 'hint'), `お話のひらめき「${n}」が表にない`);
 ok(AS.MAX_KINDS === 8, '1体に持てる数が8でない(社長 2026-11-14)');
 for (const p of [0, 999, 2000, 8000, 14000, 19500, 20070, 99999]) ok(AS.pointsOf(p) === SUC.assistPointsOf(p), `ポイントの式が芯と違う(総合力 ${p})`);
-ok(AS.describe('sokoji', 10) === 'いっしょにトレーニングすると、伸びが10%上がる', '説明の差しこみがおかしい');
+ok(AS.describe('sokoji', 10) === 'いっしょにトレーニングしたとき、伸び +10%', `説明の差しこみがおかしい: ${AS.describe('sokoji', 10)}`);
+// 書き方の型(社長 2026-11-14): どの効果も型(k)を持ち、「点」「段」を使わない・文頭は効く場面
+const SCENE_HEAD = /^(いっしょにトレーニングしたとき、|成長のピークの外でいっしょに|\d+〜\d+月にいっしょに|「.+」のトレーニングにいっしょに来たとき、|このモンスター|編成にいるだけで、|助手が来たトレーニングでは、)/;
+for (const a of AS.LIST) {
+  ok(['grow', 'rate', 'rateDown', 'mul', 'cut', 'val', 'cnt', 'on'].includes(a.k), `${a.id} に書き方の型(k)がない`);
+  for (let n = 1; n <= a.max; n++) { const t = AS.describe(a.id, n) + AS.valueText(a.id, n); ok(!/点|段/.test(t), `${a.id} 目盛り${n}: 「点」「段」を使っている: ${t}`); }
+  ok(SCENE_HEAD.test(AS.describe(a.id, 1)), `${a.id} の説明の文頭が効く場面でない: ${AS.describe(a.id, 1)}`);
+}
+ok(AS.valueText('hirameki', 5) === '確率+5%' && AS.describe('hirameki', 5) === 'いっしょにトレーニングしたとき、大成功の確率 +5%' && AS.valueText('ochitsuki', 1) === '×0.95' && AS.valueText('shokin', 5) === '×1.05' && AS.valueText('chokyo', 1) === '+1回', '型ごとの数字の書き方がおかしい');
 ok(AS.valueText('sokoji', 12) === '+12%' && AS.valueText('hitonatsu', 2) === '×1.1', `効き目の短い字がおかしい: ${AS.valueText('sokoji', 12)} ${AS.valueText('hitonatsu', 2)}`);
 for (const pts of [20, 40, 160, 288, 400]) {
   const r = AS.autoPick(pts, []);

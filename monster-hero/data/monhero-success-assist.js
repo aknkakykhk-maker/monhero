@@ -30,12 +30,61 @@
   const STAT_ICON = { pow: '💥', wise: '📘', hit: '🎯', eva: '💨', tough: '🛡', life: '❤' };
   const r3 = (x) => Math.round(x * 1000) / 1000;
 
+
+  // ---- 書き方の型(社長 2026-11-14「みんな同じような書き方に」「点・段は使わない」)----
+  //   文頭は効く場面(いっしょにトレーニングしたとき/〜に来たとき/このモンスターが〜/編成にいるだけで)。{v} に k の書き方の数字が入る
+  //   k … grow 伸び(上がる量の補正に足す)「+5%」/ rate 確率に足す「+5%」/ rateDown 確率から引く「−5%」/
+  //       mul その量にかける「×1.05」/ cut その量・確率にかける「×0.95」/ val 値「+5」/ cnt 回数など「+1回」(cu が単位)/ on 1つだけ「あり」
+  const T1 = 'いっしょにトレーニングしたとき、'; const ST = '編成にいるだけで、';
+  const W = {
+    sokoji: ['grow', T1 + '伸び {v}'], kizuna: ['grow', T1 + '忠誠度が高いほど伸び {v}(忠誠100のとき)'],
+    hirameki: ['rate', T1 + '大成功の確率 {v}'], ochitsuki: ['cut', T1 + '失敗の確率 {v}'], itawari: ['cut', T1 + '減る体力 {v}'],
+    ninzu: ['grow', T1 + '3体以上集まっていれば伸び さらに {v}'], trainlv: ['cnt', T1 + 'トレーニングLv {v}(Lv5まで)', 'Lv'],
+    gyakkyo: ['cnt', '成長のピークの外で' + T1 + 'トレーニングLv {v}(Lv5まで)', 'Lv'],
+    hagemi: ['grow', T1 + '賞金の合計が多いほど伸び {v}(18,000G のとき)'],
+    haru: ['grow', '3〜5月に' + T1 + '伸び {v}'], natsu: ['grow', '6〜8月に' + T1 + '伸び {v}'],
+    aki: ['grow', '9〜11月に' + T1 + '伸び {v}'], fuyu: ['grow', '12〜2月に' + T1 + '伸び {v}'],
+    ninkigreat: ['rate', T1 + '人気が高いほど大成功の確率 {v}(人気100のとき)'], challenge: ['rate', T1 + '取った称号1つにつき大成功の確率 {v}'],
+    tsuika: ['rate', T1 + 'あとからどれか1つの能力がさらに +5〜20 になる確率 {v}'], kaifuku: ['val', T1 + 'トレーニングのあと体力 {v}'],
+    atooshi: ['grow', 'このモンスターのいちばん高い能力のトレーニングにいっしょに来たとき、伸び {v}'],
+    miharu: ['cut', T1 + 'サボりの確率 {v}'], kibarashi: ['cut', T1 + 'たまるストレス {v}'],
+    kunpow: ['grow', '「ちから」のトレーニングにいっしょに来たとき、伸び {v}'], kunwise: ['grow', '「かしこさ」のトレーニングにいっしょに来たとき、伸び {v}'],
+    kunhit: ['grow', '「命中」のトレーニングにいっしょに来たとき、伸び {v}'], kuneva: ['grow', '「回避」のトレーニングにいっしょに来たとき、伸び {v}'],
+    kuntough: ['grow', '「丈夫さ」のトレーニングにいっしょに来たとき、伸び {v}'], kunlife: ['grow', '「ライフ」のトレーニングにいっしょに来たとき、伸び {v}'],
+    kaketsuke: ['rate', 'このモンスターが得意なトレーニングに来る確率 {v}(90%まで)'], shutsugen: ['rateDown', 'このモンスターがトレーニングに来ない確率 {v}(はじめは15%)'],
+    shitashi: ['val', 'このモンスターのはじめの親密度 {v}'], tagpow: ['grow', 'このモンスターが友情タッグになったとき、タッグの強さ {v}'],
+    hitonatsu: ['mul', ST + 'みんなの親密度の上がり {v}(このモンスターのはじめの親密度も +{start})'], nakayoshi: ['val', T1 + 'このモンスターの親密度の上がり {v}'],
+    shitsuke: ['mul', ST + '褒める・叱るで上がる忠誠度 {v}'],
+    shoki: ['val', ST + '育成のはじめの6つの能力 {v}'], ticket0: ['cnt', ST + '育成のはじめの修行チケット {v}', '枚'], tairyoku: ['val', ST + '育成のはじめの体力の上限 {v}'],
+    kuishinbo: ['mul', ST + '大会のあとのごはんの効き目 {v}'],
+    trchance: ['rate', ST + '遊んだとき「ひらめき」(次のトレーニングの大成功の確率 +10%)になる確率 {v}'],
+    shchance: ['rate', ST + '遊んだとき「修行の気合い」(次の修行で上がる能力 ×1.2)になる確率 {v}'],
+    gussuri: ['mul', ST + '休んだときの体力の回復 {v}'], asobi: ['mul', ST + '遊んだときの体力の回復と甘え度の上がり {v}'],
+    tsukisoi: ['rate', ST + '通院で治る確率 {v}'], genki: ['cut', ST + 'けが・悪いようすになる確率 {v}'],
+    shugyo: ['mul', ST + '修行で上がる能力の合計と熟練 {v}(いちばん最後にかける)'], shugyotoku: ['val', ST + '修行で上がる能力 それぞれ {v}(修行効果アップの前に足す)'],
+    waza: ['rate', ST + '修行で技を覚える確率 {v}'], chokyo: ['cnt', ST + '超修行できる回数 {v}', '回'],
+    wazakazu: ['grow', ST + '覚えた技1つにつき修行の伸び {v}'], shugyohp: ['cut', ST + '修行で減る体力 {v}'],
+    aptq: ['rate', ST + '修行で間合いの適性が上がる確率 {v}(はじめは10%)'],
+    shokin: ['mul', ST + '大会の賞金 {v}'], ikioi: ['rate', ST + '賞金の合計が多いほどトレーニングの大成功の確率 {v}(18,000G のとき)'],
+    ninki: ['mul', ST + '人気の上がり {v}'], kokoroe: ['mul', ST + '大会に勝ったときの能力ポイント {v}'],
+    ticket: ['rate', ST + '大会に勝ったとき修行チケットがもう1枚もらえる確率 {v}'], rivaldamashii: ['mul', ST + 'ライバルに勝ったときのごほうび(全能力) {v}'],
+    event: ['mul', ST + '出来事で上がる能力 {v}'], peak: ['cnt', ST + 'ピークの伸びが、成長のピークのあとも {v} 続く', 'ターン'],
+    yobimizu: ['rate', ST + '編成のモンスターとの出来事が起きる確率 {v}'], mejirushi: ['rate', ST + 'イッサ博士が来る確率(1ターンごと) {v}'],
+    joshu: ['rate', ST + 'イッサ博士の実験が成功する確率 {v}'],
+    aidcome: ['rate', ST + '助手がトレーニングに来る確率 {v}(はじめは60%)'], aidtrain: ['grow', ST + '助手が来たトレーニングの伸び {v}'],
+    aidluck: ['rate', ST + '助手が来たトレーニングの大成功の確率 {v}'], aidtrust: ['mul', ST + '助手が来たトレーニングで忠誠度の効き目 {v}'],
+    aidkeisho: ['on', '助手が来たトレーニングでは、このモンスターが来ていなくても「いっしょにトレーニングしたとき」の効果が効く(編成で1体まで)'],
+    gatsu: ['val', ST + '大会の試合のはじめのガッツ {v}'], miseba: ['rate', ST + '大会の試合で会心が出る確率 {v}'],
+    mitate: ['rateDown', ST + '大会の試合で相手の攻撃が当たる確率 {v}'], kensho: ['cut', ST + '大会の試合で技が外れる確率 {v}'],
+    mimamori: ['rate', ST + '大会の試合の最初の攻撃が当たる確率 {v}', null, ST + '大会の試合の最初の攻撃が当たる確率 {v}・言うことを聞かない番も出ない'],
+  };
   const L = [];
   // unit・max・pt から v と cost を作る(v を渡した物はそのまま。cost は pt × 目盛り)
   const add = (o) => {
     const v = Array.isArray(o.v) ? o.v.slice() : Array.from({ length: o.max }, (_, i) => r3((o.base || 0) + o.unit * (i + 1)));
     const cost = Array.from({ length: v.length }, (_, i) => o.pt * (i + 1));
-    L.push(fz({ from: 'core', ref: true, ...o, max: v.length, v: Object.freeze(v), cost: Object.freeze(cost) }));
+    const w = W[o.id]; const wd = w ? { k: w[0], text: w[1], ...(w[2] ? { cu: w[2] } : {}), ...(w[3] ? { text5: w[3] } : {}) } : {};
+    L.push(fz({ from: 'core', ref: true, ...o, ...wd, max: v.length, v: Object.freeze(v), cost: Object.freeze(cost) }));
   };
   const T = (s) => `いっしょにトレーニングすると、${s}`;
 
@@ -171,9 +220,24 @@
   const describe = (id, n) => {
     const a = BY_ID[id]; if (!a) return '';
     const i = nOf(id, n) - 1;
-    return ((i === a.max - 1 && a.text5) || a.text).replace('{v}', fmt(a.v[i])).replace('{start}', a.start ? String(a.start[i]) : '');
+    const vt = a.k === 'cnt' && a.cu === 'Lv' ? `+${fmt(a.v[i])}` : a.k === 'rate' ? `+${fmt(a.v[i])}%` : a.k === 'rateDown' ? `−${fmt(a.v[i])}%` : (a.k ? valueText(id, i + 1) : fmt(a.v[i])); // 文の中は「トレーニングLv +1」「◯◯の確率 +5%」
+    return ((i === a.max - 1 && a.text5) || a.text).replace('{v}', vt).replace('{start}', a.start ? String(a.start[i]) : '');
   };
-  const valueText = (id, n) => { const a = BY_ID[id]; if (!a) return ''; const x = a.v[nOf(id, n) - 1]; return a.u === '倍' ? `×${fmt(x)}` : `+${fmt(x)}${a.u || ''}`; };
+  // 型ごとの数字の書き方(W の k)。mul・cut の % は掛ける割合に直す(+5% → ×1.05・−5% → ×0.95)
+  const valueText = (id, n) => {
+    const a = BY_ID[id]; if (!a) return ''; const x = a.v[nOf(id, n) - 1];
+    switch (a.k) {
+      case 'grow': return `+${fmt(x)}%`;
+      case 'rate': return `確率+${fmt(x)}%`; // 右上の値・取るものの行でも確率と分かるように(説明の文の中は「◯◯の確率 +5%」)
+      case 'rateDown': return `確率−${fmt(x)}%`;
+      case 'mul': return `×${fmt(a.u === '倍' ? x : 1 + x / 100)}`;
+      case 'cut': return `×${fmt(1 - x / 100)}`;
+      case 'val': return `+${fmt(x)}`;
+      case 'cnt': return a.cu === 'Lv' ? `Lv+${fmt(x)}` : `+${fmt(x)}${a.cu || ''}`;
+      case 'on': return 'あり';
+      default: return a.u === '倍' ? `×${fmt(x)}` : `+${fmt(x)}${a.u || ''}`;
+    }
+  };
   const label = (id, n) => { const a = BY_ID[id]; return a ? `${a.icon} ${a.name} ${valueText(id, n)}` : ''; };
   const costOf = (id, n) => { const a = BY_ID[id]; return a && n >= 1 ? a.cost[nOf(id, n) - 1] : 0; };
   const valueOf = (id, n) => { const a = BY_ID[id]; return a && n >= 1 ? a.v[nOf(id, n) - 1] : 0; };
