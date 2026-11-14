@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 6b81ada2aaa27169
+// source-sha256: 909182fef2dde7df
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -156882,12 +156882,12 @@ function MonsucFuseSheet({
         setNmErr('');
       } else setNmErr(r && r.why === 'name' ? 'その名前は使えません。ほかの名前にしてね' : '名前を保存できませんでした');
     },
-    className: "mt-2 min-h-[44px] w-full rounded-xl bg-amber-400 text-[14px] font-black text-slate-900"
+    className: "mt-2 min-h-[44px] w-full text-center rounded-xl bg-amber-400 text-[14px] font-black text-slate-900"
   }, "この名前にする"))) : null, React.createElement("button", {
     type: "button",
     onClick: onClose,
     "data-mhl-sheet-close": true,
-    className: "mt-3 min-h-[44px] w-full rounded-xl bg-slate-700 text-[13px] font-black"
+    className: "mt-3 min-h-[44px] w-full text-center rounded-xl bg-slate-700 text-[13px] font-black"
   }, "閉じる")) : !main ? React.createElement(React.Fragment, null, React.createElement("p", {
     className: "text-[11px] font-bold text-slate-300"
   }, "① 主の親を選んでください。生まれるモンスターの主血統は、主の親から受け継ぎます。成長の型は、生まれたモンスターの種類で決まります"), typeof MsxMmGrid === 'function' ? React.createElement(MsxMmGrid, {
@@ -156964,7 +156964,7 @@ function MonsucFuseSheet({
     disabled: !ready || busy,
     "data-monsuc-fuse-go": sure,
     "data-monsuc-fuse-ready": ready ? 1 : 0,
-    className: `mt-3 disabled:opacity-50 min-h-[48px] w-full rounded-xl text-[14px] font-black ${sure ? 'bg-rose-500 text-white' : 'bg-fuchsia-500 text-white'}`
+    className: `mt-3 disabled:opacity-50 min-h-[48px] w-full text-center rounded-xl text-[14px] font-black ${sure ? 'bg-rose-500 text-white' : 'bg-fuchsia-500 text-white'}`
   }, busy ? '合体しています…' : sure ? '本当に合体する' : '🧬 合体する'), React.createElement("button", {
     type: "button",
     onClick: () => {
@@ -156972,7 +156972,7 @@ function MonsucFuseSheet({
       setSure(0);
       setErr('');
     },
-    className: "mt-2 min-h-[44px] w-full rounded-xl bg-slate-700 text-[13px] font-black"
+    className: "mt-2 min-h-[44px] w-full text-center rounded-xl bg-slate-700 text-[13px] font-black"
   }, "選び直す")) : React.createElement("p", {
     className: "mt-2 text-[11px] font-bold text-slate-400",
     "data-monsuc-fuse-err": true
@@ -156980,7 +156980,7 @@ function MonsucFuseSheet({
     type: "button",
     onClick: onClose,
     "data-mhl-sheet-close": true,
-    className: "mt-2 min-h-[44px] w-full rounded-xl bg-slate-700 text-[13px] font-black"
+    className: "mt-2 min-h-[44px] w-full text-center rounded-xl bg-slate-700 text-[13px] font-black"
   }, "やめる")));
 }
 const MSX_AW_DIST = Object.freeze(['零', '近', '中', '遠']);
