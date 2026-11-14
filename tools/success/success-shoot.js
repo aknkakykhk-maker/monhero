@@ -62,7 +62,9 @@ const makeRun = async (kind) => {
   // [幅, 高さ, 名札, 文字の倍率]。大きい文字設定は、画面の中の文字を 1.3 倍にして真似る
   const sizes = process.env.SHOT_QUICK ? [[390, 844, '']] : [[390, 844, ''], [844, 390, 'land'], [667, 375, 'land667'], [320, 568, 's320'], [390, 844, 'big', 1.3], [844, 390, 'landbig', 1.3], [320, 568, 's320big', 1.3]];
   // [名前, 作る育成, 開いたあとの操作]
-  const SHOTS = [
+  // H0・H1 はモンサクのホーム(育成なし・途中の育成あり。2026-11-14 作り直し)
+  const SHOTS_ALL = [
+    ['H0', null, []], ['H1', 'mid', []],
     ['S1', null, ['new']], ['S2', null, ['new', 'next']], ['S3', null, ['new', 'next', 'next']], ['S4', null, ['new', 'next', 'next', 'next']],
     ['S5', null, ['new', 'next', 'next', 'next', 'next']], ['S6', null, ['new', 'next', 'next', 'next', 'next', 'next']],
     ['M1', 'mid', ['cont']], ['M2', 'yosu', ['cont']], ['M3', 'mid', ['cont', 'bag']], ['T1', 'mid', ['cont', 'train']],
@@ -70,6 +72,9 @@ const makeRun = async (kind) => {
     ['I1', 'mid', ['cont', 'issa']], ['P1', 'mid', ['cont', 'stats']],
     ['E1', 'mid', ['cont', 'event']],
   ];
+  // SHOT_ONLY=H0,H1 のように名前を並べると、その場面だけ撮る
+  const only = (process.env.SHOT_ONLY || '').split(',').map((x) => x.trim()).filter(Boolean);
+  const SHOTS = only.length ? SHOTS_ALL.filter(([n]) => only.includes(n)) : SHOTS_ALL;
   try {
     const page0 = await browser.newPage({ viewport: { width: 390, height: 844 } });
     for (const [w, h, tag, fscale] of sizes) {

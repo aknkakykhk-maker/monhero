@@ -15,6 +15,9 @@ const MSX_SCENES_SRC = 'data/success-scenes.js'; // 住む場所の景色(季節
 const MSX_ARC_SRC = 'data/monhero-success-arc.js'; // 助手1人分のストーリーの表(固有イベント・頂への道の相手えらび・お祝い。2026-11-13)。芯が create のときに拾う
 const MSX_REGULARS_SRC = 'data/monhero-success-regulars.js'; // 大会の常連の表(const だけの形なので typeof で見る)
 const MSX_ISSA_ART = 'images/success/issa-hakase.png';
+// モンヒロサクセスの題字ロゴ(原本 tools/art-sources/monhero-success-2026-11-14/logo-a-blue-transparent.png を横800の減色PNGにした写し)。
+// モンサクのホームと、本編のお話の幕開けで同じ写しを使う
+const MSX_LOGO_ART = 'images/success/logo-monhero-success.png';
 // シナリオ(助手)。台本があるのは みゅあ・あつ(第1弾)。ほかは準備中。β版で選べるのはみゅあだけ(56-monsuc-beta.jsx の MSX_BETA_AIDS)
 const MSX_SCENARIOS = Object.freeze([
   { aid: 'mua', no: 1, title: 'いっしょに、てっぺんへ!', lead: '明るく元気なムードメーカーと、笑いながら頂点をめざす物語。はじめての育成におすすめ', tag: 'やさしい',
