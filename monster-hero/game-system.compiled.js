@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 40d97b94f8d47575
+// source-sha256: 9b8e735466aeb72a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -175117,7 +175117,7 @@ function MsxR3GameOver({
   }, "もう1回 はじめから ▶"));
   return React.createElement(MsxR3Frame, {
     run: run,
-    back: "とじる",
+    back: "閉じる",
     onBack: onPause,
     body: body,
     foot: foot
@@ -175243,7 +175243,7 @@ function MsxR3Retire({
     }));
     return React.createElement(MsxR3Frame, {
       run: run,
-      back: s.pts > 0 ? 'もどる' : 'とじる',
+      back: s.pts > 0 ? '戻る' : '閉じる',
       onBack: s.pts > 0 ? () => setStep('e3') : onPause,
       right: right,
       body: body,
@@ -175423,7 +175423,7 @@ function MsxR3Retire({
     }, "これで決める ▶"));
     return React.createElement(MsxR3Frame, {
       run: run,
-      back: "とじる",
+      back: "閉じる",
       onBack: onPause,
       right: right,
       body: body,
@@ -175739,7 +175739,7 @@ function MsxR3Retire({
     }, "マスモンボックス"), React.createElement("span", null, box ? `${box.mons.length} / ${box.cap}体` : '…'))));
     return React.createElement(MsxR3Frame, {
       run: run,
-      back: "とじる",
+      back: "閉じる",
       onBack: () => {
         setRun(null);
         onPause();
