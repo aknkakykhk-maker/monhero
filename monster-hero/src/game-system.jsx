@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: a34a27af91b53bdc
+// generated-sha256: 63a0518e995a99f1
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -87696,6 +87696,7 @@ const MSX_R3_CSS = `
 .msx .r3-gnx{text-align:center;font-size:11px;font-weight:800;color:#e2e8f0;margin-top:3px}.msx .r3-gnx b{color:#fde047}
 @keyframes msxR3GAura{from{opacity:.6;transform:translateX(-50%) scale(.96)}to{opacity:1;transform:translateX(-50%) scale(1.04)}}
 .msx .r3-mscene{min-height:170px}
+.msx .v-rec .nw{white-space:nowrap}
 .msx .r3-mtag{position:absolute;left:10px;top:10px;z-index:3;font-size:11px;font-weight:900;color:#fde047;background:#0f0d24d0;border:1px solid #fde04766;border-radius:99px;padding:2px 10px}
 .msx .r3-msum{position:absolute;right:10px;top:50%;transform:translateY(-50%);z-index:3;width:44%;background:#0f0d24e0;border:1.5px solid #fde047;border-radius:14px;padding:8px 6px;text-align:center}
 .msx .r3-msum .gd{display:inline-block;font-size:30px;font-weight:900;line-height:1;color:#f0abfc;-webkit-text-stroke:1.5px #fff;paint-order:stroke fill;text-shadow:0 3px 0 #701a75;margin-bottom:4px}
@@ -88834,8 +88835,8 @@ function MsxR3Retire({ run, setRun, onPause, debug, SUC }) {
         <div><small>🏆 大会</small>{cupWins + cupLoss}戦 {cupWins}勝{(ws.crowns || 0) ? `・👑 ${ws.crowns}回` : ''}</div>
         <div><small>🤝 忠誠 / ⭐ 人気</small>{ev.loyal} / {ws.pop}</div>
         <div><small>📯 集まりやすいトレーニング(上位3つ)</small>{(ev.top || []).map((k) => `${MSX_STAT_ICON[k]}${MSX_STAT_NAME[k]}`).join('・')}</div>
-        {mem ? <div><small>💥 編成での補正</small>{(mem.top || []).map((k) => `${MSX_STAT_NAME[k]} ${Math.round(mem.bonus[k] || 0)}%`).join('・')}</div> : null}
-        {mem ? <div><small>🧩 アシストの基本値</small>親密度 {mem.bond0}・タッグ +{mem.tag}%・得意率 {Math.round((mem.fav || 0) * 100)}%</div> : null}
+        {mem ? <div><small>💥 編成での補正</small>{(mem.top || []).map((k, i) => <React.Fragment key={k}>{i ? '・' : ''}<span className="nw">{`${MSX_STAT_NAME[k]} ${Math.round(mem.bonus[k] || 0)}%`}</span></React.Fragment>)}</div> : null}
+        {mem ? <div><small>🧩 アシストの基本値</small><span className="nw">親密度 {mem.bond0}</span>・<span className="nw">タッグ +{mem.tag}%</span>・<span className="nw">得意率 {Math.round((mem.fav || 0) * 100)}%</span></div> : null}
         {mem && mem.startAdd ? <div><small>📈 はじめの能力</small>{MSX_STAT_NAME[mem.startAdd.stat]} +{mem.startAdd.v}</div> : null}
       </div>
       {(() => { const band = msxR3Band(grade.rank); const l = msxR3Line(`turn.retire.r${band}`, run, {}, `「${run.nick || 'このモンスター'}、まぢでがんばったね! 次の育成の編成に入ったら、${MSX_STAT_NAME[(ev.top || [])[0]] || 'ちから'}のトレーニングがすっごい伸びるよ!」`); return <MsxSay aid={ws.aid} ex={l.e || 'excited'} text={l.t}/>; })()}

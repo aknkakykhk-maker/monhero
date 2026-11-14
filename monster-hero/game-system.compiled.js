@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c1abe20925224235
+// source-sha256: 064b93511fe9d3fd
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -169331,6 +169331,7 @@ const MSX_R3_CSS = `
 .msx .r3-gnx{text-align:center;font-size:11px;font-weight:800;color:#e2e8f0;margin-top:3px}.msx .r3-gnx b{color:#fde047}
 @keyframes msxR3GAura{from{opacity:.6;transform:translateX(-50%) scale(.96)}to{opacity:1;transform:translateX(-50%) scale(1.04)}}
 .msx .r3-mscene{min-height:170px}
+.msx .v-rec .nw{white-space:nowrap}
 .msx .r3-mtag{position:absolute;left:10px;top:10px;z-index:3;font-size:11px;font-weight:900;color:#fde047;background:#0f0d24d0;border:1px solid #fde04766;border-radius:99px;padding:2px 10px}
 .msx .r3-msum{position:absolute;right:10px;top:50%;transform:translateY(-50%);z-index:3;width:44%;background:#0f0d24e0;border:1.5px solid #fde047;border-radius:14px;padding:8px 6px;text-align:center}
 .msx .r3-msum .gd{display:inline-block;font-size:30px;font-weight:900;line-height:1;color:#f0abfc;-webkit-text-stroke:1.5px #fff;paint-order:stroke fill;text-shadow:0 3px 0 #701a75;margin-bottom:4px}
@@ -172751,7 +172752,17 @@ function MsxR3Retire({
       stats: ws.stats
     }), React.createElement("div", {
       className: "v-rec"
-    }, React.createElement("div", null, React.createElement("small", null, "🏆 大会"), cupWins + cupLoss, "戦 ", cupWins, "勝", ws.crowns || 0 ? `・👑 ${ws.crowns}回` : ''), React.createElement("div", null, React.createElement("small", null, "🤝 忠誠 / ⭐ 人気"), ev.loyal, " / ", ws.pop), React.createElement("div", null, React.createElement("small", null, "📯 集まりやすいトレーニング(上位3つ)"), (ev.top || []).map(k => `${MSX_STAT_ICON[k]}${MSX_STAT_NAME[k]}`).join('・')), mem ? React.createElement("div", null, React.createElement("small", null, "💥 編成での補正"), (mem.top || []).map(k => `${MSX_STAT_NAME[k]} ${Math.round(mem.bonus[k] || 0)}%`).join('・')) : null, mem ? React.createElement("div", null, React.createElement("small", null, "🧩 アシストの基本値"), "親密度 ", mem.bond0, "・タッグ +", mem.tag, "%・得意率 ", Math.round((mem.fav || 0) * 100), "%") : null, mem && mem.startAdd ? React.createElement("div", null, React.createElement("small", null, "📈 はじめの能力"), MSX_STAT_NAME[mem.startAdd.stat], " +", mem.startAdd.v) : null), (() => {
+    }, React.createElement("div", null, React.createElement("small", null, "🏆 大会"), cupWins + cupLoss, "戦 ", cupWins, "勝", ws.crowns || 0 ? `・👑 ${ws.crowns}回` : ''), React.createElement("div", null, React.createElement("small", null, "🤝 忠誠 / ⭐ 人気"), ev.loyal, " / ", ws.pop), React.createElement("div", null, React.createElement("small", null, "📯 集まりやすいトレーニング(上位3つ)"), (ev.top || []).map(k => `${MSX_STAT_ICON[k]}${MSX_STAT_NAME[k]}`).join('・')), mem ? React.createElement("div", null, React.createElement("small", null, "💥 編成での補正"), (mem.top || []).map((k, i) => React.createElement(React.Fragment, {
+      key: k
+    }, i ? '・' : '', React.createElement("span", {
+      className: "nw"
+    }, `${MSX_STAT_NAME[k]} ${Math.round(mem.bonus[k] || 0)}%`)))) : null, mem ? React.createElement("div", null, React.createElement("small", null, "🧩 アシストの基本値"), React.createElement("span", {
+      className: "nw"
+    }, "親密度 ", mem.bond0), "・", React.createElement("span", {
+      className: "nw"
+    }, "タッグ +", mem.tag, "%"), "・", React.createElement("span", {
+      className: "nw"
+    }, "得意率 ", Math.round((mem.fav || 0) * 100), "%")) : null, mem && mem.startAdd ? React.createElement("div", null, React.createElement("small", null, "📈 はじめの能力"), MSX_STAT_NAME[mem.startAdd.stat], " +", mem.startAdd.v) : null), (() => {
       const band = msxR3Band(grade.rank);
       const l = msxR3Line(`turn.retire.r${band}`, run, {}, `「${run.nick || 'このモンスター'}、まぢでがんばったね! 次の育成の編成に入ったら、${MSX_STAT_NAME[(ev.top || [])[0]] || 'ちから'}のトレーニングがすっごい伸びるよ!」`);
       return React.createElement(MsxSay, {

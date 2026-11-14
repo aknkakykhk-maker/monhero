@@ -30,3 +30,16 @@ function msxUiRulesMeasure() {
 }
 
 module.exports = { msxUiRulesMeasure, BLANK_MAX, NUM_OFF_MAX };
+
+// 横に送れる帯(タブ・カルーセル)の中の文字は、画面の外にあって当然なので、折れの見張りから外すための一覧
+function msxScrollStripTexts() {
+  const out = [];
+  document.querySelectorAll('.msx *').forEach((e) => {
+    for (let p = e.parentElement; p; p = p.parentElement) {
+      const o = getComputedStyle(p).overflowX;
+      if ((o === 'auto' || o === 'scroll') && p.scrollWidth > p.clientWidth + 2) { const t = (e.innerText || '').replace(/\s+/g, ' ').trim(); if (t) out.push(t); break; }
+    }
+  });
+  return out;
+}
+module.exports.msxScrollStripTexts = msxScrollStripTexts;
