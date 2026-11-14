@@ -35,6 +35,12 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    date: "2026-11-14 18:14", type:'update', title:'能力の上がりやすさを「素質」と呼ぶようにしました', group:'success', releaseFlag:'monheroSuccess', status:'new',
+    items:[
+      '育てるモンスターを選ぶ画面とモンスターの詳細で、能力ごとの上がりやすさ(A〜E)を「素質」と書くようにしました。A に近いほど、トレーニングでよく上がります。',
+    ],
+  },
+  {
     // 2026-11-14 社長の指摘(iPhone の Safari): 更新履歴の予告動画の音が、設定の音量と関係なく鳴る。ChangelogVideo・HELL の説明動画を Audio_.videoGain に合わせた
     date: "2026-11-14 17:19", type:'fix', title:'お知らせの動画の音が、設定の音量と関係なく鳴っていたのを直しました', status:'new',
     items:[
