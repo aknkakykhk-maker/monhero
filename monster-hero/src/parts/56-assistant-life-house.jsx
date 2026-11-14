@@ -876,7 +876,11 @@ const assistantLifeStandLayout = (items, W, H) => {
   // 2人の場面(助手どうしの会話)の顔の大きさ: 全身画の助手(体の幅が広い)が並んでも、みゅあ・ももすけ(34px 前後)とそろえる(2026-11-14 社長「ききときゅうこがでかい？」)
   const fh = H * ({ 1: 0.085, 2: 0.04, 3: 0.064, 4: 0.055 }[Math.min(4, n)]);
   const visH = (x, F) => assistantLifeStandVisH(x.face, F);
-  const visW = (x, F) => visH(x, F) * (x.box.r - x.box.l) * x.box.ar / (x.box.b - x.box.t);
+  // 幅の上限(顔の長さ F の何倍まで数えるか): 全身画の胸から上は、腕・羽・耳・髪を入れると体の幅が顔の7〜8倍になる。そのまま数えると
+  //   並ぶ場面で顔が小さくなる(2026-11-15 社長「ききときゅうこがでかい？」で顔を 34px にそろえたとき)。絵は切らず、広がった所は
+  //   となりと少し重ねてよいことにして、数える幅だけ顔の 5.6 倍までにする
+  const VIS_W_MAX_F = 5.6;
+  const visW = (x, F) => Math.min(visH(x, F) * (x.box.r - x.box.l) * x.box.ar / (x.box.b - x.box.t), F * VIS_W_MAX_F);
   let F = fh;
   for (const x of items) { const w1 = visW(x, 1); if (w1 > 0) F = Math.min(F, (sw * 1.08) / w1); }
   // 頭のてっぺんの高さ: 目の高さの平均が、縦は場面の上から4割・横は3割5分に来るところ
