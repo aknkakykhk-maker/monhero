@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 21dd3b76a82356ac
+// source-sha256: 9bdb0b8b29cd3191
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -150697,6 +150697,8 @@ const monsucLossWhy = (log, meName) => {
   const me = meName || 'こちら';
   if (sulk >= 2 && sulk / Math.max(1, acts) >= 0.15) return `${me}が そっぽを向いて、${sulk}回 技を出さなかった(忠誠が低いと 言うことを聞かない)`;
   if (stuck >= 2 && stuck / Math.max(1, acts) >= 0.15) return `技の届かない間合いに いることが多く、${stuck}回 動くだけで 番が終わった`;
+  const foeAll = Object.values(foe).reduce((x, y) => x + y, 0);
+  if (foeAll > 0 && foeAll <= 5) return `相手の技が重く、${foeAll}回 受けただけで 倒れた`;
   if (tries <= 2) return `技を ${tries}回しか 撃てなかった`;
   if (hits / tries < 0.45) return `技が ${tries}回中 ${hits}回しか 当たらなかった`;
   const top = Object.entries(foe).sort((a, b) => b[1] - a[1])[0];
@@ -151045,6 +151047,7 @@ const MSC_CSS = `
 .msc-tabs button.on{background:#fde047;border-color:#fde047;color:#3b2a05}
 .msx .msc-tabs button{text-align:center}
 .msc-sheet{background:rgba(15,12,34,.85);border:1.5px solid #3f3a6b;border-radius:14px;padding:10px 8px}
+.msc-sheet.grow{flex:1 1 auto;display:flex;flex-direction:column;justify-content:space-evenly}
 .msc-st{display:grid;grid-template-columns:34px 1fr 74px 1fr 34px;align-items:center;gap:4px;height:30px;font-size:12.5px}
 .msc-st b{text-align:center;font-weight:900;color:#cbd5e1}.msc-st b.up{color:#fde047}
 .msc-st .lab{text-align:center;font-size:11.5px;font-weight:800;color:#e2e8f0;white-space:nowrap}
@@ -151432,7 +151435,7 @@ function MonsucBattleCard({
     className: tab === k ? 'on' : '',
     onClick: () => setTab(k)
   }, l))), React.createElement("div", {
-    className: "msc-sheet",
+    className: "msc-sheet grow",
     key: tab
   }, tab === 'st' && React.createElement(React.Fragment, null, MSC_STAT_KEYS.map((k, j) => {
     const a = mscNum(me[k]);
@@ -151532,7 +151535,9 @@ function MonsucBattleCard({
   }, React.createElement("img", {
     src: mscFace(s.aid),
     alt: ""
-  }), React.createElement("span", null, hint)), React.createElement("div", {
+  }), React.createElement("span", {
+    style: typeof JA_LABEL_STYLE !== 'undefined' ? JA_LABEL_STYLE : undefined
+  }, hint)), React.createElement("div", {
     className: "msc-foot"
   }, React.createElement("button", {
     className: "msc-btn y s",

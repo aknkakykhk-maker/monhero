@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 2a1c64e33656bf71
+// generated-sha256: ae5c4820eec6a846
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -79024,6 +79024,8 @@ const monsucLossWhy = (log, meName) => {
   const me = meName || 'こちら';
   if (sulk >= 2 && sulk / Math.max(1, acts) >= 0.15) return `${me}が そっぽを向いて、${sulk}回 技を出さなかった(忠誠が低いと 言うことを聞かない)`;
   if (stuck >= 2 && stuck / Math.max(1, acts) >= 0.15) return `技の届かない間合いに いることが多く、${stuck}回 動くだけで 番が終わった`;
+  const foeAll = Object.values(foe).reduce((x, y) => x + y, 0);
+  if (foeAll > 0 && foeAll <= 5) return `相手の技が重く、${foeAll}回 受けただけで 倒れた`;
   if (tries <= 2) return `技を ${tries}回しか 撃てなかった`;
   if (hits / tries < 0.45) return `技が ${tries}回中 ${hits}回しか 当たらなかった`;
   const top = Object.entries(foe).sort((a, b) => b[1] - a[1])[0];
@@ -79202,6 +79204,7 @@ const MSC_CSS = `
 .msc-tabs button.on{background:#fde047;border-color:#fde047;color:#3b2a05}
 .msx .msc-tabs button{text-align:center}
 .msc-sheet{background:rgba(15,12,34,.85);border:1.5px solid #3f3a6b;border-radius:14px;padding:10px 8px}
+.msc-sheet.grow{flex:1 1 auto;display:flex;flex-direction:column;justify-content:space-evenly}
 .msc-st{display:grid;grid-template-columns:34px 1fr 74px 1fr 34px;align-items:center;gap:4px;height:30px;font-size:12.5px}
 .msc-st b{text-align:center;font-weight:900;color:#cbd5e1}.msc-st b.up{color:#fde047}
 .msc-st .lab{text-align:center;font-size:11.5px;font-weight:800;color:#e2e8f0;white-space:nowrap}
@@ -79446,7 +79449,7 @@ function MonsucBattleCard({ suc, s, info, catalog, odds, onReady, onResultOnly, 
         <div className="nm b"><span>{o.name || mscMonName(o.species)}</span>{o.champ && <i className="msc-tag ch">👑王者</i>}{o.rival && <i className="msc-tag rv">ライバル</i>}</div>
       </div>
       <div className="msc-tabs">{[['st', 'ステータス'], ['tech', '技'], ['abl', '能力']].map(([k, l]) => <button key={k} data-msc-tab={k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)}>{l}</button>)}</div>
-      <div className="msc-sheet" key={tab}>
+      <div className="msc-sheet grow" key={tab}>
         {tab === 'st' && <>
           {MSC_STAT_KEYS.map((k, j) => {
             const a = mscNum(me[k]); const b = mscNum(op[k]);
@@ -79477,7 +79480,7 @@ function MonsucBattleCard({ suc, s, info, catalog, odds, onReady, onResultOnly, 
         <span><small>相手の得意</small><b>{AMBW_DIST[foeBest.d]}</b></span>
         <span data-msc-reach={reach.map(x => (x ? 1 : 0)).join('')}><small>技が届く</small><b className="r">{AMBW_DIST.map((dn, d) => <i key={dn} className={reach[d] ? 'y' : ''}>{dn}</i>)}</b></span>
       </div>
-      <div className="msc-hint"><img src={mscFace(s.aid)} alt=""/><span>{hint}</span></div>
+      <div className="msc-hint"><img src={mscFace(s.aid)} alt=""/><span style={typeof JA_LABEL_STYLE !== 'undefined' ? JA_LABEL_STYLE : undefined}>{hint}</span></div>
       <div className="msc-foot">
         <button className="msc-btn y s" data-msc-quick onClick={onResultOnly}>⏩ 結果だけ見る</button>
         <button className="msc-btn" data-msc-ready onClick={onReady}>準備完了</button>

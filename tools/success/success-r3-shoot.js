@@ -66,10 +66,10 @@ const makeRun = async (kind) => {
     ['C1', 'mid', ['cont', /^🏆大会/]],
     ['C1w', 'mid', ['cont', /^🏆大会/, '@cup']], ['C1p', 'mid', ['cont', /^🏆大会/, '@cup', '@prize=g']], ['C1m', 'mid', ['cont', /^🏆大会/, '@next-month']], // 受付の作り直し(確認の窓・賞品の詳細・次の月)
     // 大会の1戦はバトル部の見せる部品 MonsucCupShow('%x' は [data-msc-x])。賞品のあとのごはんは回3
-    ['B1', 'win', ['cont']], ['C2', 'win', ['cont', '%go']], ['W1', 'win', ['cont', '%go', '%ready']],
-    ['B2', 'win', ['cont', '%quick']], ['R1', 'win', ['cont', '%quick', '%next']], ['C3', 'win', ['cont', '%quick', '%next', '@next']], ['C3b', 'win', ['cont', '%quick', '%next', '@next', '@meal=f_pow']], // R1: 賞金ランク UP!(段が上がったときだけ)
-    ['C4', 'lose', ['cont', '%quick']], ['C4r', 'lose', ['cont', '%quick', '%rematch=sand']], ['C4g', 'lose', ['cont', '%quick', '%giveup']],
-    ['C4d', 'debutlose', ['cont', '%quick']],
+    ['B1', 'win', ['cont', '@cupintro-go']], ['C2', 'win', ['cont', '@cupintro-go', '%go']], ['W1', 'win', ['cont', '@cupintro-go', '%go', '%ready']],
+    ['B2', 'win', ['cont', '@cupintro-go', '%quick']], ['R1', 'win', ['cont', '@cupintro-go', '%quick', '%next']], ['C3', 'win', ['cont', '@cupintro-go', '%quick', '%next', '@next']], ['C3b', 'win', ['cont', '@cupintro-go', '%quick', '%next', '@next', '@meal=f_pow']], // R1: 賞金ランク UP!(段が上がったときだけ)
+    ['C4', 'lose', ['cont', '@cupintro-go', '%quick']], ['C4r', 'lose', ['cont', '@cupintro-go', '%quick', '%rematch=sand']], ['C4g', 'lose', ['cont', '@cupintro-go', '%quick', '%giveup']],
+    ['C4d', 'debutlose', ['cont', '@cupintro-go', '%quick']],
     ['Q1', 'mid', ['cont', /^⚔修行/]], ['Q2', 'mid', ['cont', /^⚔修行/, '@shugyo']], ['Q3', 'mid', ['cont', /^⚔修行/, '@shugyo', '@qnext']],
     ['G1', 'gameover', ['cont']],
     ['X1', 'box', ['@openbox', '@boxmon=b1', '@edit']], ['X2', 'box', ['@openbox', '@boxmon=b1', '@edit', '@editsave']],
