@@ -135,7 +135,7 @@ function MsxR3Shugyo({ run, setRun, v, ev, onBack, onPause }) {
           const got = (s0.techs || []).includes(t.id); const ok = rateOf[t.id] != null; const sel = want.includes(t.id);
           const cs = got || ok ? [] : condsOf(t); const ng = cs.find((x) => !x.ok);
           return (<button type="button" key={t.id} className={`q-card ${sel ? 'sel' : got ? 'got' : ok ? 'ok' : 'lock'}`} onClick={() => (ok && !got ? toggle(t.id) : !got ? setLockT(t) : null)} data-msx-r3-tech={t.id}>
-            <span className="nm msx-kp">{t.name}</span><span className="rk">R{rankOf[t.id] || t.rank || '-'}</span>
+            <span className="nm msx-kp">{String(t.name || '').length >= 7 ? <>{String(t.name).slice(0, Math.ceil(String(t.name).length / 2))}<wbr/>{String(t.name).slice(Math.ceil(String(t.name).length / 2))}</> : t.name}</span><span className="rk">R{rankOf[t.id] || t.rank || '-'}</span>
             {got ? <span className="p g">覚えた</span> : ok ? <span className="p">{Math.round(rateOf[t.id] * 100)}%</span> : <span className="lk msx-kp">🔒 {full ? '技がいっぱい' : ng ? ng.short : '条件あり'}</span>}
           </button>);
         })}</div>))}</div> : <div className="q-note msx-kp">このモンスターの技の表がまだありません(能力だけ上がる)</div>}

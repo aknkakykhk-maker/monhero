@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5f843c72bb1039ec
+// source-sha256: eb7e9dc5e15d2dc1
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -174222,7 +174222,7 @@ const MSX_R3_CSS = `
 .msx .r3 .q-col{display:flex;flex-direction:column;gap:5px;min-width:0}
 .msx .r3 .q-col h4{text-align:center;font-size:12px;font-weight:900;padding:2px 0;margin:0;border-radius:8px;background:#ffffff1a}
 .msx .r3 .q-card{border-radius:10px;padding:5px 3px;text-align:center;font-size:10.5px;font-weight:800;line-height:1.25;background:#ffffff10;border:1px solid #ffffff22;color:#fff;min-height:52px;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:1px;min-width:0}
-.msx .r3 .q-card .nm{font-size:10px;letter-spacing:-.02em}
+.msx .r3 .q-card .nm{font-size:10px;letter-spacing:-.02em;text-wrap:balance}
 .msx .r3 .q-card .rk{font-size:9px;color:#cbd5e1}
 .msx .r3 .q-card .p{font-size:15px;font-weight:900;color:#86efac}
 .msx .r3 .q-card .p.g{font-size:10.5px;color:#cbd5e1}
@@ -177746,7 +177746,7 @@ function MsxR3Shugyo({
       "data-msx-r3-tech": t.id
     }, React.createElement("span", {
       className: "nm msx-kp"
-    }, t.name), React.createElement("span", {
+    }, String(t.name || '').length >= 7 ? React.createElement(React.Fragment, null, String(t.name).slice(0, Math.ceil(String(t.name).length / 2)), React.createElement("wbr", null), String(t.name).slice(Math.ceil(String(t.name).length / 2))) : t.name), React.createElement("span", {
       className: "rk"
     }, "R", rankOf[t.id] || t.rank || '-'), got ? React.createElement("span", {
       className: "p g"
