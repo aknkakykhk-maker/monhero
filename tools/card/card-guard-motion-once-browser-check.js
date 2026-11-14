@@ -84,7 +84,7 @@ const check = (name, ok, detail = '') => { if (!ok) failed++; console.log(`${ok 
       await page.getByRole('button', { name: '設定' }).first().dispatchEvent('click');
       await page.getByRole('button', { name: 'ヘルプ' }).first().waitFor({ timeout: 20000 });
       await page.getByRole('button', { name: 'ヘルプ' }).first().dispatchEvent('click');
-      await page.getByRole('button', { name: 'わかった！冒険に戻る' }).waitFor({ timeout: 20000 });
+      await page.getByRole('button', { name: '分かった！冒険に戻る' }).waitFor({ timeout: 20000 });
       await page.locator('footer button[aria-label=""]').dispatchEvent('click');
       await page.getByText('DEBUG MENU').first().waitFor({ timeout: 20000 });
       await page.locator('summary').filter({ hasText: '⚔️ バトル' }).first().dispatchEvent('click');
