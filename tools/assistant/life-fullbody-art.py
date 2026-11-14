@@ -34,7 +34,7 @@ ART = {
     'mua': 'msg2-blonde-angel.png',
     'mua:halloween': 'msg3-blonde-halloween-witch.png',
     'mua:card-master': 'msg4-blonde-blue-cape.png',
-    'sorashido': 'msg6-kimono-boy.png',
+    'sorashido:hosei': 'msg6-kimono-boy.png',  # 2026-11-15 から服『補正』(いままでのソラシド)。新しい絵が既定の服『馬骨』(sorashido)
     'erubin': 'msg7-curly-man-casual.png',
     'erubin:sekiyuou': 'msg8-curly-man-robe.png',
 }
@@ -45,6 +45,16 @@ SPLIT_SHEETS = {
         ('kiki-halloween-8expressions-sheet1.png', ['normal', 'happy', 'wink', 'surprise'], 720, 500),
         ('kiki-halloween-8expressions-sheet2.png', ['troubled', 'angry', 'crying', 'excited'], 748, (500, 460)),
     ],
+}
+
+
+# えるびん(2026-11-15 社長から)。1024×1536 に 2×2(1体 512×768)。通常は背後の茶色い光(半透明)・石油王はふちの赤いにじみを仕上げで取る。
+#   キー → [(シート, [表情…(左上・右上・左下・右下)], 段の切れ目の行, 列の切れ目)]。倍率は ふつう(normal)の体を基準(SELF_BASE と同じ考え方)
+GRID_SHEETS = {
+    'erubin': [('erubin-normal-sheet1.png', ['normal', 'happy', 'wink', 'surprise'], 768, 512),
+               ('erubin-normal-sheet2.png', ['troubled', 'angry', 'crying', 'excited'], 768, 512)],
+    'erubin:sekiyuou': [('erubin-sekiyuou-sheet1.png', ['normal', 'happy', 'wink', 'surprise'], 768, 512),
+                        ('erubin-sekiyuou-sheet2.png', ['troubled', 'angry', 'crying', 'excited'], 768, 512)],
 }
 
 
@@ -68,9 +78,17 @@ def split_cells(file, cut_y, cut_x):
 SEAM_SHEETS = {
     'atsu': [('atsu-8expressions-sheet.png', [775], ['normal', 'happy', 'wink', 'surprise', 'troubled', 'angry', 'crying', 'excited'], 4)],
     # ソラシド(2026-11-12 社長から。横に4人ずつ・1人 約 440×887)。袖・羽織のすその透ける布は不透明(252前後)で描かれているので、薄い光を消しても残る
-    'sorashido': [('sorashido-8expressions-sheet1.png', [], ['normal', 'happy', 'wink', 'surprise'], 4),
+    # ソラシド『馬骨』(2026-11-15 社長から。新しい絵が既定の服)。表情なしの元絵が無いので、ふつう(normal)の体を大きさの基準にする(SELF_BASE)
+    'sorashido': [('sorashido-umahone-sheet1.png', [], ['normal', 'happy', 'wink', 'surprise'], 4),
+                  ('sorashido-umahone-sheet2.png', [], ['troubled', 'angry', 'crying', 'excited'], 4)],
+    'sorashido:hosei': [('sorashido-8expressions-sheet1.png', [], ['normal', 'happy', 'wink', 'surprise'], 4),
                   ('sorashido-8expressions-sheet2.png', [], ['troubled', 'angry', 'crying', 'excited'], 4)],
     # キュウコ(2026-11-12 社長から。横に8人・1人 約 220×887)。となりと横の範囲が重なるが、体どうしはくっついていない(縫い目は不透明を横切らない)
+    # ももすけ(2026-11-15 社長から。横に4人ずつ・1人 約 440×887・ふだんとハロウィン)。sheet1=ふだん・両手を広げる・ウインク・びっくり / sheet2=悩み・怒り・泣き・やったー
+    'momosuke': [('momosuke-normal-sheet1.png', [], ['normal', 'happy', 'wink', 'surprise'], 4),
+                 ('momosuke-normal-sheet2.png', [], ['troubled', 'angry', 'crying', 'excited'], 4)],
+    'momosuke:halloween': [('momosuke-halloween-sheet1.png', [], ['normal', 'happy', 'wink', 'surprise'], 4),
+                           ('momosuke-halloween-sheet2.png', [], ['troubled', 'angry', 'crying', 'excited'], 4)],
     'kyuko': [('kyuko-8expressions-sheet.png', [], ['normal', 'happy', 'wink', 'surprise', 'troubled', 'angry', 'crying', 'excited'], 8)],
 }
 
@@ -100,6 +118,13 @@ def seam_path(al, x0, x1, bias=0.02):
         x += back[y, x]
         path.append(x)
     return np.array(path[::-1]) + x0
+
+
+SELF_BASE = {'sorashido'}  # 表情なしの元絵が無く、ふつうの体を大きさの基準にするシート
+
+
+def arr_to_im(a):
+    return Image.fromarray(a)
 
 
 HEM_MEND = {'atsu-8expressions-sheet.png'}  # 縫い目がすそ(重なった布)を縦に切るシート。切れた所の先を描き足す
@@ -233,7 +258,7 @@ def mend_hem(cell, sheet, path, ya, yb, side):
     cell[y0:y1, x0:x1] = np.clip(sub, 0, 255).astype(np.uint8)
 
 
-HAIR_DEHAZE = {'sorashido'}  # 髪のふちに元絵の青白い光(もや)が残る子。ふちを髪の内側の色で塗り直す
+HAIR_DEHAZE = {'sorashido:hosei'}  # 髪のふちに元絵の青白い光(もや)が残る子。ふちを髪の内側の色で塗り直す
 
 
 def dehaze_hair(arr, head_frac=0.15, band=10):
@@ -702,7 +727,10 @@ def main():
             continue
         cells = [(e, arr) for file, rows, exprs, per_row in sheets for e, arr in zip(exprs, seam_cells(file, rows, per_row))]
         # 倍率: 表情なしの元絵の体の高さ ÷ シートの体の高さ(8人の真ん中の値。手や足を上げた子に引っぱられないように)
-        ratio = body_height(np.array(Image.open(os.path.join(SRC, ART[key])).convert('RGBA'))) / float(np.median([body_height(a) for _, a in cells]))
+        if key in SELF_BASE:
+            ratio = 1.0  # 元の絵のまま(ふつうの体が枠に収まる倍率より縮めない)
+        else:
+            ratio = body_height(np.array(Image.open(os.path.join(SRC, ART[key])).convert('RGBA'))) / float(np.median([body_height(a) for _, a in cells]))
         print('%s: シートの体を表情なしの絵の %.2f 倍の大きさとして縮める' % (key, ratio))
         for e, arr in cells:
             if True:
@@ -710,9 +738,23 @@ def main():
                 arr[..., 3] = np.where(arr[..., 3] >= 245, 255, arr[..., 3])
                 if key in HAIR_DEHAZE:
                     arr[...] = dehaze_hair(arr)
-                jobs.append(('%s__%s' % (key, e),
+                jobs.append(('%s__%s' % (key.replace(':', '_'), e),
                              lambda arr=arr: clean(None, min_frac=0.004, arr=arr, glow_cut=True, soft=1.0),
-                             (lambda key=key, ratio=ratio: fit_scale(make_art(key)) * ratio)))
+                             ((lambda arr0=cells[0][1]: fit_scale(arr_to_im(arr0))) if key in SELF_BASE else (lambda key=key, ratio=ratio: fit_scale(make_art(key)) * ratio))))
+    for key, sheets in GRID_SHEETS.items():
+        if only and key.replace(':', '_') != only:
+            continue
+        base_name = key.replace(':', '_')
+        cells = [(e, arr) for file, exprs, cy, cx in sheets for e, arr in zip(exprs, split_cells(file, cy, cx))]
+        base_arr = cells[0][1]
+        for e, arr in cells:
+            arr[..., 3] = np.where(arr[..., 3] >= 245, 255, arr[..., 3])
+            # となりの段・列の体のかけら(シートの切れ目で切れた靴の先など)を消す: 体の最大の塊から離れた小さい塊を捨てる
+            main = dil(label_keep(arr[..., 3] > 40, 0.3), 4)
+            arr[..., 3] = np.where(main, arr[..., 3], 0)
+            jobs.append(('%s__%s' % (base_name, e),
+                         lambda arr=arr, key=key: clean(None, min_frac=0.004, arr=arr, glow_cut=True, soft=1.0, halo=(key == 'erubin:sekiyuou')),
+                         (lambda base_arr=base_arr: fit_scale(Image.fromarray(base_arr)))))
     for key, sheets in SPLIT_SHEETS.items():
         base_name = key.replace(':', '_')
         for file, exprs, cy, cx in sheets:

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 4892dec2d3869a85
+// generated-sha256: f76eb156d8f7f6fc
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -43150,7 +43150,7 @@ function ProfileScreen({
               {costumeEnabled&&onOpenCostumePicker&&(
                 <button type="button" data-profile-tile="costume" onClick={onOpenCostumePicker} className={tile}>
                   <span className="flex h-8 w-8 shrink-0 items-center justify-center text-xl max-[359px]:h-6 max-[359px]:w-6 max-[359px]:text-base" aria-hidden="true">👗</span>
-                  <span className="min-w-0 flex-1"><small className="block text-[10px] font-black text-pink-300">着替え</small><b className="block break-words text-[11px] max-[359px]:text-[10px] font-black leading-tight text-white">{wornCostume?wornCostume.name:'元の服'}</b></span>
+                  <span className="min-w-0 flex-1"><small className="block text-[10px] font-black text-pink-300">着替え</small><b className="block break-words text-[11px] max-[359px]:text-[10px] font-black leading-tight text-white">{wornCostume?wornCostume.name:(typeof assistantDefaultOutfitName==='function'?assistantDefaultOutfitName(selectedAssistantId):'元の服')}</b></span>
                 </button>
               )}
             </div>);
@@ -58379,6 +58379,8 @@ const RHYTHM_MODE_ASSISTANT_FRAMES = Object.freeze({
   // きゅうこ(2026-10-22)。大きい絵は 384x512(胸から上・髪のてっぺんが絵の上端近く)。
   // 社長「立ち絵もうちょい引かせたい」(2026-10-23)で、3案から「もう少し引く」を選んだ: 枠の幅の0.75倍。髪全体と胸元のフリルまで入る
   kyuko: { zoom: 0.75, cx: 0.5, cy: 0, top: 0.06, show: 0.8 },
+  // ソラシド(2026-11-15 全身画の立ち絵 馬骨・横長の絵・髪のてっぺんが絵の上端近く)。ももすけと同じ置き方(絵の上端を枠の上から 6%・幅は枠いっぱい)
+  sorashido: { zoom: 1, cx: 0.5, cy: 0, top: 0.06, show: 0.8 },
 });
 // 舞台の飾り(スポットライト3本・音符・キラキラ・床の光)。位置と遅れは固定(描くたびに変わらないように)
 const RHYTHM_MODE_SELECT_NOTES = Object.freeze([
@@ -67842,7 +67844,7 @@ const assistantLifeStandBox = (src) => new Promise((res) => {
 const ASSISTANT_LIFE_STAND_FACE = Object.freeze({
   mua: { top: 0.145, eye: 0.3275, chin: 0.425, m: 0.724 }, kiki: { top: 0.195, eye: 0.46, chin: 0.595, m: 0.847 }, momosuke: { top: 0.075, eye: 0.3925, chin: 0.535, m: 1.022 },
   dra: { head: true, top: 0.10, eye: 0.46, m: 2.017 }, atsu: { top: 0.09, eye: 0.31, chin: 0.435, m: 0.895 }, kyuko: { top: 0.01, eye: 0.40, chin: 0.56, m: 1.040, fit: 0.95 },
-  sorashido: { top: 0.015, eye: 0.345, chin: 0.55, m: 1.248 }, erubin: { top: 0.01, eye: 0.2325, chin: 0.46, m: 1.224 },
+  sorashido: { top: 0.01, eye: 0.2455, chin: 0.3739, m: 0.956 }, erubin: { top: 0.01, eye: 0.2325, chin: 0.46, m: 1.224 },
 });
 //   2026-11-08 社長「顔のサイズがまだあってない」「ちゃんとはかってるの？」: 絵を見て手で点を置き直した(測り絵 gifts/stagec/marks.png・STAND-MEASURE.md の4回目)
 //   top … 頭のてっぺん(髪の上端。うさ耳・リボン・羽・王冠などの飾りは含めない)/eye … 目の線(目を閉じた絵はまぶたの線)/chin … 顎の先(見えている体の上を0・下を1)
@@ -67865,10 +67867,14 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
   halloween: { mua: { top: 0.2, eye: 0.358, chin: 0.433, m: 0.557, above: 0.85 }, kiki: { top: 0.217, eye: 0.412, chin: 0.498, m: 0.54, above: 0.95 }, momosuke: { top: 0.065, eye: 0.39, chin: 0.508, m: 0.846 } },
   'card-master': { mua: { top: 0.09, eye: 0.22, chin: 0.295, m: 0.55 } },
   sekiyuou: { erubin: { top: 0.02, eye: 0.225, chin: 0.47, m: 1.25 } },
+  // ソラシドの服『補正』(いままでの絵。2026-11-15 から服の1つ。新しい絵『馬骨』が既定の服)
+  hosei: { sorashido: { top: 0.015, eye: 0.345, chin: 0.55, m: 1.248 } },
   // 社長の全身画の8表情から切り出した、みゅあの胸から上の立ち絵(2026-11-11)。測り方は上と同じ。m は、いまの立ち絵と目から顎の見た目の長さが同じになるように決めた
   //   数字は tools/assistant/life-expression-sheets.py が出す(絵を作り直したら、出た数字へ直す)。stand-normal=ふだんの服
-  'stand-normal': { mua: { top: 0.1386, eye: 0.3072, chin: 0.4187, m: 0.829 }, kiki: { top: 0.0777, eye: 0.3325, chin: 0.4296, m: 0.722 }, atsu: { top: 0.0699, eye: 0.3272, chin: 0.4301, m: 0.766 }, kyuko: { top: 0.0344, eye: 0.3093, chin: 0.4296, m: 0.895 }, sorashido: { top: 0.0562, eye: 0.2921, chin: 0.4307, m: 1.031 } },
-  'stand-halloween': { mua: { top: 0.1502, eye: 0.3379, chin: 0.4334, m: 0.711, above: 0.85 }, kiki: { top: 0.1496, eye: 0.3349, chin: 0.4299, m: 0.707, above: 0.95 } },
+  'stand-normal': { mua: { top: 0.1386, eye: 0.3072, chin: 0.4187, m: 0.829 }, momosuke: { top: 0.061, eye: 0.3239, chin: 0.4296, m: 0.786, above: 0.7 }, kiki: { top: 0.0777, eye: 0.3325, chin: 0.4296, m: 0.722 }, atsu: { top: 0.0699, eye: 0.3272, chin: 0.4301, m: 0.766 }, kyuko: { top: 0.0344, eye: 0.3093, chin: 0.4296, m: 0.895 }, sorashido: { top: 0.0106, eye: 0.2817, chin: 0.4296, m: 1.1 } , erubin: { top: 0.0083, eye: 0.2521, chin: 0.4298, m: 1.322 } },
+  'stand-sekiyuou': { erubin: { top: 0.004, eye: 0.249, chin: 0.4297, m: 1.345 } },
+  'stand-hosei': { sorashido: { top: 0.0562, eye: 0.2921, chin: 0.4307, m: 1.031 } },
+  'stand-halloween': { mua: { top: 0.1502, eye: 0.3379, chin: 0.4334, m: 0.711, above: 0.85 }, momosuke: { top: 0.0594, eye: 0.3112, chin: 0.4299, m: 0.884, above: 0.95 }, kiki: { top: 0.1496, eye: 0.3349, chin: 0.4299, m: 0.707, above: 0.95 } },
   'stand-card-master': { mua: { top: 0.1166, eye: 0.2283, chin: 0.2953, m: 0.499, above: 0.75 } },
 });
 // 絵の置き場所から、着替えの名前を引く(ふだんの服は null)
@@ -68301,7 +68307,7 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
   const groupLeft = typeof assistantLifeGiftLeft === 'function' ? Math.max(0, Number(assistantLifeGiftLeft(peerSt)) || 0) : 0;
   const giveLeftAll = groupLeft + (soloOn ? soloLeft : 0);
   const itemsLeft = Math.min(typeof assistantLifeGiftLeft === 'function' ? assistantLifeGiftLeft(peerSt) : 0, itemInfos.filter(x => !usedOf(x.kind) && haveOf(x.kind) > 0).length);
-  const soloInfos = soloOn ? assistantLifeSoloDefs().map(g => assistantLifeItemInfo(g.kind)).filter(Boolean) : [];
+  const soloInfos = soloOn ? assistantLifeSoloDefs().filter(g => !(typeof assistantLifeTasteGiftHidden === 'function' && assistantLifeTasteGiftHidden(g))).map(g => assistantLifeItemInfo(g.kind)).filter(Boolean) : [];
   const itemsHave = [...itemInfos, ...soloInfos].reduce((n, x) => n + haveOf(x.kind), 0);
   const giveGroup = (life.groups || [])[0];
   // ひとりの助手しかいない時間も、1人に贈れる(❶B: 1人には別に1日3回)
@@ -69333,6 +69339,7 @@ const ASSISTANT_LIFE_SLEEP_ART = Object.freeze(new Set([
   'atsu_normal.PNG', 'face/atsu_normal.PNG', 'kiki_normal.PNG', 'face/kiki_normal.PNG', 'halloween/kiki_normal.PNG', 'halloween/face/kiki_normal.PNG',
   'kyuko_normal.PNG', 'face/kyuko_normal.PNG', 'myua_normal.PNG', 'face/myua_normal.PNG',
   'card-master/myua_normal.PNG', 'card-master/face/myua_normal.PNG', 'halloween/myua_normal.PNG', 'halloween/face/myua_normal.PNG',
+  'sorashido_normal.PNG', 'face/sorashido_normal.PNG', // 2026-11-15 ソラシド『馬骨』の寝顔(社長から)
   'momosuke_normal.PNG', 'face/momosuke_normal.PNG', 'halloween/momosuke_normal.PNG', 'halloween/face/momosuke_normal.PNG',
 ]));
 // その絵(ふつうの顔 normal)に社長の寝顔の絵があれば、その絵のパス。無ければ null
@@ -71821,7 +71828,7 @@ const ASSISTANT_LIFE_SOLO_GIFT_KEY = 'mh_assistant_life_solo_gift_v1';
 // 狭い枠で名前を折り返すときの区切り(言葉の途中で折らない)。名前が変わって合わなくなったら、名前をそのまま1つで出す
 const ASSISTANT_LIFE_GIFT_WRAP = Object.freeze({ basket: ['おやつ', 'バスケット'], misanga: ['おそろいの', 'ミサンガ'], cake: ['はんぶんこ', 'ケーキ'], onigiri: ['ほかほか', 'おにぎり'],
   tea: ['午後の', 'ティーセット'], earphone: ['かたみみ', 'イヤホン'], puzzle: ['ふたりで解く', 'パズル'], sleeve: ['おそろい', 'スリーブ'], cheki: ['思い出', 'チェキ'], flower: ['ちいさな', '花束'],
-  letter: ['手書きの', '手紙'], candy: ['ひとつぶ', 'キャンディ'], omamori: ['小さな', 'おまもり'] });
+  letter: ['手書きの', '手紙'], candy: ['ひとつぶ', 'キャンディ'], omamori: ['小さな', 'おまもり'], monplush: ['モンスターの', 'ぬいぐるみ'] });
 const assistantLifeGiftWrapName = (g) => { const w = g && ASSISTANT_LIFE_GIFT_WRAP[g.key]; return w && w.join('') === g.name ? w : [g ? g.name : '']; };
 const ASSISTANT_LIFE_GIFT_LABEL = Object.freeze({ like: '💗 好き', mid: 'ふつう', bad: '💧 苦手', unknown: '?' });
 
@@ -71832,7 +71839,7 @@ const assistantLifeSoloOn = () => typeof assistantLifeEnabled === 'function' && 
 const assistantLifeAnyGiftDef = (kindOrKey) => assistantLifeGiftDefs().find(x => x.kind === kindOrKey || x.key === kindOrKey) || assistantLifeSoloDefs().find(x => x.kind === kindOrKey || x.key === kindOrKey) || null;
 const assistantLifeIsSoloOnly = (kindOrKey) => !!assistantLifeSoloDefs().find(x => x.kind === kindOrKey || x.key === kindOrKey);
 // 1人に贈れる道具(印が真なら 10種類+1人用4種類)
-const assistantLifeSoloKinds = () => (assistantLifeSoloOn() ? [...assistantLifeGiftDefs(), ...assistantLifeSoloDefs()] : []);
+const assistantLifeSoloKinds = () => (assistantLifeSoloOn() ? [...assistantLifeGiftDefs(), ...assistantLifeSoloDefs()].filter(g => !(typeof assistantLifeTasteGiftHidden === 'function' && assistantLifeTasteGiftHidden(g))) : []);
 // 印が真なら10種類、偽なら今までの2つ(🧺🤝)
 const assistantLifeGiftKinds = () => {
   const all = assistantLifeGiftDefs();
@@ -72108,8 +72115,10 @@ const assistantLifeSoloGive = async (who, kind, rand = Math.random) => {
   if (typeof assistantLifeDiaryAdd === 'function') void assistantLifeDiaryAdd(`${typeof assistantLifeName === 'function' ? assistantLifeName(who) : who}に${g.name}を贈った`, [who], { kind: 'give' });
   const line = assistantLifeSoloLine(who, g, like, rand);
   const call = typeof assistantPeerPlayerCall === 'function' ? assistantPeerPlayerCall(who) : 'あなた';
-  return line ? { id: `solo-${g.key}-${who}`, pair: [who], lv: 1, scene: 'any', reaction: kind, gift: g.key, solo: true, like, amount,
+  const out = line ? { id: `solo-${g.key}-${who}`, pair: [who], lv: 1, scene: 'any', reaction: kind, gift: g.key, solo: true, like, amount,
     lines: [{ ...line, t: line.t.split('{name}').join(call) }] } : null;
+  // 🧸 モンスターのぬいぐるみは、選んだモンスターの好みを動かす(r1115-035・56-assistant-life-taste-gift.jsx)
+  return typeof assistantLifeTasteGiftApply === 'function' ? assistantLifeTasteGiftApply(who, g, out) : out;
 };
 
 // 仲良し度の段が上がった(60-app の addAssistantBondFor から)。まだ分かっていない好きな道具を1つ教えてくれる。知らせは部屋のシートで見るまで残す
@@ -72159,7 +72168,8 @@ function AssistantLifeGiftLikesRow({ id, compact = false }) {
   const [open, setOpen] = React.useState(false);
   if (typeof assistantLifeEnabled !== 'function' || !assistantLifeEnabled()) return null;
   // ❹A: 1人に贈る道具が開いていれば、1人用の4種類も並べて「分かった ◯/14」
-  const gifts = [...assistantLifeGiftKinds(), ...(assistantLifeSoloOn() ? assistantLifeSoloDefs() : [])].map(g => assistantLifeGiftOf(g.kind)).filter(Boolean);
+  // 🧸 モンスターのぬいぐるみは選んだモンスターで喜び方が変わるので、道具の好みの一覧には並べない(r1115-035)
+  const gifts = [...assistantLifeGiftKinds(), ...(assistantLifeSoloOn() ? assistantLifeSoloDefs() : [])].filter(g => g.key !== 'monplush').map(g => assistantLifeGiftOf(g.kind)).filter(Boolean);
   const known = gifts.filter(g => assistantLifeGiftKnown(id, g.key, st)).length;
   const liked = gifts.filter(g => assistantLifeGiftShownLike(id, g.key, st) === 'like');
   const told = st.likes.told.filter(x => x.who === id).slice(-1)[0] || null;
@@ -72498,6 +72508,7 @@ function AssistantLifeGiftSheet({ give, setGive, life, peerSt, haveOf, nameOf, o
             <p className="text-[11px] leading-snug text-slate-300 [[data-assistant-life-land='1']_&]:hidden">{soloWho && info.key === 'cheki' ? `その場で写真が出るカメラ。思い出アルバムに${nameOf(soloWho)}ひとりの1枚が増えます` : info.what}</p>
           </div>
         </div>
+        {soloWho && info.key === 'monplush' && typeof AssistantLifeTasteGiftPicker === 'function' && <AssistantLifeTasteGiftPicker who={soloWho} nameOf={nameOf}/>}
         <div className="mt-1.5 space-y-1 text-[12px]">
           {people.map((id, i) => (
             <div key={id} className="rounded-lg bg-slate-800/80 px-2 py-1" data-assistant-life-give-person={`${id}:${shown[i]}`}>
@@ -82057,6 +82068,152 @@ let amtDailyDay = '';
 const amtDailyTry = () => { try { const d = typeof assistantLifeDayKey === 'function' ? assistantLifeDayKey() : ''; if (!d || amtDailyDay === d || !AMT_STORE || !AMT_STORE.loaded || typeof ASSISTANT_MASMON_STORE === 'undefined' || !ASSISTANT_MASMON_STORE.loaded || (typeof ASSISTANT_PEER_STORE !== 'undefined' && ASSISTANT_PEER_STORE.state && !ASSISTANT_PEER_STORE.state.loaded)) return; amtDailyDay = d; assistantLifeTasteDaily(); } catch (_) {} };
 try { setTimeout(() => { try { if (amtOn() && AMT_STORE) { void AMT_STORE.load().then(amtDailyTry).catch(() => {}); if (typeof ASSISTANT_MASMON_STORE !== 'undefined' && ASSISTANT_MASMON_STORE.subs) ASSISTANT_MASMON_STORE.subs.add(amtDailyTry); if (typeof ASSISTANT_PEER_STORE !== 'undefined' && ASSISTANT_PEER_STORE.listeners) ASSISTANT_PEER_STORE.listeners.add(amtDailyTry); } } catch (_) {} }, 0); } catch (_) {}
 
+// ---- part: 56-assistant-life-taste-gift.jsx ----
+// ===== 🧸 モンスターのぬいぐるみ(好き・苦手の gift・color をオクリモノに付ける・r1115-035) =====
+//   2026-11-15 社長「オクリモノに付ける」→ 窓口経由で案A・300P(案 docs/progress/assistant-peer/taste-change/GIFT-COLOR-PLAN.md)
+//   1人に贈る道具の1つ(データは assistants.js の ASSISTANT_LIFE_SOLO_GIFTS の key 'monplush')。贈るときにモンスターとリボンの色を選ぶ
+//   贈ると assistantLifeTasteBump(助手, モンスター, 'gift')。リボンがその助手の好きな色(favColors。淡い色も同じ色として数える)なら 'color' も
+//   1日の回数・持ち物の数え方・仲良し度の量は、ほかの1人用の道具と同じ(56-assistant-life-gifts.jsx がそのまま扱う)
+//   助手のひとことだけ、選んだモンスターがいまの好み(好き/ふつう/苦手)のどれかで変える
+//   公開の印は好き嫌いの印 RELEASE_FLAGS.assistantLifeTaste(偽の間は贈る窓にも交換所にも出ない)
+//   保存は新しいキーを足すだけ(CLAUDE.md ⑦): mh_assistant_life_taste_gift_v1 { v:1, last:{ [助手]: { mon, color, day } }, n:{ [助手]: 贈った回数 } }
+//   (次に贈るとき、前に選んだものを先に選んでおくため。好みの点は mh_assistant_life_taste_v1 にマスモン部の入口が書く)
+const ASSISTANT_TASTE_GIFT_KEY = 'mh_assistant_life_taste_gift_v1';
+const ATG_ITEM_KEY = 'monplush';
+const atgOn = () => { try { return typeof RELEASE_FLAGS !== 'undefined' && !!RELEASE_FLAGS && RELEASE_FLAGS.assistantLifeTaste === true; } catch (_) { return false; } };
+const atgIsPlush = (kindOrKey) => kindOrKey === ATG_ITEM_KEY;
+const atgMonOk = (m) => typeof m === 'string' && /^\w{2,40}$/.test(m) && typeof ALL_PLAYER_MONSTERS !== 'undefined' && !!ALL_PLAYER_MONSTERS[m];
+const atgColorIds = () => (typeof MASU_COLOR_SWATCH !== 'undefined' && MASU_COLOR_SWATCH ? Object.keys(MASU_COLOR_SWATCH).filter(c => typeof MASU_COLOR_LABELS === 'undefined' || MASU_COLOR_LABELS[c]) : []);
+const atgColorOk = (c) => typeof c === 'string' && atgColorIds().includes(c);
+const atgColorName = (c) => (typeof MASU_COLOR_LABELS !== 'undefined' && MASU_COLOR_LABELS[c]) || c;
+const atgBase = (c) => String(c || '').replace(/_light$/, '');
+const normalizeAssistantTasteGift = (raw) => {
+  const out = { v: 1, last: {}, n: {} };
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return out;
+  const last = raw.last && typeof raw.last === 'object' && !Array.isArray(raw.last) ? raw.last : {};
+  for (const [aid, x] of Object.entries(last).slice(0, 40)) {
+    if (!/^[a-z0-9_]{2,24}$/.test(aid) || !x || typeof x !== 'object') continue;
+    out.last[aid] = { mon: atgMonOk(x.mon) ? x.mon : '', color: typeof x.color === 'string' && /^[a-z_]{2,20}$/.test(x.color) ? x.color : '', day: typeof x.day === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(x.day) ? x.day : '' };
+  }
+  const n = raw.n && typeof raw.n === 'object' && !Array.isArray(raw.n) ? raw.n : {};
+  for (const [aid, v] of Object.entries(n).slice(0, 40)) if (/^[a-z0-9_]{2,24}$/.test(aid) && Number.isFinite(Number(v)) && Number(v) > 0) out.n[aid] = Math.min(99999, Math.floor(Number(v)));
+  return out;
+};
+const ATG_STORE = typeof amgpMakeStore === 'function' ? amgpMakeStore(ASSISTANT_TASTE_GIFT_KEY, normalizeAssistantTasteGift) : null;
+// 贈る窓で選んでいる途中のもの(保存しない)。{ [助手]: { mon, color } }
+const ATG_PICK = { by: {}, subs: new Set() };
+const atgSetPick = (aid, patch) => { ATG_PICK.by = { ...ATG_PICK.by, [aid]: { ...(ATG_PICK.by[aid] || {}), ...patch } }; ATG_PICK.subs.forEach(f => { try { f(ATG_PICK.by); } catch (_) {} }); };
+// その助手の好きな色(表の favColors)
+const atgFavColors = (aid) => { try { const p = (typeof ASSISTANT_MASMON_PLAN !== 'undefined' ? ASSISTANT_MASMON_PLAN : []).find(a => a && a.id === aid); return (p && Array.isArray(p.favColors) ? p.favColors : []).map(x => x && x.color).filter(c => typeof c === 'string'); } catch (_) { return []; } };
+const atgIsFavColor = (aid, c) => !!c && atgFavColors(aid).some(f => atgBase(f) === atgBase(c));
+// いまの好み(はじめの好み + 遊んで変わった分)での段 'like' | 'normal' | 'dislike'
+const atgTier = (aid, m) => {
+  try {
+    const p = typeof assistantMasmonBasePlanOf === 'function' ? assistantMasmonBasePlanOf(aid) : null;
+    if (!p) return 'normal';
+    const lin = typeof assistantMasmonLineage === 'function' ? assistantMasmonLineage(m) : null;
+    const has = (xs, f) => (Array.isArray(xs) ? xs : []).some(x => x && f(x));
+    if (has(p.dislikeMon, x => x.monster === m)) return 'dislike';
+    if (has(p.likeMon, x => x.monster === m)) return 'like';
+    if (lin && has(p.dislikeMon, x => x.lineage === lin)) return 'dislike';
+    if (lin && has(p.likeMon, x => x.lineage === lin)) return 'like';
+    return 'normal';
+  } catch (_) { return 'normal'; }
+};
+// 選べるモンスター: その助手のマスモンの種類を先に、残りは図鑑の順
+const atgMonList = (aid) => {
+  const all = typeof ALL_PLAYER_MONSTERS !== 'undefined' && ALL_PLAYER_MONSTERS ? Object.keys(ALL_PLAYER_MONSTERS) : [];
+  let mine = [];
+  try { const p = typeof assistantMasmonPlanOf === 'function' ? assistantMasmonPlanOf(aid) : null; mine = [...((p && p.team) || []), ...((p && p.extra) || [])].map(x => x && x.monster).filter(m => all.includes(m)); } catch (_) { mine = []; }
+  return [...new Set([...mine, ...all])];
+};
+const atgPickOf = (aid) => {
+  const now = ATG_PICK.by[aid] || {};
+  const last = ATG_STORE && ATG_STORE.loaded ? (ATG_STORE.state.last[aid] || {}) : {};
+  const list = atgMonList(aid);
+  const mon = atgMonOk(now.mon) ? now.mon : atgMonOk(last.mon) ? last.mon : (list[0] || '');
+  const color = atgColorOk(now.color) ? now.color : atgColorOk(last.color) ? last.color : (atgColorIds()[0] || '');
+  return { mon, color };
+};
+const atgMonName = (m) => (typeof ALL_PLAYER_MONSTERS !== 'undefined' && ALL_PLAYER_MONSTERS[m] && ALL_PLAYER_MONSTERS[m].name) || m;
+const atgFace = (m) => { const x = typeof ALL_PLAYER_MONSTERS !== 'undefined' ? ALL_PLAYER_MONSTERS[m] : null; return x ? (x.faceIconUrl || x.iconUrl || '') : ''; };
+// 贈る窓の道具の並びから外すか(印が偽のとき)
+const assistantLifeTasteGiftHidden = (g) => !!g && atgIsPlush(g.key) && !atgOn();
+// 贈ったあと(56-assistant-life-gifts.jsx の assistantLifeSoloGive から)。好みを動かし、選んだものを保存し、ひとことを選んだモンスターに合わせる
+const assistantLifeTasteGiftApply = async (who, g, out) => {
+  try {
+    if (!g || !atgIsPlush(g.key) || !who) return out;
+    const { mon, color } = atgPickOf(who);
+    if (!atgMonOk(mon)) return out;
+    const day = typeof assistantLifeDayKey === 'function' ? assistantLifeDayKey() : '';
+    try { if (typeof AMT_STORE !== 'undefined' && AMT_STORE && !AMT_STORE.loaded) await AMT_STORE.load(); } catch (_) {}
+    const fav = atgIsFavColor(who, color);
+    const changes = [];
+    if (typeof assistantLifeTasteBump === 'function') {
+      changes.push(...(assistantLifeTasteBump(who, mon, 'gift') || []));
+      if (fav) changes.push(...(assistantLifeTasteBump(who, mon, 'color') || []));
+    }
+    if (ATG_STORE) {
+      await ATG_STORE.load();
+      const st = ATG_STORE.state;
+      ATG_STORE.save({ ...st, last: { ...st.last, [who]: { mon, color: atgColorOk(color) ? color : '', day } }, n: { ...st.n, [who]: (st.n[who] || 0) + 1 } });
+    }
+    const tier = atgTier(who, mon);
+    const like = tier === 'like' ? 'like' : tier === 'dislike' ? 'bad' : 'mid';
+    const item = `${atgMonName(mon)}のぬいぐるみ`;
+    const temp = typeof ASSISTANT_LIFE_SOLO_TEMP_LINES !== 'undefined' && ASSISTANT_LIFE_SOLO_TEMP_LINES[who] ? ASSISTANT_LIFE_SOLO_TEMP_LINES[who][like] : null;
+    const call = typeof assistantPeerPlayerCall === 'function' ? assistantPeerPlayerCall(who) : 'あなた';
+    const lines = temp ? [{ who, e: temp.e || 'happy', t: String(temp.t).split('{item}').join(item).split('{name}').join(call) }] : (out && out.lines) || [];
+    return out ? { ...out, lines, plush: { mon, color, fav, tier }, tasteChanges: changes } : out;
+  } catch (_) { return out; }
+};
+// 贈る窓の中の「どのモンスター・どの色」の小窓(1人に贈るで 🧸 を選んでいるときだけ)
+function AssistantLifeTasteGiftPicker({ who, nameOf }) {
+  const [, tick] = React.useState(0);
+  React.useEffect(() => {
+    const f = () => tick(x => x + 1);
+    ATG_PICK.subs.add(f);
+    let off = null;
+    if (ATG_STORE) { ATG_STORE.subs.add(f); off = () => ATG_STORE.subs.delete(f); void ATG_STORE.load(); }
+    return () => { ATG_PICK.subs.delete(f); if (off) off(); };
+  }, []);
+  const [open, setOpen] = React.useState(false);
+  if (!who || !atgOn()) return null;
+  const { mon, color } = atgPickOf(who);
+  const list = atgMonList(who);
+  const cols = atgColorIds();
+  const fav = atgIsFavColor(who, color);
+  const sw = (c) => (typeof MASU_COLOR_SWATCH !== 'undefined' && MASU_COLOR_SWATCH[c]) || '#ccc';
+  const name = nameOf ? nameOf(who) : who;
+  return (
+    <div className="mt-2 rounded-xl border border-pink-300/40 bg-pink-500/10 p-2" data-assistant-life-plush-picker={who}>
+      <p className="text-[11px] font-black text-pink-100">🧸 どのモンスターのぬいぐるみにする？</p>
+      <button type="button" data-assistant-life-plush-open aria-expanded={open} onClick={() => setOpen(v => !v)}
+        className="mt-1 flex min-h-[44px] w-full items-center gap-2 rounded-xl border border-white/15 bg-slate-900/70 px-2 text-left active:scale-[.98]">
+        {atgFace(mon) ? <img src={atgFace(mon)} alt="" className="h-9 w-9 shrink-0 rounded-full bg-white/10 object-cover"/> : <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white/10 text-[18px]" aria-hidden="true">🧸</span>}
+        <span className="min-w-0 flex-1 truncate text-[13px] font-black text-white" data-assistant-life-plush-mon={mon}>{atgMonName(mon)}</span>
+        <span className="shrink-0 text-[11px] font-black text-pink-200">{open ? '閉じる' : '選ぶ'}</span>
+      </button>
+      {open && <div className="mt-1 grid max-h-[220px] grid-cols-5 gap-1 overflow-y-auto rounded-xl bg-slate-950/60 p-1" data-assistant-life-plush-list>
+        {list.map(m => (
+          <button key={m} type="button" data-assistant-life-plush-pick={m} aria-pressed={m === mon} onClick={() => { atgSetPick(who, { mon: m }); setOpen(false); }}
+            className={`flex min-h-[56px] flex-col items-center justify-center rounded-lg border px-0.5 active:scale-95 ${m === mon ? 'border-pink-300 bg-pink-400/25' : 'border-white/10 bg-slate-800/60'}`}>
+            {atgFace(m) ? <img src={atgFace(m)} alt="" className="h-8 w-8 rounded-full object-cover"/> : <span className="text-[18px]" aria-hidden="true">🧸</span>}
+            <span className="mt-0.5 block w-full truncate text-center text-[9.5px] font-black leading-tight text-white">{atgMonName(m)}</span>
+          </button>))}
+      </div>}
+      <p className="mt-2 text-[11px] font-black text-pink-100">🎀 リボンの色 <span className="text-white" data-assistant-life-plush-color={color}>{atgColorName(color)}</span></p>
+      <div className="mt-1 flex flex-wrap gap-1" data-assistant-life-plush-colors>
+        {cols.map(c => (
+          <button key={c} type="button" data-assistant-life-plush-color-pick={c} aria-pressed={c === color} aria-label={`${atgColorName(c)}のリボン`} onClick={() => atgSetPick(who, { color: c })}
+            className={`h-8 w-8 rounded-full border-2 active:scale-90 ${c === color ? 'border-white ring-2 ring-pink-300' : 'border-white/20'}`} style={{ background: sw(c) }}/>))}
+      </div>
+      <p className="mt-1.5 text-[11px] font-bold leading-snug text-slate-300" style={{ wordBreak: 'keep-all', overflowWrap: 'anywhere' }}>
+        贈ると、{name}がこのモンスターを少し好きになります。{fav ? <b className="text-pink-200" data-assistant-life-plush-fav>好きな色のリボンなので、もう少し好きになります。</b> : '好きな色のリボンだと、もう少し好きになります。'}
+      </p>
+    </div>);
+}
+
 // ---- part: 56-monsuc-fuse.jsx ----
 // ---------- モンヒロサクセスの合体(保存枠の育て終えた子どうし・2026-11-12 開発部・段取りの回3) ----------
 // 案: docs/progress/player-raise/PLAN.md §3「合体」・§9。計算は芯 MONHERO_SUCCESS(data/monhero-success.js)の fusePlan だけを使う。
@@ -88072,7 +88229,9 @@ function MsxHd({ back, onBack, title = '🌱 モンヒロサクセス', sub, rig
   return (
     <div className="v-hd">
       <button type="button" className="bk" onClick={onBack}>← {back}</button>
-      <span className="ti">{title}{title === '🌱 モンヒロサクセス' && typeof MsxBetaMark === 'function' ? <MsxBetaMark/> : null}{sub ? <small>{sub}</small> : null}</span>
+      {/* 育成中などシナリオ名(sub)があるときは、題は「みゅあ編」だけにする(2026-11-15 社長。字の大きい設定でも切れない) */}
+      {sub && title === '🌱 モンヒロサクセス' ? <span className="ti" data-msx-hd-sc>{sub}</span>
+        : <span className="ti">{title}{title === '🌱 モンヒロサクセス' && typeof MsxBetaMark === 'function' ? <MsxBetaMark/> : null}{sub ? <small>{sub}</small> : null}</span>}
       {right != null && <span className="rt">{right}</span>}
     </div>
   );
@@ -89537,8 +89696,17 @@ function MsxStats({ run, setRun, v, ev, onClose }) {
   const { SUC } = msxSuc;
   const s = run.s;
   const tagAt = (SUC.BOND && SUC.BOND.tag) || 80;
-  const spend = (k) => { const r = SUC.spendPts(s, k, 1); if (r.out.ok) setRun({ ...run, s: r.state }); };
-  const auto = () => { const r = SUC.autoPts(s); setRun({ ...run, s: r.state }); };
+  // 仮振り: 画面の中だけ(draft=振った能力の順)。「決定」で初めて芯の spendPts を通して確定。画面を離れれば捨てる
+  const [draft, setDraft] = useState([]);
+  const replay = (list) => { let w = s; for (const k of list) { const r = SUC.spendPts(w, k, 1); if (!r.out.ok) break; w = r.state; } return w; };
+  const ws = replay(draft);
+  const addOf = (k) => draft.filter((x) => x === k).length;
+  const plus = (k) => { const r = SUC.spendPts(ws, k, 1); if (r.out.ok) setDraft([...draft, k]); };
+  const minus = (k) => { const i = draft.lastIndexOf(k); if (i >= 0) setDraft(draft.filter((_, j) => j !== i)); };
+  const auto = () => { let w = replay(draft); const list = draft.slice(); while (w.pts > 0) { const k = MSX_STATS.slice().sort((x, y) => w.stats[x] - w.stats[y])[0]; const r = SUC.spendPts(w, k, 1); if (!r.out.ok) break; w = r.state; list.push(k); } setDraft(list); };
+  const commit = () => { if (!draft.length) return; setRun({ ...run, s: ws }); setDraft([]); };
+  const used = s.pts - ws.pts;
+  const lineOf = SUC.PTS && SUC.PTS.line ? SUC.PTS.line[SUC.periodOf(s.turn).key] : null;
   const own = typeof SUC.techsOf === 'function' ? SUC.techsOf(s.species) : [];
   const techs = (Array.isArray(s.techs) ? s.techs : []).map((id) => own.find((t) => t && t.id === id)).filter(Boolean);
   const pk = typeof SUC.peakInfo === 'function' ? SUC.peakInfo(s) : { state: null };
@@ -89546,13 +89714,24 @@ function MsxStats({ run, setRun, v, ev, onClose }) {
   return (<>
     <MsxBand s={s} v={v} ev={ev}/>
     <div className="msx-scroll" data-msx-ability>
-      <div className="v-card pk"><div className="msx-row" style={{ justifyContent: 'space-between' }}><b className="h2">📊 能力ポイント {s.pts}</b>{s.pts ? <button type="button" className="chip on" onClick={auto}>おまかせで振る</button> : null}</div>
-        <div className="msx-note">大会でもらえる。好きな能力へ 1点で +1(期の目安を超えると 2点で +1)</div>
-        {MSX_STATS.map((k) => (
-          <div key={k} className="msx-ab-row"><span className="n">{MSX_STAT_ICON[k]} {MSX_STAT_NAME[k]}</span><b>{s.stats[k]}</b>
-            <button type="button" className="chip on" style={{ minWidth: 52 }} disabled={!s.pts || s.pts < SUC.ptsCost(s, k)} onClick={() => spend(k)}>+1<small style={{ fontSize: 10 }}>({SUC.ptsCost(s, k)}点)</small></button>
-          </div>
-        ))}
+      <div className="v-card pk" data-msx-pts>
+        <div className="msx-row" style={{ justifyContent: 'space-between' }}><b className="h2">📊 能力ポイント</b><button type="button" className="chip on" disabled={!ws.pts} onClick={auto}>おまかせで振る</button></div>
+        <div className="msx-row" style={{ justifyContent: 'space-around', margin: '6px 0' }}>
+          <div className="v-num"><small>持っている点</small><b>{s.pts}</b></div>
+          <div className="v-num"><small>使う点</small><b style={{ color: used ? '#fde047' : undefined }}>{used}</b></div>
+          <div className="v-num"><small>残りの点</small><b>{ws.pts}</b></div>
+        </div>
+        <div className="msx-note">＋で仮に振り、「決定」で確定する。1点で +1(期の目安{lineOf ? ` ${lineOf}` : ''}を超えると 2点で +1)</div>
+        {MSX_STATS.map((k) => { const n = addOf(k); const cost = SUC.ptsCost(ws, k); const over = lineOf != null && ws.stats[k] >= lineOf; return (
+          <div key={k} className="msx-ab-row" data-msx-pts-row={k}><span className="n">{MSX_STAT_ICON[k]} {MSX_STAT_NAME[k]}<small className="sub" style={{ display: 'block', fontSize: 10, color: over ? '#fbbf24' : '#94a3b8' }}>{over ? '目安超え・2点で +1' : '1点で +1'}</small></span>
+            <span style={{ fontSize: 12, fontWeight: 900, whiteSpace: 'nowrap' }}>{n ? <>{s.stats[k]} → <b style={{ width: 'auto', color: '#fde047' }}>{ws.stats[k]}</b> <small style={{ color: '#fde047' }}>(+{n})</small></> : <b style={{ width: 'auto' }}>{s.stats[k]}</b>}</span>
+            <button type="button" className="chip" style={{ minWidth: 40, minHeight: 36 }} disabled={!n} onClick={() => minus(k)} aria-label={`${MSX_STAT_NAME[k]}を戻す`}>−</button>
+            <button type="button" className="chip on" style={{ minWidth: 44, minHeight: 36 }} disabled={ws.pts < cost} onClick={() => plus(k)} aria-label={`${MSX_STAT_NAME[k]}を上げる`}>＋</button>
+          </div>); })}
+        <div className="msx-row" style={{ marginTop: 8, gap: 6 }}>
+          <button type="button" className="chip" style={{ flex: 1, minHeight: 44 }} disabled={!draft.length} onClick={() => setDraft([])}>元に戻す</button>
+          <button type="button" className="chip on" style={{ flex: 2, minHeight: 44 }} disabled={!draft.length} onClick={commit}>決定</button>
+        </div>
       </div>
       <div className="v-card" data-msx-ability-techs><div className="h2">⚔ 覚えている技 {techs.length}</div>
         {techs.length ? <div>{techs.map((t) => <span key={t.id} className="msx-ab-tech">{t.kind === 'wise' ? '🧠' : '💪'}{t.name}</span>)}</div> : <div className="sub">まだない</div>}
@@ -89675,13 +89854,15 @@ const MSX_R3_CSS = `
 .msx .r3 .q-slot ul{list-style:none;margin:2px 0 0;padding:0;font-size:9.5px;color:#e2e8f0}
 .msx .r3 .q-slot li{display:flex;gap:4px;align-items:center}
 .msx .r3 .q-slot li i{font-style:normal;color:#94a3b8;flex:0 0 auto}
-.msx .r3 .q-slot li em{font-style:normal;margin-left:auto;background:#16a34a;color:#fff;border-radius:4px;padding:0 4px;font-size:9px}
+.msx .r3 .q-slot li em.no{background:#475569;color:#cbd5e1}
+.msx .r3 .q-slot li span{min-width:0;flex:1 1 auto}
+.msx .r3 .q-slot li em{white-space:nowrap;flex:0 0 auto;font-style:normal;margin-left:auto;background:#16a34a;color:#fff;border-radius:4px;padding:0 4px;font-size:9px}
 .msx .r3 .q-list{flex:1 1 auto;min-height:0;overflow-y:auto}
 .msx .r3 .q-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px}
 .msx .r3 .q-col{display:flex;flex-direction:column;gap:5px;min-width:0}
 .msx .r3 .q-col h4{text-align:center;font-size:12px;font-weight:900;padding:2px 0;margin:0;border-radius:8px;background:#ffffff1a}
 .msx .r3 .q-card{border-radius:10px;padding:5px 3px;text-align:center;font-size:10.5px;font-weight:800;line-height:1.25;background:#ffffff10;border:1px solid #ffffff22;color:#fff;min-height:52px;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:1px;min-width:0}
-.msx .r3 .q-card .nm{font-size:10px;letter-spacing:-.02em}
+.msx .r3 .q-card .nm{font-size:10px;letter-spacing:-.02em;text-wrap:balance}
 .msx .r3 .q-card .rk{font-size:9px;color:#cbd5e1}
 .msx .r3 .q-card .p{font-size:15px;font-weight:900;color:#86efac}
 .msx .r3 .q-card .p.g{font-size:10.5px;color:#cbd5e1}
@@ -91029,10 +91210,14 @@ function MsxR3Shugyo({ run, setRun, v, ev, onBack, onPause }) {
   const say = msxPh(want.length >= 2 ? '「2つで｜超修行!｜2つとも｜覚えることも｜あるよ。｜能力の上がりも｜疲れも｜2回分だからね」' : want.length === 1 ? (superWhy ? `「この技で｜いこう!｜(${superWhy}から、｜技は｜1つだけ)」` : '「いいね!｜もう1つ選ぶと｜超修行に｜なるよ」') : '「覚えたい技を｜1つ選んでね。｜2つ選ぶと｜超修行!｜選ばなくても｜能力は｜上がるよ」');
   const slot = (id) => {
     if (!id) return <div className="q-slot msx-kp" data-msx-r3-qslot="0">{want.length ? (superWhy ? `超修行は できない(${superWhy})` : '+ もう1つ選ぶと 🔥超修行') : '+ 下の緑の札から 技を選ぶ'}</div>;
-    const t = all.find((x) => x.id === id) || {}; const cs = condsOf(t);
+    const t = all.find((x) => x.id === id) || {};
+    // 覚える率が上がる条件(加点・満たした1つにつき +5%): いま選んでいる技の組み合わせで数える(選んだ技の段の合計)
+    const bc = typeof SUC.techBoostConds === 'function' ? SUC.techBoostConds(s0, t, want) : [];
+    const rate = typeof SUC.techRate === 'function' ? SUC.techRate(s0, t, { course, super: isSuper, picks: want }) : (rateOf[id] || 0);
+    const BC = { n: (c) => `覚えた技 ${c.need}つ以上`, pop: (c) => `人気 ${c.need}以上`, sum: (c) => `選んだ技の段の合計 ${c.need}以上` };
     return (<div className="q-slot on msx-kp" onClick={() => toggle(id)} data-msx-r3-qslot={id}>
-      <small>{MSX_R3_DIST[Math.min(...(t.dist || [1]))]}・R{rankOf[id] || '-'}</small><b className="n">{t.name}</b><b className="r">{Math.round((rateOf[id] || 0) * 100)}%</b>
-      {cs.length ? <ul>{cs.slice(0, 4).map((c, i) => <li key={c.k}><i>条件{i + 1}</i>{c.short.replace(/で$/, ' 以上')}<em>済</em></li>)}</ul> : <ul><li><i>条件</i>なし</li></ul>}
+      <small>{MSX_R3_DIST[Math.min(...(t.dist || [1]))]}・R{rankOf[id] || '-'}</small><b className="n">{t.name}</b><b className="r" data-msx-r3-qrate>{Math.round(rate * 100)}%</b>
+      {bc.length ? <ul data-msx-r3-qconds>{bc.slice(0, 4).map((c, i) => <li key={`${c.type}${i}`} className={c.ok ? 'ok' : ''}><i>条件{i + 1}</i><span>{(BC[c.type] || (() => ''))(c)}</span><em className={c.ok ? '' : 'no'}>{c.ok ? '済 +5%' : 'まだ'}</em></li>)}</ul> : <ul><li><i>条件</i>なし</li></ul>}
     </div>);
   };
   const body = (<>
@@ -91054,7 +91239,7 @@ function MsxR3Shugyo({ run, setRun, v, ev, onBack, onPause }) {
           const got = (s0.techs || []).includes(t.id); const ok = rateOf[t.id] != null; const sel = want.includes(t.id);
           const cs = got || ok ? [] : condsOf(t); const ng = cs.find((x) => !x.ok);
           return (<button type="button" key={t.id} className={`q-card ${sel ? 'sel' : got ? 'got' : ok ? 'ok' : 'lock'}`} onClick={() => (ok && !got ? toggle(t.id) : !got ? setLockT(t) : null)} data-msx-r3-tech={t.id}>
-            <span className="nm msx-kp">{t.name}</span><span className="rk">R{rankOf[t.id] || t.rank || '-'}</span>
+            <span className="nm msx-kp">{String(t.name || '').length >= 7 ? <>{String(t.name).slice(0, Math.ceil(String(t.name).length / 2))}<wbr/>{String(t.name).slice(Math.ceil(String(t.name).length / 2))}</> : t.name}</span><span className="rk">R{rankOf[t.id] || t.rank || '-'}</span>
             {got ? <span className="p g">覚えた</span> : ok ? <span className="p">{Math.round(rateOf[t.id] * 100)}%</span> : <span className="lk msx-kp">🔒 {full ? '技がいっぱい' : ng ? ng.short : '条件あり'}</span>}
           </button>);
         })}</div>))}</div> : <div className="q-note msx-kp">このモンスターの技の表がまだありません(能力だけ上がる)</div>}
@@ -103688,14 +103873,15 @@ const CARD_ART_KNOWN_BOX = Object.freeze({
   myua_surprise: [1536, 1024, 325, 27, 852, 997],
   myua_troubled: [1536, 1024, 323, 15, 866, 1009],
   myua_wink: [1536, 1024, 379, 28, 760, 996],
-  sorashido_angry: [384, 512, 0, 0, 384, 512],
-  sorashido_crying: [384, 512, 0, 0, 384, 512],
-  sorashido_excited: [384, 512, 0, 3, 384, 509],
-  sorashido_happy: [384, 512, 0, 0, 384, 512],
-  sorashido_normal: [384, 512, 0, 0, 384, 512],
-  sorashido_surprise: [384, 512, 0, 2, 384, 510],
-  sorashido_troubled: [384, 512, 0, 0, 384, 512],
-  sorashido_wink: [384, 512, 0, 2, 384, 510],
+  sorashido_angry: [384, 512, 50, 37, 314, 475],
+  sorashido_crying: [384, 512, 5, 39, 375, 473],
+  sorashido_excited: [384, 512, 5, 37, 379, 475],
+  sorashido_happy: [384, 512, 28, 38, 317, 474],
+  sorashido_normal: [384, 512, 16, 37, 368, 475],
+  sorashido_sleep: [384, 512, 5, 27, 379, 485],
+  sorashido_surprise: [384, 512, 0, 38, 384, 474],
+  sorashido_troubled: [384, 512, 0, 39, 384, 473],
+  sorashido_wink: [384, 512, 27, 38, 357, 474],
   'stand-normal/atsu_angry': [540, 552, 83, 7, 407, 545],
   'stand-normal/atsu_crying': [606, 552, 108, 6, 390, 546],
   'stand-normal/atsu_excited': [618, 552, 89, 7, 503, 545],
@@ -103704,6 +103890,14 @@ const CARD_ART_KNOWN_BOX = Object.freeze({
   'stand-normal/atsu_surprise': [624, 552, 118, 7, 434, 545],
   'stand-normal/atsu_troubled': [556, 552, 47, 7, 458, 545],
   'stand-normal/atsu_wink': [626, 552, 81, 7, 537, 545],
+  'stand-normal/erubin_angry': [454, 492, 33, 7, 389, 485],
+  'stand-normal/erubin_crying': [548, 492, 7, 7, 528, 485],
+  'stand-normal/erubin_excited': [576, 492, 7, 7, 535, 485],
+  'stand-normal/erubin_happy': [550, 492, 18, 8, 524, 484],
+  'stand-normal/erubin_normal': [484, 492, 19, 9, 454, 483],
+  'stand-normal/erubin_surprise': [698, 492, 39, 6, 620, 486],
+  'stand-normal/erubin_troubled': [552, 492, 8, 7, 533, 485],
+  'stand-normal/erubin_wink': [516, 492, 7, 7, 498, 485],
   'stand-normal/kiki_angry': [616, 832, 8, 8, 601, 824],
   'stand-normal/kiki_crying': [436, 832, 8, 6, 420, 826],
   'stand-normal/kiki_excited': [946, 832, 8, 8, 929, 824],
@@ -103720,6 +103914,14 @@ const CARD_ART_KNOWN_BOX = Object.freeze({
   'stand-normal/kyuko_surprise': [410, 590, 43, 8, 342, 582],
   'stand-normal/kyuko_troubled': [366, 590, 21, 7, 337, 583],
   'stand-normal/kyuko_wink': [424, 590, 30, 8, 386, 582],
+  'stand-normal/momosuke_angry': [708, 860, 7, 7, 689, 853],
+  'stand-normal/momosuke_crying': [776, 860, 7, 7, 762, 853],
+  'stand-normal/momosuke_excited': [796, 860, 6, 6, 783, 854],
+  'stand-normal/momosuke_happy': [792, 860, 8, 7, 776, 853],
+  'stand-normal/momosuke_normal': [704, 860, 8, 7, 689, 853],
+  'stand-normal/momosuke_surprise': [742, 860, 8, 8, 727, 852],
+  'stand-normal/momosuke_troubled': [714, 860, 8, 6, 699, 854],
+  'stand-normal/momosuke_wink': [764, 860, 24, 6, 734, 854],
   'stand-normal/myua_angry': [592, 672, 12, 0, 520, 672],
   'stand-normal/myua_crying': [592, 672, 0, 0, 591, 672],
   'stand-normal/myua_excited': [592, 672, 0, 0, 583, 672],
@@ -103728,14 +103930,14 @@ const CARD_ART_KNOWN_BOX = Object.freeze({
   'stand-normal/myua_surprise': [592, 672, 0, 10, 509, 662],
   'stand-normal/myua_troubled': [592, 672, 27, 0, 516, 672],
   'stand-normal/myua_wink': [592, 672, 12, 10, 579, 662],
-  'stand-normal/sorashido_angry': [698, 542, 113, 7, 443, 535],
-  'stand-normal/sorashido_crying': [684, 542, 98, 7, 477, 535],
-  'stand-normal/sorashido_excited': [772, 542, 53, 8, 674, 534],
-  'stand-normal/sorashido_happy': [732, 542, 47, 6, 655, 536],
-  'stand-normal/sorashido_normal': [762, 542, 121, 8, 569, 534],
-  'stand-normal/sorashido_surprise': [766, 542, 105, 7, 586, 535],
-  'stand-normal/sorashido_troubled': [730, 542, 31, 9, 672, 533],
-  'stand-normal/sorashido_wink': [646, 542, 97, 9, 446, 533],
+  'stand-normal/sorashido_angry': [536, 576, 26, 7, 432, 569],
+  'stand-normal/sorashido_crying': [534, 576, 7, 7, 520, 569],
+  'stand-normal/sorashido_excited': [648, 576, 16, 6, 626, 570],
+  'stand-normal/sorashido_happy': [534, 576, 30, 6, 440, 570],
+  'stand-normal/sorashido_normal': [572, 576, 31, 8, 534, 568],
+  'stand-normal/sorashido_surprise': [632, 576, 67, 7, 542, 569],
+  'stand-normal/sorashido_troubled': [662, 576, 6, 7, 648, 569],
+  'stand-normal/sorashido_wink': [586, 576, 7, 9, 565, 567],
   // </card-art-known-box>
 });
 const cardArtBoxOf = (v) => (Array.isArray(v) && v.length === 6 ? { nw: v[0], nh: v[1], x: v[2], y: v[3], w: v[4], h: v[5] } : null);
@@ -140393,11 +140595,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 aria-pressed={!!selected} aria-disabled={!owned}
                 className={`relative flex flex-col items-center gap-1.5 rounded-2xl border-2 p-2 active:scale-95 ${selected?'border-amber-400 bg-amber-950/30':'border-slate-700 bg-slate-950/40'}`}>
                 <span className={`relative block ${owned?'':'opacity-45'}`}>
-                  {src?<img src={src} alt={costume?costume.name:'元の服'} className="h-14 w-14 rounded-full object-cover bg-black/30" draggable="false"/>:<span className="flex h-14 w-14 items-center justify-center text-3xl" aria-hidden="true">👗</span>}
+                  {src?<img src={src} alt={costume?costume.name:assistantDefaultOutfitName(who.id)} className="h-14 w-14 rounded-full object-cover bg-black/30" draggable="false"/>:<span className="flex h-14 w-14 items-center justify-center text-3xl" aria-hidden="true">👗</span>}
                   {!owned&&<Lock size={14} className="absolute inset-0 m-auto text-white drop-shadow-[0_0_3px_rgba(0,0,0,0.9)]"/>}
                 </span>
                 {selected&&<PickerCheckMark/>}
-                <span className={`text-[9px] font-black leading-tight text-center ${owned?'text-slate-200':'text-slate-500'}`}>{costume?costume.name:'元の服'}</span>
+                <span className={`text-[9px] font-black leading-tight text-center ${owned?'text-slate-200':'text-slate-500'}`}>{costume?costume.name:assistantDefaultOutfitName(who.id)}</span>
                 {!owned&&<span className="text-[8px] font-black leading-tight text-center text-amber-400">{costume&&!assistantCostumeUnlockedNow(costume)?'解放の条件あり':'マーケットで購入'}</span>}
               </button>
             );
@@ -140420,7 +140622,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             <PickerSheet title="助手の着替え" note="助手の顔と立ち絵が、選んだ服に変わります。服はマーケットで買えます。" onClose={closeCostume}
               preview={<>
                 {(()=>{const nowSrc=assistantFaceImage(who,'happy');return nowSrc?<img src={nowSrc} alt={who.name} className="h-14 w-14 shrink-0 rounded-full object-cover bg-black/30" draggable="false"/>:<span className="text-3xl" aria-hidden="true">{who.emoji}</span>;})()}
-                <span className="min-w-0"><b className="block truncate text-[12px] font-black text-white">{who.name}：{worn?worn.name:'元の服'}</b><small className="block text-[10px] font-bold leading-tight text-slate-400">いま着ている服</small></span>
+                <span className="min-w-0"><b className="block truncate text-[12px] font-black text-white">{who.name}：{worn?worn.name:assistantDefaultOutfitName(who.id)}</b><small className="block text-[10px] font-bold leading-tight text-slate-400">いま着ている服</small></span>
               </>}
               chips={chipList} chip={who.id} onChip={(id)=>{ setCostumeAssistantId(id); setCostumeLockedInfo(null); }}
               footerExtra={lockedInfo} dataPicker="assistant-costume">

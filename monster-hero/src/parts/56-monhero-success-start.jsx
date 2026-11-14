@@ -93,7 +93,9 @@ function MsxHd({ back, onBack, title = '🌱 モンヒロサクセス', sub, rig
   return (
     <div className="v-hd">
       <button type="button" className="bk" onClick={onBack}>← {back}</button>
-      <span className="ti">{title}{title === '🌱 モンヒロサクセス' && typeof MsxBetaMark === 'function' ? <MsxBetaMark/> : null}{sub ? <small>{sub}</small> : null}</span>
+      {/* 育成中などシナリオ名(sub)があるときは、題は「みゅあ編」だけにする(2026-11-15 社長。字の大きい設定でも切れない) */}
+      {sub && title === '🌱 モンヒロサクセス' ? <span className="ti" data-msx-hd-sc>{sub}</span>
+        : <span className="ti">{title}{title === '🌱 モンヒロサクセス' && typeof MsxBetaMark === 'function' ? <MsxBetaMark/> : null}{sub ? <small>{sub}</small> : null}</span>}
       {right != null && <span className="rt">{right}</span>}
     </div>
   );

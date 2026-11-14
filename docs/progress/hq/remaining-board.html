@@ -39,7 +39,7 @@ input[type=search]{flex:1 1 160px}
 .top{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:12px;color:var(--sub)}
 .pill{display:inline-block;border-radius:999px;padding:1px 9px;font-size:12px;font-weight:700;background:var(--accent-soft);color:var(--accent)}
 .st-確認待ち,.st-OK済み{background:var(--ok-soft);color:var(--ok)}
-.st-止め中{background:var(--hold-soft);color:var(--hold)}
+.st-止め中,.st-β公開待ち{background:var(--hold-soft);color:var(--hold)}
 .st-作業中{background:var(--first-soft);color:var(--first)}
 .st-依頼済み,.st-未依頼{background:var(--drop-soft);color:var(--sub)}
 .text{font-size:14.5px;min-width:0;overflow-wrap:anywhere}
@@ -80,7 +80,7 @@ textarea{font:inherit;font-size:13.5px;color:var(--ink);background:var(--bg);bor
 
 <script>
 const DEPT={hq:"本社",beat:"モンヒロビート",card:"MFバトルカード",battle:"モンヒロバトル",dev:"モンサク・開発",'assistant-ai':"助手(ココロ)",'assistant-life':"助手ライフ",friend:"フレンド"};
-const STATE_ORDER=["確認待ち","OK済み","作業中","依頼済み","未依頼","止め中"];
+const STATE_ORDER=["確認待ち","OK済み","作業中","依頼済み","未依頼","β公開待ち","止め中"];
 const MARKS=[["ok","OK"],["first","先にやって"],["drop","いらない"],["hold","保留"]];
 let tasks=[], marks={}, db=null, gotTasks=false;
 const $=s=>document.querySelector(s);

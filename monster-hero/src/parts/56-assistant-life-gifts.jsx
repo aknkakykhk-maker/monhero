@@ -18,7 +18,7 @@ const ASSISTANT_LIFE_SOLO_GIFT_KEY = 'mh_assistant_life_solo_gift_v1';
 // 狭い枠で名前を折り返すときの区切り(言葉の途中で折らない)。名前が変わって合わなくなったら、名前をそのまま1つで出す
 const ASSISTANT_LIFE_GIFT_WRAP = Object.freeze({ basket: ['おやつ', 'バスケット'], misanga: ['おそろいの', 'ミサンガ'], cake: ['はんぶんこ', 'ケーキ'], onigiri: ['ほかほか', 'おにぎり'],
   tea: ['午後の', 'ティーセット'], earphone: ['かたみみ', 'イヤホン'], puzzle: ['ふたりで解く', 'パズル'], sleeve: ['おそろい', 'スリーブ'], cheki: ['思い出', 'チェキ'], flower: ['ちいさな', '花束'],
-  letter: ['手書きの', '手紙'], candy: ['ひとつぶ', 'キャンディ'], omamori: ['小さな', 'おまもり'] });
+  letter: ['手書きの', '手紙'], candy: ['ひとつぶ', 'キャンディ'], omamori: ['小さな', 'おまもり'], monplush: ['モンスターの', 'ぬいぐるみ'] });
 const assistantLifeGiftWrapName = (g) => { const w = g && ASSISTANT_LIFE_GIFT_WRAP[g.key]; return w && w.join('') === g.name ? w : [g ? g.name : '']; };
 const ASSISTANT_LIFE_GIFT_LABEL = Object.freeze({ like: '💗 好き', mid: 'ふつう', bad: '💧 苦手', unknown: '?' });
 
@@ -29,7 +29,7 @@ const assistantLifeSoloOn = () => typeof assistantLifeEnabled === 'function' && 
 const assistantLifeAnyGiftDef = (kindOrKey) => assistantLifeGiftDefs().find(x => x.kind === kindOrKey || x.key === kindOrKey) || assistantLifeSoloDefs().find(x => x.kind === kindOrKey || x.key === kindOrKey) || null;
 const assistantLifeIsSoloOnly = (kindOrKey) => !!assistantLifeSoloDefs().find(x => x.kind === kindOrKey || x.key === kindOrKey);
 // 1人に贈れる道具(印が真なら 10種類+1人用4種類)
-const assistantLifeSoloKinds = () => (assistantLifeSoloOn() ? [...assistantLifeGiftDefs(), ...assistantLifeSoloDefs()] : []);
+const assistantLifeSoloKinds = () => (assistantLifeSoloOn() ? [...assistantLifeGiftDefs(), ...assistantLifeSoloDefs()].filter(g => !(typeof assistantLifeTasteGiftHidden === 'function' && assistantLifeTasteGiftHidden(g))) : []);
 // 印が真なら10種類、偽なら今までの2つ(🧺🤝)
 const assistantLifeGiftKinds = () => {
   const all = assistantLifeGiftDefs();
@@ -305,8 +305,10 @@ const assistantLifeSoloGive = async (who, kind, rand = Math.random) => {
   if (typeof assistantLifeDiaryAdd === 'function') void assistantLifeDiaryAdd(`${typeof assistantLifeName === 'function' ? assistantLifeName(who) : who}に${g.name}を贈った`, [who], { kind: 'give' });
   const line = assistantLifeSoloLine(who, g, like, rand);
   const call = typeof assistantPeerPlayerCall === 'function' ? assistantPeerPlayerCall(who) : 'あなた';
-  return line ? { id: `solo-${g.key}-${who}`, pair: [who], lv: 1, scene: 'any', reaction: kind, gift: g.key, solo: true, like, amount,
+  const out = line ? { id: `solo-${g.key}-${who}`, pair: [who], lv: 1, scene: 'any', reaction: kind, gift: g.key, solo: true, like, amount,
     lines: [{ ...line, t: line.t.split('{name}').join(call) }] } : null;
+  // 🧸 モンスターのぬいぐるみは、選んだモンスターの好みを動かす(r1115-035・56-assistant-life-taste-gift.jsx)
+  return typeof assistantLifeTasteGiftApply === 'function' ? assistantLifeTasteGiftApply(who, g, out) : out;
 };
 
 // 仲良し度の段が上がった(60-app の addAssistantBondFor から)。まだ分かっていない好きな道具を1つ教えてくれる。知らせは部屋のシートで見るまで残す
@@ -356,7 +358,8 @@ function AssistantLifeGiftLikesRow({ id, compact = false }) {
   const [open, setOpen] = React.useState(false);
   if (typeof assistantLifeEnabled !== 'function' || !assistantLifeEnabled()) return null;
   // ❹A: 1人に贈る道具が開いていれば、1人用の4種類も並べて「分かった ◯/14」
-  const gifts = [...assistantLifeGiftKinds(), ...(assistantLifeSoloOn() ? assistantLifeSoloDefs() : [])].map(g => assistantLifeGiftOf(g.kind)).filter(Boolean);
+  // 🧸 モンスターのぬいぐるみは選んだモンスターで喜び方が変わるので、道具の好みの一覧には並べない(r1115-035)
+  const gifts = [...assistantLifeGiftKinds(), ...(assistantLifeSoloOn() ? assistantLifeSoloDefs() : [])].filter(g => g.key !== 'monplush').map(g => assistantLifeGiftOf(g.kind)).filter(Boolean);
   const known = gifts.filter(g => assistantLifeGiftKnown(id, g.key, st)).length;
   const liked = gifts.filter(g => assistantLifeGiftShownLike(id, g.key, st) === 'like');
   const told = st.likes.told.filter(x => x.who === id).slice(-1)[0] || null;
@@ -695,6 +698,7 @@ function AssistantLifeGiftSheet({ give, setGive, life, peerSt, haveOf, nameOf, o
             <p className="text-[11px] leading-snug text-slate-300 [[data-assistant-life-land='1']_&]:hidden">{soloWho && info.key === 'cheki' ? `その場で写真が出るカメラ。思い出アルバムに${nameOf(soloWho)}ひとりの1枚が増えます` : info.what}</p>
           </div>
         </div>
+        {soloWho && info.key === 'monplush' && typeof AssistantLifeTasteGiftPicker === 'function' && <AssistantLifeTasteGiftPicker who={soloWho} nameOf={nameOf}/>}
         <div className="mt-1.5 space-y-1 text-[12px]">
           {people.map((id, i) => (
             <div key={id} className="rounded-lg bg-slate-800/80 px-2 py-1" data-assistant-life-give-person={`${id}:${shown[i]}`}>

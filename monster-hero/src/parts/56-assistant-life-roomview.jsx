@@ -159,6 +159,7 @@ const ASSISTANT_LIFE_SLEEP_ART = Object.freeze(new Set([
   'atsu_normal.PNG', 'face/atsu_normal.PNG', 'kiki_normal.PNG', 'face/kiki_normal.PNG', 'halloween/kiki_normal.PNG', 'halloween/face/kiki_normal.PNG',
   'kyuko_normal.PNG', 'face/kyuko_normal.PNG', 'myua_normal.PNG', 'face/myua_normal.PNG',
   'card-master/myua_normal.PNG', 'card-master/face/myua_normal.PNG', 'halloween/myua_normal.PNG', 'halloween/face/myua_normal.PNG',
+  'sorashido_normal.PNG', 'face/sorashido_normal.PNG', // 2026-11-15 ソラシド『馬骨』の寝顔(社長から)
   'momosuke_normal.PNG', 'face/momosuke_normal.PNG', 'halloween/momosuke_normal.PNG', 'halloween/face/momosuke_normal.PNG',
 ]));
 // その絵(ふつうの顔 normal)に社長の寝顔の絵があれば、その絵のパス。無ければ null
