@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 6a9b8d5e82a221af
+// generated-sha256: 576bf7e4b6929635
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -77925,7 +77925,7 @@ function AssistantMasmonBattleWatch({ onClose }) {
         {!ended && (
           <div className="ambw-card ambw-log">
             {recent.map(x => <p key={x.k} className={x.side}><small>R{x.r}</small>{x.t}</p>)}
-            {actor && e.why && ambwWhyOf(e.why) && (
+            {actor && e.why && ambwWhyOf(e.why, WHY) && (
               <div className="ambw-row" style={{ marginTop: 6 }}><img className="ambw-face" src={assistantFaceSrc(actor, 'normal')} alt=""/><div className="ambw-bubble">{actor.name}「{ambwWhyOf(e.why, WHY)}」</div></div>
             )}
           </div>

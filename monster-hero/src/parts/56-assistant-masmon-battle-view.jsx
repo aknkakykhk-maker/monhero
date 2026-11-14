@@ -474,7 +474,7 @@ function AssistantMasmonBattleWatch({ onClose }) {
         {!ended && (
           <div className="ambw-card ambw-log">
             {recent.map(x => <p key={x.k} className={x.side}><small>R{x.r}</small>{x.t}</p>)}
-            {actor && e.why && ambwWhyOf(e.why) && (
+            {actor && e.why && ambwWhyOf(e.why, WHY) && (
               <div className="ambw-row" style={{ marginTop: 6 }}><img className="ambw-face" src={assistantFaceSrc(actor, 'normal')} alt=""/><div className="ambw-bubble">{actor.name}「{ambwWhyOf(e.why, WHY)}」</div></div>
             )}
           </div>

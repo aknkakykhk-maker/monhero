@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 43377a745b1b1f2a
+// source-sha256: ea8019c134e824a8
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -148385,7 +148385,7 @@ function AssistantMasmonBattleWatch({
     }, recent.map(x => React.createElement("p", {
       key: x.k,
       className: x.side
-    }, React.createElement("small", null, "R", x.r), x.t)), actor && e.why && ambwWhyOf(e.why) && React.createElement("div", {
+    }, React.createElement("small", null, "R", x.r), x.t)), actor && e.why && ambwWhyOf(e.why, WHY) && React.createElement("div", {
       className: "ambw-row",
       style: {
         marginTop: 6
