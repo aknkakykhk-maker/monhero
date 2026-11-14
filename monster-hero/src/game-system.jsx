@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 0e8b9cf64560d5b3
+// generated-sha256: bd9b5fc25f164da2
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -81912,7 +81912,11 @@ function MsxScenarioSelect({ value, onBack, onNext }) {
   const [detail, setDetail] = useState(false);
   const sc = MSX_STORIES[idx] || MSX_STORIES[0];
   const n = MSX_STORIES.length;
-  const art = (aid) => (aid === 'issa' ? (typeof MSX_ISSA_ART === 'string' ? MSX_ISSA_ART : '') : `images/assistant/fullbody/${aid}__${aid === 'mua' ? 'excited' : 'happy'}.png`); // 全身の絵(助手ごとの表情)
+  const art = (aid) => { // 全身の絵(助手ごとの表情)。パスは助手の表(assistantFullBodyImage)から引く。無ければ今の立ち絵
+    if (aid === 'issa') return typeof MSX_ISSA_ART === 'string' ? MSX_ISSA_ART : '';
+    const ex = aid === 'mua' ? 'excited' : 'happy'; const who = typeof assistantById === 'function' ? assistantById(aid) : null;
+    return (who && typeof assistantFullBodyImage === 'function' && assistantFullBodyImage(who, ex)) || (typeof msxBody === 'function' ? msxBody(aid, ex) : '');
+  };
   const many = n > 1;
   return (
     <div className="scn" data-msx-scenario={sc.id}>

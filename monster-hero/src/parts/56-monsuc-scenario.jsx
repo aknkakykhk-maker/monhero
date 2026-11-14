@@ -61,7 +61,11 @@ function MsxScenarioSelect({ value, onBack, onNext }) {
   const [detail, setDetail] = useState(false);
   const sc = MSX_STORIES[idx] || MSX_STORIES[0];
   const n = MSX_STORIES.length;
-  const art = (aid) => (aid === 'issa' ? (typeof MSX_ISSA_ART === 'string' ? MSX_ISSA_ART : '') : `images/assistant/fullbody/${aid}__${aid === 'mua' ? 'excited' : 'happy'}.png`); // 全身の絵(助手ごとの表情)
+  const art = (aid) => { // 全身の絵(助手ごとの表情)。パスは助手の表(assistantFullBodyImage)から引く。無ければ今の立ち絵
+    if (aid === 'issa') return typeof MSX_ISSA_ART === 'string' ? MSX_ISSA_ART : '';
+    const ex = aid === 'mua' ? 'excited' : 'happy'; const who = typeof assistantById === 'function' ? assistantById(aid) : null;
+    return (who && typeof assistantFullBodyImage === 'function' && assistantFullBodyImage(who, ex)) || (typeof msxBody === 'function' ? msxBody(aid, ex) : '');
+  };
   const many = n > 1;
   return (
     <div className="scn" data-msx-scenario={sc.id}>

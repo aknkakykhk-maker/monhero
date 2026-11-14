@@ -151,6 +151,7 @@ const annivCheck = () => {
     // 閉じて開き直すと、β版の話はもう出ない
     await page.locator('.v-hd .bk').click(); await page.waitForTimeout(200);
     for (let i = 0; i < 3 && await page.locator('.v-hd .bk').count(); i++) { await page.locator('.v-hd .bk').first().click(); await page.waitForTimeout(250); }
+    if (await page.locator('[data-msx-scenario]').count()) { await page.locator('.scn-ft .bk').click(); await page.waitForTimeout(250); } // ストーリー選択(2026-11-14)の もどる
     await page.locator('[data-debug-monhero-success]').dispatchEvent('click');
     await page.waitForSelector('.msx[data-msx-view="home"]', { timeout: 20000 });
     await page.waitForTimeout(800);

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 48c310f3170ce5ad
+// source-sha256: b35dcf0f4b724cd2
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -157052,7 +157052,12 @@ function MsxScenarioSelect({
   const [detail, setDetail] = useState(false);
   const sc = MSX_STORIES[idx] || MSX_STORIES[0];
   const n = MSX_STORIES.length;
-  const art = aid => aid === 'issa' ? typeof MSX_ISSA_ART === 'string' ? MSX_ISSA_ART : '' : `images/assistant/fullbody/${aid}__${aid === 'mua' ? 'excited' : 'happy'}.png`;
+  const art = aid => {
+    if (aid === 'issa') return typeof MSX_ISSA_ART === 'string' ? MSX_ISSA_ART : '';
+    const ex = aid === 'mua' ? 'excited' : 'happy';
+    const who = typeof assistantById === 'function' ? assistantById(aid) : null;
+    return who && typeof assistantFullBodyImage === 'function' && assistantFullBodyImage(who, ex) || (typeof msxBody === 'function' ? msxBody(aid, ex) : '');
+  };
   const many = n > 1;
   return React.createElement("div", {
     className: "scn",
