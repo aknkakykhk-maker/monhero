@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 110c47d699b527e5
+// source-sha256: 6ad829b63381d03f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -115254,10 +115254,19 @@ function AssistantLifeStands({
         objectFit: 'fill',
         filter,
         clipPath: `inset(${p.clip[0].toFixed(1)}px 0 ${p.clip[1].toFixed(1)}px 0)`,
-        ...(p.fade ? {
-          WebkitMaskImage: `linear-gradient(to bottom,#000 ${(p.fade[0] * 100).toFixed(1)}%,transparent ${(p.fade[1] * 100).toFixed(1)}%)`,
-          maskImage: `linear-gradient(to bottom,#000 ${(p.fade[0] * 100).toFixed(1)}%,transparent ${(p.fade[1] * 100).toFixed(1)}%)`
-        } : {})
+        ...(p.fade ? (() => {
+          const bust = !/\/stand-[a-z-]+\//.test(String(x.src || ''));
+          const v = `linear-gradient(to bottom,#000 ${(p.fade[0] * 100).toFixed(1)}%,transparent ${(p.fade[1] * 100).toFixed(1)}%)`;
+          return bust ? {
+            WebkitMaskImage: `${v},linear-gradient(to right,transparent,#000 12%,#000 88%,transparent)`,
+            maskImage: `${v},linear-gradient(to right,transparent,#000 12%,#000 88%,transparent)`,
+            WebkitMaskComposite: 'source-in',
+            maskComposite: 'intersect'
+          } : {
+            WebkitMaskImage: v,
+            maskImage: v
+          };
+        })() : {})
       } : {
         opacity: 0,
         height: '50%',

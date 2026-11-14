@@ -911,7 +911,12 @@ function AssistantLifeStands({ ids, sleepIds = [] }) {
         data-assistant-life-scene-face={p ? Math.round(p.face) : ''} data-assistant-life-scene-vis={p ? `${Math.round(p.visTop)},${Math.round(p.visBottom)}` : ''}
         style={p ? { left: p.left, top: p.top, height: p.height, width: p.width, maxWidth: 'none', bottom: 'auto', objectFit: 'fill', filter,
           clipPath: `inset(${p.clip[0].toFixed(1)}px 0 ${p.clip[1].toFixed(1)}px 0)`,
-          ...(p.fade ? { WebkitMaskImage: `linear-gradient(to bottom,#000 ${(p.fade[0] * 100).toFixed(1)}%,transparent ${(p.fade[1] * 100).toFixed(1)}%)`, maskImage: `linear-gradient(to bottom,#000 ${(p.fade[0] * 100).toFixed(1)}%,transparent ${(p.fade[1] * 100).toFixed(1)}%)` } : {}) } : { opacity: 0, height: '50%', filter }}/>
+          ...(p.fade ? (() => {
+            // 全身画の無い助手(絵が顔のアップ・胸から上の切り抜き)は、左右の切れ目も薄く消して、下の消え際を少し長くする(2026-11-14 ココロ案)
+            const bust = !/\/stand-[a-z-]+\//.test(String(x.src || ''));
+            const v = `linear-gradient(to bottom,#000 ${(p.fade[0] * 100).toFixed(1)}%,transparent ${(p.fade[1] * 100).toFixed(1)}%)`;
+            return bust ? { WebkitMaskImage: `${v},linear-gradient(to right,transparent,#000 12%,#000 88%,transparent)`, maskImage: `${v},linear-gradient(to right,transparent,#000 12%,#000 88%,transparent)`, WebkitMaskComposite: 'source-in', maskComposite: 'intersect' } : { WebkitMaskImage: v, maskImage: v };
+          })() : {}) } : { opacity: 0, height: '50%', filter }}/>
       {zz && p && typeof AssistantLifeSleepEyes === 'function' && <AssistantLifeSleepEyes pid={x.pid} src={x.src} w={p.width} h={p.height} style={{ left: p.left, top: p.top, filter, zIndex: 1 }}/>}
       {zz && p && <span className="absolute text-[34px]" style={{ left: p.cx + 20, top: Math.max(40, p.visTop) }} aria-hidden="true">💤</span>}
     </React.Fragment>); })}</>);
