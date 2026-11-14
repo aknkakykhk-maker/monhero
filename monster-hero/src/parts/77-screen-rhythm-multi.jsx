@@ -1789,8 +1789,9 @@ function RhythmMultiChatBubble({ text: raw }) {
     </span>
   );
   return (
-    <span data-rhythm-multi-chat-bubble className="pointer-events-none absolute inset-x-0.5 bottom-0.5 top-3 z-40 flex items-start justify-center overflow-hidden">
-      <span className="line-clamp-2 max-h-full max-w-full break-words rounded-xl bg-white px-1.5 py-0.5 text-center text-[10px] font-black leading-tight text-slate-900 shadow-lg">{text}</span>
+    <span data-rhythm-multi-chat-bubble className="pointer-events-none absolute inset-x-0.5 bottom-0.5 top-3 z-40 flex items-start justify-center overflow-hidden landscape:top-0.5 [[data-mh-view-rotation=true]_&]:top-0.5">
+      {/* 席のカードが低い横(高さ38px)でも2行が白い箱に入るよう、箱の上の余白を詰める。字は言葉の切れ目(jaWrap)で折り、2行を超える分は「…」で省く(2026-11-14 社長の止め絵: 2行目が箱の下へはみ出して切れていた) */}
+      <span className="line-clamp-2 max-h-full max-w-full overflow-hidden rounded-xl bg-white px-1.5 py-0.5 text-center text-[10px] font-black leading-tight text-slate-900 shadow-lg" style={typeof JA_WRAP_STYLE !== 'undefined' ? JA_WRAP_STYLE : { wordBreak: 'keep-all', overflowWrap: 'anywhere' }}>{typeof jaWrap === 'function' ? jaWrap(text) : text}</span>
     </span>
   );
 }
@@ -3761,7 +3762,7 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
       <RhythmOrientationButton/>
       {view && liveBoardButton()}
       {view && optionsButton()}
-      {view && rankingButton()}
+      {/* 🏆 は上の帯から外した(2026-11-14 社長「ランキングボタンを曲側の方にうつせばいいんじゃない？」。🔄横で上の帯に入りきらず、💬が下の段へ落ちていた)。曲の側(曲えらびの詳しい欄の下・待ちの出る段・準備の曲の札・待機の段)に置く */}
       {view && inviteButton()}
       {view && chatButton()}
     </header>
@@ -3809,6 +3810,11 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
   const rankingButton = (extra = '') => rankingSupport && (
     <button data-rhythm-multi-ranking type="button" aria-label="全国ランキング" onClick={openRanking}
       className={`min-h-[44px] min-w-[44px] max-[380px]:min-w-[38px] shrink-0 rounded-xl border border-amber-400/50 bg-amber-950/40 text-lg ${extra}`}>🏆</button>
+  );
+  // 曲の側に置く 🏆 ランキング(字つき)。上の帯の 🏆 は外した
+  const rankingWideButton = (extra = '') => rankingSupport && (
+    <button data-rhythm-multi-ranking type="button" aria-label="全国ランキング" onClick={openRanking}
+      className={`flex min-h-[44px] items-center justify-center gap-1 rounded-xl border border-amber-400/50 bg-amber-950/40 px-1 text-[11px] font-black text-amber-100 landscape:min-h-[34px] ${extra}`}><span aria-hidden="true" className="text-base leading-none">🏆</span>ランキング</button>
   );
   // ランキングは対戦の画面の上へ重ねる(画面を移すと、ライブ開始の合図を受ける側が外れて取り逃すため)
   const rankingLayer = rankingOpen && rankingSupport && view && (
@@ -4271,6 +4277,7 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
                 {/* 招待の部屋は、開いたままほかの画面へ出られる(2026-10-29 社長・案A)。相手が来たら上の帯(RhythmMultiAwayBar)で知らせる */}
                 {/* 横・🔄横では、出る2つを横に並べて右の欄に収める(2026-11-07 ミハリ B1「開いたときは画面の外で、なでられると分からない」) */}
                 <div data-rhythm-multi-exit-row className="space-y-2 landscape:grid landscape:grid-flow-col landscape:auto-cols-fr landscape:gap-2 landscape:space-y-0">
+                {view && rankingWideButton('w-full')}
                 {view && !publicRoom && !view.full && onStepAway && <button data-rhythm-multi-step-away type="button" className={`${btn} w-full bg-cyan-800`} style={JA_WRAP_STYLE} onClick={onStepAway}>{jaWrap('部屋はそのままで、ほかの画面へ')}</button>}
                 <button data-rhythm-multi-leave type="button" className={`${btn} w-full bg-slate-700`} onClick={leaveRoomAfterTap}>{view ? 'ルームを出る' : 'やめる'}</button>
                 </div>
@@ -4480,6 +4487,7 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
         <RhythmMultiStampBar phase={phase} onSend={(text) => RHYTHM_MULTI.sendChat(text)} wrap big limit={6} className="shrink-0 px-2 pt-1" />
         <div className="mt-auto flex shrink-0 flex-col gap-2 border-t border-white/10 bg-slate-950/90 p-2 landscape:flex-row landscape:items-center" style={{ paddingBottom: 'calc(.5rem + var(--mh-sa-bottom))' }}>
           <p className="min-w-0 flex-1 text-sm font-black text-amber-200">{phase === 'playing' ? 'いまライブ中です。次の曲から参加できます' : 'ホストが次へ進むのを待っています'}{drawnSong ? <small className="block truncate text-[11px] font-bold text-slate-300">{rhythmSongFullName(drawnSong)}</small> : null}</p>
+          {rankingWideButton('landscape:w-36')}
           <button data-rhythm-multi-leave type="button" className={`${btn} bg-slate-700 landscape:w-48`} onClick={leaveRoomAfterTap}>ルームを出る</button>
         </div>
         {chatSheet}{inviteSheetLayer}{rankingLayer}{buddyInfoLayer}
@@ -4555,6 +4563,8 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
                   <span>演奏中のみんなのスコア</span><b>{multiLiveBoard ? 'ON' : 'OFF'}</b>
                 </button>}
               </div>
+              {/* 🏆 は上の帯から曲の側へ移した(2026-11-14)。ライブする曲のランキング */}
+              <div className="shrink-0">{rankingButton('landscape:min-h-[40px]')}</div>
             </div>
           )}
           {/* 難易度のボタン。HELL のある曲は6つ並ぶ(2026-10-13 社長「マルチも通常と同じ仕様にして」)。鍵つきは、ひとりのときと同じく「◯◯で解放」を出す */}
@@ -4615,7 +4625,8 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
           </div>
         )}
         footer={() => (
-          <div className="grid grid-cols-2 gap-1.5">
+          <div className="grid grid-cols-3 gap-1.5">
+            {rankingWideButton()}
             <button data-rhythm-multi-omakase type="button" aria-pressed={myPick === RHYTHM_MULTI_OMAKASE} onClick={() => RHYTHM_MULTI.pick(RHYTHM_MULTI_OMAKASE)}
               className={`flex min-h-[44px] flex-col items-center justify-center rounded-xl border px-1 text-[11px] font-black leading-tight ${myPick === RHYTHM_MULTI_OMAKASE ? 'border-amber-300 bg-amber-600/80 text-white' : 'border-white/15 bg-slate-900/80 text-slate-300'}`}>🔀 おまかせ{myPick === RHYTHM_MULTI_OMAKASE ? '(選曲済)' : ''}<small data-rhythm-multi-omakase-note className="block text-[8px] font-bold opacity-80">{members.some((m) => m.cpu) ? (members.some((m) => m.cpu && m.as) ? '助手・マスモンの希望の曲に' : 'マスモンの希望の曲に') : 'ほかの人の曲が優先'}</small></button>
             <button data-rhythm-multi-leave type="button" onClick={leaveRoom}

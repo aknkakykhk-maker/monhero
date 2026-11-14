@@ -159,7 +159,7 @@ const AI_LINE = '今日はいい日！{task}と、{reward}がもらえるって�
         for (let i = 0; i < 4 && await closePopups(); i++) await page.waitForTimeout(400);
         const after = await page.evaluate(() => ({ beat: JSON.parse(localStorage.getItem('mh_rhythm_event_points_v1') || '0'), card: (JSON.parse(localStorage.getItem('mh_card_tactics_v1') || 'null') || {}).tickets || 0,
           left: missionClaimableCount(normalizeMissions(JSON.parse(localStorage.getItem('mh_missions')))) }));
-        check(`${T}すべて受け取る: ビートPとカードパック券が数どおりに増える`, expect.n > 0 && after.beat - before.beat === expect.beat && after.card - before.card === expect.card && expect.beat > 0 && expect.card > 0, JSON.stringify({ before, after, expect }));
+        check(`${T}全て受け取る: ビートPとカードパック券が数どおりに増える`, expect.n > 0 && after.beat - before.beat === expect.beat && after.card - before.card === expect.card && expect.beat > 0 && expect.card > 0, JSON.stringify({ before, after, expect }));
         check(`${T}受け取ったあとは、同じものをもう一度受け取れない`, after.left === 0 && await page.locator('[data-mission-claim-all]').isDisabled());
       }
       check(`${T}実行時エラーが出ない`, errors.length === 0, errors.slice(0, 2).join(' / '));

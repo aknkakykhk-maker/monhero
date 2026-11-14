@@ -948,6 +948,9 @@
       const m = s.team[i]; const fk = m.top[0];
       const ep = s.story[i]; const st = STORY[ep];
       s.log.events += 1;
+      // 画面で「実際に動いた数」を出すため、前の値を覚えておく(出来事の外へ d として渡すだけ・保存の形は変えない)
+      const b0 = { st: s.stats[fk], bond: s.bond[i], hp: s.hp, stress: s.stress };
+      const dOf = () => ({ stat: fk, up: Math.round(s.stats[fk] - b0.st), bondFrom: b0.bond, bondTo: s.bond[i], bond: Math.round(s.bond[i] - b0.bond), hp: Math.round(s.hp - b0.hp), stress: Math.round(s.stress - b0.stress) });
       if (st && s.bond[i] >= st.need && rng() < Math.min(1, st.p + (s.good && s.good.uketsugu && ep > 0 ? GOOD.uketsugu.story : 0))) {
         s.story[i] = ep + 1; s.log.story += 1; addBond(s, i, st.bond);
         if (ep === 0) addStat(s, fk, unitOf(s, fk) * 0.5);
@@ -957,7 +960,7 @@
           if (tid) { learnTech(s, tid); s.log.taught += 1; out.taught = tid; } else s.techs.forEach(t => { s.mastery[t] = clamp(num(s.mastery[t]) + 10, 0, 100); });
           addStat(s, fk, unitOf(s, fk) * (s.good && s.good.uketsugu ? GOOD.uketsugu.teach : 1));
         }
-        out.event = { who: i, story: ep + 1 };
+        out.event = { who: i, story: ep + 1, d: dOf() };
         return;
       }
       s.log.lottery += 1;
@@ -967,7 +970,7 @@
       else if (pick === 'talk') { addStress(s, -10); addBond(s, i, 5); }
       else if (pick === 'tip') s.hirameki = true;
       else addBond(s, i, 10);
-      out.event = { who: i, lottery: pick };
+      out.event = { who: i, lottery: pick, d: dOf() };
     };
 
     const condRoll = (s, rng, kind) => {

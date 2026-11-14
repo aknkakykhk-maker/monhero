@@ -222,10 +222,14 @@ function MsxR3Retire({ run, setRun, onPause, debug, SUC }) {
     }
     let r = null;
     try { r = await msxR3Retire({ ...run, s: ws }, ws, ev, assists, debug); } catch (e) { r = { ok: false }; }
-    if (r && r.ok) { try { await msxR3ClearRun(); } catch (e) {} setRes({ ok: true, mon: r.mon }); setStep('done'); }
+    if (r && r.ok) { try { await msxR3ClearRun(); } catch (e) {} setRes({ ok: true, mon: r.mon, best3: r.best3 || null }); setStep(r.best3 && typeof MsxBest3 === 'function' ? 'best3' : 'done'); }
     else setRes(r || { ok: false });
     setBusy(false); setSure(false);
   };
+  // ---- 自分だけのベスト3(56-monsuc-best3.jsx・r1113-057②)。入ったらせり上がる演出 → いつもの完了の段へ ----
+  if (step === 'best3' && res && res.best3 && typeof MsxBest3 === 'function') {
+    return <MsxR3Frame run={run} back="とじる" onBack={() => setStep('done')} right={right} body={<MsxBest3 b={res.best3} run={run}/>} foot={<div className="v-ft"><button type="button" className="go" onClick={() => setStep('done')} data-msx-best3-next>次へ ▶</button></div>}/>;
+  }
   if (step === 'done') {
     const body = (<>
       <div className="v-scene" style={{ flex: '1 1 0', minHeight: 260 }}><img className="bg" src={msxSceneBg().bg} alt=""/><div className="sh"/><div className="v-burst"/>

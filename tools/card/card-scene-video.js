@@ -55,7 +55,7 @@ const bootToCardTop = async (page) => {
   await page.locator('[data-home-card-battle]').waitFor({ timeout: 30000 });
   await page.waitForTimeout(1500);
   for (let i = 0; i < 8; i++) {
-    const closed = await page.evaluate(() => { const b = [...document.querySelectorAll('button')].find((x) => x.offsetParent && /^(受け取る|閉じる|OK|わかった！?|あとで)$/.test((x.innerText || '').trim())); if (b) { b.click(); return true; } return false; });
+    const closed = await page.evaluate(() => { const b = [...document.querySelectorAll('button')].find((x) => x.offsetParent && /^(受け取る|閉じる|OK|(?:分|わ)かった！?|あとで)$/.test((x.innerText || '').trim())); if (b) { b.click(); return true; } return false; });
     if (!closed) break;
     await page.waitForTimeout(400);
   }
@@ -100,7 +100,7 @@ const SCENES = {
     file: 'd-vs.mp4',
     prepare: async (page) => {
       await page.locator('[data-card-cpu]').click();
-      await page.getByRole('button', { name: 'わかった' }).click({ timeout: 3000 }).catch(() => {});
+      await page.getByRole('button', { name: /^(分かった|わかった)$/ }).click({ timeout: 3000 }).catch(() => {});
       await page.locator('[data-card-top] button').filter({ hasText: 'フリー対戦' }).first().click();
       await page.locator('[data-card-foe="erubin"]').click();
       await page.locator('[data-card-level="normal"]').click().catch(() => {});

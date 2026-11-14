@@ -82,7 +82,7 @@ const CLIMAX = 'ヒーローズファイナル';
         if (appeared) break;
         // 先に出る受け取り・案内の窓を閉じる(お話は HOME で待っている)
         // 見えているボタンを順に探す(ログインボーナスの窓などは後から出る。最初の1つが隠れたボタンのことがある)
-        const bs = page.getByRole('button', { name: /受け取る|閉じる|はじめる|OK|スキップ/ });
+        const bs = page.getByRole('button', { name: /受け取る|閉じる|(?:始|はじ)める|OK|スキップ/ });
         for (let k = 0, n = await bs.count(); k < n; k++) {
           const b = bs.nth(k);
           if (await b.isVisible().catch(() => false)) { await b.dispatchEvent('click').catch(() => {}); break; }

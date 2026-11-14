@@ -85,7 +85,7 @@ check('保存済みかどうかを起動時に見て、続きから設定でき�
 
 // --- デバッグの「見るだけ」表示 ---
 // onboarded が true のままだと初回のまとまりが出ず、ふつうのプロフィールが開くだけになる
-check('見るだけの表示でも「はじめての設定」を出す',
+check('見るだけの表示でも「初めての設定」を出す',
   has('{(!onboarded||onboardingPreview)&&(()=>{'));
 check('見るだけの表示でも戻るボタンを出さない',
   has('{(onboarded&&!onboardingPreview)'));
@@ -103,7 +103,7 @@ check('決定するとそのまま村の案内へ続く',
 
 // --- 案内は「選んだ助手」が担当する ---
 // ここが固定のままだと、ききを選んだのにみゅあが案内してしまう
-check('あいさつ・村の案内・はじめての設定は選んだ助手のもの',
+check('あいさつ・村の案内・初めての設定は選んだ助手のもの',
   has('assistantIntroPages(selectedAssistantId)')
     && has('assistantTutorialPages(selectedAssistantId')
     && has('findAssistantOnboarding(hasName,hasIcon,selectedAssistantId)'));
@@ -118,12 +118,12 @@ check('台本を固定の助手のものへ書き戻していない',
 // 入り口そのものは、はじめての設定が終わるまでログインボーナスを出さないことで塞いである
 // (報酬はすでにギフトボックスへ配ってあるので、出すのを遅らせても何も失われない)。
 // 実際の画面で確かめるほうは tools/boot/onboarding-required-check.js が見る
-check('はじめての設定が終わるまでHOMEへ入れない',
+check('初めての設定が終わるまでHOMEへ入れない',
   has("if (bootPhase !== 'GAME' || onboarded || onboardingPreview) return;")
     && has("setGameState(assistantChosen ? 'PROFILE' : 'ASSISTANT_SELECT');"));
-check('ログインボーナスの告知は、はじめての設定が終わってから出す',
+check('ログインボーナスの告知は、初めての設定が終わってから出す',
   has('{loginBonusPopup&&onboarded&&!onboardingPreview&&'));
-check('村の案内も、はじめての設定が終わった人にだけ出す',
+check('村の案内も、初めての設定が終わった人にだけ出す',
   has("if (bootPhase !== 'GAME' || gameState !== 'HOME' || tutorialShownRef.current || !dataLoaded || !onboarded) return;"));
 
 console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');

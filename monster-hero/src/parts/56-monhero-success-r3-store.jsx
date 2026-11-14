@@ -141,6 +141,11 @@ const msxR3BoxMonOf = (run, s, ev, assists, parent) => ({
   ...(Array.isArray(s.aptAwake) && s.aptAwake.some((n) => n > 0) ? { aptAwake: s.aptAwake.slice(0, 4) } : {}), // 覚醒で上げた間合い適性の段数(合体で継ぐ段数を数えるときに入る) // 合体円盤石から継いだ段数(2026-11-13・足すだけ) // 育成中に上げた間合い適性の段数 [零,近,中,遠](2026-11-13・足すだけ。種の表は変えない)
   titles: msxR3FinalTitles(s, ev), from: run.from || null,
 });
+// 自分だけのベスト3: [{ id, power, rank, species, nick, at }] を総合力の大きい順に3つまで。壊れた行は捨てる・同じ id は1つ
+const msxBest3Norm = (raw) => (Array.isArray(raw) ? raw : []).filter((e) => msxR3Obj(e) && typeof e.id === 'string' && Number.isFinite(e.power) && typeof e.species === 'string')
+  .map((e) => ({ id: e.id.slice(0, 64), power: Math.max(0, Math.round(e.power)), rank: typeof e.rank === 'string' ? e.rank.slice(0, 4) : '', species: e.species.slice(0, 40), nick: typeof e.nick === 'string' ? e.nick.slice(0, 16) : '', at: Number.isFinite(e.at) ? e.at : 0 }))
+  .filter((e, i, a) => a.findIndex((x) => x.id === e.id) === i).sort((a, b) => (b.power - a.power) || (a.at - b.at)).slice(0, 3);
+const msxBest3Add = (list, e) => msxBest3Norm([...msxBest3Norm(list).filter((x) => x.id !== e.id), e]);
 // 引退した子を保存枠へ。{ ok, full, box, meta }。同じ id がもうあれば足さない(二度押し・中断のあとでも1回)
 const msxR3Retire = async (run, s, ev, assists, debug) => {
   const box = await msxR3ReadBox(); let meta = await msxR3ReadMeta();
@@ -154,13 +159,17 @@ const msxR3Retire = async (run, s, ev, assists, debug) => {
   meta.retired += 1;
   const best = msxR3Obj(meta.best[s.species]) ? meta.best[s.species] : null;
   if (!best || !(best.power >= ev.power)) meta.best = { ...meta.best, [s.species]: { power: ev.power, rank: ev.rank, id: run.id } };
+  // 自分だけのベスト3(2026-11-13 社長 r1113-057②)。種に関係なく総合力の上位3つ。meta に best3 を足すだけ(既存の best は種ごとのまま)
+  const best3Prev = msxBest3Norm(meta.best3);
+  meta.best3 = msxBest3Add(best3Prev, { id: run.id, power: ev.power, rank: ev.rank, species: s.species, nick: run.nick || '', at: Date.now() });
+  const best3 = { prev: best3Prev, next: meta.best3, place: meta.best3.findIndex((e) => e.id === run.id), power: ev.power };
   meta.titles = Array.from(new Set([...(meta.titles || []), ...(Array.isArray(s.titles) ? s.titles : [])])).slice(0, 200);
   const next = { ...box, cap: Math.max(box.cap, msxR3BoxCap(meta.retired)), mons: [...rest, mon] };
   await storeSet(MSX_KEYS.box, next); // 先に子を書き、そのあと途中の育成を消す(消えたのに入っていない、を作らない)
   await storeSet(MSX_KEYS.meta, meta);
   await msxR3AddRecord(run, s, ev, mon.titles, mon.gen);
   msxR3RankSend(run, s, ev, debug);
-  return { ok: true, box: next, meta, mon };
+  return { ok: true, box: next, meta, mon, best3 };
 };
 // ゲームオーバー: 保存枠には入れない(PLAN §1・TOURNAMENT §12 E は「思い出」の扱いを窓口へ)。優勝ずみの大会だけ足す
 const msxR3GameOver = async (s) => {
