@@ -156,7 +156,7 @@ function MsxR3Retire({ run, setRun, onPause, debug, SUC }) {
       <div className="v-card"><div className="sub" style={{ color: '#f9a8d4', fontWeight: 900 }}>🏅 この育成で手に入れたもの</div>
         <div className="v-kv"><b>賞金</b><span>合計 {msxFmt(ws.fameTotal || 0)}G</span></div>
         <div className="v-kv"><b>称号</b><span>{(ws.titles || []).length ? ws.titles.slice(0, 6).map((t) => `「${msxR3TitleName(t)}」`).join('') : 'なし'}</span></div>
-        <div className="v-kv"><b>マスモンボックス</b><span>{box ? `${box.mons.length + 1} / ${box.cap}体 に入る。次の育成の編成・対戦・合体に使える` : '…'}</span></div></div>
+        <div className="v-kv"><b style={{ width: 'auto', whiteSpace: 'nowrap' }}>マスモンボックス</b><span>{box ? `${box.mons.length + 1} / ${box.cap}体 に入る。次の育成の編成・対戦・合体に使える` : '…'}</span></div></div>
       <div style={{ flex: 1 }}/>
     </>);
     return <MsxR3Frame run={run} back="もどる" onBack={() => setStep(s.pts > 0 ? 'e3' : 'e0')} right={right} body={body} foot={<div className="v-ft"><button type="button" className="go" onClick={() => setStep('e2')} data-msx-r3-e1>✨ アシスト効果を取る({msxR3T().assist ? msxR3T().assist.pointsOf(ev.power) : ev.points}ポイント)</button></div>}/>;
@@ -212,7 +212,7 @@ function MsxR3Retire({ run, setRun, onPause, debug, SUC }) {
         <div className="v-stamp msx-pop" style={{ top: '6%', fontSize: 30 }}>育成完了!<small>{run.nick || msxMonName(ws.species)}・評価 {grade.label}・総合力 {msxFmt(ev.power)}</small></div></div>
       <MsxSay aid={ws.aid} ex="happy" text="「おつかれさま! 次の育成で、編成に入れてあげてね」"/>
       {!fxDone && typeof MsxFxMoment === 'function' ? <MsxFxMoment kind="retire" title="育成完了!" sub={`${run.nick || msxMonName(ws.species)}・評価 ${grade.label}`} species={ws.species} colors={run.colors} onDone={() => setFxDone(true)}/> : null}
-      <div className="v-card"><div className="v-kv"><b>マスモンボックス</b><span>{box ? `${box.mons.length} / ${box.cap}体` : '…'}</span></div></div>
+      <div className="v-card"><div className="v-kv"><b style={{ width: 'auto', whiteSpace: 'nowrap' }}>マスモンボックス</b><span>{box ? `${box.mons.length} / ${box.cap}体` : '…'}</span></div></div>
     </>);
     return <MsxR3Frame run={run} back="とじる" onBack={() => { setRun(null); onPause(); }} right={right} body={body} foot={<div className="v-ft"><button type="button" onClick={() => setShowBox(true)}>🐾 マスモンボックスを見る</button><button type="button" className="go" onClick={() => { setRun(null); onPause(); }} data-msx-r3-home>ホームへ ▶</button></div>}/>;
   }

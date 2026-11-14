@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: efee32f22d156983
+// source-sha256: ede73204f55517b7
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -172779,7 +172779,12 @@ function MsxR3Retire({
       className: "v-kv"
     }, React.createElement("b", null, "称号"), React.createElement("span", null, (ws.titles || []).length ? ws.titles.slice(0, 6).map(t => `「${msxR3TitleName(t)}」`).join('') : 'なし')), React.createElement("div", {
       className: "v-kv"
-    }, React.createElement("b", null, "マスモンボックス"), React.createElement("span", null, box ? `${box.mons.length + 1} / ${box.cap}体 に入る。次の育成の編成・対戦・合体に使える` : '…'))), React.createElement("div", {
+    }, React.createElement("b", {
+      style: {
+        width: 'auto',
+        whiteSpace: 'nowrap'
+      }
+    }, "マスモンボックス"), React.createElement("span", null, box ? `${box.mons.length + 1} / ${box.cap}体 に入る。次の育成の編成・対戦・合体に使える` : '…'))), React.createElement("div", {
       style: {
         flex: 1
       }
@@ -172980,7 +172985,12 @@ function MsxR3Retire({
       className: "v-card"
     }, React.createElement("div", {
       className: "v-kv"
-    }, React.createElement("b", null, "マスモンボックス"), React.createElement("span", null, box ? `${box.mons.length} / ${box.cap}体` : '…'))));
+    }, React.createElement("b", {
+      style: {
+        width: 'auto',
+        whiteSpace: 'nowrap'
+      }
+    }, "マスモンボックス"), React.createElement("span", null, box ? `${box.mons.length} / ${box.cap}体` : '…'))));
     return React.createElement(MsxR3Frame, {
       run: run,
       back: "とじる",
@@ -173593,7 +173603,7 @@ function MsxR3Box({
       "data-msx-r3-mmbye": true
     }, "お別れ")), tab === 'bye' ? React.createElement("div", {
       className: "mm-hint"
-    }, "お別れするマスモンを選んでね(ハート・貸し出し中・育成中のマスモンは選べない)") : null, msg ? React.createElement("div", {
+    }, "お別れするマスモンを選んでね", React.createElement("br", null), "ハート・貸し出し中・育成中のマスモンは選べません") : null, msg ? React.createElement("div", {
       className: "mm-hint ok"
     }, msg) : null, React.createElement("div", {
       className: "mm-gridw"
@@ -174026,10 +174036,11 @@ function MsxR3Box({
 const MSX_MM_CSS = `
 .msx .mm{gap:0}
 .msx .mm-gate{flex:1 1 0;min-height:0;display:flex;flex-direction:column;gap:12px;padding-top:8px}
-.msx .mm-desk{position:relative;flex:1 1 0;min-height:160px;border-radius:16px;overflow:hidden;background:radial-gradient(circle at 70% 40%,#4c3a8a 0,#1e1a36 70%);border:1px solid #3b3566}
-.msx .mm-aid{position:absolute;right:4%;bottom:0;height:92%;max-width:60%;object-fit:contain;object-position:bottom}
-.msx .mm-bub{position:absolute;left:10px;top:18%;max-width:58%;background:#fff;color:#1e1b4b;border-radius:14px;padding:10px 12px;font-size:13px;font-weight:900;line-height:1.5;box-shadow:0 4px 0 #0005}
-.msx .mm-cards{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.msx .mm-desk{position:relative;flex:1 1 0;min-height:200px;max-height:470px;border-radius:16px;overflow:hidden;background:radial-gradient(circle at 70% 40%,#4c3a8a 0,#1e1a36 70%);border:1px solid #3b3566}
+/* 参考 mm-02 の組み立て: 右に助手の上半身、左に吹き出し。場面の高さに上限を付けて、助手が下に寄って上が大きく空かないようにする */
+.msx .mm-aid{position:absolute;right:0;bottom:0;height:100%;width:100%;object-fit:contain;object-position:right bottom}
+.msx .mm-bub{position:absolute;z-index:1;left:10px;top:7%;max-width:62%;background:#fff;color:#1e1b4b;border-radius:14px;padding:10px 12px;font-size:13px;font-weight:900;line-height:1.5;box-shadow:0 4px 0 #0005}
+.msx .mm-cards{display:grid;grid-template-columns:1fr 1fr;gap:10px;flex:1 1 auto;max-height:240px}
 .msx .mm-card{min-height:96px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;border-radius:16px;background:linear-gradient(180deg,#43307a,#2a2052);border:2px solid #fde047;border-bottom-width:5px;padding:8px 6px;text-align:center}
 .msx .mm-card .e{font-size:30px;line-height:1.1}
 .msx .mm-card b{font-size:15px;font-weight:900}
@@ -174069,7 +174080,9 @@ const MSX_MM_CSS = `
 .msx .mm-apt{background:#1e1a36;border:1px solid #3b3566;border-radius:14px;padding:6px;display:grid;grid-template-columns:repeat(4,1fr);gap:4px;text-align:center}
 .msx .mm-apt small{display:block;font-size:10.5px;font-weight:900;color:#cbd5e1}.msx .mm-apt b{font-size:20px;font-weight:900;color:#fde047}
 .msx .mm-apt .note{grid-column:1/-1;font-size:10px;color:#cbd5e1;font-weight:700;text-align:left}
-.msx .mm-low{flex:1 1 auto;min-height:0;overflow-y:auto;margin-top:6px}
+/* 下のタブの中身は残りの高さを全部使う札にする(下に空きを残さない・決まりは48pxまで) */
+.msx .mm-low{flex:1 1 0;min-height:120px;overflow-y:auto;margin-top:6px;background:#1e1a36;border:1px solid #3b3566;border-radius:14px;padding:6px}
+.msx .mm-low>.mm-kv{background:none;border:0;padding:0}
 .msx .mm-tech{display:grid;grid-template-columns:52% 1fr;gap:6px}
 .msx .mm-tg{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;align-content:start}
 .msx .mm-tg .hd{font-size:10.5px;font-weight:900;text-align:center;border-radius:8px;background:#334155;padding:1px 0}

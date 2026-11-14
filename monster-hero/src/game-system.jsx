@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 91ced0abb429ba23
+// generated-sha256: b1d5eadb095e01eb
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -88816,7 +88816,7 @@ function MsxR3Retire({ run, setRun, onPause, debug, SUC }) {
       <div className="v-card"><div className="sub" style={{ color: '#f9a8d4', fontWeight: 900 }}>🏅 この育成で手に入れたもの</div>
         <div className="v-kv"><b>賞金</b><span>合計 {msxFmt(ws.fameTotal || 0)}G</span></div>
         <div className="v-kv"><b>称号</b><span>{(ws.titles || []).length ? ws.titles.slice(0, 6).map((t) => `「${msxR3TitleName(t)}」`).join('') : 'なし'}</span></div>
-        <div className="v-kv"><b>マスモンボックス</b><span>{box ? `${box.mons.length + 1} / ${box.cap}体 に入る。次の育成の編成・対戦・合体に使える` : '…'}</span></div></div>
+        <div className="v-kv"><b style={{ width: 'auto', whiteSpace: 'nowrap' }}>マスモンボックス</b><span>{box ? `${box.mons.length + 1} / ${box.cap}体 に入る。次の育成の編成・対戦・合体に使える` : '…'}</span></div></div>
       <div style={{ flex: 1 }}/>
     </>);
     return <MsxR3Frame run={run} back="もどる" onBack={() => setStep(s.pts > 0 ? 'e3' : 'e0')} right={right} body={body} foot={<div className="v-ft"><button type="button" className="go" onClick={() => setStep('e2')} data-msx-r3-e1>✨ アシスト効果を取る({msxR3T().assist ? msxR3T().assist.pointsOf(ev.power) : ev.points}ポイント)</button></div>}/>;
@@ -88872,7 +88872,7 @@ function MsxR3Retire({ run, setRun, onPause, debug, SUC }) {
         <div className="v-stamp msx-pop" style={{ top: '6%', fontSize: 30 }}>育成完了!<small>{run.nick || msxMonName(ws.species)}・評価 {grade.label}・総合力 {msxFmt(ev.power)}</small></div></div>
       <MsxSay aid={ws.aid} ex="happy" text="「おつかれさま! 次の育成で、編成に入れてあげてね」"/>
       {!fxDone && typeof MsxFxMoment === 'function' ? <MsxFxMoment kind="retire" title="育成完了!" sub={`${run.nick || msxMonName(ws.species)}・評価 ${grade.label}`} species={ws.species} colors={run.colors} onDone={() => setFxDone(true)}/> : null}
-      <div className="v-card"><div className="v-kv"><b>マスモンボックス</b><span>{box ? `${box.mons.length} / ${box.cap}体` : '…'}</span></div></div>
+      <div className="v-card"><div className="v-kv"><b style={{ width: 'auto', whiteSpace: 'nowrap' }}>マスモンボックス</b><span>{box ? `${box.mons.length} / ${box.cap}体` : '…'}</span></div></div>
     </>);
     return <MsxR3Frame run={run} back="とじる" onBack={() => { setRun(null); onPause(); }} right={right} body={body} foot={<div className="v-ft"><button type="button" onClick={() => setShowBox(true)}>🐾 マスモンボックスを見る</button><button type="button" className="go" onClick={() => { setRun(null); onPause(); }} data-msx-r3-home>ホームへ ▶</button></div>}/>;
   }
@@ -89118,7 +89118,7 @@ function MsxR3Box({ onClose }) {
     body = (<>
       <div className="mm-tabs"><button type="button" className={tab === 'list' ? 'on' : ''} onClick={() => { setTab('list'); setPick([]); }}>一覧</button>
         <button type="button" className={tab === 'bye' ? 'on' : ''} onClick={() => { setTab('bye'); setPick([]); setMsg(''); }} data-msx-mm-tab-bye data-msx-r3-mmbye>お別れ</button></div>
-      {tab === 'bye' ? <div className="mm-hint">お別れするマスモンを選んでね(ハート・貸し出し中・育成中のマスモンは選べない)</div> : null}
+      {tab === 'bye' ? <div className="mm-hint">お別れするマスモンを選んでね<br/>ハート・貸し出し中・育成中のマスモンは選べません</div> : null}
       {msg ? <div className="mm-hint ok">{msg}</div> : null}
       <div className="mm-gridw">{list.length ? <MsxMmGrid mons={list} label={view.label} fav={fav}
         isOn={(m) => tab === 'bye' && pick.includes(m.id)} lockOf={tab === 'bye' ? byeLock : null}
@@ -89256,10 +89256,11 @@ function MsxR3Box({ onClose }) {
 const MSX_MM_CSS = `
 .msx .mm{gap:0}
 .msx .mm-gate{flex:1 1 0;min-height:0;display:flex;flex-direction:column;gap:12px;padding-top:8px}
-.msx .mm-desk{position:relative;flex:1 1 0;min-height:160px;border-radius:16px;overflow:hidden;background:radial-gradient(circle at 70% 40%,#4c3a8a 0,#1e1a36 70%);border:1px solid #3b3566}
-.msx .mm-aid{position:absolute;right:4%;bottom:0;height:92%;max-width:60%;object-fit:contain;object-position:bottom}
-.msx .mm-bub{position:absolute;left:10px;top:18%;max-width:58%;background:#fff;color:#1e1b4b;border-radius:14px;padding:10px 12px;font-size:13px;font-weight:900;line-height:1.5;box-shadow:0 4px 0 #0005}
-.msx .mm-cards{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.msx .mm-desk{position:relative;flex:1 1 0;min-height:200px;max-height:470px;border-radius:16px;overflow:hidden;background:radial-gradient(circle at 70% 40%,#4c3a8a 0,#1e1a36 70%);border:1px solid #3b3566}
+/* 参考 mm-02 の組み立て: 右に助手の上半身、左に吹き出し。場面の高さに上限を付けて、助手が下に寄って上が大きく空かないようにする */
+.msx .mm-aid{position:absolute;right:0;bottom:0;height:100%;width:100%;object-fit:contain;object-position:right bottom}
+.msx .mm-bub{position:absolute;z-index:1;left:10px;top:7%;max-width:62%;background:#fff;color:#1e1b4b;border-radius:14px;padding:10px 12px;font-size:13px;font-weight:900;line-height:1.5;box-shadow:0 4px 0 #0005}
+.msx .mm-cards{display:grid;grid-template-columns:1fr 1fr;gap:10px;flex:1 1 auto;max-height:240px}
 .msx .mm-card{min-height:96px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;border-radius:16px;background:linear-gradient(180deg,#43307a,#2a2052);border:2px solid #fde047;border-bottom-width:5px;padding:8px 6px;text-align:center}
 .msx .mm-card .e{font-size:30px;line-height:1.1}
 .msx .mm-card b{font-size:15px;font-weight:900}
@@ -89299,7 +89300,9 @@ const MSX_MM_CSS = `
 .msx .mm-apt{background:#1e1a36;border:1px solid #3b3566;border-radius:14px;padding:6px;display:grid;grid-template-columns:repeat(4,1fr);gap:4px;text-align:center}
 .msx .mm-apt small{display:block;font-size:10.5px;font-weight:900;color:#cbd5e1}.msx .mm-apt b{font-size:20px;font-weight:900;color:#fde047}
 .msx .mm-apt .note{grid-column:1/-1;font-size:10px;color:#cbd5e1;font-weight:700;text-align:left}
-.msx .mm-low{flex:1 1 auto;min-height:0;overflow-y:auto;margin-top:6px}
+/* 下のタブの中身は残りの高さを全部使う札にする(下に空きを残さない・決まりは48pxまで) */
+.msx .mm-low{flex:1 1 0;min-height:120px;overflow-y:auto;margin-top:6px;background:#1e1a36;border:1px solid #3b3566;border-radius:14px;padding:6px}
+.msx .mm-low>.mm-kv{background:none;border:0;padding:0}
 .msx .mm-tech{display:grid;grid-template-columns:52% 1fr;gap:6px}
 .msx .mm-tg{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;align-content:start}
 .msx .mm-tg .hd{font-size:10.5px;font-weight:900;text-align:center;border-radius:8px;background:#334155;padding:1px 0}
