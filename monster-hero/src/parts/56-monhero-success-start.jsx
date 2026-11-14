@@ -128,7 +128,8 @@ function MsxMonDetail({ species, name, art, st, apt, type, peak, grades, known, 
   // 升目の段は技のランク(1〜5)で固定する(2026-11-14 社長「ランク別に技表示されてるんじゃなくて上から詰めて置かれてるのか。段をランク別に変えて」)。
   //   1つの間合い・同じランクに技が2つ以上ある種族(固有技の多い子)は、そのランクの段だけ行を増やす。そのランクの技が無い升は ×
   const tgAt = (r, d) => all.filter((t) => (Number(t.rank) || 1) === r && Array.isArray(t.dist) && t.dist.includes(d));
-  const tgLines = [1, 2, 3, 4, 5].flatMap((r) => { const k = Math.max(1, ...[0, 1, 2, 3].map((d) => tgAt(r, d).length)); return Array.from({ length: k }, (_, i) => ({ r, i })); });
+  // 段は技のランク1〜5で必ず5つ。1升に1技で、同じ間合い・同じランクに2つ以上ある升は1つ目を出し⇄の印を付ける(2026-11-14 社長の決め r1114-128。選ぶ仕組みは次の会話で作る)
+  const tgRanks = [1, 2, 3, 4, 5];
   const [pickT, setPickT] = useState(() => (all.find(has) || all[0] || {}).id || null);
   const tech = all.find((t) => t.id === pickT) || list[0] || null;
   const grade = (k, v) => (typeof msaTechGrade === 'function' ? msaTechGrade(k, v) : '') || '−';
@@ -171,13 +172,13 @@ function MsxMonDetail({ species, name, art, st, apt, type, peak, grades, known, 
             <div className="msx-md-tw">
               <div className="msx-md-tg">
                 {MSX_TG_COLS.map((d) => <span key={`h${d}`} className={`tgh d${d}`}>{MSX_DIST_NAMES[d]}</span>)}
-                {tgLines.map(({ r, i }) => MSX_TG_COLS.map((d) => { const t = tgAt(r, d)[i];
+                {tgRanks.map((r) => MSX_TG_COLS.map((d) => { const i = 0; const alts = tgAt(r, d); const t = alts[0];
                   if (!t) return <span key={`${r}-${i}-${d}`} className="no" aria-hidden="true">×</span>;
                   const got = has(t);
                   // 技の種類で升の色を分ける(参考どおり ちから=金・かしこさ=緑)。覚えていない技も絵を出し、升の地を暗くして見分ける(2026-11-14 社長「鍵じゃなくて覚えてないやつも表示して色分けして」)。
                   // 覚える条件の数は升に出さず、押したときの右の「覚え方」に出す(社長「150とかその数字何?」→ 升目から消す)
                   return <button type="button" key={`${r}-${i}-${d}`} className={`tc ${t.kind === 'wise' ? 'wise' : 'pow'}${got ? ' got' : ' tg-not'}${tech && tech.id === t.id ? ' on' : ''}`} data-msx-tech={t.id} aria-label={`${t.name}${got ? '' : '(まだ覚えていない)'}`} onClick={() => setPickT(t.id)}>
-                    <span className="ti" aria-hidden="true">{t.kind === 'wise' ? '🧠' : '💪'}</span><span className="g">{t.guts}</span></button>; }))}
+                    <span className="ti" aria-hidden="true">{t.kind === 'wise' ? '🧠' : '💪'}</span><span className="g">{t.guts}</span>{alts.length > 1 ? <span className="tg-alt" aria-hidden="true">⇄</span> : null}</button>; }))}
               </div>
               {tech ? (<div className="msx-md-td">
                 <div className="tn">{tech.name}{has(tech) ? null : <small className="msx-md-not">まだ覚えていない</small>}</div>

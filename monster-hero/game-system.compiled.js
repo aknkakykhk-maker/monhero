@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c8c75750a2bb83ca
+// source-sha256: 4eab7567773a0c49
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -165548,6 +165548,7 @@ const MSX_CSS = `
 .msx-md-tg .tgh.d3{background:#2563eb}.msx-md-tg .tgh.d2{background:#16a34a}.msx-md-tg .tgh.d1{background:#d97706}.msx-md-tg .tgh.d0{background:#dc2626}
 .msx .msx-md-tg .tc,.msx-md-tg .no{position:relative;aspect-ratio:1/1;min-height:0;border-radius:8px;display:flex;align-items:center;justify-content:center}
 .msx .msx-md-tg .tc{padding:0;border:1.5px solid transparent}
+.msx .msx-md-tg .tc .tg-alt{position:absolute;top:-4px;right:-4px;width:17px;height:17px;border-radius:50%;background:#1e293b;border:1.5px solid #fff;color:#fff;font-size:11px;line-height:14px;font-weight:900;text-align:center;box-shadow:0 1px 2px rgba(0,0,0,.6);z-index:1}
 /* 技の種類で色分け(参考 monster-detail-basic・mm-04: ちから技=金・かしこさ技=緑)。覚えていない技は升の地と枠を暗くし、絵は少しだけ暗く(.msx .lk の白黒の見た目とぶつからないよう tg-not という名前にする) */
 .msx .msx-md-tg .tc.pow{background:linear-gradient(160deg,#fde68a,#d97706);border-color:#f59e0b}
 .msx .msx-md-tg .tc.wise{background:linear-gradient(160deg,#bbf7d0,#16a34a);border-color:#4ade80}
@@ -166593,15 +166594,7 @@ function MsxMonDetail({
   const has = t => Array.isArray(known) ? known.includes(t.id) : !!(t.learn && t.learn.start);
   const list = all.slice().sort((x, y) => has(y) - has(x) || (Number(x.rank) || 0) - (Number(y.rank) || 0));
   const tgAt = (r, d) => all.filter(t => (Number(t.rank) || 1) === r && Array.isArray(t.dist) && t.dist.includes(d));
-  const tgLines = [1, 2, 3, 4, 5].flatMap(r => {
-    const k = Math.max(1, ...[0, 1, 2, 3].map(d => tgAt(r, d).length));
-    return Array.from({
-      length: k
-    }, (_, i) => ({
-      r,
-      i
-    }));
-  });
+  const tgRanks = [1, 2, 3, 4, 5];
   const [pickT, setPickT] = useState(() => (all.find(has) || all[0] || {}).id || null);
   const tech = all.find(t => t.id === pickT) || list[0] || null;
   const grade = (k, v) => (typeof msaTechGrade === 'function' ? msaTechGrade(k, v) : '') || '−';
@@ -166705,11 +166698,10 @@ function MsxMonDetail({
   }, MSX_TG_COLS.map(d => React.createElement("span", {
     key: `h${d}`,
     className: `tgh d${d}`
-  }, MSX_DIST_NAMES[d])), tgLines.map(({
-    r,
-    i
-  }) => MSX_TG_COLS.map(d => {
-    const t = tgAt(r, d)[i];
+  }, MSX_DIST_NAMES[d])), tgRanks.map(r => MSX_TG_COLS.map(d => {
+    const i = 0;
+    const alts = tgAt(r, d);
+    const t = alts[0];
     if (!t) return React.createElement("span", {
       key: `${r}-${i}-${d}`,
       className: "no",
@@ -166728,7 +166720,10 @@ function MsxMonDetail({
       "aria-hidden": "true"
     }, t.kind === 'wise' ? '🧠' : '💪'), React.createElement("span", {
       className: "g"
-    }, t.guts));
+    }, t.guts), alts.length > 1 ? React.createElement("span", {
+      className: "tg-alt",
+      "aria-hidden": "true"
+    }, "⇄") : null);
   }))), tech ? React.createElement("div", {
     className: "msx-md-td"
   }, React.createElement("div", {

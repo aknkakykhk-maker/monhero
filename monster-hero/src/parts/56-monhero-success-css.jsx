@@ -695,6 +695,7 @@ const MSX_CSS = `
 .msx-md-tg .tgh.d3{background:#2563eb}.msx-md-tg .tgh.d2{background:#16a34a}.msx-md-tg .tgh.d1{background:#d97706}.msx-md-tg .tgh.d0{background:#dc2626}
 .msx .msx-md-tg .tc,.msx-md-tg .no{position:relative;aspect-ratio:1/1;min-height:0;border-radius:8px;display:flex;align-items:center;justify-content:center}
 .msx .msx-md-tg .tc{padding:0;border:1.5px solid transparent}
+.msx .msx-md-tg .tc .tg-alt{position:absolute;top:-4px;right:-4px;width:17px;height:17px;border-radius:50%;background:#1e293b;border:1.5px solid #fff;color:#fff;font-size:11px;line-height:14px;font-weight:900;text-align:center;box-shadow:0 1px 2px rgba(0,0,0,.6);z-index:1}
 /* 技の種類で色分け(参考 monster-detail-basic・mm-04: ちから技=金・かしこさ技=緑)。覚えていない技は升の地と枠を暗くし、絵は少しだけ暗く(.msx .lk の白黒の見た目とぶつからないよう tg-not という名前にする) */
 .msx .msx-md-tg .tc.pow{background:linear-gradient(160deg,#fde68a,#d97706);border-color:#f59e0b}
 .msx .msx-md-tg .tc.wise{background:linear-gradient(160deg,#bbf7d0,#16a34a);border-color:#4ade80}

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 6929c7d4606d169d
+// generated-sha256: 64a1881da87872e8
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -86333,6 +86333,7 @@ const MSX_CSS = `
 .msx-md-tg .tgh.d3{background:#2563eb}.msx-md-tg .tgh.d2{background:#16a34a}.msx-md-tg .tgh.d1{background:#d97706}.msx-md-tg .tgh.d0{background:#dc2626}
 .msx .msx-md-tg .tc,.msx-md-tg .no{position:relative;aspect-ratio:1/1;min-height:0;border-radius:8px;display:flex;align-items:center;justify-content:center}
 .msx .msx-md-tg .tc{padding:0;border:1.5px solid transparent}
+.msx .msx-md-tg .tc .tg-alt{position:absolute;top:-4px;right:-4px;width:17px;height:17px;border-radius:50%;background:#1e293b;border:1.5px solid #fff;color:#fff;font-size:11px;line-height:14px;font-weight:900;text-align:center;box-shadow:0 1px 2px rgba(0,0,0,.6);z-index:1}
 /* 技の種類で色分け(参考 monster-detail-basic・mm-04: ちから技=金・かしこさ技=緑)。覚えていない技は升の地と枠を暗くし、絵は少しだけ暗く(.msx .lk の白黒の見た目とぶつからないよう tg-not という名前にする) */
 .msx .msx-md-tg .tc.pow{background:linear-gradient(160deg,#fde68a,#d97706);border-color:#f59e0b}
 .msx .msx-md-tg .tc.wise{background:linear-gradient(160deg,#bbf7d0,#16a34a);border-color:#4ade80}
@@ -87002,7 +87003,8 @@ function MsxMonDetail({ species, name, art, st, apt, type, peak, grades, known, 
   // 升目の段は技のランク(1〜5)で固定する(2026-11-14 社長「ランク別に技表示されてるんじゃなくて上から詰めて置かれてるのか。段をランク別に変えて」)。
   //   1つの間合い・同じランクに技が2つ以上ある種族(固有技の多い子)は、そのランクの段だけ行を増やす。そのランクの技が無い升は ×
   const tgAt = (r, d) => all.filter((t) => (Number(t.rank) || 1) === r && Array.isArray(t.dist) && t.dist.includes(d));
-  const tgLines = [1, 2, 3, 4, 5].flatMap((r) => { const k = Math.max(1, ...[0, 1, 2, 3].map((d) => tgAt(r, d).length)); return Array.from({ length: k }, (_, i) => ({ r, i })); });
+  // 段は技のランク1〜5で必ず5つ。1升に1技で、同じ間合い・同じランクに2つ以上ある升は1つ目を出し⇄の印を付ける(2026-11-14 社長の決め r1114-128。選ぶ仕組みは次の会話で作る)
+  const tgRanks = [1, 2, 3, 4, 5];
   const [pickT, setPickT] = useState(() => (all.find(has) || all[0] || {}).id || null);
   const tech = all.find((t) => t.id === pickT) || list[0] || null;
   const grade = (k, v) => (typeof msaTechGrade === 'function' ? msaTechGrade(k, v) : '') || '−';
@@ -87045,13 +87047,13 @@ function MsxMonDetail({ species, name, art, st, apt, type, peak, grades, known, 
             <div className="msx-md-tw">
               <div className="msx-md-tg">
                 {MSX_TG_COLS.map((d) => <span key={`h${d}`} className={`tgh d${d}`}>{MSX_DIST_NAMES[d]}</span>)}
-                {tgLines.map(({ r, i }) => MSX_TG_COLS.map((d) => { const t = tgAt(r, d)[i];
+                {tgRanks.map((r) => MSX_TG_COLS.map((d) => { const i = 0; const alts = tgAt(r, d); const t = alts[0];
                   if (!t) return <span key={`${r}-${i}-${d}`} className="no" aria-hidden="true">×</span>;
                   const got = has(t);
                   // 技の種類で升の色を分ける(参考どおり ちから=金・かしこさ=緑)。覚えていない技も絵を出し、升の地を暗くして見分ける(2026-11-14 社長「鍵じゃなくて覚えてないやつも表示して色分けして」)。
                   // 覚える条件の数は升に出さず、押したときの右の「覚え方」に出す(社長「150とかその数字何?」→ 升目から消す)
                   return <button type="button" key={`${r}-${i}-${d}`} className={`tc ${t.kind === 'wise' ? 'wise' : 'pow'}${got ? ' got' : ' tg-not'}${tech && tech.id === t.id ? ' on' : ''}`} data-msx-tech={t.id} aria-label={`${t.name}${got ? '' : '(まだ覚えていない)'}`} onClick={() => setPickT(t.id)}>
-                    <span className="ti" aria-hidden="true">{t.kind === 'wise' ? '🧠' : '💪'}</span><span className="g">{t.guts}</span></button>; }))}
+                    <span className="ti" aria-hidden="true">{t.kind === 'wise' ? '🧠' : '💪'}</span><span className="g">{t.guts}</span>{alts.length > 1 ? <span className="tg-alt" aria-hidden="true">⇄</span> : null}</button>; }))}
               </div>
               {tech ? (<div className="msx-md-td">
                 <div className="tn">{tech.name}{has(tech) ? null : <small className="msx-md-not">まだ覚えていない</small>}</div>
