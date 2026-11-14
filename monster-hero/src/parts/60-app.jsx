@@ -59,7 +59,21 @@ function MonsterHeroGame() {
   // ここで控えも一緒に更新すれば、切り替えたその瞬間から正しい判断になる。
   // 画面を変えるたびに、どの処理が変えたかを記録に残す(MH_SCREEN_TRAIL・10-core.jsx)
   const gameStateCaller = () => { try { const line = String(new Error().stack || '').split('\n').slice(2).find((l) => !/setGameState|gameStateCaller/.test(l)) || ''; const m = /at\s+([\w$.]+)/.exec(line) || /^([\w$.]+)@/.exec(line.trim()); return m ? m[1] : ''; } catch (_) { return ''; } };
-  const setGameState = (next) => { gameStateNowRef.current = next; runBackgroundAllowedRef.current = isBackgroundRunScreen(next); if (typeof MH_SCREEN_TRAIL !== 'undefined') MH_SCREEN_TRAIL.push('gs', `${next}<${gameStateCaller()}`); setGameStateRaw(next); };
+  // マルチの演奏中に、ボタンを押していないのに外の画面(HOME など)へ替わろうとしたら止める(2026-11-15・r1115-006。本文は 10-core.jsx の MH_MULTI_PLAY_GUARD)。
+  //   止めたら、画面の記録に blk と残し、診断へ kind:'stray' を1行送る。演奏の終わりの切り替え(RHYTHM_MULTI へ)は RHYTHM_ なので通る
+  const rhythmPlayGuardRef = useRef(null);
+  const stopStrayGameState = (next) => {
+    try {
+      const play = rhythmPlayGuardRef.current;
+      if (typeof MH_MULTI_PLAY_GUARD !== 'undefined' && MH_MULTI_PLAY_GUARD.shouldBlock(gameStateNowRef.current, next, play && play.from)) {
+        if (typeof MH_SCREEN_TRAIL !== 'undefined') MH_SCREEN_TRAIL.push('blk', `${next}<${gameStateCaller()}`);
+        if (typeof rhythmTouchDiagStray === 'function' && play && play.song) void rhythmTouchDiagStray({ song_id: play.song.songId, difficulty: play.difficulty && play.difficulty.id, to: `${next}<${gameStateCaller()}` });
+        return true;
+      }
+    } catch (_) { /* 守りが落ちても、画面の切り替えは今までどおり通す */ }
+    return false;
+  };
+  const setGameState = (next) => { if (stopStrayGameState(next)) return; gameStateNowRef.current = next; runBackgroundAllowedRef.current = isBackgroundRunScreen(next); if (typeof MH_SCREEN_TRAIL !== 'undefined') MH_SCREEN_TRAIL.push('gs', `${next}<${gameStateCaller()}`); setGameStateRaw(next); };
   const [debugThrowScreenError, setDebugThrowScreenError] = useState(false); // デバッグ設定から画面エラーの受け止めを試すためだけの印
   const debugMenuRootRef = useRef(null); // デバッグメニューの名前で絞り込む欄が、どの範囲を探すか(2026-10-27)
   const [battleMenuTab, setBattleMenuTab] = useState('difficulty');
@@ -183,6 +197,7 @@ function MonsterHeroGame() {
   const [rhythmSettings, setRhythmSettings] = useState(DEFAULT_RHYTHM_SETTINGS);
   const [rhythmBestRecords, setRhythmBestRecords] = useState(()=>normalizeRhythmBestRecords(null));
   const [rhythmPlay,setRhythmPlayState]=useState(null);
+  rhythmPlayGuardRef.current = rhythmPlay; // マルチの演奏中の守り(setGameState)が見る控え
   // 招待の部屋を開いたままほかの画面へ出られる(2026-10-29・案A)ので、部屋にいるまま対戦でない曲を始めるときは、先に部屋を抜けるかを聞く
   // (部屋の中の曲と、ひとりの曲を同時には鳴らせない)。曲を始める入口が多いので、ここ1か所で見る
   const setRhythmPlay=(next)=>{

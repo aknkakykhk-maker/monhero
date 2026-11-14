@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 0cd265b5e1ed1d50
+// generated-sha256: 1da5023331a27ce6
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -52,6 +52,24 @@ const MH_SCREEN_TRAIL=(()=>{
     }catch(_){}
   }
   return {push,list:()=>list.slice(),sinceLast,compact};
+})();
+// ==== マルチの演奏中に、勝手に別の画面へ替わらないようにする守り(2026-11-15・r1115-006) ====
+// 社長の報告(11/7)「モンビー中に音は流れてるのにいきなりホームに戻された。時間がたってまたモンビーに戻った。マルチをしてたとき」。
+// 演奏の画面は gameState が 'RHYTHM_PLAY' のときだけ描かれ、音は画面と別の部品なので、gameState が演奏中に HOME などへ替わると
+// 「音は鳴っているのに画面だけホーム」になる。原因の道はまだ見つかっていない(記録に gs:HOME が無い)ので、
+// 「マルチの演奏中に、ボタンを押していないのに、モンヒロビートの外の画面(RHYTHM_ で始まらない画面)へ替わろうとした」ものだけを止める。
+//   ・止めるのは gameState の切り替えだけ(演奏・通信・保存には触れない)。演奏が終わったあとの切り替え(RHYTHM_MULTI へ)は RHYTHM_ なので通る
+//   ・「押した」= 画面を押して click が起きたとき(trusted)。演奏中の指の動きは click にならない(touchstart で止めている)ので、押した扱いにならない
+//   ・止めたら MH_SCREEN_TRAIL に blk と残し、診断(rhythm_touch_diagnostics)へ kind:'stray' の行を足す(呼ぶ側 60-app.jsx)
+const MH_MULTI_PLAY_GUARD=(()=>{
+  const GRACE_MS=1500;
+  let lastClick=0;
+  if(typeof document!=='undefined'&&document.addEventListener){
+    try{document.addEventListener('click',(e)=>{if(!e||e.isTrusted!==false)lastClick=Date.now();},true);}catch(_){}
+  }
+  const shouldBlock=(current,next,playFrom,now=Date.now())=>
+    current==='RHYTHM_PLAY'&&playFrom==='multi'&&typeof next==='string'&&!next.startsWith('RHYTHM_')&&now-lastClick>GRACE_MS;
+  return {shouldBlock,touch:()=>{lastClick=Date.now();},lastClickAt:()=>lastClick};
 })();
 // ==== 見えないページのずれを戻す(全画面) ====
 // 【2026-11-02 社長「押した所と反応する所がたまにずれる。横向きにしたり、更新情報の窓を開いたりしたあとになる気がする」→ 決定「A+B 両方入れる」】
@@ -25334,6 +25352,17 @@ const rhythmTouchDiagReport=async(report)=>{
       song_id:report.song_id,difficulty:report.difficulty,note_count:Math.max(1,report.note_count),stats:{kind:'report',playId:report.playId},schema_version:RHYTHM_TOUCH_DIAG_VERSION});
   }catch{return false;}
 };
+// マルチの演奏中に画面が勝手に替わろうとして止めたとき(10-core.jsx の MH_MULTI_PLAY_GUARD・2026-11-15 r1115-006)。
+// 診断の行に stats:{kind:'stray',to,scr} を1行足す(表は足すだけ・stats は4KBまで)。足すだけで、既存の診断の形は変えない
+const rhythmTouchDiagStray=async(info)=>{
+  try{
+    if(!info||typeof sbSendRhythmTouchDiag!=='function'||!RHYTHM_DEMO_SONG_IDS.includes(info.song_id))return false;
+    const deviceKey=await rhythmPlayLogDeviceKey();
+    const scr=typeof MH_SCREEN_TRAIL!=='undefined'?MH_SCREEN_TRAIL.compact(MH_SCREEN_TRAIL.list().slice(-12)):[];
+    return await sbSendRhythmTouchDiag({device_key:deviceKey,app_build:typeof BUILD_DATE==='string'?BUILD_DATE:'',platform:rhythmTouchPlatform(),standalone:!!rhythmTouchStandalone(),
+      song_id:info.song_id,difficulty:info.difficulty,note_count:1,stats:{kind:'stray',to:String(info.to||'').slice(0,60),scr},schema_version:RHYTHM_TOUCH_DIAG_VERSION});
+  }catch{return false;}
+};
 const RHYTHM_CHART_NOTES_KEY='mh_rhythm_chart_notes_v1';
 const RHYTHM_CHART_NOTE_SEGMENT_MS=8000;
 const RHYTHM_CHART_NOTE_MARKS=['', 'good', 'bad'];
@@ -37625,6 +37654,10 @@ const MULTI_STAMP_RECV_GAP_MS = 2000;
 const MULTI_STAMP_SLOT_BASE = 8;
 const MULTI_STAMP_SLOT_STEP = 4;
 const MULTI_STAMP_SLOT_BUY_MAX = 2; // 8 → 12 → 16
+// 自由入力の文字(2026-11-15 r1115-026・社長「A 無料」)。言葉の番号は 'x'(買い物の言葉ではない)。全角8文字・1行・制御文字なし(ひとことと同じ見張り)
+const MULTI_STAMP_CUSTOM_ID = 'x';
+const MULTI_STAMP_CUSTOM_MAX = 8;
+const multiStampCleanText = (v) => String(v == null ? '' : v).replace(/[\u0000-\u001f\u007f-\u009f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, MULTI_STAMP_CUSTOM_MAX);
 // 助手(この並び)と表情。はじめに使えるのは各助手の happy
 const MULTI_STAMP_ASSISTANT_IDS = Object.freeze(['mua', 'kiki', 'momosuke', 'dra', 'atsu', 'kyuko', 'sorashido', 'erubin']);
 const MULTI_STAMP_EXPRESSIONS = Object.freeze(['happy', 'excited', 'wink', 'surprise', 'troubled', 'crying', 'angry', 'normal']);
@@ -37691,7 +37724,7 @@ const multiStampFaceName = (fid) => {
 const multiStampWord = (wid) => MULTI_STAMP_WORDS.find((w) => w.id === wid) || null;
 // 受け取った番号を確かめる(知らない番号は null。古い版から来た・まだ無い顔は言葉だけで出す)
 const multiStampCleanFace = (v) => (typeof v === 'string' && v.length <= 40 && multiStampFaceSrc(v) ? v : null);
-const multiStampCleanWord = (v) => (typeof v === 'string' && multiStampWord(v) ? v : null);
+const multiStampCleanWord = (v) => (typeof v === 'string' && (v === MULTI_STAMP_CUSTOM_ID || multiStampWord(v)) ? v : null);
 
 // 売り場の品(id は変えない)
 const MULTI_STAMP_SHOP_OFFERS = Object.freeze([
@@ -37713,7 +37746,11 @@ const multiStampOwnsFace = (owned, fid) => {
   if (m) return MULTI_STAMP_MONSTER_SETS.some((set, i) => set.includes(m[1]) && owned.includes(`stamp_mon_${i + 1}`)) && !!multiStampMonster(m[1]);
   return false;
 };
-const multiStampOwnsWord = (owned, wid) => { const w = multiStampWord(wid); return !!w && (w.pack === 'base' || owned.includes(`stamp_words_${w.pack}`)); };
+const multiStampOwnsWord = (owned, wid) => { if (wid === MULTI_STAMP_CUSTOM_ID) return true; const w = multiStampWord(wid); return !!w && (w.pack === 'base' || owned.includes(`stamp_words_${w.pack}`)); };
+// 枠1つの中身を、保存・送信の形へそろえる(自由入力のときだけ t を持つ)
+const multiStampSlotClean = (x) => (x.w === MULTI_STAMP_CUSTOM_ID ? { f: x.f, w: x.w, t: multiStampCleanText(x.t) } : { f: x.f, w: x.w });
+const multiStampSlotLabel = (x) => (x ? (x.w === MULTI_STAMP_CUSTOM_ID ? multiStampCleanText(x.t) : (multiStampWord(x.w) || {}).text || '') : '');
+const multiStampSlotKey = (x) => `${x.f}|${x.w}${x.w === MULTI_STAMP_CUSTOM_ID ? `|${multiStampCleanText(x.t)}` : ''}`;
 const multiStampSlotMax = (owned) => MULTI_STAMP_SLOT_BASE + MULTI_STAMP_SLOT_STEP * Math.min(MULTI_STAMP_SLOT_BUY_MAX, owned.filter((x) => x === 'stamp_slot').length);
 const normalizeMultiStamps = (raw) => {
   const o = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : null;
@@ -37722,12 +37759,12 @@ const normalizeMultiStamps = (raw) => {
   const ownedClean = [...new Set(owned.filter((x) => x !== 'stamp_slot')), ...owned.filter((x) => x === 'stamp_slot').slice(0, MULTI_STAMP_SLOT_BUY_MAX)];
   const max = multiStampSlotMax(ownedClean);
   const slots = o && Array.isArray(o.slots)
-    ? o.slots.slice(0, max).map((x) => (x && typeof x === 'object' && multiStampOwnsFace(ownedClean, x.f) && multiStampOwnsWord(ownedClean, x.w) ? { f: x.f, w: x.w } : null))
+    ? o.slots.slice(0, max).map((x) => (x && typeof x === 'object' && multiStampOwnsFace(ownedClean, x.f) && multiStampOwnsWord(ownedClean, x.w) && (x.w !== MULTI_STAMP_CUSTOM_ID || multiStampCleanText(x.t)) ? multiStampSlotClean(x) : null))
     : multiStampDefaultSlots();
   while (slots.length < max) slots.push(null);
   return { owned: ownedClean, slots };
 };
-const multiStampToStore = (st) => ({ v: 1, owned: st.owned.slice(), slots: st.slots.map((x) => (x ? { f: x.f, w: x.w } : null)) });
+const multiStampToStore = (st) => ({ v: 1, owned: st.owned.slice(), slots: st.slots.map((x) => (x ? multiStampSlotClean(x) : null)) });
 const normalizeMultiStampPrefs = (v) => ({ pic: !(v && typeof v === 'object' && v.pic === false) });
 // 品の値段(持っている・買えないときは null)。8人まとめては、まだ持っていない助手1人につき 400P
 const multiStampOfferCost = (offer, st) => {
@@ -37786,8 +37823,8 @@ const MULTI_STAMP = (() => {
     replace: (next) => { st = normalizeMultiStamps(multiStampToStore(next)); emit(); },
     setSlot: (i, slot) => {
       if (!Number.isInteger(i) || i < 0 || i >= st.slots.length) return false;
-      if (slot && !(multiStampOwnsFace(st.owned, slot.f) && multiStampOwnsWord(st.owned, slot.w))) return false;
-      const slots = st.slots.slice(); slots[i] = slot ? { f: slot.f, w: slot.w } : null;
+      if (slot && !(multiStampOwnsFace(st.owned, slot.f) && multiStampOwnsWord(st.owned, slot.w) && (slot.w !== MULTI_STAMP_CUSTOM_ID || multiStampCleanText(slot.t)))) return false;
+      const slots = st.slots.slice(); slots[i] = slot ? multiStampSlotClean(slot) : null;
       st = { ...st, slots };
       try { void storeSet(MULTI_STAMP_KEY, multiStampToStore(st), false); } catch (_) { /* 保存できなくても、その場では使える */ }
       emit();
@@ -37805,12 +37842,12 @@ const MULTI_STAMP = (() => {
     setPic: (on) => { prefs = { pic: !!on }; try { void storeSet(MULTI_STAMP_PREFS_KEY, prefs, false); } catch (_) { /* 同上 */ } emit(); },
     // 送れるか(2秒に1回・同じのは続けて3回まで)。{ ok, why }
     check: (slot) => {
-      if (!slot || !multiStampOwnsFace(st.owned, slot.f) || !multiStampOwnsWord(st.owned, slot.w)) return { ok: false, why: '' };
+      if (!slot || !multiStampOwnsFace(st.owned, slot.f) || !multiStampOwnsWord(st.owned, slot.w) || (slot.w === MULTI_STAMP_CUSTOM_ID && !multiStampCleanText(slot.t))) return { ok: false, why: '' };
       if (Date.now() - sentAt < MULTI_STAMP_SEND_GAP_MS) return { ok: false, why: '少しあけてから送ってね' };
-      if (lastKey === `${slot.f}|${slot.w}` && sameCount >= MULTI_STAMP_SAME_MAX) return { ok: false, why: '同じスタンプは続けて3回までです' };
+      if (lastKey === multiStampSlotKey(slot) && sameCount >= MULTI_STAMP_SAME_MAX) return { ok: false, why: '同じスタンプは続けて3回までです' };
       return { ok: true, why: '' };
     },
-    sent: (slot) => { const k = `${slot.f}|${slot.w}`; sameCount = k === lastKey ? sameCount + 1 : 1; lastKey = k; sentAt = Date.now(); },
+    sent: (slot) => { const k = multiStampSlotKey(slot); sameCount = k === lastKey ? sameCount + 1 : 1; lastKey = k; sentAt = Date.now(); },
     // 受け取ったスタンプを出してよいか(1人2秒に1個)
     accept: (who) => { const k = String(who || ''); const now = Date.now(); if (now - (recvAt.get(k) || 0) < MULTI_STAMP_RECV_GAP_MS) return false; recvAt.set(k, now); if (recvAt.size > 50) recvAt.clear(); return true; },
   };
@@ -37867,8 +37904,7 @@ function MultiStampPalette({ onSend, onEdit = null, cols = 4, wide = false, clas
   const press = (slot, i) => {
     const r = MULTI_STAMP.check(slot);
     if (!r.ok) { setWhy(r.why); setFlash({ i, ok: false }); return; }
-    const word = multiStampWord(slot.w);
-    const ok = onSend({ f: slot.f, w: slot.w, text: word ? word.text : '' }) !== false;
+    const ok = onSend({ f: slot.f, w: slot.w, text: multiStampSlotLabel(slot) }) !== false;
     if (ok) MULTI_STAMP.sent(slot);
     setWhy(ok ? '' : 'いまは送れません');
     setFlash({ i, ok });
@@ -37879,14 +37915,14 @@ function MultiStampPalette({ onSend, onEdit = null, cols = 4, wide = false, clas
     <div data-multi-stamp-palette className={className}>
       <div className={`grid gap-1.5 ${MULTI_STAMP_COLS[cols] || 'grid-cols-4'} ${wide ? 'landscape:grid-cols-8 [[data-mh-view-rotation=true]_&]:grid-cols-8' : ''}`}>
         {list.map(({ s, i }) => {
-          const word = multiStampWord(s.w);
+          const label = multiStampSlotLabel(s);
           const src = multiStampFaceSrc(s.f);
           const hit = flash && flash.i === i;
           return (
             <button key={i} type="button" data-multi-stamp-send={i} onClick={() => press(s, i)}
               className={`relative min-w-0 rounded-xl border p-1 text-center active:scale-95 ${hit ? (flash.ok ? 'border-emerald-300 bg-emerald-500/20' : 'border-amber-300 bg-amber-500/15') : 'border-white/15 bg-white/10'}`}>
               {src && <img src={src} alt="" draggable={false} loading="lazy" decoding="async" className="mx-auto block aspect-square w-full rounded-lg object-cover" />}
-              <b className="mt-0.5 block truncate text-[11px] font-black leading-tight text-white">{hit && flash.ok ? '✓ 送信' : (word ? word.text : '')}</b>
+              <b className="mt-0.5 block truncate text-[11px] font-black leading-tight text-white">{hit && flash.ok ? '✓ 送信' : label}</b>
             </button>
           );
         })}
@@ -37911,17 +37947,19 @@ function MultiStampEditor({ onClose, onShop = null }) {
   const [who, setWho] = React.useState(() => { const a = cur && /^a\.([a-z]+)\./.exec(cur.f); return a ? a[1] : MULTI_STAMP_ASSISTANT_IDS[0]; });
   const [face, setFace] = React.useState(cur ? cur.f : `a.${MULTI_STAMP_ASSISTANT_IDS[0]}.${MULTI_STAMP_START_EXPRESSION}`);
   const [word, setWord] = React.useState(cur ? cur.w : MULTI_STAMP_WORDS[0].id);
+  // 自分で打つ文字(word が 'x' のとき使う。2026-11-15 r1115-026)
+  const [freeText, setFreeText] = React.useState(cur && cur.w === MULTI_STAMP_CUSTOM_ID ? multiStampCleanText(cur.t) : '');
   const [lockNote, setLockNote] = React.useState('');
   const pickSlot = (i) => {
     setSel(i); setLockNote('');
     const s = st.slots[i];
-    if (s) { setFace(s.f); setWord(s.w); const a = /^a\.([a-z]+)\./.exec(s.f); if (a) { setTab('assistant'); setWho(a[1]); } else setTab('monster'); }
+    if (s) { setFace(s.f); setWord(s.w); if (s.w === MULTI_STAMP_CUSTOM_ID) setFreeText(multiStampCleanText(s.t)); const a = /^a\.([a-z]+)\./.exec(s.f); if (a) { setTab('assistant'); setWho(a[1]); } else setTab('monster'); }
   };
   const faces = tab === 'assistant'
     ? MULTI_STAMP_EXPRESSIONS.map((e) => `a.${who}.${e}`)
     : MULTI_STAMP_MONSTER_SETS.flat().filter((id) => multiStampMonster(id)).map((id) => `m.${id}`);
   const lockedBuy = (what) => setLockNote(`${what}は、ビートP交換所の「スタンプ」で買えます`);
-  const canPut = multiStampOwnsFace(st.owned, face) && multiStampOwnsWord(st.owned, word);
+  const canPut = multiStampOwnsFace(st.owned, face) && multiStampOwnsWord(st.owned, word) && (word !== MULTI_STAMP_CUSTOM_ID || !!multiStampCleanText(freeText));
   const max = st.slots.length;
   return (
     <div data-multi-stamp-editor className="fixed inset-0 z-[80] flex items-end justify-center bg-black/60 landscape:items-center" onClick={onClose}>
@@ -37942,7 +37980,7 @@ function MultiStampEditor({ onClose, onShop = null }) {
                     <span className="absolute left-1 top-0.5 text-[10px] font-black text-cyan-200">{i + 1}</span>
                     {s ? <>
                       <img src={multiStampFaceSrc(s.f) || undefined} alt="" draggable={false} loading="lazy" decoding="async" className="mx-auto block aspect-square w-full rounded-lg object-cover" />
-                      <b className="mt-0.5 block truncate text-[10.5px] font-black leading-tight">{(multiStampWord(s.w) || {}).text}</b>
+                      <b className="mt-0.5 block truncate text-[10.5px] font-black leading-tight">{multiStampSlotLabel(s)}</b>
                     </> : <span className="flex aspect-[4/5] items-center justify-center text-xl text-slate-500">＋</span>}
                   </button>
                 ))}
@@ -37954,9 +37992,9 @@ function MultiStampEditor({ onClose, onShop = null }) {
               </div>
             </section>
             <section data-multi-stamp-preview className="flex items-center gap-2.5 rounded-xl border border-slate-700 bg-slate-900 p-2 landscape:order-first">
-              <MultiStampView f={face} w={word} size={76} forcePic />
+              <MultiStampView f={face} w={word} text={multiStampCleanText(freeText)} size={76} forcePic />
               <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-                <button type="button" data-multi-stamp-put disabled={!canPut} onClick={() => MULTI_STAMP.setSlot(sel, { f: face, w: word })}
+                <button type="button" data-multi-stamp-put disabled={!canPut} onClick={() => MULTI_STAMP.setSlot(sel, { f: face, w: word, t: freeText })}
                   className="min-h-[44px] rounded-xl bg-gradient-to-b from-cyan-500 to-cyan-700 px-2 text-[13px] font-black disabled:opacity-40">⭐ {sel + 1}番に入れる</button>
                 {lockNote && <p data-multi-stamp-lock-note className="text-[11px] font-black leading-snug text-amber-200" style={{ wordBreak: 'keep-all', overflowWrap: 'anywhere' }}>🔒 {lockNote}</p>}
               </div>
@@ -37995,6 +38033,13 @@ function MultiStampEditor({ onClose, onShop = null }) {
                   </button>
                 );
               })}
+            </div>
+            <div data-multi-stamp-free className={`mb-2 rounded-xl border p-2 ${word === MULTI_STAMP_CUSTOM_ID ? 'border-cyan-300 bg-cyan-500/10' : 'border-slate-700'}`}>
+              <label htmlFor="multi-stamp-free-input" className="mb-1 block text-[12px] font-black text-cyan-100">✏️ 自分で文字を打つ<small className="ml-1 text-[11px] text-slate-400">(全角{MULTI_STAMP_CUSTOM_MAX}文字まで・1行)</small></label>
+              <input id="multi-stamp-free-input" data-multi-stamp-free-input value={freeText} maxLength={MULTI_STAMP_CUSTOM_MAX} autoComplete="off" enterKeyHint="done"
+                onFocus={() => setWord(MULTI_STAMP_CUSTOM_ID)}
+                onChange={(e) => { setFreeText(e.target.value.replace(/[\u0000-\u001f\u007f-\u009f]/g, '').slice(0, MULTI_STAMP_CUSTOM_MAX)); setWord(MULTI_STAMP_CUSTOM_ID); setLockNote(''); }}
+                placeholder="例:いくぞ！" className="min-h-[44px] w-full min-w-0 rounded-xl border border-white/20 bg-slate-950 px-3 text-base font-bold text-white" />
             </div>
             <div className="flex flex-wrap gap-1.5">
               {MULTI_STAMP_WORDS.map((wd) => {
@@ -55868,6 +55913,8 @@ const rhythmMultiCleanMessage = (raw) => {
     const sf = typeof multiStampCleanFace === 'function' ? multiStampCleanFace(raw.sf) : null;
     const sw = typeof multiStampCleanWord === 'function' ? multiStampCleanWord(raw.sw) : null;
     if (sf && sw) { out.sf = sf; out.sw = sw; }
+    // 自由入力のスタンプ(sw が 'x')の文字は、受け取る側でも全角8文字・1行へそろえる(2026-11-15 r1115-026。改造した相手が長い文字を送っても札に出さない)
+    if (out.sw === 'x' && typeof multiStampCleanText === 'function') out.text = multiStampCleanText(out.text);
     return out.text && out.cid ? out : null;
   }
   if (raw.t === 'bye') return out;
@@ -56992,7 +57039,10 @@ const RHYTHM_MULTI = (() => {
       if (!clean || !me || Date.now() - s.lastChatAt < RHYTHM_MULTI_CHAT_INTERVAL_MS) return false;
       s.lastChatAt = Date.now();
       const st = stamp && multiStampCleanFace(stamp.f) && multiStampCleanWord(stamp.w) ? { sf: stamp.f, sw: stamp.w } : {};
-      return socket.send({ t: 'chat', id: s.selfId, name: me.name, text: clean, cid: `c${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`, ...st });
+      // 自由入力のスタンプ(sw が 'x')は、文字を全角8文字・1行へそろえる(2026-11-15 r1115-026)
+      const sendText = st.sw === 'x' ? multiStampCleanText(clean) : clean;
+      if (!sendText) return false;
+      return socket.send({ t: 'chat', id: s.selfId, name: me.name, text: sendText, cid: `c${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`, ...st });
     },
     hasReported(round) { const me = selfMember(); return !!(me && me.res && me.res.startId === round); },
     // 自分が選んだ難易度(演奏の結果へ添える)
@@ -57365,7 +57415,7 @@ function RhythmMultiChatBubble({ text: raw }) {
           横・🔄横の低いカードでは名前に重なっていた(2026-11-15 r1115-025)。縦は「絵の下に言葉」、横・🔄横は「絵の右に言葉」 */}
       <span className="mh-seat-stamp flex max-h-full max-w-full items-center rounded-xl bg-white p-0.5 shadow-lg">
         <img src={multiStampFaceSrc(stamp.sf) || undefined} alt="" draggable={false} decoding="async" className="mh-seat-stamp-img block shrink-0 rounded-lg object-cover" />
-        <b className="mh-seat-stamp-word block min-w-0 truncate text-[10px] font-black leading-tight text-slate-900">{text}</b>
+        <b className="mh-seat-stamp-word block min-w-0 text-[10px] font-black leading-tight text-slate-900">{text}</b>
       </span>
     </span>
   );
@@ -81993,12 +82043,26 @@ const assistantLifeTasteDaily = () => {
       if (!a || !a.id) continue;
       for (const r of assistantMasmonRowsOf(ASSISTANT_MASMON_STORE.state, a.id) || []) if (r && r.monster) assistantLifeTasteBump(a.id, r.monster, 'raise');
     }
+    // 友情Lv5以上の助手が好きなモンスターは、その友だちの好みにもじわっと入る(1日1回・+1。2026-11-15 窓口)。友情の保存が読み込まれているときだけ
+    //   好きな点は、友だちのはじめの好み(masmon-plan の likeMon)の monster から取る(血統の好みは対象にしない)
+    if (typeof ASSISTANT_PEER_STORE !== 'undefined' && ASSISTANT_PEER_STORE.state && ASSISTANT_PEER_STORE.state.loaded && typeof assistantPeerLevel === 'function') {
+      const st = ASSISTANT_PEER_STORE.state;
+      for (const a of ASSISTANT_MASMON_PLAN) {
+        if (!a || !a.id) continue;
+        for (const b of ASSISTANT_MASMON_PLAN) {
+          if (!b || !b.id || b.id === a.id || !Array.isArray(b.likeMon)) continue;
+          let lv = 0; try { lv = Number(assistantPeerLevel(st, a.id, b.id)); } catch (_) { lv = 0; }
+          if (!(lv >= 5)) continue;
+          for (const x of b.likeMon) if (x && typeof x.monster === 'string' && x.monster) assistantLifeTasteBump(a.id, x.monster, 'friend');
+        }
+      }
+    }
   } catch (_) {}
 };
 // 読み込み: 好みの保存だけを先に読む。助手のマスモンの保存は、助手ライフが開いて読み込まれたあと(subs の通知)で日次を1回走らせる(ここから読み込ませない=起動時に名前付けなどが走らないように)
 let amtDailyDay = '';
-const amtDailyTry = () => { try { const d = typeof assistantLifeDayKey === 'function' ? assistantLifeDayKey() : ''; if (!d || amtDailyDay === d || !AMT_STORE || !AMT_STORE.loaded || typeof ASSISTANT_MASMON_STORE === 'undefined' || !ASSISTANT_MASMON_STORE.loaded) return; amtDailyDay = d; assistantLifeTasteDaily(); } catch (_) {} };
-try { setTimeout(() => { try { if (amtOn() && AMT_STORE) { void AMT_STORE.load().then(amtDailyTry).catch(() => {}); if (typeof ASSISTANT_MASMON_STORE !== 'undefined' && ASSISTANT_MASMON_STORE.subs) ASSISTANT_MASMON_STORE.subs.add(amtDailyTry); } } catch (_) {} }, 0); } catch (_) {}
+const amtDailyTry = () => { try { const d = typeof assistantLifeDayKey === 'function' ? assistantLifeDayKey() : ''; if (!d || amtDailyDay === d || !AMT_STORE || !AMT_STORE.loaded || typeof ASSISTANT_MASMON_STORE === 'undefined' || !ASSISTANT_MASMON_STORE.loaded || (typeof ASSISTANT_PEER_STORE !== 'undefined' && ASSISTANT_PEER_STORE.state && !ASSISTANT_PEER_STORE.state.loaded)) return; amtDailyDay = d; assistantLifeTasteDaily(); } catch (_) {} };
+try { setTimeout(() => { try { if (amtOn() && AMT_STORE) { void AMT_STORE.load().then(amtDailyTry).catch(() => {}); if (typeof ASSISTANT_MASMON_STORE !== 'undefined' && ASSISTANT_MASMON_STORE.subs) ASSISTANT_MASMON_STORE.subs.add(amtDailyTry); if (typeof ASSISTANT_PEER_STORE !== 'undefined' && ASSISTANT_PEER_STORE.listeners) ASSISTANT_PEER_STORE.listeners.add(amtDailyTry); } } catch (_) {} }, 0); } catch (_) {}
 
 // ---- part: 56-monsuc-fuse.jsx ----
 // ---------- モンヒロサクセスの合体(保存枠の育て終えた子どうし・2026-11-12 開発部・段取りの回3) ----------
@@ -83096,7 +83160,7 @@ const MSX_BETA_KEY = 'mh_monsuc_beta_v1';
 const MSX_BETA_AIDS = Object.freeze(['mua']);
 const msxBetaAidOk = (aid) => MSX_BETA_AIDS.includes(aid);
 // 最初の1回だけ出す説明の名前(台本の tut.<名前>)と、β版の話(scn.mua.beta.<名前>)
-const MSX_BETA_TUT = Object.freeze(['scn', 'prep', 'turn', 'train', 'result', 'rest', 'shugyo', 'cup', 'rank', 'meal', 'match', 'rematch', 'event', 'awake', 'retire']);
+const MSX_BETA_TUT = Object.freeze(['scn', 'prep', 'team', 'bring', 'turn', 'train', 'result', 'rest', 'shugyo', 'cup', 'rank', 'meal', 'match', 'rematch', 'event', 'awake', 'retire']);
 const MSX_BETA_STORY = Object.freeze(['open', 'firstend', 'start']); // start … 育成の始まりの場面を1回見た(2回目から「とばす」を出す。56-monsuc-intro.jsx)
 const msxBetaScene = (k) => (MSX_BETA_STORY.includes(k) ? `scn.mua.beta.${k}` : `tut.${k}`);
 const msxBetaKnown = (k) => MSX_BETA_TUT.includes(k) || MSX_BETA_STORY.includes(k);
@@ -83362,11 +83426,21 @@ const msxTevChanges = (s, o) => {
   return out;
 };
 
+// 編成の子の出来事(第1〜3話)の台本の役割。いちばん得意な能力で決める(Fable の点検 ①-16: ベースモンはどの種でも同じ1行だった)。
+//   ちから=攻め・丈夫さ=守り・ライフ=癒し・かしこさ=支え・命中/回避=影。得意が分からない子は種の名前で散らす
+const MSX_CHEER_TYPE = Object.freeze({ pow: 'attacker', tough: 'tank', life: 'healer', wise: 'supporter', hit: 'shadow', eva: 'shadow' });
+const msxCheerType = (m) => {
+  const top = m && Array.isArray(m.top) ? m.top[0] : null;
+  if (top && MSX_CHEER_TYPE[top]) return MSX_CHEER_TYPE[top];
+  const k = String((m && m.species) || ''); let h = 0; for (let i = 0; i < k.length; i++) h = (h * 31 + k.charCodeAt(i)) >>> 0;
+  return ['attacker', 'tank', 'supporter', 'healer', 'shadow'][h % 5];
+};
+
 function MsxTrainEvent({ run, o, ctx, style = MSX_TEV_STYLE }) {
   msxTevEnsureCss();
   const s = run.s; const e = o.event; const m = s.team[e.who];
   const name = typeof msxMemberName === 'function' ? msxMemberName(m) : '編成のモンスター';
-  const line = e.story ? msxPickLine({ ...ctx, cheer: name }, `cheer.base.ep${e.story}`, { who: 'narr' }) : msxPickLine({ ...ctx, cheer: name }, `cheer.lot.${MSX_TEV_LOT[e.lottery] || 'friend'}`, { who: '*' });
+  const line = e.story ? (msxPickLine({ ...ctx, cheer: name }, `cheer.${msxCheerType(m)}.ep${e.story}`, { who: 'narr' }) || msxPickLine({ ...ctx, cheer: name }, `cheer.base.ep${e.story}`, { who: 'narr' })) : msxPickLine({ ...ctx, cheer: name }, `cheer.lot.${MSX_TEV_LOT[e.lottery] || 'friend'}`, { who: '*' });
   const title = e.story ? `${name}との出来事 第${e.story}話` : `${name}と${MSX_TEV_LOT_NAME[e.lottery] || '小さな出来事'}`;
   const ch = msxTevChanges(s, o);
   const calm = typeof msxFxCalm === 'function' && msxFxCalm();
@@ -87489,6 +87563,8 @@ const MSX_CSS = `
 .msx .v-sl .ic{max-width:100%;white-space:normal;word-break:keep-all;overflow-wrap:anywhere}
 .msx .v-sl{display:flex;flex-direction:column;align-items:center;justify-content:center}
 .msx .v-heat .hi{display:block;font-size:16px;line-height:1.15;margin-bottom:1px}
+/* r1114-065: 札の中の言葉は語の切れ目でだけ折る */
+.msx .v-hm-tile b{word-break:keep-all;overflow-wrap:normal}
 `;
 
 // ---- part: 56-monhero-success-store.jsx ----
@@ -87912,7 +87988,7 @@ function MonheroSuccessDebugEntry({ callNameOf, bondLvOf, onOpenChange }) {
 // 見本: docs/progress/player-raise/mock/png/v3-S.png(S1〜S6)。計算は芯の memberOf / newRun を呼ぶだけ
 // 品の名前の折り目: 「の」のあとと、カタカナ語の「ー」のあと(「縁結びの/お守り」「ブリーダー/ライセンス」)。狭い升目で言葉の途中で折れないように(2026-11-14)
 // 折り目は「の」「!」のあとと、決まったカタカナの境目だけ(「ー のあと」で区切ると「トレー|ニング」でも折れた。2026-11-14 窓口)
-const msxItemNameNode = (name) => String(name || '').split(/(?<=[の!！])(?=.)|(?<=ブリーダー)(?=ライセンス)|(?<=オイリー)(?=パック|オイル)|(?<=野菜)(?=ジュース)|(?<=スタミナ)(?=だんご)/).map((x, i) => <React.Fragment key={i}>{i > 0 ? <wbr/> : null}{x}</React.Fragment>);
+const msxItemNameNode = (name) => String(name || '').split(/(?<=[の!！])(?=.)|(?<=ブリーダー)(?=ライセンス)|(?<=オイリー)(?=パック|オイル)|(?<=野菜)(?=ジュース)|(?<=スタミナ)(?=だんご)|(?<=キビ)(?=ダンゴ)/).map((x, i) => <React.Fragment key={i}>{i > 0 ? <wbr/> : null}{x}</React.Fragment>);
 const MSX_STEP_NAMES = Object.freeze(['育てるモンスター', '編成', '助手', '持ちこみ', '名前と染色', '確認']);
 // 持ちこみ12種(ITEMS-REF.md・名前と効き目は参考のまま・博士はイッサ博士)。before = はじめる前に効く / both = 育成中にも使える
 const MSX_ITEMS = Object.freeze([
@@ -88412,7 +88488,7 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf }) {
             {/* 1項目ずつ途中で折らない(幅320で「🧠かしこさ4% 🎯命中4%」が札の外へ切れていた。2026-11-14 社長「編成の文字のはみ出し」) */}
             <div className="t3">{m.top.slice(0, 2).map((k) => <span key={k}>{`${MSX_STAT_ICON[k]}${MSX_STAT_NAME[k]} +${Math.round(m.bonus[k] || 0)}%`}</span>)}</div>
             <div className="bs"><span>親密度 {m.bond0}</span><span>タッグ +{m.tag}%</span></div>
-            <div className="ic">{m.kind === 'base' ? (m.auto ? 'ベースモン・✎選ぶ' : 'ベースモン・✎変える') : m.friend ? `借: ${m.friend.name || 'フレンド'}` : '✎変える'}</div>
+            <div className="ic">{m.kind === 'base' ? (m.auto ? 'ベースモン ✎⁠選ぶ' : 'ベースモン ✎⁠変える') : m.friend ? `借: ${m.friend.name || 'フレンド'}` : '✎変える'}</div>
           </div>
         ))}
       </div>
@@ -88555,7 +88631,7 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf }) {
         {body}
       </div>
       {go && <div className="v-ft"><button type="button" onClick={back}>{step ? '← 戻る' : '← やめる'}</button><button type="button" className="go" onClick={next}>{go}</button></div>}
-      {typeof MsxBetaTalk === 'function' ? (lockTalk ? <MsxBetaTalk key={`lock${lockTalk}`} keys={['lock']} always ctx={betaCtx} onDone={() => setLockTalk(0)}/> : <MsxBetaTalk keys={['prep']} ctx={betaCtx}/>) : null}
+      {typeof MsxBetaTalk === 'function' ? (lockTalk ? <MsxBetaTalk key={`lock${lockTalk}`} keys={['lock']} always ctx={betaCtx} onDone={() => setLockTalk(0)}/> : <MsxBetaTalk keys={[step === 0 ? 'prep' : step === 1 ? 'team' : step === 3 ? 'bring' : null]} ctx={betaCtx}/>) : null}
     </>
   );
 }
@@ -88831,6 +88907,7 @@ function MonheroSuccessScreen({ onClose, callNameOf, bondLvOf, debug = false, st
   // 育成中は MsxPlay が場面の曲を鳴らすので、ここは何もしない(画面を閉じると入る前の曲へ戻る)
   // 後片付け(閉じたら入る前の曲へ)はここの1か所だけ。育成中(play)は MsxPlay が場面の曲を切り替える
   msxUseSound(view === 'play' || view === 'loading' || view === 'fail' ? null : 'menu');
+  const [tutTurn, setTutTurn] = useState(null); // メインで説明の窓を1つ見たターン(1ターンに1つまで。保存しない)
   useEffect(() => {
     const on = () => setLayout(msxLayout());
     window.addEventListener('resize', on); window.addEventListener('orientationchange', on);
@@ -88890,10 +88967,12 @@ function MonheroSuccessScreen({ onClose, callNameOf, bondLvOf, debug = false, st
     betaKeys = { keys: ['open', raisedMons.length > 0 && !(run && run.s && !run.s.over) && 'firstend'], ctx: { ...betaCtx, mon: lastRaised ? (lastRaised.nick || msxMonName(lastRaised.species)) : undefined } };
   } else if (view === 'play' && run && run.s) {
     const s = run.s; const ph = run.phase;
-    const keys = s.over || ph === 'over' ? (s.over !== 'gameover' && (run.arcAfter || (s.ending && !s.ending.seen)) ? null /* エンディングのお話を読み終えてから「引退」の説明を出す(お話に重ねない) */ : ['retire']) : ph === 'battle' ? [run.out && run.out.r3 ? (run.out.r3.stage === 'rank' ? 'rank' : run.out.r3.stage === 'meal' ? 'meal' : null) : 'match'] /* 賞金ランク UP!・ごはんの段(2026-11-14) */ : playSub === 'cup' ? ['cup'] : playSub === 'shugyo' ? ['shugyo']
+    // 説明の窓は、その画面で動きが止まってから出す(Fable の点検 ①-12): 演出のあいだ(fx)は出さない/引退の説明は最後の評価の画面だけ(お話・エンディングの上やゲームオーバーでは出さない)/メインは1ターンに1つだけ・トレーニングの説明は選ぶ画面で
+    const overReady = s.over !== 'gameover' && !run.arcAfter && !(s.ending && !s.ending.seen);
+    const keys = playSub === 'fx' ? null : ph === 'battle' ? [run.out && run.out.r3 ? (run.out.r3.stage === 'rank' ? 'rank' : run.out.r3.stage === 'meal' ? 'meal' : null) : 'match'] /* 賞金ランク UP!・ごはんの段(2026-11-14) */ : s.over || ph === 'over' ? (overReady ? ['retire'] : null) : playSub === 'cup' ? ['cup'] : playSub === 'shugyo' ? ['shugyo'] : playSub === 'train' ? ['train']
       : ph === 'event' || ph === 'story' ? ['event'] : ph === 'awake' ? ['awake'] : ph === 'result' && run.out && run.out.result ? ['result']
-        : ph === 'main' && playSub === 'main' ? ['turn', 'train', s.hpMax > 0 && s.hp < s.hpMax * 0.5 && 'rest', Number(s.tickets) > 0 && 'shugyo'] : null;
-    if (keys) betaKeys = { keys, ctx: { ...betaCtx, mon: run.nick } };
+        : ph === 'main' && playSub === 'main' && tutTurn !== s.turn ? ['turn', s.hpMax > 0 && s.hp < s.hpMax * 0.5 && 'rest'] : null;
+    if (keys) betaKeys = { keys, ctx: { ...betaCtx, mon: run.nick }, onDone: ph === 'main' ? () => setTutTurn(s.turn) : undefined };
   }
 
   const node = (
@@ -88904,7 +88983,7 @@ function MonheroSuccessScreen({ onClose, callNameOf, bondLvOf, debug = false, st
       {view === 'rank' && typeof MonsucRankScreen === 'function' ? <MonsucRankScreen onBack={() => setView('home')}/> : null}
       <div className={`msx v3 ${layout}`} data-msx-view={view}>
         {content}
-        {betaKeys && !ask && typeof MsxBetaTalk === 'function' ? <MsxBetaTalk keys={betaKeys.keys} ctx={betaKeys.ctx}/> : null}
+        {betaKeys && !ask && typeof MsxBetaTalk === 'function' ? <MsxBetaTalk keys={betaKeys.keys} ctx={betaKeys.ctx} onDone={betaKeys.onDone}/> : null}
         {ask && <div className="msx-ov msx-fade"><div className="msx-sheet"><div style={{ fontSize: 13, fontWeight: 900, lineHeight: 1.6 }}>{ask.text}</div>
           <button type="button" className="msx-btn go" onClick={() => { const f = ask.onYes; setAsk(null); f(); }}>{ask.yes}</button>
           <button type="button" className="msx-btn sub" onClick={() => setAsk(null)}>やめておく</button></div></div>}
@@ -88946,7 +89025,7 @@ function MsxHome({ data, run, debug, onClose, onContinue, onNew, setMeta, onWipe
         <button type="button" className={s ? 'v-hm-new' : 'v-big v-hm-new'} onClick={onNew} data-msx-home-new>🌱 新しく育成を始める</button>
         {tiles.length ? (
           <div className="v-hm-tiles">
-            {tiles.map((t) => <button key={t.key} type="button" className="v-hm-tile" onClick={t.on} {...t.attr}><span className="e">{t.e}</span><b>{t.name}</b>{t.sub ? <small>{t.sub}</small> : null}</button>)}
+            {tiles.map((t) => <button key={t.key} type="button" className="v-hm-tile" onClick={t.on} {...t.attr}><span className="e">{t.e}</span><b>{t.name === 'マスモンボックス' ? <>マスモン<wbr/>ボックス</> : t.name}</b>{t.sub ? <small>{t.sub}</small> : null}</button>)}
           </div>
         ) : null}
         {debug && (
@@ -88977,12 +89056,13 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
   //   通った跡に白い細い線を少し残す。離した所の札が選ばれたまま。替わるたびにタップ音(既存の効果音 tap・SE の音量に従う)
   const scrubRef = useRef(null);
   const [trail, setTrail] = useState(null); // { pts: [{x,y}], live, w, h }
-  useEffect(() => { if (onSub) onSub(sub); }, [sub]);
   useEffect(() => () => { if (onSub) onSub('main'); }, []);
   // 期の区切りの演出(56-monsuc-kifx.jsx)を見終えたターン(保存しない。読み直したときはもう一度出る)
   const [kiAt, setKiAt] = useState(null);
   // トレーニングしている場面(56-monsuc-actfx.jsx)をまだ見せていないターン。押した直後だけ立てる(読み直したときは出さない・保存しない)
   const [actAt, setActAt] = useState(null);
+  // 押す前の育成(演出のあいだ、上の帯に結果を先に見せない。Fable の点検 ①-11。保存しない)
+  const [actFrom, setActFrom] = useState(null);
   const [sheet, setSheet] = useState(null); // 'log' | 'menu' | 'dex'
   const [detail, setDetail] = useState(false); // 場面の「くわしく」= モンスターの詳細(見るだけ)。「能力」とは別の画面(2026-11-14 社長「役割で分ける」)
   // 期末の大会・最後の大会の当日(2026-11-14 社長「参考資料どおりに」・参考 te-30〜34): 芯が battle を立てても、すぐ組み合わせ表へは行かない。
@@ -89004,6 +89084,8 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
   // トレーニングを選ぶ画面は育成中の曲のまま。「◯◯をする」を押して動きが始まってからトレーニングの曲(2026-11-14 社長)。結果の場面は曲を替えないので、メインへ戻るまで続く
   const soundId = childSound ? null : actOn ? 'training' : kiOn ? 'kiShow' : run.phase === 'awake' && run.out && run.out.fire && typeof MsxAwakeShow === 'function' ? 'awakeShow' : run.phase === 'awake' && run.out && run.out.fire ? (run.out.fire.kind === 2 ? 'trainGreat' : 'trainLvUp') : run.phase === 'result' && run.out && MSX_REST_SOUND[run.out.kind] ? MSX_REST_SOUND[run.out.kind] : run.phase === 'result' && run.out && run.out.result ? MSX_RES_SOUND[run.out.result] : run.phase === 'issa' ? 'issa' : s.over === 'gameover' ? 'gameOver' : 'main';
   msxUseScene(soundId, { season: msxCalendar(s.turn).season });
+  // 演出のあいだは「fx」と知らせて、説明の窓を出さない(結果が出てから出す)
+  useEffect(() => { if (onSub) onSub(actOn || kiOn ? 'fx' : sub); }, [sub, actOn, kiOn]);
   // トレーニングLvが上がった回は、結果の音のあとに Lv アップの音を続ける(演出が終わって結果の字が出てから)
   const lvUpSe = run.phase === 'result' && !actOn && run.out && run.out.result && run.out.lvUp;
   useEffect(() => {
@@ -89013,7 +89095,8 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
   }, [lvUpSe, s.turn]);
   const tagAt = (SUC.BOND && SUC.BOND.tag) || 80;
   const bondLv = bondLvOf ? Number(bondLvOf(s.aid)) || 1 : 1;
-  const ctx = { id: s.id, turn: s.turn, aid: s.aid, mon: run.nick, species: s.species, callName: callNameOf ? callNameOf(s.aid) : '' };
+  if (typeof msxCurBondLv !== 'undefined') msxCurBondLv = bondLv; // 受付・試合・結果の台詞も同じ親密度の段で引く(56-monhero-success-r3-store.jsx)
+  const ctx = { id: s.id, turn: s.turn, aid: s.aid, mon: run.nick, species: s.species, callName: callNameOf ? callNameOf(s.aid) : '', bond: bondLv };
   const line = (scene, fallback, extra = {}) => { const l = msxPickLine({ ...ctx, ...extra }, scene, { bondLv }); return l || { t: fallback, e: 'normal' }; };
   const pushLog = (r, text) => ({ ...r, log: [...(r.log || []), { turn: s.turn, t: text }].slice(-20) });
 
@@ -89068,7 +89151,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
     if (a.kind === 'retry') { endTurnFlow(next); return; }
     const text = r.out.result ? `${MSX_STAT_NAME[a.stat] || ''}のトレーニング: ${MSX_RES[r.out.result].word}` : a.kind === 'rest' ? '休んだ' : a.kind === 'play' ? '遊んだ' : a.kind === 'clinic' ? '通院した' : '休み';
     next = pushLog(next, text);
-    if (r.out.result && typeof MsxTrainAct === 'function') setActAt(r.state.turn);
+    if (r.out.result && typeof MsxTrainAct === 'function') { setActAt(r.state.turn); setActFrom(s); }
     setRun({ ...next, phase: 'result' });
   };
 
@@ -89104,14 +89187,15 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
     const restName = o.rest && SUC.REST ? (SUC.REST.find((x) => x.key === o.rest) || {}).name : null;
     const say = isTrain ? line(o.result === 'sab' ? 'turn.result.slack' : `turn.result.${o.result}`, '') : o.kind === 'rest' ? line(`turn.rest.${o.rest === 'poor' ? 'little' : o.rest === 'great' ? 'deep' : 'normal'}`, '') : o.kind === 'play' ? line('turn.play', '') : o.kind === 'clinic' ? line((o.cured || []).length ? 'turn.clinic.cured' : 'turn.clinic.again', '') : { t: '' };
     const evMember = o.event && Number.isInteger(o.event.who) ? s.team[o.event.who] : null;
-    const evLine = o.event ? (o.event.story ? msxPickLine({ ...ctx, cheer: msxMemberName(evMember) }, `cheer.base.ep${o.event.story}`, { who: 'narr' }) : msxPickLine({ ...ctx, cheer: msxMemberName(evMember) }, `cheer.lot.${MSX_LOT[o.event.lottery] || 'friend'}`, { who: '*' })) : null;
+    const evLine = o.event ? (o.event.story ? ((typeof msxCheerType === 'function' && msxPickLine({ ...ctx, cheer: msxMemberName(evMember) }, `cheer.${msxCheerType(evMember)}.ep${o.event.story}`, { who: 'narr' })) || msxPickLine({ ...ctx, cheer: msxMemberName(evMember) }, `cheer.base.ep${o.event.story}`, { who: 'narr' })) : msxPickLine({ ...ctx, cheer: msxMemberName(evMember) }, `cheer.lot.${MSX_LOT[o.event.lottery] || 'friend'}`, { who: '*' })) : null;
+    const bandS = acting && actFrom ? actFrom : null; // 演出のあいだは押す前の値
     const hpUp = !isTrain && Number.isFinite(o.hpFrom) && Number.isFinite(s.hp) ? Math.round(s.hp - o.hpFrom) : 0;
     const stDown = !isTrain && Number.isFinite(o.stFrom) ? Math.round(o.stFrom - s.stress) : 0;
     body = (<>
-      <MsxBand s={s} v={v} ev={ev} {...(isTrain ? {} : { hpFrom: o.hpFrom, stFrom: o.stFrom })}/>
+      {bandS ? <MsxBand s={bandS} v={SUC.peek(bandS)} ev={SUC.evaluate(bandS)} {...(isTrain ? {} : { hpFrom: o.hpFrom, stFrom: o.stFrom })}/> : <MsxBand s={s} v={v} ev={ev} {...(isTrain ? {} : { hpFrom: o.hpFrom, stFrom: o.stFrom })}/>}
       <div className="v-scene" style={{ flex: '1 1 0' }}>
         <img className="bg" src={`images/story-bg/${isTrain ? R.bg : 'monhero_plaza'}.jpg`} alt=""/><div className="sh"/>
-        {acting ? <MsxTrainAct key={`act-${s.turn}`} run={run} o={o} onDone={() => setActAt(null)}/> : null}
+        {acting ? <MsxTrainAct key={`act-${s.turn}`} run={run} o={o} onDone={() => { setActAt(null); setActFrom(null); }}/> : null}
         {acting ? null : isTrain && o.result === 'great' ? <div className="v-burst"/> : isTrain && o.result === 'ok' ? <div className="v-burst b2"/> : null}
         <div className="gr" style={{ left: '62%', bottom: 'calc(14% - 5px)' }}/>
         {acting ? null : <MsxMonArt run={run} className="mon" live={typeof MsxLiveMon === 'function'} react={isTrain ? { kind: o.result, id: s.turn } : null} style={{ left: '62%', bottom: '14%', height: '46%', transform: o.result === 'sab' ? 'translateX(-50%) rotate(84deg)' : o.result === 'fail' ? 'translateX(-50%) rotate(-12deg)' : 'translateX(-50%) rotate(6deg)', filter: o.result === 'fail' ? 'grayscale(.5) drop-shadow(0 8px 5px #0009)' : undefined }}/>}
@@ -90089,11 +90173,14 @@ const useMsxR3Lines = (aid) => {
   useEffect(() => { let alive = true; msxR3LoadSE(aid).then(() => { if (alive) setN((n) => n + 1); }); return () => { alive = false; }; }, [aid]);
 };
 const msxR3Q = (t) => { const x = String(t || ''); return /^[「『(]/.test(x) ? x : `「${x}」`; };
+// いま育てている助手の親密度(育成の画面 MsxPlay が描くたびに入れる)。台詞の段(ていねい語/タメ口)を選ぶのに使う。
+// 入れないと台本は親密度4として選び、受付・試合・結果だけタメ口になっていた(Fable の点検 ①-15)
+let msxCurBondLv = null;
 const msxR3Line = (scene, run, extra, fallback, opt) => {
   const SE = msxR3SE(); const s = run.s;
   try {
     if (SE) {
-      const l = SE.say(scene, { id: s.id, turn: s.turn, aid: s.aid, mon: run.nick || '', species: s.species, ...(extra || {}) }, opt || {});
+      const l = SE.say(scene, { id: s.id, turn: s.turn, aid: s.aid, mon: run.nick || '', species: s.species, ...(msxCurBondLv ? { bond: msxCurBondLv } : {}), ...(extra || {}) }, opt || {});
       if (l && l.t) return { t: msxR3Q(l.t), e: l.e || null };
     }
   } catch (e) {}
@@ -108416,7 +108503,7 @@ const cardPvpCleanMessage = (raw) => {
     const sf = typeof multiStampCleanFace === 'function' ? multiStampCleanFace(raw.sf) : null;
     const sw = typeof multiStampCleanWord === 'function' ? multiStampCleanWord(raw.sw) : null;
     const st = sf && sw ? { sf, sw } : {};
-    if (typeof raw.x === 'string') { const x = cardChatClean(raw.x); return x ? { t: 'chat', from, x, ...st } : null; }
+    if (typeof raw.x === 'string') { const x0 = cardChatClean(raw.x); const x = st.sw === 'x' && typeof multiStampCleanText === 'function' ? multiStampCleanText(x0) : x0; return x ? { t: 'chat', from, x, ...st } : null; }
     const i = cardPvpInt(raw.i, CARD_PVP_STAMPS.length - 1); return i === null ? null : { t: 'chat', from, i, ...st };
   }
   // 観戦の人のコメント(ホストが観戦の通り道で受け取り、相手へ渡す。v … 観戦の人の印・n … 名前)
@@ -109213,7 +109300,7 @@ const CARD_PVP = (() => {
     // 絵のスタンプ(2026-11-11)。言葉が定型と同じなら番号 i で、ちがえば言葉 x で送り、顔と言葉の番号を添える(古い版には言葉だけが出る)
     stamp: (x) => {
       if (!s || s.phase !== 'playing' || !x || !multiStampCleanFace(x.f) || !multiStampCleanWord(x.w) || Date.now() - s.chatAt < CARD_PVP_CHAT_GAP_MS) return false;
-      const text = cardChatClean((multiStampWord(x.w) || {}).text || '');
+      const text = cardChatClean(x.w === 'x' ? multiStampCleanText(x.text) : (multiStampWord(x.w) || {}).text || '');
       if (!text) return false;
       const i = CARD_PVP_STAMPS.indexOf(text);
       s = { ...s, chatAt: Date.now() };
@@ -115972,7 +116059,21 @@ function MonsterHeroGame() {
   // ここで控えも一緒に更新すれば、切り替えたその瞬間から正しい判断になる。
   // 画面を変えるたびに、どの処理が変えたかを記録に残す(MH_SCREEN_TRAIL・10-core.jsx)
   const gameStateCaller = () => { try { const line = String(new Error().stack || '').split('\n').slice(2).find((l) => !/setGameState|gameStateCaller/.test(l)) || ''; const m = /at\s+([\w$.]+)/.exec(line) || /^([\w$.]+)@/.exec(line.trim()); return m ? m[1] : ''; } catch (_) { return ''; } };
-  const setGameState = (next) => { gameStateNowRef.current = next; runBackgroundAllowedRef.current = isBackgroundRunScreen(next); if (typeof MH_SCREEN_TRAIL !== 'undefined') MH_SCREEN_TRAIL.push('gs', `${next}<${gameStateCaller()}`); setGameStateRaw(next); };
+  // マルチの演奏中に、ボタンを押していないのに外の画面(HOME など)へ替わろうとしたら止める(2026-11-15・r1115-006。本文は 10-core.jsx の MH_MULTI_PLAY_GUARD)。
+  //   止めたら、画面の記録に blk と残し、診断へ kind:'stray' を1行送る。演奏の終わりの切り替え(RHYTHM_MULTI へ)は RHYTHM_ なので通る
+  const rhythmPlayGuardRef = useRef(null);
+  const stopStrayGameState = (next) => {
+    try {
+      const play = rhythmPlayGuardRef.current;
+      if (typeof MH_MULTI_PLAY_GUARD !== 'undefined' && MH_MULTI_PLAY_GUARD.shouldBlock(gameStateNowRef.current, next, play && play.from)) {
+        if (typeof MH_SCREEN_TRAIL !== 'undefined') MH_SCREEN_TRAIL.push('blk', `${next}<${gameStateCaller()}`);
+        if (typeof rhythmTouchDiagStray === 'function' && play && play.song) void rhythmTouchDiagStray({ song_id: play.song.songId, difficulty: play.difficulty && play.difficulty.id, to: `${next}<${gameStateCaller()}` });
+        return true;
+      }
+    } catch (_) { /* 守りが落ちても、画面の切り替えは今までどおり通す */ }
+    return false;
+  };
+  const setGameState = (next) => { if (stopStrayGameState(next)) return; gameStateNowRef.current = next; runBackgroundAllowedRef.current = isBackgroundRunScreen(next); if (typeof MH_SCREEN_TRAIL !== 'undefined') MH_SCREEN_TRAIL.push('gs', `${next}<${gameStateCaller()}`); setGameStateRaw(next); };
   const [debugThrowScreenError, setDebugThrowScreenError] = useState(false); // デバッグ設定から画面エラーの受け止めを試すためだけの印
   const debugMenuRootRef = useRef(null); // デバッグメニューの名前で絞り込む欄が、どの範囲を探すか(2026-10-27)
   const [battleMenuTab, setBattleMenuTab] = useState('difficulty');
@@ -116096,6 +116197,7 @@ function MonsterHeroGame() {
   const [rhythmSettings, setRhythmSettings] = useState(DEFAULT_RHYTHM_SETTINGS);
   const [rhythmBestRecords, setRhythmBestRecords] = useState(()=>normalizeRhythmBestRecords(null));
   const [rhythmPlay,setRhythmPlayState]=useState(null);
+  rhythmPlayGuardRef.current = rhythmPlay; // マルチの演奏中の守り(setGameState)が見る控え
   // 招待の部屋を開いたままほかの画面へ出られる(2026-10-29・案A)ので、部屋にいるまま対戦でない曲を始めるときは、先に部屋を抜けるかを聞く
   // (部屋の中の曲と、ひとりの曲を同時には鳴らせない)。曲を始める入口が多いので、ここ1か所で見る
   const setRhythmPlay=(next)=>{

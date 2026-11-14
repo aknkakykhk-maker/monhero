@@ -952,6 +952,17 @@ const rhythmTouchDiagReport=async(report)=>{
       song_id:report.song_id,difficulty:report.difficulty,note_count:Math.max(1,report.note_count),stats:{kind:'report',playId:report.playId},schema_version:RHYTHM_TOUCH_DIAG_VERSION});
   }catch{return false;}
 };
+// マルチの演奏中に画面が勝手に替わろうとして止めたとき(10-core.jsx の MH_MULTI_PLAY_GUARD・2026-11-15 r1115-006)。
+// 診断の行に stats:{kind:'stray',to,scr} を1行足す(表は足すだけ・stats は4KBまで)。足すだけで、既存の診断の形は変えない
+const rhythmTouchDiagStray=async(info)=>{
+  try{
+    if(!info||typeof sbSendRhythmTouchDiag!=='function'||!RHYTHM_DEMO_SONG_IDS.includes(info.song_id))return false;
+    const deviceKey=await rhythmPlayLogDeviceKey();
+    const scr=typeof MH_SCREEN_TRAIL!=='undefined'?MH_SCREEN_TRAIL.compact(MH_SCREEN_TRAIL.list().slice(-12)):[];
+    return await sbSendRhythmTouchDiag({device_key:deviceKey,app_build:typeof BUILD_DATE==='string'?BUILD_DATE:'',platform:rhythmTouchPlatform(),standalone:!!rhythmTouchStandalone(),
+      song_id:info.song_id,difficulty:info.difficulty,note_count:1,stats:{kind:'stray',to:String(info.to||'').slice(0,60),scr},schema_version:RHYTHM_TOUCH_DIAG_VERSION});
+  }catch{return false;}
+};
 const RHYTHM_CHART_NOTES_KEY='mh_rhythm_chart_notes_v1';
 const RHYTHM_CHART_NOTE_SEGMENT_MS=8000;
 const RHYTHM_CHART_NOTE_MARKS=['', 'good', 'bad'];

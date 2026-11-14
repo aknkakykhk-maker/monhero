@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ab11b21f2ebd6a4e
+// source-sha256: 4e07188bdbc52269
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -91,6 +91,25 @@ const MH_SCREEN_TRAIL = (() => {
     list: () => list.slice(),
     sinceLast,
     compact
+  };
+})();
+const MH_MULTI_PLAY_GUARD = (() => {
+  const GRACE_MS = 1500;
+  let lastClick = 0;
+  if (typeof document !== 'undefined' && document.addEventListener) {
+    try {
+      document.addEventListener('click', e => {
+        if (!e || e.isTrusted !== false) lastClick = Date.now();
+      }, true);
+    } catch (_) {}
+  }
+  const shouldBlock = (current, next, playFrom, now = Date.now()) => current === 'RHYTHM_PLAY' && playFrom === 'multi' && typeof next === 'string' && !next.startsWith('RHYTHM_') && now - lastClick > GRACE_MS;
+  return {
+    shouldBlock,
+    touch: () => {
+      lastClick = Date.now();
+    },
+    lastClickAt: () => lastClick
   };
 })();
 const MH_PAGE_OFFSET_GUARD = (() => {
@@ -40733,6 +40752,30 @@ const rhythmTouchDiagReport = async report => {
     return false;
   }
 };
+const rhythmTouchDiagStray = async info => {
+  try {
+    if (!info || typeof sbSendRhythmTouchDiag !== 'function' || !RHYTHM_DEMO_SONG_IDS.includes(info.song_id)) return false;
+    const deviceKey = await rhythmPlayLogDeviceKey();
+    const scr = typeof MH_SCREEN_TRAIL !== 'undefined' ? MH_SCREEN_TRAIL.compact(MH_SCREEN_TRAIL.list().slice(-12)) : [];
+    return await sbSendRhythmTouchDiag({
+      device_key: deviceKey,
+      app_build: typeof BUILD_DATE === 'string' ? BUILD_DATE : '',
+      platform: rhythmTouchPlatform(),
+      standalone: !!rhythmTouchStandalone(),
+      song_id: info.song_id,
+      difficulty: info.difficulty,
+      note_count: 1,
+      stats: {
+        kind: 'stray',
+        to: String(info.to || '').slice(0, 60),
+        scr
+      },
+      schema_version: RHYTHM_TOUCH_DIAG_VERSION
+    });
+  } catch {
+    return false;
+  }
+};
 const RHYTHM_CHART_NOTES_KEY = 'mh_rhythm_chart_notes_v1';
 const RHYTHM_CHART_NOTE_SEGMENT_MS = 8000;
 const RHYTHM_CHART_NOTE_MARKS = ['', 'good', 'bad'];
@@ -61005,6 +61048,9 @@ const MULTI_STAMP_RECV_GAP_MS = 2000;
 const MULTI_STAMP_SLOT_BASE = 8;
 const MULTI_STAMP_SLOT_STEP = 4;
 const MULTI_STAMP_SLOT_BUY_MAX = 2;
+const MULTI_STAMP_CUSTOM_ID = 'x';
+const MULTI_STAMP_CUSTOM_MAX = 8;
+const multiStampCleanText = v => String(v == null ? '' : v).replace(/[\u0000-\u001f\u007f-\u009f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, MULTI_STAMP_CUSTOM_MAX);
 const MULTI_STAMP_ASSISTANT_IDS = Object.freeze(['mua', 'kiki', 'momosuke', 'dra', 'atsu', 'kyuko', 'sorashido', 'erubin']);
 const MULTI_STAMP_EXPRESSIONS = Object.freeze(['happy', 'excited', 'wink', 'surprise', 'troubled', 'crying', 'angry', 'normal']);
 const MULTI_STAMP_START_EXPRESSION = 'happy';
@@ -61262,7 +61308,7 @@ const multiStampFaceName = fid => {
 };
 const multiStampWord = wid => MULTI_STAMP_WORDS.find(w => w.id === wid) || null;
 const multiStampCleanFace = v => typeof v === 'string' && v.length <= 40 && multiStampFaceSrc(v) ? v : null;
-const multiStampCleanWord = v => typeof v === 'string' && multiStampWord(v) ? v : null;
+const multiStampCleanWord = v => typeof v === 'string' && (v === MULTI_STAMP_CUSTOM_ID || multiStampWord(v)) ? v : null;
 const MULTI_STAMP_SHOP_OFFERS = Object.freeze([...MULTI_STAMP_ASSISTANT_IDS.map(id => ({
   id: `stamp_face_${id}`,
   kind: 'stamp',
@@ -61301,19 +61347,27 @@ const multiStampOwnsFace = (owned, fid) => {
   return false;
 };
 const multiStampOwnsWord = (owned, wid) => {
+  if (wid === MULTI_STAMP_CUSTOM_ID) return true;
   const w = multiStampWord(wid);
   return !!w && (w.pack === 'base' || owned.includes(`stamp_words_${w.pack}`));
 };
+const multiStampSlotClean = x => x.w === MULTI_STAMP_CUSTOM_ID ? {
+  f: x.f,
+  w: x.w,
+  t: multiStampCleanText(x.t)
+} : {
+  f: x.f,
+  w: x.w
+};
+const multiStampSlotLabel = x => x ? x.w === MULTI_STAMP_CUSTOM_ID ? multiStampCleanText(x.t) : (multiStampWord(x.w) || {}).text || '' : '';
+const multiStampSlotKey = x => `${x.f}|${x.w}${x.w === MULTI_STAMP_CUSTOM_ID ? `|${multiStampCleanText(x.t)}` : ''}`;
 const multiStampSlotMax = owned => MULTI_STAMP_SLOT_BASE + MULTI_STAMP_SLOT_STEP * Math.min(MULTI_STAMP_SLOT_BUY_MAX, owned.filter(x => x === 'stamp_slot').length);
 const normalizeMultiStamps = raw => {
   const o = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : null;
   const owned = (o && Array.isArray(o.owned) ? o.owned : []).filter(x => typeof x === 'string' && multiStampOffer(x) && x !== 'stamp_face_all').slice(0, 60);
   const ownedClean = [...new Set(owned.filter(x => x !== 'stamp_slot')), ...owned.filter(x => x === 'stamp_slot').slice(0, MULTI_STAMP_SLOT_BUY_MAX)];
   const max = multiStampSlotMax(ownedClean);
-  const slots = o && Array.isArray(o.slots) ? o.slots.slice(0, max).map(x => x && typeof x === 'object' && multiStampOwnsFace(ownedClean, x.f) && multiStampOwnsWord(ownedClean, x.w) ? {
-    f: x.f,
-    w: x.w
-  } : null) : multiStampDefaultSlots();
+  const slots = o && Array.isArray(o.slots) ? o.slots.slice(0, max).map(x => x && typeof x === 'object' && multiStampOwnsFace(ownedClean, x.f) && multiStampOwnsWord(ownedClean, x.w) && (x.w !== MULTI_STAMP_CUSTOM_ID || multiStampCleanText(x.t)) ? multiStampSlotClean(x) : null) : multiStampDefaultSlots();
   while (slots.length < max) slots.push(null);
   return {
     owned: ownedClean,
@@ -61323,10 +61377,7 @@ const normalizeMultiStamps = raw => {
 const multiStampToStore = st => ({
   v: 1,
   owned: st.owned.slice(),
-  slots: st.slots.map(x => x ? {
-    f: x.f,
-    w: x.w
-  } : null)
+  slots: st.slots.map(x => x ? multiStampSlotClean(x) : null)
 });
 const normalizeMultiStampPrefs = v => ({
   pic: !(v && typeof v === 'object' && v.pic === false)
@@ -61444,12 +61495,9 @@ const MULTI_STAMP = (() => {
     },
     setSlot: (i, slot) => {
       if (!Number.isInteger(i) || i < 0 || i >= st.slots.length) return false;
-      if (slot && !(multiStampOwnsFace(st.owned, slot.f) && multiStampOwnsWord(st.owned, slot.w))) return false;
+      if (slot && !(multiStampOwnsFace(st.owned, slot.f) && multiStampOwnsWord(st.owned, slot.w) && (slot.w !== MULTI_STAMP_CUSTOM_ID || multiStampCleanText(slot.t)))) return false;
       const slots = st.slots.slice();
-      slots[i] = slot ? {
-        f: slot.f,
-        w: slot.w
-      } : null;
+      slots[i] = slot ? multiStampSlotClean(slot) : null;
       st = {
         ...st,
         slots
@@ -61485,7 +61533,7 @@ const MULTI_STAMP = (() => {
       emit();
     },
     check: slot => {
-      if (!slot || !multiStampOwnsFace(st.owned, slot.f) || !multiStampOwnsWord(st.owned, slot.w)) return {
+      if (!slot || !multiStampOwnsFace(st.owned, slot.f) || !multiStampOwnsWord(st.owned, slot.w) || slot.w === MULTI_STAMP_CUSTOM_ID && !multiStampCleanText(slot.t)) return {
         ok: false,
         why: ''
       };
@@ -61493,7 +61541,7 @@ const MULTI_STAMP = (() => {
         ok: false,
         why: '少しあけてから送ってね'
       };
-      if (lastKey === `${slot.f}|${slot.w}` && sameCount >= MULTI_STAMP_SAME_MAX) return {
+      if (lastKey === multiStampSlotKey(slot) && sameCount >= MULTI_STAMP_SAME_MAX) return {
         ok: false,
         why: '同じスタンプは続けて3回までです'
       };
@@ -61503,7 +61551,7 @@ const MULTI_STAMP = (() => {
       };
     },
     sent: slot => {
-      const k = `${slot.f}|${slot.w}`;
+      const k = multiStampSlotKey(slot);
       sameCount = k === lastKey ? sameCount + 1 : 1;
       lastKey = k;
       sentAt = Date.now();
@@ -61625,11 +61673,10 @@ function MultiStampPalette({
       });
       return;
     }
-    const word = multiStampWord(slot.w);
     const ok = onSend({
       f: slot.f,
       w: slot.w,
-      text: word ? word.text : ''
+      text: multiStampSlotLabel(slot)
     }) !== false;
     if (ok) MULTI_STAMP.sent(slot);
     setWhy(ok ? '' : 'いまは送れません');
@@ -61656,7 +61703,7 @@ function MultiStampPalette({
     s,
     i
   }) => {
-    const word = multiStampWord(s.w);
+    const label = multiStampSlotLabel(s);
     const src = multiStampFaceSrc(s.f);
     const hit = flash && flash.i === i;
     return React.createElement("button", {
@@ -61674,7 +61721,7 @@ function MultiStampPalette({
       className: "mx-auto block aspect-square w-full rounded-lg object-cover"
     }), React.createElement("b", {
       className: "mt-0.5 block truncate text-[11px] font-black leading-tight text-white"
-    }, hit && flash.ok ? '✓ 送信' : word ? word.text : ''));
+    }, hit && flash.ok ? '✓ 送信' : label));
   }), onEdit && React.createElement("button", {
     type: "button",
     "data-multi-stamp-edit-open": true,
@@ -61704,6 +61751,7 @@ function MultiStampEditor({
   });
   const [face, setFace] = React.useState(cur ? cur.f : `a.${MULTI_STAMP_ASSISTANT_IDS[0]}.${MULTI_STAMP_START_EXPRESSION}`);
   const [word, setWord] = React.useState(cur ? cur.w : MULTI_STAMP_WORDS[0].id);
+  const [freeText, setFreeText] = React.useState(cur && cur.w === MULTI_STAMP_CUSTOM_ID ? multiStampCleanText(cur.t) : '');
   const [lockNote, setLockNote] = React.useState('');
   const pickSlot = i => {
     setSel(i);
@@ -61712,6 +61760,7 @@ function MultiStampEditor({
     if (s) {
       setFace(s.f);
       setWord(s.w);
+      if (s.w === MULTI_STAMP_CUSTOM_ID) setFreeText(multiStampCleanText(s.t));
       const a = /^a\.([a-z]+)\./.exec(s.f);
       if (a) {
         setTab('assistant');
@@ -61721,7 +61770,7 @@ function MultiStampEditor({
   };
   const faces = tab === 'assistant' ? MULTI_STAMP_EXPRESSIONS.map(e => `a.${who}.${e}`) : MULTI_STAMP_MONSTER_SETS.flat().filter(id => multiStampMonster(id)).map(id => `m.${id}`);
   const lockedBuy = what => setLockNote(`${what}は、ビートP交換所の「スタンプ」で買えます`);
-  const canPut = multiStampOwnsFace(st.owned, face) && multiStampOwnsWord(st.owned, word);
+  const canPut = multiStampOwnsFace(st.owned, face) && multiStampOwnsWord(st.owned, word) && (word !== MULTI_STAMP_CUSTOM_ID || !!multiStampCleanText(freeText));
   const max = st.slots.length;
   return React.createElement("div", {
     "data-multi-stamp-editor": true,
@@ -61778,7 +61827,7 @@ function MultiStampEditor({
     className: "mx-auto block aspect-square w-full rounded-lg object-cover"
   }), React.createElement("b", {
     className: "mt-0.5 block truncate text-[10.5px] font-black leading-tight"
-  }, (multiStampWord(s.w) || {}).text)) : React.createElement("span", {
+  }, multiStampSlotLabel(s))) : React.createElement("span", {
     className: "flex aspect-[4/5] items-center justify-center text-xl text-slate-500"
   }, "＋")))), React.createElement("div", {
     className: "mt-1.5 flex gap-1.5"
@@ -61810,6 +61859,7 @@ function MultiStampEditor({
   }, React.createElement(MultiStampView, {
     f: face,
     w: word,
+    text: multiStampCleanText(freeText),
     size: 76,
     forcePic: true
   }), React.createElement("div", {
@@ -61820,7 +61870,8 @@ function MultiStampEditor({
     disabled: !canPut,
     onClick: () => MULTI_STAMP.setSlot(sel, {
       f: face,
-      w: word
+      w: word,
+      t: freeText
     }),
     className: "min-h-[44px] rounded-xl bg-gradient-to-b from-cyan-500 to-cyan-700 px-2 text-[13px] font-black disabled:opacity-40"
   }, "⭐ ", sel + 1, "番に入れる"), lockNote && React.createElement("p", {
@@ -61894,6 +61945,29 @@ function MultiStampEditor({
       "aria-hidden": "true",
       className: "absolute right-0.5 top-0 text-[11px]"
     }, "🔒"));
+  })), React.createElement("div", {
+    "data-multi-stamp-free": true,
+    className: `mb-2 rounded-xl border p-2 ${word === MULTI_STAMP_CUSTOM_ID ? 'border-cyan-300 bg-cyan-500/10' : 'border-slate-700'}`
+  }, React.createElement("label", {
+    htmlFor: "multi-stamp-free-input",
+    className: "mb-1 block text-[12px] font-black text-cyan-100"
+  }, "✏️ 自分で文字を打つ", React.createElement("small", {
+    className: "ml-1 text-[11px] text-slate-400"
+  }, "(全角", MULTI_STAMP_CUSTOM_MAX, "文字まで・1行)")), React.createElement("input", {
+    id: "multi-stamp-free-input",
+    "data-multi-stamp-free-input": true,
+    value: freeText,
+    maxLength: MULTI_STAMP_CUSTOM_MAX,
+    autoComplete: "off",
+    enterKeyHint: "done",
+    onFocus: () => setWord(MULTI_STAMP_CUSTOM_ID),
+    onChange: e => {
+      setFreeText(e.target.value.replace(/[\u0000-\u001f\u007f-\u009f]/g, '').slice(0, MULTI_STAMP_CUSTOM_MAX));
+      setWord(MULTI_STAMP_CUSTOM_ID);
+      setLockNote('');
+    },
+    placeholder: "例:いくぞ！",
+    className: "min-h-[44px] w-full min-w-0 rounded-xl border border-white/20 bg-slate-950 px-3 text-base font-bold text-white"
   })), React.createElement("div", {
     className: "flex flex-wrap gap-1.5"
   }, MULTI_STAMP_WORDS.map(wd => {
@@ -93794,6 +93868,7 @@ const rhythmMultiCleanMessage = raw => {
       out.sf = sf;
       out.sw = sw;
     }
+    if (out.sw === 'x' && typeof multiStampCleanText === 'function') out.text = multiStampCleanText(out.text);
     return out.text && out.cid ? out : null;
   }
   if (raw.t === 'bye') return out;
@@ -95650,11 +95725,13 @@ const RHYTHM_MULTI = (() => {
         sf: stamp.f,
         sw: stamp.w
       } : {};
+      const sendText = st.sw === 'x' ? multiStampCleanText(clean) : clean;
+      if (!sendText) return false;
       return socket.send({
         t: 'chat',
         id: s.selfId,
         name: me.name,
-        text: clean,
+        text: sendText,
         cid: `c${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`,
         ...st
       });
@@ -96300,7 +96377,7 @@ function RhythmMultiChatBubble({
     decoding: "async",
     className: "mh-seat-stamp-img block shrink-0 rounded-lg object-cover"
   }), React.createElement("b", {
-    className: "mh-seat-stamp-word block min-w-0 truncate text-[10px] font-black leading-tight text-slate-900"
+    className: "mh-seat-stamp-word block min-w-0 text-[10px] font-black leading-tight text-slate-900"
   }, text)));
   return React.createElement("span", {
     "data-rhythm-multi-chat-bubble": true,
@@ -157787,13 +157864,30 @@ const assistantLifeTasteDaily = () => {
       if (!a || !a.id) continue;
       for (const r of assistantMasmonRowsOf(ASSISTANT_MASMON_STORE.state, a.id) || []) if (r && r.monster) assistantLifeTasteBump(a.id, r.monster, 'raise');
     }
+    if (typeof ASSISTANT_PEER_STORE !== 'undefined' && ASSISTANT_PEER_STORE.state && ASSISTANT_PEER_STORE.state.loaded && typeof assistantPeerLevel === 'function') {
+      const st = ASSISTANT_PEER_STORE.state;
+      for (const a of ASSISTANT_MASMON_PLAN) {
+        if (!a || !a.id) continue;
+        for (const b of ASSISTANT_MASMON_PLAN) {
+          if (!b || !b.id || b.id === a.id || !Array.isArray(b.likeMon)) continue;
+          let lv = 0;
+          try {
+            lv = Number(assistantPeerLevel(st, a.id, b.id));
+          } catch (_) {
+            lv = 0;
+          }
+          if (!(lv >= 5)) continue;
+          for (const x of b.likeMon) if (x && typeof x.monster === 'string' && x.monster) assistantLifeTasteBump(a.id, x.monster, 'friend');
+        }
+      }
+    }
   } catch (_) {}
 };
 let amtDailyDay = '';
 const amtDailyTry = () => {
   try {
     const d = typeof assistantLifeDayKey === 'function' ? assistantLifeDayKey() : '';
-    if (!d || amtDailyDay === d || !AMT_STORE || !AMT_STORE.loaded || typeof ASSISTANT_MASMON_STORE === 'undefined' || !ASSISTANT_MASMON_STORE.loaded) return;
+    if (!d || amtDailyDay === d || !AMT_STORE || !AMT_STORE.loaded || typeof ASSISTANT_MASMON_STORE === 'undefined' || !ASSISTANT_MASMON_STORE.loaded || typeof ASSISTANT_PEER_STORE !== 'undefined' && ASSISTANT_PEER_STORE.state && !ASSISTANT_PEER_STORE.state.loaded) return;
     amtDailyDay = d;
     assistantLifeTasteDaily();
   } catch (_) {}
@@ -157804,6 +157898,7 @@ try {
       if (amtOn() && AMT_STORE) {
         void AMT_STORE.load().then(amtDailyTry).catch(() => {});
         if (typeof ASSISTANT_MASMON_STORE !== 'undefined' && ASSISTANT_MASMON_STORE.subs) ASSISTANT_MASMON_STORE.subs.add(amtDailyTry);
+        if (typeof ASSISTANT_PEER_STORE !== 'undefined' && ASSISTANT_PEER_STORE.listeners) ASSISTANT_PEER_STORE.listeners.add(amtDailyTry);
       }
     } catch (_) {}
   }, 0);
@@ -160106,7 +160201,7 @@ function MsxEvResult({
 const MSX_BETA_KEY = 'mh_monsuc_beta_v1';
 const MSX_BETA_AIDS = Object.freeze(['mua']);
 const msxBetaAidOk = aid => MSX_BETA_AIDS.includes(aid);
-const MSX_BETA_TUT = Object.freeze(['scn', 'prep', 'turn', 'train', 'result', 'rest', 'shugyo', 'cup', 'rank', 'meal', 'match', 'rematch', 'event', 'awake', 'retire']);
+const MSX_BETA_TUT = Object.freeze(['scn', 'prep', 'team', 'bring', 'turn', 'train', 'result', 'rest', 'shugyo', 'cup', 'rank', 'meal', 'match', 'rematch', 'event', 'awake', 'retire']);
 const MSX_BETA_STORY = Object.freeze(['open', 'firstend', 'start']);
 const msxBetaScene = k => MSX_BETA_STORY.includes(k) ? `scn.mua.beta.${k}` : `tut.${k}`;
 const msxBetaKnown = k => MSX_BETA_TUT.includes(k) || MSX_BETA_STORY.includes(k);
@@ -160535,6 +160630,22 @@ const msxTevChanges = (s, o) => {
   }
   return out;
 };
+const MSX_CHEER_TYPE = Object.freeze({
+  pow: 'attacker',
+  tough: 'tank',
+  life: 'healer',
+  wise: 'supporter',
+  hit: 'shadow',
+  eva: 'shadow'
+});
+const msxCheerType = m => {
+  const top = m && Array.isArray(m.top) ? m.top[0] : null;
+  if (top && MSX_CHEER_TYPE[top]) return MSX_CHEER_TYPE[top];
+  const k = String(m && m.species || '');
+  let h = 0;
+  for (let i = 0; i < k.length; i++) h = h * 31 + k.charCodeAt(i) >>> 0;
+  return ['attacker', 'tank', 'supporter', 'healer', 'shadow'][h % 5];
+};
 function MsxTrainEvent({
   run,
   o,
@@ -160547,6 +160658,11 @@ function MsxTrainEvent({
   const m = s.team[e.who];
   const name = typeof msxMemberName === 'function' ? msxMemberName(m) : '編成のモンスター';
   const line = e.story ? msxPickLine({
+    ...ctx,
+    cheer: name
+  }, `cheer.${msxCheerType(m)}.ep${e.story}`, {
+    who: 'narr'
+  }) || msxPickLine({
     ...ctx,
     cheer: name
   }, `cheer.base.ep${e.story}`, {
@@ -168095,6 +168211,8 @@ const MSX_CSS = `
 .msx .v-sl .ic{max-width:100%;white-space:normal;word-break:keep-all;overflow-wrap:anywhere}
 .msx .v-sl{display:flex;flex-direction:column;align-items:center;justify-content:center}
 .msx .v-heat .hi{display:block;font-size:16px;line-height:1.15;margin-bottom:1px}
+/* r1114-065: 札の中の言葉は語の切れ目でだけ折る */
+.msx .v-hm-tile b{word-break:keep-all;overflow-wrap:normal}
 `;
 const MSX_KEYS = Object.freeze({
   run: 'mh_monsuc_run_v1',
@@ -168818,7 +168936,7 @@ function MonheroSuccessDebugEntry({
     debug: true
   }));
 }
-const msxItemNameNode = name => String(name || '').split(/(?<=[の!！])(?=.)|(?<=ブリーダー)(?=ライセンス)|(?<=オイリー)(?=パック|オイル)|(?<=野菜)(?=ジュース)|(?<=スタミナ)(?=だんご)/).map((x, i) => React.createElement(React.Fragment, {
+const msxItemNameNode = name => String(name || '').split(/(?<=[の!！])(?=.)|(?<=ブリーダー)(?=ライセンス)|(?<=オイリー)(?=パック|オイル)|(?<=野菜)(?=ジュース)|(?<=スタミナ)(?=だんご)|(?<=キビ)(?=ダンゴ)/).map((x, i) => React.createElement(React.Fragment, {
   key: i
 }, i > 0 ? React.createElement("wbr", null) : null, x));
 const MSX_STEP_NAMES = Object.freeze(['育てるモンスター', '編成', '助手', '持ちこみ', '名前と染色', '確認']);
@@ -170190,7 +170308,7 @@ function MsxStart({
       className: "bs"
     }, React.createElement("span", null, "親密度 ", m.bond0), React.createElement("span", null, "タッグ +", m.tag, "%")), React.createElement("div", {
       className: "ic"
-    }, m.kind === 'base' ? m.auto ? 'ベースモン・✎選ぶ' : 'ベースモン・✎変える' : m.friend ? `借: ${m.friend.name || 'フレンド'}` : '✎変える')))), React.createElement("div", {
+    }, m.kind === 'base' ? m.auto ? 'ベースモン ✎⁠選ぶ' : 'ベースモン ✎⁠変える' : m.friend ? `借: ${m.friend.name || 'フレンド'}` : '✎変える')))), React.createElement("div", {
       className: "msx-note msx-sl-legend",
       "data-msx-slot-legend": true
     }, "札の見方: 「+4%」はその能力のトレーニングの伸びが上がる分・親密度は初めの値・タッグは友情タッグのときの伸び"), React.createElement("button", {
@@ -170799,7 +170917,7 @@ function MsxStart({
     ctx: betaCtx,
     onDone: () => setLockTalk(0)
   }) : React.createElement(MsxBetaTalk, {
-    keys: ['prep'],
+    keys: [step === 0 ? 'prep' : step === 1 ? 'team' : step === 3 ? 'bring' : null],
     ctx: betaCtx
   }) : null);
 }
@@ -171531,6 +171649,7 @@ function MonheroSuccessScreen({
   const [ask, setAsk] = useState(null);
   const [playSub, setPlaySub] = useState('main');
   msxUseSound(view === 'play' || view === 'loading' || view === 'fail' ? null : 'menu');
+  const [tutTurn, setTutTurn] = useState(null);
   useEffect(() => {
     const on = () => setLayout(msxLayout());
     window.addEventListener('resize', on);
@@ -171749,13 +171868,15 @@ function MonheroSuccessScreen({
   } else if (view === 'play' && run && run.s) {
     const s = run.s;
     const ph = run.phase;
-    const keys = s.over || ph === 'over' ? s.over !== 'gameover' && (run.arcAfter || s.ending && !s.ending.seen) ? null : ['retire'] : ph === 'battle' ? [run.out && run.out.r3 ? run.out.r3.stage === 'rank' ? 'rank' : run.out.r3.stage === 'meal' ? 'meal' : null : 'match'] : playSub === 'cup' ? ['cup'] : playSub === 'shugyo' ? ['shugyo'] : ph === 'event' || ph === 'story' ? ['event'] : ph === 'awake' ? ['awake'] : ph === 'result' && run.out && run.out.result ? ['result'] : ph === 'main' && playSub === 'main' ? ['turn', 'train', s.hpMax > 0 && s.hp < s.hpMax * 0.5 && 'rest', Number(s.tickets) > 0 && 'shugyo'] : null;
+    const overReady = s.over !== 'gameover' && !run.arcAfter && !(s.ending && !s.ending.seen);
+    const keys = playSub === 'fx' ? null : ph === 'battle' ? [run.out && run.out.r3 ? run.out.r3.stage === 'rank' ? 'rank' : run.out.r3.stage === 'meal' ? 'meal' : null : 'match'] : s.over || ph === 'over' ? overReady ? ['retire'] : null : playSub === 'cup' ? ['cup'] : playSub === 'shugyo' ? ['shugyo'] : playSub === 'train' ? ['train'] : ph === 'event' || ph === 'story' ? ['event'] : ph === 'awake' ? ['awake'] : ph === 'result' && run.out && run.out.result ? ['result'] : ph === 'main' && playSub === 'main' && tutTurn !== s.turn ? ['turn', s.hpMax > 0 && s.hp < s.hpMax * 0.5 && 'rest'] : null;
     if (keys) betaKeys = {
       keys,
       ctx: {
         ...betaCtx,
         mon: run.nick
-      }
+      },
+      onDone: ph === 'main' ? () => setTutTurn(s.turn) : undefined
     };
   }
   const node = React.createElement("div", {
@@ -171770,7 +171891,8 @@ function MonheroSuccessScreen({
     "data-msx-view": view
   }, content, betaKeys && !ask && typeof MsxBetaTalk === 'function' ? React.createElement(MsxBetaTalk, {
     keys: betaKeys.keys,
-    ctx: betaKeys.ctx
+    ctx: betaKeys.ctx,
+    onDone: betaKeys.onDone
   }) : null, ask && React.createElement("div", {
     className: "msx-ov msx-fade"
   }, React.createElement("div", {
@@ -171892,7 +172014,7 @@ function MsxHome({
     onClick: t.on
   }, t.attr), React.createElement("span", {
     className: "e"
-  }, t.e), React.createElement("b", null, t.name), t.sub ? React.createElement("small", null, t.sub) : null))) : null, debug && React.createElement("div", {
+  }, t.e), React.createElement("b", null, t.name === 'マスモンボックス' ? React.createElement(React.Fragment, null, "マスモン", React.createElement("wbr", null), "ボックス") : t.name), t.sub ? React.createElement("small", null, t.sub) : null))) : null, debug && React.createElement("div", {
     className: "v-card",
     style: {
       borderColor: '#a3e63566'
@@ -171945,14 +172067,12 @@ function MsxPlay({
   });
   const scrubRef = useRef(null);
   const [trail, setTrail] = useState(null);
-  useEffect(() => {
-    if (onSub) onSub(sub);
-  }, [sub]);
   useEffect(() => () => {
     if (onSub) onSub('main');
   }, []);
   const [kiAt, setKiAt] = useState(null);
   const [actAt, setActAt] = useState(null);
+  const [actFrom, setActFrom] = useState(null);
   const [sheet, setSheet] = useState(null);
   const [detail, setDetail] = useState(false);
   const [preAt, setPreAt] = useState(null);
@@ -171977,6 +172097,9 @@ function MsxPlay({
   msxUseScene(soundId, {
     season: msxCalendar(s.turn).season
   });
+  useEffect(() => {
+    if (onSub) onSub(actOn || kiOn ? 'fx' : sub);
+  }, [sub, actOn, kiOn]);
   const lvUpSe = run.phase === 'result' && !actOn && run.out && run.out.result && run.out.lvUp;
   useEffect(() => {
     if (!lvUpSe || typeof SuccessSound === 'undefined') return undefined;
@@ -171989,13 +172112,15 @@ function MsxPlay({
   }, [lvUpSe, s.turn]);
   const tagAt = SUC.BOND && SUC.BOND.tag || 80;
   const bondLv = bondLvOf ? Number(bondLvOf(s.aid)) || 1 : 1;
+  if (typeof msxCurBondLv !== 'undefined') msxCurBondLv = bondLv;
   const ctx = {
     id: s.id,
     turn: s.turn,
     aid: s.aid,
     mon: run.nick,
     species: s.species,
-    callName: callNameOf ? callNameOf(s.aid) : ''
+    callName: callNameOf ? callNameOf(s.aid) : '',
+    bond: bondLv
   };
   const line = (scene, fallback, extra = {}) => {
     const l = msxPickLine({
@@ -172183,7 +172308,10 @@ function MsxPlay({
     }
     const text = r.out.result ? `${MSX_STAT_NAME[a.stat] || ''}のトレーニング: ${MSX_RES[r.out.result].word}` : a.kind === 'rest' ? '休んだ' : a.kind === 'play' ? '遊んだ' : a.kind === 'clinic' ? '通院した' : '休み';
     next = pushLog(next, text);
-    if (r.out.result && typeof MsxTrainAct === 'function') setActAt(r.state.turn);
+    if (r.out.result && typeof MsxTrainAct === 'function') {
+      setActAt(r.state.turn);
+      setActFrom(s);
+    }
     setRun({
       ...next,
       phase: 'result'
@@ -172281,7 +172409,12 @@ function MsxPlay({
       t: ''
     };
     const evMember = o.event && Number.isInteger(o.event.who) ? s.team[o.event.who] : null;
-    const evLine = o.event ? o.event.story ? msxPickLine({
+    const evLine = o.event ? o.event.story ? typeof msxCheerType === 'function' && msxPickLine({
+      ...ctx,
+      cheer: msxMemberName(evMember)
+    }, `cheer.${msxCheerType(evMember)}.ep${o.event.story}`, {
+      who: 'narr'
+    }) || msxPickLine({
       ...ctx,
       cheer: msxMemberName(evMember)
     }, `cheer.base.ep${o.event.story}`, {
@@ -172292,9 +172425,17 @@ function MsxPlay({
     }, `cheer.lot.${MSX_LOT[o.event.lottery] || 'friend'}`, {
       who: '*'
     }) : null;
+    const bandS = acting && actFrom ? actFrom : null;
     const hpUp = !isTrain && Number.isFinite(o.hpFrom) && Number.isFinite(s.hp) ? Math.round(s.hp - o.hpFrom) : 0;
     const stDown = !isTrain && Number.isFinite(o.stFrom) ? Math.round(o.stFrom - s.stress) : 0;
-    body = React.createElement(React.Fragment, null, React.createElement(MsxBand, _extends({
+    body = React.createElement(React.Fragment, null, bandS ? React.createElement(MsxBand, _extends({
+      s: bandS,
+      v: SUC.peek(bandS),
+      ev: SUC.evaluate(bandS)
+    }, isTrain ? {} : {
+      hpFrom: o.hpFrom,
+      stFrom: o.stFrom
+    })) : React.createElement(MsxBand, _extends({
       s: s,
       v: v,
       ev: ev
@@ -172316,7 +172457,10 @@ function MsxPlay({
       key: `act-${s.turn}`,
       run: run,
       o: o,
-      onDone: () => setActAt(null)
+      onDone: () => {
+        setActAt(null);
+        setActFrom(null);
+      }
     }) : null, acting ? null : isTrain && o.result === 'great' ? React.createElement("div", {
       className: "v-burst"
     }) : isTrain && o.result === 'ok' ? React.createElement("div", {
@@ -174939,6 +175083,7 @@ const msxR3Q = t => {
   const x = String(t || '');
   return /^[「『(]/.test(x) ? x : `「${x}」`;
 };
+let msxCurBondLv = null;
 const msxR3Line = (scene, run, extra, fallback, opt) => {
   const SE = msxR3SE();
   const s = run.s;
@@ -174950,6 +175095,9 @@ const msxR3Line = (scene, run, extra, fallback, opt) => {
         aid: s.aid,
         mon: run.nick || '',
         species: s.species,
+        ...(msxCurBondLv ? {
+          bond: msxCurBondLv
+        } : {}),
         ...(extra || {})
       }, opt || {});
       if (l && l.t) return {
@@ -209096,7 +209244,8 @@ const cardPvpCleanMessage = raw => {
       sw
     } : {};
     if (typeof raw.x === 'string') {
-      const x = cardChatClean(raw.x);
+      const x0 = cardChatClean(raw.x);
+      const x = st.sw === 'x' && typeof multiStampCleanText === 'function' ? multiStampCleanText(x0) : x0;
       return x ? {
         t: 'chat',
         from,
@@ -210771,7 +210920,7 @@ const CARD_PVP = (() => {
     },
     stamp: x => {
       if (!s || s.phase !== 'playing' || !x || !multiStampCleanFace(x.f) || !multiStampCleanWord(x.w) || Date.now() - s.chatAt < CARD_PVP_CHAT_GAP_MS) return false;
-      const text = cardChatClean((multiStampWord(x.w) || {}).text || '');
+      const text = cardChatClean(x.w === 'x' ? multiStampCleanText(x.text) : (multiStampWord(x.w) || {}).text || '');
       if (!text) return false;
       const i = CARD_PVP_STAMPS.indexOf(text);
       s = {
@@ -223749,7 +223898,24 @@ function MonsterHeroGame() {
       return '';
     }
   };
+  const rhythmPlayGuardRef = useRef(null);
+  const stopStrayGameState = next => {
+    try {
+      const play = rhythmPlayGuardRef.current;
+      if (typeof MH_MULTI_PLAY_GUARD !== 'undefined' && MH_MULTI_PLAY_GUARD.shouldBlock(gameStateNowRef.current, next, play && play.from)) {
+        if (typeof MH_SCREEN_TRAIL !== 'undefined') MH_SCREEN_TRAIL.push('blk', `${next}<${gameStateCaller()}`);
+        if (typeof rhythmTouchDiagStray === 'function' && play && play.song) void rhythmTouchDiagStray({
+          song_id: play.song.songId,
+          difficulty: play.difficulty && play.difficulty.id,
+          to: `${next}<${gameStateCaller()}`
+        });
+        return true;
+      }
+    } catch (_) {}
+    return false;
+  };
   const setGameState = next => {
+    if (stopStrayGameState(next)) return;
     gameStateNowRef.current = next;
     runBackgroundAllowedRef.current = isBackgroundRunScreen(next);
     if (typeof MH_SCREEN_TRAIL !== 'undefined') MH_SCREEN_TRAIL.push('gs', `${next}<${gameStateCaller()}`);
@@ -223903,6 +224069,7 @@ function MonsterHeroGame() {
   const [rhythmSettings, setRhythmSettings] = useState(DEFAULT_RHYTHM_SETTINGS);
   const [rhythmBestRecords, setRhythmBestRecords] = useState(() => normalizeRhythmBestRecords(null));
   const [rhythmPlay, setRhythmPlayState] = useState(null);
+  rhythmPlayGuardRef.current = rhythmPlay;
   const setRhythmPlay = next => {
     if (next && typeof next === 'object' && next.from !== 'multi' && typeof RHYTHM_MULTI !== 'undefined' && RHYTHM_MULTI.view()) {
       if (!window.confirm('みんなで対戦の部屋で待っています。部屋を出てから遊びますか?')) return;
