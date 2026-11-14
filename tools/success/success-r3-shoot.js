@@ -88,7 +88,7 @@ const makeRun = async (kind) => {
     ['X5', 'box', ['@openbox', '@mmlist', '@boxmon=b1', '#detail-tab=feat']], ['X6', 'box', ['@openbox', '@mmlist', '@boxmon=b1', '#detail-tab=apt']],
     ['A1', 'box', ['@openbox', '#mm-open-assist']], ['A2', 'box', ['@openbox', '#mm-open-assist', '#assist-mon=as1', '#assist-mon=as3']], ['A3', 'box', ['@openbox', '#mm-open-assist', '#assist-mon=as1', '#assist-remove']],
     ['F1', 'box', ['@openbox', '@mmlist', '@mmbye', '@boxmon=b2', '#mm-bye']], ['F2', 'box', ['@openbox', '@fuse', '~fuse-pick=b1', '~fuse-pick=b2']],
-    ['T1', 'box', [/新しく育成/, /次へ/, /このモンスターにする/, '^assist-note']], ['T2', 'box', [/新しく育成/, /次へ/, /このモンスターにする/, '#team-assist=as1', '#team-assist=as3', '^assist-note']],
+    ['T1', 'box', [/新しく育成/, /次へ/, /このモンスターにする/, '^assist-head']], ['T2', 'box', [/新しく育成/, /次へ/, /このモンスターにする/, '#team-assist=as1', '#team-assist=as3', '^assist-head']],
     ['F3', 'box', ['@openbox', '@mmlist', '@mmbye', '@boxmon=b2', '#mm-bye', '#mm-bye-yes']], ['K9', 'box', ['@openbox']],
     ['F4', 'box', ['@openbox', '@fuse', '~fuse-pick=b1', '~fuse-pick=b2', '~fuse-go', 'w1100', '~fuse-go']], ['F5', 'box', ['@openbox', '@fuse', '~fuse-pick=b1', '~fuse-pick=b2', '~fuse-go', 'w1100', '~fuse-go', '=fuse-nameinput:ぷにお', '~fuse-namego']],
     ['F6', 'box', ['@openbox', '@fuse', '~fuse-pick=b1', '~fuse-pick=b2', '~fuse-go', 'w1100', '~fuse-go', '=fuse-nameinput:ぷにお', '~fuse-namego', '!sheet-close', '#mm-open-assist']],
@@ -141,7 +141,7 @@ const makeRun = async (kind) => {
             if (st === 'cont') { const b = [...document.querySelectorAll('.msx button')].find((x) => /続きから|結果を見る/.test(x.innerText || '')); if (b) b.click(); return !!b; }
             if (/^w\d+$/.test(st)) return true; // 'w1000' は待つだけ
             if (st[0] === '=') { const [k, v] = st.slice(1).split(':'); const e = document.querySelector(`[data-monsuc-${k}]`); if (!e) return false; const set = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set; set.call(e, v); e.dispatchEvent(new Event('input', { bubbles: true })); return true; } // '=k:文字' は [data-monsuc-k] の入力に文字を入れる
-            if (st[0] === '^') { const e = document.querySelector(`[data-msx-${st.slice(1)}]`); if (e) e.scrollIntoView({ block: 'center' }); return !!e; } // '^x' は [data-msx-x] が見える所までスクロール
+            if (st[0] === '^') { const e = document.querySelector(`[data-msx-${st.slice(1)}]`); if (e) e.scrollIntoView({ block: 'start' }); return !!e; } // '^x' は [data-msx-x] が見出しの頭に来るところまでスクロール
             const [k, val] = st.slice(1).split('=');
             const pre = st[0] === '%' ? 'data-msc-' : st[0] === '#' ? 'data-msx-' : st[0] === '~' ? 'data-monsuc-' : st[0] === '!' ? 'data-mhl-' : 'data-msx-r3-'; // '#x' は [data-msx-x](詳細の窓 MsxMonDetail のタブなど)
             const b = document.querySelector(`[${pre}${k}${val ? `="${val}"` : ''}]`);

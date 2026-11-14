@@ -438,7 +438,7 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf }) {
         )) : <div className="msx-note" style={{ marginTop: 4 }}>マスモンボックスはまだ空です。上の枠を押すと、入れるベースモンを選べます。育て終えたモンスターは、ここに入ります</div>}
         {/* アシスト用に残したモンスター(合体の親・お別れしたモンスター)。育成には使えない。ここでは編成にだけ入れられる(2026-11-14 社長) */}
         {stock.length ? (<>
-          <div className="sub" style={{ color: '#a5b4fc', fontWeight: 900, marginTop: 8 }}>アシスト用に残したモンスターから選ぶ({stock.length}/100)</div>
+          <div className="sub" style={{ color: '#a5b4fc', fontWeight: 900, marginTop: 8 }} data-msx-assist-head>アシスト用に残したモンスターから選ぶ({stock.length}/100)</div>
           <div className="msx-note" style={{ marginTop: 2 }} data-msx-assist-note>育成には使えません。アシスト効果と得意な能力だけ効きます</div>
           {typeof MsxMmGrid === 'function' ? <MsxMmGrid mons={stock} mark={() => 'アシスト用'} isOn={(m) => teamAssist.includes(m.id)} onPick={(m) => toggleAssist(m.id)} attrs={(m) => ({ 'data-msx-team-assist': m.id })}/> : null}
         </>) : null}

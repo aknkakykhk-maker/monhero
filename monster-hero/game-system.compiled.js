@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1701c1ac9fdfac65
+// source-sha256: 6b81ada2aaa27169
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -156742,6 +156742,7 @@ function MonsucFuseSheet({
   onClose,
   suc = null,
   keepNote = '',
+  keptOf = null,
   onName = null
 }) {
   const SUC = suc || monsucFuseCore();
@@ -156838,7 +156839,10 @@ function MonsucFuseSheet({
       wordBreak: 'keep-all',
       overflowWrap: 'anywhere'
     }
-  }, done.lost.join('と'), "は、アシスト用に残ります。", '\u200b', "思い出の記録(名前・ランク・代)も残ります")), typeof onName === 'function' ? React.createElement("div", {
+  }, (() => {
+    const k = typeof keptOf === 'function' ? keptOf() : null;
+    return k === 0 ? `${done.lost.join('と')}は、置き場がいっぱいなので、アシスト用には残りませんでした。思い出に名前・ランク・代が残ります` : k === 1 ? `${done.lost.join('と')}のうち1体は、アシスト用の置き場に残ります。思い出の記録(名前・ランク・代)も残ります` : `${done.lost.join('と')}は、アシスト用の置き場に残ります。思い出の記録(名前・ランク・代)も残ります`;
+  })())), typeof onName === 'function' ? React.createElement("div", {
     className: "mt-2 rounded-xl border border-amber-300/60 bg-amber-950/40 p-3",
     "data-monsuc-fuse-name": true
   }, React.createElement("p", {
@@ -156941,23 +156945,17 @@ function MonsucFuseSheet({
     className: "mt-2 rounded-xl border-2 border-rose-400 bg-rose-950/70 p-2",
     "data-monsuc-fuse-lose": true
   }, React.createElement("p", {
-    className: "text-[12px] font-black text-rose-100"
-  }, monsucFuseNick(main), "と", monsucFuseNick(mat), "は、マスモンボックスからいなくなります。元に戻せません"), keepNote ? React.createElement("p", {
-    className: "mt-0.5 text-[10.5px] font-bold text-indigo-200",
-    style: {
-      wordBreak: 'keep-all',
-      overflowWrap: 'anywhere'
-    },
-    "data-monsuc-fuse-keep": true
-  }, keepNote) : React.createElement("p", {
-    className: "mt-0.5 text-[10.5px] font-bold text-rose-200"
-  }, "思い出に名前・ランク・代が残ります"), keepNote ? React.createElement("p", {
-    className: "mt-0.5 text-[10.5px] font-bold text-rose-200",
+    className: "text-[12px] font-black text-rose-100",
     style: {
       wordBreak: 'keep-all',
       overflowWrap: 'anywhere'
     }
-  }, "思い出の記録(名前・ランク・代)もそのまま残ります") : null), err && React.createElement("p", {
+  }, monsucFuseNick(main), "と", monsucFuseNick(mat), "は、マスモンボックスからいなくなります。", keepNote ? keepNote : '元に戻せません'), !keepNote ? React.createElement("p", {
+    className: "mt-0.5 text-[10.5px] font-bold text-rose-200"
+  }, "思い出に名前・ランク・代が残ります") : keepNote.includes('思い出') ? null : React.createElement("p", {
+    className: "mt-0.5 text-[10.5px] font-bold text-rose-200",
+    "data-monsuc-fuse-keep": true
+  }, "思い出の記録(名前・ランク・代)もそのまま残ります")), err && React.createElement("p", {
     className: "mt-1 text-[11px] font-bold text-rose-200",
     "data-monsuc-fuse-err": true
   }, err), React.createElement("button", {
@@ -167979,7 +167977,8 @@ function MsxStart({
         color: '#a5b4fc',
         fontWeight: 900,
         marginTop: 8
-      }
+      },
+      "data-msx-assist-head": true
     }, "アシスト用に残したモンスターから選ぶ(", stock.length, "/100)"), React.createElement("div", {
       className: "msx-note",
       style: {
@@ -176409,6 +176408,7 @@ function MsxR3Box({
   const [pick, setPick] = useState([]);
   const [byeAsk, setByeAsk] = useState(null);
   const [assist, setAssist] = useState(null);
+  const fuseKept = React.useRef(null);
   const [apick, setApick] = useState([]);
   const [aAsk, setAAsk] = useState(false);
   const [menu, setMenu] = useState(null);
@@ -176545,7 +176545,14 @@ function MsxR3Box({
         if (r && r.ok && r.box) setBox(r.box);
         return r;
       },
-      keepNote: assist && assist.mons.length >= MSX_ASSIST_CAP ? `アシスト用がいっぱい(${MSX_ASSIST_CAP}/${MSX_ASSIST_CAP})なので、\u200b親の2体は残りません(置き場から外すと残せます)` : `親の2体は、アシスト用に残ります(${assist ? Math.min(MSX_ASSIST_CAP, assist.mons.length + 2) : 2}/${MSX_ASSIST_CAP})。\u200b育成には使えず、\u200b編成にだけ入れられます`,
+      keepNote: (() => {
+        const have = assist ? assist.mons.length : 0;
+        const room = Math.max(0, MSX_ASSIST_CAP - have);
+        if (room >= 2) return `アシスト用の置き場に残ります(${have + 2}/${MSX_ASSIST_CAP})。\u200b育成には使えず、\u200b編成にだけ入れられます`;
+        if (room <= 0) return `置き場がいっぱいなので、\u200bアシスト用には残りません(思い出に名前・ランク・代だけ残ります)`;
+        return `片方だけ、\u200bアシスト用の置き場に残ります。\u200bもう一方は置き場がいっぱいなので残りません`;
+      })(),
+      keptOf: () => fuseKept.current,
       onSave: async n => {
         let old = null;
         try {
@@ -176558,6 +176565,7 @@ function MsxR3Box({
           try {
             const left = old.mons.filter(m => !n.mons.some(x => x.id === m.id));
             const k = await msxAssistKeep(left, 'fuse');
+            fuseKept.current = k ? k.kept : 0;
             if (k && k.assist) setAssist(k.assist);
           } catch (e) {}
         }
@@ -176637,7 +176645,7 @@ function MsxR3Box({
     }, React.createElement("button", {
       type: "button",
       onClick: onClose
-    }, "← もどる"));
+    }, "← 戻る"));
   } else if (page === 'assist') {
     title = 'アシスト用の置き場';
     const stock = assist ? assist.mons : [];
@@ -176812,10 +176820,17 @@ function MsxR3Box({
         fontWeight: 900,
         lineHeight: 1.6
       }
-    }, byeAsk.ids.length === 1 && box.mons.find(x => x.id === byeAsk.ids[0]) ? msxMmName(box.mons.find(x => x.id === byeAsk.ids[0])) : `${byeAsk.ids.length}体`, "とお別れしますか? お別れしたマスモンは元に戻せません(思い出に名前とランクだけ残ります)"), React.createElement("div", {
+    }, byeAsk.ids.length === 1 && box.mons.find(x => x.id === byeAsk.ids[0]) ? msxMmName(box.mons.find(x => x.id === byeAsk.ids[0])) : `${byeAsk.ids.length}体`, "とお別れしますか?"), React.createElement("div", {
       className: "mm-keep msx-kp",
       "data-msx-mm-keepnote": true
-    }, assist && assist.mons.length + byeAsk.ids.length > MSX_ASSIST_CAP ? `アシスト用がいっぱい(${assist.mons.length}/${MSX_ASSIST_CAP})なので、\u200b入りきらない分は残りません` : `アシスト用に残ります(${assist ? Math.min(MSX_ASSIST_CAP, assist.mons.length + byeAsk.ids.length) : byeAsk.ids.length}/${MSX_ASSIST_CAP})。\u200b育成には使えず、\u200b編成にだけ入れられます`), React.createElement("div", {
+    }, (() => {
+      const have = assist ? assist.mons.length : 0;
+      const room = Math.max(0, MSX_ASSIST_CAP - have);
+      const n = byeAsk.ids.length;
+      if (room >= n) return `マスモンボックスからはいなくなります。\u200bアシスト用の置き場に残ります(${have + n}/${MSX_ASSIST_CAP})。\u200b育成には使えず、\u200b編成にだけ入れられます。\u200b思い出にも名前とランクが残ります`;
+      if (room <= 0) return `マスモンボックスからはいなくなります。\u200b置き場がいっぱいなので、\u200bアシスト用には残りません(思い出に名前とランクだけ残ります)。\u200b元に戻せません`;
+      return `マスモンボックスからはいなくなります。\u200b${n}体のうち${room}体は、\u200bアシスト用の置き場に残ります。\u200b置き場がいっぱいなので、\u200bのこりは残りません(思い出に名前とランクだけ残ります)`;
+    })()), React.createElement("div", {
       className: "mm-byelist"
     }, byeAsk.ids.map(id => {
       const m = box.mons.find(x => x.id === id);
@@ -176939,7 +176954,7 @@ function MsxR3Box({
         setPage('gate');
         setMsg('');
       }
-    }, "← もどる"));
+    }, "← 戻る"));
   } else if (page === 'edit' && cur && edit) {
     title = '名前と染色';
     body = React.createElement("div", {
@@ -177041,10 +177056,10 @@ function MsxR3Box({
     }, React.createElement("button", {
       type: "button",
       onClick: () => setPage('list')
-    }, "← もどる"));
+    }, "← 戻る"));
   }
   return React.createElement(React.Fragment, null, React.createElement("style", null, MSX_R3_CSS), React.createElement("style", null, MSX_MM_CSS), React.createElement(MsxHd, {
-    back: "もどる",
+    back: "戻る",
     onBack: page === 'gate' ? onClose : page === 'list' ? () => setPage('gate') : page === 'edit' ? () => {
       setEdit(null);
       setPage('detail');
