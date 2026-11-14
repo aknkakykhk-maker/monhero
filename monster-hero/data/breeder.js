@@ -19,7 +19,7 @@ const POLTZ_FACE_ICON = "images/breeder-icons/poltz.PNG?v=a17ca7fa2869";
 // きゅうこ(2026-10-22)。顔アイコン(案B)をそのまま使う
 const KYUKO_FACE_ICON = "images/assistant/face/kyuko_happy.PNG?v=6ad5eda132bf";
 // ソラシド(2026-10-27)。顔アイコンをそのまま使う(きゅうこと同じ形。字のアイコンのままだと、マーケットで「?」の箱になった)
-const SORASHIDO_FACE_ICON = "images/assistant/face/sorashido_happy.PNG?v=9f79e0b9d616";
+const SORASHIDO_FACE_ICON = "images/assistant/face/sorashido_happy.PNG?v=d99ade5e6de8";
 // えるびん(2026-11-05)。顔アイコンをそのまま使う(きゅうこ・ソラシドと同じ形)
 const ERUBIN_FACE_ICON = "images/assistant/face/erubin_happy.PNG?v=cff970be9e3f";
 // お話の背景絵(2026-11-05 社長「背景絵がない」「今後のイベントや今のパンドラのイベントにも使いたい」)。どのお話からも使える共通の背景。台本の行の bg:'<名前>' で切り替える(次に bg を書いた行まで続き、bg:'none' で消す。一覧は docs/progress/story-bg/README.md)。

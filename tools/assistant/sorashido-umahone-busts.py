@@ -19,8 +19,8 @@ EXPR = ['normal', 'happy', 'wink', 'surprise', 'troubled', 'angry', 'crying', 'e
 TOP, EYE, CHIN = 12, 89, 131
 F = CHIN - EYE
 OUT_W, OUT_H, EYE_Y, F_OUT = 384, 512, 0.30, 61.0
-FACE_SIDE_F = 4.6   # 顔アイコンの辺 = 顔の長さ × これ(出力側の画素)
-FACE_DOWN = 0.10    # 顔のまんなかを丸のまんなかより 辺の10% 下へ(いままでのソラシドと同じ)
+FACE_SIDE_F = 3.4   # 顔アイコンの辺 = 顔の長さ × これ(出力側の画素)
+FACE_DOWN = 0.04    # 顔のまんなかを丸のまんなかより 辺のこの割合だけ下へ
 
 
 def bbox(a):
@@ -39,7 +39,10 @@ def keep_main(im):
 
 
 def head_cx(a, top, rows):
-    sub = a[top:top + rows, :, 3] > 40
+    """頭の横の真ん中。上げた腕・こぶし(肌色)に引かれないよう、髪(暗い色)の重心を使う。"""
+    sub = (a[top:top + rows, :, 3] > 40) & (a[top:top + rows, :, :3].astype(int).sum(axis=2) < 3 * 90)
+    if sub.sum() < 50:
+        sub = a[top:top + rows, :, 3] > 40
     return float(np.nonzero(sub)[1].mean())
 
 
@@ -55,11 +58,15 @@ def place(im, top_src, eye_src, f_src, cx_src):
     return canvas, (s, ox, oy)
 
 
-def face_icon(bust, eye_out, cx_out, f_out):
-    side = int(round(f_out * FACE_SIDE_F))
+SIDE_BY = {'happy': 3.5}  # 表情ごとの辺の上書き
+DOWN_BY = {'happy': 0.065}  # 表情ごとの上書き(やったー は肌が上へ寄るので、少し下げる)
+
+
+def face_icon(bust, eye_out, cx_out, f_out, down=None, sf=None):
+    side = int(round(f_out * (FACE_SIDE_F if sf is None else sf)))
     cy = eye_out + 0.35 * f_out  # 目と鼻のあいだ
     x0 = int(round(cx_out - side / 2))
-    y0 = int(round(cy - side * (0.5 + FACE_DOWN)))
+    y0 = int(round(cy - side * (0.5 + (FACE_DOWN if down is None else down))))
     canvas = Image.new('RGBA', (side, side), (0, 0, 0, 0))
     canvas.paste(bust.crop((x0, y0, x0 + side, y0 + side)), (0, 0))
     return canvas.resize((256, 256), Image.LANCZOS)
@@ -82,10 +89,10 @@ def main():
         # 髪のてっぺんからの距離は normal と同じとみなす(頭の大きさは表情でほぼ変わらない)
         top_src = b[1]
         eye_src = top_src + (EYE - nb[1])
-        cx = head_cx(a, top_src, int(F * 3))
+        cx = head_cx(a, top_src, int(F * 1.8))
         bust, (s, ox, oy) = place(im, top_src, eye_src, F, cx)
         tot += save(bust, os.path.join(IMG, 'sorashido_%s.PNG' % e))
-        tot += save(face_icon(bust, OUT_H * EYE_Y, OUT_W / 2, F_OUT), os.path.join(IMG, 'face/sorashido_%s.PNG' % e))
+        tot += save(face_icon(bust, OUT_H * EYE_Y, OUT_W / 2, F_OUT, DOWN_BY.get(e), SIDE_BY.get(e)), os.path.join(IMG, 'face/sorashido_%s.PNG' % e))
     # 寝顔
     sl = keep_main(Image.open(SLEEP).convert('RGBA'))
     a = np.array(sl)
