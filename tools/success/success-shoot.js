@@ -68,7 +68,7 @@ const makeRun = async (kind) => {
     ['M1', 'mid', ['cont']], ['M2', 'yosu', ['cont']], ['M3', 'mid', ['cont', 'bag']], ['T1', 'mid', ['cont', 'train']],
     ['K1', 'mid', ['cont', 'train', 'go']], ['K3', 'mid', ['cont', 'train', 'go', 'next']], ['K5', 'mid', ['cont', 'train', 'go', 'next', 'praise']],
     ['I1', 'mid', ['cont', 'issa']], ['P1', 'mid', ['cont', 'stats']],
-    ['E1', 'mid', ['cont', 'event']],
+    ['E1', 'mid', ['cont', 'event']], ['E2', 'mid', ['cont', 'event', 'pick']], ['E3', 'mid', ['cont', 'eventDaily', 'pick']], // E2・E3: 選んだあとの結果の段(札が出る。E3 はふだんの出来事)
   ];
   try {
     const page0 = await browser.newPage({ viewport: { width: 390, height: 844 } });
@@ -103,12 +103,17 @@ const makeRun = async (kind) => {
             if (st === 'train') return click(/^💪 トレーニング/);
             if (st === 'go') return click(/をする$/); // 2026-11-14 トレーニングのボタンは「丸太割りをする」のようにトレーニングの名前になった
             if (st === 'praise') return click(/褒める/);
-            if (st === 'event') {
+            if (st === 'pick') { const b = document.querySelector('.msx .v-opt:not([disabled])'); if (b) b.click(); return !!b; }
+            if (st === 'event' || st === 'eventDaily') {
               // ランダムイベントが出るターンを芯で探して、その場面を開く(撮るときだけ id を変えて探す)
               const SUC = msxSuc.SUC; const raw = JSON.parse(localStorage.getItem(MSX_KEYS.run));
               if (!SUC.events) return false;
               let hit = false;
-              for (let i = 0; i < 400 && !hit; i++) { const s0 = { ...raw.s, id: `shot-ev-${i}`, acted: false }; const o = SUC.events.open(s0, 'start'); if (o.out && o.out.ev && o.out.ev.choices && o.out.ev.choices.length) { raw.s = o.state; raw.phase = 'event'; raw.out = { ev: o.out.ev, slot: 'start' }; hit = true; } }
+              for (let i = 0; i < 400 && !hit && st === 'event'; i++) { const s0 = { ...raw.s, id: `shot-ev-${i}`, acted: false }; const o = SUC.events.open(s0, 'start'); if (o.out && o.out.ev && o.out.ev.choices && o.out.ev.choices.length && st === 'event') { raw.s = o.state; raw.phase = 'event'; raw.out = { ev: o.out.ev, slot: 'start' }; hit = true; } }
+              if (st === 'eventDaily') { // 社長が見た「広場で町の子どもたち」を出す(選んだあとに 人気・体力 の札)
+                const s1 = SUC.events.open({ ...raw.s, acted: false }, 'start').state; s1.ev.pend = { id: 'ev.daily.kids', slot: 'start', turn: s1.turn };
+                const o = SUC.events.open(s1, 'start'); hit = !!(o.out && o.out.ev); if (hit) { raw.s = o.state; raw.phase = 'event'; raw.out = { ev: o.out.ev, slot: 'start' }; }
+              }
               if (!hit) return false;
               localStorage.setItem(MSX_KEYS.run, JSON.stringify(raw));
               window.__msxRoot.unmount(); const el = document.getElementById('msx-shot'); window.__msxRoot = ReactDOM.createRoot(el);

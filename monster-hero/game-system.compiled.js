@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 61125cf0a13b9bb1
+// source-sha256: e9326c4250747fbb
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -156693,6 +156693,74 @@ const msxDexEnsureCss = () => {
   el.textContent = MSX_DEX_CSS;
   document.head.appendChild(el);
 };
+const msxEvSigned = n => n > 0 ? `+${n}` : `−${Math.abs(n)}`;
+const msxEvDeltaChips = d => {
+  if (!d || typeof d !== 'object') return [];
+  const out = [];
+  const num = (k, name, up = true, unit = '') => {
+    const n = Math.round(Number(d[k]));
+    if (Number.isFinite(n) && n) out.push({
+      k,
+      name,
+      val: `${msxEvSigned(n)}${unit}`,
+      good: up ? n > 0 : n < 0
+    });
+  };
+  num('hp', '体力');
+  num('stress', 'ストレス', false);
+  num('pop', '人気');
+  num('loyal', '忠誠');
+  num('bond', '親密度');
+  num('fame', '賞金', true, 'G');
+  num('pts', '能力ポイント');
+  num('mastery', '技の熟練');
+  const BUFFS = typeof msxSuc !== 'undefined' && msxSuc && msxSuc.SUC && msxSuc.SUC.events ? msxSuc.SUC.events.BUFFS || {} : {};
+  (Array.isArray(d.buffs) ? d.buffs : []).forEach(b => {
+    const x = BUFFS[b];
+    out.push({
+      k: `buff-${b}`,
+      name: x ? `${x.icon} ${x.name}` : 'いい調子になった',
+      good: x ? x.good !== false : true
+    });
+  });
+  const FLAG = typeof MSX_FX_FLAG !== 'undefined' ? MSX_FX_FLAG : {};
+  ['guts', 'goalPlus', 'boost', 'fav', 'tagSeen', 'injRisk'].forEach(k => {
+    if (d[k]) out.push({
+      k,
+      name: FLAG[k === 'boost' ? 'baseBoost' : k] || 'いいことがある',
+      good: k !== 'injRisk'
+    });
+  });
+  if (d.goal) out.push({
+    k: 'goal',
+    name: typeof MSX_FX_GOAL !== 'undefined' && MSX_FX_GOAL[d.goal] || '期の目標が決まった',
+    good: true
+  });
+  return out;
+};
+function MsxEvResult({
+  delta,
+  hasStats
+}) {
+  const chips = msxEvDeltaChips(delta);
+  if (!chips.length && hasStats) return null;
+  return React.createElement("div", {
+    className: "v-log",
+    "data-msx-ev-res": chips.length
+  }, React.createElement("span", {
+    className: "hd2"
+  }, "📋 結果"), React.createElement("br", null), chips.length ? chips.map((c, i) => React.createElement("span", {
+    key: c.k,
+    "data-msx-ev-chip": c.k
+  }, i ? '・' : '', c.name, c.val ? React.createElement(React.Fragment, null, " ", React.createElement("b", {
+    className: c.good ? 'gu' : '',
+    style: c.good ? undefined : {
+      color: '#dc2626'
+    }
+  }, c.val)) : null)) : React.createElement("span", {
+    "data-msx-ev-none": true
+  }, "変わったことはなかった"));
+}
 const MSX_BETA_KEY = 'mh_monsuc_beta_v1';
 const MSX_BETA_AIDS = Object.freeze(['mua']);
 const msxBetaAidOk = aid => MSX_BETA_AIDS.includes(aid);
@@ -157298,6 +157366,9 @@ function MsxTrainAct({
   }), mv && k === 'life' ? React.createElement("span", {
     className: "road",
     "aria-hidden": "true"
+  }) : null, typeof MsxActCrew === 'function' ? React.createElement(MsxActCrew, {
+    run: run,
+    o: o
   }) : null, front ? null : prop, mv && k === 'eva' ? [2, 1].map(g => React.createElement("div", {
     key: g,
     className: `me gh g${g}`,
@@ -157628,6 +157699,121 @@ const msxActEnsureCss = () => {
   el.textContent = MSX_ACT_CSS;
   document.head.appendChild(el);
 };
+const MSX_CREW_SPOT = Object.freeze([{
+  left: '10%',
+  bottom: '14%'
+}, {
+  left: '90%',
+  bottom: '14%'
+}, {
+  left: '10%',
+  bottom: '31%'
+}, {
+  left: '90%',
+  bottom: '31%'
+}, {
+  left: '10%',
+  bottom: '48%'
+}, {
+  left: '90%',
+  bottom: '48%'
+}]);
+const MSX_CREW_SPOT_AID = Object.freeze([{
+  left: '10%',
+  bottom: '14%'
+}, {
+  left: '10%',
+  bottom: '31%'
+}, {
+  left: '10%',
+  bottom: '48%'
+}, {
+  left: '90%',
+  bottom: '62%'
+}, {
+  left: '10%',
+  bottom: '65%'
+}, {
+  left: '72%',
+  bottom: '70%'
+}]);
+const MSX_CREW_CSS = `
+.msx .msx-act .crew{position:absolute;inset:0;z-index:4;pointer-events:none}
+.msx .msx-act .crew .cm{position:absolute;transform:translateX(-50%);height:15%;aspect-ratio:1/1;display:flex;align-items:flex-end;justify-content:center;animation:msxCrewIn .35s cubic-bezier(.2,1.4,.4,1) both;animation-delay:calc(.08s + var(--i) * .07s)}
+.msx .msx-act .crew .cm img{max-height:100%;max-width:100%;object-fit:contain;filter:drop-shadow(0 3px 0 #0007);animation:msxCrewHop .5s ease-in-out infinite alternate;animation-delay:calc(var(--i) * .11s)}
+.msx .msx-act .crew .cm.tag{height:19%}
+.msx .msx-act .crew .cm.tag img{filter:drop-shadow(0 0 6px #fde047) drop-shadow(0 0 14px #f59e0b) drop-shadow(0 3px 0 #0007)}
+.msx .msx-act .crew .cm .tg{position:absolute;top:-16px;left:50%;transform:translateX(-50%);white-space:nowrap;font-size:11px;font-weight:900;color:#7c2d12;background:linear-gradient(#fef08a,#f59e0b);border:1.5px solid #fff;border-radius:99px;padding:0 6px;box-shadow:0 2px 0 #0006}
+.msx .msx-act .crew .cm .ch{position:absolute;top:-6px;right:-8px;font-size:16px;animation:msxCrewCheer .6s ease-in-out infinite alternate}
+.msx .msx-act .crew .aid{position:absolute;right:-8%;bottom:10%;height:44%;width:38%;display:flex;align-items:flex-end;justify-content:flex-end;animation:msxCrewSide .4s cubic-bezier(.2,1.3,.4,1) .15s both}
+.msx .msx-act .crew .aid img{height:100%;max-width:100%;object-fit:contain;object-position:right bottom;filter:drop-shadow(0 4px 0 #0006)}
+.msx .msx-act .crew .aid.tag img{filter:drop-shadow(0 0 8px #fde047) drop-shadow(0 4px 0 #0006)}
+.msx .msx-act .crew .aid .say{position:absolute;right:46%;top:-4%;white-space:nowrap;font-size:13px;font-weight:900;color:#be185d;background:#fff;border:2px solid #f9a8d4;border-radius:12px;padding:2px 8px;box-shadow:0 2px 0 #0005;animation:msxCrewPop .3s cubic-bezier(.2,1.4,.4,1) .45s both}
+.msx .msx-act .crew .aid.tag .say{color:#7c2d12;background:linear-gradient(#fef9c3,#fde68a);border-color:#f59e0b}
+@keyframes msxCrewIn{from{opacity:0;transform:translateX(-50%) translateY(14px) scale(.6)}to{opacity:1;transform:translateX(-50%)}}
+@keyframes msxCrewHop{from{transform:translateY(0)}to{transform:translateY(-12%)}}
+@keyframes msxCrewCheer{from{transform:rotate(-14deg) scale(.9)}to{transform:rotate(14deg) scale(1.1)}}
+@keyframes msxCrewSide{from{opacity:0;transform:translateX(30%)}to{opacity:1;transform:none}}
+@keyframes msxCrewPop{from{opacity:0;transform:scale(.6)}to{opacity:1;transform:none}}
+`;
+let msxCrewCssDone = false;
+const msxCrewEnsureCss = () => {
+  if (msxCrewCssDone || typeof document === 'undefined') return;
+  msxCrewCssDone = true;
+  const el = document.createElement('style');
+  el.setAttribute('data-msx-crew-css', '1');
+  el.textContent = MSX_CREW_CSS;
+  document.head.appendChild(el);
+};
+function MsxActCrew({
+  run,
+  o
+}) {
+  msxCrewEnsureCss();
+  const s = run && run.s;
+  const card = o && o.card;
+  if (!s || !card) return null;
+  const tags = Array.isArray(card.tags) ? card.tags : [];
+  const team = Array.isArray(s.team) ? s.team : [];
+  const ms = (Array.isArray(card.members) ? card.members : []).filter(i => Number.isInteger(i) && team[i] && team[i].species).slice(0, MSX_CREW_SPOT.length);
+  ms.sort((a, b) => Number(tags.includes(b)) - Number(tags.includes(a)));
+  const aid = Boolean(card.aid || tags.includes('aid')) && s.aid;
+  const aidImg = aid && typeof msxBody === 'function' ? msxBody(s.aid, 'happy') : '';
+  const SPOT = aidImg ? MSX_CREW_SPOT_AID : MSX_CREW_SPOT;
+  if (!ms.length && !aidImg) return null;
+  return React.createElement("div", {
+    className: "crew",
+    "aria-hidden": "true",
+    "data-msx-crew": ms.length,
+    "data-msx-crew-tag": ms.filter(i => tags.includes(i)).length,
+    "data-msx-crew-aid": aidImg ? 1 : 0
+  }, ms.map((i, n) => {
+    const tag = tags.includes(i);
+    const img = typeof msxMonImg === 'function' ? msxMonImg(team[i].species) : '';
+    return img ? React.createElement("div", {
+      key: i,
+      className: `cm${tag ? ' tag' : ''}`,
+      style: {
+        ...SPOT[n],
+        '--i': n
+      }
+    }, React.createElement("img", {
+      src: img,
+      alt: ""
+    }), tag ? React.createElement("b", {
+      className: "tg"
+    }, "🤝 タッグ") : React.createElement("i", {
+      className: "ch"
+    }, "📣")) : null;
+  }), aidImg ? React.createElement("div", {
+    className: `aid${tags.includes('aid') ? ' tag' : ''}`
+  }, React.createElement("img", {
+    src: aidImg,
+    alt: ""
+  }), React.createElement("b", {
+    className: "say"
+  }, tags.includes('aid') ? '🤝 いっしょに!' : 'がんばれ〜!')) : null);
+}
 const MSX_KI_CHAPTER = Object.freeze(['第一章', '第二章', '第三章', '第四章', '最終章']);
 const MSX_KI_MS = Object.freeze([2600, 2600]);
 const msxKiCalm = () => typeof msxFxCalm === 'function' && msxFxCalm();
@@ -167828,6 +168014,7 @@ function MsxEvent({
           scenes: [r.out.next, r.out.scene].filter(Boolean),
           before: s.stats,
           res: r.out.res,
+          delta: r.out.delta || null,
           apt: r.out.delta && r.out.delta.apt ? r.out.delta.apt : null
         }
       }
@@ -167915,6 +168102,9 @@ function MsxEvent({
   }, who(l)) : null, who(l) ? `「${l.t}」` : l.t)) : React.createElement("div", null, picked ? 'いい時間になった。' : 'なにか起きそうだ…'))), picked ? React.createElement(React.Fragment, null, Object.keys(ups).length ? React.createElement(MsxStRow, {
     stats: s.stats,
     ups: ups
+  }) : null, !isStory && typeof MsxEvResult === 'function' ? React.createElement(MsxEvResult, {
+    delta: picked.delta,
+    hasStats: Object.keys(ups).length > 0
   }) : null, picked.apt ? React.createElement("div", {
     className: "v-log",
     "data-msx-ev-apt": true

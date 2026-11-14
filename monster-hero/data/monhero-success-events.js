@@ -370,7 +370,7 @@
         else if (op === 'goal') { const pk = periodOf(s.turn).key; ev.goal[pk] = a; delta.goal = a; }
         else if (op === 'flag') {
           if (a === 'baseBoost' && Number.isInteger(ctx.cheer)) { ev.boost[ctx.cheer] = EFFECT.baseBoost; delta.boost = EFFECT.baseBoost; }
-          else if (a === 'tagSeen' && Number.isInteger(ctx.cheer)) { if (!ev.tag.includes(ctx.cheer)) ev.tag.push(ctx.cheer); }
+          else if (a === 'tagSeen' && Number.isInteger(ctx.cheer)) { if (!ev.tag.includes(ctx.cheer)) ev.tag.push(ctx.cheer); delta.tagSeen = true; }
           else if (a === 'fav') { ev.fav = favCand(s); delta.fav = ev.fav; }
           else if (a === 'goalPlus') { ev.flags.goalPlus = true; delta.goalPlus = true; }
           else if (a === 'injRisk') { ev.flags.injRisk = s.turn; delta.injRisk = true; }

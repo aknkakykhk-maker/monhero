@@ -521,6 +521,10 @@
       "role": "部品: モンヒロサクセスの見た出来事(新しいキー mh_monsuc_event_seen_v1 = { v:1, ch, ev }・msxSeenMark)・選択肢の詳細ボタンの中身 MsxChoiceInfo(芯の出来事の表から効果の文を作る・まだは「？？？」)・イベント図鑑 MsxDex(全体と種類ごとの ◯/◯・見たものは読み直せる)。公開の印 monheroSuccess の後ろ"
     },
     {
+      "file": "56-monsuc-evres.jsx",
+      "role": "部品: モンヒロサクセスの育成イベントの選んだあとの結果の札(芯の out.delta から体力・人気・忠誠などの増減を並べる msxEvDeltaChips・MsxEvResult)。何も保存しない・公開の印 monheroSuccess の後ろ"
+    },
+    {
       "file": "56-monsuc-beta.jsx",
       "role": "部品: モンヒロサクセスのβ版(選べる助手はみゅあだけ msxBetaAidOk・はじめて開いたとき/はじめての育成を終えたときのβ版の話・最初の1回だけのみゅあの説明の重ね窓 MsxBetaTalk・タイトルの「β」MsxBetaMark)。台本は script/beta-mua.js。新しいキー mh_monsuc_beta_v1 = { v:1, seen }(見た印だけ・足すだけ)。公開の印 monheroSuccess の後ろ"
     },
@@ -531,6 +535,10 @@
     {
       "file": "56-monsuc-actfx.jsx",
       "role": "部品: モンヒロサクセスの訓練・修行の演出。訓練の結果の前に訓練している場面 MsxTrainAct(約1.3秒・押すと飛ばせる)と、修行の結果の前の段 MsxShugyoStages(助手の一言→STAGE 1→STAGE 2)。何も保存しない・動きを減らす設定では出さない。公開の印 monheroSuccess の後ろ"
+    },
+    {
+      "file": "56-monsuc-actcrew.jsx",
+      "role": "部品: モンヒロサクセスのトレーニングの演出(MsxTrainAct)に重ねる、いっしょにいた編成の子と助手の絵 MsxActCrew(友情タッグの子は大きく金色に・助手はひとこと)。何も保存しない・公開の印 monheroSuccess の後ろ"
     },
     {
       "file": "56-monsuc-kifx.jsx",
