@@ -19,7 +19,7 @@
   const ASSTS = Object.freeze(['mua', 'atsu', 'kiki', 'momosuke', 'dra', 'kyuko', 'sorashido', 'erubin']);
   const SLOTS = Object.freeze(['name', 'mon', 'cheer', 'cheer2', 'stat', 'train', 'tech', 'cup', 'food', 'rival', 'owner', 'cry']);
   // 差しこみが渡されなかったときの言葉(「{」「}」を画面に出さない・モンスターを「子」と呼ばない)
-  const FALLBACK = Object.freeze({ name: 'きみ', mon: 'モンスター', cheer: '編成の仲間', cheer2: '編成の仲間', stat: '能力', train: '訓練',
+  const FALLBACK = Object.freeze({ name: 'きみ', mon: 'モンスター', cheer: '編成の仲間', cheer2: '編成の仲間', stat: '能力', train: 'トレーニング',
     tech: '技', cup: '大会', food: '苦手なもの', rival: 'ライバル', owner: 'ライバルの育て手', cry: '…' });
   const ctxKey = Object.freeze({ name: 'callName' });
 
@@ -185,7 +185,7 @@
       if (r >= 0.65) return 'turn.start.good';
       return 'turn.start.normal';
     },
-    // 訓練の結果(芯の res: great / ok / fail / sab)。友情タッグが起きたら tag
+    // トレーニングの結果(芯の res: great / ok / fail / sab)。友情タッグが起きたら tag
     result: (res, tag) => (tag ? 'turn.result.tag' : `turn.result.${({ great: 'great', ok: 'ok', fail: 'fail', sab: 'slack' })[res] || 'ok'}`),
     // 褒める/叱る(合っていたか)
     react: (kind, fit) => `turn.${kind === 'scold' ? 'scold' : 'praise'}.${fit ? 'fit' : 'miss'}`,

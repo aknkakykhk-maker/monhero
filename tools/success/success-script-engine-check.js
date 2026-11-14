@@ -27,7 +27,7 @@ E.load(E.ASSTS).then((ok) => {
   check('共通と8人ぶんを読めた', ok && E.ASSTS.every(a => E.has(a)) && E.ready());
   const scenes = E.scenes();
   const LVS = [1, 2, 3, 4, 8, 9, 15, 16, 20];
-  const ctxFull = { id: 'chk', turn: 7, callName: 'あいな', mon: 'ぷらんと', species: 'Plant', cheer: 'ゴーレム', cheer2: 'メロディ', stat: 'ちから', train: 'ちから訓練',
+  const ctxFull = { id: 'chk', turn: 7, callName: 'あいな', mon: 'ぷらんと', species: 'Plant', cheer: 'ゴーレム', cheer2: 'メロディ', stat: 'ちから', train: 'ちからトレーニング',
     tech: 'たいあたり', cup: 'ジュニアしめくくり杯', food: 'にがうり', rival: 'ガルム', owner: 'あつ' };
 
   // ② 助手が話す場面(あつの場面を物差しに、助手の名前が入る場面は人ごとに置きかえる)

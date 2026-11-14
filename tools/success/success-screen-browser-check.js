@@ -7,7 +7,7 @@
 // 見るもの(縦390×844・横844×390・幅320×568 のそれぞれで):
 //   ① HOME → 設定 → ヘルプ → DEBUG MENU → 「🌱 モンヒロサクセス(試す)」で開く
 //   ② はじめる6段を ▶ で進めて「🌱 育成をはじめる」→ メイン
-//   ③ 数ターン(訓練 → 結果 → 褒める/叱る → ターンが進む。期末の大会はデバッグの「勝ったことにする」)
+//   ③ 数ターン(トレーニング → 結果 → 褒める/叱る → ターンが進む。期末の大会はデバッグの「勝ったことにする」)
 //   ④ 「← 中断」→ 保存(mh_monsuc_run_v1)を控える → ページを読み直す → 入口から「▶ 続きから」
 //      → 同じターン・同じ能力・同じ体力から始まる → さらに数ターン進む
 //   ⑤ どの場面でも: 真っ白にならない・ページのエラー/コンソールのエラーが出ない・ボタンや帯が枠(.msx)からはみ出さない・横にスクロールしない
@@ -131,7 +131,7 @@ const advance = (page, react) => page.evaluate((react) => {
   // デビュー戦の再挑戦・体調が悪い
   const retry = by(/デビュー戦に再挑戦/); if (retry) return press(retry, 'retry');
   const cond = by(/^🛌 休む/, '.v-p.main'); if (cond) return press(cond, 'cond');
-  // 訓練を選ぶ画面: いちばん上の札を選んでから「する」
+  // トレーニングを選ぶ画面: いちばん上の札を選んでから「する」
   const tr = root.querySelector('.v-tr'); if (tr) {
     if (!root.querySelector('.v-tr.sel')) return press(tr, 'pick');
     const go = root.querySelector('.v-ft button.go:not([disabled])'); if (go) return press(go, 'train');
@@ -141,10 +141,10 @@ const advance = (page, react) => page.evaluate((react) => {
   // 結果・ターンが進む・博士: 足もとの「▶」のボタン
   const go = root.querySelector('.v-ft button.go:not([disabled])'); if (go) return press(go, 'go');
   const nx = by(/つぎへ ▶|^▶/); if (nx) return press(nx, 'next');
-  // メイン: 体力が少なければ休む・ふだんは訓練
+  // メイン: 体力が少なければ休む・ふだんはトレーニング
   const hp = (root.innerText.match(/体力\s*(\d+)\s*\/\s*(\d+)/) || []);
   if (hp[1] && Number(hp[1]) < Number(hp[2]) * 0.35) { const rest = by(/^🛌\s*休む/, '.v-p'); if (rest) return press(rest, 'rest'); }
-  const train = by(/^💪 訓練/); if (train) return press(train, 'open-train');
+  const train = by(/^💪 トレーニング/); if (train) return press(train, 'open-train');
   return null;
 }, react);
 
@@ -226,7 +226,7 @@ const sameState = (a, b) => {
           while (guard++ < 40 * n) {
             const cur = await look(page);
             if (cur.turn && cur.turn >= t0 + n && cur.view !== 'home' && !(await page.evaluate(() => !!document.querySelector('.v-ch, .v-tr')))) {
-              const onMain = await page.evaluate(() => [...document.querySelectorAll('.msx button')].some((b) => /^💪 訓練|デビュー戦に再挑戦|^🛌 休む/.test(b.innerText.trim())));
+              const onMain = await page.evaluate(() => [...document.querySelectorAll('.msx button')].some((b) => /^💪 トレーニング|デビュー戦に再挑戦|^🛌 休む/.test(b.innerText.trim())));
               if (onMain) break;
             }
             const did = await advance(page, guard % 3 === 0 ? 'scold' : 'praise');
@@ -239,7 +239,7 @@ const sameState = (a, b) => {
         const p1 = await play(TURNS_BEFORE, '中断の前');
         m = await look(page);
         check(`${tag}: ${TURNS_BEFORE} ターン進む`, m.turn === 1 + TURNS_BEFORE, `turn=${m.turn}・押した ${p1.length} 回`);
-        check(`${tag}: 訓練と叱る/褒めるを通った`, p1.includes('train') && (p1.includes('praise') || p1.includes('scold')));
+        check(`${tag}: トレーニングと叱る/褒めるを通った`, p1.includes('train') && (p1.includes('praise') || p1.includes('scold')));
         // 中断
         const paused = await page.evaluate(() => { const b = [...document.querySelectorAll('.msx .v-ft button')].find((x) => /中断/.test(x.innerText)); if (b) b.click(); return !!b; });
         check(`${tag}: 「← 中断」が押せる`, paused);

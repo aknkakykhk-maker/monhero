@@ -224,7 +224,7 @@ function homeScene(season, time) {
   // 家の足もとの影
   b.push(`<ellipse cx="220" cy="975" rx="210" ry="18" fill="#000" opacity="0.12"/>`);
 
-  // 右手前: 訓練の丸太とバケツ
+  // 右手前: トレーニングの丸太とバケツ
   b.push(`<ellipse cx="860" cy="1080" rx="70" ry="14" fill="#000" opacity="0.12"/>`);
   b.push(`<rect x="830" y="960" width="60" height="120" rx="12" fill="${T('#b07a48')}" stroke="${T(OL)}" stroke-width="5"/>`);
   b.push(`<ellipse cx="860" cy="962" rx="30" ry="10" fill="${T('#e6c08a')}" stroke="${T(OL)}" stroke-width="4"/>`);

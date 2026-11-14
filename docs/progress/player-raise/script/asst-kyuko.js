@@ -34,7 +34,7 @@ const MONSUC_SCRIPT_KYUKO = Object.freeze([
   { id:'scn.kyuko.ep1.b.kyuko2', who:'kyuko', e:'happy', c:'b', t:'{mon}、楽しそうな顔してるもん。機嫌がいいと伸びもいいんだよねw' },
 
   // ── 2話「数字ばっか見てた」(ジュニア期・親密度30〜) ──
-  { id:'scn.kyuko.ep2.narr1', who:'narr', t:'きゅうこが徹夜で作った、すきまのない訓練の計画表。なのに{mon}は、訓練場の前でそっぽを向いた。' },
+  { id:'scn.kyuko.ep2.narr1', who:'narr', t:'きゅうこが徹夜で作った、すきまのないトレーニングの計画表。なのに{mon}は、トレーニング場の前でそっぽを向いた。' },
   { id:'scn.kyuko.ep2.kyuko1', who:'kyuko', e:'angry', t:'ぐぬぬぬ……計算では今日がいちばん伸びる日なのにぃ' },
   { id:'scn.kyuko.ep2.narr2', who:'narr', t:'しばらく計画表をにらんでいたきゅうこが、ふっと肩の力を抜いた。' },
   { id:'scn.kyuko.ep2.kyuko2', who:'kyuko', e:'troubled', t:'……あー、そっか。俺、数字ばっか見てて、{mon}の顔見てなかったわ笑' },
@@ -86,7 +86,7 @@ const MONSUC_SCRIPT_KYUKO = Object.freeze([
   // ═══════════ ターンごとのことば(turn.js と同じ場面) ═══════════
   { id:'turn.start.great.kyuko1', who:'kyuko', e:'excited', t:'{mon}、今日すごい調子いいね。重いのいけるよぉ笑' },
   { id:'turn.start.great.kyuko2', who:'kyuko', e:'happy', t:'いい日だね。こういう日に積んだ分、あとでちゃんと効いてくるからw' },
-  { id:'turn.start.good.kyuko1', who:'kyuko', e:'happy', t:'ほい、調子いいね。ふつうに訓練でいいと思う笑' },
+  { id:'turn.start.good.kyuko1', who:'kyuko', e:'happy', t:'ほい、調子いいね。ふつうにトレーニングでいいと思う笑' },
   { id:'turn.start.good.kyuko2', who:'kyuko', e:'normal', t:'{mon}、動き軽いね。このペースでいこぉ' },
   { id:'turn.start.normal.kyuko1', who:'kyuko', e:'normal', t:'まあ、ふつうの日だね。どうする？笑' },
   { id:'turn.start.normal.kyuko2', who:'kyuko', e:'normal', t:'可もなく不可もなく。こういう日をどう使うかで差がつくんですよね笑' },
@@ -194,7 +194,7 @@ const MONSUC_SCRIPT_KYUKO = Object.freeze([
   { id:'ev.self.peakout.kyuko1', who:'kyuko', e:'normal', t:'山はこえたね。休ませるか、まだやるか。俺はどっちも正解だと思うw' },
   { id:'ev.self.anniv.kyuko1', who:'kyuko', e:'happy', t:'{mon}、1年おめでとう。ここまでの道、ちゃんと見てたよw' },
   { id:'ev.self.slump.kyuko1', who:'kyuko', e:'normal', t:'こういうときは、流れを変えるのがいいと思う。気分転換、大事笑' },
-  { id:'ev.self.favtrain.kyuko1', who:'kyuko', e:'happy', t:'好きな訓練は伸びがいいんだよねぇ。いい傾向w' },
+  { id:'ev.self.favtrain.kyuko1', who:'kyuko', e:'happy', t:'好きなトレーニングは伸びがいいんだよねぇ。いい傾向w' },
   { id:'ev.self.selfish.kyuko1', who:'kyuko', e:'troubled', t:'わがままだねぇ。合わせるか、叱るか……どっちもアリ笑' },
   { id:'ev.self.clingy.kyuko1', who:'kyuko', e:'happy', t:'すっかりなついたね。なでてあげなよぉ' },
   { id:'ev.goal.pick.kyuko1', who:'kyuko', e:'normal', t:'俺なら「得意をのばす」かな。得意があると組み方が楽になるから笑' },
@@ -229,7 +229,7 @@ const MONSUC_SCRIPT_KYUKO = Object.freeze([
   { id:'ev.cup.interview.kyuko1', who:'kyuko', e:'happy', t:'取材かぁ。かっこよく決めてもいいし、控えめでもいいよ笑' },
   { id:'ev.cup.after.kyuko1', who:'kyuko', e:'normal', t:'切りかえるか、反省会か。どっちも大事だよぉ' },
 
-  // ═══════════ 編成の子との訓練イベント(cheer.js と同じ場面) ═══════════
+  // ═══════════ 編成の子とのトレーニングイベント(cheer.js と同じ場面) ═══════════
   { id:'cheer.attacker.ep1.kyuko1', who:'kyuko', e:'happy', t:'{cheer}が相手してくれるって。遠慮しないでいいよぉ' },
   { id:'cheer.attacker.ep2.kyuko1', who:'kyuko', e:'excited', t:'ここで鍛えてたんだぁ。そりゃ強いわけだw' },
   { id:'cheer.attacker.ep3.kyuko1', who:'kyuko', e:'normal', t:'あれは{cheer}の全部だね。受け取るかは{mon}しだい笑' },
