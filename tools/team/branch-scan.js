@@ -66,6 +66,22 @@ function scan(ref, base = 'origin/main') {
   }
   return { files: names.length, added, inMain, ratio: added ? inMain / added : 1 };
 }
+
+// gh api の compare で同じことをする(枝を fetch できない浅い複製用)。{ files, added, inMain, ratio, ahead, subject } / 取れなければ null
+function scanApi(slug, name, base = 'origin/main') {
+  const c = gh(`repos/${slug}/compare/main...${name.split('/').map(encodeURIComponent).join('/')}`);
+  if (!c) return null;
+  let files = 0, added = 0, inMain = 0;
+  for (const f of c.files || []) {
+    if (!BODY.some(b => f.filename.startsWith(b)) || f.status === 'removed') continue;
+    files++;
+    if (!f.patch) { added++; if (git(['rev-parse', `${base}:${f.filename}`]).trim() === f.sha) inMain++; continue; }
+    const mainText = new Set(git(['show', `${base}:${f.filename}`]).split('\n').filter(lineOk).map(l => l.trim()));
+    for (const l of f.patch.split('\n')) if (l.startsWith('+') && !l.startsWith('+++') && lineOk(l.slice(1))) { added++; if (mainText.has(l.slice(1).trim())) inMain++; }
+  }
+  const last = (c.commits || []).slice(-1)[0];
+  return { files, added, inMain, ratio: added ? inMain / added : 1, ahead: c.ahead_by, subject: last ? last.commit.message.split('\n')[0] : '', unix: last ? Date.parse(last.commit.committer.date) / 1000 : 0 };
+}
 const landed = (s) => s.files === 0 || s.ratio >= IN_MAIN;
 
 // 直近 days 日に動いた origin の枝: [{ name, unix, subject }] 新しい順
@@ -88,4 +104,4 @@ function ownNames() {
   return [...names].filter(n => n && n !== 'main' && !/^[0-9a-f]{7,40}$/.test(n) && n !== 'HEAD');
 }
 
-module.exports = { BODY, IN_MAIN, KEEP_LABEL, ok, gh, openPRs, mergedHeads, scan, landed, recentRemote, ownNames };
+module.exports = { repoSlug, scanApi, BODY, IN_MAIN, KEEP_LABEL, ok, gh, openPRs, mergedHeads, scan, landed, recentRemote, ownNames };

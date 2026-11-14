@@ -288,7 +288,7 @@ const FORMATS = [[1, 1], [2, 2], [3, 3], [1, 2], [2, 3], [3, 1]];
       && n2.lv === 7 && n2.techs === null && n2.mastery[t0.id] === 0, JSON.stringify(n));
   const starts = catalog.species.Golem.techs.filter(t => t.start).map(t => t.id);
   const def = I.buildMoves(catalog, 'Golem', null, {}).map(m => m.key);
-  check('⑪ 覚えた技の記録が無ければ、はじめの技(learn.start)だけ(無い種は全部)',
+  check('⑪ 覚えた技の記録が無ければ、初めの技(learn.start)だけ(無い種は全部)',
     starts.length ? JSON.stringify(def) === JSON.stringify(starts) : def.length === golem.length, def.join('・'));
   const n3 = I.normalizeUnit(engine.unitFromGrow({ monster: 'Golem', nick: 'ごろ' }, null, { techs: [t0.id], mastery: { [t0.id]: 40 } }), catalog);
   check('⑪ 修行の受け渡し amgtBattleOf の { techs, mastery } もそのまま受ける', n3.techs.length === 1 && n3.techs[0] === t0.id && n3.mastery[t0.id] === 40);
@@ -297,7 +297,7 @@ const FORMATS = [[1, 1], [2, 2], [3, 3], [1, 2], [2, 3], [3, 1]];
   const m0 = mv.find(m => m.key === t0.id), r0 = raw.find(m => m.key === t0.id);
   const nope = I.buildMoves(catalog, 'Golem', ['nope'], {}).map(m => m.key);
   const startIds = golem.filter(t => t.start).map(t => t.id);
-  check('⑪ 覚えている技だけ出す・当てはまる技が0なら、はじめの技(無ければ最初の技)',
+  check('⑪ 覚えている技だけ出す・当てはまる技が0なら、初めの技(無ければ最初の技)',
     mv.length === 1 && raw.length === golem.length && JSON.stringify(nope) === JSON.stringify(startIds.length ? startIds : [golem[0].id]), nope.join('・'));
   check('⑪ 熟練100で 命中+6%・ガッツ消費−15%(四捨五入)',
     Math.abs(m0.hit - r0.hit - engine.MASTERY_HIT_MAX) < 1e-9 && m0.guts === Math.round(t0.guts * (1 - engine.MASTERY_GUTS_CUT)),

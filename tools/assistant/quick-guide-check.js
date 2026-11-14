@@ -125,7 +125,7 @@ check('村の案内: 建物「バトル」の最後のページのすぐあと�
 check('村の案内: 台詞の無い助手はみゅあの文', tourOut[3].t === (L.kiki['tour.autoQuick'] || L.mua['tour.autoQuick']).t);
 check('れんしゅうの終わり: 「いつでも選べる」を直した', !assistantsSrc.includes('いつでも選べるからね♪') && assistantsSrc.includes('チャレンジでクリアした難易度から、クイックでも遊べるようになるよ♪'));
 check('ヘルプに「クイックのAUTO設定と裏周回」と見返すボタン', /id: 'quick-auto-guide'[^\n]*launch: 'quickGuides'/.test(help) && /topic\.launch==='quickGuides'/.test(app) && /setQuickGuideReplay\(id\)/.test(app) && /data-quick-guide-replay=\{id\}/.test(app));
-check('ヘルプの「⏹ 終了」の場所を直した(曲えらびではなくモードえらびの左上)', !help.includes('曲えらびの左上の「⏹ 終了」') && help.includes('モードえらび(モンヒロビートの入口)の左上の「⏹ 終了」'));
+check('ヘルプの「⏹ 終了」の場所を直した(曲えらびではなくモードえらびの左上)', !help.includes('曲えらびの左上の「⏹ 終了」') && help.includes('モード選び(モンヒロビートの入口)の左上の「⏹ 終了」'));
 check('案内は画面を切り替えない(setGameState を使わない。AUTO設定へは押したときだけ)', !/setGameState|openAutoSettings\(/.test(guideSrc) && /onClick=\{\(\) => \{ onDone\(true\); onGoAutoSettings\(\); \}\}/.test(guideSrc));
 const busy = (app.match(/const quickGuideBusy = ([\s\S]*?);\n/) || [])[1] || '';
 const needBusy = ['tutorialStep != null', 'battleTutorialStep != null', '!!eventReplay', 'assistantChatOpen', 'kikiIntroStep != null', 'momosukeIntroStep != null', '!!rhythmPlay', 'updateNoticeVisible', '!!loginBonusPopup', '!!dailyMasuAdvice', '!!peerReplay'];
