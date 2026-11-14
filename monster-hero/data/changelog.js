@@ -52,6 +52,12 @@ const CHANGELOG = [
     ],
   },
   {
+    date: "2026-11-15 02:01", type:'fix', title:'ヘルプの目次の説明が、言葉の途中で折れないようにしました', status:'new', group:'ui',
+    items:[
+      'ヘルプ(攻略情報局)の目次で、項目の説明が「ランキ/ング」のように言葉の途中で次の行へ折れていたのを直しました。',
+    ],
+  },
+  {
     // 2026-11-15 社長(r1115-007): 助手の好き嫌いは遊んでいくうちに変わる(案 GROW-PLAN 8)。公開の印 assistantLifeTaste
     date: "2026-11-15 01:18", type:'update', title:'助手の好き・苦手が、遊んでいくうちに変わるようになりました', status:'new', group:'assistant', releaseFlag:'assistantLifeTaste',
     items:[

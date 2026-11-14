@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1a1241bfc3c4d6d7
+// source-sha256: e9ba2ed0d342cc65
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -260727,7 +260727,7 @@ function MonsterHeroGame() {
         }
       }, c.title), React.createElement("span", {
         className: "block text-[10px] text-slate-400 leading-tight mt-0.5"
-      }, c.summary)), (c.topics || []).some(t => helpTopicIsNew(t, helpSeen)) && helpNewBadge, React.createElement(ChevronRight, {
+      }, helpWrap(c.summary))), (c.topics || []).some(t => helpTopicIsNew(t, helpSeen)) && helpNewBadge, React.createElement(ChevronRight, {
         size: 16,
         className: "shrink-0 text-slate-500"
       })))), cat && !topic && React.createElement("div", {
