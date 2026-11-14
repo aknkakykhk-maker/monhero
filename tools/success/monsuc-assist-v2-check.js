@@ -112,7 +112,7 @@ const nk = L5.map((lv) => {
   }
   return null;
 });
-check('⑥ 仲よし特訓: トレーニング1回の親密度の上がり +表の値', same(nk, AT.BY_ID.nakayoshi.v2), nk.join('/'));
+check('⑥ 仲良し特訓: トレーニング1回の親密度の上がり +表の値', same(nk, AT.BY_ID.nakayoshi.v2), nk.join('/'));
 
 // ⑦ いるだけ型(体力・ようす・編成の7つ)。編成の2番目の子に持たせ、いちばん高い段だけ効くことも見る
 const runOf = (as, extra) => S2.newRun({ id: 'stay', species: sp, aid: 'kiki', team: [child([]), child(as), ...(extra ? [child(extra)] : [])] });

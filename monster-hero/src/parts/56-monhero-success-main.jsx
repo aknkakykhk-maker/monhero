@@ -41,7 +41,7 @@ const msxReactPreview = (s, how) => {
   } catch (e) { return null; }
 };
 // 選んだあとのひとこと(吹き出し)。同じターンなら同じ言葉
-const MSX_REACT_BUB = Object.freeze({ praise: ['やったー!', 'えへへ…', 'もっとほめて!'], scold: ['…ごめんなさい', 'わかった…!', 'つぎは がんばる!'] });
+const MSX_REACT_BUB = Object.freeze({ praise: ['やったー!', 'えへへ…', 'もっとほめて!'], scold: ['…ごめんなさい', '分かった…!', '次は がんばる!'] });
 // 選んだあと: 甘え度・恐れ度・忠誠度のゲージが前から後へ動く。変わった数は札で出す
 const MsxReactGauges = ({ from, to }) => {
   const [on, setOn] = useState(false);
@@ -182,7 +182,7 @@ function MsxStRow({ stats, ups, main, preview = false, who = null }) {
   const tgId = who && who.species && who.id ? who.id : null;
   const aptOn = !!(tgId && msxStAptView.on && msxStAptView.id === tgId);
   const aptL = tgId && typeof msxAptOf === 'function' ? msxAptOf(who.species) : null;
-  const tgProps = tgId ? { role: 'button', tabIndex: 0, 'aria-label': aptOn ? '能力の数の表示にもどす' : '能力の素質を見る', 'data-msx-st-toggle': aptOn ? 'apt' : 'num', onClick: () => msxStAptFlip(tgId), onKeyDown: (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); msxStAptFlip(tgId); } } } : {};
+  const tgProps = tgId ? { role: 'button', tabIndex: 0, 'aria-label': aptOn ? '能力の数の表示に戻す' : '能力の素質を見る', 'data-msx-st-toggle': aptOn ? 'apt' : 'num', onClick: () => msxStAptFlip(tgId), onKeyDown: (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); msxStAptFlip(tgId); } } } : {};
   return (
     <div {...tgProps} className={`v-st${tgId ? ' tg' : ''}${aptOn ? ' apton' : ''}${grow ? ' grow' : ''}${grow && on ? ' on' : ''}${grow && !calm ? ' gs-a' : ''}${zoomA ? ' zin' : ''}${zoomS ? ' zs' : ''}${zoomA && MSX_STATS.filter((k) => ups[k]).length > 3 ? ' many' : ''}`} data-msx-st-grow={grow ? (on ? 'on' : 'pre') : undefined}>
       {tgId ? <span className="v-sttg" aria-hidden="true">⇄ {aptOn ? '数' : '素質'}</span> : null}
@@ -379,8 +379,8 @@ function MsxHome({ data, run, debug, onClose, onContinue, onNew, setMeta, onWipe
             <span className="d">{run.nick}({msxMonName(s.species)})・{msxAidName(s.aid)}編</span>
             <span className="d2">{s.over ? 'この育成は終わりました(引退の続きから)' : `${v.period.name}・残り${v.period.left}ターン(最後まで あと${v.toEnd})`}</span>
           </button>
-        ) : <div className="v-hm-lead">育てるモンスターを選んで、46ターンの育成をはじめよう<small>編成の6体が集まったトレーニングほど、よく伸びる</small></div>}
-        <button type="button" className={s ? 'v-hm-new' : 'v-big v-hm-new'} onClick={onNew} data-msx-home-new>🌱 新しく育成をはじめる</button>
+        ) : <div className="v-hm-lead">育てるモンスターを選んで、46ターンの育成を始めよう<small>編成の6体が集まったトレーニングほど、よく伸びる</small></div>}
+        <button type="button" className={s ? 'v-hm-new' : 'v-big v-hm-new'} onClick={onNew} data-msx-home-new>🌱 新しく育成を始める</button>
         {tiles.length ? (
           <div className="v-hm-tiles">
             {tiles.map((t) => <button key={t.key} type="button" className="v-hm-tile" onClick={t.on} {...t.attr}><span className="e">{t.e}</span><b>{t.name}</b>{t.sub ? <small>{t.sub}</small> : null}</button>)}
@@ -726,7 +726,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
         {card && <div className={`v-fx${tags.length ? '' : ' plain'}`}>
           <div className="t">{tags.length ? <span className="big">🤝 友情タッグ ×{tags.length}</span> : <span>タッグなし</span>}<span>効果 ×{card.mult}</span><span className="fl">失敗 <b>{Math.round(card.fail * 100)}%</b></span></div>
           <div className="ch"><span>基本</span><i>▶</i><span>編成 +{Math.round(card.add * 100)}%</span>{tags.length ? <><i>▶</i><span className="tgx">🤝×{tags.length} +{Math.round(card.tag * 100)}%</span></> : null}{pv && pv.gain ? <><i>▶</i><span className="res">{MSX_STAT_NAME[stat]} +{pv.gain[stat] || 0}</span></> : null}</div>
-          {trainLv ? <div className="v-lvx"><b>トレーニングLv.{trainLv}</b><i><u style={{ width: `${card.next ? Math.max(0, 100 - card.next * 20) : 100}%` }}/></i><span>{trainLv >= 5 ? 'Lv が いちばん上' : card.next ? `あと${card.next}回で Lvアップ` : ''}</span></div> : null}
+          {trainLv ? <div className="v-lvx"><b>トレーニングLv.{trainLv}</b><i><u style={{ width: `${card.next ? Math.max(0, 100 - card.next * 20) : 100}%` }}/></i><span>{trainLv >= 5 ? 'Lv が 一番上' : card.next ? `あと${card.next}回で Lvアップ` : ''}</span></div> : null}
         </div>}
       </div>
       <MsxStRow who={s} stats={s.stats} ups={pv ? pv.gain : null} main={stat} preview/>
@@ -769,7 +769,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
           {SUC.events && typeof SUC.events.buffs === 'function' ? SUC.events.buffs(s).slice(0, 2).map((b) => <span key={b.k} className="v-chip ylw">{cardIconNode(b.icon, 14)} {b.name}</span>) : null}</div>
         <span className="v-nm">{run.nick}<small>方針: {MSX_POLICY_SCALE[Math.max(-3, Math.min(3, s.pol || 0)) + 3]}</small></span>
         <button type="button" className="v-bagb" onClick={() => setSub('bag')}>🎒<small>持ち物</small>{bag.length ? <i>{bag.length}</i> : null}</button>
-        <button type="button" className="v-bagb r" data-msx-detail-open onClick={() => setDetail(true)}>🔍<small>くわしく</small></button>
+        <button type="button" className="v-bagb r" data-msx-detail-open onClick={() => setDetail(true)}>🔍<small>詳しく</small></button>
       </div>
       <MsxStRow who={s} stats={s.stats}/>
       {preOn ? (
@@ -874,14 +874,14 @@ function MsxBag({ run, setRun, v, ev, onClose }) {
     <div className="v-scene home dk" style={{ flex: '1 1 0' }}><img className="bg" src={msxSceneBg(s.turn).bg} alt=""/><div className="sh"/>
       <div className="v-bagw">
         <div className="t">🎒 持ち物<small>使えるのは 1ターンに1個まで・使ってもターンは進まない</small><button type="button" onClick={onClose}><i>✕</i></button></div>
-        {t ? <div className="v-bsel"><span className="e" style={{ fontSize: 26 }}>{t.e}</span><div><b>{t.name}{t.n ? <span className="yel"> ×{t.n}</span> : null}</b><small>{t.desc}</small><small className="lim">{t.carry ? 'はじめる前から効いている' : 'いつ使える: 自分のターン'}</small></div></div> : null}
+        {t ? <div className="v-bsel"><span className="e" style={{ fontSize: 26 }}>{t.e}</span><div><b>{t.name}{t.n ? <span className="yel"> ×{t.n}</span> : null}</b><small>{t.desc}</small><small className="lim">{t.carry ? '始める前から効いている' : 'いつ使える: 自分のターン'}</small></div></div> : null}
         <div className="v-bgrid">
           {bagList.map((x) => <button type="button" key={x.id} className={pick === x.id ? 'sel' : ''} onClick={() => setPick(x.id)}><span className="e" style={{ fontSize: 22 }}>{x.e}</span><i>×{x.n}</i><small style={JA_LABEL_STYLE}>{msxItemNameNode(x.name.replace('ガロエ印の', ''))}</small></button>)}
           {carryList.map((x) => <button type="button" key={`c-${x.id}`} className={`no${pick === x.id ? ' sel' : ''}`} onClick={() => setPick(x.id)}><span className="e" style={{ fontSize: 22 }}>{x.e}</span><small style={JA_LABEL_STYLE}>{msxItemNameNode(x.name.replace('ガロエ印の', ''))}</small></button>)}
           <div className="no"><span className="e">⏳</span><i>×{sand}</i><small style={JA_LABEL_STYLE}>{msxItemNameNode('時渡りの砂時計')}</small></div><div className="no"><span className="e">🌈</span><i>×{rainbow}</i><small style={JA_LABEL_STYLE}>{msxItemNameNode('虹の時渡りの砂時計')}</small></div>
         </div>
         {!bagList.length && !carryList.length ? <div className="msx-note">持ちこんだ物はありません</div> : null}
-        <div className="v-bnote">⏳ 時渡りの砂時計: バトルに敗北したときにやり直せる<br/>🌈 虹の時渡りの砂時計: 敗北したとき相手を変えてやり直せる<br/><span className="dim2" style={JA_WRAP_STYLE}>{jaWrap('色のうすい物は、ここでは使えません(はじめる前から効く物・大会で負けたときの砂時計)')}</span></div>
+        <div className="v-bnote">⏳ 時渡りの砂時計: バトルに敗北したときにやり直せる<br/>🌈 虹の時渡りの砂時計: 敗北したとき相手を変えてやり直せる<br/><span className="dim2" style={JA_WRAP_STYLE}>{jaWrap('色のうすい物は、ここでは使えません(始める前から効く物・大会で負けたときの砂時計)')}</span></div>
         <button type="button" className="v-big" style={{ fontSize: 14, padding: 9, marginTop: 0, color: '#fff' }} disabled={!t || t.carry || usedNow || blocked} onClick={use}>
           {usedNow ? 'このターンはもう使った' : blocked ? 'いまは使えない' : t && !t.carry ? `${t.e} ${t.name}を使う` : '使う'}</button>
       </div>
@@ -915,7 +915,7 @@ function MsxStats({ run, setRun, v, ev, onClose }) {
       </div>
       <div className="v-card" data-msx-ability-techs><div className="h2">⚔ 覚えている技 {techs.length}</div>
         {techs.length ? <div>{techs.map((t) => <span key={t.id} className="msx-ab-tech">{t.kind === 'wise' ? '🧠' : '💪'}{t.name}</span>)}</div> : <div className="sub">まだない</div>}
-        <div className="sub" style={{ marginTop: 4 }}>新しい技は修行で覚える。技の性能は場面の「🔍 くわしく」で見られる</div></div>
+        <div className="sub" style={{ marginTop: 4 }}>新しい技は修行で覚える。技の性能は場面の「🔍 詳しく」で見られる</div></div>
       <div className="v-card"><div className="h2">🌱 成長の型 {typeof MASMON_CALC !== 'undefined' ? MASMON_CALC.typeOf(s.type).name : '—'}</div>
         <div className="sub">{pk.state === 'in' ? `ピーク中(あと${pk.left}ターン)。トレーニングがよく伸びる` : pk.state === 'soon' ? `あと${pk.in}ターンでピーク(伸びどき)が始まる` : peakSpan ? `伸びどき: ${peakSpan}` : ''}</div></div>
       <div className="v-card"><div className="h2">🤝 忠誠度 {SUC.loyalOf(s)}<span className="sub">(甘え度 {s.ama}+恐れ度 {s.fear})</span></div>
@@ -975,7 +975,7 @@ function MsxEvent({ run, setRun, v, ev, ctx, bondLv, onDone }) {
   const ups = {}; if (picked && picked.before) MSX_STATS.forEach((k) => { const d = s.stats[k] - picked.before[k]; if (d) ups[k] = d; });
   const afterLines = picked ? picked.scenes.flatMap((sc) => (evOf(sc) || { lines: [] }).lines.concat((evOf(sc) || { after: [] }).after)) : [];
   const shown = (picked && (afterLines.length || !(view && view.watch)) ? afterLines : main.lines).slice(0, 4); // 見るだけの出来事(拾い物など)は、結果のあとも台詞を残す
-  const head = isStory ? `${msxAidName(s.aid)}のお話 ${o.ep === 'special' ? '特別な1話' : `第${o.ep}話`}` : isUniq ? `${msxAidName(s.aid)}の${view.title ? `「${view.title}」` : 'お話'}` : view && view.id === 'ev.self.anniv' ? 'はじめての育成記念日' : (view && view.head) || main.label || '育成イベント';
+  const head = isStory ? `${msxAidName(s.aid)}のお話 ${o.ep === 'special' ? '特別な1話' : `第${o.ep}話`}` : isUniq ? `${msxAidName(s.aid)}の${view.title ? `「${view.title}」` : 'お話'}` : view && view.id === 'ev.self.anniv' ? '初めての育成記念日' : (view && view.head) || main.label || '育成イベント';
   const cheerIdx = view && Number.isInteger(view.cheer) ? view.cheer : null;
   const who = (l) => (l.who === 'narr' ? null : l.who === 'issa' ? 'イッサ博士' : l.who === 'mon' ? run.nick : msxAidName(l.who));
   return (<>

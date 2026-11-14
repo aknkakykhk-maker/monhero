@@ -227,7 +227,7 @@ ok(near(SUC.failRateOf({ ...base, yosu: { sabori: { visits: 0 } } }) - fFull, 0.
 // ---- 修行(社長 2026-11-12: チケット・2段で能力2つずつ・最後に技のくじ・外すと次の率が上がる) ----
 {
   const s0 = SUC.newRun({ id: 'shu', species: 'Mocchi', aid: 'mua', team: Array.from({ length: 6 }, () => ({ kind: 'base', species: 'Mocchi' })) }); // 編成の得意の上乗せを前と同じにそろえる
-  ok(s0.techs.length === 2 && s0.tickets === SUC.SHUGYO.ticket0, `はじめの技(はじめから覚えている2つ)・チケットがずれている: ${s0.techs} ${s0.tickets}`);
+  ok(s0.techs.length === 2 && s0.tickets === SUC.SHUGYO.ticket0, `初めの技(はじめから覚えている2つ)・チケットがずれている: ${s0.techs} ${s0.tickets}`);
   ok(SUC.peek(s0).can.includes('shugyo') && SUC.shugyoLeft(s0) === s0.tickets, '修行がチケットの数だけ行けない(期ごとの回数は決めない)');
   const j = { ...s0, turn: 8, tickets: 3 };
   ok(SUC.shugyoLeft(j) === 3, 'チケット3枚で修行が3回できない');
@@ -471,7 +471,7 @@ ok(near(SUC.failRateOf({ ...base, yosu: { sabori: { visits: 0 } } }) - fFull, 0.
     ok(ci('str', 1).oil === 1 && ci('str', 2).fruit_pow === 1 && ci('str', 3).fruit_pow === 1 && ci('str', 3).oilyoil === 1, `ふつうの大会の賞品がずれている: ${JSON.stringify([ci('str', 1), ci('str', 2), ci('str', 3)])}`);
     const c4 = ci('normal', 4); ok(Object.keys(c4).length === 2 && Object.keys(c4).some(k => /^elixir[0-3]$/.test(k)) && Object.keys(c4).some(k => k.startsWith('fruit_')), `👑の賞品(得意の間合いの秘薬+得意の能力の実)がずれている: ${JSON.stringify(c4)}`);
     ok(ci('derby', 3).stamina === 1 && !(SUC.EX_BY_SYS.derby.rw.hpMax) && ci('four1', 4).oilyoil === 1 && ci('four1', 4)[`fruit_${top}`] === 1 && ci('mem_pow', 3).fruit_pow === 2 && ci('ssn3_0', 2).fruit_life === 1 && Object.keys(ci('gem_tank', 3)).some(k => /^elixir/.test(k)), '第2版の大会の賞品がずれている');
-    const sb = SUC.useItem({ ...eb, hp: 50, hpMax: 100, bag: { stamina: 1 }, itemTurn: -1 }, 'stamina').state; ok(sb.hpMax === 115 && sb.hp === 65, `スタミナだんごで体力の最大値 +15 にならない: ${sb.hpMax}/${sb.hp}`); }
+    const sb = SUC.useItem({ ...eb, hp: 50, hpMax: 100, bag: { stamina: 1 }, itemTurn: -1 }, 'stamina').state; ok(sb.hpMax === 115 && sb.hp === 65, `スタミナ団子で体力の最大値 +15 にならない: ${sb.hpMax}/${sb.hp}`); }
   const last = SUC.endTurn(SUC.act({ ...j, turn: 17, stats: { ...j.stats, pow: 300, life: 300 } }, { kind: 'cup', id: SUC.cupsOf({ ...j, turn: 17, stats: { ...j.stats, pow: 300, life: 300 } }).find(c => c.entry.ok).id }).state).state;
   const after = SUC.settle(last, [true]).state; ok(after.battle && after.battle.kind === 'junior', '期の最後のターンに大会に出たあと、強制大会が続かない');
 }
