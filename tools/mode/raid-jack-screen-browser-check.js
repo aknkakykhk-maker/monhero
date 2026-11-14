@@ -116,7 +116,7 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     await page.getByRole('button', { name: 'トップ画面へ進む' }).click({ timeout: 30000 });
     await page.getByRole('button', { name: 'モンヒロバトル' }).waitFor({ timeout: 30000 });
     for (let i = 0; i < 6; i++) {
-      const btn = page.getByRole('button', { name: /受け取る|閉じる|はじめる|OK/ }).first();
+      const btn = page.getByRole('button', { name: /受け取る|閉じる|(?:始|はじ)める|OK/ }).first();
       if (await btn.count() === 0 || !(await btn.isVisible().catch(() => false))) break;
       await btn.dispatchEvent('click').catch(() => {});
       await page.waitForTimeout(250);
@@ -148,19 +148,19 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     }
     // HOMEを開いたとき重なる導入(新しい助手の紹介など)は、読み終えて閉じる
     for (let i = 0; i < 60; i++) {
-      const next = page.locator('button[aria-label="次へ"], button:has-text("次へ"), button:has-text("はじめる"), button:has-text("閉じる"), button:has-text("あとで")').filter({ visible: true }).first();
+      const next = page.locator('button[aria-label="次へ"], button:has-text("次へ"), button:has-text("はじめる"), button:has-text("始める"), button:has-text("閉じる"), button:has-text("あとで")').filter({ visible: true }).first();
       if (await next.count() === 0) break;
       await next.click({ timeout: 3000, force: true }).catch(() => {});
       await page.waitForTimeout(250);
     }
     // ひとこと(吹き出し): 爵位の話し方(段階2=子爵)・残り77%なので full の場面。押すと次のセリフへ。吹き出しを押してもレイド画面は開かない
     await page.locator('[data-home-raid-say]').waitFor({ timeout: 20000 });
-    const sayA = (await page.locator('[data-home-raid-say]').innerText()).replace('▶ つぎ', '').trim();
+    const sayA = (await page.locator('[data-home-raid-say]').innerText()).replace(/▶ (?:つぎ|次)/, '').trim();
     const FULL2 = ['ほっほっほ。わたくしを止められるとお思いですかな？', '優雅に参りましょう。ランタンは、ぜんぶ割ってさしあげますぞ', '男爵などと一緒にされては困りますな。わたくしは子爵ですぞ', 'おや、また挑戦者ですかな。ご苦労なことですぞ'];
     check('HOMEのジャックが、子爵の話し方で、残りライフが多い(full)ときのひとことを話す', FULL2.includes(sayA), sayA);
     if (SHOT) await page.screenshot({ path: `${SHOT}/home-say.png` });
     const seen = new Set([sayA]);
-    for (let k = 0; k < 4; k++) { await page.locator('[data-home-raid-say]').click(); await page.waitForTimeout(120); seen.add((await page.locator('[data-home-raid-say]').innerText()).replace('▶ つぎ', '').trim()); }
+    for (let k = 0; k < 4; k++) { await page.locator('[data-home-raid-say]').click(); await page.waitForTimeout(120); seen.add((await page.locator('[data-home-raid-say]').innerText()).replace(/▶ (?:つぎ|次)/, '').trim()); }
     check('吹き出しを押すと、次のセリフに切り替わる(4回押して4種類すべてを回る)', seen.size === 4 && [...seen].every((t) => FULL2.includes(t)), [...seen].join(' | '));
     check('吹き出しを押してもレイド画面は開かない(ジャック本体を押したときだけ開く)', (await page.locator('[data-raid-jack-screen]').count()) === 0 && (await page.locator('[data-home-raid-jack]').count()) === 1);
     check('強制表示でHOMEの真ん中にジャックが出る', true);

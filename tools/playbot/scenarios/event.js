@@ -50,7 +50,7 @@ async function raidScenario(s, { maxMs = 660000 } = {}) {
     await s.wait(900);
     await s.dismissOverlays(4);
     const list = await s.listButtons();
-    const go = list.find((b) => /^(出撃|バトル開始|決定|確定|はじめる|習得する|強化する|この編成で挑戦する)$/.test(b.label))
+    const go = list.find((b) => /^(出撃|バトル開始|決定|確定|(?:始|はじ)める|習得する|強化する|この編成で挑戦する)$/.test(b.label))
       || list.find((b) => /^(零|近|中|遠)距離/.test(b.label))
       || list.find((b) => /新規習得|強化後/.test(b.label));
     if (go) await s.tap(go, 'レイドの準備');

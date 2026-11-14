@@ -74,7 +74,7 @@ const LABEL = { portrait: '縦', landscape: '横', rotated: '🔄横' };
         await page.getByRole('button', { name: 'TAP TO START' }).click({ timeout: 120000 });
         await page.getByRole('button', { name: 'トップ画面へ進む' }).click({ timeout: 30000 });
         await page.locator('[data-home-card-battle]').waitFor({ timeout: 30000 });
-        for (let i = 0; i < 6; i++) { const x = page.getByRole('button', { name: /受け取る|閉じる|はじめる|OK/ }).first(); if (!(await x.count()) || !(await x.isVisible().catch(() => false))) break; await x.dispatchEvent('click').catch(() => {}); await page.waitForTimeout(250); }
+        for (let i = 0; i < 6; i++) { const x = page.getByRole('button', { name: /受け取る|閉じる|(?:始|はじ)める|OK/ }).first(); if (!(await x.count()) || !(await x.isVisible().catch(() => false))) break; await x.dispatchEvent('click').catch(() => {}); await page.waitForTimeout(250); }
         await page.waitForTimeout(800);
         await page.locator('[data-home-card-battle]').first().dispatchEvent('click');
         await page.locator('[data-card-top="starter"]').waitFor({ timeout: 20000 });

@@ -210,7 +210,7 @@ async function walk(browser, base, orient) {
   await tap(/^この助手にする$/);
 
   // ---- 3. 名前とアイコン ----
-  await until(() => /はじめての設定/.test(document.body.innerText), 10000, '名前とアイコン');
+  await until(() => /初めての設定/.test(document.body.innerText), 10000, '名前とアイコン');
   const hello = await talk('名前とアイコン');
   await scene('名前とアイコン', { talkTaps: hello.taps });
   await tap(/^名前を決める$/);
@@ -347,7 +347,7 @@ async function walk(browser, base, orient) {
     const s = await scene(name, { openMs: Date.now() - from - 1300, firstTalkTaps: firstTalk.taps });
     readChars += Math.min(s.text.length, 400);
     if (name === 'ギフト') {
-      const got = await tap(/^(すべて受け取る|まとめて受け取る|全部受け取る|受け取る)/);
+      const got = await tap(/^(全て受け取る|まとめて受け取る|全部受け取る|受け取る)/);
       if (got) { giftClaim = { humanSec: humanSec(), taps, button: got }; await wait(900); await scene('ギフト-受け取ったあと'); await tap(CLOSERS, { count: false }); }
       else note('行止', 'ギフト', '受け取るボタンが見つからない');
     }

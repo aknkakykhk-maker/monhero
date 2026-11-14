@@ -75,7 +75,7 @@ const run = async (browser, mode, errors) => {
   };
   // 対戦の前の画面(デッキの確かめ・対戦開始の演出)を進める
   const pass = async () => {
-    const b = page.getByRole('button', { name: /対戦へ|このデッキで|はじめる|スタート|タップ/ }).first();
+    const b = page.getByRole('button', { name: /対戦へ|このデッキで|(?:始|はじ)める|スタート|タップ/ }).first();
     if (await b.count() && await b.isVisible().catch(() => false)) await b.click().catch(() => {});
     else await page.mouse.click(mode.view.width / 2, mode.view.height * 0.7).catch(() => {});
     await page.waitForTimeout(600);

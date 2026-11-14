@@ -83,7 +83,7 @@ const check = (name, ok, detail = '') => {
     // --- ① 助手えらびから始まり、そこから抜け出す導線が出ていない ---
     const first = await textOf();
     check('はじめての人は助手えらびから始まる', first.includes('助手を選ぶ'), first.slice(0, 30));
-    check('はじめての設定が終わるまでログインボーナスは出さない',
+    check('初めての設定が終わるまでログインボーナスは出さない',
       !first.includes('ログインボーナス')
         && await page.locator('button').filter({ hasText: /ギフトを確認/ }).count() === 0);
     check('助手えらびの時点では何も保存されていない',
@@ -94,13 +94,13 @@ const check = (name, ok, detail = '') => {
     // 助手えらびは「一覧から選ぶ(押すと選択中になる)→『この助手にする』を押す」に作り替わった(2026-11-11 #5320・#5360)。
     // 選んだだけでは進まない(まだ何も決まらない)ことも見る
     await tap(/みゅあ/);
-    check('助手を押しただけでは、はじめての設定へ進まない(「この助手にする」を押すまで)',
+    check('助手を押しただけでは、初めての設定へ進まない(「この助手にする」を押すまで)',
       (await textOf()).includes('助手を選ぶ') && await page.locator('[data-assistant-pick-confirm]').count() === 1);
     await page.locator('[data-assistant-pick-confirm]').first().dispatchEvent('click');
     await page.waitForTimeout(900);
     const profile = await textOf();
-    check('助手を選ぶとはじめての設定へ進む',
-      profile.includes('はじめての設定') && profile.includes('名前を決める') && profile.includes('アイコンを選ぶ'));
+    check('助手を選ぶと初めての設定へ進む',
+      profile.includes('初めての設定') && profile.includes('名前を決める') && profile.includes('アイコンを選ぶ'));
     check('名前もアイコンも決めていないうちは「決定！」を押せない',
       await page.locator('button').filter({ hasText: /^決定！$/ }).first().isDisabled());
 
@@ -115,7 +115,7 @@ const check = (name, ok, detail = '') => {
     // 「確認」ボタンが先頭にあり、2番目が戻るだった。お詫びを出さなくしたら(2026-09-27)順番がずれて押し違えた
     await page.getByRole('button', { name: '戻る', exact: true }).first().dispatchEvent('click');
     await page.waitForTimeout(800);
-    check('寄り道から戻る先ははじめての設定', (await textOf()).includes('はじめての設定'));
+    check('寄り道から戻る先は初めての設定', (await textOf()).includes('初めての設定'));
     check('寄り道しても何も保存されていない',
       (await saved()).name === null && (await saved()).onboarded === 'false');
 
@@ -137,7 +137,7 @@ const check = (name, ok, detail = '') => {
     await tap(/^決定！$/);
     await page.waitForTimeout(1200);
     const home = await textOf();
-    check('はじめての設定を終えるとHOMEへ入れる',
+    check('初めての設定を終えるとHOMEへ入れる',
       home.includes('バトル') && home.includes('マーケット'), home.slice(0, 30));
     check('決めた名前とアイコンで始まる', (await saved()).onboarded === 'true' && home.includes('けんさ'));
     // 出すのを遅らせただけで、受け取り損ねてはいけない

@@ -96,7 +96,7 @@ const boot = async (browser, opts = {}) => {
   await page.addInitScript(eventStorySeed()); await page.addInitScript(require('../boot/quiet-boot-seed').updateNoticeSeed()); await page.addInitScript(require('../boot/quiet-boot-seed').loginBonusDoneSeed()); await page.addInitScript(require('../boot/quiet-boot-seed').oneTimeNoticeSeed()); // みゅあの今日の助言などの一度きりの案内も済んだことにする // ログインボーナスの窓も同じく割りこむので受け取ったことにする // 更新履歴の告知の窓が後から割りこんで押せなくなるので、見たことにする(2026-11-11)
   await page.goto(`http://localhost:${PORT}/monster-hero/index.html`, { waitUntil: 'domcontentloaded' });
   const sleep = (ms) => page.waitForTimeout(ms);
-  const dismiss = async () => { for (const x of await page.getByRole('button', { name: /^(受け取る|閉じる|はじめる|OK|スキップ|次へ|とじる|あとで|あとで読む|(?:分|わ)かった)$/ }).all()) { if (await x.isVisible().catch(() => false)) { await x.dispatchEvent('click').catch(() => {}); await sleep(300); } } };
+  const dismiss = async () => { for (const x of await page.getByRole('button', { name: /^(受け取る|閉じる|(?:始|はじ)める|OK|スキップ|次へ|とじる|あとで|あとで読む|(?:分|わ)かった)$/ }).all()) { if (await x.isVisible().catch(() => false)) { await x.dispatchEvent('click').catch(() => {}); await sleep(300); } } };
   await page.getByRole('button', { name: 'TAP TO START' }).click({ timeout: 90000 });
   const top = page.getByRole('button', { name: 'トップ画面へ進む' });
   const home = page.locator('[data-home-card-battle]');

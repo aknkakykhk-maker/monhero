@@ -72,7 +72,7 @@ const serve = () => new Promise((resolve) => {
       // 配布のお知らせなどが重なっていると測れないので、先に閉じる
       const dismiss = async () => {
         for (let i = 0; i < 6; i += 1) {
-          const b = page.getByRole('button', { name: /^(確認|受け取る|閉じる|はじめる|OK)$/ }).first();
+          const b = page.getByRole('button', { name: /^(確認|受け取る|閉じる|(?:始|はじ)める|OK)$/ }).first();
           if (await b.count() === 0 || !(await b.isVisible().catch(() => false))) break;
           await b.dispatchEvent('click').catch(() => {});
           await page.waitForTimeout(400);

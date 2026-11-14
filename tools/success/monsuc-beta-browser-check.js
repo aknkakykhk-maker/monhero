@@ -70,7 +70,7 @@ const toHome = async (page, port) => {
   await page.getByRole('button', { name: 'トップ画面へ進む' }).click({ timeout: 30000 });
   await page.getByRole('button', { name: 'モンヒロバトル' }).waitFor({ timeout: 30000 });
   for (let i = 0; i < 6; i++) { // ログインボーナス・お知らせ
-    const btn = page.getByRole('button', { name: /受け取る|閉じる|はじめる|OK/ }).first();
+    const btn = page.getByRole('button', { name: /受け取る|閉じる|(?:始|はじ)める|OK/ }).first();
     if (await btn.count() === 0 || !(await btn.isVisible().catch(() => false))) break;
     await btn.dispatchEvent('click').catch(() => {}); await page.waitForTimeout(250);
   }
@@ -129,7 +129,7 @@ const annivCheck = () => {
     const saved = await page.evaluate(() => { try { return JSON.parse(localStorage.getItem('mh_monsuc_beta_v1')); } catch (e) { return null; } });
     check('見た印 mh_monsuc_beta_v1 に open が残る', !!(saved && saved.seen && saved.seen.open), JSON.stringify(saved));
     // 新しく育成をはじめる → 準備の説明(最初の1回)
-    await page.getByRole('button', { name: /新しく育成をはじめる/ }).click();
+    await page.getByRole('button', { name: /新しく育成を(?:始|はじ)める/ }).click();
     // ストーリー選択(2026-11-14)では、はじめの1回だけみゅあの説明(tut.scn)
     const scnTalk = page.locator('[data-msx-beta="scn"]');
     await scnTalk.waitFor({ timeout: 10000 }).catch(() => {});

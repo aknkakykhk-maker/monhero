@@ -552,7 +552,7 @@ const browser = async (core) => {
     // ⑭ 公開(2026-10-14)のあとの最初の HOME で、お話「話せるようになった日」が1回流れる
     // 先に出る受け取り(ログインボーナスなど)を閉じてから待つ。お話はほかの会話・案内が終わってから流れる
     for (let i = 0; i < 6; i++) {
-      const btn = page.getByRole('button', { name: /受け取る|閉じる|はじめる|OK/ }).first();
+      const btn = page.getByRole('button', { name: /受け取る|閉じる|(?:始|はじ)める|OK/ }).first();
       if (await btn.count() === 0 || !(await btn.isVisible().catch(() => false))) break;
       await btn.dispatchEvent('click').catch(() => {});
       await page.waitForTimeout(250);
@@ -570,7 +570,7 @@ const browser = async (core) => {
     check('⑭ 最後まで見ると、新しいキー mh_story_assistant_chat_seen_v1 に「見た」が残る',
       await page.evaluate(() => localStorage.getItem('mh_story_assistant_chat_seen_v1')) === 'true');
     for (let i = 0; i < 6; i++) {
-      const btn = page.getByRole('button', { name: /受け取る|閉じる|はじめる|OK/ }).first();
+      const btn = page.getByRole('button', { name: /受け取る|閉じる|(?:始|はじ)める|OK/ }).first();
       if (await btn.count() === 0 || !(await btn.isVisible().catch(() => false))) break;
       await btn.dispatchEvent('click').catch(() => {});
       await page.waitForTimeout(250);

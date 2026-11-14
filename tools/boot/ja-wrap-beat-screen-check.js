@@ -320,16 +320,16 @@ const runTutorial = async (browser, W, H) => {
     await page.getByRole('button', { name: 'トップ画面へ進む' }).click({ timeout: 30000 });
     await page.waitForFunction(() => document.body.innerText.includes('モンヒロビート'), null, { timeout: 40000 });
     await page.waitForTimeout(1200);
-    for (let i = 0; i < 10; i++) { const ok = await page.evaluate(() => { const b = [...document.querySelectorAll('button')].find((x) => /^(受け取る|閉じる|OK|確認|あとで読む)$/.test((x.innerText || '').trim()) && x.getClientRects().length && !x.closest('[aria-label="はじめての案内"]')); if (b) b.click(); return !!b; }); if (!ok) break; await page.waitForTimeout(500); }
+    for (let i = 0; i < 10; i++) { const ok = await page.evaluate(() => { const b = [...document.querySelectorAll('button')].find((x) => /^(受け取る|閉じる|OK|確認|あとで読む)$/.test((x.innerText || '').trim()) && x.getClientRects().length && !x.closest('[aria-label="初めての案内"]')); if (b) b.click(); return !!b; }); if (!ok) break; await page.waitForTimeout(500); }
     await page.evaluate(() => { const b = [...document.querySelectorAll('button')].find((x) => (x.innerText || '').replace(/\s+/g, '').includes('モンヒロビート')); b && b.click(); });
     await page.waitForSelector('[data-rhythm-mode-select]', { timeout: 20000 }); await page.waitForTimeout(800);
     // 案内がモードえらびで始まっていなければ、曲えらびへ進む
-    if (!(await page.locator('[aria-label="はじめての案内"]').count())) await page.locator('button:visible', { hasText: 'ソロライブ' }).first().click({ timeout: 8000 });
-    await page.waitForSelector('[aria-label="はじめての案内"]', { timeout: 15000 });
+    if (!(await page.locator('[aria-label="初めての案内"]').count())) await page.locator('button:visible', { hasText: 'ソロライブ' }).first().click({ timeout: 8000 });
+    await page.waitForSelector('[aria-label="初めての案内"]', { timeout: 15000 });
     for (let n = 1; n <= 20; n++) {
       await page.waitForTimeout(700);
       out.push([`練習の案内(${n}枚目)`, await page.evaluate(SCAN), await page.evaluate(CLIP, CLIP_ALLOW.map(([k, sel]) => [k, sel]))]);
-      const next = page.locator('[aria-label="はじめての案内"] button:visible').filter({ hasText: /^\s*次へ\s*$/ });
+      const next = page.locator('[aria-label="初めての案内"] button:visible').filter({ hasText: /^\s*次へ\s*$/ });
       if (!(await next.count())) break;
       await next.first().click({ timeout: 5000 });
     }

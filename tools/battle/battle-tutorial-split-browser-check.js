@@ -74,7 +74,7 @@ const bootPage = async (browser, w, h, errors) => {
 
 const closePopups = async (page) => {
   for (let i = 0; i < 6; i++) {
-    const btn = page.getByRole('button', { name: /受け取る|閉じる|はじめる|OK/ }).first();
+    const btn = page.getByRole('button', { name: /受け取る|閉じる|(?:始|はじ)める|OK/ }).first();
     if (await btn.count() === 0 || !(await btn.isVisible().catch(() => false))) break;
     await btn.dispatchEvent('click').catch(() => {});
     await page.waitForTimeout(250);

@@ -108,7 +108,7 @@ const bondGifts = (page) => page.evaluate(() => (JSON.parse(localStorage.getItem
       return { gold: Number(JSON.parse(localStorage.getItem('mh_gold') || '0')) || 0, other };
     });
     // すべて受け取る
-    await page.evaluate(() => [...document.querySelectorAll('button')].find(b => b.textContent.includes('すべて受け取る') && !b.disabled)?.click());
+    await page.evaluate(() => [...document.querySelectorAll('button')].find(b => b.textContent.includes('全て受け取る') && !b.disabled)?.click());
     await page.waitForTimeout(1500);
     if (SHOT_DIR) await page.screenshot({ path: path.join(SHOT_DIR, `gift-claimed-${W}.png`) });
     const claimed = await bondGifts(page);

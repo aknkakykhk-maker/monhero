@@ -294,7 +294,7 @@ const notes = [];
           if (vs) await take('cardvs', id, { settle: 1500, filter: r => r.kind === 'full' }); else notes.push(`${v.name} カード ${id}: VS が出ない`);
           for (let i = 0; i < 40; i++) {
             if (await page.locator('[data-card-top="result"]').count()) break;
-            const b = page.getByRole('button', { name: /対戦へ|このデッキで|はじめる|スタート|タップ/ }).first();
+            const b = page.getByRole('button', { name: /対戦へ|このデッキで|(?:始|はじ)める|スタート|タップ/ }).first();
             if (await b.count() && await b.isVisible().catch(() => false)) await b.click().catch(() => {}); else await page.locator('[data-card-vs], [data-mh-screen]').first().click({ timeout: 800, force: true }).catch(() => {});
             await page.waitForTimeout(600);
           }

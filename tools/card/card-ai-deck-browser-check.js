@@ -81,7 +81,7 @@ const run = async (browser, mode, scene, errors) => {
     const l = [...document.querySelectorAll('button')].filter((b) => inO(b) && /^(確認|閉じる|OK|受け取る|次へ|(?:分|わ)かった|はい|スキップ|あとで読む|あとで)$/.test((b.innerText || '').replace(/\s+/g, ' ').trim())); if (!l.length) return false; l[0].click(); return true; }); if (!did) break; await page.waitForTimeout(400); } };
   // 対戦の前の画面(デッキの確かめ・対戦開始の演出)を進める
   const pass = async () => {
-    const b = page.getByRole('button', { name: /対戦へ|このデッキで|はじめる|スタート|タップ/ }).first();
+    const b = page.getByRole('button', { name: /対戦へ|このデッキで|(?:始|はじ)める|スタート|タップ/ }).first();
     if (await b.count() && await b.isVisible().catch(() => false)) await b.click().catch(() => {});
     else await page.mouse.click(mode.view.width / 2, mode.view.height * 0.7).catch(() => {});
     await page.waitForTimeout(600);

@@ -142,7 +142,7 @@ const pvpGo = async (page, sel) => { await page.locator(sel).first().click(); aw
       await page.getByRole('button', { name: 'トップ画面へ進む' }).click({ timeout: 30000 });
       await page.getByRole('button', { name: 'モンヒロバトル', exact: true }).waitFor({ timeout: 30000 });
       for (let i = 0; i < 6; i++) {
-        const b = page.getByRole('button', { name: /受け取る|閉じる|はじめる|OK|スキップ/ }).first();
+        const b = page.getByRole('button', { name: /受け取る|閉じる|(?:始|はじ)める|OK|スキップ/ }).first();
         if (await b.count() === 0 || !(await b.isVisible().catch(() => false))) break;
         await b.dispatchEvent('click').catch(() => {}); await page.waitForTimeout(250);
       }

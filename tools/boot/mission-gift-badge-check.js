@@ -65,12 +65,12 @@ check('ギフト画面の受取可能判定も共通化されている', has('co
 // 一括受取
 // 2026-09-10(STEP 6-3)にミッション画面を MissionsScreen へ切り出したので、
 // 「本体の関数 → 画面の props → ボタン」の結線まで見る。処理の中身は本体側に残っている
-check('すべて受け取るを画面へ渡している', has('onClaimAll={claimAllMissions}'));
-check('「すべて受け取る」ボタンがある', has('onClaimAll()') && has('すべて受け取る') && has('data-mission-claim-all'));
+check('全て受け取るを画面へ渡している', has('onClaimAll={claimAllMissions}'));
+check('「全て受け取る」ボタンがある', has('onClaimAll()') && has('全て受け取る') && has('data-mission-claim-all'));
 check('対象が無ければ無効化する', has('disabled={!total}'));
 check('個別受取を画面へ渡している', has('onClaim={claimMission}'));
 check('個別受取も残っている', has('onClaim(missionTab,m)'));
-check('個別・すべて受け取るとも同じ受け取り処理を通る',
+check('個別・全て受け取るとも同じ受け取り処理を通る',
   has('const claimMission = (type,mission) => claimMissionRewards({ [type]:[mission] });') &&
   has("const claimAllMissions = () => claimMissionRewards({ daily:'all', weekly:'all', monthly:'all' }, { includeBacklog:true });"));
 // ギフトを作って保存し、そのギフトを受け取って保存するまでを1つのロックの中で行う(割り込まれると、作ったギフトが消える)
