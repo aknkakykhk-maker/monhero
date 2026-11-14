@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e85d17df50f45f8b
+// source-sha256: cbef35d5ad40080b
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -170029,9 +170029,10 @@ function MsxR3Battle({
       const e = effOf(k);
       if (!e) return '';
       const hp = e.hp > 0 ? `体力+${e.hp}` : '体力 満タン';
-      if (e.m.stat) return `${MSX_STAT_NAME[e.m.stat]}+${e.st}・${hp}`;
-      if (e.m.pop || e.m.pts) return `人気+${e.pop}・能力P+${e.pts}・${hp}`;
-      return `${e.m.fear ? `恐れ+${e.fear}` : `甘え+${e.ama}`}・${hp}`;
+      const ly = e.m.fear ? `恐れ+${e.fear}` : e.m.ama ? `甘え+${e.ama}` : '';
+      if (e.m.stat) return [`${MSX_STAT_NAME[e.m.stat]}+${e.st}`, ly, hp].filter(Boolean).join('・');
+      if (e.m.pop || e.m.pts) return [`人気+${e.pop}`, `能力P+${e.pts}`, ly, hp].filter(Boolean).join('・');
+      return [ly, hp].filter(Boolean).join('・');
     };
     const fxLong = k => {
       const e = effOf(k);
@@ -170177,9 +170178,15 @@ function MsxR3Battle({
       className: "v-ft"
     }, React.createElement("button", {
       type: "button",
-      onClick: () => finish(s),
+      onClick: () => finish(typeof SUC.mealSkip === 'function' ? SUC.mealSkip(s).state : s),
       "data-msx-r3-nomeal": true
-    }, "あげずに つぎへ"), React.createElement("button", {
+    }, "あげずに つぎへ", React.createElement("small", {
+      style: {
+        display: 'block',
+        fontSize: 9.5,
+        opacity: 0.85
+      }
+    }, "恐れ度 +", SUC.MEAL_SKIP_FEAR || 1)), React.createElement("button", {
       type: "button",
       className: "go",
       disabled: !(mealPick && can(mealPick)),
