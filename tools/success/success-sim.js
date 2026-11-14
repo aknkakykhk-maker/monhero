@@ -35,6 +35,7 @@ const RANK_PRESET = {
   S: { sum: 4300, lv: 50, techs: 6, m: 70, loy: 85, pop: 70 },
   M: { sum: 5850, lv: 99, techs: 8, m: 100, loy: 100, pop: 100 },
 };
+const AS3 = (power) => { try { const AT = require('../../monster-hero/data/monhero-success-assist.js'); return AT.VERSION === 3 ? AT.autoPick(AT.pointsOf(power), []).picks : []; } catch (e) { return []; } };
 const makeRaised = (rng, rank, topStats, assists) => {
   const p = RANK_PRESET[rank];
   const species = SUC.speciesList[Math.floor(rng() * SUC.speciesList.length)];
@@ -77,6 +78,13 @@ const PRESETS = {
   // いるだけ型(体力・ようす・編成の7つ)段5(依頼③の1つ目)。いるだけ型は編成でいちばん高い段の1つだけなので、7つを4体と2体に分けて持たせる
   B6stay5: { name: 'B 6体・いるだけ型7つ 段5(体力自慢・ぐっすり・食いしん坊・しつけ上手/遊び上手・元気のお守り・通院の付きそい)', team: (rng) => Array.from({ length: 6 }, (_, i) => makeRaised(rng, 'B', null, i < 4 ? STAY7[0] : STAY7[1])) },
   M6stay5: { name: 'M 6体・底力 段5+いるだけ型7つ 段5', team: (rng) => Array.from({ length: 6 }, (_, i) => makeRaised(rng, 'M', null, i < 4 ? STAY7[0] : [{ id: 'sokoji', lv: 5 }, ...STAY7[1]])) },
+  // 第3版(2026-11-14): 全員がおまかせで取ったアシスト効果(ポイント = そのランクの中ほどの総合力 ÷ 50)。今の B6as・S6as・M6as とくらべる
+  B6auto3: { name: 'B 6体・全員 第3版のおまかせ(200pt・8種類)', team: (rng) => Array.from({ length: 6 }, () => makeRaised(rng, 'B', null, AS3(10000))) },
+  S6auto3: { name: 'S 6体・全員 第3版のおまかせ(290pt・8種類)', team: (rng) => Array.from({ length: 6 }, () => makeRaised(rng, 'S', null, AS3(14500))) },
+  // 集合率アップ(2026-11-14): 1体目だけ 集合率アップ 満タン(+30%)+ おまかせの7種類
+  B6auto3g: { name: 'B 6体・第3版のおまかせ・1体が集合率アップ +30%', team: (rng) => Array.from({ length: 6 }, (_, i) => makeRaised(rng, 'B', null, i ? AS3(10000) : [{ id: 'shuugou', n: 15 }, ...AS3(10000).slice(0, 7)])) },
+  M6auto3g: { name: 'M 6体・第3版のおまかせ・1体が集合率アップ +30%', team: (rng) => Array.from({ length: 6 }, (_, i) => makeRaised(rng, 'M', null, i ? AS3(19500) : [{ id: 'shuugou', n: 15 }, ...AS3(19500).slice(0, 7)])) },
+  M6auto3: { name: 'M 6体・全員 第3版のおまかせ(390pt・8種類)', team: (rng) => Array.from({ length: 6 }, () => makeRaised(rng, 'M', null, AS3(19500))) },
   B6cup5: { name: 'B 6体・いるだけ型8つ 段5(賞金かせぎ・勝負の心得・チケット運・ライバル魂/人気者のお手本・出来事の呼び水・博士の目じるし・博士の助手)', team: (rng) => Array.from({ length: 6 }, (_, i) => makeRaised(rng, 'B', null, i < 3 ? CUP8[0] : CUP8[1])) },
   M6all5: { name: 'M 6体・底力 段5+いるだけ型15 段5(いちばん積んだ形)', team: (rng) => Array.from({ length: 6 }, (_, i) => makeRaised(rng, 'M', null, [[{ id: 'sokoji', lv: 5 }, ...STAY7[1]], STAY7[0], CUP8[0], CUP8[1], [{ id: 'sokoji', lv: 5 }], [{ id: 'sokoji', lv: 5 }]][i])) },
   M6kun5: { name: 'M 6体・得意そろえ・全員 ちから/命中/回避特訓・タッグの息 段5', team: (rng) => Array.from({ length: 6 }, () => makeRaised(rng, 'M', ['pow', 'hit', 'eva'], [{ id: 'kunpow', lv: 5 }, { id: 'kunhit', lv: 5 }, { id: 'kuneva', lv: 5 }, { id: 'tagpow', lv: 5 }])) },
@@ -91,7 +99,7 @@ const VARIANTS = [
   { key: 'B6', aidLv: 3, cups: true, label: 'B 6体・ライバル2人(助手・フレンド)の大会に出る' },
   { key: 'M6hint', aidLv: 5 },
   { key: 'B6hint5', aidLv: 3 },
-  { key: 'B6as', aidLv: 3 }, { key: 'S6as', aidLv: 5 }, { key: 'M6as', aidLv: 5 }, { key: 'M6asAim', aidLv: 5 },
+  { key: 'B6as', aidLv: 3 }, { key: 'S6as', aidLv: 5 }, { key: 'M6as', aidLv: 5 }, { key: 'M6asAim', aidLv: 5 }, { key: 'B6auto3', aidLv: 3 }, { key: 'S6auto3', aidLv: 5 }, { key: 'M6auto3', aidLv: 5 }, { key: 'B6auto3g', aidLv: 3 }, { key: 'M6auto3g', aidLv: 5 },
   { key: 'B6sokoji5', aidLv: 3 }, { key: 'M6as5', aidLv: 5 }, // 段5(第2版・2026-11-12)
   { key: 'B6kun5', aidLv: 3 }, { key: 'B6care5', aidLv: 3 }, { key: 'M6kun5', aidLv: 5 }, { key: 'M6new5', aidLv: 5 }, // トレーニングに効く新しい11種 段5(依頼②)
   { key: 'B6stay5', aidLv: 3 }, { key: 'M6stay5', aidLv: 5 }, // いるだけ型7つ 段5(依頼③の1つ目)

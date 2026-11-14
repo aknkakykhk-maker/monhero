@@ -110,9 +110,10 @@ ok(near(SUC.failRateOf({ ...base, yosu: { sabori: { visits: 0 } } }) - fFull, 0.
   ok(m.bonus.pow === 600 / 40 + SUC.RANK_ADD[m.rank] && near(m.bonus.hit, 530 / 40 * 0.9 + SUC.RANK_ADD[m.rank], 0.01) && m.bonus.life === 0, `能力の補正の式がずれている: ${JSON.stringify(m.bonus)}`);
   ok(m.tag === SUC.TAG_POWER[m.rank] && SUC.TAG_POWER.B === 25 && SUC.TAG_POWER.M === 35 && SUC.TAG_POWER.aid === 25, 'タッグの強さがランクの表でない');
   // かけつけ 段3 の得意率(表の値で出す。第1版 +20 → 0.85・第2版 +12 → 0.77。2026-11-12)
-  ok(near(m.fav, Math.min(SUC.GATHER.favCap, SUC.GATHER.fav + SUC.ASSISTS.kaketsuke.v[2] / 100), 1e-9) && m.assists.length === 2, `かけつけの得意率・同じアシストの重なりがおかしい: ${m.fav} ${m.assists.length}`);
+  ok(near(m.fav, Math.min(SUC.GATHER.favCap, SUC.GATHER.fav + SUC.ASSISTS.kaketsuke.v[m.assists.find(x => x.id === 'kaketsuke').lv - 1] / 100), 1e-9) && SUC.ASSISTS.kaketsuke.v[m.assists.find(x => x.id === 'kaketsuke').lv - 1] === 12 && m.assists.length === 2, `かけつけの得意率・同じアシストの重なりがおかしい: ${m.fav} ${m.assists.length}`);
   ok(m.startAdd.stat === 'pow' && m.startAdd.v === 24, `はじめの能力が 1位 ÷ 25 でない: ${JSON.stringify(m.startAdd)}`);
-  const so2 = SUC.ASSISTS.sokoji.v[1]; // 底力 段2(第2版の表を渡すと 10・第1版なら 7。2026-11-12)
+  const so2 = SUC.ASSISTS.sokoji.v[m.assists.find(x => x.id === 'sokoji').lv - 1]; // 古い子の段2 は第3版の目盛り10(+10%)に読み替わる(2026-11-14)
+  ok(so2 === 10, `古い子の段2 の底力が +10% のままでない: ${so2}`);
   ok(SUC.memberEffect(m, 'life', 0) === so2 && SUC.memberEffect(m, 'pow', 0) === m.bonus.pow + so2, '4位以下のトレーニングで補正0%・アシストは効く になっていない');
   // 得意率: 上位3つに 65%(30:20:15)
   const s = SUC.newRun({ id: 'g', species: 'Mocchi', aid: 'mua', team: [{ kind: 'raised', species: 'Mocchi', stats: st, loy: 50 }] });
