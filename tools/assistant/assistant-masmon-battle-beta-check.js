@@ -130,6 +130,22 @@ const seed = () => {
     await page.waitForFunction(() => !!document.querySelector('[data-ambb-prep]'), { timeout: 20000 }).catch(() => {});
     check('おまかせ: 3体が選ばれている', await page.evaluate(() => document.querySelectorAll('[data-ambb-prep] .ambb-mon.on').length === 3));
     await shot('1-prep-auto');
+    // iPhone の時計・電波の帯(2026-11-14 えるびんさん「もどるが押せない」): 上の帯は safe-area-inset-top の下に置く。
+    //   ブラウザでは env() の値を変えられないので、CSS の env(safe-area-inset-top) を 47px に差し替えた見え方で、もどるが帯の下にあり押せるかを見る
+    {
+      const safe = await page.evaluate(() => {
+        const css = [...document.querySelectorAll('style')].map(x => x.textContent).find(t => t.includes('.ambw-in{max-width:460px')) || '';
+        const has = /\.ambw-in\{[^}]*padding:max\(10px,env\(safe-area-inset-top\)\)/.test(css);
+        const st = document.createElement('style'); st.setAttribute('data-safe-sim', '');
+        st.textContent = '.ambw-in{padding-top:max(10px,47px)!important}'; document.head.appendChild(st);
+        const b = document.querySelector('[data-ambb-close]').getBoundingClientRect();
+        const hit = document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2);
+        return { has, top: Math.round(b.top), ok: !!hit && !!hit.closest('[data-ambb-close]') };
+      });
+      check('上の帯は時計の帯(safe-area-inset-top)の下: 47px のつもりでも、もどるが帯の下にあって押せる', safe.has && safe.top >= 47 && safe.ok, JSON.stringify(safe));
+      await shot('1-prep-safe-top');
+      await page.evaluate(() => { const st = document.querySelector('[data-safe-sim]'); if (st) st.remove(); });
+    }
     await clickSel('[data-ambb-mode="self"]');
     await page.waitForTimeout(200);
     const self = await page.evaluate(() => ({ sizes: document.querySelectorAll('[data-ambb-size]').length, plans: document.querySelectorAll('[data-ambb-plan]').length, swaps: document.querySelectorAll('[data-ambb-swap]').length, mons: document.querySelectorAll('[data-ambb-mon]').length }));

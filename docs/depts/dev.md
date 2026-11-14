@@ -83,6 +83,8 @@ node tools/ctx.js brief               いまの状態
 - P/25-storage.jsx・P/26-supabase.jsx は保存データとランキングの土台。変えたら ミハリ確認が要る
 - はじめての人だけに書く印(!wasOnboarded の分岐・finishOnboarding)を足したら、復元で片づける一覧 MH_FIRST_TIMER_MARK_KEYS(data/mhsave-backup.js)にも足す。見張り: node tools/boot/restore-first-timer-marks-check.js
 - デバッグ専用の変更は更新履歴にもヘルプにも載せない
+- モンサクの画面を作る・直す前に docs/reference/line-mf/REF-MAP.md でその画面の行を引き、参考の実物(画像・動画のコマ)を自分の目で見てから作る(要約のメモだけで作らない)
+- モンサクの画面は docs/spec/MONSUC_UI.md の決まり(画面の使い方・数字のそろえ方・結果の出し方・札の形)にそろえる
 
 ## 資料(要る節だけ `node tools/ctx.js doc <ファイル> <見出し>`)
 
