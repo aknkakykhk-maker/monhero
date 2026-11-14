@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8be81a7a46428fbc
+// source-sha256: 094d3630de2193d0
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -96190,10 +96190,14 @@ function RhythmMultiChatBubble({
   }, text)));
   return React.createElement("span", {
     "data-rhythm-multi-chat-bubble": true,
-    className: "pointer-events-none absolute inset-x-0.5 bottom-0.5 top-3 z-40 flex items-start justify-center overflow-hidden"
+    className: "pointer-events-none absolute inset-x-0.5 bottom-0.5 top-3 z-40 flex items-start justify-center overflow-hidden landscape:top-0.5 [[data-mh-view-rotation=true]_&]:top-0.5"
   }, React.createElement("span", {
-    className: "line-clamp-2 max-h-full max-w-full break-words rounded-xl bg-white px-1.5 py-0.5 text-center text-[10px] font-black leading-tight text-slate-900 shadow-lg"
-  }, text));
+    className: "line-clamp-2 max-h-full max-w-full overflow-hidden rounded-xl bg-white px-1.5 py-0.5 text-center text-[10px] font-black leading-tight text-slate-900 shadow-lg",
+    style: typeof JA_WRAP_STYLE !== 'undefined' ? JA_WRAP_STYLE : {
+      wordBreak: 'keep-all',
+      overflowWrap: 'anywhere'
+    }
+  }, typeof jaWrap === 'function' ? jaWrap(text) : text));
 }
 function RhythmMultiResultBubble({
   text: raw
@@ -102213,7 +102217,7 @@ function RhythmBuddyListSheet({
     }, opt.label, active && React.createElement("span", null, settings.dir === 'asc' ? '▲' : '▼'));
   })), tab === 'lineage' && React.createElement("div", null, React.createElement("p", {
     className: "mb-2.5 text-[10px] leading-relaxed text-slate-400"
-  }, "選んだ種族だけを表示します。並べ替え・しぼりこみはそのまま効きます。"), React.createElement("div", {
+  }, "選んだ種族だけを表示します。並べ替え・絞り込みはそのまま効きます。"), React.createElement("div", {
     className: "grid grid-cols-2 gap-2.5"
   }, [{
     id: 'all',
@@ -102254,7 +102258,7 @@ function RhythmBuddyListSheet({
     className: "mb-1.5 text-[11px] font-black text-slate-300"
   }, "性格", React.createElement("small", {
     className: "ml-1 font-bold text-slate-500"
-  }, "(何も選ばなければすべて)")), React.createElement("div", {
+  }, "(何も選ばなければ全て)")), React.createElement("div", {
     className: "grid grid-cols-2 gap-2"
   }, [...RHYTHM_BUDDY_TRAITS.map(t => ({
     id: t.id,
@@ -102273,7 +102277,7 @@ function RhythmBuddyListSheet({
     className: "mb-1.5 text-[11px] font-black text-slate-300"
   }, "今日の調子", React.createElement("small", {
     className: "ml-1 font-bold text-slate-500"
-  }, "(何も選ばなければすべて)")), React.createElement("div", {
+  }, "(何も選ばなければ全て)")), React.createElement("div", {
     className: "grid grid-cols-2 gap-2"
   }, RHYTHM_BUDDY_MOODS.map(mood => React.createElement("button", {
     key: mood.id,
@@ -102331,7 +102335,7 @@ function RhythmBuddyList({
   const list = rhythmBuddyListRows(masuMons, state, dayKey, settings);
   if (list.length === 0) return React.createElement("p", {
     className: "py-6 text-center text-[12px] font-bold text-slate-400"
-  }, helpWrap((masuMons || []).length ? 'しぼりこみに当てはまるマスモンがいません' : 'マスモンがまだいません。モンヒロバトルのランを終えて、勇者モンをマスモンに登録すると、ここに並びます'));
+  }, helpWrap((masuMons || []).length ? '絞り込みに当てはまるマスモンがいません' : 'マスモンがまだいません。モンヒロバトルのランを終えて、勇者モンをマスモンに登録すると、ここに並びます'));
   if (settings && settings.view === 'card') {
     return React.createElement("div", {
       "data-rhythm-buddy-cards": true,
