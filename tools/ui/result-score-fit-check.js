@@ -81,6 +81,48 @@ const html = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewp
 const htmlPath = path.join(dir, 'index.html');
 fs.writeFileSync(htmlPath, html);
 
+
+// ---- 結果画面まるごと(背景・王冠・CHAMPION・枠・下のボタンまで)。本物の ChampionScreen / GameOverScreen / GaveUpScreen を置く ----
+const boot = fs.readFileSync(path.join(parts, '70-bootstrap.jsx'), 'utf8');
+const core = fs.readFileSync(path.join(parts, '10-core.jsx'), 'utf8');
+const screensSrc = cut(run, 'function ChampionScreen({', 'function MasuRegisterModal({');
+check('本物の結果画面3つ(優勝・敗北・リタイア)を取り出せた', /function GameOverScreen/.test(screensSrc) && /function GaveUpScreen/.test(screensSrc));
+const iconSrc = cut(core, 'const _ICON_PATHS = {', 'const Heart=_icon');
+const confettiSrc = cut(ui, 'const EndConfetti =', '// ==== クイックの成長・合流の1行');
+const cssLines = boot.split('\n').slice(4699, 5110).filter(l => /mh-end-|mh-game-over|mh-confetti|mhEnd|mhConf|mhPhasePop/.test(l)).join('\n');
+const fullJsx = `
+const isQuickMode = () => false;
+${iconSrc}
+const Crown=_icon('Crown'), Skull=_icon('Skull'), Flag=_icon('Flag'), RotateCcw=_icon('RotateCcw');
+const AssistantBubble = () => <div className="w-full max-w-xs mx-auto rounded-xl bg-black/40 text-white text-xs p-2">みゅあの吹き出し(仮の枠)</div>;
+const RewardSummaryCard = () => <div className="w-full max-w-xs rounded-2xl bg-black/30 text-white text-xs p-3 mt-2">もらった物の一覧(仮の枠)</div>;
+const RankingFailedNote = () => null;
+${countSrc}
+${fitSrc}
+${confettiSrc}
+${screensSrc}
+const noop = () => {};
+window.__mountFull = (score, which) => {
+  const el = document.getElementById('root');
+  ReactDOM.unmountComponentAtNode(el);
+  const common = { finalRewardSummary: {}, masuRegisterButtonNode: () => null, resultActionPending: false, returnToHome: noop, runMode: 'normal', runResultActionOnce: (f) => f && f(), score, handleRetry: noop, runHighlights: {}, autoRepeat: false, resultProcessing: false };
+  const C = [ChampionScreen, GameOverScreen, GaveUpScreen][which];
+  ReactDOM.render(<C {...common} setChampionPresentationComplete={noop} setAutoRepeatEnabled={noop} setAutoBattleEnabled={noop} openSpeciesChallengeSelection={noop} speciesChallengeBattleRun={null} speciesChallengeClearCardNode={() => null} speciesChallengeFromDebugRef={{current:false}} speciesChallengeSaveRunRef={{current:null}} speciesChallengeBattleRunRef={{current:null}}/>, el);
+};
+`;
+let fullOut = '';
+try { fullOut = babel.transformSync(fullJsx, { presets: [], plugins: [[path.join(__dirname, '../node_modules/@babel/plugin-transform-react-jsx'), { runtime: 'classic' }]], configFile: false, babelrc: false }).code; }
+catch (e) { check('結果画面まるごとの組み立て', false, String(e.message).slice(0, 200)); }
+const fullDir = fs.mkdtempSync(path.join(os.tmpdir(), 'fitfull-'));
+const fullHtml = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="file://${root}/monster-hero/tailwind.css">
+<style>html,body{margin:0;background:#000;color:#fff}${cssLines}</style></head><body><div id="root"></div>
+<script src="file://${root}/monster-hero/vendor/react.production.min.js"></script>
+<script src="file://${root}/monster-hero/vendor/react-dom.production.min.js"></script>
+<script>${fullOut}</script></body></html>`;
+const fullPath = path.join(fullDir, 'index.html');
+fs.writeFileSync(fullPath, fullHtml);
+
 const shotsAt = process.argv.indexOf('--shots');
 const shotsDir = shotsAt > 0 ? process.argv[shotsAt + 1] : null;
 if (shotsDir) fs.mkdirSync(shotsDir, { recursive: true });
@@ -124,6 +166,38 @@ const VIEWS = [['幅320', 320, 640], ['幅360', 360, 780], ['幅390', 390, 844],
         if (shotsDir && score === 23365084358631234) {
           await page.screenshot({ path: path.join(shotsDir, `${vname}-${['champion', 'defeat', 'retire'][which]}.png`) });
         }
+      }
+    }
+    await page.close();
+  }
+  // ---- まるごと ----
+  const FULL_NAMES = ['優勝(まるごと)', '敗北(まるごと)', 'リタイア(まるごと)'];
+  for (const [vname, w, h] of VIEWS) {
+    const page = await browser.newPage({ viewport: { width: w, height: h }, deviceScaleFactor: shotsDir ? 2 : 1 });
+    await page.goto('file://' + fullPath);
+    for (const score of [1234, 23365084358631234]) {
+      for (let which = 0; which < 3; which++) {
+        await page.evaluate(([s, k]) => window.__mountFull(Number(s), k), [String(score), which]);
+        await page.waitForTimeout(2300);
+        const r = await page.evaluate(() => {
+          const bad = [];
+          const vw = document.documentElement.clientWidth;
+          const sc = document.querySelector('.mh-end-score');
+          if (!sc) return { bad: ['スコア枠が無い'] };
+          const bb = sc.getBoundingClientRect();
+          if (bb.left < 8 || bb.right > vw - 8) bad.push(`枠が画面の端に近い(左${Math.round(bb.left)}・右${Math.round(vw - bb.right)}px)`);
+          const t = document.querySelector('h1,h2');
+          if (t) { const tb = t.getBoundingClientRect(); if (tb.top < 0) bad.push('見出しの上が切れている'); }
+          for (const o of document.querySelectorAll('[data-fit-number]')) {
+            const rng = document.createRange(); rng.selectNodeContents(o.querySelector('[data-fit-number-inner]'));
+            const tb = rng.getBoundingClientRect();
+            if (tb.right > bb.right + 0.5 || tb.left < bb.left - 0.5) bad.push('文字が枠の外');
+          }
+          if (document.documentElement.scrollWidth - vw > 1) bad.push('ページが横にはみ出し');
+          return { bad };
+        });
+        check(`${vname} ${FULL_NAMES[which]} スコア${String(score).length}桁`, r.bad.length === 0, r.bad.join(' / '));
+        if (shotsDir && score === 23365084358631234) await page.screenshot({ path: path.join(shotsDir, `全体-${vname}-${['優勝', '敗北', 'リタイア'][which]}.png`) });
       }
     }
     await page.close();
