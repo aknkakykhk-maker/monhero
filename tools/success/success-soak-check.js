@@ -202,8 +202,8 @@ const step = (s, c, st) => {
     checkState(s2, `${where} settle`);
     let s3 = s2;
     if (s3.mealReady && !s3.over) {
-      const mr = rngAt(s3, 'meal'); const key = pick(mr, ['stat', 'hp', 'loyal', null]);
-      if (key) { const fame0 = s3.fame; const m = SUC.meal(s3, key); if (m.out.ok) { s3 = m.state; st.meal += 1; if (s3.fame < 0 || (fame0 >= SUC.MEALS[key].cost && !s3.freeMeal && s3.fame > fame0)) fail(`${where}: ごはんの名声の数え方がおかしい`); checkState(s3, `${where} meal`); } }
+      const mr = rngAt(s3, 'meal'); const key = pick(mr, [...Object.keys(SUC.MEALS), null]);
+      if (key) { const fame0 = s3.fame; const m = SUC.meal(s3, key); if (m.out.ok) { s3 = m.state; st.meal += 1; if (s3.fame !== fame0) fail(`${where}: ごはんで賞金が動いた(ただのはず)`); checkState(s3, `${where} meal`); } }
     }
     return s3;
   }
