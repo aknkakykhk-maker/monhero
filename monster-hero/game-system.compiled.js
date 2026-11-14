@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e18288db7d161349
+// source-sha256: ba727677d80b34f3
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -118461,6 +118461,7 @@ function AssistantLifeRoomFigure({
   const night = look === 'night' && sleep,
     evening = look === 'evening';
   const tone = night ? 'linear-gradient(100deg,#ffd08a 0%,#c9c2ee 45%,#8a86c0 100%)' : evening ? 'linear-gradient(100deg,#fff6ec 0%,#fbeee4 60%,#f0dcd4 100%)' : 'linear-gradient(100deg,#ffffff 0%,#fbf5f3 60%,#efe3df 100%)';
+  const sideMask = sleep ? null : 'linear-gradient(to right,transparent 0,#000 7%,#000 93%,transparent 100%)';
   const fadeMask = p.fade ? `linear-gradient(to bottom,#000 ${(p.fade[0] * 100).toFixed(1)}%,transparent ${(p.fade[1] * 100).toFixed(1)}%)` : null;
   const box = {
     position: 'absolute',
@@ -118469,9 +118470,11 @@ function AssistantLifeRoomFigure({
     width: p.width,
     height: p.height,
     clipPath: `inset(${p.clip[0].toFixed(1)}px 0 ${p.clip[1].toFixed(1)}px 0)`,
-    ...(fadeMask ? {
-      WebkitMaskImage: fadeMask,
-      maskImage: fadeMask
+    ...(fadeMask || sideMask ? {
+      WebkitMaskImage: [fadeMask, sideMask].filter(Boolean).join(','),
+      maskImage: [fadeMask, sideMask].filter(Boolean).join(','),
+      WebkitMaskComposite: 'source-in',
+      maskComposite: 'intersect'
     } : {})
   };
   const shape = {
@@ -118480,7 +118483,7 @@ function AssistantLifeRoomFigure({
     maskImage: `url(${src})`,
     maskSize: '100% 100%'
   };
-  return React.createElement(React.Fragment, null, React.createElement("span", {
+  return React.createElement(React.Fragment, null, sleep && React.createElement("span", {
     "aria-hidden": "true",
     style: {
       position: 'absolute',
@@ -118984,11 +118987,18 @@ function AssistantLifeRoomBed({
       box
     }, F, 0, 0);
     const U = r.U || F * 2.63;
-    const cw = U * 1.2,
-      ch = U * 1.32,
-      y0 = -0.22 * U;
-    const cx = pillow.left + ch / 2 + 2 + i * 14,
-      cy = pillow.top + pillow.h * 0.6 - cw / 2 - i * 6;
+    const cw0 = U * 1.2,
+      ch0 = U * 1.32;
+    const ex = 0.7 * U,
+      ey = 0.35 * U,
+      cw = cw0 + ey * 2,
+      ch = ch0 + ex,
+      y0 = -0.22 * U - ex;
+    const cx = pillow.left + ch0 / 2 + 2 + i * 14 - ex / 2,
+      cy = pillow.top + pillow.h * 0.6 - cw0 / 2 - i * 6;
+    const fadeAt = `${((0.82 * ch0 + ex) / ch * 100).toFixed(1)}%`;
+    const feather = `linear-gradient(to right,transparent,#000 9%,#000 91%,transparent),linear-gradient(to bottom,transparent,#000 6%,#000 ${fadeAt},transparent)`;
+    const imgLeft = r.left + cw / 2;
     return React.createElement("div", {
       key: x.pid,
       "data-assistant-life-roomview-sleeper": x.pid,
@@ -119000,9 +119010,10 @@ function AssistantLifeRoomBed({
         height: ch,
         transform: 'rotate(-78deg)',
         transformOrigin: '50% 50%',
-        overflow: 'hidden',
-        WebkitMaskImage: 'linear-gradient(#000 82%,transparent)',
-        maskImage: 'linear-gradient(#000 82%,transparent)'
+        WebkitMaskImage: feather,
+        maskImage: feather,
+        WebkitMaskComposite: 'source-in',
+        maskComposite: 'intersect'
       }
     }, React.createElement("img", {
       src: x.src,
@@ -119010,7 +119021,7 @@ function AssistantLifeRoomBed({
       draggable: false,
       style: {
         position: 'absolute',
-        left: r.left + cw / 2,
+        left: imgLeft,
         top: r.top - y0,
         width: r.width,
         height: r.height,
@@ -119023,7 +119034,7 @@ function AssistantLifeRoomBed({
       w: r.width,
       h: r.height,
       style: {
-        left: r.left + cw / 2,
+        left: imgLeft,
         top: r.top - y0,
         filter: `saturate(.9) brightness(${night ? 0.72 : 0.9})`
       }
@@ -119567,7 +119578,7 @@ function AssistantLifeRoomScene({
   }) : null), people.length > 0 && !asleep && React.createElement(AssistantLifeRoomFront, {
     kind: frontKind,
     cx: W / 2,
-    top: lay && !asleep ? Math.max(...lay.map(p => p.frameBottom - 4)) : deskTop,
+    top: lay && !asleep ? Math.max(...lay.map(p => Math.min(p.frameBottom, p.top + p.height) - 6)) : deskTop,
     w: frontW,
     items: ASSISTANT_LIFE_ROOM_DESK_ITEMS[id] || []
   }), layoutOn && React.createElement(AssistantLifeRoomLayoutLayer, {
