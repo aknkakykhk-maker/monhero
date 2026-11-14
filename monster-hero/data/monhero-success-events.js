@@ -94,7 +94,7 @@
     { id: 'ev.team.fight', kind: 'team', slot: 'after', w: 6, pickPair: (s, x) => x.pair(s, (a, b) => x.typeOf(a) && x.typeOf(a) === x.typeOf(b)),
       ch: { a: { fx: [['bond', 'cheer', 5], ['bond', 'cheer2', 5]] }, b: { fx: [['st', 'main', M], ['buff', 'futekusare']] } } },
     { id: 'ev.team.base', kind: 'team', slot: 'after', w: 6, pickA: (s, x) => x.team(s, (m, i) => m.kind === 'base' && !(s.ev.boost || {})[i]),
-      ch: { a: { fx: [['flag', 'baseBoost']] } } },
+      ch: { a: { fx: [['flag', 'baseBoost']] }, b: { fx: [['bond', 'cheer', 5], ['str', -5]] } } }, // b はそっと見守る(Fable ①-16: 選択肢が1つだけだった)
     { id: 'ev.team.friend', kind: 'team', slot: 'after', w: 12, pickA: (s, x) => x.team(s, (m) => m.friend === true || m.from === 'friend'),
       ch: { a: { fx: [['bond', 'cheer', 10]] } } },
     { id: 'ev.team.typeskill', kind: 'team', slot: 'after', w: 8, pickA: (s, x) => x.team(s, (m) => Boolean(TYPE_STAT[x.typeOf(m)])),
