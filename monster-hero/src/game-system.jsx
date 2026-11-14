@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: efb05981c20b738c
+// generated-sha256: 2b2596e3fa616b44
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -9921,6 +9921,7 @@ const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, tact
   assistantMasmonRanchTicket: true, // 2026-11-12 社長「この文で公開」・masmon-pvp 版4(DAILY_GROWTH_CAP 40)を配り終えてから真にした。2026-11-11 M/B管理にいる助手のマスモンにトレーニングチケット/重トレーニングチケットを使ってあげる(ボクジョウ)。真にすると今の「次の育成が1.2倍」は止まる。ミハリの確認と Fable の最終確認のあと、更新履歴とヘルプと一緒に真にする
   assistantMasmonPlan: true, // 2026-11-12 ミハリ5 OK・窓口の最終確認のあと公開。 育成ノート(助手のマスモンを計画して育てる・けが/病気/家出/サボり・56-assistant-life-masmon-plan.jsx・キズナ)。保存 mh_assistant_masmon_plan_v1・mh_assistant_masmon_cond_v1。gate → ミハリ → 窓口の最終確認のあと、更新履歴とヘルプと一緒に真にする
   assistantMasmonSleep: true, // 2026-11-12 公開(社長「この文で」・ミハリ fable 確認済み・真にしたら偽へ戻さない)。2026-11-12 助手のマスモンの冬眠(育てた中身を保ったまま眠らせ、あとで起こす・56-assistant-life-masmon-sleep.jsx・キズナ)。保存 mh_assistant_masmon_sleep_v1。育成ノートの印も真のときだけ動く。ミハリ → 窓口の確認のあと真にする
+  assistantLifeTaste: true, // 2026-11-15 社長 OK(案・止め絵・文)のあと公開。助手の好き嫌いが遊んでいくうちに変わる(56-assistant-life-masmon-taste.jsx・キズナ8)。ミハリ10の確認済みなら真にしたら偽へ戻さない。保存 mh_assistant_life_taste_v1
   assistantMasmonBond: true, // 2026-11-12 助手のマスモンの総合力とランク・忠誠度・人気・育成方針と叱る/褒める・年齢と寿命・成長の型・育ちの速さ×3(56-assistant-life-masmon-bond.jsx・キズナ・案 masmon-plan/POWER.md 第3版)。保存 mh_assistant_masmon_bond_v1。真にするのは masmon-pvp の配り直し(DAILY_GROWTH_CAP 200)・止め絵と更新履歴の「この文で」・ミハリ・Fable の確認のあと
   // モンヒロサクセス(プレイヤー側のターン制の育成・PLAN.md)。回2(育成の画面)を作っている途中なので偽。入口はデバッグ設定の「🌱 モンヒロサクセス(試す)」だけ(56-monhero-success-*.jsx)
   monheroSuccess: false,
@@ -70520,10 +70521,10 @@ const assistantLifeProfileLikes = (id, giftSt) => {
   const hintCell = cells.find(c => c.like && !c.shown && hints[c.k] && typeof hints[c.k].t === 'string');
   // モンスター(マスモンの表の好き・苦手。贈る仕組みが無いので最初から出す)
   const plan = typeof assistantMasmonBasePlanOf === 'function' ? assistantMasmonBasePlanOf(id) : null;
-  const monOf = (x) => { const m = x && typeof assistantMasmonMon === 'function' ? assistantMasmonMon(x.monster) : null; return m ? { id: x.monster, name: m.name, icon: m.faceIconUrl || m.iconUrl || '', emoji: m.emoji || '🐾' } : null; };
+  const monOf = (x) => { const m = x && typeof assistantMasmonMon === 'function' ? assistantMasmonMon(x.monster) : null; return m ? { id: x.monster, name: m.name, icon: m.faceIconUrl || m.iconUrl || '', emoji: m.emoji || '🐾', grown: x.grown === true } : null; };
   const monLike = plan && Array.isArray(plan.likeMon) ? plan.likeMon.map(monOf).filter(Boolean) : [];
   const monBad = plan && Array.isArray(plan.dislikeMon) ? plan.dislikeMon.map(monOf).filter(Boolean) : [];
-  return { rows, known: cells.filter(c => c.shown).length, total: cells.length, hint: hintCell ? hints[hintCell.k] : null, monLike, monBad };
+  return { rows, known: cells.filter(c => c.shown).length, total: cells.length, hint: hintCell ? hints[hintCell.k] : null, monLike, monBad, recent: typeof assistantLifeTasteRecent === 'function' ? assistantLifeTasteRecent(id, 14) : [] };
 };
 
 // 台詞の最初に聞ける Lv(bond が無い行は Lv1 から)
@@ -70772,7 +70773,7 @@ function AssistantLifeProfileSheet({ id, bondLevelOf = null, land = false, giftS
       {c.like ? '💗' : '💧'} {c.shown ? `${c.it.emoji} ${c.it.name}` : '？'}</span>);
   const monChip = (m, like) => (
     <span key={`${like}-${m.id}`} className={`inline-flex items-center gap-1 rounded-xl border px-1.5 py-1 text-[11.5px] font-black ${like ? 'border-pink-400 text-pink-100' : 'border-sky-400 text-sky-100'}`}>
-      {like ? '💗' : '💧'}{m.icon ? <img src={m.icon} alt="" className="h-5 w-5 rounded-md object-contain"/> : m.emoji} {m.name}</span>);
+      {like ? '💗' : '💧'}{m.icon ? <img src={m.icon} alt="" className="h-5 w-5 rounded-md object-contain"/> : m.emoji} {m.name}{m.grown && <em data-assistant-life-taste-new className="whitespace-nowrap rounded-md bg-amber-300 px-1 text-[9.5px] font-black not-italic text-slate-900">✨ 新しく</em>}</span>);
   const hero = (
     <div className="relative overflow-hidden" data-assistant-life-profile-hero style={{ height: land ? '100%' : 300, backgroundImage: `linear-gradient(160deg, ${who.accent}55, #0f172a 72%)` }}>
       {/* 立ち絵は右側の枠の中で、顔の大きさと頭の高さをそろえる(縦は右6割・横は名前の下から) */}
@@ -70800,10 +70801,15 @@ function AssistantLifeProfileSheet({ id, bondLevelOf = null, land = false, giftS
   const secLikes = viewOnly ? null : (
     <div ref={refs.likes} className={card} data-assistant-life-profile-sec="likes">
       <p className={h3}><span className="whitespace-nowrap">{land ? '💗 好き・💧 苦手' : '💗 好きなもの・💧 苦手なもの'}</span>{likes.total > 0 && <em className="whitespace-nowrap text-[10.5px] font-bold not-italic text-slate-400">分かったもの {likes.known}/{likes.total}</em>}</p>
+      {likes.recent.length > 0 && (() => { const x = likes.recent[0]; return (
+        <p data-assistant-life-taste-say className="my-1.5 rounded-xl bg-slate-950/80 px-2 py-1.5 text-[11.5px] font-bold leading-snug text-pink-100">🗨 {who.name}「{assistantLifeTasteSay(x).map((t, i) => <span key={i} className="inline-block whitespace-nowrap">{t}</span>)}」</p>); })()}
       {likes.rows.map(r => (
         <div key={r.label} className="my-1 flex flex-wrap items-center gap-1"><span className="w-[4.6em] shrink-0 whitespace-nowrap text-[11px] font-bold text-slate-400">{r.label}</span>{r.cells.map(chip)}</div>))}
       {(likes.monLike.length > 0 || likes.monBad.length > 0) && (
         <div className="my-1 flex flex-wrap items-center gap-1"><span className="w-[4.6em] shrink-0 whitespace-nowrap text-[11px] font-bold text-slate-400">モンスター</span>{likes.monLike.map(m => monChip(m, true))}{likes.monBad.map(m => monChip(m, false))}</div>)}
+      {likes.recent.length > 0 && (
+        <div data-assistant-life-taste-log className="mt-1.5 rounded-xl border border-white/10 px-2 py-1.5"><p className="mb-0.5 text-[11px] font-black text-slate-300">🌱 最近の変化</p>
+          {likes.recent.slice(0, 3).map((x, i) => (<p key={i} className="text-[10.5px] font-bold leading-snug text-slate-300"><span className="inline-block whitespace-nowrap">{x.day.slice(5).replace('-', '/')}</span> <span className="inline-block whitespace-nowrap">{x.name}:</span> <span className="inline-block whitespace-nowrap">{{ like: '好き', dislike: '苦手', normal: 'ふつう' }[x.from]} →</span> <span className="inline-block whitespace-nowrap">{{ like: '好き', dislike: '苦手', normal: 'ふつう' }[x.to]}</span></p>))}</div>)}
       {likes.hint && <p data-assistant-life-profile-hint className="mt-1.5 rounded-xl bg-slate-950/80 px-2 py-1.5 text-[11px] font-bold leading-snug text-slate-200">💭 {who.name}の話から:「{String(likes.hint.t).replace(/\{name\}/g, call)}」</p>}
       {likes.total > 0 && <p className="mt-1 text-[10.5px] font-bold text-slate-400">？は贈ると分かります。分かった好みはここに残ります。</p>}
     </div>);
@@ -73148,7 +73154,8 @@ const ASSISTANT_MASMON_PLAN = [
 ];
 // >>> ASSISTANT_MASMON_PLAN
 
-const assistantMasmonBasePlanOf = (id) => ASSISTANT_MASMON_PLAN.find(a => a && a.id === id) || null;
+// 好き嫌いは、遊んで変わった分(56-assistant-life-masmon-taste.jsx・公開の印 assistantLifeTaste)を重ねた「いまの好み」を返す。差分が無い・印が偽のときは表のまま
+const assistantMasmonBasePlanOf = (id) => { const b = ASSISTANT_MASMON_PLAN.find(a => a && a.id === id) || null; if (!b) return null; try { return typeof assistantLifeTasteOverlay === 'function' ? assistantLifeTasteOverlay(b) : b; } catch (_) { return b; } };
 // プレイヤーごとのマスモン(2026-11-08 社長の選び ❶B): 保存した made があれば、表の team・extra をそれに差し替えて見せる(表は作る前の控え)
 const assistantMasmonPlanOf = (id) => {
   const base = assistantMasmonBasePlanOf(id);
@@ -74421,16 +74428,17 @@ const assistantLifeCardStyle = (id) => {
   return ASSISTANT_MASMON_CARD_STYLE[id] || null;
 };
 // ココロ(AI のおしゃべり)が読む口: いまの好き・苦手を表示名で(2026-11-08 ココロとすり合わせ)。
-//   changed は「好き嫌いが変わる」(GROW-PLAN 8)が入ってから埋まる。いまは空
+//   changed は遊んで段が変わった分(14日以内・3つまで。56-assistant-life-masmon-taste.jsx)
 const assistantLifeTasteOf = (id) => {
   try { if (typeof assistantLifeEnabled === 'function' && !assistantLifeEnabled()) return null; } catch (_) { return null; }
   const p = assistantMasmonPlanOf(id);
   if (!p) return null;
   const names = (xs) => [...new Set((xs || []).map(assistantMasmonTasteName).filter(Boolean))].slice(0, 5);
-  return { likes: names(p.likeMon), dislikes: names(p.dislikeMon), changed: [] };
+  let changed = []; try { changed = typeof assistantLifeTasteRecent === 'function' ? assistantLifeTasteRecent(id, 14).slice(0, 3).map(x => ({ name: x.name, to: x.to })) : []; } catch (_) { changed = []; }
+  return { likes: names(p.likeMon), dislikes: names(p.dislikeMon), changed };
 };
 
-// ココロの受け口(56-assistant-chat.jsx の入れ物)へ渡す。onTalk は「好き嫌いが変わる」を作るときに足す
+// ココロの受け口(56-assistant-chat.jsx の入れ物)へ渡す。onTalk は 56-assistant-life-masmon-taste.jsx が入れる
 if (typeof ASSISTANT_CHAT_TASTE_HOOKS === 'object' && ASSISTANT_CHAT_TASTE_HOOKS) { ASSISTANT_CHAT_TASTE_HOOKS.of = assistantLifeTasteOf; }
 
 // 能力のゲージ(見た目用)。プレイヤーと同じ4つ。基礎値 × Lv の伸び × 育ち方
@@ -81689,6 +81697,189 @@ function AmgsFuseSheet({ beds, onClose }) {
     </div>);
 }
 
+// ---- part: 56-assistant-life-masmon-taste.jsx ----
+// 助手の好き嫌いが遊んでいくうちに変わる仕組み(2026-11-15 キズナ8・r1115-007・社長「この形で作る」)。
+//   案 docs/progress/assistant-peer/GROW-PLAN.md 8・docs/progress/assistant-peer/taste-change/PROPOSAL.md
+//   はじめの好み(masmon-plan の likeMon/dislikeMon)は書き換えない。今の好みは「はじめとの差分」だけを新しいキー mh_assistant_life_taste_v1 に持つ
+//   点は -100〜+100。はじめの好き +60・苦手 -60・ふつう 0(好きなモンスターの血統の仲間は ±18)。段: +40 以上 好き / -40 以下 苦手 / その間 ふつう
+//   1日の上限は1つのモンスターにつき +6・-3。推し(性格の芯)の血統は動き方が5分の1で、好きの段より下がらない
+//   数字(点)は画面に出さない。段が変わった日だけ、助手のひとこと・家の掲示板1件・部屋の「好き・苦手」の変化に出す
+//   スコア・ランキング・強さ・ごほうびには効かせない(反応の台詞とマスモンの選び方だけ)
+//   公開の印 RELEASE_FLAGS.assistantLifeTaste が真のときだけ動く。今の好みを消せば、はじめの好みに戻る
+//   他の部の入口(呼ぶ口): assistantLifeTasteBump(助手id, モンスターid, 種類) 種類 = win / praise / gift / color / friend / raise / lose
+const ASSISTANT_TASTE_KEY = 'mh_assistant_life_taste_v1';
+const AMT_LIKE_AT = 40; // この点以上で「好き」、マイナスの同じ点以下で「苦手」
+const AMT_UP_DAY = 6, AMT_DOWN_DAY = 3; // 1日・1モンスターの上限
+const AMT_CORE_RATE = 0.2; // 推し(芯)の血統は動き方が5分の1
+const AMT_SPREAD = 0.3; // 点の3割は血統の仲間へ広がる
+const AMT_KINDS = Object.freeze({
+  win: { p: 3, once: false }, // 一緒に使って勝つ(バトル・モンヒロビート)
+  praise: { p: 4, once: true }, // 会話で良さを伝える(1日1回)
+  gift: { p: 5, once: false }, // そのモンスターの道具・家具を贈る
+  color: { p: 3, once: false }, // 好きな色の物を贈る・その色に染めたマスモンを見せる
+  friend: { p: 1, once: true }, // 友情Lv5以上の助手がそのモンスターを好き(1日1回)
+  raise: { p: 1, once: true }, // 自分のマスモンとして育てている(1日1回)
+  lose: { p: -2, once: false }, // いやな思い(同じ日に3回負ける・苦手なのに何度も連れていく)
+});
+const amtOn = () => { try { return typeof RELEASE_FLAGS !== 'undefined' && !!RELEASE_FLAGS && RELEASE_FLAGS.assistantLifeTaste === true; } catch (_) { return false; } };
+const amtNum = (v, lim) => (Number.isFinite(Number(v)) ? Math.max(-lim, Math.min(lim, Math.round(Number(v) * 100) / 100)) : 0);
+const amtMonKey = (k) => typeof k === 'string' && /^\w{2,40}$/.test(k);
+const amtEmptyRec = () => ({ mon: {}, lin: {}, day: { d: '', m: {} }, log: [], raised: '' });
+// 保存の形: { v:1, by:{ [助手id]: { mon:{[モンスター]:差}, lin:{[血統]:差}, day:{d,m:{[モンスター]:{up,down,k:[種類]}}}, log:[{day,target,from,to}], raised:'YYYY-MM-DD' } } }
+const normalizeAssistantLifeTaste = (raw) => {
+  const out = { v: 1, by: {} };
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw) || !raw.by || typeof raw.by !== 'object' || Array.isArray(raw.by)) return out;
+  for (const [aid, r] of Object.entries(raw.by)) {
+    if (!r || typeof r !== 'object' || Array.isArray(r) || !/^[a-z0-9_]{2,24}$/.test(aid)) continue;
+    const rec = amtEmptyRec();
+    for (const [k, v] of Object.entries(r.mon && typeof r.mon === 'object' && !Array.isArray(r.mon) ? r.mon : {}).slice(0, 80)) if (amtMonKey(k)) { const n = amtNum(v, 100); if (n) rec.mon[k] = n; }
+    for (const [k, v] of Object.entries(r.lin && typeof r.lin === 'object' && !Array.isArray(r.lin) ? r.lin : {}).slice(0, 60)) if (amtMonKey(k)) { const n = amtNum(v, 100); if (n) rec.lin[k] = n; }
+    const d = r.day && typeof r.day === 'object' ? r.day : null;
+    if (d && typeof d.d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d.d) && d.m && typeof d.m === 'object' && !Array.isArray(d.m)) {
+      rec.day.d = d.d;
+      for (const [k, v] of Object.entries(d.m).slice(0, 80)) if (amtMonKey(k) && v && typeof v === 'object') rec.day.m[k] = { up: Math.max(0, amtNum(v.up, 99)), down: Math.max(0, amtNum(v.down, 99)), k: (Array.isArray(v.k) ? v.k : []).filter(x => typeof x === 'string' && AMT_KINDS[x]).slice(0, 8) };
+    }
+    rec.log = (Array.isArray(r.log) ? r.log : []).filter(x => x && typeof x === 'object' && typeof x.day === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(x.day) && amtMonKey(x.target) && ['like', 'dislike', 'normal'].includes(x.from) && ['like', 'dislike', 'normal'].includes(x.to)).map(x => ({ day: x.day, target: x.target, from: x.from, to: x.to })).slice(-30);
+    rec.raised = typeof r.raised === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(r.raised) ? r.raised : '';
+    out.by[aid] = rec;
+  }
+  return out;
+};
+const AMT_STORE = typeof amgpMakeStore === 'function' ? amgpMakeStore(ASSISTANT_TASTE_KEY, normalizeAssistantLifeTaste) : null;
+const amtRawPlan = (aid) => { try { return ASSISTANT_MASMON_PLAN.find(a => a && a.id === aid) || null; } catch (_) { return null; } };
+const amtLin = (m) => { try { return typeof assistantMasmonLineage === 'function' ? assistantMasmonLineage(m) : null; } catch (_) { return null; } };
+const amtTier = (v) => (v >= AMT_LIKE_AT ? 'like' : v <= -AMT_LIKE_AT ? 'dislike' : 'normal');
+// はじめの点(表の likeMon/dislikeMon から)
+const amtBase = (raw, m) => {
+  if (!raw) return 0;
+  const lin = amtLin(m);
+  const some = (xs, f) => (Array.isArray(xs) ? xs : []).some(x => x && f(x));
+  if (some(raw.dislikeMon, x => x.monster === m)) return -60;
+  if (some(raw.likeMon, x => x.monster === m)) return 60;
+  if (lin && some(raw.dislikeMon, x => x.lineage === lin)) return -60;
+  if (lin && some(raw.likeMon, x => x.lineage === lin)) return 60;
+  let s = 0;
+  if (lin && some(raw.likeMon, x => x.monster && x.monster !== m && amtLin(x.monster) === lin)) s += 18;
+  if (lin && some(raw.dislikeMon, x => x.monster && x.monster !== m && amtLin(x.monster) === lin)) s -= 18;
+  return s;
+};
+const amtCoreLin = (aid) => { try { const mat = typeof assistantLifeCardMaterial === 'function' ? assistantLifeCardMaterial(aid) : null; return mat && mat.core ? mat.core : null; } catch (_) { return null; } };
+const amtIsCore = (aid, m) => { const c = amtCoreLin(aid); return !!c && amtLin(m) === c; };
+// いまの点(はじめ + 差分)。推しの血統で、はじめが好きなら、好きの段より下がらない
+const amtEff = (aid, raw, rec, m) => {
+  const b = amtBase(raw, m), lin = amtLin(m);
+  let v = b + (rec && rec.mon[m] || 0) + (lin && rec && rec.lin[lin] || 0);
+  v = Math.max(-100, Math.min(100, v));
+  if (b >= AMT_LIKE_AT && amtIsCore(aid, m)) v = Math.max(AMT_LIKE_AT, v);
+  return v;
+};
+const amtAllMons = () => (typeof ALL_PLAYER_MONSTERS !== 'undefined' && ALL_PLAYER_MONSTERS ? Object.keys(ALL_PLAYER_MONSTERS) : []);
+const amtMonName = (m) => { try { const x = typeof assistantMasmonMon === 'function' ? assistantMasmonMon(m) : null; return x ? x.name : m; } catch (_) { return m; } };
+// はじめの好みに、遊んで変わった分を重ねた「いまの好み」(likeMon/dislikeMon だけを差し替える。差分が無ければそのまま返す)
+const amtCache = { st: null, by: {} };
+function assistantLifeTasteOverlay(base) {
+  try {
+    if (!base || !amtOn() || !AMT_STORE || !AMT_STORE.loaded) return base;
+    const st = AMT_STORE.state; const rec = st.by[base.id];
+    if (!rec || (!Object.keys(rec.mon).length && !Object.keys(rec.lin).length)) return base;
+    if (amtCache.st !== st) { amtCache.st = st; amtCache.by = {}; }
+    if (amtCache.by[base.id]) return amtCache.by[base.id];
+    let like = [...(base.likeMon || [])], dis = [...(base.dislikeMon || [])];
+    for (const m of amtAllMons()) {
+      const bt = amtTier(amtBase(base, m)), t = amtTier(amtEff(base.id, base, rec, m));
+      if (bt === t) continue;
+      if (bt === 'like') like = like.filter(x => !(x && x.monster === m));
+      if (bt === 'dislike') dis = dis.filter(x => !(x && x.monster === m));
+      if (t === 'like') like.push({ monster: m, why: '遊んでいるうちに好きになった', grown: true });
+      if (t === 'dislike') dis.push({ monster: m, why: '遊んでいるうちに苦手になった', grown: true });
+    }
+    return (amtCache.by[base.id] = { ...base, likeMon: like, dislikeMon: dis });
+  } catch (_) { return base; }
+}
+// 段が変わったときの助手のひとこと(言葉の切れ目ごとの配列。画面で切れ目だけで折る)
+const AMT_SAY = Object.freeze({
+  like: (c) => ['最近', c, 'のこと…', 'ちょっと好きに', 'なってきた', 'かも'],
+  normal_from_dislike: (c) => [c, 'のこと、', '前ほど', '苦手じゃ', 'なくなってきた', 'かも'],
+  normal_from_like: (c) => [c, 'は、', '前ほど', '夢中じゃ', 'なくなった', 'かも'],
+  dislike: (c) => [c, 'は、', 'ちょっと', '苦手に', 'なってきた', 'かも'],
+});
+const assistantLifeTasteSay = (x) => {
+  const c = amtMonName(x.target);
+  if (x.to === 'like') return AMT_SAY.like(c);
+  if (x.to === 'dislike') return AMT_SAY.dislike(c);
+  return x.from === 'dislike' ? AMT_SAY.normal_from_dislike(c) : AMT_SAY.normal_from_like(c);
+};
+// 変わった記録(新しい順)。days 日以内
+const assistantLifeTasteRecent = (aid, days = 14) => {
+  try {
+    if (!amtOn() || !AMT_STORE || !AMT_STORE.loaded) return [];
+    const rec = AMT_STORE.state.by[aid]; if (!rec) return [];
+    const now = typeof assistantLifeDayKey === 'function' ? assistantLifeDayKey() : '';
+    const t0 = Date.parse(`${now}T00:00:00Z`);
+    return rec.log.filter(x => !Number.isFinite(t0) || (t0 - Date.parse(`${x.day}T00:00:00Z`)) / 86400000 <= days).slice().reverse().map(x => ({ ...x, name: amtMonName(x.target) }));
+  } catch (_) { return []; }
+};
+// 好き嫌いを動かす入口。他の部は種類だけ決めて呼ぶ。変わった段があれば [{ target, from, to }] を返す(無ければ空)
+const assistantLifeTasteBump = (aid, monsterId, kind, now = Date.now()) => {
+  try {
+    if (!amtOn() || !AMT_STORE || !AMT_STORE.loaded) return [];
+    const k = AMT_KINDS[kind], raw = amtRawPlan(aid);
+    if (!k || !raw || !amtMonKey(monsterId) || !(typeof assistantMasmonMon === 'function' && assistantMasmonMon(monsterId))) return [];
+    const st = AMT_STORE.state, old = st.by[aid] || amtEmptyRec();
+    const rec = { mon: { ...old.mon }, lin: { ...old.lin }, day: { d: old.day.d, m: { ...old.day.m } }, log: [...old.log], raised: old.raised };
+    const day = typeof assistantLifeDayKey === 'function' ? assistantLifeDayKey(now) : '';
+    if (!day) return [];
+    if (rec.day.d !== day) rec.day = { d: day, m: {} };
+    const dm = { up: 0, down: 0, k: [], ...(rec.day.m[monsterId] || {}) }; dm.k = [...dm.k];
+    if (k.once && dm.k.includes(kind)) return [];
+    let p = k.p * (amtIsCore(aid, monsterId) ? AMT_CORE_RATE : 1);
+    if (p > 0) { p = Math.min(p, Math.max(0, AMT_UP_DAY - dm.up)); dm.up += p; } else { p = -Math.min(-p, Math.max(0, AMT_DOWN_DAY - dm.down)); dm.down += -p; }
+    if (!p) return [];
+    if (k.once) dm.k.push(kind);
+    rec.day.m[monsterId] = dm;
+    const lin = amtLin(monsterId);
+    rec.mon[monsterId] = amtNum((rec.mon[monsterId] || 0) + p * (1 - AMT_SPREAD), 100);
+    if (lin) rec.lin[lin] = amtNum((rec.lin[lin] || 0) + p * AMT_SPREAD, 100);
+    const changes = [];
+    for (const m of amtAllMons()) {
+      const a = amtTier(amtEff(aid, raw, old, m)), b = amtTier(amtEff(aid, raw, rec, m));
+      if (a !== b) changes.push({ target: m, from: a, to: b });
+    }
+    for (const c of changes.slice(0, 3)) rec.log.push({ day, target: c.target, from: c.from, to: c.to });
+    rec.log = rec.log.slice(-30);
+    AMT_STORE.save({ ...st, by: { ...st.by, [aid]: rec } });
+    for (const c of changes.slice(0, 3)) {
+      try {
+        if (typeof assistantLifeDiaryAdd === 'function') {
+          const who = typeof assistantLifeName === 'function' ? assistantLifeName(aid) : aid, n = amtMonName(c.target);
+          const txt = c.to === 'like' ? `${who}が ${n}を 好きになってきたみたい` : c.to === 'dislike' ? `${who}は ${n}が 苦手になってきたみたい` : c.from === 'dislike' ? `${who}は ${n}が 前ほど苦手じゃ なくなってきたみたい` : `${who}は ${n}に 前ほど夢中じゃ なくなったみたい`; // 掲示板の小さな札で言葉の途中で切れないよう、言葉の切れ目に空白(AssistantLifeChunks が空白で区切る)
+          void assistantLifeDiaryAdd(txt, [aid], { kind: 'note' });
+        }
+      } catch (_) {}
+    }
+    return changes;
+  } catch (_) { return []; }
+};
+// ココロ(AI のおしゃべり)の手がかり: 良い言葉が出たら「ほめた」(1日1回)。悪い言葉は数えない(控えめ)
+const assistantLifeTasteOnTalk = (x) => {
+  try { if (x && x.positive === true && typeof x.assistantId === 'string' && typeof x.monsterId === 'string') assistantLifeTasteBump(x.assistantId, x.monsterId, 'praise'); } catch (_) {}
+};
+if (typeof ASSISTANT_CHAT_TASTE_HOOKS === 'object' && ASSISTANT_CHAT_TASTE_HOOKS) { ASSISTANT_CHAT_TASTE_HOOKS.onTalk = assistantLifeTasteOnTalk; }
+// 自分のマスモンとして育てているモンスター: 1日1回、+1(読み込みのあとに1回走る)
+const assistantLifeTasteDaily = () => {
+  try {
+    if (!amtOn() || !AMT_STORE || !AMT_STORE.loaded || typeof ASSISTANT_MASMON_STORE === 'undefined' || !ASSISTANT_MASMON_STORE.loaded || typeof assistantMasmonRowsOf !== 'function') return;
+    for (const a of ASSISTANT_MASMON_PLAN) {
+      if (!a || !a.id) continue;
+      for (const r of assistantMasmonRowsOf(ASSISTANT_MASMON_STORE.state, a.id) || []) if (r && r.monster) assistantLifeTasteBump(a.id, r.monster, 'raise');
+    }
+  } catch (_) {}
+};
+// 読み込み: 好みの保存だけを先に読む。助手のマスモンの保存は、助手ライフが開いて読み込まれたあと(subs の通知)で日次を1回走らせる(ここから読み込ませない=起動時に名前付けなどが走らないように)
+let amtDailyDay = '';
+const amtDailyTry = () => { try { const d = typeof assistantLifeDayKey === 'function' ? assistantLifeDayKey() : ''; if (!d || amtDailyDay === d || !AMT_STORE || !AMT_STORE.loaded || typeof ASSISTANT_MASMON_STORE === 'undefined' || !ASSISTANT_MASMON_STORE.loaded) return; amtDailyDay = d; assistantLifeTasteDaily(); } catch (_) {} };
+try { setTimeout(() => { try { if (amtOn() && AMT_STORE) { void AMT_STORE.load().then(amtDailyTry).catch(() => {}); if (typeof ASSISTANT_MASMON_STORE !== 'undefined' && ASSISTANT_MASMON_STORE.subs) ASSISTANT_MASMON_STORE.subs.add(amtDailyTry); } } catch (_) {} }, 0); } catch (_) {}
+
 // ---- part: 56-monsuc-fuse.jsx ----
 // ---------- モンヒロサクセスの合体(保存枠の育て終えた子どうし・2026-11-12 開発部・段取りの回3) ----------
 // 案: docs/progress/player-raise/PLAN.md §3「合体」・§9。計算は芯 MONHERO_SUCCESS(data/monhero-success.js)の fusePlan だけを使う。
@@ -82917,19 +83108,31 @@ const MSX_SCN_CSS = `
 .msx .scn-sc .who.c{left:50%;transform:translateX(-50%);bottom:46%;height:46%;z-index:1;animation:msxScnBob 3.2s ease-in-out infinite}
 @keyframes msxScnBob{0%,100%{transform:translateX(-50%) translateY(0)}50%{transform:translateX(-50%) translateY(-6px)}}
 .msx .scn-bd{position:absolute;z-index:3;right:4%;top:3%;width:68px;height:68px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fcd34d,#b45309);border:3px solid #fef3c7;box-shadow:0 2px 8px #0006;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#3b1d02;font-weight:900;font-size:11px;line-height:1.15;text-align:center}
-.msx .scn-ti{position:absolute;left:0;right:0;top:41%;text-align:center;z-index:3}
+.msx .scn-tx{position:absolute;z-index:3;left:0;right:0;bottom:3%;display:flex;flex-direction:column;align-items:stretch}
+.msx .scn-ti{text-align:center}
 .msx .scn-ti b{display:block;font-size:clamp(34px,11vw,46px);font-weight:900;letter-spacing:1px;color:#fde047;background:linear-gradient(180deg,#ffffff 8%,#fef08a 40%,#facc15 68%,#f59e0b 95%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;-webkit-text-stroke:1px #c2410c;filter:drop-shadow(0 2px 0 #7c2d12) drop-shadow(0 0 6px #0007)}
-.msx .scn-ti small{display:block;margin-top:2px;font-size:12px;font-weight:900;letter-spacing:5px;color:#fff;text-shadow:0 1px 3px #000}
-.msx .scn-ld{position:absolute;z-index:3;left:4%;right:4%;top:56%;padding:9px 12px;border-radius:8px;background:linear-gradient(90deg,#4338ca,#7c3aed);border:2px solid #c4b5fd;color:#fff;font-size:12.5px;font-weight:800;line-height:1.6;transform:skewX(-3deg);box-shadow:0 3px 10px #0006}
+.msx .scn-ti small{display:table;margin:4px auto 0;padding:1px 12px;border-radius:9px;background:#0b092099;font-size:12px;font-weight:900;letter-spacing:5px;color:#fff;text-shadow:0 1px 3px #000}
+.msx .scn-ld{margin:10px 3% 0;text-align:center;padding:9px 8px;border-radius:8px;background:linear-gradient(90deg,#4338ca,#7c3aed);border:2px solid #c4b5fd;color:#fff;font-size:clamp(10px,3vw,12.5px);font-weight:800;line-height:1.6;transform:skewX(-3deg);box-shadow:0 3px 10px #0006}
 .msx .scn-ld>div{transform:skewX(3deg)}
-.msx .scn-dt{position:absolute;z-index:3;left:0;right:0;top:calc(56% + 92px);text-align:center;color:#fff;font-size:11px;font-weight:800;text-shadow:0 1px 3px #000}
+.msx .scn-dt{margin-top:8px;text-align:center;color:#fff;font-size:11px;font-weight:800;text-shadow:0 1px 3px #000}
 .msx .scn-dt i{display:inline-block;width:7px;height:7px;border-radius:50%;background:#fff;margin:0 3px 4px}
 .msx .scn-dt i.off{width:4px;height:4px;opacity:.6}
 .msx .scn-ft{display:flex;gap:10px;align-items:center;padding:10px 12px calc(10px + env(safe-area-inset-bottom));background:#c9b9a6;flex:none}
-.msx .scn-ft button{height:48px;border-radius:10px;font-weight:900;font-size:16px;border:3px solid #fff;box-shadow:0 3px 0 #0003}
+.msx .scn-ft button{display:flex;align-items:center;justify-content:center;text-align:center;line-height:1;padding:0;height:48px;border-radius:10px;font-weight:900;font-size:16px;border:3px solid #fff;box-shadow:0 3px 0 #0003}
 .msx .scn-ft .bk{width:48px;flex:none;background:#f59e0b;color:#fff;font-size:22px}
 .msx .scn-ft .go{flex:1 1 0;background:linear-gradient(180deg,#fb923c,#ea580c);color:#fff}
 .msx .scn-ft .dt{flex:1 1 0;background:#fff;color:#1f2937;border-color:#e5e7eb}
+.msx .land .scn-tx,.msx.land .scn-tx{right:42%}
+.msx .land .scn-sc .who.c,.msx.land .scn-sc .who.c{left:auto;right:17%;transform:none;bottom:0;height:90%;animation:none}
+.msx .land .scn-sc .who.r,.msx.land .scn-sc .who.r{right:-3%;bottom:0;height:78%}
+.msx .land .scn-sc .who.l,.msx.land .scn-sc .who.l{display:none}
+.msx .land .scn-bd,.msx.land .scn-bd{right:2%}
+@media (orientation:landscape) and (max-height:520px){
+.msx .scn-tx{right:42%}
+.msx .scn-sc .who.c{left:auto;right:17%;transform:none;bottom:0;height:90%;animation:none}
+.msx .scn-sc .who.r{right:-3%;bottom:0;height:78%}
+.msx .scn-sc .who.l{display:none}
+}
 .msx .scn-win{position:absolute;inset:0;z-index:30;background:#0008;display:flex;align-items:center;justify-content:center;padding:28px 18px}
 .msx .scn-win .in{width:100%;max-height:100%;overflow-y:auto;background:#fffbeb;border:4px solid #c2410c;border-radius:14px;padding:14px 16px;color:#1f2937}
 .msx .scn-win h3{margin:0 0 8px;text-align:center;font-size:18px;font-weight:900;color:#9a3412}
@@ -82962,11 +83165,13 @@ function MsxScenarioSelect({ value, onBack, onNext, ctx }) {
         {sc.cast.right ? <img className="who r" src={art(sc.cast.right)} alt=""/> : null}
         {sc.cast.center ? <img className="who c" src={art(sc.cast.center)} alt=""/> : null}
         <div className="scn-bd">{sc.badge}<span style={{ fontSize: 16 }}>👑</span></div>
-        <div className="scn-ti"><b>{sc.name}</b><small>{sc.en}</small></div>
-        <div className="scn-ld"><div>{sc.lead.map((t, i) => <React.Fragment key={i}>{i ? <br/> : null}{t}</React.Fragment>)}</div></div>
-        <div className="scn-dt">
-          <div>{MSX_STORIES.map((x, i) => <i key={x.id} className={i === idx ? '' : 'off'}/>)}</div>
-          {many ? null : 'ほかのシナリオは 準備中です'}
+        <div className="scn-tx">
+          <div className="scn-ti"><b>{sc.name}</b><small>{sc.en}</small></div>
+          <div className="scn-ld"><div>{sc.lead.map((t, i) => <React.Fragment key={i}>{i ? <br/> : null}{t}</React.Fragment>)}</div></div>
+          <div className="scn-dt">
+            <div>{MSX_STORIES.map((x, i) => <i key={x.id} className={i === idx ? '' : 'off'}/>)}</div>
+            {many ? null : 'ほかのシナリオは 準備中です'}
+          </div>
         </div>
         {many ? <>
           <button type="button" aria-label="前のシナリオ" onClick={() => setIdx((i) => (i + n - 1) % n)} style={{ position: 'absolute', left: 4, top: '44%', background: 'none', border: 0, color: '#fff', fontSize: 28, opacity: 0.8 }}>◀</button>
@@ -86887,9 +87092,32 @@ const MSX_CSS = `
 .msx .msx-md-tg .tc.wise{background:linear-gradient(160deg,#bbf7d0,#16a34a);border-color:#4ade80}
 .msx .msx-md-tg .tc.pow.tg-not{background:linear-gradient(160deg,#9a7420,#5e420c);border-color:#a8801f}
 .msx .msx-md-tg .tc.wise.tg-not{background:linear-gradient(160deg,#2f8050,#145230);border-color:#3f9a62}
-.msx-md-tg .tc.tg-not .ti{filter:brightness(.8)}
+.msx-md-tg .tc.tg-not .ti{filter:brightness(.55) saturate(.65)}
+/* 技の絵(資料の技アイコン・2026-11-15 社長 r1115-003): 升いっぱいに敷く。元絵に焼き込まれた数字は、右下の数字の札(.g)でかぶせる */
+.msx-md-tg .tc .ti{position:absolute;inset:0;border-radius:6px;overflow:hidden;display:block}
+.msx-md-tg .tc .tg-img{display:block;width:100%;height:100%;object-fit:cover;pointer-events:none}
+.msx-md-tg .tc .g{right:2px;bottom:2px;min-width:20px;padding:0 3px;border-radius:5px;background:rgba(18,12,6,.86);text-align:center;line-height:13px;height:13px;z-index:2}
+.msx-md-tg .tc .tg-alt{z-index:3}
+.msx-md-tg .tc .tg-rk{position:absolute;left:2px;top:2px;z-index:2;min-width:14px;height:14px;border-radius:4px;font-size:10px;font-weight:900;line-height:14px;text-align:center;color:#2a1608;border:1px solid #2a1608}
+.tg-rk.rk1{background:linear-gradient(135deg,#e9a46a,#a95f27)}.tg-rk.rk2{background:linear-gradient(135deg,#f4f7fb,#aab4c2)}.tg-rk.rk3{background:linear-gradient(135deg,#fff1a6,#f2b705)}.tg-rk.rk4{background:linear-gradient(135deg,#d9a8ff,#8a3ffc);color:#fff}.tg-rk.rk5{background:linear-gradient(135deg,#ff5a5a,#ffd23f,#4ade80,#38bdf8,#c084fc)}
 .msx-md-tg .tc{position:relative}
-.msx-md-tg .tc .tg-alt{position:absolute;top:1px;right:3px;font-size:11px;font-weight:900;line-height:1;color:#fff;text-shadow:0 1px 2px #000}
+.msx .msx-md-alt{margin-top:6px;width:100%;padding:6px 8px;border-radius:10px;font-size:12px;font-weight:900;color:#fff;background:linear-gradient(160deg,#6d4cd9,#4a2fa6);border:1.5px solid #a78bfa}
+.msx .msx-tp{display:flex;align-items:center;gap:8px;width:100%;margin:0 0 6px;padding:6px 8px;border-radius:12px;text-align:left;color:#fff;background:#1e1b3a;border:1.5px solid #3b3566}
+.msx .msx-tp.on{border-color:#facc15;background:#2a2547}
+.msx .msx-tp:disabled{opacity:.55}
+.msx .msx-tp .tc{position:relative;overflow:hidden;flex:0 0 44px;width:44px;height:44px;border-radius:8px;display:flex;align-items:center;justify-content:center;border:1.5px solid transparent}
+.msx .msx-tp .tc.pow{background:linear-gradient(160deg,#fde68a,#d97706);border-color:#f59e0b}
+.msx .msx-tp .tc.wise{background:linear-gradient(160deg,#bbf7d0,#16a34a);border-color:#4ade80}
+.msx .msx-tp .tc.pow.tg-not{background:linear-gradient(160deg,#9a7420,#5e420c);border-color:#a8801f}
+.msx .msx-tp .tc.wise.tg-not{background:linear-gradient(160deg,#2f8050,#145230);border-color:#3f9a62}
+.msx .msx-tp .tc{overflow:hidden}.msx .msx-tp .tc .ti{position:absolute;inset:0;display:block}.msx .msx-tp .tc .tg-img{width:100%;height:100%;object-fit:cover;display:block}
+.msx .msx-tp .tc.tg-not .ti{filter:brightness(.55) saturate(.65)}
+.msx .msx-tp .tpb{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.msx .msx-tp .tpb b{font-size:13px}
+.msx .msx-tp .tpb small{font-size:10.5px;opacity:.85;line-height:1.35}
+.msx .msx-tp .tpb small.tp-nb i{font-style:normal;display:inline-block;white-space:nowrap;margin-right:.6em}
+.msx .msx-tp .tpm{flex:0 0 auto;font-size:11px;font-weight:900;color:#facc15}
+.msx-md-tg .tc .tg-alt{position:absolute;top:0;right:0;min-width:22px;height:22px;display:flex;align-items:flex-start;justify-content:flex-end;padding:1px 3px 0 0;font-size:12px;font-weight:900;line-height:1;color:#fff;text-shadow:0 1px 2px #000;cursor:pointer}
 
 .msx-md-not{display:block;font-size:10px;color:#94a3b8;font-weight:800}
 .msx-md-howrow{flex-direction:column;align-items:flex-start;gap:1px}.msx-md-howrow>span{width:100%}
@@ -87278,6 +87506,29 @@ const msxNormAssist = (raw) => {
   });
   return { v: 1, cap: MSX_ASSIST_CAP, mons };
 };
+// ---- 技の升の選び(2026-11-14 社長 r1114-128・131) ----
+//   新しいキー mh_monsuc_techpick_v1 = { v:1, base:{ 種族: { 升: 技id } }, mon:{ マスモンボックスの子のid: { 升: 技id } } }。升 = `${ランク}-${間合い}`。
+//   育成を始めるときに、その種族(または合体で生まれた子)の分を育成の状態 techPick へ写す(芯 data/monhero-success.js の techPick)。既存のキーは変えない。
+//   読めない値は _broken へ写して空で始める。項目が無い・壊れた升は「並びの1つ目」(芯の techPickNorm と同じ)
+const MSX_PICK_KEY = 'mh_monsuc_techpick_v1';
+const msxNormPickMap = (raw) => { const o = {}; if (!msxIsObj(raw)) return o; Object.keys(raw).slice(0, 32).forEach((c) => { if (/^[1-5]-[0-3]$/.test(c) && typeof raw[c] === 'string' && raw[c].length <= 48) o[c] = raw[c]; }); return o; };
+const msxNormTechPick = (raw) => {
+  const o = msxIsObj(raw) ? raw : {}; const base = {}; const mon = {};
+  if (msxIsObj(o.base)) Object.keys(o.base).slice(0, 64).forEach((k) => { if (k.length <= 32) base[k] = msxNormPickMap(o.base[k]); });
+  if (msxIsObj(o.mon)) Object.keys(o.mon).slice(0, 300).forEach((k) => { if (k.length <= 64) mon[k] = msxNormPickMap(o.mon[k]); });
+  return { v: 1, base, mon };
+};
+const msxReadTechPick = async () => {
+  let raw = null; try { raw = await storeGet(MSX_PICK_KEY, null); } catch (e) { raw = null; }
+  if (raw != null && !msxIsObj(raw)) { try { await storeSet(MSX_PICK_KEY + '_broken', raw); } catch (e) {} }
+  return msxNormTechPick(raw);
+};
+// kind … 'base'(ベースモン・key は種族) / 'mon'(合体で生まれた子・key は箱の子の id)。書いた結果の全体を返す
+const msxWriteTechPick = async (kind, key, map) => {
+  const cur = await msxReadTechPick(); const out = { ...cur, [kind]: { ...cur[kind], [key]: msxNormPickMap(map) } };
+  try { await storeSet(MSX_PICK_KEY, out); } catch (e) { return cur; }
+  return out;
+};
 const msxReadAssist = async () => {
   let raw = null; try { raw = await storeGet(MSX_ASSIST_KEY, null); } catch (e) { raw = null; }
   if (raw != null && (!msxIsObj(raw) || !Array.isArray(raw.mons))) { try { await storeSet(MSX_ASSIST_KEY + '_broken', raw); } catch (e) {} }
@@ -87592,32 +87843,42 @@ const msxStartPreview = (SUC, species, type, aptBase, startSt) => {
   } catch (e) { /* 見通しが出せなくても選ぶ画面は動く */ }
   return out;
 };
+/* skill-icons:begin(tools/success/build-skill-icons.js が書く) */
+const MSX_SKILL_ICONS = new Set([
+'images/success/skill/sk-0001.png','images/success/skill/sk-0002.png','images/success/skill/sk-0003.png','images/success/skill/sk-0004.png','images/success/skill/sk-0005.png','images/success/skill/sk-0008.png','images/success/skill/sk-0009.png','images/success/skill/sk-0010.png','images/success/skill/sk-0015.png','images/success/skill/sk-0016.png','images/success/skill/sk-0017.png','images/success/skill/sk-0018.png','images/success/skill/sk-0023.png','images/success/skill/sk-0025.png','images/success/skill/sk-0026.png','images/success/skill/sk-0027.png','images/success/skill/sk-0028.png','images/success/skill/sk-0035.png','images/success/skill/sk-0036.png','images/success/skill/sk-0037.png','images/success/skill/sk-0039.png','images/success/skill/sk-0040.png','images/success/skill/sk-0041.png','images/success/skill/sk-0042.png','images/success/skill/sk-0043.png','images/success/skill/sk-0044.png','images/success/skill/sk-0045.png','images/success/skill/sk-0046.png','images/success/skill/sk-0047.png','images/success/skill/sk-0048.png','images/success/skill/sk-0049.png','images/success/skill/sk-0050.png','images/success/skill/sk-0051.png','images/success/skill/sk-0052.png','images/success/skill/sk-0053.png','images/success/skill/sk-0054.png','images/success/skill/sk-0055.png','images/success/skill/sk-0064.png','images/success/skill/sk-0065.png','images/success/skill/sk-0066.png','images/success/skill/sk-0067.png','images/success/skill/sk-0068.png','images/success/skill/sk-0069.png','images/success/skill/sk-0070.png','images/success/skill/sk-0071.png','images/success/skill/sk-0072.png','images/success/skill/sk-0073.png','images/success/skill/sk-0074.png','images/success/skill/sk-0075.png','images/success/skill/sk-0076.png','images/success/skill/sk-0077.png','images/success/skill/sk-0078.png','images/success/skill/sk-0079.png','images/success/skill/sk-0080.png','images/success/skill/sk-0082.png','images/success/skill/sk-0083.png','images/success/skill/sk-0084.png','images/success/skill/sk-0110.png','images/success/skill/sk-0111.png','images/success/skill/sk-0112.png','images/success/skill/sk-0113.png','images/success/skill/sk-0114.png','images/success/skill/sk-0115.png','images/success/skill/sk-0116.png','images/success/skill/sk-0117.png','images/success/skill/sk-0118.png','images/success/skill/sk-0119.png','images/success/skill/sk-0120.png','images/success/skill/sk-0121.png','images/success/skill/sk-0122.png','images/success/skill/sk-0123.png','images/success/skill/sk-0124.png','images/success/skill/sk-0125.png','images/success/skill/sk-0129.png','images/success/skill/sk-0258.png','images/success/skill/sk-0259.png','images/success/skill/sk-0260.png','images/success/skill/sk-0261.png','images/success/skill/sk-0262.png','images/success/skill/sk-0263.png','images/success/skill/sk-0264.png','images/success/skill/sk-0265.png','images/success/skill/sk-0266.png','images/success/skill/sk-0267.png','images/success/skill/sk-0268.png','images/success/skill/sk-0269.png','images/success/skill/sk-0270.png','images/success/skill/sk-0271.png','images/success/skill/sk-0272.png','images/success/skill/sk-0273.png','images/success/skill/sk-0274.png','images/success/skill/sk-0292.png','images/success/skill/sk-0293.png','images/success/skill/sk-0294.png','images/success/skill/sk-0295.png','images/success/skill/sk-0296.png','images/success/skill/sk-0297.png','images/success/skill/sk-0298.png','images/success/skill/sk-0299.png','images/success/skill/sk-0300.png','images/success/skill/sk-0301.png','images/success/skill/sk-0302.png','images/success/skill/sk-0303.png','images/success/skill/sk-0304.png','images/success/skill/sk-0305.png','images/success/skill/sk-0306.png','images/success/skill/sk-0307.png','images/success/skill/sk-0338.png','images/success/skill/sk-0339.png','images/success/skill/sk-0340.png','images/success/skill/sk-0341.png','images/success/skill/sk-0342.png','images/success/skill/sk-0343.png','images/success/skill/sk-0344.png','images/success/skill/sk-0345.png','images/success/skill/sk-0346.png','images/success/skill/sk-0347.png','images/success/skill/sk-0348.png','images/success/skill/sk-0349.png','images/success/skill/sk-0350.png','images/success/skill/sk-0351.png','images/success/skill/sk-0384.png','images/success/skill/sk-0385.png','images/success/skill/sk-0386.png','images/success/skill/sk-0387.png','images/success/skill/sk-0388.png','images/success/skill/sk-0389.png','images/success/skill/sk-0390.png','images/success/skill/sk-0391.png','images/success/skill/sk-0392.png','images/success/skill/sk-0393.png','images/success/skill/sk-0394.png','images/success/skill/sk-0395.png','images/success/skill/sk-0396.png','images/success/skill/sk-0397.png','images/success/skill/sk-0398.png','images/success/skill/sk-0399.png','images/success/skill/sk-0400.png','images/success/skill/sk-0401.png','images/success/skill/sk-0402.png','images/success/skill/sk-0403.png','images/success/skill/sk-0404.png','images/success/skill/sk-0405.png','images/success/skill/sk-0406.png','images/success/skill/sk-0407.png','images/success/skill/sk-0408.png','images/success/skill/sk-0409.png','images/success/skill/sk-0410.png','images/success/skill/sk-0411.png','images/success/skill/sk-0412.png','images/success/skill/sk-0413.png','images/success/skill/sk-0414.png','images/success/skill/sk-0415.png','images/success/skill/sk-0416.png','images/success/skill/sk-0446.png','images/success/skill/sk-0447.png','images/success/skill/sk-0448.png','images/success/skill/sk-0449.png','images/success/skill/sk-0450.png','images/success/skill/sk-0451.png','images/success/skill/sk-0452.png','images/success/skill/sk-0453.png','images/success/skill/sk-0454.png','images/success/skill/sk-0455.png','images/success/skill/sk-0456.png','images/success/skill/sk-0457.png','images/success/skill/sk-0458.png','images/success/skill/sk-0459.png','images/success/skill/sk-0460.png','images/success/skill/sk-0461.png','images/success/skill/sk-0462.png','images/success/skill/sk-0463.png','images/success/skill/sk-0464.png','images/success/skill/sk-0465.png','images/success/skill/sk-0466.png','images/success/skill/sk-0467.png','images/success/skill/sk-0468.png','images/success/skill/sk-0469.png','images/success/skill/sk-0470.png','images/success/skill/sk-0471.png','images/success/skill/sk-0472.png','images/success/skill/sk-0473.png','images/success/skill/sk-0474.png','images/success/skill/sk-0475.png','images/success/skill/sk-0476.png','images/success/skill/sk-0477.png','images/success/skill/sk-0478.png','images/success/skill/sk-0479.png','images/success/skill/sk-0480.png','images/success/skill/sk-0481.png','images/success/skill/sk-0482.png','images/success/skill/sk-0483.png','images/success/skill/sk-0484.png','images/success/skill/sk-0485.png','images/success/skill/sk-0486.png','images/success/skill/sk-0487.png','images/success/skill/sk-0488.png','images/success/skill/sk-0489.png','images/success/skill/sk-0490.png','images/success/skill/sk-0491.png','images/success/skill/sk-0496.png','images/success/skill/sk-0511.png','images/success/skill/sk-0512.png','images/success/skill/sk-0513.png','images/success/skill/sk-0514.png','images/success/skill/sk-0515.png','images/success/skill/sk-0516.png','images/success/skill/sk-0517.png','images/success/skill/sk-0518.png','images/success/skill/sk-0519.png','images/success/skill/sk-0520.png','images/success/skill/sk-0521.png','images/success/skill/sk-0522.png','images/success/skill/sk-0523.png','images/success/skill/sk-0524.png','images/success/skill/sk-0525.png','images/success/skill/sk-0526.png','images/success/skill/sk-0573.png','images/success/skill/sk-0574.png','images/success/skill/sk-0575.png','images/success/skill/sk-0576.png','images/success/skill/sk-0577.png','images/success/skill/sk-0578.png','images/success/skill/sk-0579.png','images/success/skill/sk-0580.png','images/success/skill/sk-0581.png','images/success/skill/sk-0582.png','images/success/skill/sk-0583.png','images/success/skill/sk-0584.png','images/success/skill/sk-0585.png','images/success/skill/sk-0586.png','images/success/skill/sk-0587.png','images/success/skill/sk-0588.png','images/success/skill/sk-0589.png','images/success/skill/sk-0590.png','images/success/skill/sk-0591.png','images/success/skill/sk-0592.png','images/success/skill/sk-0593.png','images/success/skill/sk-0594.png','images/success/skill/sk-0595.png','images/success/skill/sk-0596.png','images/success/skill/sk-0597.png','images/success/skill/sk-0598.png','images/success/skill/sk-0599.png','images/success/skill/sk-0742.png','images/success/skill/sk-0743.png','images/success/skill/sk-0744.png','images/success/skill/sk-0785.png','images/success/skill/sk-0787.png','images/success/skill/sk-0788.png','images/success/skill/sk-0797.png','images/success/skill/sk-0798.png','images/success/skill/sk-0799.png','images/success/skill/sk-0824.png']);
+/* skill-icons:end */
 // 技の升の絵(2026-11-14 社長「力で剣はいいね」「ランク帯で色を変えて」): ちから技=剣・かしこさ技=本の単色の形を、技のランク1〜5の色(銅・銀・金・紫・虹)で塗る。升の地の色(ちから=金・かしこさ=緑)は変えない。
 //   升の地と同じ色にならないよう、形のまわりを暗い線で縁取る
 const MSX_TG_RANK_COL = Object.freeze({ 1: ['#e9a46a', '#a95f27'], 2: ['#f4f7fb', '#aab4c2'], 3: ['#fff1a6', '#f2b705'], 4: ['#d9a8ff', '#8a3ffc'] });
 const MSX_TG_RANK_NAME = Object.freeze({ 1: '銅', 2: '銀', 3: '金', 4: '紫', 5: '虹' });
-function MsxTechIcon({ kind, rank, size = 28, uid = '' }) {
-  const r = Math.max(1, Math.min(5, Number(rank) || 1)); const gid = `tgi-${uid}${kind}${r}`;
-  const stops = r === 5 ? [['0', '#ff5a5a'], ['.25', '#ffd23f'], ['.5', '#4ade80'], ['.75', '#38bdf8'], ['1', '#c084fc']] : [['0', MSX_TG_RANK_COL[r][0]], ['1', MSX_TG_RANK_COL[r][1]]];
-  const ink = '#2a1608';
+// 技の絵(2026-11-15 社長 r1115-003「技の絵は資料の技アイコンへ」): 資料の絵がある技は images/success/skill/sk-####.png。
+//   資料に無い技(オリジナルの子・オリジナル技)は、資料の絵にならった影絵(同じ灰色の枠・ちから技=黄・かしこさ技=緑の単色)を間合いごとの形で描く。
+//   82×82 の元絵は右下に消費ガッツの数字が焼き込まれているので、升の右下の数字の札(.g)でかぶせる
+const MSX_SHADOW_PATHS = Object.freeze({
+  pow: [
+    <g key="p0"><path d="M22 38h30a10 10 0 0 1 10 10v16a10 10 0 0 1-10 10H32a10 10 0 0 1-10-10z"/><path d="M66 30l14-8-6 16 16 4-16 8 8 16-16-8z"/></g>,
+    <g key="p1"><path d="M16 74Q40 14 82 20Q54 32 44 76z"/><path d="M30 82Q56 50 88 44Q66 62 56 84z"/></g>,
+    <g key="p2"><path d="M26 28Q58 48 26 68" fill="none" strokeWidth="9" strokeLinecap="round"/><path d="M44 20Q86 48 44 76" fill="none" strokeWidth="9" strokeLinecap="round"/><circle cx="20" cy="48" r="8"/></g>,
+    <g key="p3"><path d="M10 56h46V42l30 20-30 20V68H10z"/><path d="M14 36h30M20 90h30" fill="none" strokeWidth="6" strokeLinecap="round"/></g>,
+  ],
+  wise: [
+    <g key="w0"><path d="M48 52C48 44 58 44 58 52C58 64 40 64 40 48C40 30 66 30 66 52C66 76 32 76 32 46C32 18 72 18 72 52" fill="none" strokeWidth="7" strokeLinecap="round"/></g>,
+    <g key="w1"><path d="M56 10L26 54h20L36 86l34-48H50z"/></g>,
+    <g key="w2"><circle cx="48" cy="48" r="30" fill="none" strokeWidth="6"/><path d="M48 22l6 20 20 6-20 6-6 20-6-20-20-6 20-6z"/></g>,
+    <g key="w3"><circle cx="68" cy="30" r="13"/><path d="M60 40L12 86l24-30-16 8 34-32z"/></g>,
+  ],
+});
+const msxSkillIconPath = (id) => ['images/success/skill', `${id}.png`].join('/'); // パスを部品で組む(画像の検査が ${} の入った文字を実在しない絵と読むため)
+function MsxSkillArt({ t, uid = '' }) {
+  if (t && MSX_SKILL_ICONS.has(msxSkillIconPath(t.id))) return <img className="tg-img" src={msxSkillIconPath(t.id)} alt="" draggable="false" loading="lazy"/>;
+  const kind = t && t.kind === 'wise' ? 'wise' : 'pow'; const d = Math.max(0, Math.min(3, Math.min(...(t && Array.isArray(t.dist) && t.dist.length ? t.dist : [1]))));
+  const gid = `tgs-${uid}${t ? t.id : ''}`; const fill = kind === 'wise' ? '#34c46a' : '#f5b81b'; const ink = kind === 'wise' ? '#14653a' : '#8a5a06';
   return (
-    <svg className="tg-ic" data-tg-rank={r} width={size} height={size} viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-      <defs><linearGradient id={gid} x1="0" y1="0" x2="1" y2="1">{stops.map(([o, c]) => <stop key={o} offset={o} stopColor={c}/>)}</linearGradient></defs>
-      {kind === 'wise' ? (
-        <g fill={`url(#${gid})`} stroke={ink} strokeWidth="1.3" strokeLinejoin="round">
-          <path d="M12 6.6C9.6 4.6 6 4.1 2.2 5v12.6c3.8-.9 7.4-.4 9.8 1.6z"/>
-          <path d="M12 6.6c2.4-2 6-2.5 9.8-1.6v12.6c-3.8-.9-7.4-.4-9.8 1.6z"/>
-          <path d="M12 6.6v12.6M2.2 19.6c3.8-.9 7.4-.4 9.8 1.6 2.4-2 6-2.5 9.8-1.6" fill="none" strokeLinecap="round"/>
-          <path d="M4.6 8.4c2-.3 4 0 5.6.9M4.6 11.4c2-.3 4 0 5.6.9M19.4 8.4c-2-.3-4 0-5.6.9M19.4 11.4c-2-.3-4 0-5.6.9" fill="none" strokeLinecap="round" strokeWidth="1"/>
-        </g>
-      ) : (
-        <g fill={`url(#${gid})`} stroke={ink} strokeWidth="1.3" strokeLinejoin="round" transform="rotate(45 12 12)">
-          <path d="M12 0.8l2.3 3.3v9.6H9.7V4.1z"/>
-          <rect x="6" y="13.7" width="12" height="2.5" rx="1.2"/>
-          <rect x="10.6" y="16.2" width="2.8" height="4.2" rx="0.8"/>
-          <circle cx="12" cy="21.6" r="1.7"/>
-        </g>
-      )}
+    <svg className="tg-img tg-shadow" viewBox="0 0 96 96" aria-hidden="true" focusable="false" data-tg-shadow={`${kind}${d}`}>
+      <defs><linearGradient id={gid} x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#ecebef"/><stop offset="1" stopColor="#c3c0c8"/></linearGradient></defs>
+      <rect x="2" y="2" width="92" height="92" rx="8" fill={`url(#${gid})`} stroke="#8e8b95" strokeWidth="2"/>
+      <path d="M2 70h92v16a8 8 0 0 1-8 8H10a8 8 0 0 1-8-8z" fill="#00000014"/>
+      <g fill={fill} stroke={fill === '#f5b81b' ? ink : ink} strokeWidth="3" strokeLinejoin="round" transform="translate(0 -4)">{MSX_SHADOW_PATHS[kind][d]}</g>
     </svg>
   );
 }
@@ -87638,9 +87899,11 @@ const msxLineName = (id) => (id && typeof MONSTER_LINEAGES === 'object' && MONST
 //   見るだけ。選ぶ画面の「くわしく」と、育成中の場面の「くわしく」で同じ部品を使う。絵・用語・見た目はうちの物
 //   st 能力6つ / apt 素質の字(画面の呼び名。2026-11-14 社長「伸びは素質って表記にして」) / type 成長の型 / peak ピークの期 / grades 間合い適性 [零,近,中,遠] / known 覚えている技の id(無ければ はじめから使える技) / power・rank 総合力
 const MSX_STAT_COLOR = Object.freeze({ life: '#facc15', pow: '#f87171', wise: '#4ade80', hit: '#f472b6', eva: '#60a5fa', tough: '#818cf8' });
+// pick … 被った升で覚える技を選べるとき { sel: { 升: 技id }, locked: (升) => 覚えたあとで変えられないか, onPick: (升, 技id) => void }(無ければ見るだけ)
 // head … 名前の横に置く物(マスモンボックスのハート・✏)/ more … 特徴のタブの下に足す行 [[見出し, 中身], …] / foot … 「とじる」の上に置くボタン(貸し出し・お別れ)/ grade … 総合力の横の評価(A2 など)
-function MsxMonDetail({ species, name, art, st, apt, type, peak, grades, known, power, rank, sub, onClose, SUC, head = null, more = null, foot = null, grade: gradeLabel = null }) {
+function MsxMonDetail({ species, name, art, st, apt, type, peak, grades, known, power, rank, sub, onClose, SUC, head = null, more = null, foot = null, grade: gradeLabel = null, pick = null }) {
   const [tab, setTab] = useState('base');
+  const [pickCell, setPickCell] = useState(null); // 技を選ぶ窓を開いている升(pick があるときだけ)
   const line = typeof MONSTER_LINEAGE_MAP === 'object' && MONSTER_LINEAGE_MAP ? MONSTER_LINEAGE_MAP[species] : null;
   const main = line ? msxLineName(line.main) : ''; const subL = line ? msxLineName(line.sub || line.main) : '';
   const dex = typeof MONSTER_DEX_DESCRIPTIONS === 'object' && MONSTER_DEX_DESCRIPTIONS && MONSTER_DEX_DESCRIPTIONS[species];
@@ -87695,13 +87958,15 @@ function MsxMonDetail({ species, name, art, st, apt, type, peak, grades, known, 
             <div className="msx-md-tw">
               <div className="msx-md-tg">
                 {MSX_TG_COLS.map((d) => <span key={`h${d}`} className={`tgh d${d}`}>{MSX_DIST_NAMES[d]}</span>)}
-                {tgLines.map((r) => MSX_TG_COLS.map((d) => { const alts = tgAt(r, d); const t = alts[0];
+                {tgLines.map((r) => MSX_TG_COLS.map((d) => { const alts = tgAt(r, d); const cellK = `${r}-${d}`;
+                  // 升に出す技: 覚えた技があればそれ → 選んだ技 → 並びの1つ目
+                  const t = alts.find(has) || alts.find((x) => pick && pick.sel && pick.sel[cellK] === x.id) || alts[0];
                   if (!t) return <span key={`${r}-${d}`} className="no" aria-hidden="true">×</span>;
-                  const got = has(t);
+                  const got = has(t); const canAlt = !!pick && alts.length > 1;
                   // 技の種類で升の色を分ける(参考どおり ちから=金・かしこさ=緑)。覚えていない技も絵を出し、升の地を暗くして見分ける(2026-11-14 社長「鍵じゃなくて覚えてないやつも表示して色分けして」)。
                   // 覚える条件の数は升に出さず、押したときの右の「覚え方」に出す(社長「150とかその数字何?」→ 升目から消す)
-                  return <button type="button" key={`${r}-${d}`} className={`tc ${t.kind === 'wise' ? 'wise' : 'pow'}${got ? ' got' : ' tg-not'}${tech && tech.id === t.id ? ' on' : ''}`} data-msx-tech={t.id} aria-label={`${t.name}${got ? '' : '(まだ覚えていない)'}${alts.length > 1 ? '(選べる技が' + alts.length + 'つ)' : ''}`} onClick={() => setPickT(t.id)}>
-                    <span className="ti" aria-hidden="true"><MsxTechIcon kind={t.kind === 'wise' ? 'wise' : 'pow'} rank={t.rank} uid={`${r}${d}`}/></span><span className="g">{t.guts}</span>{alts.length > 1 ? <span className="tg-alt" aria-hidden="true">⇄</span> : null}</button>; }))}
+                  return <button type="button" key={`${r}-${d}`} className={`tc ${t.kind === 'wise' ? 'wise' : 'pow'}${got ? ' got' : ' tg-not'}${tech && tech.id === t.id ? ' on' : ''}`} data-msx-tech={t.id} data-msx-cell={cellK} aria-label={`${t.name}${got ? '' : '(まだ覚えていない)'}${canAlt ? '(選べる技が' + alts.length + 'つ)' : ''}`} onClick={() => setPickT(t.id)}>
+                    <span className="ti" aria-hidden="true"><MsxSkillArt t={t} uid={`${r}${d}`}/></span><span className={`tg-rk rk${Math.max(1, Math.min(5, Number(t.rank) || 1))}`} aria-hidden="true">{Math.max(1, Math.min(5, Number(t.rank) || 1))}</span><span className="g">{t.guts}</span>{canAlt ? <span className="tg-alt" role="button" aria-label="覚える技を選ぶ" data-msx-alt={cellK} onClick={(e) => { e.stopPropagation(); setPickCell(cellK); }}>⇄</span> : null}</button>; }))}
               </div>
               {tech ? (<div className="msx-md-td">
                 <div className="tn">{tech.name}{has(tech) ? null : <small className="msx-md-not">まだ覚えていない</small>}</div>
@@ -87712,10 +87977,24 @@ function MsxMonDetail({ species, name, art, st, apt, type, peak, grades, known, 
                 <div className="msx-md-kv"><b>ガッツダウン</b><span className="gd">{grade('gd', tech.gd)}</span></div>
                 <div className="msx-md-kv"><b>クリティカル率</b><span className="gd">{grade('crit', tech.crit)}</span></div>
                 <div className="msx-md-kv msx-md-howrow"><b>覚え方</b><span>{has(tech) ? (Array.isArray(known) ? '覚えている' : '初めから') : (() => { const how = msxTechHow(tech, all); return how.startsWith('修行で覚える(') ? <>修行で覚える<small className="msx-md-how">{how.slice('修行で覚える'.length)}</small></> : how; })()}</span></div>
+                {pick && tgAt(tech.rank, Math.min(...(tech.dist || [1]))).length > 1 ? <button type="button" className="msx-md-alt" data-msx-alt-open onClick={() => setPickCell(`${tech.rank}-${Math.min(...(tech.dist || [1]))}`)}>⇄ 覚える技を選ぶ</button> : null}
               </div>) : null}
             </div>
           </div>
         </div>
+        {pick && pickCell ? (() => { const [pr, pd] = pickCell.split('-').map(Number); const alts = tgAt(pr, pd); const lock = !!pick.locked(pickCell); const cur = alts.find(has) || alts.find((x) => pick.sel && pick.sel[pickCell] === x.id) || alts[0];
+          return (<div className="msx-ov msx-fade" data-msx-techpick onClick={(e) => { e.stopPropagation(); setPickCell(null); }}>
+            <div className="msx-sheet msx-dt" onClick={(e) => e.stopPropagation()}>
+              <h3>覚える技を選ぶ</h3>
+              <div className="msx-note msx-kp">{msxPh(`${MSX_DIST_NAMES[pd]}の間合い・ランク${pr}。｜${lock ? 'この升の技は｜もう覚えたので、｜選び直せません' : '選ばなかった技は、｜この升では｜覚えません。｜覚えるまでは｜選び直せます'}`)}</div>
+              <div className="msx-dt-body">{alts.map((t) => { const on = cur && cur.id === t.id; const how = has(t) ? '覚えている' : msxTechHow(t, all); return (
+                <button type="button" key={t.id} className={`msx-tp${on ? ' on' : ''}`} disabled={lock && !on} data-msx-techpick-opt={t.id} onClick={() => { if (!lock) { pick.onPick(pickCell, t.id); setPickT(t.id); setPickCell(null); } }}>
+                  <span className={`tc ${t.kind === 'wise' ? 'wise' : 'pow'}${has(t) ? ' got' : ' tg-not'}`}><span className="ti" aria-hidden="true"><MsxSkillArt t={t} uid="p"/></span></span>
+                  <span className="tpb"><b>{t.name}</b><small>{t.kind === 'wise' ? 'かしこさ' : 'ちから'}・消費ガッツ {t.guts}</small>
+                    <small className="tp-nb"><i>ダメージ {grade('power', t.power)}</i><i>命中率 {grade('hit', t.hit)}</i><i>クリティカル率 {grade('crit', t.crit)}</i></small><small className="tp-nb">{how.startsWith('修行で覚える(') ? <><i>修行で覚える</i><i>{how.slice('修行で覚える'.length)}</i></> : <i>{how}</i>}</small></span>
+                  <span className="tpm">{on ? '✅ 選択中' : '選ぶ'}</span></button>); })}</div>
+              <button type="button" className="msx-dt-close" data-msx-techpick-close onClick={() => setPickCell(null)}>閉じる</button>
+            </div></div>); })() : null}
         {foot ? <div className="msx-md-foot">{foot}</div> : null}
         <button type="button" className="msx-dt-close" data-msx-detail-close onClick={onClose}>閉じる</button>
       </div>
@@ -87858,17 +88137,23 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf }) {
   const start = () => {
     const name = msxNameGuard(nick || msxMonName(species).slice(0, MSX_NAME_MAX));
     if (!name) { setStep(4); setNameErr('その名前は使えません。ほかの名前にしてね'); return; }
-    onStart({ scn: typeof msxScenarioId === 'function' ? msxScenarioId(scn) : 'hero', species, from: pick.box ? { box: pick.box } : { base: species }, team: team.map((t) => (t.friend ? t.friend : msxTeamSrc(t, box, species, data.assist))), teamSlots: team.filter((t) => !t.friend).map((t) => (t.box ? { box: t.box } : t.assist ? { assist: t.assist } : { base: t.base })), aid, aidBondLv: aidLv, items, nick: name, colors,
+    onStart({ scn: typeof msxScenarioId === 'function' ? msxScenarioId(scn) : 'hero', species, techPick: tpSel, from: pick.box ? { box: pick.box } : { base: species }, team: team.map((t) => (t.friend ? t.friend : msxTeamSrc(t, box, species, data.assist))), teamSlots: team.filter((t) => !t.friend).map((t) => (t.box ? { box: t.box } : t.assist ? { assist: t.assist } : { base: t.base })), aid, aidBondLv: aidLv, items, nick: name, colors,
       friendId: friend && friend.friend ? friend.friend.id : null, baseFill: autoBases[0] || species });
   };
 
   const apt = msxAptOf(species);
   // はじめの能力・成長の型・ピーク・間合い適性(2026-11-14 社長「ステータスがわからない」「くじで決まるって表現がやだ」)
   const [detail, setDetail] = useState(false);
+  // 被った升で覚える技の選び(新しいキー mh_monsuc_techpick_v1)。ベースモンは種族ごと・合体で生まれた子は箱の子ごとに持つ
+  const [tpAll, setTpAll] = useState(null);
+  useEffect(() => { let on = true; msxReadTechPick().then((t) => { if (on) setTpAll(t); }).catch(() => { if (on) setTpAll(msxNormTechPick(null)); }); return () => { on = false; }; }, []);
   const fromMon = pick.box ? box.mons.find((m) => m.id === pick.box) || null : null;
   // 合体で生まれた子は、合体のときに決めた名前(親と同じ種族なら親の名前)を最初から入れておく。ここで変えられる(2026-11-14 社長 r1114-126)
   useEffect(() => { setNick(fromMon && typeof fromMon.nick === 'string' ? fromMon.nick.slice(0, MSX_NAME_MAX) : ''); setNameErr(''); }, [pick.box]);
   const growType = fromMon && Number.isInteger(fromMon.gt) ? fromMon.gt : (typeof SUC.speciesType === 'function' ? SUC.speciesType(species) : null);
+  const tpKind = fromMon ? 'mon' : 'base'; const tpKey = fromMon ? fromMon.id : species;
+  const tpSel = typeof SUC.techPickNorm === 'function' ? SUC.techPickNorm(tpAll && tpAll[tpKind] ? tpAll[tpKind][tpKey] : null, species) : {};
+  const onTechPick = async (cell, id) => { const next = { ...tpSel, [cell]: id }; try { setTpAll(await msxWriteTechPick(tpKind, tpKey, next)); } catch (e) { /* 書けなくても今回の育成には使う */ } setTpAll((cur) => { const c = cur || msxNormTechPick(null); return { ...c, [tpKind]: { ...c[tpKind], [tpKey]: next } }; }); };
   const growName = growType != null && typeof MASMON_CALC !== 'undefined' ? MASMON_CALC.typeOf(growType).name : '—';
   // 合体で生まれたモンスターは、合体で受け継いだ上乗せ込みの能力から始まる(芯の newRun の startSt と同じ)
   const startSt = useMemo(() => (fromMon && fromMon.st && typeof fromMon.st === 'object' && typeof SUC.normStats === 'function' ? SUC.normStats(fromMon.st, species) : typeof SUC.initStats === 'function' ? SUC.initStats(species) : {}), [SUC, species, fromMon]);
@@ -87909,7 +88194,7 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf }) {
         <div className="sub" style={{ marginTop: 6, color: '#f9a8d4', fontWeight: 900 }}>初めの能力<span className="msx-dt-sm">(小さい字は素質)</span></div>
         <div className="msx-st6" data-msx-start-stats>{MSX_STATS.map((k, i) => <div key={k}><span className="n">{MSX_STAT_NAME[k]}</span><b>{startSt[k]}</b><i className={apt[i] > 'B' ? 'lo' : ''}>素質 {apt[i]}</i></div>)}</div>
       </div>
-      {detail && <MsxMonDetail species={species} name={fromMon && fromMon.nick ? fromMon.nick : msxMonName(species)} sub={fromMon ? '合体で生まれたモンスター' : 'ベースモン'} st={startSt} apt={apt} type={growType} grades={preview.grades} peak={peakText} power={preview.power} rank={preview.rank} onClose={() => setDetail(false)} SUC={SUC}/>}
+      {detail && <MsxMonDetail pick={{ sel: tpSel, locked: () => false, onPick: onTechPick }} species={species} name={fromMon && fromMon.nick ? fromMon.nick : msxMonName(species)} sub={fromMon ? '合体で生まれたモンスター' : 'ベースモン'} st={startSt} apt={apt} type={growType} grades={preview.grades} peak={peakText} power={preview.power} rank={preview.rank} onClose={() => setDetail(false)} SUC={SUC}/>}
     </>);
     go = 'このモンスターにする ▶';
   } else if (step === 1) {
@@ -88398,7 +88683,7 @@ function MonheroSuccessScreen({ onClose, callNameOf, bondLvOf, debug = false, st
     const carry = cfg.items.filter((k) => MSX_ITEM_BY_ID[k] && MSX_ITEM_BY_ID[k].when === 'before');
     const bag = {}; cfg.items.filter((k) => MSX_ITEM_BY_ID[k] && MSX_ITEM_BY_ID[k].when === 'both').forEach((k) => { bag[k] = 1; });
     const fromMon = cfg.from && typeof cfg.from.box === 'string' ? data.box.mons.find((m) => m.id === cfg.from.box && !m.raised) || null : null; // 未育成の子だけ(育て終えた能力から始まる道を本体でも塞ぐ) // 合体円盤石(未育成)から始めるなら、継いだ間合い適性の段数を写す
-    const s = SUC.newRun({ id, species: cfg.species, aid: cfg.aid, team: cfg.team, aidBondLv: cfg.aidBondLv, carry, bag, ...(fromMon && Array.isArray(fromMon.aptBase) ? { aptBase: fromMon.aptBase } : {}), ...(fromMon && Number.isInteger(fromMon.gt) ? { type: fromMon.gt } : {}), ...(fromMon && fromMon.st && typeof fromMon.st === 'object' ? { startSt: fromMon.st } : {}), wonBefore: Array.isArray(data.meta.wonCups) ? data.meta.wonCups : [] });
+    const s = SUC.newRun({ id, species: cfg.species, ...(cfg.techPick && typeof cfg.techPick === 'object' ? { techPick: cfg.techPick } : {}), aid: cfg.aid, team: cfg.team, aidBondLv: cfg.aidBondLv, carry, bag, ...(fromMon && Array.isArray(fromMon.aptBase) ? { aptBase: fromMon.aptBase } : {}), ...(fromMon && Number.isInteger(fromMon.gt) ? { type: fromMon.gt } : {}), ...(fromMon && fromMon.st && typeof fromMon.st === 'object' ? { startSt: fromMon.st } : {}), wonBefore: Array.isArray(data.meta.wonCups) ? data.meta.wonCups : [] });
     const r = { v: 1, id, s, scn: typeof msxScenarioId === 'function' ? msxScenarioId(cfg.scn) : 'hero', nick: cfg.nick, colors: cfg.colors, from: cfg.from, items: cfg.items, used: 0, phase: typeof MsxBirth === 'function' ? 'birth' : 'begin', out: null, log: [], startAt: Date.now() };
     const meta = { ...data.meta, team: cfg.teamSlots.map((t) => (t.box ? { box: t.box } : { base: t.base })), runs: (data.meta.runs || 0) + 1, picked: { ...(data.meta.picked || {}), [cfg.species]: ((data.meta.picked || {})[cfg.species] || 0) + 1 } };
     // 持ちこんだ物は1つずつ減らす。芯がまだ知らない物(効き目が無い物)は減らさない
@@ -88906,7 +89191,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
         const pk = typeof SUC.peakInfo === 'function' ? SUC.peakInfo(s) : null;
         const peak = pk && Number.isInteger(pk.from) ? (() => { const a = SUC.periodOf(pk.from).name; const b = SUC.periodOf(pk.to).name; return a === b ? a : `${a}〜${b}`; })() : '';
         return <MsxMonDetail species={s.species} name={run.nick} sub={msxMonName(s.species)} art={<MsxMonArt run={run} noPeak/>} st={s.stats} apt={msxAptOf(s.species)} type={s.type} peak={peak}
-          grades={typeof SUC.aptGradesOf === 'function' ? SUC.aptGradesOf(s) : null} known={Array.isArray(s.techs) ? s.techs : []} power={ev.power} rank={ev.rank} SUC={SUC} onClose={() => setDetail(false)}/>;
+          grades={typeof SUC.aptGradesOf === 'function' ? SUC.aptGradesOf(s) : null} known={Array.isArray(s.techs) ? s.techs : []} power={ev.power} rank={ev.rank} SUC={SUC} pick={typeof SUC.setTechPick === 'function' && s.techPick ? { sel: s.techPick, locked: (c) => SUC.techPickLocked(s, c), onPick: (c, id) => { const n = JSON.parse(JSON.stringify(s)); if (SUC.setTechPick(n, c, id)) setRun({ ...run, s: n }); } } : null} onClose={() => setDetail(false)}/>;
       })() : null}
       {sheet === 'dex' && typeof MsxDex === 'function' ? <MsxDex aid={s.aid} nick={run.nick} onClose={() => setSheet(null)}/> : null}
       {sheet && sheet !== 'dex' && (
@@ -90920,6 +91205,8 @@ function MsxR3Box({ onClose }) {
   const [tab, setTab] = useState('list'); // 一覧のタブ 'list' / 'bye'(お別れをまとめて選ぶ)
   const [pick, setPick] = useState([]); // お別れで選んだ子の id
   const [byeAsk, setByeAsk] = useState(null); // お別れの確かめ { ids }
+  const [tpAll, setTpAll] = useState(null); // 合体で生まれた子(未育成)の技の升の選び(mh_monsuc_techpick_v1)
+  useEffect(() => { let on = true; msxReadTechPick().then((t) => { if (on) setTpAll(t); }).catch(() => {}); return () => { on = false; }; }, []);
   const [assist, setAssist] = useState(null); // メモリアルモンスターの置き場(mh_monsuc_assist_v1)
   const fuseKept = React.useRef(null); // 合体でメモリアルモンスターとして残った親の数(生まれたあとの文に使う)
   const [apick, setApick] = useState([]); // 置き場で、外すために選んだ子の id
@@ -91082,7 +91369,7 @@ function MsxR3Box({ onClose }) {
         return (<MsxMonDetail species={cur.species} name={msxMmName(cur)} sub={`Lv.${Math.round(Number(cur.lv) || 1)}・${msxMonName(cur.species)}`}
           art={<MsxMmArt m={cur} size="100%"/>} st={MSX_STATS.reduce((o, k) => ({ ...o, [k]: Math.round((cur.st && cur.st[k]) || 0) }), {})}
           apt={typeof msxAptOf === 'function' ? msxAptOf(cur.species) : ['C', 'C', 'C', 'C', 'C', 'C']} type={cur.gt} grades={SUC && typeof SUC.aptGradesOf === 'function' ? (() => { try { return SUC.aptGradesOf(cur); } catch (e) { return null; } })() : null}
-          known={Array.isArray(cur.techs) ? cur.techs : []} power={cur.raised === false ? null : msxMmPow(cur)} rank={cur.grade ? null : cur.rank} grade={cur.grade} SUC={SUC}
+          pick={cur.raised === false && SUC && typeof SUC.techPickNorm === 'function' ? (() => { const sel = SUC.techPickNorm(tpAll && tpAll.mon ? tpAll.mon[cur.id] : null, cur.species); return { sel, locked: () => false, onPick: async (c, id) => { const next = { ...sel, [c]: id }; setTpAll((t0) => { const t = t0 || msxNormTechPick(null); return { ...t, mon: { ...t.mon, [cur.id]: next } }; }); try { setTpAll(await msxWriteTechPick('mon', cur.id, next)); } catch (e) {} } }; })() : null} known={Array.isArray(cur.techs) ? cur.techs : []} power={cur.raised === false ? null : msxMmPow(cur)} rank={cur.grade ? null : cur.rank} grade={cur.grade} SUC={SUC}
           head={<><button type="button" className={`mm-fav${fav.includes(cur.id) ? ' on' : ''}`} onClick={() => toggleFav(cur.id)} aria-label="お気に入り" data-msx-mm-fav>{fav.includes(cur.id) ? '❤' : '♡'}</button>
             <button type="button" className="mm-ed" aria-label="名前と染色を変える" onClick={() => { setEdit({ nick: cur.nick || msxMonName(cur.species), colors: Array.isArray(cur.colors) ? cur.colors.slice(0, 6) : [], err: '' }); setPage('edit'); }} data-msx-r3-edit>✏</button></>}
           more={more}
