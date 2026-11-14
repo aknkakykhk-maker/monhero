@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 87fda588a75f3a54
+// generated-sha256: 961f516bb8879983
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -7074,6 +7074,19 @@ const SuccessSound = (() => {
   return { enter, leave, scene, bgm, se, isActive: () => active };
 })();
 
+// モンサクの画面の内側(育成中・修行・大会・引退など)で使う入り口。sceneId が替わるたびに場面の曲と効果音を鳴らすだけで、
+// 消えても後片付け(leave)はしない。後片付けはモンサクの画面全体(MonheroSuccessScreen)の useSuccessSound の1か所だけ。
+// 内側で useSuccessSound を使うと、その画面を出るたびに入る前の曲へ一度戻ってから鳴り直し、育成中の曲が途切れる(2026-11-14 社長)
+//   useSuccessScene(sceneId, { season, delayMs }) … sceneId が null のあいだは何もしない(いまの曲のまま)
+const useSuccessScene = (sceneId, opts = null) => {
+  const season = opts && opts.season;
+  const delayMs = opts && opts.delayMs;
+  useEffect(() => {
+    if (!sceneId) return undefined;
+    SuccessSound.scene(sceneId, { season, delayMs });
+    return undefined;
+  }, [sceneId, season]);
+};
 // 画面の中で使う入り口。sceneId が替わるたびに鳴らし、画面を離れる(消える)と後片付けする。
 //   useSuccessSound(sceneId, { season, delayMs, on })  … on が false のあいだは何もしない(既定は true)
 const useSuccessSound = (sceneId, opts = null) => {
@@ -79283,7 +79296,7 @@ function MonsucBracket({ suc, s, info, result, onFight, onResultOnly, onClose, c
         <div className="msc-bk">
           {E.map((e, i) => (
             <div key={i} className={`msc-row ${out(i) ? 'out' : ''}`} style={{ paddingRight: W }} data-msc-entrant={e.you ? 'you' : i === 4 ? 'foe' : i}>
-              <span className="msc-no">{no[i]}</span>
+              <span className="msc-no" title={`${no[i]}番人気`} aria-label={`${no[i]}番人気`}>{no[i]}</span>
               <span className={`msc-name ${e.you ? 'you' : i === 4 ? 'foe' : ''}`}><span>{nm(e)}</span>
                 {e.you && <i className="msc-tag you">あなた</i>}
                 {e.rival && <i className="msc-tag rv">ライバル</i>}
@@ -79299,7 +79312,7 @@ function MonsucBracket({ suc, s, info, result, onFight, onResultOnly, onClose, c
           <div className={`msc-cupbadge ${result === 'win' ? 'lit' : ''}`} style={{ right: 4 }}>🏆<br/>優勝</div>
         </div>
       </div>
-      <div className="msc-note">あなたの1戦は 赤い丸の2体のあいだ({info.meName} VS {nm(foe)})。<small>ほかの試合の結果は、見せるだけの演出です</small></div>
+      <div className="msc-note">左の数字は人気の順(1が いちばん人気)。あなたの1戦は 赤い丸の2体のあいだ({info.meName} VS {nm(foe)})。<small>ほかの試合の結果は、見せるだけの演出です</small></div>
       <div className="msc-talk"><img src={mscFace(s.aid)} alt=""/><p>{coach ? <b style={{ display: 'block', fontSize: 11, color: '#b45309' }}>解説 {coach.name}</b> : null}{line}</p></div>
       <div className="msc-foot">
         <button className="msc-btn y s" data-msc-quick onClick={onResultOnly}>{canSkip ? '⏩ 結果だけ見る(優勝ずみ)' : '⏩ 結果だけ見る'}</button>
@@ -79492,13 +79505,16 @@ function MonsucCupShow(props) {
   const b = (s && s.battle) || {};
   return <MonsucCupShowInner key={[s && s.id, s && s.turn, b.kind, b.id, b.round, b.retry, b.again, b.reroll].join('|')} {...props}/>;
 }
-function MonsucCupShowInner({ suc, s, me, settle, onRematch, onNext, onClose, startAt, previewOut, fight, opp, title, autoOnly }) {
+function MonsucCupShowInner({ suc, s, me, settle, onRematch, onNext, onClose, startAt, previewOut, fight, opp, title, autoOnly, onPhase }) {
   const [engine, setEngine] = useState(typeof window !== 'undefined' ? window.ASSISTANT_MASMON_BATTLE || null : null);
   const [failed, setFailed] = useState(false);
   const [phase, setPhase] = useState(startAt || 'bracket'); // bracket → card → cutin → match → win / lose
   const [out, setOut] = useState(startAt === 'win' ? (previewOut || {}) : null); // startAt・previewOut は止め絵を撮るときだけ
   const rootRef = useRef(null);
-  if (typeof useMhBattleBgmHold === 'function') useMhBattleBgmHold(true); // 大会のあいだはバトルの曲(組み合わせ表〜優勝/負け)
+  // バトルの曲は試合のあいだ(cutin・match)だけ。組み合わせ表・札・決着はモンサクの曲(cupPre・cupWin・cupLose。2026-11-14 社長の曲)
+  if (typeof useMhBattleBgmHold === 'function') useMhBattleBgmHold(phase === 'cutin' || phase === 'match');
+  // 段を呼ぶ側へ知らせる(回3の MsxR3Battle が場面の音の id を切り替える)
+  useEffect(() => { if (typeof onPhase === 'function') onPhase(phase); }, [phase]);
   useEffect(() => {
     let alive = true;
     if (!engine && typeof ambwLoadEngine === 'function') ambwLoadEngine().then((x) => { if (!alive) return; if (x) setEngine(x); else setFailed(true); });
@@ -86494,6 +86510,8 @@ const MSX_LOT = Object.freeze({ self: 'drill', rest: 'rest', talk: 'chat', tip: 
 
 // 音(14-success-sound.jsx の useSuccessSound)。無いときは何もしない(フックの数は変わらない)
 const msxUseSound = typeof useSuccessSound === 'function' ? useSuccessSound : () => {};
+// 内側(育成中)は場面の曲を切り替えるだけ(後片付けは画面全体の msxUseSound の1か所)
+const msxUseScene = typeof useSuccessScene === 'function' ? useSuccessScene : () => {};
 // 休む・遊ぶ・通院の結果の場面の曲(表はビート部 data/success-sounds.js。表に無いうちは今の曲のまま)
 const MSX_REST_SOUND = Object.freeze({ rest: 'rest', play: 'play', clinic: 'hospital' });
 const MSX_RES_SOUND = Object.freeze({ great: 'trainGreat', ok: 'trainOk', fail: 'trainFail', sab: 'trainSkip' });
@@ -86642,6 +86660,10 @@ function MonheroSuccessScreen({ onClose, callNameOf, bondLvOf, debug = false }) 
   const [layout, setLayout] = useState(msxLayout);
   const [ask, setAsk] = useState(null); // 確かめの小窓 { text, yes, onYes }
   const [playSub, setPlaySub] = useState('main'); // 育成中の小画面(MsxPlay の sub。β版の説明を出す場面を決める)
+  // 育成の外(ホーム・ボックス・ランキング・図鑑・始めるまでの準備)の曲(ビート部の表 data/success-sounds.js の menu)。
+  // 育成中は MsxPlay が場面の曲を鳴らすので、ここは何もしない(画面を閉じると入る前の曲へ戻る)
+  // 後片付け(閉じたら入る前の曲へ)はここの1か所だけ。育成中(play)は MsxPlay が場面の曲を切り替える
+  msxUseSound(view === 'play' || view === 'loading' || view === 'fail' ? null : 'menu');
   useEffect(() => {
     const on = () => setLayout(msxLayout());
     window.addEventListener('resize', on); window.addEventListener('orientationchange', on);
@@ -86786,8 +86808,11 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
   // 演出のあいだは演出の場面の音(2026-11-14 社長「演出に音を」)。トレーニングの結果の音は、演出が終わって結果の字が出たときに鳴らす
   const actOn = run.phase === 'result' && actAt === s.turn && typeof MsxTrainAct === 'function';
   const kiOn = run.phase === 'turn' && typeof MsxKiShow === 'function' && v.period && v.period.at === 1 && v.period.index > 0 && kiAt !== s.turn;
-  const soundId = actOn ? 'trainAct' : kiOn ? 'kiShow' : run.phase === 'awake' && run.out && run.out.fire && typeof MsxAwakeShow === 'function' ? 'awakeShow' : run.phase === 'awake' && run.out && run.out.fire ? (run.out.fire.kind === 2 ? 'trainGreat' : 'trainLvUp') : run.phase === 'result' && run.out && MSX_REST_SOUND[run.out.kind] ? MSX_REST_SOUND[run.out.kind] : run.phase === 'result' && run.out && run.out.result ? MSX_RES_SOUND[run.out.result] : run.phase === 'issa' ? 'issa' : s.over === 'gameover' ? 'gameOver' : sub === 'train' ? 'training' : 'main';
-  msxUseSound(soundId, { season: msxCalendar(s.turn).season });
+  // 大会(試合)・修行・決着・引退は、その画面(56-monhero-success-r3-*.jsx)が自分で場面の音を鳴らす。ここで main を鳴らすと後から上書きするので何もしない
+  const childSound = typeof MsxR3 === 'function' && (run.phase === 'battle' || run.phase === 'over' || !!s.over || sub === 'cup' || sub === 'shugyo');
+  // トレーニングを選ぶ画面は育成中の曲のまま。「◯◯をする」を押して動きが始まってからトレーニングの曲(2026-11-14 社長)。結果の場面は曲を替えないので、メインへ戻るまで続く
+  const soundId = childSound ? null : actOn ? 'training' : kiOn ? 'kiShow' : run.phase === 'awake' && run.out && run.out.fire && typeof MsxAwakeShow === 'function' ? 'awakeShow' : run.phase === 'awake' && run.out && run.out.fire ? (run.out.fire.kind === 2 ? 'trainGreat' : 'trainLvUp') : run.phase === 'result' && run.out && MSX_REST_SOUND[run.out.kind] ? MSX_REST_SOUND[run.out.kind] : run.phase === 'result' && run.out && run.out.result ? MSX_RES_SOUND[run.out.result] : run.phase === 'issa' ? 'issa' : s.over === 'gameover' ? 'gameOver' : 'main';
+  msxUseScene(soundId, { season: msxCalendar(s.turn).season });
   // トレーニングLvが上がった回は、結果の音のあとに Lv アップの音を続ける(演出が終わって結果の字が出てから)
   const lvUpSe = run.phase === 'result' && !actOn && run.out && run.out.result && run.out.lvUp;
   useEffect(() => {
@@ -87892,7 +87917,8 @@ function MsxR3Cup({ run, setRun, v, ev, onBack, onActed }) {
   const toForced = P.key === 'final' ? null : P.left;
   const cal = msxCalendar(s.turn); const calV = msxCalendar(vt);
   useMsxR3Lines(s.aid);
-  useSuccessSound('cupEntry', { season: cal.season });
+  // 受付(月の大会を選ぶ)のあいだは育成中の曲のまま(2026-11-14 社長)。大会の曲 cupPre は組み合わせ表に入ってから(MsxR3Battle)
+  useEffect(() => { if (typeof SuccessSound !== 'undefined') SuccessSound.se('cupEntry'); }, []);
   const nOk = cupsNow.filter((c) => c.entry && c.entry.ok).length;
   const openLine = msxR3Line('turn.cup.open', run, { cup: cur ? msxR3CupName(cur.sys) : '' }, nOk ? `「今月は ${nOk}つ 出られるよ! 出ると1ターン使うから、トレーニングとどっちにするか考えてね」` : '「今月は出られる大会がないみたい。トレーニングでじっくり力をつけよ!」');
   const rankStep = typeof SUC.rankStepOf === 'function' ? SUC.rankStepOf(s) : 0; const rank = rankStep ? { name: SUC.rankNameOf(rankStep) } : null; // 賞金ランク10段(2026-11-14)
@@ -88036,6 +88062,43 @@ const msxR3PrizeRows = (d, s) => {
   Object.entries(d.items || {}).forEach(([k, n]) => { const S = msxSuc && msxSuc.SUC ? msxSuc.SUC : null; const it = S && S.ITEMS ? S.ITEMS[k] : null; rows.push([(typeof MSX_EXTRA_ITEM !== 'undefined' && MSX_EXTRA_ITEM[k] && MSX_EXTRA_ITEM[k].e) || '🎁', it ? it.name : k, `×${n}(この育成の中で使える)`, 'new', 'GET']); });
   return rows;
 };
+// 大会の知らせの段(2026-11-14 社長「いきなり大会の画面になる」): 組み合わせ表の前に、大会が始まることを知らせる。
+// 大きな帯(期末の大会の日!/今月の大会)・会場の絵・助手のひとこと・「会場へ ▶」。約2.2秒で進む・押せばすぐ進む。何も保存しない
+const MSX_R3_INTRO_MS = 2200;
+const MSX_R3_INTRO_CSS = `
+.msx-cupin{position:relative;flex:1 1 0;min-height:max(260px,calc(var(--mh-vh) - 190px));border-radius:16px;overflow:hidden;cursor:pointer;background:#1e1b4b}
+.msx-cupin .bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;animation:msxCupinBg 2.4s ease-out both}
+.msx-cupin .sh{position:absolute;inset:0;background:linear-gradient(180deg,rgba(15,13,36,.15),rgba(15,13,36,.65))}
+.msx-cupin .band{position:absolute;left:0;right:0;top:20%;text-align:center;padding:8px 0 10px;background:linear-gradient(90deg,transparent,#7c2d12e6 14%,#b45309e6 50%,#7c2d12e6 86%,transparent);animation:msxCupinBand .45s cubic-bezier(.2,1.3,.4,1) .1s both}
+.msx-cupin .band small{display:block;font-size:13px;font-weight:900;color:#fde68a;letter-spacing:.08em}
+.msx-cupin .band b{display:block;font-size:30px;font-weight:900;font-style:italic;color:#fff;-webkit-text-stroke:2px #7c2d12;paint-order:stroke fill;text-shadow:0 3px 0 #7c2d12,0 0 16px #fde047}
+.msx-cupin .say{position:absolute;left:10px;right:10px;bottom:12px;display:flex;gap:8px;align-items:flex-end;animation:msxCupinSay .35s ease-out .5s both}
+.msx-cupin .say img{width:52px;height:52px;border-radius:50%;border:2px solid #fff;background:#fff;object-fit:cover}
+.msx-cupin .say p{flex:1;background:#fffdf5;color:#1e1b4b;border:2px solid #fb923c;border-radius:12px;padding:7px 10px;font-size:13px;font-weight:800;line-height:1.5}
+.msx-cupin .skip{position:absolute;right:10px;top:8px;font-size:10px;font-weight:800;color:#e2e8f0cc}
+@keyframes msxCupinBg{from{transform:scale(1.12)}to{transform:none}}
+@keyframes msxCupinBand{from{opacity:0;transform:translateX(-40px) scale(.9)}to{opacity:1;transform:none}}
+@keyframes msxCupinSay{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion: reduce){.msx-cupin .bg,.msx-cupin .band,.msx-cupin .say{animation:none}}
+`;
+function MsxR3CupIntro({ run, b, title, onGo }) {
+  const s = run.s;
+  const done = useRef(false);
+  const go = () => { if (done.current) return; done.current = true; onGo(); };
+  useEffect(() => { const id = setTimeout(go, MSX_R3_INTRO_MS); return () => clearTimeout(id); }, []);
+  const monthly = b.kind === 'cup';
+  const venue = typeof MSC_VENUE_IMG !== 'undefined' ? (MSC_VENUE_IMG[b.kind] || MSC_VENUE_IMG.cup) : '';
+  const l = msxR3Line('turn.cup.intro', run, { cup: title }, `「いよいよ ${title}! ${run.nick || 'このモンスター'}、いってらっしゃい!」`);
+  return (<>
+    <style>{MSX_R3_INTRO_CSS}</style>
+    <div className="msx-cupin" onClick={go} data-msx-r3-cupintro={b.kind}>
+      {venue ? <img className="bg" src={venue} alt=""/> : null}<span className="sh"/>
+      <div className="band"><small>{monthly ? '今月の大会' : b.kind === 'summit' ? '頂への道' : '期末の大会の日!'}</small><b>{title}</b></div>
+      <div className="say">{typeof msxFace === 'function' ? <img src={msxFace(s.aid, 'excited')} alt=""/> : null}<p>{l && l.t}</p></div>
+      <div className="skip">タップで すすむ</div>
+    </div>
+  </>);
+}
 function MsxR3Battle({ run, setRun, v, ev, ctx, bondLv, onPause, debug }) {
   const { SUC } = msxSuc;
   const s = run.s; const b = s.battle; const st3 = run.out && run.out.r3 ? run.out.r3 : null; // 勝ち負けを付けたあとの段
@@ -88048,7 +88111,15 @@ function MsxR3Battle({ run, setRun, v, ev, ctx, bondLv, onPause, debug }) {
   const [tab, setTab] = useState('st');
   const [mealPick, setMealPick] = useState(null);
   useMsxR3Lines(s.aid);
-  useSuccessSound(st3 ? (st3.won ? 'cupWin' : 'cupLose') : 'cupMatch', { season: msxCalendar(s.turn).season });
+  // 大会の曲(2026-11-14 社長の曲・ビート部の表): 組み合わせ表と札=cupPre / 試合=cupMatch / 決着=cupWin・cupLose
+  //   バトル部の見せる部品(MonsucCupShow)は段を onPhase で知らせてくる。部品が無いときは、ここの step で決める
+  const [showPh, setShowPh] = useState('bracket');
+  // 知らせの段を見終えた大会(この画面のあいだだけ。やり直し・もう一度では出さない)
+  const [introSeen, setIntroSeen] = useState(null);
+  const cupSound = st3 ? (st3.won ? 'cupWin' : 'cupLose')
+    : showOn ? (showPh === 'win' ? 'cupWin' : showPh === 'lose' ? 'cupLose' : showPh === 'cutin' || showPh === 'match' ? 'cupMatch' : 'cupPre')
+      : step === 'lost' ? 'cupLose' : step === 'bracket' || step === 'card' ? 'cupPre' : 'cupMatch';
+  useSuccessScene(cupSound, { season: msxCalendar(s.turn).season });
   useEffect(() => {
     let alive = true;
     // 試合型のアシストの表を読み終えてから試合を作る(読む前と後で同じ試合の結果が変わらないように)
@@ -88190,11 +88261,18 @@ function MsxR3Battle({ run, setRun, v, ev, ctx, bondLv, onPause, debug }) {
   const skip = typeof SUC.canSkip === 'function' && SUC.canSkip(s);
   const foeName = opp.name || msxMonName(opp.species);
 
+  // ---- 大会の知らせの段(組み合わせ表の前に1回)。大会の曲 cupPre はここから ----
+  const introKey = `${s.turn}|${b.kind}|${b.round || 0}`;
+  if (!st3 && step === 'bracket' && introSeen !== introKey && !run.r3skip) {
+    const title = b.kind === 'cup' ? msxR3CupName(b.sys) : name;
+    return <MsxR3Frame run={run} back="中断" onBack={onPause} body={<MsxR3CupIntro key={introKey} run={run} b={b} title={title} onGo={() => setIntroSeen(introKey)}/>}
+      foot={<div className="v-ft"><button type="button" className="go" onClick={() => setIntroSeen(introKey)} data-msx-r3-cupintro-go>会場へ ▶</button></div>}/>;
+  }
   // ---- バトル部の見せる部品(組み合わせ表・バトルカード・カットイン・観戦・優勝/負け)。試合の計算と勝ち負けの記録は回3 ----
   if (showOn) {
     return <MsxR3Frame run={run} back="中断" onBack={onPause} body={
       <MonsucCupShow suc={SUC} s={s} me={{ name: run.nick || msxMonName(s.species) }} title={b.kind === 'cup' ? msxR3CupName(b.sys) : name} opp={{ loy: opp.loy, pop: opp.pop }}
-        fight={() => fight} settle={settleShow} onRematch={rematchWith} onNext={nextShow} onClose={onPause}/>} foot={null}/>;
+        fight={() => fight} settle={settleShow} onRematch={rematchWith} onNext={nextShow} onClose={onPause} onPhase={setShowPh}/>} foot={null}/>;
   }
   // ---- 負けた(C4): やり直す/あきらめる ----
   if (step === 'lost') {
@@ -88328,7 +88406,8 @@ function MsxR3Shugyo({ run, setRun, v, ev, onBack, onPause }) {
   const [fxDone, setFxDone] = useState(false);
   // 結果の前の段(助手の一言 → STAGE 1 → STAGE 2。56-monsuc-actfx.jsx)。押した直後だけ・保存しない
   const [stOn, setStOn] = useState(false);
-  useSuccessSound('ascetic', { season: msxCalendar(s0.turn).season });
+  // 行き先・技を選ぶあいだは育成中の曲のまま。「修行する」を押して修行の段が始まってから修行の曲(2026-11-14 社長)
+  useSuccessScene(res ? 'ascetic' : null, { season: msxCalendar(s0.turn).season });
   // 段のあと、結果の字が出たときに 覚えた/覚えなかった の音(2026-11-14 社長「修行の結果にも SE を」)
   const qRes = res && !stOn ? ((res.out.learnedAll && res.out.learnedAll.length) || res.out.learned ? 'qLearn' : 'qMiss') : null;
   useEffect(() => { if (qRes && typeof SuccessSound !== 'undefined') SuccessSound.se(qRes, 150); }, [qRes]);
@@ -88467,7 +88546,7 @@ function MsxR3GameOver({ run, setRun, onPause }) {
   const [log, setLog] = useState(false);
   const [busy, setBusy] = useState(false);
   const [fxDone, setFxDone] = useState(false);
-  useSuccessSound('gameOver');
+  useSuccessScene('gameOver');
   const again = async () => {
     if (busy) return; setBusy(true);
     try { await msxR3GameOver(s); await msxR3ClearRun(); } catch (e) {}
@@ -88501,7 +88580,7 @@ function MsxR3Retire({ run, setRun, onPause, debug, SUC }) {
   const [pick, setPick] = useState({}); // アシスト能力 { id: 段 }
   const [atab, setAtab] = useState(null); // アシストの場面のタブ(第2版・7つ)
   const [fxDone, setFxDone] = useState(false);
-  useSuccessSound('retire');
+  useSuccessScene('retire');
   const [sure, setSure] = useState(false);
   const [busy, setBusy] = useState(false);
   const [box, setBox] = useState(null);
@@ -88927,7 +89006,7 @@ function MsxArcEnding({ run, setRun, v, ev, onPause, ctx, bondLv }) {
   const { SUC } = msxSuc;
   const s = run.s; const end = s.ending; const kind = end.kind;
   const [step, setStep] = useState(0); // 0 = エンディング / 1〜n = お祝い / n+1 = 特別演出
-  useSuccessSound(kind === 'bad' ? 'cupLose' : 'cupWin', { season: msxCalendar(s.turn).season });
+  useSuccessScene(kind === 'bad' ? 'cupLose' : 'cupWin', { season: msxCalendar(s.turn).season });
   const parties = Array.isArray(end.parties) ? end.parties : [];
   const finish = () => { const r = typeof SUC.endingSeen === 'function' ? SUC.endingSeen(s) : { state: { ...s, ending: { ...end, seen: true } } }; setRun({ ...run, s: r.state, arcAfter: undefined }); };
   const goNext = () => { if (step < parties.length) setStep(step + 1); else if (kind === 'super' && step === parties.length) setStep(step + 1); else finish(); };
@@ -119389,6 +119468,9 @@ function MonsterHeroGame() {
   // (2026-09-07・ユーザー報告「勇者モン選択時のデフォ曲が変わってる」)
   // モンビーを開いていてバトルのBGMを止めたかどうか。戻ってきたときに鳴らし直す判断に使う
   const bgmSuspendedByRhythmRef = useRef(false);
+  // モンヒロサクセスを開いているあいだは、曲はモンサクの鳴らす口(14-success-sound.jsx の SuccessSound)が決める。
+  // 下の BGM の effect はそのあいだ曲を替えない(大会の試合の画面の「バトルの曲」も含む)。閉じたら SuccessSound が入る前の曲へ戻し、ここも鳴らし直す
+  const [successScreenOpen, setSuccessScreenOpen] = useState(false);
   const bgmKeyForState = (state, currentWave, enemyId, wavesDone, isGameOver, allowKeep = true) => {
     // 会話イベント中は画面(HOME/PROFILE)より優先してイベントBGMを鳴らす。
     // 通常再生(きき加入)も、プロフィールからのイベント回想も同じ設定を使う。
@@ -119490,6 +119572,7 @@ function MonsterHeroGame() {
   useEffect(() => {
     // 専用sourceの開始・停止はRhythmTapTestが管理する。通常BGM effectから触ると二重再生や途中停止になる。
     if (gameState === 'RHYTHM_PLAY') return;
+    if (successScreenOpen) return;
     let key = bootPhase === 'GAME' ? bgmKeyForState(gameState, wave, enemy?.id, (waveHistory||[]).length > 0, hp <= 0 || gaveUp) : (bootPhase === 'TITLE' || bootPhase === 'ENTERING_GAME' ? bgmArrangement.title : null);
     // ★モンビーを開いているあいだ、バトルのBGMは止まっている(この画面はキーを持たない)。
     //   戻ってきた最初の1回で「直前のBGMを維持」を選ぶと、維持すべき曲が無いので
@@ -119520,7 +119603,7 @@ function MonsterHeroGame() {
     if (key && eventId && prev && prev.id === eventId && prev.key !== key) Audio_.fadeToBGM(key, EVENT_BGM_FADE_MS);
     else if (key) Audio_.playBGM(key);
     else Audio_.stopBGM();
-  }, [bootPhase, gameState, wave, enemy?.id, hp, gaveUp, audioOn, waveHistory.length, bgmArrangement, runMode, eventBgmScene, mainHero?.id, autoBattle, autoBgmOverride, rhythmScreenOpen, cardScreenOpen, eventLineBgm, cardBgm, assistantLifeOpenNow, battleBgmOverlay]);
+  }, [bootPhase, gameState, wave, enemy?.id, hp, gaveUp, audioOn, successScreenOpen, waveHistory.length, bgmArrangement, runMode, eventBgmScene, mainHero?.id, autoBattle, autoBgmOverride, rhythmScreenOpen, cardScreenOpen, eventLineBgm, cardBgm, assistantLifeOpenNow, battleBgmOverlay]);
 
   // SE/BGMそれぞれの音量をAudioエンジンへ反映
   // 超省エネではBGMを選んで鳴らしてもSEだけは常に0。保存済みSE音量そのものは変更しない。
@@ -119548,7 +119631,6 @@ function MonsterHeroGame() {
   //   (2026-11-12 社長「モンビー中の演奏後に裏クイックの音が表に出てきてる」。演出の音は fgSe から鳴るので、モンビーで周回が残っているあいだも裏の音だけ止める印を立てる)
   const rhythmRunBackgroundQuiet = rhythmScreenOpen && runStage !== null;
   // モンヒロサクセスの育成の画面(デバッグの入口から開く・56-monhero-success-*.jsx)を開いているあいだも、裏の周回のバトルの効果音を止める(14-success-sound.jsx の決まり)
-  const [successScreenOpen, setSuccessScreenOpen] = useState(false);
   useEffect(() => { if (Audio_.setBackgroundSeQuiet) Audio_.setBackgroundSeQuiet(cardScreenOpen || quickAnywhereScreenOpen || rhythmRunBackgroundQuiet || successScreenOpen); }, [cardScreenOpen, quickAnywhereScreenOpen, rhythmRunBackgroundQuiet, successScreenOpen]);
   quickAnywhereSeQuietRef.current = quickAnywhereScreenOpen && !cardScreenOpen;
   useEffect(() => { Audio_.setBgmVolume(bgmVolume); }, [bgmVolume]);

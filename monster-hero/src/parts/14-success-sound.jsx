@@ -83,6 +83,19 @@ const SuccessSound = (() => {
   return { enter, leave, scene, bgm, se, isActive: () => active };
 })();
 
+// モンサクの画面の内側(育成中・修行・大会・引退など)で使う入り口。sceneId が替わるたびに場面の曲と効果音を鳴らすだけで、
+// 消えても後片付け(leave)はしない。後片付けはモンサクの画面全体(MonheroSuccessScreen)の useSuccessSound の1か所だけ。
+// 内側で useSuccessSound を使うと、その画面を出るたびに入る前の曲へ一度戻ってから鳴り直し、育成中の曲が途切れる(2026-11-14 社長)
+//   useSuccessScene(sceneId, { season, delayMs }) … sceneId が null のあいだは何もしない(いまの曲のまま)
+const useSuccessScene = (sceneId, opts = null) => {
+  const season = opts && opts.season;
+  const delayMs = opts && opts.delayMs;
+  useEffect(() => {
+    if (!sceneId) return undefined;
+    SuccessSound.scene(sceneId, { season, delayMs });
+    return undefined;
+  }, [sceneId, season]);
+};
 // 画面の中で使う入り口。sceneId が替わるたびに鳴らし、画面を離れる(消える)と後片付けする。
 //   useSuccessSound(sceneId, { season, delayMs, on })  … on が false のあいだは何もしない(既定は true)
 const useSuccessSound = (sceneId, opts = null) => {
