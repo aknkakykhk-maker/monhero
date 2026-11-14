@@ -186,7 +186,7 @@ const badgeProblems = (page) => page.evaluate(() => {
         await page.locator('[data-alf-vtab="where"]').click();
         await page.locator('[data-alf-vview="where"] [data-assistant-life-where]').waitFor({ timeout: 8000 }).catch(() => {});
         await page.waitForTimeout(800);
-        const where = await page.evaluate(() => { const w = document.querySelector('[data-alf-vview="where"]'); return { n: w ? w.querySelectorAll('[data-assistant-life-map-who]').length : -1, act: w ? w.querySelectorAll('[data-assistant-life-map-act]').length : -1, title: (w && (w.querySelector('p.truncate') || {}).textContent) || '' }; });
+        const where = await page.evaluate(() => { const w = document.querySelector('[data-alf-vview="where"]'); return { n: w ? w.querySelectorAll('[data-assistant-life-map-who]').length : -1, act: w ? w.querySelectorAll('[data-assistant-life-map-act]').length : -1, title: (w && ((w.querySelector('[data-assistant-life-map-time]') || {}).previousElementSibling || {}).textContent) || '' }; });
         check(`㉑ 町の地図に、あおいさんの助手が札で並ぶ(自分の操作ボタンは無い)(${v.id})`, where.n > 0 && where.act === 0 && /さんの町/.test(where.title), JSON.stringify(where));
         await shot(page, `${v.id}-21-vtab-where`);
         const tabNg2 = await page.evaluate(() => { const b = document.querySelector('[data-alf-vview="where"] [data-alf-vtabs]'); if (!b) return ['無い']; const r = b.getBoundingClientRect(); return (r.left < -1 || r.right > innerWidth + 1) ? ['はみ出し'] : []; });
