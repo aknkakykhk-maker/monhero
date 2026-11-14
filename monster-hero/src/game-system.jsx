@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 49ebee06ef0027a4
+// generated-sha256: 45fa85d466fe327c
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -79381,12 +79381,14 @@ function MonsucBracket({ suc, s, info, result, onFight, onResultOnly, onClose, c
   const bk = info.bracket;
   const [stage, setStage] = useState(0); // 0=開いた直後 1=1回戦のあと 2=準決勝のあと 3=決勝の前
   useEffect(() => {
-    const ts = [setTimeout(() => setStage(1), 1200), setTimeout(() => setStage(2), 3000), setTimeout(() => setStage(3), 4800)];
+    const k = (typeof window !== 'undefined' && Number(window.__MSC_BK_T)) || 1; // 撮影用: 動きをゆっくりにする倍率(ふだんは 1)
+    const ts = [setTimeout(() => setStage(1), 1200 * k), setTimeout(() => setStage(2), 3000 * k), setTimeout(() => setStage(3), 4800 * k)];
     return () => ts.forEach(clearTimeout);
   }, []);
   const [vh, setVh] = useState(() => (typeof window !== 'undefined' ? window.innerHeight : 844));
   useEffect(() => { const f = () => setVh(window.innerHeight); window.addEventListener('resize', f); return () => window.removeEventListener('resize', f); }, []);
   if (!bk) return null;
+  const Z = '\u200b'; // 折ってよい所の印(字の札は msx-kp で、ここと句読点でだけ折れる)
   const E = bk.entrants;
   const st = result ? 3 : stage;
   const no = bk.pop && bk.pop.length === E.length ? bk.pop : monsucPopOrder(suc, s, E);
@@ -79410,19 +79412,19 @@ function MonsucBracket({ suc, s, info, result, onFight, onResultOnly, onClose, c
   const coach = mscAssistant(s.aid);
   const top = E[no.indexOf(1)] || E[0]; const upsets = r1.filter(w => w !== 0 && w !== fi && no[w] >= 5); const foeNo = no[fi];
   const lines = [
-    top.you ? <>「<em>1番人気は {info.meName}!</em> まずは 1回戦から 見ていこう」</> : <>「<em>1番人気は {top.champ ? '王者の ' : ''}{nm(top)}!</em> {info.meName}の1回戦は これからだよ」</>,
-    upsets.length ? <>「<em>大穴! {nm(E[upsets[0]])}</em> が 勝ち上がったぞ! {info.meName}も 1回戦を 勝ち上がり!」</> : <>「1回戦が おわったよ。<em>{info.meName}</em>は 順当に 勝ち上がり!」</>,
-    foeNo >= 4 ? <>「<em>大穴! {nm(foe)}</em> 決勝まで きたぞ! {info.meName}は 準決勝も 勝って 決勝へ!」</> : <>「準決勝も おわったよ。<em>{info.meName}</em>は 決勝へ! 反対の山からは <em>{nm(foe)}</em>」</>,
+    top.you ? <>「<em>1番人気は{Z} {info.meName}!</em>{Z} まずは{Z} 1回戦から{Z} 見ていこう」</> : <>「<em>1番人気は{Z} {top.champ ? '王者の ' : ''}{nm(top)}!</em>{Z} {info.meName}の{Z}1回戦は{Z} これからだよ」</>,
+    upsets.length ? <>「<em>大穴!{Z} {nm(E[upsets[0]])}</em> が{Z} 勝ち上がったぞ!{Z} {info.meName}も{Z} 1回戦を{Z} 勝ち上がり!」</> : <>「1回戦が{Z} おわったよ。{Z}<em>{info.meName}</em>は{Z} 順当に{Z} 勝ち上がり!」</>,
+    foeNo >= 4 ? <>「<em>大穴!{Z} {nm(foe)}</em>{Z} 決勝まで{Z} きたぞ!{Z} {info.meName}は{Z} 準決勝も{Z} 勝って{Z} 決勝へ!」</> : <>「準決勝も{Z} おわったよ。{Z}<em>{info.meName}</em>は{Z} 決勝へ!{Z} 反対の山からは{Z} <em>{nm(foe)}</em>」</>,
   ];
   const champNo1 = no[E.indexOf(champ)] === 1;
   const finalLine = foe.rival
-    ? <>「{champNo1 && champ !== foe ? <>1番人気は 王者の {nm(champ)}! でも、</> : null}決勝の相手は <em>ライバルの {nm(foe)}</em> だよ。勝てば ごほうび大!」</>
+    ? <>「{champNo1 && champ !== foe ? <>1番人気は{Z} 王者の {nm(champ)}!{Z} でも、{Z}</> : null}決勝の相手は{Z} <em>ライバルの {nm(foe)}</em> だよ。{Z}勝てば{Z} ごほうび大!」</>
     : foe.champ
-      ? <>「決勝の相手は 1番人気の王者 <em>{nm(foe)}</em>! {info.opp && info.opp.note ? `${info.opp.note}、だって。` : ''}ここで勝てば 大金星だよ!」</>
-      : <>「決勝の相手は <em>{nm(foe)}</em>! あわてずに いこうね」</>;
+      ? <>「決勝の相手は{Z} 1番人気の王者{Z} <em>{nm(foe)}</em>!{Z} {info.opp && info.opp.note ? `${info.opp.note}、だって。` : ''}{Z}ここで勝てば{Z} 大金星だよ!」</>
+      : <>「決勝の相手は{Z} <em>{nm(foe)}</em>!{Z} あわてずに{Z} いこうね」</>;
   return (
     <div className="msc-wrap" data-msc-bracket data-msc-stage={st}>
-      <div className="msc-top"><button className="msc-btn g s" data-msc-close onClick={onClose}>← もどる</button><b>{info.title} {MSC_STARS(info.star)}</b></div>
+      <div className="msc-top"><button className="msc-btn g s" data-msc-close onClick={onClose}>← 戻る</button><b>{info.title} {MSC_STARS(info.star)}</b></div>
       <div className="msc-panel">
         <div className="msc-head">{info.title} {MSC_STARS(info.star)}</div>
         <div className="msc-bk">
@@ -79445,7 +79447,7 @@ function MonsucBracket({ suc, s, info, result, onFight, onResultOnly, onClose, c
         </div>
       </div>
       <div className="msc-note"><b>決勝は <span className="nw">{info.meName} VS {nm(foe)}</span></b>。<span className="nw">左の数字は人気の順</span><span className="nw">(1が いちばん人気)。</span><small><span className="nw">ほかの試合の結果は、</span><span className="nw">見せるだけの演出です</span><span className="nw">(戦うのは決勝の1戦だけ)</span></small></div>
-      <div className="msc-talk"><img src={mscFace(s.aid)} alt=""/><p>{coach ? <b style={{ display: 'block', fontSize: 11, color: '#b45309' }}>解説 {coach.name}</b> : null}{st >= 3 ? finalLine : lines[st]}</p>{st < 3 ? <button type="button" className="msc-sk" data-msc-skip onClick={() => setStage(3)}>SKIP ▸▸</button> : null}</div>
+      <div className="msc-talk"><img src={mscFace(s.aid)} alt=""/><p className="msx-kp">{coach ? <b style={{ display: 'block', fontSize: 11, color: '#b45309' }}>解説 {coach.name}</b> : null}{st >= 3 ? finalLine : lines[st]}</p>{st < 3 ? <button type="button" className="msc-sk" data-msc-skip onClick={() => setStage(3)}>SKIP ▸▸</button> : null}</div>
       <div className="msc-foot">
         <button className="msc-btn y s" data-msc-quick onClick={onResultOnly}>{canSkip ? '⏩ 結果だけ見る(優勝ずみ)' : '⏩ 結果だけ見る'}</button>
         <button className="msc-btn" data-msc-go onClick={onFight}>⚔ 決勝へ</button>

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1a5c60d937f74058
+// source-sha256: e2206b33b85ebacd
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -151273,7 +151273,8 @@ function MonsucBracket({
   const bk = info.bracket;
   const [stage, setStage] = useState(0);
   useEffect(() => {
-    const ts = [setTimeout(() => setStage(1), 1200), setTimeout(() => setStage(2), 3000), setTimeout(() => setStage(3), 4800)];
+    const k = typeof window !== 'undefined' && Number(window.__MSC_BK_T) || 1;
+    const ts = [setTimeout(() => setStage(1), 1200 * k), setTimeout(() => setStage(2), 3000 * k), setTimeout(() => setStage(3), 4800 * k)];
     return () => ts.forEach(clearTimeout);
   }, []);
   const [vh, setVh] = useState(() => typeof window !== 'undefined' ? window.innerHeight : 844);
@@ -151283,6 +151284,7 @@ function MonsucBracket({
     return () => window.removeEventListener('resize', f);
   }, []);
   if (!bk) return null;
+  const Z = '\u200b';
   const E = bk.entrants;
   const st = result ? 3 : stage;
   const no = bk.pop && bk.pop.length === E.length ? bk.pop : monsucPopOrder(suc, s, E);
@@ -151323,9 +151325,9 @@ function MonsucBracket({
   const top = E[no.indexOf(1)] || E[0];
   const upsets = r1.filter(w => w !== 0 && w !== fi && no[w] >= 5);
   const foeNo = no[fi];
-  const lines = [top.you ? React.createElement(React.Fragment, null, "「", React.createElement("em", null, "1番人気は ", info.meName, "!"), " まずは 1回戦から 見ていこう」") : React.createElement(React.Fragment, null, "「", React.createElement("em", null, "1番人気は ", top.champ ? '王者の ' : '', nm(top), "!"), " ", info.meName, "の1回戦は これからだよ」"), upsets.length ? React.createElement(React.Fragment, null, "「", React.createElement("em", null, "大穴! ", nm(E[upsets[0]])), " が 勝ち上がったぞ! ", info.meName, "も 1回戦を 勝ち上がり!」") : React.createElement(React.Fragment, null, "「1回戦が おわったよ。", React.createElement("em", null, info.meName), "は 順当に 勝ち上がり!」"), foeNo >= 4 ? React.createElement(React.Fragment, null, "「", React.createElement("em", null, "大穴! ", nm(foe)), " 決勝まで きたぞ! ", info.meName, "は 準決勝も 勝って 決勝へ!」") : React.createElement(React.Fragment, null, "「準決勝も おわったよ。", React.createElement("em", null, info.meName), "は 決勝へ! 反対の山からは ", React.createElement("em", null, nm(foe)), "」")];
+  const lines = [top.you ? React.createElement(React.Fragment, null, "「", React.createElement("em", null, "1番人気は", Z, " ", info.meName, "!"), Z, " まずは", Z, " 1回戦から", Z, " 見ていこう」") : React.createElement(React.Fragment, null, "「", React.createElement("em", null, "1番人気は", Z, " ", top.champ ? '王者の ' : '', nm(top), "!"), Z, " ", info.meName, "の", Z, "1回戦は", Z, " これからだよ」"), upsets.length ? React.createElement(React.Fragment, null, "「", React.createElement("em", null, "大穴!", Z, " ", nm(E[upsets[0]])), " が", Z, " 勝ち上がったぞ!", Z, " ", info.meName, "も", Z, " 1回戦を", Z, " 勝ち上がり!」") : React.createElement(React.Fragment, null, "「1回戦が", Z, " おわったよ。", Z, React.createElement("em", null, info.meName), "は", Z, " 順当に", Z, " 勝ち上がり!」"), foeNo >= 4 ? React.createElement(React.Fragment, null, "「", React.createElement("em", null, "大穴!", Z, " ", nm(foe)), Z, " 決勝まで", Z, " きたぞ!", Z, " ", info.meName, "は", Z, " 準決勝も", Z, " 勝って", Z, " 決勝へ!」") : React.createElement(React.Fragment, null, "「準決勝も", Z, " おわったよ。", Z, React.createElement("em", null, info.meName), "は", Z, " 決勝へ!", Z, " 反対の山からは", Z, " ", React.createElement("em", null, nm(foe)), "」")];
   const champNo1 = no[E.indexOf(champ)] === 1;
-  const finalLine = foe.rival ? React.createElement(React.Fragment, null, "「", champNo1 && champ !== foe ? React.createElement(React.Fragment, null, "1番人気は 王者の ", nm(champ), "! でも、") : null, "決勝の相手は ", React.createElement("em", null, "ライバルの ", nm(foe)), " だよ。勝てば ごほうび大!」") : foe.champ ? React.createElement(React.Fragment, null, "「決勝の相手は 1番人気の王者 ", React.createElement("em", null, nm(foe)), "! ", info.opp && info.opp.note ? `${info.opp.note}、だって。` : '', "ここで勝てば 大金星だよ!」") : React.createElement(React.Fragment, null, "「決勝の相手は ", React.createElement("em", null, nm(foe)), "! あわてずに いこうね」");
+  const finalLine = foe.rival ? React.createElement(React.Fragment, null, "「", champNo1 && champ !== foe ? React.createElement(React.Fragment, null, "1番人気は", Z, " 王者の ", nm(champ), "!", Z, " でも、", Z) : null, "決勝の相手は", Z, " ", React.createElement("em", null, "ライバルの ", nm(foe)), " だよ。", Z, "勝てば", Z, " ごほうび大!」") : foe.champ ? React.createElement(React.Fragment, null, "「決勝の相手は", Z, " 1番人気の王者", Z, " ", React.createElement("em", null, nm(foe)), "!", Z, " ", info.opp && info.opp.note ? `${info.opp.note}、だって。` : '', Z, "ここで勝てば", Z, " 大金星だよ!」") : React.createElement(React.Fragment, null, "「決勝の相手は", Z, " ", React.createElement("em", null, nm(foe)), "!", Z, " あわてずに", Z, " いこうね」");
   return React.createElement("div", {
     className: "msc-wrap",
     "data-msc-bracket": true,
@@ -151336,7 +151338,7 @@ function MonsucBracket({
     className: "msc-btn g s",
     "data-msc-close": true,
     onClick: onClose
-  }, "← もどる"), React.createElement("b", null, info.title, " ", MSC_STARS(info.star))), React.createElement("div", {
+  }, "← 戻る"), React.createElement("b", null, info.title, " ", MSC_STARS(info.star))), React.createElement("div", {
     className: "msc-panel"
   }, React.createElement("div", {
     className: "msc-head"
@@ -151412,7 +151414,9 @@ function MonsucBracket({
   }, React.createElement("img", {
     src: mscFace(s.aid),
     alt: ""
-  }), React.createElement("p", null, coach ? React.createElement("b", {
+  }), React.createElement("p", {
+    className: "msx-kp"
+  }, coach ? React.createElement("b", {
     style: {
       display: 'block',
       fontSize: 11,
