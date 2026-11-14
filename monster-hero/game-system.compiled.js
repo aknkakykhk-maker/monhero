@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 72b89bc379aeb8e0
+// source-sha256: a84733a2e726904a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -10163,6 +10163,18 @@ const SuccessSound = (() => {
     isActive: () => active
   };
 })();
+const useSuccessScene = (sceneId, opts = null) => {
+  const season = opts && opts.season;
+  const delayMs = opts && opts.delayMs;
+  useEffect(() => {
+    if (!sceneId) return undefined;
+    SuccessSound.scene(sceneId, {
+      season,
+      delayMs
+    });
+    return undefined;
+  }, [sceneId, season]);
+};
 const useSuccessSound = (sceneId, opts = null) => {
   const on = !opts || opts.on !== false;
   const season = opts && opts.season;
@@ -151125,7 +151137,9 @@ function MonsucBracket({
     },
     "data-msc-entrant": e.you ? 'you' : i === 4 ? 'foe' : i
   }, React.createElement("span", {
-    className: "msc-no"
+    className: "msc-no",
+    title: `${no[i]}番人気`,
+    "aria-label": `${no[i]}番人気`
   }, no[i]), React.createElement("span", {
     className: `msc-name ${e.you ? 'you' : i === 4 ? 'foe' : ''}`
   }, React.createElement("span", null, nm(e)), e.you && React.createElement("i", {
@@ -151164,7 +151178,7 @@ function MonsucBracket({
     }
   }, "🏆", React.createElement("br", null), "優勝"))), React.createElement("div", {
     className: "msc-note"
-  }, "あなたの1戦は 赤い丸の2体のあいだ(", info.meName, " VS ", nm(foe), ")。", React.createElement("small", null, "ほかの試合の結果は、見せるだけの演出です")), React.createElement("div", {
+  }, "左の数字は人気の順(1が いちばん人気)。あなたの1戦は 赤い丸の2体のあいだ(", info.meName, " VS ", nm(foe), ")。", React.createElement("small", null, "ほかの試合の結果は、見せるだけの演出です")), React.createElement("div", {
     className: "msc-talk"
   }, React.createElement("img", {
     src: mscFace(s.aid),
@@ -151680,14 +151694,18 @@ function MonsucCupShowInner({
   fight,
   opp,
   title,
-  autoOnly
+  autoOnly,
+  onPhase
 }) {
   const [engine, setEngine] = useState(typeof window !== 'undefined' ? window.ASSISTANT_MASMON_BATTLE || null : null);
   const [failed, setFailed] = useState(false);
   const [phase, setPhase] = useState(startAt || 'bracket');
   const [out, setOut] = useState(startAt === 'win' ? previewOut || {} : null);
   const rootRef = useRef(null);
-  if (typeof useMhBattleBgmHold === 'function') useMhBattleBgmHold(true);
+  if (typeof useMhBattleBgmHold === 'function') useMhBattleBgmHold(phase === 'cutin' || phase === 'match');
+  useEffect(() => {
+    if (typeof onPhase === 'function') onPhase(phase);
+  }, [phase]);
   useEffect(() => {
     let alive = true;
     if (!engine && typeof ambwLoadEngine === 'function') ambwLoadEngine().then(x => {
@@ -166155,6 +166173,7 @@ const MSX_LOT = Object.freeze({
   friend: 'friend'
 });
 const msxUseSound = typeof useSuccessSound === 'function' ? useSuccessSound : () => {};
+const msxUseScene = typeof useSuccessScene === 'function' ? useSuccessScene : () => {};
 const MSX_REST_SOUND = Object.freeze({
   rest: 'rest',
   play: 'play',
@@ -166592,6 +166611,7 @@ function MonheroSuccessScreen({
   const [layout, setLayout] = useState(msxLayout);
   const [ask, setAsk] = useState(null);
   const [playSub, setPlaySub] = useState('main');
+  msxUseSound(view === 'play' || view === 'loading' || view === 'fail' ? null : 'menu');
   useEffect(() => {
     const on = () => setLayout(msxLayout());
     window.addEventListener('resize', on);
@@ -167022,8 +167042,9 @@ function MsxPlay({
   }, [s.aid]);
   const actOn = run.phase === 'result' && actAt === s.turn && typeof MsxTrainAct === 'function';
   const kiOn = run.phase === 'turn' && typeof MsxKiShow === 'function' && v.period && v.period.at === 1 && v.period.index > 0 && kiAt !== s.turn;
-  const soundId = actOn ? 'trainAct' : kiOn ? 'kiShow' : run.phase === 'awake' && run.out && run.out.fire && typeof MsxAwakeShow === 'function' ? 'awakeShow' : run.phase === 'awake' && run.out && run.out.fire ? run.out.fire.kind === 2 ? 'trainGreat' : 'trainLvUp' : run.phase === 'result' && run.out && MSX_REST_SOUND[run.out.kind] ? MSX_REST_SOUND[run.out.kind] : run.phase === 'result' && run.out && run.out.result ? MSX_RES_SOUND[run.out.result] : run.phase === 'issa' ? 'issa' : s.over === 'gameover' ? 'gameOver' : sub === 'train' ? 'training' : 'main';
-  msxUseSound(soundId, {
+  const childSound = typeof MsxR3 === 'function' && (run.phase === 'battle' || run.phase === 'over' || !!s.over || sub === 'cup' || sub === 'shugyo');
+  const soundId = childSound ? null : actOn ? 'training' : kiOn ? 'kiShow' : run.phase === 'awake' && run.out && run.out.fire && typeof MsxAwakeShow === 'function' ? 'awakeShow' : run.phase === 'awake' && run.out && run.out.fire ? run.out.fire.kind === 2 ? 'trainGreat' : 'trainLvUp' : run.phase === 'result' && run.out && MSX_REST_SOUND[run.out.kind] ? MSX_REST_SOUND[run.out.kind] : run.phase === 'result' && run.out && run.out.result ? MSX_RES_SOUND[run.out.result] : run.phase === 'issa' ? 'issa' : s.over === 'gameover' ? 'gameOver' : 'main';
+  msxUseScene(soundId, {
     season: msxCalendar(s.turn).season
   });
   const lvUpSe = run.phase === 'result' && !actOn && run.out && run.out.result && run.out.lvUp;
@@ -170080,9 +170101,9 @@ function MsxR3Cup({
   const cal = msxCalendar(s.turn);
   const calV = msxCalendar(vt);
   useMsxR3Lines(s.aid);
-  useSuccessSound('cupEntry', {
-    season: cal.season
-  });
+  useEffect(() => {
+    if (typeof SuccessSound !== 'undefined') SuccessSound.se('cupEntry');
+  }, []);
   const nOk = cupsNow.filter(c => c.entry && c.entry.ok).length;
   const openLine = msxR3Line('turn.cup.open', run, {
     cup: cur ? msxR3CupName(cur.sys) : ''
@@ -170519,6 +170540,66 @@ const msxR3PrizeRows = (d, s) => {
   });
   return rows;
 };
+const MSX_R3_INTRO_MS = 2200;
+const MSX_R3_INTRO_CSS = `
+.msx-cupin{position:relative;flex:1 1 0;min-height:max(260px,calc(var(--mh-vh) - 190px));border-radius:16px;overflow:hidden;cursor:pointer;background:#1e1b4b}
+.msx-cupin .bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;animation:msxCupinBg 2.4s ease-out both}
+.msx-cupin .sh{position:absolute;inset:0;background:linear-gradient(180deg,rgba(15,13,36,.15),rgba(15,13,36,.65))}
+.msx-cupin .band{position:absolute;left:0;right:0;top:20%;text-align:center;padding:8px 0 10px;background:linear-gradient(90deg,transparent,#7c2d12e6 14%,#b45309e6 50%,#7c2d12e6 86%,transparent);animation:msxCupinBand .45s cubic-bezier(.2,1.3,.4,1) .1s both}
+.msx-cupin .band small{display:block;font-size:13px;font-weight:900;color:#fde68a;letter-spacing:.08em}
+.msx-cupin .band b{display:block;font-size:30px;font-weight:900;font-style:italic;color:#fff;-webkit-text-stroke:2px #7c2d12;paint-order:stroke fill;text-shadow:0 3px 0 #7c2d12,0 0 16px #fde047}
+.msx-cupin .say{position:absolute;left:10px;right:10px;bottom:12px;display:flex;gap:8px;align-items:flex-end;animation:msxCupinSay .35s ease-out .5s both}
+.msx-cupin .say img{width:52px;height:52px;border-radius:50%;border:2px solid #fff;background:#fff;object-fit:cover}
+.msx-cupin .say p{flex:1;background:#fffdf5;color:#1e1b4b;border:2px solid #fb923c;border-radius:12px;padding:7px 10px;font-size:13px;font-weight:800;line-height:1.5}
+.msx-cupin .skip{position:absolute;right:10px;top:8px;font-size:10px;font-weight:800;color:#e2e8f0cc}
+@keyframes msxCupinBg{from{transform:scale(1.12)}to{transform:none}}
+@keyframes msxCupinBand{from{opacity:0;transform:translateX(-40px) scale(.9)}to{opacity:1;transform:none}}
+@keyframes msxCupinSay{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion: reduce){.msx-cupin .bg,.msx-cupin .band,.msx-cupin .say{animation:none}}
+`;
+function MsxR3CupIntro({
+  run,
+  b,
+  title,
+  onGo
+}) {
+  const s = run.s;
+  const done = useRef(false);
+  const go = () => {
+    if (done.current) return;
+    done.current = true;
+    onGo();
+  };
+  useEffect(() => {
+    const id = setTimeout(go, MSX_R3_INTRO_MS);
+    return () => clearTimeout(id);
+  }, []);
+  const monthly = b.kind === 'cup';
+  const venue = typeof MSC_VENUE_IMG !== 'undefined' ? MSC_VENUE_IMG[b.kind] || MSC_VENUE_IMG.cup : '';
+  const l = msxR3Line('turn.cup.intro', run, {
+    cup: title
+  }, `「いよいよ ${title}! ${run.nick || 'このモンスター'}、いってらっしゃい!」`);
+  return React.createElement(React.Fragment, null, React.createElement("style", null, MSX_R3_INTRO_CSS), React.createElement("div", {
+    className: "msx-cupin",
+    onClick: go,
+    "data-msx-r3-cupintro": b.kind
+  }, venue ? React.createElement("img", {
+    className: "bg",
+    src: venue,
+    alt: ""
+  }) : null, React.createElement("span", {
+    className: "sh"
+  }), React.createElement("div", {
+    className: "band"
+  }, React.createElement("small", null, monthly ? '今月の大会' : b.kind === 'summit' ? '頂への道' : '期末の大会の日!'), React.createElement("b", null, title)), React.createElement("div", {
+    className: "say"
+  }, typeof msxFace === 'function' ? React.createElement("img", {
+    src: msxFace(s.aid, 'excited'),
+    alt: ""
+  }) : null, React.createElement("p", null, l && l.t)), React.createElement("div", {
+    className: "skip"
+  }, "タップで すすむ")));
+}
 function MsxR3Battle({
   run,
   setRun,
@@ -170544,7 +170625,10 @@ function MsxR3Battle({
   const [tab, setTab] = useState('st');
   const [mealPick, setMealPick] = useState(null);
   useMsxR3Lines(s.aid);
-  useSuccessSound(st3 ? st3.won ? 'cupWin' : 'cupLose' : 'cupMatch', {
+  const [showPh, setShowPh] = useState('bracket');
+  const [introSeen, setIntroSeen] = useState(null);
+  const cupSound = st3 ? st3.won ? 'cupWin' : 'cupLose' : showOn ? showPh === 'win' ? 'cupWin' : showPh === 'lose' ? 'cupLose' : showPh === 'cutin' || showPh === 'match' ? 'cupMatch' : 'cupPre' : step === 'lost' ? 'cupLose' : step === 'bracket' || step === 'card' ? 'cupPre' : 'cupMatch';
+  useSuccessScene(cupSound, {
     season: msxCalendar(s.turn).season
   });
   useEffect(() => {
@@ -171151,6 +171235,30 @@ function MsxR3Battle({
   });
   const skip = typeof SUC.canSkip === 'function' && SUC.canSkip(s);
   const foeName = opp.name || msxMonName(opp.species);
+  const introKey = `${s.turn}|${b.kind}|${b.round || 0}`;
+  if (!st3 && step === 'bracket' && introSeen !== introKey && !run.r3skip) {
+    const title = b.kind === 'cup' ? msxR3CupName(b.sys) : name;
+    return React.createElement(MsxR3Frame, {
+      run: run,
+      back: "中断",
+      onBack: onPause,
+      body: React.createElement(MsxR3CupIntro, {
+        key: introKey,
+        run: run,
+        b: b,
+        title: title,
+        onGo: () => setIntroSeen(introKey)
+      }),
+      foot: React.createElement("div", {
+        className: "v-ft"
+      }, React.createElement("button", {
+        type: "button",
+        className: "go",
+        onClick: () => setIntroSeen(introKey),
+        "data-msx-r3-cupintro-go": true
+      }, "会場へ ▶"))
+    });
+  }
   if (showOn) {
     return React.createElement(MsxR3Frame, {
       run: run,
@@ -171171,7 +171279,8 @@ function MsxR3Battle({
         settle: settleShow,
         onRematch: rematchWith,
         onNext: nextShow,
-        onClose: onPause
+        onClose: onPause,
+        onPhase: setShowPh
       }),
       foot: null
     });
@@ -171683,7 +171792,7 @@ function MsxR3Shugyo({
   const [res, setRes] = useState(null);
   const [fxDone, setFxDone] = useState(false);
   const [stOn, setStOn] = useState(false);
-  useSuccessSound('ascetic', {
+  useSuccessScene(res ? 'ascetic' : null, {
     season: msxCalendar(s0.turn).season
   });
   const qRes = res && !stOn ? res.out.learnedAll && res.out.learnedAll.length || res.out.learned ? 'qLearn' : 'qMiss' : null;
@@ -172169,7 +172278,7 @@ function MsxR3GameOver({
   const [log, setLog] = useState(false);
   const [busy, setBusy] = useState(false);
   const [fxDone, setFxDone] = useState(false);
-  useSuccessSound('gameOver');
+  useSuccessScene('gameOver');
   const again = async () => {
     if (busy) return;
     setBusy(true);
@@ -172280,7 +172389,7 @@ function MsxR3Retire({
   const [pick, setPick] = useState({});
   const [atab, setAtab] = useState(null);
   const [fxDone, setFxDone] = useState(false);
-  useSuccessSound('retire');
+  useSuccessScene('retire');
   const [sure, setSure] = useState(false);
   const [busy, setBusy] = useState(false);
   const [box, setBox] = useState(null);
@@ -173775,7 +173884,7 @@ function MsxArcEnding({
   const end = s.ending;
   const kind = end.kind;
   const [step, setStep] = useState(0);
-  useSuccessSound(kind === 'bad' ? 'cupLose' : 'cupWin', {
+  useSuccessScene(kind === 'bad' ? 'cupLose' : 'cupWin', {
     season: msxCalendar(s.turn).season
   });
   const parties = Array.isArray(end.parties) ? end.parties : [];
@@ -223814,6 +223923,7 @@ function MonsterHeroGame() {
   }, [eventLineFadeOut]);
   const eventBgmPlayedRef = useRef(null);
   const bgmSuspendedByRhythmRef = useRef(false);
+  const [successScreenOpen, setSuccessScreenOpen] = useState(false);
   const bgmKeyForState = (state, currentWave, enemyId, wavesDone, isGameOver, allowKeep = true) => {
     if (eventLineBgm) return eventLineBgm;
     if (eventBgmScene) return bgmArrangementWithEventDefault(bgmArrangement, eventBgmScene);
@@ -223891,6 +224001,7 @@ function MonsterHeroGame() {
   };
   useEffect(() => {
     if (gameState === 'RHYTHM_PLAY') return;
+    if (successScreenOpen) return;
     let key = bootPhase === 'GAME' ? bgmKeyForState(gameState, wave, enemy?.id, (waveHistory || []).length > 0, hp <= 0 || gaveUp) : bootPhase === 'TITLE' || bootPhase === 'ENTERING_GAME' ? bgmArrangement.title : null;
     if (key === '__keep_battle_bgm__' && bgmSuspendedByRhythmRef.current) {
       key = bgmKeyForState(gameState, wave, enemy?.id, (waveHistory || []).length > 0, hp <= 0 || gaveUp, false);
@@ -223917,7 +224028,7 @@ function MonsterHeroGame() {
       key
     } : null;
     if (key && eventId && prev && prev.id === eventId && prev.key !== key) Audio_.fadeToBGM(key, EVENT_BGM_FADE_MS);else if (key) Audio_.playBGM(key);else Audio_.stopBGM();
-  }, [bootPhase, gameState, wave, enemy?.id, hp, gaveUp, audioOn, waveHistory.length, bgmArrangement, runMode, eventBgmScene, mainHero?.id, autoBattle, autoBgmOverride, rhythmScreenOpen, cardScreenOpen, eventLineBgm, cardBgm, assistantLifeOpenNow, battleBgmOverlay]);
+  }, [bootPhase, gameState, wave, enemy?.id, hp, gaveUp, audioOn, successScreenOpen, waveHistory.length, bgmArrangement, runMode, eventBgmScene, mainHero?.id, autoBattle, autoBgmOverride, rhythmScreenOpen, cardScreenOpen, eventLineBgm, cardBgm, assistantLifeOpenNow, battleBgmOverlay]);
   const assistantLifeRunMuted = assistantLifeScreenOpen && runStage !== null;
   useEffect(() => {
     Audio_.setSeVolume(ultraEcoSession && !cardScreenOpen || rhythmScreenOpen || assistantLifeRunMuted ? 0 : seVolume);
@@ -223930,7 +224041,6 @@ function MonsterHeroGame() {
     };
   }, [beatRankFx, beatRankBarPlaying, seVolume]);
   const rhythmRunBackgroundQuiet = rhythmScreenOpen && runStage !== null;
-  const [successScreenOpen, setSuccessScreenOpen] = useState(false);
   useEffect(() => {
     if (Audio_.setBackgroundSeQuiet) Audio_.setBackgroundSeQuiet(cardScreenOpen || quickAnywhereScreenOpen || rhythmRunBackgroundQuiet || successScreenOpen);
   }, [cardScreenOpen, quickAnywhereScreenOpen, rhythmRunBackgroundQuiet, successScreenOpen]);
