@@ -15,7 +15,7 @@ const EV = SUC.events;
 const errors = [];
 const ok = (cond, msg) => { if (!cond) errors.push(msg); };
 // 何も動かないと分かっている選択肢。ev.goal.miss は目標を逃した知らせ(2026-11-14 ほかの5つには小さな効果を足した)
-const NO_EFFECT = new Set(['ev.goal.miss']);
+const NO_EFFECT = new Set(['ev.goal.miss', 'ev.daily.find']); // ev.daily.find は能力でなく持ち物が増える(結果は「◯◯を手に入れた!」の行で出る)
 
 const PARTS = path.join(ROOT, 'monster-hero', 'src', 'parts');
 const res = fs.readFileSync(path.join(PARTS, '56-monsuc-evres.jsx'), 'utf8');

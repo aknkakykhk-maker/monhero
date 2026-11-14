@@ -247,6 +247,7 @@
     {"id":"ev.team.typeskill.choice.a","who":"choice","c":"a","t":"教わる"},
     {"id":"ev.team.sync.narr1","who":"narr","t":"{cheer}と{cheer2}が、言葉もなしにぴったり同じ動きをしている。"},
     {"id":"ev.daily.find.narr1","who":"narr","t":"散歩から戻った{mon}が、なにかをくわえている。……{item}だ！"},
+    {"id":"ev.daily.find.res.narr1","who":"narr","t":"{item}を持ち物に入れた。{mon}は、ほめてほしそうにこちらを見ている。"},
     {"id":"ev.team.kin.narr1","who":"narr","t":"トレーニングのあと、同じ血統の{cheer}が、{item}を持って{mon}のところへやってきた。"},
     {"id":"ev.team.kin.choice.a","who":"choice","c":"a","t":"ありがたく受け取る"},
     {"id":"ev.team.kin.choice.b","who":"choice","c":"b","t":"お礼に、もう少しいっしょに練習する"},

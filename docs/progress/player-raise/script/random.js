@@ -146,6 +146,7 @@ const MONSUC_SCRIPT_RANDOM = Object.freeze([
   // 2026-11-14 アイテムを拾ってくる(見るだけ)・同じ血統の編成の仲間がアイテムをくれる(r1113-037)。{item} はアイテムの名前
   { id:'ev.daily.find.narr1', who:'narr', t:'散歩から戻った{mon}が、なにかをくわえている。……{item}だ！' },
   { id:'ev.daily.find.mua1', who:'mua', e:'happy', t:'{mon}、お手柄ぢゃん！ {item}、ありがたく使わせてもらお♪' },
+  { id:'ev.daily.find.res.narr1', who:'narr', t:'{item}を持ち物に入れた。{mon}は、ほめてほしそうにこちらを見ている。' },
   { id:'ev.daily.find.atsu1', who:'atsu', e:'happy', t:'お、{item}じゃん。いい鼻してるな、{mon}笑' },
 
   { id:'ev.team.kin.narr1', who:'narr', t:'トレーニングのあと、同じ血統の{cheer}が、{item}を持って{mon}のところへやってきた。' },
