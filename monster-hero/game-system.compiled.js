@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3caff55a2ceae47d
+// source-sha256: 2c6f9d7ac09d5ffa
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -62915,6 +62915,69 @@ const TrainingCountUp = ({
     ref: holderRef
   }, format ? format(value) : value);
 };
+const FitNumber = ({
+  finalText,
+  children,
+  className = '',
+  style = null
+}) => {
+  const outerRef = React.useRef(null);
+  const sizerRef = React.useRef(null);
+  const [scale, setScale] = React.useState(1);
+  const text = String(finalText == null ? '' : finalText);
+  React.useLayoutEffect(() => {
+    const fit = () => {
+      const o = outerRef.current,
+        z = sizerRef.current;
+      if (!o || !z) return;
+      const avail = o.clientWidth,
+        need = z.scrollWidth;
+      if (!(avail > 0) || !(need > 0)) return;
+      const next = need > avail ? Math.max(0.05, Math.floor(avail / need * 1000) / 1000) : 1;
+      setScale(prev => Math.abs(prev - next) < 0.002 ? prev : next);
+    };
+    fit();
+    let ro = null;
+    try {
+      if (typeof ResizeObserver === 'function') {
+        ro = new ResizeObserver(fit);
+        ro.observe(outerRef.current);
+      }
+    } catch (e) {}
+    window.addEventListener('resize', fit);
+    return () => {
+      window.removeEventListener('resize', fit);
+      if (ro) ro.disconnect();
+    };
+  }, [text]);
+  return React.createElement("div", {
+    ref: outerRef,
+    "data-fit-number": true,
+    className: `relative w-full min-w-0 ${className}`,
+    style: style || undefined
+  }, React.createElement("span", {
+    ref: sizerRef,
+    "aria-hidden": "true",
+    style: {
+      position: 'absolute',
+      left: 0,
+      top: 0,
+      width: 0,
+      height: 0,
+      overflow: 'hidden',
+      visibility: 'hidden',
+      whiteSpace: 'nowrap',
+      pointerEvents: 'none'
+    }
+  }, text), React.createElement("div", {
+    "data-fit-number-inner": true,
+    style: {
+      fontSize: `${scale}em`,
+      whiteSpace: 'nowrap',
+      lineHeight: 1.1
+    }
+  }, children));
+};
 const PhaseGrowthCell = ({
   row,
   d = 0,
@@ -80507,26 +80570,36 @@ function WaveResultScreen({
     }, React.createElement("span", {
       className: "text-indigo-400 text-xs font-black uppercase"
     }, "獲得スコア"), React.createElement("span", {
-      className: "text-white font-mono font-black text-xl"
+      className: "text-white font-mono font-black text-xl min-w-0 flex-1 pl-2"
+    }, React.createElement(FitNumber, {
+      finalText: Number(waveResult.roundScore).toLocaleString(),
+      style: {
+        textAlign: 'right'
+      }
     }, React.createElement(TrainingCountUp, {
       from: 0,
       to: waveResult.roundScore,
       delay: 600,
       duration: 1000,
       format: v => v.toLocaleString()
-    })))), React.createElement("div", {
+    }))))), React.createElement("div", {
       className: "pt-1 flex justify-between items-end border-t border-white/20"
     }, React.createElement("span", {
       className: "text-amber-500 text-[11px] font-black uppercase"
     }, "累計スコア"), React.createElement("span", {
-      className: "text-amber-400 font-mono font-black text-lg"
+      className: "text-amber-400 font-mono font-black text-lg min-w-0 flex-1 pl-2"
+    }, React.createElement(FitNumber, {
+      finalText: Number(waveResult.totalScore).toLocaleString(),
+      style: {
+        textAlign: 'right'
+      }
     }, React.createElement(TrainingCountUp, {
       from: Math.max(0, waveResult.totalScore - waveResult.roundScore),
       to: waveResult.totalScore,
       delay: 900,
       duration: 1000,
       format: v => v.toLocaleString()
-    })))))), React.createElement("button", {
+    }))))))), React.createElement("button", {
       onClick: handleNextWave,
       disabled: runFinalizing,
       "aria-busy": runFinalizing,
@@ -80984,7 +81057,7 @@ function ChampionScreen({
       background: 'linear-gradient(to bottom right,#fbbf24,#78350f)'
     }
   }, React.createElement(EndConfetti, null), React.createElement("div", {
-    className: "relative z-10 shrink-0 flex flex-col items-center [@media(orientation:landscape)_and_(max-height:520px)]:col-start-1 [@media(orientation:landscape)_and_(max-height:520px)]:self-center"
+    className: "relative z-10 shrink-0 w-full flex flex-col items-center [@media(orientation:landscape)_and_(max-height:520px)]:col-start-1 [@media(orientation:landscape)_and_(max-height:520px)]:self-center"
   }, React.createElement(Crown, {
     size: 64,
     className: "mh-end-crown text-white animate-bounce mb-3 [@media(max-height:700px)]:h-10 [@media(max-height:700px)]:w-10 [@media(max-height:700px)]:mb-1"
@@ -80994,13 +81067,15 @@ function ChampionScreen({
     className: "mh-end-score w-full max-w-xs bg-black/40 border border-white/20 rounded-3xl p-6 mb-3 mt-3 shadow-2xl [@media(max-height:700px)]:p-2 [@media(max-height:700px)]:my-1.5 [@media(max-height:700px)]:rounded-2xl"
   }, React.createElement("div", {
     className: "text-5xl font-mono font-black text-white [@media(max-height:700px)]:text-3xl"
+  }, React.createElement(FitNumber, {
+    finalText: Number(score).toLocaleString()
   }, React.createElement(TrainingCountUp, {
     from: 0,
     to: score,
     delay: 500,
     duration: 1400,
     format: v => v.toLocaleString()
-  })))), React.createElement("div", {
+  }))))), React.createElement("div", {
     "data-champion-rewards": true,
     className: "relative z-10 flex-1 min-h-0 w-full flex flex-col items-center overflow-y-auto mh-scroll [@media(orientation:landscape)_and_(max-height:520px)]:col-start-2 [@media(orientation:landscape)_and_(max-height:520px)]:row-start-1 [@media(orientation:landscape)_and_(max-height:520px)]:row-span-5 [@media(orientation:landscape)_and_(max-height:520px)]:h-full"
   }, React.createElement("div", {
@@ -81081,13 +81156,15 @@ function GameOverScreen({
     className: "mh-end-score bg-white/5 border border-white/10 rounded-2xl p-4 mb-3 mt-3 w-full max-w-xs"
   }, React.createElement("div", {
     className: "text-3xl font-mono font-black text-white"
+  }, React.createElement(FitNumber, {
+    finalText: Number(score).toLocaleString()
   }, React.createElement(TrainingCountUp, {
     from: 0,
     to: score,
     delay: 500,
     duration: 1000,
     format: v => v.toLocaleString()
-  })))), React.createElement("div", {
+  }))))), React.createElement("div", {
     className: "flex-1 min-h-0 w-full flex flex-col items-center overflow-y-auto mh-scroll"
   }, React.createElement("div", {
     className: "m-auto w-full flex flex-col items-center"
@@ -81142,13 +81219,15 @@ function GaveUpScreen({
     className: "mh-end-score bg-white/5 border border-white/10 rounded-2xl p-4 mb-3 mt-3 w-full max-w-xs"
   }, React.createElement("div", {
     className: "text-3xl font-mono font-black text-white"
+  }, React.createElement(FitNumber, {
+    finalText: Number(score).toLocaleString()
   }, React.createElement(TrainingCountUp, {
     from: 0,
     to: score,
     delay: 500,
     duration: 1000,
     format: v => v.toLocaleString()
-  })))), React.createElement("div", {
+  }))))), React.createElement("div", {
     className: "flex-1 min-h-0 w-full flex flex-col items-center overflow-y-auto mh-scroll"
   }, React.createElement("div", {
     className: "m-auto w-full flex flex-col items-center"
@@ -118008,6 +118087,7 @@ const ASSISTANT_LIFE_ROOM_STAND_DEF = Object.freeze({
     fade: 0.45
   })
 });
+const ASSISTANT_LIFE_ROOM_STAND_EXT = 0.6;
 const assistantLifeRoomVisH = (face, F) => {
   try {
     if (typeof assistantLifeStandVisH === 'function') {
@@ -118072,23 +118152,26 @@ const assistantLifeRoomStandLayout = (items, W, usable, deskTop, land, bed = fal
     if (w1 > 0) F = Math.min(F, sw * 0.98 / w1);
   }
   const U = F * D.len;
-  const topY = bed ? deskTop + 0.15 * U - U : deskTop + 0.2 * U - D.cut.below * U;
+  const topY = bed ? deskTop + 0.15 * U - U : deskTop + 0.2 * U - 1.8 * U;
   return items.map((x, i) => {
     const cx = x0 + sw * (i + 0.5);
     const r = assistantLifeRoomPlace(x, F, topY, cx);
+    const ext = bed ? 0 : ASSISTANT_LIFE_ROOM_STAND_EXT * U,
+      ih = Math.max(1, r.height);
     return {
       left: r.left,
       top: r.top,
       width: r.width,
       height: r.height,
-      clip: r.clip,
-      fade: r.fade,
+      clip: [r.clip[0], Math.max(0, r.clip[1] - ext)],
+      fade: r.fade ? [r.fade[0] + ext / ih, Math.min(1, r.fade[1] + ext / ih)] : r.fade,
       cx,
       face: F,
       visTop: r.visTop,
       headTop: topY,
-      frameBottom: r.frameBottom,
-      w: visW(x, F)
+      frameBottom: r.frameBottom + ext,
+      w: visW(x, F),
+      U
     };
   });
 };
@@ -118102,7 +118185,7 @@ function AssistantLifeRoomFigure({
 }) {
   const night = look === 'night' && sleep,
     evening = look === 'evening';
-  const tone = night ? 'linear-gradient(100deg,#ffd08a 0%,#c9c2ee 45%,#8a86c0 100%)' : evening ? 'linear-gradient(100deg,#ffe0b0 0%,#f2c9b0 60%,#c99a90 100%)' : 'linear-gradient(100deg,#ffffff 0%,#f6ece8 60%,#d9c2bc 100%)';
+  const tone = night ? 'linear-gradient(100deg,#ffd08a 0%,#c9c2ee 45%,#8a86c0 100%)' : evening ? 'linear-gradient(100deg,#fff6ec 0%,#fbeee4 60%,#f0dcd4 100%)' : 'linear-gradient(100deg,#ffffff 0%,#fbf5f3 60%,#efe3df 100%)';
   const fadeMask = p.fade ? `linear-gradient(to bottom,#000 ${(p.fade[0] * 100).toFixed(1)}%,transparent ${(p.fade[1] * 100).toFixed(1)}%)` : null;
   const box = {
     position: 'absolute',
@@ -118127,7 +118210,7 @@ function AssistantLifeRoomFigure({
     style: {
       position: 'absolute',
       left: p.cx - p.w * 0.45,
-      top: p.frameBottom - 16,
+      top: p.frameBottom - 30,
       width: p.w * 0.9,
       height: 26,
       borderRadius: '50%',
@@ -118151,7 +118234,7 @@ function AssistantLifeRoomFigure({
       width: '100%',
       height: '100%',
       maxWidth: 'none',
-      filter: `drop-shadow(0 0 .6px #2a1414cc) saturate(.92) sepia(.1)${sleep ? ' brightness(.6)' : ''}`,
+      filter: `drop-shadow(0 0 .6px #2a1414cc)${sleep ? ' brightness(.6)' : ''}`,
       cursor: onPress ? 'pointer' : undefined
     }
   }), React.createElement("span", {
@@ -119091,7 +119174,58 @@ function AssistantLifeRoomScene({
       border: '6px solid #ffffff99',
       background: night ? 'radial-gradient(circle at 70% 30%,#fff 0 5px,transparent 6px),linear-gradient(#0b1030,#1e2a5a)' : evening ? 'linear-gradient(#f59e0b,#fb7185)' : look === 'morning' ? 'linear-gradient(#93c5fd,#fde68a)' : 'linear-gradient(#7cc4ff,#d6f0ff)'
     }
-  }), layoutOn && React.createElement(AssistantLifeRoomLayoutLayer, {
+  }, React.createElement("span", {
+    style: {
+      position: 'absolute',
+      left: '50%',
+      top: 0,
+      bottom: 0,
+      width: 4,
+      marginLeft: -2,
+      background: '#ffffffcc'
+    }
+  }), React.createElement("span", {
+    style: {
+      position: 'absolute',
+      top: '50%',
+      left: 0,
+      right: 0,
+      height: 4,
+      marginTop: -2,
+      background: '#ffffffcc'
+    }
+  }), React.createElement("span", {
+    style: {
+      position: 'absolute',
+      left: -10,
+      right: -10,
+      bottom: -13,
+      height: 8,
+      borderRadius: 3,
+      background: '#ffffffd9',
+      boxShadow: '0 2px 3px #0003'
+    }
+  }), React.createElement("span", {
+    style: {
+      position: 'absolute',
+      left: -9,
+      top: -6,
+      bottom: -4,
+      width: 14,
+      borderRadius: '4px 8px 8px 4px',
+      background: 'linear-gradient(90deg,#f9a8d4,#f472b6)'
+    }
+  }), React.createElement("span", {
+    style: {
+      position: 'absolute',
+      right: -9,
+      top: -6,
+      bottom: -4,
+      width: 14,
+      borderRadius: '8px 4px 4px 8px',
+      background: 'linear-gradient(90deg,#f472b6,#f9a8d4)'
+    }
+  })), layoutOn && React.createElement(AssistantLifeRoomLayoutLayer, {
     who: layoutWho,
     items: layoutEdit ? layoutEdit.items : layoutItems,
     geom: layoutGeom,
@@ -119130,7 +119264,7 @@ function AssistantLifeRoomScene({
   }) : null), people.length > 0 && !asleep && React.createElement(AssistantLifeRoomFront, {
     kind: frontKind,
     cx: W / 2,
-    top: deskTop,
+    top: lay && !asleep ? Math.max(...lay.map(p => p.frameBottom - 4)) : deskTop,
     w: frontW,
     items: ASSISTANT_LIFE_ROOM_DESK_ITEMS[id] || []
   }), layoutOn && React.createElement(AssistantLifeRoomLayoutLayer, {
@@ -232391,7 +232525,7 @@ function MonsterHeroGame() {
     }, React.createElement("span", null, "種族 / 難易度"), React.createElement("b", {
       className: "text-right"
     }, speciesName, "／", labelOf(r.difficultyId)), React.createElement("span", null, "今回のスコア"), React.createElement("b", {
-      className: "text-right"
+      className: "text-right break-all min-w-0"
     }, r.score.toLocaleString()), React.createElement("span", null, "クリアターン"), React.createElement("b", {
       className: "text-right"
     }, r.clearTurns !== null ? `${r.clearTurns}T` : '—'), React.createElement("span", null, "初回報酬"), React.createElement("b", {
@@ -243188,7 +243322,7 @@ function MonsterHeroGame() {
     }, sub)), empty ? React.createElement("small", {
       className: "shrink-0 text-right text-[9px] font-black text-slate-500"
     }, "記録なし") : React.createElement("b", {
-      className: "shrink-0 text-right text-[13px] font-black text-cyan-200"
+      className: "min-w-0 max-w-[60%] break-all text-right text-[13px] font-black text-cyan-200"
     }, score.toLocaleString(), React.createElement("small", {
       className: "ml-0.5 text-[8px] text-slate-400"
     }, "pt")));
@@ -257058,7 +257192,7 @@ function MonsterHeroGame() {
       }, React.createElement("span", null, "曲"), React.createElement("b", {
         className: "truncate text-right"
       }, r.songName || '-', r.difficultyName ? `(${r.difficultyName})` : ''), React.createElement("span", null, "スコア"), React.createElement("b", {
-        className: "text-right"
+        className: "text-right break-all min-w-0"
       }, r.score.toLocaleString()), r.assist && React.createElement(React.Fragment, null, React.createElement("span", null, "アシストモード"), React.createElement("b", {
         className: "text-right"
       }, "ダメージにならない")), r.pumpkin ? React.createElement(React.Fragment, null, React.createElement("span", null, "体力"), React.createElement("b", {
