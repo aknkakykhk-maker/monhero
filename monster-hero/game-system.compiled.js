@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: bee385b62b9d19ab
+// source-sha256: 546181787166e06b
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -117344,6 +117344,20 @@ const assistantLifeMapReadHome = () => {
   } catch (_) {}
   return out;
 };
+const ASSISTANT_LIFE_MAP_HEAD = Object.freeze({
+  myua_sleep: [0.15, 0.51],
+  kiki_sleep: [0.22, 0.60],
+  momosuke_sleep: [0.07, 0.58],
+  atsu_sleep: [0.08, 0.60],
+  kyuko_sleep: [0.05, 0.52],
+  'halloween/myua_sleep': [0.20, 0.51],
+  'halloween/kiki_sleep': [0.22, 0.585],
+  'halloween/momosuke_sleep': [0.12, 0.58],
+  'card-master/myua_sleep': [0.07, 0.39],
+  momosuke: [0.065, 0.51, 0.85],
+  'halloween/momosuke': [0.065, 0.51, 0.8],
+  erubin: [0.01, 0.45]
+});
 function AssistantLifeMapFig({
   who,
   h,
@@ -117374,7 +117388,22 @@ function AssistantLifeMapFig({
     r: 1,
     ar: 0.6
   };
-  const face = typeof assistantLifeStandFace === 'function' ? assistantLifeStandFace(who && who.id, src) : null;
+  const face0 = typeof assistantLifeStandFace === 'function' ? assistantLifeStandFace(who && who.id, src) : null;
+  const headKey = String(src || '').replace(/[?#].*$/, '').replace(/^.*assistant\//, '').replace(/\.png$/i, '').replace(/_(?!sleep$)[a-z]+$/i, '');
+  const head = ASSISTANT_LIFE_MAP_HEAD[headKey] || null;
+  const topChin = head ? {
+    top: head[0],
+    chin: head[1]
+  } : face0 && Number.isFinite(face0.top) && (Number.isFinite(face0.chin) || face0.head) ? {
+    top: face0.top,
+    chin: face0.head ? 1 : face0.chin
+  } : null;
+  const face = face0 && topChin && typeof ASSISTANT_LIFE_STAND_EC === 'number' ? {
+    ...face0,
+    top: topChin.top,
+    m: (topChin.chin - topChin.top) / (ASSISTANT_LIFE_STAND_EC * ASSISTANT_LIFE_STAND_FACE_LEN),
+    fit: head && head[2] || 1
+  } : face0;
   const rule = box && face && typeof assistantLifeStandRule === 'function' ? assistantLifeStandRule({
     face,
     box,
