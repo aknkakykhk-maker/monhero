@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 134d5d2f6ab0ca19
+// source-sha256: 5a40cd58569f92c9
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -174352,7 +174352,7 @@ function MsxR3Battle({
       if (!e) return '';
       const hp = e.hp > 0 ? `体力+${e.hp}` : '体力 満タン';
       const ly = [e.m.ama ? e.ama > 0 ? `甘え+${e.ama}` : '甘え 上限' : '', e.m.fear ? e.fear > 0 ? `恐れ+${e.fear}` : '恐れ 上限' : ''].filter(Boolean).join('・');
-      if (e.m.gives) return `持ち物に${SUC.ITEMS && SUC.ITEMS[e.m.gives] && SUC.ITEMS[e.m.gives].name || e.m.gives}`;
+      if (e.m.gives) return '持ち物に入る';
       if (e.m.stat) return [`${MSX_STAT_NAME[e.m.stat]}+${e.st}`, ly, e.m.hp ? hp : ''].filter(Boolean).join('・');
       if (e.m.pop || e.m.pts) return [`人気+${e.pop}`, `能力P+${e.pts}`, ly, hp].filter(Boolean).join('・');
       return [ly, e.m.hp ? hp : ''].filter(Boolean).join('・');
@@ -174451,7 +174451,18 @@ function MsxR3Battle({
       "data-msx-r3-meal": k
     }, React.createElement("div", {
       className: "e"
-    }, MEAL_ICON[k] || '🍙'), React.createElement("b", null, M[k].name), React.createElement("small", {
+    }, MEAL_ICON[k] || '🍙'), React.createElement("b", {
+      style: {
+        wordBreak: 'keep-all',
+        overflowWrap: 'normal'
+      }
+    }, String(M[k].name).split(/(?=（)/).map((x, i) => React.createElement(React.Fragment, {
+      key: i
+    }, i > 0 ? React.createElement("wbr", null) : null, React.createElement("span", {
+      style: {
+        whiteSpace: 'nowrap'
+      }
+    }, x)))), React.createElement("small", {
       "data-msx-r3-mealfx": k
     }, fx(k).split('・').map((x, i) => React.createElement(React.Fragment, {
       key: i
