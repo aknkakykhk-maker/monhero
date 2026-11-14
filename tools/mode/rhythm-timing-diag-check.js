@@ -250,7 +250,7 @@ check('端末の音の事情(info)を返す',/info:\(\)=>\(\{outLatMs:/.test(aud
   check('時計の直し: デバッグの上書きで切ってある端末では入れない',off.rhythmSmoothClockLiveCheck()===false&&off.rhythmTouchFixOn('smoothSongClock')===false);
   // 演奏画面のつなぎ
   check('毎コマ、その曲の中で時計の直しを入れるかを見る',/RHYTHM_TIMING_DIAG\.frame\(songTimeMs,[^;]*\);rhythmSmoothClockLiveCheck\(\);/.test(play));
-  check('見えた指だけ分けて、ふだんの遅れより古くは戻さない',/const revealedStart=!ownStart;/.test(play)&&/\.\.\.\(revealedStart\?\{revealed:true\}:\{\}\)/.test(play)&&/if\(ownStarts\.length\)inputStarts\(ownStarts,ageMs\);/.test(play)&&/inputStarts\(revealedStarts,rhythmRevealedAgeMs\(ageMs\)\)/.test(play));
+  check('見えた指だけ分けて、ふだんの遅れより古くは戻さない',/const revealedStart=!ownStart;/.test(play)&&/\.\.\.\(revealedStart\?\{revealed:true\}:\{\}\)/.test(play)&&/const revealedStarts=rhythmTouchFixOn\('lateStampTypical'\)\?starts\.filter\(s=>s\.revealed\):\[\];/.test(play)&&/if\(!revealedStarts\.length\)\{if\(starts\.length\)inputStarts\(starts,ageMs\);\}/.test(play)&&/inputStarts\(revealedStarts,rhythmRevealedAgeMs\(ageMs\)\)/.test(play));
   check('判定の窓は変えていない(MARVELOUS 55・EXCELLENT 100・GREAT 150・GOOD 170・BAD 185)',/id:'MARVELOUS', windowMs:55,/.test(runtime)&&/id:'EXCELLENT', windowMs:100,/.test(runtime)&&/id:'GREAT', windowMs:150,/.test(runtime)&&/id:'GOOD', windowMs:170,/.test(runtime)&&/id:'BAD', windowMs:185,/.test(runtime));
   // 報告ツール
   const dd=require('./rhythm-touch-diag.js');

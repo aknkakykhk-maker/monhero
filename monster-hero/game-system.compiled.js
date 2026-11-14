@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 40ec22c3b4a7884d
+// source-sha256: c59563c9cf10b6b7
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -44027,10 +44027,12 @@ const RhythmTapTest = ({
       liveTouchSkySubLanesRef.current = liveSkySubLanes;
       setPressedLanes(pressedLanesNow());
       const ageMs = rhythmInputAgeMs(e.timeStamp, typeof performance !== 'undefined' ? performance.now() : NaN);
-      const revealedStarts = starts.filter(s => s.revealed),
-        ownStarts = revealedStarts.length ? starts.filter(s => !s.revealed) : starts;
-      if (ownStarts.length) inputStarts(ownStarts, ageMs);
-      if (revealedStarts.length) {
+      const revealedStarts = rhythmTouchFixOn('lateStampTypical') ? starts.filter(s => s.revealed) : [];
+      if (!revealedStarts.length) {
+        if (starts.length) inputStarts(starts, ageMs);
+      } else {
+        const ownStarts = starts.filter(s => !s.revealed);
+        if (ownStarts.length) inputStarts(ownStarts, ageMs);
         RHYTHM_TIMING_DIAG.revealed(true);
         try {
           inputStarts(revealedStarts, rhythmRevealedAgeMs(ageMs));

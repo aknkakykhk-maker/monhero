@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 1fb7297060327f11
+// generated-sha256: ddf892ccb1b15f26
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -26740,9 +26740,11 @@ if(!ownStart){const nowPerf=typeof performance!=='undefined'?performance.now():D
 const revealedStart=!ownStart;if(RHYTHM_TOUCH_BRIDGE.isIgnoredTouch(touch.identifier))return;if(lane!==null&&subLaneCoordinate!==null)starts.push({lane,subLaneCoordinate,inputKey,sky:rhythmSkyTouch(tp.y,rect),subLaneCoordinateAtLine:rhythmSubLaneCoordinateAtLineIfBelow(tp.x,tp.y,rect),...(revealedStart?{revealed:true}:{})});else{RHYTHM_PERF.touchIgnored();(current.outsideStartInputs=current.outsideStartInputs||new Set()).add(inputKey);}});liveTouchSubLanesRef.current=liveSubLanes;liveTouchSkySubLanesRef.current=liveSkySubLanes;setPressedLanes(pressedLanesNow());const ageMs=rhythmInputAgeMs(e.timeStamp,typeof performance!=='undefined'?performance.now():NaN);
 /* 【2026-11-14・同期の総点検 2本目】別の指の合図の中で初めて見えた指(自分の touchstart が無い)は、この合図の時刻が自分のものではない。
    その指だけ分けて、ふだんの遅れより古くは戻さない(rhythmRevealedAgeMs。直し方 lateStampTypical を入れた iPhone だけ。ほかの端末は今までと同じ値)。判定の窓は変えない */
-const revealedStarts=starts.filter(s=>s.revealed),ownStarts=revealedStarts.length?starts.filter(s=>!s.revealed):starts;
-if(ownStarts.length)inputStarts(ownStarts,ageMs);
-if(revealedStarts.length){RHYTHM_TIMING_DIAG.revealed(true);try{inputStarts(revealedStarts,rhythmRevealedAgeMs(ageMs));}finally{RHYTHM_TIMING_DIAG.revealed(false);}}
+/* 同時に押した指は今までどおり1まとめで渡す(同じノーツを2本の指で取り合わないため)。分けるのは、直しの入った端末で見えた指があるときだけ */
+const revealedStarts=rhythmTouchFixOn('lateStampTypical')?starts.filter(s=>s.revealed):[];
+if(!revealedStarts.length){if(starts.length)inputStarts(starts,ageMs);}
+else{const ownStarts=starts.filter(s=>!s.revealed);if(ownStarts.length)inputStarts(ownStarts,ageMs);
+  RHYTHM_TIMING_DIAG.revealed(true);try{inputStarts(revealedStarts,rhythmRevealedAgeMs(ageMs));}finally{RHYTHM_TIMING_DIAG.revealed(false);}}
 const ended=[];Array.from(current.activeTouchInputs).forEach(inputKey=>{if(live.has(inputKey)){current.missingHeld?.delete(inputKey);return;}
 /* ★ロング(ホールド・スライド)を押さえている指が、自分の離しの合図(touchend/touchcancel の changedTouches)なしに指の一覧から消えたときは、
    すぐ離した扱いにせず RHYTHM_MISSING_TOUCH_CONFIRM_MS だけ待つ。そのあいだに一覧へ戻れば押さえたまま続ける(2026-10-15 社長「空スライド中に別の指でタップ・フリックすると空スライドが外れる」)。
