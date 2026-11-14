@@ -138,7 +138,7 @@ const alfDiaryShare = (n) => {
   } catch { return []; }
 };
 // 仲良し度の Lv を3つの段にまとめる(Lv1〜2=0・3〜5=1・6〜=2)。Lv の数そのものは相手に渡さない
-const ALF_BOND_TIER_NAMES = Object.freeze(['はじめのころ', 'なかよし', 'ずっと仲良し']);
+const ALF_BOND_TIER_NAMES = Object.freeze(['初めのころ', 'なかよし', 'ずっと仲良し']);
 const alfBondTierOfLv = (lv) => (!Number.isFinite(lv) || lv < 3 ? 0 : lv < 6 ? 1 : 2);
 const alfBondTiers = (ids) => {
   const out = {};
@@ -161,7 +161,7 @@ const alfBuildMore = (ids) => {
     } catch {}
   }
   const dy = alfDiaryShare(8);
-  // 仲良しの「段」(2026-11-14 社長 r1115-019 第2弾「段は見せてよい・数字は出さない」): 助手ごとに 0(はじめのころ)/1(なかよし)/2(ずっと仲良し)。点・Lv の数は送らない
+  // 仲良しの「段」(2026-11-14 社長 r1115-019 第2弾「段は見せてよい・数字は出さない」): 助手ごとに 0(初めのころ)/1(なかよし)/2(ずっと仲良し)。点・Lv の数は送らない
   const bd = alfBondTiers(ids);
   return { v: 1, fu, dy, ...(Object.keys(bd).length ? { bd } : {}) };
 };
