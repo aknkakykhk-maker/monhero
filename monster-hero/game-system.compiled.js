@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: fdc42570d5ee73f8
+// source-sha256: 8daba111d07b0b21
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -168531,7 +168531,8 @@ function MsxR3Battle({
       t: `${name}: ${won ? '優勝' : '負け'}`
     }].slice(-20);
     const arcAfter = msxArcAfterOf(SUC, before, b, won, fight && fight.opp) || undefined;
-    if (s2.mealReady && !s2.over) {
+    const rankUp = d && d.rankTo > d.rankFrom;
+    if (rankUp || s2.mealReady && !s2.over) {
       setRun({
         ...run,
         s: s2,
@@ -168541,7 +168542,8 @@ function MsxR3Battle({
         log,
         out: {
           r3: {
-            stage: 'meal',
+            stage: rankUp ? 'rank' : 'meal',
+            meal: !!(s2.mealReady && !s2.over),
             won,
             name,
             icon: msxR3BattleIcon(b),
@@ -168668,6 +168670,59 @@ function MsxR3Battle({
   });
   if (st3) {
     const d = st3.d || {};
+    if (st3.stage === 'rank') {
+      const body = React.createElement(React.Fragment, null, React.createElement(MsxBand, {
+        s: s,
+        v: v,
+        ev: ev
+      }), React.createElement("div", {
+        className: "v-scene",
+        style: {
+          flex: '1 1 0',
+          minHeight: 120
+        }
+      }, React.createElement("img", {
+        className: "bg",
+        src: "images/story-bg/monhero_plaza_evening.jpg",
+        alt: ""
+      }), React.createElement("div", {
+        className: "sh"
+      }), React.createElement("div", {
+        className: "v-burst"
+      }), React.createElement("div", {
+        className: "v-stamp msx-pop",
+        style: {
+          top: '8%',
+          fontSize: 34
+        }
+      }, "ランク UP!", React.createElement("small", null, msxR3RankName(d.rankFrom || 0), " → ", msxR3RankName(d.rankTo), "・🎫 修行チケット +", (d.rankTo || 0) - (d.rankFrom || 0)))), React.createElement(MsxR3RankPyramid, {
+        step: d.rankTo || 0,
+        up: true
+      }));
+      const next = () => st3.meal ? setRun({
+        ...run,
+        out: {
+          r3: {
+            ...st3,
+            stage: 'meal'
+          }
+        }
+      }) : finish(s);
+      return React.createElement(MsxR3Frame, {
+        run: run,
+        back: "中断",
+        onBack: onPause,
+        body: body,
+        foot: React.createElement("div", {
+          className: "v-ft"
+        }, React.createElement("button", {
+          type: "button",
+          className: "go",
+          onClick: next,
+          "data-msx-r3-next": true
+        }, st3.meal ? '🍽 ごはんへ ▶' : 'つぎへ ▶'))
+      });
+    }
     if (st3.stage === 'prize') {
       const rows = msxR3PrizeRows(d, s);
       const body = React.createElement(React.Fragment, null, React.createElement(MsxBand, {
@@ -168830,7 +168885,7 @@ function MsxR3Battle({
     };
     const LY = SUC.LOYAL || {};
     const RT = SUC.RATE || {};
-    const loyNote = `忠誠度が高いほど、トレーニングと修行の伸びが上がる(${LY.capBoost || 60}で最大 ×${1 + (LY.capBoost || 60) / 100})。80以上で大成功が少し出やすい(+${Math.round((RT.greatLoyal80 || 0.03) * 100)}%)`;
+    const loyNote = `忠誠度が高いほど、トレーニングの伸びが上がる(${LY.capBoost || 60}で最大 ×${1 + (LY.capBoost || 60) / 100})。80以上で大成功が少し出やすい(+${Math.round((RT.greatLoyal80 || 0.03) * 100)}%)`;
     const give = () => {
       if (!mealPick || !can(mealPick)) return;
       const r = SUC.meal(s, mealPick);
