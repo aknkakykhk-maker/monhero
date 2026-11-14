@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 4524e2f80a3b4dc9
+// generated-sha256: ee532f14ce22966c
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -68626,7 +68626,7 @@ function AssistantLifeMapRow({ id, place, town = false, life, selected = false, 
     // モンヒロサクセス(β)の入口(2026-11-14 社長・印 monheroSuccess が偽なら null)。モンヒロバトルにいる助手の札にだけ
     let si = null; if (place === 'battle') { try { si = typeof assistantLifeSuccessRowInfo === 'function' ? assistantLifeSuccessRowInfo(id) : null; } catch (_) { si = null; } }
     const successBtn = si && <button type="button" title={si.sub} data-assistant-life-map-act="monhero-success" onClick={() => { close(); try { assistantLifeSuccessOpen({ assistantId: id, from: 'place' }); } catch (_) {} }} className="w-full rounded-xl bg-gradient-to-r from-emerald-600 to-lime-600 min-h-[44px] px-2 py-1 text-[12px] font-black text-white active:scale-95"><span style={JA_LABEL_STYLE}>{jaWrap(si.label)}</span><span className="block text-[10px] font-bold text-emerald-50" style={JA_LABEL_STYLE}>{jaWrap(si.sub)}</span></button>;
-    const tiLine = ti && (ti.today ? `🥋 ${ti.today.nick}・${ti.today.kind}${ti.today.learned ? ` NEW ${ti.today.learned}を覚えた` : ''}${ti.today.main ? ` ・ ${ti.today.main} 熟練 +${ti.today.gain}` : ''}` : '🥋 今日はまだ修行していません');
+    const tiLine = ti && (ti.today ? `🥋 今日の修行: ${ti.today.nick} ― ${ti.today.kindText || ti.today.kind}${ti.today.learned ? ` NEW 新しい技「${ti.today.learned}」を覚えた` : ''}${ti.today.main ? ` 技の熟練度 ${ti.today.main} +${ti.today.gain}` : ''}` : '🥋 今日はまだ修行していません');
     return (
       <div key={id} className={`mt-2 flex flex-wrap items-center gap-2 rounded-2xl border bg-slate-900/85 p-2 ${selected ? "border-sky-300 ring-2 ring-sky-300/70" : "border-white/10"}`} data-assistant-life-map-sheet-selected={selected ? "1" : undefined} data-assistant-life-map-sheet-who={id} data-assistant-life-map-sheet-at={place}>
         <span className="shrink-0" style={typeof assistantLifePartnerOk === 'function' && !assistantLifePartnerOk(id) ? { filter: 'grayscale(.55) brightness(.85)' } : undefined}><AssistantFace who={a} size={36} accent={a.accent}/></span>
@@ -80098,6 +80098,8 @@ const amgcAtBattle = (aid, life = amgcLife()) => {
   try { const w = typeof assistantLifeWhereOf === 'function' ? assistantLifeWhereOf(life, aid) : null; return !!(w && w.place === AMGT_PLACE); } catch (_) { return false; }
 };
 
+// 修行の種類を、何を伸ばす修行かの文で(2026-11-15 社長 r1115-027)
+const AMGC_KIND_SENTENCE = Object.freeze({ pow: 'ちからを伸ばす修行', wise: 'かしこさを伸ばす修行', hit: '命中を伸ばす修行', eva: '回避を伸ばす修行', tough: '防御を伸ばす修行', real: '実戦で技を磨く修行' });
 // ---------- 練習の相手(社長: フレンドのマスモン → 自分の別のマスモン → 一人) ----------
 // 修行は通信せずに回るので、「フレンド」は 👀 で見たときに登録編成を見つけた日を覚えておく(amgcNoteFriend)
 const amgcSparOf = (aid, now = Date.now()) => {
@@ -80137,7 +80139,7 @@ const assistantMasmonTrainRowInfo = (aid, now = Date.now()) => {
   let today = null;
   if (last && last.today) {
     const g = last.log.g || {}; const mainId = Object.keys(g).sort((a, b) => g[b] - g[a])[0];
-    today = { nick: last.row.nick || '', monster: last.row.monster, kind: (AMGT_KINDS[last.log.k] || {}).name || '', act: (AMGT_KINDS[last.log.k] || {}).act || '',
+    today = { nick: last.row.nick || '', monster: last.row.monster, kindText: AMGC_KIND_SENTENCE[last.log.k] || '', kind: (AMGT_KINDS[last.log.k] || {}).name || '', act: (AMGT_KINDS[last.log.k] || {}).act || '',
       learned: last.log.l ? amgcTechName(last.row.monster, last.log.l) : '', main: mainId ? amgcTechName(last.row.monster, mainId) : '', gain: mainId ? g[mainId] : 0, fail: !!last.log.f };
   }
   const st = AMGC_STORE.state.day[aid]; const d = amgcToday(now);
@@ -80265,7 +80267,7 @@ function AssistantMasmonTrainWatch({ assistantId, onClose }) {
   const learnedName = last && last.log.l ? amgcTechName(row.monster, last.log.l) : '';
   const growNames = aimNames.filter(n => n && n !== learnedName);
   const aim = learnedName ? `新しい技「${learnedName}」を覚えるための練習試合${growNames.length ? `(${growNames.join('・')}の熟練も伸ばします)` : ''}`
-    : growNames.length ? `「${growNames.join('」「')}」の熟練(見習い→熟練)を伸ばす練習試合` : '技の熟練を伸ばす練習試合';
+    : growNames.length ? `「${growNames.join('」「')}」の技の熟練度を伸ばす練習試合` : '技の熟練を伸ばす練習試合';
   const faceOf = (aId) => { const a = typeof ASSISTANT_LIST !== 'undefined' ? ASSISTANT_LIST.find(x => x.id === aId) : null; return a ? { a, src: assistantFaceSrc(a, 'normal') } : null; };
   const stageBlock = () => {
     if (failed) return <p className="ambw-small" style={{ padding: 24, textAlign: 'center' }}>練習試合を読み込めませんでした。もう一度開いてください</p>;
@@ -80333,10 +80335,10 @@ function AssistantMasmonTrainWatch({ assistantId, onClose }) {
         <div className="ambw-card" data-amgc-result-wait style={{ textAlign: 'center' }}><b style={{ color: '#fde68a', fontSize: 12.5 }}>🥋 試合が終わると、今日の修行の結果が出ます</b></div>
       ) : (
       <div className="ambw-card" data-amgc-result>
-        <b className="amgc-head"><span>🥋 {last ? (last.today ? '今日の修行の結果' : '前回の修行の結果') : 'まだ修行していません'}</span>{last ? <span className="who" style={{ display: 'block' }}><span>{row.nick}</span> <span>({(AMGT_KINDS[last.log.k] || {}).name || ''})</span></span> : null}</b>
-        {last && last.log.l && <p data-amgc-learned style={{ margin: '4px 0 0', fontWeight: 800 }}><span style={{ background: '#fbbf24', color: '#111', borderRadius: 6, padding: '0 4px', fontSize: 10 }}>NEW</span> {amgcTechName(row.monster, last.log.l)} を覚えた</p>}
-        {gains.map(([k, n]) => { const to = me ? me.m[k] || 0 : 0; const from = Math.max(0, to - n); return <p key={k} data-amgc-gain={k} style={{ margin: '3px 0 0', fontSize: 12, fontWeight: 800 }}>{amgcTechName(row.monster, k)} {from}→{to}(+{n}) <span style={{ color: '#fde68a' }}>{amgtRankOf(from) === amgtRankOf(to) ? amgtRankOf(to) : `${amgtRankOf(from)}→${amgtRankOf(to)}`}</span></p>; })}
-        {gift && gift.ok && <p data-amgc-gift style={{ margin: '6px 0 0', color: '#fdba74', fontWeight: 900 }}>{who ? who.name : ''}「見に来てくれてうれしいです！」 🥋 {gift.nick} {gift.tech} 熟練 +{gift.to - gift.from} ・ 💗 +{gift.bond}</p>}
+        <b className="amgc-head"><span>🥋 {last ? (last.today ? '今日の修行の結果' : '前回の修行の結果') : 'まだ修行していません'}</span>{last ? <span className="who" style={{ display: 'block' }}><span>{row.nick}</span> <span>― {AMGC_KIND_SENTENCE[last.log.k] || (AMGT_KINDS[last.log.k] || {}).name || ''}</span></span> : null}</b>
+        {last && last.log.l && <p data-amgc-learned style={{ margin: '4px 0 0', fontWeight: 800 }}><span style={{ background: '#fbbf24', color: '#111', borderRadius: 6, padding: '0 4px', fontSize: 10 }}>NEW</span> 新しい技「{amgcTechName(row.monster, last.log.l)}」を覚えた</p>}
+        {gains.map(([k, n]) => { const to = me ? me.m[k] || 0 : 0; const from = Math.max(0, to - n); return <p key={k} data-amgc-gain={k} style={{ margin: '3px 0 0', fontSize: 12, fontWeight: 800 }}><span style={{ whiteSpace: 'nowrap' }}>技の熟練度</span> <span style={{ whiteSpace: 'nowrap' }}>{amgcTechName(row.monster, k)}</span> <span style={{ whiteSpace: 'nowrap' }}>{from}→{to}(+{n})</span> <span style={{ color: '#fde68a', whiteSpace: 'nowrap' }}>熟練の段: {amgtRankOf(from) === amgtRankOf(to) ? amgtRankOf(to) : `${amgtRankOf(from)}→${amgtRankOf(to)}`}</span></p>; })}
+        {gift && gift.ok && <p data-amgc-gift style={{ margin: '6px 0 0', color: '#fdba74', fontWeight: 900 }}>{who ? who.name : ''}「見に来てくれてうれしいです！」 🥋 {gift.nick} {gift.tech} 技の熟練度 +{gift.to - gift.from} ・ 💗 +{gift.bond}</p>}
         {done && gift && !gift.ok && info && info.why && <p className="ambw-small" style={{ marginTop: 6 }} data-amgc-nogift>{info.why}</p>}
       </div>
       )}

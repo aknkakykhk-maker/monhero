@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8475874e5bb83a86
+// source-sha256: 9ea692e6eeefd8d7
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -117408,7 +117408,7 @@ function AssistantLifeMapRow({
     className: "block text-[10px] font-bold text-emerald-50",
     style: JA_LABEL_STYLE
   }, jaWrap(si.sub)));
-  const tiLine = ti && (ti.today ? `🥋 ${ti.today.nick}・${ti.today.kind}${ti.today.learned ? ` NEW ${ti.today.learned}を覚えた` : ''}${ti.today.main ? ` ・ ${ti.today.main} 熟練 +${ti.today.gain}` : ''}` : '🥋 今日はまだ修行していません');
+  const tiLine = ti && (ti.today ? `🥋 今日の修行: ${ti.today.nick} ― ${ti.today.kindText || ti.today.kind}${ti.today.learned ? ` NEW 新しい技「${ti.today.learned}」を覚えた` : ''}${ti.today.main ? ` 技の熟練度 ${ti.today.main} +${ti.today.gain}` : ''}` : '🥋 今日はまだ修行していません');
   return React.createElement("div", {
     key: id,
     className: `mt-2 flex flex-wrap items-center gap-2 rounded-2xl border bg-slate-900/85 p-2 ${selected ? "border-sky-300 ring-2 ring-sky-300/70" : "border-white/10"}`,
@@ -153047,6 +153047,14 @@ const amgcAtBattle = (aid, life = amgcLife()) => {
     return false;
   }
 };
+const AMGC_KIND_SENTENCE = Object.freeze({
+  pow: 'ちからを伸ばす修行',
+  wise: 'かしこさを伸ばす修行',
+  hit: '命中を伸ばす修行',
+  eva: '回避を伸ばす修行',
+  tough: '防御を伸ばす修行',
+  real: '実戦で技を磨く修行'
+});
 const amgcSparOf = (aid, now = Date.now()) => {
   const fr = AMGC_STORE.state.fr;
   if (fr >= 0 && amgcToday(now) - fr < AMGC_NUM.friendDays) return 'friend';
@@ -153099,6 +153107,7 @@ const assistantMasmonTrainRowInfo = (aid, now = Date.now()) => {
     today = {
       nick: last.row.nick || '',
       monster: last.row.monster,
+      kindText: AMGC_KIND_SENTENCE[last.log.k] || '',
       kind: (AMGT_KINDS[last.log.k] || {}).name || '',
       act: (AMGT_KINDS[last.log.k] || {}).act || '',
       learned: last.log.l ? amgcTechName(last.row.monster, last.log.l) : '',
@@ -153404,7 +153413,7 @@ function AssistantMasmonTrainWatch({
   const aimNames = gains.map(([k]) => amgcTechName(row.monster, k));
   const learnedName = last && last.log.l ? amgcTechName(row.monster, last.log.l) : '';
   const growNames = aimNames.filter(n => n && n !== learnedName);
-  const aim = learnedName ? `新しい技「${learnedName}」を覚えるための練習試合${growNames.length ? `(${growNames.join('・')}の熟練も伸ばします)` : ''}` : growNames.length ? `「${growNames.join('」「')}」の熟練(見習い→熟練)を伸ばす練習試合` : '技の熟練を伸ばす練習試合';
+  const aim = learnedName ? `新しい技「${learnedName}」を覚えるための練習試合${growNames.length ? `(${growNames.join('・')}の熟練も伸ばします)` : ''}` : growNames.length ? `「${growNames.join('」「')}」の技の熟練度を伸ばす練習試合` : '技の熟練を伸ばす練習試合';
   const faceOf = aId => {
     const a = typeof ASSISTANT_LIST !== 'undefined' ? ASSISTANT_LIST.find(x => x.id === aId) : null;
     return a ? {
@@ -153638,7 +153647,7 @@ function AssistantMasmonTrainWatch({
     style: {
       display: 'block'
     }
-  }, React.createElement("span", null, row.nick), " ", React.createElement("span", null, "(", (AMGT_KINDS[last.log.k] || {}).name || '', ")")) : null), last && last.log.l && React.createElement("p", {
+  }, React.createElement("span", null, row.nick), " ", React.createElement("span", null, "― ", AMGC_KIND_SENTENCE[last.log.k] || (AMGT_KINDS[last.log.k] || {}).name || '')) : null), last && last.log.l && React.createElement("p", {
     "data-amgc-learned": true,
     style: {
       margin: '4px 0 0',
@@ -153652,7 +153661,7 @@ function AssistantMasmonTrainWatch({
       padding: '0 4px',
       fontSize: 10
     }
-  }, "NEW"), " ", amgcTechName(row.monster, last.log.l), " を覚えた"), gains.map(([k, n]) => {
+  }, "NEW"), " 新しい技「", amgcTechName(row.monster, last.log.l), "」を覚えた"), gains.map(([k, n]) => {
     const to = me ? me.m[k] || 0 : 0;
     const from = Math.max(0, to - n);
     return React.createElement("p", {
@@ -153663,11 +153672,24 @@ function AssistantMasmonTrainWatch({
         fontSize: 12,
         fontWeight: 800
       }
-    }, amgcTechName(row.monster, k), " ", from, "→", to, "(+", n, ") ", React.createElement("span", {
+    }, React.createElement("span", {
       style: {
-        color: '#fde68a'
+        whiteSpace: 'nowrap'
       }
-    }, amgtRankOf(from) === amgtRankOf(to) ? amgtRankOf(to) : `${amgtRankOf(from)}→${amgtRankOf(to)}`));
+    }, "技の熟練度"), " ", React.createElement("span", {
+      style: {
+        whiteSpace: 'nowrap'
+      }
+    }, amgcTechName(row.monster, k)), " ", React.createElement("span", {
+      style: {
+        whiteSpace: 'nowrap'
+      }
+    }, from, "→", to, "(+", n, ")"), " ", React.createElement("span", {
+      style: {
+        color: '#fde68a',
+        whiteSpace: 'nowrap'
+      }
+    }, "熟練の段: ", amgtRankOf(from) === amgtRankOf(to) ? amgtRankOf(to) : `${amgtRankOf(from)}→${amgtRankOf(to)}`));
   }), gift && gift.ok && React.createElement("p", {
     "data-amgc-gift": true,
     style: {
@@ -153675,7 +153697,7 @@ function AssistantMasmonTrainWatch({
       color: '#fdba74',
       fontWeight: 900
     }
-  }, who ? who.name : '', "「見に来てくれてうれしいです！」 🥋 ", gift.nick, " ", gift.tech, " 熟練 +", gift.to - gift.from, " ・ 💗 +", gift.bond), done && gift && !gift.ok && info && info.why && React.createElement("p", {
+  }, who ? who.name : '', "「見に来てくれてうれしいです！」 🥋 ", gift.nick, " ", gift.tech, " 技の熟練度 +", gift.to - gift.from, " ・ 💗 +", gift.bond), done && gift && !gift.ok && info && info.why && React.createElement("p", {
     className: "ambw-small",
     style: {
       marginTop: 6
