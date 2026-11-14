@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 04813269dfb71bf9
+// source-sha256: 170b19e71837946d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -70205,7 +70205,7 @@ function ProfileScreen({
       className: "block text-[10px] font-black text-pink-300"
     }, "着替え"), React.createElement("b", {
       className: "block break-words text-[11px] max-[359px]:text-[10px] font-black leading-tight text-white"
-    }, wornCostume ? wornCostume.name : '元の服'))));
+    }, wornCostume ? wornCostume.name : typeof assistantDefaultOutfitName === 'function' ? assistantDefaultOutfitName(selectedAssistantId) : '元の服'))));
   })()), onboarded && !onboardingPreview && friendsEnabled && (() => {
     const base = favoriteMasu ? ALL_PLAYER_MONSTERS[favoriteMasu.baseId] : null;
     const face = base ? friendsFaceIconOf(favoriteMasu.baseId) : null;
@@ -97926,6 +97926,13 @@ const RHYTHM_MODE_ASSISTANT_FRAMES = Object.freeze({
     cy: 0,
     top: 0.06,
     show: 0.8
+  },
+  sorashido: {
+    zoom: 1,
+    cx: 0.5,
+    cy: 0,
+    top: 0.06,
+    show: 0.8
   }
 });
 const RHYTHM_MODE_SELECT_NOTES = Object.freeze([{
@@ -115275,10 +115282,10 @@ const ASSISTANT_LIFE_STAND_FACE = Object.freeze({
     fit: 0.95
   },
   sorashido: {
-    top: 0.015,
-    eye: 0.345,
-    chin: 0.55,
-    m: 1.248
+    top: 0.01,
+    eye: 0.2455,
+    chin: 0.3739,
+    m: 0.956
   },
   erubin: {
     top: 0.01,
@@ -115333,12 +115340,27 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
       m: 1.25
     }
   },
+  hosei: {
+    sorashido: {
+      top: 0.015,
+      eye: 0.345,
+      chin: 0.55,
+      m: 1.248
+    }
+  },
   'stand-normal': {
     mua: {
       top: 0.1386,
       eye: 0.3072,
       chin: 0.4187,
       m: 0.829
+    },
+    momosuke: {
+      top: 0.061,
+      eye: 0.3239,
+      chin: 0.4296,
+      m: 0.786,
+      above: 0.7
     },
     kiki: {
       top: 0.0777,
@@ -115359,6 +115381,28 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
       m: 0.895
     },
     sorashido: {
+      top: 0.0106,
+      eye: 0.2817,
+      chin: 0.4296,
+      m: 1.1
+    },
+    erubin: {
+      top: 0.0083,
+      eye: 0.2521,
+      chin: 0.4298,
+      m: 1.322
+    }
+  },
+  'stand-sekiyuou': {
+    erubin: {
+      top: 0.004,
+      eye: 0.249,
+      chin: 0.4297,
+      m: 1.345
+    }
+  },
+  'stand-hosei': {
+    sorashido: {
       top: 0.0562,
       eye: 0.2921,
       chin: 0.4307,
@@ -115372,6 +115416,13 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
       chin: 0.4334,
       m: 0.711,
       above: 0.85
+    },
+    momosuke: {
+      top: 0.0594,
+      eye: 0.3112,
+      chin: 0.4299,
+      m: 0.884,
+      above: 0.95
     },
     kiki: {
       top: 0.1496,
@@ -119180,7 +119231,7 @@ const ASSISTANT_LIFE_SLEEP_EYES_FACE = Object.freeze({
     eyes: [[0.315, 0.64, 0.145, 0.12, '#f9c7b0'], [0.605, 0.585, 0.185, 0.115, '#fbd6bf']]
   }
 });
-const ASSISTANT_LIFE_SLEEP_ART = Object.freeze(new Set(['atsu_normal.PNG', 'face/atsu_normal.PNG', 'kiki_normal.PNG', 'face/kiki_normal.PNG', 'halloween/kiki_normal.PNG', 'halloween/face/kiki_normal.PNG', 'kyuko_normal.PNG', 'face/kyuko_normal.PNG', 'myua_normal.PNG', 'face/myua_normal.PNG', 'card-master/myua_normal.PNG', 'card-master/face/myua_normal.PNG', 'halloween/myua_normal.PNG', 'halloween/face/myua_normal.PNG', 'momosuke_normal.PNG', 'face/momosuke_normal.PNG', 'halloween/momosuke_normal.PNG', 'halloween/face/momosuke_normal.PNG']));
+const ASSISTANT_LIFE_SLEEP_ART = Object.freeze(new Set(['atsu_normal.PNG', 'face/atsu_normal.PNG', 'kiki_normal.PNG', 'face/kiki_normal.PNG', 'halloween/kiki_normal.PNG', 'halloween/face/kiki_normal.PNG', 'kyuko_normal.PNG', 'face/kyuko_normal.PNG', 'myua_normal.PNG', 'face/myua_normal.PNG', 'card-master/myua_normal.PNG', 'card-master/face/myua_normal.PNG', 'halloween/myua_normal.PNG', 'halloween/face/myua_normal.PNG', 'sorashido_normal.PNG', 'face/sorashido_normal.PNG', 'momosuke_normal.PNG', 'face/momosuke_normal.PNG', 'halloween/momosuke_normal.PNG', 'halloween/face/momosuke_normal.PNG']));
 function assistantLifeSleepArt(pid, src) {
   const who = typeof assistantById === 'function' ? assistantById(pid) : null;
   const s0 = String(src || '').replace(/[?#].*$/, ''),
@@ -200265,14 +200316,15 @@ const CARD_ART_KNOWN_BOX = Object.freeze({
   myua_surprise: [1536, 1024, 325, 27, 852, 997],
   myua_troubled: [1536, 1024, 323, 15, 866, 1009],
   myua_wink: [1536, 1024, 379, 28, 760, 996],
-  sorashido_angry: [384, 512, 0, 0, 384, 512],
-  sorashido_crying: [384, 512, 0, 0, 384, 512],
-  sorashido_excited: [384, 512, 0, 3, 384, 509],
-  sorashido_happy: [384, 512, 0, 0, 384, 512],
-  sorashido_normal: [384, 512, 0, 0, 384, 512],
-  sorashido_surprise: [384, 512, 0, 2, 384, 510],
-  sorashido_troubled: [384, 512, 0, 0, 384, 512],
-  sorashido_wink: [384, 512, 0, 2, 384, 510],
+  sorashido_angry: [384, 512, 50, 37, 314, 475],
+  sorashido_crying: [384, 512, 5, 39, 375, 473],
+  sorashido_excited: [384, 512, 5, 37, 379, 475],
+  sorashido_happy: [384, 512, 28, 38, 317, 474],
+  sorashido_normal: [384, 512, 16, 37, 368, 475],
+  sorashido_sleep: [384, 512, 5, 27, 379, 485],
+  sorashido_surprise: [384, 512, 0, 38, 384, 474],
+  sorashido_troubled: [384, 512, 0, 39, 384, 473],
+  sorashido_wink: [384, 512, 27, 38, 357, 474],
   'stand-normal/atsu_angry': [540, 552, 83, 7, 407, 545],
   'stand-normal/atsu_crying': [606, 552, 108, 6, 390, 546],
   'stand-normal/atsu_excited': [618, 552, 89, 7, 503, 545],
@@ -200281,6 +200333,14 @@ const CARD_ART_KNOWN_BOX = Object.freeze({
   'stand-normal/atsu_surprise': [624, 552, 118, 7, 434, 545],
   'stand-normal/atsu_troubled': [556, 552, 47, 7, 458, 545],
   'stand-normal/atsu_wink': [626, 552, 81, 7, 537, 545],
+  'stand-normal/erubin_angry': [454, 492, 33, 7, 389, 485],
+  'stand-normal/erubin_crying': [548, 492, 7, 7, 528, 485],
+  'stand-normal/erubin_excited': [576, 492, 7, 7, 535, 485],
+  'stand-normal/erubin_happy': [550, 492, 18, 8, 524, 484],
+  'stand-normal/erubin_normal': [484, 492, 19, 9, 454, 483],
+  'stand-normal/erubin_surprise': [698, 492, 39, 6, 620, 486],
+  'stand-normal/erubin_troubled': [552, 492, 8, 7, 533, 485],
+  'stand-normal/erubin_wink': [516, 492, 7, 7, 498, 485],
   'stand-normal/kiki_angry': [616, 832, 8, 8, 601, 824],
   'stand-normal/kiki_crying': [436, 832, 8, 6, 420, 826],
   'stand-normal/kiki_excited': [946, 832, 8, 8, 929, 824],
@@ -200297,6 +200357,14 @@ const CARD_ART_KNOWN_BOX = Object.freeze({
   'stand-normal/kyuko_surprise': [410, 590, 43, 8, 342, 582],
   'stand-normal/kyuko_troubled': [366, 590, 21, 7, 337, 583],
   'stand-normal/kyuko_wink': [424, 590, 30, 8, 386, 582],
+  'stand-normal/momosuke_angry': [708, 860, 7, 7, 689, 853],
+  'stand-normal/momosuke_crying': [776, 860, 7, 7, 762, 853],
+  'stand-normal/momosuke_excited': [796, 860, 6, 6, 783, 854],
+  'stand-normal/momosuke_happy': [792, 860, 8, 7, 776, 853],
+  'stand-normal/momosuke_normal': [704, 860, 8, 7, 689, 853],
+  'stand-normal/momosuke_surprise': [742, 860, 8, 8, 727, 852],
+  'stand-normal/momosuke_troubled': [714, 860, 8, 6, 699, 854],
+  'stand-normal/momosuke_wink': [764, 860, 24, 6, 734, 854],
   'stand-normal/myua_angry': [592, 672, 12, 0, 520, 672],
   'stand-normal/myua_crying': [592, 672, 0, 0, 591, 672],
   'stand-normal/myua_excited': [592, 672, 0, 0, 583, 672],
@@ -200305,14 +200373,14 @@ const CARD_ART_KNOWN_BOX = Object.freeze({
   'stand-normal/myua_surprise': [592, 672, 0, 10, 509, 662],
   'stand-normal/myua_troubled': [592, 672, 27, 0, 516, 672],
   'stand-normal/myua_wink': [592, 672, 12, 10, 579, 662],
-  'stand-normal/sorashido_angry': [698, 542, 113, 7, 443, 535],
-  'stand-normal/sorashido_crying': [684, 542, 98, 7, 477, 535],
-  'stand-normal/sorashido_excited': [772, 542, 53, 8, 674, 534],
-  'stand-normal/sorashido_happy': [732, 542, 47, 6, 655, 536],
-  'stand-normal/sorashido_normal': [762, 542, 121, 8, 569, 534],
-  'stand-normal/sorashido_surprise': [766, 542, 105, 7, 586, 535],
-  'stand-normal/sorashido_troubled': [730, 542, 31, 9, 672, 533],
-  'stand-normal/sorashido_wink': [646, 542, 97, 9, 446, 533]
+  'stand-normal/sorashido_angry': [536, 576, 26, 7, 432, 569],
+  'stand-normal/sorashido_crying': [534, 576, 7, 7, 520, 569],
+  'stand-normal/sorashido_excited': [648, 576, 16, 6, 626, 570],
+  'stand-normal/sorashido_happy': [534, 576, 30, 6, 440, 570],
+  'stand-normal/sorashido_normal': [572, 576, 31, 8, 534, 568],
+  'stand-normal/sorashido_surprise': [632, 576, 67, 7, 542, 569],
+  'stand-normal/sorashido_troubled': [662, 576, 6, 7, 648, 569],
+  'stand-normal/sorashido_wink': [586, 576, 7, 9, 565, 567]
 });
 const cardArtBoxOf = v => Array.isArray(v) && v.length === 6 ? {
   nw: v[0],
@@ -258860,7 +258928,7 @@ function MonsterHeroGame() {
           className: `relative block ${owned ? '' : 'opacity-45'}`
         }, src ? React.createElement("img", {
           src: src,
-          alt: costume ? costume.name : '元の服',
+          alt: costume ? costume.name : assistantDefaultOutfitName(who.id),
           className: "h-14 w-14 rounded-full object-cover bg-black/30",
           draggable: "false"
         }) : React.createElement("span", {
@@ -258871,7 +258939,7 @@ function MonsterHeroGame() {
           className: "absolute inset-0 m-auto text-white drop-shadow-[0_0_3px_rgba(0,0,0,0.9)]"
         })), selected && React.createElement(PickerCheckMark, null), React.createElement("span", {
           className: `text-[9px] font-black leading-tight text-center ${owned ? 'text-slate-200' : 'text-slate-500'}`
-        }, costume ? costume.name : '元の服'), !owned && React.createElement("span", {
+        }, costume ? costume.name : assistantDefaultOutfitName(who.id)), !owned && React.createElement("span", {
           className: "text-[8px] font-black leading-tight text-center text-amber-400"
         }, costume && !assistantCostumeUnlockedNow(costume) ? '解放の条件あり' : 'マーケットで購入'));
       };
@@ -258910,7 +258978,7 @@ function MonsterHeroGame() {
           className: "min-w-0"
         }, React.createElement("b", {
           className: "block truncate text-[12px] font-black text-white"
-        }, who.name, "：", worn ? worn.name : '元の服'), React.createElement("small", {
+        }, who.name, "：", worn ? worn.name : assistantDefaultOutfitName(who.id)), React.createElement("small", {
           className: "block text-[10px] font-bold leading-tight text-slate-400"
         }, "いま着ている服"))),
         chips: chipList,
