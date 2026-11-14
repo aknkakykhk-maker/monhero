@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: fdfb43fbdf36ea40
+// generated-sha256: 43a971a89a93eaba
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -42383,7 +42383,7 @@ function BreederMarketScreen({
     breeder:{ color:'#d97706', tabs:[{key:'face',label:'アイコン'},...(hasDiscIconCards?[{key:'disc',label:'円盤石アイコン'}]:[]),...(breederFrameItems.length?[{key:'frame',label:'フレーム'}]:[])] },
     exchange:{ color:'#059669', tabs:[{key:'psyche',label:'プシュケー'},{key:'proof',label:'勇者の証'}] },
     card:{ color:'#ea580c', tabs:[{key:'pack',label:'パック'},{key:'tactics',label:'戦術カード'},{key:'starter',label:'スターター'},{key:'disc',label:'円盤石'},{key:'assist',label:'アシスト'}] },
-    event:{ color:'#7c3aed', tabs:[{key:'disc',label:'円盤石'},{key:'assist',label:'アシスト'},...(RHYTHM_EVENT_POINT_SHOP_FRAME_OFFERS.length?[{key:'frame',label:'フレーム'}]:[]),...(RHYTHM_EVENT_POINT_SHOP_COSTUME_OFFERS.some(offer=>offer.available!==false)?[{key:'costume',label:'着替え'}]:[]),...(RHYTHM_EVENT_POINT_SHOP_ICON_OFFERS.some(offer=>offer.available!==false)?[{key:'icon',label:'アイコン'}]:[]),{key:'item',label:'アイテム'},{key:'stamp',label:'スタンプ'},...(typeof rhythmPaidSongList==='function'&&rhythmPaidSongList().length?[{key:'song',label:'曲'}]:[]),...((typeof RELEASE_FLAGS!=='undefined'&&RELEASE_FLAGS.assistantLife===true&&RELEASE_FLAGS.assistantLifeFurniture===true)?[{key:'furniture',label:'家具'}]:[]),{key:'material',label:'強化素材'}] },
+    event:{ color:'#7c3aed', tabs:[{key:'disc',label:'円盤石'},{key:'assist',label:'アシスト'},...(RHYTHM_EVENT_POINT_SHOP_FRAME_OFFERS.length?[{key:'frame',label:'フレーム'}]:[]),...(RHYTHM_EVENT_POINT_SHOP_COSTUME_OFFERS.some(offer=>offer.available!==false)?[{key:'costume',label:'着替え'}]:[]),...(RHYTHM_EVENT_POINT_SHOP_ICON_OFFERS.some(offer=>offer.available!==false)?[{key:'icon',label:'アイコン'}]:[]),{key:'item',label:'アイテム'},...(typeof monsucShopOpen==='function'&&monsucShopOpen()?[{key:'monsuc',label:'モンサク'}]:[]),{key:'stamp',label:'スタンプ'},...(typeof rhythmPaidSongList==='function'&&rhythmPaidSongList().length?[{key:'song',label:'曲'}]:[]),...((typeof RELEASE_FLAGS!=='undefined'&&RELEASE_FLAGS.assistantLife===true&&RELEASE_FLAGS.assistantLifeFurniture===true)?[{key:'furniture',label:'家具'}]:[]),{key:'material',label:'強化素材'}] },
   };
   const activeSectionTab = (section) => {
     const tabs=SECTION_TABS[section]?.tabs||[];
@@ -42747,6 +42747,7 @@ function BreederMarketScreen({
           {/* マルチのスタンプ(2026-11-11 社長「いっぱい作って、カスタマイズできるようにしたい」「ビートPで買い足す」)。品と値段は 39-multi-stamp.jsx の表 */}
           {/* 新曲(2026-11-13)。有料の印を付けた曲だけ並ぶ。印が1曲も無ければタブも出ない(39-rhythm-song-owned.jsx) */}
           {eventTab==='song'&&<RhythmSongShopList points={safeEventPoints} busy={busy} disabled={purchaseProcessing} openSheet={openSheet} onExchange={onExchangeEventPoints} onZoomIcon={onZoomIcon}/>}
+          {eventTab==='monsuc'&&typeof MonsucShopList==='function'&&<MonsucShopList points={safeEventPoints} busy={busy} disabled={purchaseProcessing} openSheet={openSheet} onExchange={onExchangeEventPoints}/>}
           {eventTab==='stamp'&&<MultiStampShopList points={safeEventPoints} busy={busy} disabled={purchaseProcessing} openSheet={openSheet} onExchange={onExchangeEventPoints} onZoomIcon={onZoomIcon}/>}
           {/* 交換できる助手の着替え(2026-10-03)。いまは売る服が無いので何も並ばない(タブも出ない)。
               服に price:{beatPoint:◯◯} を書くと、ここへ自動で並ぶ。1着につき1回、持っていれば「所持済み」 */}
@@ -57354,8 +57355,9 @@ function RhythmMultiChatBubble({ text: raw }) {
     </span>
   );
   return (
-    <span data-rhythm-multi-chat-bubble className="pointer-events-none absolute inset-x-0.5 bottom-0.5 top-3 z-40 flex items-start justify-center overflow-hidden">
-      <span className="line-clamp-2 max-h-full max-w-full break-words rounded-xl bg-white px-1.5 py-0.5 text-center text-[10px] font-black leading-tight text-slate-900 shadow-lg">{text}</span>
+    <span data-rhythm-multi-chat-bubble className="pointer-events-none absolute inset-x-0.5 bottom-0.5 top-3 z-40 flex items-start justify-center overflow-hidden landscape:top-0.5 [[data-mh-view-rotation=true]_&]:top-0.5">
+      {/* 席のカードが低い横(高さ38px)でも2行が白い箱に入るよう、箱の上の余白を詰める。字は言葉の切れ目(jaWrap)で折り、2行を超える分は「…」で省く(2026-11-14 社長の止め絵: 2行目が箱の下へはみ出して切れていた) */}
+      <span className="line-clamp-2 max-h-full max-w-full overflow-hidden rounded-xl bg-white px-1.5 py-0.5 text-center text-[10px] font-black leading-tight text-slate-900 shadow-lg" style={typeof JA_WRAP_STYLE !== 'undefined' ? JA_WRAP_STYLE : { wordBreak: 'keep-all', overflowWrap: 'anywhere' }}>{typeof jaWrap === 'function' ? jaWrap(text) : text}</span>
     </span>
   );
 }
@@ -60897,7 +60899,7 @@ function RhythmBuddyListSheet({ tab, settings, onChange, onTab, onClose }) {
         )}
         {tab === 'lineage' && (
           <div>
-            <p className="mb-2.5 text-[10px] leading-relaxed text-slate-400">選んだ種族だけを表示します。並べ替え・しぼりこみはそのまま効きます。</p>
+            <p className="mb-2.5 text-[10px] leading-relaxed text-slate-400">選んだ種族だけを表示します。並べ替え・絞り込みはそのまま効きます。</p>
             <div className="grid grid-cols-2 gap-2.5">
               {[{ id: 'all', label: '全て' }, ...lineages.map((l) => ({ id: l.id, label: `${l.name}種` }))].map((opt) => (
                 <button key={opt.id} type="button" onClick={() => onChange({ lineage: opt.id })} className={chip(settings.lineage === opt.id)}>{opt.label}</button>
@@ -60916,7 +60918,7 @@ function RhythmBuddyListSheet({ tab, settings, onChange, onTab, onClose }) {
               </div>
             </section>
             <section>
-              <h4 className="mb-1.5 text-[11px] font-black text-slate-300">性格<small className="ml-1 font-bold text-slate-500">(何も選ばなければすべて)</small></h4>
+              <h4 className="mb-1.5 text-[11px] font-black text-slate-300">性格<small className="ml-1 font-bold text-slate-500">(何も選ばなければ全て)</small></h4>
               <div className="grid grid-cols-2 gap-2">
                 {[...RHYTHM_BUDDY_TRAITS.map((t) => ({ id: t.id, label: t.label })), { id: 'none', label: 'まだ見えない' }].map((opt) => (
                   <button key={opt.id} type="button" onClick={() => onChange({ traits: toggle(settings.traits, opt.id) })} className={chip(settings.traits.includes(opt.id))}>{opt.label}</button>
@@ -60924,7 +60926,7 @@ function RhythmBuddyListSheet({ tab, settings, onChange, onTab, onClose }) {
               </div>
             </section>
             <section>
-              <h4 className="mb-1.5 text-[11px] font-black text-slate-300">今日の調子<small className="ml-1 font-bold text-slate-500">(何も選ばなければすべて)</small></h4>
+              <h4 className="mb-1.5 text-[11px] font-black text-slate-300">今日の調子<small className="ml-1 font-bold text-slate-500">(何も選ばなければ全て)</small></h4>
               <div className="grid grid-cols-2 gap-2">
                 {RHYTHM_BUDDY_MOODS.map((mood) => (
                   <button key={mood.id} type="button" onClick={() => onChange({ moods: toggle(settings.moods, mood.id) })} className={chip(settings.moods.includes(mood.id))}>
@@ -60952,7 +60954,7 @@ const useRhythmBuddyListControls = () => {
 // マスモンの一覧(1行ずつ)。onPick を渡すと「呼ぶ」ボタンが付く
 function RhythmBuddyList({ masuMons, state, dayKey, onOpen, onPick = null, busy = false, canPay = true, calledIds = [], settings = null }) {
   const list = rhythmBuddyListRows(masuMons, state, dayKey, settings);
-  if (list.length === 0) return <p className="py-6 text-center text-[12px] font-bold text-slate-400">{helpWrap((masuMons || []).length ? 'しぼりこみに当てはまるマスモンがいません' : 'マスモンがまだいません。モンヒロバトルのランを終えて、勇者モンをマスモンに登録すると、ここに並びます')}</p>;
+  if (list.length === 0) return <p className="py-6 text-center text-[12px] font-bold text-slate-400">{helpWrap((masuMons || []).length ? '絞り込みに当てはまるマスモンがいません' : 'マスモンがまだいません。モンヒロバトルのランを終えて、勇者モンをマスモンに登録すると、ここに並びます')}</p>;
   if (settings && settings.view === 'card') {
     // バトル側と同じ3列のカード。絵・名前・ビートLv・調子の顔。呼ぶボタンは下に付ける(「マスモンを呼ぶ」のとき)
     return (
@@ -81765,6 +81767,170 @@ function MonsucFuseSheet({ box, saveBox, onSave, readBox, locked = [], onDone, o
     </div>);
 }
 
+// ---- part: 56-monsuc-shop.jsx ----
+// ===== モンヒロサクセスの持ちこみアイテムを、マーケットのビートP交換所で交換する(2026-11-13 社長 r1113-057①) =====
+// 値段はこの表 MONSUC_SHOP_OFFERS だけで決める(2026-11-14 社長「案を全体に1.5倍」・台帳 #6142)。
+// 交換した物は、モンサクの持ちこみの数(mh_monsuc_meta_v1 の items)に足す。新しいキーは作らない・既存の値の意味は変えない。
+// ビートP(RHYTHM_EVENT_POINTS_KEY)と持ちこみの数は、1つの取引で保存する(どちらかが書けなければ両方戻す。曲・スタンプの交換と同じ)。
+// 公開の印 monheroSuccess が立つまで、売り場(交換所の「モンサク」タブ)を出さない・交換もしない。
+// 砂時計2種(時渡り・虹)は、育成への持ちこみ方が決まってから並べる(いまは育成の中でだけ手に入る)。
+
+const MONSUC_SHOP_OFFERS = Object.freeze([
+  { itemId: 'oil', cost: 75 }, { itemId: 'herb', cost: 75 },
+  { itemId: 'band', cost: 225 }, { itemId: 'mag', cost: 225 }, { itemId: 'hachi', cost: 225 }, { itemId: 'omamori', cost: 225 }, { itemId: 'grass', cost: 225 },
+  { itemId: 'dango', cost: 225 }, { itemId: 'guide', cost: 225 },
+  { itemId: 'juice', cost: 300 }, { itemId: 'powder', cost: 300 }, { itemId: 'loupe', cost: 300 }, { itemId: 'license', cost: 300 },
+  { itemId: 'pack', cost: 375 },
+  { itemId: 'awakeFruit', cost: 450 }, { itemId: 'superAwakeFruit', cost: 1200 },
+].map((o) => Object.freeze({ ...o, id: `monsuc_${o.itemId}`, kind: 'monsuc' })));
+const MONSUC_SHOP_MAX = 999; // 持ちこみの数の上限(記録の読み直し msxNormMeta と同じ)
+const monsucShopOpen = () => typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.monheroSuccess === true;
+const monsucShopOffer = (id) => MONSUC_SHOP_OFFERS.find((o) => o.id === id) || null;
+
+// 交換する(本体の exchangeRhythmEventPoints から呼ぶ)。値段は画面から来た値を使わず、表から決め直す
+const monsucShopBuy = async (offerId, quantity = 1) => {
+  const offer = monsucShopOffer(offerId);
+  if (!offer) return { ok: false, reason: 'unknown' };
+  if (!monsucShopOpen()) return { ok: false, reason: 'soon' };
+  const q = Math.max(1, Math.min(99, Math.floor(Number(quantity) || 1)));
+  const cost = offer.cost * q;
+  const beforePoints = await loadRhythmEventPoints();
+  const stored = await storeGet(MSX_KEYS.meta, null, false);
+  const base = stored && typeof stored === 'object' && !Array.isArray(stored) ? stored : { v: 1 };
+  const items = base.items && typeof base.items === 'object' && !Array.isArray(base.items) ? base.items : {};
+  const had = Number.isFinite(Number(items[offer.itemId])) ? Math.max(0, Math.floor(Number(items[offer.itemId]))) : 0;
+  if (had + q > MONSUC_SHOP_MAX) return { ok: false, reason: 'max', eventPoints: beforePoints };
+  if (!(beforePoints >= cost)) return { ok: false, reason: 'points', eventPoints: beforePoints, cost };
+  const next = { ...base, v: 1, items: { ...items, [offer.itemId]: had + q } }; // 持ちこみの数に足すだけ(ほかの項目はそのまま)
+  const nextPoints = beforePoints - cost;
+  const saved = await saveStoredValuesOrRollback([
+    { key: RHYTHM_EVENT_POINTS_KEY, before: beforePoints, next: nextPoints },
+    { key: MSX_KEYS.meta, before: stored, next },
+  ], storeGet, storeSet);
+  if (!saved) return { ok: false, reason: 'save', eventPoints: beforePoints };
+  return { ok: true, eventPoints: nextPoints, cost, have: had + q };
+};
+const monsucShopReasonText = (r) => (r === 'points' ? 'ビートPが足りません。' : r === 'max' ? `持てるのは${MONSUC_SHOP_MAX}個までです。` : r === 'soon' ? 'まだ交換できません。' : '交換を保存できませんでした。ビートPと持ちこみの数は変えていません。');
+
+// 交換所の「モンサク」タブの中身。効き目は持ちこみの画面と同じ数値の説明(msxItemFx)を出すので、芯を読みこんでから並べる
+function MonsucShopList({ points = 0, busy = false, disabled = false, openSheet, onExchange }) {
+  const [have, setHave] = React.useState({});
+  const [ready, setReady] = React.useState(false);
+  const reload = React.useCallback(async () => {
+    try { const m = await storeGet(MSX_KEYS.meta, null, false); setHave(m && m.items && typeof m.items === 'object' ? m.items : {}); } catch (e) { setHave({}); }
+  }, []);
+  React.useEffect(() => { let alive = true; (async () => { try { if (typeof msxLoad === 'function') await msxLoad(); } catch (e) {} await reload(); if (alive) setReady(true); })(); return () => { alive = false; }; }, [reload]);
+  if (!ready) return <p className="col-span-full text-center text-[12px] font-bold text-slate-300">読み込んでいます…</p>;
+  return <>
+    <p data-monsuc-shop-note className="col-span-full text-[11px] font-bold leading-snug text-slate-300" style={typeof JA_WRAP_STYLE !== 'undefined' ? JA_WRAP_STYLE : undefined}>
+      {typeof jaWrap === 'function' ? jaWrap('モンヒロサクセスの育成に持っていくアイテムです。交換した物は、育成をはじめるときの「持ちこみ」で選べます') : 'モンヒロサクセスの育成に持っていくアイテムです。交換した物は、育成をはじめるときの「持ちこみ」で選べます'}
+    </p>
+    {MONSUC_SHOP_OFFERS.map((offer) => {
+      const t = typeof MSX_ITEM_BY_ID !== 'undefined' ? MSX_ITEM_BY_ID[offer.itemId] : null;
+      if (!t) return null;
+      const n = Math.max(0, Math.floor(Number(have[offer.itemId]) || 0));
+      const desc = typeof msxItemDesc === 'function' ? msxItemDesc(offer.itemId) : t.desc;
+      const when = t.when === 'before' ? 'はじめる前に効く' : '育成中にも使える';
+      const item = { id: offer.id, name: t.name, emoji: t.e, type: 'item', currency: 'beatPoint', cost: offer.cost, desc: `${when}。${desc}` };
+      return <MarketProductCard key={offer.id} dataAttrs={{ 'data-monsuc-shop-offer': offer.itemId }}
+        item={item} owned={false} comingSoon={false}
+        canBuy={points >= offer.cost && !busy && n < MONSUC_SHOP_MAX}
+        disabled={disabled}
+        onBuy={() => openSheet({ item, stackable: true, confirm: async (count) => { const r = onExchange ? await onExchange(offer, count || 1) : false; await reload(); return r; } })}
+        middle={<span data-monsuc-shop-have className="block px-1 text-center text-[10px] font-bold leading-tight text-slate-300">{when}・持っている数 {n.toLocaleString()}</span>}
+      />;
+    })}
+  </>;
+}
+
+// ---- part: 56-monsuc-best3.jsx ----
+// ===== モンヒロサクセスの「自分だけのベスト3」(2026-11-13 社長 r1113-057②) =====
+// 育成が終わった(引退した)あとに、種に関係なく総合力の上位3つを出す。今回が入ったら、下からせり上がって入り込み、
+// 押し出された行は1段下がる。1位なら「自己ベスト更新!」、2・3位なら「ベスト3入り!」。入らなければ「ベスト3まで あと ◯」。
+// 記録は芯ではなく保存枠の部品(56-monhero-success-r3-store.jsx の msxR3Retire)が mh_monsuc_meta_v1 の best3 に足す。ここは見せるだけ。
+// 「動きを減らす」設定(msxFxCalm)と prefers-reduced-motion では、動かさずに並べ終わりの形を出す。
+
+// 1行の高さ(px)。せり上がる距離もこれで数える。横長の低い画面では詰める
+const msxB3Row = () => (typeof window !== 'undefined' && window.innerHeight < 520 ? 46 : 64);
+const msxB3Calm = () => {
+  if (typeof msxFxCalm === 'function' && msxFxCalm()) return true;
+  try { return typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; }
+};
+
+// b = { prev, next, place, power }(msxR3Retire の best3)
+function MsxBest3({ b, run }) {
+  msxB3EnsureCss();
+  const calm = msxB3Calm();
+  const MSX_B3_ROW = msxB3Row();
+  const [go, setGo] = React.useState(calm);
+  React.useEffect(() => { if (calm) return undefined; const id = setTimeout(() => setGo(true), 650); return () => clearTimeout(id); }, []);
+  if (typeof msxUseTimedSe === 'function') msxUseTimedSe(go && b.place >= 0 && !calm ? [['awKira', 250]] : [], [go]);
+  const next = Array.isArray(b.next) ? b.next : []; const prev = Array.isArray(b.prev) ? b.prev : [];
+  const inIt = b.place >= 0;
+  // 動き出す前の位置: 今回の行は「4位の場所」から、押し出された行は1つ上の場所から
+  const startOf = (i, e) => {
+    if (!inIt) return 0;
+    if (e.id === next[b.place].id) return (3 - b.place) * MSX_B3_ROW;
+    const was = prev.findIndex((x) => x.id === e.id);
+    return was >= 0 ? (was - i) * MSX_B3_ROW : 0;
+  };
+  const third = next.length >= 3 ? next[2].power : null;
+  const fmt = (n) => (typeof msxFmt === 'function' ? msxFmt(n) : Number(n).toLocaleString());
+  const name = (e) => e.nick || (typeof msxMonName === 'function' ? msxMonName(e.species) : e.species);
+  const thumb = (sp) => (typeof msxMonThumb === 'function' ? msxMonThumb(sp) : '');
+  const stamp = !inIt ? null : b.place === 0 ? '自己ベスト更新!' : 'ベスト3入り!';
+  return (<>
+    {run && typeof MsxMonArt === 'function' ? <div className="v-scene" style={{ flex: '1 1 0', minHeight: 150 }} data-msx-best3-scene>
+      <img className="bg" src={msxSceneBg().bg} alt=""/><div className="sh"/>{inIt ? <div className="v-burst"/> : null}
+      <div className="gr" style={{ bottom: 'calc(10% - 5px)' }}/><MsxMonArt run={run} className="mon" style={{ bottom: '10%', height: '70%' }}/>
+      <div className="v-stamp msx-pop" style={{ top: '6%', fontSize: 22 }}>{run.nick || msxMonName(run.s.species)}<small>総合力 {fmt(b.power)}</small></div>
+    </div> : null}
+    <div className="v-h">🏆 自分だけのベスト3<small>これまでに育てたモンスターの、総合力の上位3つ</small></div>
+    <div className={`msx-b3${go ? ' go' : ''}${calm ? ' calm' : ''}`} data-msx-best3={inIt ? b.place + 1 : 0} style={{ height: MSX_B3_ROW * 3 + 16 }}>
+      {[0, 1, 2].map((i) => <div key={`slot-${i}`} className="slot" style={{ top: 8 + i * MSX_B3_ROW, height: MSX_B3_ROW - 8 }}><b className={`pl p${i + 1}`}>{i + 1}</b>{next[i] ? null : <span className="none">まだない</span>}</div>)}
+      {next.map((e, i) => {
+        const me = inIt && i === b.place;
+        return (<div key={e.id} className={`row${me ? ' me' : ''}`} data-msx-best3-row={i + 1}
+          style={{ top: 8 + i * MSX_B3_ROW, height: MSX_B3_ROW - 8, transform: go ? 'translateY(0)' : `translateY(${startOf(i, e)}px)` }}>
+          <b className={`pl p${i + 1}`}>{i + 1}</b>
+          {thumb(e.species) ? <img src={thumb(e.species)} alt=""/> : null}
+          <span className="nm">{name(e)}{me ? <small>今回</small> : null}</span>
+          <span className="rk">{e.rank}</span>
+          <b className="pw">{fmt(e.power)}</b>
+        </div>);
+      })}
+    </div>
+    {stamp ? <div className={`msx-b3-stamp${go ? ' on' : ''}`} data-msx-best3-stamp>{stamp}</div>
+      : <div className="v-card" data-msx-best3-miss><div className="v-kv"><b>今回</b><span>総合力 <b>{fmt(b.power)}</b></span></div>{third != null ? <div className="v-kv"><b>3位まで</b><span>あと <b className="yel">{fmt(Math.max(1, third - b.power + 1))}</b></span></div> : null}</div>}
+    {typeof MsxSay === 'function' && run ? <MsxSay aid={run.s.aid} ex={inIt ? 'excited' : 'happy'} text={inIt ? (b.place === 0 ? '「新記録! いちばん強いモンスターが生まれたね!」' : `「ベスト3に入ったよ! ${b.place + 1}番目!」`) : '「次はベスト3をめざそ!」'}/> : null}
+  </>);
+}
+
+const MSX_B3_CSS = `
+.msx-b3{position:relative;margin:4px 0 6px;overflow:hidden}
+.msx-b3 .slot{position:absolute;left:0;right:0;border-radius:12px;border:1.5px dashed #47556988;display:flex;align-items:center;gap:8px;padding:0 10px}
+.msx-b3 .slot .none{flex:1;text-align:center;color:#94a3b8;font-size:12px;font-weight:800}
+.msx-b3 .row{position:absolute;left:0;right:0;border-radius:12px;background:#0f172a;border:1.5px solid #475569;display:flex;align-items:center;gap:8px;padding:0 10px;transition:transform .8s cubic-bezier(.2,1.2,.4,1)}
+.msx-b3.calm .row{transition:none}
+.msx-b3 .row.me{border-color:#fde047;background:#3b2f0b;box-shadow:0 0 12px #fde04788;z-index:2}
+.msx-b3 .pl{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:900;background:#334155;color:#fff;flex:0 0 auto}
+.msx-b3 .pl.p1{background:linear-gradient(#fde68a,#d97706);color:#422006}.msx-b3 .pl.p2{background:linear-gradient(#f1f5f9,#94a3b8);color:#1e293b}.msx-b3 .pl.p3{background:linear-gradient(#fdba74,#b45309);color:#431407}
+.msx-b3 .row img{width:40px;height:min(40px,100%);object-fit:contain;flex:0 0 auto}
+.msx-b3 .row .nm{flex:1;min-width:0;font-size:13px;font-weight:900;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.msx-b3 .row .nm small{display:inline-block;margin-left:6px;padding:1px 6px;border-radius:8px;background:#fde047;color:#422006;font-size:10px}
+.msx-b3 .row .rk{font-size:13px;font-weight:900;color:#a5f3fc;min-width:26px;text-align:center}
+.msx-b3 .row .pw{font-size:16px;font-weight:900;color:#fde047;min-width:62px;text-align:center}
+.msx-b3-stamp{align-self:center;margin:2px auto 6px;padding:6px 18px;border-radius:14px;background:linear-gradient(90deg,#f59e0b,#ec4899);color:#fff;font-size:20px;font-weight:900;text-align:center;opacity:0;transform:scale(.6);transition:opacity .4s .6s,transform .5s .6s cubic-bezier(.2,1.6,.4,1)}
+.msx-b3-stamp.on{opacity:1;transform:scale(1)}
+@media (prefers-reduced-motion: reduce){.msx-b3 .row,.msx-b3-stamp{transition:none}}
+`;
+let msxB3CssDone = false;
+const msxB3EnsureCss = () => {
+  if (msxB3CssDone || typeof document === 'undefined') return;
+  msxB3CssDone = true;
+  const el = document.createElement('style'); el.setAttribute('data-msx-best3-css', '1'); el.textContent = MSX_B3_CSS; document.head.appendChild(el);
+};
+
 // ---- part: 56-monsuc-awake.jsx ----
 // ===== モンヒロサクセスの覚醒・超覚醒(2026-11-13 社長「この形で作る」) =====
 // 計算は芯 MONHERO_SUCCESS の awakeOpen(くじ・前触れ・起きる中身)。ここは見せる部分だけ。何も保存しない・公開の印は持たない(モンサクの印の後ろ)。
@@ -88973,6 +89139,11 @@ const msxR3BoxMonOf = (run, s, ev, assists, parent) => ({
   ...(Array.isArray(s.aptAwake) && s.aptAwake.some((n) => n > 0) ? { aptAwake: s.aptAwake.slice(0, 4) } : {}), // 覚醒で上げた間合い適性の段数(合体で継ぐ段数を数えるときに入る) // 合体円盤石から継いだ段数(2026-11-13・足すだけ) // 育成中に上げた間合い適性の段数 [零,近,中,遠](2026-11-13・足すだけ。種の表は変えない)
   titles: msxR3FinalTitles(s, ev), from: run.from || null,
 });
+// 自分だけのベスト3: [{ id, power, rank, species, nick, at }] を総合力の大きい順に3つまで。壊れた行は捨てる・同じ id は1つ
+const msxBest3Norm = (raw) => (Array.isArray(raw) ? raw : []).filter((e) => msxR3Obj(e) && typeof e.id === 'string' && Number.isFinite(e.power) && typeof e.species === 'string')
+  .map((e) => ({ id: e.id.slice(0, 64), power: Math.max(0, Math.round(e.power)), rank: typeof e.rank === 'string' ? e.rank.slice(0, 4) : '', species: e.species.slice(0, 40), nick: typeof e.nick === 'string' ? e.nick.slice(0, 16) : '', at: Number.isFinite(e.at) ? e.at : 0 }))
+  .filter((e, i, a) => a.findIndex((x) => x.id === e.id) === i).sort((a, b) => (b.power - a.power) || (a.at - b.at)).slice(0, 3);
+const msxBest3Add = (list, e) => msxBest3Norm([...msxBest3Norm(list).filter((x) => x.id !== e.id), e]);
 // 引退した子を保存枠へ。{ ok, full, box, meta }。同じ id がもうあれば足さない(二度押し・中断のあとでも1回)
 const msxR3Retire = async (run, s, ev, assists, debug) => {
   const box = await msxR3ReadBox(); let meta = await msxR3ReadMeta();
@@ -88986,13 +89157,17 @@ const msxR3Retire = async (run, s, ev, assists, debug) => {
   meta.retired += 1;
   const best = msxR3Obj(meta.best[s.species]) ? meta.best[s.species] : null;
   if (!best || !(best.power >= ev.power)) meta.best = { ...meta.best, [s.species]: { power: ev.power, rank: ev.rank, id: run.id } };
+  // 自分だけのベスト3(2026-11-13 社長 r1113-057②)。種に関係なく総合力の上位3つ。meta に best3 を足すだけ(既存の best は種ごとのまま)
+  const best3Prev = msxBest3Norm(meta.best3);
+  meta.best3 = msxBest3Add(best3Prev, { id: run.id, power: ev.power, rank: ev.rank, species: s.species, nick: run.nick || '', at: Date.now() });
+  const best3 = { prev: best3Prev, next: meta.best3, place: meta.best3.findIndex((e) => e.id === run.id), power: ev.power };
   meta.titles = Array.from(new Set([...(meta.titles || []), ...(Array.isArray(s.titles) ? s.titles : [])])).slice(0, 200);
   const next = { ...box, cap: Math.max(box.cap, msxR3BoxCap(meta.retired)), mons: [...rest, mon] };
   await storeSet(MSX_KEYS.box, next); // 先に子を書き、そのあと途中の育成を消す(消えたのに入っていない、を作らない)
   await storeSet(MSX_KEYS.meta, meta);
   await msxR3AddRecord(run, s, ev, mon.titles, mon.gen);
   msxR3RankSend(run, s, ev, debug);
-  return { ok: true, box: next, meta, mon };
+  return { ok: true, box: next, meta, mon, best3 };
 };
 // ゲームオーバー: 保存枠には入れない(PLAN §1・TOURNAMENT §12 E は「思い出」の扱いを窓口へ)。優勝ずみの大会だけ足す
 const msxR3GameOver = async (s) => {
@@ -90207,10 +90382,14 @@ function MsxR3Retire({ run, setRun, onPause, debug, SUC }) {
     }
     let r = null;
     try { r = await msxR3Retire({ ...run, s: ws }, ws, ev, assists, debug); } catch (e) { r = { ok: false }; }
-    if (r && r.ok) { try { await msxR3ClearRun(); } catch (e) {} setRes({ ok: true, mon: r.mon }); setStep('done'); }
+    if (r && r.ok) { try { await msxR3ClearRun(); } catch (e) {} setRes({ ok: true, mon: r.mon, best3: r.best3 || null }); setStep(r.best3 && typeof MsxBest3 === 'function' ? 'best3' : 'done'); }
     else setRes(r || { ok: false });
     setBusy(false); setSure(false);
   };
+  // ---- 自分だけのベスト3(56-monsuc-best3.jsx・r1113-057②)。入ったらせり上がる演出 → いつもの完了の段へ ----
+  if (step === 'best3' && res && res.best3 && typeof MsxBest3 === 'function') {
+    return <MsxR3Frame run={run} back="とじる" onBack={() => setStep('done')} right={right} body={<MsxBest3 b={res.best3} run={run}/>} foot={<div className="v-ft"><button type="button" className="go" onClick={() => setStep('done')} data-msx-best3-next>つぎへ ▶</button></div>}/>;
+  }
   if (step === 'done') {
     const body = (<>
       <div className="v-scene" style={{ flex: '1 1 0', minHeight: 260 }}><img className="bg" src={msxSceneBg().bg} alt=""/><div className="sh"/><div className="v-burst"/>
@@ -124333,6 +124512,20 @@ function MonsterHeroGame() {
         return r;
       } catch {
         setMarketExchangeError(rhythmSongBuyReasonText('save'));
+        return { ok:false, reason:'save' };
+      } finally { marketPurchaseProcessingRef.current = false; }
+    }
+    // モンヒロサクセスの持ちこみ(2026-11-14 r1113-057)。ビートPと持ちこみの数(mh_monsuc_meta_v1 の items)を1つの取引で保存する(56-monsuc-shop.jsx)
+    if (offer?.kind==='monsuc' && typeof monsucShopBuy==='function') {
+      marketPurchaseProcessingRef.current = true;
+      setMarketExchangeError('');
+      try {
+        const r = await monsucShopBuy(offer.id, quantity);
+        if (r.ok) { setRhythmEventPoints(r.eventPoints); saveMissionProgress('market'); }
+        else setMarketExchangeError(monsucShopReasonText(r.reason));
+        return r;
+      } catch {
+        setMarketExchangeError(monsucShopReasonText('save'));
         return { ok:false, reason:'save' };
       } finally { marketPurchaseProcessingRef.current = false; }
     }
