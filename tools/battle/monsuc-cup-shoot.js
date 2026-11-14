@@ -38,6 +38,8 @@ const SCENES = [
   // 試合(MonsucArena・自分操作): 手を選ぶ帯が出たところ / 技を押して動きの途中(click … 押すボタン・after … 押してから撮るまで)
   { id: 'M1-pick', state: 'rival', startAt: 'match', wait: 4200 },
   { id: 'M2-attack', state: 'rival', startAt: 'match', wait: 4200, click: '[data-msxm-tech]:not([disabled])', after: 520 },
+  // オート(2026-11-14 社長「基本マニュアルで、オートにもできるように」): 保存キー mh_monsuc_arena_ctl_v1 を 'auto' にして始めた試合
+  { id: 'M3-auto', state: 'rival', startAt: 'match', wait: 7000, ctl: 'auto' },
   { id: 'B2-win', state: 'rival', startAt: 'win', wait: 1400 },
   { id: 'C4-lose', state: 'champ', startAt: 'lose', wait: 900 },
 ];
@@ -73,10 +75,11 @@ const SCENES = [
           if (sc.state === 'rival') s.battle = { kind: 'cup', id: 'middle:4:spring:3', sys: 'spring', star: 3, rival: { name: 'こんこ' }, round: 0 };
           if (sc.state === 'champ') { s.battle = { kind: 'cup', id: 'middle:4:str:2', sys: 'str', star: 2, rival: null, round: 0 }; s.rematchUsed = 1; }
           if (sc.state === 'summit') { s.turn = 44; s.special = true; s.battle = { kind: 'summit', round: 0 }; s.stats = { life: 812, pow: 906, wise: 433, hit: 780, eva: 598, tough: 841 }; }
+          try { localStorage.setItem('mh_monsuc_arena_ctl_v1', sc.ctl === 'auto' ? 'auto' : 'manual'); } catch (_) {}   // 試合の操作(既定は手動)
           const old = document.getElementById('msc-shoot'); if (old && old.__root) old.__root.unmount(); if (old) old.remove();
           const div = document.createElement('div'); div.id = 'msc-shoot'; document.body.appendChild(div);
           const root = ReactDOM.createRoot(div); div.__root = root;
-          root.render(React.createElement(MonsucCupShow, { suc: SUC, s, me: { name: 'もちまる' }, startAt: sc.startAt, opp: { loy: 60, pop: 38 }, title: sc.state === 'rival' ? '春の大会' : sc.state === 'champ' ? 'ちから自慢の大会' : undefined,
+          root.render(React.createElement(MonsucCupShow, { suc: SUC, s, me: { name: 'もちまる', colors: ['custom:210:70:85', 'custom:120:60:70', null] /* 染めた色(育てるモンスターは染めた絵で出る) */ }, startAt: sc.startAt, opp: { loy: 60, pop: 38 }, title: sc.state === 'rival' ? '春の大会' : sc.state === 'champ' ? 'ちから自慢の大会' : undefined,
             previewOut: { prize: 750, tickets: 1, rows: [
               { i: '💪', k: '全能力', v: '+12(ライバルに勝った・主なごほうび)', big: true },
               { i: '🏅', k: '称号', v: '「春の覇者」「ライバルに勝った」' },
