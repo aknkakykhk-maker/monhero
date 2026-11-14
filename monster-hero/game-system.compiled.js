@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 6929d20d407d5e09
+// source-sha256: c64aac195cb717d1
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -170238,7 +170238,7 @@ const msxR3BeatPrize = (SUC, g) => {
     id: 'bp',
     e: '🎵',
     name: `ビートP +${msxFmt(n)}`,
-    desc: `優勝すると、本編のビートP(モンヒロビートのポイント)に ${msxFmt(n)} 足されます。ビートP交換所で使えます`,
+    desc: `優勝すると、｜本編のビートP｜(モンヒロビートのポイント)に｜${msxFmt(n)}P 足されます。｜ビートP交換所で｜使えます`,
     pt: true
   } : null;
 };
@@ -170517,7 +170517,9 @@ function MsxR3Cup({
     onClick: e => e.stopPropagation()
   }, React.createElement("div", {
     className: "e"
-  }, prz.e), React.createElement("b", null, prz.name), React.createElement("p", null, prz.desc), React.createElement("button", {
+  }, prz.e), React.createElement("b", null, prz.name), React.createElement("p", {
+    className: "msx-kp"
+  }, msxPh(prz.desc)), React.createElement("button", {
     type: "button",
     onClick: () => setPrz(null)
   }, "とじる"))) : null)) : null);
@@ -171045,7 +171047,9 @@ function MsxR3PreDesk({
     onClick: e => e.stopPropagation()
   }, React.createElement("div", {
     className: "e"
-  }, prz.e), React.createElement("b", null, prz.name), React.createElement("p", null, prz.desc), React.createElement("button", {
+  }, prz.e), React.createElement("b", null, prz.name), React.createElement("p", {
+    className: "msx-kp"
+  }, msxPh(prz.desc)), React.createElement("button", {
     type: "button",
     onClick: () => setPrz(null)
   }, "とじる"))) : null)) : null);
