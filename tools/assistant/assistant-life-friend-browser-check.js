@@ -191,7 +191,7 @@ const badgeProblems = (page) => page.evaluate(() => {
         await shot(page, `${v.id}-21-vtab-where`);
         const tabNg2 = await page.evaluate(() => { const b = document.querySelector('[data-alf-vview="where"] [data-alf-vtabs]'); if (!b) return ['無い']; const r = b.getBoundingClientRect(); return (r.left < -1 || r.right > innerWidth + 1) ? ['はみ出し'] : []; });
         check(`㉑ 町でもタブの列が画面からはみ出さない(${v.id})`, tabNg2.length === 0, tabNg2.join(' / '));
-        await page.locator('[data-alf-vview="where"] [data-assistant-life-map-who]').first().click();
+        await page.locator('[data-alf-vview="where"] [data-assistant-life-map-place="home"]').click();
         await page.locator('[data-alf-vview="where"] [data-assistant-life-map-sheet]').waitFor({ timeout: 3000 }).catch(() => {});
         check(`㉑ 町の札を押すと、いる助手の一覧(見る専用の行)が出る(${v.id})`, (await page.locator('[data-assistant-life-map-view-row]').count()) > 0 && (await page.locator('[data-assistant-life-map-act]').count()) === 0);
         await shot(page, `${v.id}-21-vtab-where-sheet`);
