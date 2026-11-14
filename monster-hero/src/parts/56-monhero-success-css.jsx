@@ -712,17 +712,26 @@ const MSX_CSS = `
 .msx .msx-md-tg .tc.wise{background:linear-gradient(160deg,#bbf7d0,#16a34a);border-color:#4ade80}
 .msx .msx-md-tg .tc.pow.tg-not{background:linear-gradient(160deg,#9a7420,#5e420c);border-color:#a8801f}
 .msx .msx-md-tg .tc.wise.tg-not{background:linear-gradient(160deg,#2f8050,#145230);border-color:#3f9a62}
-.msx-md-tg .tc.tg-not .ti{filter:brightness(.8)}
+.msx-md-tg .tc.tg-not .ti{filter:brightness(.55) saturate(.65)}
+/* 技の絵(資料の技アイコン・2026-11-15 社長 r1115-003): 升いっぱいに敷く。元絵に焼き込まれた数字は、右下の数字の札(.g)でかぶせる */
+.msx-md-tg .tc .ti{position:absolute;inset:0;border-radius:6px;overflow:hidden;display:block}
+.msx-md-tg .tc .tg-img{display:block;width:100%;height:100%;object-fit:cover;pointer-events:none}
+.msx-md-tg .tc .g{right:2px;bottom:2px;min-width:20px;padding:0 3px;border-radius:5px;background:rgba(18,12,6,.86);text-align:center;line-height:13px;height:13px;z-index:2}
+.msx-md-tg .tc .tg-alt{z-index:3}
+.msx-md-tg .tc .tg-rk{position:absolute;left:2px;top:2px;z-index:2;min-width:13px;height:13px;border-radius:4px;font-size:9px;font-weight:900;line-height:13px;text-align:center;color:#2a1608;border:1px solid #2a1608}
+.tg-rk.rk1{background:linear-gradient(135deg,#e9a46a,#a95f27)}.tg-rk.rk2{background:linear-gradient(135deg,#f4f7fb,#aab4c2)}.tg-rk.rk3{background:linear-gradient(135deg,#fff1a6,#f2b705)}.tg-rk.rk4{background:linear-gradient(135deg,#d9a8ff,#8a3ffc);color:#fff}.tg-rk.rk5{background:linear-gradient(135deg,#ff5a5a,#ffd23f,#4ade80,#38bdf8,#c084fc)}
 .msx-md-tg .tc{position:relative}
 .msx .msx-md-alt{margin-top:6px;width:100%;padding:6px 8px;border-radius:10px;font-size:12px;font-weight:900;color:#fff;background:linear-gradient(160deg,#6d4cd9,#4a2fa6);border:1.5px solid #a78bfa}
 .msx .msx-tp{display:flex;align-items:center;gap:8px;width:100%;margin:0 0 6px;padding:6px 8px;border-radius:12px;text-align:left;color:#fff;background:#1e1b3a;border:1.5px solid #3b3566}
 .msx .msx-tp.on{border-color:#facc15;background:#2a2547}
 .msx .msx-tp:disabled{opacity:.55}
-.msx .msx-tp .tc{position:relative;flex:0 0 44px;width:44px;height:44px;border-radius:8px;display:flex;align-items:center;justify-content:center;border:1.5px solid transparent}
+.msx .msx-tp .tc{position:relative;overflow:hidden;flex:0 0 44px;width:44px;height:44px;border-radius:8px;display:flex;align-items:center;justify-content:center;border:1.5px solid transparent}
 .msx .msx-tp .tc.pow{background:linear-gradient(160deg,#fde68a,#d97706);border-color:#f59e0b}
 .msx .msx-tp .tc.wise{background:linear-gradient(160deg,#bbf7d0,#16a34a);border-color:#4ade80}
 .msx .msx-tp .tc.pow.tg-not{background:linear-gradient(160deg,#9a7420,#5e420c);border-color:#a8801f}
 .msx .msx-tp .tc.wise.tg-not{background:linear-gradient(160deg,#2f8050,#145230);border-color:#3f9a62}
+.msx .msx-tp .tc{overflow:hidden}.msx .msx-tp .tc .ti{position:absolute;inset:0;display:block}.msx .msx-tp .tc .tg-img{width:100%;height:100%;object-fit:cover;display:block}
+.msx .msx-tp .tc.tg-not .ti{filter:brightness(.55) saturate(.65)}
 .msx .msx-tp .tpb{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
 .msx .msx-tp .tpb b{font-size:13px}
 .msx .msx-tp .tpb small{font-size:10.5px;opacity:.85;line-height:1.35}

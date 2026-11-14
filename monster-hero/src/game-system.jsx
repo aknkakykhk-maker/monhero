@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: ed241b6bf62b5483
+// generated-sha256: 5eac39056c2ca59a
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -86778,17 +86778,26 @@ const MSX_CSS = `
 .msx .msx-md-tg .tc.wise{background:linear-gradient(160deg,#bbf7d0,#16a34a);border-color:#4ade80}
 .msx .msx-md-tg .tc.pow.tg-not{background:linear-gradient(160deg,#9a7420,#5e420c);border-color:#a8801f}
 .msx .msx-md-tg .tc.wise.tg-not{background:linear-gradient(160deg,#2f8050,#145230);border-color:#3f9a62}
-.msx-md-tg .tc.tg-not .ti{filter:brightness(.8)}
+.msx-md-tg .tc.tg-not .ti{filter:brightness(.55) saturate(.65)}
+/* 技の絵(資料の技アイコン・2026-11-15 社長 r1115-003): 升いっぱいに敷く。元絵に焼き込まれた数字は、右下の数字の札(.g)でかぶせる */
+.msx-md-tg .tc .ti{position:absolute;inset:0;border-radius:6px;overflow:hidden;display:block}
+.msx-md-tg .tc .tg-img{display:block;width:100%;height:100%;object-fit:cover;pointer-events:none}
+.msx-md-tg .tc .g{right:2px;bottom:2px;min-width:20px;padding:0 3px;border-radius:5px;background:rgba(18,12,6,.86);text-align:center;line-height:13px;height:13px;z-index:2}
+.msx-md-tg .tc .tg-alt{z-index:3}
+.msx-md-tg .tc .tg-rk{position:absolute;left:2px;top:2px;z-index:2;min-width:13px;height:13px;border-radius:4px;font-size:9px;font-weight:900;line-height:13px;text-align:center;color:#2a1608;border:1px solid #2a1608}
+.tg-rk.rk1{background:linear-gradient(135deg,#e9a46a,#a95f27)}.tg-rk.rk2{background:linear-gradient(135deg,#f4f7fb,#aab4c2)}.tg-rk.rk3{background:linear-gradient(135deg,#fff1a6,#f2b705)}.tg-rk.rk4{background:linear-gradient(135deg,#d9a8ff,#8a3ffc);color:#fff}.tg-rk.rk5{background:linear-gradient(135deg,#ff5a5a,#ffd23f,#4ade80,#38bdf8,#c084fc)}
 .msx-md-tg .tc{position:relative}
 .msx .msx-md-alt{margin-top:6px;width:100%;padding:6px 8px;border-radius:10px;font-size:12px;font-weight:900;color:#fff;background:linear-gradient(160deg,#6d4cd9,#4a2fa6);border:1.5px solid #a78bfa}
 .msx .msx-tp{display:flex;align-items:center;gap:8px;width:100%;margin:0 0 6px;padding:6px 8px;border-radius:12px;text-align:left;color:#fff;background:#1e1b3a;border:1.5px solid #3b3566}
 .msx .msx-tp.on{border-color:#facc15;background:#2a2547}
 .msx .msx-tp:disabled{opacity:.55}
-.msx .msx-tp .tc{position:relative;flex:0 0 44px;width:44px;height:44px;border-radius:8px;display:flex;align-items:center;justify-content:center;border:1.5px solid transparent}
+.msx .msx-tp .tc{position:relative;overflow:hidden;flex:0 0 44px;width:44px;height:44px;border-radius:8px;display:flex;align-items:center;justify-content:center;border:1.5px solid transparent}
 .msx .msx-tp .tc.pow{background:linear-gradient(160deg,#fde68a,#d97706);border-color:#f59e0b}
 .msx .msx-tp .tc.wise{background:linear-gradient(160deg,#bbf7d0,#16a34a);border-color:#4ade80}
 .msx .msx-tp .tc.pow.tg-not{background:linear-gradient(160deg,#9a7420,#5e420c);border-color:#a8801f}
 .msx .msx-tp .tc.wise.tg-not{background:linear-gradient(160deg,#2f8050,#145230);border-color:#3f9a62}
+.msx .msx-tp .tc{overflow:hidden}.msx .msx-tp .tc .ti{position:absolute;inset:0;display:block}.msx .msx-tp .tc .tg-img{width:100%;height:100%;object-fit:cover;display:block}
+.msx .msx-tp .tc.tg-not .ti{filter:brightness(.55) saturate(.65)}
 .msx .msx-tp .tpb{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
 .msx .msx-tp .tpb b{font-size:13px}
 .msx .msx-tp .tpb small{font-size:10.5px;opacity:.85;line-height:1.35}
@@ -87520,32 +87529,40 @@ const msxStartPreview = (SUC, species, type, aptBase, startSt) => {
   } catch (e) { /* 見通しが出せなくても選ぶ画面は動く */ }
   return out;
 };
+/* skill-icons:begin(tools/success/build-skill-icons.js が書く) */
+const MSX_SKILL_ICON_IDS = new Set('sk-0001 sk-0002 sk-0003 sk-0004 sk-0005 sk-0008 sk-0009 sk-0010 sk-0015 sk-0016 sk-0017 sk-0018 sk-0023 sk-0025 sk-0026 sk-0027 sk-0028 sk-0035 sk-0036 sk-0037 sk-0039 sk-0040 sk-0041 sk-0042 sk-0043 sk-0044 sk-0045 sk-0046 sk-0047 sk-0048 sk-0049 sk-0050 sk-0051 sk-0052 sk-0053 sk-0054 sk-0055 sk-0064 sk-0065 sk-0066 sk-0067 sk-0068 sk-0069 sk-0070 sk-0071 sk-0072 sk-0073 sk-0074 sk-0075 sk-0076 sk-0077 sk-0078 sk-0079 sk-0080 sk-0082 sk-0083 sk-0084 sk-0110 sk-0111 sk-0112 sk-0113 sk-0114 sk-0115 sk-0116 sk-0117 sk-0118 sk-0119 sk-0120 sk-0121 sk-0122 sk-0123 sk-0124 sk-0125 sk-0129 sk-0258 sk-0259 sk-0260 sk-0261 sk-0262 sk-0263 sk-0264 sk-0265 sk-0266 sk-0267 sk-0268 sk-0269 sk-0270 sk-0271 sk-0272 sk-0273 sk-0274 sk-0292 sk-0293 sk-0294 sk-0295 sk-0296 sk-0297 sk-0298 sk-0299 sk-0300 sk-0301 sk-0302 sk-0303 sk-0304 sk-0305 sk-0306 sk-0307 sk-0338 sk-0339 sk-0340 sk-0341 sk-0342 sk-0343 sk-0344 sk-0345 sk-0346 sk-0347 sk-0348 sk-0349 sk-0350 sk-0351 sk-0384 sk-0385 sk-0386 sk-0387 sk-0388 sk-0389 sk-0390 sk-0391 sk-0392 sk-0393 sk-0394 sk-0395 sk-0396 sk-0397 sk-0398 sk-0399 sk-0400 sk-0401 sk-0402 sk-0403 sk-0404 sk-0405 sk-0406 sk-0407 sk-0408 sk-0409 sk-0410 sk-0411 sk-0412 sk-0413 sk-0414 sk-0415 sk-0416 sk-0446 sk-0447 sk-0448 sk-0449 sk-0450 sk-0451 sk-0452 sk-0453 sk-0454 sk-0455 sk-0456 sk-0457 sk-0458 sk-0459 sk-0460 sk-0461 sk-0462 sk-0463 sk-0464 sk-0465 sk-0466 sk-0467 sk-0468 sk-0469 sk-0470 sk-0471 sk-0472 sk-0473 sk-0474 sk-0475 sk-0476 sk-0477 sk-0478 sk-0479 sk-0480 sk-0481 sk-0482 sk-0483 sk-0484 sk-0485 sk-0486 sk-0487 sk-0488 sk-0489 sk-0490 sk-0491 sk-0496 sk-0511 sk-0512 sk-0513 sk-0514 sk-0515 sk-0516 sk-0517 sk-0518 sk-0519 sk-0520 sk-0521 sk-0522 sk-0523 sk-0524 sk-0525 sk-0526 sk-0573 sk-0574 sk-0575 sk-0576 sk-0577 sk-0578 sk-0579 sk-0580 sk-0581 sk-0582 sk-0583 sk-0584 sk-0585 sk-0586 sk-0587 sk-0588 sk-0589 sk-0590 sk-0591 sk-0592 sk-0593 sk-0594 sk-0595 sk-0596 sk-0597 sk-0598 sk-0599 sk-0742 sk-0743 sk-0744 sk-0785 sk-0787 sk-0788 sk-0797 sk-0798 sk-0799 sk-0824'.split(' '));
+/* skill-icons:end */
 // 技の升の絵(2026-11-14 社長「力で剣はいいね」「ランク帯で色を変えて」): ちから技=剣・かしこさ技=本の単色の形を、技のランク1〜5の色(銅・銀・金・紫・虹)で塗る。升の地の色(ちから=金・かしこさ=緑)は変えない。
 //   升の地と同じ色にならないよう、形のまわりを暗い線で縁取る
 const MSX_TG_RANK_COL = Object.freeze({ 1: ['#e9a46a', '#a95f27'], 2: ['#f4f7fb', '#aab4c2'], 3: ['#fff1a6', '#f2b705'], 4: ['#d9a8ff', '#8a3ffc'] });
 const MSX_TG_RANK_NAME = Object.freeze({ 1: '銅', 2: '銀', 3: '金', 4: '紫', 5: '虹' });
-function MsxTechIcon({ kind, rank, size = 28, uid = '' }) {
-  const r = Math.max(1, Math.min(5, Number(rank) || 1)); const gid = `tgi-${uid}${kind}${r}`;
-  const stops = r === 5 ? [['0', '#ff5a5a'], ['.25', '#ffd23f'], ['.5', '#4ade80'], ['.75', '#38bdf8'], ['1', '#c084fc']] : [['0', MSX_TG_RANK_COL[r][0]], ['1', MSX_TG_RANK_COL[r][1]]];
-  const ink = '#2a1608';
+// 技の絵(2026-11-15 社長 r1115-003「技の絵は資料の技アイコンへ」): 資料の絵がある技は images/success/skill/sk-####.png。
+//   資料に無い技(オリジナルの子・オリジナル技)は、資料の絵にならった影絵(同じ灰色の枠・ちから技=黄・かしこさ技=緑の単色)を間合いごとの形で描く。
+//   82×82 の元絵は右下に消費ガッツの数字が焼き込まれているので、升の右下の数字の札(.g)でかぶせる
+const MSX_SHADOW_PATHS = Object.freeze({
+  pow: [
+    <g key="p0"><path d="M22 38h30a10 10 0 0 1 10 10v16a10 10 0 0 1-10 10H32a10 10 0 0 1-10-10z"/><path d="M66 30l14-8-6 16 16 4-16 8 8 16-16-8z"/></g>,
+    <g key="p1"><path d="M16 74Q40 14 82 20Q54 32 44 76z"/><path d="M30 82Q56 50 88 44Q66 62 56 84z"/></g>,
+    <g key="p2"><path d="M26 28Q58 48 26 68" fill="none" strokeWidth="9" strokeLinecap="round"/><path d="M44 20Q86 48 44 76" fill="none" strokeWidth="9" strokeLinecap="round"/><circle cx="20" cy="48" r="8"/></g>,
+    <g key="p3"><path d="M10 56h46V42l30 20-30 20V68H10z"/><path d="M14 36h30M20 90h30" fill="none" strokeWidth="6" strokeLinecap="round"/></g>,
+  ],
+  wise: [
+    <g key="w0"><path d="M48 52C48 44 58 44 58 52C58 64 40 64 40 48C40 30 66 30 66 52C66 76 32 76 32 46C32 18 72 18 72 52" fill="none" strokeWidth="7" strokeLinecap="round"/></g>,
+    <g key="w1"><path d="M56 10L26 54h20L36 86l34-48H50z"/></g>,
+    <g key="w2"><circle cx="48" cy="48" r="30" fill="none" strokeWidth="6"/><path d="M48 22l6 20 20 6-20 6-6 20-6-20-20-6 20-6z"/></g>,
+    <g key="w3"><circle cx="68" cy="30" r="13"/><path d="M60 40L12 86l24-30-16 8 34-32z"/></g>,
+  ],
+});
+function MsxSkillArt({ t, uid = '' }) {
+  if (t && MSX_SKILL_ICON_IDS.has(t.id)) return <img className="tg-img" src={`images/success/skill/${t.id}.png`} alt="" draggable="false" loading="lazy"/>;
+  const kind = t && t.kind === 'wise' ? 'wise' : 'pow'; const d = Math.max(0, Math.min(3, Math.min(...(t && Array.isArray(t.dist) && t.dist.length ? t.dist : [1]))));
+  const gid = `tgs-${uid}${t ? t.id : ''}`; const fill = kind === 'wise' ? '#34c46a' : '#f5b81b'; const ink = kind === 'wise' ? '#14653a' : '#8a5a06';
   return (
-    <svg className="tg-ic" data-tg-rank={r} width={size} height={size} viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-      <defs><linearGradient id={gid} x1="0" y1="0" x2="1" y2="1">{stops.map(([o, c]) => <stop key={o} offset={o} stopColor={c}/>)}</linearGradient></defs>
-      {kind === 'wise' ? (
-        <g fill={`url(#${gid})`} stroke={ink} strokeWidth="1.3" strokeLinejoin="round">
-          <path d="M12 6.6C9.6 4.6 6 4.1 2.2 5v12.6c3.8-.9 7.4-.4 9.8 1.6z"/>
-          <path d="M12 6.6c2.4-2 6-2.5 9.8-1.6v12.6c-3.8-.9-7.4-.4-9.8 1.6z"/>
-          <path d="M12 6.6v12.6M2.2 19.6c3.8-.9 7.4-.4 9.8 1.6 2.4-2 6-2.5 9.8-1.6" fill="none" strokeLinecap="round"/>
-          <path d="M4.6 8.4c2-.3 4 0 5.6.9M4.6 11.4c2-.3 4 0 5.6.9M19.4 8.4c-2-.3-4 0-5.6.9M19.4 11.4c-2-.3-4 0-5.6.9" fill="none" strokeLinecap="round" strokeWidth="1"/>
-        </g>
-      ) : (
-        <g fill={`url(#${gid})`} stroke={ink} strokeWidth="1.3" strokeLinejoin="round" transform="rotate(45 12 12)">
-          <path d="M12 0.8l2.3 3.3v9.6H9.7V4.1z"/>
-          <rect x="6" y="13.7" width="12" height="2.5" rx="1.2"/>
-          <rect x="10.6" y="16.2" width="2.8" height="4.2" rx="0.8"/>
-          <circle cx="12" cy="21.6" r="1.7"/>
-        </g>
-      )}
+    <svg className="tg-img tg-shadow" viewBox="0 0 96 96" aria-hidden="true" focusable="false" data-tg-shadow={`${kind}${d}`}>
+      <defs><linearGradient id={gid} x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#ecebef"/><stop offset="1" stopColor="#c3c0c8"/></linearGradient></defs>
+      <rect x="2" y="2" width="92" height="92" rx="8" fill={`url(#${gid})`} stroke="#8e8b95" strokeWidth="2"/>
+      <path d="M2 70h92v16a8 8 0 0 1-8 8H10a8 8 0 0 1-8-8z" fill="#00000014"/>
+      <g fill={fill} stroke={fill === '#f5b81b' ? ink : ink} strokeWidth="3" strokeLinejoin="round" transform="translate(0 -4)">{MSX_SHADOW_PATHS[kind][d]}</g>
     </svg>
   );
 }
@@ -87633,7 +87650,7 @@ function MsxMonDetail({ species, name, art, st, apt, type, peak, grades, known, 
                   // 技の種類で升の色を分ける(参考どおり ちから=金・かしこさ=緑)。覚えていない技も絵を出し、升の地を暗くして見分ける(2026-11-14 社長「鍵じゃなくて覚えてないやつも表示して色分けして」)。
                   // 覚える条件の数は升に出さず、押したときの右の「覚え方」に出す(社長「150とかその数字何?」→ 升目から消す)
                   return <button type="button" key={`${r}-${d}`} className={`tc ${t.kind === 'wise' ? 'wise' : 'pow'}${got ? ' got' : ' tg-not'}${tech && tech.id === t.id ? ' on' : ''}`} data-msx-tech={t.id} data-msx-cell={cellK} aria-label={`${t.name}${got ? '' : '(まだ覚えていない)'}${canAlt ? '(選べる技が' + alts.length + 'つ)' : ''}`} onClick={() => setPickT(t.id)}>
-                    <span className="ti" aria-hidden="true"><MsxTechIcon kind={t.kind === 'wise' ? 'wise' : 'pow'} rank={t.rank} uid={`${r}${d}`}/></span><span className="g">{t.guts}</span>{canAlt ? <span className="tg-alt" role="button" aria-label="覚える技を選ぶ" data-msx-alt={cellK} onClick={(e) => { e.stopPropagation(); setPickCell(cellK); }}>⇄</span> : null}</button>; }))}
+                    <span className="ti" aria-hidden="true"><MsxSkillArt t={t} uid={`${r}${d}`}/></span><span className={`tg-rk rk${Math.max(1, Math.min(5, Number(t.rank) || 1))}`} aria-hidden="true">{Math.max(1, Math.min(5, Number(t.rank) || 1))}</span><span className="g">{t.guts}</span>{canAlt ? <span className="tg-alt" role="button" aria-label="覚える技を選ぶ" data-msx-alt={cellK} onClick={(e) => { e.stopPropagation(); setPickCell(cellK); }}>⇄</span> : null}</button>; }))}
               </div>
               {tech ? (<div className="msx-md-td">
                 <div className="tn">{tech.name}{has(tech) ? null : <small className="msx-md-not">まだ覚えていない</small>}</div>
@@ -87656,7 +87673,7 @@ function MsxMonDetail({ species, name, art, st, apt, type, peak, grades, known, 
               <div className="msx-note msx-kp">{msxPh(`${MSX_DIST_NAMES[pd]}の間合い・ランク${pr}。｜${lock ? 'この升の技は｜もう覚えたので、｜選び直せません' : '選ばなかった技は、｜この升では｜覚えません。｜覚えるまでは｜選び直せます'}`)}</div>
               <div className="msx-dt-body">{alts.map((t) => { const on = cur && cur.id === t.id; const how = has(t) ? '覚えている' : msxTechHow(t, all); return (
                 <button type="button" key={t.id} className={`msx-tp${on ? ' on' : ''}`} disabled={lock && !on} data-msx-techpick-opt={t.id} onClick={() => { if (!lock) { pick.onPick(pickCell, t.id); setPickT(t.id); setPickCell(null); } }}>
-                  <span className={`tc ${t.kind === 'wise' ? 'wise' : 'pow'}${has(t) ? ' got' : ' tg-not'}`}><span className="ti" aria-hidden="true"><MsxTechIcon kind={t.kind === 'wise' ? 'wise' : 'pow'} rank={t.rank} uid={`p${t.id}`}/></span></span>
+                  <span className={`tc ${t.kind === 'wise' ? 'wise' : 'pow'}${has(t) ? ' got' : ' tg-not'}`}><span className="ti" aria-hidden="true"><MsxSkillArt t={t} uid="p"/></span></span>
                   <span className="tpb"><b>{t.name}</b><small>{t.kind === 'wise' ? 'かしこさ' : 'ちから'}・消費ガッツ {t.guts}</small>
                     <small className="tp-nb"><i>ダメージ {grade('power', t.power)}</i><i>命中率 {grade('hit', t.hit)}</i><i>クリティカル率 {grade('crit', t.crit)}</i></small><small className="tp-nb">{how.startsWith('修行で覚える(') ? <><i>修行で覚える</i><i>{how.slice('修行で覚える'.length)}</i></> : <i>{how}</i>}</small></span>
                   <span className="tpm">{on ? '✅ 選択中' : '選ぶ'}</span></button>); })}</div>
