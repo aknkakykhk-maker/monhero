@@ -1461,7 +1461,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
       <img src={lyricFull} alt="歌詞カード" className="block h-auto max-w-none" style={{width:'max(100%, 900px)'}}/>
       <button type="button" data-rhythm-song-lyric-full-close onClick={()=>setLyricFull(null)}
         className="fixed right-3 top-3 min-h-[48px] rounded-xl bg-slate-800/90 px-4 text-sm font-black text-white"
-        style={{position:'fixed',top:'max(12px, env(safe-area-inset-top))',right:12,minHeight:'48px'}}>✕ 戻る</button>
+        style={{position:'fixed',top:'max(12px, var(--mh-sa-top))',right:12,minHeight:'48px'}}>✕ 戻る</button>
     </div>}
     {/* ジャンルのシート。並び替えと同じ形で下から出す。選んだらすぐ閉じる */}
     {genreOpen&&<div data-rhythm-genre-sheet className="fixed inset-0 z-[9000] flex items-end justify-center"
@@ -1633,7 +1633,7 @@ const RhythmHellGuide=({pageIndex,onPage,onClose})=>{
   const nextVideo=!last?rhythmHellGuideVideo(pages[index+1]&&pages[index+1].video):null;
   // 動画のあるページは横に広げる(横持ちでは 動画|文 の2列、狭い画面では縦に並ぶ)
   return <div data-rhythm-hell-guide role="dialog" aria-modal="true" aria-label={`HELL の遊び方 ${index+1}/${pages.length}`}
-    style={{position:'fixed',inset:0,zIndex:77500,display:'flex',alignItems:'center',justifyContent:'center',padding:'12px calc(16px + env(safe-area-inset-right)) 12px calc(16px + env(safe-area-inset-left))',background:'radial-gradient(ellipse at center,rgba(30,27,75,.96),rgba(2,6,23,.98) 72%)'}}>
+    style={{position:'fixed',inset:0,zIndex:77500,display:'flex',alignItems:'center',justifyContent:'center',padding:'12px calc(16px + var(--mh-sa-right)) 12px calc(16px + var(--mh-sa-left))',background:'radial-gradient(ellipse at center,rgba(30,27,75,.96),rgba(2,6,23,.98) 72%)'}}>
     <section data-rhythm-hell-guide-card style={{width:'100%',maxWidth:video?'760px':'460px',maxHeight:'100%',overflowY:'auto',borderRadius:'20px',border:'1px solid rgba(244,114,182,.45)',background:'rgba(15,23,42,.92)',boxShadow:'0 0 28px rgba(244,114,182,.25)',padding:'16px 18px'}}>
       <small style={{display:'block',fontSize:'10px',fontWeight:900,letterSpacing:'.28em',color:'#f9a8d4'}}>HELL の遊び方 {index+1}/{pages.length}</small>
       <div style={video?{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(220px,1fr))',gap:'12px 16px',alignItems:'start',marginTop:'6px'}:undefined}>

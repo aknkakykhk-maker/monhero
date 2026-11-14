@@ -2220,7 +2220,7 @@ function RhythmMultiAwayBar({ hidden = false, busy = false, onReturn = null }) {
 function MultiAwayBar({ text, hot = false, busy = false, onReturn = null, onLeave = null, icon = '🎵', game = '' }) {
   const leave = () => { if (onLeave && window.confirm('ルームを出ますか?')) onLeave(); };
   return (
-    <div data-multi-away-bar={hot ? 'hot' : 'wait'} data-multi-away-game={game} className="pointer-events-none fixed inset-x-0 top-0 z-[1000] flex justify-center px-2 pt-[max(env(safe-area-inset-top),6px)]">
+    <div data-multi-away-bar={hot ? 'hot' : 'wait'} data-multi-away-game={game} className="pointer-events-none fixed inset-x-0 top-0 z-[1000] flex justify-center px-2 pt-[max(var(--mh-sa-top),6px)]">
       <div className={`pointer-events-auto flex w-full max-w-[420px] items-center gap-2 rounded-2xl border px-3 py-1.5 text-white shadow-lg ${hot ? 'border-amber-200/80 bg-fuchsia-800/95' : 'border-cyan-300/50 bg-slate-900/95'}`}>
         <span className={`min-w-0 flex-1 text-[12px] font-black leading-snug ${hot ? 'animate-pulse' : ''}`} style={JA_WRAP_STYLE}>{icon ? `${icon} ` : ''}{jaWrap(text)}</span>
         {busy ? <small className="shrink-0 text-[10px] font-bold text-amber-100">終わったら戻れます</small>
@@ -3045,7 +3045,7 @@ function RhythmWatchScreen({ songs = [], resolveIconUrl = null }) {
     </span>
   );
   const body = (
-    <div data-rhythm-watch data-rhythm-watch-phase={v.phase} className="fixed inset-0 z-[95000] flex flex-col bg-slate-950 text-white" style={{ paddingTop: 'max(env(safe-area-inset-top), 6px)', paddingBottom: 'max(env(safe-area-inset-bottom), 6px)' }}>
+    <div data-rhythm-watch data-rhythm-watch-phase={v.phase} className="fixed inset-0 z-[95000] flex flex-col bg-slate-950 text-white" style={{ paddingTop: 'max(var(--mh-sa-top), 6px)', paddingBottom: 'max(var(--mh-sa-bottom), 6px)' }}>
       <style>{'@keyframes mhWatchPop{0%{opacity:0;transform:translateY(8px)}15%{opacity:1;transform:none}85%{opacity:1}100%{opacity:0}}'}</style>
       <header className="flex shrink-0 items-center gap-2 px-3">
         <button data-rhythm-watch-close type="button" aria-label="観戦をやめる" onClick={close} className="min-h-[44px] min-w-[44px] rounded-xl text-lg font-black text-slate-300">←</button>
