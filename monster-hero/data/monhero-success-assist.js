@@ -94,7 +94,7 @@
   add({ id: 'kokoroe', icon: '📜', name: '勝負の心得', type: 'stay', scene: 'cup', cls: 'mid', unit: '%', v: [5, 10, 15, 20, 25],
     text: '編成にいるだけで、大会で勝ったときの能力ポイントが{v}%増える' });
   add({ id: 'ticket', icon: '🎫', name: 'チケット運', type: 'stay', scene: 'cup', cls: 'low', unit: '%', v: [10, 20, 30, 40, 50],
-    text: '編成にいるだけで、大会に勝ったとき{v}%で修行チケットがもう1枚もらえる' });
+    text: '編成にいるだけで、賞金ランクが1段上がるたびに{v}%で修行チケットがもう1枚もらえる' });
   add({ id: 'rivaldamashii', icon: '🏁', name: 'ライバル魂', type: 'stay', scene: 'cup', cls: 'low', unit: '%', v: [10, 20, 30, 40, 50],
     text: '編成にいるだけで、ライバルに勝ったときのごほうび(全能力)が{v}%増える' });
   add({ id: 'ninki', icon: '🌟', name: '人気者のお手本', type: 'stay', scene: 'cup', cls: 'low', unit: '%', v: [10, 20, 30, 40, 50],

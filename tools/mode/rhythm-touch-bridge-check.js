@@ -37,11 +37,11 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     const fixCtx = (ua) => { const c = { navigator: { userAgent: ua, maxTouchPoints: 5 }, console }; vm.runInNewContext(`${src.slice(start, end)}\nthis.F=RHYTHM_TOUCH_FIXES;this.on=rhythmTouchFixOn;this.active=rhythmTouchFixesActive;`, c); return c; };
     const pc = fixCtx('Mozilla/5.0 (X11; Linux x86_64)'), ip = fixCtx('Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)');
     // inputAgeCap は 2026-10-07 21時のユーザー報告(タップ抜けがひどくなった)で標準では切った。releaseAgeWide(2026-10-11)はデバッグ画面で試すだけで標準は切ってある
-    check('部品: 入れてあるのは lateInputEffectDown・wideEdge(iPhoneのみ)と autoPauseOnHidden(全端末)で、inputAgeCap・releaseAgeWide・smoothSongClock は切ってある', ip.on('lateInputEffectDown') && !ip.on('inputAgeCap') && !ip.on('releaseAgeWide') && ip.on('wideEdge') && !pc.on('wideEdge') && !ip.on('smoothSongClock') && !pc.on('lateInputEffectDown') && !pc.on('inputAgeCap') && !pc.on('releaseAgeWide') && pc.on('autoPauseOnHidden') && ip.active().join() === 'lateInputEffectDown,wideEdge,autoPauseOnHidden' && pc.active().join() === 'autoPauseOnHidden');
+    check('部品: 入れてあるのは lateInputEffectDown・wideEdge(iPhoneのみ)と autoPauseOnHidden(全端末)で、inputAgeCap・releaseAgeWide・smoothSongClock は切ってある', ip.on('lateInputEffectDown') && !ip.on('inputAgeCap') && !ip.on('releaseAgeWide') && ip.on('wideEdge') && !pc.on('wideEdge') && !ip.on('smoothSongClock') && !pc.on('lateInputEffectDown') && !pc.on('inputAgeCap') && !pc.on('releaseAgeWide') && pc.on('autoPauseOnHidden') && ip.active().join() === 'lateInputEffectDown,wideEdge,autoPauseOnHidden,lateStampTypical' && pc.active().join() === 'autoPauseOnHidden');
     pc.F.wideEdge = true; ip.F.wideEdge = true;
-    check('部品: iPhone専用の直し方は iPhone だけに効く', ip.on('wideEdge') && !pc.on('wideEdge') && ip.active().join() === 'lateInputEffectDown,wideEdge,autoPauseOnHidden' && pc.active().join() === 'autoPauseOnHidden');
+    check('部品: iPhone専用の直し方は iPhone だけに効く', ip.on('wideEdge') && !pc.on('wideEdge') && ip.active().join() === 'lateInputEffectDown,wideEdge,autoPauseOnHidden,lateStampTypical' && pc.active().join() === 'autoPauseOnHidden');
     pc.F.allPlatforms = true;
-    check('部品: 検査用の allPlatforms で、パソコンでも試せる(名前としては返さない)', pc.on('wideEdge') && !pc.on('allPlatforms') && pc.active().join() === 'lateInputEffectDown,wideEdge,autoPauseOnHidden');
+    check('部品: 検査用の allPlatforms で、パソコンでも試せる(名前としては返さない)', pc.on('wideEdge') && !pc.on('allPlatforms') && pc.active().join() === 'lateInputEffectDown,wideEdge,autoPauseOnHidden,lateStampTypical');   // lateStampTypical は 2026-11-14 に入れた(iPhoneだけ。allPlatforms は検査用)
   }
   B.reset();
   B.pointerDown(1, 100, 300, 1000, 1000); B.touchStart(11, 100, 300, 1000, 1001, 1);
@@ -252,7 +252,7 @@ const seed = () => {
       const hit = list.find((x) => x.stats && x.stats.playId === d.stats.playId);
       return { playId: d.stats.playId, fixes: d.stats.fixes, reported: !!(hit && hit.reported), others: list.filter((x) => x !== hit).every((x) => !x.reported), sent, origFetch: typeof origFetch };
     });
-    check('⑩ 1曲ごとに、結ぶための番号(12文字)と、効いていた直し方(iPhone以外では、全端末に効く autoPauseOnHidden だけ)が入る', /^[0-9a-z]{12}$/.test(rep.playId) && Array.isArray(rep.fixes) && rep.fixes.length === 1 && rep.fixes[0] === 'autoPauseOnHidden', JSON.stringify(rep));
+    check('⑩ 1曲ごとに、結ぶための番号(12文字)と、効いていた直し方(iPhone以外では、全端末に効く autoPauseOnHidden だけ)が入る', /^[0-9a-z]{12}$/.test(rep.playId) && Array.isArray(rep.fixes) && rep.fixes.includes('autoPauseOnHidden') && rep.fixes.every((f) => f === 'autoPauseOnHidden' || f === 'smoothSongClock'), JSON.stringify(rep));   // smoothSongClock は、元の時計が止まりやすい環境(検査のブラウザを含む)では、その曲の中でゲームが自分で入れる(2026-11-14)
     check('⑩ 報告すると、端末の記録のその曲にだけ印が付く', rep.reported && rep.others, JSON.stringify(rep));
     check('⑩ 手元のサーバーで開いたゲームからは送らない', rep.sent === false, JSON.stringify(rep));
     await page.close();

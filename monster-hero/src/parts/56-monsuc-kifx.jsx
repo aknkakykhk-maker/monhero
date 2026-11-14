@@ -22,6 +22,8 @@ function MsxKiShow({ run, v, ev, ki, onDone }) {
     const id = setTimeout(step, MSX_KI_MS[st] || 2600);
     return () => clearTimeout(id);
   }, [st]);
+  // 段ごとの音(2026-11-14。「第◯章 終了」の音と曲は場面の音 kiShow が鳴らす)
+  if (typeof msxUseTimedSe === 'function') msxUseTimedSe(st === 1 ? [['kiNext', 0]] : [], [st]);
   const s = run.s;
   const fame = Number.isFinite(s.fameTotal) ? s.fameTotal : 0;
   const has = ki && ki.p === prev && Number.isFinite(ki.fame) && Number.isFinite(ki.power);
