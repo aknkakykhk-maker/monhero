@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 7fbbad9f983a8823
+// source-sha256: 33e682d96fcc8749
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -164506,7 +164506,8 @@ const MSX_CSS = `
 .msx .v-slots{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-top:6px}
 .msx .v-sl{background:#0f172a;border:1px solid #475569;border-radius:12px;padding:6px 4px 5px;text-align:center;font-size:10.5px;font-weight:900;line-height:1.3;position:relative;min-width:0}
 .msx .v-sl .v-pf{margin:0 auto 3px}
-.msx .v-sl .t3{font-size:10px;color:#86efac;white-space:nowrap}.msx .v-sl .bs{font-size:10px;color:#cbd5e1;font-weight:700;white-space:nowrap}.msx .v-sl .ic{font-size:10px;white-space:nowrap;letter-spacing:1px}
+.msx .v-sl .t3{font-size:10px;color:#86efac;display:flex;flex-wrap:wrap;justify-content:center;column-gap:5px}.msx .v-sl .bs{font-size:10px;color:#cbd5e1;font-weight:700;display:flex;flex-wrap:wrap;justify-content:center;column-gap:5px}.msx .v-sl .t3>span,.msx .v-sl .bs>span{white-space:nowrap}
+.msx .msx-sl-legend{font-size:10px;line-height:1.45;margin-top:4px;word-break:auto-phrase}.msx .v-sl .ic{font-size:10px;white-space:nowrap;letter-spacing:1px}
 .msx .v-sl.fr{border-color:#38bdf8;background:#0c2a4a}.msx .v-sl.base{border-style:dashed}.msx .v-sl.base .t3{color:#94a3b8}
 .msx .v-heat{display:grid;grid-template-columns:repeat(6,1fr);gap:3px;margin-top:5px;text-align:center;font-size:10px;font-weight:900}
 .msx .v-heat div{border-radius:8px;padding:3px 0;background:#0f172a;white-space:nowrap;line-height:1.3}
@@ -166531,11 +166532,16 @@ function MsxStart({
       className: msxRankCls(m.rank)
     }, m.rank), React.createElement("div", {
       className: "t3"
-    }, m.top.slice(0, 2).map(k => `${MSX_STAT_ICON[k]}${MSX_STAT_NAME[k]}${Math.round(m.bonus[k] || 0)}%`).join(' ')), React.createElement("div", {
+    }, m.top.slice(0, 2).map(k => React.createElement("span", {
+      key: k
+    }, `${MSX_STAT_ICON[k]}${MSX_STAT_NAME[k]} +${Math.round(m.bonus[k] || 0)}%`))), React.createElement("div", {
       className: "bs"
-    }, "親密度", m.bond0, "・タッグ+", m.tag, "%"), React.createElement("div", {
+    }, React.createElement("span", null, "親密度 ", m.bond0), React.createElement("span", null, "タッグ +", m.tag, "%")), React.createElement("div", {
       className: "ic"
-    }, m.kind === 'base' ? m.auto ? 'ベースモン・✎選ぶ' : 'ベースモン・✎変える' : m.friend ? `借: ${m.friend.name || 'フレンド'}` : '✎変える')))), React.createElement("button", {
+    }, m.kind === 'base' ? m.auto ? 'ベースモン・✎選ぶ' : 'ベースモン・✎変える' : m.friend ? `借: ${m.friend.name || 'フレンド'}` : '✎変える')))), React.createElement("div", {
+      className: "msx-note msx-sl-legend",
+      "data-msx-slot-legend": true
+    }, "札の見方: 「+4%」はその能力のトレーニングの伸びが上がる分・親密度ははじめの値・タッグは友情タッグのときの伸び"), React.createElement("button", {
       type: "button",
       className: "v-card msx-heat-btn",
       "data-msx-gather-open": true,

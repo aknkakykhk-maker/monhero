@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 3a5604ed6f6eb316
+// generated-sha256: f8377a6dd69c359f
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -85661,7 +85661,8 @@ const MSX_CSS = `
 .msx .v-slots{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-top:6px}
 .msx .v-sl{background:#0f172a;border:1px solid #475569;border-radius:12px;padding:6px 4px 5px;text-align:center;font-size:10.5px;font-weight:900;line-height:1.3;position:relative;min-width:0}
 .msx .v-sl .v-pf{margin:0 auto 3px}
-.msx .v-sl .t3{font-size:10px;color:#86efac;white-space:nowrap}.msx .v-sl .bs{font-size:10px;color:#cbd5e1;font-weight:700;white-space:nowrap}.msx .v-sl .ic{font-size:10px;white-space:nowrap;letter-spacing:1px}
+.msx .v-sl .t3{font-size:10px;color:#86efac;display:flex;flex-wrap:wrap;justify-content:center;column-gap:5px}.msx .v-sl .bs{font-size:10px;color:#cbd5e1;font-weight:700;display:flex;flex-wrap:wrap;justify-content:center;column-gap:5px}.msx .v-sl .t3>span,.msx .v-sl .bs>span{white-space:nowrap}
+.msx .msx-sl-legend{font-size:10px;line-height:1.45;margin-top:4px;word-break:auto-phrase}.msx .v-sl .ic{font-size:10px;white-space:nowrap;letter-spacing:1px}
 .msx .v-sl.fr{border-color:#38bdf8;background:#0c2a4a}.msx .v-sl.base{border-style:dashed}.msx .v-sl.base .t3{color:#94a3b8}
 .msx .v-heat{display:grid;grid-template-columns:repeat(6,1fr);gap:3px;margin-top:5px;text-align:center;font-size:10px;font-weight:900}
 .msx .v-heat div{border-radius:8px;padding:3px 0;background:#0f172a;white-space:nowrap;line-height:1.3}
@@ -86893,12 +86894,14 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf }) {
           <div key={i} className={`v-sl${m.kind === 'base' ? ' base' : ''}${m.friend ? ' fr' : ''}${m.friend ? '' : ' msx-slot-tap'}`} data-msx-slot={i} {...(m.friend ? {} : { role: 'button', tabIndex: 0, onClick: () => setSlotPick(i), onKeyDown: (e) => { if (e.key === 'Enter' || e.key === ' ') setSlotPick(i); } })}>
             <span className={`v-pf lg r${m.rank === 'base' ? 'G' : m.rank}${m.kind === 'base' ? ' base' : ''}`}>{(() => { const img = <img src={msxMonThumb(m.species)} alt=""/>; const bm = m.boxId && box && Array.isArray(box.mons) ? box.mons.find((x) => x.id === m.boxId) : null; return bm && bm.awake && typeof MsxKira === 'function' && typeof msxKiraOf === 'function' ? <MsxKira kind={msxKiraOf(bm.awake)} small>{img}</MsxKira> : img; })()}</span>
             {m.name} {m.kind !== 'base' && <i className={msxRankCls(m.rank)}>{m.rank}</i>}
-            <div className="t3">{m.top.slice(0, 2).map((k) => `${MSX_STAT_ICON[k]}${MSX_STAT_NAME[k]}${Math.round(m.bonus[k] || 0)}%`).join(' ')}</div>
-            <div className="bs">親密度{m.bond0}・タッグ+{m.tag}%</div>
+            {/* 1項目ずつ途中で折らない(幅320で「🧠かしこさ4% 🎯命中4%」が札の外へ切れていた。2026-11-14 社長「編成の文字のはみ出し」) */}
+            <div className="t3">{m.top.slice(0, 2).map((k) => <span key={k}>{`${MSX_STAT_ICON[k]}${MSX_STAT_NAME[k]} +${Math.round(m.bonus[k] || 0)}%`}</span>)}</div>
+            <div className="bs"><span>親密度 {m.bond0}</span><span>タッグ +{m.tag}%</span></div>
             <div className="ic">{m.kind === 'base' ? (m.auto ? 'ベースモン・✎選ぶ' : 'ベースモン・✎変える') : m.friend ? `借: ${m.friend.name || 'フレンド'}` : '✎変える'}</div>
           </div>
         ))}
       </div>
+      <div className="msx-note msx-sl-legend" data-msx-slot-legend>札の見方: 「+4%」はその能力のトレーニングの伸びが上がる分・親密度ははじめの値・タッグは友情タッグのときの伸び</div>
       <button type="button" className="v-card msx-heat-btn" data-msx-gather-open onClick={() => setGatherOpen(true)}><div className="sub" style={{ color: '#f9a8d4', fontWeight: 900 }}>この編成が集まりやすいトレーニング<span className="msx-dt-sm"> 押すと表 ▶</span></div>
         <div className="v-heat">{MSX_STATS.map((k, i) => <div key={k} className={heat[i] >= 3 ? 'x3' : heat[i] === 2 ? 'x2' : ''}>{msxTrainIcon(k, 1)}{MSX_STAT_NAME[k]}<b>{heat[i]}体</b></div>)}</div></button>
       <div className="v-card" style={{ flex: '1 1 0', minHeight: 0, overflowY: 'auto' }}>
