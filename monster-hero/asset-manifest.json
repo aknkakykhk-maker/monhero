@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "id": "54c4ea102523",
-  "packs": {"beat":{"bytes":166336666,"count":122},"battle":{"bytes":164408575,"count":1019},"card":{"bytes":37779758,"count":1048},"all":{"bytes":368524999,"count":2189},"core":{"bytes":22638859,"count":24}},
+  "id": "aef9ca2234c0",
+  "packs": {"beat":{"bytes":166336666,"count":122},"battle":{"bytes":164365833,"count":1019},"card":{"bytes":37779758,"count":1048},"all":{"bytes":368482257,"count":2189},"core":{"bytes":22638859,"count":24}},
   "files": {
     "audio/bgm-4u-hitasura.mp3": {"v":"f4fb42472438","size":1446380,"pack":"beat"},
     "audio/bgm-against-my-own-shadow.mp3": {"v":"a58782a4c46f","size":1889175,"pack":"beat"},
@@ -426,7 +426,7 @@
     "images/assistant/stand-card-master/myua_wink.png": {"v":"fa9ac64c9a8d","size":126818,"pack":"battle"},
     "images/assistant/stand-halloween/kiki_angry.png": {"v":"4fc18d80f218","size":169764,"pack":"battle"},
     "images/assistant/stand-halloween/kiki_crying.png": {"v":"6994395483e5","size":145424,"pack":"battle"},
-    "images/assistant/stand-halloween/kiki_excited.png": {"v":"af61ca53254b","size":180806,"pack":"battle"},
+    "images/assistant/stand-halloween/kiki_excited.png": {"v":"7a7995abca88","size":170082,"pack":"battle"},
     "images/assistant/stand-halloween/kiki_happy.png": {"v":"1e69d2cc392b","size":156984,"pack":"battle"},
     "images/assistant/stand-halloween/kiki_normal.png": {"v":"941a66e76a2d","size":161671,"pack":"battle"},
     "images/assistant/stand-halloween/kiki_surprise.png": {"v":"92235aa6889e","size":153333,"pack":"battle"},
@@ -448,14 +448,14 @@
     "images/assistant/stand-normal/atsu_surprise.png": {"v":"041fdaec9637","size":57875,"pack":"battle"},
     "images/assistant/stand-normal/atsu_troubled.png": {"v":"9f1f7e3abd6e","size":57531,"pack":"battle"},
     "images/assistant/stand-normal/atsu_wink.png": {"v":"c2cbb7c79612","size":64792,"pack":"battle"},
-    "images/assistant/stand-normal/kiki_angry.png": {"v":"aad9a71185d3","size":103434,"pack":"battle"},
+    "images/assistant/stand-normal/kiki_angry.png": {"v":"2154f5e22ff7","size":97774,"pack":"battle"},
     "images/assistant/stand-normal/kiki_crying.png": {"v":"b435ea2d2a5e","size":84134,"pack":"battle"},
-    "images/assistant/stand-normal/kiki_excited.png": {"v":"ff27d7a3e83b","size":118402,"pack":"battle"},
+    "images/assistant/stand-normal/kiki_excited.png": {"v":"ccd28ec7bdf0","size":97962,"pack":"battle"},
     "images/assistant/stand-normal/kiki_happy.png": {"v":"5acc988885f5","size":81147,"pack":"battle"},
     "images/assistant/stand-normal/kiki_normal.png": {"v":"8db5747ac6f5","size":77056,"pack":"battle"},
-    "images/assistant/stand-normal/kiki_surprise.png": {"v":"50c65a0a5beb","size":95041,"pack":"battle"},
+    "images/assistant/stand-normal/kiki_surprise.png": {"v":"88e69efa969c","size":92318,"pack":"battle"},
     "images/assistant/stand-normal/kiki_troubled.png": {"v":"638e48391bc5","size":83484,"pack":"battle"},
-    "images/assistant/stand-normal/kiki_wink.png": {"v":"22520cfa4c6f","size":93671,"pack":"battle"},
+    "images/assistant/stand-normal/kiki_wink.png": {"v":"c8e416e63eef","size":90476,"pack":"battle"},
     "images/assistant/stand-normal/kyuko_angry.png": {"v":"8a61c2fb32c2","size":58968,"pack":"battle"},
     "images/assistant/stand-normal/kyuko_crying.png": {"v":"2f71947a0b0e","size":54587,"pack":"battle"},
     "images/assistant/stand-normal/kyuko_excited.png": {"v":"0855e3976523","size":53237,"pack":"battle"},
@@ -2194,7 +2194,7 @@
     "images/ui/breakthrough-rainbow-star.PNG": {"v":"c0e9259703a7","size":199081,"pack":"battle"},
     "vendor/react.production.min.js": {"v":"18","size":10751,"pack":"core"},
     "vendor/react-dom.production.min.js": {"v":"18","size":131835,"pack":"core"},
-    "tailwind.css": {"v":"036d358808d3","size":306877,"pack":"core"},
+    "tailwind.css": {"v":"700c718dd2b1","size":306877,"pack":"core"},
     "data/images/images-ally.js": {"v":"7469815ddc0f","size":81722,"pack":"core"},
     "data/images/images-enemy.js": {"v":"f10f6ad82110","size":2926,"pack":"core"},
     "data/ally-monsters.js": {"v":"4309001c3dde","size":60897,"pack":"core"},
@@ -2215,6 +2215,6 @@
     "data/card-battle-cards.js": {"v":"44db72dafe0b","size":124624,"pack":"core"},
     "data/assistant-masmon-techs.js": {"v":"a3439247bb0f","size":110880,"pack":"core"},
     "data/success-sounds.js": {"v":"7e0a2b44dc42","size":9908,"pack":"core"},
-    "game-system.compiled.js": {"v":"41cb1b78175e","size":11588160,"pack":"core"}
+    "game-system.compiled.js": {"v":"45e18cf38b39","size":11588160,"pack":"core"}
   }
 }

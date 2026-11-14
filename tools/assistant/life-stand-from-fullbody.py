@@ -57,7 +57,13 @@ def run(key, cfg):
     tot = 0
     for e, im, b in zip(EXPR, ims, boxes):
         bottom = int(round(b[1] + H))
-        c = im.crop((max(0, b[0] - 4), max(0, b[1] - 4), min(im.width, b[2] + 4), min(im.height, bottom)))
+        x0, x1 = max(0, b[0] - 4), min(im.width, b[2] + 4)
+        # 腕を広げた・上げた表情は幅が広がり、並ぶ場面で顔が小さくなる。幅は ふだん(normal)の体の幅の WMAX 倍までにして、中心から左右を切る
+        lim = int((nb[2] - nb[0]) * cfg.get('wmax', 1.25))
+        if x1 - x0 > lim:
+            cx = (b[0] + b[2]) // 2
+            x0, x1 = max(x0, cx - lim // 2), min(x1, cx + lim // 2)
+        c = im.crop((x0, max(0, b[1] - 4), x1, min(im.height, bottom)))
         # 上の端から外へはみ出さないよう、切った絵は体の上端に合わせてある
         c = smooth2x(c)
         tot += save_png(c, os.path.join(ROOT, 'monster-hero/images/assistant', cfg['stand'], '%s_%s.png' % (cfg['prefix'], e)))

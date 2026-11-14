@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 6b64a105a60f5396
+// generated-sha256: 0eb5965e4b9db107
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -102278,14 +102278,14 @@ const CARD_ART_KNOWN_BOX = Object.freeze({
   'stand-normal/atsu_surprise': [624, 552, 118, 7, 434, 545],
   'stand-normal/atsu_troubled': [556, 552, 47, 7, 458, 545],
   'stand-normal/atsu_wink': [626, 552, 81, 7, 537, 545],
-  'stand-normal/kiki_angry': [616, 832, 8, 8, 601, 824],
+  'stand-normal/kiki_angry': [496, 832, 0, 8, 496, 824],
   'stand-normal/kiki_crying': [436, 832, 8, 6, 420, 826],
-  'stand-normal/kiki_excited': [946, 832, 8, 8, 929, 824],
+  'stand-normal/kiki_excited': [496, 832, 0, 8, 496, 824],
   'stand-normal/kiki_happy': [392, 832, 7, 8, 377, 824],
   'stand-normal/kiki_normal': [414, 832, 12, 8, 394, 824],
-  'stand-normal/kiki_surprise': [554, 832, 8, 8, 537, 824],
+  'stand-normal/kiki_surprise': [496, 832, 0, 8, 496, 824],
   'stand-normal/kiki_troubled': [456, 832, 8, 8, 439, 824],
-  'stand-normal/kiki_wink': [566, 832, 8, 6, 550, 826],
+  'stand-normal/kiki_wink': [496, 832, 0, 6, 496, 826],
   'stand-normal/kyuko_angry': [492, 590, 15, 7, 470, 583],
   'stand-normal/kyuko_crying': [416, 590, 23, 8, 364, 582],
   'stand-normal/kyuko_excited': [452, 590, 12, 8, 433, 582],
