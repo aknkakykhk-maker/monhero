@@ -565,6 +565,10 @@
       "role": "部品: モンヒロサクセスのトレーニングの演出(MsxTrainAct)に重ねる、いっしょにいた編成の子と助手の絵 MsxActCrew(友情タッグの子は大きく金色に・助手はひとこと)。何も保存しない・公開の印 monheroSuccess の後ろ"
     },
     {
+      "file": "56-monsuc-intro.jsx",
+      "role": "部品: モンヒロサクセスの育成の始まりの場面 MsxRunIntro(シナリオごとの台本 scn.<助手>.start.* を1行ずつ・毎回の育成の最初に1回・2回目から「とばす」)。保存は mh_monsuc_beta_v1 の seen.start だけ。公開の印 monheroSuccess の後ろ"
+    },
+    {
       "file": "56-monsuc-kifx.jsx",
       "role": "部品: モンヒロサクセスの期の区切りの演出 MsxKiShow(「第◯章 終了/◯◯期」と獲得賞金・総合力の増えた分 →「NEXT あと◯ターン」と期のはしご・最上段は頂への道)。新しい期の1ターン目の区切りで1回。何も保存しない(控え run.ki の書きかえは呼ぶ側)。公開の印 monheroSuccess の後ろ"
     },
