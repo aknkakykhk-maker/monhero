@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e7a886b4db86a2a3
+// source-sha256: ef370d7445e10680
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -173304,6 +173304,8 @@ function MsxManualBar({
   }, "オートにする") : null));
 }
 const MSA_GAP = [0.13, 0.32, 0.5, 0.68];
+const MSA_C_LIM = 0.24;
+const MSA_PAN_K = 0.35;
 const MSA_SPEEDS = Object.freeze([{
   id: 'x1',
   label: '×1',
@@ -173368,7 +173370,7 @@ const MSA_CSS = `
 .msa-floor{position:absolute;left:4%;right:4%;bottom:30px;height:2px;background:linear-gradient(90deg,#fff0,#ffffff55 20%,#ffffff55 80%,#fff0);z-index:1}
 .msa-spot{position:absolute;bottom:23px;width:16px;height:16px;margin-left:-8px;border-radius:50%;border:2px solid #ffffff40;background:#0f0b2280;z-index:1;transition:all .35s}
 .msa-spot.on{border-color:#fde047;background:#fde04766;box-shadow:0 0 10px #fde047aa}
-.msa-f{position:absolute;bottom:30px;width:96px;margin-left:-48px;height:120px;display:flex;align-items:flex-end;justify-content:center;z-index:3;transition:left .45s cubic-bezier(.3,.8,.4,1)}
+.msa-f{position:absolute;bottom:30px;width:96px;margin-left:-48px;height:120px;display:flex;align-items:flex-end;justify-content:center;z-index:3;transition:left .64s cubic-bezier(.45,.05,.35,1)}
 .msa-f.act{z-index:6}
 .msa-f img.msa-img{max-width:96px;max-height:112px;object-fit:contain;filter:drop-shadow(0 6px 5px rgba(0,0,0,.55))}
 .msa-f .msa-flip{transform:scaleX(-1)}
@@ -173382,7 +173384,11 @@ const MSA_CSS = `
 .msa-charge{animation:msaCharge .7s ease-out both}
 .msa-aura{position:absolute;left:50%;bottom:0;width:90px;height:90px;margin-left:-45px;border-radius:50%;background:radial-gradient(circle,#fde04788 0,#f9731644 45%,#f9731600 70%);animation:msaAura .7s ease-out both;z-index:-1;pointer-events:none}
 .msa-sulk{animation:msaSulk .7s ease-in-out both}
-.msa-step{animation:msaStep .45s ease-out both}
+.msa-step{transform-origin:50% 100%;animation:msaWalk .64s linear both}
+.msa-pan{position:absolute;inset:0;transition:transform .64s cubic-bezier(.45,.05,.35,1);will-change:transform}
+/* 横に送っても背景の端が見えないよう、絵は左右に広げて描く(広げるのは ::before だけ。要素の枠は場の中のまま) */
+.msa-pan .msa-bg{background-size:0 0}
+.msa-pan .msa-bg::before{content:'';position:absolute;top:0;bottom:0;left:-24%;right:-24%;background-color:#2a2147;background-image:inherit;background-size:cover;background-position:center;background-repeat:no-repeat}
 .msa-in{animation:msaIn .45s ease-out both}
 .msa-dist{position:absolute;left:0;right:0;bottom:4px;display:flex;justify-content:center;gap:5px;z-index:2}
 .msa-dist span{font-size:11px;font-weight:900;padding:1px 9px;border-radius:99px;background:#0f0b2299;color:#94a3b8;transition:all .3s}
@@ -173455,6 +173461,8 @@ const MSA_CSS = `
 @keyframes msaAura{0%{opacity:0;transform:scale(.4)}40%{opacity:1}100%{opacity:0;transform:scale(1.5)}}
 @keyframes msaSulk{0%,100%{transform:none}30%,70%{transform:rotate(-8deg) translateX(-4px)}}
 @keyframes msaStep{0%{transform:none}45%{transform:translateY(-14px)}100%{transform:none}}
+/* 歩いて寄る: 3歩の弾み(上がる→着く)と前のめり/のけぞり。最後は元の姿勢へ */
+@keyframes msaWalk{0%{transform:none;animation-timing-function:ease-out}14%{transform:translateY(-10px) rotate(var(--msa-lean,0deg));animation-timing-function:ease-in}28%{transform:translateY(0) rotate(var(--msa-lean,0deg)) scale(1.04,.95);animation-timing-function:ease-out}45%{transform:translateY(-11px) rotate(var(--msa-lean,0deg));animation-timing-function:ease-in}60%{transform:translateY(0) rotate(var(--msa-lean,0deg)) scale(1.04,.95);animation-timing-function:ease-out}76%{transform:translateY(-6px) rotate(calc(var(--msa-lean,0deg) * .5));animation-timing-function:ease-in}90%{transform:translateY(0) scale(1.05,.94)}100%{transform:none}}
 @keyframes msaIn{0%{opacity:0;transform:translateY(16px) scale(.8)}100%{opacity:1;transform:none}}
 /* ---- 2026-11-13 社長「参考動画を見てもっと改良して」: 入り・カメラ・技の札・効果の帯・DAMAGE ---- */
 /* 白飛びの直し: 閃光(msa-flash)は animation-delay の待ちの間も 0% のコマが当たる(fill both)。0% を透明にして当たる瞬間から光らせる */
@@ -173715,7 +173723,7 @@ const msaStepMs = (e, team, reduce, log, sf = 1) => {
   return {
     start: MSA_INTRO_MS,
     enter: 350,
-    move: 650,
+    move: 820,
     guard: 750,
     charge: 800,
     swap: 700,
@@ -173779,7 +173787,8 @@ function MsaFighter({
   fx,
   motionOn = true,
   maxHp = 0,
-  gutsNow = null
+  gutsNow = null,
+  lean = 0
 }) {
   fx = fx || {
     pre: 0,
@@ -173892,16 +173901,20 @@ function MsaFighter({
       }));
     }
   }
+  let bodyStyle;
   if (me && e.ev === 'move') {
     cls = 'msa-step';
+    bodyStyle = {
+      '--msa-lean': `${lean}deg`
+    };
     if (!reduce) [0, 1, 2].forEach(j => extra.push(React.createElement("i", {
       key: `du-${e.k}-${j}`,
       className: "msa-dust",
       "aria-hidden": "true",
       style: {
         left: `${18 + j * 22}%`,
-        animationDelay: `${j * 60}ms`,
-        '--msa-dx': `${(j - 1) * 16}px`
+        animationDelay: `${120 + j * 190}ms`,
+        '--msa-dx': `${(lean >= 0 ? -1 : 1) * (side === 'A' ? 1 : -1) * 16}px`
       }
     })));
   }
@@ -173946,7 +173959,8 @@ function MsaFighter({
     }) : still0;
     body = React.createElement("div", {
       key: `b-${e ? e.k : 0}-${cls}`,
-      className: `flex items-end justify-center ${cls}`
+      className: `flex items-end justify-center ${cls}`,
+      style: bodyStyle
     }, still);
   }
   return React.createElement("div", {
@@ -174297,9 +174311,26 @@ function MsaStage({
     const g = MSA_GAP[d] != null ? MSA_GAP[d] : MSA_GAP[1];
     return d === 0 ? Math.max(g, Math.min(MSA_GAP[1] - 0.04, (fill ? 140 : 96) * 0.6 / Math.max(200, stageW))) : g;
   };
+  const cs = useMemo(() => {
+    const out = [0.5];
+    let c = 0.5;
+    for (let k = 1; k < frames.length; k++) {
+      const r = log[k] || {};
+      const g0 = gapOf(frames[k - 1] ? frames[k - 1].d : 1);
+      const g1 = gapOf(frames[k] ? frames[k].d : 1);
+      if (r.ev === 'move' && (r.side === 'A' || r.side === 'B') && g0 !== g1) c = r.side === 'A' ? c + g0 / 2 - g1 / 2 : c - g0 / 2 + g1 / 2;
+      c = Math.max(Math.max(0.5 - MSA_C_LIM, 0.09 + g1 / 2), Math.min(Math.min(0.5 + MSA_C_LIM, 0.91 - g1 / 2), c));
+      out.push(c);
+    }
+    return out;
+  }, [log, frames, stageW, fill]);
   const gap = gapOf(f ? f.d : 1);
-  const xA = 0.5 - gap / 2;
-  const xB = 0.5 + gap / 2;
+  const cNow = cs[Math.min(pos, cs.length - 1)] != null ? cs[Math.min(pos, cs.length - 1)] : 0.5;
+  const xA = cNow - gap / 2;
+  const xB = cNow + gap / 2;
+  const panX = reduce ? 0 : (0.5 - cNow) * stageW * MSA_PAN_K;
+  const scrX = x => x + (reduce ? 0 : (0.5 - cNow) * MSA_PAN_K);
+  const walkLean = e0.ev === 'move' && pf && f && e0.side ? (f.d < pf.d ? 1 : -0.6) * (e0.side === 'A' ? 1 : -1) * 7 : 0;
   const fx = msaFxOf(log, e0, reduce, Number(speedF) || 1);
   const hitMs = e.ev === 'tech' && !reduce ? fx.pre + msaMotionMs(msaMotionKind(e.atkSp, e.tech)).hit : 0;
   useEffect(() => {
@@ -174308,7 +174339,7 @@ function MsaStage({
     if (reduce || ended || !el || !e1 || typeof el.animate !== 'function') return undefined;
     const total = Math.round(msaStepMs(e1, teams[e1.side], reduce, log, Number(speedF) || 1) * (Number(speedF) || 1));
     const w = el.clientWidth || stageW;
-    const sx = sd => sd === 'A' ? xA : xB;
+    const sx = sd => scrX(sd === 'A' ? xA : xB);
     let kf = null;
     if (e1.ev === 'tech' && e1.side) {
       if (total < hitMs + 300) return undefined;
@@ -174319,7 +174350,7 @@ function MsaStage({
       kf = msaCamFrames([...(fx.pre > 0 ? [[Math.max(110, fx.pre * 0.5), msaCamAt(ax, sw, w)], [fx.pre, msaCamAt(ax, sw, w)]] : []), [fx.pre > 0 ? fx.pre + 90 : Math.min(280, Math.max(120, hitMs * 0.45)), msaCamAt(ax, s1, w)], [hitMs - 60, msaCamAt(ax * 0.55 + dx * 0.45, s1, w)], [hitMs + 110, msaCamAt(dx, e1.hit ? s1 + 0.08 : s1, w)], [total - 280, msaCamAt(dx, s1 - 0.04, w)]], total);
     } else if (e1.ev === 'ko' && e1.side) {
       kf = msaCamFrames([[260, msaCamAt(sx(e1.side), 1.28, w)], [total - 320, msaCamAt(sx(e1.side), 1.3, w)]], total);
-    } else if ((e1.ev === 'guard' || e1.ev === 'charge' || e1.ev === 'move' || e1.ev === 'swap') && e1.side) {
+    } else if ((e1.ev === 'guard' || e1.ev === 'charge' || e1.ev === 'swap') && e1.side) {
       kf = msaCamFrames([[220, msaCamAt(sx(e1.side), 1.1, w)], [total - 260, msaCamAt(sx(e1.side), 1.1, w)]], total);
     }
     if (!kf) return undefined;
@@ -174342,7 +174373,7 @@ function MsaStage({
   if (!f) return null;
   const spots = MSA_GAP.map((_, d) => {
     const g = gapOf(d);
-    return [0.5 - g / 2, 0.5 + g / 2];
+    return [cNow - g / 2, cNow + g / 2];
   });
   const hpOf = side => (f.hp[side] || [])[f.act[side]];
   const gdOf = side => {
@@ -174427,6 +174458,12 @@ function MsaStage({
     ref: camRef,
     "data-msa-cam": true
   }, React.createElement("div", {
+    className: "msa-pan",
+    style: {
+      transform: `translateX(${Math.round(panX)}px)`
+    },
+    "data-msa-pan": true
+  }, React.createElement("div", {
     className: "msa-bg",
     "aria-hidden": "true",
     style: {
@@ -174474,6 +174511,7 @@ function MsaStage({
     }
   }), React.createElement(MsaFighter, {
     side: "A",
+    lean: e0.side === 'A' ? walkLean : 0,
     member: mA,
     x: xA,
     e: e,
@@ -174491,6 +174529,7 @@ function MsaStage({
     gutsNow: gutsOf('A')
   }), React.createElement(MsaFighter, {
     side: "B",
+    lean: e0.side === 'B' ? walkLean : 0,
     member: mB,
     x: xB,
     e: e,
@@ -174519,7 +174558,7 @@ function MsaStage({
     style: {
       animationDelay: `${hitMs}ms`
     }
-  }))), !intro && !ended && ['A', 'B'].map(hud), !intro && React.createElement("div", {
+  })))), !intro && !ended && ['A', 'B'].map(hud), !intro && React.createElement("div", {
     className: "msa-rnd",
     "data-msa-round": f.r || 0
   }, React.createElement("small", null, "ラウンド"), React.createElement("b", null, f.r || 1)), ['A', 'B'].map(sd => bands[sd].length ? React.createElement("div", {

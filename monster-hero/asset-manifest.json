@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "id": "b86a45f263c1",
-  "packs": {"beat":{"bytes":149788587,"count":113},"battle":{"bytes":160097237,"count":974},"card":{"bytes":37779758,"count":1048},"all":{"bytes":347665582,"count":2135},"core":{"bytes":22035405,"count":24}},
+  "id": "c438ec7d3974",
+  "packs": {"beat":{"bytes":149788587,"count":113},"battle":{"bytes":160097237,"count":974},"card":{"bytes":37779758,"count":1048},"all":{"bytes":347665582,"count":2135},"core":{"bytes":22038702,"count":24}},
   "files": {
     "audio/bgm-4u-hitasura.mp3": {"v":"f4fb42472438","size":1446380,"pack":"beat"},
     "audio/bgm-against-my-own-shadow.mp3": {"v":"a58782a4c46f","size":1889175,"pack":"beat"},
@@ -2140,7 +2140,7 @@
     "images/ui/breakthrough-rainbow-star.PNG": {"v":"c0e9259703a7","size":199081,"pack":"battle"},
     "vendor/react.production.min.js": {"v":"18","size":10751,"pack":"core"},
     "vendor/react-dom.production.min.js": {"v":"18","size":131835,"pack":"core"},
-    "tailwind.css": {"v":"0579c5a13ad1","size":306738,"pack":"core"},
+    "tailwind.css": {"v":"b1c3c558a60f","size":306738,"pack":"core"},
     "data/images/images-ally.js": {"v":"cfbdb3b899b2","size":81504,"pack":"core"},
     "data/images/images-enemy.js": {"v":"f10f6ad82110","size":2926,"pack":"core"},
     "data/ally-monsters.js": {"v":"4309001c3dde","size":60897,"pack":"core"},
@@ -2153,7 +2153,7 @@
     "data/rhythm-geometry-calibration.js": {"v":"02534cca12f6","size":15552,"pack":"core"},
     "data/rhythm-result-replay-remount.js": {"v":"381554180360","size":5743,"pack":"core"},
     "data/rhythm-event.js": {"v":"54980ffcb59f","size":96654,"pack":"core"},
-    "data/changelog.js": {"v":"37611a8d5cbf","size":1733723,"pack":"core"},
+    "data/changelog.js": {"v":"c13f170a1f81","size":1734324,"pack":"core"},
     "data/help.js": {"v":"a9e01ee5358a","size":849591,"pack":"core"},
     "data/mhsave-backup.js": {"v":"7845a4fd261f","size":14703,"pack":"core"},
     "data/rhythm-step3-release.js": {"v":"ae1d7f73f23a","size":8517,"pack":"core"},
@@ -2161,6 +2161,6 @@
     "data/card-battle-cards.js": {"v":"44db72dafe0b","size":124624,"pack":"core"},
     "data/assistant-masmon-techs.js": {"v":"a3439247bb0f","size":110880,"pack":"core"},
     "data/success-sounds.js": {"v":"4b6e2bce095d","size":8761,"pack":"core"},
-    "game-system.compiled.js": {"v":"288a6eaefb42","size":11354612,"pack":"core"}
+    "game-system.compiled.js": {"v":"52363238dfff","size":11357308,"pack":"core"}
   }
 }

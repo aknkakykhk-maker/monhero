@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 5fcd5795fa6541b3
+// generated-sha256: 027fc6a8d4304b0f
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -88955,7 +88955,9 @@ function MsxManualBar({ opt, onPick, onAuto, busy, rep = null, onRep = null, tit
 //     ダメージ数字の大きさを威力で変える/会心は白い閃光とカットイン/とどめはスローと「K.O.」/間合いの移動に土煙/
 //     ガッツが尽きかけたら息切れ/勝ち負けの印を大きく。動きを減らす設定では、ため・止め・揺れ・閃光・土煙を出さない(音は鳴る)
 // 計算・保存には触れない(勝ち負けを onEnd で返すだけ)。公開の印 monheroSuccess の後ろで使う。
-const MSA_GAP = [0.13, 0.32, 0.5, 0.68];            // 距離ごとの、2体の間(場の幅に対する割合)。零は触れ合うほど
+const MSA_GAP = [0.13, 0.32, 0.5, 0.68];
+const MSA_C_LIM = 0.24;  // 2体のまん中が場のまん中から離れてよい幅(場の幅に対する割合。離れているときは2体が場に収まる所まで)
+const MSA_PAN_K = 0.35;  // カメラがまん中を追う割合(1 で真ん中に戻しきる。追いすぎると動いていない相手まで流れて見えるので、少しだけ追う)            // 距離ごとの、2体の間(場の幅に対する割合)。零は触れ合うほど
 const MSA_SPEEDS = Object.freeze([{ id: 'x1', label: '×1', f: 1 }, { id: 'x2', label: '×2', f: 0.55 }, { id: 'x4', label: '×4', f: 0.3 }]);
 // 試合の場の背景(2026-11-14 社長「背景は参考資料のバトル中にならって。サッカー場みたいのもオプションで選べるように」)
 //   闘技場(既定・tools/battle/msa-arena-art.js が描く)/スタジアム(前からの会場の絵 MSC_VENUE_IMG)。選んだ方は mh_monsuc_arena_bg_v1 に 'arena' | 'stadium' で持つ
@@ -88984,7 +88986,7 @@ const MSA_CSS = `
 .msa-floor{position:absolute;left:4%;right:4%;bottom:30px;height:2px;background:linear-gradient(90deg,#fff0,#ffffff55 20%,#ffffff55 80%,#fff0);z-index:1}
 .msa-spot{position:absolute;bottom:23px;width:16px;height:16px;margin-left:-8px;border-radius:50%;border:2px solid #ffffff40;background:#0f0b2280;z-index:1;transition:all .35s}
 .msa-spot.on{border-color:#fde047;background:#fde04766;box-shadow:0 0 10px #fde047aa}
-.msa-f{position:absolute;bottom:30px;width:96px;margin-left:-48px;height:120px;display:flex;align-items:flex-end;justify-content:center;z-index:3;transition:left .45s cubic-bezier(.3,.8,.4,1)}
+.msa-f{position:absolute;bottom:30px;width:96px;margin-left:-48px;height:120px;display:flex;align-items:flex-end;justify-content:center;z-index:3;transition:left .64s cubic-bezier(.45,.05,.35,1)}
 .msa-f.act{z-index:6}
 .msa-f img.msa-img{max-width:96px;max-height:112px;object-fit:contain;filter:drop-shadow(0 6px 5px rgba(0,0,0,.55))}
 .msa-f .msa-flip{transform:scaleX(-1)}
@@ -88998,7 +89000,11 @@ const MSA_CSS = `
 .msa-charge{animation:msaCharge .7s ease-out both}
 .msa-aura{position:absolute;left:50%;bottom:0;width:90px;height:90px;margin-left:-45px;border-radius:50%;background:radial-gradient(circle,#fde04788 0,#f9731644 45%,#f9731600 70%);animation:msaAura .7s ease-out both;z-index:-1;pointer-events:none}
 .msa-sulk{animation:msaSulk .7s ease-in-out both}
-.msa-step{animation:msaStep .45s ease-out both}
+.msa-step{transform-origin:50% 100%;animation:msaWalk .64s linear both}
+.msa-pan{position:absolute;inset:0;transition:transform .64s cubic-bezier(.45,.05,.35,1);will-change:transform}
+/* 横に送っても背景の端が見えないよう、絵は左右に広げて描く(広げるのは ::before だけ。要素の枠は場の中のまま) */
+.msa-pan .msa-bg{background-size:0 0}
+.msa-pan .msa-bg::before{content:'';position:absolute;top:0;bottom:0;left:-24%;right:-24%;background-color:#2a2147;background-image:inherit;background-size:cover;background-position:center;background-repeat:no-repeat}
 .msa-in{animation:msaIn .45s ease-out both}
 .msa-dist{position:absolute;left:0;right:0;bottom:4px;display:flex;justify-content:center;gap:5px;z-index:2}
 .msa-dist span{font-size:11px;font-weight:900;padding:1px 9px;border-radius:99px;background:#0f0b2299;color:#94a3b8;transition:all .3s}
@@ -89071,6 +89077,8 @@ const MSA_CSS = `
 @keyframes msaAura{0%{opacity:0;transform:scale(.4)}40%{opacity:1}100%{opacity:0;transform:scale(1.5)}}
 @keyframes msaSulk{0%,100%{transform:none}30%,70%{transform:rotate(-8deg) translateX(-4px)}}
 @keyframes msaStep{0%{transform:none}45%{transform:translateY(-14px)}100%{transform:none}}
+/* 歩いて寄る: 3歩の弾み(上がる→着く)と前のめり/のけぞり。最後は元の姿勢へ */
+@keyframes msaWalk{0%{transform:none;animation-timing-function:ease-out}14%{transform:translateY(-10px) rotate(var(--msa-lean,0deg));animation-timing-function:ease-in}28%{transform:translateY(0) rotate(var(--msa-lean,0deg)) scale(1.04,.95);animation-timing-function:ease-out}45%{transform:translateY(-11px) rotate(var(--msa-lean,0deg));animation-timing-function:ease-in}60%{transform:translateY(0) rotate(var(--msa-lean,0deg)) scale(1.04,.95);animation-timing-function:ease-out}76%{transform:translateY(-6px) rotate(calc(var(--msa-lean,0deg) * .5));animation-timing-function:ease-in}90%{transform:translateY(0) scale(1.05,.94)}100%{transform:none}}
 @keyframes msaIn{0%{opacity:0;transform:translateY(16px) scale(.8)}100%{opacity:1;transform:none}}
 /* ---- 2026-11-13 社長「参考動画を見てもっと改良して」: 入り・カメラ・技の札・効果の帯・DAMAGE ---- */
 /* 白飛びの直し: 閃光(msa-flash)は animation-delay の待ちの間も 0% のコマが当たる(fill both)。0% を透明にして当たる瞬間から光らせる */
@@ -89276,7 +89284,7 @@ const msaStepMs = (e, team, reduce, log, sf = 1) => {
       : fx.pre + Math.max((mm.ms + 300) * Math.max(f, 0.6), mm.hit + (e.hit ? MSA_AFTER_HIT : MSA_AFTER_MISS) * f) + fx.stop + (fx.fin ? 450 * f : 0);
     return real / f;
   }
-  return { start: MSA_INTRO_MS, enter: 350, move: 650, guard: 750, charge: 800, swap: 700, ko: 1500, end: 600 }[e.ev] || 500;
+  return { start: MSA_INTRO_MS, enter: 350, move: 820, guard: 750, charge: 800, swap: 700, ko: 1500, end: 600 }[e.ev] || 500;
 };
 
 // ダメージの数字(場の上の層。守る側の立ち位置に置く)
@@ -89308,7 +89316,7 @@ const msaSay = (e, nm) => {
 
 // ---- 場の1体 ----
 //   gd … この行での自分のガッツの増減(ためる +・技を撃つ −・ガッツを削られた −)
-function MsaFighter({ side, member, x, e, foeX, hpNow, reduce, idleOk, gd, fx, motionOn = true, maxHp = 0, gutsNow = null }) {
+function MsaFighter({ side, member, x, e, foeX, hpNow, reduce, idleOk, gd, fx, motionOn = true, maxHp = 0, gutsNow = null, lean = 0 }) {
   fx = fx || { pre: 0, stop: 0, fin: false, big: false };
   const sp = member ? member.species : '';
   const src = mscMonImg(sp);
@@ -89346,9 +89354,10 @@ function MsaFighter({ side, member, x, e, foeX, hpNow, reduce, idleOk, gd, fx, m
     if (e.why === 'sulk') { cls = 'msa-sulk'; extra.push(<span key="t" className="msa-tag">そっぽ…</span>); }
     else { cls = 'msa-charge'; extra.push(<span key="a" className="msa-aura" aria-hidden="true"/>); }
   }
+  let bodyStyle;
   if (me && e.ev === 'move') {
-    cls = 'msa-step';
-    if (!reduce) [0, 1, 2].forEach((j) => extra.push(<i key={`du-${e.k}-${j}`} className="msa-dust" aria-hidden="true" style={{ left: `${18 + j * 22}%`, animationDelay: `${j * 60}ms`, '--msa-dx': `${(j - 1) * 16}px` }}/>));
+    cls = 'msa-step'; bodyStyle = { '--msa-lean': `${lean}deg` };
+    if (!reduce) [0, 1, 2].forEach((j) => extra.push(<i key={`du-${e.k}-${j}`} className="msa-dust" aria-hidden="true" style={{ left: `${18 + j * 22}%`, animationDelay: `${120 + j * 190}ms`, '--msa-dx': `${(lean >= 0 ? -1 : 1) * (side === 'A' ? 1 : -1) * 16}px` }}/>));
   }
   if (me && (e.ev === 'swap' || e.ev === 'enter')) cls = 'msa-in';
   const koNow = e && e.ev === 'ko' && e.side === side;
@@ -89370,7 +89379,7 @@ function MsaFighter({ side, member, x, e, foeX, hpNow, reduce, idleOk, gd, fx, m
     // 覚醒した自分の側はキラ(超覚醒はレアキラ)をまとう。バトルカードと同じ光(84 の cardKiraWrap)
     const kira = side === 'A' && member && member.awake && !down && typeof msxKiraOf === 'function' ? msxKiraOf(member.awake) : null;
     const still = kira && typeof cardKiraWrap === 'function' ? cardKiraWrap(kira, still0, { src, calm: reduce }) : still0;
-    body = <div key={`b-${e ? e.k : 0}-${cls}`} className={`flex items-end justify-center ${cls}`}>{still}</div>;
+    body = <div key={`b-${e ? e.k : 0}-${cls}`} className={`flex items-end justify-center ${cls}`} style={bodyStyle}>{still}</div>;
   }
   return (
     <div className={`msa-f ${down ? 'down' : ''} ${tech && me ? 'act' : ''} ${koNow ? 'slowko' : ''} ${tired && !reduce ? 'tired' : ''}`} style={style} data-msa-fighter={side}>
@@ -89571,8 +89580,26 @@ function MsaStage({ log, frames, pos, teams, venueImg, ended = false, win = null
   const e = { ...e0, k: pos, atkSp: e0.side ? (memberOf(e0.side, e0.i) || {}).species : '', tech: msaTechInfo(log, e0) };
   // 零でも2体の体と顔が見えるように、絵の幅の6割はあける(2026-11-13 社長「重なりを直して」。小さい子が大きい子の後ろに隠れた)
   const gapOf = (d) => { const g = MSA_GAP[d] != null ? MSA_GAP[d] : MSA_GAP[1]; return d === 0 ? Math.max(g, Math.min(MSA_GAP[1] - 0.04, ((fill ? 140 : 96) * 0.6) / Math.max(200, stageW))) : g; };
+  // 立ち位置(2026-11-14 社長「距離の移動が違和感」): 間合いを変えた子だけが歩いて動き、相手はその場に残る。
+  // 2体のまん中(c)は行ごとに前から順に決める(動いた子の相手の位置を残す)。端に寄りすぎないよう c は 0.5±MSA_C_LIM・2体が場の内側に収まる範囲に収める
+  const cs = useMemo(() => {
+    const out = [0.5]; let c = 0.5;
+    for (let k = 1; k < frames.length; k++) {
+      const r = log[k] || {}; const g0 = gapOf(frames[k - 1] ? frames[k - 1].d : 1); const g1 = gapOf(frames[k] ? frames[k].d : 1);
+      if (r.ev === 'move' && (r.side === 'A' || r.side === 'B') && g0 !== g1) c = r.side === 'A' ? (c + g0 / 2) - g1 / 2 : (c - g0 / 2) + g1 / 2;
+      c = Math.max(Math.max(0.5 - MSA_C_LIM, 0.09 + g1 / 2), Math.min(Math.min(0.5 + MSA_C_LIM, 0.91 - g1 / 2), c)); // 2体とも場の内側(端から9%)に収まる範囲
+      out.push(c);
+    }
+    return out;
+  }, [log, frames, stageW, fill]);
   const gap = gapOf(f ? f.d : 1);
-  const xA = 0.5 - gap / 2; const xB = 0.5 + gap / 2;
+  const cNow = cs[Math.min(pos, cs.length - 1)] != null ? cs[Math.min(pos, cs.length - 1)] : 0.5;
+  const xA = cNow - gap / 2; const xB = cNow + gap / 2;
+  // カメラの横の追いかけ: 2体のまん中が画面のまん中へ来るよう、場の中身を横へ送る(歩くのと同じ速さ・同じゆるみ)
+  const panX = reduce ? 0 : (0.5 - cNow) * stageW * MSA_PAN_K;
+  const scrX = (x) => x + (reduce ? 0 : (0.5 - cNow) * MSA_PAN_K); // 画面の上での位置(カメラの寄せの中心に使う)
+  // 歩く向き: 間合いを詰める=前のめり / 下がる=のけぞる(A は右向き・B は左向き)
+  const walkLean = e0.ev === 'move' && pf && f && e0.side ? (f.d < pf.d ? 1 : -0.6) * (e0.side === 'A' ? 1 : -1) * 7 : 0;
   const fx = msaFxOf(log, e0, reduce, Number(speedF) || 1);
   const hitMs = e.ev === 'tech' && !reduce ? fx.pre + msaMotionMs(msaMotionKind(e.atkSp, e.tech)).hit : 0;
   // カメラ: 行ごとに1回。技は攻め手へ寄る → 当たる瞬間に受け手へ振る/KO は倒れた子へ/守る・ためる・動くは軽く寄る
@@ -89581,7 +89608,7 @@ function MsaStage({ log, frames, pos, teams, venueImg, ended = false, win = null
     if (reduce || ended || !el || !e1 || typeof el.animate !== 'function') return undefined;
     const total = Math.round(msaStepMs(e1, teams[e1.side], reduce, log, Number(speedF) || 1) * (Number(speedF) || 1));
     const w = el.clientWidth || stageW;
-    const sx = (sd) => (sd === 'A' ? xA : xB);
+    const sx = (sd) => scrX(sd === 'A' ? xA : xB);
     let kf = null;
     if (e1.ev === 'tech' && e1.side) {
       if (total < hitMs + 300) return undefined; // 速くしていて間に合わないときは寄せない
@@ -89596,7 +89623,7 @@ function MsaStage({ log, frames, pos, teams, venueImg, ended = false, win = null
       ], total);
     } else if (e1.ev === 'ko' && e1.side) {
       kf = msaCamFrames([[260, msaCamAt(sx(e1.side), 1.28, w)], [total - 320, msaCamAt(sx(e1.side), 1.3, w)]], total);
-    } else if ((e1.ev === 'guard' || e1.ev === 'charge' || e1.ev === 'move' || e1.ev === 'swap') && e1.side) {
+    } else if ((e1.ev === 'guard' || e1.ev === 'charge' || e1.ev === 'swap') && e1.side) { // 歩く行は寄せない(場の横送りが位置について行く)
       kf = msaCamFrames([[220, msaCamAt(sx(e1.side), 1.1, w)], [total - 260, msaCamAt(sx(e1.side), 1.1, w)]], total);
     }
     if (!kf) return undefined;
@@ -89605,7 +89632,7 @@ function MsaStage({ log, frames, pos, teams, venueImg, ended = false, win = null
   }, [pos, ended]);
   const regen = useMemo(() => msaRegenOf(log, frames), [log, frames]);
   if (!f) return null;
-  const spots = MSA_GAP.map((_, d) => { const g = gapOf(d); return [0.5 - g / 2, 0.5 + g / 2]; });
+  const spots = MSA_GAP.map((_, d) => { const g = gapOf(d); return [cNow - g / 2, cNow + g / 2]; });
   const hpOf = (side) => (f.hp[side] || [])[f.act[side]];
   // ガッツの増減(足元の小さい札)は、ためた行だけ。技で使った分は技の札・削られた分は DAMAGE の下に出す
   const gdOf = (side) => {
@@ -89647,16 +89674,18 @@ function MsaStage({ log, frames, pos, teams, venueImg, ended = false, win = null
     <div className={`msa-stage${fill ? ' fill' : ''}`} ref={stageRef} data-msa-stage>
      <div className={`msa-shk ${shake ? `shake s${shakeLv}` : ''}`} key={shake ? `sh-${pos}` : 'st'} style={shake ? { animationDelay: `${hitMs}ms` } : undefined}>
       <div className="msa-cam" ref={camRef} data-msa-cam>
+      <div className="msa-pan" style={{ transform: `translateX(${Math.round(panX)}px)` }} data-msa-pan>
       <div className="msa-bg" aria-hidden="true" style={{ backgroundImage: venueImg ? `linear-gradient(180deg,rgba(20,16,38,.05),rgba(20,16,38,.5)),url(${venueImg})` : undefined }}/>
       <div className="msa-floor" aria-hidden="true"/>
       {spots.map(([a, b], d) => <React.Fragment key={d}><i className={`msa-spot ${d === f.d ? 'on' : ''}`} style={{ left: `${a * 100}%` }}/><i className={`msa-spot ${d === f.d ? 'on' : ''}`} style={{ left: `${b * 100}%` }}/></React.Fragment>)}
       {e.ev === 'tech' && fx.pre > 0 && preAt !== pos && <i key={`fo-${pos}`} className={`msa-focus ${e.kind}`} aria-hidden="true" data-msa-wind style={{ '--msa-pre': `${fx.pre}ms`, '--msa-cx': `${(e.side === 'A' ? xA : xB) * 100}%` }}/>}
       {e.ev === 'tech' && fx.pre > 0 && <i key={`aim-${pos}`} className={`msa-aim ${e.kind}`} aria-hidden="true" style={{ left: `${(e.side === 'A' ? xB : xA) * 100}%`, '--msa-pre': `${fx.pre}ms` }}/>}
       {e.ev === 'tech' && fx.big && fx.pre > 0 && preAt !== pos && <i key={`dim-${pos}`} className="msa-dim" aria-hidden="true" style={{ '--msa-pre': `${fx.pre}ms`, '--msa-cx': `${(e.side === 'A' ? xA : xB) * 100}%` }}/>}
-      <MsaFighter side="A" member={mA} x={xA} e={e} foeX={{ x: xB, w: stageW }} hpNow={hpOf('A')} reduce={reduce} idleOk gd={null} fx={fx} motionOn={!fx.pre || preAt === pos} maxHp={maxHpOf('A')} gutsNow={gutsOf('A')}/>
-      <MsaFighter side="B" member={mB} x={xB} e={e} foeX={{ x: xA, w: stageW }} hpNow={hpOf('B')} reduce={reduce} idleOk gd={null} fx={fx} motionOn={!fx.pre || preAt === pos} maxHp={maxHpOf('B')} gutsNow={gutsOf('B')}/>
+      <MsaFighter side="A" lean={e0.side === 'A' ? walkLean : 0} member={mA} x={xA} e={e} foeX={{ x: xB, w: stageW }} hpNow={hpOf('A')} reduce={reduce} idleOk gd={null} fx={fx} motionOn={!fx.pre || preAt === pos} maxHp={maxHpOf('A')} gutsNow={gutsOf('A')}/>
+      <MsaFighter side="B" lean={e0.side === 'B' ? walkLean : 0} member={mB} x={xB} e={e} foeX={{ x: xA, w: stageW }} hpNow={hpOf('B')} reduce={reduce} idleOk gd={null} fx={fx} motionOn={!fx.pre || preAt === pos} maxHp={maxHpOf('B')} gutsNow={gutsOf('B')}/>
       {e.ev === 'tech' && <MsaDmgLayer key={`dl-${pos}`} e={e} x={e.side === 'A' ? xB : xA} delay={hitMs} tier={tier || 1}/>}
       {e.ev === 'tech' && fx.fin && !reduce && <i key={`fin-${pos}`} className="msa-fin" aria-hidden="true" style={{ animationDelay: `${hitMs}ms` }}/>}
+      </div>
       </div>
      </div>
       {/* ここから上の層(カメラ・揺れの外。字が読めるように動かさない) */}
