@@ -393,6 +393,11 @@ function AssistantLifeRoomScene({ id, look = 'noon', land = false, people = [], 
         <span style={{ position: 'absolute', left: -9, top: -6, bottom: -4, width: 14, borderRadius: '4px 8px 8px 4px', background: 'linear-gradient(90deg,#f9a8d4,#f472b6)' }}/>
         <span style={{ position: 'absolute', right: -9, top: -6, bottom: -4, width: 14, borderRadius: '8px 4px 4px 8px', background: 'linear-gradient(90deg,#f472b6,#f9a8d4)' }}/>
       </div>
+      {/* 時間帯の暗さ・灯りは壁・窓の上、家具・助手の下(2026-11-14 社長「夜だとアイテムとかも暗くなってる?」: 家具は夜でもふだんの明るさ。みんな寝ているときだけ、ベッドもふくめて部屋ぜんたいを暗くする) */}
+      {night && !lit && <div aria-hidden="true" className="pointer-events-none absolute inset-0" style={{ background: 'radial-gradient(circle at 18% 30%,#ffc46b40 0,#ffc46b18 110px,transparent 220px),#050a2480' }}/>}
+      {lit && <div aria-hidden="true" data-assistant-life-roomview-lit className="pointer-events-none absolute inset-0" style={{ background: `${lights.map(l => `radial-gradient(circle at ${l.x.toFixed(0)}px ${l.y.toFixed(0)}px,#fff3c8d0 0,#ffd88a88 ${Math.round(l.r * 0.7)}px,#ffc46b38 ${Math.round(W * 0.45)}px,transparent ${Math.round(W * 0.8)}px)`).join(',')},#0a1030${'26'}`, mixBlendMode: 'normal' }}/>}
+      {night && !lit && <span aria-hidden="true" className="pointer-events-none absolute" style={{ left: W * 0.08, top: topH + 2, fontSize: 26 }}>🏮</span>}
+      {evening && <div aria-hidden="true" className="pointer-events-none absolute inset-0" style={{ background: '#ff8a3018' }}/>}
       {/* 置いた家具(天井・壁・床)。押すと名前 */}
       {/* 模様替え(公開の印 assistantLifeRoomEdit・56-assistant-life-roomedit.jsx): 自分の家の部屋は、保存してある並びで描く。助手の後ろの層 */}
       {layoutOn && <AssistantLifeRoomLayoutLayer who={layoutWho} items={layoutEdit ? layoutEdit.items : layoutItems} geom={layoutGeom} front={false} onTip={layoutEdit ? null : setTip}/>}
@@ -411,12 +416,9 @@ function AssistantLifeRoomScene({ id, look = 'noon', land = false, people = [], 
           {away.sub && <p className="whitespace-nowrap text-[10.5px] font-bold text-slate-300">{away.sub}</p>}
         </div>)}
 
-      {/* 時間帯: 夜は暗く・灯り */}
+      {/* みんな寝ているときだけ、家具やベッドもふくめて部屋ぜんたいを暗くする */}
+      {asleep && night && !lit && <div aria-hidden="true" data-assistant-life-roomview-sleepdark className="pointer-events-none absolute inset-0" style={{ background: 'radial-gradient(circle at 18% 30%,#ffc46b40 0,#ffc46b18 110px,transparent 220px),#050a2480' }}/>}
       {layoutOn && layoutEdit && <AssistantLifeRoomLayoutHandles items={layoutEdit.items} geom={layoutGeom} sel={layoutEdit.sel} onSelect={layoutEdit.onSelect} onMove={layoutEdit.onMove} onDrop={layoutEdit.onDrop} onScale={layoutEdit.onScale}/>}
-      {night && !lit && <div aria-hidden="true" className="pointer-events-none absolute inset-0" style={{ background: 'radial-gradient(circle at 18% 30%,#ffc46b40 0,#ffc46b18 110px,transparent 220px),#050a2480' }}/>}
-      {lit && <div aria-hidden="true" data-assistant-life-roomview-lit className="pointer-events-none absolute inset-0" style={{ background: `${lights.map(l => `radial-gradient(circle at ${l.x.toFixed(0)}px ${l.y.toFixed(0)}px,#fff3c8d0 0,#ffd88a88 ${Math.round(l.r * 0.7)}px,#ffc46b38 ${Math.round(W * 0.45)}px,transparent ${Math.round(W * 0.8)}px)`).join(',')},#0a1030${'26'}`, mixBlendMode: 'normal' }}/>}
-      {night && !lit && <span aria-hidden="true" className="pointer-events-none absolute" style={{ left: W * 0.08, top: topH + 2, fontSize: 26 }}>🏮</span>}
-      {evening && <div aria-hidden="true" className="pointer-events-none absolute inset-0" style={{ background: '#ff8a3018' }}/>}
       {/* 床の列(マスモンとミニキャラが立つ所)は明るく: 夜の暗さの上に、あたたかい灯りの帯を重ねる(2026-11-12 社長「床の列を明るくしてから」) */}
       {people.length > 0 && !asleep && minis.length > 0 && <div aria-hidden="true" data-assistant-life-roomview-floorlight className="pointer-events-none absolute inset-x-0" style={{ top: floorY, height: Math.max(60, H - dockH - floorY), background: night ? 'linear-gradient(#ffd99a88,#ffd99a50 55%,transparent)' : 'linear-gradient(#fff3d052,#fff3d022 55%,transparent)' }}/>}
       {/* マスモン(全部・歩く)。押すとくわしい画面 */}

@@ -314,6 +314,10 @@
     fruit_wise: { name: 'ちえの実', use: 'during', fruit: 'wise' }, fruit_hit: { name: 'ねらいの実', use: 'during', fruit: 'hit' },
     fruit_eva: { name: 'かわしの実', use: 'during', fruit: 'eva' }, fruit_tough: { name: 'かたさの実', use: 'during', fruit: 'tough' },
     stamina: { name: 'スタミナだんご', use: 'during', hpMax: 15 }, // モンスターダービーの賞品: 使うと体力の最大値 +15(体力も同じだけ回復)
+    // 覚醒の実・超覚醒の実(2026-11-13 社長 r1113-038・053)。使うとその場で起きる(中身は AWAKE と同じ: 全能力 +30/+40・間合いの適性 1段/2段)
+    //   覚醒の実: 覚醒していない子に、育成中いつでも(参考 mo-14「育成中に覚醒する」)/ 超覚醒の実: 期の条件なし・覚醒していなければ覚醒してから超覚醒まで(覚醒の実の完全な上位互換)
+    awakeFruit: { name: '覚醒の実', use: 'during', awake: 1 },
+    superAwakeFruit: { name: '超覚醒の実', use: 'during', awake: 2 },
   });
   const GOOD = Object.freeze({
     eventMaker: { name: 'イベントメーカー', eventRate: 0.25 },              // 編成の子との出来事 +25%(50% → 75%。2026-11-13 社長)
@@ -1347,7 +1351,10 @@
     const useItem = (s0, key) => {
       const s = clone(s0); const it = ITEMS[key];
       if (!it || it.use !== 'during' || num(s.bag[key]) <= 0 || s.itemTurn === s.turn || s.over) return { state: s0, out: { ok: false } };
+      if (it.awake && !awakeItemOk(s, it.awake)) return { state: s0, out: { ok: false, why: 'awake' } };
       s.bag[key] -= 1; s.itemTurn = s.turn;
+      const fires = [];
+      if (it.awake) { if (num(s.awake) < 1) fires.push(awakeApply(s, 1)); if (it.awake >= 2) fires.push(awakeApply(s, 2)); }
       if (it.hpFull) s.hp = s.hpMax;
       if (it.hp) recover(s, it.hp);
       if (it.cure) { s.yosu = {}; }
@@ -1360,8 +1367,11 @@
       if (it.fruit) s.fruit = { stat: it.fruit, turn: s.turn };
       if (it.hpMax) { s.hpMax = Math.min(HP_MAX_CAP, s.hpMax + it.hpMax); s.hp = Math.min(s.hpMax, s.hp + it.hpMax); }
       s.log.items = (s.log.items || 0) + 1;
-      return { state: s, out: { ok: true, item: key } };
+      return { state: s, out: fires.length ? { ok: true, item: key, fires } : { ok: true, item: key } };
     };
+    // 覚醒の実を使えるか(k = 1 覚醒の実・2 超覚醒の実)。超覚醒ずみには、どちらも使えない
+    const awakeItemOk = (s, k) => (k >= 2 ? num(s.awake) < 2 : num(s.awake) < 1);
+    const itemUsable = (s, key) => { const it = ITEMS[key]; if (!it || it.use !== 'during' || !s || s.over) return false; return it.awake ? awakeItemOk(s, it.awake) : true; };
 
     // ---- ターンを閉じる(期末の強制大会・頂への道・デビュー戦の再挑戦をここで立てる) ----
     const endTurn = (s0) => {
@@ -1958,7 +1968,7 @@
       act, react, reactOf, issa, issaComes, issaRate, endTurn, opponents: opponentsOf, settle, cupsOf, canEnter, bracketOf, gradeOf, GRADE_STEP, stayV, SC_CUPS, SC_NAME, ASST_STORY, storyEnd, markSpecial, battleMods, battleBuffs, peakTurn, ASTORY, storyDue, storyStep, preview, restore, ARC, PARTY, summitPick, endingOf, endingSeen, CUP_SYS, YEAR, RIVAL, CUP_PRIZE, spendPts, autoPts, ptsCost, evaluate, assistPointsOf, loyalOf, loyalMult, top3Of, sumOf,
       FUSE, fuseOk, fuseKinds, fusePlan, fuseId,
       DIST_UP, aptUpOf, aptGradesOf, aptUpRoom, addAptUp, aptSendOf, aptInherit, aptBaseNorm,
-      AWAKE, aptAwakeNorm, awakeOpen, awakePick, peakInfo,
+      AWAKE, aptAwakeNorm, awakeOpen, awakePick, peakInfo, itemUsable,
     });
   };
 

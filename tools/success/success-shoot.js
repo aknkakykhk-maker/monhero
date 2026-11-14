@@ -3,6 +3,7 @@
 // あわせて、押せる大きさ・字の小ささ・横画面・大きい文字の見張りは success-layout-check.js が回す。
 //
 //   node tools/success/success-shoot.js                 … 縦390×844 で全部の画面を開いて確かめる(撮らない)
+//   SHOT_SIZES=base,land … 大きさの名札を並べると、その大きさだけ撮る
 //   SHOT_DIR=<フォルダ> node tools/success/success-shoot.js … 縦390×844・横844×390・幅320×568 で撮る
 //
 // 入口はデバッグ設定だけなので、ここでは画面の部品(MonheroSuccessScreen)を直接置いて開く。
@@ -51,6 +52,7 @@ const makeRun = async (kind) => {
     let g2 = 0; while (s.battle && g2++ < 5) { const opp = SUC.opponents(s); s = SUC.settle(s, opp.map(() => true)).state; }
   }
   if (kind === 'yosu') s = { ...s, yosu: { sabori: { visits: 0 } } };
+  if (kind === 'bagall') s = { ...s, bag: Object.fromEntries(Object.keys(SUC.ITEMS).filter((k) => SUC.ITEMS[k].use === 'during').map((k) => [k, 1])) }; // 持ち物の升目に育成中に使う物を全部並べる(名前の折れを見る)
   if (kind === 'ki') { const pv = SUC.peek(s).period.index - 1; const pw = SUC.evaluate(s).power; s = { ...s, fameTotal: Math.max(s.fameTotal || 0, 1000) }; return { v: 1, id: s.id, s, nick: 'もちまる', colors: [], from: { base: 'Mocchi' }, items: [], used: 0, phase: 'turn', out: null, log: [], startAt: 1, ki: { p: pv, fame: 0, power: Math.max(0, pw - 616) } }; }
   const run = { v: 1, id: s.id, s, nick: 'もちまる', colors: [], from: { base: 'Mocchi' }, items: ['juice', 'dango'], used: 0, phase: 'main', out: null, log: [], startAt: 1 };
   return run;
@@ -64,7 +66,10 @@ const makeRun = async (kind) => {
   const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
   const errors = [];
   // [幅, 高さ, 名札, 文字の倍率]。大きい文字設定は、画面の中の文字を 1.3 倍にして真似る
-  const sizes = process.env.SHOT_QUICK ? [[390, 844, '']] : [[390, 844, ''], [844, 390, 'land'], [667, 375, 'land667'], [320, 568, 's320'], [390, 844, 'big', 1.3], [844, 390, 'landbig', 1.3], [320, 568, 's320big', 1.3]];
+  const sizesAll = process.env.SHOT_QUICK ? [[390, 844, '']] : [[390, 844, ''], [390, 664, 'ip'], [844, 390, 'land'], [667, 375, 'land667'], [320, 568, 's320'], [390, 844, 'big', 1.3], [844, 390, 'landbig', 1.3], [320, 568, 's320big', 1.3]];
+  // SHOT_SIZES=land,big のように名札を並べると、その大きさだけ撮る(縦390の名札は空なので "base")。success-layout-check が大きさごとに分けて同時に回すために使う
+  const onlySizes = (process.env.SHOT_SIZES || '').split(',').map((x) => x.trim()).filter(Boolean);
+  const sizes = onlySizes.length ? sizesAll.filter(([, , tag]) => onlySizes.includes(tag || 'base')) : sizesAll;
   // [名前, 作る育成, 開いたあとの操作]
   // H0・H1 はモンサクのホーム(育成なし・途中の育成あり。2026-11-14 作り直し)
   const SHOTS_ALL = [
@@ -72,9 +77,10 @@ const makeRun = async (kind) => {
     ['S0', null, ['new']], // ストーリー選択(2026-11-14)。S1〜S6 はその「次へ」のあと
     ['S1', null, ['new', 'next']], ['S1D', null, ['new', 'next', 'detail']], ['S1A', null, ['new', 'next', 'detail', 'tab:apt']], ['S1F', null, ['new', 'next', 'detail', 'tab:feat']], ['S1Z', null, ['seedfuse', 'new', 'next', 'tabfuse', 'pickfirst']], ['S1ZD', null, ['seedfuse', 'new', 'next', 'tabfuse', 'pickfirst', 'detail']],
     ['S2', null, ['new', 'next', 'next']], ['S2P', null, ['new', 'next', 'next', 'slot:1']], ['S2B', null, ['new', 'next', 'next', 'slot:1', 'base:Golem']], ['S2G', null, ['new', 'next', 'next', 'gather']],
-    ['S3', null, ['new', 'next', 'next', 'next']], ['S4', null, ['new', 'next', 'next', 'next', 'next']],
+    ['S3', null, ['new', 'next', 'next', 'next']], ['S4', null, ['new', 'next', 'next', 'next', 'next']], ['S4L', null, ['new', 'next', 'next', 'next', 'next', 'carry:oil']],
     ['S5', null, ['new', 'next', 'next', 'next', 'next', 'next']], ['S6', null, ['new', 'next', 'next', 'next', 'next', 'next', 'next']],
-    ['M1', 'mid', ['cont']], ['M2', 'yosu', ['cont']], ['M3', 'mid', ['cont', 'bag']], ['T1', 'mid', ['cont', 'train']], ['T2', 'mid', ['cont', 'train', 'swipe']], ['Q0', 'mid', ['ki']], ['Q1', 'mid', ['ki', 'kitap']], ['R1', 'mid', ['cont', 'rest']],
+    ['M1', 'mid', ['cont']], ['M2', 'yosu', ['cont']], ['M3', 'mid', ['cont', 'bag']], ['M3A', 'bagall', ['cont', 'bag']], ['T1', 'mid', ['cont', 'train']], ['T2', 'mid', ['cont', 'train', 'swipe']], ['Q0', 'mid', ['ki']], ['Q1', 'mid', ['ki', 'kitap']], ['R1', 'mid', ['cont', 'rest']],
+    ['M1A', 'mid', ['cont', 'apt']], ['K3A', 'mid', ['cont', 'apt', 'train', 'go', 'next']], // 能力の列を押して素質の表示に(2026-11-14)
     ['K1', 'mid', ['cont', 'train', 'go']], ['K3', 'mid', ['cont', 'train', 'go', 'next']], ['K5', 'mid', ['cont', 'train', 'go', 'next', 'praise']],
     ['I1', 'mid', ['cont', 'issa']], ['P1', 'mid', ['cont', 'stats']], ['M1D', 'mid', ['cont', 'detail']], ['M1F', 'mid', ['cont', 'detail', 'tab:feat']],
     ['E1', 'mid', ['cont', 'event']], ['E3', 'mid', ['cont', 'event', 'three']], ['E4', 'mid', ['cont', 'event', 'three', 'long']],
@@ -86,7 +92,10 @@ const makeRun = async (kind) => {
   ];
   // SHOT_ONLY=H0,H1 のように名前を並べると、その場面だけ撮る
   const only = (process.env.SHOT_ONLY || '').split(',').map((x) => x.trim()).filter(Boolean);
-  const SHOTS = only.length ? SHOTS_ALL.filter(([n]) => only.includes(n)) : SHOTS_ALL;
+  // 名指ししたときだけ撮る場面(全サイズで回すと success-layout-check が 600秒を超えるため。2026-11-14)
+  //   M3A = 持ち物に育成中の物を全部並べた所 / S4L = 持ちこみで升目を押した所。名前の折れは S4・M3 で全サイズ見張っている
+  const OPT_IN = ['M3A', 'S4L'];
+  const SHOTS = only.length ? SHOTS_ALL.filter(([n]) => only.includes(n)) : SHOTS_ALL.filter(([n]) => !OPT_IN.includes(n));
   try {
     const page0 = await browser.newPage({ viewport: { width: 390, height: 844 } });
     for (const [w, h, tag, fscale] of sizes) {
@@ -101,6 +110,7 @@ const makeRun = async (kind) => {
           // eslint-disable-next-line no-new-func
           const make = new Function(`return (${mk})`)();
           if (window.__msxRoot) { window.__msxRoot.unmount(); window.__msxRoot = null; }
+          try { msxStAptView = { id: null, on: false }; } catch (e) { /* 素質の表示は撮るたびに数の表示へ戻す */ }
           if (kind) { const run = await make(kind); localStorage.setItem(MSX_KEYS.run, JSON.stringify(run)); } else localStorage.removeItem(MSX_KEYS.run);
           localStorage.removeItem(MSX_KEYS.box); // 前の場面で置いた保存枠(seedfuse)を残さない
           const el = document.getElementById('msx-shot') || Object.assign(document.createElement('div'), { id: 'msx-shot' });
@@ -128,6 +138,7 @@ const makeRun = async (kind) => {
             if (st.startsWith('base:')) { const d = document.querySelector(`[data-msx-pick-base="${st.slice(5)}"]`); if (d) d.click(); return !!d; }
             if (st === 'gather') { const d = document.querySelector('[data-msx-gather-open]'); if (d) d.click(); return !!d; }
             if (st.startsWith('tab:')) { const d = document.querySelector(`[data-msx-detail-tab="${st.slice(4)}"]`); if (d) d.click(); return !!d; }
+            if (st.startsWith('carry:')) { const d = document.querySelector(`[data-msx-carry-item="${st.slice(6)}"]`); if (d) d.click(); return !!d; } // 持ちこみの升目を押す(持っていない物も・2026-11-14)
             if (st === 'cont') return click(/続きから/);
             if (st === 'bag') return click(/持ち物/);
             if (st === 'stats') return click(/^📊/);
@@ -135,6 +146,7 @@ const makeRun = async (kind) => {
             if (st === 'go') return click(/をする$/); // 2026-11-14 トレーニングのボタンは「丸太割りをする」のようにトレーニングの名前になった
             if (st === 'praise') { const b = document.querySelector('[data-msx-react-how="praise"]'); if (b) { b.click(); return true; } return !document.querySelector('[data-msx-react]'); } // 2026-11-14 成功のあとは叱る・褒めるの段が出ない
             if (st === 'clinic') return click(/通院/);
+            if (st === 'apt') { const r = document.querySelector('.msx [data-msx-st-toggle]'); if (!r) return false; r.click(); return true; }
             if (st === 'rest') return click(/^🛌/);
             if (st === 'kitap') { const k = document.querySelector('[data-msx-ki]'); if (!k) return false; k.click(); return true; }
             if (st === 'ki') { // 新しい期の1ターン目(期の区切りの「NEXT あと◯ターン」)を開く
@@ -210,7 +222,7 @@ const makeRun = async (kind) => {
           if (!done) check(`${name}${tag ? `(${tag})` : ''}: 「${st}」のボタンが押せる`, false);
           await page.waitForTimeout(350);
         }
-        await page.waitForTimeout(900);
+        await page.waitForTimeout(steps.some((x) => String(x).startsWith("how:")) ? 1800 : 900); // 選んだあとのゲージの動きが終わるまで待つ
         const m = await page.evaluate((fscale) => {
           const root = document.querySelector('.msx'); if (!root) return { ok: false };
           if (fscale) { // 大きい文字設定の真似: 文字の大きさを倍にする(一度だけ)

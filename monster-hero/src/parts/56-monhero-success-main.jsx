@@ -25,12 +25,40 @@ const msxReactChips = (d, polFrom, polTo) => {
   if (a !== b && typeof MSX_POLICY_SCALE !== 'undefined') out.push({ k: 'pol', name: `方針 ${MSX_POLICY_SCALE[a + 3]} → ${MSX_POLICY_SCALE[b + 3]}`, val: '', good: true });
   return out;
 };
+// 選ぶ前の小さい字: 芯の react を複製して試し、実際に動く数を出す(甘え度 +4・方針の点)
+const msxReactPreview = (s, how) => {
+  try {
+    const r = msxSuc.SUC.react(s, how);
+    if (!r || !r.out || !r.out.ok) return null;
+    const d = r.out.d || {}; const parts = [];
+    if (Math.round(d.ama)) parts.push(`甘え度 +${Math.round(d.ama)}`);
+    if (Math.round(d.fear)) parts.push(`恐れ度 +${Math.round(d.fear)}`);
+    const st = 10; const pp = r.state.pp || 0; const lim = Math.abs(r.state.pol) === 3 && Math.abs(pp) >= st - 1;
+    const side = how === 'praise' ? '甘い' : '厳しい';
+    const moved = r.state.pol !== s.pol;
+    parts.push(lim ? `方針 これ以上${side}側へは動かない` : moved ? `方針 ${side}側へ1段` : `方針 ${side}側へ1点(あと${st - Math.abs(pp)}点で次の段)`);
+    return parts.join('・');
+  } catch (e) { return null; }
+};
+// 選んだあとのひとこと(吹き出し)。同じターンなら同じ言葉
+const MSX_REACT_BUB = Object.freeze({ praise: ['やったー!', 'えへへ…', 'もっとほめて!'], scold: ['…ごめんなさい', 'わかった…!', 'つぎは がんばる!'] });
+// 選んだあと: 甘え度・恐れ度・忠誠度のゲージが前から後へ動く。変わった数は札で出す
+const MsxReactGauges = ({ from, to }) => {
+  const [on, setOn] = useState(false);
+  useEffect(() => { const t = setTimeout(() => setOn(true), 450); return () => clearTimeout(t); }, []);
+  const rows = [
+    { k: 'ama', name: '🥰 甘え度', a: from.ama, b: to.ama, w: 2, bg: 'linear-gradient(180deg,#f9a8d4,#f472b6)' },
+    { k: 'fear', name: '😨 恐れ度', a: from.fear, b: to.fear, w: 2, bg: 'linear-gradient(180deg,#7dd3fc,#3b82f6)' },
+    { k: 'loy', name: '💖 忠誠度', a: from.loy, b: to.loy, w: 1, bg: 'linear-gradient(180deg,#fde68a,#f59e0b)' },
+  ];
+  return <>{rows.map((r) => { const dd = r.b - r.a; return <div key={r.k} className="v-ga" data-msx-react-gauge={r.k}><span>{r.name}</span><div className="tr"><i style={{ width: `${(on ? r.b : r.a) * r.w}%`, background: r.bg, transition: 'width .9s ease-out' }}/></div><b>{on ? r.b : r.a}{dd ? <small> ({dd > 0 ? `+${dd}` : dd})</small> : null}</b></div>; })}</>;
+};
 const MSX_COND = Object.freeze({ injury: 'けが', ill: '病気', away: '家出' });
 const MSX_ISSA_KEYS = Object.freeze([
   { key: 'stat', icon: '💪', name: 'ステータスアップ', ok: '全能力 +50', ng: '全能力 −10・サボりグセ', line: 'stat' },
   { key: 'hpmax', icon: '🔋', name: '体力上限アップ', ok: '体力の上限 +20', ng: '体力 −20', line: 'cap' },
   { key: 'hp', icon: '❤️', name: '体力回復', ok: '体力を8割回復', ng: '体力 −30・うつ病', line: 'heal' },
-  { key: 'loyal', icon: '🤝', name: '忠誠度アップ', ok: '忠誠度 +15', ng: '忠誠度 −5', line: 'loy' },
+  { key: 'loyal', icon: '🤝', name: '忠誠度アップ', ok: '忠誠度 +15', ng: '変化なし', line: 'loy' },
   { key: 'pop', icon: '⭐', name: '人気アップ', ok: '人気 +15', ng: '人気 −5', line: 'pop' },
 ]);
 const MSX_LOT = Object.freeze({ self: 'drill', rest: 'rest', talk: 'chat', tip: 'tip', friend: 'friend' });
@@ -108,7 +136,12 @@ function msxClinicText(cured, yosu) {
   if (left.length) parts.push(`${nm(left)}は今回は治らなかった。もう1回来れば必ず治る。`);
   return parts.join(' ');
 }
-function MsxStRow({ stats, ups, main, preview = false }) {
+// 能力の列を押すと、数の下のゲージ ⇄ 素質(A〜E)を切り替える(2026-11-14 社長「ステータスを押したら素質表示に切り替えて」)。
+// どちらの表示かは、その育成のあいだ覚える(育成の id ごと・画面をまたいで同じ。保存はしない)
+let msxStAptView = { id: null, on: false };
+const msxStAptSubs = new Set();
+const msxStAptFlip = (id) => { msxStAptView = { id, on: !(msxStAptView.on && msxStAptView.id === id) }; msxStAptSubs.forEach((f) => { try { f((n) => n + 1); } catch (e) { /* 消えた画面 */ } }); };
+function MsxStRow({ stats, ups, main, preview = false, who = null }) {
   const grow = Boolean(ups) && !preview && MSX_STATS.some((k) => ups[k]);
   const calm = typeof msxFxCalm === 'function' && msxFxCalm();
   const sig = grow ? MSX_STATS.map((k) => `${stats[k]}:${ups[k] || 0}`).join('|') : '';
@@ -137,8 +170,16 @@ function MsxStRow({ stats, ups, main, preview = false }) {
   // 拡大した目盛り(両はしの数字つき)は結果のあいだずっと使い、2.6秒で戻すのは札の持ち上がりだけにする
   const zoomA = grow && !calm && !zout; // 札が持ち上がっている
   const zoomS = grow && !calm;          // 棒は拡大した目盛りで描く
+  // 素質の表示(who = 育成の状態。種と id があるときだけ押せる)
+  const [, setAptTick] = useState(0);
+  useEffect(() => { msxStAptSubs.add(setAptTick); return () => { msxStAptSubs.delete(setAptTick); }; }, []);
+  const tgId = who && who.species && who.id ? who.id : null;
+  const aptOn = !!(tgId && msxStAptView.on && msxStAptView.id === tgId);
+  const aptL = tgId && typeof msxAptOf === 'function' ? msxAptOf(who.species) : null;
+  const tgProps = tgId ? { role: 'button', tabIndex: 0, 'aria-label': aptOn ? '能力の数の表示にもどす' : '能力の素質を見る', 'data-msx-st-toggle': aptOn ? 'apt' : 'num', onClick: () => msxStAptFlip(tgId), onKeyDown: (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); msxStAptFlip(tgId); } } } : {};
   return (
-    <div className={`v-st${grow ? ' grow' : ''}${grow && on ? ' on' : ''}${grow && !calm ? ' gs-a' : ''}${zoomA ? ' zin' : ''}${zoomS ? ' zs' : ''}${zoomA && MSX_STATS.filter((k) => ups[k]).length > 3 ? ' many' : ''}`} data-msx-st-grow={grow ? (on ? 'on' : 'pre') : undefined}>
+    <div {...tgProps} className={`v-st${tgId ? ' tg' : ''}${aptOn ? ' apton' : ''}${grow ? ' grow' : ''}${grow && on ? ' on' : ''}${grow && !calm ? ' gs-a' : ''}${zoomA ? ' zin' : ''}${zoomS ? ' zs' : ''}${zoomA && MSX_STATS.filter((k) => ups[k]).length > 3 ? ' many' : ''}`} data-msx-st-grow={grow ? (on ? 'on' : 'pre') : undefined}>
+      {tgId ? <span className="v-sttg" aria-hidden="true">⇄ {aptOn ? '数' : '素質'}</span> : null}
       {MSX_STATS.map((k) => {
         const u = ups ? (ups[k] || 0) : 0;
         const after = stats[k]; const before = Math.max(0, after - (grow ? u : 0));
@@ -151,7 +192,7 @@ function MsxStRow({ stats, ups, main, preview = false }) {
         const cur = grow && u ? before + (after - before) * ease(t) : after;
         return (<div key={k} className={`${u > 0 ? 'up' : u < 0 ? 'dn' : ''}${k === main ? ' main' : ''}`}>
           <small>{MSX_STAT_ICON[k]}{MSX_STAT_NAME[k]}</small><b>{grow && u ? Math.round(before + (after - before) * ease(t)) : stats[k]}</b>
-          {grow && u ? <u className="g" style={tick}><i style={{ width: zp(u > 0 ? cur : after) }}/>{u > 0 ? <s className="gu" style={{ left: zp(before), width: `calc(${zp(cur)} - ${zp(before)})` }}/> : <s className="gd" style={{ left: zp(after), width: `calc(${zp(before)} - ${zp(after)})` }}/>}{zoomS ? <q className="zl"><span>{lo}</span><span>{lo + span}</span></q> : null}</u>
+          {aptOn && aptL ? <span className={`ap a${aptL[MSX_STATS.indexOf(k)]}`}>素質 {aptL[MSX_STATS.indexOf(k)]}</span> : grow && u ? <u className="g" style={tick}><i style={{ width: zp(u > 0 ? cur : after) }}/>{u > 0 ? <s className="gu" style={{ left: zp(before), width: `calc(${zp(cur)} - ${zp(before)})` }}/> : <s className="gd" style={{ left: zp(after), width: `calc(${zp(before)} - ${zp(after)})` }}/>}{zoomS ? <q className="zl"><span>{lo}</span><span>{lo + span}</span></q> : null}</u>
             : <u><i style={{ width: pct(after) }}/></u>}
           {ups ? <em>{u > 0 ? `+${u}` : u < 0 ? `−${-u}` : ''}</em> : null}</div>);
       })}
@@ -503,7 +544,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
           {isTrain && o.card && o.card.tags && o.card.tags.length ? <small>🤝 友情タッグ ×{o.card.tags.length}{o.result === 'great' ? '・伸び ×1.5' : ''}</small> : null}</div>}
         {!acting && typeof MsxBondChips === 'function' ? <MsxBondChips s={s} card={o.card} add={(SUC.BOND && SUC.BOND.train) || 8}/> : !acting && members.length ? <div className="v-chips" style={{ top: 'auto', bottom: 8 }}>{members.map((m, i) => <span key={i} className="v-chip">{msxMemberName(m)} 親密度 +{(SUC.BOND && SUC.BOND.train) || 8}</span>)}</div> : null}
       </div>
-      {isTrain ? <MsxStRow stats={s.stats} ups={acting ? null : gains} main={o.card && o.card.stat}/> : null}
+      {isTrain ? <MsxStRow who={s} stats={s.stats} ups={acting ? null : gains} main={o.card && o.card.stat}/> : null}
       {acting ? <div className="v-log" style={{ opacity: .35 }}><span className="hd2">{msxTrainIcon(o.card.stat, tlv)} {msxTrainName(o.card.stat, tlv)}をしている…</span></div> : <div className="v-log">
         {isTrain && o.lvUp ? <div className="v-lvup">⬆ トレーニングLvアップ! {MSX_STAT_ICON[o.card.stat]} {MSX_STAT_NAME[o.card.stat]} <b>Lv.{o.trainLv - 1} → Lv.{o.trainLv}</b><small>次から、{MSX_STAT_NAME[o.card.stat]}のトレーニングの基本の伸びが上がる</small></div> : null}
         {isTrain ? <><span className="hd2">{msxTrainIcon(o.card.stat, tlv)} {msxTrainName(o.card.stat, tlv)}({MSX_STAT_NAME[o.card.stat]}のトレーニング)</span><br/>
@@ -528,8 +569,11 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
   // ---- 覚醒・超覚醒(56-monsuc-awake.jsx の演出)。終わったら、ターンのはじめならメインへ・ターンの終わりなら閉じる ----
   else if (phase === 'awake' && run.out && run.out.fire && typeof MsxAwakeShow === 'function') {
     const f = run.out.fire; const then = run.out.then;
-    const done = () => { if (typeof msxSeenMark === 'function') msxSeenMark(f.kind === 2 ? 'aw.super' : 'aw.awake'); const next = pushLog({ ...run, out: null }, f.kind === 2 ? '超覚醒した!' : '覚醒した!'); if (then === 'end') endTurnFlow({ ...next, phase: 'main' }); else toMain(next); };
-    body = <MsxAwakeShow key={`${s.turn}-${f.kind}`} run={run} fire={f} v={v} ev={ev} line={line}/>;
+    const done = () => { if (typeof msxSeenMark === 'function') msxSeenMark(f.kind === 2 ? 'aw.super' : 'aw.awake'); const next = pushLog({ ...run, out: null }, f.kind === 2 ? '超覚醒した!' : '覚醒した!'); const rest = Array.isArray(run.out.rest) ? run.out.rest : []; if (rest.length) setRun({ ...next, phase: 'awake', out: { fire: rest[0], rest: rest.slice(1), then } }); else if (then === 'item') setRun({ ...next, phase: 'main' }); else if (then === 'end') endTurnFlow({ ...next, phase: 'main' }); else toMain(next); };
+    // 超覚醒の実で 覚醒 → 超覚醒 と続くとき、1つ目の演出の数字はあとの分を引いて見せる(能力はもう両方ぶん上がっている)
+    const later = Array.isArray(run.out.rest) ? run.out.rest : [];
+    const showRun = later.length ? { ...run, s: { ...s, stats: Object.fromEntries(Object.entries(s.stats).map(([k, x]) => [k, x - later.reduce((a, r) => a + ((r.ups && r.ups[k]) || 0), 0)])) } } : run;
+    body = <MsxAwakeShow key={`${s.turn}-${f.kind}`} run={showRun} fire={f} v={v} ev={ev} line={line}/>;
     foot = <div className="v-ft"><button type="button" className="go" onClick={done} data-msx-awake-next>つぎへ ▶</button></div>;
   }
   // ---- 出来事(ランダムイベント・助手の連続イベント) ----
@@ -548,7 +592,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
     const choose = (how) => {
       const r = SUC.react(s, how);
       if (!how || !r.out || !r.out.ok) { afterAct({ ...run, s: r.out && r.out.ok ? r.state : s, phase: 'main' }); return; }
-      setRun({ ...run, s: r.state, out: { ...(run.out || {}), reacted: { how, d: r.out.d, polFrom: r.out.polFrom, scene: r.out.scene } } });
+      setRun({ ...run, s: r.state, out: { ...(run.out || {}), reacted: { how, d: r.out.d, polFrom: r.out.polFrom, scene: r.out.scene, from: { ama: s.ama, fear: s.fear, loy: loy } } } });
     };
     const resIcon = sc === 'shugyo' ? '⛰️' : (MSX_RES[sc] || MSX_RES.ok).icon;
     const resWord = sc === 'shugyo' ? '修行' : (MSX_RES[sc] || MSX_RES.ok).word;
@@ -557,13 +601,13 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
       <MsxBand s={s} v={v} ev={ev}/>
       <div className="v-scene dk" style={{ flex: '1 1 0' }}>
         <img className="bg" src={`images/story-bg/${sc === 'shugyo' ? 'forest_evening' : (MSX_RES[sc] || MSX_RES.ok).bg}.jpg`} alt=""/><div className="sh"/>
-        <div className="v-strip"/><img className="v-body2" src={msxBody(s.aid, done ? (done.how === 'praise' ? 'happy' : 'normal') : sc === 'great' || sc === 'shugyo' ? 'happy' : 'troubled')} alt=""/>
+        <div className="v-strip"/><img className={`v-body2${done ? (done.how === 'praise' ? ' rx-hop' : ' rx-sag') : ''}`} src={msxBody(s.aid, done ? (done.how === 'praise' ? 'happy' : 'normal') : sc === 'great' || sc === 'shugyo' ? 'happy' : 'troubled')} alt=""/>{done && MSX_REACT_BUB[done.how] ? <div className="rx-bub" data-msx-react-bub>{MSX_REACT_BUB[done.how][s.turn % 3]}</div> : null}
         <div className="v-chips"><span className="v-chip ylw">{resIcon} {resWord}のあと</span></div>
         <div className="v-q" data-msx-react={sc || 'none'}>
           {done ? <div className="ask" data-msx-react-done={done.how}>{(RC && RC[done.how] ? RC[done.how].after : '').replace('{mon}', run.nick)}</div>
             : <div className="ask">{RC ? RC.ask.replace('{mon}', run.nick) : `${run.nick}のようすを見守った。`}</div>}
           {!done && RC ? <div className="bt">
-            {RC.order.map((how) => <button key={how} type="button" className={`v-ch${how === 'scold' ? ' b' : ''}`} onClick={() => choose(how)} data-msx-react-how={how}><span style={JA_LABEL_STYLE}>{jaWrap(RC[how].t)}</span><small style={JA_LABEL_STYLE}>{jaWrap(how === 'praise' ? '甘え度 +・方針が甘いほうへ' : '恐れ度 +・方針が厳しいほうへ')}</small></button>)}
+            {RC.order.map((how) => <button key={how} type="button" className={`v-ch${how === 'scold' ? ' b' : ''}`} onClick={() => choose(how)} data-msx-react-how={how}><span style={JA_LABEL_STYLE}>{jaWrap(RC[how].t)}</span><small style={JA_LABEL_STYLE} data-msx-react-pv={how}>{jaWrap(msxReactPreview(s, how) || (how === 'praise' ? '方針が甘い側へ' : '方針が厳しい側へ'))}</small></button>)}
             <button type="button" className="v-ch n" onClick={() => choose(null)}>なにもしない(方針はそのまま)</button>
           </div> : null}
         </div>
@@ -572,14 +616,15 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
         {chips.length ? chips.map((c, i) => <span key={c.k}>{i ? '・' : ''}{c.name}{c.val ? <> <b className={c.good ? 'gu' : ''} style={c.good ? undefined : { color: '#dc2626' }}>{c.val}</b></> : null}</span>) : '変わったことはなかった'}</div> : null}
       <div className="v-pol"><div className="l"><span>超溺愛</span><span>甘い</span><span style={{ color: '#fde047' }}>いまの方針: {MSX_POLICY_SCALE[pol + 3]}</span><span>厳しい</span><span>超スパルタ</span></div>
         <div className="m">{MSX_POLICY_SCALE.map((n, i) => <i key={n} className={i === pol + 3 ? 'on' : ''}/>)}</div>
-        <div className="two">
-          <div className="v-ga"><span>🥰 甘え度</span><div className="tr"><i style={{ width: `${s.ama * 2}%`, background: 'linear-gradient(180deg,#f9a8d4,#f472b6)' }}/></div><b>{s.ama}</b></div>
-          <div className="v-ga"><span>😨 恐れ度</span><div className="tr"><i style={{ width: `${s.fear * 2}%`, background: 'linear-gradient(180deg,#7dd3fc,#3b82f6)' }}/></div><b>{s.fear}</b></div></div>
-        <div style={{ fontSize: 10.5, color: '#cbd5e1', fontWeight: 700, marginTop: 4 }}>忠誠度 {loy} = 甘え度 {s.ama} + 恐れ度 {s.fear}。甘すぎるとサボりやすく、厳しすぎるとストレスがたまりやすい</div></div>
+        <div className="two">{done && done.from
+          ? <MsxReactGauges from={done.from} to={{ ama: s.ama, fear: s.fear, loy }}/>
+          : <><div className="v-ga"><span>🥰 甘え度</span><div className="tr"><i style={{ width: `${s.ama * 2}%`, background: 'linear-gradient(180deg,#f9a8d4,#f472b6)' }}/></div><b>{s.ama}</b></div>
+          <div className="v-ga"><span>😨 恐れ度</span><div className="tr"><i style={{ width: `${s.fear * 2}%`, background: 'linear-gradient(180deg,#7dd3fc,#3b82f6)' }}/></div><b>{s.fear}</b></div></>}</div>
+        <div style={{ fontSize: 10.5, color: '#cbd5e1', fontWeight: 700, marginTop: 4, ...JA_LABEL_STYLE }}>{jaWrap(`忠誠度 ${loy} = 甘え度 ${s.ama} + 恐れ度 ${s.fear}。甘すぎるとサボりやすく、厳しすぎるとストレスがたまりやすい`)}</div></div>
     </>);
     foot = done || !RC || s.reacted
       ? <div className="v-ft"><button type="button" className="go" onClick={() => afterAct({ ...run, out: run.out ? { ...run.out, reacted: undefined } : run.out, phase: 'main' })} data-msx-react-next>つぎへ ▶</button></div>
-      : <div className="v-ft"><button type="button" onClick={() => choose(null)}>⏩ とばす</button><button type="button" className="on" disabled>えらんでね</button></div>;
+      : <div className="v-ft"><button type="button" onClick={() => choose(null)}>⏩ とばす</button><button type="button" className="on" disabled>選んでね</button></div>;
   }
   // ---- イッサ博士 ----
   else if (phase === 'issa') {
@@ -653,7 +698,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
           {trainLv ? <div className="v-lvx"><b>トレーニングLv.{trainLv}</b><i><u style={{ width: `${card.next ? Math.max(0, 100 - card.next * 20) : 100}%` }}/></i><span>{trainLv >= 5 ? 'Lv が いちばん上' : card.next ? `あと${card.next}回で Lvアップ` : ''}</span></div> : null}
         </div>}
       </div>
-      <MsxStRow stats={s.stats} ups={pv ? pv.gain : null} main={stat} preview/>
+      <MsxStRow who={s} stats={s.stats} ups={pv ? pv.gain : null} main={stat} preview/>
       <div className="v-trs" data-msx-train-swipe-row {...swipeOn}>
         {MSX_STATS.map((k) => { const c = msxCardOf(v, k); const lv = lvOf(c); return (
           <button type="button" key={k} className={`v-tr${c && c.tags.length ? ' tag' : ''}${k === stat ? ' sel' : ''}`} onClick={() => setSel(k)}>
@@ -693,7 +738,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
         <button type="button" className="v-bagb" onClick={() => setSub('bag')}>🎒<small>持ち物</small>{bag.length ? <i>{bag.length}</i> : null}</button>
         <button type="button" className="v-bagb r" data-msx-detail-open onClick={() => setDetail(true)}>🔍<small>くわしく</small></button>
       </div>
-      <MsxStRow stats={s.stats}/>
+      <MsxStRow who={s} stats={s.stats}/>
       {preOn ? (
         <div className="v-act v-act-pre" style={{ gridTemplateColumns: '1fr 1.5fr' }} data-msx-pre-main>
           <button type="button" className="v-p" onClick={() => setSub('stats')}><div className="e">📊</div>能力<small>技・型・編成</small>{s.pts ? <span className="bd">能力P {s.pts}</span> : null}</button>
@@ -717,10 +762,10 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
         </div>
       </>)}
     </>);
-    foot = <div className="v-ft"><button type="button" onClick={onPause}>← 中断</button><button type="button" onClick={() => setSheet('log')}>📖 きろく</button><button type="button" onClick={() => setSheet('menu')}>☰ メニュー</button></div>;
+    foot = <div className="v-ft"><button type="button" onClick={onPause}>← 中断</button><button type="button" onClick={() => setSheet('log')}>📖 記録</button><button type="button" onClick={() => setSheet('menu')}>☰ メニュー</button></div>;
     if (sub === 'bag') body = <MsxBag run={run} setRun={setRun} v={v} ev={ev} onClose={() => setSub('main')}/>;
     if (sub === 'stats') body = <MsxStats run={run} setRun={setRun} v={v} ev={ev} onClose={() => setSub('main')}/>;
-    if (sub === 'bag' || sub === 'stats') foot = <div className="v-ft"><button type="button" onClick={() => setSub('main')}>← もどる</button></div>;
+    if (sub === 'bag' || sub === 'stats') foot = <div className="v-ft"><button type="button" onClick={() => setSub('main')}>← 戻る</button></div>;
   }
 
   return (
@@ -738,7 +783,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
       {sheet && sheet !== 'dex' && (
         <div className="msx-ov msx-fade" onClick={() => setSheet(null)}>
           <div className="msx-sheet" onClick={(e) => e.stopPropagation()}>
-            {sheet === 'log' ? <><h3>📖 きろく</h3>{(run.log || []).length ? run.log.slice().reverse().map((l, i) => <div key={i} className="msx-note">{l.turn}ターン目: {l.t}</div>) : <div className="msx-note">まだありません</div>}</>
+            {sheet === 'log' ? <><h3>📖 記録</h3>{(run.log || []).length ? run.log.slice().reverse().map((l, i) => <div key={i} className="msx-note">{l.turn}ターン目: {l.t}</div>) : <div className="msx-note">まだありません</div>}</>
               : sheet === 'menu' ? <><h3>☰ メニュー</h3>
                 <div className="msx-note">育成方針: {MSX_POLICY_SCALE[Math.max(-3, Math.min(3, s.pol || 0)) + 3]}(褒めると甘く・叱ると厳しくなる)</div>
                 <div className="msx-note">成長の型: {typeof MASMON_CALC !== 'undefined' ? MASMON_CALC.typeOf(s.type).name : '—'}</div>
@@ -770,7 +815,7 @@ const MSX_EXTRA_ITEM = Object.freeze({ oil: { e: '🫙', desc: '体力を上限�
   stamina: { e: '🍡', desc: '体力の最大値 +15(体力も15回復)' } });
 const msxItemView = (k) => {
   const base = MSX_ITEM_BY_ID[k]; const core = msxSuc && msxSuc.SUC.ITEMS ? msxSuc.SUC.ITEMS[k] : null; const ex = MSX_EXTRA_ITEM[k];
-  return { id: k, name: (base && base.name) || (core && core.name) || k, desc: typeof msxItemFx === 'function' && msxItemFx(k) ? `${(base && base.desc) || (ex && ex.desc) || ''}。効き目: ${msxItemFx(k)}` : (base && base.desc) || (ex && ex.desc) || '', e: (base && base.e) || (ex && ex.e) || '🎁', during: core ? core.use === 'during' : !!(base && base.when === 'both') };
+  return { id: k, name: (base && base.name) || (core && core.name) || k, desc: typeof msxItemFx === 'function' && msxItemFx(k) ? (base && typeof msxItemDesc === 'function' ? msxItemDesc(k) : msxItemFx(k)) : (base && base.desc) || (ex && ex.desc) || '', /* 効き目だけ(2026-11-14 社長) */ e: (base && base.e) || (ex && ex.e) || '🎁', during: core ? core.use === 'during' : !!(base && base.when === 'both') };
 };
 function MsxBag({ run, setRun, v, ev, onClose }) {
   const { SUC } = msxSuc;
@@ -785,8 +830,12 @@ function MsxBag({ run, setRun, v, ev, onClose }) {
     if (!t || t.carry || usedNow || typeof SUC.useItem !== 'function') return;
     const r = SUC.useItem(s, t.id);
     if (!r || !r.out || !r.out.ok) return;
-    setRun({ ...run, s: r.state, log: [...(run.log || []), { turn: s.turn, t: `${t.name}を使った` }].slice(-20) });
+    const log = [...(run.log || []), { turn: s.turn, t: `${t.name}を使った` }].slice(-20);
+    // 覚醒の実・超覚醒の実: その場で覚醒の演出(超覚醒の実で覚醒前なら 覚醒 → 超覚醒 の2つを続けて)。終わったらメインへ
+    if (Array.isArray(r.out.fires) && r.out.fires.length && typeof MsxAwakeShow === 'function') { setRun({ ...run, s: r.state, log, phase: 'awake', out: { fire: r.out.fires[0], rest: r.out.fires.slice(1), then: 'item' } }); onClose(); return; }
+    setRun({ ...run, s: r.state, log });
   };
+  const blocked = t && !t.carry && typeof SUC.itemUsable === 'function' && !SUC.itemUsable(s, t.id); // 覚醒の実の期の条件・覚醒ずみ
   return (<>
     <MsxBand s={s} v={v} ev={ev}/>
     <div className="v-scene home dk" style={{ flex: '1 1 0' }}><img className="bg" src={msxSceneBg(s.turn).bg} alt=""/><div className="sh"/>
@@ -794,17 +843,17 @@ function MsxBag({ run, setRun, v, ev, onClose }) {
         <div className="t">🎒 持ち物<small>使えるのは 1ターンに1個まで・使ってもターンは進まない</small><button type="button" onClick={onClose}><i>✕</i></button></div>
         {t ? <div className="v-bsel"><span className="e" style={{ fontSize: 26 }}>{t.e}</span><div><b>{t.name}{t.n ? <span className="yel"> ×{t.n}</span> : null}</b><small>{t.desc}</small><small className="lim">{t.carry ? 'はじめる前から効いている' : 'いつ使える: 自分のターン'}</small></div></div> : null}
         <div className="v-bgrid">
-          {bagList.map((x) => <button type="button" key={x.id} className={pick === x.id ? 'sel' : ''} onClick={() => setPick(x.id)}><span className="e" style={{ fontSize: 22 }}>{x.e}</span><i>×{x.n}</i><small style={JA_LABEL_STYLE}>{msxItemNameNode(x.name)}</small></button>)}
-          {carryList.map((x) => <button type="button" key={`c-${x.id}`} className={`no${pick === x.id ? ' sel' : ''}`} onClick={() => setPick(x.id)}><span className="e" style={{ fontSize: 22 }}>{x.e}</span><small style={JA_LABEL_STYLE}>{msxItemNameNode(x.name)}</small></button>)}
-          <div className="no"><span className="e">⏳</span><i>×{sand}</i><small>時渡りの砂時計</small></div><div className="no"><span className="e">🌈</span><i>×{rainbow}</i><small>虹の時渡りの砂時計</small></div>
+          {bagList.map((x) => <button type="button" key={x.id} className={pick === x.id ? 'sel' : ''} onClick={() => setPick(x.id)}><span className="e" style={{ fontSize: 22 }}>{x.e}</span><i>×{x.n}</i><small style={JA_LABEL_STYLE}>{msxItemNameNode(x.name.replace('ガロエ印の', ''))}</small></button>)}
+          {carryList.map((x) => <button type="button" key={`c-${x.id}`} className={`no${pick === x.id ? ' sel' : ''}`} onClick={() => setPick(x.id)}><span className="e" style={{ fontSize: 22 }}>{x.e}</span><small style={JA_LABEL_STYLE}>{msxItemNameNode(x.name.replace('ガロエ印の', ''))}</small></button>)}
+          <div className="no"><span className="e">⏳</span><i>×{sand}</i><small style={JA_LABEL_STYLE}>{msxItemNameNode('時渡りの砂時計')}</small></div><div className="no"><span className="e">🌈</span><i>×{rainbow}</i><small style={JA_LABEL_STYLE}>{msxItemNameNode('虹の時渡りの砂時計')}</small></div>
         </div>
         {!bagList.length && !carryList.length ? <div className="msx-note">持ちこんだ物はありません</div> : null}
-        <div className="v-bnote">⏳ 時渡りの砂時計: バトルに敗北したときにやり直せる<br/>🌈 虹の時渡りの砂時計: 敗北したとき相手を変えてやり直せる<br/><span className="dim2">(うすい物はここでは使わない。砂時計は大会で負けたときに使う・大会は次の回で入ります)</span></div>
-        <button type="button" className="v-big" style={{ fontSize: 14, padding: 9, marginTop: 0, color: '#fff' }} disabled={!t || t.carry || usedNow} onClick={use}>
-          {usedNow ? 'このターンはもう使った' : t && !t.carry ? `${t.e} ${t.name}を使う` : '使う'}</button>
+        <div className="v-bnote">⏳ 時渡りの砂時計: バトルに敗北したときにやり直せる<br/>🌈 虹の時渡りの砂時計: 敗北したとき相手を変えてやり直せる<br/><span className="dim2" style={JA_WRAP_STYLE}>{jaWrap('色のうすい物は、ここでは使えません(はじめる前から効く物・大会で負けたときの砂時計)')}</span></div>
+        <button type="button" className="v-big" style={{ fontSize: 14, padding: 9, marginTop: 0, color: '#fff' }} disabled={!t || t.carry || usedNow || blocked} onClick={use}>
+          {usedNow ? 'このターンはもう使った' : blocked ? 'いまは使えない' : t && !t.carry ? `${t.e} ${t.name}を使う` : '使う'}</button>
       </div>
     </div>
-    <MsxStRow stats={s.stats}/>
+    <MsxStRow who={s} stats={s.stats}/>
   </>);
 }
 
@@ -909,7 +958,7 @@ function MsxEvent({ run, setRun, v, ev, ctx, bondLv, onDone }) {
       <div className="v-talk">{shown.length ? shown.map((l, i) => <div key={i}>{who(l) ? <span className="who">{who(l)}</span> : null}{who(l) ? `「${l.t}」` : l.t}</div>) : <div>{picked ? '…' : 'なにか起きそうだ…'}</div>}</div>
     </div>
     {picked ? (<>
-      {Object.keys(ups).length ? <MsxStRow stats={s.stats} ups={ups}/> : null}
+      {Object.keys(ups).length ? <MsxStRow who={s} stats={s.stats} ups={ups}/> : null}
       {!isStory && typeof MsxEvResult === 'function' ? <MsxEvResult delta={picked.delta} hasStats={Object.keys(ups).length > 0}/> : null}
       {gotGift ? <div className="v-log" data-msx-ev-gift>{giftItem.e} <b className="gu">{giftItem.name}</b> を手に入れた!(🎒持ち物に入った)<br/><small>{giftItem.desc}</small></div> : null}
       {picked.apt ? <div className="v-log" data-msx-ev-apt>📏 「{['零', '近', '中', '遠'][picked.apt.dist]}」の間合い適性が <b className="ga">{picked.apt.from} → {picked.apt.grade}</b> に上がった!</div> : null}
