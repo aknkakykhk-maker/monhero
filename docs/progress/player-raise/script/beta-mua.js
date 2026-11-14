@@ -152,8 +152,8 @@ const MONSUC_SCRIPT_BETA_MUA = Object.freeze([
   // 引退
   { id:'tut.retire.mua1', who:'mua', e:'happy', t:'育成はここまで！ 最後の総合力で評価が決まるよ' },
   { id:'tut.retire.mua1b', who:'mua', e:'happy', bond:[1,2], t:'育成はここまでです。最後の総合力で、評価が決まります。' },
-  { id:'tut.retire.mua2', who:'mua', e:'normal', t:'もらったポイントでアシスト能力を選んでね。次の育成でこのモンスターを編成に連れていくと、効いてくれるの' },
-  { id:'tut.retire.mua2b', who:'mua', e:'normal', bond:[1,2], t:'もらったポイントで、アシスト能力を選んでください。次の育成でこのモンスターを編成に連れていくと、効いてくれます。' },
+  { id:'tut.retire.mua2', who:'mua', e:'normal', t:'もらったポイントでアシスト効果を選んでね。次の育成でこのモンスターを編成に連れていくと、効いてくれるの' },
+  { id:'tut.retire.mua2b', who:'mua', e:'normal', bond:[1,2], t:'もらったポイントで、アシスト効果を選んでください。次の育成でこのモンスターを編成に連れていくと、効いてくれます。' },
   { id:'tut.retire.mua3', who:'mua', e:'wink', t:'引退しても、いなくなるわけぢゃないよ！ 保存枠に入って、名前や色もあとから変えられるからね' },
   { id:'tut.retire.mua3b', who:'mua', e:'wink', bond:[1,2], t:'引退しても、いなくなるわけではありません。保存枠に入って、名前や色もあとから変えられますよ。' },
 ]);
