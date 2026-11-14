@@ -18,6 +18,9 @@ function MsxR3Shugyo({ run, setRun, v, ev, onBack, onPause }) {
   // 結果の前の段(助手の一言 → STAGE 1 → STAGE 2。56-monsuc-actfx.jsx)。押した直後だけ・保存しない
   const [stOn, setStOn] = useState(false);
   useSuccessSound('ascetic', { season: msxCalendar(s0.turn).season });
+  // 段のあと、結果の字が出たときに 覚えた/覚えなかった の音(2026-11-14 社長「修行の結果にも SE を」)
+  const qRes = res && !stOn ? ((res.out.learnedAll && res.out.learnedAll.length) || res.out.learned ? 'qLearn' : 'qMiss') : null;
+  useEffect(() => { if (qRes && typeof SuccessSound !== 'undefined') SuccessSound.se(qRes, 150); }, [qRes]);
   const all = typeof SUC.techsOf === 'function' ? SUC.techsOf(s0.species) : [];
   const superLeft = typeof SUC.superLeft === 'function' ? SUC.superLeft(s0) : 0;
   const isSuper = want.length >= 2;
