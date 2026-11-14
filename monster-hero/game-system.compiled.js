@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 0e982d186c9156f7
+// source-sha256: cac551d70ef33305
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -150509,6 +150509,23 @@ const monsucBuffsOf = mods => {
 const mscNum = (v, d = 0) => Number.isFinite(Number(v)) ? Number(v) : d;
 const mscMonName = sp => (typeof ALL_PLAYER_MONSTERS !== 'undefined' && ALL_PLAYER_MONSTERS[sp] ? ALL_PLAYER_MONSTERS[sp].name : sp) || '';
 const mscMonImg = sp => (typeof ALL_PLAYER_MONSTERS !== 'undefined' && ALL_PLAYER_MONSTERS[sp] ? ALL_PLAYER_MONSTERS[sp].imgUrl : '') || '';
+const mscDyed = colors => Array.isArray(colors) && colors.some(Boolean) && typeof DyedMonsterImage === 'function';
+const MscMyMon = ({
+  sp,
+  colors,
+  className
+}) => mscDyed(colors) ? React.createElement(DyedMonsterImage, {
+  baseId: sp,
+  src: mscMonImg(sp),
+  masuColors: colors,
+  alt: "",
+  draggable: false,
+  className: className
+}) : React.createElement("img", {
+  className: className,
+  src: mscMonImg(sp),
+  alt: ""
+});
 const mscAssistant = id => typeof ASSISTANT_LIST !== 'undefined' ? ASSISTANT_LIST.find(a => a.id === id) || ASSISTANT_LIST[0] : null;
 const mscFace = (id, ex) => {
   const a = mscAssistant(id);
@@ -150958,7 +150975,10 @@ function MonsucBracket({
     className: "msc-tag ch"
   }, "👑王者")), React.createElement("span", {
     className: `msc-face ${e.you ? 'you' : i === 4 ? 'foe' : ''}`
-  }, React.createElement("img", {
+  }, e.you ? React.createElement(MscMyMon, {
+    sp: e.species,
+    colors: info.colors
+  }) : React.createElement("img", {
     src: mscMonImg(e.species),
     alt: ""
   })))), React.createElement("svg", {
@@ -151071,9 +151091,9 @@ function MonsucBattleCard({
   }, info.title, " ", MSC_STARS(info.star), "・1戦"), React.createElement("div", {
     className: "mon a"
   }, (() => {
-    const im = React.createElement("img", {
-      src: mscMonImg(s.species),
-      alt: ""
+    const im = React.createElement(MscMyMon, {
+      sp: s.species,
+      colors: info.colors
     });
     const k = s.awake && typeof msxKiraOf === 'function' ? msxKiraOf(s.awake) : null;
     return k && typeof cardKiraWrap === 'function' ? cardKiraWrap(k, im, {
@@ -151229,10 +151249,10 @@ function MonsucCutin({
     className: "sub"
   }, sp.sub), React.createElement("div", {
     className: "duo"
-  }, React.createElement("img", {
+  }, React.createElement(MscMyMon, {
     className: "a",
-    src: mscMonImg(s.species),
-    alt: ""
+    sp: s.species,
+    colors: info.colors
   }), React.createElement("img", {
     src: mscMonImg(o.species),
     alt: ""
@@ -151357,9 +151377,9 @@ function MonsucCupWin({
   }, "優勝!"), React.createElement("div", {
     className: "who"
   }, (() => {
-    const im = React.createElement("img", {
-      src: mscMonImg(s.species),
-      alt: ""
+    const im = React.createElement(MscMyMon, {
+      sp: s.species,
+      colors: info.colors
     });
     const k = s.awake && typeof msxKiraOf === 'function' ? msxKiraOf(s.awake) : null;
     return k && typeof cardKiraWrap === 'function' ? cardKiraWrap(k, im, {
@@ -151437,9 +151457,9 @@ function MonsucCupLose({
   }, info.title, " ", MSC_STARS(info.star), "・", o.name || mscMonName(o.species), " に 負け"), React.createElement("div", {
     className: "who"
   }, (() => {
-    const im = React.createElement("img", {
-      src: mscMonImg(s.species),
-      alt: ""
+    const im = React.createElement(MscMyMon, {
+      sp: s.species,
+      colors: info.colors
     });
     const k = s.awake && typeof msxKiraOf === 'function' ? msxKiraOf(s.awake) : null;
     return k && typeof cardKiraWrap === 'function' ? cardKiraWrap(k, im, {
@@ -151526,7 +151546,11 @@ function MonsucCupShowInner({
   }, [phase]);
   const info = useMemo(() => {
     if (!s || !s.battle) return null;
-    const i0 = monsucCupInfo(suc, s, me);
+    const i1 = monsucCupInfo(suc, s, me);
+    const i0 = me && Array.isArray(me.colors) ? {
+      ...i1,
+      colors: me.colors.slice(0, 6)
+    } : i1;
     const i = title ? {
       ...i0,
       title
@@ -170201,16 +170225,19 @@ function MsxR3Battle({
   });
   const skip = typeof SUC.canSkip === 'function' && SUC.canSkip(s);
   const foeName = opp.name || msxMonName(opp.species);
-  if (showOn) {
+  const showDbg = debug && typeof MonsucCupShow === 'function' && (step === 'card' || step === 'watch');
+  if (showOn || showDbg) {
     return React.createElement(MsxR3Frame, {
       run: run,
       back: "中断",
       onBack: onPause,
       body: React.createElement(MonsucCupShow, {
+        startAt: showDbg ? 'card' : undefined,
         suc: SUC,
         s: s,
         me: {
-          name: run.nick || msxMonName(s.species)
+          name: run.nick || msxMonName(s.species),
+          colors: Array.isArray(run.colors) ? run.colors : null
         },
         title: b.kind === 'cup' ? msxR3CupName(b.sys) : name,
         opp: {
@@ -174271,7 +174298,14 @@ function MsaFighter({
   };
   const sp = member ? member.species : '';
   const src = mscMonImg(sp);
-  const img = React.createElement("img", {
+  const img = member && Array.isArray(member.colors) && member.colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? React.createElement(DyedMonsterImage, {
+    baseId: sp,
+    src: src,
+    masuColors: member.colors,
+    alt: member.name || '',
+    draggable: false,
+    className: `msa-img ${side === 'A' ? 'msa-flip' : ''}`
+  }) : React.createElement("img", {
     className: `msa-img ${side === 'A' ? 'msa-flip' : ''}`,
     src: src,
     alt: member ? member.name : '',
@@ -175078,7 +175112,13 @@ function MsaStage({
     className: "ttl"
   }, introTitle || '試合開始'), React.createElement("div", {
     className: "pa"
-  }, mA ? React.createElement("img", {
+  }, mA ? Array.isArray(mA.colors) && mA.colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? React.createElement(DyedMonsterImage, {
+    baseId: mA.species,
+    src: mscMonImg(mA.species),
+    masuColors: mA.colors,
+    alt: "",
+    draggable: false
+  }) : React.createElement("img", {
     src: mscMonImg(mA.species),
     alt: ""
   }) : null, React.createElement("span", {
@@ -175189,6 +175229,20 @@ function MonsucArena({
     }, 1700);
     return () => clearTimeout(t);
   }, [ended]);
+  const stageTeams = useMemo(() => {
+    const c = info && Array.isArray(info.colors) && info.colors.some(Boolean) ? info.colors : null;
+    if (!c || !teams.A || !Array.isArray(teams.A.members)) return teams;
+    return {
+      ...teams,
+      A: {
+        ...teams.A,
+        members: teams.A.members.map((m, i) => i === 0 && m ? {
+          ...m,
+          colors: c
+        } : m)
+      }
+    };
+  }, [teams.A, teams.B, info && info.colors]);
   const fShowH = useMsaShownFrame(log, frames, pos, teams, (MSA_SPEEDS.find(x => x.id === speed) || MSA_SPEEDS[0]).f);
   if (!log.length) return React.createElement("div", {
     className: "msc-wrap"
@@ -175253,7 +175307,7 @@ function MonsucArena({
     log: log,
     frames: frames,
     pos: pos,
-    teams: teams,
+    teams: stageTeams,
     venueImg: msaVenueBg(info.venue, bg),
     ended: ended,
     win: result ? result.winner : null,

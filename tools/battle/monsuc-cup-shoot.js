@@ -79,7 +79,7 @@ const SCENES = [
           const old = document.getElementById('msc-shoot'); if (old && old.__root) old.__root.unmount(); if (old) old.remove();
           const div = document.createElement('div'); div.id = 'msc-shoot'; document.body.appendChild(div);
           const root = ReactDOM.createRoot(div); div.__root = root;
-          root.render(React.createElement(MonsucCupShow, { suc: SUC, s, me: { name: 'もちまる' }, startAt: sc.startAt, opp: { loy: 60, pop: 38 }, title: sc.state === 'rival' ? '春の大会' : sc.state === 'champ' ? 'ちから自慢の大会' : undefined,
+          root.render(React.createElement(MonsucCupShow, { suc: SUC, s, me: { name: 'もちまる', colors: ['custom:210:70:85', 'custom:120:60:70', null] /* 染めた色(育てるモンスターは染めた絵で出る) */ }, startAt: sc.startAt, opp: { loy: 60, pop: 38 }, title: sc.state === 'rival' ? '春の大会' : sc.state === 'champ' ? 'ちから自慢の大会' : undefined,
             previewOut: { prize: 750, tickets: 1, rows: [
               { i: '💪', k: '全能力', v: '+12(ライバルに勝った・主なごほうび)', big: true },
               { i: '🏅', k: '称号', v: '「春の覇者」「ライバルに勝った」' },

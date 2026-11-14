@@ -69,6 +69,11 @@ const monsucBuffsOf = (mods) => {
 const mscNum = (v, d = 0) => (Number.isFinite(Number(v)) ? Number(v) : d);
 const mscMonName = (sp) => ((typeof ALL_PLAYER_MONSTERS !== 'undefined' && ALL_PLAYER_MONSTERS[sp]) ? ALL_PLAYER_MONSTERS[sp].name : sp) || '';
 const mscMonImg = (sp) => ((typeof ALL_PLAYER_MONSTERS !== 'undefined' && ALL_PLAYER_MONSTERS[sp]) ? ALL_PLAYER_MONSTERS[sp].imgUrl : '') || '';
+// 育てるモンスターの絵は、染めた色で出す(2026-11-14 Fable の点検・窓口経由)。colors は育成の run.colors(回3が me.colors で渡す)
+const mscDyed = (colors) => Array.isArray(colors) && colors.some(Boolean) && typeof DyedMonsterImage === 'function';
+const MscMyMon = ({ sp, colors, className }) => (mscDyed(colors)
+  ? <DyedMonsterImage baseId={sp} src={mscMonImg(sp)} masuColors={colors} alt="" draggable={false} className={className}/>
+  : <img className={className} src={mscMonImg(sp)} alt=""/>);
 const mscAssistant = (id) => (typeof ASSISTANT_LIST !== 'undefined' ? (ASSISTANT_LIST.find(a => a.id === id) || ASSISTANT_LIST[0]) : null);
 const mscFace = (id, ex) => { const a = mscAssistant(id); return a && typeof assistantFaceSrc === 'function' ? assistantFaceSrc(a, ex || 'normal') : ''; };
 
@@ -364,7 +369,7 @@ function MonsucBracket({ suc, s, info, result, onFight, onResultOnly, onClose, c
                 {e.rival && <i className="msc-tag rv">ライバル</i>}
                 {e.champ && <i className="msc-tag ch">👑王者</i>}
               </span>
-              <span className={`msc-face ${e.you ? 'you' : i === 4 ? 'foe' : ''}`}><img src={mscMonImg(e.species)} alt=""/></span>
+              <span className={`msc-face ${e.you ? 'you' : i === 4 ? 'foe' : ''}`}>{e.you ? <MscMyMon sp={e.species} colors={info.colors}/> : <img src={mscMonImg(e.species)} alt=""/>}</span>
             </div>
           ))}
           <svg className="msc-lines" width={W} height={H * 8} viewBox={`0 0 ${W} ${H * 8}`} style={{ width: W, height: H * 8 }}>
@@ -411,7 +416,7 @@ function MonsucBattleCard({ suc, s, info, catalog, onReady, onResultOnly, onBack
       <div className="msc-top"><button className="msc-btn g s" onClick={onBack}>← 表へ</button><b>{info.title} {MSC_STARS(info.star)}・1戦</b></div>
       <div className="msc-vs" style={{ backgroundImage: `url(${venue})` }}>
         <div className="cap">{info.title} {MSC_STARS(info.star)}・1戦</div>
-        <div className="mon a">{(() => { const im = <img src={mscMonImg(s.species)} alt=""/>; const k = s.awake && typeof msxKiraOf === 'function' ? msxKiraOf(s.awake) : null; return k && typeof cardKiraWrap === 'function' ? cardKiraWrap(k, im, { src: mscMonImg(s.species), calm: typeof msxAwCalm === 'function' && msxAwCalm() }) : im; })()}</div>
+        <div className="mon a">{(() => { const im = <MscMyMon sp={s.species} colors={info.colors}/>; const k = s.awake && typeof msxKiraOf === 'function' ? msxKiraOf(s.awake) : null; return k && typeof cardKiraWrap === 'function' ? cardKiraWrap(k, im, { src: mscMonImg(s.species), calm: typeof msxAwCalm === 'function' && msxAwCalm() }) : im; })()}</div>
         <div className="mon b"><img src={mscMonImg(o.species)} alt=""/></div>
         <div className="vs">VS</div>
         <div className="nm a"><span>{info.meName}</span></div>
@@ -464,7 +469,7 @@ function MonsucCutin({ s, info, onGo }) {
         <div className="msc-rays"/>
         <div className="word">{sp.word}</div>
         <div className="sub">{sp.sub}</div>
-        <div className="duo"><img className="a" src={mscMonImg(s.species)} alt=""/><img src={mscMonImg(o.species)} alt=""/></div>
+        <div className="duo"><MscMyMon className="a" sp={s.species} colors={info.colors}/><img src={mscMonImg(o.species)} alt=""/></div>
         <div className="say"><img src={mscFace(s.aid, 'happy')} alt=""/><div><b>{coach ? coach.name : ''}</b><p>{MSC_LINE[s.aid] || '「いっしょに がんばろう!」'}</p></div></div>
       </div>
       <div className="msc-eff">
@@ -517,7 +522,7 @@ function MonsucCupWin({ s, info, match, out, onNext }) {
       <div className="msc-hero win hi" data-msc-win-hero style={{ backgroundImage: `url(${MSC_VENUE_IMG[info.venue] || MSC_VENUE_IMG.cup})` }}>
         <div className="msc-rays"/>
         <div className="big">優勝!</div>
-        <div className="who">{(() => { const im = <img src={mscMonImg(s.species)} alt=""/>; const k = s.awake && typeof msxKiraOf === 'function' ? msxKiraOf(s.awake) : null; return k && typeof cardKiraWrap === 'function' ? cardKiraWrap(k, im, { src: mscMonImg(s.species), calm: typeof msxAwCalm === 'function' && msxAwCalm() }) : im; })()}</div>
+        <div className="who">{(() => { const im = <MscMyMon sp={s.species} colors={info.colors}/>; const k = s.awake && typeof msxKiraOf === 'function' ? msxKiraOf(s.awake) : null; return k && typeof cardKiraWrap === 'function' ? cardKiraWrap(k, im, { src: mscMonImg(s.species), calm: typeof msxAwCalm === 'function' && msxAwCalm() }) : im; })()}</div>
         <div className="sub">{info.title} {MSC_STARS(info.star)}・1戦: {o.name || mscMonName(o.species)} に 勝ち{match && match.r ? `(${match.r.rounds} ラウンド)` : ''}</div>
         {info.rival && <div className="rival"><span>ライバルの {o.name || mscMonName(o.species)} にも 勝った!</span><em>ごほうび大</em></div>}
       </div>
@@ -547,7 +552,7 @@ function MonsucCupLose({ suc, s, info, match, onRematch, onGiveUp, onSkipAnim })
       <div className="msc-hero lose" style={{ backgroundImage: `url(${MSC_VENUE_IMG[info.venue] || MSC_VENUE_IMG.cup})` }}>
         <div className="big">負けた…</div>
         <div className="sub">{info.title} {MSC_STARS(info.star)}・{o.name || mscMonName(o.species)} に 負け</div>
-        <div className="who">{(() => { const im = <img src={mscMonImg(s.species)} alt=""/>; const k = s.awake && typeof msxKiraOf === 'function' ? msxKiraOf(s.awake) : null; return k && typeof cardKiraWrap === 'function' ? cardKiraWrap(k, im, { src: mscMonImg(s.species), calm: typeof msxAwCalm === 'function' && msxAwCalm() }) : im; })()}</div>
+        <div className="who">{(() => { const im = <MscMyMon sp={s.species} colors={info.colors}/>; const k = s.awake && typeof msxKiraOf === 'function' ? msxKiraOf(s.awake) : null; return k && typeof cardKiraWrap === 'function' ? cardKiraWrap(k, im, { src: mscMonImg(s.species), calm: typeof msxAwCalm === 'function' && msxAwCalm() }) : im; })()}</div>
       </div>
       <div className="msc-again">
         <h3>時をもどして、やり直す?</h3>
@@ -583,7 +588,8 @@ function MonsucCupShowInner({ suc, s, me, settle, onRematch, onNext, onClose, st
   // opp: 回3の流れが決めた相手の値(loy・pop など)を上書きする。fight: 回3の試合の計算(msxR3Fight)。渡されたら、こちらの計算は使わない
   const info = useMemo(() => {
     if (!s || !s.battle) return null;
-    const i0 = monsucCupInfo(suc, s, me); const i = title ? { ...i0, title } : i0; // title: 回3が大会の名前を渡せる
+    const i1 = monsucCupInfo(suc, s, me); const i0 = me && Array.isArray(me.colors) ? { ...i1, colors: me.colors.slice(0, 6) } : i1;
+    const i = title ? { ...i0, title } : i0; // title: 回3が大会の名前を渡せる
     return opp && typeof opp === 'object' ? { ...i, opp: { ...(i.opp || {}), ...opp } } : i;
   }, [suc, s]);
   const catalog = useMemo(() => {

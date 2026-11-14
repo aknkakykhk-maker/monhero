@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 7e3c36464b0d2e4a
+// generated-sha256: 2edd2ddb701d2ecb
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -78925,6 +78925,11 @@ const monsucBuffsOf = (mods) => {
 const mscNum = (v, d = 0) => (Number.isFinite(Number(v)) ? Number(v) : d);
 const mscMonName = (sp) => ((typeof ALL_PLAYER_MONSTERS !== 'undefined' && ALL_PLAYER_MONSTERS[sp]) ? ALL_PLAYER_MONSTERS[sp].name : sp) || '';
 const mscMonImg = (sp) => ((typeof ALL_PLAYER_MONSTERS !== 'undefined' && ALL_PLAYER_MONSTERS[sp]) ? ALL_PLAYER_MONSTERS[sp].imgUrl : '') || '';
+// 育てるモンスターの絵は、染めた色で出す(2026-11-14 Fable の点検・窓口経由)。colors は育成の run.colors(回3が me.colors で渡す)
+const mscDyed = (colors) => Array.isArray(colors) && colors.some(Boolean) && typeof DyedMonsterImage === 'function';
+const MscMyMon = ({ sp, colors, className }) => (mscDyed(colors)
+  ? <DyedMonsterImage baseId={sp} src={mscMonImg(sp)} masuColors={colors} alt="" draggable={false} className={className}/>
+  : <img className={className} src={mscMonImg(sp)} alt=""/>);
 const mscAssistant = (id) => (typeof ASSISTANT_LIST !== 'undefined' ? (ASSISTANT_LIST.find(a => a.id === id) || ASSISTANT_LIST[0]) : null);
 const mscFace = (id, ex) => { const a = mscAssistant(id); return a && typeof assistantFaceSrc === 'function' ? assistantFaceSrc(a, ex || 'normal') : ''; };
 
@@ -79220,7 +79225,7 @@ function MonsucBracket({ suc, s, info, result, onFight, onResultOnly, onClose, c
                 {e.rival && <i className="msc-tag rv">ライバル</i>}
                 {e.champ && <i className="msc-tag ch">👑王者</i>}
               </span>
-              <span className={`msc-face ${e.you ? 'you' : i === 4 ? 'foe' : ''}`}><img src={mscMonImg(e.species)} alt=""/></span>
+              <span className={`msc-face ${e.you ? 'you' : i === 4 ? 'foe' : ''}`}>{e.you ? <MscMyMon sp={e.species} colors={info.colors}/> : <img src={mscMonImg(e.species)} alt=""/>}</span>
             </div>
           ))}
           <svg className="msc-lines" width={W} height={H * 8} viewBox={`0 0 ${W} ${H * 8}`} style={{ width: W, height: H * 8 }}>
@@ -79267,7 +79272,7 @@ function MonsucBattleCard({ suc, s, info, catalog, onReady, onResultOnly, onBack
       <div className="msc-top"><button className="msc-btn g s" onClick={onBack}>← 表へ</button><b>{info.title} {MSC_STARS(info.star)}・1戦</b></div>
       <div className="msc-vs" style={{ backgroundImage: `url(${venue})` }}>
         <div className="cap">{info.title} {MSC_STARS(info.star)}・1戦</div>
-        <div className="mon a">{(() => { const im = <img src={mscMonImg(s.species)} alt=""/>; const k = s.awake && typeof msxKiraOf === 'function' ? msxKiraOf(s.awake) : null; return k && typeof cardKiraWrap === 'function' ? cardKiraWrap(k, im, { src: mscMonImg(s.species), calm: typeof msxAwCalm === 'function' && msxAwCalm() }) : im; })()}</div>
+        <div className="mon a">{(() => { const im = <MscMyMon sp={s.species} colors={info.colors}/>; const k = s.awake && typeof msxKiraOf === 'function' ? msxKiraOf(s.awake) : null; return k && typeof cardKiraWrap === 'function' ? cardKiraWrap(k, im, { src: mscMonImg(s.species), calm: typeof msxAwCalm === 'function' && msxAwCalm() }) : im; })()}</div>
         <div className="mon b"><img src={mscMonImg(o.species)} alt=""/></div>
         <div className="vs">VS</div>
         <div className="nm a"><span>{info.meName}</span></div>
@@ -79320,7 +79325,7 @@ function MonsucCutin({ s, info, onGo }) {
         <div className="msc-rays"/>
         <div className="word">{sp.word}</div>
         <div className="sub">{sp.sub}</div>
-        <div className="duo"><img className="a" src={mscMonImg(s.species)} alt=""/><img src={mscMonImg(o.species)} alt=""/></div>
+        <div className="duo"><MscMyMon className="a" sp={s.species} colors={info.colors}/><img src={mscMonImg(o.species)} alt=""/></div>
         <div className="say"><img src={mscFace(s.aid, 'happy')} alt=""/><div><b>{coach ? coach.name : ''}</b><p>{MSC_LINE[s.aid] || '「いっしょに がんばろう!」'}</p></div></div>
       </div>
       <div className="msc-eff">
@@ -79373,7 +79378,7 @@ function MonsucCupWin({ s, info, match, out, onNext }) {
       <div className="msc-hero win hi" data-msc-win-hero style={{ backgroundImage: `url(${MSC_VENUE_IMG[info.venue] || MSC_VENUE_IMG.cup})` }}>
         <div className="msc-rays"/>
         <div className="big">優勝!</div>
-        <div className="who">{(() => { const im = <img src={mscMonImg(s.species)} alt=""/>; const k = s.awake && typeof msxKiraOf === 'function' ? msxKiraOf(s.awake) : null; return k && typeof cardKiraWrap === 'function' ? cardKiraWrap(k, im, { src: mscMonImg(s.species), calm: typeof msxAwCalm === 'function' && msxAwCalm() }) : im; })()}</div>
+        <div className="who">{(() => { const im = <MscMyMon sp={s.species} colors={info.colors}/>; const k = s.awake && typeof msxKiraOf === 'function' ? msxKiraOf(s.awake) : null; return k && typeof cardKiraWrap === 'function' ? cardKiraWrap(k, im, { src: mscMonImg(s.species), calm: typeof msxAwCalm === 'function' && msxAwCalm() }) : im; })()}</div>
         <div className="sub">{info.title} {MSC_STARS(info.star)}・1戦: {o.name || mscMonName(o.species)} に 勝ち{match && match.r ? `(${match.r.rounds} ラウンド)` : ''}</div>
         {info.rival && <div className="rival"><span>ライバルの {o.name || mscMonName(o.species)} にも 勝った!</span><em>ごほうび大</em></div>}
       </div>
@@ -79403,7 +79408,7 @@ function MonsucCupLose({ suc, s, info, match, onRematch, onGiveUp, onSkipAnim })
       <div className="msc-hero lose" style={{ backgroundImage: `url(${MSC_VENUE_IMG[info.venue] || MSC_VENUE_IMG.cup})` }}>
         <div className="big">負けた…</div>
         <div className="sub">{info.title} {MSC_STARS(info.star)}・{o.name || mscMonName(o.species)} に 負け</div>
-        <div className="who">{(() => { const im = <img src={mscMonImg(s.species)} alt=""/>; const k = s.awake && typeof msxKiraOf === 'function' ? msxKiraOf(s.awake) : null; return k && typeof cardKiraWrap === 'function' ? cardKiraWrap(k, im, { src: mscMonImg(s.species), calm: typeof msxAwCalm === 'function' && msxAwCalm() }) : im; })()}</div>
+        <div className="who">{(() => { const im = <MscMyMon sp={s.species} colors={info.colors}/>; const k = s.awake && typeof msxKiraOf === 'function' ? msxKiraOf(s.awake) : null; return k && typeof cardKiraWrap === 'function' ? cardKiraWrap(k, im, { src: mscMonImg(s.species), calm: typeof msxAwCalm === 'function' && msxAwCalm() }) : im; })()}</div>
       </div>
       <div className="msc-again">
         <h3>時をもどして、やり直す?</h3>
@@ -79439,7 +79444,8 @@ function MonsucCupShowInner({ suc, s, me, settle, onRematch, onNext, onClose, st
   // opp: 回3の流れが決めた相手の値(loy・pop など)を上書きする。fight: 回3の試合の計算(msxR3Fight)。渡されたら、こちらの計算は使わない
   const info = useMemo(() => {
     if (!s || !s.battle) return null;
-    const i0 = monsucCupInfo(suc, s, me); const i = title ? { ...i0, title } : i0; // title: 回3が大会の名前を渡せる
+    const i1 = monsucCupInfo(suc, s, me); const i0 = me && Array.isArray(me.colors) ? { ...i1, colors: me.colors.slice(0, 6) } : i1;
+    const i = title ? { ...i0, title } : i0; // title: 回3が大会の名前を渡せる
     return opp && typeof opp === 'object' ? { ...i, opp: { ...(i.opp || {}), ...opp } } : i;
   }, [suc, s]);
   const catalog = useMemo(() => {
@@ -87841,9 +87847,12 @@ function MsxR3Battle({ run, setRun, v, ev, ctx, bondLv, onPause, debug }) {
   const foeName = opp.name || msxMonName(opp.species);
 
   // ---- バトル部の見せる部品(組み合わせ表・バトルカード・カットイン・観戦・優勝/負け)。試合の計算と勝ち負けの記録は回3 ----
-  if (showOn) {
+  // デバッグで開いたときも、「⚔ 1戦へ」からはバトル部の部品の試合(手動が基本・染めた色・モンスターの名前の札)を通す(2026-11-14 社長「バトルがオートだった」・Fable の点検)。
+  //   組み合わせ表(このあとの「勝ったことにする」などの確かめのボタン)だけは回3のまま
+  const showDbg = debug && typeof MonsucCupShow === 'function' && (step === 'card' || step === 'watch');
+  if (showOn || showDbg) {
     return <MsxR3Frame run={run} back="中断" onBack={onPause} body={
-      <MonsucCupShow suc={SUC} s={s} me={{ name: run.nick || msxMonName(s.species) }} title={b.kind === 'cup' ? msxR3CupName(b.sys) : name} opp={{ loy: opp.loy, pop: opp.pop }}
+      <MonsucCupShow startAt={showDbg ? 'card' : undefined} suc={SUC} s={s} me={{ name: run.nick || msxMonName(s.species), colors: Array.isArray(run.colors) ? run.colors : null }} title={b.kind === 'cup' ? msxR3CupName(b.sys) : name} opp={{ loy: opp.loy, pop: opp.pop }}
         fight={() => fight} settle={settleShow} onRematch={rematchWith} onNext={nextShow} onClose={onPause}/>} foot={null}/>;
   }
   // ---- 負けた(C4): やり直す/あきらめる ----
@@ -89521,7 +89530,10 @@ function MsaFighter({ side, member, x, e, foeX, hpNow, reduce, idleOk, gd, fx, m
   fx = fx || { pre: 0, stop: 0, fin: false, big: false };
   const sp = member ? member.species : '';
   const src = mscMonImg(sp);
-  const img = <img className={`msa-img ${side === 'A' ? 'msa-flip' : ''}`} src={src} alt={member ? member.name : ''} draggable={false}/>;
+  // 染めた色(member.colors。モンサクの育てるモンスターだけ。芯へは渡さない見せる用の値)があれば染めた絵
+  const img = member && Array.isArray(member.colors) && member.colors.some(Boolean) && typeof DyedMonsterImage === 'function'
+    ? <DyedMonsterImage baseId={sp} src={src} masuColors={member.colors} alt={member.name || ''} draggable={false} className={`msa-img ${side === 'A' ? 'msa-flip' : ''}`}/>
+    : <img className={`msa-img ${side === 'A' ? 'msa-flip' : ''}`} src={src} alt={member ? member.name : ''} draggable={false}/>;
   const down = hpNow <= 0;
   const me = e && e.side === side;
   const foe = e && e.side && e.side !== side;
@@ -89903,7 +89915,7 @@ function MsaStage({ log, frames, pos, teams, venueImg, ended = false, win = null
         <div className="msa-intro" data-msa-intro aria-hidden="true">
           <div className="ph1">
             <div className="ttl">{introTitle || '試合開始'}</div>
-            <div className="pa">{mA ? <img src={mscMonImg(mA.species)} alt=""/> : null}<span className="nm">{mA ? mA.name : ''}</span></div>
+            <div className="pa">{mA ? (Array.isArray(mA.colors) && mA.colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? <DyedMonsterImage baseId={mA.species} src={mscMonImg(mA.species)} masuColors={mA.colors} alt="" draggable={false}/> : <img src={mscMonImg(mA.species)} alt=""/>) : null}<span className="nm">{mA ? mA.name : ''}</span></div>
             <div className="pb">{mB ? <img src={mscMonImg(mB.species)} alt=""/> : null}<span className="nm">{mB ? mB.name : ''}</span></div>
             <div className="vs">VS</div>
           </div>
@@ -89974,6 +89986,12 @@ function MonsucArena({ s, info, engine, input, watch, onEnd }) {
     const t = setTimeout(() => { if (endRef.current) return; endRef.current = true; if (onEnd) onEnd(won, { choices: manual ? mm.choices : null, auto, result }); }, 1700);
     return () => clearTimeout(t);
   }, [ended]);
+  // 場に出す両チーム: 育てるモンスターに染めた色(info.colors)を足す。芯の入力(input)は変えない
+  const stageTeams = useMemo(() => {
+    const c = info && Array.isArray(info.colors) && info.colors.some(Boolean) ? info.colors : null;
+    if (!c || !teams.A || !Array.isArray(teams.A.members)) return teams;
+    return { ...teams, A: { ...teams.A, members: teams.A.members.map((m, i) => (i === 0 && m ? { ...m, colors: c } : m)) } };
+  }, [teams.A, teams.B, info && info.colors]);
   const fShowH = useMsaShownFrame(log, frames, pos, teams, (MSA_SPEEDS.find(x => x.id === speed) || MSA_SPEEDS[0]).f);
   if (!log.length) return <div className="msc-wrap"><p className="msc-note" style={{ textAlign: 'center', marginTop: 40 }}>試合の準備をしています…</p></div>;
   const f = frames[Math.min(pos, frames.length - 1)] || frames[0];
@@ -89992,7 +90010,7 @@ function MonsucArena({ s, info, engine, input, watch, onEnd }) {
       <style>{MSA_CSS}</style>
       <div className="msc-top"><b>{info.title} {MSC_STARS(info.star)}</b></div>
       <MscPanel side="B" team={teams.B} frame={fShow} maxHp={maxHp} info={info} s={s}/>
-      <MsaStage log={log} frames={frames} pos={pos} teams={teams} venueImg={msaVenueBg(info.venue, bg)} ended={ended} win={result ? result.winner : null} introTitle={info.title} speedF={(MSA_SPEEDS.find(x => x.id === speed) || MSA_SPEEDS[0]).f}/>
+      <MsaStage log={log} frames={frames} pos={pos} teams={stageTeams} venueImg={msaVenueBg(info.venue, bg)} ended={ended} win={result ? result.winner : null} introTitle={info.title} speedF={(MSA_SPEEDS.find(x => x.id === speed) || MSA_SPEEDS[0]).f}/>
       <MscPanel side="A" team={teams.A} frame={fShow} maxHp={maxHp} info={info} s={s} buffed={Boolean(info.buffs)}/>
       <div className="msa-say" data-msa-say>{msaSay(e, nm)}</div>
       <div ref={barRef}>{showBar ? <MsxManualBar opt={mm.pending} onPick={pick} onAuto={goAuto} busy={busy}/> : null}</div>

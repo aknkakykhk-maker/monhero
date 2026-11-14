@@ -399,7 +399,10 @@ function MsaFighter({ side, member, x, e, foeX, hpNow, reduce, idleOk, gd, fx, m
   fx = fx || { pre: 0, stop: 0, fin: false, big: false };
   const sp = member ? member.species : '';
   const src = mscMonImg(sp);
-  const img = <img className={`msa-img ${side === 'A' ? 'msa-flip' : ''}`} src={src} alt={member ? member.name : ''} draggable={false}/>;
+  // 染めた色(member.colors。モンサクの育てるモンスターだけ。芯へは渡さない見せる用の値)があれば染めた絵
+  const img = member && Array.isArray(member.colors) && member.colors.some(Boolean) && typeof DyedMonsterImage === 'function'
+    ? <DyedMonsterImage baseId={sp} src={src} masuColors={member.colors} alt={member.name || ''} draggable={false} className={`msa-img ${side === 'A' ? 'msa-flip' : ''}`}/>
+    : <img className={`msa-img ${side === 'A' ? 'msa-flip' : ''}`} src={src} alt={member ? member.name : ''} draggable={false}/>;
   const down = hpNow <= 0;
   const me = e && e.side === side;
   const foe = e && e.side && e.side !== side;
@@ -781,7 +784,7 @@ function MsaStage({ log, frames, pos, teams, venueImg, ended = false, win = null
         <div className="msa-intro" data-msa-intro aria-hidden="true">
           <div className="ph1">
             <div className="ttl">{introTitle || '試合開始'}</div>
-            <div className="pa">{mA ? <img src={mscMonImg(mA.species)} alt=""/> : null}<span className="nm">{mA ? mA.name : ''}</span></div>
+            <div className="pa">{mA ? (Array.isArray(mA.colors) && mA.colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? <DyedMonsterImage baseId={mA.species} src={mscMonImg(mA.species)} masuColors={mA.colors} alt="" draggable={false}/> : <img src={mscMonImg(mA.species)} alt=""/>) : null}<span className="nm">{mA ? mA.name : ''}</span></div>
             <div className="pb">{mB ? <img src={mscMonImg(mB.species)} alt=""/> : null}<span className="nm">{mB ? mB.name : ''}</span></div>
             <div className="vs">VS</div>
           </div>
@@ -852,6 +855,12 @@ function MonsucArena({ s, info, engine, input, watch, onEnd }) {
     const t = setTimeout(() => { if (endRef.current) return; endRef.current = true; if (onEnd) onEnd(won, { choices: manual ? mm.choices : null, auto, result }); }, 1700);
     return () => clearTimeout(t);
   }, [ended]);
+  // 場に出す両チーム: 育てるモンスターに染めた色(info.colors)を足す。芯の入力(input)は変えない
+  const stageTeams = useMemo(() => {
+    const c = info && Array.isArray(info.colors) && info.colors.some(Boolean) ? info.colors : null;
+    if (!c || !teams.A || !Array.isArray(teams.A.members)) return teams;
+    return { ...teams, A: { ...teams.A, members: teams.A.members.map((m, i) => (i === 0 && m ? { ...m, colors: c } : m)) } };
+  }, [teams.A, teams.B, info && info.colors]);
   const fShowH = useMsaShownFrame(log, frames, pos, teams, (MSA_SPEEDS.find(x => x.id === speed) || MSA_SPEEDS[0]).f);
   if (!log.length) return <div className="msc-wrap"><p className="msc-note" style={{ textAlign: 'center', marginTop: 40 }}>試合の準備をしています…</p></div>;
   const f = frames[Math.min(pos, frames.length - 1)] || frames[0];
@@ -870,7 +879,7 @@ function MonsucArena({ s, info, engine, input, watch, onEnd }) {
       <style>{MSA_CSS}</style>
       <div className="msc-top"><b>{info.title} {MSC_STARS(info.star)}</b></div>
       <MscPanel side="B" team={teams.B} frame={fShow} maxHp={maxHp} info={info} s={s}/>
-      <MsaStage log={log} frames={frames} pos={pos} teams={teams} venueImg={msaVenueBg(info.venue, bg)} ended={ended} win={result ? result.winner : null} introTitle={info.title} speedF={(MSA_SPEEDS.find(x => x.id === speed) || MSA_SPEEDS[0]).f}/>
+      <MsaStage log={log} frames={frames} pos={pos} teams={stageTeams} venueImg={msaVenueBg(info.venue, bg)} ended={ended} win={result ? result.winner : null} introTitle={info.title} speedF={(MSA_SPEEDS.find(x => x.id === speed) || MSA_SPEEDS[0]).f}/>
       <MscPanel side="A" team={teams.A} frame={fShow} maxHp={maxHp} info={info} s={s} buffed={Boolean(info.buffs)}/>
       <div className="msa-say" data-msa-say>{msaSay(e, nm)}</div>
       <div ref={barRef}>{showBar ? <MsxManualBar opt={mm.pending} onPick={pick} onAuto={goAuto} busy={busy}/> : null}</div>
