@@ -60,7 +60,7 @@ function MsxR3Cup({ run, setRun, v, ev, onBack, onActed }) {
   useMsxR3Lines(s.aid);
   useSuccessSound('cupEntry', { season: cal.season });
   const nOk = cups.filter((c) => c.entry && c.entry.ok).length;
-  const openLine = msxR3Line('turn.cup.open', run, { cup: cur ? msxR3CupName(cur.sys) : '' }, nOk ? `「今月は ${nOk}つ 出られるよ! 出ると1ターン使うから、訓練とどっちにするか考えてね」` : '「今月は出られる大会がないみたい。訓練でじっくり力をつけよ!」');
+  const openLine = msxR3Line('turn.cup.open', run, { cup: cur ? msxR3CupName(cur.sys) : '' }, nOk ? `「今月は ${nOk}つ 出られるよ! 出ると1ターン使うから、トレーニングとどっちにするか考えてね」` : '「今月は出られる大会がないみたい。トレーニングでじっくり力をつけよ!」');
   const body = (<>
     <MsxBand s={s} v={v} ev={ev} use={20}/>
     <div className="v-scene low" style={{ flex: '0 0 auto', minHeight: 150 }}><img className="bg" src="images/story-bg/monhero_town.jpg" alt=""/><div className="sh"/>
@@ -231,10 +231,38 @@ function MsxR3Battle({ run, setRun, v, ev, ctx, bondLv, onPause, debug }) {
     }
     // ごはん(C3): 大会のあとに1回。あげなくてもよい
     const M = SUC.MEALS || {};
-    const free = s.freeMeal === true;
     const keys = Object.keys(M);
-    const can = (k) => s.mealReady && !s.over && (free || s.fame >= M[k].cost);
-    const fx = (k) => { const m = M[k]; return m.hp ? `体力 +${Math.round(m.hp * 100)}%` : m.ama || m.fear ? `忠誠 +${(m.ama || 0) + (m.fear || 0)}` : m.all ? '全能力 少し +' : ''; };
+    const can = (k) => s.mealReady && !s.over && !!M[k];
+    // 効き目は芯の meal を写しで試しに呼んで、実際に増える量を出す(食いしん坊・うつ・上限まで含めて本当の数。2026-11-13 社長「ごはんの効果が全然わからない」)
+    const tryMeal = (k) => { try { const r = SUC.meal(s, k); return r && r.out && r.out.ok ? r.state : null; } catch (e) { return null; } };
+    const loyOf = (x) => Math.max(0, Math.min(100, (Number(x.ama) || 0) + (Number(x.fear) || 0)));
+    // 札には短く、選んだごはんは下の行でくわしく(体力は「回復」。上限は上がらない)
+    const effOf = (k) => {
+      const m = M[k]; const t = tryMeal(k); if (!m || !t) return null;
+      const hp = t.hp - s.hp; const ama = (Number(t.ama) || 0) - (Number(s.ama) || 0); const fear = (Number(t.fear) || 0) - (Number(s.fear) || 0);
+      const st = m.stat ? (t.stats[m.stat] || 0) - (s.stats[m.stat] || 0) : 0; const pop = (Number(t.pop) || 0) - (Number(s.pop) || 0); const pts = (Number(t.pts) || 0) - (Number(s.pts) || 0);
+      return { m, hp, ama, fear, st, pop, pts, loy0: loyOf(s), loy1: loyOf(t) };
+    };
+    const fx = (k) => {
+      const e = effOf(k); if (!e) return '';
+      const hp = e.hp > 0 ? `体力+${e.hp}` : '体力 満タン';
+      if (e.m.stat) return `${MSX_STAT_NAME[e.m.stat]}+${e.st}・${hp}`;
+      if (e.m.pop || e.m.pts) return `人気+${e.pop}・能力P+${e.pts}・${hp}`;
+      return `${e.m.fear ? `恐れ+${e.fear}` : `甘え+${e.ama}`}・${hp}`;
+    };
+    const fxLong = (k) => {
+      const e = effOf(k); if (!e) return '';
+      const hp = e.hp > 0 ? `体力を上限の${Math.round(e.m.hp * 100)}%回復(+${e.hp}・いま ${s.hp}→${s.hp + e.hp} / ${s.hpMax})` : `体力はもう満タン(上限 ${s.hpMax})`;
+      const parts = [hp];
+      if (e.m.stat) parts.push(`${MSX_STAT_NAME[e.m.stat]} +${e.st}(${s.stats[e.m.stat]}→${s.stats[e.m.stat] + e.st})`);
+      if (e.m.fear || e.m.ama) parts.push(`${e.m.fear ? '恐れ度' : '甘え度'} +${e.m.fear ? e.fear : e.ama}(忠誠度 ${e.loy0}→${e.loy1})`);
+      if (e.m.pop) parts.push(`人気 +${e.pop}(${s.pop}→${s.pop + e.pop})`);
+      if (e.m.pts) parts.push(`能力ポイント +${e.pts}`);
+      return parts.join('・');
+    };
+    const MEAL_ICON = { vitamin: '💊', gochiso: '🍱', f_life: '🥕', f_pow: '🍖', f_wise: '🌰', f_hit: '🫐', f_eva: '🍎', f_tough: '🥔', prune: '⭐' };
+    const LY = SUC.LOYAL || {}; const RT = SUC.RATE || {};
+    const loyNote = `忠誠度が高いほど、トレーニングと修行の伸びが上がる(${LY.capBoost || 60}で最大 ×${1 + (LY.capBoost || 60) / 100})。80以上で大成功が少し出やすい(+${Math.round((RT.greatLoyal80 || 0.03) * 100)}%)`;
     const give = () => { if (!mealPick || !can(mealPick)) return; const r = SUC.meal(s, mealPick); if (r.out.ok) finish(r.state); };
     const body = (<>
       <MsxBand s={s} v={v} ev={ev}/>
@@ -242,15 +270,21 @@ function MsxR3Battle({ run, setRun, v, ev, ctx, bondLv, onPause, debug }) {
         <div className="gr" style={{ bottom: 'calc(40% - 5px)' }}/><MsxMonArt run={run} className="mon" style={{ bottom: '40%', height: '34%', ...(st3.won ? {} : { filter: 'grayscale(.5) drop-shadow(0 8px 5px #0009)' }) }}/>
         <div className={`v-stamp ${st3.won ? '' : 'ng'}`} style={{ top: '4%', fontSize: st3.won ? 42 : 34 }}>{st3.won ? '優勝!' : '負けた…'}<small>{cardIconNode(st3.icon, 16)} {st3.name}{d.fame ? `・賞金 💰${msxFmt(d.fame)}` : ''}</small></div>
         {s.mealReady && !s.over ? (
-          <div className="v-meal"><div className="t">🍽 がんばったごほうびに、ごはんをあげよう<small>大会のあとだけあげられる(1回){free ? '・今回はただ' : ''}</small></div>
+          <div className="v-meal"><div className="t">🍽 がんばったごほうびに、ごはんをあげよう<small>優勝したときだけ あげられる(1回・ただ)</small></div>
             <div className="ms">{keys.map((k) => (
               <button type="button" key={k} className={`v-ml ${mealPick === k ? 'sel' : ''}`} disabled={!can(k)} onClick={() => setMealPick(k)} style={{ opacity: can(k) ? 1 : 0.45 }} data-msx-r3-meal={k}>
-                <div className="e">{k === 'hp' ? '🍙' : k === 'loyal' ? '🍛' : '🍖'}</div><b>{M[k].name}</b><span className="g">{free ? 'ただ' : `💰 ${M[k].cost}G`}</span><small>{fx(k)}</small></button>))}</div>
+                <div className="e">{MEAL_ICON[k] || '🍙'}</div><b>{M[k].name}</b><small data-msx-r3-mealfx={k}>{fx(k)}</small></button>))}</div>
+            <div className="msx-note" data-msx-r3-mealdetail style={{ marginTop: 5, fontSize: 11, lineHeight: 1.5, textAlign: 'left', color: '#fde68a' }}>{mealPick && M[mealPick] ? `${M[mealPick].name}: ${fxLong(mealPick)}` : '札を押すと、くわしい効き目が出ます'}</div>
+            <div className="msx-note" data-msx-r3-loynote style={{ marginTop: 4, fontSize: 10.5, lineHeight: 1.5, textAlign: 'left' }}>💡 {loyNote}</div>
             <div className="row" style={{ marginTop: 6 }}><img className="fc" src={msxFace(s.aid, st3.won ? 'excited' : 'troubled')} alt=""/><div className="bub f1">{st3.won ? '「優勝だもん、今日は ごちそう にしちゃお!」' : '「おつかれさま。おいしいもの食べて、また がんばろ!」'}</div></div></div>
+        ) : !st3.won && !s.over ? (
+          // 2026-11-13 社長: 負けたらごはんはなし。画面は出さず、助手の慰めの一言だけ
+          <div className="v-meal" data-msx-r3-lostnote><div className="row"><img className="fc" src={msxFace(s.aid, 'troubled')} alt=""/><div className="bub f1">{msxR3Line('turn.cup.lose', run, { cup: st3.name }, '「おつかれさま。負けちゃったけど、ここまでよくがんばったよ。次、いこ!」')}</div></div></div>
         ) : null}
       </div>
     </>);
-    const foot = <div className="v-ft"><button type="button" onClick={() => finish(s)} data-msx-r3-nomeal>あげない</button><button type="button" className="go" onClick={() => (mealPick && can(mealPick) ? give() : finish(s))} data-msx-r3-give>{mealPick && can(mealPick) ? `${M[mealPick].name}をあげる(${free ? 'ただ' : `💰${M[mealPick].cost}`})` : 'あげずに つぎへ ▶'}</button></div>;
+    const foot = !(s.mealReady && !s.over) ? <div className="v-ft"><button type="button" className="go" onClick={() => finish(s)} data-msx-r3-nomeal>つぎへ ▶</button></div>
+      : <div className="v-ft"><button type="button" onClick={() => finish(s)} data-msx-r3-nomeal>あげない</button><button type="button" className="go" onClick={() => (mealPick && can(mealPick) ? give() : finish(s))} data-msx-r3-give>{mealPick && can(mealPick) ? `${M[mealPick].name}をあげる` : 'あげずに つぎへ ▶'}</button></div>;
     return <MsxR3Frame run={run} back="中断" onBack={onPause} body={body} foot={foot}/>;
   }
   if (!b) return <MsxR3Frame run={run} back="中断" onBack={onPause} body={<div className="msx-note">大会の中身を読めませんでした</div>} foot={<div className="v-ft"><button type="button" className="go" onClick={() => finish(s)}>つぎへ ▶</button></div>}/>;

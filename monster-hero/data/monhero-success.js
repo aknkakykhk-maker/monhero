@@ -12,9 +12,9 @@
 //
 // 1ターンの進め方(画面からも試算からも同じ順で呼ぶ):
 //   let s = SUC.newRun({ id, species, aid, team, aidBondLv });
-//   const v = SUC.peek(s);                 // そのターンの札(編成の子が集まった訓練)・博士が来たか・できること
-//   s = SUC.act(s, { kind:'train', stat:'pow' }).state;   // 訓練(6つ)・shugyo・rest・play・clinic・retry(デビュー戦の再挑戦)
-//   s = SUC.react(s, 'praise').state;      // 訓練の結果のあとに 褒める/叱る/なし(null)
+//   const v = SUC.peek(s);                 // そのターンの札(編成の子が集まったトレーニング)・博士が来たか・できること
+//   s = SUC.act(s, { kind:'train', stat:'pow' }).state;   // トレーニング(6つ)・shugyo・rest・play・clinic・retry(デビュー戦の再挑戦)
+//   s = SUC.react(s, 'praise').state;      // トレーニングの結果のあとに 褒める/叱る/なし(null)
 //   s = SUC.issa(s, 'hp').state;           // 博士が来ていれば(peek().issa)、選ぶ(none でもよい)
 //   s = SUC.endTurn(s).state;              // ターンを閉じる。期末・頂への道なら s.battle に「戦う大会」が入る
 //   while (s.battle) { const opp = SUC.opponents(s); /* 対戦の芯で戦う */ s = SUC.settle(s, wins).state; }
@@ -22,7 +22,7 @@
 (function (root) {
   'use strict';
 
-  const VERSION = 9;   // 計算を変えたら上げる(ランキングの行に残る)。9 = 覚醒・超覚醒(2026-11-13)/8 = 修行の作り直し(技のランク1〜5・仕上がりで率・技ごとの外した回数・超修行。2026-11-13)/7 = 間合い適性を育成中に上げる(修行のくじ・間合いの自慢の大会・出来事。2026-11-13)/6 = 助手1人分のストーリー(固有イベント・相手えらび・エンディングとお祝い・2026-11-13)/2 = アシスト能力を第2版の表(段1〜5・数字)で効かせる(2026-11-12)/3 = 第2版の訓練に効く11種を足す/4 = いるだけ型(体力・ようす・編成の7つ)を足す/5 = いるだけ型(大会・出来事の8つ)を足す(2026-11-12)
+  const VERSION = 9;   // 計算を変えたら上げる(ランキングの行に残る)。9 = 覚醒・超覚醒(2026-11-13)/8 = 修行の作り直し(技のランク1〜5・仕上がりで率・技ごとの外した回数・超修行。2026-11-13)/7 = 間合い適性を育成中に上げる(修行のくじ・間合いの自慢の大会・出来事。2026-11-13)/6 = 助手1人分のストーリー(固有イベント・相手えらび・エンディングとお祝い・2026-11-13)/2 = アシスト能力を第2版の表(段1〜5・数字)で効かせる(2026-11-12)/3 = 第2版のトレーニングに効く11種を足す/4 = いるだけ型(体力・ようす・編成の7つ)を足す/5 = いるだけ型(大会・出来事の8つ)を足す(2026-11-12)
   const KEYS = ['life', 'pow', 'wise', 'hit', 'eva', 'tough'];
   const STAT_NAMES = Object.freeze({ life: 'ライフ', pow: 'ちから', wise: 'かしこさ', hit: '命中', eva: '回避', tough: '丈夫さ' });
   const STAT_MAX = 999;
@@ -84,16 +84,16 @@
 
   // ---- 基礎数値(試算 tools/success/success-sim.js で合わせる。ASSIST.md §4 の「基礎数値」) ----
   const BASE = Object.freeze({
-    light: 11,                                     // 訓練の主の能力の基礎(出来事の「訓練1回ぶん」の物差しもこれ)
-    sub: [0.35, 0.15],                           // ほか2つ(主に対する割合)。訓練は1種類ずつ(軽い/重いの区別はなし・社長 2026-11-12)
+    light: 11,                                     // トレーニングの主の能力の基礎(出来事の「トレーニング1回ぶん」の物差しもこれ)
+    sub: [0.35, 0.15],                           // ほか2つ(主に対する割合)。トレーニングは1種類ずつ(軽い/重いの区別はなし・社長 2026-11-12)
     hp: 16,                                      // 体力の減り
     stress: 4,                                   // ストレスの増え(方針の倍率をかける)
   });
-  // 訓練で能力は下がらない(社長 2026-11-12: 3能力が上がるだけ・マイナスはなし)
-  // 訓練Lv(社長 2026-11-12): 訓練ごと(6能力の6つ)にトレ経験値があり、踏むたびに +1。最大 Lv5。Lv ごとに基礎値が上がる
-  const TRAIN_LV = Object.freeze({ max: 5, need: [0, 4, 9, 15, 22], mult: [1, 1.08, 1.16, 1.25, 1.35] }); // 6つの訓練それぞれ。need = その Lv に要る経験の合計
+  // トレーニングで能力は下がらない(社長 2026-11-12: 3能力が上がるだけ・マイナスはなし)
+  // トレーニングLv(社長 2026-11-12): トレーニングごと(6能力の6つ)にトレ経験値があり、踏むたびに +1。最大 Lv5。Lv ごとに基礎値が上がる
+  const TRAIN_LV = Object.freeze({ max: 5, need: [0, 4, 9, 15, 22], mult: [1, 1.08, 1.16, 1.25, 1.35] }); // 6つのトレーニングそれぞれ。need = その Lv に要る経験の合計
   const trainLvOf = (xp) => { let lv = 1; for (let i = 1; i < TRAIN_LV.max; i++) if (num(xp) >= TRAIN_LV.need[i]) lv = i + 1; return lv; };
-  // 1回の訓練で上がる3能力の組み合わせ(主 → [ほか1, ほか2])は助手ごとに違う(台帳 2026-11-12)
+  // 1回のトレーニングで上がる3能力の組み合わせ(主 → [ほか1, ほか2])は助手ごとに違う(台帳 2026-11-12)
   const TRAIN_COMBO = Object.freeze({
     mua: { life: ['pow', 'tough'], pow: ['life', 'hit'], wise: ['hit', 'eva'], hit: ['pow', 'eva'], eva: ['hit', 'life'], tough: ['life', 'pow'] },
     kiki: { life: ['wise', 'tough'], pow: ['wise', 'tough'], wise: ['pow', 'hit'], hit: ['wise', 'pow'], eva: ['wise', 'hit'], tough: ['pow', 'life'] },
@@ -166,7 +166,7 @@
   // ---- アシスト能力(ASSIST §1・§3) ----
   // 第1版(9種類・3段)+ 試合型5つ。create に第2版の表(deps.assist = MONHERO_SUCCESS_ASSIST)が渡されたら、
   // 芯が効き目を持つ種類は第2版の段(1〜5)と数字で効く(create の中の ASSISTS)。試合型5つはひらめきの保留中なのでこのまま(社長 2026-11-12)
-  // 第2版で足した「訓練に効く11種」(ASSISTS_V2_TRAIN)は表があるときだけ出る
+  // 第2版で足した「トレーニングに効く11種」(ASSISTS_V2_TRAIN)は表があるときだけ出る
   const ASSISTS_V1 = Object.freeze({
     sokoji: { name: '特訓の底力', type: 'with', v: [4, 7, 10], cost: [40, 80, 128] },
     kaketsuke: { name: 'かけつけ', type: 'self', v: [8, 14, 20], cost: [32, 64, 104] },
@@ -177,7 +177,7 @@
     itawari: { name: 'いたわり', type: 'with', v: [8, 14, 20], cost: [24, 48, 80] },
     shugyo: { name: '修行の手ほどき', type: 'stay', v: [10, 18, 25], cost: [24, 48, 80] },
     hitonatsu: { name: '人なつっこさ', type: 'stay', v: [1.2, 1.4, 1.6], cost: [32, 64, 104], start: [5, 10, 15] },
-    // 助手のお話のひらめきで取れる5つ(型 battle・社長 2026-11-12): 編成にいると、育てる子の大会の試合で効く(いちばん高い段の1つだけ)。訓練には効かない
+    // 助手のお話のひらめきで取れる5つ(型 battle・社長 2026-11-12): 編成にいると、育てる子の大会の試合で効く(いちばん高い段の1つだけ)。トレーニングには効かない
     //   数字は data/monhero-success-assist.js と同じ(buff は対戦の芯の buffs の形)
     gatsu: { name: '試合のはじめのガッツ', type: 'battle', v: [3, 5, 8], cost: [24, 48, 80], hint: 'atsu', buff: [{ guts: 3 }, { guts: 5 }, { guts: 8 }] },
     miseba: { name: '見せ場', type: 'battle', v: [3, 5, 8], cost: [24, 48, 80], hint: 'momosuke', buff: [{ crit: 0.03 }, { crit: 0.05 }, { crit: 0.08 }] },
@@ -185,8 +185,8 @@
     kensho: { name: '検証', type: 'battle', v: [15, 25, 35], cost: [24, 48, 80], hint: 'sorashido', buff: [{ missCut: 0.15 }, { missCut: 0.25 }, { missCut: 0.35 }] },
     mimamori: { name: '見守り', type: 'battle', v: [5, 10, 10], cost: [24, 48, 80], hint: 'erubin', buff: [{ hit1: 0.05 }, { hit1: 0.10 }, { hit1: 0.10, noSulk: true }] },
   });
-  // 第2版で足した「訓練に効く11種」(数字は第2版の表から読む。表が無いときは出さない)
-  //   miharu: サボりの率 −v%/kibarashi: 訓練でたまるストレス −v%/kun〇〇: その能力の訓練の伸び +v%(memberEffect)/
+  // 第2版で足した「トレーニングに効く11種」(数字は第2版の表から読む。表が無いときは出さない)
+  //   miharu: サボりの率 −v%/kibarashi: トレーニングでたまるストレス −v%/kun〇〇: その能力のトレーニングの伸び +v%(memberEffect)/
   //   nakayoshi: その子の親密度の上がり +v/tagpow: その子のタッグの強さ +v(%の点)/shitashi: その子のはじめの親密度 +v
   const ASSISTS_V2_TRAIN = Object.freeze({
     miharu: { type: 'with' }, kibarashi: { type: 'with' },
@@ -256,7 +256,7 @@
       wind: { name: '風の森', stages: [['eva', 'hit'], ['wise', 'pow']] },
       star: { name: '星の湖', stages: [['wise', 'life'], ['eva', 'pow']] },
     }),
-    gain: 0.9,                 // 1段で2つの能力に「軽い訓練1回ぶん」× 0.9 ずつ(2段で4能力ぶん)
+    gain: 0.9,                 // 1段で2つの能力に「軽いトレーニング1回ぶん」× 0.9 ずつ(2段で4能力ぶん)
     hp: 30, stress: 8,         // 体力を多めに使う
     ticket0: 1,                // はじめのチケット。期ごとの回数は決めず、チケットの数だけ行ける(社長 2026-11-12)
     pick: 2,                   // 覚えたい技は1つか2つ。2つ選ぶと「超修行」(2026-11-13 社長: 育成中2回まで・修行1回分の時間・2つとも覚えることがある・率 +15・能力の上がりと疲れは2回分)
@@ -297,17 +297,18 @@
     grass: { name: 'うけつぎ草', use: 'before', good: 'uketsugu' },
     juice: { name: 'ガロエ印の野菜ジュース', use: 'during', hpFull: true },                 // 体力を完全に回復
     powder: { name: '悪様散', use: 'during', cure: true, hp: 0.3 },               // 悪いようすを治して体力を回復
-    license: { name: 'ブリーダーライセンス', use: 'during', loyal: 10 },               // 忠誠度が一定数上がる
-    pack: { name: 'オイリーパック', use: 'during', gives: { oil: 2, herb: 1 } }, // 中身はオイル2個と薬草
-    oil: { name: 'オイル', use: 'during', hp: 0.3 },                                 // 詰め合わせの中身(体力 上限の30%)
+    license: { name: 'ブリーダーライセンス', use: 'during', ama: 10, fear: 10 },       // 甘え度 +10・恐れ度 +10(忠誠度 +20。2026-11-13 社長)
+    pack: { name: 'オイリーパック', use: 'during', gives: { oilyoil: 2, herb: 1 } }, // 中身はオイリーオイル2個と薬草(2026-11-13 社長: 案)
+    oil: { name: 'オイル', use: 'during', hp: 0.2 },                                 // 小さいオイル(体力 上限の20%。2026-11-13 社長)
+    oilyoil: { name: 'オイリーオイル', use: 'during', hp: 0.4 },                     // 大きいオイル(体力 上限の40%。2026-11-13 社長)
     herb: { name: '薬草', use: 'during', stress: -20 },                          // 詰め合わせの中身(ストレス −20)
   });
   const GOOD = Object.freeze({
-    eventMaker: { name: 'イベントメーカー', eventRate: 0.15 },              // 編成の子との出来事 +15%(50% → 65%)
-    trainGood: { name: 'トレーニング得意', train: 0.10 },                  // 訓練の伸び +10%
+    eventMaker: { name: 'イベントメーカー', eventRate: 0.25 },              // 編成の子との出来事 +25%(50% → 75%。2026-11-13 社長)
+    trainGood: { name: 'トレーニング得意', train: 0.10 },                  // トレーニングの伸び +10%
     shugyoGood: { name: '修行得意', shugyo: 0.20, techRate: 10 },          // 修行の伸び +20%・技を覚える率 +10
     star: { name: 'スターの素質○', pop: 1.5, bond: 1.2 },                // 人気の上がり ×1.5・親密度の上がり ×1.2(良縁)
-    uketsugu: { name: 'うけつぐ魂', story: 0.15, teach: 2 },               // 連続の話が進む率 +15%・3話(伝授)の能力が2倍
+    uketsugu: { name: 'うけつぐ魂', story: 0.15, teach: 2, start: 2 },  // start: 編成から受け継ぐはじめの能力 ×2(2026-11-13 社長)               // 連続の話が進む率 +15%・3話(伝授)の能力が2倍
   });
   const CARRY_MAX = 2; // 持ちこみは1回の育成で2つまで(社長 2026-11-12。始める前の物と育成中の袋を合わせて)
 
@@ -323,10 +324,18 @@
 
   // ---- 大会のあとのごほうびのごはん(社長 2026-11-12: 体力・忠誠度・能力の3種類・値段は賞金) ----
   // 大会が終わるたびに1回だけ選べる(選ばなくてもよい)。次の行動かターンの区切りで消える
+  // 2026-11-13 社長: 「いまのごはんは効果が高すぎる」→ 9種に作り直す(体力はどれも回復で、上限は上がらない)。値段なし(社長: 大会後限定なら値段なしでいい)
+  //   前の3種(hp・loyal・stat)は途中の育成に保存されない(大会のあとに選ぶ画面の中だけ)ので、読み替えは要らない。知らない名前は食べられない(ok:false)
   const MEALS = Object.freeze({
-    hp: { name: 'スタミナごはん', cost: 1500, hp: 0.4 },              // 体力を上限の40%ぶん回復
-    loyal: { name: 'なかよしごはん', cost: 3000, ama: 3, fear: 2 },    // 忠誠度 +5(甘え +3・恐れ +2)
-    stat: { name: 'パワーごはん', cost: 5000, all: 0.4 },              // 6能力すべて +「軽い訓練1回ぶん」× 0.4
+    vitamin: { name: 'ビタミンもどき', hp: 0.2, fear: 3 },               // 体力 上限の20%回復・恐れ度 +3
+    gochiso: { name: 'ごちそうもどき', hp: 0.2, ama: 3 },                // 体力 上限の20%回復・甘え度 +3
+    f_life: { name: 'もりもりニンジン', hp: 0.1, stat: 'life', add: 15 }, // 体力 上限の10%回復・その能力 +15(6種)
+    f_pow: { name: 'がっつりお肉', hp: 0.1, stat: 'pow', add: 15 },
+    f_wise: { name: 'ひらめきクルミ', hp: 0.1, stat: 'wise', add: 15 },
+    f_hit: { name: 'ねらいうちベリー', hp: 0.1, stat: 'hit', add: 15 },
+    f_eva: { name: 'ひらりリンゴ', hp: 0.1, stat: 'eva', add: 15 },
+    f_tough: { name: 'かちかちイモ', hp: 0.1, stat: 'tough', add: 15 },
+    prune: { name: 'スタープルーン', hp: 0.05, pop: 5, pts: 10 },        // 体力 上限の5%回復・人気 +5・能力ポイント +10
   });
 
   // ---- 能力ポイント(TOURNAMENT §7b) ----
@@ -392,8 +401,8 @@
     lvMax: () => 4, specialLv: 5,
     rate: 0.4,                                       // 条件に届いたターンに出る率(期の最後のターンは必ず)
   });
-  const STORY_GOOD_ALL = 1.75; // いい結末の全能力 = 訓練1回ぶん × 1.75(EVENTS §3 の「特大」)
-  const STORY_BIG = 2;         // ほろ苦い結末の「大+」= 訓練2回ぶん
+  const STORY_GOOD_ALL = 1.75; // いい結末の全能力 = トレーニング1回ぶん × 1.75(EVENTS §3 の「特大」)
+  const STORY_BIG = 2;         // ほろ苦い結末の「大+」= トレーニング2回ぶん
   const RUNNER_UP = 0.4; // 負けたときは準優勝の扱い(★★ 以上・賞金の40%)
   // ライバル(TOURNAMENT §8b・社長 2026-11-12): 月のはじめに決まる・札にアイコン・ごほうびが大きい
   const RIVAL = Object.freeze({ rate: 0.25, str: 1.1, prize: 1.5, all: 12, tickets: 1, title: 'ライバルに勝った' }); // ごほうびの主は全能力 +12(社長 2026-11-12)
@@ -420,7 +429,7 @@
         if (b.type === 'battle' || !a || a.type !== b.type || !nums(a.v) || !nums(a.cost) || a.cost.length !== a.v.length) { out[id] = b; return; }
         out[id] = Object.freeze({ ...b, name: typeof a.name === 'string' && a.name ? a.name : b.name, v: a.v.slice(), cost: a.cost.slice(), ...(b.start ? { start: nums(a.start) && a.start.length === a.v.length ? a.start.slice() : b.start } : {}) });
       });
-      // 第2版で足した「訓練に効く11種」(2026-11-12 バトル部・窓口の依頼②)。表にあって形が正しいときだけ効く(表が無ければ出さない)
+      // 第2版で足した「トレーニングに効く11種」(2026-11-12 バトル部・窓口の依頼②)。表にあって形が正しいときだけ効く(表が無ければ出さない)
       Object.keys(ASSISTS_V2_TRAIN).forEach((id) => {
         const w = ASSISTS_V2_TRAIN[id]; const a = T[id];
         if (!a || a.type !== w.type || !nums(a.v) || !nums(a.cost) || a.cost.length !== a.v.length || (w.stat && a.stat !== w.stat)) return;
@@ -521,13 +530,13 @@
       };
     };
     const assistLv = (m, id) => { const a = m.assists.find(x => x.id === id); return a ? a.lv : 0; };
-    // その子がその能力の訓練にいるときの効き(%)= 能力の補正 + いっしょ型アシスト
+    // その子がその能力のトレーニングにいるときの効き(%)= 能力の補正 + いっしょ型アシスト
     const memberEffect = (m, k, loy) => {
       let v = m.bonus[k] || 0;
       const so = assistLv(m, 'sokoji'); if (so) v += aOf('sokoji', 'v', so);
       const at = assistLv(m, 'atooshi'); if (at && m.top[0] === k) v += aOf('atooshi', 'v', at);
       const ki = assistLv(m, 'kizuna'); if (ki) v += aOf('kizuna', 'v', ki) * clamp(num(loy), 0, 100) / 100;
-      const ku = assistLv(m, `kun${k}`); if (ku) v += num(aOf(`kun${k}`, 'v', ku)); // 能力ごとの特訓: その能力の訓練に来たときだけ
+      const ku = assistLv(m, `kun${k}`); if (ku) v += num(aOf(`kun${k}`, 'v', ku)); // 能力ごとの特訓: その能力のトレーニングに来たときだけ
       return r2(v);
     };
     const stayLv = (team, id) => team.reduce((a, m) => Math.max(a, assistLv(m, id)), 0); // いるだけ型は編成でいちばん高い段の1つだけ
@@ -544,10 +553,12 @@
       const team = raw.map(memberOf);
       const typeIdx = Number.isInteger(src.type) ? clamp(src.type, 0, 5) : C.typeFromApt(aptStr(species), rngOf(id, 'type')());
       const stats = initStats(species);
-      team.forEach(m => { stats[m.startAdd.stat] = clamp(stats[m.startAdd.stat] + m.startAdd.v, 0, STAT_MAX); });
-      const aidLv = clamp(Math.round(num(src.aidBondLv, 1)), 1, 10);
       // 持ちこみ: carry = 始める前に使う物(3つまで)・bag = 育成中に使う物の数
       const carry = (Array.isArray(src.carry) ? src.carry : []).filter(k => ITEMS[k] && ITEMS[k].use === 'before').filter((k, i, a) => a.indexOf(k) === i).slice(0, CARRY_MAX);
+      // うけつぎ草(うけつぐ魂): 編成から受け継ぐはじめの能力が2倍(2026-11-13 社長)
+      const startMul = carry.some(k => ITEMS[k].good === 'uketsugu') ? GOOD.uketsugu.start : 1;
+      team.forEach(m => { stats[m.startAdd.stat] = clamp(stats[m.startAdd.stat] + m.startAdd.v * startMul, 0, STAT_MAX); });
+      const aidLv = clamp(Math.round(num(src.aidBondLv, 1)), 1, 10);
       const bag = {}; let room = CARRY_MAX - carry.length;
       if (src.bag && typeof src.bag === 'object') for (const [k, v] of Object.entries(src.bag)) if (ITEMS[k] && ITEMS[k].use === 'during' && room > 0) { const n = clamp(Math.round(num(v)), 0, room); if (n > 0) { bag[k] = n; room -= n; } }
       const good = {}; let hpMax = HP_MAX0; let issaForce = false;
@@ -601,7 +612,7 @@
       f *= 1 - Math.min(0.8, cut);
       if (s.aid === 'dra') f *= 0.7;
       if (num(s.fear) >= 40) f *= RATE.failFearHi;
-      if (card) f += evMod(s, 'fail', card.stat); // 出来事「好きな訓練」: その訓練の失敗 −10%
+      if (card) f += evMod(s, 'fail', card.stat); // 出来事「好きなトレーニング」: そのトレーニングの失敗 −10%
       return clamp(f, 0, RATE.failCap);
     };
     // card があれば、いっしょに来た子の「見張り役」でサボりの率が減る(合わせて −80% まで)
@@ -689,7 +700,7 @@
 
     // ---- 伸び(ASSIST §4 の1本の式) ----
     const ageOf = (s) => C.ageMult(s.type, (s.turn - 1) / TOTAL_TURNS);
-    const unitOf = (s, k) => BASE.light * aptMult(s.species, k) * ageOf(s); // 「軽い訓練1回ぶん」
+    const unitOf = (s, k) => BASE.light * aptMult(s.species, k) * ageOf(s); // 「軽いトレーニング1回ぶん」
     const addStat = (s, k, v) => { s.stats[k] = clamp(Math.round(s.stats[k] + v), 0, STAT_MAX); };
     const addLoyal = (s, ama, fear) => {
       if (s.yosu.utsu) return; // うつ病のあいだ忠誠度(甘え度・恐れ度)は動かない(台帳 2026-11-12)
@@ -705,7 +716,7 @@
       if (i === 'aid') s.aidBond = clamp(Math.round(s.aidBond + v * mult), 0, BOND.max); else s.bond[i] = clamp(Math.round(s.bond[i] + v * mult), 0, BOND.max);
     };
 
-    // 編成の子との訓練イベント(1ターン1回まで・50%)。試算は1つ目の選択肢を選ぶ
+    // 編成の子とのトレーニングイベント(1ターン1回まで・50%)。試算は1つ目の選択肢を選ぶ
     const trainEvent = (s, card, rng, out) => {
       if (!card.members.length || rng() >= BOND.eventRate + (s.good && s.good.eventMaker ? GOOD.eventMaker.eventRate : 0) + stayNum(s, 'yobimizu') / 100) return; // 💬出来事の呼び水
       // 話を進められる子を先に
@@ -737,7 +748,7 @@
     };
 
     const condRoll = (s, rng, kind) => {
-      // けが(体力が少ないときの訓練)・病気(ストレス)・家出(忠誠が低くストレスが高い)
+      // けが(体力が少ないときのトレーニング)・病気(ストレス)・家出(忠誠が低くストレスが高い)
       const ratio = s.hp / s.hpMax; const soft = (s.aid === 'sorashido' ? COND.sorashido : 1) * (1 - Math.min(0.8, stayNum(s, 'genki') / 100)); // 🍀元気のお守り
       if (kind === 'train' && ratio < COND.injLowHp && rng() < COND.injTrain * soft * (EV ? EV.mod(s, 'inj') : 1)) {
         let len = rng() < 0.5 ? COND.injLen[0] : COND.injLen[1]; if (s.aid === 'erubin') len = Math.max(1, len - 1);
@@ -759,7 +770,7 @@
         recover(s, COND.rec); addStress(s, REST_STRESS); s.cond.left -= 1; out.cond = s.cond.kind; if (s.cond.left <= 0) s.cond = null;
         s.log.cond += 1; s.acted = true; s.last = { kind: 'cond' }; return { state: s, out };
       }
-      if (retry) { // デビュー戦の再挑戦: 訓練はできない。ターンの終わりに戦う
+      if (retry) { // デビュー戦の再挑戦: トレーニングはできない。ターンの終わりに戦う
         if (kind !== 'retry') return { state: s0, out: { ok: false, why: 'retry-only' } };
         s.acted = true; s.last = { kind: 'retry' }; return { state: s, out };
       }
@@ -782,7 +793,7 @@
         const before = { ...s.stats };
         Object.entries(gains).forEach(([k, g]) => addStat(s, k, g));
         let it = 0; card.members.forEach(i => { const lv = assistLv(s.team[i], 'itawari'); if (lv) it += aOf('itawari', 'v', lv) / 100; });
-        const hpCost = BASE.hp * R.hp * (1 - Math.min(0.6, it)) * (s.aid === 'kiki' ? 0.85 : 1); // きき: 訓練の疲れ −15%
+        const hpCost = BASE.hp * R.hp * (1 - Math.min(0.6, it)) * (s.aid === 'kiki' ? 0.85 : 1); // きき: トレーニングの疲れ −15%
         s.hp = clamp(Math.round(s.hp - hpCost), 0, s.hpMax);
         const stUp = BASE.stress * pol.stress + R.stress;
         addStress(s, stUp * (EV && stUp > 0 ? EV.mod(s, 'stress') : 1) * (stUp > 0 ? 1 - cutOf(s, card, 'kibarashi') : 1)); // 🎵ごきげん: 増えが半分/🎈気晴らし: 増えを減らす
@@ -819,7 +830,7 @@
         const R = RESULTS[res]; const pol = C.policyOf(s.pol);
         const sl = stayLv(s.team, 'shugyo'); const boost = 1 + (sl ? aOf('shugyo', 'v', sl) / 100 : 0);
         const before = { ...s.stats };
-        // 編成の補正も訓練と同じ考え方でかける(社長 2026-11-12): 段ごとに、その段の能力が上位3つにある子が付いてくる(多いときは補正の大きい3体まで)
+        // 編成の補正もトレーニングと同じ考え方でかける(社長 2026-11-12): 段ごとに、その段の能力が上位3つにある子が付いてくる(多いときは補正の大きい3体まで)
         const stages = [];
         for (let round = 0; round < (sup ? 2 : 1); round++) SHUGYO.courses[course].stages.forEach((pair, si) => { // 超修行は能力の上がりが2回分
           const who = s.team.map((m, i) => ({ i, v: Math.max(memberEffect(m, pair[0], loyalOf(s)) * (m.top.includes(pair[0]) ? 1 : 0), memberEffect(m, pair[1], loyalOf(s)) * (m.top.includes(pair[1]) ? 1 : 0)) }))
@@ -879,7 +890,7 @@
       return { state: s0, out: { ok: false, why: 'unknown' } };
     };
 
-    // 叱る・褒める(訓練の結果のあと1回。しなくてもよい)
+    // 叱る・褒める(トレーニングの結果のあと1回。しなくてもよい)
     const react = (s0, how) => {
       const s = clone(s0);
       if (!s.last || !['train', 'shugyo'].includes(s.last.kind) || s.reacted) return { state: s, out: { ok: false } };
@@ -914,13 +925,15 @@
     // 大会のあとのごほうびのごはん(1回だけ・賞金を使う)
     const meal = (s0, key) => {
       const s = clone(s0); const m = MEALS[key];
-      const free = s.freeMeal === true; // えるびんの見守りの大会: 次のごはんが1回ただ
-      if (!s.mealReady || !m || (!free && s.fame < m.cost) || s.over) return { state: s0, out: { ok: false } };
-      if (free) s.freeMeal = false; else s.fame -= m.cost; s.mealReady = false;
+      // 2026-11-14 社長: 勝ったあとのごはんはただ(賞金を使わない)。えるびんの freeMeal は読めるまま残すが、ごはんでは使わない(代わりの効果は案)
+      if (!s.mealReady || !m || s.over) return { state: s0, out: { ok: false } };
+      s.mealReady = false;
       const kui = 1 + stayNum(s, 'kuishinbo') / 100; // 🍙食いしん坊: ごはんの効き目が増える
       if (m.hp) recover(s, m.hp * kui);
       if (m.ama || m.fear) addLoyalRaw(s, Math.round((m.ama || 0) * kui), Math.round((m.fear || 0) * kui));
-      if (m.all) KEYS.forEach(k => addStat(s, k, unitOf(s, k) * m.all * kui));
+      if (m.stat && KEYS.includes(m.stat)) addStat(s, m.stat, Math.round(m.add * kui));
+      if (m.pop) s.pop = clamp(s.pop + popGain(s, Math.round(m.pop * kui)), 0, 100);
+      if (m.pts) gainPts(s, Math.round(m.pts * kui));
       s.log.meal = (s.log.meal || 0) + 1;
       return { state: s, out: { ok: true, meal: key } };
     };
@@ -1072,6 +1085,7 @@
       if (it.hp) recover(s, it.hp);
       if (it.cure) { s.yosu = {}; }
       if (it.loyal) addLoyalRaw(s, Math.ceil(it.loyal / 2), Math.floor(it.loyal / 2));
+      if (it.ama || it.fear) addLoyalRaw(s, num(it.ama), num(it.fear));
       if (it.stress) addStress(s, it.stress);
       if (it.issaSure) s.issaSure = true;
       if (it.gives) for (const [k, n] of Object.entries(it.gives)) s.bag[k] = num(s.bag[k]) + n;
@@ -1428,7 +1442,7 @@
         const tk = stayNum(s, 'ticket') / 100; const extra = tk > 0 && rngOf(s.id, s.turn, 'ticket', b.kind, num(b.round), num(b.retry), num(b.again))() < tk ? 1 : 0; // 🎫チケット運
         const t = ticketsOfPrize(tkFull) + (b.rival ? RIVAL.tickets : 0) + extra; s.tickets += t; out.tickets = t; if (extra) out.ticketLuck = true;
       }
-      s.mealReady = true;
+      s.mealReady = won; // 2026-11-13 社長: 大会に勝ったときだけごはんを選べる(負けたらなし)
       gainMastery(s, use); // 熟練: 出場で全部の技 +2・使った技は1回 +2(1試合で +6 まで)
       s.battle = null;
       if (b.kind === 'debut') {
@@ -1557,7 +1571,7 @@
 
     return Object.freeze({
       events: EV,
-      VERSION, KEYS, STAT_NAMES, PERIODS, TOTAL_TURNS, FORCED, SUMMIT, BASE, RESULTS, RATE, REST, PLAY, CLINIC, COND, LOYAL, GATHER, BOND, STORY, LOTTERY,
+      VERSION, STORY, KEYS, STAT_NAMES, PERIODS, TOTAL_TURNS, FORCED, SUMMIT, BASE, RESULTS, RATE, REST, PLAY, CLINIC, COND, LOYAL, GATHER, BOND, STORY, LOTTERY,
       ASSISTS, ISSA, PTS, XP, SHUGYO, TECH_POWER, MASTERY, techRowsOf, techPowerOfRows, powerOf, techBoostOf, techUseOf, ITEMS, GOOD, CARRY_MAX, useItem, FAME_V, FAME_SCALE, TICKET_BASE, TRAIN_LV, trainLvOf, REMATCH, canRematch, rematch, canSkip, battleKey, PRIZE, MEALS, meal, ticketsOfPrize, TECH_MAX, techsOf, canLearn, techRate, learnable, techRank, shugyoQ, superLeft, techMissOf, techCanon, canonTechList, shugyoLeft, teachFrom, BENCH: BENCH_USE, STAR_MULT, TAG_POWER, BOND_START, RANK_ADD, TRAIN_COMBO, AIDS, speciesList,
       rngOf, periodOf, aptMult, initStats, memberOf, memberEffect, newRun, gatherOf, cardMult, peek, failRateOf, sabRateOf, greatRateOf,
       act, react, issa, issaComes, issaRate, endTurn, opponents: opponentsOf, settle, cupsOf, canEnter, bracketOf, gradeOf, GRADE_STEP, stayV, SC_CUPS, SC_NAME, ASST_STORY, storyEnd, markSpecial, battleMods, battleBuffs, peakTurn, ASTORY, storyDue, storyStep, preview, restore, ARC, PARTY, summitPick, endingOf, endingSeen, CUP_SYS, YEAR, RIVAL, CUP_PRIZE, spendPts, autoPts, ptsCost, evaluate, assistPointsOf, loyalOf, loyalMult, top3Of, sumOf,

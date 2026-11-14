@@ -91,7 +91,7 @@ eq('入る→メイン(夏・4季節とも同じ曲)', last(), ['quiet:true', 'p
 S.scene('main', { season: 'summer' });
 eq('同じ曲は鳴らし直さない', last(), []);
 S.scene('trainGreat');
-eq('訓練の結果は曲を替えず効果音だけ', last(), ['se:trainingGoal']);
+eq('トレーニングの結果は曲を替えず効果音だけ', last(), ['se:trainingGoal']);
 S.scene('cupWin');
 eq('大会の勝ち', last(), ['play:ichika_clear', 'se:rankFanfare']);
 S.scene('trainOk', { delayMs: 500 });
