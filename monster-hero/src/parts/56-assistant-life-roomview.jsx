@@ -45,6 +45,8 @@ const assistantLifeRoomFaceOf = (pid, src) => {
 //   ・assistantLifeStandVisH(face, F) … 見えている体の高さ(fit を含む)
 //   ・assistantLifeStandRule({ face, box, F, topY, cx }) … 1人ぶんの { top, height, width, left, clip, fade, frameTop, frameBottom, visTop, visBottom, U }
 const ASSISTANT_LIFE_ROOM_STAND_DEF = Object.freeze({ ec: 0.1639, len: 2.63, cut: Object.freeze({ above: 0.55, below: 1.8, fade: 0.45 }) });
+// 見せる範囲を下へ広げる分(顔の長さ U の何個ぶんか)。前の家具の天板はこの分だけ下がる
+const ASSISTANT_LIFE_ROOM_STAND_EXT = 0.6;
 const assistantLifeRoomVisH = (face, F) => {
   try { if (typeof assistantLifeStandVisH === 'function') { const v = assistantLifeStandVisH(face, F); if (Number.isFinite(v) && v > 0) return v; } } catch (_) { /* 既定へ */ }
   return F / (ASSISTANT_LIFE_ROOM_STAND_DEF.ec * (face.m || 1)) * (face.fit || 1);
@@ -69,11 +71,13 @@ const assistantLifeRoomStandLayout = (items, W, usable, deskTop, land, bed = fal
   const visW = (x, f) => assistantLifeRoomVisH(x.face, f) * (x.box.r - x.box.l) * x.box.ar / (x.box.b - x.box.t);
   for (const x of items) { const w1 = visW(x, 1); if (w1 > 0) F = Math.min(F, (sw * 0.98) / w1); }
   const U = F * D.len;
-  const topY = bed ? deskTop + 0.15 * U - U : deskTop + 0.2 * U - D.cut.below * U;
+  const topY = bed ? deskTop + 0.15 * U - U : deskTop + 0.2 * U - 1.8 * U; // 頭の高さは今までどおり(見せる範囲だけ下へ広げ、前の家具をその下へ下げる)
   return items.map((x, i) => {
     const cx = x0 + sw * (i + 0.5);
     const r = assistantLifeRoomPlace(x, F, topY, cx);
-    return { left: r.left, top: r.top, width: r.width, height: r.height, clip: r.clip, fade: r.fade, cx, face: F, visTop: r.visTop, headTop: topY, frameBottom: r.frameBottom, w: visW(x, F) };
+    // 助手のアップは前の家具に隠されない(2026-11-14 社長「机みたいのが前に出ちゃってる」): 見せる範囲を腰まで下へ広げ、前の家具は見せる範囲の下から始める
+    const ext = bed ? 0 : ASSISTANT_LIFE_ROOM_STAND_EXT * U, ih = Math.max(1, r.height);
+    return { left: r.left, top: r.top, width: r.width, height: r.height, clip: [r.clip[0], Math.max(0, r.clip[1] - ext)], fade: r.fade ? [r.fade[0] + ext / ih, Math.min(1, r.fade[1] + ext / ih)] : r.fade, cx, face: F, visTop: r.visTop, headTop: topY, frameBottom: r.frameBottom + ext, w: visW(x, F), U };
   });
 };
 
@@ -82,17 +86,17 @@ function AssistantLifeRoomFigure({ who, src, p, look, sleep = false, onPress = n
   // 夜に部屋が暗くなっても、起きている助手は暗くしない(2026-11-12 社長「起きてるのに夜だと暗くなる」)。夜の色味は寝ている助手だけ
   const night = look === 'night' && sleep, evening = look === 'evening';
   const tone = night ? 'linear-gradient(100deg,#ffd08a 0%,#c9c2ee 45%,#8a86c0 100%)'
-    : evening ? 'linear-gradient(100deg,#ffe0b0 0%,#f2c9b0 60%,#c99a90 100%)'
-    : 'linear-gradient(100deg,#ffffff 0%,#f6ece8 60%,#d9c2bc 100%)';
+    : evening ? 'linear-gradient(100deg,#fff6ec 0%,#fbeee4 60%,#f0dcd4 100%)'
+    : 'linear-gradient(100deg,#ffffff 0%,#fbf5f3 60%,#efe3df 100%)';
   const fadeMask = p.fade ? `linear-gradient(to bottom,#000 ${(p.fade[0] * 100).toFixed(1)}%,transparent ${(p.fade[1] * 100).toFixed(1)}%)` : null;
   const box = { position: 'absolute', left: p.left, top: p.top, width: p.width, height: p.height,
     clipPath: `inset(${p.clip[0].toFixed(1)}px 0 ${p.clip[1].toFixed(1)}px 0)`, ...(fadeMask ? { WebkitMaskImage: fadeMask, maskImage: fadeMask } : {}) };
   const shape = { WebkitMaskImage: `url(${src})`, WebkitMaskSize: '100% 100%', maskImage: `url(${src})`, maskSize: '100% 100%' };
   return (<>
-    <span aria-hidden="true" style={{ position: 'absolute', left: p.cx - p.w * 0.45, top: p.frameBottom - 16, width: p.w * 0.9, height: 26, borderRadius: '50%', background: 'radial-gradient(#0007,transparent 70%)', pointerEvents: 'none' }}/>
+    <span aria-hidden="true" style={{ position: 'absolute', left: p.cx - p.w * 0.45, top: p.frameBottom - 30, width: p.w * 0.9, height: 26, borderRadius: '50%', background: 'radial-gradient(#0007,transparent 70%)', pointerEvents: 'none' }}/>
     <div style={box} data-assistant-life-roomview-person={who.id} data-assistant-life-roomview-face={Math.round(p.face)} data-assistant-life-roomview-head={Math.round(p.headTop)}>
       <img src={src} alt="" draggable={false} data-assistant-life-roomview-fig={who.id} onClick={onPress || undefined}
-        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', maxWidth: 'none', filter: `drop-shadow(0 0 .6px #2a1414cc) saturate(.92) sepia(.1)${sleep ? ' brightness(.6)' : ''}`, cursor: onPress ? 'pointer' : undefined }}/>
+        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', maxWidth: 'none', filter: `drop-shadow(0 0 .6px #2a1414cc)${sleep ? ' brightness(.6)' : ''}`, cursor: onPress ? 'pointer' : undefined }}/>
       <span aria-hidden="true" style={{ position: 'absolute', inset: 0, ...shape, background: tone, mixBlendMode: 'multiply', pointerEvents: 'none' }}/>
     </div>
     {sleep && <span aria-hidden="true" style={{ position: 'absolute', left: p.cx + p.w * 0.2, top: p.visTop, fontSize: 18, pointerEvents: 'none' }}>💤</span>}
@@ -381,7 +385,14 @@ function AssistantLifeRoomScene({ id, look = 'noon', land = false, people = [], 
       <div aria-hidden="true" style={{ position: 'absolute', left: 0, right: 0, top: floorY - 64, height: 64, background: 'linear-gradient(#ffffff40,#00000018)', borderTop: '3px solid #00000022' }}/>
       <div aria-hidden="true" style={{ position: 'absolute', left: 0, right: 0, top: floorY, bottom: 0, background: 'repeating-linear-gradient(90deg,#c4895a 0 64px,#b87c4d 64px 66px),linear-gradient(#cf9562,#9a6a40)', backgroundBlendMode: 'multiply', borderTop: '4px solid #6b4426' }}/>
       <div aria-hidden="true" style={{ position: 'absolute', right: W * 0.06, top: topH + usable * 0.06, width: Math.min(130, W * 0.3), height: Math.min(96, usable * 0.22), borderRadius: 8, border: '6px solid #ffffff99',
-        background: night ? 'radial-gradient(circle at 70% 30%,#fff 0 5px,transparent 6px),linear-gradient(#0b1030,#1e2a5a)' : evening ? 'linear-gradient(#f59e0b,#fb7185)' : look === 'morning' ? 'linear-gradient(#93c5fd,#fde68a)' : 'linear-gradient(#7cc4ff,#d6f0ff)' }}/>
+        background: night ? 'radial-gradient(circle at 70% 30%,#fff 0 5px,transparent 6px),linear-gradient(#0b1030,#1e2a5a)' : evening ? 'linear-gradient(#f59e0b,#fb7185)' : look === 'morning' ? 'linear-gradient(#93c5fd,#fde68a)' : 'linear-gradient(#7cc4ff,#d6f0ff)' }}>
+        {/* 窓だと分かるように、まどわく(十字)・窓台・カーテンを描く */}
+        <span style={{ position: 'absolute', left: '50%', top: 0, bottom: 0, width: 4, marginLeft: -2, background: '#ffffffcc' }}/>
+        <span style={{ position: 'absolute', top: '50%', left: 0, right: 0, height: 4, marginTop: -2, background: '#ffffffcc' }}/>
+        <span style={{ position: 'absolute', left: -10, right: -10, bottom: -13, height: 8, borderRadius: 3, background: '#ffffffd9', boxShadow: '0 2px 3px #0003' }}/>
+        <span style={{ position: 'absolute', left: -9, top: -6, bottom: -4, width: 14, borderRadius: '4px 8px 8px 4px', background: 'linear-gradient(90deg,#f9a8d4,#f472b6)' }}/>
+        <span style={{ position: 'absolute', right: -9, top: -6, bottom: -4, width: 14, borderRadius: '8px 4px 4px 8px', background: 'linear-gradient(90deg,#f472b6,#f9a8d4)' }}/>
+      </div>
       {/* 置いた家具(天井・壁・床)。押すと名前 */}
       {/* 模様替え(公開の印 assistantLifeRoomEdit・56-assistant-life-roomedit.jsx): 自分の家の部屋は、保存してある並びで描く。助手の後ろの層 */}
       {layoutOn && <AssistantLifeRoomLayoutLayer who={layoutWho} items={layoutEdit ? layoutEdit.items : layoutItems} geom={layoutGeom} front={false} onTip={layoutEdit ? null : setTip}/>}
@@ -391,7 +402,7 @@ function AssistantLifeRoomScene({ id, look = 'noon', land = false, people = [], 
       {asleep && <AssistantLifeRoomBed id={id} W={W} floorY={floorY} sleepers={people} look={look}/>}
       {!asleep && lay && standItems.map((x, i) => (sleepIds.includes(x.pid)
         ? <AssistantLifeRoomFigure key={x.pid} who={x.who} src={x.src} p={lay[i]} look={look} sleep onPress={onPerson ? () => onPerson(x.pid) : null}/> : null))}
-      {people.length > 0 && !asleep && <AssistantLifeRoomFront kind={frontKind} cx={W / 2} top={deskTop} w={frontW} items={ASSISTANT_LIFE_ROOM_DESK_ITEMS[id] || []}/>}
+      {people.length > 0 && !asleep && <AssistantLifeRoomFront kind={frontKind} cx={W / 2} top={lay && !asleep ? Math.max(...lay.map(p => p.frameBottom - 4)) : deskTop} w={frontW} items={ASSISTANT_LIFE_ROOM_DESK_ITEMS[id] || []}/>}
       {/* 助手より前に出した家具(机の前) */}
       {layoutOn && <AssistantLifeRoomLayoutLayer who={layoutWho} items={layoutEdit ? layoutEdit.items : layoutItems} geom={layoutGeom} front={true} onTip={layoutEdit ? null : setTip}/>}
       {away && (
