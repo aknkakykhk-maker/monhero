@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 97ebad7659363cbd
+// source-sha256: 0804fd3af1a82be6
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -156424,6 +156424,11 @@ const MSX_IS_YOSU = Object.freeze({
   kaze: '🤧 かぜ'
 });
 const msxIsCalm = () => typeof msxFxCalm === 'function' ? Boolean(msxFxCalm()) : false;
+const msxIsJw = t => typeof jaWrap === 'function' ? jaWrap(t) : t;
+const MSX_IS_WRAP = typeof JA_WRAP_STYLE !== 'undefined' ? JA_WRAP_STYLE : {
+  wordBreak: 'keep-all',
+  overflowWrap: 'anywhere'
+};
 function msxIssaGainList(before, s, SUC) {
   if (!before || !s) return [];
   const out = [];
@@ -156596,8 +156601,9 @@ function MsxIssaMeet({
       borderRadius: '0 99px 99px 0'
     }
   }, React.createElement("small", null, "大きな賭け"), "イッサ博士があらわれた!"), React.createElement("div", {
-    className: "v-ibub msx-is-bub"
-  }, "「", meet ? meet.t : 'やっほー! ちょっと強くなってみない?', "」")), React.createElement("div", {
+    className: "v-ibub msx-is-bub",
+    style: MSX_IS_WRAP
+  }, msxIsJw(`「${meet ? meet.t : 'やっほー! ちょっと強くなってみない?'}」`))), React.createElement("div", {
     className: "v-six msx-is-six"
   }, MSX_ISSA_KEYS.map((x, i) => {
     const p = SUC.issaRate(s, x.key);
@@ -156780,17 +156786,19 @@ function MsxIssaResult({
       top: 'auto',
       bottom: 8,
       left: 8,
-      right: '44%'
+      right: '44%',
+      ...MSX_IS_WRAP
     }
-  }, "「スイッチ、オン! …どうなるかな〜?」") : null, done && said ? React.createElement("div", {
+  }, msxIsJw('「スイッチ、オン! …どうなるかな〜?」')) : null, done && said ? React.createElement("div", {
     className: "v-ibub msx-is-bub2",
     style: {
       top: 'auto',
       bottom: 8,
       left: 8,
-      right: '44%'
+      right: '44%',
+      ...MSX_IS_WRAP
     }
-  }, "「", said.t, "」") : null, st < 2 && !calm ? React.createElement("div", {
+  }, msxIsJw(`「${said.t}」`)) : null, st < 2 && !calm ? React.createElement("div", {
     className: "msx-is-ctl"
   }, React.createElement("button", {
     type: "button",
@@ -156816,8 +156824,9 @@ function MsxIssaResult({
     onClick: onNext,
     "data-msx-issa-next": true
   }, "つぎへ ▶"))) : React.createElement(React.Fragment, null, React.createElement("div", {
-    className: "v-log"
-  }, k ? `${k.icon} ${k.name}に賭けた。` : '', "のびのび装置が、ガタガタと震えている…"), React.createElement("div", {
+    className: "v-log",
+    style: MSX_IS_WRAP
+  }, msxIsJw(`${k ? `${k.icon} ${k.name}に賭けた。` : ''}のびのび装置が、ガタガタと震えている…`)), React.createElement("div", {
     className: "v-ft",
     style: {
       marginTop: 6
