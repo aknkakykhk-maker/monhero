@@ -503,7 +503,7 @@ check('ねらった敵が倒れたら自動(ライフ最小)へ戻る',
   rpgUi.includes('const aimUnit=(rpgAim!==null&&battle.enemies[rpgAim]&&battle.enemies[rpgAim].alive)?battle.enemies[rpgAim]:null;')
   && rpgUi.includes('const aimIndex=aimUnit?rpgAim:-1;'));
 check('いま誰をねらっているかが画面に出る',
-  rpgUi.includes('mh-rpg-aim') && rpgUi.includes('ねらい: <b>{targetUnit?targetUnit.name:') 
+  rpgUi.includes('mh-rpg-aim') && rpgUi.includes('狙い: <b>{targetUnit?targetUnit.name:') 
   && rpgUi.includes('自動・ライフ最小') && rpgUi.includes('mh-rpg-aim-mark'));
 check('ねらいは画面だけの状態で、戦闘の状態には入れない',
   source.includes('const [rpgAim, setRpgAim] = useState(null);') && !/rpgAim/.test(rpgSource),
