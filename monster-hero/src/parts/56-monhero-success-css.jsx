@@ -106,6 +106,7 @@ const MSX_CSS = `
 .msx .v-hd .rt{background:#3b3566;border-radius:99px;padding:3px 9px;font-size:11px;font-weight:900;white-space:nowrap}
 .msx .v-body{flex:1;min-height:0;display:flex;flex-direction:column;padding:0 10px 8px}
 .msx .v-body>*{flex:none}
+.msx .v-body>.msx-scroll{flex:1 1 0;min-height:0}
 .msx .v-band{background:linear-gradient(180deg,#241d4a,#1a1636);border:1px solid #4a4380;border-radius:14px;padding:6px 8px 6px;margin-top:5px;box-shadow:inset 0 1px 0 #ffffff14}
 .msx .v-b1{display:flex;align-items:center;gap:6px}
 .msx .v-turn{flex:1;min-width:0;display:flex;align-items:center;gap:6px}
@@ -133,10 +134,6 @@ const MSX_CSS = `
 .msx .v-ga b{font-size:12.5px;min-width:22px;text-align:right}.msx .v-ga b small{font-size:10px;color:#cbd5e1;font-weight:700}
 .msx .v-ga b small.cap{color:#fde047}
 .msx .v-ga em{font-style:normal;font-size:10.5px;color:#fca5a5}.msx .v-ga em.pl{color:#f0abfc}.msx .v-ga em.hl{color:#86efac}
-.msx .v-track{display:flex;gap:2px;margin-top:5px}
-.msx .v-track span{height:5px;border-radius:3px;background:#334155;position:relative;overflow:hidden}
-.msx .v-track span i{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,#f472b6,#fb923c)}
-.msx .v-track span.now{outline:1px solid #fde047}
 .msx .v-scene{flex:1 1 0;min-height:0;position:relative;border-radius:16px;border:1px solid #4a4380;overflow:hidden;margin-top:6px;background:#0f0d24}
 .msx .v-scene .bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 78%}
 .msx .v-scene .sh{position:absolute;inset:0;background:linear-gradient(180deg,#1d174055 0,#1d174000 26%,#0f0d2400 62%,#0f0d24cc 100%)}
@@ -639,7 +636,7 @@ const MSX_CSS = `
 .msx{width:100%;max-width:520px;height:100%;font-family:inherit;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
 .msx.land{max-width:none}
 .msx img{display:block}
-/* 下げる前は .msx button(0,1,1)が .msx-btn・.msc-btn などの余白・背景を消し、ボタンが17px に潰れて当たり判定が下のボタンに取られていた(Fable の点検 ①-2)。:where で 0,0,1 にして、クラスで書いた見た目を勝たせる */
+/* ボタンの初期化は :where で強さを0にする(どのクラスの見た目にも負ける)。2026-11-14 点検: .msx button{padding:0} が .msx-btn{padding:10px} に勝ち、.msx-btn が高さ17〜18pxに潰れていた */
 :where(.msx) button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cursor:pointer;text-align:inherit;-webkit-appearance:none;appearance:none}
 .msx button:active{transform:scale(.97)}
 .msx button[disabled]{opacity:.45;cursor:default}
@@ -652,7 +649,86 @@ const MSX_CSS = `
 .msx-sheet{width:100%;max-height:100%;overflow-y:auto;background:linear-gradient(180deg,#241d4a,#16122e);border:1px solid #f472b6aa;border-radius:16px;padding:12px;box-shadow:0 10px 30px #000a}
 .msx-sheet h3{margin:0 0 6px;font-size:15px;font-weight:900;color:#f9a8d4}
 .msx-row{display:flex;align-items:center;gap:6px}
-.msx-btn{display:block;width:100%;border-radius:12px;padding:10px;font-size:13px;font-weight:900;text-align:center;background:#2b3348;margin-top:6px}
+/* モンスターの詳細(2026-11-14 手本の組み立て・見た目はうちの物) */
+.msx-md{padding:8px 10px}
+.msx-md-ti{text-align:center}
+.msx .msx-sheet h3.msx-md-ti{margin:0 0 4px}
+.msx-md-scroll{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+.msx-md-top{display:grid;grid-template-columns:minmax(0,38%) minmax(0,1fr);gap:6px}
+.msx-md-art{position:relative;display:flex;flex-direction:column;align-items:center;border-radius:12px;background:linear-gradient(180deg,#3b2f6b,#1b1638);padding:4px;min-height:150px}
+.msx-md-art .nm{align-self:stretch;font-size:12px;font-weight:900;color:#fde047;line-height:1.3;overflow-wrap:anywhere}.msx-md-art .nm small{display:block;font-size:10px;color:#cbd5e1}
+.msx-md-art img,.msx-md-art>span{flex:1 1 auto;width:100%;max-height:min(150px,30cqh);object-fit:contain;filter:drop-shadow(0 4px 3px #0008)}
+.msx-md-art .pw{align-self:stretch;display:flex;align-items:center;gap:3px;background:#0f172acc;border-radius:999px;padding:2px 8px;margin-top:2px}
+.msx-md-art .pw small{flex:none;font-size:10px;color:#cbd5e1;white-space:nowrap}.msx-md-art .pw b{flex:1;min-width:0;font-size:14px;text-align:right;white-space:nowrap}.msx-md-art .pw i{flex:none}
+.msx-md-panel{min-width:0;display:flex;flex-direction:column}
+.msx-md-tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:2px}
+.msx .msx-md-tabs button,.msx .msx-md-dists button{border-radius:8px 8px 0 0;padding:4px 0;text-align:center;font-size:11px;font-weight:900;background:#2b2550;color:#cbd5e1}
+.msx .msx-md-tabs button.on,.msx .msx-md-dists button.on{background:#fde047;color:#1e1b4b}
+.msx-md-box{flex:1;background:#0f172a;border-radius:0 0 10px 10px;padding:5px 6px}
+.msx-md-box .cap{display:flex;justify-content:space-between;font-size:10px;color:#f9a8d4;font-weight:900}
+.msx-md-st{display:flex;align-items:center;gap:4px;margin:3px 0;font-size:11px}
+.msx-md-st .n{flex:none;width:5.2em;white-space:nowrap;font-size:10.5px}
+.msx-md-st .v{flex:1;min-width:0;display:flex;flex-direction:column}
+.msx-md-st .v b{font-size:14px;line-height:1.1;text-align:right}
+.msx-md-st .g{height:4px;border-radius:2px;background:#334155;overflow:hidden}.msx-md-st .g i{display:block;height:100%}
+.msx-md-st .a{flex:none;width:1.4em;text-align:center;font-weight:900;color:#fde047}.msx-md-st .a.lo{color:#94a3b8}
+.msx-md-kv{display:flex;gap:6px;align-items:baseline;font-size:11px;padding:2px 0;border-bottom:1px solid #1e293b}
+.msx-md-kv>b{flex:none;width:6em;color:#f9a8d4;font-size:10.5px}.msx-md-kv>span{flex:1;min-width:0;overflow-wrap:anywhere}.msx-md-kv .gd{font-size:14px;font-weight:900;color:#fde047}
+.msx-md-dex{font-size:11px;font-weight:500;line-height:1.6;margin-top:4px}
+.msx-md-bot{margin-top:6px}
+.msx-md-cap{font-size:12px;font-weight:900;color:#f9a8d4}.msx-md-cap small{font-size:10px;color:#cbd5e1;margin-left:6px;font-weight:700}
+.msx-md-dists{display:grid;grid-template-columns:repeat(5,1fr);gap:2px;margin-top:3px}
+.msx-md-tw{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:6px;background:#0f172a;border-radius:0 0 10px 10px;padding:5px}
+.msx-md-tl{display:flex;flex-direction:column;gap:3px;max-height:200px;overflow-y:auto}.msx-md-tl>*{flex:none}
+.msx .msx-md-tl button{display:block;text-align:left;border-radius:8px;padding:3px 6px;background:#1e1a36;border:1px solid #334155;color:#cbd5e1}
+.msx .msx-md-tl button.got{color:#fff;border-color:#a78bfa}.msx .msx-md-tl button.on{border-color:#fde047;background:#3b2f0b}
+.msx-md-tl b{display:block;font-size:11px;overflow-wrap:anywhere}.msx-md-tl small{display:block;font-size:10px;color:#cbd5e1}
+.msx-md-td .tn{font-size:12px;font-weight:900;color:#fde047;margin-bottom:2px;overflow-wrap:anywhere}
+@container (max-width: 359px){.msx-md-top{grid-template-columns:1fr}.msx-md-art{flex-direction:row;flex-wrap:wrap;min-height:0}.msx-md-art img,.msx-md-art>span{width:34%;max-height:90px}.msx-md-tw{grid-template-columns:1fr}.msx-md-tl{max-height:150px}}
+/* 育成中の「能力」(いじる物だけ・2026-11-14) */
+.msx-ab-row{display:flex;align-items:center;gap:6px;margin-top:5px}
+.msx-ab-row .n{flex:1;min-width:0;font-size:12px;font-weight:900}.msx-ab-row b{width:3em;text-align:right}
+.msx-ab-tech{display:inline-block;background:#0f172a;border:1px solid #a78bfa;border-radius:8px;padding:2px 7px;margin:3px 3px 0 0;font-size:11px}
+/* 編成: 枠を押して選ぶ・集まりやすいトレーニングの表(2026-11-14) */
+.msx .msx-slot-tap{cursor:pointer;outline:1px dashed #f9a8d488;outline-offset:-2px}
+.msx .msx-heat-btn{display:block;width:100%;text-align:left;cursor:pointer}
+.msx-pick-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:4px}
+.msx .msx-pick{display:flex;flex-direction:column;align-items:center;gap:1px;background:#0f172a;border:1px solid #334155;border-radius:10px;padding:4px 2px;min-width:0;color:#fff}
+.msx .msx-pick.on{border-color:#fde047;background:#3b2f0b}
+.msx-pick img{width:40px;height:40px;object-fit:contain}.msx-pick b{font-size:11px;max-width:100%;overflow-wrap:anywhere;text-align:center}.msx-pick small{font-size:10px;color:#cbd5e1;text-align:center;line-height:1.25}
+.msx-gt-row{background:#0f172a;border-radius:10px;padding:5px 8px;margin:4px 0}
+.msx-gt-row .hd{display:flex;align-items:center;gap:5px;font-size:12px}.msx-gt-row .hd .ic{font-size:16px}.msx-gt-row .hd b{flex:1;min-width:0}
+.msx-gt-row .hd .st{font-size:10.5px;color:#fde047}.msx-gt-row .hd .n{font-size:11px;color:#f9a8d4;font-weight:900}
+.msx-gt-mon{display:flex;align-items:center;gap:5px;margin-top:3px;font-size:11px}
+.msx-gt-mon img{flex:none;width:24px;height:24px;border-radius:7px;object-fit:contain;background:#1e1a36}.msx-gt-mon .nm{flex:1;min-width:0;overflow-wrap:anywhere}.msx-gt-mon .v{flex:0 1 auto;font-size:10px;color:#cbd5e1;text-align:right}
+.msx-gt-none{font-size:10.5px;color:#94a3b8;margin-top:2px}
+/* 選ぶ画面: はじめの能力(数字を大きく・伸びやすさは小さく)と「くわしく」の窓(2026-11-14) */
+.msx-dt-hd{display:flex;align-items:center;gap:6px}.msx-dt-hd .h1{flex:1;min-width:0}
+.msx .msx-dt-more{flex:none;border-radius:999px;padding:3px 10px;font-size:11px;font-weight:900;background:#f472b6;color:#fff;box-shadow:0 2px 0 #9d174d}
+.msx-dt-sm{font-size:10px;font-weight:700;color:#cbd5e1}
+.msx-st6{display:grid;grid-template-columns:repeat(3,1fr);gap:3px;margin-top:4px;text-align:center}
+.msx-st6 div{background:#0f172a;border-radius:8px;padding:2px 0 3px;line-height:1.15;min-width:0}
+.msx-st6 .n{display:block;font-size:10px;color:#cbd5e1}
+.msx-st6 b{display:block;font-size:20px;color:#fff;letter-spacing:.5px}
+.msx-st6 i{display:block;font-style:normal;font-size:10px;color:#fde047}.msx-st6 i.lo{color:#94a3b8}
+.msx-dt{display:flex;flex-direction:column;max-height:100%;padding:10px}.msx-dt>*{flex:none}.msx-dt>.msx-dt-body{flex:1 1 auto}
+.msx-dt-top{display:flex;align-items:flex-end;gap:8px}
+.msx-dt-top img{flex:none;width:30%;max-width:min(120px,24cqh);aspect-ratio:1;object-fit:contain;filter:drop-shadow(0 4px 3px #0008)}
+.msx-dt-top .nm{flex:1;min-width:0;line-height:1.5}
+.msx-dt-tabs{margin-top:6px}
+.msx-dt-body{flex:1 1 auto;min-height:0;overflow-y:auto;margin-top:6px;padding-right:2px}
+.msx-dt-cap{font-size:11px;font-weight:900;color:#f9a8d4;margin:2px 0 4px}
+.msx-dt-bar{display:flex;align-items:center;gap:6px;margin:3px 0;font-size:11px}
+.msx-dt-bar .n{flex:none;width:4.5em}.msx-dt-bar b{flex:none;width:2.4em;text-align:right;font-size:15px}
+.msx-dt-bar .g{flex:1;min-width:0;height:8px;border-radius:4px;background:#0f172a;overflow:hidden}.msx-dt-bar .g i{display:block;height:100%;background:linear-gradient(90deg,#f472b6,#fde047)}
+.msx-dt-bar .a{flex:none;width:1.6em;text-align:center;font-weight:900;color:#fde047}.msx-dt-bar .a.lo{color:#94a3b8}
+.msx-dt-dist{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;text-align:center}
+.msx-dt-dist div{background:#0f172a;border-radius:8px;padding:4px 0}.msx-dt-dist span{display:block;font-size:11px;color:#cbd5e1}.msx-dt-dist b{display:block;font-size:18px;color:#fde047}
+.msx-dt-tech{display:flex;align-items:center;gap:6px;background:#0f172a;border-radius:8px;padding:4px 8px;margin:3px 0;font-size:11px}
+.msx-dt-tech .k{flex:none;font-size:10px;color:#7dd3fc}.msx-dt-tech b{flex:1;min-width:0;overflow-wrap:anywhere}.msx-dt-tech .d{flex:none;font-size:10px;color:#cbd5e1}
+.msx .msx-dt-close{display:block;width:100%;margin-top:8px;border-radius:12px;padding:10px;font-size:13px;font-weight:900;text-align:center;color:#fff;background:#1e1a36;border:1px solid #4a4380}
+.msx-dt-dex{font-size:12px;font-weight:500;line-height:1.7;background:#0f172a;border-radius:10px;padding:8px 10px}
+.msx-btn{display:block;width:100%;min-height:44px;border-radius:12px;padding:10px;font-size:13px;font-weight:900;text-align:center;background:#2b3348;margin-top:6px}
 .msx-btn.go{background:linear-gradient(90deg,#f472b6,#fb923c);box-shadow:0 2px 0 #9d174d}
 .msx-btn.sub{background:#1e1a36;border:1px solid #4a4380}
 .msx-note{font-size:10px;color:#cbd5e1;font-weight:700;line-height:1.5}
@@ -677,14 +753,83 @@ const MSX_CSS = `
 @keyframes msx-fadein{from{opacity:0}to{opacity:1}}
 @keyframes msx-popin{from{transform:scale(.6);opacity:0}to{transform:scale(1);opacity:1}}
 /* 押せる大きさ: 見た目は変えず、押せる範囲だけ 44px 四方まで広げる(見張り: tools/success/success-shoot.js) */
-.msx button,.msx [role=button]{position:relative;min-height:0}
+:where(.msx) button,:where(.msx) [role=button]{position:relative;min-height:0}
 .msx button:not(:disabled)::after,.msx [role=button]::after{content:'';position:absolute;left:50%;top:50%;width:max(100%,44px);height:max(100%,44px);transform:translate(-50%,-50%)}
 /* 横画面・大きい文字で中身が縦にあふれるときは、本体の中で送れるようにする(下のボタンは貼りつけて残す) */
 .msx.land .v-body,.msx.s320 .v-body{overflow-y:auto;overscroll-behavior:contain}
 .msx.land .v-ft{position:sticky;bottom:0;z-index:3}
 .msx .v-inp{padding-top:0;padding-bottom:0}.msx .v-inp input{min-height:44px;align-self:stretch}
 .msx .v-ft,.msx.land .v-ft{height:auto;min-height:48px;padding-top:2px;padding-bottom:2px}
-.msx .v-ft button{min-height:40px}
+/* 下の帯のボタンも見た目で44px(2026-11-14 点検「押しにくい」) */
+.msx .v-ft{height:auto;min-height:52px;padding-top:4px;padding-bottom:4px}
+.msx .v-ft button{min-height:44px}
 .msx .v-hd{height:auto;min-height:32px}
 @media (prefers-reduced-motion:reduce){.msx *{animation:none!important}}
+/* はじめの画面(MsxHome・2026-11-14 作り直し): 題字ロゴ・大きな「続きから」・3つの札 */
+.msx .v-scene.hm{--mb:14%}
+.msx .v-scene.hm .mon{height:38%}.msx .v-scene.hm .gr{width:26%}
+.msx.land .v-scene.hm .mon{height:40%}
+.msx .v-hm-logo{position:absolute;left:50%;top:6px;transform:translateX(-50%);width:min(92%,360px);filter:drop-shadow(0 4px 6px #0008)}
+.msx .v-hm-logo img{display:block;width:100%;height:auto}
+.msx .v-hm-logo .msx-beta-mk{position:absolute;right:2%;bottom:6%}
+.msx .v-hm-cont{display:flex;flex-direction:column;align-items:center;gap:1px;width:100%;margin-top:8px;border-radius:18px;padding:10px 10px 9px;background:linear-gradient(90deg,#f472b6,#fb923c);box-shadow:0 4px 0 #9d174d,0 0 18px #f472b688;line-height:1.3;min-width:0}
+.msx .v-hm-cont .t{font-size:21px;font-weight:900;white-space:nowrap}
+.msx .v-hm-cont .d{font-size:12.5px;font-weight:900;max-width:100%;overflow-wrap:anywhere;text-align:center}
+.msx .v-hm-cont .d2{font-size:11px;font-weight:800;color:#fff7ed;max-width:100%;overflow-wrap:anywhere;text-align:center}
+.msx .v-hm-lead{margin-top:8px;font-size:12.5px;font-weight:900;text-align:center;line-height:1.45}
+.msx .v-hm-lead small{display:block;font-size:10.5px;font-weight:700;color:#cbd5e1}
+.msx .v-hm-new{display:block;width:100%;min-height:44px;margin-top:7px;border-radius:99px;padding:8px 10px;font-size:14px;font-weight:900;text-align:center;background:#1e1a36;border:1.5px solid #f9a8d4;color:#fff;white-space:normal}
+.msx .v-big.v-hm-new{font-size:18px;padding:14px 10px;border:0;background:linear-gradient(90deg,#f472b6,#fb923c)}
+.msx .v-hm-tiles{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:7px;margin-top:8px}
+.msx .v-hm-tile{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:62px;min-width:0;border-radius:14px;padding:5px 3px;background:#1e1a36;border:1.5px solid #64748b;border-bottom-width:3px;line-height:1.2}
+.msx .v-hm-tile .e{font-size:22px;line-height:1.1}
+.msx .v-hm-tile b{font-size:11.5px;font-weight:900;max-width:100%;overflow-wrap:anywhere;text-align:center}
+.msx .v-hm-tile small{font-size:10px;font-weight:800;color:#fde047}
+.msx.land .v-hm .v-hm-cont{margin-top:5px}
+.msx.s320 .v-hm-cont .t{font-size:18px}.msx.s320 .v-hm-tile{min-height:54px}.msx.s320 .v-hm-tile .e{font-size:19px}
+/* トレーニングを選ぶ画面: スライドで替わったとき、場面の中身が少し横に流れる(左へスライド=右から入る) */
+@keyframes msxSwL{from{transform:translateX(22px);opacity:.55}to{transform:none;opacity:1}}
+@keyframes msxSwR{from{transform:translateX(-22px);opacity:.55}to{transform:none;opacity:1}}
+.msx .v-scene.msx-swl>*:not(.sh):not(.bg){animation:msxSwL .22s ease-out}
+.msx .v-scene.msx-swr>*:not(.sh):not(.bg){animation:msxSwR .22s ease-out}
+/* 育成イベントの選択肢(2026-11-14 社長「選択肢が押しにくい。詳細ボタンがずれてる」): 押せる高さ52px以上・塗りと押したときの沈み・「i」は選択肢と同じ高さで中心をそろえる */
+.msx .v-opts{gap:10px;margin-top:8px}
+.msx .v-opts .v-opt{min-height:52px;display:flex;flex-direction:column;justify-content:center;padding:8px 14px;border-radius:16px;background:linear-gradient(180deg,#43307a,#2a2052);border:2px solid #f472b6;border-bottom-width:5px;box-shadow:0 2px 8px #0006;font-size:14px;font-weight:900;line-height:1.35;color:#fff;text-align:left}
+.msx .v-opts .v-opt:not(:disabled):active{transform:translateY(3px);border-bottom-width:2px;margin-bottom:3px;background:linear-gradient(180deg,#5b3f9e,#3b2a6b)}
+.msx .v-opts .v-opt small{display:block;font-size:10.5px;color:#86efac;font-weight:800;margin-top:1px}
+.msx .v-opts .msx-optrow{display:flex;gap:8px;align-items:stretch}
+.msx .v-opts .msx-optrow>.v-opt{flex:1;min-width:0}
+.msx .v-opts .msx-info{flex:none;align-self:stretch;width:52px;min-height:52px;display:flex;align-items:center;justify-content:center;padding:0;border-radius:16px;background:linear-gradient(180deg,#164e74,#0c3350);border:2px solid #7dd3fc;border-bottom-width:5px;color:#e0f2fe;font-size:20px;font-weight:900;line-height:1}
+.msx .v-opts .msx-info.on{background:#0369a1;color:#fff}
+.msx .v-opts .msx-info:not(:disabled):active{transform:translateY(3px);border-bottom-width:2px;margin-bottom:3px}
+/* 育成のメイン画面: 編成の顔の列(6体+助手)と「持ち物」が重ならないよう、持ち物は右下の「くわしく」の上へ置く(2026-11-14 社長「持ち物と編成がかぶってる」。
+   忠誠・人気の札を上の帯へ移して右下が空いた)。編成の列は場面の高さに合わせて顔を縮め、場面の下からはみ出さない。
+   列の中 = 枠の内側9 + 「編成」の字(大きい文字でも収まるよう20) + すき間 + 顔×7(幅320は2列×4段)、上下6ずつ */
+.msx .v-scene.home{container-type:size}
+.msx .v-scene.home .v-bagb:not(.r){left:auto;right:7px;bottom:59px}
+.msx.s320 .v-scene.home .v-bagb:not(.r){bottom:51px}
+.msx .v-scene.home .v-party{--pfs:clamp(14px,calc((100cqh - 12px - 29px - 24px) / 7),30px)}
+.msx.land .v-scene.home .v-party{--pfs:clamp(14px,calc((100cqh - 12px - 29px - 18px) / 7),24px)}
+.msx.s320 .v-scene.home .v-party{--pfs:clamp(14px,calc((100cqh - 12px - 29px - 12px) / 4),22px)}
+.msx .v-scene.home .v-party .v-pf,.msx .v-scene.home .v-party .v-pf img{width:var(--pfs)}
+.msx .v-scene.home .v-party .v-pf img{height:var(--pfs)}
+/* 場面がとても低いとき(幅320で大きい文字など): 編成は4列×2段に並べ替え、上の札は右下の持ち物・くわしくの左で止める */
+@container (max-height:210px){
+  .msx .v-scene.home .v-party{display:grid;grid-template-columns:repeat(4,auto);gap:2px 3px;--pfs:20px}
+  .msx .v-scene.home .v-party>small{grid-column:1/-1;text-align:center}
+  .msx .v-scene.home .v-chips{right:58px}
+}
+/* 上の帯の忠誠・人気の行(2026-11-14 社長「忠誠度と人気を上部に」)と、休む・遊ぶ・通院で棒が前の値から伸び縮みする動き */
+.msx .v-b3{display:flex;gap:14px;margin-top:4px;font-size:10.5px;font-weight:900;white-space:nowrap;color:#e2e8f0;line-height:1.25}
+.msx .v-b3 span{display:inline-flex;align-items:baseline;gap:3px}
+.msx .v-b3 b{font-size:12.5px;color:#fff}
+.msx .v-b3 .v-dl{font-style:normal;font-size:10.5px;font-weight:900;animation:msxDl 2.6s ease-out both}
+.msx .v-b3 .v-dl.up{color:#86efac}.msx .v-b3 .v-dl.dn{color:#fca5a5}
+@keyframes msxDl{0%{opacity:0;transform:translateY(4px)}12%{opacity:1;transform:none}75%{opacity:1}100%{opacity:0}}
+@keyframes msxBarGrow{from{width:var(--w0)}}
+/* 押し物の見た目の高さをそろえる(2026-11-14 点検「押しにくい」): はじめる画面のタブ・まとめの行・叱る/褒めるの「なにもしない」は44px、上の「← 中断」は36px(押せる範囲は ::after で44px) */
+.msx .v-tabs button{min-height:44px;display:flex;align-items:center;justify-content:center}
+.msx .v-sum{min-height:44px}
+.msx .v-ch{min-height:44px}
+.msx .v-hd .bk{min-height:36px;display:inline-flex;align-items:center}
 `;
