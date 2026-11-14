@@ -194,7 +194,7 @@ ok(near(SUC.failRateOf({ ...base, yosu: { sabori: { visits: 0 } } }) - fFull, 0.
   const pre = { ...w.stats };
   w = SUC.settle(w, [true]).state;
   // 決勝の全能力の上乗せは、エンディングのお祝いへ置きかえた(2026-11-13)。称号・能力ポイントはそのまま
-  ok(w.over === 'done' && w.titles.includes('ヒーローの頂') && w.ending && ['good', 'super'].includes(w.ending.kind)
+  ok(w.over === 'done' && w.titles.includes('真のヒーロー') && w.ending && ['good', 'super'].includes(w.ending.kind)
     && w.stats.life === Math.min(999, pre.life + SUC.PARTY[w.ending.kind].reduce((a, n) => a + n, 0)), `決勝に勝ったあとのエンディングとお祝いがずれている: ${JSON.stringify(w.ending)}`);
   ok(lose.ending && lose.ending.kind === 'bad' && lose.ending.parties.length === 1, '頂への道で負けてもバッドエンディングが付かない');
   const ev = SUC.evaluate(w); ok(Number.isFinite(ev.power) && Number.isFinite(ev.powerS) && ev.powerS <= ev.power && ev.points === SUC.assistPointsOf(ev.powerS), '評価(総合力・アシストポイント)が出ない(アシストポイントは今までの数え方の総合力 powerS から・案A)');
