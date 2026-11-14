@@ -21,7 +21,7 @@ HEADS = {
     'kiki:halloween': dict(name='kiki_halloween', stand='stand-halloween', prefix='kiki', wf=6.9, top=70, eye=148, chin=188, chin_frac=0.43, above=0.95),
     'atsu': dict(name='atsu', stand='stand-normal', prefix='atsu', top=30, eye=100, chin=128, chin_frac=0.43, above=None),
     'kyuko': dict(name='kyuko', stand='stand-normal', prefix='kyuko', top=20, eye=100, chin=135, chin_frac=0.43, above=None),
-    'sorashido': dict(name='sorashido', stand='stand-normal', prefix='sorashido', top=25, eye=88, chin=125, chin_frac=0.43, above=None),
+    'sorashido': dict(name='sorashido', stand='stand-normal', prefix='sorashido', top=12, eye=89, chin=131, chin_frac=0.43, above=None),  # 馬骨(2026-11-15)。補正(いままでの絵)は stand-hosei へ移した(作り直さない)
 }
 
 

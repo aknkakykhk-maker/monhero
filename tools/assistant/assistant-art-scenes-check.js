@@ -29,8 +29,8 @@ const VIEWS = [
   { id: 'rot', name: '🔄横 390×844', w: 390, h: 844, rot: true },
 ].filter(v => !list('--views') || list('--views').includes(v.id));
 const ONLY = list('--only');
-// 着替え: --outfit a(みゅあ・きき・ももすけ=ハロウィン、えるびん=石油王)/ --outfit b(みゅあ=カードマスター)。着ている助手だけ回す
-const OUTFITS = { a: { mua: 'mua_halloween_2026', kiki: 'kiki_halloween_2026', momosuke: 'momosuke_halloween_2026', erubin: 'erubin_sekiyuou_v1' }, b: { mua: 'mua_card_master_v1' } };
+// 着替え: --outfit a(みゅあ・きき・ももすけ=ハロウィン、えるびん=石油王)/ --outfit b(みゅあ=カードマスター)/ --outfit c(ソラシド=補正)。着ている助手だけ回す
+const OUTFITS = { a: { mua: 'mua_halloween_2026', kiki: 'kiki_halloween_2026', momosuke: 'momosuke_halloween_2026', erubin: 'erubin_sekiyuou_v1' }, b: { mua: 'mua_card_master_v1' }, c: { sorashido: 'sorashido_hosei_v1' } };
 const OUTFIT = arg('--outfit') ? OUTFITS[arg('--outfit')] : null;
 const SFX = arg('--outfit') ? `-outfit${arg('--outfit')}` : '';
 const WHO = OUTFIT ? WHO0.filter(id => OUTFIT[id]) : WHO0;

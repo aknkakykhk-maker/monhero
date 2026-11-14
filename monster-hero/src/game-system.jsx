@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: a26a90493375d0bc
+// generated-sha256: a6dc22770fe4bcf1
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -43092,7 +43092,7 @@ function ProfileScreen({
               {costumeEnabled&&onOpenCostumePicker&&(
                 <button type="button" data-profile-tile="costume" onClick={onOpenCostumePicker} className={tile}>
                   <span className="flex h-8 w-8 shrink-0 items-center justify-center text-xl max-[359px]:h-6 max-[359px]:w-6 max-[359px]:text-base" aria-hidden="true">👗</span>
-                  <span className="min-w-0 flex-1"><small className="block text-[10px] font-black text-pink-300">着替え</small><b className="block break-words text-[11px] max-[359px]:text-[10px] font-black leading-tight text-white">{wornCostume?wornCostume.name:'元の服'}</b></span>
+                  <span className="min-w-0 flex-1"><small className="block text-[10px] font-black text-pink-300">着替え</small><b className="block break-words text-[11px] max-[359px]:text-[10px] font-black leading-tight text-white">{wornCostume?wornCostume.name:(typeof assistantDefaultOutfitName==='function'?assistantDefaultOutfitName(selectedAssistantId):'元の服')}</b></span>
                 </button>
               )}
             </div>);
@@ -67753,7 +67753,7 @@ const assistantLifeStandBox = (src) => new Promise((res) => {
 const ASSISTANT_LIFE_STAND_FACE = Object.freeze({
   mua: { top: 0.145, eye: 0.3275, chin: 0.425, m: 0.724 }, kiki: { top: 0.195, eye: 0.46, chin: 0.595, m: 0.847 }, momosuke: { top: 0.075, eye: 0.3925, chin: 0.535, m: 1.022 },
   dra: { head: true, top: 0.10, eye: 0.46, m: 2.017 }, atsu: { top: 0.09, eye: 0.31, chin: 0.435, m: 0.895 }, kyuko: { top: 0.01, eye: 0.40, chin: 0.56, m: 1.040, fit: 0.95 },
-  sorashido: { top: 0.015, eye: 0.345, chin: 0.55, m: 1.248 }, erubin: { top: 0.01, eye: 0.2325, chin: 0.46, m: 1.224 },
+  sorashido: { top: 0.01, eye: 0.2455, chin: 0.3739, m: 0.956 }, erubin: { top: 0.01, eye: 0.2325, chin: 0.46, m: 1.224 },
 });
 //   2026-11-08 社長「顔のサイズがまだあってない」「ちゃんとはかってるの？」: 絵を見て手で点を置き直した(測り絵 gifts/stagec/marks.png・STAND-MEASURE.md の4回目)
 //   top … 頭のてっぺん(髪の上端。うさ耳・リボン・羽・王冠などの飾りは含めない)/eye … 目の線(目を閉じた絵はまぶたの線)/chin … 顎の先(見えている体の上を0・下を1)
@@ -67776,9 +67776,12 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
   halloween: { mua: { top: 0.2, eye: 0.358, chin: 0.433, m: 0.557, above: 0.85 }, kiki: { top: 0.217, eye: 0.412, chin: 0.498, m: 0.54, above: 0.95 }, momosuke: { top: 0.065, eye: 0.39, chin: 0.508, m: 0.846 } },
   'card-master': { mua: { top: 0.09, eye: 0.22, chin: 0.295, m: 0.55 } },
   sekiyuou: { erubin: { top: 0.02, eye: 0.225, chin: 0.47, m: 1.25 } },
+  // ソラシドの服『補正』(いままでの絵。2026-11-15 から服の1つ。新しい絵『馬骨』が既定の服)
+  hosei: { sorashido: { top: 0.015, eye: 0.345, chin: 0.55, m: 1.248 } },
   // 社長の全身画の8表情から切り出した、みゅあの胸から上の立ち絵(2026-11-11)。測り方は上と同じ。m は、いまの立ち絵と目から顎の見た目の長さが同じになるように決めた
   //   数字は tools/assistant/life-expression-sheets.py が出す(絵を作り直したら、出た数字へ直す)。stand-normal=ふだんの服
-  'stand-normal': { mua: { top: 0.1386, eye: 0.3072, chin: 0.4187, m: 0.829 }, kiki: { top: 0.0777, eye: 0.3325, chin: 0.4296, m: 0.722 }, atsu: { top: 0.0699, eye: 0.3272, chin: 0.4301, m: 0.766 }, kyuko: { top: 0.0344, eye: 0.3093, chin: 0.4296, m: 0.895 }, sorashido: { top: 0.0562, eye: 0.2921, chin: 0.4307, m: 1.031 } },
+  'stand-normal': { mua: { top: 0.1386, eye: 0.3072, chin: 0.4187, m: 0.829 }, kiki: { top: 0.0777, eye: 0.3325, chin: 0.4296, m: 0.722 }, atsu: { top: 0.0699, eye: 0.3272, chin: 0.4301, m: 0.766 }, kyuko: { top: 0.0344, eye: 0.3093, chin: 0.4296, m: 0.895 }, sorashido: { top: 0.0106, eye: 0.2817, chin: 0.4296, m: 1.1 } },
+  'stand-hosei': { sorashido: { top: 0.0562, eye: 0.2921, chin: 0.4307, m: 1.031 } },
   'stand-halloween': { mua: { top: 0.1502, eye: 0.3379, chin: 0.4334, m: 0.711, above: 0.85 }, kiki: { top: 0.1496, eye: 0.3349, chin: 0.4299, m: 0.707, above: 0.95 } },
   'stand-card-master': { mua: { top: 0.1166, eye: 0.2283, chin: 0.2953, m: 0.499, above: 0.75 } },
 });
@@ -69204,6 +69207,7 @@ const ASSISTANT_LIFE_SLEEP_ART = Object.freeze(new Set([
   'atsu_normal.PNG', 'face/atsu_normal.PNG', 'kiki_normal.PNG', 'face/kiki_normal.PNG', 'halloween/kiki_normal.PNG', 'halloween/face/kiki_normal.PNG',
   'kyuko_normal.PNG', 'face/kyuko_normal.PNG', 'myua_normal.PNG', 'face/myua_normal.PNG',
   'card-master/myua_normal.PNG', 'card-master/face/myua_normal.PNG', 'halloween/myua_normal.PNG', 'halloween/face/myua_normal.PNG',
+  'sorashido_normal.PNG', 'face/sorashido_normal.PNG', // 2026-11-15 ソラシド『馬骨』の寝顔(社長から)
   'momosuke_normal.PNG', 'face/momosuke_normal.PNG', 'halloween/momosuke_normal.PNG', 'halloween/face/momosuke_normal.PNG',
 ]));
 // その絵(ふつうの顔 normal)に社長の寝顔の絵があれば、その絵のパス。無ければ null
@@ -102999,14 +103003,15 @@ const CARD_ART_KNOWN_BOX = Object.freeze({
   myua_surprise: [1536, 1024, 325, 27, 852, 997],
   myua_troubled: [1536, 1024, 323, 15, 866, 1009],
   myua_wink: [1536, 1024, 379, 28, 760, 996],
-  sorashido_angry: [384, 512, 0, 0, 384, 512],
-  sorashido_crying: [384, 512, 0, 0, 384, 512],
-  sorashido_excited: [384, 512, 0, 3, 384, 509],
-  sorashido_happy: [384, 512, 0, 0, 384, 512],
-  sorashido_normal: [384, 512, 0, 0, 384, 512],
-  sorashido_surprise: [384, 512, 0, 2, 384, 510],
-  sorashido_troubled: [384, 512, 0, 0, 384, 512],
-  sorashido_wink: [384, 512, 0, 2, 384, 510],
+  sorashido_angry: [384, 512, 49, 37, 314, 475],
+  sorashido_crying: [384, 512, 8, 39, 375, 473],
+  sorashido_excited: [384, 512, 0, 37, 384, 475],
+  sorashido_happy: [384, 512, 43, 37, 319, 475],
+  sorashido_normal: [384, 512, 17, 37, 367, 475],
+  sorashido_sleep: [384, 512, 4, 27, 380, 485],
+  sorashido_surprise: [384, 512, 4, 38, 380, 474],
+  sorashido_troubled: [384, 512, 6, 39, 378, 473],
+  sorashido_wink: [384, 512, 33, 38, 351, 474],
   'stand-normal/atsu_angry': [344, 552, 29, 7, 314, 545],
   'stand-normal/atsu_crying': [344, 552, 14, 6, 329, 546],
   'stand-normal/atsu_excited': [344, 552, 1, 6, 342, 546],
@@ -103039,14 +103044,14 @@ const CARD_ART_KNOWN_BOX = Object.freeze({
   'stand-normal/myua_surprise': [592, 672, 0, 10, 509, 662],
   'stand-normal/myua_troubled': [592, 672, 27, 0, 516, 672],
   'stand-normal/myua_wink': [592, 672, 12, 10, 579, 662],
-  'stand-normal/sorashido_angry': [456, 542, 11, 6, 441, 536],
-  'stand-normal/sorashido_crying': [456, 542, 21, 7, 434, 535],
-  'stand-normal/sorashido_excited': [456, 542, 1, 8, 454, 534],
-  'stand-normal/sorashido_happy': [456, 542, 1, 4, 454, 538],
-  'stand-normal/sorashido_normal': [456, 542, 1, 7, 454, 535],
-  'stand-normal/sorashido_surprise': [456, 542, 20, 7, 435, 535],
-  'stand-normal/sorashido_troubled': [456, 542, 1, 8, 454, 534],
-  'stand-normal/sorashido_wink': [456, 542, 1, 9, 440, 533],
+  'stand-normal/sorashido_angry': [498, 576, 26, 7, 432, 569],
+  'stand-normal/sorashido_crying': [520, 576, 2, 7, 516, 569],
+  'stand-normal/sorashido_excited': [520, 576, 1, 6, 518, 570],
+  'stand-normal/sorashido_happy': [514, 576, 30, 6, 440, 570],
+  'stand-normal/sorashido_normal': [518, 576, 31, 8, 486, 568],
+  'stand-normal/sorashido_surprise': [520, 576, 10, 7, 509, 569],
+  'stand-normal/sorashido_troubled': [520, 576, 2, 7, 517, 569],
+  'stand-normal/sorashido_wink': [498, 576, 7, 9, 490, 567],
   // </card-art-known-box>
 });
 const cardArtBoxOf = (v) => (Array.isArray(v) && v.length === 6 ? { nw: v[0], nh: v[1], x: v[2], y: v[3], w: v[4], h: v[5] } : null);
@@ -139667,11 +139672,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 aria-pressed={!!selected} aria-disabled={!owned}
                 className={`relative flex flex-col items-center gap-1.5 rounded-2xl border-2 p-2 active:scale-95 ${selected?'border-amber-400 bg-amber-950/30':'border-slate-700 bg-slate-950/40'}`}>
                 <span className={`relative block ${owned?'':'opacity-45'}`}>
-                  {src?<img src={src} alt={costume?costume.name:'元の服'} className="h-14 w-14 rounded-full object-cover bg-black/30" draggable="false"/>:<span className="flex h-14 w-14 items-center justify-center text-3xl" aria-hidden="true">👗</span>}
+                  {src?<img src={src} alt={costume?costume.name:assistantDefaultOutfitName(who.id)} className="h-14 w-14 rounded-full object-cover bg-black/30" draggable="false"/>:<span className="flex h-14 w-14 items-center justify-center text-3xl" aria-hidden="true">👗</span>}
                   {!owned&&<Lock size={14} className="absolute inset-0 m-auto text-white drop-shadow-[0_0_3px_rgba(0,0,0,0.9)]"/>}
                 </span>
                 {selected&&<PickerCheckMark/>}
-                <span className={`text-[9px] font-black leading-tight text-center ${owned?'text-slate-200':'text-slate-500'}`}>{costume?costume.name:'元の服'}</span>
+                <span className={`text-[9px] font-black leading-tight text-center ${owned?'text-slate-200':'text-slate-500'}`}>{costume?costume.name:assistantDefaultOutfitName(who.id)}</span>
                 {!owned&&<span className="text-[8px] font-black leading-tight text-center text-amber-400">{costume&&!assistantCostumeUnlockedNow(costume)?'解放の条件あり':'マーケットで購入'}</span>}
               </button>
             );
@@ -139694,7 +139699,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             <PickerSheet title="助手の着替え" note="助手の顔と立ち絵が、選んだ服に変わります。服はマーケットで買えます。" onClose={closeCostume}
               preview={<>
                 {(()=>{const nowSrc=assistantFaceImage(who,'happy');return nowSrc?<img src={nowSrc} alt={who.name} className="h-14 w-14 shrink-0 rounded-full object-cover bg-black/30" draggable="false"/>:<span className="text-3xl" aria-hidden="true">{who.emoji}</span>;})()}
-                <span className="min-w-0"><b className="block truncate text-[12px] font-black text-white">{who.name}：{worn?worn.name:'元の服'}</b><small className="block text-[10px] font-bold leading-tight text-slate-400">いま着ている服</small></span>
+                <span className="min-w-0"><b className="block truncate text-[12px] font-black text-white">{who.name}：{worn?worn.name:assistantDefaultOutfitName(who.id)}</b><small className="block text-[10px] font-bold leading-tight text-slate-400">いま着ている服</small></span>
               </>}
               chips={chipList} chip={who.id} onChip={(id)=>{ setCostumeAssistantId(id); setCostumeLockedInfo(null); }}
               footerExtra={lockedInfo} dataPicker="assistant-costume">

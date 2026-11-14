@@ -784,7 +784,7 @@ const assistantFaceImage = (who, expression) => (who && who.imagePrefix)
 const ASSISTANT_STAND_ART = Object.freeze({
   mua: 'stand-normal', 'mua:halloween': 'stand-halloween', 'mua:card-master': 'stand-card-master',
   // 8表情の全身画がある助手(2026-11-14)。作り方は tools/assistant/life-stand-from-fullbody.py
-  kiki: 'stand-normal', 'kiki:halloween': 'stand-halloween', atsu: 'stand-normal', kyuko: 'stand-normal', sorashido: 'stand-normal',
+  kiki: 'stand-normal', 'kiki:halloween': 'stand-halloween', atsu: 'stand-normal', kyuko: 'stand-normal', sorashido: 'stand-normal', 'sorashido:hosei': 'stand-hosei',
 });
 const ASSISTANT_STAND_EXPRESSIONS = Object.freeze(['normal', 'happy', 'wink', 'surprise', 'troubled', 'angry', 'crying', 'excited']);
 // outfit … 服の名前(ふだんの服は '')。表情が8つのどれでもない・絵が無い助手・服は null(今までの立ち絵へ)
@@ -810,7 +810,7 @@ const assistantFullImage = (who, expression) => (who && who.imagePrefix)
 //   絵が届いたら、ここに1行足して(元の絵を同じ道具へ足して回す)だけでよい。全身が入るので、胸から下をぼかす処理も顔の表も使わない
 const ASSISTANT_FULLBODY_ART = Object.freeze({
   atsu: 'atsu', kiki: 'kiki', 'kiki:halloween': 'kiki_halloween', kyuko: 'kyuko', momosuke: 'momosuke', 'momosuke:halloween': 'momosuke_halloween',
-  mua: 'mua', 'mua:halloween': 'mua_halloween', 'mua:card-master': 'mua_card-master', sorashido: 'sorashido',
+  mua: 'mua', 'mua:halloween': 'mua_halloween', 'mua:card-master': 'mua_card-master', sorashido: 'sorashido', 'sorashido:hosei': 'sorashido_hosei',
   erubin: 'erubin', 'erubin:sekiyuou': 'erubin_sekiyuou',
 });
 // 表情ごとの全身画(社長「時間があったら全身画の8表情を作りたい」)。届いたら、上の名前をキーに、あるぶんの表情名を足すだけ(絵は <名前>__<表情>.png)。
@@ -819,7 +819,7 @@ const ASSISTANT_FULLBODY_EXPRESSIONS = Object.freeze({
   mua: ASSISTANT_STAND_EXPRESSIONS, mua_halloween: ASSISTANT_STAND_EXPRESSIONS, 'mua_card-master': ASSISTANT_STAND_EXPRESSIONS,
   kiki: ASSISTANT_STAND_EXPRESSIONS, kiki_halloween: ASSISTANT_STAND_EXPRESSIONS, // 2026-11-12 社長から届いたききの8表情(ふだん・ハロウィン)
   kyuko: ASSISTANT_STAND_EXPRESSIONS, // 2026-11-12 社長から届いたキュウコの8表情
-  atsu: ASSISTANT_STAND_EXPRESSIONS, sorashido: ASSISTANT_STAND_EXPRESSIONS, // 2026-11-12 社長から届いたあつ・ソラシドの8表情(あつはすその切れを描き足し、ソラシドは髪のふちのもやを直した)
+  atsu: ASSISTANT_STAND_EXPRESSIONS, sorashido: ASSISTANT_STAND_EXPRESSIONS, sorashido_hosei: ASSISTANT_STAND_EXPRESSIONS, // 2026-11-12 社長から届いたあつ・ソラシドの8表情(あつはすその切れを描き足し、ソラシドは髪のふちのもやを直した)
 });
 // その助手が(いま着ている服で)全身画を持っていれば絵の置き場所を返す(画像のパスはここに集める)。服の全身画が無いときは null(今の立ち絵へ)
 const assistantFullBodyImage = (who, expression = 'happy') => {
