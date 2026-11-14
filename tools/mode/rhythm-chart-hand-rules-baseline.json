@@ -2458,6 +2458,216 @@
    "fastSameSide": 0,
    "heldHandSwitch": 0
   },
+  "departure/EASY": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "departure/NORMAL": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "departure/HARD": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "departure/EXPERT": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "departure/MASTER": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "departure_short/EASY": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "departure_short/NORMAL": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "departure_short/HARD": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "departure_short/EXPERT": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "departure_short/MASTER": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "rpg/EASY": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "rpg/NORMAL": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "rpg/HARD": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 2,
+   "heldHandSwitch": 0
+  },
+  "rpg/EXPERT": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 17,
+   "heldHandSwitch": 0
+  },
+  "rpg/MASTER": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 53,
+   "heldHandSwitch": 0
+  },
+  "rpg_short/EASY": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "rpg_short/NORMAL": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "rpg_short/HARD": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 1,
+   "heldHandSwitch": 0
+  },
+  "rpg_short/EXPERT": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 9,
+   "heldHandSwitch": 0
+  },
+  "rpg_short/MASTER": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 22,
+   "heldHandSwitch": 0
+  },
+  "midnight_studio/EASY": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "midnight_studio/NORMAL": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "midnight_studio/HARD": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "midnight_studio/EXPERT": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "midnight_studio/MASTER": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "midnight_studio_short/EASY": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "midnight_studio_short/NORMAL": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "midnight_studio_short/HARD": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "midnight_studio_short/EXPERT": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "midnight_studio_short/MASTER": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
   "atsu_cup_theme_debug_short/EASY": {
    "sideHeightSwitch": 0,
    "skyAfterGround": 0,
@@ -2564,6 +2774,16 @@
    "at": "2026-11-12T11:42",
    "reason": "新曲 メガロバニア2曲を公開(その12行だけ足した)",
    "changed": 10
+  },
+  {
+   "at": "2026-11-14T06:44",
+   "reason": "新曲 departure!・RPG・Midnight Studio(通常版と short ver.)を公開",
+   "changed": 30
+  },
+  {
+   "at": "2026-11-14T07:17",
+   "reason": "新曲 departure!・RPG・Midnight Studio(通常版と short ver.)を公開(終点フリックを1本外した)",
+   "changed": 0
   }
  ]
 }

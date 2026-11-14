@@ -452,12 +452,14 @@ check('既存のデバッグ戦(debugBattleRef)と混ざらない',
   !/debugBattleRef|setDebugBattle|extremeRunRef/.test(rpgSource) && !/debugBattleRef|setDebugBattle/.test(rpgUi));
 check('RPGの3画面はヘルプ対象外として明示されている',
   ['RPG_DEBUG_SETUP', 'RPG_DEBUG_BATTLE', 'RPG_DEBUG_RESULT'].every(name => new RegExp(`${name}:\\s*null`).test(helpSource)));
-check('デバッグ専用なので更新履歴には載せない', !/RPG|ダンジョン/.test(changelogSource));
+// 曲の名前の「RPG」(モンヒロビートの新曲・2026-11-14)は、デバッグ用のダンジョンRPG戦闘とは別なので数えない
+const RPG_SONG_NAME = /「RPG( short ver\.)?」/g;
+check('デバッグ専用なので更新履歴には載せない', !/RPG|ダンジョン/.test(changelogSource.replace(RPG_SONG_NAME, '')));
 // ヘルプ側にRPGの文字が出てよいのは、画面カバレッジの対象外指定とその説明コメントだけ。
 // プレイヤー向けの項目(HELP_CATEGORIES)へは1文字も足さない
 const helpCoverage = grab(helpSource, 'const HELP_SCREEN_COVERAGE = {', '\n};');
 check('公開ヘルプにRPGの項目を作っていない',
-  (helpSource.match(/RPG/g) || []).length === (helpCoverage.match(/RPG/g) || []).length
+  (helpSource.replace(RPG_SONG_NAME, '').match(/RPG/g) || []).length === (helpCoverage.match(/RPG/g) || []).length
   && !/素早さ|会心の一撃/.test(helpSource),
   `ヘルプ全体${(helpSource.match(/RPG/g) || []).length}件 / うち画面カバレッジ${(helpCoverage.match(/RPG/g) || []).length}件`);
 

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 17479f1924b47090
+// generated-sha256: b08487e2dda9338f
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -4840,6 +4840,12 @@ const BGM_TRACKS = [
   { id:'melo_saudade_short', name:'サウダージ short ver.', creator:'ポルノグラフィティ', src:'audio/bgm-saudade-short.mp3', gain:1, loop:true },
   { id:'melo_megalovania_sans', name:'メガロバニア（サンズ戦）', creator:'ねるかめちゃん', src:'audio/bgm-megalovania-sans.mp3', gain:1, loop:true },
   { id:'melo_megalovania_smash', name:'MEGALOVANIA（スマブラver）', creator:'暇人[もちゃ]', src:'audio/bgm-megalovania-smash.mp3', gain:1, loop:true },
+  { id:'melo_departure', name:'departure!', creator:'小野正利', src:'audio/bgm-departure.mp3', gain:1, loop:true },
+  { id:'melo_departure_short', name:'departure! short ver.', creator:'小野正利', src:'audio/bgm-departure-short.mp3', gain:1, loop:true },
+  { id:'melo_rpg', name:'RPG', creator:'school food punishment', src:'audio/bgm-rpg.mp3', gain:1, loop:true },
+  { id:'melo_rpg_short', name:'RPG short ver.', creator:'school food punishment', src:'audio/bgm-rpg-short.mp3', gain:1, loop:true },
+  { id:'melo_midnight_studio', name:'Midnight Studio', creator:'music studio 9 for 5', src:'audio/bgm-midnight-studio.mp3', gain:1, loop:true },
+  { id:'melo_midnight_studio_short', name:'Midnight Studio short ver.', creator:'music studio 9 for 5', src:'audio/bgm-midnight-studio-short.mp3', gain:1, loop:true },
   { id:'melo_tsuki_ga_michiru_mae_ni_short', name:'月が満ちる前に short ver.', creator:'Fuki Commune', src:'audio/bgm-tsuki-ga-michiru-mae-ni-short.mp3', gain:1, loop:true },
   { id:'melo_dullahan_clockwork_alt', name:'呪われた騎士の時計仕掛け -Another-', creator:'オリジナル', src:'audio/bgm-dullahan-clockwork-alt.mp3', gain:1, loop:true },
   { id:'melo_dullahan_steel_ghost', name:'鋼鉄の亡霊', creator:'オリジナル', src:'audio/bgm-dullahan-steel-ghost.mp3', gain:1, loop:true },
@@ -6234,6 +6240,8 @@ const Audio_ = (() => {
     "audio/bgm-crazy-party-night-full.mp3": "88a00b2a4fa0",
     "audio/bgm-crazy-party-night.mp3": "45e7252c400e",
     "audio/bgm-crossing-field.mp3": "1e2e7cc1d3d5",
+    "audio/bgm-departure-short.mp3": "d2dcbe5c72a8",
+    "audio/bgm-departure.mp3": "ad4d5a6838c8",
     "audio/bgm-dullahan-clockwork-alt.mp3": "9e934451770b",
     "audio/bgm-dullahan-clockwork.mp3": "f94c4b3c8cb8",
     "audio/bgm-dullahan-steel-ghost-alt.mp3": "1e9c04ccc1db",
@@ -6266,6 +6274,8 @@ const Audio_ = (() => {
     "audio/bgm-megalovania-sans.mp3": "6fafc978fa05",
     "audio/bgm-megalovania-smash.mp3": "1bbb6aea8bb2",
     "audio/bgm-menu.mp3": "a6aef603fd6a",
+    "audio/bgm-midnight-studio-short.mp3": "936b28949b4a",
+    "audio/bgm-midnight-studio.mp3": "9ae7e65a5cf4",
     "audio/bgm-monster-hero-theme-alt.mp3": "6b4eb065c2e2",
     "audio/bgm-monster-hero-theme.mp3": "083a1d9db281",
     "audio/bgm-monster-short.mp3": "415b771e9bbf",
@@ -6291,6 +6301,8 @@ const Audio_ = (() => {
     "audio/bgm-rising-hope.mp3": "5b56b8f9d099",
     "audio/bgm-rose-short.mp3": "fd5f8290037c",
     "audio/bgm-rose.mp3": "1a030e41df75",
+    "audio/bgm-rpg-short.mp3": "7d4428d73d94",
+    "audio/bgm-rpg.mp3": "36abe34289f9",
     "audio/bgm-sad-song-short.mp3": "2ff39f50eddd",
     "audio/bgm-sad-song.mp3": "47d16979bb90",
     "audio/bgm-saudade-short.mp3": "3491f3c33de4",
@@ -24064,7 +24076,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
       onClick={()=>{if(!buyBusy)setBuyAsk(null);}}>
       <div className="w-full max-w-sm rounded-2xl border border-amber-300/50 bg-slate-900 p-4 text-center" onClick={e=>e.stopPropagation()}>
         <p style={JA_WRAP_STYLE} className="text-sm font-black text-white">{jaWrap(`「${rhythmSongFullName(buyAsk)}」を買いますか？`)}</p>
-        <p style={JA_WRAP_STYLE} className="mt-1 text-xs font-bold text-slate-300">{jaWrap(`${rhythmSongPrice(buyAsk.songId).toLocaleString()}ビートPで、全部の難易度で遊べるようになります。`)}</p>
+        <p style={JA_WRAP_STYLE} className="mt-1 text-xs font-bold text-slate-300">{jaWrap(`${rhythmSongPrice(buyAsk.songId).toLocaleString()}ビートPで、全部の難易度で遊べるようになります。${typeof rhythmSongHasBundle==='function'&&rhythmSongHasBundle(buyAsk.songId)?'short ver. もいっしょに遊べます。':''}`)}</p>
         <p className="mt-1 text-[11px] font-bold tabular-nums text-amber-200">いまのビートP {songLock.balance==null?'—':Number(songLock.balance).toLocaleString()}</p>
         {buyError&&<p data-rhythm-song-buy-error style={JA_WRAP_STYLE} className="mt-2 text-[11px] font-black text-red-300">{jaWrap(buyError)}</p>}
         <div className="mt-3 flex gap-2">
@@ -32514,6 +32526,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'sp100': [['excited', 'セッションLv.100！あたしたち、セッションマスターぢゃん！'], ['happy', 'ここまで一緒に叩いてくれて、まぢありがと♪']],
     woke: [['troubled', 'ふぁ…{name}？ 起こされたけど、行く〜'], ['happy', 'ん〜…目、半分閉じてるけど叩くｗ'], ['wink', '寝ぐせのままだけど、来ちゃった♪']],
     refuse: [['normal', 'むにゃ…あと5曲…ぢゃなくて5分…'], ['normal', '…ん…あしたなら、まぢで行く…'], ['happy', 'すぅ…{name}…またあとでね…']],
+    'listen:departure': [['excited', '3:59からいちばん強くなるの！ ずっとアガるよ♪']],
     'listen:mf_ichika_mix': [['excited', 'サビは1:48から！ そこからテンションまぢ上がるやつ♪']],
     'listen:monster_hero': [['excited', '1:50からずーっといちばん強いの！ 最後までアゲてこ♪']],
     'listen:monster_hero_another': [['excited', 'こっちもサビは1:49から！ 最後までずっと盛り上がるの♪']],
@@ -32540,6 +32553,8 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:lamia': [['excited', '0:32から一気にいちばん強くなるの！ ここまぢでアガる♪']],
     'listen:megalovania_sans': [['excited', '0:18からいきなりいちばん強いの！ ずっとドキドキだよ♪']],
     'listen:megalovania_smash': [['excited', '0:10でもういちばん強くなるの！ 2分半にぎゅっと詰まってるよ♪']],
+    'listen:midnight_studio': [['excited', '2:00でいちばん強くなるの！ ここまぢでアガる♪']],
+    'listen:rpg': [['excited', '0:53でいきなりいちばん強いの！ ドキドキが止まらないよ♪']],
     'listen:saudade': [['excited', '2:44からいちばん強いところが続くの！ ずっとアガるよ♪']],
     'listen:only_my_railgun': [['excited', '0:52からずっとサビで盛り上がるの、テンション上がるぢゃん♪']],
     'listen:big_bridge_no_shitou': [['excited', '0:08でいきなりサビ！？ 始まってすぐ上がるの、まぢ好き♪']],
@@ -32591,6 +32606,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'sp100': [['excited', 'Lv.100でつ！セッションマスターですね♪'], ['happy', 'たくさん一緒に演奏してくれて、ありがとうございまつ♪']],
     woke: [['troubled', '…ふぁ。起きまつ。お供しまつね'], ['wink', '眠いでつが、ちから全開でいきまつ♪'], ['happy', '早寝の私を呼ぶなんて、大胆でつね']],
     refuse: [['normal', '…すぅ…明日の朝なら、ぜひ…'], ['normal', '…むにゃ…お茶は…あとで…'], ['troubled', '…ごめんなさい…もう、夢の中でつ…']],
+    'listen:departure': [['normal', '最初の静かなところ、そっと始まってきれいでつ']],
     'listen:mf_ichika_mix': [['normal', '2分25秒の曲でつ。終わりの手前の盛り上がりまで、ていねいにいきましょう']],
     'listen:monster_hero': [['normal', '最初の45秒くらいは静かなんでつ。そこから少しずつ強くなっていきます']],
     'listen:monster_hero_another': [['normal', '0:48までは、静かな時間が長いんでつ。そこが好きです']],
@@ -32617,6 +32633,8 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:lamia': [['normal', '最初の静かなところから少しずつ大きくなるの、きれいでつ']],
     'listen:megalovania_sans': [['normal', '最初の静かなところと、2:26の終わりぎわ、すてきでつ']],
     'listen:megalovania_smash': [['normal', '1:14と1:43の静かなところ、すーっと入ってすてきでつ']],
+    'listen:midnight_studio': [['normal', '最初の静かなところ、夜みたいにやさしくてきれいでつ']],
+    'listen:rpg': [['normal', '0:24の静かなところ、すーっと入ってきてすてきでつ']],
     'listen:saudade': [['normal', '0:46の静かなところ、すーっと入ってきてすてきでつ']],
     'listen:only_my_railgun': [['normal', '0:25のところで一度静かになるのが、きれいでつね']],
     'listen:big_bridge_no_shitou': [['normal', '最後の2:15で静かに終わるところ、余韻がありますね']],
@@ -32668,6 +32686,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'sp100': [['excited', 'Lv.100！！セッションマスターはもものおかげだよね♡'], ['happy', 'ずっと一緒にステージ立ってくれて、ありがと！！']],
     woke: [['angry', 'ふぁ…ももを起こすなんて！ でも行く！！'], ['excited', '寝起きでもセンターは、もも！！'], ['wink', '目こすりながら叩くねw']],
     refuse: [['normal', '…むにゃ…アンコールは…あした…'], ['happy', '…もも、いま夢でライブ中…♡'], ['normal', '…すぅ…起こさないで…w']],
+    'listen:departure': [['excited', '4:36でもう一回いちばん強くなるの！！ 最高だよ♡']],
     'listen:mf_ichika_mix': [['excited', '1:48からがいちばん盛り上がるとこ！！ そこでももが決めるね♡']],
     'listen:monster_hero': [['excited', '1:50からいちばん強いとこが続くの！！ 最高に盛り上がるやつ♡']],
     'listen:monster_hero_another': [['excited', '1:49からの盛り上がり、もとの曲に負けてないよ！！']],
@@ -32694,6 +32713,8 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:lamia': [['excited', '0:56でもう一回いちばん強くなるの！！ 最高潮だよ♡']],
     'listen:megalovania_sans': [['excited', '0:52から1:18までいちばん強いのが続くよ♡ すごいね♡']],
     'listen:megalovania_smash': [['excited', '1:08と1:49でいちばん強くなるよ♡ ぐっとくるね♡']],
+    'listen:midnight_studio': [['excited', '2:58からいちばん強いのが続くよ♡ 最高潮だよ♡']],
+    'listen:rpg': [['excited', '3:06と3:11、いちばん強いのが続くよ♡ すごいね♡']],
     'listen:saudade': [['excited', '1:00で強めに入って、2:44でいちばん強くなるよ♡']],
     'listen:only_my_railgun': [['excited', 'サビは0:52から最後まで！！ ももが一番かわいく踊れるとこw']],
     'listen:big_bridge_no_shitou': [['excited', '0:08からもう盛り上がりMAX！！ 最初から全力だよw']],
@@ -32745,6 +32766,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'sp100': [['excited', 'Lv.100だな！セッションマスターだからな！'], ['happy', '長い冒険だったな。ありがとうな、えへへ']],
     woke: [['troubled', '…ぐぅ…はっ、起きたぞ。行くからな'], ['normal', '寝ぼけてるが、叩くのはできるぞ'], ['happy', 'おでを起こすとは…しょうがないな']],
     refuse: [['normal', '…ぐぅ…あと10時間…'], ['happy', '…むにゃ…グジラ…でっかい…'], ['troubled', '…すまん…膝が、まだ寝てる…']],
+    'listen:departure': [['happy', 'BPM156で強い音がいっぱいだぞ。旅の出発みたいだな']],
     'listen:mf_ichika_mix': [['happy', 'サビは1:48から2:14までだな。そこまでは体力をとっとけよ']],
     'listen:monster_hero': [['happy', '静かに始まって、だんだん強くなる。冒険の始まりみたいな曲だな']],
     'listen:monster_hero_another': [['normal', '0:48で急に強くなるからな。そこで置いていかれるなよ']],
@@ -32771,6 +32793,8 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:lamia': [['troubled', 'BPM199でLv.51だぞ。速すぎて、おでの冒険も駆け足だな']],
     'listen:megalovania_sans': [['happy', '2分39秒、ずっと強い音で押してくるな。戦いの前みたいだぞ']],
     'listen:megalovania_smash': [['happy', 'BPM160で強く打つ音が多いな。長い冒険みたいで元気が出るぞ']],
+    'listen:midnight_studio': [['happy', 'BPM148でちょうどいいぞ。夜の冒険にぴったりだな']],
+    'listen:rpg': [['happy', 'BPM175で速いぞ。強い音が多くて冒険が走り出すみたいだな']],
     'listen:saudade': [['happy', 'BPM120でちょうどいいぞ。強く打つ音が多くて元気が出るな']],
     'listen:only_my_railgun': [['happy', '出だしからいきなり強めでくるからな。最初から冒険が始まってる感じだ']],
     'listen:big_bridge_no_shitou': [['excited', 'おでの好きな曲だ。0:08からずっと戦ってる感じで、冒険そのものだな']],
@@ -32822,6 +32846,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'sp100': [['excited', 'Lv.100！セッションマスターだな笑'], ['happy', 'ここまで付き合ってくれて、ありがとな！']],
     woke: [['surprise', '…ん！？ 起きた起きた！ 行くぞ笑'], ['happy', '寝起きだけど、とりあえずやる！'], ['happy', '眠いけど、{name}の頼みなら！']],
     refuse: [['normal', '…朝練…6時…だから…！'], ['troubled', '…わり…明日な…笑'], ['normal', '…すぅ…ノーカン…だろ…']],
+    'listen:departure': [['happy', '4:48でスッと静かに終わるの、きれいだよね笑']],
     'listen:mf_ichika_mix': [['wink', '自分の大会の曲はちょっと照れる笑 でも1:48からのサビは全力でいくよ！']],
     'listen:monster_hero': [['happy', '最後の2:30でいきなり静かになるから、きれいに締めよ笑']],
     'listen:monster_hero_another': [['happy', 'サビは2:34まで続くから、最後の1秒までちゃんと締めよ！']],
@@ -32848,6 +32873,8 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:lamia': [['happy', '2:08から静かに締めていくとこ、余韻あっていいよね笑']],
     'listen:megalovania_sans': [['happy', '2:26でスッと静かになって終わるの、きれいだよね笑']],
     'listen:megalovania_smash': [['happy', '2:11からすっと落ち着いて終わるの、余韻があっていいよね笑']],
+    'listen:midnight_studio': [['happy', '3:32で静かに締めるところ、余韻あっていいよね笑']],
+    'listen:rpg': [['happy', '3:58でスッと静かになって終わるの、余韻があっていいよね笑']],
     'listen:saudade': [['happy', '4:10で静かに終わるの、余韻があっていいよね笑']],
     'listen:only_my_railgun': [['happy', '1:22からもう一回いちばん強くなって、そのまま締めるのが最高笑']],
     'listen:big_bridge_no_shitou': [['happy', '1:24でもう一回いちばん強くなるとこ、ここが勝負所だよね笑']],
@@ -32899,6 +32926,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'sp100': [['excited', 'Lv.100〜！セッションマスターだね、ありがとん笑'], ['happy', 'ここまでの全部、いい流れだったよ〜']],
     woke: [['troubled', 'ぇ…起こされたぁ。ほい、行くよぉ'], ['happy', 'ふぁ…ありがとん。目、さめたかも笑'], ['normal', '寝ぼけてても、だいたい叩けるっしょ笑']],
     refuse: [['normal', '…むにゃ…あと1章…だけぇ…'], ['troubled', '…ぐぬぬぬ…眠い…またあとでぇ…'], ['happy', '…すぅ…{name}…おやすみぃ…']],
+    'listen:departure': [['happy', '1:51でいったん落として、2:04からまた上げるのがいいんだよね〜']],
     'listen:mf_ichika_mix': [['normal', 'サビは1:48から2:14。終わりの近くに山があるから、前半はためていこ']],
     'listen:monster_hero': [['normal', '0:46でふつう、0:57で強め、1:50でいちばん強い。段の上がり方がきれいなんだよねぇ']],
     'listen:monster_hero_another': [['normal', '0:48で強くなって、1:14で一回ふつうに戻るんだよねぇ。そこが休みどころ']],
@@ -32925,6 +32953,8 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:lamia': [['happy', '1:37でいったん落として、1:46でもう一回上げるのがいいんだよね〜']],
     'listen:megalovania_sans': [['happy', '1:22でひと息ついて、1:38からまた上げていくのがいいんだよね〜']],
     'listen:megalovania_smash': [['happy', '1:08で上げて、1:14で一回落とす緩急がいいんだよね〜']],
+    'listen:midnight_studio': [['happy', '1:14でいったん落として、1:27からまた上げるのがいいんだよね〜']],
+    'listen:rpg': [['happy', '1:23でひと息ついて、2:00でまたいちばん強くするのがいいんだよね〜']],
     'listen:saudade': [['happy', '1:40で一回落として、2:04からまた上げるのがいいんだよね〜']],
     'listen:only_my_railgun': [['normal', '強め→静か→サビ、の3段なんだよねぇ。短いのに組み立てがきれい']],
     'listen:big_bridge_no_shitou': [['normal', 'サビが最初に来て、1:24でもう一回山がある構成なんだよねぇ']],
@@ -32976,6 +33006,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'sp100': [['excited', 'うぉぉぉ！ Lv.100、セッションマスターです・・・！'], ['happy', 'ここまでの記録、全部宝物です笑']],
     woke: [['surprise', '・・・はっ！？ 起きました、行きます！'], ['normal', '寝起きの指でも、計算どおり叩きます'], ['happy', 'ふぁ・・・目ざましより効きました笑']],
     refuse: [['normal', '・・・表の・・・3行目・・・むにゃ・・・'], ['troubled', '・・・すみません・・・朝は弱いんです・・・'], ['happy', '・・・なんくるないさ・・・すぅ・・・']],
+    'listen:departure': [['normal', 'BPM156です。強く打つ音が45%・・・！ 力強いです']],
     'listen:mf_ichika_mix': [['excited', 'いちばん上はLv.23で434ノーツです・・・！ サビは1:48からですね笑']],
     'listen:monster_hero': [['excited', '強く打つ音が62%、軽い音は3%です・・・！ 553ノーツ、全部数えたいです笑']],
     'listen:monster_hero_another': [['happy', 'BPMはおよそ171。もとの曲より少しだけゆっくりです笑']],
@@ -33002,6 +33033,8 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:lamia': [['normal', 'BPM199で797ノーツ、Lv.51。強く打つ音が56%です・・・！']],
     'listen:megalovania_sans': [['normal', 'BPM240です。強く打つ音が43%・・・！ 速くて力強いです']],
     'listen:megalovania_smash': [['normal', 'BPM160です。強く打つ音が64%・・・！ かなり力強いです']],
+    'listen:midnight_studio': [['normal', 'BPM148です。強く打つ音が31%・・・！ まざる音がいいです']],
+    'listen:rpg': [['normal', 'BPM175です。強く打つ音が59%・・・！ 速くて力強いです']],
     'listen:saudade': [['normal', 'BPM120です。強く打つ音が48%・・・！ 力強いです']],
     'listen:only_my_railgun': [['excited', 'BPM143で325ノーツ。1:30しかないのに、Lv.29は手ごわいですね・・・！']],
     'listen:big_bridge_no_shitou': [['surprise', '768ノーツでLv.34です。2分25秒でこの数は、でーじ多いです笑']],
@@ -33053,6 +33086,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'sp100': [['excited', 'Lv.100だね。セッションマスター、すごいよ'], ['happy', 'ここまで一緒にいてくれて、ありがとね']],
     woke: [['surprise', '…あ、呼ばれた？ うん、行くよ'], ['happy', 'ふぁ…起こされちゃった笑 いいよ'], ['happy', '眠いけど、{name}と叩きたいしね']],
     refuse: [['troubled', '…ごめんね…今日はもう寝るね…'], ['normal', '…すぅ…また明日、いっしょにね…'], ['happy', '…むにゃ…デュラハン…いけ…']],
+    'listen:departure': [['normal', '0:45の静かなところ、ひと息つけるね']],
     'listen:mf_ichika_mix': [['happy', '2分半くらいの曲だね。サビの1:48までは、落ち着いて合わせようか']],
     'listen:monster_hero': [['normal', 'はじめの静かなところで、気持ちを落ち着けておくといいよ']],
     'listen:monster_hero_another': [['happy', '1:14から少し落ち着く所があるね。そこでひと息つこうか']],
@@ -33079,6 +33113,8 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:lamia': [['normal', '1:00で少し落ち着く所、ひと息つけるね']],
     'listen:megalovania_sans': [['normal', '1:22と1:26は少し落ち着くから、ひと息つけるね']],
     'listen:megalovania_smash': [['normal', '1:43で一度静かになるから、そこでひと息つけるね']],
+    'listen:midnight_studio': [['normal', '1:14の静かなところ、ひと息つけるね']],
+    'listen:rpg': [['normal', '1:23の静かなところ、ひと息つけるね']],
     'listen:saudade': [['normal', '1:40で少し静かになるから、ひと息つけるね']],
     'listen:only_my_railgun': [['happy', '0:25からの静かな所で、ひと息つけるのがいいね']],
     'listen:big_bridge_no_shitou': [['normal', '1:08のふつうになる所で、少し落ち着けるかな']],
@@ -37310,7 +37346,7 @@ const sbPutBeatRank = (row) => sbPutPlayerRank('beat', row);
 // 決まり(社長):
 //  ・今ある曲は無料。**有料の印を付けた曲だけ**買う(印 = 下の RHYTHM_SONG_PRICES に曲の id と値段を書くこと)。
 //    2026-11-13 の時点では、どの曲にも印は付けない(本オープン後の LAMIA・サウダージ2曲・メガロバニア2曲も無料のまま)
-//  ・買った曲は全難易度で遊べる。曲えらびとビートP交換所の「曲」の両方で買える。お試しは試し聴きだけ(買うまで演奏はできない)
+//  ・買った曲は全難易度で遊べる。short ver. がある曲は1回の購入で両方開く(RHYTHM_SONG_BUNDLE_OWNER)。曲えらびとビートP交換所の「曲」の両方で買える。お試しは試し聴きだけ(買うまで演奏はできない)
 //  ・マルチは持っていない人もその回だけ遊べて、記録も載る(ここでは何も止めない)。総合・週間ランキングにもふつうに入る
 //  ・助手とのセッションは、無料の曲+持っている曲から選ぶ(rhythmSongPickable)
 //  ・値段は RHYTHM_SONG_PRICES の1か所で変える
@@ -37319,11 +37355,16 @@ const sbPutBeatRank = (row) => sbPutPlayerRank('beat', row);
 // ★有料の曲の足し方は rhythm-song-add スキルの「有料の曲にするとき」。この表に1行足すだけで、画面・交換所・助手が従う
 const RHYTHM_SONG_OWNED_KEY = 'mh_rhythm_owned_songs_v1';
 const RHYTHM_SONG_DEFAULT_PRICE = 500;
-// 有料の曲: { 曲の id: ビートP }。いまは1曲もない(無料のまま)
-const RHYTHM_SONG_PRICES = Object.freeze({});
+// 有料の曲: { 曲の id: ビートP }。2026-11-14 の新曲3つから(departure!・RPG・Midnight Studio。LAMIA・サウダージ・メガロバニアは無料のまま)
+const RHYTHM_SONG_PRICES = Object.freeze({ departure: 500, rpg: 500, midnight_studio: 500 });
+// 1曲の値段で、組の別の版(short ver.)もいっしょに遊べる(2026-11-14 社長「1曲500で両方ついてくる」)。{ 別の版の id: 買う曲の id }。
+// 保存するのは買った曲(全編)の id だけ。別の版は、全編を持っていれば開く(保存の形は変えない)
+const RHYTHM_SONG_BUNDLE_OWNER = Object.freeze({ departure_short: 'departure', rpg_short: 'rpg', midnight_studio_short: 'midnight_studio' });
+const rhythmSongOwnerId = (songId) => { const id = String(songId || ''); return RHYTHM_SONG_BUNDLE_OWNER[id] || id; };
+const rhythmSongHasBundle = (songId) => Object.values(RHYTHM_SONG_BUNDLE_OWNER).includes(rhythmSongOwnerId(songId));
 
 const rhythmSongPrice = (songId) => {
-  const n = Math.floor(Number(RHYTHM_SONG_PRICES[String(songId || '')]));
+  const n = Math.floor(Number(RHYTHM_SONG_PRICES[rhythmSongOwnerId(songId)]));
   return Number.isFinite(n) && n > 0 ? n : 0;
 };
 const rhythmSongIsPaid = (songId) => rhythmSongPrice(songId) > 0;
@@ -37333,9 +37374,9 @@ const normalizeRhythmOwnedSongs = (value) => {
   return [...new Set(list.filter((id) => typeof id === 'string' && id))];
 };
 // 買わないと遊べない曲か(有料の印があり、まだ持っていない)
-const rhythmSongLocked = (songId, owned) => rhythmSongIsPaid(songId) && !normalizeRhythmOwnedSongs(owned).includes(String(songId || ''));
+const rhythmSongLocked = (songId, owned) => rhythmSongIsPaid(songId) && !normalizeRhythmOwnedSongs(owned).includes(rhythmSongOwnerId(songId));
 // 有料の曲の一覧(公開している曲の中から。交換所の「曲」と、買える曲の数に使う)
-const rhythmPaidSongList = () => (typeof rhythmDemoSongs === 'function' && typeof RHYTHM_SONGS !== 'undefined' ? rhythmDemoSongs(RHYTHM_SONGS) : []).filter((song) => song && rhythmSongIsPaid(song.songId));
+const rhythmPaidSongList = () => (typeof rhythmDemoSongs === 'function' && typeof RHYTHM_SONGS !== 'undefined' ? rhythmDemoSongs(RHYTHM_SONGS) : []).filter((song) => song && rhythmSongIsPaid(song.songId) && rhythmSongOwnerId(song.songId) === song.songId);
 
 // 端末の持っている曲(読んだ値を覚えておき、買ったら画面へ知らせる)
 const RHYTHM_SONG_OWNED = (() => {
@@ -37382,9 +37423,10 @@ const rhythmSongPickable = (songIds) => {
 // ★保存されている値を読み直してから計算し、ビートPと持っている曲を1つの取引で保存する(失敗したら両方戻す)
 // 戻り値 { ok, reason: 'unknown'|'free'|'owned'|'points'|'save', eventPoints, cost }
 const rhythmSongBuy = async (songId) => {
-  const id = String(songId || '');
+  const asked = String(songId || '');
+  if (!asked || !(typeof RHYTHM_SONGS !== 'undefined' && RHYTHM_SONGS.some((song) => song && song.songId === asked))) return { ok: false, reason: 'unknown' };
+  const id = rhythmSongOwnerId(asked);
   const price = rhythmSongPrice(id);
-  if (!id || !(typeof RHYTHM_SONGS !== 'undefined' && RHYTHM_SONGS.some((song) => song && song.songId === id))) return { ok: false, reason: 'unknown' };
   if (!price) return { ok: false, reason: 'free' };
   const beforePoints = await loadRhythmEventPoints();
   const stored = await storeGet(RHYTHM_SONG_OWNED_KEY, [], false);
@@ -37413,13 +37455,13 @@ function RhythmSongShopList({ points = 0, busy = false, disabled = false, openSh
   if (!songs.length) return null;
   return <>
     <p data-rhythm-song-shop-note className="col-span-full -mt-1 text-[11px] font-bold leading-snug text-slate-300" style={{ wordBreak: 'keep-all', overflowWrap: 'anywhere' }}>
-      買うと、その曲を全部の難易度で遊べます。みんなで対戦なら、持っていなくてもその回だけ遊べます
+      買うと、その曲を全部の難易度で遊べます(short ver. がある曲は、short ver. もいっしょに遊べます)。みんなで対戦なら、持っていなくてもその回だけ遊べます
     </p>
     {songs.map((song) => {
       const price = rhythmSongPrice(song.songId);
       const has = owned.includes(song.songId);
       const src = typeof rhythmSongArtSrc === 'function' ? rhythmSongArtSrc(song) : '';
-      const item = { id: `song_${song.songId}`, name: rhythmSongFullName(song), emoji: '🎵', icon: src || undefined, type: 'song', currency: 'beatPoint', cost: price, desc: '新曲(全難易度で遊べます)' };
+      const item = { id: `song_${song.songId}`, name: rhythmSongFullName(song), emoji: '🎵', icon: src || undefined, type: 'song', currency: 'beatPoint', cost: price, desc: rhythmSongHasBundle(song.songId) ? '新曲(全難易度・short ver. もセット)' : '新曲(全難易度で遊べます)' };
       const offer = { id: `song_${song.songId}`, kind: 'song', songId: song.songId, cost: price };
       return <MarketProductCard key={song.songId} dataAttrs={{ 'data-rhythm-song-offer': song.songId }}
         item={item} owned={has} comingSoon={false}
