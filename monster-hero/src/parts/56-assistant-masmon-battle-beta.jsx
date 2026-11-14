@@ -762,7 +762,7 @@ function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, preview, tryPv
         {/* 場は試合の画面と同じ部品(立ち位置・技の動き・数字・音。56-monhero-success-arena.jsx の MsaStage。2026-11-12 社長「ちゃんとバトル部分作りこんで」) */}
         {typeof MsaStage === 'function' ? (
           <div className="msa ambb-stagewrap" style={{ marginTop: 8 }}><style>{MSA_CSS}</style>
-            <MsaStage log={log} frames={battle.frames} pos={pos} teams={{ A: battle.teamA, B: battle.teamB }} venueImg={typeof MSC_VENUE_IMG !== 'undefined' ? MSC_VENUE_IMG.cup : null}
+            <MsaStage log={log} frames={battle.frames} pos={pos} teams={{ A: battle.teamA, B: battle.teamB }} venueImg={typeof msaVenueBg === 'function' ? msaVenueBg('cup', msaBgRead()) : null}
               ended={review} win={battle.r.winner} endSub={review ? `${battle.r.rounds} ラウンド` : ''} sound={phase === 'watch' && !paused}
               introTitle={battle.pvp ? 'フレンド対戦' : 'マスモン対戦'} speedF={{ x1: 1, x2: 0.55, x4: 0.3 }[speed] || 1} fill={!review} lite={lite}/>
           </div>
