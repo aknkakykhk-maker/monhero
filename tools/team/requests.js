@@ -8,6 +8,7 @@
 //   node tools/ctx.js todo set <id>[,<id>…] <状態> [--to 名前] [--pr 6130] [--memo "…"] [--dept 部]   … 状態を変える
 //   node tools/ctx.js todo show <id>           … 1件の全部(台帳の行も)
 //   node tools/ctx.js todo find <語>           … 中身・メモから探す(完了も含む)
+//   node tools/ctx.js asked <語> [<語>…]       … 社長に聞く前に: その語の決めごとを台帳から新しい順に短く(表の状態つき)
 //   node tools/ctx.js todo --all [部] / --json [部] / --count
 //
 // 状態: 未依頼 → 依頼済み → 作業中 → 確認待ち → 完了(ほかに やめた・上書き済み=後の決めごとで変わった)
@@ -200,6 +201,28 @@ function main() {
     for (const [k, v] of Object.entries(r)) console.log(`${k}: ${Array.isArray(v) ? v.join(' ') : v}`);
     const l = ledgerRows().find(x => x.hash === r['台帳']);
     if (l) console.log(`台帳の行: - ${l.date} ${l.text}`);
+    return;
+  }
+
+  // 社長に聞く前に引く: その語の決めごとの行を、新しい順に短く(2026-11-14 社長「同じこと聞かれてだるい」)
+  //   語は空白で区切ると「全部を含む行」。追跡表にある行は id と状態も出す(上書き済みは、新しい決めの id がメモにある)
+  if (cmd === 'asked') {
+    const words = pos.slice(1);
+    if (!words.length) { console.error('NG: node tools/ctx.js asked <語> [<語>…](社長に聞く前に、その語の決めごとを台帳から引く)'); process.exit(1); }
+    const byHash = new Map(rows.map(r => [r['台帳'], r]));
+    const hit = [];
+    for (const l of fs.readFileSync(LEDGER, 'utf8').split('\n')) {
+      if (!l.startsWith('- ') || !words.every(w => l.includes(w))) continue;
+      const m = DATED.exec(l.replace(/\*\*/g, ''));
+      hit.push({ date: m ? m[1] : '', text: (m ? m[2] : l.slice(2)).replace(/\*\*/g, ''), r: byHash.get(hashOf(l)) });
+    }
+    hit.sort((x, y) => y.date.localeCompare(x.date));
+    // 語が行の後ろのほうにあるときは、頭と、語のまわりを出す(切れた先に答えがある、を防ぐ)
+    const near = (t) => { const i = Math.min(...words.map(w => t.indexOf(w))); return i < 130 ? cut(t, 180) : `${t.slice(0, 50)}… ${cut(t.slice(Math.max(0, i - 40)), 130)}`; };
+    const cap = argv.includes('--all') ? 9999 : 8;
+    console.log(`# 台帳で「${words.join('」「')}」が入った決めごと ${hit.length} 件(新しい順${hit.length > cap ? `・上位 ${cap} 件。全部は --all` : ''})`);
+    for (const h of hit.slice(0, cap)) console.log(`- ${h.date || '(日付なし)'}${h.r ? ` ${h.r.id}[${h.r['状態']}]` : ''} ${near(h.text)}${h.r && h.r['状態'] === '上書き済み' ? `  〔${cut(h.r['メモ'], 50)}〕` : ''}`);
+    console.log(hit.length ? '\n→ もう決まっている問いは、社長に聞かずにこの決めで進める(新しい行が正。[上書き済み] は古い決め)。決まっていない所だけ選択式で聞く。' : '\n→ 台帳に無い。語を変えてもう一度引き、それでも無ければ選択式で聞く(決まったら台帳に1行 → todo sync)。');
     return;
   }
 
