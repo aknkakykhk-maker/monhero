@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a124aeb278874af7
+// source-sha256: eab82bc68da6a956
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -164786,7 +164786,8 @@ const MSX_CSS = `
 .msx .v-slots{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-top:6px}
 .msx .v-sl{background:#0f172a;border:1px solid #475569;border-radius:12px;padding:6px 4px 5px;text-align:center;font-size:10.5px;font-weight:900;line-height:1.3;position:relative;min-width:0}
 .msx .v-sl .v-pf{margin:0 auto 3px}
-.msx .v-sl .t3{font-size:10px;color:#86efac;white-space:nowrap}.msx .v-sl .bs{font-size:10px;color:#cbd5e1;font-weight:700;white-space:nowrap}.msx .v-sl .ic{font-size:10px;white-space:nowrap;letter-spacing:1px}
+.msx .v-sl .t3{font-size:10px;color:#86efac;display:flex;flex-wrap:wrap;justify-content:center;column-gap:5px}.msx .v-sl .bs{font-size:10px;color:#cbd5e1;font-weight:700;display:flex;flex-wrap:wrap;justify-content:center;column-gap:5px}.msx .v-sl .t3>span,.msx .v-sl .bs>span{white-space:nowrap}
+.msx .msx-sl-legend{font-size:10px;line-height:1.45;margin-top:4px;word-break:auto-phrase}.msx .v-sl .ic{font-size:10px;white-space:nowrap;letter-spacing:1px}
 .msx .v-sl.fr{border-color:#38bdf8;background:#0c2a4a}.msx .v-sl.base{border-style:dashed}.msx .v-sl.base .t3{color:#94a3b8}
 .msx .v-heat{display:grid;grid-template-columns:repeat(6,1fr);gap:3px;margin-top:5px;text-align:center;font-size:10px;font-weight:900}
 .msx .v-heat div{border-radius:8px;padding:3px 0;background:#0f172a;white-space:nowrap;line-height:1.3}
@@ -166359,7 +166360,7 @@ function MsxSlotPicker({
     style: {
       marginTop: 8
     }
-  }, "保存枠のモンスター(5体まで)"), raised.length ? raised.map(m => {
+  }, "マスモンボックスのモンスター(5体まで)"), raised.length ? raised.map(m => {
     const on = cur && cur.box === m.id;
     const used = !on && teamBox.includes(m.id);
     return React.createElement("button", {
@@ -166786,7 +166787,7 @@ function MsxStart({
     });
     body = React.createElement(React.Fragment, null, React.createElement("div", {
       className: "v-h"
-    }, "編成の6体", React.createElement("small", null, "枠を押すと、ベースモンか保存枠のモンスターから選べる(保存枠は5体まで)+フレンドから1体。強いモンスターほどトレーニングがよく伸びる")), React.createElement("div", {
+    }, "編成の6体", React.createElement("small", null, "枠を押すと、ベースモンかマスモンボックスのモンスターから選べる(マスモンボックスからは5体まで)+フレンドから1体。強いモンスターほどトレーニングがよく伸びる")), React.createElement("div", {
       className: "v-slots"
     }, members.map((m, i) => React.createElement("div", _extends({
       key: i,
@@ -166815,11 +166816,16 @@ function MsxStart({
       className: msxRankCls(m.rank)
     }, m.rank), React.createElement("div", {
       className: "t3"
-    }, m.top.slice(0, 2).map(k => `${MSX_STAT_ICON[k]}${MSX_STAT_NAME[k]}${Math.round(m.bonus[k] || 0)}%`).join(' ')), React.createElement("div", {
+    }, m.top.slice(0, 2).map(k => React.createElement("span", {
+      key: k
+    }, `${MSX_STAT_ICON[k]}${MSX_STAT_NAME[k]} +${Math.round(m.bonus[k] || 0)}%`))), React.createElement("div", {
       className: "bs"
-    }, "親密度", m.bond0, "・タッグ+", m.tag, "%"), React.createElement("div", {
+    }, React.createElement("span", null, "親密度 ", m.bond0), React.createElement("span", null, "タッグ +", m.tag, "%")), React.createElement("div", {
       className: "ic"
-    }, m.kind === 'base' ? m.auto ? 'ベースモン・✎選ぶ' : 'ベースモン・✎変える' : m.friend ? `借: ${m.friend.name || 'フレンド'}` : '✎変える')))), React.createElement("button", {
+    }, m.kind === 'base' ? m.auto ? 'ベースモン・✎選ぶ' : 'ベースモン・✎変える' : m.friend ? `借: ${m.friend.name || 'フレンド'}` : '✎変える')))), React.createElement("div", {
+      className: "msx-note msx-sl-legend",
+      "data-msx-slot-legend": true
+    }, "札の見方: 「+4%」はその能力のトレーニングの伸びが上がる分・親密度ははじめの値・タッグは友情タッグのときの伸び"), React.createElement("button", {
       type: "button",
       className: "v-card msx-heat-btn",
       "data-msx-gather-open": true,
@@ -166850,7 +166856,7 @@ function MsxStart({
         color: '#f9a8d4',
         fontWeight: 900
       }
-    }, "保存枠から選ぶ(", teamBox.length, "/5)"), raised.length ? raised.map(m => React.createElement("button", {
+    }, "マスモンボックスから選ぶ(", teamBox.length, "/5)"), raised.length ? raised.map(m => React.createElement("button", {
       type: "button",
       key: m.id,
       className: `v-item${teamBox.includes(m.id) ? ' sel' : ''}`,
@@ -166891,7 +166897,7 @@ function MsxStart({
       style: {
         marginTop: 4
       }
-    }, "保存枠はまだ空です。上の枠を押すと、入れるベースモンを選べます。育て終えたモンスターは、ここに入ります"), React.createElement("div", {
+    }, "マスモンボックスはまだ空です。上の枠を押すと、入れるベースモンを選べます。育て終えたモンスターは、ここに入ります"), React.createElement("div", {
       className: "sub",
       style: {
         color: '#7dd3fc',
@@ -167324,7 +167330,7 @@ function MsxStart({
     }, "🌱 育成をはじめる"));
   }
   return React.createElement(React.Fragment, null, React.createElement(MsxHd, {
-    back: step ? 'もどる' : 'やめる',
+    back: step ? '戻る' : 'やめる',
     onBack: back,
     right: `${step + 1} / 6`
   }), React.createElement("div", {
@@ -167336,7 +167342,7 @@ function MsxStart({
   }, React.createElement("button", {
     type: "button",
     onClick: back
-  }, step ? '← もどる' : '← やめる'), React.createElement("button", {
+  }, step ? '← 戻る' : '← やめる'), React.createElement("button", {
     type: "button",
     className: "go",
     onClick: next
