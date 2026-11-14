@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e9ba2ed0d342cc65
+// source-sha256: 992c1133b670cdd0
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -122289,7 +122289,9 @@ function AssistantLifeProfilePage({
   bondLevelOf = null,
   land = false,
   onMasmon = null,
-  viewOnly = false
+  viewOnly = false,
+  ownerName = '',
+  tierOf = null
 }) {
   const giftStAll = typeof useAssistantLifeGiftState === 'function' ? useAssistantLifeGiftState() : null;
   const giftSt = viewOnly ? null : giftStAll;
@@ -122360,7 +122362,11 @@ function AssistantLifeProfilePage({
     className: "text-[16px] font-black text-white"
   }, "📖 助手紹介"), React.createElement("p", {
     className: "text-[11px] font-bold text-indigo-200"
-  }, "選ぶと、その助手のことが分かります")), React.createElement("span", {
+  }, viewOnly && ownerName ? React.createElement(React.Fragment, null, React.createElement("span", {
+    className: "whitespace-nowrap"
+  }, ownerName, "さんが会った助手です。"), " ", React.createElement("span", {
+    className: "whitespace-nowrap"
+  }, "選ぶと人となりが分かります")) : '選ぶと、その助手のことが分かります')), React.createElement("span", {
     "data-assistant-life-profile-count": `${metList.length}/${roster.length}`,
     className: "shrink-0 whitespace-nowrap rounded-full border border-white/15 bg-slate-950/80 px-2.5 py-1 text-[11px] font-black text-slate-100"
   }, "会った助手 ", metList.length, "/", roster.length)), React.createElement("div", {
@@ -122410,7 +122416,10 @@ function AssistantLifeProfilePage({
       style: typeof JA_LABEL_STYLE !== 'undefined' ? JA_LABEL_STYLE : undefined
     }, typeof jaWrap === 'function' ? jaWrap(w.tagline || '') : w.tagline || ''), b && React.createElement("span", {
       className: "mt-1 inline-block rounded-full bg-slate-950/80 px-2 py-0.5 text-[10.5px] font-black text-pink-100"
-    }, "💗 Lv", b.lv));
+    }, "💗 Lv", b.lv), viewOnly && typeof tierOf === 'function' && tierOf(w.id) && React.createElement("span", {
+      "data-assistant-life-profile-tier": w.id,
+      className: "mt-1 inline-block whitespace-nowrap rounded-full bg-slate-950/80 px-2 py-0.5 text-[10.5px] font-black text-pink-100"
+    }, "💗 ", tierOf(w.id)));
   })), React.createElement("p", {
     className: "mt-2 text-[10.5px] font-bold leading-snug text-slate-300"
   }, viewOnly ? metList.length < roster.length ? 'まだ会っていない助手は、この家の人も会うと紹介が開きます。' : '' : React.createElement(React.Fragment, null, "💗 好きなものは、贈ると分かって紹介に残ります。", metList.length < roster.length ? 'まだ会っていない助手は、お話で出会うと紹介が開きます。' : '')), openId && (() => {
@@ -161901,6 +161910,19 @@ const alfDiaryShare = n => {
     return [];
   }
 };
+const ALF_BOND_TIER_NAMES = Object.freeze(['はじめのころ', 'なかよし', 'ずっと仲良し']);
+const alfBondTierOfLv = lv => !Number.isFinite(lv) || lv < 3 ? 0 : lv < 6 ? 1 : 2;
+const alfBondTiers = ids => {
+  const out = {};
+  if (typeof assistantLifeProfileBond !== 'function') return out;
+  for (const id of (ids || []).filter(alfValidId)) {
+    try {
+      const b = assistantLifeProfileBond(id);
+      if (b && Number.isFinite(b.lv)) out[id] = alfBondTierOfLv(b.lv);
+    } catch {}
+  }
+  return out;
+};
 const alfBuildMore = ids => {
   const fu = {};
   for (const id of (ids || []).filter(alfValidId)) {
@@ -161921,10 +161943,14 @@ const alfBuildMore = ids => {
     } catch {}
   }
   const dy = alfDiaryShare(8);
+  const bd = alfBondTiers(ids);
   return {
     v: 1,
     fu,
-    dy
+    dy,
+    ...(Object.keys(bd).length ? {
+      bd
+    } : {})
   };
 };
 const ALF_MORE_FIT = 5600;
@@ -162162,6 +162188,11 @@ const assistantLifeFriendNormalizeMore = raw => {
     if (Number.isInteger(k) && k > one.length && k <= 8) mn[id] = k;
   }
   const fv = typeof albNormalizeFavShare === 'function' ? albNormalizeFavShare(raw.fv) : null;
+  const bd = {};
+  if (raw.bd && typeof raw.bd === 'object' && !Array.isArray(raw.bd)) for (const id of ALF_IDS) {
+    const t = raw.bd[id];
+    if (t === 0 || t === 1 || t === 2) bd[id] = t;
+  }
   return {
     v: 1,
     fu,
@@ -162171,6 +162202,9 @@ const assistantLifeFriendNormalizeMore = raw => {
     mn,
     ...(fv ? {
       fv
+    } : {}),
+    ...(Object.keys(bd).length ? {
+      bd
     } : {})
   };
 };
@@ -163965,7 +163999,7 @@ function AlfFriendHouseView({
     act: a.k
   })) : [];
   const diaryItems = [...actItems, ...(more && more.dy.length ? more.dy : h.dy || [])].slice(0, 10);
-  const vtabs = [['house', '🏡', '家'], ...(typeof AssistantLifeTownMap === 'function' && typeof assistantLifeMapReadHome === 'function' ? [['where', '🗺', '町']] : []), ...(typeof AssistantLifeProfilePage === 'function' && typeof assistantLifeProfileOn === 'function' && assistantLifeProfileOn() ? [['profile', '📖', '紹介']] : [])];
+  const vtabs = [['house', '🏡', '家'], ...(typeof AssistantLifeTownMap === 'function' && typeof assistantLifeMapReadHome === 'function' ? [['where', '🗺', '町']] : []), ...(typeof AlfBondView === 'function' && typeof albEnabled === 'function' && albEnabled() ? [['bond', '🤝', 'きずな']] : []), ...(typeof AssistantLifeProfilePage === 'function' && typeof assistantLifeProfileOn === 'function' && assistantLifeProfileOn() ? [['profile', '📖', '紹介']] : [])];
   const goTab = k => {
     setRoomId(null);
     setTalk(null);
@@ -163974,7 +164008,20 @@ function AlfFriendHouseView({
     setBoardOpen(false);
     setVtab(k);
   };
-  const vIcons = flat => vtabs.length > 1 ? React.createElement("div", {
+  const vIcons = flat => vtabs.length > 1 && land && !flat ? React.createElement("div", {
+    className: "flex min-w-0 flex-1 gap-1",
+    role: "tablist",
+    "data-alf-vtabs": true
+  }, vtabs.map(([k, ic, label]) => React.createElement("button", {
+    key: k,
+    type: "button",
+    role: "tab",
+    "aria-selected": vtab === k,
+    "data-alf-vtab": k,
+    className: `min-h-[30px] flex-1 whitespace-nowrap rounded-xl border px-1 text-[11px] font-black ${vtab === k ? 'border-pink-300 bg-pink-900/50 text-white' : 'border-white/20 bg-slate-800/80 text-slate-200'}`,
+    "aria-label": label,
+    onClick: () => goTab(k)
+  }, ic, vw >= 800 ? ` ${label}` : ''))) : vtabs.length > 1 ? React.createElement("div", {
     className: "mhl-icons",
     role: "tablist",
     "data-alf-vtabs": true,
@@ -164052,13 +164099,22 @@ function AlfFriendHouseView({
   }, "👀 見る専用です")), vIcons(false)), React.createElement("div", {
     className: "relative min-h-0 flex-1 overflow-y-auto",
     "data-alf-vview-body": true
-  }, vtab === 'profile' && React.createElement(AssistantLifeProfilePage, {
+  }, vtab === 'bond' && React.createElement(AlfBondView, {
+    friend: friend,
+    more: more,
+    land: land
+  }), vtab === 'profile' && React.createElement(AssistantLifeProfilePage, {
     metIds: metIds,
     viewOnly: true,
-    land: land
+    land: land,
+    ownerName: friend.name,
+    tierOf: id => {
+      const t = more && more.bd ? more.bd[id] : undefined;
+      return t === 0 || t === 1 || t === 2 ? ALF_BOND_TIER_NAMES[t] : null;
+    }
   })))) : null;
   const header = React.createElement("div", {
-    className: "mhl-hdr flex flex-wrap items-start gap-2",
+    className: `mhl-hdr flex items-start gap-2${land ? '' : ' flex-wrap'}`,
     style: {
       paddingTop: land ? 6 : 'calc(8px + env(safe-area-inset-top))'
     }
@@ -164087,7 +164143,7 @@ function AlfFriendHouseView({
   }, friend.name, "さんが最後に開いたとき")), now && now.online && React.createElement("p", {
     className: `mt-0.5 inline-block max-w-full truncate rounded-full px-2 py-0.5 text-[10.5px] font-black ${now.auto ? 'bg-amber-950/80 text-amber-200' : 'bg-emerald-950/70 text-emerald-200'}`,
     "data-alf-visit-now": true
-  }, "いま ", land ? now.long || now.text : now.text)), vIcons(false));
+  }, "いま ", land ? now.long || now.text : now.text)), land ? null : vIcons(false));
   const tiles = React.createElement("div", {
     "data-alf-visit-acts": true
   }, typeof AlfBondBar === 'function' && React.createElement(AlfBondBar, {
@@ -164578,12 +164634,19 @@ function AlfFriendHouseView({
       flex: '0 0 64%'
     }
   }, houseView), React.createElement("div", {
-    className: "flex min-w-0 flex-1 flex-col gap-1.5 overflow-y-auto bg-gradient-to-b from-[#1a0f2e] to-[#0b1020] px-2.5 pb-2",
+    className: "relative flex min-w-0 flex-1 flex-col gap-1.5 overflow-y-auto bg-gradient-to-b from-[#1a0f2e] to-[#0b1020] px-2.5 pb-2",
     style: {
       paddingTop: 88
     },
     "data-alf-visit-side": true
-  }, header, board, tiles)) : React.createElement(React.Fragment, null, header, React.createElement("div", {
+  }, React.createElement("div", {
+    className: "absolute z-[3] flex",
+    style: {
+      left: 10,
+      right: 10,
+      top: 6
+    }
+  }, vIcons(false)), header, board, tiles)) : React.createElement(React.Fragment, null, header, React.createElement("div", {
     className: "mhl-body"
   }, houseView), React.createElement("div", {
     className: "relative z-[3] bg-gradient-to-t from-[#0b1020] via-[#0b1020ee] to-transparent px-3 pt-1.5",
@@ -165782,6 +165845,89 @@ function AlfBondSheet({
     className: "mhl-btn mt-3 w-full bg-slate-700",
     onClick: onClose
   }, "閉じる")));
+}
+function AlfBondView({
+  friend,
+  more,
+  land = false
+}) {
+  const s = useAssistantLifeFriendState();
+  React.useEffect(() => {
+    if (albEnabled()) void albLoad();
+  }, []);
+  if (!albEnabled() || !s.bond) return null;
+  const x = albOne(s.bond, friend.id);
+  const nx = albNext(x.st);
+  const fv = more && more.fv ? more.fv : null;
+  const bd = more && more.bd ? more.bd : null;
+  const ids = (friend.house && friend.house.ids || []).filter(id => ALF_IDS.includes(id));
+  const card = 'rounded-2xl border border-white/10 bg-slate-800/90 px-3 py-2.5';
+  const sec = 'mt-3 mb-1 text-[12px] font-black text-amber-200';
+  const names = typeof ALF_BOND_TIER_NAMES !== 'undefined' ? ALF_BOND_TIER_NAMES : ['はじめのころ', 'なかよし', 'ずっと仲良し'];
+  return React.createElement("div", {
+    className: "px-3 pb-4 pt-2",
+    "data-alf-bond-view": true
+  }, React.createElement("div", {
+    className: card,
+    "data-alf-bond-view-friend": true
+  }, React.createElement("p", {
+    className: "text-[15px] font-black text-pink-100"
+  }, "🤝 ", friend.name, "さんとの友情 Lv", albLv(x.st)), React.createElement("p", {
+    className: "text-[11px] font-bold text-slate-200"
+  }, React.createElement("span", {
+    className: "whitespace-nowrap"
+  }, "「", albTitle(x.st), "」"), " ", React.createElement("span", {
+    className: "whitespace-nowrap"
+  }, "スタンプ ", x.st, "個"), nx ? React.createElement(React.Fragment, null, " ", React.createElement("span", {
+    className: "whitespace-nowrap"
+  }, "あと", nx.need, "個で「", ALB_TITLES[albLv(x.st) + 1], "」")) : null), React.createElement("div", {
+    className: "mt-1.5 h-2 overflow-hidden rounded-full bg-white/15"
+  }, React.createElement("div", {
+    className: "h-full rounded-full bg-gradient-to-r from-pink-400 to-amber-300",
+    style: {
+      width: `${nx ? Math.round((x.st - nx.from) / Math.max(1, nx.to - nx.from) * 100) : 100}%`
+    }
+  })), React.createElement("p", {
+    className: "mt-2 text-[12px] font-black text-amber-200"
+  }, "今日のスタンプ", x.done ? ' ✔' : ''), React.createElement("div", {
+    className: "mt-1 grid grid-cols-3 gap-1",
+    "data-alb-view-tasks": true
+  }, ALB_TASKS.map(([k, icon, label]) => React.createElement("div", {
+    key: k,
+    className: `whitespace-nowrap rounded-xl px-0.5 py-1.5 text-center text-[10.5px] font-black ${x.t[k] ? 'border border-amber-300 bg-amber-300/20 text-amber-100' : 'border border-white/15 bg-white/5 text-slate-300'}`
+  }, icon, " ", label, x.t[k] ? ' ✔' : ''))), React.createElement("p", {
+    className: "mt-1 text-[10px] leading-snug text-slate-300"
+  }, "この家で3つすると、今日のスタンプが1個たまります。")), React.createElement("p", {
+    className: sec
+  }, "💗 ", friend.name, "さんの助手との仲(段)"), React.createElement("div", {
+    className: card,
+    "data-alf-bond-view-tiers": true
+  }, ids.length ? ids.map(id => {
+    const t = bd ? bd[id] : undefined;
+    const a = typeof assistantById === 'function' ? assistantById(id) : null;
+    return React.createElement("div", {
+      key: id,
+      className: "flex items-center gap-2 border-b border-slate-700/60 py-1 last:border-0",
+      "data-alf-bond-view-tier": id
+    }, React.createElement("span", {
+      className: "shrink-0"
+    }, a && typeof AssistantFace === 'function' ? React.createElement(AssistantFace, {
+      who: a,
+      size: 30
+    }) : null), React.createElement("span", {
+      className: "min-w-0 flex-1 truncate text-[12.5px] font-black text-white"
+    }, assistantLifeName(id)), React.createElement("span", {
+      className: "shrink-0 whitespace-nowrap rounded-full bg-slate-950/80 px-2 py-0.5 text-[11px] font-black text-pink-100"
+    }, t === 0 || t === 1 || t === 2 ? `💗 ${names[t]}` : '—'));
+  }) : React.createElement("p", {
+    className: "text-[11px] text-slate-300"
+  }, "まだ会っている助手がいません。"), React.createElement("p", {
+    className: "mt-1.5 text-[10px] leading-snug text-slate-300"
+  }, friend.name, "さんとそれぞれの助手の仲の段です。くわしい数は出ません。")), fv ? React.createElement(React.Fragment, null, React.createElement("p", {
+    className: sec
+  }, "🏆 ", friend.name, "さんのお気に入りの棚"), React.createElement(AlfFavShelf, {
+    fv: fv
+  })) : null);
 }
 function AlfGuestBook({
   s,

@@ -137,6 +137,17 @@ const alfDiaryShare = (n) => {
     return (d && Array.isArray(d.items) ? d.items : []).filter(x => x && x.kind !== 'friend' && !/さんの|さんち/.test(x.text)).slice(-n).reverse().map(x => ({ t: alfStr(x.t, 5), x: alfStr(x.text, 40) }));
   } catch { return []; }
 };
+// 仲良し度の Lv を3つの段にまとめる(Lv1〜2=0・3〜5=1・6〜=2)。Lv の数そのものは相手に渡さない
+const ALF_BOND_TIER_NAMES = Object.freeze(['はじめのころ', 'なかよし', 'ずっと仲良し']);
+const alfBondTierOfLv = (lv) => (!Number.isFinite(lv) || lv < 3 ? 0 : lv < 6 ? 1 : 2);
+const alfBondTiers = (ids) => {
+  const out = {};
+  if (typeof assistantLifeProfileBond !== 'function') return out;
+  for (const id of (ids || []).filter(alfValidId)) {
+    try { const b = assistantLifeProfileBond(id); if (b && Number.isFinite(b.lv)) out[id] = alfBondTierOfLv(b.lv); } catch {}
+  }
+  return out;
+};
 const alfBuildMore = (ids) => {
   const fu = {};
   for (const id of (ids || []).filter(alfValidId)) {
@@ -150,7 +161,9 @@ const alfBuildMore = (ids) => {
     } catch {}
   }
   const dy = alfDiaryShare(8);
-  return { v: 1, fu, dy };
+  // 仲良しの「段」(2026-11-14 社長 r1115-019 第2弾「段は見せてよい・数字は出さない」): 助手ごとに 0(はじめのころ)/1(なかよし)/2(ずっと仲良し)。点・Lv の数は送らない
+  const bd = alfBondTiers(ids);
+  return { v: 1, fu, dy, ...(Object.keys(bd).length ? { bd } : {}) };
 };
 // ---------- 助手のマスモンの写し(2026-11-08 社長「その人の色々見れるように」・キズナ4 #5103/#5108 の口 assistantLifeMasmonTeamOf) ----------
 //   迎えたマスモンだけ(1〜8体・先頭が勇者モン)。名前・種類・色だけを写す(強さ・数値は写さない)。
@@ -278,7 +291,9 @@ const assistantLifeFriendNormalizeMore = (raw) => {
     if (Number.isInteger(k) && k > one.length && k <= 8) mn[id] = k;
   }
   const fv = typeof albNormalizeFavShare === 'function' ? albNormalizeFavShare(raw.fv) : null; // お気に入りの棚(56-assistant-life-friend-bond)
-  return { v: 1, fu, dy, ac: alfNormalizeAc(raw.ac), ms, mn, ...(fv ? { fv } : {}) };
+  const bd = {}; // 仲良しの段(知らない助手・0〜2 以外は捨てる)
+  if (raw.bd && typeof raw.bd === 'object' && !Array.isArray(raw.bd)) for (const id of ALF_IDS) { const t = raw.bd[id]; if (t === 0 || t === 1 || t === 2) bd[id] = t; }
+  return { v: 1, fu, dy, ac: alfNormalizeAc(raw.ac), ms, mn, ...(fv ? { fv } : {}), ...(Object.keys(bd).length ? { bd } : {}) };
 };
 // 相手の控えを読むとき(知らない id・種類・長い値は捨てる)
 const assistantLifeFriendNormalizeHouse = (raw) => {
@@ -1134,9 +1149,14 @@ function AlfFriendHouseView({ friend, onClose }) {
   // 見る専用のタブ(自分の助手ライフと同じ並びの飾り・同じ class)。町・紹介は、自分の画面の部品に「相手の写し」を渡して見せるだけ(保存・操作は使わない)
   const vtabs = [['house', '🏡', '家'],
     ...(typeof AssistantLifeTownMap === 'function' && typeof assistantLifeMapReadHome === 'function' ? [['where', '🗺', '町']] : []),
+    ...(typeof AlfBondView === 'function' && typeof albEnabled === 'function' && albEnabled() ? [['bond', '🤝', 'きずな']] : []),
     ...(typeof AssistantLifeProfilePage === 'function' && typeof assistantLifeProfileOn === 'function' && assistantLifeProfileOn() ? [['profile', '📖', '紹介']] : [])];
   const goTab = (k) => { setRoomId(null); setTalk(null); setLeaving(null); setBondOpen(false); setBoardOpen(false); setVtab(k); };
-  const vIcons = (flat) => (vtabs.length > 1 ? (
+  const vIcons = (flat) => (vtabs.length > 1 && land && !flat ? (
+    // 横画面の右の欄は縦が足りないので、1行の小さな札にする(下の帯がはみ出さない)
+    <div className="flex min-w-0 flex-1 gap-1" role="tablist" data-alf-vtabs>
+      {vtabs.map(([k, ic, label]) => <button key={k} type="button" role="tab" aria-selected={vtab === k} data-alf-vtab={k} className={`min-h-[30px] flex-1 whitespace-nowrap rounded-xl border px-1 text-[11px] font-black ${vtab === k ? 'border-pink-300 bg-pink-900/50 text-white' : 'border-white/20 bg-slate-800/80 text-slate-200'}`} aria-label={label} onClick={() => goTab(k)}>{ic}{vw >= 800 ? ` ${label}` : ''}</button>)}
+    </div>) : vtabs.length > 1 ? (
     <div className="mhl-icons" role="tablist" data-alf-vtabs style={flat ? undefined : { flexBasis: '100%' }}>
       {vtabs.map(([k, ic, label]) => <button key={k} type="button" role="tab" aria-selected={vtab === k} data-alf-vtab={k} className={vtab === k ? 'on' : ''} onClick={() => goTab(k)}><i>{ic}</i>{label}</button>)}
     </div>) : null);
@@ -1154,12 +1174,13 @@ function AlfFriendHouseView({ friend, onClose }) {
             {vIcons(false)}
           </div>
           <div className="relative min-h-0 flex-1 overflow-y-auto" data-alf-vview-body>
-            {vtab === 'profile' && <AssistantLifeProfilePage metIds={metIds} viewOnly land={land}/>}
+            {vtab === 'bond' && <AlfBondView friend={friend} more={more} land={land}/>}
+            {vtab === 'profile' && <AssistantLifeProfilePage metIds={metIds} viewOnly land={land} ownerName={friend.name} tierOf={(id) => { const t = more && more.bd ? more.bd[id] : undefined; return t === 0 || t === 1 || t === 2 ? ALF_BOND_TIER_NAMES[t] : null; }}/>}
           </div>
         </>}
     </div>) : null;
   const header = (
-    <div className="mhl-hdr flex flex-wrap items-start gap-2" style={{ paddingTop: land ? 6 : 'calc(8px + env(safe-area-inset-top))' }}>
+    <div className={`mhl-hdr flex items-start gap-2${land ? '' : ' flex-wrap'}`} style={{ paddingTop: land ? 6 : 'calc(8px + env(safe-area-inset-top))' }}>
       <button type="button" className="h-9 w-8 shrink-0 text-[19px] text-slate-100" aria-label="戻る" data-alf-visit-close onClick={onClose}>←</button>
       {/* 右上は「仲良し度 +10」などの知らせ(44-growth-fx の .mh-gfx-chips)が出る所なので、題は左に寄せて右を空ける */}
       <div className="min-w-0" style={{ maxWidth: land ? '100%' : '48%' }}>
@@ -1168,7 +1189,7 @@ function AlfFriendHouseView({ friend, onClose }) {
         <p className="text-[10px] font-bold text-slate-200"><span className="whitespace-nowrap">📷 {alfAgoText(friend.at)} の様子</span>・<span className="whitespace-nowrap">{friend.name}さんが最後に開いたとき</span></p>
         {now && now.online && <p className={`mt-0.5 inline-block max-w-full truncate rounded-full px-2 py-0.5 text-[10.5px] font-black ${now.auto ? 'bg-amber-950/80 text-amber-200' : 'bg-emerald-950/70 text-emerald-200'}`} data-alf-visit-now>いま {land ? (now.long || now.text) : now.text}</p>}
       </div>
-      {vIcons(false)}
+      {land ? null : vIcons(false)}
     </div>);
   const tiles = (
     <div data-alf-visit-acts>
@@ -1306,7 +1327,7 @@ function AlfFriendHouseView({ friend, onClose }) {
         {land ? (
           <div className="relative z-[2] flex h-full min-h-0" style={{ paddingLeft: 'env(safe-area-inset-left)', paddingRight: 'env(safe-area-inset-right)' }}>
             <div className="mhl-body" style={{ flex: '0 0 64%' }}>{houseView}</div>
-            <div className="flex min-w-0 flex-1 flex-col gap-1.5 overflow-y-auto bg-gradient-to-b from-[#1a0f2e] to-[#0b1020] px-2.5 pb-2" style={{ paddingTop: 88 }} data-alf-visit-side>{header}{board}{tiles}</div>
+            <div className="relative flex min-w-0 flex-1 flex-col gap-1.5 overflow-y-auto bg-gradient-to-b from-[#1a0f2e] to-[#0b1020] px-2.5 pb-2" style={{ paddingTop: 88 }} data-alf-visit-side><div className="absolute z-[3] flex" style={{ left: 10, right: 10, top: 6 }}>{vIcons(false)}</div>{header}{board}{tiles}</div>
           </div>
         ) : (<>
           {header}
