@@ -64,10 +64,10 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     { // ① 偽
       const page = await open({ name: '偽', w: 390, h: 844 }, false);
       const r = await page.evaluate(async () => {
-        await AMT_STORE.load();
-        const before = JSON.stringify(assistantMasmonBasePlanOf('kiki').dislikeMon);
+        await AMT_STORE.load(); RELEASE_FLAGS.assistantLifeTaste = false;
+        const before = JSON.stringify(assistantMasmonBasePlanOf('kiki').dislikeMon), st0 = AMT_STORE.state;
         const res = [assistantLifeTasteBump('kiki', 'Oboro', 'win'), assistantLifeTasteBump('kiki', 'Oboro', 'win')];
-        return { res: JSON.stringify(res), same: before === JSON.stringify(assistantMasmonBasePlanOf('kiki').dislikeMon), saved: localStorage.getItem('mh_assistant_life_taste_v1') };
+        return { res: JSON.stringify(res), same: before === JSON.stringify(assistantMasmonBasePlanOf('kiki').dislikeMon), saved: AMT_STORE.state !== st0 };
       });
       check('① 印が偽なら何も変わらず保存も増えない', r.res === '[[],[]]' && r.same && !r.saved, JSON.stringify(r));
       await page.close();

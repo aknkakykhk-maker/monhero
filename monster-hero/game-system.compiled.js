@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1d8a784c6ffa1eab
+// source-sha256: ae6c3e08af487723
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -157302,13 +157302,21 @@ const assistantLifeTasteDaily = () => {
     }
   } catch (_) {}
 };
+let amtDailyDay = '';
+const amtDailyTry = () => {
+  try {
+    const d = typeof assistantLifeDayKey === 'function' ? assistantLifeDayKey() : '';
+    if (!d || amtDailyDay === d || !AMT_STORE || !AMT_STORE.loaded || typeof ASSISTANT_MASMON_STORE === 'undefined' || !ASSISTANT_MASMON_STORE.loaded) return;
+    amtDailyDay = d;
+    assistantLifeTasteDaily();
+  } catch (_) {}
+};
 try {
   setTimeout(() => {
     try {
       if (amtOn() && AMT_STORE) {
-        const w = [AMT_STORE.load()];
-        if (typeof ASSISTANT_MASMON_STORE !== 'undefined' && ASSISTANT_MASMON_STORE.load) w.push(ASSISTANT_MASMON_STORE.load());
-        void Promise.all(w).then(assistantLifeTasteDaily).catch(() => {});
+        void AMT_STORE.load().then(amtDailyTry).catch(() => {});
+        if (typeof ASSISTANT_MASMON_STORE !== 'undefined' && ASSISTANT_MASMON_STORE.subs) ASSISTANT_MASMON_STORE.subs.add(amtDailyTry);
       }
     } catch (_) {}
   }, 0);

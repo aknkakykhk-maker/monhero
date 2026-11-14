@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: d9646585258de1dd
+// generated-sha256: 88ad2191ed3dba94
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -81853,7 +81853,10 @@ const assistantLifeTasteDaily = () => {
     }
   } catch (_) {}
 };
-try { setTimeout(() => { try { if (amtOn() && AMT_STORE) { const w = [AMT_STORE.load()]; if (typeof ASSISTANT_MASMON_STORE !== 'undefined' && ASSISTANT_MASMON_STORE.load) w.push(ASSISTANT_MASMON_STORE.load()); void Promise.all(w).then(assistantLifeTasteDaily).catch(() => {}); } } catch (_) {} }, 0); } catch (_) {}
+// 読み込み: 好みの保存だけを先に読む。助手のマスモンの保存は、助手ライフが開いて読み込まれたあと(subs の通知)で日次を1回走らせる(ここから読み込ませない=起動時に名前付けなどが走らないように)
+let amtDailyDay = '';
+const amtDailyTry = () => { try { const d = typeof assistantLifeDayKey === 'function' ? assistantLifeDayKey() : ''; if (!d || amtDailyDay === d || !AMT_STORE || !AMT_STORE.loaded || typeof ASSISTANT_MASMON_STORE === 'undefined' || !ASSISTANT_MASMON_STORE.loaded) return; amtDailyDay = d; assistantLifeTasteDaily(); } catch (_) {} };
+try { setTimeout(() => { try { if (amtOn() && AMT_STORE) { void AMT_STORE.load().then(amtDailyTry).catch(() => {}); if (typeof ASSISTANT_MASMON_STORE !== 'undefined' && ASSISTANT_MASMON_STORE.subs) ASSISTANT_MASMON_STORE.subs.add(amtDailyTry); } } catch (_) {} }, 0); } catch (_) {}
 
 // ---- part: 56-monsuc-fuse.jsx ----
 // ---------- モンヒロサクセスの合体(保存枠の育て終えた子どうし・2026-11-12 開発部・段取りの回3) ----------
