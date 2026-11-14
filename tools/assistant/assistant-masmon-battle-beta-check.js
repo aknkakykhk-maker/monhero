@@ -161,6 +161,9 @@ const seed = () => {
     const o1 = order.find(x => x[0] === ks[ks.length - 1]);
     check('押した順に1・2が付く(2 VS 2)', order.length === 2 && !!o1 && o1[1] === '1', JSON.stringify(order));
     await shot('2-prep-self');
+    // 操作は手動が基本(2026-11-14 社長「基本マニュアルで、オートにもできるように」・新しいキー mh_monsuc_arena_ctl_v1)。この場面はオートの観戦を見るので、オートを選んでから始める
+    check('試合の操作は、はじめは手動', await page.evaluate(() => !!document.querySelector('[data-ambb-set="ctl:manual"].on') && !document.querySelector('[data-ambb-set="ctl:auto"].on')));
+    await clickSel('[data-ambb-set="ctl:auto"]');
     await clickSel('[data-ambb-start]');
     await page.waitForFunction(() => !!document.querySelector('[data-ambb-watch]'), { timeout: 10000 }).catch(() => {});
     await page.waitForFunction(() => !!document.querySelector('.ambw-dmg, .msa-dmg'), { timeout: 30000 }).catch(() => {});

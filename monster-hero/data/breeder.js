@@ -36,7 +36,11 @@ const STORY_BG_FOREST_EVENING = "images/story-bg/forest_evening.jpg?v=bd1ff69881
 const STORY_BG_FOREST_NIGHT = "images/story-bg/forest_night.jpg?v=c81c56738292";       // 森の奥(夜・蛍)
 const STORY_BG_FOREST_MORNING = "images/story-bg/forest_morning.jpg?v=f4ff723a3e67";   // 森の奥(朝・もや)
 const STORY_BG_DARK_VOID = "images/story-bg/dark_void.jpg?v=6c4987dd8307";             // 暗やみ(心の中・箱の中など。うすい鎖の影と光の粒)
+// モンヒロサクセスの育成場の町の門(2026-11-14 社長の絵・看板「育成場」。原本 tools/art-sources/monhero-success-2026-11-14/town-gate-1024x1536.png)。
+//   縦2:3なので、縦長の画面では左右が少し切れる。お話「モンヒロサクセス」第1話の冒頭・第2話の町に着く場面
+const STORY_BG_MONSUC_GATE = "images/story-bg/monsuc_gate.jpg?v=73a1779eec12";
 const STORY_SCENE_IMAGES = Object.freeze({
+  monsuc_gate: STORY_BG_MONSUC_GATE,
   desert_palace: STORY_BG_DESERT_PALACE,
   desert_oilfield: STORY_BG_DESERT_OILFIELD,
   desert_hall: STORY_BG_DESERT_HALL,
