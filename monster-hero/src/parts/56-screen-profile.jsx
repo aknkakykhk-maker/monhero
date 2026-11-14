@@ -182,7 +182,7 @@ function ProfileScreen({
           return(
           <div className="mb-4 rounded-2xl border border-indigo-400/60 bg-indigo-950/50 p-3">
             {onboardingPreview&&<div className="-mx-3 -mt-3 mb-2 px-3 py-1.5 rounded-t-xl bg-fuchsia-700 text-white text-[10px] font-black tracking-widest">DEBUG・見るだけの表示です。名前もアイコンも保存されません</div>}
-            <div className="mb-2"><ScreenSectionLabel>はじめての設定</ScreenSectionLabel></div>
+            <div className="mb-2"><ScreenSectionLabel>初めての設定</ScreenSectionLabel></div>
             <AssistantBubble line={step?.t||null} expression={step?.e||null} helpRef="basics/onboarding" compact/>
             <div className="grid grid-cols-2 gap-2 mt-3">
               <button onClick={()=>onOpenNameEdit(hasName?breederName:'')} className={`min-h-[44px] rounded-xl border text-[11px] font-black active:scale-95 ${hasName?'bg-emerald-950/60 border-emerald-400/60 text-emerald-200':'bg-slate-900 border-indigo-400/60 text-white'}`}>{hasName?'✓ 名前':'名前を決める'}</button>
@@ -237,7 +237,7 @@ function ProfileScreen({
                   「えらびなおす」は truncate だと幅320で「えらびな…」と切れて読めなかったので、2行にする(2026-10-21 窓口) */}
               <button type="button" data-profile-tile="icon" onClick={onOpenIconPicker} className={tile}>
                 <span className="flex h-8 w-8 shrink-0 items-center justify-center text-xl max-[359px]:h-6 max-[359px]:w-6 max-[359px]:text-base" aria-hidden="true">🖼️</span>
-                <span className="min-w-0 flex-1"><small className="block text-[10px] font-black text-indigo-300">アイコン</small><b className="block text-[11px] max-[359px]:text-[10px] font-black leading-tight text-white" style={JA_LABEL_STYLE}>えらび<wbr/>なおす</b></span>
+                <span className="min-w-0 flex-1"><small className="block text-[10px] font-black text-indigo-300">アイコン</small><b className="block text-[11px] max-[359px]:text-[10px] font-black leading-tight text-white" style={JA_LABEL_STYLE}>選び<wbr/>なおす</b></span>
               </button>
               <button type="button" data-profile-tile="frame" onClick={onOpenFramePicker} className={tile}>
                 <Sparkles size={18} className="mx-1.5 shrink-0 text-amber-300 max-[359px]:mx-0.5"/>
@@ -301,7 +301,7 @@ function ProfileScreen({
           </div>
         </div>
         <details data-profile-playtime className="mb-3 rounded-xl border border-indigo-500/20 bg-indigo-950/30 px-3 py-2">
-          <summary className="cursor-pointer text-[11px] font-black text-indigo-200">プレイ時間のくわしい記録</summary>
+          <summary className="cursor-pointer text-[11px] font-black text-indigo-200">プレイ時間の詳しい記録</summary>
           <div className="mt-2 flex flex-col items-center gap-1">
             <div className="flex items-center gap-2 text-[11px] font-black text-indigo-300">
               <span>今日 <span className="text-white font-mono">{formatPlaytime(playtimeTodayMs(playtimeView))}</span></span>
@@ -309,7 +309,7 @@ function ProfileScreen({
               <span>遊んだ日 <span className="text-white font-mono">{playtimeView.days}</span>日</span>
             </div>
             {playtimeView.longest.day&&(
-              <div className="text-[10px] text-slate-400 font-bold">いちばん長かった日 {formatPlaytime(playtimeView.longest.ms)}（{playtimeView.longest.day}）</div>
+              <div className="text-[10px] text-slate-400 font-bold">一番長かった日 {formatPlaytime(playtimeView.longest.ms)}（{playtimeView.longest.day}）</div>
             )}
             <div className="text-[10px] text-slate-400 font-bold">{playtimeView.since?`${playtimeView.since} から数えています`:'いま数え始めたところです'}</div>
             {(Number(playtimeAllDevicesMs) || 0) > playtimeView.totalMs&&(
@@ -361,7 +361,7 @@ function ProfileScreen({
                 )}
               </div>
               <div className="mt-2 h-2 rounded-full border border-white/5 bg-black/40 overflow-hidden"><i className="block h-full rounded-full" style={{width:`${width}%`,background:`linear-gradient(90deg,${accent},#fbbf24)`}}/></div>
-              <div className="text-[10px] text-slate-400 font-bold mt-1 text-right">{next?`次のLv.${next.level}まで あと${next.remain}`:'いちばん仲良し！'}</div>
+              <div className="text-[10px] text-slate-400 font-bold mt-1 text-right">{next?`次のLv.${next.level}まで あと${next.remain}`:'一番仲良し！'}</div>
               {/* ごほうび一覧(2026-10-21)。Lvごとにもらえるもの(ギフト・飾り枠・呼び方)を見る */}
               <button type="button" data-assistant-bond-reward-open onClick={()=>setBondRewardListOpen(true)}
                 className="mt-2 flex w-full min-h-[44px] items-center justify-center gap-1.5 rounded-xl border border-pink-400/50 bg-pink-950/40 px-3 text-[12px] font-black text-pink-100 active:scale-[.98]">
