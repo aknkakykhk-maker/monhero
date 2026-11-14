@@ -600,18 +600,21 @@
       const power = pv2 ? powerOfParts({ stats, lv, loyal: loy, pop }, techRowsOf({ species: sp, techs: canonTechList(o.techs), aptUp: o.aptUp, aptBase: o.aptBase, aptAwake: o.aptAwake }))
         : C.power({ stats, masteries, lv, loyal: loy, pop });
       const rank = base ? 'base' : C.rankOf(power).key;
+      // 強さの段(案A): 能力の補正・タッグ・仲良しの始まりは、能力を今までどおり ×2.5 で数えた段で引く(画面に出す rank は新しい総合力のまま)
+      const srank = base ? 'base' : strengthRankOf(pv2 ? powerOfPartsClassic({ stats, lv, loyal: loy, pop }, techRowsOf({ species: sp, techs: canonTechList(o.techs), aptUp: o.aptUp, aptBase: o.aptBase, aptAwake: o.aptAwake }))
+        : powerClassicOf({ stats, masteries, lv, loyal: loy, pop }));
       const top = base ? aptTop3(sp) : top3Of(stats, sp);
       const assists = base ? [] : normAssists(o.assists);
       const own = techsOf(sp).map(t => t.id);
       const techs = base ? startTechs(sp) : (Array.isArray(o.techs) ? canonTechList(o.techs).filter(t => own.includes(t)).slice(0, TECH_MAX) : startTechs(sp));
       const lvOf = (id) => { const a = assists.find(x => x.id === id); return a ? a.lv : 0; };
-      const bonus = {}; KEYS.forEach(k => { const i = top.indexOf(k); bonus[k] = i < 0 ? 0 : r2(stats[k] / 40 * POS_COEF[i] + (base ? 0 : RANK_ADD[rank])); });
+      const bonus = {}; KEYS.forEach(k => { const i = top.indexOf(k); bonus[k] = i < 0 ? 0 : r2(stats[k] / 40 * POS_COEF[i] + (base ? 0 : RANK_ADD[srank])); });
       const kake = lvOf('kaketsuke'); const fav = Math.min(GATHER.favCap, GATHER.fav + (kake ? aOf('kaketsuke', 'v', kake) / 100 : 0));
       const hn = lvOf('hitonatsu'); const sh = lvOf('shitashi'); const so = lvOf('shutsugen');
       return {
         ...(so ? { none: num(aOf('shutsugen', 'v', so)) } : {}),
         ...(pv2 ? { pv: 2 } : {}), kind: base ? 'base' : 'raised', species: sp, name: typeof o.name === 'string' ? o.name.slice(0, 24) : sp, stats, loy, pop, lv, masteries, rank, power, top, assists, bonus, fav, techs,
-        tag: base ? TAG_POWER.base : TAG_POWER[rank], bond0: clamp((base ? BOND_START.base : BOND_START[rank]) + (hn ? aOf('hitonatsu', 'start', hn) : 0) + (sh ? num(aOf('shitashi', 'v', sh)) : 0), 0, BOND.max),
+        tag: base ? TAG_POWER.base : TAG_POWER[srank], bond0: clamp((base ? BOND_START.base : BOND_START[srank]) + (hn ? aOf('hitonatsu', 'start', hn) : 0) + (sh ? num(aOf('shitashi', 'v', sh)) : 0), 0, BOND.max),
         startAdd: { stat: top[0], v: Math.floor(stats[top[0]] / START_STAT_DIV) },
       };
     };
@@ -1374,6 +1377,10 @@
     };
     // 6能力・Lv・忠誠・人気は助手マスモンと同じ重み(MASMON_CALC.power に技なしで聞く)+ 技の分
     const powerOfParts = (o, rows) => Math.round(C.power({ stats: o.stats, masteries: [], lv: o.lv, loyal: o.loyal, pop: o.pop }) + techPowerOfRows(rows));
+    // 強さの段(案A・2026-11-14): 能力を今までどおり ×2.5 で数えた総合力と、今までの区切り(M 19,500)の段。芯が古くて無いときは新しい式で代える
+    const powerClassicOf = (o) => (typeof C.powerClassic === 'function' ? C.powerClassic(o) : C.power(o));
+    const powerOfPartsClassic = (o, rows) => Math.round(powerClassicOf({ stats: o.stats, masteries: [], lv: o.lv, loyal: o.loyal, pop: o.pop }) + techPowerOfRows(rows));
+    const strengthRankOf = (p) => (typeof C.rankClassicOf === 'function' ? C.rankClassicOf(p) : C.rankOf(p).key);
     const powerOf = (s) => powerOfParts({ stats: s.stats, lv: s.lv, loyal: loyalOf(s), pop: s.pop }, techRowsOf(s));
     // 熟練の効き目(試合の芯の members[].techBoost)。熟練から自動 + 強化した段(s.techUp・いまは無い)
     const techBoostOf = (s) => {
@@ -1808,13 +1815,18 @@
     // ---- 評価(引退): 総合力・ランク・アシストポイント・上位3つ ----
     // 評価の表示(社長 2026-11-12: ランク表は助手マスモンと同じ・500ごとに番号。C は 6,000/6,500/7,000/7,500 で C1〜C4・M は上限なしで M1・M2…)
     const GRADE_STEP = 500;
-    const gradeOf = (power) => { const p = Math.max(0, num(power)); const r = C.rankOf(p); const step = Math.floor((p - r.min) / GRADE_STEP) + 1; return { rank: r.key, step, label: `${r.key}${step}`, min: r.min, next: r.next, toNext: GRADE_STEP - ((p - r.min) % GRADE_STEP) }; };
+    //   2026-11-14 社長「M は 20,000」: M より上はランクの名前そのものが 500 ごと(M・M1〜M9・MG・MG1…)なので番号を付けない(芯の rankOf の label)
+    const gradeOf = (power) => { const p = Math.max(0, num(power)); const r = C.rankOf(p); const step = Math.floor((p - r.min) / GRADE_STEP) + 1;
+      const label = r.key === 'M' && r.label ? r.label : `${r.key}${step}`;
+      return { rank: r.key, step, label, min: r.min, next: r.key === 'M' && r.label ? r.labelNext : r.next, toNext: GRADE_STEP - ((p - r.min) % GRADE_STEP) }; };
     const evaluate = (s) => {
       const loy = loyalOf(s);
       const techRows = techRowsOf(s);
       const power = powerOfParts({ stats: s.stats, lv: s.lv, loyal: loy, pop: s.pop }, techRows);
       const rank = C.rankOf(power);
-      return { power, rank: rank.key, grade: gradeOf(power), points: assistPointsOf(power), top: top3Of(s.stats, s.species), sum: sumOf(s.stats), loyal: loy, ama: s.ama, fear: s.fear, pop: s.pop, lv: s.lv, techs: techRows.length, techRows, over: s.over };
+      // アシストポイントは強さの段と同じく今までの数え方の総合力から(案A: 育成の釣り合いを変えない)
+      const powerS = powerOfPartsClassic({ stats: s.stats, lv: s.lv, loyal: loy, pop: s.pop }, techRows);
+      return { power, powerS, rank: rank.key, grade: gradeOf(power), points: assistPointsOf(powerS), top: top3Of(s.stats, s.species), sum: sumOf(s.stats), loyal: loy, ama: s.ama, fear: s.fear, pop: s.pop, lv: s.lv, techs: techRows.length, techRows, over: s.over };
     };
 
     const EVX = (deps && deps.events) || (root && root.MONHERO_SUCCESS_EVENTS) || null;
