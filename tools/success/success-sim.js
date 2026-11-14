@@ -200,7 +200,7 @@ const playRun = (id, preset, aidLv, species, aid, rematch, carry, bag, rivals) =
       if (bk === 'cup') { trace.cups = (trace.cups || 0) + 1; if (rv) { trace.rivalCups = (trace.rivalCups || 0) + 1; if (st.out.won) trace.rivalWins = (trace.rivalWins || 0) + 1; } }
       // 大会のあとのごはん(9種): 忠誠60未満 → ごちそう、体力が少ない → ビタミン、賞金があれば いちばん高い能力の餌
       if (s.mealReady && !s.over) {
-        const topK = Object.keys(s.stats).sort((x, y) => s.stats[y] - s.stats[x])[0]; const can = (k) => SUC.MEALS[k] && s.fame >= SUC.MEALS[k].cost;
+        const topK = Object.keys(s.stats).sort((x, y) => s.stats[y] - s.stats[x])[0]; const can = (k) => !!SUC.MEALS[k];
         const pick = SUC.loyalOf(s) < 60 && can('gochiso') ? 'gochiso' : s.hp < s.hpMax * 0.6 && can('vitamin') ? 'vitamin' : can(`f_${topK}`) ? `f_${topK}` : null;
         if (pick) s = SUC.meal(s, pick).state;
       }

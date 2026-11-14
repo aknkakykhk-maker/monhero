@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9b18e5403a6954f6
+// source-sha256: 6a24e0ace9a437b4
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -167928,16 +167928,11 @@ function MsxR3Battle({
       });
     }
     const M = SUC.MEALS || {};
-    const free = s.freeMeal === true;
     const keys = Object.keys(M);
-    const can = k => s.mealReady && !s.over && (free || s.fame >= M[k].cost);
+    const can = k => s.mealReady && !s.over && !!M[k];
     const tryMeal = k => {
       try {
-        const r = SUC.meal({
-          ...s,
-          fame: Math.max(Number(s.fame) || 0, M[k].cost),
-          freeMeal: false
-        }, k);
+        const r = SUC.meal(s, k);
         return r && r.out && r.out.ok ? r.state : null;
       } catch (e) {
         return null;
@@ -168047,7 +168042,7 @@ function MsxR3Battle({
       className: "v-meal"
     }, React.createElement("div", {
       className: "t"
-    }, "🍽 がんばったごほうびに、ごはんをあげよう", React.createElement("small", null, "優勝したときだけ あげられる(1回)", free ? '・今回はただ' : '')), React.createElement("div", {
+    }, "🍽 がんばったごほうびに、ごはんをあげよう", React.createElement("small", null, "優勝したときだけ あげられる(1回・ただ)")), React.createElement("div", {
       className: "ms"
     }, keys.map(k => React.createElement("button", {
       type: "button",
@@ -168061,9 +168056,7 @@ function MsxR3Battle({
       "data-msx-r3-meal": k
     }, React.createElement("div", {
       className: "e"
-    }, MEAL_ICON[k] || '🍙'), React.createElement("b", null, M[k].name), React.createElement("span", {
-      className: "g"
-    }, free ? 'ただ' : `💰 ${msxFmt(M[k].cost)}G`), React.createElement("small", {
+    }, MEAL_ICON[k] || '🍙'), React.createElement("b", null, M[k].name), React.createElement("small", {
       "data-msx-r3-mealfx": k
     }, fx(k))))), React.createElement("div", {
       className: "msx-note",
@@ -168127,7 +168120,7 @@ function MsxR3Battle({
       className: "go",
       onClick: () => mealPick && can(mealPick) ? give() : finish(s),
       "data-msx-r3-give": true
-    }, mealPick && can(mealPick) ? `${M[mealPick].name}をあげる(${free ? 'ただ' : `💰${M[mealPick].cost}`})` : 'あげずに つぎへ ▶'));
+    }, mealPick && can(mealPick) ? `${M[mealPick].name}をあげる` : 'あげずに つぎへ ▶'));
     return React.createElement(MsxR3Frame, {
       run: run,
       back: "中断",

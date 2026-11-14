@@ -264,12 +264,12 @@ ok(near(SUC.failRateOf({ ...base, yosu: { sabori: { visits: 0 } } }) - fFull, 0.
   ok(runner.mealReady === false, '大会に負けたのにごはんを選べる(2026-11-13 社長: 勝ったときだけ)');
   // ごほうびのごはん(2026-11-13 社長: 9種に作り直し・体力は回復だけ・賞金を使う・大会のあと1回だけ)
   ok(Object.keys(SUC.MEALS).sort().join() === 'f_eva,f_hit,f_life,f_pow,f_tough,f_wise,gochiso,prune,vitamin', `ごはんが9種でない: ${Object.keys(SUC.MEALS).sort().join()}`);
-  const mh = SUC.meal({ ...pro, hp: 10, ama: 10, fear: 10 }, 'vitamin'); ok(mh.out.ok && mh.state.hp === 10 + Math.round(pro.hpMax * 0.2) && mh.state.hpMax === pro.hpMax && mh.state.fear === 13 && mh.state.ama === 10 && mh.state.fame === pro.fame - SUC.MEALS.vitamin.cost && !mh.state.mealReady, 'ビタミンもどきの効き・値段がずれている(体力 上限の20%回復・恐れ +3)');
+  const mh = SUC.meal({ ...pro, hp: 10, ama: 10, fear: 10 }, 'vitamin'); ok(mh.out.ok && mh.state.hp === 10 + Math.round(pro.hpMax * 0.2) && mh.state.hpMax === pro.hpMax && mh.state.fear === 13 && mh.state.ama === 10 && mh.state.fame === pro.fame && !mh.state.mealReady, 'ビタミンもどきの効きがずれている・賞金が動いた(体力 上限の20%回復・恐れ +3・ただ)');
   ok(!SUC.meal(mh.state, 'prune').out.ok, 'ごはんが大会のあと2回食べられる');
   const mg = SUC.meal({ ...pro, ama: 10, fear: 10 }, 'gochiso').state; ok(mg.ama === 13 && mg.fear === 10, `ごちそうもどきで甘え +3 にならない: ${mg.ama}`);
   const mf = SUC.meal({ ...pro, hp: 10, stats: { ...pro.stats, pow: 100 } }, 'f_pow').state; ok(mf.stats.pow === 115 && mf.hp === 10 + Math.round(pro.hpMax * 0.1) && K.filter(k => k !== 'pow').every(k => mf.stats[k] === pro.stats[k]), 'ちからの餌で ちから +15・体力 上限の10%回復 にならない');
   const mp = SUC.meal({ ...pro, pop: 20, pts: 0 }, 'prune').state; ok(mp.pop >= 25 && mp.pts === 10, `スタープルーンで人気 +5・能力ポイント +10 にならない: 人気 ${mp.pop} pt ${mp.pts}`);
-  ok(!SUC.meal({ ...pro, fame: 10 }, 'vitamin').out.ok && !SUC.meal(s0, 'vitamin').out.ok && !SUC.meal(pro, 'hp').out.ok, '賞金が足りない・大会のあとでない・前のごはんの名前で食べられる');
+  ok(SUC.meal({ ...pro, fame: 0 }, 'vitamin').out.ok && !SUC.meal(s0, 'vitamin').out.ok && !SUC.meal(pro, 'hp').out.ok, '賞金0で食べられない・大会のあとでない・前のごはんの名前で食べられる');
   { // 総合力の技の分(2026-11-13 社長): 覚えた技は全部数える・熟練は入れない・ランクの値 × 間合い適性の補正
     const all = SUC.techsOf(s0.species).map(t => t.id);
     ok(SUC.evaluate({ ...s0, techs: all.slice(0, 4), mastery: {} }).power > SUC.evaluate({ ...s0, techs: all.slice(0, 2), mastery: {} }).power, '覚えた技が総合力に入っていない');

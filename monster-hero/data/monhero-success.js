@@ -324,18 +324,18 @@
 
   // ---- 大会のあとのごほうびのごはん(社長 2026-11-12: 体力・忠誠度・能力の3種類・値段は賞金) ----
   // 大会が終わるたびに1回だけ選べる(選ばなくてもよい)。次の行動かターンの区切りで消える
-  // 2026-11-13 社長: 「いまのごはんは効果が高すぎる」→ 9種に作り直す(体力はどれも回復で、上限は上がらない)。値段は案(窓口・社長の OK 待ち)
+  // 2026-11-13 社長: 「いまのごはんは効果が高すぎる」→ 9種に作り直す(体力はどれも回復で、上限は上がらない)。値段なし(社長: 大会後限定なら値段なしでいい)
   //   前の3種(hp・loyal・stat)は途中の育成に保存されない(大会のあとに選ぶ画面の中だけ)ので、読み替えは要らない。知らない名前は食べられない(ok:false)
   const MEALS = Object.freeze({
-    vitamin: { name: 'ビタミンもどき', cost: 1000, hp: 0.2, fear: 3 },               // 体力 上限の20%回復・恐れ度 +3
-    gochiso: { name: 'ごちそうもどき', cost: 1000, hp: 0.2, ama: 3 },                // 体力 上限の20%回復・甘え度 +3
-    f_life: { name: 'もりもりニンジン', cost: 2000, hp: 0.1, stat: 'life', add: 15 }, // 体力 上限の10%回復・その能力 +15(6種)
-    f_pow: { name: 'がっつりお肉', cost: 2000, hp: 0.1, stat: 'pow', add: 15 },
-    f_wise: { name: 'ひらめきクルミ', cost: 2000, hp: 0.1, stat: 'wise', add: 15 },
-    f_hit: { name: 'ねらいうちベリー', cost: 2000, hp: 0.1, stat: 'hit', add: 15 },
-    f_eva: { name: 'ひらりリンゴ', cost: 2000, hp: 0.1, stat: 'eva', add: 15 },
-    f_tough: { name: 'かちかちイモ', cost: 2000, hp: 0.1, stat: 'tough', add: 15 },
-    prune: { name: 'スタープルーン', cost: 3000, hp: 0.05, pop: 5, pts: 10 },        // 体力 上限の5%回復・人気 +5・能力ポイント +10
+    vitamin: { name: 'ビタミンもどき', hp: 0.2, fear: 3 },               // 体力 上限の20%回復・恐れ度 +3
+    gochiso: { name: 'ごちそうもどき', hp: 0.2, ama: 3 },                // 体力 上限の20%回復・甘え度 +3
+    f_life: { name: 'もりもりニンジン', hp: 0.1, stat: 'life', add: 15 }, // 体力 上限の10%回復・その能力 +15(6種)
+    f_pow: { name: 'がっつりお肉', hp: 0.1, stat: 'pow', add: 15 },
+    f_wise: { name: 'ひらめきクルミ', hp: 0.1, stat: 'wise', add: 15 },
+    f_hit: { name: 'ねらいうちベリー', hp: 0.1, stat: 'hit', add: 15 },
+    f_eva: { name: 'ひらりリンゴ', hp: 0.1, stat: 'eva', add: 15 },
+    f_tough: { name: 'かちかちイモ', hp: 0.1, stat: 'tough', add: 15 },
+    prune: { name: 'スタープルーン', hp: 0.05, pop: 5, pts: 10 },        // 体力 上限の5%回復・人気 +5・能力ポイント +10
   });
 
   // ---- 能力ポイント(TOURNAMENT §7b) ----
@@ -925,9 +925,9 @@
     // 大会のあとのごほうびのごはん(1回だけ・賞金を使う)
     const meal = (s0, key) => {
       const s = clone(s0); const m = MEALS[key];
-      const free = s.freeMeal === true; // えるびんの見守りの大会: 次のごはんが1回ただ
-      if (!s.mealReady || !m || (!free && s.fame < m.cost) || s.over) return { state: s0, out: { ok: false } };
-      if (free) s.freeMeal = false; else s.fame -= m.cost; s.mealReady = false;
+      // 2026-11-14 社長: 勝ったあとのごはんはただ(賞金を使わない)。えるびんの freeMeal は読めるまま残すが、ごはんでは使わない(代わりの効果は案)
+      if (!s.mealReady || !m || s.over) return { state: s0, out: { ok: false } };
+      s.mealReady = false;
       const kui = 1 + stayNum(s, 'kuishinbo') / 100; // 🍙食いしん坊: ごはんの効き目が増える
       if (m.hp) recover(s, m.hp * kui);
       if (m.ama || m.fear) addLoyalRaw(s, Math.round((m.ama || 0) * kui), Math.round((m.fear || 0) * kui));
