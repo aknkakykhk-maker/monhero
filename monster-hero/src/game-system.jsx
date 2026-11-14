@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: d89a7e4fb55b8643
+// generated-sha256: 5190970d176f0fb5
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -86835,17 +86835,26 @@ const MSX_CSS = `
 .msx .msx-md-tg .tc.wise{background:linear-gradient(160deg,#bbf7d0,#16a34a);border-color:#4ade80}
 .msx .msx-md-tg .tc.pow.tg-not{background:linear-gradient(160deg,#9a7420,#5e420c);border-color:#a8801f}
 .msx .msx-md-tg .tc.wise.tg-not{background:linear-gradient(160deg,#2f8050,#145230);border-color:#3f9a62}
-.msx-md-tg .tc.tg-not .ti{filter:brightness(.8)}
+.msx-md-tg .tc.tg-not .ti{filter:brightness(.55) saturate(.65)}
+/* 技の絵(資料の技アイコン・2026-11-15 社長 r1115-003): 升いっぱいに敷く。元絵に焼き込まれた数字は、右下の数字の札(.g)でかぶせる */
+.msx-md-tg .tc .ti{position:absolute;inset:0;border-radius:6px;overflow:hidden;display:block}
+.msx-md-tg .tc .tg-img{display:block;width:100%;height:100%;object-fit:cover;pointer-events:none}
+.msx-md-tg .tc .g{right:2px;bottom:2px;min-width:20px;padding:0 3px;border-radius:5px;background:rgba(18,12,6,.86);text-align:center;line-height:13px;height:13px;z-index:2}
+.msx-md-tg .tc .tg-alt{z-index:3}
+.msx-md-tg .tc .tg-rk{position:absolute;left:2px;top:2px;z-index:2;min-width:14px;height:14px;border-radius:4px;font-size:10px;font-weight:900;line-height:14px;text-align:center;color:#2a1608;border:1px solid #2a1608}
+.tg-rk.rk1{background:linear-gradient(135deg,#e9a46a,#a95f27)}.tg-rk.rk2{background:linear-gradient(135deg,#f4f7fb,#aab4c2)}.tg-rk.rk3{background:linear-gradient(135deg,#fff1a6,#f2b705)}.tg-rk.rk4{background:linear-gradient(135deg,#d9a8ff,#8a3ffc);color:#fff}.tg-rk.rk5{background:linear-gradient(135deg,#ff5a5a,#ffd23f,#4ade80,#38bdf8,#c084fc)}
 .msx-md-tg .tc{position:relative}
 .msx .msx-md-alt{margin-top:6px;width:100%;padding:6px 8px;border-radius:10px;font-size:12px;font-weight:900;color:#fff;background:linear-gradient(160deg,#6d4cd9,#4a2fa6);border:1.5px solid #a78bfa}
 .msx .msx-tp{display:flex;align-items:center;gap:8px;width:100%;margin:0 0 6px;padding:6px 8px;border-radius:12px;text-align:left;color:#fff;background:#1e1b3a;border:1.5px solid #3b3566}
 .msx .msx-tp.on{border-color:#facc15;background:#2a2547}
 .msx .msx-tp:disabled{opacity:.55}
-.msx .msx-tp .tc{position:relative;flex:0 0 44px;width:44px;height:44px;border-radius:8px;display:flex;align-items:center;justify-content:center;border:1.5px solid transparent}
+.msx .msx-tp .tc{position:relative;overflow:hidden;flex:0 0 44px;width:44px;height:44px;border-radius:8px;display:flex;align-items:center;justify-content:center;border:1.5px solid transparent}
 .msx .msx-tp .tc.pow{background:linear-gradient(160deg,#fde68a,#d97706);border-color:#f59e0b}
 .msx .msx-tp .tc.wise{background:linear-gradient(160deg,#bbf7d0,#16a34a);border-color:#4ade80}
 .msx .msx-tp .tc.pow.tg-not{background:linear-gradient(160deg,#9a7420,#5e420c);border-color:#a8801f}
 .msx .msx-tp .tc.wise.tg-not{background:linear-gradient(160deg,#2f8050,#145230);border-color:#3f9a62}
+.msx .msx-tp .tc{overflow:hidden}.msx .msx-tp .tc .ti{position:absolute;inset:0;display:block}.msx .msx-tp .tc .tg-img{width:100%;height:100%;object-fit:cover;display:block}
+.msx .msx-tp .tc.tg-not .ti{filter:brightness(.55) saturate(.65)}
 .msx .msx-tp .tpb{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
 .msx .msx-tp .tpb b{font-size:13px}
 .msx .msx-tp .tpb small{font-size:10.5px;opacity:.85;line-height:1.35}
@@ -87577,32 +87586,42 @@ const msxStartPreview = (SUC, species, type, aptBase, startSt) => {
   } catch (e) { /* 見通しが出せなくても選ぶ画面は動く */ }
   return out;
 };
+/* skill-icons:begin(tools/success/build-skill-icons.js が書く) */
+const MSX_SKILL_ICONS = new Set([
+'images/success/skill/sk-0001.png','images/success/skill/sk-0002.png','images/success/skill/sk-0003.png','images/success/skill/sk-0004.png','images/success/skill/sk-0005.png','images/success/skill/sk-0008.png','images/success/skill/sk-0009.png','images/success/skill/sk-0010.png','images/success/skill/sk-0015.png','images/success/skill/sk-0016.png','images/success/skill/sk-0017.png','images/success/skill/sk-0018.png','images/success/skill/sk-0023.png','images/success/skill/sk-0025.png','images/success/skill/sk-0026.png','images/success/skill/sk-0027.png','images/success/skill/sk-0028.png','images/success/skill/sk-0035.png','images/success/skill/sk-0036.png','images/success/skill/sk-0037.png','images/success/skill/sk-0039.png','images/success/skill/sk-0040.png','images/success/skill/sk-0041.png','images/success/skill/sk-0042.png','images/success/skill/sk-0043.png','images/success/skill/sk-0044.png','images/success/skill/sk-0045.png','images/success/skill/sk-0046.png','images/success/skill/sk-0047.png','images/success/skill/sk-0048.png','images/success/skill/sk-0049.png','images/success/skill/sk-0050.png','images/success/skill/sk-0051.png','images/success/skill/sk-0052.png','images/success/skill/sk-0053.png','images/success/skill/sk-0054.png','images/success/skill/sk-0055.png','images/success/skill/sk-0064.png','images/success/skill/sk-0065.png','images/success/skill/sk-0066.png','images/success/skill/sk-0067.png','images/success/skill/sk-0068.png','images/success/skill/sk-0069.png','images/success/skill/sk-0070.png','images/success/skill/sk-0071.png','images/success/skill/sk-0072.png','images/success/skill/sk-0073.png','images/success/skill/sk-0074.png','images/success/skill/sk-0075.png','images/success/skill/sk-0076.png','images/success/skill/sk-0077.png','images/success/skill/sk-0078.png','images/success/skill/sk-0079.png','images/success/skill/sk-0080.png','images/success/skill/sk-0082.png','images/success/skill/sk-0083.png','images/success/skill/sk-0084.png','images/success/skill/sk-0110.png','images/success/skill/sk-0111.png','images/success/skill/sk-0112.png','images/success/skill/sk-0113.png','images/success/skill/sk-0114.png','images/success/skill/sk-0115.png','images/success/skill/sk-0116.png','images/success/skill/sk-0117.png','images/success/skill/sk-0118.png','images/success/skill/sk-0119.png','images/success/skill/sk-0120.png','images/success/skill/sk-0121.png','images/success/skill/sk-0122.png','images/success/skill/sk-0123.png','images/success/skill/sk-0124.png','images/success/skill/sk-0125.png','images/success/skill/sk-0129.png','images/success/skill/sk-0258.png','images/success/skill/sk-0259.png','images/success/skill/sk-0260.png','images/success/skill/sk-0261.png','images/success/skill/sk-0262.png','images/success/skill/sk-0263.png','images/success/skill/sk-0264.png','images/success/skill/sk-0265.png','images/success/skill/sk-0266.png','images/success/skill/sk-0267.png','images/success/skill/sk-0268.png','images/success/skill/sk-0269.png','images/success/skill/sk-0270.png','images/success/skill/sk-0271.png','images/success/skill/sk-0272.png','images/success/skill/sk-0273.png','images/success/skill/sk-0274.png','images/success/skill/sk-0292.png','images/success/skill/sk-0293.png','images/success/skill/sk-0294.png','images/success/skill/sk-0295.png','images/success/skill/sk-0296.png','images/success/skill/sk-0297.png','images/success/skill/sk-0298.png','images/success/skill/sk-0299.png','images/success/skill/sk-0300.png','images/success/skill/sk-0301.png','images/success/skill/sk-0302.png','images/success/skill/sk-0303.png','images/success/skill/sk-0304.png','images/success/skill/sk-0305.png','images/success/skill/sk-0306.png','images/success/skill/sk-0307.png','images/success/skill/sk-0338.png','images/success/skill/sk-0339.png','images/success/skill/sk-0340.png','images/success/skill/sk-0341.png','images/success/skill/sk-0342.png','images/success/skill/sk-0343.png','images/success/skill/sk-0344.png','images/success/skill/sk-0345.png','images/success/skill/sk-0346.png','images/success/skill/sk-0347.png','images/success/skill/sk-0348.png','images/success/skill/sk-0349.png','images/success/skill/sk-0350.png','images/success/skill/sk-0351.png','images/success/skill/sk-0384.png','images/success/skill/sk-0385.png','images/success/skill/sk-0386.png','images/success/skill/sk-0387.png','images/success/skill/sk-0388.png','images/success/skill/sk-0389.png','images/success/skill/sk-0390.png','images/success/skill/sk-0391.png','images/success/skill/sk-0392.png','images/success/skill/sk-0393.png','images/success/skill/sk-0394.png','images/success/skill/sk-0395.png','images/success/skill/sk-0396.png','images/success/skill/sk-0397.png','images/success/skill/sk-0398.png','images/success/skill/sk-0399.png','images/success/skill/sk-0400.png','images/success/skill/sk-0401.png','images/success/skill/sk-0402.png','images/success/skill/sk-0403.png','images/success/skill/sk-0404.png','images/success/skill/sk-0405.png','images/success/skill/sk-0406.png','images/success/skill/sk-0407.png','images/success/skill/sk-0408.png','images/success/skill/sk-0409.png','images/success/skill/sk-0410.png','images/success/skill/sk-0411.png','images/success/skill/sk-0412.png','images/success/skill/sk-0413.png','images/success/skill/sk-0414.png','images/success/skill/sk-0415.png','images/success/skill/sk-0416.png','images/success/skill/sk-0446.png','images/success/skill/sk-0447.png','images/success/skill/sk-0448.png','images/success/skill/sk-0449.png','images/success/skill/sk-0450.png','images/success/skill/sk-0451.png','images/success/skill/sk-0452.png','images/success/skill/sk-0453.png','images/success/skill/sk-0454.png','images/success/skill/sk-0455.png','images/success/skill/sk-0456.png','images/success/skill/sk-0457.png','images/success/skill/sk-0458.png','images/success/skill/sk-0459.png','images/success/skill/sk-0460.png','images/success/skill/sk-0461.png','images/success/skill/sk-0462.png','images/success/skill/sk-0463.png','images/success/skill/sk-0464.png','images/success/skill/sk-0465.png','images/success/skill/sk-0466.png','images/success/skill/sk-0467.png','images/success/skill/sk-0468.png','images/success/skill/sk-0469.png','images/success/skill/sk-0470.png','images/success/skill/sk-0471.png','images/success/skill/sk-0472.png','images/success/skill/sk-0473.png','images/success/skill/sk-0474.png','images/success/skill/sk-0475.png','images/success/skill/sk-0476.png','images/success/skill/sk-0477.png','images/success/skill/sk-0478.png','images/success/skill/sk-0479.png','images/success/skill/sk-0480.png','images/success/skill/sk-0481.png','images/success/skill/sk-0482.png','images/success/skill/sk-0483.png','images/success/skill/sk-0484.png','images/success/skill/sk-0485.png','images/success/skill/sk-0486.png','images/success/skill/sk-0487.png','images/success/skill/sk-0488.png','images/success/skill/sk-0489.png','images/success/skill/sk-0490.png','images/success/skill/sk-0491.png','images/success/skill/sk-0496.png','images/success/skill/sk-0511.png','images/success/skill/sk-0512.png','images/success/skill/sk-0513.png','images/success/skill/sk-0514.png','images/success/skill/sk-0515.png','images/success/skill/sk-0516.png','images/success/skill/sk-0517.png','images/success/skill/sk-0518.png','images/success/skill/sk-0519.png','images/success/skill/sk-0520.png','images/success/skill/sk-0521.png','images/success/skill/sk-0522.png','images/success/skill/sk-0523.png','images/success/skill/sk-0524.png','images/success/skill/sk-0525.png','images/success/skill/sk-0526.png','images/success/skill/sk-0573.png','images/success/skill/sk-0574.png','images/success/skill/sk-0575.png','images/success/skill/sk-0576.png','images/success/skill/sk-0577.png','images/success/skill/sk-0578.png','images/success/skill/sk-0579.png','images/success/skill/sk-0580.png','images/success/skill/sk-0581.png','images/success/skill/sk-0582.png','images/success/skill/sk-0583.png','images/success/skill/sk-0584.png','images/success/skill/sk-0585.png','images/success/skill/sk-0586.png','images/success/skill/sk-0587.png','images/success/skill/sk-0588.png','images/success/skill/sk-0589.png','images/success/skill/sk-0590.png','images/success/skill/sk-0591.png','images/success/skill/sk-0592.png','images/success/skill/sk-0593.png','images/success/skill/sk-0594.png','images/success/skill/sk-0595.png','images/success/skill/sk-0596.png','images/success/skill/sk-0597.png','images/success/skill/sk-0598.png','images/success/skill/sk-0599.png','images/success/skill/sk-0742.png','images/success/skill/sk-0743.png','images/success/skill/sk-0744.png','images/success/skill/sk-0785.png','images/success/skill/sk-0787.png','images/success/skill/sk-0788.png','images/success/skill/sk-0797.png','images/success/skill/sk-0798.png','images/success/skill/sk-0799.png','images/success/skill/sk-0824.png']);
+/* skill-icons:end */
 // 技の升の絵(2026-11-14 社長「力で剣はいいね」「ランク帯で色を変えて」): ちから技=剣・かしこさ技=本の単色の形を、技のランク1〜5の色(銅・銀・金・紫・虹)で塗る。升の地の色(ちから=金・かしこさ=緑)は変えない。
 //   升の地と同じ色にならないよう、形のまわりを暗い線で縁取る
 const MSX_TG_RANK_COL = Object.freeze({ 1: ['#e9a46a', '#a95f27'], 2: ['#f4f7fb', '#aab4c2'], 3: ['#fff1a6', '#f2b705'], 4: ['#d9a8ff', '#8a3ffc'] });
 const MSX_TG_RANK_NAME = Object.freeze({ 1: '銅', 2: '銀', 3: '金', 4: '紫', 5: '虹' });
-function MsxTechIcon({ kind, rank, size = 28, uid = '' }) {
-  const r = Math.max(1, Math.min(5, Number(rank) || 1)); const gid = `tgi-${uid}${kind}${r}`;
-  const stops = r === 5 ? [['0', '#ff5a5a'], ['.25', '#ffd23f'], ['.5', '#4ade80'], ['.75', '#38bdf8'], ['1', '#c084fc']] : [['0', MSX_TG_RANK_COL[r][0]], ['1', MSX_TG_RANK_COL[r][1]]];
-  const ink = '#2a1608';
+// 技の絵(2026-11-15 社長 r1115-003「技の絵は資料の技アイコンへ」): 資料の絵がある技は images/success/skill/sk-####.png。
+//   資料に無い技(オリジナルの子・オリジナル技)は、資料の絵にならった影絵(同じ灰色の枠・ちから技=黄・かしこさ技=緑の単色)を間合いごとの形で描く。
+//   82×82 の元絵は右下に消費ガッツの数字が焼き込まれているので、升の右下の数字の札(.g)でかぶせる
+const MSX_SHADOW_PATHS = Object.freeze({
+  pow: [
+    <g key="p0"><path d="M22 38h30a10 10 0 0 1 10 10v16a10 10 0 0 1-10 10H32a10 10 0 0 1-10-10z"/><path d="M66 30l14-8-6 16 16 4-16 8 8 16-16-8z"/></g>,
+    <g key="p1"><path d="M16 74Q40 14 82 20Q54 32 44 76z"/><path d="M30 82Q56 50 88 44Q66 62 56 84z"/></g>,
+    <g key="p2"><path d="M26 28Q58 48 26 68" fill="none" strokeWidth="9" strokeLinecap="round"/><path d="M44 20Q86 48 44 76" fill="none" strokeWidth="9" strokeLinecap="round"/><circle cx="20" cy="48" r="8"/></g>,
+    <g key="p3"><path d="M10 56h46V42l30 20-30 20V68H10z"/><path d="M14 36h30M20 90h30" fill="none" strokeWidth="6" strokeLinecap="round"/></g>,
+  ],
+  wise: [
+    <g key="w0"><path d="M48 52C48 44 58 44 58 52C58 64 40 64 40 48C40 30 66 30 66 52C66 76 32 76 32 46C32 18 72 18 72 52" fill="none" strokeWidth="7" strokeLinecap="round"/></g>,
+    <g key="w1"><path d="M56 10L26 54h20L36 86l34-48H50z"/></g>,
+    <g key="w2"><circle cx="48" cy="48" r="30" fill="none" strokeWidth="6"/><path d="M48 22l6 20 20 6-20 6-6 20-6-20-20-6 20-6z"/></g>,
+    <g key="w3"><circle cx="68" cy="30" r="13"/><path d="M60 40L12 86l24-30-16 8 34-32z"/></g>,
+  ],
+});
+const msxSkillIconPath = (id) => ['images/success/skill', `${id}.png`].join('/'); // パスを部品で組む(画像の検査が ${} の入った文字を実在しない絵と読むため)
+function MsxSkillArt({ t, uid = '' }) {
+  if (t && MSX_SKILL_ICONS.has(msxSkillIconPath(t.id))) return <img className="tg-img" src={msxSkillIconPath(t.id)} alt="" draggable="false" loading="lazy"/>;
+  const kind = t && t.kind === 'wise' ? 'wise' : 'pow'; const d = Math.max(0, Math.min(3, Math.min(...(t && Array.isArray(t.dist) && t.dist.length ? t.dist : [1]))));
+  const gid = `tgs-${uid}${t ? t.id : ''}`; const fill = kind === 'wise' ? '#34c46a' : '#f5b81b'; const ink = kind === 'wise' ? '#14653a' : '#8a5a06';
   return (
-    <svg className="tg-ic" data-tg-rank={r} width={size} height={size} viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-      <defs><linearGradient id={gid} x1="0" y1="0" x2="1" y2="1">{stops.map(([o, c]) => <stop key={o} offset={o} stopColor={c}/>)}</linearGradient></defs>
-      {kind === 'wise' ? (
-        <g fill={`url(#${gid})`} stroke={ink} strokeWidth="1.3" strokeLinejoin="round">
-          <path d="M12 6.6C9.6 4.6 6 4.1 2.2 5v12.6c3.8-.9 7.4-.4 9.8 1.6z"/>
-          <path d="M12 6.6c2.4-2 6-2.5 9.8-1.6v12.6c-3.8-.9-7.4-.4-9.8 1.6z"/>
-          <path d="M12 6.6v12.6M2.2 19.6c3.8-.9 7.4-.4 9.8 1.6 2.4-2 6-2.5 9.8-1.6" fill="none" strokeLinecap="round"/>
-          <path d="M4.6 8.4c2-.3 4 0 5.6.9M4.6 11.4c2-.3 4 0 5.6.9M19.4 8.4c-2-.3-4 0-5.6.9M19.4 11.4c-2-.3-4 0-5.6.9" fill="none" strokeLinecap="round" strokeWidth="1"/>
-        </g>
-      ) : (
-        <g fill={`url(#${gid})`} stroke={ink} strokeWidth="1.3" strokeLinejoin="round" transform="rotate(45 12 12)">
-          <path d="M12 0.8l2.3 3.3v9.6H9.7V4.1z"/>
-          <rect x="6" y="13.7" width="12" height="2.5" rx="1.2"/>
-          <rect x="10.6" y="16.2" width="2.8" height="4.2" rx="0.8"/>
-          <circle cx="12" cy="21.6" r="1.7"/>
-        </g>
-      )}
+    <svg className="tg-img tg-shadow" viewBox="0 0 96 96" aria-hidden="true" focusable="false" data-tg-shadow={`${kind}${d}`}>
+      <defs><linearGradient id={gid} x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#ecebef"/><stop offset="1" stopColor="#c3c0c8"/></linearGradient></defs>
+      <rect x="2" y="2" width="92" height="92" rx="8" fill={`url(#${gid})`} stroke="#8e8b95" strokeWidth="2"/>
+      <path d="M2 70h92v16a8 8 0 0 1-8 8H10a8 8 0 0 1-8-8z" fill="#00000014"/>
+      <g fill={fill} stroke={fill === '#f5b81b' ? ink : ink} strokeWidth="3" strokeLinejoin="round" transform="translate(0 -4)">{MSX_SHADOW_PATHS[kind][d]}</g>
     </svg>
   );
 }
@@ -87690,7 +87709,7 @@ function MsxMonDetail({ species, name, art, st, apt, type, peak, grades, known, 
                   // 技の種類で升の色を分ける(参考どおり ちから=金・かしこさ=緑)。覚えていない技も絵を出し、升の地を暗くして見分ける(2026-11-14 社長「鍵じゃなくて覚えてないやつも表示して色分けして」)。
                   // 覚える条件の数は升に出さず、押したときの右の「覚え方」に出す(社長「150とかその数字何?」→ 升目から消す)
                   return <button type="button" key={`${r}-${d}`} className={`tc ${t.kind === 'wise' ? 'wise' : 'pow'}${got ? ' got' : ' tg-not'}${tech && tech.id === t.id ? ' on' : ''}`} data-msx-tech={t.id} data-msx-cell={cellK} aria-label={`${t.name}${got ? '' : '(まだ覚えていない)'}${canAlt ? '(選べる技が' + alts.length + 'つ)' : ''}`} onClick={() => setPickT(t.id)}>
-                    <span className="ti" aria-hidden="true"><MsxTechIcon kind={t.kind === 'wise' ? 'wise' : 'pow'} rank={t.rank} uid={`${r}${d}`}/></span><span className="g">{t.guts}</span>{canAlt ? <span className="tg-alt" role="button" aria-label="覚える技を選ぶ" data-msx-alt={cellK} onClick={(e) => { e.stopPropagation(); setPickCell(cellK); }}>⇄</span> : null}</button>; }))}
+                    <span className="ti" aria-hidden="true"><MsxSkillArt t={t} uid={`${r}${d}`}/></span><span className={`tg-rk rk${Math.max(1, Math.min(5, Number(t.rank) || 1))}`} aria-hidden="true">{Math.max(1, Math.min(5, Number(t.rank) || 1))}</span><span className="g">{t.guts}</span>{canAlt ? <span className="tg-alt" role="button" aria-label="覚える技を選ぶ" data-msx-alt={cellK} onClick={(e) => { e.stopPropagation(); setPickCell(cellK); }}>⇄</span> : null}</button>; }))}
               </div>
               {tech ? (<div className="msx-md-td">
                 <div className="tn">{tech.name}{has(tech) ? null : <small className="msx-md-not">まだ覚えていない</small>}</div>
@@ -87713,7 +87732,7 @@ function MsxMonDetail({ species, name, art, st, apt, type, peak, grades, known, 
               <div className="msx-note msx-kp">{msxPh(`${MSX_DIST_NAMES[pd]}の間合い・ランク${pr}。｜${lock ? 'この升の技は｜もう覚えたので、｜選び直せません' : '選ばなかった技は、｜この升では｜覚えません。｜覚えるまでは｜選び直せます'}`)}</div>
               <div className="msx-dt-body">{alts.map((t) => { const on = cur && cur.id === t.id; const how = has(t) ? '覚えている' : msxTechHow(t, all); return (
                 <button type="button" key={t.id} className={`msx-tp${on ? ' on' : ''}`} disabled={lock && !on} data-msx-techpick-opt={t.id} onClick={() => { if (!lock) { pick.onPick(pickCell, t.id); setPickT(t.id); setPickCell(null); } }}>
-                  <span className={`tc ${t.kind === 'wise' ? 'wise' : 'pow'}${has(t) ? ' got' : ' tg-not'}`}><span className="ti" aria-hidden="true"><MsxTechIcon kind={t.kind === 'wise' ? 'wise' : 'pow'} rank={t.rank} uid={`p${t.id}`}/></span></span>
+                  <span className={`tc ${t.kind === 'wise' ? 'wise' : 'pow'}${has(t) ? ' got' : ' tg-not'}`}><span className="ti" aria-hidden="true"><MsxSkillArt t={t} uid="p"/></span></span>
                   <span className="tpb"><b>{t.name}</b><small>{t.kind === 'wise' ? 'かしこさ' : 'ちから'}・消費ガッツ {t.guts}</small>
                     <small className="tp-nb"><i>ダメージ {grade('power', t.power)}</i><i>命中率 {grade('hit', t.hit)}</i><i>クリティカル率 {grade('crit', t.crit)}</i></small><small className="tp-nb">{how.startsWith('修行で覚える(') ? <><i>修行で覚える</i><i>{how.slice('修行で覚える'.length)}</i></> : <i>{how}</i>}</small></span>
                   <span className="tpm">{on ? '✅ 選択中' : '選ぶ'}</span></button>); })}</div>
