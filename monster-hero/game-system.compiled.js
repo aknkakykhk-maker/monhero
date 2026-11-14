@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3dd9905d845aa9e9
+// source-sha256: b71b5730d9f4ee79
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -174260,13 +174260,16 @@ const MSA_CSS = `
 .msc-wrap.msa{height:100%;min-height:0}
 .msa-stagebox{flex:1 1 auto;min-height:300px}
 .msa[data-msa-mode=manual] .msa-stagebox{min-height:280px}
-.msa-stagebox .msa-stage.fill .msa-f,.msa-stagebox .msa-stage.fill .msa-dmgwrap{width:168px;margin-left:-84px;height:206px}
-.msa-stagebox .msa-stage.fill .msa-f img.msa-img{max-width:168px;max-height:196px}
-.msa-stagebox .msa-stage.fill .msa-f .msa-shadow{width:96px;margin-left:-48px}
+.msa-stage.fill.big .msa-f,.msa-stage.fill.big .msa-dmgwrap{width:var(--msa-fw);margin-left:calc(var(--msa-fw) / -2);height:var(--msa-fh);bottom:36%}
+.msa-stage.fill.big .msa-f img.msa-img{max-width:var(--msa-fw);max-height:calc(var(--msa-fh) - 10px)}
+.msa-stage.fill.big .msa-f .msa-shadow{width:calc(var(--msa-fw) * .56);margin-left:calc(var(--msa-fw) * -.28)}
+.msa-stage.big .msa-floor{bottom:36%}
+.msa-stage.big .msa-spot{bottom:calc(36% - 7px)}
+.msa-stage.big .msa-aim{bottom:calc(36% + 28px)}
 .msa-topline{flex-wrap:wrap;row-gap:2px}
 .msa-topline .msc-buff{font-style:normal;font-size:10.5px}
 .msa-topline .msa-breeder{font-size:11px;color:#cbd5e1;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:55%}
-@media (max-height:500px) and (orientation:landscape){.msc-wrap.msa{height:auto}.msa-stagebox,.msa[data-msa-mode=manual] .msa-stagebox{flex:none;height:calc(100vh - 70px);min-height:240px}.msa-stagebox .msa-stage.fill .msa-f,.msa-stagebox .msa-stage.fill .msa-dmgwrap{width:130px;margin-left:-65px;height:150px}.msa-stagebox .msa-stage.fill .msa-f img.msa-img{max-width:130px;max-height:142px}}
+@media (max-height:500px) and (orientation:landscape){.msc-wrap.msa{height:auto}.msa-stagebox,.msa[data-msa-mode=manual] .msa-stagebox{flex:none;height:calc(100vh - 70px);min-height:240px}}
 .msa-stage.fill .msa-f,.msa-stage.fill .msa-dmgwrap{width:140px;margin-left:-70px;height:176px}
 .msa-stage.fill .msa-f img.msa-img{max-width:140px;max-height:166px}
 .msa-stage.fill .msa-f .msa-shadow{width:80px;margin-left:-40px}
@@ -174934,16 +174937,23 @@ function MsaStage({
   introTitle = '',
   speedF = 1,
   fill = false,
-  lite = false
+  lite = false,
+  wide = false
 }) {
   const reduce = useMemo(() => !!lite || msaReduce(), [lite]);
   const [stageW, setStageW] = useState(340);
+  const [stageH, setStageH] = useState(300);
+  const bigFh = Math.round(Math.max(110, Math.min(300, stageH * 0.5, stageH * 0.66 - 72, stageW * 0.51)));
+  const bigFw = Math.round(bigFh * 0.82);
   const stageRef = useRef(null);
   const camRef = useRef(null);
   useEffect(() => {
     const el = stageRef.current;
     if (!el) return undefined;
-    const fit = () => setStageW(el.clientWidth || 340);
+    const fit = () => {
+      setStageW(el.clientWidth || 340);
+      setStageH(el.clientHeight || 300);
+    };
     fit();
     if (typeof ResizeObserver === 'undefined') {
       window.addEventListener('resize', fit);
@@ -175016,6 +175026,12 @@ function MsaStage({
     tech: msaTechInfo(log, e0)
   };
   const gapOf = d => {
+    if (wide) {
+      const g0 = Math.max(MSA_GAP[0], Math.min(0.44, bigFw * 0.72 / Math.max(200, stageW)));
+      const k = Math.max(0, Math.min(3, Number.isFinite(d) ? d : 1));
+      const gMax = Math.max(g0, 0.98 - bigFw / Math.max(200, stageW));
+      return Math.min(gMax, Math.max(MSA_GAP[k], g0 + (gMax - g0) * k / 3));
+    }
     const g = MSA_GAP[d] != null ? MSA_GAP[d] : MSA_GAP[1];
     return d === 0 ? Math.max(g, Math.min(MSA_GAP[1] - 0.04, (fill ? 140 : 96) * 0.6 / Math.max(200, stageW))) : g;
   };
@@ -175027,11 +175043,12 @@ function MsaStage({
       const g0 = gapOf(frames[k - 1] ? frames[k - 1].d : 1);
       const g1 = gapOf(frames[k] ? frames[k].d : 1);
       if (r.ev === 'move' && (r.side === 'A' || r.side === 'B') && g0 !== g1) c = r.side === 'A' ? c + g0 / 2 - g1 / 2 : c - g0 / 2 + g1 / 2;
-      c = Math.max(Math.max(0.5 - MSA_C_LIM, 0.09 + g1 / 2), Math.min(Math.min(0.5 + MSA_C_LIM, 0.91 - g1 / 2), c));
+      const eM = wide ? Math.max(0.09, bigFw / 2 / Math.max(200, stageW) + 0.01) : 0.09;
+      c = Math.max(Math.max(0.5 - MSA_C_LIM, eM + g1 / 2), Math.min(Math.min(0.5 + MSA_C_LIM, 1 - eM - g1 / 2), c));
       out.push(c);
     }
     return out;
-  }, [log, frames, stageW, fill]);
+  }, [log, frames, stageW, fill, wide, bigFw]);
   const gap = gapOf(f ? f.d : 1);
   const cNow = cs[Math.min(pos, cs.length - 1)] != null ? cs[Math.min(pos, cs.length - 1)] : 0.5;
   const xA = cNow - gap / 2;
@@ -175152,9 +175169,13 @@ function MsaStage({
   const mA = memberOf('A');
   const mB = memberOf('B');
   return React.createElement("div", {
-    className: `msa-stage${fill ? ' fill' : ''}`,
+    className: `msa-stage${fill ? ' fill' : ''}${wide ? ' big' : ''}`,
     ref: stageRef,
-    "data-msa-stage": true
+    "data-msa-stage": true,
+    style: wide ? {
+      '--msa-fw': `${bigFw}px`,
+      '--msa-fh': `${bigFh}px`
+    } : undefined
   }, React.createElement("div", {
     className: `msa-shk ${shake ? `shake s${shakeLv}` : ''}`,
     key: shake ? `sh-${pos}` : 'st',
@@ -175514,7 +175535,8 @@ function MonsucArena({
     win: result ? result.winner : null,
     introTitle: info.title,
     speedF: (MSA_SPEEDS.find(x => x.id === speed) || MSA_SPEEDS[0]).f,
-    fill: true
+    fill: true,
+    wide: true
   })), React.createElement("div", {
     className: "msa-say",
     "data-msa-say": true

@@ -266,13 +266,16 @@ const MSA_CSS = `
 .msc-wrap.msa{height:100%;min-height:0}
 .msa-stagebox{flex:1 1 auto;min-height:300px}
 .msa[data-msa-mode=manual] .msa-stagebox{min-height:280px}
-.msa-stagebox .msa-stage.fill .msa-f,.msa-stagebox .msa-stage.fill .msa-dmgwrap{width:168px;margin-left:-84px;height:206px}
-.msa-stagebox .msa-stage.fill .msa-f img.msa-img{max-width:168px;max-height:196px}
-.msa-stagebox .msa-stage.fill .msa-f .msa-shadow{width:96px;margin-left:-48px}
+.msa-stage.fill.big .msa-f,.msa-stage.fill.big .msa-dmgwrap{width:var(--msa-fw);margin-left:calc(var(--msa-fw) / -2);height:var(--msa-fh);bottom:36%}
+.msa-stage.fill.big .msa-f img.msa-img{max-width:var(--msa-fw);max-height:calc(var(--msa-fh) - 10px)}
+.msa-stage.fill.big .msa-f .msa-shadow{width:calc(var(--msa-fw) * .56);margin-left:calc(var(--msa-fw) * -.28)}
+.msa-stage.big .msa-floor{bottom:36%}
+.msa-stage.big .msa-spot{bottom:calc(36% - 7px)}
+.msa-stage.big .msa-aim{bottom:calc(36% + 28px)}
 .msa-topline{flex-wrap:wrap;row-gap:2px}
 .msa-topline .msc-buff{font-style:normal;font-size:10.5px}
 .msa-topline .msa-breeder{font-size:11px;color:#cbd5e1;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:55%}
-@media (max-height:500px) and (orientation:landscape){.msc-wrap.msa{height:auto}.msa-stagebox,.msa[data-msa-mode=manual] .msa-stagebox{flex:none;height:calc(100vh - 70px);min-height:240px}.msa-stagebox .msa-stage.fill .msa-f,.msa-stagebox .msa-stage.fill .msa-dmgwrap{width:130px;margin-left:-65px;height:150px}.msa-stagebox .msa-stage.fill .msa-f img.msa-img{max-width:130px;max-height:142px}}
+@media (max-height:500px) and (orientation:landscape){.msc-wrap.msa{height:auto}.msa-stagebox,.msa[data-msa-mode=manual] .msa-stagebox{flex:none;height:calc(100vh - 70px);min-height:240px}}
 .msa-stage.fill .msa-f,.msa-stage.fill .msa-dmgwrap{width:140px;margin-left:-70px;height:176px}
 .msa-stage.fill .msa-f img.msa-img{max-width:140px;max-height:166px}
 .msa-stage.fill .msa-f .msa-shadow{width:80px;margin-left:-40px}
@@ -625,14 +628,19 @@ const msaCamFrames = (pts, total) => {
 //   sound … 効果音を鳴らすか(止めて見返しているときなどは false)
 //   introTitle … 試合の入りの題字(無ければ「試合開始」) / speedF … 見せる速さ(1行の長さに掛ける。×2 は 0.55)
 // fill … 親の高さいっぱいに広げる(助手マスモン対戦 β の観戦・2026-11-13 段2「場を画面いっぱいに」)/ lite … 演出を少なめ(端末の動きを減らす設定と同じ扱い)
-function MsaStage({ log, frames, pos, teams, venueImg, ended = false, win = null, endSub = '', sound = true, introTitle = '', speedF = 1, fill = false, lite = false }) {
+function MsaStage({ log, frames, pos, teams, venueImg, ended = false, win = null, endSub = '', sound = true, introTitle = '', speedF = 1, fill = false, lite = false, wide = false }) {
   const reduce = useMemo(() => !!lite || msaReduce(), [lite]);
   const [stageW, setStageW] = useState(340);
+  const [stageH, setStageH] = useState(300);
+  // wide … モンサクの大きな場(2026-11-14 社長「零で2体が重なる」「上半分が背景だけ」): 絵の大きさを場の高さから決め、足もとを場の高さの64%に置き、
+  //   間合い4段の幅を絵の幅に合わせて取り直す(零でも2体の顔と体が見分けられる)
+  const bigFh = Math.round(Math.max(110, Math.min(300, stageH * 0.5, stageH * 0.66 - 72, stageW * 0.51))); // 足もと(高さの66%)から上の帯(約72px)にかぶらない所まで。幅は場の約4割まで(零〜遠の4段の差が残るように)
+  const bigFw = Math.round(bigFh * 0.82);
   const stageRef = useRef(null);
   const camRef = useRef(null);
   useEffect(() => {
     const el = stageRef.current; if (!el) return undefined;
-    const fit = () => setStageW(el.clientWidth || 340);
+    const fit = () => { setStageW(el.clientWidth || 340); setStageH(el.clientHeight || 300); };
     fit();
     if (typeof ResizeObserver === 'undefined') { window.addEventListener('resize', fit); return () => window.removeEventListener('resize', fit); }
     const ro = new ResizeObserver(fit); ro.observe(el); return () => ro.disconnect();
@@ -673,7 +681,9 @@ function MsaStage({ log, frames, pos, teams, venueImg, ended = false, win = null
   const memberOf = (side, i) => { const t = teams[side]; const ms = (t && t.members) || []; return ms[Number.isFinite(i) ? i : (f ? f.act[side] : 0)] || ms[0] || null; };
   const e = { ...e0, k: pos, atkSp: e0.side ? (memberOf(e0.side, e0.i) || {}).species : '', tech: msaTechInfo(log, e0) };
   // 零でも2体の体と顔が見えるように、絵の幅の6割はあける(2026-11-13 社長「重なりを直して」。小さい子が大きい子の後ろに隠れた)
-  const gapOf = (d) => { const g = MSA_GAP[d] != null ? MSA_GAP[d] : MSA_GAP[1]; return d === 0 ? Math.max(g, Math.min(MSA_GAP[1] - 0.04, ((fill ? 140 : 96) * 0.6) / Math.max(200, stageW))) : g; };
+  const gapOf = (d) => {
+    if (wide) { const g0 = Math.max(MSA_GAP[0], Math.min(0.44, (bigFw * 0.72) / Math.max(200, stageW))); const k = Math.max(0, Math.min(3, Number.isFinite(d) ? d : 1)); const gMax = Math.max(g0, 0.98 - bigFw / Math.max(200, stageW)); return Math.min(gMax, Math.max(MSA_GAP[k], g0 + (gMax - g0) * k / 3)); }
+    const g = MSA_GAP[d] != null ? MSA_GAP[d] : MSA_GAP[1]; return d === 0 ? Math.max(g, Math.min(MSA_GAP[1] - 0.04, ((fill ? 140 : 96) * 0.6) / Math.max(200, stageW))) : g; };
   // 立ち位置(2026-11-14 社長「距離の移動が違和感」): 間合いを変えた子だけが歩いて動き、相手はその場に残る。
   // 2体のまん中(c)は行ごとに前から順に決める(動いた子の相手の位置を残す)。端に寄りすぎないよう c は 0.5±MSA_C_LIM・2体が場の内側に収まる範囲に収める
   const cs = useMemo(() => {
@@ -681,11 +691,12 @@ function MsaStage({ log, frames, pos, teams, venueImg, ended = false, win = null
     for (let k = 1; k < frames.length; k++) {
       const r = log[k] || {}; const g0 = gapOf(frames[k - 1] ? frames[k - 1].d : 1); const g1 = gapOf(frames[k] ? frames[k].d : 1);
       if (r.ev === 'move' && (r.side === 'A' || r.side === 'B') && g0 !== g1) c = r.side === 'A' ? (c + g0 / 2) - g1 / 2 : (c - g0 / 2) + g1 / 2;
-      c = Math.max(Math.max(0.5 - MSA_C_LIM, 0.09 + g1 / 2), Math.min(Math.min(0.5 + MSA_C_LIM, 0.91 - g1 / 2), c)); // 2体とも場の内側(端から9%)に収まる範囲
+      const eM = wide ? Math.max(0.09, bigFw / 2 / Math.max(200, stageW) + 0.01) : 0.09; // 大きな場では、絵の半分の幅だけ端から離す
+      c = Math.max(Math.max(0.5 - MSA_C_LIM, eM + g1 / 2), Math.min(Math.min(0.5 + MSA_C_LIM, 1 - eM - g1 / 2), c)); // 2体とも場の内側(端から9%)に収まる範囲
       out.push(c);
     }
     return out;
-  }, [log, frames, stageW, fill]);
+  }, [log, frames, stageW, fill, wide, bigFw]);
   const gap = gapOf(f ? f.d : 1);
   const cNow = cs[Math.min(pos, cs.length - 1)] != null ? cs[Math.min(pos, cs.length - 1)] : 0.5;
   const xA = cNow - gap / 2; const xB = cNow + gap / 2;
@@ -765,7 +776,7 @@ function MsaStage({ log, frames, pos, teams, venueImg, ended = false, win = null
   };
   const mA = memberOf('A'); const mB = memberOf('B');
   return (
-    <div className={`msa-stage${fill ? ' fill' : ''}`} ref={stageRef} data-msa-stage>
+    <div className={`msa-stage${fill ? ' fill' : ''}${wide ? ' big' : ''}`} ref={stageRef} data-msa-stage style={wide ? { '--msa-fw': `${bigFw}px`, '--msa-fh': `${bigFh}px` } : undefined}>
      <div className={`msa-shk ${shake ? `shake s${shakeLv}` : ''}`} key={shake ? `sh-${pos}` : 'st'} style={shake ? { animationDelay: `${hitMs}ms` } : undefined}>
       <div className="msa-cam" ref={camRef} data-msa-cam>
       <div className="msa-pan" style={{ transform: `translateX(${Math.round(panX)}px)` }} data-msa-pan>
@@ -894,7 +905,7 @@ function MonsucArena({ s, info, engine, input, watch, onEnd }) {
         {info.buffs ? <i className="msc-buff">✨ 特別な1話</i> : null}
         {(info.opp || {}).breeder ? <small className="msa-breeder">相手 {nm('B')}・{info.opp.breeder}</small> : null}</div>
       <div className="msa-stagebox" data-msa-stagebox>
-        <MsaStage log={log} frames={frames} pos={pos} teams={stageTeams} venueImg={msaVenueBg(info.venue, bg)} ended={ended} win={result ? result.winner : null} introTitle={info.title} speedF={(MSA_SPEEDS.find(x => x.id === speed) || MSA_SPEEDS[0]).f} fill/>
+        <MsaStage log={log} frames={frames} pos={pos} teams={stageTeams} venueImg={msaVenueBg(info.venue, bg)} ended={ended} win={result ? result.winner : null} introTitle={info.title} speedF={(MSA_SPEEDS.find(x => x.id === speed) || MSA_SPEEDS[0]).f} fill wide/>
       </div>
       <div className="msa-say" data-msa-say>{msaSay(e, nm)}</div>
       <div ref={barRef}>{showBar ? <MsxManualBar opt={mm.pending} onPick={pick} onAuto={goAuto} busy={busy}/> : null}</div>
