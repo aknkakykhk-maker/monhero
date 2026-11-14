@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d9be2b050cc306ee
+// source-sha256: 87c5d7c2ca51befc
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -167558,6 +167558,7 @@ const msxItemFx = id => {
     if (it.awake === 1) return `育成中に使うと、その場でかならず${a1}。覚醒ずみなら使えない`;
     return `いつ使っても、その場でかならず${a2}。覚醒していなければ、先に${a1}してから超覚醒まで進む(覚醒の実の分も入る)。適性が上がるのは覚醒と合わせて${A.aptMax}段まで`;
   }
+  if (it.popTurn) return `使ったターンだけ、人気の上がり ×${S.POP_TURN_MULT || 1.5}`;
   if (it.issaForce) return 'イッサ博士が1度かならず来る';
   if (it.issaSure) return 'その回の博士の実験がかならず成功';
   if (it.hpMax) return `体力の上限 +${it.hpMax}`;
@@ -171825,8 +171826,12 @@ const MSX_EXTRA_ITEM = Object.freeze({
     desc: '使ったターンのトレーニングで、丈夫さの伸び ×1.5'
   },
   stamina: {
-    e: '🍡',
+    e: '🍑',
     desc: '体力の最大値 +15(体力も15回復)'
+  },
+  prune: {
+    e: '⭐',
+    desc: '使ったターンだけ、人気の上がり ×1.5'
   }
 });
 const msxItemView = k => {
@@ -174892,35 +174897,39 @@ function MsxR3Battle({
       const e = effOf(k);
       if (!e) return '';
       const hp = e.hp > 0 ? `体力+${e.hp}` : '体力 満タン';
-      const ly = e.m.fear ? e.fear > 0 ? `恐れ+${e.fear}` : '恐れ 上限' : e.m.ama ? e.ama > 0 ? `甘え+${e.ama}` : '甘え 上限' : '';
-      if (e.m.stat) return [`${MSX_STAT_NAME[e.m.stat]}+${e.st}`, ly, hp].filter(Boolean).join('・');
+      const ly = [e.m.ama ? e.ama > 0 ? `甘え+${e.ama}` : '甘え 上限' : '', e.m.fear ? e.fear > 0 ? `恐れ+${e.fear}` : '恐れ 上限' : ''].filter(Boolean).join('・');
+      if (e.m.gives) return '持ち物に入る';
+      if (e.m.stat) return [`${MSX_STAT_NAME[e.m.stat]}+${e.st}`, ly, e.m.hp ? hp : ''].filter(Boolean).join('・');
       if (e.m.pop || e.m.pts) return [`人気+${e.pop}`, `能力P+${e.pts}`, ly, hp].filter(Boolean).join('・');
-      return [ly, hp].filter(Boolean).join('・');
+      return [ly, e.m.hp ? hp : ''].filter(Boolean).join('・');
     };
     const fxLong = k => {
       const e = effOf(k);
       if (!e) return '';
       const hp = e.hp > 0 ? `体力を上限の${Math.round(e.m.hp * 100)}%回復(+${e.hp}・いま ${s.hp}→${s.hp + e.hp} / ${s.hpMax})` : `体力はもう満タン(上限 ${s.hpMax})`;
-      const parts = [hp];
+      if (e.m.gives) {
+        const it = SUC.ITEMS && SUC.ITEMS[e.m.gives];
+        return `持ち物に「${it && it.name || e.m.gives}」が1つ入る(使ったターンだけ、人気の上がり ×${SUC.POP_TURN_MULT || 1.5})`;
+      }
+      const parts = e.m.hp ? [hp] : [];
       if (e.m.stat) parts.push(`${MSX_STAT_NAME[e.m.stat]} +${e.st}(${s.stats[e.m.stat]}→${s.stats[e.m.stat] + e.st})`);
       if (e.m.fear || e.m.ama) {
-        const d = e.m.fear ? e.fear : e.ama;
-        const nm = e.m.fear ? '恐れ度' : '甘え度';
-        parts.push(d > 0 ? `${nm} +${d}(忠誠度 ${e.loy0}→${e.loy1})` : `${nm}はもう上限(50)`);
+        const ls = [e.m.ama ? e.ama > 0 ? `甘え度 +${e.ama}` : '甘え度はもう上限(50)' : '', e.m.fear ? e.fear > 0 ? `恐れ度 +${e.fear}` : '恐れ度はもう上限(50)' : ''].filter(Boolean).join('・');
+        parts.push(`${ls}(忠誠度 ${e.loy0}→${e.loy1})`);
       }
       if (e.m.pop) parts.push(`人気 +${e.pop}(${s.pop}→${s.pop + e.pop})`);
       if (e.m.pts) parts.push(`能力ポイント +${e.pts}`);
       return parts.join('・');
     };
     const MEAL_ICON = {
-      vitamin: '💊',
-      gochiso: '🍱',
-      f_life: '🥕',
-      f_pow: '🍖',
-      f_wise: '🌰',
-      f_hit: '🫐',
-      f_eva: '🍎',
-      f_tough: '🥔',
+      vitamin: '🐍',
+      gochiso: '🍰',
+      f_life: '🍓',
+      f_pow: '🍍',
+      f_wise: '🍏',
+      f_hit: '🥗',
+      f_eva: '🧃',
+      f_tough: '🥫',
       prune: '⭐'
     };
     const LY = SUC.LOYAL || {};
@@ -174988,7 +174997,18 @@ function MsxR3Battle({
       "data-msx-r3-meal": k
     }, React.createElement("div", {
       className: "e"
-    }, MEAL_ICON[k] || '🍙'), React.createElement("b", null, M[k].name), React.createElement("small", {
+    }, MEAL_ICON[k] || '🍙'), React.createElement("b", {
+      style: {
+        wordBreak: 'keep-all',
+        overflowWrap: 'normal'
+      }
+    }, String(M[k].name).split(/(?=（)/).map((x, i) => React.createElement(React.Fragment, {
+      key: i
+    }, i > 0 ? React.createElement("wbr", null) : null, React.createElement("span", {
+      style: {
+        whiteSpace: 'nowrap'
+      }
+    }, x)))), React.createElement("small", {
       "data-msx-r3-mealfx": k
     }, fx(k).split('・').map((x, i) => React.createElement(React.Fragment, {
       key: i
