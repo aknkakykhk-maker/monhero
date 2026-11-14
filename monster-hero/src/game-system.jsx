@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: b67b935cad70cd90
+// generated-sha256: 9248262885c2c92d
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -87290,6 +87290,7 @@ const msxItemFx = (id) => {
     if (it.awake === 1) return `育成中に使うと、その場でかならず${a1}。覚醒ずみなら使えない`;
     return `いつ使っても、その場でかならず${a2}。覚醒していなければ、先に${a1}してから超覚醒まで進む(覚醒の実の分も入る)。適性が上がるのは覚醒と合わせて${A.aptMax}段まで`;
   }
+  if (it.popTurn) return `使ったターンだけ、人気の上がり ×${S.POP_TURN_MULT || 1.5}`;
   if (it.issaForce) return 'イッサ博士が1度かならず来る';
   if (it.issaSure) return 'その回の博士の実験がかならず成功';
   if (it.hpMax) return `体力の上限 +${it.hpMax}`;
@@ -88602,7 +88603,8 @@ const MSX_EXTRA_ITEM = Object.freeze({ oil: { e: '🫙', desc: '体力を上限�
   fruit_hit: { e: '🍊', desc: '使ったターンのトレーニングで、命中の伸び ×1.5' },
   fruit_eva: { e: '🍇', desc: '使ったターンのトレーニングで、回避の伸び ×1.5' },
   fruit_tough: { e: '🥥', desc: '使ったターンのトレーニングで、丈夫さの伸び ×1.5' },
-  stamina: { e: '🍡', desc: '体力の最大値 +15(体力も15回復)' } });
+  stamina: { e: '🍑', desc: '体力の最大値 +15(体力も15回復)' },
+  prune: { e: '⭐', desc: '使ったターンだけ、人気の上がり ×1.5' } });
 const msxItemView = (k) => {
   const base = MSX_ITEM_BY_ID[k]; const core = msxSuc && msxSuc.SUC.ITEMS ? msxSuc.SUC.ITEMS[k] : null; const ex = MSX_EXTRA_ITEM[k];
   return { id: k, name: (base && base.name) || (core && core.name) || k, desc: typeof msxItemFx === 'function' && msxItemFx(k) ? (base && typeof msxItemDesc === 'function' ? msxItemDesc(k) : msxItemFx(k)) : (base && base.desc) || (ex && ex.desc) || '', /* 効き目だけ(2026-11-14 社長) */ e: (base && base.e) || (ex && ex.e) || '🎁', during: core ? core.use === 'during' : !!(base && base.when === 'both') };
@@ -89874,22 +89876,25 @@ function MsxR3Battle({ run, setRun, v, ev, ctx, bondLv, onPause, debug }) {
       const e = effOf(k); if (!e) return '';
       const hp = e.hp > 0 ? `体力+${e.hp}` : '体力 満タン';
       // 2026-11-14 社長: どのごはんでも甘え度・恐れ度が上がる。札の短い効き目にも出す
-      const ly = e.m.fear ? (e.fear > 0 ? `恐れ+${e.fear}` : '恐れ 上限') : e.m.ama ? (e.ama > 0 ? `甘え+${e.ama}` : '甘え 上限') : '';
-      if (e.m.stat) return [`${MSX_STAT_NAME[e.m.stat]}+${e.st}`, ly, hp].filter(Boolean).join('・');
+      // 2026-11-14 社長「参考に合わせる」: 体力は回復しない品がある・甘え度と恐れ度が両方上がる品がある・持ち物をもらう品(スタープルーン)がある
+      const ly = [e.m.ama ? (e.ama > 0 ? `甘え+${e.ama}` : '甘え 上限') : '', e.m.fear ? (e.fear > 0 ? `恐れ+${e.fear}` : '恐れ 上限') : ''].filter(Boolean).join('・');
+      if (e.m.gives) return `持ち物に${(SUC.ITEMS && SUC.ITEMS[e.m.gives] && SUC.ITEMS[e.m.gives].name) || e.m.gives}`;
+      if (e.m.stat) return [`${MSX_STAT_NAME[e.m.stat]}+${e.st}`, ly, e.m.hp ? hp : ''].filter(Boolean).join('・');
       if (e.m.pop || e.m.pts) return [`人気+${e.pop}`, `能力P+${e.pts}`, ly, hp].filter(Boolean).join('・');
-      return [ly, hp].filter(Boolean).join('・');
+      return [ly, e.m.hp ? hp : ''].filter(Boolean).join('・');
     };
     const fxLong = (k) => {
       const e = effOf(k); if (!e) return '';
       const hp = e.hp > 0 ? `体力を上限の${Math.round(e.m.hp * 100)}%回復(+${e.hp}・いま ${s.hp}→${s.hp + e.hp} / ${s.hpMax})` : `体力はもう満タン(上限 ${s.hpMax})`;
-      const parts = [hp];
+      if (e.m.gives) { const it = SUC.ITEMS && SUC.ITEMS[e.m.gives]; return `持ち物に「${(it && it.name) || e.m.gives}」が1つ入る(使ったターンだけ、人気の上がり ×${SUC.POP_TURN_MULT || 1.5})`; }
+      const parts = e.m.hp ? [hp] : [];
       if (e.m.stat) parts.push(`${MSX_STAT_NAME[e.m.stat]} +${e.st}(${s.stats[e.m.stat]}→${s.stats[e.m.stat] + e.st})`);
-      if (e.m.fear || e.m.ama) { const d = e.m.fear ? e.fear : e.ama; const nm = e.m.fear ? '恐れ度' : '甘え度'; parts.push(d > 0 ? `${nm} +${d}(忠誠度 ${e.loy0}→${e.loy1})` : `${nm}はもう上限(50)`); }
+      if (e.m.fear || e.m.ama) { const ls = [e.m.ama ? (e.ama > 0 ? `甘え度 +${e.ama}` : '甘え度はもう上限(50)') : '', e.m.fear ? (e.fear > 0 ? `恐れ度 +${e.fear}` : '恐れ度はもう上限(50)') : ''].filter(Boolean).join('・'); parts.push(`${ls}(忠誠度 ${e.loy0}→${e.loy1})`); }
       if (e.m.pop) parts.push(`人気 +${e.pop}(${s.pop}→${s.pop + e.pop})`);
       if (e.m.pts) parts.push(`能力ポイント +${e.pts}`);
       return parts.join('・');
     };
-    const MEAL_ICON = { vitamin: '💊', gochiso: '🍱', f_life: '🥕', f_pow: '🍖', f_wise: '🌰', f_hit: '🫐', f_eva: '🍎', f_tough: '🥔', prune: '⭐' };
+    const MEAL_ICON = { vitamin: '🐍', gochiso: '🍰', f_life: '🍓', f_pow: '🍍', f_wise: '🍏', f_hit: '🥗', f_eva: '🧃', f_tough: '🥫', prune: '⭐' };
     const LY = SUC.LOYAL || {}; const RT = SUC.RATE || {};
     const loyNote = `忠誠度が高いほど、トレーニングの伸びが上がる(${LY.capBoost || 60}で最大 ×${1 + (LY.capBoost || 60) / 100})。80以上で大成功が少し出やすい(+${Math.round((RT.greatLoyal80 || 0.03) * 100)}%)`;
     const give = () => { if (!mealPick || !can(mealPick)) return; const r = SUC.meal(s, mealPick); if (r.out.ok) finish(r.state); };

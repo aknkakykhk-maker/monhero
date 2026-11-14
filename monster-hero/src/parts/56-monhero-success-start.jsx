@@ -40,6 +40,7 @@ const msxItemFx = (id) => {
     if (it.awake === 1) return `育成中に使うと、その場でかならず${a1}。覚醒ずみなら使えない`;
     return `いつ使っても、その場でかならず${a2}。覚醒していなければ、先に${a1}してから超覚醒まで進む(覚醒の実の分も入る)。適性が上がるのは覚醒と合わせて${A.aptMax}段まで`;
   }
+  if (it.popTurn) return `使ったターンだけ、人気の上がり ×${S.POP_TURN_MULT || 1.5}`;
   if (it.issaForce) return 'イッサ博士が1度かならず来る';
   if (it.issaSure) return 'その回の博士の実験がかならず成功';
   if (it.hpMax) return `体力の上限 +${it.hpMax}`;

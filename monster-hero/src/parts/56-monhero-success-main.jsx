@@ -814,7 +814,8 @@ const MSX_EXTRA_ITEM = Object.freeze({ oil: { e: '🫙', desc: '体力を上限�
   fruit_hit: { e: '🍊', desc: '使ったターンのトレーニングで、命中の伸び ×1.5' },
   fruit_eva: { e: '🍇', desc: '使ったターンのトレーニングで、回避の伸び ×1.5' },
   fruit_tough: { e: '🥥', desc: '使ったターンのトレーニングで、丈夫さの伸び ×1.5' },
-  stamina: { e: '🍡', desc: '体力の最大値 +15(体力も15回復)' } });
+  stamina: { e: '🍑', desc: '体力の最大値 +15(体力も15回復)' },
+  prune: { e: '⭐', desc: '使ったターンだけ、人気の上がり ×1.5' } });
 const msxItemView = (k) => {
   const base = MSX_ITEM_BY_ID[k]; const core = msxSuc && msxSuc.SUC.ITEMS ? msxSuc.SUC.ITEMS[k] : null; const ex = MSX_EXTRA_ITEM[k];
   return { id: k, name: (base && base.name) || (core && core.name) || k, desc: typeof msxItemFx === 'function' && msxItemFx(k) ? (base && typeof msxItemDesc === 'function' ? msxItemDesc(k) : msxItemFx(k)) : (base && base.desc) || (ex && ex.desc) || '', /* 効き目だけ(2026-11-14 社長) */ e: (base && base.e) || (ex && ex.e) || '🎁', during: core ? core.use === 'during' : !!(base && base.when === 'both') };
