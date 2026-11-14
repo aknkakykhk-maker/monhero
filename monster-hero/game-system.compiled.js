@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 59553650a0b6705f
+// source-sha256: 3836e4869565247e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -150717,6 +150717,81 @@ const MSC_STAT_ICON = Object.freeze({
   tough: '🛡️'
 });
 const MSC_STARS = n => n >= 4 ? '👑' : '★'.repeat(Math.max(1, Math.min(3, n || 1)));
+const MSC_FORECAST = Object.freeze([[0.85, 'easy', '楽勝'], [0.65, 'good', '有利'], [0.4, 'even', '互角'], [0.15, 'hard', '苦戦'], [0, 'none', '勝ち目なし…']]);
+const MSC_ODDS_N = 40;
+const mscOddsCache = new Map();
+const monsucOdds = (engine, input, n) => {
+  if (!engine || typeof engine.simulate !== 'function' || !input || !input.teamA || !input.teamB) return null;
+  const N = Math.max(1, Math.round(n || MSC_ODDS_N));
+  let key = null;
+  try {
+    key = JSON.stringify([input.seed, input.teamA, input.teamB, input.buffs || null, input.rules || null, N]);
+  } catch (_) {
+    key = null;
+  }
+  if (key && mscOddsCache.has(key)) return mscOddsCache.get(key);
+  let win = 0;
+  for (let i = 0; i < N; i++) {
+    try {
+      const r = engine.simulate({
+        ...input,
+        trace: false,
+        seed: `${input.seed}:odds${i}`
+      });
+      if (r && r.winner === 'A') win++;
+    } catch (_) {
+      return null;
+    }
+  }
+  const rate = win / N;
+  const f = MSC_FORECAST.find(([m]) => rate >= m) || MSC_FORECAST[MSC_FORECAST.length - 1];
+  const out = Object.freeze({
+    win,
+    n: N,
+    rate,
+    key: f[1],
+    label: f[2]
+  });
+  if (key) {
+    if (mscOddsCache.size > 64) mscOddsCache.clear();
+    mscOddsCache.set(key, out);
+  }
+  return out;
+};
+const monsucLossWhy = (log, meName) => {
+  if (!Array.isArray(log) || !log.length) return null;
+  const st = log[0] || {};
+  const aMoves = Array.isArray(st.aMoves) ? st.aMoves : [];
+  const reach = (i, d) => (aMoves[i] || aMoves[0] || []).some(m => m && Array.isArray(m.dist) && m.dist.includes(d));
+  let acts = 0;
+  let sulk = 0;
+  let stuck = 0;
+  let tries = 0;
+  let hits = 0;
+  const foe = {};
+  for (const e of log) {
+    if (!e || !e.ev) continue;
+    if (e.side === 'A') {
+      if (e.ev === 'tech' || e.ev === 'guard' || e.ev === 'charge' || e.ev === 'move' && e.why !== 'techMove') acts++;
+      if (e.ev === 'charge' && e.why === 'sulk') sulk++;
+      if (e.ev === 'move' && e.why !== 'techMove' && Number.isInteger(e.to) && Number.isInteger(e.step) && !reach(e.i || 0, e.to - e.step)) stuck++;
+      if (e.ev === 'tech') {
+        tries++;
+        if (e.hit) hits++;
+      }
+    } else if (e.side === 'B' && e.ev === 'tech' && e.hit && e.name) foe[e.name] = (foe[e.name] || 0) + 1;
+  }
+  const me = meName || 'こちら';
+  if (sulk >= 2 && sulk / Math.max(1, acts) >= 0.15) return `${me}が そっぽを向いて、${sulk}回 技を出さなかった(忠誠が低いと 言うことを聞かない)`;
+  if (stuck >= 2 && stuck / Math.max(1, acts) >= 0.15) return `技の届く間合いへ動くのに ${stuck}回 番を使って、そのあいだ 技を撃てなかった`;
+  const foeAll = Object.values(foe).reduce((x, y) => x + y, 0);
+  if (foeAll > 0 && foeAll <= 5) return `相手の技が重く、${foeAll}回 受けただけで 倒れた`;
+  if (tries <= 2) return `技を ${tries}回しか 撃てなかった`;
+  if (hits / tries < 0.45) return `技が ${tries}回中 ${hits}回しか 当たらなかった`;
+  const top = Object.entries(foe).sort((a, b) => b[1] - a[1])[0];
+  return top ? `相手の「${top[0]}」を ${top[1]}回 受けたのが 大きかった` : 'あと少しの 差だった';
+};
+const monsucReachOf = techs => [0, 1, 2, 3].map(d => (Array.isArray(techs) ? techs : []).some(t => t && Array.isArray(t.dist) && t.dist.includes(d)));
 const MSC_VENUE_IMG = Object.freeze({
   debut: 'images/success/scenes/venue-debut.png',
   cup: 'images/success/scenes/venue-cup.png',
@@ -151059,6 +151134,7 @@ const MSC_CSS = `
 .msc-tabs button.on{background:#fde047;border-color:#fde047;color:#3b2a05}
 .msx .msc-tabs button{text-align:center}
 .msc-sheet{background:rgba(15,12,34,.85);border:1.5px solid #3f3a6b;border-radius:14px;padding:10px 8px}
+.msc-sheet.grow{flex:1 1 auto;display:flex;flex-direction:column;justify-content:space-evenly}
 .msc-st{display:grid;grid-template-columns:34px 1fr 74px 1fr 34px;align-items:center;gap:4px;height:30px;font-size:12.5px}
 .msc-st b{text-align:center;font-weight:900;color:#cbd5e1}.msc-st b.up{color:#fde047}
 .msc-st .lab{text-align:center;font-size:11.5px;font-weight:800;color:#e2e8f0;white-space:nowrap}
@@ -151082,6 +151158,14 @@ const MSC_CSS = `
 .msc-tl span{display:block;border-radius:8px;padding:5px 7px;background:#1e1b3a;font-size:12px;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .msc-tl small{color:#94a3b8;font-size:10.5px;margin-left:4px}
 .msc-hint{display:flex;gap:8px;align-items:center;font-size:12.5px;font-weight:800;color:#fff}
+.msc-fc{display:flex;gap:6px}
+.msc-fc>span{flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;padding:5px 4px;border-radius:12px;background:#1e1a36;border:1.5px solid #475569;color:#e2e8f0}
+.msc-fc small{font-size:10.5px;font-weight:800;color:#cbd5e1;white-space:nowrap}
+.msc-fc b{font-size:15px;font-weight:900;color:#fff;white-space:nowrap}
+.msc-fc .p.easy{border-color:#fde047}.msc-fc .p.easy b,.msc-fc .p.good b{color:#fde047}.msc-fc .p.hard b{color:#fb923c}.msc-fc .p.none b{color:#f87171}
+.msc-fc b.r{display:flex;gap:2px}.msc-fc b.r i{font-style:normal;font-size:11px;width:19px;height:19px;border-radius:5px;display:grid;place-items:center;background:#1e293b;color:#64748b}.msc-fc b.r i.y{background:#fde047;color:#3b2a05}
+.msc-why{display:flex;gap:8px;align-items:center;padding:8px 10px;border-radius:12px;background:#2a1530;border:1.5px solid #be123c;color:#fff;font-size:12.5px;font-weight:800}
+.msc-why b{flex:0 0 auto;font-size:11px;padding:2px 7px;border-radius:99px;background:#be123c;color:#fff;white-space:nowrap}
 .msc-hint img{width:32px;height:32px;border-radius:50%;object-fit:cover;flex:0 0 auto}
 .msc-hint em{font-style:normal;color:#fde047}
 .msc-stage{position:relative;border-radius:16px;overflow:hidden;background:#2a2147 center/cover no-repeat}
@@ -151338,6 +151422,7 @@ function MonsucBattleCard({
   s,
   info,
   catalog,
+  odds,
   onReady,
   onResultOnly,
   onBack
@@ -151370,7 +151455,26 @@ function MonsucBattleCard({
     d: 1
   };
   const distWord = ['くっついた間合い', '近い間合い', '中くらいの間合い', '遠い間合い'][bestD.d];
-  const hint = ahead.length ? React.createElement(React.Fragment, null, ahead.map(x => MSC_STAT_JP[x.k]).join('と'), "は 勝ってる! ", React.createElement("em", null, distWord), " で押していこう!") : React.createElement(React.Fragment, null, "能力は 相手が上…。", React.createElement("em", null, distWord), " で 技を当てていこう!");
+  const allAhead = MSC_STAT_KEYS.every(k => mscNum(me[k]) > mscNum(op[k]));
+  const reach = monsucReachOf(myTechs.length ? myTechs : (catalog && catalog.species[s.species] && catalog.species[s.species].techs || []).filter(t => t.start));
+  const foeApt = aptOf(o.species);
+  const foeBest = foeApt.map((g, d) => ({
+    g,
+    d
+  })).sort((a, b) => rankOf(a.g) - rankOf(b.g))[0] || {
+    d: 1
+  };
+  const noReach = [0, 1, 2, 3].filter(d => !reach[d]);
+  const kindOf = ts => {
+    const p = ts.filter(x => x.kind === 'pow').length;
+    const w = ts.filter(x => x.kind === 'wise').length;
+    return p === w ? null : p > w ? 'pow' : 'wise';
+  };
+  const other = k => k === 'pow' ? 'wise' : 'pow';
+  const foeKind = kindOf(foeTechs);
+  const myKind = kindOf(myTechs);
+  const kindWhy = foeKind && mscNum(op[foeKind]) < mscNum(op[other(foeKind)]) * 0.7 ? React.createElement(React.Fragment, null, "相手の技は ", React.createElement("em", null, MSC_STAT_JP[foeKind], "技"), "が中心。相手の", MSC_STAT_JP[foeKind], "は低めで、こちらへの痛手は小さいよ!") : myKind && mscNum(me[myKind]) < mscNum(me[other(myKind)]) * 0.7 ? React.createElement(React.Fragment, null, "こちらの技は ", React.createElement("em", null, MSC_STAT_JP[myKind], "技"), "が中心。", MSC_STAT_JP[myKind], "が低めで、痛手を与えにくいよ…") : null;
+  const hint = loy < 40 ? React.createElement(React.Fragment, null, "忠誠が ", loy, " だと、", React.createElement("em", null, "そっぽを向いて"), " 技を出さない番が あるよ…") : kindWhy ? kindWhy : noReach.includes(foeBest.d) ? React.createElement(React.Fragment, null, "相手の得意な", AMBW_DIST[foeBest.d], "の間合いに、", React.createElement("em", null, "届く技が無い"), "よ。入られたら 動いて離れよう!") : allAhead ? React.createElement(React.Fragment, null, "6つの能力は ", React.createElement("em", null, "どれも"), " 勝ってる! ", distWord, "で 押していこう!") : ahead.length ? React.createElement(React.Fragment, null, ahead.map(x => MSC_STAT_JP[x.k]).join('と'), "は 勝ってる! ", React.createElement("em", null, distWord), " で押していこう!") : React.createElement(React.Fragment, null, "能力は 相手が上…。", React.createElement("em", null, distWord), " で 技を当てていこう!");
   const aptRow = (sp, me) => React.createElement("div", {
     className: "msc-apt"
   }, aptOf(sp, me).map((g, d) => React.createElement("span", {
@@ -151427,7 +151531,7 @@ function MonsucBattleCard({
     className: tab === k ? 'on' : '',
     onClick: () => setTab(k)
   }, l))), React.createElement("div", {
-    className: "msc-sheet",
+    className: "msc-sheet grow",
     key: tab
   }, tab === 'st' && React.createElement(React.Fragment, null, MSC_STAT_KEYS.map((k, j) => {
     const a = mscNum(me[k]);
@@ -151510,11 +151614,26 @@ function MonsucBattleCard({
   }, t.kind === 'pow' ? '💪' : '🧠', t.name, React.createElement("small", null, (t.dist || []).map(d => AMBW_DIST[d]).join('')))) : React.createElement("span", null, "—"))), tab === 'abl' && React.createElement("div", {
     className: "msc-tl"
   }, React.createElement("div", null, React.createElement("span", null, "能力の合計 ", sumMe), React.createElement("span", null, "技 ", myTechs.length, "つ"), React.createElement("span", null, "Lv ", mscNum(s.lv, 1)), React.createElement("span", null, "間合い"), aptRow(s.species, true)), React.createElement("div", null, React.createElement("span", null, o.champ ? '大会の王者' : o.rival ? 'ライバル' : '大会の常連'), React.createElement("span", null, "技 ", foeTechs.length, "つ"), React.createElement("span", null, o.breeder ? `育てた人 ${o.breeder}` : '育てた人 —'), React.createElement("span", null, "間合い"), aptRow(o.species)))), React.createElement("div", {
+    className: "msc-fc",
+    "data-msc-forecast": true
+  }, React.createElement("span", {
+    className: `p ${odds ? odds.key : ''}`,
+    "data-msc-odds": odds ? odds.win : ''
+  }, React.createElement("small", null, "予想"), React.createElement("b", null, odds ? odds.label : '…'), odds ? React.createElement("small", null, odds.n, "回中 ", odds.win, "勝") : null), React.createElement("span", null, React.createElement("small", null, "相手の得意"), React.createElement("b", null, AMBW_DIST[foeBest.d])), React.createElement("span", {
+    "data-msc-reach": reach.map(x => x ? 1 : 0).join('')
+  }, React.createElement("small", null, "技が届く"), React.createElement("b", {
+    className: "r"
+  }, AMBW_DIST.map((dn, d) => React.createElement("i", {
+    key: dn,
+    className: reach[d] ? 'y' : ''
+  }, dn))))), React.createElement("div", {
     className: "msc-hint"
   }, React.createElement("img", {
     src: mscFace(s.aid),
     alt: ""
-  }), React.createElement("span", null, hint)), React.createElement("div", {
+  }), React.createElement("span", {
+    style: typeof JA_LABEL_STYLE !== 'undefined' ? JA_LABEL_STYLE : undefined
+  }, hint)), React.createElement("div", {
     className: "msc-foot"
   }, React.createElement("button", {
     className: "msc-btn y s",
@@ -151746,6 +151865,7 @@ function MonsucCupLose({
     const t = match.r.log.filter(x => x.ev === 'tech' && x.side === 'B' && x.hit);
     return t.length ? `${t[t.length - 1].name}が 効いてたね…` : 'あと少しだったね…';
   })();
+  const lossWhy = match && match.r ? monsucLossWhy(match.r.log, info.meName) : null;
   return React.createElement("div", {
     className: "msc-wrap",
     "data-msc-lose": true
@@ -151770,7 +151890,12 @@ function MonsucCupLose({
       src: mscMonImg(s.species),
       calm: typeof msxAwCalm === 'function' && msxAwCalm()
     }) : im;
-  })())), React.createElement("div", {
+  })())), lossWhy ? React.createElement("div", {
+    className: "msc-why",
+    "data-msc-loss-why": true
+  }, React.createElement("b", null, "負けたわけ"), React.createElement("span", {
+    style: typeof JA_LABEL_STYLE !== 'undefined' ? JA_LABEL_STYLE : undefined
+  }, typeof jaWrap === 'function' ? jaWrap(lossWhy) : lossWhy)) : null, React.createElement("div", {
     className: "msc-again"
   }, React.createElement("h3", null, "時をもどして、やり直す?"), React.createElement("p", null, "やり直せるのは 1回の育成で", mscNum(suc.REMATCH && suc.REMATCH.max, 3), "回まで・", React.createElement("em", null, "のこり ", left, "/", mscNum(suc.REMATCH && suc.REMATCH.max, 3))), React.createElement("button", {
     className: "msc-pick sand",
@@ -151932,6 +152057,8 @@ function MonsucCupShowInner({
       return null;
     }
   }, [engine, catalog, info, fightRes]);
+  const oddsInput = fightRes && fightRes.input || match && match.input || null;
+  const odds = useMemo(() => engine && oddsInput ? monsucOdds(engine, oddsInput) : null, [engine, oddsInput]);
   const [played, setPlayed] = useState(null);
   const shown = played && played.result ? {
     ...match,
@@ -151962,6 +152089,7 @@ function MonsucCupShowInner({
     s: s,
     info: info,
     catalog: catalog,
+    odds: odds,
     onBack: () => setPhase('bracket'),
     onReady: () => setPhase(info.buffs || info.buffRows.length ? 'cutin' : 'match'),
     onResultOnly: () => match && finish(match.won)
@@ -170390,6 +170518,45 @@ function MsxR3Cup({
   const [win, setWin] = useState(null);
   const [prz, setPrz] = useState(null);
   const cur = cupsNow.find(c => c.id === pick) || null;
+  const [engine, setEngine] = useState(typeof window !== 'undefined' ? window.ASSISTANT_MASMON_BATTLE || null : null);
+  const [tablesOk, setTablesOk] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    Promise.all([engine ? Promise.resolve(engine) : msxR3LoadEngine(), msxR3LoadTables()]).then(([e]) => {
+      if (!alive) return;
+      setTablesOk(true);
+      if (e) setEngine(e);
+    }).catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, []);
+  const oddsBy = useMemo(() => {
+    const out = {};
+    if (!engine || !tablesOk || typeof monsucOdds !== 'function') return out;
+    cupsNow.forEach(c => {
+      if (!c.entry || !c.entry.ok) return;
+      try {
+        const f = msxR3Fight(engine, SUC, {
+          ...run,
+          s: {
+            ...s,
+            battle: {
+              kind: 'cup',
+              id: c.id,
+              sys: c.sys,
+              star: c.star,
+              rival: c.rival || null,
+              round: 0
+            }
+          }
+        });
+        const o = f && f.input ? monsucOdds(engine, f.input) : null;
+        if (o) out[c.id] = o;
+      } catch (_) {}
+    });
+    return out;
+  }, [engine, tablesOk, s.turn, s.stats, s.techs, cupsNow.length]);
   const go = skip => {
     if (!cur || !cur.entry || !cur.entry.ok) return;
     const r = SUC.act(s, {
@@ -170486,7 +170653,7 @@ function MsxR3Cup({
     className: "v-cups"
   }, cups.length ? cups.map(c => {
     const ok = now && c.entry && c.entry.ok;
-    const fc = typeof SUC.forecastOf === 'function' ? SUC.forecastOf(s, c) : null;
+    const fc = now && oddsBy[c.id] || (typeof SUC.forecastOf === 'function' ? SUC.forecastOf(s, c) : null);
     const cls = `${!(c.entry && c.entry.ok) ? 'ng' : now && c.id === pick ? 'sel' : c.rival ? 'rv' : c.done ? 'won' : ''}${c.ex ? ` ex g-${c.grade || 'gold'}` : ''}${c.hard ? ' hard' : ''}${now ? '' : ' later'}`;
     return React.createElement("button", {
       type: "button",
@@ -172157,7 +172324,7 @@ function MsxR3Battle({
     }, React.createElement("img", {
       src: msxFace(s.aid, 'excited'),
       alt: ""
-    }), better.length ? React.createElement("span", null, better.slice(0, 2).join('と'), "は勝ってる! ", React.createElement("em", null, "落ち着いて"), "いこう!") : React.createElement("span", null, "相手は強いよ… ", React.createElement("em", null, "ねばって"), "いこう!")));
+    }), better.length ? React.createElement("span", null, better.length >= MSX_STATS.length ? '能力は全部' : better.slice(0, 2).join('と'), "は勝ってる! ", React.createElement("em", null, "落ち着いて"), "いこう!") : React.createElement("span", null, "相手は強いよ… ", React.createElement("em", null, "ねばって"), "いこう!")));
     const foot = React.createElement("div", {
       className: "v-ft"
     }, React.createElement("button", {
