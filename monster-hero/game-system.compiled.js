@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 57a5be258d82ee99
+// source-sha256: b95ca0622d852125
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -14221,6 +14221,7 @@ const RELEASE_FLAGS = {
   assistantMasmonRanchTicket: true,
   assistantMasmonPlan: true,
   assistantMasmonSleep: true,
+  assistantLifeTaste: true,
   assistantMasmonBond: true,
   monheroSuccess: false,
   assistantMasmonFuse: true,
@@ -117328,6 +117329,34 @@ function AssistantLifeMapFig({
     size: Math.round(h * 0.5)
   }));
 }
+function AssistantLifeMapViewRow({
+  id,
+  place,
+  town = false,
+  w = null
+}) {
+  const a = assistantById(id);
+  if (!a) return null;
+  const d = w && ASSISTANT_LIFE_DOINGS[w.doing];
+  return React.createElement("div", {
+    className: "mt-2 flex items-center gap-2 rounded-2xl border border-white/10 bg-slate-900/85 p-2",
+    "data-assistant-life-map-sheet-who": id,
+    "data-assistant-life-map-view-row": true
+  }, React.createElement("span", {
+    className: "shrink-0"
+  }, React.createElement(AssistantFace, {
+    who: a,
+    size: 36
+  })), React.createElement("div", {
+    className: "min-w-0 flex-1"
+  }, React.createElement("p", {
+    className: "text-[13px] font-black text-white",
+    style: JA_WRAP_STYLE
+  }, a.name), React.createElement("p", {
+    className: "text-[10.5px] font-bold text-slate-300",
+    style: JA_WRAP_STYLE
+  }, town ? jaWrap(`${assistantLifeMapSpotWord(place)}で `) : '', w && ASSISTANT_LIFE_DOING_ICON[w.doing], " ", jaWrap(d ? d.label : '過ごしている'))));
+}
 function AssistantLifeMapRow({
   id,
   place,
@@ -117408,7 +117437,7 @@ function AssistantLifeMapRow({
     className: "block text-[10px] font-bold text-emerald-50",
     style: JA_LABEL_STYLE
   }, jaWrap(si.sub)));
-  const tiLine = ti && (ti.today ? `🥋 ${ti.today.nick}・${ti.today.kind}${ti.today.learned ? ` NEW ${ti.today.learned}を覚えた` : ''}${ti.today.main ? ` ・ ${ti.today.main} 熟練 +${ti.today.gain}` : ''}` : '🥋 今日はまだ修行していません');
+  const tiLine = ti && (ti.today ? `🥋 今日の修行: ${ti.today.nick} ― ${ti.today.kindText || ti.today.kind}${ti.today.learned ? ` NEW 新しい技「${ti.today.learned}」を覚えた` : ''}${ti.today.main ? ` 技の熟練度 ${ti.today.main} +${ti.today.gain}` : ''}` : '🥋 今日はまだ修行していません');
   return React.createElement("div", {
     key: id,
     className: `mt-2 flex flex-wrap items-center gap-2 rounded-2xl border bg-slate-900/85 p-2 ${selected ? "border-sky-300 ring-2 ring-sky-300/70" : "border-white/10"}`,
@@ -117631,7 +117660,8 @@ function AssistantLifeTownMap({
   land = false,
   initialPlace = null,
   initialAssistantId = null,
-  initialKey = 0
+  initialKey = 0,
+  friendView = null
 }) {
   const [home, setHome] = React.useState(() => assistantLifeMapReadHome());
   const [sheet, setSheet] = React.useState(() => initialPlace && assistantLifeMapOrderNow().includes(initialPlace) ? initialPlace : null);
@@ -117653,10 +117683,13 @@ function AssistantLifeTownMap({
       window.removeEventListener('resize', re);
     };
   }, []);
+  const whereOf = id => friendView ? friendView.whereOf(id) : assistantLifeWhereOf(life, id);
+  const ro = !!friendView;
   const at = {};
   for (const id of ASSISTANT_LIFE_HOUSE_ORDER) {
     if (!ids.includes(id)) continue;
-    const w = assistantLifeWhereOf(life, id);
+    const w = whereOf(id);
+    if (ro && !(w && ASSISTANT_LIFE_PLACE_ICON[w.place])) continue;
     const p = w && ASSISTANT_LIFE_PLACE_ICON[w.place] ? w.place : 'home';
     (at[p] = at[p] || []).push(id);
   }
@@ -117873,6 +117906,7 @@ function AssistantLifeTownMap({
     cardroom: `×${typeof CARD_LIFE_UP_LABEL !== 'undefined' ? String(CARD_LIFE_UP_LABEL).replace(/倍$/, '') : '1.375'}`
   };
   const perkOf = place => {
+    if (ro) return false;
     try {
       return typeof assistantLifePerkAt === 'function' && assistantLifePerkAt(place, life, ids) === true;
     } catch (_) {
@@ -117901,7 +117935,7 @@ function AssistantLifeTownMap({
     }, inner, perkMark(place));
   };
   const cardN = (at.cardroom || []).length;
-  const spentOf = (id, place) => place === 'cardroom' && typeof assistantLifeCardSpent === 'function' && !!assistantLifeCardSpent(id);
+  const spentOf = (id, place) => !ro && place === 'cardroom' && typeof assistantLifeCardSpent === 'function' && !!assistantLifeCardSpent(id);
   const crowd = place => {
     const who = at[place] || [];
     if (!who.length) return null;
@@ -117922,7 +117956,7 @@ function AssistantLifeTownMap({
     }, who.map((id, i) => {
       const a = assistantById(id);
       if (!a) return null;
-      const w = assistantLifeWhereOf(life, id);
+      const w = whereOf(id);
       return React.createElement("button", {
         key: id,
         type: "button",
@@ -117944,7 +117978,7 @@ function AssistantLifeTownMap({
     }, `${assistantLifeName(who[0])}ほか${who.length - 1}人`)) : who.map(id => {
       const a = assistantById(id);
       if (!a) return null;
-      const w = assistantLifeWhereOf(life, id);
+      const w = whereOf(id);
       const d = w && ASSISTANT_LIFE_DOINGS[w.doing];
       return React.createElement("button", {
         key: id,
@@ -117955,7 +117989,7 @@ function AssistantLifeTownMap({
         onClick: () => setSheet(place),
         className: "flex flex-col items-center px-[1px]"
       }, (() => {
-        const town = typeof assistantLifePartnerOk === 'function' && !assistantLifePartnerOk(id);
+        const town = !ro && typeof assistantLifePartnerOk === 'function' && !assistantLifePartnerOk(id);
         return React.createElement(React.Fragment, null, React.createElement("span", {
           className: "block",
           style: town ? {
@@ -117970,7 +118004,7 @@ function AssistantLifeTownMap({
         })), React.createElement("span", {
           className: "mhl-map-name",
           "data-assistant-life-map-name": true
-        }, typeof assistantLifeBodyCondShort === 'function' && assistantLifeBodyCondShort(id) ? assistantLifeBodyBadge(id) : w && ASSISTANT_LIFE_DOING_ICON[w.doing], a.name, town ? '・町の人' : ''));
+        }, !ro && typeof assistantLifeBodyCondShort === 'function' && assistantLifeBodyCondShort(id) ? assistantLifeBodyBadge(id) : w && ASSISTANT_LIFE_DOING_ICON[w.doing], a.name, town ? '・町の人' : ''));
       })());
     }));
   };
@@ -117980,7 +118014,13 @@ function AssistantLifeTownMap({
     place: sheetPlace
   }) : null;
   const sheetTown = sheetPlace === 'home' ? assistantLifeMapTownOnlyNow().flatMap(p => (at[p] || []).map(id => [id, p])) : [];
-  const row = (id, place, town) => React.createElement(AssistantLifeMapRow, {
+  const row = (id, place, town) => ro ? React.createElement(AssistantLifeMapViewRow, {
+    key: id,
+    id: id,
+    place: place,
+    town: town,
+    w: whereOf(id)
+  }) : React.createElement(AssistantLifeMapRow, {
     key: id,
     id: id,
     place: place,
@@ -118003,7 +118043,7 @@ function AssistantLifeTownMap({
     className: "absolute inset-0 z-[4] overflow-y-auto overflow-x-hidden bg-[#0b1020]",
     "data-assistant-life-where": true,
     "data-assistant-life-map-art": art
-  }, typeof AssistantMasmonRanchHost === 'function' && React.createElement(AssistantMasmonRanchHost, null), typeof AssistantMasmonTrainWatchHost === 'function' && React.createElement(AssistantMasmonTrainWatchHost, null), React.createElement("style", null, `.mhl-map-town{position:absolute;z-index:4;padding:0;border:0;background:transparent;color:#fff}
+  }, !ro && typeof AssistantMasmonRanchHost === 'function' && React.createElement(AssistantMasmonRanchHost, null), !ro && typeof AssistantMasmonTrainWatchHost === 'function' && React.createElement(AssistantMasmonTrainWatchHost, null), React.createElement("style", null, `.mhl-map-town{position:absolute;z-index:4;padding:0;border:0;background:transparent;color:#fff}
 .mhl-map-town>span{display:flex;align-items:center;gap:4px;white-space:nowrap;min-height:${home.h >= 700 ? 44 : home.h >= 600 ? 34 : 0}px;padding:4px ${home.h >= 600 ? 11 : 9}px;border:2px solid #ffe6a7a8;border-radius:12px;background:#10211df2;box-shadow:0 3px 10px #0009;font-size:12px;font-weight:900;line-height:1.15;text-shadow:0 2px 4px #000}
 .mhl-map-town[data-assistant-life-map-empty="1"]>span{opacity:.6;border-color:#94a3b8aa;background:#0f172ad9}
 .mhl-map-name{display:block;margin-top:-1px;white-space:nowrap;border-radius:7px;background:#0b1020e6;padding:0 4px;font-size:${home.h >= 700 ? 11 : 10}px;font-weight:900;line-height:${small ? 13 : home.h >= 700 ? 15 : 14}px;color:#fff;box-shadow:0 1px 3px #0008}
@@ -118080,7 +118120,7 @@ function AssistantLifeTownMap({
       onClick: () => setSheet(p)
     }, React.createElement("span", null, ASSISTANT_LIFE_PLACE_ICON[p], " ", assistantLifePlaceShow(p)));
   }), assistantLifeMapOrderNow().map(crowd), React.createElement("div", {
-    className: "absolute inset-x-0 top-0 z-[8] flex items-center gap-2 bg-gradient-to-b from-[#0b1020f2] via-[#0b1020d9] to-transparent px-2 pb-3",
+    className: `absolute inset-x-0 top-0 z-[8] flex items-center gap-2${ro && !land ? ' flex-wrap' : ''} bg-gradient-to-b from-[#0b1020f2] via-[#0b1020d9] to-transparent px-2 pb-3`,
     style: {
       paddingTop: land ? 6 : 'calc(6px + env(safe-area-inset-top))',
       paddingLeft: 'calc(8px + env(safe-area-inset-left))',
@@ -118099,14 +118139,25 @@ function AssistantLifeTownMap({
     onClick: onBack,
     className: "shrink-0 rounded-xl border border-pink-300/60 bg-slate-950/85 px-2.5 py-1.5 text-[12px] font-black text-pink-100 active:scale-95"
   }, "🏡 家へ"), React.createElement("div", {
-    className: "min-w-0 flex-1"
+    className: ro && !land ? 'min-w-0 basis-full' : 'min-w-0 flex-1'
   }, React.createElement("p", {
-    className: "truncate text-[15px] font-black leading-tight text-white",
+    className: ro ? 'text-[13px] font-black leading-tight text-white' : 'truncate text-[15px] font-black leading-tight text-white',
     style: {
-      textShadow: '0 2px 4px #000'
+      textShadow: '0 2px 4px #000',
+      ...(ro ? {
+        overflowWrap: 'anywhere'
+      } : null)
     }
-  }, nav ? '🗺 町' : '📋 みんなの居場所'), React.createElement("p", {
-    className: "truncate text-[10px] font-bold text-slate-200",
+  }, ro ? React.createElement(React.Fragment, null, React.createElement("span", {
+    style: {
+      display: 'inline-block'
+    }
+  }, `🗺 ${friendView.name}さんの`), React.createElement("span", {
+    style: {
+      display: 'inline-block'
+    }
+  }, "町")) : nav ? '🗺 町' : '📋 みんなの居場所'), React.createElement("p", {
+    className: ro ? 'text-[10px] font-bold leading-tight text-slate-200' : 'truncate text-[10px] font-bold text-slate-200',
     "data-assistant-life-map-time": true
   }, assistantLifeTodLabel(), " ・ ", assistantLifeNextSlotText().replace(/みんなが動きます$/, 'みんなが動く'))), list && React.createElement("button", {
     type: "button",
@@ -118125,10 +118176,10 @@ function AssistantLifeTownMap({
   }, "📃 一覧 ↓")), React.createElement("p", {
     className: "pointer-events-none absolute left-1/2 z-[7] -translate-x-1/2 whitespace-nowrap rounded-full bg-slate-950/85 px-3 py-1 text-[10.5px] font-bold text-slate-100",
     style: {
-      top: land ? 54 : 'calc(60px + env(safe-area-inset-top))'
+      top: land ? 54 : ro ? 'calc(98px + env(safe-area-inset-top))' : 'calc(60px + env(safe-area-inset-top))'
     },
     "data-assistant-life-map-hint": true
-  }, "場所を押すと、いる助手と「いま行くと得」が見られます"))), list && React.createElement("div", {
+  }, ro ? '場所を押すと、いる助手が見られます' : '場所を押すと、いる助手と「いま行くと得」が見られます'))), list && React.createElement("div", {
     ref: listRef,
     className: "relative bg-[#0b1020]",
     "data-assistant-life-map-below": true
@@ -118169,7 +118220,7 @@ function AssistantLifeTownMap({
     style: JA_WRAP_STYLE
   }, sheetPlace === 'cardroom' && typeof CARD_LIFE_UP_LABEL !== 'undefined' ? React.createElement(React.Fragment, null, jaWrap('MFバトルカードの研究をしている助手。いる助手と対戦すると、'), React.createElement("span", {
     className: "whitespace-nowrap"
-  }, "ごほうび ", CARD_LIFE_UP_LABEL)) : jaWrap(ASSISTANT_LIFE_MAP_ABOUT[sheetPlace])), typeof AssistantLifePlacePerk === 'function' && sheetWho.length > 0 && React.createElement(AssistantLifePlacePerk, {
+  }, "ごほうび ", CARD_LIFE_UP_LABEL)) : jaWrap(ASSISTANT_LIFE_MAP_ABOUT[sheetPlace])), !ro && typeof AssistantLifePlacePerk === 'function' && sheetWho.length > 0 && React.createElement(AssistantLifePlacePerk, {
     life: life,
     ids: sheetWho,
     place: sheetPlace,
@@ -118182,7 +118233,7 @@ function AssistantLifeTownMap({
     className: "mt-2 rounded-xl bg-slate-900/85 px-2 py-2 text-[12px] font-bold text-slate-300",
     "data-assistant-life-map-sheet-none": true,
     style: JA_WRAP_STYLE
-  }, "いまはだれもいません"), typeof assistantLifePlanOn === 'function' && assistantLifePlanOn() && ASSISTANT_LIFE_PLAN_PLACES.includes(sheetPlace) && assistantLifePlanSlotsLeft().length > 0 && React.createElement("button", {
+  }, "いまはだれもいません"), !ro && typeof assistantLifePlanOn === 'function' && assistantLifePlanOn() && ASSISTANT_LIFE_PLAN_PLACES.includes(sheetPlace) && assistantLifePlanSlotsLeft().length > 0 && React.createElement("button", {
     type: "button",
     "data-assistant-life-map-plan": sheetPlace,
     onClick: () => assistantLifePlanOpen({
@@ -121734,7 +121785,8 @@ const assistantLifeProfileLikes = (id, giftSt) => {
       id: x.monster,
       name: m.name,
       icon: m.faceIconUrl || m.iconUrl || '',
-      emoji: m.emoji || '🐾'
+      emoji: m.emoji || '🐾',
+      grown: x.grown === true
     } : null;
   };
   const monLike = plan && Array.isArray(plan.likeMon) ? plan.likeMon.map(monOf).filter(Boolean) : [];
@@ -121745,7 +121797,8 @@ const assistantLifeProfileLikes = (id, giftSt) => {
     total: cells.length,
     hint: hintCell ? hints[hintCell.k] : null,
     monLike,
-    monBad
+    monBad,
+    recent: typeof assistantLifeTasteRecent === 'function' ? assistantLifeTasteRecent(id, 14) : []
   };
 };
 const assistantLifeProfileMinBond = line => {
@@ -121984,9 +122037,11 @@ function AssistantLifeProfilePage({
   metIds,
   bondLevelOf = null,
   land = false,
-  onMasmon = null
+  onMasmon = null,
+  viewOnly = false
 }) {
-  const giftSt = typeof useAssistantLifeGiftState === 'function' ? useAssistantLifeGiftState() : null;
+  const giftStAll = typeof useAssistantLifeGiftState === 'function' ? useAssistantLifeGiftState() : null;
+  const giftSt = viewOnly ? null : giftStAll;
   const [seen, setSeen] = React.useState(null);
   const [openId, setOpenId] = React.useState(null);
   const boxRef = React.useRef(null);
@@ -121994,8 +122049,12 @@ function AssistantLifeProfilePage({
   const met = new Set(Array.isArray(metIds) ? metIds : []);
   const metList = roster.filter(w => met.has(w.id));
   const counts = {};
-  for (const w of metList) counts[w.id] = assistantLifeProfileCount(w.id, assistantLifeProfileBond(w.id, bondLevelOf).lv, giftSt);
+  if (!viewOnly) for (const w of metList) counts[w.id] = assistantLifeProfileCount(w.id, assistantLifeProfileBond(w.id, bondLevelOf).lv, giftSt);
   React.useEffect(() => {
+    if (viewOnly) {
+      setSeen({});
+      return undefined;
+    }
     let alive = true;
     Promise.resolve(typeof storeGet === 'function' ? storeGet(ASSISTANT_LIFE_PROFILE_SEEN_KEY, null, false) : null).then(v => {
       if (alive) setSeen(normalizeAssistantLifeProfileSeen(v));
@@ -122008,13 +122067,14 @@ function AssistantLifeProfilePage({
   }, []);
   const save = next => {
     setSeen(next);
+    if (viewOnly) return;
     try {
       if (typeof storeSet === 'function') void storeSet(ASSISTANT_LIFE_PROFILE_SEEN_KEY, next, false);
     } catch (_) {}
   };
   const giftReady = typeof ASSISTANT_LIFE_GIFT_STORE === 'undefined' || ASSISTANT_LIFE_GIFT_STORE.loaded === true;
   React.useEffect(() => {
-    if (!seen || !giftReady) return;
+    if (viewOnly || !seen || !giftReady) return;
     const miss = metList.filter(w => !seen[w.id]);
     if (!miss.length) return;
     const next = {
@@ -122025,7 +122085,7 @@ function AssistantLifeProfilePage({
     };
     save(next);
   }, [seen, giftReady, metList.map(w => w.id).join(',')]);
-  const isNew = id => !!(giftReady && seen && seen[id] && (counts[id] || 0) > seen[id].n);
+  const isNew = id => !viewOnly && !!(giftReady && seen && seen[id] && (counts[id] || 0) > seen[id].n);
   const open = id => {
     if (!met.has(id)) return;
     if (seen && giftReady) save({
@@ -122072,7 +122132,7 @@ function AssistantLifeProfilePage({
     }, "？？？"), React.createElement("p", {
       className: "text-[11px] font-bold text-slate-400"
     }, "まだ会っていません"));
-    const b = assistantLifeProfileBond(w.id, bondLevelOf);
+    const b = viewOnly ? null : assistantLifeProfileBond(w.id, bondLevelOf);
     return React.createElement("button", {
       key: w.id,
       type: "button",
@@ -122097,18 +122157,19 @@ function AssistantLifeProfilePage({
     }, w.name), React.createElement("p", {
       className: "text-[10.5px] font-bold leading-snug text-slate-200",
       style: typeof JA_LABEL_STYLE !== 'undefined' ? JA_LABEL_STYLE : undefined
-    }, typeof jaWrap === 'function' ? jaWrap(w.tagline || '') : w.tagline || ''), React.createElement("span", {
+    }, typeof jaWrap === 'function' ? jaWrap(w.tagline || '') : w.tagline || ''), b && React.createElement("span", {
       className: "mt-1 inline-block rounded-full bg-slate-950/80 px-2 py-0.5 text-[10.5px] font-black text-pink-100"
     }, "💗 Lv", b.lv));
   })), React.createElement("p", {
     className: "mt-2 text-[10.5px] font-bold leading-snug text-slate-300"
-  }, "💗 好きなものは、贈ると分かって紹介に残ります。", metList.length < roster.length ? 'まだ会っていない助手は、お話で出会うと紹介が開きます。' : ''), openId && (() => {
+  }, viewOnly ? metList.length < roster.length ? 'まだ会っていない助手は、この家の人も会うと紹介が開きます。' : '' : React.createElement(React.Fragment, null, "💗 好きなものは、贈ると分かって紹介に残ります。", metList.length < roster.length ? 'まだ会っていない助手は、お話で出会うと紹介が開きます。' : '')), openId && (() => {
     const sheet = React.createElement(AssistantLifeProfileSheet, {
       id: openId,
       bondLevelOf: bondLevelOf,
       land: land,
       giftSt: giftSt,
       onMasmon: onMasmon,
+      viewOnly: viewOnly,
       onClose: () => setOpenId(null)
     });
     const host = boxRef.current && boxRef.current.closest ? boxRef.current.closest('[data-assistant-life-screen]') : null;
@@ -122121,6 +122182,7 @@ function AssistantLifeProfileSheet({
   land = false,
   giftSt = null,
   onMasmon = null,
+  viewOnly = false,
   onClose
 }) {
   const who = typeof assistantById === 'function' ? assistantById(id) : null;
@@ -122134,9 +122196,15 @@ function AssistantLifeProfileSheet({
     voice: React.useRef(null)
   };
   if (!who) return null;
-  const b = assistantLifeProfileBond(id, bondLevelOf);
-  const likes = assistantLifeProfileLikes(id, giftSt);
-  const voices = assistantLifeProfileVoices(id, b.lv, giftSt);
+  const b = viewOnly ? {
+    lv: 0,
+    title: '',
+    tone: '',
+    next: null,
+    rate: 0
+  } : assistantLifeProfileBond(id, bondLevelOf);
+  const likes = viewOnly ? null : assistantLifeProfileLikes(id, giftSt);
+  const voices = viewOnly ? [] : assistantLifeProfileVoices(id, b.lv, giftSt);
   const vg = voices.find(g => g.key === vKey) || voices[0] || null;
   const vLine = vg && vg.open.length ? vg.open[vIdx % vg.open.length] : null;
   const team = typeof assistantLifeMasmonTeamOf === 'function' ? assistantLifeMasmonTeamOf(id) : [];
@@ -122182,7 +122250,10 @@ function AssistantLifeProfileSheet({
     src: m.icon,
     alt: "",
     className: "h-5 w-5 rounded-md object-contain"
-  }) : m.emoji, " ", m.name);
+  }) : m.emoji, " ", m.name, m.grown && React.createElement("em", {
+    "data-assistant-life-taste-new": true,
+    className: "whitespace-nowrap rounded-md bg-amber-300 px-1 text-[9.5px] font-black not-italic text-slate-900"
+  }, "✨ 新しく"));
   const hero = React.createElement("div", {
     className: "relative overflow-hidden",
     "data-assistant-life-profile-hero": true,
@@ -122221,7 +122292,7 @@ function AssistantLifeProfileSheet({
       textShadow: '0 1px 3px #000',
       ...(typeof JA_LABEL_STYLE !== 'undefined' ? JA_LABEL_STYLE : {})
     }
-  }, typeof jaWrap === 'function' ? jaWrap(who.tagline || '') : who.tagline), React.createElement("span", {
+  }, typeof jaWrap === 'function' ? jaWrap(who.tagline || '') : who.tagline), !viewOnly && React.createElement("span", {
     className: "mt-1.5 inline-block rounded-full border border-white/15 bg-slate-950/80 px-2 py-0.5 text-[11px] font-black text-white"
   }, "💗 Lv", b.lv, " ", b.title)), greeting && React.createElement("div", {
     "data-assistant-life-profile-greeting": true,
@@ -122241,7 +122312,7 @@ function AssistantLifeProfileSheet({
   const jumps = React.createElement("div", {
     className: "flex gap-1.5 border-b border-white/10 bg-slate-950/90 px-2.5 py-2",
     "data-assistant-life-profile-jump": true
-  }, [['who', '人となり'], ['likes', '好き・苦手'], ['bond', 'きずな'], ['voice', '台詞']].map(([k, l]) => React.createElement("button", {
+  }, (viewOnly ? [['who', '人となり']] : [['who', '人となり'], ['likes', '好き・苦手'], ['bond', 'きずな'], ['voice', '台詞']]).map(([k, l]) => React.createElement("button", {
     key: k,
     type: "button",
     onClick: () => jump(k),
@@ -122254,7 +122325,7 @@ function AssistantLifeProfileSheet({
   }, React.createElement("p", {
     className: h3
   }, who.emoji || '🌟', " 人となり"), who.intro && kv('性格', who.intro), assistantLifeProfileRhythm(id) && kv('生活', assistantLifeProfileRhythm(id)), b.tone && kv('話し方(いま)', b.tone));
-  const secLikes = React.createElement("div", {
+  const secLikes = viewOnly ? null : React.createElement("div", {
     ref: refs.likes,
     className: card,
     "data-assistant-life-profile-sec": "likes"
@@ -122264,7 +122335,16 @@ function AssistantLifeProfileSheet({
     className: "whitespace-nowrap"
   }, land ? '💗 好き・💧 苦手' : '💗 好きなもの・💧 苦手なもの'), likes.total > 0 && React.createElement("em", {
     className: "whitespace-nowrap text-[10.5px] font-bold not-italic text-slate-400"
-  }, "分かったもの ", likes.known, "/", likes.total)), likes.rows.map(r => React.createElement("div", {
+  }, "分かったもの ", likes.known, "/", likes.total)), likes.recent.length > 0 && (() => {
+    const x = likes.recent[0];
+    return React.createElement("p", {
+      "data-assistant-life-taste-say": true,
+      className: "my-1.5 rounded-xl bg-slate-950/80 px-2 py-1.5 text-[11.5px] font-bold leading-snug text-pink-100"
+    }, "🗨 ", who.name, "「", assistantLifeTasteSay(x).map((t, i) => React.createElement("span", {
+      key: i,
+      className: "inline-block whitespace-nowrap"
+    }, t)), "」");
+  })(), likes.rows.map(r => React.createElement("div", {
     key: r.label,
     className: "my-1 flex flex-wrap items-center gap-1"
   }, React.createElement("span", {
@@ -122273,13 +122353,37 @@ function AssistantLifeProfileSheet({
     className: "my-1 flex flex-wrap items-center gap-1"
   }, React.createElement("span", {
     className: "w-[4.6em] shrink-0 whitespace-nowrap text-[11px] font-bold text-slate-400"
-  }, "モンスター"), likes.monLike.map(m => monChip(m, true)), likes.monBad.map(m => monChip(m, false))), likes.hint && React.createElement("p", {
+  }, "モンスター"), likes.monLike.map(m => monChip(m, true)), likes.monBad.map(m => monChip(m, false))), likes.recent.length > 0 && React.createElement("div", {
+    "data-assistant-life-taste-log": true,
+    className: "mt-1.5 rounded-xl border border-white/10 px-2 py-1.5"
+  }, React.createElement("p", {
+    className: "mb-0.5 text-[11px] font-black text-slate-300"
+  }, "🌱 最近の変化"), likes.recent.slice(0, 3).map((x, i) => React.createElement("p", {
+    key: i,
+    className: "text-[10.5px] font-bold leading-snug text-slate-300"
+  }, React.createElement("span", {
+    className: "inline-block whitespace-nowrap"
+  }, x.day.slice(5).replace('-', '/')), " ", React.createElement("span", {
+    className: "inline-block whitespace-nowrap"
+  }, x.name, ":"), " ", React.createElement("span", {
+    className: "inline-block whitespace-nowrap"
+  }, {
+    like: '好き',
+    dislike: '苦手',
+    normal: 'ふつう'
+  }[x.from], " →"), " ", React.createElement("span", {
+    className: "inline-block whitespace-nowrap"
+  }, {
+    like: '好き',
+    dislike: '苦手',
+    normal: 'ふつう'
+  }[x.to])))), likes.hint && React.createElement("p", {
     "data-assistant-life-profile-hint": true,
     className: "mt-1.5 rounded-xl bg-slate-950/80 px-2 py-1.5 text-[11px] font-bold leading-snug text-slate-200"
   }, "💭 ", who.name, "の話から:「", String(likes.hint.t).replace(/\{name\}/g, call), "」"), likes.total > 0 && React.createElement("p", {
     className: "mt-1 text-[10.5px] font-bold text-slate-400"
   }, "？は贈ると分かります。分かった好みはここに残ります。"));
-  const secBond = React.createElement("div", {
+  const secBond = viewOnly ? null : React.createElement("div", {
     ref: refs.bond,
     className: card,
     "data-assistant-life-profile-sec": "bond"
@@ -122335,7 +122439,7 @@ function AssistantLifeProfileSheet({
     },
     className: "mt-2 min-h-[44px] w-full rounded-xl bg-slate-700 text-[12.5px] font-black text-white active:scale-[.98]"
   }, "🐾 マスモンをくわしく見る ›")));
-  const secVoice = React.createElement("div", {
+  const secVoice = viewOnly ? null : React.createElement("div", {
     ref: refs.voice,
     className: card,
     "data-assistant-life-profile-sec": "voice"
@@ -122427,9 +122531,9 @@ function AssistantLifeProfileSheet({
     className: "grid grid-cols-2 items-start gap-2.5"
   }, React.createElement("div", {
     className: "flex flex-col gap-2.5"
-  }, secWho, secLikes), React.createElement("div", {
+  }, secWho, !viewOnly && secLikes), React.createElement("div", {
     className: "flex flex-col gap-2.5"
-  }, secBond, secVoice))))) : React.createElement(React.Fragment, null, top, React.createElement("div", {
+  }, !viewOnly && secBond, !viewOnly && secVoice))))) : React.createElement(React.Fragment, null, top, React.createElement("div", {
     ref: scrollRef,
     className: "mh-scroll relative min-h-0 flex-1 overflow-y-auto",
     style: {
@@ -122439,7 +122543,7 @@ function AssistantLifeProfileSheet({
     className: "sticky top-0 z-[3]"
   }, jumps), React.createElement("div", {
     className: "flex flex-col gap-2.5 p-3"
-  }, secWho, secLikes, secBond, secVoice))));
+  }, secWho, !viewOnly && secLikes, !viewOnly && secBond, !viewOnly && secVoice))));
 }
 const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   id: 'rel-fight-erubin-momosuke-1',
@@ -138100,7 +138204,15 @@ const ASSISTANT_MASMON_PLAN = [{
     "why": "落ち着いた色"
   }]
 }];
-const assistantMasmonBasePlanOf = id => ASSISTANT_MASMON_PLAN.find(a => a && a.id === id) || null;
+const assistantMasmonBasePlanOf = id => {
+  const b = ASSISTANT_MASMON_PLAN.find(a => a && a.id === id) || null;
+  if (!b) return null;
+  try {
+    return typeof assistantLifeTasteOverlay === 'function' ? assistantLifeTasteOverlay(b) : b;
+  } catch (_) {
+    return b;
+  }
+};
 const assistantMasmonPlanOf = id => {
   const base = assistantMasmonBasePlanOf(id);
   if (!base) return null;
@@ -141200,10 +141312,19 @@ const assistantLifeTasteOf = id => {
   const p = assistantMasmonPlanOf(id);
   if (!p) return null;
   const names = xs => [...new Set((xs || []).map(assistantMasmonTasteName).filter(Boolean))].slice(0, 5);
+  let changed = [];
+  try {
+    changed = typeof assistantLifeTasteRecent === 'function' ? assistantLifeTasteRecent(id, 14).slice(0, 3).map(x => ({
+      name: x.name,
+      to: x.to
+    })) : [];
+  } catch (_) {
+    changed = [];
+  }
   return {
     likes: names(p.likeMon),
     dislikes: names(p.dislikeMon),
-    changed: []
+    changed
   };
 };
 if (typeof ASSISTANT_CHAT_TASTE_HOOKS === 'object' && ASSISTANT_CHAT_TASTE_HOOKS) {
@@ -153047,6 +153168,14 @@ const amgcAtBattle = (aid, life = amgcLife()) => {
     return false;
   }
 };
+const AMGC_KIND_SENTENCE = Object.freeze({
+  pow: 'ちからを伸ばす修行',
+  wise: 'かしこさを伸ばす修行',
+  hit: '命中を伸ばす修行',
+  eva: '回避を伸ばす修行',
+  tough: '防御を伸ばす修行',
+  real: '実戦で技を磨く修行'
+});
 const amgcSparOf = (aid, now = Date.now()) => {
   const fr = AMGC_STORE.state.fr;
   if (fr >= 0 && amgcToday(now) - fr < AMGC_NUM.friendDays) return 'friend';
@@ -153099,6 +153228,7 @@ const assistantMasmonTrainRowInfo = (aid, now = Date.now()) => {
     today = {
       nick: last.row.nick || '',
       monster: last.row.monster,
+      kindText: AMGC_KIND_SENTENCE[last.log.k] || '',
       kind: (AMGT_KINDS[last.log.k] || {}).name || '',
       act: (AMGT_KINDS[last.log.k] || {}).act || '',
       learned: last.log.l ? amgcTechName(last.row.monster, last.log.l) : '',
@@ -153404,7 +153534,7 @@ function AssistantMasmonTrainWatch({
   const aimNames = gains.map(([k]) => amgcTechName(row.monster, k));
   const learnedName = last && last.log.l ? amgcTechName(row.monster, last.log.l) : '';
   const growNames = aimNames.filter(n => n && n !== learnedName);
-  const aim = learnedName ? `新しい技「${learnedName}」を覚えるための練習試合${growNames.length ? `(${growNames.join('・')}の熟練も伸ばします)` : ''}` : growNames.length ? `「${growNames.join('」「')}」の熟練(見習い→熟練)を伸ばす練習試合` : '技の熟練を伸ばす練習試合';
+  const aim = learnedName ? `新しい技「${learnedName}」を覚えるための練習試合${growNames.length ? `(${growNames.join('・')}の熟練も伸ばします)` : ''}` : growNames.length ? `「${growNames.join('」「')}」の技の熟練度を伸ばす練習試合` : '技の熟練を伸ばす練習試合';
   const faceOf = aId => {
     const a = typeof ASSISTANT_LIST !== 'undefined' ? ASSISTANT_LIST.find(x => x.id === aId) : null;
     return a ? {
@@ -153638,7 +153768,7 @@ function AssistantMasmonTrainWatch({
     style: {
       display: 'block'
     }
-  }, React.createElement("span", null, row.nick), " ", React.createElement("span", null, "(", (AMGT_KINDS[last.log.k] || {}).name || '', ")")) : null), last && last.log.l && React.createElement("p", {
+  }, React.createElement("span", null, row.nick), " ", React.createElement("span", null, "― ", AMGC_KIND_SENTENCE[last.log.k] || (AMGT_KINDS[last.log.k] || {}).name || '')) : null), last && last.log.l && React.createElement("p", {
     "data-amgc-learned": true,
     style: {
       margin: '4px 0 0',
@@ -153652,7 +153782,7 @@ function AssistantMasmonTrainWatch({
       padding: '0 4px',
       fontSize: 10
     }
-  }, "NEW"), " ", amgcTechName(row.monster, last.log.l), " を覚えた"), gains.map(([k, n]) => {
+  }, "NEW"), " 新しい技「", amgcTechName(row.monster, last.log.l), "」を覚えた"), gains.map(([k, n]) => {
     const to = me ? me.m[k] || 0 : 0;
     const from = Math.max(0, to - n);
     return React.createElement("p", {
@@ -153663,11 +153793,24 @@ function AssistantMasmonTrainWatch({
         fontSize: 12,
         fontWeight: 800
       }
-    }, amgcTechName(row.monster, k), " ", from, "→", to, "(+", n, ") ", React.createElement("span", {
+    }, React.createElement("span", {
       style: {
-        color: '#fde68a'
+        whiteSpace: 'nowrap'
       }
-    }, amgtRankOf(from) === amgtRankOf(to) ? amgtRankOf(to) : `${amgtRankOf(from)}→${amgtRankOf(to)}`));
+    }, "技の熟練度"), " ", React.createElement("span", {
+      style: {
+        whiteSpace: 'nowrap'
+      }
+    }, amgcTechName(row.monster, k)), " ", React.createElement("span", {
+      style: {
+        whiteSpace: 'nowrap'
+      }
+    }, from, "→", to, "(+", n, ")"), " ", React.createElement("span", {
+      style: {
+        color: '#fde68a',
+        whiteSpace: 'nowrap'
+      }
+    }, "熟練の段: ", amgtRankOf(from) === amgtRankOf(to) ? amgtRankOf(to) : `${amgtRankOf(from)}→${amgtRankOf(to)}`));
   }), gift && gift.ok && React.createElement("p", {
     "data-amgc-gift": true,
     style: {
@@ -153675,7 +153818,7 @@ function AssistantMasmonTrainWatch({
       color: '#fdba74',
       fontWeight: 900
     }
-  }, who ? who.name : '', "「見に来てくれてうれしいです！」 🥋 ", gift.nick, " ", gift.tech, " 熟練 +", gift.to - gift.from, " ・ 💗 +", gift.bond), done && gift && !gift.ok && info && info.why && React.createElement("p", {
+  }, who ? who.name : '', "「見に来てくれてうれしいです！」 🥋 ", gift.nick, " ", gift.tech, " 技の熟練度 +", gift.to - gift.from, " ・ 💗 +", gift.bond), done && gift && !gift.ok && info && info.why && React.createElement("p", {
     className: "ambw-small",
     style: {
       marginTop: 6
@@ -156916,6 +157059,355 @@ function AmgsFuseSheet({
     className: "mt-2 min-h-[44px] w-full rounded-xl bg-slate-700 text-[13px] font-black"
   }, "やめる")));
 }
+const ASSISTANT_TASTE_KEY = 'mh_assistant_life_taste_v1';
+const AMT_LIKE_AT = 40;
+const AMT_UP_DAY = 6,
+  AMT_DOWN_DAY = 3;
+const AMT_CORE_RATE = 0.2;
+const AMT_SPREAD = 0.3;
+const AMT_KINDS = Object.freeze({
+  win: {
+    p: 3,
+    once: false
+  },
+  praise: {
+    p: 4,
+    once: true
+  },
+  gift: {
+    p: 5,
+    once: false
+  },
+  color: {
+    p: 3,
+    once: false
+  },
+  friend: {
+    p: 1,
+    once: true
+  },
+  raise: {
+    p: 1,
+    once: true
+  },
+  lose: {
+    p: -2,
+    once: false
+  }
+});
+const amtOn = () => {
+  try {
+    return typeof RELEASE_FLAGS !== 'undefined' && !!RELEASE_FLAGS && RELEASE_FLAGS.assistantLifeTaste === true;
+  } catch (_) {
+    return false;
+  }
+};
+const amtNum = (v, lim) => Number.isFinite(Number(v)) ? Math.max(-lim, Math.min(lim, Math.round(Number(v) * 100) / 100)) : 0;
+const amtMonKey = k => typeof k === 'string' && /^\w{2,40}$/.test(k);
+const amtEmptyRec = () => ({
+  mon: {},
+  lin: {},
+  day: {
+    d: '',
+    m: {}
+  },
+  log: [],
+  raised: ''
+});
+const normalizeAssistantLifeTaste = raw => {
+  const out = {
+    v: 1,
+    by: {}
+  };
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw) || !raw.by || typeof raw.by !== 'object' || Array.isArray(raw.by)) return out;
+  for (const [aid, r] of Object.entries(raw.by)) {
+    if (!r || typeof r !== 'object' || Array.isArray(r) || !/^[a-z0-9_]{2,24}$/.test(aid)) continue;
+    const rec = amtEmptyRec();
+    for (const [k, v] of Object.entries(r.mon && typeof r.mon === 'object' && !Array.isArray(r.mon) ? r.mon : {}).slice(0, 80)) if (amtMonKey(k)) {
+      const n = amtNum(v, 100);
+      if (n) rec.mon[k] = n;
+    }
+    for (const [k, v] of Object.entries(r.lin && typeof r.lin === 'object' && !Array.isArray(r.lin) ? r.lin : {}).slice(0, 60)) if (amtMonKey(k)) {
+      const n = amtNum(v, 100);
+      if (n) rec.lin[k] = n;
+    }
+    const d = r.day && typeof r.day === 'object' ? r.day : null;
+    if (d && typeof d.d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d.d) && d.m && typeof d.m === 'object' && !Array.isArray(d.m)) {
+      rec.day.d = d.d;
+      for (const [k, v] of Object.entries(d.m).slice(0, 80)) if (amtMonKey(k) && v && typeof v === 'object') rec.day.m[k] = {
+        up: Math.max(0, amtNum(v.up, 99)),
+        down: Math.max(0, amtNum(v.down, 99)),
+        k: (Array.isArray(v.k) ? v.k : []).filter(x => typeof x === 'string' && AMT_KINDS[x]).slice(0, 8)
+      };
+    }
+    rec.log = (Array.isArray(r.log) ? r.log : []).filter(x => x && typeof x === 'object' && typeof x.day === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(x.day) && amtMonKey(x.target) && ['like', 'dislike', 'normal'].includes(x.from) && ['like', 'dislike', 'normal'].includes(x.to)).map(x => ({
+      day: x.day,
+      target: x.target,
+      from: x.from,
+      to: x.to
+    })).slice(-30);
+    rec.raised = typeof r.raised === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(r.raised) ? r.raised : '';
+    out.by[aid] = rec;
+  }
+  return out;
+};
+const AMT_STORE = typeof amgpMakeStore === 'function' ? amgpMakeStore(ASSISTANT_TASTE_KEY, normalizeAssistantLifeTaste) : null;
+const amtRawPlan = aid => {
+  try {
+    return ASSISTANT_MASMON_PLAN.find(a => a && a.id === aid) || null;
+  } catch (_) {
+    return null;
+  }
+};
+const amtLin = m => {
+  try {
+    return typeof assistantMasmonLineage === 'function' ? assistantMasmonLineage(m) : null;
+  } catch (_) {
+    return null;
+  }
+};
+const amtTier = v => v >= AMT_LIKE_AT ? 'like' : v <= -AMT_LIKE_AT ? 'dislike' : 'normal';
+const amtBase = (raw, m) => {
+  if (!raw) return 0;
+  const lin = amtLin(m);
+  const some = (xs, f) => (Array.isArray(xs) ? xs : []).some(x => x && f(x));
+  if (some(raw.dislikeMon, x => x.monster === m)) return -60;
+  if (some(raw.likeMon, x => x.monster === m)) return 60;
+  if (lin && some(raw.dislikeMon, x => x.lineage === lin)) return -60;
+  if (lin && some(raw.likeMon, x => x.lineage === lin)) return 60;
+  let s = 0;
+  if (lin && some(raw.likeMon, x => x.monster && x.monster !== m && amtLin(x.monster) === lin)) s += 18;
+  if (lin && some(raw.dislikeMon, x => x.monster && x.monster !== m && amtLin(x.monster) === lin)) s -= 18;
+  return s;
+};
+const amtCoreLin = aid => {
+  try {
+    const mat = typeof assistantLifeCardMaterial === 'function' ? assistantLifeCardMaterial(aid) : null;
+    return mat && mat.core ? mat.core : null;
+  } catch (_) {
+    return null;
+  }
+};
+const amtIsCore = (aid, m) => {
+  const c = amtCoreLin(aid);
+  return !!c && amtLin(m) === c;
+};
+const amtEff = (aid, raw, rec, m) => {
+  const b = amtBase(raw, m),
+    lin = amtLin(m);
+  let v = b + (rec && rec.mon[m] || 0) + (lin && rec && rec.lin[lin] || 0);
+  v = Math.max(-100, Math.min(100, v));
+  if (b >= AMT_LIKE_AT && amtIsCore(aid, m)) v = Math.max(AMT_LIKE_AT, v);
+  return v;
+};
+const amtAllMons = () => typeof ALL_PLAYER_MONSTERS !== 'undefined' && ALL_PLAYER_MONSTERS ? Object.keys(ALL_PLAYER_MONSTERS) : [];
+const amtMonName = m => {
+  try {
+    const x = typeof assistantMasmonMon === 'function' ? assistantMasmonMon(m) : null;
+    return x ? x.name : m;
+  } catch (_) {
+    return m;
+  }
+};
+const amtCache = {
+  st: null,
+  by: {}
+};
+function assistantLifeTasteOverlay(base) {
+  try {
+    if (!base || !amtOn() || !AMT_STORE || !AMT_STORE.loaded) return base;
+    const st = AMT_STORE.state;
+    const rec = st.by[base.id];
+    if (!rec || !Object.keys(rec.mon).length && !Object.keys(rec.lin).length) return base;
+    if (amtCache.st !== st) {
+      amtCache.st = st;
+      amtCache.by = {};
+    }
+    if (amtCache.by[base.id]) return amtCache.by[base.id];
+    let like = [...(base.likeMon || [])],
+      dis = [...(base.dislikeMon || [])];
+    for (const m of amtAllMons()) {
+      const bt = amtTier(amtBase(base, m)),
+        t = amtTier(amtEff(base.id, base, rec, m));
+      if (bt === t) continue;
+      if (bt === 'like') like = like.filter(x => !(x && x.monster === m));
+      if (bt === 'dislike') dis = dis.filter(x => !(x && x.monster === m));
+      if (t === 'like') like.push({
+        monster: m,
+        why: '遊んでいるうちに好きになった',
+        grown: true
+      });
+      if (t === 'dislike') dis.push({
+        monster: m,
+        why: '遊んでいるうちに苦手になった',
+        grown: true
+      });
+    }
+    return amtCache.by[base.id] = {
+      ...base,
+      likeMon: like,
+      dislikeMon: dis
+    };
+  } catch (_) {
+    return base;
+  }
+}
+const AMT_SAY = Object.freeze({
+  like: c => ['最近', c, 'のこと…', 'ちょっと好きに', 'なってきた', 'かも'],
+  normal_from_dislike: c => [c, 'のこと、', '前ほど', '苦手じゃ', 'なくなってきた', 'かも'],
+  normal_from_like: c => [c, 'は、', '前ほど', '夢中じゃ', 'なくなった', 'かも'],
+  dislike: c => [c, 'は、', 'ちょっと', '苦手に', 'なってきた', 'かも']
+});
+const assistantLifeTasteSay = x => {
+  const c = amtMonName(x.target);
+  if (x.to === 'like') return AMT_SAY.like(c);
+  if (x.to === 'dislike') return AMT_SAY.dislike(c);
+  return x.from === 'dislike' ? AMT_SAY.normal_from_dislike(c) : AMT_SAY.normal_from_like(c);
+};
+const assistantLifeTasteRecent = (aid, days = 14) => {
+  try {
+    if (!amtOn() || !AMT_STORE || !AMT_STORE.loaded) return [];
+    const rec = AMT_STORE.state.by[aid];
+    if (!rec) return [];
+    const now = typeof assistantLifeDayKey === 'function' ? assistantLifeDayKey() : '';
+    const t0 = Date.parse(`${now}T00:00:00Z`);
+    return rec.log.filter(x => !Number.isFinite(t0) || (t0 - Date.parse(`${x.day}T00:00:00Z`)) / 86400000 <= days).slice().reverse().map(x => ({
+      ...x,
+      name: amtMonName(x.target)
+    }));
+  } catch (_) {
+    return [];
+  }
+};
+const assistantLifeTasteBump = (aid, monsterId, kind, now = Date.now()) => {
+  try {
+    if (!amtOn() || !AMT_STORE || !AMT_STORE.loaded) return [];
+    const k = AMT_KINDS[kind],
+      raw = amtRawPlan(aid);
+    if (!k || !raw || !amtMonKey(monsterId) || !(typeof assistantMasmonMon === 'function' && assistantMasmonMon(monsterId))) return [];
+    const st = AMT_STORE.state,
+      old = st.by[aid] || amtEmptyRec();
+    const rec = {
+      mon: {
+        ...old.mon
+      },
+      lin: {
+        ...old.lin
+      },
+      day: {
+        d: old.day.d,
+        m: {
+          ...old.day.m
+        }
+      },
+      log: [...old.log],
+      raised: old.raised
+    };
+    const day = typeof assistantLifeDayKey === 'function' ? assistantLifeDayKey(now) : '';
+    if (!day) return [];
+    if (rec.day.d !== day) rec.day = {
+      d: day,
+      m: {}
+    };
+    const dm = {
+      up: 0,
+      down: 0,
+      k: [],
+      ...(rec.day.m[monsterId] || {})
+    };
+    dm.k = [...dm.k];
+    if (k.once && dm.k.includes(kind)) return [];
+    let p = k.p * (amtIsCore(aid, monsterId) ? AMT_CORE_RATE : 1);
+    if (p > 0) {
+      p = Math.min(p, Math.max(0, AMT_UP_DAY - dm.up));
+      dm.up += p;
+    } else {
+      p = -Math.min(-p, Math.max(0, AMT_DOWN_DAY - dm.down));
+      dm.down += -p;
+    }
+    if (!p) return [];
+    if (k.once) dm.k.push(kind);
+    rec.day.m[monsterId] = dm;
+    const lin = amtLin(monsterId);
+    rec.mon[monsterId] = amtNum((rec.mon[monsterId] || 0) + p * (1 - AMT_SPREAD), 100);
+    if (lin) rec.lin[lin] = amtNum((rec.lin[lin] || 0) + p * AMT_SPREAD, 100);
+    const changes = [];
+    for (const m of amtAllMons()) {
+      const a = amtTier(amtEff(aid, raw, old, m)),
+        b = amtTier(amtEff(aid, raw, rec, m));
+      if (a !== b) changes.push({
+        target: m,
+        from: a,
+        to: b
+      });
+    }
+    for (const c of changes.slice(0, 3)) rec.log.push({
+      day,
+      target: c.target,
+      from: c.from,
+      to: c.to
+    });
+    rec.log = rec.log.slice(-30);
+    AMT_STORE.save({
+      ...st,
+      by: {
+        ...st.by,
+        [aid]: rec
+      }
+    });
+    for (const c of changes.slice(0, 3)) {
+      try {
+        if (typeof assistantLifeDiaryAdd === 'function') {
+          const who = typeof assistantLifeName === 'function' ? assistantLifeName(aid) : aid,
+            n = amtMonName(c.target);
+          const txt = c.to === 'like' ? `${who}が ${n}を 好きになってきたみたい` : c.to === 'dislike' ? `${who}は ${n}が 苦手になってきたみたい` : c.from === 'dislike' ? `${who}は ${n}が 前ほど苦手じゃ なくなってきたみたい` : `${who}は ${n}に 前ほど夢中じゃ なくなったみたい`;
+          void assistantLifeDiaryAdd(txt, [aid], {
+            kind: 'note'
+          });
+        }
+      } catch (_) {}
+    }
+    return changes;
+  } catch (_) {
+    return [];
+  }
+};
+const assistantLifeTasteOnTalk = x => {
+  try {
+    if (x && x.positive === true && typeof x.assistantId === 'string' && typeof x.monsterId === 'string') assistantLifeTasteBump(x.assistantId, x.monsterId, 'praise');
+  } catch (_) {}
+};
+if (typeof ASSISTANT_CHAT_TASTE_HOOKS === 'object' && ASSISTANT_CHAT_TASTE_HOOKS) {
+  ASSISTANT_CHAT_TASTE_HOOKS.onTalk = assistantLifeTasteOnTalk;
+}
+const assistantLifeTasteDaily = () => {
+  try {
+    if (!amtOn() || !AMT_STORE || !AMT_STORE.loaded || typeof ASSISTANT_MASMON_STORE === 'undefined' || !ASSISTANT_MASMON_STORE.loaded || typeof assistantMasmonRowsOf !== 'function') return;
+    for (const a of ASSISTANT_MASMON_PLAN) {
+      if (!a || !a.id) continue;
+      for (const r of assistantMasmonRowsOf(ASSISTANT_MASMON_STORE.state, a.id) || []) if (r && r.monster) assistantLifeTasteBump(a.id, r.monster, 'raise');
+    }
+  } catch (_) {}
+};
+let amtDailyDay = '';
+const amtDailyTry = () => {
+  try {
+    const d = typeof assistantLifeDayKey === 'function' ? assistantLifeDayKey() : '';
+    if (!d || amtDailyDay === d || !AMT_STORE || !AMT_STORE.loaded || typeof ASSISTANT_MASMON_STORE === 'undefined' || !ASSISTANT_MASMON_STORE.loaded) return;
+    amtDailyDay = d;
+    assistantLifeTasteDaily();
+  } catch (_) {}
+};
+try {
+  setTimeout(() => {
+    try {
+      if (amtOn() && AMT_STORE) {
+        void AMT_STORE.load().then(amtDailyTry).catch(() => {});
+        if (typeof ASSISTANT_MASMON_STORE !== 'undefined' && ASSISTANT_MASMON_STORE.subs) ASSISTANT_MASMON_STORE.subs.add(amtDailyTry);
+      }
+    } catch (_) {}
+  }, 0);
+} catch (_) {}
 const MONSUC_FUSE_KEY = 'mh_monsuc_fuse_v1';
 const MONSUC_FUSE_LOG = 50;
 const MONSUC_MEMORY_MAX = 100;
@@ -159424,19 +159916,31 @@ const MSX_SCN_CSS = `
 .msx .scn-sc .who.c{left:50%;transform:translateX(-50%);bottom:46%;height:46%;z-index:1;animation:msxScnBob 3.2s ease-in-out infinite}
 @keyframes msxScnBob{0%,100%{transform:translateX(-50%) translateY(0)}50%{transform:translateX(-50%) translateY(-6px)}}
 .msx .scn-bd{position:absolute;z-index:3;right:4%;top:3%;width:68px;height:68px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fcd34d,#b45309);border:3px solid #fef3c7;box-shadow:0 2px 8px #0006;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#3b1d02;font-weight:900;font-size:11px;line-height:1.15;text-align:center}
-.msx .scn-ti{position:absolute;left:0;right:0;top:41%;text-align:center;z-index:3}
+.msx .scn-tx{position:absolute;z-index:3;left:0;right:0;bottom:3%;display:flex;flex-direction:column;align-items:stretch}
+.msx .scn-ti{text-align:center}
 .msx .scn-ti b{display:block;font-size:clamp(34px,11vw,46px);font-weight:900;letter-spacing:1px;color:#fde047;background:linear-gradient(180deg,#ffffff 8%,#fef08a 40%,#facc15 68%,#f59e0b 95%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;-webkit-text-stroke:1px #c2410c;filter:drop-shadow(0 2px 0 #7c2d12) drop-shadow(0 0 6px #0007)}
-.msx .scn-ti small{display:block;margin-top:2px;font-size:12px;font-weight:900;letter-spacing:5px;color:#fff;text-shadow:0 1px 3px #000}
-.msx .scn-ld{position:absolute;z-index:3;left:4%;right:4%;top:56%;padding:9px 12px;border-radius:8px;background:linear-gradient(90deg,#4338ca,#7c3aed);border:2px solid #c4b5fd;color:#fff;font-size:12.5px;font-weight:800;line-height:1.6;transform:skewX(-3deg);box-shadow:0 3px 10px #0006}
+.msx .scn-ti small{display:table;margin:4px auto 0;padding:1px 12px;border-radius:9px;background:#0b092099;font-size:12px;font-weight:900;letter-spacing:5px;color:#fff;text-shadow:0 1px 3px #000}
+.msx .scn-ld{margin:10px 3% 0;text-align:center;padding:9px 8px;border-radius:8px;background:linear-gradient(90deg,#4338ca,#7c3aed);border:2px solid #c4b5fd;color:#fff;font-size:clamp(10px,3vw,12.5px);font-weight:800;line-height:1.6;transform:skewX(-3deg);box-shadow:0 3px 10px #0006}
 .msx .scn-ld>div{transform:skewX(3deg)}
-.msx .scn-dt{position:absolute;z-index:3;left:0;right:0;top:calc(56% + 92px);text-align:center;color:#fff;font-size:11px;font-weight:800;text-shadow:0 1px 3px #000}
+.msx .scn-dt{margin-top:8px;text-align:center;color:#fff;font-size:11px;font-weight:800;text-shadow:0 1px 3px #000}
 .msx .scn-dt i{display:inline-block;width:7px;height:7px;border-radius:50%;background:#fff;margin:0 3px 4px}
 .msx .scn-dt i.off{width:4px;height:4px;opacity:.6}
 .msx .scn-ft{display:flex;gap:10px;align-items:center;padding:10px 12px calc(10px + env(safe-area-inset-bottom));background:#c9b9a6;flex:none}
-.msx .scn-ft button{height:48px;border-radius:10px;font-weight:900;font-size:16px;border:3px solid #fff;box-shadow:0 3px 0 #0003}
+.msx .scn-ft button{display:flex;align-items:center;justify-content:center;text-align:center;line-height:1;padding:0;height:48px;border-radius:10px;font-weight:900;font-size:16px;border:3px solid #fff;box-shadow:0 3px 0 #0003}
 .msx .scn-ft .bk{width:48px;flex:none;background:#f59e0b;color:#fff;font-size:22px}
 .msx .scn-ft .go{flex:1 1 0;background:linear-gradient(180deg,#fb923c,#ea580c);color:#fff}
 .msx .scn-ft .dt{flex:1 1 0;background:#fff;color:#1f2937;border-color:#e5e7eb}
+.msx .land .scn-tx,.msx.land .scn-tx{right:42%}
+.msx .land .scn-sc .who.c,.msx.land .scn-sc .who.c{left:auto;right:17%;transform:none;bottom:0;height:90%;animation:none}
+.msx .land .scn-sc .who.r,.msx.land .scn-sc .who.r{right:-3%;bottom:0;height:78%}
+.msx .land .scn-sc .who.l,.msx.land .scn-sc .who.l{display:none}
+.msx .land .scn-bd,.msx.land .scn-bd{right:2%}
+@media (orientation:landscape) and (max-height:520px){
+.msx .scn-tx{right:42%}
+.msx .scn-sc .who.c{left:auto;right:17%;transform:none;bottom:0;height:90%;animation:none}
+.msx .scn-sc .who.r{right:-3%;bottom:0;height:78%}
+.msx .scn-sc .who.l{display:none}
+}
 .msx .scn-win{position:absolute;inset:0;z-index:30;background:#0008;display:flex;align-items:center;justify-content:center;padding:28px 18px}
 .msx .scn-win .in{width:100%;max-height:100%;overflow-y:auto;background:#fffbeb;border:4px solid #c2410c;border-radius:14px;padding:14px 16px;color:#1f2937}
 .msx .scn-win h3{margin:0 0 8px;text-align:center;font-size:18px;font-weight:900;color:#9a3412}
@@ -159494,6 +159998,8 @@ function MsxScenarioSelect({
       fontSize: 16
     }
   }, "👑")), React.createElement("div", {
+    className: "scn-tx"
+  }, React.createElement("div", {
     className: "scn-ti"
   }, React.createElement("b", null, sc.name), React.createElement("small", null, sc.en)), React.createElement("div", {
     className: "scn-ld"
@@ -159504,7 +160010,7 @@ function MsxScenarioSelect({
   }, React.createElement("div", null, MSX_STORIES.map((x, i) => React.createElement("i", {
     key: x.id,
     className: i === idx ? '' : 'off'
-  }))), many ? null : 'ほかのシナリオは 準備中です'), many ? React.createElement(React.Fragment, null, React.createElement("button", {
+  }))), many ? null : 'ほかのシナリオは 準備中です')), many ? React.createElement(React.Fragment, null, React.createElement("button", {
     type: "button",
     "aria-label": "前のシナリオ",
     onClick: () => setIdx(i => (i + n - 1) % n),
@@ -163029,6 +163535,7 @@ function AlfFriendHouseView({
   const [noteWarn, setNoteWarn] = React.useState('');
   const [confirm, setConfirm] = React.useState(null);
   const [boardOpen, setBoardOpen] = React.useState(false);
+  const [vtab, setVtab] = React.useState('house');
   const [bondOpen, setBondOpen] = React.useState(false);
   const bondMark = task => {
     if (typeof albMark === 'function') void albMark(friend.id, task);
@@ -163207,8 +163714,100 @@ function AlfFriendHouseView({
     act: a.k
   })) : [];
   const diaryItems = [...actItems, ...(more && more.dy.length ? more.dy : h.dy || [])].slice(0, 10);
+  const vtabs = [['house', '🏡', '家'], ...(typeof AssistantLifeTownMap === 'function' && typeof assistantLifeMapReadHome === 'function' ? [['where', '🗺', '町']] : []), ...(typeof AssistantLifeProfilePage === 'function' && typeof assistantLifeProfileOn === 'function' && assistantLifeProfileOn() ? [['profile', '📖', '紹介']] : [])];
+  const goTab = k => {
+    setRoomId(null);
+    setTalk(null);
+    setLeaving(null);
+    setBondOpen(false);
+    setBoardOpen(false);
+    setVtab(k);
+  };
+  const vIcons = flat => vtabs.length > 1 ? React.createElement("div", {
+    className: "mhl-icons",
+    role: "tablist",
+    "data-alf-vtabs": true,
+    style: flat ? undefined : {
+      flexBasis: '100%'
+    }
+  }, vtabs.map(([k, ic, label]) => React.createElement("button", {
+    key: k,
+    type: "button",
+    role: "tab",
+    "aria-selected": vtab === k,
+    "data-alf-vtab": k,
+    className: vtab === k ? 'on' : '',
+    onClick: () => goTab(k)
+  }, React.createElement("i", null, ic), label))) : null;
+  const fWhereOf = id => {
+    const r = h.r[id];
+    if (!r) return null;
+    const place = r.at === 'home' ? 'home' : r.p || null;
+    return place ? {
+      id,
+      place,
+      doing: r.d,
+      with: [],
+      group: null,
+      reason: null
+    } : null;
+  };
+  const metIds = h.ids.filter(id => ALF_IDS.includes(id));
+  const vView = vtab !== 'house' && vtabs.some(t => t[0] === vtab) ? React.createElement("div", {
+    className: "absolute inset-0 flex flex-col",
+    style: {
+      zIndex: 20,
+      background: '#0b1020'
+    },
+    "data-alf-vview": vtab
+  }, vtab === 'where' ? React.createElement(AssistantLifeTownMap, {
+    life: null,
+    ids: metIds,
+    land: land,
+    onBack: () => goTab('house'),
+    onPick: () => {},
+    friendView: {
+      whereOf: fWhereOf,
+      name: friend.name
+    },
+    nav: React.createElement("div", {
+      className: "flex items-center gap-1"
+    }, React.createElement("button", {
+      type: "button",
+      "aria-label": "戻る",
+      "data-alf-vview-back": true,
+      className: "h-9 w-7 shrink-0 text-[18px] text-slate-100",
+      onClick: () => goTab('house')
+    }, "←"), React.createElement("div", {
+      className: "min-w-0 flex-1"
+    }, vIcons(true)))
+  }) : React.createElement(React.Fragment, null, React.createElement("div", {
+    className: "mhl-hdr flex flex-wrap items-start gap-2",
+    style: {
+      paddingTop: land ? 6 : 'calc(8px + env(safe-area-inset-top))'
+    }
+  }, React.createElement("button", {
+    type: "button",
+    "aria-label": "戻る",
+    "data-alf-vview-back": true,
+    className: "h-9 w-8 shrink-0 text-[19px] text-slate-100",
+    onClick: () => goTab('house')
+  }, "←"), React.createElement("div", {
+    className: "min-w-0 flex-1"
+  }, React.createElement("p", {
+    className: "truncate text-[17px] font-black text-amber-100"
+  }, "🏘 ", friend.name, "さんの助手ライフ"), React.createElement("p", {
+    className: "text-[10px] font-bold text-slate-200"
+  }, "👀 見る専用です")), vIcons(false)), React.createElement("div", {
+    className: "relative min-h-0 flex-1 overflow-y-auto",
+    "data-alf-vview-body": true
+  }, vtab === 'profile' && React.createElement(AssistantLifeProfilePage, {
+    metIds: metIds,
+    viewOnly: true,
+    land: land
+  })))) : null;
   const header = React.createElement("div", {
-    className: "mhl-hdr flex items-start gap-2",
+    className: "mhl-hdr flex flex-wrap items-start gap-2",
     style: {
       paddingTop: land ? 6 : 'calc(8px + env(safe-area-inset-top))'
     }
@@ -163237,7 +163836,7 @@ function AlfFriendHouseView({
   }, friend.name, "さんが最後に開いたとき")), now && now.online && React.createElement("p", {
     className: `mt-0.5 inline-block max-w-full truncate rounded-full px-2 py-0.5 text-[10.5px] font-black ${now.auto ? 'bg-amber-950/80 text-amber-200' : 'bg-emerald-950/70 text-emerald-200'}`,
     "data-alf-visit-now": true
-  }, "いま ", land ? now.long || now.text : now.text)));
+  }, "いま ", land ? now.long || now.text : now.text)), vIcons(false));
   const tiles = React.createElement("div", {
     "data-alf-visit-acts": true
   }, typeof AlfBondBar === 'function' && React.createElement(AlfBondBar, {
@@ -163740,7 +164339,7 @@ function AlfFriendHouseView({
     style: {
       paddingBottom: 'calc(10px + env(safe-area-inset-bottom))'
     }
-  }, tiles)), sheet, words, confirm && leaving != null && typeof AlfNoteConfirm === 'function' && React.createElement(AlfNoteConfirm, {
+  }, tiles)), sheet, words, vView, confirm && leaving != null && typeof AlfNoteConfirm === 'function' && React.createElement(AlfNoteConfirm, {
     friend: friend,
     to: leaving || null,
     word: confirm.word,

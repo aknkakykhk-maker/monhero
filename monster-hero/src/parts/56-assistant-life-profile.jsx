@@ -75,10 +75,10 @@ const assistantLifeProfileLikes = (id, giftSt) => {
   const hintCell = cells.find(c => c.like && !c.shown && hints[c.k] && typeof hints[c.k].t === 'string');
   // モンスター(マスモンの表の好き・苦手。贈る仕組みが無いので最初から出す)
   const plan = typeof assistantMasmonBasePlanOf === 'function' ? assistantMasmonBasePlanOf(id) : null;
-  const monOf = (x) => { const m = x && typeof assistantMasmonMon === 'function' ? assistantMasmonMon(x.monster) : null; return m ? { id: x.monster, name: m.name, icon: m.faceIconUrl || m.iconUrl || '', emoji: m.emoji || '🐾' } : null; };
+  const monOf = (x) => { const m = x && typeof assistantMasmonMon === 'function' ? assistantMasmonMon(x.monster) : null; return m ? { id: x.monster, name: m.name, icon: m.faceIconUrl || m.iconUrl || '', emoji: m.emoji || '🐾', grown: x.grown === true } : null; };
   const monLike = plan && Array.isArray(plan.likeMon) ? plan.likeMon.map(monOf).filter(Boolean) : [];
   const monBad = plan && Array.isArray(plan.dislikeMon) ? plan.dislikeMon.map(monOf).filter(Boolean) : [];
-  return { rows, known: cells.filter(c => c.shown).length, total: cells.length, hint: hintCell ? hints[hintCell.k] : null, monLike, monBad };
+  return { rows, known: cells.filter(c => c.shown).length, total: cells.length, hint: hintCell ? hints[hintCell.k] : null, monLike, monBad, recent: typeof assistantLifeTasteRecent === 'function' ? assistantLifeTasteRecent(id, 14) : [] };
 };
 
 // 台詞の最初に聞ける Lv(bond が無い行は Lv1 から)
@@ -219,8 +219,10 @@ function AssistantLifeProfileStand({ who, head = 0.32, top = 0.16 }) {
 }
 
 // 一覧(タブ「📖 紹介」の中身)
-function AssistantLifeProfilePage({ metIds, bondLevelOf = null, land = false, onMasmon = null }) {
-  const giftSt = typeof useAssistantLifeGiftState === 'function' ? useAssistantLifeGiftState() : null;
+// viewOnly … フレンドの家から見る専用で開くとき(2026-11-14 社長 r1115-019)。相手が会っている助手の「人となり」だけ。自分の仲良し度・好み・贈った記録・NEW の保存は使わない・書かない
+function AssistantLifeProfilePage({ metIds, bondLevelOf = null, land = false, onMasmon = null, viewOnly = false }) {
+  const giftStAll = typeof useAssistantLifeGiftState === 'function' ? useAssistantLifeGiftState() : null;
+  const giftSt = viewOnly ? null : giftStAll;
   const [seen, setSeen] = React.useState(null); // 読めるまで null(NEW を出さない)
   const [openId, setOpenId] = React.useState(null);
   const boxRef = React.useRef(null);
@@ -228,26 +230,27 @@ function AssistantLifeProfilePage({ metIds, bondLevelOf = null, land = false, on
   const met = new Set(Array.isArray(metIds) ? metIds : []);
   const metList = roster.filter(w => met.has(w.id));
   const counts = {};
-  for (const w of metList) counts[w.id] = assistantLifeProfileCount(w.id, assistantLifeProfileBond(w.id, bondLevelOf).lv, giftSt);
+  if (!viewOnly) for (const w of metList) counts[w.id] = assistantLifeProfileCount(w.id, assistantLifeProfileBond(w.id, bondLevelOf).lv, giftSt);
   React.useEffect(() => {
+    if (viewOnly) { setSeen({}); return undefined; } // 見る専用は、自分の「見た」の記録を読まない・書かない
     let alive = true;
     Promise.resolve(typeof storeGet === 'function' ? storeGet(ASSISTANT_LIFE_PROFILE_SEEN_KEY, null, false) : null)
       .then(v => { if (alive) setSeen(normalizeAssistantLifeProfileSeen(v)); }).catch(() => { if (alive) setSeen({}); });
     return () => { alive = false; };
   }, []);
-  const save = (next) => { setSeen(next); try { if (typeof storeSet === 'function') void storeSet(ASSISTANT_LIFE_PROFILE_SEEN_KEY, next, false); } catch (_) {} };
+  const save = (next) => { setSeen(next); if (viewOnly) return; try { if (typeof storeSet === 'function') void storeSet(ASSISTANT_LIFE_PROFILE_SEEN_KEY, next, false); } catch (_) {} };
   // はじめて一覧を開いたとき(まだ記録の無い助手)は、いまの数を控えるだけ(全員に NEW が付かないように)
   // 贈った記録が読み終わるまでは数を控えない・NEW も出さない(読む前の少ない数を控えると、あとで全員に NEW が付く・2026-11-11 最終確認の留意)
   const giftReady = typeof ASSISTANT_LIFE_GIFT_STORE === 'undefined' || ASSISTANT_LIFE_GIFT_STORE.loaded === true;
   React.useEffect(() => {
-    if (!seen || !giftReady) return;
+    if (viewOnly || !seen || !giftReady) return;
     const miss = metList.filter(w => !seen[w.id]);
     if (!miss.length) return;
     const next = { ...seen };
     for (const w of miss) next[w.id] = { n: counts[w.id] || 0 };
     save(next);
   }, [seen, giftReady, metList.map(w => w.id).join(',')]);
-  const isNew = (id) => !!(giftReady && seen && seen[id] && (counts[id] || 0) > seen[id].n);
+  const isNew = (id) => !viewOnly && !!(giftReady && seen && seen[id] && (counts[id] || 0) > seen[id].n);
   const open = (id) => {
     if (!met.has(id)) return;
     if (seen && giftReady) save({ ...seen, [id]: { n: counts[id] || 0 } });
@@ -271,7 +274,7 @@ function AssistantLifeProfilePage({ metIds, bondLevelOf = null, land = false, on
               <p className="mt-1 text-[15px] font-black text-slate-400">？？？</p>
               <p className="text-[11px] font-bold text-slate-400">まだ会っていません</p>
             </div>);
-          const b = assistantLifeProfileBond(w.id, bondLevelOf);
+          const b = viewOnly ? null : assistantLifeProfileBond(w.id, bondLevelOf);
           return (
             <button key={w.id} type="button" data-assistant-life-profile-card={w.id} onClick={() => open(w.id)} aria-label={`${w.name}の紹介を見る`}
               className="relative overflow-hidden rounded-2xl border-2 bg-slate-900/85 p-2 text-left active:scale-[.98]" style={{ borderColor: w.accent, backgroundImage: `linear-gradient(160deg, ${w.accent}44, transparent 65%)` }}>
@@ -279,14 +282,14 @@ function AssistantLifeProfilePage({ metIds, bondLevelOf = null, land = false, on
               {typeof AssistantFace === 'function' && <AssistantFace who={w} size={face} accent={w.accent} expression="happy"/>}
               <p className="mt-1 text-[15px] font-black text-white">{w.name}</p>
               <p className="text-[10.5px] font-bold leading-snug text-slate-200" style={typeof JA_LABEL_STYLE !== 'undefined' ? JA_LABEL_STYLE : undefined}>{typeof jaWrap === 'function' ? jaWrap(w.tagline || '') : (w.tagline || '')}</p>
-              <span className="mt-1 inline-block rounded-full bg-slate-950/80 px-2 py-0.5 text-[10.5px] font-black text-pink-100">💗 Lv{b.lv}</span>
+              {b && <span className="mt-1 inline-block rounded-full bg-slate-950/80 px-2 py-0.5 text-[10.5px] font-black text-pink-100">💗 Lv{b.lv}</span>}
             </button>);
         })}
       </div>
-      <p className="mt-2 text-[10.5px] font-bold leading-snug text-slate-300">💗 好きなものは、贈ると分かって紹介に残ります。{metList.length < roster.length ? 'まだ会っていない助手は、お話で出会うと紹介が開きます。' : ''}</p>
+      <p className="mt-2 text-[10.5px] font-bold leading-snug text-slate-300">{viewOnly ? (metList.length < roster.length ? 'まだ会っていない助手は、この家の人も会うと紹介が開きます。' : '') : <>💗 好きなものは、贈ると分かって紹介に残ります。{metList.length < roster.length ? 'まだ会っていない助手は、お話で出会うと紹介が開きます。' : ''}</>}</p>
       {/* 紹介は家の画面のいちばん外の枠(data-assistant-life-screen)へ描く。見出しやタブの下に潜らないように(🔄横でも同じ枠の中) */}
       {openId && (() => {
-        const sheet = <AssistantLifeProfileSheet id={openId} bondLevelOf={bondLevelOf} land={land} giftSt={giftSt} onMasmon={onMasmon} onClose={() => setOpenId(null)}/>;
+        const sheet = <AssistantLifeProfileSheet id={openId} bondLevelOf={bondLevelOf} land={land} giftSt={giftSt} onMasmon={onMasmon} viewOnly={viewOnly} onClose={() => setOpenId(null)}/>;
         const host = boxRef.current && boxRef.current.closest ? boxRef.current.closest('[data-assistant-life-screen]') : null;
         return host && typeof ReactDOM !== 'undefined' && ReactDOM.createPortal ? ReactDOM.createPortal(sheet, host) : sheet;
       })()}
@@ -294,16 +297,16 @@ function AssistantLifeProfilePage({ metIds, bondLevelOf = null, land = false, on
 }
 
 // 1人ずつの紹介(一覧の上にかぶせる)
-function AssistantLifeProfileSheet({ id, bondLevelOf = null, land = false, giftSt = null, onMasmon = null, onClose }) {
+function AssistantLifeProfileSheet({ id, bondLevelOf = null, land = false, giftSt = null, onMasmon = null, viewOnly = false, onClose }) {
   const who = typeof assistantById === 'function' ? assistantById(id) : null;
   const [vKey, setVKey] = React.useState('home');
   const [vIdx, setVIdx] = React.useState(0);
   const scrollRef = React.useRef(null);
   const refs = { who: React.useRef(null), likes: React.useRef(null), bond: React.useRef(null), voice: React.useRef(null) };
   if (!who) return null;
-  const b = assistantLifeProfileBond(id, bondLevelOf);
-  const likes = assistantLifeProfileLikes(id, giftSt);
-  const voices = assistantLifeProfileVoices(id, b.lv, giftSt);
+  const b = viewOnly ? { lv: 0, title: '', tone: '', next: null, rate: 0 } : assistantLifeProfileBond(id, bondLevelOf);
+  const likes = viewOnly ? null : assistantLifeProfileLikes(id, giftSt);
+  const voices = viewOnly ? [] : assistantLifeProfileVoices(id, b.lv, giftSt);
   const vg = voices.find(g => g.key === vKey) || voices[0] || null;
   const vLine = vg && vg.open.length ? vg.open[vIdx % vg.open.length] : null;
   const team = typeof assistantLifeMasmonTeamOf === 'function' ? assistantLifeMasmonTeamOf(id) : [];
@@ -324,7 +327,7 @@ function AssistantLifeProfileSheet({ id, bondLevelOf = null, land = false, giftS
       {c.like ? '💗' : '💧'} {c.shown ? `${c.it.emoji} ${c.it.name}` : '？'}</span>);
   const monChip = (m, like) => (
     <span key={`${like}-${m.id}`} className={`inline-flex items-center gap-1 rounded-xl border px-1.5 py-1 text-[11.5px] font-black ${like ? 'border-pink-400 text-pink-100' : 'border-sky-400 text-sky-100'}`}>
-      {like ? '💗' : '💧'}{m.icon ? <img src={m.icon} alt="" className="h-5 w-5 rounded-md object-contain"/> : m.emoji} {m.name}</span>);
+      {like ? '💗' : '💧'}{m.icon ? <img src={m.icon} alt="" className="h-5 w-5 rounded-md object-contain"/> : m.emoji} {m.name}{m.grown && <em data-assistant-life-taste-new className="whitespace-nowrap rounded-md bg-amber-300 px-1 text-[9.5px] font-black not-italic text-slate-900">✨ 新しく</em>}</span>);
   const hero = (
     <div className="relative overflow-hidden" data-assistant-life-profile-hero style={{ height: land ? '100%' : 300, backgroundImage: `linear-gradient(160deg, ${who.accent}55, #0f172a 72%)` }}>
       {/* 立ち絵は右側の枠の中で、顔の大きさと頭の高さをそろえる(縦は右6割・横は名前の下から) */}
@@ -332,14 +335,14 @@ function AssistantLifeProfileSheet({ id, bondLevelOf = null, land = false, giftS
       <div className="absolute left-3.5 z-[2]" style={{ top: land ? 56 : 14, width: land ? 150 : 210 }}>
         <p className="text-[28px] font-black leading-tight text-white" style={{ textShadow: '0 2px 6px #000' }}>{who.name}</p>
         <p className="text-[12.5px] font-black leading-snug" style={{ color: who.accent, textShadow: '0 1px 3px #000', ...(typeof JA_LABEL_STYLE !== 'undefined' ? JA_LABEL_STYLE : {}) }}>{typeof jaWrap === 'function' ? jaWrap(who.tagline || '') : who.tagline}</p>
-        <span className="mt-1.5 inline-block rounded-full border border-white/15 bg-slate-950/80 px-2 py-0.5 text-[11px] font-black text-white">💗 Lv{b.lv} {b.title}</span>
+        {!viewOnly && <span className="mt-1.5 inline-block rounded-full border border-white/15 bg-slate-950/80 px-2 py-0.5 text-[11px] font-black text-white">💗 Lv{b.lv} {b.title}</span>}
       </div>
       {greeting && <div data-assistant-life-profile-greeting className="absolute bottom-3 left-3 z-[2] rounded-2xl border-2 bg-white px-3 py-2 text-[12px] font-bold leading-relaxed text-slate-800 shadow-lg" style={{ borderColor: who.accent, width: land ? 170 : 205 }}>
         <span className="block text-[10px] font-black" style={{ color: who.accent }}>ひとこと</span><span style={typeof JA_LABEL_STYLE !== 'undefined' ? JA_LABEL_STYLE : undefined}>{jw(greeting)}</span></div>}
     </div>);
   const jumps = (
     <div className="flex gap-1.5 border-b border-white/10 bg-slate-950/90 px-2.5 py-2" data-assistant-life-profile-jump>
-      {[['who', '人となり'], ['likes', '好き・苦手'], ['bond', 'きずな'], ['voice', '台詞']].map(([k, l]) => (
+      {(viewOnly ? [['who', '人となり']] : [['who', '人となり'], ['likes', '好き・苦手'], ['bond', 'きずな'], ['voice', '台詞']]).map(([k, l]) => (
         <button key={k} type="button" onClick={() => jump(k)} className="min-h-[36px] flex-1 rounded-xl border border-white/10 bg-slate-800 text-[11.5px] font-black text-slate-100 active:scale-95">{l}</button>))}
     </div>);
   const secWho = (
@@ -349,17 +352,22 @@ function AssistantLifeProfileSheet({ id, bondLevelOf = null, land = false, giftS
       {assistantLifeProfileRhythm(id) && kv('生活', assistantLifeProfileRhythm(id))}
       {b.tone && kv('話し方(いま)', b.tone)}
     </div>);
-  const secLikes = (
+  const secLikes = viewOnly ? null : (
     <div ref={refs.likes} className={card} data-assistant-life-profile-sec="likes">
       <p className={h3}><span className="whitespace-nowrap">{land ? '💗 好き・💧 苦手' : '💗 好きなもの・💧 苦手なもの'}</span>{likes.total > 0 && <em className="whitespace-nowrap text-[10.5px] font-bold not-italic text-slate-400">分かったもの {likes.known}/{likes.total}</em>}</p>
+      {likes.recent.length > 0 && (() => { const x = likes.recent[0]; return (
+        <p data-assistant-life-taste-say className="my-1.5 rounded-xl bg-slate-950/80 px-2 py-1.5 text-[11.5px] font-bold leading-snug text-pink-100">🗨 {who.name}「{assistantLifeTasteSay(x).map((t, i) => <span key={i} className="inline-block whitespace-nowrap">{t}</span>)}」</p>); })()}
       {likes.rows.map(r => (
         <div key={r.label} className="my-1 flex flex-wrap items-center gap-1"><span className="w-[4.6em] shrink-0 whitespace-nowrap text-[11px] font-bold text-slate-400">{r.label}</span>{r.cells.map(chip)}</div>))}
       {(likes.monLike.length > 0 || likes.monBad.length > 0) && (
         <div className="my-1 flex flex-wrap items-center gap-1"><span className="w-[4.6em] shrink-0 whitespace-nowrap text-[11px] font-bold text-slate-400">モンスター</span>{likes.monLike.map(m => monChip(m, true))}{likes.monBad.map(m => monChip(m, false))}</div>)}
+      {likes.recent.length > 0 && (
+        <div data-assistant-life-taste-log className="mt-1.5 rounded-xl border border-white/10 px-2 py-1.5"><p className="mb-0.5 text-[11px] font-black text-slate-300">🌱 最近の変化</p>
+          {likes.recent.slice(0, 3).map((x, i) => (<p key={i} className="text-[10.5px] font-bold leading-snug text-slate-300"><span className="inline-block whitespace-nowrap">{x.day.slice(5).replace('-', '/')}</span> <span className="inline-block whitespace-nowrap">{x.name}:</span> <span className="inline-block whitespace-nowrap">{{ like: '好き', dislike: '苦手', normal: 'ふつう' }[x.from]} →</span> <span className="inline-block whitespace-nowrap">{{ like: '好き', dislike: '苦手', normal: 'ふつう' }[x.to]}</span></p>))}</div>)}
       {likes.hint && <p data-assistant-life-profile-hint className="mt-1.5 rounded-xl bg-slate-950/80 px-2 py-1.5 text-[11px] font-bold leading-snug text-slate-200">💭 {who.name}の話から:「{String(likes.hint.t).replace(/\{name\}/g, call)}」</p>}
       {likes.total > 0 && <p className="mt-1 text-[10.5px] font-bold text-slate-400">？は贈ると分かります。分かった好みはここに残ります。</p>}
     </div>);
-  const secBond = (
+  const secBond = viewOnly ? null : (
     <div ref={refs.bond} className={card} data-assistant-life-profile-sec="bond">
       <p className={h3}>🤝 いまのきずな</p>
       <div className="flex flex-wrap items-baseline justify-between gap-x-2"><span className="whitespace-nowrap text-[14px] font-black text-white">💗 仲良し度 Lv{b.lv} <span className="text-[11px] text-pink-200">{b.title}</span></span>{b.next && <span className="whitespace-nowrap text-[11px] font-bold text-slate-400">あと {b.next.remain} で Lv{b.next.level}</span>}</div>
@@ -376,7 +384,7 @@ function AssistantLifeProfileSheet({ id, bondLevelOf = null, land = false, giftS
         {onMasmon && <button type="button" data-assistant-life-profile-masmon onClick={() => { onClose(); onMasmon(id); }} className="mt-2 min-h-[44px] w-full rounded-xl bg-slate-700 text-[12.5px] font-black text-white active:scale-[.98]">🐾 マスモンをくわしく見る ›</button>}
       </>}
     </div>);
-  const secVoice = (
+  const secVoice = viewOnly ? null : (
     <div ref={refs.voice} className={card} data-assistant-life-profile-sec="voice">
       <p className={h3}><span>🔊 台詞を聞く</span>{vg && <em className="whitespace-nowrap text-[10.5px] font-bold not-italic text-slate-400">聞ける台詞 {voices.reduce((a, g) => a + g.open.length, 0)}</em>}</p>
       <div className="flex items-start gap-2">
@@ -403,14 +411,14 @@ function AssistantLifeProfileSheet({ id, bondLevelOf = null, land = false, giftS
         <div className="relative h-full w-[34%] max-w-[320px] shrink-0">{hero}
           <button type="button" data-assistant-life-profile-close onClick={onClose} className="absolute left-2 top-2 z-[3] min-h-[44px] rounded-xl border border-white/15 bg-slate-800/90 px-3 text-[13px] font-black text-white active:scale-95">← 一覧へ</button></div>
         <div className="flex min-w-0 flex-1 flex-col">{jumps}
-          <div ref={scrollRef} className="mh-scroll relative min-h-0 flex-1 overflow-y-auto p-2.5"><div className="grid grid-cols-2 items-start gap-2.5"><div className="flex flex-col gap-2.5">{secWho}{secLikes}</div><div className="flex flex-col gap-2.5">{secBond}{secVoice}</div></div></div>
+          <div ref={scrollRef} className="mh-scroll relative min-h-0 flex-1 overflow-y-auto p-2.5"><div className="grid grid-cols-2 items-start gap-2.5"><div className="flex flex-col gap-2.5">{secWho}{!viewOnly && secLikes}</div><div className="flex flex-col gap-2.5">{!viewOnly && secBond}{!viewOnly && secVoice}</div></div></div>
         </div>
       </> : <>
         {top}
         <div ref={scrollRef} className="mh-scroll relative min-h-0 flex-1 overflow-y-auto" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
           {hero}
           <div className="sticky top-0 z-[3]">{jumps}</div>
-          <div className="flex flex-col gap-2.5 p-3">{secWho}{secLikes}{secBond}{secVoice}</div>
+          <div className="flex flex-col gap-2.5 p-3">{secWho}{!viewOnly && secLikes}{!viewOnly && secBond}{!viewOnly && secVoice}</div>
         </div>
       </>}
     </div>);

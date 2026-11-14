@@ -1,0 +1,28 @@
+<!doctype html><meta charset=utf-8><style>
+body{margin:0;background:#0b1020;font-family:sans-serif;color:#fff}
+.wrap{display:flex;gap:14px;padding:12px;align-items:flex-start}
+.ph{background:#1e293b;border-radius:18px;overflow:hidden;position:relative;height:640px;border:2px solid #475569;flex:none;display:flex;flex-direction:column}
+.cap{font:800 12px sans-serif;color:#fde68a;margin:0 0 6px}
+.top{padding:9px 10px;font-weight:900;font-size:13px;background:#0f172a;display:flex;justify-content:space-between}
+.pill{background:#fde047;color:#7c2d12;font-size:10px;font-weight:900;padding:2px 7px;border-radius:9px}
+.body{flex:1;padding:8px;overflow:hidden}
+.card{background:#ffffff14;border-radius:12px;padding:8px;margin-bottom:7px;font-size:11px;line-height:1.5}
+.house{display:grid;grid-template-columns:1fr 1fr;gap:5px}.house div{background:#ffffff12;border-radius:8px;height:44px;font-size:10px;padding:4px}
+.bar{display:flex;background:#0f172a;border-top:1px solid #334155}.bar div{flex:1;text-align:center;padding:7px 0;font-size:10px;font-weight:800;color:#94a3b8}.bar .on{color:#fde047;border-top:2px solid #fde047}
+.new{outline:2px solid #fde047}.mut{color:#94a3b8;font-size:10px}
+.map{height:150px;background:linear-gradient(#334155,#1e3a2f);border-radius:10px;position:relative}.map i{position:absolute;background:#e11d48;border-radius:8px;padding:1px 5px;font-size:10px;font-style:normal;font-weight:800}
+</style><body><div id=root></div><script>
+const W=+new URLSearchParams(location.search).get('w')||390;
+const now=`<div class=top><span>🏘 あおいさんの家</span><span>閉じる</span></div><div class=body>
+<div class=card>🏠 8部屋の家の絵(いる・おでかけ・おやすみ)</div><div class=house><div>🪞 ミュア<br>のんびり</div><div>🎧 ドラ<br>ぼーっと</div><div>🌙 キキ<br>おやすみ</div><div>🚶 ももすけ<br>おでかけ</div></div>
+<div class=card style="margin-top:7px">📰 今日のできごと(掲示板)</div><div class=card>🐾 助手のマスモン ›(部屋を開くと)</div><div class=card>✉️ 置き手紙を残して帰る</div>
+<p class=mut>見られるのは、家・部屋・マスモン・置き手紙だけ。町・きずな・紹介・予定は見られません。</p></div>`;
+const plan=`<div class=top><span>🏘 あおいさんの助手ライフ</span><span class=pill>👀 見る専用</span></div><div class=body>
+<div class=card class=new style="outline:2px solid #fde047">🏡 家 … 今と同じ家の絵+「今日やれること」の代わりに「今日あったこと」</div>
+<div class=map><i style="left:10px;top:14px">🎧 ドラ</i><i style="left:120px;top:60px">🃏 キキ</i><i style="left:40px;top:100px">🎵 ミュア</i></div>
+<div class=card style="margin-top:7px">🗺 町 … 自分の町と同じ地図に、あおいさんの助手がいる場所を札で置く</div>
+<div class=card>🤝 きずな … 友情Lv・スタンプ・仲良しの「段」(数字は出さない)</div>
+<div class=card>📖 紹介 … 会っている助手の図鑑(自分のと同じ絵・文)</div></div>
+<div class=bar><div class=on>🏡 家</div><div>🗺 町</div><div>🤝 きずな</div><div>📖 紹介</div></div>`;
+root.innerHTML=`<div class=wrap><div><p class=cap>① いまのフレンドの家(幅${W})</p><div class=ph style="width:${W}px">${now}</div></div><div><p class=cap>② 案(自分の助手ライフと同じ4つのタブ)</p><div class=ph style="width:${W}px">${plan}</div></div></div>`;
+</script>
