@@ -6,6 +6,8 @@
 // 表: tools/ui/ui-kanji-words.js(ひらがな → 漢字。ひらがなのままにする語は KEEP に理由つき)
 // 見ないもの: 台詞・お話(台詞の部品の長い文、「」や語尾のある文、お話の台本・助手の台詞集)、出した更新履歴、
 //   識別子・保存キー・data-* の値・比べる値、戦術カードの段(保存値)。探し方は ui-kanji-scan.js
+// ★字を変えたら、tools を grep して、古い字で画面を探している検査を同じ PR で直す(2026-11-14 #6230 で取りこぼし、#6267 で直した)。
+//   ボタンを押して閉じる・進む所は、古い字と新しい字の両方を拾う形にする(例: (?:分|わ)かった・(?:始|はじ)める)。ソースの注記の字で探している所は変えない
 // 置き換えを部品ごとに進めているあいだは、まだの部品を PENDING に書いて見送る(済んだら消す)。
 'use strict';
 const path = require('path');
@@ -13,7 +15,7 @@ const { scanFile, applyFile, targetFiles } = require('./ui-kanji-scan.js');
 
 // まだ置き換えていない部品(r1114-089 で部品ごとに PR を分けて進めている。済んだら消す)
 const PENDING = [
-  /src\/parts\/(?:60-app|70-bootstrap|56-monhero-success|56-monsuc-)/, // まだ: 60-app・起動・モンサク(最後)
+  /src\/parts\/(?:56-monhero-success|56-monsuc-)/, // まだ: モンサク(最後)
   /data\/(?!card-battle-cards\.js)/, // data(help.js・名前の表)
 ];
 

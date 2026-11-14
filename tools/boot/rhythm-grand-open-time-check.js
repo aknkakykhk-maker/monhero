@@ -44,7 +44,7 @@ ok('記念ギフトは二度配らない(同じギフトがある・配った印
 
 // 更新履歴・助手の告知の時刻
 const cl = read('monster-hero/data/changelog.js');
-ok('本編の更新履歴は 11/9 10:00 に出はじめる(date と visibleFrom がそろっている)', /date: "2026-11-09 10:00", visibleFrom:'2026-11-09T10:00:00\+09:00', type:'update', group:'rhythm', title:'モンヒロビート本オープン記念のプレゼント'/.test(cl));
+ok('本編の更新履歴は 11/9 10:00 に出(?:始|はじ)める(date と visibleFrom がそろっている)', /date: "2026-11-09 10:00", visibleFrom:'2026-11-09T10:00:00\+09:00', type:'update', group:'rhythm', title:'モンヒロビート本オープン記念のプレゼント'/.test(cl));
 ok('予告の助手の告知は、本オープンの時刻で止まる', /id:'update_notice_rhythm_grand_open_teaser_v1', type:'content', notifyUntil:'2026-11-09T10:00:00\+09:00'/.test(cl));
 // 開いたままの端末: HOME のお話は印を見るたびに読む(本編のお話・予告のお話の切り替え)
 const app = read('monster-hero/src/parts/60-app.jsx');

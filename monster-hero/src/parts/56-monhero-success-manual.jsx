@@ -57,6 +57,12 @@ function MsaTechName({ name, icon = '', className = '' }) {
 // 画面の技名の札で、入りきらない言葉があれば字を 0.5px ずつ小さくする(7px まで)
 const msaFitTechNames = () => {
   try {
+    // 字(フォント)が遅れて読み込まれると幅が変わるので、そのあとと、画面の向き・大きさが変わったときにも縮め直す(2026-11-14 社長「札から字がはみ出す」)
+    if (typeof window !== 'undefined' && !window.__msaFitHooked) {
+      window.__msaFitHooked = true;
+      if (document.fonts && document.fonts.addEventListener) document.fonts.addEventListener('loadingdone', () => msaFitTechNames());
+      window.addEventListener('resize', () => msaFitTechNames());
+    }
     document.querySelectorAll('[data-msa-tn]').forEach((el) => {
       el.style.fontSize = '';
       let fs = parseFloat(getComputedStyle(el).fontSize) || 12, n = 0;
@@ -89,7 +95,7 @@ const MSA_DC_CSS = `
 .msa-dc{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px}
 /* 幅360未満は2列×2段(1語の長い技名が4列の札に入りきらない。技名は言葉の途中で折らない) */
 @media (max-width:359.98px){.msa-dc{grid-template-columns:repeat(2,minmax(0,1fr))}.msa-dc-c{min-height:52px}}
-.msa-dc-c{position:relative;min-width:0;min-height:58px;border-radius:10px;border:1px solid #4c4680;background:#1b1733;color:#94a3b8;font-weight:800;font-size:10.5px;padding:3px 4px 4px;text-align:left;line-height:1.2;font-family:inherit;display:flex;flex-direction:column;gap:1px}
+.msa-dc-c{position:relative;overflow:hidden;min-width:0;min-height:58px;border-radius:10px;border:1px solid #4c4680;background:#1b1733;color:#94a3b8;font-weight:800;font-size:10.5px;padding:3px 4px 4px;text-align:left;line-height:1.2;font-family:inherit;display:flex;flex-direction:column;gap:1px}
 .msa-dc-c .msa-dc-h{display:flex;align-items:center;gap:3px;font-size:10px;color:#a5b4fc}
 .msa-dc-c .msa-dc-h em{font-style:normal;font-size:9px;background:#fde047;color:#422006;border-radius:6px;padding:0 4px;font-weight:900}
 .msa-dc-c .msa-dc-h i{font-style:normal;margin-left:auto;font-size:9px;color:#94a3b8}
@@ -156,6 +162,7 @@ const msaKindIcon = (t) => (t && t.kind === 'pow' ? '💪' : '🧠');
 //   hitAt(t, d) … その間合いで撃つ前の命中%(無ければ t.hit)/lastMove … いま使った技(その札を光らせる)/hintId … 助手のおすすめの技
 //   onOpen(d) … 押したら一覧(無ければ見るだけの札)
 function MsaDistCards({ list, rep, dist = null, guts = null, hitAt = null, lastMove = null, hintId = null, onOpen = null, busy = false, dataSide = '' }) {
+  useEffect(() => { msaFitTechNames(); });
   const ids = Array.isArray(rep) && rep.length === 4 ? rep : msaRepIds(list, null);
   return (
     <div className="msa-dc" data-msa-dc={dataSide || ''}><style>{MSA_DC_CSS}</style>
@@ -293,7 +300,7 @@ function MsxManualBar({ opt, onPick, onAuto, busy, rep = null, onRep = null, tit
       </div>
       <div className="msxm-sec">
         <div className="msxm-h" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 6 }}>
-          <span>⚔ 攻撃{reachN ? '(札を押して技を選ぶ)' : '(この間合いでは届く技がありません)'}</span>
+          <span>⚔ 攻撃{reachN ? '(札を押して技を選ぶ)' : '(この間合いの技なし)'}</span>
           {items.length ? <button type="button" className="msxm-all" data-msxm-all onClick={() => setSheet('all')}>📜 全部の技({items.length})</button> : null}
         </div>
         <MsaDistCards list={items} rep={ids} dist={opt.dist} guts={opt.guts} hitAt={hitAt} hintId={hintId} busy={busy} onOpen={(d) => setSheet(d)} dataSide="manual"/>
@@ -309,9 +316,10 @@ function MsxManualBar({ opt, onPick, onAuto, busy, rep = null, onRep = null, tit
         <div className="msxm-row">
           <button type="button" className={`msxm-btn ${isHint(opt.guard) ? 'hint' : ''}`} disabled={busy} onClick={() => go({ type: 'guard' })}>🛡 ガード<small>受けるダメージを減らす</small></button>
           <button type="button" className={`msxm-btn ${isHint(opt.charge) ? 'hint' : ''}`} disabled={!opt.charge.ok || busy} onClick={() => go({ type: 'charge' })}>💪 ためる<small>{opt.charge.ok ? 'ガッツを大きく回復' : 'ガッツは満タン'}</small></button>
-          {opt.move.map((mv) => (
+          {/* 自分は画面の左・相手は右。後ろへ(離れる・step +1)は左向き、前へ(近づく・step −1)は右向き。ボタンも左に後ろへ・右に前へ(2026-11-14 社長) */}
+          {opt.move.slice().sort((x, y) => y.step - x.step).map((mv) => (
             <button key={mv.step} type="button" data-msxm-move={mv.step} className={`msxm-btn ${isHint(mv) ? 'hint' : ''}`} disabled={!mv.ok || busy} onClick={() => go({ type: 'move', step: mv.step })}>
-              {mv.step < 0 ? '◀ 前へ' : '後ろへ ▶'}<small>{mv.ok ? `→ ${MSX_MANUAL_DIST[mv.to]}` : 'これ以上は行けない'}</small>
+              {mv.step < 0 ? '前へ ▶' : '◀ 後ろへ'}<small>{mv.ok ? `→ ${MSX_MANUAL_DIST[mv.to]}` : 'これ以上は行けない'}</small>
             </button>
           ))}
         </div>

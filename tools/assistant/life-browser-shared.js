@@ -11,7 +11,7 @@ const seed = ({ storyIds, introKeys = [], life, intro = false, bondAll = null })
   const put = (k, v) => localStorage.setItem(k, JSON.stringify(v));
   // 助手ライフの画面: 新UIが既定(2026-11-11)。ここを使う検査は前の画面(旧UI)を前提にしているので、決めていなければ前の画面で見る。
   //   新UIを見る検査(assistant-life-ux-check・ux3-check・life-walkthrough)は、先に true を入れる(保存なしを見るときは window.__mhLifeUiNoSeed)
-  if (localStorage.getItem('mh_assistant_life_ui_v2') === null && !window.__mhLifeUiNoSeed) localStorage.setItem('mh_assistant_life_ui_v2', 'false');
+  if (localStorage.getItem('mh_assistant_life_ui_v2') === null && !window.__mhLifeUiNoSeed) { localStorage.setItem('mh_assistant_life_ui_v2', 'false'); localStorage.setItem('mh_assistant_life_ui_v2_default_v1', 'true'); }
   if (localStorage.getItem('mh_breeder_name') === null) {
     put('mh_breeder_name', 'テスト'); put('mh_breeder_icon', 'Mocchi'); put('mh_onboarded', true);
     for (const k of ['mh_tutorial_seen_v1','mh_battle_tutorial_seen_v1','mh_battle_tutorial_guide_shown_v1','mh_rhythm_tutorial_seen_v1','mh_masu_migrated','mh_kiki_intro_seen_v1','mh_momosuke_intro_seen_v1','mh_tactics_intro_seen_v1','mh_rhythm_hell_story_seen_v1','mh_story_assistant_chat_seen_v1','mh_story_tactics_types_seen_v1','mh_story_card_battle_seen_v1','mh_inherited_unique_level_compensation_v1']) put(k, true);
@@ -54,7 +54,7 @@ const toHome = async (page) => {
     await page.getByRole('button', { name: /TAP TO START|トップ画面へ進む/ }).first().click({ timeout: 800 }).catch(() => {});
     await page.waitForTimeout(500);
   }
-  for (let i = 0; i < 12; i++) { const c = await page.evaluate(() => { const b = [...document.querySelectorAll('button')].find(x => x.offsetParent && /^(受け取る|閉じる|OK|わかった！?|とじる)$/.test((x.innerText || '').trim())); if (b) { b.click(); return true; } return false; }); if (!c) break; await page.waitForTimeout(400); }
+  for (let i = 0; i < 12; i++) { const c = await page.evaluate(() => { const b = [...document.querySelectorAll('button')].find(x => x.offsetParent && /^(受け取る|閉じる|OK|(?:分|わ)かった！?|とじる)$/.test((x.innerText || '').trim())); if (b) { b.click(); return true; } return false; }); if (!c) break; await page.waitForTimeout(400); }
 };
 const finishTalk = async (page) => { for (let i = 0; i < 24; i++) { const n = await page.locator('[data-assistant-peer-talk]').count(); if (!n) break; await page.locator('[data-assistant-peer-talk]').first().click({ timeout: 800 }).catch(() => {}); await page.waitForTimeout(250); } };
 // HOME の顔の列: どの札でも札(名前)の下にあり、札・ほかのボタン・画面の端に重ならない(2026-11-07 社長「アイコンってコンテンツ名の下に表示じゃなかったっけ？」)

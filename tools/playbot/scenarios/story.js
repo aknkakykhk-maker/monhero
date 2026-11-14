@@ -93,7 +93,7 @@ async function replayScenario(s, { max = 6 } = {}) {
     for (let k = 0; k < 120; k++) {
       const prog = await s.page.evaluate(() => { const m = document.body.innerText.match(/(\d+)\s*\/\s*(\d+)\s*(次へ|▶)/); return m ? [Number(m[1]), Number(m[2])] : null; });
       if (prog) { maxSeen = Math.max(maxSeen, prog[0]); total = prog[1]; }
-      const next = (await s.listButtons()).find((b) => b.overlay && /^(次へ|▶ つぎ|つぎ|とじる|閉じる|OK|おわり)$/.test(b.label));
+      const next = (await s.listButtons()).find((b) => b.overlay && /^(次へ|▶ つぎ|▶ 次|つぎ|次|とじる|閉じる|OK|おわり|終わり)$/.test(b.label));
       if (!next) break;
       s.state.step += 1;
       await s.tap(next, '回想を読み進める');

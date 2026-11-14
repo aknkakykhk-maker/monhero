@@ -74,7 +74,7 @@ const openHome = async (page) => {
     await page.getByRole('button', { name: '設定' }).first().dispatchEvent('click');
     await page.getByRole('button', { name: 'ヘルプ' }).first().waitFor({ timeout: 20000 });
     await page.getByRole('button', { name: 'ヘルプ' }).first().dispatchEvent('click');
-    await page.getByRole('button', { name: 'わかった！冒険に戻る' }).waitFor({ timeout: 20000 });
+    await page.getByRole('button', { name: '分かった！冒険に戻る' }).waitFor({ timeout: 20000 });
     await page.waitForTimeout(500);
     const catNew = await page.evaluate(() => [...document.querySelectorAll('[data-help-new]')].map(b => b.closest('button')?.innerText.split('\n')[0] || ''));
     check('① カテゴリに🆕が付く', catNew.length > 0, catNew.join(' / '));

@@ -52,7 +52,7 @@ const seed = ({ storyIds }) => {
       await page.getByRole('button', { name: /TAP TO START|トップ画面へ進む/ }).first().click({ timeout: 800 }).catch(() => {});
       await page.waitForTimeout(500);
     }
-    for (let i = 0; i < 10; i++) { const c = await page.evaluate(() => { const b = [...document.querySelectorAll('button')].find(x => x.offsetParent && /^(受け取る|閉じる|OK|わかった！?)$/.test((x.innerText || '').trim())); if (b) { b.click(); return true; } return false; }); if (!c) break; await page.waitForTimeout(400); }
+    for (let i = 0; i < 10; i++) { const c = await page.evaluate(() => { const b = [...document.querySelectorAll('button')].find(x => x.offsetParent && /^(受け取る|閉じる|OK|(?:分|わ)かった！?)$/.test((x.innerText || '').trim())); if (b) { b.click(); return true; } return false; }); if (!c) break; await page.waitForTimeout(400); }
     await page.evaluate(() => document.querySelector('.mh-home-player')?.click());
     await page.waitForTimeout(1200);
     await page.evaluate(() => [...document.querySelectorAll('button')].find(b => /イベント回想/.test(b.textContent || ''))?.click());

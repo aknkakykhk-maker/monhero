@@ -23,7 +23,7 @@ async function enterQuickBattle(s, { system = 'systemQuick', mode = 'challenge' 
       if (!card) return '';
       card.scrollIntoView({ block: 'center' });
       const btns = [...card.querySelectorAll('button')].filter((b) => !/説明|ランキング/.test(b.innerText || ''));
-      const btn = btns.find((b) => /難易度を選ぶ/.test(b.innerText || '')) || btns.find((b) => /遊ぶ|挑戦|選ぶ|はじめる|決定/.test(b.innerText || ''));
+      const btn = btns.find((b) => /難易度を選ぶ/.test(b.innerText || '')) || btns.find((b) => /遊ぶ|挑戦|選ぶ|(?:始|はじ)める|決定/.test(b.innerText || ''));
       (btn || card).click();
       return (btn ? btn.innerText : card.innerText || '').split('\n')[0].trim();
     }, mode);

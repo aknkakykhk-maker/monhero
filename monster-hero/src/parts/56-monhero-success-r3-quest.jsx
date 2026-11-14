@@ -72,7 +72,7 @@ function MsxR3Shugyo({ run, setRun, v, ev, onBack, onPause }) {
           {helpers.length ? <span className="v-chip ylw">👥 編成のおかげ ×{helpers.length}体</span> : null}
         </div>
       </div>
-      <MsxStRow stats={s.stats} ups={gains}/>
+      <MsxStRow who={s} stats={s.stats} ups={gains}/>
       <div className="v-log"><span className="hd2">⚔ 修行のけっか</span><br/>
         {Object.keys(gains).length ? Object.entries(gains).map(([k, g], i) => <span key={k}>{i ? '・' : ''}{MSX_STAT_NAME[k]} <b className="gu">+{g}</b></span>) : '能力は上がらなかった'}
         {helpers.length ? <>(編成のモンスター <b className="ga">{helpers.length}体</b> がいっしょに修行した)</> : null}<br/>

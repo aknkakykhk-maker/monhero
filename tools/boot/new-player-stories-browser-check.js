@@ -97,7 +97,7 @@ const SETUP = [/^名前を決める$/, /^アイコンを選ぶ$/];
       if (state.story && state.bonus) overlap += 1;
       if (state.story && played[played.length - 1] !== state.story) played.push(state.story);
       const closer = await page.evaluate(() => {
-        const b = [...document.querySelectorAll('button')].find((x) => x.offsetParent && /^(スキップ|受け取る|閉じる|あとで読む|あとで|あとでやる|今はいい|いまはいい|今は見ない|わかった！?|OK|見ない|次へ)$/.test((x.innerText || '').trim()));
+        const b = [...document.querySelectorAll('button')].find((x) => x.offsetParent && /^(スキップ|受け取る|閉じる|あとで読む|あとで|あとでやる|今はいい|いまはいい|今は見ない|(?:分|わ)かった！?|OK|見ない|次へ)$/.test((x.innerText || '').trim()));
         if (b) { b.click(); return true; } return false;
       });
       if (process.env.TRACE && (state.story || state.bonus || closer)) console.log('HOME', i, JSON.stringify(state), closer);

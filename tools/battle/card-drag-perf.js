@@ -78,7 +78,7 @@ const check = (name, ok, detail = '') => {
     await page.getByRole('button', { name: 'トップ画面へ進む' }).click({ timeout: 30000 });
     await page.getByRole('button', { name: 'モンヒロバトル' }).waitFor({ timeout: 30000 });
     for (let i = 0; i < 6; i += 1) {
-      const btn = page.getByRole('button', { name: /受け取る|閉じる|はじめる|OK/ }).first();
+      const btn = page.getByRole('button', { name: /受け取る|閉じる|(?:始|はじ)める|OK/ }).first();
       if (await btn.count() === 0 || !(await btn.isVisible().catch(() => false))) break;
       await btn.dispatchEvent('click').catch(() => {});
       await page.waitForTimeout(250);
@@ -115,7 +115,7 @@ const check = (name, ok, detail = '') => {
       const step = await page.evaluate(() => {
         const live = [...document.querySelectorAll('button')].filter((x) => x.offsetParent && !x.disabled);
         const pick = (re) => live.find((x) => re.test(x.textContent.trim()));
-        const go = pick(/出撃|バトル開始|この編成で|この子で挑む|供モン\d*にする|はじめる|^決定$|^確定$/); if (go) { go.click(); return 'go'; }
+        const go = pick(/出撃|バトル開始|この編成で|この子で挑む|供モン\d*にする|(?:始|はじ)める|^決定$|^確定$/); if (go) { go.click(); return 'go'; }
         const confirm = pick(/^(習得する|強化する)$/); if (confirm) { confirm.click(); return 'confirm'; }
         const teaching = pick(/新規習得|強化後/); if (teaching) { teaching.click(); return 'teach'; }
         const slot = pick(/^(零|近|中|遠)距離/); if (slot) { slot.click(); return 'slot'; }
