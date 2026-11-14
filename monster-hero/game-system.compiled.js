@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 110f5cf68ecc2f87
+// source-sha256: 2661754fc04186c0
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -158962,7 +158962,7 @@ function MsxRunIntro({
     if (last) finish();else setI(n + 1);
   };
   return React.createElement(React.Fragment, null, React.createElement("style", null, MSX_INTRO_CSS), React.createElement("div", {
-    className: "v-body"
+    className: "v-body msx-intro-body"
   }, React.createElement("div", {
     className: "v-scene msx-intro",
     style: {
@@ -159014,10 +159014,17 @@ function MsxRunIntro({
     className: "go",
     onClick: next,
     "data-msx-intro-next": true
-  }, last ? '育成をはじめる ▶' : 'つぎへ ▶')));
+  }, last ? '育成をはじめる ▶' : '次へ ▶')));
 }
 const MSX_INTRO_CSS = `
 .msx .msx-intro{cursor:pointer}
+/* 横画面: ほかの画面の2列の並べ方を使わず、場面を画面いっぱいに。文の窓は右下 */
+.msx.land .v-body.msx-intro-body{display:flex;flex-direction:column}
+.msx.land .msx-intro{flex:1 1 auto;min-height:0}
+.msx.land .msx-intro-talk{left:auto;width:52%}
+.msx.land .msx-intro-aid{right:auto;left:48%;width:30%;height:88%;bottom:0}
+.msx.land .msx-intro .mon{height:60%!important;bottom:12%!important;left:24%!important}
+.msx.land .msx-intro .gr{left:24%!important;bottom:calc(12% - 5px)!important}
 .msx .msx-intro-aid{position:absolute;right:-6%;bottom:16%;height:66%;width:62%;object-fit:contain;object-position:right bottom;filter:drop-shadow(0 6px 4px #0008)}
 .msx .msx-intro-talk{position:absolute;left:10px;right:10px;bottom:10px;z-index:3;word-break:auto-phrase}
 .msx .msx-intro-talk .pg{display:block;text-align:right;font-size:10px;color:#64748b;margin-top:2px}

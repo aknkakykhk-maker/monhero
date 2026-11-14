@@ -28,7 +28,7 @@ function MsxRunIntro({ run, ctx, onDone }) {
   const next = () => { if (last) finish(); else setI(n + 1); };
   return (<>
     <style>{MSX_INTRO_CSS}</style>
-    <div className="v-body">
+    <div className="v-body msx-intro-body">
       <div className="v-scene msx-intro" style={{ flex: '1 1 0' }} onClick={next} data-msx-intro={n}>
         <img className="bg" src={msxSceneBg(s.turn).bg} alt=""/><div className="sh"/>
         <div className="gr" style={{ left: '30%', bottom: 'calc(30% - 5px)' }}/>
@@ -40,7 +40,7 @@ function MsxRunIntro({ run, ctx, onDone }) {
     </div>
     <div className="v-ft">
       {seenBefore ? <button type="button" onClick={finish} data-msx-intro-skip>⏩ とばす</button> : null}
-      <button type="button" className="go" onClick={next} data-msx-intro-next>{last ? '育成をはじめる ▶' : 'つぎへ ▶'}</button>
+      <button type="button" className="go" onClick={next} data-msx-intro-next>{last ? '育成をはじめる ▶' : '次へ ▶'}</button>
     </div>
   </>);
 }
@@ -48,6 +48,13 @@ function MsxRunIntro({ run, ctx, onDone }) {
 
 const MSX_INTRO_CSS = `
 .msx .msx-intro{cursor:pointer}
+/* 横画面: ほかの画面の2列の並べ方を使わず、場面を画面いっぱいに。文の窓は右下 */
+.msx.land .v-body.msx-intro-body{display:flex;flex-direction:column}
+.msx.land .msx-intro{flex:1 1 auto;min-height:0}
+.msx.land .msx-intro-talk{left:auto;width:52%}
+.msx.land .msx-intro-aid{right:auto;left:48%;width:30%;height:88%;bottom:0}
+.msx.land .msx-intro .mon{height:60%!important;bottom:12%!important;left:24%!important}
+.msx.land .msx-intro .gr{left:24%!important;bottom:calc(12% - 5px)!important}
 .msx .msx-intro-aid{position:absolute;right:-6%;bottom:16%;height:66%;width:62%;object-fit:contain;object-position:right bottom;filter:drop-shadow(0 6px 4px #0008)}
 .msx .msx-intro-talk{position:absolute;left:10px;right:10px;bottom:10px;z-index:3;word-break:auto-phrase}
 .msx .msx-intro-talk .pg{display:block;text-align:right;font-size:10px;color:#64748b;margin-top:2px}
