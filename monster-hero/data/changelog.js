@@ -35,6 +35,13 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    date: "2026-11-14 18:50", type:'update', title:'能力の列を押すと、素質を見られるようになりました', group:'success', releaseFlag:'monheroSuccess', status:'new',
+    items:[
+      '育成中の能力6つの札の列を押すと、能力ごとの素質(A〜E)の表示に切り替わります。もう一度押すと元に戻ります。',
+      '縦長の画面が低い端末でも、左の編成の列に7体ぜんぶが見えるようにしました。',
+    ],
+  },
+  {
     // 2026-11-14 社長の指摘(iPhone の Safari): 更新履歴の予告動画の音が、設定の音量と関係なく鳴る。ChangelogVideo・HELL の説明動画を Audio_.videoGain に合わせた
     date: "2026-11-14 17:19", type:'fix', title:'お知らせの動画の音が、設定の音量と関係なく鳴っていたのを直しました', status:'new',
     items:[
