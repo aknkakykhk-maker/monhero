@@ -276,7 +276,7 @@ const __mod = { exports: {} };
       return { key: t.id, name: t.name, kind: t.kind, dist: t.dist, power: b && b.pow ? t.power / 20 * (1 + b.pow) : t.power / 20,
         hit: t.hit / 100 + m / 100 * MASTERY_HIT_MAX + (b && b.hit ? b.hit : 0),
         guts: b && b.guts ? Math.round(t.guts * (1 - m / 100 * MASTERY_GUTS_CUT) * (1 - b.guts)) : Math.round(t.guts * (1 - m / 100 * MASTERY_GUTS_CUT)),
-        crit: t.crit / 100, gd: t.gd, big: t.power >= 30, ...(t.moveTo != null ? { moveTo: t.moveTo } : {}) };
+        crit: t.crit / 100, gd: t.gd, big: t.power >= 30, base: { power: t.power, hit: t.hit, gd: t.gd, crit: t.crit }, ...(t.moveTo != null ? { moveTo: t.moveTo } : {}) };
     });
   };
 
@@ -856,8 +856,11 @@ const __mod = { exports: {} };
       const tech = u.moves.map(mv => {
         const reach = inRange(mv, d);
         const p = buffedHit(hitChance(u, f, mv, undefined, d), flow.buffs[side], flow.buffs[foeOf(side)], first);
+        // base … 技表の元の数(威力・命中の補正・ガッツダウン・クリティカル。技の性能の段に使う)/power … 見せる威力(技表の値)/pd … 間合いごとの撃つ前の命中%(届かない間合いは null)。画面の「技の札」用で、記録・指紋には入らない
+        const pd = [0, 1, 2, 3].map(dd => (inRange(mv, dd) ? Math.round(buffedHit(hitChance(u, f, mv, undefined, dd), flow.buffs[side], flow.buffs[foeOf(side)], first) * 1000) / 10 : null));
         return { type: 'tech', key: mv.key, name: mv.name, kind: mv.kind, guts: mv.guts, dist: mv.dist.slice(), reach,
-          ok: reach && u.guts >= mv.guts, need: Math.max(0, mv.guts - u.guts), p: Math.round(p * 1000) / 10, gd: mv.gd, crit: mv.crit };
+          ok: reach && u.guts >= mv.guts, need: Math.max(0, mv.guts - u.guts), p: Math.round(p * 1000) / 10, gd: mv.gd, crit: mv.crit,
+          power: Math.round(mv.power * 20 * 10) / 10, pd, base: mv.base };
       });
       const move = [-1, 1].map(step => ({ type: 'move', step, to: d + step, ok: d + step >= 0 && d + step <= 3 }));
       const swap = me.units.map((x, i) => ({ type: 'swap', to: i, name: x.name, hp: x.hp, maxHp: x.maxHp,
