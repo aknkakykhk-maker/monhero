@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ecbace6cdc828df4
+// source-sha256: e9238faac1f8f408
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -162763,7 +162763,13 @@ const MSX_CSS = `
 .msx .v-cup.sel{border-color:#fde047;background:#3b2f0b;box-shadow:0 0 12px #fde04766}
 .msx .v-cup.rv{border-color:#f87171;background:linear-gradient(90deg,#3b1220,#1e1a36)}.msx .v-cup.rv .tx small{color:#fca5a5}
 .msx .v-cup .rvb{position:absolute;right:8px;top:-8px;background:linear-gradient(90deg,#ef4444,#fb923c);border-radius:99px;padding:0 8px;font-size:10px;font-weight:900;line-height:1.6;white-space:nowrap}
-.msx .v-cup.ng{opacity:.55;border-style:dashed}.msx .v-cup.ng .tx small{color:#fca5a5}
+.msx .v-cup.ng{opacity:.55;border-style:dashed}
+.msx .v-cup .e .gr{position:absolute;left:2px;bottom:-2px;font-size:8.5px;font-weight:900;border-radius:5px;padding:0 3px;color:#1e1b4b;background:#cbd5e1;letter-spacing:0}
+.msx .v-cup .e .gr.g-bronze{background:#d9a066}.msx .v-cup .e .gr.g-silver{background:#cbd5e1}.msx .v-cup .e .gr.g-gold{background:#fde047}
+.msx .v-cup .e .gr.g-green{background:#86efac}.msx .v-cup .e .gr.g-four{background:#c4b5fd}.msx .v-cup .e .gr.g-rainbow{background:linear-gradient(90deg,#fda4af,#fde047,#86efac,#93c5fd);color:#1e1b4b}
+.msx .v-cup.ex .e{position:relative}
+.msx .v-cup.ex.g-four{border-color:#a78bfa}.msx .v-cup.ex.g-gold{border-color:#fde047}.msx .v-cup.ex.g-rainbow{border-color:#fda4af}
+.msx .v-cup.hard .tx small{color:#fca5a5}.msx .v-cup.ng .tx small{color:#fca5a5}
 .msx .v-vsh{display:flex;align-items:center;gap:4px;margin-top:6px;border-radius:16px;overflow:hidden;border:1px solid #4a4380;background:linear-gradient(100deg,#9d174d 0,#3b2a6b 49%,#0f0d24 50%,#1e3a8a 100%);padding:6px 6px;min-height:104px}
 .msx .v-vsh .sd{flex:1;min-width:0;display:flex;align-items:center;gap:4px;line-height:1.3}.msx .v-vsh .sd.op{justify-content:flex-end;text-align:right}
 .msx .v-vsh .sd img{height:70px;aspect-ratio:1;object-fit:contain;flex:none;filter:drop-shadow(0 5px 3px #0008)}.msx .v-vsh .sd.op img{transform:scaleX(-1)}
@@ -166505,15 +166511,59 @@ function MsxPlay({
 const MSX_EXTRA_ITEM = Object.freeze({
   oil: {
     e: '🫙',
-    desc: '体力を少し回復する'
+    desc: '体力を上限の20%回復'
   },
   oilyoil: {
     e: '🛢️',
-    desc: '体力をたっぷり回復する'
+    desc: '体力を上限の40%回復'
   },
   herb: {
     e: '🌱',
-    desc: 'ストレスを下げる'
+    desc: 'ストレス −20'
+  },
+  elixir0: {
+    e: '🧪',
+    desc: '使ったターンの修行で、零の間合いの技を覚える率 +20'
+  },
+  elixir1: {
+    e: '🧪',
+    desc: '使ったターンの修行で、近の間合いの技を覚える率 +20'
+  },
+  elixir2: {
+    e: '🧪',
+    desc: '使ったターンの修行で、中の間合いの技を覚える率 +20'
+  },
+  elixir3: {
+    e: '🧪',
+    desc: '使ったターンの修行で、遠の間合いの技を覚える率 +20'
+  },
+  fruit_life: {
+    e: '🍎',
+    desc: '使ったターンのトレーニングで、ライフの伸び ×1.5'
+  },
+  fruit_pow: {
+    e: '🍖',
+    desc: '使ったターンのトレーニングで、ちからの伸び ×1.5'
+  },
+  fruit_wise: {
+    e: '🫐',
+    desc: '使ったターンのトレーニングで、かしこさの伸び ×1.5'
+  },
+  fruit_hit: {
+    e: '🍊',
+    desc: '使ったターンのトレーニングで、命中の伸び ×1.5'
+  },
+  fruit_eva: {
+    e: '🍇',
+    desc: '使ったターンのトレーニングで、回避の伸び ×1.5'
+  },
+  fruit_tough: {
+    e: '🥥',
+    desc: '使ったターンのトレーニングで、丈夫さの伸び ×1.5'
+  },
+  stamina: {
+    e: '🍡',
+    desc: '体力の最大値 +15(体力も15回復)'
   }
 });
 const msxItemView = k => {
@@ -167465,10 +167515,50 @@ const MSX_R3_CUP_ICON = Object.freeze({
   herosummer: '👑',
   herowinter: '👑',
   debut: '🎀',
-  peak: '🗻'
+  peak: '🗻',
+  derby: '🔥',
+  four1: '🌅',
+  four2: '🌊',
+  four3: '🦁',
+  four4: '🏔',
+  distT0: '🤜',
+  distT1: '👊',
+  distT2: '🏹',
+  distT3: '🔭',
+  distC0: '🤜',
+  distC1: '👊',
+  distC2: '🏹',
+  distC3: '🔭',
+  sel_life: '❤️',
+  sel_pow: '💪',
+  sel_wise: '🧠',
+  sel_hit: '🎯',
+  sel_eva: '💨',
+  sel_tough: '🛡️',
+  mem_life: '🏮',
+  mem_pow: '🥊',
+  mem_wise: '📖',
+  mem_hit: '🎯',
+  mem_eva: '👟',
+  mem_tough: '🛡️',
+  gem_attacker: '♦️',
+  gem_tank: '🔷',
+  gem_supporter: '💚',
+  gem_healer: '🔶',
+  gem_shadow: '🟣'
+});
+const MSX_R3_CUP_GRADE = Object.freeze({
+  bronze: '銅',
+  silver: '銀',
+  gold: '金',
+  green: '緑',
+  four: '四大',
+  rainbow: '特別'
 });
 const msxR3Stars = n => n >= 4 ? '👑' : '★'.repeat(Math.max(1, n || 1));
 const msxR3CupName = sys => {
+  const S0 = msxSuc && msxSuc.SUC;
+  if (S0 && S0.EX_BY_SYS && S0.EX_BY_SYS[sys]) return S0.EX_BY_SYS[sys].name;
   const names = typeof window !== 'undefined' && window.MONSUC_REGULAR_CUPS ? window.MONSUC_REGULAR_CUPS : {};
   if (names[sys]) return String(names[sys]).replace(/(自慢|大会)$/, m => m === '自慢' ? '自慢の大会' : m);
   const S = msxSuc && msxSuc.SUC;
@@ -168009,9 +168099,34 @@ const msxR3WhyText = (e, s) => {
   if (e.why === 'cond') return '体調が悪いと出られない';
   if (e.why === 'loyal') return `忠誠が ${e.need} 以上 要る`;
   if (e.why === 'fame') return `これまでの賞金の合計が ${msxFmt(e.need)}G 以上で出られる(いま ${msxFmt(s.fameTotal)}G)`;
+  if (e.why === 'rank') return `賞金の段が ${e.needName} 以上で出られる(${msxFmt(e.needG)}G・いま ${msxFmt(s.fameTotal)}G)`;
+  if (e.why === 'won') return `${e.wonName} 優勝で出られる`;
   return '出られない';
 };
-const msxR3CupReward = (SUC, c) => {
+const msxR3CupItems = (SUC, c, s) => {
+  try {
+    const o = s && typeof SUC.cupItemsOf === 'function' ? SUC.cupItemsOf(s, c.sys, c.star) : {};
+    return Object.entries(o || {}).map(([k, n]) => `${(SUC.ITEMS[k] || {}).name || k} ×${n}`);
+  } catch (e) {
+    return [];
+  }
+};
+const msxR3CupReward = (SUC, c, s) => {
+  const ex = SUC.EX_BY_SYS ? SUC.EX_BY_SYS[c.sys] : null;
+  if (ex) {
+    const rw = ex.rw || {};
+    const o = [];
+    if (rw.all) o.push(`全能力 +${rw.all}`);
+    if (rw.stat) Object.entries(rw.stat).forEach(([k, v]) => o.push(`${MSX_STAT_NAME[k]} +${v}`));
+    if (rw.hpMax) o.push(`体力の最大値 +${rw.hpMax}`);
+    if (rw.loy) o.push(`忠誠度 +${rw.loy}`);
+    if (rw.pts) o.push(`能力ポイント +${rw.pts}`);
+    if (rw.pop) o.push(`人気 +${rw.pop}`);
+    o.push(...msxR3CupItems(SUC, c, s));
+    if (Number.isInteger(rw.apt)) o.push('その間合いの適性が1段上がる');
+    if (ex.four) o.push('四大大会');
+    return o.length ? o.join('・') : '賞金と修行チケット';
+  }
   const R = SUC.CUP_SYS ? SUC.CUP_SYS[c.sys] || {} : {};
   const out = [];
   const pts = {
@@ -168023,14 +168138,16 @@ const msxR3CupReward = (SUC, c) => {
     3: 4,
     4: 8
   }[c.star];
-  const up = {
-    2: 6,
+  const up = ((SUC.CUP_REWARD || {}).statUp || {
+    1: 4,
+    2: 8,
     3: 12
-  }[c.star];
+  })[c.star];
   if (pts) out.push(`能力ポイント +${pts}`);
   if (pop) out.push(`人気 +${pop}`);
   if (R.stat && up) out.push(`${MSX_STAT_NAME[R.stat]} +${up}`);
   if (c.star >= 4) out.push('全能力 +4');
+  out.push(...msxR3CupItems(SUC, c, s));
   if (c.scenario) out.push(c.sys === 'scerubin' ? `忠誠度 +5・次のごはんの効き目 ×${SUC.MEAL_WATCH_MULT || 1.5}` : 'シナリオのごほうび');
   return out.length ? out.join('・') : '賞金と修行チケット';
 };
@@ -168121,7 +168238,7 @@ function MsxR3Cup({
     className: "v-cups"
   }, cups.length ? cups.map(c => {
     const ok = c.entry && c.entry.ok;
-    const cls = !ok ? 'ng' : c.id === pick ? 'sel' : c.rival ? 'rv' : c.done ? 'won' : '';
+    const cls = `${!ok ? 'ng' : c.id === pick ? 'sel' : c.rival ? 'rv' : c.done ? 'won' : ''}${c.ex ? ` ex g-${c.grade || 'gold'}` : ''}${c.hard ? ' hard' : ''}`;
     return React.createElement("button", {
       type: "button",
       key: c.id,
@@ -168131,11 +168248,13 @@ function MsxR3Cup({
       "data-msx-r3-cup": c.id
     }, React.createElement("div", {
       className: "e"
-    }, c.scenario ? '📖' : MSX_R3_CUP_ICON[c.sys] || '🏆'), React.createElement("div", {
+    }, c.scenario ? '📖' : MSX_R3_CUP_ICON[c.sys] || '🏆', c.ex && c.grade ? React.createElement("small", {
+      className: `gr g-${c.grade}`
+    }, MSX_R3_CUP_GRADE[c.grade] || '') : null), React.createElement("div", {
       className: "tx"
-    }, React.createElement("b", null, c.scenario ? c.name : msxR3CupName(c.sys)), React.createElement("small", null, !ok ? `✖ ${msxR3WhyText(c.entry, s)}` : c.rival ? `ライバル: ${c.rival.name}` : c.done ? '👑 優勝したことがある → ⏩ スキップできる' : '出られる ✔'), React.createElement("span", {
+    }, React.createElement("b", null, c.scenario ? c.name : msxR3CupName(c.sys)), React.createElement("small", null, !ok ? `✖ ${msxR3WhyText(c.entry, s)}` : c.hard ? '🔥 勝ち目なし… 相手がとても強い' : c.rival ? `ライバル: ${c.rival.name}` : c.done ? '👑 優勝したことがある → ⏩ スキップできる' : '出られる ✔'), React.createElement("span", {
       className: "rw"
-    }, "🎁 ", msxR3CupReward(SUC, c))), React.createElement("div", {
+    }, "🎁 ", msxR3CupReward(SUC, c, s))), React.createElement("div", {
       className: "rt"
     }, React.createElement("span", {
       className: "st"
@@ -168297,10 +168416,96 @@ const msxR3Diff = (a, b) => {
     const g = b.stats[k] - a.stats[k];
     if (g) d.stats[k] = g;
   });
+  d.rankFrom = Number(a.fameRank) || 0;
+  d.rankTo = Number(b.fameRank) || 0;
+  d.items = {};
+  Object.keys(b.bag || {}).forEach(k => {
+    const g = (Number((b.bag || {})[k]) || 0) - (Number((a.bag || {})[k]) || 0);
+    if (g > 0) d.items[k] = g;
+  });
   return d;
 };
+const msxR3RankName = step => {
+  const S = msxSuc && msxSuc.SUC ? msxSuc.SUC : null;
+  return S && typeof S.rankNameOf === 'function' ? S.rankNameOf(step) : String(step);
+};
+function MsxR3RankPyramid({
+  step,
+  up
+}) {
+  const S = msxSuc && msxSuc.SUC ? msxSuc.SUC : null;
+  const R = S && S.FAME_RANK ? S.FAME_RANK : [];
+  if (!R.length) return null;
+  const COL = ['#bae6fd', '#86efac', '#fb923c', '#7dd3fc', '#facc15', '#c084fc', '#f43f5e', '#14b8a6', '#e879f9', '#6d28d9'];
+  const cond = x => x.cond === 'debut' ? 'デビュー戦に出る' : x.cond === 'win' ? '大会で1勝' : `${msxFmt(x.min)}G`;
+  return React.createElement("div", {
+    "data-msx-r3-rank": true,
+    style: {
+      margin: '4px 10px 0',
+      padding: '5px 6px 6px',
+      borderRadius: 10,
+      background: '#0f172acc'
+    }
+  }, React.createElement("div", {
+    style: {
+      fontSize: 11,
+      fontWeight: 800,
+      color: '#fde68a',
+      textAlign: 'center',
+      marginBottom: 3
+    }
+  }, "賞金ランク"), R.map((x, i) => i).reverse().map(i => {
+    const x = R[i];
+    const me = i + 1 === step;
+    const w = 46 + (R.length - 1 - i) * 5.5;
+    return React.createElement("div", {
+      key: i,
+      style: {
+        display: 'flex',
+        alignItems: 'center',
+        height: 15,
+        gap: 4
+      }
+    }, React.createElement("span", {
+      style: {
+        width: 40,
+        fontSize: 9,
+        fontWeight: 900,
+        textAlign: 'right',
+        color: up ? '#fef08a' : '#a7f3d0'
+      }
+    }, me ? up ? 'UP!▶' : 'KEEP▶' : ''), React.createElement("span", {
+      style: {
+        flex: '1 1 0',
+        display: 'flex',
+        justifyContent: 'center'
+      }
+    }, React.createElement("span", {
+      style: {
+        width: `${w}%`,
+        background: COL[i],
+        opacity: i + 1 <= step ? 1 : 0.35,
+        borderRadius: 3,
+        fontSize: 10,
+        fontWeight: 800,
+        color: '#111827',
+        textAlign: 'center',
+        lineHeight: '14px',
+        outline: me ? '2px solid #fff' : 'none'
+      }
+    }, x.name)), React.createElement("span", {
+      style: {
+        width: 74,
+        fontSize: 9.5,
+        textAlign: 'right',
+        color: '#e5e7eb'
+      }
+    }, cond(x)));
+  }));
+}
 const msxR3PrizeRows = (d, s) => {
   const rows = [];
+  if (d.rankTo > d.rankFrom) rows.push(['🏆', '賞金ランク', `${msxR3RankName(d.rankFrom || 0)} → ${msxR3RankName(d.rankTo)}`, 'new', 'UP']);else if (d.rankTo > 0) rows.push(['🏆', '賞金ランク', `${msxR3RankName(d.rankTo)}(KEEP)`, '', '']);
   (d.titles || []).forEach(t => rows.push(['🏅', '称号', `「${typeof msxR3TitleName === 'function' ? msxR3TitleName(t) : t}」を手に入れた!`, 'new', 'NEW']));
   (d.apt || []).forEach(i => rows.push(['📏', '間合い適性', `「${['零', '近', '中', '遠'][i]}」の間合い適性が1段上がった!`, 'new', 'UP']));
   if (d.pts) rows.push(['🔷', '能力ポイント', `+${d.pts}(いま ${s.pts})`, '', '']);
@@ -168309,6 +168514,11 @@ const msxR3PrizeRows = (d, s) => {
   if (d.pop) rows.push(['⭐', '人気', `+${d.pop}(${s.pop - d.pop} → ${s.pop})`, '', '']);
   if (d.sand) rows.push(['⏳', '時渡りの砂時計', `+${d.sand}`, '', '']);
   Object.entries(d.stats || {}).forEach(([k, g]) => rows.push([MSX_STAT_ICON[k], MSX_STAT_NAME[k], `+${g}`, '', '']));
+  Object.entries(d.items || {}).forEach(([k, n]) => {
+    const S = msxSuc && msxSuc.SUC ? msxSuc.SUC : null;
+    const it = S && S.ITEMS ? S.ITEMS[k] : null;
+    rows.push([typeof MSX_EXTRA_ITEM !== 'undefined' && MSX_EXTRA_ITEM[k] && MSX_EXTRA_ITEM[k].e || '🎁', it ? it.name : k, `×${n}(この育成の中で使える)`, 'new', 'GET']);
+  });
   return rows;
 };
 function MsxR3Battle({
@@ -168358,7 +168568,7 @@ function MsxR3Battle({
     const d = msxR3Diff(before, r.state);
     const out = {
       r3: {
-        stage: won ? 'prize' : 'meal',
+        stage: won ? 'prize' : d.rankTo > d.rankFrom ? 'rank' : 'meal',
         won,
         name,
         icon: msxR3BattleIcon(b),
@@ -168396,7 +168606,8 @@ function MsxR3Battle({
       t: `${name}: ${won ? '優勝' : '負け'}`
     }].slice(-20);
     const arcAfter = msxArcAfterOf(SUC, before, b, won, fight && fight.opp) || undefined;
-    if (s2.mealReady && !s2.over) {
+    const rankUp = d && d.rankTo > d.rankFrom;
+    if (rankUp || s2.mealReady && !s2.over) {
       setRun({
         ...run,
         s: s2,
@@ -168406,7 +168617,8 @@ function MsxR3Battle({
         log,
         out: {
           r3: {
-            stage: 'meal',
+            stage: rankUp ? 'rank' : 'meal',
+            meal: !!(s2.mealReady && !s2.over),
             won,
             name,
             icon: msxR3BattleIcon(b),
@@ -168533,6 +168745,59 @@ function MsxR3Battle({
   });
   if (st3) {
     const d = st3.d || {};
+    if (st3.stage === 'rank') {
+      const body = React.createElement(React.Fragment, null, React.createElement(MsxBand, {
+        s: s,
+        v: v,
+        ev: ev
+      }), React.createElement("div", {
+        className: "v-scene",
+        style: {
+          flex: '1 1 0',
+          minHeight: 120
+        }
+      }, React.createElement("img", {
+        className: "bg",
+        src: "images/story-bg/monhero_plaza_evening.jpg",
+        alt: ""
+      }), React.createElement("div", {
+        className: "sh"
+      }), React.createElement("div", {
+        className: "v-burst"
+      }), React.createElement("div", {
+        className: "v-stamp msx-pop",
+        style: {
+          top: '8%',
+          fontSize: 34
+        }
+      }, "ランク UP!", React.createElement("small", null, msxR3RankName(d.rankFrom || 0), " → ", msxR3RankName(d.rankTo), "・🎫 修行チケット +", (d.rankTo || 0) - (d.rankFrom || 0)))), React.createElement(MsxR3RankPyramid, {
+        step: d.rankTo || 0,
+        up: true
+      }));
+      const next = () => st3.meal ? setRun({
+        ...run,
+        out: {
+          r3: {
+            ...st3,
+            stage: 'meal'
+          }
+        }
+      }) : finish(s);
+      return React.createElement(MsxR3Frame, {
+        run: run,
+        back: "中断",
+        onBack: onPause,
+        body: body,
+        foot: React.createElement("div", {
+          className: "v-ft"
+        }, React.createElement("button", {
+          type: "button",
+          className: "go",
+          onClick: next,
+          "data-msx-r3-next": true
+        }, st3.meal ? '🍽 ごはんへ ▶' : 'つぎへ ▶'))
+      });
+    }
     if (st3.stage === 'prize') {
       const rows = msxR3PrizeRows(d, s);
       const body = React.createElement(React.Fragment, null, React.createElement(MsxBand, {
@@ -168578,7 +168843,10 @@ function MsxR3Battle({
         alt: ""
       }), "ライバルの ", st3.rivalName, " に 勝った!", React.createElement("b", null, "ごほうび大")) : null, React.createElement("div", {
         className: "v-trophy"
-      }, "🏆")), React.createElement("div", {
+      }, "🏆")), React.createElement(MsxR3RankPyramid, {
+        step: d.rankTo || 0,
+        up: d.rankTo > d.rankFrom
+      }), React.createElement("div", {
         className: "v-prz"
       }, rows.length ? rows.map(([e, n, t, c, nw], i) => React.createElement("div", {
         key: i,
@@ -168692,7 +168960,7 @@ function MsxR3Battle({
     };
     const LY = SUC.LOYAL || {};
     const RT = SUC.RATE || {};
-    const loyNote = `忠誠度が高いほど、トレーニングと修行の伸びが上がる(${LY.capBoost || 60}で最大 ×${1 + (LY.capBoost || 60) / 100})。80以上で大成功が少し出やすい(+${Math.round((RT.greatLoyal80 || 0.03) * 100)}%)`;
+    const loyNote = `忠誠度が高いほど、トレーニングの伸びが上がる(${LY.capBoost || 60}で最大 ×${1 + (LY.capBoost || 60) / 100})。80以上で大成功が少し出やすい(+${Math.round((RT.greatLoyal80 || 0.03) * 100)}%)`;
     const give = () => {
       if (!mealPick || !can(mealPick)) return;
       const r = SUC.meal(s, mealPick);
@@ -169393,6 +169661,7 @@ const MSX_R3_COURSE_BG = Object.freeze({
   wind: 'forest_deep',
   star: 'monhero_night'
 });
+const MSX_STAT_KEYS_R3 = ['life', 'pow', 'wise', 'hit', 'eva', 'tough'];
 function MsxR3Shugyo({
   run,
   setRun,
@@ -169512,7 +169781,7 @@ function MsxR3Shugyo({
     const missed = (o.tries || []).filter(t => !t.hit).map(t => (all.find(x => x.id === t.id) || {}).name).filter(Boolean);
     const stg = (SH.courses[o.course] || {}).stages || [];
     const helpers = Array.from(new Set((o.stages || []).flat()));
-    const R = MSX_RES[o.result] || MSX_RES.ok;
+    void stg;
     const body = React.createElement(React.Fragment, null, React.createElement(MsxBand, {
       s: s,
       v: SUC.peek(s),
@@ -169547,21 +169816,20 @@ function MsxR3Shugyo({
         })
       }
     }), React.createElement("div", {
-      className: `v-stamp msx-pop ${learned ? '' : R.cls}`,
+      className: `v-stamp msx-pop ${learned ? '' : 'ok'}`,
       style: {
         top: '5%',
         fontSize: learned ? 38 : 32
       }
-    }, learned ? '技をおぼえた!' : o.result === 'sab' ? 'サボった…' : o.result === 'fail' ? '修行は失敗…' : '修行おわり!', React.createElement("small", null, learnedAll.length > 1 ? `✨ ${learnedAll.map(x => x.name).join('・')}` : learned ? `✨ ${learned.name}(${MSX_R3_DIST[Math.min(...(learned.dist || [1]))]}い間合い)` : R.word)), React.createElement("div", {
+    }, learned ? '技をおぼえた!' : '修行おわり!', React.createElement("small", null, learnedAll.length > 1 ? `✨ ${learnedAll.map(x => x.name).join('・')}` : learned ? `✨ ${learned.name}(${MSX_R3_DIST[Math.min(...(learned.dist || [1]))]}い間合い)` : '技は覚えられなかった')), React.createElement("div", {
       className: "v-chips",
       style: {
         top: 'auto',
         bottom: 8
       }
-    }, stg.map((pair, i) => React.createElement("span", {
-      key: i,
+    }, React.createElement("span", {
       className: "v-chip"
-    }, "第", i + 1, "段 ", pair.map(k => `${MSX_STAT_ICON[k]}${gains[k] ? `+${gains[k]}` : '±0'}`).join(' '))), helpers.length ? React.createElement("span", {
+    }, MSX_STAT_KEYS_R3.filter(k => gains[k]).map(k => `${MSX_STAT_ICON[k]}+${gains[k]}`).join(' ') || '±0'), helpers.length ? React.createElement("span", {
       className: "v-chip ylw"
     }, "👥 編成のおかげ ×", helpers.length, "体") : null)), React.createElement(MsxStRow, {
       stats: s.stats,
@@ -169570,7 +169838,7 @@ function MsxR3Shugyo({
       className: "v-log"
     }, React.createElement("span", {
       className: "hd2"
-    }, "⚔ 修行のけっか(", R.word, ")"), React.createElement("br", null), Object.keys(gains).length ? Object.entries(gains).map(([k, g], i) => React.createElement("span", {
+    }, "⚔ 修行のけっか"), React.createElement("br", null), Object.keys(gains).length ? Object.entries(gains).map(([k, g], i) => React.createElement("span", {
       key: k
     }, i ? '・' : '', MSX_STAT_NAME[k], " ", React.createElement("b", {
       className: "gu"
