@@ -4,7 +4,9 @@
 const http = require('http'), path = require('path'), fs = require('fs');
 const root = path.resolve(__dirname, '..', '..'), PORT = 9272, W = Number(process.env.SHOT_W) || 390, SLEEP = !!process.env.SHOT_SLEEP;
 const out = path.resolve(process.argv[2] || path.join(root, 'docs/progress/assistant-room/r1115-031/town.png'));
-const PLACES = { mua: 'plaza', kiki: 'plaza', dra: 'garden', atsu: 'garden', kyuko: 'hill', momosuke: 'cafe', sorashido: 'library', erubin: 'clinic' };
+// SHOT_SCENE=honban … 社長の本番の止め絵(夜・みゅあ/きき/ドラが寝ている・ももすけはハロウィン・ソラシドはカード・ももすけ/あつ/えるびんはバトル・きゅうこは丘)
+const HONBAN = { mua: 'sleep', kiki: 'sleep', dra: 'sleep', momosuke: 'battle', atsu: 'battle', erubin: 'battle', sorashido: 'cardroom', kyuko: 'hill' };
+const PLACES = process.env.SHOT_SCENE === 'honban' ? HONBAN : { mua: 'plaza', kiki: 'plaza', dra: 'garden', atsu: 'garden', kyuko: 'hill', momosuke: 'cafe', sorashido: 'library', erubin: 'clinic' };
 (async () => {
   const { chromium } = require('playwright');
   const { quietBootSeed, updateNoticeSeed, oneTimeNoticeSeed } = require(path.resolve(__dirname, '..', 'boot/quiet-boot-seed'));
@@ -24,12 +26,13 @@ const PLACES = { mua: 'plaza', kiki: 'plaza', dra: 'garden', atsu: 'garden', kyu
   await page.route(/supabase|functions\/v1/, r => r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
   await page.goto(`http://localhost:${PORT}/monster-hero/index.html`, { waitUntil: 'domcontentloaded' });
   await toHome(page); await waitFaces(page); await finishTalk(page);
-  const setLife = () => page.evaluate(({ places, sleep }) => { const l = ASSISTANT_LIFE_STORE.state.life; ASSISTANT_LIFE_STORE.set({ life: { ...l, groups: [], solo: Object.fromEntries(Object.entries(places).map(([id, place]) => [id, { doing: sleep ? 'sleep' : 'idle', place: sleep ? 'home' : place }])), watched: [] } }); }, { places: PLACES, sleep: SLEEP });
+  const dress = () => process.env.SHOT_SCENE === 'honban' ? page.evaluate(() => { try { setAssistantCostumeWornNow({ momosuke: 'momosuke_halloween_2026' }); } catch (e) { console.log('dress', e.message); } }) : null;
+  const setLife = () => page.evaluate(({ places, sleep }) => { const l = ASSISTANT_LIFE_STORE.state.life; ASSISTANT_LIFE_STORE.set({ life: { ...l, groups: [], solo: Object.fromEntries(Object.entries(places).map(([id, place]) => [id, place === 'sleep' || sleep ? { doing: 'sleep', place: 'home' } : { doing: 'idle', place }])), watched: [] } }); }, { places: PLACES, sleep: SLEEP });
   await setLife(); await page.waitForTimeout(800); await finishTalk(page);
   await page.locator('[data-home-assistant-life]').click({ timeout: 20000 });
   await page.locator('[data-assistant-life-intro]').waitFor({ state: 'detached', timeout: 8000 }).catch(() => {});
   await page.waitForTimeout(1200); await setLife();
-  await page.locator('[data-assistant-life-icon="where"]').click(); await page.waitForTimeout(2500); await setLife(); await page.waitForTimeout(1200);
+  await page.locator('[data-assistant-life-icon="where"]').click(); await page.waitForTimeout(2500); await dress(); await setLife(); await page.waitForTimeout(1200);
   const rows = await page.evaluate(() => [...document.querySelectorAll('[data-assistant-life-map-fig]')].map(fig => { const img = fig.querySelector('img'), r = fig.getBoundingClientRect(); const src = img ? (img.getAttribute('src') || '').split('/').slice(-2).join('/') : ''; return { src, w: Math.round(r.width), h: Math.round(r.height) }; }));
   console.log(rows.map(r => `${r.src} ${r.w}x${r.h}`).join('\n'));
   fs.mkdirSync(path.dirname(out), { recursive: true });

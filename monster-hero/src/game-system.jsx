@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: cadbf78ee2268281
+// generated-sha256: ef6cf84b55245b24
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -68593,6 +68593,12 @@ const assistantLifeMapReadHome = () => {
   return out;
 };
 
+// 町の地図の頭の高さの表(2026-11-15 r1115-031)。キーは絵の置き場所(images/assistant/ の下)から表情の名前を取ったもの。値は [頭のてっぺん, 顎](絵の見えている範囲の上を0・下を1)
+const ASSISTANT_LIFE_MAP_HEAD = Object.freeze({
+  myua_sleep: [0.15, 0.51], kiki_sleep: [0.22, 0.60], momosuke_sleep: [0.07, 0.58], atsu_sleep: [0.08, 0.60], kyuko_sleep: [0.05, 0.52],
+  'halloween/myua_sleep': [0.20, 0.51], 'halloween/kiki_sleep': [0.22, 0.585], 'halloween/momosuke_sleep': [0.12, 0.58], 'card-master/myua_sleep': [0.07, 0.39],
+  momosuke: [0.065, 0.51], 'halloween/momosuke': [0.065, 0.51], erubin: [0.01, 0.45],
+});
 // 小さな全身(絵の描かれている範囲を測って、見た目の高さを h にそろえる。胸から上の絵は下をぼかす)
 function AssistantLifeMapFig({ who, h, sleep, spent = false }) {
   // 寝ている助手は、社長の寝顔の絵があればそれ(assistantLifeSleepSrc・2026-11-11 社長「絵をそのまま使う」)
@@ -68606,11 +68612,15 @@ function AssistantLifeMapFig({ who, h, sleep, spent = false }) {
   // 大きさは「見えている体の高さ」ではなく顔でそろえる(2026-11-11 社長「助手の立ち絵も見直して」: 高さでそろえると、体の長い絵=みゅあ・きき・あつ の顔が 4px、
   //   顔だけの絵=ドラ が 11px と 2.8倍ちがい、羽や耳のある絵は左右も切れていた)。場面の立ち絵と同じ表(assistantLifeStandFace)と決まり(assistantLifeStandRule)を使う:
   //   頭(てっぺんから顎)が箱の高さの半分・頭のてっぺんは上から 25%(うさ耳が入る。魔女の帽子・大きな耳の着替え=above のある絵は 38% まで下げる)・胸から下は箱の下でぼかして消す。測れないうちは今までの出し方
+  // 町の地図は、頭の高さ(髪のてっぺん〜顎。うさ耳・リボン・帽子・王冠は含めない)を全員そろえる(2026-11-15 社長 r1115-031「助手ごとに絵の大きさがばらばら」)。
+  //   場面の立ち絵の表は目〜顎と頬の幅でそろえていて、髪やうさ耳で頭が大きく見える人が出ていた。さらに、寝ている絵・ハロウィンのももすけなど表の点が合わない絵が大きく出ていた。
+  //   表(assistantLifeStandFace)に顎の点がある絵はそれを使い、無い絵は下の ASSISTANT_LIFE_MAP_HEAD(絵を目盛りつきで切り出して手で読んだ 上・顎。見えている体の高さに対する割合)を使う
   const face0 = typeof assistantLifeStandFace === 'function' ? assistantLifeStandFace(who && who.id, src) : null;
-  // 町の地図は、頭の高さ(髪のてっぺん〜顎)を全員そろえる(2026-11-15 社長 r1115-031「助手ごとに絵の大きさがばらばら」。場面の立ち絵の表は目〜顎と頬の幅でそろえているので、髪やうさ耳で頭が大きく見える人が出ていた)。
-  //   表の top・chin から見えている体の高さを決め直す(顔だけの絵=ドラは、頭の円=絵の下端まで)。着替え・寝ている絵など表に chin が無い絵は、いままでどおり
-  const face = face0 && Number.isFinite(face0.top) && (Number.isFinite(face0.chin) || face0.head) && typeof ASSISTANT_LIFE_STAND_EC === 'number'
-    ? { ...face0, m: ((face0.head ? 1 : face0.chin) - face0.top) / (ASSISTANT_LIFE_STAND_EC * ASSISTANT_LIFE_STAND_FACE_LEN), fit: 1 } : face0;
+  const headKey = String(src || '').replace(/[?#].*$/, '').replace(/^.*images\/assistant\//, '').replace(/\.png$/i, '').replace(/_(?!sleep$)[a-z]+$/i, '');
+  const head = ASSISTANT_LIFE_MAP_HEAD[headKey] || null;
+  const topChin = head ? { top: head[0], chin: head[1] } : (face0 && Number.isFinite(face0.top) && (Number.isFinite(face0.chin) || face0.head) ? { top: face0.top, chin: face0.head ? 1 : face0.chin } : null);
+  const face = face0 && topChin && typeof ASSISTANT_LIFE_STAND_EC === 'number'
+    ? { ...face0, top: topChin.top, m: (topChin.chin - topChin.top) / (ASSISTANT_LIFE_STAND_EC * ASSISTANT_LIFE_STAND_FACE_LEN), fit: 1 } : face0;
   const rule = box && face && typeof assistantLifeStandRule === 'function' ? assistantLifeStandRule({ face, box, F: (h * 0.5) / ASSISTANT_LIFE_STAND_FACE_LEN, topY: h * Math.max(0.25, Math.min(0.38, (face.above || 0) * 0.4)), cx: 0 }) : null;
   const ih = rule ? rule.height : h / Math.max(0.2, b.b - b.t), iw = rule ? rule.width : ih * (b.ar || 0.6);
   const w = Math.round(Math.min((b.r - b.l) * iw, h * 0.78));
