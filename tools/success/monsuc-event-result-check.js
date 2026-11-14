@@ -14,8 +14,8 @@ const { SUC } = load();
 const EV = SUC.events;
 const errors = [];
 const ok = (cond, msg) => { if (!cond) errors.push(msg); };
-// 何も動かないと分かっている選択肢(窓口へ報告ずみ・2026-11-14)。ev.goal.miss は目標を逃した知らせ
-const NO_EFFECT = new Set(['ev.daily.night.a', 'ev.daily.arm.b', 'ev.daily.lost.b', 'ev.small.nut.b', 'ev.body.runaway.b', 'ev.goal.miss']);
+// 何も動かないと分かっている選択肢。ev.goal.miss は目標を逃した知らせ(2026-11-14 ほかの5つには小さな効果を足した)
+const NO_EFFECT = new Set(['ev.goal.miss']);
 
 const PARTS = path.join(ROOT, 'monster-hero', 'src', 'parts');
 const res = fs.readFileSync(path.join(PARTS, '56-monsuc-evres.jsx'), 'utf8');

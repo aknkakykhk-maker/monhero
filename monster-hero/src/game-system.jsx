@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 31a2a3e707377ea2
+// generated-sha256: a37ffd3123ed70e9
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -77265,13 +77265,18 @@ const ambwHitPct = (catalog, teams, side, frame, id) => {
   return Number.isFinite(v) ? v : null;
 };
 // 技の札の形にそろえる(56-monhero-success-manual.jsx の MsaDistCards・MsaTechSheet が読む形)。
-//   命中の目安 hit と威力 power は技表から(代表の技を「命中×威力」で決めるため)。技表の hit は基本の命中 75% に足す補正なので、目安は 75+補正
+//   命中の目安 hit と威力 power は技表から(代表の技を「命中×威力」で決めるため)。版9から技表の hit は最後に掛ける係数(5 で1段・×1.35)なので、
+//   目安は「命中=回避・ガッツ半分」のときの命中%(芯の techHitPreview。B の技で 50%)。芯が古いときだけ 75+補正
 //   (能力の差はどの技にも同じだけ効くので、目安には入れない。札と一覧に出す命中%は hitPreviewer のいまの値)。技表に無い技は 0
 const AMBW_HIT_BASE = 75;
+const ambwHitOf = (hitPct, extra) => {
+  const eng = typeof window !== 'undefined' && window.ASSISTANT_MASMON_BATTLE ? window.ASSISTANT_MASMON_BATTLE : null;
+  return eng && typeof eng.techHitPreview === 'function' ? eng.techHitPreview(hitPct, extra) : AMBW_HIT_BASE + (Number(hitPct) || 0) + (Number(extra) || 0) * 100;
+};
 const ambwTechItems = (catalog, member, list) => {
   const sp = catalog && member && catalog.species && catalog.species[member.species];
   const byId = {}; if (sp && Array.isArray(sp.techs)) for (const t of sp.techs) byId[t.id] = t;
-  return (Array.isArray(list) ? list : []).map((mv) => { const t = byId[mv.id]; return { ...mv, dist: Array.isArray(mv.dist) ? mv.dist : [], hit: t ? AMBW_HIT_BASE + (Number(t.hit) || 0) : 0, power: t ? Number(t.power) || 0 : 0,
+  return (Array.isArray(list) ? list : []).map((mv) => { const t = byId[mv.id]; return { ...mv, dist: Array.isArray(mv.dist) ? mv.dist : [], hit: t ? ambwHitOf(t.hit) : 0, power: t ? Number(t.power) || 0 : 0,
     ...(t ? { base: { power: t.power, hit: t.hit, gd: t.gd, crit: t.crit } } : {}) }; });
 };
 // cards … 技の札を間合いごとの4枚にする(2026-11-13 社長)。rep … [零,近,中,遠] の代表の技 id/onOpen(side, d) … 札を押すと一覧
@@ -77609,7 +77614,7 @@ const AMBB_SET_OPTS = Object.freeze({
   team: [{ id: 'team', label: 'チーム', note: '交代あり' }, { id: 'ko', label: '勝ち抜き', note: '交代なし・倒れたら次' }],
   rounds: [30, 50, 100, 150],
   dist: ['auto', 0, 1, 2, 3],
-  guts: [30, 50, 70, 100],
+  guts: [30, 50, 70, 99],
   fx: [{ id: 'full', label: 'たっぷり' }, { id: 'lite', label: '少なめ' }],
   ctl: [{ id: 'auto', label: 'オートで観戦' }, { id: 'manual', label: '手動', note: '手番ごとに自分で選ぶ' }],
   balance: [{ id: 'A', label: 'そのまま' }, { id: 'B', label: '差を縮める' }, { id: 'C', label: '差を広げる' }],
@@ -77620,7 +77625,7 @@ const normalizeAmbbSet = (raw) => {
     team: x.team === 'ko' ? 'ko' : 'team',
     rounds: ambbInt(x.rounds, 10, 300, AMBB_SET_DEF.rounds),
     dist: Number.isInteger(x.dist) && x.dist >= 0 && x.dist <= 3 ? x.dist : 'auto',
-    guts: ambbInt(x.guts, 0, 100, AMBB_SET_DEF.guts),
+    guts: ambbInt(x.guts, 0, 99, AMBB_SET_DEF.guts), // 版9でガッツの最大は 99(前に保存した 100 は 99 として読む)
     fx: x.fx === 'lite' ? 'lite' : 'full',
     balance: ['A', 'B', 'C'].includes(x.balance) ? x.balance : 'A',
     seedLock: x.seedLock === true,
@@ -77756,8 +77761,8 @@ const ambbUnitTechItems = (engine, catalog, unit) => {
   const hitMax = engine && Number.isFinite(engine.MASTERY_HIT_MAX) ? engine.MASTERY_HIT_MAX : 0, cut = engine && Number.isFinite(engine.MASTERY_GUTS_CUT) ? engine.MASTERY_GUTS_CUT : 0;
   return list.map(t => {
     const m = Math.max(0, Math.min(100, Number(unit.mastery && unit.mastery[t.id]) || 0));
-    // 技表の hit は基本の命中に足す補正。代表を決める目安は 75+補正(観戦の札 ambwTechItems と同じ決め方にそろえる)。一覧に出す命中%は熟練の分を足す
-    return { id: t.id, name: t.name, kind: t.kind, dist: t.dist, power: t.power, hit: 75 + t.hit, base: { power: t.power, hit: t.hit, gd: t.gd, crit: t.crit }, shown: Math.round((75 + t.hit + m * hitMax) * 10) / 10, guts: Math.round(t.guts * (1 - m / 100 * cut)) };
+    // 代表を決める目安は「命中=回避・ガッツ半分」の命中%(観戦の札 ambwTechItems と同じ ambwHitOf)。一覧に出す命中%は熟練の分を足す
+    return { id: t.id, name: t.name, kind: t.kind, dist: t.dist, power: t.power, hit: ambwHitOf(t.hit), base: { power: t.power, hit: t.hit, gd: t.gd, crit: t.crit }, shown: ambwHitOf(t.hit, m / 100 * hitMax), guts: Math.round(t.guts * (1 - m / 100 * cut)) };
   });
 };
 const ambbTacticsOf = (aid, rows) => { try { return typeof amgtTacticsOf === 'function' ? amgtTacticsOf(aid, rows) : 40; } catch (_) { return 40; } };
@@ -78714,7 +78719,7 @@ function AmbbSettings({ set, onSet, local, size, sizeMax, onSize, speed, onSpeed
         <details className="ambb-fold" data-ambb-tune>
           <summary>🔧 調整(試す人向け)</summary>
           <div className="ambb-set-row"><span>ラウンド上限</span><div><input type="range" min="10" max="300" step="5" value={set.rounds} data-ambb-tune-rounds onChange={(ev) => onSet({ rounds: Number(ev.target.value) })}/><div className="ambw-small">{set.rounds} ラウンド(いつもは {limit})</div></div></div>
-          <div className="ambb-set-row"><span>ガッツの初期値</span><div><input type="range" min="0" max="100" step="5" value={set.guts} data-ambb-tune-guts onChange={(ev) => onSet({ guts: Number(ev.target.value) })}/><div className="ambw-small">{set.guts}(いつもは {AMBB_SET_DEF.guts})</div></div></div>
+          <div className="ambb-set-row"><span>ガッツの初期値</span><div><input type="range" min="0" max="99" step="1" value={set.guts} data-ambb-tune-guts onChange={(ev) => onSet({ guts: Number(ev.target.value) })}/><div className="ambw-small">{set.guts}(いつもは {AMBB_SET_DEF.guts})</div></div></div>
           <div className="ambb-set-row"><span>能力の差</span>{chips('balance', AMBB_SET_OPTS.balance, o => o.label)}</div>
           <div className="ambb-set-row"><span>試合の流れ</span>
             <div className="ambb-tabs">
@@ -81711,7 +81716,7 @@ const MSX_BETA_KEY = 'mh_monsuc_beta_v1';
 const MSX_BETA_AIDS = Object.freeze(['mua']);
 const msxBetaAidOk = (aid) => MSX_BETA_AIDS.includes(aid);
 // 最初の1回だけ出す説明の名前(台本の tut.<名前>)と、β版の話(scn.mua.beta.<名前>)
-const MSX_BETA_TUT = Object.freeze(['prep', 'turn', 'train', 'result', 'rest', 'shugyo', 'cup', 'match', 'rematch', 'event', 'awake', 'retire']);
+const MSX_BETA_TUT = Object.freeze(['prep', 'turn', 'train', 'result', 'rest', 'shugyo', 'cup', 'rank', 'meal', 'match', 'rematch', 'event', 'awake', 'retire']);
 const MSX_BETA_STORY = Object.freeze(['open', 'firstend']);
 const msxBetaScene = (k) => (MSX_BETA_STORY.includes(k) ? `scn.mua.beta.${k}` : `tut.${k}`);
 const msxBetaKnown = (k) => MSX_BETA_TUT.includes(k) || MSX_BETA_STORY.includes(k);
@@ -81806,6 +81811,117 @@ const MSX_BETA_CSS = `
 .msx .v-faces .lk.soon{position:relative}
 .msx .v-faces .lk.soon b{position:absolute;left:0;right:0;bottom:-3px;font-size:10px;color:#fde68a;text-align:center;font-weight:900}
 `;
+
+// ---- part: 56-monsuc-scenario.jsx ----
+// ===== モンヒロサクセス: ストーリー選択(シナリオを選ぶ段) =====
+// 2026-11-14 社長: シナリオは今後増やす。いまのシナリオの名前は「ヒーローへの道」。参考のストーリー選択の画面
+//   (docs/reference/line-mf/scenario-select-2026-11-14/)に合わせて、育成を始める前にシナリオを選ぶ段を作る。
+//   止め絵: docs/progress/player-raise/shots/scenario-2026-11-14/scenario-select-mock.png(社長に見せ済み・案のまま)
+// 保存: 途中の育成 mh_monsuc_run_v1 に scn(シナリオの id)を足すだけ。無い保存・知らない id は 'hero' として読む(msxScenarioId)
+const MSX_STORIES = Object.freeze([
+  Object.freeze({
+    id: 'hero', name: 'ヒーローへの道', en: 'ROAD TO HERO', badge: '頂への道',
+    lead: ['町の育成場で、きみと1体のモンスターの物語が始まる', '大会で勝ち、修行で技を覚え、仲間と強くなろう。', 'めざすは頂への道——ヒーローと呼ばれる日まで。'],
+    about: 'デビュー戦から始まり、ジュニア・ミドル・プロの3つの期を経て、最後は「頂への道」に挑む、モンヒロサクセスのいちばん最初のお話。',
+    rows: Object.freeze([
+      ['📅', '流れ', 'デビュー期 → ジュニア期 → ミドル期 → プロ期 → 頂への道(3戦)'],
+      ['🏆', '大会', 'ルーキーズ・クラウン/四大大会/季節の賞 ほか。賞金ランクは ルーキー〜ヒーローの10段'],
+      ['👥', '登場人物', '助手(いまはみゅあ)・イッサ博士・ライバルたち'],
+      ['🎯', 'めざすもの', '頂への道の決勝に勝って「ヒーロー」に。'],
+    ]),
+    cast: Object.freeze({ left: 'issa', center: 'mua', right: 'kiki' }),
+  }),
+]);
+const msxScenarioId = (id) => (MSX_STORIES.some((x) => x.id === id) ? id : 'hero');
+const msxScenarioOf = (id) => MSX_STORIES.find((x) => x.id === msxScenarioId(id)) || MSX_STORIES[0];
+
+const MSX_SCN_CSS = `
+.msx .scn{position:relative;display:flex;flex-direction:column;flex:1 1 0;min-height:0;overflow:hidden;background:#1e1b4b}
+.msx .scn-hd{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:#2a2118;color:#fde68a;font-weight:900;font-size:15px;flex:none}
+.msx .scn-hd small{font-size:14px;color:#fde68a}
+.msx .scn-sc{position:relative;flex:1 1 0;min-height:0;overflow:hidden}
+.msx .scn-sc>.bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.msx .scn-sc>.pl{position:absolute;left:0;right:0;bottom:0;height:16%;background:repeating-linear-gradient(0deg,#c9b9a6 0 22px,#b9a690 22px 24px)}
+.msx .scn-sc .who{position:absolute;object-fit:contain;pointer-events:none}
+.msx .scn-sc .who.l{left:-7%;bottom:40%;height:36%;z-index:2}
+.msx .scn-sc .who.r{right:-9%;bottom:38%;height:40%;z-index:2}
+.msx .scn-sc .who.c{left:50%;transform:translateX(-50%);bottom:46%;height:46%;z-index:1;animation:msxScnBob 3.2s ease-in-out infinite}
+@keyframes msxScnBob{0%,100%{transform:translateX(-50%) translateY(0)}50%{transform:translateX(-50%) translateY(-6px)}}
+.msx .scn-bd{position:absolute;z-index:3;right:4%;top:3%;width:68px;height:68px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fcd34d,#b45309);border:3px solid #fef3c7;box-shadow:0 2px 8px #0006;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#3b1d02;font-weight:900;font-size:11px;line-height:1.15;text-align:center}
+.msx .scn-ti{position:absolute;left:0;right:0;top:41%;text-align:center;z-index:3}
+.msx .scn-ti b{display:block;font-size:clamp(34px,11vw,46px);font-weight:900;letter-spacing:1px;color:#fde047;background:linear-gradient(180deg,#ffffff 8%,#fef08a 40%,#facc15 68%,#f59e0b 95%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;-webkit-text-stroke:1px #c2410c;filter:drop-shadow(0 2px 0 #7c2d12) drop-shadow(0 0 6px #0007)}
+.msx .scn-ti small{display:block;margin-top:2px;font-size:12px;font-weight:900;letter-spacing:5px;color:#fff;text-shadow:0 1px 3px #000}
+.msx .scn-ld{position:absolute;z-index:3;left:4%;right:4%;top:56%;padding:9px 12px;border-radius:8px;background:linear-gradient(90deg,#4338ca,#7c3aed);border:2px solid #c4b5fd;color:#fff;font-size:12.5px;font-weight:800;line-height:1.6;transform:skewX(-3deg);box-shadow:0 3px 10px #0006}
+.msx .scn-ld>div{transform:skewX(3deg)}
+.msx .scn-dt{position:absolute;z-index:3;left:0;right:0;top:calc(56% + 92px);text-align:center;color:#fff;font-size:11px;font-weight:800;text-shadow:0 1px 3px #000}
+.msx .scn-dt i{display:inline-block;width:7px;height:7px;border-radius:50%;background:#fff;margin:0 3px 4px}
+.msx .scn-dt i.off{width:4px;height:4px;opacity:.6}
+.msx .scn-ft{display:flex;gap:10px;align-items:center;padding:10px 12px calc(10px + env(safe-area-inset-bottom));background:#c9b9a6;flex:none}
+.msx .scn-ft button{height:48px;border-radius:10px;font-weight:900;font-size:16px;border:3px solid #fff;box-shadow:0 3px 0 #0003}
+.msx .scn-ft .bk{width:48px;flex:none;background:#f59e0b;color:#fff;font-size:22px}
+.msx .scn-ft .go{flex:1 1 0;background:linear-gradient(180deg,#fb923c,#ea580c);color:#fff}
+.msx .scn-ft .dt{flex:1 1 0;background:#fff;color:#1f2937;border-color:#e5e7eb}
+.msx .scn-win{position:absolute;inset:0;z-index:30;background:#0008;display:flex;align-items:center;justify-content:center;padding:28px 18px}
+.msx .scn-win .in{width:100%;max-height:100%;overflow-y:auto;background:#fffbeb;border:4px solid #c2410c;border-radius:14px;padding:14px 16px;color:#1f2937}
+.msx .scn-win h3{margin:0 0 8px;text-align:center;font-size:18px;font-weight:900;color:#9a3412}
+.msx .scn-win p{margin:0 0 10px;font-size:13.5px;line-height:1.7}
+.msx .scn-win .k{font-size:14px;font-weight:900;color:#c2410c;margin-top:4px}
+.msx .scn-win .v{font-size:13.5px;line-height:1.6;margin-bottom:8px}
+.msx .scn-win .cl{display:block;margin:10px auto 0;padding:8px 28px;border-radius:9px;background:#fff;border:2px solid #d6d3d1;font-weight:900;font-size:14px;color:#1f2937}
+`;
+
+// ストーリー選択の画面。value: いま選んでいるシナリオの id。onNext(id): 次へ(育てるモンスターを選ぶ段)
+function MsxScenarioSelect({ value, onBack, onNext }) {
+  const [idx, setIdx] = useState(() => Math.max(0, MSX_STORIES.findIndex((x) => x.id === msxScenarioId(value))));
+  const [detail, setDetail] = useState(false);
+  const sc = MSX_STORIES[idx] || MSX_STORIES[0];
+  const n = MSX_STORIES.length;
+  const art = (aid) => { // 全身の絵(助手ごとの表情)。パスは助手の表(assistantFullBodyImage)から引く。無ければ今の立ち絵
+    if (aid === 'issa') return typeof MSX_ISSA_ART === 'string' ? MSX_ISSA_ART : '';
+    const ex = aid === 'mua' ? 'excited' : 'happy'; const who = typeof assistantById === 'function' ? assistantById(aid) : null;
+    return (who && typeof assistantFullBodyImage === 'function' && assistantFullBodyImage(who, ex)) || (typeof msxBody === 'function' ? msxBody(aid, ex) : '');
+  };
+  const many = n > 1;
+  return (
+    <div className="scn" data-msx-scenario={sc.id}>
+      <style>{MSX_SCN_CSS}</style>
+      <div className="scn-hd"><span>📖 ストーリー選択</span><small>シナリオ {idx + 1}/{n}</small></div>
+      <div className="scn-sc">
+        <img className="bg" src="images/story-bg/monhero_town.jpg" alt=""/>
+        <div className="pl"/>
+        {sc.cast.left ? <img className="who l" src={art(sc.cast.left)} alt=""/> : null}
+        {sc.cast.right ? <img className="who r" src={art(sc.cast.right)} alt=""/> : null}
+        {sc.cast.center ? <img className="who c" src={art(sc.cast.center)} alt=""/> : null}
+        <div className="scn-bd">{sc.badge}<span style={{ fontSize: 16 }}>👑</span></div>
+        <div className="scn-ti"><b>{sc.name}</b><small>{sc.en}</small></div>
+        <div className="scn-ld"><div>{sc.lead.map((t, i) => <React.Fragment key={i}>{i ? <br/> : null}{t}</React.Fragment>)}</div></div>
+        <div className="scn-dt">
+          <div>{MSX_STORIES.map((x, i) => <i key={x.id} className={i === idx ? '' : 'off'}/>)}</div>
+          {many ? null : 'ほかのシナリオは 準備中です'}
+        </div>
+        {many ? <>
+          <button type="button" aria-label="前のシナリオ" onClick={() => setIdx((i) => (i + n - 1) % n)} style={{ position: 'absolute', left: 4, top: '44%', background: 'none', border: 0, color: '#fff', fontSize: 28, opacity: 0.8 }}>◀</button>
+          <button type="button" aria-label="次のシナリオ" onClick={() => setIdx((i) => (i + 1) % n)} style={{ position: 'absolute', right: 4, top: '44%', background: 'none', border: 0, color: '#fff', fontSize: 28, opacity: 0.8 }}>▶</button>
+        </> : null}
+      </div>
+      <div className="scn-ft">
+        <button type="button" className="bk" onClick={onBack} aria-label="もどる">↩</button>
+        <button type="button" className="go" onClick={() => onNext(sc.id)} data-msx-scenario-next>次へ ▶</button>
+        <button type="button" className="dt" onClick={() => setDetail(true)} data-msx-scenario-detail>ストーリー詳細</button>
+      </div>
+      {detail ? (
+        <div className="scn-win" onClick={() => setDetail(false)}>
+          <div className="in" onClick={(e) => e.stopPropagation()}>
+            <h3>{sc.name}</h3>
+            <p>{sc.about}</p>
+            {sc.rows.map(([e, k, v]) => <React.Fragment key={k}><div className="k">{e} {k}</div><div className="v">{v}</div></React.Fragment>)}
+            <button type="button" className="cl" onClick={() => setDetail(false)}>とじる</button>
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
 
 // ---- part: 56-monsuc-tevent.jsx ----
 // ===== モンヒロサクセスの「トレーニングのあとの出来事」を1枚の場面で見せる(2026-11-13 社長「ターン後のイベントが下部にぽつんとで地味」) =====
@@ -85598,6 +85714,7 @@ const msxNormRun = (raw, SUC) => {
   }
   return {
     v: 1, id: msxStr(raw.id, 64, s.id), s,
+    scn: typeof msxScenarioId === 'function' ? msxScenarioId(raw.scn) : 'hero', // シナリオ(2026-11-14 足した項目。無い保存は ヒーローへの道)
     nick: msxStr(raw.nick, 8) || '', colors: msxColors(raw.colors),
     from: msxIsObj(raw.from) && typeof raw.from.box === 'string' ? { box: raw.from.box.slice(0, 64) } : { base: msxStr(raw.from && raw.from.base, 24, s.species) },
     items: Array.isArray(raw.items) ? raw.items.filter((x) => typeof x === 'string').slice(0, 2) : [],
@@ -85877,6 +85994,7 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf }) {
   const unraised = box.mons.filter((m) => !m.raised);
   const raised = box.mons.filter((m) => m.raised);
   const [step, setStep] = useState(0);
+  const [scn, setScn] = useState(null); // ストーリー選択(56-monsuc-scenario.jsx)。null のあいだは選ぶ段を出す
   const [tab, setTab] = useState('base');
   const [pick, setPick] = useState(() => ({ base: unlocked[0] || 'Mocchi' }));
   const species = pick.box ? ((box.mons.find((m) => m.id === pick.box) || {}).species || 'Mocchi') : pick.base;
@@ -85912,11 +86030,11 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf }) {
   const sc = MSX_SCENARIOS.find((x) => x.aid === aid) || MSX_SCENARIOS[0];
 
   const next = () => setStep((n) => Math.min(5, n + 1));
-  const back = () => (step === 0 ? onCancel() : setStep((n) => n - 1));
+  const back = () => (step === 0 ? (typeof MsxScenarioSelect === 'function' ? setScn(null) : onCancel()) : setStep((n) => n - 1));
   const start = () => {
     const name = msxNameGuard(nick || msxMonName(species).slice(0, MSX_NAME_MAX));
     if (!name) { setStep(4); setNameErr('その名前は使えません。ほかの名前にしてね'); return; }
-    onStart({ species, from: pick.box ? { box: pick.box } : { base: species }, team: team.map((t) => (t.friend ? t.friend : msxTeamSrc(t, box))), teamSlots: team.filter((t) => !t.friend), aid, aidBondLv: aidLv, items, nick: name, colors,
+    onStart({ scn: typeof msxScenarioId === 'function' ? msxScenarioId(scn) : 'hero', species, from: pick.box ? { box: pick.box } : { base: species }, team: team.map((t) => (t.friend ? t.friend : msxTeamSrc(t, box))), teamSlots: team.filter((t) => !t.friend), aid, aidBondLv: aidLv, items, nick: name, colors,
       friendId: friend && friend.friend ? friend.friend.id : null, baseFill: [species, ...unlocked.filter((id) => id !== species)][5 % Math.max(1, unlocked.length)] || species });
   };
 
@@ -85933,6 +86051,7 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf }) {
     </div>
   );
 
+  if (scn == null && typeof MsxScenarioSelect === 'function') return <MsxScenarioSelect value={scn} onBack={onCancel} onNext={(id) => { setScn(id); setStep(0); }}/>;
   let body = null; let go = null;
   if (step === 0) {
     const list = tab === 'base' ? unlocked.map((id) => ({ key: id, sp: id, on: !pick.box && pick.base === id, pick: { base: id } }))
@@ -86075,6 +86194,7 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf }) {
         <img src={msxBody(aid, 'happy')} alt="" style={{ position: 'absolute', right: '-4%', bottom: 0, width: '50%', height: '78%', objectFit: 'contain', objectPosition: 'right bottom' }}/>
       </div>
       <button type="button" className="v-sum" onClick={() => setStep(1)}><span className="k">編成</span>{members.map((m, i) => <span key={i} className={`v-pf sm r${m.rank === 'base' ? 'G' : m.rank}${m.kind === 'base' ? ' base' : ''}`}><img src={msxMonThumb(m.species)} alt=""/></span>)}<span className="ed">変える</span></button>
+      {typeof msxScenarioOf === 'function' ? <button type="button" className="v-sum" onClick={() => setScn(null)}><span className="k">シナリオ</span><span>{msxScenarioOf(scn).name}</span><span className="ed">変える</span></button> : null}
       <button type="button" className="v-sum" onClick={() => setStep(2)}><span className="k">助手</span><span>{msxAidName(aid)}編「{sc.title}」</span><span className="ed">変える</span></button>
       <button type="button" className="v-sum" onClick={() => setStep(3)}><span className="k">持ちこみ</span><span>{items.length ? items.map((id) => `${MSX_ITEM_BY_ID[id].e}${MSX_ITEM_BY_ID[id].name}`).join('・') : 'なし'}</span><span className="ed">変える</span></button>
       <div className="v-sum"><span className="k">はじめの上乗せ</span><span>{Object.keys(startAdd).length ? `編成から ${Object.entries(startAdd).map(([k, v]) => `${MSX_STAT_NAME[k]} +${v}`).join('・')}` : '編成からの上乗せなし'}</span></div>
@@ -86301,7 +86421,7 @@ function MonheroSuccessScreen({ onClose, callNameOf, bondLvOf, debug = false }) 
     const bag = {}; cfg.items.filter((k) => MSX_ITEM_BY_ID[k] && MSX_ITEM_BY_ID[k].when === 'both').forEach((k) => { bag[k] = 1; });
     const fromMon = cfg.from && typeof cfg.from.box === 'string' ? data.box.mons.find((m) => m.id === cfg.from.box) : null; // 合体円盤石(未育成)から始めるなら、継いだ間合い適性の段数を写す
     const s = SUC.newRun({ id, species: cfg.species, aid: cfg.aid, team: cfg.team, aidBondLv: cfg.aidBondLv, carry, bag, ...(fromMon && Array.isArray(fromMon.aptBase) ? { aptBase: fromMon.aptBase } : {}), wonBefore: Array.isArray(data.meta.wonCups) ? data.meta.wonCups : [] });
-    const r = { v: 1, id, s, nick: cfg.nick, colors: cfg.colors, from: cfg.from, items: cfg.items, used: 0, phase: 'begin', out: null, log: [], startAt: Date.now() };
+    const r = { v: 1, id, s, scn: typeof msxScenarioId === 'function' ? msxScenarioId(cfg.scn) : 'hero', nick: cfg.nick, colors: cfg.colors, from: cfg.from, items: cfg.items, used: 0, phase: 'begin', out: null, log: [], startAt: Date.now() };
     const meta = { ...data.meta, team: cfg.teamSlots.map((t) => (t.box ? { box: t.box } : { base: t.base })), runs: (data.meta.runs || 0) + 1, picked: { ...(data.meta.picked || {}), [cfg.species]: ((data.meta.picked || {})[cfg.species] || 0) + 1 } };
     // 持ちこんだ物は1つずつ減らす。芯がまだ知らない物(効き目が無い物)は減らさない
     if (cfg.items.some(known)) { const it = { ...meta.items }; cfg.items.filter(known).forEach((k) => { it[k] = Math.max(0, (it[k] || 0) - 1); if (!it[k]) delete it[k]; }); meta.items = it; }
@@ -86325,7 +86445,7 @@ function MonheroSuccessScreen({ onClose, callNameOf, bondLvOf, debug = false }) 
     betaKeys = { keys: ['open', raisedMons.length > 0 && !(run && run.s && !run.s.over) && 'firstend'], ctx: { ...betaCtx, mon: lastRaised ? (lastRaised.nick || msxMonName(lastRaised.species)) : undefined } };
   } else if (view === 'play' && run && run.s) {
     const s = run.s; const ph = run.phase;
-    const keys = s.over || ph === 'over' ? ['retire'] : ph === 'battle' ? ['match'] : playSub === 'cup' ? ['cup'] : playSub === 'shugyo' ? ['shugyo']
+    const keys = s.over || ph === 'over' ? ['retire'] : ph === 'battle' ? [run.out && run.out.r3 ? (run.out.r3.stage === 'rank' ? 'rank' : run.out.r3.stage === 'meal' ? 'meal' : null) : 'match'] /* 賞金ランク UP!・ごはんの段(2026-11-14) */ : playSub === 'cup' ? ['cup'] : playSub === 'shugyo' ? ['shugyo']
       : ph === 'event' || ph === 'story' ? ['event'] : ph === 'awake' ? ['awake'] : ph === 'result' && run.out && run.out.result ? ['result']
         : ph === 'main' && playSub === 'main' ? ['turn', 'train', s.hpMax > 0 && s.hp < s.hpMax * 0.5 && 'rest', Number(s.tickets) > 0 && 'shugyo'] : null;
     if (keys) betaKeys = { keys, ctx: { ...betaCtx, mon: run.nick } };
@@ -86930,7 +87050,7 @@ function MsxEvent({ run, setRun, v, ev, ctx, bondLv, onDone }) {
       return;
     }
     const r = SUC.events.pick(s, c); if (!r.out || !r.out.ok) return;
-    setRun({ ...run, s: r.state, out: { ...o, picked: { scenes: [r.out.next, r.out.scene].filter(Boolean), before: s.stats, res: r.out.res, delta: r.out.delta || null, apt: r.out.delta && r.out.delta.apt ? r.out.delta.apt : null } } });
+    setRun({ ...run, s: r.state, out: { ...o, picked: { scenes: [r.out.next || (view && view.id ? `${view.id}.res` : null), r.out.scene].filter(Boolean), before: s.stats, res: r.out.res, delta: r.out.delta || null, apt: r.out.delta && r.out.delta.apt ? r.out.delta.apt : null } } });
   };
   const ups = {}; if (picked && picked.before) MSX_STATS.forEach((k) => { const d = s.stats[k] - picked.before[k]; if (d) ups[k] = d; });
   const afterLines = picked ? picked.scenes.flatMap((sc) => (evOf(sc) || { lines: [] }).lines.concat((evOf(sc) || { after: [] }).after)) : [];
@@ -89810,7 +89930,7 @@ function MsaStage({ log, frames, pos, teams, venueImg, ended = false, win = null
       <div key={sd} className={`msa-hud ${sd}`} data-msa-hud={sd}>
         <div className="nm">{m ? m.name : ''}</div>
         <MsaGauge kind="hp" value={hpOf(sd)} max={maxHpOf(sd)} delay={foe ? hitMs : 0} sf={sf} reduce={reduce}/>
-        <MsaGauge kind="gt" value={gutsOf(sd)} max={100} delay={foe ? hitMs : 0} sf={sf} reduce={reduce}/>
+        <MsaGauge kind="gt" value={gutsOf(sd)} max={typeof window !== 'undefined' && window.ASSISTANT_MASMON_BATTLE && window.ASSISTANT_MASMON_BATTLE.GUTS_MAX ? window.ASSISTANT_MASMON_BATTLE.GUTS_MAX : 99} delay={foe ? hitMs : 0} sf={sf} reduce={reduce}/>
         <div className="msa-gtags">{tags.map((t, j) => <span key={`${pos}-${j}`} className={`msa-gt ${t.cls}`} data-msa-gtag={t.t} style={{ animationDelay: `${t.delay}ms` }}>{t.t}</span>)}</div>
       </div>
     );
