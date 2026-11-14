@@ -44,8 +44,8 @@ const CHANGELOG = [
     // 2026-11-14 社長「β近日公開予定のお知らせと、そこに紹介動画と、作ったストーリーを出そう。紹介動画はイッサ博士と覚醒のシーン」。動画は実際の画面を本物のブラウザで録った(博士の大きな賭け → 覚醒の前触れ → 覚醒 → 超覚醒)。
     // 第1話のお知らせ(releaseFlag monsucStoryEp1)と同じ日に出す。みゅあの告知は第1話の側の1つにまとめ、ここには付けない(2回続けて話さないように)
     date: "2026-11-14 15:40", type:'content', title:'モンヒロサクセス β版 近日公開予定', status:'new', group:'success',
-    video: 'movies/monsaku-beta-soon.mp4?v=ae3bd9d1a25c',
-    videoPoster: 'images/events/monsaku-beta-soon-poster.jpg?v=e937fb4bc03b',
+    video: 'movies/monsaku-beta-soon.mp4?v=d873ea8d02e3',
+    videoPoster: 'images/events/monsaku-beta-soon-poster.jpg?v=cca884327653',
     items:[
       '開発中の新コンテンツ「モンヒロサクセス」は、β版を近日公開予定です。',
       '動画では、育成の途中にふらりと現れる博士との「大きな賭け」と、モンスターがまばゆい光をまとって強くなる「覚醒」の様子をお見せします。',
@@ -60,6 +60,15 @@ const CHANGELOG = [
     date: "2026-11-14 14:33", type:'fix', title:'マスモンの対戦で、iPhone の「もどる」が押せないことがあったのを直しました', group:'assistant', status:'new', releaseFlag:'assistantMasmonBattleBeta',
     items:[
       'iPhone などで、上の「← もどる」が時計の表示と重なって押せないことがありました。いまは時計の下に出て、押せるようになっています。',
+    ],
+  },
+  {
+    // 2026-11-14 社長「バトルがオートだった。基本マニュアルで、オートにもできるようにして」(窓口経由・キズナ5)。モンサクの大会の試合も同じ(公開前なのでここには書かない)
+    date: "2026-11-14 12:55", type:'update', title:'マスモンで対戦の試合を、自分で技を選んで戦うのが基本になりました', group:'assistant', status:'new', releaseFlag:'assistantMasmonBattleBeta',
+    items:[
+      'マスモンで対戦の試合は、手番ごとに自分で技や動きを選ぶ「手動」から始まるようになりました。',
+      '準備の画面の「操作」で「オートで観戦」も選べます。試合の途中でも、手番の帯の「オートにする」で残りをオートに任せられます。',
+      '手動とオートのどちらを選んだかは、次の試合でも使われます。',
     ],
   },
   {
