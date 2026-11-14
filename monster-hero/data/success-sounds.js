@@ -15,10 +15,11 @@
     // トレーニング全体(2026-11-14 社長の「モンサク トレーニングBGM」)。画面に入ってから抜けるまでこの曲。結果の効果音は下の4種が鳴らす
     { id: 'training', name: 'トレーニング', bgm: 'monsuc_training', se: null },
     // 休む(2026-11-14 社長の「モンサク 休養BGM」)。休むを選んだ場面のあいだこの曲(遊ぶ・通院の曲は決まっていない)
-    { id: 'rest', name: '休む', bgm: 'monsuc_rest', se: null },
+    { id: 'rest', name: '休む', bgm: 'monsuc_rest', se: 'heal' },
+    // 休む・遊ぶ・通院の効果音(2026-11-14 社長「休んだときの音もないから、わかりにくい」): 休む・通院=回復の音 heal / 遊ぶ=trainingGood
     // 遊ぶ・通院(2026-11-14 社長「なにか曲を当てはめといて」)。専用の曲が届くまで、ゲームにある曲から仮に当てた(曲を替えるときはここ)
-    { id: 'play', name: '遊ぶ', bgm: 'ichika_home', se: null },
-    { id: 'hospital', name: '通院', bgm: 'original_profile', se: null },
+    { id: 'play', name: '遊ぶ', bgm: 'ichika_home', se: 'trainingGood' },
+    { id: 'hospital', name: '通院', bgm: 'original_profile', se: 'heal' },
     // 育成の外の画面(モンヒロサクセスを開いたときのメニュー・ボックス・ランキング・図鑑・始めるまでの準備)。2026-11-14 社長の「モンサク メインBGM」
     { id: 'menu', name: 'メニュー(育成の外)', bgm: 'monsuc_menu', se: null },
     // トレーニングの結果4種(曲は替えない)。演出のあと結果の字が出たときに鳴らす。2026-11-14 社長「大成功は派手に・失敗は残念そうに」で 大成功=ファンファーレ・成功=和音・サボり=低いブザーに替えた
@@ -73,6 +74,14 @@
     { id: 'cupLose', name: '大会: 負け', bgm: 'monsuc_lose', se: null },
     // イッサ博士・ゲームオーバー・引退
     { id: 'issa', name: 'イッサ博士', bgm: 'original_event_01', se: 'trainingTool' },
+    // 博士の大きな賭けの演出(2026-11-14 社長「イッサ博士の演出が弱い」。56-monsuc-issa.jsx)。大成功は閃光+大ファンファーレ+きらめきの重ねで専用の音にする
+    { id: 'issaIn', name: '博士: 飛びこんでくる', se: 'join' },
+    { id: 'issaDrum', name: '博士: 装置の溜め(ドキドキ)', se: 'trainingDice' },
+    { id: 'issaZap', name: '博士: 大成功の閃光', se: 'fusion' },
+    { id: 'issaPuff', name: '博士: 失敗の煙', se: 'enemyMove' },
+    { id: 'issaWin', name: '博士: 大成功', se: 'rankFanfareGrand' },
+    { id: 'issaWin2', name: '博士: 大成功のきらめき', se: 'levelUp' },
+    { id: 'issaLose', name: '博士: 失敗', se: 'trainingFail' },
     { id: 'gameOver', name: 'ゲームオーバー', bgm: 'original_game_over', se: null },
     { id: 'retire', name: '引退', bgm: 'original_result', se: 'rankFanfareGrand' },
   ].map(Object.freeze));

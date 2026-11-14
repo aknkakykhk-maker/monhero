@@ -1698,6 +1698,90 @@
     "subdivisionsPerBeat": 3,
     "source": "command"
    }
+  },
+  "departure": {
+   "flowPlacement": true,
+   "audio": "monster-hero/audio/bgm-departure.mp3",
+   "chartRevision": 39,
+   "audioSha256": "ad4d5a6838c8d5513da5b74924e8b382b55288b068473fbb935853c0659b4150",
+   "durationMs": 297352,
+   "analyzedTiming": {
+    "bpm": 156.25,
+    "beatZeroMs": 621,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "detected"
+   }
+  },
+  "departure_short": {
+   "flowPlacement": true,
+   "audio": "monster-hero/audio/bgm-departure-short.mp3",
+   "chartRevision": 39,
+   "audioSha256": "d2dcbe5c72a879fb1e476627377793d1aec6579a1a25efe6263347514017fdf1",
+   "durationMs": 105378,
+   "analyzedTiming": {
+    "bpm": 156.25,
+    "beatZeroMs": 641,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   }
+  },
+  "rpg": {
+   "flowPlacement": true,
+   "audio": "monster-hero/audio/bgm-rpg.mp3",
+   "chartRevision": 39,
+   "audioSha256": "36abe34289f90845123504e4840ffafc8d65dce2b76d37615d0c2b5a796c64c3",
+   "durationMs": 245211,
+   "analyzedTiming": {
+    "bpm": 174.998,
+    "beatZeroMs": 575.6,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "detected"
+   }
+  },
+  "rpg_short": {
+   "flowPlacement": true,
+   "audio": "monster-hero/audio/bgm-rpg-short.mp3",
+   "chartRevision": 39,
+   "audioSha256": "7d4428d73d94d91d0385bac302a57c42d327703fe7b01aac0e56cc17cf7f35e2",
+   "durationMs": 87615,
+   "analyzedTiming": {
+    "bpm": 174.998,
+    "beatZeroMs": 575.6,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   }
+  },
+  "midnight_studio": {
+   "flowPlacement": true,
+   "audio": "monster-hero/audio/bgm-midnight-studio.mp3",
+   "chartRevision": 39,
+   "audioSha256": "9ae7e65a5cf463a2d92854db537fd0967e505d46697eb1dc69c93fefc0bfa3b0",
+   "durationMs": 217051,
+   "analyzedTiming": {
+    "bpm": 147.969,
+    "beatZeroMs": 1490,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "detected"
+   }
+  },
+  "midnight_studio_short": {
+   "flowPlacement": true,
+   "audio": "monster-hero/audio/bgm-midnight-studio-short.mp3",
+   "chartRevision": 39,
+   "audioSha256": "936b28949b4a330a5ead20347808bb9629bc52e6185d380fc6fac5e5da59d95a",
+   "durationMs": 74475,
+   "analyzedTiming": {
+    "bpm": 147.969,
+    "beatZeroMs": 1730,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   }
   }
  }
 }

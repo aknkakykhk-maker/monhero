@@ -49,8 +49,8 @@ const makeRun = async (kind) => {
   // [名前, 作る育成, 操作(data 属性 か テキストの正規表現)]。'@x' は [data-msx-r3-x] を押す
   const SHOTS = [
     ['U1', 'uniq', ['cont']], ['U2', 'uniq', ['cont', 'opt']],
-    ['P1', 'pick1', ['cont']], ['P2', 'pick2', ['cont']], ['P3', 'pick3', ['cont']],
-    ['A1', 'pick1', ['cont', '#next', '%quick', '%next']],
+    ['P1', 'pick1', ['cont']], ['P2', 'pick2', ['cont', '@precup', '@enter', '@yes', 'wait']], ['P3', 'pick3', ['cont']],
+    ['A1', 'pick1', ['cont', '@precup', '@enter', '@yes', '#next*', '@cupintro-go', '%quick', '%next', '#next']],
     ['N1', 'bad', ['cont']], ['N2', 'bad', ['cont', '#next', '#next']],
     ['G1', 'good', ['cont']], ['G2', 'good', ['cont', '#next', '#next']], ['G4', 'good', ['cont', '#next', '#next', '#next', '#next']],
     ['S1', 'super', ['cont']], ['S2', 'super', ['cont', '#next', '#next']], ['S5', 'super', ['cont', '#next', '#next', '#next', '#next', '#next']],
@@ -61,6 +61,8 @@ const makeRun = async (kind) => {
       const page = await browser.newPage({ viewport: { width: w, height: h } });
       page.on('pageerror', (e) => errors.push(String(e && e.message || e)));
       await page.addInitScript(quietBootSeed()); await page.addInitScript(updateNoticeSeed());
+      // β版のみゅあの説明(最初の1回だけ重なる窓)は見た印を付けておく。付けないと、試合の前の説明で手順が止まる
+      await page.addInitScript(() => { try { localStorage.setItem('mh_monsuc_beta_v1', JSON.stringify({ v: 1, seen: { open: 1, firstend: 1, prep: 1, turn: 1, train: 1, result: 1, rest: 1, shugyo: 1, cup: 1, match: 1, rematch: 1, event: 1, awake: 1, retire: 1 } })); } catch (e) {} });
       await page.addInitScript(() => { try { localStorage.setItem('mh_unlocked_monsters', JSON.stringify(['Mocchi', 'Suezo', 'Golem', 'Tiger', 'Pixie', 'Undine', 'Kyubi'])); } catch (e) {} });
       await page.goto(`http://localhost:${PORT}/monster-hero/index.html`, { waitUntil: 'load', timeout: 90000 });
       await page.waitForFunction(() => typeof MonheroSuccessScreen === 'function' && typeof MsxR3 === 'function' && typeof msxLoad === 'function' && typeof MASMON_CALC !== 'undefined', undefined, { timeout: 90000 });
@@ -88,6 +90,10 @@ const makeRun = async (kind) => {
           const done = await page.evaluate(async (st) => {
             if (st.re) { const re = new RegExp(st.re); const b = [...document.querySelectorAll('.msx button')].find((x) => re.test((x.innerText || '').replace(/\s+/g, '')) && !x.disabled); if (b) b.click(); return !!b; }
             if (st === 'wait') return true;
+            if (st === '#next*') { // 相手えらびなどの会話を、次へが無くなるまで送る(最大20回)
+              for (let i = 0; i < 20; i++) { await new Promise((r) => setTimeout(r, 500)); const b = document.querySelector('[data-msx-arc-next]'); if (!b) break; b.click(); }
+              return true;
+            }
             if (st === 'opt') { const b = document.querySelector('.msx .v-opt'); if (b) b.click(); return !!b; }
             if (st === 'cont') { const b = [...document.querySelectorAll('.msx button')].find((x) => /続きから|結果を見る/.test(x.innerText || '')); if (b) b.click(); return !!b; }
             const [k, val] = st.slice(1).split('=');

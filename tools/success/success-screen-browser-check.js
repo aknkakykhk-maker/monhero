@@ -123,9 +123,17 @@ const advance = (page, react) => page.evaluate((react) => {
   // 確かめの小窓(はい/やめておく)
   const ask = root.querySelector('.msx-btn.go'); if (ask && /はい|する|使う|やめる/.test(ask.innerText) && ask.closest('[class*="ask"], [class*="modal"], [class*="sheet"]')) return press(ask, 'ask');
   // 叱る・褒める
-  const ch = by(react === 'scold' ? /^📣 叱る/ : /^👏 褒める/, '.v-ch'); if (ch) return press(ch, react);
+  // 2026-11-14 選択肢の字は場面ごと(思いきりほめる・なぐさめる・気合いを入れる…)になったので、data-msx-react-how で探す
+  const ch = root.querySelector(`[data-msx-react-how="${react === 'scold' ? 'scold' : 'praise'}"]`) || by(react === 'scold' ? /^📣 叱る/ : /^👏 褒める/, '.v-ch'); if (ch && !ch.disabled) return press(ch, react);
+  // その後の結果の札(選んだあとの「つぎへ」)は下の「つぎへ」で進む
   // 出来事(ランダムイベント・助手の連続イベント・2026-11-12 回2): 1つ目の選択肢を選ぶ
   const opt = root.querySelector('.v-opts .v-opt:not([disabled])'); if (opt) return press(opt, 'event');
+  // 期末の大会の当日: 当日のメインの「大会(本番)」→ 受付の「出場」→ 参加の確認「はい」→ 紋章の入りの SKIP
+  if (root.querySelector('[data-msx-r3-loading]')) return 'wait'; // 試合を読み込み中
+  const yes = root.querySelector('[data-msx-r3-yes]'); if (yes) return press(yes, 'pre-yes');
+  if (root.querySelector('[data-msx-r3-pre-card]')) { const en = root.querySelector('[data-msx-r3-enter]'); if (en) return press(en, 'pre-enter'); }
+  const pc = root.querySelector('[data-msx-r3-precup]'); if (pc) return press(pc, 'pre-cup');
+  const ig = root.querySelector('[data-msx-r3-cupintro-go]'); if (ig) return press(ig, 'intro');
   // 期末の大会(デバッグ)
   const win = by(/勝ったことにする/); if (win) return press(win, 'win');
   // デビュー戦の再挑戦・体調が悪い
@@ -234,8 +242,9 @@ const sameState = (a, b) => {
               if (onMain) break;
             }
             const did = await advance(page, guard % 3 === 0 ? 'scold' : 'praise');
-            if (!did) { check(`${tag}: ${label} T${cur.turn} で押せるボタンが見つからない`, false, `view=${cur.view}`); break; }
+            if (!did) { const tx = await page.evaluate(() => (document.querySelector(".msx") || {}).innerText || ""); check(`${tag}: ${label} T${cur.turn} で押せるボタンが見つからない`, false, `view=${cur.view} ${pressed.slice(-4).join(",")} ${tx.replace(/\s+/g, " ").slice(0, 200)}`); break; }
             pressed.push(did);
+            if (did === 'wait') { await page.waitForTimeout(400); continue; }
             if (['train', 'praise', 'scold', 'go', 'next', 'win', 'rest', 'retry', 'cond'].includes(did)) await see(`T${cur.turn}-${did}`);
           }
           return pressed;
@@ -243,7 +252,8 @@ const sameState = (a, b) => {
         const p1 = await play(TURNS_BEFORE, '中断の前');
         m = await look(page);
         check(`${tag}: ${TURNS_BEFORE} ターン進む`, m.turn === 1 + TURNS_BEFORE, `turn=${m.turn}・押した ${p1.length} 回`);
-        check(`${tag}: トレーニングと叱る/褒めるを通った`, p1.includes('train') && (p1.includes('praise') || p1.includes('scold')));
+        // 2026-11-14 叱る/褒めるは大成功・失敗・サボり・修行のあとだけ出る(ふつうの成功では出ない)。出たときは上の advance が押す
+        check(`${tag}: トレーニングを通った`, p1.includes('train'), p1.join(',').slice(0, 80));
         // 中断
         const paused = await page.evaluate(() => { const b = [...document.querySelectorAll('.msx .v-ft button')].find((x) => /中断/.test(x.innerText)); if (b) b.click(); return !!b; });
         check(`${tag}: 「← 中断」が押せる`, paused);

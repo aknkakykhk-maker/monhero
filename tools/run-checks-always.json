@@ -98,6 +98,7 @@
   "changelog/player-words-check.js",
   "changelog/song-art-notice-check.js",
   "changelog/song-numbers-check.js",
+  "ui/ui-kanji-check.js",
   "changelog/title-prefix-check.js",
   "compiled-runtime-check.js",
   "friends/alf-masmon-share-check.js",
@@ -385,6 +386,7 @@
   "supabase-apply-check.js",
   "teaching-roster-size-check.js",
   "team/decision-lock-check.js",
+  "team/requests-check.js",
   "update-notice-check.js",
   "viewport-height-check.js"
  ]

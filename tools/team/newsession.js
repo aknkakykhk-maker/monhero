@@ -15,6 +15,7 @@
 const { findDept, cut, deptList } = require('./lib');
 const { pick } = require('./model-pick');
 const { latest } = require('./handoff');
+const { linesFor } = require('./requests');
 
 const HQ = 'session_014GTmSNS2ae9tRr57k3zFjC';
 
@@ -34,17 +35,28 @@ function build(d, job, { name, kind, failed, to } = {}) {
   P.push('■仕事');
   P.push(job);
   P.push('');
+  // この部の完了でない頼み(追跡表)。会話が替わっても頼みが消えないように、依頼文に毎回入れる(2026-11-14 社長「お願いしたのに漏れてるの多い」)
+  const todo = linesFor(d.id, 6, 60);
+  if (todo.total && d.id !== 'hq') {
+    P.push(`■この部の完了でない頼み(追跡表・${todo.total} 件。今回の仕事に入る物は一緒に済ませ、入らない物は報告に「残り」と書く)`);
+    for (const l of todo.lines) P.push(l);
+    P.push('');
+  }
   P.push('■守ること');
   P.push('・サブエージェントは使わない。Supabase には触れない(SQL の本文・配り直しの頼みは窓口へ)');
   P.push('・デバッグの合言葉・社長個人の情報・API キーを、コード・コミット・PR・資料・報告のどこにも書かない');
   P.push('・マージするのは、自分が作った PR の作成の結果に出た番号だけ');
   P.push('・公開の前に node tools/ctx.js gate。「要る」と出たら、マージの前に窓口へ知らせる(ミハリが確認する)。「要らない」なら検査が通りしだい公開');
+  P.push('・画面の文(ボタン・見出し・説明など)は、漢字で書ける所は漢字にする(戻る・閉じる・次へ・選ぶ)。台詞だけは個性で変えてよい');
+  P.push('・できた物から1つずつ PR にし、溜めてから出さない。ミハリの OK が届いたら窓口を待たずにマージする');
+  P.push('・見た目の止め絵を窓口へ送るときは、関係する決めごと(台帳の行と参考の絵)を1行ずつ並べ、止め絵のどこで満たしているかを書いた突き合わせ表を一緒に送る。満たしていない行は直してから送る');
   P.push('・判断や設計が要ると分かった・結果がおかしい・2回やってうまくいかない → 自分で続けず窓口へ知らせる(上のモデルの会話に替える)');
   P.push(`・「会話が長くなった」という知らせが出たら、区切りで node tools/ctx.js handoff ${d.id} --write → 窓口へ`);
+  P.push(`・社長の頼みは追跡表で完了まで追う: node tools/ctx.js todo ${d.id} で自分の部の完了でない頼みを見る`);
   if (r.kind.id === 'run') P.push('・道具の出力は全部読まない(問題の大きい順の上位・件数だけ。2>&1 | tail)。道具が足りない・直したいときは自分で作り込まず窓口へ(道具づくりは別の会話)');
   if (r.kind.id === 'tool') P.push('・道具の出力は小さく作る(既定は要約・件数・問題の大きい順の上位だけ。全部は --all や --json で)。回す側は安いモデルなので、読む量がそのまま費用になる。作り終えたら回し方を1行で報告する');
   P.push('');
-  P.push(`■報告: send_message で ${to || HQ} へ。短く「何を直したか・PR番号・更新履歴の要否(要るなら文案)・本番で見る所」`);
+  P.push(`■報告: send_message で ${to || HQ} へ。短く「何を直したか・PR番号・済ませた頼みの id(追跡表)・更新履歴の要否(要るなら文案)・本番で見る所」`);
   return {
     title: `${d['部'].replace(/\(.*$/, '')} ${who}: ${cut(job.replace(/\s+/g, ' '), 28)}`,
     model: r.kind.model,
