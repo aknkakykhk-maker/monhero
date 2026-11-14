@@ -21,6 +21,8 @@ const MSX_LOT = Object.freeze({ self: 'drill', rest: 'rest', talk: 'chat', tip: 
 
 // 音(14-success-sound.jsx の useSuccessSound)。無いときは何もしない(フックの数は変わらない)
 const msxUseSound = typeof useSuccessSound === 'function' ? useSuccessSound : () => {};
+// 内側(育成中)は場面の曲を切り替えるだけ(後片付けは画面全体の msxUseSound の1か所)
+const msxUseScene = typeof useSuccessScene === 'function' ? useSuccessScene : () => {};
 // 休む・遊ぶ・通院の結果の場面の曲(表はビート部 data/success-sounds.js。表に無いうちは今の曲のまま)
 const MSX_REST_SOUND = Object.freeze({ rest: 'rest', play: 'play', clinic: 'hospital' });
 const MSX_RES_SOUND = Object.freeze({ great: 'trainGreat', ok: 'trainOk', fail: 'trainFail', sab: 'trainSkip' });
@@ -171,6 +173,7 @@ function MonheroSuccessScreen({ onClose, callNameOf, bondLvOf, debug = false }) 
   const [playSub, setPlaySub] = useState('main'); // 育成中の小画面(MsxPlay の sub。β版の説明を出す場面を決める)
   // 育成の外(ホーム・ボックス・ランキング・図鑑・始めるまでの準備)の曲(ビート部の表 data/success-sounds.js の menu)。
   // 育成中は MsxPlay が場面の曲を鳴らすので、ここは何もしない(画面を閉じると入る前の曲へ戻る)
+  // 後片付け(閉じたら入る前の曲へ)はここの1か所だけ。育成中(play)は MsxPlay が場面の曲を切り替える
   msxUseSound(view === 'play' || view === 'loading' || view === 'fail' ? null : 'menu');
   useEffect(() => {
     const on = () => setLayout(msxLayout());
@@ -318,7 +321,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
   // 大会(試合)・修行・決着・引退は、その画面(56-monhero-success-r3-*.jsx)が自分で場面の音を鳴らす。ここで main を鳴らすと後から上書きするので何もしない
   const childSound = typeof MsxR3 === 'function' && (run.phase === 'battle' || run.phase === 'over' || !!s.over || sub === 'cup' || sub === 'shugyo');
   const soundId = childSound ? null : actOn ? 'trainAct' : kiOn ? 'kiShow' : run.phase === 'awake' && run.out && run.out.fire && typeof MsxAwakeShow === 'function' ? 'awakeShow' : run.phase === 'awake' && run.out && run.out.fire ? (run.out.fire.kind === 2 ? 'trainGreat' : 'trainLvUp') : run.phase === 'result' && run.out && MSX_REST_SOUND[run.out.kind] ? MSX_REST_SOUND[run.out.kind] : run.phase === 'result' && run.out && run.out.result ? MSX_RES_SOUND[run.out.result] : run.phase === 'issa' ? 'issa' : s.over === 'gameover' ? 'gameOver' : sub === 'train' ? 'training' : 'main';
-  msxUseSound(soundId, { season: msxCalendar(s.turn).season });
+  msxUseScene(soundId, { season: msxCalendar(s.turn).season });
   // トレーニングLvが上がった回は、結果の音のあとに Lv アップの音を続ける(演出が終わって結果の字が出てから)
   const lvUpSe = run.phase === 'result' && !actOn && run.out && run.out.result && run.out.lvUp;
   useEffect(() => {

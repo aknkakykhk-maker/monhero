@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 2c0e072ae16ae02d
+// generated-sha256: f2e9e85d810bfc16
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -7070,6 +7070,19 @@ const SuccessSound = (() => {
   return { enter, leave, scene, bgm, se, isActive: () => active };
 })();
 
+// モンサクの画面の内側(育成中・修行・大会・引退など)で使う入り口。sceneId が替わるたびに場面の曲と効果音を鳴らすだけで、
+// 消えても後片付け(leave)はしない。後片付けはモンサクの画面全体(MonheroSuccessScreen)の useSuccessSound の1か所だけ。
+// 内側で useSuccessSound を使うと、その画面を出るたびに入る前の曲へ一度戻ってから鳴り直し、育成中の曲が途切れる(2026-11-14 社長)
+//   useSuccessScene(sceneId, { season, delayMs }) … sceneId が null のあいだは何もしない(いまの曲のまま)
+const useSuccessScene = (sceneId, opts = null) => {
+  const season = opts && opts.season;
+  const delayMs = opts && opts.delayMs;
+  useEffect(() => {
+    if (!sceneId) return undefined;
+    SuccessSound.scene(sceneId, { season, delayMs });
+    return undefined;
+  }, [sceneId, season]);
+};
 // 画面の中で使う入り口。sceneId が替わるたびに鳴らし、画面を離れる(消える)と後片付けする。
 //   useSuccessSound(sceneId, { season, delayMs, on })  … on が false のあいだは何もしない(既定は true)
 const useSuccessSound = (sceneId, opts = null) => {
@@ -86103,6 +86116,8 @@ const MSX_LOT = Object.freeze({ self: 'drill', rest: 'rest', talk: 'chat', tip: 
 
 // 音(14-success-sound.jsx の useSuccessSound)。無いときは何もしない(フックの数は変わらない)
 const msxUseSound = typeof useSuccessSound === 'function' ? useSuccessSound : () => {};
+// 内側(育成中)は場面の曲を切り替えるだけ(後片付けは画面全体の msxUseSound の1か所)
+const msxUseScene = typeof useSuccessScene === 'function' ? useSuccessScene : () => {};
 // 休む・遊ぶ・通院の結果の場面の曲(表はビート部 data/success-sounds.js。表に無いうちは今の曲のまま)
 const MSX_REST_SOUND = Object.freeze({ rest: 'rest', play: 'play', clinic: 'hospital' });
 const MSX_RES_SOUND = Object.freeze({ great: 'trainGreat', ok: 'trainOk', fail: 'trainFail', sab: 'trainSkip' });
@@ -86253,6 +86268,7 @@ function MonheroSuccessScreen({ onClose, callNameOf, bondLvOf, debug = false }) 
   const [playSub, setPlaySub] = useState('main'); // 育成中の小画面(MsxPlay の sub。β版の説明を出す場面を決める)
   // 育成の外(ホーム・ボックス・ランキング・図鑑・始めるまでの準備)の曲(ビート部の表 data/success-sounds.js の menu)。
   // 育成中は MsxPlay が場面の曲を鳴らすので、ここは何もしない(画面を閉じると入る前の曲へ戻る)
+  // 後片付け(閉じたら入る前の曲へ)はここの1か所だけ。育成中(play)は MsxPlay が場面の曲を切り替える
   msxUseSound(view === 'play' || view === 'loading' || view === 'fail' ? null : 'menu');
   useEffect(() => {
     const on = () => setLayout(msxLayout());
@@ -86400,7 +86416,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
   // 大会(試合)・修行・決着・引退は、その画面(56-monhero-success-r3-*.jsx)が自分で場面の音を鳴らす。ここで main を鳴らすと後から上書きするので何もしない
   const childSound = typeof MsxR3 === 'function' && (run.phase === 'battle' || run.phase === 'over' || !!s.over || sub === 'cup' || sub === 'shugyo');
   const soundId = childSound ? null : actOn ? 'trainAct' : kiOn ? 'kiShow' : run.phase === 'awake' && run.out && run.out.fire && typeof MsxAwakeShow === 'function' ? 'awakeShow' : run.phase === 'awake' && run.out && run.out.fire ? (run.out.fire.kind === 2 ? 'trainGreat' : 'trainLvUp') : run.phase === 'result' && run.out && MSX_REST_SOUND[run.out.kind] ? MSX_REST_SOUND[run.out.kind] : run.phase === 'result' && run.out && run.out.result ? MSX_RES_SOUND[run.out.result] : run.phase === 'issa' ? 'issa' : s.over === 'gameover' ? 'gameOver' : sub === 'train' ? 'training' : 'main';
-  msxUseSound(soundId, { season: msxCalendar(s.turn).season });
+  msxUseScene(soundId, { season: msxCalendar(s.turn).season });
   // トレーニングLvが上がった回は、結果の音のあとに Lv アップの音を続ける(演出が終わって結果の字が出てから)
   const lvUpSe = run.phase === 'result' && !actOn && run.out && run.out.result && run.out.lvUp;
   useEffect(() => {
@@ -87494,7 +87510,8 @@ function MsxR3Cup({ run, setRun, v, ev, onBack, onActed }) {
   const toForced = P.key === 'final' ? null : P.left;
   const cal = msxCalendar(s.turn); const calV = msxCalendar(vt);
   useMsxR3Lines(s.aid);
-  useSuccessSound('cupEntry', { season: cal.season });
+  // 受付(月の大会を選ぶ)のあいだは育成中の曲のまま(2026-11-14 社長)。大会の曲 cupPre は組み合わせ表に入ってから(MsxR3Battle)
+  useEffect(() => { if (typeof SuccessSound !== 'undefined') SuccessSound.se('cupEntry'); }, []);
   const nOk = cupsNow.filter((c) => c.entry && c.entry.ok).length;
   const openLine = msxR3Line('turn.cup.open', run, { cup: cur ? msxR3CupName(cur.sys) : '' }, nOk ? `「今月は ${nOk}つ 出られるよ! 出ると1ターン使うから、トレーニングとどっちにするか考えてね」` : '「今月は出られる大会がないみたい。トレーニングでじっくり力をつけよ!」');
   const rankStep = typeof SUC.rankStepOf === 'function' ? SUC.rankStepOf(s) : 0; const rank = rankStep ? { name: SUC.rankNameOf(rankStep) } : null; // 賞金ランク10段(2026-11-14)
@@ -87656,7 +87673,7 @@ function MsxR3Battle({ run, setRun, v, ev, ctx, bondLv, onPause, debug }) {
   const cupSound = st3 ? (st3.won ? 'cupWin' : 'cupLose')
     : showOn ? (showPh === 'win' ? 'cupWin' : showPh === 'lose' ? 'cupLose' : showPh === 'cutin' || showPh === 'match' ? 'cupMatch' : 'cupPre')
       : step === 'lost' ? 'cupLose' : step === 'bracket' || step === 'card' ? 'cupPre' : 'cupMatch';
-  useSuccessSound(cupSound, { season: msxCalendar(s.turn).season });
+  useSuccessScene(cupSound, { season: msxCalendar(s.turn).season });
   useEffect(() => {
     let alive = true;
     // 試合型のアシストの表を読み終えてから試合を作る(読む前と後で同じ試合の結果が変わらないように)
@@ -87936,7 +87953,8 @@ function MsxR3Shugyo({ run, setRun, v, ev, onBack, onPause }) {
   const [fxDone, setFxDone] = useState(false);
   // 結果の前の段(助手の一言 → STAGE 1 → STAGE 2。56-monsuc-actfx.jsx)。押した直後だけ・保存しない
   const [stOn, setStOn] = useState(false);
-  useSuccessSound('ascetic', { season: msxCalendar(s0.turn).season });
+  // 行き先・技を選ぶあいだは育成中の曲のまま。「修行する」を押して修行の段が始まってから修行の曲(2026-11-14 社長)
+  useSuccessScene(res ? 'ascetic' : null, { season: msxCalendar(s0.turn).season });
   // 段のあと、結果の字が出たときに 覚えた/覚えなかった の音(2026-11-14 社長「修行の結果にも SE を」)
   const qRes = res && !stOn ? ((res.out.learnedAll && res.out.learnedAll.length) || res.out.learned ? 'qLearn' : 'qMiss') : null;
   useEffect(() => { if (qRes && typeof SuccessSound !== 'undefined') SuccessSound.se(qRes, 150); }, [qRes]);
@@ -88075,7 +88093,7 @@ function MsxR3GameOver({ run, setRun, onPause }) {
   const [log, setLog] = useState(false);
   const [busy, setBusy] = useState(false);
   const [fxDone, setFxDone] = useState(false);
-  useSuccessSound('gameOver');
+  useSuccessScene('gameOver');
   const again = async () => {
     if (busy) return; setBusy(true);
     try { await msxR3GameOver(s); await msxR3ClearRun(); } catch (e) {}
@@ -88109,7 +88127,7 @@ function MsxR3Retire({ run, setRun, onPause, debug, SUC }) {
   const [pick, setPick] = useState({}); // アシスト能力 { id: 段 }
   const [atab, setAtab] = useState(null); // アシストの場面のタブ(第2版・7つ)
   const [fxDone, setFxDone] = useState(false);
-  useSuccessSound('retire');
+  useSuccessScene('retire');
   const [sure, setSure] = useState(false);
   const [busy, setBusy] = useState(false);
   const [box, setBox] = useState(null);
@@ -88535,7 +88553,7 @@ function MsxArcEnding({ run, setRun, v, ev, onPause, ctx, bondLv }) {
   const { SUC } = msxSuc;
   const s = run.s; const end = s.ending; const kind = end.kind;
   const [step, setStep] = useState(0); // 0 = エンディング / 1〜n = お祝い / n+1 = 特別演出
-  useSuccessSound(kind === 'bad' ? 'cupLose' : 'cupWin', { season: msxCalendar(s.turn).season });
+  useSuccessScene(kind === 'bad' ? 'cupLose' : 'cupWin', { season: msxCalendar(s.turn).season });
   const parties = Array.isArray(end.parties) ? end.parties : [];
   const finish = () => { const r = typeof SUC.endingSeen === 'function' ? SUC.endingSeen(s) : { state: { ...s, ending: { ...end, seen: true } } }; setRun({ ...run, s: r.state, arcAfter: undefined }); };
   const goNext = () => { if (step < parties.length) setStep(step + 1); else if (kind === 'super' && step === parties.length) setStep(step + 1); else finish(); };

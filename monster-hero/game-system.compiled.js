@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 996203e75d850ad3
+// source-sha256: 21d62886484558fa
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -10154,6 +10154,18 @@ const SuccessSound = (() => {
     isActive: () => active
   };
 })();
+const useSuccessScene = (sceneId, opts = null) => {
+  const season = opts && opts.season;
+  const delayMs = opts && opts.delayMs;
+  useEffect(() => {
+    if (!sceneId) return undefined;
+    SuccessSound.scene(sceneId, {
+      season,
+      delayMs
+    });
+    return undefined;
+  }, [sceneId, season]);
+};
 const useSuccessSound = (sceneId, opts = null) => {
   const on = !opts || opts.on !== false;
   const season = opts && opts.season;
@@ -165237,6 +165249,7 @@ const MSX_LOT = Object.freeze({
   friend: 'friend'
 });
 const msxUseSound = typeof useSuccessSound === 'function' ? useSuccessSound : () => {};
+const msxUseScene = typeof useSuccessScene === 'function' ? useSuccessScene : () => {};
 const MSX_REST_SOUND = Object.freeze({
   rest: 'rest',
   play: 'play',
@@ -166035,7 +166048,7 @@ function MsxPlay({
   const kiOn = run.phase === 'turn' && typeof MsxKiShow === 'function' && v.period && v.period.at === 1 && v.period.index > 0 && kiAt !== s.turn;
   const childSound = typeof MsxR3 === 'function' && (run.phase === 'battle' || run.phase === 'over' || !!s.over || sub === 'cup' || sub === 'shugyo');
   const soundId = childSound ? null : actOn ? 'trainAct' : kiOn ? 'kiShow' : run.phase === 'awake' && run.out && run.out.fire && typeof MsxAwakeShow === 'function' ? 'awakeShow' : run.phase === 'awake' && run.out && run.out.fire ? run.out.fire.kind === 2 ? 'trainGreat' : 'trainLvUp' : run.phase === 'result' && run.out && MSX_REST_SOUND[run.out.kind] ? MSX_REST_SOUND[run.out.kind] : run.phase === 'result' && run.out && run.out.result ? MSX_RES_SOUND[run.out.result] : run.phase === 'issa' ? 'issa' : s.over === 'gameover' ? 'gameOver' : sub === 'train' ? 'training' : 'main';
-  msxUseSound(soundId, {
+  msxUseScene(soundId, {
     season: msxCalendar(s.turn).season
   });
   const lvUpSe = run.phase === 'result' && !actOn && run.out && run.out.result && run.out.lvUp;
@@ -169032,9 +169045,9 @@ function MsxR3Cup({
   const cal = msxCalendar(s.turn);
   const calV = msxCalendar(vt);
   useMsxR3Lines(s.aid);
-  useSuccessSound('cupEntry', {
-    season: cal.season
-  });
+  useEffect(() => {
+    if (typeof SuccessSound !== 'undefined') SuccessSound.se('cupEntry');
+  }, []);
   const nOk = cupsNow.filter(c => c.entry && c.entry.ok).length;
   const openLine = msxR3Line('turn.cup.open', run, {
     cup: cur ? msxR3CupName(cur.sys) : ''
@@ -169498,7 +169511,7 @@ function MsxR3Battle({
   useMsxR3Lines(s.aid);
   const [showPh, setShowPh] = useState('bracket');
   const cupSound = st3 ? st3.won ? 'cupWin' : 'cupLose' : showOn ? showPh === 'win' ? 'cupWin' : showPh === 'lose' ? 'cupLose' : showPh === 'cutin' || showPh === 'match' ? 'cupMatch' : 'cupPre' : step === 'lost' ? 'cupLose' : step === 'bracket' || step === 'card' ? 'cupPre' : 'cupMatch';
-  useSuccessSound(cupSound, {
+  useSuccessScene(cupSound, {
     season: msxCalendar(s.turn).season
   });
   useEffect(() => {
@@ -170638,7 +170651,7 @@ function MsxR3Shugyo({
   const [res, setRes] = useState(null);
   const [fxDone, setFxDone] = useState(false);
   const [stOn, setStOn] = useState(false);
-  useSuccessSound('ascetic', {
+  useSuccessScene(res ? 'ascetic' : null, {
     season: msxCalendar(s0.turn).season
   });
   const qRes = res && !stOn ? res.out.learnedAll && res.out.learnedAll.length || res.out.learned ? 'qLearn' : 'qMiss' : null;
@@ -171124,7 +171137,7 @@ function MsxR3GameOver({
   const [log, setLog] = useState(false);
   const [busy, setBusy] = useState(false);
   const [fxDone, setFxDone] = useState(false);
-  useSuccessSound('gameOver');
+  useSuccessScene('gameOver');
   const again = async () => {
     if (busy) return;
     setBusy(true);
@@ -171235,7 +171248,7 @@ function MsxR3Retire({
   const [pick, setPick] = useState({});
   const [atab, setAtab] = useState(null);
   const [fxDone, setFxDone] = useState(false);
-  useSuccessSound('retire');
+  useSuccessScene('retire');
   const [sure, setSure] = useState(false);
   const [busy, setBusy] = useState(false);
   const [box, setBox] = useState(null);
@@ -172730,7 +172743,7 @@ function MsxArcEnding({
   const end = s.ending;
   const kind = end.kind;
   const [step, setStep] = useState(0);
-  useSuccessSound(kind === 'bad' ? 'cupLose' : 'cupWin', {
+  useSuccessScene(kind === 'bad' ? 'cupLose' : 'cupWin', {
     season: msxCalendar(s.turn).season
   });
   const parties = Array.isArray(end.parties) ? end.parties : [];

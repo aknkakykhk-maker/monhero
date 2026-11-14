@@ -95,7 +95,8 @@ function MsxR3Cup({ run, setRun, v, ev, onBack, onActed }) {
   const toForced = P.key === 'final' ? null : P.left;
   const cal = msxCalendar(s.turn); const calV = msxCalendar(vt);
   useMsxR3Lines(s.aid);
-  useSuccessSound('cupEntry', { season: cal.season });
+  // 受付(月の大会を選ぶ)のあいだは育成中の曲のまま(2026-11-14 社長)。大会の曲 cupPre は組み合わせ表に入ってから(MsxR3Battle)
+  useEffect(() => { if (typeof SuccessSound !== 'undefined') SuccessSound.se('cupEntry'); }, []);
   const nOk = cupsNow.filter((c) => c.entry && c.entry.ok).length;
   const openLine = msxR3Line('turn.cup.open', run, { cup: cur ? msxR3CupName(cur.sys) : '' }, nOk ? `「今月は ${nOk}つ 出られるよ! 出ると1ターン使うから、トレーニングとどっちにするか考えてね」` : '「今月は出られる大会がないみたい。トレーニングでじっくり力をつけよ!」');
   const rankStep = typeof SUC.rankStepOf === 'function' ? SUC.rankStepOf(s) : 0; const rank = rankStep ? { name: SUC.rankNameOf(rankStep) } : null; // 賞金ランク10段(2026-11-14)
@@ -257,7 +258,7 @@ function MsxR3Battle({ run, setRun, v, ev, ctx, bondLv, onPause, debug }) {
   const cupSound = st3 ? (st3.won ? 'cupWin' : 'cupLose')
     : showOn ? (showPh === 'win' ? 'cupWin' : showPh === 'lose' ? 'cupLose' : showPh === 'cutin' || showPh === 'match' ? 'cupMatch' : 'cupPre')
       : step === 'lost' ? 'cupLose' : step === 'bracket' || step === 'card' ? 'cupPre' : 'cupMatch';
-  useSuccessSound(cupSound, { season: msxCalendar(s.turn).season });
+  useSuccessScene(cupSound, { season: msxCalendar(s.turn).season });
   useEffect(() => {
     let alive = true;
     // 試合型のアシストの表を読み終えてから試合を作る(読む前と後で同じ試合の結果が変わらないように)
