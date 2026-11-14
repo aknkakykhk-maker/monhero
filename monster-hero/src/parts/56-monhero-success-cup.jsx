@@ -363,7 +363,7 @@ function MonsucBracket({ suc, s, info, result, onFight, onResultOnly, onClose, c
         <div className="msc-bk">
           {E.map((e, i) => (
             <div key={i} className={`msc-row ${out(i) ? 'out' : ''}`} style={{ paddingRight: W }} data-msc-entrant={e.you ? 'you' : i === 4 ? 'foe' : i}>
-              <span className="msc-no">{no[i]}</span>
+              <span className="msc-no" title={`${no[i]}番人気`} aria-label={`${no[i]}番人気`}>{no[i]}</span>
               <span className={`msc-name ${e.you ? 'you' : i === 4 ? 'foe' : ''}`}><span>{nm(e)}</span>
                 {e.you && <i className="msc-tag you">あなた</i>}
                 {e.rival && <i className="msc-tag rv">ライバル</i>}
@@ -379,7 +379,7 @@ function MonsucBracket({ suc, s, info, result, onFight, onResultOnly, onClose, c
           <div className={`msc-cupbadge ${result === 'win' ? 'lit' : ''}`} style={{ right: 4 }}>🏆<br/>優勝</div>
         </div>
       </div>
-      <div className="msc-note">あなたの1戦は 赤い丸の2体のあいだ({info.meName} VS {nm(foe)})。<small>ほかの試合の結果は、見せるだけの演出です</small></div>
+      <div className="msc-note">左の数字は人気の順(1が いちばん人気)。あなたの1戦は 赤い丸の2体のあいだ({info.meName} VS {nm(foe)})。<small>ほかの試合の結果は、見せるだけの演出です</small></div>
       <div className="msc-talk"><img src={mscFace(s.aid)} alt=""/><p>{coach ? <b style={{ display: 'block', fontSize: 11, color: '#b45309' }}>解説 {coach.name}</b> : null}{line}</p></div>
       <div className="msc-foot">
         <button className="msc-btn y s" data-msc-quick onClick={onResultOnly}>{canSkip ? '⏩ 結果だけ見る(優勝ずみ)' : '⏩ 結果だけ見る'}</button>
@@ -572,13 +572,16 @@ function MonsucCupShow(props) {
   const b = (s && s.battle) || {};
   return <MonsucCupShowInner key={[s && s.id, s && s.turn, b.kind, b.id, b.round, b.retry, b.again, b.reroll].join('|')} {...props}/>;
 }
-function MonsucCupShowInner({ suc, s, me, settle, onRematch, onNext, onClose, startAt, previewOut, fight, opp, title, autoOnly }) {
+function MonsucCupShowInner({ suc, s, me, settle, onRematch, onNext, onClose, startAt, previewOut, fight, opp, title, autoOnly, onPhase }) {
   const [engine, setEngine] = useState(typeof window !== 'undefined' ? window.ASSISTANT_MASMON_BATTLE || null : null);
   const [failed, setFailed] = useState(false);
   const [phase, setPhase] = useState(startAt || 'bracket'); // bracket → card → cutin → match → win / lose
   const [out, setOut] = useState(startAt === 'win' ? (previewOut || {}) : null); // startAt・previewOut は止め絵を撮るときだけ
   const rootRef = useRef(null);
-  if (typeof useMhBattleBgmHold === 'function') useMhBattleBgmHold(true); // 大会のあいだはバトルの曲(組み合わせ表〜優勝/負け)
+  // バトルの曲は試合のあいだ(cutin・match)だけ。組み合わせ表・札・決着はモンサクの曲(cupPre・cupWin・cupLose。2026-11-14 社長の曲)
+  if (typeof useMhBattleBgmHold === 'function') useMhBattleBgmHold(phase === 'cutin' || phase === 'match');
+  // 段を呼ぶ側へ知らせる(回3の MsxR3Battle が場面の音の id を切り替える)
+  useEffect(() => { if (typeof onPhase === 'function') onPhase(phase); }, [phase]);
   useEffect(() => {
     let alive = true;
     if (!engine && typeof ambwLoadEngine === 'function') ambwLoadEngine().then((x) => { if (!alive) return; if (x) setEngine(x); else setFailed(true); });

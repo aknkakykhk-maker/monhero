@@ -11020,6 +11020,63 @@ const ASSISTANT_CARD_BATTLE_INTRO = [
   { who:'dra', e:'happy', t:'よし、それじゃあ箱を開けるぞ。{name}、デッキを選んでくれ' },
   { who:'mua', e:'excited', t:'いっくよー！ MFバトルカード、スタート！' },
 ];
+// モンヒロサクセス 第1話(2026-11-14 ココロ・台本 docs/progress/monsuc-beta-story/script.md・社長 OK)。β版の前に先に出す予告のお話。
+// 公開の印 monsucStoryEp1(17-release-changelog-login-missions.jsx)で、公開のあとの最初の HOME で1回だけ流す(見たかは mh_rhythm_event_story_v1 の id)。
+// 助手たちだけの場面({name}は台詞で名前が出るだけ)。最後の「ないしょ」→ β の日の第2話 → モンサクの中の始まりの話(みゅあがチラシを手に走ってきた)へつながる。
+// ★まだ遊べない前提(近日オープン)。数字を書かない。大会名はデビュー戦と、最後の大会「ヒーローズファイナル」(社長の決め)だけ。イッサ博士は出さない(中の出来事で初めて名乗る)
+const ASSISTANT_MONSUC_BETA_EP1 = [
+  // ---- 冒頭: 町はずれ。きゅうこが見つける ----
+  { who:'kyuko', e:'surprise', bg:'monsuc_gate', bgm:'monsuc_menu', fxText:'とある町に、新しい育成場ができるらしい', holdMs:2500, t:'ほえ〜……こんなとこに、こんなでっかい門あったっけ？' },
+  { who:'kyuko', e:'normal', fxText:'門の向こうは、まだ準備中らしい。工事の音とモンスターたちのかけ声が聞こえる', t:'中からすごい音するねぇ。もうすぐ、なにか始まるみたいだよぉ' },
+  { who:'kyuko', e:'wink', t:'お、チラシ置いてある。……これ、みんなに見せたら大さわぎになるやつだねぇ笑' },
+  // ---- 広場: チラシ ----
+  { who:'kyuko', e:'happy', bg:'monhero_plaza', t:'ほい、みんな集合〜。町はずれで、おもしろいもん見つけてきたよぉ' },
+  { who:'mua', e:'surprise', t:'なになに？ きゅきゅがそんな顔するの、めずらしいぢゃん' },
+  { who:'momosuke', e:'excited', t:'えっ、チラシにモンスターが走ってる絵が描いてある！！ かっこいい！！' },
+  { who:'dra', e:'normal', fxText:'デビューしたてのモンスターが、大きな大会を目指して駆けていく絵', t:'どれどれ……『モンヒロサクセス、近日オープン』。新しい育成場が、もうすぐできるんだな' },
+  { who:'kiki', e:'surprise', t:'育成場、でつか。モンスターを1体、じっくり育てるところでつね？' },
+  { who:'sorashido', e:'excited', t:'デビュー戦から始めて、ヒーローを目指す……シナリオの名前は「ヒーローへの道」・・・！ いい名前です' },
+  { who:'erubin', e:'happy', t:'トレーニングして、大会に出て……。1体と長くいっしょにいられるのは、いいね😊' },
+  { who:'atsu', e:'excited', atsu:'with', t:'うわ、まじか！ こういうの、俺めちゃくちゃ好きなやつ笑' },
+  { who:'dra', e:'wink', t:'しかも、ここ見てみろ。『助手も、いっしょに育成場へ行けます』だってよ' },
+  { who:'momosuke', e:'surprise', t:'えっ、ももたちも行けるの！？ 行く行く！！ もも、いちばんに行く！！' },
+  { who:'mua', e:'excited', t:'ちょ、待って！ あたしも行きたいんだけど！' },
+  // ---- ひとりだけ？ ----
+  { who:'kiki', e:'troubled', t:'でも……下のほうに小さく『はじめはβ版。助手は、まずおひとりから』って書いてありまつ' },
+  { who:'momosuke', e:'troubled', t:'ひとりだけ！？ そんなの、ぜったいけんかになるやつじゃん……' },
+  { who:'sorashido', e:'normal', t:'では、公平に決めましょう。自分、くじを作ります・・・！' },
+  { who:'kyuko', e:'wink', t:'それもいいけどさ、オープンの日にすぐ行ける人から行けばいいんじゃない？ 準備ができてる人ね笑' },
+  { who:'dra', e:'happy', t:'いいな、それ。じゃあ順番に、自分の準備を言ってくか' },
+  // ---- 準備の話 ----
+  { who:'dra', e:'normal', t:'おではまず、膝の調子を整えないとな。育成場は走り回るって聞くし……えへへ' },
+  { who:'mua', e:'wink', t:'ドラケン、そこから！？ｗ' },
+  { who:'kiki', e:'normal', t:'私は、トレーニングの帳面を作りたいでつ。どのモンスターに何がよく効くか、ぜんぶ書きとめたいので( ˘ω˘)' },
+  { who:'sorashido', e:'happy', t:'自分も、表を作ってからにします。トレーニングごとに1列ずつ……今夜は眠れません笑' },
+  { who:'momosuke', e:'happy', t:'ももは、育成場に着ていくお洋服を選ばなきゃ♡ かわいくないと、モンスターもやる気出ないでしょ？' },
+  { who:'kyuko', e:'normal', t:'俺は、編成の組み方をもうちょい考えたいんだよねぇ。どのモンスターに力を借りるかで、育ち方がぜんぜん変わりそうでさw' },
+  { who:'erubin', e:'wink', t:'俺は、みんなのお弁当係かな。長い育成になりそうだから、ちょっと時間がほしいね' },
+  { who:'atsu', e:'wink', atsu:'with', t:'俺は……大会の下見かな笑 どんな相手が出てくるか、先に見ときたいんだよね' },
+  // ---- 山場: 夕方 ----
+  { who:'mua', e:'surprise', bg:'monhero_plaza_evening', bgm:'monsuc_rest', fxText:'気がつけば、広場はすっかり夕方', t:'……あれ？ ってことは、みんな準備中ってこと？' },
+  { who:'kiki', e:'happy', t:'みゅあちんは、なにか準備いりまつか？' },
+  { who:'mua', e:'normal', t:'あたし？ ……うーん、なんにもない。オープンの日、朝いちばんに行ける！' },
+  { who:'momosuke', e:'surprise', t:'ずるい！！ ……でも、ほんとに何にもないの？' },
+  { who:'mua', e:'happy', t:'だって、わかんないことは、行ってから{name}といっしょに覚えればいいぢゃん？' },
+  { who:'mua', e:'excited', t:'デビュー戦から、最後の大会「ヒーローズファイナル」まで。' },
+  { who:'mua', e:'happy', t:'ぜんぶ、いっしょに見られるんだよ？ そんなの、早く始めたほうがいいに決まってるもん！' },
+  { who:'dra', e:'happy', t:'はは、みゅあらしいな。……決まりだ。一番乗りは、みゅあに任せた' },
+  { who:'sorashido', e:'excited', t:'異議なしです・・・！ みゅあさんが見てきたこと、あとで表に足させてください' },
+  { who:'erubin', e:'happy', t:'うん、みゅあちゃんがいちばん似合ってると思う😊' },
+  { who:'kyuko', e:'wink', t:'みゅあねぇ、どんな感じだったか、帰ってきたら教えてねぇ。俺の作戦の参考にするからw' },
+  { who:'atsu', e:'happy', atsu:'with', t:'一番乗り、いいなぁ笑 俺らのぶんの席も、取っといて！' },
+  { who:'momosuke', e:'troubled', t:'うぅ……くやしいけど、みゅあねぇならいいよ。……すぐ追いつくけど♡' },
+  { who:'mua', e:'excited', t:'みんな、ありがと！ よーし、オープンの日は、あたしが一番乗りで手あげてくる！' },
+  { who:'dra', e:'normal', t:'ひとりで行く気か？ おでも付きそうよ。膝の準備運動にちょうどいい' },
+  { who:'momosuke', e:'excited', t:'ももも行く！ 育成場で、お洋服の下見しなきゃだし♡' },
+  { who:'mua', e:'happy', t:'じゃあ3人で行こ！ オープンの日の朝、門の前に集合ね♪' },
+  { who:'dra', e:'happy', t:'オープンまで、もうすぐだな。……それまでに、おでも膝を仕上げとかないとな' },
+  { who:'mua', e:'wink', t:'{name}には、オープンの日までないしょにしとこ。びっくりさせたいもんね♪' },
+];
 const ASSISTANT_TACTICS_TYPES = [
   { who:'mua',      e:'excited',  t:'ねえねえ、モンスターにタイプができたんだって！ あたしたちも当てはめてみよ！' },
   { who:'mua',      e:'happy',    t:'まずはあたし！ ✨サポーター！ みんなを強くして、背中を押す係だよ！ ちょっとだけ🔥が付きやすいかも' },
@@ -12478,6 +12535,10 @@ const EVENT_REPLAYS = [
   // (releaseFlag。モードが見えていないのに会話だけあると、何の話か分からない)。
   // いまは alwaysUnlocked で「公開したら回想からいつでも見られる」形。
   // 本編で1度だけ流す導線は、β版を出すときに告知とセットで足す
+  // モンヒロサクセス 第1話(2026-11-14)。β版の前の予告。公開の印 monsucStoryEp1 まで回想にも出さない。
+  //   openingLogo … 幕開けに大きく出す題字。art は本体の定数の名前(MSX_LOGO_ART・社長の題字ロゴ)。定数が無いときは text を金色の字で出す / endingTeaser … 次のお話がまだ無いときの次回予告の札(押しても何も開かない)
+  { id: 'monsuc_beta_ep1', date: '2026-11-14 12:12', title: 'モンヒロサクセス 第1話 ～一番乗りは、だれだ～', script: ASSISTANT_MONSUC_BETA_EP1, unlockedKey: 'monsucBetaEp1Seen', releaseFlag: 'monsucStoryEp1', group: 'monsuc',
+    openingLogo: { art: 'MSX_LOGO_ART', text: 'モンヒロサクセス', badge: 'β' }, endingTeaser: { title: '第2話 ～ヒーローへの道～', note: 'モンヒロサクセス β版 近日公開' } },
   // MFバトルカードのはじまり(2026-10-24)。公開の印 cardBattle まで回想にも出さない。見たかは mh_story_card_battle_seen_v1(cardBattleIntroSeen)
   { id: 'card_battle_intro_2026', date: '2026-10-24 12:40', title: 'MFバトルカード ～物置の古い箱～', script: ASSISTANT_CARD_BATTLE_INTRO, unlockedKey: 'cardBattleIntroSeen', releaseFlag: 'cardBattle', group: 'update' },
   // 助手4人がタイプを教える(2026-10-17 作成・2026-10-18 公開)。releaseFlag の tacticsTypes はヘイトとタイプの公開の印(RELEASE_FLAGS.tacticsHate)と一緒

@@ -79,6 +79,12 @@ const VIEWS = [{ id: 'tate', name: '縦 390×844', w: 390, h: 844 }, { id: 'yoko
     const mapN = await mapBtn.count();
     check(`${T}④ 地図のモンヒロバトルにいる助手の札に入口が出る`, mapN === 1, `${mapN}`);
     if (mapN && SHOTS) { await mapBtn.scrollIntoViewIfNeeded(); await page.screenshot({ path: path.join(shotDir, `3-map-${v.id}.png`) }); }
+    // ① 印を偽に戻すと、地図の札にも入口が出ず、口を呼んでも開かない
+    await page.evaluate(() => { RELEASE_FLAGS.monheroSuccess = false; });
+    await page.locator('[data-assistant-life-map-sheet-close]').first().click({ timeout: 2000 }).catch(() => {}); await page.waitForTimeout(500);
+    await page.evaluate((m) => { const l = ASSISTANT_LIFE_STORE.state.life; ASSISTANT_LIFE_STORE.set({ life: { ...l, groups: m.groups, solo: m.solo, watched: [] } }); try { assistantLifeOpenMapAt('battle', 'kiki'); } catch (_) {} }, MIX); await page.waitForTimeout(1200);
+    const off = await page.evaluate(() => ({ card: document.querySelectorAll('[data-assistant-life-map-sheet-who="kiki"]').length, btn: document.querySelectorAll('[data-assistant-life-map-act="monhero-success"]').length, open: typeof assistantLifeSuccessOpen === 'function' ? assistantLifeSuccessOpen({ assistantId: 'kiki', from: 'place' }) : null }));
+    check(`${T}① 印が偽のあいだは地図の札にも入口が出ず、口を呼んでも開かない`, off.card === 1 && off.btn === 0 && off.open === false, JSON.stringify(off));
     await page.close();
   }
   check('⑤ ページのエラーが出ない', errors.length === 0, errors.slice(0, 2).join(' / '));
