@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 58c975b473fc99fe
+// generated-sha256: 94884684bc39a3c2
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -77265,13 +77265,18 @@ const ambwHitPct = (catalog, teams, side, frame, id) => {
   return Number.isFinite(v) ? v : null;
 };
 // 技の札の形にそろえる(56-monhero-success-manual.jsx の MsaDistCards・MsaTechSheet が読む形)。
-//   命中の目安 hit と威力 power は技表から(代表の技を「命中×威力」で決めるため)。技表の hit は基本の命中 75% に足す補正なので、目安は 75+補正
+//   命中の目安 hit と威力 power は技表から(代表の技を「命中×威力」で決めるため)。版9から技表の hit は最後に掛ける係数(5 で1段・×1.35)なので、
+//   目安は「命中=回避・ガッツ半分」のときの命中%(芯の techHitPreview。B の技で 50%)。芯が古いときだけ 75+補正
 //   (能力の差はどの技にも同じだけ効くので、目安には入れない。札と一覧に出す命中%は hitPreviewer のいまの値)。技表に無い技は 0
 const AMBW_HIT_BASE = 75;
+const ambwHitOf = (hitPct, extra) => {
+  const eng = typeof window !== 'undefined' && window.ASSISTANT_MASMON_BATTLE ? window.ASSISTANT_MASMON_BATTLE : null;
+  return eng && typeof eng.techHitPreview === 'function' ? eng.techHitPreview(hitPct, extra) : AMBW_HIT_BASE + (Number(hitPct) || 0) + (Number(extra) || 0) * 100;
+};
 const ambwTechItems = (catalog, member, list) => {
   const sp = catalog && member && catalog.species && catalog.species[member.species];
   const byId = {}; if (sp && Array.isArray(sp.techs)) for (const t of sp.techs) byId[t.id] = t;
-  return (Array.isArray(list) ? list : []).map((mv) => { const t = byId[mv.id]; return { ...mv, dist: Array.isArray(mv.dist) ? mv.dist : [], hit: t ? AMBW_HIT_BASE + (Number(t.hit) || 0) : 0, power: t ? Number(t.power) || 0 : 0,
+  return (Array.isArray(list) ? list : []).map((mv) => { const t = byId[mv.id]; return { ...mv, dist: Array.isArray(mv.dist) ? mv.dist : [], hit: t ? ambwHitOf(t.hit) : 0, power: t ? Number(t.power) || 0 : 0,
     ...(t ? { base: { power: t.power, hit: t.hit, gd: t.gd, crit: t.crit } } : {}) }; });
 };
 // cards … 技の札を間合いごとの4枚にする(2026-11-13 社長)。rep … [零,近,中,遠] の代表の技 id/onOpen(side, d) … 札を押すと一覧
@@ -77609,7 +77614,7 @@ const AMBB_SET_OPTS = Object.freeze({
   team: [{ id: 'team', label: 'チーム', note: '交代あり' }, { id: 'ko', label: '勝ち抜き', note: '交代なし・倒れたら次' }],
   rounds: [30, 50, 100, 150],
   dist: ['auto', 0, 1, 2, 3],
-  guts: [30, 50, 70, 100],
+  guts: [30, 50, 70, 99],
   fx: [{ id: 'full', label: 'たっぷり' }, { id: 'lite', label: '少なめ' }],
   ctl: [{ id: 'auto', label: 'オートで観戦' }, { id: 'manual', label: '手動', note: '手番ごとに自分で選ぶ' }],
   balance: [{ id: 'A', label: 'そのまま' }, { id: 'B', label: '差を縮める' }, { id: 'C', label: '差を広げる' }],
@@ -77620,7 +77625,7 @@ const normalizeAmbbSet = (raw) => {
     team: x.team === 'ko' ? 'ko' : 'team',
     rounds: ambbInt(x.rounds, 10, 300, AMBB_SET_DEF.rounds),
     dist: Number.isInteger(x.dist) && x.dist >= 0 && x.dist <= 3 ? x.dist : 'auto',
-    guts: ambbInt(x.guts, 0, 100, AMBB_SET_DEF.guts),
+    guts: ambbInt(x.guts, 0, 99, AMBB_SET_DEF.guts), // 版9でガッツの最大は 99(前に保存した 100 は 99 として読む)
     fx: x.fx === 'lite' ? 'lite' : 'full',
     balance: ['A', 'B', 'C'].includes(x.balance) ? x.balance : 'A',
     seedLock: x.seedLock === true,
@@ -77756,8 +77761,8 @@ const ambbUnitTechItems = (engine, catalog, unit) => {
   const hitMax = engine && Number.isFinite(engine.MASTERY_HIT_MAX) ? engine.MASTERY_HIT_MAX : 0, cut = engine && Number.isFinite(engine.MASTERY_GUTS_CUT) ? engine.MASTERY_GUTS_CUT : 0;
   return list.map(t => {
     const m = Math.max(0, Math.min(100, Number(unit.mastery && unit.mastery[t.id]) || 0));
-    // 技表の hit は基本の命中に足す補正。代表を決める目安は 75+補正(観戦の札 ambwTechItems と同じ決め方にそろえる)。一覧に出す命中%は熟練の分を足す
-    return { id: t.id, name: t.name, kind: t.kind, dist: t.dist, power: t.power, hit: 75 + t.hit, base: { power: t.power, hit: t.hit, gd: t.gd, crit: t.crit }, shown: Math.round((75 + t.hit + m * hitMax) * 10) / 10, guts: Math.round(t.guts * (1 - m / 100 * cut)) };
+    // 代表を決める目安は「命中=回避・ガッツ半分」の命中%(観戦の札 ambwTechItems と同じ ambwHitOf)。一覧に出す命中%は熟練の分を足す
+    return { id: t.id, name: t.name, kind: t.kind, dist: t.dist, power: t.power, hit: ambwHitOf(t.hit), base: { power: t.power, hit: t.hit, gd: t.gd, crit: t.crit }, shown: ambwHitOf(t.hit, m / 100 * hitMax), guts: Math.round(t.guts * (1 - m / 100 * cut)) };
   });
 };
 const ambbTacticsOf = (aid, rows) => { try { return typeof amgtTacticsOf === 'function' ? amgtTacticsOf(aid, rows) : 40; } catch (_) { return 40; } };
@@ -77857,8 +77862,8 @@ const AMBB_CSS = `
 .ambw.ambb-full .ambw-log{margin-top:6px;padding:5px 8px;min-height:44px}
 .ambw.ambb-full .ambw-log p:nth-last-child(n+3){display:none}
 .ambw.ambb-full .ambw-seek{margin-top:8px}
-.ambw.ambb-full .ambw-ctl{margin-top:8px;flex-wrap:nowrap;gap:5px}
-.ambw.ambb-full .ambw-ctl button{min-height:38px;padding:4px 10px;font-size:12.5px;white-space:nowrap}
+.ambw.ambb-full .ambw-ctl{margin-top:8px;flex-wrap:nowrap;gap:4px;justify-content:center}
+.ambw.ambb-full .ambw-ctl button{min-height:38px;padding:4px 8px;font-size:12px;white-space:nowrap;min-width:0}
 .ambw.ambb-full .ambw-top{min-height:34px}
 .ambw.ambb-full .ambb-bar-wrap .msxm{margin-top:6px;padding:7px;max-height:42vh;overflow-y:auto}
 .ambw.ambb-full .ambb-bar-wrap .msxm-btn{min-height:36px;font-size:11.5px;padding:3px 6px;flex:1 1 22%}
@@ -77911,40 +77916,7 @@ const AMBB_CSS = `
 .ambb-op-vs i{flex:1;height:3px;background:linear-gradient(90deg,#0000,#fde047,#0000)}
 .ambb-op-vs b{font-size:40px;font-weight:900;font-style:italic;color:#fde047;text-shadow:3px 0 0 #b91c1c,-3px 0 0 #b91c1c,0 3px 0 #b91c1c,0 -3px 0 #b91c1c,0 0 22px #f87171}
 .ambb-op-tap{text-align:center;font-size:12px;font-weight:900;color:#fde68a;animation:ambbBlink 1.2s 1.8s ease-in-out infinite both}
-.ambb-next{position:absolute;inset:0;z-index:12;pointer-events:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;background:radial-gradient(circle,#0009,#0003 75%);animation:ambbNext 1.5s ease-in-out both}
-.ambb-next-band{width:100%;text-align:center;padding:6px 0;background:linear-gradient(90deg,#0000,#ec4899 18%,#ec4899 82%,#0000);transform:skewY(-4deg)}
-.ambb-next.B .ambb-next-band{background:linear-gradient(90deg,#0000,#0284c7 18%,#0284c7 82%,#0000)}
-.ambb-next-band small{display:block;font-size:11px;font-weight:900;letter-spacing:.4em;color:#fde68a}
-.ambb-next-band b{display:block;font-size:22px;font-weight:900;text-shadow:0 2px 0 #0008}
-.ambb-next-left{display:flex;gap:14px;font-size:11.5px;font-weight:900;background:#0f172acc;border-radius:99px;padding:3px 12px}
-.ambb-next-left span{display:flex;align-items:center;gap:4px}
-.ambb-next-left u{display:inline-block;width:9px;height:9px;border-radius:50%;background:#64748b;text-decoration:none}
-.ambb-next-left .A u.on{background:#f472b6}.ambb-next-left .B u.on{background:#38bdf8}
-.ambb-next-talk{display:flex;align-items:center;gap:6px;max-width:92%;background:#fff;color:#1e1b4b;border-radius:12px;padding:4px 10px 4px 4px;font-size:12px}
-.ambb-next-talk img{width:30px;height:30px;border-radius:50%;object-fit:cover;object-position:top;flex:none}
-.ambb-call{margin:0 0 4px;padding:3px 8px;border-radius:8px;background:linear-gradient(90deg,#7c3aed55,#0000);font-size:12px;font-weight:900;color:#fde68a;animation:ambbCall .35s ease-out both;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.ambb-call.crit,.ambb-call.big{color:#fde047;background:linear-gradient(90deg,#b4530999,#0000)}
-.ambb-call.ko,.ambb-call.pinch{color:#fecaca;background:linear-gradient(90deg,#b91c1c99,#0000)}
-.ambb-call.rev,.ambb-call.last{color:#a5f3fc;background:linear-gradient(90deg,#0e749099,#0000)}
-.ambw.ambb-full .ambw-log .ambb-call+p:nth-last-child(n+2){display:none}
-.ambb-fin{position:fixed;inset:0;z-index:9700;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:16px;background:#160f2e center/cover no-repeat;color:#fff;cursor:pointer;overflow:hidden;animation:ambbFade .35s ease-out both}
-.ambb-fin:before{content:"";position:absolute;inset:0;background:radial-gradient(circle at 50% 45%,#0000 0,#0009 70%)}
-.ambb-fin.l:before{background:linear-gradient(180deg,#0f172acc,#020617ee)}
-.ambb-fin>*{position:relative}
-.ambb-fin-rays{position:absolute!important;left:50%;top:44%;width:640px;height:640px;margin:-320px 0 0 -320px;border-radius:50%;background:repeating-conic-gradient(#fde04700 0 9deg,#fde04740 9deg 18deg);-webkit-mask:radial-gradient(circle,#000 18%,#0000 66%);mask:radial-gradient(circle,#000 18%,#0000 66%);animation:ambbSpin 8s linear infinite}
-.ambb-fin-big{font-size:58px;font-weight:900;font-style:italic;letter-spacing:.04em;color:#fde047;text-shadow:3px 0 0 #92400e,-3px 0 0 #92400e,0 -3px 0 #92400e,0 5px 0 #92400e,0 0 24px #fde047aa;animation:ambbStamp .6s .15s cubic-bezier(.2,1.6,.4,1) both}
-.ambb-fin.l .ambb-fin-big{color:#cbd5e1;text-shadow:3px 0 0 #334155,-3px 0 0 #334155,0 -3px 0 #334155,0 5px 0 #1e293b;animation:ambbDrop .7s .1s ease-out both}
-.ambb-fin.d .ambb-fin-big{color:#e2e8f0;text-shadow:0 4px 0 #475569}
-.ambb-fin-sub{font-size:12px;font-weight:900;background:#0f172acc;border-radius:99px;padding:3px 14px;animation:ambbFade .4s .5s both}
-.ambb-fin-hero{text-align:center;animation:ambbHero .7s .35s cubic-bezier(.2,1.4,.4,1) both}
-.ambb-fin-hero img{display:block;width:200px;height:200px;object-fit:contain;margin:0 auto;filter:drop-shadow(0 8px 14px #000a)}
-.ambb-fin.w .ambb-fin-hero img{animation:ambbHop 1.1s 1.1s ease-in-out infinite}
-.ambb-fin.l .ambb-fin-hero img{filter:grayscale(.5) brightness(.75) drop-shadow(0 8px 14px #000a)}
-.ambb-fin-hero em{display:inline-block;margin-top:2px;font-style:normal;font-size:14px;font-weight:900;background:#0f172acc;border-radius:99px;padding:2px 14px}
-.ambb-fin-talk{display:flex;align-items:center;gap:8px;max-width:420px;width:100%;background:#fff;color:#1e1b4b;border-radius:14px;padding:6px 10px 6px 6px;font-size:13px;line-height:1.45;animation:ambbInL .45s 1s ease-out both}
-.ambb-fin-talk img{width:48px;height:48px;border-radius:50%;object-fit:cover;object-position:top;flex:none;background:#ede9fe}
-.ambb-fin-talk b{display:block;font-size:11px;color:#be185d}
-.ambb-fin .ambb-op-tap{margin-top:6px;animation-delay:2s}
+.ambw.ambb-full .ambw-log .msa-call+p:nth-last-child(n+2){display:none}
 .ambb-hero{position:relative;overflow:hidden;border-radius:16px;margin-top:8px;padding:12px 10px 10px;background:#1e1a36 center/cover no-repeat;border:2px solid #fde04788;text-align:center}
 .ambb-hero.l{border-color:#64748b}
 .ambb-hero:before{content:"";position:absolute;inset:0;background:linear-gradient(180deg,#0008,#160f2ee6 80%)}
@@ -77982,8 +77954,8 @@ const AMBB_CSS = `
 @keyframes ambbSpin{to{transform:rotate(360deg)}}
 @keyframes ambbHero{0%{opacity:0;transform:translateY(40px) scale(.6)}100%{opacity:1;transform:none}}
 @keyframes ambbHop{0%,100%{transform:none}30%{transform:translateY(-14px)}50%{transform:none}}
-@media (prefers-reduced-motion:reduce){.ambb-op,.ambb-op *,.ambb-fin,.ambb-fin *,.ambb-next,.ambb-call,.ambb-hero-stamp{animation:none!important}}
-@media (max-height:640px){.ambb-op-mons img{height:46px}.ambb-op-ttl b{font-size:24px}.ambb-op-vs b{font-size:30px}.ambb-fin-hero img{width:140px;height:140px}.ambb-fin-big{font-size:44px}}
+@media (prefers-reduced-motion:reduce){.ambb-op,.ambb-op *,.ambb-hero-stamp{animation:none!important}}
+@media (max-height:640px){.ambb-op-mons img{height:46px}.ambb-op-ttl b{font-size:24px}.ambb-op-vs b{font-size:30px}}
 `;
 
 // ---- 試合の見せ方(2026-11-14 社長「助手バトルがなんか準備からバトル、終わりとそのまま流れてて味気ない。軽いミニゲームみたいな感じ。もっとちゃんとつくってほしい」) ----
@@ -78005,32 +77977,7 @@ const ambbAsst = (id) => (typeof ASSISTANT_LIST !== 'undefined' ? ASSISTANT_LIST
 const ambbFace = (id, ex) => { const a = ambbAsst(id); return a && typeof assistantFaceSrc === 'function' ? assistantFaceSrc(a, ex || 'normal') : ''; };
 const ambbMonImg = (sp) => ((typeof ALL_PLAYER_MONSTERS !== 'undefined' && ALL_PLAYER_MONSTERS[sp]) || {}).imgUrl || '';
 const ambbSe = (k) => { if (typeof msaSe === 'function') msaSe(k); };
-// 倒れたあとに次の子が出る所(NEXT の区切りを出す・少し間を取る)
-const ambbIsNext = (log, k) => { const e = log[k]; if (!e || e.ev !== 'enter' || !e.side) return false; for (let j = k - 1; j >= 1; j--) if (log[j].ev === 'ko') return true; return false; };
-const AMBB_NEXT_MS = 1500;
-// 実況の1行(会心・大ダメージ・あとがない・ダウン・最後の1体・逆転)。無ければ null
-const ambbCallOf = (log, frames, k, maxHp, who) => {
-  const e = log[k] || {}, f = frames[k], pf = frames[k - 1];
-  if (!e.side || !f) return null;
-  const left = (sd) => (f.hp[sd] || []).filter(h => h > 0).length;
-  const many = (sd) => (maxHp[sd] || []).length > 1;
-  const ratio = (fr, sd) => { const mx = (maxHp[sd] || []).reduce((a, b) => a + (Number(b) || 0), 0) || 1; return (fr.hp[sd] || []).reduce((a, h) => a + Math.max(0, Number(h) || 0), 0) / mx; };
-  if (e.ev === 'ko') { const n = left(e.side); return { k: 'ko', t: n ? `${e.name}、ダウン! のこりは ${n}体!` : `${e.name}、ダウン! 勝負あり!` }; }
-  if (e.ev === 'enter' && ambbIsNext(log, k) && many(e.side) && left(e.side) === 1) return { k: 'last', t: `最後の1体、${who(e.side, e.i)}が出てきた!` };
-  if (e.ev === 'swap') return { k: 'swap', t: `ここで交代! ${who(e.side, e.i)}が前へ!` };
-  if (e.ev !== 'tech' || !e.hit) return null;
-  const foe = e.side === 'A' ? 'B' : 'A';
-  if (pf && k > 3) {
-    const a0 = ratio(pf, 'A') - ratio(pf, 'B'), a1 = ratio(f, 'A') - ratio(f, 'B');
-    if (a0 * a1 < 0 && Math.abs(a1) > 0.04) return { k: 'rev', t: `逆転! ${e.name}で 形勢が入れかわった!` };
-  }
-  if (e.crit) return { k: 'crit', t: `会心の一撃! ${who(e.side, e.i)}の${e.name}!` };
-  const ti = Number.isFinite(e.ti) ? e.ti : f.act[foe];
-  const mx = (maxHp[foe] || [])[ti] || 1, hp = (f.hp[foe] || [])[ti];
-  if (e.dmg >= mx * 0.3) return { k: 'big', t: `大きい! ${e.name}で ${e.dmg}ダメージ!` };
-  if (hp > 0 && hp <= mx * 0.2) return { k: 'pinch', t: `${who(foe, ti)}、あとがない!` };
-  return null;
-};
+const ambbIsNext = (log, k) => msaIsNext(log, k);
 // 試合のマスモンごとの活躍(与えたダメージ・当てた数・たおした数)。MVP は自分の側でダメージ+たおした数がいちばんの子
 const ambbStarsOf = (log, side, n) => {
   const out = Array.from({ length: n }, () => ({ dmg: 0, hit: 0, n: 0, crit: 0, ko: 0 }));
@@ -78078,27 +78025,11 @@ function AmbbOpening({ teams, title, sub, plan, nameA, nameB, quick, onGo }) {
   );
 }
 
-// 決着: 勝者の大写し・リボン・自分の助手のひとこと。タップか時間で結果へ
+// 決着の大写しは試合の画面の共通部品(56-monhero-success-arena.jsx の MsaFinish)。ここでは助手の顔とひとことを渡す
 function AmbbFinish({ win, hero, rounds, reason, meId, venueImg, onGo }) {
-  const done = useRef(false);
-  const go = () => { if (done.current) return; done.current = true; onGo(); };
-  useEffect(() => {
-    ambbSe(win === 'A' ? 'victory' : 'trainingFail');
-    const f = win === 'A' ? setTimeout(() => ambbSe('rankFanfare'), 650) : null;
-    const t = setTimeout(go, 7000);
-    return () => { clearTimeout(t); if (f) clearTimeout(f); };
-  }, []);
   const k = win === 'A' ? 'w' : win === 'draw' ? 'd' : 'l';
-  return (
-    <div className={`ambb-fin ${k}`} data-ambb-finish={k === 'w' ? 'win' : k === 'd' ? 'draw' : 'lose'} onClick={go} role="button" aria-label="結果を見る" style={venueImg ? { backgroundImage: `url(${venueImg})` } : null}>
-      {k === 'w' && <i className="ambb-fin-rays" aria-hidden="true"/>}
-      <div className="ambb-fin-big">{k === 'w' ? 'WIN!' : k === 'd' ? 'DRAW' : 'LOSE…'}</div>
-      <div className="ambb-fin-sub">{k === 'w' ? '勝利!' : k === 'd' ? '引き分け' : '敗北'}・{rounds} ラウンド・{reason === 'judge' ? '判定' : '全滅で決着'}</div>
-      {hero && <div className="ambb-fin-hero"><img src={ambbMonImg(hero.species)} alt=""/><em>{k === 'w' ? 'MVP' : '勝者'} {hero.name}</em></div>}
-      <div className="ambb-fin-talk"><img src={ambbFace(meId, k === 'w' ? 'happy' : k === 'l' ? 'sad' : 'normal')} alt=""/><p><b>{(ambbAsst(meId) || {}).name || ''}</b>{ambbTalk(meId, k === 'w' ? 'win' : 'lose')}</p></div>
-      <div className="ambb-op-tap">タップで結果へ ▶</div>
-    </div>
-  );
+  return <MsaFinish win={win} hero={hero} rounds={rounds} reason={reason} venueImg={venueImg} onGo={onGo}
+    coach={{ face: ambbFace(meId, k === 'w' ? 'happy' : k === 'l' ? 'sad' : 'normal'), name: (ambbAsst(meId) || {}).name || '', line: ambbTalk(meId, k === 'w' ? 'win' : 'lose') }}/>;
 }
 
 function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, preview, tryPvp, onClose }) {
@@ -78108,7 +78039,8 @@ function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, preview, tryPv
   const [ticked, setTicked] = useState(false);
   const [phase, setPhase] = useState('prep');   // prep → watch(入場 → 試合) → finish(決着の大写し) → review / rank
   const [opening, setOpening] = useState(false);  // 入場(両方の助手と並び・VS)を見せているあいだは試合を進めない
-  const finSeenRef = useRef('');                  // 決着の大写しは1戦に1回だけ(見返したあとは結果へ直行)
+  const finSeenRef = useRef('');
+  const [bg, setBg] = useState(() => (typeof msaBgRead === 'function' ? msaBgRead() : 'arena'));   // 試合の背景(モンサクの試合と同じ保存・闘技場 ⇄ スタジアム)                  // 決着の大写しは1戦に1回だけ(見返したあとは結果へ直行)
   // 観戦・振り返りのあいだはバトルの曲(56-monhero-success-arena.jsx の口)
   if (typeof useMhBattleBgmHold === 'function') useMhBattleBgmHold(phase === 'watch' || phase === 'finish' || phase === 'review');
   const [battle, setBattle] = useState(null);
@@ -78249,7 +78181,7 @@ function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, preview, tryPv
     const f = { x1: 1, x2: 0.55, x4: 0.3 }[speed];
     const ms0 = f && typeof msaStepMs === 'function' ? Math.round(msaStepMs(cur, team, lite || (typeof msaReduce === 'function' && msaReduce()), log, f) * f) : sp.ms;
     // 倒れたあとに次の子が出る所は NEXT の区切りのぶん間を取る(×4・見せ場だけ・少なめは短く)
-    const ms = ms0 + (ambbIsNext(log, pos) ? Math.round(AMBB_NEXT_MS * (f && !lite ? f : 0.4)) : 0);
+    const ms = ms0 + (ambbIsNext(log, pos) ? Math.round(MSA_NEXT_MS * (f && !lite ? f : 0.4)) : 0);
     const t = setTimeout(() => {
       let next = pos + 1;
       if (speed === 'hl') while (next < log.length - 1 && !ambwIsHighlight(log[next], battle.maxHp)) next++;
@@ -78497,10 +78429,10 @@ function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, preview, tryPv
     const gains = battle.units.map(u => ({ u, g: typeof amgCareGainOf === 'function' ? amgCareGainOf(u.entry) : { total: 0 } }));
     const bestStat = ifs && ifs.best;
     const stars = ambbStarsOf(log, 'A', battle.teamA.members.length), mvp = ambbMvpOf(stars), mvpM = battle.teamA.members[mvp] || null;
-    const venue = typeof msaVenueBg === 'function' ? msaVenueBg('cup', msaBgRead()) : (typeof MSC_VENUE_IMG !== 'undefined' ? MSC_VENUE_IMG.cup : null);
+    const venue = typeof msaVenueBg === 'function' ? msaVenueBg('cup', bg) : (typeof MSC_VENUE_IMG !== 'undefined' ? MSC_VENUE_IMG.cup : null);
     // 実況: いまから2手前までの見せ場の1行(場の下の記録の頭に出す)
     let call = null;
-    for (let k = pos; k >= Math.max(1, pos - 2) && !call; k--) { const c = ambbCallOf(log, battle.frames, k, battle.maxHp, who); if (c) call = { ...c, at: k }; }
+    for (let k = pos; k >= Math.max(1, pos - 2) && !call; k--) { const c = msaCallOf(log, battle.frames, k, battle.maxHp, who); if (c) call = { ...c, at: k }; }
     const nextOn = !review && !finish && !opening && ambbIsNext(log, pos);
     const lead = bestStat ? battle.units.slice().sort((a, b) => (Number(a.unit.stats && a.unit.stats[bestStat.k]) || 0) - (Number(b.unit.stats && b.unit.stats[bestStat.k]) || 0))[0] : null;
     body = (
@@ -78587,13 +78519,7 @@ function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, preview, tryPv
               introTitle={battle.teamA.members.length > 1 ? '先頭どうし' : (battle.pvp ? 'フレンド対戦' : 'マスモン対戦')} speedF={{ x1: 1, x2: 0.55, x4: 0.3 }[speed] || 1} fill lite={lite}/>
             {nextOn && (() => {
               const sd = e.side, t = sd === 'A' ? battle.teamA : battle.teamB, fr = battle.frames[pos] || f;
-              return (
-                <div key={`nx-${pos}`} className={`ambb-next ${sd}`} data-ambb-next={sd}>
-                  <div className="ambb-next-band"><small>NEXT</small><b>{who(sd, e.i)}</b></div>
-                  <div className="ambb-next-left">{['A', 'B'].map(x => <span key={x} className={x}>{x === 'A' ? me.name : foeName} {(fr.hp[x] || []).map((h, k) => <u key={k} className={h > 0 ? 'on' : ''}/>)}</span>)}</div>
-                  <div className="ambb-next-talk"><img src={ambbFace(t.assistantId, 'normal')} alt=""/><span>{ambbTalk(t.assistantId, 'next', who(sd, e.i))}</span></div>
-                </div>
-              );
+              return <MsaNext key={`nx-${pos}`} side={sd} name={who(sd, e.i)} hp={fr.hp} names={{ A: me.name, B: foeName }} face={ambbFace(t.assistantId, 'normal')} line={ambbTalk(t.assistantId, 'next', who(sd, e.i))}/>;
             })()}
           </div>
         ) : review ? null : (
@@ -78611,7 +78537,7 @@ function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, preview, tryPv
         )}
         {!review && !manualWait && (
           <div className="ambw-card ambw-log">
-            {call && <div key={`call-${call.at}`} className={`ambb-call ${call.k}`} data-ambb-call={call.k}>🎙 {call.t}</div>}
+            {call && <div key={`call-${call.at}`} className={`msa-call ${call.k}`} data-msa-call={call.k}>🎙 {call.t}</div>}
             {recent.map(x => <p key={x.k} className={x.side}><small>R{x.r}</small>{x.t}</p>)}
             {actor && e.why && WHY[e.why] && (
               <div className="ambw-row" style={{ marginTop: 6 }}><img className="ambw-face" src={assistantFaceSrc(actor, 'normal')} alt=""/><div className="ambw-bubble">{actor.name}「{WHY[e.why]}」</div></div>
@@ -78637,6 +78563,7 @@ function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, preview, tryPv
           <div className="ambw-ctl">
             <button className="ambw-btn2" data-ambb-pause onClick={() => setPaused(p => !p)}>{paused ? '▶' : '⏸'}</button>
             {AMBW_SPEEDS.map(s => <button key={s.id} className={`ambw-sp ${speed === s.id ? 'on' : ''}`} data-ambb-speed={s.id} onClick={() => { setSpeed(s.id); setPaused(false); }}>{s.label}</button>)}
+            {typeof msaBgWrite === 'function' && (() => { const nx = bg === 'stadium' ? 'arena' : 'stadium'; return <button className="ambw-sp" data-msa-bg={bg} aria-label={nx === 'arena' ? '背景を闘技場にする' : '背景をスタジアムにする'} onClick={() => { msaSe('tap'); msaBgWrite(nx); setBg(nx); }}>{bg === 'stadium' ? '🏟️' : '🏛️'}</button>; })()}
             <button className="ambw-btn2" data-ambb-skip onClick={() => {
               // 手動のときは残りをオートで進めてから結果へ
               const n = battle.match && !battle.match.done() ? (battle.match.auto('A'), syncManual(battle.match)) : log.length;
@@ -78651,7 +78578,7 @@ function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, preview, tryPv
   const back = phase === 'prep' || !battle ? onClose : () => setPhase('prep');
   return (
     <div className={`ambw${(phase === 'watch' || phase === 'finish') && battle ? ' ambb-full' : ''}`} data-ambb-root ref={rootRef}>
-      <style>{AMBW_CSS}{AMBB_CSS}</style>
+      <style>{AMBW_CSS}{AMBB_CSS}{typeof MSA_SHOW_CSS === 'string' ? MSA_SHOW_CSS : ''}</style>
       <div className="ambw-in">
         <div className="ambw-top">
           <button className="ambw-btn2" data-ambb-close onClick={phase === 'rank' && !battle ? () => setPhase('prep') : back}>← {phase === 'prep' ? 'もどる' : 'じゅんびへ'}</button>
@@ -78792,7 +78719,7 @@ function AmbbSettings({ set, onSet, local, size, sizeMax, onSize, speed, onSpeed
         <details className="ambb-fold" data-ambb-tune>
           <summary>🔧 調整(試す人向け)</summary>
           <div className="ambb-set-row"><span>ラウンド上限</span><div><input type="range" min="10" max="300" step="5" value={set.rounds} data-ambb-tune-rounds onChange={(ev) => onSet({ rounds: Number(ev.target.value) })}/><div className="ambw-small">{set.rounds} ラウンド(いつもは {limit})</div></div></div>
-          <div className="ambb-set-row"><span>ガッツの初期値</span><div><input type="range" min="0" max="100" step="5" value={set.guts} data-ambb-tune-guts onChange={(ev) => onSet({ guts: Number(ev.target.value) })}/><div className="ambw-small">{set.guts}(いつもは {AMBB_SET_DEF.guts})</div></div></div>
+          <div className="ambb-set-row"><span>ガッツの初期値</span><div><input type="range" min="0" max="99" step="1" value={set.guts} data-ambb-tune-guts onChange={(ev) => onSet({ guts: Number(ev.target.value) })}/><div className="ambw-small">{set.guts}(いつもは {AMBB_SET_DEF.guts})</div></div></div>
           <div className="ambb-set-row"><span>能力の差</span>{chips('balance', AMBB_SET_OPTS.balance, o => o.label)}</div>
           <div className="ambb-set-row"><span>試合の流れ</span>
             <div className="ambb-tabs">
@@ -89791,7 +89718,7 @@ function MsaStage({ log, frames, pos, teams, venueImg, ended = false, win = null
       <div key={sd} className={`msa-hud ${sd}`} data-msa-hud={sd}>
         <div className="nm">{m ? m.name : ''}</div>
         <MsaGauge kind="hp" value={hpOf(sd)} max={maxHpOf(sd)} delay={foe ? hitMs : 0} sf={sf} reduce={reduce}/>
-        <MsaGauge kind="gt" value={gutsOf(sd)} max={100} delay={foe ? hitMs : 0} sf={sf} reduce={reduce}/>
+        <MsaGauge kind="gt" value={gutsOf(sd)} max={typeof window !== 'undefined' && window.ASSISTANT_MASMON_BATTLE && window.ASSISTANT_MASMON_BATTLE.GUTS_MAX ? window.ASSISTANT_MASMON_BATTLE.GUTS_MAX : 99} delay={foe ? hitMs : 0} sf={sf} reduce={reduce}/>
         <div className="msa-gtags">{tags.map((t, j) => <span key={`${pos}-${j}`} className={`msa-gt ${t.cls}`} data-msa-gtag={t.t} style={{ animationDelay: `${t.delay}ms` }}>{t.t}</span>)}</div>
       </div>
     );
@@ -89927,6 +89854,115 @@ function MonsucArena({ s, info, engine, input, watch, onEnd }) {
           <MsaBgToggle bg={bg} onChange={setBg}/>
         </div>
       ) : null}
+    </div>
+  );
+}
+
+// ---- 試合の見せ方の共通部品(2026-11-14 社長「助手バトルの方もモンサクバトルと同じにしてね。基本バトルシステムは同じ。見た目とかも」) ----
+//   助手マスモン対戦β(#6045)で作った物を、モンサクの試合でも使える形でここへ置く。助手の台詞などは使う側が渡す
+const MSA_SHOW_CSS = `
+.msa-next{position:absolute;inset:0;z-index:12;pointer-events:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;background:radial-gradient(circle,#0009,#0003 75%);animation:msaSNext 1.5s ease-in-out both}
+.msa-next-band{width:100%;text-align:center;padding:6px 0;background:linear-gradient(90deg,#0000,#ec4899 18%,#ec4899 82%,#0000);transform:skewY(-4deg)}
+.msa-next.B .msa-next-band{background:linear-gradient(90deg,#0000,#0284c7 18%,#0284c7 82%,#0000)}
+.msa-next-band small{display:block;font-size:11px;font-weight:900;letter-spacing:.4em;color:#fde68a}
+.msa-next-band b{display:block;font-size:22px;font-weight:900;text-shadow:0 2px 0 #0008}
+.msa-next-left{display:flex;gap:14px;font-size:11.5px;font-weight:900;background:#0f172acc;border-radius:99px;padding:3px 12px}
+.msa-next-left span{display:flex;align-items:center;gap:4px}
+.msa-next-left u{display:inline-block;width:9px;height:9px;border-radius:50%;background:#64748b;text-decoration:none}
+.msa-next-left .A u.on{background:#f472b6}.msa-next-left .B u.on{background:#38bdf8}
+.msa-next-talk{display:flex;align-items:center;gap:6px;max-width:92%;background:#fff;color:#1e1b4b;border-radius:12px;padding:4px 10px 4px 4px;font-size:12px}
+.msa-next-talk img{width:30px;height:30px;border-radius:50%;object-fit:cover;object-position:top;flex:none}
+.msa-call{margin:0 0 4px;padding:3px 8px;border-radius:8px;background:linear-gradient(90deg,#7c3aed55,#0000);font-size:12px;font-weight:900;color:#fde68a;animation:msaSCall .35s ease-out both;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.msa-call.crit,.msa-call.big{color:#fde047;background:linear-gradient(90deg,#b4530999,#0000)}
+.msa-call.ko,.msa-call.pinch{color:#fecaca;background:linear-gradient(90deg,#b91c1c99,#0000)}
+.msa-call.rev,.msa-call.last{color:#a5f3fc;background:linear-gradient(90deg,#0e749099,#0000)}
+.msa-final{position:fixed;inset:0;z-index:9700;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:16px;background:#160f2e center/cover no-repeat;color:#fff;cursor:pointer;overflow:hidden;animation:msaSFade .35s ease-out both}
+.msa-final:before{content:"";position:absolute;inset:0;background:radial-gradient(circle at 50% 45%,#0000 0,#0009 70%)}
+.msa-final.l:before{background:linear-gradient(180deg,#0f172acc,#020617ee)}
+.msa-final>*{position:relative}
+.msa-final-rays{position:absolute!important;left:50%;top:44%;width:640px;height:640px;margin:-320px 0 0 -320px;border-radius:50%;background:repeating-conic-gradient(#fde04700 0 9deg,#fde04740 9deg 18deg);-webkit-mask:radial-gradient(circle,#000 18%,#0000 66%);mask:radial-gradient(circle,#000 18%,#0000 66%);animation:msaSSpin 8s linear infinite}
+.msa-final-big{font-size:58px;font-weight:900;font-style:italic;letter-spacing:.04em;color:#fde047;text-shadow:3px 0 0 #92400e,-3px 0 0 #92400e,0 -3px 0 #92400e,0 5px 0 #92400e,0 0 24px #fde047aa;animation:msaSStamp .6s .15s cubic-bezier(.2,1.6,.4,1) both}
+.msa-final.l .msa-final-big{color:#cbd5e1;text-shadow:3px 0 0 #334155,-3px 0 0 #334155,0 -3px 0 #334155,0 5px 0 #1e293b;animation:msaSDrop .7s .1s ease-out both}
+.msa-final.d .msa-final-big{color:#e2e8f0;text-shadow:0 4px 0 #475569}
+.msa-final-sub{font-size:12px;font-weight:900;background:#0f172acc;border-radius:99px;padding:3px 14px;animation:msaSFade .4s .5s both}
+.msa-final-hero{text-align:center;animation:msaSHero .7s .35s cubic-bezier(.2,1.4,.4,1) both}
+.msa-final-hero img{display:block;width:200px;height:200px;object-fit:contain;margin:0 auto;filter:drop-shadow(0 8px 14px #000a)}
+.msa-final.w .msa-final-hero img{animation:msaSHop 1.1s 1.1s ease-in-out infinite}
+.msa-final.l .msa-final-hero img{filter:grayscale(.5) brightness(.75) drop-shadow(0 8px 14px #000a)}
+.msa-final-hero em{display:inline-block;margin-top:2px;font-style:normal;font-size:14px;font-weight:900;background:#0f172acc;border-radius:99px;padding:2px 14px}
+.msa-final-talk{display:flex;align-items:center;gap:8px;max-width:420px;width:100%;background:#fff;color:#1e1b4b;border-radius:14px;padding:6px 10px 6px 6px;font-size:13px;line-height:1.45;animation:msaSInL .45s 1s ease-out both}
+.msa-final-talk img{width:48px;height:48px;border-radius:50%;object-fit:cover;object-position:top;flex:none;background:#ede9fe}
+.msa-final-talk b{display:block;font-size:11px;color:#be185d}
+@keyframes msaSFade{from{opacity:0}to{opacity:1}}
+@keyframes msaSDrop{0%{opacity:0;transform:translateY(-30px) scale(1.3)}100%{opacity:1;transform:none}}
+@keyframes msaSInL{from{opacity:0;transform:translateX(-60px)}to{opacity:1;transform:none}}
+@keyframes msaSStamp{0%{opacity:0;transform:scale(2.6)}60%{opacity:1;transform:scale(.9)}100%{opacity:1;transform:scale(1)}}
+@keyframes msaSBlink{0%,100%{opacity:.35}50%{opacity:1}}
+@keyframes msaSNext{0%{opacity:0}12%{opacity:1}82%{opacity:1}100%{opacity:0}}
+@keyframes msaSCall{from{opacity:0;transform:translateX(-14px)}to{opacity:1;transform:none}}
+@keyframes msaSSpin{to{transform:rotate(360deg)}}
+@keyframes msaSHero{0%{opacity:0;transform:translateY(40px) scale(.6)}100%{opacity:1;transform:none}}
+@keyframes msaSHop{0%,100%{transform:none}30%{transform:translateY(-14px)}50%{transform:none}}
+.msa-tap{text-align:center;font-size:12px;font-weight:900;color:#fde68a;margin-top:6px;animation:msaSBlink 1.2s 2s ease-in-out infinite both}
+@media (prefers-reduced-motion:reduce){.msa-final,.msa-final *,.msa-next,.msa-call{animation:none!important}}
+@media (max-height:640px){.msa-final-hero img{width:140px;height:140px}.msa-final-big{font-size:44px}}
+`;
+// 倒れたあとに次のモンスターが出る所(NEXT の区切りを出す・少し間を取る)
+const msaIsNext = (log, k) => { const e = log[k]; if (!e || e.ev !== 'enter' || !e.side) return false; for (let j = k - 1; j >= 1; j--) if (log[j].ev === 'ko') return true; return false; };
+const MSA_NEXT_MS = 1500;
+// 実況の1行(会心・大ダメージ・あとがない・ダウン・最後の1体・逆転)。無ければ null。who(side, i) … 名前
+const msaCallOf = (log, frames, k, maxHp, who) => {
+  const e = log[k] || {}, f = frames[k], pf = frames[k - 1];
+  if (!e.side || !f) return null;
+  const left = (sd) => (f.hp[sd] || []).filter(h => h > 0).length;
+  const many = (sd) => (maxHp[sd] || []).length > 1;
+  const ratio = (fr, sd) => { const mx = (maxHp[sd] || []).reduce((a, b) => a + (Number(b) || 0), 0) || 1; return (fr.hp[sd] || []).reduce((a, h) => a + Math.max(0, Number(h) || 0), 0) / mx; };
+  if (e.ev === 'ko') { const n = left(e.side); return { k: 'ko', t: n ? `${e.name}、ダウン! のこりは ${n}体!` : `${e.name}、ダウン! 勝負あり!` }; }
+  if (e.ev === 'enter' && msaIsNext(log, k) && many(e.side) && left(e.side) === 1) return { k: 'last', t: `最後の1体、${who(e.side, e.i)}が出てきた!` };
+  if (e.ev === 'swap') return { k: 'swap', t: `ここで交代! ${who(e.side, e.i)}が前へ!` };
+  if (e.ev !== 'tech' || !e.hit) return null;
+  const foe = e.side === 'A' ? 'B' : 'A';
+  if (pf && k > 3) {
+    const a0 = ratio(pf, 'A') - ratio(pf, 'B'), a1 = ratio(f, 'A') - ratio(f, 'B');
+    if (a0 * a1 < 0 && Math.abs(a1) > 0.04) return { k: 'rev', t: `逆転! ${e.name}で 形勢が入れかわった!` };
+  }
+  if (e.crit) return { k: 'crit', t: `会心の一撃! ${who(e.side, e.i)}の${e.name}!` };
+  const ti = Number.isFinite(e.ti) ? e.ti : f.act[foe];
+  const mx = (maxHp[foe] || [])[ti] || 1, hp = (f.hp[foe] || [])[ti];
+  if (e.dmg >= mx * 0.3) return { k: 'big', t: `大きい! ${e.name}で ${e.dmg}ダメージ!` };
+  if (hp > 0 && hp <= mx * 0.2) return { k: 'pinch', t: `${who(foe, ti)}、あとがない!` };
+  return null;
+};
+// 倒れたあと次のモンスターが出る所の区切り(NEXT の帯・のこりの数・ひとこと)。場の上に重ねる(場の入れ物は position:relative)
+function MsaNext({ side, name, hp, names, face, line }) {
+  return (
+    <div className={`msa-next ${side}`} data-msa-next={side}>
+      <div className="msa-next-band"><small>NEXT</small><b>{name}</b></div>
+      <div className="msa-next-left">{['A', 'B'].map(x => <span key={x} className={x}>{(names || {})[x] || ''} {((hp || {})[x] || []).map((h, k) => <u key={k} className={h > 0 ? 'on' : ''}/>)}</span>)}</div>
+      {line ? <div className="msa-next-talk">{face ? <img src={face} alt=""/> : null}<span>{line}</span></div> : null}
+    </div>
+  );
+}
+// 決着の大写し: 勝者・WIN/LOSE のリボン・光・音・育てた人(助手)のひとこと。タップか7秒で次へ
+//   coach … { face, name, line }(無ければ出さない)。hero … 大きく映す側のモンスター { species, name }
+function MsaFinish({ win, hero, rounds, reason, coach, venueImg, onGo }) {
+  const done = useRef(false);
+  const go = () => { if (done.current) return; done.current = true; onGo(); };
+  useEffect(() => {
+    msaSe(win === 'A' ? 'victory' : 'trainingFail');
+    const f = win === 'A' ? setTimeout(() => msaSe('rankFanfare'), 650) : null;
+    const t = setTimeout(go, 7000);
+    return () => { clearTimeout(t); if (f) clearTimeout(f); };
+  }, []);
+  const k = win === 'A' ? 'w' : win === 'draw' ? 'd' : 'l';
+  return (
+    <div className={`msa-final ${k}`} data-msa-finish={k === 'w' ? 'win' : k === 'd' ? 'draw' : 'lose'} onClick={go} role="button" aria-label="結果を見る" style={venueImg ? { backgroundImage: `url(${venueImg})` } : null}>
+      {k === 'w' && <i className="msa-final-rays" aria-hidden="true"/>}
+      <div className="msa-final-big">{k === 'w' ? 'WIN!' : k === 'd' ? 'DRAW' : 'LOSE…'}</div>
+      <div className="msa-final-sub">{k === 'w' ? '勝利!' : k === 'd' ? '引き分け' : '敗北'}・{rounds} ラウンド・{reason === 'judge' ? '判定' : '全滅で決着'}</div>
+      {hero && <div className="msa-final-hero"><img src={mscMonImg(hero.species)} alt=""/><em>{k === 'w' ? 'MVP' : '勝者'} {hero.name}</em></div>}
+      {coach && coach.line ? <div className="msa-final-talk">{coach.face ? <img src={coach.face} alt=""/> : null}<p>{coach.name ? <b>{coach.name}</b> : null}{coach.line}</p></div> : null}
+      <div className="msa-tap">タップで結果へ ▶</div>
     </div>
   );
 }

@@ -30,8 +30,27 @@
 (function (root) {
   'use strict';
 
-  const VERSION = 8;           // 計算を変えたら上げる(8 = 技表 第2版(資料の血統別の技・ガッツダウンを強く)・技ごとの強化 techBoost/7 = 距離適性が G〜M の12段で与ダメ・被ダメ・命中・回避に効く・オリジナル5種の等級と与ダメの補正 ×0.80〜×1.20 を社長の値に・移動速度が速いほど受けるダメージが増える・6 = ガッツの回復を種ごとに広げ(5〜15・等級 G〜A)・移動速度で先手・サイズ(小さい=当たりにくい/大きい=受けるダメージ減)・移動とガードの回復を増やし・回復の速さで与ダメを補正・サーバの試合の行に残る。2 = 技を MF のように一新・3 = 作戦と交代の早さ・4 = 忠誠度の「そっぽを向く番」と人気の会心・5 = ちから/かしこさが同じ種類の技の受けるダメージも減らす)
-  const VERSION_PLAIN = 8;     // 忠誠度・人気が効かない編成(忠誠100・人気0)の版。版4までは 3 のままにしていたが、版5でダメージの式がすべての試合で変わったのでそろえた
+  const VERSION = 9;           // 計算を変えたら上げる(9 = 命中を「当たる:外れるの比」で作り直し(能力差・ガッツ・体 → 間合い → 技の係数 → 1〜99%)・ガッツ最大99・ガッツのダメージ補正 ×0.7〜1.3・全体のダメージ ×1.3/8 = 技表 第2版(資料の血統別の技・ガッツダウンを強く)・技ごとの強化 techBoost/7 = 距離適性が G〜M の12段で与ダメ・被ダメ・命中・回避に効く・オリジナル5種の等級と与ダメの補正 ×0.80〜×1.20 を社長の値に・移動速度が速いほど受けるダメージが増える・6 = ガッツの回復を種ごとに広げ(5〜15・等級 G〜A)・移動速度で先手・サイズ(小さい=当たりにくい/大きい=受けるダメージ減)・移動とガードの回復を増やし・回復の速さで与ダメを補正・サーバの試合の行に残る。2 = 技を MF のように一新・3 = 作戦と交代の早さ・4 = 忠誠度の「そっぽを向く番」と人気の会心・5 = ちから/かしこさが同じ種類の技の受けるダメージも減らす)
+  const VERSION_PLAIN = 9;     // 忠誠度・人気が効かない編成(忠誠100・人気0)の版。版4までは 3 のままにしていたが、版5でダメージの式がすべての試合で変わったのでそろえた
+  // 命中(版9・2026-11-14 社長の決め。案と試算: docs/spec/ASSISTANT_MASMON_BATTLE.md「命中とダメージ(版9)」)
+  const HIT_STAT_A = 0.11;    // 能力差の効き: 当たりやすさの比 = exp(a·x + c·x|x|)、x = (命中−回避)/100
+  const HIT_STAT_C = 0.028;
+  const HIT_GUTS = 1.85;      // ガッツ 0 → 比 ÷1.85・99 → ×1.85
+  const HIT_TECH_STEP = 1.35; // 技の命中の段1つ(hit 5)ごとに比 ×1.35
+  const HIT_MIN = 0.01, HIT_MAX = 0.99;
+  //   Math.exp・Math.pow はブラウザ・サーバで最後の桁がずれうる(検査⑦)ので、四則演算だけの exp を使う。対数は数の字で持つ
+  const LN2 = 0.6931471805599453, LN_HIT_GUTS = 0.6151856390902335 /* ln 1.85 */, LN_HIT_TECH_STEP = 0.30010459245033816 /* ln 1.35 */;
+  const expDet = (x) => {
+    const v = Math.max(-40, Math.min(40, Number(x) || 0));
+    const k = Math.round(v / LN2);
+    const r = v - k * LN2;                 // |r| ≤ 0.35
+    let s = 1, t = 1;
+    for (let i = 1; i <= 18; i++) { t = t * r / i; s += t; }
+    for (let i = 0; i < k; i++) s *= 2;    // 2 倍・半分は丸めが入らない
+    for (let i = 0; i > k; i--) s /= 2;
+    return s;
+  };
+  const DMG_ALL = 1.3;        // 外れが増えた分の手数を戻す全体のダメージ(試算で決着までのラウンド 13.1 → 13.6)
   const DEF_SAME_KIND = 0.45;  // 受ける技と同じ種類の能力の、防ぎの効き目(丈夫さ 0.9 の半分。版5)
   const STAT_KEYS = ['life', 'pow', 'wise', 'hit', 'eva', 'tough'];
   const STAT_MAX = 999;
@@ -39,7 +58,7 @@
   const DIST_START = 2; // 種が無いときの始まりの距離(中)。ふつうは種で 近・中 のどちらか(得意な距離の有利を片寄らせない)
   const GRADES = ['G', 'F', 'E', 'D', 'C', 'B', 'A', 'S', 'S+', 'SS', 'SS+', 'M'];
   const TEAM_MAX = 3;
-  const GUTS_MAX = 100;
+  const GUTS_MAX = 99;        // 2026-11-14 社長「ガッツの最大は 99」(始まりは 50 のまま)
   const GUTS_START = 50;
   const GUTS_REGEN = 10;      // 毎ラウンドの自然回復の真ん中(MF の「ガッツ回復」の考え方)
   // 2026-11-13 社長「移動を増やし、種の差も広げる」「回復が速い種ほど与ダメが少し下がり、遅い種ほど上がる」
@@ -52,7 +71,7 @@
   // 移動速度(先手)とサイズ(2026-11-13 社長「移動速度・サイズ・移動間合い・技能力の4つを、すべて入れます」「大きいほど受けるダメージを少し減らす」)
   const MOVE_SPEED_FIRST = 6;    // 移動速度の1段ごとに、先手の決め方へ足す分(D が 0。A は +18・G は −18。能力と運の合計は数百。試算で速い側の得が +1〜2 ポイントに収まる量)
   const MOVE_SPEED_TAKEN = 0.03; // 移動速度の1段ごとに受けるダメージを増減(D が ×1。速いほど多く受け、遅いほど少なく受ける。2026-11-13 社長「被ダメに影響。速いほど被ダメが上がる」)
-  const SIZE_SMALL_EVADE = 0.02; // 小さい: 受ける技の命中 −2%(よける型)
+  const SIZE_SMALL_EVADE = 0.9;  // 小さい: 受ける技の当たりやすさの比 ×0.9(50%の所で −3%。よける型。版9で足し算から比への掛け算に)
   const SIZE_LARGE_CUT = 0.05;   // 大きい: 受けるダメージ −5%(耐える型。試算で小さい・大きいのどちらにも偏らない組)
   // 種ごとの等級(参考の資料の評価。gutsRecovery・moveSpeed・size)。資料に無いうちのオリジナルの5種は近い子からの案(社長に確認する)。
   //   g … ガッツ回復力 / m … 移動速度 / z … サイズ(S 小さい・M ふつう・L 大きい)。表に無い種は回復が基礎ガッツから・移動 D・サイズ M
@@ -354,20 +373,39 @@
   // ── 計算の部品(AI もこれで見積もる。実際の判定と同じ式) ──
   // モンスターファームの考え方を参考に(docs/spec/ASSISTANT_MASMON_BATTLE.md「MF との対応」):
   //   撃つときのガッツが多いほど当たりやすく(±5%)・重い(×0.9〜1.1)。g は撃つ前のガッツ(省くといまのガッツ)
-  const gutsHit = (g) => (clamp(g, 0, GUTS_MAX) - 50) / 50 * 0.05;
-  const gutsPow = (g) => 0.9 + clamp(g, 0, GUTS_MAX) / GUTS_MAX * 0.2;
+  // 版9(2026-11-14 社長「味方・相手のステータスで基礎ダメージや基礎命中を決めて、技性能は係数として最後にかかる」「命中率はステや技性能で 1% も 99% もある」)
+  //   ガッツ: 当たりやすさの比に ×1/1.85〜×1.85(50%の所で 35〜65%)・ダメージ ×0.7〜1.3。g は撃つ前のガッツ(省くといまのガッツ)
+  const gutsHit = (g) => expDet(LN_HIT_GUTS * (clamp(g, 0, GUTS_MAX) - GUTS_MAX / 2) / (GUTS_MAX / 2));
+  const gutsPow = (g) => 0.7 + clamp(g, 0, GUTS_MAX) / GUTS_MAX * 0.6;
+  // 技の命中の係数(技表の hit は % の数。5 ごとに1段 = ×1.35。熟練・techBoost の上乗せも同じ物差し)
+  const techHitMul = (mvHit) => expDet(LN_HIT_TECH_STEP * (Number(mvHit) || 0) * 100 / 5);
+  // 比 → 確率。最後の切りは 1〜99% の1回だけ
+  const oddsToP = (o) => o / (1 + o);
+  //   ① 基礎命中: 能力差の効き exp(a·x + c·x|x|)(x = (命中−回避)/100。差が大きいほど効きが急)× ガッツ × 小さい体 を比で掛けて確率へ
+  //   ② 間合いの適性: いまの強さ(±1.5%/段)のまま基礎命中に足す(技の係数の前=上下の端をつぶさない)
+  //   ③ 技の係数を比に掛ける ④ 1〜99% で1回だけ切る
   //   dist … いまの間合い(渡したときだけ距離適性が命中・回避に効く)
-  const hitChance = (atkU, defU, mv, g, dist) => clamp(0.75 + (atkU.stats.hit - defU.stats.eva) / STAT_MAX * 0.5 + mv.hit - (defU.size === 'S' ? SIZE_SMALL_EVADE : 0)
-    + gutsHit(g == null ? atkU.guts : g)
-    + (Number.isInteger(dist) && atkU.apt && defU.apt ? aptSteps(atkU.apt[dist]) * APT_HIT - aptSteps(defU.apt[dist]) * APT_EVA : 0), 0.15, 0.97);
+  const baseHit = (atkU, defU, g, dist) => {
+    const x = (atkU.stats.hit - defU.stats.eva) / 100;
+    const o = expDet(HIT_STAT_A * x + HIT_STAT_C * x * Math.abs(x)) * gutsHit(g == null ? atkU.guts : g) * (defU.size === 'S' ? SIZE_SMALL_EVADE : 1);
+    return clamp(oddsToP(o) + (Number.isInteger(dist) && atkU.apt && defU.apt ? aptSteps(atkU.apt[dist]) * APT_HIT - aptSteps(defU.apt[dist]) * APT_EVA : 0), 0.005, 0.995);
+  };
+  const hitChance = (atkU, defU, mv, g, dist) => {
+    const b = baseHit(atkU, defU, g, dist);
+    return clamp(oddsToP(b / (1 - b) * techHitMul(mv.hit)), HIT_MIN, HIT_MAX);
+  };
+  // 技表だけから見た命中の目安(%): 命中=回避・ガッツ半分・適性同じのとき。準備の画面・技の一覧の目安と代表の決め方に使う
+  const techHitPreview = (hitPct, extra) => Math.round(clamp(oddsToP(techHitMul((Number(hitPct) || 0) / 100 + (Number(extra) || 0))), HIT_MIN, HIT_MAX) * 1000) / 10;
+  // 基礎ダメージ(能力・間合い・ガッツ・受ける側)を出して、技の威力(power/20)を最後に掛ける
   const rawDamage = (atkU, defU, mv, dist, g) => {
     const a = atkU.stats[mv.kind];
-    const base = mv.power * (20 + a * 0.6) * aptMult(atkU.apt[dist]) * gutsPow(g == null ? atkU.guts : g) * (atkU.dmgMul || 1);
+    const atk = (20 + a * 0.6) * aptMult(atkU.apt[dist]) * gutsPow(g == null ? atkU.guts : g) * (atkU.dmgMul || 1) * DMG_ALL;
     // 受ける側: 丈夫さ(×0.9)に、受ける技と同じ種類の能力(ちから技ならちから・かしこさ技ならかしこさ)を丈夫さの半分の効き目(×0.45)で足す
     //   (2026-11-12 社長「ちから技のダメージが増加する/相手のちから技によるダメージを軽減する。かしこさも同じ。被ダメにも影響ある」)
-    return base * 300 / (300 + defU.stats.tough * 0.9 + (defU.stats[mv.kind] || 0) * DEF_SAME_KIND) * (defU.size === 'L' ? 1 - SIZE_LARGE_CUT : 1)
+    const def = 300 / (300 + defU.stats.tough * 0.9 + (defU.stats[mv.kind] || 0) * DEF_SAME_KIND) * (defU.size === 'L' ? 1 - SIZE_LARGE_CUT : 1)
       * Math.max(0.5, 1 - aptSteps(defU.apt ? defU.apt[dist] : 'C') * APT_DEF) // 受ける側の距離適性
       * (defU.taken || 1); // 受ける側の移動速度(速いほど多く受ける)
+    return atk * def * mv.power;
   };
   const guardCut = (u) => clamp(0.35 + u.stats.tough / STAT_MAX * 0.25, 0.35, 0.6) + (u.mastery ? u.mastery.guard : 0) / 100 * MASTERY_GUARD_ADD;
   const canUse = (u, mv, dist) => mv.dist.includes(dist) && u.guts >= mv.guts;
@@ -584,9 +622,9 @@
     let q = p;
     if (bAtk && first && bAtk.hit1) q += bAtk.hit1;
     if (bDef && bDef.eva) q -= bDef.eva;
-    q = clamp(q, 0.05, 0.99);
+    q = clamp(q, HIT_MIN, HIT_MAX);
     if (bAtk && bAtk.missCut) q = 1 - (1 - q) * (1 - bAtk.missCut);
-    return clamp(q, 0.05, 0.99);
+    return clamp(q, HIT_MIN, HIT_MAX);
   };
   // ── 試合の決まり(rules・β の練習だけ) ──
   //   壊れた値・範囲外は切る。効くものが1つも無ければ null(= 今までと同じ計算の道)
@@ -951,13 +989,14 @@
     // 芯が持っている口の印(呼ぶ側が古い芯を見分ける。モンサクは techBoost があるときだけ渡す)
     FEATURES: Object.freeze({ techBoost: true }),
     VERSION, VERSION_PLAIN, STAT_KEYS, STAT_MAX, DIST_NAMES, TEAM_MAX, GUTS_MAX, GUTS_REGEN_MIN, GUTS_REGEN_MAX, GUTS_REGEN_GRADES, GUTS_REGEN_GRADES_UP, SPECIES_TRAITS, MOVE_SPEED_FIRST, MOVE_SPEED_TAKEN, APT_UP_LIMITS, SIZE_SMALL_EVADE, APT_DMG, APT_DEF, APT_HIT, APT_EVA, APT_ABOVE_A, SIZE_LARGE_CUT, GUTS_CHARGE, GUTS_MOVE, REGEN_DMG_SWING, ROUND_LIMIT, STYLES, TECH_LIMITS,
+    HIT_STAT_A, HIT_STAT_C, HIT_GUTS, HIT_TECH_STEP, HIT_MIN, HIT_MAX, DMG_ALL, techHitPreview,
     MASTERY_HIT_MAX, MASTERY_GUTS_CUT, MASTERY_GUARD_ADD, TECH_BOOST_LIMITS, BALANCE, PLANS, SWAP_PACES, STYLE_RANGE,
     LV_MAX, BUFF_LIMITS, RULE_LIMITS, unitTraits, normTechBoost, buildCatalog, simulate, hitPreviewer, createMatch, replay, firstAction, unitFromGrow, makeRng, hashSeed,
     WHY: Object.freeze({ sulk: 'そっぽを向いて、言うことを聞かない…', finish: '倒しきれる', gutsDown: 'ガッツを削る', big: '大技', attack: '攻める', reach: '技が届く所へ', better: '有利な間合いへ',
       safer: '危ない間合いから離れる', lowHp: 'ライフが少ないので守る', block: '相手の大きい一撃にそなえる', noGuts: 'ガッツが足りない', saveUp: '大技のためにためる',
       rescue: '倒されそうなので下げる', matchup: '相性のよい仲間へ', player: 'あなたの指示', techMove: '技の勢いで間合いが変わった' }),
     // 検査用(計算の部品)
-    _internal: Object.freeze({ setupState, aptMult, aptSteps, normAptUp, applyAptUp, normTech, normTechBoost, buildMoves, normalizeUnit, normalizeTeam, normalizeBuffs, buffedHit, styleOf, hitChance, rawDamage, chooseAction, maxHpOf }),
+    _internal: Object.freeze({ setupState, aptMult, aptSteps, normAptUp, applyAptUp, normTech, normTechBoost, buildMoves, normalizeUnit, normalizeTeam, normalizeBuffs, buffedHit, styleOf, expDet, baseHit, hitChance, rawDamage, chooseAction, maxHpOf }),
   });
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   if (root) root.ASSISTANT_MASMON_BATTLE = api;
