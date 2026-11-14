@@ -851,7 +851,7 @@ function MsxEvent({ run, setRun, v, ev, ctx, bondLv, onDone }) {
         : isStory || isUniq || (view && view.id === 'ev.self.anniv') ? <img src={msxBody(s.aid, 'happy')} alt="" style={{ position: 'absolute', right: '-4%', bottom: 0, height: '70%', width: '46%', objectFit: 'contain', objectPosition: 'right bottom' }}/> : null}
       {view && view.id === 'ev.self.peakin' && !picked ? <div className="msx-peak-card msx-pop" data-msx-peak-start>🔥 ピークが始まった!</div> : null}
       {(() => { const cat = isStory || isUniq ? 'メインのお話' : (view && view.kind === 'team' ? '編成のモンスターのイベント' : '育成イベント'); return <div className="v-ev-h">{head !== cat ? <small>{cat}</small> : null}{head}</div>; })()}
-      <div className="v-talk">{shown.length ? shown.map((l, i) => <div key={i}>{who(l) ? <span className="who">{who(l)}</span> : null}{who(l) ? `「${l.t}」` : l.t}</div>) : <div>{picked ? 'いい時間になった。' : 'なにか起きそうだ…'}</div>}</div>
+      <div className="v-talk">{shown.length ? shown.map((l, i) => <div key={i}>{who(l) ? <span className="who">{who(l)}</span> : null}{who(l) ? `「${l.t}」` : l.t}</div>) : <div>{picked ? '…' : 'なにか起きそうだ…'}</div>}</div>
     </div>
     {picked ? (<>
       {Object.keys(ups).length ? <MsxStRow stats={s.stats} ups={ups}/> : null}

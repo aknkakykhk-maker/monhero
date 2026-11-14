@@ -25,9 +25,18 @@ const chipsOf = ctx.__c;
 const main = fs.readFileSync(path.join(PARTS, '56-monhero-success-main.jsx'), 'utf8');
 ok(/<MsxEvResult delta=\{picked\.delta\}/.test(main), '選んだあとの段に MsxEvResult が無い(56-monhero-success-main.jsx)');
 ok(/delta: r\.out\.delta/.test(main), '選んだときに芯の out.delta を picked に残していない');
+// どのイベントにも出る仮の1行(2026-11-14 社長が見た「いい時間になった。」)を画面に置かない
+ok(!main.includes('いい時間になった'), '選んだあとの仮の1行「いい時間になった。」が画面に残っている');
+ok(/r\.out\.next \|\| \(view && view\.id \? `\$\{view\.id\}\.res`/.test(main), '見るだけの出来事の結果の場面(<出来事>.res)を引いていない');
+// 台本(生成物)で台詞のある場面(地の文か、おみくじのように助手のひとこと)
+const narrScenes = new Set();
+for (const f of fs.readdirSync(path.join(ROOT, 'monster-hero', 'data')).filter((x) => /^monhero-success-script-(?!engine).*\.js$/.test(x))) {
+  const src = fs.readFileSync(path.join(ROOT, 'monster-hero', 'data', f), 'utf8');
+  for (const m of src.matchAll(/\{"id":"([^"]+)\.[a-z]+\d+[a-z]?","who":"(?!choice)/g)) narrScenes.add(m[1]);
+}
 
 const base = EV.open(SUC.newRun({ id: 'evres', species: SUC.speciesList[0], aid: SUC.AIDS[0] }), 'start').state;
-let n = 0; const none = [];
+let n = 0; const none = []; const noLine = new Set();
 for (const e of EV.LIST) {
   if (e.slot === 'none') continue; // おみくじの結果の置き場(じかには起きない)
   const hasCh = e.ch && (e.ch.a || e.ch.b);
@@ -44,7 +53,10 @@ for (const e of EV.LIST) {
       if (!r.out || !r.out.ok) { ok(false, `${id}: 選べなかった(${r.out && r.out.why})`); break; }
       seen = true; n += 1;
       const d = r.out.delta || {}; const st = Object.values(d.stats || {}).some((x) => x);
-      if (st || chipsOf(d).length || d.apt || 'fav' in d) moved = true; // fav: 好きなトレーニングの候補は育成のようすしだい(起きるときは必ずある)
+      if (st || chipsOf(d).length || d.apt || 'fav' in d) moved = true;
+      // 選んだ選択肢に合った結果の文(画面と同じ引き方: 選んだ側の場面 → 確率・おみくじの結果の場面)
+      const scenes = [r.out.next || `${e.id}.res`, r.out.scene].filter(Boolean);
+      if (!scenes.some((sc) => narrScenes.has(sc))) noLine.add(`${id}${r.out.res ? `(${r.out.res})` : ''}`); // fav: 好きなトレーニングの候補は育成のようすしだい(起きるときは必ずある)
     }
     if (seen && !moved) none.push(id);
   }
@@ -52,6 +64,7 @@ for (const e of EV.LIST) {
 for (const id of none) ok(NO_EFFECT.has(id), `${id}: 選んでも何も動かない(結果の札が出ない)。効果を付けるか、NO_EFFECT に足して窓口へ`);
 for (const id of NO_EFFECT) ok(none.includes(id), `NO_EFFECT の ${id} は、いまは何か動く。一覧から消す`);
 ok(n >= 99, `通した選択肢が少ない: ${n}`);
+ok(noLine.size === 0, `選んだあとの結果の文が台本に無い: ${[...noLine].slice(0, 8).join(' ')}${noLine.size > 8 ? ` …ほか ${noLine.size - 8}` : ''}`);
 
 if (errors.length) { console.error('NG monsuc-event-result-check'); errors.slice(0, 30).forEach((x) => console.error('  - ' + x)); process.exit(1); }
-console.log(`OK monsuc-event-result-check: 出来事 ${EV.LIST.length} 種・選択肢を ${n} 回通して、何も動かないのは一覧の ${NO_EFFECT.size} つだけ・選んだあとに結果の札を出す`);
+console.log(`OK monsuc-event-result-check: 出来事 ${EV.LIST.length} 種・選択肢を ${n} 回通して、何も動かないのは一覧の ${NO_EFFECT.size} つだけ・どの選択肢にも結果の文がある・選んだあとに結果の札を出す`);
