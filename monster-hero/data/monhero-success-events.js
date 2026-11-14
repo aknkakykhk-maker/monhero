@@ -44,6 +44,11 @@
   const EFFECT = Object.freeze({ great: 0.10, sab: 0.10, stress: 0.5, tech: 0.15, iki: 0.20, scold: -2, fav: -0.10, inj: 2, baseBoost: 2, guts: 5, issaUp: 0.05, issaDown: -0.05 });
 
   // ---- 起きる確率(EVENTS §2。数字は試算 tools/success/success-sim.js で合わせた) ----
+  // 拾い物とおすそわけ(r1113-037)。kin = 主血統ごとにくれる物(無い血統は、その子の1番の得意の実)/ find = 拾ってくる物の山(決まった乱数で1つ)
+  //   どちらも同じ出来事が続けて出すぎないよう、もらってから GIFT_GAP ターンは出さない
+  const KIN_GIFT = Object.freeze({ mocchi: 'fruit_life', pixie: 'fruit_wise', plant: 'herb', zan: 'fruit_hit', ark: 'fruit_tough', undine: 'oilyoil', yggdrasil: 'oil', ghost: 'fruit_eva', illumine: 'elixir2', kyubi: 'elixir1' });
+  const FIND_POOL = Object.freeze(['oil', 'oil', 'herb', 'herb', 'fruit_life', 'fruit_pow', 'fruit_wise', 'fruit_hit', 'fruit_eva', 'fruit_tough']);
+  const GIFT_GAP = 6;
   const RATE = Object.freeze({
     start: 0.16, after: 0.10, gapAdd: 0.03, gapMax: 0.12, recent: -0.08, // すき間ごとの土台・空いたターンごとに足す・前のターンに出たら引く
     cupWin: 0.6, cupLose: 0.6,                                           // 大会のあと(取材・負けたあと)
@@ -78,6 +83,8 @@
     { id: 'ev.daily.arm', kind: 'daily', slot: 'start', w: 10, ch: { a: { p: 0.6, ok: [['st', 'pow', M]], ng: [['hp', -10]] }, b: { fx: [['str', -10]] } } },
     { id: 'ev.daily.dream', kind: 'daily', slot: 'start', w: 8, ch: { a: { fx: [['loy', 3]] }, b: { fx: [['loy', 6], ['hp', -10]] } } },
     { id: 'ev.daily.picky', kind: 'daily', slot: 'start', w: 8, ch: { a: { fx: [['st', 'tough', S], ['str', 10]] }, b: { fx: [['str', -10]] } } },
+    // 2026-11-13 社長 r1113-037: たまに、育成する子がアイテムを拾ってくる(見るだけ・中身は決まった乱数)
+    { id: 'ev.daily.find', kind: 'daily', slot: 'start', w: 5, repeat: true, when: (s, x) => !x.giftedNow(s, 'find'), ch: { fx: [['item', 'find']] } },
     { id: 'ev.daily.mirror', kind: 'daily', slot: 'start', w: (s) => (s.pop >= 60 ? 14 : 8), ch: { a: { fx: [['pop', 3], ['loy', 3]] }, b: { fx: [['st', 'hit', S]] } } },
     { id: 'ev.daily.lost', kind: 'daily', slot: 'start', w: 8, ch: { a: { fx: [['pop', 3], ['hp', -10]] }, b: { fx: [['hp', 10]] } } },
     // 間合いの稽古(2026-11-13 社長: 間合い適性を出来事の選択肢でも上げる)。上げられる間合いが残っていて、出来事で上げた数が上限より少ないときだけ
@@ -97,6 +104,9 @@
       ch: { a: { fx: [['flag', 'baseBoost']] }, b: { fx: [['bond', 'cheer', 5], ['str', -5]] } } }, // b はそっと見守る(Fable ①-16: 選択肢が1つだけだった)
     { id: 'ev.team.friend', kind: 'team', slot: 'after', w: 12, pickA: (s, x) => x.team(s, (m) => m.friend === true || m.from === 'friend'),
       ch: { a: { fx: [['bond', 'cheer', 10]] } } },
+    // 2026-11-13 社長 r1113-037: 育成する子と同じ血統(主血統)の編成の子が、いっしょにトレーニングしたあとにアイテムをくれる(中身は血統ごと)
+    { id: 'ev.team.kin', kind: 'team', slot: 'after', w: 14, repeat: true, when: (s, x) => !x.giftedNow(s, 'kin'), pickA: (s, x) => x.kinJoined(s),
+      ch: { a: { fx: [['item', 'kin'], ['bond', 'cheer', 5]] }, b: { fx: [['st', 'cheer', S], ['bond', 'cheer', 10]] } } },
     { id: 'ev.team.typeskill', kind: 'team', slot: 'after', w: 8, pickA: (s, x) => x.team(s, (m) => Boolean(TYPE_STAT[x.typeOf(m)])),
       ch: { a: { fx: [['st', 'type', S], ['buff', 'hirameki']] } } },
     { id: 'ev.team.sync', kind: 'team', slot: 'after', w: 8, pickPair: (s, x) => x.pair(s, (a, b, i, j) => s.bond[i] >= 60 && s.bond[j] >= 60),
@@ -195,7 +205,7 @@
         healed: ['injury', 'ill', 'away'].includes(o.healed) ? o.healed : null, rolled: {}, seasons: {}, pend: null,
       };
       if (o.goal && typeof o.goal === 'object') for (const k of ['junior', 'middle', 'pro']) if (['star', 'toku', 'naka'].includes(o.goal[k])) out.goal[k] = o.goal[k];
-      if (o.flags && typeof o.flags === 'object') { if (o.flags.goalPlus === true) out.flags.goalPlus = true; for (const k of ['injRisk', 'guts']) if (Number.isInteger(o.flags[k])) out.flags[k] = clamp(o.flags[k], 0, 99); }
+      if (o.flags && typeof o.flags === 'object') { if (o.flags.goalPlus === true) out.flags.goalPlus = true; for (const k of ['injRisk', 'guts', 'gift_kin', 'gift_find']) if (Number.isInteger(o.flags[k])) out.flags[k] = clamp(o.flags[k], 0, 99); }
       if (o.boost && typeof o.boost === 'object') for (const [k, v] of Object.entries(o.boost)) if (/^[0-5]$/.test(k) && Number.isFinite(Number(v))) out.boost[k] = clamp(Number(v), 0, 10);
       if (o.rolled && typeof o.rolled === 'object') for (const sl of SLOTS) if (Number.isInteger(o.rolled[sl])) out.rolled[sl] = o.rolled[sl];
       if (o.seasons && typeof o.seasons === 'object') for (const y of ['junior', 'middle', 'pro']) if (Array.isArray(o.seasons[y])) out.seasons[y] = o.seasons[y].filter(m => SEASON_MONTHS.includes(m)).slice(0, 5);
@@ -227,7 +237,16 @@
     const favCand = (s) => { const k = KEYS.find(k => num(s.trainXp && s.trainXp[`train:${k}`]) >= 4); return evOf(s).fav ? null : (k || null); };
     // ★★★・👑 の前の晩: 期の最後のターン(強制大会が星3以上)か、最後の期の頂への道の前
     const bigCupTonight = (s) => { const p = periodOf(s.turn); if (p.left !== 1) return false; if (p.key === 'final') return true; const f = FORCED[p.key]; return Boolean(f && f.star >= 3); };
-    const X = { aptRoom: (s) => typeof h.aptUpRoom === 'function' && [0, 1, 2, 3].some(d => h.aptUpRoom(s, d, 'event')), hpRatio, loyal: loyalOf, period: (s) => periodOf(s.turn), team, pair, rankAtLeast, typeOf: tOf, peakEdge, favCand, bigCupTonight, BOND };
+    const lineMain = (sp) => { const l = typeof h.lineOf === 'function' ? h.lineOf(sp) : null; return l && l.main ? l.main : null; };
+    // いまのトレーニングに来た編成の子のうち、育成する子と主血統が同じ子(芯の s.last.members)
+    const kinJoined = (s) => { const me = lineMain(s.species); const mem = s.last && Array.isArray(s.last.members) ? s.last.members : []; return me ? mem.filter(i => Number.isInteger(i) && s.team[i] && lineMain(s.team[i].species) === me) : []; };
+    const giftedNow = (s, kind) => { const t = s.ev && s.ev.flags ? num(s.ev.flags[`gift_${kind}`]) : 0; return t > 0 && s.turn - t < GIFT_GAP; };
+    // その出来事でもらえる物(開いたときと選んだときで同じになるよう、決まった乱数とその子から決める)
+    const giftOf = (s, kind, cheer) => {
+      if (kind === 'kin') { const m = s.team[cheer]; const g = m ? KIN_GIFT[lineMain(m.species)] : null; return g || (m && Array.isArray(m.top) && m.top[0] ? `fruit_${m.top[0]}` : 'fruit_life'); }
+      return FIND_POOL[Math.floor(rngOf(s.id, s.turn, 'find')() * FIND_POOL.length)];
+    };
+    const X = { kinJoined, giftedNow, aptRoom: (s) => typeof h.aptUpRoom === 'function' && [0, 1, 2, 3].some(d => h.aptUpRoom(s, d, 'event')), hpRatio, loyal: loyalOf, period: (s) => periodOf(s.turn), team, pair, rankAtLeast, typeOf: tOf, peakEdge, favCand, bigCupTonight, BOND };
 
     // ---- 何年目か(ジュニア=1・ミドル=2・プロ=3)と、その年に出る季節の行事 ----
     const yearOf = (s) => ({ junior: 1, middle: 2, pro: 3 })[periodOf(s.turn).key] || 0;
@@ -270,6 +289,7 @@
       if (cast && Number.isInteger(cast.cheer2)) { view.cheer2 = cast.cheer2; view.cheer2Name = s.team[cast.cheer2] && s.team[cast.cheer2].name; }
       if (e.kind === 'uniq') { view.aid = e.aid; view.title = e.title || ''; } // 固有イベント(助手1人分のストーリー)
       if (e.id === 'ev.self.favtrain') view.train = favCand(s);
+      if (e.id === 'ev.team.kin' || e.id === 'ev.daily.find') view.item = giftOf(s, e.id === 'ev.team.kin' ? 'kin' : 'find', cast ? cast.cheer : null);
       if (e.id === 'ev.goal.done' || e.id === 'ev.goal.miss') view.goal = o && o.goal;
       if (e.id === 'ev.cup.eve') { const p = periodOf(s.turn); view.cup = p.key === 'final' ? 'summit' : (FORCED[p.key] && FORCED[p.key].name) || null; }
       return view;
@@ -367,6 +387,7 @@
           if (Number.isInteger(d) && h.addAptUp(s, d, 'event')) delta.apt = { dist: d, from: g[d], grade: h.aptGradesOf(s)[d] };
         }
         else if (op === 'mas') { (s.techs || []).forEach(t => { s.mastery[t] = clamp(num(s.mastery[t]) + num(a), 0, 100); }); delta.mastery = num(a); }
+        else if (op === 'item') { const key = giftOf(s, a, ctx.cheer); if (key) { s.bag = s.bag && typeof s.bag === 'object' ? s.bag : {}; s.bag[key] = num(s.bag[key]) + 1; ev.flags[`gift_${a}`] = s.turn; (delta.items = delta.items || []).push(key); } }
         else if (op === 'goal') { const pk = periodOf(s.turn).key; ev.goal[pk] = a; delta.goal = a; }
         else if (op === 'flag') {
           if (a === 'baseBoost' && Number.isInteger(ctx.cheer)) { ev.boost[ctx.cheer] = EFFECT.baseBoost; delta.boost = EFFECT.baseBoost; }

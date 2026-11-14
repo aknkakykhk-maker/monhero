@@ -521,6 +521,10 @@
       "role": "部品: モンヒロサクセスの覚醒・超覚醒の見せる部分(バトルカードのキラで絵を包む MsxKira・前触れの光 MsxOmenFx・起きたときの演出 MsxAwakeShow・印 msxKiraOf)。計算は芯 MONHERO_SUCCESS の awakeOpen。何も保存しない・公開の印 monheroSuccess の後ろ"
     },
     {
+      "file": "56-monsuc-birth.jsx",
+      "role": "部品: モンヒロサクセスの育成のはじまりの演出 MsxBirth(ベースモンでも合体円盤石でも、円盤石から生まれる。r1113-008)。新しい育成は phase 'birth' で始まり、終わると 'begin'。何も保存しない・公開の印 monheroSuccess の後ろ"
+    },
+    {
       "file": "56-monsuc-issa.jsx",
       "role": "部品: モンヒロサクセスのイッサ博士「大きな賭け」の場面(登場 MsxIssaMeet・溜めと結果 MsxIssaResult・動いた数字の札 MsxIssaGains・入口 MsxIssa)。計算は芯 MONHERO_SUCCESS の issa。保存は run.out だけ・公開の印 monheroSuccess の後ろ"
     },

@@ -1022,7 +1022,7 @@
         out.gain = {}; KEYS.forEach(k => { if (s.stats[k] !== before[k]) out.gain[k] = s.stats[k] - before[k]; });
         trainEvent(s, card, rng, out);
         const cd = condRoll(s, rng, kind); if (cd) { s.cond = cd; out.cond = cd.kind; }
-        s.last = { kind, res }; s.acted = true; s.reacted = false;
+        s.last = { kind, res, members: card.members.slice() }; s.acted = true; s.reacted = false; // members: 来た編成の子(同じ血統の出来事 ev.team.kin)
         return { state: s, out };
       }
       if (kind === 'cup') { // 月の大会に出る(ターンを使う・ターンの終わりに1戦)
@@ -1924,7 +1924,7 @@
     const EVX = (deps && deps.events) || (root && root.MONHERO_SUCCESS_EVENTS) || null;
     EV = EVX && typeof EVX.create === 'function' ? EVX.create({
       KEYS, TOTAL_TURNS, FORCED, BOND, rngOf, periodOf, monthOf, clamp, num, r2, unitOf, addStat: (s, k, v) => addStat(s, k, num(v) > 0 ? num(v) * (1 + stayNum(s, 'event') / 100) : v), addLoyalRaw, recover, addStress, addBond, loyalOf, aptMult, gainPts, popGain, addAptUp, aptUpRoom, aptGradesOf, DIST_UP_GRADES: DIST_UP.grades,
-      typeOf: TYPE_OF, peakOf: (type) => C.peakOf(type), arc: ARC,
+      typeOf: TYPE_OF, peakOf: (type) => C.peakOf(type), arc: ARC, lineOf,
     }) : null;
 
     return Object.freeze({
