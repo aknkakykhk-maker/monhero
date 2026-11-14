@@ -11,7 +11,7 @@
 //   node tools/ctx.js asked <語> [<語>…]       … 社長に聞く前に: その語の決めごとを台帳から新しい順に短く(表の状態つき)
 //   node tools/ctx.js todo --all [部] / --json [部] / --count
 //
-// 状態: 未依頼 → 依頼済み → 作業中 → 確認待ち → 完了(ほかに 止め中=一時止めた・閉じない/やめた・上書き済み=後の決めごとで変わった)
+// 状態: 未依頼 → 依頼済み → 作業中 → 確認待ち → OK済み → 完了(ほかに 止め中=一時止めた・閉じない/やめた・上書き済み=後の決めごとで変わった)
 //
 // 【なぜあるか】(2026-11-14 社長「なんかお願いしたのに漏れてるの多いのは何で?」)
 // 決めごとは台帳(docs/rules/PRESIDENT_DECISIONS.md)に書いていたが、「どの部に頼んだか・できたか」を追う物が無かった。
@@ -28,10 +28,11 @@ const { ROOT, loadDepts, findDept, today, cut, deptList } = require('./lib');
 
 const FILE = path.join(__dirname, 'requests.json');
 const LEDGER = path.join(ROOT, 'docs', 'rules', 'PRESIDENT_DECISIONS.md');
-const STATES = ['未依頼', '依頼済み', '作業中', '確認待ち', '止め中', '完了', 'やめた', '上書き済み'];
+const STATES = ['未依頼', '依頼済み', '作業中', '確認待ち', 'OK済み', '止め中', '完了', 'やめた', '上書き済み'];
 // 止め中 = 優先順位などで一時止めた頼み。閉じない(完了でない物に数え、毎回 ★ で出し続ける)。メモに止めた理由を書く(2026-11-15 社長「頼んだことをなくさないようにしろ」)
 const CLOSED = ['完了', 'やめた', '上書き済み'];
-const STALE_DAYS = 2; // 依頼済み・作業中・確認待ちのまま、この日数を超えたら ★(止まっていないか窓口が確かめる)
+// OK済み = 社長が止め絵や案に OK を出した・まだ公開していない(閉じない)。OK済み・確認待ちは PR がマージされるまで ★ を出し続ける(2026-11-15 ドラの寝顔が OK のあと枝のまま落ちた)
+const STALE_DAYS = 2; // 依頼済み・作業中・確認待ち・OK済みのまま、この日数を超えたら ★(止まっていないか窓口が確かめる)
 const DATED = /^- (20\d\d-\d\d-\d\d) (.+)$/;
 const HOW = /^(窓口の)?進め方[::]/; // 進め方の決めごとは錠(decision-locks.json)が受け持つ。追跡表には入れない
 
@@ -115,8 +116,27 @@ function sync(j) {
   return { added, relinked };
 }
 
-const line = (r, width) => `- ${r.id} [${r['状態']}${stale(r) ? '★' : ''}] ${r['会話'] ? r['会話'] + ': ' : ''}${cut(r['中身'], width || 96)}${r.PR.length ? ' ' + r.PR.join(' ') : ''}`;
-const stale = (r) => r['状態'] === '止め中' || (['依頼済み', '作業中', '確認待ち'].includes(r['状態']) && daysSince(r['更新'] || r['日付']) > STALE_DAYS);
+const line = (r, width) => `- ${r.id} [${r['状態']}${stale(r) ? '★' + unmerged(r) : ''}] ${r['会話'] ? r['会話'] + ': ' : ''}${cut(r['中身'], width || 96)}${r.PR.length ? ' ' + r.PR.join(' ') : ''}`;
+// PR がマージ済みか(ネットに出ず判定): git log origin/main の件名に「(#番号)」か「Merge pull request #番号」があるか。取れなければ null(分からない)
+let mergedSet;
+function mergedPRs() {
+  if (mergedSet !== undefined) return mergedSet;
+  mergedSet = null;
+  const o = require('child_process').spawnSync('git', ['log', 'origin/main', '--format=%s'], { cwd: ROOT, encoding: 'utf8', maxBuffer: 1 << 28 });
+  if (o.status !== 0) return mergedSet;
+  const set = new Set();
+  for (const m of (o.stdout || '').matchAll(/\(#(\d+)\)|Merge pull request #(\d+)/g)) set.add(m[1] || m[2]);
+  return (mergedSet = set);
+}
+// 公開まで追う物(OK済み・確認待ち)で、PR が無い・マージされていない理由。無ければ ''
+function unmerged(r) {
+  if (!['OK済み', '確認待ち'].includes(r['状態'])) return '';
+  if (!r.PR.length) return 'PR無し';
+  const m = mergedPRs();
+  if (!m) return '';
+  return r.PR.some(p => m.has(String(p).replace(/^#/, ''))) ? '' : 'PR未マージ';
+}
+const stale = (r) => r['状態'] === '止め中' || !!unmerged(r) || (['依頼済み', '作業中', '確認待ち', 'OK済み'].includes(r['状態']) && daysSince(r['更新'] || r['日付']) > STALE_DAYS);
 const rank = (r) => STATES.indexOf(r['状態']); // 未依頼がいちばん上
 
 // その部の完了でない頼み(newsession・handoff・brief・フックが使う)
@@ -266,4 +286,4 @@ function main() {
 }
 
 if (require.main === module) { try { main(); } catch (e) { console.error('NG: ' + e.message); process.exit(1); } }
-module.exports = { STATES, CLOSED, load, save, ledgerRows, missing, openFor, linesFor, summary, hashOf, guessOwner };
+module.exports = { stale, unmerged, mergedPRs, STATES, CLOSED, load, save, ledgerRows, missing, openFor, linesFor, summary, hashOf, guessOwner };
