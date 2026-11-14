@@ -113,7 +113,7 @@ ok(near(SUC.failRateOf({ ...base, yosu: { sabori: { visits: 0 } } }) - fFull, 0.
   ok(near(m.fav, Math.min(SUC.GATHER.favCap, SUC.GATHER.fav + SUC.ASSISTS.kaketsuke.v[2] / 100), 1e-9) && m.assists.length === 2, `かけつけの得意率・同じアシストの重なりがおかしい: ${m.fav} ${m.assists.length}`);
   ok(m.startAdd.stat === 'pow' && m.startAdd.v === 24, `はじめの能力が 1位 ÷ 25 でない: ${JSON.stringify(m.startAdd)}`);
   const so2 = SUC.ASSISTS.sokoji.v[1]; // 底力 段2(第2版の表を渡すと 10・第1版なら 7。2026-11-12)
-  ok(SUC.memberEffect(m, 'life', 0) === so2 && SUC.memberEffect(m, 'pow', 0) === m.bonus.pow + so2, '4位以下の訓練で補正0%・アシストは効く になっていない');
+  ok(SUC.memberEffect(m, 'life', 0) === so2 && SUC.memberEffect(m, 'pow', 0) === m.bonus.pow + so2, '4位以下のトレーニングで補正0%・アシストは効く になっていない');
   // 得意率: 上位3つに 65%(30:20:15)
   const s = SUC.newRun({ id: 'g', species: 'Mocchi', aid: 'mua', team: [{ kind: 'raised', species: 'Mocchi', stats: st, loy: 50 }] });
   const cnt = { top: 0, t1: 0, t2: 0, t3: 0, other: 0, none: 0 }; const n = 6000; const top = s.team[0].top;
@@ -152,10 +152,10 @@ ok(near(SUC.failRateOf({ ...base, yosu: { sabori: { visits: 0 } } }) - fFull, 0.
   let s = toBattle(SUC.newRun({ id: 'tour', species: 'Mocchi', aid: 'mua' }));
   ok(s.battle && s.battle.kind === 'debut' && s.turn === 5, `デビュー戦がデビュー期の終わりに来ない: ${JSON.stringify(s.battle)} ${s.turn}`);
   const o0 = SUC.opponents(s)[0];
-  // 負け → 再挑戦(訓練できない・相手は1割ずつ弱く)
+  // 負け → 再挑戦(トレーニングできない・相手は1割ずつ弱く)
   s = SUC.settle(s, [false]).state;
   ok(s.turn === 6 && !s.over && SUC.peek(s).can.join() === 'retry', '負けたあとのジュニア期が再挑戦だけになっていない');
-  ok(!SUC.act(s, { kind: 'train', stat: 'pow' }).out.ok, '再挑戦のターンに訓練できてしまう');
+  ok(!SUC.act(s, { kind: 'train', stat: 'pow' }).out.ok, '再挑戦のターンにトレーニングできてしまう');
   s = SUC.endTurn(SUC.act(s, { kind: 'retry' }).state).state;
   ok(s.battle && s.battle.kind === 'debut' && s.battle.retry === 1, '再挑戦の大会が立たない');
   const w1 = SUC.opponents(s)[0];
@@ -290,22 +290,22 @@ ok(near(SUC.failRateOf({ ...base, yosu: { sabori: { visits: 0 } } }) - fFull, 0.
   }
 }
 
-// ---- 訓練で能力が下がらない・訓練Lv(社長 2026-11-12) ----
+// ---- トレーニングで能力が下がらない・トレーニングLv(社長 2026-11-12) ----
 {
   let dropped = false;
   for (let i = 0; i < 60 && !dropped; i++) { const t = { ...base, id: `nd-${i}` }; const r = SUC.act(t, { kind: 'train', stat: K[i % 6] }); if (K.some(k => r.state.stats[k] < t.stats[k])) dropped = true; }
-  ok(!dropped, '訓練で下がる能力がある(社長: 3能力が上がるだけ)');
-  ok(SUC.trainLvOf(0) === 1 && SUC.trainLvOf(4) === 2 && SUC.trainLvOf(22) === 5 && SUC.trainLvOf(999) === 5, '訓練Lv が 1〜5 で上がらない');
-  ok(SUC.TRAIN_LV.mult.every((v, i, a) => i === 0 || v > a[i - 1]), '訓練Lv ごとに基礎値が上がらない');
-  // 同じ札・同じ乱数で、Lv5 の訓練は Lv1 よりよく伸びる
+  ok(!dropped, 'トレーニングで下がる能力がある(社長: 3能力が上がるだけ)');
+  ok(SUC.trainLvOf(0) === 1 && SUC.trainLvOf(4) === 2 && SUC.trainLvOf(22) === 5 && SUC.trainLvOf(999) === 5, 'トレーニングLv が 1〜5 で上がらない');
+  ok(SUC.TRAIN_LV.mult.every((v, i, a) => i === 0 || v > a[i - 1]), 'トレーニングLv ごとに基礎値が上がらない');
+  // 同じ札・同じ乱数で、Lv5 のトレーニングは Lv1 よりよく伸びる
   let lo = null; let hi = null;
   for (let i = 0; i < 80 && (lo === null || hi === null); i++) {
     const t = { ...base, id: `tl-${i}` }; const r1 = SUC.act(t, { kind: 'train', stat: 'pow' }); if (r1.out.result !== 'ok') continue;
     const r5 = SUC.act({ ...t, trainXp: { 'train:pow': 22 } }, { kind: 'train', stat: 'pow' });
     lo = r1.out.gain.pow; hi = r5.out.gain.pow;
-    ok(r1.state.trainXp['train:pow'] === 1, '訓練を踏んでもトレ経験値が増えない');
+    ok(r1.state.trainXp['train:pow'] === 1, 'トレーニングを踏んでもトレ経験値が増えない');
   }
-  ok(hi > lo, `訓練Lv5 が Lv1 より伸びない: ${lo} → ${hi}`);
+  ok(hi > lo, `トレーニングLv5 が Lv1 より伸びない: ${lo} → ${hi}`);
 }
 
 // ---- 修行にも編成の補正がかかる ----
@@ -353,7 +353,7 @@ ok(near(SUC.failRateOf({ ...base, yosu: { sabori: { visits: 0 } } }) - fFull, 0.
   const note = { ...SUC.newRun({ id: 'note', species: 'Mocchi', aid: 'mua', carry: ['guide'] }), turn: 12, acted: true };
   ok(SUC.issaComes(note) && !SUC.issaComes({ ...note, turn: 11 }), '研究ノートで博士が来ない(ジュニア期の7ターン目から)');
   const lou = SUC.useItem({ ...note, bag: { loupe: 1 } }, 'loupe').state; const ex = SUC.issa(lou, 'stat'); ok(ex.out.win === true, 'ルーペを使ったのに博士の実験が失敗した');
-  // トレーニング得意で訓練の伸びが上がる
+  // トレーニング得意でトレーニングの伸びが上がる
   const t0 = SUC.newRun({ id: 'tg', species: 'Mocchi', aid: 'mua' }); const t1 = SUC.newRun({ id: 'tg', species: 'Mocchi', aid: 'mua', carry: ['mag'] });
   const a0 = SUC.act(t0, { kind: 'train', stat: 'pow' }); const a1 = SUC.act(t1, { kind: 'train', stat: 'pow' });
   if (a0.out.result === 'ok' && a1.out.result === 'ok') ok(a1.out.gain.pow > a0.out.gain.pow, 'トレーニング得意で伸びが上がらない');
@@ -420,7 +420,7 @@ ok(near(SUC.failRateOf({ ...base, yosu: { sabori: { visits: 0 } } }) - fFull, 0.
   ok(SUC.restore(null) === null && SUC.restore([]) === null && SUC.restore({ id: 'x', species: 'NoSuch' }) === null, '壊れた保存を戻せてしまう');
   const bad = SUC.restore({ ...JSON.parse(JSON.stringify(mid)), hp: 'abc', stats: { pow: 5000 }, turn: -3, bond: 'x', techs: ['nope'] });
   ok(bad && bad.hp === bad.hpMax && bad.stats.pow === 999 && bad.turn === 1 && Array.isArray(bad.bond) && bad.techs.length === 0, '壊れた値が既定に戻らない');
-  const v = SUC.peek(s0).cards['train:pow']; ok(v.lv === 1 && v.xp === 0 && v.next === 4, `札の訓練Lv・経験・次までがない: ${JSON.stringify({ lv: v.lv, xp: v.xp, next: v.next })}`);
+  const v = SUC.peek(s0).cards['train:pow']; ok(v.lv === 1 && v.xp === 0 && v.next === 4, `札のトレーニングLv・経験・次までがない: ${JSON.stringify({ lv: v.lv, xp: v.xp, next: v.next })}`);
 }
 
 // ---- シナリオの大会(§4b・8人)・助手のお話の結末と特別な1話 ----
@@ -522,9 +522,9 @@ ok(near(SUC.failRateOf({ ...base, yosu: { sabori: { visits: 0 } } }) - fFull, 0.
   const cup = { kind: 'cup', sys: 'str', star: 1, round: 0 };
   ok(JSON.stringify(SUC.battleBuffs({ ...all, battle: cup })) === JSON.stringify({ A: { guts: 8, hit1: 0.1, crit: 0.08, eva: 0.08, noSulk: true } }), `ひらめきのアシストの上乗せ(いちばん高い段の1つだけ)がずれている: ${JSON.stringify(SUC.battleBuffs({ ...all, battle: cup }))}`);
   ok(JSON.stringify(SUC.battleBuffs({ ...plain, battle: cup })) === '{"A":{"guts":3}}' && SUC.battleBuffs(all) === undefined, '大会の試合のときだけ上乗せが付く になっていない');
-  // 訓練には効かない
+  // トレーニングには効かない
   const tp = SUC.act(plain, { kind: 'train', stat: 'pow' }); const ta = SUC.act(all, { kind: 'train', stat: 'pow' });
-  ok(JSON.stringify(tp.out.gain) === JSON.stringify(ta.out.gain), 'ひらめきのアシスト(型 battle)が訓練に効いている');
+  ok(JSON.stringify(tp.out.gain) === JSON.stringify(ta.out.gain), 'ひらめきのアシスト(型 battle)がトレーニングに効いている');
   // 特別な1話と足し合わせて範囲で切る
   const sp = SUC.markSpecial({ ...SUC.newRun({ id: 'h2', species: 'Mocchi', aid: 'atsu', team: [{ kind: 'raised', species: 'Golem', stats: st, lv: 30, loy: 70, assists: [{ id: 'gatsu', lv: 3 }] }] }), turn: 44 }).state;
   ok(SUC.battleBuffs({ ...sp, battle: { kind: 'summit', round: 0 } }).A.guts === 18, '特別な1話とひらめきのガッツが足し合わさらない');
@@ -608,4 +608,4 @@ if (typeof SUC.awakeOpen === 'function') {
 }
 
 if (errors.length) { console.error(`NG monhero-success-check: ${errors.length}件`); errors.forEach(e => console.error('  - ' + e)); process.exit(1); }
-console.log('OK monhero-success-check: 46ターン・決まった乱数・結果4種・休む/遊ぶ/通院・忠誠・編成とタッグ・イッサ博士・大会の流れ・修行と技・訓練Lv・再戦とスキップ・持ちこみ・月の大会とライバル・見通しと保存から戻す・シナリオの大会とお話・助手の連続イベント・評価の番号とひらめきのアシスト・合体');
+console.log('OK monhero-success-check: 46ターン・決まった乱数・結果4種・休む/遊ぶ/通院・忠誠・編成とタッグ・イッサ博士・大会の流れ・修行と技・トレーニングLv・再戦とスキップ・持ちこみ・月の大会とライバル・見通しと保存から戻す・シナリオの大会とお話・助手の連続イベント・評価の番号とひらめきのアシスト・合体');

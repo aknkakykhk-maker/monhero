@@ -3,7 +3,7 @@
 (function (root) {
   'use strict';
   const rows = [
-    {"id":"scn.momosuke.ep1.narr1","who":"narr","t":"ももすけが、大きな鏡を引きずって訓練場にあらわれた。"},
+    {"id":"scn.momosuke.ep1.narr1","who":"narr","t":"ももすけが、大きな鏡を引きずってトレーニング場にあらわれた。"},
     {"id":"scn.momosuke.ep1.momosuke1","who":"momosuke","e":"wink","t":"{name}、今日は見せ方の練習ね♡ 強いだけじゃ、だれも覚えてくれないんだからw"},
     {"id":"scn.momosuke.ep1.narr2","who":"narr","t":"鏡の前に立たされた{mon}は、きょとんと首をかしげている。"},
     {"id":"scn.momosuke.ep1.momosuke2","who":"momosuke","e":"happy","t":"まって、今の首かしげ、かわいすぎじゃん！！ これ武器になるよ w"},
@@ -52,7 +52,7 @@
     {"id":"scn.momosuke.sp.retire.momosuke1","who":"momosuke","e":"happy","t":"おつかれ、{mon}。……ずっと、ももの推しだよ♡ {name}も、えらかった！！"},
     {"id":"turn.start.great.momosuke1","who":"momosuke","e":"excited","t":"まって、{mon}今日キラッキラじゃん！！ 重いのいけるっしょ w"},
     {"id":"turn.start.great.momosuke2","who":"momosuke","e":"happy","t":"いい顔してる♡ こういう日に詰めとくと、あとでモテるよ w"},
-    {"id":"turn.start.good.momosuke1","who":"momosuke","e":"happy","t":"調子いいじゃん。ふつうに訓練でいいよ♡"},
+    {"id":"turn.start.good.momosuke1","who":"momosuke","e":"happy","t":"調子いいじゃん。ふつうにトレーニングでいいよ♡"},
     {"id":"turn.start.good.momosuke2","who":"momosuke","e":"normal","t":"{mon}、動きいい感じ！！ このままいこ"},
     {"id":"turn.start.normal.momosuke1","who":"momosuke","e":"normal","t":"んー、ふつう w {name}、どうする？"},
     {"id":"turn.start.normal.momosuke2","who":"momosuke","e":"normal","t":"まあまあの日ね。地味な日の積み重ねが、本番でかわいく効くんだよ♡"},
@@ -238,7 +238,7 @@
     {"id":"item.guide.momosuke1","who":"momosuke","e":"normal","t":"博士の書類じゃん w 持ってたら、そのうち取りに来るでしょ"},
     {"id":"item.loupe.momosuke1","who":"momosuke","e":"wink","t":"ほら博士、ルーペ♡ これで失敗したら言い訳できないよ w"},
     {"id":"item.misanga.momosuke1","who":"momosuke","e":"happy","t":"ミサンガかわいい！！ にぎやかな育成になりそ♡"},
-    {"id":"item.weekly.momosuke1","who":"momosuke","e":"normal","t":"週刊!トレーニング読んどいた w 訓練のコツ、ばっちり"},
+    {"id":"item.weekly.momosuke1","who":"momosuke","e":"normal","t":"週刊!トレーニング読んどいた w トレーニングのコツ、ばっちり"},
     {"id":"item.hachimaki.momosuke1","who":"momosuke","e":"excited","t":"ハチマキ似合う！！ 修行がんばったら、もっと似合うよ♡"},
     {"id":"item.omamori.momosuke1","who":"momosuke","e":"happy","t":"縁結びのお守り！！ ファン、もっと増えちゃうじゃん♡"},
     {"id":"item.kibidango.momosuke1","who":"momosuke","e":"happy","t":"モモのキビダンゴ……名前、ももっぽくてかわいい w 体力もばっちり"},

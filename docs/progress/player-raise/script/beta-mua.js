@@ -9,8 +9,8 @@
 //   tut.lock               … 準備中の助手(みゅあ以外)を押したとき
 //   tut.prep               … 育成の準備の画面(育てるモンスター・編成・持ちこみ)をはじめて開いたとき
 //   tut.turn               … はじめてのターン(期とターン・毎ターンひとつ選ぶ)
-//   tut.train              … 訓練の札をはじめて見たとき
-//   tut.result             … はじめての訓練の結果(叱る・褒める)
+//   tut.train              … トレーニングの札をはじめて見たとき
+//   tut.result             … はじめてのトレーニングの結果(叱る・褒める)
 //   tut.rest               … 体力がはじめて半分を下回ったとき(休む・遊ぶ・通院)
 //   tut.shugyo             … 修行チケットをはじめて持ったとき
 //   tut.cup                … はじめて大会の札が並んだとき(デビュー戦の前)
@@ -26,8 +26,8 @@ const MONSUC_SCRIPT_BETA_MUA = Object.freeze([
   { id:'scn.mua.beta.open.mua1', who:'mua', e:'excited', t:'{name}、見て見て！ 新しい育成場ができたんだって！ 名前は「モンヒロサクセス」✨' },
   { id:'scn.mua.beta.open.mua1b', who:'mua', e:'excited', bond:[1,2], t:'{name}、見てください！ 新しい育成場ができたそうです。名前は「モンヒロサクセス」です！' },
   { id:'scn.mua.beta.open.narr2', who:'narr', t:'チラシには、デビューしたてのモンスターが、ヒーローの頂を目指して駆けていく絵が描かれている。' },
-  { id:'scn.mua.beta.open.mua2', who:'mua', e:'happy', t:'モンスターを1体、デビューから頂点までじっくり育てるとこなの。訓練して、大会に出て、いっしょに強くなってくやつ！' },
-  { id:'scn.mua.beta.open.mua2b', who:'mua', e:'happy', bond:[1,2], t:'モンスターを1体、デビューから頂点まで、じっくり育てる場所なんです。訓練をして、大会に出て、いっしょに強くなっていきます。' },
+  { id:'scn.mua.beta.open.mua2', who:'mua', e:'happy', t:'モンスターを1体、デビューから頂点までじっくり育てるとこなの。トレーニングして、大会に出て、いっしょに強くなってくやつ！' },
+  { id:'scn.mua.beta.open.mua2b', who:'mua', e:'happy', bond:[1,2], t:'モンスターを1体、デビューから頂点まで、じっくり育てる場所なんです。トレーニングをして、大会に出て、いっしょに強くなっていきます。' },
   { id:'scn.mua.beta.open.mua3', who:'mua', e:'normal', t:'あたし、いつもは横で応援してるだけぢゃん？ 今度はいちばん最初から、{name}といっしょに育ててみたいなって' },
   { id:'scn.mua.beta.open.mua3b', who:'mua', e:'normal', bond:[1,2], t:'あたし、いつもは横で応援しているだけでした。今度はいちばん最初から、{name}といっしょに育ててみたいんです。' },
   { id:'scn.mua.beta.open.mua4', who:'mua', e:'wink', t:'だから助手の一番乗り、手あげてきちゃったｗ' },
@@ -66,30 +66,30 @@ const MONSUC_SCRIPT_BETA_MUA = Object.freeze([
   // 育成の準備
   { id:'tut.prep.mua1', who:'mua', e:'happy', t:'まずは育てるモンスターを1体えらぼ！ ベースモンか、合体で生まれたモンスターから選べるよ' },
   { id:'tut.prep.mua1b', who:'mua', e:'happy', bond:[1,2], t:'まずは、育てるモンスターを1体選びましょう。ベースモンか、合体で生まれたモンスターから選べます。' },
-  { id:'tut.prep.mua2', who:'mua', e:'normal', t:'次は編成。ここに入れたマスモンが、訓練を手伝いに来てくれるの' },
-  { id:'tut.prep.mua2b', who:'mua', e:'normal', bond:[1,2], t:'次は編成です。ここに入れたマスモンが、訓練を手伝いに来てくれます。' },
+  { id:'tut.prep.mua2', who:'mua', e:'normal', t:'次は編成。ここに入れたマスモンが、トレーニングを手伝いに来てくれるの' },
+  { id:'tut.prep.mua2b', who:'mua', e:'normal', bond:[1,2], t:'次は編成です。ここに入れたマスモンが、トレーニングを手伝いに来てくれます。' },
   { id:'tut.prep.mua3', who:'mua', e:'wink', t:'持ちこみの物も選べるけど、数に限りがあるから、よーく考えてね♪' },
   { id:'tut.prep.mua3b', who:'mua', e:'wink', bond:[1,2], t:'持ちこみの物も選べますが、数に限りがあるので、よく考えてくださいね。' },
 
   // 期とターン
   { id:'tut.turn.mua1', who:'mua', e:'happy', t:'育成はターンで進むよ。デビュー期からはじまって、最後の期まで駆け抜けるの！' },
   { id:'tut.turn.mua1b', who:'mua', e:'happy', bond:[1,2], t:'育成は、ターンで進みます。デビュー期からはじまって、最後の期まで駆け抜けます。' },
-  { id:'tut.turn.mua2', who:'mua', e:'normal', t:'毎ターン、訓練・休む・遊ぶ・修行・大会から、ひとつ選んでね。いまの期とあと何ターンかは、画面の上に出てるよ' },
-  { id:'tut.turn.mua2b', who:'mua', e:'normal', bond:[1,2], t:'毎ターン、訓練・休む・遊ぶ・修行・大会から、ひとつ選びます。いまの期と残りのターンは、画面の上に出ています。' },
+  { id:'tut.turn.mua2', who:'mua', e:'normal', t:'毎ターン、トレーニング・休む・遊ぶ・修行・大会から、ひとつ選んでね。いまの期とあと何ターンかは、画面の上に出てるよ' },
+  { id:'tut.turn.mua2b', who:'mua', e:'normal', bond:[1,2], t:'毎ターン、トレーニング・休む・遊ぶ・修行・大会から、ひとつ選びます。いまの期と残りのターンは、画面の上に出ています。' },
   { id:'tut.turn.mua3', who:'mua', e:'wink', t:'1ターンごとに保存されるから、途中でやめても続きからできるよ (｡ ˘-˘)ｳﾝｳﾝ' },
   { id:'tut.turn.mua3b', who:'mua', e:'wink', bond:[1,2], t:'1ターンごとに保存されるので、途中でやめても続きから遊べます。' },
 
-  // 訓練
-  { id:'tut.train.mua1', who:'mua', e:'normal', t:'訓練は6つ。選んだ能力がぐんっと伸びて、ほかの能力もちょっとずつ上がるよ' },
-  { id:'tut.train.mua1b', who:'mua', e:'normal', bond:[1,2], t:'訓練は6つあります。選んだ能力が大きく伸びて、ほかの能力も少しずつ上がります。' },
+  // トレーニング
+  { id:'tut.train.mua1', who:'mua', e:'normal', t:'トレーニングは6つ。選んだ能力がぐんっと伸びて、ほかの能力もちょっとずつ上がるよ' },
+  { id:'tut.train.mua1b', who:'mua', e:'normal', bond:[1,2], t:'トレーニングは6つあります。選んだ能力が大きく伸びて、ほかの能力も少しずつ上がります。' },
   { id:'tut.train.mua2', who:'mua', e:'happy', t:'札に顔が並んでるのは、手伝いに来てくれた編成のマスモン！ たくさん来てる札ほど、よく伸びるの' },
   { id:'tut.train.mua2b', who:'mua', e:'happy', bond:[1,2], t:'札に顔が並んでいるのは、手伝いに来てくれた編成のマスモンです。たくさん来ている札ほど、よく伸びます。' },
-  { id:'tut.train.mua3', who:'mua', e:'excited', t:'同じ訓練を続けると訓練Lvが上がるし、仲良くなったマスモンとは友情タッグで、もっと伸びるんだって！' },
-  { id:'tut.train.mua3b', who:'mua', e:'excited', bond:[1,2], t:'同じ訓練を続けると訓練Lvが上がります。仲良くなったマスモンとは友情タッグになって、もっと伸びるそうです。' },
-  { id:'tut.train.mua4', who:'mua', e:'troubled', t:'でも訓練すると体力が減るから、そこだけ見ててあげてね' },
-  { id:'tut.train.mua4b', who:'mua', e:'troubled', bond:[1,2], t:'ただ、訓練をすると体力が減ります。そこだけは見ていてあげてくださいね。' },
+  { id:'tut.train.mua3', who:'mua', e:'excited', t:'同じトレーニングを続けるとトレーニングLvが上がるし、仲良くなったマスモンとは友情タッグで、もっと伸びるんだって！' },
+  { id:'tut.train.mua3b', who:'mua', e:'excited', bond:[1,2], t:'同じトレーニングを続けるとトレーニングLvが上がります。仲良くなったマスモンとは友情タッグになって、もっと伸びるそうです。' },
+  { id:'tut.train.mua4', who:'mua', e:'troubled', t:'でもトレーニングすると体力が減るから、そこだけ見ててあげてね' },
+  { id:'tut.train.mua4b', who:'mua', e:'troubled', bond:[1,2], t:'ただ、トレーニングをすると体力が減ります。そこだけは見ていてあげてくださいね。' },
 
-  // 訓練の結果と叱る・褒める
+  // トレーニングの結果と叱る・褒める
   { id:'tut.result.mua1', who:'mua', e:'surprise', t:'結果が出たね！ 大成功・成功・失敗・サボりの4つがあるの' },
   { id:'tut.result.mua1b', who:'mua', e:'surprise', bond:[1,2], t:'結果が出ましたね。大成功・成功・失敗・サボりの4つがあります。' },
   { id:'tut.result.mua2', who:'mua', e:'normal', t:'結果のあとは、叱るか褒めるかを1回選べるよ。選ばなくても大丈夫！' },
@@ -98,8 +98,8 @@ const MONSUC_SCRIPT_BETA_MUA = Object.freeze([
   { id:'tut.result.mua3b', who:'mua', e:'wink', bond:[1,2], t:'どちらが正解、ということはありません。甘えん坊にするか、きりっとさせるかは、{name}の育て方しだいです。' },
 
   // 休む・遊ぶ・通院
-  { id:'tut.rest.mua1', who:'mua', e:'troubled', t:'{mon}、ちょっと疲れてきたかも💦 体力が減ってると、訓練で失敗しやすくなるの' },
-  { id:'tut.rest.mua1b', who:'mua', e:'troubled', bond:[1,2], t:'{mon}、少し疲れてきたみたいです。体力が減っていると、訓練で失敗しやすくなります。' },
+  { id:'tut.rest.mua1', who:'mua', e:'troubled', t:'{mon}、ちょっと疲れてきたかも💦 体力が減ってると、トレーニングで失敗しやすくなるの' },
+  { id:'tut.rest.mua1b', who:'mua', e:'troubled', bond:[1,2], t:'{mon}、少し疲れてきたみたいです。体力が減っていると、トレーニングで失敗しやすくなります。' },
   { id:'tut.rest.mua2', who:'mua', e:'normal', t:'そんなときは「休む」でしっかり回復！ 「遊ぶ」は回復は少しだけど、気分が晴れて甘えてくれるようになるよ' },
   { id:'tut.rest.mua2b', who:'mua', e:'normal', bond:[1,2], t:'そんなときは「休む」で回復しましょう。「遊ぶ」は回復が少しですが、気分が晴れて、甘えてくれるようになります。' },
   { id:'tut.rest.mua3', who:'mua', e:'happy', t:'悪いようすが付いちゃったら「通院」で治せるからね。無理させないのがいちばん♪' },
