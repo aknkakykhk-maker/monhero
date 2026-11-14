@@ -66,7 +66,8 @@
 | `mh_assistant_peer_quarrel_v1` | object | 助手どうしのけんか→仲直り(2026-11-07)。`{ pending: { id, pair, at } \| null, done: [けんかid] }`。pending は言い合いを見て、まだ仲直りを見ていないもの(次に HOME を開いたとき仲直りが流れる)。done は見たけんか(同じけんかは2度出ない) |
 | `mh_assistant_peer_special2_seen_v1` | array | 仲良し度 Lv10 の「2人の特別なお話・その2」を見たペア。`[ペア]`。Lv5 の記録(`mh_assistant_peer_special_seen_v1`)とは別に持つ |
 | `mh_assistant_market_perk_v1` | object / 無し | 助手がマーケットにいるときの「今日のおすすめ品1割引き」を使ったか(2026-11-11)。`{ day:'YYYY-MM-DD'(朝4時区切りの日), used:true }`。買えたときだけ書き、日が変われば古い日付は無視される。読むときは `normalizeAssistantMarketPerk` を通す(壊れていれば未使用)。既存のキーは触らない |
-| `mh_assistant_life_ui_v2` | boolean / 無いときは新UI(2026-11-11 から。それまでは `false`) | 助手ライフの画面の切替(設定の「助手ライフの画面」)。`true` で新UI、`false` で前の画面。押したときだけ書く・消さない。助手の進行・報酬・親密度には影響しない |
+| `mh_assistant_life_ui_v2` | boolean / 無いときは新UI(2026-11-11 から。それまでは `false`) | 助手ライフの画面の切替(設定の「助手ライフの画面」)。`true` で新UI、`false` で前の画面。押したときだけ書く(例外: 下の移行の1回)・消さない。助手の進行・報酬・親密度には影響しない |
+| `mh_assistant_life_ui_v2_default_v1` | `true` / 無いとき未移行 | 2026-11-14 の一度きりの移行の印。`mh_assistant_life_ui_v2` が `false` だった人を一度だけ新UIにし、そのあとは設定で選んだ「前の画面」を守る。消さない・変えない |
 | `mh_assistant_life_guide_seen_v1` | boolean / `false` | 助手ライフ(新UI)で「初めて開いた人への1枚」を見たか(2026-11-11)。`true` になると1枚は出なくなり、見守る札の光も止まる。無い・壊れているときは「まだ見ていない」。ほかの保存は読まない・変えない |
 | `mh_assistant_life_profile_seen_v1` | object / `normalizeAssistantLifeProfileSeen` | 助手紹介(2026-11-11)の NEW の印。`{ [助手id]: { n: 見た時点の数(分かった好み+聞ける台詞) } }`。いまの数がこれより多い助手に NEW を付ける。はじめて一覧を開いたときは、いまの数を控えるだけ。壊れた値・無い助手は控え直す |
 | `mh_assistant_life_daily_v1` | object / `{day:'',heard:[],days:[],claims:0}` | 助手ライフ(新UI)の「時間帯のできごと」(2026-11-11)。`heard` はその日に聞いた時間帯、`days` は聞いた日(最大7・とびとびでよい)、`claims` は7日で🧺おやつバスケットを受け取った回数。7日たまり、持ち物へ足せたときだけ `days` を空にして `claims` を1足す(二重に渡さない)。無い・壊れているときは全部空。ほかの保存(`mh_owned_items` は道具1個を足すだけ)は消さない |

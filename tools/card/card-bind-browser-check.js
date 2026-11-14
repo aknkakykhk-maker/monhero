@@ -77,7 +77,7 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     await page.getByRole('button', { name: 'トップ画面へ進む' }).click({ timeout: 30000 });
     await page.getByRole('button', { name: 'モンヒロバトル', exact: true }).waitFor({ timeout: 30000 });
     for (let i = 0; i < 6; i++) {
-      const btn = page.getByRole('button', { name: /受け取る|閉じる|はじめる|OK/ }).first();
+      const btn = page.getByRole('button', { name: /受け取る|閉じる|(?:始|はじ)める|OK/ }).first();
       if (await btn.count() === 0 || !(await btn.isVisible().catch(() => false))) break;
       await btn.dispatchEvent('click').catch(() => {});
       await page.waitForTimeout(250);

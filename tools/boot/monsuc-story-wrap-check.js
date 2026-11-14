@@ -88,7 +88,7 @@ const letters = (t) => (t.match(/[ぁ-ゖァ-ヶ一-龯A-Za-z0-9０-９]/g) || [
       let appeared = false;
       for (let i = 0; i < 80 && !appeared; i++) {
         appeared = await story.count() > 0; if (appeared) break;
-        const bs = page.getByRole('button', { name: /受け取る|閉じる|はじめる|OK|スキップ/ });
+        const bs = page.getByRole('button', { name: /受け取る|閉じる|(?:始|はじ)める|OK|スキップ/ });
         for (let k = 0, n = await bs.count(); k < n; k++) { const b = bs.nth(k); if (await b.isVisible().catch(() => false)) { await b.dispatchEvent('click').catch(() => {}); break; } }
         await page.waitForTimeout(500);
       }
