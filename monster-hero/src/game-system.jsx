@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: bc988435e36f23f8
+// generated-sha256: dfb99d72427364fd
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -85188,7 +85188,7 @@ const msxNormBoxMon = (m) => {
     id: m.id.slice(0, 64), species: m.species.slice(0, 24), nick: msxStr(m.nick, 8), colors: msxColors(m.colors),
     st, loy: Math.max(0, Math.min(100, msxNum(m.loy, 0))), pop: Math.max(0, Math.min(100, msxNum(m.pop, 0))), lv: Math.max(1, Math.min(99, msxNum(m.lv, 1))),
     rank: msxStr(m.rank, 4, ''), score: msxNum(m.score, 0), raised: m.raised !== false,
-    assists: Array.isArray(m.assists) ? m.assists.filter(msxIsObj).slice(0, 8) : [], // 第3版は8種類まで(古い子は4つ・形はそのまま。読み替えは芯の memberOf) masteries: tm.mast,
+    assists: Array.isArray(m.assists) ? m.assists.filter(msxIsObj).slice(0, 8) : [], masteries: tm.mast, // assists は第3版で8種類まで(古い子は4つ・形はそのまま。読み替えは芯の memberOf)
     coach: msxStr(m.coach, 16), endAt: msxNum(m.endAt, 0),
     aptUp: [0, 1, 2, 3].map((i) => Math.max(0, Math.min(11, Math.round(msxNum(Array.isArray(m.aptUp) ? m.aptUp[i] : 0, 0))))),
     aptBase: [0, 1, 2, 3].map((i) => Math.max(0, Math.min(11, Math.round(msxNum(Array.isArray(m.aptBase) ? m.aptBase[i] : 0, 0))))),

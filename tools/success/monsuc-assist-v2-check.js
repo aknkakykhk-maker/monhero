@@ -181,5 +181,16 @@ const evRate = (as) => { let n = 0, m = 0; for (let t = 0; t < 800; t++) { const
 const y0 = evRate([]); const y5 = evRate([{ id: 'yobimizu', lv: 5 }]);
 check('⑧ 出来事の呼び水: 出来事が起きやすくなる(段5 で +15点 ほど)', y5 - y0 > 0.09 && y5 - y0 < 0.21, `${Math.round(y0 * 100)}% → ${Math.round(y5 * 100)}%`);
 
+// ⑨ 第3版で書き換えた行で、コメントの後ろに処理が入り込んでいない(2026-11-14 ミハリ6の指摘: 熟練の保存と修行のストレスが消えていた)
+{
+  const fs = require('fs');
+  const store = fs.readFileSync(path.join(__dirname, '..', '..', 'monster-hero', 'src', 'parts', '56-monhero-success-store.jsx'), 'utf8');
+  const line = store.split('\n').find((l) => l.includes('assists: Array.isArray(m.assists)')) || '';
+  check('⑨ 保存枠の読み込みで masteries がコメントに飲まれていない', /masteries: tm\.mast,/.test(line.split('//')[0]));
+  const core = fs.readFileSync(path.join(__dirname, '..', '..', 'monster-hero', 'data', 'monhero-success.js'), 'utf8');
+  const sh = core.split('\n').find((l) => l.includes("stayNum(s, 'shugyohp')")) || '';
+  check('⑨ 修行のストレス(addStress)がコメントに飲まれていない', /addStress\(s, \(SHUGYO\.stress/.test(sh.split('//')[0]));
+}
 console.log(ng ? `\n${ng} 件 NG` : '\nすべて OK');
 process.exit(ng ? 1 : 0);
+

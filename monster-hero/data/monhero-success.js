@@ -904,7 +904,7 @@
         });
         out.stages = stages;
         const tired = sup ? 2 : 1; // 超修行は疲れも2回分
-        s.hp = clamp(Math.round(s.hp - SHUGYO.hp * R.hp * tired * (1 - stayNum(s, 'shugyohp') / 100)), 0, s.hpMax); // 🍃修行の体力消費ダウン addStress(s, (SHUGYO.stress * pol.stress + R.stress) * tired);
+        s.hp = clamp(Math.round(s.hp - SHUGYO.hp * R.hp * tired * (1 - stayNum(s, 'shugyohp') / 100)), 0, s.hpMax); addStress(s, (SHUGYO.stress * pol.stress + R.stress) * tired); // 🍃修行の体力消費ダウン
         s.techs.forEach(t => { s.mastery[t] = clamp(num(s.mastery[t]) + Math.round(SHUGYO.mastery * boost), 0, 100); });
         // 技のくじ: 選んだ技それぞれ(超修行なら2つとも覚えることがある)。外した技は、その技だけ次から +SHUGYO.miss(技ごと)
         const tries = []; const got = [];
