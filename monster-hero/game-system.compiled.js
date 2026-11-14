@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b8d85e4c0cc88274
+// source-sha256: d54522b09316e839
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -169645,6 +169645,29 @@ function MsxSkillArt({
 }
 const MSX_DIST_NAMES = ['零', '近', '中', '遠'];
 const MSX_TG_COLS = Object.freeze([3, 2, 1, 0]);
+function MsxTechGrid({
+  all,
+  cell,
+  className
+}) {
+  const at = (r, d) => all.filter(t => (Number(t.rank) || 1) === r && Array.isArray(t.dist) && t.dist.includes(d));
+  return React.createElement("div", {
+    className: `msx-md-tg${className ? ` ${className}` : ''}`
+  }, MSX_TG_COLS.map(d => React.createElement("span", {
+    key: `h${d}`,
+    className: `tgh d${d}`
+  }, MSX_DIST_NAMES[d])), [1, 2, 3, 4, 5].map(r => MSX_TG_COLS.map(d => {
+    const alts = at(r, d);
+    const k = `${r}-${d}`;
+    return alts.length ? React.createElement(React.Fragment, {
+      key: k
+    }, cell(alts, r, d, k)) : React.createElement("span", {
+      key: k,
+      className: "no",
+      "aria-hidden": "true"
+    }, "×");
+  })));
+}
 const msxTechHow = (t, all = []) => {
   const L = t && t.learn;
   if (!L) return '修行で覚える';
@@ -169794,52 +169817,43 @@ function MsxMonDetail({
     className: "msx-md-cap"
   }, "技", React.createElement("small", null, Array.isArray(known) ? '覚えた技' : '初めから使える技', " ", all.filter(has).length, "/", all.length)), React.createElement("div", {
     className: "msx-md-tw"
-  }, React.createElement("div", {
-    className: "msx-md-tg"
-  }, MSX_TG_COLS.map(d => React.createElement("span", {
-    key: `h${d}`,
-    className: `tgh d${d}`
-  }, MSX_DIST_NAMES[d])), tgLines.map(r => MSX_TG_COLS.map(d => {
-    const alts = tgAt(r, d);
-    const cellK = `${r}-${d}`;
-    const t = alts.find(has) || alts.find(x => pick && pick.sel && pick.sel[cellK] === x.id) || alts[0];
-    if (!t) return React.createElement("span", {
-      key: `${r}-${d}`,
-      className: "no",
-      "aria-hidden": "true"
-    }, "×");
-    const got = has(t);
-    const canAlt = !!pick && alts.length > 1;
-    return React.createElement("button", {
-      type: "button",
-      key: `${r}-${d}`,
-      className: `tc ${t.kind === 'wise' ? 'wise' : 'pow'}${got ? ' got' : ' tg-not'}${tech && tech.id === t.id ? ' on' : ''}`,
-      "data-msx-tech": t.id,
-      "data-msx-cell": cellK,
-      "aria-label": `${t.name}${got ? '' : '(まだ覚えていない)'}${canAlt ? '(選べる技が' + alts.length + 'つ)' : ''}`,
-      onClick: () => setPickT(t.id)
-    }, React.createElement("span", {
-      className: "ti",
-      "aria-hidden": "true"
-    }, React.createElement(MsxSkillArt, {
-      t: t,
-      uid: `${r}${d}`
-    })), React.createElement("span", {
-      className: `tg-rk rk${Math.max(1, Math.min(5, Number(t.rank) || 1))}`,
-      "aria-hidden": "true"
-    }, Math.max(1, Math.min(5, Number(t.rank) || 1))), React.createElement("span", {
-      className: "g"
-    }, t.guts), canAlt ? React.createElement("span", {
-      className: "tg-alt",
-      role: "button",
-      "aria-label": "覚える技を選ぶ",
-      "data-msx-alt": cellK,
-      onClick: e => {
-        e.stopPropagation();
-        setPickCell(cellK);
-      }
-    }, "⇄") : null);
-  }))), tech ? React.createElement("div", {
+  }, React.createElement(MsxTechGrid, {
+    all: all,
+    cell: (alts, r, d, cellK) => {
+      const t = alts.find(has) || alts.find(x => pick && pick.sel && pick.sel[cellK] === x.id) || alts[0];
+      const got = has(t);
+      const canAlt = !!pick && alts.length > 1;
+      return React.createElement("button", {
+        type: "button",
+        key: `${r}-${d}`,
+        className: `tc ${t.kind === 'wise' ? 'wise' : 'pow'}${got ? ' got' : ' tg-not'}${tech && tech.id === t.id ? ' on' : ''}`,
+        "data-msx-tech": t.id,
+        "data-msx-cell": cellK,
+        "aria-label": `${t.name}${got ? '' : '(まだ覚えていない)'}${canAlt ? '(選べる技が' + alts.length + 'つ)' : ''}`,
+        onClick: () => setPickT(t.id)
+      }, React.createElement("span", {
+        className: "ti",
+        "aria-hidden": "true"
+      }, React.createElement(MsxSkillArt, {
+        t: t,
+        uid: `${r}${d}`
+      })), React.createElement("span", {
+        className: `tg-rk rk${Math.max(1, Math.min(5, Number(t.rank) || 1))}`,
+        "aria-hidden": "true"
+      }, Math.max(1, Math.min(5, Number(t.rank) || 1))), React.createElement("span", {
+        className: "g"
+      }, t.guts), canAlt ? React.createElement("span", {
+        className: "tg-alt",
+        role: "button",
+        "aria-label": "覚える技を選ぶ",
+        "data-msx-alt": cellK,
+        onClick: e => {
+          e.stopPropagation();
+          setPickCell(cellK);
+        }
+      }, "⇄") : null);
+    }
+  }), tech ? React.createElement("div", {
     className: "msx-md-td"
   }, React.createElement("div", {
     className: "tn"
@@ -174665,6 +174679,13 @@ const MSX_R3_CSS = `
 .msx .r3 .q-col{display:flex;flex-direction:column;gap:5px;min-width:0}
 .msx .r3 .q-col h4{text-align:center;font-size:12px;font-weight:900;padding:2px 0;margin:0;border-radius:8px;background:#ffffff1a}
 .msx .r3 .q-card{border-radius:10px;padding:5px 3px;text-align:center;font-size:10.5px;font-weight:800;line-height:1.25;background:#ffffff10;border:1px solid #ffffff22;color:#fff;min-height:52px;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:1px;min-width:0}
+/* 修行の「覚えられる技」は詳細の技の升目と同じ部品(MsxTechGrid)。状態は升の枠で出す: 覚えられる=緑・選んだ=金・覚えた=済・🔒=暗い */
+.msx .msx-md-tg.q{grid-template-columns:repeat(4,minmax(0,64px));gap:5px;margin:2px auto 0}
+.msx .msx-md-tg.q .tc.ok{box-shadow:0 0 0 2px #22c55e,0 0 8px #22c55e88}
+.msx .msx-md-tg.q .tc.sel{box-shadow:0 0 0 3px #fde047,0 0 12px #fde047aa;transform:translateY(-1px)}
+.msx .msx-md-tg.q .tc.lock .ti{filter:brightness(.5) saturate(.55)}
+.msx .msx-md-tg.q .tc .qb{position:absolute;right:2px;bottom:2px;min-width:22px;padding:0 3px;border-radius:5px;background:rgba(18,12,6,.86);color:#fff;font-size:10px;font-weight:900;line-height:13px;height:13px;text-align:center;z-index:2}
+.msx .msx-md-tg.q .tc.ok .qb{background:#16a34a}.msx .msx-md-tg.q .tc.sel .qb{background:#ca8a04;color:#fff}.msx .msx-md-tg.q .tc.got:not(.ok):not(.sel) .qb{background:#334155;color:#cbd5e1}
 .msx .r3 .q-card .nm{font-size:10px;letter-spacing:-.02em;text-wrap:balance}
 .msx .r3 .q-card .rk{font-size:9px;color:#cbd5e1}
 .msx .r3 .q-card .p{font-size:15px;font-weight:900;color:#86efac}
@@ -178079,10 +178100,6 @@ function MsxR3Shugyo({
     }));
     return out;
   };
-  const cols = MSX_R3_DIST.map((dn, d) => ({
-    dn,
-    list: all.filter(t => Math.min(...(Array.isArray(t.dist) && t.dist.length ? t.dist : [1])) === d).sort((x, y) => (rankOf[x.id] || x.rank || 5) - (rankOf[y.id] || y.rank || 5))
-  }));
   const say = msxPh(want.length >= 2 ? '「2つで｜超修行!｜2つとも｜覚えることも｜あるよ。｜能力の上がりも｜疲れも｜2回分だからね」' : want.length === 1 ? superWhy ? `「この技で｜いこう!｜(${superWhy}から、｜技は｜1つだけ)」` : '「いいね!｜もう1つ選ぶと｜超修行に｜なるよ」' : '「覚えたい技を｜1つ選んでね。｜2つ選ぶと｜超修行!｜選ばなくても｜能力は｜上がるよ」');
   const slot = id => {
     if (!id) return React.createElement("div", {
@@ -178105,7 +178122,10 @@ function MsxR3Shugyo({
       className: "q-slot on msx-kp",
       onClick: () => toggle(id),
       "data-msx-r3-qslot": id
-    }, React.createElement("small", null, MSX_R3_DIST[Math.min(...(t.dist || [1]))], "・R", rankOf[id] || '-'), React.createElement("b", {
+    }, React.createElement("small", null, MSX_R3_DIST[Math.min(...(t.dist || [1]))], "・R", rankOf[id] || '-', typeof SUC.techAptAdd === 'function' ? ` ・適性 ${(() => {
+      const a = SUC.techAptAdd(s0, t);
+      return a ? `${a > 0 ? '+' : ''}${a}%` : '±0';
+    })()}` : ''), React.createElement("b", {
       className: "n"
     }, t.name), React.createElement("b", {
       className: "r",
@@ -178170,35 +178190,48 @@ function MsxR3Shugyo({
     "data-msx-r3-techlist": true
   }, React.createElement("h3", null, React.createElement("i", null, "3"), "覚えられる技", React.createElement("span", {
     className: "tk"
-  }, "緑の札をタップ")), all.length ? React.createElement("div", {
-    className: "q-grid"
-  }, cols.map(c => React.createElement("div", {
-    key: c.dn,
-    className: "q-col"
-  }, React.createElement("h4", null, c.dn), c.list.map(t => {
-    const got = (s0.techs || []).includes(t.id);
-    const ok = rateOf[t.id] != null;
-    const sel = want.includes(t.id);
-    const cs = got || ok ? [] : condsOf(t);
-    const ng = cs.find(x => !x.ok);
-    return React.createElement("button", {
-      type: "button",
-      key: t.id,
-      className: `q-card ${sel ? 'sel' : got ? 'got' : ok ? 'ok' : 'lock'}`,
-      onClick: () => ok && !got ? toggle(t.id) : !got ? setLockT(t) : null,
-      "data-msx-r3-tech": t.id
-    }, React.createElement("span", {
-      className: "nm msx-kp"
-    }, String(t.name || '').length >= 7 ? React.createElement(React.Fragment, null, String(t.name).slice(0, Math.ceil(String(t.name).length / 2)), React.createElement("wbr", null), String(t.name).slice(Math.ceil(String(t.name).length / 2))) : t.name), React.createElement("span", {
-      className: "rk"
-    }, "R", rankOf[t.id] || t.rank || '-'), got ? React.createElement("span", {
-      className: "p g"
-    }, "覚えた") : ok ? React.createElement("span", {
-      className: "p"
-    }, Math.round(rateOf[t.id] * 100), "%") : React.createElement("span", {
-      className: "lk msx-kp"
-    }, "🔒 ", full ? '技がいっぱい' : ng ? ng.short : '条件あり'));
-  })))) : React.createElement("div", {
+  }, "緑の札をタップ")), all.length ? React.createElement(MsxTechGrid, {
+    className: "q",
+    all: all,
+    cell: (alts, r, d, cellK) => {
+      const gotOf = x => (s0.techs || []).includes(x.id);
+      const pk = s0.techPick && typeof s0.techPick === 'object' ? s0.techPick[cellK] : null;
+      const t = alts.find(gotOf) || alts.find(x => x.id === pk) || alts[0];
+      const got = gotOf(t);
+      const ok = rateOf[t.id] != null;
+      const sel = want.includes(t.id);
+      const cs = got || ok ? [] : condsOf(t);
+      const ng = cs.find(x => !x.ok);
+      const state = sel ? 'sel' : got ? 'got' : ok ? 'ok' : 'lock';
+      const rk = Math.max(1, Math.min(5, Number(t.rank) || 1));
+      return React.createElement("button", {
+        type: "button",
+        className: `tc ${t.kind === 'wise' ? 'wise' : 'pow'} q-cell ${state}${got || ok || sel ? ' got' : ' tg-not'}`,
+        "data-msx-r3-tech": t.id,
+        "data-msx-cell": cellK,
+        "aria-label": `${t.name}${got ? '(覚えた)' : sel ? '(選んだ)' : ok ? `(覚えられる ${Math.round(rateOf[t.id] * 100)}%)` : full ? '(技がいっぱい)' : ng ? `(${ng.short})` : '(条件あり)'}`,
+        onClick: () => ok && !got ? toggle(t.id) : !got ? setLockT(t) : null
+      }, React.createElement("span", {
+        className: "ti",
+        "aria-hidden": "true"
+      }, React.createElement(MsxSkillArt, {
+        t: t,
+        uid: `q${r}${d}`
+      })), React.createElement("span", {
+        className: `tg-rk rk${rk}`,
+        "aria-hidden": "true"
+      }, rk), got ? React.createElement("span", {
+        className: "g qb",
+        "aria-hidden": "true"
+      }, "済") : ok ? React.createElement("span", {
+        className: "g qb",
+        "aria-hidden": "true"
+      }, Math.round(rateOf[t.id] * 100), "%") : React.createElement("span", {
+        className: "g qb",
+        "aria-hidden": "true"
+      }, "🔒"));
+    }
+  }) : React.createElement("div", {
     className: "q-note msx-kp"
   }, "このモンスターの技の表がまだありません(能力だけ上がる)"), React.createElement("div", {
     className: "q-note msx-kp"

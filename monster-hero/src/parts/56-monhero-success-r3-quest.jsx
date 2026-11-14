@@ -102,7 +102,6 @@ function MsxR3Shugyo({ run, setRun, v, ev, onBack, onPause }) {
     Object.entries(L.need || {}).forEach(([id, n]) => out.push({ k: `nd-${id}`, short: `${techName(id)} 熟練${n}で`, long: msxPh(`「${techName(id)}」の熟練が｜${n} 以上｜${(s0.techs || []).includes(id) ? `(いま ${(s0.mastery || {})[id] || 0})` : '(まだ覚えていない)'}`), ok: ((s0.mastery || {})[id] || 0) >= n }));
     return out;
   };
-  const cols = MSX_R3_DIST.map((dn, d) => ({ dn, list: all.filter((t) => Math.min(...(Array.isArray(t.dist) && t.dist.length ? t.dist : [1])) === d).sort((x, y) => ((rankOf[x.id] || (x.rank || 5)) - (rankOf[y.id] || (y.rank || 5)))) }));
   const say = msxPh(want.length >= 2 ? '「2つで｜超修行!｜2つとも｜覚えることも｜あるよ。｜能力の上がりも｜疲れも｜2回分だからね」' : want.length === 1 ? (superWhy ? `「この技で｜いこう!｜(${superWhy}から、｜技は｜1つだけ)」` : '「いいね!｜もう1つ選ぶと｜超修行に｜なるよ」') : '「覚えたい技を｜1つ選んでね。｜2つ選ぶと｜超修行!｜選ばなくても｜能力は｜上がるよ」');
   const slot = (id) => {
     if (!id) return <div className="q-slot msx-kp" data-msx-r3-qslot="0">{want.length ? (superWhy ? `超修行は できない(${superWhy})` : '+ もう1つ選ぶと 🔥超修行') : '+ 下の緑の札から 技を選ぶ'}</div>;
@@ -112,7 +111,7 @@ function MsxR3Shugyo({ run, setRun, v, ev, onBack, onPause }) {
     const rate = typeof SUC.techRate === 'function' ? SUC.techRate(s0, t, { course, super: isSuper, picks: want }) : (rateOf[id] || 0);
     const BC = { n: (c) => `覚えた技 ${c.need}つ以上`, pop: (c) => `人気 ${c.need}以上`, sum: (c) => `選んだ技の段の合計 ${c.need}以上` };
     return (<div className="q-slot on msx-kp" onClick={() => toggle(id)} data-msx-r3-qslot={id}>
-      <small>{MSX_R3_DIST[Math.min(...(t.dist || [1]))]}・R{rankOf[id] || '-'}</small><b className="n">{t.name}</b><b className="r" data-msx-r3-qrate>{Math.round(rate * 100)}%</b>
+      <small>{MSX_R3_DIST[Math.min(...(t.dist || [1]))]}・R{rankOf[id] || '-'}{typeof SUC.techAptAdd === 'function' ? ` ・適性 ${(() => { const a = SUC.techAptAdd(s0, t); return a ? `${a > 0 ? '+' : ''}${a}%` : '±0'; })()}` : ''}</small><b className="n">{t.name}</b><b className="r" data-msx-r3-qrate>{Math.round(rate * 100)}%</b>
       {bc.length ? <ul data-msx-r3-qconds>{bc.slice(0, 4).map((c, i) => <li key={`${c.type}${i}`} className={c.ok ? 'ok' : ''}><i>条件{i + 1}</i><span>{(BC[c.type] || (() => ''))(c)}</span><em className={c.ok ? '' : 'no'}>{c.ok ? '済 +5%' : 'まだ'}</em></li>)}</ul> : <ul><li><i>条件</i>なし</li></ul>}
     </div>);
   };
@@ -130,15 +129,22 @@ function MsxR3Shugyo({ run, setRun, v, ev, onBack, onPause }) {
       {superWhy && want.length ? <div className="q-note msx-kp" data-msx-r3-superwhy>🔥 {superWhy}ので、技は1つだけ選べる(別の技を押すと入れ替わる)</div> : null}
     </div>
     <div className="q-sec q-list" data-msx-r3-techlist><h3><i>3</i>覚えられる技<span className="tk">緑の札をタップ</span></h3>
-      {all.length ? <div className="q-grid">{cols.map((c) => (
-        <div key={c.dn} className="q-col"><h4>{c.dn}</h4>{c.list.map((t) => {
-          const got = (s0.techs || []).includes(t.id); const ok = rateOf[t.id] != null; const sel = want.includes(t.id);
-          const cs = got || ok ? [] : condsOf(t); const ng = cs.find((x) => !x.ok);
-          return (<button type="button" key={t.id} className={`q-card ${sel ? 'sel' : got ? 'got' : ok ? 'ok' : 'lock'}`} onClick={() => (ok && !got ? toggle(t.id) : !got ? setLockT(t) : null)} data-msx-r3-tech={t.id}>
-            <span className="nm msx-kp">{String(t.name || '').length >= 7 ? <>{String(t.name).slice(0, Math.ceil(String(t.name).length / 2))}<wbr/>{String(t.name).slice(Math.ceil(String(t.name).length / 2))}</> : t.name}</span><span className="rk">R{rankOf[t.id] || t.rank || '-'}</span>
-            {got ? <span className="p g">覚えた</span> : ok ? <span className="p">{Math.round(rateOf[t.id] * 100)}%</span> : <span className="lk msx-kp">🔒 {full ? '技がいっぱい' : ng ? ng.short : '条件あり'}</span>}
-          </button>);
-        })}</div>))}</div> : <div className="q-note msx-kp">このモンスターの技の表がまだありません(能力だけ上がる)</div>}
+      {all.length ? <MsxTechGrid className="q" all={all} cell={(alts, r, d, cellK) => {
+        // 詳細の技の升目と同じ部品(2026-11-15 社長 r1115-040)。升の技: 覚えた技 → 選んだ技(その升の選び) → 並びの1つ目
+        const gotOf = (x) => (s0.techs || []).includes(x.id);
+        const pk = s0.techPick && typeof s0.techPick === 'object' ? s0.techPick[cellK] : null;
+        const t = alts.find(gotOf) || alts.find((x) => x.id === pk) || alts[0];
+        const got = gotOf(t); const ok = rateOf[t.id] != null; const sel = want.includes(t.id);
+        const cs = got || ok ? [] : condsOf(t); const ng = cs.find((x) => !x.ok);
+        const state = sel ? 'sel' : got ? 'got' : ok ? 'ok' : 'lock';
+        const rk = Math.max(1, Math.min(5, Number(t.rank) || 1));
+        return (<button type="button" className={`tc ${t.kind === 'wise' ? 'wise' : 'pow'} q-cell ${state}${got || ok || sel ? ' got' : ' tg-not'}`} data-msx-r3-tech={t.id} data-msx-cell={cellK}
+          aria-label={`${t.name}${got ? '(覚えた)' : sel ? '(選んだ)' : ok ? `(覚えられる ${Math.round(rateOf[t.id] * 100)}%)` : full ? '(技がいっぱい)' : ng ? `(${ng.short})` : '(条件あり)'}`}
+          onClick={() => (ok && !got ? toggle(t.id) : !got ? setLockT(t) : null)}>
+          <span className="ti" aria-hidden="true"><MsxSkillArt t={t} uid={`q${r}${d}`}/></span><span className={`tg-rk rk${rk}`} aria-hidden="true">{rk}</span>
+          {got ? <span className="g qb" aria-hidden="true">済</span> : ok ? <span className="g qb" aria-hidden="true">{Math.round(rateOf[t.id] * 100)}%</span> : <span className="g qb" aria-hidden="true">🔒</span>}
+        </button>);
+      }}/> : <div className="q-note msx-kp">このモンスターの技の表がまだありません(能力だけ上がる)</div>}
       <div className="q-note msx-kp">ランクが高い技ほど覚えにくい。能力・忠誠度・人気がよく仕上がっているほど、行き先の旬の季節ほど覚えやすい。外した技は、その技だけ次から覚えやすくなる。助手がドラだと、さらに覚えやすい</div>
     </div>
     {lockT ? (
