@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: d123d6289c2a628e
+// generated-sha256: cf610a260f4dfd9c
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -78321,7 +78321,7 @@ function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, preview, tryPv
         {/* 場は試合の画面と同じ部品(立ち位置・技の動き・数字・音。56-monhero-success-arena.jsx の MsaStage。2026-11-12 社長「ちゃんとバトル部分作りこんで」) */}
         {typeof MsaStage === 'function' ? (
           <div className="msa ambb-stagewrap" style={{ marginTop: 8 }}><style>{MSA_CSS}</style>
-            <MsaStage log={log} frames={battle.frames} pos={pos} teams={{ A: battle.teamA, B: battle.teamB }} venueImg={typeof MSC_VENUE_IMG !== 'undefined' ? MSC_VENUE_IMG.cup : null}
+            <MsaStage log={log} frames={battle.frames} pos={pos} teams={{ A: battle.teamA, B: battle.teamB }} venueImg={typeof msaVenueBg === 'function' ? msaVenueBg('cup', msaBgRead()) : null}
               ended={review} win={battle.r.winner} endSub={review ? `${battle.r.rounds} ラウンド` : ''} sound={phase === 'watch' && !paused}
               introTitle={battle.pvp ? 'フレンド対戦' : 'マスモン対戦'} speedF={{ x1: 1, x2: 0.55, x4: 0.3 }[speed] || 1} fill={!review} lite={lite}/>
           </div>
@@ -88472,6 +88472,27 @@ function MsxManualBar({ opt, onPick, onAuto, busy, rep = null, onRep = null, tit
 // 計算・保存には触れない(勝ち負けを onEnd で返すだけ)。公開の印 monheroSuccess の後ろで使う。
 const MSA_GAP = [0.13, 0.32, 0.5, 0.68];            // 距離ごとの、2体の間(場の幅に対する割合)。零は触れ合うほど
 const MSA_SPEEDS = Object.freeze([{ id: 'x1', label: '×1', f: 1 }, { id: 'x2', label: '×2', f: 0.55 }, { id: 'x4', label: '×4', f: 0.3 }]);
+// 試合の場の背景(2026-11-14 社長「背景は参考資料のバトル中にならって。サッカー場みたいのもオプションで選べるように」)
+//   闘技場(既定・tools/battle/msa-arena-art.js が描く)/スタジアム(前からの会場の絵 MSC_VENUE_IMG)。選んだ方は mh_monsuc_arena_bg_v1 に 'arena' | 'stadium' で持つ
+//   (新しいキー。無い・読めない値は闘技場)。大会の入り・勝ち負けの画面の絵はいままでどおり MSC_VENUE_IMG
+const MSA_ARENA_IMG = Object.freeze({
+  debut: 'images/success/arena/arena-debut.png', cup: 'images/success/arena/arena-cup.png',
+  hero: 'images/success/arena/arena-hero.png', summit: 'images/success/arena/arena-summit.png',
+});
+const MSA_BG_KEY = 'mh_monsuc_arena_bg_v1';
+const msaBgNorm = (v) => (v === 'stadium' ? 'stadium' : 'arena');
+const msaBgRead = () => { try { return msaBgNorm(localStorage.getItem(MSA_BG_KEY)); } catch (_) { return 'arena'; } };
+const msaBgWrite = (v) => { try { localStorage.setItem(MSA_BG_KEY, msaBgNorm(v)); } catch (_) {} };
+const msaVenueBg = (venue, mode) => {
+  if (msaBgNorm(mode) === 'stadium' && typeof MSC_VENUE_IMG !== 'undefined') return MSC_VENUE_IMG[venue] || MSC_VENUE_IMG.cup;
+  return MSA_ARENA_IMG[venue] || MSA_ARENA_IMG.cup;
+};
+const MSA_BG_LABEL = Object.freeze({ arena: '🏛️ 闘技場', stadium: '🏟️ スタジアム' });
+// 背景の切り替え(試合の下の帯に置く)。押すたびに闘技場 ⇄ スタジアム
+function MsaBgToggle({ bg, onChange }) {
+  const next = msaBgNorm(bg) === 'arena' ? 'stadium' : 'arena';
+  return <button type="button" className="msa-bgsw" data-msa-bg={msaBgNorm(bg)} aria-label={`背景を${MSA_BG_LABEL[next].slice(3)}にする`} onClick={() => { msaSe('tap'); msaBgWrite(next); onChange(next); }}>背景 {MSA_BG_LABEL[msaBgNorm(bg)]}</button>;
+}
 const MSA_CSS = `
 .msa{display:flex;flex-direction:column;gap:6px}
 .msa-stage{position:relative;height:clamp(200px,34vh,290px);border-radius:16px;overflow:hidden;background:#2a2147 center/cover no-repeat}
@@ -88503,6 +88524,7 @@ const MSA_CSS = `
 .msa-tools button{flex:1;min-height:34px;border-radius:10px;border:1px solid #4c4680;background:#2b2650;color:#fff;font-weight:900;font-size:12px}
 .msa-tools button.on{background:#fde047;color:#422006;border-color:#fde047}
 .msx .msa-tools button{text-align:center}
+.msa-tools button.msa-bgsw{flex:1.4;font-size:11px;white-space:nowrap;background:#1e1b3a;border-color:#6b64a8}
 .msa-wait{font-size:11.5px;color:#cbd5e1;text-align:center}
 .msa-gtag{position:absolute;z-index:8;bottom:-16px;left:50%;transform:translateX(-50%);white-space:nowrap;border-radius:99px;padding:0 7px;font-size:10.5px;font-weight:900;line-height:16px;animation:msaPop .45s ease-out both}
 .msa-gtag.up{background:#facc15;color:#422006}.msa-gtag.down{background:#334155;color:#e2e8f0}
@@ -89191,6 +89213,7 @@ function MonsucArena({ s, info, engine, input, watch, onEnd }) {
   const teams = manual ? { A: input.teamA, B: input.teamB } : { A: watch && watch.teamA, B: watch && watch.teamB };
   const [pos, setPos] = useState(0);
   const [speed, setSpeed] = useState('x1');
+  const [bg, setBg] = useState(msaBgRead);
   const [auto, setAuto] = useState(!manual);
   const [ended, setEnded] = useState(false);
   const endRef = useRef(false);
@@ -89245,7 +89268,7 @@ function MonsucArena({ s, info, engine, input, watch, onEnd }) {
       <style>{MSA_CSS}</style>
       <div className="msc-top"><b>{info.title} {MSC_STARS(info.star)}</b></div>
       <MscPanel side="B" team={teams.B} frame={fShow} maxHp={maxHp} info={info} s={s}/>
-      <MsaStage log={log} frames={frames} pos={pos} teams={teams} venueImg={MSC_VENUE_IMG[info.venue] || MSC_VENUE_IMG.cup} ended={ended} win={result ? result.winner : null} introTitle={info.title} speedF={(MSA_SPEEDS.find(x => x.id === speed) || MSA_SPEEDS[0]).f}/>
+      <MsaStage log={log} frames={frames} pos={pos} teams={teams} venueImg={msaVenueBg(info.venue, bg)} ended={ended} win={result ? result.winner : null} introTitle={info.title} speedF={(MSA_SPEEDS.find(x => x.id === speed) || MSA_SPEEDS[0]).f}/>
       <MscPanel side="A" team={teams.A} frame={fShow} maxHp={maxHp} info={info} s={s} buffed={Boolean(info.buffs)}/>
       <div className="msa-say" data-msa-say>{msaSay(e, nm)}</div>
       <div ref={barRef}>{showBar ? <MsxManualBar opt={mm.pending} onPick={pick} onAuto={goAuto} busy={busy}/> : null}</div>
@@ -89254,11 +89277,13 @@ function MonsucArena({ s, info, engine, input, watch, onEnd }) {
         <div className="msa-tools">
           {MSA_SPEEDS.map(x => <button key={x.id} type="button" className={speed === x.id ? 'on' : ''} onClick={() => { msaSe('tap'); setSpeed(x.id); }}>{x.label}</button>)}
           <button type="button" data-msc-skip onClick={skip}>⏭ とばす</button>
+          <MsaBgToggle bg={bg} onChange={setBg}/>
         </div>
       ) : null}
       {manual && !auto && !ended ? (
         <div className="msa-tools">
           {MSA_SPEEDS.slice(0, 2).map(x => <button key={x.id} type="button" className={speed === x.id ? 'on' : ''} onClick={() => { msaSe('tap'); setSpeed(x.id); }}>見せる速さ {x.label}</button>)}
+          <MsaBgToggle bg={bg} onChange={setBg}/>
         </div>
       ) : null}
     </div>
