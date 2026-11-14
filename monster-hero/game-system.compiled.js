@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1fefad502267d737
+// source-sha256: f386c6f3245fa44a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -164627,7 +164627,7 @@ function MsxHd({
     className: "rt"
   }, right));
 }
-const msxStartPreview = (SUC, species, type, aptBase) => {
+const msxStartPreview = (SUC, species, type, aptBase, startSt) => {
   const out = {
     peak: '',
     grades: null,
@@ -164656,7 +164656,7 @@ const msxStartPreview = (SUC, species, type, aptBase) => {
     if (typeof SUC.evaluate === 'function') {
       const e = SUC.evaluate({
         ...s,
-        stats: typeof SUC.initStats === 'function' ? SUC.initStats(species) : s.stats
+        stats: startSt || (typeof SUC.initStats === 'function' ? SUC.initStats(species) : s.stats)
       });
       out.power = e.power;
       out.rank = e.rank;
@@ -165138,8 +165138,8 @@ function MsxStart({
   const fromMon = pick.box ? box.mons.find(m => m.id === pick.box) || null : null;
   const growType = fromMon && Number.isInteger(fromMon.gt) ? fromMon.gt : typeof SUC.speciesType === 'function' ? SUC.speciesType(species) : null;
   const growName = growType != null && typeof MASMON_CALC !== 'undefined' ? MASMON_CALC.typeOf(growType).name : '—';
-  const startSt = useMemo(() => typeof SUC.initStats === 'function' ? SUC.initStats(species) : {}, [SUC, species]);
-  const preview = useMemo(() => msxStartPreview(SUC, species, growType, fromMon && fromMon.aptBase), [SUC, species, growType, fromMon]);
+  const startSt = useMemo(() => fromMon && fromMon.st && typeof fromMon.st === 'object' && typeof SUC.normStats === 'function' ? SUC.normStats(fromMon.st, species) : typeof SUC.initStats === 'function' ? SUC.initStats(species) : {}, [SUC, species, fromMon]);
+  const preview = useMemo(() => msxStartPreview(SUC, species, growType, fromMon && fromMon.aptBase, startSt), [SUC, species, growType, fromMon, startSt]);
   const peakText = preview.peak;
   const heat = MSX_STATS.map(k => members.filter(m => Array.isArray(m.top) && m.top.includes(k)).length);
   const scene = (style, inner) => React.createElement("div", {
@@ -166433,6 +166433,9 @@ function MonheroSuccessScreen({
       } : {}),
       ...(fromMon && Number.isInteger(fromMon.gt) ? {
         type: fromMon.gt
+      } : {}),
+      ...(fromMon && fromMon.st && typeof fromMon.st === 'object' ? {
+        startSt: fromMon.st
       } : {}),
       wonBefore: Array.isArray(data.meta.wonCups) ? data.meta.wonCups : []
     });

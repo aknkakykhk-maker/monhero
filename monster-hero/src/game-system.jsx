@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: f3b93bf19d15fa08
+// generated-sha256: 9fc2d0dcbfd3545e
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -86007,7 +86007,7 @@ function MsxHd({ back, onBack, title = '🌱 モンヒロサクセス', sub, rig
 }
 
 // 始める前の見通し: ピークの時期(期の名前)と間合い適性の段。仮の育成を1つ作って芯に聞く(保存しない)
-const msxStartPreview = (SUC, species, type, aptBase) => {
+const msxStartPreview = (SUC, species, type, aptBase, startSt) => {
   const out = { peak: '', grades: null, power: null, rank: null };
   try {
     if (typeof SUC.newRun !== 'function') return out;
@@ -86018,7 +86018,7 @@ const msxStartPreview = (SUC, species, type, aptBase) => {
       out.peak = a === b ? a : `${a}〜${b}`;
     }
     if (typeof SUC.aptGradesOf === 'function') out.grades = SUC.aptGradesOf(s);
-    if (typeof SUC.evaluate === 'function') { const e = SUC.evaluate({ ...s, stats: typeof SUC.initStats === 'function' ? SUC.initStats(species) : s.stats }); out.power = e.power; out.rank = e.rank; }
+    if (typeof SUC.evaluate === 'function') { const e = SUC.evaluate({ ...s, stats: startSt || (typeof SUC.initStats === 'function' ? SUC.initStats(species) : s.stats) }); out.power = e.power; out.rank = e.rank; }
   } catch (e) { /* 見通しが出せなくても選ぶ画面は動く */ }
   return out;
 };
@@ -86221,8 +86221,9 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf }) {
   const fromMon = pick.box ? box.mons.find((m) => m.id === pick.box) || null : null;
   const growType = fromMon && Number.isInteger(fromMon.gt) ? fromMon.gt : (typeof SUC.speciesType === 'function' ? SUC.speciesType(species) : null);
   const growName = growType != null && typeof MASMON_CALC !== 'undefined' ? MASMON_CALC.typeOf(growType).name : '—';
-  const startSt = useMemo(() => (typeof SUC.initStats === 'function' ? SUC.initStats(species) : {}), [SUC, species]);
-  const preview = useMemo(() => msxStartPreview(SUC, species, growType, fromMon && fromMon.aptBase), [SUC, species, growType, fromMon]);
+  // 合体で生まれたモンスターは、合体で受け継いだ上乗せ込みの能力から始まる(芯の newRun の startSt と同じ)
+  const startSt = useMemo(() => (fromMon && fromMon.st && typeof fromMon.st === 'object' && typeof SUC.normStats === 'function' ? SUC.normStats(fromMon.st, species) : typeof SUC.initStats === 'function' ? SUC.initStats(species) : {}), [SUC, species, fromMon]);
+  const preview = useMemo(() => msxStartPreview(SUC, species, growType, fromMon && fromMon.aptBase, startSt), [SUC, species, growType, fromMon, startSt]);
   const peakText = preview.peak;
   const heat = MSX_STATS.map((k) => members.filter((m) => Array.isArray(m.top) && m.top.includes(k)).length);
   const scene = (style, inner) => (
@@ -86621,7 +86622,7 @@ function MonheroSuccessScreen({ onClose, callNameOf, bondLvOf, debug = false }) 
     const carry = cfg.items.filter((k) => MSX_ITEM_BY_ID[k] && MSX_ITEM_BY_ID[k].when === 'before');
     const bag = {}; cfg.items.filter((k) => MSX_ITEM_BY_ID[k] && MSX_ITEM_BY_ID[k].when === 'both').forEach((k) => { bag[k] = 1; });
     const fromMon = cfg.from && typeof cfg.from.box === 'string' ? data.box.mons.find((m) => m.id === cfg.from.box) : null; // 合体円盤石(未育成)から始めるなら、継いだ間合い適性の段数を写す
-    const s = SUC.newRun({ id, species: cfg.species, aid: cfg.aid, team: cfg.team, aidBondLv: cfg.aidBondLv, carry, bag, ...(fromMon && Array.isArray(fromMon.aptBase) ? { aptBase: fromMon.aptBase } : {}), ...(fromMon && Number.isInteger(fromMon.gt) ? { type: fromMon.gt } : {}), wonBefore: Array.isArray(data.meta.wonCups) ? data.meta.wonCups : [] });
+    const s = SUC.newRun({ id, species: cfg.species, aid: cfg.aid, team: cfg.team, aidBondLv: cfg.aidBondLv, carry, bag, ...(fromMon && Array.isArray(fromMon.aptBase) ? { aptBase: fromMon.aptBase } : {}), ...(fromMon && Number.isInteger(fromMon.gt) ? { type: fromMon.gt } : {}), ...(fromMon && fromMon.st && typeof fromMon.st === 'object' ? { startSt: fromMon.st } : {}), wonBefore: Array.isArray(data.meta.wonCups) ? data.meta.wonCups : [] });
     const r = { v: 1, id, s, scn: typeof msxScenarioId === 'function' ? msxScenarioId(cfg.scn) : 'hero', nick: cfg.nick, colors: cfg.colors, from: cfg.from, items: cfg.items, used: 0, phase: 'begin', out: null, log: [], startAt: Date.now() };
     const meta = { ...data.meta, team: cfg.teamSlots.map((t) => (t.box ? { box: t.box } : { base: t.base })), runs: (data.meta.runs || 0) + 1, picked: { ...(data.meta.picked || {}), [cfg.species]: ((data.meta.picked || {})[cfg.species] || 0) + 1 } };
     // 持ちこんだ物は1つずつ減らす。芯がまだ知らない物(効き目が無い物)は減らさない

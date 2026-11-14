@@ -64,7 +64,7 @@ const makeRun = async (kind) => {
   // [名前, 作る育成, 開いたあとの操作]
   const SHOTS = [
     ['S0', null, ['new']], // ストーリー選択(2026-11-14)。S1〜S6 はその「次へ」のあと
-    ['S1', null, ['new', 'next']], ['S1D', null, ['new', 'next', 'detail']], ['S1A', null, ['new', 'next', 'detail', 'tab:apt']], ['S1F', null, ['new', 'next', 'detail', 'tab:feat']],
+    ['S1', null, ['new', 'next']], ['S1D', null, ['new', 'next', 'detail']], ['S1A', null, ['new', 'next', 'detail', 'tab:apt']], ['S1F', null, ['new', 'next', 'detail', 'tab:feat']], ['S1Z', null, ['seedfuse', 'new', 'next', 'tabfuse', 'pickfirst']], ['S1ZD', null, ['seedfuse', 'new', 'next', 'tabfuse', 'pickfirst', 'detail']],
     ['S2', null, ['new', 'next', 'next']], ['S2P', null, ['new', 'next', 'next', 'slot:1']], ['S2B', null, ['new', 'next', 'next', 'slot:1', 'base:Golem']], ['S2G', null, ['new', 'next', 'next', 'gather']],
     ['S3', null, ['new', 'next', 'next', 'next']], ['S4', null, ['new', 'next', 'next', 'next', 'next']],
     ['S5', null, ['new', 'next', 'next', 'next', 'next', 'next']], ['S6', null, ['new', 'next', 'next', 'next', 'next', 'next', 'next']],
@@ -88,6 +88,7 @@ const makeRun = async (kind) => {
           const make = new Function(`return (${mk})`)();
           if (window.__msxRoot) { window.__msxRoot.unmount(); window.__msxRoot = null; }
           if (kind) { const run = await make(kind); localStorage.setItem(MSX_KEYS.run, JSON.stringify(run)); } else localStorage.removeItem(MSX_KEYS.run);
+          localStorage.removeItem(MSX_KEYS.box); // 前の場面で置いた保存枠(seedfuse)を残さない
           const el = document.getElementById('msx-shot') || Object.assign(document.createElement('div'), { id: 'msx-shot' });
           document.body.appendChild(el);
           window.__msxRoot = ReactDOM.createRoot(el);
@@ -100,6 +101,14 @@ const makeRun = async (kind) => {
             const click = (re) => { const b = btn(re); if (b) b.click(); return !!b; };
             if (st === 'new') return click(/新しく育成をはじめる/);
             if (st === 'next') return click(/▶$/);
+            if (st === 'seedfuse') { // 合体で生まれた未育成のモンスターを保存枠に1体置いて開き直す(2026-11-14 合体の能力から始まる)
+              localStorage.setItem(MSX_KEYS.box, JSON.stringify({ v: 1, mons: [{ id: 'shot-fz-1', species: 'Mitarashi', nick: 'ミタ', gen: 2, st: { life: 260, pow: 240, wise: 150, hit: 230, eva: 210, tough: 200 }, techs: [], mast: [], gt: 1, lv: 1, raised: false, parents: ['a', 'b'] }] }));
+              window.__msxRoot.unmount(); const el = document.getElementById('msx-shot'); window.__msxRoot = ReactDOM.createRoot(el);
+              window.__msxRoot.render(React.createElement(MonheroSuccessScreen, { onClose() {}, callNameOf: () => 'けんささん', bondLvOf: () => 4 }));
+              await new Promise((r) => setTimeout(r, 800)); return true;
+            }
+            if (st === 'tabfuse') return click(/合体で生まれたモンスター/);
+            if (st === 'pickfirst') { const d = document.querySelector('.v-grid6 button'); if (d) d.click(); return !!d; }
             if (st === 'detail') { const d = document.querySelector('[data-msx-detail-open]'); if (d) d.click(); return !!d; } // 選ぶ画面の「くわしく」(2026-11-14)
             if (st.startsWith('slot:')) { const d = document.querySelector(`[data-msx-slot="${st.slice(5)}"]`); if (d) d.click(); return !!d; } // 編成の枠を押す(2026-11-14)
             if (st.startsWith('base:')) { const d = document.querySelector(`[data-msx-pick-base="${st.slice(5)}"]`); if (d) d.click(); return !!d; }
