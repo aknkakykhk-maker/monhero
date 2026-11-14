@@ -29,7 +29,7 @@ const make = (prices) => {
   const fail = new Set();
   const ctx = {
     React: {}, console, Promise,
-    RHYTHM_SONGS: [{ songId: 'a' }, { songId: 'b' }, { songId: 'free1' }],
+    RHYTHM_SONGS: [{ songId: 'a' }, { songId: 'b' }, { songId: 'free1' }, { songId: 'departure' }, { songId: 'departure_short' }],
     rhythmDemoSongs: (s) => s,
     RHYTHM_EVENT_POINTS_KEY: 'mh_rhythm_event_points_v1',
     loadRhythmEventPoints: async () => Number(store.has('mh_rhythm_event_points_v1') ? JSON.parse(store.get('mh_rhythm_event_points_v1')) : 0),
@@ -90,6 +90,16 @@ const own = (w) => JSON.parse(w.store.get('mh_rhythm_owned_songs_v1') || '[]');
   check('F. 助手は無料+持っている曲から選ぶ', J(wf.api.rhythmSongPickable(['a', 'b', 'free1'])) === J(['b', 'free1']));
   const wg = make({ a: 500 });
   check('F. 絞って空になるときは元のまま', J(wg.api.rhythmSongPickable(['a'])) === J(['a']));
+
+  // I: 1曲の値段で全編と short ver. の両方が開く(2026-11-14 社長「1曲500で両方ついてくる」)
+  const wi = make({ departure: 500 });
+  wi.store.set('mh_rhythm_event_points_v1', '1000');
+  check('I. short ver. も全編と同じ鍵・同じ値段', wi.api.rhythmSongLocked('departure', []) && wi.api.rhythmSongLocked('departure_short', []) && wi.api.rhythmSongPrice('departure_short') === 500);
+  check('I. 売り場に並ぶのは全編だけ(short ver. は別に並ばない)', J(wi.api.rhythmPaidSongList().map((x) => x.songId)) === J(['departure']));
+  const ri = await wi.api.rhythmSongBuy('departure_short');
+  check('I. short ver. から買っても500Pで1回・保存は全編の id だけ・両方開く', ri.ok && pts(wi) === 500 && J(own(wi)) === J(['departure']) && !wi.api.rhythmSongLocked('departure', wi.api.RHYTHM_SONG_OWNED.get()) && !wi.api.rhythmSongLocked('departure_short', wi.api.RHYTHM_SONG_OWNED.get()));
+  const ri2 = await wi.api.rhythmSongBuy('departure');
+  check('I. 全編を持っていれば short ver. は買えない(二重払いなし)', !ri2.ok && ri2.reason === 'owned' && pts(wi) === 500);
 
   // H
   const multi = read('src/parts/77-screen-rhythm-multi.jsx');
