@@ -26,6 +26,7 @@ const kids = [
 for (const [name, p, rk] of kids) check(`総合力とランク: ${name} は ${rk}`, C.rankOf(p).key === rk, `${p} → ${C.rankOf(p).key}`);
 check('ランクは11段・M は 20,000 から・S は 14,000 から', C.RANKS.length === 11 && C.rankOf(20000).key === 'M' && C.rankOf(19999).key === 'SSS' && C.rankOf(14000).key === 'S' && C.rankOf(13999).key === 'A');
 check('M より上の名前は500ごと(合体3回ほど M5・とても強い MF・全部最大 MF6)', C.rankOf(P(4600, 6, 80, 45, 85, 70)).label === 'M5' && C.rankOf(P(5600, 8, 100, 70, 100, 100)).label === 'MF' && C.rankOf(P(5994, 8, 100, 99, 100, 100)).label === 'MF6' && C.rankOf(20000).label === 'M' && C.rankOf(25000).label === 'MG');
+check('強さの段(案A): 今までの数え方は ×2.5・区切り M 19,500 のまま', C.powerClassic({ stats: st(5994), masteries: Array(8).fill(100), lv: 99, loyal: 100, pop: 100 }) === 20070 && C.rankClassicOf(19500) === 'M' && C.rankClassicOf(19499) === 'SSS' && C.rankClassicOf(13999) === 'A' && Number.isFinite(C.powerClassic({ stats: { life: 'x' } })));
 check('総合力は壊れた値でも数になる', Number.isFinite(C.power({ stats: { life: 'x' }, masteries: null, lv: NaN })));
 check('合体の上乗せ: 平均999で+200・片方だけ強いと小さい', C.fuseBonus(999, 999) === 200 && C.fuseBonus(999, 100) * 4 <= C.fuseBonus(500, 500));
 const f = C.fuseStats({ life: 110, pow: 100, wise: 120, hit: 140, eva: 150, tough: 130 }, st(5994), st(5994));

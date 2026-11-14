@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 04ad1366a388cd9b
+// generated-sha256: b4c370d9fa73d216
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -74826,6 +74826,16 @@ const MASMON_CALC = (() => {
     const tech = (Array.isArray(masteries) ? masteries : []).slice(0, POWER_W.techMax).reduce((a, m) => a + POWER_W.tech + clamp(num(m), 0, 100) * POWER_W.mastery, 0);
     return Math.round(sum + tech + clamp(num(lv, 1), 1, 99) * POWER_W.lv + clamp(num(loyal), 0, 100) * POWER_W.loyal + clamp(num(pop), 0, 100) * POWER_W.pop);
   };
+  // 強さの段(2026-11-14 社長・案A): モンヒロサクセスの育成の強さの表(能力の補正・タッグ・仲良しの始まり・アシストポイント)を引くときだけ、
+  //   能力の重みを今までどおり一律 ×2.5 で数え、ランクの区切りも今まで(M 19,500)のまま。画面に出す総合力・ランクは上の power・rankOf
+  const powerClassic = (o) => {
+    const { stats, masteries, lv = 1, loyal = 0, pop = 0 } = o && typeof o === 'object' ? o : {}; const st = stats && typeof stats === 'object' ? stats : {};
+    const sum = KEYS.reduce((a, k) => a + clamp(num(st[k]), 0, STAT_MAX), 0);
+    const tech = (Array.isArray(masteries) ? masteries : []).slice(0, POWER_W.techMax).reduce((a, m) => a + POWER_W.tech + clamp(num(m), 0, 100) * POWER_W.mastery, 0);
+    return Math.round(sum * POWER_W.stat + tech + clamp(num(lv, 1), 1, 99) * POWER_W.lv + clamp(num(loyal), 0, 100) * POWER_W.loyal + clamp(num(pop), 0, 100) * POWER_W.pop);
+  };
+  const RANKS_CLASSIC = Object.freeze([['G', 0], ['F', 2000], ['E', 3000], ['D', 4500], ['C', 6000], ['B', 8000], ['A', 11000], ['S', 14000], ['SS', 16000], ['SSS', 18000], ['M', 19500]]);
+  const rankClassicOf = (p) => { const v = num(p); let i = 0; RANKS_CLASSIC.forEach(([, min], j) => { if (v >= min) i = j; }); return RANKS_CLASSIC[i][0]; };
   // ランク(2026-11-14 社長「M は 20,000」)。key は 11 種のまま(表で引く所はこれ)。M より上は 500 ごとに M1〜M9 → MG → MG1〜MG9 → MF …(画面に出すのは label)
   const RANKS = Object.freeze([['G', 0], ['F', 2000], ['E', 3000], ['D', 4500], ['C', 6000], ['B', 8000], ['A', 11000], ['S', 14000], ['SS', 16000], ['SSS', 18000], ['M', 20000]]);
   const M_STEP = 500; const M_LETTERS = Object.freeze(['', 'G', 'F', 'E', 'D', 'C', 'B', 'A']); // M・MG・MF … MA(それぞれ番号なし+1〜9)
@@ -74933,7 +74943,7 @@ const MASMON_CALC = (() => {
   // ---- けが・病気・家出の長さ(社長: 重さで幅): 軽い1回・ふつう3回・重い6回。疲れ・ストレスが高いほど重い ----
   const condLen = (load, r) => { const v = clamp(num(load), 0, 100); const x = clamp(num(r), 0, 0.999999); const heavy = v >= 90 ? 0.3 : v >= 80 ? 0.15 : 0.05; const light = v >= 90 ? 0.2 : v >= 80 ? 0.35 : 0.5; return x < heavy ? 6 : x < heavy + light ? 1 : 3; };
 
-  return Object.freeze({ KEYS, STAT_MAX, POWER_W, statPower, power, RANKS, M_STEP, M_LETTERS, rankOf, FUSE, fuseBonus, fuseStats, PACE, GROW_TYPES, typeOf, ageMult, peakOf, typeFromApt,
+  return Object.freeze({ KEYS, STAT_MAX, POWER_W, statPower, power, powerClassic, RANKS_CLASSIC, rankClassicOf, RANKS, M_STEP, M_LETTERS, rankOf, FUSE, fuseBonus, fuseStats, PACE, GROW_TYPES, typeOf, ageMult, peakOf, typeFromApt,
     POLICIES, policyOf, POLICY_STEP, policyMove, lifeLen, lifeStep, ageLabel, noActChance, critBonus, CRIT_CAP, critOf, sabLoyalMult, POP, popAfterBattle, RESULTS, resultOf, reactOf, condLen });
 })();
 
