@@ -651,6 +651,19 @@ const MSX_CSS = `
 .msx-sheet{width:100%;max-height:100%;overflow-y:auto;background:linear-gradient(180deg,#241d4a,#16122e);border:1px solid #f472b6aa;border-radius:16px;padding:12px;box-shadow:0 10px 30px #000a}
 .msx-sheet h3{margin:0 0 6px;font-size:15px;font-weight:900;color:#f9a8d4}
 .msx-row{display:flex;align-items:center;gap:6px}
+/* 編成: 枠を押して選ぶ・集まりやすいトレーニングの表(2026-11-14) */
+.msx .msx-slot-tap{cursor:pointer;outline:1px dashed #f9a8d488;outline-offset:-2px}
+.msx .msx-heat-btn{display:block;width:100%;text-align:left;cursor:pointer}
+.msx-pick-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:4px}
+.msx .msx-pick{display:flex;flex-direction:column;align-items:center;gap:1px;background:#0f172a;border:1px solid #334155;border-radius:10px;padding:4px 2px;min-width:0;color:#fff}
+.msx .msx-pick.on{border-color:#fde047;background:#3b2f0b}
+.msx-pick img{width:40px;height:40px;object-fit:contain}.msx-pick b{font-size:11px;max-width:100%;overflow-wrap:anywhere;text-align:center}.msx-pick small{font-size:10px;color:#cbd5e1;text-align:center;line-height:1.25}
+.msx-gt-row{background:#0f172a;border-radius:10px;padding:5px 8px;margin:4px 0}
+.msx-gt-row .hd{display:flex;align-items:center;gap:5px;font-size:12px}.msx-gt-row .hd .ic{font-size:16px}.msx-gt-row .hd b{flex:1;min-width:0}
+.msx-gt-row .hd .st{font-size:10.5px;color:#fde047}.msx-gt-row .hd .n{font-size:11px;color:#f9a8d4;font-weight:900}
+.msx-gt-mon{display:flex;align-items:center;gap:5px;margin-top:3px;font-size:11px}
+.msx-gt-mon img{flex:none;width:24px;height:24px;border-radius:7px;object-fit:contain;background:#1e1a36}.msx-gt-mon .nm{flex:1;min-width:0;overflow-wrap:anywhere}.msx-gt-mon .v{flex:0 1 auto;font-size:10px;color:#cbd5e1;text-align:right}
+.msx-gt-none{font-size:10.5px;color:#94a3b8;margin-top:2px}
 /* 選ぶ画面: はじめの能力(数字を大きく・伸びやすさは小さく)と「くわしく」の窓(2026-11-14) */
 .msx-dt-hd{display:flex;align-items:center;gap:6px}.msx-dt-hd .h1{flex:1;min-width:0}
 .msx .msx-dt-more{flex:none;border-radius:999px;padding:3px 10px;font-size:11px;font-weight:900;background:#f472b6;color:#fff;box-shadow:0 2px 0 #9d174d}

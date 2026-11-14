@@ -655,7 +655,9 @@
       const species = speciesList.includes(src.species) ? src.species : (speciesList[0] || 'Mocchi');
       const aid = AIDS.includes(src.aid) ? src.aid : 'mua';
       const raw = Array.isArray(src.team) ? src.team.slice(0, TEAM_SIZE) : [];
-      while (raw.length < TEAM_SIZE) raw.push({ kind: 'base', species }); // 空いた枠はベースモン(育てる子と同じ種)
+      // 空いた枠はベースモン。育てる子と同じ種は避ける(育てる子自身が編成にいるように見え、自分との出来事が起きていた・2026-11-14)。途中の育成は team が6体そろっているので変わらない
+      const fill = speciesList.filter(x => x !== species); let fi = 0;
+      while (raw.length < TEAM_SIZE) { raw.push({ kind: 'base', species: fill.length ? fill[fi % fill.length] : species }); fi += 1; }
       const team = raw.map(memberOf);
       const typeIdx = Number.isInteger(src.type) ? clamp(src.type, 0, 5) : speciesType(species); // 種族の決まった型(くじはやめた・2026-11-14)
       const stats = initStats(species);
@@ -687,6 +689,13 @@
 
     // ---- そのターンの集まり(決まった乱数: 育成の id + ターン) ----
     const cardKey = (kind, stat) => `${kind}:${stat}`;
+    // 編成の1体が、得意の1〜3位のトレーニングへ来る確率(0〜1・gatherOf と同じ数え方)。選ぶ画面の表に使う(2026-11-14)
+    const gatherChanceOf = (m) => {
+      const out = {}; if (!m || !Array.isArray(m.top)) return out;
+      const fav = num(m.fav, GATHER.fav); const unit = fav / (GATHER.top[0] + GATHER.top[1] + GATHER.top[2]);
+      m.top.slice(0, 3).forEach((k, j) => { out[k] = r2(GATHER.top[j] * unit); });
+      return out;
+    };
     const gatherOf = (s) => {
       const rng = rngOf(s.id, s.turn, 'gather');
       const cards = {}; for (const k of KEYS) cards[cardKey('train', k)] = { kind: 'train', stat: k, members: [], aid: false };
@@ -1740,10 +1749,10 @@
     //   種類: 子の主血統 = 主の親の主血統・子の副血統 = もう一方の親の主血統か副血統(くじ)。その組み合わせのモンスターがいればその種類、
     //         いなければ主の親の種類。血統の正本は data/lineages.js の MONSTER_LINEAGE_MAP(deps.lineage で受け取る・読むだけ)
     //   6能力: 生まれた種類の初期値 + 上乗せ(助手マスモンの合体と同じ MASMON_CALC.fuseBonus。2体の平均を元に・そろいで効く・上限なし)
-    //   技: 親の技のうち生まれた種類でも覚えられる技を2つまで(熟練は0から・mast は techs と同じ順の配列。保存枠の形は回3 56-monhero-success-r3-store.jsx) / 型: 主の親の型(くじで少し別の型) / 世代: 親の大きい方 + 1
+    //   技: 親の技のうち生まれた種類でも覚えられる技を2つまで(熟練は0から・mast は techs と同じ順の配列。保存枠の形は回3 56-monhero-success-r3-store.jsx) / 型: 生まれた種類の決まった型(2026-11-14) / 世代: 親の大きい方 + 1
     //   くじは2体の id から作る決まった乱数なので、見通しと本番が同じになる(押し直しても変わらない)
     const LINEAGE = (deps && deps.lineage) || {};
-    const FUSE = Object.freeze({ techs: 2, typeChange: 0.1, genMax: 999 });
+    const FUSE = Object.freeze({ techs: 2, typeChange: 0, genMax: 999 }); // typeChange は使わない(型は種類で決まる・2026-11-14)
     const lineOf = (sp) => { const x = LINEAGE[sp]; return x && typeof x.main === 'string' ? { main: x.main, sub: typeof x.sub === 'string' ? x.sub : x.main } : null; };
     const fuseId = (a, b) => 'f' + hashStr(`${a}|${b}`).toString(36) + hashStr(`${b}#${a}`).toString(36).slice(0, 3);
     const boxSt = (m) => normStats(m && m.st, m && m.species);
@@ -1776,15 +1785,14 @@
       KEYS.forEach(k => { add[k] = C.fuseBonus(sa[k], sb[k]); st[k] = clamp(base[k] + add[k], 1, STAT_MAX); });
       const own = (m) => canonTechList(m.techs);
       const techs = [...own(a), ...own(b)].filter((t, i, arr) => arr.indexOf(t) === i).filter(t => techById(species, t) && !(techById(species, t).learn || {}).start).slice(0, FUSE.techs);
-      // 型は主の親(a)から継ぐ。記録が無い親なら子の種族の型。たまに子の種族の決まった型へ変わる(くじで引き直すのはやめた・2026-11-14)
+      // 型はいつも子の種族の決まった型(2026-11-14 社長。親から継がない・くじも無し)。保存枠の子の gt は書き換えない
       const t0 = Number.isInteger(a.gt) ? clamp(a.gt, 0, 5) : speciesType(species);
-      const typeRoll = r(); const changed = typeRoll < FUSE.typeChange;
-      const gt = changed ? speciesType(species) : t0;
+      const gt = speciesType(species); const changed = gt !== t0;
       const gen = clamp(Math.max(Math.round(num(a.gen, 1)), Math.round(num(b.gen, 1)), 1) + 1, 2, FUSE.genMax);
       const parentOf = (m) => ({ id: String(m.id), species: m.species, nick: typeof m.nick === 'string' ? m.nick.slice(0, 16) : '', rank: typeof m.rank === 'string' ? m.rank : null, gen: Math.max(1, Math.round(num(m.gen, 1))) });
       return {
         ok: true, kinds, sub: kind.sub, base, add,
-        typeChanged: changed && gt !== t0,
+        typeChanged: changed, // 主の親と型が違う(表示用)
         parentInfo: [parentOf(a), parentOf(b)],
         child: { id: fuseId(a.id, b.id), species, nick: species === a.species && typeof a.nick === 'string' ? a.nick.slice(0, 16) : '', gen, st, techs, mast: techs.map(() => 0), gt, lv: 1, raised: false, parents: [String(a.id), String(b.id)], ...(aptInherit(a, b).some(n => n > 0) ? { aptBase: aptInherit(a, b) } : {}) },
       };
@@ -1811,7 +1819,7 @@
     return Object.freeze({
       events: EV,
       VERSION, STORY, KEYS, STAT_NAMES, PERIODS, TOTAL_TURNS, FORCED, SUMMIT, BASE, RESULTS, RATE, REST, PLAY, CLINIC, COND, LOYAL, GATHER, BOND, STORY, LOTTERY,
-      GROW_BY_SPECIES, speciesType, ASSISTS, ISSA, PTS, XP, SHUGYO, TECH_POWER, MASTERY, techRowsOf, techPowerOfRows, powerOf, techBoostOf, techUseOf, ITEMS, GOOD, CARRY_MAX, useItem, FAME_V, FAME_SCALE, TICKET_BASE, TRAIN_LV, trainLvOf, REMATCH, canRematch, rematch, canSkip, battleKey, PRIZE, MEALS, meal, MEAL_WATCH_MULT, ticketsOfPrize, TECH_MAX, techsOf, canLearn, techRate, learnable, techRank, shugyoQ, superLeft, techMissOf, techCanon, canonTechList, shugyoLeft, teachFrom, BENCH: BENCH_USE, STAR_MULT, TAG_POWER, BOND_START, RANK_ADD, TRAIN_COMBO, AIDS, speciesList, shugyoGainOf, EX_CUPS, EX_BY_SYS, cupItemsOf, CUP_REWARD, FAME_RANK, FAME_RANK_MAX, rankStepOf, rankNameOf, rankNeedG, WIN_TICKET, FOUR_DONE, fourWinsOf, forecastOf, ELIXIR_ADD, FRUIT_MULT,
+      GROW_BY_SPECIES, speciesType, gatherChanceOf, ASSISTS, ISSA, PTS, XP, SHUGYO, TECH_POWER, MASTERY, techRowsOf, techPowerOfRows, powerOf, techBoostOf, techUseOf, ITEMS, GOOD, CARRY_MAX, useItem, FAME_V, FAME_SCALE, TICKET_BASE, TRAIN_LV, trainLvOf, REMATCH, canRematch, rematch, canSkip, battleKey, PRIZE, MEALS, meal, MEAL_WATCH_MULT, ticketsOfPrize, TECH_MAX, techsOf, canLearn, techRate, learnable, techRank, shugyoQ, superLeft, techMissOf, techCanon, canonTechList, shugyoLeft, teachFrom, BENCH: BENCH_USE, STAR_MULT, TAG_POWER, BOND_START, RANK_ADD, TRAIN_COMBO, AIDS, speciesList, shugyoGainOf, EX_CUPS, EX_BY_SYS, cupItemsOf, CUP_REWARD, FAME_RANK, FAME_RANK_MAX, rankStepOf, rankNameOf, rankNeedG, WIN_TICKET, FOUR_DONE, fourWinsOf, forecastOf, ELIXIR_ADD, FRUIT_MULT,
       rngOf, periodOf, aptMult, initStats, memberOf, memberEffect, newRun, gatherOf, cardMult, peek, failRateOf, sabRateOf, greatRateOf,
       act, react, issa, issaComes, issaRate, endTurn, opponents: opponentsOf, settle, cupsOf, canEnter, bracketOf, gradeOf, GRADE_STEP, stayV, SC_CUPS, SC_NAME, ASST_STORY, storyEnd, markSpecial, battleMods, battleBuffs, peakTurn, ASTORY, storyDue, storyStep, preview, restore, ARC, PARTY, summitPick, endingOf, endingSeen, CUP_SYS, YEAR, RIVAL, CUP_PRIZE, spendPts, autoPts, ptsCost, evaluate, assistPointsOf, loyalOf, loyalMult, top3Of, sumOf,
       FUSE, fuseOk, fuseKinds, fusePlan, fuseId,

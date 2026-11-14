@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a8aa94dcd7000f85
+// source-sha256: 986b0e50133066c6
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -155911,7 +155911,7 @@ function MonsucFuseSheet({
     className: "mt-3 min-h-[44px] w-full rounded-xl bg-slate-700 text-[13px] font-black"
   }, "閉じる")) : !main ? React.createElement(React.Fragment, null, React.createElement("p", {
     className: "text-[11px] font-bold text-slate-300"
-  }, "① 主の親を選んでください。生まれるモンスターの主血統と型は、主の親から受け継ぎます"), usable.map(m => card(m, () => setMain(m.id), 'border-white/15 bg-slate-800')), usable.length < 2 && React.createElement("p", {
+  }, "① 主の親を選んでください。生まれるモンスターの主血統は、主の親から受け継ぎます。成長の型は、生まれたモンスターの種類で決まります"), usable.map(m => card(m, () => setMain(m.id), 'border-white/15 bg-slate-800')), usable.length < 2 && React.createElement("p", {
     className: "mt-2 text-[11px] font-bold text-slate-400",
     "data-monsuc-fuse-none": true
   }, "育て終えたモンスターが2体そろうと合体できます(編成・貸し出し中のモンスターは使えません)")) : !mat ? React.createElement(React.Fragment, null, React.createElement("p", {
@@ -155927,7 +155927,7 @@ function MonsucFuseSheet({
     className: "text-[11px] text-amber-200"
   }, plan.child.gen, "代目 ・ 未育成"), React.createElement("small", {
     className: "block text-[10px] font-bold text-slate-300"
-  }, "型: ", typeof MASMON_CALC !== 'undefined' && MASMON_CALC.typeOf ? MASMON_CALC.typeOf(plan.child.gt).name : '', plan.typeChanged ? '(主の親とは別の型になりました)' : '(主の親から)'))), React.createElement("div", {
+  }, "型: ", typeof MASMON_CALC !== 'undefined' && MASMON_CALC.typeOf ? MASMON_CALC.typeOf(plan.child.gt).name : '', "(生まれたモンスターの種類の型)"))), React.createElement("div", {
     className: "mt-1 rounded-xl bg-slate-800 p-2",
     "data-monsuc-fuse-plan": true
   }, React.createElement("p", {
@@ -163650,6 +163650,19 @@ const MSX_CSS = `
 .msx-sheet{width:100%;max-height:100%;overflow-y:auto;background:linear-gradient(180deg,#241d4a,#16122e);border:1px solid #f472b6aa;border-radius:16px;padding:12px;box-shadow:0 10px 30px #000a}
 .msx-sheet h3{margin:0 0 6px;font-size:15px;font-weight:900;color:#f9a8d4}
 .msx-row{display:flex;align-items:center;gap:6px}
+/* 編成: 枠を押して選ぶ・集まりやすいトレーニングの表(2026-11-14) */
+.msx .msx-slot-tap{cursor:pointer;outline:1px dashed #f9a8d488;outline-offset:-2px}
+.msx .msx-heat-btn{display:block;width:100%;text-align:left;cursor:pointer}
+.msx-pick-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:4px}
+.msx .msx-pick{display:flex;flex-direction:column;align-items:center;gap:1px;background:#0f172a;border:1px solid #334155;border-radius:10px;padding:4px 2px;min-width:0;color:#fff}
+.msx .msx-pick.on{border-color:#fde047;background:#3b2f0b}
+.msx-pick img{width:40px;height:40px;object-fit:contain}.msx-pick b{font-size:11px;max-width:100%;overflow-wrap:anywhere;text-align:center}.msx-pick small{font-size:10px;color:#cbd5e1;text-align:center;line-height:1.25}
+.msx-gt-row{background:#0f172a;border-radius:10px;padding:5px 8px;margin:4px 0}
+.msx-gt-row .hd{display:flex;align-items:center;gap:5px;font-size:12px}.msx-gt-row .hd .ic{font-size:16px}.msx-gt-row .hd b{flex:1;min-width:0}
+.msx-gt-row .hd .st{font-size:10.5px;color:#fde047}.msx-gt-row .hd .n{font-size:11px;color:#f9a8d4;font-weight:900}
+.msx-gt-mon{display:flex;align-items:center;gap:5px;margin-top:3px;font-size:11px}
+.msx-gt-mon img{flex:none;width:24px;height:24px;border-radius:7px;object-fit:contain;background:#1e1a36}.msx-gt-mon .nm{flex:1;min-width:0;overflow-wrap:anywhere}.msx-gt-mon .v{flex:0 1 auto;font-size:10px;color:#cbd5e1;text-align:right}
+.msx-gt-none{font-size:10.5px;color:#94a3b8;margin-top:2px}
 /* 選ぶ画面: はじめの能力(数字を大きく・伸びやすさは小さく)と「くわしく」の窓(2026-11-14) */
 .msx-dt-hd{display:flex;align-items:center;gap:6px}.msx-dt-hd .h1{flex:1;min-width:0}
 .msx .msx-dt-more{flex:none;border-radius:999px;padding:3px 10px;font-size:11px;font-weight:900;background:#f472b6;color:#fff;box-shadow:0 2px 0 #9d174d}
@@ -164383,7 +164396,7 @@ const msxAptOf = sp => {
   const a = typeof AMG_APT !== 'undefined' && AMG_APT && typeof AMG_APT[sp] === 'string' && AMG_APT[sp].length === 6 ? AMG_APT[sp] : 'CCCCCC';
   return a.split('');
 };
-const msxTeamSrc = (slot, box) => {
+const msxTeamSrc = (slot, box, own) => {
   if (slot && slot.box) {
     const m = box.mons.find(x => x.id === slot.box);
     if (m) return {
@@ -164407,7 +164420,7 @@ const msxTeamSrc = (slot, box) => {
   return {
     kind: 'base',
     species: sp,
-    name: msxMonName(sp)
+    name: sp === own ? `${msxMonName(sp)}(ベースモン)` : msxMonName(sp)
   };
 };
 function MsxSteps({
@@ -164579,6 +164592,161 @@ function MsxMonDetail({
     onClick: onClose
   }, "とじる")));
 }
+function MsxSlotPicker({
+  idx,
+  cur,
+  own,
+  unlocked,
+  raised,
+  teamBox,
+  SUC,
+  onPick,
+  onClose
+}) {
+  const thumb = {
+    width: 34,
+    height: 34,
+    borderRadius: 9,
+    objectFit: 'contain',
+    background: '#0f172a'
+  };
+  const topTxt = src => {
+    try {
+      const m = SUC.memberOf(src);
+      return m.top.slice(0, 2).map(k => `${MSX_STAT_ICON[k]}${MSX_STAT_NAME[k]}`).join(' ');
+    } catch (e) {
+      return '';
+    }
+  };
+  const boxFull = teamBox.length >= 5 && !(cur && cur.box);
+  return React.createElement("div", {
+    className: "msx-ov msx-fade",
+    "data-msx-slot-picker": true,
+    onClick: onClose
+  }, React.createElement("div", {
+    className: "msx-sheet msx-dt",
+    onClick: e => e.stopPropagation()
+  }, React.createElement("h3", null, idx + 1, "枠目に入れるモンスター"), React.createElement("div", {
+    className: "msx-dt-body"
+  }, React.createElement("div", {
+    className: "msx-dt-cap"
+  }, "ベースモン"), React.createElement("div", {
+    className: "msx-pick-grid"
+  }, unlocked.map(sp => {
+    const on = cur && !cur.box && cur.base === sp && !cur.auto;
+    return React.createElement("button", {
+      type: "button",
+      key: sp,
+      className: `msx-pick${on ? ' on' : ''}`,
+      "data-msx-pick-base": sp,
+      onClick: () => onPick({
+        base: sp
+      })
+    }, React.createElement("img", {
+      src: msxMonThumb(sp),
+      alt: ""
+    }), React.createElement("b", null, msxMonName(sp)), React.createElement("small", null, sp === own ? '育てる子と同じ種' : topTxt({
+      kind: 'base',
+      species: sp
+    })));
+  })), React.createElement("div", {
+    className: "msx-dt-cap",
+    style: {
+      marginTop: 8
+    }
+  }, "保存枠のモンスター(5体まで)"), raised.length ? raised.map(m => {
+    const on = cur && cur.box === m.id;
+    const used = !on && teamBox.includes(m.id);
+    return React.createElement("button", {
+      type: "button",
+      key: m.id,
+      className: `v-item${on ? ' sel' : ''}`,
+      disabled: !on && boxFull && !used,
+      style: {
+        padding: '4px 8px',
+        width: '100%'
+      },
+      onClick: () => onPick({
+        box: m.id
+      })
+    }, React.createElement("img", {
+      src: msxMonThumb(m.species),
+      alt: "",
+      style: thumb
+    }), React.createElement("div", null, m.nick || msxMonName(m.species), " ", m.rank ? React.createElement("i", {
+      className: msxRankCls(m.rank)
+    }, m.rank) : null, React.createElement("small", null, msxMonName(m.species), used ? '・ほかの枠から移す' : '')), React.createElement("span", {
+      className: "pr"
+    }, on ? '✅ この枠' : '入れる'));
+  }) : React.createElement("div", {
+    className: "msx-note"
+  }, "まだいません。育て終えたモンスターが入ります")), React.createElement("button", {
+    type: "button",
+    className: "msx-dt-close",
+    "data-msx-slot-close": true,
+    onClick: onClose
+  }, "とじる")));
+}
+function MsxGatherTable({
+  members,
+  SUC,
+  onClose
+}) {
+  const RANK = ['1位', '2位', '3位'];
+  return React.createElement("div", {
+    className: "msx-ov msx-fade",
+    "data-msx-gather": true,
+    onClick: onClose
+  }, React.createElement("div", {
+    className: "msx-sheet msx-dt",
+    onClick: e => e.stopPropagation()
+  }, React.createElement("h3", null, "集まりやすいトレーニング"), React.createElement("div", {
+    className: "msx-note"
+  }, "編成のモンスターは、得意な能力(1位〜3位)のトレーニングに来やすい。来ると、そのトレーニングの伸びが上がる"), React.createElement("div", {
+    className: "msx-dt-body"
+  }, MSX_STATS.map(k => {
+    const rows = members.map(m => ({
+      m,
+      j: Array.isArray(m.top) ? m.top.indexOf(k) : -1
+    })).filter(x => x.j >= 0 && x.j < 3).sort((a, b) => a.j - b.j);
+    return React.createElement("div", {
+      key: k,
+      className: "msx-gt-row",
+      "data-msx-gather-row": k
+    }, React.createElement("div", {
+      className: "hd"
+    }, React.createElement("span", {
+      className: "ic"
+    }, msxTrainIcon(k, 1)), React.createElement("b", null, msxTrainName(k, 1)), React.createElement("span", {
+      className: "st"
+    }, MSX_STAT_ICON[k], MSX_STAT_NAME[k]), React.createElement("span", {
+      className: "n"
+    }, rows.length, "体")), rows.length ? rows.map(({
+      m,
+      j
+    }, i) => {
+      const ch = typeof SUC.gatherChanceOf === 'function' ? SUC.gatherChanceOf(m)[k] : null;
+      return React.createElement("div", {
+        key: i,
+        className: "msx-gt-mon"
+      }, React.createElement("img", {
+        src: msxMonThumb(m.species),
+        alt: ""
+      }), React.createElement("span", {
+        className: "nm"
+      }, m.name), React.createElement("span", {
+        className: "v"
+      }, "得意", RANK[j], ch != null ? `・来やすさ${Math.round(ch * 100)}%` : '', "・伸び+", Math.round(m.bonus[k] || 0), "%"));
+    }) : React.createElement("div", {
+      className: "msx-gt-none"
+    }, "集まりやすい子なし"));
+  })), React.createElement("button", {
+    type: "button",
+    className: "msx-dt-close",
+    "data-msx-gather-close": true,
+    onClick: onClose
+  }, "とじる")));
+}
 function MsxStart({
   data,
   SUC,
@@ -164600,37 +164768,55 @@ function MsxStart({
     base: unlocked[0] || 'Mocchi'
   }));
   const species = pick.box ? (box.mons.find(m => m.id === pick.box) || {}).species || 'Mocchi' : pick.base;
-  const [teamBox, setTeamBox] = useState(() => (meta.team || []).filter(t => t && t.box && raised.some(m => m.id === t.box)).map(t => t.box).slice(0, 5));
+  const [slots, setSlots] = useState(() => {
+    const own0 = unlocked[0] || 'Mocchi';
+    let nb = 0;
+    const o = (meta.team || []).slice(0, 6).map(t => {
+      if (t && t.box && raised.some(m => m.id === t.box) && nb < 5) {
+        nb += 1;
+        return {
+          box: t.box
+        };
+      }
+      return t && t.base && unlocked.includes(t.base) && t.base !== own0 ? {
+        base: t.base
+      } : null;
+    });
+    while (o.length < 6) o.push(null);
+    return o;
+  });
+  const [slotPick, setSlotPick] = useState(null);
+  const [gatherOpen, setGatherOpen] = useState(false);
+  const teamBox = slots.filter(t => t && t.box).map(t => t.box);
   const [friend, setFriend] = useState(null);
   const [lendList, setLendList] = useState(null);
+  const autoBases = useMemo(() => {
+    const o = unlocked.filter(id => id !== species);
+    return o.length ? o : [species];
+  }, [unlocked, species]);
   const team = useMemo(() => {
-    const list = teamBox.map(id => ({
-      box: id
-    }));
-    const bases = [species, ...unlocked.filter(id => id !== species)];
     const room = friend ? 5 : 6;
-    let bi = 0;
-    while (list.length < room) {
-      list.push({
-        base: bases[bi % bases.length] || species
-      });
-      bi += 1;
-    }
+    let ai = 0;
+    const list = slots.slice(0, room).map(t => t || {
+      base: autoBases[ai++ % autoBases.length],
+      auto: true
+    });
     if (friend) list.push({
       friend
     });
     return list;
-  }, [teamBox, species, unlocked, friend]);
+  }, [slots, autoBases, friend]);
   const members = useMemo(() => team.map(t => {
-    const src = t.friend ? t.friend : msxTeamSrc(t, box);
+    const src = t.friend ? t.friend : msxTeamSrc(t, box, species);
     const m = SUC.memberOf(src);
     return {
       ...m,
       name: src.name,
       boxId: src.boxId || null,
-      friend: t.friend ? t.friend.friend : null
+      friend: t.friend ? t.friend.friend : null,
+      auto: !!t.auto
     };
-  }), [team, box, SUC]);
+  }), [team, box, SUC, species]);
   const openLend = async () => {
     if (typeof monsucLendFriends !== 'function') return;
     setLendList('loading');
@@ -164679,15 +164865,19 @@ function MsxStart({
       } : {
         base: species
       },
-      team: team.map(t => t.friend ? t.friend : msxTeamSrc(t, box)),
-      teamSlots: team.filter(t => !t.friend),
+      team: team.map(t => t.friend ? t.friend : msxTeamSrc(t, box, species)),
+      teamSlots: team.filter(t => !t.friend).map(t => t.box ? {
+        box: t.box
+      } : {
+        base: t.base
+      }),
       aid,
       aidBondLv: aidLv,
       items,
       nick: name,
       colors,
       friendId: friend && friend.friend ? friend.friend.id : null,
-      baseFill: [species, ...unlocked.filter(id => id !== species)][5 % Math.max(1, unlocked.length)] || species
+      baseFill: autoBases[0] || species
     });
   };
   const apt = msxAptOf(species);
@@ -164848,15 +165038,48 @@ function MsxStart({
     }));
     go = 'このモンスターにする ▶';
   } else if (step === 1) {
-    const toggleBox = id => setTeamBox(cur => cur.includes(id) ? cur.filter(x => x !== id) : cur.length >= 5 ? cur : [...cur, id]);
+    const toggleBox = id => setSlots(cur => {
+      const n = cur.slice();
+      const at = n.findIndex(t => t && t.box === id);
+      if (at >= 0) {
+        n[at] = null;
+        return n;
+      }
+      if (n.filter(t => t && t.box).length >= 5) return cur;
+      let i = n.slice(0, 5).findIndex(t => !t);
+      if (i < 0) i = n.slice(0, 5).findIndex(t => t && t.base);
+      if (i < 0) return cur;
+      n[i] = {
+        box: id
+      };
+      return n;
+    });
+    const putSlot = (i, v) => setSlots(cur => {
+      const n = cur.slice();
+      if (v && v.box) {
+        const at = n.findIndex(t => t && t.box === v.box);
+        if (at >= 0) n[at] = null;
+        if (n.filter(t => t && t.box).length >= 5 && !(n[i] && n[i].box)) return cur;
+      }
+      n[i] = v;
+      return n;
+    });
     body = React.createElement(React.Fragment, null, React.createElement("div", {
       className: "v-h"
-    }, "編成の6体", React.createElement("small", null, "保存枠から5体まで+フレンドから1体。強いモンスターほどトレーニングがよく伸びる")), React.createElement("div", {
+    }, "編成の6体", React.createElement("small", null, "枠を押すと、ベースモンか保存枠のモンスターから選べる(保存枠は5体まで)+フレンドから1体。強いモンスターほどトレーニングがよく伸びる")), React.createElement("div", {
       className: "v-slots"
-    }, members.map((m, i) => React.createElement("div", {
+    }, members.map((m, i) => React.createElement("div", _extends({
       key: i,
-      className: `v-sl${m.kind === 'base' ? ' base' : ''}${m.friend ? ' fr' : ''}`
-    }, React.createElement("span", {
+      className: `v-sl${m.kind === 'base' ? ' base' : ''}${m.friend ? ' fr' : ''}${m.friend ? '' : ' msx-slot-tap'}`,
+      "data-msx-slot": i
+    }, m.friend ? {} : {
+      role: 'button',
+      tabIndex: 0,
+      onClick: () => setSlotPick(i),
+      onKeyDown: e => {
+        if (e.key === 'Enter' || e.key === ' ') setSlotPick(i);
+      }
+    }), React.createElement("span", {
       className: `v-pf lg r${m.rank === 'base' ? 'G' : m.rank}${m.kind === 'base' ? ' base' : ''}`
     }, (() => {
       const img = React.createElement("img", {
@@ -164872,24 +165095,29 @@ function MsxStart({
       className: msxRankCls(m.rank)
     }, m.rank), React.createElement("div", {
       className: "t3"
-    }, m.top.slice(0, 2).map(k => `${MSX_STAT_NAME[k]}${Math.round(m.bonus[k] || 0)}%`).join(' ')), React.createElement("div", {
+    }, m.top.slice(0, 2).map(k => `${MSX_STAT_ICON[k]}${MSX_STAT_NAME[k]}${Math.round(m.bonus[k] || 0)}%`).join(' ')), React.createElement("div", {
       className: "bs"
     }, "親密度", m.bond0, "・タッグ+", m.tag, "%"), React.createElement("div", {
       className: "ic"
-    }, m.kind === 'base' ? 'ベースモン' : m.friend ? `借: ${m.friend.name || 'フレンド'}` : '')))), React.createElement("div", {
-      className: "v-card"
+    }, m.kind === 'base' ? m.auto ? 'ベースモン・✎選ぶ' : 'ベースモン・✎変える' : m.friend ? `借: ${m.friend.name || 'フレンド'}` : '✎変える')))), React.createElement("button", {
+      type: "button",
+      className: "v-card msx-heat-btn",
+      "data-msx-gather-open": true,
+      onClick: () => setGatherOpen(true)
     }, React.createElement("div", {
       className: "sub",
       style: {
         color: '#f9a8d4',
         fontWeight: 900
       }
-    }, "この編成が集まりやすいトレーニング"), React.createElement("div", {
+    }, "この編成が集まりやすいトレーニング", React.createElement("span", {
+      className: "msx-dt-sm"
+    }, " 押すと表 ▶")), React.createElement("div", {
       className: "v-heat"
     }, MSX_STATS.map((k, i) => React.createElement("div", {
       key: k,
       className: heat[i] >= 3 ? 'x3' : heat[i] === 2 ? 'x2' : ''
-    }, MSX_STAT_NAME[k], React.createElement("b", null, heat[i], "体"))))), React.createElement("div", {
+    }, msxTrainIcon(k, 1), MSX_STAT_NAME[k], React.createElement("b", null, heat[i], "体"))))), React.createElement("div", {
       className: "v-card",
       style: {
         flex: '1 1 0',
@@ -164943,7 +165171,7 @@ function MsxStart({
       style: {
         marginTop: 4
       }
-    }, "保存枠はまだ空です。育て終えたモンスターがここに入ります(いまは空いた枠をベースモンで埋めます)"), React.createElement("div", {
+    }, "保存枠はまだ空です。上の枠を押すと、入れるベースモンを選べます。育て終えたモンスターは、ここに入ります"), React.createElement("div", {
       className: "sub",
       style: {
         color: '#7dd3fc',
@@ -165010,6 +165238,25 @@ function MsxStart({
       }, on ? '✅ 借りている' : '借りる'));
     })) : null));
     go = 'この編成でいく ▶';
+    if (slotPick != null) body = React.createElement(React.Fragment, null, body, React.createElement(MsxSlotPicker, {
+      idx: slotPick,
+      cur: team[slotPick],
+      own: species,
+      unlocked: unlocked,
+      raised: raised,
+      teamBox: teamBox,
+      SUC: SUC,
+      onPick: v => {
+        putSlot(slotPick, v);
+        setSlotPick(null);
+      },
+      onClose: () => setSlotPick(null)
+    }));
+    if (gatherOpen) body = React.createElement(React.Fragment, null, body, React.createElement(MsxGatherTable, {
+      members: members,
+      SUC: SUC,
+      onClose: () => setGatherOpen(false)
+    }));
   } else if (step === 2) {
     const combo = SUC.TRAIN_COMBO && SUC.TRAIN_COMBO[aid];
     body = React.createElement(React.Fragment, null, React.createElement("div", {
