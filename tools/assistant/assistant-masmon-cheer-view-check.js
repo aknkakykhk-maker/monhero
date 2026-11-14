@@ -112,7 +112,7 @@ const seed = () => {
       const res = await page.evaluate(() => { const r = document.querySelector('[data-amgc-result]'); return r ? r.innerText.replace(/\s+/g, ' ') : ''; });
       const headOk = await page.evaluate(() => { const h = document.querySelector('.amgc-head'); if (!h) return true; return [...h.querySelectorAll('span')].filter((sp) => !sp.classList.contains('who')).every((sp) => sp.getBoundingClientRect().height <= (parseFloat(getComputedStyle(sp).lineHeight) || 20) * 1.5); });
       check(`(幅${width}) 結果欄の見出しが言葉の途中で折れない`, headOk);
-      check(`(幅${width}) 最後に「今日の修行の結果」(覚えた技・熟練の伸び)が出る`, /今日の修行の結果/.test(res) && /NEW/.test(res) && /→/.test(res), res.slice(0, 120));
+      check(`(幅${width}) 最後に「今日の修行の結果」(覚えた技・熟練の伸び)が出る`, /今日の修行の結果/.test(res) && /NEW/.test(res) && /→/.test(res) && /技の熟練度/.test(res) && /熟練の段/.test(res) && /を伸ばす修行|実戦で技を磨く修行/.test(res), res.slice(0, 120));
       if (SHOTS && width === 390) await page.screenshot({ path: path.join(shotDir, 'cheer-result-390.png') });
       await page.close();
     }
