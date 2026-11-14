@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 1b61161681663d50
+// generated-sha256: 50f204728472cba5
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -82015,12 +82015,26 @@ const assistantLifeTasteDaily = () => {
       if (!a || !a.id) continue;
       for (const r of assistantMasmonRowsOf(ASSISTANT_MASMON_STORE.state, a.id) || []) if (r && r.monster) assistantLifeTasteBump(a.id, r.monster, 'raise');
     }
+    // 友情Lv5以上の助手が好きなモンスターは、その友だちの好みにもじわっと入る(1日1回・+1。2026-11-15 窓口)。友情の保存が読み込まれているときだけ
+    //   好きな点は、友だちのはじめの好み(masmon-plan の likeMon)の monster から取る(血統の好みは対象にしない)
+    if (typeof ASSISTANT_PEER_STORE !== 'undefined' && ASSISTANT_PEER_STORE.state && ASSISTANT_PEER_STORE.state.loaded && typeof assistantPeerLevel === 'function') {
+      const st = ASSISTANT_PEER_STORE.state;
+      for (const a of ASSISTANT_MASMON_PLAN) {
+        if (!a || !a.id) continue;
+        for (const b of ASSISTANT_MASMON_PLAN) {
+          if (!b || !b.id || b.id === a.id || !Array.isArray(b.likeMon)) continue;
+          let lv = 0; try { lv = Number(assistantPeerLevel(st, a.id, b.id)); } catch (_) { lv = 0; }
+          if (!(lv >= 5)) continue;
+          for (const x of b.likeMon) if (x && typeof x.monster === 'string' && x.monster) assistantLifeTasteBump(a.id, x.monster, 'friend');
+        }
+      }
+    }
   } catch (_) {}
 };
 // 読み込み: 好みの保存だけを先に読む。助手のマスモンの保存は、助手ライフが開いて読み込まれたあと(subs の通知)で日次を1回走らせる(ここから読み込ませない=起動時に名前付けなどが走らないように)
 let amtDailyDay = '';
-const amtDailyTry = () => { try { const d = typeof assistantLifeDayKey === 'function' ? assistantLifeDayKey() : ''; if (!d || amtDailyDay === d || !AMT_STORE || !AMT_STORE.loaded || typeof ASSISTANT_MASMON_STORE === 'undefined' || !ASSISTANT_MASMON_STORE.loaded) return; amtDailyDay = d; assistantLifeTasteDaily(); } catch (_) {} };
-try { setTimeout(() => { try { if (amtOn() && AMT_STORE) { void AMT_STORE.load().then(amtDailyTry).catch(() => {}); if (typeof ASSISTANT_MASMON_STORE !== 'undefined' && ASSISTANT_MASMON_STORE.subs) ASSISTANT_MASMON_STORE.subs.add(amtDailyTry); } } catch (_) {} }, 0); } catch (_) {}
+const amtDailyTry = () => { try { const d = typeof assistantLifeDayKey === 'function' ? assistantLifeDayKey() : ''; if (!d || amtDailyDay === d || !AMT_STORE || !AMT_STORE.loaded || typeof ASSISTANT_MASMON_STORE === 'undefined' || !ASSISTANT_MASMON_STORE.loaded || (typeof ASSISTANT_PEER_STORE !== 'undefined' && ASSISTANT_PEER_STORE.state && !ASSISTANT_PEER_STORE.state.loaded)) return; amtDailyDay = d; assistantLifeTasteDaily(); } catch (_) {} };
+try { setTimeout(() => { try { if (amtOn() && AMT_STORE) { void AMT_STORE.load().then(amtDailyTry).catch(() => {}); if (typeof ASSISTANT_MASMON_STORE !== 'undefined' && ASSISTANT_MASMON_STORE.subs) ASSISTANT_MASMON_STORE.subs.add(amtDailyTry); if (typeof ASSISTANT_PEER_STORE !== 'undefined' && ASSISTANT_PEER_STORE.listeners) ASSISTANT_PEER_STORE.listeners.add(amtDailyTry); } } catch (_) {} }, 0); } catch (_) {}
 
 // ---- part: 56-monsuc-fuse.jsx ----
 // ---------- モンヒロサクセスの合体(保存枠の育て終えた子どうし・2026-11-12 開発部・段取りの回3) ----------
