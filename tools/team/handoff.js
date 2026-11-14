@@ -46,6 +46,11 @@ function draft(d) {
   const log = d.files.length ? git(['log', '--no-merges', '-n', '12', '--format=%h %ad %s', '--date=format:%m/%d', 'HEAD', '--', ...pathspecs(d)]).split('\n').filter(Boolean) : [];
   if (log.length) for (const l of log) L.push(`- ${cut(l, 130)}`); else L.push('- (なし)');
   L.push('');
+  // 社長の頼みの追跡表(完了でない物)。メモを書く人が忘れても、頼みは道具が入れる
+  const todo = require('./requests').linesFor(d.id, 20, 110);
+  L.push(`## 完了でない社長の頼み(追跡表・${todo.total} 件)`, '');
+  if (todo.total) { for (const l of todo.lines) L.push(l); L.push('', '済んだ物は報告に id を書く(窓口が `node tools/ctx.js todo set <id> 完了 --pr <番号>` にする)。'); } else L.push('- (なし)');
+  L.push('');
   L.push('## 残りの仕事', '');
   const jobs = openJobs(d);
   if (jobs.length) { L.push('頼みの台帳(docs/playbot/dashboard/ledger.json)で、まだ済んでいないもの:'); for (const x of jobs.slice(-12)) L.push(`- [${x['いま']}] ${cut(x['頼み'], 110)}${(x.PR || []).length ? ' ' + x.PR.join(' ') : ''}`); L.push(''); }
