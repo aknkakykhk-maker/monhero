@@ -121,7 +121,9 @@ const seed=(guide)=>{ if (sessionStorage.getItem('s')) return; sessionStorage.se
       const backup=await page.waitForFunction(()=>[...document.querySelectorAll('h3')].some(h=>/データ引き継ぎ|データのバックアップ/.test(h.textContent||'')),{timeout:8000}).then(()=>true).catch(()=>false);
       ok('実物: 「データ引き継ぎを開く」でデータ引き継ぎの窓が開く',backup);
       await page.keyboard.press('Escape').catch(()=>{});
-      await page.evaluate(()=>{const b=[...document.querySelectorAll('button')].find(x=>/^(閉じる|×|✕)$/.test((x.innerText||'').trim())&&!x.closest('[data-home-screen-guide]'));if(b)b.click();});
+      // データ引き継ぎの窓の閉じるは絵(×)だけで字が無い。名前(aria-label)で押し、窓が消えるまで待つ(Escape だけだと、たまに窓が残って次が押せなかった)
+      await page.locator('.mh-title-dialog .mh-dialog-head button[aria-label="閉じる"]').first().click({timeout:8000}).catch(()=>{});
+      await page.waitForFunction(()=>![...document.querySelectorAll('h3')].some(h=>/データ引き継ぎ|データのバックアップ/.test(h.textContent||'')),{timeout:8000}).catch(()=>{});
       await page.waitForTimeout(400);
       await page.click('[data-home-screen-guide-never]');
       const st2=await page.evaluate(()=>JSON.parse(localStorage.getItem('mh_home_screen_guide_v1')||'{}'));
