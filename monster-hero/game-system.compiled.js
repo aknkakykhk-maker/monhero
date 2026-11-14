@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f8a46d73a8d82f47
+// source-sha256: 47c882c47165cdcd
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -165548,12 +165548,14 @@ const MSX_CSS = `
 .msx-md-tg .tgh.d3{background:#2563eb}.msx-md-tg .tgh.d2{background:#16a34a}.msx-md-tg .tgh.d1{background:#d97706}.msx-md-tg .tgh.d0{background:#dc2626}
 .msx .msx-md-tg .tc,.msx-md-tg .no{position:relative;aspect-ratio:1/1;min-height:0;border-radius:8px;display:flex;align-items:center;justify-content:center}
 .msx .msx-md-tg .tc{padding:0;border:1.5px solid transparent}
-/* 技の種類で色分け(参考 monster-detail-basic・mm-04: ちから技=金・かしこさ技=緑)。覚えていない技は同じ色のまま暗くくすませる */
+/* 技の種類で色分け(参考 monster-detail-basic・mm-04: ちから技=金・かしこさ技=緑)。覚えていない技は升の地と枠を暗くし、絵は少しだけ暗く(.msx .lk の白黒の見た目とぶつからないよう tg-not という名前にする) */
 .msx .msx-md-tg .tc.pow{background:linear-gradient(160deg,#fde68a,#d97706);border-color:#f59e0b}
 .msx .msx-md-tg .tc.wise{background:linear-gradient(160deg,#bbf7d0,#16a34a);border-color:#4ade80}
-.msx .msx-md-tg .tc.lk{filter:grayscale(.55) brightness(.5)}
-.msx .msx-md-tg .tc.lk.on{filter:grayscale(.3) brightness(.75)}
-.msx-md-tg .tc .nd{position:absolute;left:2px;top:1px;font-size:10px;font-weight:900;color:#fff;background:#0f0d24cc;border-radius:5px;padding:0 3px;line-height:13px}
+.msx .msx-md-tg .tc.pow.tg-not{background:linear-gradient(160deg,#9a7420,#5e420c);border-color:#a8801f}
+.msx .msx-md-tg .tc.wise.tg-not{background:linear-gradient(160deg,#2f8050,#145230);border-color:#3f9a62}
+.msx-md-tg .tc.tg-not .ti{filter:brightness(.8)}
+.msx-md-tg .tc .nd{position:absolute;left:1px;top:1px;font-size:10px;font-weight:900;color:#fde68a;background:#0f0d24e6;border-radius:4px 0 4px 0;padding:0 2px;line-height:11px}
+.msx-md-tg .tc.tg-not .ti{margin-top:6px}
 .msx-md-not{display:block;font-size:10px;color:#94a3b8;font-weight:800}
 .msx .msx-md-tg .tc.on{border-color:#fde047;box-shadow:0 0 0 2px #fde047}
 .msx-md-tg .tc .ti{font-size:17px;line-height:1}
@@ -166706,7 +166708,7 @@ function MsxMonDetail({
     return React.createElement("button", {
       type: "button",
       key: `${r}-${d}`,
-      className: `tc ${t.kind === 'wise' ? 'wise' : 'pow'}${got ? ' got' : ' lk'}${tech && tech.id === t.id ? ' on' : ''}`,
+      className: `tc ${t.kind === 'wise' ? 'wise' : 'pow'}${got ? ' got' : ' tg-not'}${tech && tech.id === t.id ? ' on' : ''}`,
       "data-msx-tech": t.id,
       "aria-label": `${t.name}${got ? '' : '(まだ覚えていない)'}`,
       onClick: () => setPickT(t.id)
