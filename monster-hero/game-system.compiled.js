@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b5d1b60c229e9718
+// source-sha256: 18b4c0ae749b004a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -156841,7 +156841,7 @@ function MonsucFuseSheet({
     }
   }, (() => {
     const k = typeof keptOf === 'function' ? keptOf() : null;
-    return k === 0 ? `${done.lost.join('と')}は、置き場がいっぱいなので、メモリアルモンスターには残りませんでした。思い出に名前・ランク・代が残ります` : k === 1 ? `${done.lost.join('と')}のうち1体は、メモリアルモンスターとして残ります。思い出の記録(名前・ランク・代)も残ります` : `${done.lost.join('と')}は、メモリアルモンスターとして残ります。思い出の記録(名前・ランク・代)も残ります`;
+    return k === 0 ? `${done.lost.join('と')}は、メモリアルモンスターがいっぱいなので、メモリアルモンスターには残りませんでした。思い出に名前・ランク・代が残ります` : k === 1 ? `${done.lost.join('と')}のうち1体は、メモリアルモンスターとして残ります。思い出の記録(名前・ランク・代)も残ります` : `${done.lost.join('と')}は、メモリアルモンスターとして残ります。思い出の記録(名前・ランク・代)も残ります`;
   })())), typeof onName === 'function' ? React.createElement("div", {
     className: "mt-2 rounded-xl border border-amber-300/60 bg-amber-950/40 p-3",
     "data-monsuc-fuse-name": true
@@ -176549,8 +176549,8 @@ function MsxR3Box({
         const have = assist ? assist.mons.length : 0;
         const room = Math.max(0, MSX_ASSIST_CAP - have);
         if (room >= 2) return `メモリアルモンスターとして残ります(${have + 2}/${MSX_ASSIST_CAP})。\u200b育成には使えず、\u200b編成にだけ入れられます`;
-        if (room <= 0) return `置き場がいっぱいなので、\u200bメモリアルモンスターには残りません(思い出に名前・ランク・代だけ残ります)`;
-        return `片方だけ、\u200bメモリアルモンスターとして残ります。\u200bもう一方は置き場がいっぱいなので残りません`;
+        if (room <= 0) return `メモリアルモンスターがいっぱいなので、\u200bメモリアルモンスターには残りません(思い出に名前・ランク・代だけ残ります)`;
+        return `片方だけ、\u200bメモリアルモンスターとして残ります。\u200bもう一方はメモリアルモンスターがいっぱいなので残りません`;
       })(),
       keptOf: () => fuseKept.current,
       onSave: async n => {
@@ -176673,7 +176673,7 @@ function MsxR3Box({
       className: "mm-bar"
     }, React.createElement("span", {
       className: "cnt"
-    }, "置き場 ", React.createElement("b", null, stock.length), "/", MSX_ASSIST_CAP, "体"), React.createElement("button", {
+    }, "メモモン ", React.createElement("b", null, stock.length), "/", MSX_ASSIST_CAP, "体"), React.createElement("button", {
       type: "button",
       className: "mm-sel",
       disabled: !apick.length,
@@ -176828,8 +176828,8 @@ function MsxR3Box({
       const room = Math.max(0, MSX_ASSIST_CAP - have);
       const n = byeAsk.ids.length;
       if (room >= n) return `マスモンボックスからはいなくなり、\u200bメモリアルモンスターとして残ります(${have + n}/${MSX_ASSIST_CAP})。\u200b育成には使えず、\u200b編成にだけ入れられます。\u200b思い出にも名前とランクが残ります`;
-      if (room <= 0) return `マスモンボックスからはいなくなります。\u200b置き場がいっぱいなので、\u200bメモリアルモンスターには残りません(思い出に名前とランクだけ残ります)。\u200b元に戻せません`;
-      return `マスモンボックスからはいなくなります。\u200b${n}体のうち${room}体は、\u200bメモリアルモンスターとして残ります。\u200b置き場がいっぱいなので、\u200bのこりは残りません(思い出に名前とランクだけ残ります)`;
+      if (room <= 0) return `マスモンボックスからはいなくなります。\u200bメモリアルモンスターがいっぱいなので、\u200bメモリアルモンスターには残りません(思い出に名前とランクだけ残ります)。\u200b元に戻せません`;
+      return `マスモンボックスからはいなくなります。\u200b${n}体のうち${room}体は、\u200bメモリアルモンスターとして残ります。\u200bメモリアルモンスターがいっぱいなので、\u200bのこりは残りません(思い出に名前とランクだけ残ります)`;
     })()), React.createElement("div", {
       className: "mm-byelist"
     }, byeAsk.ids.map(id => {
