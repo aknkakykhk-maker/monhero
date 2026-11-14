@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 52102d3f3e4e5022
+// generated-sha256: a26a90493375d0bc
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -64852,9 +64852,12 @@ function AssistantPeerMap({ metIds, onReplay, peerItems = null, onUseItem = null
   // 一覧は仲良し度の高い6組だけ出し、残りは「全部のペアを見る」で広げる
   const [showAll, setShowAll] = React.useState(false);
   const [albumPair, setAlbumPair] = React.useState(null);
+  const mapRef = React.useRef(null); const [mapW, setMapW] = React.useState(0); // 新UI: 関係図の幅を画面に合わせる(札が顔・名前に重ならないよう、できるだけ大きく)
+  React.useLayoutEffect(() => { const w = mapRef.current && mapRef.current.parentElement ? mapRef.current.parentElement.clientWidth : 0; if (w && w !== mapW) setMapW(w); });
   const ids = (metIds || []).filter(id => assistantById(id) && assistantById(id).id === id);
   if (ids.length < 2) return null;
-  const size = 260, cx = size / 2, cy = size / 2, r = 98;
+  const size = v2 ? Math.max(240, Math.min(320, mapW || 260)) : 260, cx = size / 2, cy = v2 ? size / 2 + 2 : size / 2, r = v2 ? Math.round((size - 58) / 2) : 98;
+  const boxH = v2 ? size + 12 : size;
   const pos = Object.fromEntries(ids.map((id, i) => {
     const a = -Math.PI / 2 + (2 * Math.PI * i) / ids.length;
     return [id, { x: cx + r * Math.cos(a), y: cy + r * Math.sin(a) }];
@@ -64889,25 +64892,25 @@ function AssistantPeerMap({ metIds, onReplay, peerItems = null, onUseItem = null
         </button>)}
       {st.play && st.play.pair && st.play.pair.split('-').every(id => ids.includes(id)) && (
         <p data-assistant-peer-playing className="mb-2 text-[10px] font-bold text-sky-200">🎮 遊びに連れているペア: {st.play.pair.split('-').map(id => assistantById(id).name).join(' × ')}</p>)}
-      <div className="relative mx-auto" style={{ width: size, height: size }}>
-        <svg width={size} height={size} className="absolute inset-0" style={v2 ? { pointerEvents: 'none' } : undefined} aria-hidden="true">
+      <div ref={mapRef} className="relative mx-auto" style={{ width: size, height: boxH }}>
+        <svg width={size} height={boxH} className="absolute inset-0" style={v2 ? { pointerEvents: 'none' } : undefined} aria-hidden="true">
           {rows.filter(x => x.lv >= 3).map(x => (
             <line key={`${x.a}-${x.b}`} data-assistant-peer-link={assistantPeerPairKey(x.a, x.b)} x1={pos[x.a].x} y1={pos[x.a].y} x2={pos[x.b].x} y2={pos[x.b].y}
               stroke={lineColor(x.lv)} strokeWidth={Math.min(10, x.lv * 0.9)} strokeLinecap="round" opacity="0.85"/>))}
         </svg>
         {ids.map(id => { const who = assistantById(id); return (
-          <div key={id} className="absolute flex flex-col items-center" style={{ left: pos[id].x - 24, top: pos[id].y - 24, width: 48 }}>
+          <div key={id} data-assistant-peer-node={id} className="absolute flex flex-col items-center" style={{ left: pos[id].x - 24, top: pos[id].y - 24, width: 48 }}>
             <AssistantFace who={who} size={48} accent={who.accent}/>
             <span className={`mt-0.5 whitespace-nowrap ${v2 ? 'text-[10.5px]' : 'text-[9px]'} font-black text-slate-200`}>{who.name}</span>
           </div>); })}
-        {v2 && (<svg width={size} height={size} className="absolute inset-0" style={{ pointerEvents: 'none' }}>
+        {v2 && (<svg width={size} height={boxH} className="absolute inset-0" style={{ pointerEvents: 'none' }}>
           {v2 && (() => { const put = []; return rows.filter(x => x.lv >= 3).map(x => {
               // 札(Lv)は、顔と名前・ほかの札に重ならない位置(線の上の 50%→40%→60%…)に置く
               const at = (t) => ({ x: pos[x.a].x + (pos[x.b].x - pos[x.a].x) * t, y: pos[x.a].y + (pos[x.b].y - pos[x.a].y) * t });
-              const hit = (q) => ids.some(id => Math.abs(q.x - pos[id].x) < 38 && q.y > pos[id].y - 32 && q.y < pos[id].y + 40) || put.some(o => Math.abs(q.x - o.x) < 30 && Math.abs(q.y - o.y) < 18);
+              const hit = (q) => ids.some(id => Math.abs(q.x - pos[id].x) < 40 && q.y > pos[id].y - 34 && q.y < pos[id].y + 52) || put.some(o => Math.abs(q.x - o.x) < 30 && Math.abs(q.y - o.y) < 18);
               const dx = pos[x.b].x - pos[x.a].x, dy = pos[x.b].y - pos[x.a].y, dl = Math.hypot(dx, dy) || 1, nx = -dy / dl, ny = dx / dl;
-              const cand = []; for (const t of [0.5, 0.4, 0.6, 0.33, 0.67, 0.27, 0.73]) for (const o of [0, 16, -16, 26, -26]) { const c = at(t); cand.push({ x: c.x + nx * o, y: c.y + ny * o }); }
-              const inside = (c) => c.x > 16 && c.x < size - 16 && c.y > 8 && c.y < size - 8;
+              const cand = []; for (const t of [0.5, 0.45, 0.55, 0.4, 0.6, 0.35, 0.65, 0.3, 0.7, 0.25, 0.75, 0.2, 0.8]) for (const o of [0, 14, -14, 24, -24, 34, -34]) { const c = at(t); cand.push({ x: c.x + nx * o, y: c.y + ny * o }); }
+              const inside = (c) => c.x > 16 && c.x < size - 16 && c.y > 8 && c.y < boxH - 8;
               const q = cand.find(c => inside(c) && !hit(c)) || at(0.5); put.push(q); const mx = q.x, my = q.y; return (
             <g key={`t-${x.a}-${x.b}`} data-assistant-peer-link-lv={assistantPeerPairKey(x.a, x.b)} style={{ pointerEvents: 'auto', cursor: 'pointer' }} onClick={() => setAlbumPair([x.a, x.b])}>
               <line x1={pos[x.a].x} y1={pos[x.a].y} x2={pos[x.b].x} y2={pos[x.b].y} stroke="transparent" strokeWidth="22"/>
@@ -67409,11 +67412,12 @@ function AssistantLifeRoom({ id, met, look, x, y, w, h, state, onOpen, idx, othe
         // 縦: 上の行(名札の右)に一緒の全員の名前か、ひとりなら何をしているか・印。下の行(札の幅いっぱい)に行き先。名前は札に入る数まで(残りは「ほか◯人」)
         const ml = [...assistantLifeName(id)].length * 10 + 20; // 名札の幅(字10px+余白)。上の行はその右から
         const names = t[2] ? assistantLifeTagNames(t[2], Math.floor((w - 6 - ml - 10) / (v2 ? 10.8 : 8.8))) : null;
+        const tagLand = typeof window !== 'undefined' && window.innerWidth > window.innerHeight; // 横画面は札の高さが床の帯(マスモンが歩く所)に響くので、これまでの折り方のまま
         const tagFit = assistantLifeTagFit(t[0], w - 26, 10.5, 0); // 1行に入る字の大きさ(10.5 に入らない狭い部屋は、意味の切れ目で2行にする)
         const short = [...String(t[0])].length <= 9; // 横は1行。行き先が長いときは人数を付けない(「…」で切らない)
         return <span className="tag" data-assistant-life-room-away={id} data-assistant-life-room-tag-mark={mark ? '1' : '0'}>
           {mark || !names ? <small data-assistant-life-room-what style={{ marginLeft: ml }}>{t[1]}</small> : <small data-assistant-life-room-with style={{ marginLeft: ml }}><AssistantLifeNames text={names}/></small>}
-          <b style={w < 150 ? (tagFit >= 10.5 ? { whiteSpace: 'nowrap', fontSize: 10.5 } : { whiteSpace: 'normal', fontSize: Math.max(9, Math.min(10.5, Math.floor((w - 26) / 5.2 * 10) / 10)), lineHeight: '12px' }) : undefined}>{v2 && w >= 150 ? <span data-assistant-life-room-out className="mr-1 rounded bg-slate-600 px-1 text-white">留守</span> : null}{w < 150 && tagFit < 10.5 ? assistantLifeTagChunks(t[0]) : t[0]}<i data-assistant-life-room-tag-short>{n > 1 && short ? `・${n}人` : ''}{mark ? ` ${[...t[1]][0]}` : ''}</i></b></span>; })()}
+          <b style={w < 150 && !tagLand ? (tagFit >= 10.5 ? { whiteSpace: 'nowrap', fontSize: 10.5 } : { whiteSpace: 'normal', fontSize: Math.max(9, Math.min(10.5, Math.floor((w - 26) / 5.2 * 10) / 10)), lineHeight: '12px' }) : undefined}>{v2 && w >= 150 ? <span data-assistant-life-room-out className="mr-1 rounded bg-slate-600 px-1 text-white">留守</span> : null}{w < 150 && !tagLand && tagFit < 10.5 ? assistantLifeTagChunks(t[0]) : t[0]}<i data-assistant-life-room-tag-short>{n > 1 && short ? `・${n}人` : ''}{mark ? ` ${[...t[1]][0]}` : ''}</i></b></span>; })()}
       {!met && <span className="lock">{other ? 'まだいない' : 'まだ会っていない'}</span>}
       {met && state && state.ev && <span className="evm" data-assistant-life-room-ev={id} aria-label="いま、できごとがあります">❗</span>}
       {met && !other && typeof assistantLifeBodyCondShort === 'function' && assistantLifeBodyCondShort(id) && <span className="evm" style={{ right: 'auto', left: 2 }} data-assistant-life-room-body={id} aria-label={assistantLifeBodyCondShort(id)}>{assistantLifeBodyBadge(id)}</span>}
@@ -69285,18 +69289,22 @@ function AssistantLifeRoomBed({ id, W, floorY, sleepers = [], look }) {
         const U = r.U || F * 2.63;
         const cw0 = U * 1.2, ch0 = U * 1.32; // 頭の絵の大きさ(これまでの枠)。頭の位置はここから決める
         // 枠は頭より広く取り、四角い切れ目を見せない(2026-11-14 社長「寝てるときの表示も上が切れてた」: 頭の上の飾り・角・髪が枠の上で四角く切れていた)。
-        //   上へ 0.7U・左右へ 0.35U ずつ広げ、枠の縁は薄く消す。頭の位置は変えない(広げた分だけ枠の中心をずらす)
-        const ex = 0.7 * U, ey = 0.35 * U, cw = cw0 + ey * 2, ch = ch0 + ex, y0 = -0.22 * U - ex;
+        //   上へ 0.38U・左右へ 0.18U ずつ広げ、枠の縁を広く薄く消す(広げすぎると絵の髪・羽まで出て頭が大きく見える・2026-11-15 社長)。頭の位置は変えない(広げた分だけ枠の中心をずらす)
+        const ex = 0.38 * U, ey = 0.18 * U, cw = cw0 + ey * 2, ch = ch0 + ex, y0 = -0.22 * U - ex;
         // 倒すと縦横が入れかわる(見た目の幅 ch・高さ cw)。頭の後ろを枕の左端に、下端を枕の6割の高さに沈める
         const cx = pillow.left + ch0 / 2 + 2 + i * 14 - ex / 2, cy = pillow.top + pillow.h * 0.6 - cw0 / 2 - i * 6;
         const fadeAt = `${(((0.82 * ch0 + ex) / ch) * 100).toFixed(1)}%`; // 顎の側(布団の側)の消え始めは、これまでと同じ位置
-        const feather = `linear-gradient(to right,transparent,#000 9%,#000 91%,transparent),linear-gradient(to bottom,transparent,#000 6%,#000 ${fadeAt},transparent)`;
+        const feather = `linear-gradient(to right,transparent,#000 22%,#000 78%,transparent),linear-gradient(to bottom,transparent,#000 20%,#000 ${fadeAt},transparent)`;
         const imgLeft = r.left + cw / 2;
+        // 寝顔の絵が大きすぎて布団・家具にはみ出す(2026-11-15 社長 r1115-005): 見えている部分の高さが 2.0U を超える絵は、目の位置を動かさずに縮めて枕に収める
+        const visH = r.height * (box.b - box.t), k = Math.min(1, (2.0 * U) / Math.max(1, visH));
+        const eyeOrigin = `${(((box.l + box.r) / 2) * 100).toFixed(1)}% ${((box.t + (x.face.eye || 0.33) * (box.b - box.t)) * 100).toFixed(1)}%`;
+        const shrink = k < 0.999 ? { transform: `scale(${k.toFixed(3)})`, transformOrigin: eyeOrigin } : {};
         return (
           <div key={x.pid} data-assistant-life-roomview-sleeper={x.pid} style={{ position: 'absolute', left: cx - cw / 2, top: cy - ch / 2, width: cw, height: ch, transform: 'rotate(-78deg)', transformOrigin: '50% 50%',
             WebkitMaskImage: feather, maskImage: feather, WebkitMaskComposite: 'source-in', maskComposite: 'intersect' }}>
-            <img src={x.src} alt="" draggable={false} style={{ position: 'absolute', left: imgLeft, top: r.top - y0, width: r.width, height: r.height, maxWidth: 'none', filter: `saturate(.9) brightness(${night ? 0.72 : 0.9})` }}/>
-            <AssistantLifeSleepEyes pid={x.pid} src={x.src} w={r.width} h={r.height} style={{ left: imgLeft, top: r.top - y0, filter: `saturate(.9) brightness(${night ? 0.72 : 0.9})` }}/>
+            <img src={x.src} alt="" draggable={false} style={{ position: 'absolute', left: imgLeft, top: r.top - y0, width: r.width, height: r.height, maxWidth: 'none', ...shrink, filter: `saturate(.9) brightness(${night ? 0.72 : 0.9})` }}/>
+            <AssistantLifeSleepEyes pid={x.pid} src={x.src} w={r.width} h={r.height} style={{ left: imgLeft, top: r.top - y0, ...shrink, filter: `saturate(.9) brightness(${night ? 0.72 : 0.9})` }}/>
           </div>); })}
       {/* 掛け布団(2026-11-08 社長「布団を膨らませて顔にちょっとかかる感じに」): 肩・体・足のふくらみのある形で、顔の下半分〜目のあたりまでかぶせる(髪と頭のてっぺんは見せる) */}
       {(() => {
