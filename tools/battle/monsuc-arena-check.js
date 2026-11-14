@@ -119,6 +119,7 @@ const open = async (browser, reducedMotion, width = 390, species = 'Mocchi', loy
         if (st.act) await page.evaluate(() => { const b = [...document.querySelectorAll('.msxm-btn:not([disabled])')].find((y) => /ためる/.test(y.textContent)); if (b) b.click(); });
         await page.waitForTimeout(80);
       }
+      if (seen && process.argv.includes('--shots')) await page.screenshot({ path: path.join(ROOT, 'docs', 'progress', 'masmon-battle', 'stage-c', 'monsuc-imi-fumei.png') });
       const bandOk = seen ? await page.evaluate(() => /意味不明/.test(document.querySelector('[data-msa-sulk]').textContent)) : false;
       check('段C: 意味不明な行動の番に「意味不明!」の判子が出る(手動のまま)', seen && bandOk, JSON.stringify({ seen, bandOk, callSeen, guard }));
       await page.close();
