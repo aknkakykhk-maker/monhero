@@ -13,6 +13,7 @@ const path = require('path');
 const http = require('http');
 const ROOT = path.resolve(__dirname, '..', '..');
 const SHOT_DIR = process.env.SHOT_DIR || '';
+const ONLY = process.env.R3_ONLY ? new RegExp(process.env.R3_ONLY) : null; // 一部だけ回す(例: R3_ONLY='^Q' で修行の画面だけ)
 let failed = 0;
 const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${name}${detail ? ` — ${detail}` : ''}`); if (!ok) failed++; };
 let chromium;
@@ -70,7 +71,7 @@ const makeRun = async (kind) => {
     ['B2', 'win', ['cont', '%quick']], ['R1', 'win', ['cont', '%quick', '%next']], ['C3', 'win', ['cont', '%quick', '%next', '@next']], ['C3b', 'win', ['cont', '%quick', '%next', '@next', '@meal=f_pow']], // R1: 賞金ランク UP!(段が上がったときだけ)
     ['C4', 'lose', ['cont', '%quick']], ['C4r', 'lose', ['cont', '%quick', '%rematch=sand']], ['C4g', 'lose', ['cont', '%quick', '%giveup']],
     ['C4d', 'debutlose', ['cont', '%quick']],
-    ['Q1', 'mid', ['cont', /^⚔修行/]], ['Q2', 'mid', ['cont', /^⚔修行/, '@shugyo']], ['Q3', 'mid', ['cont', /^⚔修行/, '@shugyo', '@qnext']],
+    ['Q1', 'mid', ['cont', /^⚔修行/]], ['Q2', 'mid', ['cont', /^⚔修行/, '@shugyo']], ['Q2b', 'mid', ['cont', /^⚔修行/, '@shugyo', '@qskip']], ['Q3', 'mid', ['cont', /^⚔修行/, '@shugyo', '@qskip', '@qnext']], // 修行の段の演出 → 「結果へ」(qskip)→ 結果 → つぎへ(qnext)
     ['G1', 'gameover', ['cont']],
     ['X1', 'box', ['@openbox', '@boxmon=b1', '@edit']], ['X2', 'box', ['@openbox', '@boxmon=b1', '@edit', '@editsave']],
     ['E0', 'retire', ['cont']], ['E3', 'retire', ['cont', '@e0']], ['E3b', 'retire', ['cont', '@e0', '@bal']], ['E1', 'retire', ['cont', '@e0', '@bal', '@e3']],
@@ -84,7 +85,7 @@ const makeRun = async (kind) => {
       await page.addInitScript(() => { try { localStorage.setItem('mh_monsuc_beta_v1', JSON.stringify({ v: 1, seen: { open: 1, firstend: 1, prep: 1, turn: 1, train: 1, result: 1, rest: 1, shugyo: 1, cup: 1, match: 1, rematch: 1, event: 1, awake: 1, retire: 1 } })); /* β版の説明は monsuc-beta-browser-check.js が見る */ localStorage.setItem('mh_unlocked_monsters', JSON.stringify(['Mocchi', 'Suezo', 'Golem', 'Tiger', 'Pixie', 'Undine', 'Kyubi'])); } catch (e) {} });
       await page.goto(`http://localhost:${PORT}/monster-hero/index.html`, { waitUntil: 'load', timeout: 90000 });
       await page.waitForFunction(() => typeof MonheroSuccessScreen === 'function' && typeof MsxR3 === 'function' && typeof msxLoad === 'function' && typeof MASMON_CALC !== 'undefined', undefined, { timeout: 90000 });
-      for (const [name, kind, steps] of SHOTS) {
+      for (const [name, kind, steps] of SHOTS.filter(([n]) => !ONLY || ONLY.test(n))) {
         const label = `${name}${tag ? `(${tag})` : ''}`;
         await page.evaluate(async ({ kind, mk }) => {
           // eslint-disable-next-line no-new-func

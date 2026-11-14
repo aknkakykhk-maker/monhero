@@ -253,11 +253,14 @@ const useMsxR3Lines = (aid) => {
   useEffect(() => { let alive = true; msxR3LoadSE(aid).then(() => { if (alive) setN((n) => n + 1); }); return () => { alive = false; }; }, [aid]);
 };
 const msxR3Q = (t) => { const x = String(t || ''); return /^[「『(]/.test(x) ? x : `「${x}」`; };
+// いま育てている助手の親密度(育成の画面 MsxPlay が描くたびに入れる)。台詞の段(ていねい語/タメ口)を選ぶのに使う。
+// 入れないと台本は親密度4として選び、受付・試合・結果だけタメ口になっていた(Fable の点検 ①-15)
+let msxCurBondLv = null;
 const msxR3Line = (scene, run, extra, fallback, opt) => {
   const SE = msxR3SE(); const s = run.s;
   try {
     if (SE) {
-      const l = SE.say(scene, { id: s.id, turn: s.turn, aid: s.aid, mon: run.nick || '', species: s.species, ...(extra || {}) }, opt || {});
+      const l = SE.say(scene, { id: s.id, turn: s.turn, aid: s.aid, mon: run.nick || '', species: s.species, ...(msxCurBondLv ? { bond: msxCurBondLv } : {}), ...(extra || {}) }, opt || {});
       if (l && l.t) return { t: msxR3Q(l.t), e: l.e || null };
     }
   } catch (e) {}

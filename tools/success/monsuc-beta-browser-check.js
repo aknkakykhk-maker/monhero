@@ -140,10 +140,18 @@ const annivCheck = () => {
     const prep = page.locator('[data-msx-beta="prep"]');
     await prep.waitFor({ timeout: 10000 }).catch(() => {});
     check('準備の画面で説明が出る', await prep.count() === 1);
-    for (let i = 0; i < 20 && await prep.count(); i++) { await page.locator('.msx-beta-card').click(); await page.waitForTimeout(100); }
+    let prepText = '';
+    for (let i = 0; i < 20 && await prep.count(); i++) { prepText += await prep.innerText().catch(() => ''); await page.locator('.msx-beta-card').click(); await page.waitForTimeout(100); }
     check('準備の説明を読むと閉じる', await prep.count() === 0);
+    check('育てる子の段では編成・持ちこみの話をしない', !/編成|持ちこみ/.test(prepText), prepText.slice(0, 60));
     // 助手の選択(3つ目の段)まで進む
-    for (let i = 0; i < 2; i++) { await page.locator('.v-ft button.go').click(); await page.waitForTimeout(200); }
+    // 編成の段では編成の説明(team)が出る(2026-11-14 Fable ①-12: 育てる子の段では編成・持ちこみの話をしない)
+    await page.locator('.v-ft button.go').click(); await page.waitForTimeout(300);
+    const team = page.locator('[data-msx-beta="team"]');
+    await team.waitFor({ timeout: 5000 }).catch(() => {});
+    check('編成の段で編成の説明が出る', await team.count() === 1);
+    for (let i = 0; i < 10 && await team.count(); i++) { await page.locator('.msx-beta-card').click(); await page.waitForTimeout(100); }
+    await page.locator('.v-ft button.go').click(); await page.waitForTimeout(200);
     const opens = await page.locator('.v-faces button').count();
     check('選べる助手はみゅあだけ', opens === 1, `選べる ${opens}`);
     check('あつは準備中', await page.locator('[data-msx-soon="atsu"]').count() === 1);

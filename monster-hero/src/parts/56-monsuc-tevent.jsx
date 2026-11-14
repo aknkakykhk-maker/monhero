@@ -30,11 +30,21 @@ const msxTevChanges = (s, o) => {
   return out;
 };
 
+// 編成の子の出来事(第1〜3話)の台本の役割。いちばん得意な能力で決める(Fable の点検 ①-16: ベースモンはどの種でも同じ1行だった)。
+//   ちから=攻め・丈夫さ=守り・ライフ=癒し・かしこさ=支え・命中/回避=影。得意が分からない子は種の名前で散らす
+const MSX_CHEER_TYPE = Object.freeze({ pow: 'attacker', tough: 'tank', life: 'healer', wise: 'supporter', hit: 'shadow', eva: 'shadow' });
+const msxCheerType = (m) => {
+  const top = m && Array.isArray(m.top) ? m.top[0] : null;
+  if (top && MSX_CHEER_TYPE[top]) return MSX_CHEER_TYPE[top];
+  const k = String((m && m.species) || ''); let h = 0; for (let i = 0; i < k.length; i++) h = (h * 31 + k.charCodeAt(i)) >>> 0;
+  return ['attacker', 'tank', 'supporter', 'healer', 'shadow'][h % 5];
+};
+
 function MsxTrainEvent({ run, o, ctx, style = MSX_TEV_STYLE }) {
   msxTevEnsureCss();
   const s = run.s; const e = o.event; const m = s.team[e.who];
   const name = typeof msxMemberName === 'function' ? msxMemberName(m) : '編成のモンスター';
-  const line = e.story ? msxPickLine({ ...ctx, cheer: name }, `cheer.base.ep${e.story}`, { who: 'narr' }) : msxPickLine({ ...ctx, cheer: name }, `cheer.lot.${MSX_TEV_LOT[e.lottery] || 'friend'}`, { who: '*' });
+  const line = e.story ? (msxPickLine({ ...ctx, cheer: name }, `cheer.${msxCheerType(m)}.ep${e.story}`, { who: 'narr' }) || msxPickLine({ ...ctx, cheer: name }, `cheer.base.ep${e.story}`, { who: 'narr' })) : msxPickLine({ ...ctx, cheer: name }, `cheer.lot.${MSX_TEV_LOT[e.lottery] || 'friend'}`, { who: '*' });
   const title = e.story ? `${name}との出来事 第${e.story}話` : `${name}と${MSX_TEV_LOT_NAME[e.lottery] || '小さな出来事'}`;
   const ch = msxTevChanges(s, o);
   const calm = typeof msxFxCalm === 'function' && msxFxCalm();

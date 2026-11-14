@@ -169,6 +169,7 @@ function MonheroSuccessScreen({ onClose, callNameOf, bondLvOf, debug = false }) 
   const [layout, setLayout] = useState(msxLayout);
   const [ask, setAsk] = useState(null); // 確かめの小窓 { text, yes, onYes }
   const [playSub, setPlaySub] = useState('main'); // 育成中の小画面(MsxPlay の sub。β版の説明を出す場面を決める)
+  const [tutTurn, setTutTurn] = useState(null); // メインで説明の窓を1つ見たターン(1ターンに1つまで。保存しない)
   useEffect(() => {
     const on = () => setLayout(msxLayout());
     window.addEventListener('resize', on); window.addEventListener('orientationchange', on);
@@ -228,10 +229,12 @@ function MonheroSuccessScreen({ onClose, callNameOf, bondLvOf, debug = false }) 
     betaKeys = { keys: ['open', raisedMons.length > 0 && !(run && run.s && !run.s.over) && 'firstend'], ctx: { ...betaCtx, mon: lastRaised ? (lastRaised.nick || msxMonName(lastRaised.species)) : undefined } };
   } else if (view === 'play' && run && run.s) {
     const s = run.s; const ph = run.phase;
-    const keys = s.over || ph === 'over' ? ['retire'] : ph === 'battle' ? [run.out && run.out.r3 ? (run.out.r3.stage === 'rank' ? 'rank' : run.out.r3.stage === 'meal' ? 'meal' : null) : 'match'] /* 賞金ランク UP!・ごはんの段(2026-11-14) */ : playSub === 'cup' ? ['cup'] : playSub === 'shugyo' ? ['shugyo']
+    // 説明の窓は、その画面で動きが止まってから出す(Fable の点検 ①-12): 演出のあいだ(fx)は出さない/引退の説明は最後の評価の画面だけ(お話・エンディングの上やゲームオーバーでは出さない)/メインは1ターンに1つだけ・トレーニングの説明は選ぶ画面で
+    const overReady = s.over !== 'gameover' && !run.arcAfter && !(s.ending && !s.ending.seen);
+    const keys = playSub === 'fx' ? null : ph === 'battle' ? [run.out && run.out.r3 ? (run.out.r3.stage === 'rank' ? 'rank' : run.out.r3.stage === 'meal' ? 'meal' : null) : 'match'] /* 賞金ランク UP!・ごはんの段(2026-11-14) */ : s.over || ph === 'over' ? (overReady ? ['retire'] : null) : playSub === 'cup' ? ['cup'] : playSub === 'shugyo' ? ['shugyo'] : playSub === 'train' ? ['train']
       : ph === 'event' || ph === 'story' ? ['event'] : ph === 'awake' ? ['awake'] : ph === 'result' && run.out && run.out.result ? ['result']
-        : ph === 'main' && playSub === 'main' ? ['turn', 'train', s.hpMax > 0 && s.hp < s.hpMax * 0.5 && 'rest', Number(s.tickets) > 0 && 'shugyo'] : null;
-    if (keys) betaKeys = { keys, ctx: { ...betaCtx, mon: run.nick } };
+        : ph === 'main' && playSub === 'main' && tutTurn !== s.turn ? ['turn', s.hpMax > 0 && s.hp < s.hpMax * 0.5 && 'rest'] : null;
+    if (keys) betaKeys = { keys, ctx: { ...betaCtx, mon: run.nick }, onDone: ph === 'main' ? () => setTutTurn(s.turn) : undefined };
   }
 
   const node = (
@@ -242,7 +245,7 @@ function MonheroSuccessScreen({ onClose, callNameOf, bondLvOf, debug = false }) 
       {view === 'rank' && typeof MonsucRankScreen === 'function' ? <MonsucRankScreen onBack={() => setView('home')}/> : null}
       <div className={`msx v3 ${layout}`} data-msx-view={view}>
         {content}
-        {betaKeys && !ask && typeof MsxBetaTalk === 'function' ? <MsxBetaTalk keys={betaKeys.keys} ctx={betaKeys.ctx}/> : null}
+        {betaKeys && !ask && typeof MsxBetaTalk === 'function' ? <MsxBetaTalk keys={betaKeys.keys} ctx={betaKeys.ctx} onDone={betaKeys.onDone}/> : null}
         {ask && <div className="msx-ov msx-fade"><div className="msx-sheet"><div style={{ fontSize: 13, fontWeight: 900, lineHeight: 1.6 }}>{ask.text}</div>
           <button type="button" className="msx-btn go" onClick={() => { const f = ask.onYes; setAsk(null); f(); }}>{ask.yes}</button>
           <button type="button" className="msx-btn sub" onClick={() => setAsk(null)}>やめておく</button></div></div>}
@@ -299,12 +302,14 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
   const ev = useMemo(() => SUC.evaluate(s), [s]);
   const [sub, setSub] = useState('main');
   const [sel, setSel] = useState(null);
-  useEffect(() => { if (onSub) onSub(sub); }, [sub]);
+
   useEffect(() => () => { if (onSub) onSub('main'); }, []);
   // 期の区切りの演出(56-monsuc-kifx.jsx)を見終えたターン(保存しない。読み直したときはもう一度出る)
   const [kiAt, setKiAt] = useState(null);
   // トレーニングしている場面(56-monsuc-actfx.jsx)をまだ見せていないターン。押した直後だけ立てる(読み直したときは出さない・保存しない)
   const [actAt, setActAt] = useState(null);
+  // 押す前の育成(演出のあいだ、上の帯に結果を先に見せない。Fable の点検 ①-11。保存しない)
+  const [actFrom, setActFrom] = useState(null);
   const [sheet, setSheet] = useState(null); // 'log' | 'menu' | { soon: 名前 }
   const [, setScriptTick] = useState(0);
   // 台本(共通 + 助手の分)を読む。読み終わったら描き直して台詞を出す
@@ -314,6 +319,8 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
   const kiOn = run.phase === 'turn' && typeof MsxKiShow === 'function' && v.period && v.period.at === 1 && v.period.index > 0 && kiAt !== s.turn;
   const soundId = actOn ? 'trainAct' : kiOn ? 'kiShow' : run.phase === 'awake' && run.out && run.out.fire && typeof MsxAwakeShow === 'function' ? 'awakeShow' : run.phase === 'awake' && run.out && run.out.fire ? (run.out.fire.kind === 2 ? 'trainGreat' : 'trainLvUp') : run.phase === 'result' && run.out && MSX_REST_SOUND[run.out.kind] ? MSX_REST_SOUND[run.out.kind] : run.phase === 'result' && run.out && run.out.result ? MSX_RES_SOUND[run.out.result] : run.phase === 'issa' ? 'issa' : s.over === 'gameover' ? 'gameOver' : sub === 'train' ? 'training' : 'main';
   msxUseSound(soundId, { season: msxCalendar(s.turn).season });
+  // 演出のあいだは「fx」と知らせて、説明の窓を出さない(結果が出てから出す)
+  useEffect(() => { if (onSub) onSub(actOn || kiOn ? 'fx' : sub); }, [sub, actOn, kiOn]);
   // トレーニングLvが上がった回は、結果の音のあとに Lv アップの音を続ける(演出が終わって結果の字が出てから)
   const lvUpSe = run.phase === 'result' && !actOn && run.out && run.out.result && run.out.lvUp;
   useEffect(() => {
@@ -323,7 +330,8 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
   }, [lvUpSe, s.turn]);
   const tagAt = (SUC.BOND && SUC.BOND.tag) || 80;
   const bondLv = bondLvOf ? Number(bondLvOf(s.aid)) || 1 : 1;
-  const ctx = { id: s.id, turn: s.turn, aid: s.aid, mon: run.nick, species: s.species, callName: callNameOf ? callNameOf(s.aid) : '' };
+  if (typeof msxCurBondLv !== 'undefined') msxCurBondLv = bondLv; // 受付・試合・結果の台詞も同じ親密度の段で引く(56-monhero-success-r3-store.jsx)
+  const ctx = { id: s.id, turn: s.turn, aid: s.aid, mon: run.nick, species: s.species, callName: callNameOf ? callNameOf(s.aid) : '', bond: bondLv };
   const line = (scene, fallback, extra = {}) => { const l = msxPickLine({ ...ctx, ...extra }, scene, { bondLv }); return l || { t: fallback, e: 'normal' }; };
   const pushLog = (r, text) => ({ ...r, log: [...(r.log || []), { turn: s.turn, t: text }].slice(-20) });
 
@@ -373,7 +381,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
     if (a.kind === 'retry') { endTurnFlow(next); return; }
     const text = r.out.result ? `${MSX_STAT_NAME[a.stat] || ''}のトレーニング: ${MSX_RES[r.out.result].word}` : a.kind === 'rest' ? '休んだ' : a.kind === 'play' ? '遊んだ' : a.kind === 'clinic' ? '通院した' : '休み';
     next = pushLog(next, text);
-    if (r.out.result && typeof MsxTrainAct === 'function') setActAt(r.state.turn);
+    if (r.out.result && typeof MsxTrainAct === 'function') { setActAt(r.state.turn); setActFrom(s); }
     setRun({ ...next, phase: 'result' });
   };
 
@@ -403,12 +411,13 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
     const restName = o.rest && SUC.REST ? (SUC.REST.find((x) => x.key === o.rest) || {}).name : null;
     const say = isTrain ? line(o.result === 'sab' ? 'turn.result.slack' : `turn.result.${o.result}`, '') : o.kind === 'rest' ? line(`turn.rest.${o.rest === 'poor' ? 'little' : o.rest === 'great' ? 'deep' : 'normal'}`, '') : o.kind === 'play' ? line('turn.play', '') : o.kind === 'clinic' ? line((o.cured || []).length ? 'turn.clinic.cured' : 'turn.clinic.again', '') : { t: '' };
     const evMember = o.event && Number.isInteger(o.event.who) ? s.team[o.event.who] : null;
-    const evLine = o.event ? (o.event.story ? msxPickLine({ ...ctx, cheer: msxMemberName(evMember) }, `cheer.base.ep${o.event.story}`, { who: 'narr' }) : msxPickLine({ ...ctx, cheer: msxMemberName(evMember) }, `cheer.lot.${MSX_LOT[o.event.lottery] || 'friend'}`, { who: '*' })) : null;
+    const evLine = o.event ? (o.event.story ? ((typeof msxCheerType === 'function' && msxPickLine({ ...ctx, cheer: msxMemberName(evMember) }, `cheer.${msxCheerType(evMember)}.ep${o.event.story}`, { who: 'narr' })) || msxPickLine({ ...ctx, cheer: msxMemberName(evMember) }, `cheer.base.ep${o.event.story}`, { who: 'narr' })) : msxPickLine({ ...ctx, cheer: msxMemberName(evMember) }, `cheer.lot.${MSX_LOT[o.event.lottery] || 'friend'}`, { who: '*' })) : null;
+    const bandS = acting && actFrom ? actFrom : null; // 演出のあいだは押す前の値
     body = (<>
-      <MsxBand s={s} v={v} ev={ev}/>
+      {bandS ? <MsxBand s={bandS} v={SUC.peek(bandS)} ev={SUC.evaluate(bandS)}/> : <MsxBand s={s} v={v} ev={ev}/>}
       <div className="v-scene" style={{ flex: '1 1 0' }}>
         <img className="bg" src={`images/story-bg/${isTrain ? R.bg : 'monhero_plaza'}.jpg`} alt=""/><div className="sh"/>
-        {acting ? <MsxTrainAct key={`act-${s.turn}`} run={run} o={o} onDone={() => setActAt(null)}/> : null}
+        {acting ? <MsxTrainAct key={`act-${s.turn}`} run={run} o={o} onDone={() => { setActAt(null); setActFrom(null); }}/> : null}
         {acting ? null : isTrain && o.result === 'great' ? <div className="v-burst"/> : isTrain && o.result === 'ok' ? <div className="v-burst b2"/> : null}
         <div className="gr" style={{ left: '62%', bottom: 'calc(14% - 5px)' }}/>
         {acting ? null : <MsxMonArt run={run} className="mon" live={typeof MsxLiveMon === 'function'} react={isTrain ? { kind: o.result, id: s.turn } : null} style={{ left: '62%', bottom: '14%', height: '46%', transform: o.result === 'sab' ? 'translateX(-50%) rotate(84deg)' : o.result === 'fail' ? 'translateX(-50%) rotate(-12deg)' : 'translateX(-50%) rotate(6deg)', filter: o.result === 'fail' ? 'grayscale(.5) drop-shadow(0 8px 5px #0009)' : undefined }}/>}

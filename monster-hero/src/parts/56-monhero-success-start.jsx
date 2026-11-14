@@ -299,7 +299,7 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf }) {
         {body}
       </div>
       {go && <div className="v-ft"><button type="button" onClick={back}>{step ? '← もどる' : '← やめる'}</button><button type="button" className="go" onClick={next}>{go}</button></div>}
-      {typeof MsxBetaTalk === 'function' ? (lockTalk ? <MsxBetaTalk key={`lock${lockTalk}`} keys={['lock']} always ctx={betaCtx} onDone={() => setLockTalk(0)}/> : <MsxBetaTalk keys={['prep']} ctx={betaCtx}/>) : null}
+      {typeof MsxBetaTalk === 'function' ? (lockTalk ? <MsxBetaTalk key={`lock${lockTalk}`} keys={['lock']} always ctx={betaCtx} onDone={() => setLockTalk(0)}/> : <MsxBetaTalk keys={[step === 0 ? 'prep' : step === 1 ? 'team' : step === 3 ? 'bring' : null]} ctx={betaCtx}/>) : null}
     </>
   );
 }
