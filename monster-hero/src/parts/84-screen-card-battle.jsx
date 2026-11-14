@@ -2934,30 +2934,30 @@ const CARD_ART_KNOWN_BOX = Object.freeze({
   sorashido_surprise: [384, 512, 0, 2, 384, 510],
   sorashido_troubled: [384, 512, 0, 0, 384, 512],
   sorashido_wink: [384, 512, 0, 2, 384, 510],
-  'stand-normal/atsu_angry': [344, 552, 29, 7, 314, 545],
-  'stand-normal/atsu_crying': [344, 552, 14, 6, 329, 546],
-  'stand-normal/atsu_excited': [344, 552, 1, 6, 342, 546],
-  'stand-normal/atsu_happy': [344, 552, 12, 7, 331, 545],
-  'stand-normal/atsu_normal': [344, 552, 1, 7, 342, 545],
-  'stand-normal/atsu_surprise': [344, 552, 1, 7, 342, 545],
-  'stand-normal/atsu_troubled': [344, 552, 3, 7, 340, 545],
-  'stand-normal/atsu_wink': [344, 552, 1, 8, 342, 544],
-  'stand-normal/kiki_angry': [552, 832, 1, 8, 550, 824],
+  'stand-normal/atsu_angry': [540, 552, 83, 7, 407, 545],
+  'stand-normal/atsu_crying': [606, 552, 108, 6, 390, 546],
+  'stand-normal/atsu_excited': [618, 552, 89, 7, 503, 545],
+  'stand-normal/atsu_happy': [494, 552, 47, 7, 420, 545],
+  'stand-normal/atsu_normal': [586, 552, 43, 7, 439, 545],
+  'stand-normal/atsu_surprise': [624, 552, 118, 7, 434, 545],
+  'stand-normal/atsu_troubled': [556, 552, 47, 7, 458, 545],
+  'stand-normal/atsu_wink': [626, 552, 81, 7, 537, 545],
+  'stand-normal/kiki_angry': [616, 832, 8, 8, 601, 824],
   'stand-normal/kiki_crying': [436, 832, 8, 6, 420, 826],
-  'stand-normal/kiki_excited': [552, 832, 1, 8, 550, 824],
+  'stand-normal/kiki_excited': [946, 832, 8, 8, 929, 824],
   'stand-normal/kiki_happy': [392, 832, 7, 8, 377, 824],
   'stand-normal/kiki_normal': [414, 832, 12, 8, 394, 824],
-  'stand-normal/kiki_surprise': [486, 832, 1, 8, 476, 824],
+  'stand-normal/kiki_surprise': [554, 832, 8, 8, 537, 824],
   'stand-normal/kiki_troubled': [456, 832, 8, 8, 439, 824],
-  'stand-normal/kiki_wink': [550, 832, 8, 6, 541, 826],
-  'stand-normal/kyuko_angry': [430, 590, 16, 7, 413, 583],
-  'stand-normal/kyuko_crying': [396, 590, 23, 8, 361, 582],
-  'stand-normal/kyuko_excited': [418, 590, 6, 8, 405, 582],
-  'stand-normal/kyuko_happy': [424, 590, 61, 8, 356, 582],
+  'stand-normal/kiki_wink': [566, 832, 8, 6, 550, 826],
+  'stand-normal/kyuko_angry': [492, 590, 15, 7, 470, 583],
+  'stand-normal/kyuko_crying': [416, 590, 23, 8, 364, 582],
+  'stand-normal/kyuko_excited': [452, 590, 12, 8, 433, 582],
+  'stand-normal/kyuko_happy': [448, 590, 85, 8, 356, 582],
   'stand-normal/kyuko_normal': [410, 590, 19, 8, 381, 582],
   'stand-normal/kyuko_surprise': [410, 590, 43, 8, 342, 582],
   'stand-normal/kyuko_troubled': [366, 590, 21, 7, 337, 583],
-  'stand-normal/kyuko_wink': [416, 590, 30, 8, 380, 582],
+  'stand-normal/kyuko_wink': [424, 590, 30, 8, 386, 582],
   'stand-normal/myua_angry': [592, 672, 12, 0, 520, 672],
   'stand-normal/myua_crying': [592, 672, 0, 0, 591, 672],
   'stand-normal/myua_excited': [592, 672, 0, 0, 583, 672],
@@ -2966,14 +2966,14 @@ const CARD_ART_KNOWN_BOX = Object.freeze({
   'stand-normal/myua_surprise': [592, 672, 0, 10, 509, 662],
   'stand-normal/myua_troubled': [592, 672, 27, 0, 516, 672],
   'stand-normal/myua_wink': [592, 672, 12, 10, 579, 662],
-  'stand-normal/sorashido_angry': [456, 542, 11, 6, 441, 536],
-  'stand-normal/sorashido_crying': [456, 542, 21, 7, 434, 535],
-  'stand-normal/sorashido_excited': [456, 542, 1, 8, 454, 534],
-  'stand-normal/sorashido_happy': [456, 542, 1, 4, 454, 538],
-  'stand-normal/sorashido_normal': [456, 542, 1, 7, 454, 535],
-  'stand-normal/sorashido_surprise': [456, 542, 20, 7, 435, 535],
-  'stand-normal/sorashido_troubled': [456, 542, 1, 8, 454, 534],
-  'stand-normal/sorashido_wink': [456, 542, 1, 9, 440, 533],
+  'stand-normal/sorashido_angry': [698, 542, 113, 7, 443, 535],
+  'stand-normal/sorashido_crying': [684, 542, 98, 7, 477, 535],
+  'stand-normal/sorashido_excited': [772, 542, 53, 8, 674, 534],
+  'stand-normal/sorashido_happy': [732, 542, 47, 6, 655, 536],
+  'stand-normal/sorashido_normal': [762, 542, 121, 8, 569, 534],
+  'stand-normal/sorashido_surprise': [766, 542, 105, 7, 586, 535],
+  'stand-normal/sorashido_troubled': [730, 542, 31, 9, 672, 533],
+  'stand-normal/sorashido_wink': [646, 542, 97, 9, 446, 533],
   // </card-art-known-box>
 });
 const cardArtBoxOf = (v) => (Array.isArray(v) && v.length === 6 ? { nw: v[0], nh: v[1], x: v[2], y: v[3], w: v[4], h: v[5] } : null);
@@ -3038,20 +3038,24 @@ const CardAssistantArt = ({ src, alt, className = '', style = null, knownBox = n
   const fit = (() => {
     const W = size.w, H = size.h;
     if (!box || !W || !H) return null;
-    const sc = Math.min(H / box.h, W / box.w);
+    // 幅は枠の 1.2 倍まではみ出してよい(2026-11-15 立ち絵を左右を切らない形にしたので、腕を広げた絵が広くなる。幅で縮めると高さが枠より1割ほど小さくなった)
+    const sc = Math.min(H / box.h, (W * 1.2) / box.w);
     // 顔の大きさをそろえる(2026-11-11 社長「助手の立ち絵も見直して、使う場面全部でうまく表示させるようにして」)。
     //   描かれている範囲いっぱいに収めるだけだと、羽や大きな耳のある絵(みゅあ・ももすけ)は顔が小さく、助手ごとに顔の大きさが 1.7〜2.8倍ちがった。
-    //   助手ライフの場面と同じ顔の点の表(assistantLifeStandFace)と決まり(assistantLifeStandRule)で、頭(てっぺんから顎)を枠の高さの 44%・頭のてっぺんを上から 18% に置く。
+    //   助手ライフの場面と同じ顔の点の表(assistantLifeStandFace)と決まり(assistantLifeStandRule)で、頭(てっぺんから顎)を枠の高さの 44%・頭のてっぺんを上から 12〜30% に置く(2026-11-15 18%→12%: きゅうこの絵が欄より1割以上小さくなっていた)。
     //   羽・肩は枠の外へ出てよい(顔は切らない)。今までの収め方より小さくなる絵(ソラシド・えるびん・きゅうこ)と、顔だけの絵(ドラ)は今までどおり
     const face = cardArtFaceBySrc(src);
     if (face && !face.head && typeof assistantLifeStandRule === 'function') {
       const lb = { t: box.y / box.nh, b: (box.y + box.h) / box.nh, l: box.x / box.nw, r: (box.x + box.w) / box.nw, ar: box.nw / box.nh };
       const U = Math.min(H * 0.44, W * 0.95);
-      const r = assistantLifeStandRule({ face, box: lb, F: U / ASSISTANT_LIFE_STAND_FACE_LEN, topY: H * Math.max(0.18, Math.min(0.3, (face.above || 0) * 0.32)), cx: W / 2 }); // 魔女の帽子・大きな耳の着替え(above のある絵)は、頭を少し下げて飾りを入れる
+      const r = assistantLifeStandRule({ face, box: lb, F: U / ASSISTANT_LIFE_STAND_FACE_LEN, topY: H * Math.max(0.12, Math.min(0.3, (face.above || 0) * 0.32)), cx: W / 2 }); // 魔女の帽子・大きな耳の着替え(above のある絵)は、頭を少し下げて飾りを入れる
       if (r && r.width > box.nw * sc * 1.02) {
         const dy = Math.max(0, H - r.visBottom); // 体が枠の下まで届かない絵は、下の端にそろえる
         const visW = (lb.r - lb.l) * r.width;
-        return { width: r.width, left: r.left, top: r.top + dy, artH: Math.round(Math.min(H, r.visBottom + dy) - Math.max(0, r.visTop + dy)), artW: Math.round(Math.min(W, visW)), byFace: true };
+        const byFace = { width: r.width, left: r.left, top: r.top + dy, artH: Math.round(Math.min(H, r.visBottom + dy) - Math.max(0, r.visTop + dy)), artW: Math.round(Math.min(W, visW)), byFace: true };
+        // 顔で置いた絵が、高さも幅も枠の 92% に届かない(上が空いて小さく見える)ときは、枠いっぱいに収める今までの置き方にする
+        //   (2026-11-15 左右を切らない立ち絵で、腕を広げたきゅうこがこうなった)
+        if (byFace.artH >= H * 0.92 || byFace.artW >= W * 0.92) return byFace;
       }
     }
     return { width: box.nw * sc, left: W / 2 - (box.x + box.w / 2) * sc, top: H - (box.y + box.h) * sc, artH: Math.round(box.h * sc), artW: Math.round(box.w * sc) };

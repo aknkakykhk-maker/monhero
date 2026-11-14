@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 89d06636a1f0b1a4
+// generated-sha256: 6eeb9b320cf5c0e2
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -67351,7 +67351,7 @@ const ASSISTANT_LIFE_HOUSE_CSS = `
 @media (orientation:landscape) and (max-height:420px){[data-assistant-life-room-acts] .mhl-btn{min-height:34px;font-size:11.5px}[data-assistant-life-room-acts]{gap:5px}}
 .mhl-scene{position:absolute;inset:0;z-index:30;overflow:hidden;background:#000}
 .mhl-scene .bg{position:absolute;inset:0;background-size:cover;background-position:center}
-.mhl-scene .st{position:absolute;bottom:0;object-fit:contain;object-position:bottom;filter:drop-shadow(0 6px 12px #0008)}
+.mhl-scene .st{position:absolute;bottom:0;object-fit:contain;object-position:bottom}/* 2026-11-15 drop-shadow は絵の箱で切れて、後ろに四角い影の面が出た(窓口の指摘)のでやめた */
 @keyframes mhlIntroTitle{0%{opacity:0;transform:scale(.9)}30%{opacity:1;transform:scale(1)}100%{opacity:1}}
 @keyframes mhlDoorL{from{transform:translateX(0)}to{transform:translateX(-102%)}}
 @keyframes mhlDoorR{from{transform:translateX(0)}to{transform:translateX(102%)}}
@@ -67857,7 +67857,11 @@ const assistantLifeStandLayout = (items, W, H) => {
   // 2人の場面(助手どうしの会話)の顔の大きさ: 全身画の助手(体の幅が広い)が並んでも、みゅあ・ももすけ(34px 前後)とそろえる(2026-11-14 社長「ききときゅうこがでかい？」)
   const fh = H * ({ 1: 0.085, 2: 0.04, 3: 0.064, 4: 0.055 }[Math.min(4, n)]);
   const visH = (x, F) => assistantLifeStandVisH(x.face, F);
-  const visW = (x, F) => visH(x, F) * (x.box.r - x.box.l) * x.box.ar / (x.box.b - x.box.t);
+  // 幅の上限(顔の長さ F の何倍まで数えるか): 全身画の胸から上は、腕・羽・耳・髪を入れると体の幅が顔の7〜8倍になる。そのまま数えると
+  //   並ぶ場面で顔が小さくなる(2026-11-15 社長「ききときゅうこがでかい？」で顔を 34px にそろえたとき)。絵は切らず、広がった所は
+  //   となりと少し重ねてよいことにして、数える幅だけ顔の 5.6 倍までにする
+  const VIS_W_MAX_F = 5.6;
+  const visW = (x, F) => Math.min(visH(x, F) * (x.box.r - x.box.l) * x.box.ar / (x.box.b - x.box.t), F * VIS_W_MAX_F);
   let F = fh;
   for (const x of items) { const w1 = visW(x, 1); if (w1 > 0) F = Math.min(F, (sw * 1.08) / w1); }
   // 頭のてっぺんの高さ: 目の高さの平均が、縦は場面の上から4割・横は3割5分に来るところ
@@ -68619,6 +68623,12 @@ const assistantLifeMapReadHome = () => {
   return out;
 };
 
+// 町の地図の頭の高さの表(2026-11-15 r1115-031)。キーは絵の置き場所(助手の絵のフォルダの下)から表情の名前を取ったもの。値は [頭のてっぺん, 顎, (任意)大きさの倍率](絵の見えている範囲の上を0・下を1。倍率は、見た目で他の人より大きい絵だけ)
+const ASSISTANT_LIFE_MAP_HEAD = Object.freeze({
+  myua_sleep: [0.15, 0.51], kiki_sleep: [0.22, 0.60], momosuke_sleep: [0.07, 0.58], atsu_sleep: [0.08, 0.60], kyuko_sleep: [0.05, 0.52],
+  'halloween/myua_sleep': [0.20, 0.51], 'halloween/kiki_sleep': [0.22, 0.585], 'halloween/momosuke_sleep': [0.12, 0.58], 'card-master/myua_sleep': [0.07, 0.39],
+  momosuke: [0.065, 0.51, 0.85], 'halloween/momosuke': [0.065, 0.51, 0.8], erubin: [0.01, 0.45],
+});
 // 小さな全身(絵の描かれている範囲を測って、見た目の高さを h にそろえる。胸から上の絵は下をぼかす)
 function AssistantLifeMapFig({ who, h, sleep, spent = false }) {
   // 寝ている助手は、社長の寝顔の絵があればそれ(assistantLifeSleepSrc・2026-11-11 社長「絵をそのまま使う」)
@@ -68632,7 +68642,15 @@ function AssistantLifeMapFig({ who, h, sleep, spent = false }) {
   // 大きさは「見えている体の高さ」ではなく顔でそろえる(2026-11-11 社長「助手の立ち絵も見直して」: 高さでそろえると、体の長い絵=みゅあ・きき・あつ の顔が 4px、
   //   顔だけの絵=ドラ が 11px と 2.8倍ちがい、羽や耳のある絵は左右も切れていた)。場面の立ち絵と同じ表(assistantLifeStandFace)と決まり(assistantLifeStandRule)を使う:
   //   頭(てっぺんから顎)が箱の高さの半分・頭のてっぺんは上から 25%(うさ耳が入る。魔女の帽子・大きな耳の着替え=above のある絵は 38% まで下げる)・胸から下は箱の下でぼかして消す。測れないうちは今までの出し方
-  const face = typeof assistantLifeStandFace === 'function' ? assistantLifeStandFace(who && who.id, src) : null;
+  // 町の地図は、頭の高さ(髪のてっぺん〜顎。うさ耳・リボン・帽子・王冠は含めない)を全員そろえる(2026-11-15 社長 r1115-031「助手ごとに絵の大きさがばらばら」)。
+  //   場面の立ち絵の表は目〜顎と頬の幅でそろえていて、髪やうさ耳で頭が大きく見える人が出ていた。さらに、寝ている絵・ハロウィンのももすけなど表の点が合わない絵が大きく出ていた。
+  //   表(assistantLifeStandFace)に顎の点がある絵はそれを使い、無い絵は下の ASSISTANT_LIFE_MAP_HEAD(絵を目盛りつきで切り出して手で読んだ 上・顎。見えている体の高さに対する割合)を使う
+  const face0 = typeof assistantLifeStandFace === 'function' ? assistantLifeStandFace(who && who.id, src) : null;
+  const headKey = String(src || '').replace(/[?#].*$/, '').replace(/^.*assistant\//, '').replace(/\.png$/i, '').replace(/_(?!sleep$)[a-z]+$/i, '');
+  const head = ASSISTANT_LIFE_MAP_HEAD[headKey] || null;
+  const topChin = head ? { top: head[0], chin: head[1] } : (face0 && Number.isFinite(face0.top) && (Number.isFinite(face0.chin) || face0.head) ? { top: face0.top, chin: face0.head ? 1 : face0.chin } : null);
+  const face = face0 && topChin && typeof ASSISTANT_LIFE_STAND_EC === 'number'
+    ? { ...face0, top: topChin.top, m: (topChin.chin - topChin.top) / (ASSISTANT_LIFE_STAND_EC * ASSISTANT_LIFE_STAND_FACE_LEN), fit: (head && head[2]) || 1 } : face0;
   const rule = box && face && typeof assistantLifeStandRule === 'function' ? assistantLifeStandRule({ face, box, F: (h * 0.5) / ASSISTANT_LIFE_STAND_FACE_LEN, topY: h * Math.max(0.25, Math.min(0.38, (face.above || 0) * 0.4)), cx: 0 }) : null;
   const ih = rule ? rule.height : h / Math.max(0.2, b.b - b.t), iw = rule ? rule.width : ih * (b.ar || 0.6);
   const w = Math.round(Math.min((b.r - b.l) * iw, h * 0.78));
@@ -84207,7 +84225,7 @@ const alfBuildMore = (ids) => {
     } catch {}
   }
   const dy = alfDiaryShare(8);
-  // 仲良しの「段」(2026-11-14 社長 r1115-019 第2弾「段は見せてよい・数字は出さない」): 助手ごとに 0(はじめのころ)/1(なかよし)/2(ずっと仲良し)。点・Lv の数は送らない
+  // 仲良しの「段」(2026-11-14 社長 r1115-019 第2弾「段は見せてよい・数字は出さない」): 助手ごとに 0(初めのころ)/1(なかよし)/2(ずっと仲良し)。点・Lv の数は送らない
   const bd = alfBondTiers(ids);
   return { v: 1, fu, dy, ...(Object.keys(bd).length ? { bd } : {}) };
 };
@@ -103593,30 +103611,30 @@ const CARD_ART_KNOWN_BOX = Object.freeze({
   sorashido_surprise: [384, 512, 0, 2, 384, 510],
   sorashido_troubled: [384, 512, 0, 0, 384, 512],
   sorashido_wink: [384, 512, 0, 2, 384, 510],
-  'stand-normal/atsu_angry': [344, 552, 29, 7, 314, 545],
-  'stand-normal/atsu_crying': [344, 552, 14, 6, 329, 546],
-  'stand-normal/atsu_excited': [344, 552, 1, 6, 342, 546],
-  'stand-normal/atsu_happy': [344, 552, 12, 7, 331, 545],
-  'stand-normal/atsu_normal': [344, 552, 1, 7, 342, 545],
-  'stand-normal/atsu_surprise': [344, 552, 1, 7, 342, 545],
-  'stand-normal/atsu_troubled': [344, 552, 3, 7, 340, 545],
-  'stand-normal/atsu_wink': [344, 552, 1, 8, 342, 544],
-  'stand-normal/kiki_angry': [552, 832, 1, 8, 550, 824],
+  'stand-normal/atsu_angry': [540, 552, 83, 7, 407, 545],
+  'stand-normal/atsu_crying': [606, 552, 108, 6, 390, 546],
+  'stand-normal/atsu_excited': [618, 552, 89, 7, 503, 545],
+  'stand-normal/atsu_happy': [494, 552, 47, 7, 420, 545],
+  'stand-normal/atsu_normal': [586, 552, 43, 7, 439, 545],
+  'stand-normal/atsu_surprise': [624, 552, 118, 7, 434, 545],
+  'stand-normal/atsu_troubled': [556, 552, 47, 7, 458, 545],
+  'stand-normal/atsu_wink': [626, 552, 81, 7, 537, 545],
+  'stand-normal/kiki_angry': [616, 832, 8, 8, 601, 824],
   'stand-normal/kiki_crying': [436, 832, 8, 6, 420, 826],
-  'stand-normal/kiki_excited': [552, 832, 1, 8, 550, 824],
+  'stand-normal/kiki_excited': [946, 832, 8, 8, 929, 824],
   'stand-normal/kiki_happy': [392, 832, 7, 8, 377, 824],
   'stand-normal/kiki_normal': [414, 832, 12, 8, 394, 824],
-  'stand-normal/kiki_surprise': [486, 832, 1, 8, 476, 824],
+  'stand-normal/kiki_surprise': [554, 832, 8, 8, 537, 824],
   'stand-normal/kiki_troubled': [456, 832, 8, 8, 439, 824],
-  'stand-normal/kiki_wink': [550, 832, 8, 6, 541, 826],
-  'stand-normal/kyuko_angry': [430, 590, 16, 7, 413, 583],
-  'stand-normal/kyuko_crying': [396, 590, 23, 8, 361, 582],
-  'stand-normal/kyuko_excited': [418, 590, 6, 8, 405, 582],
-  'stand-normal/kyuko_happy': [424, 590, 61, 8, 356, 582],
+  'stand-normal/kiki_wink': [566, 832, 8, 6, 550, 826],
+  'stand-normal/kyuko_angry': [492, 590, 15, 7, 470, 583],
+  'stand-normal/kyuko_crying': [416, 590, 23, 8, 364, 582],
+  'stand-normal/kyuko_excited': [452, 590, 12, 8, 433, 582],
+  'stand-normal/kyuko_happy': [448, 590, 85, 8, 356, 582],
   'stand-normal/kyuko_normal': [410, 590, 19, 8, 381, 582],
   'stand-normal/kyuko_surprise': [410, 590, 43, 8, 342, 582],
   'stand-normal/kyuko_troubled': [366, 590, 21, 7, 337, 583],
-  'stand-normal/kyuko_wink': [416, 590, 30, 8, 380, 582],
+  'stand-normal/kyuko_wink': [424, 590, 30, 8, 386, 582],
   'stand-normal/myua_angry': [592, 672, 12, 0, 520, 672],
   'stand-normal/myua_crying': [592, 672, 0, 0, 591, 672],
   'stand-normal/myua_excited': [592, 672, 0, 0, 583, 672],
@@ -103625,14 +103643,14 @@ const CARD_ART_KNOWN_BOX = Object.freeze({
   'stand-normal/myua_surprise': [592, 672, 0, 10, 509, 662],
   'stand-normal/myua_troubled': [592, 672, 27, 0, 516, 672],
   'stand-normal/myua_wink': [592, 672, 12, 10, 579, 662],
-  'stand-normal/sorashido_angry': [456, 542, 11, 6, 441, 536],
-  'stand-normal/sorashido_crying': [456, 542, 21, 7, 434, 535],
-  'stand-normal/sorashido_excited': [456, 542, 1, 8, 454, 534],
-  'stand-normal/sorashido_happy': [456, 542, 1, 4, 454, 538],
-  'stand-normal/sorashido_normal': [456, 542, 1, 7, 454, 535],
-  'stand-normal/sorashido_surprise': [456, 542, 20, 7, 435, 535],
-  'stand-normal/sorashido_troubled': [456, 542, 1, 8, 454, 534],
-  'stand-normal/sorashido_wink': [456, 542, 1, 9, 440, 533],
+  'stand-normal/sorashido_angry': [698, 542, 113, 7, 443, 535],
+  'stand-normal/sorashido_crying': [684, 542, 98, 7, 477, 535],
+  'stand-normal/sorashido_excited': [772, 542, 53, 8, 674, 534],
+  'stand-normal/sorashido_happy': [732, 542, 47, 6, 655, 536],
+  'stand-normal/sorashido_normal': [762, 542, 121, 8, 569, 534],
+  'stand-normal/sorashido_surprise': [766, 542, 105, 7, 586, 535],
+  'stand-normal/sorashido_troubled': [730, 542, 31, 9, 672, 533],
+  'stand-normal/sorashido_wink': [646, 542, 97, 9, 446, 533],
   // </card-art-known-box>
 });
 const cardArtBoxOf = (v) => (Array.isArray(v) && v.length === 6 ? { nw: v[0], nh: v[1], x: v[2], y: v[3], w: v[4], h: v[5] } : null);
@@ -103697,20 +103715,24 @@ const CardAssistantArt = ({ src, alt, className = '', style = null, knownBox = n
   const fit = (() => {
     const W = size.w, H = size.h;
     if (!box || !W || !H) return null;
-    const sc = Math.min(H / box.h, W / box.w);
+    // 幅は枠の 1.2 倍まではみ出してよい(2026-11-15 立ち絵を左右を切らない形にしたので、腕を広げた絵が広くなる。幅で縮めると高さが枠より1割ほど小さくなった)
+    const sc = Math.min(H / box.h, (W * 1.2) / box.w);
     // 顔の大きさをそろえる(2026-11-11 社長「助手の立ち絵も見直して、使う場面全部でうまく表示させるようにして」)。
     //   描かれている範囲いっぱいに収めるだけだと、羽や大きな耳のある絵(みゅあ・ももすけ)は顔が小さく、助手ごとに顔の大きさが 1.7〜2.8倍ちがった。
-    //   助手ライフの場面と同じ顔の点の表(assistantLifeStandFace)と決まり(assistantLifeStandRule)で、頭(てっぺんから顎)を枠の高さの 44%・頭のてっぺんを上から 18% に置く。
+    //   助手ライフの場面と同じ顔の点の表(assistantLifeStandFace)と決まり(assistantLifeStandRule)で、頭(てっぺんから顎)を枠の高さの 44%・頭のてっぺんを上から 12〜30% に置く(2026-11-15 18%→12%: きゅうこの絵が欄より1割以上小さくなっていた)。
     //   羽・肩は枠の外へ出てよい(顔は切らない)。今までの収め方より小さくなる絵(ソラシド・えるびん・きゅうこ)と、顔だけの絵(ドラ)は今までどおり
     const face = cardArtFaceBySrc(src);
     if (face && !face.head && typeof assistantLifeStandRule === 'function') {
       const lb = { t: box.y / box.nh, b: (box.y + box.h) / box.nh, l: box.x / box.nw, r: (box.x + box.w) / box.nw, ar: box.nw / box.nh };
       const U = Math.min(H * 0.44, W * 0.95);
-      const r = assistantLifeStandRule({ face, box: lb, F: U / ASSISTANT_LIFE_STAND_FACE_LEN, topY: H * Math.max(0.18, Math.min(0.3, (face.above || 0) * 0.32)), cx: W / 2 }); // 魔女の帽子・大きな耳の着替え(above のある絵)は、頭を少し下げて飾りを入れる
+      const r = assistantLifeStandRule({ face, box: lb, F: U / ASSISTANT_LIFE_STAND_FACE_LEN, topY: H * Math.max(0.12, Math.min(0.3, (face.above || 0) * 0.32)), cx: W / 2 }); // 魔女の帽子・大きな耳の着替え(above のある絵)は、頭を少し下げて飾りを入れる
       if (r && r.width > box.nw * sc * 1.02) {
         const dy = Math.max(0, H - r.visBottom); // 体が枠の下まで届かない絵は、下の端にそろえる
         const visW = (lb.r - lb.l) * r.width;
-        return { width: r.width, left: r.left, top: r.top + dy, artH: Math.round(Math.min(H, r.visBottom + dy) - Math.max(0, r.visTop + dy)), artW: Math.round(Math.min(W, visW)), byFace: true };
+        const byFace = { width: r.width, left: r.left, top: r.top + dy, artH: Math.round(Math.min(H, r.visBottom + dy) - Math.max(0, r.visTop + dy)), artW: Math.round(Math.min(W, visW)), byFace: true };
+        // 顔で置いた絵が、高さも幅も枠の 92% に届かない(上が空いて小さく見える)ときは、枠いっぱいに収める今までの置き方にする
+        //   (2026-11-15 左右を切らない立ち絵で、腕を広げたきゅうこがこうなった)
+        if (byFace.artH >= H * 0.92 || byFace.artW >= W * 0.92) return byFace;
       }
     }
     return { width: box.nw * sc, left: W / 2 - (box.x + box.w / 2) * sc, top: H - (box.y + box.h) * sc, artH: Math.round(box.h * sc), artW: Math.round(box.w * sc) };
