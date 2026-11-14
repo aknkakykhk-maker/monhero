@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1abed550c4b56d2a
+// source-sha256: ad985311f2d49eb2
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -68780,7 +68780,10 @@ function BreederMarketScreen({
       }] : []), {
         key: 'item',
         label: 'アイテム'
-      }, {
+      }, ...(typeof monsucShopOpen === 'function' && monsucShopOpen() ? [{
+        key: 'monsuc',
+        label: 'モンサク'
+      }] : []), {
         key: 'stamp',
         label: 'スタンプ'
       }, ...(typeof rhythmPaidSongList === 'function' && rhythmPaidSongList().length ? [{
@@ -69497,6 +69500,12 @@ function BreederMarketScreen({
     openSheet: openSheet,
     onExchange: onExchangeEventPoints,
     onZoomIcon: onZoomIcon
+  }), eventTab === 'monsuc' && typeof MonsucShopList === 'function' && React.createElement(MonsucShopList, {
+    points: safeEventPoints,
+    busy: busy,
+    disabled: purchaseProcessing,
+    openSheet: openSheet,
+    onExchange: onExchangeEventPoints
   }), eventTab === 'stamp' && React.createElement(MultiStampShopList, {
     points: safeEventPoints,
     busy: busy,
@@ -115043,6 +115052,30 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
       eye: 0.3072,
       chin: 0.4187,
       m: 0.829
+    },
+    kiki: {
+      top: 0.0777,
+      eye: 0.3325,
+      chin: 0.4296,
+      m: 0.722
+    },
+    atsu: {
+      top: 0.0699,
+      eye: 0.3272,
+      chin: 0.4301,
+      m: 0.766
+    },
+    kyuko: {
+      top: 0.0344,
+      eye: 0.3093,
+      chin: 0.4296,
+      m: 0.895
+    },
+    sorashido: {
+      top: 0.0562,
+      eye: 0.2921,
+      chin: 0.4307,
+      m: 1.031
     }
   },
   'stand-halloween': {
@@ -115052,6 +115085,13 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
       chin: 0.4334,
       m: 0.711,
       above: 0.85
+    },
+    kiki: {
+      top: 0.1496,
+      eye: 0.3349,
+      chin: 0.4299,
+      m: 0.707,
+      above: 0.95
     }
   },
   'stand-card-master': {
@@ -115124,7 +115164,7 @@ const assistantLifeStandLayout = (items, W, H) => {
   const sw = W * 0.92 / n;
   const fh = H * {
     1: 0.085,
-    2: 0.075,
+    2: 0.04,
     3: 0.064,
     4: 0.055
   }[Math.min(4, n)];
@@ -120115,8 +120155,8 @@ async function assistantLifeUiV2Load() {
   }
   if (done === true) return v;
   try {
-    await storeSet('mh_assistant_life_ui_v2_default_v1', true, false);
     await storeSet('mh_assistant_life_ui_v2', true, false);
+    await storeSet('mh_assistant_life_ui_v2_default_v1', true, false);
   } catch (_) {
     return v;
   }
@@ -120269,8 +120309,8 @@ function AssistantLifeUiSettingRow() {
     setV2(on);
     assistantLifeUiV2Last = on;
     try {
-      void storeSet('mh_assistant_life_ui_v2_default_v1', true, false);
       void storeSet('mh_assistant_life_ui_v2', on, false);
+      void storeSet('mh_assistant_life_ui_v2_default_v1', true, false);
     } catch (_) {}
   };
   return React.createElement("div", {
@@ -156978,6 +157018,358 @@ function MonsucFuseSheet({
     className: "mt-2 min-h-[44px] w-full rounded-xl bg-slate-700 text-[13px] font-black"
   }, "やめる")));
 }
+const MONSUC_SHOP_OFFERS = Object.freeze([{
+  itemId: 'oil',
+  cost: 75
+}, {
+  itemId: 'herb',
+  cost: 75
+}, {
+  itemId: 'band',
+  cost: 225
+}, {
+  itemId: 'mag',
+  cost: 225
+}, {
+  itemId: 'hachi',
+  cost: 225
+}, {
+  itemId: 'omamori',
+  cost: 225
+}, {
+  itemId: 'grass',
+  cost: 225
+}, {
+  itemId: 'dango',
+  cost: 225
+}, {
+  itemId: 'guide',
+  cost: 225
+}, {
+  itemId: 'juice',
+  cost: 300
+}, {
+  itemId: 'powder',
+  cost: 300
+}, {
+  itemId: 'loupe',
+  cost: 300
+}, {
+  itemId: 'license',
+  cost: 300
+}, {
+  itemId: 'pack',
+  cost: 375
+}, {
+  itemId: 'awakeFruit',
+  cost: 450
+}, {
+  itemId: 'superAwakeFruit',
+  cost: 1200
+}].map(o => Object.freeze({
+  ...o,
+  id: `monsuc_${o.itemId}`,
+  kind: 'monsuc'
+})));
+const MONSUC_SHOP_MAX = 999;
+const monsucShopOpen = () => typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.monheroSuccess === true;
+const monsucShopOffer = id => MONSUC_SHOP_OFFERS.find(o => o.id === id) || null;
+const monsucShopBuy = async (offerId, quantity = 1) => {
+  const offer = monsucShopOffer(offerId);
+  if (!offer) return {
+    ok: false,
+    reason: 'unknown'
+  };
+  if (!monsucShopOpen()) return {
+    ok: false,
+    reason: 'soon'
+  };
+  const q = Math.max(1, Math.min(99, Math.floor(Number(quantity) || 1)));
+  const cost = offer.cost * q;
+  const beforePoints = await loadRhythmEventPoints();
+  const stored = await storeGet(MSX_KEYS.meta, null, false);
+  const base = stored && typeof stored === 'object' && !Array.isArray(stored) ? stored : {
+    v: 1
+  };
+  const items = base.items && typeof base.items === 'object' && !Array.isArray(base.items) ? base.items : {};
+  const had = Number.isFinite(Number(items[offer.itemId])) ? Math.max(0, Math.floor(Number(items[offer.itemId]))) : 0;
+  if (had + q > MONSUC_SHOP_MAX) return {
+    ok: false,
+    reason: 'max',
+    eventPoints: beforePoints
+  };
+  if (!(beforePoints >= cost)) return {
+    ok: false,
+    reason: 'points',
+    eventPoints: beforePoints,
+    cost
+  };
+  const next = {
+    ...base,
+    v: 1,
+    items: {
+      ...items,
+      [offer.itemId]: had + q
+    }
+  };
+  const nextPoints = beforePoints - cost;
+  const saved = await saveStoredValuesOrRollback([{
+    key: RHYTHM_EVENT_POINTS_KEY,
+    before: beforePoints,
+    next: nextPoints
+  }, {
+    key: MSX_KEYS.meta,
+    before: stored,
+    next
+  }], storeGet, storeSet);
+  if (!saved) return {
+    ok: false,
+    reason: 'save',
+    eventPoints: beforePoints
+  };
+  return {
+    ok: true,
+    eventPoints: nextPoints,
+    cost,
+    have: had + q
+  };
+};
+const monsucShopReasonText = r => r === 'points' ? 'ビートPが足りません。' : r === 'max' ? `持てるのは${MONSUC_SHOP_MAX}個までです。` : r === 'soon' ? 'まだ交換できません。' : '交換を保存できませんでした。ビートPと持ちこみの数は変えていません。';
+function MonsucShopList({
+  points = 0,
+  busy = false,
+  disabled = false,
+  openSheet,
+  onExchange
+}) {
+  const [have, setHave] = React.useState({});
+  const [ready, setReady] = React.useState(false);
+  const reload = React.useCallback(async () => {
+    try {
+      const m = await storeGet(MSX_KEYS.meta, null, false);
+      setHave(m && m.items && typeof m.items === 'object' ? m.items : {});
+    } catch (e) {
+      setHave({});
+    }
+  }, []);
+  React.useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        if (typeof msxLoad === 'function') await msxLoad();
+      } catch (e) {}
+      await reload();
+      if (alive) setReady(true);
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [reload]);
+  if (!ready) return React.createElement("p", {
+    className: "col-span-full text-center text-[12px] font-bold text-slate-300"
+  }, "読み込んでいます…");
+  return React.createElement(React.Fragment, null, React.createElement("p", {
+    "data-monsuc-shop-note": true,
+    className: "col-span-full text-[11px] font-bold leading-snug text-slate-300",
+    style: typeof JA_WRAP_STYLE !== 'undefined' ? JA_WRAP_STYLE : undefined
+  }, typeof jaWrap === 'function' ? jaWrap('モンヒロサクセスの育成に持っていくアイテムです。交換した物は、育成をはじめるときの「持ちこみ」で選べます') : 'モンヒロサクセスの育成に持っていくアイテムです。交換した物は、育成をはじめるときの「持ちこみ」で選べます'), MONSUC_SHOP_OFFERS.map(offer => {
+    const t = typeof MSX_ITEM_BY_ID !== 'undefined' ? MSX_ITEM_BY_ID[offer.itemId] : null;
+    if (!t) return null;
+    const n = Math.max(0, Math.floor(Number(have[offer.itemId]) || 0));
+    const desc = typeof msxItemDesc === 'function' ? msxItemDesc(offer.itemId) : t.desc;
+    const when = t.when === 'before' ? 'はじめる前に効く' : '育成中にも使える';
+    const item = {
+      id: offer.id,
+      name: t.name,
+      emoji: t.e,
+      type: 'item',
+      currency: 'beatPoint',
+      cost: offer.cost,
+      desc: `${when}。${desc}`
+    };
+    return React.createElement(MarketProductCard, {
+      key: offer.id,
+      dataAttrs: {
+        'data-monsuc-shop-offer': offer.itemId
+      },
+      item: item,
+      owned: false,
+      comingSoon: false,
+      canBuy: points >= offer.cost && !busy && n < MONSUC_SHOP_MAX,
+      disabled: disabled,
+      onBuy: () => openSheet({
+        item,
+        stackable: true,
+        confirm: async count => {
+          const r = onExchange ? await onExchange(offer, count || 1) : false;
+          await reload();
+          return r;
+        }
+      }),
+      middle: React.createElement("span", {
+        "data-monsuc-shop-have": true,
+        className: "block px-1 text-center text-[10px] font-bold leading-tight text-slate-300"
+      }, when, "・持っている数 ", n.toLocaleString())
+    });
+  }));
+}
+const msxB3Row = () => typeof window !== 'undefined' && window.innerHeight < 520 ? 46 : 64;
+const msxB3Calm = () => {
+  if (typeof msxFxCalm === 'function' && msxFxCalm()) return true;
+  try {
+    return typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  } catch (e) {
+    return false;
+  }
+};
+function MsxBest3({
+  b,
+  run
+}) {
+  msxB3EnsureCss();
+  const calm = msxB3Calm();
+  const MSX_B3_ROW = msxB3Row();
+  const [go, setGo] = React.useState(calm);
+  React.useEffect(() => {
+    if (calm) return undefined;
+    const id = setTimeout(() => setGo(true), 650);
+    return () => clearTimeout(id);
+  }, []);
+  if (typeof msxUseTimedSe === 'function') msxUseTimedSe(go && b.place >= 0 && !calm ? [['awKira', 250]] : [], [go]);
+  const next = Array.isArray(b.next) ? b.next : [];
+  const prev = Array.isArray(b.prev) ? b.prev : [];
+  const inIt = b.place >= 0;
+  const startOf = (i, e) => {
+    if (!inIt) return 0;
+    if (e.id === next[b.place].id) return (3 - b.place) * MSX_B3_ROW;
+    const was = prev.findIndex(x => x.id === e.id);
+    return was >= 0 ? (was - i) * MSX_B3_ROW : 0;
+  };
+  const third = next.length >= 3 ? next[2].power : null;
+  const fmt = n => typeof msxFmt === 'function' ? msxFmt(n) : Number(n).toLocaleString();
+  const name = e => e.nick || (typeof msxMonName === 'function' ? msxMonName(e.species) : e.species);
+  const thumb = sp => typeof msxMonThumb === 'function' ? msxMonThumb(sp) : '';
+  const stamp = !inIt ? null : b.place === 0 ? '自己ベスト更新!' : 'ベスト3入り!';
+  return React.createElement(React.Fragment, null, run && typeof MsxMonArt === 'function' ? React.createElement("div", {
+    className: "v-scene",
+    style: {
+      flex: '1 1 0',
+      minHeight: 150
+    },
+    "data-msx-best3-scene": true
+  }, React.createElement("img", {
+    className: "bg",
+    src: msxSceneBg().bg,
+    alt: ""
+  }), React.createElement("div", {
+    className: "sh"
+  }), inIt ? React.createElement("div", {
+    className: "v-burst"
+  }) : null, React.createElement("div", {
+    className: "gr",
+    style: {
+      bottom: 'calc(10% - 5px)'
+    }
+  }), React.createElement(MsxMonArt, {
+    run: run,
+    className: "mon",
+    style: {
+      bottom: '10%',
+      height: '70%'
+    }
+  }), React.createElement("div", {
+    className: "v-stamp msx-pop",
+    style: {
+      top: '6%',
+      fontSize: 22
+    }
+  }, run.nick || msxMonName(run.s.species), React.createElement("small", null, "総合力 ", fmt(b.power)))) : null, React.createElement("div", {
+    className: "v-h"
+  }, "🏆 自分だけのベスト3", React.createElement("small", null, "これまでに育てたモンスターの、総合力の上位3つ")), React.createElement("div", {
+    className: `msx-b3${go ? ' go' : ''}${calm ? ' calm' : ''}`,
+    "data-msx-best3": inIt ? b.place + 1 : 0,
+    style: {
+      height: MSX_B3_ROW * 3 + 16
+    }
+  }, [0, 1, 2].map(i => React.createElement("div", {
+    key: `slot-${i}`,
+    className: "slot",
+    style: {
+      top: 8 + i * MSX_B3_ROW,
+      height: MSX_B3_ROW - 8
+    }
+  }, React.createElement("b", {
+    className: `pl p${i + 1}`
+  }, i + 1), next[i] ? null : React.createElement("span", {
+    className: "none"
+  }, "まだない"))), next.map((e, i) => {
+    const me = inIt && i === b.place;
+    return React.createElement("div", {
+      key: e.id,
+      className: `row${me ? ' me' : ''}`,
+      "data-msx-best3-row": i + 1,
+      style: {
+        top: 8 + i * MSX_B3_ROW,
+        height: MSX_B3_ROW - 8,
+        transform: go ? 'translateY(0)' : `translateY(${startOf(i, e)}px)`
+      }
+    }, React.createElement("b", {
+      className: `pl p${i + 1}`
+    }, i + 1), thumb(e.species) ? React.createElement("img", {
+      src: thumb(e.species),
+      alt: ""
+    }) : null, React.createElement("span", {
+      className: "nm"
+    }, name(e), me ? React.createElement("small", null, "今回") : null), React.createElement("span", {
+      className: "rk"
+    }, e.rank), React.createElement("b", {
+      className: "pw"
+    }, fmt(e.power)));
+  })), stamp ? React.createElement("div", {
+    className: `msx-b3-stamp${go ? ' on' : ''}`,
+    "data-msx-best3-stamp": true
+  }, stamp) : React.createElement("div", {
+    className: "v-card",
+    "data-msx-best3-miss": true
+  }, React.createElement("div", {
+    className: "v-kv"
+  }, React.createElement("b", null, "今回"), React.createElement("span", null, "総合力 ", React.createElement("b", null, fmt(b.power)))), third != null ? React.createElement("div", {
+    className: "v-kv"
+  }, React.createElement("b", null, "3位まで"), React.createElement("span", null, "あと ", React.createElement("b", {
+    className: "yel"
+  }, fmt(Math.max(1, third - b.power + 1))))) : null), typeof MsxSay === 'function' && run ? React.createElement(MsxSay, {
+    aid: run.s.aid,
+    ex: inIt ? 'excited' : 'happy',
+    text: inIt ? b.place === 0 ? '「新記録! いちばん強いモンスターが生まれたね!」' : `「ベスト3に入ったよ! ${b.place + 1}番目!」` : '「次はベスト3をめざそ!」'
+  }) : null);
+}
+const MSX_B3_CSS = `
+.msx-b3{position:relative;margin:4px 0 6px;overflow:hidden}
+.msx-b3 .slot{position:absolute;left:0;right:0;border-radius:12px;border:1.5px dashed #47556988;display:flex;align-items:center;gap:8px;padding:0 10px}
+.msx-b3 .slot .none{flex:1;text-align:center;color:#94a3b8;font-size:12px;font-weight:800}
+.msx-b3 .row{position:absolute;left:0;right:0;border-radius:12px;background:#0f172a;border:1.5px solid #475569;display:flex;align-items:center;gap:8px;padding:0 10px;transition:transform .8s cubic-bezier(.2,1.2,.4,1)}
+.msx-b3.calm .row{transition:none}
+.msx-b3 .row.me{border-color:#fde047;background:#3b2f0b;box-shadow:0 0 12px #fde04788;z-index:2}
+.msx-b3 .pl{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:900;background:#334155;color:#fff;flex:0 0 auto}
+.msx-b3 .pl.p1{background:linear-gradient(#fde68a,#d97706);color:#422006}.msx-b3 .pl.p2{background:linear-gradient(#f1f5f9,#94a3b8);color:#1e293b}.msx-b3 .pl.p3{background:linear-gradient(#fdba74,#b45309);color:#431407}
+.msx-b3 .row img{width:40px;height:min(40px,100%);object-fit:contain;flex:0 0 auto}
+.msx-b3 .row .nm{flex:1;min-width:0;font-size:13px;font-weight:900;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.msx-b3 .row .nm small{display:inline-block;margin-left:6px;padding:1px 6px;border-radius:8px;background:#fde047;color:#422006;font-size:10px}
+.msx-b3 .row .rk{font-size:13px;font-weight:900;color:#a5f3fc;min-width:26px;text-align:center}
+.msx-b3 .row .pw{font-size:16px;font-weight:900;color:#fde047;min-width:62px;text-align:center}
+.msx-b3-stamp{align-self:center;margin:2px auto 6px;padding:6px 18px;border-radius:14px;background:linear-gradient(90deg,#f59e0b,#ec4899);color:#fff;font-size:20px;font-weight:900;text-align:center;opacity:0;transform:scale(.6);transition:opacity .4s .6s,transform .5s .6s cubic-bezier(.2,1.6,.4,1)}
+.msx-b3-stamp.on{opacity:1;transform:scale(1)}
+@media (prefers-reduced-motion: reduce){.msx-b3 .row,.msx-b3-stamp{transition:none}}
+`;
+let msxB3CssDone = false;
+const msxB3EnsureCss = () => {
+  if (msxB3CssDone || typeof document === 'undefined') return;
+  msxB3CssDone = true;
+  const el = document.createElement('style');
+  el.setAttribute('data-msx-best3-css', '1');
+  el.textContent = MSX_B3_CSS;
+  document.head.appendChild(el);
+};
 const MSX_AW_DIST = Object.freeze(['零', '近', '中', '遠']);
 const MSX_AW_NAME = Object.freeze({
   1: '覚醒',
@@ -158876,6 +159268,18 @@ const MSX_TEV_LOT_NAME = Object.freeze({
 const msxTevChanges = (s, o) => {
   const e = o && o.event;
   if (!e) return [];
+  if (e.d && typeof e.d === 'object') {
+    const d = e.d;
+    const out = [];
+    const sg = n => n > 0 ? `+${n}` : `−${Math.abs(n)}`;
+    if (d.bond) out.push(`🤝 親密度 ${sg(d.bond)}`);
+    if (d.hp) out.push(`❤️ 体力 ${sg(d.hp)}`);
+    if (d.stress) out.push(`💢 ストレス ${sg(d.stress)}`);
+    const SUC = msxSuc && msxSuc.SUC;
+    if (e.story === 3) out.push(o.taught ? `⚔ 技「${(SUC.techsOf(s.species).find(t => t.id === o.taught) || {}).name || '新しい技'}」を覚えた!` : '⚔ 技の熟練 +10');
+    if (e.lottery === 'tip') out.push('✨ ひらめき(次の修行で技を覚えやすい)');
+    return out;
+  }
   const SUC = msxSuc && msxSuc.SUC;
   const m = s.team[e.who];
   const fk = m && Array.isArray(m.top) ? m.top[0] : null;
@@ -158929,6 +159333,16 @@ function MsxTrainEvent({
   const ch = msxTevChanges(s, o);
   const calm = typeof msxFxCalm === 'function' && msxFxCalm();
   const bondNow = s.bond[e.who];
+  const bondFrom = e.d && Number.isFinite(e.d.bondFrom) ? e.d.bondFrom : bondNow;
+  const [bondOn, setBondOn] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setBondOn(true), 700);
+    return () => clearTimeout(t);
+  }, []);
+  const bondShow = bondOn || calm ? bondNow : bondFrom;
+  const ups = e.d && e.d.up > 0 && e.d.stat ? {
+    [e.d.stat]: e.d.up
+  } : null;
   return React.createElement(React.Fragment, null, React.createElement("div", {
     className: `v-scene msx-tev s-${style}${calm ? ' calm' : ''}`,
     style: {
@@ -158972,18 +159386,22 @@ function MsxTrainEvent({
       height: '25%'
     }
   }) : null, React.createElement("div", {
-    className: "v-talk tev-talk"
+    className: "v-talk tev-talk",
+    style: JA_LABEL_STYLE
   }, line && line.t ? line.who && line.who !== 'narr' ? React.createElement("div", null, React.createElement("span", {
     className: "who"
-  }, line.who === 'mon' ? run.nick : msxAidName(line.who)), "「", line.t, "」") : React.createElement("div", null, line.t) : React.createElement("div", null, name, "と、すこし特別な時間をすごした。")), React.createElement("div", {
+  }, line.who === 'mon' ? run.nick : msxAidName(line.who)), "「", jaWrap(line.t), "」") : React.createElement("div", null, jaWrap(line.t)) : React.createElement("div", null, jaWrap(`${name}と、すこし特別な時間をすごした。`))), React.createElement("div", {
     className: "v-ev-h"
   }, React.createElement("small", null, "編成のモンスターのイベント"), title), React.createElement("div", {
     className: "tev-bond"
   }, React.createElement("span", null, "🤝 ", name, "との親密度"), React.createElement("i", null, React.createElement("b", {
     style: {
-      width: `${Math.max(0, Math.min(100, bondNow))}%`
+      width: `${Math.max(0, Math.min(100, bondShow))}%`,
+      transition: 'width .9s ease-out'
     }
-  })), React.createElement("em", null, bondNow)), style === 'a' ? React.createElement("span", {
+  })), React.createElement("em", {
+    "data-msx-tev-bond": true
+  }, bondShow, e.d && e.d.bond ? React.createElement("small", null, " (", e.d.bond > 0 ? `+${e.d.bond}` : e.d.bond, ")") : null)), style === 'a' ? React.createElement("span", {
     className: "tev-in-a",
     "aria-hidden": "true"
   }) : null, style === 'b' ? React.createElement("div", {
@@ -159004,8 +159422,12 @@ function MsxTrainEvent({
     className: "fl"
   }), React.createElement("div", {
     className: "rb"
-  }, "EVENT")) : null), React.createElement("div", {
-    className: "v-log tev-ch"
+  }, "EVENT")) : null), ups ? React.createElement(MsxStRow, {
+    stats: s.stats,
+    ups: ups
+  }) : null, React.createElement("div", {
+    className: "v-log tev-ch",
+    "data-msx-tev-chips": true
   }, ch.map((t, i) => React.createElement("span", {
     key: i,
     className: "v-chip ylw",
@@ -159021,6 +159443,7 @@ const MSX_TEV_CSS = `
 .msx .msx-tev .tev-bond i{flex:1;height:6px;border-radius:6px;background:#334155;overflow:hidden}
 .msx .msx-tev .tev-bond i b{display:block;height:100%;background:linear-gradient(90deg,#f472b6,#fb7185)}
 .msx .msx-tev .tev-bond em{font-style:normal;color:#fff}
+.msx .msx-tev .tev-bond em small{font-size:10px;color:#fbcfe8}
 .msx .msx-tev .tev-talk{bottom:8px;z-index:4}
 .msx .tev-ch{display:flex;flex-wrap:wrap;gap:4px}
 .msx .tev-ch .v-chip{animation:msx-popin .35s cubic-bezier(.2,1.4,.4,1) both}
@@ -159971,7 +160394,7 @@ function MsxRunIntro({
     type: "button",
     onClick: finish,
     "data-msx-intro-skip": true
-  }, "⏩ とばす") : null, React.createElement("button", {
+  }, "⏩ 飛ばす") : null, React.createElement("button", {
     type: "button",
     className: "go",
     onClick: next,
@@ -165456,8 +165879,8 @@ const MSX_CSS = `
 .msx .v-st.gs-a.zs div.up u.g i,.msx .v-st.gs-a.zs div.up u.g s,.msx .v-st.gs-a.zs div.dn u.g i,.msx .v-st.gs-a.zs div.dn u.g s{border-radius:2px}
 .msx .v-st.gs-a u.g q{quotes:none;position:absolute;left:0;right:0;top:100%;display:flex;justify-content:space-between;font-size:10px;font-weight:800;color:#fde68a;line-height:11px;pointer-events:none}
 .msx .v-st.gs-a u.g q::before,.msx .v-st.gs-a u.g q::after{content:none}
-@container (max-width:340px){.msx .v-st.gs-a u.g q{font-size:9.5px;letter-spacing:-.06em;left:-3px;right:-3px}}
-@media (max-width:340px){.msx .v-st.gs-a u.g q{font-size:9.5px;letter-spacing:-.06em;left:-3px;right:-3px}}
+@container (max-width:340px){.msx .v-st.gs-a u.g q{font-size:10px;letter-spacing:-.06em;left:-3px;right:-3px}}
+@media (max-width:340px){.msx .v-st.gs-a u.g q{font-size:10px;letter-spacing:-.06em;left:-3px;right:-3px}}
 @media (prefers-reduced-motion: reduce){.msx .v-st u.g i,.msx .v-st u.g s.gu{transition:none}.msx .v-st.grow.on u.g s.gu{animation:none}}
 .msx .v-act{display:grid;gap:5px;margin-top:6px}
 .msx .v-p{background:linear-gradient(180deg,#3d4c6b,#2a3247);border:1px solid #64748b;border-bottom:3px solid #0b1020;border-radius:14px;text-align:center;padding:5px 2px 4px;font-size:12.5px;font-weight:900;line-height:1.2;position:relative;display:flex;flex-direction:column;justify-content:center;align-items:center;min-width:0;white-space:nowrap}
@@ -165836,11 +166259,13 @@ const MSX_CSS = `
 .msx .v-tk>i{flex:none;width:24px;height:24px;border-radius:7px;background:#9d174d;font-style:normal;font-size:11.5px;font-weight:900;display:flex;align-items:center;justify-content:center}
 .msx .v-tk span{flex:1;min-width:0;background:#0f172a;border:1px solid #475569;border-radius:9px;padding:4px 7px;font-size:10.5px;font-weight:900;white-space:nowrap;display:flex;justify-content:space-between;gap:4px}
 .msx .v-tk span b{color:#86efac}.msx .v-tk span.sel{border-color:#fde047;background:#3b2f0b}.msx .v-tk span.sel b{color:#fde047}.msx .v-tk span.got{opacity:.45}.msx .v-tk span.got b{color:#94a3b8}
-.msx .v-bagw{position:absolute;left:8px;right:8px;top:8px;bottom:8px;background:#151130f5;border:1.5px solid #fde047;border-radius:16px;padding:8px 9px;display:flex;flex-direction:column;justify-content:space-evenly;box-shadow:0 0 18px #fde04755}
-.msx .v-bagw .t{font-size:14px;font-weight:900;line-height:1.3;position:relative}.msx .v-bagw .t small{display:block;font-size:10px;color:#fca5a5;font-weight:800}
-.msx .v-bagw .t i{position:absolute;right:0;top:0;width:24px;height:24px;border-radius:50%;background:#2b3348;font-style:normal;font-size:12px;display:flex;align-items:center;justify-content:center}
+.msx .v-bagw{position:absolute;left:8px;right:8px;top:8px;bottom:8px;background:#151130f5;border:1.5px solid #fde047;border-radius:16px;padding:8px 9px;display:flex;flex-direction:column;justify-content:space-evenly;justify-content:safe space-evenly;gap:6px;overflow-y:auto;box-shadow:0 0 18px #fde04755}
+.msx .v-bagw .t{font-size:14px;font-weight:900;line-height:1.3;position:relative;padding-right:40px;flex:none}
+.msx .v-bagw .t button{position:absolute;right:-4px;top:-4px;width:44px;height:44px;display:flex;align-items:flex-start;justify-content:flex-end;background:transparent;border:0}.msx .v-bagw .t small{display:block;font-size:10px;color:#fca5a5;font-weight:800}
+.msx .v-bagw .t i{position:static;width:24px;height:24px;border-radius:50%;background:#2b3348;font-style:normal;font-size:12px;display:flex;align-items:center;justify-content:center}
 .msx .v-bagw .v-item{margin-top:0}
-.v-bagw .v-bgrid{flex:0 1 auto;min-height:0;overflow-y:auto;align-content:start;grid-auto-rows:max-content;padding:2px 1px}
+.v-bagw .v-bgrid{flex:none;align-content:start;grid-auto-rows:max-content;padding:2px 1px}
+.v-bagw > *{flex-shrink:0}
 .msx .v-trs{gap:4px;margin-top:8px;align-items:start}
 .msx .v-tr{padding-top:0}
 .msx .v-tr .o{width:50px;height:50px;font-size:23px;margin:0 auto}
@@ -167995,11 +168420,13 @@ function MsxStart({
     }), "はじめる前に効く物"), React.createElement("span", null, React.createElement("b", {
       className: "sw2"
     }), "育成中にも使える物(1ターン1個まで)")), React.createElement("div", {
-      className: "msx-scroll",
       style: {
-        flex: '1 1 0',
-        minHeight: 128
-      }
+        flex: '1 0 auto',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 6
+      },
+      "data-msx-carry-list": true
     }, look && MSX_ITEM_BY_ID[look] ? (() => {
       const t = MSX_ITEM_BY_ID[look];
       const n = has(look);
@@ -169887,7 +170314,7 @@ function MsxPlay({
         ...run,
         phase: 'main'
       }) : afterAct(run)
-    }, "⏩ とばす"), React.createElement("button", {
+    }, "⏩ 飛ばす"), React.createElement("button", {
       type: "button",
       className: "go",
       onClick: () => tev ? setRun({
@@ -169914,12 +170341,12 @@ function MsxPlay({
         ...run,
         phase: 'main'
       })
-    }, "⏩ とばす"), React.createElement("button", {
+    }, "⏩ 飛ばす"), React.createElement("button", {
       type: "button",
       className: "go",
       onClick: () => toReact(run),
       "data-msx-tev-next": true
-    }, "つぎへ ▶"));
+    }, "次へ ▶"));
   } else if (phase === 'awake' && run.out && run.out.fire && typeof MsxAwakeShow === 'function') {
     const f = run.out.fire;
     const then = run.out.then;
@@ -170161,7 +170588,7 @@ function MsxPlay({
     }, React.createElement("button", {
       type: "button",
       onClick: () => choose(null)
-    }, "⏩ とばす"), React.createElement("button", {
+    }, "⏩ 飛ばす"), React.createElement("button", {
       type: "button",
       className: "on",
       disabled: true
@@ -170214,7 +170641,7 @@ function MsxPlay({
       className: "go",
       onClick: doneKi,
       "data-msx-ki-skip": true
-    }, "⏩ とばす"));
+    }, "⏩ 飛ばす"));
   } else if (phase === 'turn') {
     const cal = msxCalendar(s.turn);
     const prev = msxCalendar(Math.max(1, s.turn - 1));
@@ -172042,6 +172469,15 @@ const msxR3BoxMonOf = (run, s, ev, assists, parent) => ({
   titles: msxR3FinalTitles(s, ev),
   from: run.from || null
 });
+const msxBest3Norm = raw => (Array.isArray(raw) ? raw : []).filter(e => msxR3Obj(e) && typeof e.id === 'string' && Number.isFinite(e.power) && typeof e.species === 'string').map(e => ({
+  id: e.id.slice(0, 64),
+  power: Math.max(0, Math.round(e.power)),
+  rank: typeof e.rank === 'string' ? e.rank.slice(0, 4) : '',
+  species: e.species.slice(0, 40),
+  nick: typeof e.nick === 'string' ? e.nick.slice(0, 16) : '',
+  at: Number.isFinite(e.at) ? e.at : 0
+})).filter((e, i, a) => a.findIndex(x => x.id === e.id) === i).sort((a, b) => b.power - a.power || a.at - b.at).slice(0, 3);
+const msxBest3Add = (list, e) => msxBest3Norm([...msxBest3Norm(list).filter(x => x.id !== e.id), e]);
 const msxR3Retire = async (run, s, ev, assists, debug) => {
   const box = await msxR3ReadBox();
   let meta = await msxR3ReadMeta();
@@ -172072,6 +172508,21 @@ const msxR3Retire = async (run, s, ev, assists, debug) => {
       id: run.id
     }
   };
+  const best3Prev = msxBest3Norm(meta.best3);
+  meta.best3 = msxBest3Add(best3Prev, {
+    id: run.id,
+    power: ev.power,
+    rank: ev.rank,
+    species: s.species,
+    nick: run.nick || '',
+    at: Date.now()
+  });
+  const best3 = {
+    prev: best3Prev,
+    next: meta.best3,
+    place: meta.best3.findIndex(e => e.id === run.id),
+    power: ev.power
+  };
   meta.titles = Array.from(new Set([...(meta.titles || []), ...(Array.isArray(s.titles) ? s.titles : [])])).slice(0, 200);
   const next = {
     ...box,
@@ -172086,7 +172537,8 @@ const msxR3Retire = async (run, s, ev, assists, debug) => {
     ok: true,
     box: next,
     meta,
-    mon
+    mon,
+    best3
   };
 };
 const msxR3GameOver = async s => {
@@ -175725,15 +176177,36 @@ function MsxR3Retire({
       } catch (e) {}
       setRes({
         ok: true,
-        mon: r.mon
+        mon: r.mon,
+        best3: r.best3 || null
       });
-      setStep('done');
+      setStep(r.best3 && typeof MsxBest3 === 'function' ? 'best3' : 'done');
     } else setRes(r || {
       ok: false
     });
     setBusy(false);
     setSure(false);
   };
+  if (step === 'best3' && res && res.best3 && typeof MsxBest3 === 'function') {
+    return React.createElement(MsxR3Frame, {
+      run: run,
+      back: "とじる",
+      onBack: () => setStep('done'),
+      right: right,
+      body: React.createElement(MsxBest3, {
+        b: res.best3,
+        run: run
+      }),
+      foot: React.createElement("div", {
+        className: "v-ft"
+      }, React.createElement("button", {
+        type: "button",
+        className: "go",
+        onClick: () => setStep('done'),
+        "data-msx-best3-next": true
+      }, "つぎへ ▶"))
+    });
+  }
   if (step === 'done') {
     const body = React.createElement(React.Fragment, null, React.createElement("div", {
       className: "v-scene",
@@ -196826,6 +197299,30 @@ const CARD_ART_KNOWN_BOX = Object.freeze({
   sorashido_surprise: [384, 512, 0, 2, 384, 510],
   sorashido_troubled: [384, 512, 0, 0, 384, 512],
   sorashido_wink: [384, 512, 0, 2, 384, 510],
+  'stand-normal/atsu_angry': [344, 552, 29, 7, 314, 545],
+  'stand-normal/atsu_crying': [344, 552, 14, 6, 329, 546],
+  'stand-normal/atsu_excited': [344, 552, 1, 6, 342, 546],
+  'stand-normal/atsu_happy': [344, 552, 12, 7, 331, 545],
+  'stand-normal/atsu_normal': [344, 552, 1, 7, 342, 545],
+  'stand-normal/atsu_surprise': [344, 552, 1, 7, 342, 545],
+  'stand-normal/atsu_troubled': [344, 552, 3, 7, 340, 545],
+  'stand-normal/atsu_wink': [344, 552, 1, 8, 342, 544],
+  'stand-normal/kiki_angry': [552, 832, 1, 8, 550, 824],
+  'stand-normal/kiki_crying': [436, 832, 8, 6, 420, 826],
+  'stand-normal/kiki_excited': [552, 832, 1, 8, 550, 824],
+  'stand-normal/kiki_happy': [392, 832, 7, 8, 377, 824],
+  'stand-normal/kiki_normal': [414, 832, 12, 8, 394, 824],
+  'stand-normal/kiki_surprise': [486, 832, 1, 8, 476, 824],
+  'stand-normal/kiki_troubled': [456, 832, 8, 8, 439, 824],
+  'stand-normal/kiki_wink': [550, 832, 8, 6, 541, 826],
+  'stand-normal/kyuko_angry': [430, 590, 16, 7, 413, 583],
+  'stand-normal/kyuko_crying': [396, 590, 23, 8, 361, 582],
+  'stand-normal/kyuko_excited': [418, 590, 6, 8, 405, 582],
+  'stand-normal/kyuko_happy': [424, 590, 61, 8, 356, 582],
+  'stand-normal/kyuko_normal': [410, 590, 19, 8, 381, 582],
+  'stand-normal/kyuko_surprise': [410, 590, 43, 8, 342, 582],
+  'stand-normal/kyuko_troubled': [366, 590, 21, 7, 337, 583],
+  'stand-normal/kyuko_wink': [416, 590, 30, 8, 380, 582],
   'stand-normal/myua_angry': [592, 672, 12, 0, 520, 672],
   'stand-normal/myua_crying': [592, 672, 0, 0, 591, 672],
   'stand-normal/myua_excited': [592, 672, 0, 0, 583, 672],
@@ -196833,7 +197330,15 @@ const CARD_ART_KNOWN_BOX = Object.freeze({
   'stand-normal/myua_normal': [592, 672, 31, 7, 500, 665],
   'stand-normal/myua_surprise': [592, 672, 0, 10, 509, 662],
   'stand-normal/myua_troubled': [592, 672, 27, 0, 516, 672],
-  'stand-normal/myua_wink': [592, 672, 12, 10, 579, 662]
+  'stand-normal/myua_wink': [592, 672, 12, 10, 579, 662],
+  'stand-normal/sorashido_angry': [456, 542, 11, 6, 441, 536],
+  'stand-normal/sorashido_crying': [456, 542, 21, 7, 434, 535],
+  'stand-normal/sorashido_excited': [456, 542, 1, 8, 454, 534],
+  'stand-normal/sorashido_happy': [456, 542, 1, 4, 454, 538],
+  'stand-normal/sorashido_normal': [456, 542, 1, 7, 454, 535],
+  'stand-normal/sorashido_surprise': [456, 542, 20, 7, 435, 535],
+  'stand-normal/sorashido_troubled': [456, 542, 1, 8, 454, 534],
+  'stand-normal/sorashido_wink': [456, 542, 1, 9, 440, 533]
 });
 const cardArtBoxOf = v => Array.isArray(v) && v.length === 6 ? {
   nw: v[0],
@@ -230605,6 +231110,26 @@ function MonsterHeroGame() {
         return r;
       } catch {
         setMarketExchangeError(rhythmSongBuyReasonText('save'));
+        return {
+          ok: false,
+          reason: 'save'
+        };
+      } finally {
+        marketPurchaseProcessingRef.current = false;
+      }
+    }
+    if (offer?.kind === 'monsuc' && typeof monsucShopBuy === 'function') {
+      marketPurchaseProcessingRef.current = true;
+      setMarketExchangeError('');
+      try {
+        const r = await monsucShopBuy(offer.id, quantity);
+        if (r.ok) {
+          setRhythmEventPoints(r.eventPoints);
+          saveMissionProgress('market');
+        } else setMarketExchangeError(monsucShopReasonText(r.reason));
+        return r;
+      } catch {
+        setMarketExchangeError(monsucShopReasonText('save'));
         return {
           ok: false,
           reason: 'save'

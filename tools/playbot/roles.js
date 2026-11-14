@@ -46,11 +46,11 @@ const { loginBonusScenario, eventPeriodScenario } = require('./scenarios/clock')
 const PARTS = [
   {
     id: 'new', name: '新人係', prepare: null,
-    does: 'はじめての設定から、最初のバトルと少しの探索まで',
+    does: '初めての設定から、最初のバトルと少しの探索まで',
     run: async (s, { phase, steps, rand, numbers }) => {
       await phase('はじめて遊ぶ', async () => {
         const r = await newPlayerScenario(s);
-        numbers['新人係: はじめての設定の手数'] = r.stats.stepsTaken;
+        numbers['新人係: 初めての設定の手数'] = r.stats.stepsTaken;
         return r;
       });
       await phase('はじめてのバトル', async () => { await s.backHome(); const r = await battleScenario(s, { manualTurns: 4, autoMs: 30000, system: 'systemClassic' }); await s.backHome(); return r; });
@@ -280,7 +280,7 @@ const GROUPS = [
   { id: 'raidbeat', name: 'レイド音ゲー係', parts: ['raidbeat'],
     does: 'レイドに「モンヒロビートで挑戦」し、挑戦回数とダメージの記録が1回分だけか見る' },
   { id: 'new', name: '新人係', parts: ['new'],
-    does: 'はじめての設定から、最初のバトルと少しの探索まで' },
+    does: '初めての設定から、最初のバトルと少しの探索まで' },
   { id: 'walk', name: '見回り係', parts: ['tour', 'explore'],
     does: 'HOME の入口を1つずつ開いて少し遊び、まだ押していないボタンを優先して押していく' },
   { id: 'story', name: 'ストーリー係', parts: ['story'],

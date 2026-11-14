@@ -78,10 +78,10 @@ const run = async (browser, mode, scene, errors) => {
     localStorage.setItem('mh_card_ai_deck_history_v1', JSON.stringify({ v: 1, perWho: { kiki: [{ id: 'oshi-1700000000000', slot: 'oshi', name: 'ゴーレムの力くらべ', plan: null,
       spec: { lead: 'golem', avoid: ['dragon', 'zilla'], keep: ['tiger', 'hare'], free: 1, style: 'normal' }, monsters: [], top: [], from: 1700000000000, to: 1700300000000 }] } })); });
   const dismiss = async () => { for (let i = 0; i < 16; i++) { const did = await page.evaluate(() => { const inO = (el) => { for (let e = el; e && e !== document.body; e = e.parentElement) { const s = getComputedStyle(e); if (s.position === 'fixed' || (s.position === 'absolute' && Number(s.zIndex) >= 40)) return true; } return false; };
-    const l = [...document.querySelectorAll('button')].filter((b) => inO(b) && /^(確認|閉じる|OK|受け取る|次へ|わかった|はい|スキップ|あとで読む|あとで)$/.test((b.innerText || '').replace(/\s+/g, ' ').trim())); if (!l.length) return false; l[0].click(); return true; }); if (!did) break; await page.waitForTimeout(400); } };
+    const l = [...document.querySelectorAll('button')].filter((b) => inO(b) && /^(確認|閉じる|OK|受け取る|次へ|(?:分|わ)かった|はい|スキップ|あとで読む|あとで)$/.test((b.innerText || '').replace(/\s+/g, ' ').trim())); if (!l.length) return false; l[0].click(); return true; }); if (!did) break; await page.waitForTimeout(400); } };
   // 対戦の前の画面(デッキの確かめ・対戦開始の演出)を進める
   const pass = async () => {
-    const b = page.getByRole('button', { name: /対戦へ|このデッキで|はじめる|スタート|タップ/ }).first();
+    const b = page.getByRole('button', { name: /対戦へ|このデッキで|(?:始|はじ)める|スタート|タップ/ }).first();
     if (await b.count() && await b.isVisible().catch(() => false)) await b.click().catch(() => {});
     else await page.mouse.click(mode.view.width / 2, mode.view.height * 0.7).catch(() => {});
     await page.waitForTimeout(600);

@@ -116,7 +116,7 @@ async function openPage(browser) {
 const closeOverlays = async (page) => {
   for (let i = 0; i < 12; i++) {
     const hit = await page.evaluate(() => {
-      const b = [...document.querySelectorAll('button')].find((x) => x.offsetParent && /^(スキップ|閉じる|とじる|OK|受け取る|わかった！?|今は見ない|あとで|あとで読む|×|✕)$/.test((x.innerText || x.getAttribute('aria-label') || '').trim()) && (() => { for (let e = x; e; e = e.parentElement) { const st = getComputedStyle(e); if (st.position === 'fixed' && (Number(st.zIndex) || 0) >= 40) return true; } return false; })());
+      const b = [...document.querySelectorAll('button')].find((x) => x.offsetParent && /^(スキップ|閉じる|とじる|OK|受け取る|(?:分|わ)かった！?|今は見ない|あとで|あとで読む|×|✕)$/.test((x.innerText || x.getAttribute('aria-label') || '').trim()) && (() => { for (let e = x; e; e = e.parentElement) { const st = getComputedStyle(e); if (st.position === 'fixed' && (Number(st.zIndex) || 0) >= 40) return true; } return false; })());
       if (b) b.click(); return !!b;
     }).catch(() => false);
     if (!hit) return; await page.waitForTimeout(400);
