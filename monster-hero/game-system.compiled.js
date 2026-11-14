@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5db7e7102024eb00
+// source-sha256: 7a5a74db3e5a005b
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -159309,6 +159309,17 @@ const MSX_SCN_CSS = `
 .msx .scn-ft .bk{width:48px;flex:none;background:#f59e0b;color:#fff;font-size:22px}
 .msx .scn-ft .go{flex:1 1 0;background:linear-gradient(180deg,#fb923c,#ea580c);color:#fff}
 .msx .scn-ft .dt{flex:1 1 0;background:#fff;color:#1f2937;border-color:#e5e7eb}
+.msx .land .scn-tx,.msx.land .scn-tx{right:42%}
+.msx .land .scn-sc .who.c,.msx.land .scn-sc .who.c{left:auto;right:17%;transform:none;bottom:0;height:90%;animation:none}
+.msx .land .scn-sc .who.r,.msx.land .scn-sc .who.r{right:-3%;bottom:0;height:78%}
+.msx .land .scn-sc .who.l,.msx.land .scn-sc .who.l{display:none}
+.msx .land .scn-bd,.msx.land .scn-bd{right:2%}
+@media (orientation:landscape) and (max-height:520px){
+.msx .scn-tx{right:42%}
+.msx .scn-sc .who.c{left:auto;right:17%;transform:none;bottom:0;height:90%;animation:none}
+.msx .scn-sc .who.r{right:-3%;bottom:0;height:78%}
+.msx .scn-sc .who.l{display:none}
+}
 .msx .scn-win{position:absolute;inset:0;z-index:30;background:#0008;display:flex;align-items:center;justify-content:center;padding:28px 18px}
 .msx .scn-win .in{width:100%;max-height:100%;overflow-y:auto;background:#fffbeb;border:4px solid #c2410c;border-radius:14px;padding:14px 16px;color:#1f2937}
 .msx .scn-win h3{margin:0 0 8px;text-align:center;font-size:18px;font-weight:900;color:#9a3412}
