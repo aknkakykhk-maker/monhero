@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3ee0dbc6b9d5aed2
+// source-sha256: 16ca8f10f239444d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -254333,7 +254333,7 @@ function MonsterHeroGame() {
         className: "px-4 py-2.5 text-center text-[17px] font-black",
         style: {
           position: 'absolute',
-          top: '42%',
+          top: 'max(44px, calc((100% - var(--story-sheet-h, 50%)) / 2))',
           left: '50%',
           width: 'calc(100% - 32px)',
           maxWidth: '26rem',
@@ -260635,7 +260635,7 @@ const createAnimationStyle = () => {
     [data-event-story][data-story-ending-pull] > :not([data-story-ending]) { transform: scale(.88); filter: brightness(.3) blur(1px); }
     @media (prefers-reduced-motion: reduce) { [data-story-ending] *, [data-story-ending] { animation-duration: .01s !important; animation-delay: 0s !important; } }
     @keyframes storyShrink { 0% { opacity: 0; transform: scale(1.7); filter: brightness(1.9); } 50% { opacity: 1; } 100% { transform: scale(1); filter: brightness(1); } }
-    @keyframes storyBanner { 0% { opacity: 0; transform: translate(-50%, -8px) scale(.9); } 45% { opacity: 1; transform: translate(-50%, 0) scale(1.06); } 70%, 100% { opacity: 1; transform: translate(-50%, 0) scale(1); } }
+    @keyframes storyBanner { 0% { opacity: 0; transform: translate(-50%, calc(-50% - 8px)) scale(.9); } 45% { opacity: 1; transform: translate(-50%, -50%) scale(1.06); } 70%, 100% { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
     @keyframes storyShakeA { 0%, 100% { transform: translate(0,0); } 12% { transform: translate(-6px,3px); } 24% { transform: translate(6px,-4px); } 36% { transform: translate(-5px,-3px); } 48% { transform: translate(5px,3px); } 62% { transform: translate(-3px,2px); } 78% { transform: translate(3px,-2px); } }
     @keyframes storyShakeB { 0%, 100% { transform: translate(0,0); } 12% { transform: translate(-6px,3px); } 24% { transform: translate(6px,-4px); } 36% { transform: translate(-5px,-3px); } 48% { transform: translate(5px,3px); } 62% { transform: translate(-3px,2px); } 78% { transform: translate(3px,-2px); } }
     [data-story-shake="0"] { animation: storyShakeA .7s ease-in-out both; }

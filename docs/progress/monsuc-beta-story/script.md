@@ -33,7 +33,7 @@ const ASSISTANT_MONSUC_BETA_EP1 = [
   { who:'kyuko', e:'happy', bg:'monhero_plaza', t:'ほい、みんな集合〜。町はずれで、おもしろいもん見つけてきたよぉ' },
   { who:'mua', e:'surprise', t:'なになに？ きゅきゅがそんな顔するの、めずらしいぢゃん' },
   { who:'momosuke', e:'excited', t:'えっ、チラシにモンスターが走ってる絵が描いてある！！ かっこいい！！' },
-  { who:'dra', e:'normal', fxText:'デビューしたてのモンスターが、大きな大会を目指して駆けていく絵', t:'どれどれ……『モンヒロサクセス、近日オープン』。新しい育成場が、もうすぐできるんだな' },
+  { who:'dra', e:'normal', fxText:'チラシには、大きな大会を目指して走る、モンスターたちが描かれている', t:'どれどれ……『モンヒロサクセス、近日オープン』。新しい育成場が、もうすぐできるんだな' },
   { who:'kiki', e:'surprise', t:'育成場、でつか。モンスターを1体、じっくり育てるところでつね？' },
   { who:'sorashido', e:'excited', t:'デビュー戦から始めて、ヒーローを目指す……シナリオの名前は「ヒーローへの道」・・・！ いい名前です' },
   { who:'erubin', e:'happy', t:'トレーニングして、大会に出て……。1体と、長く一緒にいられるのは、いいね😊' },
@@ -94,29 +94,29 @@ id `monsuc_beta_ep2` / β 公開(印 monheroSuccess が真)と同時に、次の
 ```js
 const ASSISTANT_MONSUC_BETA_EP2 = [
   // ---- 町の門 ----
-  { who:'mua', e:'excited', bg:'monsuc_gate', bgm:'monsuc_menu', fxText:'オープンの日の朝。育成場の町の門', holdMs:2500, t:'着いた〜！ ここが、モンヒロサクセス……！' },
+  { who:'mua', e:'excited', bg:'monsuc_gate', bgm:'monsuc_menu', fxText:'オープンの日の朝。育成場の門が、大きく開いている', holdMs:2500, t:'着いた〜！ ここが、モンヒロサクセス……！' },
   { who:'momosuke', e:'surprise', t:'門、おっきい！！ 看板も、ぴかぴか光ってる！！' },
   { who:'dra', e:'normal', t:'きゅうこちゃんの言ってたとおりだな。……今日は、門が開いてるぞ' },
   // ---- 住む場所 ----
-  { who:'mua', e:'surprise', bg:'monsuc_home', fxText:'赤い屋根の家と、大きな木。土の広場', t:'わ、かわいいおうち！ ここなに？' },
+  { who:'mua', e:'surprise', bg:'monsuc_home', fxText:'赤い屋根の家の前に、大きな木と土の広場がある', t:'わ、かわいいおうち！ ここなに？' },
   { who:'dra', e:'normal', t:'育成のあいだ、モンスターとここで暮らすんだと。季節が変わると、景色も変わるらしいぞ' },
   { who:'momosuke', e:'happy', t:'すてき♡ 春は桜で、冬は雪とか？ ももなら、毎日ここで写真撮っちゃう♡' },
   { who:'mua', e:'happy', fxText:'広場では、モンスターが坂道を何度も駆け上がっている', t:'見て、あっちの子、坂道を何回も走ってる……！' },
   { who:'dra', e:'happy', t:'トレーニングだな。走るのも、打ちこむのも、ぜんぶ種類がちがうんだ。どれをやるかは、毎回選べるらしい' },
   { who:'mua', e:'normal', t:'どの子も、まだデビュー前なんだよね。みんな、すっごい真剣な顔してる' },
   // ---- 修行の滝 ----
-  { who:'momosuke', e:'surprise', bg:'monsuc_waterfall', bgm:'monsuc_training', fxText:'町の奥には、大きな滝', t:'えっ、滝！？ あそこ、だれか打たれてるんだけど！！' },
+  { who:'momosuke', e:'surprise', bg:'monsuc_waterfall', bgm:'monsuc_training', fxText:'町の奥では、大きな滝が流れ落ちている', t:'えっ、滝！？ あそこ、だれか打たれてるんだけど！！' },
   { who:'dra', e:'wink', t:'修行だよ。遠くまで出かけて、まとめて鍛えるんだ。行けば、ちゃんと力になって帰ってくる' },
   { who:'mua', e:'excited', t:'まぢか〜！ じゃあ、行き先選ぶのも楽しみぢゃん！' },
   { who:'momosuke', e:'troubled', t:'でも、滝って冷たそう……。ももは見てるだけにする……' },
   // ---- デビュー戦の会場 ----
-  { who:'mua', e:'surprise', bg:'monsuc_debut', bgm:'monsuc_cup', fxText:'木の観客席と、色とりどりの旗', t:'ここは……大会の会場？' },
+  { who:'mua', e:'surprise', bg:'monsuc_debut', bgm:'monsuc_cup', fxText:'木の観客席に、色とりどりの旗がはためいている', t:'ここは……大会の会場？' },
   { who:'dra', e:'normal', t:'デビュー戦の会場だな。どの子も、最初の大会はここからだ' },
   { who:'momosuke', e:'happy', t:'旗がいっぱいでかわいい♡ ここで勝ったら、みんなが拍手してくれるのかな' },
   { who:'mua', e:'normal', t:'……ねぇ、ドラケン。デビュー戦のその先って、どこまで続いてるの？' },
   { who:'dra', e:'wink', t:'それなら、いちばん奥まで行ってみるか' },
   // ---- 山場: 闘技場 ----
-  { who:'mua', e:'surprise', bg:'monsuc_arena', fxText:'町のいちばん奥。大きな闘技場', holdMs:2500, t:'…………すごい' },
+  { who:'mua', e:'surprise', bg:'monsuc_arena', fxText:'町のいちばん奥に、大きな闘技場がそびえている', holdMs:2500, t:'…………すごい' },
   { who:'momosuke', e:'surprise', t:'ひろい……！ 観客席が、空まで続いてるみたい……！' },
   { who:'dra', e:'normal', t:'ここで戦えるのは、勝ち上がってきた子だけだ。デビューして、大会で勝って、力をつけて……その先にあるのが、ヒーローズファイナル。最後の期の勝ち抜きの大会だ。そこで勝った子が、ヒーローって呼ばれるんだよ' },
   { who:'mua', e:'normal', t:'デビューしたての子が、ここまで来るんだ……' },
@@ -127,7 +127,7 @@ const ASSISTANT_MONSUC_BETA_EP2 = [
   { who:'momosuke', e:'wink', t:'みゅあねぇ、ちょっとかっこいい……。でも、ももだってすぐ追いつくから♡' },
   { who:'dra', e:'happy', t:'おでたちも、準備ができたらすぐ行く。それまで、一番乗りの道を作っといてくれ' },
   // ---- 受付 → 駆けだす ----
-  { who:'mua', e:'excited', bg:'monsuc_gate', bgm:'monsuc_menu', fxText:'育成場の受付', t:'すみませーん！ 助手の一番乗り、みゅあです！' },
+  { who:'mua', e:'excited', bg:'monsuc_gate', bgm:'monsuc_menu', fxText:'3人は、育成場の受付へやってきた', t:'すみませーん！ 助手の一番乗り、みゅあです！' },
   { who:'mua', e:'happy', fxText:'チラシに、「一番乗り」のしるしが押された', t:'やった〜！ 押してもらっちゃった✨' },
   { who:'mua', e:'surprise', t:'あ……でも、これ{name}に言わないと始まらないぢゃん！' },
   { who:'dra', e:'happy', t:'はは、そりゃそうだ。早く知らせてやれ' },
