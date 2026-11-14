@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 72ea7de95a4d654c
+// generated-sha256: b67b935cad70cd90
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -67740,8 +67740,8 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
   sekiyuou: { erubin: { top: 0.02, eye: 0.225, chin: 0.47, m: 1.25 } },
   // 社長の全身画の8表情から切り出した、みゅあの胸から上の立ち絵(2026-11-11)。測り方は上と同じ。m は、いまの立ち絵と目から顎の見た目の長さが同じになるように決めた
   //   数字は tools/assistant/life-expression-sheets.py が出す(絵を作り直したら、出た数字へ直す)。stand-normal=ふだんの服
-  'stand-normal': { mua: { top: 0.1386, eye: 0.3072, chin: 0.4187, m: 0.829 } },
-  'stand-halloween': { mua: { top: 0.1502, eye: 0.3379, chin: 0.4334, m: 0.711, above: 0.85 } },
+  'stand-normal': { mua: { top: 0.1386, eye: 0.3072, chin: 0.4187, m: 0.829 }, kiki: { top: 0.0777, eye: 0.3325, chin: 0.4296, m: 0.722 }, atsu: { top: 0.0699, eye: 0.3272, chin: 0.4301, m: 0.766 }, kyuko: { top: 0.0344, eye: 0.3093, chin: 0.4296, m: 0.895 }, sorashido: { top: 0.0562, eye: 0.2921, chin: 0.4307, m: 1.031 } },
+  'stand-halloween': { mua: { top: 0.1502, eye: 0.3379, chin: 0.4334, m: 0.711, above: 0.85 }, kiki: { top: 0.1496, eye: 0.3349, chin: 0.4299, m: 0.707, above: 0.95 } },
   'stand-card-master': { mua: { top: 0.1166, eye: 0.2283, chin: 0.2953, m: 0.499, above: 0.75 } },
 });
 // 絵の置き場所から、着替えの名前を引く(ふだんの服は null)
@@ -67777,7 +67777,8 @@ const assistantLifeStandLayout = (items, W, H) => {
   const n = items.length;
   if (!n || !W || !H || items.some(x => !x.box)) return null;
   const sw = (W * 0.92) / n;
-  const fh = H * ({ 1: 0.085, 2: 0.075, 3: 0.064, 4: 0.055 }[Math.min(4, n)]);
+  // 2人の場面(助手どうしの会話)の顔の大きさ: 全身画の助手(体の幅が広い)が並んでも、みゅあ・ももすけ(34px 前後)とそろえる(2026-11-14 社長「ききときゅうこがでかい？」)
+  const fh = H * ({ 1: 0.085, 2: 0.04, 3: 0.064, 4: 0.055 }[Math.min(4, n)]);
   const visH = (x, F) => assistantLifeStandVisH(x.face, F);
   const visW = (x, F) => visH(x, F) * (x.box.r - x.box.l) * x.box.ar / (x.box.b - x.box.t);
   let F = fh;
@@ -69685,7 +69686,7 @@ async function assistantLifeUiV2Load() {
   let done = null;
   try { done = await storeGet('mh_assistant_life_ui_v2_default_v1', null, false); } catch (_) { return v; }
   if (done === true) return v;
-  try { await storeSet('mh_assistant_life_ui_v2_default_v1', true, false); await storeSet('mh_assistant_life_ui_v2', true, false); } catch (_) { return v; }
+  try { await storeSet('mh_assistant_life_ui_v2', true, false); await storeSet('mh_assistant_life_ui_v2_default_v1', true, false); } catch (_) { return v; }
   return true;
 }
 // 新UIのタブ(下の列と、町の上の帯で同じ並び)
@@ -69769,7 +69770,7 @@ function AssistantLifeUiSettingRow() {
   const [v2, setV2] = React.useState(() => assistantLifeUiV2Of(assistantLifeUiV2Last));
   React.useEffect(() => { let alive = true; assistantLifeUiV2Load().then(v => { assistantLifeUiV2Last = v === true || v === false ? v : null; if (alive) setV2(assistantLifeUiV2Of(v)); }).catch(() => {}); return () => { alive = false; }; }, []);
   if (typeof assistantLifeEnabled === 'function' && !assistantLifeEnabled()) return null;
-  const pick = (on) => { setV2(on); assistantLifeUiV2Last = on; try { void storeSet('mh_assistant_life_ui_v2_default_v1', true, false); void storeSet('mh_assistant_life_ui_v2', on, false); } catch (_) {} }; // 自分で選んだ印も残す(移行で選びを上書きしない)
+  const pick = (on) => { setV2(on); assistantLifeUiV2Last = on; try { void storeSet('mh_assistant_life_ui_v2', on, false); void storeSet('mh_assistant_life_ui_v2_default_v1', true, false); } catch (_) {} }; // 自分で選んだ印も残す(移行で選びを上書きしない)
   return (
     <div data-assistant-life-ui-setting className={`${SCREEN_PANEL_CLASS} w-full text-left`}>
       <b className="block text-[13px] font-black text-slate-200">助手ライフの画面</b>
@@ -82893,6 +82894,17 @@ const MSX_TEV_LOT_NAME = Object.freeze({ self: 'いっしょに自主練', rest:
 // 変わったこと(芯の trainEvent と同じ中身を文にする)
 const msxTevChanges = (s, o) => {
   const e = o && o.event; if (!e) return [];
+  // 芯が動いた数(e.d)を持っているときは、言葉でなく実際の数で出す(2026-11-14 社長・r1114-098)。能力はゲージ(MsxStRow)が出すので、ここは能力以外
+  if (e.d && typeof e.d === 'object') {
+    const d = e.d; const out = []; const sg = (n) => (n > 0 ? `+${n}` : `−${Math.abs(n)}`);
+    if (d.bond) out.push(`🤝 親密度 ${sg(d.bond)}`);
+    if (d.hp) out.push(`❤️ 体力 ${sg(d.hp)}`);
+    if (d.stress) out.push(`💢 ストレス ${sg(d.stress)}`);
+    const SUC = msxSuc && msxSuc.SUC;
+    if (e.story === 3) out.push(o.taught ? `⚔ 技「${(SUC.techsOf(s.species).find((t) => t.id === o.taught) || {}).name || '新しい技'}」を覚えた!` : '⚔ 技の熟練 +10');
+    if (e.lottery === 'tip') out.push('✨ ひらめき(次の修行で技を覚えやすい)');
+    return out;
+  }
   const SUC = msxSuc && msxSuc.SUC; const m = s.team[e.who]; const fk = m && Array.isArray(m.top) ? m.top[0] : null;
   const stat = fk && typeof MSX_STAT_NAME !== 'undefined' ? MSX_STAT_NAME[fk] : '能力';
   const out = [];
@@ -82922,6 +82934,11 @@ function MsxTrainEvent({ run, o, ctx, style = MSX_TEV_STYLE }) {
   const ch = msxTevChanges(s, o);
   const calm = typeof msxFxCalm === 'function' && msxFxCalm();
   const bondNow = s.bond[e.who];
+  const bondFrom = e.d && Number.isFinite(e.d.bondFrom) ? e.d.bondFrom : bondNow;
+  const [bondOn, setBondOn] = useState(false);
+  useEffect(() => { const t = setTimeout(() => setBondOn(true), 700); return () => clearTimeout(t); }, []);
+  const bondShow = bondOn || calm ? bondNow : bondFrom;
+  const ups = e.d && e.d.up > 0 && e.d.stat ? { [e.d.stat]: e.d.up } : null;
   return (<>
     <div className={`v-scene msx-tev s-${style}${calm ? ' calm' : ''}`} style={{ flex: '1 1 0' }} data-msx-tev={style}>
       <img className="bg" src={msxSceneBg(s.turn).bg} alt=""/><div className="sh"/>
@@ -82929,15 +82946,16 @@ function MsxTrainEvent({ run, o, ctx, style = MSX_TEV_STYLE }) {
       <MsxMonArt run={run} className="mon" style={{ left: '29%', bottom: '40%', height: '22%' }} live/>
       <div className="gr" style={{ left: '71%', bottom: 'calc(40% - 5px)' }}/>
       {m ? <img className="mon tev-pal" src={msxMonImg(m.species)} alt="" style={{ left: '71%', bottom: '40%', height: '25%' }}/> : null}
-      <div className="v-talk tev-talk">{line && line.t ? (line.who && line.who !== 'narr' ? <div><span className="who">{line.who === 'mon' ? run.nick : msxAidName(line.who)}</span>「{line.t}」</div> : <div>{line.t}</div>) : <div>{name}と、すこし特別な時間をすごした。</div>}</div>
+      <div className="v-talk tev-talk" style={JA_LABEL_STYLE}>{line && line.t ? (line.who && line.who !== 'narr' ? <div><span className="who">{line.who === 'mon' ? run.nick : msxAidName(line.who)}</span>「{jaWrap(line.t)}」</div> : <div>{jaWrap(line.t)}</div>) : <div>{jaWrap(`${name}と、すこし特別な時間をすごした。`)}</div>}</div>
       <div className="v-ev-h"><small>編成のモンスターのイベント</small>{title}</div>
-      <div className="tev-bond"><span>🤝 {name}との親密度</span><i><b style={{ width: `${Math.max(0, Math.min(100, bondNow))}%` }}/></i><em>{bondNow}</em></div>
+      <div className="tev-bond"><span>🤝 {name}との親密度</span><i><b style={{ width: `${Math.max(0, Math.min(100, bondShow))}%`, transition: 'width .9s ease-out' }}/></i><em data-msx-tev-bond>{bondShow}{e.d && e.d.bond ? <small> ({e.d.bond > 0 ? `+${e.d.bond}` : e.d.bond})</small> : null}</em></div>
       {/* 入り方 */}
       {style === 'a' ? <span className="tev-in-a" aria-hidden="true"/> : null}
       {style === 'b' ? <div className="tev-in-b" aria-hidden="true"><div className="band"><img src={msxMonThumb(s.species)} alt=""/><b>{name}との出来事!</b><img src={m ? msxMonThumb(m.species) : ''} alt=""/></div></div> : null}
       {style === 'c' ? <div className="tev-in-c" aria-hidden="true"><span className="fl"/><div className="rb">EVENT</div></div> : null}
     </div>
-    <div className="v-log tev-ch">{ch.map((t, i) => <span key={i} className="v-chip ylw" style={{ position: 'static', animationDelay: `${0.9 + i * 0.15}s` }}>{t}</span>)}</div>
+    {ups ? <MsxStRow stats={s.stats} ups={ups}/> : null}
+    <div className="v-log tev-ch" data-msx-tev-chips>{ch.map((t, i) => <span key={i} className="v-chip ylw" style={{ position: 'static', animationDelay: `${0.9 + i * 0.15}s` }}>{t}</span>)}</div>
   </>);
 }
 
@@ -82947,6 +82965,7 @@ const MSX_TEV_CSS = `
 .msx .msx-tev .tev-bond i{flex:1;height:6px;border-radius:6px;background:#334155;overflow:hidden}
 .msx .msx-tev .tev-bond i b{display:block;height:100%;background:linear-gradient(90deg,#f472b6,#fb7185)}
 .msx .msx-tev .tev-bond em{font-style:normal;color:#fff}
+.msx .msx-tev .tev-bond em small{font-size:10px;color:#fbcfe8}
 .msx .msx-tev .tev-talk{bottom:8px;z-index:4}
 .msx .tev-ch{display:flex;flex-wrap:wrap;gap:4px}
 .msx .tev-ch .v-chip{animation:msx-popin .35s cubic-bezier(.2,1.4,.4,1) both}
@@ -83474,7 +83493,7 @@ function MsxRunIntro({ run, ctx, onDone }) {
       </div>
     </div>
     <div className="v-ft">
-      {seenBefore ? <button type="button" onClick={finish} data-msx-intro-skip>⏩ とばす</button> : null}
+      {seenBefore ? <button type="button" onClick={finish} data-msx-intro-skip>⏩ 飛ばす</button> : null}
       <button type="button" className="go" onClick={next} data-msx-intro-next>{last ? '育成をはじめる ▶' : '次へ ▶'}</button>
     </div>
   </>);
@@ -86198,8 +86217,8 @@ const MSX_CSS = `
 .msx .v-st.gs-a.zs div.up u.g i,.msx .v-st.gs-a.zs div.up u.g s,.msx .v-st.gs-a.zs div.dn u.g i,.msx .v-st.gs-a.zs div.dn u.g s{border-radius:2px}
 .msx .v-st.gs-a u.g q{quotes:none;position:absolute;left:0;right:0;top:100%;display:flex;justify-content:space-between;font-size:10px;font-weight:800;color:#fde68a;line-height:11px;pointer-events:none}
 .msx .v-st.gs-a u.g q::before,.msx .v-st.gs-a u.g q::after{content:none}
-@container (max-width:340px){.msx .v-st.gs-a u.g q{font-size:9.5px;letter-spacing:-.06em;left:-3px;right:-3px}}
-@media (max-width:340px){.msx .v-st.gs-a u.g q{font-size:9.5px;letter-spacing:-.06em;left:-3px;right:-3px}}
+@container (max-width:340px){.msx .v-st.gs-a u.g q{font-size:10px;letter-spacing:-.06em;left:-3px;right:-3px}}
+@media (max-width:340px){.msx .v-st.gs-a u.g q{font-size:10px;letter-spacing:-.06em;left:-3px;right:-3px}}
 @media (prefers-reduced-motion: reduce){.msx .v-st u.g i,.msx .v-st u.g s.gu{transition:none}.msx .v-st.grow.on u.g s.gu{animation:none}}
 .msx .v-act{display:grid;gap:5px;margin-top:6px}
 .msx .v-p{background:linear-gradient(180deg,#3d4c6b,#2a3247);border:1px solid #64748b;border-bottom:3px solid #0b1020;border-radius:14px;text-align:center;padding:5px 2px 4px;font-size:12.5px;font-weight:900;line-height:1.2;position:relative;display:flex;flex-direction:column;justify-content:center;align-items:center;min-width:0;white-space:nowrap}
@@ -88330,12 +88349,12 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
     </>);
     // 編成のモンスターとの出来事があれば、結果のあとに場面を1枚挟む(56-monsuc-tevent.jsx。とばすと飛ぶ)
     const tev = isTrain && o.event && typeof MsxTrainEvent === 'function';
-    foot = <div className="v-ft"><button type="button" onClick={() => (isTrain ? afterAct({ ...run, phase: 'main' }) : afterAct(run))}>⏩ とばす</button><button type="button" className="go" onClick={() => (tev ? setRun({ ...run, phase: 'tevent' }) : isTrain ? toReact(run) : afterAct(run))}>つぎへ ▶</button></div>;
+    foot = <div className="v-ft"><button type="button" onClick={() => (isTrain ? afterAct({ ...run, phase: 'main' }) : afterAct(run))}>⏩ 飛ばす</button><button type="button" className="go" onClick={() => (tev ? setRun({ ...run, phase: 'tevent' }) : isTrain ? toReact(run) : afterAct(run))}>つぎへ ▶</button></div>;
   }
   // ---- トレーニングのあとの出来事の場面(56-monsuc-tevent.jsx) ----
   else if (phase === 'tevent' && run.out && run.out.event && typeof MsxTrainEvent === 'function') {
     body = <><MsxBand s={s} v={v} ev={ev}/><MsxTrainEvent key={`${s.turn}-tev`} run={run} o={run.out} ctx={ctx}/></>;
-    foot = <div className="v-ft"><button type="button" onClick={() => afterAct({ ...run, phase: 'main' })}>⏩ とばす</button><button type="button" className="go" onClick={() => toReact(run)} data-msx-tev-next>つぎへ ▶</button></div>;
+    foot = <div className="v-ft"><button type="button" onClick={() => afterAct({ ...run, phase: 'main' })}>⏩ 飛ばす</button><button type="button" className="go" onClick={() => toReact(run)} data-msx-tev-next>次へ ▶</button></div>;
   }
   // ---- 覚醒・超覚醒(56-monsuc-awake.jsx の演出)。終わったら、ターンのはじめならメインへ・ターンの終わりなら閉じる ----
   else if (phase === 'awake' && run.out && run.out.fire && typeof MsxAwakeShow === 'function') {
@@ -88395,7 +88414,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
     </>);
     foot = done || !RC || s.reacted
       ? <div className="v-ft"><button type="button" className="go" onClick={() => afterAct({ ...run, out: run.out ? { ...run.out, reacted: undefined } : run.out, phase: 'main' })} data-msx-react-next>つぎへ ▶</button></div>
-      : <div className="v-ft"><button type="button" onClick={() => choose(null)}>⏩ とばす</button><button type="button" className="on" disabled>選んでね</button></div>;
+      : <div className="v-ft"><button type="button" onClick={() => choose(null)}>⏩ 飛ばす</button><button type="button" className="on" disabled>選んでね</button></div>;
   }
   // ---- イッサ博士 ----
   else if (phase === 'issa') {
@@ -88405,7 +88424,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
   else if (phase === 'turn' && typeof MsxKiShow === 'function' && v.period.at === 1 && v.period.index > 0 && kiAt !== s.turn) {
     const doneKi = () => { setKiAt(s.turn); setRun({ ...run, ki: { p: v.period.index, fame: Number.isFinite(s.fameTotal) ? s.fameTotal : 0, power: ev.power } }); };
     body = <><MsxBand s={s} v={v} ev={ev}/><MsxKiShow key={`ki-${s.turn}`} run={run} v={v} ev={ev} ki={run.ki} onDone={doneKi}/></>;
-    foot = <div className="v-ft"><button type="button" onClick={onPause}>← 中断</button><button type="button" className="go" onClick={doneKi} data-msx-ki-skip>⏩ とばす</button></div>;
+    foot = <div className="v-ft"><button type="button" onClick={onPause}>← 中断</button><button type="button" className="go" onClick={doneKi} data-msx-ki-skip>⏩ 飛ばす</button></div>;
   }
   else if (phase === 'turn') {
     const cal = msxCalendar(s.turn); const prev = msxCalendar(Math.max(1, s.turn - 1));
@@ -102691,6 +102710,30 @@ const CARD_ART_KNOWN_BOX = Object.freeze({
   sorashido_surprise: [384, 512, 0, 2, 384, 510],
   sorashido_troubled: [384, 512, 0, 0, 384, 512],
   sorashido_wink: [384, 512, 0, 2, 384, 510],
+  'stand-normal/atsu_angry': [344, 552, 29, 7, 314, 545],
+  'stand-normal/atsu_crying': [344, 552, 14, 6, 329, 546],
+  'stand-normal/atsu_excited': [344, 552, 1, 6, 342, 546],
+  'stand-normal/atsu_happy': [344, 552, 12, 7, 331, 545],
+  'stand-normal/atsu_normal': [344, 552, 1, 7, 342, 545],
+  'stand-normal/atsu_surprise': [344, 552, 1, 7, 342, 545],
+  'stand-normal/atsu_troubled': [344, 552, 3, 7, 340, 545],
+  'stand-normal/atsu_wink': [344, 552, 1, 8, 342, 544],
+  'stand-normal/kiki_angry': [552, 832, 1, 8, 550, 824],
+  'stand-normal/kiki_crying': [436, 832, 8, 6, 420, 826],
+  'stand-normal/kiki_excited': [552, 832, 1, 8, 550, 824],
+  'stand-normal/kiki_happy': [392, 832, 7, 8, 377, 824],
+  'stand-normal/kiki_normal': [414, 832, 12, 8, 394, 824],
+  'stand-normal/kiki_surprise': [486, 832, 1, 8, 476, 824],
+  'stand-normal/kiki_troubled': [456, 832, 8, 8, 439, 824],
+  'stand-normal/kiki_wink': [550, 832, 8, 6, 541, 826],
+  'stand-normal/kyuko_angry': [430, 590, 16, 7, 413, 583],
+  'stand-normal/kyuko_crying': [396, 590, 23, 8, 361, 582],
+  'stand-normal/kyuko_excited': [418, 590, 6, 8, 405, 582],
+  'stand-normal/kyuko_happy': [424, 590, 61, 8, 356, 582],
+  'stand-normal/kyuko_normal': [410, 590, 19, 8, 381, 582],
+  'stand-normal/kyuko_surprise': [410, 590, 43, 8, 342, 582],
+  'stand-normal/kyuko_troubled': [366, 590, 21, 7, 337, 583],
+  'stand-normal/kyuko_wink': [416, 590, 30, 8, 380, 582],
   'stand-normal/myua_angry': [592, 672, 12, 0, 520, 672],
   'stand-normal/myua_crying': [592, 672, 0, 0, 591, 672],
   'stand-normal/myua_excited': [592, 672, 0, 0, 583, 672],
@@ -102699,6 +102742,14 @@ const CARD_ART_KNOWN_BOX = Object.freeze({
   'stand-normal/myua_surprise': [592, 672, 0, 10, 509, 662],
   'stand-normal/myua_troubled': [592, 672, 27, 0, 516, 672],
   'stand-normal/myua_wink': [592, 672, 12, 10, 579, 662],
+  'stand-normal/sorashido_angry': [456, 542, 11, 6, 441, 536],
+  'stand-normal/sorashido_crying': [456, 542, 21, 7, 434, 535],
+  'stand-normal/sorashido_excited': [456, 542, 1, 8, 454, 534],
+  'stand-normal/sorashido_happy': [456, 542, 1, 4, 454, 538],
+  'stand-normal/sorashido_normal': [456, 542, 1, 7, 454, 535],
+  'stand-normal/sorashido_surprise': [456, 542, 20, 7, 435, 535],
+  'stand-normal/sorashido_troubled': [456, 542, 1, 8, 454, 534],
+  'stand-normal/sorashido_wink': [456, 542, 1, 9, 440, 533],
   // </card-art-known-box>
 });
 const cardArtBoxOf = (v) => (Array.isArray(v) && v.length === 6 ? { nw: v[0], nh: v[1], x: v[2], y: v[3], w: v[4], h: v[5] } : null);

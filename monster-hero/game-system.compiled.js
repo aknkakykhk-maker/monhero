@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d07af7907da84d68
+// source-sha256: 37f911acead56f7d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -115040,6 +115040,30 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
       eye: 0.3072,
       chin: 0.4187,
       m: 0.829
+    },
+    kiki: {
+      top: 0.0777,
+      eye: 0.3325,
+      chin: 0.4296,
+      m: 0.722
+    },
+    atsu: {
+      top: 0.0699,
+      eye: 0.3272,
+      chin: 0.4301,
+      m: 0.766
+    },
+    kyuko: {
+      top: 0.0344,
+      eye: 0.3093,
+      chin: 0.4296,
+      m: 0.895
+    },
+    sorashido: {
+      top: 0.0562,
+      eye: 0.2921,
+      chin: 0.4307,
+      m: 1.031
     }
   },
   'stand-halloween': {
@@ -115049,6 +115073,13 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
       chin: 0.4334,
       m: 0.711,
       above: 0.85
+    },
+    kiki: {
+      top: 0.1496,
+      eye: 0.3349,
+      chin: 0.4299,
+      m: 0.707,
+      above: 0.95
     }
   },
   'stand-card-master': {
@@ -115121,7 +115152,7 @@ const assistantLifeStandLayout = (items, W, H) => {
   const sw = W * 0.92 / n;
   const fh = H * {
     1: 0.085,
-    2: 0.075,
+    2: 0.04,
     3: 0.064,
     4: 0.055
   }[Math.min(4, n)];
@@ -120112,8 +120143,8 @@ async function assistantLifeUiV2Load() {
   }
   if (done === true) return v;
   try {
-    await storeSet('mh_assistant_life_ui_v2_default_v1', true, false);
     await storeSet('mh_assistant_life_ui_v2', true, false);
+    await storeSet('mh_assistant_life_ui_v2_default_v1', true, false);
   } catch (_) {
     return v;
   }
@@ -120266,8 +120297,8 @@ function AssistantLifeUiSettingRow() {
     setV2(on);
     assistantLifeUiV2Last = on;
     try {
-      void storeSet('mh_assistant_life_ui_v2_default_v1', true, false);
       void storeSet('mh_assistant_life_ui_v2', on, false);
+      void storeSet('mh_assistant_life_ui_v2_default_v1', true, false);
     } catch (_) {}
   };
   return React.createElement("div", {
@@ -159225,6 +159256,18 @@ const MSX_TEV_LOT_NAME = Object.freeze({
 const msxTevChanges = (s, o) => {
   const e = o && o.event;
   if (!e) return [];
+  if (e.d && typeof e.d === 'object') {
+    const d = e.d;
+    const out = [];
+    const sg = n => n > 0 ? `+${n}` : `−${Math.abs(n)}`;
+    if (d.bond) out.push(`🤝 親密度 ${sg(d.bond)}`);
+    if (d.hp) out.push(`❤️ 体力 ${sg(d.hp)}`);
+    if (d.stress) out.push(`💢 ストレス ${sg(d.stress)}`);
+    const SUC = msxSuc && msxSuc.SUC;
+    if (e.story === 3) out.push(o.taught ? `⚔ 技「${(SUC.techsOf(s.species).find(t => t.id === o.taught) || {}).name || '新しい技'}」を覚えた!` : '⚔ 技の熟練 +10');
+    if (e.lottery === 'tip') out.push('✨ ひらめき(次の修行で技を覚えやすい)');
+    return out;
+  }
   const SUC = msxSuc && msxSuc.SUC;
   const m = s.team[e.who];
   const fk = m && Array.isArray(m.top) ? m.top[0] : null;
@@ -159278,6 +159321,16 @@ function MsxTrainEvent({
   const ch = msxTevChanges(s, o);
   const calm = typeof msxFxCalm === 'function' && msxFxCalm();
   const bondNow = s.bond[e.who];
+  const bondFrom = e.d && Number.isFinite(e.d.bondFrom) ? e.d.bondFrom : bondNow;
+  const [bondOn, setBondOn] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setBondOn(true), 700);
+    return () => clearTimeout(t);
+  }, []);
+  const bondShow = bondOn || calm ? bondNow : bondFrom;
+  const ups = e.d && e.d.up > 0 && e.d.stat ? {
+    [e.d.stat]: e.d.up
+  } : null;
   return React.createElement(React.Fragment, null, React.createElement("div", {
     className: `v-scene msx-tev s-${style}${calm ? ' calm' : ''}`,
     style: {
@@ -159321,18 +159374,22 @@ function MsxTrainEvent({
       height: '25%'
     }
   }) : null, React.createElement("div", {
-    className: "v-talk tev-talk"
+    className: "v-talk tev-talk",
+    style: JA_LABEL_STYLE
   }, line && line.t ? line.who && line.who !== 'narr' ? React.createElement("div", null, React.createElement("span", {
     className: "who"
-  }, line.who === 'mon' ? run.nick : msxAidName(line.who)), "「", line.t, "」") : React.createElement("div", null, line.t) : React.createElement("div", null, name, "と、すこし特別な時間をすごした。")), React.createElement("div", {
+  }, line.who === 'mon' ? run.nick : msxAidName(line.who)), "「", jaWrap(line.t), "」") : React.createElement("div", null, jaWrap(line.t)) : React.createElement("div", null, jaWrap(`${name}と、すこし特別な時間をすごした。`))), React.createElement("div", {
     className: "v-ev-h"
   }, React.createElement("small", null, "編成のモンスターのイベント"), title), React.createElement("div", {
     className: "tev-bond"
   }, React.createElement("span", null, "🤝 ", name, "との親密度"), React.createElement("i", null, React.createElement("b", {
     style: {
-      width: `${Math.max(0, Math.min(100, bondNow))}%`
+      width: `${Math.max(0, Math.min(100, bondShow))}%`,
+      transition: 'width .9s ease-out'
     }
-  })), React.createElement("em", null, bondNow)), style === 'a' ? React.createElement("span", {
+  })), React.createElement("em", {
+    "data-msx-tev-bond": true
+  }, bondShow, e.d && e.d.bond ? React.createElement("small", null, " (", e.d.bond > 0 ? `+${e.d.bond}` : e.d.bond, ")") : null)), style === 'a' ? React.createElement("span", {
     className: "tev-in-a",
     "aria-hidden": "true"
   }) : null, style === 'b' ? React.createElement("div", {
@@ -159353,8 +159410,12 @@ function MsxTrainEvent({
     className: "fl"
   }), React.createElement("div", {
     className: "rb"
-  }, "EVENT")) : null), React.createElement("div", {
-    className: "v-log tev-ch"
+  }, "EVENT")) : null), ups ? React.createElement(MsxStRow, {
+    stats: s.stats,
+    ups: ups
+  }) : null, React.createElement("div", {
+    className: "v-log tev-ch",
+    "data-msx-tev-chips": true
   }, ch.map((t, i) => React.createElement("span", {
     key: i,
     className: "v-chip ylw",
@@ -159370,6 +159431,7 @@ const MSX_TEV_CSS = `
 .msx .msx-tev .tev-bond i{flex:1;height:6px;border-radius:6px;background:#334155;overflow:hidden}
 .msx .msx-tev .tev-bond i b{display:block;height:100%;background:linear-gradient(90deg,#f472b6,#fb7185)}
 .msx .msx-tev .tev-bond em{font-style:normal;color:#fff}
+.msx .msx-tev .tev-bond em small{font-size:10px;color:#fbcfe8}
 .msx .msx-tev .tev-talk{bottom:8px;z-index:4}
 .msx .tev-ch{display:flex;flex-wrap:wrap;gap:4px}
 .msx .tev-ch .v-chip{animation:msx-popin .35s cubic-bezier(.2,1.4,.4,1) both}
@@ -160320,7 +160382,7 @@ function MsxRunIntro({
     type: "button",
     onClick: finish,
     "data-msx-intro-skip": true
-  }, "⏩ とばす") : null, React.createElement("button", {
+  }, "⏩ 飛ばす") : null, React.createElement("button", {
     type: "button",
     className: "go",
     onClick: next,
@@ -165805,8 +165867,8 @@ const MSX_CSS = `
 .msx .v-st.gs-a.zs div.up u.g i,.msx .v-st.gs-a.zs div.up u.g s,.msx .v-st.gs-a.zs div.dn u.g i,.msx .v-st.gs-a.zs div.dn u.g s{border-radius:2px}
 .msx .v-st.gs-a u.g q{quotes:none;position:absolute;left:0;right:0;top:100%;display:flex;justify-content:space-between;font-size:10px;font-weight:800;color:#fde68a;line-height:11px;pointer-events:none}
 .msx .v-st.gs-a u.g q::before,.msx .v-st.gs-a u.g q::after{content:none}
-@container (max-width:340px){.msx .v-st.gs-a u.g q{font-size:9.5px;letter-spacing:-.06em;left:-3px;right:-3px}}
-@media (max-width:340px){.msx .v-st.gs-a u.g q{font-size:9.5px;letter-spacing:-.06em;left:-3px;right:-3px}}
+@container (max-width:340px){.msx .v-st.gs-a u.g q{font-size:10px;letter-spacing:-.06em;left:-3px;right:-3px}}
+@media (max-width:340px){.msx .v-st.gs-a u.g q{font-size:10px;letter-spacing:-.06em;left:-3px;right:-3px}}
 @media (prefers-reduced-motion: reduce){.msx .v-st u.g i,.msx .v-st u.g s.gu{transition:none}.msx .v-st.grow.on u.g s.gu{animation:none}}
 .msx .v-act{display:grid;gap:5px;margin-top:6px}
 .msx .v-p{background:linear-gradient(180deg,#3d4c6b,#2a3247);border:1px solid #64748b;border-bottom:3px solid #0b1020;border-radius:14px;text-align:center;padding:5px 2px 4px;font-size:12.5px;font-weight:900;line-height:1.2;position:relative;display:flex;flex-direction:column;justify-content:center;align-items:center;min-width:0;white-space:nowrap}
@@ -170240,7 +170302,7 @@ function MsxPlay({
         ...run,
         phase: 'main'
       }) : afterAct(run)
-    }, "⏩ とばす"), React.createElement("button", {
+    }, "⏩ 飛ばす"), React.createElement("button", {
       type: "button",
       className: "go",
       onClick: () => tev ? setRun({
@@ -170267,12 +170329,12 @@ function MsxPlay({
         ...run,
         phase: 'main'
       })
-    }, "⏩ とばす"), React.createElement("button", {
+    }, "⏩ 飛ばす"), React.createElement("button", {
       type: "button",
       className: "go",
       onClick: () => toReact(run),
       "data-msx-tev-next": true
-    }, "つぎへ ▶"));
+    }, "次へ ▶"));
   } else if (phase === 'awake' && run.out && run.out.fire && typeof MsxAwakeShow === 'function') {
     const f = run.out.fire;
     const then = run.out.then;
@@ -170514,7 +170576,7 @@ function MsxPlay({
     }, React.createElement("button", {
       type: "button",
       onClick: () => choose(null)
-    }, "⏩ とばす"), React.createElement("button", {
+    }, "⏩ 飛ばす"), React.createElement("button", {
       type: "button",
       className: "on",
       disabled: true
@@ -170567,7 +170629,7 @@ function MsxPlay({
       className: "go",
       onClick: doneKi,
       "data-msx-ki-skip": true
-    }, "⏩ とばす"));
+    }, "⏩ 飛ばす"));
   } else if (phase === 'turn') {
     const cal = msxCalendar(s.turn);
     const prev = msxCalendar(Math.max(1, s.turn - 1));
@@ -197225,6 +197287,30 @@ const CARD_ART_KNOWN_BOX = Object.freeze({
   sorashido_surprise: [384, 512, 0, 2, 384, 510],
   sorashido_troubled: [384, 512, 0, 0, 384, 512],
   sorashido_wink: [384, 512, 0, 2, 384, 510],
+  'stand-normal/atsu_angry': [344, 552, 29, 7, 314, 545],
+  'stand-normal/atsu_crying': [344, 552, 14, 6, 329, 546],
+  'stand-normal/atsu_excited': [344, 552, 1, 6, 342, 546],
+  'stand-normal/atsu_happy': [344, 552, 12, 7, 331, 545],
+  'stand-normal/atsu_normal': [344, 552, 1, 7, 342, 545],
+  'stand-normal/atsu_surprise': [344, 552, 1, 7, 342, 545],
+  'stand-normal/atsu_troubled': [344, 552, 3, 7, 340, 545],
+  'stand-normal/atsu_wink': [344, 552, 1, 8, 342, 544],
+  'stand-normal/kiki_angry': [552, 832, 1, 8, 550, 824],
+  'stand-normal/kiki_crying': [436, 832, 8, 6, 420, 826],
+  'stand-normal/kiki_excited': [552, 832, 1, 8, 550, 824],
+  'stand-normal/kiki_happy': [392, 832, 7, 8, 377, 824],
+  'stand-normal/kiki_normal': [414, 832, 12, 8, 394, 824],
+  'stand-normal/kiki_surprise': [486, 832, 1, 8, 476, 824],
+  'stand-normal/kiki_troubled': [456, 832, 8, 8, 439, 824],
+  'stand-normal/kiki_wink': [550, 832, 8, 6, 541, 826],
+  'stand-normal/kyuko_angry': [430, 590, 16, 7, 413, 583],
+  'stand-normal/kyuko_crying': [396, 590, 23, 8, 361, 582],
+  'stand-normal/kyuko_excited': [418, 590, 6, 8, 405, 582],
+  'stand-normal/kyuko_happy': [424, 590, 61, 8, 356, 582],
+  'stand-normal/kyuko_normal': [410, 590, 19, 8, 381, 582],
+  'stand-normal/kyuko_surprise': [410, 590, 43, 8, 342, 582],
+  'stand-normal/kyuko_troubled': [366, 590, 21, 7, 337, 583],
+  'stand-normal/kyuko_wink': [416, 590, 30, 8, 380, 582],
   'stand-normal/myua_angry': [592, 672, 12, 0, 520, 672],
   'stand-normal/myua_crying': [592, 672, 0, 0, 591, 672],
   'stand-normal/myua_excited': [592, 672, 0, 0, 583, 672],
@@ -197232,7 +197318,15 @@ const CARD_ART_KNOWN_BOX = Object.freeze({
   'stand-normal/myua_normal': [592, 672, 31, 7, 500, 665],
   'stand-normal/myua_surprise': [592, 672, 0, 10, 509, 662],
   'stand-normal/myua_troubled': [592, 672, 27, 0, 516, 672],
-  'stand-normal/myua_wink': [592, 672, 12, 10, 579, 662]
+  'stand-normal/myua_wink': [592, 672, 12, 10, 579, 662],
+  'stand-normal/sorashido_angry': [456, 542, 11, 6, 441, 536],
+  'stand-normal/sorashido_crying': [456, 542, 21, 7, 434, 535],
+  'stand-normal/sorashido_excited': [456, 542, 1, 8, 454, 534],
+  'stand-normal/sorashido_happy': [456, 542, 1, 4, 454, 538],
+  'stand-normal/sorashido_normal': [456, 542, 1, 7, 454, 535],
+  'stand-normal/sorashido_surprise': [456, 542, 20, 7, 435, 535],
+  'stand-normal/sorashido_troubled': [456, 542, 1, 8, 454, 534],
+  'stand-normal/sorashido_wink': [456, 542, 1, 9, 440, 533]
 });
 const cardArtBoxOf = v => Array.isArray(v) && v.length === 6 ? {
   nw: v[0],
