@@ -169,7 +169,35 @@ const makeRun = async (kind) => {
           // 重なり: 押せる物どうしが 6px 角以上かぶる
           const bs = [...root.querySelectorAll('button')].filter((e) => vis(e) && !clipped(e)).map((e) => ({ e, r: e.getBoundingClientRect() }));
           const lap = []; for (let i = 0; i < bs.length; i++) for (let j = i + 1; j < bs.length; j++) { const a = bs[i].r, b = bs[j].r; if (bs[i].e.contains(bs[j].e) || bs[j].e.contains(bs[i].e)) continue; if (Math.min(a.right, b.right) - Math.max(a.left, b.left) > 6 && Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > 6) lap.push(`${lab(bs[i].e)}×${lab(bs[j].e)}`); }
-          return { ok: true, text: root.innerText.length, over, taps, cut, tiny, topBlank, lap, land: window.innerWidth > window.innerHeight };
+          // ボタン・選択肢の文が言葉の途中で折れた(2026-11-14 社長「次へ向けて気合いを入/れる」)。判定は tools/boot/ja-wrap-check.js と同じ作り:
+          //   折ってよいのは <wbr> の所・空白や記号のあと・言葉の切れ目(ひらがな同士の間は、助詞のあと以外は言葉の途中)。1行に入らない長い言葉(10字以上)は数えない
+          const wordCut = [];
+          { const seg = new Intl.Segmenter('ja', { granularity: 'word' }); const range = document.createRange(); const hira = (c) => /[ぁ-ゖ]/.test(c || '');
+            for (const btn of root.querySelectorAll('button, [role=button]')) {
+              if (!vis(btn) || clipped(btn)) continue;
+              for (const el of [btn, ...btn.querySelectorAll('*')]) {
+                if (el.matches('[data-ja-keep]')) continue;
+                const nodes = [...el.childNodes].filter((n) => n.nodeType === 3 || n.nodeName === 'WBR' || (n.nodeType === 1 && n.matches('[data-ja-keep]')));
+                if (!nodes.some((n) => n.nodeType === 3 && /[぀-ヿ一-鿿]/.test(n.textContent))) continue;
+                let text = ''; const tops = []; const wbrAt = new Set();
+                for (const n of nodes) {
+                  if (n.nodeName === 'WBR') { wbrAt.add(text.length); continue; }
+                  const tn = n.nodeType === 3 ? [n] : [...n.childNodes].filter((x) => x.nodeType === 3);
+                  for (const x of tn) for (let i = 0; i < x.textContent.length; i++) { range.setStart(x, i); range.setEnd(x, i + 1); const rs = range.getClientRects(); if (!rs.length) continue; text += x.textContent[i]; tops.push(Math.round(rs[0].top)); }
+                }
+                const breaks = []; for (let i = 1; i < tops.length; i++) if (tops[i] - tops[i - 1] > 4) breaks.push(i);
+                if (!breaks.length) continue;
+                const bounds = new Set([0, ...wbrAt]); let pos = 0;
+                for (const s of seg.segment(text)) { pos += s.segment.length; const a = text[pos - 1], b2 = text[pos]; if (hira(a) && hira(b2) && !/[のをはがにともへ]/.test(a)) continue; bounds.add(pos); }
+                for (const b of breaks) {
+                  if (bounds.has(b) || /[\s・、。!?！？)）」』…〜~+＋-]/.test(text[b - 1] || '')) continue;
+                  const arr = [...bounds].sort((x, y) => x - y); let st = 0, en = text.length; for (const x of arr) { if (x < b) st = x; if (x > b) { en = x; break; } }
+                  if (en - st >= 10) continue;
+                  wordCut.push(`${text.slice(Math.max(0, b - 6), b)}/${text.slice(b, b + 6)}`);
+                }
+              }
+            } }
+          return { ok: true, text: root.innerText.length, over, taps, cut, tiny, topBlank, lap, wordCut, land: window.innerWidth > window.innerHeight };
         }, fscale || 0);
         const L = `${name}${tag ? `(${tag})` : ''}`;
         const warn = (what, arr) => { if (arr && arr.length) console.log(`  見張り ${L}: ${what} ${arr.length}件 ${arr.slice(0, 4).join(' / ')}`); };
@@ -178,6 +206,7 @@ const makeRun = async (kind) => {
           check(`${L}: 字が枠で切れない`, m.cut.length === 0, m.cut.slice(0, 4).join(' / '));
           check(`${L}: 字が小さすぎない`, m.tiny.length === 0, m.tiny.slice(0, 4).join(' / '));
           check(`${L}: 押せる物が重ならない`, m.lap.length === 0, m.lap.slice(0, 3).join(' / '));
+          check(`${L}: ボタン・選択肢の文が言葉の途中で折れない`, m.wordCut.length === 0, m.wordCut.slice(0, 4).join(' / '));
           if (m.land) check(`${L}: 横画面の上に空白が無い`, m.topBlank <= 50, `${m.topBlank}px`);
         }
         check(`${name}${tag ? `(${tag})` : ''}: 画面が出る`, m.ok && m.text > 20);

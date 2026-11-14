@@ -145,6 +145,8 @@
     half: 50, start: [10, 10], capBoost: 60, // 補正 = 1 + min(忠誠,60)/100
     praiseGood: [4, 0], praiseBad: [2, -2], scoldBad: [0, 4], scoldGood: [-3, 1],
     win: [2, 0], loseScold: [0, 3], idleTurns: 4, idle: [-1, -1],
+    // ターンの終わりに、残りの体力で忠誠度が育つ(2026-11-14 社長・台帳 #6108): 上限の50%以上なら甘え度+1・下なら恐れ度+1。方針の段の補正は addLoyal のまま
+    turnHpLine: 0.5, turnAma: 1, turnFear: 1,
   });
   // 方針の段(-3〜+3)で、甘え度・恐れ度の上がり方が変わる(甘い側ほど甘えが上がりやすい)
   const POL_AMA = Object.freeze([1.5, 1.35, 1.2, 1, 0.8, 0.65, 0.5]);
@@ -1281,6 +1283,7 @@
       if (s.over || s.battle) return { state: s, out: { ok: false } };
       if (!s.acted) return { state: s, out: { ok: false, why: 'not-acted' } };
       if (EV) EV.tick(s); // 出来事のひとときの状態を1ターン減らす(s.last を消す前)
+      if (num(s.hp) >= Math.max(1, num(s.hpMax)) * LOYAL.turnHpLine) addLoyal(s, LOYAL.turnAma, 0); else addLoyal(s, 0, LOYAL.turnFear);
       if (s.last && s.last.kind === 'retry') s.battle = { kind: 'debut', retry: s.debutLoss, round: 0 };
       else if (s.last && s.last.kind === 'cup') s.battle = { kind: 'cup', id: s.last.cup.id, sys: s.last.cup.sys, star: s.last.cup.star, rival: s.last.cup.rival || null, round: 0 };
       else s.battle = forcedBattle(s);

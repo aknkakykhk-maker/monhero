@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 42bb8971468d98ea
+// source-sha256: 0372baa1d14f6f8e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -163418,7 +163418,7 @@ const MSX_CSS = `
 .msx .v-q .ask{background:#fff;color:#1e1b4b;border-radius:12px;padding:6px 10px;font-size:12.5px;font-weight:900;text-align:center;border:2px solid #f9a8d4}
 .msx .v-q .bt{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px}
 .msx .v-ch{background:linear-gradient(180deg,#fff,#fde7f3);color:#1e1b4b;border:2px solid #f472b6;border-bottom-width:4px;border-radius:13px;padding:6px 6px;text-align:center;font-size:13.5px;font-weight:900;line-height:1.25;min-width:0}
-.msx .v-ch small{display:block;font-size:10px;font-weight:800;color:#9d174d;white-space:nowrap}
+.msx .v-ch small{display:block;font-size:10px;font-weight:800;color:#9d174d;white-space:normal} /* 狭い画面では「・」のあとで折る(jaWrap。言葉の途中では折らない) */
 .msx .v-ch.b{border-color:#38bdf8;background:linear-gradient(180deg,#fff,#e0f2fe)}.msx .v-ch.b small{color:#075985}
 .msx .v-ch.n{grid-column:1/-1;background:#1e293b;color:#cbd5e1;border-color:#475569;font-size:11.5px;padding:4px}
 .msx .v-pol{background:#1e1a36;border:1px solid #3b3566;border-radius:12px;padding:6px 9px;margin-top:6px}
@@ -163495,7 +163495,7 @@ const MSX_CSS = `
 .msx .v-sw i{flex:1;aspect-ratio:1;max-width:30px;border-radius:50%;border:2px solid #ffffff55}
 .msx .v-sw i.on{border-color:#fff;box-shadow:0 0 0 2px #fde047}
 .msx .v-sum{display:flex;align-items:center;gap:8px;background:#1e1a36;border:1px solid #3b3566;border-radius:12px;padding:6px 9px;margin-top:5px;font-size:11.5px;font-weight:900;line-height:1.35;min-width:0}
-.msx .v-sum .k{width:46px;font-size:10px;color:#f9a8d4;flex:none}
+.msx .v-sum .k{min-width:46px;font-size:10px;color:#f9a8d4;flex:none;white-space:nowrap} /* 見出しは折らない(大きい文字で「持ちこ/み」になっていた) */
 .msx .v-sum .ed{margin-left:auto;font-size:10px;color:#7dd3fc;flex:none}
 .msx .v-big{display:block;margin-top:8px;border-radius:99px;padding:12px;text-align:center;font-size:16px;font-weight:900;background:linear-gradient(90deg,#f472b6,#fb923c);box-shadow:0 4px 0 #9d174d,0 0 18px #f472b688;white-space:nowrap}
 .msx .v-issa{position:absolute;left:2%;bottom:-58%;height:150%;filter:drop-shadow(0 6px 6px #000a)}
@@ -164343,6 +164343,9 @@ function MonheroSuccessDebugEntry({
     debug: true
   }));
 }
+const msxItemNameNode = name => String(name || '').split(/(?<=の)|(?<=ー)(?=[ァ-ヶ])/).map((x, i) => React.createElement(React.Fragment, {
+  key: i
+}, i > 0 ? React.createElement("wbr", null) : null, x));
 const MSX_STEP_NAMES = Object.freeze(['育てるモンスター', '編成', '助手', '持ちこみ', '名前と染色', '確認']);
 const MSX_ITEMS = Object.freeze([{
   id: 'guide',
@@ -165072,7 +165075,9 @@ function MsxStart({
         fontSize: 22,
         lineHeight: 1
       }
-    }, t.e), React.createElement("i", null, "×", has(t.id)), React.createElement("small", null, t.name.replace('ガロエ印の', '')), items.includes(t.id) ? React.createElement("u", null, "✔") : null))), React.createElement("div", {
+    }, t.e), React.createElement("i", null, "×", has(t.id)), React.createElement("small", {
+      style: JA_LABEL_STYLE
+    }, msxItemNameNode(t.name.replace('ガロエ印の', ''))), items.includes(t.id) ? React.createElement("u", null, "✔") : null))), React.createElement("div", {
       className: "v-ileg"
     }, React.createElement("span", null, React.createElement("b", {
       className: "sw1"
@@ -165269,7 +165274,9 @@ function MsxStart({
       onClick: () => setStep(3)
     }, React.createElement("span", {
       className: "k"
-    }, "持ちこみ"), React.createElement("span", null, items.length ? items.map(id => `${MSX_ITEM_BY_ID[id].e}${MSX_ITEM_BY_ID[id].name}`).join('・') : 'なし'), React.createElement("span", {
+    }, "持ちこみ"), React.createElement("span", {
+      style: JA_LABEL_STYLE
+    }, jaWrap(items.length ? items.map(id => `${MSX_ITEM_BY_ID[id].e}${MSX_ITEM_BY_ID[id].name}`).join('・') : 'なし')), React.createElement("span", {
       className: "ed"
     }, "変える")), React.createElement("div", {
       className: "v-sum"
@@ -165345,7 +165352,7 @@ const MSX_REACT = Object.freeze({
       after: '{mon}は、うれしそうに胸を張った!'
     },
     scold: {
-      t: '🫡 調子に乗らないよう引きしめる',
+      t: '🫡 気を引きしめさせる',
       after: '{mon}は、きりっと表情を引きしめた。'
     }
   },
@@ -165381,7 +165388,7 @@ const MSX_REACT = Object.freeze({
       after: '{mon}は、満足そうにひと息ついた。'
     },
     scold: {
-      t: '💪 次へ向けて気合いを入れる',
+      t: '💪 気合いを入れる',
       after: '{mon}は、もう次の修行を見すえている。'
     }
   }
@@ -166799,7 +166806,11 @@ function MsxPlay({
       className: `v-ch${how === 'scold' ? ' b' : ''}`,
       onClick: () => choose(how),
       "data-msx-react-how": how
-    }, RC[how].t, React.createElement("small", null, how === 'praise' ? '甘え度 +・方針が甘いほうへ' : '恐れ度 +・方針が厳しいほうへ'))), React.createElement("button", {
+    }, React.createElement("span", {
+      style: JA_LABEL_STYLE
+    }, jaWrap(RC[how].t)), React.createElement("small", {
+      style: JA_LABEL_STYLE
+    }, jaWrap(how === 'praise' ? '甘え度 +・方針が甘いほうへ' : '恐れ度 +・方針が厳しいほうへ')))), React.createElement("button", {
       type: "button",
       className: "v-ch n",
       onClick: () => choose(null)
@@ -167710,7 +167721,9 @@ function MsxBag({
     style: {
       fontSize: 22
     }
-  }, x.e), React.createElement("i", null, "×", x.n), React.createElement("small", null, x.name))), carryList.map(x => React.createElement("button", {
+  }, x.e), React.createElement("i", null, "×", x.n), React.createElement("small", {
+    style: JA_LABEL_STYLE
+  }, msxItemNameNode(x.name)))), carryList.map(x => React.createElement("button", {
     type: "button",
     key: `c-${x.id}`,
     className: `no${pick === x.id ? ' sel' : ''}`,
@@ -167720,7 +167733,9 @@ function MsxBag({
     style: {
       fontSize: 22
     }
-  }, x.e), React.createElement("small", null, x.name))), React.createElement("div", {
+  }, x.e), React.createElement("small", {
+    style: JA_LABEL_STYLE
+  }, msxItemNameNode(x.name)))), React.createElement("div", {
     className: "no"
   }, React.createElement("span", {
     className: "e"
