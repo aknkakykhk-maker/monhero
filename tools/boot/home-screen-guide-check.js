@@ -101,6 +101,8 @@ const seed=(guide)=>{ if (sessionStorage.getItem('s')) return; sessionStorage.se
       await page.addInitScript(()=>{window.__mhSupabaseStubbed=true;});
       await page.route(/supabase|functions\/v1/,r=>r.fulfill({status:200,contentType:'application/json',body:'[]'}));
       await page.addInitScript(seed,guide);
+      // お話(HOME で1回流すもの)は見た扱いにする。この見張りは案内だけを見るので、お話のあとの窓が案内を隠さないように(2026-11-14 モンヒロサクセス第1話で落ちた)
+      await page.addInitScript(require('./quiet-boot-seed').eventStorySeed());
       await page.goto(`http://localhost:${PORT}/monster-hero/index.html`,{waitUntil:'load',timeout:60000});
       await page.waitForFunction(()=>document.body?.innerText.includes('TAP TO START'),{timeout:40000});
       await page.getByRole('button',{name:'TAP TO START'}).click({force:true});
@@ -119,7 +121,9 @@ const seed=(guide)=>{ if (sessionStorage.getItem('s')) return; sessionStorage.se
       const backup=await page.waitForFunction(()=>[...document.querySelectorAll('h3')].some(h=>/データ引き継ぎ|データのバックアップ/.test(h.textContent||'')),{timeout:8000}).then(()=>true).catch(()=>false);
       ok('実物: 「データ引き継ぎを開く」でデータ引き継ぎの窓が開く',backup);
       await page.keyboard.press('Escape').catch(()=>{});
-      await page.evaluate(()=>{const b=[...document.querySelectorAll('button')].find(x=>/^(閉じる|×|✕)$/.test((x.innerText||'').trim())&&!x.closest('[data-home-screen-guide]'));if(b)b.click();});
+      // データ引き継ぎの窓の閉じるは絵(×)だけで字が無い。名前(aria-label)で押し、窓が消えるまで待つ(Escape だけだと、たまに窓が残って次が押せなかった)
+      await page.locator('.mh-title-dialog .mh-dialog-head button[aria-label="閉じる"]').first().click({timeout:8000}).catch(()=>{});
+      await page.waitForFunction(()=>![...document.querySelectorAll('h3')].some(h=>/データ引き継ぎ|データのバックアップ/.test(h.textContent||'')),{timeout:8000}).catch(()=>{});
       await page.waitForTimeout(400);
       await page.click('[data-home-screen-guide-never]');
       const st2=await page.evaluate(()=>JSON.parse(localStorage.getItem('mh_home_screen_guide_v1')||'{}'));

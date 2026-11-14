@@ -25,6 +25,9 @@
 //   node tools/ctx.js decisions <部>         … 社長の決めごと台帳から、進め方と自分の部に関わる行だけ
 //   node tools/ctx.js gate                   … いまの変更にミハリ(検査部)の確認が要るかを判定
 //   node tools/ctx.js handoff <部> [--write] … 会話を替えるときの引き継ぎメモの下書き
+//   node tools/ctx.js still <絵…> [--screen 語] … 窓口の止め絵の点検（空きの帯を測る・拡大の切り出し・参考と台帳の行）
+//   node tools/ctx.js asked <語>             … 社長に聞く前に、その語の決めごとを台帳から引く（もう決まっていれば聞かない）
+//   node tools/ctx.js todo [部]              … 社長の頼みの追跡表（完了でない頼み。sync / add / set / show / find）
 //   node tools/ctx.js model "<仕事の文>"      … その仕事に合うモデルを表から引く
 //   node tools/ctx.js newsession <部> "<仕事>" … 新しい会話のモデルと依頼文（窓口が create_session に渡す）
 //   node tools/ctx.js redeploy assistant-chat … Edge Function の配り直しで窓口が渡すもの（数行）
@@ -569,6 +572,8 @@ function cmdBrief(argv, opts) {
   if (src.length > 20) console.log(`  … ほか ${src.length - 20} 件`);
   console.log('\n直近のコミット:');
   for (const l of git(['log', '--oneline', '-3']).split('\n').filter(Boolean)) console.log(`  ${cut(l, opts.width)}`);
+  // 社長の頼みで完了でない物の数（追跡表。2026-11-14 社長「お願いしたのに漏れてるの多い」）
+  try { const t = require('./team/requests').summary(); if (t) console.log(`\n${t}  → node tools/ctx.js todo <自分の部>`); } catch (e) { /* 表が読めなくても brief は出す */ }
   console.log('\n次に打つもの:');
   console.log('  node tools/run-checks.js --changed     … 変更内容から必要な検査を選んで回す');
   console.log('  node tools/ctx.js diff                 … 生成物を除いた差分を見る');
@@ -624,6 +629,9 @@ function main() {
     case 'dept': return cmdTeam('team/dept-guide.js', rest);
     case 'decisions': return cmdTeam('team/decisions.js', rest);
     case 'handoff': return cmdTeam('team/handoff.js', rest);
+    case 'todo': return cmdTeam('team/requests.js', rest);
+    case 'asked': return cmdTeam('team/requests.js', ['asked', ...rest]);
+    case 'still': return cmdTeam('team/still-check.js', rest);
     case 'model': return cmdTeam('team/model-pick.js', rest);
     case 'newsession': return cmdTeam('team/newsession.js', rest);
     case 'gate': return cmdTeam('team/review-gate.js', rest);

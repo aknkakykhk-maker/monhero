@@ -487,6 +487,8 @@ const EVENT_REPLAY_RELEASE_FLAGS = Object.freeze({
   get rhythmGrandOpen() { return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.rhythmGrandOpen === true; },
   // 本オープンの予告のお話(rhythm_grand_open_teaser)。予告の印で出て、本オープンのあとも回想に残す
   get rhythmGrandOpenTeaser() { return typeof RELEASE_FLAGS !== 'undefined' && (RELEASE_FLAGS.rhythmGrandOpenTeaser === true || RELEASE_FLAGS.rhythmGrandOpen === true); },
+  // モンヒロサクセス 第1話(monsuc_beta_ep1・2026-11-14)。β版の前に先に出す予告のお話。β版の公開の印とは別
+  get monsucStoryEp1() { return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.monsucStoryEp1 === true; },
   // 個人杯のお話(2026-10-31)。公開の印は 99-card-cup.jsx の cardCupOpen(あとの部品なので見るたびに引く)
   get cardCup() { return typeof cardCupOpen === 'function' && cardCupOpen() === true; },
 });
@@ -524,6 +526,8 @@ const eventReplayAllList = () => eventReplaySorted(() => true);
 // ★この並びを使うのは一覧の画面だけ。再生・着替え・デバッグ一覧は今までの eventReplayList / eventReplayAllList(id で引くだけ)。
 const EVENT_REPLAY_GROUPS = Object.freeze([
   { id:'pandora_wings', emoji:'🗝️', label:'鍵の向こう側へ', note:'パンドラとふたつの翼のお話', color:'#c084fc' },
+  // モンヒロサクセスのお話(2026-11-14 第1話・β版の前の予告から)
+  { id:'monsuc', emoji:'🌱', label:'モンヒロサクセス', note:'新しい育成場のお話', color:'#4ade80' },
   { id:'halloween', emoji:'🎃', label:'ハロウィン・ナイト', note:'レイドバトルとジャックのお話', color:'#fb923c' },
   { id:'update', emoji:'✨', label:'新しい遊びのお話', note:'新しい遊びができたときの案内', color:'#e879f9' },
   { id:'beat_point', emoji:'🎵', label:'ビートP', note:'ビートPと交換所のお話', color:'#34d399' },

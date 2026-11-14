@@ -185,6 +185,9 @@ const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, tact
   //   偽のあいだは、更新履歴の項目・助手の告知・ヘルプのグループが出ない。予告の項目(update_notice_monsaku_soon_v1)は偽のあいだだけ出て、
   //   真になると「紹介」に直した同じ項目へ入れ替わる(unreleasedFlag と releaseFlag の組)。ミハリ → 窓口の最終確認のあとに真にする
   monheroSuccess: false,
+  // モンヒロサクセス 第1話のお話(monsuc_beta_ep1・2026-11-14 社長「β版公開の前に1話」)。monheroSuccess とは切り離した予告のお話。
+  //   真のあいだ、公開のあとの最初の HOME で1回だけ流し、回想にも出す(β版の公開のあとも回想に残す)
+  monsucStoryEp1: true, // 2026-11-14 社長 OK(窓口経由)
   // MFバトルカードの助手のおしゃべり(AI)(2026-10-25 社長が3つとも選んだ)。中継役 card-assistant-talk を窓口が出して、社長が「公開」と言ったら真にする。
   //   偽のあいだは、デバッグ端末だけが呼べる(83-card-battle-talk-ai.jsx の cardTalkOpen)。オプションの入/切もデバッグ端末だけに出る
   cardAssistantTalk: true, // 2026-10-26 社長「公開する」
@@ -588,6 +591,8 @@ const CARD_CUP_STORY_ID = 'card_cup_2026_10_31';
 // モンヒロビート本オープンの予告のお話と、本オープンのお話(2026-11-07)。id は data/assistants.js の EVENT_REPLAYS と同じ。
 // 見たかは、ほかのイベントのお話と同じく mh_rhythm_event_story_v1 の id の並びに足す(新しいキーは作らない)
 const RHYTHM_GRAND_OPEN_TEASER_STORY_ID = 'rhythm_grand_open_teaser';
+// モンヒロサクセス 第1話(β版の前の予告・2026-11-14)。印は RELEASE_FLAGS.monsucStoryEp1
+const MONSUC_BETA_EP1_STORY_ID = 'monsuc_beta_ep1';
 const RHYTHM_GRAND_OPEN_STORY_ID = 'rhythm_grand_open';
 // ソラシドの加入のお話を見終えたら、沖縄のおみやげとして 10,000ビートPをギフトで1回だけ届ける(2026-10-27 社長)。
 // ★届けたかは新しいキー mh_sorashido_gift_v1 に持つ(ギフトの一覧は古いものから消えるので、それだけでは二重を防げない・CLAUDE.md ⑦)。
