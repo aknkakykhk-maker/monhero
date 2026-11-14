@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ff9252b9bd7db238
+// source-sha256: d1101a8c9a19aae4
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -5812,6 +5812,20 @@ const BGM_TRACKS = [{
   gain: 1,
   loop: true
 }, {
+  id: 'monsuc_training',
+  name: 'モンヒロサクセス トレーニング',
+  creator: 'オリジナル',
+  src: 'audio/bgm-monsuc-training.mp3',
+  gain: 1,
+  loop: true
+}, {
+  id: 'monsuc_rest',
+  name: 'モンヒロサクセス 休養',
+  creator: 'オリジナル',
+  src: 'audio/bgm-monsuc-rest.mp3',
+  gain: 1,
+  loop: true
+}, {
   id: 'original_prep',
   name: '強化テーマ',
   creator: 'オリジナル',
@@ -8086,6 +8100,8 @@ const Audio_ = (() => {
     "audio/bgm-monster-hero-theme.mp3": "083a1d9db281",
     "audio/bgm-monster-short.mp3": "415b771e9bbf",
     "audio/bgm-monster.mp3": "6b190639c3fa",
+    "audio/bgm-monsuc-rest.mp3": "3bf37f96821c",
+    "audio/bgm-monsuc-training.mp3": "9bfeb31fb38a",
     "audio/bgm-mou-hitotsu-no-sekai-e.mp3": "633ed0ee2501",
     "audio/bgm-nothing-without-you.mp3": "4cb261cf1cd9",
     "audio/bgm-only-my-railgun.mp3": "62fb741fe3f1",
@@ -110558,6 +110574,11 @@ const assistantLifeNow = async ({
       void assistantLifeFriendOnSlot(life, slot, now);
     } catch {}
   }
+  if (typeof assistantLifeFindOnSlot === 'function') {
+    try {
+      void assistantLifeFindOnSlot(life, slot, now);
+    } catch {}
+  }
   if (typeof assistantLifeRelTick === 'function') {
     try {
       void assistantLifeRelTick(now);
@@ -115756,7 +115777,22 @@ function AssistantLifeHouse({
   }, React.createElement(AssistantLifeHouseStyle, null), typeof AssistantLifeRelStyle === 'function' && React.createElement(AssistantLifeRelStyle, null), typeof AssistantLifePlanHost === 'function' && React.createElement(AssistantLifePlanHost, {
     ids: ids,
     land: land
-  }), React.createElement("div", {
+  }), typeof AssistantLifeFindCard === 'function' && React.createElement("div", {
+    style: {
+      position: 'fixed',
+      left: 0,
+      right: 0,
+      bottom: 'calc(78px + env(safe-area-inset-bottom))',
+      zIndex: 9100,
+      pointerEvents: 'none'
+    }
+  }, React.createElement("div", {
+    style: {
+      pointerEvents: 'auto',
+      maxWidth: 480,
+      margin: '0 auto'
+    }
+  }, React.createElement(AssistantLifeFindCard, null))), React.createElement("div", {
     className: "mhl-page",
     style: {
       maxWidth: land || tab === 'where' ? 'none' : 480
@@ -117278,6 +117314,150 @@ function AssistantLifeTownMap({
     onClick: () => setSheet(null),
     className: "mt-3 min-h-[44px] w-full rounded-xl border border-slate-600 text-[12px] font-black text-slate-300 active:scale-[.98]"
   }, "閉じる"))));
+}
+const ASSISTANT_LIFE_FIND_KEY = 'mh_msx_find_v1';
+const ASSISTANT_LIFE_FIND_DAILY = 2;
+const ASSISTANT_LIFE_FIND_CHANCE = Object.freeze({
+  trip: 0.08,
+  gift: 0.04,
+  masmon: 0.05
+});
+const ASSISTANT_LIFE_FIND_TABLE = Object.freeze([['juice', 12], ['powder', 12], ['pack', 12], ['dango', 12], ['grass', 12], ['mag', 6], ['hachi', 6], ['band', 6], ['omamori', 6], ['license', 6], ['guide', 5], ['loupe', 5]]);
+const ASSISTANT_LIFE_FIND_LINES = Object.freeze({
+  trip: ['これ、道で見つけたよ。使うかなって', '落ちてたの拾ってきたんだ。あげる'],
+  gift: ['あなたに持っててほしいの', 'これ、きっと役に立つよ'],
+  masmon: ['(マスモンが何かくわえて戻ってきた!)', '(マスモンが得意げに持ってきた!)']
+});
+const assistantLifeFindNorm = raw => {
+  const o = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
+  const last = {};
+  if (o.last && typeof o.last === 'object') for (const [k, v] of Object.entries(o.last)) if (typeof v === 'string' && v.length < 24) last[String(k).slice(0, 24)] = v;
+  const pending = (Array.isArray(o.pending) ? o.pending : []).filter(p => p && typeof p.item === 'string' && typeof p.kind === 'string').slice(-5).map(p => ({
+    item: p.item.slice(0, 24),
+    kind: p.kind.slice(0, 12),
+    who: typeof p.who === 'string' ? p.who.slice(0, 24) : '',
+    line: Number.isFinite(p.line) ? p.line : 0
+  }));
+  return {
+    day: typeof o.day === 'string' ? o.day.slice(0, 12) : '',
+    n: Math.max(0, Math.min(99, Math.floor(Number(o.n) || 0))),
+    last,
+    pending
+  };
+};
+const assistantLifeFindPick = (rand = Math.random) => {
+  const total = ASSISTANT_LIFE_FIND_TABLE.reduce((a, t) => a + t[1], 0);
+  let x = rand() * total;
+  for (const [id, w] of ASSISTANT_LIFE_FIND_TABLE) {
+    x -= w;
+    if (x < 0) return id;
+  }
+  return ASSISTANT_LIFE_FIND_TABLE[0][0];
+};
+const assistantLifeFindOnSlot = async (life, slot, now = Date.now(), rand = Math.random) => {
+  try {
+    if (typeof msxReleased !== 'function' || !msxReleased() || typeof storeGet !== 'function' || typeof storeSet !== 'function' || !life) return null;
+    const st = assistantLifeFindNorm(await storeGet(ASSISTANT_LIFE_FIND_KEY, null));
+    const day = typeof assistantLifeDayKey === 'function' ? String(assistantLifeDayKey(now)) : '';
+    if (st.day !== day) {
+      st.day = day;
+      st.n = 0;
+    }
+    const where = {};
+    for (const [id, s] of Object.entries(life.solo || {})) if (s) where[id] = {
+      place: s.place,
+      grouped: false
+    };
+    for (const g of life.groups || []) for (const id of g.ids || []) where[id] = {
+      place: g.place,
+      grouped: (g.ids || []).length >= 2
+    };
+    const found = [];
+    for (const [id, w] of Object.entries(where)) {
+      if (st.n + found.length >= ASSISTANT_LIFE_FIND_DAILY) break;
+      const was = st.last[id];
+      let kind = null;
+      if (was && was !== 'home' && w.place === 'home') kind = 'trip';else if (w.place === 'home' && w.grouped) kind = 'gift';else if (w.place === 'battle') kind = 'masmon';
+      if (kind && rand() < ASSISTANT_LIFE_FIND_CHANCE[kind]) found.push({
+        item: assistantLifeFindPick(rand),
+        kind,
+        who: id,
+        line: Math.floor(rand() * 2)
+      });
+    }
+    st.last = Object.fromEntries(Object.entries(where).map(([id, w]) => [id, w.place]));
+    if (found.length) {
+      const K = typeof MSX_KEYS !== 'undefined' ? MSX_KEYS.meta : 'mh_monsuc_meta_v1';
+      const meta = msxNormMeta(await storeGet(K, null));
+      const ok = [];
+      for (const f of found) {
+        if (typeof MSX_ITEM_BY_ID !== 'undefined' && !MSX_ITEM_BY_ID[f.item]) continue;
+        meta.items[f.item] = Math.min(999, (meta.items[f.item] || 0) + 1);
+        ok.push(f);
+      }
+      if (ok.length) {
+        await storeSet(K, msxNormMeta(meta));
+        st.n += ok.length;
+        st.pending = [...st.pending, ...ok].slice(-5);
+      }
+    }
+    await storeSet(ASSISTANT_LIFE_FIND_KEY, st);
+    if (found.length && typeof window !== 'undefined') {
+      try {
+        window.dispatchEvent(new Event('mh-life-find'));
+      } catch (_) {}
+    }
+    return found;
+  } catch (_) {
+    return null;
+  }
+};
+function AssistantLifeFindCard() {
+  const [st, setSt] = React.useState(null);
+  const read = React.useCallback(async () => {
+    try {
+      if (typeof msxReleased !== 'function' || !msxReleased()) {
+        setSt(null);
+        return;
+      }
+      setSt(assistantLifeFindNorm(await storeGet(ASSISTANT_LIFE_FIND_KEY, null)));
+    } catch (_) {}
+  }, []);
+  React.useEffect(() => {
+    void read();
+    window.addEventListener('mh-life-find', read);
+    return () => window.removeEventListener('mh-life-find', read);
+  }, [read]);
+  const p = st && st.pending[0];
+  if (!p) return null;
+  const item = typeof MSX_ITEM_BY_ID !== 'undefined' ? MSX_ITEM_BY_ID[p.item] : null;
+  const who = typeof assistantById === 'function' && p.who ? assistantById(p.who) : null;
+  const lines = ASSISTANT_LIFE_FIND_LINES[p.kind] || ASSISTANT_LIFE_FIND_LINES.trip;
+  const close = async () => {
+    try {
+      const n = assistantLifeFindNorm(await storeGet(ASSISTANT_LIFE_FIND_KEY, null));
+      n.pending = n.pending.slice(1);
+      await storeSet(ASSISTANT_LIFE_FIND_KEY, n);
+      setSt(n);
+    } catch (_) {}
+  };
+  return React.createElement("div", {
+    "data-assistant-life-find": true,
+    className: "mx-2 mb-1 flex items-center gap-2 rounded-xl border border-amber-300/70 bg-slate-950/90 px-2.5 py-1.5"
+  }, React.createElement("span", {
+    className: "text-[24px]",
+    "aria-hidden": "true"
+  }, item ? item.e : '🎁'), React.createElement("div", {
+    className: "min-w-0 flex-1"
+  }, React.createElement("p", {
+    className: "text-[12px] font-black text-amber-100"
+  }, "🎁 ", item ? item.name : '持ちこみアイテム', "をもらった"), React.createElement("p", {
+    className: "text-[10.5px] font-bold leading-snug text-slate-200"
+  }, who ? `${who.name}「${lines[p.line % lines.length]}」` : lines[p.line % lines.length], "(モンヒロサクセスで使えます)")), React.createElement("button", {
+    type: "button",
+    onClick: close,
+    className: "shrink-0 rounded-lg border border-amber-300/60 px-2 py-1 text-[11px] font-black text-amber-100 active:scale-95"
+  }, "閉じる"));
 }
 const ASSISTANT_LIFE_ROOM_FRONT = Object.freeze({
   mua: 'sofa',
@@ -146524,6 +146704,9 @@ const AMBW_CSS = `
 .ambw-num{width:78px;text-align:right;font-size:14px;line-height:1.15;font-weight:900}.ambw-num small{font-size:10px;color:#94a3b8}.ambw-num em{font-style:normal;font-size:11px;color:#fde047}
 .ambw-chips{display:flex;gap:4px;margin-top:6px;flex-wrap:wrap}
 .ambw-chip{flex:1 1 22%;min-width:0;font-size:10px;font-weight:800;background:#0f172a;border:1px solid #475569;color:#64748b;border-radius:8px;padding:3px 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center;line-height:1.3}
+.ambw-chip .msa-tn{display:block;white-space:normal;word-break:keep-all;overflow-wrap:normal;line-height:1.15}.ambw-chip .msa-tn-s{white-space:nowrap}
+.ambw-chip{white-space:normal!important;text-overflow:clip!important}
+[data-ambw-cards]{display:block}
 .ambw-chip small{display:block;font-size:9px;line-height:1.2}.ambw-chip small.ambw-hit{font-size:10px;font-weight:900;color:#fde68a}.ambw-chip.use small.ambw-hit{color:#7c2d12}.ambw-chip.on{border-color:#fde047;color:#fff;background:#3b2f0b}.ambw-chip.ng{border-color:#64748b;color:#cbd5e1}.ambw-chip.use{background:#fde047;color:#422006;border-color:#fde047}
 .ambw-ring{position:relative;height:244px;margin-top:8px;border-radius:14px;background:radial-gradient(ellipse at 50% 85%,#4c3f8f 0,#241d4a 55%,#171230 100%);border:1px solid #3b3566;overflow:hidden}
 .ambw-dist{position:absolute;bottom:6px;left:50%;transform:translateX(-50%);display:flex;gap:4px}
@@ -146581,6 +146764,29 @@ const ambwHitPct = (catalog, teams, side, frame, id) => {
   const v = st.f(side, frame.act.A, frame.act.B, frame.g[side], frame.d)[id];
   return Number.isFinite(v) ? v : null;
 };
+const AMBW_HIT_BASE = 75;
+const ambwTechItems = (catalog, member, list) => {
+  const sp = catalog && member && catalog.species && catalog.species[member.species];
+  const byId = {};
+  if (sp && Array.isArray(sp.techs)) for (const t of sp.techs) byId[t.id] = t;
+  return (Array.isArray(list) ? list : []).map(mv => {
+    const t = byId[mv.id];
+    return {
+      ...mv,
+      dist: Array.isArray(mv.dist) ? mv.dist : [],
+      hit: t ? AMBW_HIT_BASE + (Number(t.hit) || 0) : 0,
+      power: t ? Number(t.power) || 0 : 0,
+      ...(t ? {
+        base: {
+          power: t.power,
+          hit: t.hit,
+          gd: t.gd,
+          crit: t.crit
+        }
+      } : {})
+    };
+  });
+};
 function AmbwPanel({
   side,
   team,
@@ -146590,7 +146796,10 @@ function AmbwPanel({
   lastMove,
   mine,
   catalog = null,
-  teams = null
+  teams = null,
+  cards = false,
+  rep = null,
+  onOpen = null
 }) {
   const who = ASSISTANT_LIST.find(a => a.id === team.assistantId) || ASSISTANT_LIST[0];
   const style = (window.ASSISTANT_MASMON_BATTLE.STYLES[team.assistantId] || {}).label || '';
@@ -146599,6 +146808,9 @@ function AmbwPanel({
     mx = maxHp[side][i] || 1,
     g = frame.g[side];
   const list = moves && moves[i] || [];
+  useEffect(() => {
+    if (typeof msaFitTechNames === 'function') msaFitTechNames();
+  });
   return React.createElement("div", {
     className: `ambw-card ${mine ? 'me' : 'foe'}`,
     "data-ambw-panel": side
@@ -146668,7 +146880,25 @@ function AmbwPanel({
     className: "ambw-num"
   }, React.createElement("span", {
     "data-ambw-hp": side
-  }, hp), React.createElement("small", null, "/", mx), React.createElement("br", null), React.createElement("em", null, "ガッツ ", Math.round(g)))), React.createElement("div", {
+  }, hp), React.createElement("small", null, "/", mx), React.createElement("br", null), React.createElement("em", null, "ガッツ ", Math.round(g)))), cards && typeof MsaDistCards === 'function' ? React.createElement("div", {
+    className: "ambw-chips",
+    "data-ambw-cards": side
+  }, React.createElement(MsaDistCards, {
+    list: ambwTechItems(catalog, team.members && team.members[i], list),
+    rep: rep,
+    dist: frame.d,
+    guts: g,
+    lastMove: lastMove,
+    dataSide: side,
+    hitAt: (t, d) => {
+      const v = ambwHitPct(catalog, teams, side, {
+        ...frame,
+        d
+      }, t.id);
+      return v != null ? v : t.hit;
+    },
+    onOpen: onOpen ? d => onOpen(side, d) : null
+  })) : React.createElement("div", {
     className: "ambw-chips"
   }, list.map(mv => {
     const reach = Array.isArray(mv.dist) && mv.dist.includes(frame.d),
@@ -146678,7 +146908,10 @@ function AmbwPanel({
     return React.createElement("span", {
       key: mv.id,
       className: `ambw-chip ${cls}`
-    }, mv.kind === 'pow' ? '💪' : '🧠', mv.name, hp != null ? React.createElement("small", {
+    }, typeof MsaTechName === 'function' ? React.createElement(MsaTechName, {
+      name: mv.name,
+      icon: mv.kind === 'pow' ? '💪' : '🧠'
+    }) : React.createElement(React.Fragment, null, mv.kind === 'pow' ? '💪' : '🧠', mv.name), hp != null ? React.createElement("small", {
       className: "ambw-hit",
       "data-ambw-hit": hp
     }, "命中 ", hp, "%") : null, React.createElement("small", null, "ガッツ", mv.guts, "・", (mv.dist || []).map(d => AMBW_DIST[d]).join('')));
@@ -147274,7 +147507,8 @@ const AMBB_SET_DEF = Object.freeze({
   guts: 50,
   fx: 'full',
   balance: 'A',
-  seedLock: false
+  seedLock: false,
+  ctl: 'auto'
 });
 const AMBB_SET_OPTS = Object.freeze({
   team: [{
@@ -147296,6 +147530,14 @@ const AMBB_SET_OPTS = Object.freeze({
     id: 'lite',
     label: '少なめ'
   }],
+  ctl: [{
+    id: 'auto',
+    label: 'オートで観戦'
+  }, {
+    id: 'manual',
+    label: '手動',
+    note: '手番ごとに自分で選ぶ'
+  }],
   balance: [{
     id: 'A',
     label: 'そのまま'
@@ -147316,7 +147558,8 @@ const normalizeAmbbSet = raw => {
     guts: ambbInt(x.guts, 0, 100, AMBB_SET_DEF.guts),
     fx: x.fx === 'lite' ? 'lite' : 'full',
     balance: ['A', 'B', 'C'].includes(x.balance) ? x.balance : 'A',
-    seedLock: x.seedLock === true
+    seedLock: x.seedLock === true,
+    ctl: x.ctl === 'manual' ? 'manual' : 'auto'
   };
 };
 const ambbMatchOpts = set => {
@@ -147334,7 +147577,7 @@ const ambbMatchOpts = set => {
     balance: set.balance
   };
 };
-const ambbSetDiff = set => Object.keys(AMBB_SET_DEF).filter(k => k !== 'fx' && set[k] !== AMBB_SET_DEF[k]).length;
+const ambbSetDiff = set => Object.keys(AMBB_SET_DEF).filter(k => k !== 'fx' && k !== 'ctl' && set[k] !== AMBB_SET_DEF[k]).length;
 const AMBB_TIERS = Object.freeze([{
   id: 'bronze',
   label: 'ブロンズ',
@@ -147428,6 +147671,7 @@ const normalizeAssistantMasmonBattleSave = raw => {
     rec: {},
     done: [],
     reg: {},
+    rep: {},
     set: normalizeAmbbSet(src.set)
   };
   if (typeof src.speed === 'string' && typeof AMBW_SPEEDS !== 'undefined' && AMBW_SPEEDS.some(s => s.id === src.speed)) out.speed = src.speed;
@@ -147452,6 +147696,16 @@ const normalizeAssistantMasmonBattleSave = raw => {
     };
   }
   out.done = (Array.isArray(src.done) ? src.done : []).filter(x => typeof x === 'string').slice(-40);
+  out.rep = {};
+  for (const [aid, r] of Object.entries(obj(src.rep))) {
+    const o = {};
+    for (const [k, v] of Object.entries(obj(r)).slice(0, 60)) {
+      if (!Array.isArray(v)) continue;
+      const ids = [0, 1, 2, 3].map(i => typeof v[i] === 'string' && v[i] && v[i].length <= 40 ? v[i] : null);
+      if (ids.some(Boolean)) o[k] = ids;
+    }
+    if (Object.keys(o).length) out.rep[aid] = o;
+  }
   for (const [aid, r] of Object.entries(obj(src.reg))) {
     const x = obj(r);
     const at = ambbInt(x.at, 0, 9e15, 0);
@@ -147542,6 +147796,35 @@ const ambbUnitsOf = (engine, aid, rows) => rows.map(row => {
     total: entry && entry.st ? Object.values(entry.st).reduce((a, b) => a + (Number(b) || 0), 0) : 0
   };
 });
+const ambbUnitTechItems = (engine, catalog, unit) => {
+  const sp = catalog && unit && catalog.species && catalog.species[unit.species];
+  if (!sp || !Array.isArray(sp.techs) || !sp.techs.length) return [];
+  const st = sp.techs.filter(t => t.start),
+    start = st.length ? st : sp.techs.slice();
+  const known = Array.isArray(unit.techs) ? sp.techs.filter(t => unit.techs.includes(t.id)) : start;
+  const list = known.length ? known : st.length ? start : [sp.techs[0]];
+  const hitMax = engine && Number.isFinite(engine.MASTERY_HIT_MAX) ? engine.MASTERY_HIT_MAX : 0,
+    cut = engine && Number.isFinite(engine.MASTERY_GUTS_CUT) ? engine.MASTERY_GUTS_CUT : 0;
+  return list.map(t => {
+    const m = Math.max(0, Math.min(100, Number(unit.mastery && unit.mastery[t.id]) || 0));
+    return {
+      id: t.id,
+      name: t.name,
+      kind: t.kind,
+      dist: t.dist,
+      power: t.power,
+      hit: 75 + t.hit,
+      base: {
+        power: t.power,
+        hit: t.hit,
+        gd: t.gd,
+        crit: t.crit
+      },
+      shown: Math.round((75 + t.hit + m * hitMax) * 10) / 10,
+      guts: Math.round(t.guts * (1 - m / 100 * cut))
+    };
+  });
+};
 const ambbTacticsOf = (aid, rows) => {
   try {
     return typeof amgtTacticsOf === 'function' ? amgtTacticsOf(aid, rows) : 40;
@@ -147686,17 +147969,38 @@ const AMBB_CSS = `
 .ambw.ambb-full [data-ambb-watch]{flex:1;min-height:0;display:flex;flex-direction:column}
 .ambw.ambb-full .ambb-stagewrap{flex:1;min-height:0;display:flex;flex-direction:column;margin-top:6px!important}
 .ambw.ambb-full .ambb-stagewrap .msa-stage{flex:1}
+.ambw.ambb-full [data-ambb-watch]>*:not(.ambb-stagewrap){flex-shrink:0}
 .ambw.ambb-full .ambw-log{margin-top:6px;padding:5px 8px;min-height:44px}
 .ambw.ambb-full .ambw-log p:nth-last-child(n+3){display:none}
 .ambw.ambb-full .ambw-seek{margin-top:8px}
 .ambw.ambb-full .ambw-ctl{margin-top:8px;flex-wrap:nowrap;gap:5px}
 .ambw.ambb-full .ambw-ctl button{min-height:38px;padding:4px 10px;font-size:12.5px;white-space:nowrap}
 .ambw.ambb-full .ambw-top{min-height:34px}
+.ambw.ambb-full .ambb-bar-wrap .msxm{margin-top:6px;padding:7px;max-height:42vh;overflow-y:auto}
+.ambw.ambb-full .ambb-bar-wrap .msxm-btn{min-height:36px;font-size:11.5px;padding:3px 6px;flex:1 1 22%}
+.ambw.ambb-full .ambb-bar-wrap .msxm-btn small{font-size:9.5px}
+.ambw.ambb-full .ambb-bar-wrap .msxm-btn:not(.atk):not([data-msxm-move]) small{display:none}
+.ambw.ambb-full .ambb-bar-wrap .msxm-btn small{white-space:nowrap}
+.ambw.ambb-full .ambb-bar-wrap .msxm-sec{margin-top:5px}
+.ambw.ambb-full .ambb-bar-wrap .msxm-foot{margin-top:5px}
 .ambw.ambb-full [data-ambw-panel]{padding:6px 8px;margin-top:6px}
 .ambw.ambb-full [data-ambw-panel]>.ambw-row+.ambw-row{display:none}
 .ambw.ambb-full [data-ambw-panel] .ambw-face{width:28px;height:28px}
 .ambw.ambb-full [data-ambw-panel] .ambw-small{display:none}
 .ambw.ambb-full [data-ambw-panel] .ambw-chips{margin-top:5px}
+/* 背の低い画面(高さ740以下)では全画面の詰め方をやめ、場は決まった高さ・画面ごと縦にスクロール(ミハリ6 #5891: 場が手動の帯に重なった) */
+@media (max-height:740px){
+  .ambw.ambb-full{overflow-y:auto}
+  .ambw.ambb-full .ambw-in{height:auto;display:block}
+  .ambw.ambb-full [data-ambb-watch]{display:block}
+  .ambw.ambb-full .ambb-stagewrap{display:flex}
+  .ambw.ambb-full .ambb-stagewrap .msa-stage.fill{flex:none;height:clamp(160px,34vh,260px);min-height:0}
+  .ambw.ambb-full .ambb-bar-wrap .msxm{max-height:none;overflow:visible}
+  .msa-stage.fill .msa-f,.msa-stage.fill .msa-dmgwrap{width:96px;margin-left:-48px;height:120px}
+  .msa-stage.fill .msa-f img.msa-img{max-width:96px;max-height:112px}
+}
+@media (max-width:360px){.ambw.ambb-full .ambw-ctl{flex-wrap:wrap}.ambw.ambb-full .ambw-ctl button{padding:4px 8px;font-size:12px}}
+@media (max-width:360px){.ambw-top{font-size:11px;gap:4px}.ambw-top>span{white-space:nowrap}.ambw-top .ambw-btn2{padding-left:8px;padding-right:8px}}
 `;
 function AssistantMasmonBattleBeta({
   assistantId,
@@ -147842,9 +148146,27 @@ function AssistantMasmonBattleBeta({
     const seed = set.seedLock && lastSeedRef.current ? lastSeedRef.current : `ambb-${meId}-${fb.assistantId}-${Date.now()}`;
     lastSeedRef.current = seed;
     const opts = ambbMatchOpts(set);
-    let r;
+    let r,
+      match = null;
     try {
-      r = engine.simulate({
+      if (set.ctl === 'manual' && typeof engine.createMatch === 'function') {
+        match = engine.createMatch({
+          seed,
+          catalog,
+          teamA,
+          teamB,
+          ...opts,
+          trace: true,
+          control: {
+            A: 'human'
+          }
+        });
+        r = match.result() || {
+          log: match.log.slice(),
+          winner: null,
+          rounds: 0
+        };
+      } else r = engine.simulate({
         seed,
         catalog,
         teamA,
@@ -147861,6 +148183,7 @@ function AssistantMasmonBattleBeta({
       seed,
       opts,
       r,
+      match,
       frames: ambwFramesOf(r.log),
       teamA,
       teamB,
@@ -147986,6 +148309,7 @@ function AssistantMasmonBattleBeta({
     if (phase !== 'watch' || !battle || paused) return undefined;
     const log = battle.r.log;
     if (pos >= log.length - 1) {
+      if (battle.match && !battle.match.done()) return undefined;
       const t = setTimeout(() => setPhase('review'), 900);
       return () => clearTimeout(t);
     }
@@ -148076,6 +148400,97 @@ function AssistantMasmonBattleBeta({
     }, 80);
     return () => clearTimeout(t);
   }, [phase, battle, ifs]);
+  const syncManual = m => {
+    const res = m.result();
+    const log = res ? res.log : m.log.slice();
+    setBattle(b => b && b.match === m ? {
+      ...b,
+      r: res || {
+        ...b.r,
+        log
+      },
+      frames: ambwFramesOf(log)
+    } : b);
+    return log.length;
+  };
+  const manualPick = c => {
+    const m = battle && battle.match;
+    if (!m) return;
+    const busy = pos < battle.r.log.length - 1;
+    if (busy) return;
+    if (typeof msaSe === 'function') msaSe('tap');
+    const r = m.choose(c);
+    if (r && r.ok) {
+      syncManual(m);
+      setPos(p => p + 1);
+      setPaused(false);
+    }
+  };
+  const manualAuto = () => {
+    const m = battle && battle.match;
+    if (!m) return;
+    m.auto('A');
+    syncManual(m);
+    setPaused(false);
+  };
+  const [techList, setTechList] = useState(null);
+  const [repEdit, setRepEdit] = useState(null);
+  const [repSheet, setRepSheet] = useState(null);
+  const repOf = k => k && save.rep && save.rep[meId] && save.rep[meId][k] || null;
+  const putRep = (k, ids) => {
+    const fn = s => {
+      const mine = {
+        ...((s.rep || {})[meId] || {})
+      };
+      if (ids) mine[k] = ids;else delete mine[k];
+      return {
+        ...s,
+        rep: {
+          ...(s.rep || {}),
+          [meId]: mine
+        }
+      };
+    };
+    if (!ambbSave(fn)) AMBB_STORE.set(normalizeAssistantMasmonBattleSave(fn(AMBB_STORE.state)));
+  };
+  const setRep = (k, d, id) => {
+    if (!k) return;
+    const nx = (repOf(k) || [null, null, null, null]).slice();
+    nx[d] = id;
+    putRep(k, nx);
+  };
+  const repKeyOf = i => {
+    const m = battle && battle.teamA && battle.teamA.members[i];
+    if (!m || !Array.isArray(battle.units)) return null;
+    const u = battle.units.find(x => x.unit === m) || battle.units.find(x => x.unit && x.unit.species === m.species && x.unit.name === m.name);
+    return u ? ambbRowKey(u.row) : null;
+  };
+  const repIdsAt = (side, fr) => {
+    const i = fr.act[side],
+      t = side === 'A' ? battle.teamA : battle.teamB;
+    const items = ambwTechItems(catalog, t.members[i], (battle.moves[side] || [])[i]);
+    const k = side === 'A' ? repKeyOf(i) : null;
+    return {
+      k,
+      items,
+      ids: msaRepIds(items, side === 'A' ? repOf(k) : null),
+      name: (t.members[i] || {}).name || ''
+    };
+  };
+  useEffect(() => {
+    if (typeof msaFitTechNames === 'function') msaFitTechNames();
+  });
+  const manualNow = !!(battle && battle.match && !battle.match.done() && pos >= battle.r.log.length - 1 && phase === 'watch');
+  useEffect(() => {
+    if (!manualNow) return;
+    const box = rootRef.current,
+      el = box && box.querySelector('[data-ambb-manual]');
+    if (!box || !el || box.scrollHeight <= box.clientHeight) return;
+    const r = el.getBoundingClientRect(),
+      b = box.getBoundingClientRect();
+    const over = r.bottom - b.bottom + 8;
+    if (over > 0) box.scrollTop += Math.min(over, Math.max(0, r.top - b.top - 8));
+  }, [manualNow, pos]);
   const nameOf = id => (typeof ASSISTANT_LIST !== 'undefined' && ASSISTANT_LIST.find(a => a.id === id) || {}).name || id;
   const faceOf = id => {
     const a = typeof ASSISTANT_LIST !== 'undefined' && ASSISTANT_LIST.find(x => x.id === id);
@@ -148270,7 +148685,29 @@ function AssistantMasmonBattleBeta({
       foes: foeUnits.slice(0, size),
       meName: me.name,
       foeName: nameOf(foeId)
-    }), React.createElement(AmbbSettings, {
+    }), chosen.length > 0 && typeof MsaDistCards === 'function' && React.createElement("div", {
+      className: "ambw-card",
+      "data-ambb-rep-card": true
+    }, React.createElement("div", {
+      className: "ambw-small",
+      style: {
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        gap: 8
+      }
+    }, React.createElement("span", null, "技の札(間合いごとの代表の技)"), React.createElement("button", {
+      type: "button",
+      className: "ambw-btn2",
+      "data-ambb-rep-open": true,
+      style: {
+        minHeight: 32,
+        padding: '2px 12px',
+        fontSize: 12,
+        flex: 'none'
+      },
+      onClick: () => setRepEdit(ambbRowKey(chosen[0].row))
+    }, "🃏 技の札を決める"))), React.createElement(AmbbSettings, {
       set: set,
       onSet: setSet,
       local: srcNow === 'local',
@@ -148368,6 +148805,7 @@ function AssistantMasmonBattleBeta({
       e = log[pos] || {},
       f = battle.frames[pos] || battle.frames[0];
     const review = phase === 'review';
+    const manualWait = !!(battle.match && !battle.match.done() && pos >= log.length - 1 && battle.match.pending());
     const mem = (side, i) => (side === 'A' ? battle.teamA : battle.teamB).members[i];
     const who = (side, i) => (mem(side, i) || {}).name || '';
     const WHY = engine.WHY || {};
@@ -148583,7 +149021,12 @@ function AssistantMasmonBattleBeta({
       maxHp: battle.maxHp,
       moves: battle.moves.B,
       lastMove: e.side === 'B' && e.ev === 'tech' ? e.move : null,
-      mine: false
+      mine: false,
+      cards: true,
+      onOpen: (sd, d) => setTechList({
+        side: sd,
+        d
+      })
     }), typeof MsaStage === 'function' ? React.createElement("div", {
       className: "msa ambb-stagewrap",
       style: {
@@ -148627,7 +149070,7 @@ function AssistantMasmonBattleBeta({
     }, n))), cutText && e.ev !== 'end' && React.createElement("div", {
       key: `cut-${pos}`,
       className: `ambw-cut ${e.ev === 'tech' ? e.kind : 'etc'} ${e.side === 'B' ? 'B' : ''}`
-    }, React.createElement("small", null, cutSmall), React.createElement("b", null, cutText))), React.createElement(AmbwPanel, {
+    }, React.createElement("small", null, cutSmall), React.createElement("b", null, cutText))), !manualWait && React.createElement(AmbwPanel, {
       side: "A",
       catalog: catalog,
       teams: {
@@ -148639,8 +149082,28 @@ function AssistantMasmonBattleBeta({
       maxHp: battle.maxHp,
       moves: battle.moves.A,
       lastMove: e.side === 'A' && e.ev === 'tech' ? e.move : null,
-      mine: true
-    }), !review && React.createElement("div", {
+      mine: true,
+      cards: true,
+      rep: repIdsAt('A', shownF || f).ids,
+      onOpen: (sd, d) => setTechList({
+        side: sd,
+        d
+      })
+    }), !review && manualWait && typeof MsxManualBar === 'function' && React.createElement("div", {
+      className: "ambb-bar-wrap",
+      "data-ambb-manual": true
+    }, (() => {
+      const ra = repIdsAt('A', f);
+      return React.createElement(MsxManualBar, {
+        opt: battle.match.pending(),
+        onPick: manualPick,
+        onAuto: manualAuto,
+        busy: false,
+        rep: ra.ids,
+        title: ra.name,
+        onRep: ra.k ? (d, id) => setRep(ra.k, d, id) : null
+      });
+    })()), !review && !manualWait && React.createElement("div", {
       className: "ambw-card ambw-log"
     }, recent.map(x => React.createElement("p", {
       key: x.k,
@@ -148691,7 +149154,8 @@ function AssistantMasmonBattleBeta({
       className: "ambw-btn2",
       "data-ambb-skip": true,
       onClick: () => {
-        setPos(log.length - 1);
+        const n = battle.match && !battle.match.done() ? (battle.match.auto('A'), syncManual(battle.match)) : log.length;
+        setPos(n - 1);
         setPhase('review');
       }
     }, "⏭ 結果へ")));
@@ -148711,7 +149175,111 @@ function AssistantMasmonBattleBeta({
     onClick: phase === 'rank' && !battle ? () => setPhase('prep') : back
   }, "← ", phase === 'prep' ? 'もどる' : 'じゅんびへ'), React.createElement("span", null, "⚔ マスモンで対戦", React.createElement("span", {
     className: "ambb-beta"
-  }, "β")), React.createElement("b", null, phase === 'watch' && battle ? `ラウンド ${(battle.frames[pos] || {}).r || 0}` : '')), body), ask && me && React.createElement(AssistantMasmonAskSheet, {
+  }, "β")), React.createElement("b", null, phase === 'watch' && battle ? `ラウンド ${(battle.frames[pos] || {}).r || 0}` : '')), body), techList && battle && phase !== 'prep' && (() => {
+    const side = techList.side,
+      d = techList.d,
+      fr = battle.frames[Math.min(pos, battle.frames.length - 1)] || battle.frames[0];
+    const r = repIdsAt(side, fr),
+      teams = {
+        A: battle.teamA,
+        B: battle.teamB
+      };
+    const hitAt = (x, dd) => {
+      const v = ambwHitPct(catalog, teams, side, {
+        ...fr,
+        d: dd
+      }, x.id);
+      return v != null ? v : x.hit;
+    };
+    return React.createElement("div", {
+      "data-ambb-techlist": side
+    }, React.createElement(MsaTechSheet, {
+      title: `${r.name} の${d == null ? `技(${r.items.length})` : `${AMBW_DIST[d]}の技`}`,
+      list: r.items,
+      d: d,
+      dist: fr.d,
+      rep: r.ids,
+      hitAt: hitAt,
+      onRep: r.k && d != null ? (dd, id) => setRep(r.k, dd, id) : null,
+      onClose: () => setTechList(null)
+    }));
+  })(), repEdit && phase === 'prep' && catalog && (() => {
+    const units = chosen.concat(myUnits.filter(u => !chosen.includes(u)));
+    const u = units.find(x => ambbRowKey(x.row) === repEdit) || units[0];
+    if (!u) return null;
+    const k = ambbRowKey(u.row),
+      items = ambbUnitTechItems(engine, catalog, u.unit),
+      ids = msaRepIds(items, repOf(k));
+    const nm = x => x.row.nick || ALL_PLAYER_MONSTERS[x.row.monster].name;
+    const close = () => {
+      setRepEdit(null);
+      setRepSheet(null);
+    };
+    return React.createElement(React.Fragment, null, React.createElement("div", {
+      className: "msa-sh",
+      "data-ambb-rep-edit": true,
+      onClick: close
+    }, React.createElement("style", null, MSA_DC_CSS), React.createElement("div", {
+      className: "msa-sh-in",
+      onClick: ev => ev.stopPropagation()
+    }, React.createElement("div", {
+      className: "msa-sh-top"
+    }, React.createElement("b", null, "🃏 技の札を決める"), React.createElement("button", {
+      type: "button",
+      className: "msa-sh-x",
+      onClick: close
+    }, "閉じる")), React.createElement("p", {
+      className: "msa-sh-note"
+    }, "試合で間合いごとに出す技(代表の技)です。札を押して、一覧の「☆ 代表にする」で決めます。決めていない間合いは「命中×威力」がいちばん大きい技になります。"), React.createElement("div", {
+      className: "ambb-tabs",
+      style: {
+        flexWrap: 'wrap',
+        marginTop: 6
+      }
+    }, units.map(x => React.createElement("button", {
+      key: ambbRowKey(x.row),
+      type: "button",
+      "data-ambb-rep-unit": ambbRowKey(x.row),
+      className: ambbRowKey(x.row) === k ? 'on' : '',
+      onClick: () => {
+        setRepEdit(ambbRowKey(x.row));
+        setRepSheet(null);
+      }
+    }, chosen.includes(x) ? '⚔ ' : '', nm(x)))), React.createElement("div", {
+      style: {
+        marginTop: 8
+      }
+    }, React.createElement(MsaDistCards, {
+      list: items,
+      rep: ids,
+      hitAt: t => t.shown,
+      onOpen: d => setRepSheet(d),
+      dataSide: "prep"
+    })), repOf(k) ? React.createElement("div", {
+      style: {
+        textAlign: 'right',
+        marginTop: 8
+      }
+    }, React.createElement("button", {
+      type: "button",
+      className: "ambw-btn2",
+      "data-ambb-rep-reset": true,
+      style: {
+        minHeight: 30,
+        padding: '2px 12px',
+        fontSize: 12
+      },
+      onClick: () => putRep(k, null)
+    }, "このモンスターをおまかせに戻す")) : null)), repSheet != null && React.createElement(MsaTechSheet, {
+      title: `${nm(u)} の${AMBW_DIST[repSheet]}の技`,
+      list: items,
+      d: repSheet,
+      rep: ids,
+      hitAt: t => t.shown,
+      onRep: (d, id) => setRep(k, d, id),
+      onClose: () => setRepSheet(null)
+    }));
+  })(), ask && me && React.createElement(AssistantMasmonAskSheet, {
     who: me,
     from: "masmon",
     t: ask.t,
@@ -148879,7 +149447,8 @@ function AmbbSettings({
     "data-ambb-set-reset": true,
     onClick: () => onSet({
       ...AMBB_SET_DEF,
-      fx: set.fx
+      fx: set.fx,
+      ctl: set.ctl
     })
   }, "いつもの決まりに戻す")), React.createElement("div", {
     className: "ambb-set-row"
@@ -148892,6 +149461,8 @@ function AmbbSettings({
     className: size === k ? 'on' : '',
     onClick: () => onSize(k)
   }, k, "対", k)))), local && React.createElement(React.Fragment, null, React.createElement("div", {
+    className: "ambb-set-row"
+  }, React.createElement("span", null, "操作"), chips('ctl', AMBB_SET_OPTS.ctl, o => o.label, o => o.note)), React.createElement("div", {
     className: "ambb-set-row"
   }, React.createElement("span", null, "形式"), chips('team', AMBB_SET_OPTS.team, o => o.label, o => o.note)), React.createElement("div", {
     className: "ambb-set-row"
@@ -171160,6 +171731,7 @@ const monsucLendClaim = async () => {
   };
 };
 const MSX_MANUAL_DIST = ['零', '近', '中', '遠'];
+const MSA_TN_CSS = `.msa-tn{display:block;white-space:normal;word-break:keep-all;overflow-wrap:normal;line-height:1.15;min-width:0}.msa-tn-s{white-space:nowrap}`;
 const MSX_MANUAL_CSS = `
 .msxm{background:#1e1a36;border:1px solid #f472b6aa;border-radius:14px;padding:9px;margin-top:8px;color:#fff;font-weight:700}
 .msxm-top{display:flex;align-items:center;gap:8px;font-size:12px;color:#f9a8d4}
@@ -171170,6 +171742,8 @@ const MSX_MANUAL_CSS = `
 .msxm-row{display:flex;flex-wrap:wrap;gap:6px}
 .msxm-btn{flex:1 1 46%;min-height:44px;border-radius:11px;border:1px solid #4c4680;background:#2b2650;color:#fff;font-weight:900;font-size:13px;padding:6px 8px;text-align:left;line-height:1.25}
 .msxm-btn small{display:block;font-size:10.5px;color:#cbd5e1;font-weight:700}
+.msxm-nm{margin-bottom:1px}
+${MSA_TN_CSS}
 .msxm-btn:disabled{opacity:.38}
 .msxm-btn.hint{border-color:#fde047;box-shadow:0 0 0 1px #fde04766 inset}
 .msxm-btn.atk{background:#3a2448;border-color:#f472b6aa}
@@ -171179,7 +171753,280 @@ const MSX_MANUAL_CSS = `
 .msxm-foot{display:flex;justify-content:space-between;align-items:center;margin-top:8px;gap:8px}
 .msxm-auto{border-radius:99px;border:1px solid #64748b;background:#0f172a;color:#e2e8f0;font-size:12px;padding:6px 14px;font-weight:900}
 .msxm-swap{font-size:11px}
+.msxm-all{border-radius:99px;border:1px solid #64748b;background:#0f172a;color:#e2e8f0;font-size:11px;padding:3px 10px;font-weight:900}
 `;
+const msaTechNameParts = name => {
+  const t = String(name || '');
+  const cls = ch => /[\u30A0-\u30FF]/.test(ch) ? 'k' : /[\u3040-\u309F]/.test(ch) ? 'h' : /[\u4E00-\u9FFF\u3005]/.test(ch) ? 'c' : /[A-Za-z0-9'’]/.test(ch) ? 'l' : 'o';
+  const out = [];
+  let cur = '',
+    prev = '';
+  for (const ch of t) {
+    const c = ch === '・' ? 'o' : cls(ch);
+    const cut = cur && (prev === '・' || c !== 'o' && prev && cls(prev) !== c && cls(prev) !== 'o' && !(cls(prev) === 'c' && c === 'h'));
+    if (cut) {
+      out.push(cur);
+      cur = '';
+    }
+    cur += ch;
+    prev = ch;
+  }
+  if (cur) out.push(cur);
+  return out;
+};
+function MsaTechName({
+  name,
+  icon = '',
+  className = ''
+}) {
+  const parts = msaTechNameParts(name);
+  return React.createElement("span", {
+    className: `msa-tn ${className}`,
+    "data-msa-tn": true
+  }, icon ? React.createElement("span", {
+    className: "msa-tn-s"
+  }, icon) : null, parts.map((p, i) => React.createElement(React.Fragment, {
+    key: i
+  }, i ? React.createElement("wbr", null) : null, React.createElement("span", {
+    className: "msa-tn-s"
+  }, p))));
+}
+const msaFitTechNames = () => {
+  try {
+    document.querySelectorAll('[data-msa-tn]').forEach(el => {
+      el.style.fontSize = '';
+      let fs = parseFloat(getComputedStyle(el).fontSize) || 12,
+        n = 0;
+      while (el.scrollWidth > el.clientWidth + 0.5 && fs > 7 && n++ < 12) {
+        fs -= 0.5;
+        el.style.fontSize = `${fs}px`;
+      }
+    });
+  } catch (_) {}
+};
+const MSA_DC_DIST = ['零', '近', '中', '遠'];
+const msaTechsAt = (list, d) => (Array.isArray(list) ? list : []).filter(t => t && Array.isArray(t.dist) && t.dist.includes(d));
+const msaRepScore = t => (Number(t.hit) || 0) * (Number(t.power) || 0);
+const msaRepOf = (list, d, chosenId) => {
+  const at = msaTechsAt(list, d);
+  if (!at.length) return null;
+  const c = typeof chosenId === 'string' ? at.find(t => t.id === chosenId) : null;
+  if (c) return c;
+  let best = at[0];
+  for (const t of at) {
+    const a = msaRepScore(t),
+      b = msaRepScore(best);
+    if (a > b || a === b && (Number(t.guts) || 0) < (Number(best.guts) || 0)) best = t;
+  }
+  return best;
+};
+const msaRepIds = (list, chosen) => [0, 1, 2, 3].map(d => {
+  const t = msaRepOf(list, d, Array.isArray(chosen) ? chosen[d] : null);
+  return t ? t.id : null;
+});
+const msaSheetOrder = (list, d, repId) => msaTechsAt(list, d).slice().sort((a, b) => a.id === repId ? -1 : b.id === repId ? 1 : msaRepScore(b) - msaRepScore(a) || a.guts - b.guts);
+const MSA_DC_CSS = `
+.msa-dc{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px}
+/* 幅360未満は2列×2段(1語の長い技名が4列の札に入りきらない。技名は言葉の途中で折らない) */
+@media (max-width:359.98px){.msa-dc{grid-template-columns:repeat(2,minmax(0,1fr))}.msa-dc-c{min-height:52px}}
+.msa-dc-c{position:relative;min-width:0;min-height:58px;border-radius:10px;border:1px solid #4c4680;background:#1b1733;color:#94a3b8;font-weight:800;font-size:10.5px;padding:3px 4px 4px;text-align:left;line-height:1.2;font-family:inherit;display:flex;flex-direction:column;gap:1px}
+.msa-dc-c .msa-dc-h{display:flex;align-items:center;gap:3px;font-size:10px;color:#a5b4fc}
+.msa-dc-c .msa-dc-h em{font-style:normal;font-size:9px;background:#fde047;color:#422006;border-radius:6px;padding:0 4px;font-weight:900}
+.msa-dc-c .msa-dc-h i{font-style:normal;margin-left:auto;font-size:9px;color:#94a3b8}
+.msa-dc-c small{display:block;font-size:9.5px;color:#cbd5e1;white-space:nowrap;overflow:hidden}
+.msa-dc-c small.p{color:#fde68a;font-weight:900}
+.msa-dc-c.now{border-color:#fde047;box-shadow:0 0 0 1px #fde04788 inset;background:#2d2650;color:#fff}
+.msa-dc-c.far{opacity:.55}
+.msa-dc-c.ng small.p{color:#fca5a5}
+.msa-dc-c.use{background:#fde047;color:#422006;border-color:#fde047;opacity:1}
+.msa-dc-c.use small,.msa-dc-c.use small.p,.msa-dc-c.use .msa-dc-h{color:#422006}
+.msa-dc-c.hint{outline:2px solid #fde047;outline-offset:1px}
+.msa-dc-c:disabled{opacity:.35}
+.msa-dc-none{font-size:10px;color:#64748b}
+.msa-sh{position:fixed;inset:0;z-index:9650;background:#000a;display:flex;align-items:flex-end;justify-content:center}
+.msa-sh-in{width:100%;max-width:460px;max-height:78vh;overflow-y:auto;background:#1e1a36;border-radius:16px 16px 0 0;padding:12px 12px max(14px,env(safe-area-inset-bottom));color:#fff;font-weight:700}
+.msa-sh-top{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.msa-sh-top b{font-size:14px;min-width:0}
+.msa-sh-x{flex:none;border-radius:99px;border:1px solid #64748b;background:#0f172a;color:#e2e8f0;font-size:12px;padding:5px 14px;font-weight:900;font-family:inherit}
+.msa-sh-note{font-size:11px;color:#cbd5e1;margin:4px 0 2px}
+.msa-sh-row{display:flex;align-items:center;gap:6px;padding:6px 0;border-top:1px dashed rgba(255,255,255,.12)}
+.msa-sh-row.rep{background:#fde04712;border-radius:8px}
+.msa-sh-use{flex:1;min-width:0;text-align:left;border:1px solid #4c4680;background:#2b2650;color:#fff;border-radius:10px;padding:5px 8px;font-weight:900;font-size:12.5px;font-family:inherit;line-height:1.25}
+.msa-sh-use.view{background:transparent;border-color:transparent;padding-left:2px}
+.msa-sh-use.hint{border-color:#fde047}
+.msa-sh-use:disabled{opacity:.45}
+.msa-sh-use.view:disabled{opacity:1}
+.msa-sh-use small{display:block;font-size:10.5px;color:#cbd5e1;font-weight:700}
+.msa-sh-use small.p{color:#fde68a}
+.msa-tg{display:flex;flex-wrap:wrap;gap:3px 8px;margin:2px 0 1px;font-size:10.5px;color:#cbd5e1;font-weight:800}
+.msa-tg-i{white-space:nowrap}.msa-tg-i b{display:inline-block;min-width:14px;margin-left:3px;text-align:center;font-weight:900;color:#e2e8f0}
+.msa-tg-i b,.msa-dc-c small.dmg b{color:#94a3b8}
+.msa-tg-i.gSS b,.msa-dc-c small.dmg b.gSS{background:linear-gradient(90deg,#f472b6,#fde047,#4ade80,#60a5fa,#c084fc);-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:0 0 6px #fde04755}
+.msa-tg-i.gS b,.msa-dc-c small.dmg b.gS{color:#fde047}.msa-tg-i.gA b,.msa-dc-c small.dmg b.gA{color:#fb923c}.msa-tg-i.gB b,.msa-dc-c small.dmg b.gB{color:#86efac}.msa-tg-i.gC b,.msa-dc-c small.dmg b.gC{color:#e2e8f0}
+.msa-dc-c small.dmg b{margin-left:2px}
+.msa-sh-rep{flex:none;border-radius:99px;border:1px solid #a78bfa;background:#1e1b4b;color:#ddd6fe;font-size:11px;padding:5px 9px;font-weight:900;font-family:inherit;white-space:nowrap}
+.msa-sh-rep.on{border-color:#fde047;background:#3b2f0b;color:#fde047}
+${MSA_TN_CSS}
+`;
+const MSA_TECH_GRADE_CUTS = Object.freeze({
+  power: [8, 11, 16, 21, 26, 33, 39, 51],
+  hit: [-21, -18, -12, -8, -2, 2, 8, 13],
+  gd: [3, 6, 8, 10, 12, 16, 21, 27],
+  crit: [7, 8, 9, 11, 12, 18, 19, 26]
+});
+const MSA_TECH_GRADES = ['G', 'F', 'E', 'D', 'C', 'B', 'A', 'S', 'SS'];
+const msaTechGrade = (key, v) => {
+  const c = MSA_TECH_GRADE_CUTS[key],
+    n = Number(v);
+  if (!c || !Number.isFinite(n)) return '';
+  if (key === 'gd' && n <= 0) return '−';
+  let i = 0;
+  while (i < c.length && n >= c[i]) i++;
+  return MSA_TECH_GRADES[i];
+};
+const MSA_TECH_GRADE_ROWS = [['power', 'ダメージ'], ['hit', '命中'], ['gd', 'ガッツダウン'], ['crit', 'クリティカル']];
+function MsaTechGrades({
+  base
+}) {
+  if (!base) return null;
+  return React.createElement("span", {
+    className: "msa-tg",
+    "data-msa-tg": true
+  }, MSA_TECH_GRADE_ROWS.map(([k, label]) => {
+    const g = msaTechGrade(k, base[k]);
+    return React.createElement("span", {
+      key: k,
+      className: `msa-tg-i g${g === '−' ? 'x' : g}`
+    }, label, React.createElement("b", null, g || '−'));
+  }));
+}
+const msaKindIcon = t => t && t.kind === 'pow' ? '💪' : '🧠';
+function MsaDistCards({
+  list,
+  rep,
+  dist = null,
+  guts = null,
+  hitAt = null,
+  lastMove = null,
+  hintId = null,
+  onOpen = null,
+  busy = false,
+  dataSide = ''
+}) {
+  const ids = Array.isArray(rep) && rep.length === 4 ? rep : msaRepIds(list, null);
+  return React.createElement("div", {
+    className: "msa-dc",
+    "data-msa-dc": dataSide || ''
+  }, React.createElement("style", null, MSA_DC_CSS), [0, 1, 2, 3].map(d => {
+    const at = msaTechsAt(list, d);
+    const used = lastMove && d === dist ? at.find(t => t.id === lastMove) : null;
+    const t = used || at.find(x => x.id === ids[d]) || msaRepOf(list, d, null);
+    const now = dist === d,
+      hp = t ? hitAt ? hitAt(t, d) : t.hit : null;
+    const ng = t && Number.isFinite(guts) && guts < t.guts;
+    const cls = `msa-dc-c ${now ? 'now' : dist == null ? '' : 'far'} ${used ? 'use' : ''} ${ng ? 'ng' : ''} ${t && now && hintId && at.some(x => x.id === hintId) ? 'hint' : ''}`;
+    return React.createElement("button", {
+      key: d,
+      type: "button",
+      className: cls,
+      "data-msa-dc-card": d,
+      "data-msa-dc-rep": t ? t.id : '',
+      disabled: !t || busy || !onOpen,
+      onClick: () => {
+        if (onOpen && t && !busy) onOpen(d);
+      }
+    }, React.createElement("span", {
+      className: "msa-dc-h"
+    }, MSA_DC_DIST[d], now ? React.createElement("em", null, "いま") : null, React.createElement("i", null, at.length ? `${at.length}技` : '')), t ? React.createElement(MsaTechName, {
+      name: t.name,
+      icon: msaKindIcon(t)
+    }) : React.createElement("span", {
+      className: "msa-dc-none"
+    }, "届く技なし"), t ? React.createElement("small", {
+      className: "p"
+    }, Number.isFinite(hp) ? `命中 ${Math.round(hp)}%` : '命中 —') : null, t ? React.createElement("small", null, "ガッツ ", t.guts) : null, t && t.base ? (() => {
+      const g = msaTechGrade('power', t.base.power);
+      return React.createElement("small", {
+        className: "dmg"
+      }, "ダメージ", React.createElement("b", {
+        className: `g${g}`
+      }, g));
+    })() : null);
+  }));
+}
+function MsaTechSheet({
+  title,
+  list,
+  d = null,
+  dist = null,
+  rep = null,
+  hitAt = null,
+  onUse = null,
+  usable = null,
+  useNote = null,
+  onRep = null,
+  hintId = null,
+  onClose
+}) {
+  useEffect(() => {
+    if (typeof msaFitTechNames === 'function') msaFitTechNames();
+  });
+  const ids = Array.isArray(rep) && rep.length === 4 ? rep : msaRepIds(list, null);
+  const repId = d == null ? null : ids[d];
+  const rows = d == null ? (Array.isArray(list) ? list.slice() : []).sort((a, b) => dist != null ? (b.dist.includes(dist) ? 1 : 0) - (a.dist.includes(dist) ? 1 : 0) : 0) : msaSheetOrder(list, d, repId);
+  const distOf = t => Array.isArray(t.dist) ? t.dist.map(x => MSA_DC_DIST[x]).join('・') : '';
+  const note = d == null ? dist != null ? `いまの間合い: ${MSA_DC_DIST[dist]}・届く技を先に並べています` : 'このモンスターの技' : onUse ? 'いちばん上が代表の技。押した技を使います' : `いちばん上が代表の技${dist != null && d !== dist ? `(いまの間合いは ${MSA_DC_DIST[dist]})` : ''}`;
+  return React.createElement("div", {
+    className: "msa-sh",
+    "data-msa-sheet": d == null ? 'all' : d,
+    onClick: onClose
+  }, React.createElement("style", null, MSA_DC_CSS), React.createElement("div", {
+    className: "msa-sh-in",
+    onClick: ev => ev.stopPropagation()
+  }, React.createElement("div", {
+    className: "msa-sh-top"
+  }, React.createElement("b", null, title), React.createElement("button", {
+    type: "button",
+    className: "msa-sh-x",
+    "data-msa-sheet-close": true,
+    onClick: onClose
+  }, "閉じる")), React.createElement("p", {
+    className: "msa-sh-note"
+  }, note), rows.map(t => {
+    const hd = d == null ? dist != null && t.dist.includes(dist) ? dist : t.dist[0] : d;
+    const hp = hitAt ? hitAt(t, hd) : t.hit;
+    const can = !!onUse && (!usable || usable(t));
+    const isRep = d != null && t.id === repId;
+    return React.createElement("div", {
+      key: t.id,
+      className: `msa-sh-row ${isRep ? 'rep' : ''}`,
+      "data-msa-sheet-row": t.id
+    }, React.createElement("button", {
+      type: "button",
+      className: `msa-sh-use ${onUse ? '' : 'view'} ${hintId === t.id ? 'hint' : ''}`,
+      disabled: !can,
+      "data-msxm-tech": onUse ? t.id : undefined,
+      onClick: () => {
+        if (can) onUse(t);
+      }
+    }, React.createElement(MsaTechName, {
+      name: t.name,
+      icon: `${isRep ? '★ ' : ''}${msaKindIcon(t)}`
+    }), React.createElement(MsaTechGrades, {
+      base: t.base
+    }), React.createElement("small", {
+      className: "p"
+    }, Number.isFinite(hp) ? `命中 ${Math.round(hp)}%` : '命中 —', "・ガッツ ", t.guts, !t.base && Number.isFinite(t.power) ? `・威力 ${Math.round(t.power)}` : '', onUse && useNote && !can ? useNote(t) : ''), React.createElement("small", null, "届く ", distOf(t))), onRep && d != null ? isRep ? React.createElement("span", {
+      className: "msa-sh-rep on",
+      "data-msa-rep-on": t.id
+    }, "★ 代表") : React.createElement("button", {
+      type: "button",
+      className: "msa-sh-rep",
+      "data-msa-rep": t.id,
+      onClick: () => onRep(d, t.id)
+    }, "☆ 代表にする") : null);
+  })));
+}
 const msxManualOpen = (engine, input, choices) => {
   if (!engine || typeof engine.createMatch !== 'function' || !input) return null;
   try {
@@ -171229,12 +172076,26 @@ function useMsxManualMatch(engine, input, choices, key) {
     toAuto
   };
 }
+const msxTechItems = opt => (opt && Array.isArray(opt.tech) ? opt.tech : []).map(t => ({
+  ...t,
+  id: t.key,
+  hit: Number.isFinite(t.p) ? t.p : 0,
+  power: Number.isFinite(t.power) ? t.power : 1
+}));
 function MsxManualBar({
   opt,
   onPick,
   onAuto,
-  busy
+  busy,
+  rep = null,
+  onRep = null,
+  title = '',
+  sheetInit = null
 }) {
+  const [sheet, setSheet] = useState(sheetInit);
+  useEffect(() => {
+    msaFitTechNames();
+  });
   if (!opt) return null;
   const isHint = c => !!(opt.hint && opt.hint.type === c.type && (c.key == null || opt.hint.key === c.key) && (c.step == null || opt.hint.step === c.step) && (c.to == null || opt.hint.to === c.to));
   const go = c => {
@@ -171259,8 +172120,14 @@ function MsxManualBar({
       })
     }, x.name, React.createElement("small", null, "ライフ ", x.hp, "/", x.maxHp)))));
   }
-  const techs = opt.tech.filter(t => t.reach).concat(opt.tech.filter(t => !t.reach));
-  const distOf = t => Array.isArray(t.dist) ? t.dist.map(d => MSX_MANUAL_DIST[d]).join('・') : '';
+  const items = msxTechItems(opt);
+  const ids = msaRepIds(items, rep);
+  const hitAt = (t, d) => Array.isArray(t.pd) && Number.isFinite(t.pd[d]) ? t.pd[d] : t.hit;
+  const hintId = opt.hint && opt.hint.type === 'tech' ? opt.hint.key : null;
+  const reachN = items.filter(t => t.reach).length;
+  const sheetOn = sheet != null && (sheet === 'all' || msaTechsAt(items, sheet).length > 0);
+  const sd = sheet === 'all' ? null : sheet;
+  const useHere = !busy && (sd == null || sd === opt.dist);
   return React.createElement("div", {
     className: "msxm",
     "data-msxm": "act"
@@ -171275,23 +172142,48 @@ function MsxManualBar({
   })), React.createElement("b", null, "ガッツ ", Math.round(opt.guts))), React.createElement("div", {
     className: "msxm-sec"
   }, React.createElement("div", {
-    className: "msxm-h"
-  }, "⚔ 攻撃", techs.some(t => t.reach) ? '' : '(この間合いでは届く技がありません)'), React.createElement("div", {
-    className: "msxm-row"
-  }, techs.map(t => React.createElement("button", {
-    key: t.key,
+    className: "msxm-h",
+    style: {
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      gap: 6
+    }
+  }, React.createElement("span", null, "⚔ 攻撃", reachN ? '(札を押して技を選ぶ)' : '(この間合いでは届く技がありません)'), items.length ? React.createElement("button", {
     type: "button",
-    className: `msxm-btn atk ${isHint(t) ? 'hint' : ''} ${t.reach ? '' : 'far'}`,
-    disabled: !t.ok || busy,
-    "data-msxm-tech": t.key,
-    "data-msxm-reach": t.reach ? '1' : '0',
-    onClick: () => go({
-      type: 'tech',
-      key: t.key
-    })
-  }, t.kind === 'pow' ? '💪' : '🧠', t.name, React.createElement("small", {
-    className: "p"
-  }, "命中 ", Math.round(t.p), "%・ガッツ ", t.guts, t.reach && !t.ok ? `(あと${t.need})` : ''), React.createElement("small", null, "届く ", distOf(t), t.reach ? '' : '(いまは届かない)'))))), React.createElement("div", {
+    className: "msxm-all",
+    "data-msxm-all": true,
+    onClick: () => setSheet('all')
+  }, "📜 全部の技(", items.length, ")") : null), React.createElement(MsaDistCards, {
+    list: items,
+    rep: ids,
+    dist: opt.dist,
+    guts: opt.guts,
+    hitAt: hitAt,
+    hintId: hintId,
+    busy: busy,
+    onOpen: d => setSheet(d),
+    dataSide: "manual"
+  })), sheetOn ? React.createElement(MsaTechSheet, {
+    title: `${title ? `${title} の` : ''}${sd == null ? `技(${items.length})` : `${MSX_MANUAL_DIST[sd]}の技`}`,
+    list: items,
+    d: sd,
+    dist: opt.dist,
+    rep: ids,
+    hitAt: hitAt,
+    hintId: hintId,
+    onUse: useHere ? t => {
+      setSheet(null);
+      go({
+        type: 'tech',
+        key: t.id
+      });
+    } : null,
+    usable: t => t.ok,
+    useNote: t => !t.reach ? '(いまは届かない)' : `(あと${t.need})`,
+    onRep: onRep && sd != null ? (d, id) => onRep(d, id) : null,
+    onClose: () => setSheet(null)
+  }) : null, React.createElement("div", {
     className: "msxm-sec"
   }, React.createElement("div", {
     className: "msxm-h"
@@ -171314,6 +172206,7 @@ function MsxManualBar({
   }, "💪 ためる", React.createElement("small", null, opt.charge.ok ? 'ガッツを大きく回復' : 'ガッツは満タン')), opt.move.map(mv => React.createElement("button", {
     key: mv.step,
     type: "button",
+    "data-msxm-move": mv.step,
     className: `msxm-btn ${isHint(mv) ? 'hint' : ''}`,
     disabled: !mv.ok || busy,
     onClick: () => go({

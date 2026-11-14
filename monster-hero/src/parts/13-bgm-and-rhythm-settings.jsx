@@ -12,6 +12,9 @@ const BGM_TRACKS = [
   { id:'original_home', name:'HOMEテーマ', creator:'オリジナル', src:'audio/bgm-title.mp3', gain:1, loop:true, legacyKey:'home' },
   // 社長の持ち込み(2026-11-13)。元の音源は tools/art-sources/song-audio/home_2/。頭に無音は無く、終わりの0.03秒だけ消して継ぎ目を整えた(90.0秒)
   { id:'original_home_2', name:'モンヒロサクセス ホーム', creator:'オリジナル', src:'audio/bgm-home-2.mp3', gain:1, loop:true },
+  // 社長の持ち込み(2026-11-14・作り直し版)。元の音源は tools/art-sources/song-audio/monsuc_training/ と monsuc_rest/。終わりの小さくなる所は使わず、手前で頭へ戻す形にした(2026-11-14 社長)。トレーニングは150.25BPMの24小節=38.32秒の所で戻し、頭の0.4秒と重ねてつなぐ(37.9秒)。休養は48.5秒の所で戻し、頭の1.5秒と重ねてつなぐ(47.0秒)
+  { id:'monsuc_training', name:'モンヒロサクセス トレーニング', creator:'オリジナル', src:'audio/bgm-monsuc-training.mp3', gain:1, loop:true },
+  { id:'monsuc_rest', name:'モンヒロサクセス 休養', creator:'オリジナル', src:'audio/bgm-monsuc-rest.mp3', gain:1, loop:true },
   { id:'original_prep', name:'強化テーマ', creator:'オリジナル', src:'audio/bgm-menu.mp3', gain:1, loop:true, legacyKey:'prep' },
   { id:'original_battle', name:'バトルテーマ', creator:'オリジナル', src:'audio/bgm-battle.mp3', gain:1, loop:true, legacyKey:'battle' },
   { id:'original_boss', name:'ボステーマ', creator:'オリジナル', src:'audio/bgm-boss.mp3', gain:1, loop:true, legacyKey:'boss' },

@@ -12,6 +12,10 @@
   const SUCCESS_SOUND_SCENES = Object.freeze([
     // メイン(住む場所)。2026-11-13 社長の「モンサク ホームBGM」(original_home_2)に4季節とも替えた。季節で曲を替えたいときはここを戻す(前: 春 original_home / 夏 ichika_home / 秋 original_profile / 冬 original_enhance)
     { id: 'main', name: 'メイン(住む場所)', bgmBySeason: { spring: 'original_home_2', summer: 'original_home_2', autumn: 'original_home_2', winter: 'original_home_2' }, se: null },
+    // トレーニング全体(2026-11-14 社長の「モンサク トレーニングBGM」)。画面に入ってから抜けるまでこの曲。結果の効果音は下の4種が鳴らす
+    { id: 'training', name: 'トレーニング', bgm: 'monsuc_training', se: null },
+    // 休む(2026-11-14 社長の「モンサク 休養BGM」)。休むを選んだ場面のあいだこの曲(遊ぶ・通院の曲は決まっていない)
+    { id: 'rest', name: '休む', bgm: 'monsuc_rest', se: null },
     // トレーニングの結果4種(曲は替えない)
     { id: 'trainGreat', name: 'トレーニング: 大成功', se: 'trainingGoal' },
     { id: 'trainOk', name: 'トレーニング: 成功', se: 'trainingGood' },
