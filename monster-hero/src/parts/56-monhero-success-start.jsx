@@ -82,7 +82,7 @@ function MsxHd({ back, onBack, title = '🌱 モンヒロサクセス', sub, rig
 
 // 始める前の見通し: ピークの時期(期の名前)と間合い適性の段。仮の育成を1つ作って芯に聞く(保存しない)
 const msxStartPreview = (SUC, species, type, aptBase) => {
-  const out = { peak: '', grades: null };
+  const out = { peak: '', grades: null, power: null, rank: null };
   try {
     if (typeof SUC.newRun !== 'function') return out;
     const s = SUC.newRun({ id: 'peek', species, ...(Number.isInteger(type) ? { type } : {}), ...(Array.isArray(aptBase) ? { aptBase } : {}) });
@@ -92,58 +92,81 @@ const msxStartPreview = (SUC, species, type, aptBase) => {
       out.peak = a === b ? a : `${a}〜${b}`;
     }
     if (typeof SUC.aptGradesOf === 'function') out.grades = SUC.aptGradesOf(s);
+    if (typeof SUC.evaluate === 'function') { const e = SUC.evaluate({ ...s, stats: typeof SUC.initStats === 'function' ? SUC.initStats(species) : s.stats }); out.power = e.power; out.rank = e.rank; }
   } catch (e) { /* 見通しが出せなくても選ぶ画面は動く */ }
   return out;
 };
 const MSX_DIST_NAMES = ['零', '近', '中', '遠'];
 const msxLineName = (id) => (id && typeof MONSTER_LINEAGES === 'object' && MONSTER_LINEAGES && MONSTER_LINEAGES[id] ? MONSTER_LINEAGES[id].name : '');
-// モンスターの詳細(選ぶ画面の「くわしく」)。うちのデータにある物だけを出す
-function MsxMonDetail({ species, st, apt, type, grades, peak, onClose, SUC }) {
-  const [tab, setTab] = useState('st');
+// モンスターの詳細(2026-11-14 社長の手本 monster-detail-basic の組み立て: 左上に絵・名前・総合力/右上に 基礎・特徴・適性/下に技の一覧と選んだ技の詳細)。
+//   見るだけ。選ぶ画面の「くわしく」と、育成中の場面の「くわしく」で同じ部品を使う。絵・用語・見た目はうちの物
+//   st 能力6つ / apt 伸びやすさの字 / type 成長の型 / peak ピークの期 / grades 間合い適性 [零,近,中,遠] / known 覚えている技の id(無ければ はじめから使える技) / power・rank 総合力
+const MSX_STAT_COLOR = Object.freeze({ life: '#facc15', pow: '#f87171', wise: '#4ade80', hit: '#f472b6', eva: '#60a5fa', tough: '#818cf8' });
+function MsxMonDetail({ species, name, art, st, apt, type, peak, grades, known, power, rank, sub, onClose, SUC }) {
+  const [tab, setTab] = useState('base');
+  const [dist, setDist] = useState(-1); // 技の一覧の間合いのしぼり(-1 = 全部)
   const line = typeof MONSTER_LINEAGE_MAP === 'object' && MONSTER_LINEAGE_MAP ? MONSTER_LINEAGE_MAP[species] : null;
-  const main = line ? msxLineName(line.main) : ''; const sub = line ? msxLineName(line.sub || line.main) : '';
+  const main = line ? msxLineName(line.main) : ''; const subL = line ? msxLineName(line.sub || line.main) : '';
   const dex = typeof MONSTER_DEX_DESCRIPTIONS === 'object' && MONSTER_DEX_DESCRIPTIONS && MONSTER_DEX_DESCRIPTIONS[species];
   const typeName = type != null && typeof MASMON_CALC !== 'undefined' ? MASMON_CALC.typeOf(type).name : '—';
-  const techs = typeof SUC.techsOf === 'function' ? SUC.techsOf(species) : [];
-  const startT = techs.filter((t) => t && t.learn && t.learn.start); const laterT = techs.filter((t) => t && !(t.learn && t.learn.start));
-  const techRow = (t) => (
-    <div key={t.id} className="msx-dt-tech"><span className="k">{t.kind === 'wise' ? 'かしこさ' : 'ちから'}</span><b>{t.name}</b>
-      <span className="d">{(Array.isArray(t.dist) ? t.dist : []).map((d) => MSX_DIST_NAMES[d]).filter(Boolean).join('・')}</span></div>
-  );
-  const TABS = [['st', '能力'], ['apt', '適性'], ['tech', '技'], ['dex', '図鑑']];
+  const all = typeof SUC.techsOf === 'function' ? SUC.techsOf(species).filter(Boolean) : [];
+  const has = (t) => (Array.isArray(known) ? known.includes(t.id) : !!(t.learn && t.learn.start));
+  const list = all.filter((t) => dist < 0 || (Array.isArray(t.dist) && t.dist.includes(dist))).sort((x, y) => (has(y) - has(x)) || (Number(x.rank) || 0) - (Number(y.rank) || 0));
+  const [pickT, setPickT] = useState(() => (all.find(has) || all[0] || {}).id || null);
+  const tech = all.find((t) => t.id === pickT) || list[0] || null;
+  const grade = (k, v) => (typeof msaTechGrade === 'function' ? msaTechGrade(k, v) : '') || '−';
+  const maxSt = Math.max(300, ...MSX_STATS.map((k) => Number(st[k]) || 0));
+  const TOP = [['base', '基礎'], ['feat', '特徴'], ['apt', '適性']];
   return (
     <div className="msx-ov msx-fade" data-msx-detail onClick={onClose}>
-      <div className="msx-sheet msx-dt" onClick={(e) => e.stopPropagation()}>
-        <div className="msx-dt-top">
-          <img src={msxMonImg(species)} alt=""/>
-          <div className="nm"><h3>{msxMonName(species)}</h3>
-            {main ? <div className="msx-dt-sm">血統 {main}{sub && sub !== main ? ` × ${sub}` : '(純血)'}</div> : null}
-            <div className="msx-dt-sm">成長の型 <b className="yel">{typeName}</b>{peak ? ` ・ピーク ${peak}` : ''}</div></div>
-        </div>
-        <div className="v-tabs msx-dt-tabs">{TABS.map(([k, n]) => <button type="button" key={k} className={tab === k ? 'on' : ''} data-msx-detail-tab={k} onClick={() => setTab(k)}>{n}</button>)}</div>
-        <div className="msx-dt-body">
-          {tab === 'st' ? (<>
-            <div className="msx-dt-cap">はじめの能力と伸びやすさ</div>
-            {MSX_STATS.map((k, i) => (
-              <div key={k} className="msx-dt-bar"><span className="n">{MSX_STAT_NAME[k]}</span><b>{st[k]}</b>
-                <span className="g"><i style={{ width: `${Math.max(2, Math.min(100, (Number(st[k]) || 0) / 3))}%` }}/></span><span className={`a${apt[i] > 'B' ? ' lo' : ''}`}>{apt[i]}</span></div>
-            ))}
-            <div className="msx-note">伸びやすさは A がいちばん伸びやすい(A〜E)。編成のモンスターから、はじめの能力に上乗せがある</div>
-          </>) : null}
-          {tab === 'apt' ? (<>
-            <div className="msx-dt-cap">間合い適性</div>
-            <div className="msx-dt-dist">{MSX_DIST_NAMES.map((d, i) => <div key={d}><span>{d}</span><b>{grades ? grades[i] : '—'}</b></div>)}</div>
-            <div className="msx-note">適性が高い間合いほど、その間合いの技がよく当たる。育成の修行や大会で上がることがある</div>
-            <div className="msx-dt-cap" style={{ marginTop: 8 }}>成長の型</div>
-            <div className="msx-note">{typeName}{peak ? `。いちばん伸びるのは ${peak}` : ''}</div>
-          </>) : null}
-          {tab === 'tech' ? (<>
-            <div className="msx-dt-cap">はじめから使える技</div>
-            {startT.length ? startT.map(techRow) : <div className="msx-note">なし</div>}
-            <div className="msx-dt-cap" style={{ marginTop: 8 }}>修行で覚えられる技</div>
-            {laterT.length ? laterT.map(techRow) : <div className="msx-note">なし</div>}
-          </>) : null}
-          {tab === 'dex' ? <div className="msx-dt-dex">{dex || 'このモンスターの図鑑は調査中'}</div> : null}
+      <div className="msx-sheet msx-dt msx-md" onClick={(e) => e.stopPropagation()}>
+        <h3 className="msx-md-ti">モンスターの詳細</h3>
+        <div className="msx-md-scroll">
+          <div className="msx-md-top">
+            <div className="msx-md-art">
+              <div className="nm">{name || msxMonName(species)}{sub ? <small>{sub}</small> : null}</div>
+              {art || <img src={msxMonImg(species)} alt=""/>}
+              {power != null ? <div className="pw"><small>総合力</small><b>{msxFmt(power)}</b>{rank ? <i className={msxRankCls(rank)}>{rank}</i> : null}</div> : null}
+            </div>
+            <div className="msx-md-panel">
+              <div className="msx-md-tabs">{TOP.map(([k, n]) => <button type="button" key={k} className={tab === k ? 'on' : ''} data-msx-detail-tab={k} onClick={() => setTab(k)}>{n}</button>)}</div>
+              {tab === 'base' ? (<div className="msx-md-box"><div className="cap">能力<span>伸び</span></div>
+                {MSX_STATS.map((k, i) => (
+                  <div key={k} className="msx-md-st"><span className="n">{MSX_STAT_ICON[k]}{MSX_STAT_NAME[k]}</span>
+                    <span className="v"><b>{st[k]}</b><span className="g"><i style={{ width: `${Math.max(2, Math.min(100, (Number(st[k]) || 0) / maxSt * 100))}%`, background: MSX_STAT_COLOR[k] }}/></span></span>
+                    <span className={`a${apt[i] > 'B' ? ' lo' : ''}`}>{apt[i]}</span></div>
+                ))}</div>) : null}
+              {tab === 'feat' ? (<div className="msx-md-box">
+                <div className="msx-md-kv"><b>成長の型</b><span className="yel">{typeName}</span></div>
+                <div className="msx-md-kv"><b>伸びどき</b><span>{peak || '—'}</span></div>
+                <div className="msx-md-kv"><b>血統</b><span>{main ? `${main}${subL && subL !== main ? ` × ${subL}` : '(純血)'}` : '—'}</span></div>
+                <div className="msx-md-dex">{dex || 'このモンスターの図鑑は調査中'}</div></div>) : null}
+              {tab === 'apt' ? (<div className="msx-md-box"><div className="cap">間合い適性</div>
+                <div className="msx-dt-dist">{MSX_DIST_NAMES.map((d, i) => <div key={d}><span>{d}</span><b>{grades ? grades[i] : '—'}</b></div>)}</div>
+                <div className="msx-note" style={{ marginTop: 4 }}>適性が高い間合いほど、その間合いの技がよく当たる</div></div>) : null}
+            </div>
+          </div>
+          <div className="msx-md-bot" data-msx-detail-techs>
+            <div className="msx-md-cap">技<small>{Array.isArray(known) ? '★ 覚えている技' : '★ はじめから使える技'}・ほかは修行で覚える</small></div>
+            <div className="msx-md-dists">{[-1, 3, 2, 1, 0].map((d) => <button type="button" key={d} className={dist === d ? 'on' : ''} onClick={() => setDist(d)}>{d < 0 ? '全部' : MSX_DIST_NAMES[d]}</button>)}</div>
+            <div className="msx-md-tw">
+              <div className="msx-md-tl">{list.length ? list.map((t) => (
+                <button type="button" key={t.id} className={`${tech && tech.id === t.id ? 'on' : ''}${has(t) ? ' got' : ''}`} data-msx-tech={t.id} onClick={() => setPickT(t.id)}>
+                  <b>{has(t) ? '★' : ''}{t.name}</b><small>{t.kind === 'wise' ? '🧠' : '💪'}{(Array.isArray(t.dist) ? t.dist : []).map((d) => MSX_DIST_NAMES[d]).join('')}・ガッツ{t.guts}</small></button>
+              )) : <div className="msx-note">この間合いの技はない</div>}</div>
+              {tech ? (<div className="msx-md-td">
+                <div className="tn">{tech.name}</div>
+                <div className="msx-md-kv"><b>種類</b><span>{tech.kind === 'wise' ? '🧠 かしこさ' : '💪 ちから'}</span></div>
+                <div className="msx-md-kv"><b>間合い</b><span>{(Array.isArray(tech.dist) ? tech.dist : []).map((d) => MSX_DIST_NAMES[d]).join('・') || '—'}</span></div>
+                <div className="msx-md-kv"><b>消費ガッツ</b><span>{tech.guts}</span></div>
+                <div className="msx-md-kv"><b>ダメージ</b><span className="gd">{grade('power', tech.power)}</span></div>
+                <div className="msx-md-kv"><b>命中</b><span className="gd">{grade('hit', tech.hit)}</span></div>
+                <div className="msx-md-kv"><b>ガッツダウン</b><span className="gd">{grade('gd', tech.gd)}</span></div>
+                <div className="msx-md-kv"><b>クリティカル</b><span className="gd">{grade('crit', tech.crit)}</span></div>
+                <div className="msx-md-kv"><b>覚え方</b><span>{has(tech) ? (Array.isArray(known) ? '覚えている' : 'はじめから') : '修行で覚える'}</span></div>
+              </div>) : null}
+            </div>
+          </div>
         </div>
         <button type="button" className="msx-dt-close" data-msx-detail-close onClick={onClose}>とじる</button>
       </div>
@@ -310,7 +333,7 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf }) {
         <div className="sub" style={{ marginTop: 6, color: '#f9a8d4', fontWeight: 900 }}>はじめの能力<span className="msx-dt-sm">(小さい字は伸びやすさ)</span></div>
         <div className="msx-st6" data-msx-start-stats>{MSX_STATS.map((k, i) => <div key={k}><span className="n">{MSX_STAT_NAME[k]}</span><b>{startSt[k]}</b><i className={apt[i] > 'B' ? 'lo' : ''}>伸び {apt[i]}</i></div>)}</div>
       </div>
-      {detail && <MsxMonDetail species={species} st={startSt} apt={apt} type={growType} grades={preview.grades} peak={peakText} onClose={() => setDetail(false)} SUC={SUC}/>}
+      {detail && <MsxMonDetail species={species} name={fromMon && fromMon.nick ? fromMon.nick : msxMonName(species)} sub={fromMon ? '合体で生まれたモンスター' : 'ベースモン'} st={startSt} apt={apt} type={growType} grades={preview.grades} peak={peakText} power={preview.power} rank={preview.rank} onClose={() => setDetail(false)} SUC={SUC}/>}
     </>);
     go = 'このモンスターにする ▶';
   } else if (step === 1) {
