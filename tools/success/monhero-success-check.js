@@ -91,8 +91,13 @@ ok(near(SUC.failRateOf({ ...base, yosu: { sabori: { visits: 0 } } }) - fFull, 0.
 
 // ---- 忠誠度 ----
 {
-  let s = { ...base, last: { kind: 'train', res: 'ok' }, reacted: false };
-  for (let i = 0; i < 40; i++) s = SUC.react({ ...s, last: { kind: 'train', res: 'ok' }, reacted: false, pol: 0, pp: 0 }, 'praise').state;
+  let s = { ...base, last: { kind: 'train', res: 'great' }, reacted: false };
+  for (let i = 0; i < 40; i++) s = SUC.react({ ...s, last: { kind: 'train', res: 'great' }, reacted: false, pol: 0, pp: 0 }, 'praise').state;
+  // 2026-11-14 ふつうの成功では叱る・褒めるを出さない(なにもしない だけ受け付ける)
+  const okR = SUC.react({ ...base, last: { kind: 'train', res: 'ok' }, reacted: false }, 'praise'); ok(!okR.out.ok && okR.out.why === 'no-scene', '成功のあとに褒めるが通ってしまう');
+  ok(SUC.react({ ...base, last: { kind: 'train', res: 'ok' }, reacted: false }, null).out.ok, '成功のあとの「なにもしない」が通らない');
+  ok(['great', 'fail', 'sab'].every((r) => SUC.reactOf({ last: { kind: 'train', res: r } }) === r) && SUC.reactOf({ last: { kind: 'shugyo' } }) === 'shugyo' && SUC.reactOf({ last: { kind: 'train', res: 'ok' } }) === null, 'reactOf の場面が違う');
+  const d = SUC.react({ ...base, last: { kind: 'train', res: 'fail' }, reacted: false }, 'scold').out.d; ok(d && d.fear > 0, `叱ったあとの変わった物 d が無い: ${JSON.stringify(d)}`);
   ok(s.ama === 50 && s.fear === 10 && SUC.loyalOf(s) === 60, `甘え度が50で止まらない: ${s.ama}/${s.fear}`);
   ok(SUC.loyalMult(60) === 1.6 && SUC.loyalMult(100) === 1.6 && SUC.loyalMult(30) === 1.3 && SUC.loyalMult(0) === 1, '忠誠度の補正が 1+min(忠誠,60)/100 でない');
   const u = SUC.react({ ...base, yosu: { utsu: { visits: 0 } }, last: { kind: 'train', res: 'ok' }, reacted: false }, 'praise').state;
