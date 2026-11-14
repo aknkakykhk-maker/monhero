@@ -120,7 +120,7 @@ const run = async (browser, mode, scene, errors) => {
     await page.locator('[data-confirm-sheet]').locator('xpath=..').getByRole('button', { name: '飛ばす' }).click();
     await page.getByRole('button', { name: 'トップへ' }).click();
     await page.locator('[data-card-top="top"]').waitFor({ timeout: 20000 });
-    // MASTER まで開け、その日はじめての勝ちは済ませておく(ビートPの 1.5倍だけを見るため)
+    // MASTER まで開け、その日初めての勝ちは済ませておく(ビートPの 1.5倍だけを見るため)
     await page.evaluate(() => { localStorage.setItem('mh_card_cpu_unlocked_v1', JSON.stringify({ hard: true, expert: true, master: true }));
       localStorage.setItem('mh_card_daily_v1', JSON.stringify({ day: cardTodayJst(), cpuPoint: 0, pvpPoint: 0, firstWin: true, foes: {}, quickLoops: 0 })); }); // eslint-disable-line no-undef
     await boot();

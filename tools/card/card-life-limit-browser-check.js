@@ -130,7 +130,7 @@ const run = async (browser, mode, errors) => {
   const usedOf = (v, slot) => (v && typeof v === 'object' && v.slot === slot && v.used ? Object.keys(v.used).filter((k) => v.used[k] >= 1).sort().join(',') : '');
   const goFoe = async () => {
     for (let i = 0; i < 3 && !(await page.locator('[data-card-top="foe"]').count()); i++) {
-      const b = page.getByRole('button', { name: '相手をえらぶ' });
+      const b = page.getByRole('button', { name: '相手を選ぶ' });
       if (await b.count()) { await b.click(); break; }
     }
     await page.locator('[data-card-top="foe"]').waitFor({ timeout: 20000 });

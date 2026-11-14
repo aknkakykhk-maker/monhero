@@ -36,7 +36,7 @@
     { id: 'breeder-license', name: 'ブリーダーライセンス', kind: 'use', image: 'images/success/items/breeder-license.png?v=f8010ded1ace',
       text: '持ち込むと育成中にも使用できる。忠誠度が一定数上がる' },
     { id: 'oily-pack', name: 'オイリーパック', kind: 'use', image: 'images/success/items/oily-pack.png?v=2b1a9c15a29b',
-      text: 'オイル2個と薬草の詰め合わせ。持ち込むと育成中にも使用できる' },
+      text: 'オイリーオイル（大）2個と夏美草1個のセット。持ち込むと育成中にも使用できる' },
     { id: 'training-ticket', name: '修行チケット', kind: 'ticket', image: 'images/success/items/training-ticket.png?v=0fc3257c41b8',
       text: '修行に使うチケット。大会などでもらえる' },
   ].map(Object.freeze));

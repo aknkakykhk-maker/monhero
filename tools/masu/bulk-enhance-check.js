@@ -130,7 +130,7 @@ const check = (name, ok, detail = '') => { results.push(ok); console.log(`  ${ok
   let allocation = await shownAllocation();
   check('復元すると以前の4距離・4能力構成を仮配分する', allocation && allocation.total-allocation.left === 10, allocation?.text);
   check('復元しただけではセーブ値が変わらない', JSON.stringify(await stored()) === JSON.stringify(before));
-  await click('配分をすべて取消');
+  await click('配分を全て取消');
 
   check('1P・5P・10P・100P・MAXの共通切替がある', await page.locator('[aria-label="振り分け単位"] button').count() === 5);
 
@@ -151,9 +151,9 @@ const check = (name, ok, detail = '') => { results.push(ok); console.log(`  ${ok
   allocation = await shownAllocation();
   check('−で選択単位ぶん仮配分が戻る', allocation && allocation.total-allocation.left === 6, allocation?.text);
 
-  await click('配分をすべて取消');
+  await click('配分を全て取消');
   allocation = await shownAllocation();
-  check('配分をすべて取消で下書きだけ0になる', allocation && allocation.left === allocation.total, allocation?.text);
+  check('配分を全て取消で下書きだけ0になる', allocation && allocation.left === allocation.total, allocation?.text);
   check('配分全取消でもセーブ値が変わらない', JSON.stringify(await stored()) === JSON.stringify(before));
 
   await clickExact('1P');
@@ -166,7 +166,7 @@ const check = (name, ok, detail = '') => { results.push(ok); console.log(`  ${ok
   const stopped = await shownAllocation();
   check('長押しで連続配分できる', held && held.total-held.left >= 2, held?.text);
   check('指を離すと長押しtimerが停止する', held && stopped && held.left === stopped.left, stopped?.text);
-  await click('配分をすべて取消');
+  await click('配分を全て取消');
 
   // Cから現行の最大段階までだけ上がり、余ったポイントは残る。
   await clickExact('MAX'); await clickControl('零間合い適性を増やす');
@@ -183,7 +183,7 @@ const check = (name, ok, detail = '') => { results.push(ok); console.log(`  ${ok
   allocation = await shownAllocation();
   check('MAX配分は残りpt不足時に残量までで止まる', allocation && allocation.left === 0, allocation?.text);
   check('MAX下書き中もセーブ値が変わらない', JSON.stringify(await stored()) === JSON.stringify(before));
-  await click('配分をすべて取消');
+  await click('配分を全て取消');
 
   // 最後は5Pを確定し、保存される量を検証する。
   await clickExact('5P'); await clickControl('零間合い適性を増やす'); await clickControl('ライフを増やす');
