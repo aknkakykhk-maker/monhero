@@ -35,6 +35,21 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    // 2026-11-14 社長「β近日公開予定のお知らせと、そこに紹介動画と、作ったストーリーを出そう。紹介動画はイッサ博士と覚醒のシーン」。動画は実際の画面を本物のブラウザで録った(博士の大きな賭け → 覚醒の前触れ → 覚醒 → 超覚醒)。
+    // 第1話のお知らせ(releaseFlag monsucStoryEp1)と同じ日に出す。みゅあの告知は第1話の側の1つにまとめ、ここには付けない(2回続けて話さないように)
+    date: "2026-11-14 15:00", type:'content', title:'モンヒロサクセス β版 近日公開予定', status:'new', group:'success',
+    video: 'movies/monsaku-beta-soon.mp4?v=ae3bd9d1a25c',
+    videoPoster: 'images/events/monsaku-beta-soon-poster.jpg?v=e937fb4bc03b',
+    items:[
+      '開発中の新コンテンツ「モンヒロサクセス」は、β版を近日公開予定です。',
+      '動画では、育成の途中にふらりと現れる博士との「大きな賭け」と、モンスターがまばゆい光をまとって強くなる「覚醒」の様子をお見せします。',
+      'β版に先がけて、お話「モンヒロサクセス 第1話 ～一番乗りは、だれだ～」をお届けしています。',
+      '画像・動画は開発中の画面です。公開までに変わることがあります。',
+      'お楽しみに！',
+    ],
+    unreleasedFlag:'monheroSuccess', // 公開したら消える(第1弾〜第3弾の予告と同じ)
+  },
+  {
     // 2026-11-14 えるびんさんの知らせ(iPhone でもどるが時計の下に入って押せない・キズナ4)
     date: "2026-11-14 14:33", type:'fix', title:'マスモンの対戦で、iPhone の「もどる」が押せないことがあったのを直しました', group:'assistant', status:'new', releaseFlag:'assistantMasmonBattleBeta',
     items:[
