@@ -36,7 +36,7 @@
     yaruki: { icon: '🔥', name: 'やる気満々', left: 3, good: true, text: 'トレーニングの大成功 +10%' },
     gokigen: { icon: '🎵', name: 'ごきげん', left: 3, good: true, text: 'ストレスの増え −50%' },
     neboke: { icon: '💤', name: 'ねぼけ', left: 2, good: false, text: 'サボり +10%' },
-    futekusare: { icon: '🌀', name: 'ふてくされ', left: 2, good: false, text: '叱ると忠誠が余計に下がる' },
+    futekusare: { icon: '🌀', name: 'ふてくされ', left: 2, good: false, text: '叱っても恐れ度が上がりにくい' },
     hirameki: { icon: '✨', name: 'ひらめき中', left: 0, good: true, text: '次の修行で技を覚えやすい' }, // left 0 = 次の修行まで
     iki: { icon: '🤝', name: '息ぴったり', left: 3, good: true, text: 'その編成の子がトレーニングに来やすい(+20%)' },
   });
@@ -72,21 +72,21 @@
   const L_OK = ['junior', 'middle', 'pro'];
   const EVENTS = [
     // ═══ ① ふだん(16) ═══
-    { id: 'ev.daily.nut', kind: 'daily', slot: 'start', w: 10, ch: { a: { fx: [['pop', 3], ['fame', 240]] }, b: { fx: [['hp', 20], ['loy', -3]] } } },
+    { id: 'ev.daily.nut', kind: 'daily', slot: 'start', w: 10, ch: { a: { fx: [['pop', 3], ['fame', 240]] }, b: { fx: [['hp', 20]] } } },
     { id: 'ev.daily.rain', kind: 'daily', slot: 'start', w: 10, ch: { a: { fx: [['st', 'wise', S]] }, b: { p: 0.5, ok: [['st', 'life', M]], ng: [['hp', -10]] } } },
-    { id: 'ev.daily.night', kind: 'daily', slot: 'start', w: (s, x) => (x.hpRatio(s) < 0.3 ? 2 : 10), ch: { a: { fx: [] }, b: { fx: [['str', -20], ['buff', 'neboke']] } } },
+    { id: 'ev.daily.night', kind: 'daily', slot: 'start', w: (s, x) => (x.hpRatio(s) < 0.3 ? 2 : 10), ch: { a: { fx: [['hp', 10]] }, b: { fx: [['str', -20], ['buff', 'neboke']] } } },
     { id: 'ev.daily.kids', kind: 'daily', slot: 'start', w: (s) => (s.pop >= 60 ? 18 : 10), ch: { a: { fx: [['pop', 3], ['hp', -10]] }, b: { fx: [['pop', 6], ['popHi', 4]] } } },
     { id: 'ev.daily.sweets', kind: 'daily', slot: 'start', w: 10, ch: { a: { need: { fame: 400 }, fx: [['fame', -400], ['buff', 'gokigen']] }, b: { fx: [['loy', 3]] } } },
     { id: 'ev.daily.book', kind: 'daily', slot: 'start', w: 10, ch: { a: { fx: [['st', 'wise', S], ['buff', 'hirameki']] }, b: { fx: [['hp', 20]] } } },
     { id: 'ev.daily.chase', kind: 'daily', slot: 'start', w: (s, x) => (x.hpRatio(s) < 0.3 ? 3 : 10), ch: { a: { fx: [['st', 'eva', S]] }, b: { fx: [['str', -10]] } } },
     { id: 'ev.daily.juggler', kind: 'daily', slot: 'start', w: 10, ch: { a: { fx: [['st', 'hit', S]] }, b: { fx: [['str', -10]] } } },
-    { id: 'ev.daily.arm', kind: 'daily', slot: 'start', w: 10, ch: { a: { p: 0.6, ok: [['st', 'pow', M]], ng: [['hp', -10]] }, b: { fx: [] } } },
+    { id: 'ev.daily.arm', kind: 'daily', slot: 'start', w: 10, ch: { a: { p: 0.6, ok: [['st', 'pow', M]], ng: [['hp', -10]] }, b: { fx: [['str', -10]] } } },
     { id: 'ev.daily.dream', kind: 'daily', slot: 'start', w: 8, ch: { a: { fx: [['loy', 3]] }, b: { fx: [['loy', 6], ['hp', -10]] } } },
     { id: 'ev.daily.picky', kind: 'daily', slot: 'start', w: 8, ch: { a: { fx: [['st', 'tough', S], ['str', 10]] }, b: { fx: [['str', -10]] } } },
     // 2026-11-13 社長 r1113-037: たまに、育成する子がアイテムを拾ってくる(見るだけ・中身は決まった乱数)
     { id: 'ev.daily.find', kind: 'daily', slot: 'start', w: 5, repeat: true, when: (s, x) => !x.giftedNow(s, 'find'), ch: { fx: [['item', 'find']] } },
     { id: 'ev.daily.mirror', kind: 'daily', slot: 'start', w: (s) => (s.pop >= 60 ? 14 : 8), ch: { a: { fx: [['pop', 3], ['loy', 3]] }, b: { fx: [['st', 'hit', S]] } } },
-    { id: 'ev.daily.lost', kind: 'daily', slot: 'start', w: 8, ch: { a: { fx: [['pop', 3], ['hp', -10]] }, b: { fx: [] } } },
+    { id: 'ev.daily.lost', kind: 'daily', slot: 'start', w: 8, ch: { a: { fx: [['pop', 3], ['hp', -10]] }, b: { fx: [['hp', 10]] } } },
     // 間合いの稽古(2026-11-13 社長: 間合い適性を出来事の選択肢でも上げる)。上げられる間合いが残っていて、出来事で上げた数が上限より少ないときだけ
     { id: 'ev.daily.range', kind: 'daily', slot: 'start', w: 8, repeat: true, when: (s, x) => s.turn >= 3 && x.aptRoom(s), ch: { a: { fx: [['apt', 'best'], ['hp', -10]] }, b: { fx: [['apt', 'low'], ['hp', -10]] } } },
     { id: 'ev.daily.map', kind: 'daily', slot: 'start', w: 6, when: per(...L_OK), ch: { fx: [['buff', 'hirameki']] } },
@@ -101,7 +101,7 @@
     { id: 'ev.team.fight', kind: 'team', slot: 'after', w: 6, pickPair: (s, x) => x.pair(s, (a, b) => x.typeOf(a) && x.typeOf(a) === x.typeOf(b)),
       ch: { a: { fx: [['bond', 'cheer', 5], ['bond', 'cheer2', 5]] }, b: { fx: [['st', 'main', M], ['buff', 'futekusare']] } } },
     { id: 'ev.team.base', kind: 'team', slot: 'after', w: 6, pickA: (s, x) => x.team(s, (m, i) => m.kind === 'base' && !(s.ev.boost || {})[i]),
-      ch: { a: { fx: [['flag', 'baseBoost']] } } },
+      ch: { a: { fx: [['flag', 'baseBoost']] }, b: { fx: [['bond', 'cheer', 5], ['str', -5]] } } }, // b はそっと見守る(Fable ①-16: 選択肢が1つだけだった)
     { id: 'ev.team.friend', kind: 'team', slot: 'after', w: 12, pickA: (s, x) => x.team(s, (m) => m.friend === true || m.from === 'friend'),
       ch: { a: { fx: [['bond', 'cheer', 10]] } } },
     // 2026-11-13 社長 r1113-037: 育成する子と同じ血統(主血統)の編成の子が、いっしょにトレーニングしたあとにアイテムをくれる(中身は血統ごと)
@@ -120,7 +120,7 @@
     { id: 'ev.self.peakout', kind: 'self', slot: 'fixed', when: (s, x) => x.peakEdge(s) === 'out', ch: { a: { fx: [['hp', 30]] }, b: { fx: [['st', 'main', S], ['str', 20]] } } },
     { id: 'ev.self.slump', kind: 'self', slot: 'start', w: 30, when: (s) => (s.ev.bad || 0) >= 3, ch: { a: { fx: [['str', -20], ['hp', 10]] }, b: { fx: [['buff', 'yaruki']] } } },
     { id: 'ev.self.favtrain', kind: 'self', slot: 'start', w: 20, when: (s, x) => Boolean(x.favCand(s)), ch: { fx: [['flag', 'fav']] } },
-    { id: 'ev.self.selfish', kind: 'self', slot: 'start', w: 25, when: (s, x) => x.loyal(s) <= 30 && s.turn >= 4, ch: { a: { fx: [['str', -20], ['loy', -3]] }, b: { fx: [['loy', 3], ['buff', 'futekusare']] } } },
+    { id: 'ev.self.selfish', kind: 'self', slot: 'start', w: 25, when: (s, x) => x.loyal(s) <= 30 && s.turn >= 4, ch: { a: { fx: [['str', -20]] }, b: { fx: [['loy', 3], ['buff', 'futekusare']] } } },
     // 育成の記念日(2026-11-13 社長): 育て始めて1年(ジュニア期8月=ターン13)のはじめに一度きり。体力が上限の50%回復・ストレス −10。ほかの病気などで出せなければ2ターンまで待つ
     { id: 'ev.self.anniv', kind: 'self', slot: 'fixed', when: (s) => s.turn >= ANNIV_TURN && s.turn <= ANNIV_TURN + 2, ch: { fx: [['hp', 50], ['str', -10]] } },
     { id: 'ev.self.clingy', kind: 'self', slot: 'start', w: 12, when: (s, x) => x.loyal(s) >= 80, ch: { a: { fx: [['loy', 3], ['str', -10]] } } },
@@ -152,11 +152,11 @@
     // ═══ ⑥ 小さな賭け(2)。おみくじは 1月の初もうで(1年目)の a から ═══
     { id: 'ev.small.omikuji', kind: 'small', slot: 'none', ch: { fx: [] } },
     { id: 'ev.small.nut', kind: 'small', slot: 'start', w: 6, when: per(...L_OK),
-      ch: { a: { need: { fame: 640 }, p: 0.6, pay: 640, ok: [['st', 'rand', M]], ng: [['hp', -20]], scene: { ok: 'ev.small.nut.ok', ng: 'ev.small.nut.ng' } }, b: { fx: [] } } },
+      ch: { a: { need: { fame: 640 }, p: 0.6, pay: 640, ok: [['st', 'rand', M]], ng: [['hp', -20]], scene: { ok: 'ev.small.nut.ok', ng: 'ev.small.nut.ng' } }, b: { fx: [['str', -5]] } } },
 
     // ═══ ⑦ 体調(3+帰ってきた) ═══
     { id: 'ev.body.injury', kind: 'body', slot: 'start', w: 60, when: (s, x) => x.hpRatio(s) <= 0.2 && !s.cond, ch: { a: { fx: [['hp', 30]] }, b: { fx: [['flag', 'injRisk']] } } },
-    { id: 'ev.body.runaway', kind: 'body', slot: 'start', w: 60, when: (s) => s.stress >= 80 && !s.cond, ch: { a: { fx: [['str', -30], ['hp', 10]] }, b: { fx: [] } } },
+    { id: 'ev.body.runaway', kind: 'body', slot: 'start', w: 60, when: (s) => s.stress >= 80 && !s.cond, ch: { a: { fx: [['str', -30], ['hp', 10]] }, b: { fx: [['str', -10]] } } },
     { id: 'ev.body.healed', kind: 'body', slot: 'fixed', repeat: true, when: (s) => s.ev.healed === 'injury' || s.ev.healed === 'ill', ch: { fx: [['loy', 3]] } },
     { id: 'ev.body.home', kind: 'body', slot: 'fixed', repeat: true, when: (s) => s.ev.healed === 'away', ch: { a: { fx: [['loy', 6], ['str', -10]] }, b: { fx: [['fear', 6]] } } },
 
@@ -391,7 +391,7 @@
         else if (op === 'goal') { const pk = periodOf(s.turn).key; ev.goal[pk] = a; delta.goal = a; }
         else if (op === 'flag') {
           if (a === 'baseBoost' && Number.isInteger(ctx.cheer)) { ev.boost[ctx.cheer] = EFFECT.baseBoost; delta.boost = EFFECT.baseBoost; }
-          else if (a === 'tagSeen' && Number.isInteger(ctx.cheer)) { if (!ev.tag.includes(ctx.cheer)) ev.tag.push(ctx.cheer); }
+          else if (a === 'tagSeen' && Number.isInteger(ctx.cheer)) { if (!ev.tag.includes(ctx.cheer)) ev.tag.push(ctx.cheer); delta.tagSeen = true; }
           else if (a === 'fav') { ev.fav = favCand(s); delta.fav = ev.fav; }
           else if (a === 'goalPlus') { ev.flags.goalPlus = true; delta.goalPlus = true; }
           else if (a === 'injRisk') { ev.flags.injRisk = s.turn; delta.injRisk = true; }
@@ -423,7 +423,7 @@
         let x = rng(); let hit = OMIKUJI[OMIKUJI.length - 1]; for (const o of OMIKUJI) { if (x < o.p) { hit = o; break; } x -= o.p; }
         res = hit.key; scene = `ev.small.omikuji.${hit.key}`; applyFx(s, hit.fx, ctx, rng, delta); if (!ev.seen.includes('ev.small.omikuji')) ev.seen.push('ev.small.omikuji');
       } else if (choice.p) {
-        const win = rng() < choice.p; res = win ? 'ok' : 'ng'; scene = choice.scene ? choice.scene[res] : null;
+        const win = rng() < choice.p; res = win ? 'ok' : 'ng'; scene = choice.scene ? choice.scene[res] : `${p.id}.${c}.${res}`; // 結果の文: 台本 random.js の <出来事>.<選択肢>.ok / .ng
         applyFx(s, win ? choice.ok : choice.ng, ctx, rng, delta);
       } else applyFx(s, choice.fx || [], ctx, rng, delta);
       // 期の目標の結果(ごほうびは達成のときだけ・願い札で ×1.5)

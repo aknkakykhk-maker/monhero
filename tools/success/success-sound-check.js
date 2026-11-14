@@ -23,7 +23,7 @@ const partSrc = read('monster-hero/src/parts/14-success-sound.jsx');
 const REQUIRED = ['main', 'training', 'rest', 'play', 'hospital', 'menu', 'cupPre', 'trainGreat', 'trainOk', 'trainFail', 'trainSkip', 'scold', 'praise', 'trainLvUp', 'ascetic',
   'cupEntry', 'cupMatch', 'cupWin', 'cupLose', 'issa', 'gameOver', 'retire',
   // 2026-11-14 演出の音(トレーニングの場面・修行の段・覚醒の入り・期の区切り)
-  'trainAct', 'actStep', 'actLeap', 'actHit', 'actDodge', 'actThrow', 'actDrop', 'actGuard', 'actBlock', 'actIdea', 'actFlash',
+  'trainAct', 'actStep', 'actLeap', 'actHit', 'actDodge', 'actThrow', 'actDrop', 'actGuard', 'actBlock', 'actIdea', 'actFlash', 'actTag', // actTag: 友情タッグのカットイン
   'qStage', 'qCharge', 'qStrike', 'qLeap', 'qSlam', 'qShine', 'qLearn', 'qMiss', 'awakeShow', 'awQi', 'awFlash', 'awKira', 'kiShow', 'kiNext',
   // 2026-11-14 博士の大きな賭けの演出(窓口経由の社長の依頼「大成功の専用の効果音と演出」)
   'issaIn', 'issaDrum', 'issaZap', 'issaPuff', 'issaWin', 'issaWin2', 'issaLose'];

@@ -89,6 +89,21 @@ ok(near(SUC.failRateOf({ ...base, yosu: { sabori: { visits: 0 } } }) - fFull, 0.
   ok(!SUC.act(base, { kind: 'clinic' }).out.ok, 'ようすが無いのに通院できる');
 }
 
+// ---- 甘え度・恐れ度は下がらない(社長 2026-11-14 r1114-115) ----
+{
+  let bad = 0;
+  for (const res of ['great', 'ok', 'fail', 'sab']) for (const how of ['praise', 'scold', null]) for (const pol of [-3, 0, 3]) {
+    for (const buff of [false, true]) {
+      const s0 = { ...base, ama: 20, fear: 20, pol, pp: 0, idle: 3, last: { kind: 'train', res }, reacted: false, buffs: buff ? [{ id: 'futekusare', left: 2 }] : base.buffs };
+      const r = SUC.react(s0, how); if (!r.out.ok) continue;
+      if (r.state.ama < 20 || r.state.fear < 20) bad++;
+    }
+  }
+  ok(bad === 0, `褒める・叱る・ほうっておくで甘え度・恐れ度が下がる経路がある(${bad}件)`);
+  const L = SUC.LOYAL, C = SUC.COND;
+  ok([L.praiseGood, L.praiseBad, L.scoldGood, L.scoldBad, L.win, L.loseScold, L.idle].every(v => v[0] >= 0 && v[1] >= 0) && C.awayAma >= 0 && C.awayFear >= 0, '忠誠度の表に負の値がある');
+}
+
 // ---- 忠誠度 ----
 {
   let s = { ...base, last: { kind: 'train', res: 'great' }, reacted: false };
