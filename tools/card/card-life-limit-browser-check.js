@@ -269,7 +269,7 @@ const run = async (browser, mode, errors) => {
     await page.locator('[data-card-top="top"]').waitFor({ timeout: 20000 });
     await page.waitForTimeout(800); await dismiss();
     await page.locator('[data-card-cpu]').dispatchEvent('click');
-    await page.getByRole('button', { name: 'わかった' }).click({ timeout: 2500 }).catch(() => {});
+    await page.getByRole('button', { name: /^(分かった|わかった)$/ }).click({ timeout: 2500 }).catch(() => {});
     await page.waitForTimeout(500);
     if (!(await page.locator('[data-card-top="foe"]').count())) await page.locator('[data-card-top] button').filter({ hasText: /フリー対戦|助手と対戦/ }).first().dispatchEvent('click').catch(() => {});
     await page.locator('[data-card-top="foe"]').waitFor({ timeout: 20000 });

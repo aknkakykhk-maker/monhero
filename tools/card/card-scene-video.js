@@ -100,7 +100,7 @@ const SCENES = {
     file: 'd-vs.mp4',
     prepare: async (page) => {
       await page.locator('[data-card-cpu]').click();
-      await page.getByRole('button', { name: 'わかった' }).click({ timeout: 3000 }).catch(() => {});
+      await page.getByRole('button', { name: /^(分かった|わかった)$/ }).click({ timeout: 3000 }).catch(() => {});
       await page.locator('[data-card-top] button').filter({ hasText: 'フリー対戦' }).first().click();
       await page.locator('[data-card-foe="erubin"]').click();
       await page.locator('[data-card-level="normal"]').click().catch(() => {});

@@ -249,7 +249,7 @@ function summary(name, rows) {
       await snap('1-card-top', i);
       if (i === 1) await profStart(cdp);
       await mark('mode'); await page.locator('[data-card-cpu]').click();
-      await page.getByRole('button', { name: 'わかった' }).click({ timeout: 1500 }).catch(() => {});
+      await page.getByRole('button', { name: /^(分かった|わかった)$/ }).click({ timeout: 1500 }).catch(() => {});
       await mark('foe'); await page.locator('[data-card-mode-assistant]').click();
       await mark('breederTab'); await page.locator('[data-card-foe-tab="breeder"]').click();
       await page.locator('[data-card-share-fight="perf-breeder-1"]').waitFor({ timeout: 15000 });
@@ -357,7 +357,7 @@ function summary(name, rows) {
       await page.locator('[data-card-top="top"]').waitFor({ timeout: 20000 });
       if (i === 1) await profStart(cdp);
       await page.locator('[data-card-cpu]').click();
-      await page.getByRole('button', { name: 'わかった' }).click({ timeout: 1500 }).catch(() => {});
+      await page.getByRole('button', { name: /^(分かった|わかった)$/ }).click({ timeout: 1500 }).catch(() => {});
       await page.locator('[data-card-mode-assistant]').click();
       await page.locator('[data-card-foe-tab="assistant"]').click();
       const foes = await page.locator('[data-card-foe]').evaluateAll((els) => els.map((e) => e.getAttribute('data-card-foe')));
