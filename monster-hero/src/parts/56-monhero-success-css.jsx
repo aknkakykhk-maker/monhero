@@ -781,6 +781,13 @@ const MSX_CSS = `
 .msx .v-hd{height:auto;min-height:32px}
 /* 文は言葉の途中で折らない(docs/spec/MONSUC_UI.md の 4)。対応していない端末ではいままでどおり */
 .msx button,.msx .v-opt,.msx .bub,.msx .v-log,.msx .v-talk,.msx .v-h{word-break:auto-phrase}
+/* 能力の列を押すと素質(A〜E)に切り替わる(2026-11-14 社長)。右上の小さな札が押せる印 */
+.msx .v-st.tg{position:relative;cursor:pointer;min-height:44px;margin-top:12px;-webkit-tap-highlight-color:transparent}
+.msx .v-st.tg:active{transform:translateY(1px)}
+.msx .v-st .v-sttg{position:absolute;right:2px;top:-14px;z-index:2;font-size:10px;font-weight:900;line-height:14px;padding:0 6px;border-radius:99px;background:#334155;color:#fde047;border:1px solid #fde04788;pointer-events:none;white-space:nowrap}
+.msx .v-st.apton .v-sttg{background:#fde047;color:#422006}
+.msx .v-st .ap{display:block;font-size:10.5px;font-weight:900;line-height:1.2;margin-top:1px;color:#e2e8f0;white-space:nowrap}
+.msx .v-st .ap.aA{color:#fde047}.msx .v-st .ap.aB{color:#86efac}.msx .v-st .ap.aC{color:#e2e8f0}.msx .v-st .ap.aD{color:#fdba74}.msx .v-st .ap.aE{color:#fca5a5}
 /* 画面の決まり(docs/spec/MONSUC_UI.md)の共通の部品: 見せ場の数字 .v-num(真ん中そろえ)・動いた数字の札 .v-gains */
 .msx .v-num{text-align:center;line-height:1.15}
 .msx .v-num>small{display:block;font-size:11px;font-weight:900;color:#e2e8f0}
@@ -834,9 +841,14 @@ const MSX_CSS = `
 .msx .v-scene.home{container-type:size}
 .msx .v-scene.home .v-bagb:not(.r){left:auto;right:7px;bottom:59px}
 .msx.s320 .v-scene.home .v-bagb:not(.r){bottom:51px}
-.msx .v-scene.home .v-party{--pfs:clamp(14px,calc((100cqh - 12px - 29px - 24px) / 7),30px)}
-.msx.land .v-scene.home .v-party{--pfs:clamp(14px,calc((100cqh - 12px - 29px - 18px) / 7),24px)}
-.msx.s320 .v-scene.home .v-party{--pfs:clamp(14px,calc((100cqh - 12px - 29px - 12px) / 4),22px)}
+/* 2026-11-14 社長「編成の7体目が切れる」(iPhone の縦で場面が低いとき): 顔の下の親密度の棒(1体 6px)を式に入れ、場面が低いときは2列×4段に並べ替える */
+.msx .v-scene.home .v-party{--pfs:clamp(14px,calc((100cqh - 12px - 29px - 24px - 42px) / 7),30px)}
+.msx.land .v-scene.home .v-party{--pfs:clamp(14px,calc((100cqh - 12px - 29px - 18px - 42px) / 7),24px)}
+.msx.s320 .v-scene.home .v-party{--pfs:clamp(14px,calc((100cqh - 12px - 29px - 9px - 24px) / 4),22px)}
+@container (max-height:260px){
+  .msx .v-scene.home .v-party{display:grid;grid-template-columns:1fr 1fr;gap:3px 4px;--pfs:clamp(14px,calc((100cqh - 12px - 29px - 9px - 24px) / 4),26px)}
+  .msx .v-scene.home .v-party>small{grid-column:1/-1;text-align:center}
+}
 .msx .v-scene.home .v-party .v-pf,.msx .v-scene.home .v-party .v-pf img{width:var(--pfs)}
 .msx .v-scene.home .v-party .v-pf img{height:var(--pfs)}
 /* 場面がとても低いとき(幅320で大きい文字など): 編成は4列×2段に並べ替え、上の札は右下の持ち物・くわしくの左で止める */

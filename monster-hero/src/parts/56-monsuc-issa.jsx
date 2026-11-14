@@ -128,7 +128,7 @@ function MsxIssaResult({ run, res, v, ev, ctx, onNext }) {
       {st < 2 && !calm ? <div className="msx-is-ctl"><button type="button" onClick={() => setSt(2)} data-msx-issa-skip>短縮 ⏭</button></div> : null}
     </div>
     {done ? (<>
-      {hasUps ? <MsxStRow stats={s.stats} ups={ups}/> : null}
+      {hasUps ? <MsxStRow who={s} stats={s.stats} ups={ups}/> : null}
       <MsxIssaGains items={gains}/>
       <div className="v-log"><span className="hd2">{k ? `${k.icon} ${k.name}` : '🙅 何もしない'}</span><br/>{k ? (win ? `⭕ ${k.ok}` : `❌ ${k.ng}`) : 'ことわった。何も変わらない'}{!none && !hasUps && !gains.length ? '(変化なし)' : ''}</div>
       <div className="v-ft" style={{ marginTop: 6 }}><button type="button" className="go" onClick={onNext} data-msx-issa-next>つぎへ ▶</button></div>

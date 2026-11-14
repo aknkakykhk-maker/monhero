@@ -8,7 +8,7 @@
 const { spawn } = require('child_process');
 const path = require('path');
 // 大きさの名札('base' は縦390)を、時間が同じくらいになるよう4組に分ける。ポートはほかの検査と重ならない 19871〜19874
-const GROUPS = [['base', 'big'], ['land', 'landbig'], ['land667', 's320'], ['s320big']];
+const GROUPS = [['base', 'big'], ['land', 'landbig'], ['land667', 's320'], ['s320big', 'ip']]; // ip: iPhone の縦 390×664(2026-11-14 編成の7体目が切れた)
 const BASE_PORT = 19871;
 const runOne = (sizes, i) => new Promise((resolve) => {
   const env = { ...process.env, SHOT_SIZES: sizes.join(','), SHOT_PORT: String(BASE_PORT + i) };
