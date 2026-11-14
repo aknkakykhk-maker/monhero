@@ -384,7 +384,7 @@ function AssistantLifeTownMap({ life, ids, onPick, onView = null, onBeat = null,
           {nav ? <div className="shrink-0" style={{ width: land ? 250 : 216 }} data-assistant-life-map-nav>{nav}</div>
             : <button type="button" data-assistant-life-map-back onClick={onBack} className="shrink-0 rounded-xl border border-pink-300/60 bg-slate-950/85 px-2.5 py-1.5 text-[12px] font-black text-pink-100 active:scale-95">🏡 家へ</button>}
           <div className="min-w-0 flex-1">
-            <p className="truncate text-[15px] font-black leading-tight text-white" style={{ textShadow: '0 2px 4px #000' }}>{ro ? `🗺 ${friendView.name}さんの町` : nav ? '🗺 町' : '📋 みんなの居場所'}</p>
+            <p className={ro ? 'text-[14px] font-black leading-tight text-white' : 'truncate text-[15px] font-black leading-tight text-white'} style={{ textShadow: '0 2px 4px #000', ...(ro ? { overflowWrap: 'anywhere' } : null) }}>{ro ? `🗺 ${friendView.name}さんの町` : nav ? '🗺 町' : '📋 みんなの居場所'}</p>
             <p className="truncate text-[10px] font-bold text-slate-200" data-assistant-life-map-time>{assistantLifeTodLabel()} ・ {assistantLifeNextSlotText().replace(/みんなが動きます$/, 'みんなが動く')}</p>
           </div>
           {list && <button type="button" data-assistant-life-map-list onClick={() => { try { const l = listRef.current, box = l && l.parentElement; if (box) box.scrollTo({ top: l.offsetTop, behavior: 'smooth' }); } catch (_) {} }} className="shrink-0 rounded-xl border border-slate-500/70 bg-slate-950/85 px-2.5 py-1.5 text-[11px] font-black text-slate-100 active:scale-95">📃 一覧 ↓</button>}

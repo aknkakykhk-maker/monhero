@@ -109,7 +109,7 @@ const badgeProblems = (page) => page.evaluate(() => {
   });
   await new Promise(r => server.listen(PORT, r));
   const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
-  const shot = async (page, name) => { if (shotDir) await page.screenshot({ path: path.join(shotDir, `${name}.png`) }); };
+  const shot = async (page, name) => { if (shotDir) await page.evaluate(() => { for (const e of document.querySelectorAll('div[style*="2147483647"] > span')) e.style.visibility = 'hidden'; }).catch(() => {}); if (shotDir) await page.screenshot({ path: path.join(shotDir, `${name}.png`) }); };
   const open = async ({ w, h, on = true, stub = [] }) => {
     const page = await browser.newPage({ viewport: { width: w, height: h }, deviceScaleFactor: shotDir ? 2 : 1 });
     const errors = []; page.on('pageerror', e => errors.push(String(e)));
