@@ -124,6 +124,8 @@ function alwaysChecks() {
 const FORCE_CHECKS = [
   // 選び方そのもの(2026-11-11)。選び方を直したら、名指しで読む検査が漏れていないか・どの領域にも入らない検査が無いかを確かめる
   { re: /^tools\/run-checks(-deps)?\.js$|^tools\/run-checks-always\.json$/, checks: ['run-checks-select-check.js'], why: '--changed の選び方(漏れ・どこにも入らない検査)' },
+  // ビートP交換所の「曲」の売り場(2026-11-14 社長「ジャケットがアップで見れない・視聴ができない」)。札・拡大の窓・試し聴き・説明の折れ・札の空きを本物の画面で見る
+  { re: /^monster-hero\/src\/parts\/(39-rhythm-song-owned|20-market-notices-help|55-screen-breeder-market|41-screen-ui)\.jsx$|^tools\/mode\/rhythm-song-shop-check\.js$/, checks: ['mode/rhythm-song-shop-check.js'], why: 'ビートP交換所の「曲」の売り場(ジャケットの拡大・試し聴き・説明の折れ・札の空き)' },
   // 🔄横(絵を90度回す)の端の黒い帯(2026-11-14 社長「何回も言ってんだから」。2026-09-29・11-12・11-14 と戻ってきた)。
   //   書き方の見張り(env(safe-area-inset-*) を直に書かない)は、本体の部品を触ったら必ず。ブラウザで四辺の帯を測る検査は、モンヒロビートの部品・回す部品を触ったら必ず
   { re: /^monster-hero\/src\/parts\/.+\.jsx$|^monster-hero\/index\.html$|^tools\/ui\/rhythm-safe-area-raw-check\.js$/, checks: ['ui/rhythm-safe-area-raw-check.js'], why: 'モンヒロビートの部品に env(safe-area-inset-*) を直に書いていないか(🔄横の帯)' },
