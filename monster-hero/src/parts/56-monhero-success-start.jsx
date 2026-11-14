@@ -79,6 +79,77 @@ function MsxHd({ back, onBack, title = '🌱 モンヒロサクセス', sub, rig
   );
 }
 
+// 始める前の見通し: ピークの時期(期の名前)と間合い適性の段。仮の育成を1つ作って芯に聞く(保存しない)
+const msxStartPreview = (SUC, species, type, aptBase) => {
+  const out = { peak: '', grades: null };
+  try {
+    if (typeof SUC.newRun !== 'function') return out;
+    const s = SUC.newRun({ id: 'peek', species, ...(Number.isInteger(type) ? { type } : {}), ...(Array.isArray(aptBase) ? { aptBase } : {}) });
+    const pk = typeof SUC.peakInfo === 'function' ? SUC.peakInfo(s) : null;
+    if (pk && Number.isInteger(pk.from) && typeof SUC.periodOf === 'function') {
+      const a = SUC.periodOf(pk.from).name; const b = SUC.periodOf(pk.to).name;
+      out.peak = a === b ? a : `${a}〜${b}`;
+    }
+    if (typeof SUC.aptGradesOf === 'function') out.grades = SUC.aptGradesOf(s);
+  } catch (e) { /* 見通しが出せなくても選ぶ画面は動く */ }
+  return out;
+};
+const MSX_DIST_NAMES = ['零', '近', '中', '遠'];
+const msxLineName = (id) => (id && typeof MONSTER_LINEAGES === 'object' && MONSTER_LINEAGES && MONSTER_LINEAGES[id] ? MONSTER_LINEAGES[id].name : '');
+// モンスターの詳細(選ぶ画面の「くわしく」)。うちのデータにある物だけを出す
+function MsxMonDetail({ species, st, apt, type, grades, peak, onClose, SUC }) {
+  const [tab, setTab] = useState('st');
+  const line = typeof MONSTER_LINEAGE_MAP === 'object' && MONSTER_LINEAGE_MAP ? MONSTER_LINEAGE_MAP[species] : null;
+  const main = line ? msxLineName(line.main) : ''; const sub = line ? msxLineName(line.sub || line.main) : '';
+  const dex = typeof MONSTER_DEX_DESCRIPTIONS === 'object' && MONSTER_DEX_DESCRIPTIONS && MONSTER_DEX_DESCRIPTIONS[species];
+  const typeName = type != null && typeof MASMON_CALC !== 'undefined' ? MASMON_CALC.typeOf(type).name : '—';
+  const techs = typeof SUC.techsOf === 'function' ? SUC.techsOf(species) : [];
+  const startT = techs.filter((t) => t && t.learn && t.learn.start); const laterT = techs.filter((t) => t && !(t.learn && t.learn.start));
+  const techRow = (t) => (
+    <div key={t.id} className="msx-dt-tech"><span className="k">{t.kind === 'wise' ? 'かしこさ' : 'ちから'}</span><b>{t.name}</b>
+      <span className="d">{(Array.isArray(t.dist) ? t.dist : []).map((d) => MSX_DIST_NAMES[d]).filter(Boolean).join('・')}</span></div>
+  );
+  const TABS = [['st', '能力'], ['apt', '適性'], ['tech', '技'], ['dex', '図鑑']];
+  return (
+    <div className="msx-ov msx-fade" data-msx-detail onClick={onClose}>
+      <div className="msx-sheet msx-dt" onClick={(e) => e.stopPropagation()}>
+        <div className="msx-dt-top">
+          <img src={msxMonImg(species)} alt=""/>
+          <div className="nm"><h3>{msxMonName(species)}</h3>
+            {main ? <div className="msx-dt-sm">血統 {main}{sub && sub !== main ? ` × ${sub}` : '(純血)'}</div> : null}
+            <div className="msx-dt-sm">成長の型 <b className="yel">{typeName}</b>{peak ? ` ・ピーク ${peak}` : ''}</div></div>
+        </div>
+        <div className="v-tabs msx-dt-tabs">{TABS.map(([k, n]) => <button type="button" key={k} className={tab === k ? 'on' : ''} data-msx-detail-tab={k} onClick={() => setTab(k)}>{n}</button>)}</div>
+        <div className="msx-dt-body">
+          {tab === 'st' ? (<>
+            <div className="msx-dt-cap">はじめの能力と伸びやすさ</div>
+            {MSX_STATS.map((k, i) => (
+              <div key={k} className="msx-dt-bar"><span className="n">{MSX_STAT_NAME[k]}</span><b>{st[k]}</b>
+                <span className="g"><i style={{ width: `${Math.max(2, Math.min(100, (Number(st[k]) || 0) / 3))}%` }}/></span><span className={`a${apt[i] > 'B' ? ' lo' : ''}`}>{apt[i]}</span></div>
+            ))}
+            <div className="msx-note">伸びやすさは A がいちばん伸びやすい(A〜E)。編成のモンスターから、はじめの能力に上乗せがある</div>
+          </>) : null}
+          {tab === 'apt' ? (<>
+            <div className="msx-dt-cap">間合い適性</div>
+            <div className="msx-dt-dist">{MSX_DIST_NAMES.map((d, i) => <div key={d}><span>{d}</span><b>{grades ? grades[i] : '—'}</b></div>)}</div>
+            <div className="msx-note">適性が高い間合いほど、その間合いの技がよく当たる。育成の修行や大会で上がることがある</div>
+            <div className="msx-dt-cap" style={{ marginTop: 8 }}>成長の型</div>
+            <div className="msx-note">{typeName}{peak ? `。いちばん伸びるのは ${peak}` : ''}</div>
+          </>) : null}
+          {tab === 'tech' ? (<>
+            <div className="msx-dt-cap">はじめから使える技</div>
+            {startT.length ? startT.map(techRow) : <div className="msx-note">なし</div>}
+            <div className="msx-dt-cap" style={{ marginTop: 8 }}>修行で覚えられる技</div>
+            {laterT.length ? laterT.map(techRow) : <div className="msx-note">なし</div>}
+          </>) : null}
+          {tab === 'dex' ? <div className="msx-dt-dex">{dex || 'このモンスターの図鑑は調査中'}</div> : null}
+        </div>
+        <button type="button" className="msx-dt-close" data-msx-detail-close onClick={onClose}>とじる</button>
+      </div>
+    </div>
+  );
+}
+
 function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf }) {
   const { box, meta, unlocked } = data;
   const unraised = box.mons.filter((m) => !m.raised);
@@ -128,6 +199,14 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf }) {
   };
 
   const apt = msxAptOf(species);
+  // はじめの能力・成長の型・ピーク・間合い適性(2026-11-14 社長「ステータスがわからない」「くじで決まるって表現がやだ」)
+  const [detail, setDetail] = useState(false);
+  const fromMon = pick.box ? box.mons.find((m) => m.id === pick.box) || null : null;
+  const growType = fromMon && Number.isInteger(fromMon.gt) ? fromMon.gt : (typeof SUC.speciesType === 'function' ? SUC.speciesType(species) : null);
+  const growName = growType != null && typeof MASMON_CALC !== 'undefined' ? MASMON_CALC.typeOf(growType).name : '—';
+  const startSt = useMemo(() => (typeof SUC.initStats === 'function' ? SUC.initStats(species) : {}), [SUC, species]);
+  const preview = useMemo(() => msxStartPreview(SUC, species, growType, fromMon && fromMon.aptBase), [SUC, species, growType, fromMon]);
+  const peakText = preview.peak;
   const heat = MSX_STATS.map((k) => members.filter((m) => Array.isArray(m.top) && m.top.includes(k)).length);
   const scene = (style, inner) => (
     <div className="v-scene" style={{ flex: '1 1 0' }}>
@@ -157,11 +236,12 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf }) {
       </div>
       {scene({ mb: '12%', h: '62%' }, <div className="v-chips"><span className="v-chip ylw">{msxMonName(species)}</span>{picked ? <span className="v-chip">えらんだ回数 {picked}回</span> : null}</div>)}
       <div className="v-card sel">
-        <div className="h1">{msxMonName(species)}</div>
-        <div className="v-kv"><b>成長の型</b><span>はじめるとくじで決まる <span className="yel">(早熟〜晩成)</span></span></div>
-        <div className="sub" style={{ marginTop: 6, color: '#f9a8d4', fontWeight: 900 }}>伸びやすさ(素質)</div>
-        <div className="v-apt">{MSX_STATS.map((k, i) => <div key={k} className={apt[i] > 'B' ? 'lo' : ''}>{MSX_STAT_NAME[k]}<b>{apt[i]}</b></div>)}</div>
+        <div className="msx-dt-hd"><div className="h1">{msxMonName(species)}</div><button type="button" className="msx-dt-more" data-msx-detail-open onClick={() => setDetail(true)}>🔍 くわしく</button></div>
+        <div className="v-kv" data-msx-start-type><b>成長の型</b><span><span className="yel">{growName}</span>{peakText ? <span className="msx-dt-sm"> ピーク {peakText}</span> : null}</span></div>
+        <div className="sub" style={{ marginTop: 6, color: '#f9a8d4', fontWeight: 900 }}>はじめの能力<span className="msx-dt-sm">(小さい字は伸びやすさ)</span></div>
+        <div className="msx-st6" data-msx-start-stats>{MSX_STATS.map((k, i) => <div key={k}><span className="n">{MSX_STAT_NAME[k]}</span><b>{startSt[k]}</b><i className={apt[i] > 'B' ? 'lo' : ''}>伸び {apt[i]}</i></div>)}</div>
       </div>
+      {detail && <MsxMonDetail species={species} st={startSt} apt={apt} type={growType} grades={preview.grades} peak={peakText} onClose={() => setDetail(false)} SUC={SUC}/>}
     </>);
     go = 'このモンスターにする ▶';
   } else if (step === 1) {
@@ -255,7 +335,7 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf }) {
     const onCustom = (idx) => { const p = typeof _parseCustomColorId === 'function' ? _parseCustomColorId(colors[idx]) : null; const h = p ? (p.h + 40) % 360 : 200; if (typeof _encodeCustomColorId === 'function') onDye(idx, _encodeCustomColorId(h, 0.7, 0.85)); };
     body = (<>
       <div className="v-h">名前と染色<small>あとからいつでも変えられる</small></div>
-      {scene({ mb: '14%', h: '72%' }, <div className="v-chips"><span className="v-chip">成長の型: はじめるとくじで決まる</span></div>)}
+      {scene({ mb: '14%', h: '72%' }, <div className="v-chips"><span className="v-chip">成長の型: {growName}</span></div>)}
       <label className="v-inp" style={{ display: 'flex' }}>
         <input type="text" value={nick} maxLength={MSX_NAME_MAX} placeholder={msxMonName(species).slice(0, MSX_NAME_MAX)} onChange={(e) => { setNick(e.target.value.slice(0, MSX_NAME_MAX)); setNameErr(''); }}
           style={{ flex: 1, minWidth: 0, background: 'transparent', border: 0, outline: 'none', color: '#1e1b4b', font: 'inherit', fontSize: 16 }}/>

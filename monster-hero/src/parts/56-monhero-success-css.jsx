@@ -651,6 +651,32 @@ const MSX_CSS = `
 .msx-sheet{width:100%;max-height:100%;overflow-y:auto;background:linear-gradient(180deg,#241d4a,#16122e);border:1px solid #f472b6aa;border-radius:16px;padding:12px;box-shadow:0 10px 30px #000a}
 .msx-sheet h3{margin:0 0 6px;font-size:15px;font-weight:900;color:#f9a8d4}
 .msx-row{display:flex;align-items:center;gap:6px}
+/* 選ぶ画面: はじめの能力(数字を大きく・伸びやすさは小さく)と「くわしく」の窓(2026-11-14) */
+.msx-dt-hd{display:flex;align-items:center;gap:6px}.msx-dt-hd .h1{flex:1;min-width:0}
+.msx .msx-dt-more{flex:none;border-radius:999px;padding:3px 10px;font-size:11px;font-weight:900;background:#f472b6;color:#fff;box-shadow:0 2px 0 #9d174d}
+.msx-dt-sm{font-size:10px;font-weight:700;color:#cbd5e1}
+.msx-st6{display:grid;grid-template-columns:repeat(3,1fr);gap:3px;margin-top:4px;text-align:center}
+.msx-st6 div{background:#0f172a;border-radius:8px;padding:2px 0 3px;line-height:1.15;min-width:0}
+.msx-st6 .n{display:block;font-size:10px;color:#cbd5e1}
+.msx-st6 b{display:block;font-size:20px;color:#fff;letter-spacing:.5px}
+.msx-st6 i{display:block;font-style:normal;font-size:10px;color:#fde047}.msx-st6 i.lo{color:#94a3b8}
+.msx-dt{display:flex;flex-direction:column;max-height:100%;padding:10px}.msx-dt>*{flex:none}.msx-dt>.msx-dt-body{flex:1 1 auto}
+.msx-dt-top{display:flex;align-items:flex-end;gap:8px}
+.msx-dt-top img{flex:none;width:30%;max-width:min(120px,24cqh);aspect-ratio:1;object-fit:contain;filter:drop-shadow(0 4px 3px #0008)}
+.msx-dt-top .nm{flex:1;min-width:0;line-height:1.5}
+.msx-dt-tabs{margin-top:6px}
+.msx-dt-body{flex:1 1 auto;min-height:0;overflow-y:auto;margin-top:6px;padding-right:2px}
+.msx-dt-cap{font-size:11px;font-weight:900;color:#f9a8d4;margin:2px 0 4px}
+.msx-dt-bar{display:flex;align-items:center;gap:6px;margin:3px 0;font-size:11px}
+.msx-dt-bar .n{flex:none;width:4.5em}.msx-dt-bar b{flex:none;width:2.4em;text-align:right;font-size:15px}
+.msx-dt-bar .g{flex:1;min-width:0;height:8px;border-radius:4px;background:#0f172a;overflow:hidden}.msx-dt-bar .g i{display:block;height:100%;background:linear-gradient(90deg,#f472b6,#fde047)}
+.msx-dt-bar .a{flex:none;width:1.6em;text-align:center;font-weight:900;color:#fde047}.msx-dt-bar .a.lo{color:#94a3b8}
+.msx-dt-dist{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;text-align:center}
+.msx-dt-dist div{background:#0f172a;border-radius:8px;padding:4px 0}.msx-dt-dist span{display:block;font-size:11px;color:#cbd5e1}.msx-dt-dist b{display:block;font-size:18px;color:#fde047}
+.msx-dt-tech{display:flex;align-items:center;gap:6px;background:#0f172a;border-radius:8px;padding:4px 8px;margin:3px 0;font-size:11px}
+.msx-dt-tech .k{flex:none;font-size:10px;color:#7dd3fc}.msx-dt-tech b{flex:1;min-width:0;overflow-wrap:anywhere}.msx-dt-tech .d{flex:none;font-size:10px;color:#cbd5e1}
+.msx .msx-dt-close{display:block;width:100%;margin-top:8px;border-radius:12px;padding:10px;font-size:13px;font-weight:900;text-align:center;color:#fff;background:#1e1a36;border:1px solid #4a4380}
+.msx-dt-dex{font-size:12px;font-weight:500;line-height:1.7;background:#0f172a;border-radius:10px;padding:8px 10px}
 .msx-btn{display:block;width:100%;border-radius:12px;padding:10px;font-size:13px;font-weight:900;text-align:center;background:#2b3348;margin-top:6px}
 .msx-btn.go{background:linear-gradient(90deg,#f472b6,#fb923c);box-shadow:0 2px 0 #9d174d}
 .msx-btn.sub{background:#1e1a36;border:1px solid #4a4380}

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b1fc8146c515415f
+// source-sha256: a8aa94dcd7000f85
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -163650,6 +163650,32 @@ const MSX_CSS = `
 .msx-sheet{width:100%;max-height:100%;overflow-y:auto;background:linear-gradient(180deg,#241d4a,#16122e);border:1px solid #f472b6aa;border-radius:16px;padding:12px;box-shadow:0 10px 30px #000a}
 .msx-sheet h3{margin:0 0 6px;font-size:15px;font-weight:900;color:#f9a8d4}
 .msx-row{display:flex;align-items:center;gap:6px}
+/* 選ぶ画面: はじめの能力(数字を大きく・伸びやすさは小さく)と「くわしく」の窓(2026-11-14) */
+.msx-dt-hd{display:flex;align-items:center;gap:6px}.msx-dt-hd .h1{flex:1;min-width:0}
+.msx .msx-dt-more{flex:none;border-radius:999px;padding:3px 10px;font-size:11px;font-weight:900;background:#f472b6;color:#fff;box-shadow:0 2px 0 #9d174d}
+.msx-dt-sm{font-size:10px;font-weight:700;color:#cbd5e1}
+.msx-st6{display:grid;grid-template-columns:repeat(3,1fr);gap:3px;margin-top:4px;text-align:center}
+.msx-st6 div{background:#0f172a;border-radius:8px;padding:2px 0 3px;line-height:1.15;min-width:0}
+.msx-st6 .n{display:block;font-size:10px;color:#cbd5e1}
+.msx-st6 b{display:block;font-size:20px;color:#fff;letter-spacing:.5px}
+.msx-st6 i{display:block;font-style:normal;font-size:10px;color:#fde047}.msx-st6 i.lo{color:#94a3b8}
+.msx-dt{display:flex;flex-direction:column;max-height:100%;padding:10px}.msx-dt>*{flex:none}.msx-dt>.msx-dt-body{flex:1 1 auto}
+.msx-dt-top{display:flex;align-items:flex-end;gap:8px}
+.msx-dt-top img{flex:none;width:30%;max-width:min(120px,24cqh);aspect-ratio:1;object-fit:contain;filter:drop-shadow(0 4px 3px #0008)}
+.msx-dt-top .nm{flex:1;min-width:0;line-height:1.5}
+.msx-dt-tabs{margin-top:6px}
+.msx-dt-body{flex:1 1 auto;min-height:0;overflow-y:auto;margin-top:6px;padding-right:2px}
+.msx-dt-cap{font-size:11px;font-weight:900;color:#f9a8d4;margin:2px 0 4px}
+.msx-dt-bar{display:flex;align-items:center;gap:6px;margin:3px 0;font-size:11px}
+.msx-dt-bar .n{flex:none;width:4.5em}.msx-dt-bar b{flex:none;width:2.4em;text-align:right;font-size:15px}
+.msx-dt-bar .g{flex:1;min-width:0;height:8px;border-radius:4px;background:#0f172a;overflow:hidden}.msx-dt-bar .g i{display:block;height:100%;background:linear-gradient(90deg,#f472b6,#fde047)}
+.msx-dt-bar .a{flex:none;width:1.6em;text-align:center;font-weight:900;color:#fde047}.msx-dt-bar .a.lo{color:#94a3b8}
+.msx-dt-dist{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;text-align:center}
+.msx-dt-dist div{background:#0f172a;border-radius:8px;padding:4px 0}.msx-dt-dist span{display:block;font-size:11px;color:#cbd5e1}.msx-dt-dist b{display:block;font-size:18px;color:#fde047}
+.msx-dt-tech{display:flex;align-items:center;gap:6px;background:#0f172a;border-radius:8px;padding:4px 8px;margin:3px 0;font-size:11px}
+.msx-dt-tech .k{flex:none;font-size:10px;color:#7dd3fc}.msx-dt-tech b{flex:1;min-width:0;overflow-wrap:anywhere}.msx-dt-tech .d{flex:none;font-size:10px;color:#cbd5e1}
+.msx .msx-dt-close{display:block;width:100%;margin-top:8px;border-radius:12px;padding:10px;font-size:13px;font-weight:900;text-align:center;color:#fff;background:#1e1a36;border:1px solid #4a4380}
+.msx-dt-dex{font-size:12px;font-weight:500;line-height:1.7;background:#0f172a;border-radius:10px;padding:8px 10px}
 .msx-btn{display:block;width:100%;border-radius:12px;padding:10px;font-size:13px;font-weight:900;text-align:center;background:#2b3348;margin-top:6px}
 .msx-btn.go{background:linear-gradient(90deg,#f472b6,#fb923c);box-shadow:0 2px 0 #9d174d}
 .msx-btn.sub{background:#1e1a36;border:1px solid #4a4380}
@@ -164414,6 +164440,145 @@ function MsxHd({
     className: "rt"
   }, right));
 }
+const msxStartPreview = (SUC, species, type, aptBase) => {
+  const out = {
+    peak: '',
+    grades: null
+  };
+  try {
+    if (typeof SUC.newRun !== 'function') return out;
+    const s = SUC.newRun({
+      id: 'peek',
+      species,
+      ...(Number.isInteger(type) ? {
+        type
+      } : {}),
+      ...(Array.isArray(aptBase) ? {
+        aptBase
+      } : {})
+    });
+    const pk = typeof SUC.peakInfo === 'function' ? SUC.peakInfo(s) : null;
+    if (pk && Number.isInteger(pk.from) && typeof SUC.periodOf === 'function') {
+      const a = SUC.periodOf(pk.from).name;
+      const b = SUC.periodOf(pk.to).name;
+      out.peak = a === b ? a : `${a}〜${b}`;
+    }
+    if (typeof SUC.aptGradesOf === 'function') out.grades = SUC.aptGradesOf(s);
+  } catch (e) {}
+  return out;
+};
+const MSX_DIST_NAMES = ['零', '近', '中', '遠'];
+const msxLineName = id => id && typeof MONSTER_LINEAGES === 'object' && MONSTER_LINEAGES && MONSTER_LINEAGES[id] ? MONSTER_LINEAGES[id].name : '';
+function MsxMonDetail({
+  species,
+  st,
+  apt,
+  type,
+  grades,
+  peak,
+  onClose,
+  SUC
+}) {
+  const [tab, setTab] = useState('st');
+  const line = typeof MONSTER_LINEAGE_MAP === 'object' && MONSTER_LINEAGE_MAP ? MONSTER_LINEAGE_MAP[species] : null;
+  const main = line ? msxLineName(line.main) : '';
+  const sub = line ? msxLineName(line.sub || line.main) : '';
+  const dex = typeof MONSTER_DEX_DESCRIPTIONS === 'object' && MONSTER_DEX_DESCRIPTIONS && MONSTER_DEX_DESCRIPTIONS[species];
+  const typeName = type != null && typeof MASMON_CALC !== 'undefined' ? MASMON_CALC.typeOf(type).name : '—';
+  const techs = typeof SUC.techsOf === 'function' ? SUC.techsOf(species) : [];
+  const startT = techs.filter(t => t && t.learn && t.learn.start);
+  const laterT = techs.filter(t => t && !(t.learn && t.learn.start));
+  const techRow = t => React.createElement("div", {
+    key: t.id,
+    className: "msx-dt-tech"
+  }, React.createElement("span", {
+    className: "k"
+  }, t.kind === 'wise' ? 'かしこさ' : 'ちから'), React.createElement("b", null, t.name), React.createElement("span", {
+    className: "d"
+  }, (Array.isArray(t.dist) ? t.dist : []).map(d => MSX_DIST_NAMES[d]).filter(Boolean).join('・')));
+  const TABS = [['st', '能力'], ['apt', '適性'], ['tech', '技'], ['dex', '図鑑']];
+  return React.createElement("div", {
+    className: "msx-ov msx-fade",
+    "data-msx-detail": true,
+    onClick: onClose
+  }, React.createElement("div", {
+    className: "msx-sheet msx-dt",
+    onClick: e => e.stopPropagation()
+  }, React.createElement("div", {
+    className: "msx-dt-top"
+  }, React.createElement("img", {
+    src: msxMonImg(species),
+    alt: ""
+  }), React.createElement("div", {
+    className: "nm"
+  }, React.createElement("h3", null, msxMonName(species)), main ? React.createElement("div", {
+    className: "msx-dt-sm"
+  }, "血統 ", main, sub && sub !== main ? ` × ${sub}` : '(純血)') : null, React.createElement("div", {
+    className: "msx-dt-sm"
+  }, "成長の型 ", React.createElement("b", {
+    className: "yel"
+  }, typeName), peak ? ` ・ピーク ${peak}` : ''))), React.createElement("div", {
+    className: "v-tabs msx-dt-tabs"
+  }, TABS.map(([k, n]) => React.createElement("button", {
+    type: "button",
+    key: k,
+    className: tab === k ? 'on' : '',
+    "data-msx-detail-tab": k,
+    onClick: () => setTab(k)
+  }, n))), React.createElement("div", {
+    className: "msx-dt-body"
+  }, tab === 'st' ? React.createElement(React.Fragment, null, React.createElement("div", {
+    className: "msx-dt-cap"
+  }, "はじめの能力と伸びやすさ"), MSX_STATS.map((k, i) => React.createElement("div", {
+    key: k,
+    className: "msx-dt-bar"
+  }, React.createElement("span", {
+    className: "n"
+  }, MSX_STAT_NAME[k]), React.createElement("b", null, st[k]), React.createElement("span", {
+    className: "g"
+  }, React.createElement("i", {
+    style: {
+      width: `${Math.max(2, Math.min(100, (Number(st[k]) || 0) / 3))}%`
+    }
+  })), React.createElement("span", {
+    className: `a${apt[i] > 'B' ? ' lo' : ''}`
+  }, apt[i]))), React.createElement("div", {
+    className: "msx-note"
+  }, "伸びやすさは A がいちばん伸びやすい(A〜E)。編成のモンスターから、はじめの能力に上乗せがある")) : null, tab === 'apt' ? React.createElement(React.Fragment, null, React.createElement("div", {
+    className: "msx-dt-cap"
+  }, "間合い適性"), React.createElement("div", {
+    className: "msx-dt-dist"
+  }, MSX_DIST_NAMES.map((d, i) => React.createElement("div", {
+    key: d
+  }, React.createElement("span", null, d), React.createElement("b", null, grades ? grades[i] : '—')))), React.createElement("div", {
+    className: "msx-note"
+  }, "適性が高い間合いほど、その間合いの技がよく当たる。育成の修行や大会で上がることがある"), React.createElement("div", {
+    className: "msx-dt-cap",
+    style: {
+      marginTop: 8
+    }
+  }, "成長の型"), React.createElement("div", {
+    className: "msx-note"
+  }, typeName, peak ? `。いちばん伸びるのは ${peak}` : '')) : null, tab === 'tech' ? React.createElement(React.Fragment, null, React.createElement("div", {
+    className: "msx-dt-cap"
+  }, "はじめから使える技"), startT.length ? startT.map(techRow) : React.createElement("div", {
+    className: "msx-note"
+  }, "なし"), React.createElement("div", {
+    className: "msx-dt-cap",
+    style: {
+      marginTop: 8
+    }
+  }, "修行で覚えられる技"), laterT.length ? laterT.map(techRow) : React.createElement("div", {
+    className: "msx-note"
+  }, "なし")) : null, tab === 'dex' ? React.createElement("div", {
+    className: "msx-dt-dex"
+  }, dex || 'このモンスターの図鑑は調査中') : null), React.createElement("button", {
+    type: "button",
+    className: "msx-dt-close",
+    "data-msx-detail-close": true,
+    onClick: onClose
+  }, "とじる")));
+}
 function MsxStart({
   data,
   SUC,
@@ -164526,6 +164691,13 @@ function MsxStart({
     });
   };
   const apt = msxAptOf(species);
+  const [detail, setDetail] = useState(false);
+  const fromMon = pick.box ? box.mons.find(m => m.id === pick.box) || null : null;
+  const growType = fromMon && Number.isInteger(fromMon.gt) ? fromMon.gt : typeof SUC.speciesType === 'function' ? SUC.speciesType(species) : null;
+  const growName = growType != null && typeof MASMON_CALC !== 'undefined' ? MASMON_CALC.typeOf(growType).name : '—';
+  const startSt = useMemo(() => typeof SUC.initStats === 'function' ? SUC.initStats(species) : {}, [SUC, species]);
+  const preview = useMemo(() => msxStartPreview(SUC, species, growType, fromMon && fromMon.aptBase), [SUC, species, growType, fromMon]);
+  const peakText = preview.peak;
   const heat = MSX_STATS.map(k => members.filter(m => Array.isArray(m.top) && m.top.includes(k)).length);
   const scene = (style, inner) => React.createElement("div", {
     className: "v-scene",
@@ -164631,24 +164803,49 @@ function MsxStart({
     }, "えらんだ回数 ", picked, "回") : null)), React.createElement("div", {
       className: "v-card sel"
     }, React.createElement("div", {
+      className: "msx-dt-hd"
+    }, React.createElement("div", {
       className: "h1"
-    }, msxMonName(species)), React.createElement("div", {
-      className: "v-kv"
-    }, React.createElement("b", null, "成長の型"), React.createElement("span", null, "はじめるとくじで決まる ", React.createElement("span", {
+    }, msxMonName(species)), React.createElement("button", {
+      type: "button",
+      className: "msx-dt-more",
+      "data-msx-detail-open": true,
+      onClick: () => setDetail(true)
+    }, "🔍 くわしく")), React.createElement("div", {
+      className: "v-kv",
+      "data-msx-start-type": true
+    }, React.createElement("b", null, "成長の型"), React.createElement("span", null, React.createElement("span", {
       className: "yel"
-    }, "(早熟〜晩成)"))), React.createElement("div", {
+    }, growName), peakText ? React.createElement("span", {
+      className: "msx-dt-sm"
+    }, " ピーク ", peakText) : null)), React.createElement("div", {
       className: "sub",
       style: {
         marginTop: 6,
         color: '#f9a8d4',
         fontWeight: 900
       }
-    }, "伸びやすさ(素質)"), React.createElement("div", {
-      className: "v-apt"
+    }, "はじめの能力", React.createElement("span", {
+      className: "msx-dt-sm"
+    }, "(小さい字は伸びやすさ)")), React.createElement("div", {
+      className: "msx-st6",
+      "data-msx-start-stats": true
     }, MSX_STATS.map((k, i) => React.createElement("div", {
-      key: k,
+      key: k
+    }, React.createElement("span", {
+      className: "n"
+    }, MSX_STAT_NAME[k]), React.createElement("b", null, startSt[k]), React.createElement("i", {
       className: apt[i] > 'B' ? 'lo' : ''
-    }, MSX_STAT_NAME[k], React.createElement("b", null, apt[i]))))));
+    }, "伸び ", apt[i]))))), detail && React.createElement(MsxMonDetail, {
+      species: species,
+      st: startSt,
+      apt: apt,
+      type: growType,
+      grades: preview.grades,
+      peak: peakText,
+      onClose: () => setDetail(false),
+      SUC: SUC
+    }));
     go = 'このモンスターにする ▶';
   } else if (step === 1) {
     const toggleBox = id => setTeamBox(cur => cur.includes(id) ? cur.filter(x => x !== id) : cur.length >= 5 ? cur : [...cur, id]);
@@ -164973,7 +165170,7 @@ function MsxStart({
       className: "v-chips"
     }, React.createElement("span", {
       className: "v-chip"
-    }, "成長の型: はじめるとくじで決まる"))), React.createElement("label", {
+    }, "成長の型: ", growName))), React.createElement("label", {
       className: "v-inp",
       style: {
         display: 'flex'
@@ -165712,6 +165909,9 @@ function MonheroSuccessScreen({
       bag,
       ...(fromMon && Array.isArray(fromMon.aptBase) ? {
         aptBase: fromMon.aptBase
+      } : {}),
+      ...(fromMon && Number.isInteger(fromMon.gt) ? {
+        type: fromMon.gt
       } : {}),
       wonBefore: Array.isArray(data.meta.wonCups) ? data.meta.wonCups : []
     });
