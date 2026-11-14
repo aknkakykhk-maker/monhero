@@ -24,7 +24,9 @@ const REQUIRED = ['main', 'training', 'rest', 'play', 'hospital', 'menu', 'cupPr
   'cupEntry', 'cupMatch', 'cupWin', 'cupLose', 'issa', 'gameOver', 'retire',
   // 2026-11-14 演出の音(トレーニングの場面・修行の段・覚醒の入り・期の区切り)
   'trainAct', 'actStep', 'actLeap', 'actHit', 'actDodge', 'actThrow', 'actDrop', 'actGuard', 'actBlock', 'actIdea', 'actFlash',
-  'qStage', 'qCharge', 'qStrike', 'qLeap', 'qSlam', 'qShine', 'qLearn', 'qMiss', 'awakeShow', 'awQi', 'awFlash', 'awKira', 'kiShow', 'kiNext'];
+  'qStage', 'qCharge', 'qStrike', 'qLeap', 'qSlam', 'qShine', 'qLearn', 'qMiss', 'awakeShow', 'awQi', 'awFlash', 'awKira', 'kiShow', 'kiNext',
+  // 2026-11-14 博士の大きな賭けの演出(窓口経由の社長の依頼「大成功の専用の効果音と演出」)
+  'issaIn', 'issaDrum', 'issaZap', 'issaPuff', 'issaWin', 'issaWin2', 'issaLose'];
 const trackIds = new Set([...bgmSrc.matchAll(/\{\s*id:'([a-z0-9_]+)'/g)].map((m) => m[1]));
 const fgStart = audioSrc.indexOf('const fgSe = {');
 const fgEnd = audioSrc.indexOf('const se = Object.fromEntries', fgStart);
