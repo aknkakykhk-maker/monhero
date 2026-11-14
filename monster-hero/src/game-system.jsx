@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: d469c534ab03a1e3
+// generated-sha256: e4a9ef8e55fa5c1c
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -10121,7 +10121,9 @@ const changelogEventLive = (entry, nowMs = Date.now()) => {
   // (2026-11-09 社長「(本オープン記念のお知らせを)上部に固定も」。周回5倍の期間が終わったら外れる)
   if (entry && entry.pinTop && typeof entry.pinTop === 'object' && entry.type !== 'event') {
     const pinFrom = Date.parse(entry.visibleFrom || '');
-    const pinEnd = Date.parse(entry.pinTop.until || '');
+    // until の代わりに days を書くと、項目の日時(date・JST)からその日数だけ固定する(2026-11-14 モンヒロサクセス β公開の帯「公開から2週間」。公開の日に date を直せば期限もついて動く)
+    const dayMs = Number(entry.pinTop.days) > 0 && /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/.test(String(entry.date || '')) ? Date.parse(`${String(entry.date).replace(' ', 'T')}:00+09:00`) + Number(entry.pinTop.days) * 86400e3 : NaN;
+    const pinEnd = entry.pinTop.until ? Date.parse(entry.pinTop.until) : dayMs;
     return Number.isFinite(pinEnd) && nowMs < pinEnd && (!Number.isFinite(pinFrom) || nowMs >= pinFrom);
   }
   const notice = entry && entry.type === 'event' ? entry.assistantNotice : null;
@@ -85812,8 +85814,10 @@ const MSX_HOME_CSS = `
 .mh-home-success .ln{display:none;flex-basis:100%;font-size:10px;font-weight:800;color:#fbcfe8;line-height:1.3;white-space:normal;text-align:left}
 @container (min-height:640px) and (max-aspect-ratio:1/1){.mh-home-success .ln{display:block}.mh-home-success{margin-bottom:-28px}}
 .mh-home-success .rb{position:absolute;right:-6px;top:-9px;z-index:1;font-style:normal;font-size:10px;font-weight:900;color:#422006;background:linear-gradient(90deg,#fde047,#fbbf24);border-radius:6px;padding:1px 7px;box-shadow:0 2px 4px #0008;transform:rotate(4deg);white-space:nowrap}
-@media (orientation:landscape){.mh-home-success,.mh-home-scene:has(.mh-home-card-battle.raised) .mh-home-success,.mh-home-scene:has(.mh-home-card-battle.below-tour) .mh-home-success{left:146px;bottom:12px}
-.mh-home-scene:has(.mh-home-facility.life) .mh-home-success{bottom:32px}}
+/* 横持ちは、下の真ん中の「モンヒロバトル」のすぐ上(村の絵の真ん中の空き)に置く。前は MFバトルカードの右に置いていて、横 568×320 ではモンヒロバトルのボタンにかかっていた(2026-11-14) */
+@media (orientation:landscape){.mh-home-success,.mh-home-scene:has(.mh-home-card-battle.raised) .mh-home-success,.mh-home-scene:has(.mh-home-card-battle.below-tour) .mh-home-success,.mh-home-scene:has(.mh-home-facility.life) .mh-home-success{left:50%;bottom:66px;translate:-50% 0}}
+/* 背の低い横画面(568×320 など)は、右の「助手ライフ」にかからないよう少し左へ寄せる */
+@media (orientation:landscape) and (max-height:340px){.mh-home-scene.mh-home-scene.mh-home-scene .mh-home-success{left:calc(50% - 34px)}}
 `;
 function MonheroSuccessHomeEntry({ callNameOf, bondLvOf, onOpenChange }) {
   const [open, setOpen] = useState(false);

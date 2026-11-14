@@ -69,6 +69,12 @@ check('イベントは pinUntil を過ぎたら固定から外れる(今まで�
 // 読めない日時なら固定しない
 check('pinTop の until が読めないときは固定しない', changelogEventLive({ type: 'update', visibleFrom: '2026-11-01T00:00:00+09:00', pinTop: { until: 'いつか' } }, at('2026-11-05T00:00:00+09:00')) === false);
 check('pinTop の until が無いときも固定しない', changelogEventLive({ type: 'update', pinTop: {} }, at('2026-11-05T00:00:00+09:00')) === false);
+// days: 項目の日時(JST)から◯日だけ固定(2026-11-14 モンヒロサクセス β公開の帯「公開から2週間」)
+check('pinTop の days は項目の日時から数えて、その日数のあいだ固定する', changelogEventLive({ type: 'content', date: '2026-11-20 12:00', pinTop: { days: 14 } }, at('2026-12-04T11:59:00+09:00')) === true
+  && changelogEventLive({ type: 'content', date: '2026-11-20 12:00', pinTop: { days: 14 } }, at('2026-12-04T12:00:00+09:00')) === false);
+check('pinTop の days は日時が読めないときは固定しない', changelogEventLive({ type: 'content', date: 'いつか', pinTop: { days: 14 } }, at('2026-11-21T00:00:00+09:00')) === false);
+{ const beta = CHANGELOG.find((e) => e && e.assistantNotice && e.assistantNotice.id === 'update_notice_monsaku_v1');
+  check('モンヒロサクセス β公開の項目は、公開から2週間 上に固定する帯を持つ', !!beta && beta.pinTop && beta.pinTop.days === 14 && beta.pinEmoji === '🌱' && beta.pinTitle === '新しい遊び「モンヒロサクセス」β版がはじまりました!' && beta.releaseFlag === 'monheroSuccess'); }
 
 console.log(failed ? `${failed}件のNGがあります` : 'すべてOK');
 process.exit(failed ? 1 : 0);

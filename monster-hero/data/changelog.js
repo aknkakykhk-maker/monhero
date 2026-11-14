@@ -397,6 +397,8 @@ const CHANGELOG = [
     // モンヒロサクセスの公開(下書き docs/progress/player-raise/RELEASE-DRAFT.md §1)。印 monheroSuccess が真になるまで出ない。日時は公開の PR で実時刻に直す
     date: "2026-11-12 21:00", type:'content', group:'success', status:'new', releaseFlag:'monheroSuccess',
     title:'モンヒロサクセス(β版)が始まりました',
+    // 一覧の上に固定する帯(2026-11-14 ココロ・窓口経由)。固定は公開から2週間(date から数える。公開の PR で date を実時刻に直せば期限も動く)
+    pinTop:{ days:14 }, pinEmoji:'🌱', pinTitle:'新しい遊び「モンヒロサクセス」β版がはじまりました!',
     image: 'images/events/monsaku-open.jpg?v=4e899510ba1c',
     assistantNotice:{ id:'update_notice_monsaku_v1', type:'content' },
     items:[

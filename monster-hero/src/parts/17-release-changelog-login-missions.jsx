@@ -399,7 +399,9 @@ const changelogEventLive = (entry, nowMs = Date.now()) => {
   // (2026-11-09 社長「(本オープン記念のお知らせを)上部に固定も」。周回5倍の期間が終わったら外れる)
   if (entry && entry.pinTop && typeof entry.pinTop === 'object' && entry.type !== 'event') {
     const pinFrom = Date.parse(entry.visibleFrom || '');
-    const pinEnd = Date.parse(entry.pinTop.until || '');
+    // until の代わりに days を書くと、項目の日時(date・JST)からその日数だけ固定する(2026-11-14 モンヒロサクセス β公開の帯「公開から2週間」。公開の日に date を直せば期限もついて動く)
+    const dayMs = Number(entry.pinTop.days) > 0 && /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/.test(String(entry.date || '')) ? Date.parse(`${String(entry.date).replace(' ', 'T')}:00+09:00`) + Number(entry.pinTop.days) * 86400e3 : NaN;
+    const pinEnd = entry.pinTop.until ? Date.parse(entry.pinTop.until) : dayMs;
     return Number.isFinite(pinEnd) && nowMs < pinEnd && (!Number.isFinite(pinFrom) || nowMs >= pinFrom);
   }
   const notice = entry && entry.type === 'event' ? entry.assistantNotice : null;
