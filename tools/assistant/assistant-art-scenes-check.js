@@ -303,7 +303,7 @@ const notes = [];
           await dismiss();
           await page.locator('[data-card-result-talk]').scrollIntoViewIfNeeded().catch(() => {});
           await take('cardresult', id, { filter: r => r.kind === 'full' });
-          await page.getByRole('button', { name: /トップへ|相手をえらぶ/ }).first().click({ timeout: 2500 }).catch(() => {});
+          await page.getByRole('button', { name: /トップへ|相手を選ぶ/ }).first().click({ timeout: 2500 }).catch(() => {});
         });
       }
     } catch (e) { notes.push(`${v.name}: 途中で止まった(${String(e.message).split('\n')[0].slice(0, 160)})`); }

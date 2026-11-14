@@ -80,7 +80,7 @@ function message(n, limit, opts) {
     const band = (t) => (t >= first ? Math.floor((t - first) / step) + 1 : 0);
     const t = Number(n.tokens) || 0;
     if (!band(t) || band(t) <= band(Number(n.prevTokens) || 0)) return '';
-    return `【窓口・会話が長くなってきた】この会話の文脈は 約${Math.round(t / 10000)}万トークン(目安 ${Math.round(first / 10000)}万)。窓口は会話を替えない。いまの仕事の区切りで、AskUserQuestion で「この会話を要約(/compact)してよいか」を社長に選んでもらう(許可されたら、残すもの・捨てるものを入れた /compact の1行をコピーできる形で出す)。文末で頼まない・「替える」を勧めない。いっぱいになったら自動の要約(${Number(limit['窓口の自動の要約']) || 700000})が走る。`;
+    return `${todoNote()}【窓口・会話が長くなってきた】この会話の文脈は 約${Math.round(t / 10000)}万トークン(目安 ${Math.round(first / 10000)}万)。窓口は会話を替えない。いまの仕事の区切りで、AskUserQuestion で「この会話を要約(/compact)してよいか」を社長に選んでもらう(許可されたら、残すもの・捨てるものを入れた /compact の1行をコピーできる形で出す)。文末で頼まない・「替える」を勧めない。いっぱいになったら自動の要約(${Number(limit['窓口の自動の要約']) || 700000})が走る。`;
   }
   // 部署: 要約(/compact)は頼まない。要約は窓口の会話だけ(台帳 2026-11-11「各部署は長くなったら引き継ぎメモで会話を替える」・
   //   2026-11-12 社長「ここ以外は要約しないんじゃないの？」)。目安を超えたら、区切りで引き継ぎメモ → 窓口が新しい会話を作る
@@ -90,6 +90,12 @@ function message(n, limit, opts) {
   if (!over.length) return '';
   if (!every && n.prompts !== limit['やりとり']) return '';
   return `【会話がとても長い】この会話は ${after}${over.join('・')}。いまの仕事の区切りがついたら、node tools/ctx.js handoff <自分の部> --write で引き継ぎメモを作り、窓口へ「会話を替えてほしい」と知らせる(docs/rules/SESSION_HANDOFF.md)。要約(/compact)は頼まない(要約は窓口の会話だけ)。作業の途中では替えない。やりかけの仕事は先に終わらせる。`;
+}
+
+// 社長の頼みで完了でない物の数(追跡表)。要約で小さな頼みが落ちないように、窓口の「長くなってきた」の知らせの頭に付ける
+//   (2026-11-14 社長「お願いしたのに漏れてるの多い」)
+function todoNote() {
+  try { const t = require('../team/requests').summary(); return t ? `【${t}。要約の前に node tools/ctx.js todo で確かめ、/compact の「残すもの」に「追跡表を見る」と入れる】\n` : ''; } catch (e) { return ''; }
 }
 
 // 窓口の自動の要約の設定を見張る(2026-11-12・決めごとの錠)。台帳 2026-11-11「窓口の autoCompactWindow は 700000」は
@@ -123,4 +129,4 @@ function main() {
 }
 
 if (require.main === module) { try { main(); } catch (e) { /* 知らせるだけの道具。失敗しても止めない */ } process.exit(0); }
-module.exports = { count, message, isHq, autoCompactNotice, readAutoCompact };
+module.exports = { count, message, isHq, autoCompactNotice, readAutoCompact, todoNote };

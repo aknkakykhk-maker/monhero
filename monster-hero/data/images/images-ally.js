@@ -23,6 +23,7 @@ const TIGER_ROLLBACK_ICON = "images/monster-icons/tiger.png?v=4519062c1312";
 const TIGER_IMG = "images/monsters/tiger.PNG?v=774d21917ef1";
 const TIGER_DYE_MASK = "images/monsters/tiger-dye-mask.PNG?v=ac56746b5791";
 const PIXIE_IMG = "images/monsters/pixie.png?v=ecd7433b3190";
+const PIXIE_DYE_MASK = "images/monsters/pixie-dye-mask.PNG?v=d96c4ae56d1c";
 const MIA_IMG = "images/monsters/mia.PNG?v=a2b1a26f451c";
 // ミーアの待機アニメ(翼の羽ばたき)用の切り抜きマスク。本体画像と同じ比率(2:3)で、白い所が見える所。
 // 左翼・右翼は境目の継ぎ目が出ないよう少し太らせてあり、本体側は翼を除いた残り
@@ -802,6 +803,7 @@ const ART_CONTENT_BOXES = {
   "monsters/pandora-shadow.png": [0.025, 0.005, 0.949, 0.961, 0.667],
   "monsters/pandora.PNG": [0.025, 0.006, 0.948, 0.961, 0.667],
   "monsters/phoenix.png": [0, 0, 1, 1, 0.969],
+  "monsters/pixie-dye-mask.PNG": [0.272, 0.136, 0.751, 0.948, 1],
   "monsters/pixie.png": [0.27, 0.136, 0.754, 0.948, 1],
   "monsters/plant-dye-mask.PNG": [0.05, 0.139, 0.95, 0.817, 1],
   "monsters/plant.PNG": [0.05, 0.139, 0.95, 0.861, 1],
@@ -1129,6 +1131,7 @@ const ART_BODY_CENTERS = {
   "monsters/pandora-shadow.png": [0.506, 0.34, 0.101, 0.059, 0.937, 0.666],
   "monsters/pandora.PNG": [0.506, 0.34, 0.101, 0.059, 0.937, 0.666],
   "monsters/phoenix.png": [0.494, 0.475, 0.029, 0.111, 0.924, 0.864],
+  "monsters/pixie-dye-mask.PNG": [0.498, 0.444, 0.297, 0.13, 0.691, 0.949],
   "monsters/pixie.png": [0.497, 0.393, 0.304, 0.137, 0.683, 0.625],
   "monsters/plant-dye-mask.PNG": [0.498, 0.523, 0.078, 0.149, 0.922, 0.818],
   "monsters/plant.PNG": [0.5, 0.59, 0.096, 0.155, 0.908, 0.82],

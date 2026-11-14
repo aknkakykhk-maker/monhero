@@ -2,6 +2,52 @@
 // 見本 docs/progress/player-raise/mock/v3.css の「回3以降の止め絵」の部品を、回3の画面(.msx .r3)の中だけに効くよう切り出したもの。
 // 回2の MSX_CSS(56-monhero-success-css.jsx)はそのまま使い、ここは足りない部品と回3で要った分だけを足す。
 const MSX_R3_CSS = `
+.msx .r3 .q-say{display:flex;gap:8px;align-items:center;margin-top:5px}
+.msx .r3 .q-say img{width:44px;height:44px;border-radius:50%;border:2px solid #fff;background:#fff;object-fit:cover;flex:0 0 auto}
+.msx .r3 .q-say p{flex:1;background:#fffdf5;color:#1e1b4b;border-radius:12px;padding:6px 10px;font-size:12px;font-weight:800;line-height:1.45}
+.msx .r3 .q-sec{margin-top:6px;padding:6px 8px 7px;border-radius:14px;background:#ffffff0d;border:1px solid #ffffff1f}
+.msx .r3 .q-sec h3{font-size:12px;font-weight:900;color:#f9a8d4;margin:0 0 5px;display:flex;align-items:center;gap:6px}
+.msx .r3 .q-sec h3 i{font-style:normal;display:inline-flex;width:18px;height:18px;border-radius:50%;background:#f472b6;color:#fff;font-size:11px;align-items:center;justify-content:center}
+.msx .r3 .q-sec h3 .tk{margin-left:auto;font-size:10.5px;color:#fed7aa;font-weight:800}
+.msx .r3 .q-dest{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}
+.msx .r3 .q-dest .r3-chip{justify-content:center;text-align:center}
+.msx .r3 .q-sec .v-stg{margin-top:5px}
+.msx .r3 .q-note{font-size:10.5px;color:#cbd5e1;font-weight:700;line-height:1.45;margin-top:4px}
+.msx .r3 .q-note.y{color:#fde047}
+.msx .r3 .q-slots{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.msx .r3 .q-slot{min-height:56px;border-radius:12px;padding:5px 8px;border:2px dashed #ffffff40;font-size:11px;font-weight:800;color:#cbd5e1;display:flex;flex-direction:column;justify-content:center;gap:1px;cursor:pointer}
+.msx .r3 .q-slot.on{border:2px solid #fde047;background:#fde04718;color:#fff}
+.msx .r3 .q-slot small{font-size:9.5px;color:#cbd5e1}
+.msx .r3 .q-slot .n{font-size:14px;font-weight:900;line-height:1.2}
+.msx .r3 .q-slot .r{font-size:18px;font-weight:900;color:#fde047;line-height:1.1}
+.msx .r3 .q-slot ul{list-style:none;margin:2px 0 0;padding:0;font-size:9.5px;color:#e2e8f0}
+.msx .r3 .q-slot li{display:flex;gap:4px;align-items:center}
+.msx .r3 .q-slot li i{font-style:normal;color:#94a3b8;flex:0 0 auto}
+.msx .r3 .q-slot li em{font-style:normal;margin-left:auto;background:#16a34a;color:#fff;border-radius:4px;padding:0 4px;font-size:9px}
+.msx .r3 .q-list{flex:1 1 auto;min-height:0;overflow-y:auto}
+.msx .r3 .q-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px}
+.msx .r3 .q-col{display:flex;flex-direction:column;gap:5px;min-width:0}
+.msx .r3 .q-col h4{text-align:center;font-size:12px;font-weight:900;padding:2px 0;margin:0;border-radius:8px;background:#ffffff1a}
+.msx .r3 .q-card{border-radius:10px;padding:5px 3px;text-align:center;font-size:10.5px;font-weight:800;line-height:1.25;background:#ffffff10;border:1px solid #ffffff22;color:#fff;min-height:52px;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:1px;min-width:0}
+.msx .r3 .q-card .nm{font-size:10px;letter-spacing:-.02em}
+.msx .r3 .q-card .rk{font-size:9px;color:#cbd5e1}
+.msx .r3 .q-card .p{font-size:15px;font-weight:900;color:#86efac}
+.msx .r3 .q-card .p.g{font-size:10.5px;color:#cbd5e1}
+.msx .r3 .q-card.ok{background:#16a34a2e;border-color:#4ade80}
+.msx .r3 .q-card.sel{background:#fde04722;border:2px solid #fde047}.msx .r3 .q-card.sel .p{color:#fde047}
+.msx .r3 .q-card.got{opacity:.55}
+.msx .r3 .q-card.lock{background:#0f0b2299;border-color:#ffffff1a;color:#94a3b8}
+.msx .r3 .q-card .lk{font-size:9px;color:#fca5a5;line-height:1.2;overflow-wrap:anywhere}
+.msx .q-lock{display:flex;flex-direction:column;gap:5px;font-size:12px;font-weight:800}
+.msx .q-lock>div{display:flex;gap:6px;align-items:center;background:#fee2e2;border-radius:8px;padding:5px 7px}
+.msx .q-lock>div.ok{background:#dcfce7}
+.msx .q-lock>div i{font-style:normal;color:#64748b;font-size:10.5px;flex:0 0 auto}
+.msx .q-lock>div span{flex:1}
+.msx .q-lock>div b{font-size:10.5px;color:#b91c1c}.msx .q-lock>div.ok b{color:#15803d}
+.msx .q-lock p{font-size:11px;color:#475569;margin:2px 0}
+.msx .r3 .v-cups.one{flex:0 0 auto!important;overflow:visible}
+.msx.land .r3 .q-list{grid-column:1;grid-row:1/-1;margin-top:5px}
+.msx.land .v-body>.msx-cupin{grid-column:1/-1;grid-row:1/-1}
 .msx .r3 .v-brh{display:grid;grid-template-columns:1.5fr 1fr 1fr .8fr;gap:5px;margin-top:6px;font-size:9.5px;font-weight:900;color:#cbd5e1;text-align:center}
 .msx .r3 .v-brk{display:grid;grid-template-columns:1.5fr 1fr 1fr .8fr;grid-template-rows:repeat(8,minmax(0,1fr));gap:4px 5px;flex:1 1 0;min-height:0;margin-top:3px}
 .msx .r3 .v-bc{position:relative;display:flex;align-items:center;gap:5px;background:#1e1a36;border:1.5px solid #475569;border-radius:11px;padding:2px 6px;min-width:0}
@@ -167,6 +213,33 @@ const MSX_R3_CSS = `
 /* ごはん9種(2026-11-13 社長)。3列×3段に収める */
 .msx .r3 .v-meal .ms{gap:4px}.msx .r3 .v-ml{padding:4px 2px}.msx .r3 .v-ml .e{font-size:20px}.msx .r3 .v-ml b{font-size:10.5px;overflow:hidden;text-overflow:clip}.msx .r3 .v-ml .g{font-size:10.5px}.msx .r3 .v-ml small{font-size:10px;line-height:1.25}
 .msx .r3 .v-ml.sel{border-color:#fde047;background:#3b2f0b;box-shadow:0 0 10px #fde04788}
+/* 最終の評価(育成グレード)。参考 v4 180〜186秒: モンスターを場面いっぱい・大きな印・総合力を真ん中・次のグレードまでの棒 */
+.msx .r3-grade{min-height:300px}
+.msx .r3-gaura{position:absolute;left:50%;top:14%;width:90%;height:62%;transform:translateX(-50%);border-radius:50%;background:radial-gradient(ellipse at 50% 50%,rgba(253,224,71,.45),rgba(244,114,182,.22) 45%,transparent 70%);animation:msxR3GAura 1.4s ease-in-out infinite alternate;pointer-events:none}
+.msx .r3-grade .r3-gttl{position:absolute;left:0;right:0;top:3%;z-index:4;text-align:center;font-size:30px;font-weight:900;letter-spacing:.08em;color:#fde047;-webkit-text-stroke:2px #7c2d12;paint-order:stroke fill;text-shadow:0 3px 0 #7c2d12,0 0 16px #fb923c88}
+.msx .r3-medal{position:absolute;left:50%;top:40%;z-index:4;width:150px;height:150px;margin-left:-75px;margin-top:-75px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#f0abfc,#a21caf 62%,#701a75);border:5px solid #fde68a;box-shadow:0 0 0 3px #7c2d12,0 0 30px #f472b6,0 8px 0 #3b0764;display:flex;align-items:center;justify-content:center}
+.msx .r3-medal b{font-size:84px;font-weight:900;line-height:1;color:#fff;-webkit-text-stroke:2px #581c87;paint-order:stroke fill;text-shadow:0 4px 0 #3b0764;margin-top:-14px}
+.msx .r3-medal b sup{font-size:38%;vertical-align:top;position:relative;top:-4px;margin-left:1px}
+.msx .r3-medal span{position:absolute;left:-26px;right:-26px;bottom:6px;text-align:center;font-size:20px;font-weight:900;letter-spacing:.08em;color:#fff;background:linear-gradient(180deg,#e11d48,#9f1239);border:2px solid #fde68a;border-radius:6px;padding:1px 0;box-shadow:0 3px 0 #4c0519}
+.msx .r3-gcard{position:absolute;left:10px;right:10px;bottom:10px;z-index:4;background:#0f0d24e6;border:1.5px solid #fde047;border-radius:14px;padding:6px 12px 8px}
+.msx .r3-gcard .v-num>b{font-size:32px}
+.msx .r3-gbar{display:flex;align-items:center;gap:8px;margin-top:4px}
+.msx .r3-gbar .g{flex:none;width:52px;text-align:center;line-height:1.1}
+.msx .r3-gbar .g b{display:block;font-size:15px;font-weight:900;color:#f0abfc}.msx .r3-gbar .g.nx b{color:#fda4af}
+.msx .r3-gbar .g small{display:block;font-size:10px;color:#cbd5e1;font-variant-numeric:tabular-nums}
+.msx .r3-gbar u{flex:1;height:10px;border-radius:6px;background:#334155;overflow:hidden;text-decoration:none}
+.msx .r3-gbar u i{display:block;height:100%;background:linear-gradient(90deg,#f59e0b,#fde047);box-shadow:0 0 8px #fde047}
+.msx .r3-gnx{text-align:center;font-size:11px;font-weight:800;color:#e2e8f0;margin-top:3px}.msx .r3-gnx b{color:#fde047}
+@keyframes msxR3GAura{from{opacity:.6;transform:translateX(-50%) scale(.96)}to{opacity:1;transform:translateX(-50%) scale(1.04)}}
+.msx .r3-mscene{min-height:170px}
+.msx .v-rec .nw{white-space:nowrap}
+.msx .r3-mtag{position:absolute;left:10px;top:10px;z-index:3;font-size:11px;font-weight:900;color:#fde047;background:#0f0d24d0;border:1px solid #fde04766;border-radius:99px;padding:2px 10px}
+.msx .r3-msum{position:absolute;right:10px;top:50%;transform:translateY(-50%);z-index:3;width:44%;background:#0f0d24e0;border:1.5px solid #fde047;border-radius:14px;padding:8px 6px;text-align:center}
+.msx .r3-msum .gd{display:inline-block;font-size:30px;font-weight:900;line-height:1;color:#f0abfc;-webkit-text-stroke:1.5px #fff;paint-order:stroke fill;text-shadow:0 3px 0 #701a75;margin-bottom:4px}
+.msx.land .r3-medal{width:92px;height:92px;margin-left:-46px;margin-top:-46px;top:36%;border-width:3px}.msx.land .r3-medal b{font-size:50px;margin-top:-10px}.msx.land .r3-medal span{font-size:12px;left:-16px;right:-16px;bottom:2px}
+.msx.land .r3-grade .r3-gttl{font-size:20px;top:2%}
+.msx.land .r3-gcard{padding:3px 10px 4px;bottom:6px}.msx.land .r3-gcard .v-num>b{font-size:22px}.msx.land .r3-gcard .v-num>small{display:none}
+.msx.land .r3-gbar{margin-top:1px}.msx.land .r3-gbar .g small,.msx.land .r3-gnx{display:none}
 .msx .v-ft button:disabled{opacity:.45}
 `;
 

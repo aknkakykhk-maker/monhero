@@ -421,6 +421,10 @@
       "role": "助手ライフの拾い物・贈り物(2026-11-14 社長): 助手が出かけ先から帰った・家で誰かと過ごした・マスモンが修行から戻ったときに、モンヒロサクセスの持ちこみアイテムが手に入る(1日2個まで)。公開の印 monheroSuccess が偽のあいだは何もしない。新しいキー mh_msx_find_v1(1日の数・直前の居場所・知らせの待ち)と、持ちこみの数 meta.items への +1 だけを保存する"
     },
     {
+      "file": "56-assistant-life-success.jsx",
+      "role": "助手ライフからモンヒロサクセスへの入口(2026-11-14 社長): 部屋の「できること」と地図のモンヒロバトルにいる助手の札に「🌱 モンヒロサクセス(β)」。押すと MonheroSuccessScreen を開く(HOME の札と同じ渡し方・入れ物 AssistantLifeSuccessHost は 60-app に1つ)。公開の印 monheroSuccess が偽のあいだは何も出さない。何も保存しない"
+    },
+    {
       "file": "56-assistant-life-roomview.jsx",
       "role": "助手の部屋を大きく見る(2026-11-08 社長 案A): 部屋の絵(壁・床・窓・置いた家具)に助手が立ち(①色味と影 ②腰から下は家具の後ろ ③見えている体で大きさ)、マスモン全部が床を歩く。部品 AssistantLifeRoomScene は見せるだけで、部屋のシートが上(横は左)に置く。フレンドの家でも使える形。何も保存しない"
     },
@@ -515,6 +519,10 @@
     {
       "file": "56-monsuc-awake.jsx",
       "role": "部品: モンヒロサクセスの覚醒・超覚醒の見せる部分(バトルカードのキラで絵を包む MsxKira・前触れの光 MsxOmenFx・起きたときの演出 MsxAwakeShow・印 msxKiraOf)。計算は芯 MONHERO_SUCCESS の awakeOpen。何も保存しない・公開の印 monheroSuccess の後ろ"
+    },
+    {
+      "file": "56-monsuc-issa.jsx",
+      "role": "部品: モンヒロサクセスのイッサ博士「大きな賭け」の場面(登場 MsxIssaMeet・溜めと結果 MsxIssaResult・動いた数字の札 MsxIssaGains・入口 MsxIssa)。計算は芯 MONHERO_SUCCESS の issa。保存は run.out だけ・公開の印 monheroSuccess の後ろ"
     },
     {
       "file": "56-monsuc-dex.jsx",

@@ -153,7 +153,7 @@ const base = { sp: 'golem', hand: ['026', '100', '100', '100', '100'], discard: 
         return { sum: [sum.left, sum.right, sum.top, sum.bottom].map(Math.round), handLeft: Math.round(hand.left), fieldRight: Math.round(field.right), bottom: innerHeight };
       }) : null;
       await shot(page, 'qa2-land-summary-844x390');
-      // 下のボタン(攻撃おわり → ガッツへ)が画面の中にあって、ふつうのタップで押せる(統括部長: 見回りの写真 q18 の「対戦」ボタン)
+      // 下のボタン(攻撃終わり → ガッツへ)が画面の中にあって、ふつうのタップで押せる(統括部長: 見回りの写真 q18 の「対戦」ボタン)
       if (ok) await page.locator('[data-card-turn-summary]').click().catch(() => {});
       await page.waitForTimeout(300);
       const foot = await page.evaluate(() => {
@@ -163,7 +163,7 @@ const base = { sp: 'golem', hand: ['026', '100', '100', '100', '100'], discard: 
         return { text: b.innerText.replace(/\s+/g, ''), top: Math.round(q.top), bottom: Math.round(q.bottom), h: innerHeight, hit: !!hit && b.contains(hit) };
       });
       const tapped = foot && foot.hit ? await page.locator('[data-card-footer] button').filter({ hasText: 'ガッツへ' }).first().click({ timeout: 5000 }).then(() => true).catch(() => false) : false;
-      check('① 横 844×390: 下のボタン(攻撃おわり → ガッツへ)が画面の中にあり、ふつうのタップで押せる', foot && foot.bottom <= foot.h && foot.top >= 0 && foot.hit && tapped, JSON.stringify(foot));
+      check('① 横 844×390: 下のボタン(攻撃終わり → ガッツへ)が画面の中にあり、ふつうのタップで押せる', foot && foot.bottom <= foot.h && foot.top >= 0 && foot.hit && tapped, JSON.stringify(foot));
       check('① 横 844×390: 始まりのまとめが右の手札にかからず、左の盤の中に出る', r && r.sum[1] <= r.handLeft && r.sum[1] <= r.fieldRight + 1 && r.sum[3] <= r.bottom, JSON.stringify(r));
       await page.close();
     }
