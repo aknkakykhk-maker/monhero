@@ -102,7 +102,7 @@
   add({ id: 'ikioi', icon: '💹', name: '賞金の勢い', type: 'stay', scene: 'cup', unit: 1, max: 10, pt: 4, u: '点', text: '編成にいるだけで、賞金の合計が多いほどトレーニングで大成功しやすくなる(18,000G で +{v}点)' });
   add({ id: 'ninki', icon: '🌟', name: '人気度効果アップ', type: 'stay', scene: 'cup', unit: 2, max: 25, pt: 2, u: '%', v2: [10, 20, 30, 40, 50], text: '編成にいるだけで、人気の上がりが{v}%増える' });
   add({ id: 'kokoroe', icon: '📜', name: '勝負の心得', ref: false, type: 'stay', scene: 'cup', unit: 1, max: 25, pt: 3, u: '%', v2: [5, 10, 15, 20, 25], text: '編成にいるだけで、大会で勝ったときの能力ポイントが{v}%増える' });
-  add({ id: 'ticket', icon: '🎫', name: 'チケット運', ref: false, type: 'stay', scene: 'cup', unit: 5, max: 10, pt: 4, u: '%', v2: [10, 20, 30, 40, 50], text: '編成にいるだけで、大会に勝ったとき{v}%で修行チケットがもう1枚もらえる' });
+  add({ id: 'ticket', icon: '🎫', name: 'チケット運', ref: false, type: 'stay', scene: 'cup', unit: 5, max: 10, pt: 4, u: '%', v2: [10, 20, 30, 40, 50], text: '編成にいるだけで、賞金ランクが1段上がるたびに{v}%で修行チケットがもう1枚もらえる' });
   add({ id: 'rivaldamashii', icon: '🏁', name: 'ライバル魂', ref: false, type: 'stay', scene: 'cup', unit: 5, max: 10, pt: 4, u: '%', v2: [10, 20, 30, 40, 50], text: '編成にいるだけで、ライバルに勝ったときのごほうび(全能力)が{v}%増える' });
 
   // ---- 出来事・イッサ博士 ----

@@ -16,9 +16,18 @@ const msxR3Ranks = () => (typeof MASMON_CALC !== 'undefined' && MASMON_CALC && A
 const MSX_R3_CUP_ICON = Object.freeze({
   str: '💪', int: '🧠', aim: '🎯', dodge: '💨', hard: '🛡️', life: '❤️', dist0: '🤜', dist1: '👊', dist2: '🏹', dist3: '🔭',
   attacker: '⚔', tank: '🧱', supporter: '🎺', healer: '🌿', shadow: '🌑', spring: '🌸', summer: '🌻', autumn: '🍁', winter: '⛄', normal: '🏟', herosummer: '👑', herowinter: '👑', debut: '🎀', peak: '🗻',
+  derby: '🔥', four1: '🌅', four2: '🌊', four3: '🦁', four4: '🏔',
+  distT0: '🤜', distT1: '👊', distT2: '🏹', distT3: '🔭', distC0: '🤜', distC1: '👊', distC2: '🏹', distC3: '🔭',
+  sel_life: '❤️', sel_pow: '💪', sel_wise: '🧠', sel_hit: '🎯', sel_eva: '💨', sel_tough: '🛡️',
+  mem_life: '🏮', mem_pow: '🥊', mem_wise: '📖', mem_hit: '🎯', mem_eva: '👟', mem_tough: '🛡️',
+  gem_attacker: '♦️', gem_tank: '🔷', gem_supporter: '💚', gem_healer: '🔶', gem_shadow: '🟣',
 });
+// 第2版の札の格(色)。CSS は .v-cup.g-<格>
+const MSX_R3_CUP_GRADE = Object.freeze({ bronze: '銅', silver: '銀', gold: '金', green: '緑', four: '四大', rainbow: '特別' });
 const msxR3Stars = (n) => (n >= 4 ? '👑' : '★'.repeat(Math.max(1, n || 1)));
 const msxR3CupName = (sys) => {
+  const S0 = msxSuc && msxSuc.SUC; // 大会の第2版(四大大会・季節の賞・選抜→記念 など)は芯が名前を持つ
+  if (S0 && S0.EX_BY_SYS && S0.EX_BY_SYS[sys]) return S0.EX_BY_SYS[sys].name;
   const names = typeof window !== 'undefined' && window.MONSUC_REGULAR_CUPS ? window.MONSUC_REGULAR_CUPS : {};
   if (names[sys]) return String(names[sys]).replace(/(自慢|大会)$/, (m) => (m === '自慢' ? '自慢の大会' : m));
   const S = msxSuc && msxSuc.SUC; const aid = typeof sys === 'string' && sys.startsWith('sc') ? sys.slice(2) : '';

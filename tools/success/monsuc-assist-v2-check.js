@@ -165,7 +165,7 @@ if (ok8) {
   // チケット運: 多くの育成 id で、もう1枚の出る割合
   const luck = (lv) => { let n = 0, m = 0; for (let t = 0; t < 400; t++) { const s = S2x.newRun({ id: `tk${t}`, species: sp, aid: 'kiki', team: [child([]), child(lv ? [{ id: 'ticket', lv }] : [])] }); s.battle = { kind: 'debut', round: 0 }; const r = S2x.settle(s, true); m++; if (r.out.ticketLuck) n++; } return n / m; };
   const l0 = luck(0); const l5 = luck(5);
-  check('⑧ チケット運: 勝ったとき段5で約50%でもう1枚', l0 === 0 && l5 > 0.4 && l5 < 0.6, `${Math.round(l5 * 100)}%`);
+  check('⑧ チケット運: 賞金ランクの段が上がるたびに段5で約50%でもう1枚(デビュー戦の勝ちは2段上がるので、少なくとも1枚は約75%)', l0 === 0 && l5 > 0.65 && l5 < 0.85, `${Math.round(l5 * 100)}%`);
 }
 // 博士の助手: 実験の成功 +v点
 const issaP = (as) => { const s = S2x.newRun({ id: 'is', species: sp, aid: 'kiki', team: [child([]), child(as)] }); return S2x.issaRate(s, 'stat'); };

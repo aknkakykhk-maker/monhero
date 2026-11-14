@@ -257,11 +257,19 @@ ok(near(SUC.failRateOf({ ...base, yosu: { sabori: { visits: 0 } } }) - fFull, 0.
   ok(tid2 && role, `違う種の子から同じ役割の技を教わらない: ${tid2}`);
   // 大会に勝つとチケット(賞金が大きいほど多い)と名声。負けると準優勝などの一部の賞金だけ
   const b = SUC.settle({ ...s0, turn: 5, acted: false, battle: { kind: 'debut', round: 0 } }, [true]).state;
-  ok(b.tickets === s0.tickets + 1 && b.fame === SUC.PRIZE.debut, 'デビュー戦に勝ってもチケット・名声が入らない');
+  ok(b.tickets === s0.tickets + 2 && b.fame === SUC.PRIZE.debut && b.fameRank === 2, `デビュー戦に勝っても賞金ランク2段ぶんのチケット・名声が入らない: ${b.tickets - s0.tickets}`);
+  // 賞金ランク10段(2026-11-14 社長): 段が上がるたびに1枚・上がらなければ KEEP・古い途中の育成はいまの段で埋めて配り直さない
+  { ok(SUC.FAME_RANK.length === 10 && SUC.FAME_RANK[9].name === 'ヒーロー' && SUC.rankStepOf(s0) === 0, '賞金ランクが10段・いちばん上がヒーローでない');
+    const lg = (w, l) => ({ ...s0.log, wins: w, losses: l });
+    ok(SUC.rankStepOf({ ...s0, log: lg(0, 1), fameTotal: 99999 }) === 1 && SUC.rankStepOf({ ...s0, log: lg(1, 0), fameTotal: 1499 }) === 2 && SUC.rankStepOf({ ...s0, log: lg(1, 0), fameTotal: 8000 }) === 6 && SUC.rankStepOf({ ...s0, log: lg(3, 0), fameTotal: 50000 }) === 10, '賞金ランクの段の数え方がずれている');
+    const rs = SUC.restore(JSON.parse(JSON.stringify({ ...s0, log: lg(2, 0), fameTotal: 9000, fameRank: undefined }))); ok(rs.fameRank === 6, `古い途中の育成の賞金ランクが いまの段で埋まらない: ${rs.fameRank}`);
+    const k2 = SUC.settle({ ...b, turn: 6, acted: false, battle: { kind: 'cup', sys: 'str', star: 1, round: 0 } }, [false]); ok(k2.out.rankKeep && k2.state.tickets === b.tickets, '段が上がらないのにチケットが入る・KEEP が出ない');
+    // 負けても獲得賞金の合計で段が上がる(2026-11-14 社長): 準優勝の賞金で 一人前(1500G) を越えたら1段・チケット1枚
+    const k3 = SUC.settle({ ...b, fameTotal: 1490, turn: 6, acted: false, battle: { kind: 'cup', sys: 'str', star: 3, round: 0 } }, [false]); ok(k3.out.rankUp && k3.state.fameRank === 3 && k3.state.tickets === b.tickets + 1 && !k3.state.mealReady, `負けたとき獲得賞金の合計で賞金ランクが上がらない: ${k3.state.fameRank}`); }
   const pro = SUC.settle({ ...s0, turn: 41, acted: false, battle: { kind: 'pro', round: 0 } }, [true, true, true]).state;
   ok(pro.tickets - s0.tickets > b.tickets - s0.tickets, '賞金の大きい大会ほどチケットが多くない');
   const runner = SUC.settle({ ...s0, turn: 41, acted: false, battle: { kind: 'pro', round: 0 } }, [false]).state;
-  ok(runner.tickets === s0.tickets && runner.fame === Math.round(SUC.PRIZE.pro * 0.4), 'ヒーロー記念で負けたとき準優勝の賞金(40%)だけになっていない');
+  ok(runner.tickets === s0.tickets + 1 && runner.fame === Math.round(SUC.PRIZE.pro * 0.4), 'ヒーロー記念で負けたとき準優勝の賞金(40%)と、ルーキーの段の1枚だけになっていない');
   ok(runner.mealReady === false, '大会に負けたのにごはんを選べる(2026-11-13 社長: 勝ったときだけ)');
   // ごほうびのごはん(2026-11-13 社長: 9種に作り直し・体力は回復だけ・賞金を使う・大会のあと1回だけ)
   ok(Object.keys(SUC.MEALS).sort().join() === 'f_eva,f_hit,f_life,f_pow,f_tough,f_wise,gochiso,prune,vitamin', `ごはんが9種でない: ${Object.keys(SUC.MEALS).sort().join()}`);
@@ -340,7 +348,7 @@ ok(near(SUC.failRateOf({ ...base, yosu: { sabori: { visits: 0 } } }) - fFull, 0.
 
 // ---- 持ちこみアイテム・よいようす(社長 2026-11-12・ITEMS-REF.md) ----
 {
-  ok(Object.values(SUC.ITEMS).filter(x => x.use === 'before').length === 7 && Object.values(SUC.ITEMS).filter(x => x.use === 'during').length === 8, '持ちこみの分け方(始める前 7・育成中 5+詰め合わせの中身 3)がずれている');
+  ok(Object.values(SUC.ITEMS).filter(x => x.use === 'before').length === 7 && Object.values(SUC.ITEMS).filter(x => x.use === 'during').length === 19, '持ちこみの分け方(始める前 7・育成中 5+詰め合わせの中身 3+大会の賞品 11)がずれている');
   ok(Object.keys(SUC.GOOD).sort().join() === 'eventMaker,shugyoGood,star,trainGood,uketsugu', 'よいようすが5つでない');
   const s0 = SUC.newRun({ id: 'it', species: 'Mocchi', aid: 'mua', carry: ['dango', 'mag', 'hachi', 'juice'], bag: { juice: 1, pack: 1 } });
   ok(s0.carry.length === 2 && !s0.carry.includes('juice') && s0.hpMax === 120 && s0.good.trainGood && !s0.good.shugyoGood && Object.keys(s0.bag).length === 0, `持ちこみが2つまでになっていない: ${s0.carry} ${JSON.stringify(s0.bag)}`);
@@ -371,8 +379,25 @@ ok(near(SUC.failRateOf({ ...base, yosu: { sabori: { visits: 0 } } }) - fFull, 0.
   const cj = SUC.cupsOf(j); ok(cj.length === 2 && cj.every(c => c.star === 1) && cj[0].sys === 'str' && cj[0].entry.ok, `ジュニア1月の大会(ちから自慢・間合い 零 ★)がずれている: ${JSON.stringify(cj.map(c => c.id))}`);
   ok(!SUC.canEnter({ ...j, stats: { ...j.stats, pow: 100 } }, cj[0]).ok, '自慢の大会の能力の条件(ジュニア 150)が効かない');
   const mid = { ...s0, turn: 18, stats: { ...s0.stats, pow: 400 } }; const cm = SUC.cupsOf(mid);
-  ok(cm.length === 3 && cm[0].star === 2 && !cm[0].entry.ok && cm[0].entry.why === 'chain', 'ミドルの ★★ がジュニアで優勝していなくても出られる');
-  ok(SUC.cupsOf({ ...mid, wonNow: ['str:1'] })[0].entry.ok, 'ジュニアで優勝したのにミドルの ★★ に出られない');
+  // ミドル1月は、月の並び3つ + 第2版(四大大会1つ・間合いトーナメント4つ)
+  const cmRow = cm.filter(c => !c.ex);
+  ok(cmRow.length === 3 && cmRow[0].star === 2 && !cmRow[0].entry.ok && cmRow[0].entry.why === 'chain', `ミドルの ★★ がジュニアで優勝していなくても出られる: ${JSON.stringify(cm.map(c => c.id))}`);
+  ok(SUC.cupsOf({ ...mid, wonNow: ['str:1'] }).filter(c => !c.ex)[0].entry.ok, 'ジュニアで優勝したのにミドルの ★★ に出られない');
+  // 第2版: 四大大会の出る条件(賞金の段)・間合いトーナメント・制覇
+  const four = cm.find(c => c.sys === 'four1');
+  ok(four && four.ex && four.prize === 12500 && !four.entry.ok && four.entry.why === 'rank', `四大大会の賞金の段の条件が効かない: ${JSON.stringify(four && four.entry)}`);
+  ok(SUC.cupsOf({ ...mid, fameTotal: 8000, log: { ...mid.log, wins: 1 } }).find(c => c.sys === 'four1').entry.ok && !SUC.cupsOf({ ...mid, fameTotal: 7999, log: { ...mid.log, wins: 1 } }).find(c => c.sys === 'four1').entry.ok, '賞金ランクが はなまる(8,000G)で四大大会に出られる、にならない');
+  ok(cm.filter(c => c.sys.startsWith('distT')).length === 4, '間合いトーナメント4つが並ばない');
+  const pc = SUC.cupsOf({ ...s0, turn: 36 }).find(c => c.sys === 'distC0'); // プロ期7月(ターン36)
+  ok(pc && !pc.entry.ok && pc.entry.why === 'won' && pc.entry.wonSys === 'distT0', `間合いチャンピオンズの「◯◯ 優勝で」が効かない: ${JSON.stringify(pc && pc.entry)}`);
+  { // 四大大会を4つ勝つと制覇(一度きり)
+    const wonAll = SUC.EX_CUPS.filter(c => c.four).map(c => `${c.sys}:${c.star}`);
+    const before = { ...s0, turn: 18, fameTotal: 60000, wonNow: wonAll.slice(0, 3), battle: { kind: 'cup', id: 'x', sys: 'four4', star: 4, round: 0 } }; // 残り1つ(four4)に勝つ
+    const r1 = SUC.settle(before, true);
+    ok(r1.out.fourDone && r1.state.fourDone && r1.state.titles.includes(SUC.FOUR_DONE.title), '四大大会を4つ勝っても制覇が起きない');
+    const r2 = SUC.settle({ ...r1.state, battle: { kind: 'cup', id: 'x', sys: 'four1', star: 4, round: 0 } }, true);
+    ok(!r2.out.fourDone, '四大大会の制覇が二度起きる');
+  }
   const pro6 = SUC.cupsOf({ ...s0, turn: 35, fameTotal: 5000 }); ok(pro6.some(c => c.sys === 'herosummer' && c.star === 4), 'プロの6月に 👑(夏のヒーロー記念)が並ばない');
   // ライバルは月のはじめに決まる(同じ月なら何度見ても同じ)・出るとごほうびが大きい
   let rv = null; for (let t = 6; t <= 41 && !rv; t++) { const c = SUC.cupsOf({ ...s0, turn: t }).find(x => x.rival); if (c) rv = { t, c }; }
@@ -396,7 +421,13 @@ ok(near(SUC.failRateOf({ ...base, yosu: { sabori: { visits: 0 } } }) - fFull, 0.
   // 月の大会に出る(ターンを使う・ターンの終わりに1戦)
   const e = SUC.act(j, { kind: 'cup', id: cj[0].id }); ok(e.out.ok, '月の大会に出られない');
   const eb = SUC.endTurn(e.state).state; ok(eb.battle && eb.battle.kind === 'cup' && eb.battle.star === 1, '月の大会の試合が立たない');
-  const ew = SUC.settle(eb, [true]).state; ok(ew.turn === 7 && ew.wonNow.includes('str:1') && ew.stats.pow === eb.stats.pow, '月の大会に勝ったあとがずれている(★ は能力のごほうびなし)');
+  const ew = SUC.settle(eb, [true]).state; ok(ew.turn === 7 && ew.wonNow.includes('str:1') && ew.stats.pow > eb.stats.pow && Number(ew.bag.oil || 0) === Number(eb.bag.oil || 0) + 1, `月の大会に勝ったあとがずれている(★ はその能力 +4・オイル1): ちから ${eb.stats.pow}→${ew.stats.pow}`);
+  // 大会に勝ったときのアイテム(2026-11-14 社長「このまま作る」)
+  { const ci = (sys, star, st) => SUC.cupItemsOf(st || eb, sys, star); const top = Object.keys(eb.stats).sort((x, y) => eb.stats[y] - eb.stats[x])[0];
+    ok(ci('str', 1).oil === 1 && ci('str', 2).fruit_pow === 1 && ci('str', 3).fruit_pow === 1 && ci('str', 3).oilyoil === 1, `ふつうの大会の賞品がずれている: ${JSON.stringify([ci('str', 1), ci('str', 2), ci('str', 3)])}`);
+    const c4 = ci('normal', 4); ok(Object.keys(c4).length === 2 && Object.keys(c4).some(k => /^elixir[0-3]$/.test(k)) && Object.keys(c4).some(k => k.startsWith('fruit_')), `👑の賞品(得意の間合いの秘薬+得意の能力の実)がずれている: ${JSON.stringify(c4)}`);
+    ok(ci('derby', 3).stamina === 1 && !(SUC.EX_BY_SYS.derby.rw.hpMax) && ci('four1', 4).oilyoil === 1 && ci('four1', 4)[`fruit_${top}`] === 1 && ci('mem_pow', 3).fruit_pow === 2 && ci('ssn3_0', 2).fruit_life === 1 && Object.keys(ci('gem_tank', 3)).some(k => /^elixir/.test(k)), '第2版の大会の賞品がずれている');
+    const sb = SUC.useItem({ ...eb, hp: 50, hpMax: 100, bag: { stamina: 1 }, itemTurn: -1 }, 'stamina').state; ok(sb.hpMax === 115 && sb.hp === 65, `スタミナだんごで体力の最大値 +15 にならない: ${sb.hpMax}/${sb.hp}`); }
   const last = SUC.endTurn(SUC.act({ ...j, turn: 17, stats: { ...j.stats, pow: 300, life: 300 } }, { kind: 'cup', id: SUC.cupsOf({ ...j, turn: 17, stats: { ...j.stats, pow: 300, life: 300 } }).find(c => c.entry.ok).id }).state).state;
   const after = SUC.settle(last, [true]).state; ok(after.battle && after.battle.kind === 'junior', '期の最後のターンに大会に出たあと、強制大会が続かない');
 }
