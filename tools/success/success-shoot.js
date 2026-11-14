@@ -18,7 +18,7 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
 let chromium;
 try { ({ chromium } = require(path.join(ROOT, 'tools', 'node_modules', 'playwright'))); } catch (e) { console.log('SKIP: playwright が入っていないので確かめられません'); process.exit(0); }
 const { quietBootSeed, updateNoticeSeed } = require(path.resolve(__dirname, '..', 'boot', 'quiet-boot-seed'));
-const PORT = 8971;
+const PORT = Number(process.env.SHOT_PORT) || 8971; // ほかの検査と同時に回すときは SHOT_PORT で替える
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.PNG': 'image/png', '.jpg': 'image/jpeg', '.webp': 'image/webp', '.json': 'application/json', '.mp3': 'audio/mpeg' };
 
 // ページの中で: 芯を読み、決まった手で途中の育成を作る(kind で場面を選ぶ)
@@ -200,7 +200,10 @@ const makeRun = async (kind) => {
             for (const bg of [...sc.querySelectorAll('.v-bagb')].filter(vis)) for (const o of others) partyBag = Math.max(partyBag, inter(o.getBoundingClientRect(), bg.getBoundingClientRect()));
             partyBag = Math.max(partyBag, pt.getBoundingClientRect().bottom - sc.getBoundingClientRect().bottom);
           }
-          return { ok: true, text: root.innerText.length, over, taps, cut, tiny, topBlank, lap, partyBag: Math.round(partyBag), land: window.innerWidth > window.innerHeight };
+          // 見た目の高さ(::after で広げた範囲を数えない)。.msx-btn は 44px 以上(2026-11-14 点検: 初期化に負けて 17〜18px に潰れていた)。ほかのボタンは見張りで出す
+          const flat = [...root.querySelectorAll('.msx-btn')].filter((e) => vis(e) && !e.disabled && !clipped(e) && e.getBoundingClientRect().height < 43.5).map((e) => `${lab(e)}(${Math.round(e.getBoundingClientRect().height)}px)`);
+          const lowBtn = [...root.querySelectorAll('button')].filter((e) => vis(e) && !e.disabled && e.getBoundingClientRect().height < 43.5).map((e) => `${lab(e)}(${Math.round(e.getBoundingClientRect().height)}px)`);
+          return { ok: true, text: root.innerText.length, over, taps, cut, tiny, topBlank, lap, flat, lowBtn, partyBag: Math.round(partyBag), land: window.innerWidth > window.innerHeight };
         }, fscale || 0);
         const L = `${name}${tag ? `(${tag})` : ''}`;
         const warn = (what, arr) => { if (arr && arr.length) console.log(`  見張り ${L}: ${what} ${arr.length}件 ${arr.slice(0, 4).join(' / ')}`); };
@@ -210,6 +213,8 @@ const makeRun = async (kind) => {
           check(`${L}: 字が小さすぎない`, m.tiny.length === 0, m.tiny.slice(0, 4).join(' / '));
           check(`${L}: 押せる物が重ならない`, m.lap.length === 0, m.lap.slice(0, 3).join(' / '));
           if (m.land) check(`${L}: 横画面の上に空白が無い`, m.topBlank <= 50, `${m.topBlank}px`);
+          check(`${L}: .msx-btn のボタンが見た目でも 44px 以上`, !m.flat.length, m.flat.slice(0, 4).join(' / '));
+          if (process.env.SHOT_LOWBTN) warn('見た目が44px未満のボタン', m.lowBtn);
           check(`${L}: 持ち物・くわしくが編成の列や札に重ならず、編成の列が場面に収まる`, !m.partyBag, `${m.partyBag}px`);
         }
         check(`${name}${tag ? `(${tag})` : ''}: 画面が出る`, m.ok && m.text > 20);
