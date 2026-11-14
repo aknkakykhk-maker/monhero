@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: dfdaddb54a3f3f82
+// generated-sha256: 3a5604ed6f6eb316
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -6997,7 +6997,10 @@ const Audio_ = (() => {
       masterOut.gain.linearRampToValueAtTime(1, at + 2);
     } catch (e) { masterOut.gain.value = 1; }
   };
-  return { currentBgmKey: () => currentKey, isBackgroundSeQuiet, setVideoHold, setStoryEndFade, setStoryOpenFade, playSeFile, preloadSE, playBGM, fadeToBGM, stopBGM, setBgmOnce, startRhythmTrack, previewBGM, stopPreview, setEnabled, isEnabled, setSeVolume, setBgmVolume, unlock, resumeIfNeeded, setPageHidden, preloadBGM, prepareBGM, prepareSE, playJingle, ensurePlaying, isContextRunning, diagnose, playTestTone, repair, se, fgSe, setBackgroundSeQuiet };
+  // お知らせ・ヘルプの動画にかける音量(2026-11-14 社長「予告動画の音が設定の音量と関係なく鳴る」)。
+  // 動画は曲と同じ扱いにして、BGM の音量と同じ曲線(_gainFromPct)で返す。音を切っている・BGM が 0 なら 0
+  const videoGain = () => (enabled && bgmVolumePct > 0 ? _gainFromPct(bgmVolumePct) : 0);
+  return { currentBgmKey: () => currentKey, isBackgroundSeQuiet, setVideoHold, videoGain, setStoryEndFade, setStoryOpenFade, playSeFile, preloadSE, playBGM, fadeToBGM, stopBGM, setBgmOnce, startRhythmTrack, previewBGM, stopPreview, setEnabled, isEnabled, setSeVolume, setBgmVolume, unlock, resumeIfNeeded, setPageHidden, preloadBGM, prepareBGM, prepareSE, playJingle, ensurePlaying, isContextRunning, diagnose, playTestTone, repair, se, fgSe, setBackgroundSeQuiet };
 })();
 
 // ---- part: 14-success-sound.jsx ----
@@ -24237,11 +24240,60 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
 // ===== お知らせの予告動画(2026-11-02 イベント「鍵の向こう側へ」・社長「BGMを止めて公開」) =====
 // 押すまで読み込まない(preload none)。再生しているあいだだけゲームの音を絞り(Audio_.setVideoHold)、
 // 終わる・一時停止する・枠を閉じる(この部品が消える)と元に戻す。読めなかったら外枠(figure)ごと消す
+// ===== 動画の音をゲームの音量の設定に合わせる(2026-11-14 社長「予告動画の音が、設定の音量と関係なく鳴る」iPhone の Safari) =====
+// 音量は Audio_.videoGain()(BGM の音量・音を切っているかで決まる 0〜1)。0 なら消音(muted)にする。
+// iPhone の Safari は video.volume を書いても効かないので、Web Audio の音量の節(GainNode)を通す。
+// その節は、動画を押した手の動きの中でだけ作る(iPhone は手の動きの外で作ると音の出口が止まったままになり、つないだ動画がずっと無音になる)。作れなかったら volume だけ書く(前と同じ鳴り方)。
+// 再生のあいだは 0.5秒ごとに設定を読み直す(途中で音量を変えても効く)
+let mhVideoAudioCtx=null;
+const mhVideoGainNow=()=>{try{if(typeof Audio_==='undefined'||!Audio_||typeof Audio_.videoGain!=='function')return 1;const g=Number(Audio_.videoGain());return Number.isFinite(g)?Math.max(0,Math.min(1,g)):1;}catch(e){return 1;}};
+const useVideoVolume=(ref,key='')=>{ // key … 動画の枠が作り直される(src が替わる)たびに付け直す
+  const node=useRef(null);
+  const mutedByUs=useRef(false);
+  const apply=()=>{
+    const el=ref.current;if(!el)return;
+    const g=mhVideoGainNow();
+    try{el.dataset.mhVideoGain=g.toFixed(3);el.dataset.mhVideoWired=node.current?'1':'0';}catch(e){} // 検査が読む印(画面には出ない)
+    // 消音は「設定が 0 なのでこちらで消した」ときだけ解く(プレイヤーが消した・ふだん無音で流す動画はそのまま)
+    if(g<=0){if(!el.muted){el.muted=true;mutedByUs.current=true;}return;}
+    if(mutedByUs.current){mutedByUs.current=false;el.muted=false;}
+    if(node.current){try{node.current.gain.value=g;}catch(e){}try{el.volume=1;}catch(e){}return;}
+    try{el.volume=g;}catch(e){}
+  };
+  // 押した手の動きの中で呼ぶ: 音の出口を起こし、まだなら動画を音量の節へつなぐ
+  const wire=()=>{
+    const el=ref.current;if(!el)return;
+    // つないだあとに iPhone が音の出口を止めた(アプリの切り替え・電話など)ときも、押した手の中で起こし直す
+    if(node.current){if(mhVideoAudioCtx&&mhVideoAudioCtx.state!=='running'){try{const p=mhVideoAudioCtx.resume();if(p&&typeof p.catch==='function')p.catch(()=>{});}catch(e){}}apply();return;}
+    try{
+      const AC=typeof window!=='undefined'?(window.AudioContext||window.webkitAudioContext):null;if(!AC)return;
+      if(!mhVideoAudioCtx)mhVideoAudioCtx=new AC();
+      const ctx=mhVideoAudioCtx;
+      if(ctx.state!=='running'){try{const p=ctx.resume();if(p&&typeof p.catch==='function')p.catch(()=>{});}catch(e){}}
+      const src=ctx.createMediaElementSource(el);const gn=ctx.createGain();gn.gain.value=mhVideoGainNow();
+      src.connect(gn);gn.connect(ctx.destination);node.current=gn;
+    }catch(e){node.current=null;}
+    apply();
+  };
+  useEffect(()=>{
+    const el=ref.current;if(!el)return undefined;
+    apply();
+    let id=0;
+    const onPlay=()=>{if(mhVideoAudioCtx&&mhVideoAudioCtx.state!=='running'){try{mhVideoAudioCtx.resume();}catch(e){}}apply();clearInterval(id);id=setInterval(apply,500);};
+    const stop=()=>{clearInterval(id);};
+    el.addEventListener('play',onPlay);el.addEventListener('pause',stop);el.addEventListener('ended',stop);
+    return ()=>{clearInterval(id);el.removeEventListener('play',onPlay);el.removeEventListener('pause',stop);el.removeEventListener('ended',stop);
+      if(node.current){try{node.current.disconnect();}catch(e){}node.current=null;}mutedByUs.current=false;};
+  },[key]);
+  return {wire,apply};
+};
 const ChangelogVideo=({src,poster})=>{
   const ref=useRef(null);
+  const vol=useVideoVolume(ref,src);
   const hold=(on)=>{try{if(typeof Audio_!=='undefined'&&Audio_&&typeof Audio_.setVideoHold==='function')Audio_.setVideoHold(on);}catch(e){}};
   useEffect(()=>()=>{try{if(ref.current)ref.current.pause();}catch(e){}hold(false);},[]);
   return <video ref={ref} src={src} poster={poster} controls playsInline preload="none"
+    onPointerDown={vol.wire} onTouchEnd={vol.wire} onClick={vol.wire}
     onPlay={()=>hold(true)} onPause={()=>hold(false)} onEnded={()=>hold(false)}
     onError={e=>{hold(false);const f=e.currentTarget.closest('figure');if(f)f.style.display='none';}}
     style={{display:'block',width:'100%',maxWidth:'320px',margin:'0 auto',borderRadius:'12px',background:'#000'}}/>;
@@ -24253,12 +24305,14 @@ const RhythmHellVideo=({id})=>{
   const [failed,setFailed]=useState(false);
   const [ready,setReady]=useState(false);
   const [sound,setSound]=useState(false);
+  const vol=useVideoVolume(ref,info?info.src:'');
   useEffect(()=>{setFailed(false);setReady(false);setSound(false);},[id]);
   useEffect(()=>()=>{try{if(ref.current)ref.current.pause();}catch(e){}},[]);
   if(!info||failed)return null;
   const toggleSound=()=>{
     const el=ref.current;if(!el)return;
     const next=!sound;setSound(next);el.muted=!next;
+    if(next){vol.wire();vol.apply();} // 音ありにしたら、ゲームの音量の設定に合わせる(押した手の動きの中でつなぐ)
     if(next){try{el.currentTime=0;}catch(e){}}
     try{const p=el.play();if(p&&typeof p.catch==='function')p.catch(()=>{el.muted=true;setSound(false);});}catch(e){}
   };

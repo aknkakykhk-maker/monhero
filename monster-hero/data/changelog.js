@@ -35,6 +35,14 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    // 2026-11-14 社長の指摘(iPhone の Safari): 更新履歴の予告動画の音が、設定の音量と関係なく鳴る。ChangelogVideo・HELL の説明動画を Audio_.videoGain に合わせた
+    date: "2026-11-14 17:19", type:'fix', title:'お知らせの動画の音が、設定の音量と関係なく鳴っていたのを直しました', status:'new',
+    items:[
+      'お知らせの予告動画の音が、設定の音量に合わせて鳴るようになりました(BGMの音量と同じ大きさ)。',
+      'BGMの音量を0にしているとき・音を切っているときは、動画の音も鳴りません。再生中に音量を変えても、すぐに反映されます。',
+    ],
+  },
+  {
     // 新曲をビートPで買えるようになった(2026-11-14 社長「1曲500で両方ついてくる」。文はテンポの案)
     date: "2026-11-14 17:03", type:'update', group:'rhythm', title:'新曲をビートPで買えるようになりました', status:'new',
     items:[
@@ -114,8 +122,8 @@ const CHANGELOG = [
     // 2026-11-14 社長「β近日公開予定のお知らせと、そこに紹介動画と、作ったストーリーを出そう。紹介動画はイッサ博士と覚醒のシーン」。動画は実際の画面を本物のブラウザで録った(博士の大きな賭け → 覚醒の前触れ → 覚醒 → 超覚醒)。
     // 第1話のお知らせ(releaseFlag monsucStoryEp1)と同じ日に出す。みゅあの告知は第1話の側の1つにまとめ、ここには付けない(2回続けて話さないように)
     date: "2026-11-14 15:40", type:'content', title:'モンヒロサクセス β版 近日公開予定', status:'new', group:'success',
-    video: 'movies/monsaku-beta-soon.mp4?v=d873ea8d02e3',
-    videoPoster: 'images/events/monsaku-beta-soon-poster.jpg?v=cca884327653',
+    video: 'movies/monsaku-beta-soon.mp4?v=3672929619a8',
+    videoPoster: 'images/events/monsaku-beta-soon-poster.jpg?v=d08f377c5f26',
     items:[
       '開発中の新コンテンツ「モンヒロサクセス」は、β版を近日公開予定です。',
       '動画では、育成の途中にふらりと現れる博士との「大きな賭け」と、モンスターがまばゆい光をまとって強くなる「覚醒」の様子をお見せします。',
