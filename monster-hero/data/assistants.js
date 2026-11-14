@@ -15649,6 +15649,8 @@ const ASSISTANT_LIFE_SOLO_GIFTS = Object.freeze([
   Object.freeze({ key:'candy',     kind:'candy',     itemId:'solo_candy',     player:15, what:'ひとつぶのキャンディ。ちょっとしたお礼に' }),
   Object.freeze({ key:'keyholder', kind:'keyholder', itemId:'solo_keyholder', player:35, what:'その助手のためのキーホルダー。いつも持ち歩けます' }),
   Object.freeze({ key:'omamori',   kind:'omamori',   itemId:'solo_omamori',   player:40, what:'小さなおまもり。がんばる助手を応援します' }),
+  // 2026-11-15 r1115-035(案A・300P): 贈るときにモンスターとリボンの色を選ぶ。好き嫌いの印 assistantLifeTaste が偽の間は出ない(56-assistant-life-taste-gift.jsx)
+  Object.freeze({ key:'monplush',  kind:'monplush',  itemId:'solo_monplush',  player:40, what:'好きなモンスターを選んで贈るぬいぐるみ。贈ると、助手がそのモンスターを少し好きになります' }),
 ]);
 // 1人用の道具の好み(1人に 💗1つ・💧1つ)
 const ASSISTANT_LIFE_SOLO_LIKES = Object.freeze({

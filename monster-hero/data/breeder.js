@@ -658,6 +658,7 @@ const BREEDER_MARKET_ITEMS = [
   { id:'solo_candy', name:"ひとつぶキャンディ", type:'item', emoji:"🍬", cost:0, shop:false, usage:'assistantPeer', desc:"助手1人に贈るキャンディ。「🏡 助手ライフ」の部屋で、その助手だけに贈る。" },
   { id:'solo_keyholder', name:"キーホルダー", type:'item', emoji:"🔑", cost:0, shop:false, usage:'assistantPeer', desc:"助手1人に贈るキーホルダー。「🏡 助手ライフ」の部屋で、その助手だけに贈る。" },
   { id:'solo_omamori', name:"小さなお守り", type:'item', emoji:"🧿", cost:0, shop:false, usage:'assistantPeer', desc:"助手1人に贈るおまもり。「🏡 助手ライフ」の部屋で、その助手だけに贈る。" },
+  { id:'solo_monplush', name:"モンスターのぬいぐるみ", type:'item', emoji:"🧸", cost:0, shop:false, usage:'assistantPeer', desc:"助手1人に贈るぬいぐるみ。「🏡 助手ライフ」の部屋で、モンスターとリボンの色を選んで贈る。" },
   { id:'peer_flower', name:"小さな花束", type:'item', emoji:"🌷", cost:0, shop:false, usage:'assistantPeer', desc:"助手2人に贈る小さな花束。「🏡 助手ライフ」で一緒にいる2人に贈る。" },
   // 🏥 特別な治療(2026-11-12 社長)。ビートP交換所(300P)で手に入る。マーケットでは売らない。使うのは助手ライフの予定表(56-assistant-life-body.jsx)
   { id:'life_cure', name:"特別な治療", type:'item', emoji:"🏥", cost:0, shop:false, usage:'assistantLife', desc:"助手の病院で受けられる特別な治療。「🏡 助手ライフ」の予定表で、病院にいる回の助手に1枚使うと、重いけが・病気でもその場で治る。その助手のマスモンのけが・病気も一緒に治る。" },

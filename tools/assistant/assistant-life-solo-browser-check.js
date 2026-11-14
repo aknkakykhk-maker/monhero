@@ -104,8 +104,10 @@ const cutProblems = (page, sel) => page.evaluate((s) => {
       await page.locator('[data-assistant-life-room-act="give-solo"]').click(); await page.waitForTimeout(400);
       const sheet = await page.locator('[data-assistant-life-give-sheet]').innerText().catch(() => '');
       const tiles = await page.locator('[data-assistant-life-give-kind]').count();
+      // 好き嫌いの印 assistantLifeTaste が真なら 🧸 モンスターのぬいぐるみ(r1115-035)も並ぶ
+      const plush = await page.evaluate(() => (typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantLifeTaste === true ? 1 : 0));
       const weights = await page.locator('[data-assistant-life-give-sheet] [data-assistant-life-give-weight]').count();
-      check('③ 1人に贈るシート: 題が「◯◯に贈る」・友情Lv の行が無い・道具14種類・重みは1行', /に贈る/.test(await page.locator('[data-assistant-life-give-title]').innerText()) && (await page.locator('[data-assistant-life-give-peer]').count()) === 0 && tiles === 14 && weights === 1, `${tiles}種類 重み${weights}`);
+      check('③ 1人に贈るシート: 題が「◯◯に贈る」・友情Lv の行が無い・道具14種類・重みは1行', /に贈る/.test(await page.locator('[data-assistant-life-give-title]').innerText()) && (await page.locator('[data-assistant-life-give-peer]').count()) === 0 && tiles === 14 + plush && weights === 1, `${tiles}種類 重み${weights}`);
       check('③ 「2人に」「◯◯だけに」の切りかえが出る', (await page.locator('[data-assistant-life-give-pair]').count()) >= 1 && (await page.locator('[data-assistant-life-give-solo]').count()) >= 2);
       // 切りかえ: 2人に → 友情Lv の行が出る・1人用は並ばない
       await page.locator('[data-assistant-life-give-pair]').first().click(); await page.waitForTimeout(200);
