@@ -308,6 +308,7 @@
     fruit_life: { name: 'いのちの実', use: 'during', fruit: 'life' }, fruit_pow: { name: 'ちからの実', use: 'during', fruit: 'pow' },
     fruit_wise: { name: 'ちえの実', use: 'during', fruit: 'wise' }, fruit_hit: { name: 'ねらいの実', use: 'during', fruit: 'hit' },
     fruit_eva: { name: 'かわしの実', use: 'during', fruit: 'eva' }, fruit_tough: { name: 'かたさの実', use: 'during', fruit: 'tough' },
+    stamina: { name: 'スタミナだんご', use: 'during', hpMax: 15 }, // ルーキーズ・クラウンの賞品: 使うと体力の最大値 +15(体力も同じだけ回復)
   });
   const GOOD = Object.freeze({
     eventMaker: { name: 'イベントメーカー', eventRate: 0.25 },              // 編成の子との出来事 +25%(50% → 75%。2026-11-13 社長)
@@ -372,7 +373,7 @@
   const CUP_COUNT = Object.freeze({ junior: 2, middle: 3, pro: 4, final: 4 });      // その期に並ぶ数(プロの 👑 は6月だけ)
   const CUP_PRIZE = Object.freeze({ 1: 1250, 2: 2500, 3: 3500, 4: 5000 });       // 優勝の賞金(ジュニア基準・G)
   const PERIOD_PRIZE = Object.freeze({ junior: 1, middle: 1.2, pro: 1.5, final: 1.5 }); // ★ジュニア 1,250・★★ミドル 3,000・★★★プロ 5,250・👑 7,500
-  const CUP_REWARD = Object.freeze({ pts: { 3: 10, 4: 20 }, pop: { 2: 2, 3: 4, 4: 8 }, statUp: { 2: 6, 3: 12 }, crownAll: 4 });
+  const CUP_REWARD = Object.freeze({ pts: { 3: 10, 4: 20 }, pop: { 2: 2, 3: 4, 4: 8 }, statUp: { 1: 4, 2: 8, 3: 12 }, crownAll: 4 });
   const CUP_NEED = Object.freeze({ stat: { 1: 150, 2: 300, 3: 500 }, fameNormal3: 9500, fameCrown: 18000 }); // 賞金の合計。桁を上げる前と同じ「その期の大会をあと何勝」で届く値(★★ 約1勝・★★★ 約1.5勝)
   // ---- 大会の第2版(2026-11-13 社長: 参考画像4・参考動画4から一式。名前・ロゴ・絵はうちの物) ----
   //   ふつうの月の並び(YEAR)に、決まった期・月の大会を足す。ex:true の大会は賞金・強さ・出る条件・ごほうびを自分で持つ
@@ -394,26 +395,26 @@
   const EX_CUPS = Object.freeze((() => {
     const L = [];
     // ジュニア期の大一番(超高難度・1つ): 予想「勝ち目なし…」
-    L.push({ sys: 'derby', name: 'ルーキーズ・クラウン', p: 'junior', m: 10, star: 3, str: 1.5, prize: 8000, tk: 1500, grade: 'rainbow', hard: true, rw: { hpMax: 15, pts: 15, pop: 6, title: '若き挑戦者' } });
+    L.push({ sys: 'derby', name: 'ルーキーズ・クラウン', p: 'junior', m: 10, star: 3, str: 1.5, prize: 8000, tk: 1500, grade: 'rainbow', hard: true, rw: { all: 3, pts: 15, pop: 6, title: '若き挑戦者', bag: { stamina: 1 } } });
     // 四大大会(ミドル1月・ミドル5月・プロ8月・プロ11月)。4つ全部勝つと「四大大会制覇」
     [['four1', '暁の大杯', 'middle', 1, 2], ['four2', '蒼天杯', 'middle', 5, 2], ['four3', '獅子王杯', 'pro', 8, 3], ['four4', '天頂杯', 'pro', 11, 3]].forEach(([sys, name, p, m, rank], k) => {
-      L.push({ sys, name, p, m, star: 4, str: 1.35, prize: 12500, tk: 1500, grade: 'four', four: true, hard: k === 3, need: { rank }, rw: { all: 5, pts: 20, pop: 8 } });
+      L.push({ sys, name, p, m, star: 4, str: 1.35, prize: 12500, tk: 1500, grade: 'four', four: true, hard: k === 3, need: { rank }, rw: { all: 5, pts: 20, pop: 8, fruitTop: 1, bag: { oilyoil: 1 } } });
     });
     // 間合いの2段: ミドル1月の間合いトーナメント → プロ7月の間合いチャンピオンズ。賞品はその間合いの秘薬
     [0, 1, 2, 3].forEach((d) => {
-      L.push({ sys: `distT${d}`, name: `${DIST_JA[d]}の間合いトーナメント`, p: 'middle', m: 1, star: 2, str: STAR_MULT[2], prize: 3500, tk: 250, grade: 'silver', dist: d, rw: { bag: { [`elixir${d}`]: 1 } } });
-      L.push({ sys: `distC${d}`, name: `${DIST_JA[d]}チャンピオンズ`, p: 'pro', m: 7, star: 3, str: STAR_MULT[3], prize: 7000, tk: 600, grade: 'gold', dist: d, need: { won: `distT${d}:2` }, rw: { bag: { [`elixir${d}`]: 2 }, apt: d } });
+      L.push({ sys: `distT${d}`, name: `${DIST_JA[d]}の間合いトーナメント`, p: 'middle', m: 1, star: 2, str: STAR_MULT[2], prize: 3500, tk: 250, grade: 'silver', dist: d, rw: { pts: 10, bag: { [`elixir${d}`]: 1 } } });
+      L.push({ sys: `distC${d}`, name: `${DIST_JA[d]}チャンピオンズ`, p: 'pro', m: 7, star: 3, str: STAR_MULT[3], prize: 7000, tk: 600, grade: 'gold', dist: d, need: { won: `distT${d}:2` }, rw: { pts: 15, bag: { [`elixir${d}`]: 2 }, apt: d } });
     });
     // 能力の2段: ミドル6月の選抜(その能力が500以上)→ プロ12月の記念(同じ能力の選抜に優勝)
     KEYS.forEach((k) => {
-      L.push({ sys: `sel_${k}`, name: SEL_NAME[k], p: 'middle', m: 6, star: 2, str: STAR_MULT[2], prize: 4000, tk: 250, grade: 'green', stat: k, need: { stat: 500 }, rw: { bag: { [`fruit_${k}`]: 1 } } });
-      L.push({ sys: `mem_${k}`, name: MEM_NAME[k], p: 'pro', m: 12, star: 3, str: STAR_MULT[3], prize: 7500, tk: 600, grade: 'gold', stat: k, need: { won: `sel_${k}:2` }, rw: { stat: { [k]: 15 }, loy: 5 } });
+      L.push({ sys: `sel_${k}`, name: SEL_NAME[k], p: 'middle', m: 6, star: 2, str: STAR_MULT[2], prize: 4000, tk: 250, grade: 'green', stat: k, need: { stat: 500 }, rw: { stat: { [k]: 8 }, bag: { [`fruit_${k}`]: 1 } } });
+      L.push({ sys: `mem_${k}`, name: MEM_NAME[k], p: 'pro', m: 12, star: 3, str: STAR_MULT[3], prize: 7500, tk: 600, grade: 'gold', stat: k, need: { won: `sel_${k}:2` }, rw: { stat: { [k]: 15 }, loy: 5, bag: { [`fruit_${k}`]: 2 } } });
     });
     // 宝石の記念(タイプの大会の上の段・プロ期): ミドルの同じタイプの大会に優勝で出られる
-    Object.entries(GEM).forEach(([t, [name, m]]) => L.push({ sys: `gem_${t}`, name, p: 'pro', m, star: 3, str: STAR_MULT[3], prize: 6750, tk: 600, grade: 'gold', type: t, need: { won: `${t}:2` }, rw: { all: 3, pts: 10 } }));
+    Object.entries(GEM).forEach(([t, [name, m]]) => L.push({ sys: `gem_${t}`, name, p: 'pro', m, star: 3, str: STAR_MULT[3], prize: 6750, tk: 600, grade: 'gold', type: t, need: { won: `${t}:2` }, rw: { all: 3, pts: 10, elixirTop: 1 } }));
     // 季節の賞(ミドル・プロの 3・6・9・12月に3つずつ。ジュニアは今までの四季の大会1つのまま)
     ['middle', 'pro'].forEach((p) => Object.entries(SEASON_PRIZE).forEach(([m, [ja, stats]]) => stats.forEach((k, i) => {
-      L.push({ sys: `ssn${m}_${i}`, name: `${SEASON_NAMES[i]}(${ja})`, p, m: Number(m), star: CUP_STAR[p], str: STAR_MULT[CUP_STAR[p]], prize: p === 'pro' ? 7000 : 5500, tk: p === 'pro' ? 600 : 250, grade: 'gold', season: true, rw: { stat: { [k]: 8 }, loy: 3 } });
+      L.push({ sys: `ssn${m}_${i}`, name: `${SEASON_NAMES[i]}(${ja})`, p, m: Number(m), star: CUP_STAR[p], str: STAR_MULT[CUP_STAR[p]], prize: p === 'pro' ? 7000 : 5500, tk: p === 'pro' ? 600 : 250, grade: 'gold', season: true, rw: { stat: { [k]: 8 }, loy: 3, bag: { [`fruit_${k}`]: 1 } } });
     })));
     return L.map(Object.freeze);
   })());
@@ -1148,6 +1149,7 @@
       if (it.gives) for (const [k, n] of Object.entries(it.gives)) s.bag[k] = num(s.bag[k]) + n;
       if (Number.isInteger(it.elixir)) s.elixir = { d: it.elixir, turn: s.turn };
       if (it.fruit) s.fruit = { stat: it.fruit, turn: s.turn };
+      if (it.hpMax) { s.hpMax = Math.min(HP_MAX_CAP, s.hpMax + it.hpMax); s.hp = Math.min(s.hpMax, s.hp + it.hpMax); }
       s.log.items = (s.log.items || 0) + 1;
       return { state: s, out: { ok: true, item: key } };
     };
@@ -1420,6 +1422,23 @@
     };
 
     // 第2版の大会に勝ったときのごほうび。四大大会を4つ全部勝つと、最後の大会のあとに「四大大会制覇」(一度きり)
+    // 大会に勝ったときにもらうアイテム(2026-11-14 社長「このまま作る」: 直接のごほうびは残し、アイテムを上乗せ)。
+    //   ふつうの大会: ★ オイル/★★ その能力の実/★★★ その能力の実+オイリーオイル/👑 得意の間合いの秘薬+得意の能力の実
+    //   第2版の大会: rw.bag に加えて rw.fruitTop(得意の能力の実)・rw.elixirTop(得意の間合いの秘薬)。得意はいまの能力・適性で決める
+    const topStatOf = (s) => top3Of(s.stats, s.species)[0];
+    const topDistOf = (s) => { const G = DIST_UP.grades; const g = aptGradesOf(s); let best = 0; g.forEach((x, i) => { if (G.indexOf(x) > G.indexOf(g[best])) best = i; }); return best; };
+    const cupItemsOf = (s, sys, star) => {
+      const o = {}; const add = (k, n) => { if (ITEMS[k] && n > 0) o[k] = num(o[k]) + n; };
+      const ex = EX_BY_SYS[sys];
+      if (ex) { const rw = ex.rw || {}; if (rw.bag) Object.entries(rw.bag).forEach(([k, n]) => add(k, n)); if (rw.fruitTop) add(`fruit_${topStatOf(s)}`, rw.fruitTop); if (rw.elixirTop) add(`elixir${topDistOf(s)}`, rw.elixirTop); return o; }
+      const st = (CUP_SYS[sys] || {}).stat; const fk = `fruit_${KEYS.includes(st) ? st : topStatOf(s)}`;
+      if (star === 1) add('oil', 1);
+      else if (star === 2) add(fk, 1);
+      else if (star === 3) { add(fk, 1); add('oilyoil', 1); }
+      else if (star >= 4) { add(`elixir${topDistOf(s)}`, 1); add(`fruit_${topStatOf(s)}`, 1); }
+      return o;
+    };
+    const giveItems = (s, items, out) => { const e = Object.entries(items || {}); if (!e.length) return; e.forEach(([k, n]) => { s.bag[k] = num(s.bag[k]) + n; }); out.gotItems = { ...(out.gotItems || {}), ...items }; };
     const exReward = (s, ex, out) => {
       const rw = ex.rw || {}; const got = {};
       if (rw.all) KEYS.forEach(k => addStat(s, k, rw.all));
@@ -1428,7 +1447,7 @@
       if (rw.pts) gainWinPts(s, rw.pts);
       if (rw.pop) s.pop = clamp(s.pop + popGain(s, rw.pop), 0, 100);
       if (rw.hpMax) { s.hpMax = Math.min(HP_MAX_CAP, s.hpMax + rw.hpMax); s.hp = Math.min(s.hpMax, s.hp + rw.hpMax); }
-      if (rw.bag) for (const [k, n] of Object.entries(rw.bag)) { s.bag[k] = num(s.bag[k]) + n; got[k] = n; }
+      Object.assign(got, cupItemsOf(s, ex.sys, ex.star)); for (const [k, n] of Object.entries(got)) s.bag[k] = num(s.bag[k]) + n;
       if (Number.isInteger(rw.apt) && addAptUp(s, rw.apt, 'cup')) out.aptUp = { dist: rw.apt, grade: aptGradesOf(s)[rw.apt] };
       if (rw.title && !s.titles.includes(rw.title)) s.titles.push(rw.title);
       if (Object.keys(got).length) out.gotItems = got;
@@ -1558,6 +1577,7 @@
       if (b.kind === 'cup') {
         if (won && EX_BY_SYS[b.sys]) { exReward(s, EX_BY_SYS[b.sys], out); if (b.rival) { KEYS.forEach(k => addStat(s, k, RIVAL.all * (1 + stayNum(s, 'rivaldamashii') / 100))); if (!s.titles.includes(RIVAL.title)) s.titles.push(RIVAL.title); out.rivalWin = true; } }
         if (won && !EX_BY_SYS[b.sys]) {
+          giveItems(s, cupItemsOf(s, b.sys, b.star), out); // 勝ったときのアイテム(直接のごほうびの上乗せ)
           const sy = CUP_SYS[b.sys] || {};
           if (CUP_REWARD.pts[b.star]) gainWinPts(s, CUP_REWARD.pts[b.star]);
           if (CUP_REWARD.pop[b.star]) s.pop = clamp(s.pop + popGain(s, CUP_REWARD.pop[b.star]), 0, 100);
@@ -1668,7 +1688,7 @@
     return Object.freeze({
       events: EV,
       VERSION, STORY, KEYS, STAT_NAMES, PERIODS, TOTAL_TURNS, FORCED, SUMMIT, BASE, RESULTS, RATE, REST, PLAY, CLINIC, COND, LOYAL, GATHER, BOND, STORY, LOTTERY,
-      ASSISTS, ISSA, PTS, XP, SHUGYO, TECH_POWER, MASTERY, techRowsOf, techPowerOfRows, powerOf, techBoostOf, techUseOf, ITEMS, GOOD, CARRY_MAX, useItem, FAME_V, FAME_SCALE, TICKET_BASE, EX_CUPS, EX_BY_SYS, FAME_RANK, fameRankOf, FOUR_DONE, fourWinsOf, ELIXIR_ADD, FRUIT_MULT, TRAIN_LV, trainLvOf, REMATCH, canRematch, rematch, canSkip, battleKey, PRIZE, MEALS, meal, ticketsOfPrize, TECH_MAX, techsOf, canLearn, techRate, learnable, techRank, shugyoQ, superLeft, techMissOf, techCanon, canonTechList, shugyoLeft, teachFrom, BENCH: BENCH_USE, STAR_MULT, TAG_POWER, BOND_START, RANK_ADD, TRAIN_COMBO, AIDS, speciesList,
+      ASSISTS, ISSA, PTS, XP, SHUGYO, TECH_POWER, MASTERY, techRowsOf, techPowerOfRows, powerOf, techBoostOf, techUseOf, ITEMS, GOOD, CARRY_MAX, useItem, FAME_V, FAME_SCALE, TICKET_BASE, EX_CUPS, EX_BY_SYS, cupItemsOf, CUP_REWARD, FAME_RANK, fameRankOf, FOUR_DONE, fourWinsOf, ELIXIR_ADD, FRUIT_MULT, TRAIN_LV, trainLvOf, REMATCH, canRematch, rematch, canSkip, battleKey, PRIZE, MEALS, meal, ticketsOfPrize, TECH_MAX, techsOf, canLearn, techRate, learnable, techRank, shugyoQ, superLeft, techMissOf, techCanon, canonTechList, shugyoLeft, teachFrom, BENCH: BENCH_USE, STAR_MULT, TAG_POWER, BOND_START, RANK_ADD, TRAIN_COMBO, AIDS, speciesList,
       rngOf, periodOf, aptMult, initStats, memberOf, memberEffect, newRun, gatherOf, cardMult, peek, failRateOf, sabRateOf, greatRateOf,
       act, react, issa, issaComes, issaRate, endTurn, opponents: opponentsOf, settle, cupsOf, canEnter, bracketOf, gradeOf, GRADE_STEP, stayV, SC_CUPS, SC_NAME, ASST_STORY, storyEnd, markSpecial, battleMods, battleBuffs, peakTurn, ASTORY, storyDue, storyStep, preview, restore, ARC, PARTY, summitPick, endingOf, endingSeen, CUP_SYS, YEAR, RIVAL, CUP_PRIZE, spendPts, autoPts, ptsCost, evaluate, assistPointsOf, loyalOf, loyalMult, top3Of, sumOf,
       FUSE, fuseOk, fuseKinds, fusePlan, fuseId,

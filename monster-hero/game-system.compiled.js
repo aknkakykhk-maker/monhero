@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: fb408f2106138d52
+// source-sha256: 4807e28d2d465494
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -165865,55 +165865,59 @@ function MsxPlay({
 const MSX_EXTRA_ITEM = Object.freeze({
   oil: {
     e: '🫙',
-    desc: '体力を少し回復する'
+    desc: '体力を上限の20%回復'
   },
   oilyoil: {
     e: '🛢️',
-    desc: '体力をたっぷり回復する'
+    desc: '体力を上限の40%回復'
   },
   herb: {
     e: '🌱',
-    desc: 'ストレスを下げる'
+    desc: 'ストレス −20'
   },
   elixir0: {
     e: '🧪',
-    desc: '使ったターンの修行で、零の間合いの技を覚える率が上がる'
+    desc: '使ったターンの修行で、零の間合いの技を覚える率 +20'
   },
   elixir1: {
     e: '🧪',
-    desc: '使ったターンの修行で、近の間合いの技を覚える率が上がる'
+    desc: '使ったターンの修行で、近の間合いの技を覚える率 +20'
   },
   elixir2: {
     e: '🧪',
-    desc: '使ったターンの修行で、中の間合いの技を覚える率が上がる'
+    desc: '使ったターンの修行で、中の間合いの技を覚える率 +20'
   },
   elixir3: {
     e: '🧪',
-    desc: '使ったターンの修行で、遠の間合いの技を覚える率が上がる'
+    desc: '使ったターンの修行で、遠の間合いの技を覚える率 +20'
   },
   fruit_life: {
     e: '🍎',
-    desc: '使ったターンの訓練で、ライフが伸びやすくなる'
+    desc: '使ったターンのトレーニングで、ライフの伸び ×1.5'
   },
   fruit_pow: {
     e: '🍖',
-    desc: '使ったターンの訓練で、ちからが伸びやすくなる'
+    desc: '使ったターンのトレーニングで、ちからの伸び ×1.5'
   },
   fruit_wise: {
     e: '🫐',
-    desc: '使ったターンの訓練で、かしこさが伸びやすくなる'
+    desc: '使ったターンのトレーニングで、かしこさの伸び ×1.5'
   },
   fruit_hit: {
     e: '🍊',
-    desc: '使ったターンの訓練で、命中が伸びやすくなる'
+    desc: '使ったターンのトレーニングで、命中の伸び ×1.5'
   },
   fruit_eva: {
     e: '🍇',
-    desc: '使ったターンの訓練で、回避が伸びやすくなる'
+    desc: '使ったターンのトレーニングで、回避の伸び ×1.5'
   },
   fruit_tough: {
     e: '🥥',
-    desc: '使ったターンの訓練で、丈夫さが伸びやすくなる'
+    desc: '使ったターンのトレーニングで、丈夫さの伸び ×1.5'
+  },
+  stamina: {
+    e: '🍡',
+    desc: '体力の最大値 +15(体力も15回復)'
   }
 });
 const msxItemView = k => {
@@ -167453,7 +167457,15 @@ const msxR3WhyText = (e, s) => {
   if (e.why === 'won') return `${e.wonName} 優勝で出られる`;
   return '出られない';
 };
-const msxR3CupReward = (SUC, c) => {
+const msxR3CupItems = (SUC, c, s) => {
+  try {
+    const o = s && typeof SUC.cupItemsOf === 'function' ? SUC.cupItemsOf(s, c.sys, c.star) : {};
+    return Object.entries(o || {}).map(([k, n]) => `${(SUC.ITEMS[k] || {}).name || k} ×${n}`);
+  } catch (e) {
+    return [];
+  }
+};
+const msxR3CupReward = (SUC, c, s) => {
   const ex = SUC.EX_BY_SYS ? SUC.EX_BY_SYS[c.sys] : null;
   if (ex) {
     const rw = ex.rw || {};
@@ -167464,7 +167476,7 @@ const msxR3CupReward = (SUC, c) => {
     if (rw.loy) o.push(`忠誠度 +${rw.loy}`);
     if (rw.pts) o.push(`能力ポイント +${rw.pts}`);
     if (rw.pop) o.push(`人気 +${rw.pop}`);
-    if (rw.bag) Object.entries(rw.bag).forEach(([k, n]) => o.push(`${(SUC.ITEMS[k] || {}).name || k} ×${n}`));
+    o.push(...msxR3CupItems(SUC, c, s));
     if (Number.isInteger(rw.apt)) o.push('その間合いの適性が1段上がる');
     if (ex.four) o.push('四大大会');
     return o.length ? o.join('・') : '賞金と修行チケット';
@@ -167480,14 +167492,16 @@ const msxR3CupReward = (SUC, c) => {
     3: 4,
     4: 8
   }[c.star];
-  const up = {
-    2: 6,
+  const up = ((SUC.CUP_REWARD || {}).statUp || {
+    1: 4,
+    2: 8,
     3: 12
-  }[c.star];
+  })[c.star];
   if (pts) out.push(`能力ポイント +${pts}`);
   if (pop) out.push(`人気 +${pop}`);
   if (R.stat && up) out.push(`${MSX_STAT_NAME[R.stat]} +${up}`);
   if (c.star >= 4) out.push('全能力 +4');
+  out.push(...msxR3CupItems(SUC, c, s));
   if (c.scenario) out.push('シナリオのごほうび');
   return out.length ? out.join('・') : '賞金と修行チケット';
 };
@@ -167594,7 +167608,7 @@ function MsxR3Cup({
       className: "tx"
     }, React.createElement("b", null, c.scenario ? c.name : msxR3CupName(c.sys)), React.createElement("small", null, !ok ? `✖ ${msxR3WhyText(c.entry, s)}` : c.hard ? '🔥 勝ち目なし… 相手がとても強い' : c.rival ? `ライバル: ${c.rival.name}` : c.done ? '👑 優勝したことがある → ⏩ スキップできる' : '出られる ✔'), React.createElement("span", {
       className: "rw"
-    }, "🎁 ", msxR3CupReward(SUC, c))), React.createElement("div", {
+    }, "🎁 ", msxR3CupReward(SUC, c, s))), React.createElement("div", {
       className: "rt"
     }, React.createElement("span", {
       className: "st"
@@ -167756,6 +167770,11 @@ const msxR3Diff = (a, b) => {
     const g = b.stats[k] - a.stats[k];
     if (g) d.stats[k] = g;
   });
+  d.items = {};
+  Object.keys(b.bag || {}).forEach(k => {
+    const g = (Number((b.bag || {})[k]) || 0) - (Number((a.bag || {})[k]) || 0);
+    if (g > 0) d.items[k] = g;
+  });
   return d;
 };
 const msxR3PrizeRows = (d, s) => {
@@ -167768,6 +167787,11 @@ const msxR3PrizeRows = (d, s) => {
   if (d.pop) rows.push(['⭐', '人気', `+${d.pop}(${s.pop - d.pop} → ${s.pop})`, '', '']);
   if (d.sand) rows.push(['⏳', '時渡りの砂時計', `+${d.sand}`, '', '']);
   Object.entries(d.stats || {}).forEach(([k, g]) => rows.push([MSX_STAT_ICON[k], MSX_STAT_NAME[k], `+${g}`, '', '']));
+  Object.entries(d.items || {}).forEach(([k, n]) => {
+    const S = msxSuc && msxSuc.SUC ? msxSuc.SUC : null;
+    const it = S && S.ITEMS ? S.ITEMS[k] : null;
+    rows.push([typeof MSX_EXTRA_ITEM !== 'undefined' && MSX_EXTRA_ITEM[k] && MSX_EXTRA_ITEM[k].e || '🎁', it ? it.name : k, `×${n}(この育成の中で使える)`, 'new', 'GET']);
+  });
   return rows;
 };
 function MsxR3Battle({
