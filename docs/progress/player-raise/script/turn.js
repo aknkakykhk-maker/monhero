@@ -4,7 +4,7 @@
 //   who  … mua / atsu
 //   e    … 表情(assistants.js の ASSISTANT_EXPRESSIONS)
 //   t    … 台詞。{name}=プレイヤーの呼び方 / {mon}=育てているモンスターの名前 / {cheer}=編成の子の名前 /
-//          {train}=訓練の名前 / {stat}=能力の名前 / {tech}=技の名前 / {cup}=大会の名前
+//          {train}=トレーニングの名前 / {stat}=能力の名前 / {tech}=技の名前 / {cup}=大会の名前
 // 同じ場面に2本以上あるときは、くじで1本を出す。
 const MONSUC_SCRIPT_TURN = Object.freeze([
   // ── ターンのはじめの様子(疲れ・ストレス・機嫌。数字は言わない) ──
@@ -17,13 +17,13 @@ const MONSUC_SCRIPT_TURN = Object.freeze([
   { id:'turn.start.tired.mua1', who:'mua', e:'troubled', t:'{mon}、ちょっとあくび多めかも…。無理しすぎないでいこ？' },
   { id:'turn.start.tired.mua2', who:'mua', e:'troubled', t:'足どりが重そう💦 そろそろ休ませてあげてもいいかもー' },
   { id:'turn.start.worn.mua1', who:'mua', e:'crying', t:'えっ、{mon}ぐったりしてるぢゃん！ 今日は休も、まぢで！' },
-  { id:'turn.start.worn.mua2', who:'mua', e:'troubled', t:'{name}、{mon}もう限界っぽい…。このまま訓練はあぶないかも' },
+  { id:'turn.start.worn.mua2', who:'mua', e:'troubled', t:'{name}、{mon}もう限界っぽい…。このままトレーニングはあぶないかも' },
   { id:'turn.start.stress.mua1', who:'mua', e:'troubled', t:'{mon}、なんかムスッとしてる…。たまにはパーッと遊ばない？' },
   { id:'turn.start.stress.mua2', who:'mua', e:'troubled', t:'最近ため息ついてるの気づいた？ 気分転換いこーよー' },
 
   { id:'turn.start.great.atsu1', who:'atsu', e:'excited', t:'今日の{mon}、仕上がってんな。重いのいっとく？笑' },
   { id:'turn.start.great.atsu2', who:'atsu', e:'happy', t:'いい顔してるわ。こういう日に詰めとくと後で効くよ笑' },
-  { id:'turn.start.good.atsu1', who:'atsu', e:'happy', t:'調子いいね。とりあえず訓練でいいよ笑' },
+  { id:'turn.start.good.atsu1', who:'atsu', e:'happy', t:'調子いいね。とりあえずトレーニングでいいよ笑' },
   { id:'turn.start.good.atsu2', who:'atsu', e:'normal', t:'{mon}、ちゃんと動けてる。この感じ続けよ！' },
   { id:'turn.start.normal.atsu1', who:'atsu', e:'normal', t:'まぁ〜ふつうだな。どうする？笑' },
   { id:'turn.start.normal.atsu2', who:'atsu', e:'normal', t:'可もなく不可もなく。こういう月の積み重ねが大事なんだよ笑' },
@@ -34,7 +34,7 @@ const MONSUC_SCRIPT_TURN = Object.freeze([
   { id:'turn.start.stress.atsu1', who:'atsu', e:'troubled', t:'{mon}、ちょっとピリついてるな。一回遊ばせよ笑' },
   { id:'turn.start.stress.atsu2', who:'atsu', e:'normal', t:'てか最近ずっと詰めすぎたかもな。息抜きしよ…' },
 
-  // ── 訓練の結果 ──
+  // ── トレーニングの結果 ──
   { id:'turn.result.great.mua1', who:'mua', e:'excited', t:'えっ、すご(๑°ロ°๑)‼️ 大成功ぢゃん！ {mon}天才すぎ！' },
   { id:'turn.result.great.mua2', who:'mua', e:'excited', t:'今のまぢ完璧なのきた✨ 見てた見てた！？' },
   { id:'turn.result.ok.mua1', who:'mua', e:'happy', t:'うんうん、ちゃんとできたね♪ えらいえらい！' },

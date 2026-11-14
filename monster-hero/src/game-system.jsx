@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 7a144c6ff449ab47
+// generated-sha256: 359c6c64b5aab438
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -4742,6 +4742,9 @@ const BGM_TRACKS = [
   { id:'original_home', name:'HOMEテーマ', creator:'オリジナル', src:'audio/bgm-title.mp3', gain:1, loop:true, legacyKey:'home' },
   // 社長の持ち込み(2026-11-13)。元の音源は tools/art-sources/song-audio/home_2/。頭に無音は無く、終わりの0.03秒だけ消して継ぎ目を整えた(90.0秒)
   { id:'original_home_2', name:'モンヒロサクセス ホーム', creator:'オリジナル', src:'audio/bgm-home-2.mp3', gain:1, loop:true },
+  // 社長の持ち込み(2026-11-14・作り直し版)。元の音源は tools/art-sources/song-audio/monsuc_training/ と monsuc_rest/。終わりの小さくなる所は使わず、手前で頭へ戻す形にした(2026-11-14 社長)。トレーニングは150.25BPMの24小節=38.32秒の所で戻し、頭の0.4秒と重ねてつなぐ(37.9秒)。休養は48.5秒の所で戻し、頭の1.5秒と重ねてつなぐ(47.0秒)
+  { id:'monsuc_training', name:'モンヒロサクセス トレーニング', creator:'オリジナル', src:'audio/bgm-monsuc-training.mp3', gain:1, loop:true },
+  { id:'monsuc_rest', name:'モンヒロサクセス 休養', creator:'オリジナル', src:'audio/bgm-monsuc-rest.mp3', gain:1, loop:true },
   { id:'original_prep', name:'強化テーマ', creator:'オリジナル', src:'audio/bgm-menu.mp3', gain:1, loop:true, legacyKey:'prep' },
   { id:'original_battle', name:'バトルテーマ', creator:'オリジナル', src:'audio/bgm-battle.mp3', gain:1, loop:true, legacyKey:'battle' },
   { id:'original_boss', name:'ボステーマ', creator:'オリジナル', src:'audio/bgm-boss.mp3', gain:1, loop:true, legacyKey:'boss' },
@@ -6255,6 +6258,8 @@ const Audio_ = (() => {
     "audio/bgm-monster-hero-theme.mp3": "083a1d9db281",
     "audio/bgm-monster-short.mp3": "415b771e9bbf",
     "audio/bgm-monster.mp3": "6b190639c3fa",
+    "audio/bgm-monsuc-rest.mp3": "3bf37f96821c",
+    "audio/bgm-monsuc-training.mp3": "9bfeb31fb38a",
     "audio/bgm-mou-hitotsu-no-sekai-e.mp3": "633ed0ee2501",
     "audio/bgm-nothing-without-you.mp3": "4cb261cf1cd9",
     "audio/bgm-only-my-railgun.mp3": "62fb741fe3f1",
@@ -64996,8 +65001,8 @@ const QuickGuideOverlay = ({ guideId, pages, assistant, callName, onDone, onGoAu
 //              skill 修行・試合で技を見せる/win 大会に勝って固有技)。
 //             great・skill・win は図鑑の攻撃アクション(技ごとの動き)を流す。技は react.skill = { kind:'normal'|'unique', name }
 //             (名前は msxFxSkillName(species, kind, 段階) で引ける。無ければ図鑑と同じく最初の段階の動き)
-//   <MsxFxMoment kind="lvup" title="ちから Lv3" sub="訓練の効果が上がった" onDone={…}/>
-//     節目の短い演出。kind: lvup 訓練Lvアップ/tech 修行の技を覚えた/win 大会に勝った/lose 大会に負けた/
+//   <MsxFxMoment kind="lvup" title="ちから Lv3" sub="トレーニングの効果が上がった" onDone={…}/>
+//     節目の短い演出。kind: lvup トレーニングLvアップ/tech 修行の技を覚えた/win 大会に勝った/lose 大会に負けた/
 //     over ゲームオーバー/retire 引退。親は position:relative の画面(.msx)。画面いっぱいに重なる
 //     pose  … しぐさを出したままにする(止め絵・見本用)
 //     pyoko … ぴょこぴょこ(小さく弾み続け、ときどき大きく跳ねる。社長 2026-11-12「もっと小さくして、ぴょこぴょこ動くように」)。
@@ -65202,7 +65207,7 @@ function MsxLiveMon({ species, colors, mood = 'calm', season, time, react, onRea
 
 // ---- 節目の短い演出 ----
 const MSXFX_MOMENT = Object.freeze({
-  lvup: { icon: '⬆️', head: '訓練Lvアップ！', tone: 'gold' },
+  lvup: { icon: '⬆️', head: 'トレーニングLvアップ！', tone: 'gold' },
   tech: { icon: '📜', head: '技を覚えた！', tone: 'sky' },
   win: { icon: '🏆', head: '優勝！', tone: 'gold' },
   lose: { icon: '…', head: '負けてしまった', tone: 'gray' },
@@ -81086,7 +81091,7 @@ const useMsxSeen = () => {
 // ---- 効果の文(芯の出来事の表 fx から作る。数は表のまま・能力は小/中/大) ----
 const MSX_FX_SIZE = (n) => (n >= 2 ? '大' : n >= 1 ? '中' : '小');
 const MSX_FX_TARGET = Object.freeze({ main: '得意の能力', all: '全能力', rand: 'どれかの能力', cheer: '編成のモンスターの得意な能力', type: 'タイプの得意な能力' });
-const MSX_FX_FLAG = Object.freeze({ guts: '次の大会でガッツ +', goalPlus: '期の目標のごほうびアップ', baseBoost: 'ベースモンの効きアップ', injRisk: 'けがをしやすくなる', fav: '好きな訓練ができる', tagSeen: '友情タッグに目ざめる' });
+const MSX_FX_FLAG = Object.freeze({ guts: '次の大会でガッツ +', goalPlus: '期の目標のごほうびアップ', baseBoost: 'ベースモンの効きアップ', injRisk: 'けがをしやすくなる', fav: '好きなトレーニングができる', tagSeen: '友情タッグに目ざめる' });
 const MSX_FX_GOAL = Object.freeze({ star: '目標「スター」', toku: '目標「得意をのばす」', naka: '目標「みんなと仲良く」' });
 const msxSigned = (n) => (n > 0 ? `+${n}` : `−${Math.abs(n)}`);
 const msxFxText = (f) => {
@@ -81135,13 +81140,13 @@ function MsxChoiceInfo({ evId, c, open }) {
 
 // ---- 図鑑の中身(タブと出来事の並び) ----
 const MSX_EV_TITLE = Object.freeze({
-  'ev.daily.nut': '道ばたの木の実', 'ev.daily.rain': '雨の日の訓練', 'ev.daily.night': '星のきれいな夜', 'ev.daily.kids': '子どもたちが集まってきた', 'ev.daily.sweets': '新作スイーツ',
+  'ev.daily.nut': '道ばたの木の実', 'ev.daily.rain': '雨の日のトレーニング', 'ev.daily.night': '星のきれいな夜', 'ev.daily.kids': '子どもたちが集まってきた', 'ev.daily.sweets': '新作スイーツ',
   'ev.daily.book': '古い本', 'ev.daily.chase': '追いかけっこ', 'ev.daily.juggler': '大道芸人', 'ev.daily.arm': '腕ずもう', 'ev.daily.dream': 'こわい夢', 'ev.daily.picky': '好ききらい',
   'ev.daily.mirror': '鏡の前の決めポーズ', 'ev.daily.lost': '迷子', 'ev.daily.range': 'ひとりで間合いの稽古', 'ev.daily.map': '宝の地図', 'ev.daily.gift': 'ファンからの贈り物', 'ev.daily.alone': 'ひとりで自主練',
   'ev.small.omikuji': 'おみくじ', 'ev.small.nut': 'あやしい木の実',
   'ev.team.selfdrill': '編成のモンスターの自主練', 'ev.team.senpai': '先輩の背中', 'ev.team.fight': '編成どうしのケンカ', 'ev.team.base': 'ベースモンのがんばり', 'ev.team.friend': 'フレンドのモンスターが来た',
   'ev.team.typeskill': '得意技を教わる', 'ev.team.sync': '息ぴったり', 'ev.team.tagwake': '心がつながった',
-  'ev.self.anniv': 'はじめての育成記念日', 'ev.self.peakin': '伸びどきが来た', 'ev.self.peakout': '落ち着いてきた', 'ev.self.slump': 'スランプ', 'ev.self.favtrain': '好きな訓練', 'ev.self.selfish': 'ご機嫌ななめ', 'ev.self.clingy': '甘えんぼ',
+  'ev.self.anniv': 'はじめての育成記念日', 'ev.self.peakin': '伸びどきが来た', 'ev.self.peakout': '落ち着いてきた', 'ev.self.slump': 'スランプ', 'ev.self.favtrain': '好きなトレーニング', 'ev.self.selfish': 'ご機嫌ななめ', 'ev.self.clingy': '甘えんぼ',
   'ev.goal.pick': '期の目標を決める', 'ev.goal.done': '目標達成', 'ev.goal.miss': '目標に届かなかった',
   'ev.body.injury': 'けがの手前', 'ev.body.runaway': '元気がない', 'ev.body.healed': '治った', 'ev.body.home': '帰ってきた',
   'ev.season.jan1': '初もうで', 'ev.season.jan2': '書きぞめ', 'ev.season.jan3': '新年の願い事', 'ev.season.apr1': 'お花見', 'ev.season.apr2': '春の町', 'ev.season.apr3': '1年前の写真',
@@ -81186,7 +81191,7 @@ function MsxDex({ aid = 'mua', nick = '', onClose }) {
   React.useEffect(() => { if (typeof msxScriptLoad === 'function') { let alive = true; msxScriptLoad(readAid).then(() => { if (alive) setTick((n) => n + 1); }); return () => { alive = false; }; } return undefined; }, [readAid]);
   const se = msxSuc && msxSuc.script;
   const scene = open ? (open.ep != null ? (se && se.SCENE ? se.SCENE.story(open.aid, open.ep) : `scn.${open.aid}.ep${open.ep}`) : open.scene) : null;
-  const c2 = { aid: readAid, mon: nick || 'モンスター', name: 'あなた', callName: '', bond: 10, cheer: '編成のモンスター', cheer2: '編成のモンスター', train: '訓練', id: 'dex', turn: 10 };
+  const c2 = { aid: readAid, mon: nick || 'モンスター', name: 'あなた', callName: '', bond: 10, cheer: '編成のモンスター', cheer2: '編成のモンスター', train: 'トレーニング', id: 'dex', turn: 10 };
   let ev0 = null; try { ev0 = open && se && typeof se.event === 'function' && !open.awake ? se.event(scene, c2) : null; } catch (e) { ev0 = null; }
   const aw = open && open.awake && typeof msxPickLine === 'function' ? msxPickLine({ ...c2 }, scene, { bondLv: 10 }) : null;
   const who = (l) => (l.who === 'narr' ? null : l.who === 'issa' ? 'イッサ博士' : l.who === 'mon' ? (nick || 'モンスター') : (typeof msxAidName === 'function' ? msxAidName(l.who) : l.who));
@@ -81372,10 +81377,10 @@ const MSX_BETA_CSS = `
 `;
 
 // ---- part: 56-monsuc-tevent.jsx ----
-// ===== モンヒロサクセスの「訓練のあとの出来事」を1枚の場面で見せる(2026-11-13 社長「ターン後のイベントが下部にぽつんとで地味」) =====
-// 訓練の結果のあと、編成のモンスターとの出来事(芯の trainEvent: out.event = { who, story } か { who, lottery })があったときだけ挟む。
+// ===== モンヒロサクセスの「トレーニングのあとの出来事」を1枚の場面で見せる(2026-11-13 社長「ターン後のイベントが下部にぽつんとで地味」) =====
+// トレーニングの結果のあと、編成のモンスターとの出来事(芯の trainEvent: out.event = { who, story } か { who, lottery })があったときだけ挟む。
 // 中身は芯がもう足し終えている(ここは見せるだけ・何も保存しない)。入り方は MSX_TEV_STYLE(社長の決めで 'b' カットイン。'a' 暗転 / 'c' 「EVENT」の帯 は案のときの形)
-//   画面 MsxTrainEvent({ run, o, ctx, style }) … o = 訓練の結果(run.out)。台詞は台本の cheer.base.ep<N>(お話)/ cheer.lot.<種類>(小さな出来事)
+//   画面 MsxTrainEvent({ run, o, ctx, style }) … o = トレーニングの結果(run.out)。台詞は台本の cheer.base.ep<N>(お話)/ cheer.lot.<種類>(小さな出来事)
 
 const MSX_TEV_STYLE = 'b'; // 社長の決め(2026-11-13): B カットイン(2体の顔と「◯◯との出来事!」の斜めの帯)
 const MSX_TEV_LOT = Object.freeze({ self: 'drill', rest: 'rest', talk: 'chat', tip: 'tip', pal: 'friend', friend: 'friend' });
@@ -81469,9 +81474,9 @@ const msxTevEnsureCss = () => {
 };
 
 // ---- part: 56-monsuc-actfx.jsx ----
-// ===== モンヒロサクセスの訓練・修行の演出(2026-11-13 社長「トレーニングも修行も演出が入っていない」・参考動画の流れだけを取り入れる) =====
+// ===== モンヒロサクセスのトレーニング・修行の演出(2026-11-13 社長「トレーニングも修行も演出が入っていない」・参考動画の流れだけを取り入れる) =====
 // 何も保存しない・公開の印は持たない(モンサクの画面の中からだけ呼ぶ)。押すと飛ばせる。「動きを減らす」設定では出さない(すぐ結果)
-//   MsxTrainAct({ run, o, style, onDone }) … 訓練の結果の字の前に、訓練している場面(約1.3秒)。style: 'a' その場で動く / 'b' 集中線のカットイン
+//   MsxTrainAct({ run, o, style, onDone }) … トレーニングの結果の字の前に、トレーニングしている場面(約1.3秒)。style: 'a' その場で動く / 'b' 集中線のカットイン
 //   MsxShugyoStages({ run, o, line, onDone }) … 修行の結果の前に、助手の一言 →「STAGE 1 ◯◯&◯◯」→「STAGE 2 ◯◯&◯◯」(段ごとに景色が替わる・いっしょに修行した編成のモンスターの顔)
 
 const MSX_ACT_MS = 1700;
@@ -81489,14 +81494,14 @@ const msxQstageBgUrl = (name) => 'images/story-bg/' + String(name || 'forest_eve
 function MsxTrainAct({ run, o, onDone }) {
   msxActEnsureCss();
   const k = o && o.card && MSX_TRAIN_LV[o.card.stat] ? o.card.stat : 'pow';
-  // 行動の前の訓練Lv(Lvアップした回は上がる前の段で見せる)
+  // 行動の前のトレーニングLv(Lvアップした回は上がる前の段で見せる)
   const lv = msxTrainLvAt(o && Number.isFinite(o.trainLv) ? o.trainLv - (o.lvUp ? 1 : 0) : 1);
   const done = React.useRef(false);
   const finish = () => { if (done.current) return; done.current = true; onDone(); };
   React.useEffect(() => { if (msxActCalm()) { finish(); return undefined; } const id = setTimeout(finish, MSX_ACT_MS); return () => clearTimeout(id); }, []);
   if (msxActCalm()) return null;
   const n = (c) => Array.from({ length: c }, (_, i) => i);
-  // 訓練ごと・段ごとの小物(絵は使わず CSS と絵文字で描く。段が上がるほど大きく・多く)
+  // トレーニングごと・段ごとの小物(絵は使わず CSS と絵文字で描く。段が上がるほど大きく・多く)
   let prop = null;
   if (k === 'pow') {
     prop = lv <= 2 ? <div className="pr logs">{n(lv === 1 ? 3 : 4).map((i) => <i key={i} style={{ '--i': i }}><b/></i>)}<em className="boom">💥</em></div>
@@ -81523,7 +81528,7 @@ function MsxTrainAct({ run, o, onDone }) {
       <div className="me"><MsxMonArt run={run} className="mon" live/></div>
       {front ? prop : null}
       {lv === 5 ? <span className="flash5" aria-hidden="true"/> : null}
-      <div className="ban"><small>{MSX_STAT_NAME[k]}の訓練 <b>Lv.{lv}</b></small>{msxTrainIcon(k, lv)} {msxTrainName(k, lv)}!</div>
+      <div className="ban"><small>{MSX_STAT_NAME[k]}のトレーニング <b>Lv.{lv}</b></small>{msxTrainIcon(k, lv)} {msxTrainName(k, lv)}!</div>
     </div>
   );
 }
@@ -84384,6 +84389,8 @@ const MSX_CSS = `
 .msx .v-st.gs-a.zin div.up u.g i,.msx .v-st.gs-a.zin div.up u.g s{border-radius:2px}
 .msx .v-st.gs-a u.g q{quotes:none;position:absolute;left:0;right:0;top:100%;display:flex;justify-content:space-between;font-size:10px;font-weight:800;color:#fde68a;line-height:11px;pointer-events:none}
 .msx .v-st.gs-a u.g q::before,.msx .v-st.gs-a u.g q::after{content:none}
+@container (max-width:340px){.msx .v-st.gs-a u.g q{font-size:9.5px;letter-spacing:-.06em;left:-3px;right:-3px}}
+@media (max-width:340px){.msx .v-st.gs-a u.g q{font-size:9.5px;letter-spacing:-.06em;left:-3px;right:-3px}}
 @media (prefers-reduced-motion: reduce){.msx .v-st u.g i,.msx .v-st u.g s.gu{transition:none}.msx .v-st.grow.on u.g s.gu{animation:none}}
 .msx .v-act{display:grid;gap:5px;margin-top:6px}
 .msx .v-p{background:linear-gradient(180deg,#3d4c6b,#2a3247);border:1px solid #64748b;border-bottom:3px solid #0b1020;border-radius:14px;text-align:center;padding:5px 2px 4px;font-size:12.5px;font-weight:900;line-height:1.2;position:relative;display:flex;flex-direction:column;justify-content:center;align-items:center;min-width:0;white-space:nowrap}
@@ -84786,7 +84793,7 @@ const MSX_CSS = `
 .msx .v-pf.tag img{animation:msx-glow 1.6s ease-in-out infinite}
 .msx .v-tr.tag .o{animation:msx-glow 1.6s ease-in-out infinite}
 .msx-fade{animation:msx-fadein .18s ease-out}
-/* 社長「育成中のメイン・訓練の画面は、モンスターもっと小さくしてぴょこぴょこ動く」(2026-11-12)。いまの約7割 */
+/* 社長「育成中のメイン・トレーニングの画面は、モンスターもっと小さくしてぴょこぴょこ動く」(2026-11-12)。いまの約7割 */
 .msx .v-scene.home .mon{height:24%}.msx.land .v-scene.home .mon{height:28%}.msx.s320 .v-scene.home .mon{height:26%}
 .msx span.mon{display:block}
 .msx .mon.msx-live{animation:none;filter:none}
@@ -84834,15 +84841,15 @@ const MSX_SCENARIOS = Object.freeze([
   { aid: 'mua', no: 1, title: 'いっしょに、てっぺんへ!', lead: '明るく元気なムードメーカーと、笑いながら頂点をめざす物語。はじめての育成におすすめ', tag: 'やさしい',
     perk: '遊ぶ・休むでストレスが 1.3倍 減る。褒めたときの忠誠 +1', eps: ['はじめての おでかけ', 'はげまし合う夜', 'ふたりの約束'] },
   { aid: 'atsu', no: 2, title: '仕上げて、勝ちに行く', lead: '面倒見のいい兄貴分と、コツコツ仕上げて大会をとりにいく物語', tag: 'ふつう',
-    perk: '訓練の組み合わせが あつ流(ちから → ライフ・回避 など)', eps: ['はじめての特訓', '雨の日の作戦会議', '仕上げの約束'] },
+    perk: 'トレーニングの組み合わせが あつ流(ちから → ライフ・回避 など)', eps: ['はじめての特訓', '雨の日の作戦会議', '仕上げの約束'] },
 ]);
 const MSX_SOON_AIDS = Object.freeze(['kiki', 'momosuke', 'dra', 'kyuko', 'sorashido', 'erubin']);
 const MSX_STAT_ICON = Object.freeze({ life: '❤️', pow: '💪', wise: '🧠', hit: '🎯', eva: '💨', tough: '🛡️' });
 const MSX_STAT_NAME = Object.freeze({ life: 'ライフ', pow: 'ちから', wise: 'かしこさ', hit: '命中', eva: '回避', tough: '丈夫さ' });
-// 訓練の名前(2026-11-13 社長「トレごとに特色を」。うちのオリジナル)と、その場面の小物
+// トレーニングの名前(2026-11-13 社長「トレごとに特色を」。うちのオリジナル)と、その場面の小物
 const MSX_TRAIN_NAME = Object.freeze({ life: '坂道ダッシュ', pow: '丸太割り', wise: '積み木パズル', hit: '的当て', eva: '落ち葉よけ', tough: '岩受け止め' });
 const MSX_TRAIN_ICON = Object.freeze({ life: '🏃', pow: '🪵', wise: '🧩', hit: '🎯', eva: '🍂', tough: '🪨' });
-// 訓練Lv(1〜5)ごとの名前と見出しの絵(2026-11-13 社長「トレーニング名はレベルごとに名前を変えて」。段が上がるほど大きく・強そうに)
+// トレーニングLv(1〜5)ごとの名前と見出しの絵(2026-11-13 社長「トレーニング名はレベルごとに名前を変えて」。段が上がるほど大きく・強そうに)
 const MSX_TRAIN_LV = Object.freeze({
   life: [['坂道ダッシュ', '🏃'], ['丘越えダッシュ', '🏃'], ['山道かけ登り', '⛰️'], ['雪山かけ登り', '🏔️'], ['火山かけ登り', '🌋']],
   pow: [['丸太割り', '🪵'], ['大丸太割り', '🪵'], ['岩割り', '🪨'], ['大岩くだき', '🪨'], ['鉄球くだき', '⚫']],
@@ -84984,7 +84991,7 @@ const msxNormBox = (raw) => {
   const mons = (Array.isArray(o.mons) ? o.mons : []).map(msxNormBoxMon).filter(Boolean);
   return { ...o, v: 1, cap: Math.max(MSX_BOX_CAP0, Math.min(60, msxNum(o.cap, MSX_BOX_CAP0))), mons, memory: Array.isArray(o.memory) ? o.memory.filter(msxIsObj).slice(-100) : [] };
 };
-const MSX_ITEM_IDS = Object.freeze(['guide', 'loupe', 'band', 'mag', 'hachi', 'omamori', 'dango', 'grass', 'juice', 'powder', 'license', 'pack', 'hourglass', 'hourglass2', 'ticket']);
+const MSX_ITEM_IDS = Object.freeze(['guide', 'loupe', 'band', 'mag', 'hachi', 'omamori', 'dango', 'grass', 'juice', 'powder', 'license', 'pack', 'oil', 'oilyoil', 'herb', 'hourglass', 'hourglass2', 'ticket']);
 const msxNormMeta = (raw) => {
   const o = msxIsObj(raw) ? raw : {};
   const items = {}; const src = msxIsObj(o.items) ? o.items : {};
@@ -85143,7 +85150,33 @@ const MSX_ITEMS = Object.freeze([
   { id: 'powder', name: '悪様散', desc: '悪いようすを治して、体力を回復する', when: 'both', e: '💊' },
   { id: 'license', name: 'ブリーダーライセンス', desc: '忠誠度が一定数 上がる', when: 'both', e: '🪪' },
   { id: 'pack', name: 'オイリーパック', desc: 'オイル2個と薬草の詰め合わせ', when: 'both', e: '🧴' },
+  // 2026-11-13 社長「持ちこみに、育成中に使えるアイテムも足して」: 詰め合わせの中身を単品でも(芯の ITEMS にある物)
+  { id: 'oil', name: 'オイル', desc: '疲れた体にぬるオイル', when: 'both', e: '🫙' },
+  { id: 'oilyoil', name: 'オイリーオイル', desc: 'たっぷり効く大きいオイル', when: 'both', e: '🛢️' },
+  { id: 'herb', name: '薬草', desc: '気持ちが落ち着く草', when: 'both', e: '🌱' },
 ]);
+// 効き目の数値(2026-11-13 社長「効果が内部の数値でわからないものがある」)。芯の ITEMS・GOOD・BOND から作る(数字を写さない)
+const msxItemFx = (id) => {
+  const S = typeof msxSuc !== 'undefined' && msxSuc ? msxSuc.SUC : null; const it = S && S.ITEMS ? S.ITEMS[id] : null; if (!it) return '';
+  const G = S.GOOD || {}; const pc = (v) => `${Math.round(v * 100)}%`;
+  if (it.good === 'eventMaker' && G.eventMaker) { const b = (S.BOND && S.BOND.eventRate) || 0.5; return `編成のモンスターとの出来事 ${pc(b)}→${pc(b + G.eventMaker.eventRate)}`; }
+  if (it.good === 'trainGood' && G.trainGood) return `トレーニングの伸び +${pc(G.trainGood.train)}`;
+  if (it.good === 'shugyoGood' && G.shugyoGood) return `修行の伸び +${pc(G.shugyoGood.shugyo)}・技を覚える率 +${G.shugyoGood.techRate}`;
+  if (it.good === 'star' && G.star) return `人気の上がり ×${G.star.pop}・親密度の上がり ×${G.star.bond}`;
+  if (it.good === 'uketsugu' && G.uketsugu) { const st = Array.isArray(S.STORY) ? S.STORY : [{}, { p: 0.7 }, { p: 0.5 }]; const up = G.uketsugu.story; return `編成のモンスターとの連続の話が進みやすくなる(2話目 ${pc(st[1].p)}→${pc(Math.min(1, st[1].p + up))}・3話目 ${pc(st[2].p)}→${pc(Math.min(1, st[2].p + up))})。3話目の伝授で、そのモンスターの得意な能力の上がりが${G.uketsugu.teach}倍${G.uketsugu.start ? `。編成から受け継ぐはじめの能力も${G.uketsugu.start}倍(例: ちから500のモンスターなら +${Math.floor(500 / 25)}→+${Math.floor(500 / 25) * G.uketsugu.start})` : ''}`; }
+  if (it.issaForce) return 'イッサ博士が1度かならず来る';
+  if (it.issaSure) return 'その回の博士の実験がかならず成功';
+  if (it.hpMax) return `体力の上限 +${it.hpMax}`;
+  if (it.hpFull) return '体力を上限まで回復';
+  if (it.cure) return `悪いようす(サボり癖・うつなど)を治し、体力を上限の${pc(it.hp || 0)}回復`;
+  if (it.loyal) return `忠誠度 +${it.loyal}`;
+  if (it.ama || it.fear) return `甘え度 +${it.ama || 0}・恐れ度 +${it.fear || 0}(忠誠度 +${(it.ama || 0) + (it.fear || 0)})`;
+  if (it.gives) { const g = it.gives; return Object.keys(g).map((k) => `${(S.ITEMS[k] && S.ITEMS[k].name) || k}${g[k]}個(${msxItemFx(k)})`).join('・'); }
+  if (it.hp) return `体力を上限の${pc(it.hp)}回復`;
+  if (it.stress) return `ストレス ${it.stress}`;
+  return '';
+};
+const msxItemDesc = (id) => { const t = MSX_ITEM_BY_ID[id]; const fx = msxItemFx(id); return `${t ? t.desc : ''}${fx ? `。効き目: ${fx}` : ''}`; };
 const MSX_ITEM_BY_ID = Object.freeze(Object.fromEntries(MSX_ITEMS.map((t) => [t.id, t])));
 const MSX_NAME_MAX = 8;
 // 名前の見張り(助手のあだ名と同じ言葉の決まりを使う)。通らなければ null
@@ -85269,7 +85302,7 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf }) {
   } else if (step === 1) {
     const toggleBox = (id) => setTeamBox((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : cur.length >= 5 ? cur : [...cur, id]));
     body = (<>
-      <div className="v-h">編成の6体<small>保存枠から5体まで+フレンドから1体。強いモンスターほど訓練がよく伸びる</small></div>
+      <div className="v-h">編成の6体<small>保存枠から5体まで+フレンドから1体。強いモンスターほどトレーニングがよく伸びる</small></div>
       <div className="v-slots">
         {members.map((m, i) => (
           <div key={i} className={`v-sl${m.kind === 'base' ? ' base' : ''}${m.friend ? ' fr' : ''}`}>
@@ -85281,7 +85314,7 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf }) {
           </div>
         ))}
       </div>
-      <div className="v-card"><div className="sub" style={{ color: '#f9a8d4', fontWeight: 900 }}>この編成が集まりやすい訓練</div>
+      <div className="v-card"><div className="sub" style={{ color: '#f9a8d4', fontWeight: 900 }}>この編成が集まりやすいトレーニング</div>
         <div className="v-heat">{MSX_STATS.map((k, i) => <div key={k} className={heat[i] >= 3 ? 'x3' : heat[i] === 2 ? 'x2' : ''}>{MSX_STAT_NAME[k]}<b>{heat[i]}体</b></div>)}</div></div>
       <div className="v-card" style={{ flex: '1 1 0', minHeight: 0, overflowY: 'auto' }}>
         <div className="sub" style={{ color: '#f9a8d4', fontWeight: 900 }}>保存枠から選ぶ({teamBox.length}/5)</div>
@@ -85313,7 +85346,7 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf }) {
   } else if (step === 2) {
     const combo = SUC.TRAIN_COMBO && SUC.TRAIN_COMBO[aid];
     body = (<>
-      <div className="v-h">だれの物語で育てる?<small>助手ごとに、筋書き・出来事・訓練の組み合わせが変わる</small></div>
+      <div className="v-h">だれの物語で育てる?<small>助手ごとに、筋書き・出来事・トレーニングの組み合わせが変わる</small></div>
       <div className="v-faces">
         {MSX_SCENARIOS.filter((x) => msxAidOpen(x.aid)).map((x) => <button type="button" key={x.aid} className={aid === x.aid ? 'on' : ''} onClick={() => setAid(x.aid)}><img src={msxFace(x.aid)} alt={msxAidName(x.aid)}/></button>)}
         {[...MSX_SCENARIOS.filter((x) => !msxAidOpen(x.aid)).map((x) => x.aid), ...MSX_SOON_AIDS].map((a) => <span key={a} className="lk soon" role="button" tabIndex={0} aria-label={`${msxAidName(a)}(準備中)`} data-msx-soon={a} onClick={() => setLockTalk((n) => n + 1)}><img src={msxFace(a)} alt=""/><b>準備中</b></span>)}
@@ -85324,8 +85357,8 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf }) {
           <div style={{ marginTop: 4 }}>{sc.lead}</div>
           <div style={{ marginTop: 5 }}><span className="chip on">{sc.tag}</span> <span className="chip p">仲良し度 Lv{aidLv}</span></div></div></div>
         <div className="v-kv"><b>助手の効き</b><span>{sc.perk}</span></div>
-        {combo && <div className="v-kv"><b>訓練の組み合わせ</b><span>{MSX_STATS.slice(0, 3).map((k) => `${MSX_STAT_ICON[k]}${MSX_STAT_NAME[k]} → +${combo[k].map((c) => MSX_STAT_ICON[c]).join('+')}`).join(' / ')} …</span></div>}
-        <div className="v-kv"><b>はじめの親密度</b><span>{Math.min(100, aidLv * ((SUC.BOND && SUC.BOND.aidPerLv) || 8))}(仲良し度 Lv{aidLv})。助手も訓練に来て、タッグになる</span></div>
+        {combo && <div className="v-kv"><b>トレーニングの組み合わせ</b><span>{MSX_STATS.slice(0, 3).map((k) => `${MSX_STAT_ICON[k]}${MSX_STAT_NAME[k]} → +${combo[k].map((c) => MSX_STAT_ICON[c]).join('+')}`).join(' / ')} …</span></div>}
+        <div className="v-kv"><b>はじめの親密度</b><span>{Math.min(100, aidLv * ((SUC.BOND && SUC.BOND.aidPerLv) || 8))}(仲良し度 Lv{aidLv})。助手もトレーニングに来て、タッグになる</span></div>
         <div className="v-eps">{sc.eps.map((t, i) => <div key={i}><b>{i + 1}話</b>{t}</div>)}<div className="lk"><b>4話</b>🔒 ？？？</div></div>
         <div className="row" style={{ marginTop: 'auto' }}><img className="fc" src={msxFace(aid, 'wink')} alt=""/><div className="bub f1">「{aid === 'atsu' ? 'よし、いっちょ仕上げてくか。よろしくな笑' : 'いっしょに てっぺん めざそ! まぢで楽しいから!'}」</div></div>
       </div>
@@ -85347,7 +85380,7 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf }) {
       </div>
       <div className="v-ileg"><span><b className="sw1"/>はじめる前に効く物</span><span><b className="sw2"/>育成中にも使える物(1ターン1個まで)</span></div>
       <div className="msx-scroll">
-        {items.map((id) => <div key={id} className="v-item sel"><span style={{ fontSize: 22 }}>{MSX_ITEM_BY_ID[id].e}</span><div>{MSX_ITEM_BY_ID[id].name}<small>{MSX_ITEM_BY_ID[id].desc}</small></div><span className="pr">✅ 持っていく・あと{has(id) - 1}</span></div>)}
+        {items.map((id) => <div key={id} className="v-item sel"><span style={{ fontSize: 22 }}>{MSX_ITEM_BY_ID[id].e}</span><div>{MSX_ITEM_BY_ID[id].name}<small>{msxItemDesc(id)}</small></div><span className="pr">✅ 持っていく・あと{has(id) - 1}</span></div>)}
         {items.some((id) => !coreItems(id)) && <div className="msx-note" style={{ marginTop: 6 }}>まだ効き目が入っていない物があります(その物は持っていっても数は減りません)</div>}
       </div>
     </>);
@@ -85404,9 +85437,9 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf }) {
 }
 
 // ---- part: 56-monhero-success-main.jsx ----
-// ===== モンヒロサクセス: 育成の画面の本体(メイン・訓練を選ぶ・結果・叱る/褒める・イッサ博士・ターンが進む・中断と再開) =====
+// ===== モンヒロサクセス: 育成の画面の本体(メイン・トレーニングを選ぶ・結果・叱る/褒める・イッサ博士・ターンが進む・中断と再開) =====
 // 見本: docs/progress/player-raise/mock/png/v3-M・T・K・I.png。大会・修行・引退・合体の中身は回3(ボタンは置いて「準備中」)
-// 1ターンの流れ(芯の決まった順): act → (訓練なら)react → (来ていれば)issa → endTurn → (大会なら)settle
+// 1ターンの流れ(芯の決まった順): act → (トレーニングなら)react → (来ていれば)issa → endTurn → (大会なら)settle
 // ★1つ進むたびに mh_monsuc_run_v1 へ保存する(phase も持つので、どこで閉じても同じ所から続く)
 const MSX_POLICY_SCALE = Object.freeze(['超溺愛', '溺愛', '甘い', '普通', '厳しい', 'スパルタ', '超スパルタ']);
 const MSX_RES = Object.freeze({
@@ -85434,7 +85467,7 @@ const msxLayout = () => {
   if (w > h && h < 520) return 'land';
   return w <= 340 ? 's320' : '';
 };
-// 訓練の札(芯が6枚の札にしたら 'train:<能力>'、いまは 'light:<能力>')
+// トレーニングの札(芯が6枚の札にしたら 'train:<能力>'、いまは 'light:<能力>')
 const msxCardOf = (v, stat) => (v && v.cards ? (v.cards[`train:${stat}`] || v.cards[`light:${stat}`] || null) : null);
 const msxMemberName = (m) => (!m ? '' : m.kind === 'base' || !m.name || m.name === m.species ? msxMonName(m.species) : m.name);
 
@@ -85465,7 +85498,7 @@ function MsxBand({ s, v, ev, use = 0, stAdd = 0 }) {
     </div>
   );
 }
-// ups … 上がった(下がった)分。stats は変わったあとの値。preview … 訓練を選ぶ画面の見込み(まだ上がっていない)
+// ups … 上がった(下がった)分。stats は変わったあとの値。preview … トレーニングを選ぶ画面の見込み(まだ上がっていない)
 //   結果の画面では、上がる前の長さからゲージが伸び、伸びた分が光る(下がるときは縮み、減った分が赤く消える。2026-11-13 社長)。
 //   「動きを減らす」設定では、はじめから変わったあとの長さで出す
 function MsxStRow({ stats, ups, main, preview = false }) {
@@ -85677,7 +85710,7 @@ function MsxHome({ data, run, debug, onClose, onContinue, onNew, setMeta, onWipe
             <div className="sub">{run.nick}({msxMonName(s.species)})・{msxAidName(s.aid)}編・{s.over ? '引退の続きから' : `${v.period.name} 残り${v.period.left}ターン(最後まで あと${v.toEnd})`}</div>
             <button type="button" className="msx-btn go" onClick={onContinue}>{s.over ? '結果を見る' : '▶ 続きから'}</button>
           </div>
-        ) : <div className="v-card"><div className="h2">育てるモンスターを選んで、46ターンの育成をはじめよう</div><div className="sub">編成の6体が集まった訓練ほど、よく伸びる</div></div>}
+        ) : <div className="v-card"><div className="h2">育てるモンスターを選んで、46ターンの育成をはじめよう</div><div className="sub">編成の6体が集まったトレーニングほど、よく伸びる</div></div>}
         <button type="button" className="v-big" onClick={onNew}>🌱 新しく育成をはじめる</button>
         {onBox ? <button type="button" className="msx-btn sub" onClick={onBox} data-msx-r3-openbox>📦 保存枠({data.box.mons.length}/{data.box.cap})</button> : null}
         {typeof MonsucRankScreen === 'function' ? <button type="button" className="msx-btn sub" onClick={onRank}>🏆 ランキング</button> : null}
@@ -85706,7 +85739,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
   useEffect(() => () => { if (onSub) onSub('main'); }, []);
   // 期の区切りの演出(56-monsuc-kifx.jsx)を見終えたターン(保存しない。読み直したときはもう一度出る)
   const [kiAt, setKiAt] = useState(null);
-  // 訓練している場面(56-monsuc-actfx.jsx)をまだ見せていないターン。押した直後だけ立てる(読み直したときは出さない・保存しない)
+  // トレーニングしている場面(56-monsuc-actfx.jsx)をまだ見せていないターン。押した直後だけ立てる(読み直したときは出さない・保存しない)
   const [actAt, setActAt] = useState(null);
   const [sheet, setSheet] = useState(null); // 'log' | 'menu' | { soon: 名前 }
   const [, setScriptTick] = useState(0);
@@ -85731,7 +85764,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
     else if (st.over) setRun({ ...r0, s: st, phase: 'over', out: null });
     else setRun({ ...r0, s: st, phase: 'turn', out: { from: r0.s.turn } });
   };
-  // 訓練の結果のあと: 編成の出来事(ランダムイベント 'after')→ イッサ博士 → ターンを閉じる
+  // トレーニングの結果のあと: 編成の出来事(ランダムイベント 'after')→ イッサ博士 → ターンを閉じる
   const afterIssa = (r0) => { const p = SUC.peek(r0.s); if (p.issa) setRun({ ...r0, phase: 'issa', out: null }); else endTurnFlow(r0); };
   const afterAct = (r0) => {
     if (SUC.events && r0.s.last && r0.s.last.kind === 'train') {
@@ -85764,7 +85797,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
     setSub('main'); setSel(null);
     let next = { ...run, s: r.state, out: { ...r.out, kind: a.kind, hpFrom: Number.isFinite(s.hp) ? s.hp : null } };
     if (a.kind === 'retry') { endTurnFlow(next); return; }
-    const text = r.out.result ? `${MSX_STAT_NAME[a.stat] || ''}の訓練: ${MSX_RES[r.out.result].word}` : a.kind === 'rest' ? '休んだ' : a.kind === 'play' ? '遊んだ' : a.kind === 'clinic' ? '通院した' : '休み';
+    const text = r.out.result ? `${MSX_STAT_NAME[a.stat] || ''}のトレーニング: ${MSX_RES[r.out.result].word}` : a.kind === 'rest' ? '休んだ' : a.kind === 'play' ? '遊んだ' : a.kind === 'clinic' ? '通院した' : '休み';
     next = pushLog(next, text);
     if (r.out.result && typeof MsxTrainAct === 'function') setActAt(r.state.turn);
     setRun({ ...next, phase: 'result' });
@@ -85811,8 +85844,8 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
       </div>
       {isTrain ? <MsxStRow stats={s.stats} ups={acting ? null : gains} main={o.card && o.card.stat}/> : null}
       {acting ? <div className="v-log" style={{ opacity: .35 }}><span className="hd2">{msxTrainIcon(o.card.stat, tlv)} {msxTrainName(o.card.stat, tlv)}をしている…</span></div> : <div className="v-log">
-        {isTrain && o.lvUp ? <div className="v-lvup">⬆ 訓練Lvアップ! {MSX_STAT_ICON[o.card.stat]} {MSX_STAT_NAME[o.card.stat]} <b>Lv.{o.trainLv - 1} → Lv.{o.trainLv}</b><small>次から、{MSX_STAT_NAME[o.card.stat]}の訓練の基本の伸びが上がる</small></div> : null}
-        {isTrain ? <><span className="hd2">{msxTrainIcon(o.card.stat, tlv)} {msxTrainName(o.card.stat, tlv)}({MSX_STAT_NAME[o.card.stat]}の訓練)</span><br/>
+        {isTrain && o.lvUp ? <div className="v-lvup">⬆ トレーニングLvアップ! {MSX_STAT_ICON[o.card.stat]} {MSX_STAT_NAME[o.card.stat]} <b>Lv.{o.trainLv - 1} → Lv.{o.trainLv}</b><small>次から、{MSX_STAT_NAME[o.card.stat]}のトレーニングの基本の伸びが上がる</small></div> : null}
+        {isTrain ? <><span className="hd2">{msxTrainIcon(o.card.stat, tlv)} {msxTrainName(o.card.stat, tlv)}({MSX_STAT_NAME[o.card.stat]}のトレーニング)</span><br/>
           {Object.keys(gains).length ? <>{Object.entries(gains).map(([k, g], i) => <span key={k}>{i ? '・' : ''}{MSX_STAT_NAME[k]} <b className="gu">{g > 0 ? `+${g}` : g}</b></span>)}</> : '能力は上がらなかった'}{hpLost ? <><br/><span data-msx-hp-lost>体力が <b style={{ color: '#dc2626' }}>{hpLost}</b> 下がった</span></> : null}</>
           : o.kind === 'rest' || o.kind === 'play' ? <><span className="hd2">{o.kind === 'rest' ? '🛌 休む' : '🎈 遊ぶ'}</span><br/>体力が回復した{(o.cured || []).includes('utsu') ? '。ようす「うつ病」が治った' : ''}</>
           : o.kind === 'clinic' ? <><span className="hd2">🏥 通院</span><br/>{(o.cured || []).length ? 'ようすが治った' : '今回は治らなかった。もう1回来れば治る'}</>
@@ -85826,7 +85859,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
     const tev = isTrain && o.event && typeof MsxTrainEvent === 'function';
     foot = <div className="v-ft"><button type="button" onClick={() => (isTrain ? afterAct({ ...run, phase: 'main' }) : afterAct(run))}>⏩ とばす</button><button type="button" className="go" onClick={() => (tev ? setRun({ ...run, phase: 'tevent' }) : isTrain ? setRun({ ...run, phase: 'react' }) : afterAct(run))}>つぎへ ▶</button></div>;
   }
-  // ---- 訓練のあとの出来事の場面(56-monsuc-tevent.jsx) ----
+  // ---- トレーニングのあとの出来事の場面(56-monsuc-tevent.jsx) ----
   else if (phase === 'tevent' && run.out && run.out.event && typeof MsxTrainEvent === 'function') {
     body = <><MsxBand s={s} v={v} ev={ev}/><MsxTrainEvent key={`${s.turn}-tev`} run={run} o={run.out} ctx={ctx}/></>;
     foot = <div className="v-ft"><button type="button" onClick={() => afterAct({ ...run, phase: 'main' })}>⏩ とばす</button><button type="button" className="go" onClick={() => setRun({ ...run, phase: 'react' })} data-msx-tev-next>つぎへ ▶</button></div>;
@@ -85933,7 +85966,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
     </>);
     foot = <div className="v-ft"><button type="button" onClick={onPause}>← もどる</button><button type="button" onClick={onQuit}>この育成を消す</button></div>;
   }
-  // ---- 訓練を選ぶ ----
+  // ---- トレーニングを選ぶ ----
   else if (sub === 'train') {
     const pull = (k) => { const c = msxCardOf(v, k); return c ? c.tags.length * 10 + c.members.length + (c.aid ? 1 : 0) : 0; };
     const stat = sel || MSX_STATS.slice().sort((a, b) => pull(b) - pull(a))[0];
@@ -85949,7 +85982,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
       <div className="v-scene" style={{ flex: '1 1 0' }}>
         <img className="bg" src={msxSceneBg(s.turn).bg} alt=""/><div className="sh"/>
         <div className="gr" style={{ left: '30%', bottom: 'calc(38% - 5px)', width: '14%' }}/><MsxMonArt run={run} className="mon" style={{ left: '30%', bottom: '38%', height: '16%' }} live/>
-        <div className="v-chips" style={{ right: 'auto', left: 7 }}><span className="v-chip ylw" data-msx-train-chip style={{ display: 'block', width: 'max-content', maxWidth: 'calc(50vw - 24px)', whiteSpace: 'normal', lineHeight: 1.2, textAlign: 'left' }}>{msxTrainIcon(stat, trainLv)} {msxTrainName(stat, trainLv)}<small style={{ display: 'block', fontSize: 10, fontWeight: 800, opacity: .85 }}>{MSX_STAT_NAME[stat]}の訓練{trainLv ? ` Lv${trainLv}` : ''}</small></span></div>
+        <div className="v-chips" style={{ right: 'auto', left: 7 }}><span className="v-chip ylw" data-msx-train-chip style={{ display: 'block', width: 'max-content', maxWidth: 'calc(50vw - 24px)', whiteSpace: 'normal', lineHeight: 1.2, textAlign: 'left' }}>{msxTrainIcon(stat, trainLv)} {msxTrainName(stat, trainLv)}<small style={{ display: 'block', fontSize: 10, fontWeight: 800, opacity: .85 }}>{MSX_STAT_NAME[stat]}のトレーニング{trainLv ? ` Lv${trainLv}` : ''}</small></span></div>
         <div className="v-come">
           {members.map((i) => { const m = s.team[i]; const tag = s.bond[i] >= tagAt; const eff = SUC.memberEffect(m, stat, SUC.loyalOf(s)); return (
             <div key={i} className={`v-cm${tag ? ' tag' : ''}`}><MsxPf m={m} bond={s.bond[i]} tagAt={999}/>
@@ -85959,7 +85992,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
         {card && <div className={`v-fx${tags.length ? '' : ' plain'}`}>
           <div className="t">{tags.length ? <span className="big">🤝 友情タッグ ×{tags.length}</span> : <span>タッグなし</span>}<span>効果 ×{card.mult}</span><span className="fl">失敗 <b>{Math.round(card.fail * 100)}%</b></span></div>
           <div className="ch"><span>基本</span><i>▶</i><span>編成 +{Math.round(card.add * 100)}%</span>{tags.length ? <><i>▶</i><span className="tgx">🤝×{tags.length} +{Math.round(card.tag * 100)}%</span></> : null}{pv && pv.gain ? <><i>▶</i><span className="res">{MSX_STAT_NAME[stat]} +{pv.gain[stat] || 0}</span></> : null}</div>
-          {trainLv ? <div className="v-lvx"><b>訓練Lv.{trainLv}</b><i><u style={{ width: `${card.next ? Math.max(0, 100 - card.next * 20) : 100}%` }}/></i><span>{trainLv >= 5 ? 'Lv が いちばん上' : card.next ? `あと${card.next}回で Lvアップ` : ''}</span></div> : null}
+          {trainLv ? <div className="v-lvx"><b>トレーニングLv.{trainLv}</b><i><u style={{ width: `${card.next ? Math.max(0, 100 - card.next * 20) : 100}%` }}/></i><span>{trainLv >= 5 ? 'Lv が いちばん上' : card.next ? `あと${card.next}回で Lvアップ` : ''}</span></div> : null}
         </div>}
       </div>
       <MsxStRow stats={s.stats} ups={pv ? pv.gain : null} main={stat} preview/>
@@ -86004,13 +86037,13 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
       </div>
       <MsxStRow stats={s.stats}/>
       {can.includes('retry') ? (
-        <div className="v-act" style={{ gridTemplateColumns: '1fr' }}><button type="button" className="v-p main" onClick={() => doAct({ kind: 'retry' })}>🏆 デビュー戦に再挑戦<small>勝つまで訓練はできない(負けるたび相手が少し弱くなる)</small></button></div>
+        <div className="v-act" style={{ gridTemplateColumns: '1fr' }}><button type="button" className="v-p main" onClick={() => doAct({ kind: 'retry' })}>🏆 デビュー戦に再挑戦<small>勝つまでトレーニングはできない(負けるたび相手が少し弱くなる)</small></button></div>
       ) : can.includes('cond') ? (
         <div className="v-act" style={{ gridTemplateColumns: '1fr' }}><button type="button" className="v-p main" onClick={() => doAct({ kind: 'cond' })}>🛌 休む<small>{MSX_COND[s.cond && s.cond.kind] || '体調'}のため、このターンは休み</small></button></div>
       ) : (<>
         <div className="v-act" style={{ gridTemplateColumns: '1fr 2.3fr 1fr' }}>
           <button type="button" className="v-p" onClick={() => doAct({ kind: 'rest' })}><div className="e">🛌</div>休む<small>体力を回復</small></button>
-          <button type="button" className="v-p main" onClick={() => setSub('train')}>💪 訓練<small>{anyTag ? '🤝 友情タッグのチャンスあり' : '6つの訓練から選ぶ'}</small></button>
+          <button type="button" className="v-p main" onClick={() => setSub('train')}>💪 トレーニング<small>{anyTag ? '🤝 友情タッグのチャンスあり' : '6つのトレーニングから選ぶ'}</small></button>
           <button type="button" className="v-p" onClick={() => setSub('stats')}><div className="e">📊</div>能力<small>技・型・編成</small>{s.pts ? <span className="bd">能力P {s.pts}</span> : null}</button>
         </div>
         <div className="v-act" style={{ gridTemplateColumns: 'repeat(4,1fr)' }}>
@@ -86053,10 +86086,10 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
 }
 
 // ---- 持ち物(1ターンに1個まで・ターンは進まない)。中身は芯の s.bag(育成中に使う物の数)と s.carry(はじめる前に効いている物) ----
-const MSX_EXTRA_ITEM = Object.freeze({ oil: { e: '🫙', desc: '体力を少し回復する' }, herb: { e: '🌱', desc: 'ストレスを下げる' } });
+const MSX_EXTRA_ITEM = Object.freeze({ oil: { e: '🫙', desc: '体力を少し回復する' }, oilyoil: { e: '🛢️', desc: '体力をたっぷり回復する' }, herb: { e: '🌱', desc: 'ストレスを下げる' } });
 const msxItemView = (k) => {
   const base = MSX_ITEM_BY_ID[k]; const core = msxSuc && msxSuc.SUC.ITEMS ? msxSuc.SUC.ITEMS[k] : null; const ex = MSX_EXTRA_ITEM[k];
-  return { id: k, name: (base && base.name) || (core && core.name) || k, desc: (base && base.desc) || (ex && ex.desc) || '', e: (base && base.e) || (ex && ex.e) || '🎁', during: core ? core.use === 'during' : !!(base && base.when === 'both') };
+  return { id: k, name: (base && base.name) || (core && core.name) || k, desc: typeof msxItemFx === 'function' && msxItemFx(k) ? `${(base && base.desc) || (ex && ex.desc) || ''}。効き目: ${msxItemFx(k)}` : (base && base.desc) || (ex && ex.desc) || '', e: (base && base.e) || (ex && ex.e) || '🎁', during: core ? core.use === 'during' : !!(base && base.when === 'both') };
 };
 function MsxBag({ run, setRun, v, ev, onClose }) {
   const { SUC } = msxSuc;
@@ -86117,7 +86150,7 @@ function MsxStats({ run, setRun, v, ev, onClose }) {
       </div>
       <div className="v-card"><div className="h2">🤝 忠誠度 {SUC.loyalOf(s)}<span className="sub">(甘え度 {s.ama}+恐れ度 {s.fear})</span></div>
         <div className="sub">方針: {MSX_POLICY_SCALE[Math.max(-3, Math.min(3, s.pol || 0)) + 3]}・人気 {s.pop}・Lv {s.lv}・成長の型: {typeof MASMON_CALC !== 'undefined' ? MASMON_CALC.typeOf(s.type).name : '—'}</div></div>
-      {(() => { const pk = typeof SUC.peakInfo === 'function' ? SUC.peakInfo(s) : { state: null }; return pk.state ? <div className="v-card" data-msx-peak-stats><div className="h2">🔥 成長のピーク</div><div className="sub">{pk.state === 'in' ? `ピーク中(あと${pk.left}ターン)。訓練がよく伸びる` : `あと${pk.in}ターンでピーク(伸びどき)が始まる`}</div></div> : null; })()}
+      {(() => { const pk = typeof SUC.peakInfo === 'function' ? SUC.peakInfo(s) : { state: null }; return pk.state ? <div className="v-card" data-msx-peak-stats><div className="h2">🔥 成長のピーク</div><div className="sub">{pk.state === 'in' ? `ピーク中(あと${pk.left}ターン)。トレーニングがよく伸びる` : `あと${pk.in}ターンでピーク(伸びどき)が始まる`}</div></div> : null; })()}
       {s.omen || s.awake ? <div className="v-card" data-msx-yosu><div className="h2">🔎 様子</div>
         {s.omen ? <div className="sub">様子: <b style={{ color: '#fde047' }}>なにか起きそう</b>(体がうっすら{s.omen.k === 2 ? '虹色に' : ''}光っている)</div> : null}
         {s.awake ? <div className="sub">{s.awake >= 2 ? '🌈 超覚醒している(全能力 +70・レアキラ)' : '✨ 覚醒している(全能力 +30・キラ)'}</div> : null}</div> : null}
@@ -86417,6 +86450,8 @@ const MSX_R3_CSS = `
 .msx .r3 .v-rm3>button{display:flex;align-items:center;gap:8px;border:1.5px solid #64748b;border-bottom-width:3px;border-radius:13px;padding:6px 9px;font-size:12.5px;font-weight:900;line-height:1.3;min-width:0;text-align:left;color:#fff;font-family:inherit;width:100%}
 .msx .r3 .v-rm3>button.gv{background:#1e293b;display:block;text-align:center;padding:5px;font-size:11.5px;color:#cbd5e1}
 .msx .r3 .v-ml{color:#fff;font-family:inherit}
+/* ごはん9種(2026-11-13 社長)。3列×3段に収める */
+.msx .r3 .v-meal .ms{gap:4px}.msx .r3 .v-ml{padding:4px 2px}.msx .r3 .v-ml .e{font-size:20px}.msx .r3 .v-ml b{font-size:10.5px;overflow:hidden;text-overflow:clip}.msx .r3 .v-ml .g{font-size:10.5px}.msx .r3 .v-ml small{font-size:10px;line-height:1.25}
 .msx .r3 .v-ml.sel{border-color:#fde047;background:#3b2f0b;box-shadow:0 0 10px #fde04788}
 .msx .v-ft button:disabled{opacity:.45}
 `;
@@ -86735,7 +86770,7 @@ function MsxR3Cup({ run, setRun, v, ev, onBack, onActed }) {
   useMsxR3Lines(s.aid);
   useSuccessSound('cupEntry', { season: cal.season });
   const nOk = cups.filter((c) => c.entry && c.entry.ok).length;
-  const openLine = msxR3Line('turn.cup.open', run, { cup: cur ? msxR3CupName(cur.sys) : '' }, nOk ? `「今月は ${nOk}つ 出られるよ! 出ると1ターン使うから、訓練とどっちにするか考えてね」` : '「今月は出られる大会がないみたい。訓練でじっくり力をつけよ!」');
+  const openLine = msxR3Line('turn.cup.open', run, { cup: cur ? msxR3CupName(cur.sys) : '' }, nOk ? `「今月は ${nOk}つ 出られるよ! 出ると1ターン使うから、トレーニングとどっちにするか考えてね」` : '「今月は出られる大会がないみたい。トレーニングでじっくり力をつけよ!」');
   const body = (<>
     <MsxBand s={s} v={v} ev={ev} use={20}/>
     <div className="v-scene low" style={{ flex: '0 0 auto', minHeight: 150 }}><img className="bg" src="images/story-bg/monhero_town.jpg" alt=""/><div className="sh"/>
@@ -86906,10 +86941,38 @@ function MsxR3Battle({ run, setRun, v, ev, ctx, bondLv, onPause, debug }) {
     }
     // ごはん(C3): 大会のあとに1回。あげなくてもよい
     const M = SUC.MEALS || {};
-    const free = s.freeMeal === true;
     const keys = Object.keys(M);
-    const can = (k) => s.mealReady && !s.over && (free || s.fame >= M[k].cost);
-    const fx = (k) => { const m = M[k]; return m.hp ? `体力 +${Math.round(m.hp * 100)}%` : m.ama || m.fear ? `忠誠 +${(m.ama || 0) + (m.fear || 0)}` : m.all ? '全能力 少し +' : ''; };
+    const can = (k) => s.mealReady && !s.over && !!M[k];
+    // 効き目は芯の meal を写しで試しに呼んで、実際に増える量を出す(食いしん坊・うつ・上限まで含めて本当の数。2026-11-13 社長「ごはんの効果が全然わからない」)
+    const tryMeal = (k) => { try { const r = SUC.meal(s, k); return r && r.out && r.out.ok ? r.state : null; } catch (e) { return null; } };
+    const loyOf = (x) => Math.max(0, Math.min(100, (Number(x.ama) || 0) + (Number(x.fear) || 0)));
+    // 札には短く、選んだごはんは下の行でくわしく(体力は「回復」。上限は上がらない)
+    const effOf = (k) => {
+      const m = M[k]; const t = tryMeal(k); if (!m || !t) return null;
+      const hp = t.hp - s.hp; const ama = (Number(t.ama) || 0) - (Number(s.ama) || 0); const fear = (Number(t.fear) || 0) - (Number(s.fear) || 0);
+      const st = m.stat ? (t.stats[m.stat] || 0) - (s.stats[m.stat] || 0) : 0; const pop = (Number(t.pop) || 0) - (Number(s.pop) || 0); const pts = (Number(t.pts) || 0) - (Number(s.pts) || 0);
+      return { m, hp, ama, fear, st, pop, pts, loy0: loyOf(s), loy1: loyOf(t) };
+    };
+    const fx = (k) => {
+      const e = effOf(k); if (!e) return '';
+      const hp = e.hp > 0 ? `体力+${e.hp}` : '体力 満タン';
+      if (e.m.stat) return `${MSX_STAT_NAME[e.m.stat]}+${e.st}・${hp}`;
+      if (e.m.pop || e.m.pts) return `人気+${e.pop}・能力P+${e.pts}・${hp}`;
+      return `${e.m.fear ? `恐れ+${e.fear}` : `甘え+${e.ama}`}・${hp}`;
+    };
+    const fxLong = (k) => {
+      const e = effOf(k); if (!e) return '';
+      const hp = e.hp > 0 ? `体力を上限の${Math.round(e.m.hp * 100)}%回復(+${e.hp}・いま ${s.hp}→${s.hp + e.hp} / ${s.hpMax})` : `体力はもう満タン(上限 ${s.hpMax})`;
+      const parts = [hp];
+      if (e.m.stat) parts.push(`${MSX_STAT_NAME[e.m.stat]} +${e.st}(${s.stats[e.m.stat]}→${s.stats[e.m.stat] + e.st})`);
+      if (e.m.fear || e.m.ama) parts.push(`${e.m.fear ? '恐れ度' : '甘え度'} +${e.m.fear ? e.fear : e.ama}(忠誠度 ${e.loy0}→${e.loy1})`);
+      if (e.m.pop) parts.push(`人気 +${e.pop}(${s.pop}→${s.pop + e.pop})`);
+      if (e.m.pts) parts.push(`能力ポイント +${e.pts}`);
+      return parts.join('・');
+    };
+    const MEAL_ICON = { vitamin: '💊', gochiso: '🍱', f_life: '🥕', f_pow: '🍖', f_wise: '🌰', f_hit: '🫐', f_eva: '🍎', f_tough: '🥔', prune: '⭐' };
+    const LY = SUC.LOYAL || {}; const RT = SUC.RATE || {};
+    const loyNote = `忠誠度が高いほど、トレーニングと修行の伸びが上がる(${LY.capBoost || 60}で最大 ×${1 + (LY.capBoost || 60) / 100})。80以上で大成功が少し出やすい(+${Math.round((RT.greatLoyal80 || 0.03) * 100)}%)`;
     const give = () => { if (!mealPick || !can(mealPick)) return; const r = SUC.meal(s, mealPick); if (r.out.ok) finish(r.state); };
     const body = (<>
       <MsxBand s={s} v={v} ev={ev}/>
@@ -86917,15 +86980,21 @@ function MsxR3Battle({ run, setRun, v, ev, ctx, bondLv, onPause, debug }) {
         <div className="gr" style={{ bottom: 'calc(40% - 5px)' }}/><MsxMonArt run={run} className="mon" style={{ bottom: '40%', height: '34%', ...(st3.won ? {} : { filter: 'grayscale(.5) drop-shadow(0 8px 5px #0009)' }) }}/>
         <div className={`v-stamp ${st3.won ? '' : 'ng'}`} style={{ top: '4%', fontSize: st3.won ? 42 : 34 }}>{st3.won ? '優勝!' : '負けた…'}<small>{cardIconNode(st3.icon, 16)} {st3.name}{d.fame ? `・賞金 💰${msxFmt(d.fame)}` : ''}</small></div>
         {s.mealReady && !s.over ? (
-          <div className="v-meal"><div className="t">🍽 がんばったごほうびに、ごはんをあげよう<small>大会のあとだけあげられる(1回){free ? '・今回はただ' : ''}</small></div>
+          <div className="v-meal"><div className="t">🍽 がんばったごほうびに、ごはんをあげよう<small>優勝したときだけ あげられる(1回・ただ)</small></div>
             <div className="ms">{keys.map((k) => (
               <button type="button" key={k} className={`v-ml ${mealPick === k ? 'sel' : ''}`} disabled={!can(k)} onClick={() => setMealPick(k)} style={{ opacity: can(k) ? 1 : 0.45 }} data-msx-r3-meal={k}>
-                <div className="e">{k === 'hp' ? '🍙' : k === 'loyal' ? '🍛' : '🍖'}</div><b>{M[k].name}</b><span className="g">{free ? 'ただ' : `💰 ${M[k].cost}G`}</span><small>{fx(k)}</small></button>))}</div>
+                <div className="e">{MEAL_ICON[k] || '🍙'}</div><b>{M[k].name}</b><small data-msx-r3-mealfx={k}>{fx(k)}</small></button>))}</div>
+            <div className="msx-note" data-msx-r3-mealdetail style={{ marginTop: 5, fontSize: 11, lineHeight: 1.5, textAlign: 'left', color: '#fde68a' }}>{mealPick && M[mealPick] ? `${M[mealPick].name}: ${fxLong(mealPick)}` : '札を押すと、くわしい効き目が出ます'}</div>
+            <div className="msx-note" data-msx-r3-loynote style={{ marginTop: 4, fontSize: 10.5, lineHeight: 1.5, textAlign: 'left' }}>💡 {loyNote}</div>
             <div className="row" style={{ marginTop: 6 }}><img className="fc" src={msxFace(s.aid, st3.won ? 'excited' : 'troubled')} alt=""/><div className="bub f1">{st3.won ? '「優勝だもん、今日は ごちそう にしちゃお!」' : '「おつかれさま。おいしいもの食べて、また がんばろ!」'}</div></div></div>
+        ) : !st3.won && !s.over ? (
+          // 2026-11-13 社長: 負けたらごはんはなし。画面は出さず、助手の慰めの一言だけ
+          <div className="v-meal" data-msx-r3-lostnote><div className="row"><img className="fc" src={msxFace(s.aid, 'troubled')} alt=""/><div className="bub f1">{msxR3Line('turn.cup.lose', run, { cup: st3.name }, '「おつかれさま。負けちゃったけど、ここまでよくがんばったよ。次、いこ!」')}</div></div></div>
         ) : null}
       </div>
     </>);
-    const foot = <div className="v-ft"><button type="button" onClick={() => finish(s)} data-msx-r3-nomeal>あげない</button><button type="button" className="go" onClick={() => (mealPick && can(mealPick) ? give() : finish(s))} data-msx-r3-give>{mealPick && can(mealPick) ? `${M[mealPick].name}をあげる(${free ? 'ただ' : `💰${M[mealPick].cost}`})` : 'あげずに つぎへ ▶'}</button></div>;
+    const foot = !(s.mealReady && !s.over) ? <div className="v-ft"><button type="button" className="go" onClick={() => finish(s)} data-msx-r3-nomeal>つぎへ ▶</button></div>
+      : <div className="v-ft"><button type="button" onClick={() => finish(s)} data-msx-r3-nomeal>あげない</button><button type="button" className="go" onClick={() => (mealPick && can(mealPick) ? give() : finish(s))} data-msx-r3-give>{mealPick && can(mealPick) ? `${M[mealPick].name}をあげる` : 'あげずに つぎへ ▶'}</button></div>;
     return <MsxR3Frame run={run} back="中断" onBack={onPause} body={body} foot={foot}/>;
   }
   if (!b) return <MsxR3Frame run={run} back="中断" onBack={onPause} body={<div className="msx-note">大会の中身を読めませんでした</div>} foot={<div className="v-ft"><button type="button" className="go" onClick={() => finish(s)}>つぎへ ▶</button></div>}/>;
@@ -87063,7 +87132,7 @@ function MsxR3Battle({ run, setRun, v, ev, ctx, bondLv, onPause, debug }) {
 // 見本: docs/progress/player-raise/mock/png/v3-Q.png(v3-phone-Q1・Q2)
 // ・1ターン使う・チケット1枚(芯の act({kind:'shugyo', course, techs}))。2段で能力2つずつ → 最後に技のくじ(選んだ技それぞれ)
 // ・技を2つ選ぶと超修行(2026-11-13 社長: 育成中2回まで・2つとも覚えることがある・率 +15・能力の上がりと疲れは2回分)。技ごとにランク(1〜5)と今の率を出す
-// ・結果のあとは訓練と同じく叱る/褒める(回2の react の段)へ。保存は act のすぐあと(run.phase = 'react')なので、閉じても同じ所から続く
+// ・結果のあとはトレーニングと同じく叱る/褒める(回2の react の段)へ。保存は act のすぐあと(run.phase = 'react')なので、閉じても同じ所から続く
 const MSX_R3_DIST = Object.freeze(['零', '近', '中', '遠']);
 const MSX_R3_COURSE_BG = Object.freeze({ fire: 'forest_evening', ice: 'forest_morning', wind: 'forest_deep', star: 'monhero_night' });
 function MsxR3Shugyo({ run, setRun, v, ev, onBack, onPause }) {
@@ -87185,7 +87254,7 @@ function MsxR3Shugyo({ run, setRun, v, ev, onBack, onPause }) {
 // ・ゲームオーバーは保存枠に入れない。持ちこみ・使ったアイテム・チケットは戻さない(社長 2026-11-12)
 // ・入口 MsxR3(kind = 'battle' | 'over' | 'cup' | 'shugyo')は回2の MsxPlay から呼ばれる。保存枠の一覧 MsxR3Box は回2のホームから
 const MSX_R3_ASSIST_TEXT = Object.freeze({
-  sokoji: (v) => `いっしょの訓練の伸び +${v.join('/')}%`, kizuna: (v) => `忠誠が高いほど伸びる +${v.join('/')}%`, kaketsuke: (v) => `得意な訓練に来る率 +${v.join('/')}点`,
+  sokoji: (v) => `いっしょのトレーニングの伸び +${v.join('/')}%`, kizuna: (v) => `忠誠が高いほど伸びる +${v.join('/')}%`, kaketsuke: (v) => `得意なトレーニングに来る率 +${v.join('/')}点`,
   hirameki: (v) => `大成功の率 +${v.join('/')}点`, hitonatsu: (v) => `親密度の上がり ×${v.join('/')}`, atooshi: (v) => `1位の能力の伸び +${v.join('/')}%`,
   ochitsuki: (v) => `失敗の率 −${v.join('/')}%`, itawari: (v) => `減る体力 −${v.join('/')}%`, shugyo: (v) => `修行の伸び +${v.join('/')}%`,
 });
@@ -87227,9 +87296,9 @@ function MsxR3GameOver({ run, setRun, onPause }) {
       <div className="v-lives"><i/><i/><i/><span>デビュー戦 0 / 3 のこり</span></div></div>
     <div className="v-card">
       <div className="v-kv"><b>やり直し</b><span>砂時計 のこり <b>{Math.max(0, left)} / 3</b></span></div>
-      <div className="v-kv"><b>記録</b><span>{s.turn}ターン・訓練 {(s.log && s.log.train) || 0}回・デビュー戦 0勝{s.debutLoss || 3}敗</span></div>
+      <div className="v-kv"><b>記録</b><span>{s.turn}ターン・トレーニング {(s.log && s.log.train) || 0}回・デビュー戦 0勝{s.debutLoss || 3}敗</span></div>
       <div className="v-kv"><b>もちかえり</b><span>持ちこみ・使ったアイテム・修行チケットは戻らない。保存枠には入らない</span></div></div>
-    <MsxSay aid={s.aid} ex="troubled" text={`「…つぎは もっと訓練してから挑もう。わたしも 手伝うから! ${run.nick || 'このモンスター'}も、がんばったよ」`}/>
+    <MsxSay aid={s.aid} ex="troubled" text={`「…つぎは もっとトレーニングしてから挑もう。わたしも 手伝うから! ${run.nick || 'このモンスター'}も、がんばったよ」`}/>
     {!fxDone && typeof MsxFxMoment === 'function' ? <MsxFxMoment kind="over" title="育成は ここまで…" sub="デビュー戦に 3回 負けた" species={s.species} colors={run.colors} onDone={() => setFxDone(true)}/> : null}
     {log ? <div className="v-card">{(run.log || []).length ? run.log.slice().reverse().map((l, i) => <div key={i} className="msx-note">{l.turn}ターン目: {l.t}</div>) : <div className="msx-note">まだありません</div>}</div> : null}
   </>);
@@ -87325,12 +87394,12 @@ function MsxR3Retire({ run, setRun, onPause, debug, SUC }) {
       <div className="v-rec">
         <div><small>🏆 大会</small>{cupWins + cupLoss}戦 {cupWins}勝{(ws.crowns || 0) ? `・👑 ${ws.crowns}回` : ''}</div>
         <div><small>🤝 忠誠 / ⭐ 人気</small>{ev.loyal} / {ws.pop}</div>
-        <div><small>📯 集まりやすい訓練(上位3つ)</small>{(ev.top || []).map((k) => `${MSX_STAT_ICON[k]}${MSX_STAT_NAME[k]}`).join('・')}</div>
+        <div><small>📯 集まりやすいトレーニング(上位3つ)</small>{(ev.top || []).map((k) => `${MSX_STAT_ICON[k]}${MSX_STAT_NAME[k]}`).join('・')}</div>
         {mem ? <div><small>💥 編成での補正</small>{(mem.top || []).map((k) => `${MSX_STAT_NAME[k]} ${Math.round(mem.bonus[k] || 0)}%`).join('・')}</div> : null}
         {mem ? <div><small>🧩 アシストの基本値</small>親密度 {mem.bond0}・タッグ +{mem.tag}%・得意率 {Math.round((mem.fav || 0) * 100)}%</div> : null}
         {mem && mem.startAdd ? <div><small>📈 はじめの能力</small>{MSX_STAT_NAME[mem.startAdd.stat]} +{mem.startAdd.v}</div> : null}
       </div>
-      {(() => { const band = msxR3Band(grade.rank); const l = msxR3Line(`turn.retire.r${band}`, run, {}, `「${run.nick || 'このモンスター'}、まぢでがんばったね! 次の育成の編成に入ったら、${MSX_STAT_NAME[(ev.top || [])[0]] || 'ちから'}の訓練がすっごい伸びるよ!」`); return <MsxSay aid={ws.aid} ex={l.e || 'excited'} text={l.t}/>; })()}
+      {(() => { const band = msxR3Band(grade.rank); const l = msxR3Line(`turn.retire.r${band}`, run, {}, `「${run.nick || 'このモンスター'}、まぢでがんばったね! 次の育成の編成に入ったら、${MSX_STAT_NAME[(ev.top || [])[0]] || 'ちから'}のトレーニングがすっごい伸びるよ!」`); return <MsxSay aid={ws.aid} ex={l.e || 'excited'} text={l.t}/>; })()}
       <div className="v-card"><div className="sub" style={{ color: '#f9a8d4', fontWeight: 900 }}>🏅 この育成で手に入れたもの</div>
         <div className="v-kv"><b>賞金</b><span>合計 {msxFmt(ws.fameTotal || 0)}G</span></div>
         <div className="v-kv"><b>称号</b><span>{(ws.titles || []).length ? ws.titles.slice(0, 6).map((t) => `「${msxR3TitleName(t)}」`).join('') : 'なし'}</span></div>
