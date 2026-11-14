@@ -192,10 +192,10 @@ const seed = () => {
     await page.waitForFunction(() => !!document.querySelector('[data-ambb-prep]'), { timeout: 20000 }).catch(() => {});
     const cmp = await page.evaluate(() => ({ rows: document.querySelectorAll('[data-ambb-compare] [data-ambb-cmp-row]').length, set: !!document.querySelector('[data-ambb-settings]'), crash: /画面の表示でエラーが起きました/.test(document.body.innerText) }));
     check('段2: 比べっこ(能力6・等級3・間合い4)と試合の設定が出る', cmp.rows === 13 && cmp.set && !cmp.crash, JSON.stringify(cmp));
-    for (const sel of ['[data-ambb-set="team:ko"]', '[data-ambb-set="rounds:30"]', '[data-ambb-set="dist:3"]', '[data-ambb-set="guts:100"]', '[data-ambb-set="fx:lite"]']) await clickSel(sel);
+    for (const sel of ['[data-ambb-set="team:ko"]', '[data-ambb-set="rounds:30"]', '[data-ambb-set="dist:3"]', '[data-ambb-set="guts:99"]', '[data-ambb-set="fx:lite"]']) await clickSel(sel);
     await page.waitForTimeout(200);
     const savedSet = await page.evaluate(() => JSON.parse(localStorage.getItem('mh_assistant_masmon_battle_v1')).set);
-    check('段2: 設定はこの画面のキーに覚える', savedSet && savedSet.team === 'ko' && savedSet.rounds === 30 && savedSet.dist === 3 && savedSet.guts === 100 && savedSet.fx === 'lite', JSON.stringify(savedSet));
+    check('段2: 設定はこの画面のキーに覚える', savedSet && savedSet.team === 'ko' && savedSet.rounds === 30 && savedSet.dist === 3 && savedSet.guts === 99 && savedSet.fx === 'lite', JSON.stringify(savedSet));
     await clickSel('[data-ambb-start]');
     await page.waitForFunction(() => !!document.querySelector('[data-ambb-watch] [data-msa-stage]'), { timeout: 10000 }).catch(() => {});
     // 場が画面いっぱいに広がり終わるまで待つ(決まった時間では入場の重ねや描き直しの途中を測ることがあった・窓口 2026-11-14)。測る条件は下のまま

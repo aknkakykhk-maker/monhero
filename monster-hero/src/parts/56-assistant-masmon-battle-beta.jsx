@@ -34,7 +34,7 @@ const AMBB_SET_OPTS = Object.freeze({
   team: [{ id: 'team', label: 'チーム', note: '交代あり' }, { id: 'ko', label: '勝ち抜き', note: '交代なし・倒れたら次' }],
   rounds: [30, 50, 100, 150],
   dist: ['auto', 0, 1, 2, 3],
-  guts: [30, 50, 70, 100],
+  guts: [30, 50, 70, 99],
   fx: [{ id: 'full', label: 'たっぷり' }, { id: 'lite', label: '少なめ' }],
   ctl: [{ id: 'auto', label: 'オートで観戦' }, { id: 'manual', label: '手動', note: '手番ごとに自分で選ぶ' }],
   balance: [{ id: 'A', label: 'そのまま' }, { id: 'B', label: '差を縮める' }, { id: 'C', label: '差を広げる' }],
@@ -45,7 +45,7 @@ const normalizeAmbbSet = (raw) => {
     team: x.team === 'ko' ? 'ko' : 'team',
     rounds: ambbInt(x.rounds, 10, 300, AMBB_SET_DEF.rounds),
     dist: Number.isInteger(x.dist) && x.dist >= 0 && x.dist <= 3 ? x.dist : 'auto',
-    guts: ambbInt(x.guts, 0, 100, AMBB_SET_DEF.guts),
+    guts: ambbInt(x.guts, 0, 99, AMBB_SET_DEF.guts), // 版9でガッツの最大は 99(前に保存した 100 は 99 として読む)
     fx: x.fx === 'lite' ? 'lite' : 'full',
     balance: ['A', 'B', 'C'].includes(x.balance) ? x.balance : 'A',
     seedLock: x.seedLock === true,
@@ -181,8 +181,8 @@ const ambbUnitTechItems = (engine, catalog, unit) => {
   const hitMax = engine && Number.isFinite(engine.MASTERY_HIT_MAX) ? engine.MASTERY_HIT_MAX : 0, cut = engine && Number.isFinite(engine.MASTERY_GUTS_CUT) ? engine.MASTERY_GUTS_CUT : 0;
   return list.map(t => {
     const m = Math.max(0, Math.min(100, Number(unit.mastery && unit.mastery[t.id]) || 0));
-    // 技表の hit は基本の命中に足す補正。代表を決める目安は 75+補正(観戦の札 ambwTechItems と同じ決め方にそろえる)。一覧に出す命中%は熟練の分を足す
-    return { id: t.id, name: t.name, kind: t.kind, dist: t.dist, power: t.power, hit: 75 + t.hit, base: { power: t.power, hit: t.hit, gd: t.gd, crit: t.crit }, shown: Math.round((75 + t.hit + m * hitMax) * 10) / 10, guts: Math.round(t.guts * (1 - m / 100 * cut)) };
+    // 代表を決める目安は「命中=回避・ガッツ半分」の命中%(観戦の札 ambwTechItems と同じ ambwHitOf)。一覧に出す命中%は熟練の分を足す
+    return { id: t.id, name: t.name, kind: t.kind, dist: t.dist, power: t.power, hit: ambwHitOf(t.hit), base: { power: t.power, hit: t.hit, gd: t.gd, crit: t.crit }, shown: ambwHitOf(t.hit, m / 100 * hitMax), guts: Math.round(t.guts * (1 - m / 100 * cut)) };
   });
 };
 const ambbTacticsOf = (aid, rows) => { try { return typeof amgtTacticsOf === 'function' ? amgtTacticsOf(aid, rows) : 40; } catch (_) { return 40; } };
@@ -1139,7 +1139,7 @@ function AmbbSettings({ set, onSet, local, size, sizeMax, onSize, speed, onSpeed
         <details className="ambb-fold" data-ambb-tune>
           <summary>🔧 調整(試す人向け)</summary>
           <div className="ambb-set-row"><span>ラウンド上限</span><div><input type="range" min="10" max="300" step="5" value={set.rounds} data-ambb-tune-rounds onChange={(ev) => onSet({ rounds: Number(ev.target.value) })}/><div className="ambw-small">{set.rounds} ラウンド(いつもは {limit})</div></div></div>
-          <div className="ambb-set-row"><span>ガッツの初期値</span><div><input type="range" min="0" max="100" step="5" value={set.guts} data-ambb-tune-guts onChange={(ev) => onSet({ guts: Number(ev.target.value) })}/><div className="ambw-small">{set.guts}(いつもは {AMBB_SET_DEF.guts})</div></div></div>
+          <div className="ambb-set-row"><span>ガッツの初期値</span><div><input type="range" min="0" max="99" step="1" value={set.guts} data-ambb-tune-guts onChange={(ev) => onSet({ guts: Number(ev.target.value) })}/><div className="ambw-small">{set.guts}(いつもは {AMBB_SET_DEF.guts})</div></div></div>
           <div className="ambb-set-row"><span>能力の差</span>{chips('balance', AMBB_SET_OPTS.balance, o => o.label)}</div>
           <div className="ambb-set-row"><span>試合の流れ</span>
             <div className="ambb-tabs">
