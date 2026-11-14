@@ -463,6 +463,7 @@ const RHYTHM_EVENT_POINT_SHOP_OFFERS = Object.freeze([
   Object.freeze({ id:'solo_candy', name:'ひとつぶキャンディ', emoji:'🍬', kind:'item', itemId:'solo_candy', grantAmount:1, unit:'個', cost:80, releaseFlag:'assistantLifeSolo' }),
   Object.freeze({ id:'solo_keyholder', name:'キーホルダー', emoji:'🔑', kind:'item', itemId:'solo_keyholder', grantAmount:1, unit:'個', cost:250, releaseFlag:'assistantLifeSolo' }),
   Object.freeze({ id:'solo_omamori', name:'小さなお守り', emoji:'🧿', kind:'item', itemId:'solo_omamori', grantAmount:1, unit:'個', cost:300, releaseFlag:'assistantLifeSolo' }),
+  Object.freeze({ id:'solo_monplush', name:'モンスターのぬいぐるみ', emoji:'🧸', kind:'item', itemId:'solo_monplush', grantAmount:1, unit:'個', cost:300, releaseFlag:'assistantLifeTaste' }),
   // 🏥 特別な治療(2026-11-12 社長)。助手ライフの病院の回に1枚使うと、重いけが・病気でもその場で治る。公開の印 assistantLifeBody が立つまで並べない
   Object.freeze({ id:'life_cure', name:'特別な治療', emoji:'🏥', kind:'item', itemId:'life_cure', grantAmount:1, unit:'枚', cost:300, releaseFlag:'assistantLifeBody' }),
   // 助手ライフの家具(2026-11-08 社長「交換所に家具の段を足すだけ」)。交換所の「家具」タブに並ぶ。公開の印 assistantLifeFurniture が立つまで並べない
