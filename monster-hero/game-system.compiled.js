@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: dc578c58b6eec3b6
+// source-sha256: 8be81a7a46428fbc
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -117454,7 +117454,7 @@ function AssistantLifeTownMap({
       className: "block text-[10px] font-bold text-emerald-50",
       style: JA_LABEL_STYLE
     }, jaWrap(si.sub)));
-    const tiLine = ti && (ti.today ? `🥋 ${ti.today.nick}・${ti.today.kind}${ti.today.learned ? ` NEW ${ti.today.learned}を覚えた` : ''}${ti.today.main ? ` ・ ${ti.today.main} 熟練 +${ti.today.gain}` : ''}` : '🥋 きょうはまだ修行していません');
+    const tiLine = ti && (ti.today ? `🥋 ${ti.today.nick}・${ti.today.kind}${ti.today.learned ? ` NEW ${ti.today.learned}を覚えた` : ''}${ti.today.main ? ` ・ ${ti.today.main} 熟練 +${ti.today.gain}` : ''}` : '🥋 今日はまだ修行していません');
     return React.createElement("div", {
       key: id,
       className: `mt-2 flex flex-wrap items-center gap-2 rounded-2xl border bg-slate-900/85 p-2 ${initialAssistantId === id ? "border-sky-300 ring-2 ring-sky-300/70" : "border-white/10"}`,
@@ -119717,7 +119717,7 @@ const assistantLifePerkRows = (life, ids, nameOf) => {
       k: 'battle',
       place: 'battle',
       icon: '⚔',
-      text: `${nm(bt)}がモンヒロバトルで修行中です。👀 修行を見る・📣 応援するができます`,
+      text: `${nm(bt)}がモンヒロバトルで修行中です。👀 修行を見る・📣 応援もできます`,
       go: typeof assistantLifeOpenMapAt === 'function' ? () => assistantLifeOpenMapAt('battle', bt[0]) : typeof go.battle === 'function' ? go.battle : null
     });
   } catch (_) {}
