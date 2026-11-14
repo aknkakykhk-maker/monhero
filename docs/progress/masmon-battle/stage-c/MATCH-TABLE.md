@@ -41,11 +41,11 @@
 | 前へ/後ろへが逆 | 直した。左に「◀ 後ろへ」・右に「前へ ▶」 | arena-check / manual-bar-check / monsuc-manual-390.png |
 | 勝手にオート(原因A: 言うことを聞かない番) | 計算はそのまま。手動でも番が飛ぶ所を「意味不明!」の大きな判子・実況・帯・吹き出しではっきり見せる(読める長さ止める)。βも同じ部品・同じ言葉 | arena-check「意味不明の判子」(手動のまま) / 止め絵 monsuc-imi-fumei.png |
 | 勝手にオート(原因B: 保存) | モンサクの試合の手動/オートは、新しいキー mh_monsuc_arena_ctl_run_v1(育成の id つき)で「その育成の中だけ」覚える。新しい育成は手動から。前のキーは消さず読まない(βは今までどおり) | arena-check「新しい育成の最初の試合は手動」「同じ育成のオートは続く」 |
-| バトルに入ったらバトル曲 | 前の画面(組み合わせ表・能力を見るバトルカード)=cupPre=monsuc_cup(audio/bgm-monsuc-cup.mp3・94秒)。試合(VS紹介から)=cupMatch=original_battle(audio/bgm-battle.mp3・62秒)。別の曲・別の音源で、切り替わる順(cupPre → cupMatch)も実機の流れで確認。勝ち=cupWin・負け=cupLose | r3-shoot の W1「場面の曲が cupPre から cupMatch へ」「別の曲・別の音源」 |
+| バトルに入ったらバトル曲 | 前の画面(組み合わせ表・能力を見るバトルカード)=cupPre=monsuc_cup(audio/bgm-monsuc-cup.mp3・94秒)。試合(VS紹介から)=cupMatch=ichika_battle(バトルテーマ by いちか・audio/bgm-battle-ichika.mp3。社長 2026-11-14 の指示で original_battle から替えた)。別の曲・別の音源で、切り替わる順(cupPre → cupMatch)も実機の流れで確認。勝ち=cupWin・負け=cupLose | r3-shoot の W1「場面の曲が cupPre から cupMatch へ」「別の曲・別の音源」 |
 
-### バトル曲について(窓口の確認用)
-- コードと表の上では、試合の前の画面と試合は別の曲で、順番どおりに替わります(検査 OK)。試験の環境は無音なので、耳での確認はできていません。
-- それでも社長の耳で「同じに聞こえる」なら、候補は ①試合の曲(original_battle)が大会の曲と雰囲気が近い ②端末の音量・消音。もし別の曲にするなら、候補は ichika_battle(バトルテーマ by いちか)・original_boss など。曲を決めてもらえれば、cupMatch の曲を1行で替えられます(data/success-sounds.js)。
+### バトル曲について
+- 社長の答え(2026-11-14): 試合の曲は「バトルテーマ by いちか」(ichika_battle)に替える。data/success-sounds.js の cupMatch の1行だけを替えた。
+- 助手マスモン対戦βの試合の曲は、BGMアレンジの「バトル」(既定は original_battle)のまま。βも同じ曲にそろえるかは社長に確認中。
 
 ## 「そっぽ」→「意味不明」(社長 2026-11-14)
 - 替えた: 画面(判子・帯・タグ・下の1行・実況・負けたわけ・バトルカードの注意)・助手マスモンの画面のひとこと・ヘルプ(忠誠度と人気)・過去の更新履歴の1文・助手の絆の画面の説明
