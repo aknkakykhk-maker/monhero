@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 767a8dcfedc8d8cf
+// generated-sha256: 5fcd5795fa6541b3
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -77881,16 +77881,232 @@ const AMBB_CSS = `
 }
 @media (max-width:360px){.ambw.ambb-full .ambw-ctl{flex-wrap:wrap}.ambw.ambb-full .ambw-ctl button{padding:4px 8px;font-size:12px}}
 @media (max-width:360px){.ambw-top{font-size:11px;gap:4px}.ambw-top>span{white-space:nowrap}.ambw-top .ambw-btn2{padding-left:8px;padding-right:8px}}
+/* ---- 試合の見せ方(2026-11-14): 入場・NEXT・実況・決着・結果 ---- */
+.ambb-op{position:fixed;inset:0;z-index:9700;overflow:hidden;background:radial-gradient(ellipse at 50% 50%,#3b1d6e 0%,#160f2e 60%,#0b0818 100%);color:#fff;cursor:pointer;animation:ambbFade .3s ease-out both}
+.ambb-op:before{content:"";position:absolute;inset:-20%;background:linear-gradient(160deg,#38bdf833 0 46%,#0000 46% 54%,#f472b633 54% 100%);animation:ambbSlash .5s ease-out both}
+.ambb-op-in{position:relative;max-width:460px;height:100%;margin:0 auto;padding:max(14px,env(safe-area-inset-top)) 14px max(14px,env(safe-area-inset-bottom));display:flex;flex-direction:column;justify-content:center;gap:10px}
+.ambb-op-ttl{text-align:center;animation:ambbDrop .5s cubic-bezier(.2,1.5,.4,1) both}
+.ambb-op-ttl b{display:block;font-size:30px;font-weight:900;letter-spacing:.06em;color:#fde047;text-shadow:0 3px 0 #92400e,0 0 18px #fde04788}
+.ambb-op-ttl small{display:inline-block;margin-top:4px;font-size:11.5px;font-weight:900;color:#e2e8f0;background:#0f172acc;border-radius:99px;padding:2px 12px}
+.ambb-op-side{border-radius:16px;padding:9px 10px;background:#0f172a99;border:2px solid #38bdf8aa;animation:ambbInR .45s .15s cubic-bezier(.2,.9,.3,1) both}
+.ambb-op-side.A{border-color:#f472b6aa;animation:ambbInL .45s .5s cubic-bezier(.2,.9,.3,1) both}
+.ambb-op-who{display:flex;align-items:center;gap:8px}
+.ambb-op-side.B .ambb-op-who{flex-direction:row-reverse;text-align:right}
+.ambb-op-who img{width:46px;height:46px;border-radius:50%;object-fit:cover;object-position:top;border:2px solid #fff6;background:#312e5a;flex:none}
+.ambb-op-who b{display:block;font-size:15px;font-weight:900}
+.ambb-op-who small{display:block;font-size:11px;color:#cbd5e1}
+.ambb-op-mons{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:6px}
+.ambb-op-mons>div{text-align:center;animation:ambbPop .4s cubic-bezier(.2,1.6,.4,1) both;min-width:0}
+.ambb-op-mons img{display:block;width:100%;height:64px;object-fit:contain;filter:drop-shadow(0 4px 6px #0008)}
+.ambb-op-side.A .ambb-op-mons img{transform:scaleX(-1)}
+.ambb-op-mons em{display:block;font-style:normal;font-size:11px;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ambb-op-mons i{display:block;font-style:normal;font-size:9.5px;color:#a5b4fc}
+.ambb-op-say{margin:6px 0 0;font-size:12px;line-height:1.45;color:#fff;background:#ffffff14;border-radius:10px;padding:5px 8px;animation:ambbFade .4s 1s both}
+.ambb-op-side.A .ambb-op-say{animation-delay:1.5s}
+.ambb-op-vs{display:flex;align-items:center;gap:10px;animation:ambbStamp .5s .35s cubic-bezier(.2,1.6,.4,1) both}
+.ambb-op-vs i{flex:1;height:3px;background:linear-gradient(90deg,#0000,#fde047,#0000)}
+.ambb-op-vs b{font-size:40px;font-weight:900;font-style:italic;color:#fde047;text-shadow:3px 0 0 #b91c1c,-3px 0 0 #b91c1c,0 3px 0 #b91c1c,0 -3px 0 #b91c1c,0 0 22px #f87171}
+.ambb-op-tap{text-align:center;font-size:12px;font-weight:900;color:#fde68a;animation:ambbBlink 1.2s 1.8s ease-in-out infinite both}
+.ambb-next{position:absolute;inset:0;z-index:12;pointer-events:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;background:radial-gradient(circle,#0009,#0003 75%);animation:ambbNext 1.5s ease-in-out both}
+.ambb-next-band{width:100%;text-align:center;padding:6px 0;background:linear-gradient(90deg,#0000,#ec4899 18%,#ec4899 82%,#0000);transform:skewY(-4deg)}
+.ambb-next.B .ambb-next-band{background:linear-gradient(90deg,#0000,#0284c7 18%,#0284c7 82%,#0000)}
+.ambb-next-band small{display:block;font-size:11px;font-weight:900;letter-spacing:.4em;color:#fde68a}
+.ambb-next-band b{display:block;font-size:22px;font-weight:900;text-shadow:0 2px 0 #0008}
+.ambb-next-left{display:flex;gap:14px;font-size:11.5px;font-weight:900;background:#0f172acc;border-radius:99px;padding:3px 12px}
+.ambb-next-left span{display:flex;align-items:center;gap:4px}
+.ambb-next-left u{display:inline-block;width:9px;height:9px;border-radius:50%;background:#64748b;text-decoration:none}
+.ambb-next-left .A u.on{background:#f472b6}.ambb-next-left .B u.on{background:#38bdf8}
+.ambb-next-talk{display:flex;align-items:center;gap:6px;max-width:92%;background:#fff;color:#1e1b4b;border-radius:12px;padding:4px 10px 4px 4px;font-size:12px}
+.ambb-next-talk img{width:30px;height:30px;border-radius:50%;object-fit:cover;object-position:top;flex:none}
+.ambb-call{margin:0 0 4px;padding:3px 8px;border-radius:8px;background:linear-gradient(90deg,#7c3aed55,#0000);font-size:12px;font-weight:900;color:#fde68a;animation:ambbCall .35s ease-out both;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ambb-call.crit,.ambb-call.big{color:#fde047;background:linear-gradient(90deg,#b4530999,#0000)}
+.ambb-call.ko,.ambb-call.pinch{color:#fecaca;background:linear-gradient(90deg,#b91c1c99,#0000)}
+.ambb-call.rev,.ambb-call.last{color:#a5f3fc;background:linear-gradient(90deg,#0e749099,#0000)}
+.ambw.ambb-full .ambw-log .ambb-call+p:nth-last-child(n+2){display:none}
+.ambb-fin{position:fixed;inset:0;z-index:9700;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:16px;background:#160f2e center/cover no-repeat;color:#fff;cursor:pointer;overflow:hidden;animation:ambbFade .35s ease-out both}
+.ambb-fin:before{content:"";position:absolute;inset:0;background:radial-gradient(circle at 50% 45%,#0000 0,#0009 70%)}
+.ambb-fin.l:before{background:linear-gradient(180deg,#0f172acc,#020617ee)}
+.ambb-fin>*{position:relative}
+.ambb-fin-rays{position:absolute!important;left:50%;top:44%;width:640px;height:640px;margin:-320px 0 0 -320px;border-radius:50%;background:repeating-conic-gradient(#fde04700 0 9deg,#fde04740 9deg 18deg);-webkit-mask:radial-gradient(circle,#000 18%,#0000 66%);mask:radial-gradient(circle,#000 18%,#0000 66%);animation:ambbSpin 8s linear infinite}
+.ambb-fin-big{font-size:58px;font-weight:900;font-style:italic;letter-spacing:.04em;color:#fde047;text-shadow:3px 0 0 #92400e,-3px 0 0 #92400e,0 -3px 0 #92400e,0 5px 0 #92400e,0 0 24px #fde047aa;animation:ambbStamp .6s .15s cubic-bezier(.2,1.6,.4,1) both}
+.ambb-fin.l .ambb-fin-big{color:#cbd5e1;text-shadow:3px 0 0 #334155,-3px 0 0 #334155,0 -3px 0 #334155,0 5px 0 #1e293b;animation:ambbDrop .7s .1s ease-out both}
+.ambb-fin.d .ambb-fin-big{color:#e2e8f0;text-shadow:0 4px 0 #475569}
+.ambb-fin-sub{font-size:12px;font-weight:900;background:#0f172acc;border-radius:99px;padding:3px 14px;animation:ambbFade .4s .5s both}
+.ambb-fin-hero{text-align:center;animation:ambbHero .7s .35s cubic-bezier(.2,1.4,.4,1) both}
+.ambb-fin-hero img{display:block;width:200px;height:200px;object-fit:contain;margin:0 auto;filter:drop-shadow(0 8px 14px #000a)}
+.ambb-fin.w .ambb-fin-hero img{animation:ambbHop 1.1s 1.1s ease-in-out infinite}
+.ambb-fin.l .ambb-fin-hero img{filter:grayscale(.5) brightness(.75) drop-shadow(0 8px 14px #000a)}
+.ambb-fin-hero em{display:inline-block;margin-top:2px;font-style:normal;font-size:14px;font-weight:900;background:#0f172acc;border-radius:99px;padding:2px 14px}
+.ambb-fin-talk{display:flex;align-items:center;gap:8px;max-width:420px;width:100%;background:#fff;color:#1e1b4b;border-radius:14px;padding:6px 10px 6px 6px;font-size:13px;line-height:1.45;animation:ambbInL .45s 1s ease-out both}
+.ambb-fin-talk img{width:48px;height:48px;border-radius:50%;object-fit:cover;object-position:top;flex:none;background:#ede9fe}
+.ambb-fin-talk b{display:block;font-size:11px;color:#be185d}
+.ambb-fin .ambb-op-tap{margin-top:6px;animation-delay:2s}
+.ambb-hero{position:relative;overflow:hidden;border-radius:16px;margin-top:8px;padding:12px 10px 10px;background:#1e1a36 center/cover no-repeat;border:2px solid #fde04788;text-align:center}
+.ambb-hero.l{border-color:#64748b}
+.ambb-hero:before{content:"";position:absolute;inset:0;background:linear-gradient(180deg,#0008,#160f2ee6 80%)}
+.ambb-hero>*{position:relative}
+.ambb-hero .ambw-res{margin:0;background:none;border:0;padding:0}
+.ambb-hero-stamp{display:inline-block;font-size:30px;font-weight:900;font-style:italic;color:#fde047;text-shadow:2px 0 0 #92400e,-2px 0 0 #92400e,0 3px 0 #92400e;animation:ambbStamp .5s cubic-bezier(.2,1.6,.4,1) both}
+.ambb-hero.l .ambb-hero-stamp{color:#cbd5e1;text-shadow:0 3px 0 #334155}
+.ambb-mvp{display:flex;align-items:center;gap:10px;margin-top:8px;padding:8px;border-radius:12px;background:#0f172acc;text-align:left}
+.ambb-mvp img{width:76px;height:76px;object-fit:contain;flex:none;filter:drop-shadow(0 4px 6px #000a)}
+.ambb-mvp-badge{display:inline-block;font-size:11px;font-weight:900;color:#422006;background:linear-gradient(90deg,#fde047,#f59e0b);border-radius:6px;padding:0 8px;margin-bottom:2px}
+.ambb-mvp b{display:block;font-size:16px}
+.ambb-mvp small{display:block;font-size:11px;color:#cbd5e1}
+.ambb-hero-talk{display:flex;align-items:center;gap:8px;margin-top:8px;text-align:left;font-size:12.5px;line-height:1.45}
+.ambb-hero-talk img{width:40px;height:40px;border-radius:50%;object-fit:cover;object-position:top;border:2px solid #fff6;background:#312e5a;flex:none}
+.ambb-hero-talk p{margin:0;background:#fff;color:#1e1b4b;border-radius:12px;padding:5px 9px;flex:1}
+.ambb-star{display:grid;grid-template-columns:40px 1fr auto;align-items:center;gap:8px;padding:6px 0;border-top:1px dashed rgba(255,255,255,.12)}
+.ambb-star:first-of-type{border-top:0}
+.ambb-star img{width:40px;height:40px;object-fit:contain}
+.ambb-star b{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
+.ambb-star .ambw-small{font-size:10.5px}
+.ambb-star em{font-style:normal;font-size:16px;font-weight:900;color:#fde047;text-align:right}
+.ambb-star em small{display:block;font-size:9.5px;color:#cbd5e1}
+.ambb-star.mvp b:after{content:"MVP";margin-left:6px;font-size:9.5px;color:#422006;background:#fde047;border-radius:5px;padding:0 5px;vertical-align:1px}
+.ambb-stagewrap{position:relative}
+@keyframes ambbFade{from{opacity:0}to{opacity:1}}
+@keyframes ambbSlash{from{transform:translateX(-30%) skewX(-10deg);opacity:0}to{transform:none;opacity:1}}
+@keyframes ambbDrop{0%{opacity:0;transform:translateY(-30px) scale(1.3)}100%{opacity:1;transform:none}}
+@keyframes ambbInL{from{opacity:0;transform:translateX(-60px)}to{opacity:1;transform:none}}
+@keyframes ambbInR{from{opacity:0;transform:translateX(60px)}to{opacity:1;transform:none}}
+@keyframes ambbPop{0%{opacity:0;transform:translateY(16px) scale(.5)}100%{opacity:1;transform:none}}
+@keyframes ambbStamp{0%{opacity:0;transform:scale(2.6)}60%{opacity:1;transform:scale(.9)}100%{opacity:1;transform:scale(1)}}
+@keyframes ambbBlink{0%,100%{opacity:.35}50%{opacity:1}}
+@keyframes ambbNext{0%{opacity:0}12%{opacity:1}82%{opacity:1}100%{opacity:0}}
+@keyframes ambbCall{from{opacity:0;transform:translateX(-14px)}to{opacity:1;transform:none}}
+@keyframes ambbSpin{to{transform:rotate(360deg)}}
+@keyframes ambbHero{0%{opacity:0;transform:translateY(40px) scale(.6)}100%{opacity:1;transform:none}}
+@keyframes ambbHop{0%,100%{transform:none}30%{transform:translateY(-14px)}50%{transform:none}}
+@media (prefers-reduced-motion:reduce){.ambb-op,.ambb-op *,.ambb-fin,.ambb-fin *,.ambb-next,.ambb-call,.ambb-hero-stamp{animation:none!important}}
+@media (max-height:640px){.ambb-op-mons img{height:46px}.ambb-op-ttl b{font-size:24px}.ambb-op-vs b{font-size:30px}.ambb-fin-hero img{width:140px;height:140px}.ambb-fin-big{font-size:44px}}
 `;
+
+// ---- 試合の見せ方(2026-11-14 社長「助手バトルがなんか準備からバトル、終わりとそのまま流れてて味気ない。軽いミニゲームみたいな感じ。もっとちゃんとつくってほしい」) ----
+//   入場(両方の助手と並び・VS)→ 試合(実況・倒れたあとの NEXT の区切り)→ 決着(勝者の大写し・ファンファーレ)→ 結果(MVP・活躍)。
+//   見せ方だけ。試合の計算・保存の形・フレンド対戦/ランキングの計算は変えない
+const AMBB_TALK = Object.freeze({
+  mua: { in: '「みんな見てるよ! いつもどおりで だいじょうぶ!」', next: '「つぎ、おねがい! {n}!」', win: '「やったー! みんな すごかったよ!」', lose: '「くやしいね… でも次は きっと勝てるよ!」', mvp: '「{n}、いちばん がんばってたね!」' },
+  atsu: { in: '「最初から全開でいけ!」', next: '「{n}、出番だ! ぶちかませ!」', win: '「よっしゃあ! これが おれたちの力だ!」', lose: '「…チッ。鍛え直しだな」', mvp: '「{n}、今日の主役は おまえだ!」' },
+  kiki: { in: '「そのまま、まっすぐ…!」', next: '「{n}… おねがい」', win: '「…勝てた。すごく うれしい」', lose: '「…つぎは、負けない」', mvp: '「{n}… かっこよかった」' },
+  momosuke: { in: '「ここが見せ場だよ! いちばん目立っちゃお!」', next: '「{n}、主役交代〜! かましちゃって!」', win: '「最高のステージだったね〜!」', lose: '「あ〜ん、くやしい! リベンジするよ!」', mvp: '「{n}、今日いちばん目立ってた!」' },
+  dra: { in: '「教えたとおりに。おまえならできる」', next: '「{n}、落ち着いていけ」', win: '「よくやった。胸を張れ」', lose: '「負けから学べ。次へつなげるぞ」', mvp: '「{n}、見事だった」' },
+  kyuko: { in: '「相手の動き、もう見えてるよ」', next: '「{n}、読みどおりに動いて」', win: '「ふふ、読みどおりだったね」', lose: '「読み負けたか… 作戦を練り直そう」', mvp: '「{n}、いい動きだったよ」' },
+  sorashido: { in: '「計算どおりっす! 落ち着いていきましょう!」', next: '「{n}、ここからが見せどころっす!」', win: '「完璧っす! 計算どおりっすね!」', lose: '「計算ちがいっす… データを取り直しましょう」', mvp: '「{n}の数字、すごいっす!」' },
+  erubin: { in: '「ちゃんと見てるからね」', next: '「{n}、だいじょうぶ。見てるよ」', win: '「えらかったね。ちゃんと見てたよ」', lose: '「よくがんばったよ。ゆっくり次に備えよう」', mvp: '「{n}、えらかったね」' },
+});
+const AMBB_TALK_DEF = Object.freeze({ in: '「いっしょに がんばろう!」', next: '「{n}、おねがい!」', win: '「やったね! 勝ったよ!」', lose: '「くやしいね… 次はがんばろう」', mvp: '「{n}、がんばったね!」' });
+const ambbTalk = (aid, k, n) => String((AMBB_TALK[aid] || {})[k] || AMBB_TALK_DEF[k] || '').split('{n}').join(n || '');
+const ambbAsst = (id) => (typeof ASSISTANT_LIST !== 'undefined' ? ASSISTANT_LIST.find(a => a.id === id) || null : null);
+const ambbFace = (id, ex) => { const a = ambbAsst(id); return a && typeof assistantFaceSrc === 'function' ? assistantFaceSrc(a, ex || 'normal') : ''; };
+const ambbMonImg = (sp) => ((typeof ALL_PLAYER_MONSTERS !== 'undefined' && ALL_PLAYER_MONSTERS[sp]) || {}).imgUrl || '';
+const ambbSe = (k) => { if (typeof msaSe === 'function') msaSe(k); };
+// 倒れたあとに次の子が出る所(NEXT の区切りを出す・少し間を取る)
+const ambbIsNext = (log, k) => { const e = log[k]; if (!e || e.ev !== 'enter' || !e.side) return false; for (let j = k - 1; j >= 1; j--) if (log[j].ev === 'ko') return true; return false; };
+const AMBB_NEXT_MS = 1500;
+// 実況の1行(会心・大ダメージ・あとがない・ダウン・最後の1体・逆転)。無ければ null
+const ambbCallOf = (log, frames, k, maxHp, who) => {
+  const e = log[k] || {}, f = frames[k], pf = frames[k - 1];
+  if (!e.side || !f) return null;
+  const left = (sd) => (f.hp[sd] || []).filter(h => h > 0).length;
+  const many = (sd) => (maxHp[sd] || []).length > 1;
+  const ratio = (fr, sd) => { const mx = (maxHp[sd] || []).reduce((a, b) => a + (Number(b) || 0), 0) || 1; return (fr.hp[sd] || []).reduce((a, h) => a + Math.max(0, Number(h) || 0), 0) / mx; };
+  if (e.ev === 'ko') { const n = left(e.side); return { k: 'ko', t: n ? `${e.name}、ダウン! のこりは ${n}体!` : `${e.name}、ダウン! 勝負あり!` }; }
+  if (e.ev === 'enter' && ambbIsNext(log, k) && many(e.side) && left(e.side) === 1) return { k: 'last', t: `最後の1体、${who(e.side, e.i)}が出てきた!` };
+  if (e.ev === 'swap') return { k: 'swap', t: `ここで交代! ${who(e.side, e.i)}が前へ!` };
+  if (e.ev !== 'tech' || !e.hit) return null;
+  const foe = e.side === 'A' ? 'B' : 'A';
+  if (pf && k > 3) {
+    const a0 = ratio(pf, 'A') - ratio(pf, 'B'), a1 = ratio(f, 'A') - ratio(f, 'B');
+    if (a0 * a1 < 0 && Math.abs(a1) > 0.04) return { k: 'rev', t: `逆転! ${e.name}で 形勢が入れかわった!` };
+  }
+  if (e.crit) return { k: 'crit', t: `会心の一撃! ${who(e.side, e.i)}の${e.name}!` };
+  const ti = Number.isFinite(e.ti) ? e.ti : f.act[foe];
+  const mx = (maxHp[foe] || [])[ti] || 1, hp = (f.hp[foe] || [])[ti];
+  if (e.dmg >= mx * 0.3) return { k: 'big', t: `大きい! ${e.name}で ${e.dmg}ダメージ!` };
+  if (hp > 0 && hp <= mx * 0.2) return { k: 'pinch', t: `${who(foe, ti)}、あとがない!` };
+  return null;
+};
+// 試合のマスモンごとの活躍(与えたダメージ・当てた数・たおした数)。MVP は自分の側でダメージ+たおした数がいちばんの子
+const ambbStarsOf = (log, side, n) => {
+  const out = Array.from({ length: n }, () => ({ dmg: 0, hit: 0, n: 0, crit: 0, ko: 0 }));
+  let act = 0, foeAct = 0;
+  const foe = side === 'A' ? 'B' : 'A';
+  for (const e of log) {
+    if ((e.ev === 'enter' || e.ev === 'swap') && e.side === side && Number.isFinite(e.i)) act = e.i;
+    if ((e.ev === 'enter' || e.ev === 'swap') && e.side === foe) foeAct = e.i;
+    const i = e.side === side && Number.isFinite(e.i) ? e.i : act;
+    if (e.ev === 'tech' && e.side === side && out[i]) { out[i].n++; if (e.hit) { out[i].hit++; out[i].dmg += e.dmg || 0; } if (e.crit) out[i].crit++; }
+    if (e.ev === 'ko' && e.side === foe && out[act]) out[act].ko++;
+  }
+  void foeAct;
+  return out;
+};
+const ambbMvpOf = (stars) => { let b = -1, bs = -1; stars.forEach((s, i) => { const sc = s.dmg + s.ko * 120; if (sc > bs) { bs = sc; b = i; } }); return b; };
+
+// 入場: 題字・両方の助手と3体の並び・VS。タップか時間で試合へ
+function AmbbOpening({ teams, title, sub, plan, nameA, nameB, quick, onGo }) {
+  const done = useRef(false);
+  const go = () => { if (done.current) return; done.current = true; ambbSe('card'); onGo(); };
+  useEffect(() => { ambbSe('join'); const t = setTimeout(go, quick ? 1800 : 4600); return () => clearTimeout(t); }, []);
+  const side = (sd) => {
+    const t = teams[sd], aid = t.assistantId;
+    return (
+      <div className={`ambb-op-side ${sd}`}>
+        <div className="ambb-op-who"><img src={ambbFace(aid, 'normal')} alt=""/><div><b>{sd === 'A' ? nameA : nameB}</b>{sd === 'A' && plan ? <small>作戦: {plan}</small> : <small>{t.members.length}体</small>}</div></div>
+        <div className="ambb-op-mons">{t.members.map((m, i) => (
+          <div key={i} style={{ animationDelay: `${(sd === 'B' ? 0.25 : 0.65) + i * 0.12}s` }}><img src={ambbMonImg(m.species)} alt=""/><em>{m.name}</em><i>{i === 0 ? '先頭' : `${i + 1}番手`}</i></div>
+        ))}</div>
+        <p className="ambb-op-say">{ambbTalk(aid, 'in')}</p>
+      </div>
+    );
+  };
+  return (
+    <div className="ambb-op" data-ambb-opening onClick={go} role="button" aria-label="試合を始める">
+      <div className="ambb-op-in">
+        <div className="ambb-op-ttl"><b>{title}</b><small>{sub}</small></div>
+        {side('B')}
+        <div className="ambb-op-vs" aria-hidden="true"><i/><b>VS</b><i/></div>
+        {side('A')}
+        <div className="ambb-op-tap">タップで試合開始 ▶</div>
+      </div>
+    </div>
+  );
+}
+
+// 決着: 勝者の大写し・リボン・自分の助手のひとこと。タップか時間で結果へ
+function AmbbFinish({ win, hero, rounds, reason, meId, venueImg, onGo }) {
+  const done = useRef(false);
+  const go = () => { if (done.current) return; done.current = true; onGo(); };
+  useEffect(() => {
+    ambbSe(win === 'A' ? 'victory' : 'trainingFail');
+    const f = win === 'A' ? setTimeout(() => ambbSe('rankFanfare'), 650) : null;
+    const t = setTimeout(go, 7000);
+    return () => { clearTimeout(t); if (f) clearTimeout(f); };
+  }, []);
+  const k = win === 'A' ? 'w' : win === 'draw' ? 'd' : 'l';
+  return (
+    <div className={`ambb-fin ${k}`} data-ambb-finish={k === 'w' ? 'win' : k === 'd' ? 'draw' : 'lose'} onClick={go} role="button" aria-label="結果を見る" style={venueImg ? { backgroundImage: `url(${venueImg})` } : null}>
+      {k === 'w' && <i className="ambb-fin-rays" aria-hidden="true"/>}
+      <div className="ambb-fin-big">{k === 'w' ? 'WIN!' : k === 'd' ? 'DRAW' : 'LOSE…'}</div>
+      <div className="ambb-fin-sub">{k === 'w' ? '勝利!' : k === 'd' ? '引き分け' : '敗北'}・{rounds} ラウンド・{reason === 'judge' ? '判定' : '全滅で決着'}</div>
+      {hero && <div className="ambb-fin-hero"><img src={ambbMonImg(hero.species)} alt=""/><em>{k === 'w' ? 'MVP' : '勝者'} {hero.name}</em></div>}
+      <div className="ambb-fin-talk"><img src={ambbFace(meId, k === 'w' ? 'happy' : k === 'l' ? 'sad' : 'normal')} alt=""/><p><b>{(ambbAsst(meId) || {}).name || ''}</b>{ambbTalk(meId, k === 'w' ? 'win' : 'lose')}</p></div>
+      <div className="ambb-op-tap">タップで結果へ ▶</div>
+    </div>
+  );
+}
 
 function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, preview, tryPvp, onClose }) {
   const save = useAmbbSave();
   const [engine, setEngine] = useState(typeof window !== 'undefined' ? window.ASSISTANT_MASMON_BATTLE || null : null);
   const [loadFailed, setLoadFailed] = useState(false);
   const [ticked, setTicked] = useState(false);
-  const [phase, setPhase] = useState('prep');   // prep → watch → review / rank
+  const [phase, setPhase] = useState('prep');   // prep → watch(入場 → 試合) → finish(決着の大写し) → review / rank
+  const [opening, setOpening] = useState(false);  // 入場(両方の助手と並び・VS)を見せているあいだは試合を進めない
+  const finSeenRef = useRef('');                  // 決着の大写しは1戦に1回だけ(見返したあとは結果へ直行)
   // 観戦・振り返りのあいだはバトルの曲(56-monhero-success-arena.jsx の口)
-  if (typeof useMhBattleBgmHold === 'function') useMhBattleBgmHold(phase === 'watch' || phase === 'review');
+  if (typeof useMhBattleBgmHold === 'function') useMhBattleBgmHold(phase === 'watch' || phase === 'finish' || phase === 'review');
   const [battle, setBattle] = useState(null);
   const [pos, setPos] = useState(0);
   const [paused, setPaused] = useState(false);
@@ -77985,7 +78201,7 @@ function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, preview, tryPv
     } catch (e) { return; }
     const st = r.log[0] || {};
     setBattle({ id: `${seed}-${Date.now()}`, seed, opts, r, match, frames: ambwFramesOf(r.log), teamA, teamB, units: chosen, maxHp: { A: st.aHp || [], B: st.bHp || [] }, moves: { A: st.aMoves || [], B: st.bMoves || [] }, plan, swap });
-    setPos(0); setPaused(false); setIfs(null); setPhase('watch');
+    setPos(0); setPaused(false); setIfs(null); setOpening(true); setPhase('watch');
     ambbSave(s => ({ ...s, mode: { ...s.mode, [meId]: modeNow }, last: { ...s.last, [meId]: { size, order: chosen.map(u => ambbRowKey(u.row)), plan: sel.plan, swap: sel.swap, foe: fb.assistantId } } }));
   };
 
@@ -78007,7 +78223,7 @@ function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, preview, tryPv
     const units = chosen.filter(u => teamA.members.some(x => x.species === u.unit.species && x.name === u.unit.name));
     setBattle({ id: `pvp-${m.id}`, seed: m.seed, r: { ...r, winner: m.winner || r.winner }, frames: ambwFramesOf(r.log), teamA, teamB, units: units.length ? units : chosen, maxHp: { A: st.aHp || [], B: st.bHp || [] }, moves: { A: st.aMoves || [], B: st.bMoves || [] },
       pvp: { kind: m.kind, rated: m.rated, rating: m.rating, oppRating: m.oppRating, remaining: m.remaining, same, foeName: foe.name } });
-    setPos(0); setPaused(false); setIfs(null); setPhase('watch');
+    setPos(0); setPaused(false); setIfs(null); setOpening(true); setPhase('watch');
   };
 
   const speed = save.speed || 'x1';
@@ -78015,29 +78231,32 @@ function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, preview, tryPv
 
   // 再生(観戦の試作と同じ進め方)
   useEffect(() => {
-    if (phase !== 'watch' || !battle || paused) return undefined;
+    if (phase !== 'watch' || !battle || paused || opening) return undefined;
     const log = battle.r.log;
     if (pos >= log.length - 1) {
       if (battle.match && !battle.match.done()) return undefined;   // 手動: あなたの手番を待つ
-      const t = setTimeout(() => setPhase('review'), 900); return () => clearTimeout(t);
+      // 決着: はじめては勝者の大写し(決着の段)、見返したあとは結果へ直行
+      const t = setTimeout(() => { const first = finSeenRef.current !== battle.id; finSeenRef.current = battle.id; setPhase(first ? 'finish' : 'review'); }, 1100); return () => clearTimeout(t);
     }
     const sp = AMBW_SPEEDS.find(s => s.id === speed) || AMBW_SPEEDS[0];
     // 1行の長さは技の動きの長さに合わせる(試合の画面 MsaStage と同じ。×2・×4 は縮める。見せ場だけは今までどおり)
     const cur = log[pos] || {};
     const team = cur.side === 'A' ? battle.teamA : cur.side === 'B' ? battle.teamB : null;
     const f = { x1: 1, x2: 0.55, x4: 0.3 }[speed];
-    const ms = f && typeof msaStepMs === 'function' ? Math.round(msaStepMs(cur, team, lite || (typeof msaReduce === 'function' && msaReduce()), log, f) * f) : sp.ms;
+    const ms0 = f && typeof msaStepMs === 'function' ? Math.round(msaStepMs(cur, team, lite || (typeof msaReduce === 'function' && msaReduce()), log, f) * f) : sp.ms;
+    // 倒れたあとに次の子が出る所は NEXT の区切りのぶん間を取る(×4・見せ場だけ・少なめは短く)
+    const ms = ms0 + (ambbIsNext(log, pos) ? Math.round(AMBB_NEXT_MS * (f && !lite ? f : 0.4)) : 0);
     const t = setTimeout(() => {
       let next = pos + 1;
       if (speed === 'hl') while (next < log.length - 1 && !ambwIsHighlight(log[next], battle.maxHp)) next++;
       setPos(next);
     }, ms);
     return () => clearTimeout(t);
-  }, [phase, battle, pos, paused, speed, lite]);
+  }, [phase, battle, pos, paused, speed, lite, opening]);
 
   // 戦績(1戦に1回だけ)
   useEffect(() => {
-    if (phase !== 'review' || !battle || battle.pvp) return; // フレンド対戦の勝ち負けはサーバの表が正本
+    if ((phase !== 'review' && phase !== 'finish') || !battle || battle.pvp) return; // フレンド対戦の勝ち負けはサーバの表が正本
     ambbSave(s => {
       if (s.done.includes(battle.id)) return s;
       const rc = s.rec[meId] || { w: 0, l: 0, d: 0 };
@@ -78047,7 +78266,7 @@ function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, preview, tryPv
   }, [phase, battle]);
   // 絆(56-assistant-life-masmon-bond.jsx): 出たマスモンの人気。フレンド対戦 勝ち+2・負け+0.5/助手どうし 勝ち+1・負け+0.2。1戦に1回だけ(印が偽なら何もしない)
   useEffect(() => {
-    if (preview || phase !== 'review' || !battle || typeof amgbBattleOnce !== 'function') return; // 確かめ(デバッグ)では保存しない
+    if (preview || (phase !== 'review' && phase !== 'finish') || !battle || typeof amgbBattleOnce !== 'function') return; // 確かめ(デバッグ)では保存しない
     try { amgbBattleOnce(battle.id, meId, (battle.units || []).map(u => u && u.row).filter(Boolean), battle.pvp ? 'pvp' : 'peer', battle.r && battle.r.winner === 'A'); } catch (_) {}
   }, [phase, battle]);
 
@@ -78228,7 +78447,7 @@ function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, preview, tryPv
     );
   } else if (battle) {
     const log = battle.r.log, e = log[pos] || {}, f = battle.frames[pos] || battle.frames[0];
-    const review = phase === 'review';
+    const review = phase === 'review', finish = phase === 'finish';
     const manualWait = !!(battle.match && !battle.match.done() && pos >= log.length - 1 && battle.match.pending());
     const mem = (side, i) => (side === 'A' ? battle.teamA : battle.teamB).members[i];
     const who = (side, i) => (mem(side, i) || {}).name || '';
@@ -78273,12 +78492,38 @@ function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, preview, tryPv
     const foeName = battle.pvp ? `${battle.pvp.foeName}の${nameOf(battle.teamB.assistantId)}` : nameOf(battle.teamB.assistantId);
     const gains = battle.units.map(u => ({ u, g: typeof amgCareGainOf === 'function' ? amgCareGainOf(u.entry) : { total: 0 } }));
     const bestStat = ifs && ifs.best;
+    const stars = ambbStarsOf(log, 'A', battle.teamA.members.length), mvp = ambbMvpOf(stars), mvpM = battle.teamA.members[mvp] || null;
+    const venue = typeof msaVenueBg === 'function' ? msaVenueBg('cup', msaBgRead()) : (typeof MSC_VENUE_IMG !== 'undefined' ? MSC_VENUE_IMG.cup : null);
+    // 実況: いまから2手前までの見せ場の1行(場の下の記録の頭に出す)
+    let call = null;
+    for (let k = pos; k >= Math.max(1, pos - 2) && !call; k--) { const c = ambbCallOf(log, battle.frames, k, battle.maxHp, who); if (c) call = { ...c, at: k }; }
+    const nextOn = !review && !finish && !opening && ambbIsNext(log, pos);
     const lead = bestStat ? battle.units.slice().sort((a, b) => (Number(a.unit.stats && a.unit.stats[bestStat.k]) || 0) - (Number(b.unit.stats && b.unit.stats[bestStat.k]) || 0))[0] : null;
     body = (
       <div data-ambb-watch data-ambb-phase={phase} data-ambw-pos={pos}>
         {review && (
           <div data-ambb-review>
-            <div className="ambw-res"><b>{draw ? '引き分け' : won ? `${me.name} の勝ち!` : `${foeName} の勝ち`}</b><span>{battle.r.rounds} ラウンド・{battle.r.reason === 'judge' ? '判定' : '全滅で決着'}</span></div>
+            <div className={`ambb-hero ${won ? 'w' : 'l'}`} data-ambb-hero style={venue ? { backgroundImage: `url(${venue})` } : null}>
+              <div className="ambb-hero-stamp">{draw ? '引き分け' : won ? '勝利!' : '敗北'}</div>
+              <div className="ambw-res"><b>{draw ? '引き分け' : won ? `${me.name} の勝ち!` : `${foeName} の勝ち`}</b><span>{battle.r.rounds} ラウンド・{battle.r.reason === 'judge' ? '判定' : '全滅で決着'}</span></div>
+              {mvpM && (
+                <div className="ambb-mvp" data-ambb-mvp>
+                  <img src={ambbMonImg(mvpM.species)} alt=""/>
+                  <div style={{ minWidth: 0 }}><span className="ambb-mvp-badge">MVP</span><b>{mvpM.name}</b><small>与えたダメージ {stars[mvp].dmg}・たおした数 {stars[mvp].ko}・命中 {stars[mvp].hit}/{stars[mvp].n}</small></div>
+                </div>
+              )}
+              <div className="ambb-hero-talk"><img src={ambbFace(meId, won ? 'happy' : draw ? 'normal' : 'sad')} alt=""/><p>{mvpM && (won || stars[mvp].dmg > 0) ? ambbTalk(meId, 'mvp', mvpM.name) : ambbTalk(meId, won ? 'win' : 'lose')}</p></div>
+            </div>
+            <div className="ambw-card" data-ambb-stars>
+              <div className="ambw-small">マスモンごとの活躍</div>
+              {battle.teamA.members.map((m, i) => (
+                <div key={i} className={`ambb-star ${i === mvp ? 'mvp' : ''}`}>
+                  <img src={ambbMonImg(m.species)} alt=""/>
+                  <div style={{ minWidth: 0 }}><b>{m.name}</b><div className="ambw-small">命中 {stars[i].hit}/{stars[i].n}{stars[i].crit ? `・会心 ${stars[i].crit}` : ''}・たおした数 {stars[i].ko}</div></div>
+                  <em>{stars[i].dmg}<small>ダメージ</small></em>
+                </div>
+              ))}
+            </div>
             {battle.pvp && (
               <div className="ambw-card" data-ambb-pvp-result>
                 <div className="ambw-small">フレンド対戦・{(AMBB_KINDS.find(k => k.id === battle.pvp.kind) || AMBB_KINDS[0]).label}</div>
@@ -78329,15 +78574,25 @@ function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, preview, tryPv
             </div>
           </div>
         )}
-        <AmbwPanel side="B" catalog={catalog} teams={{ A: battle.teamA, B: battle.teamB }} team={battle.teamB} frame={shownF || f} maxHp={battle.maxHp} moves={battle.moves.B} lastMove={e.side === 'B' && e.ev === 'tech' ? e.move : null} mine={false} cards onOpen={(sd, d) => setTechList({ side: sd, d })}/>
+        {!review && <AmbwPanel side="B" catalog={catalog} teams={{ A: battle.teamA, B: battle.teamB }} team={battle.teamB} frame={shownF || f} maxHp={battle.maxHp} moves={battle.moves.B} lastMove={e.side === 'B' && e.ev === 'tech' ? e.move : null} mine={false} cards onOpen={(sd, d) => setTechList({ side: sd, d })}/>}
         {/* 場は試合の画面と同じ部品(立ち位置・技の動き・数字・音。56-monhero-success-arena.jsx の MsaStage。2026-11-12 社長「ちゃんとバトル部分作りこんで」) */}
-        {typeof MsaStage === 'function' ? (
+        {review ? null : typeof MsaStage === 'function' ? (
           <div className="msa ambb-stagewrap" style={{ marginTop: 8 }}><style>{MSA_CSS}</style>
-            <MsaStage log={log} frames={battle.frames} pos={pos} teams={{ A: battle.teamA, B: battle.teamB }} venueImg={typeof msaVenueBg === 'function' ? msaVenueBg('cup', msaBgRead()) : null}
-              ended={review} win={battle.r.winner} endSub={review ? `${battle.r.rounds} ラウンド` : ''} sound={phase === 'watch' && !paused}
-              introTitle={battle.pvp ? 'フレンド対戦' : 'マスモン対戦'} speedF={{ x1: 1, x2: 0.55, x4: 0.3 }[speed] || 1} fill={!review} lite={lite}/>
+            <MsaStage key={opening ? 'op' : 'go'} log={log} frames={battle.frames} pos={pos} teams={{ A: battle.teamA, B: battle.teamB }} venueImg={venue}
+              ended={finish} win={battle.r.winner} endSub={finish ? `${battle.r.rounds} ラウンド` : ''} sound={phase === 'watch' && !paused && !opening}
+              introTitle={battle.teamA.members.length > 1 ? '先頭どうし' : (battle.pvp ? 'フレンド対戦' : 'マスモン対戦')} speedF={{ x1: 1, x2: 0.55, x4: 0.3 }[speed] || 1} fill lite={lite}/>
+            {nextOn && (() => {
+              const sd = e.side, t = sd === 'A' ? battle.teamA : battle.teamB, fr = battle.frames[pos] || f;
+              return (
+                <div key={`nx-${pos}`} className={`ambb-next ${sd}`} data-ambb-next={sd}>
+                  <div className="ambb-next-band"><small>NEXT</small><b>{who(sd, e.i)}</b></div>
+                  <div className="ambb-next-left">{['A', 'B'].map(x => <span key={x} className={x}>{x === 'A' ? me.name : foeName} {(fr.hp[x] || []).map((h, k) => <u key={k} className={h > 0 ? 'on' : ''}/>)}</span>)}</div>
+                  <div className="ambb-next-talk"><img src={ambbFace(t.assistantId, 'normal')} alt=""/><span>{ambbTalk(t.assistantId, 'next', who(sd, e.i))}</span></div>
+                </div>
+              );
+            })()}
           </div>
-        ) : (
+        ) : review ? null : (
         <div className="ambw-ring">
           <div className="ambw-stage">{fighter('A')}<div className="ambw-gap" style={{ width: gap }}/>{fighter('B')}</div>
           <div className="ambw-dist">{AMBW_DIST.map((n, d) => <span key={d} className={d === f.d ? 'cur' : ''}>{n}</span>)}</div>
@@ -78346,29 +78601,42 @@ function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, preview, tryPv
           )}
         </div>
         )}
-        {!manualWait && <AmbwPanel side="A" catalog={catalog} teams={{ A: battle.teamA, B: battle.teamB }} team={battle.teamA} frame={shownF || f} maxHp={battle.maxHp} moves={battle.moves.A} lastMove={e.side === 'A' && e.ev === 'tech' ? e.move : null} mine cards rep={repIdsAt('A', shownF || f).ids} onOpen={(sd, d) => setTechList({ side: sd, d })}/>}
+        {!manualWait && !review && <AmbwPanel side="A" catalog={catalog} teams={{ A: battle.teamA, B: battle.teamB }} team={battle.teamA} frame={shownF || f} maxHp={battle.maxHp} moves={battle.moves.A} lastMove={e.side === 'A' && e.ev === 'tech' ? e.move : null} mine cards rep={repIdsAt('A', shownF || f).ids} onOpen={(sd, d) => setTechList({ side: sd, d })}/>}
         {!review && manualWait && typeof MsxManualBar === 'function' && (
           <div className="ambb-bar-wrap" data-ambb-manual>{(() => { const ra = repIdsAt('A', f); return <MsxManualBar opt={battle.match.pending()} onPick={manualPick} onAuto={manualAuto} busy={false} rep={ra.ids} title={ra.name} onRep={ra.k ? (d, id) => setRep(ra.k, d, id) : null}/>; })()}</div>
         )}
         {!review && !manualWait && (
           <div className="ambw-card ambw-log">
+            {call && <div key={`call-${call.at}`} className={`ambb-call ${call.k}`} data-ambb-call={call.k}>🎙 {call.t}</div>}
             {recent.map(x => <p key={x.k} className={x.side}><small>R{x.r}</small>{x.t}</p>)}
             {actor && e.why && WHY[e.why] && (
               <div className="ambw-row" style={{ marginTop: 6 }}><img className="ambw-face" src={assistantFaceSrc(actor, 'normal')} alt=""/><div className="ambw-bubble">{actor.name}「{WHY[e.why]}」</div></div>
             )}
           </div>
         )}
+        {review && <div className="ambw-small" style={{ marginTop: 8 }}>見返す: ✖ はたおれた所。押すとそこから見られます</div>}
         <div className="ambw-seek"><i style={{ width: `${Math.round(pos / Math.max(1, log.length - 1) * 100)}%` }}/>
           {kos.map(x => <button key={x.k} className={x.side} style={{ left: `${x.k / Math.max(1, log.length - 1) * 100}%` }} onClick={() => { setPos(x.k); setPaused(true); setPhase('watch'); }}>✖</button>)}
         </div>
-        {!review && (
+        {opening && phase === 'watch' && (
+          <AmbbOpening teams={{ A: battle.teamA, B: battle.teamB }} title={battle.pvp ? 'フレンド対戦' : 'マスモン対戦'}
+            sub={`${battle.teamA.members.length}対${battle.teamB.members.length}${battle.match ? '・手動' : ''}`}
+            plan={battle.pvp ? '' : ((AMBB_PLANS.find(x => x.id === battle.plan) || {}).label || '')} nameA={me.name} nameB={foeName}
+            quick={speed === 'x4' || speed === 'hl' || lite} onGo={() => setOpening(false)}/>
+        )}
+        {finish && (
+          <AmbbFinish win={battle.r.winner} rounds={battle.r.rounds} reason={battle.r.reason} meId={meId} venueImg={venue}
+            hero={(() => { const sd = battle.r.winner === 'B' ? 'B' : 'A', t = sd === 'A' ? battle.teamA : battle.teamB, fr = battle.frames[battle.frames.length - 1] || f; const i = sd === 'A' ? mvp : (fr.hp.B || []).findIndex(h => h > 0); return t.members[i >= 0 ? i : fr.act[sd]] || t.members[0]; })()}
+            onGo={() => setPhase('review')}/>
+        )}
+        {!review && !finish && (
           <div className="ambw-ctl">
             <button className="ambw-btn2" data-ambb-pause onClick={() => setPaused(p => !p)}>{paused ? '▶' : '⏸'}</button>
             {AMBW_SPEEDS.map(s => <button key={s.id} className={`ambw-sp ${speed === s.id ? 'on' : ''}`} data-ambb-speed={s.id} onClick={() => { setSpeed(s.id); setPaused(false); }}>{s.label}</button>)}
             <button className="ambw-btn2" data-ambb-skip onClick={() => {
               // 手動のときは残りをオートで進めてから結果へ
               const n = battle.match && !battle.match.done() ? (battle.match.auto('A'), syncManual(battle.match)) : log.length;
-              setPos(n - 1); setPhase('review');
+              finSeenRef.current = battle.id; setOpening(false); setPos(n - 1); setPhase('review');
             }}>⏭ 結果へ</button>
           </div>
         )}
@@ -78378,7 +78646,7 @@ function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, preview, tryPv
 
   const back = phase === 'prep' || !battle ? onClose : () => setPhase('prep');
   return (
-    <div className={`ambw${phase === 'watch' && battle ? ' ambb-full' : ''}`} data-ambb-root ref={rootRef}>
+    <div className={`ambw${(phase === 'watch' || phase === 'finish') && battle ? ' ambb-full' : ''}`} data-ambb-root ref={rootRef}>
       <style>{AMBW_CSS}{AMBB_CSS}</style>
       <div className="ambw-in">
         <div className="ambw-top">
