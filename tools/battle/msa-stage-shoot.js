@@ -3,6 +3,7 @@
 //   社長「バトル演出はもっとアクセントもつけて迫力とか見ごたえとかあるようにして」の前と後を見くらべる用
 //
 //   SHOT_DIR=<フォルダ> node tools/battle/msa-stage-shoot.js
+//   SHOT_BG=stadium SHOT_VENUE=hero SHOT_DIR=<フォルダ> node tools/battle/msa-stage-shoot.js … 背景と会場を選んで撮る
 //   SHOT_DIR=<フォルダ> SHOT_ROOT=<別のチェックアウト> node tools/battle/msa-stage-shoot.js   … 前の版を撮る(そちらで build 済みのこと)
 //
 // 助手マスモン対戦の芯で本物の試合を回し、大技・会心・とどめ・KO・勝ちの行を探して、その行の決まった瞬間で動きを止めて撮る。
@@ -30,8 +31,10 @@ const server = http.createServer((req, res) => {
   const exe = '/opt/pw-browsers/chromium';
   const browser = await chromium.launch(fs.existsSync(exe) ? { executablePath: exe } : {});
   try {
-    const page = await browser.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 });
+    const page = await browser.newPage({ viewport: { width: Number(process.env.SHOT_W) || 390, height: Number(process.env.SHOT_H) || 844 }, deviceScaleFactor: 2 });
     const errs = []; page.on('pageerror', (e) => errs.push(String(e)));
+    // SHOT_BG=arena|stadium(背景)・SHOT_VENUE=debut|cup|hero|summit(会場)。無ければ闘技場のカップ
+    await page.addInitScript(([bg, v]) => { window.__SHOT_BG = bg; window.__SHOT_VENUE = v; }, [process.env.SHOT_BG || 'arena', process.env.SHOT_VENUE || 'cup']);
     await page.goto(`http://localhost:${PORT}/monster-hero/index.html`, { waitUntil: 'domcontentloaded' });
     await page.waitForFunction(() => typeof MsaStage === 'function' && typeof ambwLoadEngine === 'function' && typeof ambwFramesOf === 'function', null, { timeout: 60000 });
     await page.waitForTimeout(800);
@@ -74,7 +77,7 @@ const server = http.createServer((req, res) => {
         window.__root = ReactDOM.createRoot(d);
         const pos = ended ? r.log.length - 1 : at.i;
         window.__root.render(React.createElement('div', { className: 'msa' }, React.createElement('style', null, typeof MSA_CSS === 'string' ? MSA_CSS : ''),
-          React.createElement(MsaStage, { log: r.log, frames: ambwFramesOf(r.log), pos, teams: { A: teamA, B: teamB }, venueImg: typeof MSC_VENUE_IMG !== 'undefined' ? MSC_VENUE_IMG.cup : null, ended: !!ended, win: ended ? r.winner : null, sound: false })));
+          React.createElement(MsaStage, { log: r.log, frames: ambwFramesOf(r.log), pos, teams: { A: teamA, B: teamB }, venueImg: typeof msaVenueBg === 'function' ? msaVenueBg(window.__SHOT_VENUE || 'cup', window.__SHOT_BG || 'arena') : (typeof MSC_VENUE_IMG !== 'undefined' ? MSC_VENUE_IMG.cup : null), ended: !!ended, win: ended ? r.winner : null, sound: false })));
       }, { at, ended });
       await page.waitForTimeout(ms);
       await page.evaluate(() => document.getAnimations().forEach((a) => { try { a.pause(); } catch (_) {} }));

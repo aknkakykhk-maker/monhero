@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "id": "7ad3ccfd0bea",
-  "packs": {"beat":{"bytes":149788587,"count":113},"battle":{"bytes":155352820,"count":966},"card":{"bytes":37779758,"count":1048},"all":{"bytes":342921165,"count":2127},"core":{"bytes":21959158,"count":24}},
+  "id": "d7e769fa1d43",
+  "packs": {"beat":{"bytes":149788587,"count":113},"battle":{"bytes":156194577,"count":970},"card":{"bytes":37779758,"count":1048},"all":{"bytes":343762922,"count":2131},"core":{"bytes":21960795,"count":24}},
   "files": {
     "audio/bgm-4u-hitasura.mp3": {"v":"f4fb42472438","size":1446380,"pack":"beat"},
     "audio/bgm-against-my-own-shadow.mp3": {"v":"a58782a4c46f","size":1889175,"pack":"beat"},
@@ -2057,6 +2057,10 @@
     "images/story-bg/monhero_plaza.jpg": {"v":"cbac85431b63","size":140543,"pack":"battle"},
     "images/story-bg/monhero_plaza_evening.jpg": {"v":"e6a0284956a1","size":127367,"pack":"battle"},
     "images/story-bg/monhero_town.jpg": {"v":"802681764caa","size":77045,"pack":"battle"},
+    "images/success/arena/arena-cup.png": {"v":"48ba5a2f8765","size":204451,"pack":"battle"},
+    "images/success/arena/arena-debut.png": {"v":"a4276a821cc5","size":219956,"pack":"battle"},
+    "images/success/arena/arena-hero.png": {"v":"cb3d50e8c8de","size":186747,"pack":"battle"},
+    "images/success/arena/arena-summit.png": {"v":"a0a0372c8dd0","size":230603,"pack":"battle"},
     "images/success/issa-hakase.png": {"v":"6dfe78a29017","size":90428,"pack":"battle"},
     "images/success/items/akusamasan.png": {"v":"77e0c02076ef","size":15126,"pack":"battle"},
     "images/success/items/bond-charm.png": {"v":"58236c39080e","size":15162,"pack":"battle"},
@@ -2132,7 +2136,7 @@
     "images/ui/breakthrough-rainbow-star.PNG": {"v":"c0e9259703a7","size":199081,"pack":"battle"},
     "vendor/react.production.min.js": {"v":"18","size":10751,"pack":"core"},
     "vendor/react-dom.production.min.js": {"v":"18","size":131835,"pack":"core"},
-    "tailwind.css": {"v":"bf8e1de8f0b8","size":306738,"pack":"core"},
+    "tailwind.css": {"v":"b9c11c0bfe9b","size":306738,"pack":"core"},
     "data/images/images-ally.js": {"v":"cfbdb3b899b2","size":81504,"pack":"core"},
     "data/images/images-enemy.js": {"v":"f10f6ad82110","size":2926,"pack":"core"},
     "data/ally-monsters.js": {"v":"4309001c3dde","size":60897,"pack":"core"},
@@ -2153,6 +2157,6 @@
     "data/card-battle-cards.js": {"v":"44db72dafe0b","size":124624,"pack":"core"},
     "data/assistant-masmon-techs.js": {"v":"a3439247bb0f","size":110880,"pack":"core"},
     "data/success-sounds.js": {"v":"8a9177b6ff27","size":4514,"pack":"core"},
-    "game-system.compiled.js": {"v":"45763f67942f","size":11296760,"pack":"core"}
+    "game-system.compiled.js": {"v":"f14c957033c8","size":11298397,"pack":"core"}
   }
 }
