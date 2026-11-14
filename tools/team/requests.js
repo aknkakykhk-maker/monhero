@@ -242,4 +242,4 @@ function main() {
 }
 
 if (require.main === module) { try { main(); } catch (e) { console.error('NG: ' + e.message); process.exit(1); } }
-module.exports = { STATES, CLOSED, load, ledgerRows, missing, openFor, linesFor, summary, hashOf, guessOwner };
+module.exports = { STATES, CLOSED, load, save, ledgerRows, missing, openFor, linesFor, summary, hashOf, guessOwner };
