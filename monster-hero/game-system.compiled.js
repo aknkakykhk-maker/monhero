@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: bf10fb72d643258f
+// source-sha256: ec14b3662fed66db
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -160150,7 +160150,7 @@ function MsxEvResult({
 const MSX_BETA_KEY = 'mh_monsuc_beta_v1';
 const MSX_BETA_AIDS = Object.freeze(['mua']);
 const msxBetaAidOk = aid => MSX_BETA_AIDS.includes(aid);
-const MSX_BETA_TUT = Object.freeze(['scn', 'prep', 'turn', 'train', 'result', 'rest', 'shugyo', 'cup', 'rank', 'meal', 'match', 'rematch', 'event', 'awake', 'retire']);
+const MSX_BETA_TUT = Object.freeze(['scn', 'prep', 'team', 'bring', 'turn', 'train', 'result', 'rest', 'shugyo', 'cup', 'rank', 'meal', 'match', 'rematch', 'event', 'awake', 'retire']);
 const MSX_BETA_STORY = Object.freeze(['open', 'firstend', 'start']);
 const msxBetaScene = k => MSX_BETA_STORY.includes(k) ? `scn.mua.beta.${k}` : `tut.${k}`;
 const msxBetaKnown = k => MSX_BETA_TUT.includes(k) || MSX_BETA_STORY.includes(k);
@@ -160579,6 +160579,22 @@ const msxTevChanges = (s, o) => {
   }
   return out;
 };
+const MSX_CHEER_TYPE = Object.freeze({
+  pow: 'attacker',
+  tough: 'tank',
+  life: 'healer',
+  wise: 'supporter',
+  hit: 'shadow',
+  eva: 'shadow'
+});
+const msxCheerType = m => {
+  const top = m && Array.isArray(m.top) ? m.top[0] : null;
+  if (top && MSX_CHEER_TYPE[top]) return MSX_CHEER_TYPE[top];
+  const k = String(m && m.species || '');
+  let h = 0;
+  for (let i = 0; i < k.length; i++) h = h * 31 + k.charCodeAt(i) >>> 0;
+  return ['attacker', 'tank', 'supporter', 'healer', 'shadow'][h % 5];
+};
 function MsxTrainEvent({
   run,
   o,
@@ -160591,6 +160607,11 @@ function MsxTrainEvent({
   const m = s.team[e.who];
   const name = typeof msxMemberName === 'function' ? msxMemberName(m) : '編成のモンスター';
   const line = e.story ? msxPickLine({
+    ...ctx,
+    cheer: name
+  }, `cheer.${msxCheerType(m)}.ep${e.story}`, {
+    who: 'narr'
+  }) || msxPickLine({
     ...ctx,
     cheer: name
   }, `cheer.base.ep${e.story}`, {
@@ -170845,7 +170866,7 @@ function MsxStart({
     ctx: betaCtx,
     onDone: () => setLockTalk(0)
   }) : React.createElement(MsxBetaTalk, {
-    keys: ['prep'],
+    keys: [step === 0 ? 'prep' : step === 1 ? 'team' : step === 3 ? 'bring' : null],
     ctx: betaCtx
   }) : null);
 }
@@ -171577,6 +171598,7 @@ function MonheroSuccessScreen({
   const [ask, setAsk] = useState(null);
   const [playSub, setPlaySub] = useState('main');
   msxUseSound(view === 'play' || view === 'loading' || view === 'fail' ? null : 'menu');
+  const [tutTurn, setTutTurn] = useState(null);
   useEffect(() => {
     const on = () => setLayout(msxLayout());
     window.addEventListener('resize', on);
@@ -171795,13 +171817,15 @@ function MonheroSuccessScreen({
   } else if (view === 'play' && run && run.s) {
     const s = run.s;
     const ph = run.phase;
-    const keys = s.over || ph === 'over' ? s.over !== 'gameover' && (run.arcAfter || s.ending && !s.ending.seen) ? null : ['retire'] : ph === 'battle' ? [run.out && run.out.r3 ? run.out.r3.stage === 'rank' ? 'rank' : run.out.r3.stage === 'meal' ? 'meal' : null : 'match'] : playSub === 'cup' ? ['cup'] : playSub === 'shugyo' ? ['shugyo'] : ph === 'event' || ph === 'story' ? ['event'] : ph === 'awake' ? ['awake'] : ph === 'result' && run.out && run.out.result ? ['result'] : ph === 'main' && playSub === 'main' ? ['turn', 'train', s.hpMax > 0 && s.hp < s.hpMax * 0.5 && 'rest', Number(s.tickets) > 0 && 'shugyo'] : null;
+    const overReady = s.over !== 'gameover' && !run.arcAfter && !(s.ending && !s.ending.seen);
+    const keys = playSub === 'fx' ? null : ph === 'battle' ? [run.out && run.out.r3 ? run.out.r3.stage === 'rank' ? 'rank' : run.out.r3.stage === 'meal' ? 'meal' : null : 'match'] : s.over || ph === 'over' ? overReady ? ['retire'] : null : playSub === 'cup' ? ['cup'] : playSub === 'shugyo' ? ['shugyo'] : playSub === 'train' ? ['train'] : ph === 'event' || ph === 'story' ? ['event'] : ph === 'awake' ? ['awake'] : ph === 'result' && run.out && run.out.result ? ['result'] : ph === 'main' && playSub === 'main' && tutTurn !== s.turn ? ['turn', s.hpMax > 0 && s.hp < s.hpMax * 0.5 && 'rest'] : null;
     if (keys) betaKeys = {
       keys,
       ctx: {
         ...betaCtx,
         mon: run.nick
-      }
+      },
+      onDone: ph === 'main' ? () => setTutTurn(s.turn) : undefined
     };
   }
   const node = React.createElement("div", {
@@ -171816,7 +171840,8 @@ function MonheroSuccessScreen({
     "data-msx-view": view
   }, content, betaKeys && !ask && typeof MsxBetaTalk === 'function' ? React.createElement(MsxBetaTalk, {
     keys: betaKeys.keys,
-    ctx: betaKeys.ctx
+    ctx: betaKeys.ctx,
+    onDone: betaKeys.onDone
   }) : null, ask && React.createElement("div", {
     className: "msx-ov msx-fade"
   }, React.createElement("div", {
@@ -171991,14 +172016,12 @@ function MsxPlay({
   });
   const scrubRef = useRef(null);
   const [trail, setTrail] = useState(null);
-  useEffect(() => {
-    if (onSub) onSub(sub);
-  }, [sub]);
   useEffect(() => () => {
     if (onSub) onSub('main');
   }, []);
   const [kiAt, setKiAt] = useState(null);
   const [actAt, setActAt] = useState(null);
+  const [actFrom, setActFrom] = useState(null);
   const [sheet, setSheet] = useState(null);
   const [detail, setDetail] = useState(false);
   const [preAt, setPreAt] = useState(null);
@@ -172023,6 +172046,9 @@ function MsxPlay({
   msxUseScene(soundId, {
     season: msxCalendar(s.turn).season
   });
+  useEffect(() => {
+    if (onSub) onSub(actOn || kiOn ? 'fx' : sub);
+  }, [sub, actOn, kiOn]);
   const lvUpSe = run.phase === 'result' && !actOn && run.out && run.out.result && run.out.lvUp;
   useEffect(() => {
     if (!lvUpSe || typeof SuccessSound === 'undefined') return undefined;
@@ -172035,13 +172061,15 @@ function MsxPlay({
   }, [lvUpSe, s.turn]);
   const tagAt = SUC.BOND && SUC.BOND.tag || 80;
   const bondLv = bondLvOf ? Number(bondLvOf(s.aid)) || 1 : 1;
+  if (typeof msxCurBondLv !== 'undefined') msxCurBondLv = bondLv;
   const ctx = {
     id: s.id,
     turn: s.turn,
     aid: s.aid,
     mon: run.nick,
     species: s.species,
-    callName: callNameOf ? callNameOf(s.aid) : ''
+    callName: callNameOf ? callNameOf(s.aid) : '',
+    bond: bondLv
   };
   const line = (scene, fallback, extra = {}) => {
     const l = msxPickLine({
@@ -172229,7 +172257,10 @@ function MsxPlay({
     }
     const text = r.out.result ? `${MSX_STAT_NAME[a.stat] || ''}のトレーニング: ${MSX_RES[r.out.result].word}` : a.kind === 'rest' ? '休んだ' : a.kind === 'play' ? '遊んだ' : a.kind === 'clinic' ? '通院した' : '休み';
     next = pushLog(next, text);
-    if (r.out.result && typeof MsxTrainAct === 'function') setActAt(r.state.turn);
+    if (r.out.result && typeof MsxTrainAct === 'function') {
+      setActAt(r.state.turn);
+      setActFrom(s);
+    }
     setRun({
       ...next,
       phase: 'result'
@@ -172327,7 +172358,12 @@ function MsxPlay({
       t: ''
     };
     const evMember = o.event && Number.isInteger(o.event.who) ? s.team[o.event.who] : null;
-    const evLine = o.event ? o.event.story ? msxPickLine({
+    const evLine = o.event ? o.event.story ? typeof msxCheerType === 'function' && msxPickLine({
+      ...ctx,
+      cheer: msxMemberName(evMember)
+    }, `cheer.${msxCheerType(evMember)}.ep${o.event.story}`, {
+      who: 'narr'
+    }) || msxPickLine({
       ...ctx,
       cheer: msxMemberName(evMember)
     }, `cheer.base.ep${o.event.story}`, {
@@ -172338,9 +172374,17 @@ function MsxPlay({
     }, `cheer.lot.${MSX_LOT[o.event.lottery] || 'friend'}`, {
       who: '*'
     }) : null;
+    const bandS = acting && actFrom ? actFrom : null;
     const hpUp = !isTrain && Number.isFinite(o.hpFrom) && Number.isFinite(s.hp) ? Math.round(s.hp - o.hpFrom) : 0;
     const stDown = !isTrain && Number.isFinite(o.stFrom) ? Math.round(o.stFrom - s.stress) : 0;
-    body = React.createElement(React.Fragment, null, React.createElement(MsxBand, _extends({
+    body = React.createElement(React.Fragment, null, bandS ? React.createElement(MsxBand, _extends({
+      s: bandS,
+      v: SUC.peek(bandS),
+      ev: SUC.evaluate(bandS)
+    }, isTrain ? {} : {
+      hpFrom: o.hpFrom,
+      stFrom: o.stFrom
+    })) : React.createElement(MsxBand, _extends({
       s: s,
       v: v,
       ev: ev
@@ -172362,7 +172406,10 @@ function MsxPlay({
       key: `act-${s.turn}`,
       run: run,
       o: o,
-      onDone: () => setActAt(null)
+      onDone: () => {
+        setActAt(null);
+        setActFrom(null);
+      }
     }) : null, acting ? null : isTrain && o.result === 'great' ? React.createElement("div", {
       className: "v-burst"
     }) : isTrain && o.result === 'ok' ? React.createElement("div", {
@@ -174985,6 +175032,7 @@ const msxR3Q = t => {
   const x = String(t || '');
   return /^[「『(]/.test(x) ? x : `「${x}」`;
 };
+let msxCurBondLv = null;
 const msxR3Line = (scene, run, extra, fallback, opt) => {
   const SE = msxR3SE();
   const s = run.s;
@@ -174996,6 +175044,9 @@ const msxR3Line = (scene, run, extra, fallback, opt) => {
         aid: s.aid,
         mon: run.nick || '',
         species: s.species,
+        ...(msxCurBondLv ? {
+          bond: msxCurBondLv
+        } : {}),
         ...(extra || {})
       }, opt || {});
       if (l && l.t) return {
