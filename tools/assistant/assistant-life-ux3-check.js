@@ -95,7 +95,7 @@ const MIX = { groups: [{ ids: ['mua', 'kiki'], doing: 'snack', place: 'cafe' }, 
     check(`${T}⑤ 「きずな」に引き合わせるがあり、2人を選ぶと押せる`, goOff === true && goOn === true, JSON.stringify({ goOff, goOn }));
     check(`${T}⑥ きずな: 引き合わせるのボタンは横にはみ出さず高さ40px以上`, (await badBox(page, '[data-assistant-life-introduce] button')).length === 0, JSON.stringify(await badBox(page, '[data-assistant-life-introduce] button')));
     { // ⑪ きずな: 組の行は高さ44px以上で、「あと◯で Lv◯」が出る
-      const kz = await page.evaluate(() => { const rows = [...document.querySelectorAll('[data-assistant-peer-row-v2]')]; return { n: rows.length, low: rows.filter(r => r.getBoundingClientRect().height < 44).length, next: rows.filter(r => /あと\d+で Lv\d+/.test(r.innerText)).length }; });
+      const kz = await page.evaluate(() => { const rows = [...document.querySelectorAll('[data-assistant-peer-row-v2]')]; return { n: rows.length, low: rows.filter(r => r.getBoundingClientRect().height < 44).length, next: rows.filter(r => /あと\d+(ポイント)?で Lv\d+/.test(r.innerText)).length }; });
       check(`${T}⑪ きずな: 組の行(${kz.n})は高さ44px以上で、次の Lv まであといくつが出る`, kz.n >= 4 && kz.low === 0 && kz.next === kz.n, JSON.stringify(kz));
     }
     await shot(page, `${v.id}-3-kizuna.png`);

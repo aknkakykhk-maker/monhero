@@ -26,7 +26,7 @@
     { id: 'venue-debut', kind: 'venue', venue: 'debut', name: 'デビュー戦の会場', use: 'デビュー戦・デビュー戦の再挑戦', image: 'images/success/scenes/venue-debut.png?v=d2380d73411c' },
     { id: 'venue-cup', kind: 'venue', venue: 'cup', name: '大会の会場', use: 'ジュニア期〜プロ期の★〜★★★の大会と期末の強制大会', image: 'images/success/scenes/venue-cup.png?v=c9cdfad7c777' },
     { id: 'venue-hero', kind: 'venue', venue: 'hero', name: 'ヒーロー記念の会場', use: 'ヒーロー記念(プロ期の6月・プロ期末の冬のヒーロー記念)', image: 'images/success/scenes/venue-hero.png?v=f9559904e91d' },
-    { id: 'venue-summit', kind: 'venue', venue: 'summit', name: '頂への道の会場', use: '最後の期の頂への道(1回戦・準決勝・決勝)', image: 'images/success/scenes/venue-summit.png?v=c9cd61050084' },
+    { id: 'venue-summit', kind: 'venue', venue: 'summit', name: 'ヒーローズファイナルの会場', use: '最後の期のヒーローズファイナル(1回戦・準決勝・決勝)', image: 'images/success/scenes/venue-summit.png?v=c9cd61050084' },
     // 修行の段の景色(段ごとに景色が替わる。どの段にどれを使うかは回2・回3で決める)
     { id: 'training-volcano', kind: 'training', place: 'volcano', name: '修行の地(火山)', image: 'images/success/scenes/training-volcano.png?v=bce3b23cbc0b' },
     { id: 'training-iceberg', kind: 'training', place: 'iceberg', name: '修行の地(氷山)', image: 'images/success/scenes/training-iceberg.png?v=b60828f16f37' },
