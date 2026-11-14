@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 748b4d40e89da199
+// source-sha256: 05992159d48260cc
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -115169,6 +115169,13 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
       chin: 0.4187,
       m: 0.829
     },
+    momosuke: {
+      top: 0.061,
+      eye: 0.3239,
+      chin: 0.4296,
+      m: 0.786,
+      above: 0.7
+    },
     kiki: {
       top: 0.0777,
       eye: 0.3325,
@@ -115201,6 +115208,13 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
       chin: 0.4334,
       m: 0.711,
       above: 0.85
+    },
+    momosuke: {
+      top: 0.0594,
+      eye: 0.3112,
+      chin: 0.4299,
+      m: 0.884,
+      above: 0.95
     },
     kiki: {
       top: 0.1496,
@@ -198150,6 +198164,14 @@ const CARD_ART_KNOWN_BOX = Object.freeze({
   'stand-normal/kyuko_surprise': [410, 590, 43, 8, 342, 582],
   'stand-normal/kyuko_troubled': [366, 590, 21, 7, 337, 583],
   'stand-normal/kyuko_wink': [416, 590, 30, 8, 380, 582],
+  'stand-normal/momosuke_angry': [540, 860, 1, 6, 538, 854],
+  'stand-normal/momosuke_crying': [540, 860, 1, 7, 538, 853],
+  'stand-normal/momosuke_excited': [540, 860, 1, 6, 538, 854],
+  'stand-normal/momosuke_happy': [540, 860, 1, 6, 538, 854],
+  'stand-normal/momosuke_normal': [540, 860, 1, 7, 538, 853],
+  'stand-normal/momosuke_surprise': [540, 860, 1, 8, 538, 852],
+  'stand-normal/momosuke_troubled': [540, 860, 1, 6, 538, 854],
+  'stand-normal/momosuke_wink': [540, 860, 1, 6, 538, 854],
   'stand-normal/myua_angry': [592, 672, 12, 0, 520, 672],
   'stand-normal/myua_crying': [592, 672, 0, 0, 591, 672],
   'stand-normal/myua_excited': [592, 672, 0, 0, 583, 672],

@@ -71,6 +71,11 @@ SEAM_SHEETS = {
     'sorashido': [('sorashido-8expressions-sheet1.png', [], ['normal', 'happy', 'wink', 'surprise'], 4),
                   ('sorashido-8expressions-sheet2.png', [], ['troubled', 'angry', 'crying', 'excited'], 4)],
     # キュウコ(2026-11-12 社長から。横に8人・1人 約 220×887)。となりと横の範囲が重なるが、体どうしはくっついていない(縫い目は不透明を横切らない)
+    # ももすけ(2026-11-15 社長から。横に4人ずつ・1人 約 440×887・ふだんとハロウィン)。sheet1=ふだん・両手を広げる・ウインク・びっくり / sheet2=悩み・怒り・泣き・やったー
+    'momosuke': [('momosuke-normal-sheet1.png', [], ['normal', 'happy', 'wink', 'surprise'], 4),
+                 ('momosuke-normal-sheet2.png', [], ['troubled', 'angry', 'crying', 'excited'], 4)],
+    'momosuke:halloween': [('momosuke-halloween-sheet1.png', [], ['normal', 'happy', 'wink', 'surprise'], 4),
+                           ('momosuke-halloween-sheet2.png', [], ['troubled', 'angry', 'crying', 'excited'], 4)],
     'kyuko': [('kyuko-8expressions-sheet.png', [], ['normal', 'happy', 'wink', 'surprise', 'troubled', 'angry', 'crying', 'excited'], 8)],
 }
 
@@ -710,7 +715,7 @@ def main():
                 arr[..., 3] = np.where(arr[..., 3] >= 245, 255, arr[..., 3])
                 if key in HAIR_DEHAZE:
                     arr[...] = dehaze_hair(arr)
-                jobs.append(('%s__%s' % (key, e),
+                jobs.append(('%s__%s' % (key.replace(':', '_'), e),
                              lambda arr=arr: clean(None, min_frac=0.004, arr=arr, glow_cut=True, soft=1.0),
                              (lambda key=key, ratio=ratio: fit_scale(make_art(key)) * ratio)))
     for key, sheets in SPLIT_SHEETS.items():

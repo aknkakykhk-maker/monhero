@@ -19,6 +19,8 @@ EXPR = ['normal', 'happy', 'wink', 'surprise', 'troubled', 'angry', 'crying', 'e
 HEADS = {
     'kiki': dict(name='kiki', stand='stand-normal', prefix='kiki', wf=6.9, top=40, eye=145, chin=185, chin_frac=0.43, above=None),
     'kiki:halloween': dict(name='kiki_halloween', stand='stand-halloween', prefix='kiki', wf=6.9, top=70, eye=148, chin=188, chin_frac=0.43, above=0.95),
+    'momosuke': dict(name='momosuke', stand='stand-normal', prefix='momosuke', wf=6.0, top=35, eye=147, chin=192, chin_frac=0.43, above=0.7),
+    'momosuke:halloween': dict(name='momosuke_halloween', stand='stand-halloween', prefix='momosuke', wf=6.0, top=32, eye=138, chin=188, chin_frac=0.43, above=0.95),
     'atsu': dict(name='atsu', stand='stand-normal', prefix='atsu', top=30, eye=100, chin=128, chin_frac=0.43, above=None),
     'kyuko': dict(name='kyuko', stand='stand-normal', prefix='kyuko', top=20, eye=100, chin=135, chin_frac=0.43, above=None),
     'sorashido': dict(name='sorashido', stand='stand-normal', prefix='sorashido', top=25, eye=88, chin=125, chin_frac=0.43, above=None),

@@ -833,8 +833,8 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
   sekiyuou: { erubin: { top: 0.02, eye: 0.225, chin: 0.47, m: 1.25 } },
   // 社長の全身画の8表情から切り出した、みゅあの胸から上の立ち絵(2026-11-11)。測り方は上と同じ。m は、いまの立ち絵と目から顎の見た目の長さが同じになるように決めた
   //   数字は tools/assistant/life-expression-sheets.py が出す(絵を作り直したら、出た数字へ直す)。stand-normal=ふだんの服
-  'stand-normal': { mua: { top: 0.1386, eye: 0.3072, chin: 0.4187, m: 0.829 }, kiki: { top: 0.0777, eye: 0.3325, chin: 0.4296, m: 0.722 }, atsu: { top: 0.0699, eye: 0.3272, chin: 0.4301, m: 0.766 }, kyuko: { top: 0.0344, eye: 0.3093, chin: 0.4296, m: 0.895 }, sorashido: { top: 0.0562, eye: 0.2921, chin: 0.4307, m: 1.031 } },
-  'stand-halloween': { mua: { top: 0.1502, eye: 0.3379, chin: 0.4334, m: 0.711, above: 0.85 }, kiki: { top: 0.1496, eye: 0.3349, chin: 0.4299, m: 0.707, above: 0.95 } },
+  'stand-normal': { mua: { top: 0.1386, eye: 0.3072, chin: 0.4187, m: 0.829 }, momosuke: { top: 0.061, eye: 0.3239, chin: 0.4296, m: 0.786, above: 0.7 }, kiki: { top: 0.0777, eye: 0.3325, chin: 0.4296, m: 0.722 }, atsu: { top: 0.0699, eye: 0.3272, chin: 0.4301, m: 0.766 }, kyuko: { top: 0.0344, eye: 0.3093, chin: 0.4296, m: 0.895 }, sorashido: { top: 0.0562, eye: 0.2921, chin: 0.4307, m: 1.031 } },
+  'stand-halloween': { mua: { top: 0.1502, eye: 0.3379, chin: 0.4334, m: 0.711, above: 0.85 }, momosuke: { top: 0.0594, eye: 0.3112, chin: 0.4299, m: 0.884, above: 0.95 }, kiki: { top: 0.1496, eye: 0.3349, chin: 0.4299, m: 0.707, above: 0.95 } },
   'stand-card-master': { mua: { top: 0.1166, eye: 0.2283, chin: 0.2953, m: 0.499, above: 0.75 } },
 });
 // 絵の置き場所から、着替えの名前を引く(ふだんの服は null)
