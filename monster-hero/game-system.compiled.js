@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 69fe8808126d9059
+// source-sha256: 3e5c7f52f87d6f04
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -166226,12 +166226,13 @@ function MsxStart({
   useEffect(() => {
     if (!look || typeof document === 'undefined') return;
     const el = document.querySelector('[data-msx-carry-look]');
-    if (el && el.scrollIntoView) {
-      try {
-        el.scrollIntoView({
-          block: 'nearest'
-        });
-      } catch (e) {}
+    if (!el) return;
+    for (let p = el.parentElement; p; p = p.parentElement) {
+      const oy = getComputedStyle(p).overflowY;
+      if (!(oy === 'auto' || oy === 'scroll') || p.scrollHeight <= p.clientHeight + 1) continue;
+      const r = el.getBoundingClientRect();
+      const pr = p.getBoundingClientRect();
+      if (r.bottom > pr.bottom) p.scrollTop += Math.min(r.bottom - pr.bottom + 8, r.top - pr.top);else if (r.top < pr.top) p.scrollTop -= pr.top - r.top + 8;
     }
   }, [look]);
   const [pick, setPick] = useState(() => ({

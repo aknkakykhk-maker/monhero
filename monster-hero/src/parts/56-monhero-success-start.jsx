@@ -254,7 +254,16 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf }) {
   const [tab, setTab] = useState('base');
   const [look, setLook] = useState(null); // 持ちこみの段: 押した升目(持っていない物も)。下の説明の欄に出す(2026-11-14 社長「オイルって何?」)
   // 小さい画面・横では説明の欄が升目の下に隠れるので、押したら欄が見える所まで送る
-  useEffect(() => { if (!look || typeof document === 'undefined') return; const el = document.querySelector('[data-msx-carry-look]'); if (el && el.scrollIntoView) { try { el.scrollIntoView({ block: 'nearest' }); } catch (e) {} } }, [look]);
+  //   scrollIntoView は使わない(横も動かしてしまう。viewport-height-check)。縦にスクロールする親を内側から順に、欄が見える所まで動かす
+  useEffect(() => {
+    if (!look || typeof document === 'undefined') return;
+    const el = document.querySelector('[data-msx-carry-look]'); if (!el) return;
+    for (let p = el.parentElement; p; p = p.parentElement) {
+      const oy = getComputedStyle(p).overflowY; if (!(oy === 'auto' || oy === 'scroll') || p.scrollHeight <= p.clientHeight + 1) continue;
+      const r = el.getBoundingClientRect(); const pr = p.getBoundingClientRect();
+      if (r.bottom > pr.bottom) p.scrollTop += Math.min(r.bottom - pr.bottom + 8, r.top - pr.top); else if (r.top < pr.top) p.scrollTop -= pr.top - r.top + 8;
+    }
+  }, [look]);
   const [pick, setPick] = useState(() => ({ base: unlocked[0] || 'Mocchi' }));
   const species = pick.box ? ((box.mons.find((m) => m.id === pick.box) || {}).species || 'Mocchi') : pick.base;
   // 編成: いつもの編成(meta.team)から、保存枠に残っている子だけ。空きはベースモン(育てるモンスターと同じ種 → 解放済みの種の順)
