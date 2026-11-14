@@ -196,7 +196,7 @@ ok(near(SUC.failRateOf({ ...base, yosu: { sabori: { visits: 0 } } }) - fFull, 0.
   ok(w.over === 'done' && w.titles.includes('ヒーローの頂') && w.ending && ['good', 'super'].includes(w.ending.kind)
     && w.stats.life === Math.min(999, pre.life + SUC.PARTY[w.ending.kind].reduce((a, n) => a + n, 0)), `決勝に勝ったあとのエンディングとお祝いがずれている: ${JSON.stringify(w.ending)}`);
   ok(lose.ending && lose.ending.kind === 'bad' && lose.ending.parties.length === 1, '頂への道で負けてもバッドエンディングが付かない');
-  const ev = SUC.evaluate(w); ok(Number.isFinite(ev.power) && ev.points === SUC.assistPointsOf(ev.power), '評価(総合力・アシストポイント)が出ない');
+  const ev = SUC.evaluate(w); ok(Number.isFinite(ev.power) && Number.isFinite(ev.powerS) && ev.powerS <= ev.power && ev.points === SUC.assistPointsOf(ev.powerS), '評価(総合力・アシストポイント)が出ない(アシストポイントは今までの数え方の総合力 powerS から・案A)');
 }
 
 // ---- 能力ポイント ----
@@ -555,8 +555,9 @@ ok(near(SUC.failRateOf({ ...base, yosu: { sabori: { visits: 0 } } }) - fFull, 0.
 // ---- 評価の表示(gradeOf)・ひらめきのアシスト5つ ----
 {
   const g = (p) => SUC.gradeOf(p).label;
-  ok(g(6000) === 'C1' && g(6499) === 'C1' && g(6500) === 'C2' && g(7999) === 'C4' && g(8000) === 'B1' && g(19500) === 'M1' && g(25100) === 'M12' && g(0) === 'G1', `評価の番号がずれている: ${[6000, 6500, 7999, 8000, 19500, 25100].map(g)}`);
-  ok(SUC.gradeOf(7200).toNext === 300 && SUC.gradeOf(19500).next === null, '次の番号までの数がずれている');
+  // 2026-11-14 社長「M は 20,000」: M より上は名前そのものが500ごと(M・M1〜M9・MG・MG1…)で番号を付けない
+  ok(g(6000) === 'C1' && g(6499) === 'C1' && g(6500) === 'C2' && g(7999) === 'C4' && g(8000) === 'B1' && g(19500) === 'SSS4' && g(20000) === 'M' && g(20500) === 'M1' && g(25100) === 'MG' && g(0) === 'G1', `評価の番号がずれている: ${[6000, 6500, 7999, 8000, 19500, 20000, 20500, 25100].map(g)}`);
+  ok(SUC.gradeOf(7200).toNext === 300 && SUC.gradeOf(19500).next === 20000 && SUC.gradeOf(20000).next === 20500 && SUC.gradeOf(99999).next === null, '次の番号までの数がずれている');
   ok(['gatsu', 'miseba', 'mitate', 'kensho', 'mimamori'].every(id => SUC.ASSISTS[id] && SUC.ASSISTS[id].type === 'battle'), 'ひらめきのアシスト5つ(型 battle)がない');
   const st = { life: 600, pow: 700, wise: 300, hit: 500, eva: 400, tough: 600 };
   const mk = (as) => SUC.newRun({ id: 'hint', species: 'Mocchi', aid: 'mua', team: [{ kind: 'raised', species: 'Golem', stats: st, lv: 30, loy: 70, assists: as }, { kind: 'raised', species: 'Golem', stats: st, lv: 30, loy: 70, assists: [{ id: 'gatsu', lv: 1 }] }] });

@@ -237,7 +237,7 @@ const useAmgbState = () => {
 function AmgbRankChip({ rank, small = false }) {
   if (!rank) return null;
   const c = AMGB_RANK_COLOR[rank.key] || '#94a3b8'; const frame = ['SS', 'SSS', 'M'].includes(rank.key);
-  return <b className={`inline-flex items-center justify-center rounded-md px-1 font-black leading-none ${small ? 'min-w-[22px] text-[10px] py-[2px]' : 'min-w-[30px] text-[13px] py-[3px]'}`} style={{ color: '#0f172a', background: rank.key === 'M' ? 'linear-gradient(90deg,#f472b6,#facc15,#4ade80,#60a5fa,#c084fc)' : c, boxShadow: frame ? `0 0 0 2px #fde68a` : 'none' }} data-amgb-rank={rank.key}>{rank.key}</b>;
+  return <b className={`inline-flex items-center justify-center rounded-md px-1 font-black leading-none ${small ? 'min-w-[22px] text-[10px] py-[2px]' : 'min-w-[30px] text-[13px] py-[3px]'}`} style={{ color: '#0f172a', background: rank.key === 'M' ? 'linear-gradient(90deg,#f472b6,#facc15,#4ade80,#60a5fa,#c084fc)' : c, boxShadow: frame ? `0 0 0 2px #fde68a` : 'none' }} data-amgb-rank={rank.key}>{rank.label || rank.key}</b>; // M より上は M1・MG・MG9 などの名前(幅は px-1 と最小幅で広がる)
 }
 // 名前の横に置く「ランク + 総合力」(印が偽なら何も出さない)
 function AmgbPowerTag({ aid, row }) {
@@ -314,7 +314,7 @@ function AmgbPanel({ who, t }) {
         <p className="text-[10px] font-black text-slate-400">総合力</p>
         {p ? <p className="flex items-center gap-1.5 text-[18px] font-black text-amber-100" data-amgb-total={p.power}><AmgbRankChip rank={p.rank}/>{p.power.toLocaleString()}</p> : <p className="text-[12px] font-bold text-slate-400">—</p>}
       </div>
-      {p && p.rank.next && <p className="text-right text-[9.5px] font-bold text-slate-400">次のランクまで {(p.rank.next - p.power).toLocaleString()}</p>}
+      {p && (p.rank.labelNext || p.rank.next) && <p className="text-right text-[9.5px] font-bold text-slate-400">次のランクまで {((p.rank.labelNext || p.rank.next) - p.power).toLocaleString()}</p>}
       <div className="mt-1.5 grid grid-cols-2 gap-x-3 gap-y-1">
         <div className="flex items-center gap-1.5 text-[10.5px] font-bold text-slate-200"><span className="w-[40px] shrink-0">忠誠度</span><span className="mhm-bar"><i style={{ width: `${b.loy}%`, background: 'linear-gradient(90deg,#34d399,#22d3ee)' }}/></span><b className="w-[26px] text-right text-amber-200" data-amgb-loy>{Math.round(b.loy)}</b></div>
         <div className="flex items-center gap-1.5 text-[10.5px] font-bold text-slate-200"><span className="w-[40px] shrink-0">人気</span><span className="mhm-bar"><i style={{ width: `${b.pop}%`, background: 'linear-gradient(90deg,#f472b6,#facc15)' }}/></span><b className="w-[26px] text-right text-amber-200" data-amgb-pop>{Math.round(b.pop)}</b></div>
