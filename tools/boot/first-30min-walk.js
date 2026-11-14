@@ -232,7 +232,7 @@ async function walk(browser, base, orient) {
   if (tourStart.dialogs.length >= 2) note('隠れ', '村の案内', `案内が HOME の建物を指して話すあいだ、「${tourStart.dialogs.filter((d) => d !== 'はじめての案内').join('・')}」の窓が HOME を隠している`);
   const tour = await talk('村の案内');
   if (tour.taps >= LONG_TALK) note('長い', '村の案内', `「次へ」が${tour.taps}手続く(全${tour.total || tour.taps}話)`);
-  await tap(/^((?:始|はじ)める！?|(?:分|わ)かった！?)$/);
+  await tap(/^(始める！?|(?:分|わ)かった！?)$/);
   await wait(700);
 
   // ---- 5. れんしゅう(バトルのチュートリアル)の誘い ----

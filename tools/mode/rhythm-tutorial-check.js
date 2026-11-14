@@ -87,21 +87,21 @@ const serve=()=>new Promise(resolve=>{
     await page.waitForSelector('[data-rhythm-mode-solo],[data-rhythm-demo-start],[data-rhythm-demo-home]',{timeout:30000}).catch(()=>{});await page.evaluate(()=>document.querySelector('[data-rhythm-mode-solo]')?.click());
     await page.waitForTimeout(2500);
     const afterEnter=await bodyText();
-    ok('モンビーの曲えらびへ入れる',afterEnter.includes('曲えらび')||afterEnter.includes('楽曲選択')||afterEnter.includes('モンビーへようこそ'));
-    const tutorialShown=await page.evaluate(()=>!!document.querySelector('[aria-label="はじめての案内"]'));
+    ok('モンビーの曲えらびへ入れる',afterEnter.includes('曲えらび')||afterEnter.includes('曲選び')||afterEnter.includes('楽曲選択')||afterEnter.includes('モンビーへようこそ'));
+    const tutorialShown=await page.evaluate(()=>!!document.querySelector('[aria-label="初めての案内"]'));
     ok('初めて開いたら助手の案内が出る',tutorialShown,
       tutorialShown?'':'出ていない（保存値・重なる案内・画面遷移のどれかで止まっている）');
 
     if(tutorialShown){
       const total=await page.evaluate(()=>{
-        const el=document.querySelector('[aria-label="はじめての案内"]');
+        const el=document.querySelector('[aria-label="初めての案内"]');
         const m=(el?.innerText||'').match(/(\d+)\s*\/\s*(\d+)/);
         return m?Number(m[2]):0;
       });
       ok('案内が複数ページある',total>=5,`${total}ページ`);
       // --- 本題② 最後まで読むと「あそびかた練習」が始まるか ---
       for(let i=0;i<total+2;i++){
-        const moved=await clickText('^次へ$')||await clickText('^はじめる！$');
+        const moved=await clickText('^次へ$')||await clickText('^始める！$');
         if(!moved)break;
         await page.waitForTimeout(220);
       }
