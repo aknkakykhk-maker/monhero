@@ -35,6 +35,14 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    // 2026-11-14 社長「能力が高いほど1あたりの総合力が増える(900で約4.5)」「M は 20,000」「M のあと500ごとに M1〜M9 → MG → MF …」(キズナ4)
+    date: "2026-11-14 12:19", type:'update', title:'助手のマスモンの総合力が、高い能力ほど大きく伸びるようになりました', group:'assistant', status:'new', releaseFlag:'assistantMasmonBond',
+    items:[
+      '能力が高いほど、1あたりの総合力が大きくなります。高い能力を育てるほど総合力がぐんと伸びます。',
+      'ランク M は総合力20,000からになりました。その上は500ごとに M1〜M9 → MG → MG1〜MG9 → MF …と続きます。',
+    ],
+  },
+  {
     date: "2026-11-14 11:10", type:'update', group:'success', releaseFlag:'monheroSuccess', dev:true,
     title:'試合で間合いを変えるときの動きが、なめらかになりました',
     items:[

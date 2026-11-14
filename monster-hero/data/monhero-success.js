@@ -1783,7 +1783,10 @@
     // ---- 評価(引退): 総合力・ランク・アシストポイント・上位3つ ----
     // 評価の表示(社長 2026-11-12: ランク表は助手マスモンと同じ・500ごとに番号。C は 6,000/6,500/7,000/7,500 で C1〜C4・M は上限なしで M1・M2…)
     const GRADE_STEP = 500;
-    const gradeOf = (power) => { const p = Math.max(0, num(power)); const r = C.rankOf(p); const step = Math.floor((p - r.min) / GRADE_STEP) + 1; return { rank: r.key, step, label: `${r.key}${step}`, min: r.min, next: r.next, toNext: GRADE_STEP - ((p - r.min) % GRADE_STEP) }; };
+    //   2026-11-14 社長「M は 20,000」: M より上はランクの名前そのものが 500 ごと(M・M1〜M9・MG・MG1…)なので番号を付けない(芯の rankOf の label)
+    const gradeOf = (power) => { const p = Math.max(0, num(power)); const r = C.rankOf(p); const step = Math.floor((p - r.min) / GRADE_STEP) + 1;
+      const label = r.key === 'M' && r.label ? r.label : `${r.key}${step}`;
+      return { rank: r.key, step, label, min: r.min, next: r.key === 'M' && r.label ? r.labelNext : r.next, toNext: GRADE_STEP - ((p - r.min) % GRADE_STEP) }; };
     const evaluate = (s) => {
       const loy = loyalOf(s);
       const techRows = techRowsOf(s);

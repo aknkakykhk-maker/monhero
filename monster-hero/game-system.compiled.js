@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b1fc8146c515415f
+// source-sha256: 71ce82776fbc8a88
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -142013,6 +142013,8 @@ const MASMON_CALC = (() => {
   const STAT_MAX = 999;
   const POWER_W = Object.freeze({
     stat: 2.5,
+    statUp: 2,
+    statAt: 900,
     tech: 100,
     mastery: 1,
     lv: 15,
@@ -142020,6 +142022,10 @@ const MASMON_CALC = (() => {
     pop: 10,
     techMax: 8
   });
+  const statPower = v => {
+    const x = clamp(num(v), 0, STAT_MAX);
+    return x * (POWER_W.stat + POWER_W.statUp * x / POWER_W.statAt);
+  };
   const power = o => {
     const {
       stats,
@@ -142029,22 +142035,41 @@ const MASMON_CALC = (() => {
       pop = 0
     } = o && typeof o === 'object' ? o : {};
     const st = stats && typeof stats === 'object' ? stats : {};
-    const sum = KEYS.reduce((a, k) => a + clamp(num(st[k]), 0, STAT_MAX), 0);
+    const sum = KEYS.reduce((a, k) => a + statPower(st[k]), 0);
     const tech = (Array.isArray(masteries) ? masteries : []).slice(0, POWER_W.techMax).reduce((a, m) => a + POWER_W.tech + clamp(num(m), 0, 100) * POWER_W.mastery, 0);
-    return Math.round(sum * POWER_W.stat + tech + clamp(num(lv, 1), 1, 99) * POWER_W.lv + clamp(num(loyal), 0, 100) * POWER_W.loyal + clamp(num(pop), 0, 100) * POWER_W.pop);
+    return Math.round(sum + tech + clamp(num(lv, 1), 1, 99) * POWER_W.lv + clamp(num(loyal), 0, 100) * POWER_W.loyal + clamp(num(pop), 0, 100) * POWER_W.pop);
   };
-  const RANKS = Object.freeze([['G', 0], ['F', 2000], ['E', 3000], ['D', 4500], ['C', 6000], ['B', 8000], ['A', 11000], ['S', 14000], ['SS', 16000], ['SSS', 18000], ['M', 19500]]);
+  const RANKS = Object.freeze([['G', 0], ['F', 2000], ['E', 3000], ['D', 4500], ['C', 6000], ['B', 8000], ['A', 11000], ['S', 14000], ['SS', 16000], ['SSS', 18000], ['M', 20000]]);
+  const M_STEP = 500;
+  const M_LETTERS = Object.freeze(['', 'G', 'F', 'E', 'D', 'C', 'B', 'A']);
+  const mLabelOf = v => {
+    const i = Math.min(M_LETTERS.length * 10 - 1, Math.max(0, Math.floor((v - RANKS[RANKS.length - 1][1]) / M_STEP)));
+    const b = Math.floor(i / 10),
+      n = i % 10;
+    return {
+      label: `M${M_LETTERS[b]}${n ? n : ''}`,
+      labelMin: RANKS[RANKS.length - 1][1] + i * M_STEP,
+      labelNext: i + 1 < M_LETTERS.length * 10 ? RANKS[RANKS.length - 1][1] + (i + 1) * M_STEP : null
+    };
+  };
   const rankOf = p => {
     const v = num(p);
     let i = 0;
     RANKS.forEach(([, min], j) => {
       if (v >= min) i = j;
     });
+    const key = RANKS[i][0];
+    const m = key === 'M' ? mLabelOf(v) : {
+      label: key,
+      labelMin: RANKS[i][1],
+      labelNext: RANKS[i + 1] ? RANKS[i + 1][1] : null
+    };
     return {
-      key: RANKS[i][0],
+      key,
       min: RANKS[i][1],
       next: RANKS[i + 1] ? RANKS[i + 1][1] : null,
-      index: i
+      index: i,
+      ...m
     };
   };
   const FUSE = Object.freeze({
@@ -142304,8 +142329,11 @@ const MASMON_CALC = (() => {
     KEYS,
     STAT_MAX,
     POWER_W,
+    statPower,
     power,
     RANKS,
+    M_STEP,
+    M_LETTERS,
     rankOf,
     FUSE,
     fuseBonus,
@@ -142825,7 +142853,7 @@ function AmgbRankChip({
       boxShadow: frame ? `0 0 0 2px #fde68a` : 'none'
     },
     "data-amgb-rank": rank.key
-  }, rank.key);
+  }, rank.label || rank.key);
 }
 function AmgbPowerTag({
   aid,
@@ -143003,9 +143031,9 @@ function AmgbPanel({
     rank: p.rank
   }), p.power.toLocaleString()) : React.createElement("p", {
     className: "text-[12px] font-bold text-slate-400"
-  }, "—")), p && p.rank.next && React.createElement("p", {
+  }, "—")), p && (p.rank.labelNext || p.rank.next) && React.createElement("p", {
     className: "text-right text-[9.5px] font-bold text-slate-400"
-  }, "次のランクまで ", (p.rank.next - p.power).toLocaleString()), React.createElement("div", {
+  }, "次のランクまで ", ((p.rank.labelNext || p.rank.next) - p.power).toLocaleString()), React.createElement("div", {
     className: "mt-1.5 grid grid-cols-2 gap-x-3 gap-y-1"
   }, React.createElement("div", {
     className: "flex items-center gap-1.5 text-[10.5px] font-bold text-slate-200"
@@ -168260,7 +168288,7 @@ const MSX_R3_GEAR = Object.freeze({
   pro: 30,
   final: 40
 });
-const MSX_R3_RANKS = Object.freeze([['G', 0], ['F', 2000], ['E', 3000], ['D', 4500], ['C', 6000], ['B', 8000], ['A', 11000], ['S', 14000], ['SS', 16000], ['SSS', 18000], ['M', 19500]]);
+const MSX_R3_RANKS = Object.freeze([['G', 0], ['F', 2000], ['E', 3000], ['D', 4500], ['C', 6000], ['B', 8000], ['A', 11000], ['S', 14000], ['SS', 16000], ['SSS', 18000], ['M', 20000]]);
 const msxR3Ranks = () => typeof MASMON_CALC !== 'undefined' && MASMON_CALC && Array.isArray(MASMON_CALC.RANKS) ? MASMON_CALC.RANKS : MSX_R3_RANKS;
 const MSX_R3_CUP_ICON = Object.freeze({
   str: '💪',
@@ -175506,7 +175534,7 @@ function MonsucRankGrade({
   grade
 }) {
   const g = typeof grade === 'string' && /^[A-Z]{1,3}[0-9]{0,3}$/.test(grade) ? grade : 'G';
-  const letter = g.replace(/[0-9]+$/, '');
+  const letter = /^M/.test(g) ? 'M' : g.replace(/[0-9]+$/, '');
   return React.createElement("span", {
     className: "inline-flex items-center justify-center min-w-[26px] h-[22px] px-1 rounded-md text-[12px] font-black text-slate-900",
     style: {
