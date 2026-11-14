@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 25e5886df449ab00
+// source-sha256: aee6496984529559
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -81013,6 +81013,13 @@ const HOME_EVENT_BADGE_CSS = `
 @media(prefers-reduced-motion:reduce){
   .mh-home-event-badge{animation:none;transform:none}
   .mh-home-event-badge::after{display:none}}
+/* イベントの札の題の2行目(title2)。背の低い横画面では、2行のまま字と余白を詰めて札の高さを1行の題のときと同じくらいにする
+   (2026-11-14 横 568×320 の長い台詞で、背が伸びた札が M/B管理 にかかった。1行に並べると横に伸びてモンヒロビートの顔の列にかかる) */
+.mh-home-event-banner .t2{display:block}
+@media(orientation:landscape) and (max-height:430px){
+  .mh-home-scene .mh-home-event-banner{padding:3px 10px;gap:0}
+  .mh-home-scene .mh-home-event-banner b{font-size:10px;line-height:1.1}
+  .mh-home-scene .mh-home-event-banner small{line-height:1.1}}
 `;
 const HOME_RAID_JACK_CSS = `
 .mh-home-raid-jack-img{animation:mhRaidJackHop 1.15s cubic-bezier(.3,.1,.4,1) infinite;transform-origin:50% 100%}
@@ -81951,7 +81958,9 @@ function HomeScreen({
     className: "mh-home-event-banner",
     onClick: openChangelog,
     "aria-label": `${homeEventCampaign.banner.title}${homeEventCampaign.banner.title2 || ''} ${homeEventCampaign.banner.sub}`
-  }, React.createElement("b", null, homeEventCampaign.banner.emoji, " ", homeEventCampaign.banner.title, homeEventCampaign.banner.title2 ? React.createElement(React.Fragment, null, React.createElement("br", null), homeEventCampaign.banner.title2) : null), React.createElement("small", null, homeEventCampaign.banner.sub)), homeCardTour && typeof onOpenCardTour === 'function' && React.createElement("button", {
+  }, React.createElement("b", null, homeEventCampaign.banner.emoji, " ", homeEventCampaign.banner.title, homeEventCampaign.banner.title2 ? React.createElement("span", {
+    className: "t2"
+  }, homeEventCampaign.banner.title2) : null), React.createElement("small", null, homeEventCampaign.banner.sub)), homeCardTour && typeof onOpenCardTour === 'function' && React.createElement("button", {
     type: "button",
     "data-home-card-tour": homeCardTour.id,
     className: `mh-home-tour-banner${homeEventCampaign ? '' : ' raised'}`,
