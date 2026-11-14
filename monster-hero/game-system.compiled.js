@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: eb7e9dc5e15d2dc1
+// source-sha256: 3829b5b5dd271cc6
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -173790,20 +173790,48 @@ function MsxStats({
   } = msxSuc;
   const s = run.s;
   const tagAt = SUC.BOND && SUC.BOND.tag || 80;
-  const spend = k => {
-    const r = SUC.spendPts(s, k, 1);
-    if (r.out.ok) setRun({
-      ...run,
-      s: r.state
-    });
+  const [draft, setDraft] = useState([]);
+  const replay = list => {
+    let w = s;
+    for (const k of list) {
+      const r = SUC.spendPts(w, k, 1);
+      if (!r.out.ok) break;
+      w = r.state;
+    }
+    return w;
+  };
+  const ws = replay(draft);
+  const addOf = k => draft.filter(x => x === k).length;
+  const plus = k => {
+    const r = SUC.spendPts(ws, k, 1);
+    if (r.out.ok) setDraft([...draft, k]);
+  };
+  const minus = k => {
+    const i = draft.lastIndexOf(k);
+    if (i >= 0) setDraft(draft.filter((_, j) => j !== i));
   };
   const auto = () => {
-    const r = SUC.autoPts(s);
+    let w = replay(draft);
+    const list = draft.slice();
+    while (w.pts > 0) {
+      const k = MSX_STATS.slice().sort((x, y) => w.stats[x] - w.stats[y])[0];
+      const r = SUC.spendPts(w, k, 1);
+      if (!r.out.ok) break;
+      w = r.state;
+      list.push(k);
+    }
+    setDraft(list);
+  };
+  const commit = () => {
+    if (!draft.length) return;
     setRun({
       ...run,
-      s: r.state
+      s: ws
     });
+    setDraft([]);
   };
+  const used = s.pts - ws.pts;
+  const lineOf = SUC.PTS && SUC.PTS.line ? SUC.PTS.line[SUC.periodOf(s.turn).key] : null;
   const own = typeof SUC.techsOf === 'function' ? SUC.techsOf(s.species) : [];
   const techs = (Array.isArray(s.techs) ? s.techs : []).map(id => own.find(t => t && t.id === id)).filter(Boolean);
   const pk = typeof SUC.peakInfo === 'function' ? SUC.peakInfo(s) : {
@@ -173822,7 +173850,8 @@ function MsxStats({
     className: "msx-scroll",
     "data-msx-ability": true
   }, React.createElement("div", {
-    className: "v-card pk"
+    className: "v-card pk",
+    "data-msx-pts": true
   }, React.createElement("div", {
     className: "msx-row",
     style: {
@@ -173830,30 +173859,111 @@ function MsxStats({
     }
   }, React.createElement("b", {
     className: "h2"
-  }, "📊 能力ポイント ", s.pts), s.pts ? React.createElement("button", {
+  }, "📊 能力ポイント"), React.createElement("button", {
     type: "button",
     className: "chip on",
+    disabled: !ws.pts,
     onClick: auto
-  }, "おまかせで振る") : null), React.createElement("div", {
+  }, "おまかせで振る")), React.createElement("div", {
+    className: "msx-row",
+    style: {
+      justifyContent: 'space-around',
+      margin: '6px 0'
+    }
+  }, React.createElement("div", {
+    className: "v-num"
+  }, React.createElement("small", null, "持っている点"), React.createElement("b", null, s.pts)), React.createElement("div", {
+    className: "v-num"
+  }, React.createElement("small", null, "使う点"), React.createElement("b", {
+    style: {
+      color: used ? '#fde047' : undefined
+    }
+  }, used)), React.createElement("div", {
+    className: "v-num"
+  }, React.createElement("small", null, "残りの点"), React.createElement("b", null, ws.pts))), React.createElement("div", {
     className: "msx-note"
-  }, "大会でもらえる。好きな能力へ 1点で +1(期の目安を超えると 2点で +1)"), MSX_STATS.map(k => React.createElement("div", {
-    key: k,
-    className: "msx-ab-row"
-  }, React.createElement("span", {
-    className: "n"
-  }, MSX_STAT_ICON[k], " ", MSX_STAT_NAME[k]), React.createElement("b", null, s.stats[k]), React.createElement("button", {
+  }, "＋で仮に振り、「決定」で確定する。1点で +1(期の目安", lineOf ? ` ${lineOf}` : '', "を超えると 2点で +1)"), MSX_STATS.map(k => {
+    const n = addOf(k);
+    const cost = SUC.ptsCost(ws, k);
+    const over = lineOf != null && ws.stats[k] >= lineOf;
+    return React.createElement("div", {
+      key: k,
+      className: "msx-ab-row",
+      "data-msx-pts-row": k
+    }, React.createElement("span", {
+      className: "n"
+    }, MSX_STAT_ICON[k], " ", MSX_STAT_NAME[k], React.createElement("small", {
+      className: "sub",
+      style: {
+        display: 'block',
+        fontSize: 10,
+        color: over ? '#fbbf24' : '#94a3b8'
+      }
+    }, over ? '目安超え・2点で +1' : '1点で +1')), React.createElement("span", {
+      style: {
+        fontSize: 12,
+        fontWeight: 900,
+        whiteSpace: 'nowrap'
+      }
+    }, n ? React.createElement(React.Fragment, null, s.stats[k], " → ", React.createElement("b", {
+      style: {
+        width: 'auto',
+        color: '#fde047'
+      }
+    }, ws.stats[k]), " ", React.createElement("small", {
+      style: {
+        color: '#fde047'
+      }
+    }, "(+", n, ")")) : React.createElement("b", {
+      style: {
+        width: 'auto'
+      }
+    }, s.stats[k])), React.createElement("button", {
+      type: "button",
+      className: "chip",
+      style: {
+        minWidth: 40,
+        minHeight: 36
+      },
+      disabled: !n,
+      onClick: () => minus(k),
+      "aria-label": `${MSX_STAT_NAME[k]}を戻す`
+    }, "−"), React.createElement("button", {
+      type: "button",
+      className: "chip on",
+      style: {
+        minWidth: 44,
+        minHeight: 36
+      },
+      disabled: ws.pts < cost,
+      onClick: () => plus(k),
+      "aria-label": `${MSX_STAT_NAME[k]}を上げる`
+    }, "＋"));
+  }), React.createElement("div", {
+    className: "msx-row",
+    style: {
+      marginTop: 8,
+      gap: 6
+    }
+  }, React.createElement("button", {
+    type: "button",
+    className: "chip",
+    style: {
+      flex: 1,
+      minHeight: 44
+    },
+    disabled: !draft.length,
+    onClick: () => setDraft([])
+  }, "元に戻す"), React.createElement("button", {
     type: "button",
     className: "chip on",
     style: {
-      minWidth: 52
+      flex: 2,
+      minHeight: 44
     },
-    disabled: !s.pts || s.pts < SUC.ptsCost(s, k),
-    onClick: () => spend(k)
-  }, "+1", React.createElement("small", {
-    style: {
-      fontSize: 10
-    }
-  }, "(", SUC.ptsCost(s, k), "点)"))))), React.createElement("div", {
+    disabled: !draft.length,
+    onClick: commit
+  }, "決定"))), React.createElement("div", {
     className: "v-card",
     "data-msx-ability-techs": true
   }, React.createElement("div", {
