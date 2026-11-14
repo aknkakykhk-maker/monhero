@@ -202,6 +202,10 @@ const sameState = (a, b) => {
         check(`${tag}: 入口から開く`, m.ok && m.view === 'home' && m.text > 20, `view=${m.view}`);
         const startNew = await page.evaluate(() => { const b = [...document.querySelectorAll('.msx button')].find((x) => /新しく育成をはじめる/.test(x.innerText)); if (b) b.click(); return !!b; });
         check(`${tag}: 「新しく育成をはじめる」が押せる`, startNew);
+        // ストーリー選択(2026-11-14): シナリオの名前が出て、「次へ」で育てるモンスターを選ぶ段へ
+        await page.waitForSelector('[data-msx-scenario]', { timeout: 10000 }).catch(() => {});
+        const scn = await page.evaluate(() => { const el = document.querySelector('[data-msx-scenario]'); const t = el ? el.innerText : ''; const b = document.querySelector('[data-msx-scenario-next]'); if (b) b.click(); return { id: el ? el.getAttribute('data-msx-scenario') : null, name: /ヒーローへの道/.test(t), next: !!b }; });
+        check(`${tag}: ストーリー選択に「ヒーローへの道」が出て、次へで進める`, scn.id === 'hero' && scn.name && scn.next, JSON.stringify(scn));
         // はじめる6段
         let steps = 0;
         for (; steps < 8; steps++) {
