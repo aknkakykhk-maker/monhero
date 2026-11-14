@@ -466,7 +466,13 @@ const MSX_CSS = `
 .msx .v-cup.sel{border-color:#fde047;background:#3b2f0b;box-shadow:0 0 12px #fde04766}
 .msx .v-cup.rv{border-color:#f87171;background:linear-gradient(90deg,#3b1220,#1e1a36)}.msx .v-cup.rv .tx small{color:#fca5a5}
 .msx .v-cup .rvb{position:absolute;right:8px;top:-8px;background:linear-gradient(90deg,#ef4444,#fb923c);border-radius:99px;padding:0 8px;font-size:10px;font-weight:900;line-height:1.6;white-space:nowrap}
-.msx .v-cup.ng{opacity:.55;border-style:dashed}.msx .v-cup.ng .tx small{color:#fca5a5}
+.msx .v-cup.ng{opacity:.55;border-style:dashed}
+.msx .v-cup .e .gr{position:absolute;left:2px;bottom:-2px;font-size:8.5px;font-weight:900;border-radius:5px;padding:0 3px;color:#1e1b4b;background:#cbd5e1;letter-spacing:0}
+.msx .v-cup .e .gr.g-bronze{background:#d9a066}.msx .v-cup .e .gr.g-silver{background:#cbd5e1}.msx .v-cup .e .gr.g-gold{background:#fde047}
+.msx .v-cup .e .gr.g-green{background:#86efac}.msx .v-cup .e .gr.g-four{background:#c4b5fd}.msx .v-cup .e .gr.g-rainbow{background:linear-gradient(90deg,#fda4af,#fde047,#86efac,#93c5fd);color:#1e1b4b}
+.msx .v-cup.ex .e{position:relative}
+.msx .v-cup.ex.g-four{border-color:#a78bfa}.msx .v-cup.ex.g-gold{border-color:#fde047}.msx .v-cup.ex.g-rainbow{border-color:#fda4af}
+.msx .v-cup.hard .tx small{color:#fca5a5}.msx .v-cup.ng .tx small{color:#fca5a5}
 .msx .v-vsh{display:flex;align-items:center;gap:4px;margin-top:6px;border-radius:16px;overflow:hidden;border:1px solid #4a4380;background:linear-gradient(100deg,#9d174d 0,#3b2a6b 49%,#0f0d24 50%,#1e3a8a 100%);padding:6px 6px;min-height:104px}
 .msx .v-vsh .sd{flex:1;min-width:0;display:flex;align-items:center;gap:4px;line-height:1.3}.msx .v-vsh .sd.op{justify-content:flex-end;text-align:right}
 .msx .v-vsh .sd img{height:70px;aspect-ratio:1;object-fit:contain;flex:none;filter:drop-shadow(0 5px 3px #0008)}.msx .v-vsh .sd.op img{transform:scaleX(-1)}
