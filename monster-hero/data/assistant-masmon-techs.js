@@ -583,7 +583,7 @@ const ASSISTANT_MASMON_TECHS = (() => {
       {"id":"kuromy_o09","name":"ダークパワー","kind":"wise","dist":[2],"power":33,"hit":-13,"guts":34,"crit":12,"gd":12,"rank":4,"role":"heavy","learn":{"by":"wise","st":{"wise":350},"need":{"kuromy_o08":40}}},
       {"id":"kuromy_o10","name":"ドクロボム","kind":"wise","dist":[3],"power":26,"hit":-3,"guts":25,"crit":12,"gd":19,"rank":1,"role":"light","learn":{"by":"wise","st":{"wise":100}}},
       {"id":"kuromy_o11","name":"クロミーズ5突撃","kind":"pow","dist":[0],"power":26,"hit":-3,"guts":28,"crit":12,"gd":12,"moveTo":0,"rank":2,"role":"mid","learn":{"by":"pow","st":{"pow":150}}},
-      {"id":"kuromy_o12","name":"夢食いウィング","kind":"wise","dist":[3],"power":33,"hit":-13,"guts":31,"crit":12,"gd":12,"moveTo":3,"rank":3,"role":"skill","learn":{"by":"wise","st":{"wise":250},"need":{"kuromy_o07":25}}},
+      {"id":"kuromy_o12","name":"夢くいウィング","kind":"wise","dist":[3],"power":33,"hit":-13,"guts":31,"crit":12,"gd":12,"moveTo":3,"rank":3,"role":"skill","learn":{"by":"wise","st":{"wise":250},"need":{"kuromy_o07":25}}},
       {"id":"kuromy_o13","name":"恨み帳メテオ","kind":"wise","dist":[2],"power":33,"hit":-13,"guts":33,"crit":12,"gd":19,"rank":3,"role":"skill","learn":{"by":"wise","st":{"wise":250},"need":{"kuromy_o07":25}}},
       {"id":"kuromy_o14","name":"黒音符バースト","kind":"wise","dist":[3],"power":42,"hit":-13,"guts":36,"crit":12,"gd":19,"rank":4,"role":"heavy","learn":{"by":"wise","st":{"wise":350},"need":{"kuromy_o08":40}}},
       {"id":"kuromy_o15","name":"らっきょう大雨","kind":"wise","dist":[2],"power":42,"hit":-13,"guts":39,"crit":12,"gd":12,"rank":4,"role":"heavy","learn":{"by":"wise","st":{"wise":350},"need":{"kuromy_o08":40}}},
