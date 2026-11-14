@@ -41,7 +41,7 @@ const MIX = { groups: [{ ids: ['mua', 'kiki'], doing: 'snack', place: 'cafe' }, 
   const open = async (v, saved) => {
     const page = await browser.newPage({ viewport: { width: v.w, height: v.h }, deviceScaleFactor: SHOTS ? 2 : 1 });
     page.on('pageerror', e => errors.push(`${v.name}: ${e.message}`));
-    await page.addInitScript((sv) => { window.__mhSupabaseStubbed = true; if (sv != null) localStorage.setItem('mh_assistant_life_ui_v2', sv); else window.__mhLifeUiNoSeed = true; }, saved);
+    await page.addInitScript((sv) => { window.__mhSupabaseStubbed = true; if (sv != null) { localStorage.setItem('mh_assistant_life_ui_v2', sv); localStorage.setItem('mh_assistant_life_ui_v2_default_v1', 'true'); } else window.__mhLifeUiNoSeed = true; }, saved);
     await page.addInitScript(quietBootSeed()); await page.addInitScript(updateNoticeSeed()); await page.addInitScript(oneTimeNoticeSeed());
     await page.addInitScript(seed, { storyIds: STORY_IDS, introKeys: INTRO_KEYS, life: true, intro: false, bondAll: null });
     await page.route(/supabase|functions\/v1/, r => r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));

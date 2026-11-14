@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 4a8b68cbd30c30c3
+// source-sha256: 4611211ee34b6634
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -115548,7 +115548,7 @@ function AssistantLifeHouse({
   const [mapFocusKey, setMapFocusKey] = React.useState(0);
   React.useEffect(() => {
     let alive = true;
-    Promise.resolve(storeGet('mh_assistant_life_ui_v2', null, false)).then(v => {
+    assistantLifeUiV2Load().then(v => {
       assistantLifeUiV2Last = v === true || v === false ? v : null;
       if (alive) setUiV2(assistantLifeUiV2Of(v));
     }).catch(() => {});
@@ -120083,6 +120083,29 @@ let assistantLifeUiV2Last = null;
 function assistantLifeUiV2Of(saved) {
   return saved === true ? true : saved === false ? false : ASSISTANT_LIFE_UI_V2_DEFAULT;
 }
+async function assistantLifeUiV2Load() {
+  let v = null;
+  try {
+    v = await storeGet('mh_assistant_life_ui_v2', null, false);
+  } catch (_) {
+    v = null;
+  }
+  if (v !== false) return v;
+  let done = null;
+  try {
+    done = await storeGet('mh_assistant_life_ui_v2_default_v1', null, false);
+  } catch (_) {
+    return v;
+  }
+  if (done === true) return v;
+  try {
+    await storeSet('mh_assistant_life_ui_v2_default_v1', true, false);
+    await storeSet('mh_assistant_life_ui_v2', true, false);
+  } catch (_) {
+    return v;
+  }
+  return true;
+}
 function assistantLifeUiV2Tabs() {
   const profile = typeof assistantLifeProfileOn === 'function' && assistantLifeProfileOn() ? [['profile', '📖', '紹介']] : [];
   return [['house', '🏡', '家'], ['where', '🗺', '町'], ['friends', '🤝', 'きずな'], ...profile, ...(typeof alfEnabled === 'function' && alfEnabled() ? [['visit', '🏘', 'フレンド']] : [])];
@@ -120217,7 +120240,7 @@ function AssistantLifeUiSettingRow() {
   const [v2, setV2] = React.useState(() => assistantLifeUiV2Of(assistantLifeUiV2Last));
   React.useEffect(() => {
     let alive = true;
-    Promise.resolve(storeGet('mh_assistant_life_ui_v2', null, false)).then(v => {
+    assistantLifeUiV2Load().then(v => {
       assistantLifeUiV2Last = v === true || v === false ? v : null;
       if (alive) setV2(assistantLifeUiV2Of(v));
     }).catch(() => {});
@@ -120230,6 +120253,7 @@ function AssistantLifeUiSettingRow() {
     setV2(on);
     assistantLifeUiV2Last = on;
     try {
+      void storeSet('mh_assistant_life_ui_v2_default_v1', true, false);
       void storeSet('mh_assistant_life_ui_v2', on, false);
     } catch (_) {}
   };
