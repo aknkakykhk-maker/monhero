@@ -36,7 +36,7 @@
     yaruki: { icon: '🔥', name: 'やる気満々', left: 3, good: true, text: 'トレーニングの大成功 +10%' },
     gokigen: { icon: '🎵', name: 'ごきげん', left: 3, good: true, text: 'ストレスの増え −50%' },
     neboke: { icon: '💤', name: 'ねぼけ', left: 2, good: false, text: 'サボり +10%' },
-    futekusare: { icon: '🌀', name: 'ふてくされ', left: 2, good: false, text: '叱ると忠誠が余計に下がる' },
+    futekusare: { icon: '🌀', name: 'ふてくされ', left: 2, good: false, text: '叱っても恐れ度が上がりにくい' },
     hirameki: { icon: '✨', name: 'ひらめき中', left: 0, good: true, text: '次の修行で技を覚えやすい' }, // left 0 = 次の修行まで
     iki: { icon: '🤝', name: '息ぴったり', left: 3, good: true, text: 'その編成の子がトレーニングに来やすい(+20%)' },
   });
@@ -72,7 +72,7 @@
   const L_OK = ['junior', 'middle', 'pro'];
   const EVENTS = [
     // ═══ ① ふだん(16) ═══
-    { id: 'ev.daily.nut', kind: 'daily', slot: 'start', w: 10, ch: { a: { fx: [['pop', 3], ['fame', 240]] }, b: { fx: [['hp', 20], ['loy', -3]] } } },
+    { id: 'ev.daily.nut', kind: 'daily', slot: 'start', w: 10, ch: { a: { fx: [['pop', 3], ['fame', 240]] }, b: { fx: [['hp', 20]] } } },
     { id: 'ev.daily.rain', kind: 'daily', slot: 'start', w: 10, ch: { a: { fx: [['st', 'wise', S]] }, b: { p: 0.5, ok: [['st', 'life', M]], ng: [['hp', -10]] } } },
     { id: 'ev.daily.night', kind: 'daily', slot: 'start', w: (s, x) => (x.hpRatio(s) < 0.3 ? 2 : 10), ch: { a: { fx: [['hp', 10]] }, b: { fx: [['str', -20], ['buff', 'neboke']] } } },
     { id: 'ev.daily.kids', kind: 'daily', slot: 'start', w: (s) => (s.pop >= 60 ? 18 : 10), ch: { a: { fx: [['pop', 3], ['hp', -10]] }, b: { fx: [['pop', 6], ['popHi', 4]] } } },
@@ -120,7 +120,7 @@
     { id: 'ev.self.peakout', kind: 'self', slot: 'fixed', when: (s, x) => x.peakEdge(s) === 'out', ch: { a: { fx: [['hp', 30]] }, b: { fx: [['st', 'main', S], ['str', 20]] } } },
     { id: 'ev.self.slump', kind: 'self', slot: 'start', w: 30, when: (s) => (s.ev.bad || 0) >= 3, ch: { a: { fx: [['str', -20], ['hp', 10]] }, b: { fx: [['buff', 'yaruki']] } } },
     { id: 'ev.self.favtrain', kind: 'self', slot: 'start', w: 20, when: (s, x) => Boolean(x.favCand(s)), ch: { fx: [['flag', 'fav']] } },
-    { id: 'ev.self.selfish', kind: 'self', slot: 'start', w: 25, when: (s, x) => x.loyal(s) <= 30 && s.turn >= 4, ch: { a: { fx: [['str', -20], ['loy', -3]] }, b: { fx: [['loy', 3], ['buff', 'futekusare']] } } },
+    { id: 'ev.self.selfish', kind: 'self', slot: 'start', w: 25, when: (s, x) => x.loyal(s) <= 30 && s.turn >= 4, ch: { a: { fx: [['str', -20]] }, b: { fx: [['loy', 3], ['buff', 'futekusare']] } } },
     // 育成の記念日(2026-11-13 社長): 育て始めて1年(ジュニア期8月=ターン13)のはじめに一度きり。体力が上限の50%回復・ストレス −10。ほかの病気などで出せなければ2ターンまで待つ
     { id: 'ev.self.anniv', kind: 'self', slot: 'fixed', when: (s) => s.turn >= ANNIV_TURN && s.turn <= ANNIV_TURN + 2, ch: { fx: [['hp', 50], ['str', -10]] } },
     { id: 'ev.self.clingy', kind: 'self', slot: 'start', w: 12, when: (s, x) => x.loyal(s) >= 80, ch: { a: { fx: [['loy', 3], ['str', -10]] } } },
