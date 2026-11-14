@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 436e47591e631a23
+// source-sha256: aa5378e0fdaf96bb
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -109121,7 +109121,7 @@ function MsxLiveMon({
 const MSXFX_MOMENT = Object.freeze({
   lvup: {
     icon: '⬆️',
-    head: '訓練Lvアップ！',
+    head: 'トレーニングLvアップ！',
     tone: 'gold'
   },
   tech: {
@@ -155153,7 +155153,7 @@ const MSX_FX_FLAG = Object.freeze({
   goalPlus: '期の目標のごほうびアップ',
   baseBoost: 'ベースモンの効きアップ',
   injRisk: 'けがをしやすくなる',
-  fav: '好きな訓練ができる',
+  fav: '好きなトレーニングができる',
   tagSeen: '友情タッグに目ざめる'
 });
 const MSX_FX_GOAL = Object.freeze({
@@ -155223,7 +155223,7 @@ function MsxChoiceInfo({
 }
 const MSX_EV_TITLE = Object.freeze({
   'ev.daily.nut': '道ばたの木の実',
-  'ev.daily.rain': '雨の日の訓練',
+  'ev.daily.rain': '雨の日のトレーニング',
   'ev.daily.night': '星のきれいな夜',
   'ev.daily.kids': '子どもたちが集まってきた',
   'ev.daily.sweets': '新作スイーツ',
@@ -155252,7 +155252,7 @@ const MSX_EV_TITLE = Object.freeze({
   'ev.self.peakin': '伸びどきが来た',
   'ev.self.peakout': '落ち着いてきた',
   'ev.self.slump': 'スランプ',
-  'ev.self.favtrain': '好きな訓練',
+  'ev.self.favtrain': '好きなトレーニング',
   'ev.self.selfish': 'ご機嫌ななめ',
   'ev.self.clingy': '甘えんぼ',
   'ev.goal.pick': '期の目標を決める',
@@ -155408,7 +155408,7 @@ function MsxDex({
     bond: 10,
     cheer: '編成のモンスター',
     cheer2: '編成のモンスター',
-    train: '訓練',
+    train: 'トレーニング',
     id: 'dex',
     turn: 10
   };
@@ -155953,7 +155953,7 @@ function MsxTrainAct({
     "aria-hidden": "true"
   }) : null, React.createElement("div", {
     className: "ban"
-  }, React.createElement("small", null, MSX_STAT_NAME[k], "の訓練 ", React.createElement("b", null, "Lv.", lv)), msxTrainIcon(k, lv), " ", msxTrainName(k, lv), "!"));
+  }, React.createElement("small", null, MSX_STAT_NAME[k], "のトレーニング ", React.createElement("b", null, "Lv.", lv)), msxTrainIcon(k, lv), " ", msxTrainName(k, lv), "!"));
 }
 function MsxShugyoStages({
   run,
@@ -161616,6 +161616,8 @@ const MSX_CSS = `
 .msx .v-st.gs-a.zin div.up u.g i,.msx .v-st.gs-a.zin div.up u.g s{border-radius:2px}
 .msx .v-st.gs-a u.g q{quotes:none;position:absolute;left:0;right:0;top:100%;display:flex;justify-content:space-between;font-size:10px;font-weight:800;color:#fde68a;line-height:11px;pointer-events:none}
 .msx .v-st.gs-a u.g q::before,.msx .v-st.gs-a u.g q::after{content:none}
+@container (max-width:340px){.msx .v-st.gs-a u.g q{font-size:9.5px;letter-spacing:-.06em;left:-3px;right:-3px}}
+@media (max-width:340px){.msx .v-st.gs-a u.g q{font-size:9.5px;letter-spacing:-.06em;left:-3px;right:-3px}}
 @media (prefers-reduced-motion: reduce){.msx .v-st u.g i,.msx .v-st u.g s.gu{transition:none}.msx .v-st.grow.on u.g s.gu{animation:none}}
 .msx .v-act{display:grid;gap:5px;margin-top:6px}
 .msx .v-p{background:linear-gradient(180deg,#3d4c6b,#2a3247);border:1px solid #64748b;border-bottom:3px solid #0b1020;border-radius:14px;text-align:center;padding:5px 2px 4px;font-size:12.5px;font-weight:900;line-height:1.2;position:relative;display:flex;flex-direction:column;justify-content:center;align-items:center;min-width:0;white-space:nowrap}
@@ -162018,7 +162020,7 @@ const MSX_CSS = `
 .msx .v-pf.tag img{animation:msx-glow 1.6s ease-in-out infinite}
 .msx .v-tr.tag .o{animation:msx-glow 1.6s ease-in-out infinite}
 .msx-fade{animation:msx-fadein .18s ease-out}
-/* 社長「育成中のメイン・訓練の画面は、モンスターもっと小さくしてぴょこぴょこ動く」(2026-11-12)。いまの約7割 */
+/* 社長「育成中のメイン・トレーニングの画面は、モンスターもっと小さくしてぴょこぴょこ動く」(2026-11-12)。いまの約7割 */
 .msx .v-scene.home .mon{height:24%}.msx.land .v-scene.home .mon{height:28%}.msx.s320 .v-scene.home .mon{height:26%}
 .msx span.mon{display:block}
 .msx .mon.msx-live{animation:none;filter:none}
@@ -162069,7 +162071,7 @@ const MSX_SCENARIOS = Object.freeze([{
   title: '仕上げて、勝ちに行く',
   lead: '面倒見のいい兄貴分と、コツコツ仕上げて大会をとりにいく物語',
   tag: 'ふつう',
-  perk: '訓練の組み合わせが あつ流(ちから → ライフ・回避 など)',
+  perk: 'トレーニングの組み合わせが あつ流(ちから → ライフ・回避 など)',
   eps: ['はじめての特訓', '雨の日の作戦会議', '仕上げの約束']
 }]);
 const MSX_SOON_AIDS = Object.freeze(['kiki', 'momosuke', 'dra', 'kyuko', 'sorashido', 'erubin']);
@@ -162905,7 +162907,7 @@ function MsxStart({
     const toggleBox = id => setTeamBox(cur => cur.includes(id) ? cur.filter(x => x !== id) : cur.length >= 5 ? cur : [...cur, id]);
     body = React.createElement(React.Fragment, null, React.createElement("div", {
       className: "v-h"
-    }, "編成の6体", React.createElement("small", null, "保存枠から5体まで+フレンドから1体。強いモンスターほど訓練がよく伸びる")), React.createElement("div", {
+    }, "編成の6体", React.createElement("small", null, "保存枠から5体まで+フレンドから1体。強いモンスターほどトレーニングがよく伸びる")), React.createElement("div", {
       className: "v-slots"
     }, members.map((m, i) => React.createElement("div", {
       key: i,
@@ -162938,7 +162940,7 @@ function MsxStart({
         color: '#f9a8d4',
         fontWeight: 900
       }
-    }, "この編成が集まりやすい訓練"), React.createElement("div", {
+    }, "この編成が集まりやすいトレーニング"), React.createElement("div", {
       className: "v-heat"
     }, MSX_STATS.map((k, i) => React.createElement("div", {
       key: k,
@@ -163068,7 +163070,7 @@ function MsxStart({
     const combo = SUC.TRAIN_COMBO && SUC.TRAIN_COMBO[aid];
     body = React.createElement(React.Fragment, null, React.createElement("div", {
       className: "v-h"
-    }, "だれの物語で育てる?", React.createElement("small", null, "助手ごとに、筋書き・出来事・訓練の組み合わせが変わる")), React.createElement("div", {
+    }, "だれの物語で育てる?", React.createElement("small", null, "助手ごとに、筋書き・出来事・トレーニングの組み合わせが変わる")), React.createElement("div", {
       className: "v-faces"
     }, MSX_SCENARIOS.map(x => React.createElement("button", {
       type: "button",
@@ -163119,9 +163121,9 @@ function MsxStart({
       className: "v-kv"
     }, React.createElement("b", null, "助手の効き"), React.createElement("span", null, sc.perk)), combo && React.createElement("div", {
       className: "v-kv"
-    }, React.createElement("b", null, "訓練の組み合わせ"), React.createElement("span", null, MSX_STATS.slice(0, 3).map(k => `${MSX_STAT_ICON[k]}${MSX_STAT_NAME[k]} → +${combo[k].map(c => MSX_STAT_ICON[c]).join('+')}`).join(' / '), " …")), React.createElement("div", {
+    }, React.createElement("b", null, "トレーニングの組み合わせ"), React.createElement("span", null, MSX_STATS.slice(0, 3).map(k => `${MSX_STAT_ICON[k]}${MSX_STAT_NAME[k]} → +${combo[k].map(c => MSX_STAT_ICON[c]).join('+')}`).join(' / '), " …")), React.createElement("div", {
       className: "v-kv"
-    }, React.createElement("b", null, "はじめの親密度"), React.createElement("span", null, Math.min(100, aidLv * (SUC.BOND && SUC.BOND.aidPerLv || 8)), "(仲良し度 Lv", aidLv, ")。助手も訓練に来て、タッグになる")), React.createElement("div", {
+    }, React.createElement("b", null, "はじめの親密度"), React.createElement("span", null, Math.min(100, aidLv * (SUC.BOND && SUC.BOND.aidPerLv || 8)), "(仲良し度 Lv", aidLv, ")。助手もトレーニングに来て、タッグになる")), React.createElement("div", {
       className: "v-eps"
     }, sc.eps.map((t, i) => React.createElement("div", {
       key: i
@@ -164142,7 +164144,7 @@ function MsxHome({
     className: "h2"
   }, "育てるモンスターを選んで、46ターンの育成をはじめよう"), React.createElement("div", {
     className: "sub"
-  }, "編成の6体が集まった訓練ほど、よく伸びる")), React.createElement("button", {
+  }, "編成の6体が集まったトレーニングほど、よく伸びる")), React.createElement("button", {
     type: "button",
     className: "v-big",
     onClick: onNew
@@ -164400,7 +164402,7 @@ function MsxPlay({
       endTurnFlow(next);
       return;
     }
-    const text = r.out.result ? `${MSX_STAT_NAME[a.stat] || ''}の訓練: ${MSX_RES[r.out.result].word}` : a.kind === 'rest' ? '休んだ' : a.kind === 'play' ? '遊んだ' : a.kind === 'clinic' ? '通院した' : '休み';
+    const text = r.out.result ? `${MSX_STAT_NAME[a.stat] || ''}のトレーニング: ${MSX_RES[r.out.result].word}` : a.kind === 'rest' ? '休んだ' : a.kind === 'play' ? '遊んだ' : a.kind === 'clinic' ? '通院した' : '休み';
     next = pushLog(next, text);
     if (r.out.result && typeof MsxTrainAct === 'function') setActAt(r.state.turn);
     setRun({
@@ -164543,9 +164545,9 @@ function MsxPlay({
       className: "v-log"
     }, isTrain && o.lvUp ? React.createElement("div", {
       className: "v-lvup"
-    }, "⬆ 訓練Lvアップ! ", MSX_STAT_ICON[o.card.stat], " ", MSX_STAT_NAME[o.card.stat], " ", React.createElement("b", null, "Lv.", o.trainLv - 1, " → Lv.", o.trainLv), React.createElement("small", null, "次から、", MSX_STAT_NAME[o.card.stat], "の訓練の基本の伸びが上がる")) : null, isTrain ? React.createElement(React.Fragment, null, React.createElement("span", {
+    }, "⬆ トレーニングLvアップ! ", MSX_STAT_ICON[o.card.stat], " ", MSX_STAT_NAME[o.card.stat], " ", React.createElement("b", null, "Lv.", o.trainLv - 1, " → Lv.", o.trainLv), React.createElement("small", null, "次から、", MSX_STAT_NAME[o.card.stat], "のトレーニングの基本の伸びが上がる")) : null, isTrain ? React.createElement(React.Fragment, null, React.createElement("span", {
       className: "hd2"
-    }, msxTrainIcon(o.card.stat, tlv), " ", msxTrainName(o.card.stat, tlv), "(", MSX_STAT_NAME[o.card.stat], "の訓練)"), React.createElement("br", null), Object.keys(gains).length ? React.createElement(React.Fragment, null, Object.entries(gains).map(([k, g], i) => React.createElement("span", {
+    }, msxTrainIcon(o.card.stat, tlv), " ", msxTrainName(o.card.stat, tlv), "(", MSX_STAT_NAME[o.card.stat], "のトレーニング)"), React.createElement("br", null), Object.keys(gains).length ? React.createElement(React.Fragment, null, Object.entries(gains).map(([k, g], i) => React.createElement("span", {
       key: k
     }, i ? '・' : '', MSX_STAT_NAME[k], " ", React.createElement("b", {
       className: "gu"
@@ -165087,7 +165089,7 @@ function MsxPlay({
         fontWeight: 800,
         opacity: .85
       }
-    }, MSX_STAT_NAME[stat], "の訓練", trainLv ? ` Lv${trainLv}` : ''))), React.createElement("div", {
+    }, MSX_STAT_NAME[stat], "のトレーニング", trainLv ? ` Lv${trainLv}` : ''))), React.createElement("div", {
       className: "v-come"
     }, members.map(i => {
       const m = s.team[i];
@@ -165139,7 +165141,7 @@ function MsxPlay({
       className: "res"
     }, MSX_STAT_NAME[stat], " +", pv.gain[stat] || 0)) : null), trainLv ? React.createElement("div", {
       className: "v-lvx"
-    }, React.createElement("b", null, "訓練Lv.", trainLv), React.createElement("i", null, React.createElement("u", {
+    }, React.createElement("b", null, "トレーニングLv.", trainLv), React.createElement("i", null, React.createElement("u", {
       style: {
         width: `${card.next ? Math.max(0, 100 - card.next * 20) : 100}%`
       }
@@ -165288,7 +165290,7 @@ function MsxPlay({
       onClick: () => doAct({
         kind: 'retry'
       })
-    }, "🏆 デビュー戦に再挑戦", React.createElement("small", null, "勝つまで訓練はできない(負けるたび相手が少し弱くなる)"))) : can.includes('cond') ? React.createElement("div", {
+    }, "🏆 デビュー戦に再挑戦", React.createElement("small", null, "勝つまでトレーニングはできない(負けるたび相手が少し弱くなる)"))) : can.includes('cond') ? React.createElement("div", {
       className: "v-act",
       style: {
         gridTemplateColumns: '1fr'
@@ -165316,7 +165318,7 @@ function MsxPlay({
       type: "button",
       className: "v-p main",
       onClick: () => setSub('train')
-    }, "💪 訓練", React.createElement("small", null, anyTag ? '🤝 友情タッグのチャンスあり' : '6つの訓練から選ぶ')), React.createElement("button", {
+    }, "💪 トレーニング", React.createElement("small", null, anyTag ? '🤝 友情タッグのチャンスあり' : '6つのトレーニングから選ぶ')), React.createElement("button", {
       type: "button",
       className: "v-p",
       onClick: () => setSub('stats')
@@ -165707,7 +165709,7 @@ function MsxStats({
       className: "h2"
     }, "🔥 成長のピーク"), React.createElement("div", {
       className: "sub"
-    }, pk.state === 'in' ? `ピーク中(あと${pk.left}ターン)。訓練がよく伸びる` : `あと${pk.in}ターンでピーク(伸びどき)が始まる`)) : null;
+    }, pk.state === 'in' ? `ピーク中(あと${pk.left}ターン)。トレーニングがよく伸びる` : `あと${pk.in}ターンでピーク(伸びどき)が始まる`)) : null;
   })(), s.omen || s.awake ? React.createElement("div", {
     className: "v-card",
     "data-msx-yosu": true
@@ -167032,7 +167034,7 @@ function MsxR3Cup({
   const nOk = cups.filter(c => c.entry && c.entry.ok).length;
   const openLine = msxR3Line('turn.cup.open', run, {
     cup: cur ? msxR3CupName(cur.sys) : ''
-  }, nOk ? `「今月は ${nOk}つ 出られるよ! 出ると1ターン使うから、訓練とどっちにするか考えてね」` : '「今月は出られる大会がないみたい。訓練でじっくり力をつけよ!」');
+  }, nOk ? `「今月は ${nOk}つ 出られるよ! 出ると1ターン使うから、トレーニングとどっちにするか考えてね」` : '「今月は出られる大会がないみたい。トレーニングでじっくり力をつけよ!」');
   const body = React.createElement(React.Fragment, null, React.createElement(MsxBand, {
     s: s,
     v: v,
@@ -168652,9 +168654,9 @@ function MsxR3Shugyo({
   });
 }
 const MSX_R3_ASSIST_TEXT = Object.freeze({
-  sokoji: v => `いっしょの訓練の伸び +${v.join('/')}%`,
+  sokoji: v => `いっしょのトレーニングの伸び +${v.join('/')}%`,
   kizuna: v => `忠誠が高いほど伸びる +${v.join('/')}%`,
-  kaketsuke: v => `得意な訓練に来る率 +${v.join('/')}点`,
+  kaketsuke: v => `得意なトレーニングに来る率 +${v.join('/')}点`,
   hirameki: v => `大成功の率 +${v.join('/')}点`,
   hitonatsu: v => `親密度の上がり ×${v.join('/')}`,
   atooshi: v => `1位の能力の伸び +${v.join('/')}%`,
@@ -168802,12 +168804,12 @@ function MsxR3GameOver({
     className: "v-kv"
   }, React.createElement("b", null, "やり直し"), React.createElement("span", null, "砂時計 のこり ", React.createElement("b", null, Math.max(0, left), " / 3"))), React.createElement("div", {
     className: "v-kv"
-  }, React.createElement("b", null, "記録"), React.createElement("span", null, s.turn, "ターン・訓練 ", s.log && s.log.train || 0, "回・デビュー戦 0勝", s.debutLoss || 3, "敗")), React.createElement("div", {
+  }, React.createElement("b", null, "記録"), React.createElement("span", null, s.turn, "ターン・トレーニング ", s.log && s.log.train || 0, "回・デビュー戦 0勝", s.debutLoss || 3, "敗")), React.createElement("div", {
     className: "v-kv"
   }, React.createElement("b", null, "もちかえり"), React.createElement("span", null, "持ちこみ・使ったアイテム・修行チケットは戻らない。保存枠には入らない"))), React.createElement(MsxSay, {
     aid: s.aid,
     ex: "troubled",
-    text: `「…つぎは もっと訓練してから挑もう。わたしも 手伝うから! ${run.nick || 'このモンスター'}も、がんばったよ」`
+    text: `「…つぎは もっとトレーニングしてから挑もう。わたしも 手伝うから! ${run.nick || 'このモンスター'}も、がんばったよ」`
   }), !fxDone && typeof MsxFxMoment === 'function' ? React.createElement(MsxFxMoment, {
     kind: "over",
     title: "育成は ここまで…",
@@ -169151,9 +169153,9 @@ function MsxR3Retire({
       stats: ws.stats
     }), React.createElement("div", {
       className: "v-rec"
-    }, React.createElement("div", null, React.createElement("small", null, "🏆 大会"), cupWins + cupLoss, "戦 ", cupWins, "勝", ws.crowns || 0 ? `・👑 ${ws.crowns}回` : ''), React.createElement("div", null, React.createElement("small", null, "🤝 忠誠 / ⭐ 人気"), ev.loyal, " / ", ws.pop), React.createElement("div", null, React.createElement("small", null, "📯 集まりやすい訓練(上位3つ)"), (ev.top || []).map(k => `${MSX_STAT_ICON[k]}${MSX_STAT_NAME[k]}`).join('・')), mem ? React.createElement("div", null, React.createElement("small", null, "💥 編成での補正"), (mem.top || []).map(k => `${MSX_STAT_NAME[k]} ${Math.round(mem.bonus[k] || 0)}%`).join('・')) : null, mem ? React.createElement("div", null, React.createElement("small", null, "🧩 アシストの基本値"), "親密度 ", mem.bond0, "・タッグ +", mem.tag, "%・得意率 ", Math.round((mem.fav || 0) * 100), "%") : null, mem && mem.startAdd ? React.createElement("div", null, React.createElement("small", null, "📈 はじめの能力"), MSX_STAT_NAME[mem.startAdd.stat], " +", mem.startAdd.v) : null), (() => {
+    }, React.createElement("div", null, React.createElement("small", null, "🏆 大会"), cupWins + cupLoss, "戦 ", cupWins, "勝", ws.crowns || 0 ? `・👑 ${ws.crowns}回` : ''), React.createElement("div", null, React.createElement("small", null, "🤝 忠誠 / ⭐ 人気"), ev.loyal, " / ", ws.pop), React.createElement("div", null, React.createElement("small", null, "📯 集まりやすいトレーニング(上位3つ)"), (ev.top || []).map(k => `${MSX_STAT_ICON[k]}${MSX_STAT_NAME[k]}`).join('・')), mem ? React.createElement("div", null, React.createElement("small", null, "💥 編成での補正"), (mem.top || []).map(k => `${MSX_STAT_NAME[k]} ${Math.round(mem.bonus[k] || 0)}%`).join('・')) : null, mem ? React.createElement("div", null, React.createElement("small", null, "🧩 アシストの基本値"), "親密度 ", mem.bond0, "・タッグ +", mem.tag, "%・得意率 ", Math.round((mem.fav || 0) * 100), "%") : null, mem && mem.startAdd ? React.createElement("div", null, React.createElement("small", null, "📈 はじめの能力"), MSX_STAT_NAME[mem.startAdd.stat], " +", mem.startAdd.v) : null), (() => {
       const band = msxR3Band(grade.rank);
-      const l = msxR3Line(`turn.retire.r${band}`, run, {}, `「${run.nick || 'このモンスター'}、まぢでがんばったね! 次の育成の編成に入ったら、${MSX_STAT_NAME[(ev.top || [])[0]] || 'ちから'}の訓練がすっごい伸びるよ!」`);
+      const l = msxR3Line(`turn.retire.r${band}`, run, {}, `「${run.nick || 'このモンスター'}、まぢでがんばったね! 次の育成の編成に入ったら、${MSX_STAT_NAME[(ev.top || [])[0]] || 'ちから'}のトレーニングがすっごい伸びるよ!」`);
       return React.createElement(MsxSay, {
         aid: ws.aid,
         ex: l.e || 'excited',

@@ -20,7 +20,7 @@
 const MONSUC_SCRIPT_MOMOSUKE = Object.freeze([
   // ═══════════ シナリオ ═══════════
   // ── 1話「かわいいは作れる」(デビュー期・必ず出る) ──
-  { id:'scn.momosuke.ep1.narr1', who:'narr', t:'ももすけが、大きな鏡を引きずって訓練場にあらわれた。' },
+  { id:'scn.momosuke.ep1.narr1', who:'narr', t:'ももすけが、大きな鏡を引きずってトレーニング場にあらわれた。' },
   { id:'scn.momosuke.ep1.momosuke1', who:'momosuke', e:'wink', t:'{name}、今日は見せ方の練習ね♡ 強いだけじゃ、だれも覚えてくれないんだからw' },
   { id:'scn.momosuke.ep1.narr2', who:'narr', t:'鏡の前に立たされた{mon}は、きょとんと首をかしげている。' },
   { id:'scn.momosuke.ep1.momosuke2', who:'momosuke', e:'happy', t:'まって、今の首かしげ、かわいすぎじゃん！！ これ武器になるよ w' },
@@ -83,7 +83,7 @@ const MONSUC_SCRIPT_MOMOSUKE = Object.freeze([
   // ═══════════ ターンごとのことば(turn.js と同じ場面) ═══════════
   { id:'turn.start.great.momosuke1', who:'momosuke', e:'excited', t:'まって、{mon}今日キラッキラじゃん！！ 重いのいけるっしょ w' },
   { id:'turn.start.great.momosuke2', who:'momosuke', e:'happy', t:'いい顔してる♡ こういう日に詰めとくと、あとでモテるよ w' },
-  { id:'turn.start.good.momosuke1', who:'momosuke', e:'happy', t:'調子いいじゃん。ふつうに訓練でいいよ♡' },
+  { id:'turn.start.good.momosuke1', who:'momosuke', e:'happy', t:'調子いいじゃん。ふつうにトレーニングでいいよ♡' },
   { id:'turn.start.good.momosuke2', who:'momosuke', e:'normal', t:'{mon}、動きいい感じ！！ このままいこ' },
   { id:'turn.start.normal.momosuke1', who:'momosuke', e:'normal', t:'んー、ふつう w {name}、どうする？' },
   { id:'turn.start.normal.momosuke2', who:'momosuke', e:'normal', t:'まあまあの日ね。地味な日の積み重ねが、本番でかわいく効くんだよ♡' },
@@ -225,7 +225,7 @@ const MONSUC_SCRIPT_MOMOSUKE = Object.freeze([
   { id:'ev.cup.interview.momosuke1', who:'momosuke', e:'excited', t:'取材きた！！ 決めぜりふ、ももが考えといたよ♡' },
   { id:'ev.cup.after.momosuke1', who:'momosuke', e:'normal', t:'励ますか、反省会か。どっちも大事だよ' },
 
-  // ═══════════ 編成の子との訓練イベント(cheer.js と同じ場面) ═══════════
+  // ═══════════ 編成の子とのトレーニングイベント(cheer.js と同じ場面) ═══════════
   { id:'cheer.attacker.ep1.momosuke1', who:'momosuke', e:'happy', t:'{cheer}が相手してくれるって！！ 遠慮しないでいこ♡' },
   { id:'cheer.attacker.ep2.momosuke1', who:'momosuke', e:'excited', t:'ここで鍛えてたんだ w そりゃ強いわけじゃん' },
   { id:'cheer.attacker.ep3.momosuke1', who:'momosuke', e:'normal', t:'あれは{cheer}の全部だね。受け取るかは{mon}しだいだよ' },
@@ -280,7 +280,7 @@ const MONSUC_SCRIPT_MOMOSUKE = Object.freeze([
   { id:'item.guide.momosuke1', who:'momosuke', e:'normal', t:'博士の書類じゃん w 持ってたら、そのうち取りに来るでしょ' },
   { id:'item.loupe.momosuke1', who:'momosuke', e:'wink', t:'ほら博士、ルーペ♡ これで失敗したら言い訳できないよ w' },
   { id:'item.misanga.momosuke1', who:'momosuke', e:'happy', t:'ミサンガかわいい！！ にぎやかな育成になりそ♡' },
-  { id:'item.weekly.momosuke1', who:'momosuke', e:'normal', t:'週刊!トレーニング読んどいた w 訓練のコツ、ばっちり' },
+  { id:'item.weekly.momosuke1', who:'momosuke', e:'normal', t:'週刊!トレーニング読んどいた w トレーニングのコツ、ばっちり' },
   { id:'item.hachimaki.momosuke1', who:'momosuke', e:'excited', t:'ハチマキ似合う！！ 修行がんばったら、もっと似合うよ♡' },
   { id:'item.omamori.momosuke1', who:'momosuke', e:'happy', t:'縁結びのお守り！！ ファン、もっと増えちゃうじゃん♡' },
   { id:'item.kibidango.momosuke1', who:'momosuke', e:'happy', t:'モモのキビダンゴ……名前、ももっぽくてかわいい w 体力もばっちり' },

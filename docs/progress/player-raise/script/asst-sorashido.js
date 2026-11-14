@@ -18,7 +18,7 @@
 // シナリオ(EVENTS.md ② の「ソラシド=表で組み立てる1か月」・TOURNAMENT.md §4b の「計算どおりの大会」ミドル・プロの2月)
 //   1話「攻略まとめ」       デビュー期・必ず出る    今月のターンを全部表にして持ってくる
 //                                                  表どおりに進める(かしこさ 中+)/1か所だけ空けておく(体力 中+・🎵ごきげん)
-//   2話「寝る間も惜しんで」 ジュニア期・親密度30〜  検証にはまって徹夜、ソラシドが訓練場で寝落ち
+//   2話「寝る間も惜しんで」 ジュニア期・親密度30〜  検証にはまって徹夜、ソラシドがトレーニング場で寝落ち
 //                                                  今日はソラシドも休んで(親密度 +・ストレス −中)/検証の続きを手伝う(かしこさ 中+・ストレス 小+)
 //   3話「計算外」           ミドル期・親密度50〜    昔、完ぺきな表のはずが、けがで全部くずれて、自分の計算を責めた話
 //                                                  計算外も楽しもう(→ いい結末へ)/計算外をゼロにしよう(→ ほろ苦い結末へ)
@@ -33,7 +33,7 @@ const MONSUC_SCRIPT_SORASHIDO = Object.freeze([
   { id:'scn.sorashido.ep1.sorashido1b', who:'sorashido', e:'excited', bond:[1,3], t:'{name}、おはようございます！ 今月の{mon}の育て方、ひと晩で全部表にしてきました！' },
   { id:'scn.sorashido.ep1.sorashido1c', who:'sorashido', e:'excited', bond:[9,15], t:'{name}、おはようございます！ 今月の{mon}の育て方、ひと晩で全部表にしてきたっす！ つい！笑' },
   { id:'scn.sorashido.ep1.sorashido1d', who:'sorashido', e:'excited', bond:16, t:'{name}、おはようございます！ 今月の{mon}の育て方、ひと晩で全部表にしちゃいましたー！ 楽しくて止まらなかった笑' },
-  { id:'scn.sorashido.ep1.narr2', who:'narr', t:'表には、訓練・休み・ごはんの予定が、ターンごとにびっしり書きこまれている。' },
+  { id:'scn.sorashido.ep1.narr2', who:'narr', t:'表には、トレーニング・休み・ごはんの予定が、ターンごとにびっしり書きこまれている。' },
   { id:'scn.sorashido.ep1.sorashido2', who:'sorashido', e:'normal', t:'この順番なら、疲れをためずに伸ばせる計算です笑 ただ、どこまで表どおりにいくかは、試してみないとですね' },
   { id:'scn.sorashido.ep1.sorashido2c', who:'sorashido', e:'normal', bond:[9,15], t:'この順番なら、疲れをためずに伸ばせる計算っす笑 まあ、どこまで表どおりにいくかは試すしかないや' },
   { id:'scn.sorashido.ep1.sorashido2d', who:'sorashido', e:'normal', bond:16, t:'この順番なら、疲れをためずに伸ばせる計算です笑 どこまで表どおりにいくかな👀 試してみなきゃ！' },
@@ -52,10 +52,10 @@ const MONSUC_SCRIPT_SORASHIDO = Object.freeze([
   { id:'scn.sorashido.ep1.b.sorashido2d', who:'sorashido', e:'happy', c:'b', bond:16, t:'そうか、余白があれば計算外にも対応できる・・・！ {name}、それいい考えですねー笑' },
 
   // ── 2話「寝る間も惜しんで」(ジュニア期・親密度30〜) ──
-  { id:'scn.sorashido.ep2.narr1', who:'narr', t:'訓練場のベンチで、ソラシドが紙を顔にのせたまま寝息を立てていた。' },
-  { id:'scn.sorashido.ep2.sorashido1', who:'sorashido', e:'surprise', t:'・・・はっ！ すみません、寝てました笑 昨日、訓練の順番を検証してたら朝になってて' },
-  { id:'scn.sorashido.ep2.sorashido1c', who:'sorashido', e:'surprise', bond:[9,15], t:'・・・はっ！ すんません、寝てたっす笑 訓練の順番を検証してたら朝になってて' },
-  { id:'scn.sorashido.ep2.sorashido1d', who:'sorashido', e:'surprise', bond:16, t:'・・・はっ！ やば、寝てた笑 すみません、訓練の順番を検証してたら朝になっちゃいました' },
+  { id:'scn.sorashido.ep2.narr1', who:'narr', t:'トレーニング場のベンチで、ソラシドが紙を顔にのせたまま寝息を立てていた。' },
+  { id:'scn.sorashido.ep2.sorashido1', who:'sorashido', e:'surprise', t:'・・・はっ！ すみません、寝てました笑 昨日、トレーニングの順番を検証してたら朝になってて' },
+  { id:'scn.sorashido.ep2.sorashido1c', who:'sorashido', e:'surprise', bond:[9,15], t:'・・・はっ！ すんません、寝てたっす笑 トレーニングの順番を検証してたら朝になってて' },
+  { id:'scn.sorashido.ep2.sorashido1d', who:'sorashido', e:'surprise', bond:16, t:'・・・はっ！ やば、寝てた笑 すみません、トレーニングの順番を検証してたら朝になっちゃいました' },
   { id:'scn.sorashido.ep2.narr2', who:'narr', t:'目の下には、くっきりとくまができている。' },
   { id:'scn.sorashido.ep2.sorashido2', who:'sorashido', e:'troubled', t:'はまると止まらないんですよねー💦 {mon}の体調は計算するのに、自分の体調は計算に入れてなかったです笑' },
   { id:'scn.sorashido.ep2.sorashido2b', who:'sorashido', e:'troubled', bond:[1,3], t:'はまると止まらないんですよね。{mon}の体調は計算するのに、自分の体調は計算に入れてなかったです笑' },
@@ -154,17 +154,17 @@ const MONSUC_SCRIPT_SORASHIDO = Object.freeze([
   { id:'scn.sorashido.sp.retire.sorashido1d', who:'sorashido', e:'happy', bond:16, t:'おつかれさまでした、{mon}。いちばんいい攻略まとめが書けたな・・・ありがとうございます笑' },
 
   // ═══════════ ターンごとのことば(turn.js と同じ場面) ═══════════
-  { id:'turn.start.great.sorashido1', who:'sorashido', e:'excited', t:'{mon}、今日は調子がいいですねー！ 重い訓練、いける日だと思います笑' },
-  { id:'turn.start.great.sorashido1b', who:'sorashido', e:'excited', bond:[1,3], t:'{mon}、今日は調子がいいですね！ 重い訓練、いける日だと思います笑' },
-  { id:'turn.start.great.sorashido1c', who:'sorashido', e:'excited', bond:[9,15], t:'{mon}、今日は調子いいっすね！ 重い訓練、いける日だと思うっす笑' },
-  { id:'turn.start.great.sorashido1d', who:'sorashido', e:'excited', bond:16, t:'{mon}、今日は調子いいですねー！ 重い訓練、いけちゃう日だ笑' },
+  { id:'turn.start.great.sorashido1', who:'sorashido', e:'excited', t:'{mon}、今日は調子がいいですねー！ 重いトレーニング、いける日だと思います笑' },
+  { id:'turn.start.great.sorashido1b', who:'sorashido', e:'excited', bond:[1,3], t:'{mon}、今日は調子がいいですね！ 重いトレーニング、いける日だと思います笑' },
+  { id:'turn.start.great.sorashido1c', who:'sorashido', e:'excited', bond:[9,15], t:'{mon}、今日は調子いいっすね！ 重いトレーニング、いける日だと思うっす笑' },
+  { id:'turn.start.great.sorashido1d', who:'sorashido', e:'excited', bond:16, t:'{mon}、今日は調子いいですねー！ 重いトレーニング、いけちゃう日だ笑' },
   { id:'turn.start.great.sorashido2', who:'sorashido', e:'happy', t:'ほほー！ この調子なら、大成功の確率も上がってますね👀' },
   { id:'turn.start.great.sorashido2b', who:'sorashido', e:'happy', bond:[1,3], t:'なるほど！ この調子なら、大成功の確率も上がってますね' },
   { id:'turn.start.great.sorashido2c', who:'sorashido', e:'happy', bond:[9,15], t:'ほほー！ この調子なら、大成功の確率も上がってるっす👀' },
   { id:'turn.start.great.sorashido2d', who:'sorashido', e:'happy', bond:16, t:'ほほー！ この調子なら、大成功の確率も上がってるかな👀' },
-  { id:'turn.start.good.sorashido1', who:'sorashido', e:'happy', t:'いい感じです。ふつうに訓練で大丈夫だと思います笑' },
-  { id:'turn.start.good.sorashido1c', who:'sorashido', e:'happy', bond:[9,15], t:'いい感じっす。ふつうに訓練で大丈夫だと思うっす笑' },
-  { id:'turn.start.good.sorashido1d', who:'sorashido', e:'happy', bond:16, t:'いい感じです。ふつうに訓練でいけるな笑' },
+  { id:'turn.start.good.sorashido1', who:'sorashido', e:'happy', t:'いい感じです。ふつうにトレーニングで大丈夫だと思います笑' },
+  { id:'turn.start.good.sorashido1c', who:'sorashido', e:'happy', bond:[9,15], t:'いい感じっす。ふつうにトレーニングで大丈夫だと思うっす笑' },
+  { id:'turn.start.good.sorashido1d', who:'sorashido', e:'happy', bond:16, t:'いい感じです。ふつうにトレーニングでいけるな笑' },
   { id:'turn.start.good.sorashido2', who:'sorashido', e:'normal', t:'{mon}、動きが軽いですね。表どおりにいきましょう！' },
   { id:'turn.start.good.sorashido2c', who:'sorashido', e:'normal', bond:[9,15], t:'{mon}、動きが軽いっすね。表どおりにいきましょう！' },
   { id:'turn.start.good.sorashido2d', who:'sorashido', e:'normal', bond:16, t:'{mon}、動きが軽い！ 表どおりにいきましょうねー' },
@@ -267,9 +267,9 @@ const MONSUC_SCRIPT_SORASHIDO = Object.freeze([
   { id:'turn.age.peakin.sorashido1', who:'sorashido', e:'excited', t:'伸びどきに入りました！ 今は攻める時期ですねー笑' },
   { id:'turn.age.peakin.sorashido1c', who:'sorashido', e:'excited', bond:[9,15], t:'伸びどきに入ったっす！ 今は攻めるしかないや笑' },
   { id:'turn.age.peakin.sorashido1d', who:'sorashido', e:'excited', bond:16, t:'伸びどきに入りました！ よし、攻める時期だ笑' },
-  { id:'turn.age.peakin.sorashido2', who:'sorashido', e:'happy', t:'{mon}の伸び方、変わってきました。ここで重い訓練を入れるのが効率いいです' },
-  { id:'turn.age.peakin.sorashido2c', who:'sorashido', e:'happy', bond:[9,15], t:'{mon}の伸び方、変わってきたっす。ここで重い訓練を入れるのが効率いいっす' },
-  { id:'turn.age.peakin.sorashido2d', who:'sorashido', e:'happy', bond:16, t:'{mon}の伸び方、変わってきた。ここで重い訓練を入れるのが効率いいですねー' },
+  { id:'turn.age.peakin.sorashido2', who:'sorashido', e:'happy', t:'{mon}の伸び方、変わってきました。ここで重いトレーニングを入れるのが効率いいです' },
+  { id:'turn.age.peakin.sorashido2c', who:'sorashido', e:'happy', bond:[9,15], t:'{mon}の伸び方、変わってきたっす。ここで重いトレーニングを入れるのが効率いいっす' },
+  { id:'turn.age.peakin.sorashido2d', who:'sorashido', e:'happy', bond:16, t:'{mon}の伸び方、変わってきた。ここで重いトレーニングを入れるのが効率いいですねー' },
   { id:'turn.age.peakout.sorashido1', who:'sorashido', e:'normal', t:'山はこえたみたいです。ここからは組み方で勝つ時期ですね' },
   { id:'turn.age.peakout.sorashido1c', who:'sorashido', e:'normal', bond:[9,15], t:'山はこえたみたいっす。ここからは組み方で勝つ時期っすね' },
   { id:'turn.age.peakout.sorashido1d', who:'sorashido', e:'normal', bond:16, t:'山はこえたみたいです。ここからは組み方で勝つ時期かな' },
@@ -411,10 +411,10 @@ const MONSUC_SCRIPT_SORASHIDO = Object.freeze([
   { id:'ev.daily.nut.sorashido1', who:'sorashido', e:'normal', t:'落とし物ですね。届けるのが筋だと思いますけど、どうしますか？笑' },
   { id:'ev.daily.nut.sorashido1c', who:'sorashido', e:'normal', bond:[9,15], t:'落とし物っすね。届けるのが筋だと思うっすけど、どうします？笑' },
   { id:'ev.daily.nut.sorashido1d', who:'sorashido', e:'normal', bond:16, t:'落とし物か。届けるのが筋だと思いますけど、どうしますか？笑' },
-  { id:'ev.daily.rain.sorashido1', who:'sorashido', e:'normal', t:'雨ですねー。屋根の下でもできる訓練はあります' },
-  { id:'ev.daily.rain.sorashido1b', who:'sorashido', e:'normal', bond:[1,3], t:'雨ですね。屋根の下でもできる訓練はあります' },
-  { id:'ev.daily.rain.sorashido1c', who:'sorashido', e:'normal', bond:[9,15], t:'雨っすね。屋根の下でもできる訓練はあるっす' },
-  { id:'ev.daily.rain.sorashido1d', who:'sorashido', e:'normal', bond:16, t:'雨かー。屋根の下でもできる訓練はありますよ' },
+  { id:'ev.daily.rain.sorashido1', who:'sorashido', e:'normal', t:'雨ですねー。屋根の下でもできるトレーニングはあります' },
+  { id:'ev.daily.rain.sorashido1b', who:'sorashido', e:'normal', bond:[1,3], t:'雨ですね。屋根の下でもできるトレーニングはあります' },
+  { id:'ev.daily.rain.sorashido1c', who:'sorashido', e:'normal', bond:[9,15], t:'雨っすね。屋根の下でもできるトレーニングはあるっす' },
+  { id:'ev.daily.rain.sorashido1d', who:'sorashido', e:'normal', bond:16, t:'雨かー。屋根の下でもできるトレーニングはありますよ' },
   { id:'ev.daily.night.sorashido1', who:'sorashido', e:'normal', t:'眠れないんですか？ 夜ふかしは自分の得意分野ですけど、明日に響きますよ笑' },
   { id:'ev.daily.night.sorashido1c', who:'sorashido', e:'normal', bond:[9,15], t:'眠れないんすか？ 夜ふかしは俺の得意分野っすけど、明日に響くっすよ笑' },
   { id:'ev.daily.night.sorashido1d', who:'sorashido', e:'normal', bond:16, t:'眠れないんですか？ 夜ふかしは俺の得意分野だけど、明日に響きますよ笑' },
@@ -496,9 +496,9 @@ const MONSUC_SCRIPT_SORASHIDO = Object.freeze([
   { id:'ev.self.slump.sorashido1', who:'sorashido', e:'normal', t:'こういうときは、流れを変えるか、がまんして続けるか、って感じですね' },
   { id:'ev.self.slump.sorashido1c', who:'sorashido', e:'normal', bond:[9,15], t:'こういうときは、流れを変えるか、がまんして続けるか、って感じっすね' },
   { id:'ev.self.slump.sorashido1d', who:'sorashido', e:'normal', bond:16, t:'こういうときは、流れを変えるか、がまんして続けるか、って感じですね。悩むなー' },
-  { id:'ev.self.favtrain.sorashido1', who:'sorashido', e:'happy', t:'好きな訓練は伸びがいいんですよね。いい傾向です笑' },
-  { id:'ev.self.favtrain.sorashido1c', who:'sorashido', e:'happy', bond:[9,15], t:'好きな訓練は伸びがいいんすよね。いい傾向っす笑' },
-  { id:'ev.self.favtrain.sorashido1d', who:'sorashido', e:'happy', bond:16, t:'好きな訓練は伸びがいいんですよね。いい傾向だ笑' },
+  { id:'ev.self.favtrain.sorashido1', who:'sorashido', e:'happy', t:'好きなトレーニングは伸びがいいんですよね。いい傾向です笑' },
+  { id:'ev.self.favtrain.sorashido1c', who:'sorashido', e:'happy', bond:[9,15], t:'好きなトレーニングは伸びがいいんすよね。いい傾向っす笑' },
+  { id:'ev.self.favtrain.sorashido1d', who:'sorashido', e:'happy', bond:16, t:'好きなトレーニングは伸びがいいんですよね。いい傾向だ笑' },
   { id:'ev.self.selfish.sorashido1', who:'sorashido', e:'troubled', t:'わがままですね・・・。合わせるか、叱るか。{name}にお任せします' },
   { id:'ev.self.selfish.sorashido1c', who:'sorashido', e:'troubled', bond:[9,15], t:'わがままっすね・・・。合わせるか、叱るか。{name}に任せるっす' },
   { id:'ev.self.selfish.sorashido1d', who:'sorashido', e:'troubled', bond:16, t:'わがままだな・・・。合わせるか、叱るか。{name}にお任せします' },
@@ -602,7 +602,7 @@ const MONSUC_SCRIPT_SORASHIDO = Object.freeze([
   { id:'ev.cup.after.sorashido1c', who:'sorashido', e:'normal', bond:[9,15], t:'切りかえるか、反省会か。どっちも大事っすね' },
   { id:'ev.cup.after.sorashido1d', who:'sorashido', e:'normal', bond:16, t:'切りかえるか、反省会か。どっちも大事なんだよな' },
 
-  // ═══════════ 編成の子との訓練イベント(cheer.js と同じ場面) ═══════════
+  // ═══════════ 編成の子とのトレーニングイベント(cheer.js と同じ場面) ═══════════
   { id:'cheer.attacker.ep1.sorashido1', who:'sorashido', e:'happy', t:'{cheer}が相手をしてくれるそうです。遠慮しなくていいと思います笑' },
   { id:'cheer.attacker.ep1.sorashido1c', who:'sorashido', e:'happy', bond:[9,15], t:'{cheer}が相手をしてくれるそうっす。遠慮しなくていいと思うっす笑' },
   { id:'cheer.attacker.ep1.sorashido1d', who:'sorashido', e:'happy', bond:16, t:'{cheer}が相手をしてくれるそうです。遠慮はいらないな笑' },

@@ -85,7 +85,7 @@ const MONSUC_SCRIPT_ISSA = Object.freeze([
   { id:'issa.after.ng.atsu1', who:'atsu', e:'troubled', t:'{mon}、平気か？ 取り返せるから気にすんな…' },
   { id:'issa.after.ng.atsu2', who:'atsu', e:'normal', t:'まぁ〜賭けだしな。しゃあない笑 ここから巻き返そ！' },
   // あつのシナリオは、受けると成功でも失敗でも🔥やる気満々(EVENTS.md ⑥の仕組み)
-  { id:'issa.after.fire.atsu1', who:'atsu', e:'excited', t:'受けて立ったのはえらい。その度胸、訓練にぶつけよ笑' },
+  { id:'issa.after.fire.atsu1', who:'atsu', e:'excited', t:'受けて立ったのはえらい。その度胸、トレーニングにぶつけよ笑' },
 ]);
 
 if (typeof module !== 'undefined') module.exports = { MONSUC_SCRIPT_ISSA };

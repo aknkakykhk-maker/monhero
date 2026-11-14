@@ -5,20 +5,20 @@
 //   芯の内部の関数(能力を足す・忠誠を足す など)は芯から渡してもらう(写さない)。
 // ★React・window・localStorage・Date・Math.random を使わない。乱数は「育成の id + ターン + すき間」から作る決まった乱数だけ。
 //   出た出来事は s.ev.pend に残すので、選ぶ前に閉じても同じ出来事・同じ選択肢がもう一度出る。結果も決まった乱数(引き直せない)。
-// ★助手の連続イベント(②)は芯の storyDue / storyStep、イッサ博士(⑥大きな賭け)は芯の issa、編成の子との訓練イベントは芯の trainEvent。
+// ★助手の連続イベント(②)は芯の storyDue / storyStep、イッサ博士(⑥大きな賭け)は芯の issa、編成の子とのトレーニングイベントは芯の trainEvent。
 //   ここはそれ以外のすき間の出来事だけ。
 //
 // 画面からの呼び方(1ターン):
 //   r = SUC.events.open(s, 'start')            ターンのはじめ(行動の前)。r.out.ev が null でなければ出す → SUC.events.pick(s, 'a')
 //   (行動・叱る/褒める)
-//   r = SUC.events.open(s, 'after')            訓練の結果のあと(編成の出来事)
+//   r = SUC.events.open(s, 'after')            トレーニングの結果のあと(編成の出来事)
 //   r = SUC.events.open(s, 'cup', { won, kind })  大会の結果のあと(settle の out.won・out.kind)
 //   SUC.events.buffs(s)                         メイン画面の小さな印(ひとときの状態)
 //   台詞(台本エンジン MONHERO_SUCCESS_SCRIPT): event(ev.lines, ctx) で出し、選んだら event(out.next)・確率の結果は event(out.scene)。
 //   ctx の cheer / cheer2 には ev.cheerName / ev.cheer2Name、train には ev.train の能力名、cup には ev.cup を入れる
 //
 // 結果の書き方(fx): [項目, 対象, 大きさ] の並び。1つの選択肢で動くのは3項目まで(EVENTS §3)
-//   ['st', 対象, 訓練の回数]  対象 = 能力のキー / main(素質のいちばん高い能力)/ all / rand / cheer(編成の子の1位の能力)/ type(編成の子のタイプの能力)
+//   ['st', 対象, トレーニングの回数]  対象 = 能力のキー / main(素質のいちばん高い能力)/ all / rand / cheer(編成の子の1位の能力)/ type(編成の子のタイプの能力)
 //   ['loy', n] 忠誠(甘え・恐れに半分ずつ)/ ['fear', n] 恐れ度だけ / ['pop', n] 人気 / ['popHi', n] 人気60〜のときだけ足す
 //   ['hp', n] 体力(上限を100とした目盛り)/ ['str', n] ストレス / ['bond', 'cheer'|'cheer2'|'aid'|'team', n] 親密度
 //   ['buff', 状態] / ['fame', n] 賞金(G) / ['pts', n] 能力ポイント / ['mas', n] 熟練 / ['flag', 名前] / ['goal', 目標]
@@ -28,17 +28,17 @@
 
   const VERSION = 1;
   const SLOTS = ['start', 'after', 'cup'];
-  // 大きさの物差し(EVENTS §3)。能力は「軽い訓練1回ぶん」の倍数
+  // 大きさの物差し(EVENTS §3)。能力は「軽いトレーニング1回ぶん」の倍数
   const S = 0.5, M = 1, L = 2;
 
   // ---- ひとときの状態(EVENTS §3)。同時に2つまで。ようす(サボりグセ・うつ病)は芯の s.yosu で別 ----
   const BUFFS = Object.freeze({
-    yaruki: { icon: '🔥', name: 'やる気満々', left: 3, good: true, text: '訓練の大成功 +10%' },
+    yaruki: { icon: '🔥', name: 'やる気満々', left: 3, good: true, text: 'トレーニングの大成功 +10%' },
     gokigen: { icon: '🎵', name: 'ごきげん', left: 3, good: true, text: 'ストレスの増え −50%' },
     neboke: { icon: '💤', name: 'ねぼけ', left: 2, good: false, text: 'サボり +10%' },
     futekusare: { icon: '🌀', name: 'ふてくされ', left: 2, good: false, text: '叱ると忠誠が余計に下がる' },
     hirameki: { icon: '✨', name: 'ひらめき中', left: 0, good: true, text: '次の修行で技を覚えやすい' }, // left 0 = 次の修行まで
-    iki: { icon: '🤝', name: '息ぴったり', left: 3, good: true, text: 'その編成の子が訓練に来やすい(+20%)' },
+    iki: { icon: '🤝', name: '息ぴったり', left: 3, good: true, text: 'その編成の子がトレーニングに来やすい(+20%)' },
   });
   const BUFF_MAX = 2;
   const EFFECT = Object.freeze({ great: 0.10, sab: 0.10, stress: 0.5, tech: 0.15, iki: 0.20, scold: -2, fav: -0.10, inj: 2, baseBoost: 2, guts: 5, issaUp: 0.05, issaDown: -0.05 });
@@ -85,7 +85,7 @@
     { id: 'ev.daily.gift', kind: 'daily', slot: 'start', w: (s) => (s.pop >= 60 ? 14 : 6), ch: { fx: [['hp', 20]] } },
     { id: 'ev.daily.alone', kind: 'daily', slot: 'start', w: (s, x) => (x.loyal(s) >= 70 ? 14 : 4), when: (s, x) => x.loyal(s) >= 50, ch: { fx: [['st', 'main', S]] } },
 
-    // ═══ ③ 編成(8)。訓練の結果のあと ═══
+    // ═══ ③ 編成(8)。トレーニングの結果のあと ═══
     { id: 'ev.team.selfdrill', kind: 'team', slot: 'after', w: 10, pickA: (s, x) => x.team(s, (m, i) => s.bond[i] >= 40),
       ch: { a: { fx: [['st', 'cheer', S], ['mas', 1], ['bond', 'cheer', 10]] }, b: { fx: [['hp', 10]] } } },
     { id: 'ev.team.senpai', kind: 'team', slot: 'after', w: 8, pickA: (s, x) => x.team(s, (m) => m.kind === 'raised' && x.rankAtLeast(m.rank, 'B')),
