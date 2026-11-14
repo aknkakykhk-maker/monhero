@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 7fbbad9f983a8823
+// source-sha256: f5cfd53a1b6d32d6
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -156696,6 +156696,7 @@ function MsxAwakeShow({
     onClick: () => setSt(3),
     "data-msx-awake-skip": true
   }, "短縮 ⏭")) : null), st >= 2 ? React.createElement(MsxStRow, {
+    who: s,
     stats: s.stats,
     ups: fire.ups
   }) : null, React.createElement("div", {
@@ -157201,6 +157202,7 @@ function MsxIssaResult({
     onClick: () => setSt(2),
     "data-msx-issa-skip": true
   }, "短縮 ⏭")) : null), done ? React.createElement(React.Fragment, null, hasUps ? React.createElement(MsxStRow, {
+    who: s,
     stats: s.stats,
     ups: ups
   }) : null, React.createElement(MsxIssaGains, {
@@ -164949,6 +164951,13 @@ const MSX_CSS = `
 .msx .v-hd{height:auto;min-height:32px}
 /* 文は言葉の途中で折らない(docs/spec/MONSUC_UI.md の 4)。対応していない端末ではいままでどおり */
 .msx button,.msx .v-opt,.msx .bub,.msx .v-log,.msx .v-talk,.msx .v-h{word-break:auto-phrase}
+/* 能力の列を押すと素質(A〜E)に切り替わる(2026-11-14 社長)。右上の小さな札が押せる印 */
+.msx .v-st.tg{position:relative;cursor:pointer;min-height:44px;margin-top:12px;-webkit-tap-highlight-color:transparent}
+.msx .v-st.tg:active{transform:translateY(1px)}
+.msx .v-st .v-sttg{position:absolute;right:2px;top:-14px;z-index:2;font-size:10px;font-weight:900;line-height:14px;padding:0 6px;border-radius:99px;background:#334155;color:#fde047;border:1px solid #fde04788;pointer-events:none;white-space:nowrap}
+.msx .v-st.apton .v-sttg{background:#fde047;color:#422006}
+.msx .v-st .ap{display:block;font-size:10.5px;font-weight:900;line-height:1.2;margin-top:1px;color:#e2e8f0;white-space:nowrap}
+.msx .v-st .ap.aA{color:#fde047}.msx .v-st .ap.aB{color:#86efac}.msx .v-st .ap.aC{color:#e2e8f0}.msx .v-st .ap.aD{color:#fdba74}.msx .v-st .ap.aE{color:#fca5a5}
 /* 画面の決まり(docs/spec/MONSUC_UI.md)の共通の部品: 見せ場の数字 .v-num(真ん中そろえ)・動いた数字の札 .v-gains */
 .msx .v-num{text-align:center;line-height:1.15}
 .msx .v-num>small{display:block;font-size:11px;font-weight:900;color:#e2e8f0}
@@ -165002,9 +165011,14 @@ const MSX_CSS = `
 .msx .v-scene.home{container-type:size}
 .msx .v-scene.home .v-bagb:not(.r){left:auto;right:7px;bottom:59px}
 .msx.s320 .v-scene.home .v-bagb:not(.r){bottom:51px}
-.msx .v-scene.home .v-party{--pfs:clamp(14px,calc((100cqh - 12px - 29px - 24px) / 7),30px)}
-.msx.land .v-scene.home .v-party{--pfs:clamp(14px,calc((100cqh - 12px - 29px - 18px) / 7),24px)}
-.msx.s320 .v-scene.home .v-party{--pfs:clamp(14px,calc((100cqh - 12px - 29px - 12px) / 4),22px)}
+/* 2026-11-14 社長「編成の7体目が切れる」(iPhone の縦で場面が低いとき): 顔の下の親密度の棒(1体 6px)を式に入れ、場面が低いときは2列×4段に並べ替える */
+.msx .v-scene.home .v-party{--pfs:clamp(14px,calc((100cqh - 12px - 29px - 24px - 42px) / 7),30px)}
+.msx.land .v-scene.home .v-party{--pfs:clamp(14px,calc((100cqh - 12px - 29px - 18px - 42px) / 7),24px)}
+.msx.s320 .v-scene.home .v-party{--pfs:clamp(14px,calc((100cqh - 12px - 29px - 9px - 24px) / 4),22px)}
+@container (max-height:260px){
+  .msx .v-scene.home .v-party{display:grid;grid-template-columns:1fr 1fr;gap:3px 4px;--pfs:clamp(14px,calc((100cqh - 12px - 29px - 9px - 24px) / 4),26px)}
+  .msx .v-scene.home .v-party>small{grid-column:1/-1;text-align:center}
+}
 .msx .v-scene.home .v-party .v-pf,.msx .v-scene.home .v-party .v-pf img{width:var(--pfs)}
 .msx .v-scene.home .v-party .v-pf img{height:var(--pfs)}
 /* 場面がとても低いとき(幅320で大きい文字など): 編成は4列×2段に並べ替え、上の札は右下の持ち物・くわしくの左で止める */
@@ -167320,11 +167334,28 @@ function msxClinicText(cured, yosu) {
   if (left.length) parts.push(`${nm(left)}は今回は治らなかった。もう1回来れば必ず治る。`);
   return parts.join(' ');
 }
+let msxStAptView = {
+  id: null,
+  on: false
+};
+const msxStAptSubs = new Set();
+const msxStAptFlip = id => {
+  msxStAptView = {
+    id,
+    on: !(msxStAptView.on && msxStAptView.id === id)
+  };
+  msxStAptSubs.forEach(f => {
+    try {
+      f(n => n + 1);
+    } catch (e) {}
+  });
+};
 function MsxStRow({
   stats,
   ups,
   main,
-  preview = false
+  preview = false,
+  who = null
 }) {
   const grow = Boolean(ups) && !preview && MSX_STATS.some(k => ups[k]);
   const calm = typeof msxFxCalm === 'function' && msxFxCalm();
@@ -167372,10 +167403,36 @@ function MsxStRow({
   const pct = n => `${Math.max(0, Math.min(100, n / 9.99))}%`;
   const zoomA = grow && !calm && !zout;
   const zoomS = grow && !calm;
-  return React.createElement("div", {
-    className: `v-st${grow ? ' grow' : ''}${grow && on ? ' on' : ''}${grow && !calm ? ' gs-a' : ''}${zoomA ? ' zin' : ''}${zoomS ? ' zs' : ''}${zoomA && MSX_STATS.filter(k => ups[k]).length > 3 ? ' many' : ''}`,
+  const [, setAptTick] = useState(0);
+  useEffect(() => {
+    msxStAptSubs.add(setAptTick);
+    return () => {
+      msxStAptSubs.delete(setAptTick);
+    };
+  }, []);
+  const tgId = who && who.species && who.id ? who.id : null;
+  const aptOn = !!(tgId && msxStAptView.on && msxStAptView.id === tgId);
+  const aptL = tgId && typeof msxAptOf === 'function' ? msxAptOf(who.species) : null;
+  const tgProps = tgId ? {
+    role: 'button',
+    tabIndex: 0,
+    'aria-label': aptOn ? '能力の数の表示にもどす' : '能力の素質を見る',
+    'data-msx-st-toggle': aptOn ? 'apt' : 'num',
+    onClick: () => msxStAptFlip(tgId),
+    onKeyDown: e => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        msxStAptFlip(tgId);
+      }
+    }
+  } : {};
+  return React.createElement("div", _extends({}, tgProps, {
+    className: `v-st${tgId ? ' tg' : ''}${aptOn ? ' apton' : ''}${grow ? ' grow' : ''}${grow && on ? ' on' : ''}${grow && !calm ? ' gs-a' : ''}${zoomA ? ' zin' : ''}${zoomS ? ' zs' : ''}${zoomA && MSX_STATS.filter(k => ups[k]).length > 3 ? ' many' : ''}`,
     "data-msx-st-grow": grow ? on ? 'on' : 'pre' : undefined
-  }, MSX_STATS.map(k => {
+  }), tgId ? React.createElement("span", {
+    className: "v-sttg",
+    "aria-hidden": "true"
+  }, "⇄ ", aptOn ? '数' : '素質') : null, MSX_STATS.map(k => {
     const u = ups ? ups[k] || 0 : 0;
     const after = stats[k];
     const before = Math.max(0, after - (grow ? u : 0));
@@ -167389,7 +167446,9 @@ function MsxStRow({
     return React.createElement("div", {
       key: k,
       className: `${u > 0 ? 'up' : u < 0 ? 'dn' : ''}${k === main ? ' main' : ''}`
-    }, React.createElement("small", null, MSX_STAT_ICON[k], MSX_STAT_NAME[k]), React.createElement("b", null, grow && u ? Math.round(before + (after - before) * ease(t)) : stats[k]), grow && u ? React.createElement("u", {
+    }, React.createElement("small", null, MSX_STAT_ICON[k], MSX_STAT_NAME[k]), React.createElement("b", null, grow && u ? Math.round(before + (after - before) * ease(t)) : stats[k]), aptOn && aptL ? React.createElement("span", {
+      className: `ap a${aptL[MSX_STATS.indexOf(k)]}`
+    }, "素質 ", aptL[MSX_STATS.indexOf(k)]) : grow && u ? React.createElement("u", {
       className: "g",
       style: tick
     }, React.createElement("i", {
@@ -168368,6 +168427,7 @@ function MsxPlay({
       key: i,
       className: "v-chip"
     }, msxMemberName(m), " 親密度 +", SUC.BOND && SUC.BOND.train || 8))) : null), isTrain ? React.createElement(MsxStRow, {
+      who: s,
       stats: s.stats,
       ups: acting ? null : gains,
       main: o.card && o.card.stat
@@ -168922,6 +168982,7 @@ function MsxPlay({
         width: `${card.next ? Math.max(0, 100 - card.next * 20) : 100}%`
       }
     })), React.createElement("span", null, trainLv >= 5 ? 'Lv が いちばん上' : card.next ? `あと${card.next}回で Lvアップ` : '')) : null)), React.createElement(MsxStRow, {
+      who: s,
       stats: s.stats,
       ups: pv ? pv.gain : null,
       main: stat,
@@ -169056,6 +169117,7 @@ function MsxPlay({
       "data-msx-detail-open": true,
       onClick: () => setDetail(true)
     }, "🔍", React.createElement("small", null, "くわしく"))), React.createElement(MsxStRow, {
+      who: s,
       stats: s.stats
     }), preOn ? React.createElement("div", {
       className: "v-act v-act-pre",
@@ -169461,6 +169523,7 @@ function MsxBag({
     disabled: !t || t.carry || usedNow,
     onClick: use
   }, usedNow ? 'このターンはもう使った' : t && !t.carry ? `${t.e} ${t.name}を使う` : '使う'))), React.createElement(MsxStRow, {
+    who: s,
     stats: s.stats
   }));
 }
@@ -169807,6 +169870,7 @@ function MsxEvent({
   }, who(l) ? React.createElement("span", {
     className: "who"
   }, who(l)) : null, who(l) ? `「${l.t}」` : l.t)) : React.createElement("div", null, picked ? 'いい時間になった。' : 'なにか起きそうだ…'))), picked ? React.createElement(React.Fragment, null, Object.keys(ups).length ? React.createElement(MsxStRow, {
+    who: s,
     stats: s.stats,
     ups: ups
   }) : null, picked.apt ? React.createElement("div", {
@@ -173044,6 +173108,7 @@ function MsxR3Shugyo({
     }, MSX_STAT_KEYS_R3.filter(k => gains[k]).map(k => `${MSX_STAT_ICON[k]}+${gains[k]}`).join(' ') || '±0'), helpers.length ? React.createElement("span", {
       className: "v-chip ylw"
     }, "👥 編成のおかげ ×", helpers.length, "体") : null)), React.createElement(MsxStRow, {
+      who: s,
       stats: s.stats,
       ups: gains
     }), React.createElement("div", {
@@ -173584,6 +173649,7 @@ function MsxR3Retire({
     }, React.createElement("b", null, nextLabel), React.createElement("small", null, msxFmt(nextMin)))) : null, nextLabel ? React.createElement("div", {
       className: "r3-gnx"
     }, nextLabel, " まで あと ", React.createElement("b", null, msxFmt(toNext))) : null)), React.createElement(MsxStRow, {
+      who: ws,
       stats: ws.stats
     }), React.createElement(MsxSay, {
       aid: s.aid,
@@ -173831,6 +173897,7 @@ function MsxR3Retire({
     }, grade.label), React.createElement("div", {
       className: "v-num"
     }, React.createElement("small", null, "総合力"), React.createElement("b", null, msxFmt(ev.power))))), React.createElement(MsxStRow, {
+      who: ws,
       stats: ws.stats
     }), React.createElement("div", {
       className: "v-rec"

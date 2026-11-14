@@ -64,7 +64,7 @@ const makeRun = async (kind) => {
   const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
   const errors = [];
   // [幅, 高さ, 名札, 文字の倍率]。大きい文字設定は、画面の中の文字を 1.3 倍にして真似る
-  const sizes = process.env.SHOT_QUICK ? [[390, 844, '']] : [[390, 844, ''], [844, 390, 'land'], [667, 375, 'land667'], [320, 568, 's320'], [390, 844, 'big', 1.3], [844, 390, 'landbig', 1.3], [320, 568, 's320big', 1.3]];
+  const sizes = process.env.SHOT_QUICK ? [[390, 844, '']] : [[390, 844, ''], [390, 664, 'ip'], [844, 390, 'land'], [667, 375, 'land667'], [320, 568, 's320'], [390, 844, 'big', 1.3], [844, 390, 'landbig', 1.3], [320, 568, 's320big', 1.3]];
   // [名前, 作る育成, 開いたあとの操作]
   // H0・H1 はモンサクのホーム(育成なし・途中の育成あり。2026-11-14 作り直し)
   const SHOTS_ALL = [
@@ -75,6 +75,7 @@ const makeRun = async (kind) => {
     ['S3', null, ['new', 'next', 'next', 'next']], ['S4', null, ['new', 'next', 'next', 'next', 'next']],
     ['S5', null, ['new', 'next', 'next', 'next', 'next', 'next']], ['S6', null, ['new', 'next', 'next', 'next', 'next', 'next', 'next']],
     ['M1', 'mid', ['cont']], ['M2', 'yosu', ['cont']], ['M3', 'mid', ['cont', 'bag']], ['T1', 'mid', ['cont', 'train']], ['T2', 'mid', ['cont', 'train', 'swipe']], ['Q0', 'mid', ['ki']], ['Q1', 'mid', ['ki', 'kitap']], ['R1', 'mid', ['cont', 'rest']],
+    ['M1A', 'mid', ['cont', 'apt']], ['K3A', 'mid', ['cont', 'apt', 'train', 'go', 'next']], // 能力の列を押して素質の表示に(2026-11-14)
     ['K1', 'mid', ['cont', 'train', 'go']], ['K3', 'mid', ['cont', 'train', 'go', 'next']], ['K5', 'mid', ['cont', 'train', 'go', 'next', 'praise']],
     ['I1', 'mid', ['cont', 'issa']], ['P1', 'mid', ['cont', 'stats']], ['M1D', 'mid', ['cont', 'detail']], ['M1F', 'mid', ['cont', 'detail', 'tab:feat']],
     ['E1', 'mid', ['cont', 'event']], ['E3', 'mid', ['cont', 'event', 'three']], ['E4', 'mid', ['cont', 'event', 'three', 'long']],
@@ -97,6 +98,7 @@ const makeRun = async (kind) => {
           // eslint-disable-next-line no-new-func
           const make = new Function(`return (${mk})`)();
           if (window.__msxRoot) { window.__msxRoot.unmount(); window.__msxRoot = null; }
+          try { msxStAptView = { id: null, on: false }; } catch (e) { /* 素質の表示は撮るたびに数の表示へ戻す */ }
           if (kind) { const run = await make(kind); localStorage.setItem(MSX_KEYS.run, JSON.stringify(run)); } else localStorage.removeItem(MSX_KEYS.run);
           localStorage.removeItem(MSX_KEYS.box); // 前の場面で置いた保存枠(seedfuse)を残さない
           const el = document.getElementById('msx-shot') || Object.assign(document.createElement('div'), { id: 'msx-shot' });
@@ -131,6 +133,7 @@ const makeRun = async (kind) => {
             if (st === 'go') return click(/をする$/); // 2026-11-14 トレーニングのボタンは「丸太割りをする」のようにトレーニングの名前になった
             if (st === 'praise') return click(/褒める/);
             if (st === 'clinic') return click(/通院/);
+            if (st === 'apt') { const r = document.querySelector('.msx [data-msx-st-toggle]'); if (!r) return false; r.click(); return true; }
             if (st === 'rest') return click(/^🛌/);
             if (st === 'kitap') { const k = document.querySelector('[data-msx-ki]'); if (!k) return false; k.click(); return true; }
             if (st === 'ki') { // 新しい期の1ターン目(期の区切りの「NEXT あと◯ターン」)を開く
