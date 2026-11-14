@@ -1066,6 +1066,7 @@ function AlfFriendHouseView({ friend, onClose }) {
   // 自由文を送る前の確認(2026-11-12 社長・自由文があるときだけ。決まった一言だけならすぐ送る)
   const [confirm, setConfirm] = React.useState(null); // { word, warn, busy }
   const [boardOpen, setBoardOpen] = React.useState(false);
+  const [vtab, setVtab] = React.useState('house'); // 見る専用のタブ(2026-11-14 社長 r1115-019): house=今までの家 / where=町の地図 / profile=助手紹介
   const [bondOpen, setBondOpen] = React.useState(false); // 友情のシート(56-assistant-life-friend-bond・印が偽なら出ない)
   const bondMark = (task) => { if (typeof albMark === 'function') void albMark(friend.id, task); };
   const [selfName, setSelfName] = React.useState('');
@@ -1130,8 +1131,35 @@ function AlfFriendHouseView({ friend, onClose }) {
   // 掲示板: 助手の今日(dy)と、その人の最近の遊び(ac)を混ぜる(最近は先に。時刻は「今日 10:10」などの形)
   const actItems = more && more.ac ? more.ac.map(a => ({ t: alfAgoText(a.at).replace(/^今日 /, ''), x: `${ALF_ACT_ICON[a.k] || '✨'} ${a.x}`, act: a.k })) : [];
   const diaryItems = [...actItems, ...(more && more.dy.length ? more.dy : (h.dy || []))].slice(0, 10);
+  // 見る専用のタブ(自分の助手ライフと同じ並びの飾り・同じ class)。町・紹介は、自分の画面の部品に「相手の写し」を渡して見せるだけ(保存・操作は使わない)
+  const vtabs = [['house', '🏡', '家'],
+    ...(typeof AssistantLifeTownMap === 'function' && typeof assistantLifeMapReadHome === 'function' ? [['where', '🗺', '町']] : []),
+    ...(typeof AssistantLifeProfilePage === 'function' && typeof assistantLifeProfileOn === 'function' && assistantLifeProfileOn() ? [['profile', '📖', '紹介']] : [])];
+  const goTab = (k) => { setRoomId(null); setTalk(null); setLeaving(null); setBondOpen(false); setBoardOpen(false); setVtab(k); };
+  const vIcons = (flat) => (vtabs.length > 1 ? (
+    <div className="mhl-icons" role="tablist" data-alf-vtabs style={flat ? undefined : { flexBasis: '100%' }}>
+      {vtabs.map(([k, ic, label]) => <button key={k} type="button" role="tab" aria-selected={vtab === k} data-alf-vtab={k} className={vtab === k ? 'on' : ''} onClick={() => goTab(k)}><i>{ic}</i>{label}</button>)}
+    </div>) : null);
+  const fWhereOf = (id) => { const r = h.r[id]; if (!r) return null; const place = r.at === 'home' ? 'home' : (r.p || null); return place ? { id, place, doing: r.d, with: [], group: null, reason: null } : null; };
+  const metIds = h.ids.filter(id => ALF_IDS.includes(id));
+  const vView = vtab !== 'house' && vtabs.some(t => t[0] === vtab) ? (
+    <div className="absolute inset-0 flex flex-col" style={{ zIndex: 20, background: '#0b1020' }} data-alf-vview={vtab}>
+      {vtab === 'where'
+        ? <AssistantLifeTownMap life={null} ids={metIds} land={land} onBack={() => goTab('house')} onPick={() => {}} friendView={{ whereOf: fWhereOf, name: friend.name }}
+            nav={<div className="flex items-center gap-1"><button type="button" aria-label="戻る" data-alf-vview-back className="h-9 w-7 shrink-0 text-[18px] text-slate-100" onClick={() => goTab('house')}>←</button><div className="min-w-0 flex-1">{vIcons(true)}</div></div>}/>
+        : <>
+          <div className="mhl-hdr flex flex-wrap items-start gap-2" style={{ paddingTop: land ? 6 : 'calc(8px + env(safe-area-inset-top))' }}>
+            <button type="button" aria-label="戻る" data-alf-vview-back className="h-9 w-8 shrink-0 text-[19px] text-slate-100" onClick={() => goTab('house')}>←</button>
+            <div className="min-w-0 flex-1"><p className="truncate text-[17px] font-black text-amber-100">🏘 {friend.name}さんの助手ライフ</p><p className="text-[10px] font-bold text-slate-200">👀 見る専用です</p></div>
+            {vIcons(false)}
+          </div>
+          <div className="relative min-h-0 flex-1 overflow-y-auto" data-alf-vview-body>
+            {vtab === 'profile' && <AssistantLifeProfilePage metIds={metIds} viewOnly land={land}/>}
+          </div>
+        </>}
+    </div>) : null;
   const header = (
-    <div className="mhl-hdr flex items-start gap-2" style={{ paddingTop: land ? 6 : 'calc(8px + env(safe-area-inset-top))' }}>
+    <div className="mhl-hdr flex flex-wrap items-start gap-2" style={{ paddingTop: land ? 6 : 'calc(8px + env(safe-area-inset-top))' }}>
       <button type="button" className="h-9 w-8 shrink-0 text-[19px] text-slate-100" aria-label="戻る" data-alf-visit-close onClick={onClose}>←</button>
       {/* 右上は「仲良し度 +10」などの知らせ(44-growth-fx の .mh-gfx-chips)が出る所なので、題は左に寄せて右を空ける */}
       <div className="min-w-0" style={{ maxWidth: land ? '100%' : '48%' }}>
@@ -1140,6 +1168,7 @@ function AlfFriendHouseView({ friend, onClose }) {
         <p className="text-[10px] font-bold text-slate-200"><span className="whitespace-nowrap">📷 {alfAgoText(friend.at)} の様子</span>・<span className="whitespace-nowrap">{friend.name}さんが最後に開いたとき</span></p>
         {now && now.online && <p className={`mt-0.5 inline-block max-w-full truncate rounded-full px-2 py-0.5 text-[10.5px] font-black ${now.auto ? 'bg-amber-950/80 text-amber-200' : 'bg-emerald-950/70 text-emerald-200'}`} data-alf-visit-now>いま {land ? (now.long || now.text) : now.text}</p>}
       </div>
+      {vIcons(false)}
     </div>);
   const tiles = (
     <div data-alf-visit-acts>
@@ -1286,6 +1315,7 @@ function AlfFriendHouseView({ friend, onClose }) {
         </>)}
         {sheet}
         {words}
+        {vView}
         {confirm && leaving != null && typeof AlfNoteConfirm === 'function' && <AlfNoteConfirm friend={friend} to={leaving || null} word={confirm.word} note={alfNoteCheck(noteText).text} selfName={selfName} warn={confirm.warn} busy={confirm.busy} land={land}
           onFix={() => { if (!confirm.busy) setConfirm(null); }} onSend={() => { if (!confirm.busy) void leave(confirm.word); }} onCancel={() => { if (!confirm.busy) { setConfirm(null); setLeaving(null); setNoteWarn(''); } }}/>}
         {diarySheet}

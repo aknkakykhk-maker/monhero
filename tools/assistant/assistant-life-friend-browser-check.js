@@ -177,6 +177,39 @@ const badgeProblems = (page) => page.evaluate(() => {
       await page.locator('[data-alf-house="aoi-0001"] [data-alf-act="look"]').click();
       await page.locator('[data-alf-visit]').waitFor({ timeout: 5000 });
       { const ng = await textProblems(page, '[data-alf-visit]'); check(`⑥ 訪ねた家の部屋の並びがはみ出さない・字が切れない(${v.id})`, ng.length === 0, [...new Set(ng)].join(' / ')); }
+      // r1115-019 第1弾: フレンドの家の見る専用のタブ(家・町・紹介)。町はその人の助手を札で置く・紹介は人となりだけ(仲良し度・好み・NEW は出さない)
+      { await page.locator('[data-alf-vtabs]').waitFor({ timeout: 3000 }).catch(() => {});
+        check(`㉑ フレンドの家に、家・町・紹介のタブが出る(${v.id})`, (await page.locator('[data-alf-visit] [data-alf-vtab]').count()) === 3);
+        const tabNg = await page.evaluate(() => { const b = document.querySelector('[data-alf-vtabs]'); if (!b) return ['無い']; const r = b.getBoundingClientRect(); return (r.left < -1 || r.right > innerWidth + 1) ? ['はみ出し'] : []; });
+        check(`㉑ タブの列が画面からはみ出さない(${v.id})`, tabNg.length === 0, tabNg.join(' / '));
+        await shot(page, `${v.id}-21-vtab-house`);
+        await page.locator('[data-alf-vtab="where"]').click();
+        await page.locator('[data-alf-vview="where"] [data-assistant-life-where]').waitFor({ timeout: 8000 }).catch(() => {});
+        await page.waitForTimeout(800);
+        const where = await page.evaluate(() => { const w = document.querySelector('[data-alf-vview="where"]'); return { n: w ? w.querySelectorAll('[data-assistant-life-map-who]').length : -1, act: w ? w.querySelectorAll('[data-assistant-life-map-act]').length : -1, title: (w && (w.querySelector('p.truncate') || {}).textContent) || '' }; });
+        check(`㉑ 町の地図に、あおいさんの助手が札で並ぶ(自分の操作ボタンは無い)(${v.id})`, where.n > 0 && where.act === 0 && /さんの町/.test(where.title), JSON.stringify(where));
+        await shot(page, `${v.id}-21-vtab-where`);
+        const tabNg2 = await page.evaluate(() => { const b = document.querySelector('[data-alf-vview="where"] [data-alf-vtabs]'); if (!b) return ['無い']; const r = b.getBoundingClientRect(); return (r.left < -1 || r.right > innerWidth + 1) ? ['はみ出し'] : []; });
+        check(`㉑ 町でもタブの列が画面からはみ出さない(${v.id})`, tabNg2.length === 0, tabNg2.join(' / '));
+        await page.locator('[data-alf-vview="where"] [data-assistant-life-map-who]').first().click();
+        await page.locator('[data-alf-vview="where"] [data-assistant-life-map-sheet]').waitFor({ timeout: 3000 }).catch(() => {});
+        check(`㉑ 町の札を押すと、いる助手の一覧(見る専用の行)が出る(${v.id})`, (await page.locator('[data-assistant-life-map-view-row]').count()) > 0 && (await page.locator('[data-assistant-life-map-act]').count()) === 0);
+        await shot(page, `${v.id}-21-vtab-where-sheet`);
+        await page.locator('[data-assistant-life-map-sheet-close]').click();
+        await page.locator('[data-alf-vtab="profile"]').click();
+        await page.locator('[data-alf-vview="profile"] [data-assistant-life-profile-list]').waitFor({ timeout: 5000 }).catch(() => {});
+        const prof = await page.evaluate(() => { const w = document.querySelector('[data-alf-vview="profile"]'); const t = w ? w.innerText : ''; return { cards: w ? w.querySelectorAll('[data-assistant-life-profile-card]:not([data-assistant-life-profile-card="unmet"])').length : -1, bond: /💗 Lv/.test(t), isNew: !!(w && w.querySelector('[data-assistant-life-profile-new]')) }; });
+        check(`㉑ 紹介に、会っている助手の札が出る(仲良し度・NEW は出ない)(${v.id})`, prof.cards > 0 && !prof.bond && !prof.isNew, JSON.stringify(prof));
+        await shot(page, `${v.id}-21-vtab-profile`);
+        await page.locator('[data-alf-vview="profile"] [data-assistant-life-profile-card]:not([data-assistant-life-profile-card="unmet"])').first().click();
+        await page.locator('[data-assistant-life-profile]').waitFor({ timeout: 3000 }).catch(() => {});
+        const sec = await page.evaluate(() => { const w = document.querySelector('[data-assistant-life-profile]'); return { who: !!(w && w.querySelector('[data-assistant-life-profile-sec="who"]')), likes: !!(w && w.querySelector('[data-assistant-life-profile-sec="likes"]')), bond: !!(w && w.querySelector('[data-assistant-life-profile-sec="bond"]')), voice: !!(w && w.querySelector('[data-assistant-life-profile-sec="voice"]')) }; });
+        check(`㉑ 紹介の詳細は「人となり」だけ(好き・きずな・台詞は出ない)(${v.id})`, sec.who && !sec.likes && !sec.bond && !sec.voice, JSON.stringify(sec));
+        await shot(page, `${v.id}-21-vtab-profile-sheet`);
+        await page.locator('[data-assistant-life-profile-close]').first().click();
+        await page.locator('[data-alf-vtab="house"]').click();
+        check(`㉑ 家のタブへ戻ると、いつもの家が見える(${v.id})`, (await page.locator('[data-alf-vview]').count()) === 0 && (await page.locator('[data-alf-visit] [data-assistant-life-room]').count()) > 0);
+      }
       // 「仲良し度 +10」などの知らせ(右上の .mh-gfx-chips)が、部屋の名前・顔・吹き出しを隠さない
       // 知らせは画面が組み替わると置き直す(44-growth-fx の MutationObserver)。置き直すまで少し待ってから測る
       const chipNg = async () => { await page.waitForTimeout(400); return chipNgNow(); };

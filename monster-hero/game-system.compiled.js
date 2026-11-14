@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 84f1d7609033033b
+// source-sha256: 6507b547752048a8
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -117328,6 +117328,34 @@ function AssistantLifeMapFig({
     size: Math.round(h * 0.5)
   }));
 }
+function AssistantLifeMapViewRow({
+  id,
+  place,
+  town = false,
+  w = null
+}) {
+  const a = assistantById(id);
+  if (!a) return null;
+  const d = w && ASSISTANT_LIFE_DOINGS[w.doing];
+  return React.createElement("div", {
+    className: "mt-2 flex items-center gap-2 rounded-2xl border border-white/10 bg-slate-900/85 p-2",
+    "data-assistant-life-map-sheet-who": id,
+    "data-assistant-life-map-view-row": true
+  }, React.createElement("span", {
+    className: "shrink-0"
+  }, React.createElement(AssistantFace, {
+    who: a,
+    size: 36
+  })), React.createElement("div", {
+    className: "min-w-0 flex-1"
+  }, React.createElement("p", {
+    className: "text-[13px] font-black text-white",
+    style: JA_WRAP_STYLE
+  }, a.name), React.createElement("p", {
+    className: "text-[10.5px] font-bold text-slate-300",
+    style: JA_WRAP_STYLE
+  }, town ? jaWrap(`${assistantLifeMapSpotWord(place)}で `) : '', w && ASSISTANT_LIFE_DOING_ICON[w.doing], " ", jaWrap(d ? d.label : '過ごしている'))));
+}
 function AssistantLifeMapRow({
   id,
   place,
@@ -117631,7 +117659,8 @@ function AssistantLifeTownMap({
   land = false,
   initialPlace = null,
   initialAssistantId = null,
-  initialKey = 0
+  initialKey = 0,
+  friendView = null
 }) {
   const [home, setHome] = React.useState(() => assistantLifeMapReadHome());
   const [sheet, setSheet] = React.useState(() => initialPlace && assistantLifeMapOrderNow().includes(initialPlace) ? initialPlace : null);
@@ -117653,10 +117682,13 @@ function AssistantLifeTownMap({
       window.removeEventListener('resize', re);
     };
   }, []);
+  const whereOf = id => friendView ? friendView.whereOf(id) : assistantLifeWhereOf(life, id);
+  const ro = !!friendView;
   const at = {};
   for (const id of ASSISTANT_LIFE_HOUSE_ORDER) {
     if (!ids.includes(id)) continue;
-    const w = assistantLifeWhereOf(life, id);
+    const w = whereOf(id);
+    if (ro && !(w && ASSISTANT_LIFE_PLACE_ICON[w.place])) continue;
     const p = w && ASSISTANT_LIFE_PLACE_ICON[w.place] ? w.place : 'home';
     (at[p] = at[p] || []).push(id);
   }
@@ -117873,6 +117905,7 @@ function AssistantLifeTownMap({
     cardroom: `×${typeof CARD_LIFE_UP_LABEL !== 'undefined' ? String(CARD_LIFE_UP_LABEL).replace(/倍$/, '') : '1.375'}`
   };
   const perkOf = place => {
+    if (ro) return false;
     try {
       return typeof assistantLifePerkAt === 'function' && assistantLifePerkAt(place, life, ids) === true;
     } catch (_) {
@@ -117901,7 +117934,7 @@ function AssistantLifeTownMap({
     }, inner, perkMark(place));
   };
   const cardN = (at.cardroom || []).length;
-  const spentOf = (id, place) => place === 'cardroom' && typeof assistantLifeCardSpent === 'function' && !!assistantLifeCardSpent(id);
+  const spentOf = (id, place) => !ro && place === 'cardroom' && typeof assistantLifeCardSpent === 'function' && !!assistantLifeCardSpent(id);
   const crowd = place => {
     const who = at[place] || [];
     if (!who.length) return null;
@@ -117922,7 +117955,7 @@ function AssistantLifeTownMap({
     }, who.map((id, i) => {
       const a = assistantById(id);
       if (!a) return null;
-      const w = assistantLifeWhereOf(life, id);
+      const w = whereOf(id);
       return React.createElement("button", {
         key: id,
         type: "button",
@@ -117944,7 +117977,7 @@ function AssistantLifeTownMap({
     }, `${assistantLifeName(who[0])}ほか${who.length - 1}人`)) : who.map(id => {
       const a = assistantById(id);
       if (!a) return null;
-      const w = assistantLifeWhereOf(life, id);
+      const w = whereOf(id);
       const d = w && ASSISTANT_LIFE_DOINGS[w.doing];
       return React.createElement("button", {
         key: id,
@@ -117955,7 +117988,7 @@ function AssistantLifeTownMap({
         onClick: () => setSheet(place),
         className: "flex flex-col items-center px-[1px]"
       }, (() => {
-        const town = typeof assistantLifePartnerOk === 'function' && !assistantLifePartnerOk(id);
+        const town = !ro && typeof assistantLifePartnerOk === 'function' && !assistantLifePartnerOk(id);
         return React.createElement(React.Fragment, null, React.createElement("span", {
           className: "block",
           style: town ? {
@@ -117970,7 +118003,7 @@ function AssistantLifeTownMap({
         })), React.createElement("span", {
           className: "mhl-map-name",
           "data-assistant-life-map-name": true
-        }, typeof assistantLifeBodyCondShort === 'function' && assistantLifeBodyCondShort(id) ? assistantLifeBodyBadge(id) : w && ASSISTANT_LIFE_DOING_ICON[w.doing], a.name, town ? '・町の人' : ''));
+        }, !ro && typeof assistantLifeBodyCondShort === 'function' && assistantLifeBodyCondShort(id) ? assistantLifeBodyBadge(id) : w && ASSISTANT_LIFE_DOING_ICON[w.doing], a.name, town ? '・町の人' : ''));
       })());
     }));
   };
@@ -117980,7 +118013,13 @@ function AssistantLifeTownMap({
     place: sheetPlace
   }) : null;
   const sheetTown = sheetPlace === 'home' ? assistantLifeMapTownOnlyNow().flatMap(p => (at[p] || []).map(id => [id, p])) : [];
-  const row = (id, place, town) => React.createElement(AssistantLifeMapRow, {
+  const row = (id, place, town) => ro ? React.createElement(AssistantLifeMapViewRow, {
+    key: id,
+    id: id,
+    place: place,
+    town: town,
+    w: whereOf(id)
+  }) : React.createElement(AssistantLifeMapRow, {
     key: id,
     id: id,
     place: place,
@@ -118003,7 +118042,7 @@ function AssistantLifeTownMap({
     className: "absolute inset-0 z-[4] overflow-y-auto overflow-x-hidden bg-[#0b1020]",
     "data-assistant-life-where": true,
     "data-assistant-life-map-art": art
-  }, typeof AssistantMasmonRanchHost === 'function' && React.createElement(AssistantMasmonRanchHost, null), typeof AssistantMasmonTrainWatchHost === 'function' && React.createElement(AssistantMasmonTrainWatchHost, null), React.createElement("style", null, `.mhl-map-town{position:absolute;z-index:4;padding:0;border:0;background:transparent;color:#fff}
+  }, !ro && typeof AssistantMasmonRanchHost === 'function' && React.createElement(AssistantMasmonRanchHost, null), !ro && typeof AssistantMasmonTrainWatchHost === 'function' && React.createElement(AssistantMasmonTrainWatchHost, null), React.createElement("style", null, `.mhl-map-town{position:absolute;z-index:4;padding:0;border:0;background:transparent;color:#fff}
 .mhl-map-town>span{display:flex;align-items:center;gap:4px;white-space:nowrap;min-height:${home.h >= 700 ? 44 : home.h >= 600 ? 34 : 0}px;padding:4px ${home.h >= 600 ? 11 : 9}px;border:2px solid #ffe6a7a8;border-radius:12px;background:#10211df2;box-shadow:0 3px 10px #0009;font-size:12px;font-weight:900;line-height:1.15;text-shadow:0 2px 4px #000}
 .mhl-map-town[data-assistant-life-map-empty="1"]>span{opacity:.6;border-color:#94a3b8aa;background:#0f172ad9}
 .mhl-map-name{display:block;margin-top:-1px;white-space:nowrap;border-radius:7px;background:#0b1020e6;padding:0 4px;font-size:${home.h >= 700 ? 11 : 10}px;font-weight:900;line-height:${small ? 13 : home.h >= 700 ? 15 : 14}px;color:#fff;box-shadow:0 1px 3px #0008}
@@ -118105,7 +118144,7 @@ function AssistantLifeTownMap({
     style: {
       textShadow: '0 2px 4px #000'
     }
-  }, nav ? '🗺 町' : '📋 みんなの居場所'), React.createElement("p", {
+  }, ro ? `🗺 ${friendView.name}さんの町` : nav ? '🗺 町' : '📋 みんなの居場所'), React.createElement("p", {
     className: "truncate text-[10px] font-bold text-slate-200",
     "data-assistant-life-map-time": true
   }, assistantLifeTodLabel(), " ・ ", assistantLifeNextSlotText().replace(/みんなが動きます$/, 'みんなが動く'))), list && React.createElement("button", {
@@ -118169,7 +118208,7 @@ function AssistantLifeTownMap({
     style: JA_WRAP_STYLE
   }, sheetPlace === 'cardroom' && typeof CARD_LIFE_UP_LABEL !== 'undefined' ? React.createElement(React.Fragment, null, jaWrap('MFバトルカードの研究をしている助手。いる助手と対戦すると、'), React.createElement("span", {
     className: "whitespace-nowrap"
-  }, "ごほうび ", CARD_LIFE_UP_LABEL)) : jaWrap(ASSISTANT_LIFE_MAP_ABOUT[sheetPlace])), typeof AssistantLifePlacePerk === 'function' && sheetWho.length > 0 && React.createElement(AssistantLifePlacePerk, {
+  }, "ごほうび ", CARD_LIFE_UP_LABEL)) : jaWrap(ASSISTANT_LIFE_MAP_ABOUT[sheetPlace])), !ro && typeof AssistantLifePlacePerk === 'function' && sheetWho.length > 0 && React.createElement(AssistantLifePlacePerk, {
     life: life,
     ids: sheetWho,
     place: sheetPlace,
@@ -118182,7 +118221,7 @@ function AssistantLifeTownMap({
     className: "mt-2 rounded-xl bg-slate-900/85 px-2 py-2 text-[12px] font-bold text-slate-300",
     "data-assistant-life-map-sheet-none": true,
     style: JA_WRAP_STYLE
-  }, "いまはだれもいません"), typeof assistantLifePlanOn === 'function' && assistantLifePlanOn() && ASSISTANT_LIFE_PLAN_PLACES.includes(sheetPlace) && assistantLifePlanSlotsLeft().length > 0 && React.createElement("button", {
+  }, "いまはだれもいません"), !ro && typeof assistantLifePlanOn === 'function' && assistantLifePlanOn() && ASSISTANT_LIFE_PLAN_PLACES.includes(sheetPlace) && assistantLifePlanSlotsLeft().length > 0 && React.createElement("button", {
     type: "button",
     "data-assistant-life-map-plan": sheetPlace,
     onClick: () => assistantLifePlanOpen({
@@ -121984,9 +122023,11 @@ function AssistantLifeProfilePage({
   metIds,
   bondLevelOf = null,
   land = false,
-  onMasmon = null
+  onMasmon = null,
+  viewOnly = false
 }) {
-  const giftSt = typeof useAssistantLifeGiftState === 'function' ? useAssistantLifeGiftState() : null;
+  const giftStAll = typeof useAssistantLifeGiftState === 'function' ? useAssistantLifeGiftState() : null;
+  const giftSt = viewOnly ? null : giftStAll;
   const [seen, setSeen] = React.useState(null);
   const [openId, setOpenId] = React.useState(null);
   const boxRef = React.useRef(null);
@@ -121994,8 +122035,12 @@ function AssistantLifeProfilePage({
   const met = new Set(Array.isArray(metIds) ? metIds : []);
   const metList = roster.filter(w => met.has(w.id));
   const counts = {};
-  for (const w of metList) counts[w.id] = assistantLifeProfileCount(w.id, assistantLifeProfileBond(w.id, bondLevelOf).lv, giftSt);
+  if (!viewOnly) for (const w of metList) counts[w.id] = assistantLifeProfileCount(w.id, assistantLifeProfileBond(w.id, bondLevelOf).lv, giftSt);
   React.useEffect(() => {
+    if (viewOnly) {
+      setSeen({});
+      return undefined;
+    }
     let alive = true;
     Promise.resolve(typeof storeGet === 'function' ? storeGet(ASSISTANT_LIFE_PROFILE_SEEN_KEY, null, false) : null).then(v => {
       if (alive) setSeen(normalizeAssistantLifeProfileSeen(v));
@@ -122008,13 +122053,14 @@ function AssistantLifeProfilePage({
   }, []);
   const save = next => {
     setSeen(next);
+    if (viewOnly) return;
     try {
       if (typeof storeSet === 'function') void storeSet(ASSISTANT_LIFE_PROFILE_SEEN_KEY, next, false);
     } catch (_) {}
   };
   const giftReady = typeof ASSISTANT_LIFE_GIFT_STORE === 'undefined' || ASSISTANT_LIFE_GIFT_STORE.loaded === true;
   React.useEffect(() => {
-    if (!seen || !giftReady) return;
+    if (viewOnly || !seen || !giftReady) return;
     const miss = metList.filter(w => !seen[w.id]);
     if (!miss.length) return;
     const next = {
@@ -122025,7 +122071,7 @@ function AssistantLifeProfilePage({
     };
     save(next);
   }, [seen, giftReady, metList.map(w => w.id).join(',')]);
-  const isNew = id => !!(giftReady && seen && seen[id] && (counts[id] || 0) > seen[id].n);
+  const isNew = id => !viewOnly && !!(giftReady && seen && seen[id] && (counts[id] || 0) > seen[id].n);
   const open = id => {
     if (!met.has(id)) return;
     if (seen && giftReady) save({
@@ -122072,7 +122118,7 @@ function AssistantLifeProfilePage({
     }, "？？？"), React.createElement("p", {
       className: "text-[11px] font-bold text-slate-400"
     }, "まだ会っていません"));
-    const b = assistantLifeProfileBond(w.id, bondLevelOf);
+    const b = viewOnly ? null : assistantLifeProfileBond(w.id, bondLevelOf);
     return React.createElement("button", {
       key: w.id,
       type: "button",
@@ -122097,18 +122143,19 @@ function AssistantLifeProfilePage({
     }, w.name), React.createElement("p", {
       className: "text-[10.5px] font-bold leading-snug text-slate-200",
       style: typeof JA_LABEL_STYLE !== 'undefined' ? JA_LABEL_STYLE : undefined
-    }, typeof jaWrap === 'function' ? jaWrap(w.tagline || '') : w.tagline || ''), React.createElement("span", {
+    }, typeof jaWrap === 'function' ? jaWrap(w.tagline || '') : w.tagline || ''), b && React.createElement("span", {
       className: "mt-1 inline-block rounded-full bg-slate-950/80 px-2 py-0.5 text-[10.5px] font-black text-pink-100"
     }, "💗 Lv", b.lv));
   })), React.createElement("p", {
     className: "mt-2 text-[10.5px] font-bold leading-snug text-slate-300"
-  }, "💗 好きなものは、贈ると分かって紹介に残ります。", metList.length < roster.length ? 'まだ会っていない助手は、お話で出会うと紹介が開きます。' : ''), openId && (() => {
+  }, viewOnly ? metList.length < roster.length ? 'まだ会っていない助手は、この家の人も会うと紹介が開きます。' : '' : React.createElement(React.Fragment, null, "💗 好きなものは、贈ると分かって紹介に残ります。", metList.length < roster.length ? 'まだ会っていない助手は、お話で出会うと紹介が開きます。' : '')), openId && (() => {
     const sheet = React.createElement(AssistantLifeProfileSheet, {
       id: openId,
       bondLevelOf: bondLevelOf,
       land: land,
       giftSt: giftSt,
       onMasmon: onMasmon,
+      viewOnly: viewOnly,
       onClose: () => setOpenId(null)
     });
     const host = boxRef.current && boxRef.current.closest ? boxRef.current.closest('[data-assistant-life-screen]') : null;
@@ -122121,6 +122168,7 @@ function AssistantLifeProfileSheet({
   land = false,
   giftSt = null,
   onMasmon = null,
+  viewOnly = false,
   onClose
 }) {
   const who = typeof assistantById === 'function' ? assistantById(id) : null;
@@ -122134,7 +122182,13 @@ function AssistantLifeProfileSheet({
     voice: React.useRef(null)
   };
   if (!who) return null;
-  const b = assistantLifeProfileBond(id, bondLevelOf);
+  const b = viewOnly ? {
+    lv: 0,
+    title: '',
+    tone: '',
+    next: null,
+    rate: 0
+  } : assistantLifeProfileBond(id, bondLevelOf);
   const likes = assistantLifeProfileLikes(id, giftSt);
   const voices = assistantLifeProfileVoices(id, b.lv, giftSt);
   const vg = voices.find(g => g.key === vKey) || voices[0] || null;
@@ -122221,7 +122275,7 @@ function AssistantLifeProfileSheet({
       textShadow: '0 1px 3px #000',
       ...(typeof JA_LABEL_STYLE !== 'undefined' ? JA_LABEL_STYLE : {})
     }
-  }, typeof jaWrap === 'function' ? jaWrap(who.tagline || '') : who.tagline), React.createElement("span", {
+  }, typeof jaWrap === 'function' ? jaWrap(who.tagline || '') : who.tagline), !viewOnly && React.createElement("span", {
     className: "mt-1.5 inline-block rounded-full border border-white/15 bg-slate-950/80 px-2 py-0.5 text-[11px] font-black text-white"
   }, "💗 Lv", b.lv, " ", b.title)), greeting && React.createElement("div", {
     "data-assistant-life-profile-greeting": true,
@@ -122241,7 +122295,7 @@ function AssistantLifeProfileSheet({
   const jumps = React.createElement("div", {
     className: "flex gap-1.5 border-b border-white/10 bg-slate-950/90 px-2.5 py-2",
     "data-assistant-life-profile-jump": true
-  }, [['who', '人となり'], ['likes', '好き・苦手'], ['bond', 'きずな'], ['voice', '台詞']].map(([k, l]) => React.createElement("button", {
+  }, (viewOnly ? [['who', '人となり']] : [['who', '人となり'], ['likes', '好き・苦手'], ['bond', 'きずな'], ['voice', '台詞']]).map(([k, l]) => React.createElement("button", {
     key: k,
     type: "button",
     onClick: () => jump(k),
@@ -122427,9 +122481,9 @@ function AssistantLifeProfileSheet({
     className: "grid grid-cols-2 items-start gap-2.5"
   }, React.createElement("div", {
     className: "flex flex-col gap-2.5"
-  }, secWho, secLikes), React.createElement("div", {
+  }, secWho, !viewOnly && secLikes), React.createElement("div", {
     className: "flex flex-col gap-2.5"
-  }, secBond, secVoice))))) : React.createElement(React.Fragment, null, top, React.createElement("div", {
+  }, !viewOnly && secBond, !viewOnly && secVoice))))) : React.createElement(React.Fragment, null, top, React.createElement("div", {
     ref: scrollRef,
     className: "mh-scroll relative min-h-0 flex-1 overflow-y-auto",
     style: {
@@ -122439,7 +122493,7 @@ function AssistantLifeProfileSheet({
     className: "sticky top-0 z-[3]"
   }, jumps), React.createElement("div", {
     className: "flex flex-col gap-2.5 p-3"
-  }, secWho, secLikes, secBond, secVoice))));
+  }, secWho, !viewOnly && secLikes, !viewOnly && secBond, !viewOnly && secVoice))));
 }
 const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   id: 'rel-fight-erubin-momosuke-1',
@@ -162941,6 +162995,7 @@ function AlfFriendHouseView({
   const [noteWarn, setNoteWarn] = React.useState('');
   const [confirm, setConfirm] = React.useState(null);
   const [boardOpen, setBoardOpen] = React.useState(false);
+  const [vtab, setVtab] = React.useState('house');
   const [bondOpen, setBondOpen] = React.useState(false);
   const bondMark = task => {
     if (typeof albMark === 'function') void albMark(friend.id, task);
@@ -163119,8 +163174,100 @@ function AlfFriendHouseView({
     act: a.k
   })) : [];
   const diaryItems = [...actItems, ...(more && more.dy.length ? more.dy : h.dy || [])].slice(0, 10);
+  const vtabs = [['house', '🏡', '家'], ...(typeof AssistantLifeTownMap === 'function' && typeof assistantLifeMapReadHome === 'function' ? [['where', '🗺', '町']] : []), ...(typeof AssistantLifeProfilePage === 'function' && typeof assistantLifeProfileOn === 'function' && assistantLifeProfileOn() ? [['profile', '📖', '紹介']] : [])];
+  const goTab = k => {
+    setRoomId(null);
+    setTalk(null);
+    setLeaving(null);
+    setBondOpen(false);
+    setBoardOpen(false);
+    setVtab(k);
+  };
+  const vIcons = flat => vtabs.length > 1 ? React.createElement("div", {
+    className: "mhl-icons",
+    role: "tablist",
+    "data-alf-vtabs": true,
+    style: flat ? undefined : {
+      flexBasis: '100%'
+    }
+  }, vtabs.map(([k, ic, label]) => React.createElement("button", {
+    key: k,
+    type: "button",
+    role: "tab",
+    "aria-selected": vtab === k,
+    "data-alf-vtab": k,
+    className: vtab === k ? 'on' : '',
+    onClick: () => goTab(k)
+  }, React.createElement("i", null, ic), label))) : null;
+  const fWhereOf = id => {
+    const r = h.r[id];
+    if (!r) return null;
+    const place = r.at === 'home' ? 'home' : r.p || null;
+    return place ? {
+      id,
+      place,
+      doing: r.d,
+      with: [],
+      group: null,
+      reason: null
+    } : null;
+  };
+  const metIds = h.ids.filter(id => ALF_IDS.includes(id));
+  const vView = vtab !== 'house' && vtabs.some(t => t[0] === vtab) ? React.createElement("div", {
+    className: "absolute inset-0 flex flex-col",
+    style: {
+      zIndex: 20,
+      background: '#0b1020'
+    },
+    "data-alf-vview": vtab
+  }, vtab === 'where' ? React.createElement(AssistantLifeTownMap, {
+    life: null,
+    ids: metIds,
+    land: land,
+    onBack: () => goTab('house'),
+    onPick: () => {},
+    friendView: {
+      whereOf: fWhereOf,
+      name: friend.name
+    },
+    nav: React.createElement("div", {
+      className: "flex items-center gap-1"
+    }, React.createElement("button", {
+      type: "button",
+      "aria-label": "戻る",
+      "data-alf-vview-back": true,
+      className: "h-9 w-7 shrink-0 text-[18px] text-slate-100",
+      onClick: () => goTab('house')
+    }, "←"), React.createElement("div", {
+      className: "min-w-0 flex-1"
+    }, vIcons(true)))
+  }) : React.createElement(React.Fragment, null, React.createElement("div", {
+    className: "mhl-hdr flex flex-wrap items-start gap-2",
+    style: {
+      paddingTop: land ? 6 : 'calc(8px + env(safe-area-inset-top))'
+    }
+  }, React.createElement("button", {
+    type: "button",
+    "aria-label": "戻る",
+    "data-alf-vview-back": true,
+    className: "h-9 w-8 shrink-0 text-[19px] text-slate-100",
+    onClick: () => goTab('house')
+  }, "←"), React.createElement("div", {
+    className: "min-w-0 flex-1"
+  }, React.createElement("p", {
+    className: "truncate text-[17px] font-black text-amber-100"
+  }, "🏘 ", friend.name, "さんの助手ライフ"), React.createElement("p", {
+    className: "text-[10px] font-bold text-slate-200"
+  }, "👀 見る専用です")), vIcons(false)), React.createElement("div", {
+    className: "relative min-h-0 flex-1 overflow-y-auto",
+    "data-alf-vview-body": true
+  }, vtab === 'profile' && React.createElement(AssistantLifeProfilePage, {
+    metIds: metIds,
+    viewOnly: true,
+    land: land
+  })))) : null;
   const header = React.createElement("div", {
-    className: "mhl-hdr flex items-start gap-2",
+    className: "mhl-hdr flex flex-wrap items-start gap-2",
     style: {
       paddingTop: land ? 6 : 'calc(8px + env(safe-area-inset-top))'
     }
@@ -163149,7 +163296,7 @@ function AlfFriendHouseView({
   }, friend.name, "さんが最後に開いたとき")), now && now.online && React.createElement("p", {
     className: `mt-0.5 inline-block max-w-full truncate rounded-full px-2 py-0.5 text-[10.5px] font-black ${now.auto ? 'bg-amber-950/80 text-amber-200' : 'bg-emerald-950/70 text-emerald-200'}`,
     "data-alf-visit-now": true
-  }, "いま ", land ? now.long || now.text : now.text)));
+  }, "いま ", land ? now.long || now.text : now.text)), vIcons(false));
   const tiles = React.createElement("div", {
     "data-alf-visit-acts": true
   }, typeof AlfBondBar === 'function' && React.createElement(AlfBondBar, {
@@ -163652,7 +163799,7 @@ function AlfFriendHouseView({
     style: {
       paddingBottom: 'calc(10px + env(safe-area-inset-bottom))'
     }
-  }, tiles)), sheet, words, confirm && leaving != null && typeof AlfNoteConfirm === 'function' && React.createElement(AlfNoteConfirm, {
+  }, tiles)), sheet, words, vView, confirm && leaving != null && typeof AlfNoteConfirm === 'function' && React.createElement(AlfNoteConfirm, {
     friend: friend,
     to: leaving || null,
     word: confirm.word,
