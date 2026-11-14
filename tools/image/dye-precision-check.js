@@ -54,6 +54,8 @@ const APPROVED_MASKS = {
   Tiger: 'images/monsters/tiger-dye-mask.PNG',
   Suezo: 'images/monsters/suezo-dye-mask.PNG',
   Golem: 'images/monsters/golem-dye-mask.PNG',
+  // ピクシー(2026-11-14・社長「ピクシーの染色めちゃくちゃ荒いね」)。髪の内側の薄紫を髪①へ・赤い目は染めない
+  Pixie: 'images/monsters/pixie-dye-mask.PNG',
   // キュービ・オリヒメ(2026-10-27・案の段階・5部位。社長が濃い色で染めた写真を見て決めた)
   Kyubi: 'images/monsters/kyubi-dye-mask.PNG',
   Orihime: 'images/monsters/orihime-dye-mask.PNG',
