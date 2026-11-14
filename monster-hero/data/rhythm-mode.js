@@ -1932,7 +1932,21 @@ const RHYTHM_INPUT_AGE_MAX_MS=80;
 // 基準がずれている端末では最小値も大きいままなので、これまでどおり 0 のまま(安全側)。
 const RHYTHM_INPUT_AGE_BASE_ALIGNED_MS=25;
 let rhythmInputAgeFloorMs=Infinity;
-const rhythmInputAgeResetFloor=()=>{rhythmInputAgeFloorMs=Infinity;};
+// 【2026-11-14・同期の総点検 2本目(社長が案A を選んだ)】その端末の「ふだんの遅れ」。合図が起きてから処理されるまでの遅れ(80ms以下のもの)の、直近64回の中央値。
+// 本番の記録(iPhone 107曲・4台)で、80ms を超えて遅れて届いた入力の合図の時刻は古すぎて当てにならないと分かった(その入力で取れた単押し 751回が、
+// ふだんより約49ms 早く判定されていた。合図の時刻まで戻すと100ms以上早く、戻さないと31〜43ms 遅い=本当の遅れは約30ms)。
+// 直し方 lateStampTypical を入れた端末(iPhone)では、そういう入力は合図の時刻を使わず、この値だけ戻す。まだ8回たまっていないあいだは 25ms、上限は 50ms
+const RHYTHM_INPUT_AGE_TYPICAL_MAX_MS=50,RHYTHM_INPUT_AGE_TYPICAL_DEFAULT_MS=25,RHYTHM_INPUT_AGE_TYPICAL_KEEP=64,RHYTHM_INPUT_AGE_TYPICAL_MIN_N=8;
+let rhythmInputAgeRecent=[],rhythmInputAgeTypicalCache=null;
+const rhythmInputAgeTypicalMs=()=>{
+  if(rhythmInputAgeTypicalCache!==null)return rhythmInputAgeTypicalCache;
+  if(rhythmInputAgeRecent.length<RHYTHM_INPUT_AGE_TYPICAL_MIN_N)return RHYTHM_INPUT_AGE_TYPICAL_DEFAULT_MS;
+  const sorted=rhythmInputAgeRecent.slice().sort((a,b)=>a-b);
+  return rhythmInputAgeTypicalCache=Math.min(RHYTHM_INPUT_AGE_TYPICAL_MAX_MS,sorted[sorted.length>>1]);
+};
+const rhythmInputAgeResetFloor=()=>{rhythmInputAgeFloorMs=Infinity;rhythmInputAgeRecent=[];rhythmInputAgeTypicalCache=null;};
+// 別の指の合図の中で初めて見えた指(自分の touchstart が無い)の遅れ。その合図の時刻は別の指のものなので、ふだんの遅れより古くは戻さない
+const rhythmRevealedAgeMs=eventAgeMs=>{const age=Number(eventAgeMs)>0?Number(eventAgeMs):0;return rhythmTouchFixOn('lateStampTypical')?Math.min(age,rhythmInputAgeTypicalMs()):age;};
 // ===== 実機でしか分からないことを、診断で数える(2026-10-07・ユーザー指示「実機で確認しないと直せないものは、直せる仕組みを作って」) =====
 // タッチの診断の行(stats.timing)へ入れる。判定・スコア・保存には関わらない。数えるのは数だけ。
 //   ageHist  … 入力が届くまでの遅れ(イベントが起きてから処理されるまで)の分布。25ms / 50 / 80 / 150 / 300 の区切りで6つ
@@ -2016,19 +2030,28 @@ const RHYTHM_TIMING_DIAG=(()=>{
   //   全部戻したとしたら)と、上限を超えた分の中央値。合図の時刻が本当に指の触れた時刻なら lateFullMs がふだんのずれ(biasMs)に近く、時刻だけ古いなら
   //   lateActMs が近い。**数えるだけで、判定には使わない**
   const zero=()=>({ageHist:[0,0,0,0,0,0],ageCapped:0,ageBacked:0,ageUnbacked:0,matchByAge:0,frames:0,stalls:0,stallsShown:0,maxStepMs:0,hidden:0,pen:0});
-  let stats=zero(),meta={},lastSong=null,lastShown=null,lastTick=0,lastStallAt=0,biasList=[],lateEx=null,lateList=[];
+  // midN / midActMs / midTypMs … 50〜80ms 遅れた入力で取れた単押しの数・いまの判定のずれ・ふだんの遅れだけ戻したとしたときのずれ(2026-11-14。この帯は biasMs にも今までどおり入る)
+  // revN / revActMs … 別の指の合図の中で初めて見えた指で取れた単押しの数・ずれ(biasMs には混ぜない)
+  let stats=zero(),meta={},lastSong=null,lastShown=null,lastTick=0,lastStallAt=0,biasList=[],lateEx=null,lateList=[],midEx=null,midList=[],revAt=0,revList=[];
   const perfNow=()=>typeof performance!=='undefined'&&performance.now?performance.now():0;
   const median=list=>{const s=list.slice().sort((a,b)=>a-b);return s.length?Math.round(s[s.length>>1]*10)/10:null;};
   const bucket=age=>age<25?0:age<50?1:age<80?2:age<150?3:age<300?4:5;
   return {
-    reset(){stats=zero();meta={};lastSong=null;lastShown=null;lastTick=0;lastStallAt=0;biasList=[];lateEx=null;lateList=[];},
+    reset(){stats=zero();meta={};lastSong=null;lastShown=null;lastTick=0;lastStallAt=0;biasList=[];lateEx=null;lateList=[];midEx=null;midList=[];revAt=0;revList=[];},
       // 単押しを取ったときのずれ(ms。正=遅い側)。端末の音の遅れが合っているかの手がかり。診断に中央値と数だけ残す(2026-10-07)
       bias(deltaMs){const v=Number(deltaMs);if(!Number.isFinite(v))return;
+        if(revAt>0&&perfNow()-revAt<=4){if(revList.length<200)revList.push(v);return;}
+        if(midEx&&perfNow()-midEx.at<=4&&midList.length<200)midList.push([v,v+midEx.ex]);
         // 直前(同じ合図の処理の中)に、上限を超えて遅れた入力があったなら、その入力で取れた単押し。ふだんのずれの数には混ぜない
         if(lateEx&&perfNow()-lateEx.at<=4){if(lateList.length<200)lateList.push([v,v-lateEx.ex,lateEx.ex]);return;}
         if(Math.abs(v)<=200&&biasList.length<600)biasList.push(v);},
     // 上限を超えて遅れた入力の「戻し切れなかった分」(ms)。rhythmInputAgeMs が、基準のそろった端末でだけ呼ぶ。次の入力で消える
     lateExcess(ms){const v=Number(ms);lateEx=v>0?{ex:v,at:perfNow()}:null;},
+    midExcess(ms){const v=Number(ms);midEx=Number.isFinite(v)&&v!==0?{ex:v,at:perfNow()}:null;},
+    // 別の指の合図の中で初めて見えた指の入力を、これから判定する(on=true)/し終えた(false)
+    revealed(on){revAt=on?perfNow():0;},
+    // 元の時計の止まりの割合(その曲のここまで)。曲の時計の直しを、その曲の中で入れるかを決めるのに使う
+    stallShare(){return {frames:stats.frames,share:stats.frames?stats.stalls/stats.frames:0};},
     // 直近 ms のあいだに、80ms以上コマが止まったか(取りこぼしの回収を、止まったあとだけ長くするのに使う)
     recentStall(ms){return lastStallAt>0&&typeof performance!=='undefined'&&performance.now&&performance.now()-lastStallAt<=ms;},
     age(value){const v=Number(value);if(!(v>=0)||v>5000)return;stats.ageHist[bucket(v)]++;if(v>RHYTHM_INPUT_AGE_MAX_MS)stats.ageCapped++;},
@@ -2044,7 +2067,8 @@ const RHYTHM_TIMING_DIAG=(()=>{
     hidden(){stats.hidden++;},
     pen(){stats.pen++;},
     snapshot(){const sorted=biasList.slice().sort((a,b)=>a-b),n=sorted.length;return {...stats,ageHist:stats.ageHist.slice(),biasN:n,biasMs:n?Math.round(sorted[n>>1]*10)/10:null,
-      lateN:lateList.length,lateActMs:median(lateList.map(x=>x[0])),lateFullMs:median(lateList.map(x=>x[1])),lateExMs:median(lateList.map(x=>x[2])),...meta};},
+      lateN:lateList.length,lateActMs:median(lateList.map(x=>x[0])),lateFullMs:median(lateList.map(x=>x[1])),lateExMs:median(lateList.map(x=>x[2])),
+      midN:midList.length,midActMs:median(midList.map(x=>x[0])),midTypMs:median(midList.map(x=>x[1])),revN:revList.length,revActMs:median(revList),...meta};},
   };
 })();
 // 補正の上限。直し方 inputAgeCap を入れた端末だけ 300ms まで広げる(基準がそろっていると分かった端末だけ。下の rhythmInputAgeMs を見る)
@@ -2066,8 +2090,10 @@ const rhythmInputAgeCompMs=(eventTimeStamp,nowPerfMs)=>{
   if(!(age>0))return 0;
   if(age<rhythmInputAgeFloorMs)rhythmInputAgeFloorMs=age;
   RHYTHM_TIMING_DIAG.age(age);
-  if(age<=RHYTHM_INPUT_AGE_MAX_MS)return age;
+  if(age<=RHYTHM_INPUT_AGE_MAX_MS){rhythmInputAgeRecent.push(age);if(rhythmInputAgeRecent.length>RHYTHM_INPUT_AGE_TYPICAL_KEEP)rhythmInputAgeRecent.shift();rhythmInputAgeTypicalCache=null;return age;}
   const aligned=rhythmInputAgeFloorMs<=RHYTHM_INPUT_AGE_BASE_ALIGNED_MS;
+  // 直し方 lateStampTypical(2026-11-14・iPhone): コマは来ていたのに古い時刻の入力は、合図の時刻が当てにならないので、ふだんの遅れだけ戻す(これまでは 80ms)
+  const staleMs=rhythmTouchFixOn('lateStampTypical')?rhythmInputAgeTypicalMs():RHYTHM_INPUT_AGE_MAX_MS;
   // 直し方 inputAgeCap を入れていない端末は、これまでどおり(上限80ms・基準がそろっていなければ0)
   // 当てるノーツを選ぶための本当の遅れ(rhythmInputMatchAgeFor)。基準がそろっていて、その間ゲームが本当に止まっていたと見えたときだけ覚える
   // (「時刻だけ古い」入力では覚えない＝これまでどおり)。判定に使う遅れ(下で返す値)は変えない
@@ -2075,8 +2101,8 @@ const rhythmInputAgeCompMs=(eventTimeStamp,nowPerfMs)=>{
   if(!rhythmTouchFixOn('inputAgeCap')){
     // 【2026-10-09・社長の指示「iPhoneの遅れの正体を調べる」】上限を超えて遅れた入力が、本当に処理が詰まった(コマが止まっていた)ものか、
     // 端末の時刻だけ古いもの(コマは来ていた)かを、直し方を入れていない端末でも数える。数えるだけで、判定には何も効かない
-    if(aligned){if(RHYTHM_TIMING_DIAG.stalledSince(nowPerfMs)>=age*RHYTHM_INPUT_AGE_STALL_SHARE)RHYTHM_TIMING_DIAG.ageBacked();else RHYTHM_TIMING_DIAG.ageUnbacked();}
-    return aligned?RHYTHM_INPUT_AGE_MAX_MS:0;
+    if(aligned){if(RHYTHM_TIMING_DIAG.stalledSince(nowPerfMs)>=age*RHYTHM_INPUT_AGE_STALL_SHARE){RHYTHM_TIMING_DIAG.ageBacked();return RHYTHM_INPUT_AGE_MAX_MS;}RHYTHM_TIMING_DIAG.ageUnbacked();return staleMs;}
+    return 0;
   }
   // 直し方 inputAgeCap を入れた端末。広げた上限(300ms)を使うのは、
   //   ①時計の基準がそろっていて、かつ ②その間ゲームが本当に止まっていた(コマが来ていなかった)と見えたときだけ。
@@ -2084,7 +2110,7 @@ const rhythmInputAgeCompMs=(eventTimeStamp,nowPerfMs)=>{
   if(!aligned){RHYTHM_TIMING_DIAG.ageUnbacked();return 0;}
   if(RHYTHM_TIMING_DIAG.stalledSince(nowPerfMs)>=age*RHYTHM_INPUT_AGE_STALL_SHARE){RHYTHM_TIMING_DIAG.ageBacked();return Math.min(age,RHYTHM_INPUT_AGE_CAP_WIDE_MS);}
   RHYTHM_TIMING_DIAG.ageUnbacked();
-  return RHYTHM_INPUT_AGE_MAX_MS;
+  return staleMs;
 };
 // 判定に使う「入力の古さ」。中身は上の rhythmInputAgeCompMs(今までどおり)。ここでは診断のために、戻し切れなかった分を覚えるだけ
 const rhythmInputAgeMs=(eventTimeStamp,nowPerfMs)=>{
@@ -2093,6 +2119,8 @@ const rhythmInputAgeMs=(eventTimeStamp,nowPerfMs)=>{
   // 診断(2026-11-11): 基準のそろった端末で、戻し切れなかった分(遅れ − 戻した分)を覚える。判定に使う値(comp)は変えない
   const lateAge=Number(nowPerfMs)-Number(eventTimeStamp);
   RHYTHM_TIMING_DIAG.lateExcess(lateAge>RHYTHM_INPUT_AGE_MAX_MS&&lateAge<2000&&rhythmInputAgeFloorMs<=RHYTHM_INPUT_AGE_BASE_ALIGNED_MS?lateAge-comp:0);
+  // 50〜80ms 遅れた入力(いまは合図の時刻まで戻している)。ふだんの遅れだけ戻したとしたら、との差を覚える(数えるだけ・2026-11-14)
+  RHYTHM_TIMING_DIAG.midExcess(lateAge>50&&lateAge<=RHYTHM_INPUT_AGE_MAX_MS&&rhythmInputAgeFloorMs<=RHYTHM_INPUT_AGE_BASE_ALIGNED_MS?lateAge-rhythmInputAgeTypicalMs():0);
   return comp;
 };
 // 【2026-10-11・社長「たまに、ちゃんと押しているのに MISS になる」】HOLD/SLIDE を離した合図(touchend など)の遅れ。
@@ -3663,6 +3691,10 @@ const RHYTHM_TOUCH_FIXES={
   releaseAgeWide:false,
   smoothSongClock:false,
   autoPauseOnHidden:true,
+  // lateStampTypical … 2026-11-14 社長が案A を選んで入れた(iPhoneだけ)。コマは来ていたのに 80ms を超えて古い時刻の入力と、別の指の合図の中で初めて見えた指は、
+  //                    合図の時刻を使わず、その端末のふだんの遅れ(rhythmInputAgeTypicalMs・上限50ms)だけ戻す。判定の窓・スコアの数え方は変えない。
+  //                    入れたあとの記録(stats.fixes に名前が入る)で「遅れた入力のずれ − ふだんのずれ」が ±15ms に入ったかを見る。外れていたら false へ戻す
+  lateStampTypical:true,
   allPlatforms:false,
 };
 // 標準でも iPhone 以外へ効かせる直し方(安全で、端末の系統に関係なく意味があるもの)
@@ -3671,6 +3703,19 @@ const RHYTHM_TOUCH_FIX_ANY_PLATFORM=Object.freeze({smoothSongClock:true,autoPaus
 // 値が無い名前は、上の表のとおり。保存はしない(記録そのものが端末に残っているので、毎回そこから決める)
 let rhythmTouchFixAuto={};
 const rhythmTouchFixAutoSet=value=>{rhythmTouchFixAuto=value&&typeof value==='object'?{...value}:{};};
+// 【2026-11-14】曲の時計の直し(smoothSongClock)を、その曲の中でも入れる。端末の記録(前の20曲)から決めるだけだと、音の出し方が変わった直後(イヤホンの付け外しなど)の数曲は、
+// 元の時計が止まりやすいのに直しが入らないまま始まる。その曲で元の時計を3秒ぶん(180コマ)読んで、止まったコマが基準(2%)以上なら、その場で入れる。
+// 入れたら曲の終わりまで入れたまま(次の曲は、また端末の記録から決め直す)。デバッグの上書きで切ってある端末では入れない。毎コマ呼ぶ(数を比べるだけ)
+const RHYTHM_LIVE_STALL_MIN_FRAMES=180;
+const rhythmSmoothClockLiveCheck=()=>{
+  if(rhythmTouchFixAuto.smoothSongClock===true)return false;
+  const s=RHYTHM_TIMING_DIAG.stallShare();
+  if(!(s.frames>=RHYTHM_LIVE_STALL_MIN_FRAMES)||!(s.share>=RHYTHM_AUTO_STALL_SHARE))return false;
+  if(rhythmTouchFixOverride().smoothSongClock===false)return false;
+  rhythmTouchFixAuto={...rhythmTouchFixAuto,smoothSongClock:true};
+  RHYTHM_TIMING_DIAG.meta({smoothLive:s.frames});
+  return true;
+};
 // 端末の直近の診断(mh_rhythm_touch_diag_v1)の行から、入れ切りを決める。足りない・壊れているときは何も決めない(=上の表のとおり)
 const RHYTHM_AUTO_MIN_PLAYS=3;
 const RHYTHM_AUTO_STALL_SHARE=.02;

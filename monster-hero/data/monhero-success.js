@@ -199,13 +199,14 @@
     shitsuke: { type: 'stay' }, gussuri: { type: 'stay' }, asobi: { type: 'stay' }, kuishinbo: { type: 'stay' },
     tsukisoi: { type: 'stay' }, genki: { type: 'stay' }, tairyoku: { type: 'stay' },
     // いるだけ型(大会・出来事の8つ・依頼③の2つ目)
-    //   shokin: 大会の賞金(保存は fame)+v%/kokoroe: 大会に勝ったときの能力ポイント +v%/ticket: 大会に勝ったとき v% で修行チケット +1/
+    //   shokin: 大会の賞金(保存は fame)+v%/kokoroe: 大会に勝ったときの能力ポイント +v%/ticket: 賞金ランクが1段上がるたびに v% で修行チケット +1/
     //   rivaldamashii: ライバルに勝ったときの全能力 +v%/ninki: 人気の上がり +v%/yobimizu: 編成の子との出来事 +v点/
     //   mejirushi: イッサ博士が来る率 1ターン +v点/joshu: イッサ博士の実験の成功 +v点(博士の上下の幅の外で足す)
     shokin: { type: 'stay' }, kokoroe: { type: 'stay' }, ticket: { type: 'stay' }, rivaldamashii: { type: 'stay' },
     ninki: { type: 'stay' }, yobimizu: { type: 'stay' }, mejirushi: { type: 'stay' }, joshu: { type: 'stay' },
   });
   const ASSIST_MAX = 4;
+  const ASSIST_MAX_V3 = 8;   // 第3版の表のとき1体8種類まで(社長 2026-11-14)
   const ASSIST_LV_MAX = 5;   // 持ち物の段の上限(第2版)。表が第1版のときも段4・5の持ち物は削らない(効き目は表の段数で頭打ち)
   const assistPointsOf = (power) => clamp(Math.floor(num(power) / 50), 20, 400);
 
@@ -256,6 +257,7 @@
       wind: { name: '風の森', stages: [['eva', 'hit'], ['wise', 'pow']] },
       star: { name: '星の湖', stages: [['wise', 'life'], ['eva', 'pow']] },
     }),
+    fixed: Object.freeze({ base: 8, pct: Object.freeze([0.03, 0.01, 0.005]), overlap: 0.5 }), // 決まった数値(2026-11-14 社長): 行き先の基礎 +8・得意 1位3%/2位1%/3位0.5%・重なりは 1/2 ずつ
     gain: 0.9,                 // 1段で2つの能力に「軽いトレーニング1回ぶん」× 0.9 ずつ(2段で4能力ぶん)
     hp: 30, stress: 8,         // 体力を多めに使う
     ticket0: 1,                // はじめのチケット。期ごとの回数は決めず、チケットの数だけ行ける(社長 2026-11-12)
@@ -302,6 +304,13 @@
     oil: { name: 'オイル', use: 'during', hp: 0.2 },                                 // 小さいオイル(体力 上限の20%。2026-11-13 社長)
     oilyoil: { name: 'オイリーオイル', use: 'during', hp: 0.4 },                     // 大きいオイル(体力 上限の40%。2026-11-13 社長)
     herb: { name: '薬草', use: 'during', stress: -20 },                          // 詰め合わせの中身(ストレス −20)
+    // 大会の賞品(2026-11-13 大会の第2版)。秘薬=そのターンの修行でその間合いの技を覚えやすい/実=そのターンの訓練でその能力が伸びやすい
+    elixir0: { name: '零の秘薬', use: 'during', elixir: 0 }, elixir1: { name: '近の秘薬', use: 'during', elixir: 1 },
+    elixir2: { name: '中の秘薬', use: 'during', elixir: 2 }, elixir3: { name: '遠の秘薬', use: 'during', elixir: 3 },
+    fruit_life: { name: 'いのちの実', use: 'during', fruit: 'life' }, fruit_pow: { name: 'ちからの実', use: 'during', fruit: 'pow' },
+    fruit_wise: { name: 'ちえの実', use: 'during', fruit: 'wise' }, fruit_hit: { name: 'ねらいの実', use: 'during', fruit: 'hit' },
+    fruit_eva: { name: 'かわしの実', use: 'during', fruit: 'eva' }, fruit_tough: { name: 'かたさの実', use: 'during', fruit: 'tough' },
+    stamina: { name: 'スタミナだんご', use: 'during', hpMax: 15 }, // ルーキーズ・クラウンの賞品: 使うと体力の最大値 +15(体力も同じだけ回復)
   });
   const GOOD = Object.freeze({
     eventMaker: { name: 'イベントメーカー', eventRate: 0.25 },              // 編成の子との出来事 +25%(50% → 75%。2026-11-13 社長)
@@ -367,8 +376,69 @@
   const CUP_COUNT = Object.freeze({ junior: 2, middle: 3, pro: 4, final: 4 });      // その期に並ぶ数(プロの 👑 は6月だけ)
   const CUP_PRIZE = Object.freeze({ 1: 1250, 2: 2500, 3: 3500, 4: 5000 });       // 優勝の賞金(ジュニア基準・G)
   const PERIOD_PRIZE = Object.freeze({ junior: 1, middle: 1.2, pro: 1.5, final: 1.5 }); // ★ジュニア 1,250・★★ミドル 3,000・★★★プロ 5,250・👑 7,500
-  const CUP_REWARD = Object.freeze({ pts: { 3: 10, 4: 20 }, pop: { 2: 2, 3: 4, 4: 8 }, statUp: { 2: 6, 3: 12 }, crownAll: 4 });
+  const CUP_REWARD = Object.freeze({ pts: { 3: 10, 4: 20 }, pop: { 2: 2, 3: 4, 4: 8 }, statUp: { 1: 4, 2: 8, 3: 12 }, crownAll: 4 });
   const CUP_NEED = Object.freeze({ stat: { 1: 150, 2: 300, 3: 500 }, fameNormal3: 9500, fameCrown: 18000 }); // 賞金の合計。桁を上げる前と同じ「その期の大会をあと何勝」で届く値(★★ 約1勝・★★★ 約1.5勝)
+  // ---- 大会の第2版(2026-11-13 社長: 参考画像4・参考動画4から一式。名前・ロゴ・絵はうちの物) ----
+  //   ふつうの月の並び(YEAR)に、決まった期・月の大会を足す。ex:true の大会は賞金・強さ・出る条件・ごほうびを自分で持つ
+  //   str … 相手の強さ(その月の基準 × str)/prize … 優勝の賞金(G)/tk … 修行チケットを決める前の桁(TICKET_BASE と同じ)
+  //   need … { rank: 賞金の段 } { stat: 能力の値 } { won: 'sys:星' }(この育成で優勝)/rw … 勝ったときのごほうび
+  //   grade … 札の格の色(bronze・silver・gold・green・four・rainbow)
+  // 賞金ランク(2026-11-14 社長「このまま作る」・参考の賞金ランクのピラミッド10段)。下から ルーキー〜ヒーロー。
+  //   条件: 1 デビュー戦に出る/2 大会で1勝/3〜10 これまでの賞金の合計。段が1つ上がるたびに修行チケット1枚(チケット運で もう1枚)
+  //   step は 1〜10(0 はまだデビュー戦の前)。四大大会の出る条件(need.rank)もこの段
+  const FAME_RANK = Object.freeze([
+    { name: 'ルーキー', cond: 'debut' }, { name: 'はじめの一勝', cond: 'win' }, { name: '一人前', min: 1500 }, { name: 'うできき', min: 3000 }, { name: '期待の星', min: 5000 },
+    { name: 'はなまる', min: 8000 }, { name: 'エース', min: 14000 }, { name: 'スター', min: 22000 }, { name: 'チャンピオン', min: 34000 }, { name: 'ヒーロー', min: 50000 },
+  ].map(Object.freeze));
+  const FAME_RANK_MAX = FAME_RANK.length; // 10
+  const rankStepOf = (s) => { // いまの段(0〜10)
+    const lg = (s && s.log) || {}; if (num(lg.wins) + num(lg.losses) <= 0) return 0;
+    if (num(lg.wins) < 1) return 1; let r = 2;
+    for (let i = 2; i < FAME_RANK_MAX; i++) { if (num(s.fameTotal) >= FAME_RANK[i].min) r = i + 1; else break; }
+    return r;
+  };
+  const rankNameOf = (step) => (step >= 1 && step <= FAME_RANK_MAX ? FAME_RANK[step - 1].name : 'デビュー前');
+  const rankNeedG = (step) => num((FAME_RANK[step - 1] || {}).min);
+  // 段のほかに、優勝の獲得物に付く修行チケット(期末の大会・頂への道の各戦・★★★以上・四大大会)
+  const WIN_TICKET = Object.freeze({ forced: Object.freeze(['junior', 'middle', 'pro']), cupStar: 3, add: 1 });
+  const DIST_JA = ['零', '近', '中', '遠'];
+  const STAT_JA = Object.freeze({ life: 'ライフ', pow: 'ちから', wise: 'かしこさ', hit: '命中', eva: '回避', tough: '丈夫さ' });
+  const SEL_NAME = Object.freeze({ life: 'ライフスター選抜', pow: 'パワースター選抜', wise: 'スマートスター選抜', hit: 'ヒットスター選抜', eva: 'ステップスター選抜', tough: 'ガードスター選抜' });
+  const MEM_NAME = Object.freeze({ life: '命の灯記念', pow: '剛腕記念', wise: '叡智記念', hit: '一矢記念', eva: '疾風記念', tough: '鉄壁記念' });
+  const GEM = Object.freeze({ attacker: ['ルビー記念', 2], tank: ['サファイア記念', 4], supporter: ['エメラルド記念', 6], healer: ['トパーズ記念', 8], shadow: ['アメジスト記念', 10] });
+  // 季節の賞: 同じ月に3つ(同じ賞金・金の格)。名前と賞品(上がる能力)だけ違う(社長「名前だけ別で中身が同じ大会は賞品だけ同等の別物に」)
+  const SEASON_PRIZE = Object.freeze({ 3: ['春', ['life', 'hit', 'eva']], 6: ['夏', ['pow', 'tough', 'life']], 9: ['秋', ['wise', 'hit', 'eva']], 12: ['冬', ['tough', 'pow', 'wise']] });
+  const SEASON_NAMES = ['陽光賞', '月光賞', '星光賞'];
+  const EX_CUPS = Object.freeze((() => {
+    const L = [];
+    // ジュニア期の大一番(超高難度・1つ): 予想「勝ち目なし…」
+    L.push({ sys: 'derby', name: 'ルーキーズ・クラウン', p: 'junior', m: 10, star: 3, str: 1.5, prize: 8000, tk: 1500, grade: 'rainbow', hard: true, rw: { all: 3, pts: 15, pop: 6, title: '若き挑戦者', bag: { stamina: 1 } } });
+    // 四大大会(ミドル1月・ミドル5月・プロ8月・プロ11月)。4つ全部勝つと「四大大会制覇」
+    [['four1', '暁の大杯', 'middle', 1, 6], ['four2', '蒼天杯', 'middle', 5, 6], ['four3', '獅子王杯', 'pro', 8, 7], ['four4', '天頂杯', 'pro', 11, 7]].forEach(([sys, name, p, m, rank], k) => {
+      L.push({ sys, name, p, m, star: 4, str: 1.35, prize: 12500, tk: 1500, grade: 'four', four: true, hard: k === 3, need: { rank }, rw: { all: 5, pts: 20, pop: 8, fruitTop: 1, bag: { oilyoil: 1 } } });
+    });
+    // 間合いの2段: ミドル1月の間合いトーナメント → プロ7月の間合いチャンピオンズ。賞品はその間合いの秘薬
+    [0, 1, 2, 3].forEach((d) => {
+      L.push({ sys: `distT${d}`, name: `${DIST_JA[d]}の間合いトーナメント`, p: 'middle', m: 1, star: 2, str: STAR_MULT[2], prize: 3500, tk: 250, grade: 'silver', dist: d, rw: { pts: 10, bag: { [`elixir${d}`]: 1 } } });
+      L.push({ sys: `distC${d}`, name: `${DIST_JA[d]}チャンピオンズ`, p: 'pro', m: 7, star: 3, str: STAR_MULT[3], prize: 7000, tk: 600, grade: 'gold', dist: d, need: { won: `distT${d}:2` }, rw: { pts: 15, bag: { [`elixir${d}`]: 2 }, apt: d } });
+    });
+    // 能力の2段: ミドル6月の選抜(その能力が500以上)→ プロ12月の記念(同じ能力の選抜に優勝)
+    KEYS.forEach((k) => {
+      L.push({ sys: `sel_${k}`, name: SEL_NAME[k], p: 'middle', m: 6, star: 2, str: STAR_MULT[2], prize: 4000, tk: 250, grade: 'green', stat: k, need: { stat: 500 }, rw: { stat: { [k]: 8 }, bag: { [`fruit_${k}`]: 1 } } });
+      L.push({ sys: `mem_${k}`, name: MEM_NAME[k], p: 'pro', m: 12, star: 3, str: STAR_MULT[3], prize: 7500, tk: 600, grade: 'gold', stat: k, need: { won: `sel_${k}:2` }, rw: { stat: { [k]: 15 }, loy: 5, bag: { [`fruit_${k}`]: 2 } } });
+    });
+    // 宝石の記念(タイプの大会の上の段・プロ期): ミドルの同じタイプの大会に優勝で出られる
+    Object.entries(GEM).forEach(([t, [name, m]]) => L.push({ sys: `gem_${t}`, name, p: 'pro', m, star: 3, str: STAR_MULT[3], prize: 6750, tk: 600, grade: 'gold', type: t, need: { won: `${t}:2` }, rw: { all: 3, pts: 10, elixirTop: 1 } }));
+    // 季節の賞(ミドル・プロの 3・6・9・12月に3つずつ。ジュニアは今までの四季の大会1つのまま)
+    ['middle', 'pro'].forEach((p) => Object.entries(SEASON_PRIZE).forEach(([m, [ja, stats]]) => stats.forEach((k, i) => {
+      L.push({ sys: `ssn${m}_${i}`, name: `${SEASON_NAMES[i]}(${ja})`, p, m: Number(m), star: CUP_STAR[p], str: STAR_MULT[CUP_STAR[p]], prize: p === 'pro' ? 7000 : 5500, tk: p === 'pro' ? 600 : 250, grade: 'gold', season: true, rw: { stat: { [k]: 8 }, loy: 3, bag: { [`fruit_${k}`]: 1 } } });
+    })));
+    return L.map(Object.freeze);
+  })());
+  const EX_BY_SYS = Object.freeze(Object.fromEntries(EX_CUPS.map((c) => [c.sys, c])));
+  const FOUR_DONE = Object.freeze({ all: 15, pts: 40, pop: 15, title: '四大の覇者' }); // 四大大会制覇(一度きり)
+  const ELIXIR_ADD = 20; // 秘薬: 使ったターンの修行で、その間合いの技の覚える率 +20
+  const FRUIT_MULT = 1.5; // 実: 使ったターンの訓練で、その能力の伸び ×1.5
   // シナリオの大会(TOURNAMENT §4b・助手ごとに1〜2つ。並びの月に1つ足す)。sys は 'sc' + 助手
   const SC_CUPS = Object.freeze({
     mua: [{ p: 'junior', m: 8, star: 2 }, { p: 'middle', m: 8, star: 2 }],
@@ -420,9 +490,21 @@
     let EV = null;
     const evMod = (s, k, a) => (EV ? EV.mod(s, k, a) : (k === 'stress' || k === 'inj' ? 1 : 0));
     // アシスト能力: 第2版の表があれば、芯が効き目を持つ種類を第2版の段と数字にする(無い・壊れていれば第1版)。新しい種類は効き目を作るまで出さない
+    const AT = deps && deps.assist && deps.assist.BY_ID && typeof deps.assist.BY_ID === 'object' ? deps.assist : null;
+    // 第3版の表(2026-11-14 社長「%は細かくポイントで」): 段の代わりに「目盛り」。持ち物の lv は目盛り(1〜その種類の max)
+    const AV3 = !!(AT && AT.VERSION === 3 && typeof AT.fromSaved === 'function');
     const ASSISTS = (() => {
-      const T = deps && deps.assist && deps.assist.BY_ID && typeof deps.assist.BY_ID === 'object' ? deps.assist.BY_ID : null;
+      const T = AT ? AT.BY_ID : null;
       if (!T) return ASSISTS_V1;
+      if (AV3) { // 表の種類すべて。試合型だけは第1版の数字のまま(ひらめきは社長の保留中・2026-11-12)
+        const out = {};
+        Object.values(T).forEach((a) => {
+          if (!a || typeof a.id !== 'string' || !Array.isArray(a.v) || !Array.isArray(a.cost) || a.v.length !== a.cost.length || !a.v.every(Number.isFinite)) return;
+          if (a.type === 'battle') { if (ASSISTS_V1[a.id]) out[a.id] = ASSISTS_V1[a.id]; return; }
+          out[a.id] = Object.freeze({ name: a.name, type: a.type, v: a.v.slice(), cost: a.cost.slice(), max: a.v.length, ...(a.stat ? { stat: a.stat } : {}), ...(Array.isArray(a.start) ? { start: a.start.slice() } : {}) });
+        });
+        return Object.freeze(out);
+      }
       const nums = (x) => Array.isArray(x) && x.length >= 1 && x.length <= ASSIST_LV_MAX && x.every(Number.isFinite);
       const out = {};
       Object.keys(ASSISTS_V1).forEach((id) => {
@@ -498,6 +580,8 @@
       const out = []; const seen = {};
       for (const a of Array.isArray(list) ? list : []) {
         const id = a && typeof a === 'object' ? a.id : null; if (!ASSISTS[id] || seen[id]) continue;
+        // 第3版: 古い子の段(n の無い lv)は表の fromSaved で目盛りへ読み替える(効き目は変わらない)。中では lv = 目盛り・n も持つ
+        if (AV3) { const n = AT.fromSaved(a); if (n > 0) { out.push({ id, lv: n, n }); seen[id] = true; } if (out.length >= ASSIST_MAX_V3) break; continue; }
         out.push({ id, lv: clamp(Math.round(num(a.lv, 1)), 1, ASSIST_LV_MAX) }); seen[id] = true; if (out.length >= ASSIST_MAX) break;
       }
       return out;
@@ -523,8 +607,9 @@
       const lvOf = (id) => { const a = assists.find(x => x.id === id); return a ? a.lv : 0; };
       const bonus = {}; KEYS.forEach(k => { const i = top.indexOf(k); bonus[k] = i < 0 ? 0 : r2(stats[k] / 40 * POS_COEF[i] + (base ? 0 : RANK_ADD[rank])); });
       const kake = lvOf('kaketsuke'); const fav = Math.min(GATHER.favCap, GATHER.fav + (kake ? aOf('kaketsuke', 'v', kake) / 100 : 0));
-      const hn = lvOf('hitonatsu'); const sh = lvOf('shitashi');
+      const hn = lvOf('hitonatsu'); const sh = lvOf('shitashi'); const so = lvOf('shutsugen');
       return {
+        ...(so ? { none: num(aOf('shutsugen', 'v', so)) } : {}),
         ...(pv2 ? { pv: 2 } : {}), kind: base ? 'base' : 'raised', species: sp, name: typeof o.name === 'string' ? o.name.slice(0, 24) : sp, stats, loy, pop, lv, masteries, rank, power, top, assists, bonus, fav, techs,
         tag: base ? TAG_POWER.base : TAG_POWER[rank], bond0: clamp((base ? BOND_START.base : BOND_START[rank]) + (hn ? aOf('hitonatsu', 'start', hn) : 0) + (sh ? num(aOf('shitashi', 'v', sh)) : 0), 0, BOND.max),
         startAdd: { stat: top[0], v: Math.floor(stats[top[0]] / START_STAT_DIV) },
@@ -542,6 +627,17 @@
     };
     const stayLv = (team, id) => team.reduce((a, m) => Math.max(a, assistLv(m, id)), 0); // いるだけ型は編成でいちばん高い段の1つだけ
     const stayNum = (s, id) => { const lv = stayLv(s.team, id); return lv ? num(aOf(id, 'v', lv)) : 0; }; // その効き目の数(無ければ 0)
+    // ---- 第3版で足したアシスト効果(2026-11-14 社長「参考で使えそうなのは全部」・ASSIST-V3.md) ----
+    const withSum = (s, card, id) => { let v = 0; if (card) card.members.forEach(i => { const lv = assistLv(s.team[i], id); if (lv) v += num(aOf(id, 'v', lv)); }); return v; }; // いっしょ型を足す
+    const withMax = (s, card, id) => { let v = 0; if (card) card.members.forEach(i => { const lv = assistLv(s.team[i], id); if (lv) v = Math.max(v, num(aOf(id, 'v', lv))); }); return v; };
+    const FAME_FULL = 18000; // 「励」「賞金の勢い」が満タンになる賞金の合計(ヒーローズ・クラウンに出られる額 CUP_NEED.fameCrown)
+    const fameFrac = (s) => clamp(num(s.fameTotal) / FAME_FULL, 0, 1);
+    const SEASON_OF = Object.freeze({ haru: [3, 4, 5], natsu: [6, 7, 8], aki: [9, 10, 11], fuyu: [12, 1, 2] });
+    // その子のいっしょ型の効き(能力の補正を除く)。助手・継承で、来ていない子の分を足すときに使う
+    const assistPart = (m, k, loy) => r2(memberEffect(m, k, loy) - (m.bonus[k] || 0));
+    // トレーニングLvの上乗せ: トレレベルアップ(来た子のいちばん大きい1つ)+ 逆境トレレベルアップ(ピークの外)
+    const trainLvAdd = (s, card) => (card && card.kind === 'train' ? withMax(s, card, 'trainlv') + (withMax(s, card, 'gyakkyo') && peakInfo(s).state !== 'in' ? 1 : 0) : 0);
+    const superMaxOf = (s) => SHUGYO.superMax + (s && Array.isArray(s.team) ? stayNum(s, 'chokyo') : 0);
 
     // ---- はじめる ----
     const newRun = (o) => {
@@ -566,14 +662,16 @@
       carry.forEach(k => { const it = ITEMS[k]; if (it.good) good[it.good] = true; if (it.hpMax) hpMax = Math.min(HP_MAX_CAP, hpMax + it.hpMax); if (it.issaForce) issaForce = true; });
       const ty = stayLv(team, 'tairyoku'); if (ty) hpMax = Math.min(HP_MAX_CAP, hpMax + num(aOf('tairyoku', 'v', ty))); // 💪体力自慢
       const hn = stayLv(team, 'hitonatsu');
+      const stayT = (id) => { const lv = stayLv(team, id); return lv ? num(aOf(id, 'v', lv)) : 0; };
+      const sk = stayT('shoki'); if (sk) KEYS.forEach(k => { stats[k] = clamp(stats[k] + sk, 0, STAT_MAX); }); // 🌅初期ステータスアップ
       return {
         v: VERSION, id, species, aid, type: typeIdx, turn: 1, stats, hpMax, hp: hpMax, stress: 0, carry, bag, good, issaForce, issaSure: false, itemTurn: 0,
         ama: LOYAL.start[0], fear: LOYAL.start[1], pol: clamp(Math.round(num(src.pol)), -3, 3), pp: 0, pop: 0, pts: 0, ptsLost: 0, lv: 1, xp: 0,
         team, bond: team.map(m => m.bond0), story: team.map(() => 0), aidBond: clamp(aidLv * BOND.aidPerLv + (hn ? aOf('hitonatsu', 'start', hn) : 0), 0, BOND.max),
-        techs: startTechsRun(species), mastery: Object.fromEntries(startTechsRun(species).map(t => [t, 0])), masterySpent: {}, tickets: SHUGYO.ticket0, shugyoUsed: {}, pity: 0, techMiss: {}, superLeft: SHUGYO.superMax, fame: 0, fameTotal: 0, fameV: FAME_V, mealReady: false, trainXp: {}, aidLv, astory: { ep: 0, path: null, done: false }, rivalMet: null, ending: null, aptUp: [0, 0, 0, 0], aptLog: { quest: 0, cup: 0, event: 0 }, aptBase: aptBaseNorm(src.aptBase), awake: 0, awakeTurn: 0, aptAwake: [0, 0, 0, 0], omen: null,
+        techs: startTechsRun(species), mastery: Object.fromEntries(startTechsRun(species).map(t => [t, 0])), masterySpent: {}, tickets: SHUGYO.ticket0 + stayT('ticket0'), shugyoUsed: {}, pity: 0, techMiss: {}, superLeft: SHUGYO.superMax + stayT('chokyo'), fame: 0, fameTotal: 0, fameV: FAME_V, fourDone: false, elixir: null, fruit: null, mealReady: false, trainXp: {}, aidLv, astory: { ep: 0, path: null, done: false }, rivalMet: null, ending: null, aptUp: [0, 0, 0, 0], aptLog: { quest: 0, cup: 0, event: 0 }, aptBase: aptBaseNorm(src.aptBase), awake: 0, awakeTurn: 0, aptAwake: [0, 0, 0, 0], omen: null,
         items: { sand: clamp(Math.round(num(src.items && src.items.sand)), 0, REMATCH.carry), rainbow: clamp(Math.round(num(src.items && src.items.rainbow)), 0, REMATCH.carry) }, rematchUsed: 0, wonBefore: Array.isArray(src.wonBefore) ? src.wonBefore.filter(k => typeof k === 'string').slice(0, 64) : [], wonNow: [], rivals: (Array.isArray(src.rivals) ? src.rivals : []).filter(RIVALS_OK0).slice(0, 8).map(r => ({ name: String(r.name || '').slice(0, 24), breeder: typeof r.breeder === 'string' ? r.breeder.slice(0, 24) : null, kind: r.kind === 'friend' ? 'friend' : 'aid', species: r.species, stats: normStats(r.stats, r.species) })),
-        cond: null, yosu: {}, hirameki: false, idle: 0, issaMet: 0, issaWon: 0, issaDone: false,
-        debutLoss: 0, debutWon: false, crowns: 0, titles: [], battle: null, over: null, last: null, acted: false, reacted: false,
+        cond: null, yosu: {}, hirameki: false, shBoost: false, idle: 0, issaMet: 0, issaWon: 0, issaDone: false,
+        debutLoss: 0, debutWon: false, fameRank: 0, crowns: 0, titles: [], battle: null, over: null, last: null, acted: false, reacted: false,
         log: { train: 0, great: 0, ok: 0, fail: 0, sab: 0, rest: 0, play: 0, clinic: 0, cond: 0, events: 0, story: 0, lottery: 0, shugyo: 0, learned: 0, taught: 0, tagTurns: [0, 0, 0, 0], wins: 0, losses: 0, issa: [] },
       };
     };
@@ -585,23 +683,34 @@
       const cards = {}; for (const k of KEYS) cards[cardKey('train', k)] = { kind: 'train', stat: k, members: [], aid: false };
       s.team.forEach((m, i) => {
         const x = rng(); const kind = 'train'; rng(); const y = rng(); // 2つ目の乱数は前の形(軽い/重い)の名残。並びを変えないため引くだけ
-        const favUnit = m.fav / (GATHER.top[0] + GATHER.top[1] + GATHER.top[2]); const restUnit = (1 - m.fav) / (GATHER.else + GATHER.none);
+        const favUnit = m.fav / (GATHER.top[0] + GATHER.top[1] + GATHER.top[2]); const restUnit = (1 - m.fav) / (GATHER.else + Math.max(0, GATHER.none - num(m.none))); // 🚪トレーニング出現率アップ
         let a = 0; let stat = null;
         for (let j = 0; j < 3 && !stat; j++) { a += GATHER.top[j] * favUnit; if (x < a) stat = m.top[j]; }
         if (!stat) { a += GATHER.else * restUnit; if (x < a) { const others = KEYS.filter(k => !m.top.includes(k)); stat = others[Math.floor(y * others.length)]; } }
         if (!stat && evMod(s, 'iki', i) && rngOf(s.id, s.turn, 'iki', i)() < evMod(s, 'iki', i)) stat = m.top[0]; // 🤝息ぴったり(並びを変えない別の乱数)
         if (stat) cards[cardKey(kind, stat)].members.push(i);
       });
-      if (rng() < GATHER.aidRate) { const all = Object.keys(cards); cards[all[Math.floor(rng() * all.length)]].aid = true; }
+      if (rng() < GATHER.aidRate + stayNum(s, 'aidcome') / 100) { const all = Object.keys(cards); cards[all[Math.floor(rng() * all.length)]].aid = true; } // 🙋助手の出現率アップ
       return cards;
     };
     // その札の「足し算」と「タッグ」(ASSIST §4)
     const cardMult = (s, card) => {
       const loy = loyalOf(s); let add = 0; let tag = 0; const tags = [];
       card.members.forEach(i => { const m = s.team[i]; add += (memberEffect(m, card.stat, loy) + evMod(s, 'boost', i)) / 100; if (s.bond[i] >= BOND.tag) { const tp = assistLv(m, 'tagpow'); tag += (m.tag + (tp ? num(aOf('tagpow', 'v', tp)) : 0)) / 100; tags.push(i); } });
-      if (card.members.length >= GATHER.groupMin) add += GATHER.groupAdd;
+      if (card.members.length >= GATHER.groupMin) add += (GATHER.groupAdd * 100 + withSum(s, card, 'ninzu')) / 100; // 👥トレ人数効果アップ
+      if (card.kind === 'train') {
+        const hg = withSum(s, card, 'hagemi'); if (hg) add += hg * fameFrac(s) / 100; // 🏅トレ効果アップ・励
+        const mo = monthOf(s.turn); Object.keys(SEASON_OF).forEach(id => { if (SEASON_OF[id].includes(mo)) add += withSum(s, card, id) / 100; }); // 🌸☀🍁⛄季節
+        if (card.aid) {
+          add += stayNum(s, 'aidtrain') / 100; // 🏋助手・鍛錬
+          // 🔗助手・継承: 来ていない子のうち、いっしょ型がいちばん大きい1体の分
+          let best = 0; s.team.forEach((m, i) => { if (!card.members.includes(i) && assistLv(m, 'aidkeisho')) best = Math.max(best, assistPart(m, card.stat, loy)); });
+          add += best / 100;
+        }
+      }
       if (card.aid && s.aidBond >= BOND.tag) { tag += TAG_POWER.aid / 100; tags.push('aid'); }
-      return { add: r2(add), tag: r2(tag), tags, mult: r2((1 + add) * (1 + tag)) };
+      const loyM = card.aid && card.kind === 'train' ? 1 + (loyalMult(loy) - 1) * (1 + stayNum(s, 'aidtrust') / 100) : loyalMult(loy); // 🤲助手・信頼
+      return { add: r2(add), tag: r2(tag), tags, mult: r2((1 + add) * (1 + tag)), loyM: r2(loyM) };
     };
 
     // ---- 確率 ----
@@ -622,6 +731,12 @@
     const greatRateOf = (s, card) => {
       let g = RATE.great + (loyalOf(s) >= 80 ? RATE.greatLoyal80 : 0) + (s.hirameki ? 0.10 : 0) + evMod(s, 'great');
       if (card) card.members.forEach(i => { const lv = assistLv(s.team[i], 'hirameki'); if (lv) g += aOf('hirameki', 'v', lv) / 100; });
+      if (card) {
+        g += withSum(s, card, 'ninkigreat') * clamp(num(s.pop), 0, 100) / 100 / 100; // 📣人気度効果大成功アップ
+        g += withSum(s, card, 'challenge') * (Array.isArray(s.titles) ? s.titles.length : 0) / 100; // 🎖チャレンジ・幸運
+        g += stayNum(s, 'ikioi') * fameFrac(s) / 100; // 💹賞金の勢い
+        if (card.aid) g += stayNum(s, 'aidluck') / 100; // 🌈助手・幸運
+      }
       return clamp(g, 0, 0.6);
     };
 
@@ -663,17 +778,30 @@
       const inSeason = course && SHUGYO.season[course] && SHUGYO.season[course].includes(monthOf(s.turn)) ? 1 : 0;
       return r2(clamp(Q.stat * clamp(power / Q.powerFull, 0, 1) + Q.loyal * clamp(loyalOf(s) / 100, 0, 1) + Q.pop * clamp(num(s.pop) / 100, 0, 1) + Q.season * inSeason, 0, 1));
     };
+    const fruitMul = (s, k) => (s.fruit && s.fruit.turn === s.turn && s.fruit.stat === k ? FRUIT_MULT : 1);
+    const elixirOn = (s, t) => Boolean(s.elixir && s.elixir.turn === s.turn && Array.isArray(t && t.dist) && t.dist.includes(s.elixir.d));
     const techMissOf = (s, id) => clamp(Math.round(num(s.techMiss && s.techMiss[id])), 0, 20);
     // 覚える率(0〜0.99)。o.course … 行き先 / o.super … 超修行
     const techRate = (s, t, o) => {
       const opt = o || {}; const k = techRank(t) - 1;
-      const v = SHUGYO.rank.base[k] + shugyoQ(s, opt.course) * SHUGYO.rank.spread[k] + techMissOf(s, t.id) * SHUGYO.miss + (opt.super ? SHUGYO.superAdd : 0)
-        + (s.aid === 'dra' ? SHUGYO.draAdd : 0) + (s.good && s.good.shugyoGood ? GOOD.shugyoGood.techRate : 0) + evMod(s, 'tech') * 100;
+      const v = SHUGYO.rank.base[k] + shugyoQ(s, opt.course) * SHUGYO.rank.spread[k] + techMissOf(s, t.id) * SHUGYO.miss + (opt.super ? SHUGYO.superAdd : 0) + (elixirOn(s, t) ? ELIXIR_ADD : 0)
+        + (s.aid === 'dra' ? SHUGYO.draAdd : 0) + (s.good && s.good.shugyoGood ? GOOD.shugyoGood.techRate : 0) + evMod(s, 'tech') * 100 + (Array.isArray(s.team) ? stayNum(s, 'waza') : 0); // 📖技習得率アップ
       return clamp(v, 0, SHUGYO.rateTop) / 100;
     };
-    const superLeft = (s) => clamp(Math.round(num(s && s.superLeft, SHUGYO.superMax)), 0, SHUGYO.superMax);
+    const superLeft = (s) => clamp(Math.round(num(s && s.superLeft, superMaxOf(s))), 0, superMaxOf(s)); // 🌋超修行アップで回数が増える
     const learnable = (s, course) => techsOf(s.species).filter(t => canLearn(s, t)).map(t => ({ id: t.id, name: t.name, role: t.role, power: t.power, rank: techRank(t), miss: techMissOf(s, t.id), rate: r2(techRate(s, t, { course })), superRate: r2(techRate(s, t, { course, super: true })) }));
     const learnTech = (s, id) => { s.techs.push(id); s.mastery[id] = 0; };
+    // 修行で上がる決まった数値(①行き先の基礎 + ②編成の得意。③の倍率はかける前)。画面の見通しにも使う
+    const shugyoGainOf = (s, course) => {
+      const F = SHUGYO.fixed; const o = Object.fromEntries(KEYS.map(k => [k, 0]));
+      ((SHUGYO.courses[course] || SHUGYO.courses.fire).stages || []).forEach(pair => pair.forEach(k => { o[k] += F.base; }));
+      KEYS.forEach(k => {
+        const c = (s.team || []).map(m => { const i = (m && Array.isArray(m.top) ? m.top : []).indexOf(k); return i < 0 || !m.stats ? 0 : num(m.stats[k]) * (F.pct[i] || 0); }).filter(v => v > 0).sort((x, y) => y - x);
+        let w = 1; c.forEach(v => { o[k] += v * w; w *= F.overlap; });
+      });
+      KEYS.forEach(k => { o[k] = Math.round(o[k] * 10) / 10; });
+      return o;
+    };
     const shugyoLeft = (s) => Math.max(0, num(s.tickets));
     // 連続イベントの3話「受け継ぐもの」: その編成の子が持つ技を伝授する。育てる子の種がその技を持てないときは、
     // 育てる子の種の「同じ役割(小技・大技…)」の技を覚える。それも無ければ熟練 +10 と能力 中+
@@ -700,7 +828,12 @@
     };
 
     // ---- 伸び(ASSIST §4 の1本の式) ----
-    const ageOf = (s) => C.ageMult(s.type, (s.turn - 1) / TOTAL_TURNS);
+    const ageOf = (s) => {
+      const a = C.ageMult(s.type, (s.turn - 1) / TOTAL_TURNS);
+      const pk = s && Array.isArray(s.team) ? stayNum(s, 'peak') : 0; if (!pk) return a; // 📈ピークターンアップ: ピークのあとも pk ターン、ピークの終わりの伸び
+      const T = peakTurnsOf(s); if (!T.length) return a; const to = T[T.length - 1];
+      return s.turn > to && s.turn <= to + pk ? Math.max(a, C.ageMult(s.type, (to - 1) / TOTAL_TURNS)) : a;
+    };
     const unitOf = (s, k) => BASE.light * aptMult(s.species, k) * ageOf(s); // 「軽いトレーニング1回ぶん」
     const addStat = (s, k, v) => { s.stats[k] = clamp(Math.round(s.stats[k] + v), 0, STAT_MAX); };
     const addLoyal = (s, ama, fear) => {
@@ -784,18 +917,21 @@
         s.hirameki = false;
         const R = RESULTS[res];
         const pol = C.policyOf(s.pol);
-        const ck = cardKey(kind, stat); const tlv = trainLvOf(s.trainXp[ck]);
-        const mult = BASE.light * (1 + (s.good && s.good.trainGood ? GOOD.trainGood.train : 0)) * TRAIN_LV.mult[tlv - 1] * pol.gain * ageOf(s) * R.mult * (1 + card.add) * (1 + card.tag) * loyalMult(loyalOf(s));
+        const ck = cardKey(kind, stat); const tlv = trainLvOf(s.trainXp[ck]); const tlvE = Math.min(TRAIN_LV.max, tlv + trainLvAdd(s, card)); // 📶トレレベルアップ
+        const mult = BASE.light * (1 + (s.good && s.good.trainGood ? GOOD.trainGood.train : 0)) * TRAIN_LV.mult[tlvE - 1] * pol.gain * ageOf(s) * R.mult * (1 + card.add) * (1 + card.tag) * (card.loyM || loyalMult(loyalOf(s)));
         s.trainXp[ck] = num(s.trainXp[ck]) + 1; out.trainLv = trainLvOf(s.trainXp[ck]); out.lvUp = out.trainLv > tlv;
         const combo = (TRAIN_COMBO[s.aid] || TRAIN_COMBO.mua)[stat];
         const shares = [1, BASE.sub[0], BASE.sub[1]];
         const gains = {};
-        [stat, combo[0], combo[1]].forEach((k, j) => { const g = mult * shares[j] * aptMult(s.species, k); gains[k] = (gains[k] || 0) + g; });
+        [stat, combo[0], combo[1]].forEach((k, j) => { const g = mult * shares[j] * aptMult(s.species, k) * fruitMul(s, k); gains[k] = (gains[k] || 0) + g; });
         const before = { ...s.stats };
         Object.entries(gains).forEach(([k, g]) => addStat(s, k, g));
         let it = 0; card.members.forEach(i => { const lv = assistLv(s.team[i], 'itawari'); if (lv) it += aOf('itawari', 'v', lv) / 100; });
         const hpCost = BASE.hp * R.hp * (1 - Math.min(0.6, it)) * (s.aid === 'kiki' ? 0.85 : 1); // きき: トレーニングの疲れ −15%
         s.hp = clamp(Math.round(s.hp - hpCost), 0, s.hpMax);
+        const kf = withSum(s, card, 'kaifuku'); if (kf && res !== 'sab') s.hp = clamp(Math.round(s.hp + kf), 0, s.hpMax); // 💧トレ後回復効果アップ
+        const ts = withMax(s, card, 'tsuika'); // ➕追加トレボーナス(別の乱数で並びを変えない)
+        if (ts && res !== 'sab' && res !== 'fail') { const tr = rngOf(s.id, s.turn, 'tsuika'); if (tr() < ts / 100) { const k = KEYS[Math.floor(tr() * KEYS.length)]; const g = 5 + Math.floor(tr() * 16); const b0 = s.stats[k]; addStat(s, k, g); out.tsuika = { stat: k, v: s.stats[k] - b0 }; } }
         const stUp = BASE.stress * pol.stress + R.stress;
         addStress(s, stUp * (EV && stUp > 0 ? EV.mod(s, 'stress') : 1) * (stUp > 0 ? 1 - cutOf(s, card, 'kibarashi') : 1)); // 🎵ごきげん: 増えが半分/🎈気晴らし: 増えを減らす
         card.members.forEach(i => { const nk = assistLv(s.team[i], 'nakayoshi'); addBond(s, i, BOND.train + (nk ? num(aOf('nakayoshi', 'v', nk)) : 0)); }); if (card.aid) addBond(s, 'aid', BOND.train);
@@ -826,10 +962,13 @@
         const rates = want.map(t => techRate(s, t, { course, super: sup }));
         if (sup) s.superLeft = superLeft(s) - 1;
         s.tickets -= sup ? SHUGYO.superTickets : 1; s.shugyoUsed[pk] = num(s.shugyoUsed[pk]) + 1;
-        const pS = sabRateOf(s); const pF = failRateOf(s, null); const pG = greatRateOf(s, null);
-        const x = rng(); const res = x < pS ? 'sab' : x < pS + pF ? 'fail' : x < pS + pF + pG ? 'great' : 'ok';
-        const R = RESULTS[res]; const pol = C.policyOf(s.pol);
+        // 2026-11-14 社長: 修行には成功・大成功・失敗・サボりはない(確率は技を覚えるのと間合いの適性だけ)
+        const res = 'ok'; const R = RESULTS.ok; const pol = C.policyOf(s.pol);
+        // ⚔修行効果アップ: 修行の上がりの合計の最後にかける倍率 ×(1 + v%)(窓口 2026-11-14)
         const sl = stayLv(s.team, 'shugyo'); const boost = 1 + (sl ? aOf('shugyo', 'v', sl) / 100 : 0);
+        // 📚技習得効果アップ(覚えた技1つにつき)・🔮修行チャンスの「修行の気合い」(1回で消える)
+        const boost2 = (1 + stayNum(s, 'wazakazu') * s.techs.length / 100) * (s.shBoost ? 1.2 : 1); s.shBoost = false;
+        const toku = stayNum(s, 'shugyotoku'); // 🗡修行特別効果アップ
         const before = { ...s.stats };
         // 編成の補正もトレーニングと同じ考え方でかける(社長 2026-11-12): 段ごとに、その段の能力が上位3つにある子が付いてくる(多いときは補正の大きい3体まで)
         const stages = [];
@@ -837,26 +976,27 @@
           const who = s.team.map((m, i) => ({ i, v: Math.max(memberEffect(m, pair[0], loyalOf(s)) * (m.top.includes(pair[0]) ? 1 : 0), memberEffect(m, pair[1], loyalOf(s)) * (m.top.includes(pair[1]) ? 1 : 0)) }))
             .filter(x => x.v > 0).sort((p, q) => q.v - p.v || p.i - q.i).slice(0, SHUGYO.joinMax).map(x => x.i);
           if (!round) stages.push(who);
-          pair.forEach(k => {
-            const card = { kind: 'shugyo', stat: k, members: who, aid: false };
-            const cm = cardMult(s, card);
-            addStat(s, k, BASE.light * SHUGYO.gain * (1 + (s.good && s.good.shugyoGood ? GOOD.shugyoGood.shugyo : 0)) * pol.gain * ageOf(s) * R.mult * boost * (1 + cm.add) * (1 + cm.tag) * aptMult(s.species, k) * loyalMult(loyalOf(s)));
-          });
           who.forEach(i => addBond(s, i, BOND.train / 2));
         });
+        // 上がる量は決まった数値(2026-11-14 社長。種族・年齢・方針・忠誠では変えない)。修行1回ぶん × (超修行は2回)
+        //   ① 行き先の基礎: 行き先の4能力に各 SHUGYO.fixed.base
+        //   ② 編成の得意: 子それぞれの得意 1位×3%・2位×1%・3位×0.5%(その子の能力の値から)。同じ能力が重なったら大きい順に 1・1/2・1/4…
+        //   ③ ①+②の合計に、修行のハチマキ・アシスト「修行効果アップ」を最後にかける
+        const fixed = shugyoGainOf(s, course); const mul = (1 + (s.good && s.good.shugyoGood ? GOOD.shugyoGood.shugyo : 0)) * boost;
+        KEYS.forEach(k => { if (fixed[k] > 0) addStat(s, k, (fixed[k] * boost2 + toku) * mul * (sup ? 2 : 1)); }); // 📚🔮は①②にかけ、🗡は足してから ⚔(mul)をかける
         out.stages = stages;
         const tired = sup ? 2 : 1; // 超修行は疲れも2回分
-        s.hp = clamp(Math.round(s.hp - SHUGYO.hp * R.hp * tired), 0, s.hpMax); addStress(s, (SHUGYO.stress * pol.stress + R.stress) * tired);
+        s.hp = clamp(Math.round(s.hp - SHUGYO.hp * R.hp * tired * (1 - stayNum(s, 'shugyohp') / 100)), 0, s.hpMax); addStress(s, (SHUGYO.stress * pol.stress + R.stress) * tired); // 🍃修行の体力消費ダウン
         s.techs.forEach(t => { s.mastery[t] = clamp(num(s.mastery[t]) + Math.round(SHUGYO.mastery * boost), 0, 100); });
         // 技のくじ: 選んだ技それぞれ(超修行なら2つとも覚えることがある)。外した技は、その技だけ次から +SHUGYO.miss(技ごと)
         const tries = []; const got = [];
-        if (res !== 'sab') want.forEach((t, i) => { const hit = rng() < rates[i]; tries.push({ id: t.id, rate: r2(rates[i]), hit }); if (hit) got.push(t.id); });
+        want.forEach((t, i) => { const hit = rng() < rates[i]; tries.push({ id: t.id, rate: r2(rates[i]), hit }); if (hit) got.push(t.id); });
         got.forEach(id => { learnTech(s, id); s.log.learned += 1; if (s.techMiss) delete s.techMiss[id]; });
-        if (res !== 'sab') tries.filter(x => !x.hit).forEach(x => { s.techMiss = { ...(s.techMiss || {}), [x.id]: techMissOf(s, x.id) + 1 }; });
+        tries.filter(x => !x.hit).forEach(x => { s.techMiss = { ...(s.techMiss || {}), [x.id]: techMissOf(s, x.id) + 1 }; });
         addXp(s, XP.shugyo); s.log.shugyo += 1; s.log.train += 1; s.log[res] += 1;
         // 間合いのくじ: 行き先の間合いが1割で1段上がる(サボりは無し・別の乱数で並びを変えない)
         const qd = DIST_UP.course[course];
-        if (res !== 'sab' && rngOf(s.id, s.turn, 'aptq')() < DIST_UP.questRate && addAptUp(s, qd, 'quest')) out.aptUp = { dist: qd, grade: aptGradesOf(s)[qd] };
+        for (let round = 0; round < (sup ? 2 : 1); round++) if (rngOf(s.id, s.turn, 'aptq', round || '')() < DIST_UP.questRate + stayNum(s, 'aptq') / 100 && addAptUp(s, qd, 'quest')) out.aptUp = { dist: qd, grade: aptGradesOf(s)[qd] }; // 超修行は2回くじ
         out.result = res; out.course = course; out.learned = got[0] || null; out.learnedAll = got; out.tries = tries; out.super = sup;
         out.gain = {}; KEYS.forEach(k => { if (s.stats[k] !== before[k]) out.gain[k] = s.stats[k] - before[k]; });
         s.last = { kind: 'shugyo', res }; s.acted = true; s.reacted = false;
@@ -874,6 +1014,9 @@
         recover(s, PLAY.rec * asb); addStress(s, PLAY.stress * (s.aid === 'mua' ? 1.3 : 1));
         if (s.yosu.utsu) { delete s.yosu.utsu; out.cured = ['utsu']; } // 遊ぶでうつ病が治る(先に治してから甘え度を足す)
         addLoyal(s, PLAY.ama * asb, 0);
+        // 🎲トレーニングチャンス(ひらめき)・🔮修行チャンス(修行の気合い)。別の乱数で並びを変えない
+        const tc = stayNum(s, 'trchance'); if (tc && rngOf(s.id, s.turn, 'trchance')() < tc / 100) { s.hirameki = true; out.hirameki = true; }
+        const sc = stayNum(s, 'shchance'); if (sc && rngOf(s.id, s.turn, 'shchance')() < sc / 100) { s.shBoost = true; out.shBoost = true; }
         s.log.play += 1; s.last = { kind }; s.acted = true;
         return { state: s, out };
       }
@@ -946,9 +1089,9 @@
       const kind = a && a.kind; const stat = KEYS.includes(a && a.stat) ? a.stat : 'pow';
       if (kind !== 'train') return null;
       const v = peek(s); const card = v.cards[cardKey('train', stat)]; const pol = C.policyOf(s.pol);
-      const mult = BASE.light * (1 + (s.good && s.good.trainGood ? GOOD.trainGood.train : 0)) * TRAIN_LV.mult[card.lv - 1] * pol.gain * ageOf(s) * (1 + card.add) * (1 + card.tag) * loyalMult(loyalOf(s));
+      const mult = BASE.light * (1 + (s.good && s.good.trainGood ? GOOD.trainGood.train : 0)) * TRAIN_LV.mult[Math.min(TRAIN_LV.max, card.lv + trainLvAdd(s, card)) - 1] * pol.gain * ageOf(s) * (1 + card.add) * (1 + card.tag) * (card.loyM || loyalMult(loyalOf(s)));
       const combo = (TRAIN_COMBO[s.aid] || TRAIN_COMBO.mua)[stat]; const shares = [1, BASE.sub[0], BASE.sub[1]]; const gain = {};
-      [stat, combo[0], combo[1]].forEach((k, j) => { gain[k] = (gain[k] || 0) + Math.round(mult * shares[j] * aptMult(s.species, k)); });
+      [stat, combo[0], combo[1]].forEach((k, j) => { gain[k] = (gain[k] || 0) + Math.round(mult * shares[j] * aptMult(s.species, k) * fruitMul(s, k)); });
       let it = 0; card.members.forEach(i => { const lv = assistLv(s.team[i], 'itawari'); if (lv) it += aOf('itawari', 'v', lv) / 100; });
       return { gain, hp: Math.round(BASE.hp * (1 - Math.min(0.6, it)) * (s.aid === 'kiki' ? 0.85 : 1)), stress: Math.round(BASE.stress * pol.stress * (BASE.stress * pol.stress > 0 ? 1 - cutOf(s, card, 'kibarashi') : 1)), fail: card.fail, great: card.great, sab: card.sab, lv: card.lv };
     };
@@ -979,7 +1122,9 @@
       out.yosu = {}; if (raw.yosu && typeof raw.yosu === 'object') for (const k of ['sabori', 'utsu']) if (raw.yosu[k]) out.yosu[k] = { visits: Math.round(n(raw.yosu[k].visits, 0, 0, 9)) };
       const strs = (v, max) => (Array.isArray(v) ? v.filter(x => typeof x === 'string').slice(0, max) : []);
       out.titles = strs(raw.titles, 64); out.wonNow = strs(raw.wonNow, 128); out.wonBefore = strs(raw.wonBefore, 128);
-      for (const k of ['debutWon', 'issaDone', 'issaForce', 'issaSure', 'hirameki', 'acted', 'reacted', 'mealReady', 'special', 'freeMeal']) out[k] = raw[k] === true;
+      for (const k of ['debutWon', 'issaDone', 'issaForce', 'issaSure', 'hirameki', 'acted', 'reacted', 'mealReady', 'special', 'freeMeal', 'fourDone', 'shBoost']) out[k] = raw[k] === true;
+      out.elixir = raw.elixir && Number.isInteger(raw.elixir.d) && raw.elixir.d >= 0 && raw.elixir.d <= 3 ? { d: raw.elixir.d, turn: Math.round(n(raw.elixir.turn, 0, 0, TOTAL_TURNS + 1)) } : null;
+      out.fruit = raw.fruit && KEYS.includes(raw.fruit.stat) ? { stat: raw.fruit.stat, turn: Math.round(n(raw.fruit.turn, 0, 0, TOTAL_TURNS + 1)) } : null;
       out.cond = raw.cond && typeof raw.cond === 'object' && ['injury', 'ill', 'away'].includes(raw.cond.kind) ? { kind: raw.cond.kind, left: Math.round(n(raw.cond.left, 1, 1, 9)) } : null;
       out.over = ['done', 'lost', 'gameover'].includes(raw.over) ? raw.over : null;
       out.storyEnd = ['good', 'bitter'].includes(raw.storyEnd) ? raw.storyEnd : null;
@@ -999,11 +1144,13 @@
       out.shugyoUsed = raw.shugyoUsed && typeof raw.shugyoUsed === 'object' ? clone(raw.shugyoUsed) : {};
       // 修行の作り直し(2026-11-13): 技ごとの外した回数(無い → 0 回)・超修行の残り(無い → SHUGYO.superMax 回)
       out.techMiss = {}; if (raw.techMiss && typeof raw.techMiss === 'object' && !Array.isArray(raw.techMiss)) for (const [id0, v] of Object.entries(raw.techMiss)) { const id = techCanon(id0); if (okTech.includes(id) && Number.isFinite(Number(v)) && Number(v) > 0) out.techMiss[id] = Math.max(out.techMiss[id] || 0, Math.min(20, Math.round(Number(v)))); }
-      out.superLeft = Math.round(n(raw.superLeft, SHUGYO.superMax, 0, SHUGYO.superMax));
+      out.superLeft = Math.round(n(raw.superLeft, superMaxOf(out), 0, superMaxOf(out)));
       if (EV) out.ev = EV.norm(raw.ev); // ランダムイベント(monhero-success-events.js)。読めなければ「出来事なし・状態なし」
       out.rivals = base.rivals; if (Array.isArray(raw.rivals)) out.rivals = newRun({ id: raw.id, species: raw.species, rivals: raw.rivals }).rivals;
       if (raw.log && typeof raw.log === 'object') for (const k of [...new Set([...Object.keys(out.log), 'meal', 'items', 'rematch', 'astory'])]) {
         if (k !== 'tagTurns' && k !== 'issa' && raw.log[k] === undefined && out.log[k] === undefined) continue; if (k === 'tagTurns') { if (Array.isArray(raw.log.tagTurns)) out.log.tagTurns = out.log.tagTurns.map((d, i) => Math.round(n(raw.log.tagTurns[i], d, 0, 99))); } else if (k === 'issa') out.log.issa = strs(raw.log.issa, 9); else out.log[k] = Math.round(n(raw.log[k], 0, 0, 999)); }
+      // 賞金ランク(2026-11-14 から)。無い・壊れた途中の育成は、いまの段で埋める(さかのぼってチケットを配らない)
+      { const now = rankStepOf(out); const v = Number(raw.fameRank); out.fameRank = Number.isInteger(v) && v >= 0 && v <= now ? v : now; }
       return out;
     };
     // 助手の連続イベント(EVENTS ②)。そのターンに出る話(1〜4・'special')か null。画面はターンのはじめに見せる
@@ -1092,6 +1239,9 @@
       if (it.stress) addStress(s, it.stress);
       if (it.issaSure) s.issaSure = true;
       if (it.gives) for (const [k, n] of Object.entries(it.gives)) s.bag[k] = num(s.bag[k]) + n;
+      if (Number.isInteger(it.elixir)) s.elixir = { d: it.elixir, turn: s.turn };
+      if (it.fruit) s.fruit = { stat: it.fruit, turn: s.turn };
+      if (it.hpMax) { s.hpMax = Math.min(HP_MAX_CAP, s.hpMax + it.hpMax); s.hp = Math.min(s.hpMax, s.hp + it.hpMax); }
       s.log.items = (s.log.items || 0) + 1;
       return { state: s, out: { ok: true, item: key } };
     };
@@ -1113,6 +1263,8 @@
 
     // ---- 大会の相手(TOURNAMENT §9・§15: 戦うのは1戦) ----
     const benchOf = (key) => num(BENCH_USE[key], 1500);
+    // 第2版の大会の基準: その期のはじめは前の期の終わり、12月でその期の終わり(月でならす)
+    const benchAt = (s) => { const pk = periodOf(s.turn).key; const prev = { junior: 'debut', middle: 'junior', pro: 'middle', final: 'pro' }[pk]; const cur = pk === 'final' ? 'pro' : pk; if (!prev || pk === 'final') return benchOf(cur); const m = monthOf(s.turn); return benchOf(prev) + (benchOf(cur) - benchOf(prev)) * m / 12; };
     const REG = Array.isArray(deps && deps.regulars) ? deps.regulars.filter(r => r && typeof r.cup === 'string' && speciesList.includes(r.species)) : [];
     const RIVALS_OK = (x) => x && typeof x === 'object' && speciesList.includes(x.species);
     const regularsOf = (cup) => REG.filter(r => r.cup === cup);
@@ -1309,10 +1461,13 @@
       if (s.over) return [];
       if (p.key === 'final' && p.at > 2) return []; // 最後の期の3〜5ターン目は頂への道だけ
       const m = monthOf(s.turn); const row = CUP_STAR[p.key] ? YEAR[m - 1].slice(0, CUP_COUNT[p.key]) : [];
-      const list = row.filter(sys => sys !== 'herosummer' || p.key === 'pro').map((sys, i) => {
+      const SEASON_SYS = ['spring', 'summer', 'autumn', 'winter'];
+      const list = row.filter(sys => (sys !== 'herosummer' || p.key === 'pro') && !(SEASON_SYS.includes(sys) && (p.key === 'middle' || p.key === 'pro'))).map((sys, i) => {
         const star = sys === 'herosummer' ? 4 : CUP_STAR[p.key];
         return { id: `${p.key}:${m}:${sys}:${star}`, sys, star, name: (deps && deps.cupNames && deps.cupNames[sys]) || sys, prize: Math.round(CUP_PRIZE[star] * PERIOD_PRIZE[p.key]), index: i };
       });
+      // 大会の第2版: 決まった期・月の大会(四大大会・季節の賞・間合いの2段・選抜→記念・宝石の記念・ジュニアの大一番)
+      EX_CUPS.forEach((d) => { if (d.p === p.key && d.m === m) list.push({ id: `${p.key}:${m}:${d.sys}:${d.star}`, sys: d.sys, star: d.star, ex: true, name: d.name, grade: d.grade, hard: !!d.hard, prize: d.prize, index: list.length }); });
       // シナリオの大会(その助手の育成だけ)
       (SC_CUPS[s.aid] || []).forEach((d, k) => {
         const hit = d.peak ? peakTurn(s) : (d.p === p.key && d.m === m);
@@ -1332,6 +1487,15 @@
     };
     // 出る条件(TOURNAMENT §5)。{ ok, why }
     const canEnter = (s, c) => {
+      const ex = EX_BY_SYS[c.sys];
+      if (ex) {
+        const nd = ex.need || {};
+        if (nd.rank && rankStepOf(s) < nd.rank) return { ok: false, why: 'rank', need: nd.rank, needName: rankNameOf(nd.rank), needG: rankNeedG(nd.rank) };
+        if (nd.stat && ex.stat && s.stats[ex.stat] < nd.stat) return { ok: false, why: 'stat', need: nd.stat, stat: ex.stat };
+        if (nd.won && !s.wonNow.includes(nd.won)) { const [ws] = nd.won.split(':'); return { ok: false, why: 'won', wonSys: ws, wonName: (EX_BY_SYS[ws] && EX_BY_SYS[ws].name) || (deps && deps.cupNames && deps.cupNames[ws]) || ws }; }
+        if (ex.type) { const t = TYPE_OF[s.species]; if (t && t.main !== ex.type && t.sub !== ex.type) return { ok: false, why: 'type' }; }
+        return { ok: true };
+      }
       const sy = CUP_SYS[c.sys] || {};
       if (sy.stat && s.stats[sy.stat] < (CUP_NEED.stat[c.star] || 0)) return { ok: false, why: 'stat', need: CUP_NEED.stat[c.star] };
       if ((sy.stat || sy.dist !== undefined) && c.star >= 2 && !s.wonNow.includes(`${c.sys}:${c.star - 1}`)) return { ok: false, why: 'chain' };
@@ -1349,6 +1513,53 @@
       return { ok: true };
     };
 
+    // 第2版の大会に勝ったときのごほうび。四大大会を4つ全部勝つと、最後の大会のあとに「四大大会制覇」(一度きり)
+    // 大会に勝ったときにもらうアイテム(2026-11-14 社長「このまま作る」: 直接のごほうびは残し、アイテムを上乗せ)。
+    //   ふつうの大会: ★ オイル/★★ その能力の実/★★★ その能力の実+オイリーオイル/👑 得意の間合いの秘薬+得意の能力の実
+    //   第2版の大会: rw.bag に加えて rw.fruitTop(得意の能力の実)・rw.elixirTop(得意の間合いの秘薬)。得意はいまの能力・適性で決める
+    const topStatOf = (s) => top3Of(s.stats, s.species)[0];
+    const topDistOf = (s) => { const G = DIST_UP.grades; const g = aptGradesOf(s); let best = 0; g.forEach((x, i) => { if (G.indexOf(x) > G.indexOf(g[best])) best = i; }); return best; };
+    const cupItemsOf = (s, sys, star) => {
+      const o = {}; const add = (k, n) => { if (ITEMS[k] && n > 0) o[k] = num(o[k]) + n; };
+      const ex = EX_BY_SYS[sys];
+      if (ex) { const rw = ex.rw || {}; if (rw.bag) Object.entries(rw.bag).forEach(([k, n]) => add(k, n)); if (rw.fruitTop) add(`fruit_${topStatOf(s)}`, rw.fruitTop); if (rw.elixirTop) add(`elixir${topDistOf(s)}`, rw.elixirTop); return o; }
+      const st = (CUP_SYS[sys] || {}).stat; const fk = `fruit_${KEYS.includes(st) ? st : topStatOf(s)}`;
+      if (star === 1) add('oil', 1);
+      else if (star === 2) add(fk, 1);
+      else if (star === 3) { add(fk, 1); add('oilyoil', 1); }
+      else if (star >= 4) { add(`elixir${topDistOf(s)}`, 1); add(`fruit_${topStatOf(s)}`, 1); }
+      return o;
+    };
+    const giveItems = (s, items, out) => { const e = Object.entries(items || {}); if (!e.length) return; e.forEach(([k, n]) => { s.bag[k] = num(s.bag[k]) + n; }); out.gotItems = { ...(out.gotItems || {}), ...items }; };
+    const exReward = (s, ex, out) => {
+      const rw = ex.rw || {}; const got = {};
+      if (rw.all) KEYS.forEach(k => addStat(s, k, rw.all));
+      if (rw.stat) for (const [k, v] of Object.entries(rw.stat)) addStat(s, k, v);
+      if (rw.loy) addLoyalRaw(s, Math.ceil(rw.loy / 2), Math.floor(rw.loy / 2));
+      if (rw.pts) gainWinPts(s, rw.pts);
+      if (rw.pop) s.pop = clamp(s.pop + popGain(s, rw.pop), 0, 100);
+      if (rw.hpMax) { s.hpMax = Math.min(HP_MAX_CAP, s.hpMax + rw.hpMax); s.hp = Math.min(s.hpMax, s.hp + rw.hpMax); }
+      Object.assign(got, cupItemsOf(s, ex.sys, ex.star)); for (const [k, n] of Object.entries(got)) s.bag[k] = num(s.bag[k]) + n;
+      if (Number.isInteger(rw.apt) && addAptUp(s, rw.apt, 'cup')) out.aptUp = { dist: rw.apt, grade: aptGradesOf(s)[rw.apt] };
+      if (rw.title && !s.titles.includes(rw.title)) s.titles.push(rw.title);
+      if (Object.keys(got).length) out.gotItems = got;
+      out.exReward = { ...rw };
+      if (ex.four && !s.fourDone && EX_CUPS.filter(c => c.four).every(c => s.wonNow.includes(`${c.sys}:${c.star}`))) {
+        s.fourDone = true; KEYS.forEach(k => addStat(s, k, FOUR_DONE.all)); gainWinPts(s, FOUR_DONE.pts); s.pop = clamp(s.pop + popGain(s, FOUR_DONE.pop), 0, 100);
+        if (!s.titles.includes(FOUR_DONE.title)) s.titles.push(FOUR_DONE.title); out.fourDone = { ...FOUR_DONE };
+      }
+    };
+    // 大会の予想(受付の札): 自分の6能力の合計 ÷ 相手の強さ(ゆらぎ・ライバルは入れない)。敵の数字は見せず、ことばだけ返す
+    const FORECAST = Object.freeze([[1.25, 'easy', '楽勝'], [1.06, 'good', '有利'], [0.94, 'even', '互角'], [0.8, 'hard', '苦戦'], [0, 'none', '勝ち目なし…']]);
+    const forecastOf = (s, c) => {
+      if (!c) return null; const pk = periodOf(s.turn).key; const ex = EX_BY_SYS[c.sys];
+      const opp = ex ? benchAt(s) * ex.str : benchOf(pk === 'final' ? 'pro' : pk) * (c.sys === 'scatsu' ? STAR_MULT[4] : (STAR_MULT[c.star] || 1)) * (c.rival ? RIVAL.str : 1);
+      const ratio = sumOf(s.stats) / Math.max(1, opp);
+      let f = FORECAST.find(([min]) => ratio >= min) || FORECAST[FORECAST.length - 1];
+      if (ex && ex.hard && ratio < 1.1) f = FORECAST[4]; // 大一番・最後の四大大会は、よほど勝っていないと「勝ち目なし…」
+      return { key: f[1], label: f[2] };
+    };
+    const fourWinsOf = (s) => EX_CUPS.filter(c => c.four && s.wonNow.includes(`${c.sys}:${c.star}`)).length;
     // 戦う1体(王者かライバル。頂への道は1・2戦目が常連・決勝が王者)
     const cupOfBattle = (b) => (b.kind === 'cup' ? b.sys : b.kind === 'summit' ? 'peak' : (FORCED[b.kind] && FORCED[b.kind].cup) || 'normal');
     const opponentsOf = (s) => {
@@ -1359,6 +1570,7 @@
       let sp0 = null; // 頂への道: 助手が選んだ相手(STORY-ARC §3)。強さはいままでどおり
       if (b.kind === 'summit') { sum = benchOf('summit') * SUMMIT[b.round].mult; gear = OPP_GEAR.final; sp0 = summitPick(s, b.round); who = sp0.who || null; }
       else if (b.kind === 'debut') { sum = benchOf('debut') * STAR_MULT[1] * Math.max(DEBUT_RETRY_FLOOR, 1 - DEBUT_RETRY_WEAKEN * (b.retry || 0)); gear = OPP_GEAR.debut; who = champOf(cup); }
+      else if (b.kind === 'cup' && EX_BY_SYS[b.sys]) { const pk = periodOf(s.turn).key; sum = benchAt(s) * EX_BY_SYS[b.sys].str * (b.rival ? RIVAL.str : 1); gear = OPP_GEAR[pk]; who = b.rival ? null : champOf(cup); }
       else if (b.kind === 'cup') { const pk = periodOf(s.turn).key; sum = benchOf(pk === 'final' ? 'pro' : pk) * (b.sys === 'scatsu' ? STAR_MULT[4] : STAR_MULT[b.star]) * (b.rival ? RIVAL.str : 1); /* 格上への挑戦は1つ上の星の強さ */ gear = OPP_GEAR[pk]; who = b.rival ? null : champOf(cup); }
       else { const f = FORCED[b.kind]; sum = benchOf(b.kind) * STAR_MULT[f.star]; gear = OPP_GEAR[b.kind]; who = champOf(cup); }
       // 虹の砂時計は「相手を変える」: 王者のかわりに常連のだれか(いなければ種のくじ)
@@ -1433,17 +1645,29 @@
       // 賞金(保存は fame)とチケット。負けたら準優勝の扱い(★★ 以上)
       const pk = periodOf(s.turn).key;
       const star = b.kind === 'cup' ? b.star : b.kind === 'summit' ? 4 : FORCED[b.kind].star;
-      let full = b.kind === 'summit' ? PRIZE.summit[b.round] : b.kind === 'cup' ? Math.round(CUP_PRIZE[b.star] * PERIOD_PRIZE[pk]) : num(PRIZE[b.kind]);
-      let tkFull = b.kind === 'summit' ? TICKET_BASE.summit[b.round] : b.kind === 'cup' ? Math.round(TICKET_BASE.cup[b.star] * TICKET_BASE.period[pk]) : num(TICKET_BASE[b.kind]);
+      const exB = b.kind === 'cup' ? EX_BY_SYS[b.sys] : null;
+      let full = b.kind === 'summit' ? PRIZE.summit[b.round] : exB ? exB.prize : b.kind === 'cup' ? Math.round(CUP_PRIZE[b.star] * PERIOD_PRIZE[pk]) : num(PRIZE[b.kind]);
+      let tkFull = b.kind === 'summit' ? TICKET_BASE.summit[b.round] : exB ? exB.tk : b.kind === 'cup' ? Math.round(TICKET_BASE.cup[b.star] * TICKET_BASE.period[pk]) : num(TICKET_BASE[b.kind]);
       if (won && b.rival) { full = Math.round(full * RIVAL.prize); tkFull = Math.round(tkFull * RIVAL.prize); }
       let prize = won ? full : (star >= 2 && b.kind !== 'summit' ? Math.round(full * RUNNER_UP) : 0);
       if (b.sys === 'scatsu' && !won) prize = Math.round(full * 0.5); // 格上への挑戦: 負けても賞金の半分
       if (b.sys === 'scmua' && won) prize = Math.round(full * (1 + 0.3 * (1 - s.stress / 100))); // 笑顔の大会: 機嫌がよいほど賞金 ×1.0〜1.3
       prize = Math.round(prize * (1 + stayNum(s, 'shokin') / 100)); // 💰賞金かせぎ
       s.fame += prize; s.fameTotal += prize; out.prize = prize;
-      if (won) {
-        const tk = stayNum(s, 'ticket') / 100; const extra = tk > 0 && rngOf(s.id, s.turn, 'ticket', b.kind, num(b.round), num(b.retry), num(b.again))() < tk ? 1 : 0; // 🎫チケット運
-        const t = ticketsOfPrize(tkFull) + (b.rival ? RIVAL.tickets : 0) + extra; s.tickets += t; out.tickets = t; if (extra) out.ticketLuck = true;
+      void tkFull; // 2026-11-14 社長: 修行チケットは賞金ランクの段が上がるたびに(勝つたびの1〜4枚はやめた)
+      if (won) { // 優勝の獲得物のチケット(期末の大会・頂への道・★★★以上・四大大会)とライバル
+        const winTk = (WIN_TICKET.forced.includes(b.kind) || b.kind === 'summit' || (b.kind === 'cup' && (b.star >= WIN_TICKET.cupStar || (exB && exB.four)))) ? WIN_TICKET.add : 0;
+        const t = winTk + (b.rival ? RIVAL.tickets : 0); if (t) { s.tickets += t; out.tickets = t; out.winTickets = t; }
+      }
+      { // 賞金ランク: 上がった段の数だけチケット。🎫チケット運は段が上がるたびに ◯% でもう1枚
+        const from = num(s.fameRank); const to = rankStepOf(s);
+        if (to > from) {
+          const tk = stayNum(s, 'ticket') / 100; let luck = 0;
+          for (let st = from + 1; st <= to; st++) if (tk > 0 && rngOf(s.id, s.turn, 'ticket', st)() < tk) luck += 1;
+          s.tickets += (to - from) + luck; s.fameRank = to;
+          out.rankUp = { from, to, name: rankNameOf(to), tickets: (to - from) + luck, luck }; if (luck) out.ticketLuck = true;
+          out.tickets = num(out.tickets) + (to - from) + luck;
+        } else out.rankKeep = { step: from, name: rankNameOf(from) };
       }
       s.mealReady = won; // 2026-11-13 社長: 大会に勝ったときだけごはんを選べる(負けたらなし)
       gainMastery(s, use); // 熟練: 出場で全部の技 +2・使った技は1回 +2(1試合で +6 まで)
@@ -1456,7 +1680,7 @@
       if (b.kind === 'summit') {
         if (!won) { s.over = 'lost'; out.end = true; applyEnding(s, 'bad', out); return { state: s, out }; }
         if (b.round === SUMMIT.length - 1) {
-          const g = s.crowns >= 1 ? SUMMIT_FINAL.big : SUMMIT_FINAL.plain;
+          const g = s.crowns >= 1 || fourWinsOf(s) >= 2 ? SUMMIT_FINAL.big : SUMMIT_FINAL.plain; // 👑 1つ以上か四大大会 2つ以上
           KEYS.forEach(k => addStat(s, k, g.all)); gainWinPts(s, g.pts); s.pop = clamp(s.pop + popGain(s, g.pop), 0, 100); s.titles.push(g.title);
           applyEnding(s, endingOf(s, true), out);
         }
@@ -1464,7 +1688,9 @@
         return { state: s, out };
       }
       if (b.kind === 'cup') {
-        if (won) {
+        if (won && EX_BY_SYS[b.sys]) { exReward(s, EX_BY_SYS[b.sys], out); if (b.rival) { KEYS.forEach(k => addStat(s, k, RIVAL.all * (1 + stayNum(s, 'rivaldamashii') / 100))); if (!s.titles.includes(RIVAL.title)) s.titles.push(RIVAL.title); out.rivalWin = true; } }
+        if (won && !EX_BY_SYS[b.sys]) {
+          giveItems(s, cupItemsOf(s, b.sys, b.star), out); // 勝ったときのアイテム(直接のごほうびの上乗せ)
           const sy = CUP_SYS[b.sys] || {};
           if (CUP_REWARD.pts[b.star]) gainWinPts(s, CUP_REWARD.pts[b.star]);
           if (CUP_REWARD.pop[b.star]) s.pop = clamp(s.pop + popGain(s, CUP_REWARD.pop[b.star]), 0, 100);
@@ -1568,14 +1794,14 @@
 
     const EVX = (deps && deps.events) || (root && root.MONHERO_SUCCESS_EVENTS) || null;
     EV = EVX && typeof EVX.create === 'function' ? EVX.create({
-      KEYS, TOTAL_TURNS, FORCED, BOND, rngOf, periodOf, monthOf, clamp, num, r2, unitOf, addStat, addLoyalRaw, recover, addStress, addBond, loyalOf, aptMult, gainPts, popGain, addAptUp, aptUpRoom, aptGradesOf, DIST_UP_GRADES: DIST_UP.grades,
+      KEYS, TOTAL_TURNS, FORCED, BOND, rngOf, periodOf, monthOf, clamp, num, r2, unitOf, addStat: (s, k, v) => addStat(s, k, num(v) > 0 ? num(v) * (1 + stayNum(s, 'event') / 100) : v), addLoyalRaw, recover, addStress, addBond, loyalOf, aptMult, gainPts, popGain, addAptUp, aptUpRoom, aptGradesOf, DIST_UP_GRADES: DIST_UP.grades,
       typeOf: TYPE_OF, peakOf: (type) => C.peakOf(type), arc: ARC,
     }) : null;
 
     return Object.freeze({
       events: EV,
       VERSION, STORY, KEYS, STAT_NAMES, PERIODS, TOTAL_TURNS, FORCED, SUMMIT, BASE, RESULTS, RATE, REST, PLAY, CLINIC, COND, LOYAL, GATHER, BOND, STORY, LOTTERY,
-      ASSISTS, ISSA, PTS, XP, SHUGYO, TECH_POWER, MASTERY, techRowsOf, techPowerOfRows, powerOf, techBoostOf, techUseOf, ITEMS, GOOD, CARRY_MAX, useItem, FAME_V, FAME_SCALE, TICKET_BASE, TRAIN_LV, trainLvOf, REMATCH, canRematch, rematch, canSkip, battleKey, PRIZE, MEALS, meal, MEAL_WATCH_MULT, ticketsOfPrize, TECH_MAX, techsOf, canLearn, techRate, learnable, techRank, shugyoQ, superLeft, techMissOf, techCanon, canonTechList, shugyoLeft, teachFrom, BENCH: BENCH_USE, STAR_MULT, TAG_POWER, BOND_START, RANK_ADD, TRAIN_COMBO, AIDS, speciesList,
+      ASSISTS, ISSA, PTS, XP, SHUGYO, TECH_POWER, MASTERY, techRowsOf, techPowerOfRows, powerOf, techBoostOf, techUseOf, ITEMS, GOOD, CARRY_MAX, useItem, FAME_V, FAME_SCALE, TICKET_BASE, TRAIN_LV, trainLvOf, REMATCH, canRematch, rematch, canSkip, battleKey, PRIZE, MEALS, meal, MEAL_WATCH_MULT, ticketsOfPrize, TECH_MAX, techsOf, canLearn, techRate, learnable, techRank, shugyoQ, superLeft, techMissOf, techCanon, canonTechList, shugyoLeft, teachFrom, BENCH: BENCH_USE, STAR_MULT, TAG_POWER, BOND_START, RANK_ADD, TRAIN_COMBO, AIDS, speciesList, shugyoGainOf, EX_CUPS, EX_BY_SYS, cupItemsOf, CUP_REWARD, FAME_RANK, FAME_RANK_MAX, rankStepOf, rankNameOf, rankNeedG, WIN_TICKET, FOUR_DONE, fourWinsOf, forecastOf, ELIXIR_ADD, FRUIT_MULT,
       rngOf, periodOf, aptMult, initStats, memberOf, memberEffect, newRun, gatherOf, cardMult, peek, failRateOf, sabRateOf, greatRateOf,
       act, react, issa, issaComes, issaRate, endTurn, opponents: opponentsOf, settle, cupsOf, canEnter, bracketOf, gradeOf, GRADE_STEP, stayV, SC_CUPS, SC_NAME, ASST_STORY, storyEnd, markSpecial, battleMods, battleBuffs, peakTurn, ASTORY, storyDue, storyStep, preview, restore, ARC, PARTY, summitPick, endingOf, endingSeen, CUP_SYS, YEAR, RIVAL, CUP_PRIZE, spendPts, autoPts, ptsCost, evaluate, assistPointsOf, loyalOf, loyalMult, top3Of, sumOf,
       FUSE, fuseOk, fuseKinds, fusePlan, fuseId,
