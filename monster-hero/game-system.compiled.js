@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b6091370e1b43ead
+// source-sha256: c51f48f9ca1f1d1a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -118119,7 +118119,7 @@ function AssistantLifeTownMap({
       onClick: () => setSheet(p)
     }, React.createElement("span", null, ASSISTANT_LIFE_PLACE_ICON[p], " ", assistantLifePlaceShow(p)));
   }), assistantLifeMapOrderNow().map(crowd), React.createElement("div", {
-    className: "absolute inset-x-0 top-0 z-[8] flex items-center gap-2 bg-gradient-to-b from-[#0b1020f2] via-[#0b1020d9] to-transparent px-2 pb-3",
+    className: `absolute inset-x-0 top-0 z-[8] flex items-center gap-2${ro && !land ? ' flex-wrap' : ''} bg-gradient-to-b from-[#0b1020f2] via-[#0b1020d9] to-transparent px-2 pb-3`,
     style: {
       paddingTop: land ? 6 : 'calc(6px + env(safe-area-inset-top))',
       paddingLeft: 'calc(8px + env(safe-area-inset-left))',
@@ -118138,7 +118138,7 @@ function AssistantLifeTownMap({
     onClick: onBack,
     className: "shrink-0 rounded-xl border border-pink-300/60 bg-slate-950/85 px-2.5 py-1.5 text-[12px] font-black text-pink-100 active:scale-95"
   }, "🏡 家へ"), React.createElement("div", {
-    className: "min-w-0 flex-1"
+    className: ro && !land ? 'min-w-0 basis-full' : 'min-w-0 flex-1'
   }, React.createElement("p", {
     className: ro ? 'text-[13px] font-black leading-tight text-white' : 'truncate text-[15px] font-black leading-tight text-white',
     style: {
@@ -118175,7 +118175,7 @@ function AssistantLifeTownMap({
   }, "📃 一覧 ↓")), React.createElement("p", {
     className: "pointer-events-none absolute left-1/2 z-[7] -translate-x-1/2 whitespace-nowrap rounded-full bg-slate-950/85 px-3 py-1 text-[10.5px] font-bold text-slate-100",
     style: {
-      top: land ? 54 : 'calc(60px + env(safe-area-inset-top))'
+      top: land ? 54 : ro ? 'calc(98px + env(safe-area-inset-top))' : 'calc(60px + env(safe-area-inset-top))'
     },
     "data-assistant-life-map-hint": true
   }, ro ? '場所を押すと、いる助手が見られます' : '場所を押すと、いる助手と「いま行くと得」が見られます'))), list && React.createElement("div", {
