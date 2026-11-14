@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "id": "b1abc9debf41",
-  "packs": {"beat":{"bytes":149788587,"count":113},"battle":{"bytes":160646554,"count":978},"card":{"bytes":37779758,"count":1048},"all":{"bytes":348214899,"count":2139},"core":{"bytes":22131087,"count":24}},
+  "id": "9861f3b72af9",
+  "packs": {"beat":{"bytes":149788587,"count":113},"battle":{"bytes":160646525,"count":978},"card":{"bytes":37779758,"count":1048},"all":{"bytes":348214870,"count":2139},"core":{"bytes":22131087,"count":24}},
   "files": {
     "audio/bgm-4u-hitasura.mp3": {"v":"f4fb42472438","size":1446380,"pack":"beat"},
     "audio/bgm-against-my-own-shadow.mp3": {"v":"a58782a4c46f","size":1889175,"pack":"beat"},
@@ -1929,7 +1929,7 @@
     "images/monsters/pandora-shadow.png": {"v":"3883210975c5","size":40440,"pack":"battle"},
     "images/monsters/pandora.PNG": {"v":"f8009b5d2b5e","size":290525,"pack":"battle"},
     "images/monsters/phoenix.png": {"v":"c9a5b27b642f","size":135110,"pack":"battle"},
-    "images/monsters/pixie-dye-mask.PNG": {"v":"007b880cf385","size":18194,"pack":"battle"},
+    "images/monsters/pixie-dye-mask.PNG": {"v":"d96c4ae56d1c","size":18165,"pack":"battle"},
     "images/monsters/pixie.png": {"v":"ecd7433b3190","size":135668,"pack":"battle"},
     "images/monsters/plant-dye-mask.PNG": {"v":"cad1fda53cf2","size":8659,"pack":"battle"},
     "images/monsters/plant.PNG": {"v":"398cacbadab3","size":105402,"pack":"battle"},
@@ -2145,7 +2145,7 @@
     "vendor/react.production.min.js": {"v":"18","size":10751,"pack":"core"},
     "vendor/react-dom.production.min.js": {"v":"18","size":131835,"pack":"core"},
     "tailwind.css": {"v":"d056afd59f39","size":306768,"pack":"core"},
-    "data/images/images-ally.js": {"v":"0f148bd30385","size":81722,"pack":"core"},
+    "data/images/images-ally.js": {"v":"7469815ddc0f","size":81722,"pack":"core"},
     "data/images/images-enemy.js": {"v":"f10f6ad82110","size":2926,"pack":"core"},
     "data/ally-monsters.js": {"v":"4309001c3dde","size":60897,"pack":"core"},
     "data/lineages.js": {"v":"81f342c471d9","size":26476,"pack":"core"},
