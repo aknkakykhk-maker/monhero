@@ -51,7 +51,7 @@ const seed = () => {
   };
   const openHelp = async () => { await click(/^設定$/); await page.waitForTimeout(1200); await click(/ヘルプ/); await page.waitForTimeout(1500); };
   // ヘルプの画面の中だけを見る(裏のホームにも助手の吹き出しがある)
-  const inHelp = "const root = [...document.querySelectorAll('button')].find((x) => /(?:分|わ)かった！冒険に戻る/.test(x.innerText || ''))?.closest('.fixed'); const t = root ? root.querySelector('[data-bubble-text]') : null;";
+  const inHelp = "const root = [...document.querySelectorAll('button')].find((x) => /分かった！冒険に戻る/.test(x.innerText || ''))?.closest('.fixed'); const t = root ? root.querySelector('[data-bubble-text]') : null;";
   const bubbleShown = () => page.evaluate(`(() => { ${inHelp} return !!t; })()`);
   const lines = () => page.evaluate(`(() => { ${inHelp} if (!t) return null; const r = t.getBoundingClientRect(); return Math.round(r.height / (parseFloat(getComputedStyle(t).lineHeight) || 16)); })()`);
   const raw = () => page.evaluate((k) => localStorage.getItem(k), KEY);

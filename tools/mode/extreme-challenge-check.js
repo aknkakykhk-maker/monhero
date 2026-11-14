@@ -145,7 +145,7 @@ assert(source.includes("Object.prototype.hasOwnProperty.call(DIFFICULTY_SETTINGS
 assert(source.includes('data-extreme-difficulties'), 'dedicated EXTREME difficulty screen must be rendered');
 assert(source.includes("isExtreme?'EXTREME_DIFFICULTY_SELECT':'BATTLE_DIFFICULTY_SELECT'"), 'EXTREME mode must lead to its dedicated difficulty screen');
 assert(source.includes("EXTREME_DIFFICULTY_SELECT: 'enhance'"), 'EXTREME difficulty selection must reuse the challenge selection BGM');
-assert(source.includes('左右にスワイプして難易度をえらぶ') && source.includes('snap-x snap-mandatory'), 'EXTREME must reuse the challenge difficulty carousel structure');
+assert(source.includes('左右にスワイプして難易度を選ぶ') && source.includes('snap-x snap-mandatory'), 'EXTREME must reuse the challenge difficulty carousel structure');
 assert(source.includes('mh-extreme-enemy-image') && source.includes("extremeDifficulty===NIGHTMARE_SETTING.id?' mh-nightmare-enemy-image':' mh-extreme-enemy-image'"), 'all EXTREME enemies must receive the image-bound dedicated aura');
 assert(source.includes('mh-nightmare-enemy-aura-shell') && source.includes('@keyframes mhNightmareMist') && source.includes('mh-extreme-enemy-aura-shell') && source.includes('@keyframes mhExtremeEnemyMist') && source.includes('@keyframes mhExtremeEnemyFloor'), 'EXTREME and NIGHTMARE auras must remain distinct; EXTREME must combine silhouette glow, rising evil energy, and a foot glow with lightweight CSS-only motion');
 assert(source.includes('h-[366px]') && source.includes('flex items-start gap-2.5'), 'mode cards must share a fixed outer height and aligned carousel');

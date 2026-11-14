@@ -192,7 +192,7 @@ const VIEWS = [
       await resetBtn.dispatchEvent('click');
       await page.waitForTimeout(500);
       const dlg = (await page.locator('[role="dialog"], [role="alertdialog"]').last().innerText()).replace(/\s+/g, ' ');
-      check(`${T}④ リセット券の確認に、オリジナル強化と返すPが出る(Lv 16P・オリジナル強化 32,000P)`, /固有技Lv とオリジナル強化をすべて戻し/.test(dlg) && /オリジナル強化 32,000P/.test(dlg) && /Lv 16P/.test(dlg), dlg.slice(0, 160));
+      check(`${T}④ リセット券の確認に、オリジナル強化と返すPが出る(Lv 16P・オリジナル強化 32,000P)`, /固有技Lv とオリジナル強化を全て戻し/.test(dlg) && /オリジナル強化 32,000P/.test(dlg) && /Lv 16P/.test(dlg), dlg.slice(0, 160));
       await shot('06-リセット券の確認');
       await page.getByRole('button', { name: /^やめる$|^キャンセル$/ }).last().dispatchEvent('click');
       await page.waitForTimeout(400);

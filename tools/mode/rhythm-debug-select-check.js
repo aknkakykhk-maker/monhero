@@ -73,7 +73,7 @@ const snapshot=page=>page.evaluate(()=>{const o={};for(let i=0;i<localStorage.le
     page.on('request',req=>{const u=req.url();if(/supabase/i.test(u)&&req.method()!=='GET'&&!/\/rest\/v1\/rpc\//.test(u))writes.push(`${req.method()} ${u.split('?')[0]}`);});
     const errors=[];page.on('pageerror',e=>errors.push(String(e&&e.message||e)));
 
-    check('デバッグの「全解放の曲えらびを開く」がある',await openDebugSelect(page));
+    check('デバッグの「全解放の曲選びを開く」がある',await openDebugSelect(page));
     check('全解放の曲えらびが開く',await page.locator('[data-rhythm-debug-select]').count()===1);
     check('「デバッグ(記録しない)」の印が出ている',(await page.locator('[data-rhythm-debug-select-badge]').innerText().catch(()=>'')).includes('記録しない'));
     check('横持ちの切り替えボタンがある',await page.evaluate(()=>!!document.querySelector('[data-rhythm-debug-select] header button[aria-label*="横"],[data-rhythm-debug-select] header button[aria-label*="縦"],[data-rhythm-debug-select] header [data-rhythm-orientation]')||/[🔄]/.test(document.querySelector('[data-rhythm-debug-select] header')?.textContent||'')));
