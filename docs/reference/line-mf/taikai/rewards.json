@@ -1,5 +1,5 @@
 {
- "note": "大会の賞品(報酬)と効果。effect が null は説明の画像がまだ無いもの",
+ "note": "大会の賞品(報酬)と効果。effect が null は説明の画像がまだ無いもの。taikai-entry-2026-11-13 の item-* 23枚のアイテム詳細も入れた(2026-11-14 クラフト19)",
  "items": [
   {
    "item": "コイン",
@@ -111,6 +111,96 @@
     "1年目9月前半 IMaシャープネス杯",
     "1年目9月前半 IMaブレーン杯"
    ]
+  },
+  {
+   "item": "アタールの果実",
+   "effect": "使用したターンのみ「命中」が上がりやすくなる不思議な実",
+   "effectSource": "taikai-entry-2026-11-13/08-item-shousai2・102-item-atar",
+   "from": []
+  },
+  {
+   "item": "モモまん(大盛)",
+   "effect": "桃に似せて作られた、はやりのお菓子。体力の最大値が大きく上がる",
+   "effectSource": "taikai-entry-2026-11-13/21-item-shousai-derby",
+   "from": []
+  },
+  {
+   "item": "赤汁",
+   "effect": "伝説のブリーダーが開発した赤色の秘薬。零距離の技習得率が上がる",
+   "effectSource": "taikai-entry-2026-11-13/46-item-akajiru",
+   "from": []
+  },
+  {
+   "item": "橙汁",
+   "effect": "伝説のブリーダーが開発した橙色の秘薬。近距離の技習得率が上がる",
+   "effectSource": "taikai-entry-2026-11-13/48-item-daidaijiru",
+   "from": []
+  },
+  {
+   "item": "緑汁",
+   "effect": "伝説のブリーダーが開発した緑色の秘薬。中距離の技習得率が上がる",
+   "effectSource": "taikai-entry-2026-11-13/50-item-midorijiru",
+   "from": []
+  },
+  {
+   "item": "藍汁",
+   "effect": "伝説のブリーダーが開発した藍色の秘薬。遠距離の技習得率が上がる",
+   "effectSource": "taikai-entry-2026-11-13/52-item-aijiru",
+   "from": []
+  },
+  {
+   "item": "マインドジャム",
+   "effect": "思考をやわらかくする効果がある特製ジャム。ライフと忠誠度が上がる",
+   "effectSource": "taikai-entry-2026-11-13/62-item-mindjam・170-item-mind-jam",
+   "from": []
+  },
+  {
+   "item": "アタールスナック",
+   "effect": "集中力をきたえる効果がある特製スナック。命中と忠誠度が上がる",
+   "effectSource": "taikai-entry-2026-11-13/82-item-snack・158-item-atar-snack",
+   "from": []
+  },
+  {
+   "item": "アルタケーキ(ホール)",
+   "effect": "モンスターが好んで食べるヘルシーなケーキ。忠誠度が上がる",
+   "effectSource": "taikai-entry-2026-11-13/86-item-cake",
+   "from": []
+  },
+  {
+   "item": "ホッカイイラブ(一尾)",
+   "effect": "強いニオイを放つ、海外産海ヘビの串焼き。モンスターの忠誠度が上がる",
+   "effectSource": "taikai-entry-2026-11-13/88-item-hebi",
+   "from": []
+  },
+  {
+   "item": "カチコチの果実",
+   "effect": "使用したターンのみ「丈夫さ」が上がりやすくなる不思議な実",
+   "effectSource": "taikai-entry-2026-11-13/106-item-kachikochi",
+   "from": []
+  },
+  {
+   "item": "ヒルマズの果実",
+   "effect": "使用したターンのみ「ライフ」が上がりやすくなる不思議な実",
+   "effectSource": "taikai-entry-2026-11-13/108-item-life",
+   "from": []
+  },
+  {
+   "item": "サケールジュース",
+   "effect": "機敏さをきたえる効果がある特製ジュース。回避と忠誠度が上がる",
+   "effectSource": "taikai-entry-2026-11-13/161-item-sakeru-juice",
+   "from": []
+  },
+  {
+   "item": "パワフルーツ",
+   "effect": "活力がみなぎる効果がある果実。ちからと忠誠度が上がる",
+   "effectSource": "taikai-entry-2026-11-13/163-item-powa-fruits",
+   "from": []
+  },
+  {
+   "item": "インテリンゴ",
+   "effect": "頭の働きをよくする効果があるリンゴ。かしこさと忠誠度が上がる",
+   "effectSource": "taikai-entry-2026-11-13/166-item-interingo",
+   "from": []
   }
  ]
 }

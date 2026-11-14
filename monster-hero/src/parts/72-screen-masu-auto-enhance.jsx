@@ -223,7 +223,7 @@ function MasuAutoEnhanceScreen({
 
             {/* かんたん設定: 細かい上限や順番を決めなくても、押すだけで ON になって働く */}
             <div data-auto-enhance-presets className="rounded-2xl border border-lime-500/40 bg-slate-900 p-3">
-              <div className="text-[13px] font-black text-lime-300">かんたん設定（押すと案が出て、確定でON）</div>
+              <div className="text-[13px] font-black text-lime-300">簡単設定（押すと案が出て、確定でON）</div>
               <div className="mt-2 grid grid-cols-3 gap-2">
                 <button type="button" data-auto-enhance-preset="all" onClick={()=>applyPreset('all')} className="min-h-[56px] rounded-xl bg-lime-600 text-slate-950 text-[11px] font-black active:scale-95 px-1 leading-tight">おまかせ<br/><span className="text-[9px] font-bold">全部上げる</span></button>
                 <button type="button" data-auto-enhance-preset="stat" onClick={()=>applyPreset('stat')} className="min-h-[56px] rounded-xl bg-slate-800 border border-lime-400/40 text-lime-200 text-[11px] font-black active:scale-95 px-1 leading-tight">ステータスだけ<br/><span className="text-[9px] font-bold text-slate-400">適性は振らない</span></button>
@@ -235,7 +235,7 @@ function MasuAutoEnhanceScreen({
             {/* 上限の一括操作 */}
             <div className="grid grid-cols-2 gap-2">
               <button type="button" onClick={captureCurrent} className="min-h-[44px] rounded-xl bg-slate-800 border border-lime-400/40 text-lime-200 text-[11px] font-black active:scale-95 px-2 leading-tight">いまの値を<br/>目標として取り込む</button>
-              <button type="button" onClick={clearAll} className="min-h-[44px] rounded-xl bg-slate-800 border border-white/10 text-slate-300 text-[11px] font-black active:scale-95 px-2 leading-tight">すべて<br/>「振らない」に戻す</button>
+              <button type="button" onClick={clearAll} className="min-h-[44px] rounded-xl bg-slate-800 border border-white/10 text-slate-300 text-[11px] font-black active:scale-95 px-2 leading-tight">全て<br/>「振らない」に戻す</button>
             </div>
             <div className="text-[10px] text-slate-400 font-bold leading-relaxed px-1">「いまの値を目標として取り込む」は、このモンスターのいまの数値をそのまま目標に写します。転生する前に押しておくと、転生後の周回で同じ数値まで自動で戻ります。</div>
 
