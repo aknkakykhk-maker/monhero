@@ -1,0 +1,14 @@
+  1回あたり: rematch 0.1・meal 5.3・shugyo 11.2・learned 6.4・taught 0.2・train 35.2・great 2.2・fail 0.7・sab 0・events 15.2・story 11.5・cond 0.1・rest 7.4・play 3・clinic 0.2
+  大会の勝率: debut 93.2% (161)・junior 84% (150)・middle 77.3% (150)・pro 70% (150)・summit1 98.7% (150)・summit2 98% (148)・summit3 96.6% (145)
+  ランダムイベント: 1回の育成で 24.5回(daily 4.4・goal 6・uniq 0.5・body 0.1・self 3.2・season 7.9・team 1.7・cup 0.6・small 0.1)・能力の合計 +42
+  終わり方: done 93.3%・lost 6.7%・gameover 0%
+  エンディング: bad 6.7%(総合力 11038・A1) / good 93.3%(総合力 12672・A4)
+■ M 6体・底力 段5+いるだけ型15 段5(いちばん積んだ形)(助手の仲良し Lv5・150回)
+  ランク: A 4% / S 39.3% / SS 56.7%(中央値の評価 SS1)
+  総合力 中央値 16103・6能力の合計 中央値 5317・忠誠 平均 73.1(60に届く 100%・届くターン中央値 20)
+  タッグ 0/1/2/3+ 体のトレーニング: 5.2 / 9.7 / 9.3 / 2.6 回・3話を見終わる子 1.9体・博士 1.53回(成功 1.47)・技 平均 9.3つ
+  1回あたり: rematch 0・meal 5.9・shugyo 11.2・learned 5.6・taught 1.6・train 38・great 2.4・fail 0.7・sab 0・events 17.6・story 12.6・cond 0.1・rest 3.4・play 4.4・clinic 0.1
+  大会の勝率: debut 98.7% (152)・junior 96.7% (150)・middle 98.7% (150)・pro 98.7% (150)・summit1 100% (150)・summit2 100% (150)・summit3 100% (150)
+  ランダムイベント: 1回の育成で 24.6回(team 1.8・goal 6・uniq 0.5・season 7.9・daily 4.2・self 3.2・cup 0.8・body 0・small 0.1)・能力の合計 +34
+  終わり方: done 100%・lost 0%・gameover 0%
+  エンディング: good 99.3%(総合力 16103・SS1) / super 0.7%(総合力 15271・S3)

@@ -79,6 +79,9 @@ const makeRun = async (kind) => {
     ['K1', 'mid', ['cont', 'train', 'go']], ['K3', 'mid', ['cont', 'train', 'go', 'next']], ['K5', 'mid', ['cont', 'train', 'go', 'next', 'praise']],
     ['I1', 'mid', ['cont', 'issa']], ['P1', 'mid', ['cont', 'stats']], ['M1D', 'mid', ['cont', 'detail']], ['M1F', 'mid', ['cont', 'detail', 'tab:feat']],
     ['E1', 'mid', ['cont', 'event']], ['E3', 'mid', ['cont', 'event', 'three']], ['E4', 'mid', ['cont', 'event', 'three', 'long']],
+    // 叱る・褒める(2026-11-14 場面ごとの選択肢と、選んだあとの札)
+    ['R1', 'mid', ['react:great']], ['R1b', 'mid', ['react:great', 'how:praise']], ['R2', 'mid', ['react:fail']], ['R2b', 'mid', ['react:fail', 'how:scold']],
+    ['R3', 'mid', ['react:sab']], ['R3b', 'mid', ['react:sab', 'how:scold']], ['R4', 'mid', ['react:shugyo']], ['R4b', 'mid', ['react:shugyo', 'how:praise']],
     ['KI', 'ki', ['cont']], ['CL', 'yosu', ['cont', 'clinic']], // 章の終わり(数字は真ん中)・通院の結果(何が治ったかを名前で)
   ];
   // SHOT_ONLY=H0,H1 のように名前を並べると、その場面だけ撮る
@@ -130,7 +133,7 @@ const makeRun = async (kind) => {
             if (st === 'stats') return click(/^📊/);
             if (st === 'train') return click(/^💪 トレーニング/);
             if (st === 'go') return click(/をする$/); // 2026-11-14 トレーニングのボタンは「丸太割りをする」のようにトレーニングの名前になった
-            if (st === 'praise') return click(/褒める/);
+            if (st === 'praise') { const b = document.querySelector('[data-msx-react-how="praise"]'); if (b) { b.click(); return true; } return !document.querySelector('[data-msx-react]'); } // 2026-11-14 成功のあとは叱る・褒めるの段が出ない
             if (st === 'clinic') return click(/通院/);
             if (st === 'begin') return click(/育成をはじめる/);
             if (st === 'introNext') { const b = document.querySelector('[data-msx-intro-next]'); if (!b) return false; b.click(); return true; }
@@ -162,7 +165,10 @@ const makeRun = async (kind) => {
             }
             if (st === 'long') { // 選択肢の文を長く(2行に)して崩れないかを見る
               const b = document.querySelector('.msx .v-opt'); if (!b) return false;
-              b.firstChild.textContent = 'みんなで分けあって、いちばん大きいのをあの子にあげる'; return true;
+              // 画面と同じく言葉の切れ目で折る(jaWrapPoints の折り目を <wbr> にして差しこむ)
+              const tx = 'みんなで分けあって、いちばん大きいのをあの子にあげる'; const pts = typeof jaWrapPoints === 'function' ? jaWrapPoints(tx) : tx;
+              const sp = document.createElement('span'); sp.style.cssText = 'word-break:keep-all;overflow-wrap:anywhere'; String(pts).split('\u200B').forEach((x, i) => { if (i) sp.appendChild(document.createElement('wbr')); sp.appendChild(document.createTextNode(x)); });
+              b.firstChild.replaceWith(sp); return true;
             }
             if (st === 'event') {
               // ランダムイベントが出るターンを芯で探して、その場面を開く(撮るときだけ id を変えて探す)
@@ -177,6 +183,16 @@ const makeRun = async (kind) => {
               await new Promise((r) => setTimeout(r, 600));
               return click(/続きから/);
             }
+            if (st.startsWith('react:')) {
+              const res = st.slice(6); const raw = JSON.parse(localStorage.getItem(MSX_KEYS.run));
+              raw.s = { ...raw.s, last: res === 'shugyo' ? { kind: 'shugyo' } : { kind: 'train', res }, reacted: false, acted: true }; raw.phase = 'react'; raw.out = res === 'shugyo' ? { kind: 'shugyo' } : { kind: 'train', result: res };
+              localStorage.setItem(MSX_KEYS.run, JSON.stringify(raw));
+              window.__msxRoot.unmount(); const el = document.getElementById('msx-shot'); window.__msxRoot = ReactDOM.createRoot(el);
+              window.__msxRoot.render(React.createElement(MonheroSuccessScreen, { onClose() {}, callNameOf: () => 'けんささん', bondLvOf: () => 4 }));
+              await new Promise((r) => setTimeout(r, 600));
+              return click(/続きから/);
+            }
+            if (st.startsWith('how:')) { const b = document.querySelector(`[data-msx-react-how="${st.slice(4)}"]`); if (b) b.click(); return !!b; }
             if (st === 'issa') {
               // 博士が来るターンを芯で探して、その場面を開く(ふだんは 3% なので、撮るときだけ id を変えて探す)
               const SUC = msxSuc.SUC; const raw = JSON.parse(localStorage.getItem(MSX_KEYS.run));
@@ -216,6 +232,34 @@ const makeRun = async (kind) => {
           // 重なり: 押せる物どうしが 6px 角以上かぶる
           const bs = [...root.querySelectorAll('button')].filter((e) => vis(e) && !clipped(e)).map((e) => ({ e, r: e.getBoundingClientRect() }));
           const lap = []; for (let i = 0; i < bs.length; i++) for (let j = i + 1; j < bs.length; j++) { const a = bs[i].r, b = bs[j].r; if (bs[i].e.contains(bs[j].e) || bs[j].e.contains(bs[i].e)) continue; if (Math.min(a.right, b.right) - Math.max(a.left, b.left) > 6 && Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > 6) lap.push(`${lab(bs[i].e)}×${lab(bs[j].e)}`); }
+          // ボタン・選択肢の文が言葉の途中で折れた(2026-11-14 社長「次へ向けて気合いを入/れる」)。判定は tools/boot/ja-wrap-check.js と同じ作り:
+          //   折ってよいのは <wbr> の所・空白や記号のあと・言葉の切れ目(ひらがな同士の間は、助詞のあと以外は言葉の途中)。1行に入らない長い言葉(10字以上)は数えない
+          const wordCut = [];
+          { const seg = new Intl.Segmenter('ja', { granularity: 'word' }); const range = document.createRange(); const hira = (c) => /[ぁ-ゖ]/.test(c || '');
+            for (const btn of root.querySelectorAll('button, [role=button]')) {
+              if (!vis(btn) || clipped(btn)) continue;
+              for (const el of [btn, ...btn.querySelectorAll('*')]) {
+                if (el.matches('[data-ja-keep]')) continue;
+                const nodes = [...el.childNodes].filter((n) => n.nodeType === 3 || n.nodeName === 'WBR' || (n.nodeType === 1 && n.matches('[data-ja-keep]')));
+                if (!nodes.some((n) => n.nodeType === 3 && /[぀-ヿ一-鿿]/.test(n.textContent))) continue;
+                let text = ''; const tops = []; const wbrAt = new Set();
+                for (const n of nodes) {
+                  if (n.nodeName === 'WBR') { wbrAt.add(text.length); continue; }
+                  const tn = n.nodeType === 3 ? [n] : [...n.childNodes].filter((x) => x.nodeType === 3);
+                  for (const x of tn) for (let i = 0; i < x.textContent.length; i++) { range.setStart(x, i); range.setEnd(x, i + 1); const rs = range.getClientRects(); if (!rs.length) continue; text += x.textContent[i]; tops.push(Math.round(rs[0].top)); }
+                }
+                const breaks = []; for (let i = 1; i < tops.length; i++) if (tops[i] - tops[i - 1] > 4) breaks.push(i);
+                if (!breaks.length) continue;
+                const bounds = new Set([0, ...wbrAt]); let pos = 0;
+                for (const s of seg.segment(text)) { pos += s.segment.length; const a = text[pos - 1], b2 = text[pos]; if (hira(a) && hira(b2) && !/[のをはがにともへ]/.test(a)) continue; bounds.add(pos); }
+                for (const b of breaks) {
+                  if (bounds.has(b) || /[\s・、。!?！？)）」』…〜~+＋-]/.test(text[b - 1] || '')) continue;
+                  const arr = [...bounds].sort((x, y) => x - y); let st = 0, en = text.length; for (const x of arr) { if (x < b) st = x; if (x > b) { en = x; break; } }
+                  if (en - st >= 10) continue;
+                  wordCut.push(`${text.slice(Math.max(0, b - 6), b)}/${text.slice(b, b + 6)}`);
+                }
+              }
+            } }
           // 育成のメイン画面: 編成の顔の列が「持ち物」のボタンに重ならない(2026-11-14 社長「持ち物と編成がかぶってる」)
           // 持ち物・くわしくは右下へ移したので、場面の中の札(編成の列・季節などの札・名前)とも重ならないことを見る。編成の列は場面の下からはみ出さない
           const inter = (a, b) => Math.max(0, Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top)) * (Math.min(a.right, b.right) > Math.max(a.left, b.left) ? 1 : 0);
@@ -244,7 +288,7 @@ const makeRun = async (kind) => {
             const dx = Math.max(q.left - x, 0, x - q.right), dy = Math.max(q.top - y, 0, y - q.bottom);
             if ((dx > 0 || dy > 0) && dx <= 22 && dy <= 22) steal.push(`${lab(e)}→${lab(b)}`);
           }
-          return { ok: true, text: root.innerText.length, over, taps, cut, tiny, topBlank, lap, flat, flat2, steal, lowBtn, partyBag: Math.round(partyBag), land: window.innerWidth > window.innerHeight };
+          return { ok: true, text: root.innerText.length, over, taps, cut, tiny, topBlank, lap, wordCut, flat, flat2, steal, lowBtn, partyBag: Math.round(partyBag), land: window.innerWidth > window.innerHeight };
         }, fscale || 0);
         const L = `${name}${tag ? `(${tag})` : ''}`;
         const warn = (what, arr) => { if (arr && arr.length) console.log(`  見張り ${L}: ${what} ${arr.length}件 ${arr.slice(0, 4).join(' / ')}`); };
@@ -253,6 +297,7 @@ const makeRun = async (kind) => {
           check(`${L}: 字が枠で切れない`, m.cut.length === 0, m.cut.slice(0, 4).join(' / '));
           check(`${L}: 字が小さすぎない`, m.tiny.length === 0, m.tiny.slice(0, 4).join(' / '));
           check(`${L}: 押せる物が重ならない`, m.lap.length === 0, m.lap.slice(0, 3).join(' / '));
+          check(`${L}: ボタン・選択肢の文が言葉の途中で折れない`, m.wordCut.length === 0, m.wordCut.slice(0, 4).join(' / '));
           check(`${L}: ほかの主なボタンが潰れていない(見た目の高さ 32px 以上)`, m.flat2.length === 0, m.flat2.slice(0, 4).join(' / '));
           // ホーム(保存枠を押すとランキングが開いていた所)は止める。ほかの画面は数を出して直しを振り分ける(重なった窓・横画面の編成の段などで残っている)
           if (/^H/.test(name)) check(`${L}: ボタンの真ん中を押すと、そのボタンが押される(下のボタンに取られない)`, m.steal.length === 0, m.steal.slice(0, 4).join(' / '));
