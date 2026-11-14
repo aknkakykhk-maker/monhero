@@ -394,6 +394,19 @@ const MSX_CSS = `
 .msx .v-pt .n{font-size:10px;font-weight:900;color:#fde047;line-height:1.2;white-space:nowrap}.msx .v-pt .n b{display:block;font-size:26px;color:#fff;text-shadow:0 2px 0 #9a3412}
 .msx .v-pt .r{flex:1;min-width:0;font-size:10px;font-weight:800;line-height:1.4}
 .msx .v-pt .r .bar{height:7px;margin-top:3px}
+.msx .v-as3{display:flex;flex-direction:column;gap:5px;margin-top:6px;flex:1 1 0!important;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.msx .v-a3{background:#1e1a36;border:1px solid #475569;border-radius:12px;padding:6px 8px;flex:0 0 auto}
+.msx .v-a3.got{border-color:#fbbf24;background:#33270f}.msx .v-a3.dim{opacity:.45}
+.msx .v-a3 .h{display:flex;align-items:center;gap:5px;text-align:left}.msx .v-a3 .nm{flex:1 1 auto;min-width:0;font-size:12.5px;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.msx .v-a3 .rf{flex:0 0 auto;display:inline-block;width:auto;font-size:9px;font-weight:800;padding:1px 6px;border-radius:8px;background:#1d4ed8;color:#fff}.msx .v-a3 .rf.o{background:#7e22ce}
+.msx .r3 .r3-bar.sc{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}.msx .r3 .r3-bar.sc::-webkit-scrollbar{display:none}.msx .r3 .r3-bar.sc .r3-chip{flex:0 0 auto}
+.msx .v-a3 .val{flex:0 0 auto;min-width:54px;text-align:right;font-size:14px;color:#fde68a}
+.msx .v-a3 .ex{font-size:10px;color:#cbd5e1;font-weight:700;text-align:left;margin:2px 0 4px;line-height:1.35}
+.msx .v-a3 .ctl{display:flex;align-items:center;gap:6px}.msx .v-a3 .ctl button{flex:0 0 34px;height:28px;border-radius:8px;border:1px solid #6d5fa6;background:#2f2550;color:#fff;font-size:16px;font-weight:900;text-align:center;padding:0}
+.msx .v-a3 .ctl button:disabled{opacity:.35}
+.msx .v-a3 .gauge{flex:1 1 auto;height:12px;border-radius:6px;background:#3a3054;position:relative;overflow:hidden;cursor:pointer}.msx .v-a3 .gauge i{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,#f59e0b,#fde68a)}
+.msx .v-a3 .gauge s{position:absolute;top:0;bottom:0;width:1px;background:rgba(15,10,30,.55)}
+.msx .v-a3 .c{flex:0 0 46px;text-align:right;font-size:10.5px;font-weight:800;color:#fde68a}
 .msx .v-as{display:grid;grid-template-columns:1fr 1fr;grid-auto-rows:1fr;gap:5px;margin-top:6px;flex:1 1 0!important;min-height:0}
 .msx .v-a{background:#1e1a36;border:1px solid #475569;border-radius:12px;padding:5px 6px 6px;min-width:0;position:relative;display:flex;flex-direction:column;justify-content:center}
 .msx .v-a .nm{font-size:11.5px;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
