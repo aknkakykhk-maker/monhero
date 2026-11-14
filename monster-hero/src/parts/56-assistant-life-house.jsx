@@ -604,7 +604,7 @@ function AssistantLifeRoomSheet({ id, life, peerSt, bondLevelOf, diary, onClose,
   const rvAct = (k, label, cls, fn, dis = false) => <button key={k} type="button" data-assistant-life-roomview-act={k} disabled={dis} onClick={fn} className={`rounded-xl px-1 py-2 min-h-[44px] text-[12px] font-black text-white shadow active:scale-95 disabled:opacity-40 ${cls}`}>{label}</button>;
   const rvDock = land || uiV2 ? null : (
     <div className="grid grid-cols-3 gap-1.5" data-assistant-life-roomview-dock>
-      {rvAct('sheet', home ? '👀 ようす' : '👀 くわしく', 'bg-gradient-to-br from-rose-400 to-amber-500', toSheet)}
+      {rvAct('sheet', home ? '👀 ようす' : '👀 詳しく', 'bg-gradient-to-br from-rose-400 to-amber-500', toSheet)}
       {rvAct('chat', asleep ? '💤 起こす' : '💬 おしゃべり', 'bg-gradient-to-br from-sky-400 to-indigo-500', () => (onChat ? onChat(id, null) : toSheet()), !onChat && !home)}
       {rvAct('give', '🎁 贈る', 'bg-pink-600', () => { if (soloOn && canGiveSolo) onGiveSolo(id, w && w.group ? w.group.ids : [id]); else if (w && w.group && canGive) onGive(w.group); else toSheet(); })}
       {rvAct('furn', '🪑 家具', 'bg-orange-600', () => setFurnOpen(true), !(typeof assistantLifeFurnEnabled === 'function' && assistantLifeFurnEnabled() && onGiveFurn))}
@@ -679,7 +679,7 @@ function AssistantLifeRoomSheet({ id, life, peerSt, bondLevelOf, diary, onClose,
         return pi ? <AssistantLifeDoRow k="plan" icon="📅" label="次の行き先を決める" sub={pi.sub} on={() => assistantLifePlanOpen({ who: id })}/> : null;
       })()}
       {furnOn && <AssistantLifeDoRow k="furn" icon="🪑" label="部屋の家具" sub={`置いてある家具 ${rvFurn.length}個`} on={() => setFurnOpen(true)}/>}
-      <p className="mt-3 text-[11px] font-black text-slate-300">くわしく</p>
+      <p className="mt-3 text-[11px] font-black text-slate-300">詳しく</p>
     </div>) : null;
   return (
     <div className="absolute inset-0" style={{ zIndex: 25 }} data-assistant-life-room-sheet={id}>
@@ -1287,7 +1287,7 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
       <div className="mt-1 flex items-center gap-1.5" data-assistant-life-tier={tier.id} title={ASSISTANT_LIFE_TIER_NOTES[tier.id]}>
         {uiV2 ? <button type="button" className="mhl-chip" data-assistant-life-tier-help aria-label="にぎわいの説明" onClick={() => setNote(`🎉 にぎわい「${tier.label}」: 今日 🤝 友情Lv の上がり方が ×${tier.mult}。モンヒロビート・バトル・MFバトルカード・見守るで遊ぶほど上がります${next ? `(あと ${next.min - play.points} で「${next.label}」×${next.mult})` : ''}。朝4時に戻ります`)} style={{ minHeight: 32, padding: '0 10px' }}>🎉 {tier.label} ×{tier.mult} <span aria-hidden="true">ⓘ</span></button> : <span className="mhl-chip">🎉 {tier.label} ×{tier.mult}</span>}
         <span className="mhl-bar" aria-hidden="true"><i style={{ width: `${next ? Math.min(100, Math.round(100 * (play.points - tier.min) / (next.min - tier.min))) : 100}%` }}/></span>
-        <span className="whitespace-nowrap text-[9.5px] font-bold text-slate-200">{next ? `${next.label}まで ${next.min - play.points}` : 'いちばん上'}</span>
+        <span className="whitespace-nowrap text-[9.5px] font-bold text-slate-200">{next ? `${next.label}まで ${next.min - play.points}` : '一番上'}</span>
       </div>
     </div>);
   const findBtn = <button type="button" className="mhl-find" data-assistant-life-find onClick={() => { if (uiV2) { setMapFocusPlace(null); setMapFocusAssistantId(null); } setTab('where'); }}>📋 みんなの居場所 ›</button>;

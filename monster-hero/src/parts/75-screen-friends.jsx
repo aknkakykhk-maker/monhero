@@ -50,7 +50,7 @@ const FRIENDS_RESULT_TEXT = Object.freeze({
   cancelled: ['申請を取り消しました', 'info'],
   removed: ['フレンドを解除しました', 'info'],
   notready: ['フレンド機能はただいま準備中です', 'warn'],
-  error: ['通信がうまくいきませんでした。少し待ってからもう一度ためしてください', 'warn'],
+  error: ['通信がうまくいきませんでした。少し待ってからもう一度試してください', 'warn'],
 });
 const FRIENDS_TONE_CLASS = Object.freeze({
   ok: 'border-emerald-400/60 bg-emerald-950/50 text-emerald-100',
@@ -306,9 +306,9 @@ function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack
   // ---- 状態が整っていないとき ----
   if (phase !== 'ready') {
     const lines = phase === 'loading' ? ['フレンドを読み込んでいます…']
-      : phase === 'notready' ? ['フレンド機能はただいま準備中です', 'しばらくしてからもう一度ひらいてください']
-      : phase === 'noid' ? ['この端末ではフレンドを使えません', 'セーブデータを保存できる状態でひらいてください']
-      : ['フレンドを読み込めませんでした', '通信を確かめて、もう一度ひらいてください'];
+      : phase === 'notready' ? ['フレンド機能はただいま準備中です', 'しばらくしてからもう一度開いてください']
+      : phase === 'noid' ? ['この端末ではフレンドを使えません', 'セーブデータを保存できる状態で開いてください']
+      : ['フレンドを読み込めませんでした', '通信を確かめて、もう一度開いてください'];
     return (
       <div data-mh-screen data-friends-phase={phase} className={SCREEN_SHELL_CLASS}>
         <ScreenHead title="フレンド" accent="text-pink-300" onBack={onBack} backLabel="プロフィールへ戻る"/>
@@ -435,7 +435,7 @@ function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack
                         <b className="min-w-0 flex-1 truncate text-[12px] font-black text-white">{labels[e.id].label}</b>
                         <strong className="shrink-0 text-[13px] font-black text-amber-200">{e.k === 'w' ? `WAVE ${e.v.toLocaleString()}` : `${e.v.toLocaleString()} pt`}</strong>
                       </div>))}
-                    <p className="px-1 text-[10px] font-bold text-slate-500">モード別の、いちばん良い記録です。</p>
+                    <p className="px-1 text-[10px] font-bold text-slate-500">モード別の、一番良い記録です。</p>
                   </div>);
               })()}
               {fold('songs', '曲のベスト')}
@@ -545,7 +545,7 @@ function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack
           : <div className="flex flex-col gap-2">
               {groups.friends.length >= 6 && (
                 <input type="search" value={query} onChange={(event) => setQuery(event.target.value.slice(0, 20))} data-friend-search
-                  placeholder="名前でさがす" aria-label="フレンドを名前でさがす" autoComplete="off" spellCheck={false}
+                  placeholder="名前で探す" aria-label="フレンドを名前で探す" autoComplete="off" spellCheck={false}
                   className="min-h-[44px] w-full rounded-xl border border-white/15 bg-black/40 px-3 text-[13px] font-bold text-white placeholder:text-slate-500"/>
               )}
               <p data-friend-online-count className="px-1 text-[10px] font-black text-slate-400">
