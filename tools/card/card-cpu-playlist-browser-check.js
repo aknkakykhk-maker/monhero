@@ -12,7 +12,7 @@
 // 【見るもの】
 // ① 音の出口: 1回だけの曲は流れ終わると知らせる / 途中でほかの曲にしたら知らせない / 読めない曲は知らせる・古い呼び出しは知らせない
 // ② オプション: 助手と対戦の1曲えらびの欄が無く、助手ごとの曲の並びの欄がある。開いただけでは保存しない
-// ③ 足す・変える・外す・はじめの曲に戻す。同じ曲は選べない・5曲まで・1曲は外せない。ほかの助手と前の保存(mh_card_bgm_v1)は変わらない
+// ③ 足す・変える・外す・初めの曲に戻す。同じ曲は選べない・5曲まで・1曲は外せない。ほかの助手と前の保存(mh_card_bgm_v1)は変わらない
 // ④ 全員に同じ曲を入れる: やめると何も変わらない・確かめてから全員へ入る・そのあと助手ごとに直せる
 // ⑤ 試聴は、オプションを閉じたら止まる
 // ⑥ 画面が横にはみ出さない(320 幅でも)
@@ -320,7 +320,7 @@ const SHORT = 'audio/se-awakened-moo-apocalypse.mp3'; // 7秒ほどの音(検査
       await quitBattle();
 
       // ⑧ ききは全部読めない曲
-      await page.getByRole('button', { name: '相手をえらぶ' }).click();
+      await page.getByRole('button', { name: '相手を選ぶ' }).click();
       await page.waitForSelector('[data-card-foe="kiki"]', { timeout: 8000 });
       await page.click('[data-card-foe="kiki"]');
       await page.click('[data-card-start]'); await page.click('[data-card-deck-pick-go]'); // 対戦の前のデッキ選び(前に使ったデッキが選ばれている)

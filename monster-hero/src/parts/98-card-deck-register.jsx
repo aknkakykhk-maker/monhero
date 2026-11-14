@@ -25,7 +25,7 @@ const CARD_REG_COMBOS = Object.freeze([
   { sec: 'おすすめ', icon: '🌊', name: '3体いたら全体攻撃', c: 'foeAlive.3', a: 'reach.全体攻撃', where: 'mon' },
   { sec: '攻める', icon: '⚔️', name: '弱った相手を狙う', c: 'foeLife.50', a: 'atk', where: 'mon' },
   { sec: '攻める', icon: '🎯', name: '最後の1体を倒す', c: 'foeAlive.1', a: 'atk', where: 'mon' },
-  { sec: '攻める', icon: '💨', name: 'はじめから攻める', c: 'turnLe.3', a: 'atk', where: 'mon' },
+  { sec: '攻める', icon: '💨', name: '初めから攻める', c: 'turnLe.3', a: 'atk', where: 'mon' },
   { sec: '攻める', icon: '🔥', name: '弱った相手に大技', c: 'foeLife.30', a: 'cost.大技(4以上)', where: 'mon' },
   { sec: '攻める', icon: '✨', name: '回避されない技で攻める', c: 'any', a: 'eff.回避されない', where: 'mon' },
   { sec: '守る', icon: '🧱', name: '大きい攻撃だけ守る', c: 'any', a: 'guardOver.5', where: 'mon' },
@@ -35,7 +35,7 @@ const CARD_REG_COMBOS = Object.freeze([
   { sec: '崩す', icon: '🃏', name: '手札の多い相手を崩す', c: 'foeHandGe.4', a: 'disrupt.手札を捨てさせる', where: 'mon' },
   { sec: '崩す', icon: '🔻', name: 'ガッツの多い相手を崩す', c: 'foeGutsGe.4', a: 'disrupt.ガッツを減らす', where: 'mon' },
   { sec: 'ブリーダー', icon: '🔋', name: 'ガッツをためる', c: 'any', a: 'save', where: 'breeder' },
-  { sec: 'ブリーダー', icon: '⏳', name: 'はじめのうちはためる', c: 'turnLe.3', a: 'save', where: 'breeder' },
+  { sec: 'ブリーダー', icon: '⏳', name: '初めのうちはためる', c: 'turnLe.3', a: 'save', where: 'breeder' },
   { sec: 'ブリーダー', icon: '🛡️', name: '守りのカードはガッツにしない', c: 'any', a: 'keepGuard', where: 'breeder' },
   { sec: 'ブリーダー', icon: '🌐', name: '相手が3体なら全体カード', c: 'foeAlive.3', a: 'fieldCard', where: 'breeder' },
   { sec: 'ブリーダー', icon: '💚', name: 'ピンチなら回復', c: 'myLife.50', a: 'bEff.回復する', where: 'breeder' },
@@ -56,7 +56,7 @@ const cardRegSmartNextText = (frames, lv) => {
   const base = f.base.filter(Boolean).length;
   const rows = cardTacticCountedRows(f);
   const now = cardTacticSmartLevel(f);
-  if (now === 'legend') return 'いちばん上の LEGEND です。';
+  if (now === 'legend') return '一番上の LEGEND です。';
   const next = CARD_TACTIC_SMART[CARD_TACTIC_SMART.indexOf(now) + 1];
   const label = CARD_SHARE_SMART_LABEL[next];
   if (next === 'master') return `次の ${label} まで: 基本カードをあと${2 - base}枚、または、ちゃんと効く戦術カードをあと${Math.max(1, 4 - rows)}枚。`;
@@ -128,7 +128,7 @@ const CardRegComboSheet = ({ tactics, where, title, onPick, onCustom, onClose })
           </div>
         ))}
       </div>
-      <button type="button" data-card-reg-custom onClick={() => { Audio_.fgSe.tap(); onCustom(); }} className="mh-button min-h-[48px] w-full rounded-2xl font-black">自分で組み合わせる(条件と行動を別々にえらぶ)</button>
+      <button type="button" data-card-reg-custom onClick={() => { Audio_.fgSe.tap(); onCustom(); }} className="mh-button min-h-[48px] w-full rounded-2xl font-black">自分で組み合わせる(条件と行動を別々に選ぶ)</button>
     </div>
   );
 };
@@ -203,7 +203,7 @@ const CardRegMonSheet = ({ db, deck, k, rows, max, why, name, counts, baseName =
             <small className="block text-[11px] font-bold text-sky-200">上から順に見て、<u>最初に当てはまった1つ</u>だけを使います</small>
             <span className="mt-1 inline-block rounded-full bg-white/10 px-2 py-0.5 text-[11px] font-black text-white">{`${rows.length}枚 / 入れられる ${max}枚`}</span>
           </div>
-          <button type="button" aria-label="とじる" data-card-reg-mon-close onClick={onClose} className="self-start px-2 text-[22px] text-slate-400">✕</button>
+          <button type="button" aria-label="閉じる" data-card-reg-mon-close onClick={onClose} className="self-start px-2 text-[22px] text-slate-400">✕</button>
         </div>
         <CardRegRows rows={rows} why={why} onRows={onRows} baseName={baseName} rest="(攻撃のときは、ほかのモンスター・ブリーダーの手も見てから)"/>
         {rows.length < max
@@ -276,7 +276,7 @@ const CardRegTrialSheet = ({ db, deck, battle, aces, monName, onClose }) => {
   const wins = res.filter((r) => r.win).length;
   return (
     <div data-card-reg-trial={done ? 'done' : 'run'} className="fixed inset-0 z-[82] flex flex-col bg-slate-950 p-3" style={cardSafePad('.75rem')}>
-      <ScreenHead title="ためしに戦わせる" accent="text-violet-200" onBack={onClose} note={`いまの戦い方で、助手(MASTER)と${CARD_REG_TRIAL_GAMES}戦`}/>
+      <ScreenHead title="試しに戦わせる" accent="text-violet-200" onBack={onClose} note={`いまの戦い方で、助手(MASTER)と${CARD_REG_TRIAL_GAMES}戦`}/>
       <div className="min-h-0 flex-1 space-y-2 overflow-y-auto pb-3">
         <div className={`${SCREEN_PANEL_CLASS} py-2 text-center`}>
           {done ? <b data-card-reg-trial-wins={wins} className="text-[18px] font-black text-amber-200">{`${CARD_REG_TRIAL_GAMES}戦 ${wins}勝`}</b>
@@ -304,10 +304,10 @@ const CardRegTrialSheet = ({ db, deck, battle, aces, monName, onClose }) => {
               <small className="block text-[10px] font-bold text-slate-400">{`${x.by} ・ 上の行が先に当てはまっていたか、その場面が来なかった`}</small>
             </div>
           ))}
-          <p className="text-[11px] font-bold leading-snug text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('ためしの対戦は、ビートP・記録・ランクに数えません。自分で打つ対戦では戦術カードは使われません(ほかのブリーダーがこのデッキと戦うときに使われます)')}</p>
+          <p className="text-[11px] font-bold leading-snug text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('試しの対戦は、ビートP・記録・ランクに数えません。自分で打つ対戦では戦術カードは使われません(ほかのブリーダーがこのデッキと戦うときに使われます)')}</p>
         </>)}
       </div>
-      {done && <button type="button" data-card-reg-trial-close onClick={onClose} className="mh-button mh-button-primary min-h-[48px] w-full rounded-2xl font-black">戦い方にもどる</button>}
+      {done && <button type="button" data-card-reg-trial-close onClick={onClose} className="mh-button mh-button-primary min-h-[48px] w-full rounded-2xl font-black">戦い方に戻る</button>}
     </div>
   );
 };
@@ -333,11 +333,11 @@ const CardRegTemplateSheet = ({ db, deck, tactics, open, lv, aces, monName, onPi
   };
   return (
     <div data-card-reg-templates className="fixed inset-0 z-[82] flex flex-col bg-slate-950 p-3" style={cardSafePad('.75rem')}>
-      <ScreenHead title="おすすめの組み方" accent="text-amber-200" onBack={onClose} note="えらぶと、3体とブリーダーの戦い方がまとめて入ります(いまの戦い方は置きかわります)"/>
+      <ScreenHead title="おすすめの組み方" accent="text-amber-200" onBack={onClose} note="選ぶと、3体とブリーダーの戦い方がまとめて入ります(いまの戦い方は置きかわります)"/>
       <div className="min-h-0 flex-1 space-y-2 overflow-y-auto pb-3">
         <button type="button" data-card-reg-auto disabled={auto === 'run'} onClick={() => { Audio_.fgSe.tap(); runAuto(); }}
           className="mh-button w-full rounded-2xl border-2 border-dashed border-sky-300 bg-sky-950/60 py-3 text-[14px] font-black text-sky-50 disabled:opacity-60" style={JA_WRAP_STYLE}>
-          {auto === 'run' ? '4つの型を、ためしに戦わせています…' : `🎲 おまかせ(4つの型をためしに${CARD_REG_AUTO_GAMES}戦ずつ戦わせて、いちばん勝った型で組む)`}
+          {auto === 'run' ? '4つの型を、試しに戦わせています…' : `🎲 おまかせ(4つの型を試しに${CARD_REG_AUTO_GAMES}戦ずつ戦わせて、一番勝った型で組む)`}
         </button>
         {CARD_REG_STYLES.map((s) => {
           const f = cardRegApplyStyle(s, tactics, open);
@@ -488,7 +488,7 @@ const CardDeckRegister = ({ db, decks, collection, frame = null, onBack, onOpenL
         {msg && step !== 'done' && <p data-card-reg-msg className="rounded-xl bg-slate-900 p-2 text-[13px] font-bold text-amber-100" style={JA_WRAP_STYLE}>{jaWrap(msg)}</p>}
         {step === 'deck' && (<>
           {mineBox}
-          <p className="text-[16px] font-black text-white">登録するデッキをえらんでください</p>
+          <p className="text-[16px] font-black text-white">登録するデッキを選んでください</p>
           {list.map((d) => {
             const why = issuesOf(d);
             return (
@@ -517,7 +517,7 @@ const CardDeckRegister = ({ db, decks, collection, frame = null, onBack, onOpenL
             <span className="w-10 text-center text-[28px]">✏️</span>
             <span className="min-w-0 flex-1"><b className="block text-[15px] font-black text-white">自分で細かく決める</b><small className="block text-[11px] font-bold text-slate-300" style={JA_WRAP_STYLE}>3体それぞれに、戦術カードを1枚ずつセットします(今のセットから直せます)</small></span>
           </button>
-          <p className="text-[11px] font-bold text-slate-400" style={JA_WRAP_STYLE}>えらぶと、持っている戦術カードから、その戦い方に合う物を3体それぞれに自動でセットします。次の画面で中身を見られます。</p>
+          <p className="text-[11px] font-bold text-slate-400" style={JA_WRAP_STYLE}>選ぶと、持っている戦術カードから、その戦い方に合う物を3体それぞれに自動でセットします。次の画面で中身を見られます。</p>
         </>)}
         {/* 2026-10-30 社長「基本カード/ブリーダーカード/各モンスターカードを、見やすくわかりやすく設定できるように」→ 案B:
             ①基本の型 ②ブリーダーの手 ③モンスターごとの手 を1画面に、色と番号で分けて並べる。モンスターを押すと下からその子の手 */}
@@ -537,7 +537,7 @@ const CardDeckRegister = ({ db, decks, collection, frame = null, onBack, onOpenL
                     <small className="text-[10px] font-black text-amber-200">{i === 0 ? 'メイン' : `サブ${i}`}</small>
                     {locked ? <><span className="text-[20px]">🔒</span><small className="text-[10px] font-black text-slate-300">{lockAt ? `ランク${lockAt}で` : ''}</small></>
                       : c ? <><b className="mt-0.5 block text-[14px] font-black leading-tight text-white" style={JA_WRAP_STYLE}>{c.name}</b><small className="mt-auto line-clamp-3 text-[10px] font-bold leading-snug text-orange-50" style={JA_WRAP_STYLE}>{cardJaWrap(c.desc)}</small></>
-                        : <b className="mt-1 text-[13px] font-black text-amber-100">＋ えらぶ</b>}
+                        : <b className="mt-1 text-[13px] font-black text-amber-100">＋ 選ぶ</b>}
                   </button>
                 );
               })}
@@ -573,7 +573,7 @@ const CardDeckRegister = ({ db, decks, collection, frame = null, onBack, onOpenL
           <button type="button" data-card-reg-template-open disabled={!deck} onClick={() => { Audio_.fgSe.tap(); setTpl(true); }}
             className="mh-button min-h-[48px] w-full rounded-2xl border-2 border-amber-400 bg-amber-900/40 text-[14px] font-black text-amber-50 disabled:opacity-40">📋 おすすめの組み方・おまかせ</button>
           <button type="button" data-card-reg-trial-open disabled={!deck || !!issuesOf(deck).length} onClick={() => { Audio_.fgSe.tap(); setTrial(true); }}
-            className="mh-button min-h-[48px] w-full rounded-2xl border-2 border-violet-400 bg-violet-900/60 text-[14px] font-black text-violet-50 disabled:opacity-40">{`▶ ためしに戦わせる(助手と${CARD_REG_TRIAL_GAMES}戦・よく働いたカード)`}</button>
+            className="mh-button min-h-[48px] w-full rounded-2xl border-2 border-violet-400 bg-violet-900/60 text-[14px] font-black text-violet-50 disabled:opacity-40">{`▶ 試しに戦わせる(助手と${CARD_REG_TRIAL_GAMES}戦・よく働いたカード)`}</button>
         </>)}
         {step === 'confirm' && (<>
           <p className="text-[16px] font-black text-white">この内容で登録します</p>
@@ -591,7 +591,7 @@ const CardDeckRegister = ({ db, decks, collection, frame = null, onBack, onOpenL
             {smartNext && <p data-card-reg-smart-next className="mt-1 rounded-lg bg-amber-500/10 px-2 py-1 text-[11px] font-bold leading-snug text-amber-100" style={JA_WRAP_STYLE}>{jaWrap(smartNext)}</p>}
           </div>
           <div data-card-reg-aces className={`${SCREEN_PANEL_CLASS} py-2`}>
-            <div className="flex items-center gap-2 text-[13px] font-black text-white">切り札 <span className="text-[12px] text-amber-200">{aces === 'auto' ? 'おまかせ' : '自分でえらぶ'}</span>
+            <div className="flex items-center gap-2 text-[13px] font-black text-white">切り札 <span className="text-[12px] text-amber-200">{aces === 'auto' ? 'おまかせ' : '自分で選ぶ'}</span>
               <button type="button" data-card-reg-aces-toggle onClick={() => setAces((a) => (a === 'auto' ? cardRegAutoAces(db, deck) : 'auto'))} className="ml-auto text-[12px] font-black text-sky-300">{aces === 'auto' ? '変える ›' : 'おまかせに戻す'}</button></div>
             <small className="block text-[11px] font-bold text-slate-400" style={JA_WRAP_STYLE}>{`出せるときに優先して使うカード: ${acesNow.map((no) => (cardOf(db, no) || {}).name).filter(Boolean).join('・') || 'なし'}`}</small>
             {aces !== 'auto' && (
@@ -610,11 +610,11 @@ const CardDeckRegister = ({ db, decks, collection, frame = null, onBack, onOpenL
           {onOpenMarket && <button type="button" data-card-reg-market onClick={() => { Audio_.fgSe.tap(); onOpenMarket(); }} className="mh-button min-h-[48px] w-full rounded-2xl font-black">戦術カードを引く(マーケット)</button>}
         </>)}
       </div>
-      {step === 'deck' && footer(null, <button type="button" data-card-reg-next disabled={!deck || issuesOf(deck).length > 0} onClick={() => { Audio_.fgSe.tap(); setStep('style'); }} className="mh-button mh-button-primary min-h-[52px] flex-1 rounded-2xl font-black disabled:opacity-40">次へ(戦い方をえらぶ)</button>)}
+      {step === 'deck' && footer(null, <button type="button" data-card-reg-next disabled={!deck || issuesOf(deck).length > 0} onClick={() => { Audio_.fgSe.tap(); setStep('style'); }} className="mh-button mh-button-primary min-h-[52px] flex-1 rounded-2xl font-black disabled:opacity-40">次へ(戦い方を選ぶ)</button>)}
       {step === 'style' && footer(back('deck'), <button type="button" data-card-reg-next disabled={!styleId} onClick={() => { Audio_.fgSe.tap(); setStep('confirm'); }} className="mh-button mh-button-primary min-h-[52px] flex-1 rounded-2xl font-black disabled:opacity-40">次へ</button>)}
       {step === 'custom' && footer(null, <button type="button" data-card-reg-next onClick={() => { Audio_.fgSe.tap(); setStep('confirm'); }} className="mh-button mh-button-primary min-h-[52px] flex-1 rounded-2xl font-black">決める(登録の確かめへ)</button>)}
       {step === 'confirm' && footer(back(styleId === 'custom' ? 'custom' : 'style'), <button type="button" data-card-reg-register disabled={busy || !deck || !selfId} onClick={() => { Audio_.fgSe.tap(); void register(); }} className="mh-button mh-button-primary min-h-[52px] flex-[2] rounded-2xl font-black disabled:opacity-40">{mine ? 'この内容で登録し直す' : 'このデッキを登録する'}</button>)}
-      {step === 'done' && footer(null, <button type="button" onClick={() => { Audio_.fgSe.tap(); onBack(); }} className="mh-button mh-button-primary min-h-[52px] flex-1 rounded-2xl font-black">とじる</button>)}
+      {step === 'done' && footer(null, <button type="button" onClick={() => { Audio_.fgSe.tap(); onBack(); }} className="mh-button mh-button-primary min-h-[52px] flex-1 rounded-2xl font-black">閉じる</button>)}
       {tpl && deck && <CardRegTemplateSheet db={db} deck={deck} tactics={tactics} open={open} lv={lv} aces={acesNow} monName={monName}
         onPick={(frames, note) => { setDraft(frames); setStyleId('custom'); setTpl(false); setMsg(note); }} onClose={() => setTpl(false)}/>}
       {trial && deck && <CardRegTrialSheet db={db} deck={deck} battle={battle} aces={acesNow} monName={monName} onClose={() => setTrial(false)}/>}
@@ -625,7 +625,7 @@ const CardDeckRegister = ({ db, decks, collection, frame = null, onBack, onOpenL
           onCopy={() => setDraft((f) => ({ ...f, mons: f.mons.map((r, i) => (i === monSheet ? r : f.mons[monSheet].slice(0, open.mon))) }))}
           onAuto={() => setRows(monSheet, cardTacticAutoFill(tactics, draft.mons[monSheet], 'monster', open.mon))}/>
       )}
-      {basePick !== null && <CardTacticPicker db={db} tactics={tactics} deck={deck} cat="base" title={basePick === 0 ? '基本の型(メイン)をえらぶ' : `基本の型(サブ${basePick})をえらぶ`} allowNone={basePick > 0}
+      {basePick !== null && <CardTacticPicker db={db} tactics={tactics} deck={deck} cat="base" title={basePick === 0 ? '基本の型(メイン)を選ぶ' : `基本の型(サブ${basePick})を選ぶ`} allowNone={basePick > 0}
         onClose={() => setBasePick(null)} onPick={(id) => { setDraft((f) => ({ ...f, base: f.base.map((x, i) => (i === basePick ? id : x)) })); setBasePick(null); }}/>}
       {sheet && <CardRegComboSheet tactics={tactics} where={sheet.where} title={sheet.where === 'breeder' ? 'ブリーダーの戦い方' : `${monName(sheet.k)}の戦い方`}
         onClose={() => setSheet(null)} onPick={(row) => { setRows(sheet.k, [...rowsOf(sheet.k), row].slice(0, maxOf(sheet.k))); setSheet(null); }}

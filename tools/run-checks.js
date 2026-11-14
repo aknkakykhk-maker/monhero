@@ -69,6 +69,8 @@ const REQUIRED = [
   // 保存データ・ランキングにそのまま書く値(保存キー・戦術カードの id・種名)の錠。文の一括の置き換えで値まで変わったら止める
   // (2026-11-06 #4623 で戦術カードの id が画面の文と一緒に書き換わった。#4627 で戻した)
   'boot/saved-value-lock-check.js',
+  // 画面の文は漢字で書ける所は漢字にする(2026-11-14 社長。錠 ui-kanji)。台詞・お話・人名・種族名・出した更新履歴は見ない
+  'ui/ui-kanji-check.js',
   'image-asset-check.js',
 ];
 
@@ -124,6 +126,10 @@ const FORCE_CHECKS = [
   { re: /^tools\/run-checks(-deps)?\.js$|^tools\/run-checks-always\.json$/, checks: ['run-checks-select-check.js'], why: '--changed の選び方(漏れ・どこにも入らない検査)' },
   // ビートP交換所の「曲」の売り場(2026-11-14 社長「ジャケットがアップで見れない・視聴ができない」)。札・拡大の窓・試し聴き・説明の折れ・札の空きを本物の画面で見る
   { re: /^monster-hero\/src\/parts\/(39-rhythm-song-owned|20-market-notices-help|55-screen-breeder-market|41-screen-ui)\.jsx$|^tools\/mode\/rhythm-song-shop-check\.js$/, checks: ['mode/rhythm-song-shop-check.js'], why: 'ビートP交換所の「曲」の売り場(ジャケットの拡大・試し聴き・説明の折れ・札の空き)' },
+  // 🔄横(絵を90度回す)の端の黒い帯(2026-11-14 社長「何回も言ってんだから」。2026-09-29・11-12・11-14 と戻ってきた)。
+  //   書き方の見張り(env(safe-area-inset-*) を直に書かない)は、本体の部品を触ったら必ず。ブラウザで四辺の帯を測る検査は、モンヒロビートの部品・回す部品を触ったら必ず
+  { re: /^monster-hero\/src\/parts\/.+\.jsx$|^monster-hero\/index\.html$|^tools\/ui\/rhythm-safe-area-raw-check\.js$/, checks: ['ui/rhythm-safe-area-raw-check.js'], why: 'モンヒロビートの部品に env(safe-area-inset-*) を直に書いていないか(🔄横の帯)' },
+  { re: /^monster-hero\/src\/parts\/(28|29|30|33|39|58|73|77|80)-.+\.jsx$|^monster-hero\/data\/rhythm-mode\.js$|^monster-hero\/index\.html$|^tools\/ui\/rhythm-edge-band-check\.js$/, checks: ['ui/rhythm-edge-band-check.js'], why: '縦・横・🔄横で、モンヒロビートの全画面の四辺に絵の無い黒い帯が無いか' },
   // 本体を読み込む検査が、用を終えたら抜けるか(2026-11-07・#4832 の見張りで harness を使う検査が600秒止まった)。本体や harness を触ったら確かめる
   { re: /^monster-hero\/src\/parts\/.+\.jsx$|^tools\/harness\.js$/, checks: ['boot/harness-exit-check.js'], why: '本体を読み込む検査が、終わったら抜けるか(止まらないタイマーが無いか)' },
   // 保存キー(mh_*)は docs/spec/SAVE_DATA.md の一覧に載せる決まり。本体・データを触ったら必ず確かめる
