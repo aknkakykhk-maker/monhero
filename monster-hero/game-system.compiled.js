@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3cf09f068ae57bba
+// source-sha256: 0adfdca968d59e3a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -70205,7 +70205,7 @@ function ProfileScreen({
       className: "block text-[10px] font-black text-pink-300"
     }, "着替え"), React.createElement("b", {
       className: "block break-words text-[11px] max-[359px]:text-[10px] font-black leading-tight text-white"
-    }, wornCostume ? wornCostume.name : '元の服'))));
+    }, wornCostume ? wornCostume.name : typeof assistantDefaultOutfitName === 'function' ? assistantDefaultOutfitName(selectedAssistantId) : '元の服'))));
   })()), onboarded && !onboardingPreview && friendsEnabled && (() => {
     const base = favoriteMasu ? ALL_PLAYER_MONSTERS[favoriteMasu.baseId] : null;
     const face = base ? friendsFaceIconOf(favoriteMasu.baseId) : null;
@@ -97926,6 +97926,13 @@ const RHYTHM_MODE_ASSISTANT_FRAMES = Object.freeze({
     cy: 0,
     top: 0.06,
     show: 0.8
+  },
+  sorashido: {
+    zoom: 1,
+    cx: 0.5,
+    cy: 0,
+    top: 0.06,
+    show: 0.8
   }
 });
 const RHYTHM_MODE_SELECT_NOTES = Object.freeze([{
@@ -115275,10 +115282,10 @@ const ASSISTANT_LIFE_STAND_FACE = Object.freeze({
     fit: 0.95
   },
   sorashido: {
-    top: 0.015,
-    eye: 0.345,
-    chin: 0.55,
-    m: 1.248
+    top: 0.01,
+    eye: 0.2455,
+    chin: 0.3739,
+    m: 0.956
   },
   erubin: {
     top: 0.01,
@@ -115333,12 +115340,27 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
       m: 1.25
     }
   },
+  hosei: {
+    sorashido: {
+      top: 0.015,
+      eye: 0.345,
+      chin: 0.55,
+      m: 1.248
+    }
+  },
   'stand-normal': {
     mua: {
       top: 0.1386,
       eye: 0.3072,
       chin: 0.4187,
       m: 0.829
+    },
+    momosuke: {
+      top: 0.061,
+      eye: 0.3239,
+      chin: 0.4296,
+      m: 0.786,
+      above: 0.7
     },
     kiki: {
       top: 0.0777,
@@ -115359,6 +115381,28 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
       m: 0.895
     },
     sorashido: {
+      top: 0.0106,
+      eye: 0.2817,
+      chin: 0.4296,
+      m: 1.1
+    },
+    erubin: {
+      top: 0.0083,
+      eye: 0.2521,
+      chin: 0.4298,
+      m: 1.322
+    }
+  },
+  'stand-sekiyuou': {
+    erubin: {
+      top: 0.004,
+      eye: 0.249,
+      chin: 0.4297,
+      m: 1.345
+    }
+  },
+  'stand-hosei': {
+    sorashido: {
       top: 0.0562,
       eye: 0.2921,
       chin: 0.4307,
@@ -115372,6 +115416,13 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
       chin: 0.4334,
       m: 0.711,
       above: 0.85
+    },
+    momosuke: {
+      top: 0.0594,
+      eye: 0.3112,
+      chin: 0.4299,
+      m: 0.884,
+      above: 0.95
     },
     kiki: {
       top: 0.1496,
@@ -116315,7 +116366,7 @@ function AssistantLifeHouse({
   const groupLeft = typeof assistantLifeGiftLeft === 'function' ? Math.max(0, Number(assistantLifeGiftLeft(peerSt)) || 0) : 0;
   const giveLeftAll = groupLeft + (soloOn ? soloLeft : 0);
   const itemsLeft = Math.min(typeof assistantLifeGiftLeft === 'function' ? assistantLifeGiftLeft(peerSt) : 0, itemInfos.filter(x => !usedOf(x.kind) && haveOf(x.kind) > 0).length);
-  const soloInfos = soloOn ? assistantLifeSoloDefs().map(g => assistantLifeItemInfo(g.kind)).filter(Boolean) : [];
+  const soloInfos = soloOn ? assistantLifeSoloDefs().filter(g => !(typeof assistantLifeTasteGiftHidden === 'function' && assistantLifeTasteGiftHidden(g))).map(g => assistantLifeItemInfo(g.kind)).filter(Boolean) : [];
   const itemsHave = [...itemInfos, ...soloInfos].reduce((n, x) => n + haveOf(x.kind), 0);
   const giveGroup = (life.groups || [])[0];
   const giveSoloId = soloOn ? Object.keys(life.solo || {}).find(id => !awayFriend(id)) || giveGroup && giveGroup.ids[0] || null : null;
@@ -119180,7 +119231,7 @@ const ASSISTANT_LIFE_SLEEP_EYES_FACE = Object.freeze({
     eyes: [[0.315, 0.64, 0.145, 0.12, '#f9c7b0'], [0.605, 0.585, 0.185, 0.115, '#fbd6bf']]
   }
 });
-const ASSISTANT_LIFE_SLEEP_ART = Object.freeze(new Set(['atsu_normal.PNG', 'face/atsu_normal.PNG', 'kiki_normal.PNG', 'face/kiki_normal.PNG', 'halloween/kiki_normal.PNG', 'halloween/face/kiki_normal.PNG', 'kyuko_normal.PNG', 'face/kyuko_normal.PNG', 'myua_normal.PNG', 'face/myua_normal.PNG', 'card-master/myua_normal.PNG', 'card-master/face/myua_normal.PNG', 'halloween/myua_normal.PNG', 'halloween/face/myua_normal.PNG', 'momosuke_normal.PNG', 'face/momosuke_normal.PNG', 'halloween/momosuke_normal.PNG', 'halloween/face/momosuke_normal.PNG']));
+const ASSISTANT_LIFE_SLEEP_ART = Object.freeze(new Set(['atsu_normal.PNG', 'face/atsu_normal.PNG', 'kiki_normal.PNG', 'face/kiki_normal.PNG', 'halloween/kiki_normal.PNG', 'halloween/face/kiki_normal.PNG', 'kyuko_normal.PNG', 'face/kyuko_normal.PNG', 'myua_normal.PNG', 'face/myua_normal.PNG', 'card-master/myua_normal.PNG', 'card-master/face/myua_normal.PNG', 'halloween/myua_normal.PNG', 'halloween/face/myua_normal.PNG', 'sorashido_normal.PNG', 'face/sorashido_normal.PNG', 'momosuke_normal.PNG', 'face/momosuke_normal.PNG', 'halloween/momosuke_normal.PNG', 'halloween/face/momosuke_normal.PNG']));
 function assistantLifeSleepArt(pid, src) {
   const who = typeof assistantById === 'function' ? assistantById(pid) : null;
   const s0 = String(src || '').replace(/[?#].*$/, ''),
@@ -135056,7 +135107,8 @@ const ASSISTANT_LIFE_GIFT_WRAP = Object.freeze({
   flower: ['ちいさな', '花束'],
   letter: ['手書きの', '手紙'],
   candy: ['ひとつぶ', 'キャンディ'],
-  omamori: ['小さな', 'おまもり']
+  omamori: ['小さな', 'おまもり'],
+  monplush: ['モンスターの', 'ぬいぐるみ']
 });
 const assistantLifeGiftWrapName = g => {
   const w = g && ASSISTANT_LIFE_GIFT_WRAP[g.key];
@@ -135073,7 +135125,7 @@ const assistantLifeSoloDefs = () => typeof ASSISTANT_LIFE_SOLO_GIFTS !== 'undefi
 const assistantLifeSoloOn = () => typeof assistantLifeEnabled === 'function' && assistantLifeEnabled() && typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantLifeSolo === true;
 const assistantLifeAnyGiftDef = kindOrKey => assistantLifeGiftDefs().find(x => x.kind === kindOrKey || x.key === kindOrKey) || assistantLifeSoloDefs().find(x => x.kind === kindOrKey || x.key === kindOrKey) || null;
 const assistantLifeIsSoloOnly = kindOrKey => !!assistantLifeSoloDefs().find(x => x.kind === kindOrKey || x.key === kindOrKey);
-const assistantLifeSoloKinds = () => assistantLifeSoloOn() ? [...assistantLifeGiftDefs(), ...assistantLifeSoloDefs()] : [];
+const assistantLifeSoloKinds = () => assistantLifeSoloOn() ? [...assistantLifeGiftDefs(), ...assistantLifeSoloDefs()].filter(g => !(typeof assistantLifeTasteGiftHidden === 'function' && assistantLifeTasteGiftHidden(g))) : [];
 const assistantLifeGiftKinds = () => {
   const all = assistantLifeGiftDefs();
   return typeof assistantLifeEnabled === 'function' && assistantLifeEnabled() ? all : all.filter(g => g.kind === 'gift' || g.kind === 'token');
@@ -135479,7 +135531,7 @@ const assistantLifeSoloGive = async (who, kind, rand = Math.random) => {
   });
   const line = assistantLifeSoloLine(who, g, like, rand);
   const call = typeof assistantPeerPlayerCall === 'function' ? assistantPeerPlayerCall(who) : 'あなた';
-  return line ? {
+  const out = line ? {
     id: `solo-${g.key}-${who}`,
     pair: [who],
     lv: 1,
@@ -135494,6 +135546,7 @@ const assistantLifeSoloGive = async (who, kind, rand = Math.random) => {
       t: line.t.split('{name}').join(call)
     }]
   } : null;
+  return typeof assistantLifeTasteGiftApply === 'function' ? assistantLifeTasteGiftApply(who, g, out) : out;
 };
 const assistantLifeGiftOnBondLevel = async (who, level, rand = Math.random) => {
   if (typeof assistantLifeEnabled !== 'function' || !assistantLifeEnabled()) return null;
@@ -135568,7 +135621,7 @@ function AssistantLifeGiftLikesRow({
   const st = useAssistantLifeGiftState();
   const [open, setOpen] = React.useState(false);
   if (typeof assistantLifeEnabled !== 'function' || !assistantLifeEnabled()) return null;
-  const gifts = [...assistantLifeGiftKinds(), ...(assistantLifeSoloOn() ? assistantLifeSoloDefs() : [])].map(g => assistantLifeGiftOf(g.kind)).filter(Boolean);
+  const gifts = [...assistantLifeGiftKinds(), ...(assistantLifeSoloOn() ? assistantLifeSoloDefs() : [])].filter(g => g.key !== 'monplush').map(g => assistantLifeGiftOf(g.kind)).filter(Boolean);
   const known = gifts.filter(g => assistantLifeGiftKnown(id, g.key, st)).length;
   const liked = gifts.filter(g => assistantLifeGiftShownLike(id, g.key, st) === 'like');
   const told = st.likes.told.filter(x => x.who === id).slice(-1)[0] || null;
@@ -136238,7 +136291,10 @@ function AssistantLifeGiftSheet({
     className: "whitespace-nowrap text-[11px] font-bold text-slate-400"
   }, " ビートP交換所 ", info.cost, "P")), React.createElement("p", {
     className: "text-[11px] leading-snug text-slate-300 [[data-assistant-life-land='1']_&]:hidden"
-  }, soloWho && info.key === 'cheki' ? `その場で写真が出るカメラ。思い出アルバムに${nameOf(soloWho)}ひとりの1枚が増えます` : info.what))), React.createElement("div", {
+  }, soloWho && info.key === 'cheki' ? `その場で写真が出るカメラ。思い出アルバムに${nameOf(soloWho)}ひとりの1枚が増えます` : info.what))), soloWho && info.key === 'monplush' && typeof AssistantLifeTasteGiftPicker === 'function' && React.createElement(AssistantLifeTasteGiftPicker, {
+    who: soloWho,
+    nameOf: nameOf
+  }), React.createElement("div", {
     className: "mt-1.5 space-y-1 text-[12px]"
   }, people.map((id, i) => React.createElement("div", {
     key: id,
@@ -157852,6 +157908,283 @@ try {
     } catch (_) {}
   }, 0);
 } catch (_) {}
+const ASSISTANT_TASTE_GIFT_KEY = 'mh_assistant_life_taste_gift_v1';
+const ATG_ITEM_KEY = 'monplush';
+const atgOn = () => {
+  try {
+    return typeof RELEASE_FLAGS !== 'undefined' && !!RELEASE_FLAGS && RELEASE_FLAGS.assistantLifeTaste === true;
+  } catch (_) {
+    return false;
+  }
+};
+const atgIsPlush = kindOrKey => kindOrKey === ATG_ITEM_KEY;
+const atgMonOk = m => typeof m === 'string' && /^\w{2,40}$/.test(m) && typeof ALL_PLAYER_MONSTERS !== 'undefined' && !!ALL_PLAYER_MONSTERS[m];
+const atgColorIds = () => typeof MASU_COLOR_SWATCH !== 'undefined' && MASU_COLOR_SWATCH ? Object.keys(MASU_COLOR_SWATCH).filter(c => typeof MASU_COLOR_LABELS === 'undefined' || MASU_COLOR_LABELS[c]) : [];
+const atgColorOk = c => typeof c === 'string' && atgColorIds().includes(c);
+const atgColorName = c => typeof MASU_COLOR_LABELS !== 'undefined' && MASU_COLOR_LABELS[c] || c;
+const atgBase = c => String(c || '').replace(/_light$/, '');
+const normalizeAssistantTasteGift = raw => {
+  const out = {
+    v: 1,
+    last: {},
+    n: {}
+  };
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return out;
+  const last = raw.last && typeof raw.last === 'object' && !Array.isArray(raw.last) ? raw.last : {};
+  for (const [aid, x] of Object.entries(last).slice(0, 40)) {
+    if (!/^[a-z0-9_]{2,24}$/.test(aid) || !x || typeof x !== 'object') continue;
+    out.last[aid] = {
+      mon: atgMonOk(x.mon) ? x.mon : '',
+      color: typeof x.color === 'string' && /^[a-z_]{2,20}$/.test(x.color) ? x.color : '',
+      day: typeof x.day === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(x.day) ? x.day : ''
+    };
+  }
+  const n = raw.n && typeof raw.n === 'object' && !Array.isArray(raw.n) ? raw.n : {};
+  for (const [aid, v] of Object.entries(n).slice(0, 40)) if (/^[a-z0-9_]{2,24}$/.test(aid) && Number.isFinite(Number(v)) && Number(v) > 0) out.n[aid] = Math.min(99999, Math.floor(Number(v)));
+  return out;
+};
+const ATG_STORE = typeof amgpMakeStore === 'function' ? amgpMakeStore(ASSISTANT_TASTE_GIFT_KEY, normalizeAssistantTasteGift) : null;
+const ATG_PICK = {
+  by: {},
+  subs: new Set()
+};
+const atgSetPick = (aid, patch) => {
+  ATG_PICK.by = {
+    ...ATG_PICK.by,
+    [aid]: {
+      ...(ATG_PICK.by[aid] || {}),
+      ...patch
+    }
+  };
+  ATG_PICK.subs.forEach(f => {
+    try {
+      f(ATG_PICK.by);
+    } catch (_) {}
+  });
+};
+const atgFavColors = aid => {
+  try {
+    const p = (typeof ASSISTANT_MASMON_PLAN !== 'undefined' ? ASSISTANT_MASMON_PLAN : []).find(a => a && a.id === aid);
+    return (p && Array.isArray(p.favColors) ? p.favColors : []).map(x => x && x.color).filter(c => typeof c === 'string');
+  } catch (_) {
+    return [];
+  }
+};
+const atgIsFavColor = (aid, c) => !!c && atgFavColors(aid).some(f => atgBase(f) === atgBase(c));
+const atgTier = (aid, m) => {
+  try {
+    const p = typeof assistantMasmonBasePlanOf === 'function' ? assistantMasmonBasePlanOf(aid) : null;
+    if (!p) return 'normal';
+    const lin = typeof assistantMasmonLineage === 'function' ? assistantMasmonLineage(m) : null;
+    const has = (xs, f) => (Array.isArray(xs) ? xs : []).some(x => x && f(x));
+    if (has(p.dislikeMon, x => x.monster === m)) return 'dislike';
+    if (has(p.likeMon, x => x.monster === m)) return 'like';
+    if (lin && has(p.dislikeMon, x => x.lineage === lin)) return 'dislike';
+    if (lin && has(p.likeMon, x => x.lineage === lin)) return 'like';
+    return 'normal';
+  } catch (_) {
+    return 'normal';
+  }
+};
+const atgMonList = aid => {
+  const all = typeof ALL_PLAYER_MONSTERS !== 'undefined' && ALL_PLAYER_MONSTERS ? Object.keys(ALL_PLAYER_MONSTERS) : [];
+  let mine = [];
+  try {
+    const p = typeof assistantMasmonPlanOf === 'function' ? assistantMasmonPlanOf(aid) : null;
+    mine = [...(p && p.team || []), ...(p && p.extra || [])].map(x => x && x.monster).filter(m => all.includes(m));
+  } catch (_) {
+    mine = [];
+  }
+  return [...new Set([...mine, ...all])];
+};
+const atgPickOf = aid => {
+  const now = ATG_PICK.by[aid] || {};
+  const last = ATG_STORE && ATG_STORE.loaded ? ATG_STORE.state.last[aid] || {} : {};
+  const list = atgMonList(aid);
+  const mon = atgMonOk(now.mon) ? now.mon : atgMonOk(last.mon) ? last.mon : list[0] || '';
+  const color = atgColorOk(now.color) ? now.color : atgColorOk(last.color) ? last.color : atgColorIds()[0] || '';
+  return {
+    mon,
+    color
+  };
+};
+const atgMonName = m => typeof ALL_PLAYER_MONSTERS !== 'undefined' && ALL_PLAYER_MONSTERS[m] && ALL_PLAYER_MONSTERS[m].name || m;
+const atgFace = m => {
+  const x = typeof ALL_PLAYER_MONSTERS !== 'undefined' ? ALL_PLAYER_MONSTERS[m] : null;
+  return x ? x.faceIconUrl || x.iconUrl || '' : '';
+};
+const assistantLifeTasteGiftHidden = g => !!g && atgIsPlush(g.key) && !atgOn();
+const assistantLifeTasteGiftApply = async (who, g, out) => {
+  try {
+    if (!g || !atgIsPlush(g.key) || !who) return out;
+    const {
+      mon,
+      color
+    } = atgPickOf(who);
+    if (!atgMonOk(mon)) return out;
+    const day = typeof assistantLifeDayKey === 'function' ? assistantLifeDayKey() : '';
+    try {
+      if (typeof AMT_STORE !== 'undefined' && AMT_STORE && !AMT_STORE.loaded) await AMT_STORE.load();
+    } catch (_) {}
+    const fav = atgIsFavColor(who, color);
+    const changes = [];
+    if (typeof assistantLifeTasteBump === 'function') {
+      changes.push(...(assistantLifeTasteBump(who, mon, 'gift') || []));
+      if (fav) changes.push(...(assistantLifeTasteBump(who, mon, 'color') || []));
+    }
+    if (ATG_STORE) {
+      await ATG_STORE.load();
+      const st = ATG_STORE.state;
+      ATG_STORE.save({
+        ...st,
+        last: {
+          ...st.last,
+          [who]: {
+            mon,
+            color: atgColorOk(color) ? color : '',
+            day
+          }
+        },
+        n: {
+          ...st.n,
+          [who]: (st.n[who] || 0) + 1
+        }
+      });
+    }
+    const tier = atgTier(who, mon);
+    const like = tier === 'like' ? 'like' : tier === 'dislike' ? 'bad' : 'mid';
+    const item = `${atgMonName(mon)}のぬいぐるみ`;
+    const temp = typeof ASSISTANT_LIFE_SOLO_TEMP_LINES !== 'undefined' && ASSISTANT_LIFE_SOLO_TEMP_LINES[who] ? ASSISTANT_LIFE_SOLO_TEMP_LINES[who][like] : null;
+    const call = typeof assistantPeerPlayerCall === 'function' ? assistantPeerPlayerCall(who) : 'あなた';
+    const lines = temp ? [{
+      who,
+      e: temp.e || 'happy',
+      t: String(temp.t).split('{item}').join(item).split('{name}').join(call)
+    }] : out && out.lines || [];
+    return out ? {
+      ...out,
+      lines,
+      plush: {
+        mon,
+        color,
+        fav,
+        tier
+      },
+      tasteChanges: changes
+    } : out;
+  } catch (_) {
+    return out;
+  }
+};
+function AssistantLifeTasteGiftPicker({
+  who,
+  nameOf
+}) {
+  const [, tick] = React.useState(0);
+  React.useEffect(() => {
+    const f = () => tick(x => x + 1);
+    ATG_PICK.subs.add(f);
+    let off = null;
+    if (ATG_STORE) {
+      ATG_STORE.subs.add(f);
+      off = () => ATG_STORE.subs.delete(f);
+      void ATG_STORE.load();
+    }
+    return () => {
+      ATG_PICK.subs.delete(f);
+      if (off) off();
+    };
+  }, []);
+  const [open, setOpen] = React.useState(false);
+  if (!who || !atgOn()) return null;
+  const {
+    mon,
+    color
+  } = atgPickOf(who);
+  const list = atgMonList(who);
+  const cols = atgColorIds();
+  const fav = atgIsFavColor(who, color);
+  const sw = c => typeof MASU_COLOR_SWATCH !== 'undefined' && MASU_COLOR_SWATCH[c] || '#ccc';
+  const name = nameOf ? nameOf(who) : who;
+  return React.createElement("div", {
+    className: "mt-2 rounded-xl border border-pink-300/40 bg-pink-500/10 p-2",
+    "data-assistant-life-plush-picker": who
+  }, React.createElement("p", {
+    className: "text-[11px] font-black text-pink-100"
+  }, "🧸 どのモンスターのぬいぐるみにする？"), React.createElement("button", {
+    type: "button",
+    "data-assistant-life-plush-open": true,
+    "aria-expanded": open,
+    onClick: () => setOpen(v => !v),
+    className: "mt-1 flex min-h-[44px] w-full items-center gap-2 rounded-xl border border-white/15 bg-slate-900/70 px-2 text-left active:scale-[.98]"
+  }, atgFace(mon) ? React.createElement("img", {
+    src: atgFace(mon),
+    alt: "",
+    className: "h-9 w-9 shrink-0 rounded-full bg-white/10 object-cover"
+  }) : React.createElement("span", {
+    className: "grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white/10 text-[18px]",
+    "aria-hidden": "true"
+  }, "🧸"), React.createElement("span", {
+    className: "min-w-0 flex-1 truncate text-[13px] font-black text-white",
+    "data-assistant-life-plush-mon": mon
+  }, atgMonName(mon)), React.createElement("span", {
+    className: "shrink-0 text-[11px] font-black text-pink-200"
+  }, open ? '閉じる' : '選ぶ')), open && React.createElement("div", {
+    className: "mt-1 grid max-h-[220px] grid-cols-5 gap-1 overflow-y-auto rounded-xl bg-slate-950/60 p-1",
+    "data-assistant-life-plush-list": true
+  }, list.map(m => React.createElement("button", {
+    key: m,
+    type: "button",
+    "data-assistant-life-plush-pick": m,
+    "aria-pressed": m === mon,
+    onClick: () => {
+      atgSetPick(who, {
+        mon: m
+      });
+      setOpen(false);
+    },
+    className: `flex min-h-[56px] flex-col items-center justify-center rounded-lg border px-0.5 active:scale-95 ${m === mon ? 'border-pink-300 bg-pink-400/25' : 'border-white/10 bg-slate-800/60'}`
+  }, atgFace(m) ? React.createElement("img", {
+    src: atgFace(m),
+    alt: "",
+    className: "h-8 w-8 rounded-full object-cover"
+  }) : React.createElement("span", {
+    className: "text-[18px]",
+    "aria-hidden": "true"
+  }, "🧸"), React.createElement("span", {
+    className: "mt-0.5 block w-full truncate text-center text-[9.5px] font-black leading-tight text-white"
+  }, atgMonName(m))))), React.createElement("p", {
+    className: "mt-2 text-[11px] font-black text-pink-100"
+  }, "🎀 リボンの色 ", React.createElement("span", {
+    className: "text-white",
+    "data-assistant-life-plush-color": color
+  }, atgColorName(color))), React.createElement("div", {
+    className: "mt-1 flex flex-wrap gap-1",
+    "data-assistant-life-plush-colors": true
+  }, cols.map(c => React.createElement("button", {
+    key: c,
+    type: "button",
+    "data-assistant-life-plush-color-pick": c,
+    "aria-pressed": c === color,
+    "aria-label": `${atgColorName(c)}のリボン`,
+    onClick: () => atgSetPick(who, {
+      color: c
+    }),
+    className: `h-8 w-8 rounded-full border-2 active:scale-90 ${c === color ? 'border-white ring-2 ring-pink-300' : 'border-white/20'}`,
+    style: {
+      background: sw(c)
+    }
+  }))), React.createElement("p", {
+    className: "mt-1.5 text-[11px] font-bold leading-snug text-slate-300",
+    style: {
+      wordBreak: 'keep-all',
+      overflowWrap: 'anywhere'
+    }
+  }, "贈ると、", name, "がこのモンスターを少し好きになります。", fav ? React.createElement("b", {
+    className: "text-pink-200",
+    "data-assistant-life-plush-fav": true
+  }, "好きな色のリボンなので、もう少し好きになります。") : '好きな色のリボンだと、もう少し好きになります。'));
+}
 const MONSUC_FUSE_KEY = 'mh_monsuc_fuse_v1';
 const MONSUC_FUSE_LOG = 50;
 const MONSUC_MEMORY_MAX = 100;
@@ -169312,6 +169645,29 @@ function MsxSkillArt({
 }
 const MSX_DIST_NAMES = ['零', '近', '中', '遠'];
 const MSX_TG_COLS = Object.freeze([3, 2, 1, 0]);
+function MsxTechGrid({
+  all,
+  cell,
+  className
+}) {
+  const at = (r, d) => all.filter(t => (Number(t.rank) || 1) === r && Array.isArray(t.dist) && t.dist.includes(d));
+  return React.createElement("div", {
+    className: `msx-md-tg${className ? ` ${className}` : ''}`
+  }, MSX_TG_COLS.map(d => React.createElement("span", {
+    key: `h${d}`,
+    className: `tgh d${d}`
+  }, MSX_DIST_NAMES[d])), [1, 2, 3, 4, 5].map(r => MSX_TG_COLS.map(d => {
+    const alts = at(r, d);
+    const k = `${r}-${d}`;
+    return alts.length ? React.createElement(React.Fragment, {
+      key: k
+    }, cell(alts, r, d, k)) : React.createElement("span", {
+      key: k,
+      className: "no",
+      "aria-hidden": "true"
+    }, "×");
+  })));
+}
 const msxTechHow = (t, all = []) => {
   const L = t && t.learn;
   if (!L) return '修行で覚える';
@@ -169461,52 +169817,43 @@ function MsxMonDetail({
     className: "msx-md-cap"
   }, "技", React.createElement("small", null, Array.isArray(known) ? '覚えた技' : '初めから使える技', " ", all.filter(has).length, "/", all.length)), React.createElement("div", {
     className: "msx-md-tw"
-  }, React.createElement("div", {
-    className: "msx-md-tg"
-  }, MSX_TG_COLS.map(d => React.createElement("span", {
-    key: `h${d}`,
-    className: `tgh d${d}`
-  }, MSX_DIST_NAMES[d])), tgLines.map(r => MSX_TG_COLS.map(d => {
-    const alts = tgAt(r, d);
-    const cellK = `${r}-${d}`;
-    const t = alts.find(has) || alts.find(x => pick && pick.sel && pick.sel[cellK] === x.id) || alts[0];
-    if (!t) return React.createElement("span", {
-      key: `${r}-${d}`,
-      className: "no",
-      "aria-hidden": "true"
-    }, "×");
-    const got = has(t);
-    const canAlt = !!pick && alts.length > 1;
-    return React.createElement("button", {
-      type: "button",
-      key: `${r}-${d}`,
-      className: `tc ${t.kind === 'wise' ? 'wise' : 'pow'}${got ? ' got' : ' tg-not'}${tech && tech.id === t.id ? ' on' : ''}`,
-      "data-msx-tech": t.id,
-      "data-msx-cell": cellK,
-      "aria-label": `${t.name}${got ? '' : '(まだ覚えていない)'}${canAlt ? '(選べる技が' + alts.length + 'つ)' : ''}`,
-      onClick: () => setPickT(t.id)
-    }, React.createElement("span", {
-      className: "ti",
-      "aria-hidden": "true"
-    }, React.createElement(MsxSkillArt, {
-      t: t,
-      uid: `${r}${d}`
-    })), React.createElement("span", {
-      className: `tg-rk rk${Math.max(1, Math.min(5, Number(t.rank) || 1))}`,
-      "aria-hidden": "true"
-    }, Math.max(1, Math.min(5, Number(t.rank) || 1))), React.createElement("span", {
-      className: "g"
-    }, t.guts), canAlt ? React.createElement("span", {
-      className: "tg-alt",
-      role: "button",
-      "aria-label": "覚える技を選ぶ",
-      "data-msx-alt": cellK,
-      onClick: e => {
-        e.stopPropagation();
-        setPickCell(cellK);
-      }
-    }, "⇄") : null);
-  }))), tech ? React.createElement("div", {
+  }, React.createElement(MsxTechGrid, {
+    all: all,
+    cell: (alts, r, d, cellK) => {
+      const t = alts.find(has) || alts.find(x => pick && pick.sel && pick.sel[cellK] === x.id) || alts[0];
+      const got = has(t);
+      const canAlt = !!pick && alts.length > 1;
+      return React.createElement("button", {
+        type: "button",
+        key: `${r}-${d}`,
+        className: `tc ${t.kind === 'wise' ? 'wise' : 'pow'}${got ? ' got' : ' tg-not'}${tech && tech.id === t.id ? ' on' : ''}`,
+        "data-msx-tech": t.id,
+        "data-msx-cell": cellK,
+        "aria-label": `${t.name}${got ? '' : '(まだ覚えていない)'}${canAlt ? '(選べる技が' + alts.length + 'つ)' : ''}`,
+        onClick: () => setPickT(t.id)
+      }, React.createElement("span", {
+        className: "ti",
+        "aria-hidden": "true"
+      }, React.createElement(MsxSkillArt, {
+        t: t,
+        uid: `${r}${d}`
+      })), React.createElement("span", {
+        className: `tg-rk rk${Math.max(1, Math.min(5, Number(t.rank) || 1))}`,
+        "aria-hidden": "true"
+      }, Math.max(1, Math.min(5, Number(t.rank) || 1))), React.createElement("span", {
+        className: "g"
+      }, t.guts), canAlt ? React.createElement("span", {
+        className: "tg-alt",
+        role: "button",
+        "aria-label": "覚える技を選ぶ",
+        "data-msx-alt": cellK,
+        onClick: e => {
+          e.stopPropagation();
+          setPickCell(cellK);
+        }
+      }, "⇄") : null);
+    }
+  }), tech ? React.createElement("div", {
     className: "msx-md-td"
   }, React.createElement("div", {
     className: "tn"
@@ -173790,20 +174137,48 @@ function MsxStats({
   } = msxSuc;
   const s = run.s;
   const tagAt = SUC.BOND && SUC.BOND.tag || 80;
-  const spend = k => {
-    const r = SUC.spendPts(s, k, 1);
-    if (r.out.ok) setRun({
-      ...run,
-      s: r.state
-    });
+  const [draft, setDraft] = useState([]);
+  const replay = list => {
+    let w = s;
+    for (const k of list) {
+      const r = SUC.spendPts(w, k, 1);
+      if (!r.out.ok) break;
+      w = r.state;
+    }
+    return w;
+  };
+  const ws = replay(draft);
+  const addOf = k => draft.filter(x => x === k).length;
+  const plus = k => {
+    const r = SUC.spendPts(ws, k, 1);
+    if (r.out.ok) setDraft([...draft, k]);
+  };
+  const minus = k => {
+    const i = draft.lastIndexOf(k);
+    if (i >= 0) setDraft(draft.filter((_, j) => j !== i));
   };
   const auto = () => {
-    const r = SUC.autoPts(s);
+    let w = replay(draft);
+    const list = draft.slice();
+    while (w.pts > 0) {
+      const k = MSX_STATS.slice().sort((x, y) => w.stats[x] - w.stats[y])[0];
+      const r = SUC.spendPts(w, k, 1);
+      if (!r.out.ok) break;
+      w = r.state;
+      list.push(k);
+    }
+    setDraft(list);
+  };
+  const commit = () => {
+    if (!draft.length) return;
     setRun({
       ...run,
-      s: r.state
+      s: ws
     });
+    setDraft([]);
   };
+  const used = s.pts - ws.pts;
+  const lineOf = SUC.PTS && SUC.PTS.line ? SUC.PTS.line[SUC.periodOf(s.turn).key] : null;
   const own = typeof SUC.techsOf === 'function' ? SUC.techsOf(s.species) : [];
   const techs = (Array.isArray(s.techs) ? s.techs : []).map(id => own.find(t => t && t.id === id)).filter(Boolean);
   const pk = typeof SUC.peakInfo === 'function' ? SUC.peakInfo(s) : {
@@ -173822,7 +174197,8 @@ function MsxStats({
     className: "msx-scroll",
     "data-msx-ability": true
   }, React.createElement("div", {
-    className: "v-card pk"
+    className: "v-card pk",
+    "data-msx-pts": true
   }, React.createElement("div", {
     className: "msx-row",
     style: {
@@ -173830,30 +174206,111 @@ function MsxStats({
     }
   }, React.createElement("b", {
     className: "h2"
-  }, "📊 能力ポイント ", s.pts), s.pts ? React.createElement("button", {
+  }, "📊 能力ポイント"), React.createElement("button", {
     type: "button",
     className: "chip on",
+    disabled: !ws.pts,
     onClick: auto
-  }, "おまかせで振る") : null), React.createElement("div", {
+  }, "おまかせで振る")), React.createElement("div", {
+    className: "msx-row",
+    style: {
+      justifyContent: 'space-around',
+      margin: '6px 0'
+    }
+  }, React.createElement("div", {
+    className: "v-num"
+  }, React.createElement("small", null, "持っている点"), React.createElement("b", null, s.pts)), React.createElement("div", {
+    className: "v-num"
+  }, React.createElement("small", null, "使う点"), React.createElement("b", {
+    style: {
+      color: used ? '#fde047' : undefined
+    }
+  }, used)), React.createElement("div", {
+    className: "v-num"
+  }, React.createElement("small", null, "残りの点"), React.createElement("b", null, ws.pts))), React.createElement("div", {
     className: "msx-note"
-  }, "大会でもらえる。好きな能力へ 1点で +1(期の目安を超えると 2点で +1)"), MSX_STATS.map(k => React.createElement("div", {
-    key: k,
-    className: "msx-ab-row"
-  }, React.createElement("span", {
-    className: "n"
-  }, MSX_STAT_ICON[k], " ", MSX_STAT_NAME[k]), React.createElement("b", null, s.stats[k]), React.createElement("button", {
+  }, "＋で仮に振り、「決定」で確定する。1点で +1(期の目安", lineOf ? ` ${lineOf}` : '', "を超えると 2点で +1)"), MSX_STATS.map(k => {
+    const n = addOf(k);
+    const cost = SUC.ptsCost(ws, k);
+    const over = lineOf != null && ws.stats[k] >= lineOf;
+    return React.createElement("div", {
+      key: k,
+      className: "msx-ab-row",
+      "data-msx-pts-row": k
+    }, React.createElement("span", {
+      className: "n"
+    }, MSX_STAT_ICON[k], " ", MSX_STAT_NAME[k], React.createElement("small", {
+      className: "sub",
+      style: {
+        display: 'block',
+        fontSize: 10,
+        color: over ? '#fbbf24' : '#94a3b8'
+      }
+    }, over ? '目安超え・2点で +1' : '1点で +1')), React.createElement("span", {
+      style: {
+        fontSize: 12,
+        fontWeight: 900,
+        whiteSpace: 'nowrap'
+      }
+    }, n ? React.createElement(React.Fragment, null, s.stats[k], " → ", React.createElement("b", {
+      style: {
+        width: 'auto',
+        color: '#fde047'
+      }
+    }, ws.stats[k]), " ", React.createElement("small", {
+      style: {
+        color: '#fde047'
+      }
+    }, "(+", n, ")")) : React.createElement("b", {
+      style: {
+        width: 'auto'
+      }
+    }, s.stats[k])), React.createElement("button", {
+      type: "button",
+      className: "chip",
+      style: {
+        minWidth: 40,
+        minHeight: 36
+      },
+      disabled: !n,
+      onClick: () => minus(k),
+      "aria-label": `${MSX_STAT_NAME[k]}を戻す`
+    }, "−"), React.createElement("button", {
+      type: "button",
+      className: "chip on",
+      style: {
+        minWidth: 44,
+        minHeight: 36
+      },
+      disabled: ws.pts < cost,
+      onClick: () => plus(k),
+      "aria-label": `${MSX_STAT_NAME[k]}を上げる`
+    }, "＋"));
+  }), React.createElement("div", {
+    className: "msx-row",
+    style: {
+      marginTop: 8,
+      gap: 6
+    }
+  }, React.createElement("button", {
+    type: "button",
+    className: "chip",
+    style: {
+      flex: 1,
+      minHeight: 44
+    },
+    disabled: !draft.length,
+    onClick: () => setDraft([])
+  }, "元に戻す"), React.createElement("button", {
     type: "button",
     className: "chip on",
     style: {
-      minWidth: 52
+      flex: 2,
+      minHeight: 44
     },
-    disabled: !s.pts || s.pts < SUC.ptsCost(s, k),
-    onClick: () => spend(k)
-  }, "+1", React.createElement("small", {
-    style: {
-      fontSize: 10
-    }
-  }, "(", SUC.ptsCost(s, k), "点)"))))), React.createElement("div", {
+    disabled: !draft.length,
+    onClick: commit
+  }, "決定"))), React.createElement("div", {
     className: "v-card",
     "data-msx-ability-techs": true
   }, React.createElement("div", {
@@ -174222,6 +174679,13 @@ const MSX_R3_CSS = `
 .msx .r3 .q-col{display:flex;flex-direction:column;gap:5px;min-width:0}
 .msx .r3 .q-col h4{text-align:center;font-size:12px;font-weight:900;padding:2px 0;margin:0;border-radius:8px;background:#ffffff1a}
 .msx .r3 .q-card{border-radius:10px;padding:5px 3px;text-align:center;font-size:10.5px;font-weight:800;line-height:1.25;background:#ffffff10;border:1px solid #ffffff22;color:#fff;min-height:52px;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:1px;min-width:0}
+/* 修行の「覚えられる技」は詳細の技の升目と同じ部品(MsxTechGrid)。状態は升の枠で出す: 覚えられる=緑・選んだ=金・覚えた=済・🔒=暗い */
+.msx .msx-md-tg.q{grid-template-columns:repeat(4,minmax(0,64px));gap:5px;margin:2px auto 0}
+.msx .msx-md-tg.q .tc.ok{box-shadow:0 0 0 2px #22c55e,0 0 8px #22c55e88}
+.msx .msx-md-tg.q .tc.sel{box-shadow:0 0 0 3px #fde047,0 0 12px #fde047aa;transform:translateY(-1px)}
+.msx .msx-md-tg.q .tc.lock .ti{filter:brightness(.5) saturate(.55)}
+.msx .msx-md-tg.q .tc .qb{position:absolute;right:2px;bottom:2px;min-width:22px;padding:0 3px;border-radius:5px;background:rgba(18,12,6,.86);color:#fff;font-size:10px;font-weight:900;line-height:13px;height:13px;text-align:center;z-index:2}
+.msx .msx-md-tg.q .tc.ok .qb{background:#16a34a}.msx .msx-md-tg.q .tc.sel .qb{background:#ca8a04;color:#fff}.msx .msx-md-tg.q .tc.got:not(.ok):not(.sel) .qb{background:#334155;color:#cbd5e1}
 .msx .r3 .q-card .nm{font-size:10px;letter-spacing:-.02em;text-wrap:balance}
 .msx .r3 .q-card .rk{font-size:9px;color:#cbd5e1}
 .msx .r3 .q-card .p{font-size:15px;font-weight:900;color:#86efac}
@@ -177636,10 +178100,6 @@ function MsxR3Shugyo({
     }));
     return out;
   };
-  const cols = MSX_R3_DIST.map((dn, d) => ({
-    dn,
-    list: all.filter(t => Math.min(...(Array.isArray(t.dist) && t.dist.length ? t.dist : [1])) === d).sort((x, y) => (rankOf[x.id] || x.rank || 5) - (rankOf[y.id] || y.rank || 5))
-  }));
   const say = msxPh(want.length >= 2 ? '「2つで｜超修行!｜2つとも｜覚えることも｜あるよ。｜能力の上がりも｜疲れも｜2回分だからね」' : want.length === 1 ? superWhy ? `「この技で｜いこう!｜(${superWhy}から、｜技は｜1つだけ)」` : '「いいね!｜もう1つ選ぶと｜超修行に｜なるよ」' : '「覚えたい技を｜1つ選んでね。｜2つ選ぶと｜超修行!｜選ばなくても｜能力は｜上がるよ」');
   const slot = id => {
     if (!id) return React.createElement("div", {
@@ -177662,7 +178122,10 @@ function MsxR3Shugyo({
       className: "q-slot on msx-kp",
       onClick: () => toggle(id),
       "data-msx-r3-qslot": id
-    }, React.createElement("small", null, MSX_R3_DIST[Math.min(...(t.dist || [1]))], "・R", rankOf[id] || '-'), React.createElement("b", {
+    }, React.createElement("small", null, MSX_R3_DIST[Math.min(...(t.dist || [1]))], "・R", rankOf[id] || '-', typeof SUC.techAptAdd === 'function' ? ` ・適性 ${(() => {
+      const a = SUC.techAptAdd(s0, t);
+      return a ? `${a > 0 ? '+' : ''}${a}%` : '±0';
+    })()}` : ''), React.createElement("b", {
       className: "n"
     }, t.name), React.createElement("b", {
       className: "r",
@@ -177727,35 +178190,48 @@ function MsxR3Shugyo({
     "data-msx-r3-techlist": true
   }, React.createElement("h3", null, React.createElement("i", null, "3"), "覚えられる技", React.createElement("span", {
     className: "tk"
-  }, "緑の札をタップ")), all.length ? React.createElement("div", {
-    className: "q-grid"
-  }, cols.map(c => React.createElement("div", {
-    key: c.dn,
-    className: "q-col"
-  }, React.createElement("h4", null, c.dn), c.list.map(t => {
-    const got = (s0.techs || []).includes(t.id);
-    const ok = rateOf[t.id] != null;
-    const sel = want.includes(t.id);
-    const cs = got || ok ? [] : condsOf(t);
-    const ng = cs.find(x => !x.ok);
-    return React.createElement("button", {
-      type: "button",
-      key: t.id,
-      className: `q-card ${sel ? 'sel' : got ? 'got' : ok ? 'ok' : 'lock'}`,
-      onClick: () => ok && !got ? toggle(t.id) : !got ? setLockT(t) : null,
-      "data-msx-r3-tech": t.id
-    }, React.createElement("span", {
-      className: "nm msx-kp"
-    }, String(t.name || '').length >= 7 ? React.createElement(React.Fragment, null, String(t.name).slice(0, Math.ceil(String(t.name).length / 2)), React.createElement("wbr", null), String(t.name).slice(Math.ceil(String(t.name).length / 2))) : t.name), React.createElement("span", {
-      className: "rk"
-    }, "R", rankOf[t.id] || t.rank || '-'), got ? React.createElement("span", {
-      className: "p g"
-    }, "覚えた") : ok ? React.createElement("span", {
-      className: "p"
-    }, Math.round(rateOf[t.id] * 100), "%") : React.createElement("span", {
-      className: "lk msx-kp"
-    }, "🔒 ", full ? '技がいっぱい' : ng ? ng.short : '条件あり'));
-  })))) : React.createElement("div", {
+  }, "緑の札をタップ")), all.length ? React.createElement(MsxTechGrid, {
+    className: "q",
+    all: all,
+    cell: (alts, r, d, cellK) => {
+      const gotOf = x => (s0.techs || []).includes(x.id);
+      const pk = s0.techPick && typeof s0.techPick === 'object' ? s0.techPick[cellK] : null;
+      const t = alts.find(gotOf) || alts.find(x => x.id === pk) || alts[0];
+      const got = gotOf(t);
+      const ok = rateOf[t.id] != null;
+      const sel = want.includes(t.id);
+      const cs = got || ok ? [] : condsOf(t);
+      const ng = cs.find(x => !x.ok);
+      const state = sel ? 'sel' : got ? 'got' : ok ? 'ok' : 'lock';
+      const rk = Math.max(1, Math.min(5, Number(t.rank) || 1));
+      return React.createElement("button", {
+        type: "button",
+        className: `tc ${t.kind === 'wise' ? 'wise' : 'pow'} q-cell ${state}${got || ok || sel ? ' got' : ' tg-not'}`,
+        "data-msx-r3-tech": t.id,
+        "data-msx-cell": cellK,
+        "aria-label": `${t.name}${got ? '(覚えた)' : sel ? '(選んだ)' : ok ? `(覚えられる ${Math.round(rateOf[t.id] * 100)}%)` : full ? '(技がいっぱい)' : ng ? `(${ng.short})` : '(条件あり)'}`,
+        onClick: () => ok && !got ? toggle(t.id) : !got ? setLockT(t) : null
+      }, React.createElement("span", {
+        className: "ti",
+        "aria-hidden": "true"
+      }, React.createElement(MsxSkillArt, {
+        t: t,
+        uid: `q${r}${d}`
+      })), React.createElement("span", {
+        className: `tg-rk rk${rk}`,
+        "aria-hidden": "true"
+      }, rk), got ? React.createElement("span", {
+        className: "g qb",
+        "aria-hidden": "true"
+      }, "済") : ok ? React.createElement("span", {
+        className: "g qb",
+        "aria-hidden": "true"
+      }, Math.round(rateOf[t.id] * 100), "%") : React.createElement("span", {
+        className: "g qb",
+        "aria-hidden": "true"
+      }, "🔒"));
+    }
+  }) : React.createElement("div", {
     className: "q-note msx-kp"
   }, "このモンスターの技の表がまだありません(能力だけ上がる)"), React.createElement("div", {
     className: "q-note msx-kp"
@@ -199983,14 +200459,15 @@ const CARD_ART_KNOWN_BOX = Object.freeze({
   myua_surprise: [1536, 1024, 325, 27, 852, 997],
   myua_troubled: [1536, 1024, 323, 15, 866, 1009],
   myua_wink: [1536, 1024, 379, 28, 760, 996],
-  sorashido_angry: [384, 512, 0, 0, 384, 512],
-  sorashido_crying: [384, 512, 0, 0, 384, 512],
-  sorashido_excited: [384, 512, 0, 3, 384, 509],
-  sorashido_happy: [384, 512, 0, 0, 384, 512],
-  sorashido_normal: [384, 512, 0, 0, 384, 512],
-  sorashido_surprise: [384, 512, 0, 2, 384, 510],
-  sorashido_troubled: [384, 512, 0, 0, 384, 512],
-  sorashido_wink: [384, 512, 0, 2, 384, 510],
+  sorashido_angry: [384, 512, 50, 37, 314, 475],
+  sorashido_crying: [384, 512, 5, 39, 375, 473],
+  sorashido_excited: [384, 512, 5, 37, 379, 475],
+  sorashido_happy: [384, 512, 28, 38, 317, 474],
+  sorashido_normal: [384, 512, 16, 37, 368, 475],
+  sorashido_sleep: [384, 512, 5, 27, 379, 485],
+  sorashido_surprise: [384, 512, 0, 38, 384, 474],
+  sorashido_troubled: [384, 512, 0, 39, 384, 473],
+  sorashido_wink: [384, 512, 27, 38, 357, 474],
   'stand-normal/atsu_angry': [540, 552, 83, 7, 407, 545],
   'stand-normal/atsu_crying': [606, 552, 108, 6, 390, 546],
   'stand-normal/atsu_excited': [618, 552, 89, 7, 503, 545],
@@ -199999,6 +200476,14 @@ const CARD_ART_KNOWN_BOX = Object.freeze({
   'stand-normal/atsu_surprise': [624, 552, 118, 7, 434, 545],
   'stand-normal/atsu_troubled': [556, 552, 47, 7, 458, 545],
   'stand-normal/atsu_wink': [626, 552, 81, 7, 537, 545],
+  'stand-normal/erubin_angry': [454, 492, 33, 7, 389, 485],
+  'stand-normal/erubin_crying': [548, 492, 7, 7, 528, 485],
+  'stand-normal/erubin_excited': [576, 492, 7, 7, 535, 485],
+  'stand-normal/erubin_happy': [550, 492, 18, 8, 524, 484],
+  'stand-normal/erubin_normal': [484, 492, 19, 9, 454, 483],
+  'stand-normal/erubin_surprise': [698, 492, 39, 6, 620, 486],
+  'stand-normal/erubin_troubled': [552, 492, 8, 7, 533, 485],
+  'stand-normal/erubin_wink': [516, 492, 7, 7, 498, 485],
   'stand-normal/kiki_angry': [616, 832, 8, 8, 601, 824],
   'stand-normal/kiki_crying': [436, 832, 8, 6, 420, 826],
   'stand-normal/kiki_excited': [946, 832, 8, 8, 929, 824],
@@ -200015,6 +200500,14 @@ const CARD_ART_KNOWN_BOX = Object.freeze({
   'stand-normal/kyuko_surprise': [410, 590, 43, 8, 342, 582],
   'stand-normal/kyuko_troubled': [366, 590, 21, 7, 337, 583],
   'stand-normal/kyuko_wink': [424, 590, 30, 8, 386, 582],
+  'stand-normal/momosuke_angry': [708, 860, 7, 7, 689, 853],
+  'stand-normal/momosuke_crying': [776, 860, 7, 7, 762, 853],
+  'stand-normal/momosuke_excited': [796, 860, 6, 6, 783, 854],
+  'stand-normal/momosuke_happy': [792, 860, 8, 7, 776, 853],
+  'stand-normal/momosuke_normal': [704, 860, 8, 7, 689, 853],
+  'stand-normal/momosuke_surprise': [742, 860, 8, 8, 727, 852],
+  'stand-normal/momosuke_troubled': [714, 860, 8, 6, 699, 854],
+  'stand-normal/momosuke_wink': [764, 860, 24, 6, 734, 854],
   'stand-normal/myua_angry': [592, 672, 12, 0, 520, 672],
   'stand-normal/myua_crying': [592, 672, 0, 0, 591, 672],
   'stand-normal/myua_excited': [592, 672, 0, 0, 583, 672],
@@ -200023,14 +200516,14 @@ const CARD_ART_KNOWN_BOX = Object.freeze({
   'stand-normal/myua_surprise': [592, 672, 0, 10, 509, 662],
   'stand-normal/myua_troubled': [592, 672, 27, 0, 516, 672],
   'stand-normal/myua_wink': [592, 672, 12, 10, 579, 662],
-  'stand-normal/sorashido_angry': [698, 542, 113, 7, 443, 535],
-  'stand-normal/sorashido_crying': [684, 542, 98, 7, 477, 535],
-  'stand-normal/sorashido_excited': [772, 542, 53, 8, 674, 534],
-  'stand-normal/sorashido_happy': [732, 542, 47, 6, 655, 536],
-  'stand-normal/sorashido_normal': [762, 542, 121, 8, 569, 534],
-  'stand-normal/sorashido_surprise': [766, 542, 105, 7, 586, 535],
-  'stand-normal/sorashido_troubled': [730, 542, 31, 9, 672, 533],
-  'stand-normal/sorashido_wink': [646, 542, 97, 9, 446, 533]
+  'stand-normal/sorashido_angry': [536, 576, 26, 7, 432, 569],
+  'stand-normal/sorashido_crying': [534, 576, 7, 7, 520, 569],
+  'stand-normal/sorashido_excited': [648, 576, 16, 6, 626, 570],
+  'stand-normal/sorashido_happy': [534, 576, 30, 6, 440, 570],
+  'stand-normal/sorashido_normal': [572, 576, 31, 8, 534, 568],
+  'stand-normal/sorashido_surprise': [632, 576, 67, 7, 542, 569],
+  'stand-normal/sorashido_troubled': [662, 576, 6, 7, 648, 569],
+  'stand-normal/sorashido_wink': [586, 576, 7, 9, 565, 567]
 });
 const cardArtBoxOf = v => Array.isArray(v) && v.length === 6 ? {
   nw: v[0],
@@ -224022,6 +224515,10 @@ function MonsterHeroGame() {
   const [rhythmSettings, setRhythmSettings] = useState(DEFAULT_RHYTHM_SETTINGS);
   const [rhythmBestRecords, setRhythmBestRecords] = useState(() => normalizeRhythmBestRecords(null));
   const [rhythmPlay, setRhythmPlayState] = useState(null);
+  const tasteLoseRef = useRef({
+    day: '',
+    n: 0
+  });
   rhythmPlayGuardRef.current = rhythmPlay;
   const setRhythmPlay = next => {
     if (next && typeof next === 'object' && next.from !== 'multi' && typeof RHYTHM_MULTI !== 'undefined' && RHYTHM_MULTI.view()) {
@@ -253100,6 +253597,32 @@ function MonsterHeroGame() {
         if (rhythmPlay.from === 'multi') RHYTHM_MULTI.reportResult(rhythmPlay.multiStartId, result, false, {
           diffId: rhythmPlay.difficulty.id
         });
+        if (rhythmPlay.from === 'multi' && typeof assistantLifeTasteBump === 'function') {
+          try {
+            const tasteMons = [...new Set((rhythmMonsterNoteEntries || []).map(e => e && e.baseId).filter(Boolean))];
+            const tasteAssistants = [...new Set(((typeof RHYTHM_MULTI !== 'undefined' && RHYTHM_MULTI.view && RHYTHM_MULTI.view() || {}).members || []).filter(m => m && m.cpu && m.as).map(m => m.as))];
+            if (tasteMons.length && tasteAssistants.length) {
+              const tasteDay = typeof assistantLifeDayKey === 'function' ? assistantLifeDayKey(Date.now()) : '';
+              const wonThis = result?.cleared !== false;
+              if (tasteLoseRef.current.day !== tasteDay) tasteLoseRef.current = {
+                day: tasteDay,
+                n: 0
+              };
+              let kind = null;
+              if (wonThis) {
+                tasteLoseRef.current.n = 0;
+                kind = 'win';
+              } else {
+                tasteLoseRef.current.n += 1;
+                if (tasteLoseRef.current.n >= 3) {
+                  tasteLoseRef.current.n = 0;
+                  kind = 'lose';
+                }
+              }
+              if (kind) for (const aid of tasteAssistants) for (const mon of tasteMons) assistantLifeTasteBump(aid, mon, kind);
+            }
+          } catch (_) {}
+        }
         if (rhythmPlay.from !== 'tutorial') {
           const baseLoops = Math.floor(rhythmPlayLoopsFor(rhythmPlay.song, rhythmPlay.difficulty) * multiScale + 1e-9);
           const loopScale = rhythmPlayRunLoopScaleFor(rhythmPlay.song);
@@ -258578,7 +259101,7 @@ function MonsterHeroGame() {
           className: `relative block ${owned ? '' : 'opacity-45'}`
         }, src ? React.createElement("img", {
           src: src,
-          alt: costume ? costume.name : '元の服',
+          alt: costume ? costume.name : assistantDefaultOutfitName(who.id),
           className: "h-14 w-14 rounded-full object-cover bg-black/30",
           draggable: "false"
         }) : React.createElement("span", {
@@ -258589,7 +259112,7 @@ function MonsterHeroGame() {
           className: "absolute inset-0 m-auto text-white drop-shadow-[0_0_3px_rgba(0,0,0,0.9)]"
         })), selected && React.createElement(PickerCheckMark, null), React.createElement("span", {
           className: `text-[9px] font-black leading-tight text-center ${owned ? 'text-slate-200' : 'text-slate-500'}`
-        }, costume ? costume.name : '元の服'), !owned && React.createElement("span", {
+        }, costume ? costume.name : assistantDefaultOutfitName(who.id)), !owned && React.createElement("span", {
           className: "text-[8px] font-black leading-tight text-center text-amber-400"
         }, costume && !assistantCostumeUnlockedNow(costume) ? '解放の条件あり' : 'マーケットで購入'));
       };
@@ -258628,7 +259151,7 @@ function MonsterHeroGame() {
           className: "min-w-0"
         }, React.createElement("b", {
           className: "block truncate text-[12px] font-black text-white"
-        }, who.name, "：", worn ? worn.name : '元の服'), React.createElement("small", {
+        }, who.name, "：", worn ? worn.name : assistantDefaultOutfitName(who.id)), React.createElement("small", {
           className: "block text-[10px] font-bold leading-tight text-slate-400"
         }, "いま着ている服"))),
         chips: chipList,

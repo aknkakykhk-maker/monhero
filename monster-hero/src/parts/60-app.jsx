@@ -197,6 +197,7 @@ function MonsterHeroGame() {
   const [rhythmSettings, setRhythmSettings] = useState(DEFAULT_RHYTHM_SETTINGS);
   const [rhythmBestRecords, setRhythmBestRecords] = useState(()=>normalizeRhythmBestRecords(null));
   const [rhythmPlay,setRhythmPlayState]=useState(null);
+  const tasteLoseRef=useRef({day:'',n:0}); // マルチでの連敗の数(同じ日。保存しない)。3連敗で好き・苦手の 'lose'
   rhythmPlayGuardRef.current = rhythmPlay; // マルチの演奏中の守り(setGameState)が見る控え
   // 招待の部屋を開いたままほかの画面へ出られる(2026-10-29・案A)ので、部屋にいるまま対戦でない曲を始めるときは、先に部屋を抜けるかを聞く
   // (部屋の中の曲と、ひとりの曲を同時には鳴らせない)。曲を始める入口が多いので、ここ1か所で見る
@@ -21892,6 +21893,23 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const assistBonus=rhythmPlay.from==='multi'&&rhythmAssistSessionEnabled()?rhythmAssistSessionRewardBonusNow():0;
           const multiScale=rhythmPlay.from==='multi'?Math.round(rhythmMultiTotalScale(rhythmPlay.multiCount,rhythmPlay.multiStreak,rhythmPlay.multiCpus)*(1+assistBonus)*100)/100:1;
           if(rhythmPlay.from==='multi')RHYTHM_MULTI.reportResult(rhythmPlay.multiStartId,result,false,{diffId:rhythmPlay.difficulty.id});
+          // 助手の好き・苦手が遊ぶうちに変わる(r1115-007・2026-11-15 窓口の頼み)。マルチで助手(CPU)と一緒に、マスモン(モンスターノーツ)を入れた曲を遊んだとき、
+          // クリアなら 'win'(+3)・同じ日に3連敗したら 'lose'(-2)。印 assistantLifeTaste が偽・読み込み前は assistantLifeTasteBump が何もしない。1日の上限は呼ぶ先が見る
+          if(rhythmPlay.from==='multi'&&typeof assistantLifeTasteBump==='function'){
+            try{
+              const tasteMons=[...new Set((rhythmMonsterNoteEntries||[]).map(e=>e&&e.baseId).filter(Boolean))];
+              const tasteAssistants=[...new Set((((typeof RHYTHM_MULTI!=='undefined'&&RHYTHM_MULTI.view&&RHYTHM_MULTI.view())||{}).members||[]).filter(m=>m&&m.cpu&&m.as).map(m=>m.as))];
+              if(tasteMons.length&&tasteAssistants.length){
+                const tasteDay=typeof assistantLifeDayKey==='function'?assistantLifeDayKey(Date.now()):'';
+                const wonThis=result?.cleared!==false;
+                if(tasteLoseRef.current.day!==tasteDay)tasteLoseRef.current={day:tasteDay,n:0};
+                let kind=null;
+                if(wonThis){tasteLoseRef.current.n=0;kind='win';}
+                else{tasteLoseRef.current.n+=1;if(tasteLoseRef.current.n>=3){tasteLoseRef.current.n=0;kind='lose';}}
+                if(kind)for(const aid of tasteAssistants)for(const mon of tasteMons)assistantLifeTasteBump(aid,mon,kind);
+              }
+            }catch(_){/* 好き・苦手の配線が落ちても、演奏の結果は今までどおり */}
+          }
           // ===== 演奏1曲ぶんを、裏の∞周回の周回クリアとして反映する(2026-09-07・ユーザー提案) =====
           // 最後まで演奏したこの場でだけ行う。途中でやめたときは onComplete を通らないので何も入らない
           // (1秒だけ演奏してやめる、で稼げないようにするため)。
@@ -24399,11 +24417,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 aria-pressed={!!selected} aria-disabled={!owned}
                 className={`relative flex flex-col items-center gap-1.5 rounded-2xl border-2 p-2 active:scale-95 ${selected?'border-amber-400 bg-amber-950/30':'border-slate-700 bg-slate-950/40'}`}>
                 <span className={`relative block ${owned?'':'opacity-45'}`}>
-                  {src?<img src={src} alt={costume?costume.name:'元の服'} className="h-14 w-14 rounded-full object-cover bg-black/30" draggable="false"/>:<span className="flex h-14 w-14 items-center justify-center text-3xl" aria-hidden="true">👗</span>}
+                  {src?<img src={src} alt={costume?costume.name:assistantDefaultOutfitName(who.id)} className="h-14 w-14 rounded-full object-cover bg-black/30" draggable="false"/>:<span className="flex h-14 w-14 items-center justify-center text-3xl" aria-hidden="true">👗</span>}
                   {!owned&&<Lock size={14} className="absolute inset-0 m-auto text-white drop-shadow-[0_0_3px_rgba(0,0,0,0.9)]"/>}
                 </span>
                 {selected&&<PickerCheckMark/>}
-                <span className={`text-[9px] font-black leading-tight text-center ${owned?'text-slate-200':'text-slate-500'}`}>{costume?costume.name:'元の服'}</span>
+                <span className={`text-[9px] font-black leading-tight text-center ${owned?'text-slate-200':'text-slate-500'}`}>{costume?costume.name:assistantDefaultOutfitName(who.id)}</span>
                 {!owned&&<span className="text-[8px] font-black leading-tight text-center text-amber-400">{costume&&!assistantCostumeUnlockedNow(costume)?'解放の条件あり':'マーケットで購入'}</span>}
               </button>
             );
@@ -24426,7 +24444,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             <PickerSheet title="助手の着替え" note="助手の顔と立ち絵が、選んだ服に変わります。服はマーケットで買えます。" onClose={closeCostume}
               preview={<>
                 {(()=>{const nowSrc=assistantFaceImage(who,'happy');return nowSrc?<img src={nowSrc} alt={who.name} className="h-14 w-14 shrink-0 rounded-full object-cover bg-black/30" draggable="false"/>:<span className="text-3xl" aria-hidden="true">{who.emoji}</span>;})()}
-                <span className="min-w-0"><b className="block truncate text-[12px] font-black text-white">{who.name}：{worn?worn.name:'元の服'}</b><small className="block text-[10px] font-bold leading-tight text-slate-400">いま着ている服</small></span>
+                <span className="min-w-0"><b className="block truncate text-[12px] font-black text-white">{who.name}：{worn?worn.name:assistantDefaultOutfitName(who.id)}</b><small className="block text-[10px] font-bold leading-tight text-slate-400">いま着ている服</small></span>
               </>}
               chips={chipList} chip={who.id} onChip={(id)=>{ setCostumeAssistantId(id); setCostumeLockedInfo(null); }}
               footerExtra={lockedInfo} dataPicker="assistant-costume">

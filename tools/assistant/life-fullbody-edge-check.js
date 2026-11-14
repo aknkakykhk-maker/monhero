@@ -22,7 +22,7 @@ const MIN_MID = 0.5; // ふちの画素のうち、半透明(8〜247)の割合�
 const MATTE_HALO = { atsu: 0.004, kiki: 0.011, kiki_halloween: 0.004, kyuko: 0.038, momosuke: 0.022 };
 // 2026-11-12 の値(作り直したあと。全部見て、残る白は描き込みと確かめた)。名前はファイル名から .png を除いたもの。表情の絵は「__」の前の名前でまとめる
 // 'kiki__' 'kiki_halloween__' … ききの8表情(縁取りの無い元絵。2026-11-12 に全部見た。数えられるのは肌のつや・靴の白いふち)
-const MATTE_BASE = { 'kiki__': 0.040, 'kiki_halloween__': 0.020, erubin: 0.001, erubin_sekiyuou: 0.040, momosuke_halloween: 0.015, mua: 0.110, 'mua_card-master': 0.050, mua_halloween: 0.010, sorashido: 0.138 };
+const MATTE_BASE = { 'kiki__': 0.040, 'kiki_halloween__': 0.020, erubin: 0.001, erubin_sekiyuou: 0.040, momosuke_halloween: 0.015, mua: 0.110, 'mua_card-master': 0.050, mua_halloween: 0.010, sorashido_hosei: 0.138 }; // sorashido_hosei=いままでのソラシド(2026-11-15 から服『補正』。新しい絵 sorashido は標準の上限)
 const MATTE_MARGIN = 0.01;
 
 function readAlpha(file) {
