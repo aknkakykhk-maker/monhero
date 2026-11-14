@@ -17,8 +17,8 @@ FB = os.path.join(ROOT, 'monster-hero/images/assistant/fullbody')
 EXPR = ['normal', 'happy', 'wink', 'surprise', 'troubled', 'angry', 'crying', 'excited']
 # key … 助手id(服があれば id:服)。name … 全身画の名前。stand … 立ち絵の置き場。prefix … 画像の接頭辞
 HEADS = {
-    'kiki': dict(name='kiki', stand='stand-normal', prefix='kiki', top=40, eye=145, chin=185, chin_frac=0.43, above=None),
-    'kiki:halloween': dict(name='kiki_halloween', stand='stand-halloween', prefix='kiki', top=70, eye=148, chin=188, chin_frac=0.43, above=0.95),
+    'kiki': dict(name='kiki', stand='stand-normal', prefix='kiki', wf=6.9, top=40, eye=145, chin=185, chin_frac=0.43, above=None),
+    'kiki:halloween': dict(name='kiki_halloween', stand='stand-halloween', prefix='kiki', wf=6.9, top=70, eye=148, chin=188, chin_frac=0.43, above=0.95),
     'atsu': dict(name='atsu', stand='stand-normal', prefix='atsu', top=30, eye=100, chin=128, chin_frac=0.43, above=None),
     'kyuko': dict(name='kyuko', stand='stand-normal', prefix='kyuko', top=20, eye=100, chin=135, chin_frac=0.43, above=None),
     'sorashido': dict(name='sorashido', stand='stand-normal', prefix='sorashido', top=25, eye=88, chin=125, chin_frac=0.43, above=None),
@@ -57,13 +57,23 @@ def run(key, cfg):
     tot = 0
     for e, im, b in zip(EXPR, ims, boxes):
         bottom = int(round(b[1] + H))
-        x0, x1 = max(0, b[0] - 4), min(im.width, b[2] + 4)
-        # 腕を広げた・上げた表情は幅が広がり、並ぶ場面で顔が小さくなる。幅は ふだん(normal)の体の幅の WMAX 倍までにして、中心から左右を切る
-        lim = int((nb[2] - nb[0]) * cfg.get('wmax', 1.25))
-        if x1 - x0 > lim:
-            cx = (b[0] + b[2]) // 2
-            x0, x1 = max(x0, cx - lim // 2), min(x1, cx + lim // 2)
+        # 全身画は体の幅が顔の5倍以上あり、並ぶ場面(顔の大きさを全員そろえ、幅が受け持ちを超えない)で顔が小さくなる。
+        #   胸から上の「バスト」の幅(顔の長さ=目から顎の WF 倍)で左右を切り、外側は薄く消す。中心は頭の真ん中
+        F = cfg['chin'] - cfg['eye']
+        lim = int(F * cfg.get('wf', 6.2))
+        a_ = np.array(im)[..., 3] > 40
+        top_rows = a_[b[1]:b[1] + int(F * 4.2)]
+        xs_ = np.nonzero(top_rows.any(0))[0]
+        cx = int(np.average(np.nonzero(top_rows)[1]))  # 頭の重さの中心
+        x0, x1 = max(b[0] - 4, cx - lim // 2), min(b[2] + 4, cx + lim // 2)
         c = im.crop((x0, max(0, b[1] - 4), x1, min(im.height, bottom)))
+        arr = np.array(c)
+        fw = max(1, int(c.width * 0.14))
+        ramp = np.ones(c.width)
+        if x0 > b[0] - 4: ramp[:fw] = np.linspace(0, 1, fw)
+        if x1 < b[2] + 4: ramp[-fw:] = np.linspace(1, 0, fw)
+        arr[..., 3] = (arr[..., 3] * ramp[None, :]).astype(np.uint8)
+        c = Image.fromarray(arr)
         # 上の端から外へはみ出さないよう、切った絵は体の上端に合わせてある
         c = smooth2x(c)
         tot += save_png(c, os.path.join(ROOT, 'monster-hero/images/assistant', cfg['stand'], '%s_%s.png' % (cfg['prefix'], e)))
