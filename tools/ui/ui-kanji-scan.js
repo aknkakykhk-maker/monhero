@@ -21,7 +21,7 @@ const SHORT = 12;
 // 台詞らしい文
 const SPEECH = /[「」『』♪〜]|だよ|だね|よね|かな[?？!！。…]|かな$|ます(?:ね|よ)|でつ|じゃん|ねっ|よっ|ね[!！。…]|よ[!！。…]|ね$|よ$|わ[!！]|ぞ[!！]?$|っす|でしょ|なぁ|ねぇ|よぉ|だぞ|ぜ[!！]|ちゃう/;
 // 名前・決まった言い回しで、表の語を含んでいても置き換えない物(曲名・あいさつ・お話の題など)
-const EXCEPT = /愛はひとつじゃない|ふたつの翼|はじめまして|はじめての おでかけ|はじめての特訓|ひとつぶ|いけにえ|ぜんぶ見せ場|ぜんぶ必殺技|ちから|かしこさ/;
+const EXCEPT = /愛はひとつじゃない|ごきげんモッチー|ふたつの翼|はじめまして|はじめての おでかけ|はじめての特訓|ひとつぶ|いけにえ|ぜんぶ見せ場|ぜんぶ必殺技|ちから|かしこさ/;
 const PARTICLE = /[をにでがはもとへのやかよ]/;
 const HIRA = /[ぁ-んー]/;
 const NEXT_OK_N = /[をにでがはもとへのや、。！？!?・／/()（）「」\s0-9０-９]/;
@@ -120,7 +120,7 @@ function applyFile(rel, filter, opts = {}) {
   const items = scanFile(rel).filter(it => !filter || filter(it));
   let n = 0;
   for (const it of items.sort((a, b) => b.start - a.start)) {
-    const hits = findInText(it.raw).filter(h => !opts.skipNames || FORM_LIST.some(w => w.h === h.h));
+    const hits = findInText(it.raw).filter(h => (!opts.skipNames || FORM_LIST.some(w => w.h === h.h)) && !(opts.skipName && opts.skipName(h.h)));
     if (!hits.length) continue;
     let r = it.raw;
     for (const h of hits.sort((a, b) => b.at - a.at)) { r = r.slice(0, h.at) + h.k + r.slice(h.at + h.h.length); n++; }

@@ -287,7 +287,7 @@ const MYUA_ICON_EXPRESSIONS = [
   ['normal',   'ふつう'],
   ['happy',    '笑顔'],
   ['wink',     'ウィンク'],
-  ['excited',  'ごきげん'],
+  ['excited',  'ご機嫌'],
   ['surprise', 'びっくり'],
   ['troubled', '困り顔'],
   ['angry',    'おこ'],
@@ -606,9 +606,9 @@ const BREEDER_MARKET_ITEMS = [
   { id:'orihime_icon', name:"オリヒメのアイコン", type:'icon', icon:ORIHIME_FACE_ICON, cost:1, get available() { return sorashidoCardOnSale() ? undefined : false; } },
   { id:'orihime_disc_icon', name:"オリヒメの円盤石アイコン", type:'icon', icon:ORIHIME_DISC_ICON, cost:1, get available() { return sorashidoCardOnSale() ? undefined : false; } },
   { id:'Orihime', name:"オリヒメの円盤石", type:'disc', icon:ORIHIME_DISC_ICON, cost:150000, available:false },
-  { id:'bond_reset_scroll', name:"絆ポイントリセットの書", type:'item', emoji:"📜", cost:500, desc:"マスモンに使うと、そのマスモンが使用した強化ポイント(間合い適性・ステータス強化)がすべて未使用に戻る。絆レベル・絆経験値はそのまま。" },
-  { id:'transcend_reset_scroll', name:"超越ポイントリセットの書", type:'item', emoji:"🌠", cost:10000, usage:'transcendReset', desc:"マスモンに使うと、超越強化へ使った超越ポイントがすべて未使用の超越Pへ戻る。絆レベル・絆経験値・通常の強化・超越済みかどうかは変わらない。虹のプシュケーは戻らない。" },
-  { id:'soul_rank_respec_scroll', name:"魂格再編の書", type:'item', emoji:"🌀", cost:1000000, usage:'soulRankRespec', desc:"マスモンの魂格特性に使った魂格Pをすべて未使用へ戻す。魂格の結晶で増やしたぶんは、結晶として持ち物に戻る。魂格段階・Lv・最高初到達Lvは変わらない。マーケットでは100万ダイヤ、または勇者の証1個と交換できる。" },
+  { id:'bond_reset_scroll', name:"絆ポイントリセットの書", type:'item', emoji:"📜", cost:500, desc:"マスモンに使うと、そのマスモンが使用した強化ポイント(間合い適性・ステータス強化)が全て未使用に戻る。絆レベル・絆経験値はそのまま。" },
+  { id:'transcend_reset_scroll', name:"超越ポイントリセットの書", type:'item', emoji:"🌠", cost:10000, usage:'transcendReset', desc:"マスモンに使うと、超越強化へ使った超越ポイントが全て未使用の超越Pへ戻る。絆レベル・絆経験値・通常の強化・超越済みかどうかは変わらない。虹のプシュケーは戻らない。" },
+  { id:'soul_rank_respec_scroll', name:"魂格再編の書", type:'item', emoji:"🌀", cost:1000000, usage:'soulRankRespec', desc:"マスモンの魂格特性に使った魂格Pを全て未使用へ戻す。魂格の結晶で増やしたぶんは、結晶として持ち物に戻る。魂格段階・Lv・最高初到達Lvは変わらない。マーケットでは100万ダイヤ、または勇者の証1個と交換できる。" },
   { id:'unique_skill_reset_ticket', name:"スキルポイントリセット券", type:'item', emoji:"🎟️", cost:1000, usage:'uniqueSkillReset', desc:"マスモン詳細の「固有技強化」で使うと、その個体の固有技に配分したポイントをすべて未使用の固有技Pへ戻せる。固有技以外の育成状態は変わらない。" },
   // 説明は実際の機能に合わせて更新すること。導入時は6色から全身を1色に変えるだけだったが、
   // その後アイコンごとの部位分け・プリセット27色・カスタムカラーに対応している
@@ -647,18 +647,18 @@ const BREEDER_MARKET_ITEMS = [
   { id:'peer_token', name:"おそろいのミサンガ", type:'item', emoji:"🤝", cost:0, shop:false, usage:'assistantPeer',
     desc:"助手2人に贈るおそろいのミサンガ(前の名前は「友情のしるし」)。プロフィールの「助手どうしの関係図」でペアを選んで使うと、2人の仲良し度が大きく上がり、2人それぞれとあなたの仲良し度も上がる。1日1回まで。" },
   // 助手ライフで2人に贈る道具(2026-11-08 社長・GIFT-PLAN.md)。ビートP交換所で手に入る。マーケットでは売らない。好み・上がる量は assistants.js の ASSISTANT_LIFE_GIFTS
-  { id:'peer_cake', name:"はんぶんこケーキ", type:'item', emoji:"🍰", cost:0, shop:false, usage:'assistantPeer', desc:"助手2人に贈るふたり分のショートケーキ。「🏡 助手ライフ」で一緒にいる2人に贈る。" },
+  { id:'peer_cake', name:"半分こケーキ", type:'item', emoji:"🍰", cost:0, shop:false, usage:'assistantPeer', desc:"助手2人に贈るふたり分のショートケーキ。「🏡 助手ライフ」で一緒にいる2人に贈る。" },
   { id:'peer_onigiri', name:"ほかほかおにぎり", type:'item', emoji:"🍙", cost:0, shop:false, usage:'assistantPeer', desc:"助手2人に贈る具だくさんのおにぎり。「🏡 助手ライフ」で一緒にいる2人に贈る。" },
   { id:'peer_tea', name:"午後のティーセット", type:'item', emoji:"🫖", cost:0, shop:false, usage:'assistantPeer', desc:"助手2人に贈る紅茶とお菓子のセット。「🏡 助手ライフ」で一緒にいる2人に贈る。" },
-  { id:'peer_earphone', name:"かたみみイヤホン", type:'item', emoji:"🎧", cost:0, shop:false, usage:'assistantPeer', desc:"助手2人に贈る、片耳ずつで同じ曲を聴くイヤホン。「🏡 助手ライフ」で一緒にいる2人に贈る。" },
-  { id:'peer_puzzle', name:"ふたりで解くパズル", type:'item', emoji:"🧩", cost:0, shop:false, usage:'assistantPeer', desc:"助手2人に贈る絵のパズル。「🏡 助手ライフ」で一緒にいる2人に贈る。" },
+  { id:'peer_earphone', name:"片耳イヤホン", type:'item', emoji:"🎧", cost:0, shop:false, usage:'assistantPeer', desc:"助手2人に贈る、片耳ずつで同じ曲を聴くイヤホン。「🏡 助手ライフ」で一緒にいる2人に贈る。" },
+  { id:'peer_puzzle', name:"二人で解くパズル", type:'item', emoji:"🧩", cost:0, shop:false, usage:'assistantPeer', desc:"助手2人に贈る絵のパズル。「🏡 助手ライフ」で一緒にいる2人に贈る。" },
   { id:'peer_sleeve', name:"おそろいスリーブ", type:'item', emoji:"🃏", cost:0, shop:false, usage:'assistantPeer', desc:"助手2人に贈る、カードを入れるおそろいのスリーブ。「🏡 助手ライフ」で一緒にいる2人に贈る。" },
   { id:'peer_cheki', name:"思い出チェキ", type:'item', emoji:"📸", cost:0, shop:false, usage:'assistantPeer', desc:"助手2人に贈る、その場で写真が出るカメラ。2人の思い出アルバムに1枚増える。「🏡 助手ライフ」で一緒にいる2人に贈る。" },
   { id:'solo_letter', name:"手書きの手紙", type:'item', emoji:"✉️", cost:0, shop:false, usage:'assistantPeer', desc:"助手1人に贈る手紙。「🏡 助手ライフ」の部屋で、その助手だけに贈る。" },
   { id:'solo_candy', name:"ひとつぶキャンディ", type:'item', emoji:"🍬", cost:0, shop:false, usage:'assistantPeer', desc:"助手1人に贈るキャンディ。「🏡 助手ライフ」の部屋で、その助手だけに贈る。" },
   { id:'solo_keyholder', name:"キーホルダー", type:'item', emoji:"🔑", cost:0, shop:false, usage:'assistantPeer', desc:"助手1人に贈るキーホルダー。「🏡 助手ライフ」の部屋で、その助手だけに贈る。" },
-  { id:'solo_omamori', name:"小さなおまもり", type:'item', emoji:"🧿", cost:0, shop:false, usage:'assistantPeer', desc:"助手1人に贈るおまもり。「🏡 助手ライフ」の部屋で、その助手だけに贈る。" },
-  { id:'peer_flower', name:"ちいさな花束", type:'item', emoji:"🌷", cost:0, shop:false, usage:'assistantPeer', desc:"助手2人に贈る小さな花束。「🏡 助手ライフ」で一緒にいる2人に贈る。" },
+  { id:'solo_omamori', name:"小さなお守り", type:'item', emoji:"🧿", cost:0, shop:false, usage:'assistantPeer', desc:"助手1人に贈るおまもり。「🏡 助手ライフ」の部屋で、その助手だけに贈る。" },
+  { id:'peer_flower', name:"小さな花束", type:'item', emoji:"🌷", cost:0, shop:false, usage:'assistantPeer', desc:"助手2人に贈る小さな花束。「🏡 助手ライフ」で一緒にいる2人に贈る。" },
   // 🏥 特別な治療(2026-11-12 社長)。ビートP交換所(300P)で手に入る。マーケットでは売らない。使うのは助手ライフの予定表(56-assistant-life-body.jsx)
   { id:'life_cure', name:"特別な治療", type:'item', emoji:"🏥", cost:0, shop:false, usage:'assistantLife', desc:"助手の病院で受けられる特別な治療。「🏡 助手ライフ」の予定表で、病院にいる回の助手に1枚使うと、重いけが・病気でもその場で治る。その助手のマスモンのけが・病気も一緒に治る。" },
   // 助手ライフで1人に贈る家具(2026-11-08 社長・段階B)。ビートP交換所の「家具」で手に入る。マーケットでは売らない。好み・置き場所は assistants.js の ASSISTANT_LIFE_FURNITURE
@@ -674,12 +674,12 @@ const BREEDER_MARKET_ITEMS = [
   { id:'furn_lantern', name:"星のランタン", type:'item', emoji:"🏮", cost:0, shop:false, usage:'assistantLife', desc:"助手の部屋に置く家具。「🏡 助手ライフ」で部屋を押して、その助手に贈る。" },
   { id:'furn_mirrorball', name:"ミラーボール", type:'item', emoji:"🪩", cost:0, shop:false, usage:'assistantLife', desc:"助手の部屋に置く家具。「🏡 助手ライフ」で部屋を押して、その助手に贈る。" },
   { id:'furn_windbell', name:"風鈴", type:'item', emoji:"🎐", cost:0, shop:false, usage:'assistantLife', desc:"助手の部屋に置く家具。「🏡 助手ライフ」で部屋を押して、その助手に贈る。" },
-  { id:'furn_clock', name:"ふりこ時計", type:'item', emoji:"🕰️", cost:0, shop:false, usage:'assistantLife', desc:"助手の部屋に置く家具。「🏡 助手ライフ」で部屋を押して、その助手に贈る。" },
+  { id:'furn_clock', name:"振り子時計", type:'item', emoji:"🕰️", cost:0, shop:false, usage:'assistantLife', desc:"助手の部屋に置く家具。「🏡 助手ライフ」で部屋を押して、その助手に贈る。" },
   { id:'furn_map', name:"冒険の地図", type:'item', emoji:"🗺️", cost:0, shop:false, usage:'assistantLife', desc:"助手の部屋に置く家具。「🏡 助手ライフ」で部屋を押して、その助手に贈る。" },
   { id:'furn_guitar', name:"ギター", type:'item', emoji:"🎸", cost:0, shop:false, usage:'assistantLife', desc:"助手の部屋に置く家具。「🏡 助手ライフ」で部屋を押して、その助手に贈る。" },
   { id:'furn_tv', name:"レトロテレビ", type:'item', emoji:"📺", cost:0, shop:false, usage:'assistantLife', desc:"助手の部屋に置く家具。「🏡 助手ライフ」で部屋を押して、その助手に贈る。" },
   { id:'furn_windowflower', name:"窓辺の花", type:'item', emoji:"🌷", cost:0, shop:false, usage:'assistantLife', desc:"助手の部屋に置く家具。「🏡 助手ライフ」で部屋を押して、その助手に贈る。" },
-  { id:'furn_fishbowl', name:"金魚ばち", type:'item', emoji:"🐠", cost:0, shop:false, usage:'assistantLife', desc:"助手の部屋に置く家具。「🏡 助手ライフ」で部屋を押して、その助手に贈る。" },
+  { id:'furn_fishbowl', name:"金魚鉢", type:'item', emoji:"🐠", cost:0, shop:false, usage:'assistantLife', desc:"助手の部屋に置く家具。「🏡 助手ライフ」で部屋を押して、その助手に贈る。" },
   { id:'furn_pendant', name:"ペンダントライト", type:'item', emoji:"💡", cost:0, shop:false, usage:'assistantLife', desc:"助手の部屋に置く家具。「🏡 助手ライフ」で部屋を押して、その助手に贈る。" },
   { id:'furn_garland', name:"ガーランド", type:'item', emoji:"🎏", cost:0, shop:false, usage:'assistantLife', desc:"助手の部屋に置く家具。「🏡 助手ライフ」で部屋を押して、その助手に贈る。" },
   { id:'buddy_trait_seed', name:"性格のたね", type:'item', emoji:"🌱", cost:0, shop:false, usage:'rhythmBuddy',
@@ -811,7 +811,7 @@ const PROFILE_FRAMES = [
   { id:'black',  name:'ブラック', kind:'css', released:true, className:'mh-profile-frame-black',
     desc:'黒い輪。明るいアイコンを引き締めます。' },
   { id:'red',    name:'レッド',   kind:'css', released:true, className:'mh-profile-frame-red',
-    desc:'赤い輪。いちばん目を引く色です。' },
+    desc:'赤い輪。一番目を引く色です。' },
   { id:'orange', name:'オレンジ', kind:'css', released:true, className:'mh-profile-frame-orange',
     desc:'橙色の輪。あたたかい印象になります。' },
   { id:'green',  name:'グリーン', kind:'css', released:true, className:'mh-profile-frame-green',
@@ -825,7 +825,7 @@ const PROFILE_FRAMES = [
   { id:'pink',   name:'ピンク',   kind:'css', released:true, className:'mh-profile-frame-pink',
     desc:'やわらかい桃色の輪。明るい印象になります。' },
   { id:'rainbow',name:'レインボー', kind:'css', released:true, className:'mh-profile-frame-rainbow',
-    desc:'七色がぐるりと回る輪。いちばん目立つ色です。' },
+    desc:'七色がぐるりと回る輪。一番目立つ色です。' },
   // ==================== 豪華フレーム(2026-09-15) ====================
   // ユーザーから受け取った透過PNG。
   // ★hole は「穴の直径 ÷ 画像の幅」の実測値(360方向の中央値)。位置合わせに使う。
@@ -932,7 +932,7 @@ const PROFILE_FRAMES = [
   { id:'frame_mua_3', name:'みゅあ・慈愛', kind:'image', released:true, hole:0.719,
     unlock:{ assistantId:'mua', bondLevel:7 },
     src:'images/profile-frames/mua-3.png?v=d18cf1740410', srcSmall:'images/profile-frames/small/mua-3.png?v=3c302cc16d8e',
-    desc:'みゅあ本人が寄り添って眠る、いちばん特別なリース。' },
+    desc:'みゅあ本人が寄り添って眠る、一番特別なリース。' },
   // ききの3枚。同じ意匠を段階的に豪華にしたもので、呼び分けは教えカードの3段階
   // (BREEDER_EVO_NAMES.kiki の 応援 → 本気 → 全力全開)にそろえてある。
   { id:'frame_kiki_ouen', name:'きき・応援', kind:'image', released:true, hole:0.755,
@@ -946,7 +946,7 @@ const PROFILE_FRAMES = [
   { id:'frame_kiki_zenryoku', name:'きき・全力全開', kind:'image', released:true, hole:0.677,
     unlock:{ assistantId:'kiki', bondLevel:7 },
     src:'images/profile-frames/kiki-zenryoku.png?v=88238cde0306', srcSmall:'images/profile-frames/small/kiki-zenryoku.png?v=393ad230d39d',
-    desc:'髪とリボンが渦を巻き、星とハートが輝く、ききのいちばん豪華なフレーム。' },
+    desc:'髪とリボンが渦を巻き、星とハートが輝く、ききの一番豪華なフレーム。' },
   // ももすけの3枚。ももすけにはまだアシストカードが無いので、呼び分けを先に決めてある
   // (2026-09-16・ユーザーが選択)。おねだり → だだこね → 独り占め。
   // カードを実装するときも、この3段階をそのまま使う
@@ -962,7 +962,7 @@ const PROFILE_FRAMES = [
   { id:'frame_momosuke_3', name:'ももすけ・独り占め', kind:'image', released:true, hole:0.714,
     unlock:{ assistantId:'momosuke', bondLevel:7 },
     src:'images/profile-frames/momosuke-3.png?v=15ed59e8cf51', srcSmall:'images/profile-frames/small/momosuke-3.png?v=5ca7a59b24ff',
-    desc:'ももすけ本人がうさぎのぬいぐるみを抱えて陣取る、いちばん特別な輪。' },
+    desc:'ももすけ本人がうさぎのぬいぐるみを抱えて陣取る、一番特別な輪。' },
 ];
 const PROFILE_FRAME_MAP = Object.freeze(Object.fromEntries(PROFILE_FRAMES.map(frame => [frame.id, frame])));
 // 画像フレームの「穴」を、アイコンの円のどこに合わせるか。

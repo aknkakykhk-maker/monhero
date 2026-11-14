@@ -110,7 +110,7 @@ const ALL_PLAYER_MONSTERS = {
   // 勇者特性はスタックを貯める形(クッキー / 黒音符)。決めごとは 22-enemy-and-bond-entries.jsx の SWEET_STACK_TRAITS
   // collab:'sanrio' は内部の印(画面には出さない)。判定は 22-enemy-and-bond-entries.jsx の isSanrioCollabSkill
   Melody:    { id:'Melody', collab:'sanrio', name:"メロディー", emoji:"🐘", imgUrl:MELODY_IMG, iconUrl:MELODY_ICON, faceIconUrl:MELODY_FACE_ICON, atkMotion:'default', trait:"メロディの手作りクッキー", traitDesc:"勇者モンにすると：メロディーがカードを使うたびにクッキー+1(最大10・ランのあいだ持ち越す)。2個から味方の毎ターンのライフ回復+5%、4個からガッツ回復+5%、7個から被ダメージ15%軽減、10個で与ダメージ+15%", baseHp:760, baseGuts:135, baseAtk:105, baseDef:160, plusStats:{hp:360,atk:15,def:60,guts:25}, distAptitude:['C','B','A','D'], unique:{name:"メロメロハート",icon:MELODY_ICON,monId:"Melody",baseMult:3.2,baseGuts:64,evoLevel:0,names:["メロメロハート","ピアノワルツ","リボンウィング","パウンドメテオ","ピンクバースト","キャンディレイン","マリーランドアーチ","メロディタクト","スウィートパレード"],effectDesc:"ピンク音符の加護：受けるダメージが25%へる(このターンから2ターン)。さらに、ライフを上限の15%・ガッツを上限の20%ぶん回復する。メロディー本人ならクッキーをさらに+1"}},
-  Kuromy:    { id:'Kuromy', collab:'sanrio', name:"クロミー", emoji:"😈", imgUrl:KUROMY_IMG, iconUrl:KUROMY_ICON, faceIconUrl:KUROMY_FACE_ICON, atkMotion:'default', trait:"クロミノート", traitDesc:"勇者モンにすると：クロミーの攻撃が当たるたびに黒音符+1(固有技は+2・最大10・ランのあいだ持ち越す)。1個ごとにクロミーの与ダメージ+3%、5個から会心率+10%、10個でクロミーの攻撃に15%の連撃", baseHp:680, baseGuts:125, baseAtk:175, baseDef:110, plusStats:{hp:320,atk:45,def:30,guts:15}, distAptitude:['C','A','B','D'], unique:{name:"ドクロボム",icon:KUROMY_ICON,monId:"Kuromy",baseMult:3.2,baseGuts:64,evoLevel:0,names:["ドクロボム","クロミーズ5突撃","夢くいウィング","恨み帳メテオ","黒音符バースト","らっきょう大雨","ナイトメアアーク","ダークオーロラ","悪夢フィナーレ"],effectDesc:"メロディ・ボゥの旋律：受けるダメージが15%へる(このターンから2ターン)。さらに、ガッツを上限の20%ぶん回復する。使うたびに、使ったモンスターの与えるダメージ+5%(バトル中ずっと・重なる)"}},
+  Kuromy:    { id:'Kuromy', collab:'sanrio', name:"クロミー", emoji:"😈", imgUrl:KUROMY_IMG, iconUrl:KUROMY_ICON, faceIconUrl:KUROMY_FACE_ICON, atkMotion:'default', trait:"クロミノート", traitDesc:"勇者モンにすると：クロミーの攻撃が当たるたびに黒音符+1(固有技は+2・最大10・ランのあいだ持ち越す)。1個ごとにクロミーの与ダメージ+3%、5個から会心率+10%、10個でクロミーの攻撃に15%の連撃", baseHp:680, baseGuts:125, baseAtk:175, baseDef:110, plusStats:{hp:320,atk:45,def:30,guts:15}, distAptitude:['C','A','B','D'], unique:{name:"ドクロボム",icon:KUROMY_ICON,monId:"Kuromy",baseMult:3.2,baseGuts:64,evoLevel:0,names:["ドクロボム","クロミーズ5突撃","夢食いウィング","恨み帳メテオ","黒音符バースト","らっきょう大雨","ナイトメアアーク","ダークオーロラ","悪夢フィナーレ"],effectDesc:"メロディ・ボゥの旋律：受けるダメージが15%へる(このターンから2ターン)。さらに、ガッツを上限の20%ぶん回復する。使うたびに、使ったモンスターの与えるダメージ+5%(バトル中ずっと・重なる)"}},
   // ゴースト種(2026-10-05 正式実装)。数値・特性・固有技・EXはユーザーと決めた値(docs/spec/GHOST_SKILLS.md)。
   // 新しい血統ゴースト。ゴーストは純血、スプーキーはゴースト×？？？のレア。2体とも打たれ弱い魔法寄りで、ガッツ多め。
   // 勇者特性「トリックスタート」は2体で同じ。固有技の効果だけ違う(ゴースト=運命のコイン / スプーキー=運命の輪)。
@@ -139,7 +139,7 @@ const ALL_PLAYER_MONSTERS = {
   // 固有技の段の順は社長が決めた(「Aで9段目に炸裂、8段目天翔、7に煉獄」)。動きは 24-battle-fx.jsx の SKM_KYUBI が同じ順
   Kyubi: { id:'Kyubi', name:"キュービ", emoji:"🦊", imgUrl:KYUBI_IMG, iconUrl:KYUBI_IMG,
     faceIconUrl:KYUBI_FACE_ICON, atkMotion:'default',
-    trait:"九尾四相", traitDesc:"勇者モンにすると：バトルが始まったときの距離で相が決まる。遠=強い連撃／中=攻撃のあと完全回避を1回(3ターンに1回・WAVEが変わると待ちは無くなる)／近=すべての技が連撃・与ダメ+15%・会心率+20%／零=カードを使うたび煉獄がたまり、連撃が強くなる",
+    trait:"九尾四相", traitDesc:"勇者モンにすると：バトルが始まったときの距離で相が決まる。遠=強い連撃／中=攻撃のあと完全回避を1回(3ターンに1回・WAVEが変わると待ちは無くなる)／近=全ての技が連撃・与ダメ+15%・会心率+20%／零=カードを使うたび煉獄がたまり、連撃が強くなる",
     baseHp:420, baseGuts:150, baseAtk:160, baseDef:70, plusStats:{hp:120,atk:40,def:10,guts:45}, distAptitude:['B','D','B','B'],
     unique:{ name:"ゆうわく", icon:KYUBI_IMG, monId:"Kyubi", baseMult:2.4, baseGuts:48, evoLevel:0,
       names:["ゆうわく","なめろう","超狐火","神狐蒼火","八嵐天衝","陽炎","煉獄九尾陣","天河天翔","炸裂気泡陣"],
