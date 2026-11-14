@@ -117,12 +117,12 @@
     great: 0.08, greatLoyal80: 0.03,             // 大成功の土台・忠誠80〜で +3%(ASSIST §4c)
     fail: 0.03,                                  // 失敗の土台(体力が十分なとき)
     failHpFrom: 0.5,                             // 体力が上限のこの割合を下回ると失敗が増えはじめる
-    failHpTop: 0.7,                              // 体力0のときに足される失敗の率(二乗で増える = どんどん上がる)
+    failHpTop: 0.96,                             // 体力0のときに足される失敗の率(二乗で増える = どんどん上がる)。体力0で 3% + 96% = 99%(社長 2026-11-14「上がり幅を上げて、体力0で99%」)
     saboriGuse: 0.05,                            // ようす「サボりグセ」= 失敗率の下限 +5%(台帳 2026-11-12)
     sab: [0.04, 0.08, 0.12],                     // サボり: 甘い・溺愛・超溺愛(普通〜厳しい側では起きない)
     sabAmaHi: 1.2,                               // 甘え度 40〜 で少し起きやすい
     failFearHi: 0.9,                             // 恐れ度 40〜 で失敗が少し減る
-    failCap: 0.9,
+    failCap: 0.99,
   });
 
   // ---- 休む・遊ぶ・通院(社長 2026-11-12) ----
@@ -158,7 +158,7 @@
   const BOND_START = Object.freeze({ base: 0, G: 10, F: 10, E: 15, D: 15, C: 20, B: 25, A: 30, S: 35, SS: 40, SSS: 40, M: 50 });
   const POS_COEF = [1.0, 0.9, 0.8];
   const GATHER = Object.freeze({ fav: 0.65, favCap: 0.9, top: [30, 20, 15], else: 20, none: 15, aidRate: 0.6, groupAdd: 0.10, groupMin: 3 });
-  const BOND = Object.freeze({ max: 100, tag: 80, train: 8, aidPerLv: 8, eventRate: 0.5 });
+  const BOND = Object.freeze({ max: 100, tag: 80, train: 8, aidPerLv: 4, aidStartMax: 40, eventRate: 0.5 }); // 助手のはじめの親密度 = 仲良し度Lv × 4(+人なつっこさ)・最大 40(社長 2026-11-14「最初から80もある。最大40に」)
   const STORY = Object.freeze([{ need: 0, p: 1, bond: 10 }, { need: 40, p: 0.7, bond: 10 }, { need: 60, p: 0.5, bond: 15 }]);
   const LOTTERY = Object.freeze([{ key: 'self', p: 0.4 }, { key: 'rest', p: 0.25 }, { key: 'talk', p: 0.15 }, { key: 'tip', p: 0.1 }, { key: 'pal', p: 0.1 }]);
   const START_STAT_DIV = 25; // はじめの能力 = 1位の値 ÷ 25
@@ -600,18 +600,21 @@
       const power = pv2 ? powerOfParts({ stats, lv, loyal: loy, pop }, techRowsOf({ species: sp, techs: canonTechList(o.techs), aptUp: o.aptUp, aptBase: o.aptBase, aptAwake: o.aptAwake }))
         : C.power({ stats, masteries, lv, loyal: loy, pop });
       const rank = base ? 'base' : C.rankOf(power).key;
+      // 強さの段(案A): 能力の補正・タッグ・仲良しの始まりは、能力を今までどおり ×2.5 で数えた段で引く(画面に出す rank は新しい総合力のまま)
+      const srank = base ? 'base' : strengthRankOf(pv2 ? powerOfPartsClassic({ stats, lv, loyal: loy, pop }, techRowsOf({ species: sp, techs: canonTechList(o.techs), aptUp: o.aptUp, aptBase: o.aptBase, aptAwake: o.aptAwake }))
+        : powerClassicOf({ stats, masteries, lv, loyal: loy, pop }));
       const top = base ? aptTop3(sp) : top3Of(stats, sp);
       const assists = base ? [] : normAssists(o.assists);
       const own = techsOf(sp).map(t => t.id);
       const techs = base ? startTechs(sp) : (Array.isArray(o.techs) ? canonTechList(o.techs).filter(t => own.includes(t)).slice(0, TECH_MAX) : startTechs(sp));
       const lvOf = (id) => { const a = assists.find(x => x.id === id); return a ? a.lv : 0; };
-      const bonus = {}; KEYS.forEach(k => { const i = top.indexOf(k); bonus[k] = i < 0 ? 0 : r2(stats[k] / 40 * POS_COEF[i] + (base ? 0 : RANK_ADD[rank])); });
+      const bonus = {}; KEYS.forEach(k => { const i = top.indexOf(k); bonus[k] = i < 0 ? 0 : r2(stats[k] / 40 * POS_COEF[i] + (base ? 0 : RANK_ADD[srank])); });
       const kake = lvOf('kaketsuke'); const fav = Math.min(GATHER.favCap, GATHER.fav + (kake ? aOf('kaketsuke', 'v', kake) / 100 : 0));
       const hn = lvOf('hitonatsu'); const sh = lvOf('shitashi'); const so = lvOf('shutsugen');
       return {
         ...(so ? { none: num(aOf('shutsugen', 'v', so)) } : {}),
         ...(pv2 ? { pv: 2 } : {}), kind: base ? 'base' : 'raised', species: sp, name: typeof o.name === 'string' ? o.name.slice(0, 24) : sp, stats, loy, pop, lv, masteries, rank, power, top, assists, bonus, fav, techs,
-        tag: base ? TAG_POWER.base : TAG_POWER[rank], bond0: clamp((base ? BOND_START.base : BOND_START[rank]) + (hn ? aOf('hitonatsu', 'start', hn) : 0) + (sh ? num(aOf('shitashi', 'v', sh)) : 0), 0, BOND.max),
+        tag: base ? TAG_POWER.base : TAG_POWER[srank], bond0: clamp((base ? BOND_START.base : BOND_START[srank]) + (hn ? aOf('hitonatsu', 'start', hn) : 0) + (sh ? num(aOf('shitashi', 'v', sh)) : 0), 0, BOND.max),
         startAdd: { stat: top[0], v: Math.floor(stats[top[0]] / START_STAT_DIV) },
       };
     };
@@ -667,7 +670,7 @@
       return {
         v: VERSION, id, species, aid, type: typeIdx, turn: 1, stats, hpMax, hp: hpMax, stress: 0, carry, bag, good, issaForce, issaSure: false, itemTurn: 0,
         ama: LOYAL.start[0], fear: LOYAL.start[1], pol: clamp(Math.round(num(src.pol)), -3, 3), pp: 0, pop: 0, pts: 0, ptsLost: 0, lv: 1, xp: 0,
-        team, bond: team.map(m => m.bond0), story: team.map(() => 0), aidBond: clamp(aidLv * BOND.aidPerLv + (hn ? aOf('hitonatsu', 'start', hn) : 0), 0, BOND.max),
+        team, bond: team.map(m => m.bond0), story: team.map(() => 0), aidBond: clamp(aidLv * BOND.aidPerLv + (hn ? aOf('hitonatsu', 'start', hn) : 0), 0, BOND.aidStartMax), // 途中の育成は restore が保存の aidBond で上書きするので変わらない
         techs: startTechsRun(species), mastery: Object.fromEntries(startTechsRun(species).map(t => [t, 0])), masterySpent: {}, tickets: SHUGYO.ticket0 + stayT('ticket0'), shugyoUsed: {}, pity: 0, techMiss: {}, superLeft: SHUGYO.superMax + stayT('chokyo'), fame: 0, fameTotal: 0, fameV: FAME_V, fourDone: false, elixir: null, fruit: null, mealReady: false, trainXp: {}, aidLv, astory: { ep: 0, path: null, done: false }, rivalMet: null, ending: null, aptUp: [0, 0, 0, 0], aptLog: { quest: 0, cup: 0, event: 0 }, aptBase: aptBaseNorm(src.aptBase), awake: 0, awakeTurn: 0, aptAwake: [0, 0, 0, 0], omen: null,
         items: { sand: clamp(Math.round(num(src.items && src.items.sand)), 0, REMATCH.carry), rainbow: clamp(Math.round(num(src.items && src.items.rainbow)), 0, REMATCH.carry) }, rematchUsed: 0, wonBefore: Array.isArray(src.wonBefore) ? src.wonBefore.filter(k => typeof k === 'string').slice(0, 64) : [], wonNow: [], rivals: (Array.isArray(src.rivals) ? src.rivals : []).filter(RIVALS_OK0).slice(0, 8).map(r => ({ name: String(r.name || '').slice(0, 24), breeder: typeof r.breeder === 'string' ? r.breeder.slice(0, 24) : null, kind: r.kind === 'friend' ? 'friend' : 'aid', species: r.species, stats: normStats(r.stats, r.species) })),
         cond: null, yosu: {}, hirameki: false, shBoost: false, idle: 0, issaMet: 0, issaWon: 0, issaDone: false,
@@ -690,6 +693,18 @@
         if (!stat && evMod(s, 'iki', i) && rngOf(s.id, s.turn, 'iki', i)() < evMod(s, 'iki', i)) stat = m.top[0]; // 🤝息ぴったり(並びを変えない別の乱数)
         if (stat) cards[cardKey(kind, stat)].members.push(i);
       });
+      // 🧲集合率アップ(社長 2026-11-14「みんなが同じとこに集まりやすく」): くじのあと、いちばん多く集まった札にいない子が、それぞれ v% でそこへ移る。
+      //   来なかった子は対象外。同じ数なら、その札の能力を得意(上位3つ)にしている子が多い札 → 能力の並び順。別の乱数で並び(記録・ランキングの再現)を変えない
+      const gv = stayNum(s, 'shuugou');
+      if (gv > 0) {
+        const list = Object.values(cards); const fanOf = (c) => s.team.filter(m => m.top.includes(c.stat)).length;
+        const big = list.slice().sort((p, q) => (q.members.length - p.members.length) || (fanOf(q) - fanOf(p)) || (KEYS.indexOf(p.stat) - KEYS.indexOf(q.stat)))[0];
+        if (big && big.members.length > 0) {
+          const gr = rngOf(s.id, s.turn, 'shuugou');
+          list.forEach(c => { if (c === big) return; c.members = c.members.filter(i => { if (gr() < gv / 100) { big.members.push(i); return false; } return true; }); });
+          big.members.sort((p, q) => p - q);
+        }
+      }
       if (rng() < GATHER.aidRate + stayNum(s, 'aidcome') / 100) { const all = Object.keys(cards); cards[all[Math.floor(rng() * all.length)]].aid = true; } // 🙋助手の出現率アップ
       return cards;
     };
@@ -1350,6 +1365,10 @@
     };
     // 6能力・Lv・忠誠・人気は助手マスモンと同じ重み(MASMON_CALC.power に技なしで聞く)+ 技の分
     const powerOfParts = (o, rows) => Math.round(C.power({ stats: o.stats, masteries: [], lv: o.lv, loyal: o.loyal, pop: o.pop }) + techPowerOfRows(rows));
+    // 強さの段(案A・2026-11-14): 能力を今までどおり ×2.5 で数えた総合力と、今までの区切り(M 19,500)の段。芯が古くて無いときは新しい式で代える
+    const powerClassicOf = (o) => (typeof C.powerClassic === 'function' ? C.powerClassic(o) : C.power(o));
+    const powerOfPartsClassic = (o, rows) => Math.round(powerClassicOf({ stats: o.stats, masteries: [], lv: o.lv, loyal: o.loyal, pop: o.pop }) + techPowerOfRows(rows));
+    const strengthRankOf = (p) => (typeof C.rankClassicOf === 'function' ? C.rankClassicOf(p) : C.rankOf(p).key);
     const powerOf = (s) => powerOfParts({ stats: s.stats, lv: s.lv, loyal: loyalOf(s), pop: s.pop }, techRowsOf(s));
     // 熟練の効き目(試合の芯の members[].techBoost)。熟練から自動 + 強化した段(s.techUp・いまは無い)
     const techBoostOf = (s) => {
@@ -1783,13 +1802,18 @@
     // ---- 評価(引退): 総合力・ランク・アシストポイント・上位3つ ----
     // 評価の表示(社長 2026-11-12: ランク表は助手マスモンと同じ・500ごとに番号。C は 6,000/6,500/7,000/7,500 で C1〜C4・M は上限なしで M1・M2…)
     const GRADE_STEP = 500;
-    const gradeOf = (power) => { const p = Math.max(0, num(power)); const r = C.rankOf(p); const step = Math.floor((p - r.min) / GRADE_STEP) + 1; return { rank: r.key, step, label: `${r.key}${step}`, min: r.min, next: r.next, toNext: GRADE_STEP - ((p - r.min) % GRADE_STEP) }; };
+    //   2026-11-14 社長「M は 20,000」: M より上はランクの名前そのものが 500 ごと(M・M1〜M9・MG・MG1…)なので番号を付けない(芯の rankOf の label)
+    const gradeOf = (power) => { const p = Math.max(0, num(power)); const r = C.rankOf(p); const step = Math.floor((p - r.min) / GRADE_STEP) + 1;
+      const label = r.key === 'M' && r.label ? r.label : `${r.key}${step}`;
+      return { rank: r.key, step, label, min: r.min, next: r.key === 'M' && r.label ? r.labelNext : r.next, toNext: GRADE_STEP - ((p - r.min) % GRADE_STEP) }; };
     const evaluate = (s) => {
       const loy = loyalOf(s);
       const techRows = techRowsOf(s);
       const power = powerOfParts({ stats: s.stats, lv: s.lv, loyal: loy, pop: s.pop }, techRows);
       const rank = C.rankOf(power);
-      return { power, rank: rank.key, grade: gradeOf(power), points: assistPointsOf(power), top: top3Of(s.stats, s.species), sum: sumOf(s.stats), loyal: loy, ama: s.ama, fear: s.fear, pop: s.pop, lv: s.lv, techs: techRows.length, techRows, over: s.over };
+      // アシストポイントは強さの段と同じく今までの数え方の総合力から(案A: 育成の釣り合いを変えない)
+      const powerS = powerOfPartsClassic({ stats: s.stats, lv: s.lv, loyal: loy, pop: s.pop }, techRows);
+      return { power, powerS, rank: rank.key, grade: gradeOf(power), points: assistPointsOf(powerS), top: top3Of(s.stats, s.species), sum: sumOf(s.stats), loyal: loy, ama: s.ama, fear: s.fear, pop: s.pop, lv: s.lv, techs: techRows.length, techRows, over: s.over };
     };
 
     const EVX = (deps && deps.events) || (root && root.MONHERO_SUCCESS_EVENTS) || null;

@@ -11,10 +11,10 @@ export const LEND_FAME_DAILY_N = 10;     // 仮。貸した側が名声をもら
 export const LEND_FAME_EACH = 20;        // 仮。1回ごとの名声
 export const LEND_STAT_MAX = 999;
 export const LEND_ASSIST_MAX = 8;
-// アシスト効果の表 monster-hero/data/monhero-success-assist.js(第3版・2026-11-14・71種類・目盛り1〜25)と同じ id と目盛りの上限
+// アシスト効果の表 monster-hero/data/monhero-success-assist.js(第3版・2026-11-14・72種類・目盛り1〜25)と同じ id と目盛りの上限
 //   (tools/friends/monsuc-lend-check.js が表との食い違いを見張る。表を変えたらここも変えて配り直す)
 //   1つは { id, lv } か { id, lv, n }。lv = 古い段(1〜5)か目盛り、n = 目盛り(第3版)。どちらも 1〜LEND_ASSIST_LV_MAX の整数
-export const LEND_ASSIST_IDS = Object.freeze(['sokoji',  'kizuna',  'hirameki',  'ochitsuki',  'itawari',  'ninzu',  'trainlv',  'gyakkyo',  'hagemi',  'haru',  'natsu',  'aki',  'fuyu',  'ninkigreat',  'challenge',  'tsuika',  'kaifuku',  'atooshi',  'miharu',  'kibarashi',  'kunpow',  'kunwise',  'kunhit',  'kuneva',  'kuntough',  'kunlife',  'kaketsuke',  'shutsugen',  'shitashi',  'tagpow',  'hitonatsu',  'nakayoshi',  'shitsuke',  'shoki',  'ticket0',  'tairyoku',  'kuishinbo',  'trchance',  'shchance',  'gussuri',  'asobi',  'tsukisoi',  'genki',  'shugyo',  'shugyotoku',  'waza',  'chokyo',  'wazakazu',  'shugyohp',  'aptq',  'shokin',  'ikioi',  'ninki',  'kokoroe',  'ticket',  'rivaldamashii',  'event',  'peak',  'yobimizu',  'mejirushi',  'joshu',  'aidcome',  'aidtrain',  'aidluck',  'aidtrust',  'aidkeisho',  'gatsu',  'miseba',  'mitate',  'kensho',  'mimamori']);
+export const LEND_ASSIST_IDS = Object.freeze(['sokoji',  'kizuna',  'hirameki',  'ochitsuki',  'itawari',  'ninzu',  'trainlv',  'gyakkyo',  'hagemi',  'haru',  'natsu',  'aki',  'fuyu',  'ninkigreat',  'challenge',  'tsuika',  'kaifuku',  'atooshi',  'miharu',  'kibarashi',  'kunpow',  'kunwise',  'kunhit',  'kuneva',  'kuntough',  'kunlife',  'kaketsuke',  'shutsugen',  'shuugou', 'shitashi',  'tagpow',  'hitonatsu',  'nakayoshi',  'shitsuke',  'shoki',  'ticket0',  'tairyoku',  'kuishinbo',  'trchance',  'shchance',  'gussuri',  'asobi',  'tsukisoi',  'genki',  'shugyo',  'shugyotoku',  'waza',  'chokyo',  'wazakazu',  'shugyohp',  'aptq',  'shokin',  'ikioi',  'ninki',  'kokoroe',  'ticket',  'rivaldamashii',  'event',  'peak',  'yobimizu',  'mejirushi',  'joshu',  'aidcome',  'aidtrain',  'aidluck',  'aidtrust',  'aidkeisho',  'gatsu',  'miseba',  'mitate',  'kensho',  'mimamori']);
 export const LEND_ASSIST_LV_MAX = 25;
 const LEND_STAT_KEYS = ['life', 'pow', 'wise', 'hit', 'eva', 'tough'];
 const SPECIES_RE = /^[A-Za-z0-9_]{1,40}$/;

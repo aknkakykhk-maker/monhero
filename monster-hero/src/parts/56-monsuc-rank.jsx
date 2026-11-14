@@ -211,7 +211,7 @@ function MonsucRankMonImg({ species, dye, size = 36 }) {
 }
 function MonsucRankGrade({ grade }) {
   const g = typeof grade === 'string' && /^[A-Z]{1,3}[0-9]{0,3}$/.test(grade) ? grade : 'G'; // 評価は 500 ごとの数字つき(C2・M3 など)。色は字の部分で決める
-  const letter = g.replace(/[0-9]+$/, '');
+  const letter = /^M/.test(g) ? 'M' : g.replace(/[0-9]+$/, ''); // M より上(M1・MG・MG3…)は M の色
   return <span className="inline-flex items-center justify-center min-w-[26px] h-[22px] px-1 rounded-md text-[12px] font-black text-slate-900" style={{ background: MONSUC_RANK_GRADE_COLOR[letter] || '#94a3b8' }}>{g}</span>;
 }
 function MonsucRankStats({ stats }) {

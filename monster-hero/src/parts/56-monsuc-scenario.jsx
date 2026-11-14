@@ -55,8 +55,8 @@ const MSX_SCN_CSS = `
 .msx .scn-win .cl{display:block;margin:10px auto 0;padding:8px 28px;border-radius:9px;background:#fff;border:2px solid #d6d3d1;font-weight:900;font-size:14px;color:#1f2937}
 `;
 
-// ストーリー選択の画面。value: いま選んでいるシナリオの id。onNext(id): 次へ(育てるモンスターを選ぶ段)
-function MsxScenarioSelect({ value, onBack, onNext }) {
+// ストーリー選択の画面。value: いま選んでいるシナリオの id。onNext(id): 次へ(育てるモンスターを選ぶ段)。ctx: みゅあの説明(tut.scn)に渡す呼び名など
+function MsxScenarioSelect({ value, onBack, onNext, ctx }) {
   const [idx, setIdx] = useState(() => Math.max(0, MSX_STORIES.findIndex((x) => x.id === msxScenarioId(value))));
   const [detail, setDetail] = useState(false);
   const sc = MSX_STORIES[idx] || MSX_STORIES[0];
@@ -104,6 +104,7 @@ function MsxScenarioSelect({ value, onBack, onNext }) {
           </div>
         </div>
       ) : null}
+      {typeof MsxBetaTalk === 'function' ? <MsxBetaTalk keys={['scn']} ctx={ctx}/> : null}
     </div>
   );
 }

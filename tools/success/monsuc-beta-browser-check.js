@@ -130,6 +130,12 @@ const annivCheck = () => {
     check('見た印 mh_monsuc_beta_v1 に open が残る', !!(saved && saved.seen && saved.seen.open), JSON.stringify(saved));
     // 新しく育成をはじめる → 準備の説明(最初の1回)
     await page.getByRole('button', { name: /新しく育成をはじめる/ }).click();
+    // ストーリー選択(2026-11-14)では、はじめの1回だけみゅあの説明(tut.scn)
+    const scnTalk = page.locator('[data-msx-beta="scn"]');
+    await scnTalk.waitFor({ timeout: 10000 }).catch(() => {});
+    check('ストーリー選択で説明が出る', await scnTalk.count() === 1);
+    for (let i = 0; i < 10 && await scnTalk.count(); i++) { await page.locator('.msx-beta-card').click(); await page.waitForTimeout(100); }
+    check('ストーリー選択の説明を読むと閉じる', await scnTalk.count() === 0);
     await page.locator('[data-msx-scenario-next]').click(); // ストーリー選択(2026-11-14)の次へ
     const prep = page.locator('[data-msx-beta="prep"]');
     await prep.waitFor({ timeout: 10000 }).catch(() => {});

@@ -115,7 +115,7 @@ const ev = { loyal: 70, lv: 20, pop: 30, power: 9999 };
   // ⑦ 総合力の式の重み(端末とサーバ)
   const calc = fs.readFileSync(path.join(root, 'monster-hero/src/parts/56-assistant-life-masmon-calc.jsx'), 'utf8');
   const sql = fs.readFileSync(path.join(root, 'supabase/migrations/202611120003_monsuc_rank.sql'), 'utf8');
-  check('⑦ 端末の重みが変わっていない', /POWER_W = Object\.freeze\(\{ stat: 2\.5, tech: 100, mastery: 1, lv: 15, loyal: 10, pop: 10, techMax: 8 \}\)/.test(calc), '式を変えたら SQL の monsuc_rank_power も直す');
+  check('⑦ 端末の重みが変わっていない', /POWER_W = Object\.freeze\(\{ stat: 2\.5, statUp: 2, statAt: 900, tech: 100, mastery: 1, lv: 15, loyal: 10, pop: 10, techMax: 8 \}\)/.test(calc), '式を変えたら SQL の monsuc_rank_power3 も直す');
   check('⑦ SQL の式', sql.includes('* 2.5') && sql.includes('sum(100 + least(') && sql.includes('limit 8') && sql.includes('* 15 +') && /least\(greatest\(p_loyal, 0\), 100\) \* 10/.test(sql));
   const apply = fs.readFileSync(path.join(root, 'docs/sql/monsuc-rank/MONSUC_RANK_APPLY.sql'), 'utf8');
   check('⑦ docs/sql と migrations が同じ', apply === sql);
@@ -130,6 +130,22 @@ const ev = { loyal: 70, lv: 20, pop: 30, power: 9999 };
     check('⑦b 芯の段の並び', core.includes("grades: Object.freeze(['G', 'F', 'E', 'D', 'C', 'B', 'A', 'S', 'S+', 'SS', 'SS+', 'M'])"));
     check('⑦b SQL の式', v2.includes('array[40, 80, 160, 320, 640]') && v2.includes("array['G','F','E','D','C','B','A','S','S+','SS','SS+','M'], e->>'a'), 5) - 5) * 0.1") && v2.includes('* 2.5'));
     check('⑦b 端末の段の並びと SQL', JSON.stringify(ctx.MONSUC_RANK_APT) === JSON.stringify(['G', 'F', 'E', 'D', 'C', 'B', 'A', 'S', 'S+', 'SS', 'SS+', 'M']));
+  }
+
+  // ⑦c 総合力の第3版(2026-11-14 社長: 能力の重みを直線・M 20,000・M より上は500ごと)。端末と SQL(MONSUC_RANK_V3_POWER.sql)がそろっている
+  {
+    const v3 = fs.readFileSync(path.join(root, 'docs/sql/monsuc-rank/MONSUC_RANK_V3_POWER.sql'), 'utf8');
+    const v3m = fs.readFileSync(path.join(root, 'supabase/migrations/202611140001_monsuc_rank_v3_power.sql'), 'utf8');
+    check('⑦c docs/sql と migrations が同じ(V3)', v3 === v3m);
+    check('⑦c SQL の能力の式(2.5 + 2.0 × 能力 ÷ 900)', v3.includes('sum(v * (2.5 + 2.0 * v / 900))'));
+    check('⑦c SQL の M の区切りと名前', v3.includes('>= 20000') && v3.includes("array['', 'G', 'F', 'E', 'D', 'C', 'B', 'A']") && v3.includes("('SSS', 18000, 20000)"));
+    check('⑦c SQL は古い列を書き換えない(新しい列だけ埋める)', !/update public\.monsuc_finishes\s+set (power|grade)\s*=/.test(v3) && v3.includes('where power_v3 is null'));
+    check('⑦c 送信は IF で式を分ける(CASE だと両方の関数が先に計算される)', !/v_power := case when exists/.test(v3));
+    const vm2 = require('vm'); const cx = vm2.createContext({}); vm2.runInContext(calc + ';this.C = MASMON_CALC;', cx); const C = cx.C;
+    const mk = (s) => ({ life: s, pow: s, wise: s, hit: s, eva: s, tough: s });
+    check('⑦c 端末の能力の重み(900 で 1あたり 4.5)', Math.round(C.statPower(900)) === 4050 && Math.round(C.statPower(0)) === 0 && C.power({ stats: mk(999), lv: 99, loyal: 100, pop: 100 }) === 31777);
+    const labels = [[0, 'G'], [19999, 'SSS'], [20000, 'M'], [20500, 'M1'], [24999, 'M9'], [25000, 'MG'], [25500, 'MG1'], [30000, 'MF'], [99999, 'MA9']];
+    check('⑦c 端末のランクの名前', labels.every(([p, l]) => C.rankOf(p).label === l && (p < 20000 || C.rankOf(p).key === 'M')), labels.map(([p]) => C.rankOf(p).label).join(','));
   }
 
   console.log(failed ? `NG ${failed}件` : 'OK: モンヒロサクセスの総合力ランキングの端末の口');
