@@ -3,7 +3,7 @@
 //   VIDEO_DIR=<フォルダ> を付けると、動く様子を動画(webm)で残す
 // ① 「ほかのブリーダー」→「戦う」のデッキ選びに「🖐 自分で操作/🤖 オート(戦術カード)」があり、オートにすると今日のごほうびの残り(3回)が出る
 // ② オートで始めると、見出しの列にオートの操作(縦は ×1→×2→×4 の1つ・横は ×1/×2/×4、🖐 自分で)が出て、自分の側も手を触らずに最後まで戦う
-// ③ 結果: ビートPは自分で戦うときの半分(勝ち100・負けは自分の番の数で減らした半分)。その日はじめての勝ちの +50 は付かない。
+// ③ 結果: ビートPは自分で戦うときの半分(勝ち100・負けは自分の番の数で減らした半分)。その日初めての勝ちの +50 は付かない。
 //    その日の数(daily)は変えず、ごほうびの回数(mh_card_auto_reward_v1)が1つ増え、結果に「あと◯回」が出る
 // ④ 今日の3回を使い切っていると、ごほうびなし(ビートPも回数も変わらない)。結果に「ごほうびなしで遊べます」
 // ⑤ サーバへは何も書かない(「戦った」の知らせ・見返し・カードランクを送らない。登録デッキの一覧を読むだけ)
@@ -129,7 +129,7 @@ const browser = async () => {
     const today = await page.evaluate(() => cardTodayJst());
     const lvAfter = await getS('mh_card_level_v1');
     const xpGain = ((lvAfter && lvAfter.xp) || 0) - ((lvBefore && lvBefore.xp) || 0);
-    check('③ カードランクの経験値も半分(勝ち9・負け3)で、その日はじめての勝ちの分は付かない', xpGain === (out1 === 'win' ? 9 : 3), `${out1} ${xpGain}`);
+    check('③ カードランクの経験値も半分(勝ち9・負け3)で、その日初めての勝ちの分は付かない', xpGain === (out1 === 'win' ? 9 : 3), `${out1} ${xpGain}`);
     const halfOk = out1 === 'win' ? gain1 === 100 : gain1 >= 0 && gain1 <= 75;
     check('③ ビートPは自分で戦うときの半分(勝ち100・負け75まで)で、はじめての勝ちの +50 は付かない', halfOk, `${out1} ${gain1}`);
     check('③ その日の数(daily)は変えず、ごほうびの回数が1つ増え、結果の札に「残り 2」が出る', after.daily === before.daily && after.auto && after.auto.day === today && after.auto.n === 1 && /あと2回/.test(autoNote),
@@ -156,7 +156,7 @@ const browser = async () => {
     check('④ 今日の3回を使い切っていると、ごほうびなし(ビートPも回数も変わらない)・「ごほうびなし」', end2 && free === 'free' && p3 === p2 && auto3.n === 3 && /ごほうびなし/.test(note2), JSON.stringify({ end2, free, p2, p3, auto3 }));
     // ⑧ 結果だけ見る
     const toPick = async () => {
-      await page.getByRole('button', { name: '相手をえらぶ' }).click();
+      await page.getByRole('button', { name: '相手を選ぶ' }).click();
       await page.locator('[data-card-share-fight="check-breeder-1"]').click();
       await page.locator('[data-card-deck-pick-go]').waitFor({ timeout: 8000 });
       if ((await page.locator('[data-card-deck-pick-auto="auto"]').count()) === 0) await page.locator('[data-card-deck-pick-mode="auto"]').click();

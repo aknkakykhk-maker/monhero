@@ -101,7 +101,7 @@ for (const [rel, src] of sources) {
   check(`${rel}: 「負けたら止める」は負けたその時だけ動く(同じ理由が続いているあいだは2回目を止めない)`,
     compact.includes("conststopKey=hp<=0?'defeat':gaveUp?'retire':gameState==='PICK_HERO'?'manual':'';")
     && compact.includes('if(stopKey&&stopKey===prevStopKey)return;'));
-  check(`${rel}: モードえらび・マルチの札は、勝負がついたら「始め直す」、止まっただけなら「再開する」のボタンになる`,
+  check(`${rel}: モード選び・マルチの札は、勝負がついたら「始め直す」、止まっただけなら「再開する」のボタンになる`,
     src.includes('data-rhythm-multi-quick-run-restart') && src.includes('data-rhythm-multi-quick-run-resume')
     && compact.includes('canRestart:!!quickRunProgress.finished&&!quickRunResumable&&!!repeatTemplateForNewRun()')
     && compact.includes('canResume:!!quickRunProgress.finished&&quickRunResumable')

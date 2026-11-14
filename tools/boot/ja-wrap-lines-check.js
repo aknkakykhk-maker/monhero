@@ -14,7 +14,9 @@ const ROOT = path.resolve(__dirname, '..', '..');
 const P = (f) => fs.readFileSync(path.join(ROOT, 'monster-hero', f), 'utf8');
 let failed = 0;
 // 1〜2字だけの行の上限(2026-11-06。直す前は言葉のかけら31件・文節75件。かけらは22件まで減った。文節は123件に増えた。2026-11-06 「子」の言い換えで「まだ／会って」が増えた分は、折り目をあとのかたまりの中のよい所までずらして戻した。かけら22件・文節122件)。増えたら 41-screen-ui.jsx の jaKeepKanaRuns を見直す
-const JA_SHORT_FRAGMENT_LIMIT = 22;
+// 2026-11-14 23件へ(ココロ・r1114-080): 数と助数詞を離さない一覧に「列・行・ターン」などを足したので、96px の「〜の／1行／だけな」が1件増えた。
+//   前は「1／行だけ」と数と助数詞が離れていた(社長の指摘「1／列ずつ」と同じ形)。離れないほうが正しいので上限を上げた
+const JA_SHORT_FRAGMENT_LIMIT = 23;
 const JA_SHORT_PHRASE_LIMIT = 122;
 const check = (name, cond, detail = '') => { console.log(`${cond ? 'OK' : 'NG'}: ${name}${detail ? ` — ${detail}` : ''}`); if (!cond) failed++; };
 
