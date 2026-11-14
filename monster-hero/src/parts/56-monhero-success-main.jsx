@@ -561,12 +561,12 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
     </>);
     // 編成のモンスターとの出来事があれば、結果のあとに場面を1枚挟む(56-monsuc-tevent.jsx。とばすと飛ぶ)
     const tev = isTrain && o.event && typeof MsxTrainEvent === 'function';
-    foot = <div className="v-ft"><button type="button" onClick={() => (isTrain ? afterAct({ ...run, phase: 'main' }) : afterAct(run))}>⏩ とばす</button><button type="button" className="go" onClick={() => (tev ? setRun({ ...run, phase: 'tevent' }) : isTrain ? toReact(run) : afterAct(run))}>つぎへ ▶</button></div>;
+    foot = <div className="v-ft"><button type="button" onClick={() => (isTrain ? afterAct({ ...run, phase: 'main' }) : afterAct(run))}>⏩ 飛ばす</button><button type="button" className="go" onClick={() => (tev ? setRun({ ...run, phase: 'tevent' }) : isTrain ? toReact(run) : afterAct(run))}>つぎへ ▶</button></div>;
   }
   // ---- トレーニングのあとの出来事の場面(56-monsuc-tevent.jsx) ----
   else if (phase === 'tevent' && run.out && run.out.event && typeof MsxTrainEvent === 'function') {
     body = <><MsxBand s={s} v={v} ev={ev}/><MsxTrainEvent key={`${s.turn}-tev`} run={run} o={run.out} ctx={ctx}/></>;
-    foot = <div className="v-ft"><button type="button" onClick={() => afterAct({ ...run, phase: 'main' })}>⏩ とばす</button><button type="button" className="go" onClick={() => toReact(run)} data-msx-tev-next>つぎへ ▶</button></div>;
+    foot = <div className="v-ft"><button type="button" onClick={() => afterAct({ ...run, phase: 'main' })}>⏩ 飛ばす</button><button type="button" className="go" onClick={() => toReact(run)} data-msx-tev-next>次へ ▶</button></div>;
   }
   // ---- 覚醒・超覚醒(56-monsuc-awake.jsx の演出)。終わったら、ターンのはじめならメインへ・ターンの終わりなら閉じる ----
   else if (phase === 'awake' && run.out && run.out.fire && typeof MsxAwakeShow === 'function') {
@@ -626,7 +626,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
     </>);
     foot = done || !RC || s.reacted
       ? <div className="v-ft"><button type="button" className="go" onClick={() => afterAct({ ...run, out: run.out ? { ...run.out, reacted: undefined } : run.out, phase: 'main' })} data-msx-react-next>つぎへ ▶</button></div>
-      : <div className="v-ft"><button type="button" onClick={() => choose(null)}>⏩ とばす</button><button type="button" className="on" disabled>選んでね</button></div>;
+      : <div className="v-ft"><button type="button" onClick={() => choose(null)}>⏩ 飛ばす</button><button type="button" className="on" disabled>選んでね</button></div>;
   }
   // ---- イッサ博士 ----
   else if (phase === 'issa') {
@@ -636,7 +636,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
   else if (phase === 'turn' && typeof MsxKiShow === 'function' && v.period.at === 1 && v.period.index > 0 && kiAt !== s.turn) {
     const doneKi = () => { setKiAt(s.turn); setRun({ ...run, ki: { p: v.period.index, fame: Number.isFinite(s.fameTotal) ? s.fameTotal : 0, power: ev.power } }); };
     body = <><MsxBand s={s} v={v} ev={ev}/><MsxKiShow key={`ki-${s.turn}`} run={run} v={v} ev={ev} ki={run.ki} onDone={doneKi}/></>;
-    foot = <div className="v-ft"><button type="button" onClick={onPause}>← 中断</button><button type="button" className="go" onClick={doneKi} data-msx-ki-skip>⏩ とばす</button></div>;
+    foot = <div className="v-ft"><button type="button" onClick={onPause}>← 中断</button><button type="button" className="go" onClick={doneKi} data-msx-ki-skip>⏩ 飛ばす</button></div>;
   }
   else if (phase === 'turn') {
     const cal = msxCalendar(s.turn); const prev = msxCalendar(Math.max(1, s.turn - 1));
