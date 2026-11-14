@@ -35,6 +35,13 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    // 2026-11-14 えるびんさんの知らせ(iPhone でもどるが時計の下に入って押せない・キズナ4)
+    date: "2026-11-14 14:33", type:'fix', title:'マスモンの対戦で、iPhone の「もどる」が押せないことがあったのを直しました', group:'assistant', status:'new', releaseFlag:'assistantMasmonBattleBeta',
+    items:[
+      'iPhone などで、上の「← もどる」が時計の表示と重なって押せないことがありました。いまは時計の下に出て、押せるようになっています。',
+    ],
+  },
+  {
     date: "2026-11-14 12:40", type:'update', title:'体力が少ないときのトレーニングが、前より失敗しやすくなりました', group:'success', releaseFlag:'monheroSuccess', status:'new',
     items:[
       '体力が上限の半分を下回ると、トレーニングの失敗が前より大きく増えます。上限の30%で約18%、10%で約64%、0のときはほぼ必ず失敗します。',
@@ -55,6 +62,17 @@ const CHANGELOG = [
       '能力が高いほど、1あたりの総合力が大きくなります。高い能力を育てるほど総合力がぐんと伸びます。',
       'ランク M は総合力20,000からになりました。その上は500ごとに M1〜M9 → MG → MG1〜MG9 → MF …と続きます。',
     ],
+  },
+  {
+    // 2026-11-14 社長「β版公開の前に1話(急ぎ)」「更新履歴は第1話の先出しに1件付ける(案の文で)」(窓口経由)。お話は monsuc_beta_ep1(data/assistants.js)
+    // 絵は社長の告知画像「β版 近日公開!」(原本 tools/art-sources/monhero-success-2026-11-14/key-visual-coming-soon-1671x941.png)。第1話と同時に出す(社長の指示・窓口経由)
+    date: "2026-11-14 12:12", type:'update', title:'新しいお話「モンヒロサクセス 第1話 ～一番乗りは、だれだ～」', group:'success', status:'new', releaseFlag:'monsucStoryEp1',
+    image: 'images/events/monsuc-beta-coming-soon.jpg?v=b00d6a250134',
+    items:[
+      'HOMEで、助手たちのお話が見られます。',
+      '見のがしたら、プロフィールの「イベント回想」から見られます。',
+    ],
+    assistantNotice:{ id:'update_notice_monsuc_ep1_v1', type:'content' },
   },
   {
     // 2026-11-14 社長「モンサクとしてではなく、バトル部分のお知らせとして出せばいい」。試合の場(闘技場・間合いの動き)は助手のマスモン対戦と共通なので、マスモンで対戦で見えることだけを1つにまとめる(窓口)
