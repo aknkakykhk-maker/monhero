@@ -60,10 +60,10 @@ vm.runInContext([
   "const RAID_JACK_EVENT = { startAt: '1970-01-01T00:00:00Z' };",
   "const RAID_JACK_START_AT = '1970-01-01T00:00:00Z';",
   gate,
-  'globalThis.x={CHANGELOG,changelogForPlayers,CHANGELOG_ENTRIES,changelogEntriesOfTab,HIDDEN_UPDATE_NOTICE_IDS,ASSISTANT_UPDATE_NOTICES};',
+  'globalThis.x={CHANGELOG,changelogForPlayers,CHANGELOG_ENTRIES,changelogEntriesOfTab,HIDDEN_UPDATE_NOTICE_IDS,ASSISTANT_UPDATE_NOTICES,RELEASE_FLAGS};',
 ].join('\n'), context);
 const { CHANGELOG, changelogForPlayers, CHANGELOG_ENTRIES, changelogEntriesOfTab,
-        HIDDEN_UPDATE_NOTICE_IDS, ASSISTANT_UPDATE_NOTICES } = context.x;
+        HIDDEN_UPDATE_NOTICE_IDS, ASSISTANT_UPDATE_NOTICES, RELEASE_FLAGS } = context.x;
 
 const devEntries = CHANGELOG.filter(e => e.dev === true);
 const shownTitles = new Set(CHANGELOG_ENTRIES.map(e => e.title));
@@ -161,6 +161,23 @@ check('visibleFrom を書いていない項目は時刻に左右されない',
 // 書き間違いで項目が永久に消えないこと(CLAUDE.md ⑦「消さない」へ倒す)
 check('visibleFrom が読めない値でも項目は消えない',
   changelogForPlayers({ type:'update', title:'x', visibleFrom:'いつか' }, 0) === true);
+
+// ---- ⑦ 公開前の遊び(モンヒロサクセス)の項に、公開の印を付け忘れない ----
+// 2026-11-14 社長「公開されていないのに、お知らせに来ている」: モンサクの2件(#6052・#6056)に
+// releaseFlag:'monheroSuccess' を付け忘れ、まだ遊べない遊びのお知らせが本番の全員に出た。
+// 公開の印 monheroSuccess が偽のあいだは、group:'success' の項に releaseFlag:'monheroSuccess'
+// か unreleasedFlag:'monheroSuccess'(公開したら消える予告)のどちらかが要る
+const successOpen = !!(RELEASE_FLAGS && RELEASE_FLAGS.monheroSuccess === true);
+const successEntries = CHANGELOG.filter(e => e && e.group === 'success');
+check('モンヒロサクセスの項がある(まとまりの印が消えていない)', successEntries.length > 0, `${successEntries.length}件`);
+if (!successOpen) {
+  const bare = successEntries.filter(e => e.releaseFlag !== 'monheroSuccess' && e.unreleasedFlag !== 'monheroSuccess');
+  check('公開前のモンヒロサクセスの項に、公開の印(releaseFlag か unreleasedFlag の monheroSuccess)が付いている',
+    bare.length === 0, bare.map(e => `${e.date} ${e.title}`).join(' / '));
+  // 印の付いた項は、本番の判定でも一覧に出ない(公開前の予告 unreleasedFlag だけは出てよい)
+  const leaked = successEntries.filter(e => e.releaseFlag === 'monheroSuccess' && shownTitles.has(e.title));
+  check('releaseFlag:monheroSuccess の項は、公開前のあいだ一覧に出ない', leaked.length === 0, leaked.map(e => e.title).join(' / '));
+}
 
 console.log(failed === 0 ? '\nすべてOK' : `\n${failed}件のNGがあります`);
 process.exit(failed === 0 ? 0 : 1);
