@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ba727677d80b34f3
+// source-sha256: 4a8b68cbd30c30c3
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -114650,7 +114650,7 @@ function AssistantLifeRoomSheet({
     "data-assistant-life-roomview-scroll": true
   }, !land && rvScene && React.createElement("div", {
     style: {
-      height: uiV2 ? 'min(46vh, 112vw)' : 'min(calc(100% - 52px), max(470px, 132vw))'
+      height: uiV2 ? 'min(70vh, 150vw)' : 'min(calc(100% - 52px), max(470px, 132vw))'
     }
   }, rvScene), React.createElement("div", {
     ref: sheetRef,
@@ -114682,9 +114682,11 @@ function AssistantLifeRoomSheet({
       } : {})
     },
     "data-assistant-life-room-where": true
-  }, jaWrap(where), groupNames && React.createElement(React.Fragment, null, " ・ ", w.group.ids.length, "人(", React.createElement(AssistantLifeNames, {
+  }, jaWrap(where), groupNames && (w.group.ids.length <= 2 ? React.createElement(React.Fragment, null, " ・ ", React.createElement("span", {
+    className: "whitespace-nowrap"
+  }, w.group.ids.length, "人(", groupNames, ")")) : React.createElement(React.Fragment, null, " ・ ", w.group.ids.length, "人(", React.createElement(AssistantLifeNames, {
     text: groupNames
-  }), ")")), !home && React.createElement("p", {
+  }), ")"))), !home && React.createElement("p", {
     className: "text-[11px] font-bold text-violet-200"
   }, "⏱ ", slotDef ? `${slotDef.to % 24}時まで` : '', "いる"), (() => {
     const sh = assistantLifeRhythmShiftOn((ASSISTANT_LIFE_STORE.state.rhythm || {})[id], assistantLifeDayKey());
@@ -119797,7 +119799,13 @@ function AssistantLifeDoRow({
   }, label), (off && why ? why : sub) && React.createElement("small", {
     className: "block text-[11.5px] font-bold leading-snug text-slate-300",
     style: JA_WRAP_STYLE
-  }, jaWrap(off && why ? why : sub))), gain && !off && React.createElement("span", {
+  }, (() => {
+    const t = off && why ? why : sub,
+      m = String(t).match(/^(.*?)(\([^()]{1,9}\))$/);
+    return m && m[1] ? React.createElement(React.Fragment, null, jaWrap(m[1]), React.createElement("span", {
+      className: "whitespace-nowrap"
+    }, m[2])) : jaWrap(t);
+  })())), gain && !off && React.createElement("span", {
     className: "shrink-0 text-right text-[11.5px] font-black leading-tight text-emerald-300",
     "data-assistant-life-room-do-gain": true
   }, gain));
