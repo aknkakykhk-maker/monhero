@@ -48,6 +48,7 @@ const makeRun = async (kind) => {
     let g2 = 0; while (s.battle && g2++ < 5) { const opp = SUC.opponents(s); s = SUC.settle(s, opp.map(() => true)).state; }
   }
   if (kind === 'yosu') s = { ...s, yosu: { sabori: { visits: 0 } } };
+  if (kind === 'bagall') s = { ...s, bag: Object.fromEntries(Object.keys(SUC.ITEMS).filter((k) => SUC.ITEMS[k].use === 'during').map((k) => [k, 1])) }; // 持ち物の升目に育成中に使う物を全部並べる(名前の折れを見る)
   const run = { v: 1, id: s.id, s, nick: 'もちまる', colors: [], from: { base: 'Mocchi' }, items: ['juice', 'dango'], used: 0, phase: 'main', out: null, log: [], startAt: 1 };
   return run;
 };
@@ -70,7 +71,7 @@ const makeRun = async (kind) => {
     ['S2', null, ['new', 'next', 'next']], ['S2P', null, ['new', 'next', 'next', 'slot:1']], ['S2B', null, ['new', 'next', 'next', 'slot:1', 'base:Golem']], ['S2G', null, ['new', 'next', 'next', 'gather']],
     ['S3', null, ['new', 'next', 'next', 'next']], ['S4', null, ['new', 'next', 'next', 'next', 'next']],
     ['S5', null, ['new', 'next', 'next', 'next', 'next', 'next']], ['S6', null, ['new', 'next', 'next', 'next', 'next', 'next', 'next']],
-    ['M1', 'mid', ['cont']], ['M2', 'yosu', ['cont']], ['M3', 'mid', ['cont', 'bag']], ['T1', 'mid', ['cont', 'train']], ['T2', 'mid', ['cont', 'train', 'swipe']], ['Q0', 'mid', ['ki']], ['Q1', 'mid', ['ki', 'kitap']], ['R1', 'mid', ['cont', 'rest']],
+    ['M1', 'mid', ['cont']], ['M2', 'yosu', ['cont']], ['M3', 'mid', ['cont', 'bag']], ['M3A', 'bagall', ['cont', 'bag']], ['T1', 'mid', ['cont', 'train']], ['T2', 'mid', ['cont', 'train', 'swipe']], ['Q0', 'mid', ['ki']], ['Q1', 'mid', ['ki', 'kitap']], ['R1', 'mid', ['cont', 'rest']],
     ['K1', 'mid', ['cont', 'train', 'go']], ['K3', 'mid', ['cont', 'train', 'go', 'next']], ['K5', 'mid', ['cont', 'train', 'go', 'next', 'praise']],
     ['I1', 'mid', ['cont', 'issa']], ['P1', 'mid', ['cont', 'stats']], ['M1D', 'mid', ['cont', 'detail']], ['M1F', 'mid', ['cont', 'detail', 'tab:feat']],
     ['E1', 'mid', ['cont', 'event']], ['E3', 'mid', ['cont', 'event', 'three']], ['E4', 'mid', ['cont', 'event', 'three', 'long']],
@@ -220,13 +221,16 @@ const makeRun = async (kind) => {
           // 見た目の高さ(::after で広げた範囲を数えない)。.msx-btn は 44px 以上(2026-11-14 点検: 初期化に負けて 17〜18px に潰れていた)。ほかのボタンは見張りで出す
           const flat = [...root.querySelectorAll('.msx-btn')].filter((e) => vis(e) && !e.disabled && !clipped(e) && e.getBoundingClientRect().height < 43.5).map((e) => `${lab(e)}(${Math.round(e.getBoundingClientRect().height)}px)`);
           const lowBtn = [...root.querySelectorAll('button')].filter((e) => vis(e) && !e.disabled && e.getBoundingClientRect().height < 43.5).map((e) => `${lab(e)}(${Math.round(e.getBoundingClientRect().height)}px)`);
-          return { ok: true, text: root.innerText.length, over, taps, cut, tiny, topBlank, lap, flat, lowBtn, partyBag: Math.round(partyBag), land: window.innerWidth > window.innerHeight };
+          // アイテム名(MsxItemName)は言葉の切れ目だけで折る: 切れ目の枠が2行にまたがらず、升目(ボタン)からはみ出さない(2026-11-14 窓口「ブリーダーライセン/ス」)
+          const wpBad = [...root.querySelectorAll('[data-msx-wp]')].filter(vis).filter((e) => { const box = e.closest('button, .v-bgrid > div, .v-igrid > div'); const r = e.getBoundingClientRect(); const b = box ? box.getBoundingClientRect() : r; return e.getClientRects().length > 1 || r.right > b.right + 1 || r.left < b.left - 1; }).map((e) => e.textContent);
+          return { ok: true, wpBad, text: root.innerText.length, over, taps, cut, tiny, topBlank, lap, flat, lowBtn, partyBag: Math.round(partyBag), land: window.innerWidth > window.innerHeight };
         }, fscale || 0);
         const L = `${name}${tag ? `(${tag})` : ''}`;
         const warn = (what, arr) => { if (arr && arr.length) console.log(`  見張り ${L}: ${what} ${arr.length}件 ${arr.slice(0, 4).join(' / ')}`); };
         if (m.ok) {
           check(`${L}: 押せる物が 44px 以上`, m.taps.length === 0, m.taps.slice(0, 4).join(' / '));
           check(`${L}: 字が枠で切れない`, m.cut.length === 0, m.cut.slice(0, 4).join(' / '));
+          check(`${L}: アイテム名が言葉の途中で折れず、升目からはみ出さない`, !m.wpBad.length, m.wpBad.slice(0, 6).join(' / '));
           check(`${L}: 字が小さすぎない`, m.tiny.length === 0, m.tiny.slice(0, 4).join(' / '));
           check(`${L}: 押せる物が重ならない`, m.lap.length === 0, m.lap.slice(0, 3).join(' / '));
           if (m.land) check(`${L}: 横画面の上に空白が無い`, m.topBlank <= 50, `${m.topBlank}px`);

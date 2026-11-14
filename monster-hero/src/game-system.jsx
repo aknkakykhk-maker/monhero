@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 19645e15c7b3ef3a
+// generated-sha256: bf6664e01278c05c
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -85520,6 +85520,7 @@ const MSX_CSS = `
 .msx .v-bagw .t{font-size:14px;font-weight:900;line-height:1.3;position:relative}.msx .v-bagw .t small{display:block;font-size:10px;color:#fca5a5;font-weight:800}
 .msx .v-bagw .t i{position:absolute;right:0;top:0;width:24px;height:24px;border-radius:50%;background:#2b3348;font-style:normal;font-size:12px;display:flex;align-items:center;justify-content:center}
 .msx .v-bagw .v-item{margin-top:0}
+.v-bagw .v-bgrid{flex:0 1 auto;min-height:0;overflow-y:auto;align-content:start;grid-auto-rows:max-content;padding:2px 1px}
 .msx .v-trs{gap:4px;margin-top:8px;align-items:start}
 .msx .v-tr{padding-top:0}
 .msx .v-tr .o{width:50px;height:50px;font-size:23px;margin:0 auto}
@@ -86184,6 +86185,14 @@ const msxItemFx = (id) => {
 };
 const msxItemDesc = (id) => { const t = MSX_ITEM_BY_ID[id]; const fx = msxItemFx(id); return `${t ? t.desc : ''}${fx ? `。効き目: ${fx}` : ''}`; };
 const MSX_ITEM_BY_ID = Object.freeze(Object.fromEntries(MSX_ITEMS.map((t) => [t.id, t])));
+// 升目のアイテム名: 言葉の切れ目だけで折る(2026-11-14 窓口「ブリーダーライセン/ス」「時渡りの砂時/計」が言葉の途中で折れた)。
+//   折ってよい所 = 「の」「!」のあと・カタカナの言葉どうしの境目(ブリーダー|ライセンス・オイリー|パック・野菜|ジュース)。ほかは keep-all で折らない。
+//   切れ目ごとに data-msx-wp の枠で包む(検査が「枠が2行にまたがっていない」を見る)
+const MSX_NAME_CUT = /(?<=[の!！])(?=.)|(?<=ブリーダー)(?=ライセンス)|(?<=オイリー)(?=パック|オイル)|(?<=野菜)(?=ジュース)|(?<=スタミナ)(?=だんご)/u;
+function MsxItemName({ name }) {
+  const ps = String(name || '').split(MSX_NAME_CUT).filter(Boolean);
+  return <span style={{ wordBreak: 'keep-all', overflowWrap: 'normal' }} data-msx-iname>{ps.map((p, i) => <React.Fragment key={i}>{i ? <wbr/> : null}<span data-msx-wp style={{ whiteSpace: 'nowrap' }}>{p}</span></React.Fragment>)}</span>;
+}
 const MSX_NAME_MAX = 8;
 // 名前の見張り(助手のあだ名と同じ言葉の決まりを使う)。通らなければ null
 const msxNameGuard = (raw) => {
@@ -86568,7 +86577,7 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf }) {
       <div className="v-igrid">
         {MSX_ITEMS.map((t) => (
           <button type="button" key={t.id} className={`${items.includes(t.id) ? 'in' : ''}${t.when === 'both' ? ' bo' : ''}`} onClick={() => toggle(t.id)} disabled={!has(t.id) && !items.includes(t.id)}>
-            <span style={{ fontSize: 22, lineHeight: 1 }}>{t.e}</span><i>×{has(t.id)}</i><small>{t.name.replace('ガロエ印の', '')}</small>{items.includes(t.id) ? <u>✔</u> : null}
+            <span style={{ fontSize: 22, lineHeight: 1 }}>{t.e}</span><i>×{has(t.id)}</i><small><MsxItemName name={t.name.replace('ガロエ印の', '')}/></small>{items.includes(t.id) ? <u>✔</u> : null}
           </button>
         ))}
       </div>
@@ -87415,12 +87424,12 @@ function MsxBag({ run, setRun, v, ev, onClose }) {
         <div className="t">🎒 持ち物<small>使えるのは 1ターンに1個まで・使ってもターンは進まない</small><button type="button" onClick={onClose}><i>✕</i></button></div>
         {t ? <div className="v-bsel"><span className="e" style={{ fontSize: 26 }}>{t.e}</span><div><b>{t.name}{t.n ? <span className="yel"> ×{t.n}</span> : null}</b><small>{t.desc}</small><small className="lim">{t.carry ? 'はじめる前から効いている' : 'いつ使える: 自分のターン'}</small></div></div> : null}
         <div className="v-bgrid">
-          {bagList.map((x) => <button type="button" key={x.id} className={pick === x.id ? 'sel' : ''} onClick={() => setPick(x.id)}><span className="e" style={{ fontSize: 22 }}>{x.e}</span><i>×{x.n}</i><small>{x.name}</small></button>)}
-          {carryList.map((x) => <button type="button" key={`c-${x.id}`} className={`no${pick === x.id ? ' sel' : ''}`} onClick={() => setPick(x.id)}><span className="e" style={{ fontSize: 22 }}>{x.e}</span><small>{x.name}</small></button>)}
-          <div className="no"><span className="e">⏳</span><i>×{sand}</i><small>時渡りの砂時計</small></div><div className="no"><span className="e">🌈</span><i>×{rainbow}</i><small>虹の時渡りの砂時計</small></div>
+          {bagList.map((x) => <button type="button" key={x.id} className={pick === x.id ? 'sel' : ''} onClick={() => setPick(x.id)}><span className="e" style={{ fontSize: 22 }}>{x.e}</span><i>×{x.n}</i><small><MsxItemName name={x.name.replace('ガロエ印の', '')}/></small></button>)}
+          {carryList.map((x) => <button type="button" key={`c-${x.id}`} className={`no${pick === x.id ? ' sel' : ''}`} onClick={() => setPick(x.id)}><span className="e" style={{ fontSize: 22 }}>{x.e}</span><small><MsxItemName name={x.name.replace('ガロエ印の', '')}/></small></button>)}
+          <div className="no"><span className="e">⏳</span><i>×{sand}</i><small><MsxItemName name="時渡りの砂時計"/></small></div><div className="no"><span className="e">🌈</span><i>×{rainbow}</i><small><MsxItemName name="虹の時渡りの砂時計"/></small></div>
         </div>
         {!bagList.length && !carryList.length ? <div className="msx-note">持ちこんだ物はありません</div> : null}
-        <div className="v-bnote">⏳ 時渡りの砂時計: バトルに敗北したときにやり直せる<br/>🌈 虹の時渡りの砂時計: 敗北したとき相手を変えてやり直せる<br/><span className="dim2">(うすい物はここでは使わない。砂時計は大会で負けたときに使う・大会は次の回で入ります)</span></div>
+        <div className="v-bnote">⏳ 時渡りの砂時計: バトルに敗北したときにやり直せる<br/>🌈 虹の時渡りの砂時計: 敗北したとき相手を変えてやり直せる<br/><span className="dim2">色のうすい物は、ここでは使えません(はじめる前から効いている物と、大会で負けたときに使う砂時計)</span></div>
         <button type="button" className="v-big" style={{ fontSize: 14, padding: 9, marginTop: 0, color: '#fff' }} disabled={!t || t.carry || usedNow || blocked} onClick={use}>
           {usedNow ? 'このターンはもう使った' : blocked ? 'いまは使えない' : t && !t.carry ? `${t.e} ${t.name}を使う` : '使う'}</button>
       </div>

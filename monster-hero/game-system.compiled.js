@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 53a8089c8acd7993
+// source-sha256: 8494abf6c98c9f95
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -163918,6 +163918,7 @@ const MSX_CSS = `
 .msx .v-bagw .t{font-size:14px;font-weight:900;line-height:1.3;position:relative}.msx .v-bagw .t small{display:block;font-size:10px;color:#fca5a5;font-weight:800}
 .msx .v-bagw .t i{position:absolute;right:0;top:0;width:24px;height:24px;border-radius:50%;background:#2b3348;font-style:normal;font-size:12px;display:flex;align-items:center;justify-content:center}
 .msx .v-bagw .v-item{margin-top:0}
+.v-bagw .v-bgrid{flex:0 1 auto;min-height:0;overflow-y:auto;align-content:start;grid-auto-rows:max-content;padding:2px 1px}
 .msx .v-trs{gap:4px;margin-top:8px;align-items:start}
 .msx .v-tr{padding-top:0}
 .msx .v-tr .o{width:50px;height:50px;font-size:23px;margin:0 auto}
@@ -164896,6 +164897,26 @@ const msxItemDesc = id => {
   return `${t ? t.desc : ''}${fx ? `。効き目: ${fx}` : ''}`;
 };
 const MSX_ITEM_BY_ID = Object.freeze(Object.fromEntries(MSX_ITEMS.map(t => [t.id, t])));
+const MSX_NAME_CUT = /(?<=[の!！])(?=.)|(?<=ブリーダー)(?=ライセンス)|(?<=オイリー)(?=パック|オイル)|(?<=野菜)(?=ジュース)|(?<=スタミナ)(?=だんご)/u;
+function MsxItemName({
+  name
+}) {
+  const ps = String(name || '').split(MSX_NAME_CUT).filter(Boolean);
+  return React.createElement("span", {
+    style: {
+      wordBreak: 'keep-all',
+      overflowWrap: 'normal'
+    },
+    "data-msx-iname": true
+  }, ps.map((p, i) => React.createElement(React.Fragment, {
+    key: i
+  }, i ? React.createElement("wbr", null) : null, React.createElement("span", {
+    "data-msx-wp": true,
+    style: {
+      whiteSpace: 'nowrap'
+    }
+  }, p))));
+}
 const MSX_NAME_MAX = 8;
 const msxNameGuard = raw => {
   const t = String(raw == null ? '' : raw).normalize('NFKC').trim();
@@ -165976,7 +165997,9 @@ function MsxStart({
         fontSize: 22,
         lineHeight: 1
       }
-    }, t.e), React.createElement("i", null, "×", has(t.id)), React.createElement("small", null, t.name.replace('ガロエ印の', '')), items.includes(t.id) ? React.createElement("u", null, "✔") : null))), React.createElement("div", {
+    }, t.e), React.createElement("i", null, "×", has(t.id)), React.createElement("small", null, React.createElement(MsxItemName, {
+      name: t.name.replace('ガロエ印の', '')
+    })), items.includes(t.id) ? React.createElement("u", null, "✔") : null))), React.createElement("div", {
       className: "v-ileg"
     }, React.createElement("span", null, React.createElement("b", {
       className: "sw1"
@@ -168711,7 +168734,9 @@ function MsxBag({
     style: {
       fontSize: 22
     }
-  }, x.e), React.createElement("i", null, "×", x.n), React.createElement("small", null, x.name))), carryList.map(x => React.createElement("button", {
+  }, x.e), React.createElement("i", null, "×", x.n), React.createElement("small", null, React.createElement(MsxItemName, {
+    name: x.name.replace('ガロエ印の', '')
+  })))), carryList.map(x => React.createElement("button", {
     type: "button",
     key: `c-${x.id}`,
     className: `no${pick === x.id ? ' sel' : ''}`,
@@ -168721,21 +168746,27 @@ function MsxBag({
     style: {
       fontSize: 22
     }
-  }, x.e), React.createElement("small", null, x.name))), React.createElement("div", {
+  }, x.e), React.createElement("small", null, React.createElement(MsxItemName, {
+    name: x.name.replace('ガロエ印の', '')
+  })))), React.createElement("div", {
     className: "no"
   }, React.createElement("span", {
     className: "e"
-  }, "⏳"), React.createElement("i", null, "×", sand), React.createElement("small", null, "時渡りの砂時計")), React.createElement("div", {
+  }, "⏳"), React.createElement("i", null, "×", sand), React.createElement("small", null, React.createElement(MsxItemName, {
+    name: "時渡りの砂時計"
+  }))), React.createElement("div", {
     className: "no"
   }, React.createElement("span", {
     className: "e"
-  }, "🌈"), React.createElement("i", null, "×", rainbow), React.createElement("small", null, "虹の時渡りの砂時計"))), !bagList.length && !carryList.length ? React.createElement("div", {
+  }, "🌈"), React.createElement("i", null, "×", rainbow), React.createElement("small", null, React.createElement(MsxItemName, {
+    name: "虹の時渡りの砂時計"
+  })))), !bagList.length && !carryList.length ? React.createElement("div", {
     className: "msx-note"
   }, "持ちこんだ物はありません") : null, React.createElement("div", {
     className: "v-bnote"
   }, "⏳ 時渡りの砂時計: バトルに敗北したときにやり直せる", React.createElement("br", null), "🌈 虹の時渡りの砂時計: 敗北したとき相手を変えてやり直せる", React.createElement("br", null), React.createElement("span", {
     className: "dim2"
-  }, "(うすい物はここでは使わない。砂時計は大会で負けたときに使う・大会は次の回で入ります)")), React.createElement("button", {
+  }, "色のうすい物は、ここでは使えません(はじめる前から効いている物と、大会で負けたときに使う砂時計)")), React.createElement("button", {
     type: "button",
     className: "v-big",
     style: {

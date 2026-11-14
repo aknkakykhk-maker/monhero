@@ -51,6 +51,14 @@ const msxItemFx = (id) => {
 };
 const msxItemDesc = (id) => { const t = MSX_ITEM_BY_ID[id]; const fx = msxItemFx(id); return `${t ? t.desc : ''}${fx ? `。効き目: ${fx}` : ''}`; };
 const MSX_ITEM_BY_ID = Object.freeze(Object.fromEntries(MSX_ITEMS.map((t) => [t.id, t])));
+// 升目のアイテム名: 言葉の切れ目だけで折る(2026-11-14 窓口「ブリーダーライセン/ス」「時渡りの砂時/計」が言葉の途中で折れた)。
+//   折ってよい所 = 「の」「!」のあと・カタカナの言葉どうしの境目(ブリーダー|ライセンス・オイリー|パック・野菜|ジュース)。ほかは keep-all で折らない。
+//   切れ目ごとに data-msx-wp の枠で包む(検査が「枠が2行にまたがっていない」を見る)
+const MSX_NAME_CUT = /(?<=[の!！])(?=.)|(?<=ブリーダー)(?=ライセンス)|(?<=オイリー)(?=パック|オイル)|(?<=野菜)(?=ジュース)|(?<=スタミナ)(?=だんご)/u;
+function MsxItemName({ name }) {
+  const ps = String(name || '').split(MSX_NAME_CUT).filter(Boolean);
+  return <span style={{ wordBreak: 'keep-all', overflowWrap: 'normal' }} data-msx-iname>{ps.map((p, i) => <React.Fragment key={i}>{i ? <wbr/> : null}<span data-msx-wp style={{ whiteSpace: 'nowrap' }}>{p}</span></React.Fragment>)}</span>;
+}
 const MSX_NAME_MAX = 8;
 // 名前の見張り(助手のあだ名と同じ言葉の決まりを使う)。通らなければ null
 const msxNameGuard = (raw) => {
@@ -435,7 +443,7 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf }) {
       <div className="v-igrid">
         {MSX_ITEMS.map((t) => (
           <button type="button" key={t.id} className={`${items.includes(t.id) ? 'in' : ''}${t.when === 'both' ? ' bo' : ''}`} onClick={() => toggle(t.id)} disabled={!has(t.id) && !items.includes(t.id)}>
-            <span style={{ fontSize: 22, lineHeight: 1 }}>{t.e}</span><i>×{has(t.id)}</i><small>{t.name.replace('ガロエ印の', '')}</small>{items.includes(t.id) ? <u>✔</u> : null}
+            <span style={{ fontSize: 22, lineHeight: 1 }}>{t.e}</span><i>×{has(t.id)}</i><small><MsxItemName name={t.name.replace('ガロエ印の', '')}/></small>{items.includes(t.id) ? <u>✔</u> : null}
           </button>
         ))}
       </div>
