@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 40fbf8e35b2c5e5e
+// generated-sha256: 747fbec15130d8bf
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -67879,7 +67879,7 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
   const [mapFocusPlace, setMapFocusPlace] = React.useState(null);
   const [mapFocusAssistantId, setMapFocusAssistantId] = React.useState(null);
   const [mapFocusKey, setMapFocusKey] = React.useState(0); // 同じ場所をもう一度開くときも窓を出し直す
-  React.useEffect(() => { let alive = true; Promise.resolve(storeGet('mh_assistant_life_ui_v2', null, false)).then(v => { assistantLifeUiV2Last = v === true || v === false ? v : null; if (alive) setUiV2(assistantLifeUiV2Of(v)); }).catch(() => {}); return () => { alive = false; }; }, [!!(st.open && st.loaded)]); // 開くたびに読み直す(設定の「助手ライフの画面」で切り替えた分)
+  React.useEffect(() => { let alive = true; assistantLifeUiV2Load().then(v => { assistantLifeUiV2Last = v === true || v === false ? v : null; if (alive) setUiV2(assistantLifeUiV2Of(v)); }).catch(() => {}); return () => { alive = false; }; }, [!!(st.open && st.loaded)]); // 開くたびに読み直す(設定の「助手ライフの画面」で切り替えた分)
   const [roomId, setRoomId] = React.useState(st.focus || null);
   // 町の人(助手になる前の助手・56-assistant-life-partner.jsx)の部屋は開かず、小窓に替える。どこから開こうとしても(地図・家・札・道のり)ここで止める
   React.useEffect(() => { if (roomId && typeof assistantLifeTownPersonGuard === 'function' && assistantLifeTownPersonGuard(roomId)) setRoomId(null); }, [roomId]);
@@ -69559,6 +69559,18 @@ const ASSISTANT_LIFE_UI_V2_DEFAULT = true; // 2026-11-11 社長: STEP3 まで出
 // 前に読んだ保存の値(true/false/null=無い)。画面が作り直されたときの初めの値に使う(保存には触れない)
 let assistantLifeUiV2Last = null;
 function assistantLifeUiV2Of(saved) { return saved === true ? true : saved === false ? false : ASSISTANT_LIFE_UI_V2_DEFAULT; }
+// 一度きりの移行(2026-11-14 社長 r1114-088): 保存が false の人も、一度だけ新しい画面へ。印 mh_assistant_life_ui_v2_default_v1 が入ったあとは、設定で選んだ「前の画面」をそのまま守る。
+// 読むたびに呼ぶ(印があれば保存の値を返すだけ)。保存の形・キー名は変えない(値 true を書くのは移行の1回だけ)
+async function assistantLifeUiV2Load() {
+  let v = null;
+  try { v = await storeGet('mh_assistant_life_ui_v2', null, false); } catch (_) { v = null; }
+  if (v !== false) return v;
+  let done = null;
+  try { done = await storeGet('mh_assistant_life_ui_v2_default_v1', null, false); } catch (_) { return v; }
+  if (done === true) return v;
+  try { await storeSet('mh_assistant_life_ui_v2_default_v1', true, false); await storeSet('mh_assistant_life_ui_v2', true, false); } catch (_) { return v; }
+  return true;
+}
 // 新UIのタブ(下の列と、町の上の帯で同じ並び)
 function assistantLifeUiV2Tabs() {
   // 📖 紹介(助手紹介・56-assistant-life-profile.jsx)は公開の印 assistantLifeProfile が真のときだけ。きずなの次(2026-11-11 社長 Q6 A)
@@ -69638,9 +69650,9 @@ function assistantLifePeerNextOpens(a, b, nextLv) {
 //   保存は今ある mh_assistant_life_ui_v2 だけ(true=新しい画面/false=前の画面/無い人は既定)。押したときだけ書く。置き場所は 51-screen-settings.jsx
 function AssistantLifeUiSettingRow() {
   const [v2, setV2] = React.useState(() => assistantLifeUiV2Of(assistantLifeUiV2Last));
-  React.useEffect(() => { let alive = true; Promise.resolve(storeGet('mh_assistant_life_ui_v2', null, false)).then(v => { assistantLifeUiV2Last = v === true || v === false ? v : null; if (alive) setV2(assistantLifeUiV2Of(v)); }).catch(() => {}); return () => { alive = false; }; }, []);
+  React.useEffect(() => { let alive = true; assistantLifeUiV2Load().then(v => { assistantLifeUiV2Last = v === true || v === false ? v : null; if (alive) setV2(assistantLifeUiV2Of(v)); }).catch(() => {}); return () => { alive = false; }; }, []);
   if (typeof assistantLifeEnabled === 'function' && !assistantLifeEnabled()) return null;
-  const pick = (on) => { setV2(on); assistantLifeUiV2Last = on; try { void storeSet('mh_assistant_life_ui_v2', on, false); } catch (_) {} };
+  const pick = (on) => { setV2(on); assistantLifeUiV2Last = on; try { void storeSet('mh_assistant_life_ui_v2_default_v1', true, false); void storeSet('mh_assistant_life_ui_v2', on, false); } catch (_) {} }; // 自分で選んだ印も残す(移行で選びを上書きしない)
   return (
     <div data-assistant-life-ui-setting className={`${SCREEN_PANEL_CLASS} w-full text-left`}>
       <b className="block text-[13px] font-black text-slate-200">助手ライフの画面</b>
