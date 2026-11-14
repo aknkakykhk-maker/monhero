@@ -48,6 +48,11 @@ const makeRun = async (kind) => {
   const stats = (n) => ({ life: n, pow: n, wise: n, hit: n, eva: n, tough: n });
   if (kind === 'win' || kind === 'lose') { s = { ...s, stats: stats(kind === 'win' ? 700 : 40), battle: { kind: 'cup', id: 'x', sys: 'str', star: 2, rival: null, round: 0 } }; phase = 'battle'; }
   if (kind === 'debutlose') { s = { ...s, turn: 5, wonNow: [], wonBefore: [], stats: stats(30), debutLoss: 2, debutWon: false, rematchUsed: 3, battle: { kind: 'debut', round: 0, retry: 2 } }; phase = 'battle'; }
+  if (kind === 'kimatsu' || kind === 'summit') { // 期末の大会・最後の大会の当日(芯が battle を立てた直後。まだ「はい」を押していない)
+    const want = kind === 'kimatsu' ? 'junior' : 'final';
+    let t = 1; while (t < (SUC.TOTAL_TURNS || 46) && !(SUC.periodOf(t).key === want && (kind === 'summit' ? SUC.periodOf(t).at >= 3 : SUC.periodOf(t + 1).key !== want))) t++;
+    s = { ...s, turn: t, battle: kind === 'kimatsu' ? { kind: 'junior', round: 0 } : { kind: 'summit', round: 0 } }; phase = 'battle';
+  }
   if (kind === 'gameover') { s = { ...s, turn: 7, debutLoss: 3, over: 'gameover' }; phase = 'over'; }
   if (kind === 'retire') { s = { ...s, turn: 46, pts: 34, over: 'done' }; phase = 'over'; }
   return { v: 1, id: s.id, s, nick: 'もちまる', colors: [], from: { base: 'Mocchi' }, items: [], used: 0, phase, out: null, log: [{ turn: 3, t: '休んだ' }], startAt: 1 };
@@ -66,11 +71,15 @@ const makeRun = async (kind) => {
     ['C1', 'mid', ['cont', /^🏆大会/]],
     ['C1w', 'mid', ['cont', /^🏆大会/, '@cup']], ['C1p', 'mid', ['cont', /^🏆大会/, '@cup', '@prize=g']], ['C1m', 'mid', ['cont', /^🏆大会/, '@next-month']], // 受付の作り直し(確認の窓・賞品の詳細・次の月)
     // 大会の1戦はバトル部の見せる部品 MonsucCupShow('%x' は [data-msc-x])。賞品のあとのごはんは回3
-    ['B1', 'win', ['cont']], ['C2', 'win', ['cont', '%go']], ['W1', 'win', ['cont', '%go', '%ready']],
-    ['B2', 'win', ['cont', '%quick']], ['R1', 'win', ['cont', '%quick', '%next']], ['C3', 'win', ['cont', '%quick', '%next', '@next']], ['C3b', 'win', ['cont', '%quick', '%next', '@next', '@meal=f_pow']], // R1: 賞金ランク UP!(段が上がったときだけ)
-    ['C4', 'lose', ['cont', '%quick']], ['C4r', 'lose', ['cont', '%quick', '%rematch=sand']], ['C4g', 'lose', ['cont', '%quick', '%giveup']],
-    ['C4d', 'debutlose', ['cont', '%quick']],
+    ['B1', 'win', ['cont', '@cupintro-go']], ['C2', 'win', ['cont', '@cupintro-go', '%go']], ['W1', 'win', ['cont', '@cupintro-go', '%go', '%ready']],
+    ['B2', 'win', ['cont', '@cupintro-go', '%quick']], ['R1', 'win', ['cont', '@cupintro-go', '%quick', '%next']], ['C3', 'win', ['cont', '@cupintro-go', '%quick', '%next', '@next']], ['C3b', 'win', ['cont', '@cupintro-go', '%quick', '%next', '@next', '@meal=f_pow']], // R1: 賞金ランク UP!(段が上がったときだけ)
+    ['C4', 'lose', ['cont', '@cupintro-go', '%quick']], ['C4r', 'lose', ['cont', '@cupintro-go', '%quick', '%rematch=sand']], ['C4g', 'lose', ['cont', '@cupintro-go', '%quick', '%giveup']],
+    ['C4d', 'debutlose', ['cont', '@cupintro-go', '%quick']],
     ['Q1', 'mid', ['cont', /^⚔修行/]], ['Q2', 'mid', ['cont', /^⚔修行/, '@shugyo']], ['Q3', 'mid', ['cont', /^⚔修行/, '@shugyo', '@qnext']],
+    // 期末の大会の当日(参考 te-30〜34): 当日のメイン(能力と大会だけ)→ 受付に1つ → 参加の確認 → 紋章の入り → 表
+    ['K0', 'kimatsu', ['cont']], ['K1', 'kimatsu', ['cont', '@precup']], ['K2', 'kimatsu', ['cont', '@precup', '@enter']], ['K2c', 'kimatsu', ['cont', '@precup', '@enter', '@pre-cancel']],
+    ['K3', 'kimatsu', ['cont', '@precup', '@enter', '@yes']], ['K4', 'kimatsu', ['cont', '@precup', '@enter', '@yes', '@cupintro-go']],
+    ['S0', 'summit', ['cont']], ['S2', 'summit', ['cont', '@precup', '@enter']],
     ['G1', 'gameover', ['cont']],
     // マスモン一覧(モンサク)の画面(2026-11-14 作り直し): X0 入口・X3 一覧・X4 詳細(基礎・技)・X5 特徴と育成情報・X6 適性とアシスト・X7 お別れのタブ・X8 表示の切り替えの小窓
     ['X0', 'box', ['@openbox']], ['X3', 'box', ['@openbox', '@mmlist']], ['X4', 'box', ['@openbox', '@mmlist', '@boxmon=b1']],
@@ -109,6 +118,8 @@ const makeRun = async (kind) => {
           window.__msxRoot.render(React.createElement(MonheroSuccessScreen, { onClose() {}, callNameOf: () => 'けんささん', bondLvOf: () => 4, debug: false }));
         }, { kind, mk: makeRun.toString() });
         await page.waitForSelector('[data-msx-view="home"]', { timeout: 30000 });
+        const beat0 = name === 'R1' || name === 'E9' ? await page.evaluate(() => loadRhythmEventPoints()) : 0;
+        const pend0 = name === 'E9' ? await page.evaluate(async () => { const r = await storeGet(MSX_KEYS.run, null); return r && r.s ? (r.s.beatEarned || 0) - (r.beatSent || 0) : 0; }) : 0; // まだ本編へ渡していない大会の分
         for (const st of steps) {
           const done = await page.evaluate(async (st) => {
             if (st.re) { const re = new RegExp(st.re); const b = [...document.querySelectorAll('.msx button')].find((x) => re.test((x.innerText || '').replace(/\s+/g, '')) && !x.disabled); if (b) b.click(); return !!b; }
@@ -134,6 +145,28 @@ const makeRun = async (kind) => {
         check(`${label}: 枠からはみ出さない`, m.ok && m.over.length === 0, m.over && m.over.slice(0, 3).join(' / '));
         if (name === 'X2') { const b = await page.evaluate(() => JSON.parse(localStorage.getItem('mh_monsuc_box_v1') || 'null')); const m = b && b.mons.find((x) => x.id === 'b1');
           check(`${label}: 名前と染色を決めても、ほかの項目と子は残る`, !!m && m.nick === 'もちまる' && m.keepMe === 'x' && Array.isArray(m.colors) && b.mons.length === 8); }
+        if (name === 'K0' || name === 'S0') { const k = await page.evaluate(() => ({ n: document.querySelectorAll('[data-msx-pre-main] button').length, train: [...document.querySelectorAll('.msx .v-act button')].some((b) => /トレーニング|修行/.test(b.innerText || '')), bracket: !!document.querySelector('[data-msc-go], [data-msx-r3-cupintro]') }));
+          check(`${label}: 当日のメインのボタンは「能力」と「大会」の2つだけ・まだ表へ飛ばない`, k.n === 2 && !k.train && !k.bracket, JSON.stringify(k)); }
+        if (/^(K[0-3]|S[02]|Q1)$/.test(name) && !tag) { // 画面の決まり(MONSUC_UI): 中身のいちばん下とボタンの列のあいだは 48px まで(縦)
+          const gap = await page.evaluate(() => { const ft = document.querySelector('.msx .v-ft'); const kids = [...document.querySelectorAll('.msx .v-body > *')].filter((e) => getComputedStyle(e).position !== 'absolute' && e.getBoundingClientRect().height > 0); if (!ft || !kids.length) return -1; const rs = kids.map((e) => e.getBoundingClientRect()).sort((x, y) => x.top - y.top); let mid = 0; for (let i = 1; i < rs.length; i++) mid = Math.max(mid, rs[i].top - Math.max(...rs.slice(0, i).map((r) => r.bottom))); return Math.round(Math.max(mid, ft.getBoundingClientRect().top - Math.max(...rs.map((r) => r.bottom)))); });
+          check(`${label}: 下の空き・札のあいだの空きが 48px まで`, gap >= 0 && gap <= 48, `${gap}px`); }
+        if (name === 'K2') { const pz = await page.evaluate(() => { const box = document.querySelector('[data-msx-r3-cupwin] .in'); if (!box) return { ok: false }; const R = box.getBoundingClientRect(); const bs = [...box.querySelectorAll('[data-msx-r3-prize]')]; return { ok: bs.length > 0 && bs.every((b) => { const r = b.getBoundingClientRect(); return r.left >= R.left - 1 && r.right <= R.right + 1; }), n: bs.length }; });
+          check(`${label}: 獲得物の札が全部 枠の中に見える`, pz.ok, `${pz.n}枚`); }
+        if (name === 'R1') { // ビートP: 優勝の分が本編のビートPに1回だけ足される(同じ育成をもう一度保存しても増えない)
+          const bp = await page.evaluate(async (w0) => { const run = await storeGet(MSX_KEYS.run, null); const w1 = await loadRhythmEventPoints(); if (run) await msxSaveRun(run); if (run) await msxSaveRun({ ...run }); const w2 = await loadRhythmEventPoints();
+            // デバッグの入口からの育成: 渡した量の印は進むが、財布は増えない
+            const more = { ...run, s: { ...run.s, beatEarned: (run.s.beatEarned || 0) + 100 } }; more.beatSent = more.s.beatEarned; await msxSaveRun(more, true);
+            const w3 = await loadRhythmEventPoints(); const st = await storeGet(MSX_KEYS.run, null); if (run) await msxSaveRun(run, true);
+            // ほかのタブで引退・やめたあとの古い画面: 途中の育成を消してから古い run で保存 → 財布は増えず、育成も戻らない
+            await msxClearRun(); const stale = { ...run, s: { ...run.s, beatEarned: (run.s.beatEarned || 0) + 50 } }; stale.beatSent = stale.s.beatEarned; await msxSaveRun(stale); const w4 = await loadRhythmEventPoints(); const back = await storeGet(MSX_KEYS.run, null); if (run) await storeSet(MSX_KEYS.run, run);
+            return { sent: run && run.beatSent, earned: run && run.s && run.s.beatEarned, d1: w1 - w0, d2: w2 - w1, dbg: w3 - w2, dbgSent: st && st.beatSent === more.beatSent, stale: w4 - w3, staleBack: !!back }; }, beat0);
+          check(`${label}: 優勝のビートPが本編へ1回だけ足される`, bp.sent > 0 && bp.sent === bp.earned && bp.d1 === bp.sent && bp.d2 === 0, JSON.stringify(bp));
+          check(`${label}: デバッグの入口からの育成では、本編のビートPに足さない`, bp.dbg === 0 && bp.dbgSent, JSON.stringify(bp));
+          check(`${label}: 途中の育成を消したあとの古い画面の保存では、財布が増えず育成も戻らない`, bp.stale === 0 && !bp.staleBack, JSON.stringify(bp)); }
+        if (name === 'K2c') check(`${label}: キャンセルで受付へ戻る`, await page.evaluate(() => !document.querySelector('[data-msx-r3-cupwin]') && !!document.querySelector('[data-msx-r3-pre-card]')));
+        if (name === 'K3') check(`${label}: 「はい」で紋章の入り`, await page.evaluate(() => !!document.querySelector('[data-msx-r3-cupintro="junior"]')));
+        if (name === 'E9') { const e = await page.evaluate(async (w0) => { const b = await storeGet(MSX_KEYS.box, null); const m = b && b.mons && b.mons[0]; const w1 = await loadRhythmEventPoints(); return { rank: m && m.rank, d: w1 - w0, end: msxSuc.SUC.beatOfEnd(m && m.rank) }; }, beat0); e.want = e.end + pend0;
+          check(`${label}: 引退したら、総合力のランクのビートPが1回だけ足される`, e.d === e.want, JSON.stringify(e)); }
         if (name === 'E9') check(`${label}: 保存枠に1体入り、途中の育成が消える`, m.boxN === 1 && (m.run === null || m.run === 'null'), `保存枠 ${m.boxN}体`);
         if (SHOT_DIR) { fs.mkdirSync(SHOT_DIR, { recursive: true }); await page.screenshot({ path: path.join(SHOT_DIR, `r3-${name}${tag ? `-${tag}` : ''}.png`) }); }
       }

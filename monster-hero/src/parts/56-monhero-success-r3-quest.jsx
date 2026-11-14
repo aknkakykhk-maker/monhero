@@ -1,6 +1,6 @@
 // ===== モンヒロサクセス 回3: 修行(Q1 修行に出る → Q2 結果)=====
 // 見本: docs/progress/player-raise/mock/png/v3-Q.png(v3-phone-Q1・Q2)
-// ・1ターン使う・チケット1枚(芯の act({kind:'shugyo', course, techs}))。2段で能力2つずつ → 最後に技のくじ(選んだ技それぞれ)
+// ・1ターン使う・チケット1枚(芯の act({kind:'shugyo', course, techs}))。2段で能力2つずつ → 最後に技を覚える(選んだ技それぞれ・確率)
 // ・技を2つ選ぶと超修行(2026-11-13 社長: 育成中2回まで・2つとも覚えることがある・率 +15・能力の上がりと疲れは2回分)。技ごとにランク(1〜5)と今の率を出す
 // ・結果のあとはトレーニングと同じく叱る/褒める(回2の react の段)へ。保存は act のすぐあと(run.phase = 'react')なので、閉じても同じ所から続く
 const MSX_R3_DIST = Object.freeze(['零', '近', '中', '遠']);
@@ -17,6 +17,7 @@ function MsxR3Shugyo({ run, setRun, v, ev, onBack, onPause }) {
   const [fxDone, setFxDone] = useState(false);
   // 結果の前の段(助手の一言 → STAGE 1 → STAGE 2。56-monsuc-actfx.jsx)。押した直後だけ・保存しない
   const [stOn, setStOn] = useState(false);
+  const [lockT, setLockT] = useState(null); // 🔒の札の条件をくわしく(選ぶ画面)
   // 行き先・技を選ぶあいだは育成中の曲のまま。「修行する」を押して修行の段が始まってから修行の曲(2026-11-14 社長)
   useSuccessScene(res ? 'ascetic' : null, { season: msxCalendar(s0.turn).season });
   // 段のあと、結果の字が出たときに 覚えた/覚えなかった の音(2026-11-14 社長「修行の結果にも SE を」)
@@ -87,34 +88,65 @@ function MsxR3Shugyo({ run, setRun, v, ev, onBack, onPause }) {
     return <MsxR3Frame run={{ ...run, s }} back="中断" onBack={onPause} body={<>{body}{fx}</>} foot={<div className="v-ft"><button type="button" className="go" onClick={onBack} data-msx-r3-qnext>つぎへ ▶(叱る/褒める)</button></div>}/>;
   }
 
-  // ---- 修行に出る(Q1) ----
+  // ---- 修行に出る(Q1)・案A(2026-11-14 社長が選んだ。参考 v3 20〜32秒・te-67・te-68) ----
+  // ① 行き先(4つ)と、2段で上がる能力 → 技を覚える ② 覚えたい技の枠2つ(2つで超修行。札に覚える条件と「済」)
+  // ③ 覚えられる技を間合いごとの4列の札で(率・覚えた・🔒と覚えられる条件)。🔒の札を押すと条件をくわしく
   const cur = SH.courses[course] || { stages: [] };
-  // 技が多くても選びやすいように: 間合いごとに、覚えられる技(ランクの低い順)→ まだの技 → 覚えた技の順に2列で並べる
-  const tkOrder = (t) => ((s0.techs || []).includes(t.id) ? 2 : rateOf[t.id] != null ? 0 : 1) * 10 + (rankOf[t.id] || 5);
-  const groups = MSX_R3_DIST.map((dn, d) => ({ dn, list: all.filter((t) => Math.min(...(Array.isArray(t.dist) && t.dist.length ? t.dist : [1])) === d).sort((x, y) => tkOrder(x) - tkOrder(y)) }));
+  const tkMax = SUC.TECH_MAX || 99; const full = (s0.techs || []).length >= tkMax;
+  const techName = (id) => (all.find((x) => x.id === id) || {}).name || id;
+  // 覚えられる条件(芯の canLearn と同じ: t.learn.st = 能力の下限・t.learn.need = 前の技の熟練の下限)。ok は満たしているか
+  const condsOf = (t) => {
+    const L = (t && t.learn) || {}; const out = [];
+    if (L.start) return out;
+    Object.entries(L.st || {}).forEach(([k, n]) => out.push({ k: `st-${k}`, short: `${MSX_STAT_NAME[k] || k} ${msxFmt(n)}で`, long: msxPh(`${MSX_STAT_ICON[k] || ''} ${MSX_STAT_NAME[k] || k}が｜${msxFmt(n)} 以上｜(いま ${msxFmt(Math.round((s0.stats || {})[k] || 0))})`), ok: ((s0.stats || {})[k] || 0) >= n }));
+    Object.entries(L.need || {}).forEach(([id, n]) => out.push({ k: `nd-${id}`, short: `${techName(id)} 熟練${n}で`, long: msxPh(`「${techName(id)}」の熟練が｜${n} 以上｜${(s0.techs || []).includes(id) ? `(いま ${(s0.mastery || {})[id] || 0})` : '(まだ覚えていない)'}`), ok: ((s0.mastery || {})[id] || 0) >= n }));
+    return out;
+  };
+  const cols = MSX_R3_DIST.map((dn, d) => ({ dn, list: all.filter((t) => Math.min(...(Array.isArray(t.dist) && t.dist.length ? t.dist : [1])) === d).sort((x, y) => ((rankOf[x.id] || (x.rank || 5)) - (rankOf[y.id] || (y.rank || 5)))) }));
+  const say = msxPh(want.length >= 2 ? '「2つで｜超修行!｜2つとも｜覚えることも｜あるよ。｜能力の上がりも｜疲れも｜2回分だからね」' : want.length === 1 ? (superWhy ? `「この技で｜いこう!｜(${superWhy}から、｜技は｜1つだけ)」` : '「いいね!｜もう1つ選ぶと｜超修行に｜なるよ」') : '「覚えたい技を｜1つ選んでね。｜2つ選ぶと｜超修行!｜選ばなくても｜能力は｜上がるよ」');
+  const slot = (id) => {
+    if (!id) return <div className="q-slot msx-kp" data-msx-r3-qslot="0">{want.length ? (superWhy ? `超修行は できない(${superWhy})` : '+ もう1つ選ぶと 🔥超修行') : '+ 下の緑の札から 技をえらぶ'}</div>;
+    const t = all.find((x) => x.id === id) || {}; const cs = condsOf(t);
+    return (<div className="q-slot on msx-kp" onClick={() => toggle(id)} data-msx-r3-qslot={id}>
+      <small>{MSX_R3_DIST[Math.min(...(t.dist || [1]))]}・R{rankOf[id] || '-'}</small><b className="n">{t.name}</b><b className="r">{Math.round((rateOf[id] || 0) * 100)}%</b>
+      {cs.length ? <ul>{cs.slice(0, 4).map((c, i) => <li key={c.k}><i>条件{i + 1}</i>{c.short.replace(/で$/, ' 以上')}<em>済</em></li>)}</ul> : <ul><li><i>条件</i>なし</li></ul>}
+    </div>);
+  };
   const body = (<>
     <MsxBand s={s0} v={v} ev={ev} use={(SH.hp || 30) * (isSuper ? 2 : 1)}/>
-    <div className="v-scene low" style={{ flex: '0 0 auto', minHeight: 140 }}><img className="bg" src={`images/story-bg/${MSX_R3_COURSE_BG[course] || 'forest_deep'}.jpg`} alt=""/><div className="sh"/>
-      <img src={msxBody(s0.aid, 'happy')} alt="" style={{ position: 'absolute', left: '-2%', bottom: '-98%', height: '190%' }}/>
-      <div className="v-ev-h"><small>🎫 チケット {tickets}枚(修行1枚・超修行{superTk}枚)</small>⚔ 修行に出る</div>
-      <div className="v-ibub" style={{ left: '40%', top: 'auto', bottom: 10 }}>「修行は<b>2段</b>! 能力が上がって、最後に<b>技を覚える</b>チャンスだよ。覚えたい技を1つか2つ選んでね。2つなら<b>超修行</b>!」</div>
+    <div className="q-say"><img src={typeof msxFace === 'function' ? msxFace(s0.aid, 'happy') : msxBody(s0.aid, 'happy')} alt=""/><p className="msx-kp" data-msx-r3-qsay>{say}</p></div>
+    <div className="q-sec"><h3><i>1</i>行き先<span className="tk">🎫 チケット {tickets}枚</span></h3>
+      <div className="r3-bar q-dest">{courses.map((k) => <button type="button" key={k} className={`r3-chip ${k === course ? 'on' : ''}`} onClick={() => setCourse(k)} data-msx-r3-course={k}>{SH.courses[k].name}</button>)}</div>
+      <div className="v-stg">{cur.stages.map((pair, i) => <React.Fragment key={i}><div><small>第{i + 1}段</small>{pair.map((k) => `${MSX_STAT_ICON[k]} ${MSX_STAT_NAME[k]}`).join(' & ')}</div><i>▶</i></React.Fragment>)}<div className="last"><small>さいごに</small>✨ 技を覚える</div></div>
+      {SUC.DIST_UP && SUC.DIST_UP.course && Number.isInteger(SUC.DIST_UP.course[course]) ? <div className="q-note msx-kp" data-msx-r3-qapt>📏 「{MSX_R3_DIST[SUC.DIST_UP.course[course]]}」の間合いの修行。ときどき、その間合い適性が1段上がる{typeof SUC.aptUpRoom === 'function' && !SUC.aptUpRoom(s0, SUC.DIST_UP.course[course], 'quest') ? '(この育成では、もう上がらない)' : ''}</div> : null}
     </div>
-    <div className="r3-bar">{courses.map((k) => <button type="button" key={k} className={`r3-chip ${k === course ? 'on' : ''}`} onClick={() => setCourse(k)} data-msx-r3-course={k}>{SH.courses[k].name}</button>)}</div>
-    <div className="v-stg">{cur.stages.map((pair, i) => <React.Fragment key={i}><div><small>第{i + 1}段・{cur.name}</small>{pair.map((k) => `${MSX_STAT_ICON[k]} ${MSX_STAT_NAME[k]}`).join(' & ')}</div><i>▶</i></React.Fragment>)}<div className="last"><small>さいごに</small>✨ 技のくじ</div></div>
-    {SUC.DIST_UP && SUC.DIST_UP.course && Number.isInteger(SUC.DIST_UP.course[course]) ? <div className="sub" style={{ fontSize: 11, color: '#cbd5e1', padding: '0 4px' }} data-msx-r3-qapt>📏 {cur.name}は「{MSX_R3_DIST[SUC.DIST_UP.course[course]]}」の間合いの修行。ときどき、その間合い適性が1段上がる{typeof SUC.aptUpRoom === 'function' && !SUC.aptUpRoom(s0, SUC.DIST_UP.course[course], 'quest') ? '(この育成では、もう上がらない)' : ''}</div> : null}
-    <div className="v-card pk" style={{ padding: '6px 8px' }}><div className="sub" style={{ color: '#f9a8d4', fontWeight: 900 }}>えらんだ技(1つ = 修行/2つ = 🔥超修行 のこり{superLeft}回・🎫{superTk}枚)</div>
-      {superWhy && want.length ? <div className="sub" style={{ fontSize: 11, color: '#cbd5e1' }} data-msx-r3-superwhy>🔥 {superWhy}ので、技は1つだけ選べる(別の技を押すと入れ替わる)</div> : null}
-      {isSuper ? <div className="sub" style={{ fontSize: 11, color: '#fde047' }} data-msx-r3-super>🔥 超修行: チケット{superTk}枚・2つとも覚えることがある・覚える率 +{SH.superAdd || 15}%・能力の上がりと疲れは2回分</div> : null}
-      <div className="v-pick2">{want.length ? want.map((id) => { const t = all.find((x) => x.id === id) || {}; return <div key={id} className="on" onClick={() => toggle(id)}><small>{MSX_R3_DIST[Math.min(...(t.dist || [1]))]}・ランク{rankOf[id] || '-'}</small>{t.name}<b>{Math.round((rateOf[id] || 0) * 100)}%</b></div>; }) : <div className="none">技をえらばなくても、能力は上がる</div>}</div></div>
-    <div className="v-card" style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', gap: 4, overflowY: 'auto', padding: '4px 8px 6px' }} data-msx-r3-techlist>
-      <div className="sub" style={{ color: '#f9a8d4', fontWeight: 900 }}>覚えられる技(間合いごと・ランク・覚える率)</div>
-      {all.length ? groups.filter((g) => g.list.length).map((g) => (
-        <div key={g.dn} className="v-tk" style={{ alignItems: 'flex-start' }}><i>{g.dn}</i><div style={{ flex: 1, minWidth: 0, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4 }}>{g.list.map((t) => {
-          const got = (s0.techs || []).includes(t.id); const ok = rateOf[t.id] != null;
-          return <span key={t.id} className={got ? 'got' : want.includes(t.id) ? 'sel' : ''} onClick={() => (ok && !got ? toggle(t.id) : null)} style={{ opacity: got || ok ? 1 : 0.45 }} data-msx-r3-tech={t.id}>{ok && !got && rankOf[t.id] ? <small style={{ fontSize: 9, opacity: 0.8, marginRight: 2 }}>R{rankOf[t.id]}</small> : null}{t.name}<b>{got ? '覚えた' : ok ? `${Math.round(rateOf[t.id] * 100)}%` : 'まだ'}</b></span>;
-        })}</div></div>)) : <div className="sub">このモンスターの技の表がまだありません(能力だけ上がる)</div>}
-      <div className="sub">ランクが高い技ほど覚えにくい。能力・忠誠度・人気がよく仕上がっているほど、行き先の旬の季節ほど覚えやすい。外した技は、その技だけ次から覚えやすくなる。助手がドラだと、さらに覚えやすい</div>
+    <div className="q-sec"><h3><i>2</i>覚えたい技<span className="tk">2つで🔥超修行・のこり{superLeft}回</span></h3>
+      <div className="q-slots">{slot(want[0])}{slot(want[1])}</div>
+      {isSuper ? <div className="q-note y msx-kp" data-msx-r3-super>🔥 超修行: チケット{superTk}枚・2つとも覚えることがある・覚える率 +{SH.superAdd || 15}%・能力の上がりと疲れは2回分</div> : null}
+      {superWhy && want.length ? <div className="q-note msx-kp" data-msx-r3-superwhy>🔥 {superWhy}ので、技は1つだけ選べる(別の技を押すと入れ替わる)</div> : null}
     </div>
+    <div className="q-sec q-list" data-msx-r3-techlist><h3><i>3</i>覚えられる技<span className="tk">緑の札をタップ</span></h3>
+      {all.length ? <div className="q-grid">{cols.map((c) => (
+        <div key={c.dn} className="q-col"><h4>{c.dn}</h4>{c.list.map((t) => {
+          const got = (s0.techs || []).includes(t.id); const ok = rateOf[t.id] != null; const sel = want.includes(t.id);
+          const cs = got || ok ? [] : condsOf(t); const ng = cs.find((x) => !x.ok);
+          return (<button type="button" key={t.id} className={`q-card ${sel ? 'sel' : got ? 'got' : ok ? 'ok' : 'lock'}`} onClick={() => (ok && !got ? toggle(t.id) : !got ? setLockT(t) : null)} data-msx-r3-tech={t.id}>
+            <span className="nm msx-kp">{t.name}</span><span className="rk">R{rankOf[t.id] || t.rank || '-'}</span>
+            {got ? <span className="p g">覚えた</span> : ok ? <span className="p">{Math.round(rateOf[t.id] * 100)}%</span> : <span className="lk msx-kp">🔒 {full ? '技がいっぱい' : ng ? ng.short : '条件あり'}</span>}
+          </button>);
+        })}</div>))}</div> : <div className="q-note msx-kp">このモンスターの技の表がまだありません(能力だけ上がる)</div>}
+      <div className="q-note msx-kp">ランクが高い技ほど覚えにくい。能力・忠誠度・人気がよく仕上がっているほど、行き先の旬の季節ほど覚えやすい。外した技は、その技だけ次から覚えやすくなる。助手がドラだと、さらに覚えやすい</div>
+    </div>
+    {lockT ? (
+      <div className="v-cupwin" onClick={() => setLockT(null)} data-msx-r3-qlock>
+        <div className="in" onClick={(e) => e.stopPropagation()}>
+          <div className="h">🔒 {lockT.name}</div>
+          <div className="q-lock">{full ? <p>覚えられる技は {tkMax}つまで。いまは いっぱいです</p> : null}
+            {condsOf(lockT).map((c, i) => <div key={c.k} className={c.ok ? 'ok' : ''}><i>条件{i + 1}</i><span className="msx-kp">{c.long}</span><b>{c.ok ? '済' : 'まだ'}</b></div>)}
+            {!full && condsOf(lockT).length ? <p>条件をすべて満たすと、緑の「覚えられる」札になります</p> : null}</div>
+          <div className="bt"><button type="button" onClick={() => setLockT(null)}>とじる</button></div>
+        </div>
+      </div>) : null}
   </>);
   const foot = <div className="v-ft"><button type="button" onClick={onBack}>← もどる</button><button type="button" className="go" disabled={tickets <= 0} onClick={go} data-msx-r3-shugyo>{isSuper ? '🔥 超修行する' : '⚔ 修行する'}(🎫 {tickets} → {Math.max(0, tickets - (isSuper ? superTk : 1))})</button></div>;
   return <MsxR3Frame run={run} onBack={onBack} body={body} foot={foot}/>;

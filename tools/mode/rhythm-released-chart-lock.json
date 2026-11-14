@@ -296,6 +296,36 @@
   "saudade_short/hard": "904e535b5e63ab1f",
   "saudade_short/expert": "7f887e83ff20990e",
   "saudade_short/master": "0c28a5770e1c8d19",
+  "departure/easy": "e4b79485d9f69e9a",
+  "departure/normal": "dfef0de539c1af96",
+  "departure/hard": "8857eee732af5e7e",
+  "departure/expert": "33aa19606950801e",
+  "departure/master": "729bc0851351d333",
+  "departure_short/easy": "5ed4e72cb58a8d3f",
+  "departure_short/normal": "05b510637633356e",
+  "departure_short/hard": "d32919e6de3cf450",
+  "departure_short/expert": "e59224f2403465a9",
+  "departure_short/master": "0b617e1a3b63d8cb",
+  "rpg/easy": "dbf3edc7f05c1573",
+  "rpg/normal": "3bf99bc71eaa42d6",
+  "rpg/hard": "7f6e5b145181f92c",
+  "rpg/expert": "beeb0a6f00a5ac26",
+  "rpg/master": "5f2d6a0f5a9cba4e",
+  "rpg_short/easy": "38988830d461ebcc",
+  "rpg_short/normal": "e6259d2aaf000c84",
+  "rpg_short/hard": "9c543febfa0303ae",
+  "rpg_short/expert": "b19a8c0cd3cab4f1",
+  "rpg_short/master": "c6645d7ad6fb6c21",
+  "midnight_studio/easy": "2f9a880532ac0502",
+  "midnight_studio/normal": "da882b85fbf6215a",
+  "midnight_studio/hard": "25597585c5e4d230",
+  "midnight_studio/expert": "1d20e5d6d3b7e624",
+  "midnight_studio/master": "c64deb1175645f57",
+  "midnight_studio_short/easy": "2b8b5fff497d5572",
+  "midnight_studio_short/normal": "83c32d2e6d72972d",
+  "midnight_studio_short/hard": "13a1b541b0b1fdd2",
+  "midnight_studio_short/expert": "5d2891d26ae68f65",
+  "midnight_studio_short/master": "8afb6ce97c74f3ff",
   "megalovania_sans/easy": "75bb368c81cbcdc2",
   "megalovania_sans/normal": "838888ddfc3d8192",
   "megalovania_sans/hard": "89280838fe60c475",
@@ -365,6 +395,12 @@
   "lamia/hell": "9774324d7ef3d0f1",
   "saudade/hell": "3a2d2867c16d1b95",
   "saudade_short/hell": "135acd6a01c141da",
+  "departure/hell": "4d15e9e8f451fd5b",
+  "departure_short/hell": "82166e7299c39b3b",
+  "rpg/hell": "867346e5642eb56f",
+  "rpg_short/hell": "a10dac9f8283b77d",
+  "midnight_studio/hell": "ec71cfc1df7e6c32",
+  "midnight_studio_short/hell": "012172a56e1462cf",
   "megalovania_sans/hell": "b54acba215aae1da",
   "megalovania_smash/hell": "2ba3b2a5cd05b394"
  },
@@ -761,6 +797,18 @@
     "megalovania_smash/expert",
     "megalovania_smash/master",
     "megalovania_smash/hell"
+   ]
+  },
+  {
+   "at": "2026-11-14 15:44",
+   "reason": "新曲 departure!・RPG・Midnight Studio(通常版と short ver.)を公開",
+   "changedCount": 36
+  },
+  {
+   "at": "2026-11-14 16:17",
+   "reason": "新曲 departure!・RPG・Midnight Studio(終点フリック1本を外した)",
+   "changed": [
+    "midnight_studio/hard"
    ]
   }
  ]

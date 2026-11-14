@@ -199,6 +199,11 @@ function MsxR3Retire({ run, setRun, onPause, debug, SUC }) {
     if (busy) return; setBusy(true);
     let assists = Object.entries(pick).map(([id, lv]) => (V3 ? { id, n: lv } : { id, lv }));
     if (AT) assists = AT.normPicks(assists, points).picks;
+    // 育成が終わったときのビートP(総合力のランク・1回だけ)。途中の育成に足して保存 → 本編の財布へ(デバッグの育成は足さない・msxSaveRun)
+    if (!run.beatEnd && SUC && typeof SUC.beatOfEnd === 'function') {
+      const bonus = SUC.beatOfEnd((SUC.evaluate(ws) || {}).rank);
+      setRun({ ...run, s: { ...run.s, beatEarned: (Number(run.s.beatEarned) || 0) + bonus }, beatEnd: true });
+    }
     let r = null;
     try { r = await msxR3Retire({ ...run, s: ws }, ws, ev, assists, debug); } catch (e) { r = { ok: false }; }
     if (r && r.ok) { try { await msxR3ClearRun(); } catch (e) {} setRes({ ok: true, mon: r.mon }); setStep('done'); }
