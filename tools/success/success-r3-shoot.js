@@ -67,7 +67,7 @@ const makeRun = async (kind) => {
     res.writeHead(200, { 'Content-Type': TYPES[path.extname(f)] || 'application/octet-stream' }); fs.createReadStream(f).pipe(res); }); s.listen(PORT, () => r(s)); });
   const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
   const errors = [];
-  const sizes = SHOT_DIR ? [[390, 844, ''], [320, 568, 's320']] : [[390, 844, '']];
+  const sizes = SHOT_DIR ? [[390, 844, ''], [844, 390, 'land'], [320, 568, 's320']] : [[390, 844, '']]; // 撮るときは横画面も(社長に見せる止め絵は縦と横)
   // [名前, 作る育成, 操作(data 属性 か テキストの正規表現)]。'@x' は [data-msx-r3-x] を押す
   const SHOTS = [
     ['C1', 'mid', ['cont', /^🏆大会/]],
@@ -100,7 +100,7 @@ const makeRun = async (kind) => {
       await page.addInitScript((r) => { if (r) window.__MSC_BK_RESULT = r; }, process.env.SHOT_BK_RESULT || ''); // win / lose: 決勝のあとの表(勝った側の線が優勝の札へ)
       await page.addInitScript((k) => { if (k) window.__MSC_BK_T = k; }, Number(process.env.SHOT_BK) || 0); // SHOT_BK=<倍率> で、組み合わせ表の演出をゆっくりにして段ごとに撮る
       await page.addInitScript(quietBootSeed()); await page.addInitScript(updateNoticeSeed());
-      await page.addInitScript(() => { try { localStorage.setItem('mh_monsuc_beta_v1', JSON.stringify({ v: 1, seen: { open: 1, firstend: 1, prep: 1, turn: 1, train: 1, result: 1, rest: 1, shugyo: 1, cup: 1, match: 1, rematch: 1, event: 1, awake: 1, retire: 1 } })); /* β版の説明は monsuc-beta-browser-check.js が見る */ localStorage.setItem('mh_unlocked_monsters', JSON.stringify(['Mocchi', 'Suezo', 'Golem', 'Tiger', 'Pixie', 'Undine', 'Kyubi'])); } catch (e) {} });
+      await page.addInitScript(() => { try { localStorage.setItem('mh_monsuc_beta_v1', JSON.stringify({ v: 1, seen: { open: 1, meal: 1, rank: 1, scn: 1, firstend: 1, prep: 1, turn: 1, train: 1, result: 1, rest: 1, shugyo: 1, cup: 1, match: 1, rematch: 1, event: 1, awake: 1, retire: 1 } })); /* β版の説明は monsuc-beta-browser-check.js が見る */ localStorage.setItem('mh_unlocked_monsters', JSON.stringify(['Mocchi', 'Suezo', 'Golem', 'Tiger', 'Pixie', 'Undine', 'Kyubi'])); } catch (e) {} });
       await page.goto(`http://localhost:${PORT}/monster-hero/index.html`, { waitUntil: 'load', timeout: 90000 });
       await page.waitForFunction(() => typeof MonheroSuccessScreen === 'function' && typeof MsxR3 === 'function' && typeof msxLoad === 'function' && typeof MASMON_CALC !== 'undefined', undefined, { timeout: 90000 });
       for (const [name, kind, steps] of SHOTS) {

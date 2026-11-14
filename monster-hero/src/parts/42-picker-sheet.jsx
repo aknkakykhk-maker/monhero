@@ -15,7 +15,7 @@
 //   chips        … [{ id, label, count }]。chip が選ばれている id、onChip で切り替え
 //   footerExtra  … 一覧の下・閉じるの上に置くもの(鍵の説明など。省略可)
 //   onClose      … 閉じる(背景を押しても閉じる)
-const PickerSheet = ({ title, note = '', preview = null, search = '', onSearch = null, searchPlaceholder = '名前でさがす',
+const PickerSheet = ({ title, note = '', preview = null, search = '', onSearch = null, searchPlaceholder = '名前で探す',
   chips = null, chip = null, onChip = null, footerExtra = null, onClose, accent = 'border-indigo-500', dataPicker = '', children }) => (
   <div {...(dataPicker ? { 'data-picker-sheet': dataPicker } : {})} className="fixed inset-0 flex items-end justify-center" role="dialog" aria-modal="true" aria-label={title}
     onClick={onClose} style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.92)', zIndex: 90000 }}>

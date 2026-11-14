@@ -47,7 +47,7 @@ function AssetDownloadPage({ onBack }) {
       <ScreenHead title="ダウンロード" accent="text-emerald-200" onBack={onBack} backLabel="設定へ戻る"/>
       {/* 下の余白(pb-20)は、ハロウィンの画面のかぼちゃの飾り(背景の左右下・高さ約60px)に最後の行が隠れないため */}
       <div className={`${SCREEN_LIST_CLASS} w-full max-w-md mx-auto space-y-3 pb-20`}>
-        <p className="px-1 text-[11px] font-bold leading-relaxed text-slate-300">曲や画像を前もってこの端末に入れておくと、はじめて開く画面や曲がすぐ始まります。アップデートで変わったものだけを入れ直し、古いものは自動で消えます。</p>
+        <p className="px-1 text-[11px] font-bold leading-relaxed text-slate-300">曲や画像を前もってこの端末に入れておくと、初めて開く画面や曲がすぐ始まります。アップデートで変わったものだけを入れ直し、古いものは自動で消えます。</p>
         {asset.supported && !asset.enabled && (
           <div data-asset-disabled className="rounded-xl border border-cyan-400/40 bg-cyan-950/30 px-3 py-2 text-[11px] font-bold leading-relaxed text-cyan-100">
             <p>いまはダウンロードを使わない設定になっています。</p>

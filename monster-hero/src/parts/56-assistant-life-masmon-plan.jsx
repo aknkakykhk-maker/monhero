@@ -388,7 +388,7 @@ function AmgpFsGauge({ kind, start, ends }) {
       <div className="flex items-baseline gap-1.5 text-[11px] font-black">
         <span className="w-[56px] shrink-0 text-left">{label}</span>
         <span className="flex-1 text-left text-[10px] font-bold" style={{ color: over ? over[1] : '#94a3b8' }}>{over ? `⚠ ${over[2]}の線をこえる` : 'だいじょうぶ'}</span>
-        <b className="shrink-0 text-right text-amber-200" data-amgp-gauge-num>{start} → {last}{peak > last ? `(いちばん高い ${peak})` : ''}</b>
+        <b className="shrink-0 text-right text-amber-200" data-amgp-gauge-num>{start} → {last}{peak > last ? `(一番高い ${peak})` : ''}</b>
       </div>
       <div className="relative mt-1 h-3 overflow-hidden rounded-full bg-slate-700">
         <i className="absolute inset-y-0 left-0 bg-slate-300" style={{ width: pct(Math.min(start, peak)) }}/>
