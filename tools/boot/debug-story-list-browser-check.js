@@ -107,7 +107,7 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     await page.getByRole('button', { name: '設定' }).first().dispatchEvent('click');
     await page.getByRole('button', { name: 'ヘルプ' }).first().waitFor({ timeout: 20000 });
     await page.getByRole('button', { name: 'ヘルプ' }).first().dispatchEvent('click');
-    await page.getByRole('button', { name: 'わかった！冒険に戻る' }).waitFor({ timeout: 20000 });
+    await page.getByRole('button', { name: '分かった！冒険に戻る' }).waitFor({ timeout: 20000 });
     await page.locator('footer button[aria-label=""]').dispatchEvent('click');
     await page.getByText('DEBUG MENU').first().waitFor({ timeout: 20000 });
     // 並び順はそろえて比べる(ブラウザの保存の並び順は、ほかのキーを書いただけで入れ替わることがある。2026-11-04 値は同じなのに並びだけで落ちた)
