@@ -19,7 +19,7 @@
 //                                                  数字に出ないところも信じよう(→ いい結末へ)/数字で勝ち切ろう(→ ほろ苦い結末へ)
 //   シナリオの大会          ピークの大会(ピークに入った最初のターン・1回の育成に1度)。cup1 の行はこの大会で出す
 //   4話「表にない一手」     プロ期・親密度70〜      プロの ★★★ か 👑 の{cup}。いい結末: アシスト能力「見立て」系のひらめき+全能力 特大/ほろ苦い: かしこさ 大+・称号
-//   特別な1話「曲線のその先」 最後の期・仲良し度Lv5〜・4話がいい結末  夜に好きな曲を聞きながら。見るだけ(頂への道の1回戦に「先読み」の案)
+//   特別な1話「曲線のその先」 最後の期・仲良し度Lv5〜・4話がいい結末  夜に好きな曲を聞きながら。見るだけ(ヒーローズファイナルの1回戦に「先読み」の案)
 const MONSUC_SCRIPT_KYUKO = Object.freeze([
   // ═══════════ シナリオ ═══════════
   // ── 1話「曲線を読む」(デビュー期・必ず出る) ──
@@ -76,7 +76,7 @@ const MONSUC_SCRIPT_KYUKO = Object.freeze([
   { id:'scn.kyuko.cup2.lose.kyuko1', who:'kyuko', e:'troubled', t:'ぐぬぬぬ……。でも、俺の勘はまちがってなかった。{mon}、強かったよ' },
 
   // ── 特別な1話「曲線のその先」(最後の期・仲良し度Lv5〜・4話がいい結末) ──
-  { id:'scn.kyuko.sp.narr1', who:'narr', t:'頂への道の前の夜。きゅうこは好きな曲を小さく流しながら、{mon}の曲線を眺めていた。' },
+  { id:'scn.kyuko.sp.narr1', who:'narr', t:'ヒーローズファイナルの前の夜。きゅうこは好きな曲を小さく流しながら、{mon}の曲線を眺めていた。' },
   { id:'scn.kyuko.sp.kyuko1', who:'kyuko', e:'normal', t:'見て。{mon}の山、もう描いたとこ全部こえちゃった笑' },
   { id:'scn.kyuko.sp.narr2', who:'narr', t:'紙のはしまで伸びた線の先は、何も描かれていなかった。' },
   { id:'scn.kyuko.sp.kyuko2', who:'kyuko', e:'happy', t:'ここから先は、表にない。……でもね、俺それがいちばん楽しみなんだよねぇ' },
@@ -143,7 +143,7 @@ const MONSUC_SCRIPT_KYUKO = Object.freeze([
   { id:'turn.retire.r1.kyuko1', who:'kyuko', e:'normal', t:'おつかれ、{mon}。次はもっといい曲線描けるよぉ' },
   { id:'turn.retire.r2.kyuko1', who:'kyuko', e:'happy', t:'いい仕上がりだね。胸はっていいよ笑' },
   { id:'turn.retire.r3.kyuko1', who:'kyuko', e:'excited', t:'強いねぇ。{name}、育て方うまいじゃん。今度教えてぇ🥺' },
-  { id:'turn.retire.r4.kyuko1', who:'kyuko', e:'excited', t:'てっぺん……！ {mon}、俺の見立てより上いったね🤣' },
+  { id:'turn.retire.r4.kyuko1', who:'kyuko', e:'excited', t:'ヒーローズファイナル優勝……！ {mon}、俺の見立てより上いったね🤣' },
   { id:'turn.cond.injury.in.kyuko1', who:'kyuko', e:'troubled', t:'けがしちゃったかぁ……今は治すことだけ考えよ' },
   { id:'turn.cond.injury.out.kyuko1', who:'kyuko', e:'happy', t:'もう平気そうだね。取り返していこぉ笑' },
   { id:'turn.cond.sick.in.kyuko1', who:'kyuko', e:'troubled', t:'具合悪そうだね。今日は寝かせとこ🫂' },

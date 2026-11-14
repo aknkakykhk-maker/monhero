@@ -86,7 +86,7 @@ function MsxChoiceInfo({ evId, c, open }) {
   if (!open) return null;
   const known = Boolean(seen.ch[`${evId}.${c}`]);
   const lines = known ? (String(evId).startsWith('story.') ? ['お話の続きが変わる'] : msxChoiceLines(msxEvChoice(evId, c))) : ['？？？'];
-  return <div className="msx-chinfo" data-msx-chinfo={known ? 'known' : 'unknown'}>{lines.map((l, i) => <div key={i}>{l}</div>)}{known ? null : <small>一度えらぶと、効果がわかるようになる</small>}</div>;
+  return <div className="msx-chinfo" data-msx-chinfo={known ? 'known' : 'unknown'}>{lines.map((l, i) => <div key={i}>{l}</div>)}{known ? null : <small>一度選ぶと、効果がわかるようになる</small>}</div>;
 }
 
 // ---- 図鑑の中身(タブと出来事の並び) ----
@@ -171,7 +171,7 @@ function MsxDex({ aid = 'mua', nick = '', onClose }) {
             <button type="button" key={x.id} className={`msx-dex-row${known ? '' : ' no'}`} disabled={!known} onClick={() => setOpen(x)} data-msx-dex-row={x.id}>
               <span>{known ? x.title : '？？？'}</span><small>{known ? '読む ▶' : 'まだ見ていない'}</small></button>); }) : <div className="msx-note">まだありません</div>}</div>
         )}
-        <button type="button" className="msx-btn" onClick={onClose}>とじる</button>
+        <button type="button" className="msx-btn" onClick={onClose}>閉じる</button>
       </div>
     </div>
   );

@@ -1020,9 +1020,12 @@ function AssistantPeerMap({ metIds, onReplay, peerItems = null, onUseItem = null
   // 一覧は仲良し度の高い6組だけ出し、残りは「全部のペアを見る」で広げる
   const [showAll, setShowAll] = React.useState(false);
   const [albumPair, setAlbumPair] = React.useState(null);
+  const mapRef = React.useRef(null); const [mapW, setMapW] = React.useState(0); // 新UI: 関係図の幅を画面に合わせる(札が顔・名前に重ならないよう、できるだけ大きく)
+  React.useLayoutEffect(() => { const w = mapRef.current && mapRef.current.parentElement ? mapRef.current.parentElement.clientWidth : 0; if (w && w !== mapW) setMapW(w); });
   const ids = (metIds || []).filter(id => assistantById(id) && assistantById(id).id === id);
   if (ids.length < 2) return null;
-  const size = 260, cx = size / 2, cy = size / 2, r = 98;
+  const size = v2 ? Math.max(240, Math.min(320, mapW || 260)) : 260, cx = size / 2, cy = v2 ? size / 2 + 2 : size / 2, r = v2 ? Math.round((size - 58) / 2) : 98;
+  const boxH = v2 ? size + 12 : size;
   const pos = Object.fromEntries(ids.map((id, i) => {
     const a = -Math.PI / 2 + (2 * Math.PI * i) / ids.length;
     return [id, { x: cx + r * Math.cos(a), y: cy + r * Math.sin(a) }];
@@ -1039,6 +1042,15 @@ function AssistantPeerMap({ metIds, onReplay, peerItems = null, onUseItem = null
     <div data-assistant-peer-map className="rounded-2xl border border-white/10 bg-slate-950/85 p-3">
       <p className={v2 ? 'text-[14px] font-black text-pink-200' : 'text-[12px] font-black text-pink-200'}>{v2 ? '🤝 助手どうしの友情Lv' : '助手どうしの関係図'}</p>
       <p className={v2 ? 'mb-2 text-[11.5px] font-bold leading-snug text-slate-200' : 'mb-2 text-[9px] leading-tight text-slate-400'} style={v2 ? { wordBreak: 'auto-phrase' } : undefined}>助手どうしも仲良くなります。{assistantPeerLvLabel(3)} になった2人は線で結ばれます。ペアを押すと思い出アルバムが開きます。</p>
+      {v2 && (<div data-assistant-peer-legend className="mb-2 rounded-xl border border-white/10 bg-slate-900/70 px-2.5 py-2">
+        <p className="text-[11.5px] font-black text-slate-100">線の見方(太さ・色=友情Lv。数字は Lv)</p>
+        <div className="mt-1 flex flex-wrap gap-1">
+          {[['Lv3', '#93c5fd', 3], ['Lv4', '#c4b5fd', 4], ['Lv5〜6', '#f9a8d4', 5], ['Lv7〜8', '#fcd34d', 7], ['Lv9〜', '#fde68a', 9]].map(([t, c, n]) => (
+            <span key={t} className="inline-flex items-center gap-1 rounded-full bg-slate-800 px-2 py-0.5 text-[11px] font-black text-slate-100"><i className="inline-block w-5 rounded-full" style={{ background: c, height: Math.min(8, n * 0.9) }}/>{t}</span>))}
+        </div>
+        <p className="mt-1 text-[11.5px] font-bold leading-snug text-slate-200" style={{ wordBreak: 'auto-phrase' }}>Lv1〜2 はまだ線がありません。Lv3 で線が結ばれます。線や下のペアを押すと、そのペアの思い出アルバムが開きます。</p>
+        <p className="mt-1 text-[11.5px] font-bold leading-snug text-emerald-200" style={{ wordBreak: 'auto-phrase' }}>友情ポイントがたまる: 掛け合いを見る +2・返事をする +3・おやつ屋さんや広場で一緒に過ごす +2・贈り物(いちばん多くて +45)。「あと」はこのポイントです。</p>
+      </div>)}
       {!assistantPeerLifeOn() && dailyPair && dailyPair.every(id => ids.includes(id)) && (
         <button type="button" data-assistant-peer-daily onClick={() => setAlbumPair(dailyPair)}
           className="mb-2 flex w-full items-center gap-2 rounded-xl border border-amber-300/50 bg-amber-400/10 px-2 py-1.5 text-left active:scale-[.98]">
@@ -1048,17 +1060,32 @@ function AssistantPeerMap({ metIds, onReplay, peerItems = null, onUseItem = null
         </button>)}
       {st.play && st.play.pair && st.play.pair.split('-').every(id => ids.includes(id)) && (
         <p data-assistant-peer-playing className="mb-2 text-[10px] font-bold text-sky-200">🎮 遊びに連れているペア: {st.play.pair.split('-').map(id => assistantById(id).name).join(' × ')}</p>)}
-      <div className="relative mx-auto" style={{ width: size, height: size }}>
-        <svg width={size} height={size} className="absolute inset-0" aria-hidden="true">
+      <div ref={mapRef} className="relative mx-auto" style={{ width: size, height: boxH }}>
+        <svg width={size} height={boxH} className="absolute inset-0" style={v2 ? { pointerEvents: 'none' } : undefined} aria-hidden="true">
           {rows.filter(x => x.lv >= 3).map(x => (
             <line key={`${x.a}-${x.b}`} data-assistant-peer-link={assistantPeerPairKey(x.a, x.b)} x1={pos[x.a].x} y1={pos[x.a].y} x2={pos[x.b].x} y2={pos[x.b].y}
               stroke={lineColor(x.lv)} strokeWidth={Math.min(10, x.lv * 0.9)} strokeLinecap="round" opacity="0.85"/>))}
         </svg>
         {ids.map(id => { const who = assistantById(id); return (
-          <div key={id} className="absolute flex flex-col items-center" style={{ left: pos[id].x - 24, top: pos[id].y - 24, width: 48 }}>
+          <div key={id} data-assistant-peer-node={id} className="absolute flex flex-col items-center" style={{ left: pos[id].x - 24, top: pos[id].y - 24, width: 48 }}>
             <AssistantFace who={who} size={48} accent={who.accent}/>
             <span className={`mt-0.5 whitespace-nowrap ${v2 ? 'text-[10.5px]' : 'text-[9px]'} font-black text-slate-200`}>{who.name}</span>
           </div>); })}
+        {v2 && (<svg width={size} height={boxH} className="absolute inset-0" style={{ pointerEvents: 'none' }}>
+          {v2 && (() => { const put = []; return rows.filter(x => x.lv >= 3).map(x => {
+              // 札(Lv)は、顔と名前・ほかの札に重ならない位置(線の上の 50%→40%→60%…)に置く
+              const at = (t) => ({ x: pos[x.a].x + (pos[x.b].x - pos[x.a].x) * t, y: pos[x.a].y + (pos[x.b].y - pos[x.a].y) * t });
+              const hit = (q) => ids.some(id => Math.abs(q.x - pos[id].x) < 40 && q.y > pos[id].y - 34 && q.y < pos[id].y + 52) || put.some(o => Math.abs(q.x - o.x) < 30 && Math.abs(q.y - o.y) < 18);
+              const dx = pos[x.b].x - pos[x.a].x, dy = pos[x.b].y - pos[x.a].y, dl = Math.hypot(dx, dy) || 1, nx = -dy / dl, ny = dx / dl;
+              const cand = []; for (const t of [0.5, 0.45, 0.55, 0.4, 0.6, 0.35, 0.65, 0.3, 0.7, 0.25, 0.75, 0.2, 0.8]) for (const o of [0, 14, -14, 24, -24, 34, -34]) { const c = at(t); cand.push({ x: c.x + nx * o, y: c.y + ny * o }); }
+              const inside = (c) => c.x > 16 && c.x < size - 16 && c.y > 8 && c.y < boxH - 8;
+              const q = cand.find(c => inside(c) && !hit(c)) || at(0.5); put.push(q); const mx = q.x, my = q.y; return (
+            <g key={`t-${x.a}-${x.b}`} data-assistant-peer-link-lv={assistantPeerPairKey(x.a, x.b)} style={{ pointerEvents: 'auto', cursor: 'pointer' }} onClick={() => setAlbumPair([x.a, x.b])}>
+              <line x1={pos[x.a].x} y1={pos[x.a].y} x2={pos[x.b].x} y2={pos[x.b].y} stroke="transparent" strokeWidth="22"/>
+              <rect x={mx - 13} y={my - 8} width="26" height="16" rx="8" fill="#0f172a" stroke={lineColor(x.lv)} strokeWidth="1.5"/>
+              <text x={mx} y={my + 3.5} textAnchor="middle" fontSize="10" fontWeight="900" fill="#fff">Lv{x.lv}</text>
+            </g>); }); })()}
+        </svg>)}
       </div>
       <div className="mt-3 space-y-1">
         {(showAll ? rows : rows.slice(0, 6)).map(x => { const A = assistantById(x.a), B = assistantById(x.b); const stage = levels.find(s => s.level === x.lv); const nextStage = levels.find(s => s.level === x.lv + 1);
@@ -1071,9 +1098,9 @@ function AssistantPeerMap({ metIds, onReplay, peerItems = null, onUseItem = null
                 <span className="whitespace-nowrap text-[12px] font-black text-pink-200">Lv{x.lv}{stage ? ` ${assistantPeerStageName(stage)}` : ''}</span>
                 <span className="text-[12px] font-black text-slate-300" aria-hidden="true">›</span>
               </span>
-              <span className="mt-1 flex items-center gap-2">
-                <span className="h-1.5 w-16 shrink-0 overflow-hidden rounded-full bg-slate-700" aria-hidden="true"><span className="block h-full bg-pink-400" style={{ width: `${nextStage ? Math.min(100, Math.round(100 * (x.pts - stage.min) / (nextStage.min - stage.min))) : 100}%` }}/></span>
-                <span data-assistant-peer-next className="min-w-0 flex-1 truncate text-[11px] font-bold text-emerald-300">{nextStage ? `あと${nextStage.min - x.pts}で Lv${nextStage.level}${opens ? ` → ${opens}` : `「${assistantPeerStageName(nextStage)}」`}` : '一番上まで来ました'}</span>
+              <span className="mt-1 flex items-start gap-2">
+                <span className="mt-1.5 h-1.5 w-16 shrink-0 overflow-hidden rounded-full bg-slate-700" aria-hidden="true"><span className="block h-full bg-pink-400" style={{ width: `${nextStage ? Math.min(100, Math.round(100 * (x.pts - stage.min) / (nextStage.min - stage.min))) : 100}%` }}/></span>
+<span data-assistant-peer-next className="min-w-0 flex-1 text-[11.5px] font-bold leading-snug text-emerald-300" style={{ wordBreak: 'auto-phrase' }}>{nextStage ? <>あと<b className="text-amber-200">{nextStage.min - x.pts}ポイント</b>で Lv{nextStage.level}「{assistantPeerStageName(nextStage)}」{(() => { const gain = (typeof ASSISTANT_LIFE_PEER_LV_GAIN !== 'undefined' && ASSISTANT_LIFE_PEER_LV_GAIN[nextStage.level]) || opens; return gain ? <span data-assistant-peer-gain className="block text-emerald-200">Lv{nextStage.level}になると → {gain}</span> : null; })()}</> : '一番上まで来ました'}</span>
               </span>
             </button>); }
           return (

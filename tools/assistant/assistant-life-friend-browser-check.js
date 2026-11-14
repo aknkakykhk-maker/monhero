@@ -219,6 +219,21 @@ const badgeProblems = (page) => page.evaluate(() => {
         await page.locator('[data-alf-visit-roomview-close]').click(); check(`⑲ 「← 家へ」で家に戻る(${v.id})`, (await page.locator('[data-alf-visit-sheet]').count()) === 0);
         await page.locator('[data-alf-visit] [data-assistant-life-room="dra"]').click(); }
       await page.locator('[data-alf-visit-room="dra"]').click();
+      // r1115-004: 部屋のシートに「⚔ ◯◯のマスモンに挑む」(対戦の印が真のときだけ)。字が切れない・言葉の途中で折れない・押すと対戦の画面が開く
+      { const bt = page.locator('[data-alf-battle-open="dra"]');
+        await bt.waitFor({ timeout: 3000 }).catch(() => {});
+        check(`⑳ 部屋のシートに「⚔ ドラのマスモンに挑む」が出る(${v.id})`, (await bt.count()) === 1 && /マスモンに挑む/.test(await bt.innerText()));
+        const ng = await page.evaluate(() => { const b = document.querySelector('[data-alf-battle-open]'); if (!b) return ['無い']; const r = b.getBoundingClientRect(); return (r.left < -1 || r.right > innerWidth + 1 || b.scrollWidth > b.clientWidth + 1) ? [`はみ出し ${Math.round(r.left)}〜${Math.round(r.right)} / ${innerWidth}`] : []; });
+        check(`⑳ 挑むボタンが画面からはみ出さない(${v.id})`, ng.length === 0, ng.join(' / '));
+        await shot(page, `${v.id}-20-battle-entry`);
+        await bt.click();
+        await page.locator('[data-ambb-prep],[data-ambb-empty]').first().waitFor({ timeout: 8000 }).catch(() => {});
+        await page.waitForTimeout(600);
+        await shot(page, `${v.id}-20-battle-opened`);
+        check(`⑳ 押すと対戦の画面が開く(${v.id})`, (await page.locator('[data-ambb-prep],[data-ambb-empty]').count()) >= 1);
+        const cl = page.locator('[data-ambb-close], .ambw-btn2:has-text("戻る"), button:has-text("閉じる")').first();
+        await page.evaluate(() => { try { AMBB_HOST.set(null); } catch (_) {} }).catch(() => {});
+      }
       await page.locator('[data-alf-visit-replies]').waitFor({ timeout: 3000 });
       { const ng = await chipNg(); check(`⑥ 仲良し度の知らせが、声をかけた吹き出し・返事を隠さない(${v.id})`, ng.length === 0, ng.join(' / ')); }
       await shot(page, `${v.id}-6-visit-talk`);
