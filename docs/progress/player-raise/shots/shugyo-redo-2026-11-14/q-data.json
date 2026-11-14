@@ -1,0 +1,268 @@
+{
+ "courses": [
+  {
+   "k": "fire",
+   "name": "炎の谷",
+   "stages": [
+    [
+     "hit",
+     "life"
+    ],
+    [
+     "tough",
+     "eva"
+    ]
+   ]
+  },
+  {
+   "k": "ice",
+   "name": "氷の峰",
+   "stages": [
+    [
+     "pow",
+     "tough"
+    ],
+    [
+     "life",
+     "wise"
+    ]
+   ]
+  },
+  {
+   "k": "wind",
+   "name": "風の森",
+   "stages": [
+    [
+     "eva",
+     "hit"
+    ],
+    [
+     "wise",
+     "pow"
+    ]
+   ]
+  },
+  {
+   "k": "star",
+   "name": "星の湖",
+   "stages": [
+    [
+     "wise",
+     "life"
+    ],
+    [
+     "eva",
+     "pow"
+    ]
+   ]
+  }
+ ],
+ "learn": [
+  {
+   "id": "sk-0401",
+   "name": "もちき",
+   "role": "light",
+   "power": 24,
+   "rank": 1,
+   "miss": 0,
+   "rate": 0.78,
+   "superRate": 0.93
+  },
+  {
+   "id": "sk-0406",
+   "name": "ガッチョ",
+   "role": "mid",
+   "power": 21,
+   "rank": 2,
+   "miss": 0,
+   "rate": 0.66,
+   "superRate": 0.81
+  }
+ ],
+ "all": [
+  {
+   "id": "sk-0402",
+   "name": "もんた",
+   "dist": [
+    0
+   ],
+   "rank": 1,
+   "kind": "pow",
+   "guts": 16
+  },
+  {
+   "id": "sk-0400",
+   "name": "ローリンモッチ",
+   "dist": [
+    2
+   ],
+   "rank": 1,
+   "kind": "pow",
+   "guts": 21
+  },
+  {
+   "id": "sk-0401",
+   "name": "もちき",
+   "dist": [
+    1
+   ],
+   "rank": 1,
+   "kind": "pow",
+   "guts": 24
+  },
+  {
+   "id": "sk-0405",
+   "name": "ぺろりん",
+   "dist": [
+    1
+   ],
+   "rank": 2,
+   "kind": "wise",
+   "guts": 21
+  },
+  {
+   "id": "sk-0406",
+   "name": "ガッチョ",
+   "dist": [
+    0
+   ],
+   "rank": 2,
+   "kind": "pow",
+   "guts": 21
+  },
+  {
+   "id": "sk-0403",
+   "name": "モッチ砲",
+   "dist": [
+    3
+   ],
+   "rank": 2,
+   "kind": "wise",
+   "guts": 25
+  },
+  {
+   "id": "sk-0404",
+   "name": "さくら吹雪",
+   "dist": [
+    2
+   ],
+   "rank": 2,
+   "kind": "wise",
+   "guts": 26
+  },
+  {
+   "id": "sk-0409",
+   "name": "ガッチャー",
+   "dist": [
+    0
+   ],
+   "rank": 3,
+   "kind": "pow",
+   "guts": 24
+  },
+  {
+   "id": "sk-0408",
+   "name": "もっちゃん",
+   "dist": [
+    1
+   ],
+   "rank": 3,
+   "kind": "pow",
+   "guts": 26
+  },
+  {
+   "id": "sk-0407",
+   "name": "超ローリンモッチ",
+   "dist": [
+    2
+   ],
+   "rank": 3,
+   "kind": "pow",
+   "guts": 35
+  },
+  {
+   "id": "sk-0413",
+   "name": "超ガッチョ",
+   "dist": [
+    0
+   ],
+   "rank": 4,
+   "kind": "pow",
+   "guts": 35
+  },
+  {
+   "id": "sk-0410",
+   "name": "大モッチ砲",
+   "dist": [
+    3
+   ],
+   "rank": 4,
+   "kind": "wise",
+   "guts": 41
+  },
+  {
+   "id": "sk-0411",
+   "name": "枝垂ざくら",
+   "dist": [
+    2
+   ],
+   "rank": 4,
+   "kind": "wise",
+   "guts": 43
+  },
+  {
+   "id": "sk-0412",
+   "name": "もっさま",
+   "dist": [
+    1
+   ],
+   "rank": 4,
+   "kind": "pow",
+   "guts": 43
+  },
+  {
+   "id": "sk-0416",
+   "name": "もっさまん",
+   "dist": [
+    1
+   ],
+   "rank": 5,
+   "kind": "pow",
+   "guts": 45
+  },
+  {
+   "id": "sk-0415",
+   "name": "宵闇ざくら",
+   "dist": [
+    2
+   ],
+   "rank": 5,
+   "kind": "wise",
+   "guts": 48
+  },
+  {
+   "id": "sk-0414",
+   "name": "超モッチ砲",
+   "dist": [
+    3
+   ],
+   "rank": 5,
+   "kind": "wise",
+   "guts": 50
+  }
+ ],
+ "tickets": 5,
+ "superLeft": 2,
+ "stats": {
+  "life": 162,
+  "pow": 277,
+  "wise": 138,
+  "hit": 176,
+  "eva": 150,
+  "tough": 130
+ },
+ "techs": [
+  "sk-0402",
+  "sk-0400"
+ ]
+}
