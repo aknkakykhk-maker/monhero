@@ -14,14 +14,14 @@ function getParser() {
 }
 
 // 丸ごと見ないファイル(台詞・お話・出した更新履歴・生成物)
-const SKIP_FILE = /(?:^|\/)(?:changelog\.js|assistants\.js|assistant-chat-digest\.json|monhero-success-script-[^/]*\.js|game-system\.jsx|[^/]*css\.jsx|23-rpg-debug\.jsx|31-debug-ui\.jsx|74-screen-monster-check-debug\.jsx|76-screen-debug-data\.jsx|78-screen-raid-jack-debug\.jsx)$/;
+const SKIP_FILE = /(?:^|\/)(?:changelog\.js|assistants\.js|assistant-chat-digest\.json|monhero-success-script-[^/]*\.js|game-system\.jsx|33-rhythm-buddy-(?:talk|convo|persona)\.jsx|[^/]*css\.jsx|23-rpg-debug\.jsx|31-debug-ui\.jsx|74-screen-monster-check-debug\.jsx|76-screen-debug-data\.jsx|78-screen-raid-jack-debug\.jsx)$/;
 // 台詞の多い部品: 短い文(ボタン・札)だけ見る
 const DIALOG_FILE = /assistant|buddy|lines|persona|story|convo|talk|peer|chat|sorashido|card-battle-vs|card-battle-multi|finds|gifts|arc|card-ai-deck|tevent|issa|scenario/;
 const SHORT = 12;
 // 台詞らしい文
 const SPEECH = /[「」『』♪〜]|だよ|だね|よね|かな[?？!！。…]|かな$|ます(?:ね|よ)|でつ|じゃん|ねっ|よっ|ね[!！。…]|よ[!！。…]|ね$|よ$|わ[!！]|ぞ[!！]?$|っす|でしょ|なぁ|ねぇ|よぉ|だぞ|ぜ[!！]|ちゃう/;
 // 名前・決まった言い回しで、表の語を含んでいても置き換えない物(曲名・あいさつ・お話の題など)
-const EXCEPT = /愛はひとつじゃない|はじめまして|はじめての おでかけ|はじめての特訓|ひとつぶ|いけにえ|ぜんぶ見せ場|ぜんぶ必殺技|ちから|かしこさ/;
+const EXCEPT = /愛はひとつじゃない|ふたつの翼|はじめまして|はじめての おでかけ|はじめての特訓|ひとつぶ|いけにえ|ぜんぶ見せ場|ぜんぶ必殺技|ちから|かしこさ/;
 const PARTICLE = /[をにでがはもとへのやかよ]/;
 const HIRA = /[ぁ-んー]/;
 const NEXT_OK_N = /[をにでがはもとへのや、。！？!?・／/()（）「」\s0-9０-９]/;
@@ -59,9 +59,9 @@ function findInText(t) {
 }
 
 // 保存に書く値(戦術カードの段 = mh_card_tactics_v1 の id。tools/boot/saved-value-lock.json の cardTacticIds)
-const SAVED_KEY = /^tiers$/;
+const SAVED_KEY = /^(?:tiers|why)$/; // why … 助手がマスモンを選んだわけ(助手の言葉)
 // プレイヤーが送る定型文・スタンプの言葉(プレイヤーの台詞なので見ない)
-const SPEECH_VAR = /STAMP/;
+const SPEECH_VAR = /STAMP|^JA_WORDS/; // JA_WORDS_* は折り返しの道具の語の一覧(画面の文ではない)
 const SKIP_ATTR = /^(?:data-|className$|class$|key$|id$|style$|type$|name$|ref$|role$|htmlFor$|src$|href$|value$)/;
 function skipByParent(node, parent, grand) {
   if (!parent) return false;
@@ -96,7 +96,7 @@ function scanFile(rel, opts = {}) {
     if (n.type === 'StringLiteral' || n.type === 'TemplateElement' || n.type === 'JSXText') {
       const text = n.type === 'TemplateElement' ? (n.value.cooked || '') : n.value;
       if (/[ぁ-ん]/.test(text) && !skipByParent(n, parent, grand)) {
-        const speech = SPEECH.test(text) || (dialog && text.trim().length > SHORT);
+        const speech = SPEECH.test(text) || (dialog && (text.trim().length > SHORT || /[!！?？…]/.test(text)));
         if (!speech || opts.all) {
           const hits = findInText(text);
           if (hits.length) out.push({ line: n.loc.start.line, start: n.start, end: n.end, raw: src.slice(n.start, n.end), text, hits, speech });

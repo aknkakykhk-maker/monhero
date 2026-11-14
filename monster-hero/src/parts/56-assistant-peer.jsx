@@ -1073,7 +1073,7 @@ function AssistantPeerMap({ metIds, onReplay, peerItems = null, onUseItem = null
               </span>
               <span className="mt-1 flex items-center gap-2">
                 <span className="h-1.5 w-16 shrink-0 overflow-hidden rounded-full bg-slate-700" aria-hidden="true"><span className="block h-full bg-pink-400" style={{ width: `${nextStage ? Math.min(100, Math.round(100 * (x.pts - stage.min) / (nextStage.min - stage.min))) : 100}%` }}/></span>
-                <span data-assistant-peer-next className="min-w-0 flex-1 truncate text-[11px] font-bold text-emerald-300">{nextStage ? `あと${nextStage.min - x.pts}で Lv${nextStage.level}${opens ? ` → ${opens}` : `「${assistantPeerStageName(nextStage)}」`}` : 'いちばん上まで来ました'}</span>
+                <span data-assistant-peer-next className="min-w-0 flex-1 truncate text-[11px] font-bold text-emerald-300">{nextStage ? `あと${nextStage.min - x.pts}で Lv${nextStage.level}${opens ? ` → ${opens}` : `「${assistantPeerStageName(nextStage)}」`}` : '一番上まで来ました'}</span>
               </span>
             </button>); }
           return (

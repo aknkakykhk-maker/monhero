@@ -31,7 +31,7 @@ function GiftBoxScreen({ gifts, giftTab, onSelectTab, onBack, onClaim, onOpenLog
         {id:'unclaimed',color:'#0891b2',label:<>未受取 ({unclaimed.filter(g=>!giftIsExpired(g,now)).length}){tabCountBadge(claimable.length)}</>},
         {id:'history',color:'#4f46e5',label:`受取済み (${history.length})`},
       ]}/>
-      {giftTab==='unclaimed'&&<button type="button" disabled={!claimable.length} onClick={()=>onClaim(claimable.map(g=>g.id))} className="mh-button mh-button-primary shrink-0 mb-2 min-h-[52px] rounded-xl bg-gradient-to-r from-cyan-600 to-indigo-600 text-[13px] font-black text-white shadow-lg active:scale-[.98] disabled:opacity-40">すべて受け取る</button>}
+      {giftTab==='unclaimed'&&<button type="button" disabled={!claimable.length} onClick={()=>onClaim(claimable.map(g=>g.id))} className="mh-button mh-button-primary shrink-0 mb-2 min-h-[52px] rounded-xl bg-gradient-to-r from-cyan-600 to-indigo-600 text-[13px] font-black text-white shadow-lg active:scale-[.98] disabled:opacity-40">全て受け取る</button>}
       <button type="button" onClick={onOpenLoginBonusList} className="mh-button mh-button-secondary shrink-0 mb-2 min-h-[44px] rounded-xl bg-slate-800 border border-amber-400/60 text-amber-200 font-black text-[12px] active:scale-95">ログインボーナス一覧を見る</button>
       {/* 札の地は不透明(2026-10-20 改善部 M10)。半透明だと、ハロウィンの画面の殻の背景にあるかぼちゃが字の上に透けて見えた。
           色は前の半透明の色を夜空の地(#170a26)に重ねたときと同じにしてある */}

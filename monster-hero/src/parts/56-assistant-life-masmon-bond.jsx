@@ -334,7 +334,7 @@ function AmgbPanel({ who, t }) {
       {f < 1 && left <= AMGB_NUM.warnDays && <p className="mt-1 rounded-lg bg-amber-900/50 p-1.5 text-[10.5px] font-bold text-amber-100" data-amgb-warn>{who.name || '助手'}「そろそろ伸びが止まりそう。{typeof amgsFuseOn === 'function' && amgsFuseOn() ? '合体も考えてみる?' : 'いまのうちに、たくさん鍛えておこうね'}」</p>}
       {f >= 1 && <p className="mt-1 text-[10px] font-bold text-slate-400">寿命が来ても、いなくなったりはしません。対戦にも出られます</p>}
       <div className="mt-2 rounded-xl border border-white/10 p-2" data-amgb-result>
-        <p className="text-[10.5px] font-bold text-slate-200">{last ? `いちばん新しい訓練: ${AMGB_RESULT_ICON[last.r]} ${MASMON_CALC.RESULTS[last.r].name}${last.a ? `(${last.a === 'praise' ? '褒めた' : '叱った'})` : ''}` : 'まだ訓練の結果はありません'}</p>
+        <p className="text-[10.5px] font-bold text-slate-200">{last ? `一番新しい訓練: ${AMGB_RESULT_ICON[last.r]} ${MASMON_CALC.RESULTS[last.r].name}${last.a ? `(${last.a === 'praise' ? '褒めた' : '叱った'})` : ''}` : 'まだ訓練の結果はありません'}</p>
         {pend && <div className="mt-1.5 flex gap-2">
           <button type="button" className="min-h-[40px] flex-1 rounded-xl bg-sky-700 px-2 text-[12px] font-black" onClick={() => react('scold')} data-amgb-act="scold">📣 叱る</button>
           <button type="button" className="min-h-[40px] flex-1 rounded-xl bg-pink-600 px-2 text-[12px] font-black" onClick={() => react('praise')} data-amgb-act="praise">👏 褒める</button>
