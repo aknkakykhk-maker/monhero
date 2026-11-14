@@ -312,7 +312,8 @@ const RHYTHM_EVENT_POINT_CAMPAIGNS = Object.freeze([
     boost: 5,
     loopScale: 10,
     loopBoost: 5,
-    banner: Object.freeze({ emoji: '🎉', title: '本オープン記念', sub: '開催中 〜11/23 3:59' }),
+    // 札の題は2行(2026-11-14 社長「本オープン記念だけだと何の本オープンか分からない」→ 案B)
+    banner: Object.freeze({ emoji: '🎉', title: 'モンヒロビート', title2: '本オープン記念', sub: '開催中 〜11/23 3:59' }),
   }),
 ]);
 // ハロウィン・ナイトのストーリー(2026-10-03・ユーザー指示「開始と終了にストーリーイベントあり(長め)、

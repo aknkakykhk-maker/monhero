@@ -35,6 +35,13 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    // 2026-11-14 えるびんさんの知らせ(iPhone でもどるが時計の下に入って押せない・キズナ4)
+    date: "2026-11-14 14:33", type:'fix', title:'マスモンの対戦で、iPhone の「もどる」が押せないことがあったのを直しました', group:'assistant', status:'new', releaseFlag:'assistantMasmonBattleBeta',
+    items:[
+      'iPhone などで、上の「← もどる」が時計の表示と重なって押せないことがありました。いまは時計の下に出て、押せるようになっています。',
+    ],
+  },
+  {
     // 2026-11-14 社長「バトルがオートだった。基本マニュアルで、オートにもできるようにして」(窓口経由・キズナ5)。モンサクの大会の試合も同じ(公開前なのでここには書かない)
     date: "2026-11-14 12:55", type:'update', title:'マスモンで対戦の試合を、自分で技を選んで戦うのが基本になりました', group:'assistant', status:'new', releaseFlag:'assistantMasmonBattleBeta',
     items:[

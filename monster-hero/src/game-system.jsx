@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 144767a6993acf7a
+// generated-sha256: ae9e3deb3de8001b
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -48515,6 +48515,13 @@ const HOME_EVENT_BADGE_CSS = `
 @media(prefers-reduced-motion:reduce){
   .mh-home-event-badge{animation:none;transform:none}
   .mh-home-event-badge::after{display:none}}
+/* イベントの札の題の2行目(title2)。背の低い横画面では、2行のまま字と余白を詰めて札の高さを1行の題のときと同じくらいにする
+   (2026-11-14 横 568×320 の長い台詞で、背が伸びた札が M/B管理 にかかった。1行に並べると横に伸びてモンヒロビートの顔の列にかかる) */
+.mh-home-event-banner .t2{display:block}
+@media(orientation:landscape) and (max-height:430px){
+  .mh-home-scene .mh-home-event-banner{padding:3px 10px;gap:0}
+  .mh-home-scene .mh-home-event-banner b{font-size:10px;line-height:1.1}
+  .mh-home-scene .mh-home-event-banner small{line-height:1.1}}
 `;
 // ★イベント・レイドボス「ジャック」(docs/spec/RAID_BOSS_JACK.md)。開催中だけ、HOMEの真ん中でぴょこぴょこ跳ねる。
 //   タップでレイド画面を開く。近くに、いま挑める段階の共有HPバーを出す。ときどき両腕を上げたポーズに変わる(HPとは連動しない)。
@@ -48853,8 +48860,13 @@ function HomeScreen({
         // 押し下げても、いちばん下の札とその下の顔の列(助手ライフ・22px)が画面の下に収まる所まで(2026-11-08 横 568×320 で MFバトルカードの札と顔が画面の外へ出た)
         let room=Infinity;
         for(const el of scene.querySelectorAll('.mh-home-event-banner,.mh-home-tour-banner,.mh-home-card-battle')){if(!el.offsetParent)continue;const t=offTop(el);if(t>offTop(rh)&&offLeft(el)<rr){push=Math.max(push,rb-t);room=Math.min(room,scene.clientHeight-(t+el.offsetHeight)-(el.classList.contains('mh-home-card-battle')?24:4));}}
-        push=Math.min(push,Math.max(0,room));}
-      scene.style.setProperty('--mh-home-left-push',`${Math.max(0,Math.ceil(push))}px`);
+        push=Math.min(push,Math.max(0,room));
+        // 縦画面(モンヒロビートが M/B管理 より下に積まれている)で、下の札の束がビートの札から離れすぎているときは、束ごとビートの札(と顔の列)のすぐ下まで引き上げる。
+        // 2026-11-14 社長「モンヒロビートと本オープン記念のあいだが大きく空いている」(390×844 で札1つぶん以上空き、左の列が上下に分かれて見えた)
+        if(push<=0&&mg&&mg.offsetParent&&offTop(rh)>=offTop(mg)+mg.offsetHeight){let top=Infinity;
+          for(const el of scene.querySelectorAll('.mh-home-event-banner,.mh-home-tour-banner,.mh-home-card-battle,.mh-home-success')){if(!el.offsetParent)continue;const t=offTop(el);if(t>offTop(rh)&&offLeft(el)<rr)top=Math.min(top,t);}
+          if(Number.isFinite(top)&&top>rb+4)push=rb+4-top;}}
+      scene.style.setProperty('--mh-home-left-push',`${Math.ceil(push)}px`);
       // 「モンヒロバトル」(下の真ん中)が右下の「ミッション」「ギフト」と横に重なるときは、重なった分だけ左へ寄せる(2026-11-08 横 568×320 で重なった)。
       // バトルの札は translateX(-50%) で真ん中に置いているので、左端は offsetLeft − 幅/2
       const bt=scene.querySelector('.mh-home-facility.battle');let nudge=0;
@@ -48968,8 +48980,9 @@ function HomeScreen({
         {typeof TimeOfDayClock==='function'&&<TimeOfDayClock home/>}
         <button onClick={openChangelog} className="mh-home-update"><RefreshCcw size={15}/>更新履歴{hasUnreadChangelog&&<em className="mh-unread-badge" aria-label="未読あり">!</em>}</button>
         {/* 期間限定イベントのバナー(2026-10-04)。押すと更新履歴(イベントの詳細)を開く。ゲーム全体のイベントなので、特定の遊びのボタンには付けない。縦持ちの左下(モンヒロバトルのすぐ上)。右側のボタン列・上の吹き出しとかぶらない場所。横持ちでは出さない */}
-        {homeEventCampaign&&<button type="button" data-home-event-banner className="mh-home-event-banner" onClick={openChangelog} aria-label={`${homeEventCampaign.banner.title} ${homeEventCampaign.banner.sub}`}>
-          <b>{homeEventCampaign.banner.emoji} {homeEventCampaign.banner.title}</b><small>{homeEventCampaign.banner.sub}</small>
+        {homeEventCampaign&&<button type="button" data-home-event-banner className="mh-home-event-banner" onClick={openChangelog} aria-label={`${homeEventCampaign.banner.title}${homeEventCampaign.banner.title2||''} ${homeEventCampaign.banner.sub}`}>
+          {/* title2 … 題の2行目(2026-11-14「本オープン記念」だけでは何の本オープンか分からないため、題を2行に分けられるようにした) */}
+          <b>{homeEventCampaign.banner.emoji} {homeEventCampaign.banner.title}{homeEventCampaign.banner.title2?<span className="t2">{homeEventCampaign.banner.title2}</span>:null}</b><small>{homeEventCampaign.banner.sub}</small>
         </button>}
         {/* 公式杯(2026-10-31 社長・案A): ハロウィン・ナイトの札の下、MFバトルカードの上。イベントの札が無いときは1段上がる。押すといつも大会のトップ */}
         {homeCardTour&&typeof onOpenCardTour==='function'&&<button type="button" data-home-card-tour={homeCardTour.id} className={`mh-home-tour-banner${homeEventCampaign?'':' raised'}`} onClick={()=>onOpenCardTour(homeCardTour.id)} aria-label={`${homeCardTour.name} ${homeCardTour.sub}`}>
@@ -67334,6 +67347,11 @@ function AssistantLifeRoomSheet({ id, life, peerSt, bondLevelOf, diary, onClose,
         if (!bi || !(typeof assistantMasmonBattleOpen === 'function')) return null;
         return <AssistantLifeDoRow k="masmon-battle" icon="⚔" label={(bi.label || 'マスモンで対戦(β)').replace(/^⚔\s*/, '')} sub={bi.sub || ''} on={() => { try { assistantMasmonBattleOpen({ assistantId: id, from: 'room' }); } catch (_) {} }} disabled={!!bi.disabled} why={bi.why || ''}/>;
       })()}
+      {(() => { // モンヒロサクセス(β)の入口(2026-11-14 社長・56-assistant-life-success.jsx。印 monheroSuccess が偽なら null で出さない)
+        let si = null; try { si = typeof assistantLifeSuccessRowInfo === 'function' ? assistantLifeSuccessRowInfo(id) : null; } catch (_) { si = null; }
+        if (!si) return null;
+        return <AssistantLifeDoRow k="monhero-success" icon="🌱" label={si.label.replace(/^🌱\s*/, '')} sub={si.sub} on={() => { try { assistantLifeSuccessOpen({ assistantId: id, from: 'room' }); } catch (_) {} }}/>;
+      })()}
       {soloOn && <AssistantLifeDoRow k="give-solo" icon="🎁" label={w && w.group ? `${who.name}だけに贈る` : `${who.name}に贈る`} sub="好きなものは 1.5倍・苦手なものは半分" gain="💗 +" on={() => onGiveSolo(id, w && w.group ? w.group.ids : [id])} disabled={!canGiveSolo} why="今日はもう贈れません"/>}
       {w && w.group && <AssistantLifeDoRow k="give" icon="🎁" label={soloOn ? `${w.group.ids.length}人に贈る` : '贈る'} sub="一緒にいる組に贈る" gain={<>🤝 友情Lv +<br/>💗 +</>} on={() => onGive(w.group)} disabled={!canGive} why="今日はもう贈れません"/>}
       {w && w.group
@@ -68474,6 +68492,9 @@ function AssistantLifeTownMap({ life, ids, onPick, onView = null, onBeat = null,
     let ti = null; if (place === 'battle') { try { ti = typeof assistantMasmonTrainRowInfo === 'function' ? assistantMasmonTrainRowInfo(id) : null; } catch (_) { ti = null; } }
     let bi = null; if (place === 'battle') { try { bi = typeof assistantMasmonBattleRowInfo === 'function' && typeof assistantMasmonBattleOpen === 'function' ? assistantMasmonBattleRowInfo(id) : null; } catch (_) { bi = null; } }
     const battleBtn = bi && <button type="button" disabled={!!bi.disabled} title={bi.disabled ? (bi.why || '') : (bi.sub || '')} data-assistant-life-map-act="masmon-battle" onClick={() => { setSheet(null); try { assistantMasmonBattleOpen({ assistantId: id, from: 'place' }); } catch (_) {} }} className="rounded-xl bg-gradient-to-r from-amber-500 to-rose-500 min-h-[44px] px-2 py-1 text-[12px] font-black text-white active:scale-95 disabled:opacity-50">{bi.label || '⚔ マスモンで対戦(β)'}</button>;
+    // モンヒロサクセス(β)の入口(2026-11-14 社長・印 monheroSuccess が偽なら null)。モンヒロバトルにいる助手の札にだけ
+    let si = null; if (place === 'battle') { try { si = typeof assistantLifeSuccessRowInfo === 'function' ? assistantLifeSuccessRowInfo(id) : null; } catch (_) { si = null; } }
+    const successBtn = si && <button type="button" title={si.sub} data-assistant-life-map-act="monhero-success" onClick={() => { setSheet(null); try { assistantLifeSuccessOpen({ assistantId: id, from: 'place' }); } catch (_) {} }} className="w-full rounded-xl bg-gradient-to-r from-emerald-600 to-lime-600 min-h-[44px] px-2 py-1 text-[12px] font-black text-white active:scale-95">{si.label}<span className="ml-1 text-[10px] font-bold text-emerald-50">{si.sub}</span></button>;
     const tiLine = ti && (ti.today ? `🥋 ${ti.today.nick}・${ti.today.kind}${ti.today.learned ? ` NEW ${ti.today.learned}を覚えた` : ''}${ti.today.main ? ` ・ ${ti.today.main} 熟練 +${ti.today.gain}` : ''}` : '🥋 きょうはまだ修行していません');
     return (
       <div key={id} className={`mt-2 flex flex-wrap items-center gap-2 rounded-2xl border bg-slate-900/85 p-2 ${initialAssistantId === id ? "border-sky-300 ring-2 ring-sky-300/70" : "border-white/10"}`} data-assistant-life-map-sheet-selected={initialAssistantId === id ? "1" : undefined} data-assistant-life-map-sheet-who={id} data-assistant-life-map-sheet-at={place}>
@@ -68506,6 +68527,7 @@ function AssistantLifeTownMap({ life, ids, onPick, onView = null, onBeat = null,
             <button type="button" data-assistant-life-map-act="cheer" disabled={!ti.canCheer} title={ti.why || ''} onClick={() => { let r = null; try { r = assistantMasmonCheer(id); } catch (_) { r = null; } setCheerMsg(r && r.ok ? { id, text: `📣 ${r.nick} ${r.tech} 熟練 +1・💗 +${r.bond}` } : { id, text: (r && r.why) || ti.why || '' }); }} className="rounded-xl bg-emerald-700 min-h-[44px] px-1 py-1 text-[12px] font-black leading-tight text-white active:scale-95 disabled:opacity-50">📣 応援する<span className="block text-[10px] font-bold">今日{ti.perDay - ti.left}/{ti.perDay}</span></button>
             {battleBtn}
           </div>)}
+        {successBtn}
         {ti && !ti.canCheer && ti.why && <p className="w-full text-[10.5px] font-bold text-slate-300" data-assistant-life-map-cheer-why={id}>{ti.why}</p>}
         {cheerMsg && cheerMsg.id === id && cheerMsg.text && <p className="w-full rounded-lg bg-emerald-900/70 px-2 py-1 text-[11px] font-black text-emerald-100" data-assistant-life-map-cheer-msg={id}>{cheerMsg.text}</p>}
       </div>);
@@ -68673,6 +68695,39 @@ function AssistantLifeFindCard() {
       </div>
       <button type="button" onClick={close} className="shrink-0 rounded-lg border border-amber-300/60 px-2 py-1 text-[11px] font-black text-amber-100 active:scale-95">閉じる</button>
     </div>);
+}
+
+// ---- part: 56-assistant-life-success.jsx ----
+// ===== 助手ライフからモンヒロサクセスへの入口(2026-11-14 社長「助手ライフの機能でモンヒロサクセスも足しといてね」・窓口経由・ナカヨシ) =====
+//   ・部屋の「できること」(マスモンで対戦(β)の次)と、地図のモンヒロバトルにいる助手の札に「🌱 モンヒロサクセス(β)」
+//   ・押すと MonheroSuccessScreen を開く。HOME の札(MonheroSuccessHomeEntry)と同じ開き方: 開いているあいだの知らせ onOpenChange・callNameOf・bondLvOf を同じに渡す
+//   ・入れ物 AssistantLifeSuccessHost は 60-app に1つだけ置く(マスモン対戦の AssistantMasmonBattleHost と同じ形)
+//   ・始める画面はみゅあ編が選ばれた状態で開く(いま開いている編はみゅあ編だけ)。みゅあ以外の助手は sub に「いまはみゅあ編だけ」
+//   ・公開の印 monheroSuccess が偽のあいだは何も出さない(msxReleased)。何も保存しない
+const ALSX_HOST = { open: null, subs: new Set(), set(v) { this.open = v; this.subs.forEach(f => { try { f(v); } catch (_) {} }); } };
+const assistantLifeSuccessOn = () => { try { return typeof msxReleased === 'function' && !!msxReleased() && typeof MonheroSuccessScreen === 'function'; } catch (_) { return false; } };
+// 開く。印が偽なら何もしない(false)。from: 'room' | 'place'
+const assistantLifeSuccessOpen = (opts = {}) => {
+  if (!assistantLifeSuccessOn()) return false;
+  const o = opts && typeof opts === 'object' ? opts : {};
+  ALSX_HOST.set({ assistantId: typeof o.assistantId === 'string' ? o.assistantId : '', from: typeof o.from === 'string' ? o.from : 'room', at: Date.now() });
+  return true;
+};
+// 「できること」の1行。印が偽なら null(ボタンを出さない)
+const assistantLifeSuccessRowInfo = (assistantId) => {
+  if (!assistantLifeSuccessOn()) return null;
+  const open = (typeof MSX_SCENARIOS !== 'undefined' && Array.isArray(MSX_SCENARIOS) ? MSX_SCENARIOS : []).filter(x => x && (typeof msxBetaAidOk !== 'function' || msxBetaAidOk(x.aid))).map(x => x.aid);
+  const own = open.includes(assistantId);
+  const name = typeof assistantById === 'function' && assistantById(assistantId) ? assistantById(assistantId).name : '';
+  return { label: '🌱 モンヒロサクセス(β)', sub: own ? `${name}編でモンスターを育てる` : 'モンスターを育てる(いまはみゅあ編だけ)' };
+};
+// 60-app に1つだけ置く入れ物。HOME の札と同じ3つを受け取る
+function AssistantLifeSuccessHost({ callNameOf, bondLvOf, onOpenChange }) {
+  const [open, setOpen] = useState(ALSX_HOST.open);
+  useEffect(() => { const f = (v) => setOpen(v); ALSX_HOST.subs.add(f); return () => { ALSX_HOST.subs.delete(f); }; }, []);
+  useEffect(() => { try { if (onOpenChange) onOpenChange(!!open); } catch (_) {} }, [!!open]);
+  if (!open || !assistantLifeSuccessOn()) return null;
+  return <MonheroSuccessScreen key={open.at} onClose={() => ALSX_HOST.set(null)} callNameOf={callNameOf} bondLvOf={bondLvOf}/>;
 }
 
 // ---- part: 56-assistant-life-roomview.jsx ----
@@ -77206,7 +77261,8 @@ const ambwIsHighlight = (e, maxHp) => {
 
 const AMBW_CSS = `
 .ambw{position:fixed;inset:0;z-index:9500;overflow-y:auto;background:linear-gradient(180deg,#221a44,#141026 40%);color:#fff;font-weight:700;-webkit-overflow-scrolling:touch}
-.ambw-in{max-width:460px;margin:0 auto;padding:10px 12px 28px}
+/* iPhone の時計・電波の帯(上)とホームの棒(下)・横向きの切り欠きにかからないよう、端の安全な余白を足す(2026-11-14 えるびんさん「もどるが押せない」) */
+.ambw-in{max-width:460px;margin:0 auto;padding:max(10px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) max(28px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left))}
 .ambw-top{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12px;font-weight:900;color:#f9a8d4}
 .ambw-top b{color:#fff;background:#3b3566;border-radius:99px;padding:2px 10px;white-space:nowrap}
 .ambw-card{background:#1e1a36;border:1px solid #3b3566;border-radius:14px;padding:9px;margin-top:8px}
@@ -132692,6 +132748,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         {masmonBattleWatchOpen&&typeof AssistantMasmonBattleWatch==='function'&&<AssistantMasmonBattleWatch onClose={()=>setMasmonBattleWatchOpen(false)}/>}
         {/* 助手マスモンの対戦 β(2026-11-11)。開くのは assistantMasmonBattleOpen(部屋の「できること」・居場所「モンヒロバトル」・デバッグ設定) */}
         {typeof AssistantMasmonBattleHost==='function'&&<AssistantMasmonBattleHost/>}
+        {typeof AssistantLifeSuccessHost==='function'&&<AssistantLifeSuccessHost onOpenChange={setSuccessScreenOpen} callNameOf={(id)=>assistantCallName(breederName,assistantBondLevelOf(normalizeAssistantBond(assistantBondsRef.current[id]).points),assistantCallStyles[id]||null,id)} bondLvOf={(id)=>assistantBondLevelOf(normalizeAssistantBond(assistantBondsRef.current[id]).points)}/>}
         {assistantChatOpen&&activeAssistant&&(()=>{
           // 助手ライフの部屋から開いたときは、その助手(選んでいない助手でもよい)。仲良し度もその助手のぶん(社長 ❿A)
           const chatWho=(assistantChatWith&&ASSISTANT_LIST.find(a=>a.id===assistantChatWith.id))||activeAssistant;
