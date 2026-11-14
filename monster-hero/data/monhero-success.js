@@ -380,12 +380,12 @@
     healer: ['ヒーラー杯', 'ヒーラー・チャンピオンズ'], shadow: ['シャドウ杯', 'シャドウ・チャンピオンズ'],
   });
   const CUP_POS_NAMES = Object.freeze({
-    junior: [['マーキュリー杯', 'あらなみ杯'], ['ホップ杯', 'ひまわり杯'], ['ミス・マーメイド杯', 'なないろ杯'], ['ヴィーナス杯', 'あさがお杯'], ['ノーブル杯', 'シャープネス杯'], ['アース杯', 'コオロギ杯'],
+    junior: [['マーキュリー杯', 'あらなみ杯'], ['ホップ杯', 'ひまわり杯'], ['ミス・マーメイド杯', 'なないろ杯'], ['ヴィーナス杯', 'あさがお杯'], ['ノーブル杯', 'ひよこ杯'], ['アース杯', 'コオロギ杯'],
       ['ミレニアムカーニバル', 'すこやか杯'], ['マーズ杯', 'あきかぜ杯'], ['コスモス杯', 'もみじ杯'], ['ステップ杯', 'クローバー杯'], ['ミリオネア杯', 'ジュピター杯'], ['しもつき杯', 'ゆきぞら杯']],
-    middle: [['さざんか杯', 'しもばしら杯'], ['サターン杯', 'つばき杯', 'ノワール杯'], ['ふゆぞら杯'], ['ジャンプ杯', 'ゆきどけ杯', 'スカーレット杯'], ['エナジー杯', 'クレバー杯'], ['リリー・オブ・ザ・バレー', 'てるてる杯'],
-      ['ネプチューン杯', 'そよかぜ杯'], ['わかば杯', 'ほほえみ杯', 'しんりょく杯'], ['はるかぜ杯'], ['ウラヌス杯', '桜吹雪杯', 'しののめ杯'], ['しらゆり杯', 'あかね杯'], ['きたかぜ杯', 'ふぶき杯']],
-    pro: [['マーキュリー杯', 'あらなみ杯'], ['ホップ杯', 'ひまわり杯', 'かざぐるま杯'], ['ミス・マーメイド杯'], ['ヴィーナス杯', 'あさがお杯', 'あおぞら杯'], ['ノーブル杯', 'インパクトカップ'], ['アース杯', 'コオロギ杯', '夏のヒーロー記念'],
-      ['ミレニアムカーニバル', 'すこやか杯'], ['マーズ杯', 'あきかぜ杯', 'こがらし杯'], ['コスモス杯'], ['ミリオネア杯', 'ステップ杯', 'クローバー杯'], ['ジュピター杯', 'しぐれ杯'], ['きらぼし杯', 'ゆきあかり杯']],
+    middle: [['さざんか杯', 'しもばしら杯'], ['サターン杯', 'つばき杯'], ['ふゆぞら杯', 'ゆきあかり杯'], ['ジャンプ杯', 'ゆきどけ杯'], ['はなびら杯', 'つくし杯'], ['リリー・オブ・ザ・バレー', 'てるてる杯'],
+      ['ネプチューン杯', 'そよかぜ杯'], ['わかば杯', 'ほほえみ杯'], ['はるかぜ杯', 'やまざくら杯'], ['ウラヌス杯', '桜吹雪杯'], ['しらゆり杯', 'あかね杯'], ['きたかぜ杯', 'ふぶき杯']],
+    pro: [['マーキュリー杯', 'あらなみ杯'], ['ホップ杯', 'ひまわり杯'], ['ミス・マーメイド杯', 'なないろ杯'], ['ヴィーナス杯', 'あさがお杯'], ['ノーブル杯', 'ひなた杯'], ['アース杯', 'コオロギ杯', '夏のヒーロー記念'],
+      ['ミレニアムカーニバル', 'すこやか杯'], ['マーズ杯', 'あきかぜ杯'], ['コスモス杯', 'こもれび杯'], ['ミリオネア杯', 'クローバー杯'], ['ジュピター杯', 'しぐれ杯'], ['きらぼし杯', 'ゆきあかり杯']],
   });
   const cupNameAt = (pk, m, i, sys) => {
     const k = pk === 'final' ? 'pro' : pk; // 最後の期の1・2月はプロと同じ並び
@@ -438,7 +438,7 @@
   const GEM = Object.freeze({ attacker: ['ルビー記念', 2], tank: ['サファイア記念', 4], supporter: ['エメラルド記念', 6], healer: ['トパーズ記念', 8], shadow: ['アメジスト記念', 10] });
   // 季節の賞: 同じ月に3つ(同じ賞金・金の格)。名前と賞品(上がる能力)だけ違う(社長「名前だけ別で中身が同じ大会は賞品だけ同等の別物に」)
   const SEASON_PRIZE = Object.freeze([ // [期, 月, 季節, 賞品の能力3つ, 賞金]  月の季節に合わせる(春=3月・夏=6月・秋=9月。ジュニアは夏・ミドルは春・プロは秋)
-    ['junior', 6, '夏', ['pow', 'tough', 'life'], 4000], ['middle', 3, '春', ['life', 'hit', 'eva'], 5500], ['pro', 9, '秋', ['wise', 'hit', 'eva'], 7000],
+    ['junior', 6, '夏', ['pow', 'tough', 'life'], 2750], ['middle', 3, '春', ['life', 'hit', 'eva'], 5500], ['pro', 9, '秋', ['wise', 'hit', 'eva'], 10500],
   ]);
   const SEASON_NAMES = ['雪月花賞', '花水木賞', '桔梗賞'];
   const EX_CUPS = Object.freeze((() => {
@@ -464,6 +464,19 @@
     // 季節の賞(ジュニア6月=夏・ミドル3月=春・プロ9月=秋に3つずつ。同じ賞金・金の格。参考の名前)
     SEASON_PRIZE.forEach(([p, m, ja, stats, prize]) => stats.forEach((k, i) => {
       L.push({ sys: `ssn${m}_${i}`, name: `${SEASON_NAMES[i]}(${ja})`, p, m, star: CUP_STAR[p], str: STAR_MULT[CUP_STAR[p]], prize, tk: p === 'pro' ? 600 : 250, grade: 'gold', season: true, rw: { stat: { [k]: 8 }, loy: 3, bag: { [`fruit_${k}`]: 1 } } });
+    }));
+    // 能力の杯(参考: 能力の杯×4。IMa は外したオリジナルの名前)。条件なし・賞品はその能力が上がる。賞金は「参考の比」(ふだんの銀に対する倍率)でそろえた
+    //   [期, 月, 名前, 能力, 賞金, 格]  銀=その能力 +大きめ・実1つ/銅=その半分
+    [['junior', 5, 'バクレツ杯', 'pow', 1500, 'silver'], ['junior', 5, 'シャープネス杯', 'hit', 1500, 'silver'], ['junior', 5, 'パワフル杯', 'tough', 1500, 'bronze'], ['junior', 5, 'ブレーン杯', 'wise', 1500, 'bronze'],
+      ['middle', 5, 'ノックアウトカップ', 'pow', 3250, 'silver'], ['middle', 5, 'インテリジェンスカップ', 'wise', 3250, 'silver'], ['middle', 5, 'エナジー杯', 'life', 2000, 'bronze'], ['middle', 5, 'クレバー杯', 'eva', 2000, 'bronze'],
+      ['pro', 5, 'インパクトカップ', 'pow', 5600, 'silver'], ['pro', 5, 'アナライズカップ', 'wise', 5600, 'silver'], ['pro', 7, 'ヘラクレス杯', 'tough', 7500, 'silver'], ['pro', 7, 'アテナ杯', 'hit', 7500, 'silver'],
+    ].forEach(([p, m, name, k, prize, grade], i) => {
+      const n = { junior: 4, middle: 8, pro: 12 }[p] / (grade === 'bronze' ? 2 : 1);
+      L.push({ sys: `abl_${p}${m}_${i}`, name, p, m, star: CUP_STAR[p], str: STAR_MULT[CUP_STAR[p]], prize, tk: p === 'pro' ? 600 : 250, grade, rw: { stat: { [k]: n }, ...(grade === 'silver' ? { bag: { [`fruit_${k}`]: 1 } } : {}) } });
+    });
+    // 協会会長賞・モンヒロ新聞杯(参考: ミドル期4月後半の春・プロ期11月前半の秋。固有の団体名を外した名前)
+    [['middle', 8, '春'], ['pro', 10, '秋']].forEach(([p, m, ja]) => ['協会会長賞', 'モンヒロ新聞杯'].forEach((nm, i) => {
+      L.push({ sys: `pres_${p}${m}_${i}`, name: `${nm}(${ja})`, p, m, star: CUP_STAR[p], str: STAR_MULT[CUP_STAR[p]], prize: p === 'pro' ? 10500 : 6500, tk: p === 'pro' ? 600 : 250, grade: 'gold', rw: { all: p === 'pro' ? 3 : 2, pts: p === 'pro' ? 15 : 10, pop: p === 'pro' ? 8 : 6, loy: 3 } });
     }));
     return L.map(Object.freeze);
   })());
@@ -1530,11 +1543,19 @@
       if (!CUP_STAR[p.key] && !(s.aid === 'kyuko' && peakTurn(s))) return [];
       if (s.over) return [];
       if (p.key === 'final' && p.at > 2) return []; // 最後の期の3〜5ターン目は頂への道だけ
-      const m = monthOf(s.turn); const row = CUP_STAR[p.key] ? YEAR[m - 1].slice(0, CUP_COUNT[p.key]) : [];
+      const m = monthOf(s.turn);
+      // ふだんの大会は銀と銅の2つ(2026-11-14 社長「基本は参考どおり」・参考の並び)。1つ目=銀(その期の星どおりの賞金)・2つ目=銅(銀の半分)
+      //   季節の月(3・6・9・12)の2つ目は、ジュニアは四季の大会・ミドルとプロは「ふつうの大会」。プロ6月だけ夏のヒーロー記念(👑)が加わる。
+      //   系統(タイプ)の大会は、ミドル7月に「うちのタイプの1つ」だけ(宝石の記念の「下の優勝で」はこれを見る)
       const SEASON_SYS = ['spring', 'summer', 'autumn', 'winter'];
-      const list = row.filter(sys => (sys !== 'herosummer' || p.key === 'pro') && !(SEASON_SYS.includes(sys) && (p.key === 'middle' || p.key === 'pro'))).map((sys, i) => {
+      const yrow = CUP_STAR[p.key] ? YEAR[m - 1] : [];
+      const sysList = yrow.length ? [yrow[0], SEASON_SYS.includes(yrow[1]) && p.key !== 'junior' ? 'normal' : yrow[1]] : [];
+      if (yrow.length && p.key === 'pro' && yrow.includes('herosummer')) sysList.push('herosummer');
+      if (yrow.length && p.key === 'middle' && m === 7) { const t = TYPE_OF[s.species]; if (t && t.main && CUP_SYS[t.main]) sysList.push(t.main); }
+      const list = sysList.map((sys, i) => {
         const star = sys === 'herosummer' ? 4 : CUP_STAR[p.key];
-        return { id: `${p.key}:${m}:${sys}:${star}`, sys, star, name: cupNameAt(p.key, m, i, sys) || (deps && deps.cupNames && deps.cupNames[sys]) || sys, prize: Math.round(CUP_PRIZE[star] * PERIOD_PRIZE[p.key]), index: i };
+        const base = Math.round(CUP_PRIZE[star] * PERIOD_PRIZE[p.key]);
+        return { id: `${p.key}:${m}:${sys}:${star}`, sys, star, name: cupNameAt(p.key, m, i, sys) || (deps && deps.cupNames && deps.cupNames[sys]) || sys, prize: i === 1 ? Math.round(base / 2 / 50) * 50 : base, index: i };
       });
       // 大会の第2版: 決まった期・月の大会(四大大会・季節の賞・間合いの2段・選抜→記念・宝石の記念・ジュニアの大一番)
       EX_CUPS.forEach((d) => { if (d.p === p.key && d.m === m) list.push({ id: `${p.key}:${m}:${d.sys}:${d.star}`, sys: d.sys, star: d.star, ex: true, name: d.name, grade: d.grade, hard: !!d.hard, prize: d.prize, index: list.length }); });

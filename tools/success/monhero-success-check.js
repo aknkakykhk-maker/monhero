@@ -380,9 +380,9 @@ ok(near(SUC.failRateOf({ ...base, yosu: { sabori: { visits: 0 } } }) - fFull, 0.
   const cj = SUC.cupsOf(j); ok(cj.length === 2 && cj.every(c => c.star === 1) && cj[0].sys === 'str' && cj[0].entry.ok, `ジュニア1月の大会(ちから自慢・間合い 零 ★)がずれている: ${JSON.stringify(cj.map(c => c.id))}`);
   ok(!SUC.canEnter({ ...j, stats: { ...j.stats, pow: 100 } }, cj[0]).ok, '自慢の大会の能力の条件(ジュニア 150)が効かない');
   const mid = { ...s0, turn: 18, stats: { ...s0.stats, pow: 400 } }; const cm = SUC.cupsOf(mid);
-  // ミドル1月は、月の並び3つ + 第2版(間合いトーナメント4つ)。四大大会の1つ目(グレイテスト4)はミドル3月
+  // ミドル1月は、月の並び2つ(銀・銅) + 第2版(間合いトーナメント4つ)。四大大会の1つ目(グレイテスト4)はミドル3月
   const cmRow = cm.filter(c => !c.ex);
-  ok(cmRow.length === 3 && cmRow[0].star === 2 && !cmRow[0].entry.ok && cmRow[0].entry.why === 'chain', `ミドルの ★★ がジュニアで優勝していなくても出られる: ${JSON.stringify(cm.map(c => c.id))}`);
+  ok(cmRow.length === 2 && cmRow[0].star === 2 && !cmRow[0].entry.ok && cmRow[0].entry.why === 'chain', `ミドルの ★★ がジュニアで優勝していなくても出られる: ${JSON.stringify(cm.map(c => c.id))}`);
   ok(SUC.cupsOf({ ...mid, wonNow: ['str:1'] }).filter(c => !c.ex)[0].entry.ok, 'ジュニアで優勝したのにミドルの ★★ に出られない');
   // 第2版: 四大大会の出る条件(賞金の段)・間合いトーナメント・制覇
   const mid3 = { ...mid, turn: 20 }; const cm3 = SUC.cupsOf(mid3);
