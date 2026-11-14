@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d1101a8c9a19aae4
+// source-sha256: 20a821408ce8e380
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -117328,6 +117328,48 @@ const ASSISTANT_LIFE_FIND_LINES = Object.freeze({
   gift: ['あなたに持っててほしいの', 'これ、きっと役に立つよ'],
   masmon: ['(マスモンが何かくわえて戻ってきた!)', '(マスモンが得意げに持ってきた!)']
 });
+const ASSISTANT_LIFE_FIND_LINES_BY = Object.freeze({
+  "mua": {
+    "trip": ["これ道で見つけたんだけど、まぢ使えそうぢゃん？あげる！", "帰りに拾ったー！あたしの分もがんばってｗ"],
+    "gift": ["これ、あたしからー！がんばってほしーから✨", "はいっ、プレゼント！ぜったい役立つやつ！"],
+    "masmon": ["ねぇ見て、うちの子が何かくわえて戻ってきたｗ", "うちの子えらすぎる…拾ってきたって！"]
+  },
+  "kiki": {
+    "trip": ["お散歩の途中で見つけたんでつ。よかったらどうぞ♪♪", "帰り道に落ちてたので、使ってくだしゃいね(´ー`*)"],
+    "gift": ["私から、ささやかですけど…どうぞ( ˘ω˘)", "これ、きっと役に立ちまつ♪♪"],
+    "masmon": ["あれま、うちの子がこれを持って戻ってきまつた", "うちの子が見つけてきたみたいでつ。どうぞ♪♪"]
+  },
+  "momosuke": {
+    "trip": ["道で見つけたの、もものおみやげ♡", "これ拾ったー！！えらくない？w"],
+    "gift": ["ももからのプレゼント♡ ちゃんと使ってよね？w", "はい、あげる！もも優しすぎじゃない？w"],
+    "masmon": ["まって、うちの子なんかくわえてきたw かわいすぎ！！", "うちの子が拾ってきたって！すご！！"]
+  },
+  "dra": {
+    "trip": ["えへへ、道で拾ったんだわ。使ってくれよな", "帰りに見つけたからな。おでからのおみやげだ"],
+    "gift": ["おでからだ。何がとは言わんけど、役に立つからな", "これ、持っててくれよな。えへへ"],
+    "masmon": ["ふむ、うちの子が何かくわえて帰ってきたわ", "うちのマスモン、拾い物の才能あるよな"]
+  },
+  "atsu": {
+    "trip": ["てか道に落ちてたから拾ってきた笑 使って！", "帰りに見つけたー笑 これいいやつだよ！"],
+    "gift": ["とりあえずこれ渡しとく笑", "これ使ってよ。仲間だし笑"],
+    "masmon": ["うちの子がなんか持ってきた笑 えらいー笑", "まじで？うちの子拾ってきたじゃん笑"]
+  },
+  "kyuko": {
+    "trip": ["帰りに見つけたぁ。あげる笑", "ほい！道で拾ったやつ。無課金でもこれで戦えるよぉw"],
+    "gift": ["これ、俺から。使ってくれたらうれしいなぁ笑", "おけ、これ渡しとくね。役に立つはずw"],
+    "masmon": ["うちの子がなんかくわえてきたぁw", "うちの子えらすぎて泣ける😭"]
+  },
+  "sorashido": {
+    "trip": ["帰り道で見つけました。使えると思いますよ笑", "ほほー！道に落ちてたので拾ってきました笑"],
+    "gift": ["これ、自分からです。役に立つと思います笑", "よかったらどうぞ。育成で効いてくると思います笑"],
+    "masmon": ["うちの子が何か持って戻ってきましたね笑", "そうか・・・！うちの子、拾ってきてくれたんですね笑"]
+  },
+  "erubin": {
+    "trip": ["道で見つけたよ！使ってw", "帰りに拾ったー！これいいね笑"],
+    "gift": ["俺からのプレゼント！おけ？笑", "これ渡しとくね。さすがに役立つはずw"],
+    "masmon": ["うちの子がなんか持ってきたw さすが！", "うちの子、拾ってきてくれたー！☺️"]
+  }
+});
 const assistantLifeFindNorm = raw => {
   const o = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
   const last = {};
@@ -117432,7 +117474,8 @@ function AssistantLifeFindCard() {
   if (!p) return null;
   const item = typeof MSX_ITEM_BY_ID !== 'undefined' ? MSX_ITEM_BY_ID[p.item] : null;
   const who = typeof assistantById === 'function' && p.who ? assistantById(p.who) : null;
-  const lines = ASSISTANT_LIFE_FIND_LINES[p.kind] || ASSISTANT_LIFE_FIND_LINES.trip;
+  const own = who && ASSISTANT_LIFE_FIND_LINES_BY[who.id] && ASSISTANT_LIFE_FIND_LINES_BY[who.id][p.kind];
+  const lines = own && own.length ? own : ASSISTANT_LIFE_FIND_LINES[p.kind] || ASSISTANT_LIFE_FIND_LINES.trip;
   const close = async () => {
     try {
       const n = assistantLifeFindNorm(await storeGet(ASSISTANT_LIFE_FIND_KEY, null));

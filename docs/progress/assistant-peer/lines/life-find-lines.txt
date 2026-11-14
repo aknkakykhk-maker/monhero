@@ -1,0 +1,51 @@
+# 助手ライフの拾い物・贈り物のひとこと(2026-11-14 ナカヨシ案・キズナ2と相談)
+# 形: <助手> <trip|gift|masmon> | <ひとこと>   … 1人・1場面に2本ずつ。取り込み: node tools/assistant/life-find-lines-import.js
+# trip=出かけ先から帰って拾い物を渡す / gift=家で過ごしている助手の贈り物 / masmon=その助手のマスモンが拾ってきた(助手が言う)
+mua trip | これ道で見つけたんだけど、まぢ使えそうぢゃん？あげる！
+mua trip | 帰りに拾ったー！あたしの分もがんばってｗ
+mua gift | これ、あたしからー！がんばってほしーから✨
+mua gift | はいっ、プレゼント！ぜったい役立つやつ！
+mua masmon | ねぇ見て、うちの子が何かくわえて戻ってきたｗ
+mua masmon | うちの子えらすぎる…拾ってきたって！
+kiki trip | お散歩の途中で見つけたんでつ。よかったらどうぞ♪♪
+kiki trip | 帰り道に落ちてたので、使ってくだしゃいね(´ー`*)
+kiki gift | 私から、ささやかですけど…どうぞ( ˘ω˘)
+kiki gift | これ、きっと役に立ちまつ♪♪
+kiki masmon | あれま、うちの子がこれを持って戻ってきまつた
+kiki masmon | うちの子が見つけてきたみたいでつ。どうぞ♪♪
+momosuke trip | 道で見つけたの、もものおみやげ♡
+momosuke trip | これ拾ったー！！えらくない？w
+momosuke gift | ももからのプレゼント♡ ちゃんと使ってよね？w
+momosuke gift | はい、あげる！もも優しすぎじゃない？w
+momosuke masmon | まって、うちの子なんかくわえてきたw かわいすぎ！！
+momosuke masmon | うちの子が拾ってきたって！すご！！
+dra trip | えへへ、道で拾ったんだわ。使ってくれよな
+dra trip | 帰りに見つけたからな。おでからのおみやげだ
+dra gift | おでからだ。何がとは言わんけど、役に立つからな
+dra gift | これ、持っててくれよな。えへへ
+dra masmon | ふむ、うちの子が何かくわえて帰ってきたわ
+dra masmon | うちのマスモン、拾い物の才能あるよな
+atsu trip | てか道に落ちてたから拾ってきた笑 使って！
+atsu trip | 帰りに見つけたー笑 これいいやつだよ！
+atsu gift | とりあえずこれ渡しとく笑
+atsu gift | これ使ってよ。仲間だし笑
+atsu masmon | うちの子がなんか持ってきた笑 えらいー笑
+atsu masmon | まじで？うちの子拾ってきたじゃん笑
+kyuko trip | 帰りに見つけたぁ。あげる笑
+kyuko trip | ほい！道で拾ったやつ。無課金でもこれで戦えるよぉw
+kyuko gift | これ、俺から。使ってくれたらうれしいなぁ笑
+kyuko gift | おけ、これ渡しとくね。役に立つはずw
+kyuko masmon | うちの子がなんかくわえてきたぁw
+kyuko masmon | うちの子えらすぎて泣ける😭
+sorashido trip | 帰り道で見つけました。使えると思いますよ笑
+sorashido trip | ほほー！道に落ちてたので拾ってきました笑
+sorashido gift | これ、自分からです。役に立つと思います笑
+sorashido gift | よかったらどうぞ。育成で効いてくると思います笑
+sorashido masmon | うちの子が何か持って戻ってきましたね笑
+sorashido masmon | そうか・・・！うちの子、拾ってきてくれたんですね笑
+erubin trip | 道で見つけたよ！使ってw
+erubin trip | 帰りに拾ったー！これいいね笑
+erubin gift | 俺からのプレゼント！おけ？笑
+erubin gift | これ渡しとくね。さすがに役立つはずw
+erubin masmon | うちの子がなんか持ってきたw さすが！
+erubin masmon | うちの子、拾ってきてくれたー！☺️
