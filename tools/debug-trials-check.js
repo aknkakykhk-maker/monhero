@@ -79,7 +79,7 @@ check('新しいキーが保存データの一覧に載っている', ['mh_debug
     // 一度開いたので、設定の画面に入口が出る
     await page.evaluate(() => { const b = [...document.querySelectorAll('button')].find((x) => x.querySelector('svg') && /p-3/.test(x.className)); b?.click(); });
     await page.waitForTimeout(900);
-    await page.evaluate(() => { const b = [...document.querySelectorAll('button')].find((x) => /わかった！冒険に戻る/.test(x.textContent)); b?.click(); });
+    await page.evaluate(() => { const b = [...document.querySelectorAll('button')].find((x) => /(?:分|わ)かった！冒険に戻る/.test(x.textContent)); b?.click(); });
     await page.waitForTimeout(600);
     await page.evaluate(() => { const b = [...document.querySelectorAll('button')].find((x) => /設定へ戻る|戻る/.test(x.getAttribute('aria-label') || '')); });
     // ホームから設定を開き直す

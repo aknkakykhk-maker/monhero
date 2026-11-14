@@ -94,7 +94,7 @@ const check = (name, ok, detail = '') => {
     await page.getByRole('button', { name: 'トップ画面へ進む' }).click({ timeout: 30000 });
     await page.getByRole('button', { name: 'モンヒロバトル' }).waitFor({ timeout: 30000 });
     for (let i = 0; i < 8; i += 1) {
-      const btn = page.getByRole('button', { name: /受け取る|閉じる|はじめる|OK|スキップ/ }).first();
+      const btn = page.getByRole('button', { name: /受け取る|閉じる|(?:始|はじ)める|OK|スキップ/ }).first();
       if (await btn.count() === 0 || !(await btn.isVisible().catch(() => false))) break;
       await btn.dispatchEvent('click').catch(() => {}); await page.waitForTimeout(300);
     }
@@ -125,7 +125,7 @@ const check = (name, ok, detail = '') => {
         const confirm = pick(/^(習得する|強化する)$/); if (confirm) { confirm.click(); return 'confirm'; }
         const so = live.find((x) => /ソラシド/.test(x.textContent)); if (so) { so.click(); return 'sorashido'; }
         const slot = pick(/^(零|近|中|遠)距離/); if (slot) { slot.click(); return 'slot'; }
-        const start = pick(/はじめる|この子で/); if (start) { start.click(); return 'start'; }
+        const start = pick(/(?:始|はじ)める|この子で/); if (start) { start.click(); return 'start'; }
         return null;
       });
       if (step === 'sorashido') pickedSorashido = true;

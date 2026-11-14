@@ -89,7 +89,7 @@ const released = /const TACTICS_EX_SKILLS_RELEASE = true/.test(
     await boot();
     const closePopups = async () => {
       for (let i = 0; i < 8; i += 1) {
-        const btn = page.getByRole('button', { name: /受け取る|閉じる|はじめる|OK|スキップ/ }).first();
+        const btn = page.getByRole('button', { name: /受け取る|閉じる|(?:始|はじ)める|OK|スキップ/ }).first();
         if (await btn.count() === 0 || !(await btn.isVisible().catch(() => false))) break;
         await btn.dispatchEvent('click').catch(() => {});
         await page.waitForTimeout(300);
@@ -145,7 +145,7 @@ const released = /const TACTICS_EX_SKILLS_RELEASE = true/.test(
           if (mons.length) { mons[0].click(); return 'mon'; }
           const changes = live.filter(x => x.textContent.trim() === '変更');
           if (changes.length && window.__change < changes.length) { changes[window.__change].click(); window.__change += 1; return 'change'; }
-          const start = pick(/はじめる|この子で/); if (start) { start.click(); return 'start'; }
+          const start = pick(/(?:始|はじ)める|この子で/); if (start) { start.click(); return 'start'; }
           return null;
         }, heroName);
         if (!step) break;

@@ -78,7 +78,7 @@ const seed = () => {
           }).pop();
           if (!overlay) return false;
           const buttons = [...overlay.querySelectorAll('button')];
-          const b = buttons.find(x => /閉じる|次へ|確認|わかった|OK|はい|あとで|スキップ/.test(x.textContent)) || buttons.find(x => x.querySelector('svg')) || buttons[buttons.length - 1];
+          const b = buttons.find(x => /閉じる|次へ|確認|(?:分|わ)かった|OK|はい|あとで|スキップ/.test(x.textContent)) || buttons.find(x => x.querySelector('svg')) || buttons[buttons.length - 1];
           if (b) b.click();
           return !!b;
         });
@@ -122,9 +122,9 @@ const seed = () => {
     await toHome();
     await page.evaluate(() => { const b = [...document.querySelectorAll('button')].find(x => /ミッション/.test(x.getAttribute('aria-label') || x.textContent)); b && b.click(); });
     await page.waitForTimeout(1200);
-    check('ミッション画面に「すべて受け取る」がある', await page.locator('[data-mission-claim-all]').count() === 1);
+    check('ミッション画面に「全て受け取る」がある', await page.locator('[data-mission-claim-all]').count() === 1);
     const label = await page.locator('[data-mission-claim-all]').innerText();
-    check('受け取れる件数がボタンに出る', /すべて受け取る \(\d+\)/.test(label), label);
+    check('受け取れる件数がボタンに出る', /全て受け取る \(\d+\)/.test(label), label);
     check('以前の作りで送ったままのものは「ギフトボックスに届いています」と出る', await page.evaluate(() => /ギフトボックスに届いています/.test(document.body.innerText)));
 
     // ---- 二度押ししても1回分だけ ----
@@ -145,7 +145,7 @@ const seed = () => {
     // 窓を閉じて、もう一度押せないこと
     await page.evaluate(() => { const b = [...document.querySelectorAll('button')].find(x => /閉じる/.test(x.textContent)); b && b.click(); });
     await page.waitForTimeout(500);
-    check('受け取ったあとは「すべて受け取る」が押せない', await page.locator('[data-mission-claim-all]').isDisabled());
+    check('受け取ったあとは「全て受け取る」が押せない', await page.locator('[data-mission-claim-all]').isDisabled());
     check('窓を閉じられる', await page.locator('[data-reward-receipt]').count() === 0);
 
     // ---- 読み込み直しても二重に受け取れない ----

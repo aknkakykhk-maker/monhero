@@ -252,7 +252,7 @@ const notes = [];
       // ---- MFバトルカード: 相手えらび(立ち絵とひとこと)→ VS → 結果(立ち絵と吹き出し)
       if (want('card')) {
         const dismiss = async () => { for (let i = 0; i < 16; i++) { const did = await page.evaluate(() => { const inO = (el) => { for (let e = el; e && e !== document.body; e = e.parentElement) { const s = getComputedStyle(e); if (s.position === 'fixed' || (s.position === 'absolute' && Number(s.zIndex) >= 40)) return true; } return false; };
-          const l = [...document.querySelectorAll('button')].filter((b) => inO(b) && /^(確認|閉じる|OK|受け取る|次へ|わかった|はい|スキップ|あとで読む|あとで)$/.test((b.innerText || '').replace(/\s+/g, ' ').trim())); if (!l.length) return false; l[0].click(); return true; }); if (!did) break; await page.waitForTimeout(400); } };
+          const l = [...document.querySelectorAll('button')].filter((b) => inO(b) && /^(確認|閉じる|OK|受け取る|次へ|(?:分|わ)かった|はい|スキップ|あとで読む|あとで)$/.test((b.innerText || '').replace(/\s+/g, ' ').trim())); if (!l.length) return false; l[0].click(); return true; }); if (!did) break; await page.waitForTimeout(400); } };
         let ready = false;
         await step('カード 下ごしらえ', async () => {
           await page.locator('[data-home-card-battle]').first().dispatchEvent('click');
@@ -294,7 +294,7 @@ const notes = [];
           if (vs) await take('cardvs', id, { settle: 1500, filter: r => r.kind === 'full' }); else notes.push(`${v.name} カード ${id}: VS が出ない`);
           for (let i = 0; i < 40; i++) {
             if (await page.locator('[data-card-top="result"]').count()) break;
-            const b = page.getByRole('button', { name: /対戦へ|このデッキで|はじめる|スタート|タップ/ }).first();
+            const b = page.getByRole('button', { name: /対戦へ|このデッキで|(?:始|はじ)める|スタート|タップ/ }).first();
             if (await b.count() && await b.isVisible().catch(() => false)) await b.click().catch(() => {}); else await page.locator('[data-card-vs], [data-mh-screen]').first().click({ timeout: 800, force: true }).catch(() => {});
             await page.waitForTimeout(600);
           }
