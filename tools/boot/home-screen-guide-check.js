@@ -88,9 +88,6 @@ const seed=(guide)=>{ if (sessionStorage.getItem('s')) return; sessionStorage.se
   put('mh_breeder_name','テスト'); put('mh_breeder_icon','🐣'); put('mh_intro_done',true); put('mh_onboarded',true); put('mh_tutorial_seen_v1',true);
   put('mh_battle_tutorial_seen_v1',true); put('mh_battle_tutorial_guide_shown_v1',true); put('mh_assistant_selected_v1','mua'); put('mh_assistant_unlock_seen_v1',true);
   put('mh_update_notice_seen_v1',true); put('mh_rhythm_tutorial_seen_v1',true); put('mh_inherited_unique_level_compensation_v1',true); put('mh_masu_level_cap_compensation_notice_seen_v1',true);
-  // 2026-11-14 モンヒロサクセス第1話は、はじめて遊ぶ人にも HOME で1回流す。この見張りは案内だけを見るので、見た印を入れておく
-  //   (お話のあとに出る窓が、窓を閉じる手より遅れて開き、案内を隠していた。本物ではお話→窓を閉じる→案内の順に出る)
-  put('mh_rhythm_event_story_v1',['monsuc_beta_ep1']);
   if(guide)put('mh_home_screen_guide_v1',{firstSeenAt:Date.now()-2*3600e3}); };
 (async()=>{
   let chromium;
@@ -104,6 +101,8 @@ const seed=(guide)=>{ if (sessionStorage.getItem('s')) return; sessionStorage.se
       await page.addInitScript(()=>{window.__mhSupabaseStubbed=true;});
       await page.route(/supabase|functions\/v1/,r=>r.fulfill({status:200,contentType:'application/json',body:'[]'}));
       await page.addInitScript(seed,guide);
+      // お話(HOME で1回流すもの)は見た扱いにする。この見張りは案内だけを見るので、お話のあとの窓が案内を隠さないように(2026-11-14 モンヒロサクセス第1話で落ちた)
+      await page.addInitScript(require('./quiet-boot-seed').eventStorySeed());
       await page.goto(`http://localhost:${PORT}/monster-hero/index.html`,{waitUntil:'load',timeout:60000});
       await page.waitForFunction(()=>document.body?.innerText.includes('TAP TO START'),{timeout:40000});
       await page.getByRole('button',{name:'TAP TO START'}).click({force:true});
