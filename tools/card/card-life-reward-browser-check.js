@@ -112,7 +112,7 @@ const run = async (browser, mode, errors) => {
     await page.locator('[data-confirm-sheet]').locator('xpath=..').getByRole('button', { name: '飛ばす' }).click();
     await page.getByRole('button', { name: 'トップへ' }).click();
     await page.locator('[data-card-top="top"]').waitFor({ timeout: 20000 });
-    // MASTER まで開け、その日はじめての勝ちは済ませておく(ビートPの 1.375倍だけを見るため)
+    // MASTER まで開け、その日初めての勝ちは済ませておく(ビートPの 1.375倍だけを見るため)
     await page.evaluate(() => { localStorage.setItem('mh_card_cpu_unlocked_v1', JSON.stringify({ hard: true, expert: true, master: true }));
       localStorage.setItem('mh_card_daily_v1', JSON.stringify({ day: cardTodayJst(), cpuPoint: 0, pvpPoint: 0, firstWin: true, foes: {}, quickLoops: 0 })); }); // eslint-disable-line no-undef
     await boot();
@@ -232,7 +232,7 @@ const run = async (browser, mode, errors) => {
     check(`⑤ ${mode.label} すぐ投了(0): 帯も「ふだん」も出さない`, zero.gain === '0' && !zero.band && !zero.plain, JSON.stringify(zero));
     // ⑥ だれもいないとき
     await force([]);
-    await page.getByRole('button', { name: '相手をえらぶ' }).click();
+    await page.getByRole('button', { name: '相手を選ぶ' }).click();
     await page.locator('[data-card-top="foe"]').waitFor({ timeout: 20000 });
     const none = await page.evaluate(() => ({ chips: document.querySelectorAll('[data-card-foe-life-chip]').length, band: !!document.querySelector('[data-card-foe-life-band]') }));
     check(`⑥ ${mode.label} カード部屋にだれもいないとき、印も帯も出ない`, none.chips === 0 && !none.band, JSON.stringify(none));
