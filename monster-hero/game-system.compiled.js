@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 653018efef2582ee
+// source-sha256: 88c5532bed121be5
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -158724,6 +158724,18 @@ const MSX_TEV_LOT_NAME = Object.freeze({
 const msxTevChanges = (s, o) => {
   const e = o && o.event;
   if (!e) return [];
+  if (e.d && typeof e.d === 'object') {
+    const d = e.d;
+    const out = [];
+    const sg = n => n > 0 ? `+${n}` : `−${Math.abs(n)}`;
+    if (d.bond) out.push(`🤝 親密度 ${sg(d.bond)}`);
+    if (d.hp) out.push(`❤️ 体力 ${sg(d.hp)}`);
+    if (d.stress) out.push(`💢 ストレス ${sg(d.stress)}`);
+    const SUC = msxSuc && msxSuc.SUC;
+    if (e.story === 3) out.push(o.taught ? `⚔ 技「${(SUC.techsOf(s.species).find(t => t.id === o.taught) || {}).name || '新しい技'}」を覚えた!` : '⚔ 技の熟練 +10');
+    if (e.lottery === 'tip') out.push('✨ ひらめき(次の修行で技を覚えやすい)');
+    return out;
+  }
   const SUC = msxSuc && msxSuc.SUC;
   const m = s.team[e.who];
   const fk = m && Array.isArray(m.top) ? m.top[0] : null;
@@ -158777,6 +158789,16 @@ function MsxTrainEvent({
   const ch = msxTevChanges(s, o);
   const calm = typeof msxFxCalm === 'function' && msxFxCalm();
   const bondNow = s.bond[e.who];
+  const bondFrom = e.d && Number.isFinite(e.d.bondFrom) ? e.d.bondFrom : bondNow;
+  const [bondOn, setBondOn] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setBondOn(true), 700);
+    return () => clearTimeout(t);
+  }, []);
+  const bondShow = bondOn || calm ? bondNow : bondFrom;
+  const ups = e.d && e.d.up > 0 && e.d.stat ? {
+    [e.d.stat]: e.d.up
+  } : null;
   return React.createElement(React.Fragment, null, React.createElement("div", {
     className: `v-scene msx-tev s-${style}${calm ? ' calm' : ''}`,
     style: {
@@ -158820,18 +158842,22 @@ function MsxTrainEvent({
       height: '25%'
     }
   }) : null, React.createElement("div", {
-    className: "v-talk tev-talk"
+    className: "v-talk tev-talk",
+    style: JA_LABEL_STYLE
   }, line && line.t ? line.who && line.who !== 'narr' ? React.createElement("div", null, React.createElement("span", {
     className: "who"
-  }, line.who === 'mon' ? run.nick : msxAidName(line.who)), "「", line.t, "」") : React.createElement("div", null, line.t) : React.createElement("div", null, name, "と、すこし特別な時間をすごした。")), React.createElement("div", {
+  }, line.who === 'mon' ? run.nick : msxAidName(line.who)), "「", jaWrap(line.t), "」") : React.createElement("div", null, jaWrap(line.t)) : React.createElement("div", null, jaWrap(`${name}と、すこし特別な時間をすごした。`))), React.createElement("div", {
     className: "v-ev-h"
   }, React.createElement("small", null, "編成のモンスターのイベント"), title), React.createElement("div", {
     className: "tev-bond"
   }, React.createElement("span", null, "🤝 ", name, "との親密度"), React.createElement("i", null, React.createElement("b", {
     style: {
-      width: `${Math.max(0, Math.min(100, bondNow))}%`
+      width: `${Math.max(0, Math.min(100, bondShow))}%`,
+      transition: 'width .9s ease-out'
     }
-  })), React.createElement("em", null, bondNow)), style === 'a' ? React.createElement("span", {
+  })), React.createElement("em", {
+    "data-msx-tev-bond": true
+  }, bondShow, e.d && e.d.bond ? React.createElement("small", null, " (", e.d.bond > 0 ? `+${e.d.bond}` : e.d.bond, ")") : null)), style === 'a' ? React.createElement("span", {
     className: "tev-in-a",
     "aria-hidden": "true"
   }) : null, style === 'b' ? React.createElement("div", {
@@ -158852,8 +158878,12 @@ function MsxTrainEvent({
     className: "fl"
   }), React.createElement("div", {
     className: "rb"
-  }, "EVENT")) : null), React.createElement("div", {
-    className: "v-log tev-ch"
+  }, "EVENT")) : null), ups ? React.createElement(MsxStRow, {
+    stats: s.stats,
+    ups: ups
+  }) : null, React.createElement("div", {
+    className: "v-log tev-ch",
+    "data-msx-tev-chips": true
   }, ch.map((t, i) => React.createElement("span", {
     key: i,
     className: "v-chip ylw",
@@ -158869,6 +158899,7 @@ const MSX_TEV_CSS = `
 .msx .msx-tev .tev-bond i{flex:1;height:6px;border-radius:6px;background:#334155;overflow:hidden}
 .msx .msx-tev .tev-bond i b{display:block;height:100%;background:linear-gradient(90deg,#f472b6,#fb7185)}
 .msx .msx-tev .tev-bond em{font-style:normal;color:#fff}
+.msx .msx-tev .tev-bond em small{font-size:10px;color:#fbcfe8}
 .msx .msx-tev .tev-talk{bottom:8px;z-index:4}
 .msx .tev-ch{display:flex;flex-wrap:wrap;gap:4px}
 .msx .tev-ch .v-chip{animation:msx-popin .35s cubic-bezier(.2,1.4,.4,1) both}
@@ -165183,8 +165214,8 @@ const MSX_CSS = `
 .msx .v-st.gs-a.zs div.up u.g i,.msx .v-st.gs-a.zs div.up u.g s,.msx .v-st.gs-a.zs div.dn u.g i,.msx .v-st.gs-a.zs div.dn u.g s{border-radius:2px}
 .msx .v-st.gs-a u.g q{quotes:none;position:absolute;left:0;right:0;top:100%;display:flex;justify-content:space-between;font-size:10px;font-weight:800;color:#fde68a;line-height:11px;pointer-events:none}
 .msx .v-st.gs-a u.g q::before,.msx .v-st.gs-a u.g q::after{content:none}
-@container (max-width:340px){.msx .v-st.gs-a u.g q{font-size:9.5px;letter-spacing:-.06em;left:-3px;right:-3px}}
-@media (max-width:340px){.msx .v-st.gs-a u.g q{font-size:9.5px;letter-spacing:-.06em;left:-3px;right:-3px}}
+@container (max-width:340px){.msx .v-st.gs-a u.g q{font-size:10px;letter-spacing:-.06em;left:-3px;right:-3px}}
+@media (max-width:340px){.msx .v-st.gs-a u.g q{font-size:10px;letter-spacing:-.06em;left:-3px;right:-3px}}
 @media (prefers-reduced-motion: reduce){.msx .v-st u.g i,.msx .v-st u.g s.gu{transition:none}.msx .v-st.grow.on u.g s.gu{animation:none}}
 .msx .v-act{display:grid;gap:5px;margin-top:6px}
 .msx .v-p{background:linear-gradient(180deg,#3d4c6b,#2a3247);border:1px solid #64748b;border-bottom:3px solid #0b1020;border-radius:14px;text-align:center;padding:5px 2px 4px;font-size:12.5px;font-weight:900;line-height:1.2;position:relative;display:flex;flex-direction:column;justify-content:center;align-items:center;min-width:0;white-space:nowrap}
@@ -169417,7 +169448,7 @@ function MsxPlay({
       className: "go",
       onClick: () => toReact(run),
       "data-msx-tev-next": true
-    }, "つぎへ ▶"));
+    }, "次へ ▶"));
   } else if (phase === 'awake' && run.out && run.out.fire && typeof MsxAwakeShow === 'function') {
     const f = run.out.fire;
     const then = run.out.then;

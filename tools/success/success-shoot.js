@@ -82,7 +82,7 @@ const makeRun = async (kind) => {
     ['R1', 'mid', ['react:great']], ['R1b', 'mid', ['react:great', 'how:praise']], ['R2', 'mid', ['react:fail']], ['R2b', 'mid', ['react:fail', 'how:scold']],
     ['R3', 'mid', ['react:sab']], ['R3b', 'mid', ['react:sab', 'how:scold']], ['R4', 'mid', ['react:shugyo']], ['R4b', 'mid', ['react:shugyo', 'how:praise']],
     ['KI', 'ki', ['cont']], ['CL', 'yosu', ['cont', 'clinic']], // 章の終わり(数字は真ん中)・通院の結果(何が治ったかを名前で)
-    ['E2', 'mid', ['cont', 'event', 'pick']], ['E5', 'mid', ['cont', 'eventDaily', 'pick']], // E2・E5: 選んだあとの結果の段(札が出る。E5 はふだんの出来事)
+    ['TV1', 'mid', ['tev']], ['TV2', 'mid', ['tevLot']], ['E2', 'mid', ['cont', 'event', 'pick']], ['E5', 'mid', ['cont', 'eventDaily', 'pick']], // E2・E5: 選んだあとの結果の段(札が出る。E5 はふだんの出来事)
   ];
   // SHOT_ONLY=H0,H1 のように名前を並べると、その場面だけ撮る
   const only = (process.env.SHOT_ONLY || '').split(',').map((x) => x.trim()).filter(Boolean);
@@ -180,6 +180,19 @@ const makeRun = async (kind) => {
                 const o = SUC.events.open(s1, 'start'); hit = !!(o.out && o.out.ev); if (hit) { raw.s = o.state; raw.phase = 'event'; raw.out = { ev: o.out.ev, slot: 'start' }; }
               }
               if (!hit) return false;
+              localStorage.setItem(MSX_KEYS.run, JSON.stringify(raw));
+              window.__msxRoot.unmount(); const el = document.getElementById('msx-shot'); window.__msxRoot = ReactDOM.createRoot(el);
+              window.__msxRoot.render(React.createElement(MonheroSuccessScreen, { onClose() {}, callNameOf: () => 'けんささん', bondLvOf: () => 4 }));
+              await new Promise((r) => setTimeout(r, 600));
+              return click(/続きから/);
+            }
+            if (st === 'tev' || st === 'tevLot') {
+              // 編成の子とのトレーニングの出来事(結果の段): 動いた数(e.d)を入れて開く。tev=お話1話目・tevLot=ひと休み+親密度の出来事
+              const raw = JSON.parse(localStorage.getItem(MSX_KEYS.run)); const k = raw.s.team[0] && raw.s.team[0].top ? raw.s.team[0].top[0] : 'life';
+              const before = raw.s.bond[0] || 0;
+              raw.s = { ...raw.s, last: { kind: 'train', res: 'ok' }, reacted: false, acted: true, stats: { ...raw.s.stats, [k]: raw.s.stats[k] + (st === 'tev' ? 6 : 0) }, bond: raw.s.bond.map((b, i) => (i === 0 ? Math.min(100, before + (st === 'tev' ? 10 : 5)) : b)) };
+              raw.phase = 'tevent';
+              raw.out = { kind: 'train', result: 'ok', event: st === 'tev' ? { who: 0, story: 1, d: { stat: k, up: 6, bondFrom: before, bondTo: before + 10, bond: 10, hp: 0, stress: 0 } } : { who: 0, lottery: 'talk', d: { stat: k, up: 0, bondFrom: before, bondTo: before + 5, bond: 5, hp: 0, stress: -10 } } };
               localStorage.setItem(MSX_KEYS.run, JSON.stringify(raw));
               window.__msxRoot.unmount(); const el = document.getElementById('msx-shot'); window.__msxRoot = ReactDOM.createRoot(el);
               window.__msxRoot.render(React.createElement(MonheroSuccessScreen, { onClose() {}, callNameOf: () => 'けんささん', bondLvOf: () => 4 }));

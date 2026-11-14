@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 2dbc0d794a78abe0
+// generated-sha256: 6fa7495b3bf274a9
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -82669,6 +82669,17 @@ const MSX_TEV_LOT_NAME = Object.freeze({ self: 'いっしょに自主練', rest:
 // 変わったこと(芯の trainEvent と同じ中身を文にする)
 const msxTevChanges = (s, o) => {
   const e = o && o.event; if (!e) return [];
+  // 芯が動いた数(e.d)を持っているときは、言葉でなく実際の数で出す(2026-11-14 社長・r1114-098)。能力はゲージ(MsxStRow)が出すので、ここは能力以外
+  if (e.d && typeof e.d === 'object') {
+    const d = e.d; const out = []; const sg = (n) => (n > 0 ? `+${n}` : `−${Math.abs(n)}`);
+    if (d.bond) out.push(`🤝 親密度 ${sg(d.bond)}`);
+    if (d.hp) out.push(`❤️ 体力 ${sg(d.hp)}`);
+    if (d.stress) out.push(`💢 ストレス ${sg(d.stress)}`);
+    const SUC = msxSuc && msxSuc.SUC;
+    if (e.story === 3) out.push(o.taught ? `⚔ 技「${(SUC.techsOf(s.species).find((t) => t.id === o.taught) || {}).name || '新しい技'}」を覚えた!` : '⚔ 技の熟練 +10');
+    if (e.lottery === 'tip') out.push('✨ ひらめき(次の修行で技を覚えやすい)');
+    return out;
+  }
   const SUC = msxSuc && msxSuc.SUC; const m = s.team[e.who]; const fk = m && Array.isArray(m.top) ? m.top[0] : null;
   const stat = fk && typeof MSX_STAT_NAME !== 'undefined' ? MSX_STAT_NAME[fk] : '能力';
   const out = [];
@@ -82698,6 +82709,11 @@ function MsxTrainEvent({ run, o, ctx, style = MSX_TEV_STYLE }) {
   const ch = msxTevChanges(s, o);
   const calm = typeof msxFxCalm === 'function' && msxFxCalm();
   const bondNow = s.bond[e.who];
+  const bondFrom = e.d && Number.isFinite(e.d.bondFrom) ? e.d.bondFrom : bondNow;
+  const [bondOn, setBondOn] = useState(false);
+  useEffect(() => { const t = setTimeout(() => setBondOn(true), 700); return () => clearTimeout(t); }, []);
+  const bondShow = bondOn || calm ? bondNow : bondFrom;
+  const ups = e.d && e.d.up > 0 && e.d.stat ? { [e.d.stat]: e.d.up } : null;
   return (<>
     <div className={`v-scene msx-tev s-${style}${calm ? ' calm' : ''}`} style={{ flex: '1 1 0' }} data-msx-tev={style}>
       <img className="bg" src={msxSceneBg(s.turn).bg} alt=""/><div className="sh"/>
@@ -82705,15 +82721,16 @@ function MsxTrainEvent({ run, o, ctx, style = MSX_TEV_STYLE }) {
       <MsxMonArt run={run} className="mon" style={{ left: '29%', bottom: '40%', height: '22%' }} live/>
       <div className="gr" style={{ left: '71%', bottom: 'calc(40% - 5px)' }}/>
       {m ? <img className="mon tev-pal" src={msxMonImg(m.species)} alt="" style={{ left: '71%', bottom: '40%', height: '25%' }}/> : null}
-      <div className="v-talk tev-talk">{line && line.t ? (line.who && line.who !== 'narr' ? <div><span className="who">{line.who === 'mon' ? run.nick : msxAidName(line.who)}</span>「{line.t}」</div> : <div>{line.t}</div>) : <div>{name}と、すこし特別な時間をすごした。</div>}</div>
+      <div className="v-talk tev-talk" style={JA_LABEL_STYLE}>{line && line.t ? (line.who && line.who !== 'narr' ? <div><span className="who">{line.who === 'mon' ? run.nick : msxAidName(line.who)}</span>「{jaWrap(line.t)}」</div> : <div>{jaWrap(line.t)}</div>) : <div>{jaWrap(`${name}と、すこし特別な時間をすごした。`)}</div>}</div>
       <div className="v-ev-h"><small>編成のモンスターのイベント</small>{title}</div>
-      <div className="tev-bond"><span>🤝 {name}との親密度</span><i><b style={{ width: `${Math.max(0, Math.min(100, bondNow))}%` }}/></i><em>{bondNow}</em></div>
+      <div className="tev-bond"><span>🤝 {name}との親密度</span><i><b style={{ width: `${Math.max(0, Math.min(100, bondShow))}%`, transition: 'width .9s ease-out' }}/></i><em data-msx-tev-bond>{bondShow}{e.d && e.d.bond ? <small> ({e.d.bond > 0 ? `+${e.d.bond}` : e.d.bond})</small> : null}</em></div>
       {/* 入り方 */}
       {style === 'a' ? <span className="tev-in-a" aria-hidden="true"/> : null}
       {style === 'b' ? <div className="tev-in-b" aria-hidden="true"><div className="band"><img src={msxMonThumb(s.species)} alt=""/><b>{name}との出来事!</b><img src={m ? msxMonThumb(m.species) : ''} alt=""/></div></div> : null}
       {style === 'c' ? <div className="tev-in-c" aria-hidden="true"><span className="fl"/><div className="rb">EVENT</div></div> : null}
     </div>
-    <div className="v-log tev-ch">{ch.map((t, i) => <span key={i} className="v-chip ylw" style={{ position: 'static', animationDelay: `${0.9 + i * 0.15}s` }}>{t}</span>)}</div>
+    {ups ? <MsxStRow stats={s.stats} ups={ups}/> : null}
+    <div className="v-log tev-ch" data-msx-tev-chips>{ch.map((t, i) => <span key={i} className="v-chip ylw" style={{ position: 'static', animationDelay: `${0.9 + i * 0.15}s` }}>{t}</span>)}</div>
   </>);
 }
 
@@ -82723,6 +82740,7 @@ const MSX_TEV_CSS = `
 .msx .msx-tev .tev-bond i{flex:1;height:6px;border-radius:6px;background:#334155;overflow:hidden}
 .msx .msx-tev .tev-bond i b{display:block;height:100%;background:linear-gradient(90deg,#f472b6,#fb7185)}
 .msx .msx-tev .tev-bond em{font-style:normal;color:#fff}
+.msx .msx-tev .tev-bond em small{font-size:10px;color:#fbcfe8}
 .msx .msx-tev .tev-talk{bottom:8px;z-index:4}
 .msx .tev-ch{display:flex;flex-wrap:wrap;gap:4px}
 .msx .tev-ch .v-chip{animation:msx-popin .35s cubic-bezier(.2,1.4,.4,1) both}
@@ -85906,8 +85924,8 @@ const MSX_CSS = `
 .msx .v-st.gs-a.zs div.up u.g i,.msx .v-st.gs-a.zs div.up u.g s,.msx .v-st.gs-a.zs div.dn u.g i,.msx .v-st.gs-a.zs div.dn u.g s{border-radius:2px}
 .msx .v-st.gs-a u.g q{quotes:none;position:absolute;left:0;right:0;top:100%;display:flex;justify-content:space-between;font-size:10px;font-weight:800;color:#fde68a;line-height:11px;pointer-events:none}
 .msx .v-st.gs-a u.g q::before,.msx .v-st.gs-a u.g q::after{content:none}
-@container (max-width:340px){.msx .v-st.gs-a u.g q{font-size:9.5px;letter-spacing:-.06em;left:-3px;right:-3px}}
-@media (max-width:340px){.msx .v-st.gs-a u.g q{font-size:9.5px;letter-spacing:-.06em;left:-3px;right:-3px}}
+@container (max-width:340px){.msx .v-st.gs-a u.g q{font-size:10px;letter-spacing:-.06em;left:-3px;right:-3px}}
+@media (max-width:340px){.msx .v-st.gs-a u.g q{font-size:10px;letter-spacing:-.06em;left:-3px;right:-3px}}
 @media (prefers-reduced-motion: reduce){.msx .v-st u.g i,.msx .v-st u.g s.gu{transition:none}.msx .v-st.grow.on u.g s.gu{animation:none}}
 .msx .v-act{display:grid;gap:5px;margin-top:6px}
 .msx .v-p{background:linear-gradient(180deg,#3d4c6b,#2a3247);border:1px solid #64748b;border-bottom:3px solid #0b1020;border-radius:14px;text-align:center;padding:5px 2px 4px;font-size:12.5px;font-weight:900;line-height:1.2;position:relative;display:flex;flex-direction:column;justify-content:center;align-items:center;min-width:0;white-space:nowrap}
@@ -87951,7 +87969,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
   // ---- トレーニングのあとの出来事の場面(56-monsuc-tevent.jsx) ----
   else if (phase === 'tevent' && run.out && run.out.event && typeof MsxTrainEvent === 'function') {
     body = <><MsxBand s={s} v={v} ev={ev}/><MsxTrainEvent key={`${s.turn}-tev`} run={run} o={run.out} ctx={ctx}/></>;
-    foot = <div className="v-ft"><button type="button" onClick={() => afterAct({ ...run, phase: 'main' })}>⏩ とばす</button><button type="button" className="go" onClick={() => toReact(run)} data-msx-tev-next>つぎへ ▶</button></div>;
+    foot = <div className="v-ft"><button type="button" onClick={() => afterAct({ ...run, phase: 'main' })}>⏩ とばす</button><button type="button" className="go" onClick={() => toReact(run)} data-msx-tev-next>次へ ▶</button></div>;
   }
   // ---- 覚醒・超覚醒(56-monsuc-awake.jsx の演出)。終わったら、ターンのはじめならメインへ・ターンの終わりなら閉じる ----
   else if (phase === 'awake' && run.out && run.out.fire && typeof MsxAwakeShow === 'function') {
