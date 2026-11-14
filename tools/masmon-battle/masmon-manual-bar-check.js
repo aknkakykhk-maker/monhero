@@ -83,7 +83,7 @@ for (let i = 0; i < N; i++) {
     const bsAll = buttons(bar(o, { sheetInit: 'all' }));
     for (const t of far) { farN++; const b = bsAll.find(x => x.tech === t.key); if (b && b.disabled && b.text.includes('いまは届かない')) farOk++; }
     const ch = bs.find(b => b.text.startsWith('💪 ためる')); otherN++; if (ch && ch.disabled === !o.charge.ok) otherOk++;
-    for (const mv of o.move) { otherN++; const b = bs.find(x => x.text.startsWith(mv.step < 0 ? '◀ 前へ' : '後ろへ')); if (b && b.disabled === !mv.ok) otherOk++; }
+    for (const mv of o.move) { otherN++; const b = bs.find(x => x.text.startsWith(mv.step < 0 ? '前へ ▶' : '◀ 後ろへ')); if (b && b.disabled === !mv.ok) otherOk++; }
     // 押せるボタンの手を芯に渡す
     const all = [...o.tech.filter(x => x.ok), o.guard, ...o.move.filter(x => x.ok), ...(o.charge.ok ? [o.charge] : []), ...o.swap.filter(x => x.ok)];
     const c = all[Math.floor(pr() * all.length)];

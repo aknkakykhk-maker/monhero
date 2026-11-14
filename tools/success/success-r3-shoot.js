@@ -97,6 +97,7 @@ const makeRun = async (kind) => {
       await page.goto(`http://localhost:${PORT}/monster-hero/index.html`, { waitUntil: 'load', timeout: 90000 });
       await page.waitForFunction(() => typeof MonheroSuccessScreen === 'function' && typeof MsxR3 === 'function' && typeof msxLoad === 'function' && typeof MASMON_CALC !== 'undefined', undefined, { timeout: 90000 });
       for (const [name, kind, steps] of SHOTS) {
+        if (process.env.ONLY && !process.env.ONLY.split(',').includes(name)) continue;
         const label = `${name}${tag ? `(${tag})` : ''}`;
         await page.evaluate(async ({ kind, mk }) => {
           // eslint-disable-next-line no-new-func
@@ -118,6 +119,8 @@ const makeRun = async (kind) => {
         await page.waitForSelector('[data-msx-view="home"]', { timeout: 30000 });
         const beat0 = name === 'R1' || name === 'E9' ? await page.evaluate(() => loadRhythmEventPoints()) : 0;
         const pend0 = name === 'E9' ? await page.evaluate(async () => { const r = await storeGet(MSX_KEYS.run, null); return r && r.s ? (r.s.beatEarned || 0) - (r.beatSent || 0) : 0; }) : 0; // まだ本編へ渡していない大会の分
+        // 曲の呼び出しを記録する(段C 2026-11-14 社長「バトルに入ったらバトル用の音楽に」: 試合に入ったら大会の曲から original_battle へ)
+        await page.evaluate(() => { window.__bgmLog = []; if (!window.__bgmHooked && typeof SuccessSound !== 'undefined') { window.__bgmHooked = true; const o = SuccessSound.scene; SuccessSound.scene = function (id) { window.__bgmLog.push(id); return o.apply(this, arguments); }; } });
         for (const st of steps) {
           const done = await page.evaluate(async (st) => {
             if (st.re) { const re = new RegExp(st.re); const b = [...document.querySelectorAll('.msx button')].find((x) => re.test((x.innerText || '').replace(/\s+/g, '')) && !x.disabled); if (b) b.click(); return !!b; }
@@ -130,6 +133,8 @@ const makeRun = async (kind) => {
           if (!done) check(`${label}: 「${st}」が押せる`, false);
           await page.waitForTimeout(st === '%ready' ? 2500 : 700);
         }
+        if (name === 'W1') { const lg = await page.evaluate(() => window.__bgmLog.slice()); const iC = lg.lastIndexOf('cupPre'), iB = lg.lastIndexOf('cupMatch');
+          check(`${label}: 試合に入ったら、場面の曲が cupPre から cupMatch(バトルの曲 original_battle)へ替わる`, iC >= 0 && iB > iC, lg.join('>')); }
         await page.waitForTimeout(500);
         const m = await page.evaluate(() => {
           const root = document.querySelector('.msx'); if (!root) return { ok: false };

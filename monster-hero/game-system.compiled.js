@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 16c09c8b5a17a61e
+// source-sha256: 1fc66bf5cc8a65ca
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -175506,6 +175506,11 @@ function MsaTechName({
 }
 const msaFitTechNames = () => {
   try {
+    if (typeof window !== 'undefined' && !window.__msaFitHooked) {
+      window.__msaFitHooked = true;
+      if (document.fonts && document.fonts.addEventListener) document.fonts.addEventListener('loadingdone', () => msaFitTechNames());
+      window.addEventListener('resize', () => msaFitTechNames());
+    }
     document.querySelectorAll('[data-msa-tn]').forEach(el => {
       el.style.fontSize = '';
       let fs = parseFloat(getComputedStyle(el).fontSize) || 12,
@@ -175542,7 +175547,7 @@ const MSA_DC_CSS = `
 .msa-dc{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px}
 /* 幅360未満は2列×2段(1語の長い技名が4列の札に入りきらない。技名は言葉の途中で折らない) */
 @media (max-width:359.98px){.msa-dc{grid-template-columns:repeat(2,minmax(0,1fr))}.msa-dc-c{min-height:52px}}
-.msa-dc-c{position:relative;min-width:0;min-height:58px;border-radius:10px;border:1px solid #4c4680;background:#1b1733;color:#94a3b8;font-weight:800;font-size:10.5px;padding:3px 4px 4px;text-align:left;line-height:1.2;font-family:inherit;display:flex;flex-direction:column;gap:1px}
+.msa-dc-c{position:relative;overflow:hidden;min-width:0;min-height:58px;border-radius:10px;border:1px solid #4c4680;background:#1b1733;color:#94a3b8;font-weight:800;font-size:10.5px;padding:3px 4px 4px;text-align:left;line-height:1.2;font-family:inherit;display:flex;flex-direction:column;gap:1px}
 .msa-dc-c .msa-dc-h{display:flex;align-items:center;gap:3px;font-size:10px;color:#a5b4fc}
 .msa-dc-c .msa-dc-h em{font-style:normal;font-size:9px;background:#fde047;color:#422006;border-radius:6px;padding:0 4px;font-weight:900}
 .msa-dc-c .msa-dc-h i{font-style:normal;margin-left:auto;font-size:9px;color:#94a3b8}
@@ -175626,6 +175631,9 @@ function MsaDistCards({
   busy = false,
   dataSide = ''
 }) {
+  useEffect(() => {
+    msaFitTechNames();
+  });
   const ids = Array.isArray(rep) && rep.length === 4 ? rep : msaRepIds(list, null);
   return React.createElement("div", {
     className: "msa-dc",
@@ -175916,7 +175924,7 @@ function MsxManualBar({
     onClick: () => go({
       type: 'charge'
     })
-  }, "💪 ためる", React.createElement("small", null, opt.charge.ok ? 'ガッツを大きく回復' : 'ガッツは満タン')), opt.move.map(mv => React.createElement("button", {
+  }, "💪 ためる", React.createElement("small", null, opt.charge.ok ? 'ガッツを大きく回復' : 'ガッツは満タン')), opt.move.slice().sort((x, y) => y.step - x.step).map(mv => React.createElement("button", {
     key: mv.step,
     type: "button",
     "data-msxm-move": mv.step,
@@ -175926,7 +175934,7 @@ function MsxManualBar({
       type: 'move',
       step: mv.step
     })
-  }, mv.step < 0 ? '◀ 前へ' : '後ろへ ▶', React.createElement("small", null, mv.ok ? `→ ${MSX_MANUAL_DIST[mv.to]}` : 'これ以上は行けない'))))), opt.swap.length ? React.createElement("div", {
+  }, mv.step < 0 ? '前へ ▶' : '◀ 後ろへ', React.createElement("small", null, mv.ok ? `→ ${MSX_MANUAL_DIST[mv.to]}` : 'これ以上は行けない'))))), opt.swap.length ? React.createElement("div", {
     className: "msxm-sec"
   }, React.createElement("div", {
     className: "msxm-h"
