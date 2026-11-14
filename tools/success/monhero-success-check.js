@@ -602,7 +602,7 @@ ok(near(SUC.failRateOf({ ...base, yosu: { sabori: { visits: 0 } } }) - fFull, 0.
   const mk = (as) => SUC.newRun({ id: 'hint', species: 'Mocchi', aid: 'mua', team: [{ kind: 'raised', species: 'Golem', stats: st, lv: 30, loy: 70, assists: as }, { kind: 'raised', species: 'Golem', stats: st, lv: 30, loy: 70, assists: [{ id: 'gatsu', lv: 1 }] }] });
   const plain = mk([]); const all = mk([{ id: 'gatsu', lv: 3 }, { id: 'miseba', lv: 3 }, { id: 'mitate', lv: 3 }, { id: 'mimamori', lv: 3 }]);
   const cup = { kind: 'cup', sys: 'str', star: 1, round: 0 };
-  ok(JSON.stringify(SUC.battleBuffs({ ...all, battle: cup })) === JSON.stringify({ A: { guts: 8, hit1: 0.1, crit: 0.08, eva: 0.08, noSulk: true } }), `ひらめきのアシストの上乗せ(いちばん高い段の1つだけ)がずれている: ${JSON.stringify(SUC.battleBuffs({ ...all, battle: cup }))}`);
+  ok(JSON.stringify(SUC.battleBuffs({ ...all, battle: cup })) === JSON.stringify({ A: { guts: 8, hit1: 0.1, crit: 0.08, eva: 0.08, noSulk: true } }), `ひらめきのアシストの上乗せ(一番高い段の1つだけ)がずれている: ${JSON.stringify(SUC.battleBuffs({ ...all, battle: cup }))}`);
   ok(JSON.stringify(SUC.battleBuffs({ ...plain, battle: cup })) === '{"A":{"guts":3}}' && SUC.battleBuffs(all) === undefined, '大会の試合のときだけ上乗せが付く になっていない');
   // トレーニングには効かない
   const tp = SUC.act(plain, { kind: 'train', stat: 'pow' }); const ta = SUC.act(all, { kind: 'train', stat: 'pow' });
