@@ -307,7 +307,7 @@ async function measureCard(browser, seconds = 25) {
           const c = page.locator(`[data-card-hand-card="${i}"]`);
           if (await c.isEnabled().catch(() => false)) { await c.click({ timeout: 2000 }); await page.waitForTimeout(200); const tgt = page.locator('[data-card-mon^="1-"].ring-emerald-300, [data-card-mon^="1-"][data-card-target]'); if (await tgt.count()) { await tgt.first().click({ timeout: 2000 }); used = true; } }
         }
-        if (!used) await page.getByRole('button', { name: '攻撃おわり → ガッツへ' }).click({ timeout: 3000 }).catch(() => {});
+        if (!used) await page.getByRole('button', { name: '攻撃終わり → ガッツへ' }).click({ timeout: 3000 }).catch(() => {});
       } else if (mode === 'guts') await page.getByRole('button', { name: /ターン終了$/ }).click({ timeout: 3000 }).catch(() => {});
       else await page.waitForTimeout(200);
     } catch (e) { await page.waitForTimeout(200); }

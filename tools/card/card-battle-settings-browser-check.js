@@ -200,7 +200,7 @@ const EXTREME = { motion: 'OFF', shake: 'OFF', damageNum: 'OFF', think: 'FAST2',
           fired = true;
           break;
         }
-        if (!fired) await page.getByRole('button', { name: '攻撃おわり → ガッツへ' }).click().catch(() => {});
+        if (!fired) await page.getByRole('button', { name: '攻撃終わり → ガッツへ' }).click().catch(() => {});
         await page.waitForTimeout(250);
         continue;
       }

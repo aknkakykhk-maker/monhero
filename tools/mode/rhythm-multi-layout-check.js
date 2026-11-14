@@ -120,17 +120,17 @@ const overflowing = (page, rootSel) => page.evaluate((sel) => {
       await A.waitForTimeout(rotated ? 900 : 500);
       if (rotated) await A.screenshot({ path: `/tmp/claude-0/shots/X-mode-rot-${w}x${h}.png` }).catch(() => {});
       const out = await overflowing(A, '[data-rhythm-mode-select]');
-      check(`モードえらび ${rotated ? `回転(${w}×${h})` : `${w}×${h}`}: ボタンや入力欄が画面の外へはみ出さない`, out.length === 0, out.join(' / '));
+      check(`モード選び ${rotated ? `回転(${w}×${h})` : `${w}×${h}`}: ボタンや入力欄が画面の外へはみ出さない`, out.length === 0, out.join(' / '));
       // プライベートルームは押すと開くシート。作成・コード・入室がシートに収まる(2026-10-07・2×2のタイルへ組み替えた)
       const tiles = await A.evaluate(() => ['[data-rhythm-mode-solo]', '[data-rhythm-multi-free]', '[data-rhythm-mode-private-open]', '[data-rhythm-mode-ranking]']
         .map((q) => { const el = document.querySelector(q); const r = el && el.getBoundingClientRect(); return { q, ok: !!r && r.width > 40 && r.height > 40 && r.right <= innerWidth + 1 && r.left >= -1 }; })
         .filter((x) => !x.ok).map((x) => x.q));
-      check(`モードえらび ${rotated ? `回転(${w}×${h})` : `${w}×${h}`}: ソロ・フリー・プライベート・ランキングの4つのタイルが画面に収まる`, tiles.length === 0, tiles.join(' / '));
+      check(`モード選び ${rotated ? `回転(${w}×${h})` : `${w}×${h}`}: ソロ・フリー・プライベート・ランキングの4つのタイルが画面に収まる`, tiles.length === 0, tiles.join(' / '));
       // 4つのタイルは、絵と文字の並び方(向き・そろえ)が同じ。プライベートとランキングだけ横画面の指定が抜けて、
       // 文字が絵と重なって左上に寄った(2026-10-07・ユーザー報告「プライベートとランキングの文字位置がおかしい」)
       const flows = await A.evaluate(() => ['[data-rhythm-mode-solo]', '[data-rhythm-multi-free]', '[data-rhythm-mode-private-open]', '[data-rhythm-mode-ranking]']
         .map((q) => { const el = document.querySelector(q); const c = el && getComputedStyle(el); return c ? `${c.flexDirection}/${c.alignItems}` : 'なし'; }));
-      check(`モードえらび ${rotated ? `回転(${w}×${h})` : `${w}×${h}`}: 4つのタイルの絵と文字の並び方がそろっている`, new Set(flows).size === 1 && !flows.includes('なし'), flows.join(' | '));
+      check(`モード選び ${rotated ? `回転(${w}×${h})` : `${w}×${h}`}: 4つのタイルの絵と文字の並び方がそろっている`, new Set(flows).size === 1 && !flows.includes('なし'), flows.join(' | '));
       await A.locator('[data-rhythm-mode-private-open]').click();
       await A.waitForSelector('[data-rhythm-mode-private-sheet]', { timeout: 5000 });
       const box = await A.evaluate(() => {
@@ -140,7 +140,7 @@ const overflowing = (page, rootSel) => page.evaluate((sel) => {
         const bad = [...sec.querySelectorAll('button,input')].filter((el) => { const r = el.getBoundingClientRect(); return r.right > s.right + 1 || r.left < s.left - 1; }).map((el) => el.innerText || 'コード');
         return { ok: bad.length === 0 && s.right <= innerWidth + 1, why: bad.join(' / ') };
       });
-      check(`モードえらび ${rotated ? `回転(${w}×${h})` : `${w}×${h}`}: 「部屋をつくる」・コード・「入室」がプライベートルームのシートに収まる`, box.ok, box.why);
+      check(`モード選び ${rotated ? `回転(${w}×${h})` : `${w}×${h}`}: 「部屋を作る」・コード・「入室」がプライベートルームのシートに収まる`, box.ok, box.why);
       await A.locator('[data-rhythm-mode-private-sheet] button[aria-label="閉じる"]').first().click({ force: true }).catch(() => {});
       await A.waitForTimeout(150);
       const line = await A.evaluate(() => {
@@ -150,7 +150,7 @@ const overflowing = (page, rootSel) => page.evaluate((sel) => {
         const a = p.getBoundingClientRect(); const b = panel.getBoundingClientRect();
         return a.top >= b.top - 1 && a.bottom <= b.bottom + 1 && a.height > 0;
       });
-      check(`モードえらび ${rotated ? `回転(${w}×${h})` : `${w}×${h}`}: 助手の吹き出しが立ち絵の枠の中に出る`, line);
+      check(`モード選び ${rotated ? `回転(${w}×${h})` : `${w}×${h}`}: 助手の吹き出しが立ち絵の枠の中に出る`, line);
       // ★立ち絵とコメントは重ならない(コメントは絵の下に出る。2026-10-04・ユーザー指摘「助手コメントが助手に被ってる」)
       const apart = await A.evaluate(() => {
         const art = document.querySelector('[data-rhythm-mode-assistant-art-box]');
@@ -161,7 +161,7 @@ const overflowing = (page, rootSel) => page.evaluate((sel) => {
         const w = Math.min(a.right, b.right) - Math.max(a.left, b.left); const h = Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top);
         return w > 1 && h > 1 ? `コメントが絵に重なっている(重なり ${Math.round(w)}×${Math.round(h)}px)` : '';
       });
-      check(`モードえらび ${rotated ? `回転(${w}×${h})` : `${w}×${h}`}: 助手のコメントが立ち絵に重ならない`, apart === '', apart);
+      check(`モード選び ${rotated ? `回転(${w}×${h})` : `${w}×${h}`}: 助手のコメントが立ち絵に重ならない`, apart === '', apart);
     }
     // 回転は、端末が縦の大きさのうちに戻す(横の大きさで戻すと、戻ったことにならないことがある)
     await A.setViewportSize({ width: 390, height: 844 });
@@ -211,7 +211,7 @@ const overflowing = (page, rootSel) => page.evaluate((sel) => {
       if (!img || !box) return null; const r = img.getBoundingClientRect(), b = box.getBoundingClientRect();
       return { src: img.getAttribute('src') || '', style: img.getAttribute('style') || '', top: Math.round(r.top - b.top), w: Math.round(r.width), boxW: Math.round(b.width) };
     });
-    check('モードえらび: ももすけの立ち絵は、耳まで枠に入る(広げすぎない・上で切れない)', !!art && /momosuke_/.test(art.src) && art.top >= -8 && art.w <= art.boxW + 2 && /(?:^|[ ;])--mhms-w: 100%/.test(art.style),
+    check('モード選び: ももすけの立ち絵は、耳まで枠に入る(広げすぎない・上で切れない)', !!art && /momosuke_/.test(art.src) && art.top >= -8 && art.w <= art.boxW + 2 && /(?:^|[ ;])--mhms-w: 100%/.test(art.style),
       art ? `${art.src.split('/').pop()} ${art.style.slice(0, 60)}` : '絵が無い');
 
     // ===== ①-2 選曲の画面の「マスモンを呼ぶ」(マスモンを持っている部屋主で) =====
