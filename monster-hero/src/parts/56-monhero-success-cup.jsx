@@ -65,7 +65,7 @@ const monsucLossWhy = (log, meName) => {
   }
   const me = meName || 'こちら';
   if (sulk >= 2 && sulk / Math.max(1, acts) >= 0.15) return `${me}が そっぽを向いて、${sulk}回 技を出さなかった(忠誠が低いと 言うことを聞かない)`;
-  if (stuck >= 2 && stuck / Math.max(1, acts) >= 0.15) return `技の届かない間合いに いることが多く、${stuck}回 動くだけで 番が終わった`;
+  if (stuck >= 2 && stuck / Math.max(1, acts) >= 0.15) return `技の届く間合いへ動くのに ${stuck}回 番を使って、そのあいだ 技を撃てなかった`;
   const foeAll = Object.values(foe).reduce((x, y) => x + y, 0);
   if (foeAll > 0 && foeAll <= 5) return `相手の技が重く、${foeAll}回 受けただけで 倒れた`;
   if (tries <= 2) return `技を ${tries}回しか 撃てなかった`;
