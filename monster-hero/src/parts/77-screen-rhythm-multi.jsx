@@ -3704,8 +3704,11 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
         ? { top: Math.max(0, vv.offsetTop || 0), left: Math.max(0, vv.offsetLeft || 0), width: vv.width, height: vv.height } : null);
     };
     update();
-    vv.addEventListener('resize', update); vv.addEventListener('scroll', update);
-    return () => { vv.removeEventListener('resize', update); vv.removeEventListener('scroll', update); };
+    // 見える範囲が変わったら、いちばん新しい発言が見えるよう、やりとりを下までずらす
+    const toBottom = () => requestAnimationFrame(() => { const l = document.querySelector('[data-rhythm-multi-chat-list]'); if (l) l.scrollTop = l.scrollHeight; });
+    const onResize = () => { update(); toBottom(); };
+    vv.addEventListener('resize', onResize); vv.addEventListener('scroll', update);
+    return () => { vv.removeEventListener('resize', onResize); vv.removeEventListener('scroll', update); };
   }, [chatOpen]);
   // 「フレンドに送る」: 押すとゲームが開いてこの部屋に入れるリンクを送る(2026-11-11)。コードも添える(ホーム画面のアプリでは、コードを打って入れる)
   const shareCode = async () => {
@@ -3924,7 +3927,7 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
   const askBuddy = view ? (view.myCpus || []).map((c) => view.members.find((m) => m.id === c.id)).find((m) => m && !m.as) : null;
   const askBuddyName = askBuddy ? (askBuddy.name || 'マスモン') : '';
   const chatSheet = chatOpen && view && (
-    <div data-rhythm-multi-chat-layer {...(chatVV ? { 'data-kb': '1' } : {})} className="absolute inset-0 z-[80000]" style={chatVV ? { position: 'fixed', top: chatVV.top, left: chatVV.left, width: chatVV.width, height: chatVV.height, right: 'auto', bottom: 'auto' } : undefined}>
+    <div data-rhythm-multi-chat-layer {...(chatVV ? { 'data-kb': '1', ...(chatVV.height < 420 ? { 'data-kb-small': '1' } : {}) } : {})} className="absolute inset-0 z-[80000]" style={chatVV ? { position: 'fixed', top: chatVV.top, left: chatVV.left, width: chatVV.width, height: chatVV.height, right: 'auto', bottom: 'auto' } : undefined}>
       <button type="button" aria-label="チャットを閉じる" className="absolute inset-0 bg-slate-950/55" onClick={() => setChatOpen(false)} />
       <div data-rhythm-multi-chat-sheet style={chatVV ? { height: '100%', maxHeight: '100%', borderRadius: 0 } : undefined} className="absolute inset-x-0 bottom-0 flex h-[80%] flex-col rounded-t-2xl border-t border-cyan-400/40 bg-slate-900 p-2.5 shadow-2xl landscape:inset-y-0 [[data-mh-view-rotation=true]_&]:inset-y-0 landscape:left-auto [[data-mh-view-rotation=true]_&]:left-auto landscape:right-0 [[data-mh-view-rotation=true]_&]:right-0 landscape:h-full [[data-mh-view-rotation=true]_&]:h-full landscape:w-[50%] [[data-mh-view-rotation=true]_&]:w-[50%] landscape:rounded-none [[data-mh-view-rotation=true]_&]:rounded-none landscape:rounded-l-2xl [[data-mh-view-rotation=true]_&]:rounded-l-2xl landscape:border-l [[data-mh-view-rotation=true]_&]:border-l landscape:border-t-0 [[data-mh-view-rotation=true]_&]:border-t-0 landscape:pt-[calc(.6rem+var(--mh-sa-top))] [[data-mh-view-rotation=true]_&]:pt-[calc(.6rem+var(--mh-sa-top))]" style={{ paddingBottom: 'calc(.6rem + var(--mh-sa-bottom))' }}>
         <RhythmMultiChatPanel view={view} phase={room ? room.phase : ''} members={view.members} resolveIconUrl={resolveIconUrl} onClose={() => setChatOpen(false)} askName={askBuddyName} talkTip={!talkTipSeen && askBuddyName ? askBuddyName : ''} onTalkTipClose={closeTalkTip} />
@@ -4297,9 +4300,9 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
                 <div className="landscape:hidden">{buddyCallButton()}</div>
                 {/* 招待の部屋は、開いたままほかの画面へ出られる(2026-10-29 社長・案A)。相手が来たら上の帯(RhythmMultiAwayBar)で知らせる */}
                 {/* 横・🔄横では、出る2つを横に並べて右の欄に収める(2026-11-07 ミハリ B1「開いたときは画面の外で、なでられると分からない」) */}
-                <div data-rhythm-multi-exit-row className="space-y-2 landscape:grid landscape:grid-flow-col landscape:auto-cols-fr landscape:gap-2 landscape:space-y-0">
+                <div data-rhythm-multi-exit-row className="space-y-2 landscape:grid landscape:grid-cols-2 landscape:gap-2 landscape:space-y-0">
                 {view && rankingWideButton('w-full')}
-                {view && !publicRoom && !view.full && onStepAway && <button data-rhythm-multi-step-away type="button" className={`${btn} w-full bg-cyan-800`} style={JA_WRAP_STYLE} onClick={onStepAway}>{jaWrap('部屋はそのままで、ほかの画面へ')}</button>}
+                {view && !publicRoom && !view.full && onStepAway && <button data-rhythm-multi-step-away type="button" className={`${btn} w-full bg-cyan-800 landscape:order-first landscape:col-span-2`} style={JA_WRAP_STYLE} onClick={onStepAway}>{jaWrap('部屋はそのままで、ほかの画面へ')}</button>}
                 <button data-rhythm-multi-leave type="button" className={`${btn} w-full bg-slate-700`} onClick={leaveRoomAfterTap}>{view ? 'ルームを出る' : 'やめる'}</button>
                 </div>
                 {message && <p className="text-[12px] font-black text-rose-300">{message}</p>}

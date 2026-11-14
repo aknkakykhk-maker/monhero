@@ -138,6 +138,14 @@ const MEASURE = () => {
       await page.waitForSelector('[data-rhythm-multi-step="matching"]', { timeout: 30000 });
       await page.waitForTimeout(1500);
       await shoot('マルチ・待ち');
+      // 「部屋はそのままで、ほかの画面へ」が言葉の途中で折れない(窓口の確認 2026-11-15。「そのまま/で」と折れていた)
+      const stepAway = await page.evaluate(() => {
+        const b = document.querySelector('[data-rhythm-multi-step-away]'); if (!b || !b.offsetParent) return '';
+        const out = []; const walker = document.createTreeWalker(b, NodeFilter.SHOW_TEXT); let n;
+        while ((n = walker.nextNode())) { const t = (n.textContent || '').trim(); if (!t) continue; const r = document.createRange(); r.selectNodeContents(n); const tops = new Set([...r.getClientRects()].filter((q) => q.width > 0).map((q) => Math.round(q.top / 4))); if (tops.size > 1 && /^(部屋はそのままで、|ほかの画面へ)$/.test(t)) out.push(`「${t}」${tops.size}行`); }
+        return out.join(' / ');
+      });
+      check(`${name}: 「部屋はそのままで、ほかの画面へ」が言葉の途中で折れない`, !stepAway, stepAway);
       await page.evaluate(() => { for (const id of ['erubin', 'kiki', 'momosuke']) { const who = assistantById(id); RHYTHM_MULTI.summon({ masuId: `as:${id}`, assistantId: id, name: who ? who.name : id, level: 1, baseId: '', colors: null }); } });
       await page.waitForTimeout(2500);
       await page.evaluate(() => document.querySelector('[data-rhythm-multi-confirm]')?.click());
@@ -199,7 +207,11 @@ const MEASURE = () => {
           const bad = [];
           const inside = (n, r) => { if (r && (r.top < vt - 1 || r.bottom > vt + vh + 1)) bad.push(`${n}が見える範囲(${vt}〜${vt + vh})の外(${Math.round(r.top)}〜${Math.round(r.bottom)})`); };
           inside('板', sheet); inside('閉じる', close); inside('やりとり', list); inside('入力欄', input);
-          if (list && list.height < 48) bad.push(`やりとりが低すぎる(${Math.round(list.height)}px)`);
+          // いちばん新しい発言(吹き出し)が、欠けずに全部見える(下までずらした位置で。2026-11-15 窓口の確認)
+          const ul = document.querySelector('[data-rhythm-multi-chat-list]'); const lines = ul ? [...ul.querySelectorAll('[data-rhythm-multi-chat-line]')] : [];
+          const last = lines[lines.length - 1];
+          if (ul && last) { ul.scrollTop = ul.scrollHeight; const lr = ul.getBoundingClientRect(); const br = last.getBoundingClientRect(); if (br.top < lr.top - 1 || br.bottom > lr.bottom + 1) bad.push(`いちばん新しい発言が欠ける(やりとり${Math.round(lr.height)}px・発言${Math.round(br.height)}px)`); }
+          if (list && list.height < 84) bad.push(`やりとりが低すぎる(${Math.round(list.height)}px。吹き出し1つが入る高さ)`);
           return bad.join(' / ');
         }, [kbH, kbTop]);
         check(`${name}: チャットに文字を打つとき、見出し・やりとり・入力欄が見える範囲に収まる`, !kb, kb);

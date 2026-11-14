@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9352b2ef7e6410c4
+// source-sha256: d3248b5dd258b2f5
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -99429,10 +99429,18 @@ function RhythmMultiScreenBody({
       } : null);
     };
     update();
-    vv.addEventListener('resize', update);
+    const toBottom = () => requestAnimationFrame(() => {
+      const l = document.querySelector('[data-rhythm-multi-chat-list]');
+      if (l) l.scrollTop = l.scrollHeight;
+    });
+    const onResize = () => {
+      update();
+      toBottom();
+    };
+    vv.addEventListener('resize', onResize);
     vv.addEventListener('scroll', update);
     return () => {
-      vv.removeEventListener('resize', update);
+      vv.removeEventListener('resize', onResize);
       vv.removeEventListener('scroll', update);
     };
   }, [chatOpen]);
@@ -99739,7 +99747,10 @@ function RhythmMultiScreenBody({
   const chatSheet = chatOpen && view && React.createElement("div", _extends({
     "data-rhythm-multi-chat-layer": true
   }, chatVV ? {
-    'data-kb': '1'
+    'data-kb': '1',
+    ...(chatVV.height < 420 ? {
+      'data-kb-small': '1'
+    } : {})
   } : {}, {
     className: "absolute inset-0 z-[80000]",
     style: chatVV ? {
@@ -100603,11 +100614,11 @@ function RhythmMultiScreenBody({
       className: "landscape:hidden"
     }, buddyCallButton()), React.createElement("div", {
       "data-rhythm-multi-exit-row": true,
-      className: "space-y-2 landscape:grid landscape:grid-flow-col landscape:auto-cols-fr landscape:gap-2 landscape:space-y-0"
+      className: "space-y-2 landscape:grid landscape:grid-cols-2 landscape:gap-2 landscape:space-y-0"
     }, view && rankingWideButton('w-full'), view && !publicRoom && !view.full && onStepAway && React.createElement("button", {
       "data-rhythm-multi-step-away": true,
       type: "button",
-      className: `${btn} w-full bg-cyan-800`,
+      className: `${btn} w-full bg-cyan-800 landscape:order-first landscape:col-span-2`,
       style: JA_WRAP_STYLE,
       onClick: onStepAway
     }, jaWrap('部屋はそのままで、ほかの画面へ')), React.createElement("button", {
