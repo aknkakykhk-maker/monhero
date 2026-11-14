@@ -46,8 +46,8 @@
   // ---- 大会(期末の強制大会・芯の FORCED) ----
   add({ id: 'debut', group: 'cup', name: 'はじめの一歩', how: 'デビュー戦に1回目で勝つ', reward: '人気 +3・能力ポイント +5', match: 'はじめの一歩' });
   add({ id: 'debut-late', group: 'cup', name: '遅咲きの一歩', how: 'デビュー戦に負けたあと、再挑戦で勝つ', reward: '人気 +3・能力ポイント +5', match: '遅咲きの一歩' });
-  add({ id: 'junior', group: 'cup', name: 'ジュニアの星', how: 'ジュニアしめくくり杯で優勝する', reward: '全能力 +2・能力ポイント +5・人気 +2', match: 'ジュニアの星' });
-  add({ id: 'middle', group: 'cup', name: 'ミドルの星', how: 'ミドルしめくくり杯で優勝する', reward: '全能力 +3・能力ポイント +10・人気 +4', match: 'ミドルの星', rare: 2 });
+  add({ id: 'junior', group: 'cup', name: 'ジュニアの星', how: 'ジュニア期の終わりのヒーローズリーグで優勝する', reward: '全能力 +2・能力ポイント +5・人気 +2', match: 'ジュニアの星' });
+  add({ id: 'middle', group: 'cup', name: 'ミドルの星', how: 'ミドル期の終わりのヒーローズリーグで優勝する', reward: '全能力 +3・能力ポイント +10・人気 +4', match: 'ミドルの星', rare: 2 });
 
   // ---- ★★★ の大会(TOURNAMENT §8: 系統ごと。芯はまだ積んでいない) ----
   const STAR3 = [
@@ -63,7 +63,7 @@
   Object.keys(SC_CUP).forEach(aid => add({ id: `sc-${aid}`, group: 'cup', name: `${SC_CUP[aid]}の優勝`, how: `${ASSIST_NAMES[aid]}のシナリオの「${SC_CUP[aid]}」(★★★)で優勝する`, match: `${SC_CUP[aid]}の優勝`, aid, rare: 2 }));
 
   // ---- 👑(ヒーロー記念) ----
-  add({ id: 'crown-winter', group: 'crown', name: '冬のヒーロー記念の覇者', how: 'プロ期の終わりの「冬のヒーロー記念」で優勝する', reward: '全能力 +4・能力ポイント +20・人気 +8', match: 'ヒーロー記念', rare: 3 });
+  add({ id: 'crown-winter', group: 'crown', name: '冬のヒーロー記念の覇者', how: 'プロ期の終わりのヒーローズリーグで優勝する', reward: '全能力 +4・能力ポイント +20・人気 +8', match: 'ヒーロー記念', rare: 3 });
   add({ id: 'crown-summer', group: 'crown', name: '夏のヒーロー記念の覇者', how: '「夏のヒーロー記念」で優勝する', rare: 3 });
 
   // ---- 制覇(TOURNAMENT §8。芯はまだ積んでいない) ----
@@ -77,8 +77,8 @@
 
   // ---- ライバル(芯の RIVAL) ----
   // 大会の第2版(2026-11-13)
-  add({ id: 'derby', group: 'cup', name: '若き挑戦者', how: 'ジュニア期の大一番「ルーキーズ・クラウン」で優勝する', reward: '体力の最大値 +15・能力ポイント +15・人気 +6', match: '若き挑戦者', rare: 3 });
-  add({ id: 'four-done', group: 'conquer', name: '四大の覇者', how: '四大大会(暁の大杯・蒼天杯・獅子王杯・天頂杯)を4つとも優勝する', reward: '全能力 +15・能力ポイント +40・人気 +15', match: '四大の覇者', rare: 3 });
+  add({ id: 'derby', group: 'cup', name: '若き挑戦者', how: 'ジュニア期の大一番「モンスターダービー」で優勝する', reward: '体力の最大値 +15・能力ポイント +15・人気 +6', match: '若き挑戦者', rare: 3 });
+  add({ id: 'four-done', group: 'conquer', name: '四大の覇者', how: '四大大会(グレイテスト4・M-1グランプリ・ウィナーズ杯・ワールドモンスターズ杯)を4つとも優勝する', reward: '全能力 +15・能力ポイント +40・人気 +15', match: '四大の覇者', rare: 3 });
   add({ id: 'rival', group: 'rival', name: 'ライバルに勝った', how: 'ライバルが出ている大会で優勝する', reward: '全能力 +12・賞金 1.5倍・修行チケット +1', match: 'ライバルに勝った', rare: 2 });
 
   // ---- 助手のお話(芯: '<aid>:お話の結末(いい結末)' / '(ほろ苦い結末)') ----

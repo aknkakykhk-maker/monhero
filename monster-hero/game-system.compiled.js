@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c64aac195cb717d1
+// source-sha256: 36f069d277a23f37
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -157160,7 +157160,7 @@ const MSX_STORIES = Object.freeze([Object.freeze({
   badge: '頂への道',
   lead: ['町の育成場で、きみと1体のモンスターの物語が始まる', '大会で勝ち、修行で技を覚え、仲間と強くなろう。', 'めざすは頂への道——ヒーローと呼ばれる日まで。'],
   about: 'デビュー戦から始まり、ジュニア・ミドル・プロの3つの期を経て、最後は「頂への道」に挑む、モンヒロサクセスのいちばん最初のお話。',
-  rows: Object.freeze([['📅', '流れ', 'デビュー期 → ジュニア期 → ミドル期 → プロ期 → 頂への道(3戦)'], ['🏆', '大会', 'ルーキーズ・クラウン/四大大会/季節の賞 ほか。賞金ランクは ルーキー〜ヒーローの10段'], ['👥', '登場人物', '助手(いまはみゅあ)・イッサ博士・ライバルたち'], ['🎯', 'めざすもの', '頂への道の決勝に勝って「ヒーロー」に。']]),
+  rows: Object.freeze([['📅', '流れ', 'デビュー期 → ジュニア期 → ミドル期 → プロ期 → 頂への道(3戦)'], ['🏆', '大会', 'モンスターダービー/四大大会/季節の賞 ほか。賞金ランクは ルーキー〜ヒーローの10段'], ['👥', '登場人物', '助手(いまはみゅあ)・イッサ博士・ライバルたち'], ['🎯', 'めざすもの', '頂への道の決勝に勝って「ヒーロー」に。']]),
   cast: Object.freeze({
     left: 'issa',
     center: 'mua',
@@ -169588,7 +169588,8 @@ const MSX_R3_CUP_GRADE = Object.freeze({
   rainbow: '特別'
 });
 const msxR3Stars = n => n >= 4 ? '👑' : '★'.repeat(Math.max(1, n || 1));
-const msxR3CupName = sys => {
+const msxR3CupName = (sys, own) => {
+  if (own && own !== sys) return own;
   const S0 = msxSuc && msxSuc.SUC;
   if (S0 && S0.EX_BY_SYS && S0.EX_BY_SYS[sys]) return S0.EX_BY_SYS[sys].name;
   const names = typeof window !== 'undefined' && window.MONSUC_REGULAR_CUPS ? window.MONSUC_REGULAR_CUPS : {};
@@ -169601,7 +169602,7 @@ const msxR3CupName = sys => {
 const msxR3BattleName = (SUC, b) => {
   if (!b) return '';
   if (b.kind === 'summit') return (SUC.SUMMIT[b.round] || {}).name || '頂への道';
-  if (b.kind === 'cup') return `${msxR3CupName(b.sys)} ${msxR3Stars(b.star)}`;
+  if (b.kind === 'cup') return `${msxR3CupName(b.sys, b.name)} ${msxR3Stars(b.star)}`;
   return (SUC.FORCED[b.kind] || {}).name || '大会';
 };
 const msxR3BattleIcon = b => !b ? '🏆' : b.kind === 'cup' ? MSX_R3_CUP_ICON[b.sys] || '🏆' : b.kind === 'summit' ? '🗻' : b.kind === 'debut' ? '🎀' : b.kind === 'pro' ? '👑' : '🏆';
@@ -170317,7 +170318,7 @@ function MsxR3Cup({
       r3skip: skip ? true : undefined,
       log: [...(run.log || []), {
         turn: s.turn,
-        t: `${msxR3CupName(cur.sys)}に出た`
+        t: `${msxR3CupName(cur.sys, cur.name)}に出た`
       }].slice(-20)
     };
     onActed(next);
@@ -170331,7 +170332,7 @@ function MsxR3Cup({
   }, []);
   const nOk = cupsNow.filter(c => c.entry && c.entry.ok).length;
   const openLine = msxR3Line('turn.cup.open', run, {
-    cup: cur ? msxR3CupName(cur.sys) : ''
+    cup: cur ? msxR3CupName(cur.sys, cur.name) : ''
   }, nOk ? `「今月は ${nOk}つ 出られるよ! 出ると1ターン使うから、トレーニングとどっちにするか考えてね」` : '「今月は出られる大会がないみたい。トレーニングでじっくり力をつけよ!」');
   const rankStep = typeof SUC.rankStepOf === 'function' ? SUC.rankStepOf(s) : 0;
   const rank = rankStep ? {
@@ -170426,7 +170427,7 @@ function MsxR3Cup({
       className: "cs"
     }, msxR3Stars(c.star)), c.done ? React.createElement("span", {
       className: "dn"
-    }, "優勝済") : null), React.createElement("b", null, c.scenario ? c.name : msxR3CupName(c.sys)), !(c.entry && c.entry.ok) ? React.createElement("span", {
+    }, "優勝済") : null), React.createElement("b", null, c.scenario ? c.name : msxR3CupName(c.sys, c.name)), !(c.entry && c.entry.ok) ? React.createElement("span", {
       className: "why"
     }, "✖ ", msxR3WhyText(c.entry, s)) : null, React.createElement("span", {
       className: "g"
@@ -170468,7 +170469,7 @@ function MsxR3Cup({
     className: `sign g-${wc.grade || 'n'}`
   }, React.createElement("span", {
     className: "e"
-  }, wc.scenario ? '📖' : MSX_R3_CUP_ICON[wc.sys] || '🏆'), React.createElement("b", null, wc.scenario ? wc.name : msxR3CupName(wc.sys)), React.createElement("small", null, kindOf(wc), " ", msxR3Stars(wc.star))), React.createElement("div", {
+  }, wc.scenario ? '📖' : MSX_R3_CUP_ICON[wc.sys] || '🏆'), React.createElement("b", null, wc.scenario ? wc.name : msxR3CupName(wc.sys, wc.name)), React.createElement("small", null, kindOf(wc), " ", msxR3Stars(wc.star))), React.createElement("div", {
     className: "sub"
   }, "獲得物"), React.createElement(MsxR3PrizeBox, {
     prizes: msxR3Prizes(SUC, wc),
@@ -170499,7 +170500,7 @@ function MsxR3Cup({
           out: null,
           log: [...(run.log || []), {
             turn: s.turn,
-            t: `${msxR3CupName(wc.sys)}に出た`
+            t: `${msxR3CupName(wc.sys, wc.name)}に出た`
           }].slice(-20)
         });
       }
@@ -171708,7 +171709,7 @@ function MsxR3Battle({
   const foeName = opp.name || msxMonName(opp.species);
   const introKey = `${s.turn}|${b.kind}|${b.round || 0}`;
   if (!st3 && step === 'bracket' && introSeen !== introKey && !run.r3skip) {
-    const title = b.kind === 'cup' ? msxR3CupName(b.sys) : name;
+    const title = b.kind === 'cup' ? msxR3CupName(b.sys, b.name) : name;
     return React.createElement(MsxR3Frame, {
       run: run,
       back: "中断",
@@ -171743,7 +171744,7 @@ function MsxR3Battle({
           name: run.nick || msxMonName(s.species),
           colors: Array.isArray(run.colors) ? run.colors : null
         },
-        title: b.kind === 'cup' ? msxR3CupName(b.sys) : name,
+        title: b.kind === 'cup' ? msxR3CupName(b.sys, b.name) : name,
         opp: {
           loy: opp.loy,
           pop: opp.pop
