@@ -676,7 +676,7 @@ function RhythmBuddyListSheet({ tab, settings, onChange, onTab, onClose }) {
   const toggle = (list, id) => (list.includes(id) ? list.filter((x) => x !== id) : [...list, id]);
   const lineages = typeof dexMainLineages === 'function' ? dexMainLineages() : [];
   return (
-    <div data-rhythm-buddy-list-sheet className="fixed inset-0 z-[87000] flex flex-col" style={{ backgroundColor: 'rgba(2,6,23,0.98)', paddingTop: 'env(safe-area-inset-top)' }}>
+    <div data-rhythm-buddy-list-sheet className="fixed inset-0 z-[87000] flex flex-col" style={{ backgroundColor: 'rgba(2,6,23,0.98)', paddingTop: 'var(--mh-sa-top)' }}>
       <div className="flex shrink-0 items-center gap-2 border-b border-white/10 p-4">
         <h3 className="flex-1 text-base font-black text-white">並べ替え・しぼりこみ</h3>
         <button type="button" aria-label="閉じる" onClick={onClose} className="min-h-[44px] min-w-[44px] rounded-full bg-white/5 text-lg font-black">✕</button>

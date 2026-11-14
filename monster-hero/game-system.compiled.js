@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9115e710162092c1
+// source-sha256: 3874d1b526399c32
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -38328,7 +38328,7 @@ const RhythmSongSelect = ({
     className: "fixed right-3 top-3 min-h-[48px] rounded-xl bg-slate-800/90 px-4 text-sm font-black text-white",
     style: {
       position: 'fixed',
-      top: 'max(12px, env(safe-area-inset-top))',
+      top: 'max(12px, var(--mh-sa-top))',
       right: 12,
       minHeight: '48px'
     }
@@ -38622,7 +38622,7 @@ const RhythmHellGuide = ({
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      padding: '12px calc(16px + env(safe-area-inset-right)) 12px calc(16px + env(safe-area-inset-left))',
+      padding: '12px calc(16px + var(--mh-sa-right)) 12px calc(16px + var(--mh-sa-left))',
       background: 'radial-gradient(ellipse at center,rgba(30,27,75,.96),rgba(2,6,23,.98) 72%)'
     }
   }, React.createElement("section", {
@@ -61443,7 +61443,7 @@ function MultiStampEditor({
   }, React.createElement("div", {
     className: "flex max-h-[96dvh] [[data-mh-view-rotation=true]_&]:max-h-[94vw] w-full max-w-[880px] flex-col overflow-hidden rounded-t-2xl border-t-2 border-cyan-400 bg-slate-950 text-white landscape:rounded-2xl landscape:border-2",
     style: {
-      paddingBottom: 'max(8px, env(safe-area-inset-bottom))'
+      paddingBottom: 'max(8px, var(--mh-sa-bottom))'
     },
     onClick: e => e.stopPropagation()
   }, React.createElement("div", {
@@ -96671,7 +96671,7 @@ function MultiAwayBar({
   return React.createElement("div", {
     "data-multi-away-bar": hot ? 'hot' : 'wait',
     "data-multi-away-game": game,
-    className: "pointer-events-none fixed inset-x-0 top-0 z-[1000] flex justify-center px-2 pt-[max(env(safe-area-inset-top),6px)]"
+    className: "pointer-events-none fixed inset-x-0 top-0 z-[1000] flex justify-center px-2 pt-[max(var(--mh-sa-top),6px)]"
   }, React.createElement("div", {
     className: `pointer-events-auto flex w-full max-w-[420px] items-center gap-2 rounded-2xl border px-3 py-1.5 text-white shadow-lg ${hot ? 'border-amber-200/80 bg-fuchsia-800/95' : 'border-cyan-300/50 bg-slate-900/95'}`
   }, React.createElement("span", {
@@ -98045,8 +98045,8 @@ function RhythmWatchScreen({
     "data-rhythm-watch-phase": v.phase,
     className: "fixed inset-0 z-[95000] flex flex-col bg-slate-950 text-white",
     style: {
-      paddingTop: 'max(env(safe-area-inset-top), 6px)',
-      paddingBottom: 'max(env(safe-area-inset-bottom), 6px)'
+      paddingTop: 'max(var(--mh-sa-top), 6px)',
+      paddingBottom: 'max(var(--mh-sa-bottom), 6px)'
     }
   }, React.createElement("style", null, '@keyframes mhWatchPop{0%{opacity:0;transform:translateY(8px)}15%{opacity:1;transform:none}85%{opacity:1}100%{opacity:0}}'), React.createElement("header", {
     className: "flex shrink-0 items-center gap-2 px-3"
@@ -101903,7 +101903,7 @@ function RhythmBuddyListSheet({
     className: "fixed inset-0 z-[87000] flex flex-col",
     style: {
       backgroundColor: 'rgba(2,6,23,0.98)',
-      paddingTop: 'env(safe-area-inset-top)'
+      paddingTop: 'var(--mh-sa-top)'
     }
   }, React.createElement("div", {
     className: "flex shrink-0 items-center gap-2 border-b border-white/10 p-4"
