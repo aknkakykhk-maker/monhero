@@ -118,7 +118,7 @@
   // ---- 編成・親密度 ----
   add({ id: 'kaketsuke', icon: '📯', name: '得意率アップ', type: 'self', scene: 'team', unit: 1, max: 20, pt: 4, u: '点', v2: [4, 8, 12, 16, 20], text: 'この子が得意なトレーニングに来やすくなる(得意率 +{v}点・90%まで)' });
   add({ id: 'shutsugen', icon: '🚪', name: 'トレーニング出現率アップ', type: 'self', scene: 'team', unit: 1, max: 15, pt: 3, u: '点', text: 'この子がトレーニングに来ない率が{v}点下がる(はじめは15%)' });
-  add({ id: 'shuugou', icon: '🧲', name: '集合率アップ', type: 'stay', scene: 'team', unit: 2, max: 10, pt: 6, u: '%', text: '編成にいるだけで、ほかのモンスターがいちばん集まっているトレーニングへ移る確率 +{v}%' });
+  add({ id: 'shuugou', icon: '🧲', name: '集合率アップ', type: 'stay', scene: 'team', unit: 2, max: 15, pt: 6, u: '%', text: '編成にいるだけで、ほかのモンスターがいちばん集まっているトレーニングへ移る確率 +{v}%' });
   add({ id: 'shitashi', icon: '🌱', name: '初期親密度アップ', type: 'self', scene: 'team', unit: 1, max: 25, pt: 2, u: '', v2: [5, 10, 15, 20, 25], text: 'この子のはじめの親密度が +{v}' });
   add({ id: 'tagpow', icon: '⚡', name: '応援効果アップ', type: 'with', scene: 'team', unit: 1, max: 15, pt: 5, u: '%', v2: [3, 6, 9, 12, 15], text: 'この子が友情タッグになったとき、タッグの強さが +{v}%' });
   add({ id: 'hitonatsu', icon: '🤝', name: '人なつっこさ', ref: false, type: 'stay', scene: 'team', base: 1, unit: 0.05, max: 10, pt: 7, u: '倍', v2: [1.1, 1.2, 1.3, 1.4, 1.5],
