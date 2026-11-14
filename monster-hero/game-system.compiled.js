@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 2406aa86e62b4d8c
+// source-sha256: e466ad9e85d70e48
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -113993,6 +113993,7 @@ function AssistantLifeRoom({
     const n = Number((String(t[1] || '').match(/^(\d+)人で/) || [])[1]) || 0;
     const ml = [...assistantLifeName(id)].length * 10 + 20;
     const names = t[2] ? assistantLifeTagNames(t[2], Math.floor((w - 6 - ml - 10) / (v2 ? 10.8 : 8.8))) : null;
+    const tagLand = typeof window !== 'undefined' && window.innerWidth > window.innerHeight;
     const tagFit = assistantLifeTagFit(t[0], w - 26, 10.5, 0);
     const short = [...String(t[0])].length <= 9;
     return React.createElement("span", {
@@ -114012,7 +114013,7 @@ function AssistantLifeRoom({
     }, React.createElement(AssistantLifeNames, {
       text: names
     })), React.createElement("b", {
-      style: w < 150 ? tagFit >= 10.5 ? {
+      style: w < 150 && !tagLand ? tagFit >= 10.5 ? {
         whiteSpace: 'nowrap',
         fontSize: 10.5
       } : {
@@ -114023,7 +114024,7 @@ function AssistantLifeRoom({
     }, v2 && w >= 150 ? React.createElement("span", {
       "data-assistant-life-room-out": true,
       className: "mr-1 rounded bg-slate-600 px-1 text-white"
-    }, "留守") : null, w < 150 && tagFit < 10.5 ? assistantLifeTagChunks(t[0]) : t[0], React.createElement("i", {
+    }, "留守") : null, w < 150 && !tagLand && tagFit < 10.5 ? assistantLifeTagChunks(t[0]) : t[0], React.createElement("i", {
       "data-assistant-life-room-tag-short": true
     }, n > 1 && short ? `・${n}人` : '', mark ? ` ${[...t[1]][0]}` : '')));
   })(), !met && React.createElement("span", {
