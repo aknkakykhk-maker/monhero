@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 60d8e48056c61f95
+// generated-sha256: 35f970063e2dc6ec
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -87190,9 +87190,10 @@ function MsxTechIcon({ kind, rank, size = 28, uid = '' }) {
       <defs><linearGradient id={gid} x1="0" y1="0" x2="1" y2="1">{stops.map(([o, c]) => <stop key={o} offset={o} stopColor={c}/>)}</linearGradient></defs>
       {kind === 'wise' ? (
         <g fill={`url(#${gid})`} stroke={ink} strokeWidth="1.3" strokeLinejoin="round">
-          <path d="M6.2 2.6h10.6a1.8 1.8 0 0 1 1.8 1.8v14.6a1.8 1.8 0 0 1-1.8 1.8H6.2a1.8 1.8 0 0 1-1.8-1.8V4.4a1.8 1.8 0 0 1 1.8-1.8z"/>
-          <path d="M8.4 2.6v17.4" fill="none"/>
-          <path d="M11.2 7.4h4.6M11.2 10.6h4.6M11.2 13.8h3" fill="none" strokeLinecap="round"/>
+          <path d="M12 6.6C9.6 4.6 6 4.1 2.2 5v12.6c3.8-.9 7.4-.4 9.8 1.6z"/>
+          <path d="M12 6.6c2.4-2 6-2.5 9.8-1.6v12.6c-3.8-.9-7.4-.4-9.8 1.6z"/>
+          <path d="M12 6.6v12.6M2.2 19.6c3.8-.9 7.4-.4 9.8 1.6 2.4-2 6-2.5 9.8-1.6" fill="none" strokeLinecap="round"/>
+          <path d="M4.6 8.4c2-.3 4 0 5.6.9M4.6 11.4c2-.3 4 0 5.6.9M19.4 8.4c-2-.3-4 0-5.6.9M19.4 11.4c-2-.3-4 0-5.6.9" fill="none" strokeLinecap="round" strokeWidth="1"/>
         </g>
       ) : (
         <g fill={`url(#${gid})`} stroke={ink} strokeWidth="1.3" strokeLinejoin="round" transform="rotate(45 12 12)">

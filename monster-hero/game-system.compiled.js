@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: dbd97d3dadc232aa
+// source-sha256: 5ff75f97b86d203a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -166974,14 +166974,18 @@ function MsxTechIcon({
     strokeWidth: "1.3",
     strokeLinejoin: "round"
   }, React.createElement("path", {
-    d: "M6.2 2.6h10.6a1.8 1.8 0 0 1 1.8 1.8v14.6a1.8 1.8 0 0 1-1.8 1.8H6.2a1.8 1.8 0 0 1-1.8-1.8V4.4a1.8 1.8 0 0 1 1.8-1.8z"
+    d: "M12 6.6C9.6 4.6 6 4.1 2.2 5v12.6c3.8-.9 7.4-.4 9.8 1.6z"
   }), React.createElement("path", {
-    d: "M8.4 2.6v17.4",
-    fill: "none"
+    d: "M12 6.6c2.4-2 6-2.5 9.8-1.6v12.6c-3.8-.9-7.4-.4-9.8 1.6z"
   }), React.createElement("path", {
-    d: "M11.2 7.4h4.6M11.2 10.6h4.6M11.2 13.8h3",
+    d: "M12 6.6v12.6M2.2 19.6c3.8-.9 7.4-.4 9.8 1.6 2.4-2 6-2.5 9.8-1.6",
     fill: "none",
     strokeLinecap: "round"
+  }), React.createElement("path", {
+    d: "M4.6 8.4c2-.3 4 0 5.6.9M4.6 11.4c2-.3 4 0 5.6.9M19.4 8.4c-2-.3-4 0-5.6.9M19.4 11.4c-2-.3-4 0-5.6.9",
+    fill: "none",
+    strokeLinecap: "round",
+    strokeWidth: "1"
   })) : React.createElement("g", {
     fill: `url(#${gid})`,
     stroke: ink,
