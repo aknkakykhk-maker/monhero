@@ -139,7 +139,7 @@ ok(EV.buffs(s).every(b => b.icon && b.name), '画面の印(buffs)に絵文字と
     // pickA は X を通すので、出来事の中の when / pickA を直接呼ぶ代わりに、pick までの流れで見る
     const tryKin = (s) => { const p = { ...s, ev: { ...(s.ev || {}), pend: { id: 'ev.team.kin', slot: 'after', turn: s.turn, cheer: 0 } } }; return EV.pick(p, 'a'); };
     const r = tryKin(withLast([0]));
-    ok(r.out.ok && r.out.delta.items && r.out.delta.items[0] === 'fruit_life' && r.state.bag.fruit_life === 1, 'モッチー系のおすそわけで いのちの実 が持ち物に入らない');
+    ok(r.out.ok && r.out.delta.items && r.out.delta.items[0] === 'fruit_life' && r.state.bag.fruit_life === 1, 'モッチー系のおすそわけで 命の実 が持ち物に入らない');
     const rb = (() => { const s = withLast([0]); return EV.pick({ ...s, ev: { ...(s.ev || {}), pend: { id: 'ev.team.kin', slot: 'after', turn: s.turn, cheer: 0 } } }, 'b'); })();
     ok(rb.out.ok && !(rb.out.delta.items) && Object.keys(rb.out.delta.stats).length > 0, 'おすそわけの b(いっしょに練習)で能力が上がらない');
     // 起きる条件: 来た子に同じ主血統がいるときだけ(ゴーレムは別の血統)。何度引いても、条件に合わないときは出ない

@@ -197,7 +197,7 @@ function MsaTechSheet({ title, list, d = null, dist = null, rep = null, hitAt = 
   const rows = d == null ? (Array.isArray(list) ? list.slice() : []).sort((a, b) => (dist != null ? (b.dist.includes(dist) ? 1 : 0) - (a.dist.includes(dist) ? 1 : 0) : 0)) : msaSheetOrder(list, d, repId);
   const distOf = (t) => (Array.isArray(t.dist) ? t.dist.map((x) => MSA_DC_DIST[x]).join('・') : '');
   const note = d == null ? (dist != null ? `いまの間合い: ${MSA_DC_DIST[dist]}・届く技を先に並べています` : 'このモンスターの技')
-    : onUse ? 'いちばん上が代表の技。押した技を使います' : `いちばん上が代表の技${dist != null && d !== dist ? `(いまの間合いは ${MSA_DC_DIST[dist]})` : ''}`;
+    : onUse ? '一番上が代表の技。押した技を使います' : `一番上が代表の技${dist != null && d !== dist ? `(いまの間合いは ${MSA_DC_DIST[dist]})` : ''}`;
   return (
     <div className="msa-sh" data-msa-sheet={d == null ? 'all' : d} onClick={onClose}><style>{MSA_DC_CSS}</style>
       <div className="msa-sh-in" onClick={(ev) => ev.stopPropagation()}>

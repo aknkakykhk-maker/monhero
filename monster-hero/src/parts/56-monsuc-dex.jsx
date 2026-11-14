@@ -62,7 +62,7 @@ const msxFxText = (f) => {
   if (k === 'mas') return '技の熟練 +';
   if (k === 'flag') return MSX_FX_FLAG[a] || 'いいことがある';
   if (k === 'goal') return MSX_FX_GOAL[a] || '期の目標を決める';
-  if (k === 'apt') return a === 'low' ? 'いちばん低い間合い適性 +1段' : 'いちばん高い間合い適性 +1段';
+  if (k === 'apt') return a === 'low' ? '一番低い間合い適性 +1段' : '一番高い間合い適性 +1段';
   return '';
 };
 const msxFxLine = (list) => { const t = (Array.isArray(list) ? list : []).map(msxFxText).filter(Boolean); return t.length ? t.join('・') : 'なにも変わらない'; };
@@ -86,7 +86,7 @@ function MsxChoiceInfo({ evId, c, open }) {
   if (!open) return null;
   const known = Boolean(seen.ch[`${evId}.${c}`]);
   const lines = known ? (String(evId).startsWith('story.') ? ['お話の続きが変わる'] : msxChoiceLines(msxEvChoice(evId, c))) : ['？？？'];
-  return <div className="msx-chinfo" data-msx-chinfo={known ? 'known' : 'unknown'}>{lines.map((l, i) => <div key={i}>{l}</div>)}{known ? null : <small>一度選ぶと、効果がわかるようになる</small>}</div>;
+  return <div className="msx-chinfo" data-msx-chinfo={known ? 'known' : 'unknown'}>{lines.map((l, i) => <div key={i}>{l}</div>)}{known ? null : <small>一度選ぶと、効果が分かるようになる</small>}</div>;
 }
 
 // ---- 図鑑の中身(タブと出来事の並び) ----
@@ -97,7 +97,7 @@ const MSX_EV_TITLE = Object.freeze({
   'ev.small.omikuji': 'おみくじ', 'ev.small.nut': 'あやしい木の実',
   'ev.team.selfdrill': '編成のモンスターの自主練', 'ev.team.senpai': '先輩の背中', 'ev.team.fight': '編成どうしのケンカ', 'ev.team.base': 'ベースモンのがんばり', 'ev.team.friend': 'フレンドのモンスターが来た',
   'ev.team.typeskill': '得意技を教わる', 'ev.team.sync': '息ぴったり', 'ev.team.tagwake': '心がつながった',
-  'ev.self.anniv': 'はじめての育成記念日', 'ev.self.peakin': '伸びどきが来た', 'ev.self.peakout': '落ち着いてきた', 'ev.self.slump': 'スランプ', 'ev.self.favtrain': '好きなトレーニング', 'ev.self.selfish': 'ご機嫌ななめ', 'ev.self.clingy': '甘えんぼ',
+  'ev.self.anniv': '初めての育成記念日', 'ev.self.peakin': '伸びどきが来た', 'ev.self.peakout': '落ち着いてきた', 'ev.self.slump': 'スランプ', 'ev.self.favtrain': '好きなトレーニング', 'ev.self.selfish': 'ご機嫌ななめ', 'ev.self.clingy': '甘えんぼ',
   'ev.goal.pick': '期の目標を決める', 'ev.goal.done': '目標達成', 'ev.goal.miss': '目標に届かなかった',
   'ev.body.injury': 'けがの手前', 'ev.body.runaway': '元気がない', 'ev.body.healed': '治った', 'ev.body.home': '帰ってきた',
   'ev.season.jan1': '初もうで', 'ev.season.jan2': '書きぞめ', 'ev.season.jan3': '新年の願い事', 'ev.season.apr1': 'お花見', 'ev.season.apr2': '春の町', 'ev.season.apr3': '1年前の写真',
@@ -159,7 +159,7 @@ function MsxDex({ aid = 'mua', nick = '', onClose }) {
         {open ? (
           <div className="msx-dex-read" data-msx-dex-read={open.id}>
             <div className="h"><b>{open.title}</b><button type="button" className="chip" onClick={() => setOpen(null)}>← 一覧へ</button></div>
-            {open.awake ? <div className="ln">{open.awake === 2 ? '覚醒したあと、さらに虹色の光に包まれて、全能力 +40・間合い適性が2つ上がった。' : 'まぶしい光に包まれて、全能力 +30・いちばん高い間合い適性が上がった。'}</div> : null}
+            {open.awake ? <div className="ln">{open.awake === 2 ? '覚醒したあと、さらに虹色の光に包まれて、全能力 +40・間合い適性が2つ上がった。' : 'まぶしい光に包まれて、全能力 +30・一番高い間合い適性が上がった。'}</div> : null}
             {aw && aw.t ? <div className="ln"><span className="who">{typeof msxAidName === 'function' ? msxAidName(readAid) : ''}</span>「{aw.t}」</div> : null}
             {open.id === 'issa' ? <div className="ln">夜の町に、のびのび装置を持ったイッサ博士があらわれた。成功すれば大きく強くなれるが、失敗すると…。</div> : null}
             {ev0 ? ev0.lines.slice(0, 8).map((l, i) => <div key={i} className="ln">{who(l) ? <span className="who">{who(l)}</span> : null}{who(l) ? `「${l.t}」` : l.t}</div>) : null}

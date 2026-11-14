@@ -2703,7 +2703,7 @@ const RHYTHM_MODE_SELECT_CSS = `
 .mhbs-dot{width:6px;height:6px;border-radius:9999px;background:rgba(255,255,255,.22);transition:all .2s}
 .mhbs-dot.on{width:16px;background:linear-gradient(90deg,#f0abfc,#a78bfa)}
 .mhms-in{animation:mhmsIn .45s cubic-bezier(.2,.9,.3,1.2) both}
-/* MFバトルカードをはじめて開いたとき、最初に押す所だけ光らせる縁(84-screen-card-battle.jsx。一度きり) */
+/* MFバトルカードを初めて開いたとき、最初に押す所だけ光らせる縁(84-screen-card-battle.jsx。一度きり) */
 .mhcard-first-glow{filter:drop-shadow(0 0 4px #fde047) drop-shadow(0 0 10px rgba(253,224,71,.8));animation:mhcardFirstGlow 1.3s ease-in-out infinite}
 @keyframes mhcardFirstGlow{0%,100%{filter:drop-shadow(0 0 3px #fde047) drop-shadow(0 0 6px rgba(253,224,71,.5))}50%{filter:drop-shadow(0 0 6px #fff7b0) drop-shadow(0 0 16px rgba(253,224,71,1))}}
 .mhmv-mvp{animation:mhmvGlow 1.8s ease-in-out infinite}
@@ -3859,7 +3859,7 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
                         </div>
                       ))}
                       {inviteMessage && <p data-rhythm-multi-friend-message className="text-[11px] font-black text-rose-300">{inviteMessage}</p>}
-                      <p className="text-[10px] font-bold leading-relaxed text-slate-400">招待は3分のあいだ届きます。相手がマルチの入口をひらくと「参加する」が出ます。</p>
+                      <p className="text-[10px] font-bold leading-relaxed text-slate-400">招待は3分のあいだ届きます。相手がマルチの入口を開くと「参加する」が出ます。</p>
                     </div>
   );
   // 💌 フレンドを招待する(2026-11-07 社長「フリーマッチでも招待できる」「あとから誘えるように」)。部屋にいるあいだはいつでも開ける

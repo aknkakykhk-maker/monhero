@@ -32,7 +32,7 @@ const MSX_ARC_END = Object.freeze({
   super: { name: '超グッドエンディング', sub: '最高のチーム', bg: 'images/success/scenes/venue-summit.png' },
 });
 const MSX_ARC_PARTY = Object.freeze({ bad: ['おつかれさま会'], good: ['祝勝会', '町のパレード', '助手からの手紙'], super: ['町じゅうのお祝い', 'ヒーローの取材', '3人の打ち上げ'] });
-const MSX_ARC_PICK_WHY = Object.freeze({ pop: '人気がいちばんの相手', rival: 'この育成のライバル', strong: 'いちばん強い常連', champ: '王者', reg: '常連' });
+const MSX_ARC_PICK_WHY = Object.freeze({ pop: '人気が一番の相手', rival: 'この育成のライバル', strong: '一番強い常連', champ: '王者', reg: '常連' });
 
 // 台本の行(地の文と助手)。無ければ []
 const msxArcLines = (scene, ctx, bondLv, extra) => {
@@ -79,9 +79,9 @@ function MsxArcPick({ run, v, ev, onPause, ctx, bondLv, opp, round, onDone }) {
   const top = opp ? (
     <div className="arc-foe" data-msx-arc-foe>
       <img src={msxMonThumb(opp.species)} alt=""/><b>{foe}</b><small>{opp.breeder ? `育て手 ${opp.breeder}` : msxMonName(opp.species)}</small>
-      <div className="why">{msxAidName(s.aid)}のえらび: {MSX_ARC_PICK_WHY[opp.pick] || '相手'}</div>
+      <div className="why">{msxAidName(s.aid)}の選び: {MSX_ARC_PICK_WHY[opp.pick] || '相手'}</div>
     </div>) : null;
-  return <MsxArcTalk run={run} v={v} ev={ev} onPause={onPause} aid={s.aid} lines={lines} head={`${(SUM[round] || {}).name || 'ヒーローズファイナル'}の相手えらび`}
+  return <MsxArcTalk run={run} v={v} ev={ev} onPause={onPause} aid={s.aid} lines={lines} head={`${(SUM[round] || {}).name || 'ヒーローズファイナル'}の相手選び`}
     bg="images/success/scenes/venue-summit.png" top={top} fallback={`${foe}と戦うよ。いってらっしゃい！`} doneText="⚔ 試合へ" onDone={onDone}/>;
 }
 
@@ -146,7 +146,7 @@ function MsxArcEnding({ run, setRun, v, ev, onPause, ctx, bondLv }) {
     const lines = msxArcLines(`scn.${s.aid}.party.${kind}${i + 1}`, ctx, bondLv);
     const top = <div className="arc-party" data-msx-arc-party={`${kind}${i + 1}`}><b>🎉 {(MSX_ARC_PARTY[kind] || [])[i] || 'お祝い'}</b><small>全能力 +{n}</small></div>;
     return <MsxArcTalk key={`p${step}`} run={run} v={v} ev={ev} onPause={onPause} aid={s.aid} lines={lines} bg="images/story-bg/monhero_plaza_evening.jpg" top={top}
-      fallback="おめでとう！" doneText={step < parties.length ? '🎉 つぎのお祝い ▶' : kind === 'super' ? '📸 さいごに ▶' : '引退へ ▶'} onDone={goNext}/>;
+      fallback="おめでとう！" doneText={step < parties.length ? '🎉 次のお祝い ▶' : kind === 'super' ? '📸 さいごに ▶' : '引退へ ▶'} onDone={goNext}/>;
   }
   return <MsxArcSpecial run={run} v={v} ev={ev} onPause={onPause} ctx={ctx} bondLv={bondLv} onDone={finish}/>;
 }
