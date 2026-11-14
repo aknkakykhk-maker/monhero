@@ -28,7 +28,7 @@
     { id: 'momo-kibidango', name: 'モモのキビダンゴ', kind: 'start', image: 'images/success/items/momo-kibidango.png?v=9c549951ba92',
       text: '食べるとスタミナがつくキビダンゴ。体力の最大値が初めから上がる' },
     { id: 'uketsugi-grass', name: '受け継ぎ草', kind: 'start', image: 'images/success/items/uketsugi-grass.png?v=480c71c413b8',
-      text: '伝授でいい結果を残せると噂される草。ようす「うけつぐ魂」を付ける' },
+      text: '伝授でいい結果を残せると噂される草。ようす「受け継ぐ魂」を付ける' },
     { id: 'garoe-veggie-juice', name: 'ガロエ印の野菜ジュース', kind: 'use', image: 'images/success/items/garoe-veggie-juice.png?v=f0efa63e419b',
       text: '持ち込むと育成中にも使用できる。体力を完全に回復する' },
     { id: 'akusamasan', name: '悪様散', kind: 'use', image: 'images/success/items/akusamasan.png?v=77e0c02076ef',

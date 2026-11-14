@@ -143,7 +143,7 @@ function MsxR3Shugyo({ run, setRun, v, ev, onBack, onPause }) {
           <div className="h">🔒 {lockT.name}</div>
           <div className="q-lock">{full ? <p>覚えられる技は {tkMax}つまで。いまは いっぱいです</p> : null}
             {condsOf(lockT).map((c, i) => <div key={c.k} className={c.ok ? 'ok' : ''}><i>条件{i + 1}</i><span className="msx-kp">{c.long}</span><b>{c.ok ? '済' : 'まだ'}</b></div>)}
-            {!full && condsOf(lockT).length ? <p>条件をすべて満たすと、緑の「覚えられる」札になります</p> : null}</div>
+            {!full && condsOf(lockT).length ? <p>条件を全て満たすと、緑の「覚えられる」札になります</p> : null}</div>
           <div className="bt"><button type="button" onClick={() => setLockT(null)}>閉じる</button></div>
         </div>
       </div>) : null}

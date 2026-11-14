@@ -53,7 +53,7 @@ function MonsucShopList({ points = 0, busy = false, disabled = false, openSheet,
   if (!ready) return <p className="col-span-full text-center text-[12px] font-bold text-slate-300">読み込んでいます…</p>;
   return <>
     <p data-monsuc-shop-note className="col-span-full text-[11px] font-bold leading-snug text-slate-300" style={typeof JA_WRAP_STYLE !== 'undefined' ? JA_WRAP_STYLE : undefined}>
-      {typeof jaWrap === 'function' ? jaWrap('モンヒロサクセスの育成に持っていくアイテムです。交換した物は、育成をはじめるときの「持ちこみ」で選べます') : 'モンヒロサクセスの育成に持っていくアイテムです。交換した物は、育成をはじめるときの「持ちこみ」で選べます'}
+      {typeof jaWrap === 'function' ? jaWrap('モンヒロサクセスの育成に持っていくアイテムです。交換した物は、育成を始めるときの「持ちこみ」で選べます') : 'モンヒロサクセスの育成に持っていくアイテムです。交換した物は、育成を始めるときの「持ちこみ」で選べます'}
     </p>
     {MONSUC_SHOP_OFFERS.map((offer) => {
       const t = typeof MSX_ITEM_BY_ID !== 'undefined' ? MSX_ITEM_BY_ID[offer.itemId] : null;

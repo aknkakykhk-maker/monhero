@@ -264,7 +264,7 @@ const enemyActionProbabilities = (ent,currentDist,state={}) => {
 // 段: 0 いまのまま / 1 間合いを読む / 2 状況を読む / 3 技をつなぐ(上の段は下の段を全部含む)
 const TACTICS_ENEMY_AI_LEVELS = Object.freeze([
   Object.freeze({id:0,label:'いまのまま',note:'決まった重みのくじ(本番と同じ)'}),
-  Object.freeze({id:1,label:'間合いを読む',note:'移動先を「味方の攻めがいちばん弱まる間合い」に。いまが一番ましなら動かない'}),
+  Object.freeze({id:1,label:'間合いを読む',note:'移動先を「味方の攻めが一番弱まる間合い」に。いまが一番ましなら動かない'}),
   Object.freeze({id:2,label:'状況を読む',note:'様子見をしない・減ってから再生・削られてからの咆哮はしない・空振りの間合い攻撃はしない'}),
   Object.freeze({id:3,label:'技をつなぐ',note:'咆哮→ためる→必殺技・弱った味方がいれば必殺技・ガードの厚い相手に貫通の構え'}),
 ]);

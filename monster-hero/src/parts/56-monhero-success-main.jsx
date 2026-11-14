@@ -884,7 +884,7 @@ function MsxStats({ run, setRun, v, ev, onClose }) {
       </div>
       <div className="v-card" data-msx-ability-techs><div className="h2">⚔ 覚えている技 {techs.length}</div>
         {techs.length ? <div>{techs.map((t) => <span key={t.id} className="msx-ab-tech">{t.kind === 'wise' ? '🧠' : '💪'}{t.name}</span>)}</div> : <div className="sub">まだない</div>}
-        <div className="sub" style={{ marginTop: 4 }}>新しい技は修行で覚える。技の性能は場面の「🔍 くわしく」で見られる</div></div>
+        <div className="sub" style={{ marginTop: 4 }}>新しい技は修行で覚える。技の性能は場面の「🔍 詳しく」で見られる</div></div>
       <div className="v-card"><div className="h2">🌱 成長の型 {typeof MASMON_CALC !== 'undefined' ? MASMON_CALC.typeOf(s.type).name : '—'}</div>
         <div className="sub">{pk.state === 'in' ? `ピーク中(あと${pk.left}ターン)。トレーニングがよく伸びる` : pk.state === 'soon' ? `あと${pk.in}ターンでピーク(伸びどき)が始まる` : peakSpan ? `伸びどき: ${peakSpan}` : ''}</div></div>
       <div className="v-card"><div className="h2">🤝 忠誠度 {SUC.loyalOf(s)}<span className="sub">(甘え度 {s.ama}+恐れ度 {s.fear})</span></div>
