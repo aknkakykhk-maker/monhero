@@ -18,6 +18,8 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
 let chromium;
 try { ({ chromium } = require(path.join(ROOT, 'tools', 'node_modules', 'playwright'))); } catch (e) { console.log('SKIP: playwright が入っていないので確かめられません'); process.exit(0); }
 const { quietBootSeed, updateNoticeSeed } = require(path.resolve(__dirname, '..', 'boot', 'quiet-boot-seed'));
+const { scanTextWrap } = require(path.resolve(__dirname, '..', 'playbot', 'lib', 'text-wrap')); // 言葉・値の途中の折れ(r1114-077)
+const { msxUiRulesMeasure, msxScrollStripTexts, BLANK_MAX } = require('./msx-ui-rules'); // 画面の決まり(docs/spec/MONSUC_UI.md)の見張り
 const PORT = Number(process.env.SHOT_PORT) || 8971; // ほかの検査と同時に回すときは SHOT_PORT で替える
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.PNG': 'image/png', '.jpg': 'image/jpeg', '.webp': 'image/webp', '.json': 'application/json', '.mp3': 'audio/mpeg' };
 
@@ -32,6 +34,7 @@ const makeRun = async (kind) => {
   let guard = 0;
   while (s.turn < goal && !s.over && guard++ < 200) {
     const v = SUC.peek(s);
+    if (kind === 'ki' && v.period && v.period.at === 1 && v.period.index > 0) break; // 章の終わり: 期が替わった最初のターンで止める
     let a;
     if (v.can.includes('cond')) a = { kind: 'cond' };
     else if (v.can.includes('retry')) a = { kind: 'retry' };
@@ -48,6 +51,7 @@ const makeRun = async (kind) => {
     let g2 = 0; while (s.battle && g2++ < 5) { const opp = SUC.opponents(s); s = SUC.settle(s, opp.map(() => true)).state; }
   }
   if (kind === 'yosu') s = { ...s, yosu: { sabori: { visits: 0 } } };
+  if (kind === 'ki') { const pv = SUC.peek(s).period.index - 1; const pw = SUC.evaluate(s).power; s = { ...s, fameTotal: Math.max(s.fameTotal || 0, 1000) }; return { v: 1, id: s.id, s, nick: 'もちまる', colors: [], from: { base: 'Mocchi' }, items: [], used: 0, phase: 'turn', out: null, log: [], startAt: 1, ki: { p: pv, fame: 0, power: Math.max(0, pw - 616) } }; }
   const run = { v: 1, id: s.id, s, nick: 'もちまる', colors: [], from: { base: 'Mocchi' }, items: ['juice', 'dango'], used: 0, phase: 'main', out: null, log: [], startAt: 1 };
   return run;
 };
@@ -74,6 +78,7 @@ const makeRun = async (kind) => {
     ['K1', 'mid', ['cont', 'train', 'go']], ['K3', 'mid', ['cont', 'train', 'go', 'next']], ['K5', 'mid', ['cont', 'train', 'go', 'next', 'praise']],
     ['I1', 'mid', ['cont', 'issa']], ['P1', 'mid', ['cont', 'stats']], ['M1D', 'mid', ['cont', 'detail']], ['M1F', 'mid', ['cont', 'detail', 'tab:feat']],
     ['E1', 'mid', ['cont', 'event']], ['E3', 'mid', ['cont', 'event', 'three']], ['E4', 'mid', ['cont', 'event', 'three', 'long']],
+    ['KI', 'ki', ['cont']], ['CL', 'yosu', ['cont', 'clinic']], // 章の終わり(数字は真ん中)・通院の結果(何が治ったかを名前で)
   ];
   // SHOT_ONLY=H0,H1 のように名前を並べると、その場面だけ撮る
   const only = (process.env.SHOT_ONLY || '').split(',').map((x) => x.trim()).filter(Boolean);
@@ -125,6 +130,7 @@ const makeRun = async (kind) => {
             if (st === 'train') return click(/^💪 トレーニング/);
             if (st === 'go') return click(/をする$/); // 2026-11-14 トレーニングのボタンは「丸太割りをする」のようにトレーニングの名前になった
             if (st === 'praise') return click(/褒める/);
+            if (st === 'clinic') return click(/通院/);
             if (st === 'rest') return click(/^🛌/);
             if (st === 'kitap') { const k = document.querySelector('[data-msx-ki]'); if (!k) return false; k.click(); return true; }
             if (st === 'ki') { // 新しい期の1ターン目(期の区切りの「NEXT あと◯ターン」)を開く
@@ -220,7 +226,22 @@ const makeRun = async (kind) => {
           // 見た目の高さ(::after で広げた範囲を数えない)。.msx-btn は 44px 以上(2026-11-14 点検: 初期化に負けて 17〜18px に潰れていた)。ほかのボタンは見張りで出す
           const flat = [...root.querySelectorAll('.msx-btn')].filter((e) => vis(e) && !e.disabled && !clipped(e) && e.getBoundingClientRect().height < 43.5).map((e) => `${lab(e)}(${Math.round(e.getBoundingClientRect().height)}px)`);
           const lowBtn = [...root.querySelectorAll('button')].filter((e) => vis(e) && !e.disabled && e.getBoundingClientRect().height < 43.5).map((e) => `${lab(e)}(${Math.round(e.getBoundingClientRect().height)}px)`);
-          return { ok: true, text: root.innerText.length, over, taps, cut, tiny, topBlank, lap, flat, lowBtn, partyBag: Math.round(partyBag), land: window.innerWidth > window.innerHeight };
+          // ほかの主なボタン(.msc-btn・.msc-pick・.msxm-btn・下の帯のボタン)も見た目の高さ 32px 以上(Fable ①-2: クラス1つで書いたボタンが打ち消しに負けていた)
+          const flat2 = [...root.querySelectorAll('.msc-btn, .msc-pick, .msxm-btn, .v-ft button')].filter((e) => vis(e) && !e.disabled && e.getBoundingClientRect().height < 32).map((e) => `${lab(e)}(${Math.round(e.getBoundingClientRect().height)}px)`);
+          // 当たり判定の横取り: ボタンの真ん中を押すと、別のボタン(の ::after で広げた範囲)が取る。取ったボタンの見た目の枠がその点を含まなければ NG
+          const steal = [];
+          for (const e of [...root.querySelectorAll('button, [role=button]')]) {
+            if (!vis(e) || e.disabled || clipped(e)) continue;
+            const r = e.getBoundingClientRect(); const x = r.left + r.width / 2, y = r.top + r.height / 2;
+            if (x < 0 || y < 0 || x >= innerWidth || y >= innerHeight) continue;
+            const at = document.elementFromPoint(x, y); const b = at && at.closest('button, [role=button]');
+            if (!b || b === e || e.contains(b) || b.contains(e)) continue;
+            const q = b.getBoundingClientRect();
+            // 取ったボタンの見た目の枠の外で、広げた範囲(枠から 22px まで)の中 = ::after の横取り。それより遠いのは上に重なった窓などで、正しく隠れているだけ
+            const dx = Math.max(q.left - x, 0, x - q.right), dy = Math.max(q.top - y, 0, y - q.bottom);
+            if ((dx > 0 || dy > 0) && dx <= 22 && dy <= 22) steal.push(`${lab(e)}→${lab(b)}`);
+          }
+          return { ok: true, text: root.innerText.length, over, taps, cut, tiny, topBlank, lap, flat, flat2, steal, lowBtn, partyBag: Math.round(partyBag), land: window.innerWidth > window.innerHeight };
         }, fscale || 0);
         const L = `${name}${tag ? `(${tag})` : ''}`;
         const warn = (what, arr) => { if (arr && arr.length) console.log(`  見張り ${L}: ${what} ${arr.length}件 ${arr.slice(0, 4).join(' / ')}`); };
@@ -229,11 +250,24 @@ const makeRun = async (kind) => {
           check(`${L}: 字が枠で切れない`, m.cut.length === 0, m.cut.slice(0, 4).join(' / '));
           check(`${L}: 字が小さすぎない`, m.tiny.length === 0, m.tiny.slice(0, 4).join(' / '));
           check(`${L}: 押せる物が重ならない`, m.lap.length === 0, m.lap.slice(0, 3).join(' / '));
+          check(`${L}: ほかの主なボタンが潰れていない(見た目の高さ 32px 以上)`, m.flat2.length === 0, m.flat2.slice(0, 4).join(' / '));
+          // ホーム(保存枠を押すとランキングが開いていた所)は止める。ほかの画面は数を出して直しを振り分ける(重なった窓・横画面の編成の段などで残っている)
+          if (/^H/.test(name)) check(`${L}: ボタンの真ん中を押すと、そのボタンが押される(下のボタンに取られない)`, m.steal.length === 0, m.steal.slice(0, 4).join(' / '));
+          else warn('押す所が近くのボタンに取られる', m.steal);
           if (m.land) check(`${L}: 横画面の上に空白が無い`, m.topBlank <= 50, `${m.topBlank}px`);
           check(`${L}: .msx-btn のボタンが見た目でも 44px 以上`, !m.flat.length, m.flat.slice(0, 4).join(' / '));
           if (process.env.SHOT_LOWBTN) warn('見た目が44px未満のボタン', m.lowBtn);
           check(`${L}: 持ち物・くわしくが編成の列や札に重ならず、編成の列が場面に収まる`, !m.partyBag, `${m.partyBag}px`);
         }
+        const u = await page.evaluate(msxUiRulesMeasure);
+        // 演出の飾り(舞う葉っぱ・炎など、絵文字だけの粒)が画面の外へ出るのは見ない
+        const strip = await page.evaluate(msxScrollStripTexts);
+        const wr = (await scanTextWrap(page)).filter((x) => !(x.kind === '画面の外へはみ出した文字' && (!/[0-9A-Za-zぁ-んァ-ヶ一-龠]/.test(x.text) || strip.some((t) => t.startsWith(x.text.slice(0, 12))))));
+        // 基準の大きさ(縦390・横844)では止める。小さい画面・大きい文字は、直す順番待ちの一覧として知らせるだけ(2026-11-14)
+        if ((!tag || tag === 'land')) check(`${name}${tag ? `(${tag})` : ''}: 文字が値・札の途中で折れない(scanTextWrap)`, wr.length === 0, wr.slice(0, 3).map((x) => `${x.kind}「${x.text}」`).join(' / '));
+        else if (wr.length) console.log(`  見張り ${name}${tag ? `(${tag})` : ''}: 文字の折れ ${wr.length}件 ${wr.slice(0, 2).map((x) => `${x.kind}「${x.text}」`).join(' / ')}`);
+        if (u && u.blank != null) check(`${name}${tag ? `(${tag})` : ''}: 下に大きな空きが無い(${BLANK_MAX}px まで)`, u.blank <= BLANK_MAX, `${u.blank}px`);
+        if (u) check(`${name}${tag ? `(${tag})` : ''}: 見せ場の数字(.v-num)が真ん中`, u.offNum.length === 0, u.offNum.slice(0, 3).join(' / '));
         check(`${name}${tag ? `(${tag})` : ''}: 画面が出る`, m.ok && m.text > 20);
         check(`${name}${tag ? `(${tag})` : ''}: 枠からはみ出さない`, m.ok && m.over.length === 0, m.over && m.over.slice(0, 3).join(' / '));
         if (SHOT_DIR) { fs.mkdirSync(SHOT_DIR, { recursive: true }); await page.screenshot({ path: path.join(SHOT_DIR, `msx-${name}${tag ? `-${tag}` : ''}.png`) }); }
