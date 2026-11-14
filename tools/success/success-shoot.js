@@ -67,7 +67,7 @@ const makeRun = async (kind) => {
     ['H0', null, []], ['H1', 'mid', []],
     ['S1', null, ['new']], ['S2', null, ['new', 'next']], ['S3', null, ['new', 'next', 'next']], ['S4', null, ['new', 'next', 'next', 'next']],
     ['S5', null, ['new', 'next', 'next', 'next', 'next']], ['S6', null, ['new', 'next', 'next', 'next', 'next', 'next']],
-    ['M1', 'mid', ['cont']], ['M2', 'yosu', ['cont']], ['M3', 'mid', ['cont', 'bag']], ['T1', 'mid', ['cont', 'train']], ['T2', 'mid', ['cont', 'train', 'swipe']],
+    ['M1', 'mid', ['cont']], ['M2', 'yosu', ['cont']], ['M3', 'mid', ['cont', 'bag']], ['T1', 'mid', ['cont', 'train']], ['T2', 'mid', ['cont', 'train', 'swipe']], ['Q0', 'mid', ['ki']], ['Q1', 'mid', ['ki', 'kitap']], ['R1', 'mid', ['cont', 'rest']],
     ['K1', 'mid', ['cont', 'train', 'go']], ['K3', 'mid', ['cont', 'train', 'go', 'next']], ['K5', 'mid', ['cont', 'train', 'go', 'next', 'praise']],
     ['I1', 'mid', ['cont', 'issa']], ['P1', 'mid', ['cont', 'stats']],
     ['E1', 'mid', ['cont', 'event']], ['E3', 'mid', ['cont', 'event', 'three']], ['E4', 'mid', ['cont', 'event', 'three', 'long']],
@@ -108,6 +108,17 @@ const makeRun = async (kind) => {
             if (st === 'train') return click(/^💪 トレーニング/);
             if (st === 'go') return click(/をする$/); // 2026-11-14 トレーニングのボタンは「丸太割りをする」のようにトレーニングの名前になった
             if (st === 'praise') return click(/褒める/);
+            if (st === 'rest') return click(/^🛌/);
+            if (st === 'kitap') { const k = document.querySelector('[data-msx-ki]'); if (!k) return false; k.click(); return true; }
+            if (st === 'ki') { // 新しい期の1ターン目(期の区切りの「NEXT あと◯ターン」)を開く
+              const raw = JSON.parse(localStorage.getItem(MSX_KEYS.run)); const P = msxSuc.core.PERIODS;
+              const t = P[0].len + P[1].len + 1; raw.s = { ...raw.s, turn: t, acted: false }; raw.phase = 'turn'; raw.out = { from: t - 1 }; delete raw.ki;
+              localStorage.setItem(MSX_KEYS.run, JSON.stringify(raw));
+              window.__msxRoot.unmount(); const el = document.getElementById('msx-shot'); window.__msxRoot = ReactDOM.createRoot(el);
+              window.__msxRoot.render(React.createElement(MonheroSuccessScreen, { onClose() {}, callNameOf: () => 'けんささん', bondLvOf: () => 4 }));
+              await new Promise((r) => setTimeout(r, 600));
+              return click(/続きから/);
+            }
             if (st === 'swipe') { // トレーニングを選ぶ画面: 場面を左へスライドすると次のトレーニングに替わる(縦の小さな動きでは替わらない)
               const el = document.querySelector('[data-msx-train-swipe]'); if (!el) return false;
               const names = () => [...document.querySelectorAll('.msx .v-tr')].map((b) => b.classList.contains('sel'));
@@ -180,8 +191,15 @@ const makeRun = async (kind) => {
           const bs = [...root.querySelectorAll('button')].filter((e) => vis(e) && !clipped(e)).map((e) => ({ e, r: e.getBoundingClientRect() }));
           const lap = []; for (let i = 0; i < bs.length; i++) for (let j = i + 1; j < bs.length; j++) { const a = bs[i].r, b = bs[j].r; if (bs[i].e.contains(bs[j].e) || bs[j].e.contains(bs[i].e)) continue; if (Math.min(a.right, b.right) - Math.max(a.left, b.left) > 6 && Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > 6) lap.push(`${lab(bs[i].e)}×${lab(bs[j].e)}`); }
           // 育成のメイン画面: 編成の顔の列が「持ち物」のボタンに重ならない(2026-11-14 社長「持ち物と編成がかぶってる」)
-          const pt = root.querySelector('.v-scene.home .v-party'); const bg = root.querySelector('.v-scene.home .v-bagb:not(.r)');
-          let partyBag = 0; if (pt && bg && vis(pt) && vis(bg)) { const a = pt.getBoundingClientRect(), b = bg.getBoundingClientRect(); partyBag = Math.max(0, Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top)) * (Math.min(a.right, b.right) > Math.max(a.left, b.left) ? 1 : 0); }
+          // 持ち物・くわしくは右下へ移したので、場面の中の札(編成の列・季節などの札・名前)とも重ならないことを見る。編成の列は場面の下からはみ出さない
+          const inter = (a, b) => Math.max(0, Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top)) * (Math.min(a.right, b.right) > Math.max(a.left, b.left) ? 1 : 0);
+          const sc = root.querySelector('.v-scene.home'); const pt = sc && sc.querySelector('.v-party');
+          let partyBag = 0;
+          if (sc && pt && vis(pt)) {
+            const others = [...sc.querySelectorAll('.v-party, .v-chips .v-chip, .v-nm')].filter(vis);
+            for (const bg of [...sc.querySelectorAll('.v-bagb')].filter(vis)) for (const o of others) partyBag = Math.max(partyBag, inter(o.getBoundingClientRect(), bg.getBoundingClientRect()));
+            partyBag = Math.max(partyBag, pt.getBoundingClientRect().bottom - sc.getBoundingClientRect().bottom);
+          }
           return { ok: true, text: root.innerText.length, over, taps, cut, tiny, topBlank, lap, partyBag: Math.round(partyBag), land: window.innerWidth > window.innerHeight };
         }, fscale || 0);
         const L = `${name}${tag ? `(${tag})` : ''}`;
@@ -192,7 +210,7 @@ const makeRun = async (kind) => {
           check(`${L}: 字が小さすぎない`, m.tiny.length === 0, m.tiny.slice(0, 4).join(' / '));
           check(`${L}: 押せる物が重ならない`, m.lap.length === 0, m.lap.slice(0, 3).join(' / '));
           if (m.land) check(`${L}: 横画面の上に空白が無い`, m.topBlank <= 50, `${m.topBlank}px`);
-          check(`${L}: 編成の顔の列が持ち物に重ならない`, !m.partyBag, `${m.partyBag}px`);
+          check(`${L}: 持ち物・くわしくが編成の列や札に重ならず、編成の列が場面に収まる`, !m.partyBag, `${m.partyBag}px`);
         }
         check(`${name}${tag ? `(${tag})` : ''}: 画面が出る`, m.ok && m.text > 20);
         check(`${name}${tag ? `(${tag})` : ''}: 枠からはみ出さない`, m.ok && m.over.length === 0, m.over && m.over.slice(0, 3).join(' / '));

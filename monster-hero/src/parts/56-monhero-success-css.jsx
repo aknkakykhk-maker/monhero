@@ -706,12 +706,29 @@ const MSX_CSS = `
 .msx .v-opts .msx-info{flex:none;align-self:stretch;width:52px;min-height:52px;display:flex;align-items:center;justify-content:center;padding:0;border-radius:16px;background:linear-gradient(180deg,#164e74,#0c3350);border:2px solid #7dd3fc;border-bottom-width:5px;color:#e0f2fe;font-size:20px;font-weight:900;line-height:1}
 .msx .v-opts .msx-info.on{background:#0369a1;color:#fff}
 .msx .v-opts .msx-info:not(:disabled):active{transform:translateY(3px);border-bottom-width:2px;margin-bottom:3px}
-/* 育成のメイン画面: 編成の顔の列(6体+助手)が左下の「持ち物」に重ならないよう、場面の高さに合わせて顔を縮める(2026-11-14 社長「持ち物と編成がかぶってる」)。
-   使える高さ = 場面の高さ − 上6 − 持ち物46 − 下7 − すき間6。列の中 = 枠の内側9 + 「編成」の字(大きい文字でも収まるよう16) + すき間 + 顔×7(幅320は2列×4段) */
+/* 育成のメイン画面: 編成の顔の列(6体+助手)と「持ち物」が重ならないよう、持ち物は右下の「くわしく」の上へ置く(2026-11-14 社長「持ち物と編成がかぶってる」。
+   忠誠・人気の札を上の帯へ移して右下が空いた)。編成の列は場面の高さに合わせて顔を縮め、場面の下からはみ出さない。
+   列の中 = 枠の内側9 + 「編成」の字(大きい文字でも収まるよう20) + すき間 + 顔×7(幅320は2列×4段)、上下6ずつ */
 .msx .v-scene.home{container-type:size}
-.msx .v-scene.home .v-party{--pfs:clamp(14px,calc((100cqh - 65px - 25px - 24px) / 7),30px)}
-.msx.land .v-scene.home .v-party{--pfs:clamp(14px,calc((100cqh - 65px - 25px - 18px) / 7),24px)}
-.msx.s320 .v-scene.home .v-party{--pfs:clamp(14px,calc((100cqh - 65px - 25px - 12px) / 4),22px)}
+.msx .v-scene.home .v-bagb:not(.r){left:auto;right:7px;bottom:59px}
+.msx.s320 .v-scene.home .v-bagb:not(.r){bottom:51px}
+.msx .v-scene.home .v-party{--pfs:clamp(14px,calc((100cqh - 12px - 29px - 24px) / 7),30px)}
+.msx.land .v-scene.home .v-party{--pfs:clamp(14px,calc((100cqh - 12px - 29px - 18px) / 7),24px)}
+.msx.s320 .v-scene.home .v-party{--pfs:clamp(14px,calc((100cqh - 12px - 29px - 12px) / 4),22px)}
 .msx .v-scene.home .v-party .v-pf,.msx .v-scene.home .v-party .v-pf img{width:var(--pfs)}
 .msx .v-scene.home .v-party .v-pf img{height:var(--pfs)}
+/* 場面がとても低いとき(幅320で大きい文字など): 編成は4列×2段に並べ替え、上の札は右下の持ち物・くわしくの左で止める */
+@container (max-height:210px){
+  .msx .v-scene.home .v-party{display:grid;grid-template-columns:repeat(4,auto);gap:2px 3px;--pfs:20px}
+  .msx .v-scene.home .v-party>small{grid-column:1/-1;text-align:center}
+  .msx .v-scene.home .v-chips{right:58px}
+}
+/* 上の帯の忠誠・人気の行(2026-11-14 社長「忠誠度と人気を上部に」)と、休む・遊ぶ・通院で棒が前の値から伸び縮みする動き */
+.msx .v-b3{display:flex;gap:14px;margin-top:4px;font-size:10.5px;font-weight:900;white-space:nowrap;color:#e2e8f0;line-height:1.25}
+.msx .v-b3 span{display:inline-flex;align-items:baseline;gap:3px}
+.msx .v-b3 b{font-size:12.5px;color:#fff}
+.msx .v-b3 .v-dl{font-style:normal;font-size:10.5px;font-weight:900;animation:msxDl 2.6s ease-out both}
+.msx .v-b3 .v-dl.up{color:#86efac}.msx .v-b3 .v-dl.dn{color:#fca5a5}
+@keyframes msxDl{0%{opacity:0;transform:translateY(4px)}12%{opacity:1;transform:none}75%{opacity:1}100%{opacity:0}}
+@keyframes msxBarGrow{from{width:var(--w0)}}
 `;
