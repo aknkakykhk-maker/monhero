@@ -292,7 +292,7 @@ const cardPvpCleanMessage = (raw) => {
     const sf = typeof multiStampCleanFace === 'function' ? multiStampCleanFace(raw.sf) : null;
     const sw = typeof multiStampCleanWord === 'function' ? multiStampCleanWord(raw.sw) : null;
     const st = sf && sw ? { sf, sw } : {};
-    if (typeof raw.x === 'string') { const x = cardChatClean(raw.x); return x ? { t: 'chat', from, x, ...st } : null; }
+    if (typeof raw.x === 'string') { const x0 = cardChatClean(raw.x); const x = st.sw === 'x' && typeof multiStampCleanText === 'function' ? multiStampCleanText(x0) : x0; return x ? { t: 'chat', from, x, ...st } : null; }
     const i = cardPvpInt(raw.i, CARD_PVP_STAMPS.length - 1); return i === null ? null : { t: 'chat', from, i, ...st };
   }
   // 観戦の人のコメント(ホストが観戦の通り道で受け取り、相手へ渡す。v … 観戦の人の印・n … 名前)
@@ -1089,7 +1089,7 @@ const CARD_PVP = (() => {
     // 絵のスタンプ(2026-11-11)。言葉が定型と同じなら番号 i で、ちがえば言葉 x で送り、顔と言葉の番号を添える(古い版には言葉だけが出る)
     stamp: (x) => {
       if (!s || s.phase !== 'playing' || !x || !multiStampCleanFace(x.f) || !multiStampCleanWord(x.w) || Date.now() - s.chatAt < CARD_PVP_CHAT_GAP_MS) return false;
-      const text = cardChatClean((multiStampWord(x.w) || {}).text || '');
+      const text = cardChatClean(x.w === 'x' ? multiStampCleanText(x.text) : (multiStampWord(x.w) || {}).text || '');
       if (!text) return false;
       const i = CARD_PVP_STAMPS.indexOf(text);
       s = { ...s, chatAt: Date.now() };
