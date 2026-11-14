@@ -1073,7 +1073,10 @@ function AssistantPeerMap({ metIds, onReplay, peerItems = null, onUseItem = null
               // 札(Lv)は、顔と名前・ほかの札に重ならない位置(線の上の 50%→40%→60%…)に置く
               const at = (t) => ({ x: pos[x.a].x + (pos[x.b].x - pos[x.a].x) * t, y: pos[x.a].y + (pos[x.b].y - pos[x.a].y) * t });
               const hit = (q) => ids.some(id => Math.abs(q.x - pos[id].x) < 38 && q.y > pos[id].y - 32 && q.y < pos[id].y + 40) || put.some(o => Math.abs(q.x - o.x) < 30 && Math.abs(q.y - o.y) < 18);
-              const q = [0.5, 0.4, 0.6, 0.33, 0.67, 0.28, 0.72].map(at).find(c => !hit(c)) || at(0.5); put.push(q); const mx = q.x, my = q.y; return (
+              const dx = pos[x.b].x - pos[x.a].x, dy = pos[x.b].y - pos[x.a].y, dl = Math.hypot(dx, dy) || 1, nx = -dy / dl, ny = dx / dl;
+              const cand = []; for (const t of [0.5, 0.4, 0.6, 0.33, 0.67, 0.27, 0.73]) for (const o of [0, 16, -16, 26, -26]) { const c = at(t); cand.push({ x: c.x + nx * o, y: c.y + ny * o }); }
+              const inside = (c) => c.x > 16 && c.x < size - 16 && c.y > 8 && c.y < size - 8;
+              const q = cand.find(c => inside(c) && !hit(c)) || at(0.5); put.push(q); const mx = q.x, my = q.y; return (
             <g key={`t-${x.a}-${x.b}`} data-assistant-peer-link-lv={assistantPeerPairKey(x.a, x.b)} style={{ pointerEvents: 'auto', cursor: 'pointer' }} onClick={() => setAlbumPair([x.a, x.b])}>
               <line x1={pos[x.a].x} y1={pos[x.a].y} x2={pos[x.b].x} y2={pos[x.b].y} stroke="transparent" strokeWidth="22"/>
               <rect x={mx - 13} y={my - 8} width="26" height="16" rx="8" fill="#0f172a" stroke={lineColor(x.lv)} strokeWidth="1.5"/>

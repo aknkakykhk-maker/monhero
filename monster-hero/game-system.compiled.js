@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 6256bfc86762c3dd
+// source-sha256: 4429cd1115c1b406
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -108685,7 +108685,21 @@ function AssistantPeerMap({
         y: pos[x.a].y + (pos[x.b].y - pos[x.a].y) * t
       });
       const hit = q => ids.some(id => Math.abs(q.x - pos[id].x) < 38 && q.y > pos[id].y - 32 && q.y < pos[id].y + 40) || put.some(o => Math.abs(q.x - o.x) < 30 && Math.abs(q.y - o.y) < 18);
-      const q = [0.5, 0.4, 0.6, 0.33, 0.67, 0.28, 0.72].map(at).find(c => !hit(c)) || at(0.5);
+      const dx = pos[x.b].x - pos[x.a].x,
+        dy = pos[x.b].y - pos[x.a].y,
+        dl = Math.hypot(dx, dy) || 1,
+        nx = -dy / dl,
+        ny = dx / dl;
+      const cand = [];
+      for (const t of [0.5, 0.4, 0.6, 0.33, 0.67, 0.27, 0.73]) for (const o of [0, 16, -16, 26, -26]) {
+        const c = at(t);
+        cand.push({
+          x: c.x + nx * o,
+          y: c.y + ny * o
+        });
+      }
+      const inside = c => c.x > 16 && c.x < size - 16 && c.y > 8 && c.y < size - 8;
+      const q = cand.find(c => inside(c) && !hit(c)) || at(0.5);
       put.push(q);
       const mx = q.x,
         my = q.y;
