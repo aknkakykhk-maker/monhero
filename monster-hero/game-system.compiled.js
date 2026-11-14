@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 4e5eb01d38e854ea
+// source-sha256: 2348de4794345bc1
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -157273,7 +157273,7 @@ const assistantLifeTasteBump = (aid, monsterId, kind, now = Date.now()) => {
         if (typeof assistantLifeDiaryAdd === 'function') {
           const who = typeof assistantLifeName === 'function' ? assistantLifeName(aid) : aid,
             n = amtMonName(c.target);
-          const txt = c.to === 'like' ? `${who}が${n}を好きになってきたみたい` : c.to === 'dislike' ? `${who}は${n}が苦手になってきたみたい` : c.from === 'dislike' ? `${who}は${n}が前ほど苦手じゃなくなってきたみたい` : `${who}は${n}に前ほど夢中じゃなくなったみたい`;
+          const txt = c.to === 'like' ? `${who}が ${n}を 好きになってきたみたい` : c.to === 'dislike' ? `${who}は ${n}が 苦手になってきたみたい` : c.from === 'dislike' ? `${who}は ${n}が 前ほど苦手じゃ なくなってきたみたい` : `${who}は ${n}に 前ほど夢中じゃ なくなったみたい`;
           void assistantLifeDiaryAdd(txt, [aid], {
             kind: 'note'
           });

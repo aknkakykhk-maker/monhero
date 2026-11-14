@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: fd4a8783269cf10b
+// generated-sha256: d9646585258de1dd
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -9921,7 +9921,7 @@ const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, tact
   assistantMasmonRanchTicket: true, // 2026-11-12 社長「この文で公開」・masmon-pvp 版4(DAILY_GROWTH_CAP 40)を配り終えてから真にした。2026-11-11 M/B管理にいる助手のマスモンにトレーニングチケット/重トレーニングチケットを使ってあげる(ボクジョウ)。真にすると今の「次の育成が1.2倍」は止まる。ミハリの確認と Fable の最終確認のあと、更新履歴とヘルプと一緒に真にする
   assistantMasmonPlan: true, // 2026-11-12 ミハリ5 OK・窓口の最終確認のあと公開。 育成ノート(助手のマスモンを計画して育てる・けが/病気/家出/サボり・56-assistant-life-masmon-plan.jsx・キズナ)。保存 mh_assistant_masmon_plan_v1・mh_assistant_masmon_cond_v1。gate → ミハリ → 窓口の最終確認のあと、更新履歴とヘルプと一緒に真にする
   assistantMasmonSleep: true, // 2026-11-12 公開(社長「この文で」・ミハリ fable 確認済み・真にしたら偽へ戻さない)。2026-11-12 助手のマスモンの冬眠(育てた中身を保ったまま眠らせ、あとで起こす・56-assistant-life-masmon-sleep.jsx・キズナ)。保存 mh_assistant_masmon_sleep_v1。育成ノートの印も真のときだけ動く。ミハリ → 窓口の確認のあと真にする
-  assistantLifeTaste: false, // 2026-11-15 助手の好き嫌いが遊んでいくうちに変わる(56-assistant-life-masmon-taste.jsx・キズナ8・社長「この形で作る」)。止め絵と更新履歴の「この文で」・ミハリ10の確認のあと真にする。保存 mh_assistant_life_taste_v1
+  assistantLifeTaste: true, // 2026-11-15 社長 OK(案・止め絵・文)のあと公開。助手の好き嫌いが遊んでいくうちに変わる(56-assistant-life-masmon-taste.jsx・キズナ8)。ミハリ10の確認済みなら真にしたら偽へ戻さない。保存 mh_assistant_life_taste_v1
   assistantMasmonBond: true, // 2026-11-12 助手のマスモンの総合力とランク・忠誠度・人気・育成方針と叱る/褒める・年齢と寿命・成長の型・育ちの速さ×3(56-assistant-life-masmon-bond.jsx・キズナ・案 masmon-plan/POWER.md 第3版)。保存 mh_assistant_masmon_bond_v1。真にするのは masmon-pvp の配り直し(DAILY_GROWTH_CAP 200)・止め絵と更新履歴の「この文で」・ミハリ・Fable の確認のあと
   // モンヒロサクセス(プレイヤー側のターン制の育成・PLAN.md)。回2(育成の画面)を作っている途中なので偽。入口はデバッグ設定の「🌱 モンヒロサクセス(試す)」だけ(56-monhero-success-*.jsx)
   monheroSuccess: false,
@@ -81830,7 +81830,7 @@ const assistantLifeTasteBump = (aid, monsterId, kind, now = Date.now()) => {
       try {
         if (typeof assistantLifeDiaryAdd === 'function') {
           const who = typeof assistantLifeName === 'function' ? assistantLifeName(aid) : aid, n = amtMonName(c.target);
-          const txt = c.to === 'like' ? `${who}が${n}を好きになってきたみたい` : c.to === 'dislike' ? `${who}は${n}が苦手になってきたみたい` : c.from === 'dislike' ? `${who}は${n}が前ほど苦手じゃなくなってきたみたい` : `${who}は${n}に前ほど夢中じゃなくなったみたい`;
+          const txt = c.to === 'like' ? `${who}が ${n}を 好きになってきたみたい` : c.to === 'dislike' ? `${who}は ${n}が 苦手になってきたみたい` : c.from === 'dislike' ? `${who}は ${n}が 前ほど苦手じゃ なくなってきたみたい` : `${who}は ${n}に 前ほど夢中じゃ なくなったみたい`; // 掲示板の小さな札で言葉の途中で切れないよう、言葉の切れ目に空白(AssistantLifeChunks が空白で区切る)
           void assistantLifeDiaryAdd(txt, [aid], { kind: 'note' });
         }
       } catch (_) {}

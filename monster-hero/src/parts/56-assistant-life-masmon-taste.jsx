@@ -152,7 +152,7 @@ const assistantLifeTasteBump = (aid, monsterId, kind, now = Date.now()) => {
       try {
         if (typeof assistantLifeDiaryAdd === 'function') {
           const who = typeof assistantLifeName === 'function' ? assistantLifeName(aid) : aid, n = amtMonName(c.target);
-          const txt = c.to === 'like' ? `${who}が${n}を好きになってきたみたい` : c.to === 'dislike' ? `${who}は${n}が苦手になってきたみたい` : c.from === 'dislike' ? `${who}は${n}が前ほど苦手じゃなくなってきたみたい` : `${who}は${n}に前ほど夢中じゃなくなったみたい`;
+          const txt = c.to === 'like' ? `${who}が ${n}を 好きになってきたみたい` : c.to === 'dislike' ? `${who}は ${n}が 苦手になってきたみたい` : c.from === 'dislike' ? `${who}は ${n}が 前ほど苦手じゃ なくなってきたみたい` : `${who}は ${n}に 前ほど夢中じゃ なくなったみたい`; // 掲示板の小さな札で言葉の途中で切れないよう、言葉の切れ目に空白(AssistantLifeChunks が空白で区切る)
           void assistantLifeDiaryAdd(txt, [aid], { kind: 'note' });
         }
       } catch (_) {}

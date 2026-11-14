@@ -136,9 +136,12 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
       // 掲示板「今日あったこと」に1件(段が変わった日)
       await page.locator('[data-assistant-life-profile-close]').first().click().catch(() => {}); await page.waitForTimeout(500);
       await page.locator('[data-assistant-life-icon="home"], [data-assistant-life-icon="house"]').first().click({ timeout: 2000 }).catch(() => {}); await page.waitForTimeout(500);
+      const sm = await page.evaluate(() => { const b = document.querySelector('[data-assistant-life-board]'); if (!b) return null; const its = [...b.querySelectorAll('[data-assistant-life-board-item]')]; const cut = its.filter(p => { const r = document.createRange(); r.selectNodeContents(p); return r.getBoundingClientRect().bottom > p.getBoundingClientRect().bottom + 1 || p.scrollHeight > p.clientHeight + 1; }).length; return { n: its.length, cut, text: its.map(x => x.textContent).join(' | ') }; });
+      check(`${T}⑤ 家の小さな掲示板の文が、言葉の途中で切れない`, !!sm && sm.cut === 0, JSON.stringify(sm));
+      await page.locator('[data-assistant-life-board]').screenshot({ path: path.join(shotDir, `taste-board-small-${w}.png`) }).catch(() => {});
       await page.locator('[data-assistant-life-board]').click({ timeout: 4000 }).catch(() => {}); await page.waitForTimeout(500);
       const bd = await page.evaluate(() => { const d = document.querySelector('[data-assistant-life-diary]'); return d ? { text: d.textContent, over: [...d.querySelectorAll('*')].filter(e => e.getBoundingClientRect().right > window.innerWidth + 1).length } : null; });
-      check(`${T}⑤ 掲示板に「好きになってきたみたい」が1件ずつ出る`, !!bd && /ピクシー.*好きになってきた/.test(bd.text) && /オボロゲソウ.*苦手じゃなくなってきた/.test(bd.text) && bd.over === 0, bd ? bd.text.replace(/\s+/g, ' ').slice(0, 160) : 'なし');
+      check(`${T}⑤ 掲示板に「好きになってきたみたい」が1件ずつ出る`, !!bd && /ピクシーを 好きになってきた/.test(bd.text) && /オボロゲソウが 前ほど苦手じゃ なくなってきた/.test(bd.text) && bd.over === 0, bd ? bd.text.replace(/\s+/g, ' ').slice(0, 160) : 'なし');
       await shot(page, `taste-board-${w}`);
       await page.close();
     }
