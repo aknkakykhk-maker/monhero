@@ -36,11 +36,14 @@ const MEASURE = () => {
   // ① 吹き出し: 白い箱の中身(字)が箱の外へはみ出していない(scroll の大きさが箱の大きさを超えない)。回しているときは offset 系で比べる
   document.querySelectorAll('[data-rhythm-multi-chat-bubble] > span').forEach((s) => {
     const text = (s.innerText || '').trim(); if (!text) return;
-    const lh = parseFloat(getComputedStyle(s).lineHeight) || 12;
-    if (s.scrollHeight > s.clientHeight + 2) bad.bubble.push(`「${text.slice(0, 14)}」が箱(高さ${s.clientHeight})の外へはみ出す(中身${s.scrollHeight})`);
-    // 箱の下に字が出ていないか: 箱を伸ばさない作りなので、字の行数 × 行の高さ が箱に入ること
-    const lines = Math.round((s.scrollHeight - 4) / lh);
-    if (lines > 3) bad.bubble.push(`「${text.slice(0, 14)}」が${lines}行`);
+    const cs = getComputedStyle(s);
+    const lh = parseFloat(cs.lineHeight) || 12;
+    const pad = (parseFloat(cs.paddingTop) || 0) + (parseFloat(cs.paddingBottom) || 0);
+    // 字は2行までで、それを超える分は「…」で省く(line-clamp)。見える行(多くても2行)ぶんの高さが箱にあればよい。箱が低くて、見える行が箱の下へはみ出すのが NG
+    const lines = Math.max(1, Math.round((s.scrollHeight - pad) / lh));
+    const shown = Math.min(lines, 2);
+    const need = shown * lh + pad;
+    if (s.clientHeight < need - 1) bad.bubble.push(`「${text.slice(0, 14)}」は${shown}行出すのに、箱の高さが${s.clientHeight}px(要る高さ${Math.round(need)}px)`);
   });
   // ② 決定の帯と難易度の札
   const act = document.querySelector('[data-rhythm-song-act]');
