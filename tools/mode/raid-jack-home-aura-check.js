@@ -83,7 +83,7 @@ const TIERS = [1, 2, 3, 4, 5];
     await page.getByRole('button', { name: 'トップ画面へ進む' }).click({ timeout: 30000 });
     await page.getByRole('button', { name: 'モンヒロバトル' }).waitFor({ timeout: 30000 });
     for (let i = 0; i < 6; i++) {
-      const btn = page.getByRole('button', { name: /受け取る|閉じる|はじめる|OK/ }).first();
+      const btn = page.getByRole('button', { name: /受け取る|閉じる|(?:始|はじ)める|OK/ }).first();
       if (await btn.count() === 0 || !(await btn.isVisible().catch(() => false))) break;
       await btn.dispatchEvent('click').catch(() => {});
       await page.waitForTimeout(250);
@@ -108,7 +108,7 @@ const TIERS = [1, 2, 3, 4, 5];
           // 決まった印のあるもの(お知らせのまとめの「あとで読む」・HELL の遊び方の「つぎへ」)を先に、次に一番上の案内の中のボタンを文言の完全一致で押す
           const marked = document.querySelector('[data-update-guide-bundle-later], [data-rhythm-hell-guide-next]');
           if (marked) { marked.click(); return true; }
-          const rx = /^(次へ|つぎへ|はじめる|閉じる|とじる|あとで|あとで読む|わかった！?|OK|受け取る)$/;
+          const rx = /^(次へ|つぎへ|(?:始|はじ)める|閉じる|とじる|あとで|あとで読む|(?:分|わ)かった！?|OK|受け取る)$/;
           const dialogs = [...document.querySelectorAll('[role="dialog"], [aria-modal="true"]')];
           const scope = dialogs.length ? dialogs[dialogs.length - 1] : document;
           const btn = [...scope.querySelectorAll('button')].find((b) => rx.test((b.innerText || '').replace(/\s+/g, '').trim()) && b.offsetParent);

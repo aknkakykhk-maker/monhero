@@ -134,7 +134,7 @@ async function auditBuild(playwright, root, label, port) {
       if (!title) { row.why = `曲 ${songId} がこの版に無い`; throw new Error(row.why); }
       const picked = await openSoloLive(s, { songName: title, songId, difficulty: DIFFICULTY, strict: true });
       if (!picked) { row.why = '曲えらびまで行けない'; throw new Error(row.why); }
-      await s.tapLabel(/^(▶\s*)?(決定|START|スタート|演奏する|演奏開始|PLAY|はじめる)$/i, 2500);
+      await s.tapLabel(/^(▶\s*)?(決定|START|スタート|演奏する|演奏開始|PLAY|(?:始|はじ)める)$/i, 2500);
       await s.dismissOverlays(4);
       const ready = await s.page.waitForFunction(() => !!document.querySelector('[data-rhythm-play-area]') && window.__mhTestHooks && typeof window.__mhTestHooks.rhythmNotes === 'function' && (window.__mhTestHooks.rhythmNotes() || []).length > 0, { timeout: 30000 }).then(() => true).catch(() => false);
       if (!ready) { row.why = '演奏画面が開かない'; throw new Error(row.why); }
