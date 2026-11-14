@@ -130,6 +130,8 @@ const FORCE_CHECKS = [
   //   書き方の見張り(env(safe-area-inset-*) を直に書かない)は、本体の部品を触ったら必ず。ブラウザで四辺の帯を測る検査は、モンヒロビートの部品・回す部品を触ったら必ず
   { re: /^monster-hero\/src\/parts\/.+\.jsx$|^monster-hero\/index\.html$|^tools\/ui\/rhythm-safe-area-raw-check\.js$/, checks: ['ui/rhythm-safe-area-raw-check.js'], why: 'モンヒロビートの部品に env(safe-area-inset-*) を直に書いていないか(🔄横の帯)' },
   { re: /^monster-hero\/src\/parts\/(28|29|30|33|39|58|73|77|80)-.+\.jsx$|^monster-hero\/data\/rhythm-mode\.js$|^monster-hero\/index\.html$|^tools\/ui\/rhythm-edge-band-check\.js$/, checks: ['ui/rhythm-edge-band-check.js'], why: '縦・横・🔄横で、モンヒロビートの全画面の四辺に絵の無い黒い帯が無いか' },
+  // マルチの曲えらび(2026-11-14 社長の止め絵): 席の上の吹き出しの字が箱からはみ出さない・「この曲で決定」が難易度の札に重ならない(縦・横・🔄横・小さい横)
+  { re: /^monster-hero\/src\/parts\/(29-rhythm-screens|77-screen-rhythm-multi|80-screen-rhythm-buddy)\.jsx$|^monster-hero\/index\.html$|^tools\/ui\/rhythm-multi-select-fit-check\.js$/, checks: ['ui/rhythm-multi-select-fit-check.js'], why: 'マルチの曲えらびの吹き出し・決定の帯が切れず重ならないか' },
   // 本体を読み込む検査が、用を終えたら抜けるか(2026-11-07・#4832 の見張りで harness を使う検査が600秒止まった)。本体や harness を触ったら確かめる
   { re: /^monster-hero\/src\/parts\/.+\.jsx$|^tools\/harness\.js$/, checks: ['boot/harness-exit-check.js'], why: '本体を読み込む検査が、終わったら抜けるか(止まらないタイマーが無いか)' },
   // 保存キー(mh_*)は docs/spec/SAVE_DATA.md の一覧に載せる決まり。本体・データを触ったら必ず確かめる
