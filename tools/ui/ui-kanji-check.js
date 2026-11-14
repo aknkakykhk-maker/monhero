@@ -13,7 +13,7 @@ const { scanFile, applyFile, targetFiles } = require('./ui-kanji-scan.js');
 
 // まだ置き換えていない部品(r1114-089 で部品ごとに PR を分けて進めている。済んだら消す)
 const PENDING = [
-  /src\/parts\/(?!8[2-9]-|9[0-9]-)/, // カードバトル(82〜99)以外の parts
+  /src\/parts\/(?!8[2-9]-|9[0-9]-|19-|32-|59-|6[1-7]-|7[12]-|79-)/, // まだの parts(済み: カードバトル 82〜99・マスモン・勇者選び・レイド 19/32/59/61〜67/71/72/79)
   /data\/(?!card-battle-cards\.js)/, // data(help.js・名前の表)
 ];
 

@@ -954,7 +954,7 @@ const extremeRuleDetailGroups = (difficultyId, quick=false) => {
       ['Lv5','与ダメ低下 -2.0pt/T・最低10%'],
     ]);
     push('敵の強さ',[
-      adjust.lifeRate>1&&['敵ライフ',`すべての敵が${adjust.lifeRate}倍`],
+      adjust.lifeRate>1&&['敵ライフ',`全ての敵が${adjust.lifeRate}倍`],
       durahan&&['デュラハン',`ライフ・攻撃力が さらに${durahan.lifeRate}倍`],
     ]);
     push('距離強化',[
@@ -970,7 +970,7 @@ const extremeRuleDetailGroups = (difficultyId, quick=false) => {
     if(difficultyId===EREBUS_SETTING.id) push('層のシールド',[
       ['蘇り','ムーだけ1回、本体を倒すとライフ全回復・最大ライフ1.5倍で蘇る。シールドは張り直さない'],
       ['層の数','W1・W2の敵 4枚 / W3〜W8の敵(ボスも) 5枚 / W9 デュラハン 5枚 / W10 ムー 5枚'],
-      ['WAVEのはじめのシールド','エターナルの50%のシールドは、層のシールドに置き換わる'],
+      ['WAVEの初めのシールド','エターナルの50%のシールドは、層のシールドに置き換わる'],
       ['シールドの量','1枚目はその敵の最大ライフの1.8倍(デュラハン2.6倍・ムー3倍)。割れるたびに次の1枚が30%ずつ大きくなる。割りきったあとのボスのライフにも同じ倍率(ふつうの敵のライフは元のまま)'],
       ['割れるたび','ふつうの敵の攻撃力 +20%・ボスの攻撃力 +30%(最後の1枚も。ムーは蘇るときにも+30%)'],
       ['連撃','デュラハンは4枚目が割れたら必殺技が2連撃、ムーは4枚目で2連撃・5枚目で3連撃(合計の威力は同じ。ガードは1枚で1発ずつ止まり、2枚以上で全部止まる)'],
@@ -978,7 +978,7 @@ const extremeRuleDetailGroups = (difficultyId, quick=false) => {
     if(difficultyId===COCYTUS_SETTING.id) push('層のシールド',[
       ['蘇り','デュラハンは1回・ムーは2回、本体を倒すとライフ全回復・最大ライフ1.5倍で蘇る(ムーの2回目は2.25倍)。シールドは張り直さない'],
       ['層の数','W1・W2の敵 4枚 / W3〜W8の敵(ボスも) 5枚 / W9 デュラハン 5枚 / W10 ムー 5枚'],
-      ['WAVEのはじめのシールド','エターナルの50%のシールドは、層のシールドに置き換わる'],
+      ['WAVEの初めのシールド','エターナルの50%のシールドは、層のシールドに置き換わる'],
       ['シールドの量','1枚目はその敵の最大ライフの3倍(デュラハン3.8倍・ムー4.4倍)。割れるたびに次の1枚が30%ずつ大きくなる。割りきったあとのボスのライフにも同じ倍率(ふつうの敵のライフはそのまま)'],
       ['割れるたび','敵の攻撃力 +20%(最後の1枚も。蘇るたびにも+20%)'],
       ['連撃','デュラハンは4枚目が割れたら必殺技が2連撃、ムーは4枚目で2連撃・5枚目で3連撃(合計の威力は同じ。ガードは1枚で1発ずつ止まり、2枚以上で全部止まる)'],
@@ -1020,7 +1020,7 @@ const extremeRuleDetailGroups = (difficultyId, quick=false) => {
   if(breakRule)push('DISTANCE BREAK',[
     ['進行',`累計${breakRule.interval}ターンごとに1距離の弱体Lv上昇`],
     ['弱体倍率',`Lv1 ${specialRulePercent(breakRule.damageDealtPerLevel)} / Lv2 ${specialRulePercent(breakRule.damageDealtPerLevel**2)} / Lv3 ${compactPercent(breakRule.damageDealtPerLevel**3)}（以降も半減）`],
-    ['安全距離',breakRule.safeDistanceCount>0?`${breakRule.safeDistanceCount}距離は最後まで弱体化しない`:'なし（4距離すべて弱体化する）'],
+    ['安全距離',breakRule.safeDistanceCount>0?`${breakRule.safeDistanceCount}距離は最後まで弱体化しない`:'なし（4距離全て弱体化する）'],
   ]);
   const revivalRule=extremeRevivalRule(difficultyId);
   // COCYTUSの蘇り(全回復・最大ライフが増える)は「層のシールド」の欄に書くので、ここ(半分で起き上がる形)には出さない
