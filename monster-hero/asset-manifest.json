@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "id": "3b36ba085d90",
-  "packs": {"beat":{"bytes":149788587,"count":113},"battle":{"bytes":160691653,"count":978},"card":{"bytes":37779758,"count":1048},"all":{"bytes":348259998,"count":2139},"core":{"bytes":22160611,"count":24}},
+  "id": "fa1fc5697e88",
+  "packs": {"beat":{"bytes":149788587,"count":113},"battle":{"bytes":160691889,"count":978},"card":{"bytes":37779758,"count":1048},"all":{"bytes":348260234,"count":2139},"core":{"bytes":22160611,"count":24}},
   "files": {
     "audio/bgm-4u-hitasura.mp3": {"v":"f4fb42472438","size":1446380,"pack":"beat"},
     "audio/bgm-against-my-own-shadow.mp3": {"v":"a58782a4c46f","size":1889175,"pack":"beat"},
@@ -1582,7 +1582,7 @@
     "images/events/monbeat-event-2026-09-11.jpg": {"v":"bdcbebca070b","size":146353,"pack":"battle"},
     "images/events/monbeat-event-2026-09-17-wide.jpg": {"v":"b2ff791693ca","size":153034,"pack":"battle"},
     "images/events/monbeat-event-2026-09-17.jpg": {"v":"29df7296db9b","size":146816,"pack":"battle"},
-    "images/events/monsaku-beta-soon-poster.jpg": {"v":"e937fb4bc03b","size":63293,"pack":"battle"},
+    "images/events/monsaku-beta-soon-poster.jpg": {"v":"cca884327653","size":63529,"pack":"battle"},
     "images/events/monsaku-open.jpg": {"v":"4e899510ba1c","size":87653,"pack":"battle"},
     "images/events/monsaku-teaser.jpg": {"v":"8c2f0382ad8a","size":174803,"pack":"battle"},
     "images/events/monsaku-teaser2-ascetic.jpg": {"v":"aa0e366357bb","size":103567,"pack":"battle"},
@@ -2157,7 +2157,7 @@
     "data/rhythm-geometry-calibration.js": {"v":"02534cca12f6","size":15552,"pack":"core"},
     "data/rhythm-result-replay-remount.js": {"v":"381554180360","size":5743,"pack":"core"},
     "data/rhythm-event.js": {"v":"09e53d5ca313","size":96816,"pack":"core"},
-    "data/changelog.js": {"v":"9ab8ff779709","size":1744680,"pack":"core"},
+    "data/changelog.js": {"v":"984d2129974f","size":1744680,"pack":"core"},
     "data/help.js": {"v":"3a6d81929ef1","size":853205,"pack":"core"},
     "data/mhsave-backup.js": {"v":"7845a4fd261f","size":14703,"pack":"core"},
     "data/rhythm-step3-release.js": {"v":"ae1d7f73f23a","size":8517,"pack":"core"},
