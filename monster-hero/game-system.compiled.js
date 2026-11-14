@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e406679d19c4b5f3
+// source-sha256: c45783632345ba6b
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -167845,121 +167845,6 @@ function MsxPlay({
         out: null
       })
     }, "つぎへ ▶"));
-  } else if (phase === 'battle' && s.battle) {
-    const b = s.battle;
-    const opp = SUC.opponents(s);
-    const name = b.kind === 'summit' ? (SUC.SUMMIT[b.round] || {}).name : b.kind === 'debut' ? 'デビュー戦' : (SUC.FORCED[b.kind] || {}).name;
-    const settle = win => {
-      const r = SUC.settle(s, win ? opp.map(() => true) : [false]);
-      const next = pushLog({
-        ...run,
-        s: r.state
-      }, `${name}: ${r.out.won ? '優勝' : '負け'}`);
-      if (r.state.battle) setRun({
-        ...next,
-        phase: 'battle'
-      });else if (r.state.over) setRun({
-        ...next,
-        phase: 'over'
-      });else setRun({
-        ...next,
-        phase: 'turn',
-        out: {
-          from: s.turn
-        }
-      });
-    };
-    body = React.createElement(React.Fragment, null, React.createElement(MsxBand, {
-      s: s,
-      v: v,
-      ev: ev
-    }), React.createElement("div", {
-      className: "v-scene",
-      style: {
-        flex: '1 1 0'
-      }
-    }, React.createElement("img", {
-      className: "bg",
-      src: msxVenueBg(b.kind === 'summit' ? 'summit' : b.kind === 'debut' ? 'debut' : b.kind === 'pro' ? 'hero' : 'cup'),
-      alt: ""
-    }), React.createElement("div", {
-      className: "sh"
-    }), React.createElement("div", {
-      className: "v-ev-h"
-    }, React.createElement("small", null, "大会"), "🏆 ", name, b.retry ? `(再挑戦 ${b.retry}回目)` : ''), React.createElement("div", {
-      className: "gr"
-    }), React.createElement(MsxMonArt, {
-      run: run,
-      className: "mon"
-    })), React.createElement("div", {
-      className: "v-card pk"
-    }, React.createElement("div", {
-      className: "h2"
-    }, name, React.createElement("span", {
-      className: "msx-soon"
-    }, "準備中")), React.createElement("div", {
-      className: "sub"
-    }, "試合(", opp.length, "戦)と観戦の画面は、次の回で入ります。")));
-    foot = debug ? React.createElement("div", {
-      className: "v-ft"
-    }, React.createElement("button", {
-      type: "button",
-      onClick: () => settle(false)
-    }, "負けたことにする"), React.createElement("button", {
-      type: "button",
-      className: "go",
-      onClick: () => settle(true)
-    }, "勝ったことにする(デバッグ)")) : React.createElement("div", {
-      className: "v-ft"
-    }, React.createElement("button", {
-      type: "button",
-      onClick: onPause
-    }, "← 中断"));
-  } else if (phase === 'over' || s.over) {
-    body = React.createElement(React.Fragment, null, React.createElement(MsxBand, {
-      s: s,
-      v: v,
-      ev: ev
-    }), React.createElement("div", {
-      className: "v-scene",
-      style: {
-        flex: '1 1 0'
-      }
-    }, React.createElement("img", {
-      className: "bg",
-      src: msxSceneBg(s.turn).bg,
-      alt: ""
-    }), React.createElement("div", {
-      className: "sh"
-    }), React.createElement("div", {
-      className: "v-burst b2"
-    }), React.createElement("div", {
-      className: "gr"
-    }), React.createElement(MsxMonArt, {
-      run: run,
-      className: "mon"
-    }), React.createElement("div", {
-      className: "v-stamp ok msx-pop"
-    }, s.over === 'gameover' ? 'ここまで…' : s.over === 'lost' ? 'おつかれさま' : '育成おわり!', React.createElement("small", null, "総合力 ", msxFmt(ev.power), "・ランク ", ev.rank))), React.createElement(MsxStRow, {
-      stats: s.stats
-    }), React.createElement("div", {
-      className: "v-card"
-    }, React.createElement("div", {
-      className: "h2"
-    }, "引退", React.createElement("span", {
-      className: "msx-soon"
-    }, "準備中")), React.createElement("div", {
-      className: "sub"
-    }, "振り返り・育成ランク・保存枠へ入れる画面は次の回で入ります。この育成はこのまま残しておきます")));
-    foot = React.createElement("div", {
-      className: "v-ft"
-    }, React.createElement("button", {
-      type: "button",
-      onClick: onPause
-    }, "← もどる"), React.createElement("button", {
-      type: "button",
-      onClick: onQuit
-    }, "この育成を消す"));
   } else if (sub === 'train') {
     const pull = k => {
       const c = msxCardOf(v, k);
