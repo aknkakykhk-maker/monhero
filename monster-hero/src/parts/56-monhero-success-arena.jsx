@@ -41,6 +41,23 @@ function MsaBgToggle({ bg, onChange }) {
   const next = msaBgNorm(bg) === 'arena' ? 'stadium' : 'arena';
   return <button type="button" className="msa-bgsw" data-msa-bg={msaBgNorm(bg)} aria-label={`背景を${MSA_BG_LABEL[next].slice(3)}にする`} onClick={() => { msaSe('tap'); msaBgWrite(next); onChange(next); }}>背景 {MSA_BG_LABEL[msaBgNorm(bg)]}</button>;
 }
+// 試合の操作(2026-11-14 社長「バトルがオートだった。基本マニュアルで、オートにもできるようにして」)
+//   モンサクの大会と助手マスモン対戦の試合で共通の新しいキー。'manual'(既定)/'auto'。無い・知らない値は手動として読み、消さない
+const MSA_CTL_KEY = 'mh_monsuc_arena_ctl_v1';
+const msaCtlNorm = (v) => (v === 'auto' ? 'auto' : 'manual');
+const msaCtlRead = () => { try { return msaCtlNorm(localStorage.getItem(MSA_CTL_KEY)); } catch (_) { return 'manual'; } };
+const msaCtlWrite = (v) => { try { localStorage.setItem(MSA_CTL_KEY, msaCtlNorm(v)); } catch (_) {} };
+// オートのときに選ぶ手(芯のおすすめ hint。交代の番は出せる先頭の子)。無ければ null
+const msaAutoChoice = (opt) => {
+  if (!opt) return null;
+  if (opt.kind === 'enter') { const x = (opt.enter || []).find((y) => y && y.ok); return x ? { type: 'enter', to: x.to } : null; }
+  return opt.hint && opt.hint.type ? { ...opt.hint } : null;
+};
+// 手動 ⇄ オートの切り替え(試合の下の帯に置く)。保存はここ(save=false なら保存しない)
+function MsaCtlToggle({ ctl, onChange, save = true }) {
+  const now = msaCtlNorm(ctl); const next = now === 'auto' ? 'manual' : 'auto';
+  return <button type="button" className="msa-ctlsw" data-msa-ctl={now} aria-label={next === 'auto' ? 'オートにする' : '手動にする'} onClick={() => { msaSe('tap'); if (save) msaCtlWrite(next); onChange(next); }}>{now === 'auto' ? '🤖 オート中' : '🎮 手動'}<small>{next === 'auto' ? 'オートへ' : '手動へ'}</small></button>;
+}
 const MSA_CSS = `
 .msa{display:flex;flex-direction:column;gap:6px}
 .msa-stage{position:relative;height:clamp(200px,34vh,290px);border-radius:16px;overflow:hidden;background:#2a2147 center/cover no-repeat}
@@ -76,6 +93,7 @@ const MSA_CSS = `
 .msa-tools button{flex:1;min-height:34px;border-radius:10px;border:1px solid #4c4680;background:#2b2650;color:#fff;font-weight:900;font-size:12px}
 .msa-tools button.on{background:#fde047;color:#422006;border-color:#fde047}
 .msx .msa-tools button{text-align:center}
+.msa-tools button.msa-ctlsw{flex:1.3;font-size:11.5px;white-space:nowrap;background:#3b1d5e;border-color:#a78bfa;line-height:1.05}.msa-tools button.msa-ctlsw small{display:block;font-size:9.5px;color:#ddd6fe}.msa-tools button.msa-ctlsw[data-msa-ctl=auto]{background:#14532d;border-color:#4ade80}
 .msa-tools button.msa-bgsw{flex:1.4;font-size:11px;white-space:nowrap;background:#1e1b3a;border-color:#6b64a8}
 .msa-wait{font-size:11.5px;color:#cbd5e1;text-align:center}
 .msa-gtag{position:absolute;z-index:8;bottom:-16px;left:50%;transform:translateX(-50%);white-space:nowrap;border-radius:99px;padding:0 7px;font-size:10.5px;font-weight:900;line-height:16px;animation:msaPop .45s ease-out both}
@@ -789,7 +807,8 @@ function MonsucArena({ s, info, engine, input, watch, onEnd }) {
   const [pos, setPos] = useState(0);
   const [speed, setSpeed] = useState('x1');
   const [bg, setBg] = useState(msaBgRead);
-  const [auto, setAuto] = useState(!manual);
+  const [ctl, setCtl] = useState(msaCtlRead);   // 手動が基本。オートを選んだら保存して次の試合でも使う
+  const auto = !manual || ctl === 'auto';
   const [ended, setEnded] = useState(false);
   const endRef = useRef(false);
   useMhBattleBgmHold(true);
@@ -821,6 +840,13 @@ function MonsucArena({ s, info, engine, input, watch, onEnd }) {
     const over = r.bottom - b.bottom + 8;
     if (over > 0) box.scrollTop += Math.min(over, Math.max(0, r.top - b.top - 8));
   }, [barOn, pos]);
+  // オートの手番: 芯のおすすめの手を少し置いて選ぶ(いつでも手動へ戻せるよう、1手ずつ進める)
+  const autoWait = Boolean(manual && ctl === 'auto' && pos >= last && !ended && mm.pending);
+  useEffect(() => {
+    if (!autoWait) return undefined;
+    const t = setTimeout(() => { const c = msaAutoChoice(mm.pending); if (c && mm.pick(c)) setPos(p => p + 1); else { mm.toAuto(); } }, reduce ? 60 : 220);
+    return () => clearTimeout(t);
+  }, [autoWait, pos, mm.tick]);
   useEffect(() => {
     if (!ended || endRef.current) return undefined;
     const t = setTimeout(() => { if (endRef.current) return; endRef.current = true; if (onEnd) onEnd(won, { choices: manual ? mm.choices : null, auto, result }); }, 1700);
@@ -835,8 +861,9 @@ function MonsucArena({ s, info, engine, input, watch, onEnd }) {
   const maxHp = { A: st.aHp || [], B: st.bHp || [] };
   const nm = (side, i) => { const t = teams[side]; const ms = (t && t.members) || []; const m = ms[Number.isFinite(i) ? i : f.act[side]] || ms[0]; return (m && m.name) || ''; };
   const pick = (c) => { if (busy || !manual) return; msaSe('tap'); if (mm.pick(c)) setPos(p => p + 1); }; // 選んだ手の行からすぐ見せる
-  const goAuto = () => { if (!manual) return; msaSe('tap'); mm.toAuto(); setAuto(true); setSpeed('x2'); };
-  const skip = () => { if (manual && !done) return; msaSe('tap'); setPos(last); };
+  const goAuto = () => { if (!manual) return; msaSe('tap'); msaCtlWrite('auto'); setCtl('auto'); };
+  // とばす: 手動の試合は残りをオートで決めてから最後へ
+  const skip = () => { msaSe('tap'); if (manual && !done) { mm.toAuto(); const n = mm.match ? mm.match.log.length : 0; setPos(Math.max(0, n - 1)); return; } setPos(last); };
   const showBar = Boolean(manual && !auto && !busy && !ended && mm.pending);
   return (
     <div className="msc-wrap msa" data-msc-match data-msa-pos={pos} data-msa-mode={manual ? (auto ? 'auto' : 'manual') : 'watch'}>
@@ -852,15 +879,15 @@ function MonsucArena({ s, info, engine, input, watch, onEnd }) {
         <div className="msa-tools">
           {MSA_SPEEDS.map(x => <button key={x.id} type="button" className={speed === x.id ? 'on' : ''} onClick={() => { msaSe('tap'); setSpeed(x.id); }}>{x.label}</button>)}
           <button type="button" data-msc-skip onClick={skip}>⏭ とばす</button>
-          <MsaBgToggle bg={bg} onChange={setBg}/>
+          {!manual ? <MsaBgToggle bg={bg} onChange={setBg}/> : null}
         </div>
       ) : null}
       {manual && !auto && !ended ? (
         <div className="msa-tools">
           {MSA_SPEEDS.slice(0, 2).map(x => <button key={x.id} type="button" className={speed === x.id ? 'on' : ''} onClick={() => { msaSe('tap'); setSpeed(x.id); }}>見せる速さ {x.label}</button>)}
-          <MsaBgToggle bg={bg} onChange={setBg}/>
         </div>
       ) : null}
+      {manual && !ended ? <div className="msa-tools" data-msa-tools2><MsaCtlToggle ctl={ctl} onChange={setCtl}/><MsaBgToggle bg={bg} onChange={setBg}/></div> : null}
     </div>
   );
 }

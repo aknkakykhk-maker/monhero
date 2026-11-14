@@ -36,7 +36,7 @@ const AMBB_SET_OPTS = Object.freeze({
   dist: ['auto', 0, 1, 2, 3],
   guts: [30, 50, 70, 99],
   fx: [{ id: 'full', label: 'たっぷり' }, { id: 'lite', label: '少なめ' }],
-  ctl: [{ id: 'auto', label: 'オートで観戦' }, { id: 'manual', label: '手動', note: '手番ごとに自分で選ぶ' }],
+  ctl: [{ id: 'manual', label: '手動', note: '手番ごとに自分で選ぶ' }, { id: 'auto', label: 'オートで観戦' }],
   balance: [{ id: 'A', label: 'そのまま' }, { id: 'B', label: '差を縮める' }, { id: 'C', label: '差を広げる' }],
 });
 const normalizeAmbbSet = (raw) => {
@@ -534,8 +534,12 @@ function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, preview, tryPv
     return { assistantId: foeId, tactics: ambbTacticsOf(foeId, rows), members: units.map(u => u.unit) };
   };
   // 試合の設定(この端末の練習だけ)。確かめ(印が偽)では保存せず、開いているあいだだけ覚える
-  const set = save.set || normalizeAmbbSet(null);
-  const setSet = (patch) => { const next = normalizeAmbbSet({ ...set, ...patch }); if (!ambbSave(s => ({ ...s, set: next }))) AMBB_STORE.set({ ...AMBB_STORE.state, set: next }); };
+  // 操作(手動/オート)は、モンサクの試合と同じ新しいキー mh_monsuc_arena_ctl_v1 が正本(2026-11-14 社長「基本マニュアルで、オートにもできるように」)。
+  //   前の set.ctl は読まない・消さない。確かめ(preview)では保存しない
+  const [ctlNow, setCtlNow] = useState(() => (typeof msaCtlRead === 'function' ? msaCtlRead() : 'manual'));
+  const putCtl = (v) => { const n = v === 'auto' ? 'auto' : 'manual'; if (!preview && typeof msaCtlWrite === 'function') msaCtlWrite(n); setCtlNow(n); };
+  const set = { ...(save.set || normalizeAmbbSet(null)), ctl: ctlNow };
+  const setSet = (patch0) => { const { ctl: ctlP, ...patch } = patch0 || {}; if (ctlP) putCtl(ctlP); if (!Object.keys(patch).length) return; const next = normalizeAmbbSet({ ...(save.set || normalizeAmbbSet(null)), ...patch }); if (!ambbSave(s => ({ ...s, set: next }))) AMBB_STORE.set({ ...AMBB_STORE.state, set: next }); };
   const lite = set.fx === 'lite';
   const lastSeedRef = useRef('');
 
@@ -657,7 +661,7 @@ function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, preview, tryPv
     if (typeof msaSe === 'function') msaSe('tap');
     const r = m.choose(c); if (r && r.ok) { syncManual(m); setPos(p => p + 1); setPaused(false); }
   };
-  const manualAuto = () => { const m = battle && battle.match; if (!m) return; m.auto('A'); syncManual(m); setPaused(false); };
+  const manualAuto = () => { const m = battle && battle.match; if (!m) return; putCtl('auto'); m.auto('A'); syncManual(m); setPaused(false); };
   const [techList, setTechList] = useState(null);   // 札を押して開いた一覧 { side, d }(d が null なら全部の技)
   // 技の札の代表(段3・2026-11-13 社長)。保存は mh_assistant_masmon_battle_v1 の rep。確かめ(印が偽)では開いているあいだだけ覚える
   const [repEdit, setRepEdit] = useState(null);     // 準備画面の「技の札を決める」で開いている子の鍵

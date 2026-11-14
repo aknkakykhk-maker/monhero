@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1a8415e3ae8ca115
+// source-sha256: 0e982d186c9156f7
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -147629,12 +147629,12 @@ const AMBB_SET_OPTS = Object.freeze({
     label: '少なめ'
   }],
   ctl: [{
-    id: 'auto',
-    label: 'オートで観戦'
-  }, {
     id: 'manual',
     label: '手動',
     note: '手番ごとに自分で選ぶ'
+  }, {
+    id: 'auto',
+    label: 'オートで観戦'
   }],
   balance: [{
     id: 'A',
@@ -148482,10 +148482,25 @@ function AssistantMasmonBattleBeta({
       members: units.map(u => u.unit)
     };
   };
-  const set = save.set || normalizeAmbbSet(null);
-  const setSet = patch => {
+  const [ctlNow, setCtlNow] = useState(() => typeof msaCtlRead === 'function' ? msaCtlRead() : 'manual');
+  const putCtl = v => {
+    const n = v === 'auto' ? 'auto' : 'manual';
+    if (!preview && typeof msaCtlWrite === 'function') msaCtlWrite(n);
+    setCtlNow(n);
+  };
+  const set = {
+    ...(save.set || normalizeAmbbSet(null)),
+    ctl: ctlNow
+  };
+  const setSet = patch0 => {
+    const {
+      ctl: ctlP,
+      ...patch
+    } = patch0 || {};
+    if (ctlP) putCtl(ctlP);
+    if (!Object.keys(patch).length) return;
     const next = normalizeAmbbSet({
-      ...set,
+      ...(save.set || normalizeAmbbSet(null)),
       ...patch
     });
     if (!ambbSave(s => ({
@@ -148808,6 +148823,7 @@ function AssistantMasmonBattleBeta({
   const manualAuto = () => {
     const m = battle && battle.match;
     if (!m) return;
+    putCtl('auto');
     m.auto('A');
     syncManual(m);
     setPaused(false);
@@ -150784,6 +150800,16 @@ const MSC_CSS = `
 .msc-hero.win .who img{animation:msc-hop 1.1s ease-in-out infinite}
 .msc-hero.lose .who img{filter:grayscale(.65) brightness(.8) drop-shadow(0 8px 8px rgba(0,0,0,.5))}
 @keyframes msc-hop{0%,100%{transform:translateY(0)}45%{transform:translateY(-14px)}}
+/* 優勝の画面(2026-11-14 社長): 勝ったモンスターを大きく・明るく、字と帯に隠れない所へ。上から 優勝! → モンスター → 大会の帯 → ライバルの帯 と縦に並べて重ねない */
+.msc-hero.hi{display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 8px 10px}
+.msc-hero.hi::after{content:'';position:absolute;inset:0;z-index:1;pointer-events:none;background:radial-gradient(ellipse 58% 42% at 50% 52%,rgba(255,251,225,.62),rgba(255,236,170,.18) 58%,rgba(24,14,48,.5) 100%)}
+.msc-hero.hi .big{position:relative;top:auto;left:auto;right:auto;z-index:3;font-size:50px;line-height:1.05}
+.msc-hero.hi .who{position:relative;z-index:2;left:auto;bottom:auto;transform:none;width:92%;height:clamp(200px,44vh,340px);flex:none}
+.msc-hero.hi .who img{filter:brightness(1.1) saturate(1.08) drop-shadow(0 0 16px rgba(255,236,150,.95)) drop-shadow(0 10px 10px rgba(0,0,0,.45))}
+.msc-hero.hi .who::after{content:'';position:absolute;left:33%;right:33%;bottom:-6px;height:18px;border-radius:50%;background:rgba(0,0,0,.35);z-index:-1}
+.msc-hero.hi .sub{position:relative;top:auto;left:auto;right:auto;z-index:3;max-width:100%;border-radius:999px;background:rgba(15,23,42,.82);border:1.5px solid #fde04799;padding:4px 14px;text-shadow:none}
+.msc-hero.hi .rival{position:relative;left:auto;right:auto;bottom:auto;width:100%;box-sizing:border-box}
+@media (max-height:500px) and (orientation:landscape){.msc-hero.hi .who{height:clamp(190px,58vh,260px)}.msc-hero.hi .big{font-size:42px}}
 .msc-hero .rival{position:absolute;z-index:3;left:8px;right:8px;bottom:10px;display:flex;align-items:center;gap:6px;border-radius:999px;background:rgba(76,5,25,.9);border:1.5px solid #fb7185;padding:5px 10px;font-size:12.5px;font-weight:900}
 .msc-hero .rival span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .msc-hero .rival em{font-style:normal;background:#fde047;color:#3b2a05;border-radius:999px;padding:1px 8px;font-size:11px}
@@ -151319,7 +151345,8 @@ function MonsucCupWin({
     className: "msc-wrap",
     "data-msc-win": true
   }, React.createElement("div", {
-    className: "msc-hero win",
+    className: "msc-hero win hi",
+    "data-msc-win-hero": true,
     style: {
       backgroundImage: `url(${MSC_VENUE_IMG[info.venue] || MSC_VENUE_IMG.cup})`
     }
@@ -151328,8 +151355,6 @@ function MonsucCupWin({
   }), React.createElement("div", {
     className: "big"
   }, "優勝!"), React.createElement("div", {
-    className: "sub"
-  }, info.title, " ", MSC_STARS(info.star), "・1戦: ", o.name || mscMonName(o.species), " に 勝ち", match && match.r ? `(${match.r.rounds} ラウンド)` : ''), React.createElement("div", {
     className: "who"
   }, (() => {
     const im = React.createElement("img", {
@@ -151341,7 +151366,9 @@ function MonsucCupWin({
       src: mscMonImg(s.species),
       calm: typeof msxAwCalm === 'function' && msxAwCalm()
     }) : im;
-  })()), info.rival && React.createElement("div", {
+  })()), React.createElement("div", {
+    className: "sub"
+  }, info.title, " ", MSC_STARS(info.star), "・1戦: ", o.name || mscMonName(o.species), " に 勝ち", match && match.r ? `(${match.r.rounds} ラウンド)` : ''), info.rival && React.createElement("div", {
     className: "rival"
   }, React.createElement("span", null, "ライバルの ", o.name || mscMonName(o.species), " にも 勝った!"), React.createElement("em", null, "ごほうび大"))), rows.map((r, k) => React.createElement("div", {
     key: k,
@@ -173763,6 +173790,52 @@ function MsaBgToggle({
     }
   }, "背景 ", MSA_BG_LABEL[msaBgNorm(bg)]);
 }
+const MSA_CTL_KEY = 'mh_monsuc_arena_ctl_v1';
+const msaCtlNorm = v => v === 'auto' ? 'auto' : 'manual';
+const msaCtlRead = () => {
+  try {
+    return msaCtlNorm(localStorage.getItem(MSA_CTL_KEY));
+  } catch (_) {
+    return 'manual';
+  }
+};
+const msaCtlWrite = v => {
+  try {
+    localStorage.setItem(MSA_CTL_KEY, msaCtlNorm(v));
+  } catch (_) {}
+};
+const msaAutoChoice = opt => {
+  if (!opt) return null;
+  if (opt.kind === 'enter') {
+    const x = (opt.enter || []).find(y => y && y.ok);
+    return x ? {
+      type: 'enter',
+      to: x.to
+    } : null;
+  }
+  return opt.hint && opt.hint.type ? {
+    ...opt.hint
+  } : null;
+};
+function MsaCtlToggle({
+  ctl,
+  onChange,
+  save = true
+}) {
+  const now = msaCtlNorm(ctl);
+  const next = now === 'auto' ? 'manual' : 'auto';
+  return React.createElement("button", {
+    type: "button",
+    className: "msa-ctlsw",
+    "data-msa-ctl": now,
+    "aria-label": next === 'auto' ? 'オートにする' : '手動にする',
+    onClick: () => {
+      msaSe('tap');
+      if (save) msaCtlWrite(next);
+      onChange(next);
+    }
+  }, now === 'auto' ? '🤖 オート中' : '🎮 手動', React.createElement("small", null, next === 'auto' ? 'オートへ' : '手動へ'));
+}
 const MSA_CSS = `
 .msa{display:flex;flex-direction:column;gap:6px}
 .msa-stage{position:relative;height:clamp(200px,34vh,290px);border-radius:16px;overflow:hidden;background:#2a2147 center/cover no-repeat}
@@ -173798,6 +173871,7 @@ const MSA_CSS = `
 .msa-tools button{flex:1;min-height:34px;border-radius:10px;border:1px solid #4c4680;background:#2b2650;color:#fff;font-weight:900;font-size:12px}
 .msa-tools button.on{background:#fde047;color:#422006;border-color:#fde047}
 .msx .msa-tools button{text-align:center}
+.msa-tools button.msa-ctlsw{flex:1.3;font-size:11.5px;white-space:nowrap;background:#3b1d5e;border-color:#a78bfa;line-height:1.05}.msa-tools button.msa-ctlsw small{display:block;font-size:9.5px;color:#ddd6fe}.msa-tools button.msa-ctlsw[data-msa-ctl=auto]{background:#14532d;border-color:#4ade80}
 .msa-tools button.msa-bgsw{flex:1.4;font-size:11px;white-space:nowrap;background:#1e1b3a;border-color:#6b64a8}
 .msa-wait{font-size:11.5px;color:#cbd5e1;text-align:center}
 .msa-gtag{position:absolute;z-index:8;bottom:-16px;left:50%;transform:translateX(-50%);white-space:nowrap;border-radius:99px;padding:0 7px;font-size:10.5px;font-weight:900;line-height:16px;animation:msaPop .45s ease-out both}
@@ -175054,7 +175128,8 @@ function MonsucArena({
   const [pos, setPos] = useState(0);
   const [speed, setSpeed] = useState('x1');
   const [bg, setBg] = useState(msaBgRead);
-  const [auto, setAuto] = useState(!manual);
+  const [ctl, setCtl] = useState(msaCtlRead);
+  const auto = !manual || ctl === 'auto';
   const [ended, setEnded] = useState(false);
   const endRef = useRef(false);
   useMhBattleBgmHold(true);
@@ -175090,6 +175165,17 @@ function MonsucArena({
     const over = r.bottom - b.bottom + 8;
     if (over > 0) box.scrollTop += Math.min(over, Math.max(0, r.top - b.top - 8));
   }, [barOn, pos]);
+  const autoWait = Boolean(manual && ctl === 'auto' && pos >= last && !ended && mm.pending);
+  useEffect(() => {
+    if (!autoWait) return undefined;
+    const t = setTimeout(() => {
+      const c = msaAutoChoice(mm.pending);
+      if (c && mm.pick(c)) setPos(p => p + 1);else {
+        mm.toAuto();
+      }
+    }, reduce ? 60 : 220);
+    return () => clearTimeout(t);
+  }, [autoWait, pos, mm.tick]);
   useEffect(() => {
     if (!ended || endRef.current) return undefined;
     const t = setTimeout(() => {
@@ -175135,13 +175221,17 @@ function MonsucArena({
   const goAuto = () => {
     if (!manual) return;
     msaSe('tap');
-    mm.toAuto();
-    setAuto(true);
-    setSpeed('x2');
+    msaCtlWrite('auto');
+    setCtl('auto');
   };
   const skip = () => {
-    if (manual && !done) return;
     msaSe('tap');
+    if (manual && !done) {
+      mm.toAuto();
+      const n = mm.match ? mm.match.log.length : 0;
+      setPos(Math.max(0, n - 1));
+      return;
+    }
     setPos(last);
   };
   const showBar = Boolean(manual && !auto && !busy && !ended && mm.pending);
@@ -175203,10 +175293,10 @@ function MonsucArena({
     type: "button",
     "data-msc-skip": true,
     onClick: skip
-  }, "⏭ とばす"), React.createElement(MsaBgToggle, {
+  }, "⏭ とばす"), !manual ? React.createElement(MsaBgToggle, {
     bg: bg,
     onChange: setBg
-  })) : null, manual && !auto && !ended ? React.createElement("div", {
+  }) : null) : null, manual && !auto && !ended ? React.createElement("div", {
     className: "msa-tools"
   }, MSA_SPEEDS.slice(0, 2).map(x => React.createElement("button", {
     key: x.id,
@@ -175216,7 +175306,13 @@ function MonsucArena({
       msaSe('tap');
       setSpeed(x.id);
     }
-  }, "見せる速さ ", x.label)), React.createElement(MsaBgToggle, {
+  }, "見せる速さ ", x.label))) : null, manual && !ended ? React.createElement("div", {
+    className: "msa-tools",
+    "data-msa-tools2": true
+  }, React.createElement(MsaCtlToggle, {
+    ctl: ctl,
+    onChange: setCtl
+  }), React.createElement(MsaBgToggle, {
     bg: bg,
     onChange: setBg
   })) : null);
