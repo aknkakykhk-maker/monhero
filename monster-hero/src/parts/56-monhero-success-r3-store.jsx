@@ -11,7 +11,7 @@
 //   引退の画面を開いたときにだけ読む(msxR3LoadTables)。読めなければ芯の表だけで動く。
 const MSX_R3_GEAR = Object.freeze({ debut: 5, junior: 10, middle: 20, pro: 30, final: 40 }); // 育てる子の作戦(試算の fight と同じ)
 // 評価は助手マスモンと同じ11段(G〜M)+500ごとの番号(芯の gradeOf → { rank, step, label:'A2', min, next, toNext })。PLAN §1・RANKING §7
-const MSX_R3_RANKS = Object.freeze([['G', 0], ['F', 2000], ['E', 3000], ['D', 4500], ['C', 6000], ['B', 8000], ['A', 11000], ['S', 14000], ['SS', 16000], ['SSS', 18000], ['M', 19500]]);
+const MSX_R3_RANKS = Object.freeze([['G', 0], ['F', 2000], ['E', 3000], ['D', 4500], ['C', 6000], ['B', 8000], ['A', 11000], ['S', 14000], ['SS', 16000], ['SSS', 18000], ['M', 20000]]);
 const msxR3Ranks = () => (typeof MASMON_CALC !== 'undefined' && MASMON_CALC && Array.isArray(MASMON_CALC.RANKS) ? MASMON_CALC.RANKS : MSX_R3_RANKS);
 const MSX_R3_CUP_ICON = Object.freeze({
   str: '💪', int: '🧠', aim: '🎯', dodge: '💨', hard: '🛡️', life: '❤️', dist0: '🤜', dist1: '👊', dist2: '🏹', dist3: '🔭',
@@ -118,13 +118,20 @@ const msxR3FinalTitles = (s, ev) => {
   try { if (T) return T.finalize(s.titles, ev, s); } catch (e) {}
   return Array.isArray(s.titles) ? s.titles.filter((t) => typeof t === 'string').slice(0, 64) : [];
 };
+// アシスト効果を保存の形へ(第3版・2026-11-14): { id, lv, n }。n = 目盛り・lv = 古い版のアプリでも読めるいちばん近い段(CLAUDE.md ⑦)
+//   表(MONHERO_SUCCESS_ASSIST)が第3版でなければ今までどおり { id, lv } を4つまで
+const msxR3AssistsToSave = (assists) => {
+  const AT = typeof window !== 'undefined' ? window.MONHERO_SUCCESS_ASSIST : null; const list = Array.isArray(assists) ? assists : [];
+  if (!AT || AT.VERSION !== 3) return list.slice(0, 4);
+  return list.map((a) => (a && AT.BY_ID[a.id] ? AT.toSaved(a.id, AT.fromSaved(a)) : null)).filter(Boolean).slice(0, AT.MAX_KINDS);
+};
 // 保存枠の子の形(回2の msxNormBoxMon が読む項目 + 回3で足す項目: gen・techs・gt・fav・titles・paid・over・from)
 const msxR3BoxMonOf = (run, s, ev, assists, parent) => ({
   id: run.id, species: s.species, nick: run.nick || '', colors: Array.isArray(run.colors) ? run.colors.slice(0, 6) : [],
   gen: parent && Number.isFinite(parent.gen) ? parent.gen : 1, parents: parent && Array.isArray(parent.parents) ? parent.parents.slice(0, 2) : [],
   st: { ...s.stats }, techs: Array.isArray(s.techs) ? s.techs.slice(0, 99) : [], mast: (Array.isArray(s.techs) ? s.techs : []).slice(0, 99).map((t) => Math.round((s.mastery && s.mastery[t]) || 0)),
   loy: ev.loyal, pop: s.pop, lv: s.lv, gt: s.type, rank: ev.rank, grade: msxR3Grade(ev.power).label, score: ev.power, fav: Array.isArray(ev.top) ? ev.top.slice(0, 3) : [],
-  raised: true, coach: s.aid, endAt: Date.now(), paid: true, over: s.over || 'done', assists: (assists || []).slice(0, 4),
+  raised: true, coach: s.aid, endAt: Date.now(), paid: true, over: s.over || 'done', assists: msxR3AssistsToSave(assists),
   ...(s.masterySpent && (Array.isArray(s.techs) ? s.techs : []).some((t) => s.masterySpent[t] > 0) ? { mastSpent: s.techs.slice(0, 99).map((t) => Math.round(s.masterySpent[t] || 0)) } : {}), // 熟練の使った量(techs と同じ並び・あとでポイントに変える分。2026-11-13・足すだけ)
   ...(s.ending && ['bad', 'good', 'super'].includes(s.ending.kind) ? { ending: s.ending.kind } : {}), // どのエンディングだったか(2026-11-13・足すだけ)
   ...(Array.isArray(s.aptUp) && s.aptUp.some((n) => n > 0) ? { aptUp: s.aptUp.slice(0, 4) } : {}),

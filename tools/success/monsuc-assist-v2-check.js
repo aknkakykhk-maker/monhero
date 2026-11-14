@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// モンヒロサクセス: 芯がアシスト能力の第2版の表(段1〜5)を読むことを確かめる。2026-11-12 バトル部(窓口の依頼①)
+// モンヒロサクセス: 芯がアシスト能力の表を読むことを確かめる。2026-11-12 バトル部(窓口の依頼①)・2026-11-14 第3版(目盛り): 古い子の段(1〜5)が同じ効き目の目盛りに読み替わることを、第2版の数字(表の v2)で見る
 //   node tools/success/monsuc-assist-v2-check.js
 //   ① 表を渡すと、芯が効き目を持つ種類(第1版の9種類)は第2版の段と数字になる。試合型5つ(ひらめき)は保留中なので第1版のまま
 //   ② 表を渡さない・壊れた表なら第1版のまま動く
@@ -31,9 +31,9 @@ const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 const NEW11 = ['miharu', 'kibarashi', 'kunpow', 'kunwise', 'kunhit', 'kuneva', 'kuntough', 'kunlife', 'nakayoshi', 'tagpow', 'shitashi',
   'shitsuke', 'gussuri', 'asobi', 'kuishinbo', 'tsukisoi', 'genki', 'tairyoku',
   'shokin', 'kokoroe', 'ticket', 'rivaldamashii', 'ninki', 'yobimizu', 'mejirushi', 'joshu']; // トレーニングに効く11種 + いるだけ型15
-check('① 芯の種類は第1版の14 + トレーニングに効く11種 + いるだけ型15 = 40(表の40種類すべて)', same(Object.keys(S2.ASSISTS).sort(), [...Object.keys(S1.ASSISTS), ...NEW11].sort()) && Object.keys(S2.ASSISTS).length === 40 && same(Object.keys(S2.ASSISTS).sort(), AT.LIST.map(a => a.id).sort()));
+check('① 芯の種類は表の種類すべて(試合型5つは第1版の数字・2026-11-14 第3版)', same(Object.keys(S2.ASSISTS).sort(), AT.LIST.map(a => a.id).sort()) && NEW11.every(id => S2.ASSISTS[id]));
 check('② 表なし・壊れた表では新しい種類を出さない', NEW11.every((id) => !S1.ASSISTS[id] && !SB.ASSISTS[id]));
-check('① 第1版の9種類は第2版の段(5段)と数字・値段', V1_IDS.every((id) => same(S2.ASSISTS[id].v, AT.BY_ID[id].v) && same(S2.ASSISTS[id].cost, AT.BY_ID[id].cost) && S2.ASSISTS[id].v.length === 5));
+check('① 第1版の9種類は第3版の目盛りの数字・値段', V1_IDS.every((id) => same(S2.ASSISTS[id].v, AT.BY_ID[id].v) && same(S2.ASSISTS[id].cost, AT.BY_ID[id].cost)));
 check('① 人なつっこさの「はじめの親密度」も第2版', same(S2.ASSISTS.hitonatsu.start, AT.BY_ID.hitonatsu.start));
 check('① 試合型5つ(ひらめき・保留中)は第1版のまま', BATTLE.every((id) => same(S2.ASSISTS[id], S1.ASSISTS[id])));
 check('② 表なしは第1版(3段)', V1_IDS.every((id) => S1.ASSISTS[id].v.length === 3));
@@ -45,22 +45,23 @@ const sp = S2.speciesList[0];
 const child = (assists) => ({ kind: 'raised', species: sp, stats: { life: 300, pow: 300, wise: 300, hit: 300, eva: 300, tough: 300 }, lv: 10, assists });
 const asOf = (S, a) => { try { return S.memberOf(child(a)).assists; } catch (e) { return 'THROW ' + e.message; } };
 const old = [{ id: 'sokoji', lv: 3 }, { id: 'kizuna', lv: 1 }, { id: 'shugyo', lv: 2 }];
-check('③ 第1版の持ち物(段1〜3)は第1版でも第2版でもそのまま', same(asOf(S2, old), old) && same(asOf(S1, old), old));
+const up = (arr) => arr.map(p => ({ id: p.id, lv: AT.fromSaved(p), n: AT.fromSaved(p) })); // 第3版: 古い段 → 同じ効き目の目盛り
+check('③ 第1版・第2版の持ち物(段)は第3版で同じ効き目の目盛りに読み替わる/表なしは今までどおり', same(asOf(S2, old), up(old)) && same(asOf(S1, old), old) && same(up(old).map(p => S2.ASSISTS[p.id].v[p.n - 1]), old.map(p => AT.BY_ID[p.id].v2[p.lv - 1])));
 check('③ 段4・5は表が無くても削らない', same(asOf(S1, [{ id: 'sokoji', lv: 5 }, { id: 'kizuna', lv: 4 }]), [{ id: 'sokoji', lv: 5 }, { id: 'kizuna', lv: 4 }]));
-check('③ 知らない id は計算から外すだけ(落ちない)', same(asOf(S2, [{ id: 'nope', lv: 3 }, { id: 'sokoji', lv: 2 }, { id: 'NOPE', lv: 1 }]), [{ id: 'sokoji', lv: 2 }]));
-check('③ 11種は第2版で読める/表なしでは計算から外すだけ', same(asOf(S2, [{ id: 'miharu', lv: 3 }, { id: 'sokoji', lv: 2 }]), [{ id: 'miharu', lv: 3 }, { id: 'sokoji', lv: 2 }]) && same(asOf(S1, [{ id: 'miharu', lv: 3 }, { id: 'sokoji', lv: 2 }]), [{ id: 'sokoji', lv: 2 }]));
-check('③ 壊れた値は既定へ(段が文字→1・段9→5・段−1→1・重なり→1つ・配列でない→なし)',
-  same(asOf(S2, [{ id: 'sokoji', lv: 'x' }]), [{ id: 'sokoji', lv: 1 }]) && same(asOf(S2, [{ id: 'sokoji', lv: 9 }]), [{ id: 'sokoji', lv: 5 }])
-  && same(asOf(S2, [{ id: 'sokoji', lv: -1 }]), [{ id: 'sokoji', lv: 1 }]) && same(asOf(S2, [{ id: 'sokoji', lv: 2 }, { id: 'sokoji', lv: 5 }]), [{ id: 'sokoji', lv: 2 }])
+check('③ 知らない id は計算から外すだけ(落ちない)', same(asOf(S2, [{ id: 'nope', lv: 3 }, { id: 'sokoji', lv: 2 }, { id: 'NOPE', lv: 1 }]), up([{ id: 'sokoji', lv: 2 }])));
+check('③ 11種は第3版で読める/表なしでは計算から外すだけ', same(asOf(S2, [{ id: 'miharu', lv: 3 }, { id: 'sokoji', lv: 2 }]), up([{ id: 'miharu', lv: 3 }, { id: 'sokoji', lv: 2 }])) && same(asOf(S1, [{ id: 'miharu', lv: 3 }, { id: 'sokoji', lv: 2 }]), [{ id: 'sokoji', lv: 2 }]));
+check('③ 壊れた値は既定へ(段が文字→段1・段9→段5・段−1→段1・目盛り99→満タン・重なり→1つ・配列でない→なし)',
+  same(asOf(S2, [{ id: 'sokoji', lv: 'x' }]), up([{ id: 'sokoji', lv: 1 }])) && same(asOf(S2, [{ id: 'sokoji', lv: 9 }]), up([{ id: 'sokoji', lv: 5 }])) && same(asOf(S2, [{ id: 'sokoji', lv: 1, n: 99 }]), [{ id: 'sokoji', lv: 25, n: 25 }])
+  && same(asOf(S2, [{ id: 'sokoji', lv: -1 }]), up([{ id: 'sokoji', lv: 1 }])) && same(asOf(S2, [{ id: 'sokoji', lv: 2 }, { id: 'sokoji', lv: 5 }]), up([{ id: 'sokoji', lv: 2 }]))
   && same(asOf(S2, 'abc'), []) && same(asOf(S2, null), []) && same(asOf(S2, [null, 3, { lv: 2 }]), []));
-check('③ 5種類以上は先の4つまで(今までどおり)', asOf(S2, V1_IDS.map((id) => ({ id, lv: 1 }))).length === 4);
+check('③ 9種類以上は先の8つまで(第3版・1体8種類)', asOf(S2, [...V1_IDS, 'miharu'].map((id) => ({ id, lv: 1 }))).length === 8);
 
 // ④ 効き目(特訓の底力: memberEffect に足される%)
 const eff = (S, lv) => { const m = S.memberOf(child(lv ? [{ id: 'sokoji', lv }] : [])); return S.memberEffect(m, 'pow', 100); };
 const base2 = eff(S2, 0); const base1 = eff(S1, 0);
 const d2 = [1, 2, 3, 4, 5].map((lv) => Math.round((eff(S2, lv) - base2) * 100) / 100);
 const d1 = [1, 2, 3, 4, 5].map((lv) => Math.round((eff(S1, lv) - base1) * 100) / 100);
-check('④ 第2版: 底力 段1〜5 = 表の値', same(d2, AT.BY_ID.sokoji.v), d2.join('/'));
+check('④ 第2版: 底力 段1〜5 = 表の値', same(d2, AT.BY_ID.sokoji.v2), d2.join('/'));
 check('④ 第1版: 段4・5は段3と同じ値(頭打ち)', same(d1, [...S1.ASSISTS.sokoji.v, S1.ASSISTS.sokoji.v[2], S1.ASSISTS.sokoji.v[2]]), d1.join('/'));
 
 // ⑥ トレーニングに効く11種の効き目
@@ -70,13 +71,13 @@ const r2 = (x) => Math.round(x * 100) / 100;
 const kunOk = ['pow', 'wise', 'hit', 'eva', 'tough', 'life'].every((k) => {
   const other = k === 'pow' ? 'wise' : 'pow';
   const d = L5.map((lv) => { const m = S2.memberOf(child([{ id: `kun${k}`, lv }])); const m0 = S2.memberOf(child([])); return [r2(S2.memberEffect(m, k, 100) - S2.memberEffect(m0, k, 100)), r2(S2.memberEffect(m, other, 100) - S2.memberEffect(m0, other, 100))]; });
-  return same(d.map(x => x[0]), AT.BY_ID[`kun${k}`].v) && d.every(x => x[1] === 0);
+  return same(d.map(x => x[0]), AT.BY_ID[`kun${k}`].v2) && d.every(x => x[1] === 0);
 });
 check('⑥ 能力ごとの特訓6つ: その能力のトレーニングだけ 段1〜5 = 表の値', kunOk);
 // はじめの親しさ: bond0 +v
 const b0 = S2.memberOf(child([])).bond0;
 const shi = L5.map((lv) => S2.memberOf(child([{ id: 'shitashi', lv }])).bond0 - b0);
-check('⑥ はじめの親しさ: はじめの親密度 +表の値', same(shi, AT.BY_ID.shitashi.v), shi.join('/'));
+check('⑥ はじめの親しさ: はじめの親密度 +表の値', same(shi, AT.BY_ID.shitashi.v2), shi.join('/'));
 // トレーニング1回で確かめる(編成の0番だけ持たせ、その子が来た札を選ぶ)
 const runWith = (assists, tweak) => {
   for (let t = 0; t < 400; t++) {
@@ -91,14 +92,14 @@ const runWith = (assists, tweak) => {
 };
 // タッグの息: タッグの強さ +v(%の点)
 const tg = L5.map((lv) => { const r = runWith([{ id: 'tagpow', lv }], (s) => { s.bond[0] = 100; }); const r0 = runWith([], (s) => { s.bond[0] = 100; }); return r && r0 ? r2((r.card.tag - r0.card.tag) * 100) : null; });
-check('⑥ タッグの息: タッグの強さ +表の値', same(tg, AT.BY_ID.tagpow.v), tg.join('/'));
+check('⑥ タッグの息: タッグの強さ +表の値', same(tg, AT.BY_ID.tagpow.v2), tg.join('/'));
 // 見張り役: サボりの率 −v%(方針を甘やかしにしてサボりが出る形で)
 const sb = L5.map((lv) => { const r = runWith([{ id: 'miharu', lv }], (s) => { s.pol = -3; }); const r0 = runWith([], (s) => { s.pol = -3; }); const p = S2.sabRateOf(r.s, r.card); const p0 = S2.sabRateOf(r0.s, r0.card); return p0 > 0 ? Math.round((1 - p / p0) * 100) : null; });
-check('⑥ 見張り役: その札のサボりの率 −表の値%', sb.every((x, i) => x !== null && x === AT.BY_ID.miharu.v[i]), sb.join('/'));
+check('⑥ 見張り役: その札のサボりの率 −表の値%', sb.every((x, i) => x !== null && x === AT.BY_ID.miharu.v2[i]), sb.join('/'));
 // 気晴らし: 見通しのストレスが減る
 const kb = L5.map((lv) => { const r = runWith([{ id: 'kibarashi', lv }]); return r ? S2.preview(r.s, { kind: 'train', stat: r.c.stat }).stress : null; });
 const kb0 = (() => { const r = runWith([]); return r ? S2.preview(r.s, { kind: 'train', stat: r.c.stat }).stress : null; })();
-check('⑥ 気晴らし: トレーニングでたまるストレスが段ごとに減る', kb0 > 0 && kb.every((x, i) => x === Math.round(kb0 * (1 - AT.BY_ID.kibarashi.v[i] / 100))), `${kb0} → ${kb.join('/')}`);
+check('⑥ 気晴らし: トレーニングでたまるストレスが段ごとに減る', kb0 > 0 && kb.every((x, i) => x === Math.round(kb0 * (1 - AT.BY_ID.kibarashi.v2[i] / 100))), `${kb0} → ${kb.join('/')}`);
 // 仲よし特訓: トレーニング1回の親密度の上がり +v(サボり等でも親密度は上がる)
 const nk = L5.map((lv) => {
   for (let t = 0; t < 400; t++) {
@@ -111,18 +112,18 @@ const nk = L5.map((lv) => {
   }
   return null;
 });
-check('⑥ 仲よし特訓: トレーニング1回の親密度の上がり +表の値', same(nk, AT.BY_ID.nakayoshi.v), nk.join('/'));
+check('⑥ 仲よし特訓: トレーニング1回の親密度の上がり +表の値', same(nk, AT.BY_ID.nakayoshi.v2), nk.join('/'));
 
 // ⑦ いるだけ型(体力・ようす・編成の7つ)。編成の2番目の子に持たせ、いちばん高い段だけ効くことも見る
 const runOf = (as, extra) => S2.newRun({ id: 'stay', species: sp, aid: 'kiki', team: [child([]), child(as), ...(extra ? [child(extra)] : [])] });
 const ty = L5.map((lv) => runOf([{ id: 'tairyoku', lv }]).hpMax - runOf([]).hpMax);
-check('⑦ 体力自慢: 体力の上限 +表の値', same(ty, AT.BY_ID.tairyoku.v), ty.join('/'));
-check('⑦ いるだけ型は編成でいちばん高い段の1つだけ(段2と段4 → 段4)', runOf([{ id: 'tairyoku', lv: 2 }], [{ id: 'tairyoku', lv: 4 }]).hpMax - runOf([]).hpMax === AT.BY_ID.tairyoku.v[3]);
+check('⑦ 体力自慢: 体力の上限 +表の値', same(ty, AT.BY_ID.tairyoku.v2), ty.join('/'));
+check('⑦ いるだけ型は編成でいちばん高い段の1つだけ(段2と段4 → 段4)', runOf([{ id: 'tairyoku', lv: 2 }], [{ id: 'tairyoku', lv: 4 }]).hpMax - runOf([]).hpMax === AT.BY_ID.tairyoku.v2[3]);
 // 休む・遊ぶ: 体力の戻り(体力を0にして比べる)
 const hpAfter = (as, kind) => { const s = runOf(as); s.hp = 0; return S2.act(s, { kind }).state.hp; };
-const restOk = L5.every((lv) => { const a = hpAfter([{ id: 'gussuri', lv }], 'rest'); const b = hpAfter([], 'rest'); return Math.abs(a - Math.round(b * (1 + AT.BY_ID.gussuri.v[lv - 1] / 100))) <= 1; });
+const restOk = L5.every((lv) => { const a = hpAfter([{ id: 'gussuri', lv }], 'rest'); const b = hpAfter([], 'rest'); return Math.abs(a - Math.round(b * (1 + AT.BY_ID.gussuri.v2[lv - 1] / 100))) <= 1; });
 check('⑦ ぐっすり: 休んだときの体力の回復 +表の値%', restOk);
-const playOk = L5.every((lv) => { const a = hpAfter([{ id: 'asobi', lv }], 'play'); const b = hpAfter([], 'play'); return Math.abs(a - Math.round(b * (1 + AT.BY_ID.asobi.v[lv - 1] / 100))) <= 1; });
+const playOk = L5.every((lv) => { const a = hpAfter([{ id: 'asobi', lv }], 'play'); const b = hpAfter([], 'play'); return Math.abs(a - Math.round(b * (1 + AT.BY_ID.asobi.v2[lv - 1] / 100))) <= 1; });
 const amaUp = (as) => { const s = runOf(as); return S2.act(s, { kind: 'play' }).state.ama - s.ama; };
 check('⑦ 遊び上手: 遊んだときの体力の回復と甘え度が段ごとに増える', playOk && amaUp([{ id: 'asobi', lv: 5 }]) > amaUp([]), `甘え度 ${amaUp([])} → ${amaUp([{ id: 'asobi', lv: 5 }])}`);
 // 褒める: 上がる甘え度が増える(下がる方は変えない)
@@ -156,9 +157,9 @@ const w0 = settleWin([]); const ok8 = !!w0;
 check('⑧ 大会の決着を試せる(デビュー戦の勝ち)', ok8, ok8 ? `賞金 ${w0.r.out.prize}・pts ${w0.r.state.pts}` : '');
 if (ok8) {
   const fame = (lv) => settleWin(lv ? [{ id: 'shokin', lv }] : []).r.state.fame;
-  check('⑧ 賞金かせぎ: 賞金(名声)+表の値%', L5.every((lv) => Math.abs(fame(lv) - fame(0) * (1 + AT.BY_ID.shokin.v[lv - 1] / 100)) <= 1), L5.map(fame).join('/'));
+  check('⑧ 賞金かせぎ: 賞金(名声)+表の値%', L5.every((lv) => Math.abs(fame(lv) - fame(0) * (1 + AT.BY_ID.shokin.v2[lv - 1] / 100)) <= 1), L5.map(fame).join('/'));
   const pts = (lv) => settleWin(lv ? [{ id: 'kokoroe', lv }] : []).r.state.pts;
-  check('⑧ 勝負の心得: 勝ったときの能力ポイント +表の値%', L5.every((lv) => Math.abs(pts(lv) - pts(0) * (1 + AT.BY_ID.kokoroe.v[lv - 1] / 100)) <= 1), `${pts(0)} → ${L5.map(pts).join('/')}`);
+  check('⑧ 勝負の心得: 勝ったときの能力ポイント +表の値%', L5.every((lv) => Math.abs(pts(lv) - pts(0) * (1 + AT.BY_ID.kokoroe.v2[lv - 1] / 100)) <= 1), `${pts(0)} → ${L5.map(pts).join('/')}`);
   const pop = (lv) => settleWin(lv ? [{ id: 'ninki', lv }] : []).r.state.pop;
   check('⑧ 人気者のお手本: 人気の上がりが増える', pop(5) > pop(0), `${pop(0)} → ${pop(5)}`);
   // チケット運: 多くの育成 id で、もう1枚の出る割合
@@ -169,7 +170,7 @@ if (ok8) {
 // 博士の助手: 実験の成功 +v点
 const issaP = (as) => { const s = S2x.newRun({ id: 'is', species: sp, aid: 'kiki', team: [child([]), child(as)] }); return S2x.issaRate(s, 'stat'); };
 const js = L5.map((lv) => Math.round((issaP([{ id: 'joshu', lv }]) - issaP([])) * 100));
-check('⑧ 博士の助手: 実験の成功 +表の値(点)', same(js, AT.BY_ID.joshu.v), js.join('/'));
+check('⑧ 博士の助手: 実験の成功 +表の値(点)', same(js, AT.BY_ID.joshu.v2), js.join('/'));
 // 博士の目じるし: 来るターンが増える(来られる期間のターンで数える)
 const meet = (as) => { let n = 0, m = 0; for (let t = 0; t < 300; t++) { const s = S2x.newRun({ id: `me${t}`, species: sp, aid: 'kiki', team: [child([]), child(as)] }); s.turn = 20; m++; if (S2x.issaComes(s)) n++; } return n / m; };
 const m0 = meet([]); const m5 = meet([{ id: 'mejirushi', lv: 5 }]);
@@ -180,5 +181,16 @@ const evRate = (as) => { let n = 0, m = 0; for (let t = 0; t < 800; t++) { const
 const y0 = evRate([]); const y5 = evRate([{ id: 'yobimizu', lv: 5 }]);
 check('⑧ 出来事の呼び水: 出来事が起きやすくなる(段5 で +15点 ほど)', y5 - y0 > 0.09 && y5 - y0 < 0.21, `${Math.round(y0 * 100)}% → ${Math.round(y5 * 100)}%`);
 
+// ⑨ 第3版で書き換えた行で、コメントの後ろに処理が入り込んでいない(2026-11-14 ミハリ6の指摘: 熟練の保存と修行のストレスが消えていた)
+{
+  const fs = require('fs');
+  const store = fs.readFileSync(path.join(__dirname, '..', '..', 'monster-hero', 'src', 'parts', '56-monhero-success-store.jsx'), 'utf8');
+  const line = store.split('\n').find((l) => l.includes('assists: Array.isArray(m.assists)')) || '';
+  check('⑨ 保存枠の読み込みで masteries がコメントに飲まれていない', /masteries: tm\.mast,/.test(line.split('//')[0]));
+  const core = fs.readFileSync(path.join(__dirname, '..', '..', 'monster-hero', 'data', 'monhero-success.js'), 'utf8');
+  const sh = core.split('\n').find((l) => l.includes("stayNum(s, 'shugyohp')")) || '';
+  check('⑨ 修行のストレス(addStress)がコメントに飲まれていない', /addStress\(s, \(SHUGYO\.stress/.test(sh.split('//')[0]));
+}
 console.log(ng ? `\n${ng} 件 NG` : '\nすべて OK');
 process.exit(ng ? 1 : 0);
+

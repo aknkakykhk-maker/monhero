@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // モンヒロサクセスの試算(success-sim.js)が回り、ねらいの形から外れていないかの見張り(数秒)。
-//   ・編成なしの子は C 前後(総合力の中央値が 6,000〜8,000)
+//   ・編成なしは B の下の方(総合力の中央値が 8,000〜11,999。2026-11-14 能力の重みを直線にして総合力が上がった。前は C の 6,000〜8,000)
 //   ・編成が強いほど育つ(編成なし < B 6体 < M 6体)
 //   ・デビュー戦でゲームオーバーになるのは編成なしでも1割未満
 //   ・ランダムイベント(monhero-success-events.js)は1回の育成で 約20回(15〜28)
@@ -15,7 +15,7 @@ if (r.status !== 0) { console.error('NG success-sim-check: 試算が止まった
 const res = JSON.parse(fs.readFileSync(out, 'utf8')).results;
 const errors = [];
 const none = res[0]; const b6 = res.find(x => x.label.startsWith('B 6体(')); const m6 = res.find(x => x.label.startsWith('M 6体'));
-if (!(none.powerMedian >= 6000 && none.powerMedian < 8000)) errors.push(`編成なしの総合力の中央値が C(6,000〜7,999)でない: ${none.powerMedian}`);
+if (!(none.powerMedian >= 8000 && none.powerMedian < 12000)) errors.push(`編成なしの総合力の中央値が 8,000〜11,999 でない: ${none.powerMedian}`);
 if (!(none.powerMedian < b6.powerMedian && b6.powerMedian < m6.powerMedian)) errors.push(`編成が強いほど育つ形でない: ${none.powerMedian} / ${b6.powerMedian} / ${m6.powerMedian}`);
 const evn = none.randomEvents ? none.randomEvents.perRun : null;
 if (!(evn >= 15 && evn <= 28)) errors.push(`ランダムイベントが1回の育成で 約20回(15〜28)でない: ${evn}`);
