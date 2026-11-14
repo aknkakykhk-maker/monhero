@@ -9,16 +9,34 @@ const MASMON_CALC = (() => {
   const STAT_MAX = 999;
 
   // ---- 総合力とランク(POWER.md 1・2章) ----
-  const POWER_W = Object.freeze({ stat: 2.5, tech: 100, mastery: 1, lv: 15, loyal: 10, pop: 10, techMax: 8 });
+  // 能力の重み(2026-11-14 社長「能力が高いほど1あたりの総合力が増える」・直線): 能力1あたり = stat + statUp × 能力 ÷ statAt(0 で 2.5・900 で 4.5・999 で 約4.72)
+  const POWER_W = Object.freeze({ stat: 2.5, statUp: 2, statAt: 900, tech: 100, mastery: 1, lv: 15, loyal: 10, pop: 10, techMax: 8 });
+  const statPower = (v) => { const x = clamp(num(v), 0, STAT_MAX); return x * (POWER_W.stat + POWER_W.statUp * x / POWER_W.statAt); };
   // stats: { life, pow, ... } / masteries: 覚えた技ごとの熟練(0〜100)の配列 / lv / loyal / pop
   const power = (o) => {
     const { stats, masteries, lv = 1, loyal = 0, pop = 0 } = o && typeof o === 'object' ? o : {}; const st = stats && typeof stats === 'object' ? stats : {}; // どんな値でも数を返す(ミハリ5)
+    const sum = KEYS.reduce((a, k) => a + statPower(st[k]), 0);
+    const tech = (Array.isArray(masteries) ? masteries : []).slice(0, POWER_W.techMax).reduce((a, m) => a + POWER_W.tech + clamp(num(m), 0, 100) * POWER_W.mastery, 0);
+    return Math.round(sum + tech + clamp(num(lv, 1), 1, 99) * POWER_W.lv + clamp(num(loyal), 0, 100) * POWER_W.loyal + clamp(num(pop), 0, 100) * POWER_W.pop);
+  };
+  // 強さの段(2026-11-14 社長・案A): モンヒロサクセスの育成の強さの表(能力の補正・タッグ・仲良しの始まり・アシストポイント)を引くときだけ、
+  //   能力の重みを今までどおり一律 ×2.5 で数え、ランクの区切りも今まで(M 19,500)のまま。画面に出す総合力・ランクは上の power・rankOf
+  const powerClassic = (o) => {
+    const { stats, masteries, lv = 1, loyal = 0, pop = 0 } = o && typeof o === 'object' ? o : {}; const st = stats && typeof stats === 'object' ? stats : {};
     const sum = KEYS.reduce((a, k) => a + clamp(num(st[k]), 0, STAT_MAX), 0);
     const tech = (Array.isArray(masteries) ? masteries : []).slice(0, POWER_W.techMax).reduce((a, m) => a + POWER_W.tech + clamp(num(m), 0, 100) * POWER_W.mastery, 0);
     return Math.round(sum * POWER_W.stat + tech + clamp(num(lv, 1), 1, 99) * POWER_W.lv + clamp(num(loyal), 0, 100) * POWER_W.loyal + clamp(num(pop), 0, 100) * POWER_W.pop);
   };
-  const RANKS = Object.freeze([['G', 0], ['F', 2000], ['E', 3000], ['D', 4500], ['C', 6000], ['B', 8000], ['A', 11000], ['S', 14000], ['SS', 16000], ['SSS', 18000], ['M', 19500]]);
-  const rankOf = (p) => { const v = num(p); let i = 0; RANKS.forEach(([, min], j) => { if (v >= min) i = j; }); return { key: RANKS[i][0], min: RANKS[i][1], next: RANKS[i + 1] ? RANKS[i + 1][1] : null, index: i }; };
+  const RANKS_CLASSIC = Object.freeze([['G', 0], ['F', 2000], ['E', 3000], ['D', 4500], ['C', 6000], ['B', 8000], ['A', 11000], ['S', 14000], ['SS', 16000], ['SSS', 18000], ['M', 19500]]);
+  const rankClassicOf = (p) => { const v = num(p); let i = 0; RANKS_CLASSIC.forEach(([, min], j) => { if (v >= min) i = j; }); return RANKS_CLASSIC[i][0]; };
+  // ランク(2026-11-14 社長「M は 20,000」)。key は 11 種のまま(表で引く所はこれ)。M より上は 500 ごとに M1〜M9 → MG → MG1〜MG9 → MF …(画面に出すのは label)
+  const RANKS = Object.freeze([['G', 0], ['F', 2000], ['E', 3000], ['D', 4500], ['C', 6000], ['B', 8000], ['A', 11000], ['S', 14000], ['SS', 16000], ['SSS', 18000], ['M', 20000]]);
+  const M_STEP = 500; const M_LETTERS = Object.freeze(['', 'G', 'F', 'E', 'D', 'C', 'B', 'A']); // M・MG・MF … MA(それぞれ番号なし+1〜9)
+  const mLabelOf = (v) => { const i = Math.min(M_LETTERS.length * 10 - 1, Math.max(0, Math.floor((v - RANKS[RANKS.length - 1][1]) / M_STEP))); const b = Math.floor(i / 10), n = i % 10;
+    return { label: `M${M_LETTERS[b]}${n ? n : ''}`, labelMin: RANKS[RANKS.length - 1][1] + i * M_STEP, labelNext: i + 1 < M_LETTERS.length * 10 ? RANKS[RANKS.length - 1][1] + (i + 1) * M_STEP : null }; };
+  const rankOf = (p) => { const v = num(p); let i = 0; RANKS.forEach(([, min], j) => { if (v >= min) i = j; });
+    const key = RANKS[i][0]; const m = key === 'M' ? mLabelOf(v) : { label: key, labelMin: RANKS[i][1], labelNext: RANKS[i + 1] ? RANKS[i + 1][1] : null };
+    return { key, min: RANKS[i][1], next: RANKS[i + 1] ? RANKS[i + 1][1] : null, index: i, ...m }; };
 
   // ---- 合体の上乗せ(FUSE.md 第2版): 平均 × √(弱い方÷強い方) を効く値にし、200 ×(効く値÷999)^1.5 ----
   const FUSE = Object.freeze({ top: 200, pow: 1.5, ref: 999 });
@@ -118,6 +136,6 @@ const MASMON_CALC = (() => {
   // ---- けが・病気・家出の長さ(社長: 重さで幅): 軽い1回・ふつう3回・重い6回。疲れ・ストレスが高いほど重い ----
   const condLen = (load, r) => { const v = clamp(num(load), 0, 100); const x = clamp(num(r), 0, 0.999999); const heavy = v >= 90 ? 0.3 : v >= 80 ? 0.15 : 0.05; const light = v >= 90 ? 0.2 : v >= 80 ? 0.35 : 0.5; return x < heavy ? 6 : x < heavy + light ? 1 : 3; };
 
-  return Object.freeze({ KEYS, STAT_MAX, POWER_W, power, RANKS, rankOf, FUSE, fuseBonus, fuseStats, PACE, GROW_TYPES, typeOf, ageMult, peakOf, typeFromApt,
+  return Object.freeze({ KEYS, STAT_MAX, POWER_W, statPower, power, powerClassic, RANKS_CLASSIC, rankClassicOf, RANKS, M_STEP, M_LETTERS, rankOf, FUSE, fuseBonus, fuseStats, PACE, GROW_TYPES, typeOf, ageMult, peakOf, typeFromApt,
     POLICIES, policyOf, POLICY_STEP, policyMove, lifeLen, lifeStep, ageLabel, noActChance, critBonus, CRIT_CAP, critOf, sabLoyalMult, POP, popAfterBattle, RESULTS, resultOf, reactOf, condLen });
 })();
