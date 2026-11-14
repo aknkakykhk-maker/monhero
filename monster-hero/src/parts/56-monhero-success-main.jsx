@@ -106,22 +106,25 @@ function MsxStRow({ stats, ups, main, preview = false }) {
   const ease = (x) => 1 - Math.pow(1 - x, 3);
   const pct = (n) => `${Math.max(0, Math.min(100, n / 9.99))}%`;
   // 伸びる間だけ札を拡大し、上がる前の値の近くから拡大した目盛りで伸ばす(2026-11-13 社長 A 案)。約2.6秒で 0〜999 の目盛りへ戻す
-  const zoomA = grow && !calm && !zout;
+  // 2026-11-14 社長「ステータスの上がるゲージの変動がへん」: 2.6秒で 0〜999 の目盛りへ戻すと、棒が一気に縮んで下がったように見えた。
+  // 拡大した目盛り(両はしの数字つき)は結果のあいだずっと使い、2.6秒で戻すのは札の持ち上がりだけにする
+  const zoomA = grow && !calm && !zout; // 札が持ち上がっている
+  const zoomS = grow && !calm;          // 棒は拡大した目盛りで描く
   return (
-    <div className={`v-st${grow ? ' grow' : ''}${grow && on ? ' on' : ''}${grow && !calm ? ' gs-a' : ''}${zoomA ? ' zin' : ''}${zoomA && MSX_STATS.filter((k) => ups[k]).length > 3 ? ' many' : ''}`} data-msx-st-grow={grow ? (on ? 'on' : 'pre') : undefined}>
+    <div className={`v-st${grow ? ' grow' : ''}${grow && on ? ' on' : ''}${grow && !calm ? ' gs-a' : ''}${zoomA ? ' zin' : ''}${zoomS ? ' zs' : ''}${zoomA && MSX_STATS.filter((k) => ups[k]).length > 3 ? ' many' : ''}`} data-msx-st-grow={grow ? (on ? 'on' : 'pre') : undefined}>
       {MSX_STATS.map((k) => {
         const u = ups ? (ups[k] || 0) : 0;
         const after = stats[k]; const before = Math.max(0, after - (grow ? u : 0));
         // 案A: 上がる前の値の近くから、拡大した目盛り(1目盛り=10)で伸ばす
         const span = Math.max(60, Math.ceil(Math.abs(u) * 2.6 / 10) * 10);
         const lo = Math.max(0, Math.min(999 - span, Math.floor((Math.max(after, before) - span * 0.82) / 10) * 10));
-        const zp = (n) => (zoomA && u ? `${Math.max(0, Math.min(100, (n - lo) / span * 100))}%` : pct(n));
-        const tick = zoomA && u ? { backgroundSize: `${1000 / span}% 100%` } : undefined;
+        const zp = (n) => (zoomS && u ? `${Math.max(0, Math.min(100, (n - lo) / span * 100))}%` : pct(n));
+        const tick = zoomS && u ? { backgroundSize: `${1000 / span}% 100%` } : undefined;
         // 棒も数字と同じ値(数え上げの途中の値)から描く。数字と長さがいつも合う
         const cur = grow && u ? before + (after - before) * ease(t) : after;
         return (<div key={k} className={`${u > 0 ? 'up' : u < 0 ? 'dn' : ''}${k === main ? ' main' : ''}`}>
           <small>{MSX_STAT_ICON[k]}{MSX_STAT_NAME[k]}</small><b>{grow && u ? Math.round(before + (after - before) * ease(t)) : stats[k]}</b>
-          {grow && u ? <u className="g" style={tick}><i style={{ width: zp(u > 0 ? cur : after) }}/>{u > 0 ? <s className="gu" style={{ left: zp(before), width: `calc(${zp(cur)} - ${zp(before)})` }}/> : <s className="gd" style={{ left: zp(after), width: `calc(${zp(before)} - ${zp(after)})` }}/>}{zoomA ? <q className="zl"><span>{lo}</span><span>{lo + span}</span></q> : null}</u>
+          {grow && u ? <u className="g" style={tick}><i style={{ width: zp(u > 0 ? cur : after) }}/>{u > 0 ? <s className="gu" style={{ left: zp(before), width: `calc(${zp(cur)} - ${zp(before)})` }}/> : <s className="gd" style={{ left: zp(after), width: `calc(${zp(before)} - ${zp(after)})` }}/>}{zoomS ? <q className="zl"><span>{lo}</span><span>{lo + span}</span></q> : null}</u>
             : <u><i style={{ width: pct(after) }}/></u>}
           {ups ? <em>{u > 0 ? `+${u}` : u < 0 ? `−${-u}` : ''}</em> : null}</div>);
       })}
@@ -816,55 +819,7 @@ function MsxStats({ run, setRun, v, ev, onClose }) {
 }
 
 // ---- イッサ博士(6つから1つ・結果) ----
-function MsxIssa({ run, setRun, v, ev, ctx, bondLv, onDone }) {
-  const { SUC } = msxSuc;
-  useEffect(() => { if (typeof msxSeenMark === 'function') msxSeenMark('issa'); }, []);
-  const s = run.s;
-  const [pick, setPick] = useState('hp');
-  const res = run.out && run.out.issa ? run.out.issa : null;
-  const metScene = s.issaMet > 0 ? 'issa.meet.again' : 'issa.meet.first';
-  const meet = msxPickLine(ctx, metScene, { who: 'issa' });
-  const choose = () => {
-    if (typeof msxSeenMark === 'function') msxSeenMark('issa', pick);
-    const r = SUC.issa(s, pick);
-    if (!r.out.ok) { onDone(run); return; }
-    setRun({ ...run, s: r.state, out: { issa: r.out, before: s.stats }, log: [...(run.log || []), { turn: s.turn, t: `イッサ博士: ${pick === 'none' ? 'ことわった' : r.out.win ? '成功' : '失敗'}` }].slice(-20) });
-  };
-  if (res) {
-    const k = MSX_ISSA_KEYS.find((x) => x.key === res.choice);
-    const said = k ? msxPickLine(ctx, `issa.${res.win ? 'ok' : 'ng'}.${k.line}`, { who: 'issa' }) : msxPickLine(ctx, 'issa.bye', { who: 'issa' });
-    const ups = {}; if (run.out.before) MSX_STATS.forEach((x) => { const d = s.stats[x] - run.out.before[x]; if (d) ups[x] = d; });
-    return (<>
-      <MsxBand s={s} v={v} ev={ev}/>
-      <div className="v-scene" style={{ flex: '1 1 0' }}><img className="bg" src="images/story-bg/monhero_night.jpg" alt=""/><div className="sh" style={{ background: '#0f0d2466' }}/>
-        {res.win ? <div className="v-burst"/> : null}
-        <img className="v-issa" src={MSX_ISSA_ART} alt="イッサ博士" style={res.win ? undefined : { filter: 'grayscale(.4) brightness(.85)' }}/>
-        <MsxMonArt run={run} className="mon" style={{ left: '70%', bottom: '12%', height: '44%' }}/>
-        {k ? <div className={`v-stamp msx-pop ${res.win ? '' : 'ng'}`} style={{ top: '3%', fontSize: 40 }}>{res.win ? '大成功!' : '失敗…'}<small>{res.win ? '装置がぴかーっと光った' : '装置から煙が…'}</small></div> : null}
-        {said ? <div className="v-ibub" style={{ top: 'auto', bottom: 8, left: 8, right: '44%' }}>「{said.t}」</div> : null}
-      </div>
-      <MsxStRow stats={s.stats} ups={ups}/>
-      <div className="v-log"><span className="hd2">{k ? `${k.icon} ${k.name}` : '🙅 何もしない'}</span><br/>{k ? (res.win ? `⭕ ${k.ok}` : `❌ ${k.ng}`) : 'ことわった'}</div>
-      <div className="v-ft" style={{ marginTop: 6 }}><button type="button" className="go" onClick={() => onDone({ ...run, out: null })}>つぎへ ▶</button></div>
-    </>);
-  }
-  return (<>
-    <MsxBand s={s} v={v} ev={ev}/>
-    <div className="v-scene" style={{ flex: '1 1 0' }}><img className="bg" src="images/story-bg/monhero_night.jpg" alt=""/><div className="sh" style={{ background: '#0f0d2466' }}/>
-      <img className="v-issa" src={MSX_ISSA_ART} alt="イッサ博士"/>
-      <div className="v-machine">⚙️💡<small>のびのび装置</small><MsxMonArt run={run} style={{ height: '46%', aspectRatio: '1', objectFit: 'contain' }}/></div>
-      <div className="v-ev-h" style={{ top: 'auto', bottom: 8, borderRadius: '0 99px 99px 0' }}><small>大きな賭け</small>イッサ博士があらわれた!</div>
-      <div className="v-ibub">「{meet ? meet.t : 'やっほー! ちょっと強くなってみない?'}」</div>
-    </div>
-    <div className="v-six">
-      {MSX_ISSA_KEYS.map((x) => { const p = SUC.issaRate(s, x.key); const dots = Math.max(1, Math.min(4, Math.round(p * 4))); return (
-        <button type="button" key={x.key} className={`v-ix${pick === x.key ? ' sel' : ''}`} onClick={() => setPick(x.key)}>{cardIconNode(x.icon, 16)} {x.name}
-          <span className="pr">成功{[0, 1, 2, 3].map((i) => <i key={i} className={i < dots ? 'on' : ''}/>)}</span><span className="ok">⭕ {x.ok}</span><span className="ng">❌ {x.ng}</span></button>); })}
-      <button type="button" className={`v-ix no${pick === 'none' ? ' sel' : ''}`} onClick={() => setPick('none')}>🙅 何もしない<span className="ok" style={{ color: '#cbd5e1' }}>ことわる。損はない</span><span className="ng" style={{ color: '#94a3b8' }}>「えー、ノリ悪いなぁ」</span></button>
-    </div>
-    <div className="v-ft" style={{ marginTop: 6 }}><button type="button" className="go" onClick={choose}>{pick === 'none' ? 'ことわる' : `${(MSX_ISSA_KEYS.find((x) => x.key === pick) || {}).icon} ${(MSX_ISSA_KEYS.find((x) => x.key === pick) || {}).name}を受ける`}</button></div>
-  </>);
-}
+// MsxIssa(イッサ博士の大きな賭けの場面)は 56-monsuc-issa.jsx へ移した(2026-11-14 作り込み)
 
 // ---- 出来事の画面(見本 v3-K の K4 の形)。ランダムイベント(芯の SUC.events)と助手の連続イベント(芯の storyStep)の両方をここで出す ----
 //   台詞は台本エンジンの event(場面)。選ぶ前に閉じても、芯が出来事を覚えている(s.ev.pend)ので同じ物がもう一度出る

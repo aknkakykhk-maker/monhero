@@ -74,6 +74,14 @@
     { id: 'cupLose', name: '大会: 負け', bgm: 'monsuc_lose', se: null },
     // イッサ博士・ゲームオーバー・引退
     { id: 'issa', name: 'イッサ博士', bgm: 'original_event_01', se: 'trainingTool' },
+    // 博士の大きな賭けの演出(2026-11-14 社長「イッサ博士の演出が弱い」。56-monsuc-issa.jsx)。大成功は閃光+大ファンファーレ+きらめきの重ねで専用の音にする
+    { id: 'issaIn', name: '博士: 飛びこんでくる', se: 'join' },
+    { id: 'issaDrum', name: '博士: 装置の溜め(ドキドキ)', se: 'trainingDice' },
+    { id: 'issaZap', name: '博士: 大成功の閃光', se: 'fusion' },
+    { id: 'issaPuff', name: '博士: 失敗の煙', se: 'enemyMove' },
+    { id: 'issaWin', name: '博士: 大成功', se: 'rankFanfareGrand' },
+    { id: 'issaWin2', name: '博士: 大成功のきらめき', se: 'levelUp' },
+    { id: 'issaLose', name: '博士: 失敗', se: 'trainingFail' },
     { id: 'gameOver', name: 'ゲームオーバー', bgm: 'original_game_over', se: null },
     { id: 'retire', name: '引退', bgm: 'original_result', se: 'rankFanfareGrand' },
   ].map(Object.freeze));
