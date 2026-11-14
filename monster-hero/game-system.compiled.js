@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a50ebe497eeb6f6b
+// source-sha256: b9e2cef545064600
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -166744,7 +166744,7 @@ function MsxMonDetail({
     className: "msx-dt-close",
     "data-msx-detail-close": true,
     onClick: onClose
-  }, "とじる")));
+  }, "閉じる")));
 }
 function MsxSlotPicker({
   idx,
@@ -166841,7 +166841,7 @@ function MsxSlotPicker({
     className: "msx-dt-close",
     "data-msx-slot-close": true,
     onClick: onClose
-  }, "とじる")));
+  }, "閉じる")));
 }
 function MsxGatherTable({
   members,
@@ -166901,7 +166901,7 @@ function MsxGatherTable({
     className: "msx-dt-close",
     "data-msx-gather-close": true,
     onClick: onClose
-  }, "とじる")));
+  }, "閉じる")));
 }
 function MsxStart({
   data,
@@ -175686,7 +175686,7 @@ function MsxR3Box({
     }, React.createElement("button", {
       type: "button",
       onClick: onClose
-    }, "← もどる"));
+    }, "← 戻る"));
   } else if (page === 'list' || page === 'detail' && cur) {
     const list = msxMmSorted(box.mons, view.sort);
     const sortName = (MSX_MM_SORTS.find(([k]) => k === view.sort) || [])[1];
@@ -175779,7 +175779,7 @@ function MsxR3Box({
       type: "button",
       className: "msx-btn",
       onClick: () => setMenu(null)
-    }, "とじる"))) : null, byeAsk ? React.createElement("div", {
+    }, "閉じる"))) : null, byeAsk ? React.createElement("div", {
       className: "msx-ov msx-fade"
     }, React.createElement("div", {
       className: "msx-sheet"
@@ -175913,7 +175913,7 @@ function MsxR3Box({
         setPage('gate');
         setMsg('');
       }
-    }, "← もどる"));
+    }, "← 戻る"));
   } else if (page === 'edit' && cur && edit) {
     title = '名前と染色';
     body = React.createElement("div", {
@@ -176015,10 +176015,10 @@ function MsxR3Box({
     }, React.createElement("button", {
       type: "button",
       onClick: () => setPage('list')
-    }, "← もどる"));
+    }, "← 戻る"));
   }
   return React.createElement(React.Fragment, null, React.createElement("style", null, MSX_R3_CSS), React.createElement("style", null, MSX_MM_CSS), React.createElement(MsxHd, {
-    back: "もどる",
+    back: "戻る",
     onBack: page === 'gate' ? onClose : page === 'list' ? () => setPage('gate') : page === 'edit' ? () => {
       setEdit(null);
       setPage('detail');

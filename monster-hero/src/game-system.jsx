@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: b0e2e0909ada4752
+// generated-sha256: f97776989b505a17
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -87054,7 +87054,7 @@ function MsxMonDetail({ species, name, art, st, apt, type, peak, grades, known, 
           </div>
         </div>
         {foot ? <div className="msx-md-foot">{foot}</div> : null}
-        <button type="button" className="msx-dt-close" data-msx-detail-close onClick={onClose}>とじる</button>
+        <button type="button" className="msx-dt-close" data-msx-detail-close onClick={onClose}>閉じる</button>
       </div>
     </div>
   );
@@ -87082,7 +87082,7 @@ function MsxSlotPicker({ idx, cur, own, unlocked, raised, teamBox, SUC, onPick, 
               <span className="pr">{on ? '✅ この枠' : '入れる'}</span></button>); })
             : <div className="msx-note">まだいません。育て終えたモンスターが入ります</div>}
         </div>
-        <button type="button" className="msx-dt-close" data-msx-slot-close onClick={onClose}>とじる</button>
+        <button type="button" className="msx-dt-close" data-msx-slot-close onClick={onClose}>閉じる</button>
       </div>
     </div>
   );
@@ -87109,7 +87109,7 @@ function MsxGatherTable({ members, SUC, onClose }) {
             );
           })}
         </div>
-        <button type="button" className="msx-dt-close" data-msx-gather-close onClick={onClose}>とじる</button>
+        <button type="button" className="msx-dt-close" data-msx-gather-close onClick={onClose}>閉じる</button>
       </div>
     </div>
   );
@@ -90185,7 +90185,7 @@ function MsxR3Box({ onClose }) {
       </div>
       {box.memory.length ? <div className="mm-memo">思い出: {box.memory.slice(-5).reverse().map((m) => `${m.nick || msxMonName(m.species)}(${m.rank || '—'})`).join('・')}</div> : null}
     </div>);
-    foot = <div className="v-ft"><button type="button" onClick={onClose}>← もどる</button></div>;
+    foot = <div className="v-ft"><button type="button" onClick={onClose}>← 戻る</button></div>;
   }
   // ---- 一覧(mm-03) ----
   else if (page === 'list' || (page === 'detail' && cur)) {
@@ -90211,7 +90211,7 @@ function MsxR3Box({ onClose }) {
         <h3>{menu === 'sort' ? '並べ替え' : '顔の下に出す物'}</h3>
         <div className="mm-opts">{(menu === 'sort' ? MSX_MM_SORTS : MSX_MM_LABELS).map(([k, n]) => (
           <button type="button" key={k} className={(menu === 'sort' ? view.sort : view.label) === k ? 'on' : ''} onClick={() => { setView(menu === 'sort' ? { ...view, sort: k } : { ...view, label: k }); setMenu(null); }}>{n}</button>))}</div>
-        <button type="button" className="msx-btn" onClick={() => setMenu(null)}>とじる</button></div></div> : null}
+        <button type="button" className="msx-btn" onClick={() => setMenu(null)}>閉じる</button></div></div> : null}
       {byeAsk ? <div className="msx-ov msx-fade"><div className="msx-sheet">
         <div style={{ fontSize: 13, fontWeight: 900, lineHeight: 1.6 }}>{byeAsk.ids.length === 1 && box.mons.find((x) => x.id === byeAsk.ids[0]) ? msxMmName(box.mons.find((x) => x.id === byeAsk.ids[0])) : `${byeAsk.ids.length}体`}とお別れしますか? お別れしたマスモンは元に戻せません(思い出に名前とランクだけ残ります)</div>
         <div className="mm-byelist">{byeAsk.ids.map((id) => { const m = box.mons.find((x) => x.id === id); return m ? <span key={id}>{msxMmName(m)}</span> : null; })}</div>
@@ -90249,7 +90249,7 @@ function MsxR3Box({ onClose }) {
     </>);
     foot = tab === 'bye'
       ? <div className="v-ft"><button type="button" onClick={() => { setTab('list'); setPick([]); }}>← やめる</button><button type="button" className="go" disabled={!pick.length} onClick={() => setByeAsk({ ids: pick.slice() })} data-msx-mm-bye>お別れする({pick.length}体)</button></div>
-      : <div className="v-ft"><button type="button" onClick={() => { setPage('gate'); setMsg(''); }}>← もどる</button></div>;
+      : <div className="v-ft"><button type="button" onClick={() => { setPage('gate'); setMsg(''); }}>← 戻る</button></div>;
   }
   // ---- 名前と染色を変える ----
   else if (page === 'edit' && cur && edit) {
@@ -90271,10 +90271,10 @@ function MsxR3Box({ onClose }) {
     </div>);
     foot = <div className="v-ft"><button type="button" onClick={() => { setEdit(null); setPage('detail'); }}>やめる</button><button type="button" className="go" onClick={saveEdit} data-msx-r3-editsave>これで決める</button></div>;
   }
-  else { body = <div className="msx-note">見つかりませんでした</div>; foot = <div className="v-ft"><button type="button" onClick={() => setPage('list')}>← もどる</button></div>; }
+  else { body = <div className="msx-note">見つかりませんでした</div>; foot = <div className="v-ft"><button type="button" onClick={() => setPage('list')}>← 戻る</button></div>; }
   return (<>
     <style>{MSX_R3_CSS}</style><style>{MSX_MM_CSS}</style>
-    <MsxHd back="もどる" onBack={page === 'gate' ? onClose : page === 'list' ? () => setPage('gate') : page === 'edit' ? () => { setEdit(null); setPage('detail'); } : () => setPage('list')} title={title}/>
+    <MsxHd back="戻る" onBack={page === 'gate' ? onClose : page === 'list' ? () => setPage('gate') : page === 'edit' ? () => { setEdit(null); setPage('detail'); } : () => setPage('list')} title={title}/>
     <div className="v-body r3 mm" data-msx-mm={page}>{body}</div>
     {foot}
   </>);

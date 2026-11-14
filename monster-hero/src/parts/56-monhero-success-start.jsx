@@ -187,7 +187,7 @@ function MsxMonDetail({ species, name, art, st, apt, type, peak, grades, known, 
           </div>
         </div>
         {foot ? <div className="msx-md-foot">{foot}</div> : null}
-        <button type="button" className="msx-dt-close" data-msx-detail-close onClick={onClose}>とじる</button>
+        <button type="button" className="msx-dt-close" data-msx-detail-close onClick={onClose}>閉じる</button>
       </div>
     </div>
   );
@@ -215,7 +215,7 @@ function MsxSlotPicker({ idx, cur, own, unlocked, raised, teamBox, SUC, onPick, 
               <span className="pr">{on ? '✅ この枠' : '入れる'}</span></button>); })
             : <div className="msx-note">まだいません。育て終えたモンスターが入ります</div>}
         </div>
-        <button type="button" className="msx-dt-close" data-msx-slot-close onClick={onClose}>とじる</button>
+        <button type="button" className="msx-dt-close" data-msx-slot-close onClick={onClose}>閉じる</button>
       </div>
     </div>
   );
@@ -242,7 +242,7 @@ function MsxGatherTable({ members, SUC, onClose }) {
             );
           })}
         </div>
-        <button type="button" className="msx-dt-close" data-msx-gather-close onClick={onClose}>とじる</button>
+        <button type="button" className="msx-dt-close" data-msx-gather-close onClick={onClose}>閉じる</button>
       </div>
     </div>
   );
