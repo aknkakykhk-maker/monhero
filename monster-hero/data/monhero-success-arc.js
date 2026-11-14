@@ -3,7 +3,7 @@
 //
 // ★次の助手を足すときは、この表に1つ足し、台本(docs/progress/player-raise/script/arc-<助手>.js)に文を足すだけ。
 //   計算は芯(monhero-success.js)とランダムイベントの部品(monhero-success-events.js)がこの表を読んで動く。
-// ★React・window・localStorage・Date・Math.random を使わない(芯と同じ)。数は EVENTS §3 の物差し(能力は「訓練1回ぶん」の倍数)。
+// ★React・window・localStorage・Date・Math.random を使わない(芯と同じ)。数は EVENTS §3 の物差し(能力は「トレーニング1回ぶん」の倍数)。
 //
 // uniq   … 固有イベント(その助手だけの出来事・title は画面の見出し)。from〜to のターンのどこかで1回(毎ターン rate の率・to のターンで必ず)。
 //          id が台本の場面 id(scn.<助手>.uq.<名前>)。ch の書き方はランダムイベント(monhero-success-events.js の頭)と同じ

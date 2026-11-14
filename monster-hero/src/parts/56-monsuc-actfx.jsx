@@ -1,6 +1,6 @@
-// ===== モンヒロサクセスの訓練・修行の演出(2026-11-13 社長「トレーニングも修行も演出が入っていない」・参考動画の流れだけを取り入れる) =====
+// ===== モンヒロサクセスのトレーニング・修行の演出(2026-11-13 社長「トレーニングも修行も演出が入っていない」・参考動画の流れだけを取り入れる) =====
 // 何も保存しない・公開の印は持たない(モンサクの画面の中からだけ呼ぶ)。押すと飛ばせる。「動きを減らす」設定では出さない(すぐ結果)
-//   MsxTrainAct({ run, o, style, onDone }) … 訓練の結果の字の前に、訓練している場面(約1.3秒)。style: 'a' その場で動く / 'b' 集中線のカットイン
+//   MsxTrainAct({ run, o, style, onDone }) … トレーニングの結果の字の前に、トレーニングしている場面(約1.3秒)。style: 'a' その場で動く / 'b' 集中線のカットイン
 //   MsxShugyoStages({ run, o, line, onDone }) … 修行の結果の前に、助手の一言 →「STAGE 1 ◯◯&◯◯」→「STAGE 2 ◯◯&◯◯」(段ごとに景色が替わる・いっしょに修行した編成のモンスターの顔)
 
 const MSX_ACT_MS = 2000;
@@ -40,7 +40,7 @@ const msxQstageBgUrl = (name) => 'images/story-bg/' + String(name || 'forest_eve
 function MsxTrainAct({ run, o, onDone }) {
   msxActEnsureCss();
   const k = o && o.card && MSX_TRAIN_LV[o.card.stat] ? o.card.stat : 'pow';
-  // 行動の前の訓練Lv(Lvアップした回は上がる前の段で見せる)
+  // 行動の前のトレーニングLv(Lvアップした回は上がる前の段で見せる)
   const lv = msxTrainLvAt(o && Number.isFinite(o.trainLv) ? o.trainLv - (o.lvUp ? 1 : 0) : 1);
   const done = React.useRef(false);
   const finish = () => { if (done.current) return; done.current = true; onDone(); };
@@ -48,7 +48,7 @@ function MsxTrainAct({ run, o, onDone }) {
   msxUseTimedSe(msxActCalm() ? [] : (MSX_ACT_SE[k] || []).concat(lv === 5 ? [['actFlash', 600]] : []), []);
   if (msxActCalm()) return null;
   const n = (c) => Array.from({ length: c }, (_, i) => i);
-  // 訓練ごと・段ごとの小物(絵は使わず CSS と絵文字で描く。段が上がるほど大きく・多く)
+  // トレーニングごと・段ごとの小物(絵は使わず CSS と絵文字で描く。段が上がるほど大きく・多く)
   let prop = null;
   if (k === 'pow') {
     prop = lv <= 2 ? <div className="pr logs">{n(lv === 1 ? 3 : 4).map((i) => <i key={i} style={{ '--i': i }}><b/></i>)}<em className="boom">💥</em></div>
@@ -78,7 +78,7 @@ function MsxTrainAct({ run, o, onDone }) {
       <div className="me">{mv ? <div className="mv"><MsxMonArt run={run} className="mon" live/>{k === 'life' ? <i className="sweat">💦</i> : null}</div> : <MsxMonArt run={run} className="mon" live/>}</div>
       {front ? prop : null}
       {lv === 5 ? <span className="flash5" aria-hidden="true"/> : null}
-      <div className="ban"><small>{MSX_STAT_NAME[k]}の訓練 <b>Lv.{lv}</b></small>{msxTrainIcon(k, lv)} {msxTrainName(k, lv)}!</div>
+      <div className="ban"><small>{MSX_STAT_NAME[k]}のトレーニング <b>Lv.{lv}</b></small>{msxTrainIcon(k, lv)} {msxTrainName(k, lv)}!</div>
     </div>
   );
 }

@@ -58,7 +58,7 @@ const MONSUC_SCRIPT_EVENTS_BOND12 = Object.freeze([
   { id:'ev.small.omikuji.good.mua1b', who:'mua', e:'happy', bond:[1,2], t:'吉です！ ちょうどいいのがいちばんですよ♪' },
   { id:'ev.small.omikuji.bad.mua1b', who:'mua', e:'happy', bond:[1,2], t:'凶でした！ でも、運を使っていないってことかもしれませんね' },
   { id:'ev.small.nut.mua1b', who:'mua', e:'troubled', bond:[1,2], t:'色がすごいですね…。でも強くなるなら…どうしますか？' },
-  { id:'ev.body.injury.mua1b', who:'mua', e:'troubled', bond:[1,2], t:'待ってください！ 今のまま訓練したら、けがしちゃうかもしれません…' },
+  { id:'ev.body.injury.mua1b', who:'mua', e:'troubled', bond:[1,2], t:'待ってください！ 今のままトレーニングしたら、けがしちゃうかもしれません…' },
   { id:'ev.body.runaway.mua1b', who:'mua', e:'troubled', bond:[1,2], t:'最近、{mon}が元気ないですね…。どこかに連れて行ってあげたいです' },
   { id:'ev.body.healed.mua1b', who:'mua', e:'happy', bond:[1,2], t:'よかったです…！ またいっしょにがんばりましょうね♪' },
   { id:'ev.body.home.mua1b', who:'mua', e:'crying', bond:[1,2], t:'おかえりなさい…！ どこに行ってたんですか😭' },

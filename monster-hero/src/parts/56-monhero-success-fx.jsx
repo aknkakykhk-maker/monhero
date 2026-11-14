@@ -12,8 +12,8 @@
 //              skill 修行・試合で技を見せる/win 大会に勝って固有技)。
 //             great・skill・win は図鑑の攻撃アクション(技ごとの動き)を流す。技は react.skill = { kind:'normal'|'unique', name }
 //             (名前は msxFxSkillName(species, kind, 段階) で引ける。無ければ図鑑と同じく最初の段階の動き)
-//   <MsxFxMoment kind="lvup" title="ちから Lv3" sub="訓練の効果が上がった" onDone={…}/>
-//     節目の短い演出。kind: lvup 訓練Lvアップ/tech 修行の技を覚えた/win 大会に勝った/lose 大会に負けた/
+//   <MsxFxMoment kind="lvup" title="ちから Lv3" sub="トレーニングの効果が上がった" onDone={…}/>
+//     節目の短い演出。kind: lvup トレーニングLvアップ/tech 修行の技を覚えた/win 大会に勝った/lose 大会に負けた/
 //     over ゲームオーバー/retire 引退。親は position:relative の画面(.msx)。画面いっぱいに重なる
 //     pose  … しぐさを出したままにする(止め絵・見本用)
 //     pyoko … ぴょこぴょこ(小さく弾み続け、ときどき大きく跳ねる。社長 2026-11-12「もっと小さくして、ぴょこぴょこ動くように」)。
@@ -218,7 +218,7 @@ function MsxLiveMon({ species, colors, mood = 'calm', season, time, react, onRea
 
 // ---- 節目の短い演出 ----
 const MSXFX_MOMENT = Object.freeze({
-  lvup: { icon: '⬆️', head: '訓練Lvアップ！', tone: 'gold' },
+  lvup: { icon: '⬆️', head: 'トレーニングLvアップ！', tone: 'gold' },
   tech: { icon: '📜', head: '技を覚えた！', tone: 'sky' },
   win: { icon: '🏆', head: '優勝！', tone: 'gold' },
   lose: { icon: '…', head: '負けてしまった', tone: 'gray' },

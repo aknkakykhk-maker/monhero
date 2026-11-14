@@ -21,9 +21,9 @@ const MONSUC_SCRIPT_ITEMS = Object.freeze([
   { id:'item.misanga.mua1b', who:'mua', e:'happy', bond:[1,2], t:'ミサンガを結びました。いい出会いがありそうです♪' },
   { id:'item.misanga.atsu1', who:'atsu', e:'normal', t:'ミサンガね。今回はにぎやかな育成になりそうだな笑' },
   // 4. 週刊!トレーニング(ようす「トレーニング得意」)
-  { id:'item.weekly.mua1', who:'mua', e:'normal', t:'週刊!トレーニング、ちゃんと読んだよ！ 今回は訓練まかせて👍' },
-  { id:'item.weekly.mua1b', who:'mua', e:'normal', bond:[1,2], t:'週刊!トレーニング、しっかり読みました！ 訓練はまかせてください👍' },
-  { id:'item.weekly.atsu1', who:'atsu', e:'happy', t:'とりあえず読んどいた。訓練のコツ、だいたい分かったわ笑' },
+  { id:'item.weekly.mua1', who:'mua', e:'normal', t:'週刊!トレーニング、ちゃんと読んだよ！ 今回はトレーニングまかせて👍' },
+  { id:'item.weekly.mua1b', who:'mua', e:'normal', bond:[1,2], t:'週刊!トレーニング、しっかり読みました！ トレーニングはまかせてください👍' },
+  { id:'item.weekly.atsu1', who:'atsu', e:'happy', t:'とりあえず読んどいた。トレーニングのコツ、だいたい分かったわ笑' },
   // 5. 修行のハチマキ(ようす「修行得意」)
   { id:'item.hachimaki.mua1', who:'mua', e:'excited', t:'ハチマキ巻いたら、{mon}の目つき変わったｗ 修行いけそー！' },
   { id:'item.hachimaki.mua1b', who:'mua', e:'excited', bond:[1,2], t:'ハチマキを巻いたら、{mon}の目つきが変わりました！ 修行がんばれそうです' },
