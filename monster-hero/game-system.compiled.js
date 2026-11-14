@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f386c6f3245fa44a
+// source-sha256: 3b1957e872724836
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -166419,7 +166419,7 @@ function MonheroSuccessScreen({
     cfg.items.filter(k => MSX_ITEM_BY_ID[k] && MSX_ITEM_BY_ID[k].when === 'both').forEach(k => {
       bag[k] = 1;
     });
-    const fromMon = cfg.from && typeof cfg.from.box === 'string' ? data.box.mons.find(m => m.id === cfg.from.box) : null;
+    const fromMon = cfg.from && typeof cfg.from.box === 'string' ? data.box.mons.find(m => m.id === cfg.from.box && !m.raised) || null : null;
     const s = SUC.newRun({
       id,
       species: cfg.species,
