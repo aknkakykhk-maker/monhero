@@ -359,7 +359,7 @@ const CardBattleStatsPanel = ({ stats, who = 'self' }) => {
       </div>
       <div className="mt-1 grid grid-cols-3 gap-1 text-center">
         <div data-card-stats-streak className={cell}>
-          <span className="block whitespace-nowrap text-[9px] font-black text-orange-200">いちばん長い連勝</span>
+          <span className="block whitespace-nowrap text-[9px] font-black text-orange-200">一番長い連勝</span>
           <b className={`block ${val(stats.bestStreak)}`}>{stats.bestStreak}</b>
         </div>
         <div data-card-stats-pvp className={cell}>
@@ -763,7 +763,7 @@ const CardRecordScreen = ({ db = CARD_BATTLE_DATA, save, foes = [], levelLabel =
         {onOpenReplays && (
           <button type="button" data-card-replays-open-side onClick={() => { Audio_.fgSe.tap(); onOpenReplays(); }}
             className="mh-button mh-button-secondary flex min-h-[44px] w-full items-center justify-between rounded-2xl border border-sky-300/40 bg-slate-800 px-3 text-left">
-            <span><b className="block text-[13px] font-black text-sky-100">▶ 過去の対戦</b><small className="block text-[10px] font-bold text-slate-400">遊んだ試合を、はじめから見返せます</small></span>
+            <span><b className="block text-[13px] font-black text-sky-100">▶ 過去の対戦</b><small className="block text-[10px] font-bold text-slate-400">遊んだ試合を、初めから見返せます</small></span>
             <span className="text-[18px] text-slate-400">›</span>
           </button>
         )}
@@ -779,7 +779,7 @@ const CardRecordScreen = ({ db = CARD_BATTLE_DATA, save, foes = [], levelLabel =
           {onOpenReplays && (
             <button type="button" data-card-replays-open onClick={() => { Audio_.fgSe.tap(); onOpenReplays(); }}
               className="mh-button mh-button-secondary flex min-h-[48px] w-full items-center justify-between rounded-2xl border border-sky-300/40 bg-slate-800 px-3 text-left landscape:hidden">
-              <span><b className="block text-[14px] font-black text-sky-100">▶ 過去の対戦</b><small className="block text-[11px] font-bold text-slate-400">遊んだ試合を、はじめから見返せます</small></span>
+              <span><b className="block text-[14px] font-black text-sky-100">▶ 過去の対戦</b><small className="block text-[11px] font-bold text-slate-400">遊んだ試合を、初めから見返せます</small></span>
               <span className="text-[18px] text-slate-400">›</span>
             </button>
           )}
@@ -798,7 +798,7 @@ const CardRecordScreen = ({ db = CARD_BATTLE_DATA, save, foes = [], levelLabel =
             <div className="text-[12px] font-bold text-slate-400">勝ち方(フリー対戦)</div>
             <div className="mt-1 grid grid-cols-3 gap-1.5 text-center">
               {cell('勝つまでの平均', winAvg === null ? '—' : winAvg, 'ターン')}
-              {cell('いちばん早い勝ち', d.wins.fastest || '—', d.wins.fastest ? 'ターン目' : '')}
+              {cell('一番早い勝ち', d.wins.fastest || '—', d.wins.fastest ? 'ターン目' : '')}
               {cell('今日の勝ち', d.day.key === today ? d.day.win : 0, '勝')}
             </div>
             <p className={small} style={JA_WRAP_STYLE}>{jaWrap('「ターン」は自分のターンの数です。この記録ができてからのぶんです')}</p>
@@ -846,7 +846,7 @@ const CardRecordScreen = ({ db = CARD_BATTLE_DATA, save, foes = [], levelLabel =
                       {row('投了', `${f.surrender}`, 'sur')}
                       {row('いまの連勝', `${f.now}連勝`, 'now')}
                       {row('最高の連勝', `${f.best}連勝`, 'best')}
-                      {row('いちばん早い勝ち', f.fastest ? `${f.fastest}ターン目` : '—', 'fast')}
+                      {row('一番早い勝ち', f.fastest ? `${f.fastest}ターン目` : '—', 'fast')}
                       <div className="mt-1 text-[10px] font-bold text-slate-400">難易度ごとの勝ち</div>
                       <div className="mt-0.5 grid grid-cols-5 gap-1 text-center text-[10px] font-bold">
                         {CARD_LEVEL_ORDER.map((lv) => <div key={lv} className="min-w-0 rounded-md bg-black/30 py-0.5"><span className="block truncate text-slate-400">{levelLabel[lv] || lv}</span><b className="text-[12px] text-amber-200">{f.levels[lv]}</b></div>)}
@@ -864,7 +864,7 @@ const CardRecordScreen = ({ db = CARD_BATTLE_DATA, save, foes = [], levelLabel =
             <div className="text-[12px] font-bold text-slate-400">マルチ対戦</div>
             <div className="text-[16px] font-black text-white">{rec.pvp.win}勝 {rec.pvp.lose}敗</div>
             {row('いまの強さ', !multi ? '読み込み中…' : Number.isFinite(multi.rating) ? `${multi.rating}${multi.place ? `(${multi.place.capped ? `${multi.place.n}位より下` : `${multi.place.n}位`})` : ''}` : pvpGames ? '—' : 'まだ対戦していません', 'rating')}
-            {row('いちばん高かった強さ', d.pvpBest ? `${d.pvpBest}` : '—', 'best')}
+            {row('一番高かった強さ', d.pvpBest ? `${d.pvpBest}` : '—', 'best')}
           </div>
           <div data-card-record-trend className={SCREEN_PANEL_CLASS}>
             <div className="text-[12px] font-bold text-slate-400">強さの移り(最近20戦)</div>

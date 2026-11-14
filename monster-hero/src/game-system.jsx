@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 541d00d645b8896a
+// generated-sha256: f50100230e689e3d
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -85653,7 +85653,7 @@ const MSX_CSS = `
 .msx .v-q .ask{background:#fff;color:#1e1b4b;border-radius:12px;padding:6px 10px;font-size:12.5px;font-weight:900;text-align:center;border:2px solid #f9a8d4}
 .msx .v-q .bt{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px}
 .msx .v-ch{background:linear-gradient(180deg,#fff,#fde7f3);color:#1e1b4b;border:2px solid #f472b6;border-bottom-width:4px;border-radius:13px;padding:6px 6px;text-align:center;font-size:13.5px;font-weight:900;line-height:1.25;min-width:0}
-.msx .v-ch small{display:block;font-size:10px;font-weight:800;color:#9d174d;white-space:nowrap}
+.msx .v-ch small{display:block;font-size:10px;font-weight:800;color:#9d174d;white-space:normal} /* 狭い画面では「・」のあとで折る(jaWrap。言葉の途中では折らない) */
 .msx .v-ch.b{border-color:#38bdf8;background:linear-gradient(180deg,#fff,#e0f2fe)}.msx .v-ch.b small{color:#075985}
 .msx .v-ch.n{grid-column:1/-1;background:#1e293b;color:#cbd5e1;border-color:#475569;font-size:11.5px;padding:4px}
 .msx .v-pol{background:#1e1a36;border:1px solid #3b3566;border-radius:12px;padding:6px 9px;margin-top:6px}
@@ -85730,7 +85730,7 @@ const MSX_CSS = `
 .msx .v-sw i{flex:1;aspect-ratio:1;max-width:30px;border-radius:50%;border:2px solid #ffffff55}
 .msx .v-sw i.on{border-color:#fff;box-shadow:0 0 0 2px #fde047}
 .msx .v-sum{display:flex;align-items:center;gap:8px;background:#1e1a36;border:1px solid #3b3566;border-radius:12px;padding:6px 9px;margin-top:5px;font-size:11.5px;font-weight:900;line-height:1.35;min-width:0}
-.msx .v-sum .k{width:46px;font-size:10px;color:#f9a8d4;flex:none}
+.msx .v-sum .k{min-width:46px;font-size:10px;color:#f9a8d4;flex:none;white-space:nowrap} /* 見出しは折らない(大きい文字で「持ちこ/み」になっていた) */
 .msx .v-sum .ed{margin-left:auto;font-size:10px;color:#7dd3fc;flex:none}
 .msx .v-big{display:block;margin-top:8px;border-radius:99px;padding:12px;text-align:center;font-size:16px;font-weight:900;background:linear-gradient(90deg,#f472b6,#fb923c);box-shadow:0 4px 0 #9d174d,0 0 18px #f472b688;white-space:nowrap}
 .msx .v-issa{position:absolute;left:2%;bottom:-58%;height:150%;filter:drop-shadow(0 6px 6px #000a)}
@@ -86571,6 +86571,8 @@ function MonheroSuccessDebugEntry({ callNameOf, bondLvOf, onOpenChange }) {
 // ---- part: 56-monhero-success-start.jsx ----
 // ===== モンヒロサクセス: 始めるまでの6段(育てるモンスター → 編成 → 助手(シナリオ) → 持ちこみ → 名前と染色 → 確認) =====
 // 見本: docs/progress/player-raise/mock/png/v3-S.png(S1〜S6)。計算は芯の memberOf / newRun を呼ぶだけ
+// 品の名前の折り目: 「の」のあとと、カタカナ語の「ー」のあと(「縁結びの/お守り」「ブリーダー/ライセンス」)。狭い升目で言葉の途中で折れないように(2026-11-14)
+const msxItemNameNode = (name) => String(name || '').split(/(?<=の)|(?<=ー)(?=[ァ-ヶ])/).map((x, i) => <React.Fragment key={i}>{i > 0 ? <wbr/> : null}{x}</React.Fragment>);
 const MSX_STEP_NAMES = Object.freeze(['育てるモンスター', '編成', '助手', '持ちこみ', '名前と染色', '確認']);
 // 持ちこみ12種(ITEMS-REF.md・名前と効き目は参考のまま・博士はイッサ博士)。before = はじめる前に効く / both = 育成中にも使える
 const MSX_ITEMS = Object.freeze([
@@ -86998,7 +87000,7 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf }) {
       <div className="v-igrid">
         {MSX_ITEMS.map((t) => (
           <button type="button" key={t.id} className={`${items.includes(t.id) ? 'in' : ''}${t.when === 'both' ? ' bo' : ''}`} onClick={() => toggle(t.id)} disabled={!has(t.id) && !items.includes(t.id)}>
-            <span style={{ fontSize: 22, lineHeight: 1 }}>{t.e}</span><i>×{has(t.id)}</i><small style={JA_LABEL_STYLE}>{jaWrap(t.name.replace('ガロエ印の', ''))}</small>{items.includes(t.id) ? <u>✔</u> : null}
+            <span style={{ fontSize: 22, lineHeight: 1 }}>{t.e}</span><i>×{has(t.id)}</i><small style={JA_LABEL_STYLE}>{msxItemNameNode(t.name.replace('ガロエ印の', ''))}</small>{items.includes(t.id) ? <u>✔</u> : null}
           </button>
         ))}
       </div>
@@ -87045,7 +87047,7 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf }) {
       <button type="button" className="v-sum" onClick={() => setStep(1)}><span className="k">編成</span>{members.map((m, i) => <span key={i} className={`v-pf sm r${m.rank === 'base' ? 'G' : m.rank}${m.kind === 'base' ? ' base' : ''}`}><img src={msxMonThumb(m.species)} alt=""/></span>)}<span className="ed">変える</span></button>
       {typeof msxScenarioOf === 'function' ? <button type="button" className="v-sum" onClick={() => setScn(null)}><span className="k">シナリオ</span><span>{msxScenarioOf(scn).name}</span><span className="ed">変える</span></button> : null}
       <button type="button" className="v-sum" onClick={() => setStep(2)}><span className="k">助手</span><span>{msxAidName(aid)}編「{sc.title}」</span><span className="ed">変える</span></button>
-      <button type="button" className="v-sum" onClick={() => setStep(3)}><span className="k">持ちこみ</span><span>{items.length ? items.map((id) => `${MSX_ITEM_BY_ID[id].e}${MSX_ITEM_BY_ID[id].name}`).join('・') : 'なし'}</span><span className="ed">変える</span></button>
+      <button type="button" className="v-sum" onClick={() => setStep(3)}><span className="k">持ちこみ</span><span style={JA_LABEL_STYLE}>{jaWrap(items.length ? items.map((id) => `${MSX_ITEM_BY_ID[id].e}${MSX_ITEM_BY_ID[id].name}`).join('・') : 'なし')}</span><span className="ed">変える</span></button>
       <div className="v-sum"><span className="k">はじめの上乗せ</span><span>{Object.keys(startAdd).length ? `編成から ${Object.entries(startAdd).map(([k, v]) => `${MSX_STAT_NAME[k]} +${v}`).join('・')}` : '編成からの上乗せなし'}</span></div>
       <button type="button" className="v-big" onClick={start}>🌱 育成をはじめる</button>
     </>);
@@ -87075,6 +87077,22 @@ const MSX_RES = Object.freeze({
   fail: { word: '失敗…', cls: 'ng', bg: 'forest_evening', icon: '❌' },
   sab: { word: 'サボった', cls: 'zz', bg: 'monhero_plaza', icon: '💤' },
 });
+// 叱る・褒めるの場面ごとの選択肢(2026-11-14 社長)。how は芯の数字の向き(praise=甘え寄り・scold=恐れ寄り)。order は札の並び
+const MSX_REACT = Object.freeze({
+  great: { ask: '大成功! {mon}に、どう声をかける?', order: ['praise', 'scold'], praise: { t: '🎉 思いきりほめる', after: '{mon}は、うれしそうに胸を張った!' }, scold: { t: '🫡 気を引きしめさせる', after: '{mon}は、きりっと表情を引きしめた。' } },
+  fail: { ask: 'うまくいかなかった…。{mon}に、どう声をかける?', order: ['praise', 'scold'], praise: { t: '🤗 なぐさめる', after: '{mon}は、少し元気を取り戻したようだ。' }, scold: { t: '🔥 しかって奮い立たせる', after: '{mon}の目に、くやしさの火がともった。' } },
+  sab: { ask: '{mon}がサボってしまった。どうする?', order: ['scold', 'praise'], scold: { t: '📣 しかる', after: '{mon}は、しゅんとして反省している。' }, praise: { t: '👀 見のがす', after: '{mon}は、ほっとしたように甘えてきた。' } },
+  shugyo: { ask: '修行から帰ってきた{mon}に、どう声をかける?', order: ['praise', 'scold'], praise: { t: '🍵 ねぎらう', after: '{mon}は、満足そうにひと息ついた。' }, scold: { t: '💪 気合いを入れる', after: '{mon}は、もう次の修行を見すえている。' } },
+});
+// 叱る・褒めるのあとに変わった物の札 [{ k, name, val, good }]
+const msxReactChips = (d, polFrom, polTo) => {
+  if (!d || typeof d !== 'object') return [];
+  const out = []; const sg = (n) => (n > 0 ? `+${n}` : `−${Math.abs(n)}`);
+  [['ama', '🥰 甘え度'], ['fear', '😨 恐れ度'], ['loy', '忠誠度']].forEach(([k, name]) => { const n = Math.round(Number(d[k])); if (Number.isFinite(n) && n) out.push({ k, name, val: sg(n), good: n > 0 }); });
+  const a = Math.max(-3, Math.min(3, Number(polFrom) || 0)); const b = Math.max(-3, Math.min(3, Number(polTo) || 0));
+  if (a !== b && typeof MSX_POLICY_SCALE !== 'undefined') out.push({ k: 'pol', name: `方針 ${MSX_POLICY_SCALE[a + 3]} → ${MSX_POLICY_SCALE[b + 3]}`, val: '', good: true });
+  return out;
+};
 const MSX_COND = Object.freeze({ injury: 'けが', ill: '病気', away: '家出' });
 const MSX_ISSA_KEYS = Object.freeze([
   { key: 'stat', icon: '💪', name: 'ステータスアップ', ok: '全能力 +50', ng: '全能力 −10・サボりグセ', line: 'stat' },
@@ -87465,6 +87483,11 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
   };
   // トレーニングの結果のあと: 編成の出来事(ランダムイベント 'after')→ イッサ博士 → ターンを閉じる
   const afterIssa = (r0) => { const p = SUC.peek(r0.s); if (p.issa) setRun({ ...r0, phase: 'issa', out: null }); else endTurnFlow(r0); };
+  // 叱る・褒めるの段へ。場面が無い(ふつうの成功など)ときは段を出さず、「なにもしない」として進める(2026-11-14 社長)
+  const toReact = (r) => {
+    if (typeof SUC.reactOf === 'function' && !SUC.reactOf(r.s)) { const x = SUC.react(r.s, null); afterAct({ ...r, s: x.out && x.out.ok ? x.state : r.s, phase: 'main' }); return; }
+    setRun({ ...r, phase: 'react' });
+  };
   const afterAct = (r0) => {
     if (SUC.events && r0.s.last && r0.s.last.kind === 'train') {
       const o = SUC.events.open(r0.s, 'after');
@@ -87560,12 +87583,12 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
     </>);
     // 編成のモンスターとの出来事があれば、結果のあとに場面を1枚挟む(56-monsuc-tevent.jsx。とばすと飛ぶ)
     const tev = isTrain && o.event && typeof MsxTrainEvent === 'function';
-    foot = <div className="v-ft"><button type="button" onClick={() => (isTrain ? afterAct({ ...run, phase: 'main' }) : afterAct(run))}>⏩ とばす</button><button type="button" className="go" onClick={() => (tev ? setRun({ ...run, phase: 'tevent' }) : isTrain ? setRun({ ...run, phase: 'react' }) : afterAct(run))}>つぎへ ▶</button></div>;
+    foot = <div className="v-ft"><button type="button" onClick={() => (isTrain ? afterAct({ ...run, phase: 'main' }) : afterAct(run))}>⏩ とばす</button><button type="button" className="go" onClick={() => (tev ? setRun({ ...run, phase: 'tevent' }) : isTrain ? toReact(run) : afterAct(run))}>つぎへ ▶</button></div>;
   }
   // ---- トレーニングのあとの出来事の場面(56-monsuc-tevent.jsx) ----
   else if (phase === 'tevent' && run.out && run.out.event && typeof MsxTrainEvent === 'function') {
     body = <><MsxBand s={s} v={v} ev={ev}/><MsxTrainEvent key={`${s.turn}-tev`} run={run} o={run.out} ctx={ctx}/></>;
-    foot = <div className="v-ft"><button type="button" onClick={() => afterAct({ ...run, phase: 'main' })}>⏩ とばす</button><button type="button" className="go" onClick={() => setRun({ ...run, phase: 'react' })} data-msx-tev-next>つぎへ ▶</button></div>;
+    foot = <div className="v-ft"><button type="button" onClick={() => afterAct({ ...run, phase: 'main' })}>⏩ とばす</button><button type="button" className="go" onClick={() => toReact(run)} data-msx-tev-next>つぎへ ▶</button></div>;
   }
   // ---- 覚醒・超覚醒(56-monsuc-awake.jsx の演出)。終わったら、ターンのはじめならメインへ・ターンの終わりなら閉じる ----
   else if (phase === 'awake' && run.out && run.out.fire && typeof MsxAwakeShow === 'function') {
@@ -87581,33 +87604,47 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
   }
   // ---- 叱る/褒める ----
   else if (phase === 'react') {
-    const good = s.last && (s.last.res === 'great' || s.last.res === 'ok');
+    // 2026-11-14 社長: 場面(大成功・失敗・サボり・修行)ごとに選択肢を変え、選んだあとは変わった物を札で見せる
+    const sc = typeof SUC.reactOf === 'function' ? SUC.reactOf(s) : (s.last && s.last.kind === 'shugyo' ? 'shugyo' : s.last && s.last.res);
+    const RC = MSX_REACT[sc] || null;
+    const done = run.out && run.out.reacted; // 選んだあと(結果の札)
     const loy = SUC.loyalOf(s);
     const pol = Math.max(-3, Math.min(3, s.pol || 0));
-    const choose = (how) => { const r = SUC.react(s, how); afterAct({ ...run, s: r.state, phase: 'main' }); };
-    const ask = line(good ? 'turn.praise.fit' : 'turn.scold.fit', good ? 'ほめてあげる?' : 'どうする?');
+    const choose = (how) => {
+      const r = SUC.react(s, how);
+      if (!how || !r.out || !r.out.ok) { afterAct({ ...run, s: r.out && r.out.ok ? r.state : s, phase: 'main' }); return; }
+      setRun({ ...run, s: r.state, out: { ...(run.out || {}), reacted: { how, d: r.out.d, polFrom: r.out.polFrom, scene: r.out.scene } } });
+    };
+    const resIcon = sc === 'shugyo' ? '⛰️' : (MSX_RES[sc] || MSX_RES.ok).icon;
+    const resWord = sc === 'shugyo' ? '修行' : (MSX_RES[sc] || MSX_RES.ok).word;
+    const chips = done ? msxReactChips(done.d, done.polFrom, s.pol) : [];
     body = (<>
       <MsxBand s={s} v={v} ev={ev}/>
       <div className="v-scene dk" style={{ flex: '1 1 0' }}>
-        <img className="bg" src={`images/story-bg/${(MSX_RES[s.last && s.last.res] || MSX_RES.ok).bg}.jpg`} alt=""/><div className="sh"/>
-        <div className="v-strip"/><img className="v-body2" src={msxBody(s.aid, good ? 'happy' : 'troubled')} alt=""/>
-        <div className="v-chips"><span className="v-chip ylw">{(MSX_RES[s.last && s.last.res] || MSX_RES.ok).icon} {(MSX_RES[s.last && s.last.res] || MSX_RES.ok).word}のあと</span></div>
-        <div className="v-q"><div className="ask">{msxAidName(s.aid)}「{good ? `${run.nick}、ほめてあげる?` : `${run.nick}、どうする?`}」</div>
-          <div className="bt">
-            <button type="button" className="v-ch" onClick={() => choose('praise')}>👏 褒める<small>甘え度 +・方針が甘いほうへ</small></button>
-            <button type="button" className="v-ch b" onClick={() => choose('scold')}>📣 叱る<small>恐れ度 +・方針が厳しいほうへ</small></button>
+        <img className="bg" src={`images/story-bg/${sc === 'shugyo' ? 'forest_evening' : (MSX_RES[sc] || MSX_RES.ok).bg}.jpg`} alt=""/><div className="sh"/>
+        <div className="v-strip"/><img className="v-body2" src={msxBody(s.aid, done ? (done.how === 'praise' ? 'happy' : 'normal') : sc === 'great' || sc === 'shugyo' ? 'happy' : 'troubled')} alt=""/>
+        <div className="v-chips"><span className="v-chip ylw">{resIcon} {resWord}のあと</span></div>
+        <div className="v-q" data-msx-react={sc || 'none'}>
+          {done ? <div className="ask" data-msx-react-done={done.how}>{(RC && RC[done.how] ? RC[done.how].after : '').replace('{mon}', run.nick)}</div>
+            : <div className="ask">{RC ? RC.ask.replace('{mon}', run.nick) : `${run.nick}のようすを見守った。`}</div>}
+          {!done && RC ? <div className="bt">
+            {RC.order.map((how) => <button key={how} type="button" className={`v-ch${how === 'scold' ? ' b' : ''}`} onClick={() => choose(how)} data-msx-react-how={how}><span style={JA_LABEL_STYLE}>{jaWrap(RC[how].t)}</span><small style={JA_LABEL_STYLE}>{jaWrap(how === 'praise' ? '甘え度 +・方針が甘いほうへ' : '恐れ度 +・方針が厳しいほうへ')}</small></button>)}
             <button type="button" className="v-ch n" onClick={() => choose(null)}>なにもしない(方針はそのまま)</button>
-          </div></div>
+          </div> : null}
+        </div>
       </div>
+      {done ? <div className="v-log" data-msx-react-res={chips.length}><span className="hd2">📋 結果</span><br/>
+        {chips.length ? chips.map((c, i) => <span key={c.k}>{i ? '・' : ''}{c.name}{c.val ? <> <b className={c.good ? 'gu' : ''} style={c.good ? undefined : { color: '#dc2626' }}>{c.val}</b></> : null}</span>) : '変わったことはなかった'}</div> : null}
       <div className="v-pol"><div className="l"><span>超溺愛</span><span>甘い</span><span style={{ color: '#fde047' }}>いまの方針: {MSX_POLICY_SCALE[pol + 3]}</span><span>厳しい</span><span>超スパルタ</span></div>
         <div className="m">{MSX_POLICY_SCALE.map((n, i) => <i key={n} className={i === pol + 3 ? 'on' : ''}/>)}</div>
         <div className="two">
           <div className="v-ga"><span>🥰 甘え度</span><div className="tr"><i style={{ width: `${s.ama * 2}%`, background: 'linear-gradient(180deg,#f9a8d4,#f472b6)' }}/></div><b>{s.ama}</b></div>
           <div className="v-ga"><span>😨 恐れ度</span><div className="tr"><i style={{ width: `${s.fear * 2}%`, background: 'linear-gradient(180deg,#7dd3fc,#3b82f6)' }}/></div><b>{s.fear}</b></div></div>
-        <div style={{ fontSize: 10.5, color: '#cbd5e1', fontWeight: 700, marginTop: 4 }}>忠誠度 {loy} = 甘え度 {s.ama} + 恐れ度 {s.fear}。甘すぎるとサボりやすく、厳しすぎるとストレスがたまりやすい</div>
-        {ask && ask.t && ask.t !== 'ほめてあげる?' && ask.t !== 'どうする?' ? <div className="msx-note" style={{ marginTop: 4 }}>{msxAidName(s.aid)}「{ask.t}」</div> : null}</div>
+        <div style={{ fontSize: 10.5, color: '#cbd5e1', fontWeight: 700, marginTop: 4 }}>忠誠度 {loy} = 甘え度 {s.ama} + 恐れ度 {s.fear}。甘すぎるとサボりやすく、厳しすぎるとストレスがたまりやすい</div></div>
     </>);
-    foot = <div className="v-ft"><button type="button" onClick={() => choose(null)}>⏩ とばす</button><button type="button" className="on" disabled>えらんでね</button></div>;
+    foot = done || !RC || s.reacted
+      ? <div className="v-ft"><button type="button" className="go" onClick={() => afterAct({ ...run, out: run.out ? { ...run.out, reacted: undefined } : run.out, phase: 'main' })} data-msx-react-next>つぎへ ▶</button></div>
+      : <div className="v-ft"><button type="button" onClick={() => choose(null)}>⏩ とばす</button><button type="button" className="on" disabled>えらんでね</button></div>;
   }
   // ---- イッサ博士 ----
   else if (phase === 'issa') {
@@ -87822,8 +87859,8 @@ function MsxBag({ run, setRun, v, ev, onClose }) {
         <div className="t">🎒 持ち物<small>使えるのは 1ターンに1個まで・使ってもターンは進まない</small><button type="button" onClick={onClose}><i>✕</i></button></div>
         {t ? <div className="v-bsel"><span className="e" style={{ fontSize: 26 }}>{t.e}</span><div><b>{t.name}{t.n ? <span className="yel"> ×{t.n}</span> : null}</b><small>{t.desc}</small><small className="lim">{t.carry ? 'はじめる前から効いている' : 'いつ使える: 自分のターン'}</small></div></div> : null}
         <div className="v-bgrid">
-          {bagList.map((x) => <button type="button" key={x.id} className={pick === x.id ? 'sel' : ''} onClick={() => setPick(x.id)}><span className="e" style={{ fontSize: 22 }}>{x.e}</span><i>×{x.n}</i><small>{x.name}</small></button>)}
-          {carryList.map((x) => <button type="button" key={`c-${x.id}`} className={`no${pick === x.id ? ' sel' : ''}`} onClick={() => setPick(x.id)}><span className="e" style={{ fontSize: 22 }}>{x.e}</span><small>{x.name}</small></button>)}
+          {bagList.map((x) => <button type="button" key={x.id} className={pick === x.id ? 'sel' : ''} onClick={() => setPick(x.id)}><span className="e" style={{ fontSize: 22 }}>{x.e}</span><i>×{x.n}</i><small style={JA_LABEL_STYLE}>{msxItemNameNode(x.name)}</small></button>)}
+          {carryList.map((x) => <button type="button" key={`c-${x.id}`} className={`no${pick === x.id ? ' sel' : ''}`} onClick={() => setPick(x.id)}><span className="e" style={{ fontSize: 22 }}>{x.e}</span><small style={JA_LABEL_STYLE}>{msxItemNameNode(x.name)}</small></button>)}
           <div className="no"><span className="e">⏳</span><i>×{sand}</i><small>時渡りの砂時計</small></div><div className="no"><span className="e">🌈</span><i>×{rainbow}</i><small>虹の時渡りの砂時計</small></div>
         </div>
         {!bagList.length && !carryList.length ? <div className="msx-note">持ちこんだ物はありません</div> : null}
@@ -87939,10 +87976,10 @@ function MsxEvent({ run, setRun, v, ev, ctx, bondLv, onDone }) {
       <div className="v-ft" style={{ marginTop: 6 }}><button type="button" className="go" onClick={() => onDone(run)}>つぎへ ▶</button></div>
     </>) : choices.length ? (
       <div className="v-opts">{choices.map((ch) => (typeof MsxChoiceInfo === 'function' && seenId ? <React.Fragment key={ch.c}>
-        <div className="msx-optrow"><button type="button" className="v-opt" disabled={ch.ok === false} onClick={() => choose(ch.c)}>{ch.t}{MSX_LOOK[ch.look] ? <small>{MSX_LOOK[ch.look]}</small> : null}</button>
+        <div className="msx-optrow"><button type="button" className="v-opt" disabled={ch.ok === false} onClick={() => choose(ch.c)}><span style={JA_LABEL_STYLE}>{jaWrap(ch.t)}</span>{MSX_LOOK[ch.look] ? <small>{MSX_LOOK[ch.look]}</small> : null}</button>
           <button type="button" className={`msx-info${info === ch.c ? ' on' : ''}`} aria-label="詳細" onClick={() => setInfo(info === ch.c ? null : ch.c)} data-msx-info={ch.c}>ℹ</button></div>
         <MsxChoiceInfo evId={seenId} c={ch.c} open={info === ch.c}/></React.Fragment>
-        : <button type="button" key={ch.c} className="v-opt" disabled={ch.ok === false} onClick={() => choose(ch.c)}>{ch.t}{MSX_LOOK[ch.look] ? <small>{MSX_LOOK[ch.look]}</small> : null}</button>))}</div>
+        : <button type="button" key={ch.c} className="v-opt" disabled={ch.ok === false} onClick={() => choose(ch.c)}><span style={JA_LABEL_STYLE}>{jaWrap(ch.t)}</span>{MSX_LOOK[ch.look] ? <small>{MSX_LOOK[ch.look]}</small> : null}</button>))}</div>
     ) : (
       <div className="v-ft" style={{ marginTop: 6 }}><button type="button" className="go" onClick={() => (isStory ? choose('a') : choose(null))}>つぎへ ▶</button></div>
     )}
@@ -95036,9 +95073,9 @@ const CARD_TACTIC_GROUPS = Object.freeze([
   // ---------- 条件 ----------
   { id: 'any', cat: 'cond', sec: '標的', name: 'いつでも', tiers: [['', 'N']], start: [''], desc: 'いつも当たる' },
   { id: 'ko', cat: 'cond', sec: '標的', name: '倒せる相手', tiers: [['', 'N']], start: [''], desc: '出せる技で倒せる相手を標的にする' },
-  { id: 'lowest', cat: 'cond', sec: '標的', name: 'いちばんライフの低い相手', tiers: [['', 'N']], desc: '残りライフがいちばん少ないモンスター' },
-  { id: 'highest', cat: 'cond', sec: '標的', name: 'いちばんライフの高い相手', tiers: [['', 'N']], desc: '残りライフがいちばん多いモンスター' },
-  { id: 'strongest', cat: 'cond', sec: '標的', name: 'いちばん攻撃の強い相手', tiers: [['', 'R']], desc: 'そのモンスターが使える技の最大ダメージで見積もる(手札は見ない)' },
+  { id: 'lowest', cat: 'cond', sec: '標的', name: '一番ライフの低い相手', tiers: [['', 'N']], desc: '残りライフが一番少ないモンスター' },
+  { id: 'highest', cat: 'cond', sec: '標的', name: '一番ライフの高い相手', tiers: [['', 'N']], desc: '残りライフが一番多いモンスター' },
+  { id: 'strongest', cat: 'cond', sec: '標的', name: '一番攻撃の強い相手', tiers: [['', 'R']], desc: 'そのモンスターが使える技の最大ダメージで見積もる(手札は見ない)' },
   { id: 'attacker', cat: 'cond', sec: '標的', name: '前の番に攻撃してきた相手', tiers: [['', 'R']], desc: '直前の相手の番に攻撃してきたモンスター' },
   { id: 'leader', cat: 'cond', sec: '標的', name: '相手のリーダー', tiers: [['', 'R']], desc: '相手が1体目に置いたモンスター' },
   { id: 'type', cat: 'cond', sec: '標的', name: '◯の相手', tiers: [['地上', 'N'], ['空中', 'N'], ['水中', 'N']], desc: 'その特徴のモンスター' },
@@ -95107,7 +95144,7 @@ const CARD_TACTIC_GROUPS = Object.freeze([
   { id: 'tSpread', cat: 'base', sec: '基本', name: '分散型', tiers: [['', 'SR']], mul: { area: 1.4 }, knob: { spread: true }, desc: '全員を少しずつ削り、最後にまとめて倒す' },
   { id: 'tComeback', cat: 'base', sec: '基本', name: '逆転型', tiers: [['', 'SR']], knob: { comeback: true }, desc: '勝っているあいだは堅く、負けたら捨て身で攻める' },
   // ---------- 行動(ブリーダーカード・モンスターカード) ----------
-  { id: 'atk', cat: 'monster', sec: '攻撃', phase: 'attack', name: '攻める', tiers: [['', 'N']], start: [''], desc: '点数がいちばん高い攻撃' },
+  { id: 'atk', cat: 'monster', sec: '攻撃', phase: 'attack', name: '攻める', tiers: [['', 'N']], start: [''], desc: '点数が一番高い攻撃' },
   { id: 'kind', cat: 'monster', sec: '攻撃', phase: 'attack', name: '◯の技を出す', tiers: [['ちから', 'N'], ['かしこさ', 'N'], ['特殊', 'N']], desc: 'その種類の技を出す' },
   { id: 'cost', cat: 'monster', sec: '攻撃', phase: 'attack', name: '◯を出す', tiers: [['軽い技(ガッツ0〜1)', 'N'], ['中くらいの技(2〜3)', 'N'], ['大技(4以上)', 'N']], start: ['大技(4以上)'], desc: '払うガッツで選ぶ' },
   { id: 'reach', cat: 'monster', sec: '攻撃', phase: 'attack', name: '◯を出す', tiers: [['全体攻撃', 'R'], ['単体攻撃', 'N']], desc: '全員に当たる技か、1体に当てる技か' },
@@ -95146,9 +95183,9 @@ const CARD_TACTIC_TEXT = Object.freeze({
 // ---- 条件(〜なら) ----
 any:()=>['いつでも','いつでも当てはまる。組み合わせたカードを、使えるときはいつも使う'],
 ko:()=>['倒せる相手がいる','手札の攻撃の技(特殊技は除く)を、いまのガッツで出せば倒せる相手のモンスターがいるとき。その相手を狙う'],
-lowest:()=>['ライフがいちばん少ない相手','相手の場で、残りライフ(数)がいちばん少ない相手を狙う'],
-highest:()=>['ライフがいちばん多い相手','相手の場で、残りライフ(数)がいちばん多い相手を狙う'],
-strongest:()=>['攻撃がいちばん強い相手','相手のモンスターのうち、使える技の最大ダメージがいちばん大きい相手を狙う(手札は見ない)'],
+lowest:()=>['ライフが一番少ない相手','相手の場で、残りライフ(数)が一番少ない相手を狙う'],
+highest:()=>['ライフが一番多い相手','相手の場で、残りライフ(数)が一番多い相手を狙う'],
+strongest:()=>['攻撃が一番強い相手','相手のモンスターのうち、使える技の最大ダメージが一番大きい相手を狙う(手札は見ない)'],
 attacker:()=>['前のターンに攻撃してきた相手','直前の相手のターンに攻撃してきた相手のモンスターを狙う'],
 leader:()=>['相手のリーダー','相手が1体目(左)に置いたモンスターが残っていれば、それを狙う'],
 type:(v)=>[`${v}の相手`,`いま${v}にいる相手のモンスターを狙う`],
@@ -95196,7 +95233,7 @@ incoming:(v)=>[`受けるダメージ${v}以上`,`攻撃を受けたとき、受
 incomingKo:()=>['受けると倒れる','攻撃を受けたとき、守らないと倒れるなら(守るかどうかを決めるときだけ見る)'],
 incomingArea:()=>['全体攻撃を受けた','受けた攻撃が、全員に当たる攻撃なら(守るかどうかを決めるときだけ見る)'],
 // ---- 基本カード(どの手にも当てはまらないときの打ち方) ----
-tBalance:()=>['バランス型','攻め・守り・ガッツ・大技・崩し・全体を同じくらいに見て、いちばん得になるカードを出す。とどめだけ少し優先する'],
+tBalance:()=>['バランス型','攻め・守り・ガッツ・大技・崩し・全体を同じくらいに見て、一番得になるカードを出す。とどめだけ少し優先する'],
 tAttack:()=>['攻め型','攻撃をふだんの1.5倍選びやすくする。ガッツはためず、守りのカードも手札に残さない。守るのは、受けると倒れるときだけ'],
 tGuard:()=>['守り型','守りのカードを手札に残しやすく(ふだんの1.5倍)、攻撃は控えめ(0.7倍)にする。攻撃を受けたら、守れるときはいつも守る(守っても倒れるのが変わらないときは除く)'],
 tSave:()=>['溜め型','ガッツを多めにため(ふだんの1.6倍)、大技を選びやすくする(1.8倍)'],
@@ -95213,21 +95250,21 @@ tMill:()=>['持久型','相手の山札を削る・相手に引かせる・ガ�
 tReckless:()=>['捨て身型','守りのカードを手札に残さず(ふだんの0.5倍)、とどめを選びやすくする(1.3倍)。受けると倒れるとき以外は守らない'],
 tHand:()=>['手札を残す型','出したあとに手札が2枚以上残るときだけカードを出す。ターンの終わりに手札をガッツにするときも、2枚は手札に残す'],
 tDeck:()=>['山札節約型','カードを引く・山札からガッツへ・手札を引き直す・相手に引かせるカードは出さない'],
-tFocus:()=>['一点集中型','ライフの割合がいちばん低い相手への攻撃を優先して、倒れるまで同じ相手を狙う'],
-tSpread:()=>['分散型','全体攻撃を選びやすくし(ふだんの1.4倍)、ライフがいちばん多い相手への攻撃を優先する'],
+tFocus:()=>['一点集中型','ライフの割合が一番低い相手への攻撃を優先して、倒れるまで同じ相手を狙う'],
+tSpread:()=>['分散型','全体攻撃を選びやすくし(ふだんの1.4倍)、ライフが一番多い相手への攻撃を優先する'],
 tComeback:()=>['逆転型','倒された数で負けている、または味方のライフの合計が半分以下なら、捨て身で戦う(守り0.5倍・とどめ・大技・全体1.3倍)。それ以外は堅く戦う(守り・ガッツ1.2倍)'],
 // ---- モンスターカード(この子の手) ----
-atk:()=>['いちばん得な攻撃','このモンスターが出せる攻撃のうち、ダメージ・とどめ・払うガッツを見て、いちばん得な攻撃をする'],
-kind:(v)=>[`${v}の技で攻撃`,`このモンスターの${v}の技のうち、いちばん得な技で攻撃する`],
-cost:(v)=>{const n=v.startsWith('軽い')?'0〜1':v.startsWith('中')?'2〜3':'4以上';const nm=v.startsWith('軽い')?'軽い技':v.startsWith('中')?'中くらいの技':'大技';return [`${nm}で攻撃`,`このモンスターの技のうち、払うガッツが${n}の技のうち、いちばん得なもので攻撃する`];},
-reach:(v)=>[v==='全体攻撃'?'全体攻撃で攻撃':'1体だけに攻撃',v==='全体攻撃'?'このモンスターの、相手の全員に当たる技のうち、いちばん得な技で攻撃する':'このモンスターの、1体だけに当てる技のうち、いちばん得な技で攻撃する'],
-eff:(v)=>{const d={回避されない:'相手が回避できない技',攻撃できなくする:'当たると相手を攻撃できなくする技',ガッツを減らす:'当たると相手のガッツを減らす技',吸い取る:'相手のライフを吸い取って回復する技','2回攻撃':'もう1回攻撃できるようになる技',防御で減らない:'防御されてもダメージが減らない技',回避されても半分:'回避されても半分のダメージが入る技',種族に強い:'特定の特徴の相手に倍のダメージの技',ダメージを割り振る:'ダメージを相手の何体かに割り振る技','2枚同時':'2枚組でいっしょに出す技',手札に戻る:'当たると手札に戻ってくる技',カード投げ:'カードを投げてダメージを足す技'}[v];return [`「${v}」の技で攻撃`,`このモンスターの、${d}のうち、いちばん得な技で攻撃する`];},
-attach:()=>['付けるカードといっしょに攻撃','技に付けるカードをいっしょに出す攻撃のうち、いちばん得なものを出す'],
+atk:()=>['一番得な攻撃','このモンスターが出せる攻撃のうち、ダメージ・とどめ・払うガッツを見て、一番得な攻撃をする'],
+kind:(v)=>[`${v}の技で攻撃`,`このモンスターの${v}の技のうち、一番得な技で攻撃する`],
+cost:(v)=>{const n=v.startsWith('軽い')?'0〜1':v.startsWith('中')?'2〜3':'4以上';const nm=v.startsWith('軽い')?'軽い技':v.startsWith('中')?'中くらいの技':'大技';return [`${nm}で攻撃`,`このモンスターの技のうち、払うガッツが${n}の技のうち、一番得なもので攻撃する`];},
+reach:(v)=>[v==='全体攻撃'?'全体攻撃で攻撃':'1体だけに攻撃',v==='全体攻撃'?'このモンスターの、相手の全員に当たる技のうち、一番得な技で攻撃する':'このモンスターの、1体だけに当てる技のうち、一番得な技で攻撃する'],
+eff:(v)=>{const d={回避されない:'相手が回避できない技',攻撃できなくする:'当たると相手を攻撃できなくする技',ガッツを減らす:'当たると相手のガッツを減らす技',吸い取る:'相手のライフを吸い取って回復する技','2回攻撃':'もう1回攻撃できるようになる技',防御で減らない:'防御されてもダメージが減らない技',回避されても半分:'回避されても半分のダメージが入る技',種族に強い:'特定の特徴の相手に倍のダメージの技',ダメージを割り振る:'ダメージを相手の何体かに割り振る技','2枚同時':'2枚組でいっしょに出す技',手札に戻る:'当たると手札に戻ってくる技',カード投げ:'カードを投げてダメージを足す技'}[v];return [`「${v}」の技で攻撃`,`このモンスターの、${d}のうち、一番得な技で攻撃する`];},
+attach:()=>['付けるカードといっしょに攻撃','技に付けるカードをいっしょに出す攻撃のうち、一番得なものを出す'],
 attachKind:(v)=>[`付けるカード(${v})といっしょに攻撃`,`「${v}」の付けるカードをいっしょに出す攻撃のうち、いちばん得なものを出す`],
 spe:(v)=>{const d={味方を回復:'味方のライフを回復する',引く:'カードを引く',空中になる:'空中に上がる',安全になる:'次の攻撃を受けなくなる',まゆと羽化:'まゆになる・羽化する',のりうつる:'相手にのりうつる'}[v];return [`特殊技で${d}`,`このモンスターの特殊技のうち、${d}技を出す`];},
-stance:(v)=>({この子から攻める:['このモンスターから攻める','当てはまったら、このモンスターで、いちばん得な攻撃をする'],この子は攻撃しない:['このモンスターは攻撃しない','当てはまったら、このターンはこのモンスターに攻撃させない(このあとの戦術カード・基本カードでも攻撃させない)'],ライフの多い子が先に:['いちばん元気なら攻める','このモンスターが味方の中でいちばんライフが多いときだけ、このモンスターで、いちばん得な攻撃をする'],ライフの少ない子は温存:['いちばん弱っていたら休む','味方が2体以上いて、このモンスターのライフがいちばん少ないときは、このターンは攻撃させない(休ませる)'],攻撃は1回だけ:['攻撃は1回だけ','このターンにまだ攻撃していなければ攻撃する。1回攻撃したら、このターンはもう攻撃させない'],何回でも攻める:['何回でも攻める','少し損な攻撃でも出して、このモンスターで攻撃を続ける']})[v],
+stance:(v)=>({この子から攻める:['このモンスターから攻める','当てはまったら、このモンスターで、一番得な攻撃をする'],この子は攻撃しない:['このモンスターは攻撃しない','当てはまったら、このターンはこのモンスターに攻撃させない(このあとの戦術カード・基本カードでも攻撃させない)'],ライフの多い子が先に:['一番元気なら攻める','このモンスターが味方の中で一番ライフが多いときだけ、このモンスターで、一番得な攻撃をする'],ライフの少ない子は温存:['一番弱っていたら休む','味方が2体以上いて、このモンスターのライフが一番少ないときは、このターンは攻撃させない(休ませる)'],攻撃は1回だけ:['攻撃は1回だけ','このターンにまだ攻撃していなければ攻撃する。1回攻撃したら、このターンはもう攻撃させない'],何回でも攻める:['何回でも攻める','少し損な攻撃でも出して、このモンスターで攻撃を続ける']})[v],
 disrupt:(v)=>({手札を捨てさせる:['相手の手札を捨てさせる','相手の手札を捨てさせる・山札の下へ戻すカードを使う'],山札を削る:['相手の山札を削る','相手の山札を削るカードを使う'],ガッツを減らす:['相手のガッツを減らす','相手のガッツを減らす・0にするカードを使う'],番を飛ばす:['相手のターンを飛ばす','相手の次のターンを飛ばすカードを使う']})[v],
-guard:()=>['守る','このモンスターが攻撃を受けたら、手札の守りのカードでいちばん良い守り方をする。守っても倒れるのが変わらないときは、守らずに受ける'],
+guard:()=>['守る','このモンスターが攻撃を受けたら、手札の守りのカードで一番良い守り方をする。守っても倒れるのが変わらないときは、守らずに受ける'],
 guardFirst:(v)=>[`${v}で守る`,`このモンスターが攻撃を受けたら、${v==='回避'||v==='防御'?v+'のカード':'「'+v+'」のカード'}だけで守る(そのカードが無ければ、次の戦術カードへ進む)。守っても倒れるのが変わらないときは、守らずに受ける`],
 guardOver:(v)=>[`ダメージ${v}以上だけ守る`,`このモンスターが攻撃を受けたとき、受けるダメージの見込みが${v}より小さければ守らずに受ける。${v}以上なら守る`],
 guardDie:()=>['倒れるときだけ守る','このモンスターが攻撃を受けたとき、受けても倒れなければ守らずに受ける。倒れるときだけ守る。守っても倒れるのが変わらないときは、守らずに受ける'],
@@ -95255,9 +95292,9 @@ const CARD_TACTIC_LINE = Object.freeze({
   // ---- 条件 ----
   any: () => 'いつでも(ほかの条件なしで、いつも)',
   ko: () => 'いまの手札とガッツで倒せる相手がいるとき(その相手を狙う)',
-  lowest: () => 'ライフがいちばん少ない相手を狙うとき',
-  highest: () => 'ライフがいちばん多い相手を狙うとき',
-  strongest: () => 'いちばん強い技をもつ相手を狙うとき',
+  lowest: () => 'ライフが一番少ない相手を狙うとき',
+  highest: () => 'ライフが一番多い相手を狙うとき',
+  strongest: () => '一番強い技をもつ相手を狙うとき',
   attacker: () => '前のターンに攻撃してきた相手を狙うとき',
   leader: () => '相手のリーダー(1体目)が残っているとき(その相手を狙う)',
   type: (v) => `${v}にいる相手がいるとき(その相手を狙う)`,
@@ -95278,7 +95315,7 @@ const CARD_TACTIC_LINE = Object.freeze({
   bigInHand: () => '手札に大技(ガッツ4以上)があるとき',
   areaInHand: () => '手札に全体攻撃があるとき',
   breederInHand: () => '手札にブリーダーのカードがあるとき',
-  turnLe: (v) => (Number(v) === 1 ? '自分の1ターン目のとき(はじめのうち)' : `自分の${v}ターン目までのとき(はじめのうち)`),
+  turnLe: (v) => (Number(v) === 1 ? '自分の1ターン目のとき(初めのうち)' : `自分の${v}ターン目までのとき(初めのうち)`),
   turnGe: (v) => `自分の${v}ターン目からのとき(終わりのほう)`,
   myAlive: (v) => `味方が残り${v}体のとき`,
   foeAlive: (v) => `相手が残り${v}体のとき`,
@@ -95305,7 +95342,7 @@ const CARD_TACTIC_LINE = Object.freeze({
   incomingKo: () => '受けると倒れる攻撃が来たとき',
   incomingArea: () => '全体攻撃を受けたとき',
   // ---- 基本 ----
-  tBalance: () => '攻めも守りも、いちばん得になるようにカードを出す',
+  tBalance: () => '攻めも守りも、一番得になるようにカードを出す',
   tAttack: () => 'どんどん攻撃する。守るのは倒れそうなときだけ',
   tGuard: () => '守りのカードを手札に残し、攻撃を受けたらできるだけ守る',
   tSave: () => 'ガッツを多めにためて、大技を狙う',
@@ -95322,11 +95359,11 @@ const CARD_TACTIC_LINE = Object.freeze({
   tReckless: () => '守らずに、とどめをねらって攻撃する',
   tHand: () => '手札がいつも2枚以上残るようにカードを出す',
   tDeck: () => '山札を減らすカードは使わずに戦う',
-  tFocus: () => '同じ相手を、倒れるまでねらい続ける',
+  tFocus: () => '同じ相手を、倒れるまで狙い続ける',
   tSpread: () => 'ライフの多い相手や全員に、ばらしてダメージを与える',
   tComeback: () => '負けているときは捨て身で、勝っているときは堅く戦う',
   // ---- モンスター ----
-  atk: () => 'いちばん良い技で攻撃する',
+  atk: () => '一番良い技で攻撃する',
   kind: (v) => `${v}の技で攻撃する`,
   cost: (v) => (/^軽い/.test(v) ? '軽い技(ガッツ0〜1)で攻撃する' : /^中/.test(v) ? '中くらいの技(ガッツ2〜3)で攻撃する' : '大技(ガッツ4以上)で攻撃する'),
   reach: (v) => (v === '全体攻撃' ? '全体攻撃で攻撃する' : '1体だけを狙う技で攻撃する'),
@@ -95334,9 +95371,9 @@ const CARD_TACTIC_LINE = Object.freeze({
   attach: () => '付けるカードといっしょに攻撃する',
   attachKind: (v) => `「${v}」の付けるカードといっしょに攻撃する`,
   spe: (v) => ({ 味方を回復: '特殊技で味方を回復する', 引く: '特殊技でカードを引く', 空中になる: '特殊技で空中に上がる', 安全になる: '特殊技で次の攻撃を受けなくする', まゆと羽化: '特殊技でまゆになる・羽化する', のりうつる: '特殊技でのりうつる' }[v] || `特殊技(${v})を使う`),
-  stance: (v) => ({ この子から攻める: 'このモンスターから先に攻撃する', この子は攻撃しない: 'このモンスターは攻撃しない', ライフの多い子が先に: 'このモンスターのライフが味方でいちばん多いとき、攻撃する', ライフの少ない子は温存: 'このモンスターのライフが味方でいちばん少ないとき、攻撃させずに休ませる', 攻撃は1回だけ: 'このターンの攻撃は1回だけにする', 何回でも攻める: '出せるだけ何回でも攻撃する' }[v] || v),
+  stance: (v) => ({ この子から攻める: 'このモンスターから先に攻撃する', この子は攻撃しない: 'このモンスターは攻撃しない', ライフの多い子が先に: 'このモンスターのライフが味方で一番多いとき、攻撃する', ライフの少ない子は温存: 'このモンスターのライフが味方で一番少ないとき、攻撃させずに休ませる', 攻撃は1回だけ: 'このターンの攻撃は1回だけにする', 何回でも攻める: '出せるだけ何回でも攻撃する' }[v] || v),
   disrupt: (v) => ({ 手札を捨てさせる: '相手の手札を捨てさせる', 山札を削る: '相手の山札を減らす', ガッツを減らす: '相手のガッツを減らす', 番を飛ばす: '相手のターンを飛ばす' }[v] || v),
-  guard: () => '攻撃を受けたら、いちばん良い守り方で守る',
+  guard: () => '攻撃を受けたら、一番良い守り方で守る',
   guardFirst: (v) => `攻撃を受けたら、${v}のカードで守る`,
   guardOver: (v) => `${v}ダメージ以上の攻撃だけ守る(小さい攻撃は受ける)`,
   guardDie: () => '受けると倒れるときだけ守る',
@@ -98014,7 +98051,7 @@ const CARD_RULE_PAGES = Object.freeze([
   ] },
   { id: 'turn', emoji: '🔁', title: 'ターンの流れ', lines: [
     '① 引く: 手札が5枚になるまで山札から引く(先攻の1ターン目は引かない)',
-    '手札がもう5枚あるときは、山札のいちばん上が1枚ガッツになる',
+    '手札がもう5枚あるときは、山札の一番上が1枚ガッツになる',
     '② 攻撃: 技を使う(使わないモンスターがいてもよい)',
     '③ ガッツ: 手札から好きな枚数をガッツにする',
     '④ 「ターン終了」で相手のターンへ',
@@ -98051,7 +98088,7 @@ const CARD_RULE_PAGES = Object.freeze([
     '相手が投了したら勝ち',
     '両方の最後の1体が同時にKOされたときは、攻撃した側の勝ち',
   ] },
-  { id: 'text', emoji: '📜', title: 'カードの文がいちばん', lines: [
+  { id: 'text', emoji: '📜', title: 'カードの文が一番', lines: [
     'カードに書いてある文は、ここの決まりより先に効く',
     '「同時に使用できる」「同一ターンに連続して使用できる」などは、その文のとおり',
     'カードを長押しすると、大きな絵と文が見られる',
@@ -98984,7 +99021,7 @@ const cardMonStatuses = (st, p, m) => {
   if (Number.isFinite(mon.noGuardUntil) && mon.noGuardUntil >= T) out.push({ key: 'noGuard', short: '守れない', left: left(mon.noGuardUntil), text: '回避・防御のカードを出せない', tone: 'down', pill: true });
   if (Number.isFinite(mon.airUntil) && mon.airUntil >= T) out.push({ key: 'air', short: '空中', left: left(mon.airUntil), text: '持ちょうが空中(地上のモンスターしか狙えない技は当たらない)', tone: 'type', pill: true });
   else if (Number.isFinite(mon.waterUntil) && mon.waterUntil >= T) out.push({ key: 'water', short: '水中', left: left(mon.waterUntil), text: '持ちょうが水中', tone: 'type', pill: true });
-  (Array.isArray(st.taunts) ? st.taunts : []).filter((t) => t && t.by === p && t.m === m && t.turn >= T).forEach((t, i) => out.push({ key: `taunt${i}`, short: t.mode === 'not' ? 'ねらえない' : 'ねらい固定', left: left(t.turn), text: t.mode === 'not' ? '相手はこのモンスターを狙えない' : '相手の攻撃は、このモンスターしか狙えない', tone: 'aim', pill: true }));
+  (Array.isArray(st.taunts) ? st.taunts : []).filter((t) => t && t.by === p && t.m === m && t.turn >= T).forEach((t, i) => out.push({ key: `taunt${i}`, short: t.mode === 'not' ? 'ねらえない' : '狙い固定', left: left(t.turn), text: t.mode === 'not' ? '相手はこのモンスターを狙えない' : '相手の攻撃は、このモンスターしか狙えない', tone: 'aim', pill: true }));
   if (mon.cocoon) out.push({ key: 'cocoon', short: 'まゆ', left: '', text: '羽化のほかのカードは出せない', tone: 'down', pill: true });
   // 水牢(ウンディーネ 2026-11-11): この子の番(今か次)に、ちから技・かしこさ技のガッツが増える
   const cuT = T + (st.active === p ? 0 : 1);
@@ -100493,7 +100530,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
     if (!nx) return;
     const c = cardOf(db, me.hand[o.hand]);
     const pv = nx.pending ? cardGuardPreview(db, nx) : null;
-    const who = o.to !== undefined ? `ねらいが${me.mons[o.to].name}に移る` : pv && pv.after === null && o.mon !== undefined ? `${me.mons[o.mon].name}が受ける` : '';
+    const who = o.to !== undefined ? `狙いが${me.mons[o.to].name}に移る` : pv && pv.after === null && o.mon !== undefined ? `${me.mons[o.mon].name}が受ける` : '';
     Audio_.fgSe.tap();
     setGuardAsk({ act: o, name: c ? c.name : '', before: pv ? pv.before : null, after: pv ? pv.after : null, guts: nx.players[CARD_ME].guts.length, who });
   };
@@ -100898,7 +100935,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
     if (mode === 'reveal') return <div className="flex-1 text-center text-[13px] font-bold text-slate-300">相手に手札を見せています…</div>;
     if (mode === 'pray') return <div className="flex-1 text-center text-[13px] font-bold text-amber-200">{prayUse ? 'おいのりを使うか選んでください' : '相手が全体カードを出しました'}</div>;
     if (mode === 'choose') return <div className="flex-1 text-center text-[13px] font-bold text-amber-200">カードを1枚選んでください</div>;
-    if (mode === 'discard') return <button type="button" disabled={picks.length !== st.pendingDiscard.n} className={`${btn} mh-button-danger`} onClick={() => step({ type: 'discard', hand: picks })}><CardFitLabel>{`${st.pendingDiscard.n}枚えらんで捨てる`}</CardFitLabel></button>;
+    if (mode === 'discard') return <button type="button" disabled={picks.length !== st.pendingDiscard.n} className={`${btn} mh-button-danger`} onClick={() => step({ type: 'discard', hand: picks })}><CardFitLabel>{`${st.pendingDiscard.n}枚選んで捨てる`}</CardFitLabel></button>;
     if (mode === 'guard') return <button type="button" disabled={tutOff('pass')} className={`${btn} border border-white/20 bg-slate-800${tutBtn('pass')}`} onClick={() => step({ type: 'pass' })}><CardFitLabel>{tutorial && st.pending && st.pending.evaded ? 'これで守る' : guardUsed ? (guardPv.after !== null ? `これで受ける(${guardPv.after}ダメージ)` : 'これで受ける') : guardPv && guardPv.before !== null && !tutorial ? <span data-card-pass-dmg className="block leading-tight">守らない<span className="block text-[11px] font-bold text-rose-200">{`${guardPv.before}ダメージを受ける`}</span></span> : '守らない'}</CardFitLabel></button>;
     // ガッツの段から攻撃に戻る(出せるときだけ。灼熱の地でダメージが出た番などは cardCanBackToAttack が false。社長の答え 2026-10-27)
     //   練習試合(手順どおりに進める)と見返しでは出さない
@@ -100924,7 +100961,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
         : useBtn ? <button type="button" className={`${btn} mh-button-primary`} onClick={() => askUse(finalOpts[0])}><CardFitLabel>{useLabel}</CardFitLabel></button>
         // まだ出せる形になっていない(候補を足す前)は、押せない「使う」を見せる(見本1。そろったら押せるようになる)
         : setPending ? <button type="button" data-card-use-wait disabled className={`${btn} mh-button-primary`}><CardFitLabel>使う</CardFitLabel></button> : null}
-      <button type="button" disabled={tutOff('end')} className={`${btn} border border-violet-300/60 bg-violet-900${tutBtn('end')}`} onClick={() => step({ type: 'endAttacks' })}><CardFitLabel>攻撃おわり → ガッツへ</CardFitLabel></button>
+      <button type="button" disabled={tutOff('end')} className={`${btn} border border-violet-300/60 bg-violet-900${tutBtn('end')}`} onClick={() => step({ type: 'endAttacks' })}><CardFitLabel>攻撃終わり → ガッツへ</CardFitLabel></button>
     </>);
   })();
   // 黄色の案内は1行に収まる短い文に(長くて2行になり、手札を押し下げていた。2026-10-26 改良の案 E・カゲあつくん 8)。運ぶ操作の話はヘルプへ
@@ -101005,7 +101042,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
         {pvpLive && pvpClock.eyes > 0 && <span data-card-pvp-eyes={pvpClock.eyes} aria-label={`${pvpClock.eyes}人が観戦しています`} className="shrink-0 whitespace-nowrap rounded-full bg-violet-500/25 px-1.5 py-0.5 text-[11px] font-black text-violet-100 tabular-nums">{tiny ? `👀${pvpClock.eyes}` : `👀観戦${pvpClock.eyes}`}</span>}
         {/* 投了は右端へ離し、赤い縁(押しまちがえやすい所から離す)。観戦では出さない(下の「観戦をやめる」と2つ並んでいた。2026-10-27 部長) */}
         {autoGame && <span data-card-auto-bar={autoOn ? 'auto' : 'hand'} className="flex shrink-0 items-center gap-1">{wide ? autoControls(false) : autoCompact}</span>}
-        {!watch && <button type="button" data-card-quit data-card-replay-exit={replay ? '' : undefined} onClick={() => (replay ? onFinish({ outcome: 'replayExit', st }) : setQuit(true))} className={`shrink-0 rounded-lg border px-2 py-1 text-[12px] font-black ${replay || tutorial ? 'border-white/20 text-slate-200' : 'border-rose-400/80 text-rose-200'}`}>{replay ? 'とじる' : tutorial ? '飛ばす' : '投了'}</button>}
+        {!watch && <button type="button" data-card-quit data-card-replay-exit={replay ? '' : undefined} onClick={() => (replay ? onFinish({ outcome: 'replayExit', st }) : setQuit(true))} className={`shrink-0 rounded-lg border px-2 py-1 text-[12px] font-black ${replay || tutorial ? 'border-white/20 text-slate-200' : 'border-rose-400/80 text-rose-200'}`}>{replay ? '閉じる' : tutorial ? '飛ばす' : '投了'}</button>}
         {/* マルチの持ち時間の線(帯のいちばん下。減っていく) */}
         {pvpLive && <span aria-hidden="true" data-card-pvp-bar className={`pointer-events-none absolute bottom-0 left-0 h-[3px] transition-[width] duration-1000 ease-linear ${(pvpClock.offline || pvpClock.foeQuietSec > 0) ? 'bg-amber-500' : pvpClock.mine ? 'bg-amber-300' : 'bg-slate-400/60'}`} style={{ width: `${Math.max(0, Math.min(100, (pvpClock.left * 1000 / Math.max(1, cardPvpLimitMs(st))) * 100))}%` }}/>}
       </div>
@@ -101452,7 +101489,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
             {guardAsk.after !== null && guardAsk.before !== null ? (
               <div data-card-guard-ask-dmg className="mt-1 text-[13px] font-bold text-slate-200">受けるダメージ <span className="text-[18px] font-black text-rose-300 line-through decoration-2">{guardAsk.before}</span> → <span className="text-[24px] font-black text-amber-200">{guardAsk.after}</span></div>
             ) : guardAsk.who ? <div data-card-guard-ask-dmg className="mt-1 text-[15px] font-black text-amber-200" style={JA_WRAP_STYLE}>{guardAsk.who}</div> : null}
-            <div className="mt-0.5 text-[12px] font-bold text-amber-100">{`(ガッツ のこり${guardAsk.guts})`}</div>
+            <div className="mt-0.5 text-[12px] font-bold text-amber-100">{`(ガッツ 残り${guardAsk.guts})`}</div>
             <div className="mt-3 flex gap-2">
               <button type="button" data-card-guard-ask-yes className="mh-button mh-button-primary min-h-[44px] flex-1 rounded-xl text-[14px] font-black" onClick={guardYes}>これで守る</button>
               <button type="button" data-card-guard-ask-no className="mh-button min-h-[44px] flex-1 rounded-xl border border-white/20 bg-slate-800 text-[14px] font-black" onClick={() => setGuardAsk(null)}>やめる</button>
@@ -102681,7 +102718,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     const pick = kitPick ? db.starters[kitPick] : null;
     return (
       <div data-mh-screen data-card-top="starter" className={SCREEN_SHELL_CLASS}>
-        <ScreenHead title="スターターをえらぶ" accent="text-amber-200" onBack={save.starter ? () => setView('top') : onExit} note="最初の1つは無料。えらばなかった2つは、あとでビートPで買えます"/>
+        <ScreenHead title="スターターを選ぶ" accent="text-amber-200" onBack={save.starter ? () => setView('top') : onExit} note="最初の1つは無料。選ばなかった2つは、あとでビートPで買えます"/>
         <div className={`${SCREEN_LIST_CLASS} space-y-2 pb-4`}>
           {kits.map((k) => (
             // 「中身を見る」で、選ぶ前に入っているカードを確かめられる(2026-10-27 社長「最初にやるときにスターターパックの中身が分からない」案A)
@@ -102705,7 +102742,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
             // 受け取ったら、ブースターパックと同じ画面で開けて中身を見せてから練習試合へ(2026-10-27 社長「最初に手に入れたときも」)。
             //   ここを通るのは、まだスターターを持っていない人だけ(cardGrantStarter が2回目を断る)なので、もう持っている人には出ない
             if (ok) { setStarterOpen(cardStarterOpenResult(db, kitPick, before, false)); setView('starter-open'); }
-          }}>{pick ? `「${pick.name}」にする` : 'キットをえらんでください'}</button>
+          }}>{pick ? `「${pick.name}」にする` : 'キットを選んでください'}</button>
         </div>
         {kitView && <CardStarterContents db={db} kit={kitView} collection={false} onClose={() => setKitView(null)}/>}
       </div>
@@ -102719,14 +102756,14 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     return (
       <div data-mh-screen data-card-top="mode" className="mhms-stage relative flex h-full min-h-0 flex-1 flex-col overflow-hidden p-4 text-white">
         <RhythmModeSelectStage notes={false}/>
-        <div className="relative z-10"><ScreenHead title="対戦" accent="text-amber-200" onBack={() => setView('top')} note="だれと戦うかをえらびます"/></div>
+        <div className="relative z-10"><ScreenHead title="対戦" accent="text-amber-200" onBack={() => setView('top')} note="だれと戦うかを選びます"/></div>
         {shareGuide && topAssistant && (
           <div data-card-share-guide className="relative z-10 mb-2 flex items-start gap-2 rounded-2xl border border-amber-300/60 bg-slate-950/85 p-2.5">
             {topAssistant.image && <img src={topAssistant.image} alt="" aria-hidden="true" className="h-14 w-14 shrink-0 rounded-xl object-cover object-top"/>}
             <span className="min-w-0 flex-1">
               <b className="block text-[12px] font-black text-amber-200">{topAssistant.name}</b>
               <span className="block text-[12px] font-bold leading-snug text-white" style={JA_WRAP_STYLE}>{jaWrap('「フリー対戦」では、助手のほかに、ほかのブリーダーが登録したデッキとも戦えるようになったよ。「デッキ登録」で自分のデッキを登録して、戦術カードで戦い方を組んでみてね!')}</span>
-              <button type="button" data-card-share-guide-close onClick={closeShareGuide} className="mt-1.5 rounded-lg bg-amber-400 px-3 py-1 text-[12px] font-black text-slate-950">わかった</button>
+              <button type="button" data-card-share-guide-close onClick={closeShareGuide} className="mt-1.5 rounded-lg bg-amber-400 px-3 py-1 text-[12px] font-black text-slate-950">分かった</button>
             </span>
           </div>
         )}
@@ -102746,14 +102783,14 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
           <button type="button" data-card-mode-multi disabled={!(debug || cardPvpOpen())} onClick={() => { Audio_.fgSe.tap(); setView('pvp'); }} className="mhms-card mhms-in flex min-h-[112px] w-full flex-col items-start justify-center gap-2 landscape:min-h-[84px] landscape:gap-1 bg-gradient-to-br from-sky-200 via-sky-400 to-indigo-500 px-4 py-3 text-left text-slate-950 landscape:px-3 landscape:py-2 active:scale-[.98] disabled:opacity-50" style={{ animationDelay: '60ms' }}>
             <span aria-hidden="true" className="mhms-mark">MULTI</span>
             <span className="relative flex items-center gap-2"><span aria-hidden="true" className="text-3xl leading-none landscape:text-2xl">🎮</span><span><b className="block text-[22px] font-black italic leading-tight landscape:text-[17px]">マルチ対戦</b><small className="block text-[11px] font-black text-slate-900/80">ブリーダーどうしで戦う</small></span></span>
-            {!cardPvpOpen() && <span className="relative rounded-full bg-slate-950/70 px-2 py-0.5 text-[11px] font-black text-white">{debug ? 'つくっている途中(デバッグ)' : '準備中'}</span>}
+            {!cardPvpOpen() && <span className="relative rounded-full bg-slate-950/70 px-2 py-0.5 text-[11px] font-black text-white">{debug ? '作っている途中(デバッグ)' : '準備中'}</span>}
           </button>
           {/* デッキ登録(95 の登録+96・97 の戦術カード。2026-10-29 社長)。公開の印(cardShareOpen)までは、デバッグ設定から入ったときだけ出す */}
           {typeof CardTacticsScreen === 'function' && shareForm && (
             <button type="button" data-card-mode-tactics onClick={() => { Audio_.fgSe.tap(); setTacticsBack('mode'); setView('tactics'); }} className="mhms-card mhms-in flex min-h-[112px] w-full flex-col items-start justify-center gap-2 landscape:min-h-[84px] landscape:gap-1 bg-gradient-to-br from-amber-200 via-amber-400 to-orange-600 px-4 py-3 text-left text-slate-950 landscape:px-3 landscape:py-2 active:scale-[.98]">
               <span aria-hidden="true" className="mhms-mark">DECKS</span>
               <span className="relative flex items-center gap-2"><span aria-hidden="true" className="text-3xl leading-none landscape:text-2xl">🗂️</span><span><b className="block text-[22px] font-black italic leading-tight landscape:text-[17px]">デッキ登録</b><small className="block text-[11px] font-black text-slate-900/80">デッキを登録する・戦術カードを組む・引く</small></span></span>
-              {!cardShareOpen() && <span className="relative rounded-full bg-slate-950/70 px-2 py-0.5 text-[11px] font-black text-white">つくっている途中(デバッグ)</span>}
+              {!cardShareOpen() && <span className="relative rounded-full bg-slate-950/70 px-2 py-0.5 text-[11px] font-black text-white">作っている途中(デバッグ)</span>}
             </button>
           )}
           {/* MFバトルカード大会(99)。プレイヤーの入口は HOME の札とプロフィールの「公式杯の記録」(2026-10-31 社長「対戦えらびの大会の札は消す」)。
@@ -102770,7 +102807,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
             <button type="button" data-card-mode-cup onClick={() => { Audio_.fgSe.tap(); setView('cup'); }} className="mhms-card mhms-in flex min-h-[112px] w-full flex-col items-start justify-center gap-2 landscape:min-h-[84px] landscape:gap-1 bg-gradient-to-br from-lime-100 via-emerald-300 to-teal-500 px-4 py-3 text-left text-slate-950 landscape:px-3 landscape:py-2 active:scale-[.98]">
               <span aria-hidden="true" className="mhms-mark">MY CUP</span>
               <span className="relative flex items-center gap-2"><span aria-hidden="true" className="text-3xl leading-none landscape:text-2xl">🎌</span><span><b className="block text-[22px] font-black italic leading-tight landscape:text-[17px]">個人杯</b><small className="block text-[11px] font-black text-slate-900/80">自分で大会を開く・仲間の大会に出る</small></span></span>
-              {!cardCupOpen() && <span className="relative rounded-full bg-slate-950/70 px-2 py-0.5 text-[11px] font-black text-white">つくっている途中(デバッグ)</span>}
+              {!cardCupOpen() && <span className="relative rounded-full bg-slate-950/70 px-2 py-0.5 text-[11px] font-black text-white">作っている途中(デバッグ)</span>}
             </button>
           )}
           <div aria-hidden="true" className="flex-1 landscape:hidden"/>
@@ -102959,7 +102996,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     const line = a ? cardPickLine(a.id, 'challenge', null, () => 0.0) : null;
     return (
       <div data-mh-screen data-card-top="foe" className={SCREEN_SHELL_CLASS}>
-        <ScreenHead title={shareForm ? 'フリー対戦' : '助手と対戦'} accent="text-amber-200" onBack={() => setView('mode')} note="相手の助手と強さをえらびます"/>
+        <ScreenHead title={shareForm ? 'フリー対戦' : '助手と対戦'} accent="text-amber-200" onBack={() => setView('mode')} note="相手の助手と強さを選びます"/>
         {foeTabs}
         <div className={`${SCREEN_LIST_CLASS} space-y-2 pb-4`}>
           {/* 7人(ソラシドの印が立ったとき)は縦4列(4人＋3人)・横7列。6人まではいまの縦3列・横6列のまま(2026-10-27 社長の答え・ソランド部長)。
@@ -103035,7 +103072,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
           <div data-card-foe-mydeck className="mb-1.5 px-0.5">
             <div className="flex flex-wrap items-baseline gap-x-2 text-[12px] font-bold text-slate-300">
               <span style={JA_LABEL_STYLE}>あなたのデッキ: <b className="text-white">{activeDeck ? activeDeck.name : 'なし'}</b></span>
-              {!save.daily.firstWin && <span className="text-[11px] text-slate-400" style={JA_LABEL_STYLE}>{cardRuleLine('《今日はじめての勝ちで +50》')}</span>}
+              {!save.daily.firstWin && <span className="text-[11px] text-slate-400" style={JA_LABEL_STYLE}>{cardRuleLine('《今日初めての勝ちで +50》')}</span>}
             </div>
             {deckIssues.length > 0 && <div className="mt-0.5 text-[12px] font-bold text-rose-300" style={JA_WRAP_STYLE}>{jaWrap(deckIssues.join('・'))}</div>}
           </div>
@@ -103140,7 +103177,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
             </div>}
             <div className="mt-1 text-[12px] font-bold text-slate-300">{cardBattleLevelLabel(result.level, result.share)}の{win ? '勝ち' : result.outcome === 'lose' ? '負け' : '投了'}: {cardResultCut(r) ? `${r.full} → ${cardResultPlain(r)}` : cardResultPlain(r)}</div>
             {cardResultCut(r) && <div data-card-result-cut className="text-[11px] font-bold text-slate-400" style={JA_LABEL_STYLE}>{jaWrap(cardResultCutWhy(result.outcome, r))}</div>}
-            {r.bonus > 0 && <div className="text-[12px] font-bold text-slate-300">今日はじめての勝ち: +{r.bonus}</div>}
+            {r.bonus > 0 && <div className="text-[12px] font-bold text-slate-300">今日初めての勝ち: +{r.bonus}</div>}
             {r.short && <div className="mt-1 text-[11px] font-bold text-slate-500" style={JA_LABEL_STYLE}>{jaWrap('自分のターンを3回やる前に終わったので、ビートPとクイック周回は入りません')}</div>}
             {!r.short && result.loops > 0 && result.quick && (
               <div data-card-quick-loops={result.quick ? result.loops : 0} className="mt-2 rounded-xl border border-sky-300/40 bg-sky-500/10 px-2 py-1.5">
@@ -103167,7 +103204,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
           {!result.replay && result.replayRec && <button type="button" data-card-result-replay="auto" className={`${btn} mh-button-secondary col-span-2 border border-sky-300/40 bg-slate-800`} onClick={() => { Audio_.fgSe.tap(); openReplayRec(result.replayRec, 'result'); }}>この対戦を見る</button>}
           {result.replay && <button type="button" data-card-result-replay className={`${btn} mh-button-secondary col-span-2 border border-sky-300/40 bg-slate-800`} onClick={() => { Audio_.fgSe.tap(); void openReplay(result.replay, 'result'); }}>この対戦を見る</button>}
           <button type="button" className={`${btn} mh-button-primary`} onClick={() => { if (result.share) { startBattle({ who: result.share.tactics.habit, level: result.level, share: result.share }, activeDeck, result.auto ? { auto: { tactics: result.auto.tactics, quick: !!result.auto.quick } } : {}); return; } const again = { who: result.who, level: result.level }; setFoe(again); setDeckPick({ next: 'cpu', pick: again }); setView('deckPick'); }}>もう一度</button>
-          <button type="button" className={`${btn} mh-button-secondary border border-white/20 bg-slate-800`} onClick={() => setView(result.share ? 'share' : 'foe')}>相手をえらぶ</button>
+          <button type="button" className={`${btn} mh-button-secondary border border-white/20 bg-slate-800`} onClick={() => setView(result.share ? 'share' : 'foe')}>相手を選ぶ</button>
         </div>
         {autoTicketSheet}
       </div>
@@ -103208,7 +103245,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
                 <CardPlaylistRows tag="who" list={plList} bgmPreview={bgmPreview} onChange={(next) => plSave({ ...save.cpuPlaylist.assistants, [plCur]: next })}/>
                 <div className="mt-2 grid grid-cols-2 gap-1.5">
                   <button type="button" data-card-playlist-reset disabled={plIsDefault} onClick={() => plSave({ ...save.cpuPlaylist.assistants, [plCur]: [...CARD_CPU_PLAYLIST_DEFAULT[plCur]] })}
-                    className={`min-h-[44px] rounded-xl px-1 text-[11px] font-black ${plIsDefault ? 'bg-slate-800 text-slate-500' : 'bg-slate-700 text-white'}`}>{jaWrap('はじめの曲に戻す')}</button>
+                    className={`min-h-[44px] rounded-xl px-1 text-[11px] font-black ${plIsDefault ? 'bg-slate-800 text-slate-500' : 'bg-slate-700 text-white'}`}>{jaWrap('初めの曲に戻す')}</button>
                   <button type="button" data-card-playlist-copy-open onClick={() => { Audio_.fgSe.tap(); setPlCopy({ list: [...plList], confirm: false, from: plCurName }); }}
                     className="min-h-[44px] rounded-xl bg-indigo-800 px-1 text-[11px] font-black text-white">{jaWrap(`${plCurName}の曲を全員に写す`)}</button>
                 </div>
@@ -103247,7 +103284,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
                   <select data-card-bgm-select={k} aria-label={`${label}のBGM`} value={save.bgm[k]} onChange={(e) => { void persist({ bgm: normalizeCardBgm({ ...save.bgm, [k]: e.target.value }, cardIsBgmTrack) }); }}
                     className="min-h-[44px] min-w-0 flex-1 rounded-xl border border-white/15 bg-slate-950 px-2 py-2 text-xs text-white">
                     <option value={CARD_BGM_RANDOM}>ランダム(毎回ちがう曲)</option>
-                    {(typeof BGM_TRACKS !== 'undefined' ? BGM_TRACKS : []).map((t) => <option key={t.id} value={t.id}>{t.name}{t.id === (CARD_BGM_DEFAULT[k] || CARD_BGM_DEFAULT.pvp) ? '(はじめの曲)' : ''}</option>)}
+                    {(typeof BGM_TRACKS !== 'undefined' ? BGM_TRACKS : []).map((t) => <option key={t.id} value={t.id}>{t.name}{t.id === (CARD_BGM_DEFAULT[k] || CARD_BGM_DEFAULT.pvp) ? '(初めの曲)' : ''}</option>)}
                   </select>
                   {/* ランダムの試聴は1曲を選んで流す(鳴っていれば止める) */}
                   {bgmPreview && (save.bgm[k] === CARD_BGM_RANDOM
@@ -103296,7 +103333,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     const startLevelPanel = (
           <div data-card-setting="startLevel" className="mt-2.5 border-t border-white/10 pt-2.5">
             <b className="block text-[12px] font-black text-slate-200">フリー対戦の最初の強さ</b>
-            <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400" style={JA_WRAP_STYLE}>{cardJaWrap('相手えらびを開いたときに、はじめに選ばれている強さです。まだ開いていない強さのときは、開いている中でいちばん近い強さになります。')}</p>
+            <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400" style={JA_WRAP_STYLE}>{cardJaWrap('相手選びを開いたときに、はじめに選ばれている強さです。まだ開いていない強さのときは、開いている中で一番近い強さになります。')}</p>
             <div className="mt-2 grid grid-cols-3 gap-1.5">
               {CARD_START_LEVEL_OPTIONS.map((o) => (
                 <button key={o.id} type="button" data-card-start-level={o.id} aria-pressed={startLevel === o.id}
@@ -103407,7 +103444,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
   const go = (v) => () => { Audio_.fgSe.tap(); setNotice(''); setView(v); };
   const bigCards = [
     { key: 'cpu', attr: { 'data-card-cpu': '' }, label: '対戦', sub: 'フリー対戦・マルチ対戦', mark: 'BATTLE', ico: '⚔️', grad: 'from-orange-200 via-orange-400 to-rose-500', disabled: !activeDeck, onClick: () => { closeFirstGlow(); go('mode')(); } },
-    { key: 'decks', attr: { 'data-card-decks': '' }, label: 'デッキ編成', sub: 'デッキを組む・えらぶ', mark: 'DECK', ico: '🃏', grad: 'from-yellow-200 via-amber-300 to-orange-400', onClick: go('decks') },
+    { key: 'decks', attr: { 'data-card-decks': '' }, label: 'デッキ編成', sub: 'デッキを組む・選ぶ', mark: 'DECK', ico: '🃏', grad: 'from-yellow-200 via-amber-300 to-orange-400', onClick: go('decks') },
     { key: 'market', attr: { 'data-card-market-open': '' }, label: 'マーケット', sub: 'パック・スターターキット', mark: 'MARKET', ico: '🛒', grad: 'from-sky-200 via-sky-400 to-blue-500', onClick: () => { Audio_.fgSe.tap(); setNotice(''); onOpenMarket && onOpenMarket(); } },
     { key: 'ranking', attr: { 'data-card-ranking-open': '' }, label: 'ランキング', sub: '勝ち数・連勝・図鑑', mark: 'RANKING', ico: '🏆', grad: 'from-lime-200 via-emerald-300 to-teal-500', onClick: go('ranking') },
   ];
@@ -103774,7 +103811,7 @@ const CardDeckEditor = ({ db, collection, deck: deck0, onSave, onCancel, advisor
           {land && footer}
         </div>
         <div className={`${SCREEN_LIST_CLASS} pb-2 landscape:flex-1`}>
-          {view === 'mon' && <p className="mb-1 text-[11px] font-bold text-slate-400" style={JA_LABEL_STYLE}>{jaWrap('3体えらびます。同じモンスターは1体まで(キラも同じモンスター)')}</p>}
+          {view === 'mon' && <p className="mb-1 text-[11px] font-bold text-slate-400" style={JA_LABEL_STYLE}>{jaWrap('3体選びます。同じモンスターは1体まで(キラも同じモンスター)')}</p>}
           {shown.length
             ? <div data-card-deck-grid className="grid gap-1.5" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(80px, 1fr))' }}>{shown.map(tile)}</div>
             : <ScreenEmpty emoji="🃏" lines={view === 'deck' ? ['まだカードが入っていません', '「技など全部」から入れてください'] : ['当てはまるカードがありません']}/>}
@@ -103826,7 +103863,7 @@ const CardDeckList = ({ db, collection, decks, onBack, onEdit, onPut, onRemove, 
     <div data-mh-screen data-card-deck-list className={SCREEN_SHELL_CLASS}>
       <ScreenHead title="デッキ編成" accent="text-amber-200" onBack={onBack}/>
       <div className={`${SCREEN_LIST_CLASS} space-y-2 pb-2`}>
-        <p data-card-deck-count={decks.decks.length} className="text-[11px] font-bold text-slate-400">{`デッキ ${decks.decks.length} / ${CARD_DECK_MAX}。★のデッキで対戦します(★のデッキはいちばん上に出ます)`}</p>
+        <p data-card-deck-count={decks.decks.length} className="text-[11px] font-bold text-slate-400">{`デッキ ${decks.decks.length} / ${CARD_DECK_MAX}。★のデッキで対戦します(★のデッキは一番上に出ます)`}</p>
         {/* ★(使っている)デッキはいちばん上に出す(20まで並ぶと、どれを使っているか探しにくい。2026-10-30)。保存の並びは変えない */}
         {[...decks.decks].sort((a, b) => (b.id === decks.active) - (a.id === decks.active)).map((d) => {
           const ready = cardDeckReady(db, d, col);
@@ -104385,7 +104422,7 @@ const CardPackOpen = ({ db, result, onDone }) => {
       <div className={SCREEN_FOOTER_CLASS}>
         {phase !== 'open' ? <div className="text-center text-[12px] font-bold text-slate-400">{kit ? 'キットをタップしてください' : 'パックをタップしてください'}</div>
           : !allOpen ? <div className="flex gap-2"><button type="button" data-card-pack-flip-all className="mh-button mh-button-primary min-h-[52px] w-full flex-1 rounded-2xl font-black active:scale-[.98]" onClick={flipAll}>全部めくる</button>{fx && <button type="button" data-card-pack-skip className="mh-button min-h-[52px] shrink-0 rounded-2xl border border-slate-500 bg-slate-800 px-4 font-black text-slate-100 active:scale-[.98]" onClick={skipAll}>とばす</button>}</div>
-          : !last ? <button type="button" data-card-pack-next className="mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black active:scale-[.98]" onClick={next}>{kit ? 'つぎへ' : 'つぎのパック'}</button>
+          : !last ? <button type="button" data-card-pack-next className="mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black active:scale-[.98]" onClick={next}>{kit ? '次へ' : '次のパック'}</button>
           : kit && !showList ? <button type="button" data-card-pack-list-open className="mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black active:scale-[.98]" onClick={() => { Audio_.fgSe.tap(); setShowList(true); }}>入っていたカードの一覧へ</button>
           : <button type="button" data-card-pack-done className="mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black active:scale-[.98]" onClick={() => { Audio_.fgSe.tap(); onDone(); }}>{result.doneLabel || (result.demo ? 'トップへ戻る' : 'マーケットへ戻る')}</button>}
       </div>
@@ -104470,7 +104507,7 @@ const CardPackContents = ({ db, pack, collection, onClose }) => {
   const missing = [...mons, ...r.tech].filter((x) => !((collection || {})[x.no] > 0)).length;
   return (
     <CardShopSheet tag="contents" title={`${pack.name}の中身`} onClose={onClose} detail={detail} setDetail={setDetail} db={db}>
-      <p className="text-[11px] font-bold text-slate-300" style={JA_WRAP_STYLE}>{jaWrap(`このパックで出るカードです(${mons.length + r.tech.length}種類・まだ持っていないもの ${missing}種類)。押すとくわしく見られます。`)}</p>
+      <p className="text-[11px] font-bold text-slate-300" style={JA_WRAP_STYLE}>{jaWrap(`このパックで出るカードです(${mons.length + r.tech.length}種類・まだ持っていないもの ${missing}種類)。押すと詳しく見られます。`)}</p>
       <CardShopHead>モンスター({pack.mon}枚の枠・{mons.length}種類)</CardShopHead>
       <CardShopGrid db={db} rows={mons} collection={collection} onTap={setDetail}/>
       {r.tech.length > 0 && <><CardShopHead>技など({pack.tech}枚の枠・{r.tech.length}種類)</CardShopHead><CardShopGrid db={db} rows={techs} collection={collection} onTap={setDetail}/></>}
@@ -104534,7 +104571,7 @@ const CardStarterContents = ({ db, kit, collection, onClose }) => {
   const cards = Object.keys(counts).map((no) => ({ no, count: counts[no] }));
   return (
     <CardShopSheet tag="starter" title={`${kit.name}の中身`} onClose={onClose} detail={detail} setDetail={setDetail} db={db}>
-      <p className="text-[11px] font-bold text-slate-300" style={JA_WRAP_STYLE}>{jaWrap('このキットに入っているカードです。押すとくわしく見られます。')}</p>
+      <p className="text-[11px] font-bold text-slate-300" style={JA_WRAP_STYLE}>{jaWrap('このキットに入っているカードです。押すと詳しく見られます。')}</p>
       <CardShopHead>モンスター(3枚)</CardShopHead>
       <CardShopGrid db={db} rows={kit.monsters.map((no) => ({ no, rarity: cardMonRarity(cardMonsterOf(db, no)) }))} collection={collection} onTap={setDetail}/>
       <CardShopHead>カード({kit.cards.length}枚・{cards.length}種類)</CardShopHead>
@@ -104634,7 +104671,7 @@ const CardCatalogSheet = ({ db, catalogs, collection, busy, onUse, onClose }) =>
         <div onClick={(e) => e.stopPropagation()} className="flex max-h-full w-full max-w-[460px] flex-col rounded-3xl border-2 border-sky-300/70 bg-slate-950 text-white shadow-2xl landscape:max-w-[720px]">
           <div className="shrink-0 rounded-t-[22px] bg-sky-300/15 px-3 py-2 text-center text-[15px] font-black text-sky-100">📖 バトルカードカタログ</div>
           <div className="shrink-0 px-3 pt-2">
-            <p className="text-[11px] font-bold text-slate-300" style={JA_WRAP_STYLE}>{jaWrap(`好きなカードを1枚えらんで「もらう」を押すと、カタログが1冊なくなります(のこり ${catalogs}冊)。長押しでくわしく見られます。`)}</p>
+            <p className="text-[11px] font-bold text-slate-300" style={JA_WRAP_STYLE}>{jaWrap(`好きなカードを1枚えらんで「もらう」を押すと、カタログが1冊なくなります(のこり ${catalogs}冊)。長押しで詳しく見られます。`)}</p>
             {done && <div data-card-catalog-done className="mt-1 rounded-xl border border-emerald-400/40 bg-emerald-950/40 px-2 py-1 text-[12px] font-black text-emerald-200" style={JA_WRAP_STYLE}>{jaWrap(done)}</div>}
             <div className="mt-1.5 flex gap-1 overflow-x-auto pb-1" role="tablist">
               {CARD_PACKS.map((p) => <button key={p.id} type="button" role="tab" aria-selected={p.id === packId} data-card-catalog-pack={p.id} onClick={() => { setPackId(p.id); setPick(null); }} className={`shrink-0 rounded-lg px-2 py-1 text-[11px] font-black ${p.id === packId ? 'bg-amber-300 text-stone-900' : 'bg-slate-800 text-slate-300'}`}>第{p.no}弾</button>)}
@@ -104648,7 +104685,7 @@ const CardCatalogSheet = ({ db, catalogs, collection, busy, onUse, onClose }) =>
           </div>
           {/* 横画面は背が低いので、2つのボタンを横に並べて、カードを並べる所を広く取る */}
           <div className="shrink-0 space-y-1.5 p-2 landscape:grid landscape:grid-cols-2 landscape:gap-1.5 landscape:space-y-0">
-            <button type="button" data-card-catalog-take disabled={!pick || busy || catalogs < 1} onClick={() => setConfirm(true)} className="mh-button mh-button-primary min-h-[46px] w-full rounded-2xl px-2 text-[14px] font-black active:scale-[.98] disabled:opacity-40 landscape:min-h-[40px]" style={JA_WRAP_STYLE}>{pick ? jaWrap(`「${pickName}」をもらう`) : 'カードをえらんでください'}</button>
+            <button type="button" data-card-catalog-take disabled={!pick || busy || catalogs < 1} onClick={() => setConfirm(true)} className="mh-button mh-button-primary min-h-[46px] w-full rounded-2xl px-2 text-[14px] font-black active:scale-[.98] disabled:opacity-40 landscape:min-h-[40px]" style={JA_WRAP_STYLE}>{pick ? jaWrap(`「${pickName}」をもらう`) : 'カードを選んでください'}</button>
             <button type="button" data-card-catalog-close onClick={onClose} className="mh-button min-h-[40px] w-full rounded-2xl border border-white/20 text-[13px] font-black text-slate-200 active:scale-[.98]">閉じる</button>
           </div>
         </div>
@@ -104696,7 +104733,7 @@ const CardShopPacks = ({ db, point, busy, collection = null, onBuyPack }) => {
           <div className={`mt-2 grid gap-1.5 ${pack.bundle ? 'grid-cols-2' : 'grid-cols-1'}`}>
             <button type="button" data-card-shop-buy={`${pack.id}-1`} disabled={busy || point < pack.price} onClick={() => setConfirm({ pack, count: 1 })} className="mh-button min-h-[44px] rounded-xl bg-orange-500 text-[13px] font-black text-white active:scale-[.98] disabled:opacity-40">1パック {pack.price.toLocaleString()}</button>
             {pack.bundle && <button type="button" data-card-shop-buy={`${pack.id}-${pack.bundle.n}`} disabled={busy || point < pack.bundle.price} onClick={() => setConfirm({ pack, count: pack.bundle.n })} className="mh-button min-h-[44px] rounded-xl bg-orange-600 text-[13px] font-black text-white active:scale-[.98] disabled:opacity-40">{pack.bundle.n}パック {pack.bundle.price.toLocaleString()}<span className="block text-[9px] font-bold">({(pack.price * pack.bundle.n - pack.bundle.price).toLocaleString()}おトク)</span></button>}
-            {tickets > 0 && <button type="button" data-card-shop-ticket={pack.id} disabled={busy} onClick={() => setConfirm({ pack, count: 1, ticket: true })} className={`mh-button min-h-[40px] rounded-xl border border-amber-300/70 bg-slate-900 text-[12px] font-black text-amber-100 active:scale-[.98] disabled:opacity-40 ${pack.bundle ? 'col-span-2' : ''}`}>{`カードパック券で1パック(のこり${tickets}枚)`}</button>}
+            {tickets > 0 && <button type="button" data-card-shop-ticket={pack.id} disabled={busy} onClick={() => setConfirm({ pack, count: 1, ticket: true })} className={`mh-button min-h-[40px] rounded-xl border border-amber-300/70 bg-slate-900 text-[12px] font-black text-amber-100 active:scale-[.98] disabled:opacity-40 ${pack.bundle ? 'col-span-2' : ''}`}>{`カードパック券で1パック(残り${tickets}枚)`}</button>}
           </div>
         </div>
       ))}
@@ -104951,7 +104988,7 @@ const cardDeckPickChoices = (db, decks, collection, opts = {}) => {
 // rentTab … 「自分のデッキ/借りたデッキ」のタブにし、借りたデッキのタブで借りる・返すをする(2026-10-29 社長の作り直し「借りるのは対戦前のデッキを選ぶ画面のタブで」)。
 //   公開の印(cardShareOpen)までは、デバッグの人だけ(84 が決める)。借りられるのは1組・マルチでは使えない、は今のまま
 // auto … ほかのブリーダーと戦うときだけ { on, onChange, left, quick, onQuick }(quick … 結果だけ見る。2026-11-02)(オートで挑む・案B 2026-11-02)。left … 今日のごほうびの残り回数(読めていなければ null)
-const CardDeckPick = ({ db, decks, collection, title = 'デッキをえらぶ', note = '', onPick, onBack, allowRented = false, rentTab = false, auto = null }) => {
+const CardDeckPick = ({ db, decks, collection, title = 'デッキを選ぶ', note = '', onPick, onBack, allowRented = false, rentTab = false, auto = null }) => {
   const [rented, setRented] = useState(null);
   const [tab, setTab] = useState('own'); // own / rent
   const [cands, setCands] = useState(null); // 借りるデッキの候補(おすすめ・よく戦われている)
@@ -105061,7 +105098,7 @@ const CardDeckPick = ({ db, decks, collection, title = 'デッキをえらぶ', 
           ) : <p className="text-[12px] font-bold text-slate-300">いま借りているデッキはありません。下から1組借りられます(マルチ対戦では使えません)</p>}
           {rentMsg && <p data-card-deck-pick-rent-msg className="rounded-xl bg-slate-900 p-2 text-[12px] font-bold text-amber-100" style={JA_WRAP_STYLE}>{rentMsg}</p>}
           <div data-card-deck-pick-rent-list className={SCREEN_PANEL_CLASS}>
-            <div className="text-[12px] font-bold text-slate-400">借りるデッキをさがす</div>
+            <div className="text-[12px] font-bold text-slate-400">借りるデッキを探す</div>
             {cands === null ? <p className="mt-1 text-[12px] font-bold text-slate-300">読み込み中…</p> : (
               [['おすすめ', cands.picks], ['よく戦われている', cands.popular]].map(([label, rows]) => (
                 <div key={label} className="mt-1.5">
@@ -105081,7 +105118,7 @@ const CardDeckPick = ({ db, decks, collection, title = 'デッキをえらぶ', 
                 </div>
               ))
             )}
-            <button type="button" data-card-deck-pick-rent-reload className="mt-2 w-full rounded-xl border border-white/15 bg-slate-900 py-1.5 text-[12px] font-black text-slate-200" onClick={() => { Audio_.fgSe.tap(); void loadCands(); }}>ほかの人をさがす</button>
+            <button type="button" data-card-deck-pick-rent-reload className="mt-2 w-full rounded-xl border border-white/15 bg-slate-900 py-1.5 text-[12px] font-black text-slate-200" onClick={() => { Audio_.fgSe.tap(); void loadCands(); }}>ほかの人を探す</button>
           </div>
         </>)}
         {!first && tab === 'own' && <p data-card-deck-pick-none className="rounded-xl border border-amber-300/40 bg-amber-500/10 p-2 text-[13px] font-bold text-amber-100" style={JA_WRAP_STYLE}>対戦に使えるデッキがありません。デッキ編成で組んでください</p>}
@@ -105488,7 +105525,7 @@ const CardBattleStatsPanel = ({ stats, who = 'self' }) => {
       </div>
       <div className="mt-1 grid grid-cols-3 gap-1 text-center">
         <div data-card-stats-streak className={cell}>
-          <span className="block whitespace-nowrap text-[9px] font-black text-orange-200">いちばん長い連勝</span>
+          <span className="block whitespace-nowrap text-[9px] font-black text-orange-200">一番長い連勝</span>
           <b className={`block ${val(stats.bestStreak)}`}>{stats.bestStreak}</b>
         </div>
         <div data-card-stats-pvp className={cell}>
@@ -105892,7 +105929,7 @@ const CardRecordScreen = ({ db = CARD_BATTLE_DATA, save, foes = [], levelLabel =
         {onOpenReplays && (
           <button type="button" data-card-replays-open-side onClick={() => { Audio_.fgSe.tap(); onOpenReplays(); }}
             className="mh-button mh-button-secondary flex min-h-[44px] w-full items-center justify-between rounded-2xl border border-sky-300/40 bg-slate-800 px-3 text-left">
-            <span><b className="block text-[13px] font-black text-sky-100">▶ 過去の対戦</b><small className="block text-[10px] font-bold text-slate-400">遊んだ試合を、はじめから見返せます</small></span>
+            <span><b className="block text-[13px] font-black text-sky-100">▶ 過去の対戦</b><small className="block text-[10px] font-bold text-slate-400">遊んだ試合を、初めから見返せます</small></span>
             <span className="text-[18px] text-slate-400">›</span>
           </button>
         )}
@@ -105908,7 +105945,7 @@ const CardRecordScreen = ({ db = CARD_BATTLE_DATA, save, foes = [], levelLabel =
           {onOpenReplays && (
             <button type="button" data-card-replays-open onClick={() => { Audio_.fgSe.tap(); onOpenReplays(); }}
               className="mh-button mh-button-secondary flex min-h-[48px] w-full items-center justify-between rounded-2xl border border-sky-300/40 bg-slate-800 px-3 text-left landscape:hidden">
-              <span><b className="block text-[14px] font-black text-sky-100">▶ 過去の対戦</b><small className="block text-[11px] font-bold text-slate-400">遊んだ試合を、はじめから見返せます</small></span>
+              <span><b className="block text-[14px] font-black text-sky-100">▶ 過去の対戦</b><small className="block text-[11px] font-bold text-slate-400">遊んだ試合を、初めから見返せます</small></span>
               <span className="text-[18px] text-slate-400">›</span>
             </button>
           )}
@@ -105927,7 +105964,7 @@ const CardRecordScreen = ({ db = CARD_BATTLE_DATA, save, foes = [], levelLabel =
             <div className="text-[12px] font-bold text-slate-400">勝ち方(フリー対戦)</div>
             <div className="mt-1 grid grid-cols-3 gap-1.5 text-center">
               {cell('勝つまでの平均', winAvg === null ? '—' : winAvg, 'ターン')}
-              {cell('いちばん早い勝ち', d.wins.fastest || '—', d.wins.fastest ? 'ターン目' : '')}
+              {cell('一番早い勝ち', d.wins.fastest || '—', d.wins.fastest ? 'ターン目' : '')}
               {cell('今日の勝ち', d.day.key === today ? d.day.win : 0, '勝')}
             </div>
             <p className={small} style={JA_WRAP_STYLE}>{jaWrap('「ターン」は自分のターンの数です。この記録ができてからのぶんです')}</p>
@@ -105975,7 +106012,7 @@ const CardRecordScreen = ({ db = CARD_BATTLE_DATA, save, foes = [], levelLabel =
                       {row('投了', `${f.surrender}`, 'sur')}
                       {row('いまの連勝', `${f.now}連勝`, 'now')}
                       {row('最高の連勝', `${f.best}連勝`, 'best')}
-                      {row('いちばん早い勝ち', f.fastest ? `${f.fastest}ターン目` : '—', 'fast')}
+                      {row('一番早い勝ち', f.fastest ? `${f.fastest}ターン目` : '—', 'fast')}
                       <div className="mt-1 text-[10px] font-bold text-slate-400">難易度ごとの勝ち</div>
                       <div className="mt-0.5 grid grid-cols-5 gap-1 text-center text-[10px] font-bold">
                         {CARD_LEVEL_ORDER.map((lv) => <div key={lv} className="min-w-0 rounded-md bg-black/30 py-0.5"><span className="block truncate text-slate-400">{levelLabel[lv] || lv}</span><b className="text-[12px] text-amber-200">{f.levels[lv]}</b></div>)}
@@ -105993,7 +106030,7 @@ const CardRecordScreen = ({ db = CARD_BATTLE_DATA, save, foes = [], levelLabel =
             <div className="text-[12px] font-bold text-slate-400">マルチ対戦</div>
             <div className="text-[16px] font-black text-white">{rec.pvp.win}勝 {rec.pvp.lose}敗</div>
             {row('いまの強さ', !multi ? '読み込み中…' : Number.isFinite(multi.rating) ? `${multi.rating}${multi.place ? `(${multi.place.capped ? `${multi.place.n}位より下` : `${multi.place.n}位`})` : ''}` : pvpGames ? '—' : 'まだ対戦していません', 'rating')}
-            {row('いちばん高かった強さ', d.pvpBest ? `${d.pvpBest}` : '—', 'best')}
+            {row('一番高かった強さ', d.pvpBest ? `${d.pvpBest}` : '—', 'best')}
           </div>
           <div data-card-record-trend className={SCREEN_PANEL_CLASS}>
             <div className="text-[12px] font-bold text-slate-400">強さの移り(最近20戦)</div>
@@ -107618,7 +107655,7 @@ const CardPvpLobby = ({ meIcon = null, meFrame = null, deck, deckIssues = [], on
         </>)}
         {(room.phase === 'connecting' || room.phase === 'waiting') && room.mode === 'free' && (
           <div data-card-pvp-seek className="rounded-2xl border border-sky-300/40 bg-sky-500/10 p-4 text-center">
-            <p className="text-[15px] font-black text-white">{room.foe ? `${room.foe.name}さんが見つかりました。始めます…` : '相手をさがしています…'}</p>
+            <p className="text-[15px] font-black text-white">{room.foe ? `${room.foe.name}さんが見つかりました。始めます…` : '相手を探しています…'}</p>
             {/* 自分は数えない(「1人」が自分のことか分からない。カゲあつくん) */}
             <p data-card-pvp-waiting={Math.max(0, room.lobbyCount - 1)} className="mt-1 text-[13px] font-bold text-sky-100">{room.lobbyCount > 1 ? `あなたのほかに ${room.lobbyCount - 1}人が待っています` : 'いまは、ほかに待っている人はいません'}</p>
             {/* だれかが来るか、自分でやめるまで待ち続ける(残り秒数・「だれも来ませんでした」は出さない。2026-10-27 社長) */}
@@ -108847,7 +108884,7 @@ const CardReplayList = ({ onOpen, onBack }) => {
   const assistants = typeof ASSISTANTS !== 'undefined' ? ASSISTANTS : [];
   return (
     <div data-mh-screen data-card-replay-list className={SCREEN_SHELL_CLASS}>
-      <ScreenHead title="過去の対戦" accent="text-sky-200" onBack={onBack} note="押すと、はじめから見返せます"/>
+      <ScreenHead title="過去の対戦" accent="text-sky-200" onBack={onBack} note="押すと、初めから見返せます"/>
       {/* 一覧の外は、横画面では左の列に積まれる。残っている数と★の数を出す(2026-10-27 ツナグくんの見回り「左が見出しだけで空いている」) */}
       <div data-card-replay-side className={`${SCREEN_PANEL_CLASS} mb-2 shrink-0`}>
         <div className="grid grid-cols-2 gap-1.5 text-center">
@@ -109424,7 +109461,7 @@ const CardPvpWatchScreen = ({ onBack }) => {
         {w.error && <p data-card-watch-error className="rounded-xl border border-rose-300/40 bg-rose-500/10 p-2 text-[12px] font-bold text-rose-100" style={JA_WRAP_STYLE}>{jaWrap(w.error)}</p>}
         {st && meta && (<>
           <div className="flex items-center justify-between px-1 text-[12px] font-bold text-slate-300">
-            <span data-card-watch-turn={st.turn} className="tabular-nums">{st.turn > 0 ? `ターン${st.turn}` : 'はじめのガッツ'}</span>
+            <span data-card-watch-turn={st.turn} className="tabular-nums">{st.turn > 0 ? `ターン${st.turn}` : '初めのガッツ'}</span>
             <span data-card-watch-eyes={w.eyes} className="tabular-nums">👀 {w.eyes}人が見ています</span>
           </div>
           {/* 背の低い画面では、決着の帯をいちばん上に(下に置くと画面の外に出た) */}
@@ -109915,13 +109952,13 @@ const CardDeckShare = ({ db, decks, collection, frame = null, onBack, unlocked =
           {msg && tab === 'fight' && <p className="rounded-xl bg-slate-900 p-2 text-[13px] font-bold text-amber-100" style={JA_WRAP_STYLE}>{jaWrap(msg)}</p>}
           {foes === null ? <p className="text-[13px] font-bold text-slate-300">読み込み中…</p> : (<>
             <div data-card-share-filters className="flex gap-1.5 overflow-x-auto pb-0.5" role="tablist">
-              {[['all', 'すべて'], ...CARD_SHARE_FOE_TAGS.map(([k, label]) => [k, label])].map(([k, label]) => <button key={k} type="button" role="tab" aria-selected={foeFilter === k} data-card-share-filter={k} className={`shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 text-[12px] font-black ${foeFilter === k ? 'bg-amber-300 text-slate-950' : 'border border-white/20 bg-slate-900 text-slate-200'}`} onClick={() => { Audio_.fgSe.tap(); setFoeFilter(k); }}>{label}</button>)}
+              {[['all', '全て'], ...CARD_SHARE_FOE_TAGS.map(([k, label]) => [k, label])].map(([k, label]) => <button key={k} type="button" role="tab" aria-selected={foeFilter === k} data-card-share-filter={k} className={`shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 text-[12px] font-black ${foeFilter === k ? 'bg-amber-300 text-slate-950' : 'border border-white/20 bg-slate-900 text-slate-200'}`} onClick={() => { Audio_.fgSe.tap(); setFoeFilter(k); }}>{label}</button>)}
             </div>
             <div data-card-share-list={foeFilter}>
               {foeShown.length ? <ul className="space-y-1.5">{foeShown.map(foeRow)}</ul> : <p className={`${SCREEN_PANEL_CLASS} text-[12px] font-bold text-slate-400`}>{foeEmptyText}</p>}
             </div>
             <p data-card-share-replay-note className="px-1 text-[11px] font-bold leading-snug text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('戦った試合は、デッキを登録した人があとから見返せます(あなたの名前とアイコンが出ます)')}</p>
-            <button type="button" data-card-share-reload className="w-full rounded-xl border border-white/15 bg-slate-900 py-2 text-[12px] font-black text-slate-200" onClick={() => { Audio_.fgSe.tap(); void loadFoes(); }}>ほかの人をさがす</button>
+            <button type="button" data-card-share-reload className="w-full rounded-xl border border-white/15 bg-slate-900 py-2 text-[12px] font-black text-slate-200" onClick={() => { Audio_.fgSe.tap(); void loadFoes(); }}>ほかの人を探す</button>
           </>)}
         </>)}
         {mine !== undefined && !off && tab === 'mine' && (<>
@@ -109971,7 +110008,7 @@ const CardDeckShare = ({ db, decks, collection, frame = null, onBack, unlocked =
   if (embedded) return <div data-card-share data-card-share-part={part}>{body}{detailNode}</div>;
   return (
     <div data-mh-screen data-card-share data-card-share-part={part} className={SCREEN_SHELL_CLASS}>
-      <ScreenHead title={title} accent="text-amber-200" onBack={onBack} note={part === 'fight' ? 'だれと戦うかをえらびます' : '自分のデッキを1組登録すると、ほかのブリーダーが戦えます'}/>
+      <ScreenHead title={title} accent="text-amber-200" onBack={onBack} note={part === 'fight' ? 'だれと戦うかを選びます' : '自分のデッキを1組登録すると、ほかのブリーダーが戦えます'}/>
       {headExtra}
       {body}
       {mine !== undefined && !off && tab === 'mine' && <div className={SCREEN_FOOTER_CLASS}>{registerButton}</div>}
@@ -110121,7 +110158,7 @@ const CardShareDeckDetail = ({ entry, onClose, fight = null, rent = null }) => {
             {rent && <button type="button" data-card-share-detail-rent disabled={rent.disabled} onClick={() => { onClose(); rent.go(); }} className="min-h-[44px] flex-1 rounded-xl border border-emerald-300/50 bg-slate-900 text-[13px] font-black text-emerald-100 disabled:opacity-50">{rent.label}</button>}
           </div>
         )}
-        <button type="button" data-card-share-deck-detail-close onClick={onClose} className="mt-2 w-full rounded-xl bg-slate-800 py-2 text-[13px] font-black text-white">とじる</button>
+        <button type="button" data-card-share-deck-detail-close onClick={onClose} className="mt-2 w-full rounded-xl bg-slate-800 py-2 text-[13px] font-black text-white">閉じる</button>
       </div>
     </div>
   );
@@ -110241,7 +110278,7 @@ const CardDeckReplays = ({ onBack, onOpenDeck, onOpenTour, known = null }) => {
     <div data-mh-screen data-card-deck-replays className={SCREEN_SHELL_CLASS}>
       <ScreenHead title="戦われた試合" accent="text-amber-200" onBack={onBack} note={`登録中のデッキが戦った試合。フリー対戦は新しい${CARD_SHARE_REPLAY_SLOTS}試合まで`}/>
       <div className="mb-2 grid shrink-0 grid-cols-3 gap-1.5" role="tablist">
-        {[['all', 'ぜんぶ'], ['free', 'フリー対戦'], ['tour', '大会']].map(([k, label]) => (
+        {[['all', '全部'], ['free', 'フリー対戦'], ['tour', '大会']].map(([k, label]) => (
           <button key={k} type="button" role="tab" aria-selected={tab === k} data-card-deck-replays-tab={k} onClick={() => { Audio_.fgSe.tap(); setTab(k); }}
             className={`min-h-[40px] rounded-xl border text-[13px] font-black ${tab === k ? 'border-amber-300 bg-amber-500/25 text-amber-50' : 'border-white/10 bg-slate-900/80 text-slate-300'}`}>{label}</button>
         ))}
@@ -110359,7 +110396,7 @@ const cardLevelAfter = (prev, { kind, level, outcome, today: today0, auto = fals
   const sameDay = cur.day === today;
   const first = !auto && outcome === 'win' && !(sameDay && cur.dayWin);
   const add = base + (first ? CARD_LEVEL_XP.firstWin : 0);
-  const parts = [{ label: outcome === 'win' ? '勝ち' : '負け', xp: base0 }, ...(base > base0 ? [{ label: `カード部屋の助手と対戦(${typeof CARD_LIFE_UP_LABEL !== 'undefined' ? CARD_LIFE_UP_LABEL : '倍'})`, xp: base - base0 }] : []), ...(first ? [{ label: 'その日はじめての勝ち', xp: CARD_LEVEL_XP.firstWin }] : [])];
+  const parts = [{ label: outcome === 'win' ? '勝ち' : '負け', xp: base0 }, ...(base > base0 ? [{ label: `カード部屋の助手と対戦(${typeof CARD_LIFE_UP_LABEL !== 'undefined' ? CARD_LIFE_UP_LABEL : '倍'})`, xp: base - base0 }] : []), ...(first ? [{ label: 'その日初めての勝ち', xp: CARD_LEVEL_XP.firstWin }] : [])];
   const xp = cardLevelSafeXp(cur.xp + add);
   const to = cardLevelInfo(xp).level;
   const got = [...cur.got];
@@ -110651,9 +110688,9 @@ const CardTacticDetail = ({ card, onClose }) => {
         {/* 一文(2026-10-31 案A)を大きく、カードの名前と細かい効果は「くわしく」として下に */}
         <b data-card-tactic-detail-line className="mt-2 block text-[19px] font-black leading-snug" style={JA_WRAP_STYLE}>{jaWrap(card.line || card.name)}</b>
         <p className="mt-2 text-[12px] font-black text-white/80">{`カードの名前「${card.name}」`}</p>
-        <p className="mt-1 rounded-lg bg-black/25 px-2 py-1.5 text-[13px] font-bold leading-relaxed" style={JA_WRAP_STYLE}><small className="block text-[10px] font-black text-white/70">くわしく</small>{jaWrap(card.desc)}</p>
+        <p className="mt-1 rounded-lg bg-black/25 px-2 py-1.5 text-[13px] font-bold leading-relaxed" style={JA_WRAP_STYLE}><small className="block text-[10px] font-black text-white/70">詳しく</small>{jaWrap(card.desc)}</p>
         <p className="mt-2 text-[11px] font-bold text-white/80" style={JA_WRAP_STYLE}>{jaWrap(CARD_TACTIC_CAT_TEXT[card.cat] || '')}</p>
-        <button type="button" data-card-tactic-detail-close onClick={() => { Audio_.fgSe.tap(); onClose && onClose(); }} className="mh-button mt-3 min-h-[44px] w-full rounded-xl bg-black/40 text-[14px] font-black">とじる</button>
+        <button type="button" data-card-tactic-detail-close onClick={() => { Audio_.fgSe.tap(); onClose && onClose(); }} className="mh-button mt-3 min-h-[44px] w-full rounded-xl bg-black/40 text-[14px] font-black">閉じる</button>
       </div>
     </div>
   );
@@ -110753,7 +110790,7 @@ const CardTacticPicker = ({ db, tactics, cat, title, onPick, onClose, allowNone 
   if (sp) {
     return (
       <div data-card-tactic-species className="fixed inset-0 z-[80] flex flex-col bg-slate-950 p-3" style={cardSafePad('.75rem')}>
-        <ScreenHead title="種族をえらぶ" accent="text-amber-200" onBack={() => setSp(null)}/>
+        <ScreenHead title="種族を選ぶ" accent="text-amber-200" onBack={() => setSp(null)}/>
         <div className="grid min-h-0 flex-1 grid-cols-3 content-start gap-1.5 overflow-y-auto">
           {cardTacticSpeciesList(db).map((x) => (
             <button key={x.id} type="button" data-card-tactic-species-pick={x.id} onClick={() => { Audio_.fgSe.tap(); pick(sp, x.id); }}
@@ -110782,11 +110819,11 @@ const CardTacticPicker = ({ db, tactics, cat, title, onPick, onClose, allowNone 
   return (
     <div data-card-tactic-picker={cat} className="fixed inset-0 z-[80] flex flex-col bg-slate-950 p-3" style={cardSafePad('.75rem')}>
       <ScreenHead title={title} accent="text-amber-200" onBack={onClose}/>
-      <input data-card-tactic-search value={q} onChange={(e) => setQ(e.target.value.slice(0, 20))} placeholder="🔍 ことばでさがす(例: ライフ・大技・守る)" autoComplete="off"
+      <input data-card-tactic-search value={q} onChange={(e) => setQ(e.target.value.slice(0, 20))} placeholder="🔍 言葉で探す(例: ライフ・大技・守る)" autoComplete="off"
         className="mb-1.5 min-h-[40px] w-full shrink-0 rounded-xl border-2 border-sky-400/60 bg-black/50 px-3 text-[14px] text-white"/>
       {secs.length > 1 && (
         <div data-card-tactic-secs className="mb-1 flex shrink-0 gap-1 overflow-x-auto pb-1">
-          <button type="button" data-card-tactic-sec="" onClick={() => setSec('')} className={chip(!sec)}>すべて</button>
+          <button type="button" data-card-tactic-sec="" onClick={() => setSec('')} className={chip(!sec)}>全て</button>
           {secs.map((s) => <button key={s} type="button" data-card-tactic-sec={s} onClick={() => setSec(sec === s ? '' : s)} className={chip(sec === s)}>{s}</button>)}
         </div>
       )}
@@ -111014,7 +111051,7 @@ const CardTacticPackOpen = ({ packs, onDone }) => {
         )}
         {phase === 'open' && allOpen && (
           <div data-card-tactic-open-summary className="mt-3 text-center text-[12px] font-bold text-slate-300">
-            {shards > 0 ? <>持っていたカードは <b className="text-amber-200">かけら +{shards}</b> になりました(10個でまだ持っていないカードを1枚えらべます)</> : 'ぜんぶ新しいカードです'}
+            {shards > 0 ? <>持っていたカードは <b className="text-amber-200">かけら +{shards}</b> になりました(10個でまだ持っていないカードを1枚選べます)</> : '全部新しいカードです'}
           </div>
         )}
       </div>
@@ -111037,8 +111074,8 @@ const CardTacticPackOpen = ({ packs, onDone }) => {
       <div className={SCREEN_FOOTER_CLASS}>
         {phase !== 'open' ? <div className="text-center text-[12px] font-bold text-slate-400">パックをタップしてください</div>
           : !allOpen ? <div className="flex gap-2"><button type="button" data-card-tactic-open-all className="mh-button mh-button-primary min-h-[52px] w-full flex-1 rounded-2xl font-black active:scale-[.98]" onClick={flipAll}>全部めくる</button>{fx && <button type="button" data-card-tactic-skip className="mh-button min-h-[52px] shrink-0 rounded-2xl border border-slate-500 bg-slate-800 px-4 font-black text-slate-100 active:scale-[.98]" onClick={skipAll}>とばす</button>}</div>
-          : !last ? <button type="button" data-card-tactic-open-next className="mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black active:scale-[.98]" onClick={next}>つぎのパック</button>
-          : <button type="button" data-card-tactic-open-done className="mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black active:scale-[.98]" onClick={() => { Audio_.fgSe.tap(); onDone(); }}>とじる</button>}
+          : !last ? <button type="button" data-card-tactic-open-next className="mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black active:scale-[.98]" onClick={next}>次のパック</button>
+          : <button type="button" data-card-tactic-open-done className="mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black active:scale-[.98]" onClick={() => { Audio_.fgSe.tap(); onDone(); }}>閉じる</button>}
       </div>
     </div>
   );
@@ -111090,7 +111127,7 @@ const CardTacticsScreen = ({ db, decks, point = 0, onPay, onBack, share = null, 
   const catOf = (k) => (k === 'breeder' ? 'breeder' : 'monster');
   const editRow = (k, i, which) => {
     const rows = rowsOf(k);
-    setPick({ cat: which === 'c' ? 'cond' : catOf(k), hideSecs: which === 'c' && k === 'breeder' ? ['このモンスター', '守るとき'] : [], title: which === 'c' ? '条件カードをえらぶ' : `${CARD_TACTIC_CAT_STYLE[catOf(k)].label}カードをえらぶ`,
+    setPick({ cat: which === 'c' ? 'cond' : catOf(k), hideSecs: which === 'c' && k === 'breeder' ? ['このモンスター', '守るとき'] : [], title: which === 'c' ? '条件カードを選ぶ' : `${CARD_TACTIC_CAT_STYLE[catOf(k)].label}カードを選ぶ`,
       onPick: (id, sp) => { setPick(null); if (!id) return; const r = { ...rows[i], [which]: id }; if (which === 'c') { if (sp) r.sp = sp; else delete r.sp; } void setRows(k, rows.map((x, j) => (j === i ? r : x))); } });
   };
   const addRow = (k) => {
@@ -111128,7 +111165,7 @@ const CardTacticsScreen = ({ db, decks, point = 0, onPay, onBack, share = null, 
     ...[0, 1, 2].map((i) => ({ k: i, label: (monOf(i) || {}).name || ['左のモンスター', '真ん中のモンスター', '右のモンスター'][i], mon: monOf(i), sub: `${f.mons[i].length}/${open.mon}枚` }))];
   return (
     <div data-mh-screen data-card-tactics className={SCREEN_SHELL_CLASS}>
-      <ScreenHead title={screenTitle} accent="text-amber-200" onBack={onBack} note={(share ? cardShareOpen() : cardTacticsOpen()) ? '' : 'つくっている途中(デバッグ)'}/>
+      <ScreenHead title={screenTitle} accent="text-amber-200" onBack={onBack} note={(share ? cardShareOpen() : cardTacticsOpen()) ? '' : '作っている途中(デバッグ)'}/>
       <div className={`${SCREEN_LIST_CLASS} space-y-2 pb-2`}>
         <div data-card-tactics-level className={`${SCREEN_PANEL_CLASS} py-2`}>
           <PlayerRankBadge kind="card" rank={lv} size="sm"/>
@@ -111211,9 +111248,9 @@ const CardTacticsScreen = ({ db, decks, point = 0, onPay, onBack, share = null, 
             </div>
             <button type="button" data-card-tactics-buy="1" disabled={busy || point < cardTacticsPrice(1)} onClick={() => { void pay(1, 'point'); }} className="mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black disabled:opacity-40">1回引く(300ビートP)</button>
             <button type="button" data-card-tactics-buy="5" disabled={busy || point < cardTacticsPrice(5)} onClick={() => { void pay(5, 'point'); }} className="mh-button min-h-[52px] w-full rounded-2xl font-black disabled:opacity-40">5回まとめて引く(1,350ビートP)</button>
-            <button type="button" data-card-tactics-ticket disabled={busy || t.tickets < 1} onClick={() => { void pay(1, 'ticket'); }} className="mh-button min-h-[48px] w-full rounded-2xl font-black disabled:opacity-40">{`カードパック券で1回引く(のこり${t.tickets}枚)`}</button>
-            <button type="button" data-card-tactics-exchange disabled={t.shards < CARD_TACTICS_SHARD_COST} onClick={() => setPick({ cat: 'all-missing', title: 'かけら10個で1枚えらぶ', onPick: exchange })}
-              className="mh-button min-h-[48px] w-full rounded-2xl font-black disabled:opacity-40">{t.shards >= CARD_TACTICS_SHARD_COST ? `かけらで1枚えらぶ(かけら${t.shards}個)` : `かけらで1枚えらぶ(あと${CARD_TACTICS_SHARD_COST - t.shards}個)`}</button>
+            <button type="button" data-card-tactics-ticket disabled={busy || t.tickets < 1} onClick={() => { void pay(1, 'ticket'); }} className="mh-button min-h-[48px] w-full rounded-2xl font-black disabled:opacity-40">{`カードパック券で1回引く(残り${t.tickets}枚)`}</button>
+            <button type="button" data-card-tactics-exchange disabled={t.shards < CARD_TACTICS_SHARD_COST} onClick={() => setPick({ cat: 'all-missing', title: 'かけら10個で1枚選ぶ', onPick: exchange })}
+              className="mh-button min-h-[48px] w-full rounded-2xl font-black disabled:opacity-40">{t.shards >= CARD_TACTICS_SHARD_COST ? `かけらで1枚選ぶ(かけら${t.shards}個)` : `かけらで1枚選ぶ(あと${CARD_TACTICS_SHARD_COST - t.shards}個)`}</button>
           </div>
         )}
         {detailCard && <CardTacticDetail card={detailCard} onClose={() => setDetailCard(null)}/>}
@@ -111296,8 +111333,8 @@ const CardTacticsBand = ({ point = 0, busy = false, onBuy, onExchange }) => {
             {tickets > 0 && <button type="button" data-card-tactics-ticket disabled={busy} onClick={() => { Audio_.fgSe.tap(); setConfirm(true); }} className="mh-button min-h-[30px] shrink-0 rounded-lg bg-amber-400 px-2 text-[11px] font-black text-stone-900 active:scale-95 disabled:opacity-40">使う</button>}
           </div>
           <div data-card-tactics-shards={shards} className={`flex min-h-[36px] items-center gap-1 rounded-xl px-2 ${canPick ? 'bg-sky-400/20 ring-1 ring-sky-300' : 'bg-white/5'}`}>
-            <span className={`min-w-0 flex-1 text-[11px] font-black leading-tight ${canPick ? 'text-sky-100' : 'text-slate-400'}`}>かけら<b className="ml-1 text-[14px] text-white tabular-nums">{shards}</b><small className="ml-1 text-[10px]">{canPick ? '1枚えらべます' : `あと${CARD_TACTICS_SHARD_COST - shards}で1枚`}</small></span>
-            {canPick && <button type="button" data-card-tactics-exchange disabled={busy} onClick={() => { Audio_.fgSe.tap(); setPicking(true); }} className="mh-button min-h-[30px] shrink-0 rounded-lg bg-sky-400 px-2 text-[11px] font-black text-slate-950 active:scale-95 disabled:opacity-40">えらぶ</button>}
+            <span className={`min-w-0 flex-1 text-[11px] font-black leading-tight ${canPick ? 'text-sky-100' : 'text-slate-400'}`}>かけら<b className="ml-1 text-[14px] text-white tabular-nums">{shards}</b><small className="ml-1 text-[10px]">{canPick ? '1枚選べます' : `あと${CARD_TACTICS_SHARD_COST - shards}で1枚`}</small></span>
+            {canPick && <button type="button" data-card-tactics-exchange disabled={busy} onClick={() => { Audio_.fgSe.tap(); setPicking(true); }} className="mh-button min-h-[30px] shrink-0 rounded-lg bg-sky-400 px-2 text-[11px] font-black text-slate-950 active:scale-95 disabled:opacity-40">選ぶ</button>}
           </div>
         </div>
         {msg && <p data-card-tactics-shop-msg className="mt-1 text-[11px] font-bold text-amber-100">{msg}</p>}
@@ -111305,7 +111342,7 @@ const CardTacticsBand = ({ point = 0, busy = false, onBuy, onExchange }) => {
       {confirm && <ConfirmSheet title="戦術カードパックを1パック開けますか？" message={`カードパック券を1枚使います(いま ${tickets}枚)`} confirmLabel="券で開ける" onCancel={() => setConfirm(false)} onConfirm={() => { void useTicket(); }}/>}
       {picking && t && (
         <div data-card-tactic-picker="missing" className="fixed inset-0 z-[85] flex flex-col bg-slate-950 p-3" style={{ paddingTop: 'max(.75rem, env(safe-area-inset-top))', paddingBottom: 'max(.75rem, env(safe-area-inset-bottom))' }}>
-          <ScreenHead title="かけら10個で1枚えらぶ" accent="text-amber-200" onBack={() => setPicking(false)}/>
+          <ScreenHead title="かけら10個で1枚選ぶ" accent="text-amber-200" onBack={() => setPicking(false)}/>
           <div className="grid min-h-0 flex-1 grid-cols-3 content-start gap-1.5 overflow-y-auto pb-3">
             {CARD_TACTIC_CARDS.filter((c) => !cardTacticsOwns(t, c.id)).map((c) => <CardTacticFace key={c.id} card={c} small onClick={() => { Audio_.fgSe.tap(); void exchange(c.id); }}/>)}
           </div>
@@ -111351,7 +111388,7 @@ const CardTacticPackRates = ({ onClose }) => (
       </tbody></table>
       <p>{jaWrap(`1パック${CARD_TACTICS_PULL.n}枚。1枚ずつ、上の割合で出ます。`)}</p>
       <p>{jaWrap(`SR が出ないまま${CARD_TACTICS_PULL.pityAt}パック開けると、${CARD_TACTICS_PULL.pityAt + 1}パック目の最後の1枚は SR です。`)}</p>
-      <p>{jaWrap(`もう持っているカードが出たときは「かけら」1個になります。かけら${CARD_TACTICS_SHARD_COST}個で、まだ持っていないカードを1枚えらべます。`)}</p>
+      <p>{jaWrap(`もう持っているカードが出たときは「かけら」1個になります。かけら${CARD_TACTICS_SHARD_COST}個で、まだ持っていないカードを1枚選べます。`)}</p>
       <p>{jaWrap('カードパック券(カードランクのごほうび)1枚でも、1パック開けられます。')}</p>
     </div>
   </CardShopSheet>
@@ -111418,7 +111455,7 @@ const cardRankUpcoming = (lv, n = 4) => {
 const CardRankChip = ({ xp = 0, onOpen = null, showName = true, cls = '' }) => {
   const info = cardLevelInfo(xp);
   return (
-    <button type="button" data-card-rank-chip={info.level} aria-label={`カードランク ${info.level}。くわしく見る`} onClick={() => { Audio_.fgSe.tap(); onOpen && onOpen(); }}
+    <button type="button" data-card-rank-chip={info.level} aria-label={`カードランク ${info.level}。詳しく見る`} onClick={() => { Audio_.fgSe.tap(); onOpen && onOpen(); }}
       className={`inline-flex shrink-0 items-center rounded-full border border-white/20 bg-slate-950/60 py-0.5 pl-1 pr-2.5 active:scale-95 ${cls}`}>
       <PlayerRankBadge kind="card" rank={info.level} size="sm" showName={showName}/>
     </button>
@@ -111439,7 +111476,7 @@ const cardRankRewardItems = (r, got = false) => {
 // 札を押した先: 大きい札・棒・ランクごとのごほうびの一覧・経験値のたまり方(2026-10-30 社長「報酬が全部見れるように」。43 の共通の画面。ビートランクと同じ)
 const CardRankDetail = ({ xp = 0, onClose }) => (
   <PlayerRankDetail kind="card" xp={xp} rewardsOf={cardRankRewardItems} onClose={onClose}
-    how={'フリー対戦・マルチ対戦で戦うと経験値がたまります。強い相手ほど多く、マルチがいちばん多くたまります。その日はじめての勝ちは +30。投了・練習試合ではたまりません。'}/>
+    how={'フリー対戦・マルチ対戦で戦うと経験値がたまります。強い相手ほど多く、マルチが一番多くたまります。その日初めての勝ちは +30。投了・練習試合ではたまりません。'}/>
 );
 // 対戦の結果: 経験値の札(棒が前の量から伸びる)と、ランクが上がったときの演出(43 の PlayerRankUpFx。ビートランクと同じ。帯が変わると自動で豪華になる)。
 //   一度に何ランク上がっても、上がった先のランクで1回だけ出し、もらった物をまとめて渡す。5ランクごとのおまけは bonus(桃色の光)
@@ -111500,7 +111537,7 @@ const CARD_REG_COMBOS = Object.freeze([
   { sec: 'おすすめ', icon: '🌊', name: '3体いたら全体攻撃', c: 'foeAlive.3', a: 'reach.全体攻撃', where: 'mon' },
   { sec: '攻める', icon: '⚔️', name: '弱った相手を狙う', c: 'foeLife.50', a: 'atk', where: 'mon' },
   { sec: '攻める', icon: '🎯', name: '最後の1体を倒す', c: 'foeAlive.1', a: 'atk', where: 'mon' },
-  { sec: '攻める', icon: '💨', name: 'はじめから攻める', c: 'turnLe.3', a: 'atk', where: 'mon' },
+  { sec: '攻める', icon: '💨', name: '初めから攻める', c: 'turnLe.3', a: 'atk', where: 'mon' },
   { sec: '攻める', icon: '🔥', name: '弱った相手に大技', c: 'foeLife.30', a: 'cost.大技(4以上)', where: 'mon' },
   { sec: '攻める', icon: '✨', name: '回避されない技で攻める', c: 'any', a: 'eff.回避されない', where: 'mon' },
   { sec: '守る', icon: '🧱', name: '大きい攻撃だけ守る', c: 'any', a: 'guardOver.5', where: 'mon' },
@@ -111510,7 +111547,7 @@ const CARD_REG_COMBOS = Object.freeze([
   { sec: '崩す', icon: '🃏', name: '手札の多い相手を崩す', c: 'foeHandGe.4', a: 'disrupt.手札を捨てさせる', where: 'mon' },
   { sec: '崩す', icon: '🔻', name: 'ガッツの多い相手を崩す', c: 'foeGutsGe.4', a: 'disrupt.ガッツを減らす', where: 'mon' },
   { sec: 'ブリーダー', icon: '🔋', name: 'ガッツをためる', c: 'any', a: 'save', where: 'breeder' },
-  { sec: 'ブリーダー', icon: '⏳', name: 'はじめのうちはためる', c: 'turnLe.3', a: 'save', where: 'breeder' },
+  { sec: 'ブリーダー', icon: '⏳', name: '初めのうちはためる', c: 'turnLe.3', a: 'save', where: 'breeder' },
   { sec: 'ブリーダー', icon: '🛡️', name: '守りのカードはガッツにしない', c: 'any', a: 'keepGuard', where: 'breeder' },
   { sec: 'ブリーダー', icon: '🌐', name: '相手が3体なら全体カード', c: 'foeAlive.3', a: 'fieldCard', where: 'breeder' },
   { sec: 'ブリーダー', icon: '💚', name: 'ピンチなら回復', c: 'myLife.50', a: 'bEff.回復する', where: 'breeder' },
@@ -111531,7 +111568,7 @@ const cardRegSmartNextText = (frames, lv) => {
   const base = f.base.filter(Boolean).length;
   const rows = cardTacticCountedRows(f);
   const now = cardTacticSmartLevel(f);
-  if (now === 'legend') return 'いちばん上の LEGEND です。';
+  if (now === 'legend') return '一番上の LEGEND です。';
   const next = CARD_TACTIC_SMART[CARD_TACTIC_SMART.indexOf(now) + 1];
   const label = CARD_SHARE_SMART_LABEL[next];
   if (next === 'master') return `次の ${label} まで: 基本カードをあと${2 - base}枚、または、ちゃんと効く戦術カードをあと${Math.max(1, 4 - rows)}枚。`;
@@ -111603,7 +111640,7 @@ const CardRegComboSheet = ({ tactics, where, title, onPick, onCustom, onClose })
           </div>
         ))}
       </div>
-      <button type="button" data-card-reg-custom onClick={() => { Audio_.fgSe.tap(); onCustom(); }} className="mh-button min-h-[48px] w-full rounded-2xl font-black">自分で組み合わせる(条件と行動を別々にえらぶ)</button>
+      <button type="button" data-card-reg-custom onClick={() => { Audio_.fgSe.tap(); onCustom(); }} className="mh-button min-h-[48px] w-full rounded-2xl font-black">自分で組み合わせる(条件と行動を別々に選ぶ)</button>
     </div>
   );
 };
@@ -111678,7 +111715,7 @@ const CardRegMonSheet = ({ db, deck, k, rows, max, why, name, counts, baseName =
             <small className="block text-[11px] font-bold text-sky-200">上から順に見て、<u>最初に当てはまった1つ</u>だけを使います</small>
             <span className="mt-1 inline-block rounded-full bg-white/10 px-2 py-0.5 text-[11px] font-black text-white">{`${rows.length}枚 / 入れられる ${max}枚`}</span>
           </div>
-          <button type="button" aria-label="とじる" data-card-reg-mon-close onClick={onClose} className="self-start px-2 text-[22px] text-slate-400">✕</button>
+          <button type="button" aria-label="閉じる" data-card-reg-mon-close onClick={onClose} className="self-start px-2 text-[22px] text-slate-400">✕</button>
         </div>
         <CardRegRows rows={rows} why={why} onRows={onRows} baseName={baseName} rest="(攻撃のときは、ほかのモンスター・ブリーダーの手も見てから)"/>
         {rows.length < max
@@ -111751,7 +111788,7 @@ const CardRegTrialSheet = ({ db, deck, battle, aces, monName, onClose }) => {
   const wins = res.filter((r) => r.win).length;
   return (
     <div data-card-reg-trial={done ? 'done' : 'run'} className="fixed inset-0 z-[82] flex flex-col bg-slate-950 p-3" style={cardSafePad('.75rem')}>
-      <ScreenHead title="ためしに戦わせる" accent="text-violet-200" onBack={onClose} note={`いまの戦い方で、助手(MASTER)と${CARD_REG_TRIAL_GAMES}戦`}/>
+      <ScreenHead title="試しに戦わせる" accent="text-violet-200" onBack={onClose} note={`いまの戦い方で、助手(MASTER)と${CARD_REG_TRIAL_GAMES}戦`}/>
       <div className="min-h-0 flex-1 space-y-2 overflow-y-auto pb-3">
         <div className={`${SCREEN_PANEL_CLASS} py-2 text-center`}>
           {done ? <b data-card-reg-trial-wins={wins} className="text-[18px] font-black text-amber-200">{`${CARD_REG_TRIAL_GAMES}戦 ${wins}勝`}</b>
@@ -111779,10 +111816,10 @@ const CardRegTrialSheet = ({ db, deck, battle, aces, monName, onClose }) => {
               <small className="block text-[10px] font-bold text-slate-400">{`${x.by} ・ 上の行が先に当てはまっていたか、その場面が来なかった`}</small>
             </div>
           ))}
-          <p className="text-[11px] font-bold leading-snug text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('ためしの対戦は、ビートP・記録・ランクに数えません。自分で打つ対戦では戦術カードは使われません(ほかのブリーダーがこのデッキと戦うときに使われます)')}</p>
+          <p className="text-[11px] font-bold leading-snug text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('試しの対戦は、ビートP・記録・ランクに数えません。自分で打つ対戦では戦術カードは使われません(ほかのブリーダーがこのデッキと戦うときに使われます)')}</p>
         </>)}
       </div>
-      {done && <button type="button" data-card-reg-trial-close onClick={onClose} className="mh-button mh-button-primary min-h-[48px] w-full rounded-2xl font-black">戦い方にもどる</button>}
+      {done && <button type="button" data-card-reg-trial-close onClick={onClose} className="mh-button mh-button-primary min-h-[48px] w-full rounded-2xl font-black">戦い方に戻る</button>}
     </div>
   );
 };
@@ -111808,11 +111845,11 @@ const CardRegTemplateSheet = ({ db, deck, tactics, open, lv, aces, monName, onPi
   };
   return (
     <div data-card-reg-templates className="fixed inset-0 z-[82] flex flex-col bg-slate-950 p-3" style={cardSafePad('.75rem')}>
-      <ScreenHead title="おすすめの組み方" accent="text-amber-200" onBack={onClose} note="えらぶと、3体とブリーダーの戦い方がまとめて入ります(いまの戦い方は置きかわります)"/>
+      <ScreenHead title="おすすめの組み方" accent="text-amber-200" onBack={onClose} note="選ぶと、3体とブリーダーの戦い方がまとめて入ります(いまの戦い方は置きかわります)"/>
       <div className="min-h-0 flex-1 space-y-2 overflow-y-auto pb-3">
         <button type="button" data-card-reg-auto disabled={auto === 'run'} onClick={() => { Audio_.fgSe.tap(); runAuto(); }}
           className="mh-button w-full rounded-2xl border-2 border-dashed border-sky-300 bg-sky-950/60 py-3 text-[14px] font-black text-sky-50 disabled:opacity-60" style={JA_WRAP_STYLE}>
-          {auto === 'run' ? '4つの型を、ためしに戦わせています…' : `🎲 おまかせ(4つの型をためしに${CARD_REG_AUTO_GAMES}戦ずつ戦わせて、いちばん勝った型で組む)`}
+          {auto === 'run' ? '4つの型を、試しに戦わせています…' : `🎲 おまかせ(4つの型を試しに${CARD_REG_AUTO_GAMES}戦ずつ戦わせて、一番勝った型で組む)`}
         </button>
         {CARD_REG_STYLES.map((s) => {
           const f = cardRegApplyStyle(s, tactics, open);
@@ -111963,7 +112000,7 @@ const CardDeckRegister = ({ db, decks, collection, frame = null, onBack, onOpenL
         {msg && step !== 'done' && <p data-card-reg-msg className="rounded-xl bg-slate-900 p-2 text-[13px] font-bold text-amber-100" style={JA_WRAP_STYLE}>{jaWrap(msg)}</p>}
         {step === 'deck' && (<>
           {mineBox}
-          <p className="text-[16px] font-black text-white">登録するデッキをえらんでください</p>
+          <p className="text-[16px] font-black text-white">登録するデッキを選んでください</p>
           {list.map((d) => {
             const why = issuesOf(d);
             return (
@@ -111992,7 +112029,7 @@ const CardDeckRegister = ({ db, decks, collection, frame = null, onBack, onOpenL
             <span className="w-10 text-center text-[28px]">✏️</span>
             <span className="min-w-0 flex-1"><b className="block text-[15px] font-black text-white">自分で細かく決める</b><small className="block text-[11px] font-bold text-slate-300" style={JA_WRAP_STYLE}>3体それぞれに、戦術カードを1枚ずつセットします(今のセットから直せます)</small></span>
           </button>
-          <p className="text-[11px] font-bold text-slate-400" style={JA_WRAP_STYLE}>えらぶと、持っている戦術カードから、その戦い方に合う物を3体それぞれに自動でセットします。次の画面で中身を見られます。</p>
+          <p className="text-[11px] font-bold text-slate-400" style={JA_WRAP_STYLE}>選ぶと、持っている戦術カードから、その戦い方に合う物を3体それぞれに自動でセットします。次の画面で中身を見られます。</p>
         </>)}
         {/* 2026-10-30 社長「基本カード/ブリーダーカード/各モンスターカードを、見やすくわかりやすく設定できるように」→ 案B:
             ①基本の型 ②ブリーダーの手 ③モンスターごとの手 を1画面に、色と番号で分けて並べる。モンスターを押すと下からその子の手 */}
@@ -112012,7 +112049,7 @@ const CardDeckRegister = ({ db, decks, collection, frame = null, onBack, onOpenL
                     <small className="text-[10px] font-black text-amber-200">{i === 0 ? 'メイン' : `サブ${i}`}</small>
                     {locked ? <><span className="text-[20px]">🔒</span><small className="text-[10px] font-black text-slate-300">{lockAt ? `ランク${lockAt}で` : ''}</small></>
                       : c ? <><b className="mt-0.5 block text-[14px] font-black leading-tight text-white" style={JA_WRAP_STYLE}>{c.name}</b><small className="mt-auto line-clamp-3 text-[10px] font-bold leading-snug text-orange-50" style={JA_WRAP_STYLE}>{cardJaWrap(c.desc)}</small></>
-                        : <b className="mt-1 text-[13px] font-black text-amber-100">＋ えらぶ</b>}
+                        : <b className="mt-1 text-[13px] font-black text-amber-100">＋ 選ぶ</b>}
                   </button>
                 );
               })}
@@ -112048,7 +112085,7 @@ const CardDeckRegister = ({ db, decks, collection, frame = null, onBack, onOpenL
           <button type="button" data-card-reg-template-open disabled={!deck} onClick={() => { Audio_.fgSe.tap(); setTpl(true); }}
             className="mh-button min-h-[48px] w-full rounded-2xl border-2 border-amber-400 bg-amber-900/40 text-[14px] font-black text-amber-50 disabled:opacity-40">📋 おすすめの組み方・おまかせ</button>
           <button type="button" data-card-reg-trial-open disabled={!deck || !!issuesOf(deck).length} onClick={() => { Audio_.fgSe.tap(); setTrial(true); }}
-            className="mh-button min-h-[48px] w-full rounded-2xl border-2 border-violet-400 bg-violet-900/60 text-[14px] font-black text-violet-50 disabled:opacity-40">{`▶ ためしに戦わせる(助手と${CARD_REG_TRIAL_GAMES}戦・よく働いたカード)`}</button>
+            className="mh-button min-h-[48px] w-full rounded-2xl border-2 border-violet-400 bg-violet-900/60 text-[14px] font-black text-violet-50 disabled:opacity-40">{`▶ 試しに戦わせる(助手と${CARD_REG_TRIAL_GAMES}戦・よく働いたカード)`}</button>
         </>)}
         {step === 'confirm' && (<>
           <p className="text-[16px] font-black text-white">この内容で登録します</p>
@@ -112066,7 +112103,7 @@ const CardDeckRegister = ({ db, decks, collection, frame = null, onBack, onOpenL
             {smartNext && <p data-card-reg-smart-next className="mt-1 rounded-lg bg-amber-500/10 px-2 py-1 text-[11px] font-bold leading-snug text-amber-100" style={JA_WRAP_STYLE}>{jaWrap(smartNext)}</p>}
           </div>
           <div data-card-reg-aces className={`${SCREEN_PANEL_CLASS} py-2`}>
-            <div className="flex items-center gap-2 text-[13px] font-black text-white">切り札 <span className="text-[12px] text-amber-200">{aces === 'auto' ? 'おまかせ' : '自分でえらぶ'}</span>
+            <div className="flex items-center gap-2 text-[13px] font-black text-white">切り札 <span className="text-[12px] text-amber-200">{aces === 'auto' ? 'おまかせ' : '自分で選ぶ'}</span>
               <button type="button" data-card-reg-aces-toggle onClick={() => setAces((a) => (a === 'auto' ? cardRegAutoAces(db, deck) : 'auto'))} className="ml-auto text-[12px] font-black text-sky-300">{aces === 'auto' ? '変える ›' : 'おまかせに戻す'}</button></div>
             <small className="block text-[11px] font-bold text-slate-400" style={JA_WRAP_STYLE}>{`出せるときに優先して使うカード: ${acesNow.map((no) => (cardOf(db, no) || {}).name).filter(Boolean).join('・') || 'なし'}`}</small>
             {aces !== 'auto' && (
@@ -112085,11 +112122,11 @@ const CardDeckRegister = ({ db, decks, collection, frame = null, onBack, onOpenL
           {onOpenMarket && <button type="button" data-card-reg-market onClick={() => { Audio_.fgSe.tap(); onOpenMarket(); }} className="mh-button min-h-[48px] w-full rounded-2xl font-black">戦術カードを引く(マーケット)</button>}
         </>)}
       </div>
-      {step === 'deck' && footer(null, <button type="button" data-card-reg-next disabled={!deck || issuesOf(deck).length > 0} onClick={() => { Audio_.fgSe.tap(); setStep('style'); }} className="mh-button mh-button-primary min-h-[52px] flex-1 rounded-2xl font-black disabled:opacity-40">次へ(戦い方をえらぶ)</button>)}
+      {step === 'deck' && footer(null, <button type="button" data-card-reg-next disabled={!deck || issuesOf(deck).length > 0} onClick={() => { Audio_.fgSe.tap(); setStep('style'); }} className="mh-button mh-button-primary min-h-[52px] flex-1 rounded-2xl font-black disabled:opacity-40">次へ(戦い方を選ぶ)</button>)}
       {step === 'style' && footer(back('deck'), <button type="button" data-card-reg-next disabled={!styleId} onClick={() => { Audio_.fgSe.tap(); setStep('confirm'); }} className="mh-button mh-button-primary min-h-[52px] flex-1 rounded-2xl font-black disabled:opacity-40">次へ</button>)}
       {step === 'custom' && footer(null, <button type="button" data-card-reg-next onClick={() => { Audio_.fgSe.tap(); setStep('confirm'); }} className="mh-button mh-button-primary min-h-[52px] flex-1 rounded-2xl font-black">決める(登録の確かめへ)</button>)}
       {step === 'confirm' && footer(back(styleId === 'custom' ? 'custom' : 'style'), <button type="button" data-card-reg-register disabled={busy || !deck || !selfId} onClick={() => { Audio_.fgSe.tap(); void register(); }} className="mh-button mh-button-primary min-h-[52px] flex-[2] rounded-2xl font-black disabled:opacity-40">{mine ? 'この内容で登録し直す' : 'このデッキを登録する'}</button>)}
-      {step === 'done' && footer(null, <button type="button" onClick={() => { Audio_.fgSe.tap(); onBack(); }} className="mh-button mh-button-primary min-h-[52px] flex-1 rounded-2xl font-black">とじる</button>)}
+      {step === 'done' && footer(null, <button type="button" onClick={() => { Audio_.fgSe.tap(); onBack(); }} className="mh-button mh-button-primary min-h-[52px] flex-1 rounded-2xl font-black">閉じる</button>)}
       {tpl && deck && <CardRegTemplateSheet db={db} deck={deck} tactics={tactics} open={open} lv={lv} aces={acesNow} monName={monName}
         onPick={(frames, note) => { setDraft(frames); setStyleId('custom'); setTpl(false); setMsg(note); }} onClose={() => setTpl(false)}/>}
       {trial && deck && <CardRegTrialSheet db={db} deck={deck} battle={battle} aces={acesNow} monName={monName} onClose={() => setTrial(false)}/>}
@@ -112100,7 +112137,7 @@ const CardDeckRegister = ({ db, decks, collection, frame = null, onBack, onOpenL
           onCopy={() => setDraft((f) => ({ ...f, mons: f.mons.map((r, i) => (i === monSheet ? r : f.mons[monSheet].slice(0, open.mon))) }))}
           onAuto={() => setRows(monSheet, cardTacticAutoFill(tactics, draft.mons[monSheet], 'monster', open.mon))}/>
       )}
-      {basePick !== null && <CardTacticPicker db={db} tactics={tactics} deck={deck} cat="base" title={basePick === 0 ? '基本の型(メイン)をえらぶ' : `基本の型(サブ${basePick})をえらぶ`} allowNone={basePick > 0}
+      {basePick !== null && <CardTacticPicker db={db} tactics={tactics} deck={deck} cat="base" title={basePick === 0 ? '基本の型(メイン)を選ぶ' : `基本の型(サブ${basePick})を選ぶ`} allowNone={basePick > 0}
         onClose={() => setBasePick(null)} onPick={(id) => { setDraft((f) => ({ ...f, base: f.base.map((x, i) => (i === basePick ? id : x)) })); setBasePick(null); }}/>}
       {sheet && <CardRegComboSheet tactics={tactics} where={sheet.where} title={sheet.where === 'breeder' ? 'ブリーダーの戦い方' : `${monName(sheet.k)}の戦い方`}
         onClose={() => setSheet(null)} onPick={(row) => { setRows(sheet.k, [...rowsOf(sheet.k), row].slice(0, maxOf(sheet.k))); setSheet(null); }}

@@ -10,7 +10,7 @@
 //   B. 何万回か開けて割合を出す: レア度の割合・同じレア度の中は同じ確率(？？？の子もふつう・持っていない子を出やすくしない)・技の枠も同じ確率・
 //      天井(キラなしで7パック開けたら8パック目はキラ以上)・だぶり(技は4枚目から5・モンスター 50/100/200)・売り場の「提供割合」の表が実際と合う
 //   C. お金(台帳 #120・#34・#35・#131): 助手と対戦の勝ち 80/110/140/170/200・負けは勝ちの 3/4(切り捨て)を自分の番10回で満額・
-//      自分の番が3回より前は0・降参は倒した数・その日はじめての勝ち +50 は1日1回(マルチと合わせて)・マルチは勝ち400/負け150/抜けた0
+//      自分の番が3回より前は0・降参は倒した数・その日初めての勝ち +50 は1日1回(マルチと合わせて)・マルチは勝ち400/負け150/抜けた0
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
@@ -202,9 +202,9 @@ E.CARD_PACKS.forEach((p, pi) => {
       check(`C ${lv}: 降参(倒した${k}体)は ${Math.min(LOSE[lv], k * 10)}(負けの数まで)`, s.base === Math.min(LOSE[lv], k * 10) && s.bonus === 0, `${s.base}`);
     });
   });
-  // その日はじめての勝ち +50 は1日1回。負け・降参・0の試合には付かない
+  // その日初めての勝ち +50 は1日1回。負け・降参・0の試合には付かない
   const w1 = E.cardCpuReward(day, 'easy', 'win', { ownTurns: 6, kos: 3 });
-  check('C その日はじめての勝ちは +50', w1.bonus === E.CARD_FIRST_WIN_BONUS && E.CARD_FIRST_WIN_BONUS === 50 && w1.total === 80 + 50 && w1.daily.firstWin === true);
+  check('C その日初めての勝ちは +50', w1.bonus === E.CARD_FIRST_WIN_BONUS && E.CARD_FIRST_WIN_BONUS === 50 && w1.total === 80 + 50 && w1.daily.firstWin === true);
   const w2 = E.cardCpuReward(w1.daily, 'master', 'win', { ownTurns: 6, kos: 3 });
   check('C 2回目の勝ちには +50 が付かない', w2.bonus === 0 && w2.total === 200);
   check('C 負け・降参・自分の番2回の勝ちには +50 が付かない', E.cardCpuReward(day, 'easy', 'lose', { ownTurns: 10, kos: 0 }).bonus === 0 && E.cardCpuReward(day, 'easy', 'surrender', { ownTurns: 10, kos: 3 }).bonus === 0 && E.cardCpuReward(day, 'easy', 'win', { ownTurns: 2, kos: 3 }).bonus === 0);
