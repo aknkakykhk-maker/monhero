@@ -11,7 +11,7 @@
 //   node tools/ctx.js asked <語> [<語>…]       … 社長に聞く前に: その語の決めごとを台帳から新しい順に短く(表の状態つき)
 //   node tools/ctx.js todo --all [部] / --json [部] / --count
 //
-// 状態: 未依頼 → 依頼済み → 作業中 → 確認待ち → 完了(ほかに やめた・上書き済み=後の決めごとで変わった)
+// 状態: 未依頼 → 依頼済み → 作業中 → 確認待ち → 完了(ほかに 止め中=一時止めた・閉じない/やめた・上書き済み=後の決めごとで変わった)
 //
 // 【なぜあるか】(2026-11-14 社長「なんかお願いしたのに漏れてるの多いのは何で?」)
 // 決めごとは台帳(docs/rules/PRESIDENT_DECISIONS.md)に書いていたが、「どの部に頼んだか・できたか」を追う物が無かった。
@@ -28,7 +28,8 @@ const { ROOT, loadDepts, findDept, today, cut, deptList } = require('./lib');
 
 const FILE = path.join(__dirname, 'requests.json');
 const LEDGER = path.join(ROOT, 'docs', 'rules', 'PRESIDENT_DECISIONS.md');
-const STATES = ['未依頼', '依頼済み', '作業中', '確認待ち', '完了', 'やめた', '上書き済み'];
+const STATES = ['未依頼', '依頼済み', '作業中', '確認待ち', '止め中', '完了', 'やめた', '上書き済み'];
+// 止め中 = 優先順位などで一時止めた頼み。閉じない(完了でない物に数え、毎回 ★ で出し続ける)。メモに止めた理由を書く(2026-11-15 社長「頼んだことをなくさないようにしろ」)
 const CLOSED = ['完了', 'やめた', '上書き済み'];
 const STALE_DAYS = 2; // 依頼済み・作業中・確認待ちのまま、この日数を超えたら ★(止まっていないか窓口が確かめる)
 const DATED = /^- (20\d\d-\d\d-\d\d) (.+)$/;
@@ -115,7 +116,7 @@ function sync(j) {
 }
 
 const line = (r, width) => `- ${r.id} [${r['状態']}${stale(r) ? '★' : ''}] ${r['会話'] ? r['会話'] + ': ' : ''}${cut(r['中身'], width || 96)}${r.PR.length ? ' ' + r.PR.join(' ') : ''}`;
-const stale = (r) => ['依頼済み', '作業中', '確認待ち'].includes(r['状態']) && daysSince(r['更新'] || r['日付']) > STALE_DAYS;
+const stale = (r) => r['状態'] === '止め中' || (['依頼済み', '作業中', '確認待ち'].includes(r['状態']) && daysSince(r['更新'] || r['日付']) > STALE_DAYS);
 const rank = (r) => STATES.indexOf(r['状態']); // 未依頼がいちばん上
 
 // その部の完了でない頼み(newsession・handoff・brief・フックが使う)

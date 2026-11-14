@@ -197,7 +197,7 @@ const step = (s, c, st) => {
       if (!won && s2.debutLoss !== lossBefore + 1) fail(`${where}: デビュー戦の負けが1つずつ増えない: ${lossBefore}→${s2.debutLoss}`);
       if (!won) st.debutLossSeen += 1;
     }
-    if (b.kind === 'summit' && !won && s2.over !== 'lost') fail(`${where}: 頂への道で負けても終わらない`);
+    if (b.kind === 'summit' && !won && s2.over !== 'lost') fail(`${where}: ヒーローズファイナルで負けても終わらない`);
     st.battles += 1; if (won) st.wins += 1;
     checkState(s2, `${where} settle`);
     let s3 = s2;
@@ -349,7 +349,7 @@ if (idDiff.size) fail(`restore で戻すと、保存した途中の状態と中�
 const must = [
   [ends.done > 0, '最後まで育て終えた回が1つも無い'],
   [ends.gameover > 0, 'デビュー戦3回負けのゲームオーバーを1回も通っていない'],
-  [ends.lost > 0, '頂への道で負けて終わる回を1回も通っていない'],
+  [ends.lost > 0, 'ヒーローズファイナルで負けて終わる回を1回も通っていない'],
   [total.debutRematch > 0, 'デビュー戦の砂時計のやり直しを1回も通っていない'],
   [total.meal > 0, '大会のあとのごはんを1回も通っていない'],
   [total.items > 0, '育成中のアイテムを1回も使っていない'],

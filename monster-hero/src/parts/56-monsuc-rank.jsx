@@ -272,7 +272,7 @@ function MonsucRankScreen({ onBack }) {
   const totalText = data && Number.isFinite(data.total) ? `${data.total.toLocaleString()}${tab === 'lineage' ? '体' : '件'}` : '';
   return <div className="fixed inset-0 z-[60] flex flex-col text-white" style={{ background: 'linear-gradient(180deg,#1e1b4b 0%,#0f172a 100%)' }}>
     <div className="flex items-center gap-2 px-3 pt-3">
-      <button type="button" onClick={onBack} className="rounded-full bg-slate-700/80 px-3 py-1 text-[12px] font-bold">← もどる</button>
+      <button type="button" onClick={onBack} className="rounded-full bg-slate-700/80 px-3 py-1 text-[12px] font-bold">← 戻る</button>
       <div className="text-[13px] font-black text-pink-300">🌱 モンヒロサクセス</div>
     </div>
     <div className="px-3 pt-2">
@@ -299,7 +299,7 @@ function MonsucRankScreen({ onBack }) {
       <MonsucRankRow row={mine} pinned open={open === `me:${mine.run_id}`} onToggle={() => setOpen(o => (o === `me:${mine.run_id}` ? null : `me:${mine.run_id}`))} />
     </div>}
     <div className="grid grid-cols-2 gap-2 px-3 pb-3 pt-1">
-      <button type="button" onClick={onBack} className="rounded-full bg-slate-700/80 py-2 text-[13px] font-bold">← もどる</button>
+      <button type="button" onClick={onBack} className="rounded-full bg-slate-700/80 py-2 text-[13px] font-bold">← 戻る</button>
       <div className="rounded-full bg-yellow-300 text-slate-900 py-2 text-[12px] font-black text-center">{tab === 'lineage' ? '血統は 種類のまとまり' : '押すと6能力が開く'}</div>
     </div>
   </div>;
