@@ -17,7 +17,7 @@ function AssistantLifeBondRoad({ id, points = null, level = null, land = false }
     <div className={`rounded-2xl border border-pink-300/70 bg-pink-950/60 px-3 py-2 ${land ? 'mt-1.5' : 'mt-2'}`} data-assistant-life-bond-road={lv}>
       <p className="flex items-baseline gap-2 text-[13px] font-black text-pink-50">💗 仲良し度 <b className="text-[16px]">Lv{lv}</b>
         {next && <span className="ml-auto text-[11.5px] font-bold text-pink-200" data-assistant-life-bond-road-remain={next.remain}>あと {next.remain} で Lv{next.level}</span>}
-        {!next && <span className="ml-auto text-[11.5px] font-bold text-pink-200">いちばん上まで来ました</span>}
+        {!next && <span className="ml-auto text-[11.5px] font-bold text-pink-200">一番上まで来ました</span>}
       </p>
       <div className="mt-1 h-2 overflow-hidden rounded-full bg-white/15"><i className="block h-full rounded-full bg-pink-400" style={{ width: `${pct}%` }}/></div>
       {next && opens.length > 0 && <p className="mt-1 text-[11.5px] font-bold leading-snug text-pink-100" style={JA_WRAP_STYLE} data-assistant-life-bond-road-opens>{jaWrap(`Lv${next.level} で: ${opens.join('・')}`)}</p>}
@@ -33,7 +33,7 @@ function AssistantLifeDoRow({ k, icon, label, sub = '', gain = '', on = null, di
       <span className="w-7 shrink-0 text-center text-[22px] leading-none" aria-hidden="true">{icon}</span>
       <span className="min-w-0 flex-1">
         <b className="block text-[14px] leading-tight text-white">{label}</b>
-        {(off && why ? why : sub) && <small className="block text-[11.5px] font-bold leading-snug text-slate-300" style={JA_WRAP_STYLE}>{jaWrap(off && why ? why : sub)}</small>}
+        {(off && why ? why : sub) && <small className="block text-[11.5px] font-bold leading-snug text-slate-300" style={JA_WRAP_STYLE}>{(() => { const t = off && why ? why : sub, m = String(t).match(/^(.*?)(\([^()]{1,9}\))$/); return m && m[1] ? <>{jaWrap(m[1])}<span className="whitespace-nowrap">{m[2]}</span></> : jaWrap(t); })()}</small>}
       </span>
       {gain && !off && <span className="shrink-0 text-right text-[11.5px] font-black leading-tight text-emerald-300" data-assistant-life-room-do-gain>{gain}</span>}
     </button>);

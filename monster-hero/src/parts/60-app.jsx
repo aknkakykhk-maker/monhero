@@ -20886,7 +20886,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             )}
             {!systemRankTab&&<div className={`relative z-[1] flex min-h-0 flex-1 flex-col overflow-y-auto landscape:flex-row landscape:overflow-hidden ${assistShown?'':'portrait:justify-center'}`}>
               <ModeSelectAssistantPanel assistant={battleSelectAssistant} showArt={battleSelectAssist.modeSelectArt} showComment={battleSelectAssist.modeSelectComment} onToggle={toggleBattleSelectAssist}/>
-              <div className="shrink-0 space-y-2 p-3 landscape:flex landscape:min-h-0 landscape:flex-1 landscape:shrink landscape:flex-col landscape:justify-center landscape:overflow-y-auto landscape:py-2">
+              <div className="shrink-0 space-y-2 p-3 landscape:flex landscape:min-h-0 landscape:flex-1 landscape:shrink landscape:flex-col landscape:justify-center landscape:[justify-content:safe_center] landscape:overflow-y-auto landscape:py-2">
                 {!assistShown&&battleSelectAssistant&&<ModeSelectAssistToggles assistant={battleSelectAssistant} showArt={battleSelectAssist.modeSelectArt} showComment={battleSelectAssist.modeSelectComment} onToggle={toggleBattleSelectAssist} cls="justify-end" withLabel/>}
                 <div data-battle-systems={systems.length} className={`flex flex-col gap-2${battleTutorialSpotClass('systemCards')}`}>
                   {systems.map((sys,idx)=>{
@@ -20938,6 +20938,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   <button data-battle-system-help type="button" disabled={!!battleTutorial} onClick={()=>openHelp()}
                     className="mhms-glass flex min-h-[48px] min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-xl px-1 leading-none text-amber-100 active:scale-95 disabled:opacity-40"><span aria-hidden="true" className="text-lg">📖</span><b className="text-[11px] font-black">ヘルプ</b></button>
                 </div>
+                {typeof AssistantLifeBattleHall==='function'&&!battleTutorial&&<AssistantLifeBattleHall metIds={assistantsUnlockedFrom(rhythmEventStorySeen).filter(who=>who.id!=='momosuke'||momosukeIntroSeenFlag).map(who=>who.id)}/>}
               </div>
             </div>}
           </div>);
@@ -24533,7 +24534,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       {/* マーケットの商品アイコンを大きく見る。カードの中では小さいので、絵を確かめたいとき用。
           アイコンはプロフィール画像になるので、実際に使われるのと同じ丸い形で出す */}
       {marketIconZoom&&(()=>{const item=marketIconZoom;const round=item.type==='icon'||item.type==='assist';return(
-        <MarketModal narrow label={`${item.name}の拡大表示`} onClose={()=>setMarketIconZoom(null)}>
+        <MarketModal narrow={item.type!=='song'} label={`${item.name}の拡大表示`} onClose={()=>setMarketIconZoom(null)}>
           <div className="flex flex-col items-center gap-3">
             {item.type==='frame'?(
               /* プロフィールフレームの拡大(2026-10-03)。買う前に「自分のアイコンに付けるとどう見えるか」が分かるよう、自分のアイコンへ重ねて出す。
@@ -24542,7 +24543,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 <ProfileAvatar src={resolveIconUrl(breederIcon)} id={breederIcon} frameId={item.id} alt={item.name} className="h-40 w-40" fallback={<span className="h-full w-full rounded-full bg-slate-800/80"/>}/>
               </div>
             ):
-            <div className={`w-full aspect-square overflow-hidden bg-black/40 border border-white/10 flex items-center justify-center ${round?'rounded-full':'rounded-2xl'}`}>
+            <div className={`w-full aspect-square overflow-hidden bg-black/40 border border-white/10 flex items-center justify-center ${round?'rounded-full':'rounded-2xl'}`} style={item.type==='song'?{maxWidth:'min(100%, max(240px, calc(var(--mh-vh) - 190px)))'}:undefined}>
               {item.icon
                 ? (item.type==='icon'?<BreederIcon src={item.icon} id={item.id} alt={item.name} className="w-full h-full"/>:item.type==='assist'&&ASSIST_CARD_ICON_STYLES[item.id]?<AssistCardIcon icon={item.icon} cardId={item.id} className="w-full h-full"/>:<img src={item.icon} alt={item.name} className={`w-full h-full ${round?'object-cover':'object-contain'}`}/>)
                 : <span style={{fontSize:'96px'}}>{item.emoji}</span>}

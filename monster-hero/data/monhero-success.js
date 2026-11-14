@@ -136,15 +136,16 @@
   const COND = Object.freeze({
     injLowHp: 0.3, injTrain: 0.08, injLen: [1, 2],
     illStress: 70, illRate: 0.10, illLen: 1,
-    awayLoyal: 20, awayStress: 80, awayRate: 0.2, awayLen: 1, awayAma: -8, awayFear: -4,
+    awayLoyal: 20, awayStress: 80, awayRate: 0.2, awayLen: 1, awayAma: 0, awayFear: 0, // 家出でも甘え度・恐れ度は下げない(社長 2026-11-14)
+   
     rec: 0.3, sorashido: 0.7,
   });
 
   // ---- 忠誠度 = 甘え度 + 恐れ度(各50まで・ASSIST §4c) ----
   const LOYAL = Object.freeze({
     half: 50, start: [10, 10], capBoost: 60, // 補正 = 1 + min(忠誠,60)/100
-    praiseGood: [4, 0], praiseBad: [2, -2], scoldBad: [0, 4], scoldGood: [-3, 1],
-    win: [2, 0], loseScold: [0, 3], idleTurns: 4, idle: [-1, -1],
+    praiseGood: [4, 0], praiseBad: [2, 0], scoldBad: [0, 4], scoldGood: [0, 1], // 甘え度・恐れ度は下げない(社長 2026-11-14「マイナスになると忠誠度が下がる」)
+    win: [2, 0], loseScold: [0, 3], idleTurns: 4, idle: [0, 0],
     // ターンの終わりに、残りの体力で忠誠度が育つ(2026-11-14 社長・台帳 #6108): 上限の50%以上なら甘え度+1・下なら恐れ度+1。方針の段の補正は addLoyal のまま
     turnHpLine: 0.5, turnAma: 1, turnFear: 1,
   });
@@ -302,10 +303,10 @@
     juice: { name: 'ガロエ印の野菜ジュース', use: 'during', hpFull: true },                 // 体力を完全に回復
     powder: { name: '悪様散', use: 'during', cure: true, hp: 0.3 },               // 悪いようすを治して体力を回復
     license: { name: 'ブリーダーライセンス', use: 'during', ama: 10, fear: 10 },       // 甘え度 +10・恐れ度 +10(忠誠度 +20。2026-11-13 社長)
-    pack: { name: 'オイリーパック', use: 'during', gives: { oilyoil: 2, herb: 1 } }, // 中身はオイリーオイル2個と薬草(2026-11-13 社長: 案)
-    oil: { name: 'オイル', use: 'during', hp: 0.2 },                                 // 小さいオイル(体力 上限の20%。2026-11-13 社長)
-    oilyoil: { name: 'オイリーオイル', use: 'during', hp: 0.4 },                     // 大きいオイル(体力 上限の40%。2026-11-13 社長)
-    herb: { name: '薬草', use: 'during', stress: -20 },                          // 詰め合わせの中身(ストレス −20)
+    pack: { name: 'オイリーパック', use: 'during', gives: { oilyoil: 2, herb: 1 } }, // 中身はオイリーオイル（大）2個と夏美草(2026-11-13 社長: 案)
+    oil: { name: 'オイリーオイル（小）', use: 'during', hp: 0.2 },                     // 2026-11-14 社長「オイリーオイル(小)とかでいいよ」。 小さいオイル(体力 上限の20%。2026-11-13 社長)
+    oilyoil: { name: 'オイリーオイル（大）', use: 'during', hp: 0.4 },                 // 大きいオイル(体力 上限の40%。2026-11-13 社長)
+    herb: { name: '夏美草', use: 'during', stress: -20 },                          // 2026-11-14 社長「薬草は夏美草」。 詰め合わせの中身(ストレス −20)
     // 大会の賞品(2026-11-13 大会の第2版)。秘薬=そのターンの修行でその間合いの技を覚えやすい/実=そのターンの訓練でその能力が伸びやすい
     elixir0: { name: '零の秘薬', use: 'during', elixir: 0 }, elixir1: { name: '近の秘薬', use: 'during', elixir: 1 },
     elixir2: { name: '中の秘薬', use: 'during', elixir: 2 }, elixir3: { name: '遠の秘薬', use: 'during', elixir: 3 },
@@ -313,6 +314,10 @@
     fruit_wise: { name: 'ちえの実', use: 'during', fruit: 'wise' }, fruit_hit: { name: 'ねらいの実', use: 'during', fruit: 'hit' },
     fruit_eva: { name: 'かわしの実', use: 'during', fruit: 'eva' }, fruit_tough: { name: 'かたさの実', use: 'during', fruit: 'tough' },
     stamina: { name: 'スタミナだんご', use: 'during', hpMax: 15 }, // モンスターダービーの賞品: 使うと体力の最大値 +15(体力も同じだけ回復)
+    // 覚醒の実・超覚醒の実(2026-11-13 社長 r1113-038・053)。使うとその場で起きる(中身は AWAKE と同じ: 全能力 +30/+40・間合いの適性 1段/2段)
+    //   覚醒の実: 覚醒していない子に、育成中いつでも(参考 mo-14「育成中に覚醒する」)/ 超覚醒の実: 期の条件なし・覚醒していなければ覚醒してから超覚醒まで(覚醒の実の完全な上位互換)
+    awakeFruit: { name: '覚醒の実', use: 'during', awake: 1 },
+    superAwakeFruit: { name: '超覚醒の実', use: 'during', awake: 2 },
   });
   const GOOD = Object.freeze({
     eventMaker: { name: 'イベントメーカー', eventRate: 0.25 },              // 編成の子との出来事 +25%(50% → 75%。2026-11-13 社長)
@@ -341,14 +346,16 @@
   const MEALS = Object.freeze({
     vitamin: { name: 'ビタミンもどき', hp: 0.2, fear: 3 },               // 体力 上限の20%回復・恐れ度 +3
     gochiso: { name: 'ごちそうもどき', hp: 0.2, ama: 3 },                // 体力 上限の20%回復・甘え度 +3
-    f_life: { name: 'もりもりニンジン', hp: 0.1, stat: 'life', add: 15 }, // 体力 上限の10%回復・その能力 +15(6種)
-    f_pow: { name: 'がっつりお肉', hp: 0.1, stat: 'pow', add: 15 },
-    f_wise: { name: 'ひらめきクルミ', hp: 0.1, stat: 'wise', add: 15 },
-    f_hit: { name: 'ねらいうちベリー', hp: 0.1, stat: 'hit', add: 15 },
-    f_eva: { name: 'ひらりリンゴ', hp: 0.1, stat: 'eva', add: 15 },
-    f_tough: { name: 'かちかちイモ', hp: 0.1, stat: 'tough', add: 15 },
-    prune: { name: 'スタープルーン', hp: 0.05, pop: 5, pts: 10 },        // 体力 上限の5%回復・人気 +5・能力ポイント +10
+    f_life: { name: 'もりもりニンジン', hp: 0.1, stat: 'life', add: 15, fear: 2 }, // 体力 上限の10%回復・その能力 +15(6種)
+    f_pow: { name: 'がっつりお肉', hp: 0.1, stat: 'pow', add: 15, ama: 2 },
+    f_wise: { name: 'ひらめきクルミ', hp: 0.1, stat: 'wise', add: 15, fear: 2 },
+    f_hit: { name: 'ねらいうちベリー', hp: 0.1, stat: 'hit', add: 15, fear: 2 },
+    f_eva: { name: 'ひらりリンゴ', hp: 0.1, stat: 'eva', add: 15, ama: 2 },
+    f_tough: { name: 'かちかちイモ', hp: 0.1, stat: 'tough', add: 15, ama: 2 },
+    prune: { name: 'スタープルーン', hp: 0.05, pop: 5, pts: 10, ama: 2 },        // 体力 上限の5%回復・人気 +5・能力ポイント +10
   });
+  // 2026-11-14 社長: ごはんでも甘え度・恐れ度が上がる(上の ama/fear。方針の段の補正は addLoyal のまま)。あげずに進んだら恐れ度 +1
+  const MEAL_SKIP_FEAR = 1;
 
   // ---- 能力ポイント(TOURNAMENT §7b) ----
   const PTS = Object.freeze({ hold: 200, line: { debut: 300, junior: 300, middle: 500, pro: 700, final: 700 } });
@@ -920,8 +927,9 @@
     const addLoyal = (s, ama, fear) => {
       if (s.yosu.utsu) return; // うつ病のあいだ忠誠度(甘え度・恐れ度)は動かない(台帳 2026-11-12)
       const i = clamp(s.pol, -3, 3) + 3;
-      s.ama = clamp(Math.round(num(s.ama) + (ama > 0 ? ama * POL_AMA[i] : ama)), 0, LOYAL.half);
-      s.fear = clamp(Math.round(num(s.fear) + (fear > 0 ? fear * POL_FEAR[i] : fear)), 0, LOYAL.half);
+      // 甘え度・恐れ度は下げない(社長 2026-11-14): 負の値は0として数える
+      s.ama = clamp(Math.round(num(s.ama) + (ama > 0 ? ama * POL_AMA[i] : 0)), 0, LOYAL.half);
+      s.fear = clamp(Math.round(num(s.fear) + (fear > 0 ? fear * POL_FEAR[i] : 0)), 0, LOYAL.half);
     };
     const addXp = (s, x) => { s.xp += x; while (s.lv < LV_MAX && s.xp >= XP.need(s.lv)) { s.xp -= XP.need(s.lv); s.lv += 1; } };
     const recover = (s, frac) => { s.hp = clamp(Math.round(s.hp + s.hpMax * frac), 0, s.hpMax); };
@@ -1135,7 +1143,7 @@
       s.reacted = true;
       const shk = 1 + stayNum(s, 'shitsuke') / 100; const up = (x) => (x > 0 ? x * shk : x); // 📏しつけ上手: 上がる分だけ増える
       if (how === 'praise') { const d = good ? LOYAL.praiseGood : LOYAL.praiseBad; addLoyal(s, up(d[0] + (s.aid === 'mua' ? 1 : 0)), up(d[1])); const m = C.policyMove(s.pol, s.pp, -1); s.pol = m.pol; s.pp = m.pp; s.idle = 0; }
-      else if (how === 'scold') { const d = good ? LOYAL.scoldGood : LOYAL.scoldBad; addLoyal(s, up(d[0] + evMod(s, 'scold')), up(d[1])); const m = C.policyMove(s.pol, s.pp, 1); s.pol = m.pol; s.pp = m.pp; s.idle = 0; }
+      else if (how === 'scold') { const d = good ? LOYAL.scoldGood : LOYAL.scoldBad; addLoyal(s, up(d[0]), Math.max(0, up(d[1]) + evMod(s, 'scold'))); const m = C.policyMove(s.pol, s.pp, 1); s.pol = m.pol; s.pp = m.pp; s.idle = 0; }
       else { s.idle += 1; if (s.idle >= LOYAL.idleTurns) { addLoyal(s, LOYAL.idle[0], LOYAL.idle[1]); s.idle = 0; } }
       // 変わった物(画面の結果の札): 甘え度・恐れ度・忠誠度・方針
       const d = { ama: num(s.ama) - num(b0.ama), fear: num(s.fear) - num(b0.fear), loy: loyalOf(s) - b0.loy, pol: num(s.pol) - num(b0.pol) };
@@ -1152,31 +1160,48 @@
       if (key === 'stat') { KEYS.forEach(k => addStat(s, k, win ? 50 : -10)); if (!win) s.yosu.sabori = { visits: 0 }; else if (!s.titles.includes('秘めた力')) s.titles.push('秘めた力'); }
       else if (key === 'hpmax') { if (win) { s.hpMax = Math.min(HP_MAX_CAP, s.hpMax + 20); s.hp = Math.min(s.hpMax, s.hp + 20); } else s.hp = clamp(s.hp - 20, 0, s.hpMax); }
       else if (key === 'hp') { if (win) recover(s, 0.8); else { s.hp = clamp(s.hp - 30, 0, s.hpMax); s.yosu.utsu = { visits: 0 }; } }
-      else if (key === 'loyal') { if (win) { const half = 15 / 2; addLoyalRaw(s, Math.ceil(half), Math.floor(half)); } else addLoyalRaw(s, -3, -2); }
+      else if (key === 'loyal') { if (win) { const half = 15 / 2; addLoyalRaw(s, Math.ceil(half), Math.floor(half)); } } // 負けても甘え度・恐れ度は下げない(社長 2026-11-14)
       else if (key === 'pop') s.pop = clamp(s.pop + (win ? 15 : -5), 0, 100);
       if (win) s.issaWon += 1;
       s.log.issa.push(`${key}:${win ? 'win' : 'lose'}`);
       return { state: s, out: { ok: true, choice: key, win, p: r2(p) } };
     };
     // 博士の忠誠度は甘え度・恐れ度に半分ずつ(方針の倍率はかけない・うつ病なら動かない)
-    const addLoyalRaw = (s, ama, fear) => { if (s.yosu.utsu) return; s.ama = clamp(s.ama + ama, 0, LOYAL.half); s.fear = clamp(s.fear + fear, 0, LOYAL.half); };
+    const addLoyalRaw = (s, ama, fear) => { if (s.yosu.utsu) return; s.ama = clamp(s.ama + Math.max(0, num(ama)), 0, LOYAL.half); s.fear = clamp(s.fear + Math.max(0, num(fear)), 0, LOYAL.half); }; // 下げない(社長 2026-11-14)
 
-    // 大会のあとのごほうびのごはん(1回だけ・賞金を使う)
+    // 大会のあとに並ぶごはん(2026-11-14 社長「ご褒美はランダムで3個選ばれる」)。9種から3つ(同じ物は出さない)。
+    //   くじは育成ごとの決まった乱数(育成の id + 勝った回数)で引くので、開き直し・中断のあとでも引き直しにならない。
+    //   勝ったときに s.mealOpts に入れて保存する。古い途中の育成で項目が無ければ、ここで同じくじを引いて返す(同じ3つになる)
+    const MEAL_PICK = 3;
+    const mealDraw = (s) => {
+      const all = Object.keys(MEALS); const rng = rngOf(s.id, 'meal3', num(s.log && s.log.wins)); const out = []; // 勝った回数で引く(大会のあとにターンが進んでも同じ3つ)
+      while (out.length < Math.min(MEAL_PICK, all.length)) { const k = all[Math.floor(rng() * all.length)]; if (!out.includes(k)) out.push(k); }
+      return out;
+    };
+    const mealOptsOk = (x) => Array.isArray(x) && x.length === Math.min(MEAL_PICK, Object.keys(MEALS).length) && new Set(x).size === x.length && x.every(k => Object.prototype.hasOwnProperty.call(MEALS, k));
+    const mealOpts = (s) => (!s || !s.mealReady ? [] : mealOptsOk(s.mealOpts) ? s.mealOpts.slice() : mealDraw(s));
+    // 大会のあとのごほうびのごはん(1回だけ・ただ)。並んだ3つ(mealOpts)の中からだけ選べる
     const meal = (s0, key) => {
-      const s = clone(s0); const m = Object.prototype.hasOwnProperty.call(MEALS, key) ? MEALS[key] : null;
+      const s = clone(s0); const m = Object.prototype.hasOwnProperty.call(MEALS, key) && mealOpts(s0).includes(key) ? MEALS[key] : null;
       // 2026-11-14 社長: 勝ったあとのごはんはただ(賞金を使わない)。
       // えるびんの見守りの大会に勝った印 freeMeal は「次のごはんの効き目 ×1.5(1回)」に読み替える(社長の決め 2026-11-14・食いしん坊と掛け合わせ)
       if (!s.mealReady || !m || s.over) return { state: s0, out: { ok: false } };
-      s.mealReady = false;
+      s.mealReady = false; s.mealOpts = null;
       const boost = s.freeMeal === true ? MEAL_WATCH_MULT : 1; s.freeMeal = false;
       const kui = (1 + stayNum(s, 'kuishinbo') / 100) * boost; // 🍙食いしん坊: ごはんの効き目が増える(見守りの ×1.5 と掛け合わせ)
       if (m.hp) recover(s, m.hp * kui);
-      if (m.ama || m.fear) addLoyalRaw(s, Math.round((m.ama || 0) * kui), Math.round((m.fear || 0) * kui));
+      if (m.ama || m.fear) addLoyal(s, Math.round((m.ama || 0) * kui), Math.round((m.fear || 0) * kui));
       if (m.stat && KEYS.includes(m.stat)) addStat(s, m.stat, Math.round(m.add * kui));
       if (m.pop) s.pop = clamp(s.pop + popGain(s, Math.round(m.pop * kui)), 0, 100);
       if (m.pts) gainPts(s, Math.round(m.pts * kui));
       s.log.meal = (s.log.meal || 0) + 1;
       return { state: s, out: { ok: true, meal: key, boost } };
+    };
+    // ごはんをあげずに進む(恐れ度 +1)。並んだごはんが無いときは何もしない
+    const mealSkip = (s0) => {
+      if (!s0.mealReady || s0.over) return { state: s0, out: { ok: false } };
+      const s = clone(s0); s.mealReady = false; s.mealOpts = null; addLoyal(s, 0, MEAL_SKIP_FEAR);
+      return { state: s, out: { ok: true, skip: true } };
     };
 
     // 決める前の見通し(画面の「ちから +38・体力 −26・ストレス +8」): 成功のときの伸び
@@ -1218,6 +1243,7 @@
       const strs = (v, max) => (Array.isArray(v) ? v.filter(x => typeof x === 'string').slice(0, max) : []);
       out.titles = strs(raw.titles, 64); out.wonNow = strs(raw.wonNow, 128); out.wonBefore = strs(raw.wonBefore, 128);
       for (const k of ['debutWon', 'issaDone', 'issaForce', 'issaSure', 'hirameki', 'acted', 'reacted', 'mealReady', 'special', 'freeMeal', 'fourDone', 'shBoost']) out[k] = raw[k] === true;
+      out.mealOpts = out.mealReady && mealOptsOk(raw.mealOpts) ? raw.mealOpts.slice() : null; // 壊れた・無いときは null(画面は mealOpts() で同じくじを引く)
       out.elixir = raw.elixir && Number.isInteger(raw.elixir.d) && raw.elixir.d >= 0 && raw.elixir.d <= 3 ? { d: raw.elixir.d, turn: Math.round(n(raw.elixir.turn, 0, 0, TOTAL_TURNS + 1)) } : null;
       out.fruit = raw.fruit && KEYS.includes(raw.fruit.stat) ? { stat: raw.fruit.stat, turn: Math.round(n(raw.fruit.turn, 0, 0, TOTAL_TURNS + 1)) } : null;
       out.cond = raw.cond && typeof raw.cond === 'object' && ['injury', 'ill', 'away'].includes(raw.cond.kind) ? { kind: raw.cond.kind, left: Math.round(n(raw.cond.left, 1, 1, 9)) } : null;
@@ -1325,7 +1351,10 @@
     const useItem = (s0, key) => {
       const s = clone(s0); const it = ITEMS[key];
       if (!it || it.use !== 'during' || num(s.bag[key]) <= 0 || s.itemTurn === s.turn || s.over) return { state: s0, out: { ok: false } };
+      if (it.awake && !awakeItemOk(s, it.awake)) return { state: s0, out: { ok: false, why: 'awake' } };
       s.bag[key] -= 1; s.itemTurn = s.turn;
+      const fires = [];
+      if (it.awake) { if (num(s.awake) < 1) fires.push(awakeApply(s, 1)); if (it.awake >= 2) fires.push(awakeApply(s, 2)); }
       if (it.hpFull) s.hp = s.hpMax;
       if (it.hp) recover(s, it.hp);
       if (it.cure) { s.yosu = {}; }
@@ -1338,8 +1367,11 @@
       if (it.fruit) s.fruit = { stat: it.fruit, turn: s.turn };
       if (it.hpMax) { s.hpMax = Math.min(HP_MAX_CAP, s.hpMax + it.hpMax); s.hp = Math.min(s.hpMax, s.hp + it.hpMax); }
       s.log.items = (s.log.items || 0) + 1;
-      return { state: s, out: { ok: true, item: key } };
+      return { state: s, out: fires.length ? { ok: true, item: key, fires } : { ok: true, item: key } };
     };
+    // 覚醒の実を使えるか(k = 1 覚醒の実・2 超覚醒の実)。超覚醒ずみには、どちらも使えない
+    const awakeItemOk = (s, k) => (k >= 2 ? num(s.awake) < 2 : num(s.awake) < 1);
+    const itemUsable = (s, key) => { const it = ITEMS[key]; if (!it || it.use !== 'during' || !s || s.over) return false; return it.awake ? awakeItemOk(s, it.awake) : true; };
 
     // ---- ターンを閉じる(期末の強制大会・頂への道・デビュー戦の再挑戦をここで立てる) ----
     const endTurn = (s0) => {
@@ -1351,7 +1383,7 @@
       if (s.last && s.last.kind === 'retry') s.battle = { kind: 'debut', retry: s.debutLoss, round: 0 };
       else if (s.last && s.last.kind === 'cup') s.battle = { kind: 'cup', id: s.last.cup.id, sys: s.last.cup.sys, name: s.last.cup.name || null, star: s.last.cup.star, rival: s.last.cup.rival || null, round: 0 };
       else s.battle = forcedBattle(s);
-      s.acted = false; s.reacted = false; s.issaDone = false; s.last = null; s.mealReady = false;
+      s.acted = false; s.reacted = false; s.issaDone = false; s.last = null; s.mealReady = false; s.mealOpts = null;
       if (!s.battle) s.turn += 1;
       if (s.turn > TOTAL_TURNS) s.over = 'done';
       return { state: s, out: { ok: true, battle: s.battle } };
@@ -1794,6 +1826,7 @@
         } else out.rankKeep = { step: from, name: rankNameOf(from) };
       }
       s.mealReady = won; // 2026-11-13 社長: 大会に勝ったときだけごはんを選べる(負けたらなし)
+      s.mealOpts = won ? mealDraw(s) : null; // 2026-11-14 社長: 並ぶのは9種から3つ(くじ・保存して引き直しにならない)
       gainMastery(s, use); // 熟練: 出場で全部の技 +2・使った技は1回 +2(1試合で +6 まで)
       s.battle = null;
       if (b.kind === 'debut') {
@@ -1930,12 +1963,12 @@
     return Object.freeze({
       events: EV,
       VERSION, STORY, KEYS, STAT_NAMES, PERIODS, TOTAL_TURNS, FORCED, SUMMIT, BASE, RESULTS, RATE, REST, PLAY, CLINIC, COND, LOYAL, GATHER, BOND, STORY, LOTTERY,
-      GROW_BY_SPECIES, speciesType, gatherChanceOf, normStats, ASSISTS, ISSA, PTS, XP, SHUGYO, TECH_POWER, MASTERY, techRowsOf, techPowerOfRows, powerOf, techBoostOf, techUseOf, ITEMS, GOOD, CARRY_MAX, useItem, FAME_V, FAME_SCALE, TICKET_BASE, TRAIN_LV, trainLvOf, REMATCH, canRematch, rematch, canSkip, battleKey, PRIZE, BEAT_PRIZE, beatOfPrize, BEAT_END, beatOfEnd, MEALS, meal, MEAL_WATCH_MULT, ticketsOfPrize, TECH_MAX, techsOf, canLearn, techRate, learnable, techRank, shugyoQ, superLeft, techMissOf, techCanon, canonTechList, shugyoLeft, teachFrom, BENCH: BENCH_USE, STAR_MULT, TAG_POWER, BOND_START, RANK_ADD, TRAIN_COMBO, AIDS, speciesList, shugyoGainOf, EX_CUPS, EX_BY_SYS, cupItemsOf, CUP_REWARD, FAME_RANK, FAME_RANK_MAX, rankStepOf, rankNameOf, rankNeedG, WIN_TICKET, FOUR_DONE, fourWinsOf, forecastOf, ELIXIR_ADD, FRUIT_MULT,
+      GROW_BY_SPECIES, speciesType, gatherChanceOf, normStats, ASSISTS, ISSA, PTS, XP, SHUGYO, TECH_POWER, MASTERY, techRowsOf, techPowerOfRows, powerOf, techBoostOf, techUseOf, ITEMS, GOOD, CARRY_MAX, useItem, FAME_V, FAME_SCALE, TICKET_BASE, TRAIN_LV, trainLvOf, REMATCH, canRematch, rematch, canSkip, battleKey, PRIZE, BEAT_PRIZE, beatOfPrize, BEAT_END, beatOfEnd, MEALS, meal, mealSkip, MEAL_SKIP_FEAR, mealOpts, MEAL_PICK, MEAL_WATCH_MULT, ticketsOfPrize, TECH_MAX, techsOf, canLearn, techRate, learnable, techRank, shugyoQ, superLeft, techMissOf, techCanon, canonTechList, shugyoLeft, teachFrom, BENCH: BENCH_USE, STAR_MULT, TAG_POWER, BOND_START, RANK_ADD, TRAIN_COMBO, AIDS, speciesList, shugyoGainOf, EX_CUPS, EX_BY_SYS, cupItemsOf, CUP_REWARD, FAME_RANK, FAME_RANK_MAX, rankStepOf, rankNameOf, rankNeedG, WIN_TICKET, FOUR_DONE, fourWinsOf, forecastOf, ELIXIR_ADD, FRUIT_MULT,
       rngOf, periodOf, aptMult, initStats, memberOf, memberEffect, newRun, gatherOf, cardMult, peek, failRateOf, sabRateOf, greatRateOf,
       act, react, reactOf, issa, issaComes, issaRate, endTurn, opponents: opponentsOf, settle, cupsOf, canEnter, bracketOf, gradeOf, GRADE_STEP, stayV, SC_CUPS, SC_NAME, ASST_STORY, storyEnd, markSpecial, battleMods, battleBuffs, peakTurn, ASTORY, storyDue, storyStep, preview, restore, ARC, PARTY, summitPick, endingOf, endingSeen, CUP_SYS, YEAR, RIVAL, CUP_PRIZE, spendPts, autoPts, ptsCost, evaluate, assistPointsOf, loyalOf, loyalMult, top3Of, sumOf,
       FUSE, fuseOk, fuseKinds, fusePlan, fuseId,
       DIST_UP, aptUpOf, aptGradesOf, aptUpRoom, addAptUp, aptSendOf, aptInherit, aptBaseNorm,
-      AWAKE, aptAwakeNorm, awakeOpen, awakePick, peakInfo,
+      AWAKE, aptAwakeNorm, awakeOpen, awakePick, peakInfo, itemUsable,
     });
   };
 

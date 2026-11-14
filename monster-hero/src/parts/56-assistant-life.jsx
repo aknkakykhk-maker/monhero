@@ -21,7 +21,7 @@ const ASSISTANT_LIFE_SLOTS = Object.freeze([
 ]);
 // 気分。急には変わらない(前の時間の気分が残りやすい)
 const ASSISTANT_LIFE_MOODS = Object.freeze({
-  happy: 'ごきげん', lonely: 'さみしい', restless: 'そわそわ', sulky: 'すねてる', sleepy: 'ねむい', eager: 'やる気',
+  happy: 'ご機嫌', lonely: 'さみしい', restless: 'そわそわ', sulky: 'すねてる', sleepy: 'ねむい', eager: 'やる気',
 });
 // していること。label … 台本の {doing}(名詞)/ te … {doing_te}(「〜して」の形)。group … 2人以上でもする(2人の掛け合いの「していること」5つ・コトバと決めた 2026-11-07)
 const ASSISTANT_LIFE_DOINGS = Object.freeze({
@@ -1136,7 +1136,7 @@ function AssistantLifeScreenBody({ metIds, onReplay, peerItems = null, onUseItem
           <div data-assistant-life-tier={tier.id} className="rounded-2xl border border-pink-300/40 bg-pink-400/10 p-2.5">
             <div className="flex items-baseline gap-2">
               <p className="text-[12px] font-black text-pink-100">今日のにぎわい「{tier.label}」</p>
-              <p className="ml-auto whitespace-nowrap text-[10px] font-bold text-pink-200">{next ? `あと${next.min - play.points}で「${next.label}」` : 'いちばん上の段'}</p>
+              <p className="ml-auto whitespace-nowrap text-[10px] font-bold text-pink-200">{next ? `あと${next.min - play.points}で「${next.label}」` : '一番上の段'}</p>
             </div>
             <div className="mt-1 h-2 overflow-hidden rounded-full bg-slate-800" aria-hidden="true">
               <div className="h-full bg-pink-400" style={{ width: `${next ? Math.min(100, Math.round(100 * (play.points - tier.min) / (next.min - tier.min))) : 100}%` }}/>
@@ -1267,7 +1267,7 @@ function AssistantLifeItemIntro({ peerItems }) {
       <div className="w-full max-w-sm rounded-2xl border-2 border-amber-300 bg-[#1c1405] p-3 shadow-2xl">
         <div className="flex items-center gap-2">
           {guide && <AssistantFace who={guide} size={44} accent={guide.accent} expression="wink"/>}
-          <p className="text-[14px] font-black text-amber-200">はじめての {info.emoji} {info.name}！</p>
+          <p className="text-[14px] font-black text-amber-200">初めての {info.emoji} {info.name}！</p>
         </div>
         <p className="mt-2 text-[12px] leading-relaxed text-white">① 「🏡 助手ライフ」で、一緒にいる2人に贈れるよ<br/>② 2人の<span className="whitespace-nowrap">友情Lv と</span>、あなたとの仲良し度が上がる<br/>③ 好きな物だと多めに上がるよ。好みは<span className="whitespace-nowrap">贈ると分かる！</span><br/>④ 同じ道具は1日1回・<span className="whitespace-nowrap">合わせて1日3回まで</span></p>
         <div className="mt-2 flex gap-2">

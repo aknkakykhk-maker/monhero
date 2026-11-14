@@ -178,7 +178,7 @@ function AssistantLifeRewardRoad({ ids, peerSt, nameOf, onRoom = null }) {
       {sec('🐾 次に迎えるマスモン', r.masmon, 2, onRoom)}
       {sec('🤝 友情Lv(助手どうし)', r.peer, 2, null)}
       {r.maxed > 0 && <p className="mt-1.5 text-[11.5px] font-bold text-slate-300">💗 {r.maxed}人は、仲良し度がいちばん上まで来ました</p>}
-      {hidden > 0 && <button type="button" data-assistant-life-reward-more aria-expanded={all} onClick={() => setAll(v => !v)} className="mt-1.5 min-h-[44px] w-full rounded-xl border border-white/20 text-[12px] font-black text-slate-100 active:scale-[.98]">{all ? '近い所だけにする ▲' : `ぜんぶ見る(あと ${hidden} 件)▼`}</button>}
+      {hidden > 0 && <button type="button" data-assistant-life-reward-more aria-expanded={all} onClick={() => setAll(v => !v)} className="mt-1.5 min-h-[44px] w-full rounded-xl border border-white/20 text-[12px] font-black text-slate-100 active:scale-[.98]">{all ? '近い所だけにする ▲' : `全部見る(あと ${hidden} 件)▼`}</button>}
     </section>);
 }
 
@@ -200,7 +200,7 @@ function AssistantLifeFirstGuide({ land = false, canWatch = false, onClose, onWa
       <p className="mt-1.5 text-[11.5px] font-bold text-amber-100">まずは 光っている「👀 見守る」を押してみよう</p>
       <div className="mt-1.5 flex gap-1.5">
         {canWatch && onWatch && <button type="button" data-assistant-life-guide-watch onClick={onWatch} className="min-h-[44px] flex-1 rounded-xl border border-amber-200 bg-amber-400/90 px-2 text-[12.5px] font-black text-slate-900 active:scale-[.98]">👀 見守ってみる</button>}
-        <button type="button" data-assistant-life-guide-close onClick={onClose} className="min-h-[44px] flex-1 rounded-xl border border-white/25 bg-slate-800 px-2 text-[12.5px] font-black text-slate-100 active:scale-[.98]">わかった</button>
+        <button type="button" data-assistant-life-guide-close onClick={onClose} className="min-h-[44px] flex-1 rounded-xl border border-white/25 bg-slate-800 px-2 text-[12.5px] font-black text-slate-100 active:scale-[.98]">分かった</button>
       </div>
     </section>);
 }
