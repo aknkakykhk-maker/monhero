@@ -32,7 +32,7 @@ class MhErrorBoundary extends React.Component {
         {this.props.onRecover && <button onClick={recover} className="w-full bg-emerald-600 text-white py-3 rounded-2xl font-black shadow-lg active:scale-95" style={{maxWidth:'20rem'}}>ホームへ戻る</button>}
         <button onClick={reload} className="w-full bg-slate-700 text-white py-3 rounded-2xl font-black shadow-lg active:scale-95" style={{maxWidth:'20rem'}}>ゲームを読み込み直す</button>
         <details className="text-left text-xs text-slate-500" style={{maxWidth:'22rem',width:'100%'}}>
-          <summary>くわしい内容(不具合報告に添えてください)</summary>
+          <summary>詳しい内容(不具合報告に添えてください)</summary>
           <pre style={{whiteSpace:'pre-wrap',wordBreak:'break-all',marginTop:'8px'}}>{this.props.screen ? `画面: ${this.props.screen}\n` : ''}{detail}</pre>
         </details>
       </main>

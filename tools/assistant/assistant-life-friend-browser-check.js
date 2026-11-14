@@ -197,7 +197,7 @@ const badgeProblems = (page) => page.evaluate(() => {
       check(`⑯ 部屋のシートに「贈られた家具: まだありません」(${v.id})`,  /贈られた家具: まだありません/.test(await page.locator('[data-alf-visit-furn]').innerText()));
       check(`⑭ 訪ねた家の掲示板に、その人の最近(迎えたマスモン・遊んだ曲)が出る(${v.id})`, /ゴーレム/.test(await page.locator('[data-alf-visit]').innerText()));
       await shot(page, `${v.id}-5b-visit-out`);
-      await page.locator('[data-alf-visit-sheet] .mhl-sheet button:has-text("とじる")').click();
+      await page.locator('[data-alf-visit-sheet] .mhl-sheet button:has-text("閉じる")').click();
       {
         await page.locator('[data-alf-visit] [data-assistant-life-board]').click();
         await page.locator('[data-alf-visit-diary-all]').waitFor({ timeout: 3000 });
@@ -210,7 +210,7 @@ const badgeProblems = (page) => page.evaluate(() => {
       check(`⑱ 写しの無い助手の部屋には、マスモンの段を出さない(見ている人のマスモンを出さない)(${v.id})`, (await page.locator('[data-alf-visit-masmon]').count()) === 0);
       check(`⑫ くわしい控えの押し入れが部屋のシートに出る(${v.id})`, /押し入れ/.test(await page.locator('[data-alf-visit-kept]').innerText().catch(() => '')));
       await shot(page, `${v.id}-5c-visit-kept`);
-      await page.locator('[data-alf-visit-sheet] .mhl-sheet button:has-text("とじる")').click();
+      await page.locator('[data-alf-visit-sheet] .mhl-sheet button:has-text("閉じる")').click();
       await page.locator('[data-alf-visit] [data-assistant-life-room="dra"]').click();
       await page.locator('[data-alf-visit-roomview] [data-assistant-life-roomview-person="dra"]').waitFor({ timeout: 5000 }).catch(() => {});
       check(`⑲ 家にいる助手の部屋は、大きな部屋に立ち絵が出て、贈られた家具(トロフィー・くま)も並ぶ(${v.id})`, (await page.locator('[data-alf-visit-roomview] [data-assistant-life-roomview-furn]').count()) === 2 && (await page.locator('[data-alf-visit-roomview] [data-assistant-life-roomview-person="dra"]').count()) === 1);

@@ -150,6 +150,7 @@ const advance = (page, react) => page.evaluate((react) => {
   const no = by(/何もしない/, '.v-ix'); if (no && !no.classList.contains('sel')) return press(no, 'issa-none');
   // 結果・ターンが進む・博士: 足もとの「▶」のボタン
   const go = root.querySelector('.v-ft button.go:not([disabled])'); if (go) return press(go, 'go');
+  const nomeal = root.querySelector('[data-msx-r3-nomeal]:not([disabled])'); if (nomeal) return press(nomeal, 'next'); // ごはんの段(2026-11-14 ボタンは「あげずに つぎへ」1つ)
   const nx = by(/つぎへ ▶|^▶/); if (nx) return press(nx, 'next');
   // メイン: 体力が少なければ休む・ふだんはトレーニング
   const hp = (root.innerText.match(/体力\s*(\d+)\s*\/\s*(\d+)/) || []);

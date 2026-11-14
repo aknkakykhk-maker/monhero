@@ -187,7 +187,7 @@ function PlayerRankDetail({ kind = 'beat', xp = 0, rewardsOf, how = '', onClose 
         <p className="mb-1 text-[10px] font-bold text-slate-300 [@media(max-height:480px)]:hidden" style={JA_WRAP_STYLE}>{jaWrap('ランクが上がると、そのランクの物をもらえます。下へ送ると先のランクも見られます。')}</p>
         <PlayerRankRewards kind={kind} rank={info.rank} rewardsOf={rewardsOf} cls="min-h-[96px] shrink"/>
         {how && <p className="mt-2 shrink-0 text-[11px] font-bold leading-relaxed text-slate-300 [@media(max-height:480px)]:hidden" style={JA_WRAP_STYLE}>{jaWrap(how)}</p>}
-        <button type="button" data-player-rank-detail-close onClick={close} className="mh-button mt-2 min-h-[44px] w-full shrink-0 rounded-xl text-[14px] font-black">とじる</button>
+        <button type="button" data-player-rank-detail-close onClick={close} className="mh-button mt-2 min-h-[44px] w-full shrink-0 rounded-xl text-[14px] font-black">閉じる</button>
       </div>
     </div>
   );

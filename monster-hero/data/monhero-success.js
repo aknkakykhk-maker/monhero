@@ -342,14 +342,16 @@
   const MEALS = Object.freeze({
     vitamin: { name: 'ビタミンもどき', hp: 0.2, fear: 3 },               // 体力 上限の20%回復・恐れ度 +3
     gochiso: { name: 'ごちそうもどき', hp: 0.2, ama: 3 },                // 体力 上限の20%回復・甘え度 +3
-    f_life: { name: 'もりもりニンジン', hp: 0.1, stat: 'life', add: 15 }, // 体力 上限の10%回復・その能力 +15(6種)
-    f_pow: { name: 'がっつりお肉', hp: 0.1, stat: 'pow', add: 15 },
-    f_wise: { name: 'ひらめきクルミ', hp: 0.1, stat: 'wise', add: 15 },
-    f_hit: { name: 'ねらいうちベリー', hp: 0.1, stat: 'hit', add: 15 },
-    f_eva: { name: 'ひらりリンゴ', hp: 0.1, stat: 'eva', add: 15 },
-    f_tough: { name: 'かちかちイモ', hp: 0.1, stat: 'tough', add: 15 },
-    prune: { name: 'スタープルーン', hp: 0.05, pop: 5, pts: 10 },        // 体力 上限の5%回復・人気 +5・能力ポイント +10
+    f_life: { name: 'もりもりニンジン', hp: 0.1, stat: 'life', add: 15, fear: 2 }, // 体力 上限の10%回復・その能力 +15(6種)
+    f_pow: { name: 'がっつりお肉', hp: 0.1, stat: 'pow', add: 15, ama: 2 },
+    f_wise: { name: 'ひらめきクルミ', hp: 0.1, stat: 'wise', add: 15, fear: 2 },
+    f_hit: { name: 'ねらいうちベリー', hp: 0.1, stat: 'hit', add: 15, fear: 2 },
+    f_eva: { name: 'ひらりリンゴ', hp: 0.1, stat: 'eva', add: 15, ama: 2 },
+    f_tough: { name: 'かちかちイモ', hp: 0.1, stat: 'tough', add: 15, ama: 2 },
+    prune: { name: 'スタープルーン', hp: 0.05, pop: 5, pts: 10, ama: 2 },        // 体力 上限の5%回復・人気 +5・能力ポイント +10
   });
+  // 2026-11-14 社長: ごはんでも甘え度・恐れ度が上がる(上の ama/fear。方針の段の補正は addLoyal のまま)。あげずに進んだら恐れ度 +1
+  const MEAL_SKIP_FEAR = 1;
 
   // ---- 能力ポイント(TOURNAMENT §7b) ----
   const PTS = Object.freeze({ hold: 200, line: { debut: 300, junior: 300, middle: 500, pro: 700, final: 700 } });
@@ -1163,22 +1165,39 @@
     // 博士の忠誠度は甘え度・恐れ度に半分ずつ(方針の倍率はかけない・うつ病なら動かない)
     const addLoyalRaw = (s, ama, fear) => { if (s.yosu.utsu) return; s.ama = clamp(s.ama + Math.max(0, num(ama)), 0, LOYAL.half); s.fear = clamp(s.fear + Math.max(0, num(fear)), 0, LOYAL.half); }; // 下げない(社長 2026-11-14)
 
-    // 大会のあとのごほうびのごはん(1回だけ・賞金を使う)
+    // 大会のあとに並ぶごはん(2026-11-14 社長「ご褒美はランダムで3個選ばれる」)。9種から3つ(同じ物は出さない)。
+    //   くじは育成ごとの決まった乱数(育成の id + 勝った回数)で引くので、開き直し・中断のあとでも引き直しにならない。
+    //   勝ったときに s.mealOpts に入れて保存する。古い途中の育成で項目が無ければ、ここで同じくじを引いて返す(同じ3つになる)
+    const MEAL_PICK = 3;
+    const mealDraw = (s) => {
+      const all = Object.keys(MEALS); const rng = rngOf(s.id, 'meal3', num(s.log && s.log.wins)); const out = []; // 勝った回数で引く(大会のあとにターンが進んでも同じ3つ)
+      while (out.length < Math.min(MEAL_PICK, all.length)) { const k = all[Math.floor(rng() * all.length)]; if (!out.includes(k)) out.push(k); }
+      return out;
+    };
+    const mealOptsOk = (x) => Array.isArray(x) && x.length === Math.min(MEAL_PICK, Object.keys(MEALS).length) && new Set(x).size === x.length && x.every(k => Object.prototype.hasOwnProperty.call(MEALS, k));
+    const mealOpts = (s) => (!s || !s.mealReady ? [] : mealOptsOk(s.mealOpts) ? s.mealOpts.slice() : mealDraw(s));
+    // 大会のあとのごほうびのごはん(1回だけ・ただ)。並んだ3つ(mealOpts)の中からだけ選べる
     const meal = (s0, key) => {
-      const s = clone(s0); const m = Object.prototype.hasOwnProperty.call(MEALS, key) ? MEALS[key] : null;
+      const s = clone(s0); const m = Object.prototype.hasOwnProperty.call(MEALS, key) && mealOpts(s0).includes(key) ? MEALS[key] : null;
       // 2026-11-14 社長: 勝ったあとのごはんはただ(賞金を使わない)。
       // えるびんの見守りの大会に勝った印 freeMeal は「次のごはんの効き目 ×1.5(1回)」に読み替える(社長の決め 2026-11-14・食いしん坊と掛け合わせ)
       if (!s.mealReady || !m || s.over) return { state: s0, out: { ok: false } };
-      s.mealReady = false;
+      s.mealReady = false; s.mealOpts = null;
       const boost = s.freeMeal === true ? MEAL_WATCH_MULT : 1; s.freeMeal = false;
       const kui = (1 + stayNum(s, 'kuishinbo') / 100) * boost; // 🍙食いしん坊: ごはんの効き目が増える(見守りの ×1.5 と掛け合わせ)
       if (m.hp) recover(s, m.hp * kui);
-      if (m.ama || m.fear) addLoyalRaw(s, Math.round((m.ama || 0) * kui), Math.round((m.fear || 0) * kui));
+      if (m.ama || m.fear) addLoyal(s, Math.round((m.ama || 0) * kui), Math.round((m.fear || 0) * kui));
       if (m.stat && KEYS.includes(m.stat)) addStat(s, m.stat, Math.round(m.add * kui));
       if (m.pop) s.pop = clamp(s.pop + popGain(s, Math.round(m.pop * kui)), 0, 100);
       if (m.pts) gainPts(s, Math.round(m.pts * kui));
       s.log.meal = (s.log.meal || 0) + 1;
       return { state: s, out: { ok: true, meal: key, boost } };
+    };
+    // ごはんをあげずに進む(恐れ度 +1)。並んだごはんが無いときは何もしない
+    const mealSkip = (s0) => {
+      if (!s0.mealReady || s0.over) return { state: s0, out: { ok: false } };
+      const s = clone(s0); s.mealReady = false; s.mealOpts = null; addLoyal(s, 0, MEAL_SKIP_FEAR);
+      return { state: s, out: { ok: true, skip: true } };
     };
 
     // 決める前の見通し(画面の「ちから +38・体力 −26・ストレス +8」): 成功のときの伸び
@@ -1220,6 +1239,7 @@
       const strs = (v, max) => (Array.isArray(v) ? v.filter(x => typeof x === 'string').slice(0, max) : []);
       out.titles = strs(raw.titles, 64); out.wonNow = strs(raw.wonNow, 128); out.wonBefore = strs(raw.wonBefore, 128);
       for (const k of ['debutWon', 'issaDone', 'issaForce', 'issaSure', 'hirameki', 'acted', 'reacted', 'mealReady', 'special', 'freeMeal', 'fourDone', 'shBoost']) out[k] = raw[k] === true;
+      out.mealOpts = out.mealReady && mealOptsOk(raw.mealOpts) ? raw.mealOpts.slice() : null; // 壊れた・無いときは null(画面は mealOpts() で同じくじを引く)
       out.elixir = raw.elixir && Number.isInteger(raw.elixir.d) && raw.elixir.d >= 0 && raw.elixir.d <= 3 ? { d: raw.elixir.d, turn: Math.round(n(raw.elixir.turn, 0, 0, TOTAL_TURNS + 1)) } : null;
       out.fruit = raw.fruit && KEYS.includes(raw.fruit.stat) ? { stat: raw.fruit.stat, turn: Math.round(n(raw.fruit.turn, 0, 0, TOTAL_TURNS + 1)) } : null;
       out.cond = raw.cond && typeof raw.cond === 'object' && ['injury', 'ill', 'away'].includes(raw.cond.kind) ? { kind: raw.cond.kind, left: Math.round(n(raw.cond.left, 1, 1, 9)) } : null;
@@ -1353,7 +1373,7 @@
       if (s.last && s.last.kind === 'retry') s.battle = { kind: 'debut', retry: s.debutLoss, round: 0 };
       else if (s.last && s.last.kind === 'cup') s.battle = { kind: 'cup', id: s.last.cup.id, sys: s.last.cup.sys, name: s.last.cup.name || null, star: s.last.cup.star, rival: s.last.cup.rival || null, round: 0 };
       else s.battle = forcedBattle(s);
-      s.acted = false; s.reacted = false; s.issaDone = false; s.last = null; s.mealReady = false;
+      s.acted = false; s.reacted = false; s.issaDone = false; s.last = null; s.mealReady = false; s.mealOpts = null;
       if (!s.battle) s.turn += 1;
       if (s.turn > TOTAL_TURNS) s.over = 'done';
       return { state: s, out: { ok: true, battle: s.battle } };
@@ -1796,6 +1816,7 @@
         } else out.rankKeep = { step: from, name: rankNameOf(from) };
       }
       s.mealReady = won; // 2026-11-13 社長: 大会に勝ったときだけごはんを選べる(負けたらなし)
+      s.mealOpts = won ? mealDraw(s) : null; // 2026-11-14 社長: 並ぶのは9種から3つ(くじ・保存して引き直しにならない)
       gainMastery(s, use); // 熟練: 出場で全部の技 +2・使った技は1回 +2(1試合で +6 まで)
       s.battle = null;
       if (b.kind === 'debut') {
@@ -1932,7 +1953,7 @@
     return Object.freeze({
       events: EV,
       VERSION, STORY, KEYS, STAT_NAMES, PERIODS, TOTAL_TURNS, FORCED, SUMMIT, BASE, RESULTS, RATE, REST, PLAY, CLINIC, COND, LOYAL, GATHER, BOND, STORY, LOTTERY,
-      GROW_BY_SPECIES, speciesType, gatherChanceOf, normStats, ASSISTS, ISSA, PTS, XP, SHUGYO, TECH_POWER, MASTERY, techRowsOf, techPowerOfRows, powerOf, techBoostOf, techUseOf, ITEMS, GOOD, CARRY_MAX, useItem, FAME_V, FAME_SCALE, TICKET_BASE, TRAIN_LV, trainLvOf, REMATCH, canRematch, rematch, canSkip, battleKey, PRIZE, BEAT_PRIZE, beatOfPrize, BEAT_END, beatOfEnd, MEALS, meal, MEAL_WATCH_MULT, ticketsOfPrize, TECH_MAX, techsOf, canLearn, techRate, learnable, techRank, shugyoQ, superLeft, techMissOf, techCanon, canonTechList, shugyoLeft, teachFrom, BENCH: BENCH_USE, STAR_MULT, TAG_POWER, BOND_START, RANK_ADD, TRAIN_COMBO, AIDS, speciesList, shugyoGainOf, EX_CUPS, EX_BY_SYS, cupItemsOf, CUP_REWARD, FAME_RANK, FAME_RANK_MAX, rankStepOf, rankNameOf, rankNeedG, WIN_TICKET, FOUR_DONE, fourWinsOf, forecastOf, ELIXIR_ADD, FRUIT_MULT,
+      GROW_BY_SPECIES, speciesType, gatherChanceOf, normStats, ASSISTS, ISSA, PTS, XP, SHUGYO, TECH_POWER, MASTERY, techRowsOf, techPowerOfRows, powerOf, techBoostOf, techUseOf, ITEMS, GOOD, CARRY_MAX, useItem, FAME_V, FAME_SCALE, TICKET_BASE, TRAIN_LV, trainLvOf, REMATCH, canRematch, rematch, canSkip, battleKey, PRIZE, BEAT_PRIZE, beatOfPrize, BEAT_END, beatOfEnd, MEALS, meal, mealSkip, MEAL_SKIP_FEAR, mealOpts, MEAL_PICK, MEAL_WATCH_MULT, ticketsOfPrize, TECH_MAX, techsOf, canLearn, techRate, learnable, techRank, shugyoQ, superLeft, techMissOf, techCanon, canonTechList, shugyoLeft, teachFrom, BENCH: BENCH_USE, STAR_MULT, TAG_POWER, BOND_START, RANK_ADD, TRAIN_COMBO, AIDS, speciesList, shugyoGainOf, EX_CUPS, EX_BY_SYS, cupItemsOf, CUP_REWARD, FAME_RANK, FAME_RANK_MAX, rankStepOf, rankNameOf, rankNeedG, WIN_TICKET, FOUR_DONE, fourWinsOf, forecastOf, ELIXIR_ADD, FRUIT_MULT,
       rngOf, periodOf, aptMult, initStats, memberOf, memberEffect, newRun, gatherOf, cardMult, peek, failRateOf, sabRateOf, greatRateOf,
       act, react, reactOf, issa, issaComes, issaRate, endTurn, opponents: opponentsOf, settle, cupsOf, canEnter, bracketOf, gradeOf, GRADE_STEP, stayV, SC_CUPS, SC_NAME, ASST_STORY, storyEnd, markSpecial, battleMods, battleBuffs, peakTurn, ASTORY, storyDue, storyStep, preview, restore, ARC, PARTY, summitPick, endingOf, endingSeen, CUP_SYS, YEAR, RIVAL, CUP_PRIZE, spendPts, autoPts, ptsCost, evaluate, assistPointsOf, loyalOf, loyalMult, top3Of, sumOf,
       FUSE, fuseOk, fuseKinds, fusePlan, fuseId,
