@@ -211,6 +211,10 @@ const MSX_CSS = `
 .msx .v-p.hosp{background:linear-gradient(180deg,#0e7490,#155e75);border-color:#67e8f9;box-shadow:0 0 10px #22d3ee88}
 .msx .v-p .bd{position:absolute;right:-2px;top:-6px;background:#fde047;color:#422006;border-radius:99px;font-size:10px;font-weight:900;padding:0 5px;white-space:nowrap;line-height:1.5}
 .msx .v-p .bd.r{background:#ef4444;color:#fff}
+.msx .v-act-pre .v-p{min-height:74px;font-size:15px}.msx .v-act-pre .v-p .e{font-size:24px}
+.msx .v-p.hb{font-size:19px;background:linear-gradient(160deg,#f59e0b,#dc2626);border-color:#fde68a;border-bottom-color:#7f1d1d;box-shadow:0 0 16px #f59e0bb3}
+.msx .v-p.hb small{white-space:normal;font-size:11px}
+.msx .v-p .hbt{position:absolute;left:8px;top:-9px;background:#fff;color:#dc2626;border:2px solid #dc2626;border-radius:6px;font-size:12px;font-weight:900;padding:0 7px;line-height:1.4;transform:rotate(-8deg);box-shadow:0 2px 0 #7f1d1d}
 .msx .v-gather{display:flex;align-items:center;justify-content:center;gap:3px;margin-top:2px;background:#0f0d2466;border-radius:9px;padding:2px 5px;font-size:10px;white-space:nowrap}
 .msx .v-gather .v-pf,.msx .v-gather .v-pf img{width:20px}.msx .v-gather .v-pf img{height:20px;border-radius:6px;border-width:1.5px}
 .msx .v-gather .v-pf.tag::after{display:none}
@@ -509,8 +513,13 @@ const MSX_CSS = `
 .msx .v-cupwin .sign .e{font-size:40px;line-height:1}.msx .v-cupwin .sign b{font-size:15px}.msx .v-cupwin .sign small{font-size:10.5px;color:#fde68a}
 .msx .v-cupwin .sign.g-four{background:linear-gradient(180deg,#2e1065,#6d28d9)}.msx .v-cupwin .sign.g-rainbow{background:linear-gradient(180deg,#7f1d1d,#a16207)}
 .msx .v-cupwin .sub{margin-top:8px;font-size:11px;font-weight:900;color:#92400e;text-align:left}
-.msx .v-cupwin .pz{display:flex;gap:6px;overflow-x:auto;padding:4px 0}
-.msx .v-cupwin .pz button{flex:none;width:72px;display:flex;flex-direction:column;align-items:center;gap:2px;background:#fff;border:2px solid #e5e7eb;border-radius:10px;padding:4px 2px;text-align:center}
+.msx .v-cupwin .pz{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px;padding:4px 0}
+.v-cupwin .pzg{display:flex;align-items:center;gap:8px;margin-top:4px;background:#fff;border:2px solid #fcd34d;border-radius:10px;padding:4px 10px;font-weight:900;width:100%;text-align:left;color:#1e1b4b}
+.v-cupwin .pzg i{font-style:normal;font-size:11px;background:#78350f;color:#fde68a;border-radius:6px;padding:1px 8px}
+.v-cupwin .pzg b{font-size:18px;margin-left:auto}
+.v-cupwin .pz button.pt{background:#eef2ff;border-color:#c7d2fe}
+.msx-kp{word-break:keep-all;overflow-wrap:anywhere;line-break:strict}
+.msx .v-cupwin .pz button{min-width:0;display:flex;flex-direction:column;align-items:center;gap:2px;background:#fff;border:2px solid #e5e7eb;border-radius:10px;padding:4px 2px;text-align:center}
 .msx .v-cupwin .pz button span{font-size:24px;line-height:1}.msx .v-cupwin .pz button small{font-size:9.5px;font-weight:900;line-height:1.2;color:#1e1b4b}
 .msx .v-cupwin .pz button.rare{border-color:transparent;background:linear-gradient(#fff,#fff) padding-box,linear-gradient(90deg,#f43f5e,#eab308,#22c55e,#3b82f6,#a855f7) border-box}
 .msx .v-cupwin .q{margin-top:8px;text-align:center;font-weight:900;font-size:13px}.msx .v-cupwin .q.ng{color:#dc2626;font-size:12px}
