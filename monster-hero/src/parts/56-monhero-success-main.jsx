@@ -38,8 +38,6 @@ function MsxBand({ s, v, ev, use = 0, stAdd = 0 }) {
   const cal = msxCalendar(s.turn);
   const max = Math.max(1, s.hpMax); const hp = Math.max(0, Math.min(max, s.hp));
   const after = Math.max(0, hp - use);
-  const P = (msxSuc && msxSuc.core.PERIODS) || [];
-  const now = v.period.index;
   const pk = msxSuc && typeof msxSuc.SUC.peakInfo === 'function' && !s.over ? msxSuc.SUC.peakInfo(s) : { state: null };
   return (
     <div className="v-band" style={pk.state === 'in' ? { position: 'relative' } : undefined}>
@@ -57,7 +55,6 @@ function MsxBand({ s, v, ev, use = 0, stAdd = 0 }) {
           <div className="tr"><i style={{ width: `${s.stress}%` }}/>{stAdd ? <u className="add" style={{ left: `${s.stress}%`, width: `${Math.min(100 - s.stress, stAdd)}%` }}/> : null}</div>
           {stAdd ? <em className="pl">+{stAdd}</em> : null}<b>{s.stress}<small>/100</small></b></div>
       </div>
-      <div className="v-track">{P.map((p, i) => <span key={p.key} style={{ flex: p.len }} className={i === now ? 'now' : ''}><i style={{ width: `${i < now ? 100 : i === now ? (v.period.at - 1) / p.len * 100 : 0}%` }}/></span>)}</div>
     </div>
   );
 }

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a29463c029e64939
+// source-sha256: 068347f1c6ee86a0
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -163130,10 +163130,6 @@ const MSX_CSS = `
 .msx .v-ga b{font-size:12.5px;min-width:22px;text-align:right}.msx .v-ga b small{font-size:10px;color:#cbd5e1;font-weight:700}
 .msx .v-ga b small.cap{color:#fde047}
 .msx .v-ga em{font-style:normal;font-size:10.5px;color:#fca5a5}.msx .v-ga em.pl{color:#f0abfc}.msx .v-ga em.hl{color:#86efac}
-.msx .v-track{display:flex;gap:2px;margin-top:5px}
-.msx .v-track span{height:5px;border-radius:3px;background:#334155;position:relative;overflow:hidden}
-.msx .v-track span i{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,#f472b6,#fb923c)}
-.msx .v-track span.now{outline:1px solid #fde047}
 .msx .v-scene{flex:1 1 0;min-height:0;position:relative;border-radius:16px;border:1px solid #4a4380;overflow:hidden;margin-top:6px;background:#0f0d24}
 .msx .v-scene .bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 78%}
 .msx .v-scene .sh{position:absolute;inset:0;background:linear-gradient(180deg,#1d174055 0,#1d174000 26%,#0f0d2400 62%,#0f0d24cc 100%)}
@@ -165272,8 +165268,6 @@ function MsxBand({
   const max = Math.max(1, s.hpMax);
   const hp = Math.max(0, Math.min(max, s.hp));
   const after = Math.max(0, hp - use);
-  const P = msxSuc && msxSuc.core.PERIODS || [];
-  const now = v.period.index;
   const pk = msxSuc && typeof msxSuc.SUC.peakInfo === 'function' && !s.over ? msxSuc.SUC.peakInfo(s) : {
     state: null
   };
@@ -165349,19 +165343,7 @@ function MsxBand({
     }
   }) : null), stAdd ? React.createElement("em", {
     className: "pl"
-  }, "+", stAdd) : null, React.createElement("b", null, s.stress, React.createElement("small", null, "/100")))), React.createElement("div", {
-    className: "v-track"
-  }, P.map((p, i) => React.createElement("span", {
-    key: p.key,
-    style: {
-      flex: p.len
-    },
-    className: i === now ? 'now' : ''
-  }, React.createElement("i", {
-    style: {
-      width: `${i < now ? 100 : i === now ? (v.period.at - 1) / p.len * 100 : 0}%`
-    }
-  })))));
+  }, "+", stAdd) : null, React.createElement("b", null, s.stress, React.createElement("small", null, "/100")))));
 }
 function MsxStRow({
   stats,
