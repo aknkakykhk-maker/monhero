@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f72f94d74ea8d33b
+// source-sha256: dbd97d3dadc232aa
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -165901,6 +165901,8 @@ const MSX_CSS = `
 .msx .msx-md-tg .tc.pow.tg-not{background:linear-gradient(160deg,#9a7420,#5e420c);border-color:#a8801f}
 .msx .msx-md-tg .tc.wise.tg-not{background:linear-gradient(160deg,#2f8050,#145230);border-color:#3f9a62}
 .msx-md-tg .tc.tg-not .ti{filter:brightness(.8)}
+.msx-md-tg .tc{position:relative}
+.msx-md-tg .tc .tg-alt{position:absolute;top:1px;right:3px;font-size:11px;font-weight:900;line-height:1;color:#fff;text-shadow:0 1px 2px #000}
 
 .msx-md-not{display:block;font-size:10px;color:#94a3b8;font-weight:800}
 .msx-md-howrow{flex-direction:column;align-items:flex-start;gap:1px}.msx-md-howrow>span{width:100%}
@@ -166925,6 +166927,87 @@ const msxStartPreview = (SUC, species, type, aptBase, startSt) => {
   } catch (e) {}
   return out;
 };
+const MSX_TG_RANK_COL = Object.freeze({
+  1: ['#e9a46a', '#a95f27'],
+  2: ['#f4f7fb', '#aab4c2'],
+  3: ['#fff1a6', '#f2b705'],
+  4: ['#d9a8ff', '#8a3ffc']
+});
+const MSX_TG_RANK_NAME = Object.freeze({
+  1: '銅',
+  2: '銀',
+  3: '金',
+  4: '紫',
+  5: '虹'
+});
+function MsxTechIcon({
+  kind,
+  rank,
+  size = 28,
+  uid = ''
+}) {
+  const r = Math.max(1, Math.min(5, Number(rank) || 1));
+  const gid = `tgi-${uid}${kind}${r}`;
+  const stops = r === 5 ? [['0', '#ff5a5a'], ['.25', '#ffd23f'], ['.5', '#4ade80'], ['.75', '#38bdf8'], ['1', '#c084fc']] : [['0', MSX_TG_RANK_COL[r][0]], ['1', MSX_TG_RANK_COL[r][1]]];
+  const ink = '#2a1608';
+  return React.createElement("svg", {
+    className: "tg-ic",
+    "data-tg-rank": r,
+    width: size,
+    height: size,
+    viewBox: "0 0 24 24",
+    "aria-hidden": "true",
+    focusable: "false"
+  }, React.createElement("defs", null, React.createElement("linearGradient", {
+    id: gid,
+    x1: "0",
+    y1: "0",
+    x2: "1",
+    y2: "1"
+  }, stops.map(([o, c]) => React.createElement("stop", {
+    key: o,
+    offset: o,
+    stopColor: c
+  })))), kind === 'wise' ? React.createElement("g", {
+    fill: `url(#${gid})`,
+    stroke: ink,
+    strokeWidth: "1.3",
+    strokeLinejoin: "round"
+  }, React.createElement("path", {
+    d: "M6.2 2.6h10.6a1.8 1.8 0 0 1 1.8 1.8v14.6a1.8 1.8 0 0 1-1.8 1.8H6.2a1.8 1.8 0 0 1-1.8-1.8V4.4a1.8 1.8 0 0 1 1.8-1.8z"
+  }), React.createElement("path", {
+    d: "M8.4 2.6v17.4",
+    fill: "none"
+  }), React.createElement("path", {
+    d: "M11.2 7.4h4.6M11.2 10.6h4.6M11.2 13.8h3",
+    fill: "none",
+    strokeLinecap: "round"
+  })) : React.createElement("g", {
+    fill: `url(#${gid})`,
+    stroke: ink,
+    strokeWidth: "1.3",
+    strokeLinejoin: "round",
+    transform: "rotate(45 12 12)"
+  }, React.createElement("path", {
+    d: "M12 0.8l2.3 3.3v9.6H9.7V4.1z"
+  }), React.createElement("rect", {
+    x: "6",
+    y: "13.7",
+    width: "12",
+    height: "2.5",
+    rx: "1.2"
+  }), React.createElement("rect", {
+    x: "10.6",
+    y: "16.2",
+    width: "2.8",
+    height: "4.2",
+    rx: "0.8"
+  }), React.createElement("circle", {
+    cx: "12",
+    cy: "21.6",
+    r: "1.7"
+  })));
+}
 const MSX_DIST_NAMES = ['零', '近', '中', '遠'];
 const MSX_TG_COLS = Object.freeze([3, 2, 1, 0]);
 const msxTechHow = (t, all = []) => {
@@ -166972,18 +167055,10 @@ function MsxMonDetail({
   const dex = typeof MONSTER_DEX_DESCRIPTIONS === 'object' && MONSTER_DEX_DESCRIPTIONS && MONSTER_DEX_DESCRIPTIONS[species];
   const typeName = type != null && typeof MASMON_CALC !== 'undefined' ? MASMON_CALC.typeOf(type).name : '—';
   const all = typeof SUC.techsOf === 'function' ? SUC.techsOf(species).filter(Boolean) : [];
-  const has = t => Array.isArray(known) ? known.includes(t.id) : !!(t.learn && t.learn.start);
+  const has = t => !!(t.learn && t.learn.start) || Array.isArray(known) && known.includes(t.id);
   const list = all.slice().sort((x, y) => has(y) - has(x) || (Number(x.rank) || 0) - (Number(y.rank) || 0));
   const tgAt = (r, d) => all.filter(t => (Number(t.rank) || 1) === r && Array.isArray(t.dist) && t.dist.includes(d));
-  const tgLines = [1, 2, 3, 4, 5].flatMap(r => {
-    const k = Math.max(1, ...[0, 1, 2, 3].map(d => tgAt(r, d).length));
-    return Array.from({
-      length: k
-    }, (_, i) => ({
-      r,
-      i
-    }));
-  });
+  const tgLines = [1, 2, 3, 4, 5];
   const [pickT, setPickT] = useState(() => (all.find(has) || all[0] || {}).id || null);
   const tech = all.find(t => t.id === pickT) || list[0] || null;
   const grade = (k, v) => (typeof msaTechGrade === 'function' ? msaTechGrade(k, v) : '') || '−';
@@ -167087,30 +167162,35 @@ function MsxMonDetail({
   }, MSX_TG_COLS.map(d => React.createElement("span", {
     key: `h${d}`,
     className: `tgh d${d}`
-  }, MSX_DIST_NAMES[d])), tgLines.map(({
-    r,
-    i
-  }) => MSX_TG_COLS.map(d => {
-    const t = tgAt(r, d)[i];
+  }, MSX_DIST_NAMES[d])), tgLines.map(r => MSX_TG_COLS.map(d => {
+    const alts = tgAt(r, d);
+    const t = alts[0];
     if (!t) return React.createElement("span", {
-      key: `${r}-${i}-${d}`,
+      key: `${r}-${d}`,
       className: "no",
       "aria-hidden": "true"
     }, "×");
     const got = has(t);
     return React.createElement("button", {
       type: "button",
-      key: `${r}-${i}-${d}`,
+      key: `${r}-${d}`,
       className: `tc ${t.kind === 'wise' ? 'wise' : 'pow'}${got ? ' got' : ' tg-not'}${tech && tech.id === t.id ? ' on' : ''}`,
       "data-msx-tech": t.id,
-      "aria-label": `${t.name}${got ? '' : '(まだ覚えていない)'}`,
+      "aria-label": `${t.name}${got ? '' : '(まだ覚えていない)'}${alts.length > 1 ? '(選べる技が' + alts.length + 'つ)' : ''}`,
       onClick: () => setPickT(t.id)
     }, React.createElement("span", {
       className: "ti",
       "aria-hidden": "true"
-    }, t.kind === 'wise' ? '🧠' : '💪'), React.createElement("span", {
+    }, React.createElement(MsxTechIcon, {
+      kind: t.kind === 'wise' ? 'wise' : 'pow',
+      rank: t.rank,
+      uid: `${r}${d}`
+    })), React.createElement("span", {
       className: "g"
-    }, t.guts));
+    }, t.guts), alts.length > 1 ? React.createElement("span", {
+      className: "tg-alt",
+      "aria-hidden": "true"
+    }, "⇄") : null);
   }))), tech ? React.createElement("div", {
     className: "msx-md-td"
   }, React.createElement("div", {
