@@ -35,7 +35,7 @@ for (const r of rows) {
   if (!depts.has(r['部'])) bad.push(`${r.id}: 部「${r['部']}」は無い`);
   if (!/^20\d\d-\d\d-\d\d$/.test(r['日付'] || '') || !r['中身'] || !Array.isArray(r.PR)) bad.push(`${r.id}: 日付・中身・PR の形`);
   if (r['状態'] === '完了' && !r.PR.length && !r['メモ']) bad.push(`${r.id}: 完了なのに PR もメモも無い`);
-  if (['上書き済み', 'やめた'].includes(r['状態']) && !r['メモ']) bad.push(`${r.id}: ${r['状態']}なのに理由(メモ)が無い`);
+  if (['上書き済み', 'やめた', '止め中'].includes(r['状態']) && !r['メモ']) bad.push(`${r.id}: ${r['状態']}なのに理由(メモ)が無い`);
 }
 check('A 表の形', bad.length === 0, bad.slice(0, 5).join(' / ') + (bad.length > 5 ? ` ほか${bad.length - 5}件` : ''));
 

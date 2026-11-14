@@ -96,7 +96,7 @@ const MONSUC_SCRIPT_TURN = Object.freeze([
   { id:'turn.age.peakin.atsu2', who:'atsu', e:'happy', t:'{mon}の体つき変わってきたわ。ここが勝負！' },
   { id:'turn.age.peakout.atsu1', who:'atsu', e:'normal', t:'山はこえたっぽいな。ここからは頭使っていこ笑' },
   { id:'turn.age.peakout.atsu2', who:'atsu', e:'normal', t:'伸びが落ちても、勝ち方は増やせるから！' },
-  { id:'turn.age.final.atsu1', who:'atsu', e:'excited', t:'最後の期な。てっぺん、取りにいくしかないかー笑' },
+  { id:'turn.age.final.atsu1', who:'atsu', e:'excited', t:'最後の期な。ヒーローズファイナル、取りにいくしかないかー笑' },
   { id:'turn.age.final.atsu2', who:'atsu', e:'normal', t:'ここまで来たら、あとは全部出し切るだけ…！' },
 
   // ── ごはん ──
@@ -147,7 +147,7 @@ const MONSUC_SCRIPT_TURN = Object.freeze([
   { id:'turn.retire.r1.atsu1', who:'atsu', e:'normal', t:'おつかれ、{mon}。次はもっと上いけるよ、絶対！' },
   { id:'turn.retire.r2.atsu1', who:'atsu', e:'happy', t:'いい仕上がりじゃん。胸張っていいよ、{mon}笑' },
   { id:'turn.retire.r3.atsu1', who:'atsu', e:'excited', t:'強いわ、これ。{name}、いい育て方したな笑' },
-  { id:'turn.retire.r4.atsu1', who:'atsu', e:'excited', t:'てっぺんの景色、見せてもらったわ。{mon}、最高だよ…！' },
+  { id:'turn.retire.r4.atsu1', who:'atsu', e:'excited', t:'ヒーローズファイナル優勝の景色、見せてもらったわ。{mon}、最高だよ…！' },
 
   // ── けが・病気・家出 ──
   { id:'turn.cond.injury.in.mua1', who:'mua', e:'crying', t:'{mon}、足ひねっちゃった…😭 しばらくは休もうね' },

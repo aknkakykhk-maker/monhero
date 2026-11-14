@@ -8,7 +8,7 @@
 //   resolve(文字) でこの表の行に引き当てる。保存枠の子(mh_monsuc_box_v1 の titles)には id を入れる(名前を直しても記録が変わらない)。
 //   知らない文字はそのまま残し、画面ではその文字を出す(消さない・CLAUDE.md ⑦)。
 //
-//   group … cup(大会)/ crown(👑)/ conquer(制覇)/ summit(頂への道)/ rival(ライバル)/ story(助手のお話)/ issa(イッサ博士)/ grade(評価)/ feat(育成の記録)
+//   group … cup(大会)/ crown(👑)/ conquer(制覇)/ summit(ヒーローズファイナル)/ rival(ライバル)/ story(助手のお話)/ issa(イッサ博士)/ grade(評価)/ feat(育成の記録)
 //   how   … 取り方(プレイヤー向けの1行)/ reward … 取ったときに芯が付けるもの(無ければ null)/ effect … 持っている間の効き目(第1弾はすべて null)
 //   match … 芯が s.titles に積む文字(いまの芯が積んでいない行は null。芯が積むようになったらこの文字で積む)
 //   rare  … 1〜3(札の色: 1 銅・2 銀・3 金)
@@ -51,8 +51,8 @@
 
   // ---- ★★★ の大会(TOURNAMENT §8: 系統ごと。芯はまだ積んでいない) ----
   const STAR3 = [
-    ['str', 'ちから自慢の頂点', 'ちから自慢'], ['int', 'かしこさ自慢の頂点', 'かしこさ自慢'], ['aim', '狙い自慢の頂点', '狙い自慢'],
-    ['dodge', 'かわし自慢の頂点', 'かわし自慢'], ['hard', 'かたさ自慢の頂点', 'かたさ自慢'], ['life', 'しぶとさ自慢の頂点', 'しぶとさ自慢'],
+    ['str', 'ちから自慢の王者', 'ちから自慢'], ['int', 'かしこさ自慢の王者', 'かしこさ自慢'], ['aim', '狙い自慢の王者', '狙い自慢'],
+    ['dodge', 'かわし自慢の王者', 'かわし自慢'], ['hard', 'かたさ自慢の王者', 'かたさ自慢'], ['life', 'しぶとさ自慢の王者', 'しぶとさ自慢'],
     ['dist0', '零の間合いの名手', '間合い(零)'], ['dist1', '近の間合いの名手', '間合い(近)'], ['dist2', '中の間合いの名手', '間合い(中)'], ['dist3', '遠の間合いの名手', '間合い(遠)'],
     ['attacker', 'アタッカーの誇り', 'タイプ(アタッカー)'], ['tank', 'タンクの誇り', 'タイプ(タンク)'], ['supporter', 'サポーターの誇り', 'タイプ(サポーター)'],
     ['healer', 'ヒーラーの誇り', 'タイプ(ヒーラー)'], ['shadow', 'シャドウの誇り', 'タイプ(シャドウ)'],
@@ -71,9 +71,9 @@
   add({ id: 'conquer-season', group: 'conquer', name: '四季を知る子', how: '同じ1年のうちに四季の大会を4つとも優勝する', reward: '全能力 +3・能力ポイント +15・人気 +8', rare: 3 });
   add({ id: 'conquer-dist', group: 'conquer', name: '間合いの達人', how: '零・近・中・遠の間合いの大会をどれも1回は優勝する', reward: '全能力 +3・能力ポイント +15・一番低い間合いの適性が1段上がる', rare: 3 });
 
-  // ---- 頂への道(芯の SUMMIT_FINAL) ----
-  add({ id: 'summit', group: 'summit', name: '頂に立った子', how: '頂への道で優勝する', reward: '全能力 +8・能力ポイント +30・人気 +10', match: '頂に立った子', rare: 3 });
-  add({ id: 'summit-big', group: 'summit', name: 'ヒーローの頂', how: '👑 を1つ以上勝つか四大大会を2つ以上勝ったうえで、頂への道で優勝する', reward: '全能力 +15・能力ポイント +60・人気 +20', match: 'ヒーローの頂', rare: 3 });
+  // ---- ヒーローズファイナル(芯の SUMMIT_FINAL) ----
+  add({ id: 'summit', group: 'summit', name: 'ヒーローズファイナル王者', how: 'ヒーローズファイナルで優勝する', reward: '全能力 +8・能力ポイント +30・人気 +10', match: 'ヒーローズファイナル王者', oldMatch: ['頂に立った子'], rare: 3 }); // 2026-11-14 名前を直した。前の育成・保存枠に積まれた古い文字(oldMatch)も同じ行に引き当てる
+  add({ id: 'summit-big', group: 'summit', name: '真のヒーロー', how: '👑 を1つ以上勝つか四大大会を2つ以上勝ったうえで、ヒーローズファイナルで優勝する', reward: '全能力 +15・能力ポイント +60・人気 +20', match: '真のヒーロー', oldMatch: ['ヒーローの頂'], rare: 3 });
 
   // ---- ライバル(芯の RIVAL) ----
   // 大会の第2版(2026-11-13)
@@ -102,9 +102,9 @@
 
   const TITLES = Object.freeze(rows);
   const BY_ID = Object.freeze(Object.fromEntries(TITLES.map(t => [t.id, t])));
-  const BY_MATCH = Object.freeze(Object.fromEntries(TITLES.filter(t => t.match).map(t => [t.match, t])));
+  const BY_MATCH = Object.freeze(Object.fromEntries(TITLES.filter(t => t.match).flatMap(t => [[t.match, t], ...(Array.isArray(t.oldMatch) ? t.oldMatch.map(m => [m, t]) : [])])));
   const GROUPS = Object.freeze([
-    ['cup', '大会'], ['crown', 'ヒーロー記念'], ['conquer', '制覇'], ['summit', '頂への道'], ['rival', 'ライバル'],
+    ['cup', '大会'], ['crown', 'ヒーロー記念'], ['conquer', '制覇'], ['summit', 'ヒーローズファイナル'], ['rival', 'ライバル'],
     ['story', '助手のお話'], ['issa', 'イッサ博士'], ['grade', '評価'], ['feat', '育成の記録'],
   ].map(([key, name]) => Object.freeze({ key, name })));
 

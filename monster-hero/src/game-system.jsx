@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 097b2551b8e2856f
+// generated-sha256: 5fb3ee93f880774f
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -64852,9 +64852,12 @@ function AssistantPeerMap({ metIds, onReplay, peerItems = null, onUseItem = null
   // 一覧は仲良し度の高い6組だけ出し、残りは「全部のペアを見る」で広げる
   const [showAll, setShowAll] = React.useState(false);
   const [albumPair, setAlbumPair] = React.useState(null);
+  const mapRef = React.useRef(null); const [mapW, setMapW] = React.useState(0); // 新UI: 関係図の幅を画面に合わせる(札が顔・名前に重ならないよう、できるだけ大きく)
+  React.useLayoutEffect(() => { const w = mapRef.current && mapRef.current.parentElement ? mapRef.current.parentElement.clientWidth : 0; if (w && w !== mapW) setMapW(w); });
   const ids = (metIds || []).filter(id => assistantById(id) && assistantById(id).id === id);
   if (ids.length < 2) return null;
-  const size = 260, cx = size / 2, cy = size / 2, r = 98;
+  const size = v2 ? Math.max(240, Math.min(320, mapW || 260)) : 260, cx = size / 2, cy = v2 ? size / 2 + 2 : size / 2, r = v2 ? Math.round((size - 58) / 2) : 98;
+  const boxH = v2 ? size + 12 : size;
   const pos = Object.fromEntries(ids.map((id, i) => {
     const a = -Math.PI / 2 + (2 * Math.PI * i) / ids.length;
     return [id, { x: cx + r * Math.cos(a), y: cy + r * Math.sin(a) }];
@@ -64871,6 +64874,15 @@ function AssistantPeerMap({ metIds, onReplay, peerItems = null, onUseItem = null
     <div data-assistant-peer-map className="rounded-2xl border border-white/10 bg-slate-950/85 p-3">
       <p className={v2 ? 'text-[14px] font-black text-pink-200' : 'text-[12px] font-black text-pink-200'}>{v2 ? '🤝 助手どうしの友情Lv' : '助手どうしの関係図'}</p>
       <p className={v2 ? 'mb-2 text-[11.5px] font-bold leading-snug text-slate-200' : 'mb-2 text-[9px] leading-tight text-slate-400'} style={v2 ? { wordBreak: 'auto-phrase' } : undefined}>助手どうしも仲良くなります。{assistantPeerLvLabel(3)} になった2人は線で結ばれます。ペアを押すと思い出アルバムが開きます。</p>
+      {v2 && (<div data-assistant-peer-legend className="mb-2 rounded-xl border border-white/10 bg-slate-900/70 px-2.5 py-2">
+        <p className="text-[11.5px] font-black text-slate-100">線の見方(太さ・色=友情Lv。数字は Lv)</p>
+        <div className="mt-1 flex flex-wrap gap-1">
+          {[['Lv3', '#93c5fd', 3], ['Lv4', '#c4b5fd', 4], ['Lv5〜6', '#f9a8d4', 5], ['Lv7〜8', '#fcd34d', 7], ['Lv9〜', '#fde68a', 9]].map(([t, c, n]) => (
+            <span key={t} className="inline-flex items-center gap-1 rounded-full bg-slate-800 px-2 py-0.5 text-[11px] font-black text-slate-100"><i className="inline-block w-5 rounded-full" style={{ background: c, height: Math.min(8, n * 0.9) }}/>{t}</span>))}
+        </div>
+        <p className="mt-1 text-[11.5px] font-bold leading-snug text-slate-200" style={{ wordBreak: 'auto-phrase' }}>Lv1〜2 はまだ線がありません。Lv3 で線が結ばれます。線や下のペアを押すと、そのペアの思い出アルバムが開きます。</p>
+        <p className="mt-1 text-[11.5px] font-bold leading-snug text-emerald-200" style={{ wordBreak: 'auto-phrase' }}>友情ポイントがたまる: 掛け合いを見る +2・返事をする +3・おやつ屋さんや広場で一緒に過ごす +2・贈り物(いちばん多くて +45)。「あと」はこのポイントです。</p>
+      </div>)}
       {!assistantPeerLifeOn() && dailyPair && dailyPair.every(id => ids.includes(id)) && (
         <button type="button" data-assistant-peer-daily onClick={() => setAlbumPair(dailyPair)}
           className="mb-2 flex w-full items-center gap-2 rounded-xl border border-amber-300/50 bg-amber-400/10 px-2 py-1.5 text-left active:scale-[.98]">
@@ -64880,17 +64892,32 @@ function AssistantPeerMap({ metIds, onReplay, peerItems = null, onUseItem = null
         </button>)}
       {st.play && st.play.pair && st.play.pair.split('-').every(id => ids.includes(id)) && (
         <p data-assistant-peer-playing className="mb-2 text-[10px] font-bold text-sky-200">🎮 遊びに連れているペア: {st.play.pair.split('-').map(id => assistantById(id).name).join(' × ')}</p>)}
-      <div className="relative mx-auto" style={{ width: size, height: size }}>
-        <svg width={size} height={size} className="absolute inset-0" aria-hidden="true">
+      <div ref={mapRef} className="relative mx-auto" style={{ width: size, height: boxH }}>
+        <svg width={size} height={boxH} className="absolute inset-0" style={v2 ? { pointerEvents: 'none' } : undefined} aria-hidden="true">
           {rows.filter(x => x.lv >= 3).map(x => (
             <line key={`${x.a}-${x.b}`} data-assistant-peer-link={assistantPeerPairKey(x.a, x.b)} x1={pos[x.a].x} y1={pos[x.a].y} x2={pos[x.b].x} y2={pos[x.b].y}
               stroke={lineColor(x.lv)} strokeWidth={Math.min(10, x.lv * 0.9)} strokeLinecap="round" opacity="0.85"/>))}
         </svg>
         {ids.map(id => { const who = assistantById(id); return (
-          <div key={id} className="absolute flex flex-col items-center" style={{ left: pos[id].x - 24, top: pos[id].y - 24, width: 48 }}>
+          <div key={id} data-assistant-peer-node={id} className="absolute flex flex-col items-center" style={{ left: pos[id].x - 24, top: pos[id].y - 24, width: 48 }}>
             <AssistantFace who={who} size={48} accent={who.accent}/>
             <span className={`mt-0.5 whitespace-nowrap ${v2 ? 'text-[10.5px]' : 'text-[9px]'} font-black text-slate-200`}>{who.name}</span>
           </div>); })}
+        {v2 && (<svg width={size} height={boxH} className="absolute inset-0" style={{ pointerEvents: 'none' }}>
+          {v2 && (() => { const put = []; return rows.filter(x => x.lv >= 3).map(x => {
+              // 札(Lv)は、顔と名前・ほかの札に重ならない位置(線の上の 50%→40%→60%…)に置く
+              const at = (t) => ({ x: pos[x.a].x + (pos[x.b].x - pos[x.a].x) * t, y: pos[x.a].y + (pos[x.b].y - pos[x.a].y) * t });
+              const hit = (q) => ids.some(id => Math.abs(q.x - pos[id].x) < 40 && q.y > pos[id].y - 34 && q.y < pos[id].y + 52) || put.some(o => Math.abs(q.x - o.x) < 30 && Math.abs(q.y - o.y) < 18);
+              const dx = pos[x.b].x - pos[x.a].x, dy = pos[x.b].y - pos[x.a].y, dl = Math.hypot(dx, dy) || 1, nx = -dy / dl, ny = dx / dl;
+              const cand = []; for (const t of [0.5, 0.45, 0.55, 0.4, 0.6, 0.35, 0.65, 0.3, 0.7, 0.25, 0.75, 0.2, 0.8]) for (const o of [0, 14, -14, 24, -24, 34, -34]) { const c = at(t); cand.push({ x: c.x + nx * o, y: c.y + ny * o }); }
+              const inside = (c) => c.x > 16 && c.x < size - 16 && c.y > 8 && c.y < boxH - 8;
+              const q = cand.find(c => inside(c) && !hit(c)) || at(0.5); put.push(q); const mx = q.x, my = q.y; return (
+            <g key={`t-${x.a}-${x.b}`} data-assistant-peer-link-lv={assistantPeerPairKey(x.a, x.b)} style={{ pointerEvents: 'auto', cursor: 'pointer' }} onClick={() => setAlbumPair([x.a, x.b])}>
+              <line x1={pos[x.a].x} y1={pos[x.a].y} x2={pos[x.b].x} y2={pos[x.b].y} stroke="transparent" strokeWidth="22"/>
+              <rect x={mx - 13} y={my - 8} width="26" height="16" rx="8" fill="#0f172a" stroke={lineColor(x.lv)} strokeWidth="1.5"/>
+              <text x={mx} y={my + 3.5} textAnchor="middle" fontSize="10" fontWeight="900" fill="#fff">Lv{x.lv}</text>
+            </g>); }); })()}
+        </svg>)}
       </div>
       <div className="mt-3 space-y-1">
         {(showAll ? rows : rows.slice(0, 6)).map(x => { const A = assistantById(x.a), B = assistantById(x.b); const stage = levels.find(s => s.level === x.lv); const nextStage = levels.find(s => s.level === x.lv + 1);
@@ -64903,9 +64930,9 @@ function AssistantPeerMap({ metIds, onReplay, peerItems = null, onUseItem = null
                 <span className="whitespace-nowrap text-[12px] font-black text-pink-200">Lv{x.lv}{stage ? ` ${assistantPeerStageName(stage)}` : ''}</span>
                 <span className="text-[12px] font-black text-slate-300" aria-hidden="true">›</span>
               </span>
-              <span className="mt-1 flex items-center gap-2">
-                <span className="h-1.5 w-16 shrink-0 overflow-hidden rounded-full bg-slate-700" aria-hidden="true"><span className="block h-full bg-pink-400" style={{ width: `${nextStage ? Math.min(100, Math.round(100 * (x.pts - stage.min) / (nextStage.min - stage.min))) : 100}%` }}/></span>
-                <span data-assistant-peer-next className="min-w-0 flex-1 truncate text-[11px] font-bold text-emerald-300">{nextStage ? `あと${nextStage.min - x.pts}で Lv${nextStage.level}${opens ? ` → ${opens}` : `「${assistantPeerStageName(nextStage)}」`}` : '一番上まで来ました'}</span>
+              <span className="mt-1 flex items-start gap-2">
+                <span className="mt-1.5 h-1.5 w-16 shrink-0 overflow-hidden rounded-full bg-slate-700" aria-hidden="true"><span className="block h-full bg-pink-400" style={{ width: `${nextStage ? Math.min(100, Math.round(100 * (x.pts - stage.min) / (nextStage.min - stage.min))) : 100}%` }}/></span>
+<span data-assistant-peer-next className="min-w-0 flex-1 text-[11.5px] font-bold leading-snug text-emerald-300" style={{ wordBreak: 'auto-phrase' }}>{nextStage ? <>あと<b className="text-amber-200">{nextStage.min - x.pts}ポイント</b>で Lv{nextStage.level}「{assistantPeerStageName(nextStage)}」{(() => { const gain = (typeof ASSISTANT_LIFE_PEER_LV_GAIN !== 'undefined' && ASSISTANT_LIFE_PEER_LV_GAIN[nextStage.level]) || opens; return gain ? <span data-assistant-peer-gain className="block text-emerald-200">Lv{nextStage.level}になると → {gain}</span> : null; })()}</> : '一番上まで来ました'}</span>
               </span>
             </button>); }
           return (
@@ -65506,7 +65533,7 @@ function MsxFxMoment({ kind, title, sub, species, colors, skill, onDone, calm })
         {title ? <div className="msxfx-title">{title}</div> : null}
         {sub ? <div className="msxfx-sub">{sub}</div> : null}
       </div>
-      <div className="msxfx-skip">タップでとばす</div>
+      <div className="msxfx-skip">タップで飛ばす</div>
     </div>
   );
 }
@@ -67385,11 +67412,12 @@ function AssistantLifeRoom({ id, met, look, x, y, w, h, state, onOpen, idx, othe
         // 縦: 上の行(名札の右)に一緒の全員の名前か、ひとりなら何をしているか・印。下の行(札の幅いっぱい)に行き先。名前は札に入る数まで(残りは「ほか◯人」)
         const ml = [...assistantLifeName(id)].length * 10 + 20; // 名札の幅(字10px+余白)。上の行はその右から
         const names = t[2] ? assistantLifeTagNames(t[2], Math.floor((w - 6 - ml - 10) / (v2 ? 10.8 : 8.8))) : null;
+        const tagLand = typeof window !== 'undefined' && window.innerWidth > window.innerHeight; // 横画面は札の高さが床の帯(マスモンが歩く所)に響くので、これまでの折り方のまま
         const tagFit = assistantLifeTagFit(t[0], w - 26, 10.5, 0); // 1行に入る字の大きさ(10.5 に入らない狭い部屋は、意味の切れ目で2行にする)
         const short = [...String(t[0])].length <= 9; // 横は1行。行き先が長いときは人数を付けない(「…」で切らない)
         return <span className="tag" data-assistant-life-room-away={id} data-assistant-life-room-tag-mark={mark ? '1' : '0'}>
           {mark || !names ? <small data-assistant-life-room-what style={{ marginLeft: ml }}>{t[1]}</small> : <small data-assistant-life-room-with style={{ marginLeft: ml }}><AssistantLifeNames text={names}/></small>}
-          <b style={w < 150 ? (tagFit >= 10.5 ? { whiteSpace: 'nowrap', fontSize: 10.5 } : { whiteSpace: 'normal', fontSize: Math.max(9, Math.min(10.5, Math.floor((w - 26) / 5.2 * 10) / 10)), lineHeight: '12px' }) : undefined}>{v2 && w >= 150 ? <span data-assistant-life-room-out className="mr-1 rounded bg-slate-600 px-1 text-white">留守</span> : null}{w < 150 && tagFit < 10.5 ? assistantLifeTagChunks(t[0]) : t[0]}<i data-assistant-life-room-tag-short>{n > 1 && short ? `・${n}人` : ''}{mark ? ` ${[...t[1]][0]}` : ''}</i></b></span>; })()}
+          <b style={w < 150 && !tagLand ? (tagFit >= 10.5 ? { whiteSpace: 'nowrap', fontSize: 10.5 } : { whiteSpace: 'normal', fontSize: Math.max(9, Math.min(10.5, Math.floor((w - 26) / 5.2 * 10) / 10)), lineHeight: '12px' }) : undefined}>{v2 && w >= 150 ? <span data-assistant-life-room-out className="mr-1 rounded bg-slate-600 px-1 text-white">留守</span> : null}{w < 150 && !tagLand && tagFit < 10.5 ? assistantLifeTagChunks(t[0]) : t[0]}<i data-assistant-life-room-tag-short>{n > 1 && short ? `・${n}人` : ''}{mark ? ` ${[...t[1]][0]}` : ''}</i></b></span>; })()}
       {!met && <span className="lock">{other ? 'まだいない' : 'まだ会っていない'}</span>}
       {met && state && state.ev && <span className="evm" data-assistant-life-room-ev={id} aria-label="いま、できごとがあります">❗</span>}
       {met && !other && typeof assistantLifeBodyCondShort === 'function' && assistantLifeBodyCondShort(id) && <span className="evm" style={{ right: 'auto', left: 2 }} data-assistant-life-room-body={id} aria-label={assistantLifeBodyCondShort(id)}>{assistantLifeBodyBadge(id)}</span>}
@@ -69261,18 +69289,22 @@ function AssistantLifeRoomBed({ id, W, floorY, sleepers = [], look }) {
         const U = r.U || F * 2.63;
         const cw0 = U * 1.2, ch0 = U * 1.32; // 頭の絵の大きさ(これまでの枠)。頭の位置はここから決める
         // 枠は頭より広く取り、四角い切れ目を見せない(2026-11-14 社長「寝てるときの表示も上が切れてた」: 頭の上の飾り・角・髪が枠の上で四角く切れていた)。
-        //   上へ 0.7U・左右へ 0.35U ずつ広げ、枠の縁は薄く消す。頭の位置は変えない(広げた分だけ枠の中心をずらす)
-        const ex = 0.7 * U, ey = 0.35 * U, cw = cw0 + ey * 2, ch = ch0 + ex, y0 = -0.22 * U - ex;
+        //   上へ 0.38U・左右へ 0.18U ずつ広げ、枠の縁を広く薄く消す(広げすぎると絵の髪・羽まで出て頭が大きく見える・2026-11-15 社長)。頭の位置は変えない(広げた分だけ枠の中心をずらす)
+        const ex = 0.38 * U, ey = 0.18 * U, cw = cw0 + ey * 2, ch = ch0 + ex, y0 = -0.22 * U - ex;
         // 倒すと縦横が入れかわる(見た目の幅 ch・高さ cw)。頭の後ろを枕の左端に、下端を枕の6割の高さに沈める
         const cx = pillow.left + ch0 / 2 + 2 + i * 14 - ex / 2, cy = pillow.top + pillow.h * 0.6 - cw0 / 2 - i * 6;
         const fadeAt = `${(((0.82 * ch0 + ex) / ch) * 100).toFixed(1)}%`; // 顎の側(布団の側)の消え始めは、これまでと同じ位置
-        const feather = `linear-gradient(to right,transparent,#000 9%,#000 91%,transparent),linear-gradient(to bottom,transparent,#000 6%,#000 ${fadeAt},transparent)`;
+        const feather = `linear-gradient(to right,transparent,#000 22%,#000 78%,transparent),linear-gradient(to bottom,transparent,#000 20%,#000 ${fadeAt},transparent)`;
         const imgLeft = r.left + cw / 2;
+        // 寝顔の絵が大きすぎて布団・家具にはみ出す(2026-11-15 社長 r1115-005): 見えている部分の高さが 2.0U を超える絵は、目の位置を動かさずに縮めて枕に収める
+        const visH = r.height * (box.b - box.t), k = Math.min(1, (2.0 * U) / Math.max(1, visH));
+        const eyeOrigin = `${(((box.l + box.r) / 2) * 100).toFixed(1)}% ${((box.t + (x.face.eye || 0.33) * (box.b - box.t)) * 100).toFixed(1)}%`;
+        const shrink = k < 0.999 ? { transform: `scale(${k.toFixed(3)})`, transformOrigin: eyeOrigin } : {};
         return (
           <div key={x.pid} data-assistant-life-roomview-sleeper={x.pid} style={{ position: 'absolute', left: cx - cw / 2, top: cy - ch / 2, width: cw, height: ch, transform: 'rotate(-78deg)', transformOrigin: '50% 50%',
             WebkitMaskImage: feather, maskImage: feather, WebkitMaskComposite: 'source-in', maskComposite: 'intersect' }}>
-            <img src={x.src} alt="" draggable={false} style={{ position: 'absolute', left: imgLeft, top: r.top - y0, width: r.width, height: r.height, maxWidth: 'none', filter: `saturate(.9) brightness(${night ? 0.72 : 0.9})` }}/>
-            <AssistantLifeSleepEyes pid={x.pid} src={x.src} w={r.width} h={r.height} style={{ left: imgLeft, top: r.top - y0, filter: `saturate(.9) brightness(${night ? 0.72 : 0.9})` }}/>
+            <img src={x.src} alt="" draggable={false} style={{ position: 'absolute', left: imgLeft, top: r.top - y0, width: r.width, height: r.height, maxWidth: 'none', ...shrink, filter: `saturate(.9) brightness(${night ? 0.72 : 0.9})` }}/>
+            <AssistantLifeSleepEyes pid={x.pid} src={x.src} w={r.width} h={r.height} style={{ left: imgLeft, top: r.top - y0, ...shrink, filter: `saturate(.9) brightness(${night ? 0.72 : 0.9})` }}/>
           </div>); })}
       {/* 掛け布団(2026-11-08 社長「布団を膨らませて顔にちょっとかかる感じに」): 肩・体・足のふくらみのある形で、顔の下半分〜目のあたりまでかぶせる(髪と頭のてっぺんは見せる) */}
       {(() => {
@@ -70271,10 +70303,10 @@ function AssistantLifeRewardRow({ it, nameOf, onOpen = null }) {
 function AssistantLifeRewardRoad({ ids, peerSt, nameOf, onRoom = null }) {
   const [all, setAll] = React.useState(false);
   const r = assistantLifeRewardItems(ids, peerSt);
-  const total = r.bond.length + r.masmon.length + r.peer.length;
+  const total = r.bond.length + r.masmon.length; // 友情Lvは下の「助手どうしの友情Lv」に1つにまとめた(2026-11-14 社長 r1114-091)
   if (!total) return null;
   const cut = (list, n) => (all ? list : list.slice(0, n));
-  const hidden = (r.bond.length - Math.min(3, r.bond.length)) + (r.masmon.length - Math.min(2, r.masmon.length)) + (r.peer.length - Math.min(2, r.peer.length));
+  const hidden = (r.bond.length - Math.min(3, r.bond.length)) + (r.masmon.length - Math.min(2, r.masmon.length));
   const sec = (title, list, n, open) => list.length > 0 && (<div key={title}>
     <p className="mt-2 text-[12px] font-black text-slate-200">{title}</p>
     {cut(list, n).map(it => <AssistantLifeRewardRow key={it.k} it={it} nameOf={nameOf} onOpen={open}/>)}
@@ -70282,10 +70314,9 @@ function AssistantLifeRewardRoad({ ids, peerSt, nameOf, onRoom = null }) {
   return (
     <section className="mb-2 rounded-2xl border border-pink-300/60 bg-slate-950/90 p-2.5" data-assistant-life-reward-road={total}>
       <p className="text-[14px] font-black text-pink-100">🤝 きずな <span className="text-[12px] text-pink-200/90">・ 🎁 ごほうびの道のり</span></p>{/* 見出しを下のタブ「きずな」とそろえる(2026-11-11 ミヤスサ点検 ⑦) */}
-      <p className="text-[11.5px] font-bold leading-snug text-slate-200" style={{ wordBreak: 'auto-phrase' }}>💗 仲良し度=あなたと助手・🤝 友情Lv=助手どうし。見守る・贈る・おしゃべりで上がります。「あと」が小さい順です。</p>
+      <p className="text-[11.5px] font-bold leading-snug text-slate-200" style={{ wordBreak: 'auto-phrase' }}>💗 仲良し度=あなたと助手。見守る・贈る・おしゃべりで上がります。「あと」が小さい順です。助手どうしの友情Lvは、下にあります。</p>
       {sec('💗 仲良し度(あなたと助手)', r.bond, 3, onRoom)}
       {sec('🐾 次に迎えるマスモン', r.masmon, 2, onRoom)}
-      {sec('🤝 友情Lv(助手どうし)', r.peer, 2, null)}
       {r.maxed > 0 && <p className="mt-1.5 text-[11.5px] font-bold text-slate-300">💗 {r.maxed}人は、仲良し度がいちばん上まで来ました</p>}
       {hidden > 0 && <button type="button" data-assistant-life-reward-more aria-expanded={all} onClick={() => setAll(v => !v)} className="mt-1.5 min-h-[44px] w-full rounded-xl border border-white/20 text-[12px] font-black text-slate-100 active:scale-[.98]">{all ? '近い所だけにする ▲' : `全部見る(あと ${hidden} 件)▼`}</button>}
     </section>);
@@ -79382,7 +79413,7 @@ const mscFace = (id, ex) => { const a = mscAssistant(id); return a && typeof ass
 // 大会の名前と会場(芯の battle から)
 const monsucCupTitle = (suc, s) => {
   const b = s && s.battle; if (!b) return { name: '大会', star: 1, venue: 'cup' };
-  if (b.kind === 'summit') return { name: (suc.SUMMIT[b.round] || {}).name || '頂への道', star: 4, venue: 'summit' };
+  if (b.kind === 'summit') return { name: (suc.SUMMIT[b.round] || {}).name || 'ヒーローズファイナル', star: 4, venue: 'summit' };
   if (b.kind === 'cup') {
     const list = typeof suc.cupsOf === 'function' ? (() => { try { return suc.cupsOf({ ...s, battle: null, over: null }); } catch (_) { return []; } })() : [];
     const hit = list.find(c => c.id === b.id);
@@ -79911,7 +79942,7 @@ function MonsucCupLose({ suc, s, info, match, onRematch, onGiveUp, onSkipAnim })
         <p>やり直せるのは 1回の育成で{mscNum(suc.REMATCH && suc.REMATCH.max, 3)}回まで・<em>残り {left}/{mscNum(suc.REMATCH && suc.REMATCH.max, 3)}</em></p>
         <button className="msc-pick sand" data-msc-rematch="sand" disabled={!can('sand')} onClick={() => onRematch('sand')}><img src="images/success/items/hourglass.png" alt=""/><span>時渡りの砂時計で やり直す<small>同じ相手と もう一度(持っている ×{has('sand')})</small></span></button>
         <button className="msc-pick rain" data-msc-rematch="rainbow" disabled={!can('rainbow')} onClick={() => onRematch('rainbow')}><img src="images/success/items/hourglass-rainbow.png" alt=""/><span>虹の時渡りの砂時計で 相手を変えて やり直す<small>{info.rival ? '同じライバルと もう一度' : 'ちがう相手と 戦える'}(持っている ×{has('rainbow')})</small></span></button>
-        <button className="msc-pick quit" data-msc-giveup onClick={onGiveUp}>{summit ? 'あきらめる(頂への道は ここまで)' : info.star >= 2 ? 'あきらめる(準優勝の ごほうびを もらう)' : 'あきらめる'}</button>
+        <button className="msc-pick quit" data-msc-giveup onClick={onGiveUp}>{summit ? 'あきらめる(ヒーローズファイナルは ここまで)' : info.star >= 2 ? 'あきらめる(準優勝の ごほうびを もらう)' : 'あきらめる'}</button>
       </div>
       <div className="msc-talk"><img src={mscFace(s.aid, 'sad')} alt=""/><p>{coach ? <b style={{ display: 'block', fontSize: 11, color: '#b45309' }}>{coach.name}</b> : null}「おしかった! {why} もう1回 いく?」</p></div>
     </div>
@@ -81740,6 +81771,7 @@ function MonsucFuseSheet({ box, saveBox, onSave, readBox, locked = [], onDone, o
         {!SUC ? <p className="mt-2 text-[11px] font-bold text-slate-400">まだ使えません</p>
         : done ? (<>
           <div className="mt-2 rounded-xl bg-fuchsia-950 p-3" data-monsuc-fuse-done>
+            <p className="msx-pop text-center text-[26px] font-black text-fuchsia-200" data-monsuc-fuse-stamp>合体完了!</p>{/* 2026-11-14 社長(台帳 #6112): 育成の終わりの「育成完了!」とそろえる */}
             <p className="flex items-center gap-2 text-[14px] font-black">{typeof amgpMonIcon === 'function' ? amgpMonIcon(done.child.species) : null}{monsucFuseSpName(done.child.species)}が生まれました({done.child.gen}代目)</p>
             <p className="mt-1 text-[11px] font-bold text-slate-200">マスモンボックスに入りました。まだ育てていないので、このまま育成を始められます</p>
             <small className="mt-1 block text-[11px] font-bold text-slate-300" style={{ wordBreak: 'keep-all', overflowWrap: 'anywhere' }}>{(() => { const k = typeof keptOf === 'function' ? keptOf() : null; return k === 0 ? `${done.lost.join('と')}は、メモリアルモンスターがいっぱいなので、メモリアルモンスターには残りませんでした。思い出に名前・ランク・代が残ります` : k === 1 ? `${done.lost.join('と')}のうち1体は、メモリアルモンスターとして残ります。思い出の記録(名前・ランク・代)も残ります` : `${done.lost.join('と')}は、メモリアルモンスターとして残ります。思い出の記録(名前・ランク・代)も残ります`; })()}</small>
@@ -82803,14 +82835,14 @@ const MSX_BETA_CSS = `
 // 保存: 途中の育成 mh_monsuc_run_v1 に scn(シナリオの id)を足すだけ。無い保存・知らない id は 'hero' として読む(msxScenarioId)
 const MSX_STORIES = Object.freeze([
   Object.freeze({
-    id: 'hero', name: 'ヒーローへの道', en: 'ROAD TO HERO', badge: '頂への道',
-    lead: ['町の育成場で、きみと1体のモンスターの物語が始まる', '大会で勝ち、修行で技を覚え、仲間と強くなろう。', 'めざすは頂への道——ヒーローと呼ばれる日まで。'],
-    about: 'デビュー戦から始まり、ジュニア・ミドル・プロの3つの期を経て、最後は「頂への道」に挑む、モンヒロサクセスのいちばん最初のお話。',
+    id: 'hero', name: 'ヒーローへの道', en: 'ROAD TO HERO', badge: 'ヒーローズファイナル',
+    lead: ['町の育成場で、きみと1体のモンスターの物語が始まる', '大会で勝ち、修行で技を覚え、仲間と強くなろう。', 'めざすはヒーローズファイナル——ヒーローと呼ばれる日まで。'],
+    about: 'デビュー戦から始まり、ジュニア・ミドル・プロの3つの期を経て、最後は「ヒーローズファイナル」に挑む、モンヒロサクセスのいちばん最初のお話。',
     rows: Object.freeze([
-      ['📅', '流れ', 'デビュー期 → ジュニア期 → ミドル期 → プロ期 → 頂への道(3戦)'],
+      ['📅', '流れ', 'デビュー期 → ジュニア期 → ミドル期 → プロ期 → ヒーローズファイナル(3戦)'],
       ['🏆', '大会', 'モンスターダービー/四大大会/季節の賞 ほか。賞金ランクは ルーキー〜ヒーローの10段'],
       ['👥', '登場人物', '助手(いまはみゅあ)・イッサ博士・ライバルたち'],
-      ['🎯', '目指すもの', '頂への道の決勝に勝って「ヒーロー」に。'],
+      ['🎯', '目指すもの', 'ヒーローズファイナルの決勝に勝って「ヒーロー」に。'],
     ]),
     cast: Object.freeze({ left: 'issa', center: 'mua', right: 'kiki' }),
   }),
@@ -83151,7 +83183,7 @@ function MsxShugyoStages({ run, o, line, onDone }) {
         <span key={`fl${st}`} className="qflash" aria-hidden="true"/>
         {helpers.length ? <div className="faces">{helpers.map((i) => s.team[i]).filter(Boolean).map((m, j) => <img key={j} src={msxMonThumb(m.species)} alt=""/>)}<small>いっしょに修行</small></div> : null}
       </>)}
-      <div className="skip">タップでとばす</div>
+      <div className="skip">タップで飛ばす</div>
     </div>
   );
 }
@@ -83544,7 +83576,7 @@ const MSX_INTRO_CSS = `
 // ===== モンヒロサクセスの期の区切りの演出(2026-11-13 窓口の頼み・参考画像 40・41・112・113・173・176 の流れだけを取り入れる) =====
 // 新しい期の1ターン目のターンの区切りで、ふだんの「◯月」の画面の前に1回だけ出す。押すと次の段・とばすで終わり
 //   段 0「第◯章 終了/◯◯期」の大きな字・子が大きく立つ(覚醒なら気をまとう)・下に獲得賞金と総合力(期のはじめからの増えた分)
-//   段 1「NEXT あと◯ターン」と期のはしご(終わった期 ✓・次 ▶・最上段は最後の大会「頂への道」で金色)
+//   段 1「NEXT あと◯ターン」と期のはしご(終わった期 ✓・次 ▶・最上段は最後の大会「ヒーローズファイナル」で金色)
 // ki = 期のはじめの控え { p, fame, power }(run.ki・無ければ増えた分を出さない)。何も保存しない(控えの書きかえは呼ぶ側)
 // 「動きを減らす」設定では動かさず、段は押して進める
 const MSX_KI_CHAPTER = Object.freeze(['第一章', '第二章', '第三章', '第四章', '最終章']);
@@ -83572,11 +83604,11 @@ function MsxKiShow({ run, v, ev, ki, onDone }) {
   const has = ki && ki.p === prev && Number.isFinite(ki.fame) && Number.isFinite(ki.power);
   const dFame = has ? fame - ki.fame : null; const dPow = has ? ev.power - ki.power : null;
   const isFinal = P[now] && P[now].key === 'final';
-  // 次の段までのターン: ふつうの期は期の長さ・最後の期は頂への道(3ターン目から)まで
+  // 次の段までのターン: ふつうの期は期の長さ・最後の期はヒーローズファイナル(3ターン目から)まで
   const left = isFinal ? 2 : v.period.left;
   const sign = (n) => (n >= 0 ? `+${msxFmt(n)}` : `−${msxFmt(-n)}`);
-  // はしご: 上から 頂への道(金)→ プロ期 → … → デビュー期
-  const rungs = P.map((p, i) => ({ i, name: p.key === 'final' ? '頂への道' : p.name, gold: p.key === 'final', state: i < now ? 'done' : i === now ? 'next' : 'later' })).reverse();
+  // はしご: 上から ヒーローズファイナル(金)→ プロ期 → … → デビュー期
+  const rungs = P.map((p, i) => ({ i, name: p.key === 'final' ? 'ヒーローズファイナル' : p.name, gold: p.key === 'final', state: i < now ? 'done' : i === now ? 'next' : 'later' })).reverse();
   return (
     <div className={`v-scene msx-ki st${st}`} style={{ flex: '1 1 0' }} onClick={step} data-msx-ki={st}>
       <img className="bg" src={msxSceneBg(s.turn).bg} alt=""/><div className="sh"/>
@@ -86152,6 +86184,9 @@ const MSX_CSS = `
 .msx .v-turn .ph{background:linear-gradient(160deg,#f472b6,#fb923c);border-radius:9px;padding:3px 7px;font-size:11px;font-weight:900;line-height:1.15;text-align:center;white-space:nowrap;box-shadow:0 2px 0 #9d174d}
 .msx .v-turn .ph small{display:block;font-size:10px;font-weight:700;opacity:.95}
 .msx .v-turn .n{font-size:11px;font-weight:900;white-space:nowrap;line-height:1}
+/* 最後の期の帯(HF進出・当日)。参考 taikai-entry 175 */
+.msx .v-turn .ph.hf{background:linear-gradient(160deg,#fde047,#f59e0b);color:#422006;box-shadow:0 2px 0 #92400e}
+.msx .v-turn .n b.hfday{font-size:22px;color:#fde047;letter-spacing:.06em}
 .msx .v-turn .n b{font-size:30px;color:#fde047;margin:0 2px;letter-spacing:-.02em;text-shadow:0 2px 0 #9a3412,0 0 12px #fde04766}
 .msx .v-turn .n small{display:block;font-size:10px;color:#cbd5e1;font-weight:700;margin-top:3px}
 .msx .v-turn .n small em{font-style:normal;color:#fff;font-weight:900}
@@ -86638,7 +86673,16 @@ const MSX_CSS = `
 .msx .v-tr .lv{display:block;position:static;background:none;border:0;font-style:normal;font-size:10px;font-weight:800;color:#94a3b8;line-height:1.3}
 .msx .v-tr.tag .o{box-shadow:0 0 0 2px #fde04788,0 0 14px 3px #fde047,0 0 24px 6px #fb923c88}
 .msx .v-tr.tag .nm{color:#fde047}
-.msx .v-tr.sel .o{transform:scale(1.1)}
+.msx .v-tr.sel .o{transform:translateY(-8px) scale(1.18)}
+.msx .v-tr .o{transition:transform .14s ease-out,box-shadow .14s}
+.msx .v-tr:not(.sel) .o{transform:translateY(2px) scale(.96)}
+.msx .v-trs{position:relative;padding-top:17px;padding-bottom:12px;touch-action:pan-y}
+.msx .v-tr .tn.one{white-space:nowrap;letter-spacing:-.06em;margin:0 -4px;display:flex;align-items:flex-start;justify-content:center}
+.msx .v-tr .fb{position:absolute;left:50%;top:-17px;transform:translateX(-50%);background:#fff;color:#7f1d1d;border-radius:8px;padding:1px 6px;font-size:10px;font-weight:900;white-space:nowrap;line-height:1.4;z-index:3;box-shadow:0 1px 4px #0006}
+.msx .v-tr .fb::after{content:'';position:absolute;left:50%;bottom:-4px;margin-left:-4px;border:4px solid transparent;border-bottom:0;border-top-color:#fff}
+.msx .v-tr .ke{position:absolute;left:50%;bottom:-13px;transform:translateX(-50%);color:#fde047;font-size:11px;font-weight:900;text-shadow:0 1px 2px #000;white-space:nowrap}
+.msx .v-trail{position:absolute;left:0;top:0;pointer-events:none;z-index:4;opacity:.85;filter:drop-shadow(0 0 2px #fff8)}
+.msx .v-trail.out{opacity:0;transition:opacity .5s ease-out}
 .msx .v-tr.sel .nm{color:#fff}
 .msx .v-lvx{display:flex;align-items:center;gap:6px;margin-top:5px;font-size:10px;font-weight:900;white-space:nowrap}
 .msx .v-lvx b{color:#7dd3fc}.msx .v-lvx i{flex:1;height:6px;border-radius:4px;background:#334155;position:relative;overflow:hidden}
@@ -86960,12 +87004,12 @@ const MSX_ASSIST_SRC = 'data/monhero-success-assist.js'; // アシスト能力�
 const MSX_SCRIPT_SRC = 'data/monhero-success-script-engine.js'; // 台本エンジン(window.MONHERO_SUCCESS_SCRIPT_ENGINE)
 const MSX_EVENTS_SRC = 'data/monhero-success-events.js'; // ランダムイベントの部品(芯が create のときに window.MONHERO_SUCCESS_EVENTS を拾う)
 const MSX_SCENES_SRC = 'data/success-scenes.js'; // 住む場所の景色(季節×時間)・大会の会場・修行の景色。window に successHomeScene などを置く
-const MSX_ARC_SRC = 'data/monhero-success-arc.js'; // 助手1人分のストーリーの表(固有イベント・頂への道の相手えらび・お祝い。2026-11-13)。芯が create のときに拾う
+const MSX_ARC_SRC = 'data/monhero-success-arc.js'; // 助手1人分のストーリーの表(固有イベント・ヒーローズファイナルの相手えらび・お祝い。2026-11-13)。芯が create のときに拾う
 const MSX_REGULARS_SRC = 'data/monhero-success-regulars.js'; // 大会の常連の表(const だけの形なので typeof で見る)
 const MSX_ISSA_ART = 'images/success/issa-hakase.png';
 // シナリオ(助手)。台本があるのは みゅあ・あつ(第1弾)。ほかは準備中。β版で選べるのはみゅあだけ(56-monsuc-beta.jsx の MSX_BETA_AIDS)
 const MSX_SCENARIOS = Object.freeze([
-  { aid: 'mua', no: 1, title: 'いっしょに、てっぺんへ!', lead: '明るく元気なムードメーカーと、笑いながら頂点を目指す物語。初めての育成におすすめ', tag: 'やさしい',
+  { aid: 'mua', no: 1, title: 'いっしょに、ヒーローズファイナルへ!', lead: '明るく元気なムードメーカーと、笑いながらヒーローズファイナルの優勝を目指す物語。初めての育成におすすめ', tag: 'やさしい',
     perk: '遊ぶ・休むでストレスが 1.3倍 減る。褒めたときの忠誠 +1', eps: ['はじめての おでかけ', 'はげまし合う夜', 'ふたりの約束'] },
   { aid: 'atsu', no: 2, title: '仕上げて、勝ちに行く', lead: '面倒見のいい兄貴分と、コツコツ仕上げて大会をとりにいく物語', tag: 'ふつう',
     perk: 'トレーニングの組み合わせが あつ流(ちから → ライフ・回避 など)', eps: ['はじめての特訓', '雨の日の作戦会議', '仕上げの約束'] },
@@ -87868,7 +87912,7 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf }) {
         {combo && <div className="v-kv"><b>トレーニングの組み合わせ</b><span>{MSX_STATS.slice(0, 3).map((k) => `${MSX_STAT_ICON[k]}${MSX_STAT_NAME[k]} → +${combo[k].map((c) => MSX_STAT_ICON[c]).join('+')}`).join(' / ')} …</span></div>}
         <div className="v-kv"><b>初めの親密度</b><span>{Math.min((SUC.BOND && SUC.BOND.aidStartMax) || 40, aidLv * ((SUC.BOND && SUC.BOND.aidPerLv) || 4))}(仲良し度 Lv{aidLv})。助手もトレーニングに来て、タッグになる</span></div>
         <div className="v-eps">{sc.eps.map((t, i) => <div key={i}><b>{i + 1}話</b>{t}</div>)}<div className="lk"><b>4話</b>🔒 ？？？</div></div>
-        <div className="row" style={{ marginTop: 'auto' }}><img className="fc" src={msxFace(aid, 'wink')} alt=""/><div className="bub f1">「{aid === 'atsu' ? 'よし、いっちょ仕上げてくか。よろしくな笑' : 'いっしょに てっぺん めざそ! まぢで楽しいから!'}」</div></div>
+        <div className="row" style={{ marginTop: 'auto' }}><img className="fc" src={msxFace(aid, 'wink')} alt=""/><div className="bub f1">「{aid === 'atsu' ? 'よし、いっちょ仕上げてくか。よろしくな笑' : 'いっしょに ヒーローズファイナル めざそ! まぢで楽しいから!'}」</div></div>
       </div>
     </>);
     go = `${msxAidName(aid)}編で始める ▶`;
@@ -88063,8 +88107,14 @@ function MsxBand({ s, v, ev, use = 0, stAdd = 0, hpFrom = null, stFrom = null })
     <div className="v-band" style={pk.state === 'in' ? { position: 'relative' } : undefined}>
       {pk.state === 'in' ? <span className="v-peakb" data-msx-peak-band={pk.left} style={{ position: 'absolute', left: '50%', top: -7, transform: 'translateX(-50%)', zIndex: 2, whiteSpace: 'nowrap', padding: '1px 9px', borderRadius: 999, fontSize: 10.5, fontWeight: 900, color: '#fff7cc', background: 'linear-gradient(90deg,#ea580c,#f59e0b)', boxShadow: '0 0 8px #fb923c' }}>🔥 ピーク中(あと{pk.left}ターン)</span> : null}
       <div className="v-b1">
-        <div className="v-turn"><span className="ph">{v.period.name}<small>{cal.year}年目 {cal.month}月</small></span>
-          <div className="n">残り<b>{v.period.left}</b>ターン<small>最後まで あと <em>{v.toEnd}</em></small></div></div>
+        {/* 最後の期は参考(taikai-entry 175)どおり「HF進出」の札と、ヒーローズファイナルの日なら「当日」・その前は「あと◯ターン」(3ターン目から1戦ずつ) */}
+        {v.period.key === 'final' ? (
+          <div className="v-turn hf" data-msx-hfband={v.period.at >= 3 ? 'day' : 3 - v.period.at}><span className="ph hf">HF進出<small>{cal.year}年目 {cal.month}月</small></span>
+            <div className="n">{v.period.at >= 3 ? <b className="hfday">当日</b> : <>あと<b>{3 - v.period.at}</b>ターン</>}<small>最後まで あと <em>{v.toEnd}</em></small></div></div>
+        ) : (
+          <div className="v-turn"><span className="ph">{v.period.name}<small>{cal.year}年目 {cal.month}月</small></span>
+            <div className="n">残り<b>{v.period.left}</b>ターン<small>最後まで あと <em>{v.toEnd}</em></small></div></div>
+        )}
         <div className="v-pow"><div><small>総合力</small><b>{msxFmt(ev.power)}</b></div><i className={`${msxRankCls(ev.rank)} big`}>{ev.rank}</i></div>
       </div>
       <div className="v-b2">
@@ -88278,7 +88328,7 @@ function MonheroSuccessScreen({ onClose, callNameOf, bondLvOf, debug = false, st
     betaKeys = { keys: ['open', raisedMons.length > 0 && !(run && run.s && !run.s.over) && 'firstend'], ctx: { ...betaCtx, mon: lastRaised ? (lastRaised.nick || msxMonName(lastRaised.species)) : undefined } };
   } else if (view === 'play' && run && run.s) {
     const s = run.s; const ph = run.phase;
-    const keys = s.over || ph === 'over' ? ['retire'] : ph === 'battle' ? [run.out && run.out.r3 ? (run.out.r3.stage === 'rank' ? 'rank' : run.out.r3.stage === 'meal' ? 'meal' : null) : 'match'] /* 賞金ランク UP!・ごはんの段(2026-11-14) */ : playSub === 'cup' ? ['cup'] : playSub === 'shugyo' ? ['shugyo']
+    const keys = s.over || ph === 'over' ? (s.over !== 'gameover' && (run.arcAfter || (s.ending && !s.ending.seen)) ? null /* エンディングのお話を読み終えてから「引退」の説明を出す(お話に重ねない) */ : ['retire']) : ph === 'battle' ? [run.out && run.out.r3 ? (run.out.r3.stage === 'rank' ? 'rank' : run.out.r3.stage === 'meal' ? 'meal' : null) : 'match'] /* 賞金ランク UP!・ごはんの段(2026-11-14) */ : playSub === 'cup' ? ['cup'] : playSub === 'shugyo' ? ['shugyo']
       : ph === 'event' || ph === 'story' ? ['event'] : ph === 'awake' ? ['awake'] : ph === 'result' && run.out && run.out.result ? ['result']
         : ph === 'main' && playSub === 'main' ? ['turn', 'train', s.hpMax > 0 && s.hp < s.hpMax * 0.5 && 'rest', Number(s.tickets) > 0 && 'shugyo'] : null;
     if (keys) betaKeys = { keys, ctx: { ...betaCtx, mon: run.nick } };
@@ -88361,6 +88411,10 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
   //   左へスライドで次・右へで前。端で止める。横に 48px 以上、しかも縦の動きより大きいときだけ替える(縦のスクロールやタップの邪魔をしない)
   const swipeRef = useRef(null);
   const [swipe, setSwipe] = useState({ n: 0, dir: 0 });
+  // 下のトレーニングの札の列: 指を置いたまま左右になぞると、指の下の札がその場で浮き上がって選ばれる(2026-11-15 r1115-002 社長が参考の録画を見せて)。
+  //   通った跡に白い細い線を少し残す。離した所の札が選ばれたまま。替わるたびにタップ音(既存の効果音 tap・SE の音量に従う)
+  const scrubRef = useRef(null);
+  const [trail, setTrail] = useState(null); // { pts: [{x,y}], live, w, h }
   useEffect(() => { if (onSub) onSub(sub); }, [sub]);
   useEffect(() => () => { if (onSub) onSub('main'); }, []);
   // 期の区切りの演出(56-monsuc-kifx.jsx)を見終えたターン(保存しない。読み直したときはもう一度出る)
@@ -88604,7 +88658,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
       <div className="v-scene msx-fade" style={{ flex: '1 1 0' }}><div className="v-clock">
         <div className="v-cal msx-pop"><div className="y">{v.period.name}・{cal.year}年目</div><div className="mth">{cal.month}<small>月</small></div><div className="old">{prev.month}月 おつかれさま</div></div>
         <div className="v-next">この期の残り <b>{v.period.left}</b> ターン</div>
-        {v.period.key !== 'final' ? <div className="v-chip hot" style={{ position: 'static' }}>🏆 期末の大会まで あと{v.period.left}ターン</div> : <div className="v-chip hot" style={{ position: 'static' }}>🏆 頂への道</div>}
+        {v.period.key !== 'final' ? <div className="v-chip hot" style={{ position: 'static' }}>🏆 期末の大会まで あと{v.period.left}ターン</div> : <div className="v-chip hot" style={{ position: 'static' }}>🏆 ヒーローズファイナル</div>}
         {seasonChanged ? <div className="v-chip" style={{ position: 'static' }}>{MSX_SEASON[cal.season]}になった</div> : null}
         <div className="v-phs">{P.map((p, i) => <span key={p.key} style={{ flex: p.len }} className={i === v.period.index ? 'now' : ''}><i style={{ width: `${i < v.period.index ? 100 : i === v.period.index ? (v.period.at - 1) / p.len * 100 : 0}%` }}/><b>{p.name.replace('期', '').replace('最後の', '最後')}</b></span>)}</div>
       </div></div>
@@ -88639,6 +88693,25 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
       onPointerCancel: () => { swipeRef.current = null; },
       onClickCapture: (e) => { if (swipeRef.current && swipeRef.current.moved) { e.stopPropagation(); e.preventDefault(); } swipeRef.current = null; },
     };
+    const scrubIdx = (e) => { const r = e.currentTarget.getBoundingClientRect(); return Math.max(0, Math.min(MSX_STATS.length - 1, Math.floor((e.clientX - r.left) / Math.max(1, r.width) * MSX_STATS.length))); };
+    const scrubPt = (e) => { const r = e.currentTarget.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top, w: r.width, h: r.height }; };
+    const scrubOn = {
+      style: { touchAction: 'pan-y', userSelect: 'none', WebkitUserSelect: 'none' },
+      onPointerDown: (e) => { scrubRef.current = { x: e.clientX, moved: false, last: MSX_STATS.indexOf(stat), id: e.pointerId }; },
+      onPointerMove: (e) => {
+        const st = scrubRef.current; if (!st) return;
+        if (!st.moved) {
+          if (Math.abs(e.clientX - st.x) < 6) return;
+          st.moved = true; try { e.currentTarget.setPointerCapture(e.pointerId); } catch (_) {}
+        }
+        const i = scrubIdx(e); const p = scrubPt(e);
+        setTrail((t) => ({ pts: [...(t && t.live ? t.pts : []), { x: p.x, y: p.y }].slice(-28), live: true, w: p.w, h: p.h }));
+        if (i !== st.last) { st.last = i; setSel(MSX_STATS[i]); if (typeof msaSe === 'function') msaSe('tap'); }
+      },
+      onPointerUp: () => { const st = scrubRef.current; if (st && st.moved) { setTrail((t) => (t ? { ...t, live: false } : t)); setTimeout(() => setTrail(null), 600); } else { scrubRef.current = null; } },
+      onPointerCancel: () => { scrubRef.current = null; setTrail(null); },
+      onClickCapture: (e) => { const st = scrubRef.current; scrubRef.current = null; if (st && st.moved) { e.stopPropagation(); e.preventDefault(); } },
+    };
     body = (<>
       <MsxBand s={s} v={v} ev={ev} {...bandProps}/>
       <div className={`v-scene${swipe.n ? (swipe.dir > 0 ? ' msx-swl' : ' msx-swr') : ''}`} key={`trsw${swipe.n}`} data-msx-train-swipe {...swipeOn} style={{ ...swipeOn.style, flex: '1 1 0' }}>
@@ -88658,10 +88731,12 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
         </div>}
       </div>
       <MsxStRow who={s} stats={s.stats} ups={pv ? pv.gain : null} main={stat} preview/>
-      <div className="v-trs" data-msx-train-swipe-row {...swipeOn}>
+      <div className="v-trs" data-msx-train-swipe-row data-msx-train-scrub {...scrubOn}>
+        {trail && trail.pts.length > 1 ? <svg className={`v-trail${trail.live ? '' : ' out'}`} width={trail.w} height={trail.h} viewBox={`0 0 ${trail.w} ${trail.h}`} aria-hidden="true"><polyline points={trail.pts.map((q) => `${q.x.toFixed(1)},${q.y.toFixed(1)}`).join(' ')} fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg> : null}
         {MSX_STATS.map((k) => { const c = msxCardOf(v, k); const lv = lvOf(c); return (
-          <button type="button" key={k} className={`v-tr${c && c.tags.length ? ' tag' : ''}${k === stat ? ' sel' : ''}`} onClick={() => setSel(k)}>
-            <div className="o">{MSX_STAT_ICON[k]}</div><b className="nm">{MSX_STAT_NAME[k]}</b><small className="tn">{msxTrainNameParts(k, lv).map((x, i) => <React.Fragment key={i}>{i ? <wbr/> : null}{x}</React.Fragment>)}</small>{lv ? <i className="lv">Lv.{lv}</i> : null}</button>); })}
+          <button type="button" key={k} className={`v-tr${c && c.tags.length ? ' tag' : ''}${k === stat ? ' sel' : ''}`} onClick={() => { if (k === stat && c) doAct({ kind: c.kind, stat: k }); else setSel(k); }}>
+            {k === stat && c ? <span className="fb" data-msx-train-fail>失敗率 {Math.round(c.fail * 100)}%</span> : null}
+            <div className="o">{MSX_STAT_ICON[k]}</div><b className="nm">{MSX_STAT_NAME[k]}</b><small className={`tn${msxTrainName(k, lv).length <= 5 ? ' one' : ''}`}>{msxTrainName(k, lv).length <= 5 ? msxTrainName(k, lv) : msxTrainNameParts(k, lv).map((x, i) => <React.Fragment key={i}>{i ? <wbr/> : null}{x}</React.Fragment>)}</small>{lv ? <i className="lv">Lv.{lv}</i> : null}{k === stat && c ? <span className="ke" data-msx-train-ok>決定</span> : null}</button>); })}
       </div>
     </>);
     foot = <div className="v-ft"><button type="button" onClick={() => { setSub('main'); setSel(null); }}>← 戻る</button><button type="button" className="go" disabled={!card} onClick={() => doAct({ kind: card.kind, stat })}>{msxTrainIcon(stat, trainLv)} {msxTrainName(stat, trainLv)}をする</button></div>;
@@ -88687,7 +88762,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
         <div className="gr"/><MsxMonArt run={run} className={`mon${low ? ' low' : ''}`} live/>
         <div className="v-party"><small>編成</small>{s.team.map((m, i) => <MsxPf key={i} m={m} bond={s.bond[i]} tagAt={tagAt}/>)}<MsxPf aid={s.aid} bond={s.aidBond} tagAt={tagAt}/></div>
         <div className="v-chips"><span className="v-chip">{MSX_SEASON[cal.season]}・{scn.time}</span>
-          {preOn ? <span className="v-chip hot" data-msx-pre-chip>🏆 {preName} 当日</span> : v.period.key !== 'final' ? <span className="v-chip hot">🏆 期末の大会まで {v.period.left}ターン</span> : <span className="v-chip hot">🏆 頂への道</span>}
+          {preOn ? <span className="v-chip hot" data-msx-pre-chip>🏆 {preName} 当日</span> : v.period.key !== 'final' ? <span className="v-chip hot">🏆 期末の大会まで {v.period.left}ターン</span> : <span className="v-chip hot">🏆 ヒーローズファイナル</span>}
           {pkI.state === 'in' ? <span className="v-chip hot" data-msx-peak-chip>🔥 ピーク中 あと{pkI.left}ターン</span> : pkI.state === 'soon' ? <span className="v-chip ylw" data-msx-peak-chip>🔥 もうすぐ伸びどき</span> : null}
           {s.yosu && s.yosu.sabori ? <span className="v-chip bad">😪 ようす: サボりグセ</span> : null}
           {s.yosu && s.yosu.utsu ? <span className="v-chip bad">😢 ようす: うつ病</span> : null}
@@ -89226,7 +89301,7 @@ const msxR3CupName = (sys, own) => {
 // 戦う大会(s.battle)の名前
 const msxR3BattleName = (SUC, b) => {
   if (!b) return '';
-  if (b.kind === 'summit') return (SUC.SUMMIT[b.round] || {}).name || '頂への道';
+  if (b.kind === 'summit') return (SUC.SUMMIT[b.round] || {}).name || 'ヒーローズファイナル';
   if (b.kind === 'cup') return `${msxR3CupName(b.sys, b.name)} ${msxR3Stars(b.star)}`;
   return (SUC.FORCED[b.kind] || {}).name || '大会';
 };
@@ -89844,7 +89919,7 @@ function MsxR3CupIntro({ b, title, onGo }) {
   const go = () => { if (done.current) return; done.current = true; onGo(); };
   useEffect(() => { const id = setTimeout(go, MSX_R3_INTRO_MS); return () => clearTimeout(id); }, []);
   const venue = typeof MSC_VENUE_IMG !== 'undefined' ? (MSC_VENUE_IMG[b.kind] || MSC_VENUE_IMG.cup) : '';
-  const label = b.kind === 'cup' ? '今月の大会' : b.kind === 'summit' ? '最後の大会' : b.kind === 'debut' ? 'デビュー戦' : '期末の大会';
+  const label = b.kind === 'cup' ? '今月の大会' : b.kind === 'summit' ? 'ヒーローズファイナル' : b.kind === 'debut' ? 'デビュー戦' : '期末の大会';
   return (<>
     <style>{MSX_R3_INTRO_CSS}</style>
     <div className="msx-cupin" onClick={go} data-msx-r3-cupintro={b.kind}>
@@ -89884,7 +89959,7 @@ function MsxR3PreDesk({ run, v, ev, onBack, onGo, onPause }) {
   if (!b) return null;
   const name = msxR3BattleName(SUC, b);
   const star = b.kind === 'summit' ? 4 : ((SUC.FORCED || {})[b.kind] || {}).star || 1;
-  const grade = b.kind === 'summit' ? '最後の大会' : b.kind === 'debut' ? 'デビュー戦' : '期末の大会';
+  const grade = b.kind === 'summit' ? 'ヒーローズファイナル' : b.kind === 'debut' ? 'デビュー戦' : '期末の大会';
   const prizes = msxR3ForcedPrizes(SUC, b);
   const gold = prizes[0] && prizes[0].id === 'g' ? prizes[0].name.replace('賞金 ', '') : '';
   const cal = msxCalendar(s.turn);
@@ -89973,7 +90048,7 @@ function MsxR3Battle({ run, setRun, v, ev, ctx, bondLv, onPause, debug }) {
   //   (先に保存すると s が替わって見せる部品が作り直されるので、onNext まで待つ)
   const commitSettle = ({ r, d, won, before }) => {
     const s2 = r.state; const log = [...(run.log || []), { turn: before.turn, t: `${name}: ${won ? '優勝' : '負け'}` }].slice(-20);
-    const arcAfter = msxArcAfterOf(SUC, before, b, won, fight && fight.opp) || undefined; // 頂への道の試合のあとの掛け合い
+    const arcAfter = msxArcAfterOf(SUC, before, b, won, fight && fight.opp) || undefined; // ヒーローズファイナルの試合のあとの掛け合い
     const rankUp = d && d.rankTo > d.rankFrom; // 賞金ランクが上がったら、ピラミッドの段を1枚はさむ(2026-11-14)
     if (rankUp || (s2.mealReady && !s2.over)) { setRun({ ...run, s: s2, phase: 'battle', r3skip: undefined, arcAfter, log, out: { r3: { stage: rankUp ? 'rank' : 'meal', meal: !!(s2.mealReady && !s2.over), won, name, icon: msxR3BattleIcon(b), d, foe: fight ? fight.opp : null, rival: !!(b && b.rival), rivalName: b && b.rival ? b.rival.name : null, from: before.turn, gameover: !!r.out.gameover } } }); return; }
     const base = { ...run, s: s2, r3skip: undefined, arcAfter, log, out: null };
@@ -89992,7 +90067,7 @@ function MsxR3Battle({ run, setRun, v, ev, ctx, bondLv, onPause, debug }) {
   const result = () => { if (!fight) return; if (fight.won) settle(true); else setStep('lost'); };
   useEffect(() => { if (step === 'auto' && fight && !showOn) result(); }, [step, fight]);
   const actx = ctx || { id: s.id, turn: s.turn, aid: s.aid, mon: run.nick, species: s.species };
-  // 頂への道: 試合のあとの掛け合い(56-monhero-success-arc.jsx)。賞品・ごはんの前に出す
+  // ヒーローズファイナル: 試合のあとの掛け合い(56-monhero-success-arc.jsx)。賞品・ごはんの前に出す
   if (run.arcAfter) return <MsxArcAfter run={run} v={v} ev={ev} onPause={onPause} ctx={actx} bondLv={bondLv || 1} after={run.arcAfter} onDone={() => setRun({ ...run, arcAfter: undefined })}/>;
 
   // ---- 勝ち負けを付けたあと: 賞品(B2)→ ごはん(C3) ----
@@ -90092,7 +90167,7 @@ function MsxR3Battle({ run, setRun, v, ev, ctx, bondLv, onPause, debug }) {
   if (failed) return <MsxR3Frame run={run} back="中断" onBack={onPause} body={<div className="msx-note">試合を読み込めませんでした。電波のよい所で、もう一度開いてください</div>} foot={<div className="v-ft"><button type="button" onClick={onPause}>← 中断</button></div>}/>;
   if (!fight) return <MsxR3Frame run={run} back="中断" onBack={onPause} body={<div className="msx-note" data-msx-r3-loading>大会の準備をしています…</div>} foot={null}/>;
   const opp = fight.opp;
-  // 頂への道: 試合の前に、助手が相手を選ぶ(1戦ごとに1回。やり直しでは出さない)
+  // ヒーローズファイナル: 試合の前に、助手が相手を選ぶ(1戦ごとに1回。やり直しでは出さない)
   const pickKey = b.kind === 'summit' ? `${s.turn}:${b.round}` : null;
   if (pickKey && msxArcHas(SUC, s.aid) && run.arcPick !== pickKey) return <MsxArcPick run={run} v={v} ev={ev} onPause={onPause} ctx={actx} bondLv={bondLv || 1} opp={opp} round={b.round} onDone={() => setRun({ ...run, arcPick: pickKey })}/>;
   const skip = typeof SUC.canSkip === 'function' && SUC.canSkip(s);
@@ -90132,7 +90207,7 @@ function MsxR3Battle({ run, setRun, v, ev, ctx, bondLv, onPause, debug }) {
               <img src="images/success/items/hourglass.png" alt="" style={{ width: 30, height: 30 }}/><div>時渡りの砂時計で やり直す<small>同じ相手ともう一度(持っている ×{has('sand')})</small></div></button>
             <button type="button" className="nj" disabled={!SUC.canRematch(s, 'rainbow')} style={{ opacity: SUC.canRematch(s, 'rainbow') ? 1 : 0.45 }} onClick={() => re('rainbow')} data-msx-r3-rainbow>
               <img src="images/success/items/hourglass-rainbow.png" alt="" style={{ width: 30, height: 30 }}/><div>虹の砂時計で 相手を変えて やり直す<small>ちがう相手と戦える(持っている ×{has('rainbow')})</small></div></button>
-            <button type="button" className="gv" onClick={() => settle(false)} data-msx-r3-giveup>あきらめる<small>{b.kind === 'debut' ? `デビュー戦の負け ${(s.debutLoss || 0) + 1} / 3${debutLeft === 0 ? '(育成はここまで)' : ''}` : b.kind === 'summit' ? '頂への道はここまで(引退へ)' : '準優勝のごほうびをもらう'}</small></button>
+            <button type="button" className="gv" onClick={() => settle(false)} data-msx-r3-giveup>あきらめる<small>{b.kind === 'debut' ? `デビュー戦の負け ${(s.debutLoss || 0) + 1} / 3${debutLeft === 0 ? '(育成はここまで)' : ''}` : b.kind === 'summit' ? 'ヒーローズファイナルはここまで(引退へ)' : '準優勝のごほうびをもらう'}</small></button>
           </div>
           <div className="row" style={{ marginTop: 6 }}><img className="fc" src={msxFace(s.aid, 'troubled')} alt=""/><div className="bub f1">{msxR3Line('turn.cup.lose', run, { cup: name, rival: b.rival ? b.rival.name : '' }, '「おしかった! もう1回いく?」').t}</div></div>
         </div>
@@ -90367,7 +90442,7 @@ const MSX_R3_AUTO_ORDER = Object.freeze(['sokoji', 'hirameki', 'hitonatsu', 'ato
 function MsxR3Over({ run, setRun, ctx, bondLv, onPause, debug }) {
   const { SUC } = msxSuc;
   const s = run.s;
-  // 頂への道の最後の試合のあとの掛け合い → エンディング・お祝い・特別演出(56-monhero-success-arc.jsx)→ 引退
+  // ヒーローズファイナルの最後の試合のあとの掛け合い → エンディング・お祝い・特別演出(56-monhero-success-arc.jsx)→ 引退
   if (s.over !== 'gameover' && (run.arcAfter || (s.ending && !s.ending.seen))) {
     const v = SUC.peek(s); const ev = SUC.evaluate(s); const c = ctx || { id: s.id, turn: s.turn, aid: s.aid, mon: run.nick, species: s.species };
     if (run.arcAfter) return <MsxArcAfter run={run} v={v} ev={ev} onPause={onPause} ctx={c} bondLv={bondLv || 1} after={run.arcAfter} onDone={() => setRun({ ...run, arcAfter: undefined })}/>;
@@ -90629,7 +90704,7 @@ function MsxR3Retire({ run, setRun, onPause, debug, SUC }) {
 // 保存枠の一覧 MsxR3Box は、マスモン一覧(モンサク)の画面として 56-monhero-success-mm.jsx へ移した(2026-11-14 社長「マスモンの画面は画像参照」)
 
 // ---- 回2の MsxPlay から呼ぶ入口 ----
-// kind: 'battle'(期末・頂への道・月の大会の1戦。run.phase === 'battle')/'over'(引退・ゲームオーバー)/'cup'(受付)/'shugyo'(修行)
+// kind: 'battle'(期末・ヒーローズファイナル・月の大会の1戦。run.phase === 'battle')/'over'(引退・ゲームオーバー)/'cup'(受付)/'shugyo'(修行)
 function MsxR3({ kind, run, setRun, v, ev, ctx, bondLv, debug, onBack, onPause, onActed }) {
   if (!msxSuc || !run || !run.s) return null;
   if (kind === 'battle') return <MsxR3Battle run={run} setRun={setRun} v={v} ev={ev} ctx={ctx} bondLv={bondLv} onPause={onPause} debug={debug}/>;
@@ -91040,7 +91115,7 @@ function MonheroSuccessBoxHost({ callNameOf, bondLvOf, onOpenChange }) {
 
 // ---- part: 56-monhero-success-arc.jsx ----
 // ===== モンヒロサクセス: 助手1人分のストーリーの画面(2026-11-13 開発部・設計 docs/progress/player-raise/STORY-ARC.md) =====
-// ・頂への道の3連戦: 試合の前に「助手の相手えらび」(MsxArcPick)・試合のあとに「掛け合い」(MsxArcTalk。run.arcAfter)
+// ・ヒーローズファイナルの3連戦: 試合の前に「助手の相手えらび」(MsxArcPick)・試合のあとに「掛け合い」(MsxArcTalk。run.arcAfter)
 // ・エンディング(MsxArcEnding): 芯の settle が付けた s.ending(bad / good / super)の話 → お祝い(1〜3回・能力は芯が足し済み)→
 //   超グッドのときだけ特別演出(全身画+花吹雪+ふたりの記念写真・5〜6秒)→ 芯の endingSeen → 引退へ
 // ・台詞は台本エンジン(scn.<助手>.summit.* / end.* / party.* / fx.super)。台本が無い助手は短い既定の文で進む(止まらない)
@@ -91069,7 +91144,7 @@ const MSX_ARC_CSS = `
 `;
 const MSX_ARC_END = Object.freeze({
   bad: { name: 'バッドエンディング', sub: 'くやしさも、いっしょに', bg: 'images/story-bg/monhero_plaza_evening.jpg' },
-  good: { name: 'グッドエンディング', sub: 'てっぺんに届いた', bg: 'images/success/scenes/venue-summit.png' },
+  good: { name: 'グッドエンディング', sub: 'ヒーローズファイナル優勝', bg: 'images/success/scenes/venue-summit.png' },
   super: { name: '超グッドエンディング', sub: '最高のチーム', bg: 'images/success/scenes/venue-summit.png' },
 });
 const MSX_ARC_PARTY = Object.freeze({ bad: ['おつかれさま会'], good: ['祝勝会', '町のパレード', '助手からの手紙'], super: ['町じゅうのお祝い', 'ヒーローの取材', '3人の打ち上げ'] });
@@ -91082,7 +91157,7 @@ const msxArcLines = (scene, ctx, bondLv, extra) => {
 };
 const msxArcHas = (SUC, aid) => Boolean(SUC && SUC.ARC && SUC.ARC[aid]);
 const msxArcFullBody = (aid, ex) => { const w = msxWho(aid); const f = w && typeof assistantFullBodyImage === 'function' ? assistantFullBodyImage(w, ex) : null; return f || msxBody(aid, ex); };
-// 試合のあとの掛け合い(頂への道のときだけ)。MsxR3Battle が settle のときに run.arcAfter へ入れる
+// 試合のあとの掛け合い(ヒーローズファイナルのときだけ)。MsxR3Battle が settle のときに run.arcAfter へ入れる
 const msxArcAfterOf = (SUC, s, b, won, foe) => (b && b.kind === 'summit' && msxArcHas(SUC, s.aid)
   ? { round: b.round, won: !!won, foe: foe ? (foe.name || msxMonName(foe.species)) : '', species: foe ? foe.species : null, turn: s.turn } : null);
 
@@ -91112,7 +91187,7 @@ function MsxArcTalk({ run, v, ev, onPause, aid, lines, fallback, head, bg, ex = 
   );
 }
 
-// 頂への道: 試合の前に助手が相手を選ぶ
+// ヒーローズファイナル: 試合の前に助手が相手を選ぶ
 function MsxArcPick({ run, v, ev, onPause, ctx, bondLv, opp, round, onDone }) {
   const s = run.s; const foe = opp ? (opp.name || msxMonName(opp.species)) : '';
   const lines = msxArcLines(`scn.${s.aid}.summit.r${round + 1}.pick`, ctx, bondLv, { rival: foe, owner: opp && opp.breeder ? opp.breeder : '' });
@@ -91122,11 +91197,11 @@ function MsxArcPick({ run, v, ev, onPause, ctx, bondLv, opp, round, onDone }) {
       <img src={msxMonThumb(opp.species)} alt=""/><b>{foe}</b><small>{opp.breeder ? `育て手 ${opp.breeder}` : msxMonName(opp.species)}</small>
       <div className="why">{msxAidName(s.aid)}の選び: {MSX_ARC_PICK_WHY[opp.pick] || '相手'}</div>
     </div>) : null;
-  return <MsxArcTalk run={run} v={v} ev={ev} onPause={onPause} aid={s.aid} lines={lines} head={`${(SUM[round] || {}).name || '頂への道'}の相手選び`}
+  return <MsxArcTalk run={run} v={v} ev={ev} onPause={onPause} aid={s.aid} lines={lines} head={`${(SUM[round] || {}).name || 'ヒーローズファイナル'}の相手選び`}
     bg="images/success/scenes/venue-summit.png" top={top} fallback={`${foe}と戦うよ。いってらっしゃい！`} doneText="⚔ 試合へ" onDone={onDone}/>;
 }
 
-// 頂への道: 試合のあとの掛け合い
+// ヒーローズファイナル: 試合のあとの掛け合い
 function MsxArcAfter({ run, v, ev, onPause, ctx, bondLv, after, onDone }) {
   const s = run.s;
   const lines = msxArcLines(`scn.${s.aid}.summit.r${after.round + 1}.${after.won ? 'win' : 'lose'}`, ctx, bondLv, { rival: after.foe });
