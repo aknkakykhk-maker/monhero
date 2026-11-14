@@ -46,6 +46,24 @@ const MH_SCREEN_TRAIL=(()=>{
   }
   return {push,list:()=>list.slice(),sinceLast,compact};
 })();
+// ==== マルチの演奏中に、勝手に別の画面へ替わらないようにする守り(2026-11-15・r1115-006) ====
+// 社長の報告(11/7)「モンビー中に音は流れてるのにいきなりホームに戻された。時間がたってまたモンビーに戻った。マルチをしてたとき」。
+// 演奏の画面は gameState が 'RHYTHM_PLAY' のときだけ描かれ、音は画面と別の部品なので、gameState が演奏中に HOME などへ替わると
+// 「音は鳴っているのに画面だけホーム」になる。原因の道はまだ見つかっていない(記録に gs:HOME が無い)ので、
+// 「マルチの演奏中に、ボタンを押していないのに、モンヒロビートの外の画面(RHYTHM_ で始まらない画面)へ替わろうとした」ものだけを止める。
+//   ・止めるのは gameState の切り替えだけ(演奏・通信・保存には触れない)。演奏が終わったあとの切り替え(RHYTHM_MULTI へ)は RHYTHM_ なので通る
+//   ・「押した」= 画面を押して click が起きたとき(trusted)。演奏中の指の動きは click にならない(touchstart で止めている)ので、押した扱いにならない
+//   ・止めたら MH_SCREEN_TRAIL に blk と残し、診断(rhythm_touch_diagnostics)へ kind:'stray' の行を足す(呼ぶ側 60-app.jsx)
+const MH_MULTI_PLAY_GUARD=(()=>{
+  const GRACE_MS=1500;
+  let lastClick=0;
+  if(typeof document!=='undefined'&&document.addEventListener){
+    try{document.addEventListener('click',(e)=>{if(!e||e.isTrusted!==false)lastClick=Date.now();},true);}catch(_){}
+  }
+  const shouldBlock=(current,next,playFrom,now=Date.now())=>
+    current==='RHYTHM_PLAY'&&playFrom==='multi'&&typeof next==='string'&&!next.startsWith('RHYTHM_')&&now-lastClick>GRACE_MS;
+  return {shouldBlock,touch:()=>{lastClick=Date.now();},lastClickAt:()=>lastClick};
+})();
 // ==== 見えないページのずれを戻す(全画面) ====
 // 【2026-11-02 社長「押した所と反応する所がたまにずれる。横向きにしたり、更新情報の窓を開いたりしたあとになる気がする」→ 決定「A+B 両方入れる」】
 // iPhone(とくにホーム画面のアプリ)では、回転・キーボードの出し入れ・動画の全画面との行き来のあとに、
