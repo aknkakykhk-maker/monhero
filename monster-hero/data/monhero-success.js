@@ -437,8 +437,8 @@
   const MEM_NAME = Object.freeze({ pow: 'アルテミス記念', wise: 'ミカエル記念', hit: 'アトランタ記念', eva: 'キマイラ記念', tough: 'ガブリエル記念', life: 'アトロポス記念' });
   const GEM = Object.freeze({ attacker: ['ルビー記念', 2], tank: ['サファイア記念', 4], supporter: ['エメラルド記念', 6], healer: ['トパーズ記念', 8], shadow: ['アメジスト記念', 10] });
   // 季節の賞: 同じ月に3つ(同じ賞金・金の格)。名前と賞品(上がる能力)だけ違う(社長「名前だけ別で中身が同じ大会は賞品だけ同等の別物に」)
-  const SEASON_PRIZE = Object.freeze([ // [期, 月, 季節, 賞品の能力3つ, 賞金]  参考の位置(ジュニア3=夏・ミドル4=冬・プロ10=秋)
-    ['junior', 3, '夏', ['pow', 'tough', 'life'], 4000], ['middle', 4, '冬', ['tough', 'pow', 'wise'], 5500], ['pro', 10, '秋', ['wise', 'hit', 'eva'], 7000],
+  const SEASON_PRIZE = Object.freeze([ // [期, 月, 季節, 賞品の能力3つ, 賞金]  月の季節に合わせる(春=3月・夏=6月・秋=9月。ジュニアは夏・ミドルは春・プロは秋)
+    ['junior', 6, '夏', ['pow', 'tough', 'life'], 4000], ['middle', 3, '春', ['life', 'hit', 'eva'], 5500], ['pro', 9, '秋', ['wise', 'hit', 'eva'], 7000],
   ]);
   const SEASON_NAMES = ['雪月花賞', '花水木賞', '桔梗賞'];
   const EX_CUPS = Object.freeze((() => {
@@ -461,7 +461,7 @@
     });
     // 宝石の記念(タイプの大会の上の段・プロ期): ミドルの同じタイプの大会に優勝で出られる
     Object.entries(GEM).forEach(([t, [name, m]]) => L.push({ sys: `gem_${t}`, name, p: 'pro', m, star: 3, str: STAR_MULT[3], prize: 6750, tk: 600, grade: 'gold', type: t, need: { won: `${t}:2` }, rw: { all: 3, pts: 10, elixirTop: 1 } }));
-    // 季節の賞(ジュニア3月=夏・ミドル4月=冬・プロ10月=秋に3つずつ。同じ賞金・金の格。参考の名前)
+    // 季節の賞(ジュニア6月=夏・ミドル3月=春・プロ9月=秋に3つずつ。同じ賞金・金の格。参考の名前)
     SEASON_PRIZE.forEach(([p, m, ja, stats, prize]) => stats.forEach((k, i) => {
       L.push({ sys: `ssn${m}_${i}`, name: `${SEASON_NAMES[i]}(${ja})`, p, m, star: CUP_STAR[p], str: STAR_MULT[CUP_STAR[p]], prize, tk: p === 'pro' ? 600 : 250, grade: 'gold', season: true, rw: { stat: { [k]: 8 }, loy: 3, bag: { [`fruit_${k}`]: 1 } } });
     }));

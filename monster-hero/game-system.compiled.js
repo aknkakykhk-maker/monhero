@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: efc909a92a89bb3e
+// source-sha256: 94c2a111300f0f57
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -170951,7 +170951,7 @@ function MsxR3Cup({
       className: "e"
     }, c.scenario ? '📖' : MSX_R3_CUP_ICON[c.sys] || '🏆'), fc ? React.createElement("span", {
       className: `fcst ${MSX_R3_FC_CLASS[fc.key] || ''}`
-    }, fc.label) : null), React.createElement("div", {
+    }, fc.key === 'none' ? 'ほぼ無理' : fc.label) : null), React.createElement("div", {
       className: "tx"
     }, React.createElement("div", {
       className: "hd"
@@ -170987,7 +170987,11 @@ function MsxR3Cup({
     }
   }, React.createElement("b", null, "出ると"), React.createElement("span", null, "1戦だけ・1ターン使う・勝つと賞金と賞品。", toForced ? React.createElement("span", {
     className: "yel"
-  }, ` 期末の大会まで あと${toForced}ターン`) : null))), wc ? React.createElement("div", {
+  }, ' 期末の大会まで ', React.createElement("span", {
+    style: {
+      whiteSpace: 'nowrap'
+    }
+  }, `あと${toForced}ターン`)) : null))), wc ? React.createElement("div", {
     className: "v-cupwin",
     onClick: () => {
       setWin(null);
