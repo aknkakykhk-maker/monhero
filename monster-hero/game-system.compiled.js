@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b7bbdec555674d8e
+// source-sha256: 34fe2df45d0d87d7
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -690,17 +690,17 @@ const eventReplaySorted = keep => (typeof EVENT_REPLAYS !== 'undefined' && EVENT
 const eventReplayList = () => eventReplaySorted(eventReplayReleased);
 const eventReplayAllList = () => eventReplaySorted(() => true);
 const EVENT_REPLAY_GROUPS = Object.freeze([{
-  id: 'monsuc',
-  emoji: '🌱',
-  label: 'モンヒロサクセス',
-  note: '新しい育成場のお話',
-  color: '#4ade80'
-}, {
   id: 'pandora_wings',
   emoji: '🗝️',
   label: '鍵の向こう側へ',
   note: 'パンドラとふたつの翼のお話',
   color: '#c084fc'
+}, {
+  id: 'monsuc',
+  emoji: '🌱',
+  label: 'モンヒロサクセス',
+  note: '新しい育成場のお話',
+  color: '#4ade80'
 }, {
   id: 'halloween',
   emoji: '🎃',
