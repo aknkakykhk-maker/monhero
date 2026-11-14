@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9115e710162092c1
+// source-sha256: 0d6a6de3071ebfa4
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -10081,10 +10081,12 @@ const Audio_ = (() => {
       masterOut.gain.value = 1;
     }
   };
+  const videoGain = () => enabled && bgmVolumePct > 0 ? _gainFromPct(bgmVolumePct) : 0;
   return {
     currentBgmKey: () => currentKey,
     isBackgroundSeQuiet,
     setVideoHold,
+    videoGain,
     setStoryEndFade,
     setStoryOpenFade,
     playSeFile,
@@ -38451,11 +38453,122 @@ const RhythmSongSelect = ({
     className: "mt-3 min-h-[52px] w-full rounded-xl bg-slate-700 text-sm font-black text-white"
   }, "閉じる"))));
 };
+let mhVideoAudioCtx = null;
+const mhVideoGainNow = () => {
+  try {
+    if (typeof Audio_ === 'undefined' || !Audio_ || typeof Audio_.videoGain !== 'function') return 1;
+    const g = Number(Audio_.videoGain());
+    return Number.isFinite(g) ? Math.max(0, Math.min(1, g)) : 1;
+  } catch (e) {
+    return 1;
+  }
+};
+const useVideoVolume = (ref, key = '') => {
+  const node = useRef(null);
+  const mutedByUs = useRef(false);
+  const apply = () => {
+    const el = ref.current;
+    if (!el) return;
+    const g = mhVideoGainNow();
+    try {
+      el.dataset.mhVideoGain = g.toFixed(3);
+      el.dataset.mhVideoWired = node.current ? '1' : '0';
+    } catch (e) {}
+    if (g <= 0) {
+      if (!el.muted) {
+        el.muted = true;
+        mutedByUs.current = true;
+      }
+      return;
+    }
+    if (mutedByUs.current) {
+      mutedByUs.current = false;
+      el.muted = false;
+    }
+    if (node.current) {
+      try {
+        node.current.gain.value = g;
+      } catch (e) {}
+      try {
+        el.volume = 1;
+      } catch (e) {}
+      return;
+    }
+    try {
+      el.volume = g;
+    } catch (e) {}
+  };
+  const wire = () => {
+    const el = ref.current;
+    if (!el || node.current) return;
+    try {
+      const AC = typeof window !== 'undefined' ? window.AudioContext || window.webkitAudioContext : null;
+      if (!AC) return;
+      if (!mhVideoAudioCtx) mhVideoAudioCtx = new AC();
+      const ctx = mhVideoAudioCtx;
+      if (ctx.state !== 'running') {
+        try {
+          const p = ctx.resume();
+          if (p && typeof p.catch === 'function') p.catch(() => {});
+        } catch (e) {}
+      }
+      const src = ctx.createMediaElementSource(el);
+      const gn = ctx.createGain();
+      gn.gain.value = mhVideoGainNow();
+      src.connect(gn);
+      gn.connect(ctx.destination);
+      node.current = gn;
+    } catch (e) {
+      node.current = null;
+    }
+    apply();
+  };
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return undefined;
+    apply();
+    let id = 0;
+    const onPlay = () => {
+      if (mhVideoAudioCtx && mhVideoAudioCtx.state !== 'running') {
+        try {
+          mhVideoAudioCtx.resume();
+        } catch (e) {}
+      }
+      apply();
+      clearInterval(id);
+      id = setInterval(apply, 500);
+    };
+    const stop = () => {
+      clearInterval(id);
+    };
+    el.addEventListener('play', onPlay);
+    el.addEventListener('pause', stop);
+    el.addEventListener('ended', stop);
+    return () => {
+      clearInterval(id);
+      el.removeEventListener('play', onPlay);
+      el.removeEventListener('pause', stop);
+      el.removeEventListener('ended', stop);
+      if (node.current) {
+        try {
+          node.current.disconnect();
+        } catch (e) {}
+        node.current = null;
+      }
+      mutedByUs.current = false;
+    };
+  }, [key]);
+  return {
+    wire,
+    apply
+  };
+};
 const ChangelogVideo = ({
   src,
   poster
 }) => {
   const ref = useRef(null);
+  const vol = useVideoVolume(ref, src);
   const hold = on => {
     try {
       if (typeof Audio_ !== 'undefined' && Audio_ && typeof Audio_.setVideoHold === 'function') Audio_.setVideoHold(on);
@@ -38474,7 +38587,13 @@ const ChangelogVideo = ({
     controls: true,
     playsInline: true,
     preload: "none",
-    onPlay: () => hold(true),
+    onPointerDown: vol.wire,
+    onTouchEnd: vol.wire,
+    onClick: vol.wire,
+    onPlay: () => {
+      hold(true);
+      vol.wire();
+    },
     onPause: () => hold(false),
     onEnded: () => hold(false),
     onError: e => {
@@ -38508,6 +38627,7 @@ const RhythmHellVideo = ({
   const [failed, setFailed] = useState(false);
   const [ready, setReady] = useState(false);
   const [sound, setSound] = useState(false);
+  const vol = useVideoVolume(ref, info ? info.src : '');
   useEffect(() => {
     setFailed(false);
     setReady(false);
@@ -38525,6 +38645,10 @@ const RhythmHellVideo = ({
     const next = !sound;
     setSound(next);
     el.muted = !next;
+    if (next) {
+      vol.wire();
+      vol.apply();
+    }
     if (next) {
       try {
         el.currentTime = 0;
