@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 2406aa86e62b4d8c
+// source-sha256: d2e8eaee880653ba
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -148886,6 +148886,7 @@ const assistantMasmonBattleOpen = (opts = {}) => {
     assistantId: typeof o.assistantId === 'string' ? o.assistantId : '',
     from: typeof o.from === 'string' ? o.from : 'room',
     foeAssistantId: typeof o.foeAssistantId === 'string' ? o.foeAssistantId : '',
+    presetFriend: typeof o.friendId === 'string' && typeof o.friendAssistantId === 'string' && o.friendId && o.friendAssistantId ? `${o.friendId}|${o.friendAssistantId}` : '',
     preview,
     tryPvp,
     at: Date.now()
@@ -149312,6 +149313,7 @@ function AmbbFinish({
 function AssistantMasmonBattleBeta({
   assistantId,
   foeAssistantId,
+  presetFriend,
   preview,
   tryPvp,
   onClose
@@ -149548,7 +149550,7 @@ function AssistantMasmonBattleBeta({
     }));
   };
   const pvp = ambbPvpOn() && !preview || !!tryPvp && typeof masmonPvpChallenge === 'function';
-  const srcNow = pvp ? src || (foes.length ? 'local' : 'friend') : 'local';
+  const srcNow = pvp ? src || (presetFriend ? 'friend' : foes.length ? 'local' : 'friend') : 'local';
   const startPvp = (m, foe) => {
     if (!ready || !catalog || !m || !m.teamA || !m.teamB) return;
     const teamA = {
@@ -150064,6 +150066,7 @@ function AssistantMasmonBattleBeta({
       swap: modeNow === 'auto' ? 'omakase' : sel.swap,
       tactics: ambbTacticsOf(meId, chosen.map(u => u.row)),
       reg: save.reg[meId],
+      preset: presetFriend,
       onBattle: startPvp
     }), React.createElement("div", {
       className: "ambw-ctl"
@@ -150991,6 +150994,7 @@ function AmbbFriendPanel({
   swap,
   tactics,
   reg,
+  preset,
   onBattle
 }) {
   const [data, setData] = useState({
@@ -150999,7 +151003,7 @@ function AmbbFriendPanel({
     remaining: 0,
     reason: ''
   });
-  const [pickF, setPickF] = useState(null);
+  const [pickF, setPickF] = useState(preset || null);
   const [kind, setKind] = useState('raw');
   const [busy, setBusy] = useState('');
   const [msg, setMsg] = useState('');
@@ -151034,7 +151038,8 @@ function AmbbFriendPanel({
     a,
     key: `${f.friendId}|${a.assistantId}`
   });
-  const cur = opts.find(o => pickF && o.key === pickF) || opts[0] || null;
+  const hit = opts.find(o => pickF && o.key === pickF) || null;
+  const cur = hit || (preset && pickF === preset ? null : opts[0]) || null;
   const register = async () => {
     let userName = '',
       icon = null;
@@ -151132,7 +151137,35 @@ function AmbbFriendPanel({
     "data-ambb-friend-opt": o.key,
     className: cur && cur.key === o.key ? 'on' : '',
     onClick: () => setPickF(o.key)
-  }, o.f.name || 'フレンド', "の", aName(o.a.assistantId), React.createElement("small", null, o.a.members.map(m => typeof ALL_PLAYER_MONSTERS !== 'undefined' && ALL_PLAYER_MONSTERS[m.species] ? ALL_PLAYER_MONSTERS[m.species].name : m.species).join('・'))))), React.createElement("div", {
+  }, o.f.name || 'フレンド', "の", aName(o.a.assistantId), React.createElement("small", null, o.a.members.map(m => typeof ALL_PLAYER_MONSTERS !== 'undefined' && ALL_PLAYER_MONSTERS[m.species] ? ALL_PLAYER_MONSTERS[m.species].name : m.species).join('・'))))), preset && hit && pickF === preset ? React.createElement("p", {
+    className: "ambw-small",
+    "data-ambb-preset": true,
+    style: {
+      marginTop: 6
+    }
+  }, React.createElement("span", {
+    style: {
+      whiteSpace: 'nowrap'
+    }
+  }, "家から選んだ相手です。"), " ", React.createElement("span", {
+    style: {
+      whiteSpace: 'nowrap'
+    }
+  }, "ほかのフレンドにも変えられます。")) : null, preset && !hit && !data.loading && !data.reason && pickF === preset && opts.length > 0 ? React.createElement("p", {
+    className: "ambw-small",
+    "data-ambb-preset-none": true,
+    style: {
+      marginTop: 6
+    }
+  }, React.createElement("span", {
+    style: {
+      whiteSpace: 'nowrap'
+    }
+  }, "この助手はまだ編成を登録していません。"), " ", React.createElement("span", {
+    style: {
+      whiteSpace: 'nowrap'
+    }
+  }, "ほかの相手を選べます。")) : null, React.createElement("div", {
     className: "ambw-small",
     style: {
       marginTop: 10
@@ -151149,7 +151182,15 @@ function AmbbFriendPanel({
     style: {
       marginTop: 6
     }
-  }, "ランキングに数えるのは 3対3 だけです。", !data.loading && !data.reason ? `今日あと ${data.remaining} 回 挑めます。` : '')), React.createElement("div", {
+  }, React.createElement("span", {
+    style: {
+      whiteSpace: 'nowrap'
+    }
+  }, "ランキングに数えるのは 3対3 だけです。"), !data.loading && !data.reason ? React.createElement(React.Fragment, null, " ", React.createElement("span", {
+    style: {
+      whiteSpace: 'nowrap'
+    }
+  }, `今日あと ${data.remaining} 回 挑めます。`)) : '')), React.createElement("div", {
     className: "ambw-ctl"
   }, React.createElement("button", {
     className: "ambw-btn",
@@ -163298,6 +163339,9 @@ function AlfFriendHouseView({
     friend: friend,
     aid: roomId,
     land: land
+  }), typeof AlfMsBattleLink === 'function' && React.createElement(AlfMsBattleLink, {
+    friend: friend,
+    aid: roomId
   }), can === 'ok' && !done && React.createElement("button", {
     type: "button",
     className: "mhl-btn mt-2 w-full bg-amber-500 text-slate-950",
@@ -165407,6 +165451,28 @@ function AlfMsRoomLink({
     land: land,
     onClose: () => setOpen(false)
   }))));
+}
+function AlfMsBattleLink({
+  friend,
+  aid
+}) {
+  if (typeof ambbPvpOn !== 'function' || !ambbPvpOn() || typeof assistantMasmonBattleOpen !== 'function' || !friend || !alfSafeOther(friend.id) || !ALF_IDS.includes(aid)) return null;
+  return React.createElement(React.Fragment, null, React.createElement("button", {
+    type: "button",
+    className: "mhl-btn mt-2 w-full bg-rose-600",
+    "data-alf-battle-open": aid,
+    onClick: () => {
+      assistantMasmonBattleOpen({
+        from: 'friend-house',
+        friendId: friend.id,
+        friendAssistantId: aid
+      });
+    }
+  }, "⚔ ", assistantLifeName(aid), "のマスモンに挑む ›"), React.createElement("p", {
+    className: "mt-0.5 text-center text-[10px] text-slate-300"
+  }, React.createElement("span", {
+    className: "whitespace-nowrap"
+  }, "相手の登録した編成と対戦します。")));
 }
 const MASMON_PVP_URL = `${typeof SUPABASE_URL !== 'undefined' ? SUPABASE_URL : ''}/functions/v1/masmon-pvp`;
 const MASMON_PVP_KEY = 'mh_masmon_pvp_owner_key_v1';

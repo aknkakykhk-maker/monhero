@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 62ec7b3c7ff5cf76
+// generated-sha256: 088e7cfc111fcea8
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -78173,7 +78173,7 @@ const assistantMasmonBattleOpen = (opts = {}) => {
   //   タイセンの口は印 assistantMasmonBattlePvp を見るので、この起動のあいだだけ印を真にする(読み込み直すと偽に戻る・保存しない)
   const tryPvp = o.from === 'debug' && o.tryPvp === true && typeof RELEASE_FLAGS !== 'undefined' && !!RELEASE_FLAGS;
   if (tryPvp) RELEASE_FLAGS.assistantMasmonBattlePvp = true;
-  AMBB_HOST.set({ assistantId: typeof o.assistantId === 'string' ? o.assistantId : '', from: typeof o.from === 'string' ? o.from : 'room', foeAssistantId: typeof o.foeAssistantId === 'string' ? o.foeAssistantId : '', preview, tryPvp, at: Date.now() });
+  AMBB_HOST.set({ assistantId: typeof o.assistantId === 'string' ? o.assistantId : '', from: typeof o.from === 'string' ? o.from : 'room', foeAssistantId: typeof o.foeAssistantId === 'string' ? o.foeAssistantId : '', presetFriend: typeof o.friendId === 'string' && typeof o.friendAssistantId === 'string' && o.friendId && o.friendAssistantId ? `${o.friendId}|${o.friendAssistantId}` : '', preview, tryPvp, at: Date.now() });
   return true;
 };
 // 「できること」の1行。印が偽なら null(ボタンを出さない)
@@ -78430,7 +78430,7 @@ function AmbbFinish({ win, hero, rounds, reason, meId, venueImg, onGo }) {
     coach={{ face: ambbFace(meId, k === 'w' ? 'happy' : k === 'l' ? 'sad' : 'normal'), name: (ambbAsst(meId) || {}).name || '', line: ambbTalk(meId, k === 'w' ? 'win' : 'lose') }}/>;
 }
 
-function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, preview, tryPvp, onClose }) {
+function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, presetFriend, preview, tryPvp, onClose }) {
   const save = useAmbbSave();
   const [engine, setEngine] = useState(typeof window !== 'undefined' ? window.ASSISTANT_MASMON_BATTLE || null : null);
   const [loadFailed, setLoadFailed] = useState(false);
@@ -78545,7 +78545,7 @@ function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, preview, tryPv
 
   // 確かめ(印が偽)ではフレンド対戦を出さない。デバッグの「フレンド対戦を試す」だけは出す(この端末の保存はしないまま)
   const pvp = (ambbPvpOn() && !preview) || (!!tryPvp && typeof masmonPvpChallenge === 'function');
-  const srcNow = pvp ? (src || (foes.length ? 'local' : 'friend')) : 'local';
+  const srcNow = pvp ? (src || (presetFriend ? 'friend' : foes.length ? 'local' : 'friend')) : 'local';
   // フレンド対戦: サーバが回した試合(種と編成)を同じ計算で見返す。勝ち負けはサーバの返りが正本
   const startPvp = (m, foe) => {
     if (!ready || !catalog || !m || !m.teamA || !m.teamB) return;
@@ -78755,7 +78755,7 @@ function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, preview, tryPv
           </div>
         )}
         <AmbbSettings set={set} onSet={setSet} local={srcNow === 'local'} size={size} sizeMax={sizeMax} onSize={(n) => setSel({ size: n, order: picked.slice(0, n) })} speed={speed} onSpeed={setSpeed} engine={engine}/>
-        {srcNow === 'friend' && <AmbbFriendPanel me={me} meId={meId} engine={engine} catalog={catalog} units={chosen} size={size} plan={modeNow === 'auto' ? 'omakase' : sel.plan} swap={modeNow === 'auto' ? 'omakase' : sel.swap} tactics={ambbTacticsOf(meId, chosen.map(u => u.row))} reg={save.reg[meId]} onBattle={startPvp}/>}
+        {srcNow === 'friend' && <AmbbFriendPanel me={me} meId={meId} engine={engine} catalog={catalog} units={chosen} size={size} plan={modeNow === 'auto' ? 'omakase' : sel.plan} swap={modeNow === 'auto' ? 'omakase' : sel.swap} tactics={ambbTacticsOf(meId, chosen.map(u => u.row))} reg={save.reg[meId]} preset={presetFriend} onBattle={startPvp}/>}
         <div className="ambw-ctl">
           {srcNow === 'local' && <button className="ambw-btn" data-ambb-start disabled={!foeId} onClick={start}>⚔ 対戦する</button>}
           <button className="ambw-btn2" data-ambb-rank-open onClick={() => setPhase('rank')}>🏆 ランキング</button>
@@ -79138,9 +79138,9 @@ function AmbbSettings({ set, onSet, local, size, sizeMax, onSize, speed, onSpeed
 
 // ---------- β その2: フレンドの助手に挑む欄 ----------
 // 挑むときは、いまの編成を登録し直してから挑む(育った分がそのまま相手に見える)。勝ち負けはサーバが回して返す
-function AmbbFriendPanel({ me, meId, units, size, plan, swap, tactics, reg, onBattle }) {
+function AmbbFriendPanel({ me, meId, units, size, plan, swap, tactics, reg, preset, onBattle }) {
   const [data, setData] = useState({ loading: true, friends: [], remaining: 0, reason: '' });
-  const [pickF, setPickF] = useState(null);
+  const [pickF, setPickF] = useState(preset || null);
   const [kind, setKind] = useState('raw');
   const [busy, setBusy] = useState('');
   const [msg, setMsg] = useState('');
@@ -79155,7 +79155,8 @@ function AmbbFriendPanel({ me, meId, units, size, plan, swap, tactics, reg, onBa
   }, []);
   const opts = [];
   for (const f of data.friends) for (const a of f.assistants) opts.push({ f, a, key: `${f.friendId}|${a.assistantId}` });
-  const cur = opts.find(o => pickF && o.key === pickF) || opts[0] || null;
+  const hit = opts.find(o => pickF && o.key === pickF) || null;
+  const cur = hit || (preset && pickF === preset ? null : opts[0]) || null; // 家から選んだ相手が未登録のときは、別の人に挑ませない
   const register = async () => {
     let userName = '', icon = null;
     try { userName = String((await storeGet('mh_breeder_name', '', false)) || ''); icon = (await storeGet('mh_breeder_icon', null, false)) || null; } catch (_) {}
@@ -79186,9 +79187,11 @@ function AmbbFriendPanel({ me, meId, units, size, plan, swap, tactics, reg, onBa
           : <div className="ambb-tabs" style={{ marginTop: 6 }}>{opts.map(o => (
             <button key={o.key} data-ambb-friend-opt={o.key} className={cur && cur.key === o.key ? 'on' : ''} onClick={() => setPickF(o.key)}>{o.f.name || 'フレンド'}の{aName(o.a.assistantId)}<small>{o.a.members.map(m => (typeof ALL_PLAYER_MONSTERS !== 'undefined' && ALL_PLAYER_MONSTERS[m.species] ? ALL_PLAYER_MONSTERS[m.species].name : m.species)).join('・')}</small></button>
           ))}</div>}
+        {preset && hit && pickF === preset ? <p className="ambw-small" data-ambb-preset style={{ marginTop: 6 }}><span style={{ whiteSpace: 'nowrap' }}>家から選んだ相手です。</span> <span style={{ whiteSpace: 'nowrap' }}>ほかのフレンドにも変えられます。</span></p> : null}
+        {preset && !hit && !data.loading && !data.reason && pickF === preset && opts.length > 0 ? <p className="ambw-small" data-ambb-preset-none style={{ marginTop: 6 }}><span style={{ whiteSpace: 'nowrap' }}>この助手はまだ編成を登録していません。</span> <span style={{ whiteSpace: 'nowrap' }}>ほかの相手を選べます。</span></p> : null}
         <div className="ambw-small" style={{ marginTop: 10 }}>ランキングの区分</div>
         <div className="ambb-tabs">{AMBB_KINDS.map(k => <button key={k.id} data-ambb-kind={k.id} className={kind === k.id ? 'on' : ''} onClick={() => setKind(k.id)}>{k.label}<small>{k.note}</small></button>)}</div>
-        <p className="ambw-small" style={{ marginTop: 6 }}>ランキングに数えるのは 3対3 だけです。{!data.loading && !data.reason ? `今日あと ${data.remaining} 回 挑めます。` : ''}</p>
+        <p className="ambw-small" style={{ marginTop: 6 }}><span style={{ whiteSpace: 'nowrap' }}>ランキングに数えるのは 3対3 だけです。</span>{!data.loading && !data.reason ? <> <span style={{ whiteSpace: 'nowrap' }}>{`今日あと ${data.remaining} 回 挑めます。`}</span></> : ''}</p>
       </div>
       <div className="ambw-ctl">
         <button className="ambw-btn" data-ambb-challenge disabled={!cur || !!busy || (!data.loading && data.remaining <= 0)} onClick={doChallenge}>{busy === 'go' ? '対戦しています…' : '⚔ 挑む'}</button>
@@ -84892,6 +84895,7 @@ function AlfFriendHouseView({ friend, onClose }) {
           : <>{roomState === 'sleep' && vl(roomId).sleep.length > 0 && <p className="mt-2 rounded-2xl border border-indigo-300/30 bg-indigo-950/60 px-3 py-1.5 text-[12.5px] italic text-indigo-100" data-alf-visit-sleep>💤 {alfFill(vl(roomId).sleep[(roomId.length + (friend.id || '').length) % vl(roomId).sleep.length], { h: friend.name, who: roomId, name: visitor })}</p>}
             <p className="mt-2 text-[11px] text-slate-300">{roomState === 'out' ? '帰ってきたら話せます。' : '起きているときに話せます。'}</p></>}
         {typeof AlfMsRoomLink === 'function' && <AlfMsRoomLink friend={friend} aid={roomId} land={land}/>}
+        {typeof AlfMsBattleLink === 'function' && <AlfMsBattleLink friend={friend} aid={roomId}/>}
         {can === 'ok' && !done && <button type="button" className="mhl-btn mt-2 w-full bg-amber-500 text-slate-950" data-alf-visit-room-note={roomId} onClick={() => { setRoomId(null); setNoteWarn(''); setLeaving(roomId); }}>✉️ {roomState === 'home' ? '置き手紙を残して帰る' : `${assistantLifeName(roomId)}に一言残して帰る`}</button>}
       </div>
       </div>
@@ -85846,6 +85850,16 @@ function AlfMsRoomLink({ friend, aid, land = false }) {
         ? <div className="absolute inset-0 flex items-center justify-center bg-black/60"><p className="rounded-xl bg-slate-900 px-4 py-2 text-[12px] font-bold text-slate-200">読んでいます…</p></div>
         : <AssistantMasmonNote readOnly data={data} ownerName={friend.name} aid={aid} land={land} onClose={() => setOpen(false)}/>}
     </div>)}
+  </>);
+}
+
+// ---------- 家から挑む入口(2026-11-14・案 docs/progress/assistant-peer/friend-battle-entry/PLAN.md)----------
+// 「⚔ ◯◯のマスモンに挑む ›」→ 既存の対戦画面(assistantMasmonBattleOpen)を、フレンドの助手の側・この相手を選んだ状態で開く。新しい対戦の仕組みは作らない
+function AlfMsBattleLink({ friend, aid }) {
+  if (typeof ambbPvpOn !== 'function' || !ambbPvpOn() || typeof assistantMasmonBattleOpen !== 'function' || !friend || !alfSafeOther(friend.id) || !ALF_IDS.includes(aid)) return null;
+  return (<>
+    <button type="button" className="mhl-btn mt-2 w-full bg-rose-600" data-alf-battle-open={aid} onClick={() => { assistantMasmonBattleOpen({ from: 'friend-house', friendId: friend.id, friendAssistantId: aid }); }}>⚔ {assistantLifeName(aid)}のマスモンに挑む ›</button>
+    <p className="mt-0.5 text-center text-[10px] text-slate-300"><span className="whitespace-nowrap">相手の登録した編成と対戦します。</span></p>
   </>);
 }
 
