@@ -61,6 +61,8 @@ function MsxAwakeShow({ run, fire, v, ev, line }) {
     const id = setTimeout(() => setSt((n) => Math.min(3, n + 1)), MSX_AW_STEPS[k][st] - (st ? MSX_AW_STEPS[k][st - 1] : 0));
     return () => clearTimeout(id);
   }, [st]);
+  // 段ごとの音(2026-11-14 社長「演出に音を」。溜めの音と曲は場面の音 awakeShow が鳴らす)
+  if (typeof msxUseTimedSe === 'function') msxUseTimedSe(st === 1 ? [['awQi', 0]] : st === 2 ? [['awFlash', 0]] : st === 3 && !calm ? [['awKira', 0]] : [], [st]);
   const s = run.s;
   const shown = { ...run, s: { ...s, awake: st >= 3 ? k : k - 1, omen: null } };
   const say = line(k === 2 ? 'turn.awake.fire2' : 'turn.awake.fire', k === 2 ? 'うそ…まだ光が強くなっていく！' : 'えっ…この光、なに！？');
