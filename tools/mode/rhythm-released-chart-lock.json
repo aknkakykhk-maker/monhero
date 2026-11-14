@@ -326,6 +326,16 @@
   "midnight_studio_short/hard": "13a1b541b0b1fdd2",
   "midnight_studio_short/expert": "5d2891d26ae68f65",
   "midnight_studio_short/master": "8afb6ce97c74f3ff",
+  "hopes_and_dreams/easy": "c64859138e5fb36e",
+  "hopes_and_dreams/normal": "138b38df983c934e",
+  "hopes_and_dreams/hard": "4038a78039a7b58b",
+  "hopes_and_dreams/expert": "a3958f899321c2b7",
+  "hopes_and_dreams/master": "2f0b482b8fbe5a8e",
+  "hopes_and_dreams_short/easy": "fca7c300c260ca29",
+  "hopes_and_dreams_short/normal": "6b704ad771db1890",
+  "hopes_and_dreams_short/hard": "eb9a9c9592805736",
+  "hopes_and_dreams_short/expert": "7f5b5d5a4a11f020",
+  "hopes_and_dreams_short/master": "d2e8fdda5a9b3c1e",
   "megalovania_sans/easy": "75bb368c81cbcdc2",
   "megalovania_sans/normal": "838888ddfc3d8192",
   "megalovania_sans/hard": "89280838fe60c475",
@@ -401,6 +411,8 @@
   "rpg_short/hell": "a10dac9f8283b77d",
   "midnight_studio/hell": "ec71cfc1df7e6c32",
   "midnight_studio_short/hell": "012172a56e1462cf",
+  "hopes_and_dreams/hell": "d7cd72e96a947098",
+  "hopes_and_dreams_short/hell": "b1707946774bf475",
   "megalovania_sans/hell": "b54acba215aae1da",
   "megalovania_smash/hell": "2ba3b2a5cd05b394"
  },
@@ -809,6 +821,24 @@
    "reason": "新曲 departure!・RPG・Midnight Studio(終点フリック1本を外した)",
    "changed": [
     "midnight_studio/hard"
+   ]
+  },
+  {
+   "at": "2026-11-15 01:46",
+   "reason": "新曲 Hopes and Dreams(通常版と short ver.)を公開",
+   "changed": [
+    "hopes_and_dreams/easy",
+    "hopes_and_dreams/normal",
+    "hopes_and_dreams/hard",
+    "hopes_and_dreams/expert",
+    "hopes_and_dreams/master",
+    "hopes_and_dreams_short/easy",
+    "hopes_and_dreams_short/normal",
+    "hopes_and_dreams_short/hard",
+    "hopes_and_dreams_short/expert",
+    "hopes_and_dreams_short/master",
+    "hopes_and_dreams/hell",
+    "hopes_and_dreams_short/hell"
    ]
   }
  ]

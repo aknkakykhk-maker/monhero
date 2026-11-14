@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f8c13a29c3395041
+// source-sha256: 5c08bbaaa45ac7b8
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -6378,6 +6378,20 @@ const BGM_TRACKS = [{
   gain: 1,
   loop: true
 }, {
+  id: 'melo_hopes_and_dreams',
+  name: 'Hopes and Dreams',
+  creator: 'Toby Fox',
+  src: 'audio/bgm-hopes-and-dreams.mp3',
+  gain: 1,
+  loop: true
+}, {
+  id: 'melo_hopes_and_dreams_short',
+  name: 'Hopes and Dreams short ver.',
+  creator: 'Toby Fox',
+  src: 'audio/bgm-hopes-and-dreams-short.mp3',
+  gain: 1,
+  loop: true
+}, {
   id: 'melo_tsuki_ga_michiru_mae_ni_short',
   name: '月が満ちる前に short ver.',
   creator: 'Fuki Commune',
@@ -8164,6 +8178,8 @@ const Audio_ = (() => {
     "audio/bgm-haruka.mp3": "7a7164dbf152",
     "audio/bgm-home-2.mp3": "71bf51ba1f71",
     "audio/bgm-home-ichika.mp3": "29295336d1af",
+    "audio/bgm-hopes-and-dreams-short.mp3": "46bd73c5d860",
+    "audio/bgm-hopes-and-dreams.mp3": "227e0de43aa1",
     "audio/bgm-humanoid.mp3": "763466fbbf97",
     "audio/bgm-journey.mp3": "816f0cdab93e",
     "audio/bgm-kaze-ga-soyogu-basho.mp3": "e986277401a6",
@@ -53087,6 +53103,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     woke: [['troubled', 'ふぁ…{name}？ 起こされたけど、行く〜'], ['happy', 'ん〜…目、半分閉じてるけど叩くｗ'], ['wink', '寝ぐせのままだけど、来ちゃった♪']],
     refuse: [['normal', 'むにゃ…あと5曲…ぢゃなくて5分…'], ['normal', '…ん…あしたなら、まぢで行く…'], ['happy', 'すぅ…{name}…またあとでね…']],
     'listen:departure': [['excited', '3:59からいちばん強くなるの！ ずっとアガるよ♪']],
+    'listen:hopes_and_dreams': [['excited', '1:15と1:55と2:11がいちばん強いの！ ずっとアガるのー♪']],
     'listen:mf_ichika_mix': [['excited', 'サビは1:48から！ そこからテンションまぢ上がるやつ♪']],
     'listen:monster_hero': [['excited', '1:50からずーっといちばん強いの！ 最後までアゲてこ♪']],
     'listen:monster_hero_another': [['excited', 'こっちもサビは1:49から！ 最後までずっと盛り上がるの♪']],
@@ -53167,6 +53184,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     woke: [['troubled', '…ふぁ。起きまつ。お供しまつね'], ['wink', '眠いでつが、ちから全開でいきまつ♪'], ['happy', '早寝の私を呼ぶなんて、大胆でつね']],
     refuse: [['normal', '…すぅ…明日の朝なら、ぜひ…'], ['normal', '…むにゃ…お茶は…あとで…'], ['troubled', '…ごめんなさい…もう、夢の中でつ…']],
     'listen:departure': [['normal', '最初の静かなところ、そっと始まってきれいでつ']],
+    'listen:hopes_and_dreams': [['normal', '最初の2秒からの静かなところ、星空みたいできれいでつ']],
     'listen:mf_ichika_mix': [['normal', '2分25秒の曲でつ。終わりの手前の盛り上がりまで、ていねいにいきましょう']],
     'listen:monster_hero': [['normal', '最初の45秒くらいは静かなんでつ。そこから少しずつ強くなっていきます']],
     'listen:monster_hero_another': [['normal', '0:48までは、静かな時間が長いんでつ。そこが好きです']],
@@ -53247,6 +53265,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     woke: [['angry', 'ふぁ…ももを起こすなんて！ でも行く！！'], ['excited', '寝起きでもセンターは、もも！！'], ['wink', '目こすりながら叩くねw']],
     refuse: [['normal', '…むにゃ…アンコールは…あした…'], ['happy', '…もも、いま夢でライブ中…♡'], ['normal', '…すぅ…起こさないで…w']],
     'listen:departure': [['excited', '4:36でもう一回いちばん強くなるの！！ 最高だよ♡']],
+    'listen:hopes_and_dreams': [['excited', 'いちばん強いところが3回もあるよ♡ 最高潮だよ♡']],
     'listen:mf_ichika_mix': [['excited', '1:48からがいちばん盛り上がるとこ！！ そこでももが決めるね♡']],
     'listen:monster_hero': [['excited', '1:50からいちばん強いとこが続くの！！ 最高に盛り上がるやつ♡']],
     'listen:monster_hero_another': [['excited', '1:49からの盛り上がり、もとの曲に負けてないよ！！']],
@@ -53327,6 +53346,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     woke: [['troubled', '…ぐぅ…はっ、起きたぞ。行くからな'], ['normal', '寝ぼけてるが、叩くのはできるぞ'], ['happy', 'おでを起こすとは…しょうがないな']],
     refuse: [['normal', '…ぐぅ…あと10時間…'], ['happy', '…むにゃ…グジラ…でっかい…'], ['troubled', '…すまん…膝が、まだ寝てる…']],
     'listen:departure': [['happy', 'BPM156で強い音がいっぱいだぞ。旅の出発みたいだな']],
+    'listen:hopes_and_dreams': [['happy', 'BPM171で走るぞ。夜の大冒険みたいでいいな']],
     'listen:mf_ichika_mix': [['happy', 'サビは1:48から2:14までだな。そこまでは体力をとっとけよ']],
     'listen:monster_hero': [['happy', '静かに始まって、だんだん強くなる。冒険の始まりみたいな曲だな']],
     'listen:monster_hero_another': [['normal', '0:48で急に強くなるからな。そこで置いていかれるなよ']],
@@ -53407,6 +53427,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     woke: [['surprise', '…ん！？ 起きた起きた！ 行くぞ笑'], ['happy', '寝起きだけど、とりあえずやる！'], ['happy', '眠いけど、{name}の頼みなら！']],
     refuse: [['normal', '…朝練…6時…だから…！'], ['troubled', '…わり…明日な…笑'], ['normal', '…すぅ…ノーカン…だろ…']],
     'listen:departure': [['happy', '4:48でスッと静かに終わるの、きれいだよね笑']],
+    'listen:hopes_and_dreams': [['happy', '2:59で静かに終わるの、余韻があっていいよね笑']],
     'listen:mf_ichika_mix': [['wink', '自分の大会の曲はちょっと照れる笑 でも1:48からのサビは全力でいくよ！']],
     'listen:monster_hero': [['happy', '最後の2:30でいきなり静かになるから、きれいに締めよ笑']],
     'listen:monster_hero_another': [['happy', 'サビは2:34まで続くから、最後の1秒までちゃんと締めよ！']],
@@ -53487,6 +53508,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     woke: [['troubled', 'ぇ…起こされたぁ。ほい、行くよぉ'], ['happy', 'ふぁ…ありがとん。目、さめたかも笑'], ['normal', '寝ぼけてても、だいたい叩けるっしょ笑']],
     refuse: [['normal', '…むにゃ…あと1章…だけぇ…'], ['troubled', '…ぐぬぬぬ…眠い…またあとでぇ…'], ['happy', '…すぅ…{name}…おやすみぃ…']],
     'listen:departure': [['happy', '1:51でいったん落として、2:04からまた上げるのがいいんだよね〜']],
+    'listen:hopes_and_dreams': [['happy', '0:47でいったん落として、1:10からまた上げるのがいいんだよね〜']],
     'listen:mf_ichika_mix': [['normal', 'サビは1:48から2:14。終わりの近くに山があるから、前半はためていこ']],
     'listen:monster_hero': [['normal', '0:46でふつう、0:57で強め、1:50でいちばん強い。段の上がり方がきれいなんだよねぇ']],
     'listen:monster_hero_another': [['normal', '0:48で強くなって、1:14で一回ふつうに戻るんだよねぇ。そこが休みどころ']],
@@ -53567,6 +53589,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     woke: [['surprise', '・・・はっ！？ 起きました、行きます！'], ['normal', '寝起きの指でも、計算どおり叩きます'], ['happy', 'ふぁ・・・目ざましより効きました笑']],
     refuse: [['normal', '・・・表の・・・3行目・・・むにゃ・・・'], ['troubled', '・・・すみません・・・朝は弱いんです・・・'], ['happy', '・・・なんくるないさ・・・すぅ・・・']],
     'listen:departure': [['normal', 'BPM156です。強く打つ音が45%・・・！ 力強いです']],
+    'listen:hopes_and_dreams': [['normal', 'BPM171です。強く打つ音が48%・・・！ ガツンとくる音です']],
     'listen:mf_ichika_mix': [['excited', 'いちばん上はLv.23で434ノーツです・・・！ サビは1:48からですね笑']],
     'listen:monster_hero': [['excited', '強く打つ音が62%、軽い音は3%です・・・！ 553ノーツ、全部数えたいです笑']],
     'listen:monster_hero_another': [['happy', 'BPMはおよそ171。もとの曲より少しだけゆっくりです笑']],
@@ -53647,6 +53670,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     woke: [['surprise', '…あ、呼ばれた？ うん、行くよ'], ['happy', 'ふぁ…起こされちゃった笑 いいよ'], ['happy', '眠いけど、{name}と叩きたいしね']],
     refuse: [['troubled', '…ごめんね…今日はもう寝るね…'], ['normal', '…すぅ…また明日、いっしょにね…'], ['happy', '…むにゃ…デュラハン…いけ…']],
     'listen:departure': [['normal', '0:45の静かなところ、ひと息つけるね']],
+    'listen:hopes_and_dreams': [['normal', '0:47の静かなところ、ひと息つけるね']],
     'listen:mf_ichika_mix': [['happy', '2分半くらいの曲だね。サビの1:48までは、落ち着いて合わせようか']],
     'listen:monster_hero': [['normal', 'はじめの静かなところで、気持ちを落ち着けておくといいよ']],
     'listen:monster_hero_another': [['happy', '1:14から少し落ち着く所があるね。そこでひと息つこうか']],
@@ -60714,12 +60738,14 @@ const RHYTHM_SONG_DEFAULT_PRICE = 500;
 const RHYTHM_SONG_PRICES = Object.freeze({
   departure: 500,
   rpg: 500,
-  midnight_studio: 500
+  midnight_studio: 500,
+  hopes_and_dreams: 500
 });
 const RHYTHM_SONG_BUNDLE_OWNER = Object.freeze({
   departure_short: 'departure',
   rpg_short: 'rpg',
-  midnight_studio_short: 'midnight_studio'
+  midnight_studio_short: 'midnight_studio',
+  hopes_and_dreams_short: 'hopes_and_dreams'
 });
 const rhythmSongOwnerId = songId => {
   const id = String(songId || '');
