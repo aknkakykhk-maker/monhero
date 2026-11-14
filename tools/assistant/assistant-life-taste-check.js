@@ -147,6 +147,28 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     }
   } catch (e) { check('最後まで動く', false, e.message.split('\n')[0]); }
   check('実行時エラーが出ない', errors.length === 0, errors.slice(0, 3).join(' / '));
+  {
+    // 友情Lv5以上の友だち(みゅあ)が好きなモンスターは、ききの好みにも1日1回 +1(2026-11-15 窓口)。Lv4以下の友だちからは入らない
+    const page = await open({ name: '友だち', w: 390, h: 844 }, true);
+    const r = await page.evaluate(async () => {
+      await AMT_STORE.load(); await ASSISTANT_MASMON_STORE.load(); await ASSISTANT_PEER_STORE.load();
+      const mua = ASSISTANT_MASMON_PLAN.find(a => a.id === 'mua'), kiki = ASSISTANT_MASMON_PLAN.find(a => a.id === 'kiki');
+      const kl = new Set((kiki.likeMon || []).map(x => x.monster));
+      const own = new Set((assistantMasmonRowsOf(ASSISTANT_MASMON_STORE.state, 'kiki') || []).map(r => r && r.monster));
+      const mon = (mua.likeMon || []).map(x => x.monster).find(m => m && !kl.has(m) && !own.has(m));
+      const val = () => (((AMT_STORE.state.by.kiki || {}).mon || {})[mon]) || 0;
+      AMT_STORE.state = { ...AMT_STORE.state, by: {} }; // 読み込み直後の日次で入った分を消して、0 から数える
+      const pk = assistantPeerPairKey('kiki', 'mua'), st = ASSISTANT_PEER_STORE.state;
+      ASSISTANT_PEER_STORE.state = { ...st, bond: {} }; // 全員の友情を 0 から
+      assistantLifeTasteDaily(); const low = val();
+      ASSISTANT_PEER_STORE.state = { ...ASSISTANT_PEER_STORE.state, bond: { [pk]: 99999 } };
+      const lv = assistantPeerLevel(ASSISTANT_PEER_STORE.state, 'kiki', 'mua');
+      assistantLifeTasteDaily(); const hi = val(); assistantLifeTasteDaily(); const again = val();
+      return { mon, lv, low, hi, again };
+    });
+    check('⑦ 友情Lv5以上の友だちの好きなモンスターが、1日1回だけ +1 入る(Lv4以下は入らない)', !!r.mon && r.lv >= 5 && r.low === 0 && r.hi > 0 && r.again === r.hi, JSON.stringify(r));
+    await page.close();
+  }
   await browser.close(); server.close();
   console.log(failed ? `NG ${failed} 件` : 'すべてOK');
   process.exit(failed ? 1 : 0);

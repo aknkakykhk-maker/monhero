@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3c611cca13f4d990
+// source-sha256: 1baf25a6c1d75fc7
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -91,6 +91,25 @@ const MH_SCREEN_TRAIL = (() => {
     list: () => list.slice(),
     sinceLast,
     compact
+  };
+})();
+const MH_MULTI_PLAY_GUARD = (() => {
+  const GRACE_MS = 1500;
+  let lastClick = 0;
+  if (typeof document !== 'undefined' && document.addEventListener) {
+    try {
+      document.addEventListener('click', e => {
+        if (!e || e.isTrusted !== false) lastClick = Date.now();
+      }, true);
+    } catch (_) {}
+  }
+  const shouldBlock = (current, next, playFrom, now = Date.now()) => current === 'RHYTHM_PLAY' && playFrom === 'multi' && typeof next === 'string' && !next.startsWith('RHYTHM_') && now - lastClick > GRACE_MS;
+  return {
+    shouldBlock,
+    touch: () => {
+      lastClick = Date.now();
+    },
+    lastClickAt: () => lastClick
   };
 })();
 const MH_PAGE_OFFSET_GUARD = (() => {
@@ -40726,6 +40745,30 @@ const rhythmTouchDiagReport = async report => {
       stats: {
         kind: 'report',
         playId: report.playId
+      },
+      schema_version: RHYTHM_TOUCH_DIAG_VERSION
+    });
+  } catch {
+    return false;
+  }
+};
+const rhythmTouchDiagStray = async info => {
+  try {
+    if (!info || typeof sbSendRhythmTouchDiag !== 'function' || !RHYTHM_DEMO_SONG_IDS.includes(info.song_id)) return false;
+    const deviceKey = await rhythmPlayLogDeviceKey();
+    const scr = typeof MH_SCREEN_TRAIL !== 'undefined' ? MH_SCREEN_TRAIL.compact(MH_SCREEN_TRAIL.list().slice(-12)) : [];
+    return await sbSendRhythmTouchDiag({
+      device_key: deviceKey,
+      app_build: typeof BUILD_DATE === 'string' ? BUILD_DATE : '',
+      platform: rhythmTouchPlatform(),
+      standalone: !!rhythmTouchStandalone(),
+      song_id: info.song_id,
+      difficulty: info.difficulty,
+      note_count: 1,
+      stats: {
+        kind: 'stray',
+        to: String(info.to || '').slice(0, 60),
+        scr
       },
       schema_version: RHYTHM_TOUCH_DIAG_VERSION
     });
@@ -113990,7 +114033,7 @@ const ASSISTANT_LIFE_HOUSE_CSS = `
 @media (orientation:landscape) and (max-height:420px){[data-assistant-life-room-acts] .mhl-btn{min-height:34px;font-size:11.5px}[data-assistant-life-room-acts]{gap:5px}}
 .mhl-scene{position:absolute;inset:0;z-index:30;overflow:hidden;background:#000}
 .mhl-scene .bg{position:absolute;inset:0;background-size:cover;background-position:center}
-.mhl-scene .st{position:absolute;bottom:0;object-fit:contain;object-position:bottom;filter:drop-shadow(0 6px 12px #0008)}
+.mhl-scene .st{position:absolute;bottom:0;object-fit:contain;object-position:bottom}/* 2026-11-15 drop-shadow は絵の箱で切れて、後ろに四角い影の面が出た(窓口の指摘)のでやめた */
 @keyframes mhlIntroTitle{0%{opacity:0;transform:scale(.9)}30%{opacity:1;transform:scale(1)}100%{opacity:1}}
 @keyframes mhlDoorL{from{transform:translateX(0)}to{transform:translateX(-102%)}}
 @keyframes mhlDoorR{from{transform:translateX(0)}to{transform:translateX(102%)}}
@@ -115413,7 +115456,8 @@ const assistantLifeStandLayout = (items, W, H) => {
     4: 0.055
   }[Math.min(4, n)];
   const visH = (x, F) => assistantLifeStandVisH(x.face, F);
-  const visW = (x, F) => visH(x, F) * (x.box.r - x.box.l) * x.box.ar / (x.box.b - x.box.t);
+  const VIS_W_MAX_F = 5.6;
+  const visW = (x, F) => Math.min(visH(x, F) * (x.box.r - x.box.l) * x.box.ar / (x.box.b - x.box.t), F * VIS_W_MAX_F);
   let F = fh;
   for (const x of items) {
     const w1 = visW(x, 1);
@@ -117377,6 +117421,20 @@ const assistantLifeMapReadHome = () => {
   } catch (_) {}
   return out;
 };
+const ASSISTANT_LIFE_MAP_HEAD = Object.freeze({
+  myua_sleep: [0.15, 0.51],
+  kiki_sleep: [0.22, 0.60],
+  momosuke_sleep: [0.07, 0.58],
+  atsu_sleep: [0.08, 0.60],
+  kyuko_sleep: [0.05, 0.52],
+  'halloween/myua_sleep': [0.20, 0.51],
+  'halloween/kiki_sleep': [0.22, 0.585],
+  'halloween/momosuke_sleep': [0.12, 0.58],
+  'card-master/myua_sleep': [0.07, 0.39],
+  momosuke: [0.065, 0.51, 0.85],
+  'halloween/momosuke': [0.065, 0.51, 0.8],
+  erubin: [0.01, 0.45]
+});
 function AssistantLifeMapFig({
   who,
   h,
@@ -117407,7 +117465,22 @@ function AssistantLifeMapFig({
     r: 1,
     ar: 0.6
   };
-  const face = typeof assistantLifeStandFace === 'function' ? assistantLifeStandFace(who && who.id, src) : null;
+  const face0 = typeof assistantLifeStandFace === 'function' ? assistantLifeStandFace(who && who.id, src) : null;
+  const headKey = String(src || '').replace(/[?#].*$/, '').replace(/^.*assistant\//, '').replace(/\.png$/i, '').replace(/_(?!sleep$)[a-z]+$/i, '');
+  const head = ASSISTANT_LIFE_MAP_HEAD[headKey] || null;
+  const topChin = head ? {
+    top: head[0],
+    chin: head[1]
+  } : face0 && Number.isFinite(face0.top) && (Number.isFinite(face0.chin) || face0.head) ? {
+    top: face0.top,
+    chin: face0.head ? 1 : face0.chin
+  } : null;
+  const face = face0 && topChin && typeof ASSISTANT_LIFE_STAND_EC === 'number' ? {
+    ...face0,
+    top: topChin.top,
+    m: (topChin.chin - topChin.top) / (ASSISTANT_LIFE_STAND_EC * ASSISTANT_LIFE_STAND_FACE_LEN),
+    fit: head && head[2] || 1
+  } : face0;
   const rule = box && face && typeof assistantLifeStandRule === 'function' ? assistantLifeStandRule({
     face,
     box,
@@ -157740,13 +157813,30 @@ const assistantLifeTasteDaily = () => {
       if (!a || !a.id) continue;
       for (const r of assistantMasmonRowsOf(ASSISTANT_MASMON_STORE.state, a.id) || []) if (r && r.monster) assistantLifeTasteBump(a.id, r.monster, 'raise');
     }
+    if (typeof ASSISTANT_PEER_STORE !== 'undefined' && ASSISTANT_PEER_STORE.state && ASSISTANT_PEER_STORE.state.loaded && typeof assistantPeerLevel === 'function') {
+      const st = ASSISTANT_PEER_STORE.state;
+      for (const a of ASSISTANT_MASMON_PLAN) {
+        if (!a || !a.id) continue;
+        for (const b of ASSISTANT_MASMON_PLAN) {
+          if (!b || !b.id || b.id === a.id || !Array.isArray(b.likeMon)) continue;
+          let lv = 0;
+          try {
+            lv = Number(assistantPeerLevel(st, a.id, b.id));
+          } catch (_) {
+            lv = 0;
+          }
+          if (!(lv >= 5)) continue;
+          for (const x of b.likeMon) if (x && typeof x.monster === 'string' && x.monster) assistantLifeTasteBump(a.id, x.monster, 'friend');
+        }
+      }
+    }
   } catch (_) {}
 };
 let amtDailyDay = '';
 const amtDailyTry = () => {
   try {
     const d = typeof assistantLifeDayKey === 'function' ? assistantLifeDayKey() : '';
-    if (!d || amtDailyDay === d || !AMT_STORE || !AMT_STORE.loaded || typeof ASSISTANT_MASMON_STORE === 'undefined' || !ASSISTANT_MASMON_STORE.loaded) return;
+    if (!d || amtDailyDay === d || !AMT_STORE || !AMT_STORE.loaded || typeof ASSISTANT_MASMON_STORE === 'undefined' || !ASSISTANT_MASMON_STORE.loaded || typeof ASSISTANT_PEER_STORE !== 'undefined' && ASSISTANT_PEER_STORE.state && !ASSISTANT_PEER_STORE.state.loaded) return;
     amtDailyDay = d;
     assistantLifeTasteDaily();
   } catch (_) {}
@@ -157757,6 +157847,7 @@ try {
       if (amtOn() && AMT_STORE) {
         void AMT_STORE.load().then(amtDailyTry).catch(() => {});
         if (typeof ASSISTANT_MASMON_STORE !== 'undefined' && ASSISTANT_MASMON_STORE.subs) ASSISTANT_MASMON_STORE.subs.add(amtDailyTry);
+        if (typeof ASSISTANT_PEER_STORE !== 'undefined' && ASSISTANT_PEER_STORE.listeners) ASSISTANT_PEER_STORE.listeners.add(amtDailyTry);
       }
     } catch (_) {}
   }, 0);
@@ -162003,7 +162094,7 @@ const alfDiaryShare = n => {
     return [];
   }
 };
-const ALF_BOND_TIER_NAMES = Object.freeze(['はじめのころ', 'なかよし', 'ずっと仲良し']);
+const ALF_BOND_TIER_NAMES = Object.freeze(['初めのころ', 'なかよし', 'ずっと仲良し']);
 const alfBondTierOfLv = lv => !Number.isFinite(lv) || lv < 3 ? 0 : lv < 6 ? 1 : 2;
 const alfBondTiers = ids => {
   const out = {};
@@ -165956,7 +166047,7 @@ function AlfBondView({
   const ids = (friend.house && friend.house.ids || []).filter(id => ALF_IDS.includes(id));
   const card = 'rounded-2xl border border-white/10 bg-slate-800/90 px-3 py-2.5';
   const sec = 'mt-3 mb-1 text-[12px] font-black text-amber-200';
-  const names = typeof ALF_BOND_TIER_NAMES !== 'undefined' ? ALF_BOND_TIER_NAMES : ['はじめのころ', 'なかよし', 'ずっと仲良し'];
+  const names = typeof ALF_BOND_TIER_NAMES !== 'undefined' ? ALF_BOND_TIER_NAMES : ['初めのころ', 'なかよし', 'ずっと仲良し'];
   return React.createElement("div", {
     className: "px-3 pb-4 pt-2",
     "data-alf-bond-view": true
@@ -168048,6 +168139,8 @@ const MSX_CSS = `
 .msx .v-sl .ic{max-width:100%;white-space:normal;word-break:keep-all;overflow-wrap:anywhere}
 .msx .v-sl{display:flex;flex-direction:column;align-items:center;justify-content:center}
 .msx .v-heat .hi{display:block;font-size:16px;line-height:1.15;margin-bottom:1px}
+/* r1114-065: 札の中の言葉は語の切れ目でだけ折る */
+.msx .v-hm-tile b{word-break:keep-all;overflow-wrap:normal}
 `;
 const MSX_KEYS = Object.freeze({
   run: 'mh_monsuc_run_v1',
@@ -168771,7 +168864,7 @@ function MonheroSuccessDebugEntry({
     debug: true
   }));
 }
-const msxItemNameNode = name => String(name || '').split(/(?<=[の!！])(?=.)|(?<=ブリーダー)(?=ライセンス)|(?<=オイリー)(?=パック|オイル)|(?<=野菜)(?=ジュース)|(?<=スタミナ)(?=だんご)/).map((x, i) => React.createElement(React.Fragment, {
+const msxItemNameNode = name => String(name || '').split(/(?<=[の!！])(?=.)|(?<=ブリーダー)(?=ライセンス)|(?<=オイリー)(?=パック|オイル)|(?<=野菜)(?=ジュース)|(?<=スタミナ)(?=だんご)|(?<=キビ)(?=ダンゴ)/).map((x, i) => React.createElement(React.Fragment, {
   key: i
 }, i > 0 ? React.createElement("wbr", null) : null, x));
 const MSX_STEP_NAMES = Object.freeze(['育てるモンスター', '編成', '助手', '持ちこみ', '名前と染色', '確認']);
@@ -170143,7 +170236,7 @@ function MsxStart({
       className: "bs"
     }, React.createElement("span", null, "親密度 ", m.bond0), React.createElement("span", null, "タッグ +", m.tag, "%")), React.createElement("div", {
       className: "ic"
-    }, m.kind === 'base' ? m.auto ? 'ベースモン・✎選ぶ' : 'ベースモン・✎変える' : m.friend ? `借: ${m.friend.name || 'フレンド'}` : '✎変える')))), React.createElement("div", {
+    }, m.kind === 'base' ? m.auto ? 'ベースモン ✎⁠選ぶ' : 'ベースモン ✎⁠変える' : m.friend ? `借: ${m.friend.name || 'フレンド'}` : '✎変える')))), React.createElement("div", {
       className: "msx-note msx-sl-legend",
       "data-msx-slot-legend": true
     }, "札の見方: 「+4%」はその能力のトレーニングの伸びが上がる分・親密度は初めの値・タッグは友情タッグのときの伸び"), React.createElement("button", {
@@ -171845,7 +171938,7 @@ function MsxHome({
     onClick: t.on
   }, t.attr), React.createElement("span", {
     className: "e"
-  }, t.e), React.createElement("b", null, t.name), t.sub ? React.createElement("small", null, t.sub) : null))) : null, debug && React.createElement("div", {
+  }, t.e), React.createElement("b", null, t.name === 'マスモンボックス' ? React.createElement(React.Fragment, null, "マスモン", React.createElement("wbr", null), "ボックス") : t.name), t.sub ? React.createElement("small", null, t.sub) : null))) : null, debug && React.createElement("div", {
     className: "v-card",
     style: {
       borderColor: '#a3e63566'
@@ -199826,30 +199919,30 @@ const CARD_ART_KNOWN_BOX = Object.freeze({
   sorashido_surprise: [384, 512, 0, 2, 384, 510],
   sorashido_troubled: [384, 512, 0, 0, 384, 512],
   sorashido_wink: [384, 512, 0, 2, 384, 510],
-  'stand-normal/atsu_angry': [344, 552, 29, 7, 314, 545],
-  'stand-normal/atsu_crying': [344, 552, 14, 6, 329, 546],
-  'stand-normal/atsu_excited': [344, 552, 1, 6, 342, 546],
-  'stand-normal/atsu_happy': [344, 552, 12, 7, 331, 545],
-  'stand-normal/atsu_normal': [344, 552, 1, 7, 342, 545],
-  'stand-normal/atsu_surprise': [344, 552, 1, 7, 342, 545],
-  'stand-normal/atsu_troubled': [344, 552, 3, 7, 340, 545],
-  'stand-normal/atsu_wink': [344, 552, 1, 8, 342, 544],
-  'stand-normal/kiki_angry': [552, 832, 1, 8, 550, 824],
+  'stand-normal/atsu_angry': [540, 552, 83, 7, 407, 545],
+  'stand-normal/atsu_crying': [606, 552, 108, 6, 390, 546],
+  'stand-normal/atsu_excited': [618, 552, 89, 7, 503, 545],
+  'stand-normal/atsu_happy': [494, 552, 47, 7, 420, 545],
+  'stand-normal/atsu_normal': [586, 552, 43, 7, 439, 545],
+  'stand-normal/atsu_surprise': [624, 552, 118, 7, 434, 545],
+  'stand-normal/atsu_troubled': [556, 552, 47, 7, 458, 545],
+  'stand-normal/atsu_wink': [626, 552, 81, 7, 537, 545],
+  'stand-normal/kiki_angry': [616, 832, 8, 8, 601, 824],
   'stand-normal/kiki_crying': [436, 832, 8, 6, 420, 826],
-  'stand-normal/kiki_excited': [552, 832, 1, 8, 550, 824],
+  'stand-normal/kiki_excited': [946, 832, 8, 8, 929, 824],
   'stand-normal/kiki_happy': [392, 832, 7, 8, 377, 824],
   'stand-normal/kiki_normal': [414, 832, 12, 8, 394, 824],
-  'stand-normal/kiki_surprise': [486, 832, 1, 8, 476, 824],
+  'stand-normal/kiki_surprise': [554, 832, 8, 8, 537, 824],
   'stand-normal/kiki_troubled': [456, 832, 8, 8, 439, 824],
-  'stand-normal/kiki_wink': [550, 832, 8, 6, 541, 826],
-  'stand-normal/kyuko_angry': [430, 590, 16, 7, 413, 583],
-  'stand-normal/kyuko_crying': [396, 590, 23, 8, 361, 582],
-  'stand-normal/kyuko_excited': [418, 590, 6, 8, 405, 582],
-  'stand-normal/kyuko_happy': [424, 590, 61, 8, 356, 582],
+  'stand-normal/kiki_wink': [566, 832, 8, 6, 550, 826],
+  'stand-normal/kyuko_angry': [492, 590, 15, 7, 470, 583],
+  'stand-normal/kyuko_crying': [416, 590, 23, 8, 364, 582],
+  'stand-normal/kyuko_excited': [452, 590, 12, 8, 433, 582],
+  'stand-normal/kyuko_happy': [448, 590, 85, 8, 356, 582],
   'stand-normal/kyuko_normal': [410, 590, 19, 8, 381, 582],
   'stand-normal/kyuko_surprise': [410, 590, 43, 8, 342, 582],
   'stand-normal/kyuko_troubled': [366, 590, 21, 7, 337, 583],
-  'stand-normal/kyuko_wink': [416, 590, 30, 8, 380, 582],
+  'stand-normal/kyuko_wink': [424, 590, 30, 8, 386, 582],
   'stand-normal/myua_angry': [592, 672, 12, 0, 520, 672],
   'stand-normal/myua_crying': [592, 672, 0, 0, 591, 672],
   'stand-normal/myua_excited': [592, 672, 0, 0, 583, 672],
@@ -199858,14 +199951,14 @@ const CARD_ART_KNOWN_BOX = Object.freeze({
   'stand-normal/myua_surprise': [592, 672, 0, 10, 509, 662],
   'stand-normal/myua_troubled': [592, 672, 27, 0, 516, 672],
   'stand-normal/myua_wink': [592, 672, 12, 10, 579, 662],
-  'stand-normal/sorashido_angry': [456, 542, 11, 6, 441, 536],
-  'stand-normal/sorashido_crying': [456, 542, 21, 7, 434, 535],
-  'stand-normal/sorashido_excited': [456, 542, 1, 8, 454, 534],
-  'stand-normal/sorashido_happy': [456, 542, 1, 4, 454, 538],
-  'stand-normal/sorashido_normal': [456, 542, 1, 7, 454, 535],
-  'stand-normal/sorashido_surprise': [456, 542, 20, 7, 435, 535],
-  'stand-normal/sorashido_troubled': [456, 542, 1, 8, 454, 534],
-  'stand-normal/sorashido_wink': [456, 542, 1, 9, 440, 533]
+  'stand-normal/sorashido_angry': [698, 542, 113, 7, 443, 535],
+  'stand-normal/sorashido_crying': [684, 542, 98, 7, 477, 535],
+  'stand-normal/sorashido_excited': [772, 542, 53, 8, 674, 534],
+  'stand-normal/sorashido_happy': [732, 542, 47, 6, 655, 536],
+  'stand-normal/sorashido_normal': [762, 542, 121, 8, 569, 534],
+  'stand-normal/sorashido_surprise': [766, 542, 105, 7, 586, 535],
+  'stand-normal/sorashido_troubled': [730, 542, 31, 9, 672, 533],
+  'stand-normal/sorashido_wink': [646, 542, 97, 9, 446, 533]
 });
 const cardArtBoxOf = v => Array.isArray(v) && v.length === 6 ? {
   nw: v[0],
@@ -199956,7 +200049,7 @@ const CardAssistantArt = ({
     const W = size.w,
       H = size.h;
     if (!box || !W || !H) return null;
-    const sc = Math.min(H / box.h, W / box.w);
+    const sc = Math.min(H / box.h, W * 1.2 / box.w);
     const face = cardArtFaceBySrc(src);
     if (face && !face.head && typeof assistantLifeStandRule === 'function') {
       const lb = {
@@ -199971,13 +200064,13 @@ const CardAssistantArt = ({
         face,
         box: lb,
         F: U / ASSISTANT_LIFE_STAND_FACE_LEN,
-        topY: H * Math.max(0.18, Math.min(0.3, (face.above || 0) * 0.32)),
+        topY: H * Math.max(0.12, Math.min(0.3, (face.above || 0) * 0.32)),
         cx: W / 2
       });
       if (r && r.width > box.nw * sc * 1.02) {
         const dy = Math.max(0, H - r.visBottom);
         const visW = (lb.r - lb.l) * r.width;
-        return {
+        const byFace = {
           width: r.width,
           left: r.left,
           top: r.top + dy,
@@ -199985,6 +200078,7 @@ const CardAssistantArt = ({
           artW: Math.round(Math.min(W, visW)),
           byFace: true
         };
+        if (byFace.artH >= H * 0.92 || byFace.artW >= W * 0.92) return byFace;
       }
     }
     return {
@@ -223685,7 +223779,24 @@ function MonsterHeroGame() {
       return '';
     }
   };
+  const rhythmPlayGuardRef = useRef(null);
+  const stopStrayGameState = next => {
+    try {
+      const play = rhythmPlayGuardRef.current;
+      if (typeof MH_MULTI_PLAY_GUARD !== 'undefined' && MH_MULTI_PLAY_GUARD.shouldBlock(gameStateNowRef.current, next, play && play.from)) {
+        if (typeof MH_SCREEN_TRAIL !== 'undefined') MH_SCREEN_TRAIL.push('blk', `${next}<${gameStateCaller()}`);
+        if (typeof rhythmTouchDiagStray === 'function' && play && play.song) void rhythmTouchDiagStray({
+          song_id: play.song.songId,
+          difficulty: play.difficulty && play.difficulty.id,
+          to: `${next}<${gameStateCaller()}`
+        });
+        return true;
+      }
+    } catch (_) {}
+    return false;
+  };
   const setGameState = next => {
+    if (stopStrayGameState(next)) return;
     gameStateNowRef.current = next;
     runBackgroundAllowedRef.current = isBackgroundRunScreen(next);
     if (typeof MH_SCREEN_TRAIL !== 'undefined') MH_SCREEN_TRAIL.push('gs', `${next}<${gameStateCaller()}`);
@@ -223839,6 +223950,7 @@ function MonsterHeroGame() {
   const [rhythmSettings, setRhythmSettings] = useState(DEFAULT_RHYTHM_SETTINGS);
   const [rhythmBestRecords, setRhythmBestRecords] = useState(() => normalizeRhythmBestRecords(null));
   const [rhythmPlay, setRhythmPlayState] = useState(null);
+  rhythmPlayGuardRef.current = rhythmPlay;
   const setRhythmPlay = next => {
     if (next && typeof next === 'object' && next.from !== 'multi' && typeof RHYTHM_MULTI !== 'undefined' && RHYTHM_MULTI.view()) {
       if (!window.confirm('みんなで対戦の部屋で待っています。部屋を出てから遊びますか?')) return;
