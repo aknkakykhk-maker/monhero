@@ -701,9 +701,10 @@ const MSX_CSS = `
 .msx .msx-md-tg .tc.pow.tg-not{background:linear-gradient(160deg,#9a7420,#5e420c);border-color:#a8801f}
 .msx .msx-md-tg .tc.wise.tg-not{background:linear-gradient(160deg,#2f8050,#145230);border-color:#3f9a62}
 .msx-md-tg .tc.tg-not .ti{filter:brightness(.8)}
-.msx-md-tg .tc .nd{position:absolute;left:1px;top:1px;font-size:10px;font-weight:900;color:#fde68a;background:#0f0d24e6;border-radius:4px 0 4px 0;padding:0 2px;line-height:11px}
-.msx-md-tg .tc.tg-not .ti{margin-top:6px}
+
 .msx-md-not{display:block;font-size:10px;color:#94a3b8;font-weight:800}
+.msx-md-howrow{flex-direction:column;align-items:flex-start;gap:1px}.msx-md-howrow>span{width:100%}
+.msx-md-how{display:block;font-size:10.5px;color:#fde68a;font-weight:800;word-break:keep-all;overflow-wrap:anywhere}
 .msx .msx-md-tg .tc.on{border-color:#fde047;box-shadow:0 0 0 2px #fde047}
 .msx-md-tg .tc .ti{font-size:17px;line-height:1}
 .msx-md-tg .tc .g{position:absolute;right:2px;bottom:0;font-size:10px;font-weight:900;color:#fff;text-shadow:0 1px 2px #000}

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 47c882c47165cdcd
+// source-sha256: c3623a9850a5f14b
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -165554,9 +165554,10 @@ const MSX_CSS = `
 .msx .msx-md-tg .tc.pow.tg-not{background:linear-gradient(160deg,#9a7420,#5e420c);border-color:#a8801f}
 .msx .msx-md-tg .tc.wise.tg-not{background:linear-gradient(160deg,#2f8050,#145230);border-color:#3f9a62}
 .msx-md-tg .tc.tg-not .ti{filter:brightness(.8)}
-.msx-md-tg .tc .nd{position:absolute;left:1px;top:1px;font-size:10px;font-weight:900;color:#fde68a;background:#0f0d24e6;border-radius:4px 0 4px 0;padding:0 2px;line-height:11px}
-.msx-md-tg .tc.tg-not .ti{margin-top:6px}
+
 .msx-md-not{display:block;font-size:10px;color:#94a3b8;font-weight:800}
+.msx-md-howrow{flex-direction:column;align-items:flex-start;gap:1px}.msx-md-howrow>span{width:100%}
+.msx-md-how{display:block;font-size:10.5px;color:#fde68a;font-weight:800;word-break:keep-all;overflow-wrap:anywhere}
 .msx .msx-md-tg .tc.on{border-color:#fde047;box-shadow:0 0 0 2px #fde047}
 .msx-md-tg .tc .ti{font-size:17px;line-height:1}
 .msx-md-tg .tc .g{position:absolute;right:2px;bottom:0;font-size:10px;font-weight:900;color:#fff;text-shadow:0 1px 2px #000}
@@ -166544,12 +166545,14 @@ const msxStartPreview = (SUC, species, type, aptBase, startSt) => {
 };
 const MSX_DIST_NAMES = ['零', '近', '中', '遠'];
 const MSX_TG_COLS = Object.freeze([3, 2, 1, 0]);
-const msxTechHow = t => {
+const msxTechHow = (t, all = []) => {
   const L = t && t.learn;
   if (!L) return '修行で覚える';
   if (L.start) return 'はじめから';
-  const need = L.st && typeof L.st === 'object' ? Object.entries(L.st).map(([k, v]) => `${MSX_STAT_NAME[k] || k}${v}`).join('・') : '';
-  return need ? `修行で覚える(${need}で)` : '修行で覚える';
+  const st = L.st && typeof L.st === 'object' ? Object.entries(L.st).map(([k, v]) => `${MSX_STAT_NAME[k] || k}${v}以上`) : [];
+  const nd = L.need && typeof L.need === 'object' ? Object.entries(L.need).map(([id, v]) => `${((Array.isArray(all) ? all : []).find(x => x && x.id === id) || {}).name || '前の技'}の熟練${v}`) : [];
+  const parts = [...st, ...nd];
+  return parts.length ? `修行で覚える(${parts.join('・')})` : '修行で覚える';
 };
 const msxLineName = id => id && typeof MONSTER_LINEAGES === 'object' && MONSTER_LINEAGES && MONSTER_LINEAGES[id] ? MONSTER_LINEAGES[id].name : '';
 const MSX_STAT_COLOR = Object.freeze({
@@ -166704,7 +166707,6 @@ function MsxMonDetail({
       "aria-hidden": "true"
     }, "×");
     const got = has(t);
-    const need = !got && t.learn && t.learn.st && typeof t.learn.st === 'object' ? Object.values(t.learn.st)[0] : null;
     return React.createElement("button", {
       type: "button",
       key: `${r}-${d}`,
@@ -166715,9 +166717,7 @@ function MsxMonDetail({
     }, React.createElement("span", {
       className: "ti",
       "aria-hidden": "true"
-    }, t.kind === 'wise' ? '🧠' : '💪'), need != null ? React.createElement("span", {
-      className: "nd"
-    }, need) : null, React.createElement("span", {
+    }, t.kind === 'wise' ? '🧠' : '💪'), React.createElement("span", {
       className: "g"
     }, t.guts));
   }))), tech ? React.createElement("div", {
@@ -166747,8 +166747,13 @@ function MsxMonDetail({
   }, React.createElement("b", null, "クリティカル率"), React.createElement("span", {
     className: "gd"
   }, grade('crit', tech.crit))), React.createElement("div", {
-    className: "msx-md-kv"
-  }, React.createElement("b", null, "覚え方"), React.createElement("span", null, has(tech) ? Array.isArray(known) ? '覚えている' : 'はじめから' : msxTechHow(tech)))) : null))), foot ? React.createElement("div", {
+    className: "msx-md-kv msx-md-howrow"
+  }, React.createElement("b", null, "覚え方"), React.createElement("span", null, has(tech) ? Array.isArray(known) ? '覚えている' : 'はじめから' : (() => {
+    const how = msxTechHow(tech, all);
+    return how.startsWith('修行で覚える(') ? React.createElement(React.Fragment, null, "修行で覚える", React.createElement("small", {
+      className: "msx-md-how"
+    }, how.slice('修行で覚える'.length))) : how;
+  })()))) : null))), foot ? React.createElement("div", {
     className: "msx-md-foot"
   }, foot) : null, React.createElement("button", {
     type: "button",
