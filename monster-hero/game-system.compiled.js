@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f8f9a790c2d912b6
+// source-sha256: 73a996d4673de020
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -166463,6 +166463,7 @@ const MSX_CSS = `
 .msx .msx-tp .tpb{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
 .msx .msx-tp .tpb b{font-size:13px}
 .msx .msx-tp .tpb small{font-size:10.5px;opacity:.85;line-height:1.35}
+.msx .msx-tp .tpb small.tp-nb i{font-style:normal;display:inline-block;white-space:nowrap;margin-right:.6em}
 .msx .msx-tp .tpm{flex:0 0 auto;font-size:11px;font-weight:900;color:#facc15}
 .msx-md-tg .tc .tg-alt{position:absolute;top:0;right:0;min-width:22px;height:22px;display:flex;align-items:flex-start;justify-content:flex-end;padding:1px 3px 0 0;font-size:12px;font-weight:900;line-height:1;color:#fff;text-shadow:0 1px 2px #000;cursor:pointer}
 
@@ -167993,8 +167994,8 @@ function MsxMonDetail({
       className: "msx-sheet msx-dt",
       onClick: e => e.stopPropagation()
     }, React.createElement("h3", null, "覚える技を選ぶ"), React.createElement("div", {
-      className: "msx-note"
-    }, MSX_DIST_NAMES[pd], "の間合い・ランク", pr, "。", lock ? 'この升の技はもう覚えたので、選び直せません' : '選ばなかった技は、この升では覚えません。覚えるまでは選び直せます'), React.createElement("div", {
+      className: "msx-note msx-kp"
+    }, msxPh(`${MSX_DIST_NAMES[pd]}の間合い・ランク${pr}。｜${lock ? 'この升の技は｜もう覚えたので、｜選び直せません' : '選ばなかった技は、｜この升では｜覚えません。｜覚えるまでは｜選び直せます'}`)), React.createElement("div", {
       className: "msx-dt-body"
     }, alts.map(t => {
       const on = cur && cur.id === t.id;
@@ -168023,7 +168024,11 @@ function MsxMonDetail({
         uid: `p${t.id}`
       }))), React.createElement("span", {
         className: "tpb"
-      }, React.createElement("b", null, t.name), React.createElement("small", null, t.kind === 'wise' ? 'かしこさ' : 'ちから', "・消費ガッツ ", t.guts), React.createElement("small", null, "ダメージ ", grade('power', t.power), "・命中率 ", grade('hit', t.hit), "・クリティカル率 ", grade('crit', t.crit)), React.createElement("small", null, how)), React.createElement("span", {
+      }, React.createElement("b", null, t.name), React.createElement("small", null, t.kind === 'wise' ? 'かしこさ' : 'ちから', "・消費ガッツ ", t.guts), React.createElement("small", {
+        className: "tp-nb"
+      }, React.createElement("i", null, "ダメージ ", grade('power', t.power)), React.createElement("i", null, "命中率 ", grade('hit', t.hit)), React.createElement("i", null, "クリティカル率 ", grade('crit', t.crit))), React.createElement("small", {
+        className: "tp-nb"
+      }, how.startsWith('修行で覚える(') ? React.createElement(React.Fragment, null, React.createElement("i", null, "修行で覚える"), React.createElement("i", null, how.slice('修行で覚える'.length))) : React.createElement("i", null, how))), React.createElement("span", {
         className: "tpm"
       }, on ? '✅ 選択中' : '選ぶ'));
     })), React.createElement("button", {

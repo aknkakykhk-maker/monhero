@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 1a6f50bffac52d86
+// generated-sha256: ac1f94242f38f114
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -86762,6 +86762,7 @@ const MSX_CSS = `
 .msx .msx-tp .tpb{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
 .msx .msx-tp .tpb b{font-size:13px}
 .msx .msx-tp .tpb small{font-size:10.5px;opacity:.85;line-height:1.35}
+.msx .msx-tp .tpb small.tp-nb i{font-style:normal;display:inline-block;white-space:nowrap;margin-right:.6em}
 .msx .msx-tp .tpm{flex:0 0 auto;font-size:11px;font-weight:900;color:#facc15}
 .msx-md-tg .tc .tg-alt{position:absolute;top:0;right:0;min-width:22px;height:22px;display:flex;align-items:flex-start;justify-content:flex-end;padding:1px 3px 0 0;font-size:12px;font-weight:900;line-height:1;color:#fff;text-shadow:0 1px 2px #000;cursor:pointer}
 
@@ -87622,12 +87623,12 @@ function MsxMonDetail({ species, name, art, st, apt, type, peak, grades, known, 
           return (<div className="msx-ov msx-fade" data-msx-techpick onClick={(e) => { e.stopPropagation(); setPickCell(null); }}>
             <div className="msx-sheet msx-dt" onClick={(e) => e.stopPropagation()}>
               <h3>覚える技を選ぶ</h3>
-              <div className="msx-note">{MSX_DIST_NAMES[pd]}の間合い・ランク{pr}。{lock ? 'この升の技はもう覚えたので、選び直せません' : '選ばなかった技は、この升では覚えません。覚えるまでは選び直せます'}</div>
+              <div className="msx-note msx-kp">{msxPh(`${MSX_DIST_NAMES[pd]}の間合い・ランク${pr}。｜${lock ? 'この升の技は｜もう覚えたので、｜選び直せません' : '選ばなかった技は、｜この升では｜覚えません。｜覚えるまでは｜選び直せます'}`)}</div>
               <div className="msx-dt-body">{alts.map((t) => { const on = cur && cur.id === t.id; const how = has(t) ? '覚えている' : msxTechHow(t, all); return (
                 <button type="button" key={t.id} className={`msx-tp${on ? ' on' : ''}`} disabled={lock && !on} data-msx-techpick-opt={t.id} onClick={() => { if (!lock) { pick.onPick(pickCell, t.id); setPickT(t.id); setPickCell(null); } }}>
                   <span className={`tc ${t.kind === 'wise' ? 'wise' : 'pow'}${has(t) ? ' got' : ' tg-not'}`}><span className="ti" aria-hidden="true"><MsxTechIcon kind={t.kind === 'wise' ? 'wise' : 'pow'} rank={t.rank} uid={`p${t.id}`}/></span></span>
                   <span className="tpb"><b>{t.name}</b><small>{t.kind === 'wise' ? 'かしこさ' : 'ちから'}・消費ガッツ {t.guts}</small>
-                    <small>ダメージ {grade('power', t.power)}・命中率 {grade('hit', t.hit)}・クリティカル率 {grade('crit', t.crit)}</small><small>{how}</small></span>
+                    <small className="tp-nb"><i>ダメージ {grade('power', t.power)}</i><i>命中率 {grade('hit', t.hit)}</i><i>クリティカル率 {grade('crit', t.crit)}</i></small><small className="tp-nb">{how.startsWith('修行で覚える(') ? <><i>修行で覚える</i><i>{how.slice('修行で覚える'.length)}</i></> : <i>{how}</i>}</small></span>
                   <span className="tpm">{on ? '✅ 選択中' : '選ぶ'}</span></button>); })}</div>
               <button type="button" className="msx-dt-close" data-msx-techpick-close onClick={() => setPickCell(null)}>閉じる</button>
             </div></div>); })() : null}

@@ -723,6 +723,7 @@ const MSX_CSS = `
 .msx .msx-tp .tpb{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
 .msx .msx-tp .tpb b{font-size:13px}
 .msx .msx-tp .tpb small{font-size:10.5px;opacity:.85;line-height:1.35}
+.msx .msx-tp .tpb small.tp-nb i{font-style:normal;display:inline-block;white-space:nowrap;margin-right:.6em}
 .msx .msx-tp .tpm{flex:0 0 auto;font-size:11px;font-weight:900;color:#facc15}
 .msx-md-tg .tc .tg-alt{position:absolute;top:0;right:0;min-width:22px;height:22px;display:flex;align-items:flex-start;justify-content:flex-end;padding:1px 3px 0 0;font-size:12px;font-weight:900;line-height:1;color:#fff;text-shadow:0 1px 2px #000;cursor:pointer}
 
