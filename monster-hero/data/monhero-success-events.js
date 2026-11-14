@@ -34,8 +34,8 @@
   // ---- ひとときの状態(EVENTS §3)。同時に2つまで。ようす(サボりグセ・うつ病)は芯の s.yosu で別 ----
   const BUFFS = Object.freeze({
     yaruki: { icon: '🔥', name: 'やる気満々', left: 3, good: true, text: 'トレーニングの大成功 +10%' },
-    gokigen: { icon: '🎵', name: 'ごきげん', left: 3, good: true, text: 'ストレスの増え −50%' },
-    neboke: { icon: '💤', name: 'ねぼけ', left: 2, good: false, text: 'サボり +10%' },
+    gokigen: { icon: '🎵', name: 'ご機嫌', left: 3, good: true, text: 'ストレスの増え −50%' },
+    neboke: { icon: '💤', name: '寝ぼけ', left: 2, good: false, text: 'サボり +10%' },
     futekusare: { icon: '🌀', name: 'ふてくされ', left: 2, good: false, text: '叱っても恐れ度が上がりにくい' },
     hirameki: { icon: '✨', name: 'ひらめき中', left: 0, good: true, text: '次の修行で技を覚えやすい' }, // left 0 = 次の修行まで
     iki: { icon: '🤝', name: '息ぴったり', left: 3, good: true, text: 'その編成の子がトレーニングに来やすい(+20%)' },

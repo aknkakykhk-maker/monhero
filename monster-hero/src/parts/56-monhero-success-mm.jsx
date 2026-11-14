@@ -240,13 +240,13 @@ function MsxR3Box({ onClose }) {
         <h3>{menu === 'sort' ? '並べ替え' : '顔の下に出す物'}</h3>
         <div className="mm-opts">{(menu === 'sort' ? MSX_MM_SORTS : MSX_MM_LABELS).map(([k, n]) => (
           <button type="button" key={k} className={(menu === 'sort' ? view.sort : view.label) === k ? 'on' : ''} onClick={() => { setView(menu === 'sort' ? { ...view, sort: k } : { ...view, label: k }); setMenu(null); }}>{n}</button>))}</div>
-        <button type="button" className="msx-btn" onClick={() => setMenu(null)}>とじる</button></div></div> : null}
+        <button type="button" className="msx-btn" onClick={() => setMenu(null)}>閉じる</button></div></div> : null}
       {byeAsk ? <div className="msx-ov msx-fade"><div className="msx-sheet">
         <div style={{ fontSize: 13, fontWeight: 900, lineHeight: 1.6 }}>{byeAsk.ids.length === 1 && box.mons.find((x) => x.id === byeAsk.ids[0]) ? msxMmName(box.mons.find((x) => x.id === byeAsk.ids[0])) : `${byeAsk.ids.length}体`}とお別れしますか?</div>
         <div className="mm-keep msx-kp" data-msx-mm-keepnote>{(() => { const have = assist ? assist.mons.length : 0; const room = Math.max(0, MSX_ASSIST_CAP - have); const n = byeAsk.ids.length;
           if (room >= n) return `マスモンボックスからはいなくなり、\u200bメモリアルモンスターとして残ります(${have + n}/${MSX_ASSIST_CAP})。\u200b育成には使えず、\u200b編成にだけ入れられます。\u200b思い出にも名前とランクが残ります`;
           if (room <= 0) return `マスモンボックスからはいなくなります。\u200bメモリアルモンスターがいっぱいなので、\u200bメモリアルモンスターには残りません(思い出に名前とランクだけ残ります)。\u200b元に戻せません`;
-          return `マスモンボックスからはいなくなります。\u200b${n}体のうち${room}体は、\u200bメモリアルモンスターとして残ります。\u200bメモリアルモンスターがいっぱいなので、\u200bのこりは残りません(思い出に名前とランクだけ残ります)`; })()}</div>
+          return `マスモンボックスからはいなくなります。\u200b${n}体のうち${room}体は、\u200bメモリアルモンスターとして残ります。\u200bメモリアルモンスターがいっぱいなので、\u200b残りは残りません(思い出に名前とランクだけ残ります)`; })()}</div>
         <div className="mm-byelist">{byeAsk.ids.map((id) => { const m = box.mons.find((x) => x.id === id); return m ? <span key={id}>{msxMmName(m)}</span> : null; })}</div>
         <button type="button" className="msx-btn go" onClick={() => farewell(byeAsk.ids)} data-msx-mm-bye-yes>お別れする</button>
         <button type="button" className="msx-btn sub" onClick={() => setByeAsk(null)}>やめておく</button></div></div> : null}

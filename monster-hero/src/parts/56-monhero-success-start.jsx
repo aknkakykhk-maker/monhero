@@ -12,8 +12,8 @@ const MSX_ITEMS = Object.freeze([
   { id: 'mag', name: '週刊!トレーニング', desc: 'ハウツー雑誌。ようす「トレーニング得意」が付く', when: 'before', e: '📰' },
   { id: 'hachi', name: '修行のハチマキ', desc: '気合いが入るハチマキ。ようす「修行得意」が付く', when: 'before', e: '🎗️' },
   { id: 'omamori', name: '縁結びのお守り', desc: '良縁に恵まれるお守り。ようす「スターの素質○」が付く', when: 'before', e: '🧧' },
-  { id: 'dango', name: 'モモのキビダンゴ', desc: '食べるとスタミナがつく。体力の最大値が はじめから上がる', when: 'before', e: '🍡' },
-  { id: 'grass', name: 'うけつぎ草', desc: '伝授でいい結果が出る草。ようす「うけつぐ魂」が付く', when: 'before', e: '🌿' },
+  { id: 'dango', name: 'モモのキビダンゴ', desc: '食べるとスタミナがつく。体力の最大値が 初めから上がる', when: 'before', e: '🍡' },
+  { id: 'grass', name: '受け継ぎ草', desc: '伝授でいい結果が出る草。ようす「うけつぐ魂」が付く', when: 'before', e: '🌿' },
   { id: 'juice', name: 'ガロエ印の野菜ジュース', desc: '体力を完全に回復する', when: 'both', e: '🥤' },
   { id: 'powder', name: '悪様散', desc: '悪いようすを治して、体力を回復する', when: 'both', e: '💊' },
   { id: 'license', name: 'ブリーダーライセンス', desc: '忠誠度が一定数 上がる', when: 'both', e: '🪪' },
@@ -167,7 +167,7 @@ function MsxMonDetail({ species, name, art, st, apt, type, peak, grades, known, 
             </div>
           </div>
           <div className="msx-md-bot" data-msx-detail-techs>
-            <div className="msx-md-cap">技<small>{Array.isArray(known) ? '★ 覚えている技' : '★ はじめから使える技'}・ほかは修行で覚える</small></div>
+            <div className="msx-md-cap">技<small>{Array.isArray(known) ? '★ 覚えている技' : '★ 初めから使える技'}・ほかは修行で覚える</small></div>
             <div className="msx-md-dists">{[-1, 3, 2, 1, 0].map((d) => <button type="button" key={d} className={dist === d ? 'on' : ''} onClick={() => setDist(d)}>{d < 0 ? '全部' : MSX_DIST_NAMES[d]}</button>)}</div>
             <div className="msx-md-tw">
               <div className="msx-md-tl">{list.length ? list.map((t) => (
@@ -183,13 +183,13 @@ function MsxMonDetail({ species, name, art, st, apt, type, peak, grades, known, 
                 <div className="msx-md-kv"><b>命中</b><span className="gd">{grade('hit', tech.hit)}</span></div>
                 <div className="msx-md-kv"><b>ガッツダウン</b><span className="gd">{grade('gd', tech.gd)}</span></div>
                 <div className="msx-md-kv"><b>クリティカル</b><span className="gd">{grade('crit', tech.crit)}</span></div>
-                <div className="msx-md-kv"><b>覚え方</b><span>{has(tech) ? (Array.isArray(known) ? '覚えている' : 'はじめから') : '修行で覚える'}</span></div>
+                <div className="msx-md-kv"><b>覚え方</b><span>{has(tech) ? (Array.isArray(known) ? '覚えている' : '初めから') : '修行で覚える'}</span></div>
               </div>) : null}
             </div>
           </div>
         </div>
         {foot ? <div className="msx-md-foot">{foot}</div> : null}
-        <button type="button" className="msx-dt-close" data-msx-detail-close onClick={onClose}>とじる</button>
+        <button type="button" className="msx-dt-close" data-msx-detail-close onClick={onClose}>閉じる</button>
       </div>
     </div>
   );
@@ -225,7 +225,7 @@ function MsxSlotPicker({ idx, cur, own, unlocked, raised, stock = [], teamBox, t
                 <span className="pr">{on ? '✅ この枠' : '入れる'}</span></button>); })}
           </>) : null}
         </div>
-        <button type="button" className="msx-dt-close" data-msx-slot-close onClick={onClose}>とじる</button>
+        <button type="button" className="msx-dt-close" data-msx-slot-close onClick={onClose}>閉じる</button>
       </div>
     </div>
   );
@@ -252,7 +252,7 @@ function MsxGatherTable({ members, SUC, onClose }) {
             );
           })}
         </div>
-        <button type="button" className="msx-dt-close" data-msx-gather-close onClick={onClose}>とじる</button>
+        <button type="button" className="msx-dt-close" data-msx-gather-close onClick={onClose}>閉じる</button>
       </div>
     </div>
   );
@@ -374,11 +374,11 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf }) {
         {list.length ? list.map((x) => <button type="button" key={x.key} className={x.on ? 'on' : ''} onClick={() => setPick(x.pick)}><img src={msxMonThumb(x.sp)} alt={msxMonName(x.sp)}/></button>)
           : <span className="msx-note" style={{ gridColumn: '1 / -1' }}>まだいません(合体はこれから作ります)</span>}
       </div>
-      {scene({ mb: '12%', h: '62%' }, <div className="v-chips"><span className="v-chip ylw">{msxMonName(species)}</span>{picked ? <span className="v-chip">えらんだ回数 {picked}回</span> : null}</div>)}
+      {scene({ mb: '12%', h: '62%' }, <div className="v-chips"><span className="v-chip ylw">{msxMonName(species)}</span>{picked ? <span className="v-chip">選んだ回数 {picked}回</span> : null}</div>)}
       <div className="v-card sel">
-        <div className="msx-dt-hd"><div className="h1">{msxMonName(species)}</div><button type="button" className="msx-dt-more" data-msx-detail-open onClick={() => setDetail(true)}>🔍 くわしく</button></div>
+        <div className="msx-dt-hd"><div className="h1">{msxMonName(species)}</div><button type="button" className="msx-dt-more" data-msx-detail-open onClick={() => setDetail(true)}>🔍 詳しく</button></div>
         <div className="v-kv" data-msx-start-type><b>成長の型</b><span><span className="yel">{growName}</span>{peakText ? <span className="msx-dt-sm"> ピーク {peakText}</span> : null}</span></div>
-        <div className="sub" style={{ marginTop: 6, color: '#f9a8d4', fontWeight: 900 }}>はじめの能力<span className="msx-dt-sm">(小さい字は素質)</span></div>
+        <div className="sub" style={{ marginTop: 6, color: '#f9a8d4', fontWeight: 900 }}>初めの能力<span className="msx-dt-sm">(小さい字は素質)</span></div>
         <div className="msx-st6" data-msx-start-stats>{MSX_STATS.map((k, i) => <div key={k}><span className="n">{MSX_STAT_NAME[k]}</span><b>{startSt[k]}</b><i className={apt[i] > 'B' ? 'lo' : ''}>素質 {apt[i]}</i></div>)}</div>
       </div>
       {detail && <MsxMonDetail species={species} name={fromMon && fromMon.nick ? fromMon.nick : msxMonName(species)} sub={fromMon ? '合体で生まれたモンスター' : 'ベースモン'} st={startSt} apt={apt} type={growType} grades={preview.grades} peak={peakText} power={preview.power} rank={preview.rank} onClose={() => setDetail(false)} SUC={SUC}/>}
@@ -448,7 +448,7 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf }) {
             <img src={msxMonThumb(friend.species)} alt="" style={{ width: 30, height: 30, borderRadius: 9, objectFit: 'contain', background: '#0f172a' }}/>
             <div>{(friend.friend && friend.friend.name) || 'フレンド'} の {friend.name}<small>{msxMonName(friend.species)}</small></div><span className="pr">✅ 借りている(外す)</span></button> : null}
           {lendList === null ? <button type="button" className="msx-btn sub" onClick={openLend}>貸してくれるモンスターを見る</button>
-            : lendList === 'loading' ? <div className="msx-note">さがしています…</div>
+            : lendList === 'loading' ? <div className="msx-note">探しています…</div>
             : !lendList.ok ? <div className="msx-note">{typeof monsucLendReasonText === 'function' ? monsucLendReasonText(lendList.reason) : '今は借りられません'}</div>
             : !lendList.rows.length ? <div className="msx-note">貸し出しているフレンドはいません</div>
             : lendList.rows.map((row) => { const m = monsucLendMember(row, SUC); if (!m) return null; const on = friend && friend.friend && friend.friend.id === row.friendId; return (
@@ -477,12 +477,12 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf }) {
           <div style={{ marginTop: 5 }}><span className="chip on">{sc.tag}</span> <span className="chip p">仲良し度 Lv{aidLv}</span></div></div></div>
         <div className="v-kv"><b>助手の効き</b><span>{sc.perk}</span></div>
         {combo && <div className="v-kv"><b>トレーニングの組み合わせ</b><span>{MSX_STATS.slice(0, 3).map((k) => `${MSX_STAT_ICON[k]}${MSX_STAT_NAME[k]} → +${combo[k].map((c) => MSX_STAT_ICON[c]).join('+')}`).join(' / ')} …</span></div>}
-        <div className="v-kv"><b>はじめの親密度</b><span>{Math.min((SUC.BOND && SUC.BOND.aidStartMax) || 40, aidLv * ((SUC.BOND && SUC.BOND.aidPerLv) || 4))}(仲良し度 Lv{aidLv})。助手もトレーニングに来て、タッグになる</span></div>
+        <div className="v-kv"><b>初めの親密度</b><span>{Math.min((SUC.BOND && SUC.BOND.aidStartMax) || 40, aidLv * ((SUC.BOND && SUC.BOND.aidPerLv) || 4))}(仲良し度 Lv{aidLv})。助手もトレーニングに来て、タッグになる</span></div>
         <div className="v-eps">{sc.eps.map((t, i) => <div key={i}><b>{i + 1}話</b>{t}</div>)}<div className="lk"><b>4話</b>🔒 ？？？</div></div>
         <div className="row" style={{ marginTop: 'auto' }}><img className="fc" src={msxFace(aid, 'wink')} alt=""/><div className="bub f1">「{aid === 'atsu' ? 'よし、いっちょ仕上げてくか。よろしくな笑' : 'いっしょに てっぺん めざそ! まぢで楽しいから!'}」</div></div>
       </div>
     </>);
-    go = `${msxAidName(aid)}編ではじめる ▶`;
+    go = `${msxAidName(aid)}編で始める ▶`;
   } else if (step === 3) {
     const has = (id) => (meta.items && meta.items[id]) || 0;
     const toggle = (id) => setItems((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : cur.length >= 2 || has(id) <= 0 ? cur : [...cur, id]));
@@ -497,13 +497,13 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf }) {
           </button>
         ))}
       </div>
-      <div className="v-ileg"><span><b className="sw1"/>はじめる前に効く物</span><span><b className="sw2"/>育成中にも使える物(1ターン1個まで)</span></div>
+      <div className="v-ileg"><span><b className="sw1"/>始める前に効く物</span><span><b className="sw2"/>育成中にも使える物(1ターン1個まで)</span></div>
       <div style={{ flex: '1 0 auto', display: 'flex', flexDirection: 'column', gap: 6 }} data-msx-carry-list>
         {look && MSX_ITEM_BY_ID[look] ? (() => { const t = MSX_ITEM_BY_ID[look]; const n = has(look); return (
           <div className="v-bsel" style={{ marginBottom: 6 }} data-msx-carry-look={look}><span className="e" style={{ fontSize: 30 }}>{t.e}</span><div style={{ minWidth: 0 }}>
             <b>{t.name}<span className="yel"> ×{n}</span></b>
             <small style={JA_WRAP_STYLE}>{jaWrap(msxItemDesc(look))}</small>
-            <small style={{ ...JA_WRAP_STYLE, color: '#7dd3fc' }}>{jaWrap(t.when === 'before' ? 'いつ: 育成をはじめる前に効き、その育成のあいだ続く' : 'いつ: 育成中の自分のターンに使う(1ターン1個まで・ターンは進まない)')}</small>
+            <small style={{ ...JA_WRAP_STYLE, color: '#7dd3fc' }}>{jaWrap(t.when === 'before' ? 'いつ: 育成を始める前に効き、その育成のあいだ続く' : 'いつ: 育成中の自分のターンに使う(1ターン1個まで・ターンは進まない)')}</small>
             <small style={{ ...JA_WRAP_STYLE, color: '#fcd34d' }}>{jaWrap(n > 0 ? (items.includes(look) ? '持っていく物に入っている(もう一度押すと外す)' : items.length >= 2 ? '持っていけるのは2つまで(ほかを外すと選べる)' : '押すと持っていく物に入る') : '手に入れ方: マーケットのビートP交換所・助手ライフの拾い物や贈り物')}</small>
           </div></div>); })() : <div className="msx-note" style={{ marginBottom: 6 }}>升目を押すと、効き目と手に入れ方が出ます</div>}
         {items.map((id) => <div key={id} className="v-item sel"><span style={{ fontSize: 22 }}>{MSX_ITEM_BY_ID[id].e}</span><div>{MSX_ITEM_BY_ID[id].name}<small>{msxItemDesc(id)}</small></div><span className="pr">✅ 持っていく・あと{has(id) - 1}</span></div>)}
@@ -534,7 +534,7 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf }) {
     const startAdd = {}; members.forEach((m) => { if (m.startAdd && m.startAdd.v > 0) startAdd[m.startAdd.stat] = (startAdd[m.startAdd.stat] || 0) + m.startAdd.v; });
     const name = nick || msxMonName(species).slice(0, MSX_NAME_MAX);
     body = (<>
-      <div className="v-h">これで はじめる?<small>全46ターン・1回 約8〜15分。いつでも中断して続きから</small></div>
+      <div className="v-h">これで 始める?<small>全46ターン・1回 約8〜15分。いつでも中断して続きから</small></div>
       <div className="v-scene" style={{ flex: '1 1 0' }}>
         <img className="bg" src={msxSceneBg(1).bg} alt=""/><div className="sh"/>
         <div className="gr" style={{ left: '36%', bottom: 'calc(16% - 5px)' }}/>
@@ -548,8 +548,8 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf }) {
       {typeof msxScenarioOf === 'function' ? <button type="button" className="v-sum" onClick={() => setScn(null)}><span className="k">シナリオ</span><span>{msxScenarioOf(scn).name}</span><span className="ed">変える</span></button> : null}
       <button type="button" className="v-sum" onClick={() => setStep(2)}><span className="k">助手</span><span>{msxAidName(aid)}編「{sc.title}」</span><span className="ed">変える</span></button>
       <button type="button" className="v-sum" onClick={() => setStep(3)}><span className="k">持ちこみ</span><span style={JA_LABEL_STYLE}>{jaWrap(items.length ? items.map((id) => `${MSX_ITEM_BY_ID[id].e}${MSX_ITEM_BY_ID[id].name}`).join('・') : 'なし')}</span><span className="ed">変える</span></button>
-      <div className="v-sum"><span className="k">はじめの上乗せ</span><span>{Object.keys(startAdd).length ? `編成から ${Object.entries(startAdd).map(([k, v]) => `${MSX_STAT_NAME[k]} +${v}`).join('・')}` : '編成からの上乗せなし'}</span></div>
-      <button type="button" className="v-big" onClick={start}>🌱 育成をはじめる</button>
+      <div className="v-sum"><span className="k">初めの上乗せ</span><span>{Object.keys(startAdd).length ? `編成から ${Object.entries(startAdd).map(([k, v]) => `${MSX_STAT_NAME[k]} +${v}`).join('・')}` : '編成からの上乗せなし'}</span></div>
+      <button type="button" className="v-big" onClick={start}>🌱 育成を始める</button>
     </>);
   }
   return (

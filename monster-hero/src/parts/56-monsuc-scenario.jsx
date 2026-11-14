@@ -12,7 +12,7 @@ const MSX_STORIES = Object.freeze([
       ['📅', '流れ', 'デビュー期 → ジュニア期 → ミドル期 → プロ期 → 頂への道(3戦)'],
       ['🏆', '大会', 'モンスターダービー/四大大会/季節の賞 ほか。賞金ランクは ルーキー〜ヒーローの10段'],
       ['👥', '登場人物', '助手(いまはみゅあ)・イッサ博士・ライバルたち'],
-      ['🎯', 'めざすもの', '頂への道の決勝に勝って「ヒーロー」に。'],
+      ['🎯', '目指すもの', '頂への道の決勝に勝って「ヒーロー」に。'],
     ]),
     cast: Object.freeze({ left: 'issa', center: 'mua', right: 'kiki' }),
   }),
@@ -90,7 +90,7 @@ function MsxScenarioSelect({ value, onBack, onNext, ctx }) {
         </> : null}
       </div>
       <div className="scn-ft">
-        <button type="button" className="bk" onClick={onBack} aria-label="もどる">↩</button>
+        <button type="button" className="bk" onClick={onBack} aria-label="戻る">↩</button>
         <button type="button" className="go" onClick={() => onNext(sc.id)} data-msx-scenario-next>次へ ▶</button>
         <button type="button" className="dt" onClick={() => setDetail(true)} data-msx-scenario-detail>ストーリー詳細</button>
       </div>
@@ -100,7 +100,7 @@ function MsxScenarioSelect({ value, onBack, onNext, ctx }) {
             <h3>{sc.name}</h3>
             <p>{sc.about}</p>
             {sc.rows.map(([e, k, v]) => <React.Fragment key={k}><div className="k">{e} {k}</div><div className="v">{v}</div></React.Fragment>)}
-            <button type="button" className="cl" onClick={() => setDetail(false)}>とじる</button>
+            <button type="button" className="cl" onClick={() => setDetail(false)}>閉じる</button>
           </div>
         </div>
       ) : null}

@@ -102,7 +102,7 @@ const monsucBuffsOf = (mods) => {
   const buffs = {}; const rows = [];
   // 芯は対戦の芯の形(hit1・crit・eva は 0〜1・missCut・noSulk)で渡す。前の形(firstHit・crit・eva は %・techFail・noIdle)も読む
   const frac = (v) => (Number.isFinite(v) && v > 0 ? (v > 1 ? v / 100 : v) : 0);
-  if (Number.isFinite(m.guts) && m.guts > 0) { buffs.guts = m.guts; rows.push(`試合のはじめから ガッツ +${m.guts}`); }
+  if (Number.isFinite(m.guts) && m.guts > 0) { buffs.guts = m.guts; rows.push(`試合の初めから ガッツ +${m.guts}`); }
   const hit1 = frac(m.hit1) || frac(m.firstHit); if (hit1) { buffs.hit1 = hit1; rows.push('最初の技が 当たりやすい'); }
   const crit = frac(m.crit); if (crit) { buffs.crit = crit; rows.push('会心が 出やすい'); }
   const eva = frac(m.eva); if (eva) { buffs.eva = eva; rows.push('相手の技を かわしやすい'); }
@@ -448,7 +448,7 @@ function MonsucBracket({ suc, s, info, result: resultProp, onFight, onResultOnly
           <div className={`msc-cupbadge ${result === 'win' ? 'lit' : ''}`} style={{ right: 4 }}>🏆<br/>優勝</div>
         </div>
       </div>
-      <div className="msc-note"><b>決勝は <span className="nw">{info.meName} VS {nm(foe)}</span></b>。<span className="nw">左の数字は人気の順</span><span className="nw">(1が いちばん人気)。</span><small><span className="nw">ほかの試合の結果は、</span><span className="nw">見せるだけの演出です</span><span className="nw">(戦うのは決勝の1戦だけ)</span></small></div>
+      <div className="msc-note"><b>決勝は <span className="nw">{info.meName} VS {nm(foe)}</span></b>。<span className="nw">左の数字は人気の順</span><span className="nw">(1が 一番人気)。</span><small><span className="nw">ほかの試合の結果は、</span><span className="nw">見せるだけの演出です</span><span className="nw">(戦うのは決勝の1戦だけ)</span></small></div>
       <div className="msc-talk"><img src={mscFace(s.aid)} alt=""/><p className="msx-kp">{coach ? <b style={{ display: 'block', fontSize: 11, color: '#b45309' }}>解説 {coach.name}</b> : null}{st >= 3 ? finalLine : lines[st]}</p>{st < 3 ? <button type="button" className="msc-sk" data-msc-skip onClick={() => setStage(3)}>SKIP ▸▸</button> : null}</div>
       <div className="msc-foot">
         <button className="msc-btn y s" data-msc-quick onClick={onResultOnly}>{canSkip ? '⏩ 結果だけ見る(優勝ずみ)' : '⏩ 結果だけ見る'}</button>
@@ -654,7 +654,7 @@ function MonsucCupLose({ suc, s, info, match, onRematch, onGiveUp, onSkipAnim })
       {lossWhy ? <div className="msc-why" data-msc-loss-why><b>負けたわけ</b><span style={typeof JA_LABEL_STYLE !== 'undefined' ? JA_LABEL_STYLE : undefined}>{typeof jaWrap === 'function' ? jaWrap(lossWhy) : lossWhy}</span></div> : null}
       <div className="msc-again">
         <h3>時をもどして、やり直す?</h3>
-        <p>やり直せるのは 1回の育成で{mscNum(suc.REMATCH && suc.REMATCH.max, 3)}回まで・<em>のこり {left}/{mscNum(suc.REMATCH && suc.REMATCH.max, 3)}</em></p>
+        <p>やり直せるのは 1回の育成で{mscNum(suc.REMATCH && suc.REMATCH.max, 3)}回まで・<em>残り {left}/{mscNum(suc.REMATCH && suc.REMATCH.max, 3)}</em></p>
         <button className="msc-pick sand" data-msc-rematch="sand" disabled={!can('sand')} onClick={() => onRematch('sand')}><img src="images/success/items/hourglass.png" alt=""/><span>時渡りの砂時計で やり直す<small>同じ相手と もう一度(持っている ×{has('sand')})</small></span></button>
         <button className="msc-pick rain" data-msc-rematch="rainbow" disabled={!can('rainbow')} onClick={() => onRematch('rainbow')}><img src="images/success/items/hourglass-rainbow.png" alt=""/><span>虹の時渡りの砂時計で 相手を変えて やり直す<small>{info.rival ? '同じライバルと もう一度' : 'ちがう相手と 戦える'}(持っている ×{has('rainbow')})</small></span></button>
         <button className="msc-pick quit" data-msc-giveup onClick={onGiveUp}>{summit ? 'あきらめる(頂への道は ここまで)' : info.star >= 2 ? 'あきらめる(準優勝の ごほうびを もらう)' : 'あきらめる'}</button>

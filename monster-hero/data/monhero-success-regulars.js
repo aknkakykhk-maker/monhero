@@ -7,19 +7,19 @@
 //   breeder … 育てている人の名前 / mon … モンスターの名前 / species … ALL_PLAYER_MONSTERS の id
 //   champ   … true がその大会の王者(1大会に1体)/ note … 解説や紹介で使える一言の目安
 const MONSUC_REGULAR_CUPS = Object.freeze({
-  debut:'デビュー戦', str:'ちから自慢', int:'かしこさ自慢', aim:'ねらい自慢', dodge:'かわし自慢', hard:'かたさ自慢', life:'しぶとさ自慢',
+  debut:'デビュー戦', str:'ちから自慢', int:'かしこさ自慢', aim:'狙い自慢', dodge:'かわし自慢', hard:'かたさ自慢', life:'しぶとさ自慢',
   dist0:'間合い(零)', dist1:'間合い(近)', dist2:'間合い(中)', dist3:'間合い(遠)',
   attacker:'タイプ(アタッカー)', tank:'タイプ(タンク)', supporter:'タイプ(サポーター)', healer:'タイプ(ヒーラー)', shadow:'タイプ(シャドウ)',
   spring:'春の大会', summer:'夏の大会', autumn:'秋の大会', winter:'冬の大会', normal:'ふつうの大会',
   herosummer:'夏のヒーロー記念', herowinter:'冬のヒーロー記念', peak:'頂への道', scmua:'笑顔の大会(みゅあのシナリオ)', scatsu:'格上への挑戦(あつのシナリオ)',
 });
 const MONSUC_REGULARS = Object.freeze([
-  { id:'reg.debut.1', cup:'debut', breeder:'小春ひより', mon:'おもち丸', species:'Mocchi', note:'はじめての大会で緊張ぎみ' },
+  { id:'reg.debut.1', cup:'debut', breeder:'小春ひより', mon:'おもち丸', species:'Mocchi', note:'初めての大会で緊張ぎみ' },
   { id:'reg.debut.2', cup:'debut', breeder:'早川ススム', mon:'ちゅるぴ', species:'Ham', note:'とにかく元気に走り回る' },
   { id:'reg.debut.3', cup:'debut', breeder:'星野ミツル', mon:'ルミナ', species:'Pixie', note:'羽の手入れがじまん' },
   { id:'reg.debut.c', cup:'debut', breeder:'大門ハジメ', mon:'ハジマリ', species:'Mocchi', champ:true, note:'デビュー戦の名物。新人の壁' },
 
-  { id:'reg.str.1', cup:'str', breeder:'岩城ゴウタ', mon:'ガンテツ', species:'Golem', note:'一撃にすべてをかける' },
+  { id:'reg.str.1', cup:'str', breeder:'岩城ゴウタ', mon:'ガンテツ', species:'Golem', note:'一撃に全てをかける' },
   { id:'reg.str.2', cup:'str', breeder:'剣持サクラ', mon:'紅一閃', species:'Eiki', note:'まっすぐな太刀筋' },
   { id:'reg.str.3', cup:'str', breeder:'箱崎レイ', mon:'ドンガラ', species:'Pandora', note:'ふたを開けたら大暴れ' },
   { id:'reg.str.c', cup:'str', breeder:'力丸ダイゴ', mon:'ゴウリキ', species:'Golem', champ:true, note:'ちから自慢を何度も制した怪力' },
@@ -30,7 +30,7 @@ const MONSUC_REGULARS = Object.freeze([
   { id:'reg.int.c', cup:'int', breeder:'知念サトル', mon:'ハカセイ', species:'Pixie', champ:true, note:'読み合いで負けたことがない' },
 
   { id:'reg.aim.1', cup:'aim', breeder:'黒羽ジン', mon:'ノクターン', species:'Iblis', note:'遠くからでも外さない' },
-  { id:'reg.aim.2', cup:'aim', breeder:'方舟ワタル', mon:'アルクス', species:'Ark', note:'ねらいを定めるまでが長い' },
+  { id:'reg.aim.2', cup:'aim', breeder:'方舟ワタル', mon:'アルクス', species:'Ark', note:'狙いを定めるまでが長い' },
   { id:'reg.aim.3', cup:'aim', breeder:'的場ナツメ', mon:'ピタリ', species:'Mia', note:'的当ての遊びから育った' },
   { id:'reg.aim.c', cup:'aim', breeder:'一ツ目ヒカル', mon:'センリガン', species:'Suezo', champ:true, note:'大きな目でどこまでも見通す' },
 

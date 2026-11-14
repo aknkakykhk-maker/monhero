@@ -46,17 +46,17 @@ function MsxR3GameOver({ run, setRun, onPause }) {
     <div className="v-scene dk" style={{ flex: '1 1 0', minHeight: 220 }}><img className="bg" src="images/story-bg/monhero_plaza_evening.jpg" alt=""/><div className="sh"/>
       <div className="gr" style={{ bottom: 'calc(36% - 5px)' }}/><MsxMonArt run={run} className="mon" style={{ bottom: '36%', height: '30%', filter: 'grayscale(.6) drop-shadow(0 8px 5px #0009)', transform: 'translateX(-50%) rotate(-8deg)' }}/>
       <div className="v-stamp ng msx-pop" style={{ top: '5%', fontSize: 36 }}>育成は ここまで…<small>デビュー戦に 3回 負けた</small></div>
-      <div className="v-lives"><i/><i/><i/><span>デビュー戦 0 / 3 のこり</span></div></div>
+      <div className="v-lives"><i/><i/><i/><span>デビュー戦 0 / 3 残り</span></div></div>
     <div className="v-card">
-      <div className="v-kv"><b>やり直し</b><span>砂時計 のこり <b>{Math.max(0, left)} / 3</b></span></div>
+      <div className="v-kv"><b>やり直し</b><span>砂時計 残り <b>{Math.max(0, left)} / 3</b></span></div>
       <div className="v-kv"><b>記録</b><span>{s.turn}ターン・トレーニング {(s.log && s.log.train) || 0}回・デビュー戦 0勝{s.debutLoss || 3}敗</span></div>
       <div className="v-kv"><b>もちかえり</b><span>持ちこみ・使ったアイテム・修行チケットは戻らない。マスモンボックスには入らない</span></div></div>
     <MsxSay aid={s.aid} ex="troubled" text={`「…つぎは もっとトレーニングしてから挑もう。わたしも 手伝うから! ${run.nick || 'このモンスター'}も、がんばったよ」`}/>
     {!fxDone && typeof MsxFxMoment === 'function' ? <MsxFxMoment kind="over" title="育成は ここまで…" sub="デビュー戦に 3回 負けた" species={s.species} colors={run.colors} onDone={() => setFxDone(true)}/> : null}
     {log ? <div className="v-card">{(run.log || []).length ? run.log.slice().reverse().map((l, i) => <div key={i} className="msx-note">{l.turn}ターン目: {l.t}</div>) : <div className="msx-note">まだありません</div>}</div> : null}
   </>);
-  const foot = <div className="v-ft"><button type="button" onClick={() => setLog(!log)}>📖 きろくを見る</button><button type="button" className="go" disabled={busy} onClick={again} data-msx-r3-again>もう1回 はじめから ▶</button></div>;
-  return <MsxR3Frame run={run} back="とじる" onBack={onPause} body={body} foot={foot}/>;
+  const foot = <div className="v-ft"><button type="button" onClick={() => setLog(!log)}>📖 記録を見る</button><button type="button" className="go" disabled={busy} onClick={again} data-msx-r3-again>もう1回 初めから ▶</button></div>;
+  return <MsxR3Frame run={run} back="閉じる" onBack={onPause} body={body} foot={foot}/>;
 }
 
 // ---- 引退 ----
@@ -113,7 +113,7 @@ function MsxR3Retire({ run, setRun, onPause, debug, SUC }) {
       <MsxStRow who={ws} stats={ws.stats}/>
       <MsxSay aid={s.aid} ex="excited" text={`「${grade.label} だよ! ${run.nick || 'このモンスター'}、よくがんばったね!」`}/>
     </>);
-    return <MsxR3Frame run={run} back={s.pts > 0 ? 'もどる' : 'とじる'} onBack={s.pts > 0 ? () => setStep('e3') : onPause} right={right} body={body} foot={<div className="v-ft"><button type="button" className="go" onClick={() => setStep('e1')} data-msx-r3-e0>つぎへ ▶</button></div>}/>;
+    return <MsxR3Frame run={run} back={s.pts > 0 ? '戻る' : '閉じる'} onBack={s.pts > 0 ? () => setStep('e3') : onPause} right={right} body={body} foot={<div className="v-ft"><button type="button" className="go" onClick={() => setStep('e1')} data-msx-r3-e0>次へ ▶</button></div>}/>;
   }
 
   // ---- E3 能力ポイントをまとめて使う ----
@@ -138,7 +138,7 @@ function MsxR3Retire({ run, setRun, onPause, debug, SUC }) {
         <button type="button" className="r3-chip" onClick={() => preset('top')}>全部 {MSX_STAT_NAME[(ev0.top || [])[0]] || 'ちから'}</button>
         <button type="button" className="r3-chip" onClick={() => preset('low')}>弱いところ</button>
         <button type="button" className="r3-chip" onClick={() => preset('bal')} data-msx-r3-bal>バランス</button>
-        <button type="button" className="r3-chip" onClick={() => { setWs(s); setHist([]); }}>もどす</button></div>
+        <button type="button" className="r3-chip" onClick={() => { setWs(s); setHist([]); }}>戻す</button></div>
       <div className="v-pa">{MSX_STATS.map((k) => {
         const add = ws.stats[k] - s.stats[k];
         return (<div key={k}><span className="nm">{MSX_STAT_ICON[k]} {MSX_STAT_NAME[k]}</span><span className="v0">{s.stats[k]}</span><span className="ad">{add ? `+${add}` : ''}</span>
@@ -148,7 +148,7 @@ function MsxR3Retire({ run, setRun, onPause, debug, SUC }) {
       <MsxSay aid={s.aid} ex="excited" text={ws.pts > 0 ? '「能力ポイントが残ってるよ! 使い切ってから、最後の評価を見よう!」' : '「使い切ったね! それじゃあ、最後の評価を見よう!」'}/>
     </>);
     const foot = <div className="v-ft"><button type="button" onClick={() => { setWs(s); setHist([]); }}>やり直す</button><button type="button" className="go" onClick={() => { setRun({ ...run, s: ws }); setStep('e0'); }} data-msx-r3-e3>これで決める ▶</button></div>;
-    return <MsxR3Frame run={run} back="とじる" onBack={onPause} right={right} body={body} foot={foot}/>;
+    return <MsxR3Frame run={run} back="閉じる" onBack={onPause} right={right} body={body} foot={foot}/>;
   }
 
   // ---- E1 振り返り ----
@@ -156,7 +156,7 @@ function MsxR3Retire({ run, setRun, onPause, debug, SUC }) {
   if (step === 'e1') {
     const cupWins = (ws.log && ws.log.wins) || 0; const cupLoss = (ws.log && ws.log.losses) || 0;
     const body = (<>
-      <div className="v-h">🎓 引退 ── {run.nick || msxMonName(ws.species)}の育成がおわった<small>{msxAidName(ws.aid)}編・{ws.over === 'lost' ? 'ヒーローズファイナルで負けた' : '最後まで走り切った'}</small></div>
+      <div className="v-h">🎓 引退 ── {run.nick || msxMonName(ws.species)}の育成が終わった<small>{msxAidName(ws.aid)}編・{ws.over === 'lost' ? 'ヒーローズファイナルで負けた' : '最後まで走り切った'}</small></div>
       <div className="v-scene r3-mscene" style={{ flex: '1 1 0' }}><img className="bg" src={msxSceneBg(Math.min(s.turn, msxSuc.core.TOTAL_TURNS)).bg} alt=""/><div className="sh"/>
         <div className="gr" style={{ left: '32%', bottom: 'calc(6% - 5px)', width: '40%' }}/><MsxMonArt run={run} className="mon" style={{ left: '32%', bottom: '6%', height: '88%' }} live/>
         <div className="r3-msum"><span className="gd">{grade.label}</span><div className="v-num"><small>総合力</small><b>{msxFmt(ev.power)}</b></div></div></div>
@@ -167,7 +167,7 @@ function MsxR3Retire({ run, setRun, onPause, debug, SUC }) {
         <div><small>📯 集まりやすいトレーニング(上位3つ)</small>{(ev.top || []).map((k) => `${MSX_STAT_ICON[k]}${MSX_STAT_NAME[k]}`).join('・')}</div>
         {mem ? <div><small>💥 編成での補正</small>{(mem.top || []).map((k, i) => <React.Fragment key={k}>{i ? '・' : ''}<span className="nw">{`${MSX_STAT_NAME[k]} ${Math.round(mem.bonus[k] || 0)}%`}</span></React.Fragment>)}</div> : null}
         {mem ? <div><small>🧩 アシストの基本値</small><span className="nw">親密度 {mem.bond0}</span>・<span className="nw">タッグ +{mem.tag}%</span>・<span className="nw">得意率 {Math.round((mem.fav || 0) * 100)}%</span></div> : null}
-        {mem && mem.startAdd ? <div><small>📈 はじめの能力</small>{MSX_STAT_NAME[mem.startAdd.stat]} +{mem.startAdd.v}</div> : null}
+        {mem && mem.startAdd ? <div><small>📈 初めの能力</small>{MSX_STAT_NAME[mem.startAdd.stat]} +{mem.startAdd.v}</div> : null}
       </div>
       {(() => { const band = msxR3Band(grade.rank); const l = msxR3Line(`turn.retire.r${band}`, run, {}, `「${run.nick || 'このモンスター'}、まぢでがんばったね! 次の育成の編成に入ったら、${MSX_STAT_NAME[(ev.top || [])[0]] || 'ちから'}のトレーニングがすっごい伸びるよ!」`); return <MsxSay aid={ws.aid} ex={l.e || 'excited'} text={l.t}/>; })()}
       <div className="v-card"><div className="sub" style={{ color: '#f9a8d4', fontWeight: 900 }}>🏅 この育成で手に入れたもの</div>
@@ -175,7 +175,7 @@ function MsxR3Retire({ run, setRun, onPause, debug, SUC }) {
         <div className="v-kv"><b>称号</b><span>{(ws.titles || []).length ? ws.titles.slice(0, 6).map((t) => `「${msxR3TitleName(t)}」`).join('') : 'なし'}</span></div>
         <div className="v-kv"><b style={{ width: 'auto', whiteSpace: 'nowrap' }}>マスモンボックス</b><span>{box ? `${box.mons.length + 1} / ${box.cap}体 に入る。次の育成の編成・対戦・合体に使える` : '…'}</span></div></div>
     </>);
-    return <MsxR3Frame run={run} back="もどる" onBack={() => setStep('e0')} right={right} body={body} foot={<div className="v-ft"><button type="button" className="go" onClick={() => setStep('e2')} data-msx-r3-e1>✨ アシスト効果を取る({msxR3T().assist ? msxR3T().assist.pointsOf(ev.power) : ev.points}ポイント)</button></div>}/>;
+    return <MsxR3Frame run={run} back="戻る" onBack={() => setStep('e0')} right={right} body={body} foot={<div className="v-ft"><button type="button" className="go" onClick={() => setStep('e2')} data-msx-r3-e1>✨ アシスト効果を取る({msxR3T().assist ? msxR3T().assist.pointsOf(ev.power) : ev.points}ポイント)</button></div>}/>;
   }
 
   // ---- E2 アシスト能力 ----
@@ -228,7 +228,7 @@ function MsxR3Retire({ run, setRun, onPause, debug, SUC }) {
   };
   // ---- 自分だけのベスト3(56-monsuc-best3.jsx・r1113-057②)。入ったらせり上がる演出 → いつもの完了の段へ ----
   if (step === 'best3' && res && res.best3 && typeof MsxBest3 === 'function') {
-    return <MsxR3Frame run={run} back="とじる" onBack={() => setStep('done')} right={right} body={<MsxBest3 b={res.best3} run={run}/>} foot={<div className="v-ft"><button type="button" className="go" onClick={() => setStep('done')} data-msx-best3-next>つぎへ ▶</button></div>}/>;
+    return <MsxR3Frame run={run} back="閉じる" onBack={() => setStep('done')} right={right} body={<MsxBest3 b={res.best3} run={run}/>} foot={<div className="v-ft"><button type="button" className="go" onClick={() => setStep('done')} data-msx-best3-next>次へ ▶</button></div>}/>;
   }
   if (step === 'done') {
     const body = (<>
@@ -239,7 +239,7 @@ function MsxR3Retire({ run, setRun, onPause, debug, SUC }) {
       {!fxDone && typeof MsxFxMoment === 'function' ? <MsxFxMoment kind="retire" title="育成完了!" sub={`${run.nick || msxMonName(ws.species)}・評価 ${grade.label}`} species={ws.species} colors={run.colors} onDone={() => setFxDone(true)}/> : null}
       <div className="v-card"><div className="v-kv"><b style={{ width: 'auto', whiteSpace: 'nowrap' }}>マスモンボックス</b><span>{box ? `${box.mons.length} / ${box.cap}体` : '…'}</span></div></div>
     </>);
-    return <MsxR3Frame run={run} back="とじる" onBack={() => { setRun(null); onPause(); }} right={right} body={body} foot={<div className="v-ft"><button type="button" onClick={() => setShowBox(true)}>🐾 マスモンボックスを見る</button><button type="button" className="go" onClick={() => { setRun(null); onPause(); }} data-msx-r3-home>ホームへ ▶</button></div>}/>;
+    return <MsxR3Frame run={run} back="閉じる" onBack={() => { setRun(null); onPause(); }} right={right} body={body} foot={<div className="v-ft"><button type="button" onClick={() => setShowBox(true)}>🐾 マスモンボックスを見る</button><button type="button" className="go" onClick={() => { setRun(null); onPause(); }} data-msx-r3-home>ホームへ ▶</button></div>}/>;
   }
   const body = (<>
     <div className="v-pt"><div className="n">アシストポイント<b>{left}<small style={{ fontSize: 11, color: '#cbd5e1' }}> / {points}</small></b></div>
@@ -272,7 +272,7 @@ function MsxR3Retire({ run, setRun, onPause, debug, SUC }) {
   </>);
   const foot = <div className="v-ft"><button type="button" onClick={auto} data-msx-r3-auto>🎲 おまかせ</button><button type="button" onClick={() => { setPick({}); setSure(false); }}>やり直す</button>
     <button type="button" className="go" disabled={busy} onClick={decide} data-msx-r3-decide>{sure ? '本当に決める(変えられない)▶' : 'これで決める ▶'}</button></div>;
-  return <MsxR3Frame run={run} back="もどる" onBack={() => setStep('e1')} right={`1体${maxKinds}種類まで`} body={body} foot={foot}/>;
+  return <MsxR3Frame run={run} back="戻る" onBack={() => setStep('e1')} right={`1体${maxKinds}種類まで`} body={body} foot={foot}/>;
 }
 
 // ---- 保存枠(引退した子・合体の子の一覧)。お別れは2回押す・「思い出」に名前とランクだけ残る ----

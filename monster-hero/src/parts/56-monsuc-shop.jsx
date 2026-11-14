@@ -60,7 +60,7 @@ function MonsucShopList({ points = 0, busy = false, disabled = false, openSheet,
       if (!t) return null;
       const n = Math.max(0, Math.floor(Number(have[offer.itemId]) || 0));
       const desc = typeof msxItemDesc === 'function' ? msxItemDesc(offer.itemId) : t.desc;
-      const when = t.when === 'before' ? 'はじめる前に効く' : '育成中にも使える';
+      const when = t.when === 'before' ? '始める前に効く' : '育成中にも使える';
       const item = { id: offer.id, name: t.name, emoji: t.e, type: 'item', currency: 'beatPoint', cost: offer.cost, desc: `${when}。${desc}` };
       return <MarketProductCard key={offer.id} dataAttrs={{ 'data-monsuc-shop-offer': offer.itemId }}
         item={item} owned={false} comingSoon={false}
