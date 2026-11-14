@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ac37471b70ee5a76
+// source-sha256: de2365e6e80b4093
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -81697,8 +81697,17 @@ function HomeScreen({
           }
         }
         push = Math.min(push, Math.max(0, room));
+        if (push <= 0 && mg && mg.offsetParent && offTop(rh) >= offTop(mg) + mg.offsetHeight) {
+          let top = Infinity;
+          for (const el of scene.querySelectorAll('.mh-home-event-banner,.mh-home-tour-banner,.mh-home-card-battle,.mh-home-success')) {
+            if (!el.offsetParent) continue;
+            const t = offTop(el);
+            if (t > offTop(rh) && offLeft(el) < rr) top = Math.min(top, t);
+          }
+          if (Number.isFinite(top) && top > rb + 4) push = rb + 4 - top;
+        }
       }
-      scene.style.setProperty('--mh-home-left-push', `${Math.max(0, Math.ceil(push))}px`);
+      scene.style.setProperty('--mh-home-left-push', `${Math.ceil(push)}px`);
       const bt = scene.querySelector('.mh-home-facility.battle');
       let nudge = 0;
       if (bt && bt.offsetParent) {
@@ -81939,8 +81948,8 @@ function HomeScreen({
     "data-home-event-banner": true,
     className: "mh-home-event-banner",
     onClick: openChangelog,
-    "aria-label": `${homeEventCampaign.banner.title} ${homeEventCampaign.banner.sub}`
-  }, React.createElement("b", null, homeEventCampaign.banner.emoji, " ", homeEventCampaign.banner.title), React.createElement("small", null, homeEventCampaign.banner.sub)), homeCardTour && typeof onOpenCardTour === 'function' && React.createElement("button", {
+    "aria-label": `${homeEventCampaign.banner.title}${homeEventCampaign.banner.title2 || ''} ${homeEventCampaign.banner.sub}`
+  }, React.createElement("b", null, homeEventCampaign.banner.emoji, " ", homeEventCampaign.banner.title, homeEventCampaign.banner.title2 ? React.createElement(React.Fragment, null, React.createElement("br", null), homeEventCampaign.banner.title2) : null), React.createElement("small", null, homeEventCampaign.banner.sub)), homeCardTour && typeof onOpenCardTour === 'function' && React.createElement("button", {
     type: "button",
     "data-home-card-tour": homeCardTour.id,
     className: `mh-home-tour-banner${homeEventCampaign ? '' : ' raised'}`,

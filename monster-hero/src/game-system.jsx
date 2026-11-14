@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: f76bcfb3d21a0ac7
+// generated-sha256: ad034392faf8679f
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -48849,8 +48849,13 @@ function HomeScreen({
         // 押し下げても、いちばん下の札とその下の顔の列(助手ライフ・22px)が画面の下に収まる所まで(2026-11-08 横 568×320 で MFバトルカードの札と顔が画面の外へ出た)
         let room=Infinity;
         for(const el of scene.querySelectorAll('.mh-home-event-banner,.mh-home-tour-banner,.mh-home-card-battle')){if(!el.offsetParent)continue;const t=offTop(el);if(t>offTop(rh)&&offLeft(el)<rr){push=Math.max(push,rb-t);room=Math.min(room,scene.clientHeight-(t+el.offsetHeight)-(el.classList.contains('mh-home-card-battle')?24:4));}}
-        push=Math.min(push,Math.max(0,room));}
-      scene.style.setProperty('--mh-home-left-push',`${Math.max(0,Math.ceil(push))}px`);
+        push=Math.min(push,Math.max(0,room));
+        // 縦画面(モンヒロビートが M/B管理 より下に積まれている)で、下の札の束がビートの札から離れすぎているときは、束ごとビートの札(と顔の列)のすぐ下まで引き上げる。
+        // 2026-11-14 社長「モンヒロビートと本オープン記念のあいだが大きく空いている」(390×844 で札1つぶん以上空き、左の列が上下に分かれて見えた)
+        if(push<=0&&mg&&mg.offsetParent&&offTop(rh)>=offTop(mg)+mg.offsetHeight){let top=Infinity;
+          for(const el of scene.querySelectorAll('.mh-home-event-banner,.mh-home-tour-banner,.mh-home-card-battle,.mh-home-success')){if(!el.offsetParent)continue;const t=offTop(el);if(t>offTop(rh)&&offLeft(el)<rr)top=Math.min(top,t);}
+          if(Number.isFinite(top)&&top>rb+4)push=rb+4-top;}}
+      scene.style.setProperty('--mh-home-left-push',`${Math.ceil(push)}px`);
       // 「モンヒロバトル」(下の真ん中)が右下の「ミッション」「ギフト」と横に重なるときは、重なった分だけ左へ寄せる(2026-11-08 横 568×320 で重なった)。
       // バトルの札は translateX(-50%) で真ん中に置いているので、左端は offsetLeft − 幅/2
       const bt=scene.querySelector('.mh-home-facility.battle');let nudge=0;
@@ -48964,8 +48969,9 @@ function HomeScreen({
         {typeof TimeOfDayClock==='function'&&<TimeOfDayClock home/>}
         <button onClick={openChangelog} className="mh-home-update"><RefreshCcw size={15}/>更新履歴{hasUnreadChangelog&&<em className="mh-unread-badge" aria-label="未読あり">!</em>}</button>
         {/* 期間限定イベントのバナー(2026-10-04)。押すと更新履歴(イベントの詳細)を開く。ゲーム全体のイベントなので、特定の遊びのボタンには付けない。縦持ちの左下(モンヒロバトルのすぐ上)。右側のボタン列・上の吹き出しとかぶらない場所。横持ちでは出さない */}
-        {homeEventCampaign&&<button type="button" data-home-event-banner className="mh-home-event-banner" onClick={openChangelog} aria-label={`${homeEventCampaign.banner.title} ${homeEventCampaign.banner.sub}`}>
-          <b>{homeEventCampaign.banner.emoji} {homeEventCampaign.banner.title}</b><small>{homeEventCampaign.banner.sub}</small>
+        {homeEventCampaign&&<button type="button" data-home-event-banner className="mh-home-event-banner" onClick={openChangelog} aria-label={`${homeEventCampaign.banner.title}${homeEventCampaign.banner.title2||''} ${homeEventCampaign.banner.sub}`}>
+          {/* title2 … 題の2行目(2026-11-14「本オープン記念」だけでは何の本オープンか分からないため、題を2行に分けられるようにした) */}
+          <b>{homeEventCampaign.banner.emoji} {homeEventCampaign.banner.title}{homeEventCampaign.banner.title2?<><br/>{homeEventCampaign.banner.title2}</>:null}</b><small>{homeEventCampaign.banner.sub}</small>
         </button>}
         {/* 公式杯(2026-10-31 社長・案A): ハロウィン・ナイトの札の下、MFバトルカードの上。イベントの札が無いときは1段上がる。押すといつも大会のトップ */}
         {homeCardTour&&typeof onOpenCardTour==='function'&&<button type="button" data-home-card-tour={homeCardTour.id} className={`mh-home-tour-banner${homeEventCampaign?'':' raised'}`} onClick={()=>onOpenCardTour(homeCardTour.id)} aria-label={`${homeCardTour.name} ${homeCardTour.sub}`}>
