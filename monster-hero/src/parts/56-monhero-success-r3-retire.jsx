@@ -88,7 +88,7 @@ function MsxR3Retire({ run, setRun, onPause, debug, SUC }) {
   if (showBox) return <MsxR3Box onClose={() => { setShowBox(false); setRes(null); }}/>;
 
   // ---- E0 最終の評価(育成グレード) ----
-  // 参考 v4 180〜186秒の形: 子を場面いっぱいに → 大きなグレードの印 → 総合力を真ん中に・次のグレードまでの棒(docs/spec/MONSUC_UI.md)
+  // 参考 v4 180〜186秒の形: モンスターを場面いっぱいに → 大きなグレードの印 → 総合力を真ん中に・次のグレードまでの棒(docs/spec/MONSUC_UI.md)
   // 能力ポイントが残っていれば先に E3 で使い切ってから、この画面で決まったグレードを見せる
   if (step === 'e0') {
     const plain = grade.label === `${grade.rank}${grade.step}`;

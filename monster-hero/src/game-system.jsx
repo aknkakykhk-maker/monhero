@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: e12761da27f7ff2e
+// generated-sha256: fb01fd4af9d5bf07
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -87260,7 +87260,7 @@ const MSX_R3_CSS = `
 /* ごはん9種(2026-11-13 社長)。3列×3段に収める */
 .msx .r3 .v-meal .ms{gap:4px}.msx .r3 .v-ml{padding:4px 2px}.msx .r3 .v-ml .e{font-size:20px}.msx .r3 .v-ml b{font-size:10.5px;overflow:hidden;text-overflow:clip}.msx .r3 .v-ml .g{font-size:10.5px}.msx .r3 .v-ml small{font-size:10px;line-height:1.25}
 .msx .r3 .v-ml.sel{border-color:#fde047;background:#3b2f0b;box-shadow:0 0 10px #fde04788}
-/* 最終の評価(育成グレード)。参考 v4 180〜186秒: 子を場面いっぱい・大きな印・総合力を真ん中・次のグレードまでの棒 */
+/* 最終の評価(育成グレード)。参考 v4 180〜186秒: モンスターを場面いっぱい・大きな印・総合力を真ん中・次のグレードまでの棒 */
 .msx .r3-grade{min-height:300px}
 .msx .r3-gaura{position:absolute;left:50%;top:14%;width:90%;height:62%;transform:translateX(-50%);border-radius:50%;background:radial-gradient(ellipse at 50% 50%,rgba(253,224,71,.45),rgba(244,114,182,.22) 45%,transparent 70%);animation:msxR3GAura 1.4s ease-in-out infinite alternate;pointer-events:none}
 .msx .r3-grade .r3-gttl{position:absolute;left:0;right:0;top:3%;z-index:4;text-align:center;font-size:30px;font-weight:900;letter-spacing:.08em;color:#fde047;-webkit-text-stroke:2px #7c2d12;paint-order:stroke fill;text-shadow:0 3px 0 #7c2d12,0 0 16px #fb923c88}
@@ -88283,7 +88283,7 @@ function MsxR3Retire({ run, setRun, onPause, debug, SUC }) {
   if (showBox) return <MsxR3Box onClose={() => { setShowBox(false); setRes(null); }}/>;
 
   // ---- E0 最終の評価(育成グレード) ----
-  // 参考 v4 180〜186秒の形: 子を場面いっぱいに → 大きなグレードの印 → 総合力を真ん中に・次のグレードまでの棒(docs/spec/MONSUC_UI.md)
+  // 参考 v4 180〜186秒の形: モンスターを場面いっぱいに → 大きなグレードの印 → 総合力を真ん中に・次のグレードまでの棒(docs/spec/MONSUC_UI.md)
   // 能力ポイントが残っていれば先に E3 で使い切ってから、この画面で決まったグレードを見せる
   if (step === 'e0') {
     const plain = grade.label === `${grade.rank}${grade.step}`;
