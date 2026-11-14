@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 4cbb22f692befa03
+// source-sha256: 6f4720568ec68311
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -166352,25 +166352,25 @@ const MSX_ITEMS = Object.freeze([{
 }, {
   id: 'pack',
   name: 'オイリーパック',
-  desc: 'オイル2個と薬草の詰め合わせ',
+  desc: 'オイリーオイル（大）2個と夏美草1個のセット',
   when: 'both',
   e: '🧴'
 }, {
   id: 'oil',
-  name: 'オイル',
-  desc: '疲れた体にぬるオイル',
+  name: 'オイリーオイル（小）',
+  desc: '体力を上限の20%回復',
   when: 'both',
   e: '🫙'
 }, {
   id: 'oilyoil',
-  name: 'オイリーオイル',
-  desc: 'たっぷり効く大きいオイル',
+  name: 'オイリーオイル（大）',
+  desc: '体力を上限の40%回復',
   when: 'both',
   e: '🛢️'
 }, {
   id: 'herb',
-  name: '薬草',
-  desc: '気持ちが落ち着く草',
+  name: '夏美草',
+  desc: 'ストレスを20下げる',
   when: 'both',
   e: '🌱'
 }]);
@@ -170149,7 +170149,7 @@ const MSX_EXTRA_ITEM = Object.freeze({
   },
   herb: {
     e: '🌱',
-    desc: 'ストレス −20'
+    desc: 'ストレスを20下げる'
   },
   elixir0: {
     e: '🧪',

@@ -52,7 +52,7 @@ const MONSUC_SCRIPT_ITEMS = Object.freeze([
   { id:'item.license.mua1', who:'mua', e:'happy', t:'ライセンス見せたら、{mon}がキラキラした目で見てるｗ' },
   { id:'item.license.mua1b', who:'mua', e:'happy', bond:[1,2], t:'ライセンスを見せたら、{mon}がキラキラした目で{name}を見ています' },
   { id:'item.license.atsu1', who:'atsu', e:'happy', t:'ライセンスか。{mon}、ちゃんと信じてついてきてるよ笑' },
-  // 12. オイリーパック(オイル2個と薬草の詰め合わせ)
+  // 12. オイリーパック(オイリーオイル（大）2個と夏美草1個のセット)
   { id:'item.oily.mua1', who:'mua', e:'normal', t:'オイリーパック開けた！ 中身いっぱいで助かるー♪' },
   { id:'item.oily.mua1b', who:'mua', e:'normal', bond:[1,2], t:'オイリーパックを開けました！ 中身がいっぱいで助かります♪' },
   { id:'item.oily.atsu1', who:'atsu', e:'normal', t:'オイリーパックね。中身は大事に使お笑' },
