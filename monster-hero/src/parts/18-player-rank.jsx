@@ -47,7 +47,7 @@ const beatRankRewardItems = (rank) => {
   return [
     { icon: '🎟️', text: `ビートP ${(r * 100).toLocaleString()}` },
     { icon: '🎶', text: 'セッション券 1枚' },
-    ...(bonus ? [{ icon: '🎟️', text: `ビートP ${(r * 200).toLocaleString()}`, bonus: true }, { icon: '🎶', text: `セッション券 ${r.toLocaleString()}枚`, bonus: true }, { icon: '🌱', text: '性格のたね 1個', bonus: true }] : []),
+    ...(bonus ? [{ icon: '🎟️', text: `ビートP ${(r * 200).toLocaleString()}`, bonus: true }, { icon: '🎶', text: `セッション券 ${r.toLocaleString()}枚`, bonus: true }, { icon: '🌱', text: '性格の種 1個', bonus: true }] : []),
   ];
 };
 const beatRankRewardText = (rank) => `ビートP ${playerRankBeatPointsFor(rank).toLocaleString()}・セッション券 ${beatRankTicketsFor(rank).toLocaleString()}枚`;
@@ -100,7 +100,7 @@ const beatRankAfter = (prev, { difficultyId, cleared = true, fullCombo, allMarve
   if (!play.xp) return { next: cur, add: 0, parts: [], from, to: from, tickets: 0, beatPoints: 0, seeds: 0 };
   const day = typeof today === 'string' ? today.slice(0, 10) : '';
   const first = cleared !== false && !!day && !(cur.day === day && cur.dayFirst);
-  const parts = first ? [...play.parts, { label: 'その日はじめての1曲', xp: BEAT_RANK_BONUS.dayFirst }] : play.parts;
+  const parts = first ? [...play.parts, { label: 'その日初めての1曲', xp: BEAT_RANK_BONUS.dayFirst }] : play.parts;
   const add = play.xp + (first ? BEAT_RANK_BONUS.dayFirst : 0);
   const xp = playerRankSafeXp(cur.xp + add);
   const to = playerRankInfo(xp).rank;
