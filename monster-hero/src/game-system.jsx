@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 2f27d57de9fa045f
+// generated-sha256: e15905918c01af3c
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -87115,6 +87115,8 @@ const MSX_R3_CSS = `
 .msx .q-lock>div span{flex:1}
 .msx .q-lock>div b{font-size:10.5px;color:#b91c1c}.msx .q-lock>div.ok b{color:#15803d}
 .msx .q-lock p{font-size:11px;color:#475569;margin:2px 0}
+.msx.land .r3 .q-list{grid-column:1;grid-row:1/-1;margin-top:5px}
+.msx.land .v-body>.msx-cupin{grid-column:1/-1;grid-row:1/-1}
 .msx .r3 .v-brh{display:grid;grid-template-columns:1.5fr 1fr 1fr .8fr;gap:5px;margin-top:6px;font-size:9.5px;font-weight:900;color:#cbd5e1;text-align:center}
 .msx .r3 .v-brk{display:grid;grid-template-columns:1.5fr 1fr 1fr .8fr;grid-template-rows:repeat(8,minmax(0,1fr));gap:4px 5px;flex:1 1 0;min-height:0;margin-top:3px}
 .msx .r3 .v-bc{position:relative;display:flex;align-items:center;gap:5px;background:#1e1a36;border:1.5px solid #475569;border-radius:11px;padding:2px 6px;min-width:0}

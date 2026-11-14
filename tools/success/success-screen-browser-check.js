@@ -126,6 +126,12 @@ const advance = (page, react) => page.evaluate((react) => {
   const ch = by(react === 'scold' ? /^📣 叱る/ : /^👏 褒める/, '.v-ch'); if (ch) return press(ch, react);
   // 出来事(ランダムイベント・助手の連続イベント・2026-11-12 回2): 1つ目の選択肢を選ぶ
   const opt = root.querySelector('.v-opts .v-opt:not([disabled])'); if (opt) return press(opt, 'event');
+  // 期末の大会の当日: 当日のメインの「大会(本番)」→ 受付の「出場」→ 参加の確認「はい」→ 紋章の入りの SKIP
+  if (root.querySelector('[data-msx-r3-loading]')) return 'wait'; // 試合を読み込み中
+  const yes = root.querySelector('[data-msx-r3-yes]'); if (yes) return press(yes, 'pre-yes');
+  if (root.querySelector('[data-msx-r3-pre-card]')) { const en = root.querySelector('[data-msx-r3-enter]'); if (en) return press(en, 'pre-enter'); }
+  const pc = root.querySelector('[data-msx-r3-precup]'); if (pc) return press(pc, 'pre-cup');
+  const ig = root.querySelector('[data-msx-r3-cupintro-go]'); if (ig) return press(ig, 'intro');
   // 期末の大会(デバッグ)
   const win = by(/勝ったことにする/); if (win) return press(win, 'win');
   // デビュー戦の再挑戦・体調が悪い
@@ -234,8 +240,9 @@ const sameState = (a, b) => {
               if (onMain) break;
             }
             const did = await advance(page, guard % 3 === 0 ? 'scold' : 'praise');
-            if (!did) { check(`${tag}: ${label} T${cur.turn} で押せるボタンが見つからない`, false, `view=${cur.view}`); break; }
+            if (!did) { const tx = await page.evaluate(() => (document.querySelector(".msx") || {}).innerText || ""); check(`${tag}: ${label} T${cur.turn} で押せるボタンが見つからない`, false, `view=${cur.view} ${pressed.slice(-4).join(",")} ${tx.replace(/\s+/g, " ").slice(0, 200)}`); break; }
             pressed.push(did);
+            if (did === 'wait') { await page.waitForTimeout(400); continue; }
             if (['train', 'praise', 'scold', 'go', 'next', 'win', 'rest', 'retry', 'cond'].includes(did)) await see(`T${cur.turn}-${did}`);
           }
           return pressed;
