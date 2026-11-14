@@ -220,7 +220,7 @@ function AssistantLifeProfileStand({ who, head = 0.32, top = 0.16 }) {
 
 // 一覧(タブ「📖 紹介」の中身)
 // viewOnly … フレンドの家から見る専用で開くとき(2026-11-14 社長 r1115-019)。相手が会っている助手の「人となり」だけ。自分の仲良し度・好み・贈った記録・NEW の保存は使わない・書かない
-function AssistantLifeProfilePage({ metIds, bondLevelOf = null, land = false, onMasmon = null, viewOnly = false }) {
+function AssistantLifeProfilePage({ metIds, bondLevelOf = null, land = false, onMasmon = null, viewOnly = false, ownerName = '', tierOf = null }) {
   const giftStAll = typeof useAssistantLifeGiftState === 'function' ? useAssistantLifeGiftState() : null;
   const giftSt = viewOnly ? null : giftStAll;
   const [seen, setSeen] = React.useState(null); // 読めるまで null(NEW を出さない)
@@ -262,7 +262,7 @@ function AssistantLifeProfilePage({ metIds, bondLevelOf = null, land = false, on
       <div className="mb-2 flex items-center gap-2">
         <div className="min-w-0 flex-1">
           <p className="text-[16px] font-black text-white">📖 助手紹介</p>
-          <p className="text-[11px] font-bold text-indigo-200">選ぶと、その助手のことが分かります</p>
+          <p className="text-[11px] font-bold text-indigo-200">{viewOnly && ownerName ? <><span className="whitespace-nowrap">{ownerName}さんが会った助手です。</span> <span className="whitespace-nowrap">選ぶと人となりが分かります</span></> : '選ぶと、その助手のことが分かります'}</p>
         </div>
         <span data-assistant-life-profile-count={`${metList.length}/${roster.length}`} className="shrink-0 whitespace-nowrap rounded-full border border-white/15 bg-slate-950/80 px-2.5 py-1 text-[11px] font-black text-slate-100">会った助手 {metList.length}/{roster.length}</span>
       </div>
@@ -283,6 +283,7 @@ function AssistantLifeProfilePage({ metIds, bondLevelOf = null, land = false, on
               <p className="mt-1 text-[15px] font-black text-white">{w.name}</p>
               <p className="text-[10.5px] font-bold leading-snug text-slate-200" style={typeof JA_LABEL_STYLE !== 'undefined' ? JA_LABEL_STYLE : undefined}>{typeof jaWrap === 'function' ? jaWrap(w.tagline || '') : (w.tagline || '')}</p>
               {b && <span className="mt-1 inline-block rounded-full bg-slate-950/80 px-2 py-0.5 text-[10.5px] font-black text-pink-100">💗 Lv{b.lv}</span>}
+              {viewOnly && typeof tierOf === 'function' && tierOf(w.id) && <span data-assistant-life-profile-tier={w.id} className="mt-1 inline-block whitespace-nowrap rounded-full bg-slate-950/80 px-2 py-0.5 text-[10.5px] font-black text-pink-100">💗 {tierOf(w.id)}</span>}
             </button>);
         })}
       </div>

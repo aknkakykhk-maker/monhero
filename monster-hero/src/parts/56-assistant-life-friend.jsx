@@ -137,6 +137,17 @@ const alfDiaryShare = (n) => {
     return (d && Array.isArray(d.items) ? d.items : []).filter(x => x && x.kind !== 'friend' && !/さんの|さんち/.test(x.text)).slice(-n).reverse().map(x => ({ t: alfStr(x.t, 5), x: alfStr(x.text, 40) }));
   } catch { return []; }
 };
+// 仲良し度の Lv を3つの段にまとめる(Lv1〜2=0・3〜5=1・6〜=2)。Lv の数そのものは相手に渡さない
+const ALF_BOND_TIER_NAMES = Object.freeze(['はじめのころ', 'なかよし', 'ずっと仲良し']);
+const alfBondTierOfLv = (lv) => (!Number.isFinite(lv) || lv < 3 ? 0 : lv < 6 ? 1 : 2);
+const alfBondTiers = (ids) => {
+  const out = {};
+  if (typeof assistantLifeProfileBond !== 'function') return out;
+  for (const id of (ids || []).filter(alfValidId)) {
+    try { const b = assistantLifeProfileBond(id); if (b && Number.isFinite(b.lv)) out[id] = alfBondTierOfLv(b.lv); } catch {}
+  }
+  return out;
+};
 const alfBuildMore = (ids) => {
   const fu = {};
   for (const id of (ids || []).filter(alfValidId)) {
@@ -150,7 +161,9 @@ const alfBuildMore = (ids) => {
     } catch {}
   }
   const dy = alfDiaryShare(8);
-  return { v: 1, fu, dy };
+  // 仲良しの「段」(2026-11-14 社長 r1115-019 第2弾「段は見せてよい・数字は出さない」): 助手ごとに 0(はじめのころ)/1(なかよし)/2(ずっと仲良し)。点・Lv の数は送らない
+  const bd = alfBondTiers(ids);
+  return { v: 1, fu, dy, ...(Object.keys(bd).length ? { bd } : {}) };
 };
 // ---------- 助手のマスモンの写し(2026-11-08 社長「その人の色々見れるように」・キズナ4 #5103/#5108 の口 assistantLifeMasmonTeamOf) ----------
 //   迎えたマスモンだけ(1〜8体・先頭が勇者モン)。名前・種類・色だけを写す(強さ・数値は写さない)。
@@ -278,7 +291,9 @@ const assistantLifeFriendNormalizeMore = (raw) => {
     if (Number.isInteger(k) && k > one.length && k <= 8) mn[id] = k;
   }
   const fv = typeof albNormalizeFavShare === 'function' ? albNormalizeFavShare(raw.fv) : null; // お気に入りの棚(56-assistant-life-friend-bond)
-  return { v: 1, fu, dy, ac: alfNormalizeAc(raw.ac), ms, mn, ...(fv ? { fv } : {}) };
+  const bd = {}; // 仲良しの段(知らない助手・0〜2 以外は捨てる)
+  if (raw.bd && typeof raw.bd === 'object' && !Array.isArray(raw.bd)) for (const id of ALF_IDS) { const t = raw.bd[id]; if (t === 0 || t === 1 || t === 2) bd[id] = t; }
+  return { v: 1, fu, dy, ac: alfNormalizeAc(raw.ac), ms, mn, ...(fv ? { fv } : {}), ...(Object.keys(bd).length ? { bd } : {}) };
 };
 // 相手の控えを読むとき(知らない id・種類・長い値は捨てる)
 const assistantLifeFriendNormalizeHouse = (raw) => {
@@ -1134,6 +1149,7 @@ function AlfFriendHouseView({ friend, onClose }) {
   // 見る専用のタブ(自分の助手ライフと同じ並びの飾り・同じ class)。町・紹介は、自分の画面の部品に「相手の写し」を渡して見せるだけ(保存・操作は使わない)
   const vtabs = [['house', '🏡', '家'],
     ...(typeof AssistantLifeTownMap === 'function' && typeof assistantLifeMapReadHome === 'function' ? [['where', '🗺', '町']] : []),
+    ...(typeof AlfBondView === 'function' && typeof albEnabled === 'function' && albEnabled() ? [['bond', '🤝', 'きずな']] : []),
     ...(typeof AssistantLifeProfilePage === 'function' && typeof assistantLifeProfileOn === 'function' && assistantLifeProfileOn() ? [['profile', '📖', '紹介']] : [])];
   const goTab = (k) => { setRoomId(null); setTalk(null); setLeaving(null); setBondOpen(false); setBoardOpen(false); setVtab(k); };
   const vIcons = (flat) => (vtabs.length > 1 ? (
@@ -1154,7 +1170,8 @@ function AlfFriendHouseView({ friend, onClose }) {
             {vIcons(false)}
           </div>
           <div className="relative min-h-0 flex-1 overflow-y-auto" data-alf-vview-body>
-            {vtab === 'profile' && <AssistantLifeProfilePage metIds={metIds} viewOnly land={land}/>}
+            {vtab === 'bond' && <AlfBondView friend={friend} more={more} land={land}/>}
+            {vtab === 'profile' && <AssistantLifeProfilePage metIds={metIds} viewOnly land={land} ownerName={friend.name} tierOf={(id) => { const t = more && more.bd ? more.bd[id] : undefined; return t === 0 || t === 1 || t === 2 ? ALF_BOND_TIER_NAMES[t] : null; }}/>}
           </div>
         </>}
     </div>) : null;
