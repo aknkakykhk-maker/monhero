@@ -26,6 +26,7 @@
 //   node tools/ctx.js gate                   … いまの変更にミハリ(検査部)の確認が要るかを判定
 //   node tools/ctx.js handoff <部> [--write] … 会話を替えるときの引き継ぎメモの下書き
 //   node tools/ctx.js still <絵…> [--screen 語] … 窓口の止め絵の点検（空きの帯を測る・拡大の切り出し・参考と台帳の行）
+//   node tools/ctx.js asked <語>             … 社長に聞く前に、その語の決めごとを台帳から引く（もう決まっていれば聞かない）
 //   node tools/ctx.js todo [部]              … 社長の頼みの追跡表（完了でない頼み。sync / add / set / show / find）
 //   node tools/ctx.js model "<仕事の文>"      … その仕事に合うモデルを表から引く
 //   node tools/ctx.js newsession <部> "<仕事>" … 新しい会話のモデルと依頼文（窓口が create_session に渡す）
@@ -629,6 +630,7 @@ function main() {
     case 'decisions': return cmdTeam('team/decisions.js', rest);
     case 'handoff': return cmdTeam('team/handoff.js', rest);
     case 'todo': return cmdTeam('team/requests.js', rest);
+    case 'asked': return cmdTeam('team/requests.js', ['asked', ...rest]);
     case 'still': return cmdTeam('team/still-check.js', rest);
     case 'model': return cmdTeam('team/model-pick.js', rest);
     case 'newsession': return cmdTeam('team/newsession.js', rest);
