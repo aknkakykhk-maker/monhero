@@ -76,8 +76,11 @@ const MSXFX_SEASON_LIGHT = Object.freeze({
   autumn: 'radial-gradient(120% 70% at 50% 0,#fb923c33 0,#0000 60%)',
   winter: 'radial-gradient(120% 70% at 50% 0,#bae6fd38 0,#0000 60%)',
 });
+// 画面からは 'day'/'evening'/'night' で渡ってくる(MsxMonArt)。表は日本語なので読み替える。読めないと端末の時計に落ち、
+// 昼の場面でも夜の暗さで出ていた(2026-11-14 点検「昼でも msxfx-tint で暗くくすむ」)
+const MSXFX_TIME_ALIAS = Object.freeze({ morning: '朝', day: '昼', evening: '夕方', night: '夜' });
 const msxFxLight = (season, time) => {
-  const t = MSXFX_TIME_LIGHT[time] || MSXFX_TIME_LIGHT[msxFxTimeNow()];
+  const t = MSXFX_TIME_LIGHT[time] || MSXFX_TIME_LIGHT[MSXFX_TIME_ALIAS[time]] || MSXFX_TIME_LIGHT[msxFxTimeNow()];
   const s = MSXFX_SEASON_LIGHT[season] || '';
   return { overlay: [s, t.sky].filter(Boolean).join(','), mon: t.mon, rim: t.rim };
 };
