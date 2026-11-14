@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 2ff397505c5bc7dc
+// generated-sha256: 098653f0f25a2770
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -89296,7 +89296,7 @@ const MSA_CSS = `
 .msa-round{position:absolute;left:8px;top:6px;z-index:2;font-size:11px;font-weight:900;color:#fde68a;background:#0f0b2299;border-radius:99px;padding:1px 8px}
 .msa-say{min-height:22px;font-size:12.5px;font-weight:800;text-align:center;color:#fff}
 .msa-tools{display:flex;gap:5px;align-items:center}
-.msa-tools button{flex:1;min-height:34px;border-radius:10px;border:1px solid #4c4680;background:#2b2650;color:#fff;font-weight:900;font-size:12px}
+.msa-tools button{flex:1;min-height:44px;border-radius:10px;border:1px solid #4c4680;background:#2b2650;color:#fff;font-weight:900;font-size:12px}
 .msa-tools button.on{background:#fde047;color:#422006;border-color:#fde047}
 .msx .msa-tools button{text-align:center}
 .msa-tools button.msa-ctlsw{flex:1.3;font-size:11.5px;white-space:nowrap;background:#3b1d5e;border-color:#a78bfa;line-height:1.05}.msa-tools button.msa-ctlsw small{display:block;font-size:9.5px;color:#ddd6fe}.msa-tools button.msa-ctlsw[data-msa-ctl=auto]{background:#14532d;border-color:#4ade80}
@@ -89468,15 +89468,17 @@ const MSA_CSS = `
 @keyframes msaAim{0%{opacity:0;transform:scale(2.2) rotate(-60deg)}45%{opacity:1;transform:scale(1) rotate(0)}80%{opacity:1;transform:scale(.92)}100%{opacity:0;transform:scale(.6)}}
 .msa-stage.fill{height:100%;min-height:220px}
 /* モンサクの試合の場の入れ物(2026-11-14 社長「バトルの画面が小さい」)。オートは縦の6割ほど、手動は手番の帯が入るぶんだけ低く(それでも画面の半分ほど) */
-.msa-stagebox{height:clamp(300px,calc(100vh - 240px),680px)}
-.msa[data-msa-mode=manual] .msa-stagebox{height:clamp(280px,calc(100vh - 430px),560px)}
+/* 縦は 帯 → 場 → 札 → ボタン列。場が残りの高さを全部もらう(画面の決まり docs/spec/MONSUC_UI.md ①)。手番の帯が高くて入らないときだけ画面ごと送る */
+.msc-wrap.msa{height:100%;min-height:0}
+.msa-stagebox{flex:1 1 auto;min-height:300px}
+.msa[data-msa-mode=manual] .msa-stagebox{min-height:280px}
 .msa-stagebox .msa-stage.fill .msa-f,.msa-stagebox .msa-stage.fill .msa-dmgwrap{width:168px;margin-left:-84px;height:206px}
 .msa-stagebox .msa-stage.fill .msa-f img.msa-img{max-width:168px;max-height:196px}
 .msa-stagebox .msa-stage.fill .msa-f .msa-shadow{width:96px;margin-left:-48px}
 .msa-topline{flex-wrap:wrap;row-gap:2px}
 .msa-topline .msc-buff{font-style:normal;font-size:10.5px}
 .msa-topline .msa-breeder{font-size:11px;color:#cbd5e1;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:55%}
-@media (max-height:500px) and (orientation:landscape){.msa-stagebox,.msa[data-msa-mode=manual] .msa-stagebox{height:calc(100vh - 70px);min-height:240px}.msa-stagebox .msa-stage.fill .msa-f,.msa-stagebox .msa-stage.fill .msa-dmgwrap{width:130px;margin-left:-65px;height:150px}.msa-stagebox .msa-stage.fill .msa-f img.msa-img{max-width:130px;max-height:142px}}
+@media (max-height:500px) and (orientation:landscape){.msc-wrap.msa{height:auto}.msa-stagebox,.msa[data-msa-mode=manual] .msa-stagebox{flex:none;height:calc(100vh - 70px);min-height:240px}.msa-stagebox .msa-stage.fill .msa-f,.msa-stagebox .msa-stage.fill .msa-dmgwrap{width:130px;margin-left:-65px;height:150px}.msa-stagebox .msa-stage.fill .msa-f img.msa-img{max-width:130px;max-height:142px}}
 .msa-stage.fill .msa-f,.msa-stage.fill .msa-dmgwrap{width:140px;margin-left:-70px;height:176px}
 .msa-stage.fill .msa-f img.msa-img{max-width:140px;max-height:166px}
 .msa-stage.fill .msa-f .msa-shadow{width:80px;margin-left:-40px}
