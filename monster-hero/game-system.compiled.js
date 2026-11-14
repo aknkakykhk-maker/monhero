@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 363e07568a55fefd
+// source-sha256: d27bbedfd9d6bc1d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -198281,7 +198281,7 @@ const CardAssistantArt = ({
         face,
         box: lb,
         F: U / ASSISTANT_LIFE_STAND_FACE_LEN,
-        topY: H * Math.max(0.18, Math.min(0.3, (face.above || 0) * 0.32)),
+        topY: H * Math.max(0.12, Math.min(0.3, (face.above || 0) * 0.32)),
         cx: W / 2
       });
       if (r && r.width > box.nw * sc * 1.02) {
