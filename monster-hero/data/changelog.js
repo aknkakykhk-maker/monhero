@@ -71,6 +71,14 @@ const CHANGELOG = [
     ],
   },
   {
+    // 2026-11-11 社長「ドラはメガネ外して…」→ 公開の落ちを r1115-012 で出す
+    date: "2026-11-15 00:58", type:'update', title:'寝ているドラが眼鏡を外すようになりました', status:'new', group:'assistant',
+    items:[
+      'ドラが寝ているとき、眼鏡を外した「3」の字の目の寝顔になります。',
+      '外した眼鏡は、ベッドの横の台や、足もとに置かれます。',
+    ],
+  },
+  {
     // 新曲「Hopes and Dreams」(2026-11-15 社長「新曲」。通常版と short ver.・Lv.・ノーツ数は作ったあとの値)
     date: "2026-11-15 00:48", type:'update', group:'rhythm', title:'新曲「Hopes and Dreams」を追加しました', status:'new',
     image:'images/song-art/hopes-and-dreams.jpg?v=9cc45492d41a',
