@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 8a4dcf615999f394
+// generated-sha256: 2580ba8e9c380043
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -87771,6 +87771,7 @@ const msxItemFx = (id) => {
     if (it.awake === 1) return `育成中に使うと、その場でかならず${a1}。覚醒ずみなら使えない`;
     return `いつ使っても、その場でかならず${a2}。覚醒していなければ、先に${a1}してから超覚醒まで進む(覚醒の実の分も入る)。適性が上がるのは覚醒と合わせて${A.aptMax}段まで`;
   }
+  if (it.popTurn) return `使ったターンだけ、人気の上がり ×${S.POP_TURN_MULT || 1.5}`;
   if (it.issaForce) return 'イッサ博士が1度かならず来る';
   if (it.issaSure) return 'その回の博士の実験がかならず成功';
   if (it.hpMax) return `体力の上限 +${it.hpMax}`;
@@ -89228,7 +89229,8 @@ const MSX_EXTRA_ITEM = Object.freeze({ oil: { e: '🫙', desc: '体力を上限�
   fruit_hit: { e: '🍊', desc: '使ったターンのトレーニングで、命中の伸び ×1.5' },
   fruit_eva: { e: '🍇', desc: '使ったターンのトレーニングで、回避の伸び ×1.5' },
   fruit_tough: { e: '🥥', desc: '使ったターンのトレーニングで、丈夫さの伸び ×1.5' },
-  stamina: { e: '🍡', desc: '体力の最大値 +15(体力も15回復)' } });
+  stamina: { e: '🍑', desc: '体力の最大値 +15(体力も15回復)' },
+  prune: { e: '⭐', desc: '使ったターンだけ、人気の上がり ×1.5' } });
 const msxItemView = (k) => {
   const base = MSX_ITEM_BY_ID[k]; const core = msxSuc && msxSuc.SUC.ITEMS ? msxSuc.SUC.ITEMS[k] : null; const ex = MSX_EXTRA_ITEM[k];
   return { id: k, name: (base && base.name) || (core && core.name) || k, desc: typeof msxItemFx === 'function' && msxItemFx(k) ? (base && typeof msxItemDesc === 'function' ? msxItemDesc(k) : msxItemFx(k)) : (base && base.desc) || (ex && ex.desc) || '', /* 効き目だけ(2026-11-14 社長) */ e: (base && base.e) || (ex && ex.e) || '🎁', during: core ? core.use === 'during' : !!(base && base.when === 'both') };
@@ -90500,22 +90502,25 @@ function MsxR3Battle({ run, setRun, v, ev, ctx, bondLv, onPause, debug }) {
       const e = effOf(k); if (!e) return '';
       const hp = e.hp > 0 ? `体力+${e.hp}` : '体力 満タン';
       // 2026-11-14 社長: どのごはんでも甘え度・恐れ度が上がる。札の短い効き目にも出す
-      const ly = e.m.fear ? (e.fear > 0 ? `恐れ+${e.fear}` : '恐れ 上限') : e.m.ama ? (e.ama > 0 ? `甘え+${e.ama}` : '甘え 上限') : '';
-      if (e.m.stat) return [`${MSX_STAT_NAME[e.m.stat]}+${e.st}`, ly, hp].filter(Boolean).join('・');
+      // 2026-11-14 社長「参考に合わせる」: 体力は回復しない品がある・甘え度と恐れ度が両方上がる品がある・持ち物をもらう品(スタープルーン)がある
+      const ly = [e.m.ama ? (e.ama > 0 ? `甘え+${e.ama}` : '甘え 上限') : '', e.m.fear ? (e.fear > 0 ? `恐れ+${e.fear}` : '恐れ 上限') : ''].filter(Boolean).join('・');
+      if (e.m.gives) return '持ち物に入る'; // くわしくは下の行(名前と効き目)
+      if (e.m.stat) return [`${MSX_STAT_NAME[e.m.stat]}+${e.st}`, ly, e.m.hp ? hp : ''].filter(Boolean).join('・');
       if (e.m.pop || e.m.pts) return [`人気+${e.pop}`, `能力P+${e.pts}`, ly, hp].filter(Boolean).join('・');
-      return [ly, hp].filter(Boolean).join('・');
+      return [ly, e.m.hp ? hp : ''].filter(Boolean).join('・');
     };
     const fxLong = (k) => {
       const e = effOf(k); if (!e) return '';
       const hp = e.hp > 0 ? `体力を上限の${Math.round(e.m.hp * 100)}%回復(+${e.hp}・いま ${s.hp}→${s.hp + e.hp} / ${s.hpMax})` : `体力はもう満タン(上限 ${s.hpMax})`;
-      const parts = [hp];
+      if (e.m.gives) { const it = SUC.ITEMS && SUC.ITEMS[e.m.gives]; return `持ち物に「${(it && it.name) || e.m.gives}」が1つ入る(使ったターンだけ、人気の上がり ×${SUC.POP_TURN_MULT || 1.5})`; }
+      const parts = e.m.hp ? [hp] : [];
       if (e.m.stat) parts.push(`${MSX_STAT_NAME[e.m.stat]} +${e.st}(${s.stats[e.m.stat]}→${s.stats[e.m.stat] + e.st})`);
-      if (e.m.fear || e.m.ama) { const d = e.m.fear ? e.fear : e.ama; const nm = e.m.fear ? '恐れ度' : '甘え度'; parts.push(d > 0 ? `${nm} +${d}(忠誠度 ${e.loy0}→${e.loy1})` : `${nm}はもう上限(50)`); }
+      if (e.m.fear || e.m.ama) { const ls = [e.m.ama ? (e.ama > 0 ? `甘え度 +${e.ama}` : '甘え度はもう上限(50)') : '', e.m.fear ? (e.fear > 0 ? `恐れ度 +${e.fear}` : '恐れ度はもう上限(50)') : ''].filter(Boolean).join('・'); parts.push(`${ls}(忠誠度 ${e.loy0}→${e.loy1})`); }
       if (e.m.pop) parts.push(`人気 +${e.pop}(${s.pop}→${s.pop + e.pop})`);
       if (e.m.pts) parts.push(`能力ポイント +${e.pts}`);
       return parts.join('・');
     };
-    const MEAL_ICON = { vitamin: '💊', gochiso: '🍱', f_life: '🥕', f_pow: '🍖', f_wise: '🌰', f_hit: '🫐', f_eva: '🍎', f_tough: '🥔', prune: '⭐' };
+    const MEAL_ICON = { vitamin: '🐍', gochiso: '🍰', f_life: '🍓', f_pow: '🍍', f_wise: '🍏', f_hit: '🥗', f_eva: '🧃', f_tough: '🥫', prune: '⭐' };
     const LY = SUC.LOYAL || {}; const RT = SUC.RATE || {};
     const loyNote = `忠誠度が高いほど、トレーニングの伸びが上がる(${LY.capBoost || 60}で最大 ×${1 + (LY.capBoost || 60) / 100})。80以上で大成功が少し出やすい(+${Math.round((RT.greatLoyal80 || 0.03) * 100)}%)`;
     const give = () => { if (!mealPick || !can(mealPick)) return; const r = SUC.meal(s, mealPick); if (r.out.ok) finish(r.state); };
@@ -90528,10 +90533,10 @@ function MsxR3Battle({ run, setRun, v, ev, ctx, bondLv, onPause, debug }) {
           <div className="v-meal"><div className="t">🍽 がんばったごほうびに、ごはんをあげよう<small>優勝したときだけ あげられる(今日の3品から1回・ただ){s.freeMeal === true ? `・見守りで効き目 ×${SUC.MEAL_WATCH_MULT || 1.5}` : ''}</small></div>
             <div className="ms">{keys.map((k) => (
               <button type="button" key={k} className={`v-ml ${mealPick === k ? 'sel' : ''}`} disabled={!can(k)} onClick={() => setMealPick(k)} style={{ opacity: can(k) ? 1 : 0.45 }} data-msx-r3-meal={k}>
-                <div className="e">{MEAL_ICON[k] || '🍙'}</div><b>{M[k].name}</b><small data-msx-r3-mealfx={k}>{fx(k).split('・').map((x, i) => <React.Fragment key={i}>{i > 0 ? <>・<wbr/></> : null}<span style={{ whiteSpace: 'nowrap' }}>{x}</span></React.Fragment>)}</small></button>))}</div>
-            <div className="msx-note" data-msx-r3-mealdetail style={{ marginTop: 5, fontSize: 11, lineHeight: 1.5, textAlign: 'left', color: '#fde68a' }}>{mealPick && M[mealPick] ? `${M[mealPick].name}: ${fxLong(mealPick)}` : '札を押すと、詳しい効き目が出ます'}</div>
+                <div className="e">{MEAL_ICON[k] || '🍙'}</div><b style={{ wordBreak: 'keep-all', overflowWrap: 'normal' }}>{String(M[k].name).split(/(?=（)/).map((x, i) => <React.Fragment key={i}>{i > 0 ? <wbr/> : null}<span style={{ whiteSpace: 'nowrap' }}>{x}</span></React.Fragment>)}</b><small data-msx-r3-mealfx={k}>{fx(k).split('・').map((x, i) => <React.Fragment key={i}>{i > 0 ? <>・<wbr/></> : null}<span style={{ whiteSpace: 'nowrap' }}>{x}</span></React.Fragment>)}</small></button>))}</div>
+            <div className="msx-note" data-msx-r3-mealdetail style={{ marginTop: 5, fontSize: 11, lineHeight: 1.5, textAlign: 'left', color: '#fde68a', ...(typeof JA_WRAP_STYLE !== 'undefined' ? JA_WRAP_STYLE : {}) }}>{mealPick && M[mealPick] ? `${M[mealPick].name}: ${fxLong(mealPick)}`.split(/(?<=[・:])/).map((x, i) => <React.Fragment key={i}>{i > 0 ? <wbr/> : null}{typeof jaWrap === 'function' ? jaWrap(x) : x}</React.Fragment>) : '札を押すと、詳しい効き目が出ます'}</div>
             <div className="msx-note" data-msx-r3-loynote style={{ marginTop: 4, fontSize: 10.5, lineHeight: 1.5, textAlign: 'left' }}>💡 {loyNote}</div>
-            <div className="row" style={{ marginTop: 6 }}><img className="fc" src={msxFace(s.aid, st3.won ? 'excited' : 'troubled')} alt=""/><div className="bub f1">{st3.won ? '「優勝だもん、今日は ごちそう にしちゃお!」' : '「おつかれさま。おいしいもの食べて、また がんばろ!」'}</div></div></div>
+            <div className="row" style={{ marginTop: 6 }}><img className="fc" src={msxFace(s.aid, st3.won ? 'excited' : 'troubled')} alt=""/><div className="bub f1" style={{ wordBreak: 'keep-all', overflowWrap: 'normal' }}>{(st3.won ? ['「優勝だもん、', '今日は', 'ごちそうに', 'しちゃお!」'] : ['「おつかれさま。', 'おいしいもの', '食べて、', 'また', 'がんばろ!」']).map((x, i) => <React.Fragment key={i}>{i > 0 ? <wbr/> : null}<span style={{ whiteSpace: 'nowrap' }}>{x}</span></React.Fragment>)}</div></div></div>
         ) : !st3.won && !s.over ? (
           // 2026-11-13 社長: 負けたらごはんはなし。画面は出さず、助手の慰めの一言だけ
           <div className="v-meal" data-msx-r3-lostnote><div className="row"><img className="fc" src={msxFace(s.aid, 'troubled')} alt=""/><div className="bub f1">{msxR3Line('turn.cup.lose', run, { cup: st3.name }, '「おつかれさま。負けちゃったけど、ここまでよくがんばったよ。次、いこ!」').t}</div></div></div>
