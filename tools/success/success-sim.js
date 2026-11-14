@@ -70,7 +70,7 @@ const PRESETS = {
   // 段5(第2版・2026-11-12): いちばん強い形。総合力が狙いのランクを超えすぎないかを見る
   B6sokoji5: { name: 'B 6体・全員 特訓の底力 段5', team: (rng) => Array.from({ length: 6 }, () => makeRaised(rng, 'B', null, [{ id: 'sokoji', lv: 5 }])) },
   M6as5: { name: 'M 6体・全員アシスト段5(底力・きずな・後押し・かけつけ)', team: (rng) => Array.from({ length: 6 }, () => makeRaised(rng, 'M', null, [{ id: 'sokoji', lv: 5 }, { id: 'kizuna', lv: 5 }, { id: 'atooshi', lv: 5 }, { id: 'kaketsuke', lv: 5 }])) },
-  // 訓練に効く新しい11種 段5(第2版・依頼②・2026-11-12)
+  // トレーニングに効く新しい11種 段5(第2版・依頼②・2026-11-12)
   B6kun5: { name: 'B 6体・得意そろえ・全員 ちから/命中/回避特訓 段5+タッグの息 段5', team: (rng) => Array.from({ length: 6 }, () => makeRaised(rng, 'B', ['pow', 'hit', 'eva'], [{ id: 'kunpow', lv: 5 }, { id: 'kunhit', lv: 5 }, { id: 'kuneva', lv: 5 }, { id: 'tagpow', lv: 5 }])) },
   B6care5: { name: 'B 6体・全員 見張り役・気晴らし・仲よし特訓・はじめの親しさ 段5', team: (rng) => Array.from({ length: 6 }, () => makeRaised(rng, 'B', null, [{ id: 'miharu', lv: 5 }, { id: 'kibarashi', lv: 5 }, { id: 'nakayoshi', lv: 5 }, { id: 'shitashi', lv: 5 }])) },
   M6new5: { name: 'M 6体・得意そろえ・全員 底力・後押し・ちから特訓・タッグの息 段5', team: (rng) => Array.from({ length: 6 }, () => makeRaised(rng, 'M', ['pow', 'hit', 'eva'], [{ id: 'sokoji', lv: 5 }, { id: 'atooshi', lv: 5 }, { id: 'kunpow', lv: 5 }, { id: 'tagpow', lv: 5 }])) },
@@ -93,7 +93,7 @@ const VARIANTS = [
   { key: 'B6hint5', aidLv: 3 },
   { key: 'B6as', aidLv: 3 }, { key: 'S6as', aidLv: 5 }, { key: 'M6as', aidLv: 5 }, { key: 'M6asAim', aidLv: 5 },
   { key: 'B6sokoji5', aidLv: 3 }, { key: 'M6as5', aidLv: 5 }, // 段5(第2版・2026-11-12)
-  { key: 'B6kun5', aidLv: 3 }, { key: 'B6care5', aidLv: 3 }, { key: 'M6kun5', aidLv: 5 }, { key: 'M6new5', aidLv: 5 }, // 訓練に効く新しい11種 段5(依頼②)
+  { key: 'B6kun5', aidLv: 3 }, { key: 'B6care5', aidLv: 3 }, { key: 'M6kun5', aidLv: 5 }, { key: 'M6new5', aidLv: 5 }, // トレーニングに効く新しい11種 段5(依頼②)
   { key: 'B6stay5', aidLv: 3 }, { key: 'M6stay5', aidLv: 5 }, // いるだけ型7つ 段5(依頼③の1つ目)
   { key: 'B6cup5', aidLv: 3 }, { key: 'M6all5', aidLv: 5 }, // いるだけ型8つ 段5(依頼③の2つ目)
 ];
@@ -306,7 +306,7 @@ for (const v of list) {
   console.log(`■ ${r.label}(助手の仲良し Lv${r.aidLv}・${RUNS}回)`);
   console.log(`  ランク: ${r.rank}(中央値の評価 ${r.grade})`);
   console.log(`  総合力 中央値 ${r.powerMedian}・6能力の合計 中央値 ${r.sumMedian}・忠誠 平均 ${r.loyalMean}(60に届く ${r.loyal60Rate}%・届くターン中央値 ${r.loyal60Turn})`);
-  console.log(`  タッグ 0/1/2/3+ 体の訓練: ${r.tagsPerRun.join(' / ')} 回・3話を見終わる子 ${r.story3}体・博士 ${r.issa}・技 平均 ${r.techs}つ`);
+  console.log(`  タッグ 0/1/2/3+ 体のトレーニング: ${r.tagsPerRun.join(' / ')} 回・3話を見終わる子 ${r.story3}体・博士 ${r.issa}・技 平均 ${r.techs}つ`);
   console.log(`  1回あたり: ${Object.entries(r.perRun).map(([k, v]) => `${k} ${v}`).join('・')}`);
   console.log(`  大会の勝率: ${Object.entries(r.battles).map(([k, v]) => `${k} ${v}`).join('・')}`);
   if (r.rival) console.log(`  ライバルの大会: ${r.rival}`);

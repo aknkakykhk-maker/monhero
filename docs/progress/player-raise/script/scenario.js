@@ -124,7 +124,7 @@ const MONSUC_SCRIPT_SCENARIO = Object.freeze([
   { id:'scn.atsu.ep2.atsu2', who:'atsu', e:'happy', t:'勝てるかは分かんない。でも、準備で負けんのはナシな笑' },
   { id:'scn.atsu.ep2.choice.a', who:'choice', c:'a', t:'作戦どおりに戦う' },
   { id:'scn.atsu.ep2.choice.b', who:'choice', c:'b', t:'自分の得意で押す' },
-  { id:'scn.atsu.ep2.a.atsu1', who:'atsu', e:'happy', c:'a', t:'おけおけー笑 じゃあ今日は頭の訓練な！' },
+  { id:'scn.atsu.ep2.a.atsu1', who:'atsu', e:'happy', c:'a', t:'おけおけー笑 じゃあ今日は頭のトレーニングな！' },
   { id:'scn.atsu.ep2.b.atsu1', who:'atsu', e:'excited', c:'b', t:'それもアリ。{mon}の{stat}なら真っ向から行けるだろ笑' },
   // シナリオの大会: 2話の{cup}
   { id:'scn.atsu.cup1.before.atsu1', who:'atsu', e:'normal', t:'格上だろうが関係ない。やることやってきたから！' },
@@ -132,7 +132,7 @@ const MONSUC_SCRIPT_SCENARIO = Object.freeze([
   { id:'scn.atsu.cup1.lose.atsu1', who:'atsu', e:'troubled', t:'残念笑 でも差はだいぶ縮まってた。次は取れる！' },
 
   // ── 3話「くやしい負けの話」(ミドル期・親密度50〜。ここで4話が分かれる) ──
-  { id:'scn.atsu.ep3.narr1', who:'narr', t:'訓練のあと、あつが珍しく昔の話を始めた。' },
+  { id:'scn.atsu.ep3.narr1', who:'narr', t:'トレーニングのあと、あつが珍しく昔の話を始めた。' },
   { id:'scn.atsu.ep3.atsu1', who:'atsu', e:'normal', t:'{cup}ってあるだろ。昔、あそこで一回負けてんだよ笑' },
   { id:'scn.atsu.ep3.atsu2', who:'atsu', e:'troubled', t:'準備も足りてなかったし、完敗。…別に、気にしてないけど笑' },
   { id:'scn.atsu.ep3.narr2', who:'narr', t:'そう言いながら、あつは遠くの会場のほうをしばらく見ていた。' },

@@ -4,7 +4,7 @@
 // どの組み合わせでも壊れないかを見る。
 //
 //   ・いろいろな編成(なし・C/B/S/M・アシストつき)× 助手6人 × 持ちこみ(始める前/育成中/砂時計)× 作戦
-//     (訓練重視・休み多め・修行と大会に出る・叱る/褒める・博士の6択・ごはん・アイテム)で最後まで回す
+//     (トレーニング重視・休み多め・修行と大会に出る・叱る/褒める・博士の6択・ごはん・アイテム)で最後まで回す
 //   ・どの手のあとも: 例外が出ない・数がすべて有限・体力 0〜上限(上限は 160 まで)・6能力 0〜999・
 //     甘え度/恐れ度 0〜50(忠誠 0〜100)・ストレス/人気 0〜100・チケット/砂時計/袋の数/能力ポイント/名声が負にならない・
 //     やり直しは1回の育成で3回まで・技は8つまで・熟練と親密度は 0〜100
@@ -90,7 +90,7 @@ const chooseAction = (s, v, style) => {
   if (style === 'rest' && ratio < 0.7) return r() < 0.5 ? { kind: 'rest' } : { kind: 'play' };
   if (ratio < 0.3 && r() < 0.7) return s.stress >= 40 ? { kind: 'play' } : { kind: 'rest' };
   if (r() < 0.06) return { kind: pick(r, ['rest', 'play']) };
-  // 体力が少なくてもわざと訓練する回も混ぜる(体力 0 の端を通す)
+  // 体力が少なくてもわざとトレーニングする回も混ぜる(体力 0 の端を通す)
   return { kind: 'train', stat: pick(r, K) };
 };
 const chooseReact = (s, style) => {
@@ -226,7 +226,7 @@ const step = (s, c, st) => {
   if (due !== null) { const r = SUC.storyStep(s, rngAt(s, 'story')() < 0.5 ? 'a' : 'b'); if (r.out.ok) { s = r.state; st.story += 1; checkState(s, `${where} story`); } }
   const v = SUC.peek(s);
   const a = chooseAction(s, v, c.style);
-  if (a.kind === 'train') { const pv = SUC.preview(s, a); if (!pv || Object.values(pv.gain).some(g => !Number.isFinite(g))) fail(`${where}: 訓練の見込みが数でない`); }
+  if (a.kind === 'train') { const pv = SUC.preview(s, a); if (!pv || Object.values(pv.gain).some(g => !Number.isFinite(g))) fail(`${where}: トレーニングの見込みが数でない`); }
   const tickets0 = s.tickets;
   let r = SUC.act(s, a);
   if (!r.out.ok && !['cond', 'retry'].includes(a.kind)) { r = SUC.act(s, { kind: 'rest' }); }

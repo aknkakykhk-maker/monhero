@@ -3,7 +3,7 @@
 // 鳴らす口: src/parts/14-success-sound.jsx の SuccessSound / useSuccessSound。画面(回2・回3)は場面の id だけ渡す。
 // 保存キーは持たない(音量・消音は今の設定をそのまま使う)。
 //
-// bgm … 場面に入ったときに流す曲。null / 書かない = 今の曲をそのまま続ける(訓練の結果などは曲を替えない)
+// bgm … 場面に入ったときに流す曲。null / 書かない = 今の曲をそのまま続ける(トレーニングの結果などは曲を替えない)
 // bgmBySeason … 住む場所のように季節で曲を替える場面(spring/summer/autumn/winter)
 // se  … 場面に入ったときに1回鳴らす効果音(fgSe の名前)。null = 鳴らさない
 // 曲えらびに出る「アレンジ用の曲」(event_02 など自動では使わない曲)・モンヒロビートの曲・バトルのボス曲は使わない
@@ -12,15 +12,15 @@
   const SUCCESS_SOUND_SCENES = Object.freeze([
     // メイン(住む場所)。2026-11-13 社長の「モンサク ホームBGM」(original_home_2)に4季節とも替えた。季節で曲を替えたいときはここを戻す(前: 春 original_home / 夏 ichika_home / 秋 original_profile / 冬 original_enhance)
     { id: 'main', name: 'メイン(住む場所)', bgmBySeason: { spring: 'original_home_2', summer: 'original_home_2', autumn: 'original_home_2', winter: 'original_home_2' }, se: null },
-    // 訓練の結果4種(曲は替えない)
-    { id: 'trainGreat', name: '訓練: 大成功', se: 'trainingGoal' },
-    { id: 'trainOk', name: '訓練: 成功', se: 'trainingGood' },
-    { id: 'trainFail', name: '訓練: 失敗', se: 'trainingFail' },
-    { id: 'trainSkip', name: '訓練: サボり', se: 'trainingMove' },
-    // 叱る/褒める・訓練Lvアップ
+    // トレーニングの結果4種(曲は替えない)
+    { id: 'trainGreat', name: 'トレーニング: 大成功', se: 'trainingGoal' },
+    { id: 'trainOk', name: 'トレーニング: 成功', se: 'trainingGood' },
+    { id: 'trainFail', name: 'トレーニング: 失敗', se: 'trainingFail' },
+    { id: 'trainSkip', name: 'トレーニング: サボり', se: 'trainingMove' },
+    // 叱る/褒める・トレーニングLvアップ
     { id: 'scold', name: '叱る', se: 'trainingBad' },
     { id: 'praise', name: '褒める', se: 'trainingReward' },
-    { id: 'trainLvUp', name: '訓練Lvアップ', se: 'levelUp' },
+    { id: 'trainLvUp', name: 'トレーニングLvアップ', se: 'levelUp' },
     // 修行
     { id: 'ascetic', name: '修行', bgm: 'original_prep', se: 'trainingDecide' },
     // 大会
