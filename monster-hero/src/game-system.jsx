@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: f76eb156d8f7f6fc
+// generated-sha256: 902925e1d3829bcd
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -57405,10 +57405,30 @@ function RhythmMultiStampBar({ phase, onSend, className = '', limit = 0, wrap = 
 // スタンプ(2026-11-11)は text が { text, sf, sw }。絵で出さない設定のときは言葉だけ
 const rhythmMultiBubbleStamp = (text) => (text && typeof text === 'object' && text.sf && MULTI_STAMP.prefs().pic ? text : null);
 const rhythmMultiBubbleText = (text) => (text && typeof text === 'object' ? text.text : text);
-function RhythmMultiChatBubble({ text: raw }) {
+// 見えている向きが横か(🔄で回しているときも、回した見た目で決める)
+const useRhythmWatchWide = () => {
+  const [wide, setWide] = React.useState(() => (typeof orientationIsLandscape === 'function' ? orientationIsLandscape() : false));
+  React.useEffect(() => {
+    const on = () => setWide(typeof orientationIsLandscape === 'function' ? orientationIsLandscape() : false);
+    window.addEventListener('resize', on);
+    const off = typeof RHYTHM_VIEW_ROTATION !== 'undefined' && RHYTHM_VIEW_ROTATION.subscribe ? RHYTHM_VIEW_ROTATION.subscribe(on) : null;
+    on();
+    return () => { window.removeEventListener('resize', on); if (typeof off === 'function') off(); };
+  }, []);
+  return wide;
+};
+function RhythmMultiChatBubble({ text: raw, strip = false }) {
+  const wide = useRhythmWatchWide();
   if (!raw) return null;
   const stamp = rhythmMultiBubbleStamp(raw);
   const text = rhythmMultiBubbleText(raw);
+  // 縦の細い帯(札の高さ60px)では、絵を札の中の名前の上に大きく置き、言葉は札の下へ出す(名前を隠さない・2026-11-15 r1115-039)
+  if (stamp && strip && !wide) return (
+    <span data-rhythm-multi-chat-bubble data-rhythm-multi-stamp-bubble data-rhythm-multi-stamp-strip className="mh-seat-stamp-strip pointer-events-none absolute inset-x-0.5 bottom-[22px] top-[3px] z-40 flex items-start justify-center [container-type:size]">
+      <img src={multiStampFaceSrc(stamp.sf) || undefined} alt="" draggable={false} decoding="async" className="mh-seat-stamp-strip-img block rounded-lg bg-white object-cover shadow-lg" />
+      <b className="mh-seat-stamp-strip-word absolute left-0 right-0 top-[calc(100%+22px+2px)] block rounded-lg bg-white px-1 py-0.5 text-center text-[10px] font-black leading-tight text-slate-900 shadow-lg">{text}</b>
+    </span>
+  );
   if (stamp) return (
     <span data-rhythm-multi-chat-bubble data-rhythm-multi-stamp-bubble className="pointer-events-none absolute inset-x-0.5 bottom-0.5 top-3 z-40 flex items-start justify-center overflow-hidden landscape:top-0.5 [[data-mh-view-rotation=true]_&]:top-0.5 [container-type:size]">
       {/* 席のカードの高さに合わせて、絵の大きさを決める(CSS は index.html の mh-seat-stamp)。絵が大きすぎると下の言葉が切れ、
@@ -58197,7 +58217,7 @@ function RhythmMultiMemberCards({ members, hostId, selfId, resolveIconUrl, badge
           <li key={m.id} data-rhythm-multi-member {...openProps} className={`relative flex min-h-0 min-w-0 rounded-xl ${openable ? 'cursor-pointer active:brightness-125 ' : ''}${self ? 'border border-cyan-300/70 bg-cyan-950/50' : 'border border-white/10 bg-slate-950/70'} ${tall
             ? 'flex-col items-center justify-center px-1 pb-1.5 pt-3'
             : 'h-[60px] flex-col items-center px-0.5 pt-1.5 landscape:h-[38px] landscape:flex-row landscape:gap-1 landscape:px-1 landscape:pt-0'}`}>
-            <RhythmMultiChatBubble text={bubbleOf ? bubbleOf(m.id) : ''} />
+            <RhythmMultiChatBubble text={bubbleOf ? bubbleOf(m.id) : ''} strip={!tall} />
             <small data-rhythm-multi-member-badge className={`absolute -top-1.5 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded-full px-1.5 py-px text-[9px] font-black leading-tight ${badge.cls}`}>{badge.text}</small>
             <span className="relative shrink-0">
               <RhythmMultiAvatar m={m} resolveIconUrl={resolveIconUrl} sizeClass={tall ? 'h-12 w-12 landscape:h-16 landscape:w-16 [@media(max-height:440px)]:h-11 [@media(max-height:440px)]:w-11 [[data-mh-view-rotation=true]_&]:h-11 [[data-mh-view-rotation=true]_&]:w-11' : 'h-7 w-7'} small={!tall} />

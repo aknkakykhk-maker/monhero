@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b8d85e4c0cc88274
+// source-sha256: 849d3afee19fa8b3
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -96358,12 +96358,42 @@ function RhythmMultiStampBar({
 }
 const rhythmMultiBubbleStamp = text => text && typeof text === 'object' && text.sf && MULTI_STAMP.prefs().pic ? text : null;
 const rhythmMultiBubbleText = text => text && typeof text === 'object' ? text.text : text;
+const useRhythmWatchWide = () => {
+  const [wide, setWide] = React.useState(() => typeof orientationIsLandscape === 'function' ? orientationIsLandscape() : false);
+  React.useEffect(() => {
+    const on = () => setWide(typeof orientationIsLandscape === 'function' ? orientationIsLandscape() : false);
+    window.addEventListener('resize', on);
+    const off = typeof RHYTHM_VIEW_ROTATION !== 'undefined' && RHYTHM_VIEW_ROTATION.subscribe ? RHYTHM_VIEW_ROTATION.subscribe(on) : null;
+    on();
+    return () => {
+      window.removeEventListener('resize', on);
+      if (typeof off === 'function') off();
+    };
+  }, []);
+  return wide;
+};
 function RhythmMultiChatBubble({
-  text: raw
+  text: raw,
+  strip = false
 }) {
+  const wide = useRhythmWatchWide();
   if (!raw) return null;
   const stamp = rhythmMultiBubbleStamp(raw);
   const text = rhythmMultiBubbleText(raw);
+  if (stamp && strip && !wide) return React.createElement("span", {
+    "data-rhythm-multi-chat-bubble": true,
+    "data-rhythm-multi-stamp-bubble": true,
+    "data-rhythm-multi-stamp-strip": true,
+    className: "mh-seat-stamp-strip pointer-events-none absolute inset-x-0.5 bottom-[22px] top-[3px] z-40 flex items-start justify-center [container-type:size]"
+  }, React.createElement("img", {
+    src: multiStampFaceSrc(stamp.sf) || undefined,
+    alt: "",
+    draggable: false,
+    decoding: "async",
+    className: "mh-seat-stamp-strip-img block rounded-lg bg-white object-cover shadow-lg"
+  }), React.createElement("b", {
+    className: "mh-seat-stamp-strip-word absolute left-0 right-0 top-[calc(100%+22px+2px)] block rounded-lg bg-white px-1 py-0.5 text-center text-[10px] font-black leading-tight text-slate-900 shadow-lg"
+  }, text));
   if (stamp) return React.createElement("span", {
     "data-rhythm-multi-chat-bubble": true,
     "data-rhythm-multi-stamp-bubble": true,
@@ -97731,7 +97761,8 @@ function RhythmMultiMemberCards({
     }, openProps, {
       className: `relative flex min-h-0 min-w-0 rounded-xl ${openable ? 'cursor-pointer active:brightness-125 ' : ''}${self ? 'border border-cyan-300/70 bg-cyan-950/50' : 'border border-white/10 bg-slate-950/70'} ${tall ? 'flex-col items-center justify-center px-1 pb-1.5 pt-3' : 'h-[60px] flex-col items-center px-0.5 pt-1.5 landscape:h-[38px] landscape:flex-row landscape:gap-1 landscape:px-1 landscape:pt-0'}`
     }), React.createElement(RhythmMultiChatBubble, {
-      text: bubbleOf ? bubbleOf(m.id) : ''
+      text: bubbleOf ? bubbleOf(m.id) : '',
+      strip: !tall
     }), React.createElement("small", {
       "data-rhythm-multi-member-badge": true,
       className: `absolute -top-1.5 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded-full px-1.5 py-px text-[9px] font-black leading-tight ${badge.cls}`
