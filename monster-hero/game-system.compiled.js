@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d92a26b63c7dd3f5
+// source-sha256: 82bdf9e1d8ce069a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -114650,7 +114650,7 @@ function AssistantLifeRoomSheet({
     "data-assistant-life-roomview-scroll": true
   }, !land && rvScene && React.createElement("div", {
     style: {
-      height: uiV2 ? 'min(60vh, 134vw)' : 'min(calc(100% - 52px), max(470px, 132vw))'
+      height: uiV2 ? 'min(70vh, 150vw)' : 'min(calc(100% - 52px), max(470px, 132vw))'
     }
   }, rvScene), React.createElement("div", {
     ref: sheetRef,
@@ -158442,7 +158442,7 @@ const MSX_BETA_KEY = 'mh_monsuc_beta_v1';
 const MSX_BETA_AIDS = Object.freeze(['mua']);
 const msxBetaAidOk = aid => MSX_BETA_AIDS.includes(aid);
 const MSX_BETA_TUT = Object.freeze(['scn', 'prep', 'turn', 'train', 'result', 'rest', 'shugyo', 'cup', 'rank', 'meal', 'match', 'rematch', 'event', 'awake', 'retire']);
-const MSX_BETA_STORY = Object.freeze(['open', 'firstend']);
+const MSX_BETA_STORY = Object.freeze(['open', 'firstend', 'start']);
 const msxBetaScene = k => MSX_BETA_STORY.includes(k) ? `scn.mua.beta.${k}` : `tut.${k}`;
 const msxBetaKnown = k => MSX_BETA_TUT.includes(k) || MSX_BETA_STORY.includes(k);
 const msxBetaNorm = raw => {
@@ -159816,6 +159816,122 @@ function MsxBondChips({
     className: "bc-up"
   }, "親密度 +", add)) : null);
 }
+const msxIntroScene = aid => `scn.${aid}.start`;
+function MsxRunIntro({
+  run,
+  ctx,
+  onDone
+}) {
+  const s = run.s;
+  if (typeof useMsxBeta === 'function') useMsxBeta();
+  const [loaded, setLoaded] = useState(false);
+  const [i, setI] = useState(0);
+  useEffect(() => {
+    let alive = true;
+    Promise.resolve(typeof msxScriptLoad === 'function' ? msxScriptLoad(s.aid) : null).catch(() => null).then(() => {
+      if (alive) setLoaded(true);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [s.aid]);
+  const se = msxSuc && msxSuc.script;
+  let ev = null;
+  try {
+    ev = loaded && se && typeof se.event === 'function' ? se.event(msxIntroScene(s.aid), {
+      ...ctx,
+      aid: s.aid
+    }) : null;
+  } catch (e) {
+    ev = null;
+  }
+  const lines = ev && Array.isArray(ev.lines) ? ev.lines : [];
+  const seenBefore = typeof msxBetaSeen === 'function' && msxBetaSeen('start');
+  const finish = () => {
+    if (typeof msxBetaMark === 'function') msxBetaMark('start');
+    onDone();
+  };
+  useEffect(() => {
+    if (loaded && !lines.length) onDone();
+  }, [loaded, lines.length]);
+  if (!loaded || !lines.length) return React.createElement(React.Fragment, null, React.createElement("style", null, MSX_INTRO_CSS), React.createElement("div", {
+    className: "v-body"
+  }));
+  const n = Math.min(i, lines.length - 1);
+  const l = lines[n];
+  const last = n + 1 >= lines.length;
+  const who = l.who === 'narr' ? null : l.who === 'mon' ? run.nick : msxAidName(l.who);
+  const next = () => {
+    if (last) finish();else setI(n + 1);
+  };
+  return React.createElement(React.Fragment, null, React.createElement("style", null, MSX_INTRO_CSS), React.createElement("div", {
+    className: "v-body msx-intro-body"
+  }, React.createElement("div", {
+    className: "v-scene msx-intro",
+    style: {
+      flex: '1 1 0'
+    },
+    onClick: next,
+    "data-msx-intro": n
+  }, React.createElement("img", {
+    className: "bg",
+    src: msxSceneBg(s.turn).bg,
+    alt: ""
+  }), React.createElement("div", {
+    className: "sh"
+  }), React.createElement("div", {
+    className: "gr",
+    style: {
+      left: '30%',
+      bottom: 'calc(30% - 5px)'
+    }
+  }), React.createElement(MsxMonArt, {
+    run: run,
+    className: "mon",
+    style: {
+      left: '30%',
+      bottom: '30%',
+      height: '28%'
+    },
+    live: true
+  }), React.createElement("img", {
+    className: "msx-intro-aid",
+    src: msxBody(s.aid, l.who === s.aid ? l.e || 'happy' : 'happy'),
+    alt: ""
+  }), React.createElement("div", {
+    className: "v-ev-h"
+  }, React.createElement("small", null, "メインのお話"), msxAidName(s.aid), "編のはじまり"), React.createElement("div", {
+    className: "v-talk msx-intro-talk"
+  }, who ? React.createElement(React.Fragment, null, React.createElement("span", {
+    className: "who"
+  }, who), `「${l.t}」`) : l.t, React.createElement("small", {
+    className: "pg"
+  }, n + 1, "/", lines.length)))), React.createElement("div", {
+    className: "v-ft"
+  }, seenBefore ? React.createElement("button", {
+    type: "button",
+    onClick: finish,
+    "data-msx-intro-skip": true
+  }, "⏩ とばす") : null, React.createElement("button", {
+    type: "button",
+    className: "go",
+    onClick: next,
+    "data-msx-intro-next": true
+  }, last ? '育成をはじめる ▶' : '次へ ▶')));
+}
+const MSX_INTRO_CSS = `
+.msx .msx-intro{cursor:pointer}
+/* 横画面: ほかの画面の2列の並べ方を使わず、場面を画面いっぱいに。文の窓は右下 */
+.msx.land .v-body.msx-intro-body{display:flex;flex-direction:column}
+.msx.land .msx-intro{flex:1 1 auto;min-height:0}
+.msx.land .msx-intro-talk{left:auto;width:52%}
+.msx.land .msx-intro-aid{right:auto;left:48%;width:30%;height:88%;bottom:0}
+.msx.land .msx-intro .mon{height:60%!important;bottom:12%!important;left:24%!important}
+.msx.land .msx-intro .gr{left:24%!important;bottom:calc(12% - 5px)!important}
+.msx .msx-intro-aid{position:absolute;right:-6%;bottom:16%;height:66%;width:62%;object-fit:contain;object-position:right bottom;filter:drop-shadow(0 6px 4px #0008)}
+.msx .msx-intro-talk{position:absolute;left:10px;right:10px;bottom:10px;z-index:3;word-break:auto-phrase}
+.msx .msx-intro-talk .pg{display:block;text-align:right;font-size:10px;color:#64748b;margin-top:2px}
+`;
 const MSX_KI_CHAPTER = Object.freeze(['第一章', '第二章', '第三章', '第四章', '最終章']);
 const MSX_KI_MS = Object.freeze([2600, 2600]);
 const msxKiCalm = () => typeof msxFxCalm === 'function' && msxFxCalm();
@@ -165665,6 +165781,7 @@ const MSX_CSS = `
 .msx .v-bagw .t{font-size:14px;font-weight:900;line-height:1.3;position:relative}.msx .v-bagw .t small{display:block;font-size:10px;color:#fca5a5;font-weight:800}
 .msx .v-bagw .t i{position:absolute;right:0;top:0;width:24px;height:24px;border-radius:50%;background:#2b3348;font-style:normal;font-size:12px;display:flex;align-items:center;justify-content:center}
 .msx .v-bagw .v-item{margin-top:0}
+.v-bagw .v-bgrid{flex:0 1 auto;min-height:0;overflow-y:auto;align-content:start;grid-auto-rows:max-content;padding:2px 1px}
 .msx .v-trs{gap:4px;margin-top:8px;align-items:start}
 .msx .v-tr{padding-top:0}
 .msx .v-tr .o{width:50px;height:50px;font-size:23px;margin:0 auto}
@@ -165715,7 +165832,8 @@ const MSX_CSS = `
 .msx .v-igrid .v-icw{width:30px;height:30px;display:block;margin:0 auto}
 .msx .v-igrid i{position:absolute;right:3px;top:2px;font-style:normal;font-size:10px;font-weight:900;color:#fde047}
 .msx .v-igrid small{display:block;font-size:10px;font-weight:800;line-height:1.2;min-height:19px;margin-top:2px;overflow:hidden}
-.msx .v-igrid div.bo,.msx .v-igrid button.bo{border-color:#38bdf8}.msx .v-igrid div.in,.msx .v-igrid button.in{border-color:#fde047;background:#3b2f0b;box-shadow:0 0 9px #fde04788}
+.msx .v-igrid div.bo,.msx .v-igrid button.bo{border-color:#38bdf8}
+.msx .v-igrid button.none{opacity:.45}.msx .v-igrid button.look{outline:2px solid #f9a8d4;outline-offset:1px}.msx .v-igrid div.in,.msx .v-igrid button.in{border-color:#fde047;background:#3b2f0b;box-shadow:0 0 9px #fde04788}
 .msx .v-igrid u{position:absolute;left:3px;top:2px;text-decoration:none;font-size:10px;font-weight:900;color:#86efac}
 .msx .v-ileg{display:flex;gap:10px;font-size:10px;font-weight:800;color:#cbd5e1;margin-top:5px;white-space:nowrap}
 .msx .v-ileg b{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:3px;vertical-align:-1px}.msx .v-ileg .sw1{background:#475569}.msx .v-ileg .sw2{background:#38bdf8}
@@ -166246,7 +166364,7 @@ const msxNormBox = raw => {
     memory: Array.isArray(o.memory) ? o.memory.filter(msxIsObj).slice(-100) : []
   };
 };
-const MSX_ITEM_IDS = Object.freeze(['guide', 'loupe', 'band', 'mag', 'hachi', 'omamori', 'dango', 'grass', 'juice', 'powder', 'license', 'pack', 'oil', 'oilyoil', 'herb', 'hourglass', 'hourglass2', 'ticket']);
+const MSX_ITEM_IDS = Object.freeze(['guide', 'loupe', 'band', 'mag', 'hachi', 'omamori', 'dango', 'grass', 'juice', 'powder', 'license', 'pack', 'oil', 'oilyoil', 'herb', 'hourglass', 'hourglass2', 'ticket', 'awakeFruit', 'superAwakeFruit']);
 const msxNormMeta = raw => {
   const o = msxIsObj(raw) ? raw : {};
   const items = {};
@@ -166520,7 +166638,7 @@ function MonheroSuccessDebugEntry({
     debug: true
   }));
 }
-const msxItemNameNode = name => String(name || '').split(/(?<=の)|(?<=ー)(?=[ァ-ヶ])/).map((x, i) => React.createElement(React.Fragment, {
+const msxItemNameNode = name => String(name || '').split(/(?<=[の!！])(?=.)|(?<=ブリーダー)(?=ライセンス)|(?<=オイリー)(?=パック|オイル)|(?<=野菜)(?=ジュース)|(?<=スタミナ)(?=だんご)/).map((x, i) => React.createElement(React.Fragment, {
   key: i
 }, i > 0 ? React.createElement("wbr", null) : null, x));
 const MSX_STEP_NAMES = Object.freeze(['育てるモンスター', '編成', '助手', '持ちこみ', '名前と染色', '確認']);
@@ -166614,6 +166732,18 @@ const MSX_ITEMS = Object.freeze([{
   desc: 'ストレスを20下げる',
   when: 'both',
   e: '🌱'
+}, {
+  id: 'awakeFruit',
+  name: '覚醒の実',
+  desc: 'モンスターの力を引き出すといわれる果実',
+  when: 'both',
+  e: '✨'
+}, {
+  id: 'superAwakeFruit',
+  name: '超覚醒の実',
+  desc: 'モンスターの力をさらに引き出すといわれる果実',
+  when: 'both',
+  e: '🌈'
 }]);
 const msxItemFx = id => {
   const S = typeof msxSuc !== 'undefined' && msxSuc ? msxSuc.SUC : null;
@@ -166637,6 +166767,13 @@ const msxItemFx = id => {
     const up = G.uketsugu.story;
     return `編成のモンスターとの連続の話が進みやすくなる(2話目 ${pc(st[1].p)}→${pc(Math.min(1, st[1].p + up))}・3話目 ${pc(st[2].p)}→${pc(Math.min(1, st[2].p + up))})。3話目の伝授で、そのモンスターの得意な能力の上がりが${G.uketsugu.teach}倍${G.uketsugu.start ? `。編成から受け継ぐはじめの能力も${G.uketsugu.start}倍(例: ちから500のモンスターなら +${Math.floor(500 / 25)}→+${Math.floor(500 / 25) * G.uketsugu.start})` : ''}`;
   }
+  if (it.awake && S.AWAKE) {
+    const A = S.AWAKE;
+    const a1 = `覚醒(全能力 +${A.add[0]}・間合いの適性 ${A.apt[0]}段)`;
+    const a2 = `超覚醒(全能力 +${A.add[1]}・間合いの適性 ${A.apt[1]}段)`;
+    if (it.awake === 1) return `育成中に使うと、その場でかならず${a1}。覚醒ずみなら使えない`;
+    return `いつ使っても、その場でかならず${a2}。覚醒していなければ、先に${a1}してから超覚醒まで進む(覚醒の実の分も入る)。適性が上がるのは覚醒と合わせて${A.aptMax}段まで`;
+  }
   if (it.issaForce) return 'イッサ博士が1度かならず来る';
   if (it.issaSure) return 'その回の博士の実験がかならず成功';
   if (it.hpMax) return `体力の上限 +${it.hpMax}`;
@@ -166655,7 +166792,11 @@ const msxItemFx = id => {
 const msxItemDesc = id => {
   const t = MSX_ITEM_BY_ID[id];
   const fx = msxItemFx(id);
-  return `${t ? t.desc : ''}${fx ? `。効き目: ${fx}` : ''}`;
+  if (!fx) return t ? t.desc : '';
+  const S = typeof msxSuc !== 'undefined' && msxSuc ? msxSuc.SUC : null;
+  const it = S && S.ITEMS ? S.ITEMS[id] : null;
+  const g = it && it.good && S.GOOD ? S.GOOD[it.good] : null;
+  return g ? `ようす「${g.name}」が付く: ${fx}` : fx;
 };
 const MSX_ITEM_BY_ID = Object.freeze(Object.fromEntries(MSX_ITEMS.map(t => [t.id, t])));
 const MSX_NAME_MAX = 8;
@@ -167131,6 +167272,19 @@ function MsxStart({
   const [step, setStep] = useState(0);
   const [scn, setScn] = useState(null);
   const [tab, setTab] = useState('base');
+  const [look, setLook] = useState(null);
+  useEffect(() => {
+    if (!look || typeof document === 'undefined') return;
+    const el = document.querySelector('[data-msx-carry-look]');
+    if (!el) return;
+    for (let p = el.parentElement; p; p = p.parentElement) {
+      const oy = getComputedStyle(p).overflowY;
+      if (!(oy === 'auto' || oy === 'scroll') || p.scrollHeight <= p.clientHeight + 1) continue;
+      const r = el.getBoundingClientRect();
+      const pr = p.getBoundingClientRect();
+      if (r.bottom > pr.bottom) p.scrollTop += Math.min(r.bottom - pr.bottom + 8, r.top - pr.top);else if (r.top < pr.top) p.scrollTop -= pr.top - r.top + 8;
+    }
+  }, [look]);
   const [pick, setPick] = useState(() => ({
     base: unlocked[0] || 'Mocchi'
   }));
@@ -167762,9 +167916,12 @@ function MsxStart({
     }, MSX_ITEMS.map(t => React.createElement("button", {
       type: "button",
       key: t.id,
-      className: `${items.includes(t.id) ? 'in' : ''}${t.when === 'both' ? ' bo' : ''}`,
-      onClick: () => toggle(t.id),
-      disabled: !has(t.id) && !items.includes(t.id)
+      className: `${items.includes(t.id) ? 'in' : ''}${t.when === 'both' ? ' bo' : ''}${!has(t.id) && !items.includes(t.id) ? ' none' : ''}${look === t.id ? ' look' : ''}`,
+      onClick: () => {
+        setLook(t.id);
+        toggle(t.id);
+      },
+      "data-msx-carry-item": t.id
     }, React.createElement("span", {
       style: {
         fontSize: 22,
@@ -167781,9 +167938,48 @@ function MsxStart({
     }), "育成中にも使える物(1ターン1個まで)")), React.createElement("div", {
       className: "msx-scroll",
       style: {
-        flex: '1 1 0'
+        flex: '1 1 0',
+        minHeight: 128
       }
-    }, items.map(id => React.createElement("div", {
+    }, look && MSX_ITEM_BY_ID[look] ? (() => {
+      const t = MSX_ITEM_BY_ID[look];
+      const n = has(look);
+      return React.createElement("div", {
+        className: "v-bsel",
+        style: {
+          marginBottom: 6
+        },
+        "data-msx-carry-look": look
+      }, React.createElement("span", {
+        className: "e",
+        style: {
+          fontSize: 30
+        }
+      }, t.e), React.createElement("div", {
+        style: {
+          minWidth: 0
+        }
+      }, React.createElement("b", null, t.name, React.createElement("span", {
+        className: "yel"
+      }, " ×", n)), React.createElement("small", {
+        style: JA_WRAP_STYLE
+      }, jaWrap(msxItemDesc(look))), React.createElement("small", {
+        style: {
+          ...JA_WRAP_STYLE,
+          color: '#7dd3fc'
+        }
+      }, jaWrap(t.when === 'before' ? 'いつ: 育成をはじめる前に効き、その育成のあいだ続く' : 'いつ: 育成中の自分のターンに使う(1ターン1個まで・ターンは進まない)')), React.createElement("small", {
+        style: {
+          ...JA_WRAP_STYLE,
+          color: '#fcd34d'
+        }
+      }, jaWrap(n > 0 ? items.includes(look) ? '持っていく物に入っている(もう一度押すと外す)' : items.length >= 2 ? '持っていけるのは2つまで(ほかを外すと選べる)' : '押すと持っていく物に入る' : '手に入れ方: マーケットのビートP交換所・助手ライフの拾い物や贈り物'))));
+    })() : React.createElement("div", {
+      className: "msx-note",
+      style: {
+        marginBottom: 6
+      }
+    }, "升目を押すと、効き目と手に入れ方が出ます"), items.map(id => React.createElement("div", {
       key: id,
       className: "v-item sel"
     }, React.createElement("span", {
@@ -169405,15 +169601,21 @@ function MsxPlay({
   let body = null;
   let foot = null;
   useEffect(() => {
-    if (run.phase === 'begin') toMain({
-      ...run,
-      out: null,
-      ki: run.ki || {
-        p: 0,
-        fame: Number.isFinite(run.s.fameTotal) ? run.s.fameTotal : 0,
-        power: SUC.evaluate(run.s).power
-      }
-    });
+    if (run.phase === 'begin') {
+      const r0 = {
+        ...run,
+        out: null,
+        ki: run.ki || {
+          p: 0,
+          fame: Number.isFinite(run.s.fameTotal) ? run.s.fameTotal : 0,
+          power: SUC.evaluate(run.s).power
+        }
+      };
+      if (typeof MsxRunIntro === 'function') setRun({
+        ...r0,
+        phase: 'intro'
+      });else toMain(r0);
+    }
   }, [run.phase]);
   if (phase === 'begin') return React.createElement(React.Fragment, null, React.createElement(MsxHd, {
     back: "中断",
@@ -169430,6 +169632,20 @@ function MsxPlay({
       phase: 'begin'
     })
   });
+  if (phase === 'intro' && typeof MsxRunIntro === 'function') return React.createElement(React.Fragment, null, React.createElement(MsxHd, {
+    back: "中断",
+    onBack: onPause,
+    sub: `${msxAidName(s.aid)}編`,
+    right: `${s.turn} / ${msxSuc.core.TOTAL_TURNS}ターン`
+  }), React.createElement(MsxRunIntro, {
+    key: `intro-${s.id}`,
+    run: run,
+    ctx: ctx,
+    onDone: () => toMain({
+      ...run,
+      out: null
+    })
+  }));
   const r3 = typeof MsxR3 === 'function' ? phase === 'battle' && !preOn ? 'battle' : phase === 'battle' ? null : phase === 'over' || s.over ? 'over' : sub === 'cup' ? 'cup' : sub === 'shugyo' ? 'shugyo' : null : null;
   if (preOn && preDesk) return React.createElement(MsxR3PreDesk, {
     run: run,
@@ -169654,14 +169870,34 @@ function MsxPlay({
         ...run,
         out: null
       }, f.kind === 2 ? '超覚醒した!' : '覚醒した!');
-      if (then === 'end') endTurnFlow({
+      const rest = Array.isArray(run.out.rest) ? run.out.rest : [];
+      if (rest.length) setRun({
+        ...next,
+        phase: 'awake',
+        out: {
+          fire: rest[0],
+          rest: rest.slice(1),
+          then
+        }
+      });else if (then === 'item') setRun({
+        ...next,
+        phase: 'main'
+      });else if (then === 'end') endTurnFlow({
         ...next,
         phase: 'main'
       });else toMain(next);
     };
+    const later = Array.isArray(run.out.rest) ? run.out.rest : [];
+    const showRun = later.length ? {
+      ...run,
+      s: {
+        ...s,
+        stats: Object.fromEntries(Object.entries(s.stats).map(([k, x]) => [k, x - later.reduce((a, r) => a + (r.ups && r.ups[k] || 0), 0)]))
+      }
+    } : run;
     body = React.createElement(MsxAwakeShow, {
       key: `${s.turn}-${f.kind}`,
-      run: run,
+      run: showRun,
       fire: f,
       v: v,
       ev: ev,
@@ -170436,7 +170672,7 @@ function MsxPlay({
     }, React.createElement("button", {
       type: "button",
       onClick: () => setSub('main')
-    }, "← もどる"));
+    }, "← 戻る"));
   }
   return React.createElement(React.Fragment, null, React.createElement(MsxHd, {
     back: "中断",
@@ -170580,7 +170816,7 @@ const msxItemView = k => {
   return {
     id: k,
     name: base && base.name || core && core.name || k,
-    desc: typeof msxItemFx === 'function' && msxItemFx(k) ? `${base && base.desc || ex && ex.desc || ''}。効き目: ${msxItemFx(k)}` : base && base.desc || ex && ex.desc || '',
+    desc: typeof msxItemFx === 'function' && msxItemFx(k) ? base && typeof msxItemDesc === 'function' ? msxItemDesc(k) : msxItemFx(k) : base && base.desc || ex && ex.desc || '',
     e: base && base.e || ex && ex.e || '🎁',
     during: core ? core.use === 'during' : !!(base && base.when === 'both')
   };
@@ -170614,15 +170850,32 @@ function MsxBag({
     if (!t || t.carry || usedNow || typeof SUC.useItem !== 'function') return;
     const r = SUC.useItem(s, t.id);
     if (!r || !r.out || !r.out.ok) return;
+    const log = [...(run.log || []), {
+      turn: s.turn,
+      t: `${t.name}を使った`
+    }].slice(-20);
+    if (Array.isArray(r.out.fires) && r.out.fires.length && typeof MsxAwakeShow === 'function') {
+      setRun({
+        ...run,
+        s: r.state,
+        log,
+        phase: 'awake',
+        out: {
+          fire: r.out.fires[0],
+          rest: r.out.fires.slice(1),
+          then: 'item'
+        }
+      });
+      onClose();
+      return;
+    }
     setRun({
       ...run,
       s: r.state,
-      log: [...(run.log || []), {
-        turn: s.turn,
-        t: `${t.name}を使った`
-      }].slice(-20)
+      log
     });
   };
+  const blocked = t && !t.carry && typeof SUC.itemUsable === 'function' && !SUC.itemUsable(s, t.id);
   return React.createElement(React.Fragment, null, React.createElement(MsxBand, {
     s: s,
     v: v,
@@ -170670,7 +170923,7 @@ function MsxBag({
     }
   }, x.e), React.createElement("i", null, "×", x.n), React.createElement("small", {
     style: JA_LABEL_STYLE
-  }, msxItemNameNode(x.name)))), carryList.map(x => React.createElement("button", {
+  }, msxItemNameNode(x.name.replace('ガロエ印の', ''))))), carryList.map(x => React.createElement("button", {
     type: "button",
     key: `c-${x.id}`,
     className: `no${pick === x.id ? ' sel' : ''}`,
@@ -170682,21 +170935,26 @@ function MsxBag({
     }
   }, x.e), React.createElement("small", {
     style: JA_LABEL_STYLE
-  }, msxItemNameNode(x.name)))), React.createElement("div", {
+  }, msxItemNameNode(x.name.replace('ガロエ印の', ''))))), React.createElement("div", {
     className: "no"
   }, React.createElement("span", {
     className: "e"
-  }, "⏳"), React.createElement("i", null, "×", sand), React.createElement("small", null, "時渡りの砂時計")), React.createElement("div", {
+  }, "⏳"), React.createElement("i", null, "×", sand), React.createElement("small", {
+    style: JA_LABEL_STYLE
+  }, msxItemNameNode('時渡りの砂時計'))), React.createElement("div", {
     className: "no"
   }, React.createElement("span", {
     className: "e"
-  }, "🌈"), React.createElement("i", null, "×", rainbow), React.createElement("small", null, "虹の時渡りの砂時計"))), !bagList.length && !carryList.length ? React.createElement("div", {
+  }, "🌈"), React.createElement("i", null, "×", rainbow), React.createElement("small", {
+    style: JA_LABEL_STYLE
+  }, msxItemNameNode('虹の時渡りの砂時計')))), !bagList.length && !carryList.length ? React.createElement("div", {
     className: "msx-note"
   }, "持ちこんだ物はありません") : null, React.createElement("div", {
     className: "v-bnote"
   }, "⏳ 時渡りの砂時計: バトルに敗北したときにやり直せる", React.createElement("br", null), "🌈 虹の時渡りの砂時計: 敗北したとき相手を変えてやり直せる", React.createElement("br", null), React.createElement("span", {
-    className: "dim2"
-  }, "(うすい物はここでは使わない。砂時計は大会で負けたときに使う・大会は次の回で入ります)")), React.createElement("button", {
+    className: "dim2",
+    style: JA_WRAP_STYLE
+  }, jaWrap('色のうすい物は、ここでは使えません(はじめる前から効く物・大会で負けたときの砂時計)'))), React.createElement("button", {
     type: "button",
     className: "v-big",
     style: {
@@ -170705,9 +170963,9 @@ function MsxBag({
       marginTop: 0,
       color: '#fff'
     },
-    disabled: !t || t.carry || usedNow,
+    disabled: !t || t.carry || usedNow || blocked,
     onClick: use
-  }, usedNow ? 'このターンはもう使った' : t && !t.carry ? `${t.e} ${t.name}を使う` : '使う'))), React.createElement(MsxStRow, {
+  }, usedNow ? 'このターンはもう使った' : blocked ? 'いまは使えない' : t && !t.carry ? `${t.e} ${t.name}を使う` : '使う'))), React.createElement(MsxStRow, {
     who: s,
     stats: s.stats
   }));
