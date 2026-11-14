@@ -30,7 +30,7 @@ const makeRun = async (kind) => {
   const SUC = msxSuc.SUC;
   const team = ['Tiger', 'Undine', 'Golem', 'Pixie', 'Suezo', 'Kyubi'].filter((x) => SUC.speciesList.includes(x)).map((species) => ({ kind: 'base', species }));
   let s = SUC.newRun({ id: 'r3-shot-1', species: 'Mocchi', aid: 'mua', team, aidBondLv: 4, items: { sand: 2, rainbow: 1 } });
-  const goal = kind === 'debut' ? 5 : 22;
+  const goal = window.__SHOT_GOAL || (kind === 'debut' ? 5 : 22); // SHOT_GOAL=<ターン> で、大会の名前の見え方を月ごとに撮れる
   let guard = 0;
   while (s.turn < goal && !s.over && guard++ < 200) {
     const v = SUC.peek(s);
@@ -77,7 +77,7 @@ const makeRun = async (kind) => {
     ['B2', 'win', ['cont', '@cupintro-go', '%quick']], ['R1', 'win', ['cont', '@cupintro-go', '%quick', '%next']], ['C3', 'win', ['cont', '@cupintro-go', '%quick', '%next', '@next']], ['C3b', 'win', ['cont', '@cupintro-go', '%quick', '%next', '@next', '@meal=f_pow']], // R1: 賞金ランク UP!(段が上がったときだけ)
     ['C4', 'lose', ['cont', '@cupintro-go', '%quick']], ['C4r', 'lose', ['cont', '@cupintro-go', '%quick', '%rematch=sand']], ['C4g', 'lose', ['cont', '@cupintro-go', '%quick', '%giveup']],
     ['C4d', 'debutlose', ['cont', '@cupintro-go', '%quick']],
-    ['Q1', 'mid', ['cont', /^⚔修行/]], ['Q2', 'mid', ['cont', /^⚔修行/, '@shugyo']], ['Q3', 'mid', ['cont', /^⚔修行/, '@shugyo', '@qnext']],
+    ['Q1', 'mid', ['cont', /^⚔修行/]], ['Q2', 'mid', ['cont', /^⚔修行/, '@shugyo']], ['Q3', 'mid', ['cont', /^⚔修行/, '@shugyo', '@qskip', '@qnext']],
     // 期末の大会の当日(参考 te-30〜34): 当日のメイン(能力と大会だけ)→ 受付に1つ → 参加の確認 → 紋章の入り → 表
     ['K0', 'kimatsu', ['cont']], ['K1', 'kimatsu', ['cont', '@precup']], ['K2', 'kimatsu', ['cont', '@precup', '@enter']], ['K2c', 'kimatsu', ['cont', '@precup', '@enter', '@pre-cancel']],
     ['K3', 'kimatsu', ['cont', '@precup', '@enter', '@yes']], ['K4', 'kimatsu', ['cont', '@precup', '@enter', '@yes', '@cupintro-go']],
@@ -92,11 +92,15 @@ const makeRun = async (kind) => {
     for (const [w, h, tag] of sizes) {
       const page = await browser.newPage({ viewport: { width: w, height: h } });
       page.on('pageerror', (e) => errors.push(String(e && e.message || e)));
+      await page.addInitScript((g) => { window.__SHOT_GOAL = g; }, Number(process.env.SHOT_GOAL) || 0);
+      await page.addInitScript((r) => { if (r) window.__MSC_BK_RESULT = r; }, process.env.SHOT_BK_RESULT || ''); // win / lose: 決勝のあとの表(勝った側の線が優勝の札へ)
+      await page.addInitScript((k) => { if (k) window.__MSC_BK_T = k; }, Number(process.env.SHOT_BK) || 0); // SHOT_BK=<倍率> で、組み合わせ表の演出をゆっくりにして段ごとに撮る
       await page.addInitScript(quietBootSeed()); await page.addInitScript(updateNoticeSeed());
       await page.addInitScript(() => { try { localStorage.setItem('mh_monsuc_beta_v1', JSON.stringify({ v: 1, seen: { open: 1, firstend: 1, prep: 1, turn: 1, train: 1, result: 1, rest: 1, shugyo: 1, cup: 1, match: 1, rematch: 1, event: 1, awake: 1, retire: 1 } })); /* β版の説明は monsuc-beta-browser-check.js が見る */ localStorage.setItem('mh_unlocked_monsters', JSON.stringify(['Mocchi', 'Suezo', 'Golem', 'Tiger', 'Pixie', 'Undine', 'Kyubi'])); } catch (e) {} });
       await page.goto(`http://localhost:${PORT}/monster-hero/index.html`, { waitUntil: 'load', timeout: 90000 });
       await page.waitForFunction(() => typeof MonheroSuccessScreen === 'function' && typeof MsxR3 === 'function' && typeof msxLoad === 'function' && typeof MASMON_CALC !== 'undefined', undefined, { timeout: 90000 });
       for (const [name, kind, steps] of SHOTS) {
+        if (process.env.ONLY && !process.env.ONLY.split(',').includes(name)) continue; // ONLY=C1,C1w で撮る画面だけにする
         const label = `${name}${tag ? `(${tag})` : ''}`;
         await page.evaluate(async ({ kind, mk }) => {
           // eslint-disable-next-line no-new-func
@@ -130,7 +134,7 @@ const makeRun = async (kind) => {
           if (!done) check(`${label}: 「${st}」が押せる`, false);
           await page.waitForTimeout(st === '%ready' ? 2500 : 700);
         }
-        await page.waitForTimeout(500);
+        await page.waitForTimeout(500 + (Number(process.env.SHOT_WAIT) || 0)); // SHOT_WAIT=<ms> で、動く演出の途中を撮る
         const m = await page.evaluate(() => {
           const root = document.querySelector('.msx'); if (!root) return { ok: false };
           const R = root.getBoundingClientRect();
