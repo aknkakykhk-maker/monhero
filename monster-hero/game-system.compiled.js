@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 201f8ab69425a136
+// source-sha256: f350e043422c4a9c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -62915,6 +62915,69 @@ const TrainingCountUp = ({
     ref: holderRef
   }, format ? format(value) : value);
 };
+const FitNumber = ({
+  finalText,
+  children,
+  className = '',
+  style = null
+}) => {
+  const outerRef = React.useRef(null);
+  const sizerRef = React.useRef(null);
+  const [scale, setScale] = React.useState(1);
+  const text = String(finalText == null ? '' : finalText);
+  React.useLayoutEffect(() => {
+    const fit = () => {
+      const o = outerRef.current,
+        z = sizerRef.current;
+      if (!o || !z) return;
+      const avail = o.clientWidth,
+        need = z.scrollWidth;
+      if (!(avail > 0) || !(need > 0)) return;
+      const next = need > avail ? Math.max(0.05, Math.floor(avail / need * 1000) / 1000) : 1;
+      setScale(prev => Math.abs(prev - next) < 0.002 ? prev : next);
+    };
+    fit();
+    let ro = null;
+    try {
+      if (typeof ResizeObserver === 'function') {
+        ro = new ResizeObserver(fit);
+        ro.observe(outerRef.current);
+      }
+    } catch (e) {}
+    window.addEventListener('resize', fit);
+    return () => {
+      window.removeEventListener('resize', fit);
+      if (ro) ro.disconnect();
+    };
+  }, [text]);
+  return React.createElement("div", {
+    ref: outerRef,
+    "data-fit-number": true,
+    className: `relative w-full min-w-0 ${className}`,
+    style: style || undefined
+  }, React.createElement("span", {
+    ref: sizerRef,
+    "aria-hidden": "true",
+    style: {
+      position: 'absolute',
+      left: 0,
+      top: 0,
+      width: 0,
+      height: 0,
+      overflow: 'hidden',
+      visibility: 'hidden',
+      whiteSpace: 'nowrap',
+      pointerEvents: 'none'
+    }
+  }, text), React.createElement("div", {
+    "data-fit-number-inner": true,
+    style: {
+      fontSize: `${scale}em`,
+      whiteSpace: 'nowrap',
+      lineHeight: 1.1
+    }
+  }, children));
+};
 const PhaseGrowthCell = ({
   row,
   d = 0,
@@ -80507,26 +80570,36 @@ function WaveResultScreen({
     }, React.createElement("span", {
       className: "text-indigo-400 text-xs font-black uppercase"
     }, "獲得スコア"), React.createElement("span", {
-      className: "text-white font-mono font-black text-xl"
+      className: "text-white font-mono font-black text-xl min-w-0 flex-1 pl-2"
+    }, React.createElement(FitNumber, {
+      finalText: Number(waveResult.roundScore).toLocaleString(),
+      style: {
+        textAlign: 'right'
+      }
     }, React.createElement(TrainingCountUp, {
       from: 0,
       to: waveResult.roundScore,
       delay: 600,
       duration: 1000,
       format: v => v.toLocaleString()
-    })))), React.createElement("div", {
+    }))))), React.createElement("div", {
       className: "pt-1 flex justify-between items-end border-t border-white/20"
     }, React.createElement("span", {
       className: "text-amber-500 text-[11px] font-black uppercase"
     }, "累計スコア"), React.createElement("span", {
-      className: "text-amber-400 font-mono font-black text-lg"
+      className: "text-amber-400 font-mono font-black text-lg min-w-0 flex-1 pl-2"
+    }, React.createElement(FitNumber, {
+      finalText: Number(waveResult.totalScore).toLocaleString(),
+      style: {
+        textAlign: 'right'
+      }
     }, React.createElement(TrainingCountUp, {
       from: Math.max(0, waveResult.totalScore - waveResult.roundScore),
       to: waveResult.totalScore,
       delay: 900,
       duration: 1000,
       format: v => v.toLocaleString()
-    })))))), React.createElement("button", {
+    }))))))), React.createElement("button", {
       onClick: handleNextWave,
       disabled: runFinalizing,
       "aria-busy": runFinalizing,
@@ -80984,7 +81057,7 @@ function ChampionScreen({
       background: 'linear-gradient(to bottom right,#fbbf24,#78350f)'
     }
   }, React.createElement(EndConfetti, null), React.createElement("div", {
-    className: "relative z-10 shrink-0 flex flex-col items-center [@media(orientation:landscape)_and_(max-height:520px)]:col-start-1 [@media(orientation:landscape)_and_(max-height:520px)]:self-center"
+    className: "relative z-10 shrink-0 w-full flex flex-col items-center [@media(orientation:landscape)_and_(max-height:520px)]:col-start-1 [@media(orientation:landscape)_and_(max-height:520px)]:self-center"
   }, React.createElement(Crown, {
     size: 64,
     className: "mh-end-crown text-white animate-bounce mb-3 [@media(max-height:700px)]:h-10 [@media(max-height:700px)]:w-10 [@media(max-height:700px)]:mb-1"
@@ -80994,13 +81067,15 @@ function ChampionScreen({
     className: "mh-end-score w-full max-w-xs bg-black/40 border border-white/20 rounded-3xl p-6 mb-3 mt-3 shadow-2xl [@media(max-height:700px)]:p-2 [@media(max-height:700px)]:my-1.5 [@media(max-height:700px)]:rounded-2xl"
   }, React.createElement("div", {
     className: "text-5xl font-mono font-black text-white [@media(max-height:700px)]:text-3xl"
+  }, React.createElement(FitNumber, {
+    finalText: Number(score).toLocaleString()
   }, React.createElement(TrainingCountUp, {
     from: 0,
     to: score,
     delay: 500,
     duration: 1400,
     format: v => v.toLocaleString()
-  })))), React.createElement("div", {
+  }))))), React.createElement("div", {
     "data-champion-rewards": true,
     className: "relative z-10 flex-1 min-h-0 w-full flex flex-col items-center overflow-y-auto mh-scroll [@media(orientation:landscape)_and_(max-height:520px)]:col-start-2 [@media(orientation:landscape)_and_(max-height:520px)]:row-start-1 [@media(orientation:landscape)_and_(max-height:520px)]:row-span-5 [@media(orientation:landscape)_and_(max-height:520px)]:h-full"
   }, React.createElement("div", {
@@ -81081,13 +81156,15 @@ function GameOverScreen({
     className: "mh-end-score bg-white/5 border border-white/10 rounded-2xl p-4 mb-3 mt-3 w-full max-w-xs"
   }, React.createElement("div", {
     className: "text-3xl font-mono font-black text-white"
+  }, React.createElement(FitNumber, {
+    finalText: Number(score).toLocaleString()
   }, React.createElement(TrainingCountUp, {
     from: 0,
     to: score,
     delay: 500,
     duration: 1000,
     format: v => v.toLocaleString()
-  })))), React.createElement("div", {
+  }))))), React.createElement("div", {
     className: "flex-1 min-h-0 w-full flex flex-col items-center overflow-y-auto mh-scroll"
   }, React.createElement("div", {
     className: "m-auto w-full flex flex-col items-center"
@@ -81142,13 +81219,15 @@ function GaveUpScreen({
     className: "mh-end-score bg-white/5 border border-white/10 rounded-2xl p-4 mb-3 mt-3 w-full max-w-xs"
   }, React.createElement("div", {
     className: "text-3xl font-mono font-black text-white"
+  }, React.createElement(FitNumber, {
+    finalText: Number(score).toLocaleString()
   }, React.createElement(TrainingCountUp, {
     from: 0,
     to: score,
     delay: 500,
     duration: 1000,
     format: v => v.toLocaleString()
-  })))), React.createElement("div", {
+  }))))), React.createElement("div", {
     className: "flex-1 min-h-0 w-full flex flex-col items-center overflow-y-auto mh-scroll"
   }, React.createElement("div", {
     className: "m-auto w-full flex flex-col items-center"
@@ -232446,7 +232525,7 @@ function MonsterHeroGame() {
     }, React.createElement("span", null, "種族 / 難易度"), React.createElement("b", {
       className: "text-right"
     }, speciesName, "／", labelOf(r.difficultyId)), React.createElement("span", null, "今回のスコア"), React.createElement("b", {
-      className: "text-right"
+      className: "text-right break-all min-w-0"
     }, r.score.toLocaleString()), React.createElement("span", null, "クリアターン"), React.createElement("b", {
       className: "text-right"
     }, r.clearTurns !== null ? `${r.clearTurns}T` : '—'), React.createElement("span", null, "初回報酬"), React.createElement("b", {
@@ -243243,7 +243322,7 @@ function MonsterHeroGame() {
     }, sub)), empty ? React.createElement("small", {
       className: "shrink-0 text-right text-[9px] font-black text-slate-500"
     }, "記録なし") : React.createElement("b", {
-      className: "shrink-0 text-right text-[13px] font-black text-cyan-200"
+      className: "min-w-0 max-w-[60%] break-all text-right text-[13px] font-black text-cyan-200"
     }, score.toLocaleString(), React.createElement("small", {
       className: "ml-0.5 text-[8px] text-slate-400"
     }, "pt")));
@@ -257113,7 +257192,7 @@ function MonsterHeroGame() {
       }, React.createElement("span", null, "曲"), React.createElement("b", {
         className: "truncate text-right"
       }, r.songName || '-', r.difficultyName ? `(${r.difficultyName})` : ''), React.createElement("span", null, "スコア"), React.createElement("b", {
-        className: "text-right"
+        className: "text-right break-all min-w-0"
       }, r.score.toLocaleString()), r.assist && React.createElement(React.Fragment, null, React.createElement("span", null, "アシストモード"), React.createElement("b", {
         className: "text-right"
       }, "ダメージにならない")), r.pumpkin ? React.createElement(React.Fragment, null, React.createElement("span", null, "体力"), React.createElement("b", {
