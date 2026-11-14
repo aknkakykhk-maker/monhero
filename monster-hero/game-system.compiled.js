@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: abb248a23806935f
+// source-sha256: aa9d94af36f46155
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -157926,42 +157926,42 @@ const msxActEnsureCss = () => {
   document.head.appendChild(el);
 };
 const MSX_CREW_SPOT = Object.freeze([{
-  left: '10%',
+  left: '11%',
   bottom: '14%'
 }, {
-  left: '90%',
+  left: '89%',
   bottom: '14%'
 }, {
-  left: '10%',
-  bottom: '31%'
+  left: '11%',
+  bottom: '36%'
 }, {
-  left: '90%',
-  bottom: '31%'
+  left: '89%',
+  bottom: '36%'
 }, {
-  left: '10%',
-  bottom: '48%'
+  left: '11%',
+  bottom: '58%'
 }, {
-  left: '90%',
-  bottom: '48%'
+  left: '89%',
+  bottom: '58%'
 }]);
 const MSX_CREW_SPOT_AID = Object.freeze([{
-  left: '10%',
+  left: '11%',
   bottom: '14%'
 }, {
-  left: '10%',
-  bottom: '31%'
+  left: '86%',
+  bottom: '60%'
 }, {
-  left: '10%',
-  bottom: '48%'
+  left: '11%',
+  bottom: '36%'
 }, {
-  left: '90%',
-  bottom: '62%'
-}, {
-  left: '10%',
-  bottom: '65%'
-}, {
-  left: '72%',
+  left: '64%',
   bottom: '70%'
+}, {
+  left: '11%',
+  bottom: '58%'
+}, {
+  left: '36%',
+  bottom: '72%'
 }]);
 const MSX_CREW_SPOT_TAG = Object.freeze([{
   left: '22%',
@@ -158015,9 +158015,9 @@ const MSX_CREW_CSS = `
 .msx .v-bchip.tag img{border-color:#fde047;box-shadow:0 0 5px #fde047}
 .msx .v-bchip .bc-tg{flex:none;font-size:11px}
 .msx .msx-act .crew{position:absolute;inset:0;z-index:4;pointer-events:none}
-.msx .msx-act .crew .cm{position:absolute;transform:translateX(-50%);height:15%;aspect-ratio:1/1;display:flex;align-items:flex-end;justify-content:center;animation:msxCrewIn .35s cubic-bezier(.2,1.4,.4,1) both;animation-delay:calc(.08s + var(--i) * .07s)}
+.msx .msx-act .crew .cm{position:absolute;transform:translateX(-50%);height:18%;aspect-ratio:1/1;display:flex;align-items:flex-end;justify-content:center;animation:msxCrewIn .35s cubic-bezier(.2,1.4,.4,1) both;animation-delay:calc(.08s + var(--i) * .07s)}
 .msx .msx-act .crew .cm img{max-height:100%;max-width:100%;object-fit:contain;filter:drop-shadow(0 3px 0 #0007);animation:msxCrewHop .5s ease-in-out infinite alternate;animation-delay:calc(var(--i) * .11s)}
-.msx .msx-act .crew .cm.tag{height:19%}
+.msx .msx-act .crew .cm.tag{height:21%}
 .msx .msx-act .crew .cm.tag img{filter:drop-shadow(0 0 6px #fde047) drop-shadow(0 0 14px #f59e0b) drop-shadow(0 3px 0 #0007)}
 .msx .msx-act .crew .cm .tg{position:absolute;top:-16px;left:50%;transform:translateX(-50%);white-space:nowrap;font-size:11px;font-weight:900;color:#7c2d12;background:linear-gradient(#fef08a,#f59e0b);border:1.5px solid #fff;border-radius:99px;padding:0 6px;box-shadow:0 2px 0 #0006}
 .msx .msx-act .crew .cm .ch{position:absolute;top:-6px;right:-8px;font-size:16px;animation:msxCrewCheer .6s ease-in-out infinite alternate}

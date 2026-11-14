@@ -9,10 +9,11 @@
 //   友情タッグの子は金色の縁と「🤝」。名前が長くても札の幅で切る(… で省く)ので、場面の外へはみ出さない(2026-11-14 社長「名前の横にアイコンがほしい」)
 // 置き場所(育てる子は真ん中を大きく使うので、手前の左右の端に縦に並べる)。助手が来たときは右下を助手が使う
 const MSX_CREW_SPOT = Object.freeze([
-  { left: '10%', bottom: '14%' }, { left: '90%', bottom: '14%' }, { left: '10%', bottom: '31%' }, { left: '90%', bottom: '31%' }, { left: '10%', bottom: '48%' }, { left: '90%', bottom: '48%' },
+  { left: '11%', bottom: '14%' }, { left: '89%', bottom: '14%' }, { left: '11%', bottom: '36%' }, { left: '89%', bottom: '36%' }, { left: '11%', bottom: '58%' }, { left: '89%', bottom: '58%' },
 ]);
+// 助手が来たときは右下を助手が使う。編成の子は左右に振り分け、右は助手の上へ(2026-11-14 社長「左の端で重なる」)
 const MSX_CREW_SPOT_AID = Object.freeze([
-  { left: '10%', bottom: '14%' }, { left: '10%', bottom: '31%' }, { left: '10%', bottom: '48%' }, { left: '90%', bottom: '62%' }, { left: '10%', bottom: '65%' }, { left: '72%', bottom: '70%' },
+  { left: '11%', bottom: '14%' }, { left: '86%', bottom: '60%' }, { left: '11%', bottom: '36%' }, { left: '64%', bottom: '70%' }, { left: '11%', bottom: '58%' }, { left: '36%', bottom: '72%' },
 ]);
 // タッグの子の置き場所(育てる子のすぐ横・手前)。3体目からは少し奥
 const MSX_CREW_SPOT_TAG = Object.freeze([{ left: '22%', bottom: '12%' }, { left: '78%', bottom: '12%' }, { left: '12%', bottom: '34%' }, { left: '88%', bottom: '34%' }]);
@@ -44,9 +45,9 @@ const MSX_CREW_CSS = `
 .msx .v-bchip.tag img{border-color:#fde047;box-shadow:0 0 5px #fde047}
 .msx .v-bchip .bc-tg{flex:none;font-size:11px}
 .msx .msx-act .crew{position:absolute;inset:0;z-index:4;pointer-events:none}
-.msx .msx-act .crew .cm{position:absolute;transform:translateX(-50%);height:15%;aspect-ratio:1/1;display:flex;align-items:flex-end;justify-content:center;animation:msxCrewIn .35s cubic-bezier(.2,1.4,.4,1) both;animation-delay:calc(.08s + var(--i) * .07s)}
+.msx .msx-act .crew .cm{position:absolute;transform:translateX(-50%);height:18%;aspect-ratio:1/1;display:flex;align-items:flex-end;justify-content:center;animation:msxCrewIn .35s cubic-bezier(.2,1.4,.4,1) both;animation-delay:calc(.08s + var(--i) * .07s)}
 .msx .msx-act .crew .cm img{max-height:100%;max-width:100%;object-fit:contain;filter:drop-shadow(0 3px 0 #0007);animation:msxCrewHop .5s ease-in-out infinite alternate;animation-delay:calc(var(--i) * .11s)}
-.msx .msx-act .crew .cm.tag{height:19%}
+.msx .msx-act .crew .cm.tag{height:21%}
 .msx .msx-act .crew .cm.tag img{filter:drop-shadow(0 0 6px #fde047) drop-shadow(0 0 14px #f59e0b) drop-shadow(0 3px 0 #0007)}
 .msx .msx-act .crew .cm .tg{position:absolute;top:-16px;left:50%;transform:translateX(-50%);white-space:nowrap;font-size:11px;font-weight:900;color:#7c2d12;background:linear-gradient(#fef08a,#f59e0b);border:1.5px solid #fff;border-radius:99px;padding:0 6px;box-shadow:0 2px 0 #0006}
 .msx .msx-act .crew .cm .ch{position:absolute;top:-6px;right:-8px;font-size:16px;animation:msxCrewCheer .6s ease-in-out infinite alternate}
