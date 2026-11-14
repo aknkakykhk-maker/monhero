@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: b1f9a49237dfaa8b
+// generated-sha256: 4271313b7194484f
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -67172,7 +67172,7 @@ const ASSISTANT_LIFE_HOUSE_CSS = `
 .mhl-room .win img{width:100%;height:100%;object-fit:cover}
 .mhl-room .win:before,.mhl-room .win:after{content:"";position:absolute;top:0;bottom:0;width:22%;background:linear-gradient(90deg,#f9a8d4cc,#f472b688);z-index:1}
 .mhl-room .win:before{left:0}.mhl-room .win:after{right:0;transform:scaleX(-1)}
-.mhl-room .pl{position:absolute;left:5px;top:5px;z-index:3;font-size:10px;font-weight:900;padding:0 6px;border-radius:6px;background:#fffbeb;color:#422006;border:1px solid #d6b37a}
+.mhl-room .pl{position:absolute;left:5px;top:5px;z-index:9;font-size:10px;font-weight:900;padding:0 6px;border-radius:6px;background:#fffbeb;color:#422006;border:1px solid #d6b37a}
 .mhl-room .lv{position:absolute;left:5px;top:22px;z-index:3;font-size:9px;font-weight:900;padding:0 4px;border-radius:5px;background:#312e81;color:#fde68a;border:1px solid #fde68a88}
 .mhl-room .fu{position:absolute;left:5px;bottom:9px;z-index:2;font-size:19px;letter-spacing:1px}
 .mhl-room .pp{position:absolute;bottom:9px;right:10%;z-index:4;display:flex}
@@ -67205,7 +67205,7 @@ const ASSISTANT_LIFE_HOUSE_CSS = `
 .mhl-tile{position:relative;display:block;min-height:58px;border-radius:12px;padding:6px 6px 4px;text-align:left;clip-path:polygon(0 0,88% 0,100% 20%,100% 100%,0 100%);overflow:hidden;box-shadow:inset 0 -4px 0 #0003;color:#fff}
 .mhl-tile:active{transform:scale(.97)}@media (prefers-reduced-motion:no-preference){.mhl-glow{animation:mhl-glow 1.3s ease-in-out infinite}}@keyframes mhl-glow{0%,100%{filter:brightness(1);transform:scale(1)}50%{filter:brightness(1.7) saturate(1.3);transform:scale(1.05)}}.mhl-tile:disabled{opacity:.55}
 .mhl-tile i{font-style:normal;font-size:17px;display:block;line-height:1}.mhl-tile b{display:block;font-size:12px;font-weight:900;margin-top:2px;text-shadow:0 1px 2px #0007;white-space:nowrap}
-.mhl-tile small{display:block;font-size:9px;font-weight:800;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mhl-tile small{display:block;font-size:9px;font-weight:800;line-height:1.2;white-space:normal}.mhl-tile b>span,.mhl-tile small>span{white-space:nowrap}
 .mhl-tile em{position:absolute;right:6px;top:4px;font-style:normal;font-size:9px;font-weight:900;background:#0f172acc;border-radius:999px;padding:0 5px}
 .mhl-watch{background:linear-gradient(135deg,#fb7185,#f59e0b)}.mhl-call{background:linear-gradient(135deg,#38bdf8,#6366f1)}.mhl-give{background:linear-gradient(135deg,#34d399,#16a34a)}.mhl-beat{background:linear-gradient(135deg,#a855f7,#ec4899)}.mhl-card{background:linear-gradient(90deg,#fde68a,#fbbf24,#f59e0b);color:#1e1b4b}.mhl-card-up{margin-left:6px;border-radius:999px;background:#1e1b4b;color:#fde68a;padding:1px 7px;font-size:11px}
 .mhl-icons{display:flex;gap:6px}.mhl-icons button{flex:1;min-height:48px;border-radius:12px;background:rgba(30,41,59,.9);border:1px solid #ffffff2a;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:10px;font-weight:900;color:#e2e8f0}
@@ -67236,7 +67236,9 @@ const ASSISTANT_LIFE_HOUSE_CSS = `
 const ASSISTANT_LIFE_GRID4_CSS = ASSISTANT_LIFE_HOUSE_CSS.split('\n').filter(l => /^\[data-assistant-life-land="1"\] \.mhl-(room|board)/.test(l)).join('\n').split('[data-assistant-life-land="1"]').join('[data-assistant-life-grid4="1"]')
   + '\n[data-assistant-life-grid4="1"] .mhl-room .tag b,[data-assistant-life-grid4="1"] .mhl-room[data-assistant-life-room-v2="1"] .tag b{white-space:normal;word-break:auto-phrase;font-size:10.5px;line-height:12px;max-height:36px;text-overflow:clip}[data-assistant-life-grid4="1"] .mhl-room .tag{top:21px}'
   + '\n.mhl-room .evm{position:absolute;right:2px;bottom:2px;z-index:8;font-size:15px;line-height:1;filter:drop-shadow(0 1px 2px #000a)}';
-function AssistantLifeHouseStyle() { return <style>{ASSISTANT_LIFE_HOUSE_CSS + '\n' + ASSISTANT_LIFE_GRID4_CSS}</style>; }
+// 助手ライフを開いている間は、上に出る育ちの札(💗+2 など)を右へ寄せる。左だと、上の副題「…間でみんなが動く」に重なって字を隠す(2026-11-14 社長)
+const ASSISTANT_LIFE_FX_CSS = '.mh-gfx-chips.left{left:auto;right:10px;align-items:flex-end}';
+function AssistantLifeHouseStyle() { return <style>{ASSISTANT_LIFE_HOUSE_CSS + '\n' + ASSISTANT_LIFE_GRID4_CSS + '\n' + ASSISTANT_LIFE_FX_CSS}</style>; }
 // 名前の並び(「ドラ・ソラシド・えるびん」)。折り返すときは名前の途中で折らない(2026-11-07 社長「文字列も気をつけて」)
 function AssistantLifeNames({ text }) {
   const parts = String(text || '').split('・');
@@ -67309,7 +67311,7 @@ function AssistantLifeRoom({ id, met, look, x, y, w, h, state, onOpen, idx, othe
         <span key={pid} className={state.lonely && pid === id ? 'lonely' : state.after ? 'after' : ''} data-assistant-life-room-face={pid} style={{ position: 'relative', ...(v2 && !other && typeof assistantLifePartnerOk === 'function' && !assistantLifePartnerOk(pid) ? { filter: 'grayscale(.55) brightness(.85)' } : {}) }}><AssistantFace who={who} size={Math.round(Math.min(40, h * .44))} accent={who.accent}/>
           {/* 寝ているときは目を閉じた形を重ねる(2026-11-11 社長「目を開けっぱなしの人がいる」・顔の枠の線2pxの内側)。部屋の「寝ている」印で決める(フレンドの家も同じ) */}
           {met && typeof AssistantLifeSleepEyes === 'function' && state.sleep && (() => { const sz = Math.round(Math.min(40, h * .44)) - 4; return <AssistantLifeSleepEyes pid={pid} src={assistantFaceSrc(who, null)} w={sz} h={sz} style={{ left: 2, top: 2 }}/>; })()}</span>) : null; })}</div>}
-      {ppl && state.bub && <span className="bb" data-assistant-life-room-bub style={{ bottom: Math.round(Math.min(40, h * .44)) + 14, fontSize: w < 150 ? 8.5 : undefined }}>{[].concat(state.lonely && !state.sleep && !state.after && w < 150 ? ['💭 さみしいな…'] : state.bub).map((x, i) => <React.Fragment key={i}>{i ? <wbr/> : null}<span className="whitespace-nowrap" data-assistant-life-chunk>{x}</span></React.Fragment>)}</span>}
+      {ppl && state.bub && <span className="bb" data-assistant-life-room-bub style={{ ...(w < 110 ? { top: 22, bottom: 'auto' } : { bottom: Math.round(Math.min(40, h * .44)) + 14 }), fontSize: w < 150 ? 8.5 : undefined }}>{[].concat(state.lonely && !state.sleep && !state.after && w < 150 ? ['💭 さみしいな…'] : state.bub).map((x, i) => <React.Fragment key={i}>{i ? <wbr/> : null}<span className="whitespace-nowrap" data-assistant-life-chunk>{x}</span></React.Fragment>)}</span>}
       {typeof AssistantLifeRelRoomLayer === 'function' && <AssistantLifeRelRoomLayer state={state} h={h}/>}
       {/* 出かけ札は床にかけない(2026-11-08 社長: 助手のマスモンが部屋の床を歩く。キズナ2)。縦は名札の右に2行(行き先/一緒の全員の名前・ひとりなら何をしているか・けんかや仲直りの印)、
           横は名札の下に1行(行き先・人数・印)。どちらも部屋の上から 36px までに収める */}
@@ -67366,7 +67368,7 @@ function AssistantLifeHouseArt({ width, land: landIn, look, rooms, metSet, onOpe
         <div className="mhl-liv" data-assistant-life-living style={{ left: wall, top: ly, width: width - 2 * wall, height: lh, filter: night ? 'brightness(.62)' : undefined }}>
           <button type="button" ref={boardRef} className="mhl-board text-left" data-assistant-life-board onClick={onBoard} style={{ width: Math.min(width * (land ? .42 : .52), 240) }} aria-label="今日あったことを全部見る">
             <b className="flex items-center gap-1">📌 今日あったこと{items.length > 0 && <span className="mhl-board-more" data-assistant-life-board-more={restN}>{restN > 0 ? `ほか${restN}件 ›` : '全部 ›'}</span>}</b>
-            {items.length ? items.slice(0, land ? 1 : 2).map((x, i) => <p key={i} data-assistant-life-board-item><AssistantLifeChunks text={`${x.t} ${assistantLifeBoardShort(x.text, land ? 2 : 1)}`}/></p>) : <p>👀 見守ると ここに残ります</p>}
+            {items.length ? items.slice(0, land ? 1 : 2).map((x, i) => <p key={i} data-assistant-life-board-item><AssistantLifeChunks text={`${x.t} ${assistantLifeBoardShort(x.text, land ? 2 : 1)}`}/></p>) : <p><AssistantLifeChunks text="👀 見守ると ここに残ります"/></p>}
           </button>
           <div className="mhl-door" style={{ left: width * (land ? .62 : .66), height: lh - 14 }}/>
           <span className="absolute text-[24px]" style={{ left: width * (land ? .62 : .66) + 46, bottom: 6 }} aria-hidden="true">🛋️</span>
@@ -68124,11 +68126,11 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
         {/* 1日の上限はなくした(2026-11-08 社長)。いま見守れる組の数を出す */}
         <em data-assistant-life-today-watch-now={unwatched.length}>{unwatched.length ? `今 ${unwatched.length}組` : 'いまは無し'}</em><i>👀</i><b>見守る</b><small data-assistant-life-today-gain="watch">{uiV2 ? (unwatched.length ? (guideSeen === false ? '👆 まずはここ' : '🤝💗 アップ') : (life.watched || []).length ? '✓ 済み・次の時間帯に' : '次の時間帯に') : (unwatched.length ? '時間帯ごとに1回' : '次の時間帯に')}</small></button>
       <button type="button" className="mhl-tile mhl-call flex-1" data-assistant-life-today-act="call" disabled={!Object.keys(life.solo || {}).filter(id => !awayFriend(id) && partnerOk(id)).length} onClick={() => { if (uiV2) { setCallPicker(true); return; } const id = lonely ? lonely[0] : Object.keys(life.solo || {}).filter(id => !awayFriend(id) && partnerOk(id))[0]; if (id) setRoomId(id); }}>
-        <em>無料</em><i>💬</i><b>声をかける</b><small data-assistant-life-today-sub>{lonely ? `💭 ${nameOf(lonely[0])}` : 'ひとりの助手に'}</small></button>
+        <em>無料</em><i>💬</i><b>声をかける</b><small data-assistant-life-today-sub>{lonely ? `💭 ${nameOf(lonely[0])}` : <><span>ひとりの</span><span>助手に</span></>}</small></button>
       <button type="button" className="mhl-tile mhl-give flex-1" data-assistant-life-today-act="give" disabled={!uiV2 && (!canGive || (!giveGroup && !giveSoloId))} onClick={() => { if (uiV2) { setGiftItemsOpen(false); setGiftOpen(true); return; } if (itemsLeft > 0 && giveGroup) openGive(giveGroup.ids); else if (soloLeft > 0 && giveSoloId) openGiveSolo(giveSoloId, giveGroup && giveGroup.ids.includes(giveSoloId) ? giveGroup.ids : [giveSoloId]); else setTab('items'); }}>
         <em>{uiV2 ? giveLeftAll : soloOn ? itemsLeft + soloLeft : itemsLeft}回</em><i>🎁</i><b>贈る</b><small data-assistant-life-today-gain="give" style={{ whiteSpace: 'normal', overflow: 'visible' }}>{!uiV2 ? `道具 ${itemsHave}個` : giveLeftAll <= 0 ? '✓ 今日は贈った' : itemsHave > 0 ? <><span className="whitespace-nowrap">🤝💗アップ</span> <span className="whitespace-nowrap">道具{itemsHave}個</span></> : <><span className="whitespace-nowrap">道具0個</span> <span className="whitespace-nowrap">買える</span></>}</small></button>
       <button type="button" className="mhl-tile mhl-beat flex-1" data-assistant-life-today-act="beat" onClick={() => { if (beatIds[0]) setRoomId(beatIds[0]); }} disabled={!beatIds.length}>
-        <i>🎵</i><b>モンヒロビート</b><small>{beatIds.length ? `${beatIds.length}人 ・ 券なし` : 'いまはだれも'}</small></button>
+        <i>🎵</i><b style={{ whiteSpace: 'normal' }}><span>モンヒロ</span><span>ビート</span></b><small>{beatIds.length ? `${beatIds.length}人 ・ 券なし` : 'いまはだれも'}</small></button>
     </div>);
   const icons = (
     <div className="mhl-icons" role="tablist" data-assistant-life-icons>

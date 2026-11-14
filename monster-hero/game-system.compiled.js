@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 4fc967076a65ec45
+// source-sha256: ae5af6e5b505c964
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -113604,7 +113604,7 @@ const ASSISTANT_LIFE_HOUSE_CSS = `
 .mhl-room .win img{width:100%;height:100%;object-fit:cover}
 .mhl-room .win:before,.mhl-room .win:after{content:"";position:absolute;top:0;bottom:0;width:22%;background:linear-gradient(90deg,#f9a8d4cc,#f472b688);z-index:1}
 .mhl-room .win:before{left:0}.mhl-room .win:after{right:0;transform:scaleX(-1)}
-.mhl-room .pl{position:absolute;left:5px;top:5px;z-index:3;font-size:10px;font-weight:900;padding:0 6px;border-radius:6px;background:#fffbeb;color:#422006;border:1px solid #d6b37a}
+.mhl-room .pl{position:absolute;left:5px;top:5px;z-index:9;font-size:10px;font-weight:900;padding:0 6px;border-radius:6px;background:#fffbeb;color:#422006;border:1px solid #d6b37a}
 .mhl-room .lv{position:absolute;left:5px;top:22px;z-index:3;font-size:9px;font-weight:900;padding:0 4px;border-radius:5px;background:#312e81;color:#fde68a;border:1px solid #fde68a88}
 .mhl-room .fu{position:absolute;left:5px;bottom:9px;z-index:2;font-size:19px;letter-spacing:1px}
 .mhl-room .pp{position:absolute;bottom:9px;right:10%;z-index:4;display:flex}
@@ -113637,7 +113637,7 @@ const ASSISTANT_LIFE_HOUSE_CSS = `
 .mhl-tile{position:relative;display:block;min-height:58px;border-radius:12px;padding:6px 6px 4px;text-align:left;clip-path:polygon(0 0,88% 0,100% 20%,100% 100%,0 100%);overflow:hidden;box-shadow:inset 0 -4px 0 #0003;color:#fff}
 .mhl-tile:active{transform:scale(.97)}@media (prefers-reduced-motion:no-preference){.mhl-glow{animation:mhl-glow 1.3s ease-in-out infinite}}@keyframes mhl-glow{0%,100%{filter:brightness(1);transform:scale(1)}50%{filter:brightness(1.7) saturate(1.3);transform:scale(1.05)}}.mhl-tile:disabled{opacity:.55}
 .mhl-tile i{font-style:normal;font-size:17px;display:block;line-height:1}.mhl-tile b{display:block;font-size:12px;font-weight:900;margin-top:2px;text-shadow:0 1px 2px #0007;white-space:nowrap}
-.mhl-tile small{display:block;font-size:9px;font-weight:800;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mhl-tile small{display:block;font-size:9px;font-weight:800;line-height:1.2;white-space:normal}.mhl-tile b>span,.mhl-tile small>span{white-space:nowrap}
 .mhl-tile em{position:absolute;right:6px;top:4px;font-style:normal;font-size:9px;font-weight:900;background:#0f172acc;border-radius:999px;padding:0 5px}
 .mhl-watch{background:linear-gradient(135deg,#fb7185,#f59e0b)}.mhl-call{background:linear-gradient(135deg,#38bdf8,#6366f1)}.mhl-give{background:linear-gradient(135deg,#34d399,#16a34a)}.mhl-beat{background:linear-gradient(135deg,#a855f7,#ec4899)}.mhl-card{background:linear-gradient(90deg,#fde68a,#fbbf24,#f59e0b);color:#1e1b4b}.mhl-card-up{margin-left:6px;border-radius:999px;background:#1e1b4b;color:#fde68a;padding:1px 7px;font-size:11px}
 .mhl-icons{display:flex;gap:6px}.mhl-icons button{flex:1;min-height:48px;border-radius:12px;background:rgba(30,41,59,.9);border:1px solid #ffffff2a;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:10px;font-weight:900;color:#e2e8f0}
@@ -113664,8 +113664,9 @@ const ASSISTANT_LIFE_HOUSE_CSS = `
 @media (prefers-reduced-motion:reduce){.mhl-intro{display:none}.mhl-pop .pp>span{animation:none}}
 `;
 const ASSISTANT_LIFE_GRID4_CSS = ASSISTANT_LIFE_HOUSE_CSS.split('\n').filter(l => /^\[data-assistant-life-land="1"\] \.mhl-(room|board)/.test(l)).join('\n').split('[data-assistant-life-land="1"]').join('[data-assistant-life-grid4="1"]') + '\n[data-assistant-life-grid4="1"] .mhl-room .tag b,[data-assistant-life-grid4="1"] .mhl-room[data-assistant-life-room-v2="1"] .tag b{white-space:normal;word-break:auto-phrase;font-size:10.5px;line-height:12px;max-height:36px;text-overflow:clip}[data-assistant-life-grid4="1"] .mhl-room .tag{top:21px}' + '\n.mhl-room .evm{position:absolute;right:2px;bottom:2px;z-index:8;font-size:15px;line-height:1;filter:drop-shadow(0 1px 2px #000a)}';
+const ASSISTANT_LIFE_FX_CSS = '.mh-gfx-chips.left{left:auto;right:10px;align-items:flex-end}';
 function AssistantLifeHouseStyle() {
-  return React.createElement("style", null, ASSISTANT_LIFE_HOUSE_CSS + '\n' + ASSISTANT_LIFE_GRID4_CSS);
+  return React.createElement("style", null, ASSISTANT_LIFE_HOUSE_CSS + '\n' + ASSISTANT_LIFE_GRID4_CSS + '\n' + ASSISTANT_LIFE_FX_CSS);
 }
 function AssistantLifeNames({
   text
@@ -113863,7 +113864,12 @@ function AssistantLifeRoom({
     className: "bb",
     "data-assistant-life-room-bub": true,
     style: {
-      bottom: Math.round(Math.min(40, h * .44)) + 14,
+      ...(w < 110 ? {
+        top: 22,
+        bottom: 'auto'
+      } : {
+        bottom: Math.round(Math.min(40, h * .44)) + 14
+      }),
       fontSize: w < 150 ? 8.5 : undefined
     }
   }, [].concat(state.lonely && !state.sleep && !state.after && w < 150 ? ['💭 さみしいな…'] : state.bub).map((x, i) => React.createElement(React.Fragment, {
@@ -114054,7 +114060,9 @@ function AssistantLifeHouseArt({
     "data-assistant-life-board-item": true
   }, React.createElement(AssistantLifeChunks, {
     text: `${x.t} ${assistantLifeBoardShort(x.text, land ? 2 : 1)}`
-  }))) : React.createElement("p", null, "👀 見守ると ここに残ります")), React.createElement("div", {
+  }))) : React.createElement("p", null, React.createElement(AssistantLifeChunks, {
+    text: "👀 見守ると ここに残ります"
+  }))), React.createElement("div", {
     className: "mhl-door",
     style: {
       left: width * (land ? .62 : .66),
@@ -115910,7 +115918,7 @@ function AssistantLifeHouse({
     }
   }, React.createElement("em", null, "無料"), React.createElement("i", null, "💬"), React.createElement("b", null, "声をかける"), React.createElement("small", {
     "data-assistant-life-today-sub": true
-  }, lonely ? `💭 ${nameOf(lonely[0])}` : 'ひとりの助手に')), React.createElement("button", {
+  }, lonely ? `💭 ${nameOf(lonely[0])}` : React.createElement(React.Fragment, null, React.createElement("span", null, "ひとりの"), React.createElement("span", null, "助手に")))), React.createElement("button", {
     type: "button",
     className: "mhl-tile mhl-give flex-1",
     "data-assistant-life-today-act": "give",
@@ -115945,7 +115953,11 @@ function AssistantLifeHouse({
       if (beatIds[0]) setRoomId(beatIds[0]);
     },
     disabled: !beatIds.length
-  }, React.createElement("i", null, "🎵"), React.createElement("b", null, "モンヒロビート"), React.createElement("small", null, beatIds.length ? `${beatIds.length}人 ・ 券なし` : 'いまはだれも')));
+  }, React.createElement("i", null, "🎵"), React.createElement("b", {
+    style: {
+      whiteSpace: 'normal'
+    }
+  }, React.createElement("span", null, "モンヒロ"), React.createElement("span", null, "ビート")), React.createElement("small", null, beatIds.length ? `${beatIds.length}人 ・ 券なし` : 'いまはだれも')));
   const icons = React.createElement("div", {
     className: "mhl-icons",
     role: "tablist",
