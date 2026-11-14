@@ -91,6 +91,7 @@ const msxLoad = () => {
           techs: typeof ASSISTANT_MASMON_TECHS !== 'undefined' ? ASSISTANT_MASMON_TECHS : null,
           types: typeof MONSTER_TYPE_OF !== 'undefined' ? MONSTER_TYPE_OF : null,
           monsters: typeof ALL_PLAYER_MONSTERS !== 'undefined' ? ALL_PLAYER_MONSTERS : null,
+          lineage: typeof MONSTER_LINEAGE_MAP !== 'undefined' ? MONSTER_LINEAGE_MAP : null, // 血統(同じ血統の子のおすそわけ ev.team.kin。読むだけ)
           regulars: regOk ? msxGlobalConst('MONSUC_REGULARS') : null, cupNames: regOk ? msxGlobalConst('MONSUC_REGULAR_CUPS') : null,
           assist: typeof window !== 'undefined' ? window.MONHERO_SUCCESS_ASSIST || null : null, // 第2版の表(無ければ芯は第1版で動く)
           arc: typeof window !== 'undefined' ? window.MONHERO_SUCCESS_ARC || null : null, // 助手1人分のストーリー(無ければ固有イベントなし・相手えらびは今までの並び)
@@ -128,7 +129,7 @@ const msxNormRun = (raw, SUC) => {
     from: msxIsObj(raw.from) && typeof raw.from.box === 'string' ? { box: raw.from.box.slice(0, 64) } : { base: msxStr(raw.from && raw.from.base, 24, s.species) },
     items: Array.isArray(raw.items) ? raw.items.filter((x) => typeof x === 'string').slice(0, 2) : [],
     used: msxNum(raw.used, 0), // 持ち物を使ったターン(1ターン1個まで)
-    phase: ['main', 'result', 'react', 'issa', 'battle', 'turn', 'over', 'event', 'story', 'awake', 'tevent'].includes(raw.phase) ? raw.phase : 'main',
+    phase: ['main', 'result', 'react', 'issa', 'battle', 'turn', 'over', 'event', 'story', 'awake', 'tevent', 'birth'].includes(raw.phase) ? raw.phase : 'main',
     out: msxIsObj(raw.out) ? raw.out : null, // 直前の結果(中断して戻ったときに結果の画面から続ける)
     log: Array.isArray(raw.log) ? raw.log.filter(msxIsObj).slice(-20) : [],
     startAt: msxNum(raw.startAt, 0),

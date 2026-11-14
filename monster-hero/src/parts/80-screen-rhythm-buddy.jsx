@@ -388,7 +388,7 @@ function RhythmBuddyScoreChart({ recent, songName }) {
         ))}
       </svg>
       <p data-rhythm-buddy-chart-pick className="mt-1 text-[11px] font-black leading-snug text-slate-200">
-        <span className="text-slate-400">{list.length - pickedIndex === 1 ? 'いちばん新しい回' : `${list.length - pickedIndex}回前`}: </span>
+        <span className="text-slate-400">{list.length - pickedIndex === 1 ? '一番新しい回' : `${list.length - pickedIndex}回前`}: </span>
         {songName(picked.songId)} {picked.diffId ? rhythmBuddyDiffShort[picked.diffId] : ''} <b className="text-lime-200">{picked.score.toLocaleString()}点</b>
         <span className="text-slate-400">(満点の{pct(picked)}%)</span>
       </p>
@@ -505,7 +505,7 @@ function RhythmBuddyDetail({ masu, mon, dayKey, songName, onBack, ownerName = ''
       {onUseSeed && (
         <section data-rhythm-buddy-seed className="rounded-xl border border-lime-300/30 bg-slate-950/60 p-2">
           <div className="flex items-center justify-between gap-2">
-            <small className="text-[11px] font-black text-lime-100">🌱 性格のたね <b data-rhythm-buddy-seed-count className="text-amber-200">{seeds}個</b></small>
+            <small className="text-[11px] font-black text-lime-100">🌱 性格の種 <b data-rhythm-buddy-seed-count className="text-amber-200">{seeds}個</b></small>
             <button data-rhythm-buddy-seed-open type="button" disabled={seeds <= 0} onClick={() => { setSeedOpen((v) => !v); setSeedPick(''); }}
               className={`min-h-[34px] rounded-lg px-3 text-[11px] font-black ${seeds > 0 ? 'bg-lime-500 text-slate-950' : 'bg-slate-800 text-slate-500'}`}>{seedOpen ? 'やめる' : '性格を選び直す'}</button>
           </div>
@@ -570,7 +570,7 @@ function RhythmBuddyDetail({ masu, mon, dayKey, songName, onBack, ownerName = ''
         ))}
         {songCount > 5 && (
           <button data-rhythm-buddy-songs-all type="button" onClick={() => setAllSongs((v) => !v)} className="mt-1 min-h-[36px] w-full rounded-lg bg-slate-800 text-[11px] font-black text-slate-200">
-            {allSongs ? '上位5曲だけにする' : `遊んだ曲をすべて見る(${songCount}曲)`}
+            {allSongs ? '上位5曲だけにする' : `遊んだ曲を全て見る(${songCount}曲)`}
           </button>
         )}
       </section>
@@ -660,7 +660,7 @@ function RhythmBuddyListBar({ settings, onOpen, onChange }) {
         <span className="truncate text-[11px] font-black text-white">{lineage ? `${lineage.name}種` : '種族'}</span>
       </button>
       <button type="button" onClick={() => onOpen('filter')} className={`${btn} shrink-0 ${filterCount ? 'border-lime-400 bg-lime-950' : 'border-white/10 bg-slate-900'}`}>
-        <span className="text-[11px] font-black text-white">しぼりこみ</span>
+        <span className="text-[11px] font-black text-white">絞り込み</span>
         {filterCount > 0 && <span className="text-[10px] font-black text-lime-300">{filterCount}</span>}
       </button>
       <button data-rhythm-buddy-view-toggle={settings.view} type="button" onClick={() => onChange({ view: settings.view === 'card' ? 'list' : 'card' })}
@@ -678,11 +678,11 @@ function RhythmBuddyListSheet({ tab, settings, onChange, onTab, onClose }) {
   return (
     <div data-rhythm-buddy-list-sheet className="fixed inset-0 z-[87000] flex flex-col" style={{ backgroundColor: 'rgba(2,6,23,0.98)', paddingTop: 'var(--mh-sa-top)' }}>
       <div className="flex shrink-0 items-center gap-2 border-b border-white/10 p-4">
-        <h3 className="flex-1 text-base font-black text-white">並べ替え・しぼりこみ</h3>
+        <h3 className="flex-1 text-base font-black text-white">並べ替え・絞り込み</h3>
         <button type="button" aria-label="閉じる" onClick={onClose} className="min-h-[44px] min-w-[44px] rounded-full bg-white/5 text-lg font-black">✕</button>
       </div>
       <div className="flex shrink-0 gap-2 px-4 pt-3">
-        {[{ key: 'sort', label: '並べ替え' }, { key: 'lineage', label: '種族' }, { key: 'filter', label: 'しぼりこみ' }].map((t) => (
+        {[{ key: 'sort', label: '並べ替え' }, { key: 'lineage', label: '種族' }, { key: 'filter', label: '絞り込み' }].map((t) => (
           <button key={t.key} type="button" onClick={() => onTab(t.key)} className={`min-h-[44px] flex-1 rounded-xl text-xs font-black active:scale-95 ${tab === t.key ? 'bg-lime-500 text-slate-950' : 'border border-slate-800 bg-slate-900 text-slate-400'}`}>{t.label}</button>
         ))}
       </div>
@@ -703,7 +703,7 @@ function RhythmBuddyListSheet({ tab, settings, onChange, onTab, onClose }) {
           <div>
             <p className="mb-2.5 text-[10px] leading-relaxed text-slate-400">選んだ種族だけを表示します。並べ替え・しぼりこみはそのまま効きます。</p>
             <div className="grid grid-cols-2 gap-2.5">
-              {[{ id: 'all', label: 'すべて' }, ...lineages.map((l) => ({ id: l.id, label: `${l.name}種` }))].map((opt) => (
+              {[{ id: 'all', label: '全て' }, ...lineages.map((l) => ({ id: l.id, label: `${l.name}種` }))].map((opt) => (
                 <button key={opt.id} type="button" onClick={() => onChange({ lineage: opt.id })} className={chip(settings.lineage === opt.id)}>{opt.label}</button>
               ))}
             </div>
@@ -714,7 +714,7 @@ function RhythmBuddyListSheet({ tab, settings, onChange, onTab, onClose }) {
             <section>
               <h4 className="mb-1.5 text-[11px] font-black text-slate-300">一緒に遊んだか</h4>
               <div className="grid grid-cols-3 gap-2">
-                {[{ id: 'all', label: 'すべて' }, { id: 'yes', label: '遊んだモンスター' }, { id: 'no', label: 'まだのモンスター' }].map((opt) => (
+                {[{ id: 'all', label: '全て' }, { id: 'yes', label: '遊んだモンスター' }, { id: 'no', label: 'まだのモンスター' }].map((opt) => (
                   <button key={opt.id} type="button" onClick={() => onChange({ played: opt.id })} className={chip(settings.played === opt.id)}>{opt.label}</button>
                 ))}
               </div>
@@ -737,7 +737,7 @@ function RhythmBuddyListSheet({ tab, settings, onChange, onTab, onClose }) {
                 ))}
               </div>
             </section>
-            <button type="button" onClick={() => onChange({ lineage: 'all', played: 'all', traits: [], moods: [] })} className="min-h-[44px] w-full rounded-xl bg-slate-700 text-sm font-black">しぼりこみをすべて外す</button>
+            <button type="button" onClick={() => onChange({ lineage: 'all', played: 'all', traits: [], moods: [] })} className="min-h-[44px] w-full rounded-xl bg-slate-700 text-sm font-black">絞り込みを全て外す</button>
           </div>
         )}
       </div>
@@ -902,7 +902,7 @@ function RhythmBuddySheet({ masuMons = [], masuPicker = null, songName, tickets 
               )}
             {pickNote && <p data-rhythm-buddy-multi-note className="text-[10px] font-black text-amber-200">{pickNote}</p>}
             <div className="mt-1 flex gap-1.5">
-              {singleMasu && <button type="button" onClick={() => setDetailId(singleMasu.id)} className="min-h-[44px] shrink-0 rounded-xl bg-slate-700 px-2 text-[11px] font-black">くわしく</button>}
+              {singleMasu && <button type="button" onClick={() => setDetailId(singleMasu.id)} className="min-h-[44px] shrink-0 rounded-xl bg-slate-700 px-2 text-[11px] font-black">詳しく</button>}
               <button data-rhythm-buddy-call-all type="button" disabled={busy || !picks.length || shortTickets > 0} onClick={callAll}
                 className="min-h-[44px] flex-1 rounded-xl bg-gradient-to-b from-lime-400 to-emerald-600 px-3 text-sm font-black text-slate-950 disabled:opacity-40">{picks.length > 1 ? `まとめて呼ぶ(${picks.length}人)` : '呼ぶ'}</button>
             </div>
