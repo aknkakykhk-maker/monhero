@@ -154,21 +154,31 @@ const Audio_ = (() => {
     "audio/bgm-game-over.mp3": "d9fb75a7c827",
     "audio/bgm-grievous-lady.mp3": "28bfeda8d534",
     "audio/bgm-haruka.mp3": "7a7164dbf152",
+    "audio/bgm-home-2.mp3": "71bf51ba1f71",
     "audio/bgm-home-ichika.mp3": "29295336d1af",
     "audio/bgm-humanoid.mp3": "763466fbbf97",
     "audio/bgm-journey.mp3": "816f0cdab93e",
     "audio/bgm-kaze-ga-soyogu-basho.mp3": "e986277401a6",
     "audio/bgm-kiki-issen-short.mp3": "add607be5bec",
     "audio/bgm-kindan-no-resistance.mp3": "efca5c01d0b7",
+    "audio/bgm-lamia.mp3": "faaab8302652",
     "audio/bgm-light-player-short.mp3": "5d59fb7eb1fb",
     "audio/bgm-light-player.mp3": "c07830c2e774",
     "audio/bgm-makutsu-no-senritsu.mp3": "8db199451f0b",
     "audio/bgm-market.mp3": "a85ba65f90e7",
+    "audio/bgm-megalovania-sans.mp3": "6fafc978fa05",
+    "audio/bgm-megalovania-smash.mp3": "1bbb6aea8bb2",
     "audio/bgm-menu.mp3": "a6aef603fd6a",
     "audio/bgm-monster-hero-theme-alt.mp3": "6b4eb065c2e2",
     "audio/bgm-monster-hero-theme.mp3": "083a1d9db281",
     "audio/bgm-monster-short.mp3": "415b771e9bbf",
     "audio/bgm-monster.mp3": "6b190639c3fa",
+    "audio/bgm-monsuc-cup.mp3": "4e4cf0ca4ae6",
+    "audio/bgm-monsuc-lose.mp3": "eff2057aa49e",
+    "audio/bgm-monsuc-menu.mp3": "7fdee580d090",
+    "audio/bgm-monsuc-rest.mp3": "3bf37f96821c",
+    "audio/bgm-monsuc-training.mp3": "9bfeb31fb38a",
+    "audio/bgm-monsuc-win.mp3": "b708c1a263da",
     "audio/bgm-mou-hitotsu-no-sekai-e.mp3": "633ed0ee2501",
     "audio/bgm-nothing-without-you.mp3": "4cb261cf1cd9",
     "audio/bgm-only-my-railgun.mp3": "62fb741fe3f1",
@@ -186,6 +196,8 @@ const Audio_ = (() => {
     "audio/bgm-rose.mp3": "1a030e41df75",
     "audio/bgm-sad-song-short.mp3": "2ff39f50eddd",
     "audio/bgm-sad-song.mp3": "47d16979bb90",
+    "audio/bgm-saudade-short.mp3": "3491f3c33de4",
+    "audio/bgm-saudade.mp3": "463d9176b94f",
     "audio/bgm-senjou-no-shippuu.mp3": "dfcd5d833fec",
     "audio/bgm-sheriruth-proto.mp3": "a6f3c4e66746",
     "audio/bgm-sheriruth.mp3": "5044be9b5c0d",
@@ -787,6 +799,7 @@ const Audio_ = (() => {
   // そこで、se.* は印が立っているあいだ何もしない口にし、カードの画面は印を見ない fgSe.* から鳴らす。
   // 音量の保存値・seBus には触らない(手で変えた音量は上書きしない)。
   const setBackgroundSeQuiet = (on) => { backgroundSeQuiet = !!on; };
+  const isBackgroundSeQuiet = () => backgroundSeQuiet; // 検査が「裏のバトルの音を止めているか」を見る口(ゲームの動きは変えない)
   const fgSe = {
     trainingDice: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t=Tone.now(); const n=new Tone.NoiseSynth({noise:{type:'brown'},envelope:{attack:.001,decay:.22,sustain:0},volume:-15}).connect(seBus); n.triggerAttackRelease('8n',t); setTimeout(()=>{try{n.dispose();}catch(e){}},500); },
     trainingDecide: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const s=new Tone.Synth({volume:-14}).connect(seBus); s.triggerAttackRelease('C6','16n'); setTimeout(()=>{try{s.dispose();}catch(e){}},300); },
@@ -875,5 +888,5 @@ const Audio_ = (() => {
       masterOut.gain.linearRampToValueAtTime(1, at + 2);
     } catch (e) { masterOut.gain.value = 1; }
   };
-  return { setVideoHold, setStoryEndFade, setStoryOpenFade, playSeFile, preloadSE, playBGM, fadeToBGM, stopBGM, setBgmOnce, startRhythmTrack, previewBGM, stopPreview, setEnabled, isEnabled, setSeVolume, setBgmVolume, unlock, resumeIfNeeded, setPageHidden, preloadBGM, prepareBGM, prepareSE, playJingle, ensurePlaying, isContextRunning, diagnose, playTestTone, repair, se, fgSe, setBackgroundSeQuiet };
+  return { currentBgmKey: () => currentKey, isBackgroundSeQuiet, setVideoHold, setStoryEndFade, setStoryOpenFade, playSeFile, preloadSE, playBGM, fadeToBGM, stopBGM, setBgmOnce, startRhythmTrack, previewBGM, stopPreview, setEnabled, isEnabled, setSeVolume, setBgmVolume, unlock, resumeIfNeeded, setPageHidden, preloadBGM, prepareBGM, prepareSE, playJingle, ensurePlaying, isContextRunning, diagnose, playTestTone, repair, se, fgSe, setBackgroundSeQuiet };
 })();

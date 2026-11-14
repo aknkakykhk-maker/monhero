@@ -1,3 +1,4 @@
+require('../shared-serve'); // :8899 が無ければ立てる(単独で回したとき。2026-11-11)
 const TOOLS_DIR = require('path').join(__dirname, '..'); // tools/ 直下。分類フォルダから見た1つ上
 // 390x844 の実ブラウザで HOME → 難易度画面の主要導線と例外ゼロを確認する。
 // 実行前に `python3 tools/serve.py` でリポジトリルートを配信する。
@@ -24,6 +25,7 @@ const URL = process.env.SMOKE_URL || 'http://localhost:8899/monster-hero/index.h
     put('mh_breeder_icon', 'Mocchi');
     put('mh_onboarded', true);
     put('mh_tutorial_seen_v1', true);
+    put('mh_battle_tutorial_seen_v1', true); // 入口3画面の一言(2026-11-11)が下に出て波の行を覆うのを防ぐ(れんしゅうを全部見た人には出ない)
   });
   await page.addInitScript(eventStorySeed());
   // 新曲などの告知の会話が画面を覆うと、モンヒロバトルのボタンを押せずに止まる(2026-10-05)

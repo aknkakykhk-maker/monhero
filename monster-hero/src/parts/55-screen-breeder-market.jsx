@@ -28,6 +28,9 @@
 // MFバトルカードの売り場で、パック・スターターを買って開ける画面へ行き、戻ったときの位置(2026-10-30 社長「パックを買って戻ったら上に戻される」)。
 // 開ける画面へ行くとこの画面ごと消える(state も消える)ので、画面の外の変数に覚える。保存はしない(遊んでいる間だけ)。
 // 覚え方はフレンドの一覧(#4313)と同じ: 押す前のスクロールの位置と、押した物(行の目印)。戻ったら位置を戻し、押した物が見えなければ真ん中へ寄せる
+// 助手の解放(2026-11-11)。これから始める人で、まだ助手でない助手のアシストカードの札に「使うと助手になります」を1行(18-assistant-partner.jsx)
+const marketPartnerRibbon = (cardId) => (cardId && typeof assistantPartnerLockedNow === 'function' && assistantPartnerLockedNow(cardId)
+  && typeof ASSISTANTS !== 'undefined' && ASSISTANTS.some(a => a && a.id === cardId)) ? '🤝 使うと助手になります' : null;
 const CARD_SHOP_ROW_ATTRS = ['data-card-shop-pack','data-card-shop-starter','data-card-shop-disc','data-card-shop-assist'];
 const cardShopScrollMemo = { pending:false, tab:null, top:0, row:null };
 function BreederMarketScreen({
@@ -49,6 +52,11 @@ function BreederMarketScreen({
   const [sheet,setSheet]=useState(null);
   const [sheetQuantity,setSheetQuantity]=useState(1);
   const [sheetPending,setSheetPending]=useState(false);
+  // 助手がマーケットにいるときの「今日のおすすめ品1割引き」(20-market-notices-help.jsx の assistantMarketPerkToday)。
+  // 保存の読み込みが済んだら描き直す。割引き中の品は cost を9割にした写しに差し替え、画面の値段も買う処理の値段もそれを読む
+  const [perkTick,setPerkTick]=useState(0);
+  React.useEffect(()=>{ let alive=true; Promise.resolve(assistantMarketPerkLoad()).then(()=>{ if(alive) setPerkTick(n=>n+1); }); return ()=>{ alive=false; }; },[]);
+  const perkToday=(()=>{ void perkTick; const p=assistantMarketPerkToday(); return p&&!p.used?p:null; })();
   // 円盤石を買えたときの「円盤石から再生」の演出(DiscRebirthFx)。{ monsterId, discIcon }
   const [rebirth,setRebirth]=useState(null);
   // ダイヤショップ以外の売り場のタブ(2026-10-01 ユーザー指示「ビートPの商品をタブわけして / マーケット全体的に統一させて」)。
@@ -108,7 +116,8 @@ function BreederMarketScreen({
   const psycheHave = ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID);
   const shardHave = ownedItemCount(ownedItems, HERO_PROOF_SHARD_ITEM_ID);
   const proofHave = ownedItemCount(ownedItems, HERO_PROOF_ITEM_ID);
-  const marketItems = BREEDER_MARKET_ITEMS.filter(item=>item.shop!==false);
+  const marketItems = BREEDER_MARKET_ITEMS.filter(item=>item.shop!==false)
+    .map(item=>perkToday&&item.id===perkToday.itemId?{...item,cost:perkToday.discountedCost,perk:true,perkBaseCost:item.cost}:item);
   // 着替え(2026-10-03)。売る服が1着も無いうちは「着替え」タブごと出さない(空のタブを見せない)
   const costumeItems = marketItems.filter(item=>item.type==='costume');
   const diamondTabs = [
@@ -148,7 +157,7 @@ function BreederMarketScreen({
     breeder:{ color:'#d97706', tabs:[{key:'face',label:'アイコン'},...(hasDiscIconCards?[{key:'disc',label:'円盤石アイコン'}]:[]),...(breederFrameItems.length?[{key:'frame',label:'フレーム'}]:[])] },
     exchange:{ color:'#059669', tabs:[{key:'psyche',label:'プシュケー'},{key:'proof',label:'勇者の証'}] },
     card:{ color:'#ea580c', tabs:[{key:'pack',label:'パック'},{key:'tactics',label:'戦術カード'},{key:'starter',label:'スターター'},{key:'disc',label:'円盤石'},{key:'assist',label:'アシスト'}] },
-    event:{ color:'#7c3aed', tabs:[{key:'disc',label:'円盤石'},{key:'assist',label:'アシスト'},...(RHYTHM_EVENT_POINT_SHOP_FRAME_OFFERS.length?[{key:'frame',label:'フレーム'}]:[]),...(RHYTHM_EVENT_POINT_SHOP_COSTUME_OFFERS.some(offer=>offer.available!==false)?[{key:'costume',label:'着替え'}]:[]),...(RHYTHM_EVENT_POINT_SHOP_ICON_OFFERS.some(offer=>offer.available!==false)?[{key:'icon',label:'アイコン'}]:[]),{key:'item',label:'アイテム'},...((typeof RELEASE_FLAGS!=='undefined'&&RELEASE_FLAGS.assistantLife===true&&RELEASE_FLAGS.assistantLifeFurniture===true)?[{key:'furniture',label:'家具'}]:[]),{key:'material',label:'強化素材'}] },
+    event:{ color:'#7c3aed', tabs:[{key:'disc',label:'円盤石'},{key:'assist',label:'アシスト'},...(RHYTHM_EVENT_POINT_SHOP_FRAME_OFFERS.length?[{key:'frame',label:'フレーム'}]:[]),...(RHYTHM_EVENT_POINT_SHOP_COSTUME_OFFERS.some(offer=>offer.available!==false)?[{key:'costume',label:'着替え'}]:[]),...(RHYTHM_EVENT_POINT_SHOP_ICON_OFFERS.some(offer=>offer.available!==false)?[{key:'icon',label:'アイコン'}]:[]),{key:'item',label:'アイテム'},{key:'stamp',label:'スタンプ'},...(typeof rhythmPaidSongList==='function'&&rhythmPaidSongList().length?[{key:'song',label:'曲'}]:[]),...((typeof RELEASE_FLAGS!=='undefined'&&RELEASE_FLAGS.assistantLife===true&&RELEASE_FLAGS.assistantLifeFurniture===true)?[{key:'furniture',label:'家具'}]:[]),{key:'material',label:'強化素材'}] },
   };
   const activeSectionTab = (section) => {
     const tabs=SECTION_TABS[section]?.tabs||[];
@@ -169,6 +178,9 @@ function BreederMarketScreen({
     .map(offer=>rhythmEventPointShopOfferWithPass(offer, legendPassActive===true));
   // 優待パス還元の札がある一覧では、ほかの札にも同じ高さの段を取って、札の高さをそろえる
   const legendPassSlot = eventItemOffers.some(offer=>offer.legendPass===true);
+  // 助手ライフの道具・家具の札には、印と上がる物の段を出す(段の高さは同じ一覧の札でそろえる)
+  const lifeNoteOf = (offer)=>typeof assistantLifeShopNoteOf==='function'?assistantLifeShopNoteOf(offer.itemId):null;
+  const noteSlotOn = legendPassSlot || eventItemOffers.some(offer=>!!lifeNoteOf(offer));
   // scroll … タブが6つ以上のときは1行に並べ、はみ出す分は横へ送る(2段にすると品物が見える高さが減る。2026-10-26 ビートP交換所の7つ)
   //   見た目と押し方は ScreenTabs(41-screen-ui.jsx)と同じ
   //   ★ここに mh-scroll を付けない: 横画面の組み替えは「根の直下の .mh-scroll」を右の一覧(全高)にするので、タブが右いっぱいに伸びて品物へ重なる(2026-10-27)
@@ -218,6 +230,8 @@ function BreederMarketScreen({
       if(result===true||result?.ok){
         // 円盤石なら、買えたあとに「円盤石から再生」を出す(円盤石は1体1回なので、その子を初めて手に入れたときだけ)
         if(sheet.rebirth&&ALL_PLAYER_MONSTERS[sheet.rebirth.monsterId]) setRebirth(sheet.rebirth);
+        // 割引き中の品を買えたら、今日の1割引きは使用済み(買えたときだけ。買えなかったら残る)
+        if(sheet.item&&sheet.item.perk){ await assistantMarketPerkMarkUsed(); setPerkTick(n=>n+1); }
         setSheet(null);
       }
     } finally { sheetBusyRef.current = false; setSheetPending(false); }
@@ -245,10 +259,10 @@ function BreederMarketScreen({
     const exchangeItem=isSoulRankRespec?{...item,currency:'heroProof',cost:1}:null;
     return (
       <React.Fragment key={item.id}>
-        {showBase&&<MarketProductCard previewIcon={previewIcon}
+        {showBase&&<MarketProductCard previewIcon={previewIcon} ribbon={item.perk?'🛍 助手のおすすめ 1割引き':marketPartnerRibbon(item.type==='assist'?item.id:null)}
           item={item} owned={owned} comingSoon={comingSoon||frameLocked||giftLocked} comingSoonLabel={giftLocked?String(item.giftHow||'プレゼントで届きます').split(/(?<=を)/):item.type==='costume'&&comingSoon?marketCostumeSoonLabel(item):frameLocked?(profileFrameConditionShort(profileFrameById(item.id),'breederPoint')||'条件を達成すると買えます'):undefined} canBuy={canBuy}
           onZoom={()=>onZoomIcon(item)}
-          onBuy={()=>openSheet({ item, stackable:item.type==='item', confirm:(count)=>onBuy(item,count),
+          onBuy={()=>openSheet({ item, stackable:item.type==='item'&&!item.perk, confirm:(count)=>onBuy(item,count),
             rebirth:item.type==='disc'?{monsterId:item.id,discIcon:item.icon}:null })}
           detail={detailMon||detailTeaching}
           onDetail={()=>detailMon?.draft&&onOpenUpcomingDetail?onOpenUpcomingDetail(item):onOpenDetail(item,detailMon,detailTeaching)}
@@ -296,10 +310,10 @@ function BreederMarketScreen({
           {/* 4枚とも名前を語の切れ目で2行にそろえる(「ダイヤショッ／プ」「アイテム交換／所」と語の途中で折れていた) */}
           {[
             // 所持数は9桁(1億)から縮めて出す(N5)。細かい数は各ショップの中の大きな欄で見られる
-            {key:'diamond',emoji:'💎',label:'ダイヤショップ',titleLines:['ダイヤ','ショップ'],value:compactCount(gold),hint:'ダイヤで購入',border:'border-cyan-400/35',title:'text-cyan-200',arrow:'text-cyan-300/80'},
-            {key:'breeder',emoji:'🪙',label:'ブリーダーP交換所',titleLines:['ブリーダーP','交換所'],value:compactCount(breederPoints),hint:'Lv.UPで獲得',border:'border-amber-400/35',title:'text-amber-200',arrow:'text-amber-300/80'},
-            {key:'exchange',emoji:'🔄',label:'アイテム交換所',titleLines:['アイテム','交換所'],value:`🌈${ownedItemCount(ownedItems,BREAKTHROUGH_ITEM_ID).toLocaleString()}`,hint:'所持している虹のプシュケー',border:'border-emerald-400/35',title:'text-emerald-200',arrow:'text-emerald-300/80'},
-            {key:'event',emoji:'🎟️',label:'ビートP交換所',titleLines:['ビートP','交換所'],value:compactCount(safeEventPoints),hint:'所持ビートP',border:'border-violet-400/35',title:'text-violet-200',arrow:'text-violet-300/80'},
+            {key:'diamond',emoji:'💎',label:'ダイヤショップ',titleLines:['ダイヤ','ショップ'],value:compactCount(gold),hint:'円盤石・アシスト・アイテムが買える',border:'border-cyan-400/35',title:'text-cyan-200',arrow:'text-cyan-300/80'},
+            {key:'breeder',emoji:'🪙',label:'ブリーダーP交換所',titleLines:['ブリーダーP','交換所'],value:compactCount(breederPoints),hint:'アイコン・フレームが買える(Pはレベルアップで獲得)',border:'border-amber-400/35',title:'text-amber-200',arrow:'text-amber-300/80'},
+            {key:'exchange',emoji:'🔄',label:'アイテム交換所',titleLines:['アイテム','交換所'],value:`🌈${ownedItemCount(ownedItems,BREAKTHROUGH_ITEM_ID).toLocaleString()}`,hint:'プシュケー・勇者の証と交換',border:'border-emerald-400/35',title:'text-emerald-200',arrow:'text-emerald-300/80'},
+            {key:'event',emoji:'🎟️',label:'ビートP交換所',titleLines:['ビートP','交換所'],value:compactCount(safeEventPoints),hint:'円盤石・アシストなどと交換',border:'border-violet-400/35',title:'text-violet-200',arrow:'text-violet-300/80'},
             ...(cardShop?[{key:'card',emoji:'🃏',label:'MFバトルカード',titleLines:['MFバトル','カード'],value:`🎟️${compactCount(cardShop.point)}`,hint:'ビートPでパックなど',border:'border-orange-400/35',title:'text-orange-200',arrow:'text-orange-300/80'}]:[]),
           ].map(section=>(
             <button
@@ -407,7 +421,7 @@ function BreederMarketScreen({
                 const teaching=TEACHING_CARDS.find(t=>t.id===offer.cardId)||null;
                 const item={ id:offer.id, name:offer.name, emoji:'🃏', icon:card?.icon, type:'assist', currency:'cardPoint', cost:offer.cost };
                 const owned=isItemOwned({ id:offer.cardId, type:'assist' });
-                return <MarketProductCard key={offer.id} dataAttrs={{'data-card-shop-assist':offer.id}}
+                return <MarketProductCard key={offer.id} dataAttrs={{'data-card-shop-assist':offer.id}} ribbon={marketPartnerRibbon(offer.cardId)}
                   item={item} owned={owned} comingSoon={false}
                   canBuy={!owned&&cp>=offer.cost&&!busy}
                   disabled={purchaseProcessing}
@@ -450,9 +464,14 @@ function BreederMarketScreen({
               <span data-legend-pass-offer className="whitespace-nowrap text-[9px] font-bold text-slate-400 line-through tabular-nums">{offer.baseCost.toLocaleString()}P→{offer.baseGrantAmount.toLocaleString()}{offer.unit}</span>
               <span className="whitespace-nowrap text-[10px] max-[359px]:text-[9px] font-black text-amber-200 tabular-nums">{offer.cost.toLocaleString()}P→{offer.grantAmount.toLocaleString()}{offer.unit}</span>
             </>:null;
+            const lifeNoteDef=offer.legendPass?null:lifeNoteOf(offer);
+            const lifeNote=lifeNoteDef?<>
+              <span data-market-life-mark className={`whitespace-nowrap rounded-full px-1.5 text-[9px] font-black leading-[14px] ${lifeNoteDef.tone==='f'?'bg-emerald-200 text-emerald-950':lifeNoteDef.tone==='p'?'bg-pink-300 text-pink-950':'bg-amber-400 text-slate-900'}`}>{lifeNoteDef.mark}</span>
+              {lifeNoteDef.lines.map((t,i)=><span key={i} className={`whitespace-nowrap text-[10px] max-[359px]:text-[9px] font-bold tabular-nums ${i===1&&lifeNoteDef.tone!=='a'?'text-slate-400':'text-amber-200'}`}>{t}</span>)}
+            </>:null;
             return <MarketProductCard key={offer.id} dataAttrs={{'data-event-point-offer':offer.id,...(/^peer_/.test(String(offer.itemId||''))?{'data-event-point-life-gift':offer.itemId}:{})}}
               item={item} owned={false} comingSoon={false}
-              noteSlot={legendPassSlot} note={passNote}
+              noteSlot={noteSlotOn} note={passNote||lifeNote}
               canBuy={safeEventPoints>=offer.cost&&!busy}
               disabled={purchaseProcessing}
               onZoom={()=>onZoomIcon(item)}
@@ -489,7 +508,7 @@ function BreederMarketScreen({
             const teaching=TEACHING_CARDS.find(t=>t.id===offer.cardId)||null;
             const item={ id:offer.id, name:offer.name, emoji:'🃏', icon:card?.icon, type:'assist', currency:'beatPoint', cost:offer.cost };
             const owned=isItemOwned({ id:offer.cardId, type:'assist' });
-            return <MarketProductCard key={offer.id} dataAttrs={{'data-event-point-assist':offer.id}}
+            return <MarketProductCard key={offer.id} dataAttrs={{'data-event-point-assist':offer.id}} ribbon={marketPartnerRibbon(offer.cardId)}
               item={item} owned={owned} comingSoon={false}
               canBuy={!owned&&safeEventPoints>=offer.cost&&!busy}
               disabled={purchaseProcessing}
@@ -499,6 +518,10 @@ function BreederMarketScreen({
               onDetail={()=>teaching&&onOpenDetail(card||item,null,teaching)}
             />;
           })}
+          {/* マルチのスタンプ(2026-11-11 社長「いっぱい作って、カスタマイズできるようにしたい」「ビートPで買い足す」)。品と値段は 39-multi-stamp.jsx の表 */}
+          {/* 新曲(2026-11-13)。有料の印を付けた曲だけ並ぶ。印が1曲も無ければタブも出ない(39-rhythm-song-owned.jsx) */}
+          {eventTab==='song'&&<RhythmSongShopList points={safeEventPoints} busy={busy} disabled={purchaseProcessing} openSheet={openSheet} onExchange={onExchangeEventPoints} onZoomIcon={onZoomIcon}/>}
+          {eventTab==='stamp'&&<MultiStampShopList points={safeEventPoints} busy={busy} disabled={purchaseProcessing} openSheet={openSheet} onExchange={onExchangeEventPoints} onZoomIcon={onZoomIcon}/>}
           {/* 交換できる助手の着替え(2026-10-03)。いまは売る服が無いので何も並ばない(タブも出ない)。
               服に price:{beatPoint:◯◯} を書くと、ここへ自動で並ぶ。1着につき1回、持っていれば「所持済み」 */}
           {eventTab==='costume'&&RHYTHM_EVENT_POINT_SHOP_COSTUME_OFFERS.filter(offer=>offer.available!==false).map(offer=>{

@@ -25,6 +25,10 @@
       "role": "Audio_(BGM・ジングル・SE・AudioContext の復帰。音の唯一の入口)"
     },
     {
+      "file": "14-success-sound.jsx",
+      "role": "モンヒロサクセスの音を鳴らす口(SuccessSound・useSuccessSound。割り当て表は data/success-sounds.js)"
+    },
+    {
       "file": "15-dye-and-art.jsx",
       "role": "染色(色ID・領域マスク解析・再着色・キャッシュ)、模様、モンスターの絵とアイコンの部品"
     },
@@ -40,6 +44,11 @@
     {
       "file": "18-player-rank.jsx",
       "role": "プレイヤーのランク(ビートランク・カードランク共通)の計算と、ビートランクの1曲の経験値・ごほうびの決まり",
+      "pure": true
+    },
+    {
+      "file": "18-assistant-partner.jsx",
+      "role": "助手の解放(これから始める人はアシストカードを40回使うと助手になる)の判定と、いまの値の入口",
       "pure": true
     },
     {
@@ -75,6 +84,10 @@
       "role": "エイキの桜・パンドラの雷などバトル演出の部品"
     },
     {
+      "file": "24-battle-hit-feel.jsx",
+      "role": "バトルの手ごたえ(当たりの間・会心と撃破の見せ方・効果の札の種類)。敵に出た数字の札とライフを読むだけで、計算には触れない。state は持たない"
+    },
+    {
       "file": "24-sorashido-copy-view.jsx",
       "role": "アシカ「ソラシドの自動化」の見せ方の部品(コピーの演出・次に使うカードの札・コピーの手札の窓)。状態は持たず、バトル部が呼ぶ"
     },
@@ -105,6 +118,10 @@
     {
       "file": "30-rhythm-play.jsx",
       "role": "音ゲーの演奏画面 RhythmTapTest(rAF 1本・判定・描画)と振動・サイドの応援。タイミング基盤は触らない"
+    },
+    {
+      "file": "30-rhythm-preview-hands.jsx",
+      "role": "オプションの「▶ 見てみる」の見本を自動で叩く手(ふつうの指と同じポインタの合図を送るだけ。判定には触らない)"
     },
     {
       "file": "31-debug-ui.jsx",
@@ -196,6 +213,14 @@
       "role": "ビートランク・カードランクの全国ランキングの通信層(rhythm_beat_ranks・card_ranks。持ち主の鍵で書く *_rank_put)"
     },
     {
+      "file": "39-rhythm-song-owned.jsx",
+      "role": "モンヒロビートの新曲をビートPで1曲ずつ買う仕組み。有料の曲の表(RHYTHM_SONG_PRICES・いまは空)・持っている曲(mh_rhythm_owned_songs_v1)・買う処理・交換所の「曲」の売り場・助手が選べる曲"
+    },
+    {
+      "file": "39-multi-stamp.jsx",
+      "role": "マルチのスタンプ(顔×言葉)。持ち物・よく使う枠・送る間隔(MULTI_STAMP)・ビートP交換所の品と交換・マイスタンプの画面。ビートのマルチとカードのマルチから使う"
+    },
+    {
       "file": "40-screen-effects.jsx",
       "role": "画面ライフサイクル。タイマー・リスナーの登録簿 useScreenEffects(画面専用は画面を離れたら止め、進行は止めない)"
     },
@@ -220,12 +245,20 @@
       "role": "上がる値の演出(仲良し度・絆Lv・ブリーダーLv など。小=札・中=アイテムのカード・大=Lvアップ)。見た目だけ"
     },
     {
+      "file": "45-quick-anywhere-float.jsx",
+      "role": "裏クイック(どこでも回す)の小さな帯の置き場所。右下を第一に、画面のボタンにかからない隅を選ぶ。見た目だけ"
+    },
+    {
       "file": "50-error-boundary.jsx",
       "role": "画面のエラー境界 MhErrorBoundary と、デバッグ用にわざと例外を投げる部品"
     },
     {
       "file": "51-screen-settings.jsx",
       "role": "画面: 設定(SETTINGS)。MonsterHeroGame から切り出した1画面目"
+    },
+    {
+      "file": "51-home-install-guide.jsx",
+      "role": "「ホーム画面に追加」の案内(iPhone の Safari だけ・データ引き継ぎとセット・mh_home_screen_guide_v1)"
     },
     {
       "file": "52-mission-daily-line.jsx",
@@ -262,6 +295,10 @@
     {
       "file": "59-screen-masu-mons.jsx",
       "role": "画面: マスモン一覧(MASU_MONS)。一覧を出すだけで保存に触らない"
+    },
+    {
+      "file": "59-assistant-partner-fx.jsx",
+      "role": "画面: 助手の解放の演出(カードが満ちる→影→立ち絵と一言→できるようになったこと)。見た目だけで保存に触らない"
     },
     {
       "file": "61-screen-masu-regen-donation.jsx",
@@ -364,6 +401,10 @@
       "role": "クイック・AUTO設定・裏周回の一度きりの案内(QuickGuideOverlay・quickGuidePick)と誘導の回数。保存は mh_quick_guide_seen_v1・mh_quick_nudge_v1・mh_card_auto_intro_seen_v1 の新しいキーだけ"
     },
     {
+      "file": "56-monhero-success-fx.jsx",
+      "role": "モンヒロサクセスの育てる子の演出の部品(画面は持たない): MsxLiveMon(待機アニメのリグ+気分8つの姿勢・ときどきのしぐさ・訓練の結果/叱る/褒めるの反応・ふきだしの声)・MsxFxMoment(訓練Lvアップ・技を覚えた・大会の勝ち負け・ゲームオーバー・引退の短い演出)・MsxSceneLight(季節と時間の光)。1.2秒まで・押せばとばす・動きを減らす設定では止まった姿。保存なし"
+    },
+    {
       "file": "56-assistant-life.jsx",
       "role": "助手たちの今: 時間ごとに助手1人ずつの気分・したいこと・だれといるかを決める仕組みと、遊んだ量の「にぎわい」(段で助手どうしの仲良くなり方が変わる)。公開の印 assistantLife の後ろ。保存は mh_assistant_life_v1・mh_assistant_life_play_v1 だけ"
     },
@@ -376,12 +417,28 @@
       "role": "助手ライフの「📋 みんなの居場所」の地図(案A・2026-11-08 社長): HOME の画面そのもの(同じ絵・同じ札の部品と位置)に、助手が小さな全身で立つ。町だけの場所は同じ形の札を絵の中の建物に。場所を押すと、いる助手とできることのシート。公開の印 assistantLife の後ろ。何も保存しない"
     },
     {
+      "file": "56-assistant-life-finds.jsx",
+      "role": "助手ライフの拾い物・贈り物(2026-11-14 社長): 助手が出かけ先から帰った・家で誰かと過ごした・マスモンが修行から戻ったときに、モンヒロサクセスの持ちこみアイテムが手に入る(1日2個まで)。公開の印 monheroSuccess が偽のあいだは何もしない。新しいキー mh_msx_find_v1(1日の数・直前の居場所・知らせの待ち)と、持ちこみの数 meta.items への +1 だけを保存する"
+    },
+    {
       "file": "56-assistant-life-roomview.jsx",
       "role": "助手の部屋を大きく見る(2026-11-08 社長 案A): 部屋の絵(壁・床・窓・置いた家具)に助手が立ち(①色味と影 ②腰から下は家具の後ろ ③見えている体で大きさ)、マスモン全部が床を歩く。部品 AssistantLifeRoomScene は見せるだけで、部屋のシートが上(横は左)に置く。フレンドの家でも使える形。何も保存しない"
     },
     {
       "file": "56-assistant-life-ux.jsx",
       "role": "助手ライフの作り直し(2026-11-11 社長・LIFE-UX-V3-PLAN.md)の新UIだけの部品: 部屋の「その助手とできること」1列(AssistantLifeDoRow)と仲良し度の道のり(AssistantLifeBondRoad)。何も保存しない"
+    },
+    {
+      "file": "56-assistant-life-guide.jsx",
+      "role": "助手ライフ「やると何が得か」の見せ方(2026-11-11 社長が B+C と案1 を選んだ)の新UIだけの部品: 家のいちばん上の3行(AssistantLifeBenefitBoard)・「きずな」先頭のごほうびの道のり(AssistantLifeRewardRoad)・初めて開いた人への1枚(AssistantLifeFirstGuide)。保存は「見た」の印 mh_assistant_life_guide_seen_v1 だけ"
+    },
+    {
+      "file": "56-assistant-life-partner.jsx",
+      "role": "助手ライフの「町の人」(2026-11-11 社長の決め E・開発部カイホウ docs/progress/assistant-unlock/DESIGN.md): 助手になる前の助手は町・家に出るが、押すと小窓(一言と解放までのあと何回)・話す/贈る/部屋は🔒。判定は開発部の口 assistantPartnerOkNow(無いあいだは全員関われる)。新UIだけ。何も保存しない"
+    },
+    {
+      "file": "56-assistant-life-profile.jsx",
+      "role": "助手紹介(2026-11-11 社長・docs/progress/assistant-life/profile/PLAN.md): 助手ライフの下のタブ「📖 紹介」の一覧(AssistantLifeProfilePage)と1人ずつの紹介(AssistantLifeProfileSheet)。人となり・好き苦手(贈って分かったものだけ)・きずな・台詞の試し聞き。公開の印 assistantLifeProfile の後ろ。データは読むだけで、保存は NEW の印の新しいキー mh_assistant_life_profile_seen_v1 だけ"
     },
     {
       "file": "56-assistant-life-rel.jsx",
@@ -392,16 +449,176 @@
       "role": "部品: 助手ライフの道具(2人に贈る10種類)・好み(好き・ふつう・苦手。贈ると分かる・仲良し度の段で教えてくれる)・贈るシート・部屋の「好きなもの」。保存 mh_assistant_life_gift_day_v1・mh_assistant_life_likes_v1・mh_assistant_life_cheki_v1。2026-11-08 GIFT-PLAN.md"
     },
     {
+      "file": "56-assistant-life-roomedit.jsx",
+      "role": "部品: 助手の部屋の模様替え(大きな部屋の上で家具を指でつまんで動かす・大きさ・向き・色・前後・「◯◯におまかせ」)。公開の印 assistantLifeRoomEdit の後ろ。保存は新しいキー mh_assistant_life_room_layout_v1 と一度きりの写しの印 mh_assistant_life_room_layout_migrated_v1(今の mh_assistant_life_room_v1 は読むだけ)。docs/progress/assistant-life/ROOM-LAYOUT-PLAN.md"
+    },
+    {
       "file": "56-assistant-life-masmon.jsx",
       "role": "部品: 助手ライフの助手のマスモン(一覧・編成・デッキの型・好き苦手・好きな色)。部屋のシートの「🐾 マスモン」から開く。表 ASSISTANT_MASMON_PLAN は tools/assistant/assistant-masmon-import.js が docs/progress/assistant-peer/masmon-plan.json から書く。口 assistantLifeCardStyle(カード部)・assistantLifeTasteOf(ココロ)。何も保存しない"
+    },
+    {
+      "file": "56-assistant-life-masmon-calc.jsx",
+      "role": "部品: マスモンの育成の計算だけ(総合力とランク・合体の上乗せ・成長の型と年齢の伸び・育成方針と寿命・忠誠度と人気の効き・訓練の結果と叱る/褒める・けがの長さ)。助手にも保存にも結びつけない(のちのプレイヤー側の育成からも使う)。年齢は寿命の割合0〜1で受ける"
+    },
+    {
+      "file": "56-assistant-life-masmon-bond.jsx",
+      "role": "部品: 助手のマスモンの絆(総合力とランク・忠誠度・人気・育成方針7段と叱る/褒める・年齢と寿命・成長の型とピーク・訓練の結果・育ちの速さ×3・けが等の長さ)。計算は MASMON_CALC を呼ぶだけ。育成へは受け口 amgbTick/amgbPre/amgbGainMult/amgbAfter/amgbPace、育成ノートへ amgbSabMult/amgbCondLen、修行へ amgbLifeOver。画面 AmgbPanel(くわしい画面)・AmgbPowerTag(一覧)、対戦の人気の口 assistantMasmonBondBattle。公開の印 assistantMasmonBond。保存は新しいキー mh_assistant_masmon_bond_v1 だけ。案 docs/progress/assistant-peer/masmon-plan/POWER.md"
+    },
+    {
+      "file": "56-assistant-life-masmon-grow.jsx",
+      "role": "部品: 助手のマスモンの育成基盤(社長の仕様書の第①段階)。6能力・疲労・ストレス・1日3回(朝・昼・夜)の自主育成・相談。保存は mh_assistant_masmon_grow_v1 だけ(mh_assistant_life_masmon_v1 は読むだけ)。公開の印 assistantMasmonGrow が真のときだけ動く。作りは docs/progress/assistant-peer/masmon-grow/GROW-BASE-PLAN.md"
     },
     {
       "file": "56-assistant-life-masmon-train.jsx",
       "role": "部品: 助手のマスモンの修行と助手の成長(社長の仕様書の第②段階・シュギョウ)。修行6系統・技の熟練と習得(既存の技データだけ)・助手のブリーダー能力・相談・出来事。第①段階(育成)へは受け口 amgtChoose/amgtDo/amgtAfterAct と掛け算、第③段階(戦闘)へは amgtBattleOf/amgtTacticsOf。公開の印 assistantMasmonTrain の後ろ。保存は新しいキー mh_assistant_masmon_train_v1 だけ。案 docs/progress/assistant-peer/masmon-train/TRAIN-PLAN.md"
     },
     {
+      "file": "56-assistant-life-plan.jsx",
+      "role": "部品: 助手ライフの行き先の予定(📅 今日の予定表)。保存 mh_assistant_life_plan_v1(新しいキーだけ)・当てはめ assistantLifePlanApply(純粋)・assistantLifeNow から assistantLifePlanOnDecide・窓 AssistantLifePlanHost・家の上の1行 AssistantLifePlanBand・口 assistantLifePlanOpen/assistantLifePlanRowInfo。公開の印 assistantLifePlan の後ろ。設計 docs/progress/assistant-life/SCHEDULE-PLAN.md"
+    },
+    {
+      "file": "56-assistant-life-body.jsx",
+      "role": "部品: 助手の疲れ・ストレス・けが・病気と🏥病院。assistantLifeNow から assistantLifeBodyOnDecide(サボり・けが・病気は家へ・疲れたら自分で休む)と assistantLifeBodyOnSlot(場所で値を動かす)。予定表へ AssistantLifeBodyPanel・AssistantLifeBodyPlaceStat。マスモンへ口 assistantLifeHospitalSlotsOf・assistantLifePlaceSlotsOf。保存は新しいキー mh_assistant_life_body_v1 だけ。公開の印 assistantLifeBody の後ろ。案 docs/progress/assistant-peer/life-places/PLAN.md"
+    },
+    {
+      "file": "56-assistant-masmon-battle-view.jsx",
+      "role": "部品: 助手のマスモンの対戦を観戦する試作(AssistantMasmonBattleWatch)。入口はデバッグ設定だけ。data/assistant-masmon-battle.js を開いたときにだけ読み、1戦の記録を再生する。何も保存しない。2026-11-11 VIEW-PLAN.md"
+    },
+    {
+      "file": "56-assistant-masmon-battle-beta.jsx",
+      "role": "部品: 助手マスモンの対戦 β(じゅんび→観戦→振り返り→ランキング)。口 assistantMasmonBattleOpen・assistantMasmonBattleRowInfo と入れ物 AssistantMasmonBattleHost。公開の印 assistantMasmonBattleBeta の後ろ(偽のあいだはデバッグ設定から確かめだけ・保存なし)。観戦は 56-assistant-masmon-battle-view.jsx の部品を使い回す。保存は新しいキー mh_assistant_masmon_battle_v1 だけ。案 docs/progress/assistant-peer/masmon-battle/beta/STYLE-PLAN.md"
+    },
+    {
+      "file": "56-monhero-success-cup.jsx",
+      "role": "部品: モンヒロサクセスの大会の見せる部分(組み合わせ表・バトルカード・特別な1話のカットイン・試合の観戦・優勝・負け)。入れ物 MonsucCupShow と口 monsucCupInfo・monsucCupMatch。回3の大会の流れから呼ぶ。何も保存しない・公開の印は持たない。観戦は 56-assistant-masmon-battle-view.jsx の部品を使い回す。案 docs/progress/player-raise/TOURNAMENT.md §9・§15"
+    },
+    {
+      "file": "56-assistant-life-masmon-cheer.jsx",
+      "role": "部品: 助手がモンヒロバトルにいるときの 👀 修行を見る(練習試合・保存しない)・📣 応援する(1回 熟練+1・💗+5・合わせて1日3回)・一人修行の伸び。口 assistantMasmonTrainRowInfo・assistantMasmonCheer・assistantMasmonTrainWatchOpen と入れ物 AssistantMasmonTrainWatchHost(地図に置く)。公開の印 assistantMasmonCheer の後ろ。保存は新しいキー mh_assistant_masmon_cheer_v1。観戦は 56-assistant-masmon-battle-view.jsx・beta の部品を使い回す。案 docs/progress/assistant-peer/masmon-train/cheer/PLAN.md"
+    },
+    {
+      "file": "56-assistant-life-masmon-ranch.jsx",
+      "role": "部品: M/B管理にいる助手のマスモンに、トレーニングチケット/重トレーニングチケットを使ってあげる(時間帯ごとに助手1人1枚・同じマスモンは1日1枚・重トレは上がる/少し上がる/下がる)。口 assistantMasmonRanchRowInfo・assistantMasmonRanchUse・assistantMasmonRanchOpen と入れ物 AssistantMasmonRanchHost(地図)・帯 AssistantMasmonRanchBand(M/B管理)。公開の印 assistantMasmonRanchTicket。保存は新しいキー mh_assistant_masmon_ranch_v1 と育成の st。案 docs/progress/assistant-peer/masmon-ranch-ticket/PLAN.md"
+    },
+    {
+      "file": "56-assistant-life-masmon-plan.jsx",
+      "role": "部品: 助手のマスモンの育成ノート(計画して育てる子 1〜5体・朝昼夜×7日の予定・疲れとストレスの見通し・けが/病気/家出/サボり・看病/さがす/病院)。育成の計算へは受け口 amgpActAt/amgpAfterAct。口 assistantMasmonNoteOpen と入れ物 AssistantMasmonNoteHost・札 AssistantMasmonNoteBand・部屋の近道 AssistantMasmonNoteRoomLink・見る専用 <AssistantMasmonNote readOnly data/>(フレンドの家)。公開の印 assistantMasmonPlan。保存は新しいキー mh_assistant_masmon_plan_v1・mh_assistant_masmon_cond_v1 だけ。案 docs/progress/assistant-peer/masmon-plan/PLAN.md"
+    },
+    {
+      "file": "56-assistant-life-masmon-sleep.jsx",
+      "role": "部品: 助手のマスモンの冬眠(育てた中身を写して箱にしまい、眠らせた助手の枠へ起こす・入れ替えで外れた前の子も並べる・はじめ10体〜育成ノートの段で最大30体)。口 amgsSwap・amgsSyncFormer、画面 AmgsSection・AmgsDetail・AmgsSleepButton(育成ノートの一覧から)。masmon 側の入れ替えは assistantMasmonSleepSwap。公開の印 assistantMasmonSleep。保存は新しいキー mh_assistant_masmon_sleep_v1 だけ。案 docs/progress/assistant-peer/masmon-plan/HIBERNATE.md"
+    },
+    {
+      "file": "56-monsuc-fuse.jsx",
+      "role": "部品: モンヒロサクセスの合体(保存枠の育て終えた子どうし)。計算は芯 MONHERO_SUCCESS の fusePlan。画面 MonsucFuseSheet({ box, saveBox, locked, onDone, onClose })・口 monsucFuse・monsucFuseApply。箱 mh_monsuc_box_v1 の読み書きは保存枠の部品から受け取る。記録は新しいキー mh_monsuc_fuse_v1 を先に書く。公開の印 monheroSuccess。案 docs/progress/player-raise/PLAN.md §3"
+    },
+    {
+      "file": "56-monsuc-awake.jsx",
+      "role": "部品: モンヒロサクセスの覚醒・超覚醒の見せる部分(バトルカードのキラで絵を包む MsxKira・前触れの光 MsxOmenFx・起きたときの演出 MsxAwakeShow・印 msxKiraOf)。計算は芯 MONHERO_SUCCESS の awakeOpen。何も保存しない・公開の印 monheroSuccess の後ろ"
+    },
+    {
+      "file": "56-monsuc-dex.jsx",
+      "role": "部品: モンヒロサクセスの見た出来事(新しいキー mh_monsuc_event_seen_v1 = { v:1, ch, ev }・msxSeenMark)・選択肢の詳細ボタンの中身 MsxChoiceInfo(芯の出来事の表から効果の文を作る・まだは「？？？」)・イベント図鑑 MsxDex(全体と種類ごとの ◯/◯・見たものは読み直せる)。公開の印 monheroSuccess の後ろ"
+    },
+    {
+      "file": "56-monsuc-beta.jsx",
+      "role": "部品: モンヒロサクセスのβ版(選べる助手はみゅあだけ msxBetaAidOk・はじめて開いたとき/はじめての育成を終えたときのβ版の話・最初の1回だけのみゅあの説明の重ね窓 MsxBetaTalk・タイトルの「β」MsxBetaMark)。台本は script/beta-mua.js。新しいキー mh_monsuc_beta_v1 = { v:1, seen }(見た印だけ・足すだけ)。公開の印 monheroSuccess の後ろ"
+    },
+    {
+      "file": "56-monsuc-tevent.jsx",
+      "role": "部品: モンヒロサクセスの訓練のあとの出来事(編成のモンスターとのお話・小さな出来事)を1枚の場面で見せる MsxTrainEvent(背景・2体の立ち絵・見出し・台詞・変わった数字・入り方)。何も保存しない・公開の印 monheroSuccess の後ろ"
+    },
+    {
+      "file": "56-monsuc-actfx.jsx",
+      "role": "部品: モンヒロサクセスの訓練・修行の演出。訓練の結果の前に訓練している場面 MsxTrainAct(約1.3秒・押すと飛ばせる)と、修行の結果の前の段 MsxShugyoStages(助手の一言→STAGE 1→STAGE 2)。何も保存しない・動きを減らす設定では出さない。公開の印 monheroSuccess の後ろ"
+    },
+    {
+      "file": "56-monsuc-kifx.jsx",
+      "role": "部品: モンヒロサクセスの期の区切りの演出 MsxKiShow(「第◯章 終了/◯◯期」と獲得賞金・総合力の増えた分 →「NEXT あと◯ターン」と期のはしご・最上段は頂への道)。新しい期の1ターン目の区切りで1回。何も保存しない(控え run.ki の書きかえは呼ぶ側)。公開の印 monheroSuccess の後ろ"
+    },
+    {
       "file": "56-assistant-life-friend.jsx",
       "role": "助手ライフのフレンドの家との行き来(助手が自分で行く go・フレンドの助手が来る come・プレイヤーが訪ねる look)。家の控えを送る/読む・行き来の記録・置き手紙・お礼・設定・「🏘 フレンド」のページと HOME の印。公開の印 assistantLifeFriend の後ろ。保存は mh_assistant_life_friend_v1・_settings_v1・_known_v1・_intro_v1 の新しいキーだけ。表は assistant_life_friend_switch/_houses/_visits"
+    },
+    {
+      "file": "56-assistant-life-friend-bond.jsx",
+      "role": "助手ライフのフレンドの家の「行く意味・来てもらう意味」(友情とスタンプ・今日の見どころとすてき・お気に入りの棚・お客さん帳・来ている印)。56-assistant-life-friend.jsx が差しこむ。公開の印 assistantLifeFriendBond の後ろ。保存は mh_assistant_life_friend_bond_v1・_fav_v1 の新しいキーだけ。表は assistant_life_friend_likes(足すだけ)"
+    },
+    {
+      "file": "56-assistant-life-friend-sent.jsx",
+      "role": "助手ライフ: 自分が残した置き手紙の見返し(「🏘 フレンド」の家の一覧の下・家の中)と、自由文を送る前の確認。56-assistant-life-friend.jsx が差しこむ。保存は mh_alf_sent_notes_v1 の新しいキーだけ(30日・50通まで)。表は今の行き来の表を読むだけ"
+    },
+    {
+      "file": "56-assistant-life-friend-masmon-share.jsx",
+      "role": "助手ライフ: フレンドの家で、その人の助手のマスモン(Lv・型・6能力・デッキ3つ)をくわしく見せるための送る側と受け取りの形。表 alf_masmon_share(足すだけ)。保存は mh_alf_masmon_share_sent_v1 の新しいキーだけ。公開の印 alfMasmonShareSend"
+    },
+    {
+      "file": "56-assistant-life-friend-masmon-view.jsx",
+      "role": "助手ライフ: フレンドの家の部屋のシートの「🐾 ◯◯のマスモン ›」。表 alf_masmon_share を読んで、キズナの見る専用 AssistantMasmonNote readOnly を出す。公開の印 alfMasmonShareSend の後ろ。保存はしない"
+    },
+    {
+      "file": "56-assistant-masmon-pvp.jsx",
+      "role": "部品: 助手のマスモンのフレンド対戦(非同期PvP・第④段階・タイセン)の端末の口。画面は持たない(画面はミセカタ)。サーバの関数 masmon-pvp を呼ぶ masmonPvpRegister/masmonPvpChallenge/masmonPvpUnregister と、表を読む masmonPvpRatings/masmonPvpFriends。保存は新しいキー mh_masmon_pvp_owner_key_v1(持ち主の鍵)だけ。公開の印 assistantMasmonBattlePvp が真のときだけ通信。設計 docs/spec/MASMON_PVP_SERVER.md"
+    },
+    {
+      "file": "56-monhero-success-css.jsx",
+      "role": "モンヒロサクセス(育成の画面・回2)の見た目 MSX_CSS。見本 docs/progress/player-raise/mock/v3.css・mock.css を .msx の中だけに効くよう切り出したもの"
+    },
+    {
+      "file": "56-monhero-success-store.jsx",
+      "role": "モンヒロサクセスの土台: 公開の印 monheroSuccess(偽)・計算の芯 data/monhero-success.js と台本エンジン data/monhero-success-script-engine.js を開いたときだけ読む・保存の3キー mh_monsuc_run_v1/box_v1/meta_v1 の正規化・台詞を選ぶ・デバッグの入口 MonheroSuccessDebugEntry"
+    },
+    {
+      "file": "56-monhero-success-start.jsx",
+      "role": "モンヒロサクセス: 始めるまでの6段(育てる子・編成・助手(シナリオ)・持ちこみ・名前と染色・確認)。計算は芯の memberOf を呼ぶだけ"
+    },
+    {
+      "file": "56-monhero-success-main.jsx",
+      "role": "モンヒロサクセス: 育成の画面の本体 MonheroSuccessScreen(メイン・訓練を選ぶ・結果・叱る/褒める・イッサ博士・ターンが進む・中断と再開)。大会・修行・引退・合体は回3で「準備中」"
+    },
+    {
+      "file": "56-monhero-success-r3-css.jsx",
+      "role": "モンヒロサクセス 回3(大会・修行・引退・保存枠)の見た目 MSX_R3_CSS。見本 mock/v3.css の「回3以降の止め絵」を .msx .r3 の中だけに効くよう切り出したもの"
+    },
+    {
+      "file": "56-monhero-success-r3-store.jsx",
+      "role": "モンヒロサクセス 回3の土台: 試合を1対1で回す(助手マスモン対戦の芯)・大会の名前・保存枠へしまう(mh_monsuc_box_v1 に足すだけ)・優勝ずみの大会(mh_monsuc_meta_v1 の wonCups)・称号/アシスト/記録帳の表を開いたときに読む・ランキングへ送る口(monsucRankSubmit があれば呼ぶ)"
+    },
+    {
+      "file": "56-monhero-success-r3-cup.jsx",
+      "role": "モンヒロサクセス 回3: 大会(受付 C1・組み合わせ表 B1・バトルカード C2・観戦・負け C4 の砂時計・賞品 B2・ごはん C3)。観戦は 56-assistant-masmon-battle-view.jsx の部品を使い回す"
+    },
+    {
+      "file": "56-monhero-success-r3-quest.jsx",
+      "role": "モンヒロサクセス 回3: 修行(Q1 コースと覚えたい技を選ぶ → Q2 結果)。芯の act({kind:'shugyo'}) を呼ぶだけ"
+    },
+    {
+      "file": "56-monhero-success-r3-retire.jsx",
+      "role": "モンヒロサクセス 回3: 引退(E0 評価・E3 能力ポイント・E1 振り返り・E2 アシスト能力 → 保存枠へ)・ゲームオーバー G1・保存枠の一覧 MsxR3Box(お別れ・フレンドへの貸し出し)・回2から呼ぶ入口 MsxR3"
+    },
+    {
+      "file": "56-monhero-success-arc.jsx",
+      "role": "モンヒロサクセス: 助手1人分のストーリーの画面(頂への道の相手えらび MsxArcPick・試合のあとの掛け合い MsxArcAfter・エンディングとお祝いと特別演出 MsxArcEnding)。表は data/monhero-success-arc.js・計算は芯。保存は芯の s.ending だけ。公開の印 monheroSuccess の後ろ"
+    },
+    {
+      "file": "56-assistant-life-friend-monsuc-lend.jsx",
+      "role": "部品: モンヒロサクセスのフレンドからのレンタル(段取りの回5・オトズレ)の端末の口。画面は持たない(編成・保存枠の画面は開発部)。サーバの関数 masmon-pvp の lend_* を呼ぶ monsucLendSet/monsucLendClear/monsucLendUse/monsucLendClaim と、表 monsuc_lend を読む monsucLendFriends、借りた子を編成の1枠にする monsucLendMember(アシストのポイントを確かめる)。持ち主の鍵は masmon-pvp と同じ。新しい保存キーなし。公開の印 monheroSuccess が真のときだけ通信"
+    },
+    {
+      "file": "56-monhero-success-manual.jsx",
+      "role": "モンヒロサクセス: 自分で操作するバトルの手を選ぶ帯 MsxManualBar(⚔攻撃・🛡防御・↔移動・💪ガッツ回復・交代・オートにする)と進め方 useMsxManualMatch・msxManualOpen。計算は芯 ASSISTANT_MASMON_BATTLE.createMatch/replay。試合の画面(MonsucArena)の下に差す。保存なし。公開の印 monheroSuccess の後ろ"
+    },
+    {
+      "file": "56-monhero-success-arena.jsx",
+      "role": "モンヒロサクセス: 試合の画面 MonsucArena(距離 零・近・中・遠 の4つの立ち位置で間が開閉・技の動きは 24 の SkillFxMotion・SKILL_MOTION_SETS をそのまま・受ける/防ぐ/よける/倒れるはカードバトルの CSS・待機アニメ)。自分操作は useMsxManualMatch と帯 MsxManualBar を下に差す。記録だけなら再生。入れ物 MonsucCupShow(56-monhero-success-cup.jsx)の試合の段。保存なし。公開の印 monheroSuccess の後ろ"
+    },
+    {
+      "file": "56-monsuc-rank.jsx",
+      "role": "モンヒロサクセスの育成完了時の総合力ランキング(クラフト・設計 docs/progress/player-raise/RANKING.md)。送る口 monsucRankSubmit(引退で完了したとき1回)・送り直し monsucRankFlush・読む口 monsucRankRead・画面 MonsucRankScreen(全モンスター/血統別・行を押すと6能力)。サーバは表 monsuc_finishes と関数 monsuc_rank_submit(SQL 202611120003)。持ち主の鍵は masmonPvpSelf を使い回す。保存は新しいキー mh_monsuc_rank_sent_v1・mh_monsuc_rank_queue_v1 だけ。公開の印 monheroSuccess"
+    },
+    {
+      "file": "56-monster-lab.jsx",
+      "role": "モンスター画面(研究所: 入口でマスモン/ベースモン/図鑑 → 一覧 → 詳細。値は読むだけ・保存なし・設計 docs/progress/monster-screen)。マスモンの詳細に能力の横のベースモンからの伸び▲。入口はデバッグ設定の「🔬 モンスター(試す)」(公開の印はまだ無い)"
     },
     {
       "file": "82-card-battle-core.jsx",

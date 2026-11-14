@@ -15,11 +15,13 @@ node tools/ctx.js brief               いまの状態
 
 - `monster-hero/src/parts/13-bgm-and-rhythm-settings.jsx`
 - `monster-hero/src/parts/14-audio.jsx`
+- `monster-hero/src/parts/14-success-sound.jsx`
 - `monster-hero/src/parts/28-rhythm-*`
 - `monster-hero/src/parts/29-rhythm-*`
 - `monster-hero/src/parts/30-rhythm-*`
 - `monster-hero/src/parts/33-rhythm-*`
 - `monster-hero/src/parts/39-*`
+- `monster-hero/src/parts/45-quick-anywhere-float.jsx`
 - `monster-hero/src/parts/58-screen-rhythm.jsx`
 - `monster-hero/src/parts/73-screen-rhythm-history.jsx`
 - `monster-hero/src/parts/77-screen-rhythm-multi.jsx`

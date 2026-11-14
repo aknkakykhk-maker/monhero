@@ -1,4 +1,4 @@
-// MFバトルカード: カード部屋にいる助手と対戦すると、ごほうびが 1.5倍(2026-11-07 社長・カード部ルールくん)。本物の画面を縦・横で触る。
+// MFバトルカード: カード部屋にいる助手と対戦すると、ごほうびが 1.375倍(2026-11-07 社長・カード部ルールくん。2026-11-11 移動12回で 1.5 → 1.375)。本物の画面を縦・横で触る。
 //
 //   node tools/card/card-life-reward-browser-check.js        (SHOT_DIR=<フォルダ> で止め絵を残す)
 //
@@ -9,8 +9,8 @@
 //   ① HOME: MFバトルカードの札の横の顔の並びに「UP」。画面の中に入っている
 //   ② 顔を押した助手の部屋に「🃏 カード部屋で対戦する」。画面の中に入っていて、押すとMFバトルカードの相手えらびがその助手で開く
 //   ③ 相手えらび: カード部屋にいる助手の札だけに「🃏UP」。札の左上の角で、名前・「勝」の印に重ならず、札からはみ出さない。強さのボタンの下に説明の帯(いる助手の名前)。強さのボタンが「対戦する」の帯に潜らない(568×320 も)
-//   ④ MASTER で勝つ: もらったビートP 300(ふだん 200)・帯「200 → 300」・保存のビートPも 300 増える(ランクアップのごほうびは別)。
-//      カードランクの経験値が数えられる版なら 27(はじめての勝ちなら +30)。助手ライフの「今日あったこと」に勝ったと入る
+//   ④ MASTER で勝つ: もらったビートP 275(ふだん 200)・帯「200 → 275」・保存のビートPも 275 増える(ランクアップのごほうびは別)。
+//      カードランクの経験値が数えられる版なら 25(はじめての勝ちなら +30)。助手ライフの「今日あったこと」に勝ったと入る
 //   ⑤ すぐ投了(もらえる数 0): 帯を出さない
 //   ⑥ カード部屋にだれもいないとき: 相手えらびに印も帯も出ない
 //   ⑦ 実行時エラーが無い
@@ -54,7 +54,7 @@ const run = async (browser, mode, errors) => {
     const put = (k, v) => localStorage.setItem(k, JSON.stringify(v));
     put('mh_breeder_name', 'あかり'); put('mh_breeder_icon', '🐣'); put('mh_onboarded', true); put('mh_intro_done', true); put('mh_tutorial_seen_v1', true); put('mh_battle_tutorial_seen_v1', true); put('mh_battle_tutorial_guide_shown_v1', true);
     put('mh_inherited_unique_level_compensation_v1', true); put('mh_update_notice_seen_v1', true); });
-  await page.addInitScript(eventStorySeed());
+  await page.addInitScript(eventStorySeed()); await page.addInitScript(require('../boot/quiet-boot-seed').updateNoticeSeed()); await page.addInitScript(require('../boot/quiet-boot-seed').loginBonusDoneSeed()); await page.addInitScript(require('../boot/quiet-boot-seed').oneTimeNoticeSeed()); // みゅあの今日の助言などの一度きりの案内も済んだことにする // ログインボーナスの窓も同じく割りこむので受け取ったことにする // 更新履歴の告知の窓が後から割りこんで押せなくなるので、見たことにする(2026-11-11)
   const dismiss = async () => { for (let i = 0; i < 16; i++) { const did = await page.evaluate(() => { const inO = (el) => { for (let e = el; e && e !== document.body; e = e.parentElement) { const s = getComputedStyle(e); if (s.position === 'fixed' || (s.position === 'absolute' && Number(s.zIndex) >= 40)) return true; } return false; };
     const l = [...document.querySelectorAll('button')].filter((b) => inO(b) && /^(確認|閉じる|OK|受け取る|次へ|わかった|はい|スキップ|あとで読む|あとで)$/.test((b.innerText || '').replace(/\s+/g, ' ').trim())); if (!l.length) return false; l[0].click(); return true; }); if (!did) break; await page.waitForTimeout(400); } };
   // 指定の助手だけをカード部屋でカード研究にする(ほかにカード部屋にいた助手は広場へ散歩に。ids が空ならだれもいない)
@@ -96,7 +96,7 @@ const run = async (browser, mode, errors) => {
     await page.goto(`http://localhost:${PORT}/monster-hero/index.html`, { waitUntil: 'domcontentloaded' });
     await page.getByRole('button', { name: 'TAP TO START' }).click({ timeout: 90000 });
     await page.getByRole('button', { name: 'トップ画面へ進む' }).click({ timeout: 40000 });
-    await page.getByRole('button', { name: 'モンヒロバトル' }).waitFor({ timeout: 40000 });
+    await page.getByRole('button', { name: 'モンヒロバトル', exact: true }).waitFor({ timeout: 40000 });
     await page.waitForTimeout(2500); await dismiss();
   };
   try {
@@ -112,7 +112,7 @@ const run = async (browser, mode, errors) => {
     await page.locator('[data-confirm-sheet]').locator('xpath=..').getByRole('button', { name: '飛ばす' }).click();
     await page.getByRole('button', { name: 'トップへ' }).click();
     await page.locator('[data-card-top="top"]').waitFor({ timeout: 20000 });
-    // MASTER まで開け、その日はじめての勝ちは済ませておく(ビートPの 1.5倍だけを見るため)
+    // MASTER まで開け、その日はじめての勝ちは済ませておく(ビートPの 1.375倍だけを見るため)
     await page.evaluate(() => { localStorage.setItem('mh_card_cpu_unlocked_v1', JSON.stringify({ hard: true, expert: true, master: true }));
       localStorage.setItem('mh_card_daily_v1', JSON.stringify({ day: cardTodayJst(), cpuPoint: 0, pvpPoint: 0, firstWin: true, foes: {}, quickLoops: 0 })); }); // eslint-disable-line no-undef
     await boot();
@@ -172,7 +172,7 @@ const run = async (browser, mode, errors) => {
         if (under.length) out.push(`強さのボタンが「対戦する」の帯に潜る(${Math.round(Math.max(...under.map((b) => b.getBoundingClientRect().bottom)) - Math.round(top))}px)`);
       }
       const band = document.querySelector('[data-card-foe-life-band]');
-      if (!band || !/ソラシド・えるびん/.test(band.textContent) || !/1\.5倍/.test(band.textContent)) out.push(`帯 ${band ? band.textContent : 'なし'}`);
+      if (!band || !/ソラシド・えるびん/.test(band.textContent) || !/1\.375倍/.test(band.textContent)) out.push(`帯 ${band ? band.textContent : 'なし'}`);
       return out;
     }, LIFE);
     check(`③ ${mode.label} 相手えらび: いる助手の札だけ左上に「🃏UP」(名前・「勝」に重ならない・はみ出さない)・説明の帯`, pick.length === 0, pick.join(' / '));
@@ -195,8 +195,8 @@ const run = async (browser, mode, errors) => {
       return { outcome: top.getAttribute('data-card-outcome'), gain: Number(top.getAttribute('data-card-gain')), band: band ? band.textContent : null, plain: plain ? plain.textContent : null,
         lines: [...top.querySelectorAll('div')].filter((d) => !d.querySelector('div')).map((d) => d.textContent).filter((t) => /の勝ち:|もらったビートP/.test(t)) };
     });
-    check(`④ ${mode.label} MASTER の勝ち: もらったビートP 300(ふだん 200)・帯「ソラシド」「200 → 300」・「MASTERの勝ち: 200」`,
-      res.outcome === 'win' && res.gain === 300 && /ふだん 200/.test(res.plain || '') && /ソラシド/.test(res.band || '') && /200 → 300/.test(res.band || '') && res.lines.some((t) => /MASTERの勝ち: 200$/.test(t)), JSON.stringify(res));
+    check(`④ ${mode.label} MASTER の勝ち: もらったビートP 275(ふだん 200)・帯「ソラシド」「200 → 275」・「MASTERの勝ち: 200」`,
+      res.outcome === 'win' && res.gain === 275 && /ふだん 200/.test(res.plain || '') && /ソラシド/.test(res.band || '') && /200 → 275/.test(res.band || '') && res.lines.some((t) => /MASTERの勝ち: 200$/.test(t)), JSON.stringify(res));
     await page.evaluate(() => document.querySelector('[data-card-result-life-up]')?.scrollIntoView({ block: 'center' }));
     await page.waitForTimeout(300);
     const bandIn = await inView('[data-card-result-life-up]');
@@ -210,9 +210,9 @@ const run = async (browser, mode, errors) => {
     const got0 = (before.lv && Array.isArray(before.lv.got)) ? before.lv.got : [];
     const gotNew = after.lv && Array.isArray(after.lv.got) ? after.lv.got.filter((x) => !got0.includes(x)) : [];
     const rankPoint = await page.evaluate((lvs) => lvs.reduce((a, lv) => a + (cardRankRewardOf(lv).point || 0), 0), gotNew); // eslint-disable-line no-undef
-    check(`④ ${mode.label} 保存のビートPが 300 増える(ランクアップのごほうび ${rankPoint} は別)`, after.p - before.p - rankPoint === 300, `${before.p} → ${after.p}`);
+    check(`④ ${mode.label} 保存のビートPが 275 増える(ランクアップのごほうび ${rankPoint} は別)`, after.p - before.p - rankPoint === 275, `${before.p} → ${after.p}`);
     const xpAdd = (after.lv && Number(after.lv.xp)) - ((before.lv && Number(before.lv.xp)) || 0);
-    check(`④ ${mode.label} カードランクの経験値: 数える版なら 27(はじめての勝ちなら 57)`, !after.lv || xpAdd === 27 || xpAdd === 57, String(xpAdd));
+    check(`④ ${mode.label} カードランクの経験値: 数える版なら 25(はじめての勝ちなら 55)`, !after.lv || xpAdd === 25 || xpAdd === 55, String(xpAdd));
     await page.waitForTimeout(800);
     const diary = await page.evaluate(() => (ASSISTANT_LIFE_DIARY.state.items || []).map((x) => x.text)); // eslint-disable-line no-undef
     check(`④ ${mode.label} 助手ライフの「今日あったこと」に「ソラシドとMFバトルカードで対戦して勝った」が入る`, diary.some((t) => /ソラシドとMFバトルカードで対戦して勝った/.test(t)), JSON.stringify(diary.slice(-3)));

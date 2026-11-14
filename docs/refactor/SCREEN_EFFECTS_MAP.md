@@ -176,6 +176,8 @@ STEP 6 は「画面を離れたらタイマーが必ず止まる」ようにす�
 | `setShuffleStopped(true); }, RHYTHM_MULTI_SHUFFLE_MS - 800` | screen | 止める | シャッフル演出を止める(音ゲーのマルチ) |
 | `RHYTHM_MULTI.markShuffleShown(shuffleRound), RHYTHM_MULTI_SHUFFLE_MS` | progress | 投げっぱなし | シャッフルを見せた印を付ける。止めると同じ演出がまた出る |
 | `setCopied(false), 2000` | progress | 投げっぱなし | 「コピーしました」の表示を戻す。止めると出たまま |
+| `root.classList.add('mhms-idle'), RHYTHM_MODE_SELECT_IDLE_MS` | screen | 止める | モードえらびの飾りを、10秒放置したら止める(音ゲーのマルチ・見た目だけ。後片付けで外す) |
+| `setLoginBonusGuideClear(true), 700` | 対象外 | 止める | 助手の案内とバトルのれんしゅうが終わって0.7秒たってから、ログインボーナスの窓を出してよいことにする(アプリ全体の条件で、画面に紐づかない。後片付けで外す) |
 | `if (reduce || from === to) { setValue(to); return undefined; }` | screen | 止める | 数字のカウントアップ演出(画面を離れたら止める) |
 | `const raidTotals = await Promise.race([sbFetchRaidJackTierTotals(RAID_JACK_EVENT.id)` | 対象外 | await | HOMEの見回りで、ジャックの段階の合計を取る通信の時間切れ(4秒で null を返して今回は出さない) |
 | `const done = totals && totals.a && totals.a[prep.tierIndex + 1]` | 対象外 | await | レイド画面の段階の合計を取る通信の時間切れ(4秒で null を返す)。同じ形の行が3つあるので、目印は次の行(段の数え方が違う) |
@@ -196,14 +198,20 @@ STEP 6 は「画面を離れたらタイマーが必ず止まる」ようにす�
 | `setTimeout(() => { Audio_.se.crit(); triggerShake(true); }, Math.round(ms * 0.28))` | screen | 投げっぱなし | ハムのカウンター(リベンジ)の2つめの効果音と揺れ |
 | `setTimeout(() => Audio_.se.crit(), Math.round(ms * 0.36))` | screen | 投げっぱなし | ハムのカウンター(リベンジ)の3つめの効果音 |
 | `hamCounterFxTimerRef.current = setTimeout(skipHamCounterFx, ms)` | progress | 止める | ハムのカウンターの演出を見せ終えて、待っている攻撃を進める(`await` の resolve)。止めると攻撃が止まったままになる |
-| `}, QUICK_RUN_AUTO_RETRY_MS);` | progress | 止める | クイックの自動周回で負けたあと、少し待って1周目から始め直す(次の画面へ進む)。effect の後始末で `clearTimeout` |
+| `setTimeout(retryRhythm, QUICK_RUN_AUTO_RETRY_MS)` | progress | 止める | クイックの自動周回で負けたあと、少し待って1周目から始め直す(次の画面へ進む)。effect の後始末で `clearTimeout` |
 | `setTimeout(retry, QUICK_RUN_AUTO_RETRY_MS)` | progress | 止める | MFバトルカードの中で、クイックの自動周回(カードのオプション)が負けたあと、少し待って1周目から始め直す(次の画面へ進む)。effect の後始末で `clearTimeout` |
 | `setTimeout(retryLife, QUICK_RUN_AUTO_RETRY_MS)` | progress | 止める | 助手ライフを開いたまま回しているクイックの自動周回(AUTO設定の自動開始)が負けたあと、少し待って1周目から始め直す(2026-11-08)。effect の後始末で `clearTimeout` |
+| `timers = list.map((ms) => setTimeout(place, ms))` | screen | 止める | モンヒロビートのマルチ(77)で、遅れて出る中身に合わせて札を置き直す(見た目だけ)。次に呼ばれたとき・片づけで `clearTimeout` |
+| `setTimeout(retryAnywhere, QUICK_RUN_AUTO_RETRY_MS)` | progress | 止める | 裏クイックをどこでも回すとき(2026-11-11)、HOME などで負けたあと、少し待って1周目から始め直す(画面は変えない)。effect の後始末で `clearTimeout` |
+| `quickAnywhereTryStartRef.current(); }, boot ? 1500 : 300)` | progress | 止める | 裏クイックをどこでも回すとき(2026-11-11)、ゲームを開いたとき・ほかのバトルから戻ったときに、少し待って自動で始める(画面は変えない)。effect の後始末で `clearTimeout` |
+| `lifeLoseTimerRef.current = setTimeout(` | screen | ref | 助手ライフの帯の「😢 負けちゃった」の札を、始め直すまでの間だけ出して消す(見た目だけ)。新しい周回が始まった・閉じたときは ref から `clearTimeout` |
 | `const t = setTimeout(() => setOpen(false), 2500)` | screen | 止める | 小さな説明の吹き出しを2.5秒で閉じる(41-screen-ui.jsx)。後始末で `clearTimeout` |
 | `setTimeout(place, 120)` | screen | 止める | HOMEの置き場所を測り直す(1回目・69-screen-home.jsx) |
 | `setTimeout(place, 700)` | screen | 止める | HOMEの置き場所を測り直す(2回目。絵が読み込まれたあと) |
 | `timers.push(setTimeout(place, 60))` | screen | 止める | HOMEのジャックの吹き出しの置き場所を、みゅあの吹き出しが伸び縮みしたあと測り直す(69-screen-home.jsx。2026-10-24) |
 | `setTimeout(run, 600 + Math.floor(Math.random() * 1800)` | progress | 投げっぱなし | モンヒロビートのフリーマッチで、CPUの発言を少し遅らせて部屋へ送る(77-screen-rhythm-multi.jsx)。止めるとほかの人に届かない |
+| `watchAdTimer = setTimeout(() => {` | progress | 止める | モンヒロビートのフリーマッチの部屋を、ロビーへ知らせる前の4秒の待ち(77-screen-rhythm-multi.jsx)。`watchAdStop()` が止める |
+| `setLinkWatch('');` | screen | 止める | リンクから入った部屋に8秒たってもだれもいないとき、分かる言葉で知らせる待ち(77-screen-rhythm-multi.jsx)。effect の後始末で `clearTimeout` |
 | `setTimeout(() => setNote(RHYTHM_BUDDY_REFUND_NOTE.get())` | progress | 止める | 相棒の返金のお知らせを、期限が来たら消す(80-screen-rhythm-buddy.jsx)。止めると出たまま(`setCopied` と同じ) |
 | `persistQuickGuideSeen(id); }, QUICK_GUIDE_SEEN_AFTER_MS)` | screen | 止める | クイック・AUTO設定・裏周回の案内が1.2秒見えたら「見た」を保存する待ち(#4837)。案内が替わる・画面を離れると effect の後始末で `clearTimeout`(見えていない案内は数えない) |
 

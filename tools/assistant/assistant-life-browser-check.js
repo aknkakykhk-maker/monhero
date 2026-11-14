@@ -1,3 +1,4 @@
+// run-checks-timeout: 900  (画面を何度も開くので、ふつうの上限では足りない。2026-11-11 クラフトくんの切り分け)
 // 助手ライフ(助手たちの家・段階1 2026-11-07)の画面と HOME の施設の顔を、実際に開いて確かめる。公開の印 assistantLife はページの中でだけ立てる(本体の印は偽のまま)。
 //   node tools/assistant/assistant-life-browser-check.js            検査
 //   LIFE_BASE=https://aknkakykhk-maker.github.io/monhero/ で本番の版を見る(公開後の確かめ)
@@ -217,7 +218,7 @@ const overflowX = (page, sel) => page.evaluate((s) => { const el = document.quer
     check('⑩ 部屋を押すと、その助手のこと(いまどこ・仲良し度・友情Lv・セッション・今日あったこと)', ['あつの部屋', '仲良し度', '友情Lv', 'セッション', '今日あったこと'].every(w => sheetText.includes(w)), sheetText.replace(/\s+/g, ' ').slice(0, 80));
     // 助手1人に贈る(印 assistantLifeSolo・2026-11-08)が開いていれば、1人用の4種類も並んで14種類(❹A)
     const likeWant = (await page.evaluate(() => typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantLifeSolo === true)) ? 14 : 10;
-    check('⑩ 部屋を押すと「🎁 好きなもの」(10種類・1人に贈るが開いていれば14種類・分かっていない物は ?)', /好きなもの/.test(sheetText) && (await page.locator('[data-assistant-life-room-sheet="atsu"] [data-assistant-life-gift-like]').count()) === likeWant
+    check('⑩ 部屋を押すと「🎁 贈り物の好み」(10種類・1人に贈るが開いていれば14種類・分かっていない物は ?)', /贈り物の好み/.test(sheetText) && (await page.locator('[data-assistant-life-room-sheet="atsu"] [data-assistant-life-gift-like]').count()) === likeWant
       && (await page.locator('[data-assistant-life-room-sheet="atsu"] [data-assistant-life-gift-like$=":unknown"]').count()) === likeWant);
     if (SHOTS) await page.screenshot({ path: path.join(shotDir, 'life-13-room.png') });
     // ⑪ 声をかける(2026-11-07 社長「声をかけにいったら俺とじゃなくて別の助手と喋ってる」): その助手だけが {name} に話す・場面にいない助手が出ない
@@ -341,8 +342,8 @@ const overflowX = (page, sel) => page.evaluate((s) => { const el = document.quer
     // ⑧ 2人にあげる道具(家の「🎒 道具」)
     await page.locator('[data-assistant-life-icon="items"]').click().catch(() => {}); await page.waitForTimeout(250);
     const itemsText = await page.locator('[data-assistant-life-items]').innerText().catch(() => '');
-    check('⑧ 道具の欄の「仲良し度」「友情Lv」が言葉の途中で折れず、贈るシートと同じ幅(好みで変わる)で出る(2026-11-08 ミハリ)', await page.evaluate(() => [...document.querySelectorAll('[data-assistant-life-items] .whitespace-nowrap')].filter(x => /仲良し度|友情Lv/.test(x.textContent)).every(x => x.getBoundingClientRect().height <= parseFloat(getComputedStyle(x).fontSize) * 1.9)) && /仲良し度 \+15〜45/.test(itemsText), itemsText.replace(/\s+/g, ' ').slice(0, 120));
-    check('⑧ 道具の欄に、持っている数・起きること・手に入れる所が出る', /持っている 2個/.test(itemsText) && /友情Lv \+8〜23/.test(itemsText) && /仲良し度 \+\d+/.test(itemsText) && /ビートP交換所/.test(itemsText), itemsText.replace(/\s+/g, ' ').slice(0, 80));
+    check('⑧ 道具の欄の「仲良し度」「友情Lv」が言葉の途中で折れず、「ふつう」のときの数で出る(2026-11-08 ミハリ・2026-11-11 社長 案3 A)', await page.evaluate(() => [...document.querySelectorAll('[data-assistant-life-items] .whitespace-nowrap')].filter(x => /仲良し度|友情Lv/.test(x.textContent)).every(x => x.getBoundingClientRect().height <= parseFloat(getComputedStyle(x).fontSize) * 1.9)) && /仲良し度 \+30/.test(itemsText) && /ふつう/.test(itemsText), itemsText.replace(/\s+/g, ' ').slice(0, 120));
+    check('⑧ 道具の欄に、持っている数・起きること・手に入れる所が出る', /持ち 2/.test(itemsText) && /友情Lv \+15/.test(itemsText) && /仲良し度 \+\d+/.test(itemsText) && /ビートP交換所/.test(itemsText), itemsText.replace(/\s+/g, ' ').slice(0, 80));
     await toWhere(page);
     const giveBtn = page.locator('[data-assistant-life-give]').first();
     if (await giveBtn.count()) {

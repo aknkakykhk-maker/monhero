@@ -100,6 +100,7 @@
   "changelog/song-numbers-check.js",
   "changelog/title-prefix-check.js",
   "compiled-runtime-check.js",
+  "friends/alf-masmon-share-check.js",
   "friends/friends-api-check.js",
   "friends/friends-face-icon-check.js",
   "friends/playtime-devices-check.js",
@@ -280,6 +281,7 @@
   "mode/rhythm-run-progress-static-check.js",
   "mode/rhythm-run-stop-check.js",
   "mode/rhythm-scroll-back-check.js",
+  "mode/rhythm-scroll-fx-check.js",
   "mode/rhythm-side-flick-check.js",
   "mode/rhythm-side-monster-check.js",
   "mode/rhythm-side-monster-size-check.js",
@@ -382,6 +384,7 @@
   "run/unique-skill-point-check.js",
   "supabase-apply-check.js",
   "teaching-roster-size-check.js",
+  "team/decision-lock-check.js",
   "update-notice-check.js",
   "viewport-height-check.js"
  ]

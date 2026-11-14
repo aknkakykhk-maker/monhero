@@ -7,7 +7,7 @@ const { useState, useEffect, useCallback, useMemo, useRef, useContext } = React;
 //   gs   … 画面(gameState)が変わった。d は「次の画面 < 動かした処理の名前」
 //   err  … 画面のエラーを受け止めた(MhErrorBoundary)
 //   vis / page … 画面が隠れた・戻った(アプリの切り替え・通知など)
-//   gap  … 画面の描き直しが1秒以上止まった(見えているのに)
+//   gap  … 画面の処理が1秒ほど以上止まった(見えているのに)
 //   gl   … 演奏の絵(WebGL)が端末に捨てられた/戻った
 //   rot  … 自前の画面の回転(🔄 横)を切り替えた
 //   vv   … ページのずれ・拡大を見つけて戻した(s=倍率 y=ページのスクロール o=見えている範囲のずれ。MH_PAGE_OFFSET_GUARD・2026-11-11)
@@ -32,10 +32,16 @@ const MH_SCREEN_TRAIL=(()=>{
       window.addEventListener('pageshow',e=>push('page','show'+(e&&e.persisted?'*':'')));
       document.addEventListener('webglcontextlost',()=>push('gl','lost'),true);
       document.addEventListener('webglcontextrestored',()=>push('gl','restored'),true);
-      // 描き直しの止まり。1コマに1回時刻を見るだけ(演奏の判定・描画には触れない)
+      // 描き直しの止まり。0.5秒ごとの見張りが1秒以上遅れたら記録する(演奏の判定・描画には触れない)
+      //   2026-11-11 カルク: もとは毎コマ requestAnimationFrame で見ていたが、止まっている画面(HOME・助手ライフなど)でも
+      //   ブラウザに毎秒60コマ描かせ続け、iPhone の発熱・電池の元になっていた。画面を止めるのは処理の詰まりなので、タイマーの遅れで同じく分かる。
+      //   隠れていたあいだはタイマーが間引かれるので、見えていないあいだと戻った直後は数えない
       let last=0;
-      const tick=now=>{if(last>0&&now-last>1000&&document.visibilityState==='visible')push('gap',Math.round(now-last));last=now;window.requestAnimationFrame(tick);};
-      if(typeof window.requestAnimationFrame==='function')window.requestAnimationFrame(tick);
+      document.addEventListener('visibilitychange',()=>{last=0;});
+      // 検査(node)で本体を読み込んだときは、この見張りがプロセスを引き止めないようにする(unref。ブラウザの数値の戻り値には無いので何もしない)
+      //   2026-11-11 ケンサ: unref が無いと boot/harness-exit-check が「抜けない」で落ち、本体を読み込む検査が終わらなくなった
+      const gapWatch=setInterval(()=>{const now=(typeof performance!=='undefined'&&performance.now)?performance.now():Date.now();if(document.visibilityState!=='visible'){last=0;return;}if(last>0&&now-last>1000)push('gap',Math.round(now-last));last=now;},500);
+      if(gapWatch&&typeof gapWatch.unref==='function')gapWatch.unref();
     }catch(_){}
   }
   return {push,list:()=>list.slice(),sinceLast,compact};
@@ -138,6 +144,27 @@ const MH_PAGE_OFFSET_GUARD=(()=>{
   // 演奏中は 30-rhythm-play.jsx が同じことをしている(回数も数えている)。重ねて止めても変わらない
   ['gesturestart','gesturechange'].forEach(type=>document.addEventListener(type,e=>{if(e.cancelable)e.preventDefault();},{passive:false}));
   return {state,check:soon};
+})();
+// iPhone(iPad)のホーム画面から開いているか。navigator.standalone は iPhone・iPad の Safari にだけあり、ホーム画面のアプリで true になる。
+// Android のホーム画面のアプリは false(本体の「戻る」があるので、履歴の扱いを変えない)
+function mhIsIosHomeScreenApp(){
+  try{return typeof window!=='undefined'&&!!window.navigator&&window.navigator.standalone===true;}catch(_){return false;}
+}
+// 指で長押ししたときのメニュー(Android の「画像を保存」「リンクを開く」など)を出さない(2026-11-11 社長「ブラウザのような挙動がある」)。
+// iPhone の吹き出しは index.html の -webkit-touch-callout で止めている。こちらは Android 向け。
+// 止めるのは指(ペン)で押したときだけ。パソコンの右クリックと、文字の入力欄・select-text の所ではそのまま出す。
+// 押した道具を覚えるだけ(数を読んで1つ書くだけ)で、演奏の判定・スコアには関わらない
+const MH_TOUCH_MENU_GUARD=(()=>{
+  if(typeof window==='undefined'||typeof document==='undefined')return null;
+  let lastTouch=false;
+  document.addEventListener('pointerdown',e=>{lastTouch=e.pointerType==='touch'||e.pointerType==='pen';},{capture:true,passive:true});
+  document.addEventListener('contextmenu',e=>{
+    const t=e.target;
+    if(t&&typeof t.closest==='function'&&t.closest('input,textarea,[contenteditable]:not([contenteditable="false"]),.select-text'))return;
+    const byFinger=e.pointerType==='touch'||e.pointerType==='pen'||(!e.pointerType&&lastTouch);
+    if(byFinger&&e.cancelable)e.preventDefault();
+  },{capture:true});
+  return {byFinger:()=>lastTouch};
 })();
 // ==== アイコン: lucide-react UMDが不安定なため、インラインSVGで自己完結 ====
 const _LI = {};
@@ -267,6 +294,9 @@ const normalizeBattleFxSettings = (value) => {
     resultFx: ['FULL', 'SHORT', 'OFF'].includes(v.resultFx) ? v.resultFx : 'FULL',
     countUp: v.countUp === 'OFF' ? 'OFF' : 'ON',
     endFx: v.endFx === 'OFF' ? 'OFF' : 'ON',
+    // 当たりの間(2026-11-11 社長「当たりの間は入れる・設定で切れる・はじめは入」)。攻撃が当たった瞬間に、画面の動きを一瞬だけ止める。
+    // ★足す前に保存した人(hitStop が無い)は ON(入れる)で始まる。見た目だけに効き、戦闘の計算・進行・ランキングには触れない
+    hitStop: v.hitStop === 'OFF' ? 'OFF' : 'ON',
   };
 };
 // 設定画面に並べる項目。文言はここだけに書く(設定画面・ヘルプの説明と食い違わせない)
@@ -291,6 +321,9 @@ const BATTLE_FX_SETTING_ITEMS = Object.freeze([
   { key:'shake', title:'画面の揺れ',
     desc:'会心の一撃・大技・ボスの攻撃などで画面が揺れる演出と、攻撃を受けた枠の揺れです。止めても光や数字は出ます。',
     options:[{ id:'ON', label:'揺らす', note:'いつもの見た目' }, { id:'OFF', label:'揺らさない', note:'酔いやすい人向け' }] },
+  { key:'hitStop', title:'当たりの間',
+    desc:'攻撃が当たった瞬間に、画面の動きをほんの一瞬だけ止めて、当たった手ごたえを出します。会心の一撃と、敵を倒したときは少し長く止まります。バトルの速さを上げているときは、そのぶん短くなります。ダメージや進行は変わりません。',
+    options:[{ id:'ON', label:'入れる', note:'当たった手ごたえが出る' }, { id:'OFF', label:'入れない', note:'止めずに流す' }] },
   { key:'specialMovie', title:'必殺技ムービー',
     desc:'タクティクスバトルの覚醒ムーが必殺技「アポカリプス」を使うとき、画面を切り替えてムービーを流します。流さないときは、いつもの演出で短く進みます。ダメージや進行は変わりません。',
     options:[{ id:'ON', label:'流す', note:'画面いっぱいで見せる' }, { id:'OFF', label:'流さない', note:'いつもの演出で短く' }] },

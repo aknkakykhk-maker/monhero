@@ -343,9 +343,10 @@ const assistantPeerSetPlayerBondAdder = (fn) => { assistantPeerPlayerBondAdder =
 let assistantPeerPlayerCaller = null;
 const assistantPeerSetPlayerCaller = (fn) => { assistantPeerPlayerCaller = typeof fn === 'function' ? fn : null; };
 const assistantPeerPlayerCall = (who) => { try { const c = assistantPeerPlayerCaller ? assistantPeerPlayerCaller(who) : ''; return c || 'あなた'; } catch { return 'あなた'; } };
-const assistantPeerAddPlayerBond = (ids, action) => {
+// amount … 1回ぶんを呼ぶ側が決めるとき(助手ライフの見守るは約75%。行動の1回ぶんは超えない)。null は今までどおり
+const assistantPeerAddPlayerBond = (ids, action, amount = null) => {
   if (!assistantPeerEnabled() || !assistantPeerPlayerBondAdder) return;
-  for (const id of [...new Set(ids || [])]) { try { assistantPeerPlayerBondAdder(id, action); } catch {} }
+  for (const id of [...new Set(ids || [])]) { try { if (Number.isFinite(amount)) assistantPeerPlayerBondAdder(id, action, amount); else assistantPeerPlayerBondAdder(id, action); } catch {} }
 };
 
 // ---------- その日の出来事(台本の when) ----------
@@ -886,21 +887,40 @@ function AssistantPeerTalk({ scene, metIds, selectedId, replay = null, onReplayE
 
 // ---------- 思い出アルバム(ペアごと) ----------
 // ツーショット写真(ASSISTANT_PEER_PHOTOS の段ごとに1枚。2人の立ち絵を並べて作る)と、見た掛け合いの一覧。押すと見返せる
+//   2026-11-11 社長「助手の立ち絵も見直して、使う場面全部でうまく表示させるようにして」: それまでは絵を枠の 56%×170% に object-cover で入れていて、
+//   絵ごとの余白のちがいで 2人の顔が重なり・横が切れ(最大33%)、顔だけの絵のドラは枠より大きくなって下が切れていた。
+//   場面の立ち絵と同じ表と決まり(assistantLifeStandFace・assistantLifeStandBox・assistantLifeStandRule)で、2人の顔を同じ大きさ・同じ高さで左右に並べる:
+//   頭(てっぺんから顎)が写真の高さの 45%・頭のてっぺんは上から 24%(うさ耳・王冠が入る)・2人の体の真ん中は左右 27% と 73%。置き場所は写真の大きさに対する割合で持つ(写真の大きさが変わっても同じ見え方)
+const ASSISTANT_PEER_PHOTO_W = 400, ASSISTANT_PEER_PHOTO_H = 300;
 function AssistantPeerPhoto({ pair, photo, open }) {
   const [a, b] = pair.map(id => assistantById(id));
+  const srcs = open ? [assistantFullImage(a, photo.e[0]), assistantFullImage(b, photo.e[1])] : [];
+  const canFit = typeof assistantLifeStandBox === 'function' && typeof assistantLifeStandRule === 'function' && typeof assistantLifeStandFace === 'function';
+  const [boxes, setBoxes] = React.useState(() => srcs.map(s => (canFit && typeof ASSISTANT_LIFE_STAND_BOX !== 'undefined' ? ASSISTANT_LIFE_STAND_BOX.get(s) || null : null)));
+  const key = srcs.join('|');
+  React.useEffect(() => { let alive = true; if (canFit && srcs.length) Promise.all(srcs.map(s => assistantLifeStandBox(s))).then(l => { if (alive) setBoxes(l); }); return () => { alive = false; }; }, [key]);
+  const W = ASSISTANT_PEER_PHOTO_W, H = ASSISTANT_PEER_PHOTO_H;
+  const fit = (i) => {
+    if (!canFit || !boxes[i]) return null;
+    const r = assistantLifeStandRule({ face: assistantLifeStandFace(pair[i], srcs[i]), box: boxes[i], F: (H * 0.45) / ASSISTANT_LIFE_STAND_FACE_LEN, topY: H * 0.24, cx: W * (i ? 0.73 : 0.27) });
+    return r ? { left: `${(r.left / W) * 100}%`, top: `${(r.top / H) * 100}%`, width: `${(r.width / W) * 100}%`, height: `${(r.height / H) * 100}%`, maxWidth: 'none' } : null;
+  };
+  const stand = (i) => { const f = fit(i);
+    return f ? <img key={i} src={srcs[i]} alt="" loading="lazy" decoding="async" draggable={false} className="absolute" style={f}/>
+      : <img key={i} src={srcs[i]} alt="" loading="lazy" decoding="async" className={`absolute ${i ? 'right-[-2%]' : 'left-[-2%]'} top-[6%] h-[170%] w-[56%]`} style={{ objectFit: 'cover', objectPosition: '50% 0%' }}/>; };
   return (
     <div data-assistant-peer-photo={photo.lv} data-assistant-peer-photo-open={open ? '1' : '0'}
       className="relative overflow-hidden rounded-xl border-2" style={{ aspectRatio: '4 / 3', borderColor: open ? '#fcd34d' : 'rgba(255,255,255,.12)', background: open ? `linear-gradient(135deg, ${a.accent}55, ${b.accent}55)` : 'rgba(15,23,42,.8)' }}>
       {open ? (<>
         {/* 立ち絵の上のほう(顔から胸まで)を寄りで並べる */}
-        <img src={assistantFullImage(a, photo.e[0])} alt="" loading="lazy" decoding="async" className="absolute left-[-2%] top-[6%] h-[170%] w-[56%]" style={{ objectFit: 'cover', objectPosition: '50% 0%' }}/>
-        <img src={assistantFullImage(b, photo.e[1])} alt="" loading="lazy" decoding="async" className="absolute right-[-2%] top-[6%] h-[170%] w-[56%]" style={{ objectFit: 'cover', objectPosition: '50% 0%' }}/>
+        {stand(0)}
+        {stand(1)}
         <span className="absolute inset-x-0 bottom-0 bg-black/55 px-1 py-0.5 text-center text-[9px] font-black text-amber-100">{assistantPeerPhotoTitle(photo)}</span>
       </>) : (
         <span className="absolute inset-0 flex flex-col items-center justify-center text-[10px] font-bold text-slate-500"><span className="text-lg" aria-hidden="true">🔒</span>Lv{photo.lv}で貼られます</span>)}
     </div>);
 }
-function AssistantPeerAlbum({ pair, onClose, onReplay, peerItems = null, onUseItem = null }) {
+function AssistantPeerAlbum({ pair, onClose, onReplay, peerItems = null, onUseItem = null, onGivePair = null }) {
   const st = useAssistantPeerState();
   // 助手ライフの道具10種類と「買って贈る」(2026-11-08)。部品はいつもあるので、フックは毎回同じ順で呼ばれる
   const giftSt = typeof useAssistantLifeGiftState === 'function' ? useAssistantLifeGiftState() : null;
@@ -956,9 +976,15 @@ function AssistantPeerAlbum({ pair, onClose, onReplay, peerItems = null, onUseIt
             <div data-assistant-peer-actions className="mt-3">
               <p className="mb-1 text-[11px] font-black text-amber-200">2人にしてあげる</p>
               {useMsg && <p data-assistant-peer-use-msg className="mb-1 rounded-lg bg-slate-800 px-2 py-1 text-[10.5px] font-bold text-slate-200">{useMsg}</p>}
-              <div className="grid grid-cols-2 gap-1.5">
+              {/* 2026-11-11 社長 案6 A: 助手ライフの中では、押すとすぐ贈るのをやめて、贈る窓をこの2人で開く(上がる量・好み・回数を見てから贈る。入口を1つの形に) */}
+              {lifeOn && typeof onGivePair === 'function'
+                ? <button type="button" data-assistant-peer-give-sheet onClick={() => onGivePair(pair)} className="min-h-[48px] w-full rounded-xl border border-amber-300/70 bg-amber-400/20 px-3 py-1 text-left active:scale-[.98]">
+                    <span className="block text-[13px] font-black text-amber-100">🎁 この2人に贈る</span>
+                    <span className="block text-[11px] font-bold text-slate-300">道具を選ぶ窓が開きます(今日あと {typeof assistantLifeGiftLeft === 'function' ? assistantLifeGiftLeft(st, giftSt) : 0}回)</span>
+                  </button>
+                : <div className="grid grid-cols-2 gap-1.5">
                 {kinds.map(itemBtn)}
-              </div>
+              </div>}
               <button type="button" data-assistant-peer-play={playing ? 'on' : 'off'} onClick={() => assistantPeerSetPlayPair(playing ? null : pair)}
                 className="mt-1.5 min-h-[44px] w-full rounded-xl border border-sky-300/50 bg-sky-400/10 px-2 py-1 text-left active:scale-[.98]">
                 <span className="block text-[11px] font-black text-sky-100">{playing ? '🎮 遊びに連れていく(いま連れています。押すとやめます)' : '🎮 遊びに連れていく'}</span>
@@ -989,7 +1015,7 @@ function AssistantPeerAlbum({ pair, onClose, onReplay, peerItems = null, onUseIt
 
 // ---------- プロフィールの関係図(Lv3 から線が出る) ----------
 // 会った助手を円に並べ、Lv3 以上のペアを線で結ぶ(太さ・色が Lv で変わる)。下に今日のペアと全部のペアの Lv。行を押すと思い出アルバム
-function AssistantPeerMap({ metIds, onReplay, peerItems = null, onUseItem = null }) {
+function AssistantPeerMap({ metIds, onReplay, peerItems = null, onUseItem = null, v2 = false, onGivePair = null }) {
   const st = useAssistantPeerState();
   // 一覧は仲良し度の高い6組だけ出し、残りは「全部のペアを見る」で広げる
   const [showAll, setShowAll] = React.useState(false);
@@ -1011,8 +1037,8 @@ function AssistantPeerMap({ metIds, onReplay, peerItems = null, onUseItem = null
   const dailyPair = daily ? daily.pair.split('-') : null;
   return (
     <div data-assistant-peer-map className="rounded-2xl border border-white/10 bg-slate-950/85 p-3">
-      <p className="text-[12px] font-black text-pink-200">助手どうしの関係図</p>
-      <p className="mb-2 text-[9px] leading-tight text-slate-400">助手どうしも仲良くなります。{assistantPeerLvLabel(3)} になった2人は線で結ばれます。ペアを押すと思い出アルバムが開きます。</p>
+      <p className={v2 ? 'text-[14px] font-black text-pink-200' : 'text-[12px] font-black text-pink-200'}>{v2 ? '🤝 助手どうしの友情Lv' : '助手どうしの関係図'}</p>
+      <p className={v2 ? 'mb-2 text-[11.5px] font-bold leading-snug text-slate-200' : 'mb-2 text-[9px] leading-tight text-slate-400'} style={v2 ? { wordBreak: 'auto-phrase' } : undefined}>助手どうしも仲良くなります。{assistantPeerLvLabel(3)} になった2人は線で結ばれます。ペアを押すと思い出アルバムが開きます。</p>
       {!assistantPeerLifeOn() && dailyPair && dailyPair.every(id => ids.includes(id)) && (
         <button type="button" data-assistant-peer-daily onClick={() => setAlbumPair(dailyPair)}
           className="mb-2 flex w-full items-center gap-2 rounded-xl border border-amber-300/50 bg-amber-400/10 px-2 py-1.5 text-left active:scale-[.98]">
@@ -1031,11 +1057,25 @@ function AssistantPeerMap({ metIds, onReplay, peerItems = null, onUseItem = null
         {ids.map(id => { const who = assistantById(id); return (
           <div key={id} className="absolute flex flex-col items-center" style={{ left: pos[id].x - 24, top: pos[id].y - 24, width: 48 }}>
             <AssistantFace who={who} size={48} accent={who.accent}/>
-            <span className="mt-0.5 whitespace-nowrap text-[9px] font-black text-slate-200">{who.name}</span>
+            <span className={`mt-0.5 whitespace-nowrap ${v2 ? 'text-[10.5px]' : 'text-[9px]'} font-black text-slate-200`}>{who.name}</span>
           </div>); })}
       </div>
       <div className="mt-3 space-y-1">
         {(showAll ? rows : rows.slice(0, 6)).map(x => { const A = assistantById(x.a), B = assistantById(x.b); const stage = levels.find(s => s.level === x.lv); const nextStage = levels.find(s => s.level === x.lv + 1);
+          // 新UI(助手ライフの「きずな」): 押せる高さの行に、次の段まであといくつ・そこで何が開くか(2026-11-11 改善案6)
+          if (v2) { const opens = nextStage && typeof assistantLifePeerNextOpens === 'function' ? assistantLifePeerNextOpens(x.a, x.b, nextStage.level) : ''; return (
+            <button key={`${x.a}-${x.b}`} type="button" data-assistant-peer-row={assistantPeerPairKey(x.a, x.b)} data-assistant-peer-row-v2 onClick={() => setAlbumPair([x.a, x.b])}
+              className="block w-full min-h-[48px] rounded-xl border border-white/15 bg-slate-900/80 px-2.5 py-1.5 text-left active:scale-[.98]">
+              <span className="flex items-baseline gap-2">
+                <b className="min-w-0 flex-1 truncate text-[13px] text-white">{A.name} × {B.name}</b>
+                <span className="whitespace-nowrap text-[12px] font-black text-pink-200">Lv{x.lv}{stage ? ` ${assistantPeerStageName(stage)}` : ''}</span>
+                <span className="text-[12px] font-black text-slate-300" aria-hidden="true">›</span>
+              </span>
+              <span className="mt-1 flex items-center gap-2">
+                <span className="h-1.5 w-16 shrink-0 overflow-hidden rounded-full bg-slate-700" aria-hidden="true"><span className="block h-full bg-pink-400" style={{ width: `${nextStage ? Math.min(100, Math.round(100 * (x.pts - stage.min) / (nextStage.min - stage.min))) : 100}%` }}/></span>
+                <span data-assistant-peer-next className="min-w-0 flex-1 truncate text-[11px] font-bold text-emerald-300">{nextStage ? `あと${nextStage.min - x.pts}で Lv${nextStage.level}${opens ? ` → ${opens}` : `「${assistantPeerStageName(nextStage)}」`}` : 'いちばん上まで来ました'}</span>
+              </span>
+            </button>); }
           return (
             <button key={`${x.a}-${x.b}`} type="button" data-assistant-peer-row={assistantPeerPairKey(x.a, x.b)} onClick={() => setAlbumPair([x.a, x.b])}
               className="flex w-full items-center gap-2 rounded-lg bg-slate-900/70 px-2 py-1 text-left active:scale-[.98]">
@@ -1049,11 +1089,12 @@ function AssistantPeerMap({ metIds, onReplay, peerItems = null, onUseItem = null
             </button>); })}
         {rows.length > 6 && (
           <button type="button" data-assistant-peer-more onClick={() => setShowAll(v => !v)}
-            className="w-full rounded-lg border border-white/10 py-1.5 text-[10px] font-bold text-slate-300 active:scale-[.98]">
+            className={v2 ? 'min-h-[44px] w-full rounded-xl border border-white/20 text-[12px] font-black text-slate-200 active:scale-[.98]' : 'w-full rounded-lg border border-white/10 py-1.5 text-[10px] font-bold text-slate-300 active:scale-[.98]'}>
             {showAll ? 'たたむ' : `全部のペアを見る(${rows.length}組)`}
           </button>)}
       </div>
       {albumPair && <AssistantPeerAlbum pair={albumPair} onClose={() => setAlbumPair(null)} onReplay={(t) => { setAlbumPair(null); if (onReplay) onReplay(t); }}
+        onGivePair={onGivePair ? (p) => { setAlbumPair(null); onGivePair(p); } : null}
         peerItems={peerItems} onUseItem={onUseItem ? async (kind, pair) => { const talk = await onUseItem(kind, pair); if (talk) { setAlbumPair(null); if (onReplay) onReplay(talk); } return talk; } : null}/>}
     </div>
   );

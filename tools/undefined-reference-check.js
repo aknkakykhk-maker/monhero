@@ -70,9 +70,21 @@ const GLOBALS = new Set([
 //   許すのは、ソースのどこかに「typeof 名前 === 'function'」がある名前だけ(確かめずに呼ぶ書き方は、ここに載っていても落とす)。
 //   定義が入ったら、この一覧から消してよい(消し忘れても、定義があれば許しは使われない)
 const LATER_HOOKS = {
+  MonsucFuseSheet: 'モンヒロサクセスの保存枠どうしの合体の画面部品(合体の担当 claude/monsuc-fuse が足す)。保存枠の画面(56-monhero-success-r3-retire.jsx)の「合体する」から開く。2026-11-12',
+  assistantLifeHospitalCureSlotsOf: '特別な治療(ビートPの品物)を使った病院の回(abs)の配列(ナカヨシ・56-assistant-life-body.jsx)。育成ノートが、その回で助手のマスモンのけが・病気の残りを0にするのに読む。2026-11-12 キズナ',
+  assistantLifeHospitalSlotsOf: '助手専用の病院にいた生活の回(abs)の配列(ナカヨシが足す)。育成ノート(56-assistant-life-masmon-plan.jsx)がけが・病気を早く治すのに読む。2026-11-12 キズナ',
+  assistantLifeMasmonShareOf: 'フレンドに見せる助手のマスモン1人ぶんの形(キズナ・窓口の了承後に足す)。フレンドの家の送る側(56-assistant-life-friend-masmon-share)が呼ぶ。2026-11-12',
+  cardAssistantDeckShareOf: 'フレンドに見せる助手のデッキ1つの中身(カード部ツナグが足す)。フレンドの家の送る側(56-assistant-life-friend-masmon-share)が呼ぶ。2026-11-12',
   assistantLifeCardMood: '育つ助手の気分の言葉(助手部キズナ2が相談を作るときに足す。2026-11-08)',
   amgAdvise: '助手のマスモンの育成(第①段階・キズナ4)の相談の口。修行(第②段階・シュギョウ)の相談「休ませよう」から呼ぶ。2026-11-11',
   amgEntryOf: '助手のマスモンの育成(第①段階・キズナ4)の入れ物。修行の相談が疲れ具合を見るのに使う。2026-11-11',
+  assistantPartnerLockedNow: '会っているがまだ助手でない助手(町の人)か(カイホウ 18-assistant-partner.jsx)。助手ライフの🔒の判定(56-assistant-life-partner.jsx)。2026-11-11',
+  assistantPartnerProgressNow: '解放前の助手(町の人)の解放までの進み具合(カイホウ 18-assistant-partner.jsx)。助手ライフの町の人の小窓(56-assistant-life-partner.jsx)が「あと何回」に使う。2026-11-11',
+  MsxLiveMon: 'モンヒロサクセスの育てるモンスターの演出(待機のぴょこぴょこ・気分・反応。開発部 演出が 56-monhero-success-fx.jsx で足す・#5752)。育成の画面が typeof で確かめて置く。2026-11-12',
+  msxFxMoodOf: '同じ演出の部品の「芯の状態 → 気分8つ」(#5752)。無ければ育成の画面が自分で決める。2026-11-12',
+  monsucMonLine: 'モンヒロサクセスの台本エンジンのモンスターの声(別の会話が足す)。育てる子の演出(56-monhero-success-fx.jsx)のふきだしが呼ぶ。2026-11-12',
+  MsxR3: 'モンヒロサクセスの大会・修行・引退・ゲームオーバーの画面(回3のクラフトが 56-monsuc-r3-*.jsx で足す)。育成の画面(56-monhero-success-main.jsx)が typeof で確かめて渡す。2026-11-12',
+  assistantPartnerOkNow: '解放前の助手に関われないようにする判定(カイホウ 18-assistant-partner.jsx)。モンヒロバトルの応援・修行を見るが通す。2026-11-11',
 };
 const laterOk = (name) => Object.prototype.hasOwnProperty.call(LATER_HOOKS, name) && source.includes(`typeof ${name} === 'function'`);
 

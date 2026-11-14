@@ -23,7 +23,7 @@ const core = read('monster-hero/src/parts/10-core.jsx');
 // ① 上書き
 const memo = app.slice(app.indexOf('const battleFxEffective = useMemo'), app.indexOf('const battleFxLoad = battleFxEffective.load'));
 check('超省エネの∞周回の条件で上書きしている', /ecoMode === 'ultra' && autoRepeat === true/.test(memo));
-const offKeys = ['idleMotion', 'shake', 'specialMovie', 'phaseBanner', 'waveIntro', 'defeatFx', 'resultFx', 'countUp', 'endFx'];
+const offKeys = ['idleMotion', 'shake', 'specialMovie', 'phaseBanner', 'waveIntro', 'defeatFx', 'resultFx', 'countUp', 'endFx', 'hitStop'];
 for (const k of offKeys) check(`超省エネでは ${k} を切る`, new RegExp(`${k}: 'OFF'`).test(memo));
 check('上書きの再計算が ecoMode と autoRepeat に従う', /\[battleFxSettings, battleFxAutoLoad, ecoMode, autoRepeat\]/.test(memo));
 // 演出の項目を足したのに、ここの一覧へ入れ忘れていないか(足した項目は、設定の項目一覧から拾う)

@@ -9,6 +9,9 @@ const STORY_IDS = eventStoryIds();
 const INTRO_KEYS = introStoryKeys();
 const seed = ({ storyIds, introKeys = [], life, intro = false, bondAll = null }) => {
   const put = (k, v) => localStorage.setItem(k, JSON.stringify(v));
+  // 助手ライフの画面: 新UIが既定(2026-11-11)。ここを使う検査は前の画面(旧UI)を前提にしているので、決めていなければ前の画面で見る。
+  //   新UIを見る検査(assistant-life-ux-check・ux3-check・life-walkthrough)は、先に true を入れる(保存なしを見るときは window.__mhLifeUiNoSeed)
+  if (localStorage.getItem('mh_assistant_life_ui_v2') === null && !window.__mhLifeUiNoSeed) localStorage.setItem('mh_assistant_life_ui_v2', 'false');
   if (localStorage.getItem('mh_breeder_name') === null) {
     put('mh_breeder_name', 'テスト'); put('mh_breeder_icon', 'Mocchi'); put('mh_onboarded', true);
     for (const k of ['mh_tutorial_seen_v1','mh_battle_tutorial_seen_v1','mh_battle_tutorial_guide_shown_v1','mh_rhythm_tutorial_seen_v1','mh_masu_migrated','mh_kiki_intro_seen_v1','mh_momosuke_intro_seen_v1','mh_tactics_intro_seen_v1','mh_rhythm_hell_story_seen_v1','mh_story_assistant_chat_seen_v1','mh_story_tactics_types_seen_v1','mh_story_card_battle_seen_v1','mh_inherited_unique_level_compensation_v1']) put(k, true);
@@ -27,6 +30,7 @@ const seed = ({ storyIds, introKeys = [], life, intro = false, bondAll = null })
     let owned = {}; try { owned = JSON.parse(localStorage.getItem('mh_owned_items')) || {}; } catch {}
     put('mh_owned_items', { ...owned, peer_gift: 2, peer_token: 1 });
     if (!intro) put('mh_assistant_life_item_intro_v1', true);
+    if (!intro) put('mh_assistant_life_guide_seen_v1', true); // 初めて開いた人への1枚(intro のときだけ出す)
   }
   // 公開の印はページの中だけで切り替える(本体は 2026-11-07 から真)。偽の確かめのときは偽に戻す
   { const t = setInterval(() => { try { if (typeof RELEASE_FLAGS !== 'undefined') { RELEASE_FLAGS.assistantLife = !!life; clearInterval(t); } } catch {} }, 2); }
@@ -35,7 +39,7 @@ const seed = ({ storyIds, introKeys = [], life, intro = false, bondAll = null })
     localStorage.setItem('mh_check_life_seeded', '1');
     const t = Date.now() + 9 * 3600000, h = new Date(t).getUTCHours();
     const i = [0, 5, 10, 14, 18, 21].filter(x => h >= x).length - 1, ids = ['late', 'morning', 'noon', 'afternoon', 'evening', 'night'];
-    const base = { salt: 'check', abs: Math.floor(t / 86400000) * 6 + i, slot: ids[i], recent: [], nudges: { invite: [], introduce: [] }, watched: [] };
+    const base = { v: 2, salt: 'check', abs: Math.floor(t / 86400000) * 12 + Math.floor(h / 2), slot: ids[i], recent: [], nudges: { invite: [], introduce: [] }, watched: [] };
     put('mh_assistant_life_v1', bondAll != null
       ? { ...base, moods: {}, solo: {}, groups: [{ ids: ['kiki', 'mua'], doing: 'snack', place: 'cafe' }, { ids: ['dra', 'momosuke'], doing: 'walk', place: 'plaza' }, { ids: ['atsu', 'kyuko'], doing: 'cards', place: 'library' }, { ids: ['erubin', 'sorashido'], doing: 'cards', place: 'cardroom' }] }
       : { ...base, moods: { atsu: 'lonely', kyuko: 'happy', momosuke: 'lonely' },

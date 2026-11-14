@@ -1,3 +1,4 @@
+require('../shared-serve'); // :8899 が無ければ立てる(単独で回したとき。2026-11-11)
 // ウンディーネ／ヤオビクニを実ブラウザで確認する。
 //
 //   python3 -m http.server 8899 でリポジトリのルートを配信した状態で
@@ -103,7 +104,7 @@ const MARKET_ITEMS = [
   // 売り場の中から別の売り場へは、見出しの「戻る」でマーケットの入口へ戻ってから入り直す
   await clickAria('マーケット');
   const openSection = async (tab) => {
-    await page.evaluate(() => { const b = [...document.querySelectorAll('button[aria-label="戻る"]')].find(x => x.closest('.mh-screen-head')); if (b && !document.body.innerText.includes('ダイヤで購入')) b.click(); });
+    await page.evaluate(() => { const b = [...document.querySelectorAll('button[aria-label="戻る"]')].find(x => x.closest('.mh-screen-head')); if (b && !document.querySelector('[data-market-section]')) b.click(); });
     await page.waitForTimeout(600);
     // 入口の名前は2行に分けて書いてある(「ダイヤ／ショップ」)ので、文字ではなく data-market-section で押す
     const entry = tab === 'アイコン' || tab === '円盤石アイコン' ? 'breeder' : 'diamond';

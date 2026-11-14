@@ -1,0 +1,998 @@
+{
+  "blood": "グジラ",
+  "counts": {
+    "skills": 25
+  },
+  "skills": [
+    {
+      "skillId": "sk-0130",
+      "name": "突進",
+      "version": 1,
+      "blood": "グジラ",
+      "range": "中",
+      "rank": 1,
+      "moveTo": "零",
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 22,
+      "damage": "C+",
+      "accuracy": "D",
+      "gutsDown": "G",
+      "critical": "C",
+      "abilities": [
+        {
+          "abilityId": "sab-0175",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1209",
+          "rarity": 2
+        },
+        {
+          "monsterId": "1212",
+          "rarity": 2
+        }
+      ],
+      "note": "",
+      "sortOrder": 227,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0131",
+      "name": "ひっかき",
+      "version": 1,
+      "blood": "グジラ",
+      "range": "近",
+      "rank": 1,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 18,
+      "damage": "E",
+      "accuracy": "D",
+      "gutsDown": "E",
+      "critical": "G",
+      "abilities": [],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1201",
+          "rarity": 2
+        }
+      ],
+      "note": "",
+      "sortOrder": 228,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0132",
+      "name": "はら",
+      "version": 1,
+      "blood": "グジラ",
+      "range": "零",
+      "rank": 1,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 15,
+      "damage": "C",
+      "accuracy": "D+",
+      "gutsDown": "G",
+      "critical": "G",
+      "abilities": [
+        {
+          "abilityId": "sab-0141",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1251",
+          "rarity": 2
+        },
+        {
+          "monsterId": "1253",
+          "rarity": 2
+        }
+      ],
+      "note": "",
+      "sortOrder": 229,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0133",
+      "name": "地震",
+      "version": 1,
+      "blood": "グジラ",
+      "range": "遠",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "赤",
+      "skillType": "ちから",
+      "guts": 25,
+      "damage": "C+",
+      "accuracy": "A",
+      "gutsDown": "G",
+      "critical": "G",
+      "abilities": [
+        {
+          "abilityId": "sab-0023",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1201",
+          "rarity": 3
+        },
+        {
+          "monsterId": "1252",
+          "rarity": 3
+        }
+      ],
+      "note": "",
+      "sortOrder": 230,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0134",
+      "name": "しゃぼんアタック",
+      "version": 1,
+      "blood": "グジラ",
+      "range": "中",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "青",
+      "skillType": "かしこさ",
+      "guts": 28,
+      "damage": "D",
+      "accuracy": "C+",
+      "gutsDown": "A",
+      "critical": "D",
+      "abilities": [
+        {
+          "abilityId": "sab-0013",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0176",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1250",
+          "rarity": 3
+        }
+      ],
+      "note": "",
+      "sortOrder": 231,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0135",
+      "name": "くしゃみ",
+      "version": 1,
+      "blood": "グジラ",
+      "range": "近",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "青",
+      "skillType": "かしこさ",
+      "guts": 22,
+      "damage": "E",
+      "accuracy": "C",
+      "gutsDown": "B",
+      "critical": "D",
+      "abilities": [
+        {
+          "abilityId": "sab-0177",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0178",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1202",
+          "rarity": 3
+        },
+        {
+          "monsterId": "1212",
+          "rarity": 3
+        }
+      ],
+      "note": "",
+      "sortOrder": 232,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0136",
+      "name": "頭突き",
+      "version": 1,
+      "blood": "グジラ",
+      "range": "零",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 24,
+      "damage": "D+",
+      "accuracy": "B",
+      "gutsDown": "F",
+      "critical": "D",
+      "abilities": [
+        {
+          "abilityId": "sab-0175",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1208",
+          "rarity": 3
+        },
+        {
+          "monsterId": "1209",
+          "rarity": 3
+        },
+        {
+          "monsterId": "1253",
+          "rarity": 3
+        }
+      ],
+      "note": "",
+      "sortOrder": 233,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0137",
+      "name": "ぐるぐるプレス",
+      "version": 1,
+      "blood": "グジラ",
+      "range": "遠",
+      "rank": 3,
+      "moveTo": null,
+      "aura": "黒",
+      "skillType": "ちから",
+      "guts": 30,
+      "damage": "A",
+      "accuracy": "E",
+      "gutsDown": "G",
+      "critical": "D+",
+      "abilities": [
+        {
+          "abilityId": "sab-0179",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0180",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1251",
+          "rarity": 4
+        },
+        {
+          "monsterId": "1252",
+          "rarity": 4
+        }
+      ],
+      "note": "",
+      "sortOrder": 234,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0138",
+      "name": "突進つきあげ",
+      "version": 1,
+      "blood": "グジラ",
+      "range": "中",
+      "rank": 3,
+      "moveTo": "零",
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 34,
+      "damage": "B",
+      "accuracy": "B",
+      "gutsDown": "G",
+      "critical": "A",
+      "abilities": [
+        {
+          "abilityId": "sab-0181",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0182",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1208",
+          "rarity": 4
+        }
+      ],
+      "note": "",
+      "sortOrder": 235,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0139",
+      "name": "しっぽビンタ",
+      "version": 1,
+      "blood": "グジラ",
+      "range": "近",
+      "rank": 3,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 29,
+      "damage": "B",
+      "accuracy": "A",
+      "gutsDown": "F",
+      "critical": "C",
+      "abilities": [
+        {
+          "abilityId": "sab-0183",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0184",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0185",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1201",
+          "rarity": 4
+        },
+        {
+          "monsterId": "1250",
+          "rarity": 4
+        }
+      ],
+      "note": "",
+      "sortOrder": 236,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0140",
+      "name": "ボディープレス",
+      "version": 1,
+      "blood": "グジラ",
+      "range": "零",
+      "rank": 3,
+      "moveTo": null,
+      "aura": "白",
+      "skillType": "ちから",
+      "guts": 35,
+      "damage": "S",
+      "accuracy": "E",
+      "gutsDown": "E",
+      "critical": "C",
+      "abilities": [
+        {
+          "abilityId": "sab-0177",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0186",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1202",
+          "rarity": 4
+        }
+      ],
+      "note": "",
+      "sortOrder": 237,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0141",
+      "name": "大津波",
+      "version": 1,
+      "blood": "グジラ",
+      "range": "遠",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "青",
+      "skillType": "かしこさ",
+      "guts": 36,
+      "damage": "A",
+      "accuracy": "B+",
+      "gutsDown": "C",
+      "critical": "D",
+      "abilities": [
+        {
+          "abilityId": "sab-0187",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0188",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1202",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 238,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0142",
+      "name": "ウェーブプレス",
+      "version": 1,
+      "blood": "グジラ",
+      "range": "近",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "青",
+      "skillType": "ちから",
+      "guts": 46,
+      "damage": "B+",
+      "accuracy": "B",
+      "gutsDown": "C",
+      "critical": "A",
+      "abilities": [
+        {
+          "abilityId": "sab-0189",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0190",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0141",
+          "unlock": {
+            "monsterId": "1252",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0142",
+          "unlock": {
+            "monsterId": "1252",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1252",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 239,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0143",
+      "name": "つきあげ",
+      "version": 1,
+      "blood": "グジラ",
+      "range": "零",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "黄",
+      "skillType": "ちから",
+      "guts": 40,
+      "damage": "B+",
+      "accuracy": "C",
+      "gutsDown": "F",
+      "critical": "B",
+      "abilities": [
+        {
+          "abilityId": "sab-0191",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0192",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0021",
+          "unlock": {
+            "monsterId": "1251",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0039",
+          "unlock": {
+            "monsterId": "1251",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1251",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 240,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0144",
+      "name": "キングウェーブ",
+      "version": 1,
+      "blood": "グジラ",
+      "range": "遠",
+      "rank": 5,
+      "moveTo": null,
+      "aura": "黒",
+      "skillType": "かしこさ",
+      "guts": 40,
+      "damage": "S",
+      "accuracy": "S",
+      "gutsDown": "B",
+      "critical": "A",
+      "abilities": [
+        {
+          "abilityId": "sab-0193",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0194",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0004",
+          "unlock": {
+            "monsterId": "1250",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0005",
+          "unlock": {
+            "monsterId": "1250",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1250",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 241,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0145",
+      "name": "トリート",
+      "version": 1,
+      "blood": "グジラ",
+      "range": "近",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "青",
+      "skillType": "ちから",
+      "guts": 20,
+      "damage": "E",
+      "accuracy": "B",
+      "gutsDown": "B+",
+      "critical": "E+",
+      "abilities": [
+        {
+          "abilityId": "sab-0195",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "1252"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 242,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0146",
+      "name": "パンプキンプレス",
+      "version": 1,
+      "blood": "グジラ",
+      "range": "零",
+      "rank": 5,
+      "moveTo": null,
+      "aura": "青",
+      "skillType": "ちから",
+      "guts": 42,
+      "damage": "A",
+      "accuracy": "E",
+      "gutsDown": "D",
+      "critical": "A",
+      "abilities": [
+        {
+          "abilityId": "sab-0196",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0197",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "1252"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 243,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0147",
+      "name": "スノーアタック",
+      "version": 1,
+      "blood": "グジラ",
+      "range": "中",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "白",
+      "skillType": "ちから",
+      "guts": 30,
+      "damage": "C",
+      "accuracy": "C",
+      "gutsDown": "A",
+      "critical": "F",
+      "abilities": [
+        {
+          "abilityId": "sab-0198",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0199",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "1251"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 244,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0148",
+      "name": "きよしこの夜",
+      "version": 1,
+      "blood": "グジラ",
+      "range": "中",
+      "rank": 5,
+      "moveTo": null,
+      "aura": "赤",
+      "skillType": "ちから",
+      "guts": 45,
+      "damage": "S+",
+      "accuracy": "C",
+      "gutsDown": "C",
+      "critical": "C",
+      "abilities": [
+        {
+          "abilityId": "sab-0200",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0201",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "1251"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 245,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0149",
+      "name": "おおはら",
+      "version": 1,
+      "blood": "グジラ",
+      "range": "零",
+      "rank": 1,
+      "moveTo": "中",
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 17,
+      "damage": "C",
+      "accuracy": "C",
+      "gutsDown": "G",
+      "critical": "G",
+      "abilities": [
+        {
+          "abilityId": "sab-0177",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "1250"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 246,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0150",
+      "name": "ホワイトサージ",
+      "version": 1,
+      "blood": "グジラ",
+      "range": "中",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "白",
+      "skillType": "ちから",
+      "guts": 41,
+      "damage": "B",
+      "accuracy": "B",
+      "gutsDown": "G",
+      "critical": "B",
+      "abilities": [
+        {
+          "abilityId": "sab-0202",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0203",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1253",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 247,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0817",
+      "name": "きりさく",
+      "version": 1,
+      "blood": "グジラ",
+      "range": "近",
+      "rank": 1,
+      "moveTo": null,
+      "aura": "黒",
+      "skillType": "ちから",
+      "guts": 15,
+      "damage": "D+",
+      "accuracy": "D+",
+      "gutsDown": "G",
+      "critical": "F",
+      "abilities": [
+        {
+          "abilityId": "sab-0726",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "1290",
+        "1253"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 248,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0818",
+      "name": "体内放射",
+      "version": 1,
+      "blood": "グジラ",
+      "range": "遠",
+      "rank": 3,
+      "moveTo": null,
+      "aura": "白",
+      "skillType": "ちから",
+      "guts": 27,
+      "damage": "C+",
+      "accuracy": "B+",
+      "gutsDown": "B+",
+      "critical": "G",
+      "abilities": [
+        {
+          "abilityId": "sab-0727",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0728",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0042",
+          "unlock": {
+            "monsterId": "1253",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0022",
+          "unlock": {
+            "monsterId": "1253",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "1290",
+        "1253"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 249,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0819",
+      "name": "尻尾",
+      "version": 1,
+      "blood": "グジラ",
+      "range": "近",
+      "rank": 3,
+      "moveTo": "中",
+      "aura": "黒",
+      "skillType": "ちから",
+      "guts": 20,
+      "damage": "B+",
+      "accuracy": "A+",
+      "gutsDown": "G",
+      "critical": "F",
+      "abilities": [
+        {
+          "abilityId": "sab-0729",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "1290"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 250,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0820",
+      "name": "放射熱線",
+      "version": 1,
+      "blood": "グジラ",
+      "range": "中",
+      "rank": 6,
+      "moveTo": null,
+      "aura": "黒",
+      "skillType": "ちから",
+      "guts": 45,
+      "damage": "SS",
+      "accuracy": "A+",
+      "gutsDown": "A",
+      "critical": "B",
+      "abilities": [
+        {
+          "abilityId": "sab-0730",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0731",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0004",
+          "unlock": {
+            "monsterId": "1290",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0005",
+          "unlock": {
+            "monsterId": "1290",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "1290"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 251,
+      "status": "verified"
+    }
+  ]
+}

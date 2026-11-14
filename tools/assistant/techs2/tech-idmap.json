@@ -1,0 +1,302 @@
+{
+ "Mocchi": {
+  "mocchi_01": "sk-0402",
+  "mocchi_02": "sk-0401",
+  "mocchi_03": "sk-0404",
+  "mocchi_04": "sk-0408",
+  "mocchi_05": "sk-0409",
+  "mocchi_06": "sk-0403",
+  "mocchi_07": "sk-0412",
+  "mocchi_08": "sk-0403"
+ },
+ "Suezo": {
+  "suezo_01": "sk-0462",
+  "suezo_02": "sk-0461",
+  "suezo_03": "sk-0466",
+  "suezo_04": "sk-0468",
+  "suezo_05": "sk-0464",
+  "suezo_06": "sk-0466",
+  "suezo_07": "sk-0460",
+  "suezo_08": "sk-0467"
+ },
+ "Golem": {
+  "golem_01": "sk-0293",
+  "golem_02": "sk-0294",
+  "golem_03": "sk-0294",
+  "golem_04": "sk-0292",
+  "golem_05": "sk-0302",
+  "golem_06": "sk-0303",
+  "golem_07": "sk-0305",
+  "golem_08": "sk-0301"
+ },
+ "Tiger": {
+  "tiger_01": "sk-0385",
+  "tiger_02": "sk-0385",
+  "tiger_03": "sk-0384",
+  "tiger_04": "sk-0387",
+  "tiger_05": "sk-0391",
+  "tiger_06": "sk-0388",
+  "tiger_07": "sk-0396",
+  "tiger_08": "sk-0390"
+ },
+ "Ham": {
+  "ham_01": "sk-0342",
+  "ham_02": "sk-0340",
+  "ham_03": "sk-0338",
+  "ham_04": "sk-0343",
+  "ham_05": "sk-0345",
+  "ham_06": "sk-0348",
+  "ham_07": "sk-0349",
+  "ham_08": "sk-0347"
+ },
+ "Pixie": {
+  "pixie_01": "sk-0260",
+  "pixie_02": "sk-0258",
+  "pixie_03": "sk-0259",
+  "pixie_04": "sk-0264",
+  "pixie_05": "sk-0263",
+  "pixie_06": "sk-0262",
+  "pixie_07": "sk-0261",
+  "pixie_08": "sk-0265"
+ },
+ "Mia": {
+  "mia_01": "sk-0263",
+  "mia_02": "sk-0265",
+  "mia_03": "sk-0268",
+  "mia_04": "sk-0264",
+  "mia_05": "sk-0274",
+  "mia_06": "sk-0262",
+  "mia_07": "sk-0274",
+  "mia_08": "sk-0271"
+ },
+ "Pandora": {
+  "pandora_01": "pandora_o01",
+  "pandora_02": "pandora_o02",
+  "pandora_03": "pandora_o04",
+  "pandora_04": "pandora_o08",
+  "pandora_05": "pandora_o05",
+  "pandora_06": "pandora_o06",
+  "pandora_07": "pandora_o07",
+  "pandora_08": "pandora_o10"
+ },
+ "Monol": {
+  "monol_01": "sk-0512",
+  "monol_02": "sk-0512",
+  "monol_03": "sk-0514",
+  "monol_04": "sk-0515",
+  "monol_05": "sk-0519",
+  "monol_06": "sk-0518",
+  "monol_07": "sk-0521",
+  "monol_08": "sk-0515"
+ },
+ "Oboro": {
+  "oboro_01": "sk-0448",
+  "oboro_02": "sk-0447",
+  "oboro_03": "sk-0448",
+  "oboro_04": "sk-0450",
+  "oboro_05": "sk-0457",
+  "oboro_06": "sk-0451",
+  "oboro_07": "sk-0824",
+  "oboro_08": "sk-0446"
+ },
+ "Plant": {
+  "plant_01": "sk-0448",
+  "plant_02": "sk-0447",
+  "plant_03": "sk-0448",
+  "plant_04": "sk-0450",
+  "plant_05": "sk-0457",
+  "plant_06": "sk-0451",
+  "plant_07": "sk-0824",
+  "plant_08": "sk-0446"
+ },
+ "Zan": {
+  "zan_01": "sk-0592",
+  "zan_02": "sk-0797",
+  "zan_03": "sk-0797",
+  "zan_04": "sk-0591",
+  "zan_05": "sk-0595",
+  "zan_06": "sk-0798",
+  "zan_07": "sk-0599",
+  "zan_08": "sk-0599"
+ },
+ "Eiki": {
+  "eiki_01": "eiki_o01",
+  "eiki_02": "eiki_o02",
+  "eiki_03": "eiki_o03",
+  "eiki_04": "eiki_o04",
+  "eiki_05": "eiki_o06",
+  "eiki_06": "eiki_o05",
+  "eiki_07": "eiki_o07",
+  "eiki_08": "eiki_o10"
+ },
+ "KenshiMocchi": {
+  "kenshimocchi_01": "kenshimocchi_o01",
+  "kenshimocchi_02": "kenshimocchi_o03",
+  "kenshimocchi_03": "kenshimocchi_o02",
+  "kenshimocchi_04": "kenshimocchi_o06",
+  "kenshimocchi_05": "kenshimocchi_o05",
+  "kenshimocchi_06": "kenshimocchi_o04",
+  "kenshimocchi_07": "kenshimocchi_o09",
+  "kenshimocchi_08": "kenshimocchi_o10"
+ },
+ "Mitarashi": {
+  "mitarashi_01": "sk-0402",
+  "mitarashi_02": "sk-0401",
+  "mitarashi_03": "sk-0404",
+  "mitarashi_04": "sk-0408",
+  "mitarashi_05": "sk-0409",
+  "mitarashi_06": "sk-0403",
+  "mitarashi_07": "sk-0412",
+  "mitarashi_08": "sk-0403"
+ },
+ "Ark": {
+  "ark_01": "sk-0110",
+  "ark_02": "sk-0111",
+  "ark_03": "sk-0125",
+  "ark_04": "sk-0125",
+  "ark_05": "sk-0110",
+  "ark_06": "sk-0115",
+  "ark_07": "sk-0118",
+  "ark_08": "sk-0119"
+ },
+ "Iblis": {
+  "iblis_01": "sk-0110",
+  "iblis_02": "sk-0111",
+  "iblis_03": "sk-0125",
+  "iblis_04": "sk-0125",
+  "iblis_05": "sk-0110",
+  "iblis_06": "sk-0115",
+  "iblis_07": "sk-0118",
+  "iblis_08": "sk-0119"
+ },
+ "Snegurochka": {
+  "snegurochka_01": "sk-0477",
+  "snegurochka_02": "sk-0476",
+  "snegurochka_03": "sk-0475",
+  "snegurochka_04": "sk-0485",
+  "snegurochka_05": "sk-0484",
+  "snegurochka_06": "sk-0481",
+  "snegurochka_07": "sk-0743",
+  "snegurochka_08": "sk-0479"
+ },
+ "Undine": {
+  "undine_01": "sk-0477",
+  "undine_02": "sk-0476",
+  "undine_03": "sk-0475",
+  "undine_04": "sk-0485",
+  "undine_05": "sk-0484",
+  "undine_06": "sk-0481",
+  "undine_07": "sk-0490",
+  "undine_08": "sk-0479"
+ },
+ "Yaobikuni": {
+  "yaobikuni_01": "sk-0477",
+  "yaobikuni_02": "sk-0476",
+  "yaobikuni_03": "sk-0475",
+  "yaobikuni_04": "sk-0485",
+  "yaobikuni_05": "sk-0484",
+  "yaobikuni_06": "sk-0481",
+  "yaobikuni_07": "sk-0490",
+  "yaobikuni_08": "sk-0479"
+ },
+ "Yggdrasil": {
+  "yggdrasil_01": "sk-0576",
+  "yggdrasil_02": "sk-0578",
+  "yggdrasil_03": "sk-0574",
+  "yggdrasil_04": "sk-0585",
+  "yggdrasil_05": "sk-0573",
+  "yggdrasil_06": "sk-0580",
+  "yggdrasil_07": "sk-0581",
+  "yggdrasil_08": "sk-0575"
+ },
+ "MelWhip": {
+  "melwhip_01": "sk-0576",
+  "melwhip_02": "sk-0578",
+  "melwhip_03": "sk-0574",
+  "melwhip_04": "sk-0585",
+  "melwhip_05": "sk-0573",
+  "melwhip_06": "sk-0580",
+  "melwhip_07": "sk-0581",
+  "melwhip_08": "sk-0575"
+ },
+ "Melody": {
+  "melody_01": "melody_o01",
+  "melody_02": "melody_o04",
+  "melody_03": "melody_o03",
+  "melody_04": "melody_o07",
+  "melody_05": "melody_o02",
+  "melody_06": "melody_o06",
+  "melody_07": "melody_o05",
+  "melody_08": "melody_o10"
+ },
+ "Kuromy": {
+  "kuromy_01": "kuromy_o01",
+  "kuromy_02": "kuromy_o04",
+  "kuromy_03": "kuromy_o03",
+  "kuromy_04": "kuromy_o07",
+  "kuromy_05": "kuromy_o02",
+  "kuromy_06": "kuromy_o06",
+  "kuromy_07": "kuromy_o05",
+  "kuromy_08": "kuromy_o10"
+ },
+ "Ghost": {
+  "ghost_01": "sk-0066",
+  "ghost_02": "sk-0078",
+  "ghost_03": "sk-0065",
+  "ghost_04": "sk-0068",
+  "ghost_05": "sk-0072",
+  "ghost_06": "sk-0077",
+  "ghost_07": "sk-0074",
+  "ghost_08": "sk-0070"
+ },
+ "Spooky": {
+  "spooky_01": "sk-0066",
+  "spooky_02": "sk-0082",
+  "spooky_03": "sk-0065",
+  "spooky_04": "sk-0068",
+  "spooky_05": "sk-0072",
+  "spooky_06": "sk-0077",
+  "spooky_07": "sk-0083",
+  "spooky_08": "sk-0070"
+ },
+ "Illumine": {
+  "illumine_01": "sk-0045",
+  "illumine_02": "sk-0039",
+  "illumine_03": "sk-0040",
+  "illumine_04": "sk-0064",
+  "illumine_05": "sk-0042",
+  "illumine_06": "sk-0043",
+  "illumine_07": "sk-0054",
+  "illumine_08": "sk-0041"
+ },
+ "Dreamy": {
+  "dreamy_01": "sk-0045",
+  "dreamy_02": "sk-0039",
+  "dreamy_03": "sk-0040",
+  "dreamy_04": "sk-0040",
+  "dreamy_05": "sk-0042",
+  "dreamy_06": "sk-0053",
+  "dreamy_07": "sk-0042",
+  "dreamy_08": "sk-0055"
+ },
+ "Kyubi": {
+  "kyubi_01": "sk-0005",
+  "kyubi_02": "sk-0004",
+  "kyubi_03": "sk-0003",
+  "kyubi_04": "sk-0018",
+  "kyubi_05": "sk-0010",
+  "kyubi_06": "sk-0009",
+  "kyubi_07": "sk-0016",
+  "kyubi_08": "sk-0028"
+ },
+ "Orihime": {
+  "orihime_01": "sk-0005",
+  "orihime_02": "sk-0004",
+  "orihime_03": "sk-0003",
+  "orihime_04": "sk-0496",
+  "orihime_05": "sk-0010",
+  "orihime_06": "sk-0009",
+  "orihime_07": "sk-0016",
+  "orihime_08": "sk-0028"
+ }
+}

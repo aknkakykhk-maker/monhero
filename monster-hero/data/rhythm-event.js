@@ -462,6 +462,8 @@ const RHYTHM_EVENT_POINT_SHOP_OFFERS = Object.freeze([
   Object.freeze({ id:'solo_candy', name:'ひとつぶキャンディ', emoji:'🍬', kind:'item', itemId:'solo_candy', grantAmount:1, unit:'個', cost:80, releaseFlag:'assistantLifeSolo' }),
   Object.freeze({ id:'solo_keyholder', name:'キーホルダー', emoji:'🔑', kind:'item', itemId:'solo_keyholder', grantAmount:1, unit:'個', cost:250, releaseFlag:'assistantLifeSolo' }),
   Object.freeze({ id:'solo_omamori', name:'小さなおまもり', emoji:'🧿', kind:'item', itemId:'solo_omamori', grantAmount:1, unit:'個', cost:300, releaseFlag:'assistantLifeSolo' }),
+  // 🏥 特別な治療(2026-11-12 社長)。助手ライフの病院の回に1枚使うと、重いけが・病気でもその場で治る。公開の印 assistantLifeBody が立つまで並べない
+  Object.freeze({ id:'life_cure', name:'特別な治療', emoji:'🏥', kind:'item', itemId:'life_cure', grantAmount:1, unit:'枚', cost:300, releaseFlag:'assistantLifeBody' }),
   // 助手ライフの家具(2026-11-08 社長「交換所に家具の段を足すだけ」)。交換所の「家具」タブに並ぶ。公開の印 assistantLifeFurniture が立つまで並べない
   Object.freeze({ id:'furn_sofa', name:'ふかふかソファ', emoji:'🛋️', kind:'item', itemId:'furn_sofa', grantAmount:1, unit:'個', cost:1200, releaseFlag:'assistantLifeFurniture' }),
   Object.freeze({ id:'furn_bear', name:'くまのぬいぐるみ', emoji:'🧸', kind:'item', itemId:'furn_bear', grantAmount:1, unit:'個', cost:600, releaseFlag:'assistantLifeFurniture' }),
@@ -475,6 +477,14 @@ const RHYTHM_EVENT_POINT_SHOP_OFFERS = Object.freeze([
   Object.freeze({ id:'furn_lantern', name:'星のランタン', emoji:'🏮', kind:'item', itemId:'furn_lantern', grantAmount:1, unit:'個', cost:700, releaseFlag:'assistantLifeFurniture' }),
   Object.freeze({ id:'furn_mirrorball', name:'ミラーボール', emoji:'🪩', kind:'item', itemId:'furn_mirrorball', grantAmount:1, unit:'個', cost:1000, releaseFlag:'assistantLifeFurniture' }),
   Object.freeze({ id:'furn_windbell', name:'風鈴', emoji:'🎐', kind:'item', itemId:'furn_windbell', grantAmount:1, unit:'個', cost:400, releaseFlag:'assistantLifeFurniture' }),
+  Object.freeze({ id:'furn_clock', name:'ふりこ時計', emoji:'🕰️', kind:'item', itemId:'furn_clock', grantAmount:1, unit:'個', cost:900, releaseFlag:'assistantLifeFurniture' }),
+  Object.freeze({ id:'furn_map', name:'冒険の地図', emoji:'🗺️', kind:'item', itemId:'furn_map', grantAmount:1, unit:'個', cost:800, releaseFlag:'assistantLifeFurniture' }),
+  Object.freeze({ id:'furn_guitar', name:'ギター', emoji:'🎸', kind:'item', itemId:'furn_guitar', grantAmount:1, unit:'個', cost:1100, releaseFlag:'assistantLifeFurniture' }),
+  Object.freeze({ id:'furn_tv', name:'レトロテレビ', emoji:'📺', kind:'item', itemId:'furn_tv', grantAmount:1, unit:'個', cost:1200, releaseFlag:'assistantLifeFurniture' }),
+  Object.freeze({ id:'furn_windowflower', name:'窓辺の花', emoji:'🌷', kind:'item', itemId:'furn_windowflower', grantAmount:1, unit:'個', cost:500, releaseFlag:'assistantLifeFurniture' }),
+  Object.freeze({ id:'furn_fishbowl', name:'金魚ばち', emoji:'🐠', kind:'item', itemId:'furn_fishbowl', grantAmount:1, unit:'個', cost:600, releaseFlag:'assistantLifeFurniture' }),
+  Object.freeze({ id:'furn_pendant', name:'ペンダントライト', emoji:'💡', kind:'item', itemId:'furn_pendant', grantAmount:1, unit:'個', cost:700, releaseFlag:'assistantLifeFurniture' }),
+  Object.freeze({ id:'furn_garland', name:'ガーランド', emoji:'🎏', kind:'item', itemId:'furn_garland', grantAmount:1, unit:'個', cost:400, releaseFlag:'assistantLifeFurniture' }),
   Object.freeze({ id:'hero_proof_shard', name:'勇者の証片', emoji:'🎖️', kind:'item', itemId:'hero_proof_shard', grantAmount:1, unit:'個', cost:75 }),
   Object.freeze({ id:'transcend_fruit_rainbow', name:'虹の超越の実', emoji:'🍇', kind:'item', itemId:'transcend_fruit_rainbow', grantAmount:1, unit:'個', cost:3000 }),
   Object.freeze({ id:'hero_proof', name:'勇者の証', emoji:'🏅', kind:'item', itemId:'hero_proof', grantAmount:1, unit:'個', cost:1500 }),

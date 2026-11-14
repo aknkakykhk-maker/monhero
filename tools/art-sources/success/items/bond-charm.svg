@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+<defs>
+<filter id="soft" x="-30%" y="-100%" width="160%" height="300%"><feGaussianBlur stdDeviation="7"/></filter>
+<filter id="glow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="14"/></filter>
+<radialGradient id="white" cx="0.35" cy="0.3" r="0.75"><stop offset="0" stop-color="#ffffff"/><stop offset="0.7" stop-color="#f1f4fa"/><stop offset="1" stop-color="#cdd6e6"/></radialGradient><linearGradient id="blue" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6fb2ff"/><stop offset="1" stop-color="#1f56b8"/></linearGradient><linearGradient id="tas" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5aa6ff"/><stop offset="1" stop-color="#1a3f9a"/></linearGradient><linearGradient id="gold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff3b0"/><stop offset="0.35" stop-color="#f7c948"/><stop offset="0.75" stop-color="#d99a1e"/><stop offset="1" stop-color="#a8680c"/></linearGradient>
+</defs>
+<ellipse cx="256" cy="470" rx="140" ry="14" fill="#2a1a10" opacity="0.22" filter="url(#soft)"/>
+<!-- ひもの輪 -->
+  <path d="M232 128 C206 74 226 40 256 40 C286 40 306 74 280 128" fill="none" stroke="#3d2618" stroke-width="22" stroke-linecap="round"/>
+  <path d="M232 128 C206 74 226 40 256 40 C286 40 306 74 280 128" fill="none" stroke="url(#blue)" stroke-width="10" stroke-linecap="round"/>
+  <!-- 房のひも -->
+  <path d="M206 330 C196 360 180 380 166 398 M306 330 C316 360 332 380 346 398" stroke="#3d2618" stroke-width="20" stroke-linecap="round" fill="none"/>
+  <path d="M206 330 C196 360 180 380 166 398 M306 330 C316 360 332 380 346 398" stroke="url(#blue)" stroke-width="8" stroke-linecap="round" fill="none"/>
+  <!-- 丸いお守り -->
+  <circle cx="256" cy="238" r="122" fill="url(#white)" stroke="#3d2618" stroke-width="9" stroke-linejoin="round" stroke-linecap="round"/>
+  <circle cx="256" cy="238" r="100" fill="none" stroke="#9cc3f0" stroke-width="6" stroke-dasharray="4 12" stroke-linecap="round"/>
+  <polygon points="256.0,198.0 266.6,223.4 294.0,225.6 273.1,243.6 279.5,270.4 256.0,256.0 232.5,270.4 238.9,243.6 218.0,225.6 245.4,223.4" fill="#5ea0f0" stroke="#3d2618" stroke-width="6" stroke-linejoin="round" stroke-linecap="round"/>
+  <polygon points="200.0,167.0 204.0,176.5 214.3,177.4 206.4,184.1 208.8,194.1 200.0,188.8 191.2,194.1 193.6,184.1 185.7,177.4 196.0,176.5" fill="#a9cdf6" /><polygon points="316.0,173.0 319.4,181.3 328.4,182.0 321.6,187.8 323.6,196.5 316.0,191.8 308.4,196.5 310.4,187.8 303.6,182.0 312.6,181.3" fill="#a9cdf6" /><polygon points="316.0,277.0 320.0,286.5 330.3,287.4 322.4,294.1 324.8,304.1 316.0,298.8 307.2,304.1 309.6,294.1 301.7,287.4 312.0,286.5" fill="#a9cdf6" /><polygon points="196.0,280.0 199.2,287.6 207.4,288.3 201.1,293.7 203.1,301.7 196.0,297.4 188.9,301.7 190.9,293.7 184.6,288.3 192.8,287.6" fill="#a9cdf6" />
+  <path d="M170 190 C186 152 214 132 246 126" stroke="#ffffff" stroke-width="12" stroke-linecap="round" fill="none" opacity="0.9"/>
+  <!-- 上の結び目 -->
+  <ellipse cx="256" cy="122" rx="34" ry="22" fill="url(#blue)" stroke="#3d2618" stroke-width="9" stroke-linejoin="round" stroke-linecap="round"/>
+  <path d="M236 118 Q256 108 276 118" stroke="#ffffff" stroke-width="5" fill="none" opacity="0.6" stroke-linecap="round"/>
+  <!-- 房2本 -->
+  <path d="M146 392 L186 392 L194 446 Q166 462 138 446 Z" fill="url(#tas)" stroke="#3d2618" stroke-width="9" stroke-linejoin="round" stroke-linecap="round"/>
+  <path d="M326 392 L366 392 L374 446 Q346 462 318 446 Z" fill="url(#tas)" stroke="#3d2618" stroke-width="9" stroke-linejoin="round" stroke-linecap="round"/>
+  <rect x="140" y="384" width="52" height="18" rx="8" fill="url(#gold)" stroke="#3d2618" stroke-width="6" stroke-linejoin="round" stroke-linecap="round"/>
+  <rect x="320" y="384" width="52" height="18" rx="8" fill="url(#gold)" stroke="#3d2618" stroke-width="6" stroke-linejoin="round" stroke-linecap="round"/>
+  <path d="M156 408 L154 444 M170 408 L170 448 M336 408 L334 444 M350 408 L350 448" stroke="#0f2a6e" stroke-width="4" opacity="0.6"/>
+</svg>

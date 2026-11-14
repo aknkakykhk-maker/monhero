@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // 助手のマスモンの修行と助手の成長(56-assistant-life-masmon-train.jsx・社長の仕様書の第②段階)と技表(data/assistant-masmon-techs.js)を、画面なしで確かめる。
-//   技表の形と幅/印が偽なら何もしない/初めの値は一度だけ/同じ種なら同じ結果/修行はモンヒロバトルにいた回だけ・1日2回まで/熟練は0〜100で下がらない/
+//   技表の形と幅/印が偽なら何もしない/初めの値は一度だけ/同じ種なら同じ結果/修行はモンヒロバトルにいた回だけ・1日3回まで/熟練は0〜100で下がらない/
 //   技の習得は条件どおり/ブリーダー能力の天井と効き目の幅/相談は1日1回/保存の正規化/第③段階へ渡す形
 //   第①段階(育成)の受け口は、ここでは小さな代わり(drive)で回す。--sim で 30・90・180 日の伸びを表に出す
 const fs = require('fs');
@@ -11,7 +11,10 @@ const read = (p) => fs.readFileSync(path.join(root, p), 'utf8');
 const all = read('monster-hero/src/parts/56-assistant-life-masmon-train.jsx');
 const body = all.slice(0, all.indexOf('// ---------- 画面'));
 const techsSrc = read('monster-hero/data/assistant-masmon-techs.js');
-const lifeSlots = read('monster-hero/src/parts/56-assistant-life.jsx').match(/^const ASSISTANT_LIFE_SLOTS = [\s\S]*?^\]\);/m)[0];
+const lifeSlots = read('monster-hero/src/parts/56-assistant-life.jsx').match(/^const ASSISTANT_LIFE_SLOTS = [\s\S]*?^\]\);/m)[0]
+// 12区切り(2026-11-11 ナカヨシ11): 区切りの時刻を返す関数も一緒に読む
+const lifeSlots12 = read('monster-hero/src/parts/56-assistant-life.jsx').match(/^const ASSISTANT_LIFE_PER_DAY[\s\S]*?^const assistantLifeAbsV1ToV2 = [\s\S]*?^};/m)[0];
+
 let ng = 0;
 const check = (label, ok, info = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${label}${info ? ` — ${info}` : ''}`); if (!ok) ng++; };
 const make = (on, seed = 'seed-1') => {
@@ -19,13 +22,13 @@ const make = (on, seed = 'seed-1') => {
   const ctx = { console, Promise, RELEASE_FLAGS: { assistantMasmonTrain: on }, ASSISTANT_MASMON_STORE: { state: { seed } },
     storeSet: (k, v) => { saved[k] = JSON.parse(JSON.stringify(v)); }, storeGet: async (k, d) => (k in saved ? saved[k] : d) };
   vm.createContext(ctx);
-  vm.runInContext(`${techsSrc}\n${lifeSlots}\n${body}\nthis.T = { ASSISTANT_MASMON_TECHS, AMGT_STORE, AMGT_NUM, AMGT_KINDS, AMGT_SENSE_KEYS, AMGT_BR_KEYS, AMGT_BR_INIT, normalizeAssistantMasmonTrain, amgtChoose, amgtDo, amgtAfterAct, amgtLeadMult, amgtFailMult, amgtStressMult, amgtRestAt, amgtAskOf, amgtAnswer, amgtBattleOf, amgtTacticsOf, amgtEntryOf, amgtInitMon, amgtActName, amgtBrCap, amgtNoteLife, amgtSlotOf, amgtCanLearn, amgtTechsOf, amgtRoomLine };`, ctx);
+  vm.runInContext(`${techsSrc}\n${lifeSlots}\n${lifeSlots12}\n${body}\nthis.T = { ASSISTANT_MASMON_TECHS, AMGT_STORE, AMGT_NUM, AMGT_KINDS, AMGT_SENSE_KEYS, AMGT_BR_KEYS, AMGT_BR_INIT, normalizeAssistantMasmonTrain, amgtChoose, amgtDo, amgtAfterAct, amgtLeadMult, amgtFailMult, amgtStressMult, amgtRestAt, amgtAskOf, amgtAnswer, amgtBattleOf, amgtTacticsOf, amgtEntryOf, amgtInitMon, amgtActName, amgtBrCap, amgtNoteLife, amgtSlotOf, amgtCanLearn, amgtTechsOf, amgtRoomLine };`, ctx);
   ctx.T.AMGT_STORE.loaded = true;
   return { T: ctx.T, saved, ctx };
 };
 const rows = [{ slot: 1, monster: 'Golem', nick: 'ごろべえ', lv: 25 }, { slot: 2, monster: 'Pixie', nick: 'ぴく', lv: 12 }];
 const START = 20403 * 3; // ある日の朝
-const hash = (s) => { let h = 2166136261; for (const ch of String(s)) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619); } return (h >>> 0) / 4294967296; };
+const hash = (s) => { let h = 2166136261; for (const ch of String(s)) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619); } h ^= h >>> 16; h = Math.imul(h, 0x85ebca6b); h ^= h >>> 13; h = Math.imul(h, 0xc2b2ae35); h ^= h >>> 16; return (h >>> 0) / 4294967296; }; // よく混ぜる(似た文字列で片寄らない)
 // 第①段階の代わり: 疲れたら休む・ストレスが高ければ遊ぶ・それ以外は軽トレ(伸ばす能力は回ごとに変わる)。修行の回は amgtDo。
 //   モンヒロバトルにいた回は、プレイヤーが開いていたとして半分くらいの回に印を付ける
 const KEYS = ['life', 'pow', 'wise', 'hit', 'eva', 'tough'];
@@ -43,11 +46,27 @@ const drive = (T, aid, days, opt = {}) => {
         const add = (k, lo) => { e.st[k] = Math.min(999, e.st[k] + lo); };
         T.amgtDo(aid, e, r, null, s, act, add, (x) => 0.05 + x);
         const d = Math.floor(s / 3); per[d] = per[d] || {}; per[d][r.slot] = (per[d][r.slot] || 0) + 1;
-        if (!atSlots.has(s)) per.outside = (per.outside || 0) + 1;
+        if (![...atSlots].some(n => Math.floor(n / 3) === Math.floor(s / 3) && n <= s)) per.outside = (per.outside || 0) + 1;
       } else {
         if (act.a === 'rest') e.fat = Math.max(0, e.fat - 30); else if (act.a === 'play') { e.fat = Math.max(0, e.fat - 10); e.str = Math.max(0, e.str - 15); } else { e.fat = Math.min(100, e.fat + 5); e.str = Math.min(100, e.str + 1); e.st[act.k] = Math.min(999, e.st[act.k] + 5); }
         T.amgtAfterAct(aid, act, false, s);
       }
+    }
+    // --cheer の試算(応援の案): その日にモンヒロバトルにいたら、1日 n 回まで、いちばん最近に修行した1体の、いちばん低い技の熟練に k(小数は回ごとに切り上げ・切り捨てを交互)
+    if (opt.cheer && s % 3 === 2 && [...atSlots].some(n => Math.floor(n / 3) === Math.floor(s / 3))) {
+      const st = T.AMGT_STORE.state; const mons = { ...(st.mons[aid] || {}) };
+      // 応援が効くのは、いちばん最近に修行したマスモン1体だけ
+      const last = Object.keys(mons).sort((a, b) => ((mons[b].log.slice(-1)[0] || {}).s || 0) - ((mons[a].log.slice(-1)[0] || {}).s || 0))[0];
+      for (const key of last ? [last] : []) {
+        const me = { ...mons[key], m: { ...mons[key].m } };
+        for (let i = 0; i < opt.cheer.n; i++) {
+          const t = me.learn.slice().sort((a, b) => (me.m[a] || 0) - (me.m[b] || 0))[0]; if (!t) break;
+          const k = Number.isInteger(opt.cheer.k) ? opt.cheer.k : (i % 2 ? Math.ceil(opt.cheer.k) : Math.floor(opt.cheer.k));
+          me.m[t] = Math.min(100, (me.m[t] || 0) + k); opt.cheer.sum = (opt.cheer.sum || 0) + k;
+        }
+        mons[key] = me;
+      }
+      T.AMGT_STORE.state = { ...st, mons: { ...st.mons, [aid]: mons } };
     }
   }
   return { E, per };
@@ -61,16 +80,16 @@ const drive = (T, aid, days, opt = {}) => {
   Object.assign(M, c.M);
   const S = T.ASSISTANT_MASMON_TECHS.species;
   const ids = Object.keys(M);
-  check('⓪ 技表に全部の種族がある(1種族8つ)', ids.every(id => Array.isArray(S[id]) && S[id].length === 8), ids.filter(id => !S[id] || S[id].length !== 8).join(','));
+  check('⓪ 技表は第2版で、全部の種族に12〜24技ある(資料の血統別の技)', T.ASSISTANT_MASMON_TECHS.version === 2 && ids.filter(id => !M[id].debugOnly).every(id => Array.isArray(S[id]) && S[id].length >= 12 && S[id].length <= 24), ids.filter(id => !M[id].debugOnly && (!S[id] || S[id].length < 12 || S[id].length > 24)).join(','));
   const allT = Object.values(S).flat();
-  check('⓪ 技の id はかぶらない', new Set(allT.map(t => t.id)).size === allT.length);
-  const inRange = (t) => t.power >= 4 && t.power <= 70 && t.hit >= -25 && t.hit <= 22 && t.guts >= 10 && t.guts <= 55 && t.crit >= 5 && t.crit <= 30 && t.gd >= 0 && t.gd <= 45 && ['pow', 'wise'].includes(t.kind) && Array.isArray(t.dist) && t.dist.length >= 1 && t.dist.length <= 2 && t.dist.every(d => d >= 0 && d <= 3);
-  check('⓪ 数字はモンスターファーム2の幅の中', allT.every(inRange), allT.filter(t => !inRange(t)).map(t => t.id).join(','));
-  check('⓪ どの種族も零・近・中・遠のどこにでも届く技がある', ids.every(id => [0, 1, 2, 3].every(d => S[id].some(t => t.dist.includes(d)))));
-  check('⓪ 初めから使える技が2つ・近くに届く', ids.every(id => S[id].filter(t => t.learn.start).length === 2 && S[id].some(t => t.learn.start && (t.dist.includes(0) || t.dist.includes(1)))));
-  const names = (id) => [...(c.N[id] || []), ...((M[id].unique && M[id].unique.names) || [])];
-  check('⓪ 名前はその種族がいまゲームで持っている技の名前', ids.every(id => S[id].every(t => names(id).includes(t.name))));
-  check('⓪ 先に磨く技は同じ種族の・先の技', ids.every(id => S[id].every((t, i) => !t.learn.need || Object.keys(t.learn.need).every(n => S[id].slice(0, i).some(x => x.id === n)))));
+  check('⓪ 技の id は同じ種族の中でかぶらない・sk-0000 の形', Object.values(S).every(l => new Set(l.map(t => t.id)).size === l.length) && allT.every(t => /^(?:sk-\d{4}|[a-z]{2,20}_o\d{2})$/.test(t.id)));
+  const inRange = (t) => t.power >= 1 && t.power <= 70 && t.hit >= -25 && t.hit <= 22 && t.guts >= 5 && t.guts <= 60 && t.crit >= 0 && t.crit <= 30 && t.gd >= 0 && t.gd <= 45 && ['pow', 'wise'].includes(t.kind) && Array.isArray(t.dist) && t.dist.length >= 1 && t.dist.length <= 2 && t.dist.every(d => d >= 0 && d <= 3);
+  check('⓪ 数字は芯の幅の中(TECH_LIMITS)', allT.every(inRange), allT.filter(t => !inRange(t)).map(t => t.id).join(','));
+  check('⓪ どの種族も零・近・中・遠のどこにでも届く技がある(資料どおりに届かない種族は数に入れない)', ids.filter(id => !M[id].debugOnly && !['Zan', 'Ghost'].includes(id)).every(id => [0, 1, 2, 3].every(d => S[id].some(t => t.dist.includes(d)))));
+  check('⓪ 初めから使える技が2つ・近くに届く', ids.filter(id => !M[id].debugOnly).every(id => S[id].filter(t => t.learn.start).length === 2 && S[id].some(t => t.learn.start && (t.dist.includes(0) || t.dist.includes(1)))));
+  // 技名は資料のまま使ってよい(社長 2026-11-13)ので、いまゲームで持っている技の名前との照合はしない
+  check('⓪ 先に磨く技は同じ種族の・rank がそれより低い技', Object.values(S).every(l => l.every(t => !t.learn.need || Object.keys(t.learn.need).every(n => l.some(x => x.id === n && x.rank < t.rank)))));
+  check('⓪ 技ごとに rank(1〜5)が1つ・初めからの技は rank 1', allT.every(t => Number.isInteger(t.rank) && t.rank >= 1 && t.rank <= 5 && (!t.learn.start || t.rank === 1)) && T.ASSISTANT_MASMON_TECHS.rankRates[1] === 70 && T.ASSISTANT_MASMON_TECHS.rankRates[5] === 15);
   check('⓪ 覚える修行の系統は決まった6つのどれか', allT.every(t => t.learn.start || T.AMGT_KINDS[t.learn.by]));
   check('⓪ 距離撃という技は無い', !allT.some(t => /距離撃/.test(t.name)));
 }
@@ -111,22 +130,22 @@ const drive = (T, aid, days, opt = {}) => {
   const { T } = make(true);
   const g = T.amgtInitMon('Golem', 30, { pow: 220, wise: 100, hit: 80 }); const p = T.amgtInitMon('Pixie', 12, { pow: 80, wise: 120, hit: 150 });
   check('② 初めからの技は覚えている', T.amgtTechsOf('Golem').filter(t => t.learn.start).every(t => g.learn.includes(t.id)));
-  check('② いまの能力で条件を満たす技(先に磨く技の要らないもの)も覚えている', g.learn.includes('golem_03') && !p.learn.includes('pixie_03'), g.learn.join(','));
-  check('② 熟練の初めの値は育成 Lv×0.3(最大30)', g.m.golem_01 === 9 && p.m.pixie_01 === 4 && T.amgtInitMon('Golem', 99, null).m.guard === 30);
+  check('② 初めは「初めから」の技の2つだけ(能力が高くても先に覚えない・ヘルプ「初めは2つだけ」)', g.learn.length === 2 && p.learn.length === 2, g.learn.join(','));
+  check('② 熟練の初めの値は育成 Lv×0.3(最大30)', g.m[T.amgtTechsOf('Golem').find(t => t.learn.start).id] === 9 && p.m[T.amgtTechsOf('Pixie').find(t => t.learn.start).id] === 4 && T.amgtInitMon('Golem', 99, null).m.guard === 30);
 }
 
-// ③ 同じ種なら同じ結果・モンヒロバトルにいた回だけ・1日2回まで・下がらない・上限
+// ③ 同じ種なら同じ結果・モンヒロバトルにいた回だけ・1日3回まで・下がらない・上限
 {
   const a = make(true); const b = make(true);
   const ra = drive(a.T, 'kyuko', 60); drive(b.T, 'kyuko', 60);
   check('③ 同じ種なら同じ結果', JSON.stringify(a.T.AMGT_STORE.state) === JSON.stringify(b.T.AMGT_STORE.state));
   const c = make(true, 'seed-2'); drive(c.T, 'kyuko', 60);
   check('③ 違う種なら違う結果', JSON.stringify(c.T.AMGT_STORE.state.mons) !== JSON.stringify(a.T.AMGT_STORE.state.mons));
-  check('③ 修行はモンヒロバトルにいた回だけ', !ra.per.outside);
+  check('③ 修行は、その日にモンヒロバトルにいた回から(その日の残りの回)だけ', !ra.per.outside);
   const z = make(true); const rz = drive(z.T, 'kyuko', 30, { atRate: 0 });
   check('③ モンヒロバトルにいなかったら修行しない', Object.keys(rz.per).length === 0);
   const over = Object.entries(ra.per).filter(([k]) => k !== 'outside').some(([, d]) => Object.values(d).some(n => n > a.T.AMGT_NUM.perDay));
-  check('③ 修行は1日2回まで', !over);
+  check(`③ 修行は1日${a.T.AMGT_NUM.perDay}回まで(2026-11-11 社長: 3回)`, !over && a.T.AMGT_NUM.perDay === 3);
   const days = Object.entries(ra.per).filter(([k, d]) => k !== 'outside' && d[1]).length;
   check('③ 修行はほどよく起きる(1体あたり60日のうち3割〜9割の日)', days >= 18 && days <= 54, `${days}日`);
   const ms = Object.values(a.T.AMGT_STORE.state.mons.kyuko);
@@ -134,6 +153,23 @@ const drive = (T, aid, days, opt = {}) => {
   check('③ 熟練の伸びはどれもプラス(下がらない)', ms.flatMap(me => me.log).every(x => Object.values(x.g).every(n => n > 0)));
   check('③ 修行の記録は21回まで', ms.every(me => me.log.length <= 21));
   check('③ 修行の名前', a.T.amgtActName({ a: 'shugyo', k: 'tough' }) === 'モンヒロバトルで受け止め(防御修行)');
+}
+
+// ③-2 その日にいたら残りの回も・同じ回は二度当てない
+{
+  const { T } = make(true);
+  const r = rows[0]; const e = { st: { pow: 300 }, fat: 0, str: 0, lv: 25 };
+  T.AMGT_STORE.state = { ...T.AMGT_STORE.state, at: { kyuko: [START] } };
+  let ok = false; for (let i = 0; i < 20 && !ok; i++) { const c = make(true, `seed-${i}`); c.T.AMGT_STORE.state = { ...c.T.AMGT_STORE.state, at: { kyuko: [START] } }; ok = !!c.T.amgtChoose('kyuko', { ...e }, r, null, START + 2); }
+  check('③ 朝にいたら、同じ日の夜にも修行できる', ok);
+  T.AMGT_STORE.state = { ...T.AMGT_STORE.state, at: { kyuko: [START + 2] } };
+  check('③ 夜にいただけなら、同じ日の朝には修行しない', T.amgtChoose('kyuko', { ...e }, r, null, START) === null);
+  check('③ 前の日にいただけなら、次の日は修行しない', T.amgtChoose('kyuko', { ...e }, r, null, START + 3) === null);
+  const e2 = { st: { pow: 300, life: 100 }, fat: 0, str: 0, lv: 25 };
+  T.amgtDo('kyuko', e2, r, null, START, { a: 'shugyo', k: 'pow' }, () => {}, () => 0);
+  const before = JSON.stringify(T.AMGT_STORE.state.mons.kyuko); const fat = e2.fat;
+  T.amgtDo('kyuko', e2, r, null, START, { a: 'shugyo', k: 'pow' }, () => {}, () => 0);
+  check('③ 同じ回の修行は二度当てない', JSON.stringify(T.AMGT_STORE.state.mons.kyuko) === before && e2.fat === fat);
 }
 
 // ④ 技の習得・ブリーダー能力
@@ -185,7 +221,18 @@ const drive = (T, aid, days, opt = {}) => {
   check('⑥ 何も無いときは空の形', JSON.stringify(n0) === JSON.stringify({ v: 1, mons: {}, br: {}, ask: {}, ev: {}, at: {} }));
   const bad = T.normalizeAssistantMasmonTrain({ mons: { kiki: { '1:Golem': { m: { golem_01: 500, guard: -3, dist: 'x', 'bad id': 4 }, learn: ['golem_01', 'golem_01', 7, 'x y'], log: [{ s: 1, k: 'zzz' }, { s: 2, k: 'pow', g: { golem_01: 4, life: 9 } }] }, 'bad key': { m: {} } }, 'BAD': {} }, br: { kiki: { ab: { know: 300 } } }, ask: { kiki: { d: 'x' } }, at: { kiki: [3, 3, -1, 'x', 2] } });
   const me = bad.mons.kiki['1:Golem'];
-  check('⑥ 壊れた値は範囲に収める・知らない項目は捨てる', me.m.golem_01 === 100 && me.m.guard === 0 && me.m.dist === 0 && !('bad id' in me.m) && me.learn.join() === 'golem_01' && me.log.length === 1 && !('life' in me.log[0].g) && !bad.mons.BAD && !bad.mons.kiki['bad key'] && bad.br.kiki.ab.know === 100 && !bad.ask.kiki && bad.at.kiki.join() === '2,3');
+  check('⑥ 壊れた値は範囲に収める・知らない項目は捨てる', me.m[T.ASSISTANT_MASMON_TECHS.canon('golem_01')] === 100 && me.m.guard === 0 && me.m.dist === 0 && !('bad id' in me.m) && me.learn.join() === T.ASSISTANT_MASMON_TECHS.canon('golem_01') && me.log.length === 1 && !('life' in me.log[0].g) && !bad.mons.BAD && !bad.mons.kiki['bad key'] && bad.br.kiki.ab.know === 100 && !bad.ask.kiki && bad.at.kiki.join() === '2,3');
+  { // ⑥b 第1版の技 id は第2版へ読み替える(消さない・2つが1つに当たるときは熟練は大きい方・何度かけても同じ)
+    const CN = T.ASSISTANT_MASMON_TECHS.canon; const im = T.ASSISTANT_MASMON_TECHS.idmap;
+    const k1 = Object.keys(im).find(k => k.startsWith('mocchi_')); const two = Object.entries(im).filter(([k]) => k.startsWith('mocchi_')).map(([k, v]) => [v, k]).reduce((a, [v, k]) => { (a[v] = a[v] || []).push(k); return a; }, {});
+    const dupNew = Object.keys(two).find(v => two[v].length > 1);
+    const sp = T.ASSISTANT_MASMON_TECHS.species.Mocchi.map(t => t.id);
+    const old = { mons: { kiki: { '1:Mocchi': { m: { [k1]: 40, ...(dupNew ? { [two[dupNew][0]]: 10, [two[dupNew][1]]: 70 } : {}) }, learn: [k1, ...(dupNew ? two[dupNew] : [])] } } } };
+    const r = T.normalizeAssistantMasmonTrain(old).mons.kiki['1:Mocchi']; const r2 = T.normalizeAssistantMasmonTrain({ mons: { kiki: { '1:Mocchi': r } } }).mons.kiki['1:Mocchi'];
+    check('⑥b 古い技 id は新しい id へ読み替える(新しい表にある id だけになる)', r.learn.length > 0 && r.learn.every(id => sp.includes(id)) && Object.keys(r.m).filter(k => /^(sk-|mocchi_)/.test(k)).every(id => sp.includes(id)));
+    check('⑥b 2つが1つに当たるときは熟練の大きい方・覚えた技は重ねない', !dupNew || (r.m[dupNew] === 70 && r.learn.filter(id => id === dupNew).length === 1));
+    check('⑥b 読み替えは何度かけても同じ・新しい id はそのまま通る', JSON.stringify(r) === JSON.stringify(r2) && CN('sk-0402') === 'sk-0402' && CN('x') === 'x');
+  }
   const a = make(true); drive(a.T, 'erubin', 20);
   const round = a.T.normalizeAssistantMasmonTrain(JSON.parse(JSON.stringify(a.T.AMGT_STORE.state)));
   check('⑥ 正規化しても中身が変わらない(行って戻る)', JSON.stringify(round) === JSON.stringify(a.T.AMGT_STORE.state));
@@ -194,12 +241,14 @@ const drive = (T, aid, days, opt = {}) => {
 // ⑦ 生活の居場所 → 修行できる回
 {
   const { T } = make(true);
-  const now = Date.UTC(2026, 10, 11, 1, 0); // 10:00 JST = 生活の「昼」(10〜14時)・育成の「朝」(4〜12時)と「昼」(12時〜)
-  const day = Math.floor((now + 9 * 3600000) / 86400000); const abs = day * 6 + 2;
+  const now = Date.UTC(2026, 10, 11, 1, 0); // 10:00 JST。生活の区切りは2時間(10〜12時)→ 育成の「朝」(4〜12時)に入る
+  const day = Math.floor((now + 9 * 3600000) / 86400000); const abs = day * 12 + 5;
   T.amgtNoteLife({ abs, groups: [{ ids: ['kiki', 'mua'], place: 'battle', doing: 'training' }], solo: { dra: { place: 'cafe' } } });
   const at = T.AMGT_STORE.state.at;
-  const want = [T.amgtSlotOf(now), T.amgtSlotOf(now + 3 * 3600000)];
-  check('⑦ モンヒロバトルにいた助手の回を覚える(生活の1区切りが育成の2回にまたがる)', JSON.stringify(at.kiki) === JSON.stringify(want) && JSON.stringify(at.mua) === JSON.stringify(want) && !at.dra, JSON.stringify(at));
+  const want = [T.amgtSlotOf(now)];
+  check('⑦ モンヒロバトルにいた助手の回を覚える(生活の2時間の区切りが、育成の回のどれに当たるか)', JSON.stringify(at.kiki) === JSON.stringify(want) && JSON.stringify(at.mua) === JSON.stringify(want) && !at.dra, JSON.stringify(at));
+  T.amgtNoteLife({ abs: day * 12 + 6, groups: [{ ids: ['atsu', 'erubin'], place: 'battle', doing: 'training' }], solo: {} }); // 12〜14時 → 育成の「昼」
+  check('⑦ 12〜14時の区切りは、育成の次の回(昼)に当たる', JSON.stringify(T.AMGT_STORE.state.at.atsu) === JSON.stringify([T.amgtSlotOf(now + 2 * 3600000)]) && T.amgtSlotOf(now + 2 * 3600000) !== T.amgtSlotOf(now), JSON.stringify(T.AMGT_STORE.state.at.atsu));
 }
 
 // ⑦-2 部屋の行の一言
@@ -208,7 +257,7 @@ const drive = (T, aid, days, opt = {}) => {
   check('⑦ 印が偽なら部屋の一言は出さない', off.T.amgtRoomLine('kiki') === null);
   const { T, ctx } = make(true);
   const now = Date.UTC(2026, 10, 11, 1, 0);
-  ctx.assistantLifeSlotAt = (t) => ({ abs: Math.floor((t + 9 * 3600000) / 86400000) * 6 + 2 });
+  ctx.assistantLifeSlotAt = (t) => ({ abs: Math.floor((t + 9 * 3600000) / 86400000) * 12 + 5 });
   ctx.ASSISTANT_LIFE_STORE = { state: { life: { abs: ctx.assistantLifeSlotAt(now).abs, groups: [], solo: { kiki: { place: 'battle' } } } } };
   check('⑦ いまモンヒロバトルにいる助手は「修行中」', T.amgtRoomLine('kiki', now) === 'いまモンヒロバトルで修行中');
   check('⑦ いない助手でマスモンもいなければ何も出さない', T.amgtRoomLine('mua', now) === null);
@@ -222,21 +271,24 @@ const drive = (T, aid, days, opt = {}) => {
   const S = T.ASSISTANT_MASMON_TECHS.species.Golem.map(t => t.id);
   check('⑧ 1体: techs(覚えた技の id)と mastery(0〜100の整数)', Array.isArray(u.techs) && u.techs.every(id => S.includes(id)) && Object.values(u.mastery).every(v => Number.isInteger(v) && v >= 0 && v <= 100) && ['guard', 'dist', 'swap'].every(k => k in u.mastery));
   const none = T.amgtBattleOf('dra', { slot: 5, monster: 'Ark' }, 10);
-  check('⑧ 入れ物が無いマスモンは初めからの技だけ', none.techs.join() === 'ark_01,ark_02' && none.mastery.ark_01 === 3);
+  check('⑧ 入れ物が無いマスモンは初めからの技だけ', none.techs.join() === T.amgtTechsOf('Ark').filter(t => t.learn.start).map(t => t.id).join() && none.mastery[none.techs[0]] === 3);
   const tac = T.amgtTacticsOf('dra', rows);
   check('⑧ 戦術経験は 0〜100 の整数', Number.isInteger(tac) && tac >= 0 && tac <= 100, String(tac));
 }
 
 // --sim: 伸びの目安
+const SIM_RATE = Number((process.argv.find(a => a.startsWith('--rate=')) || '--rate=0.07').split('=')[1]); // 本物の生活でモンヒロバトルにいる回は1割弱(ミハリ 11-11 の実測 平均7%)
+// --cheer=回数,量 で「📣 応援する」の案を足して試算(例 --cheer=3,1.5 = 1日3回まで・1回 熟練+1〜2)
+const SIM_CHEER = (() => { const a = process.argv.find(x => x.startsWith('--cheer=')); if (!a) return null; const [n, k] = a.split('=')[1].split(',').map(Number); return { n, k }; })();
 if (process.argv.includes('--sim')) {
   for (const days of [30, 90, 180]) {
     const out = [];
     for (const aid of Object.keys(make(true).T.AMGT_BR_INIT)) {
-      const { T } = make(true); drive(T, aid, days, { answer: true });
-      const g = T.AMGT_STORE.state.mons[aid]['1:Golem']; const b = T.AMGT_STORE.state.br[aid].ab;
-      out.push(`${aid.padEnd(10)} 技 ${g.learn.length}/8 熟練 ${g.learn.map(id => String(g.m[id]).padStart(3)).join(' ')} | 判断 ${['guard', 'dist', 'swap'].map(k => String(g.m[k]).padStart(3)).join(' ')} | 腕 ${T.AMGT_BR_KEYS.map(k => String(b[k]).padStart(3)).join(' ')}`);
+      const { T } = make(true); const r = drive(T, aid, days, { answer: true, atRate: SIM_RATE, cheer: SIM_CHEER && { ...SIM_CHEER } }); r.shu = Object.entries(r.per).filter(([k]) => k !== 'outside').reduce((x, [, d]) => x + (d[1] || 0), 0);
+      const g = (T.AMGT_STORE.state.mons[aid] || {})['1:Golem'] || T.amgtInitMon('Golem', 25, null); const b = (T.AMGT_STORE.state.br[aid] || { ab: Object.fromEntries(T.AMGT_BR_KEYS.map((k, i) => [k, T.AMGT_BR_INIT[aid][i]])) }).ab;
+      out.push(`${aid.padEnd(10)} 修行 ${String(r.shu || 0).padStart(3)}回 技 ${g.learn.length}/8 熟練 ${g.learn.map(id => String(g.m[id]).padStart(3)).join(' ')} | 判断 ${['guard', 'dist', 'swap'].map(k => String(g.m[k]).padStart(3)).join(' ')} | 腕 ${T.AMGT_BR_KEYS.map(k => String(b[k]).padStart(3)).join(' ')}`);
     }
-    console.log(`\n[${days}日・ゴーレム・モンヒロバトルに半分の回・相談に毎日答えた] 腕=know lead obs tac trust exp\n${out.join('\n')}`);
+    console.log(`\n[${days}日・ゴーレム・モンヒロバトルにいる回 ${Math.round(SIM_RATE * 100)}%・相談に毎日答えた${SIM_CHEER ? `・応援 1日${SIM_CHEER.n}回×${SIM_CHEER.k}` : ''}] 腕=know lead obs tac trust exp\n${out.join('\n')}`);
   }
 }
 

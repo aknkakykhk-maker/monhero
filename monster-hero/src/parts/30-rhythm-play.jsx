@@ -1029,7 +1029,10 @@ const rhythmHudInitial=()=>({score:0,combo:0,last:'',lastPrecise:false,fastSlow:
 const rhythmNoteIsSky=note=>rhythmNoteSkyHeight(note)>0||rhythmSlideHasSky(note);
 /* 演奏中の様子を、演奏画面の外から「読むだけ」の窓(2026-11-07 助手とのセッションの顔とひとこと・80-screen-rhythm-assistant-session.jsx)。
    判定・スコア・譜面には一切使わない。演奏画面が開いているあいだだけ hud(上の帯の中身)・曲・曲の中の時刻を置く */
-const RHYTHM_PLAY_WATCH={hud:null,songId:'',timeMs:0};
+/* 読むだけの窓。マルチの観戦(2026-11-11)のために2つ足した: frames=フレームの数(送る側が1秒ごとに差を読んで、端末の重さを知る) /
+   jd=見られているあいだだけ配列(判定のたびにノーツ番号と判定の番号を push するだけ。見られていなければ null で、何もしない)。送るのは演奏のループの外 */
+const RHYTHM_PLAY_WATCH={hud:null,songId:'',timeMs:0,frames:0,jd:null};
+const RHYTHM_PLAY_WATCH_CODES={MARVELOUS:0,EXCELLENT:1,GREAT:2,GOOD:3,BAD:4,MISS:5};
 const rhythmCreateHud=()=>{let state=rhythmHudInitial();const subs=new Set();
   return {get:()=>state,set(patch){state={...state,...patch};subs.forEach(fn=>fn());},subscribe(fn){subs.add(fn);return()=>{subs.delete(fn);};}};};
 const useRhythmHud=hud=>React.useSyncExternalStore(hud.subscribe,hud.get);
@@ -1121,6 +1124,11 @@ const RhythmLineAdjustPanel=({adjust,onBump,isLandscape})=>{
   ];
   // 試す段階(保存したあと)は、操作パネルを出さない。右上の一時停止の下に小さく「位置を直す」「終わる」だけを置く
   //   (2026-10-14 社長「位置調整してるときにノーツ落ちてくるのも邪魔」「試しにやるにも左の設定邪魔」)
+  // オプションの「▶ 見てみる」の見本(2026-11-11)。自動で叩いて流すだけなので、右上は「設定へ戻る」だけ(保存前の設定のまま戻る)
+  if(adjust.preview)return <div data-rhythm-option-preview-panel className={`pointer-events-auto absolute z-[35] flex flex-col items-end gap-1 ${isLandscape?'right-1 top-[54px]':'right-2 top-[76px]'}`}>
+    <button type="button" data-rhythm-option-preview-back onClick={adjust.onEnd} className="min-h-[44px] rounded-xl border border-white/30 bg-slate-900/90 px-3 text-[12px] font-black text-white">設定へ戻る</button>
+    <span data-rhythm-option-preview-note className="max-w-[160px] rounded-lg bg-violet-900/85 px-2 py-1 text-right text-[10px] font-bold leading-snug text-violet-50">見本(自動で叩きます)<br/>保存前の設定で表示中</span>
+  </div>;
   if(adjust.phase==='try')return <div data-rhythm-line-adjust-panel data-phase="try" className={`pointer-events-auto absolute z-[35] flex flex-col items-end gap-1 ${isLandscape?'right-1 top-[54px]':'right-2 top-[76px]'}`}>
     <button type="button" data-rhythm-line-adjust-fix onClick={adjust.onFix} className="min-h-[40px] rounded-lg border border-white/25 bg-slate-900/90 px-2 text-[11px] font-black text-cyan-100">位置を直す</button>
     <button type="button" data-rhythm-line-adjust-end onClick={adjust.onEnd} className="min-h-[40px] rounded-lg border border-white/25 bg-slate-900/90 px-2 text-[11px] font-black text-white">終わる</button>
@@ -1148,11 +1156,19 @@ const RhythmLineAdjustPanel=({adjust,onBump,isLandscape})=>{
 const RHYTHM_GRAND_STAGE_CONFETTI=Object.freeze(Array.from({length:48},(_,k)=>Object.freeze({
   x:(k*37)%100, y:(k*53)%90, dur:6+(k*7)%6, delay:-((k*13)%11),
   color:['#ffd45e','#ff9ec4','#8fd8ff','#ffffff','#ffc061'][k%5]})));
+/* 最後のノーツのあとの「FULL COMBO」の帯(2026-11-12・社長「モンビーでフルコンだったのになにも演出なかった」・キラメキ案 C2)。
+   'full' … 帯・虹色の文字・光の筋・紙ふぶき / 'modest' … 帯と文字だけ・短く(軽量モード・演出量「最小」・マルチの「軽さ優先」) / 'off' … 出さない
+   「フルコンボの大きな表示」を「なし」にしたときだけ出さない。おまかせでは、動きを減らす設定でも控えめな形で出す */
+const rhythmFullComboBandMode=settings=>{const v=rhythmFxPick(settings,'fullComboBig');if(v==='OFF'||v==='NONE')return 'off';
+  if(v==='AUTO'&&(settings&&settings.lightweightMode||settings&&settings.effectAmount==='MINIMAL'))return 'modest';return 'full';};
+const RHYTHM_FULLCOMBO_CONFETTI=Object.freeze(Array.from({length:22},(_,k)=>Object.freeze({x:((k*37)%100)+.5,h:(k*47)%360,d:((k*13)%9)/20,s:.8+((k*7)%5)/10,r:((k*29)%2)?1:-1})));
 const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntries,onComplete,onExit,raidPlay=false,quickRunAward=null,beatRankAward=null,onRankBarFull=null,onRankBarDone=null,onRankBarStart=null,debugPlay=false,tutorial=false,calibrating=false,onApplyCalibration=null,multi=false,multiRewardScale=1,lineAdjust=null,breederName=''})=>{
   // 判定ラインの位置の合わせ(lineAdjust)は、練習と同じ扱い(ライフを減らさない・記録を送らない)。練習の説明の帯は出さない
   const tutorialProp=tutorial;tutorial=tutorial||!!lineAdjust;
   // 合わせている間の地上の判定ラインの高さ(保存はまだ・親が持つ)。null なら設定のまま
   const lineAdjustRef=useRef(lineAdjust);lineAdjustRef.current=lineAdjust;
+  // オプションの「▶ 見てみる」の見本は、曲が流れはじめたら自動で叩く(30-rhythm-preview-hands.jsx。ふつうの指と同じ合図を送るだけ)
+  const previewHands=!!(lineAdjust&&lineAdjust.preview);
   const lineHeightOverride=lineAdjust&&Number.isFinite(Number(lineAdjust.ground))?Number(lineAdjust.ground):null;
   // 重いときは演出を自動で控えめにする(設定 autoEffectDown・rhythmCapEffects)。この部品の中の settings は、下げた段を当てたもの
   const [effectCap,setEffectCap]=useState(()=>rhythmAutoEffectMemory.level);
@@ -1412,10 +1428,10 @@ const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntr
   // レーンの外側に空いている三角形へ、設定したマスモンを置いて拍に合わせて跳ねさせる。
   // 跳ねるのはCSSアニメーションなので毎フレームのJSは走らない。置き場所と大きさは
   // rhythmLayoutSideMonsters が、プレイエリアの大きさが変わったときだけ測り直す。
-  const sideMonsterRefs=useRef([]),screenFlashRef=useRef(null),touchSweepRef=useRef(null),judgmentTextRef=useRef(null),skyJudgmentTextRef=useRef(null),skyJudgmentBurstRef=useRef(null),comboRef=useRef(null),judgmentBurstRef=useRef(null),comboRingRef=useRef(null);
+  const fullComboBandRef=useRef(null),sideMonsterRefs=useRef([]),screenFlashRef=useRef(null),touchSweepRef=useRef(null),judgmentTextRef=useRef(null),skyJudgmentTextRef=useRef(null),skyJudgmentBurstRef=useRef(null),comboRef=useRef(null),judgmentBurstRef=useRef(null),comboRingRef=useRef(null);
   // 判定ごとに変わる表示の入れ物(rhythmCreateHud の説明を参照)
   const hudRef=useRef(null);if(!hudRef.current)hudRef.current=rhythmCreateHud();
-  useEffect(()=>{const hud=hudRef.current;RHYTHM_PLAY_WATCH.hud=hud;RHYTHM_PLAY_WATCH.songId=(song&&song.songId)||'';RHYTHM_PLAY_WATCH.timeMs=0;return()=>{if(RHYTHM_PLAY_WATCH.hud===hud){RHYTHM_PLAY_WATCH.hud=null;RHYTHM_PLAY_WATCH.songId='';RHYTHM_PLAY_WATCH.timeMs=0;}};},[]);
+  useEffect(()=>{const hud=hudRef.current;RHYTHM_PLAY_WATCH.hud=hud;RHYTHM_PLAY_WATCH.songId=(song&&song.songId)||'';RHYTHM_PLAY_WATCH.timeMs=0;return()=>{if(RHYTHM_PLAY_WATCH.hud===hud){RHYTHM_PLAY_WATCH.jd=null;RHYTHM_PLAY_WATCH.hud=null;RHYTHM_PLAY_WATCH.songId='';RHYTHM_PLAY_WATCH.timeMs=0;}};},[]);
   // 判定文字の光を焼いた絵にする(rhythmBakeJudgmentHalos の説明を参照)。演出量・軽量モードで影の枚数が変わるので、そのたびに焼き直す。
   // 焼けるまで・焼けなかったとき・影が1枚だけの判定は、今までどおり CSS のぼかしで出す(haloKeys に入っていない)。
   const [haloKeys,setHaloKeys]=useState(null);
@@ -2035,6 +2051,7 @@ useEffect(()=>{
 // 必死(ユグドラシル血統の能力)のあいだは、GREAT・EXCELLENTをMARVELOUSとして数える(判定だけをここで置き換える。
 // ずれは変えないので、ジャストのMARVELOUSになるのは本当にぴったりだったときだけ。2026-10-06 ユーザー指示)
 if(rhythmHisshiUpgrades(run.abilities,judgment,run.audio?.songTimeMs?.()??0))judgment='MARVELOUS';
+{const jd=RHYTHM_PLAY_WATCH.jd;if(jd!==null&&jd.length<480)jd.push(note.index,RHYTHM_PLAY_WATCH_CODES[judgment]??5);}/* 観戦: 見られているあいだだけ、判定を1件ためる */
 RHYTHM_INPUT_REC.event(judgment==='MISS'?'miss':'hit',{note:note.index,j:judgment,dt:typeof deltaMs==='number'&&Number.isFinite(deltaMs)?Math.round(deltaMs):null,key:note.activePointerId,sky:rhythmNoteIsSky(note)});
 if(note.activePointerId!==null){if(note.activePointerId!==-1)run.activePointers.delete(note.activePointerId);note.activePointerId=null;}note.releasedAtMs=null;rhythmFloatingNoteRemove(note);note.done=true;note._rhythmFinalJudgment=judgment;note._rhythmDeltaMs=typeof deltaMs==='number'&&Number.isFinite(deltaMs)?deltaMs:null;
 // MARVELOUSの中でも、とくにぴったり(±20ms)だったか。**見た目にしか使わない**(2026-09-12)。
@@ -2181,6 +2198,12 @@ if(luckOn){const luckNow=run.audio?.songTimeMs?.()??0;const rushActive=run.luckR
    (「100 COMBO」の大きな数字は、もとからある演出 comboMilestone が出す)。コンボガードで数が据え置きのとき(増えていないとき)は出さない */
 if(settingsLiveRef.current.comboMilestoneFx===true&&!settings.lightweightMode&&settings.effectAmount!=='MINIMAL'&&keptCombo>run.combo&&keptCombo>=RHYTHM_COMBO_MILESTONE_STEP&&keptCombo%RHYTHM_COMBO_MILESTONE_STEP===0){const el=comboRingRef.current;if(el)rhythmRestartAnimations([{el,attr:'rhythmRing'}]);}
 run.combo=keptCombo;run.maxCombo=Math.max(run.maxCombo,keptCombo);run.counts[judgment]++;if(preciseHit)run.precise++;const side=judgment==='MISS'?null:rhythmFastSlow(deltaMs);if(side)run[side.toLowerCase()]++;const songTimeMs=run.audio?.songTimeMs?.()??0;
+/* 最後のノーツを取りきった瞬間、BAD・MISS・落とした刻みが無ければ演奏画面の上へ「FULL COMBO」の帯を出す(曲の終わりを待たない)。
+   判定・スコア・保存には触らない。称号の決め方はリザルトと同じ rhythmResultAchievements。アシスト・練習・タイミング合わせ・判定ラインの調整では出さない */
+if(!run.fullComboBandShown&&!assistOn&&!tutorial&&!calibrating&&!lineAdjustRef.current&&chart.totalNotes>0&&RHYTHM_JUDGMENT_IDS.reduce((sum,id)=>sum+(Number(run.counts[id])||0),0)>=chart.totalNotes){run.fullComboBandShown=true;
+  const ach=rhythmResultAchievements(run.counts,chart.totalNotes,run.tickRules?run.tickMiss:0);const bandMode=rhythmFullComboBandMode(settingsLiveRef.current||settings);const bandEl=fullComboBandRef.current;
+  if(bandEl&&bandMode!=='off'&&(ach.fullCombo||ach.allExcellent||ach.allMarvelous)){const tier=ach.allMarvelous?'am':ach.allExcellent?'ae':'fc';const label=bandEl.querySelector('[data-rhythm-fullcombo-title]');if(label)label.textContent=tier==='am'?'ALL MARVELOUS':tier==='ae'?'ALL EXCELLENT':'FULL COMBO';
+    bandEl.dataset.tier=tier;bandEl.dataset.mode=bandMode;bandEl.hidden=false;bandEl.dataset.on='1';}}
 // ライフ変化は能力(無敵・我慢)を通してから反映する。判定・コンボ・スコアそのものは変えない(§4.2)
 // 練習ではライフを減らさない。途中で倒れると、まだ習っていないノーツまで届かなくなる
 // lifeBefore … 減ったことを知らせる演出のためだけに控える(2026-09-12)。計算には使わない
@@ -2661,7 +2684,7 @@ const progressEl=songProgressRef.current;
 if(progressEl){const ratio=playEndTimeMs>0?Math.max(0,Math.min(1,songTimeMs/playEndTimeMs)):0;if(Math.abs(ratio-(progressEl._mhRatio||0))>=.005||ratio===1){progressEl._mhRatio=ratio;progressEl.style.transform=`scaleX(${ratio.toFixed(4)})`;}}
 if(run.luckRushUntil!=null&&songTimeMs>=run.luckRushUntil){run.luckRushUntil=null;setLuckyRush(false);}
 const timeEl=songTimeRef.current;
-RHYTHM_PLAY_WATCH.timeMs=songTimeMs;/* 読むだけの窓(上の RHYTHM_PLAY_WATCH) */
+RHYTHM_PLAY_WATCH.timeMs=songTimeMs;RHYTHM_PLAY_WATCH.frames++;/* 読むだけの窓(上の RHYTHM_PLAY_WATCH) */
 if(timeEl){const shownMs=Math.max(0,Math.min(playEndTimeMs,songTimeMs)),second=Math.floor(shownMs/1000);if(timeEl._mhSecond!==second){timeEl._mhSecond=second;rhythmSetText(timeEl,`${rhythmClockLabel(shownMs)}/${rhythmClockLabel(playEndTimeMs)}`);}}
 /* 譜面より音源のほうが長い曲(デュラハンの2曲は音源をバトルと共用しているので切れない)は、
    終わりの手前から音量をなめらかに落とす。何もしないと曲の途中でぶつっと止まる。
@@ -2870,6 +2893,12 @@ scheduleTick();};
     };}catch(_){}
     return()=>{try{if(window.__mhTestHooks){delete window.__mhTestHooks.rhythmSongMs;delete window.__mhTestHooks.rhythmPrepare;delete window.__mhTestHooks.rhythmNotes;delete window.__mhTestHooks.rhythmNoteResults;}}catch(_){}};
   },[]);
+  useEffect(()=>{
+    if(!previewHands||typeof window==='undefined'||typeof rhythmPreviewHandsStart!=='function')return undefined;
+    let stop=null;
+    const wait=setInterval(()=>{if(stop)return;const ms=window.__mhTestHooks&&window.__mhTestHooks.rhythmSongMs?window.__mhTestHooks.rhythmSongMs():null;if(ms!=null&&playAreaRef.current){stop=rhythmPreviewHandsStart(playAreaRef.current);clearInterval(wait);}},100);
+    return()=>{clearInterval(wait);if(stop)stop();};
+  },[previewHands]);
   useEffect(()=>{mountedRef.current=true;rhythmChartSwitchHold(true);if(!(lineAdjust&&lineAdjust.phase==='set'))beginRun(bestRecord);return()=>{mountedRef.current=false;rhythmChartSwitchHold(false);++generationRef.current;startLockRef.current=false;disposeRun();};},[]);
   // 演奏中にアプリを離れた(画面が隠れた)回数を診断で数える。直し方 autoPauseOnHidden を入れた端末では、離れた時点で自動で一時停止する
   // (既定は切ってある。入れる前は、Androidは裏でも曲が進んで戻ると大量のMISSになる・iOSは時計が止まる、という推測を診断で確かめる段階。2026-10-07)
@@ -3545,6 +3574,7 @@ current.missingHeld?.delete(inputKey);current.activeTouchInputs.delete(inputKey)
     ノーツの絵(canvas)は z-index 5・予備のノーツ(DOM)は 2 なので、その1つ下。空中の道(2)・押した光(3)よりは上。
     ★演奏の場所(data-rhythm-play-area)は isolation:isolate で重なりを中だけで決める箱なので、赤いふちも中に置く(外に置くと演奏の場所まるごとの上に来る) */}{lifeState==='down'&&<div data-rhythm-down-vignette aria-hidden="true" className="pointer-events-none absolute inset-0" style={{zIndex:canvasNotes?4:1}}/>}{/* 案Z: SKY / GROUND の字は無し(線の位置と影で高さを見せる) */}{/* 演奏を始める前のカウントダウン。Tailwindに頼らず直接書くのは判定ラインと同じ理由で、
     CDNのCSSが間に合わなくても必ず読める大きさで出るようにするため */}
+{/* 最後のノーツのあとの「FULL COMBO」の帯(はじめは隠しておき、取りきった瞬間に判定の処理が出す。描き直しを起こさない) */}<div ref={fullComboBandRef} data-rhythm-fullcombo-band hidden aria-hidden="true"><i data-rhythm-fullcombo-sweep/><b data-rhythm-fullcombo-title>FULL COMBO</b><span data-rhythm-fullcombo-confetti>{RHYTHM_FULLCOMBO_CONFETTI.map((p,k)=><i key={k} style={{left:`${p.x}%`,'--h':p.h,'--d':`${p.d}s`,'--s':p.s,'--r':p.r}}/>)}</span></div>
 {countdownStep!==null&&<div data-rhythm-countdown aria-live="assertive" style={{position:'absolute',inset:0,zIndex:20,...(prepareOn?{contain:'strict'}:{}),display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:'8px',pointerEvents:'none',background:'rgba(2,6,23,.35)'}}><b data-rhythm-countdown-step style={{fontSize:countdownStep==='READY'?'44px':'88px',fontWeight:900,lineHeight:1,color:'#fff',letterSpacing:countdownStep==='READY'?'.12em':'0',textShadow:'0 0 18px rgba(103,232,249,.85),0 2px 10px rgba(2,6,23,.95)'}}>{countdownStep}</b><small style={{fontSize:'12px',fontWeight:900,color:'#a5f3fc',textShadow:'0 1px 6px rgba(2,6,23,.95)'}}>{resumeCountdown?'まもなく 再開します':'まもなく はじまります'}</small></div>}
 {/* 判定の文字(地上)。空中のある譜面でも、ふつうの難易度と同じ位置・大きさ・濃さ。
     2026-10-11 社長「地上は今まで通り、空中は地上と同じ仕組みを空中版の位置にする」で、空中のある譜面だけ判定線の下へ小さく薄く出していた形(10-10・改善部 R3)をやめた。

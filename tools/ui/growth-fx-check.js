@@ -49,12 +49,26 @@ if (ctx.S.sheets.length !== 1 || ctx.S.sheets[0].tier !== 'level' || ctx.S.sheet
 ctx.breeder(5, 5); ctx.breeder(5, 6); ctx.breeder(6, 7);
 const br = ctx.S.sheets.filter(s => s.kind === 'breeder');
 if (br.length !== 1 || br[0].levelFrom !== 5 || br[0].levelTo !== 7) ng(`ブリーダーLvが続けて上がったら1つにまとめる(いま ${br.length}件 ${br[0] && br[0].levelFrom}→${br[0] && br[0].levelTo})`);
+// 出している最中(先頭)の Lvアップにも、あとから上がったぶんをまとめる(2026-11-11 社長「一気に上がるときに2回表示される」)
+{
+  const saved = ctx.S.sheets; ctx.S.sheets = [];
+  ctx.breeder(3, 4); ctx.breeder(4, 6);
+  const head0 = ctx.S.sheets.filter(s => s.kind === 'breeder');
+  if (head0.length !== 1 || head0[0].levelFrom !== 3 || head0[0].levelTo !== 6) ng(`出している最中の Lvアップに、あとから上がったぶんをまとめない(いま ${head0.length}件 ${head0[0] && head0[0].levelFrom}→${head0[0] && head0[0].levelTo})`);
+  ctx.S.sheets = saved;
+}
+if (!/data-growth-fx-level-jump/.test(SRC) || !/jumpTo - jumpFrom >= 2/.test(SRC)) ng('一気に2つ以上上がったときに「Lv.元 → Lv.いま」を出していない');
 ctx.item({ masuName: 'アーク', itemName: 'チケット', count: 1, gain: 0, before: { level: 1 }, after: { level: 1 } });
 if (ctx.S.sheets.some(s => s.tier === 'item')) ng('絆経験値が増えていない(上限)ときにアイテムの演出を出した');
 for (let i = 0; i < 40; i++) ctx.push({ tier: 'small', kind: 'bond', who: `x${i}`, gain: 1 });
 if (ctx.S.small.length > 24) ng('札を貯める数に上限が無い');
 // 出してよいか
 const v = (screen, hold) => ctx.visible(screen, hold || {});
+// 裏クイックをどこでも回しているあいだ(帯 data-quick-anywhere)は、Lvアップの全面は HOME だけ(2026-11-11 社長「ホームにいなくても出るときがある」)
+if (!v('HOME', { quickAnywhere: true }).level || v('PROFILE', { quickAnywhere: true }).level || v('MISSIONS', { quickAnywhere: true }).level || v('MB_MANAGEMENT', { quickAnywhere: true }).level)
+  ng('裏クイックが回っているあいだ、Lvアップの全面を HOME 以外で出してしまう(HOME では出す)');
+if (!v('PROFILE', {}).level) ng('裏クイックが回っていないときは、今までどおりプロフィールでも Lvアップを出す');
+if (!/GROWTH_FX_HOLD_LEVEL_OFF_HOME_SELECTOR = '\[data-quick-anywhere\]'/.test(SRC)) ng('裏クイックの帯の目印で Lvアップを貯めていない');
 for (const s of ['RHYTHM_PLAY', 'RHYTHM_MULTI', 'BATTLE', 'CARD_BATTLE', 'CHAMPION', 'RAID_JACK', 'ONBOARDING']) {
   if (v(s).all || v(s).sheet) ng(`${s} で演出を出してしまう`);
 }

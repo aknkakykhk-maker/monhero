@@ -132,7 +132,7 @@ check('曜日のおやつ・週替わりの道具・月替わりの家具が入�
 check('報酬の数は表の中だけ(AI の文から数を取らない)', !/amount\s*:\s*(?:ai|line|res)\b/i.test(grab('// ===== ミッション: 助手の1日1行の案内', 'const useMissionDailyLines')));
 // ---------- ⑤ 家具の替え ----------
 const sofaCost = (offerRows.find((o) => o.itemId === 'furn_sofa') || {}).cost;
-check('交換所の家具の値段を読めた', offerRows.length === 12 && sofaCost === 1200);
+check('交換所の家具の値段を読めた', offerRows.length === 20 && sofaCost === 1200);
 check('持っていない家具はそのまま届く', m.missionFurnitureSwap('furn_sofa', { furn_sofa: 0 }, {}) === null);
 check('持っている家具は、交換所と同じ値うちのビートPに替える', (() => { const r = m.missionFurnitureSwap('furn_sofa', { furn_sofa: 1 }, {}); return r && r.type === 'beatPoint' && r.amount === 1200; })());
 check('助手みんなに贈り終えた家具もビートPに替える(1人でも残っていればそのまま)', (() => {
@@ -168,7 +168,8 @@ check('決まった台詞は穴埋めが全部入る', m.MISSION_DAILY_LINE_IDS.
 check('口調: みゅあは「じゃん」「まじ」を使わない・ききはタメ口にしない', !/じゃん|まじ/.test(fb('mua')) && /でつ|まつ|ます/.test(fb('kiki')) && !/だよ|だね/.test(fb('kiki')));
 check('口調: ももすけは自分を「私」「あたし」と言わない・ドラは関西弁にしない', !/私|あたし/.test(fb('momosuke')) && !/ほんま|やで|とる|とんだ/.test(fb('dra')));
 check('口調: あつは文の最後が「笑」か記号', /[笑！？…!?]$/.test(fb('atsu')));
-check('口調: ソラシドは「ぜ」、きゅうこは「ほい！」、えるびんは気づかう', /ぜ/.test(fb('sorashido')) && /ほい！/.test(fb('kyuko')) && /無理しない/.test(fb('erubin')));
+// 2026-11-11 社長: ソラシドは丁寧語が土台。「だぜ」はほぼ使わない
+check('口調: ソラシドは丁寧語で「ぜ」を使わない、きゅうこは「ほい！」、えるびんは気づかう', /です|ます/.test(fb('sorashido')) && !/ぜ/.test(fb('sorashido')) && /ほい！/.test(fb('kyuko')) && /無理しない/.test(fb('erubin')));
 check('AI の文は、数字が入っていたら使わない(決まった台詞に戻す)', (() => {
   const r = m.missionDailyLineFor('mua', { mua: '今日は{task}で{reward}！ 3回やろ' }, facts);
   return !r.ai && r.text === fb('mua');

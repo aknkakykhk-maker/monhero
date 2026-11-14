@@ -58,6 +58,11 @@ const SONGS={sheriruth:{marker:'sheriruth-v3',zero:711.6-2594.75,beat:324.342,le
   altar_world_tree:{marker:'altar-world-tree-v3',zero:2895,beat:365.9206,levelRe:/const altarWorldTreeHellChart=mhChart\((\d+),/,source:'audio',variant:0,crosses:'auto',crossUpper:'mover',crossDepth:-1},
   altar_world_tree_short:{marker:'altar-world-tree-short-v3',zero:2895,beat:365.9206,levelRe:/const altarWorldTreeShortHellChart=mhChart\((\d+),/,source:'audio',variant:1,crosses:'auto',crossUpper:'mover',crossDepth:-1},
   humanoid:{marker:'humanoid-v3',zero:1267.2,beat:377.346,levelRe:/const humanoidHellChart=mhChart\((\d+),/,source:'audio',variant:1,crosses:'auto',crossUpper:'mover',crossDepth:-1},
+  lamia:{marker:'lamia-v3',zero:155.9,beat:301.4621,levelRe:/const lamiaHellChart=rhythmScrollFxChart\(mhChart\((\d+),/,source:'audio',variant:2,crosses:'auto',crossUpper:'mover',crossDepth:-1,precision:true},
+  saudade:{marker:'saudade-v3',zero:119.2,beat:499.623,levelRe:/const saudadeHellChart=mhChart\((\d+),/,source:'audio',variant:3,crosses:'auto',crossUpper:'mover',crossDepth:-1,precision:true},
+  saudade_short:{marker:'saudade-short-v3',zero:149.6,beat:499.621,levelRe:/const saudadeShortHellChart=mhChart\((\d+),/,source:'audio',variant:0,crosses:'auto',crossUpper:'mover',crossDepth:-1,precision:true},
+  megalovania_sans:{marker:'megalovania-sans-v3',zero:200.5,beat:250,levelRe:/const megalovaniaSansHellChart=mhChart\((\d+),/,source:'audio',variant:0,crosses:'auto',crossUpper:'mover',crossDepth:-1,precision:true},
+  megalovania_smash:{marker:'megalovania-smash-v3',zero:761,beat:375,levelRe:/const megalovaniaSmashHellChart=mhChart\((\d+),/,source:'audio',variant:0,crosses:'auto',crossUpper:'mover',crossDepth:-1,precision:true},
   evans:{marker:'evans-v3',zero:2135,beat:324.3682,levelRe:/const evansHellChart=mhChart\((\d+),/,source:'audio',variant:3,crosses:'auto',crossUpper:'mover',crossDepth:-1},
   // Toward the Stars, Paradise or Truth short ver.(hitoyakyuko・2026-10-19・新曲は基本 HELL あり)
   // 全曲ヘル(2026-10-21 社長「全曲ヘルを実装して」)。marker・track は rhythm-runtime-notes.js の RELEASED_MARKERS・RELEASED_TRACKS、拍の頭と1拍は解析の timing
@@ -194,7 +199,7 @@ const peakWindows=master=>{const ts=master.map(startOf).sort((a,b)=>a-b);if(!ts.
   const len=(Math.max(...master.map(endOf))-ts[0])*PEAK_SHARE;let best=[ts[0],ts[0]+len],bestN=0;
   for(let i=0,j=0;i<ts.length;i++){while(j<ts.length&&ts[j]<=ts[i]+len)j++;if(j-i>bestN){bestN=j-i;best=[ts[i],ts[i]+len];}}
   return [best.map(Math.round)];};
-const mix=(master,{zero,beat,crosses=[],gentle=false,crossUpper='hold',crossDepth=null,audio=null,drawersOn=false,drawerIds=null,phrases=null,mixedWindows=null,keepMixed=false,uncross=false})=>{
+const mix=(master,{zero,beat,crosses=[],gentle=false,crossUpper='hold',crossDepth=null,audio=null,drawersOn=false,drawerIds=null,phrases=null,mixedWindows=null,keepMixed=false,uncross=false,precision=false,energyBias=0})=>{
   const want=id=>drawersOn&&audio&&(!drawerIds||drawerIds.includes(id));
   // 格子へ寄せる。元の譜面に近い時刻(3ms以内)があればその時刻を使う(丸め方が1ms違うと、2本のスライドの間がその瞬間だけ詰まる)
   const chartTimes=[...new Set(master.flatMap(n=>n.k==='s'?n.pts.map(p=>p[0]):[n.t,n.end].filter(x=>x!=null)))].sort((a,b)=>a-b);
@@ -209,7 +214,26 @@ const mix=(master,{zero,beat,crosses=[],gentle=false,crossUpper='hold',crossDept
   const phraseOf=at=>{const w=r4Windows.find(([a,b])=>at>=a&&at<b);if(w)return ['L','R'][Math.floor((at-w[0])/(beat*r4Beats))%2];return phraseBase(at);};
   // phrases: 曲の設定で回し方を上書きする(2026-10-18・Toward the Stars の HELL を重くする。書いた曲だけ・書いていない曲は今までの4つの回し)
   const modes=Array.isArray(phrases)&&phrases.length&&phrases.every(m=>PHRASE_MODES.includes(m))?phrases:PHRASE_MODES;
-  const phraseBase=at=>modes[((Math.floor((at-zero)/(beat*PHRASE_BEATS))%modes.length)+modes.length)%modes.length];
+  const phraseIndex=at=>Math.floor((at-zero)/(beat*PHRASE_BEATS));
+  // precision(2026-11-11 社長「ヘルの譜面の作成の精度を上げて」・書いた曲だけ): 回し方を順番ではなく、小節の盛り上がり(解析の structure.bars の intensity)で決める。
+  //   静かな小節=両手とも地上・中くらい=片手が空(左右を交互に)・盛り上がる小節=両手が空。それぞれの割合は回し方の並び(modes)の中の割合と同じにする
+  //   (並びが ['L','R','ground','both'] なら 地上25%・片手50%・両手25%。量は変えず、置く場所だけを曲に合わせる)。
+  //   公開中の HELL 56譜面では、空中の量と盛り上がりの順位の相関が平均 0.01(関係が無い)だった
+  const energyPlan=(()=>{
+    const bars=precision&&!gentle&&audio&&audio.structure&&Array.isArray(audio.structure.bars)?audio.structure.bars:null;if(!bars||!bars.length)return null;
+    const ts=master.map(startOf),k0=phraseIndex(Math.min(...ts)),k1=phraseIndex(Math.max(...ts)),len=beat*PHRASE_BEATS;
+    const intensityAt=at=>{const b=bars.find(x=>at>=x.startMs&&at<x.endMs)||(at<bars[0].startMs?bars[0]:bars[bars.length-1]);return Number(b.intensity)||0;};
+    const list=[];for(let k=k0;k<=k1;k++)list.push({k,e:intensityAt(zero+(k+.5)*len)});
+    // 1小節だけ跳ねた値で型がちらつかないように、前後の小節とならす
+    list.forEach((x,i)=>{const a=list[i-1]||x,b=list[i+1]||x;x.s=(a.e+2*x.e+b.e)/4;});
+    const order=list.slice().sort((a,b)=>a.s-b.s||a.k-b.k),n=order.length;
+    const gShare=modes.filter(m=>m==='ground').length/modes.length,bShare=modes.filter(m=>m==='both').length/modes.length;
+    // energyBias(0〜3): 空中の量が足りないとき、地上の小節を減らし両手が空の小節を増やす(mixBest が、順番で回したときの空中の量の9割を下回らない所まで上げる)
+    const bias=Math.max(0,Math.min(3,energyBias))/4,gN=Math.round(n*gShare*(1-bias)),bN=Math.round(n*(bShare+(1-gShare-bShare)*bias)),plan=new Map();
+    order.forEach((x,i)=>plan.set(x.k,i<gN?'ground':i>=n-bN?'both':'single'));
+    let flip=0;for(const x of list)if(plan.get(x.k)==='single')plan.set(x.k,['L','R'][flip++%2]);
+    return plan;})();
+  const phraseBase=at=>{const m=energyPlan&&energyPlan.get(phraseIndex(at));return m||modes[((phraseIndex(at)%modes.length)+modes.length)%modes.length];};
   // gentle: 拍の頭(3ms 以内)のタップだけを空にする・両手が空の小節は片手(その音の手)だけ
   const onBeat=at=>{const k=(at-zero)/beat;return Math.abs(k-Math.round(k))*beat<=3;};
   const wantSky=(n)=>{const m=phraseOf(startOf(n));
@@ -230,7 +254,11 @@ const mix=(master,{zero,beat,crosses=[],gentle=false,crossUpper='hold',crossDept
     for(let i=0;i<sl.length;i++)for(let j=i+1;j<sl.length;j++){const a=sl[i],b=sl[j];if(a.hand===b.hand)continue;
       const s0=Math.max(startOf(a),startOf(b)),e0=Math.min(endOf(a),endOf(b));if(e0-s0<300)continue;
       if(notes.filter(n=>n.k==='s'&&startOf(n)<=s0+5&&endOf(n)>=s0+5).length!==2)continue;
-      if(out.every(t=>Math.abs(t-s0)>=4000))out.push(s0);}
+      if(precision?!out.includes(s0):out.every(t=>Math.abs(t-s0)>=4000))out.push(s0);}
+    // precision: 交差は時刻の早い順ではなく、盛り上がる所から選ぶ(4秒以上あけて最大6か所は同じ)
+    if(precision&&audio&&audio.structure&&Array.isArray(audio.structure.bars)){const bars=audio.structure.bars,eAt=t=>{const b=bars.find(x=>t>=x.startMs&&t<x.endMs);return b?Number(b.intensity)||0:0;};
+      const picked=[];for(const t of out.slice().sort((x,y)=>eAt(y)-eAt(x)||x-y))if(picked.length<6&&picked.every(u=>Math.abs(u-t)>=4000))picked.push(t);
+      return picked.sort((x,y)=>x-y);}
     return out.sort((x,y)=>x-y).slice(0,6);})():crosses;
   for(const at of crossList){
     const pair=notes.filter(n=>n.k==='s'&&startOf(n)<=at+5&&endOf(n)>=at+5);
@@ -279,7 +307,8 @@ const mix=(master,{zero,beat,crosses=[],gentle=false,crossUpper='hold',crossDept
     if(n.fixed)continue;
     // gentle のスライドは地上のまま形を固定する(あとの段の直しで空へ上げない)
     if(n.k==='s'&&gentle){n.profile='ground';n.fixed=true;}
-    else if(n.k==='s'){n.profile=endOf(n)-startOf(n)>=2*beat-2?PROFILES[slideIndex++%PROFILES.length]:(wantSky(n)?'sky':'ground');}
+    // precision: 静かな小節(回し方が「両手とも地上」)で始まる長いスライドは、上げ下げせず地上のまま(行き来は盛り上がる所へ寄せる)
+    else if(n.k==='s'){n.profile=endOf(n)-startOf(n)>=2*beat-2?(energyPlan&&phraseOf(startOf(n))==='ground'?'ground':PROFILES[slideIndex++%PROFILES.length]):(wantSky(n)?'sky':'ground');}
     else n.want=fixedGround(n)?0:(wantSky(n)?1:0);
   }
   // R3(引き出し): 空中スライドの見せ場。いちばん盛り上がる区切りの、両手のスライド(1拍以上)を空のまま通す(交差の長押しの形は触らない)
@@ -557,7 +586,35 @@ const counts=notes=>{const slides=notes.filter(n=>n.k==='s');
 //   (2026-10-16 Freedom Dive を試したとき、R3 で同じ側の150ms が7→17件になった。引き出しは曲に合うときだけ使う)
 const handRuleScore=(notes,beat)=>{const HR=require('./rhythm-chart-hand-rules.js'),rt=toRuntime(notes);
   return sideSwitches(notes).length+levelSwitchViolations(notes,beat).length+HR.flatCross(rt).length+HR.skyAfterGround(rt).length;};
+// precision の仕上げ: 同じ親指の速い持ち替え(同じ側で150ms以内に高さが変わる・押さえていない手の150ms/250ms以内の切り替え・同じ側の地上から250ms以内の空中)に関わる空中のタップを地上へ下ろす。
+//   時刻・位置・ノーツ数は変えない(音に合わせたまま)。下ろして水平クロス・帯の中・見分けにくい所・指が同じ位置に来る形が増えるなら、その手は使わない
+const settleSwitches=notes=>{const HR=require('./rhythm-chart-hand-rules.js');
+  const measure=()=>{const rt=toRuntime(notes),v=[...HR.sideHeightSwitch(rt),...HR.heldHandSwitch(rt),...HR.skyAfterGround(rt)];
+    return {v,guard:HR.flatCross(rt).length+HR.heldBandBlocked(rt).length+HR.skyConfusable(rt).length+HR.samePlace(rt).length};};
+  let cur=measure(),lowered=0;const start=cur.v.length;
+  for(let round=0;round<60&&cur.v.length;round++){let done=false;
+    for(const v of cur.v){const side=v.side;
+      const cands=notes.filter(n=>n.k==='t'&&n.sky&&!n.mon&&sideOf(n)===side&&n.t<=v.at+2&&n.t>=v.at-SKY_RAISE_MS-2).sort((a,b)=>b.t-a.t);
+      for(const n of cands){n.sky=0;const next=measure();
+        if(next.v.length<cur.v.length&&next.guard<=cur.guard){cur=next;lowered++;done=true;break;}
+        n.sky=1;}
+      if(done)break;}
+    if(!done)break;}
+  notes.settle={before:start,after:cur.v.length,lowered};return notes;};
+// precision: 盛り上がりで回すと、混んだ所では段を変える間(1.5拍)が取れず空中が減ることがある。順番で回したときの空中の量の PRECISION_SKY_KEEP を下回らない所まで、
+//   両手が空の小節を増やす(energyBias 0→3)。どれも届かなければ、空中がいちばん多いものを使う
+const PRECISION_SKY_KEEP=.9;
+const skyCount=notes=>notes.filter(n=>n.k==='s'?n.pts.some(p=>p[3]>=.5):!!n.sky).length;
 const mixBest=(master,opts)=>{
+  if(!opts.precision)return mixBest0(master,opts);
+  const copy=()=>JSON.parse(JSON.stringify(master)),base=skyCount(mixBest0(copy(),{...opts,precision:false}));
+  let best=null;
+  for(let bias=0;bias<=3;bias++){const out=settleSwitches(mixBest0(copy(),{...opts,energyBias:bias})),sky=skyCount(out);
+    out.precision={bias,sky,baseSky:base};
+    if(!best||sky>skyCount(best))best=out;
+    if(sky>=base*PRECISION_SKY_KEEP){best=out;break;}}
+  return best;};
+const mixBest0=(master,opts)=>{
   const copy=()=>JSON.parse(JSON.stringify(master));
   if(!opts.drawersOn||!opts.audio)return mix(master,opts);
   const plain=mix(copy(),{...opts,drawersOn:false}),base=handRuleScore(plain,opts.beat);
@@ -613,9 +670,14 @@ if(require.main===module){
     const mixedWindows=(args.includes('--peak')?'peak':conf.mixedWindows)==='peak'?peakWindows(master):(conf.mixedWindows||[]);
     {const span=Math.max(1,Math.max(...master.map(endOf))-Math.min(...master.map(startOf))),used=mixedWindows.reduce((a,[x,y])=>a+(y-x),0);
       if(used>span*PEAK_SHARE+1)throw new Error(`mixedWindows は合わせて曲の長さの${Math.round(PEAK_SHARE*100)}%まで(山場だけ・docs/rules/CHART_ENGINE.md「HELL の地上と空中の入り乱れ」)`);}
-    const hell=mixBest(master,{...conf,mixedWindows,audio,drawersOn,drawerIds:argOf('--drawers-only')?argOf('--drawers-only').split(','):null,keepMixed:args.includes('--keep-mixed')});
+    // precision(盛り上がりで回す・交差を盛り上がる所から・速い持ち替えを下ろす)は曲の設定に書いた曲だけ。--precision / --no-precision で試しに入切
+    const precision=args.includes('--no-precision')?false:args.includes('--precision')||conf.precision===true;
+    const hell=mixBest(master,{...conf,precision,mixedWindows,audio,drawersOn,drawerIds:argOf('--drawers-only')?argOf('--drawers-only').split(','):null,keepMixed:args.includes('--keep-mixed')});
     for(const d of hell.drawers||[])console.log(`引き出し ${D.drawerLine(d)}${d.use&&d.lifted!=null?`(空へ上げた ${d.lifted}本・手直しのあと${d.id==='R3'?'区間の中で空を通るスライド':'空で終わる'} ${d.kept}本)`:''}`);
     if(!drawersOn)console.log('引き出し: 使わない(この曲は drawers:false。試すときは --drawers)');
+    if(hell.precision)console.log(`精度の強化: 空中・地上の回し方を小節の盛り上がりで決めた(空中のノーツ ${hell.precision.sky}個・順番で回すと ${hell.precision.baseSky}個・両手が空の小節の増やし方 ${hell.precision.bias}/3)`);
+    if(hell.settle)console.log(`精度の仕上げ: 同じ親指の速い持ち替え ${hell.settle.before}→${hell.settle.after}件(空中のタップ ${hell.settle.lowered}個を地上へ)`);
+    if(precision&&args.includes('--write')&&!conf.precision)throw new Error('--precision で書くときは、SONGS のその曲に precision:true を書いてから(作り直したとき同じ譜面になるように)');
     const {chartLevel}=require('./rhythm-chart-level.js');
     const rt=toRuntime(hell),level=chartLevel({notes:rt}).level,mLevel=chartLevel({notes:toRuntime(before)}).level;
     const windows=[...(conf.showcase||[]),...(hell.crossWindows||[])],inWin=t=>windows.some(([a,b])=>t>=a&&t<=b);
@@ -684,4 +746,4 @@ if(require.main===module){
     console.log(`書いた: ${path.relative(rt0.ROOT,rt0.RUNTIME)} の <${conf.marker}-hell-notes> と HELL の Lv.${finalLevel}(ほかのマーカーは1バイトも変えていない)。この後 node tools/build.js`);
   }catch(e){console.error('止まった:',e.message);process.exit(1);}
 }
-module.exports={peakWindows,PEAK_SHARE,mix,mixBest,handRuleScore,readBlock,audioDraft,render,counts,levelSwitchViolations,sideSwitches,toRuntime,HELL_LANDSCAPE,SONGS};
+module.exports={peakWindows,PEAK_SHARE,mix,mixBest,settleSwitches,skyCount,PRECISION_SKY_KEEP,handRuleScore,readBlock,audioDraft,render,counts,levelSwitchViolations,sideSwitches,toRuntime,HELL_LANDSCAPE,SONGS};

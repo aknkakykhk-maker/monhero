@@ -155,7 +155,9 @@ const badgeProblems = (page) => page.evaluate(() => {
       await page.locator('[data-alf-page="on"]').waitFor({ timeout: 8000 });
       await page.locator('[data-alf-house]').first().waitFor({ timeout: 8000 }).catch(() => {});
       await page.locator('[data-alf-note]').first().waitFor({ timeout: 8000 }).catch(() => {});
-      check(`③ ページにいまの行き来・置き手紙2通・フレンドの家2軒・設定5つ(${v.id})`, (await page.locator('[data-alf-now-out]').count()) === 1 && (await page.locator('[data-alf-note]').count()) === 2 && (await page.locator('[data-alf-house]').count()) === 2 && (await page.locator('[data-alf-setting]').count()) === 5);
+      // 設定は5つ+助手のマスモンを見せる(印 alfMasmonShareSend が真のときだけ出る・#5602)
+      const setN = 5 + (await page.evaluate(() => (typeof alfMsSendOn === 'function' && alfMsSendOn() ? 1 : 0)));
+      check(`③ ページにいまの行き来・置き手紙2通・フレンドの家2軒・設定${setN}つ(${v.id})`, (await page.locator('[data-alf-now-out]').count()) === 1 && (await page.locator('[data-alf-note]').count()) === 2 && (await page.locator('[data-alf-house]').count()) === 2 && (await page.locator('[data-alf-setting]').count()) === setN, String(await page.locator('[data-alf-setting]').count()));
       { const ng = await textProblems(page, '[data-alf-page]'); check(`③ ページがはみ出さない・字が切れない・言葉の途中で折れない(${v.id})`, ng.length === 0, [...new Set(ng)].join(' / ')); }
       check(`③ 置き手紙に「訪ねてくれた」「ドラと話した」とお礼の3択(${v.id})`, /訪ねてくれた/.test(await page.locator('[data-alf-notes]').innerText()) && /ドラと話した/.test(await page.locator('[data-alf-notes]').innerText()) && (await page.locator('[data-alf-thanks]').count()) === 3);
       check(`③ 家が届いていないフレンド(みお)は薄く並び「みおさんが助手ライフを開くと遊びに行けます」(${v.id})`, (await page.locator('[data-alf-house-waiting="mio-0001"]').count()) === 1 && /みおさんが助手ライフを開くと遊びに行けます/.test(await page.locator('[data-alf-house-waiting="mio-0001"]').innerText().catch(() => '')));
@@ -225,18 +227,42 @@ const badgeProblems = (page) => page.evaluate(() => {
       await page.locator('[data-alf-visit-words]').waitFor({ timeout: 3000 });
       await shot(page, `${v.id}-6b-visit-words`);
       await page.locator('[data-alf-note-free]').fill('ID: aoi_1234567 で');
-      check(`⑫ 自由文に連絡先を書くと理由が出て、一言を押せない(${v.id})`, (await page.locator('[data-alf-note-warn]').count()) === 1 && await page.locator('[data-alf-word="1"]').isDisabled());
+      check(`⑫ 自由文に連絡先を書くと理由が出て、一言も「この言葉で送る」も押せない(${v.id})`, (await page.locator('[data-alf-note-warn]').count()) === 1 && await page.locator('[data-alf-word="1"]').isDisabled() && await page.locator('[data-alf-note-send]').isDisabled());
+      await page.locator('[data-alf-note-free]').fill('');
+      check(`⑱ 何も書いていないときは「この言葉で送る」を押せず、「決まった一言で送る」と出る(${v.id})`, await page.locator('[data-alf-note-send]').isDisabled() && /決まった一言で送る/.test(await page.locator('[data-alf-word-hint]').innerText()));
+      await page.locator('[data-alf-note-free]').fill('ソファふかふか');
+      check(`⑱ 書くと「この言葉で送る」が押せて、「一言+書いた言葉」で届くと出る(${v.id})`, await page.locator('[data-alf-note-send]').isEnabled() && /一言\+書いた言葉/.test(await page.locator('[data-alf-word-hint]').innerText()));
+      { const ng = await page.evaluate(() => { const b = document.querySelector('[data-alf-note-send]').getBoundingClientRect(); const s = document.querySelector('[data-alf-note-send]').closest('.mhl-sheet').getBoundingClientRect(); return b.left < s.left - 1 || b.right > s.right + 1 || b.right > window.innerWidth ? ['はみ出す'] : []; }); check(`⑱ 「この言葉で送る」がシートからはみ出さない(${v.id})`, ng.length === 0, ng.join()); }
+      await page.locator('[data-alf-note-free]').fill('ID: aoi_1234567 で');
       { const ng = await chipNg(); check(`⑫ 仲良し度の知らせが、置き手紙のシートのボタンを隠さない(${v.id})`, ng.length === 0, ng.join(' / ')); }
       await shot(page, `${v.id}-6d-visit-warn`);
       await page.locator('[data-alf-note-free]').fill('ソファふかふかでよかった！');
       await shot(page, `${v.id}-6c-visit-free`);
       await page.locator('[data-alf-word="1"]').click();
+      // 自由文があるときは送る前に確認(2026-11-12 社長)。直す→もう一度→送る
+      await page.locator('[data-alf-note-confirm]').waitFor({ timeout: 5000 });
+      check(`⑲ 自由文のときは送る前に確認が出て、まだ送られていない・あて先と見本が出る(${v.id})`, posted.filter(p => p.kind === 'player').length === 0 && /ドラ/.test(await page.locator('[data-alf-note-confirm-to]').innerText()) && /ソファふかふか/.test(await page.locator('[data-alf-note-confirm-preview]').innerText()) && /また来るね/.test(await page.locator('[data-alf-note-confirm-preview]').innerText()));
+      { const ng = await textProblems(page, '[data-alf-note-confirm]'); check(`⑲ 確認の字が切れない(${v.id})`, ng.length === 0, [...new Set(ng)].join(' / ')); }
+      await shot(page, `${v.id}-6e-visit-confirm`);
+      await page.locator('[data-alf-note-confirm-fix]').click();
+      check(`⑲ 「直す」で書く画面へ戻り、文が残っている(${v.id})`, (await page.locator('[data-alf-note-confirm]').count()) === 0 && (await page.locator('[data-alf-note-free]').inputValue()) === 'ソファふかふかでよかった！');
+      await page.locator('[data-alf-word="1"]').click();
+      await page.locator('[data-alf-note-confirm-send]').click();
       await page.locator('[data-alf-visit-note="done"]').waitFor({ timeout: 5000 });
+      await page.locator('[data-alf-sent-here]').waitFor({ timeout: 5000 }).catch(() => {});
+      check(`⑲ 送ったあと、家の中に「この家に残した置き手紙」が出る(${v.id})`, (await page.locator('[data-alf-sent-here]').count()) === 1 && /ソファふかふか/.test(await page.locator('[data-alf-sent-here]').innerText()));
+      { const saved = await page.evaluate(() => { try { return JSON.parse(localStorage.getItem('mh_alf_sent_notes_v1') || 'null'); } catch { return 'broken'; } });
+        check(`⑲ 残した置き手紙が新しいキーに1通控えられる(${v.id})`, Array.isArray(saved) ? saved.length === 1 && saved[0].note === 'ソファふかふかでよかった！' && saved[0].to === 'dra' : true, JSON.stringify(saved).slice(0, 200)); }
       { const pl2 = posted.filter(p => p.kind === 'player'); check(`⑫ 置き手紙に自由文が乗る(あて先はドラ・家にいるのであて先つき)(${v.id})`, pl2.length === 1 && pl2[0].note === 'ソファふかふかでよかった！' && pl2[0].note_to === 'dra', JSON.stringify(pl2)); }
       const pl = posted.filter(p => p.kind === 'player');
       check(`⑥ 声をかける→返事→一言を選んで置き手紙(player・ドラ・一言1)(${v.id})`, pl.length === 1 && JSON.stringify(pl[0].assistants) === '["dra"]' && pl[0].word === 1, JSON.stringify(pl) + ' ' + calls.filter(c => /visits/.test(c)).map(c => c.slice(0, 60)).join(' | '));
       { const ng = await textProblems(page, '[data-alf-visit]'); check(`⑥ 置き手紙のあとも字が切れない(${v.id})`, ng.length === 0, [...new Set(ng)].join(' / ')); }
       await shot(page, `${v.id}-7-visit-left`);
+      await page.locator('[data-alf-visit-close]').click();
+      await page.locator('[data-alf-sent-item="aoi-0001"]').waitFor({ timeout: 5000 }).catch(() => {});
+      check(`⑲ 「🏘 フレンド」の家の一覧の下に「残した置き手紙」が出て、押すとその家へ行ける(${v.id})`, (await page.locator('[data-alf-sent-item="aoi-0001"]').count()) === 1 && await page.locator('[data-alf-sent-item="aoi-0001"]').isEnabled() && /ソファふかふか/.test(await page.locator('[data-alf-sent]').innerText()));
+      await page.locator('[data-alf-sent]').scrollIntoViewIfNeeded().catch(() => {});
+      await shot(page, `${v.id}-8-sent-list`);
       check(`ページの中でエラーが出ない(${v.id})`, errors.length === 0, errors.slice(0, 2).join(' / '));
       await page.close();
     }
@@ -330,7 +356,7 @@ const badgeProblems = (page) => page.evaluate(() => {
       await page.locator('[data-friend-row="mio-0001"]').waitFor({ timeout: 15000 });
       await page.waitForFunction(() => /みゅあの部屋/.test(document.body.innerText), null, { timeout: 8000 }).catch(() => {});
       { const t = await page.locator('[data-friend-row]').allInnerTexts();
-        check(`⑰ フレンドの一覧に短い形「🏡 みゅあの部屋」「🏘 フレンドの家へ」「📋 みんなの居場所」(${v.id})`, t.some(x => /あおい/.test(x) && /🏡 みゅあの部屋/.test(x)) && t.some(x => /ゆうと/.test(x) && /🏘 フレンドの家へ/.test(x)) && t.some(x => /みお/.test(x) && /📋 みんなの居場所/.test(x)), t.join(' | ').slice(0, 200));
+        check(`⑰ フレンドの一覧に短い形「🏡 みゅあの部屋」「🏘 フレンドの家へ」「🗺 助手の町」(${v.id})`, t.some(x => /あおい/.test(x) && /🏡 みゅあの部屋/.test(x)) && t.some(x => /ゆうと/.test(x) && /🏘 フレンドの家へ/.test(x)) && t.some(x => /みお/.test(x) && /🗺 助手の町/.test(x)), t.join(' | ').slice(0, 200));
         const ng = await textProblems(page, '[data-friend-row]'); check(`⑰ 一覧の字がはみ出さない(${v.id})`, ng.length === 0, [...new Set(ng)].join(' / ')); }
       await shot(page, `${v.id}-17-life-list`);
       await page.locator('[data-friend-row="aoi-0001"]').click();

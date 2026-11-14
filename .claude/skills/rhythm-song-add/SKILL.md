@@ -341,7 +341,7 @@ node tools/mode/rhythm-chart-review.js --track <track_id> --picture docs/progres
 2. `RHYTHM_HELL_CHARTS` に `<songId>:<name>HellChart` を足す(曲えらびに HELL が出る)。
    `RHYTHM_PROTO_SONGS` に `<songId>_hell_debug` の枠を足す(`rhythm-hell-mix.js --write` がこの枠で Lv. を測る)
 3. `tools/mode/rhythm-hell-mix.js` の `SONGS` に1行(`marker`・`zero`=拍の頭・`beat`=1拍のms・`levelRe`・`source:'audio'`・
-   `crosses:'auto'`・`crossUpper:'mover'`・`crossDepth:-1`・`variant`)。`drawers` は書かない(=引き出しを使う。使う/使わないと理由は道具が出す)
+   `crosses:'auto'`・`crossUpper:'mover'`・`crossDepth:-1`・`variant`・**`precision:true`**=空中を曲の盛り上がりで回し、速い持ち替えを下ろす・2026-11-11)。`drawers` は書かない(=引き出しを使う。使う/使わないと理由は道具が出す)
 4. `variant` を 0〜3 で比べ、**モンスター4個・水平クロス0・帯の中0**を満たすうち、横持ちの「交差」「届きにくい」が少ないものを選ぶ
    (ROSE は激しさ中間で、全編 1・short 3)。**歯ごたえ(`chartIntensity`・`challengeFactor`)を変えたら比べ直す**(同じ variant でもモンスターが4個から2個に減った)。`node tools/mode/rhythm-hell-mix.js --song <曲> --write` で書く(Lv. も書く)
 
@@ -494,6 +494,26 @@ assistantNotice: { id:'update_notice_<slug>_v1', type:'content' },
    **出した特徴だけで書く**(作り話の歌詞・作曲者や歌い手の話は書かない)。口調は `docs/progress/assistant-peer/VOICE.md`
 3. 取り込む: `node tools/mode/rhythm-assistant-session-lines-import.js`(部品 `33-rhythm-assistant-session-lines.jsx` は手で直さない)
 4. `listen-pending.json` には足さない(新曲は8行を書いてから入れる)
+
+
+---
+
+## 9-3. 有料の曲にするとき(2026-11-13 社長・台帳 2026-11-08「新曲の購入(ビートP500)の細部」)
+
+**本オープン(2026-11-07)より後の新曲は、ビートP500で1曲ずつ買って遊ぶ。** ただし LAMIA・サウダージ2曲・メガロバニア2曲は無料のまま(台帳 #5822)。
+仕組みは入っている(`39-rhythm-song-owned.jsx`)。**有料の印を付ける = 次の1か所に1行足すこと**だけ。
+
+```js
+// monster-hero/src/parts/39-rhythm-song-owned.jsx
+const RHYTHM_SONG_PRICES = Object.freeze({ <songId>: 500 });   // 値段もここ。変えるのもここ1か所
+```
+
+- 版が複数ある曲(原曲/ショート版など)は、**版ごとの songId に1行ずつ**(値段は別でよい。まとめて1行にはならない)
+- **有料にしない曲の手順は今までどおり**(表に書かない)。曲を足す前に、有料にするかを窓口に確かめる(はじめての1曲は無料の曲のまま)
+- 画面は表に従って自動で変わる(曲えらびは 🔒値段 の札と「買う」・ビートP交換所に「曲」のタブ・助手とのセッションは持っている曲だけ)。**マルチは持っていない人もその回だけ遊べて記録も載る**ので何も足さない
+- 持っている曲は新しいキー `mh_rhythm_owned_songs_v1`(曲の id の配列)。データ引き継ぎは `mh_` を全部写すので移る。**このキーの名前・形は変えない**
+- **最初の有料の曲を出す日に、更新履歴とヘルプを出す**(文案は台帳「新曲をビートP500で買う仕組みの更新履歴・ヘルプはテンポの文案で『この文で』」)。2曲目以降は新曲の更新履歴の1行に「ビートP500で買えます」を足す程度
+- 検査: `node tools/mode/rhythm-song-paid-check.js`(表の曲が実在するか・鍵と買う処理・マルチが鍵を見ないこと)。公開の前に `node tools/ctx.js gate`(保存データが絡むのでミハリ確認が要る見込み)
 
 ---
 

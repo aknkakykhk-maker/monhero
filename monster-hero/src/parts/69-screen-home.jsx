@@ -336,10 +336,16 @@ function HomeScreen({
   // MFバトルカードの入口(案A・左の列のいちばん下)。公開の印 cardBattle が立ち、公開のお話を見た人だけ(60-app.jsx が決める)
   cardBattleVisible = false, onOpenCardBattle = null, cardBattleTeaser = false, onOpenCardTeaser = null,
   cardTourVisible = false, onOpenCardTour = null,
+  // はじめての人の「つぎにやること」(2026-11-11 案4)。{ n:1〜3, title, sub, onTap }。null なら出さない
+  nextStep = null,
+  // モンヒロサクセス β の札(2026-11-13 社長「HOMEにβの札」)。中身は 56-monhero-success-store.jsx の MonheroSuccessHomeEntry(公開の印が偽なら何も出さない)
+  successEntry = null,
 }) {
   // 背景の絵は「HOMEの枠が横長かどうか」で選ぶ。画面の向きでは決めない。
   // パソコンは画面が横長でも、HOMEは幅600の縦長の列に収まるので、横長の絵を出すと村の真ん中だけが大きく写り、
   // 施設ボタンが建物と合わなくなる。枠の大きさは自前で回しているとき(横持ちの描き方)も回す前の値なので、そのまま使える
+  // 助手ライフの「いま行くと得なこと」から施設へ行く口(HOME の札と同じ動き。助手ライフ側が呼ぶ)
+  React.useEffect(()=>{ if(typeof ASSISTANT_LIFE_LINKS!=='undefined'&&ASSISTANT_LIFE_LINKS) ASSISTANT_LIFE_LINKS.goPlace={ranch:onOpenManagement,temple:onOpenTemple,market:onOpenMarket,battle:onOpenBattle}; });
   const homeSceneRef=React.useRef(null);
   const [homeSceneWide,setHomeSceneWide]=React.useState(false);
   React.useEffect(()=>{
@@ -479,6 +485,11 @@ function HomeScreen({
               モンヒロビートと同じく、字が長くても略さずそのまま入れる(CLAUDE.md ⑤) */}
           <button className={`mh-home-facility battle${spotClass('battle')}`} onClick={onOpenBattle} aria-label="モンヒロバトル"><span><Sword size={25}/>モンヒロバトル</span></button>
         </nav>
+        {nextStep&&<button type="button" className="mh-home-nextstep" data-home-next-step={nextStep.n} onClick={nextStep.onTap} aria-label={`つぎにやること ${nextStep.n}/3 ${nextStep.title}`}>
+          <span className="mh-home-nextstep-lab">つぎに<br/>やること<b>{nextStep.n}/3</b></span>
+          <span className="mh-home-nextstep-body"><b>{['①','②','③'][nextStep.n-1]} {nextStep.title}</b><small>{nextStep.sub}</small></span>
+          <i aria-hidden="true">›</i>
+        </button>}
         <button onClick={openMissions} className={`mh-home-mission${spotClass('reward')}`}><List size={16}/>ミッション
           {missionClaimableCount(normalizeMissions(missions))>0&&<em>{missionClaimableCount(normalizeMissions(missions))}</em>}
         </button>
@@ -500,6 +511,7 @@ function HomeScreen({
         {/* 公開前の予告(社長 2026-10-25「近日公開みたいな感じでホームに出して」)。同じ場所に「近日公開」の札を付けて出し、押すと予告の小窓。中には入れない。
             公開の印(RELEASE_FLAGS.cardBattle)を立てると、60-app がこちらを下ろして上のふつうの入口に切り替える */}
         {!cardBattleVisible&&cardBattleTeaser&&typeof onOpenCardTeaser==='function'&&<button type="button" data-home-card-battle-teaser className={`mh-home-card-battle soon${homeEventCampaign?'':' raised'}`} onClick={onOpenCardTeaser} aria-label="MFバトルカード 近日公開"><span>🃏 MFバトルカード<small>近日公開</small></span></button>}
+        {successEntry}
         {/* 仲良し度が上がった直後だけ、みゅあがそのことに触れる(HOMEを離れると元に戻る) */}
         <div className={`mh-home-assistant${spotClass('assistant')}`}><AssistantBubble scene="home" condition={assistantBondUp?'bondUp':(masuMons.length===0?'firstRun':null)} compact footerSpace={typeof onOpenAssistantChat==='function'?70:0}/>
           {/* ★おしゃべりのボタンは、吹き出しの下の行(「タップで詳しく」の左の空き)へ重ねる(2026-10-16)。吹き出しの下へ1段足すと
@@ -616,7 +628,7 @@ const FRIEND_NOTICE_LINES = Object.freeze({
   dra: (who) => `${who}からフレンド申請が来てるわ。見にいくか`,
   atsu: (who) => `${who}からフレンド申請来てるよ。とりあえず見にいこ`,
   kyuko: (who) => `ほい！ ${who}からフレンド申請来てるよぉ。見にいこ笑`,
-  sorashido: (who) => `おっ、${who}からフレンド申請来てる！ 見にいこ笑`,
+  sorashido: (who) => `${who}からフレンド申請が来てますよ！ 見にいきましょう笑`,
   // えるびん(2026-11-05・公開前)。穏やかな大人の口調
   erubin: (who) => `${who}からフレンド申請が来てるよ。よかったら、見にいってみよっか`,
 });

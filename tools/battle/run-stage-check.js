@@ -30,7 +30,7 @@ const slice = (from, to) => {
 };
 
 // ---- ① 定義がある / 表を二重に持っていない ----
-const DEFINITION_END = 'const runProgressAllowed = runStage !== null && (gameState === runStage || rhythmBackgroundRun || cardBackgroundRun || assistantLifeBackgroundRun);';
+const DEFINITION_END = 'const runProgressAllowed = runStage !== null && (gameState === runStage || rhythmBackgroundRun || cardBackgroundRun || assistantLifeBackgroundRun || quickAnywhereBackgroundRun);';
 const definition = slice('const RUN_PHASE_STATES =', DEFINITION_END);
 // 画面を切り替える入口(setGameState)は本体の冒頭にある。advanceRunStage の判断材料を
 // ここで同時に更新しているかが、モンビーとの行き来で進行不能になるかどうかを分ける
@@ -64,7 +64,7 @@ check('useStateのsetterを直接呼んでいない(必ず入口を通す)',
   (source.match(/setGameStateRaw\(/g) || []).length === 1
   && (source.match(/setGameState\(/g) || []).length > 50);
 check('ランから抜けるときに段階を捨てる helper がある',
-  definition.includes('const clearRunStage = () => { runStageRef.current = null; setRunStage(null); };')
+  definition.includes('const clearRunStage = () => { runStageRef.current = null; quickAnywhereRunRef.current = false; runBackgroundAllowedRef.current = isBackgroundRunScreen(gameStateNowRef.current); setRunStage(null); };')
   && source.includes('    clearRunStage();'));
 check('演奏中(RHYTHM_PLAY)は裏回しの対象に入れていない',
   /const RHYTHM_BACKGROUND_RUN_SCREENS = \[[^\]]*\];/.test(definition)
@@ -75,21 +75,21 @@ check('演奏中(RHYTHM_PLAY)は裏回しの対象に入れていない',
 // 本体は1回の描画ぶんの式なので、「その画面・その段階のときにどうなるか」を見るには
 // 画面と段階を与えて評価し直す(Reactが再描画で計算し直すのと同じ)。
 // 数式を検査へ書き写さないため、read() は本体が作った値をそのまま返す。
-const evaluateWith = (initialGameState, { runStage: initialRunStage = null, autoRepeat = true, quick = true, cardMarketEntry = false, assistantLifeOpen = false } = {}) => {
+const evaluateWith = (initialGameState, { runStage: initialRunStage = null, autoRepeat = true, quick = true, cardMarketEntry = false, assistantLifeOpen = false, anywhere = false, anywhereRelease = true } = {}) => {
   // useRef は「初期値を持つただの入れ物」。runStageRef には段階を、
   // runBackgroundAllowedRef には本体が描画のたびに入れ直す値がそのまま入る
   const sandbox = { console, useRef: (init) => ({ current: init === undefined ? initialRunStage : init }) };
   vm.createContext(sandbox);
-  vm.runInContext(`let gameState=${JSON.stringify(initialGameState)}; const setGameStateRaw=(v)=>{gameState=v;};
+  vm.runInContext(`let gameState=${JSON.stringify(initialGameState)}; const setGameStateRaw=(v)=>{gameState=v;}; const QUICK_RUN_ANYWHERE_RELEASE=${anywhereRelease};
 ${screenEntry}
-cardMarketEntryRef.current=${cardMarketEntry}; assistantLifeOpenRef.current=${assistantLifeOpen}; gameStateNowRef.current=gameState;
-const autoRepeat=${autoRepeat}; const runMode=${JSON.stringify(quick ? 'quick' : 'challenge')}; const isQuickMode=(m)=>m==='quick';
+cardMarketEntryRef.current=${cardMarketEntry}; assistantLifeOpenRef.current=${assistantLifeOpen}; quickAnywhereRunRef.current=${anywhere}; gameStateNowRef.current=gameState;
+const autoRepeat=${autoRepeat}; const runMode=${JSON.stringify(quick ? 'quick' : 'challenge')}; const isQuickMode=(m)=>m==='quick'; const effect=null;
 ${definition.replace('const [runStage, setRunStage] = useState(null);', `let runStage=${JSON.stringify(initialRunStage)}; const setRunStage=(v)=>{runStage=v;};`)}
 this.api={ advanceRunStage, clearRunStage, isRunStage, setGameState, screens:RUN_STAGE_SCREENS, rhythmScreens:RHYTHM_BACKGROUND_RUN_SCREENS,
   setCardMarketEntry:(v)=>{ cardMarketEntryRef.current=v; },
   setAssistantLifeOpen:(v)=>{ assistantLifeOpenRef.current=v; },
   read:()=>({ runStage, gameState, allowed: runProgressAllowed,
-              backgroundAllowed: runBackgroundAllowed, backgroundRun: rhythmBackgroundRun, cardBackgroundRun }) };`, sandbox);
+              backgroundAllowed: runBackgroundAllowed, backgroundRun: rhythmBackgroundRun, cardBackgroundRun, anywhereScreen: quickAnywhereScreenOpen, anywhereRun: quickAnywhereBackgroundRun }) };`, sandbox);
   return sandbox.api;
 };
 const base = evaluateWith('HOME');
@@ -138,7 +138,33 @@ check('助手ライフを開いている間は、ランが進んでも画面が�
   ['HOME','PROFILE','ITEM_INVENTORY'].every(screen => { const e = withRunOn(screen, { assistantLifeOpen: true }); e.advanceRunStage('WAVE_RESULT'); const r = e.read(); return r.runStage === 'WAVE_RESULT' && r.gameState === screen; }));
 check('助手ライフの開け閉めは控え(ref)で読むので、閉じた直後は1描画を待たずに切り替わる側へ戻る(締めは本体の effect)',
   source.includes('assistantLifeOpenRef.current = open;\n      runBackgroundAllowedRef.current = isBackgroundRunScreen(gameStateNowRef.current);'.replace(/\\n/g, '\n'))
-  && source.includes('if (!open && assistantLifeOpenRef.current && runStageRef.current && ASSISTANT_LIFE_RUN_STATES.includes(gameStateNowRef.current)) assistantLifeExitingRef.current = true;'));
+  && source.includes('if (!open && assistantLifeOpenRef.current && runStageRef.current && ASSISTANT_LIFE_RUN_STATES.includes(gameStateNowRef.current)\n        && !(QUICK_RUN_ANYWHERE_RELEASE && quickAnywhereRunRef.current)) assistantLifeExitingRef.current = true;'));
+
+// ---- 裏クイックをどこでも回す(2026-11-11 社長 A/B/C・docs/progress/quick-run-anywhere/PLAN.md) ----
+// ★回す画面・休む画面はこの検査の側に書き下す(実装の一覧から作らない。⑤と同じ理由)
+const ANYWHERE_RUN = ['HOME', 'PROFILE', 'ITEM_INVENTORY', 'GIFT_BOX', 'MISSIONS', 'SETTINGS', 'FRIENDS', 'BREEDER_MARKET'];
+const ANYWHERE_REST = ['MB_MANAGEMENT', 'MONSTER_LIST_MENU', 'OWNED_MONSTERS', 'ROSTER', 'AUTO_SETTINGS', 'PASTURE_SETTINGS', 'MASU_MONS', 'MASU_ENHANCE',
+  'TEMPLE', 'MASU_FUSION', 'MASU_REGENERATION', 'MASU_TRANSCENDENCE', 'TRAINING_SELECT', 'TRAINING_BOARD', 'BATTLE_MENU', 'BATTLE_SYSTEM_SELECT', 'RAID_JACK_PREP', 'DEBUG_SETTINGS', 'SOME_NEW_SCREEN'];
+check('どこでも回す: 回す画面(HOME・プロフィール・ミッション・マーケットなど)ではクイック∞周回が続く',
+  ANYWHERE_RUN.every(screen => { const r = withRunOn(screen, { anywhere: true }).read(); return r.allowed === true && r.anywhereRun === true; }), ANYWHERE_RUN.join(','));
+check('どこでも回す: M/B管理・神殿・トレーニング・バトルの入口・これから足す画面では休む(進めない)',
+  ANYWHERE_REST.every(screen => withRunOn(screen, { anywhere: true }).read().allowed === false),
+  ANYWHERE_REST.filter(screen => withRunOn(screen, { anywhere: true }).read().allowed !== false).join(','));
+check('どこでも回す: 回す画面でも休む画面でも、ランが進んで画面がバトルへ切り替わらない',
+  [...ANYWHERE_RUN, ...ANYWHERE_REST].every(screen => { const e = withRunOn(screen, { anywhere: true }); e.advanceRunStage('WAVE_RESULT'); const r = e.read(); return r.runStage === 'WAVE_RESULT' && r.gameState === screen; }));
+check('どこでも回す: 負けて∞が切れても(ランが残るあいだ)、HOME から画面を切り替えない',
+  (() => { const e = withRunOn('HOME', { anywhere: true, autoRepeat: false }); const ok = e.read().allowed === false; e.advanceRunStage('WAVE_RESULT'); return ok && e.read().gameState === 'HOME'; })());
+check('どこでも回す: バトルの画面を見ているときは、今までどおり段階と一緒に画面も進む',
+  (() => { const e = withRunOn('BATTLE', { anywhere: true }); e.advanceRunStage('WAVE_RESULT'); const r = e.read(); return r.gameState === 'WAVE_RESULT' && r.runStage === 'WAVE_RESULT'; })());
+check('どこでも回す: HOME からバトルへ戻った瞬間から、段階と一緒に画面も進む',
+  (() => { const e = withRunOn('HOME', { anywhere: true }); e.setGameState('BATTLE'); e.advanceRunStage('WAVE_RESULT'); return e.read().gameState === 'WAVE_RESULT'; })());
+check('どこでも回す: 公開の印が偽なら、今までどおり HOME では回さず画面も切り替わる',
+  (() => { const e = withRunOn('HOME', { anywhere: true, anywhereRelease: false }); const ok = e.read().allowed === false; e.advanceRunStage('WAVE_RESULT'); return ok && e.read().gameState === 'WAVE_RESULT'; })());
+check('どこでも回す: ランを捨てたら(clearRunStage)印も落ちる',
+  (() => { const e = withRunOn('HOME', { anywhere: true }); e.clearRunStage(); e.advanceRunStage('PICK_HERO'); return e.read().gameState === 'PICK_HERO'; })());
+check('どこでも回す: モンヒロビート・カードの決まり(演奏中は止まる)はそのまま',
+  withRunOn('RHYTHM_PLAY', { anywhere: true }).read().allowed === false && withRunOn('RHYTHM_DEMO_HOME', { anywhere: true }).read().allowed === true
+  && withRunOn('RHYTHM_PLAY', { anywhere: true }).read().anywhereScreen === false);
 
 // ---- ⑤ モンビーを開いている間は画面が勝手に切り替わらない ----
 // ★期待する画面は**この検査の側に書き下す**。実装の一覧(rhythmScreens)から作ると、
@@ -272,11 +298,16 @@ check('ランを片付けるときに「実行中の印」も下ろす',
   /const abandonRunAnimations = \(\) => \{[\s\S]{0,400}?runGenerationRef\.current \+= 1;[\s\S]{0,400}?autoTurnRunningRef\.current = false;[\s\S]{0,400}?autoPostWaveRunningRef\.current = false;/.test(source));
 check('モンビーを開いている間はバトルのSEを鳴らさない',
   source.includes('Audio_.setSeVolume(((ultraEcoSession && !cardScreenOpen) || rhythmScreenOpen) ? 0 : seVolume);'));
+// (2026-11-12 モンヒロサクセスの育成の画面 successScreenOpen も同じ印で止める・14-success-sound.jsx)
 // MFバトルカードは同じ効果音を使うので、音量ではなく「裏の周回の効果音だけ止める印」で止める。カードの画面は印を受けない fgSe で鳴らす
 check('MFバトルカードにいる間は、裏の周回の効果音だけを止める',
-  source.includes('Audio_.setBackgroundSeQuiet(cardScreenOpen);')
+  source.includes('Audio_.setBackgroundSeQuiet(cardScreenOpen || quickAnywhereScreenOpen || rhythmRunBackgroundQuiet || successScreenOpen);')
   && source.includes('(...args) => (backgroundSeQuiet ? Promise.resolve() : play(...args))')
   && source.includes('if (!enabled || !src || backgroundSeQuiet) return null;'));
+// 2026-11-12 社長「モンビー中の演奏後に裏クイックの音が表に出てきてる」: 結果のランク演出のあいだ効果音の音量を戻すため、裏のバトルの音まで鳴っていた
+check('モンビーで周回が残っているあいだは、効果音の音量を戻す演出中も裏の周回の効果音だけ止める',
+  source.includes('const rhythmRunBackgroundQuiet = rhythmScreenOpen && runStage !== null;')
+  && source.includes('Audio_.setBackgroundSeQuiet(cardScreenOpen || quickAnywhereScreenOpen || rhythmRunBackgroundQuiet || successScreenOpen)'));
 check('MFバトルカードの画面の効果音は、印を受けない Audio_.fgSe から鳴らす',
   fs.readdirSync(path.join(root, 'monster-hero/src/parts')).filter(name => /^(8[2-9]|9[0-9])-card/.test(name) || name === '84-screen-card-battle.jsx')
     .every(name => !/Audio_\.se[.\[]/.test(fs.readFileSync(path.join(root, 'monster-hero/src/parts', name), 'utf8'))));
@@ -287,11 +318,29 @@ check('MFバトルカードからクイックのバトルへ戻れる・戻る�
   && /const exitCardBattle = async \(\) => \{[\s\S]{0,600}?await handleGiveUp\(\{ silent: true \}\)[\s\S]{0,200}?returnToHome\(\);/.test(source));
 // 負けた・リタイアの暗幕や大きな演出を、カードの画面の上に出さない(モンビーと同じ)
 // 助手ライフの上にも出さない・揺らさない・暗幕を出さない(2026-11-08 社長「画面がめちゃくちゃ動く」。助手ライフだけ条件が抜けていた)
-check('MFバトルカード・助手ライフの上に、裏の周回の負け・演出の幕・画面の揺れ・超省エネの暗幕を出さない',
-  ['{hp<=0&&!debugBattle&&!rhythmScreenOpen&&!cardScreenOpen&&!assistantLifeScreenOpen&&(', '{gaveUp&&!debugBattle&&!rhythmScreenOpen&&!cardScreenOpen&&!assistantLifeScreenOpen&&(',
-    '{effect&&!rhythmScreenOpen&&!cardScreenOpen&&!assistantLifeScreenOpen&&(', '{ultraEcoSession&&!rhythmScreenOpen&&!cardScreenOpen&&!assistantLifeScreenOpen&&<div data-ultra-eco-session-dimmer',
-    "!cardScreenOpen&&!assistantLifeScreenOpen&&battleFxSettings.shake!=='OFF'"]
-    .every(t => source.includes(t)));
+// 2026-11-11: 画面ごとに条件を並べるのをやめ、「いまバトルの画面を見ていない」の1つの値(runBackgroundAllowed)で決める(どこでも回す裏クイックも同じ値に入る)
+check('MFバトルカード・助手ライフ・どこでも回す裏クイックの上に、裏の周回の負け・演出の幕・画面の揺れ・超省エネの暗幕を出さない',
+  ['{hp<=0&&!debugBattle&&!runBackgroundAllowed&&(', '{gaveUp&&!debugBattle&&!runBackgroundAllowed&&(',
+    '{effect&&!runBackgroundAllowed&&effect!==offscreenEffectRef.current&&(', '{ultraEcoSession&&!runBackgroundAllowed&&gameState===runStage&&<div data-ultra-eco-session-dimmer',
+    "!runBackgroundAllowed&&battleFxSettings.shake!=='OFF'"]
+    .every(t => source.includes(t))
+  && /const runBackgroundAllowed = rhythmScreenOpen \|\| cardScreenOpen \|\| assistantLifeScreenOpen \|\| quickAnywhereScreenOpen;/.test(source)
+  && !/!rhythmScreenOpen&&!cardScreenOpen&&!assistantLifeScreenOpen/.test(source));
+// 移る瞬間の1コマ(2026-11-11 社長「裏クイックがない所に戻ったときに、一瞬だけバトルの演出が起こる。画面揺れとか」)。
+//   描く側の !runBackgroundAllowed だけでは、裏で立った揺れ・演出が「表へ移った最初の描画」で出てしまう
+check('裏で回しているあいだは揺れを立てない(表へ移った瞬間に1コマ揺れない)',
+  source.includes('requestAnimationFrame(() => { if (runBackgroundAllowedRef.current) return; setScreenShake(true);'));
+check('裏で立った演出は、表へ移ったあとも出さない(表で立った演出はふつうに出す)',
+  source.includes('if (effect && runBackgroundAllowed) offscreenEffectRef.current = effect;')
+  && source.includes('{effect&&!runBackgroundAllowed&&effect!==offscreenEffectRef.current&&('));
+check('超省エネの暗幕は、ランの画面を見ているときだけ(締めて表へ移った瞬間に暗くならない)',
+  source.includes('ultraEcoSession&&!runBackgroundAllowed&&gameState===runStage&&<div data-ultra-eco-session-dimmer'));
+// 裏で負けたときの音(2026-11-11 社長「裏クイック中に死ぬと、バトルの効果音が鳴り続ける」)。∞は負けた瞬間に切れるので、∞で見ると負けた最後のターンの音が鳴る
+check('助手ライフの上の裏の周回の音は、∞ではなくランが残っているかで止める(負けても鳴らさない)',
+  source.includes('const assistantLifeRunMuted = assistantLifeScreenOpen && runStage !== null;')
+  && /Audio_\.setSeVolume\(\(\(ultraEcoSession && !cardScreenOpen\) \|\| rhythmScreenOpen \|\| assistantLifeRunMuted\) \? 0 : seVolume\)/.test(source));
+check('裏で回しているとき(HOME など)、ガッツ切れの緊急回復は見ている画面ではなくランの段階で決める(理由なしで止まらない)',
+  source.includes("(gameState==='BATTLE'||runStage==='BATTLE')&&enemy&&enemy.hp>0&&hp>0"));
 
 if (failed) { console.error(`\n${failed}件のNGがあります`); process.exit(1); }
 console.log('\nrun stage check passed.');

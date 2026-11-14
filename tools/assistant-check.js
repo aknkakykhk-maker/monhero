@@ -55,7 +55,8 @@ check('表情ごとの画像ファイルが実在する', EXPECTED_EXPRESSIONS.e
   return fs.existsSync(full) && fs.existsSync(face);
 }));
 check('吹き出しには軽い顔アイコンを使う(元絵は重いため)', (() => {
-  const full = fs.statSync(path.join(root, 'monster-hero', a.assistantFullImage(mua, 'normal'))).size;
+  // 元絵(助手の登録の imageDir の絵)の重さで比べる。立ち絵を軽い切り出しへ差し替えた助手(みゅあ・2026-11-11)も、元絵は残してある
+  const full = fs.statSync(path.join(root, 'monster-hero', `${mua.imageDir}/${mua.imagePrefix}_normal.PNG`)).size;
   const face = fs.statSync(path.join(root, 'monster-hero', a.assistantFaceImage(mua, 'normal'))).size;
   return face * 4 < full;
 })(), `顔 ${Math.round(fs.statSync(path.join(root, 'monster-hero', a.assistantFaceImage(mua, 'normal'))).size/1024)}KB`);
@@ -326,8 +327,11 @@ check('バトル練習の視聴済みと初回案内表示済みを分ける',
 // 「見た」と記録するのは、ふだんの入口(HOMEへ戻る練習)から最後まで通したときだけ。
 // デバッグのお試し再生では書き換えない
 check('バトル初回案内は表示時に記録し、完了時だけ練習を視聴済みにする',
+  // 2026-11-11 分割: はじめの1戦は別の印(mh_battle_tutorial_first_v1)だけ、seen はつづき・全部通しを終えたときだけ
   has('storeSet(BATTLE_TUTORIAL_GUIDE_SHOWN_KEY, true, false)')
-    && has("if (completed && back === 'HOME') { try { await storeSet(BATTLE_TUTORIAL_SEEN_KEY, true, false); } catch {} }")
+    && has("if (completed && back === 'HOME') {")
+    && has("if (endedVariant === 'first') {")
+    && has('await storeSet(BATTLE_TUTORIAL_SEEN_KEY, true, false);')
     && has('if(last) endBattleTutorial(true)') && has('endBattleTutorial(false)'));
 check('デバッグはデバッグ設定からだけ開ける',
   has('💬 助手') && source.indexOf('💬 助手') > source.indexOf("gameState==='DEBUG_SETTINGS'"));

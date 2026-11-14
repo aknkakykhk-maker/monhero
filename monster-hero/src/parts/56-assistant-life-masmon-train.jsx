@@ -23,11 +23,11 @@ const AMGT_RANKS = Object.freeze([[100, '極み'], [75, '達人'], [50, '得意'
 const amgtRankOf = (v) => (AMGT_RANKS.find(r => v >= r[0]) || AMGT_RANKS[AMGT_RANKS.length - 1])[1];
 // 数字(社長 11-11: 修行の伸びはふつう)。数字はここだけ
 const AMGT_NUM = Object.freeze({
-  gain: [4, 8], // 修行1回の熟練(主)
-  realAll: [1, 2], // 実戦修行で、覚えている全部の技に足す分
+  gain: [3, 6], // 修行1回の熟練(主)。移動12回で約75%(前は [4, 8]。シュギョウ2の試算・台帳 #5328)
+  realAll: [1, 1], // 実戦修行で、覚えている全部の技に足す分(移動12回で [1, 2] → [1, 1])
   stat: [2, 4], // 修行1回の能力の伸び(第①段階の1日の上限に入る)
   fat: 12, str: 2, // 疲労・ストレス
-  perDay: 2, // 1日の修行の回数の上限(案)
+  perDay: 3, // 1日の修行の回数の上限(2026-11-11 社長: 移動12回に合わせて 2 → 3。1回の伸びは約75%のまま)
   fatStop: 45, // これ以上疲れていたら修行に行かない(訓練側が休ませる)
   goAt: 0.4, // モンヒロバトルにいた回に修行へ行く起こりやすさに足す分(性格の p に足す)
   initPerLv: 0.3, initMax: 30, // 覚えている技の熟練の初めの値 = 育成 Lv × 0.3(最大30)
@@ -83,7 +83,10 @@ const amgtRngOf = (text) => {
 const amgtRange = (rnd, lo, hi) => lo + Math.floor(rnd() * (hi - lo + 1));
 // 技表
 const amgtTechsOf = (monster) => (typeof ASSISTANT_MASMON_TECHS !== 'undefined' && ASSISTANT_MASMON_TECHS.species && Array.isArray(ASSISTANT_MASMON_TECHS.species[monster]) ? ASSISTANT_MASMON_TECHS.species[monster] : []);
-const amgtTechIdOk = (id) => typeof id === 'string' && /^[a-z]{2,20}_\d{2}$/.test(id);
+// 技 id: 第2版(sk-0260 の形と、オリジナル5種の pandora_o01 の形)と、第1版(mocchi_01 の形)の全部を受ける。第1版の id は読むときに第2版へ読み替える(消さない)
+const amgtTechIdOk = (id) => typeof id === 'string' && /^(?:sk-\d{4}|[a-z]{2,20}_o?\d{2})$/.test(id);
+const amgtCanon = (id) => (typeof ASSISTANT_MASMON_TECHS !== 'undefined' && ASSISTANT_MASMON_TECHS && typeof ASSISTANT_MASMON_TECHS.canon === 'function' ? ASSISTANT_MASMON_TECHS.canon(id) : id);
+const AMGT_TECH_MAX = 64; // 1体が覚えられる技の数の上限(第2版は種類ごとに12〜21技・8技の上限はなくした)
 
 const normalizeAssistantMasmonTrain = (raw) => {
   const out = { v: 1, mons: {}, br: {}, ask: {}, ev: {}, at: {} };
@@ -91,14 +94,15 @@ const normalizeAssistantMasmonTrain = (raw) => {
   if (raw.mons && typeof raw.mons === 'object') for (const [aid, ms] of Object.entries(raw.mons)) {
     if (!amgtOkAid(aid) || !ms || typeof ms !== 'object') continue;
     const one = {};
-    for (const [key, e] of Object.entries(ms).slice(0, 24)) {
+    for (const [key, e] of Object.entries(ms).slice(-24)) { // 多すぎるときは新しい方を残す
       if (!/^[1-8]:\w{2,40}$/.test(key) || !e || typeof e !== 'object' || !e.m || typeof e.m !== 'object') continue;
       const m = {};
       for (const k of AMGT_SENSE_KEYS) m[k] = amgtNum(e.m[k], 0, 0, 100);
-      for (const [k, v] of Object.entries(e.m).slice(0, 24)) if (amgtTechIdOk(k)) m[k] = amgtNum(v, 0, 0, 100);
-      const learn = [...new Set((Array.isArray(e.learn) ? e.learn : []).filter(amgtTechIdOk))].slice(0, 16);
+      // 熟練: 第1版の id は第2版へ読み替える。2つが1つに当たるときは大きい方(足さない)
+      for (const [k, v] of Object.entries(e.m).slice(0, AMGT_TECH_MAX + AMGT_SENSE_KEYS.length)) if (amgtTechIdOk(k)) { const c = amgtCanon(k); m[c] = Math.max(m[c] || 0, amgtNum(v, 0, 0, 100)); }
+      const learn = [...new Set((Array.isArray(e.learn) ? e.learn : []).filter(amgtTechIdOk).map(amgtCanon))].slice(0, AMGT_TECH_MAX);
       const log = (Array.isArray(e.log) ? e.log : []).filter(x => x && typeof x === 'object' && Number.isInteger(x.s) && AMGT_KIND_KEYS.includes(x.k)).slice(-AMGT_LOG)
-        .map(x => ({ s: x.s, k: x.k, g: Object.fromEntries(Object.entries(x.g && typeof x.g === 'object' ? x.g : {}).filter(([k, n]) => (AMGT_SENSE_KEYS.includes(k) || amgtTechIdOk(k)) && Number.isFinite(n)).map(([k, n]) => [k, amgtClamp(Math.round(n), 0, 99)])), ...(amgtTechIdOk(x.l) ? { l: x.l } : {}), ...(x.f ? { f: 1 } : {}) }));
+        .map(x => ({ s: x.s, k: x.k, g: Object.fromEntries(Object.entries(x.g && typeof x.g === 'object' ? x.g : {}).filter(([k, n]) => (AMGT_SENSE_KEYS.includes(k) || amgtTechIdOk(k)) && Number.isFinite(n)).map(([k, n]) => [amgtTechIdOk(k) ? amgtCanon(k) : k, amgtClamp(Math.round(n), 0, 99)])), ...(amgtTechIdOk(x.l) ? { l: amgtCanon(x.l) } : {}), ...(x.f ? { f: 1 } : {}) }));
       one[key] = { m, learn, day: { d: amgtNum(e.day && e.day.d, -1, -1, 1e7), n: amgtNum(e.day && e.day.n, 0, 0, 9) }, log, src: 'init_v1' };
     }
     out.mons[aid] = one;
@@ -137,7 +141,7 @@ const amgtCanLearn = (t, st, me) => {
 // 初めの値(一度だけ): 初めからの技と、いまの能力で条件を満たしている技(先に磨く技の要らないもの)を覚えている。熟練は育成 Lv から
 const amgtInitMon = (monster, lv, st) => {
   const base = Math.min(AMGT_NUM.initMax, Math.round((Number.isFinite(lv) ? lv : 1) * AMGT_NUM.initPerLv));
-  const learn = amgtTechsOf(monster).filter(t => t.learn && (t.learn.start || (!t.learn.need && amgtCanLearn(t, st, null)))).map(t => t.id);
+  const learn = amgtTechsOf(monster).filter(t => t.learn && t.learn.start).map(t => t.id); // 初めは「初めから」の技だけ(ヘルプ「初めは2つだけ」と合わせる・ミハリ 11-11)
   const m = {}; for (const k of AMGT_SENSE_KEYS) m[k] = base; for (const id of learn) m[id] = base;
   return { m, learn, day: { d: -1, n: 0 }, log: [], src: 'init_v1' };
 };
@@ -179,12 +183,33 @@ const amgtPickKind = (aid, me, techs, st, rnd, askK) => {
 };
 
 // ---------- 店(保存) ----------
+// 技表が第2版になるとき、古い id(mocchi_01 の形)が入った保存を1回だけそのままコピーしておく(戻せるように・CLAUDE.md ⑦)。
+//   コピー先は新しいキー mh_assistant_masmon_train_v1_pre_tech2・一度きりの印は mh_assistant_masmon_tech2_migrated_v1。元のキーは消さない
+const AMGT_PRE_TECH2_KEY = 'mh_assistant_masmon_train_v1_pre_tech2';
+const AMGT_SLEEP_PRE_TECH2_KEY = 'mh_assistant_masmon_sleep_v1_pre_tech2';
+const AMGT_TECH2_FLAG = 'mh_assistant_masmon_tech2_migrated_v1';
+const amgtHasOldTechId = (raw) => { try { const im = (ASSISTANT_MASMON_TECHS && ASSISTANT_MASMON_TECHS.idmap) || {}; if (!raw || typeof raw !== 'object') return false; const txt = JSON.stringify(raw); return Object.keys(im).some((k) => txt.includes(`"${k}"`)); } catch (_) { return false; } };
+const amgtBackupBeforeTech2 = async (trainRaw) => {
+  try {
+    if (typeof storeGet !== 'function' || typeof storeSet !== 'function') return;
+    if (typeof ASSISTANT_MASMON_TECHS === 'undefined' || !ASSISTANT_MASMON_TECHS || !(ASSISTANT_MASMON_TECHS.version >= 2)) return; // 第2版の技表になってから
+    if (await storeGet(AMGT_TECH2_FLAG, false, false)) return;
+    const sleepRaw = await storeGet('mh_assistant_masmon_sleep_v1', null, false);   // 冬眠中の子の修行の写しにも古い id が入る(読むだけ)
+    const copies = [[AMGT_PRE_TECH2_KEY, trainRaw], [AMGT_SLEEP_PRE_TECH2_KEY, sleepRaw]].filter(([, r]) => amgtHasOldTechId(r));
+    for (const [key, r] of copies) { const had = await storeGet(key, null, false); if (had == null) await storeSet(key, r, false); } // すでにあれば上書きしない
+    await storeSet(AMGT_TECH2_FLAG, true, false);
+  } catch (_) { /* 写せなかったときは印を付けない(次に開いたときもう一度やる) */ }
+};
 const AMGT_STORE = { state: normalizeAssistantMasmonTrain(null), loaded: false, subs: new Set(), dirty: false,
   set(next) { this.state = next; this.subs.forEach(f => { try { f(next); } catch (_) {} }); },
-  async load() {
-    if (this.loaded) return this.state;
-    let raw = null; try { raw = typeof storeGet === 'function' ? await storeGet(ASSISTANT_MASMON_TRAIN_KEY, null, false) : null; } catch (_) {}
-    this.loaded = true; this.set(normalizeAssistantMasmonTrain(raw)); return this.state;
+  load() { // 読み込みは1回だけ(同時に呼ばれても、あとから終わった方が古い値で戻さない・ミハリ 11-11)
+    if (this.loaded) return Promise.resolve(this.state);
+    this._p = this._p || (async () => {
+      let raw = null; try { raw = typeof storeGet === 'function' ? await storeGet(ASSISTANT_MASMON_TRAIN_KEY, null, false) : null; } catch (_) {}
+      await amgtBackupBeforeTech2(raw);
+      this.loaded = true; this.set(normalizeAssistantMasmonTrain(raw)); return this.state;
+    })();
+    return this._p;
   } };
 const amgtOn = () => typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantMasmonTrain === true;
 // 保存を読み込む前は書かない(空の既定値で前の記録を上書きしない・ミハリ 11-11)
@@ -213,11 +238,11 @@ const amgtEnsure = (st, aid, row, e) => {
 const amgtPushEv = (next, aid, s, t, x) => { next.ev[aid] = [...next.ev[aid], { s, t, x: String(x || '').slice(0, 60) }].slice(-AMGT_EV); };
 
 // ---------- 修行の場所: 助手の生活でモンヒロバトルにいた回を覚えておく ----------
-// 生活の1つの時間(life.abs = 日×6+区切り)が、第①段階のどの回に当たるか(始めと終わり)
+// 生活の1つの時間(life.abs = 日×12+区切り。2時間ずつ)が、第①段階のどの回に当たるか(始めと終わり)
 const amgtLifeSlotsToGrow = (abs) => {
-  const S = typeof ASSISTANT_LIFE_SLOTS !== 'undefined' ? ASSISTANT_LIFE_SLOTS : null;
-  if (!S || !Number.isInteger(abs)) return [];
-  const day = Math.floor(abs / 6); const s = S[abs - day * 6]; if (!s) return [];
+  // 12区切り(2026-11-11 ナカヨシ11。abs = 日×12+j・2時間ずつ)。区切りの時刻は assistantLifeSlotOfAbs の from・to
+  if (typeof assistantLifeSlotOfAbs !== 'function' || !Number.isInteger(abs)) return [];
+  const day = Math.floor(abs / 12); const s = assistantLifeSlotOfAbs(abs); if (!s || !Number.isFinite(s.from)) return [];
   const t0 = day * 86400000 + s.from * 3600000 - 9 * 3600000; const t1 = day * 86400000 + s.to * 3600000 - 9 * 3600000 - 1;
   return [...new Set([amgtSlotOf(t0), amgtSlotOf(t1)])];
 };
@@ -238,7 +263,9 @@ const amgtNoteLife = (life) => {
 const amgtOnLifeSlot = (life) => { try { return amgtNoteLife(life); } catch (_) { return false; } };
 const amgtWasAtPlace = (aid, slot, st = AMGT_STORE.state) => {
   if (typeof ASSISTANT_LIFE_STORE !== 'undefined' && ASSISTANT_LIFE_STORE.state && ASSISTANT_LIFE_STORE.state.life) amgtNoteLife(ASSISTANT_LIFE_STORE.state.life);
-  return ((AMGT_STORE.state.at || st.at)[aid] || []).includes(slot);
+  // その日にモンヒロバトルにいたら、その回からその日の終わりまで修行できる(ミハリの最終確認 案A・窓口 11-11)
+  const day = amgtSlotDay(slot);
+  return ((AMGT_STORE.state.at || st.at)[aid] || []).some(n => amgtSlotDay(n) === day && n <= slot);
 };
 
 // ---------- 第①段階(キズナ4)からの受け口。印が偽なら何もしない ----------
@@ -263,16 +290,21 @@ const amgtDo = (aid, e, row, _rnd, slot, act, add, failChance) => {
   if (!amgtOn() || !AMGT_STORE.loaded || !act || !AMGT_KINDS[act.k]) return e;
   const K = AMGT_KINDS[act.k];
   const rnd = amgtRngOf(`${amgtSeed()}|${aid}|shugyo|${amgtKeyOf(row)}|${slot}`);
+  const me0 = (AMGT_STORE.state.mons[aid] || {})[amgtKeyOf(row)];
+  if (me0 && me0.log.some(x => x.s === slot)) return e; // 同じ回を二度当てない
   const { next, me, br } = amgtEnsure(AMGT_STORE.state, aid, row, e);
   const techs = amgtTechsOf(row.monster);
   const fail = rnd() < (typeof failChance === 'function' ? failChance(0.03) : 0.05) * amgtFailMult(aid);
   const lead = 1 + br.ab.lead / 100 * AMGT_BR_EFFECT.lead;
   const ask = act.asked ? AMGT_NUM.askMult : 1;
+  const solo = typeof amgcSparMult === 'function' ? amgcSparMult(aid) : 1; // 練習の相手がいないときの伸び(56-assistant-life-masmon-cheer.jsx・印が偽なら 1)
   const g = {};
   const nameOf = (k) => (AMGT_SENSE.find(x => x[0] === k) || [])[1] || (techs.find(t => t.id === k) || {}).name || '';
+  const over = typeof amgbLifeOver === 'function' && amgbLifeOver(aid, row); // 絆: 寿命が来た子は熟練も伸びない(印が偽なら false)
   const up = (k, lo, hi) => {
+    if (over) return;
     const cur = me.m[k] || 0;
-    const n = Math.min(100 - cur, Math.max(1, Math.round(amgtRange(rnd, lo, hi) * lead * ask * (fail ? 0.5 : 1))));
+    const n = Math.min(100 - cur, Math.max(1, Math.round(amgtRange(rnd, lo, hi) * lead * ask * solo * (fail ? 0.5 : 1))));
     if (n > 0) { me.m[k] = cur + n; g[k] = (g[k] || 0) + n; if (amgtRankOf(cur) !== amgtRankOf(me.m[k])) amgtPushEv(next, aid, slot, 'rank', `${amgtKeyOf(row)}|${nameOf(k)}|${amgtRankOf(me.m[k])}`); }
   };
   // 1) 技を覚える(この系統で覚える技のうち、条件を満たした最初の1つ・失敗した回は覚えない)
@@ -451,22 +483,23 @@ function AmgtCard({ who, t, e }) {
     <div className="mt-2 space-y-2" data-amgt-card>
       <div className="mhm-card">
         <p className="text-[10px] font-black text-slate-400">⚔ 技と熟練(モンヒロバトルの修行で覚える・磨く)</p>
-        <div className="mt-1 grid grid-cols-1 gap-y-0.5">
+        {/* 列をそろえる1つの格子(名前は1行で全部・間合い・棒・段階)。社長「文字列が悪い」2026-11-13: 名前が2行に折れて列と行の高さがずれていた */}
+        <div className="mt-1 grid items-center gap-x-1.5 gap-y-1" style={{ gridTemplateColumns: 'max-content 40px minmax(24px,1fr) 34px' }} data-amgt-grid>
           {techs.map(x => {
             const has = me.learn.includes(x.id);
             return (
-              <div key={x.id} className={`flex items-center gap-1.5 text-[10.5px] font-bold ${has ? 'text-slate-100' : 'text-slate-500'}`} data-amgt-tech={x.id}>
-                <span className={`w-[96px] shrink-0 truncate ${has ? (x.kind === 'wise' ? 'text-sky-200' : 'text-rose-200') : ''}`}>{has ? x.name : '???'}</span>
-                <span className="w-[46px] shrink-0 whitespace-nowrap text-[9px]">{[0, 1, 2, 3].map(d => <i key={d} className={`not-italic ${x.dist.includes(d) && has ? 'text-amber-300' : 'text-slate-600'}`}>{AMGT_DIST[d]}</i>)}</span>
+              <div key={x.id} style={{ display: 'contents' }} className={`text-[10.5px] font-bold ${has ? 'text-slate-100' : 'text-slate-500'}`} data-amgt-tech={x.id}>
+                <span className={`whitespace-nowrap text-left leading-[16px] tracking-tight ${has ? (x.kind === 'wise' ? 'text-sky-200' : 'text-rose-200') : ''}`} data-amgt-tech-name>{has ? x.name : '???'}</span>
+                <span className="whitespace-nowrap text-center text-[9px] leading-[16px]">{[0, 1, 2, 3].map(d => <i key={d} className={`not-italic ${x.dist.includes(d) && has ? 'text-amber-300' : 'text-slate-600'}`}>{AMGT_DIST[d]}</i>)}</span>
                 <span className="mhm-bar"><i style={{ width: `${has ? me.m[x.id] || 0 : 0}%`, background: 'linear-gradient(90deg,#fbbf24,#f472b6)' }}/></span>
-                <b className="w-[40px] shrink-0 text-right text-[9.5px] text-amber-200">{has ? amgtRankOf(me.m[x.id] || 0) : 'まだ'}</b>
+                <b className="whitespace-nowrap text-center text-[9.5px] leading-[16px] text-amber-200">{has ? amgtRankOf(me.m[x.id] || 0) : 'まだ'}</b>
               </div>);
           })}
           {AMGT_SENSE.map(([k, label]) => (
-            <div key={k} className="flex items-center gap-1.5 text-[10.5px] font-bold text-slate-200" data-amgt-sense={k}>
-              <span className="w-[148px] shrink-0 truncate">{label}</span>
+            <div key={k} style={{ display: 'contents' }} className="text-[10.5px] font-bold text-slate-200" data-amgt-sense={k}>
+              <span className="whitespace-nowrap text-left leading-[16px]" style={{ gridColumn: 'span 2' }}>{label}</span>
               <span className="mhm-bar"><i style={{ width: `${me.m[k] || 0}%`, background: 'linear-gradient(90deg,#a78bfa,#f472b6)' }}/></span>
-              <b className="w-[40px] shrink-0 text-right text-[9.5px] text-amber-200">{amgtRankOf(me.m[k] || 0)}</b>
+              <b className="whitespace-nowrap text-center text-[9.5px] leading-[16px] text-amber-200">{amgtRankOf(me.m[k] || 0)}</b>
             </div>))}
         </div>
       </div>

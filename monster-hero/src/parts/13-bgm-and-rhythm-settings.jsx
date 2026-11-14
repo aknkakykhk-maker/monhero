@@ -10,6 +10,19 @@ const BGM_TRACKS = [
   { id:'monster_hero_theme', name:'Monster Hero', creator:'オリジナル', src:'audio/bgm-monster-hero-theme.mp3', gain:1, loop:true },
   { id:'monster_hero_theme_alt', name:'Monster Hero -Another-', creator:'オリジナル', src:'audio/bgm-monster-hero-theme-alt.mp3', gain:1, loop:true },
   { id:'original_home', name:'HOMEテーマ', creator:'オリジナル', src:'audio/bgm-title.mp3', gain:1, loop:true, legacyKey:'home' },
+  // 社長の持ち込み(2026-11-13)。元の音源は tools/art-sources/song-audio/home_2/。頭に無音は無く、終わりの0.03秒だけ消して継ぎ目を整えた(90.0秒)
+  { id:'original_home_2', name:'モンヒロサクセス ホーム', creator:'オリジナル', src:'audio/bgm-home-2.mp3', gain:1, loop:true },
+  // 社長の持ち込み(2026-11-14・作り直し版)。元の音源は tools/art-sources/song-audio/monsuc_training/ と monsuc_rest/。終わりの小さくなる所は使わず、手前で頭へ戻す形にした(2026-11-14 社長)。トレーニングは150.25BPMの24小節=38.32秒の所で戻し、頭の0.4秒と重ねてつなぐ(37.9秒)。休養は48.5秒の所で戻し、頭の1.5秒と重ねてつなぐ(47.0秒)
+  { id:'monsuc_training', name:'モンヒロサクセス トレーニング', creator:'オリジナル', src:'audio/bgm-monsuc-training.mp3', gain:1, loop:true },
+  { id:'monsuc_rest', name:'モンヒロサクセス 休養', creator:'オリジナル', src:'audio/bgm-monsuc-rest.mp3', gain:1, loop:true },
+  // 社長の持ち込み(2026-11-14・3〜4曲目)。元の音源は tools/art-sources/song-audio/monsuc_cup/・monsuc_win/・monsuc_lose/・monsuc_menu/。モンヒロビートには足さない
+  //   大会: 131.8BPMの52小節(94.7秒)で戻して頭と重ねる(終わりの小さくなる所は使わない)。真のピークの上限(-1 dBTP)に合わせて -16.1 LUFS(圧縮はしない)
+  //   メイン: 138BPMのちょうど78小節(135.7秒)。元がそのままループになる作りで、頭と終わりの無音だけ落とした
+  //   勝利・敗北: 7秒ほどのジングル。loop:false = 1回だけ流して無音(社長の答え)
+  { id:'monsuc_cup', name:'モンヒロサクセス 大会', creator:'オリジナル', src:'audio/bgm-monsuc-cup.mp3', gain:1, loop:true },
+  { id:'monsuc_menu', name:'モンヒロサクセス メイン', creator:'オリジナル', src:'audio/bgm-monsuc-menu.mp3', gain:1, loop:true },
+  { id:'monsuc_win', name:'モンヒロサクセス 勝利(1回だけ)', creator:'オリジナル', src:'audio/bgm-monsuc-win.mp3', gain:1, loop:false },
+  { id:'monsuc_lose', name:'モンヒロサクセス 敗北(1回だけ)', creator:'オリジナル', src:'audio/bgm-monsuc-lose.mp3', gain:1, loop:false },
   { id:'original_prep', name:'強化テーマ', creator:'オリジナル', src:'audio/bgm-menu.mp3', gain:1, loop:true, legacyKey:'prep' },
   { id:'original_battle', name:'バトルテーマ', creator:'オリジナル', src:'audio/bgm-battle.mp3', gain:1, loop:true, legacyKey:'battle' },
   { id:'original_boss', name:'ボステーマ', creator:'オリジナル', src:'audio/bgm-boss.mp3', gain:1, loop:true, legacyKey:'boss' },
@@ -88,6 +101,11 @@ const BGM_TRACKS = [
   { id:'melo_evans', name:'Evans', creator:'DJ YOSHITAKA', src:'audio/bgm-evans.mp3', gain:1, loop:true },
   // 2026-11-07 追加。ZUTOMAYO(ずっと真夜中でいいのに。)。表記はジャケットのとおり
   { id:'melo_humanoid', name:'ヒューマノイド', creator:'ZUTOMAYO', src:'audio/bgm-humanoid.mp3', gain:1, loop:true },
+  { id:'melo_lamia', name:'LAMIA', creator:'BlackY', src:'audio/bgm-lamia.mp3', gain:1, loop:true },
+  { id:'melo_saudade', name:'サウダージ', creator:'ポルノグラフィティ', src:'audio/bgm-saudade.mp3', gain:1, loop:true },
+  { id:'melo_saudade_short', name:'サウダージ short ver.', creator:'ポルノグラフィティ', src:'audio/bgm-saudade-short.mp3', gain:1, loop:true },
+  { id:'melo_megalovania_sans', name:'メガロバニア（サンズ戦）', creator:'ねるかめちゃん', src:'audio/bgm-megalovania-sans.mp3', gain:1, loop:true },
+  { id:'melo_megalovania_smash', name:'MEGALOVANIA（スマブラver）', creator:'暇人[もちゃ]', src:'audio/bgm-megalovania-smash.mp3', gain:1, loop:true },
   { id:'melo_tsuki_ga_michiru_mae_ni_short', name:'月が満ちる前に short ver.', creator:'Fuki Commune', src:'audio/bgm-tsuki-ga-michiru-mae-ni-short.mp3', gain:1, loop:true },
   { id:'melo_dullahan_clockwork_alt', name:'呪われた騎士の時計仕掛け -Another-', creator:'オリジナル', src:'audio/bgm-dullahan-clockwork-alt.mp3', gain:1, loop:true },
   { id:'melo_dullahan_steel_ghost', name:'鋼鉄の亡霊', creator:'オリジナル', src:'audio/bgm-dullahan-steel-ghost.mp3', gain:1, loop:true },
@@ -632,6 +650,8 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   // LIGHT/STANDARD/VIVID は見た目のおまかせ(RHYTHM_LOOK_PRESETS)を対戦のあいだだけ重ねる。OWN は自分の設定のまま。
   // 新しい項目なので、保存値に無い人は multiLightLook から決める(ON→LIGHT・OFF→OWN。これまでの見え方のまま)
   multiLook:'LIGHT',
+  // 対戦の演奏中に、ほかの人の順位・スコア・コンボの札を出すか(2026-11-11 社長「消せる・はじめは入」)。新しい項目なので、保存値に無い人は ON で補われる
+  multiLiveBoard:true,
   // モードえらびの助手の見せ方(2026-10-04・ユーザー指示「助手コメントが助手に被ってる 位置を変えて、あとはオンオフもつけてほしい」)。
   // 立ち絵とコメントを別々に出し入れできる。新しい項目なので、保存値に無い人は ON(これまでの見え方)で補われる
   modeSelectArt:true, modeSelectComment:true,
@@ -768,7 +788,7 @@ const RHYTHM_FX_HELP = Object.freeze({
   flash:'モンスターノーツを取ったときに画面全体が光る演出です。既定は「おまかせ」。まぶしいときは「出さない」にしてください。',
   comboBounce:'コンボ数が増えるたびに数字が跳ねる動きと、枠の脈打ちです。既定は「おまかせ」（演出量が「最大」「多め」のときに出ます）。',
   combo100:'コンボが100のくぎりに届いたときのお祝いの表示です。既定は「おまかせ」（演出量「最小」と軽量モードでは出ません）。',
-  fullComboBig:'曲の終わりにフルコンボ・ALL MARVELOUS を取ったときの大きな表示です。既定は「おまかせ」（演出量「最小」と軽量モードでは出ません）。',
+  fullComboBig:'フルコンボ・ALL MARVELOUS を取ったときの表示です。最後のノーツのあとに「FULL COMBO」の帯が出て、曲の終わりに大きく祝います。既定は「おまかせ」（演出量「最小」と軽量モードでは帯だけを控えめに出します）。「なし」にすると、どちらも出ません。',
 });
 const normalizeRhythmFx = raw => {
   const source=raw&&typeof raw==='object'&&!Array.isArray(raw)?raw:{};
@@ -874,7 +894,7 @@ const normalizeRhythmSettings = value => {
     noteSeTickVolume:rhythmFiniteStep(source.noteSeTickVolume,0,100,1,DEFAULT_RHYTHM_SETTINGS.noteSeTickVolume),
     noteSeEnabled:bool('noteSeEnabled'), vibrationEnabled:bool('vibrationEnabled'),
     effectAmount:RHYTHM_EFFECT_LEVELS.includes(source.effectAmount)?source.effectAmount:DEFAULT_RHYTHM_SETTINGS.effectAmount,
-    lightweightMode:bool('lightweightMode'), livePartnerVisible:bool('livePartnerVisible'), multiLightLook:bool('multiLightLook'), modeSelectArt:bool('modeSelectArt'), modeSelectComment:bool('modeSelectComment'),
+    lightweightMode:bool('lightweightMode'), livePartnerVisible:bool('livePartnerVisible'), multiLightLook:bool('multiLightLook'), multiLiveBoard:bool('multiLiveBoard'), modeSelectArt:bool('modeSelectArt'), modeSelectComment:bool('modeSelectComment'),
     multiLook:RHYTHM_MULTI_LOOK_LEVELS.includes(source.multiLook)?source.multiLook:(source.multiLightLook===false?'OWN':'LIGHT'),
     sideMonsterOpacity:RHYTHM_SIDE_MONSTER_OPACITIES.includes(source.sideMonsterOpacity)?source.sideMonsterOpacity:DEFAULT_RHYTHM_SETTINGS.sideMonsterOpacity,
     sideMonsterMotion:RHYTHM_SIDE_MONSTER_MOTIONS.includes(source.sideMonsterMotion)?source.sideMonsterMotion:DEFAULT_RHYTHM_SETTINGS.sideMonsterMotion,

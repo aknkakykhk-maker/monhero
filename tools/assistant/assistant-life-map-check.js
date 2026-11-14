@@ -2,7 +2,7 @@
 //   node tools/assistant/assistant-life-map-check.js            検査
 //   node tools/assistant/assistant-life-map-check.js --shots    止め絵も撮る(docs/progress/assistant-peer/shots/lifemap/)
 //   LIFE_BASE=https://aknkakykhk-maker.github.io/monhero/ で本番の版を見る
-//   ① 地図の場所は11か所それぞれ1つずつ。施設と結びつく場所は HOME と同じ札(同じ class)
+//   ① 地図の場所は12か所それぞれ1つずつ。施設と結びつく場所は HOME と同じ札(同じ class)
 //   ② HOME の札と地図の札が同じ位置・同じ大きさ(1対1。HOME の画面の中での位置で ±2px)
 //   ③ HOME の札の下の顔と、地図の全身が同じ場所(町だけの場所の人は HOME では「助手ライフ」の下)
 //      家の札のシートには、HOME の「助手ライフ」の下の顔と同じ顔ぶれが並ぶ
@@ -10,7 +10,7 @@
 //   ⑤ 札・人の並び・上の帯・下の案内が重ならない・地図の中に収まる・町の札は絵の中の建物の近く・いない場所は薄い
 //   ⑥ 場所を押すと、いる助手とできることのシート。閉じるボタンで閉じる/「🏡 家へ」で家に戻る/人の「部屋へ」でその部屋
 //   ⑦ 大きさ: 縦 390×844・375×667・320×568 / 横 844×390・667×375・568×320 / タブレット 768×1024 / 🔄横(モンヒロビートで回して戻る)390×844
-//      顔ぶれ: いつもの種・11か所に散らばる・8人とも家(5人からは重ねる)
+//      顔ぶれ: いつもの種・12か所に散らばる・8人とも家(5人からは重ねる)
 //   ⑧ ページのエラーが出ない
 //   ⑨ カード部屋の 1.5倍を使い切った助手も HOME と地図に出て「済」の印(2026-11-08 社長「HOMEも地図も出す」)
 const http = require('http'), path = require('path'), fs = require('fs');
@@ -59,7 +59,7 @@ const ALL_HOME = { groups: [], solo: Object.fromEntries(['mua', 'kiki', 'momosuk
   // HOME の札の位置(HOME の画面の中)
   const homeTags = (page) => page.evaluate(() => {
     const scene = document.querySelector('main.mh-home-scene'); if (!scene) return null; const s = scene.getBoundingClientRect(); const o = {};
-    for (const [k, sel] of Object.entries({ management: '.mh-home-facility.management', temple: '.mh-home-facility.temple', market: '.mh-home-facility.market', life: '.mh-home-facility.life', rhythm: '.mh-home-facility.rhythm', card: '.mh-home-card-battle' })) {
+    for (const [k, sel] of Object.entries({ management: '.mh-home-facility.management', temple: '.mh-home-facility.temple', market: '.mh-home-facility.market', battle: '.mh-home-facility.battle', life: '.mh-home-facility.life', rhythm: '.mh-home-facility.rhythm', card: '.mh-home-card-battle' })) {
       const el = scene.querySelector(sel); if (!el) continue; const t = el.classList.contains('mh-home-facility') ? el.querySelector(':scope > span') : el; const r = t.getBoundingClientRect();
       o[k] = { x: r.left - s.left, y: r.top - s.top, w: r.width, h: r.height };
     }
@@ -90,10 +90,10 @@ const ALL_HOME = { groups: [], solo: Object.fromEntries(['mua', 'kiki', 'momosuk
     const art = document.querySelector('[data-assistant-life-where]').getAttribute('data-assistant-life-map-art');
     const town = ASSISTANT_LIFE_MAP_TOWN[art];
     const facOf = Object.fromEntries(Object.keys(ASSISTANT_LIFE_PLACE_ICON).map(p => [p, assistantLifeFacilityOf({ place: p })]));
-    return { W: S.clientWidth, H: S.clientHeight, fromHome: S.getAttribute('data-assistant-life-map-from-home') === '1', places, crowds, bar, hint, ib, town, facOf, allPlaces: Object.keys(ASSISTANT_LIFE_PLACE_ICON) };
+    return { W: S.clientWidth, H: S.clientHeight, fromHome: S.getAttribute('data-assistant-life-map-from-home') === '1', places, crowds, bar, hint, ib, town, facOf, allPlaces: typeof assistantLifeMapOrderNow === 'function' ? [...assistantLifeMapOrderNow()] : Object.keys(ASSISTANT_LIFE_PLACE_ICON) }; // 🏥 病院は印 assistantLifeBody が真のときだけ地図に出る
   });
   const hit = (a, b) => Math.min(a.right, b.right) - Math.max(a.left, b.left) > 1 && Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > 1;
-  const FAC_CLASS = { management: 'mh-home-facility management', temple: 'mh-home-facility temple', market: 'mh-home-facility market', life: 'mh-home-facility life', rhythm: 'mh-home-facility rhythm', card: 'mh-home-card-battle' };
+  const FAC_CLASS = { management: 'mh-home-facility management', temple: 'mh-home-facility temple', market: 'mh-home-facility market', battle: 'mh-home-facility battle', life: 'mh-home-facility life', rhythm: 'mh-home-facility rhythm', card: 'mh-home-card-battle' };
 
   for (const v of SIZES.filter(x => !process.env.MAP_ONLY || process.env.MAP_ONLY.split(',').includes(x.id))) { // MAP_ONLY=t320,y568 で一部だけ
     const T = `[${v.name}] `;
@@ -125,11 +125,11 @@ const ALL_HOME = { groups: [], solo: Object.fromEntries(['mua', 'kiki', 'momosuk
       await openMap(page);
       const m = await mapInfo(page);
       if (!m) { check(`${M}地図が開く`, false); continue; }
-      // ① 場所は11か所それぞれ1つ。HOME と同じ札
+      // ① 場所は12か所それぞれ1つ。HOME と同じ札
       { const ng = [];
         for (const p of m.allPlaces) { const n = m.places.filter(x => x.place === p).length; if (n !== 1) ng.push(`${p} が${n}個`); }
         for (const x of m.places) { const f = m.facOf[x.place]; if (x.town) { if (f !== 'life') ng.push(`町の場所 ${x.place} が HOME の ${f} に結びついている`); continue; } if (!(` ${x.cls} `).includes(` ${FAC_CLASS[f]} `)) ng.push(`${x.place} の札が HOME の ${f} の札(${FAC_CLASS[f]})でない: ${x.cls}`); }
-        check(`${M}① 地図の場所は11か所それぞれ1つ。施設と結びつく場所は HOME と同じ札`, ng.length === 0, ng.join(' / ')); }
+        check(`${M}① 地図の場所は12か所それぞれ1つ。施設と結びつく場所は HOME と同じ札`, ng.length === 0, ng.join(' / ')); }
       // ② 1対1の位置(🔄横は HOME が回らない作りのまま。HOME があれば同じ大きさ)
       { const ng = [];
         if (!m.fromHome) ng.push('HOME の大きさを読めていない');

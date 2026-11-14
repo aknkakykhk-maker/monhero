@@ -376,6 +376,50 @@ const marketCurrencyOf = (item) => MARKET_CURRENCY_META[item?.currency] ? item.c
   : (item?.type==='disc'||item?.type==='assist'||item?.type==='item'||item?.type==='costume') ? 'diamond' : 'breederPoint';
 const marketPriceText = (item) => MARKET_CURRENCY_META[marketCurrencyOf(item)].format(Math.max(0, Math.floor(Number(item?.cost)||0)).toLocaleString());
 
+// ==== 助手がマーケットにいるときの得(2026-11-08 社長・2026-11-11 ナカヨシ10と分担) ====
+// 助手が居場所「マーケット」にいるあいだ、その日のおすすめ品1つが1割引き(1日1回・1個まで・ランキングに効かない)。
+// ・おすすめ品: ダイヤで買う「道具」のうち、買える物(100〜5,000ダイヤ・魂格再編の書は外す)から、その日(朝4時区切り)の日付で1つ。同じ日は同じ品
+// ・割引き: 値段の9割(切り捨て・1ダイヤ未満にならない)。割引き中の品は1個だけ買える(まとめ買いの窓を出さない)
+// ・1日1回の印: 新しい保存キー mh_assistant_market_perk_v1 に { day, used } を足すだけ(既存のキーは触らない)。買えたときだけ使用済みにする
+// ・助手がマーケットにいるかは ASSISTANT_LIFE_LINKS 側(assistantLifeMarketWho)が決める。いなければ何も出さず、値段も変えない
+const ASSISTANT_MARKET_PERK_KEY = 'mh_assistant_market_perk_v1';
+const assistantMarketPerkCandidates = (items) => (Array.isArray(items) ? items : [])
+  .filter(it => it && it.type === 'item' && it.shop !== false && it.available !== false && !it.giftOnly && !it.currency
+    && it.usage !== 'soulRankRespec' && Number(it.cost) >= 100 && Number(it.cost) <= 5000)
+  .sort((a, b) => (String(a.id) < String(b.id) ? -1 : 1));
+const assistantMarketPerkHash = (text) => { let h = 0; for (const ch of String(text)) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return h; };
+const assistantMarketPerkPick = (items, dayKey) => {
+  const list = assistantMarketPerkCandidates(items);
+  return list.length ? list[assistantMarketPerkHash(dayKey) % list.length] : null;
+};
+const assistantMarketPerkCost = (cost) => Math.max(1, Math.floor((Number(cost) || 0) * 0.9));
+const normalizeAssistantMarketPerk = (v) => ({
+  day: v && typeof v.day === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v.day) ? v.day : '',
+  used: !!v && v.used === true,
+});
+let assistantMarketPerkState = { loaded: false, day: '', used: false };
+const assistantMarketPerkLoad = async () => {
+  let saved = null;
+  try { saved = await storeGet(ASSISTANT_MARKET_PERK_KEY, null, false); } catch { saved = null; }
+  assistantMarketPerkState = { loaded: true, ...normalizeAssistantMarketPerk(saved) };
+  return assistantMarketPerkState;
+};
+const assistantMarketPerkUsedToday = () => assistantMarketPerkState.day === jstDayKey4() && assistantMarketPerkState.used;
+const assistantMarketPerkMarkUsed = async () => {
+  const day = jstDayKey4();
+  assistantMarketPerkState = { loaded: true, day, used: true };
+  try { await storeSet(ASSISTANT_MARKET_PERK_KEY, { day, used: true }, false); } catch { /* 保存できなくてもこの会話の間は使用済み */ }
+};
+// 助手がいまマーケットにいて、今日のおすすめ品があるときだけ { itemId, itemName, discountedCost, used } を返す(無ければ null)。
+// 保存の読み込みが済むまでは null(まだ「使ったか」が分からないので出さない)。助手ライフの帯が ASSISTANT_LIFE_LINKS.marketPerkToday 経由で呼ぶ
+const assistantMarketPerkToday = () => {
+  if (!(typeof assistantLifeMarketWho === 'function') || !assistantLifeMarketWho()) return null;
+  const item = assistantMarketPerkPick(typeof BREEDER_MARKET_ITEMS !== 'undefined' ? BREEDER_MARKET_ITEMS : [], jstDayKey4());
+  if (!item) return null;
+  if (!assistantMarketPerkState.loaded) { void assistantMarketPerkLoad(); return null; }
+  return { itemId: item.id, itemName: item.name, discountedCost: assistantMarketPerkCost(item.cost), used: assistantMarketPerkUsedToday() };
+};
+
 // 売り場の上に出す「いま持っている量」。1つでも3つでも同じ形のマスを並べる
 // 1つだけのとき(アイテム交換所のほかの売り場)は、数とラベルを1行に並べて低くする(2026-10-26 ダメダシくん「ビートP交換所で品物が1段も見えない」)
 const MarketBalanceBar = ({ balances }) => (
@@ -572,6 +616,20 @@ const TUTORIAL_SEEN_KEY = 'mh_tutorial_seen_v1';
 // 未定義の既存セーブはどちらも false として扱うため、後方互換性を保てる。
 const BATTLE_TUTORIAL_SEEN_KEY = 'mh_battle_tutorial_seen_v1';
 const BATTLE_TUTORIAL_GUIDE_SHOWN_KEY = 'mh_battle_tutorial_guide_shown_v1';
+// れんしゅうを「はじめの1戦」と「つづき」に分けた(2026-11-11)。新しいキーを足すだけ(上の2つの意味は変えない)
+//   mh_battle_tutorial_first_v1 { done(はじめの1戦を最後まで), at, hints:{ system, mode, difficulty }(入口3画面の一言を出した) }
+//   mh_battle_tutorial_more_v1  { offered(つづきに誘った), done(つづきを最後まで), declined(誘いを断った) }
+const BATTLE_TUTORIAL_FIRST_KEY = 'mh_battle_tutorial_first_v1';
+const BATTLE_TUTORIAL_MORE_KEY = 'mh_battle_tutorial_more_v1';
+const normalizeBattleTutorialFirst = (v) => {
+  const r = v && typeof v === 'object' && !Array.isArray(v) ? v : {};
+  const h = r.hints && typeof r.hints === 'object' && !Array.isArray(r.hints) ? r.hints : {};
+  return { done: r.done === true, at: Number.isFinite(Number(r.at)) ? Number(r.at) : 0, hints: { system: h.system === true, mode: h.mode === true, difficulty: h.difficulty === true } };
+};
+const normalizeBattleTutorialMore = (v) => {
+  const r = v && typeof v === 'object' && !Array.isArray(v) ? v : {};
+  return { offered: r.offered === true, done: r.done === true, declined: r.declined === true };
+};
 // モンビー(モンヒロビート)のチュートリアルを見たかどうか。既存のキーには触らず新しく足す。
 // 値が無い既存セーブは「まだ見ていない」として扱うので、後方互換のまま初回案内が出る。
 const RHYTHM_TUTORIAL_SEEN_KEY = 'mh_rhythm_tutorial_seen_v1';
@@ -802,6 +860,22 @@ const helpDataRows = (id) => {
         .map((rewards, i) => [`${i + 1}日目`, rewards.map(giftRewardText).join(' ／ ')]);
     // 合体・転生の消費ダイヤ。単価を変えたときにヘルプだけ古くなることがないよう、
     // 実際に使っている定数からそのまま表を作る
+    // モンヒロサクセスの評価(2026-11-12)。助手マスモンと同じランクの表(MASMON_CALC.RANKS)をそのまま読む。500ごとの数字は本文で説明する
+    case 'monsakuRanks': {
+      // ★MASMON_CALC が見えない場面(ヘルプの検査の部品だけの読み込みなど)でも、行が空にならないよう1行だけ返す
+      const ranks = typeof MASMON_CALC !== 'undefined' && Array.isArray(MASMON_CALC.RANKS) ? MASMON_CALC.RANKS : [];
+      if (ranks.length === 0) return [['評価', '最終の総合力で決まります']];
+      return ranks.map(([key, min], i, all) => [key, all[i + 1] ? `${min.toLocaleString()} 〜 ${(all[i + 1][1] - 1).toLocaleString()}` : `${min.toLocaleString()} 〜`]);
+    }
+    // モンヒロサクセスのアシスト能力。数は30〜40個に増える予定なので、書き写さず計算の芯(MONHERO_SUCCESS.ASSISTS)から作る。
+    // 芯が読み込まれていない・まだ一覧を出していないあいだは行が無く、ブロックごと出ない。2列目は短く(help-render-check)
+    case 'monsakuAssists': {
+      const list = (globalThis.MONHERO_SUCCESS && globalThis.MONHERO_SUCCESS.ASSISTS) || null;
+      // ★計算の芯がゲームに読み込まれるまでは、実データの表が作れない。空のままだと表が丸ごと消えるので、1行だけ案内を返す
+      if (!list || typeof list !== 'object') return [['アシスト能力', '育て終えたとき、画面で選べます']];
+      return Object.values(list).filter(a => a && a.name && Array.isArray(a.v) && Array.isArray(a.cost))
+        .map(a => [a.name, `段1〜${a.v.length} ／ ポイント ${a.cost.join('・')}`]);
+    }
     case 'masuCosts':
       return [
         ['再生', `初回無料・2回目以降 ${REGENERATION_COST} ダイヤ`],
@@ -1021,6 +1095,8 @@ const HELP_DATA_TITLES = {
   missionsWeekly: 'ウィークリーミッション',
   missionsMonthly: 'マンスリーミッション',
   masuCosts: '神殿でかかるダイヤ',
+  monsakuRanks: '評価のランク(総合力)',
+  monsakuAssists: 'アシスト能力の一覧',
   assistants: '助手の種類',
   profileFrames: '選べるプロフィールフレーム',
   assistantBond: '仲良し度の段階と呼び方',

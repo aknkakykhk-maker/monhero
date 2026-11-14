@@ -8598,3 +8598,39 @@ songId `light_player`・`light_player_short`・`tsuki_ga_michiru_mae_ni`・`tsuk
 - **HELL**: variant を比べて light 0・light short 2・月 0・月 short 0。空中の「指が同じ位置にくる」形は許す数の内（月の全編は 9→6 に直した）
 - 作ったあとに直したもの（時刻・ノーツ数はそのまま）: 帯の中に戻っていたノーツ12件を帯の外へ（`fixHeldBand`）、月 MASTER のモンスター枠1（欠けていた）を 57.02秒の拍の頭の単打へ、
   月 short MASTER の 6.0秒で通り道が交わっていた地上スライド2本の片方を同じ位置のタップへ
+
+## 公開中の譜面の見直し(2026-11-11・フメン3)
+
+社長「全部変えていいけど告知はして」。押しにくい並びがあった39曲の EASY〜MASTER を MHB CHART ENGINE Rev.38 で作り直した(新曲と同じ条件:
+`chartRevision:38`・`flowPlacement:true`・`handFinish:{EASY:'smooth',NORMAL:'smooth',HARD:'smooth'}`、`rhythm-held-band-existing.json` の一覧から外した)。
+ヒューマノイドは社長が 11/07 に決めた Lv.・ノーツ数を守るため、公開中の譜面のまま位置だけ直した。HELL・Sheriruth・Grievous Lady の譜面は変えていない。
+前後の表と止め絵: `docs/progress/beat-chart-fix/rebuild/`。
+
+- **rebellion_short の歯ごたえ**: そのまま作り直すと MASTER が 772→565ノーツ・Lv.42→32 と大きく軽くなった。社長が「前と同じ Lv.42 前後(約780ノーツ)」を選んだので、
+  `rhythm-chart-tune.js --target MASTER:level=42` の候補から `challengeFactor:1.08`・`masterDensity:1.2`(`chartIntensityByDifficulty:{MASTER:'strong'}` は前から)を書いた。結果 MASTER 780ノーツ・Lv.42
+- **makutsu_no_senritsu**: そのままだと EXPERT 473 > MASTER 470 で段が逆になるので `sustainScale:{MASTER:0.2}`(MASTER 536ノーツ・Lv.27 は前と同じ)
+
+## 「LAMIA」をモンヒロビートへ足した（2026-11-11）
+
+社長の依頼(窓口経由・mp4 とジャケット)「新曲追加。高難易度曲。曲にあわせて止まったり戻ったりとか変動型」。BlackY の `LAMIA`。songId `lamia`、bgmTrackId `melo_lamia`、マーカー `lamia-v3`。
+
+- **ジャケット**: 1254×1254 を 512×512 に(78KB)
+- **音源**: 頭に3.3秒の無音があり、最初のノーツが4.4〜5.3秒になった(「3秒以内」の検査に落ちた)ので、頭の無音を2.4秒削った(`--from 2.4`)。×0.6577 で **-14.00 LUFS / -2.38 dBTP**(2分23秒)。元の mp4 は `tools/art-sources/song-audio/lamia/`
+- **テンポ**: 自動判定 161.41 BPM は外れ。区間ごとの局所テンポでは 133.5 と 200.5 が交互に出たが(比 1.5)、低音を除いた打点では全区間 199 BPM・ずれ ±11ms 以内で、
+  **199.03 BPM・4拍子・拍の頭 155.9ms**(削る前は 1350ms)。±15ms 59%(161.41 は 34%)。`tempo-unstable` は低音の遅れ 48.6ms(16分の半分以上)の読み違い
+- **出荷の関門の直し**: 生成器は低音の遅れを差し引いて1格子前へ置き直すのに、パイプラインの「鳴っていない場所」の関門がそれを数えていなかった(各難易度30〜49件で止まった)。関門も同じ格子を数えるようにした(公開中の譜面は変わらない)
+- **歯ごたえ**(社長「高難易度曲」・`rhythm-chart-tune.js` で狙いの Lv. から探した): `chartIntensity:'extreme'`・`chartIntensityByDifficulty:{HARD:'strong',EXPERT:'mild'}`・
+  `sustainScale:{MASTER:0.3,EASY:0.2}`・`hellDensity:1.6`。社長の選択は削る前の案A(13/18/24/32/50/HELL 68)、削って作り直したあとの「このまま」
+  EASY 13 / NORMAL 19 / HARD 25 / EXPERT 34 / MASTER 51 / HELL 78、ノーツ 362 / 442 / 495 / 617 / 797 / 728
+- **HELL**: `hellDensity` は 1.0 で Lv.61〜62、1.05 以上で 78〜82 と段差になり、その間は作れなかった。社長が 78(`variant` 2)を選んだ
+- **変動(止まる・戻る・速さ)**: ヘンドウの口 `rhythmScrollFxChart(譜面, LAMIA_SCROLL_FX)` で6譜面とも包んだ(9か所。構成の解析は `docs/progress/beat-lamia/STRUCTURE.md`)
+- 公開前に MASTER の2か所を位置だけ直した(85.47秒の帯の中のタップを左へ・131.7〜133.0秒の2本のスライドの交差をやめて左右に分けた)
+
+## 「サウダージ」(通常版 saudade・short ver. saudade_short)をモンヒロビートへ足した（2026-11-11）
+
+社長の依頼(窓口経由・mp3 2本とジャケット2枚)「新曲 通常とショート版。ジャケット2枚あるからうまく活用して」。通常版 4:23・short ver. 1:36。ジャケットは通常=イラスト・short=写真(白い帯と左上のロゴを落として正方形に)。
+
+- **テンポ**: 120.091 BPM・4拍子(格子への乗り ±43ms で 89%。240・60・160 などの候補より 120 が一番乗る)。short は通常版の単純な切り抜きではなく頭30秒以外は並びが違う編集版なので、通常版とは独立に解析した(拍の頭 149.6ms・つなぎ目の補正なし)
+- **歯ごたえ(challengeFactor)**: 自動のままだと毎秒ノーツ 1.0〜2.2 で、既存曲の帯より低かった(ラテン調のノリのいい曲なのに MASTER Lv.20)。`challengeFactor:1.18`・`masterDensity:1.2` を2曲に書いた(`rhythm-chart-tune.js` の候補。社長が「これで」を選択)。通常版 6/7/12/18/29・HELL37、short 7/8/10/19/29・HELL37。点検の帯に収まり、押せない0・モンスター4個
+- **HELL**: variant は通常版 3・short 0(交差・届きにくいが少ない順)
+- 聞きどころ8行は `docs/progress/beat-assistant-session/lines/listen-saudade.txt`

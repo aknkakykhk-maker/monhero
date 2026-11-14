@@ -229,6 +229,11 @@ const RELEASED_MARKERS=Object.freeze({
   altar_world_tree_short:'altar-world-tree-short-v3',
   evans:'evans-v3',
   humanoid:'humanoid-v3',
+  lamia:'lamia-v3',
+  saudade:'saudade-v3',
+  saudade_short:'saudade-short-v3',
+  megalovania_sans:'megalovania-sans-v3',
+  megalovania_smash:'megalovania-smash-v3',
 });
 
 // 曲id → 音源の一覧(tools/mode/authoring/rhythm-song-registry.json)のid。
@@ -291,6 +296,11 @@ const RELEASED_TRACKS=Object.freeze({
   altar_world_tree_short:'altar_world_tree_short',
   evans:'evans',
   humanoid:'humanoid',
+  lamia:'lamia',
+  saudade:'saudade',
+  saudade_short:'saudade_short',
+  megalovania_sans:'megalovania_sans',
+  megalovania_smash:'megalovania_smash',
 });
 
 module.exports={SLIDE_EASE_CODES,FLICK_DIR_CODES,heldSpan,HOLD_SHIFT_SUB,ROOT,RUNTIME,FINGER_GAP_SUB,loadRuntime,makeSpanAt,usableSpan,maxSeparation,

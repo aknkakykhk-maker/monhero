@@ -98,6 +98,10 @@ const IMAGE_HOST_FILES = [
   // 覚醒ムーの必殺技ムービー(movies/…mp4)。敵データの specialMovie から参照している
   // (HELL の説明の動画 movies/hell-guide-*.mp4・.webm は data/rhythm-mode.js の RHYTHM_HELL_GUIDE_VIDEOS から)
   'data/enemy-monsters.js',
+  // モンヒロサクセスのアイテムの絵(images/success/items/…)。まだ index.html からは読まれない
+  'data/success-items.js',
+  // モンヒロサクセスの景色(images/success/scenes/…)。まだ index.html からは読まれない
+  'data/success-scenes.js',
 ];
 let imageCount = 0, imageChanged = 0;
 for (const rel of IMAGE_HOST_FILES) {

@@ -9,14 +9,17 @@
       "語": ["窓口", "モンヒロくん", "台帳", "会話", "トークン", "モデル", "部署", "報告"],
       "files": ["docs/rules/*", "docs/depts/*", "docs/playbot/dashboard/*", "tools/team/*"],
       "入口": [],
-      "検査": ["node tools/rules-index-check.js(決まり・手引きを触ったとき)"],
+      "検査": ["node tools/rules-index-check.js(決まり・手引きを触ったとき)", "node tools/team/decision-lock-check.js(台帳の進め方・道具・フックを触ったとき)"],
       "資料": ["docs/rules/ORGANIZATION.md", "docs/rules/MODEL_ROUTING.md", "docs/rules/SESSION_HANDOFF.md", "docs/rules/REVIEW_GATE.md", "docs/rules/EDGE_REDEPLOY.md", "docs/rules/NEW_DEPT_BRIEF.md"],
       "決まり": [
         "新しい会話は node tools/ctx.js newsession <部> \"<仕事>\" の出力どおりに作る(モデル・最初に読むもの・報告先が入る)",
         "claude-fable-5-2 を使ってよいのは決まりの3つ(道具・仕組みを作る/強化する1回・新機能の公開前の最終確認・2回直しても直らない不具合)だけ。外れるときは社長に選択式で聞いてから",
         "配り直しは node tools/ctx.js redeploy assistant-chat の出力をそのまま deploy_edge_function に渡す",
-        "足すだけ・読むだけの SQL は聞かずに流す。消す・書き換えるは先に社長へ(CLAUDE.md ⑦)",
-        "社長が決めたら、その場で PRESIDENT_DECISIONS.md に1行足す"
+        "SQL は消す・書き換える・既存の表を変えるものも含めて、窓口の判断で社長に聞かずに流す(2026-11-12 社長。CLAUDE.md ⑦)。保存データ・ランキングを壊さない決まりは変わらない",
+        "社長が決めたら、その場で PRESIDENT_DECISIONS.md に1行足す。進め方の決めごとは「<日付> 進め方:」で書き、同じ PR で tools/team/decision-locks.json に錠を足す(docs/rules/DECISION_LOCKS.md)",
+        "見た目が変わる仕上げは、公開の前に必ず社長に止め絵を見せて OK をもらう(部へ「公開まで」と回すのは社長の OK のあと)",
+        "社長が寝る・離れるときは、相当重要なこと以外は窓口の判断で進める。同時に進める仕事は3〜5つ(優先順位は窓口が決める)。20時を過ぎたら作業の数を減らし、モンサクを優先する(モンヒロビートの新曲はいつも優先)",
+        "表は画像(PNG)で見せる(送る前に拡大して確かめる。返事に表の記法が残るとフックが止める)。仕上がりは社長に報告する前にカゲあつくんに見てもらう"
       ],
       "板": []
     },
@@ -26,7 +29,7 @@
       "部長": "テンポくん",
       "受け持ち": "モンヒロビート(曲えらび・演奏・判定・マルチ・ランキング・相棒・助手とのセッション)、譜面生成ツール、曲の音源",
       "語": ["ビート", "モンビー", "譜面", "新曲", "判定", "ノーツ", "HELL", "テンポ", "相棒", "セッション", "曲"],
-      "files": ["P/13-bgm-and-rhythm-settings.jsx", "P/14-audio.jsx", "P/28-rhythm-*", "P/29-rhythm-*", "P/30-rhythm-*", "P/33-rhythm-*", "P/39-*", "P/58-screen-rhythm.jsx", "P/73-screen-rhythm-history.jsx", "P/77-screen-rhythm-multi.jsx", "P/80-screen-rhythm-*", "D/rhythm-*", "monster-hero/audio/*", "tools/mode/*", "tools/audio/*", "supabase/functions/rhythm-anomaly-report/*"],
+      "files": ["P/13-bgm-and-rhythm-settings.jsx", "P/14-audio.jsx", "P/14-success-sound.jsx", "P/28-rhythm-*", "P/29-rhythm-*", "P/30-rhythm-*", "P/33-rhythm-*", "P/39-*", "P/45-quick-anywhere-float.jsx", "P/58-screen-rhythm.jsx", "P/73-screen-rhythm-history.jsx", "P/77-screen-rhythm-multi.jsx", "P/80-screen-rhythm-*", "D/rhythm-*", "monster-hero/audio/*", "tools/mode/*", "tools/audio/*", "supabase/functions/rhythm-anomaly-report/*"],
       "入口": ["RhythmSongSelectScreen", "RhythmMultiScreen", "RhythmRankingScreen", "RhythmInfoScreen"],
       "検査": ["node tools/run-checks.js --changed(tools/mode・tools/audio から選ばれる)", "新曲: rhythm-song-add スキルの検査の並び"],
       "資料": ["tools/mode/CLAUDE.md", "monster-hero/data/CLAUDE.md", "monster-hero/audio/CLAUDE.md", "docs/rules/RHYTHM_SONG.md", "docs/rules/RHYTHM_EVENT.md", "docs/rules/CHART_ENGINE.md", "docs/spec/RHYTHM_EVENT_PLAYBOOK.md", "docs/spec/RHYTHM_MULTI.md", "docs/spec/RHYTHM_RANKING.md"],
@@ -61,7 +64,7 @@
       "部長": "ジンくん",
       "受け持ち": "モンヒロバトル(難易度とルール・敵・戦闘画面・演出・タクティクス・レイドのジャック・編成・結果)",
       "語": ["バトル", "タクティクス", "レイド", "ジャック", "難易度", "WAVE", "クイック", "プロモード", "Tier", "ジン"],
-      "files": ["P/19-difficulties-and-rules.jsx", "P/22-enemy-and-bond-entries.jsx", "P/24-*", "P/32-*", "P/33-ai-copy*", "P/34-tactics-ex-effects.jsx", "P/35-raid-jack.jsx", "P/36-raid-jack-api.jsx", "P/37-raid-jack-aura.jsx", "P/38-raid-jack-home-lines.jsx", "P/67-screen-pick.jsx", "P/68-screen-run-result.jsx", "P/71-screen-battle.jsx", "P/78-screen-raid-jack-debug.jsx", "P/79-screen-raid-jack.jsx", "D/enemy-monsters.js", "D/skills.js", "tools/battle/*"],
+      "files": ["P/19-difficulties-and-rules.jsx", "P/22-enemy-and-bond-entries.jsx", "P/24-*", "P/32-*", "P/33-ai-copy*", "P/34-tactics-ex-effects.jsx", "P/35-raid-jack.jsx", "P/36-raid-jack-api.jsx", "P/37-raid-jack-aura.jsx", "P/38-raid-jack-home-lines.jsx", "P/67-screen-pick.jsx", "P/68-screen-run-result.jsx", "P/71-screen-battle.jsx", "P/78-screen-raid-jack-debug.jsx", "P/79-screen-raid-jack.jsx", "P/56-monhero-success-cup.jsx", "P/56-monhero-success-arena.jsx", "D/enemy-monsters.js", "D/skills.js", "tools/battle/*"],
       "入口": ["BattleScreen", "BattleUnitDetailPanel", "ExtremeRuleOverlay"],
       "検査": ["node tools/run-checks.js --changed(tools/battle から選ばれる)"],
       "資料": ["docs/spec/BATTLE_SYSTEM.md", "docs/spec/TACTICS_EX_SKILLS.md", "docs/spec/RAID_BOSS_JACK.md", "docs/spec/BATTLE_LOG.md"],
@@ -95,13 +98,14 @@
       "部長": "クラフトくん",
       "受け持ち": "HOME・マーケット・マスモンの育成・ミッション・プロフィール・設定・ヘルプと更新履歴の仕組み・保存と通信の土台・デバッグ・検査の道具・速さ",
       "語": ["HOME", "マーケット", "育成", "ミッション", "プロフィール", "設定", "ヘルプ", "デバッグ", "速さ", "クラフト"],
-      "files": ["P/10-core.jsx", "P/11-masu-progression.jsx", "P/12-training.jsx", "P/16-*", "P/17-*", "P/18-*", "P/20-market-notices-help.jsx", "P/23-rpg-debug.jsx", "P/25-*", "P/26-supabase.jsx", "P/27-result-widgets.jsx", "P/31-debug-ui.jsx", "P/40-*", "P/41-*", "P/42-*", "P/43-*", "P/44-*", "P/50-*", "P/51-*", "P/52-screen-missions.jsx", "P/53-*", "P/54-*", "P/55-*", "P/56-quick-guide.jsx", "P/56-screen-profile.jsx", "P/59-*", "P/60-app.jsx", "P/61-*", "P/62-*", "P/63-*", "P/64-*", "P/65-*", "P/66-*", "P/69-screen-home.jsx", "P/70-bootstrap.jsx", "P/72-*", "P/76-*", "P/81-*", "D/breeder.js", "D/help.js", "D/changelog.js", "D/mhsave-backup.js", "tools/boot/*", "tools/market/*", "tools/masu/*", "tools/ui/*", "tools/ranking/*", "tools/changelog/*", "tools/run/*"],
+      "files": ["P/10-core.jsx", "P/11-masu-progression.jsx", "P/12-training.jsx", "P/16-*", "P/17-*", "P/18-*", "P/20-market-notices-help.jsx", "P/23-rpg-debug.jsx", "P/25-*", "P/26-supabase.jsx", "P/27-result-widgets.jsx", "P/31-debug-ui.jsx", "P/40-*", "P/41-*", "P/42-*", "P/43-*", "P/44-*", "P/50-*", "P/51-*", "P/52-screen-missions.jsx", "P/53-*", "P/54-*", "P/55-*", "P/56-quick-guide.jsx", "P/56-screen-profile.jsx", "P/56-monhero-success-*.jsx", "P/56-monsuc-*.jsx", "P/59-*", "P/60-app.jsx", "P/61-*", "P/62-*", "P/63-*", "P/64-*", "P/65-*", "P/66-*", "P/69-screen-home.jsx", "P/70-bootstrap.jsx", "P/72-*", "P/76-*", "P/81-*", "D/breeder.js", "D/help.js", "D/changelog.js", "D/mhsave-backup.js", "tools/boot/*", "tools/market/*", "tools/masu/*", "tools/ui/*", "tools/ranking/*", "tools/changelog/*", "tools/run/*"],
       "入口": ["HomeScreen", "MarketModal", "MarketPurchaseSheet"],
       "検査": ["node tools/run-checks.js --changed", "HOME の配置を触ったら node tools/home-layout-check.js"],
       "資料": ["docs/spec/SAVE_DATA.md", "docs/rules/SAVE_DATA_RULES.md", "docs/rules/BUILD_CHECKS.md", "docs/spec/UI_RULES.md", "docs/spec/SOUL_RANK_SYSTEM.md"],
       "決まり": [
         "P/60-app.jsx(2MB超)・P/70-bootstrap.jsx は全部の部が通る場所。開かずに node tools/ctx.js read <名前> で切り出す。ほかの部の場所を触るときは先に窓口へ",
         "P/25-storage.jsx・P/26-supabase.jsx は保存データとランキングの土台。変えたら ミハリ確認が要る",
+        "はじめての人だけに書く印(!wasOnboarded の分岐・finishOnboarding)を足したら、復元で片づける一覧 MH_FIRST_TIMER_MARK_KEYS(data/mhsave-backup.js)にも足す。見張り: node tools/boot/restore-first-timer-marks-check.js",
         "デバッグ専用の変更は更新履歴にもヘルプにも載せない"
       ],
       "板": ["docs/progress/dev-board.md", "docs/progress/craft-backlog.md", "docs/progress/tsugihagi-backlog.md", "docs/progress/speed-backlog.md"]
@@ -130,7 +134,7 @@
       "部長": "ナカヨシ",
       "受け持ち": "助手ライフ本体(家・部屋・時間帯・仲良し度・けんかと仲直り)・地図・助手どうしの掛け合い",
       "語": ["助手ライフ", "地図", "マップ", "掛け合い", "仲良し", "見守る", "部屋", "ナカヨシ"],
-      "files": ["P/56-assistant-life.jsx", "P/56-assistant-life-house.jsx", "P/56-assistant-life-roomview.jsx", "P/56-assistant-life-rel.jsx", "P/56-assistant-life-map.jsx", "P/56-assistant-life-ux.jsx", "P/56-assistant-peer.jsx", "P/44-time-of-day.jsx", "tools/assistant/life-*", "tools/assistant/peer-*"],
+      "files": ["P/56-assistant-life.jsx", "P/56-assistant-life-house.jsx", "P/56-assistant-life-roomview.jsx", "P/56-assistant-life-rel.jsx", "P/56-assistant-life-map.jsx", "P/56-assistant-life-ux.jsx", "P/56-assistant-life-guide.jsx", "P/56-assistant-life-profile.jsx", "P/56-assistant-life-partner.jsx", "P/56-assistant-peer.jsx", "P/44-time-of-day.jsx", "tools/assistant/life-*", "tools/assistant/peer-*", "P/56-assistant-life-plan.jsx", "P/56-assistant-life-body.jsx", "P/56-assistant-life-finds.jsx"],
       "入口": ["AssistantLifeScreen", "AssistantLifeRoomSheet"],
       "検査": ["node tools/run-checks.js --changed(tools/assistant から選ばれる)"],
       "資料": ["docs/progress/assistant-peer/STATUS.md", "docs/progress/assistant-peer-plan.md", "docs/progress/assistant-peer/LIFE-HOUSE-RELEASE.md"],
@@ -139,7 +143,25 @@
         "贈り物・フレンドの家・マスモンは別の担当(gift・friend・masmon)。同じファイルを触るときは先に窓口へ",
         "表示の直しは縦・横・🔄横で崩れないこと(検査が見る)"
       ],
-      "板": ["docs/progress/assistant-peer/STATUS.md"]
+      "板": ["docs/progress/assistant-peer/STATUS.md"],
+      "点検": {
+        "題": "通しの点検(見やすさ・やる意味。安いモデルで回せる)",
+        "行": [
+          "新しいUIを「初めての人」「毎日来る人」× 縦・横で歩いて、画面ごとの数字と気になる所を出す道具(ゲーム本体は変えない・2分ほど)。",
+          "",
+          "```",
+          "node tools/build.js && node tools/assistant/life-walkthrough.js 2>&1 | tail -30   点検(最後の1行が OK/NG)",
+          "node tools/assistant/life-walkthrough.js --shots            止め絵も撮る(docs/progress/assistant-life/walkthrough/)",
+          "node tools/assistant/life-walkthrough.js --save-baseline    直して点が下がったら、控えを新しくする",
+          "```",
+          "",
+          "- 読み方: 「画面ごと」は点が大きいほど気になる所が多い。「得 a/b」= 押せる所 b個のうち何が上がるか字に出ているもの、「また来る」= 次に来る理由の言葉がある枚数。「気になる所」は大きい順",
+          "- **NG のとき**: 「NG」の付いた行(たどり着けない・エラー・画面の外・押せる所の重なり)か、控えより1割より多く悪くなった画面。自分の変更の画面なら直す。ほかの部員の画面・理由が分からないときは直さず窓口へ",
+          "- OK でも「気になる所」は残る(直すかは人が決める)。点を下げるためだけに字や札を消さない",
+          "- 画面を足したとき・目印(data-assistant-life-*)を変えたときは、道具の歩く順(step の並び)も合わせる。これは判断が要るので上のモデルで",
+          "- 改善案の一覧: [`docs/progress/assistant-life/IMPROVE-2026-11-11.md`](../../docs/progress/assistant-life/IMPROVE-2026-11-11.md)"
+        ]
+      }
     },
     {
       "id": "gift",
@@ -147,7 +169,7 @@
       "部長": "オクリモノ",
       "受け持ち": "助手ライフの贈り物(買って贈る)・道具・家具",
       "語": ["贈り物", "ギフト", "家具", "道具", "オクリモノ"],
-      "files": ["P/56-assistant-life-gifts.jsx", "tools/assistant/life-gift-*"],
+      "files": ["P/56-assistant-life-gifts.jsx", "P/56-assistant-life-roomedit.jsx", "tools/assistant/life-gift-*", "tools/assistant/assistant-life-roomedit-*"],
       "入口": ["AssistantLifeGiftSheet", "AssistantLifeFurnSheet"],
       "検査": ["node tools/run-checks.js --changed(tools/assistant から選ばれる)"],
       "資料": ["docs/progress/assistant-peer/GIFT-PLAN.md", "docs/progress/assistant-peer/GIFT-HANDOFF.md"],
@@ -163,7 +185,7 @@
       "部長": "オトズレ",
       "受け持ち": "フレンドの家(助手の行き来・場面)とフレンド機能(一覧・申請・通信)",
       "語": ["フレンド", "訪問", "行き来", "オトズレ"],
-      "files": ["P/56-assistant-life-friend.jsx", "P/34-friends-api.jsx", "P/75-screen-friends.jsx", "tools/friends/*"],
+      "files": ["P/56-assistant-life-friend.jsx", "P/56-assistant-life-friend-*.jsx", "P/34-friends-api.jsx", "P/75-screen-friends.jsx", "tools/friends/*"],
       "入口": ["AssistantLifeFriendPage", "AlfFriendHouseView", "FriendsScreen"],
       "検査": ["node tools/run-checks.js --changed(tools/friends・tools/assistant から選ばれる)"],
       "資料": ["docs/spec/FRIENDS.md", "docs/progress/assistant-peer/FRIEND-VISIT-PLAN.md", "docs/progress/assistant-peer/FRIEND-VISIT-BUILD.md"],
@@ -179,7 +201,7 @@
       "部長": "キズナ",
       "受け持ち": "助手のマスモン(名前・染め方・育て方)・育つ助手・「助手に提案する」",
       "語": ["マスモン", "提案", "育つ助手", "キズナ", "染め方", "引き直し"],
-      "files": ["P/56-assistant-life-masmon.jsx", "P/56-assistant-life-masmon-*.jsx", "tools/assistant/assistant-masmon-*"],
+      "files": ["P/56-assistant-life-masmon.jsx", "P/56-assistant-life-masmon-*.jsx", "P/56-assistant-masmon-battle-view.jsx", "P/56-assistant-masmon-battle-beta.jsx", "P/56-assistant-masmon-pvp.jsx", "P/56-monsuc-*.jsx", "P/56-monster-lab.jsx", "tools/success/monster-lab-browser-check.js", "P/14-success-*.jsx", "supabase/functions/masmon-pvp/*", "supabase/migrations/202611110001_masmon_pvp.sql", "monster-hero/data/assistant-masmon-battle.js", "monster-hero/data/assistant-masmon-techs.js", "tools/assistant/assistant-masmon-*", "tools/masmon-battle/*"],
       "入口": ["AssistantMasmonSheet", "AssistantMasmonAskSheet"],
       "検査": ["node tools/run-checks.js --changed(tools/assistant から選ばれる)", "node tools/assistant/assistant-chat-check.js --unit(中継役の masmon_names・masmon_suggest を触ったとき)"],
       "資料": ["docs/spec/ASSISTANT_CHAT.md", "docs/progress/assistant-peer/STATUS.md"],

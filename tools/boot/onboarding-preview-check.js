@@ -48,14 +48,14 @@ check('新規プレイヤーと同じ状態にしてから始める',
 check('きき加入の既読も未読に戻してから始める', /setKikiIntroSeenFlag\(false\)/.test(startFn));
 // 助手を選ぶボタンは本番と同じもの。プレビュー用に別のボタンを作っていない
 check('助手選択は本番と同じボタンをそのまま使う',
-  has("onClick={()=>{chooseAssistant(who.id);markKikiIntroSeen();")
+  has("onClick={()=>{if(!onboardingPreview&&RELEASE_FLAGS.assistantPartnerUnlock===true)startAssistantPartnerEarn(pick.id);chooseAssistant(pick.id);markKikiIntroSeen();")
     && has("setGameState('PROFILE');setTutorialKind('intro');setTutorialStep(0);}}")
-    && (source.match(/chooseAssistant\(who\.id\);markKikiIntroSeen\(\)/g) || []).length === 1);
+    && (source.match(/chooseAssistant\(pick\.id\);markKikiIntroSeen\(\)/g) || []).length === 1);
 // 以前は ASSISTANT_LIST をそのまま並べていたが、イベントで加入する助手(ドラ)は
 // その会話を見るまで出さない作りになった(assistantsUnlockedFrom)。
 // 見ている約束は「1体ずつ手で書かず、一覧から作る」こと。そこは変わっていない
 check('助手は一覧から作っている(1体ずつ手で並べていない)',
-  has('assistantsUnlockedFrom(rhythmEventStorySeen).map(who=>(')
+  has('assistantsUnlockedFrom(rhythmEventStorySeen)') && has('list.map(who=>{')
     && typeof ASSISTANT_LIST_OK === 'undefined');
 // あいさつ→プロフィール→村の案内は既存の仕組み(tutorialKind)をそのまま使う
 check('あいさつは既存の intro をそのまま使う', has("setTutorialKind('intro')"));

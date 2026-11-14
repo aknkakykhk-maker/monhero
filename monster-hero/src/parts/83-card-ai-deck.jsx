@@ -242,15 +242,16 @@ const CARD_AI_FACE_NOISE = Object.freeze({
 // 決めた振り分け(2026-11-08 自動で探した結果。EXPERT・MASTER で、どの顔もその助手の今の勝率に近い物。docs/progress/card-ai-faces/README.md の強さの表)
 //   探し方: 蛇行6通り+混ぜた割り当てから始め、2つの組の種を1つずつ入れかえて、いちばんずれの小さい物を残した(作業場所の道具。1組60戦)
 //   使う前に、決まり(重なり4割まで・主役2体以上ちがう)と、カードの種と合っているかを確かめる。合わなければ、下の手順で探し直す
+// ウンディーネ(2026-11-11)は、キュービを入れた組に足した(どの組でも主役・仲間に選ばれず、4つのデッキの3体は足す前と同じ。card-undine-check が見張る)
 const CARD_AI_FACE_LAYOUTS = Object.freeze({
-  mua: { oshi: ['mocchi', 'metalner', 'golem', 'hare', 'centaur', 'worm', 'mew', 'arrowhead', 'zilla'], suki: ['joker', 'henger', 'dino', 'dragon', 'kyubi', 'ghost', 'gali', 'colorpandora', 'plant'], sugao: ['tiger', 'durahan', 'naga', 'phoenix', 'pixie', 'jell', 'monol', 'suezo'], free: { oshi: 0, suki: 0, yoso: 0, honne: 1 } },
-  kiki: { oshi: ['golem', 'durahan', 'gali', 'phoenix', 'mew', 'metalner', 'suezo', 'monol', 'ghost'], suki: ['dragon', 'worm', 'henger', 'tiger', 'zilla', 'centaur', 'mocchi', 'pixie', 'joker'], sugao: ['hare', 'dino', 'naga', 'kyubi', 'jell', 'arrowhead', 'colorpandora', 'plant'], free: { oshi: 1, suki: 0, yoso: 0, honne: 0 } },
-  momosuke: { oshi: ['durahan', 'metalner', 'ghost', 'dino', 'mocchi', 'dragon', 'naga', 'monol', 'joker'], suki: ['tiger', 'centaur', 'kyubi', 'phoenix', 'colorpandora', 'mew', 'worm', 'jell', 'gali'], sugao: ['henger', 'hare', 'golem', 'plant', 'suezo', 'pixie', 'arrowhead', 'zilla'], free: { oshi: 0, suki: 0, yoso: 1, honne: 1 } },
-  dra: { oshi: ['tiger', 'phoenix', 'hare', 'worm', 'mew', 'jell', 'plant', 'zilla', 'monol'], suki: ['dragon', 'durahan', 'dino', 'kyubi', 'centaur', 'arrowhead', 'suezo', 'ghost', 'colorpandora'], sugao: ['henger', 'golem', 'metalner', 'mocchi', 'pixie', 'gali', 'naga', 'joker'], free: { oshi: 1, suki: 1, yoso: 1, honne: 1 } },
-  atsu: { oshi: ['dragon', 'golem', 'henger', 'worm', 'centaur', 'suezo', 'naga', 'colorpandora', 'monol'], suki: ['tiger', 'hare', 'dino', 'mew', 'gali', 'mocchi', 'pixie', 'zilla'], sugao: ['durahan', 'metalner', 'phoenix', 'kyubi', 'jell', 'arrowhead', 'ghost', 'plant', 'joker'], free: { oshi: 0, suki: 0, yoso: 0, honne: 0 } },
-  kyuko: { oshi: ['durahan', 'henger', 'hare', 'dino', 'centaur', 'mew', 'mocchi', 'naga', 'monol'], suki: ['dragon', 'golem', 'phoenix', 'worm', 'jell', 'suezo', 'pixie', 'plant', 'colorpandora'], sugao: ['tiger', 'metalner', 'kyubi', 'gali', 'arrowhead', 'ghost', 'zilla', 'joker'], free: { oshi: 1, suki: 1, yoso: 1, honne: 1 } },
-  sorashido: { oshi: ['henger', 'mew', 'joker', 'metalner', 'hare', 'phoenix', 'mocchi', 'gali', 'naga'], suki: ['tiger', 'durahan', 'dragon', 'plant', 'centaur', 'kyubi', 'worm', 'arrowhead', 'monol'], sugao: ['jell', 'suezo', 'golem', 'dino', 'ghost', 'zilla', 'pixie', 'colorpandora'], free: { oshi: 1, suki: 0, yoso: 0, honne: 1 } },
-  erubin: { oshi: ['durahan', 'dragon', 'golem', 'hare', 'metalner', 'gali', 'naga', 'mocchi', 'plant'], suki: ['monol', 'phoenix', 'dino', 'mew', 'centaur', 'suezo', 'pixie', 'zilla', 'joker'], sugao: ['tiger', 'henger', 'worm', 'kyubi', 'jell', 'arrowhead', 'colorpandora', 'ghost'], free: { oshi: 1, suki: 0, yoso: 0, honne: 0 } },
+  mua: { oshi: ['mocchi', 'metalner', 'golem', 'hare', 'centaur', 'worm', 'mew', 'arrowhead', 'zilla'], suki: ['joker', 'henger', 'dino', 'dragon', 'kyubi', 'undine', 'ghost', 'gali', 'colorpandora', 'plant'], sugao: ['tiger', 'durahan', 'naga', 'phoenix', 'pixie', 'jell', 'monol', 'suezo'], free: { oshi: 0, suki: 0, yoso: 0, honne: 1 } },
+  kiki: { oshi: ['golem', 'durahan', 'gali', 'phoenix', 'mew', 'metalner', 'suezo', 'monol', 'ghost'], suki: ['dragon', 'worm', 'henger', 'tiger', 'zilla', 'centaur', 'mocchi', 'pixie', 'joker'], sugao: ['hare', 'dino', 'naga', 'kyubi', 'undine', 'jell', 'arrowhead', 'colorpandora', 'plant'], free: { oshi: 1, suki: 0, yoso: 0, honne: 0 } },
+  momosuke: { oshi: ['durahan', 'metalner', 'ghost', 'dino', 'mocchi', 'dragon', 'naga', 'monol', 'joker'], suki: ['tiger', 'centaur', 'kyubi', 'undine', 'phoenix', 'colorpandora', 'mew', 'worm', 'jell', 'gali'], sugao: ['henger', 'hare', 'golem', 'plant', 'suezo', 'pixie', 'arrowhead', 'zilla'], free: { oshi: 0, suki: 0, yoso: 1, honne: 1 } },
+  dra: { oshi: ['tiger', 'phoenix', 'hare', 'worm', 'mew', 'jell', 'plant', 'zilla', 'monol'], suki: ['dragon', 'durahan', 'dino', 'kyubi', 'undine', 'centaur', 'arrowhead', 'suezo', 'ghost', 'colorpandora'], sugao: ['henger', 'golem', 'metalner', 'mocchi', 'pixie', 'gali', 'naga', 'joker'], free: { oshi: 1, suki: 1, yoso: 1, honne: 1 } },
+  atsu: { oshi: ['dragon', 'golem', 'henger', 'worm', 'centaur', 'suezo', 'naga', 'colorpandora', 'monol'], suki: ['tiger', 'hare', 'dino', 'mew', 'gali', 'mocchi', 'pixie', 'zilla'], sugao: ['durahan', 'metalner', 'phoenix', 'kyubi', 'undine', 'jell', 'arrowhead', 'ghost', 'plant', 'joker'], free: { oshi: 0, suki: 0, yoso: 0, honne: 0 } },
+  kyuko: { oshi: ['durahan', 'henger', 'hare', 'dino', 'centaur', 'mew', 'mocchi', 'naga', 'monol'], suki: ['dragon', 'golem', 'phoenix', 'worm', 'jell', 'suezo', 'pixie', 'plant', 'colorpandora'], sugao: ['tiger', 'metalner', 'kyubi', 'undine', 'gali', 'arrowhead', 'ghost', 'zilla', 'joker'], free: { oshi: 1, suki: 1, yoso: 1, honne: 1 } },
+  sorashido: { oshi: ['henger', 'mew', 'joker', 'metalner', 'hare', 'phoenix', 'mocchi', 'gali', 'naga'], suki: ['tiger', 'durahan', 'dragon', 'plant', 'centaur', 'kyubi', 'undine', 'worm', 'arrowhead', 'monol'], sugao: ['jell', 'suezo', 'golem', 'dino', 'ghost', 'zilla', 'pixie', 'colorpandora'], free: { oshi: 1, suki: 0, yoso: 0, honne: 1 } },
+  erubin: { oshi: ['durahan', 'dragon', 'golem', 'hare', 'metalner', 'gali', 'naga', 'mocchi', 'plant'], suki: ['monol', 'phoenix', 'dino', 'mew', 'centaur', 'suezo', 'pixie', 'zilla', 'joker'], sugao: ['tiger', 'henger', 'worm', 'kyubi', 'undine', 'jell', 'arrowhead', 'colorpandora', 'ghost'], free: { oshi: 1, suki: 0, yoso: 0, honne: 0 } },
 });
 const CARD_AI_FACE_RANK = Object.freeze(['oshi', 'yoso', 'suki', 'honne']);
 const CARD_AI_FACE_PAIRS = Object.freeze([['oshi', 'suki'], ['oshi', 'yoso'], ['suki', 'yoso'], ['oshi', 'honne'], ['suki', 'honne']]);
@@ -899,7 +900,7 @@ const CARD_AI_DECK_VS_LINES = Object.freeze({
   kyuko: 'ほい、今日は『{name}』でいくよぉ笑',
   dra: 'おでは今日『{name}』でいくぞ。えへへ、手加減しないからな',
   atsu: '今日は『{name}』でいくわ笑 全力な！',
-  sorashido: '今日は『{name}』でいくぜ・・・！ 計算済み笑',
+  sorashido: '今日は『{name}』でいきます！ 計算済みです笑',
   erubin: '今日は『{name}』でいこうかな🤔 よろしくね笑',
 });
 // 提案のデッキで初めて戦うとき(1回だけ・AI のひとことより先)。2026-11-08 部長の案・社長「やる」
@@ -910,7 +911,7 @@ const CARD_AI_DECK_WISH_LINES = Object.freeze({
   kyuko: 'ほい、考えてくれた『{name}』でいくよぉ笑 ありがとね',
   dra: 'おで、考えてくれた『{name}』でいくぞ。えへへ、うれしいな。手加減しないからな',
   atsu: '考えてくれた『{name}』でいくわ笑 全力な！',
-  sorashido: '考えてくれた『{name}』でいくぜ・・・！ これも計算済み笑',
+  sorashido: '考えてくれた『{name}』でいきます！ これも計算済みです笑',
   erubin: '考えてくれた『{name}』でいこうかな🤔 ありがとね笑',
 });
 const cardAiDeckVsLine = (who, pick) => {

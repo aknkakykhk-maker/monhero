@@ -58,15 +58,14 @@ ok(R['種類'].every(k => /^claude-(haiku|sonnet|opus|fable)-\d/.test(k.model)),
 
 // ③
 const limit = R['区切り'];
-ok(hook.message({ prompts: limit['要約のやりとり'] - 1, merges: 0 }, limit) === '', '③ 目安の前は黙る');
-ok(/要約\(\/compact\)/.test(hook.message({ prompts: limit['要約のやりとり'], merges: 0 }, limit)), '③ 1段目: 要約の目安に届いたら「区切りで要約を」と知らせる');
-ok(!/handoff <自分の部> --write/.test(hook.message({ prompts: limit['要約のやりとり'], merges: 0 }, limit)), '③ 1段目では会話を替えさせない');
-ok(hook.message({ prompts: limit['要約のやりとり'] + 1, merges: 0 }, limit) === '', '③ 毎回は出さない');
+ok(hook.message({ prompts: limit['やりとり'] - 1, merges: 0 }, limit) === '', '③ 目安の前は黙る');
+// 部署には要約(/compact)を勧めない。要約は窓口の会話だけ(台帳 2026-11-11・2026-11-12 社長「ここ以外は要約しないんじゃないの？」)
+for (const k of [1, 20, 25, 39, 40, 50, 60]) for (const m of [0, 3, 5, 9]) { const t = hook.message({ prompts: k, merges: m }, limit); ok(!/要約\(\/compact\)を?[かけ頼]|--compact/.test(t) || /要約\(\/compact\)は頼まない/.test(t), `③ 部署の知らせで要約を勧めない(やりとり${k}・公開${m})`); }
+{ const r = spawnSync('node', [path.join(__dirname, 'handoff.js'), 'assistant-life', '--compact'], { encoding: 'utf8' }); ok(r.status !== 0 && /要約は窓口だけ/.test(r.stderr), '③ handoff <部> --compact は NG で止まる(部署は要約しない)'); }
 ok(/会話がとても長い/.test(hook.message({ prompts: limit['やりとり'], merges: 0 }, limit)), '③ 2段目: 替える目安に届いたら引き継ぎメモを知らせる');
 ok(/作業の途中では替えない/.test(hook.message({ prompts: limit['やりとり'], merges: 0 }, limit)), '③ 2段目でも作業の途中では替えさせない');
 ok(/会話がとても長い/.test(hook.message({ prompts: limit['やりとり'] + limit['くり返し'], merges: 0 }, limit)), '③ くり返しの回でまた知らせる');
 ok(/公開 \d+ 件/.test(hook.message({ prompts: limit['くり返し'], merges: limit['公開'] }, limit)), '③ 公開の件数でも知らせる');
-ok(limit['要約のやりとり'] < limit['やりとり'] && limit['要約の公開'] < limit['公開'], '③ 要約の目安は、替える目安より手前');
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'mh-team-'));
 const tr = path.join(tmp, 't.jsonl');
 const lines = [];
@@ -112,6 +111,16 @@ for (const d of loadDepts()) {
   const boot = claudeMd + fs.statSync(path.join(ROOT, 'docs', 'depts', `${d.id}.md`)).size + Buffer.byteLength([...c.how, ...c.undated, ...c.recent].join('\n')) + Buffer.byteLength(build(d, '表示のずれを直す', {}).prompt);
   maxBoot = Math.max(maxBoot, boot);
   ok(boot < 60000, `⑦ ${d.id}: 立ち上がりで読む量は 60KB 未満のはずが ${boot}`);
+}
+
+// ⑧ 公開前の判定(gate)が、既存のキーの値に項目を足す変更を見落とさない(2026-11-13 ミハリ6: #5866 の aptUp)
+{
+  const src = fs.readFileSync(path.join(ROOT, 'tools', 'team', 'review-gate.js'), 'utf8');
+  const fileRe = new Function(`${src.match(/const SAVE_SHAPE_FILE_RE = [^\n]+/)[0]}; return SAVE_SHAPE_FILE_RE;`)();
+  const lineRe = new Function(`${src.match(/const SAVE_SHAPE_LINE_RE = [^\n]+/)[0]}; return SAVE_SHAPE_LINE_RE;`)();
+  ok(fileRe.test('monster-hero/src/parts/56-monhero-success-store.jsx') && fileRe.test('monster-hero/src/parts/56-monhero-success-r3-store.jsx'), '⑧ gate: 保存の入れ物の部品(〜-store.jsx)を見張ること');
+  ok(lineRe.test("      out.aptBase = aptBaseNorm(raw.aptBase);") && lineRe.test("await storeSet(MSX_KEYS.box, next);"), '⑧ gate: 保存値を読み戻す行(raw.〜・〜Norm(・storeSet)を見張ること');
+  ok(!lineRe.test("const hp = Math.round(s.hp * 0.5);") && !fileRe.test('monster-hero/src/parts/42-screen-battle.jsx'), '⑧ gate: 関係ない行・ファイルは当たらないこと');
 }
 
 if (problems.length) { console.error(`NG: トークン節約の仕組みの道具に ${problems.length} 件の問題`); for (const p of problems) console.error(`  - ${p}`); process.exit(1); }

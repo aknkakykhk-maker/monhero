@@ -374,14 +374,14 @@ const ERUBIN_MARKET_ICONS = MYUA_ICON_EXPRESSIONS.map(([key, label]) => ({
 // こちらは id を atsu_* に分けているので、既存の保存データには影響しない。
 // (使われていない画像の検査が見つけられるよう、パスは1枚ずつ文字で書いておく)
 const ATSU_EXPRESSION_ICONS = {
-  normal:   "images/breeder-icons/atsu_normal.png?v=c7743bb24276",
-  happy:    "images/breeder-icons/atsu_happy.png?v=c99760be79b6",
-  wink:     "images/breeder-icons/atsu_wink.png?v=b5c98359f32b",
-  excited:  "images/breeder-icons/atsu_excited.png?v=363fb647aac0",
-  surprise: "images/breeder-icons/atsu_surprise.png?v=307aaa394f61",
-  troubled: "images/breeder-icons/atsu_troubled.png?v=b5bc115df52f",
-  angry:    "images/breeder-icons/atsu_angry.png?v=781bf0aca262",
-  crying:   "images/breeder-icons/atsu_crying.png?v=23e2be3f83f9",
+  normal:   "images/breeder-icons/atsu_normal.png?v=41c0943c8135",
+  happy:    "images/breeder-icons/atsu_happy.png?v=ec9a757df660",
+  wink:     "images/breeder-icons/atsu_wink.png?v=647a9d1ba32b",
+  excited:  "images/breeder-icons/atsu_excited.png?v=3e9f1d0da572",
+  surprise: "images/breeder-icons/atsu_surprise.png?v=bbe577749001",
+  troubled: "images/breeder-icons/atsu_troubled.png?v=b312e6c3d4de",
+  angry:    "images/breeder-icons/atsu_angry.png?v=36c99769785e",
+  crying:   "images/breeder-icons/atsu_crying.png?v=170a244f6826",
 };
 const ATSU_MARKET_ICONS = MYUA_ICON_EXPRESSIONS.map(([key, label]) => ({
   id: `atsu_${key}`,
@@ -655,6 +655,8 @@ const BREEDER_MARKET_ITEMS = [
   { id:'solo_keyholder', name:"キーホルダー", type:'item', emoji:"🔑", cost:0, shop:false, usage:'assistantPeer', desc:"助手1人に贈るキーホルダー。「🏡 助手ライフ」の部屋で、その助手だけに贈る。" },
   { id:'solo_omamori', name:"小さなおまもり", type:'item', emoji:"🧿", cost:0, shop:false, usage:'assistantPeer', desc:"助手1人に贈るおまもり。「🏡 助手ライフ」の部屋で、その助手だけに贈る。" },
   { id:'peer_flower', name:"ちいさな花束", type:'item', emoji:"🌷", cost:0, shop:false, usage:'assistantPeer', desc:"助手2人に贈る小さな花束。「🏡 助手ライフ」で一緒にいる2人に贈る。" },
+  // 🏥 特別な治療(2026-11-12 社長)。ビートP交換所(300P)で手に入る。マーケットでは売らない。使うのは助手ライフの予定表(56-assistant-life-body.jsx)
+  { id:'life_cure', name:"特別な治療", type:'item', emoji:"🏥", cost:0, shop:false, usage:'assistantLife', desc:"助手の病院で受けられる特別な治療。「🏡 助手ライフ」の予定表で、病院にいる回の助手に1枚使うと、重いけが・病気でもその場で治る。その助手のマスモンのけが・病気も一緒に治る。" },
   // 助手ライフで1人に贈る家具(2026-11-08 社長・段階B)。ビートP交換所の「家具」で手に入る。マーケットでは売らない。好み・置き場所は assistants.js の ASSISTANT_LIFE_FURNITURE
   { id:'furn_sofa', name:"ふかふかソファ", type:'item', emoji:"🛋️", cost:0, shop:false, usage:'assistantLife', desc:"助手の部屋に置く家具。「🏡 助手ライフ」で部屋を押して、その助手に贈る。" },
   { id:'furn_bear', name:"くまのぬいぐるみ", type:'item', emoji:"🧸", cost:0, shop:false, usage:'assistantLife', desc:"助手の部屋に置く家具。「🏡 助手ライフ」で部屋を押して、その助手に贈る。" },
@@ -668,6 +670,14 @@ const BREEDER_MARKET_ITEMS = [
   { id:'furn_lantern', name:"星のランタン", type:'item', emoji:"🏮", cost:0, shop:false, usage:'assistantLife', desc:"助手の部屋に置く家具。「🏡 助手ライフ」で部屋を押して、その助手に贈る。" },
   { id:'furn_mirrorball', name:"ミラーボール", type:'item', emoji:"🪩", cost:0, shop:false, usage:'assistantLife', desc:"助手の部屋に置く家具。「🏡 助手ライフ」で部屋を押して、その助手に贈る。" },
   { id:'furn_windbell', name:"風鈴", type:'item', emoji:"🎐", cost:0, shop:false, usage:'assistantLife', desc:"助手の部屋に置く家具。「🏡 助手ライフ」で部屋を押して、その助手に贈る。" },
+  { id:'furn_clock', name:"ふりこ時計", type:'item', emoji:"🕰️", cost:0, shop:false, usage:'assistantLife', desc:"助手の部屋に置く家具。「🏡 助手ライフ」で部屋を押して、その助手に贈る。" },
+  { id:'furn_map', name:"冒険の地図", type:'item', emoji:"🗺️", cost:0, shop:false, usage:'assistantLife', desc:"助手の部屋に置く家具。「🏡 助手ライフ」で部屋を押して、その助手に贈る。" },
+  { id:'furn_guitar', name:"ギター", type:'item', emoji:"🎸", cost:0, shop:false, usage:'assistantLife', desc:"助手の部屋に置く家具。「🏡 助手ライフ」で部屋を押して、その助手に贈る。" },
+  { id:'furn_tv', name:"レトロテレビ", type:'item', emoji:"📺", cost:0, shop:false, usage:'assistantLife', desc:"助手の部屋に置く家具。「🏡 助手ライフ」で部屋を押して、その助手に贈る。" },
+  { id:'furn_windowflower', name:"窓辺の花", type:'item', emoji:"🌷", cost:0, shop:false, usage:'assistantLife', desc:"助手の部屋に置く家具。「🏡 助手ライフ」で部屋を押して、その助手に贈る。" },
+  { id:'furn_fishbowl', name:"金魚ばち", type:'item', emoji:"🐠", cost:0, shop:false, usage:'assistantLife', desc:"助手の部屋に置く家具。「🏡 助手ライフ」で部屋を押して、その助手に贈る。" },
+  { id:'furn_pendant', name:"ペンダントライト", type:'item', emoji:"💡", cost:0, shop:false, usage:'assistantLife', desc:"助手の部屋に置く家具。「🏡 助手ライフ」で部屋を押して、その助手に贈る。" },
+  { id:'furn_garland', name:"ガーランド", type:'item', emoji:"🎏", cost:0, shop:false, usage:'assistantLife', desc:"助手の部屋に置く家具。「🏡 助手ライフ」で部屋を押して、その助手に贈る。" },
   { id:'buddy_trait_seed', name:"性格のたね", type:'item', emoji:"🌱", cost:0, shop:false, usage:'rhythmBuddy',
     desc:"モンヒロビートのマスモンの性格を、全部の中から好きなものに選び直す。選んだ性格は遊び方では変わらない(もう一度使えば変えられる)。HOMEの「M/B管理」の「マスモン一覧(モンヒロビート)」で、マスモンの詳しい画面から使う。ビートP交換所とビートランクのおまけで手に入る。" },
   // 助手みゅあの表情アイコン(8種)。アイコンタブの最後に並ぶ

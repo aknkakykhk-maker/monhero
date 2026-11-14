@@ -24,6 +24,7 @@ node tools/ctx.js rules 音量       その語に触れている節だけ
 | [`CHART_ENGINE.md`](CHART_ENGINE.md) | ⑩-2 | 譜面の作り方(最新リビジョンだけ・手の決まり)を触るとき |
 | [`CONVERSATION.md`](CONVERSATION.md) | 会話言語 | 英語禁止のフックの経緯 |
 | [`ASSISTANT_ADD.md`](ASSISTANT_ADD.md) | ⑤・⑥ | 新しい助手を足すとき(全場面の台詞をそろえる・取り違えの検査) |
+| [`TERMS.md`](TERMS.md) | 会話言語 | 画面・資料・報告で物の名前を書くとき(マスモン・ベースモン・保存枠など。「育てた子」は台詞だけ) |
 | [`CALL_NAMES.md`](CALL_NAMES.md) | ⑤・⑥ | 助手・マスモンの台詞でプレイヤーや助手を呼ぶとき(`{name}`・`{c}` の決まり・呼び方の一覧) |
 | [`NEW_DEPT_BRIEF.md`](NEW_DEPT_BRIEF.md) | — | 新しい部署を作るとき・新しい部署になったとき(共通の申し送り) |
 | [`ORGANIZATION.md`](ORGANIZATION.md) | — | だれ(どの部署・部長)に仕事を頼むか・報告するかを確かめるとき(組織図) |
@@ -31,6 +32,7 @@ node tools/ctx.js rules 音量       その語に触れている節だけ
 | [`SESSION_HANDOFF.md`](SESSION_HANDOFF.md) | ⑪ | 会話が長くなったとき(区切りの目安・引き継ぎメモの型・新しい会話の依頼文の型) |
 | [`REVIEW_GATE.md`](REVIEW_GATE.md) | ⑪ | 公開の前(ミハリの確認が要る変更・要らない変更。判定は `node tools/ctx.js gate`) |
 | [`EDGE_REDEPLOY.md`](EDGE_REDEPLOY.md) | ⑪ | Edge Function(assistant-chat)を配り直すとき(送るのは数行。窓口が打つもの) |
+| [`DECISION_LOCKS.md`](DECISION_LOCKS.md) | 台帳 | 台帳の「進め方」に決めごとを足すとき・道具やフックの文を変えるとき(決めごとの錠。検査は `node tools/team/decision-lock-check.js`) |
 
 ## 部署別の手引き(2026-11-11)
 

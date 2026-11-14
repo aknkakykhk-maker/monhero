@@ -14,8 +14,9 @@
 // タブは4つ(2026-10-13 社長の選択「案1 タブ4つ+よく触るものを上」)。保存キー・値は変えず、並べ替えと見出しだけ。
 // id は前のまま使う(live=演奏 / volume=音 / system=軽さ・演出)。display(表示)はライブにあった表示の項目を分けたもの
 const RHYTHM_OPTION_TABS=Object.freeze([['live','演奏'],['display','表示'],['volume','音'],['system','軽さ・演出']]);
-const RhythmOptions=({value,onSave,onBack,onCalibrate=null,onLineAdjust=null,calibrationResult=null,onClearCalibration=null})=>{
-  const [draft,setDraft]=useState(()=>normalizeRhythmSettings(value));
+const RhythmOptions=({value,onSave,onBack,onCalibrate=null,onLineAdjust=null,calibrationResult=null,onClearCalibration=null,onPreview=null,initialDraft=null})=>{
+  // 「▶ 見てみる」の見本から戻ったときは、そのときの下書き(initialDraft)から続ける(保存前の変更を消さない。2026-11-11)
+  const [draft,setDraft]=useState(()=>normalizeRhythmSettings(initialDraft||value));
   const [message,setMessage]=useState('');
   // 未保存のまま「戻る」を押したときの確認。それまでは何も言わずに変更が消えていた
   const [leaveAsk,setLeaveAsk]=useState(false);
@@ -180,7 +181,11 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,onLineAdjust=null,cal
         横持ちでは**1行へ並べる**。これだけで中身へ回せる高さが50pxほど増える。
         押す場所(戻る・タブ)は44pxのまま縮めない。 */}
     <div data-rhythm-options-bar className={`z-10 shrink-0 border-b border-cyan-400/15 bg-slate-950/95 ${wide?'flex items-center gap-3':''}`}>
-      <header className={`flex shrink-0 items-center gap-2 px-3 ${wide?'py-1':'py-2'}`}><button aria-label="戻る" onClick={requestBack} className="min-h-[44px] min-w-[44px] text-slate-300"><ArrowLeft size={20}/></button><div className={wide?'flex items-baseline gap-2':''}><small className="block text-[8px] font-black tracking-[0.2em] text-cyan-300">MONBEAT</small><h2 className={`font-black ${wide?'text-[13px]':'text-base'}`}>⚙️ オプション</h2></div></header>
+      <header className={`flex shrink-0 items-center gap-2 px-3 ${wide?'py-1':'py-2'}`}><button aria-label="戻る" onClick={requestBack} className="min-h-[44px] min-w-[44px] text-slate-300"><ArrowLeft size={20}/></button><div className={wide?'flex items-baseline gap-2':''}><small className="block text-[8px] font-black tracking-[0.2em] text-cyan-300">MONBEAT</small><h2 className={`font-black ${wide?'text-[13px]':'text-base'}`}>⚙️ オプション</h2></div>
+        {/* いまの設定(保存前)で演奏画面がどう見えるかを、本物の演奏画面の見本で見る(2026-11-11 社長「現在の設定での画面が分からないから見れるようにしたい」) */}
+        {onPreview&&<button type="button" data-rhythm-option-preview-open onClick={()=>onPreview(draft)} aria-label="いまの設定で演奏画面を見てみる"
+          className={`ml-auto flex shrink-0 flex-col items-center justify-center rounded-xl border border-cyan-300/70 bg-cyan-950/70 px-3 font-black text-cyan-50 active:scale-95 ${wide?'min-h-[38px] text-[12px]':'min-h-[44px] text-[13px]'}`}>
+          <span>▶ 見てみる</span>{!wide&&<small className="text-[10px] font-bold text-cyan-200/90">いまの設定で演奏画面</small>}</button>}</header>
       {/* いま見ているタブだけ色を変え、下へ小さな三角を出して「ここの中身」と分かるようにする */}
       <nav data-rhythm-options-tabs className={`grid shrink-0 grid-cols-4 px-3 ${wide?'min-w-0 flex-1 gap-1.5 pb-0 pl-0 pr-3':'gap-2 pb-2'}`}>
         {RHYTHM_OPTION_TABS.map(([id,text])=><button type="button" key={id} data-rhythm-options-tab={id} aria-pressed={tab===id} onClick={()=>changeTab(id)}
@@ -559,6 +564,8 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,onLineAdjust=null,cal
                 オプションでオンオフできて」。できる範囲は端末とブラウザで違うので、
                 何が起きるかを必ず添える(黙って効かないのがいちばん困る)。 */}
 {field('演奏中は通知を出さない',toggle('quietDuringPlay'))}
+{/* みんなで対戦の演奏中に、ほかの人の順位・スコア・コンボの札を出すか(2026-11-11。部屋の上の帯の 📊 と同じ値) */}
+{field('みんなで対戦の演奏中に、みんなのスコアを出す',toggle('multiLiveBoard'))}
 </div>
 </section>
 <section className={card}>
@@ -840,7 +847,7 @@ const rhythmSelectNoticeOpen=(state,playedSongCount,isShortScreen)=>isShortScree
   :(!state.noticeTouched&&playedSongCount>=RHYTHM_NOTICE_FOLD_PLAYED_SONGS?false:state.noticeOpen);
 const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,noticeHidden=0,footer=null,actionExtra=null,emptyText='遊べる譜面がまだありません。',spotClass=null,
   songId='',difficultyId='',onSongId=null,onDifficultyId=null,view=null,onView=null,
-  listScrollTop=null,onListScrollTop=null,toolbarExtra=null,playLabel='決定',playDisabled=false,hideRandom=false,unlockAll=false})=>{
+  listScrollTop=null,onListScrollTop=null,toolbarExtra=null,playLabel='決定',playDisabled=false,hideRandom=false,unlockAll=false,songLock=null})=>{
   const spot=name=>(typeof spotClass==='function'?spotClass(name):'');
   // 演奏へ入る前に、タップ音を作り置きしておく
   useEffect(()=>{RHYTHM_NOTE_SE_RUNTIME.prepare?.();},[]);
@@ -869,6 +876,21 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
   // 並び替えても**選んでいる曲は変わらない**(並びは見え方だけの話なので)。
   const song=playable.find(entry=>entry.songId===songId)||playable[0]||null;
   const available=song?(difficulties||[]).filter(difficulty=>rhythmChartPlayable(song,difficulty.id)):[];
+  // 有料の曲(2026-11-13・39-rhythm-song-owned.jsx)。songLock={owned,balance,onBuy(song)} を渡された画面(ソロの曲えらび)だけ、
+  // 持っていない有料の曲を「買う」に替える。選んで試し聴きはできるが、買うまで演奏は始められない。マルチ・デバッグは songLock を渡さないので何も変わらない
+  const lockedSong=item=>!!songLock&&!unlockAll&&!!item&&typeof rhythmSongLocked==='function'&&rhythmSongLocked(item.songId,songLock.owned);
+  const [buyAsk,setBuyAsk]=React.useState(null);
+  const [buyBusy,setBuyBusy]=React.useState(false);
+  const [buyError,setBuyError]=React.useState('');
+  const doBuy=async()=>{
+    if(!buyAsk||buyBusy||!songLock||typeof songLock.onBuy!=='function')return;
+    setBuyBusy(true);setBuyError('');
+    try{
+      const r=await songLock.onBuy(buyAsk);
+      if(r&&r.ok)setBuyAsk(null);else setBuyError(rhythmSongBuyReasonText(r&&r.reason));
+    }catch(_){setBuyError(rhythmSongBuyReasonText('save'));}
+    finally{setBuyBusy(false);}
+  };
   // EXPERT・MASTERは、その曲のHARDをクリアするまで選べない(2026-09-05 に1段ずつで始め、2026-10-10 から HARD で2つとも開く)。
   // 一覧からは消さずに鍵つきで見せる。「先に何をクリアすればよいか」が分かるようにするため。
   // unlockAll … デバッグの全解放の曲えらび(RHYTHM_DEBUG_SELECT)だけが立てる。鍵を見ずに全部の難易度を選べる
@@ -985,8 +1007,10 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
   },[song?song.songId:'',songId]);
 
   const pickRandom=()=>{
-    if(!list.length)return;
-    const nextSong=list[Math.floor(Math.random()*list.length)];
+    // 買っていない有料の曲はランダムで選ばない(買うまで遊べないため)
+    const pool=list.filter(item=>!lockedSong(item));
+    if(!pool.length)return;
+    const nextSong=pool[Math.floor(Math.random()*pool.length)];
     // ★鍵のかかった難易度は選ばない。選ぶと画面の側がいちばん下の難易度へ戻すので、
     //   「ランダムを押したのにEASYになった」ように見えていた
     const ids=(difficulties||[]).filter(item=>rhythmChartPlayable(nextSong,item.id)&&rhythmDifficultyUnlocked(nextSong.songId,item.id,bestRecords));
@@ -1204,6 +1228,8 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
                   {favoriteIds.has(entry.songId)&&<small {...(main?{'data-rhythm-song-row-favorite':''}:{})} aria-label="お気に入り" className="ml-auto shrink-0 text-[12px] leading-none text-rose-300">♥</small>}
                   {firstSongId&&row.members.some(item=>item.songId===firstSongId)&&<small {...(main?{'data-rhythm-song-first':firstSongId}:{})}
                     className="ml-auto shrink-0 rounded-md border border-emerald-300/60 bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-black text-emerald-200">🔰 はじめての1曲</small>}
+                  {lockedSong(entry)&&<small {...(main?{'data-rhythm-song-locked':entry.songId}:{})}
+                    className="ml-auto shrink-0 rounded-md border border-amber-300/60 bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-black text-amber-200">🔒 {rhythmSongPrice(entry.songId).toLocaleString()}P</small>}
                   {eventSong&&<small {...(main?{'data-rhythm-song-event':entry.songId}:{})}
                     className="ml-auto shrink-0 rounded-md border border-amber-300/60 bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-black text-amber-200">🏆<span className="[@container(max-width:380px)]:hidden"> イベント対象</span></small>}
                 </span>
@@ -1324,9 +1350,12 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
           <div data-rhythm-song-act className="flex gap-2 landscape:sticky landscape:bottom-0 landscape:z-10 landscape:bg-slate-950/95" style={{gridArea:'act'}}>
             {!hideRandom&&<button type="button" data-rhythm-song-random onClick={pickRandom}
               className="min-h-[46px] w-[38%] rounded-xl border border-white/20 bg-slate-900 text-xs font-black text-slate-200 landscape:min-h-[42px]">ランダム</button>}
-            <button type="button" data-rhythm-demo-start={difficulty.id} disabled={playDisabled}
+            {lockedSong(song)
+              ?<button type="button" data-rhythm-song-buy={song.songId} onClick={()=>{setBuyError('');setBuyAsk(song);}}
+                className="min-h-[46px] flex-1 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 text-base font-black text-slate-950 landscape:min-h-[42px]">🔒 {rhythmSongPrice(song.songId).toLocaleString()}ビートPで買う</button>
+              :<button type="button" data-rhythm-demo-start={difficulty.id} disabled={playDisabled}
               onClick={()=>onPlay(song,difficulty)}
-              className="min-h-[46px] flex-1 rounded-xl bg-gradient-to-r from-cyan-500 to-fuchsia-600 text-base font-black text-white disabled:opacity-40 landscape:min-h-[42px]">{playLabel}</button>
+              className="min-h-[46px] flex-1 rounded-xl bg-gradient-to-r from-cyan-500 to-fuchsia-600 text-base font-black text-white disabled:opacity-40 landscape:min-h-[42px]">{playLabel}</button>}
             {/* actionExtra … 縦画面だけ、決定の右に置く小さなボタン(ソロの曲えらびのランキング・2026-10-19)。横は footer に置く */}
             {actionExtra&&<div data-rhythm-song-action-extra className="flex shrink-0 landscape:hidden">{actionExtra(song,difficulty)}</div>}
           </div>
@@ -1337,6 +1366,21 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
       {notice&&noticeOpen&&<div data-rhythm-song-notice-landscape className="mt-1.5 hidden landscape:block">{React.isValidElement(notice)?React.cloneElement(notice,{oneLine:true,faceSize:28}):notice}</div>}
     </aside>
 
+    {/* 有料の曲を買う確認(ソロの曲えらびだけ)。買うとその曲は全難易度で遊べる */}
+    {buyAsk&&songLock&&<div data-rhythm-song-buy-modal role="dialog" aria-modal="true" aria-label="曲を買う"
+      className="fixed inset-0 z-[9000] flex items-center justify-center p-4" style={{position:'fixed',inset:0,zIndex:9000,backgroundColor:'rgba(0,0,0,0.75)'}}
+      onClick={()=>{if(!buyBusy)setBuyAsk(null);}}>
+      <div className="w-full max-w-sm rounded-2xl border border-amber-300/50 bg-slate-900 p-4 text-center" onClick={e=>e.stopPropagation()}>
+        <p style={JA_WRAP_STYLE} className="text-sm font-black text-white">{jaWrap(`「${rhythmSongFullName(buyAsk)}」を買いますか？`)}</p>
+        <p style={JA_WRAP_STYLE} className="mt-1 text-xs font-bold text-slate-300">{jaWrap(`${rhythmSongPrice(buyAsk.songId).toLocaleString()}ビートPで、全部の難易度で遊べるようになります。`)}</p>
+        <p className="mt-1 text-[11px] font-bold tabular-nums text-amber-200">いまのビートP {songLock.balance==null?'—':Number(songLock.balance).toLocaleString()}</p>
+        {buyError&&<p data-rhythm-song-buy-error style={JA_WRAP_STYLE} className="mt-2 text-[11px] font-black text-red-300">{jaWrap(buyError)}</p>}
+        <div className="mt-3 flex gap-2">
+          <button type="button" disabled={buyBusy} onClick={()=>setBuyAsk(null)} className="min-h-[44px] flex-1 rounded-xl border border-white/20 bg-slate-800 text-sm font-black text-slate-200 disabled:opacity-40">やめる</button>
+          <button type="button" data-rhythm-song-buy-ok disabled={buyBusy} onClick={doBuy} className="min-h-[44px] flex-1 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 text-sm font-black text-slate-950 disabled:opacity-40">{buyBusy?'買っています…':'買う'}</button>
+        </div>
+      </div>
+    </div>}
     {/* 並び替えのシート。行を1本増やさずに済むよう、選ぶところは下から出す。
         並びを変えても、選んでいる曲・難易度・自己ベスト・全国ランキングは何も変わらない。 */}
     {/* ジャケットの拡大。曲えらびの上に重ねるだけで、選んでいる曲・難易度・再生中の曲は動かさない。

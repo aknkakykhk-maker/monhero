@@ -1,0 +1,1425 @@
+{
+  "blood": "ヒノトリ",
+  "counts": {
+    "skills": 35
+  },
+  "skills": [
+    {
+      "skillId": "sk-0352",
+      "name": "雄叫び",
+      "version": 1,
+      "blood": "ヒノトリ",
+      "range": "中",
+      "rank": 1,
+      "moveTo": null,
+      "aura": "白",
+      "skillType": "かしこさ",
+      "guts": 20,
+      "damage": "D",
+      "accuracy": "D",
+      "gutsDown": "B",
+      "critical": "F",
+      "abilities": [],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1420",
+          "rarity": 2
+        },
+        {
+          "monsterId": "1432",
+          "rarity": 2
+        }
+      ],
+      "note": "",
+      "sortOrder": 303,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0353",
+      "name": "かぎづめ",
+      "version": 1,
+      "blood": "ヒノトリ",
+      "range": "近",
+      "rank": 1,
+      "moveTo": null,
+      "aura": "赤",
+      "skillType": "ちから",
+      "guts": 14,
+      "damage": "E",
+      "accuracy": "D",
+      "gutsDown": "G",
+      "critical": "G",
+      "abilities": [
+        {
+          "abilityId": "sab-0016",
+          "unlock": {
+            "monsterId": "1402",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0118",
+          "unlock": {
+            "monsterId": "1402",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1402",
+          "rarity": 2
+        }
+      ],
+      "note": "",
+      "sortOrder": 304,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0354",
+      "name": "くちばし",
+      "version": 1,
+      "blood": "ヒノトリ",
+      "range": "零",
+      "rank": 1,
+      "moveTo": null,
+      "aura": "無",
+      "skillType": "ちから",
+      "guts": 16,
+      "damage": "D",
+      "accuracy": "C",
+      "gutsDown": "G",
+      "critical": "G",
+      "abilities": [
+        {
+          "abilityId": "sab-0400",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1404",
+          "rarity": 2
+        },
+        {
+          "monsterId": "1450",
+          "rarity": 2
+        }
+      ],
+      "note": "",
+      "sortOrder": 305,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0355",
+      "name": "フレイムビーム",
+      "version": 1,
+      "blood": "ヒノトリ",
+      "range": "遠",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "白",
+      "skillType": "かしこさ",
+      "guts": 25,
+      "damage": "A",
+      "accuracy": "C",
+      "gutsDown": "G",
+      "critical": "G",
+      "abilities": [
+        {
+          "abilityId": "sab-0012",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0401",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1414",
+          "rarity": 3
+        },
+        {
+          "monsterId": "1420",
+          "rarity": 3
+        },
+        {
+          "monsterId": "1452",
+          "rarity": 3
+        }
+      ],
+      "note": "",
+      "sortOrder": 306,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0356",
+      "name": "爆裂落とし",
+      "version": 1,
+      "blood": "ヒノトリ",
+      "range": "中",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "赤",
+      "skillType": "ちから",
+      "guts": 38,
+      "damage": "B",
+      "accuracy": "E",
+      "gutsDown": "F",
+      "critical": "B",
+      "abilities": [
+        {
+          "abilityId": "sab-0023",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1402",
+          "rarity": 3
+        },
+        {
+          "monsterId": "1404",
+          "rarity": 3
+        }
+      ],
+      "note": "",
+      "sortOrder": 307,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0357",
+      "name": "ファイヤキャノン",
+      "version": 1,
+      "blood": "ヒノトリ",
+      "range": "近",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "赤",
+      "skillType": "かしこさ",
+      "guts": 18,
+      "damage": "D",
+      "accuracy": "A",
+      "gutsDown": "B",
+      "critical": "D",
+      "abilities": [
+        {
+          "abilityId": "sab-0013",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0301",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1451",
+          "rarity": 3
+        },
+        {
+          "monsterId": "1450",
+          "rarity": 3
+        }
+      ],
+      "note": "",
+      "sortOrder": 308,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0358",
+      "name": "ファイヤーバード",
+      "version": 1,
+      "blood": "ヒノトリ",
+      "range": "遠",
+      "rank": 3,
+      "moveTo": "中",
+      "aura": "赤",
+      "skillType": "ちから",
+      "guts": 40,
+      "damage": "B",
+      "accuracy": "A",
+      "gutsDown": "E",
+      "critical": "D",
+      "abilities": [
+        {
+          "abilityId": "sab-0014",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0108",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1414",
+          "rarity": 4
+        }
+      ],
+      "note": "",
+      "sortOrder": 309,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0359",
+      "name": "フレイムライン",
+      "version": 1,
+      "blood": "ヒノトリ",
+      "range": "中",
+      "rank": 3,
+      "moveTo": null,
+      "aura": "赤",
+      "skillType": "かしこさ",
+      "guts": 25,
+      "damage": "D",
+      "accuracy": "S",
+      "gutsDown": "D",
+      "critical": "A",
+      "abilities": [
+        {
+          "abilityId": "sab-0402",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0016",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1452",
+          "rarity": 4
+        }
+      ],
+      "note": "",
+      "sortOrder": 310,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0360",
+      "name": "連続かぎづめ",
+      "version": 1,
+      "blood": "ヒノトリ",
+      "range": "近",
+      "rank": 3,
+      "moveTo": null,
+      "aura": "赤",
+      "skillType": "ちから",
+      "guts": 25,
+      "damage": "D",
+      "accuracy": "C",
+      "gutsDown": "B",
+      "critical": "D",
+      "abilities": [
+        {
+          "abilityId": "sab-0017",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1432",
+          "rarity": 4
+        },
+        {
+          "monsterId": "1451",
+          "rarity": 4
+        }
+      ],
+      "note": "",
+      "sortOrder": 311,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0361",
+      "name": "ヴェノムクロウ",
+      "version": 1,
+      "blood": "ヒノトリ",
+      "range": "零",
+      "rank": 3,
+      "moveTo": null,
+      "aura": "黒",
+      "skillType": "かしこさ",
+      "guts": 27,
+      "damage": "C",
+      "accuracy": "A+",
+      "gutsDown": "B",
+      "critical": "D",
+      "abilities": [
+        {
+          "abilityId": "sab-0286",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0403",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0021",
+          "unlock": {
+            "monsterId": "1432",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0022",
+          "unlock": {
+            "monsterId": "1432",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1432",
+          "rarity": 4
+        }
+      ],
+      "note": "",
+      "sortOrder": 312,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0362",
+      "name": "ファイアウェーブ",
+      "version": 1,
+      "blood": "ヒノトリ",
+      "range": "遠",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "赤",
+      "skillType": "かしこさ",
+      "guts": 43,
+      "damage": "S",
+      "accuracy": "A",
+      "gutsDown": "D",
+      "critical": "C",
+      "abilities": [
+        {
+          "abilityId": "sab-0141",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0404",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1404",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 313,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0363",
+      "name": "エタニティフレア",
+      "version": 1,
+      "blood": "ヒノトリ",
+      "range": "中",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "青",
+      "skillType": "かしこさ",
+      "guts": 45,
+      "damage": "A",
+      "accuracy": "B",
+      "gutsDown": "D",
+      "critical": "D",
+      "abilities": [
+        {
+          "abilityId": "sab-0300",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0021",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1420",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 314,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0364",
+      "name": "フレイムタイフーン",
+      "version": 1,
+      "blood": "ヒノトリ",
+      "range": "近",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "赤",
+      "skillType": "かしこさ",
+      "guts": 30,
+      "damage": "B+",
+      "accuracy": "B+",
+      "gutsDown": "E",
+      "critical": "A",
+      "abilities": [
+        {
+          "abilityId": "sab-0405",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0068",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0141",
+          "unlock": {
+            "monsterId": "1414",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0142",
+          "unlock": {
+            "monsterId": "1414",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1414",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 315,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0365",
+      "name": "ファントムブレイク",
+      "version": 1,
+      "blood": "ヒノトリ",
+      "range": "零",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "黒",
+      "skillType": "かしこさ",
+      "guts": 40,
+      "damage": "D",
+      "accuracy": "C",
+      "gutsDown": "S",
+      "critical": "C+",
+      "abilities": [
+        {
+          "abilityId": "sab-0406",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0240",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0021",
+          "unlock": {
+            "monsterId": "1452",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0039",
+          "unlock": {
+            "monsterId": "1452",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1452",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 316,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0366",
+      "name": "エボニーノヴァ",
+      "version": 1,
+      "blood": "ヒノトリ",
+      "range": "遠",
+      "rank": 5,
+      "moveTo": null,
+      "aura": "黒",
+      "skillType": "かしこさ",
+      "guts": 54,
+      "damage": "S+",
+      "accuracy": "B+",
+      "gutsDown": "G",
+      "critical": "S",
+      "abilities": [
+        {
+          "abilityId": "sab-0407",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0408",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0004",
+          "unlock": {
+            "monsterId": "1451",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0005",
+          "unlock": {
+            "monsterId": "1451",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1451",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 317,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0367",
+      "name": "アブソリュートゼロ",
+      "version": 1,
+      "blood": "ヒノトリ",
+      "range": "近",
+      "rank": 5,
+      "moveTo": null,
+      "aura": "青",
+      "skillType": "かしこさ",
+      "guts": 40,
+      "damage": "B+",
+      "accuracy": "C",
+      "gutsDown": "S",
+      "critical": "A+",
+      "abilities": [
+        {
+          "abilityId": "sab-0409",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0410",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0004",
+          "unlock": {
+            "monsterId": "1450",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0005",
+          "unlock": {
+            "monsterId": "1450",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1450",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 318,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0698",
+      "name": "フリーズ",
+      "version": 1,
+      "blood": "ヒノトリ",
+      "range": "中",
+      "rank": 1,
+      "moveTo": null,
+      "aura": "青",
+      "skillType": "かしこさ",
+      "guts": 18,
+      "damage": "E",
+      "accuracy": "D+",
+      "gutsDown": "B+",
+      "critical": "G",
+      "abilities": [
+        {
+          "abilityId": "sab-0633",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "1450"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 319,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0699",
+      "name": "アクアライン",
+      "version": 1,
+      "blood": "ヒノトリ",
+      "range": "中",
+      "rank": 3,
+      "moveTo": null,
+      "aura": "青",
+      "skillType": "かしこさ",
+      "guts": 27,
+      "damage": "B",
+      "accuracy": "S",
+      "gutsDown": "D",
+      "critical": "B",
+      "abilities": [
+        {
+          "abilityId": "sab-0402",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0016",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "1450",
+        "1420"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 320,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0700",
+      "name": "サンダーバード",
+      "version": 1,
+      "blood": "ヒノトリ",
+      "range": "遠",
+      "rank": 3,
+      "moveTo": "中",
+      "aura": "黄",
+      "skillType": "ちから",
+      "guts": 45,
+      "damage": "S",
+      "accuracy": "C",
+      "gutsDown": "G",
+      "critical": "E",
+      "abilities": [
+        {
+          "abilityId": "sab-0012",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0040",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "1404"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 321,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0701",
+      "name": "ホーリーバード",
+      "version": 1,
+      "blood": "ヒノトリ",
+      "range": "遠",
+      "rank": 3,
+      "moveTo": "中",
+      "aura": "白",
+      "skillType": "かしこさ",
+      "guts": 47,
+      "damage": "S",
+      "accuracy": "C",
+      "gutsDown": "E",
+      "critical": "B",
+      "abilities": [
+        {
+          "abilityId": "sab-0012",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0040",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "1452"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 322,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0702",
+      "name": "ホワイトタイフーン",
+      "version": 1,
+      "blood": "ヒノトリ",
+      "range": "近",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "白",
+      "skillType": "かしこさ",
+      "guts": 34,
+      "damage": "B+",
+      "accuracy": "S",
+      "gutsDown": "C",
+      "critical": "C",
+      "abilities": [
+        {
+          "abilityId": "sab-0634",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0068",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "1452"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 323,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0703",
+      "name": "天衣無縫",
+      "version": 1,
+      "blood": "ヒノトリ",
+      "range": "中",
+      "rank": 5,
+      "moveTo": null,
+      "aura": "白",
+      "skillType": "かしこさ",
+      "guts": 45,
+      "damage": "A",
+      "accuracy": "C",
+      "gutsDown": "E",
+      "critical": "S",
+      "abilities": [
+        {
+          "abilityId": "sab-0635",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0100",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "1452"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 324,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0704",
+      "name": "ブラックバード",
+      "version": 1,
+      "blood": "ヒノトリ",
+      "range": "遠",
+      "rank": 3,
+      "moveTo": "中",
+      "aura": "黒",
+      "skillType": "ちから",
+      "guts": 38,
+      "damage": "A",
+      "accuracy": "A",
+      "gutsDown": "E",
+      "critical": "E",
+      "abilities": [
+        {
+          "abilityId": "sab-0012",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0040",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "1432"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 325,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0705",
+      "name": "アクアキャノン",
+      "version": 1,
+      "blood": "ヒノトリ",
+      "range": "近",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "青",
+      "skillType": "かしこさ",
+      "guts": 18,
+      "damage": "D+",
+      "accuracy": "A",
+      "gutsDown": "B+",
+      "critical": "D",
+      "abilities": [
+        {
+          "abilityId": "sab-0013",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0488",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "1420"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 326,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0706",
+      "name": "くちばし・炭",
+      "version": 1,
+      "blood": "ヒノトリ",
+      "range": "零",
+      "rank": 1,
+      "moveTo": "中",
+      "aura": "黒",
+      "skillType": "かしこさ",
+      "guts": 16,
+      "damage": "E",
+      "accuracy": "C+",
+      "gutsDown": "D",
+      "critical": "D",
+      "abilities": [],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "1451"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 327,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0707",
+      "name": "超火力",
+      "version": 1,
+      "blood": "ヒノトリ",
+      "range": "中",
+      "rank": 3,
+      "moveTo": null,
+      "aura": "黒",
+      "skillType": "かしこさ",
+      "guts": 27,
+      "damage": "C",
+      "accuracy": "A",
+      "gutsDown": "F",
+      "critical": "A",
+      "abilities": [
+        {
+          "abilityId": "sab-0402",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "1451"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 328,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0708",
+      "name": "ヴォイドサークル",
+      "version": 1,
+      "blood": "ヒノトリ",
+      "range": "中",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "白",
+      "skillType": "かしこさ",
+      "guts": 41,
+      "damage": "B",
+      "accuracy": "S",
+      "gutsDown": "G",
+      "critical": "S",
+      "abilities": [
+        {
+          "abilityId": "sab-0636",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0637",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "1451"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 329,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0356",
+      "name": "爆裂落とし",
+      "version": 2,
+      "blood": "ヒノトリ",
+      "range": "中",
+      "rank": 2,
+      "moveTo": null,
+      "aura": "赤",
+      "skillType": "ちから",
+      "guts": 25,
+      "damage": "B",
+      "accuracy": "D",
+      "gutsDown": "F",
+      "critical": "B",
+      "abilities": [
+        {
+          "abilityId": "sab-0023",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1402",
+          "rarity": 3
+        },
+        {
+          "monsterId": "1404",
+          "rarity": 3
+        }
+      ],
+      "note": "",
+      "sortOrder": 330,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0362",
+      "name": "ファイアウェーブ",
+      "version": 2,
+      "blood": "ヒノトリ",
+      "range": "遠",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "赤",
+      "skillType": "かしこさ",
+      "guts": 40,
+      "damage": "S",
+      "accuracy": "S",
+      "gutsDown": "D",
+      "critical": "C",
+      "abilities": [
+        {
+          "abilityId": "sab-0745",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0746",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1404",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 331,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0363",
+      "name": "エタニティフレア",
+      "version": 2,
+      "blood": "ヒノトリ",
+      "range": "中",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "青",
+      "skillType": "かしこさ",
+      "guts": 40,
+      "damage": "S",
+      "accuracy": "B",
+      "gutsDown": "D",
+      "critical": "D",
+      "abilities": [
+        {
+          "abilityId": "sab-0300",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0747",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1420",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 332,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0364",
+      "name": "フレイムタイフーン",
+      "version": 2,
+      "blood": "ヒノトリ",
+      "range": "近",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "赤",
+      "skillType": "かしこさ",
+      "guts": 25,
+      "damage": "B+",
+      "accuracy": "B+",
+      "gutsDown": "E",
+      "critical": "A",
+      "abilities": [
+        {
+          "abilityId": "sab-0405",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0748",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0141",
+          "unlock": {
+            "monsterId": "1414",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0142",
+          "unlock": {
+            "monsterId": "1414",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1414",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 333,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0365",
+      "name": "ファントムブレイク",
+      "version": 2,
+      "blood": "ヒノトリ",
+      "range": "零",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "黒",
+      "skillType": "かしこさ",
+      "guts": 35,
+      "damage": "D",
+      "accuracy": "B+",
+      "gutsDown": "S",
+      "critical": "A",
+      "abilities": [
+        {
+          "abilityId": "sab-0406",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0749",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0021",
+          "unlock": {
+            "monsterId": "1452",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0039",
+          "unlock": {
+            "monsterId": "1452",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1452",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 334,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0366",
+      "name": "エボニーノヴァ",
+      "version": 2,
+      "blood": "ヒノトリ",
+      "range": "遠",
+      "rank": 5,
+      "moveTo": null,
+      "aura": "黒",
+      "skillType": "かしこさ",
+      "guts": 45,
+      "damage": "S+",
+      "accuracy": "B+",
+      "gutsDown": "G",
+      "critical": "S",
+      "abilities": [
+        {
+          "abilityId": "sab-0407",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0408",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0004",
+          "unlock": {
+            "monsterId": "1451",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0005",
+          "unlock": {
+            "monsterId": "1451",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1451",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 335,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0367",
+      "name": "アブソリュートゼロ",
+      "version": 2,
+      "blood": "ヒノトリ",
+      "range": "近",
+      "rank": 5,
+      "moveTo": null,
+      "aura": "青",
+      "skillType": "かしこさ",
+      "guts": 36,
+      "damage": "B+",
+      "accuracy": "B+",
+      "gutsDown": "S",
+      "critical": "A+",
+      "abilities": [
+        {
+          "abilityId": "sab-0409",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0410",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0004",
+          "unlock": {
+            "monsterId": "1450",
+            "level": 6
+          }
+        },
+        {
+          "abilityId": "sab-0005",
+          "unlock": {
+            "monsterId": "1450",
+            "level": 10
+          }
+        }
+      ],
+      "icon": null,
+      "unique": false,
+      "owners": [],
+      "unlockedBy": [
+        {
+          "monsterId": "1450",
+          "rarity": 5
+        }
+      ],
+      "note": "",
+      "sortOrder": 336,
+      "status": "verified"
+    },
+    {
+      "skillId": "sk-0708",
+      "name": "ヴォイドサークル",
+      "version": 2,
+      "blood": "ヒノトリ",
+      "range": "中",
+      "rank": 4,
+      "moveTo": null,
+      "aura": "白",
+      "skillType": "かしこさ",
+      "guts": 36,
+      "damage": "B",
+      "accuracy": "S",
+      "gutsDown": "G",
+      "critical": "S",
+      "abilities": [
+        {
+          "abilityId": "sab-0636",
+          "unlock": null
+        },
+        {
+          "abilityId": "sab-0637",
+          "unlock": null
+        }
+      ],
+      "icon": null,
+      "unique": true,
+      "owners": [
+        "1451"
+      ],
+      "unlockedBy": [],
+      "note": "",
+      "sortOrder": 337,
+      "status": "verified"
+    }
+  ]
+}
