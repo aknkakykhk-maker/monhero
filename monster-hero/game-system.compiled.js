@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8daba111d07b0b21
+// source-sha256: e7f37f419c7aa8cf
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -5826,6 +5826,34 @@ const BGM_TRACKS = [{
   gain: 1,
   loop: true
 }, {
+  id: 'monsuc_cup',
+  name: 'モンヒロサクセス 大会',
+  creator: 'オリジナル',
+  src: 'audio/bgm-monsuc-cup.mp3',
+  gain: 1,
+  loop: true
+}, {
+  id: 'monsuc_menu',
+  name: 'モンヒロサクセス メイン',
+  creator: 'オリジナル',
+  src: 'audio/bgm-monsuc-menu.mp3',
+  gain: 1,
+  loop: true
+}, {
+  id: 'monsuc_win',
+  name: 'モンヒロサクセス 勝利(1回だけ)',
+  creator: 'オリジナル',
+  src: 'audio/bgm-monsuc-win.mp3',
+  gain: 1,
+  loop: false
+}, {
+  id: 'monsuc_lose',
+  name: 'モンヒロサクセス 敗北(1回だけ)',
+  creator: 'オリジナル',
+  src: 'audio/bgm-monsuc-lose.mp3',
+  gain: 1,
+  loop: false
+}, {
   id: 'original_prep',
   name: '強化テーマ',
   creator: 'オリジナル',
@@ -8100,8 +8128,12 @@ const Audio_ = (() => {
     "audio/bgm-monster-hero-theme.mp3": "083a1d9db281",
     "audio/bgm-monster-short.mp3": "415b771e9bbf",
     "audio/bgm-monster.mp3": "6b190639c3fa",
+    "audio/bgm-monsuc-cup.mp3": "4e4cf0ca4ae6",
+    "audio/bgm-monsuc-lose.mp3": "eff2057aa49e",
+    "audio/bgm-monsuc-menu.mp3": "7fdee580d090",
     "audio/bgm-monsuc-rest.mp3": "3bf37f96821c",
     "audio/bgm-monsuc-training.mp3": "9bfeb31fb38a",
+    "audio/bgm-monsuc-win.mp3": "b708c1a263da",
     "audio/bgm-mou-hitotsu-no-sekai-e.mp3": "633ed0ee2501",
     "audio/bgm-nothing-without-you.mp3": "4cb261cf1cd9",
     "audio/bgm-only-my-railgun.mp3": "62fb741fe3f1",
@@ -149040,7 +149072,7 @@ function AssistantMasmonBattleBeta({
         A: battle.teamA,
         B: battle.teamB
       },
-      venueImg: typeof MSC_VENUE_IMG !== 'undefined' ? MSC_VENUE_IMG.cup : null,
+      venueImg: typeof msaVenueBg === 'function' ? msaVenueBg('cup', msaBgRead()) : null,
       ended: review,
       win: battle.r.winner,
       endSub: review ? `${battle.r.rounds} ラウンド` : '',
@@ -168493,7 +168525,7 @@ function MsxR3Battle({
     const d = msxR3Diff(before, r.state);
     const out = {
       r3: {
-        stage: won ? 'prize' : 'meal',
+        stage: won ? 'prize' : d.rankTo > d.rankFrom ? 'rank' : 'meal',
         won,
         name,
         icon: msxR3BattleIcon(b),
@@ -172520,6 +172552,51 @@ const MSA_SPEEDS = Object.freeze([{
   label: '×4',
   f: 0.3
 }]);
+const MSA_ARENA_IMG = Object.freeze({
+  debut: 'images/success/arena/arena-debut.png',
+  cup: 'images/success/arena/arena-cup.png',
+  hero: 'images/success/arena/arena-hero.png',
+  summit: 'images/success/arena/arena-summit.png'
+});
+const MSA_BG_KEY = 'mh_monsuc_arena_bg_v1';
+const msaBgNorm = v => v === 'stadium' ? 'stadium' : 'arena';
+const msaBgRead = () => {
+  try {
+    return msaBgNorm(localStorage.getItem(MSA_BG_KEY));
+  } catch (_) {
+    return 'arena';
+  }
+};
+const msaBgWrite = v => {
+  try {
+    localStorage.setItem(MSA_BG_KEY, msaBgNorm(v));
+  } catch (_) {}
+};
+const msaVenueBg = (venue, mode) => {
+  if (msaBgNorm(mode) === 'stadium' && typeof MSC_VENUE_IMG !== 'undefined') return MSC_VENUE_IMG[venue] || MSC_VENUE_IMG.cup;
+  return MSA_ARENA_IMG[venue] || MSA_ARENA_IMG.cup;
+};
+const MSA_BG_LABEL = Object.freeze({
+  arena: '🏛️ 闘技場',
+  stadium: '🏟️ スタジアム'
+});
+function MsaBgToggle({
+  bg,
+  onChange
+}) {
+  const next = msaBgNorm(bg) === 'arena' ? 'stadium' : 'arena';
+  return React.createElement("button", {
+    type: "button",
+    className: "msa-bgsw",
+    "data-msa-bg": msaBgNorm(bg),
+    "aria-label": `背景を${MSA_BG_LABEL[next].slice(3)}にする`,
+    onClick: () => {
+      msaSe('tap');
+      msaBgWrite(next);
+      onChange(next);
+    }
+  }, "背景 ", MSA_BG_LABEL[msaBgNorm(bg)]);
+}
 const MSA_CSS = `
 .msa{display:flex;flex-direction:column;gap:6px}
 .msa-stage{position:relative;height:clamp(200px,34vh,290px);border-radius:16px;overflow:hidden;background:#2a2147 center/cover no-repeat}
@@ -172551,6 +172628,7 @@ const MSA_CSS = `
 .msa-tools button{flex:1;min-height:34px;border-radius:10px;border:1px solid #4c4680;background:#2b2650;color:#fff;font-weight:900;font-size:12px}
 .msa-tools button.on{background:#fde047;color:#422006;border-color:#fde047}
 .msx .msa-tools button{text-align:center}
+.msa-tools button.msa-bgsw{flex:1.4;font-size:11px;white-space:nowrap;background:#1e1b3a;border-color:#6b64a8}
 .msa-wait{font-size:11.5px;color:#cbd5e1;text-align:center}
 .msa-gtag{position:absolute;z-index:8;bottom:-16px;left:50%;transform:translateX(-50%);white-space:nowrap;border-radius:99px;padding:0 7px;font-size:10.5px;font-weight:900;line-height:16px;animation:msaPop .45s ease-out both}
 .msa-gtag.up{background:#facc15;color:#422006}.msa-gtag.down{background:#334155;color:#e2e8f0}
@@ -173772,6 +173850,7 @@ function MonsucArena({
   };
   const [pos, setPos] = useState(0);
   const [speed, setSpeed] = useState('x1');
+  const [bg, setBg] = useState(msaBgRead);
   const [auto, setAuto] = useState(!manual);
   const [ended, setEnded] = useState(false);
   const endRef = useRef(false);
@@ -173882,7 +173961,7 @@ function MonsucArena({
     frames: frames,
     pos: pos,
     teams: teams,
-    venueImg: MSC_VENUE_IMG[info.venue] || MSC_VENUE_IMG.cup,
+    venueImg: msaVenueBg(info.venue, bg),
     ended: ended,
     win: result ? result.winner : null,
     introTitle: info.title,
@@ -173921,7 +174000,10 @@ function MonsucArena({
     type: "button",
     "data-msc-skip": true,
     onClick: skip
-  }, "⏭ とばす")) : null, manual && !auto && !ended ? React.createElement("div", {
+  }, "⏭ とばす"), React.createElement(MsaBgToggle, {
+    bg: bg,
+    onChange: setBg
+  })) : null, manual && !auto && !ended ? React.createElement("div", {
     className: "msa-tools"
   }, MSA_SPEEDS.slice(0, 2).map(x => React.createElement("button", {
     key: x.id,
@@ -173931,7 +174013,10 @@ function MonsucArena({
       msaSe('tap');
       setSpeed(x.id);
     }
-  }, "見せる速さ ", x.label))) : null);
+  }, "見せる速さ ", x.label)), React.createElement(MsaBgToggle, {
+    bg: bg,
+    onChange: setBg
+  })) : null);
 }
 const MONSUC_RANK_SENT_KEY = 'mh_monsuc_rank_sent_v1';
 const MONSUC_RANK_QUEUE_KEY = 'mh_monsuc_rank_queue_v1';
