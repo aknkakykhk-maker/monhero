@@ -385,6 +385,7 @@
   "supabase-apply-check.js",
   "teaching-roster-size-check.js",
   "team/decision-lock-check.js",
+  "team/requests-check.js",
   "update-notice-check.js",
   "viewport-height-check.js"
  ]

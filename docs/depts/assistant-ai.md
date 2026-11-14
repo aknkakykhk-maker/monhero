@@ -16,7 +16,7 @@ node tools/ctx.js brief               いまの状態
 - `monster-hero/src/parts/21-assistant.jsx`
 - `monster-hero/src/parts/52-mission-daily-line.jsx`
 - `monster-hero/src/parts/56-assistant-chat.jsx`
-- `monster-hero/data/assistants.js`(2.0MB・開かない)
+- `monster-hero/data/assistants.js`(2.1MB・開かない)
 - `monster-hero/data/assistant-chat-digest.json`(0.5MB・開かない)
 - `supabase/functions/assistant-chat/*`
 - `supabase/functions/mission-daily-line/*`
