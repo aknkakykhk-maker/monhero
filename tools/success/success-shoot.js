@@ -156,7 +156,10 @@ const makeRun = async (kind) => {
             }
             if (st === 'long') { // 選択肢の文を長く(2行に)して崩れないかを見る
               const b = document.querySelector('.msx .v-opt'); if (!b) return false;
-              b.firstChild.textContent = 'みんなで分けあって、いちばん大きいのをあの子にあげる'; return true;
+              // 画面と同じく言葉の切れ目で折る(jaWrapPoints の折り目を <wbr> にして差しこむ)
+              const tx = 'みんなで分けあって、いちばん大きいのをあの子にあげる'; const pts = typeof jaWrapPoints === 'function' ? jaWrapPoints(tx) : tx;
+              const sp = document.createElement('span'); sp.style.cssText = 'word-break:keep-all;overflow-wrap:anywhere'; String(pts).split('\u200B').forEach((x, i) => { if (i) sp.appendChild(document.createElement('wbr')); sp.appendChild(document.createTextNode(x)); });
+              b.firstChild.replaceWith(sp); return true;
             }
             if (st === 'event') {
               // ランダムイベントが出るターンを芯で探して、その場面を開く(撮るときだけ id を変えて探す)
