@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: c27036d5d6ef6335
+// generated-sha256: f644d53b2f0de601
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -84184,7 +84184,7 @@ const alfDiaryShare = (n) => {
   } catch { return []; }
 };
 // 仲良し度の Lv を3つの段にまとめる(Lv1〜2=0・3〜5=1・6〜=2)。Lv の数そのものは相手に渡さない
-const ALF_BOND_TIER_NAMES = Object.freeze(['はじめのころ', 'なかよし', 'ずっと仲良し']);
+const ALF_BOND_TIER_NAMES = Object.freeze(['初めのころ', 'なかよし', 'ずっと仲良し']);
 const alfBondTierOfLv = (lv) => (!Number.isFinite(lv) || lv < 3 ? 0 : lv < 6 ? 1 : 2);
 const alfBondTiers = (ids) => {
   const out = {};
@@ -84207,7 +84207,7 @@ const alfBuildMore = (ids) => {
     } catch {}
   }
   const dy = alfDiaryShare(8);
-  // 仲良しの「段」(2026-11-14 社長 r1115-019 第2弾「段は見せてよい・数字は出さない」): 助手ごとに 0(はじめのころ)/1(なかよし)/2(ずっと仲良し)。点・Lv の数は送らない
+  // 仲良しの「段」(2026-11-14 社長 r1115-019 第2弾「段は見せてよい・数字は出さない」): 助手ごとに 0(初めのころ)/1(なかよし)/2(ずっと仲良し)。点・Lv の数は送らない
   const bd = alfBondTiers(ids);
   return { v: 1, fu, dy, ...(Object.keys(bd).length ? { bd } : {}) };
 };
@@ -85901,7 +85901,7 @@ function AlfBondView({ friend, more, land = false }) {
   const ids = ((friend.house && friend.house.ids) || []).filter(id => ALF_IDS.includes(id));
   const card = 'rounded-2xl border border-white/10 bg-slate-800/90 px-3 py-2.5';
   const sec = 'mt-3 mb-1 text-[12px] font-black text-amber-200';
-  const names = typeof ALF_BOND_TIER_NAMES !== 'undefined' ? ALF_BOND_TIER_NAMES : ['はじめのころ', 'なかよし', 'ずっと仲良し'];
+  const names = typeof ALF_BOND_TIER_NAMES !== 'undefined' ? ALF_BOND_TIER_NAMES : ['初めのころ', 'なかよし', 'ずっと仲良し'];
   return (
     <div className="px-3 pb-4 pt-2" data-alf-bond-view>
       <div className={card} data-alf-bond-view-friend>
