@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 03ede45a5537baa9
+// generated-sha256: 0045992258470829
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -87734,7 +87734,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
         </div>
       </>)}
     </>);
-    foot = <div className="v-ft"><button type="button" onClick={onPause}>← 中断</button><button type="button" onClick={() => setSheet('log')}>📖 きろく</button><button type="button" onClick={() => setSheet('menu')}>☰ メニュー</button></div>;
+    foot = <div className="v-ft"><button type="button" onClick={onPause}>← 中断</button><button type="button" onClick={() => setSheet('log')}>📖 記録</button><button type="button" onClick={() => setSheet('menu')}>☰ メニュー</button></div>;
     if (sub === 'bag') body = <MsxBag run={run} setRun={setRun} v={v} ev={ev} onClose={() => setSub('main')}/>;
     if (sub === 'stats') body = <MsxStats run={run} setRun={setRun} v={v} ev={ev} onClose={() => setSub('main')}/>;
     if (sub === 'bag' || sub === 'stats') foot = <div className="v-ft"><button type="button" onClick={() => setSub('main')}>← もどる</button></div>;
@@ -87755,7 +87755,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
       {sheet && sheet !== 'dex' && (
         <div className="msx-ov msx-fade" onClick={() => setSheet(null)}>
           <div className="msx-sheet" onClick={(e) => e.stopPropagation()}>
-            {sheet === 'log' ? <><h3>📖 きろく</h3>{(run.log || []).length ? run.log.slice().reverse().map((l, i) => <div key={i} className="msx-note">{l.turn}ターン目: {l.t}</div>) : <div className="msx-note">まだありません</div>}</>
+            {sheet === 'log' ? <><h3>📖 記録</h3>{(run.log || []).length ? run.log.slice().reverse().map((l, i) => <div key={i} className="msx-note">{l.turn}ターン目: {l.t}</div>) : <div className="msx-note">まだありません</div>}</>
               : sheet === 'menu' ? <><h3>☰ メニュー</h3>
                 <div className="msx-note">育成方針: {MSX_POLICY_SCALE[Math.max(-3, Math.min(3, s.pol || 0)) + 3]}(褒めると甘く・叱ると厳しくなる)</div>
                 <div className="msx-note">成長の型: {typeof MASMON_CALC !== 'undefined' ? MASMON_CALC.typeOf(s.type).name : '—'}</div>

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f5cfd53a1b6d32d6
+// source-sha256: ec08078a1ffbed7a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -169232,7 +169232,7 @@ function MsxPlay({
     }, "← 中断"), React.createElement("button", {
       type: "button",
       onClick: () => setSheet('log')
-    }, "📖 きろく"), React.createElement("button", {
+    }, "📖 記録"), React.createElement("button", {
       type: "button",
       onClick: () => setSheet('menu')
     }, "☰ メニュー"));
@@ -169300,7 +169300,7 @@ function MsxPlay({
   }, React.createElement("div", {
     className: "msx-sheet",
     onClick: e => e.stopPropagation()
-  }, sheet === 'log' ? React.createElement(React.Fragment, null, React.createElement("h3", null, "📖 きろく"), (run.log || []).length ? run.log.slice().reverse().map((l, i) => React.createElement("div", {
+  }, sheet === 'log' ? React.createElement(React.Fragment, null, React.createElement("h3", null, "📖 記録"), (run.log || []).length ? run.log.slice().reverse().map((l, i) => React.createElement("div", {
     key: i,
     className: "msx-note"
   }, l.turn, "ターン目: ", l.t)) : React.createElement("div", {
