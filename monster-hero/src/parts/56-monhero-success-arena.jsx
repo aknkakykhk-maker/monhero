@@ -883,23 +883,23 @@ const MSA_SHOW_CSS = `
 .msa-call.crit,.msa-call.big{color:#fde047;background:linear-gradient(90deg,#b4530999,#0000)}
 .msa-call.ko,.msa-call.pinch{color:#fecaca;background:linear-gradient(90deg,#b91c1c99,#0000)}
 .msa-call.rev,.msa-call.last{color:#a5f3fc;background:linear-gradient(90deg,#0e749099,#0000)}
-.msa-fin{position:fixed;inset:0;z-index:9700;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:16px;background:#160f2e center/cover no-repeat;color:#fff;cursor:pointer;overflow:hidden;animation:msaSFade .35s ease-out both}
-.msa-fin:before{content:"";position:absolute;inset:0;background:radial-gradient(circle at 50% 45%,#0000 0,#0009 70%)}
-.msa-fin.l:before{background:linear-gradient(180deg,#0f172acc,#020617ee)}
-.msa-fin>*{position:relative}
-.msa-fin-rays{position:absolute!important;left:50%;top:44%;width:640px;height:640px;margin:-320px 0 0 -320px;border-radius:50%;background:repeating-conic-gradient(#fde04700 0 9deg,#fde04740 9deg 18deg);-webkit-mask:radial-gradient(circle,#000 18%,#0000 66%);mask:radial-gradient(circle,#000 18%,#0000 66%);animation:msaSSpin 8s linear infinite}
-.msa-fin-big{font-size:58px;font-weight:900;font-style:italic;letter-spacing:.04em;color:#fde047;text-shadow:3px 0 0 #92400e,-3px 0 0 #92400e,0 -3px 0 #92400e,0 5px 0 #92400e,0 0 24px #fde047aa;animation:msaSStamp .6s .15s cubic-bezier(.2,1.6,.4,1) both}
-.msa-fin.l .msa-fin-big{color:#cbd5e1;text-shadow:3px 0 0 #334155,-3px 0 0 #334155,0 -3px 0 #334155,0 5px 0 #1e293b;animation:msaSDrop .7s .1s ease-out both}
-.msa-fin.d .msa-fin-big{color:#e2e8f0;text-shadow:0 4px 0 #475569}
-.msa-fin-sub{font-size:12px;font-weight:900;background:#0f172acc;border-radius:99px;padding:3px 14px;animation:msaSFade .4s .5s both}
-.msa-fin-hero{text-align:center;animation:msaSHero .7s .35s cubic-bezier(.2,1.4,.4,1) both}
-.msa-fin-hero img{display:block;width:200px;height:200px;object-fit:contain;margin:0 auto;filter:drop-shadow(0 8px 14px #000a)}
-.msa-fin.w .msa-fin-hero img{animation:msaSHop 1.1s 1.1s ease-in-out infinite}
-.msa-fin.l .msa-fin-hero img{filter:grayscale(.5) brightness(.75) drop-shadow(0 8px 14px #000a)}
-.msa-fin-hero em{display:inline-block;margin-top:2px;font-style:normal;font-size:14px;font-weight:900;background:#0f172acc;border-radius:99px;padding:2px 14px}
-.msa-fin-talk{display:flex;align-items:center;gap:8px;max-width:420px;width:100%;background:#fff;color:#1e1b4b;border-radius:14px;padding:6px 10px 6px 6px;font-size:13px;line-height:1.45;animation:msaSInL .45s 1s ease-out both}
-.msa-fin-talk img{width:48px;height:48px;border-radius:50%;object-fit:cover;object-position:top;flex:none;background:#ede9fe}
-.msa-fin-talk b{display:block;font-size:11px;color:#be185d}
+.msa-final{position:fixed;inset:0;z-index:9700;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:16px;background:#160f2e center/cover no-repeat;color:#fff;cursor:pointer;overflow:hidden;animation:msaSFade .35s ease-out both}
+.msa-final:before{content:"";position:absolute;inset:0;background:radial-gradient(circle at 50% 45%,#0000 0,#0009 70%)}
+.msa-final.l:before{background:linear-gradient(180deg,#0f172acc,#020617ee)}
+.msa-final>*{position:relative}
+.msa-final-rays{position:absolute!important;left:50%;top:44%;width:640px;height:640px;margin:-320px 0 0 -320px;border-radius:50%;background:repeating-conic-gradient(#fde04700 0 9deg,#fde04740 9deg 18deg);-webkit-mask:radial-gradient(circle,#000 18%,#0000 66%);mask:radial-gradient(circle,#000 18%,#0000 66%);animation:msaSSpin 8s linear infinite}
+.msa-final-big{font-size:58px;font-weight:900;font-style:italic;letter-spacing:.04em;color:#fde047;text-shadow:3px 0 0 #92400e,-3px 0 0 #92400e,0 -3px 0 #92400e,0 5px 0 #92400e,0 0 24px #fde047aa;animation:msaSStamp .6s .15s cubic-bezier(.2,1.6,.4,1) both}
+.msa-final.l .msa-final-big{color:#cbd5e1;text-shadow:3px 0 0 #334155,-3px 0 0 #334155,0 -3px 0 #334155,0 5px 0 #1e293b;animation:msaSDrop .7s .1s ease-out both}
+.msa-final.d .msa-final-big{color:#e2e8f0;text-shadow:0 4px 0 #475569}
+.msa-final-sub{font-size:12px;font-weight:900;background:#0f172acc;border-radius:99px;padding:3px 14px;animation:msaSFade .4s .5s both}
+.msa-final-hero{text-align:center;animation:msaSHero .7s .35s cubic-bezier(.2,1.4,.4,1) both}
+.msa-final-hero img{display:block;width:200px;height:200px;object-fit:contain;margin:0 auto;filter:drop-shadow(0 8px 14px #000a)}
+.msa-final.w .msa-final-hero img{animation:msaSHop 1.1s 1.1s ease-in-out infinite}
+.msa-final.l .msa-final-hero img{filter:grayscale(.5) brightness(.75) drop-shadow(0 8px 14px #000a)}
+.msa-final-hero em{display:inline-block;margin-top:2px;font-style:normal;font-size:14px;font-weight:900;background:#0f172acc;border-radius:99px;padding:2px 14px}
+.msa-final-talk{display:flex;align-items:center;gap:8px;max-width:420px;width:100%;background:#fff;color:#1e1b4b;border-radius:14px;padding:6px 10px 6px 6px;font-size:13px;line-height:1.45;animation:msaSInL .45s 1s ease-out both}
+.msa-final-talk img{width:48px;height:48px;border-radius:50%;object-fit:cover;object-position:top;flex:none;background:#ede9fe}
+.msa-final-talk b{display:block;font-size:11px;color:#be185d}
 @keyframes msaSFade{from{opacity:0}to{opacity:1}}
 @keyframes msaSDrop{0%{opacity:0;transform:translateY(-30px) scale(1.3)}100%{opacity:1;transform:none}}
 @keyframes msaSInL{from{opacity:0;transform:translateX(-60px)}to{opacity:1;transform:none}}
@@ -911,8 +911,8 @@ const MSA_SHOW_CSS = `
 @keyframes msaSHero{0%{opacity:0;transform:translateY(40px) scale(.6)}100%{opacity:1;transform:none}}
 @keyframes msaSHop{0%,100%{transform:none}30%{transform:translateY(-14px)}50%{transform:none}}
 .msa-tap{text-align:center;font-size:12px;font-weight:900;color:#fde68a;margin-top:6px;animation:msaSBlink 1.2s 2s ease-in-out infinite both}
-@media (prefers-reduced-motion:reduce){.msa-fin,.msa-fin *,.msa-next,.msa-call{animation:none!important}}
-@media (max-height:640px){.msa-fin-hero img{width:140px;height:140px}.msa-fin-big{font-size:44px}}
+@media (prefers-reduced-motion:reduce){.msa-final,.msa-final *,.msa-next,.msa-call{animation:none!important}}
+@media (max-height:640px){.msa-final-hero img{width:140px;height:140px}.msa-final-big{font-size:44px}}
 `;
 // 倒れたあとに次のモンスターが出る所(NEXT の区切りを出す・少し間を取る)
 const msaIsNext = (log, k) => { const e = log[k]; if (!e || e.ev !== 'enter' || !e.side) return false; for (let j = k - 1; j >= 1; j--) if (log[j].ev === 'ko') return true; return false; };
@@ -963,12 +963,12 @@ function MsaFinish({ win, hero, rounds, reason, coach, venueImg, onGo }) {
   }, []);
   const k = win === 'A' ? 'w' : win === 'draw' ? 'd' : 'l';
   return (
-    <div className={`msa-fin ${k}`} data-msa-finish={k === 'w' ? 'win' : k === 'd' ? 'draw' : 'lose'} onClick={go} role="button" aria-label="結果を見る" style={venueImg ? { backgroundImage: `url(${venueImg})` } : null}>
-      {k === 'w' && <i className="msa-fin-rays" aria-hidden="true"/>}
-      <div className="msa-fin-big">{k === 'w' ? 'WIN!' : k === 'd' ? 'DRAW' : 'LOSE…'}</div>
-      <div className="msa-fin-sub">{k === 'w' ? '勝利!' : k === 'd' ? '引き分け' : '敗北'}・{rounds} ラウンド・{reason === 'judge' ? '判定' : '全滅で決着'}</div>
-      {hero && <div className="msa-fin-hero"><img src={mscMonImg(hero.species)} alt=""/><em>{k === 'w' ? 'MVP' : '勝者'} {hero.name}</em></div>}
-      {coach && coach.line ? <div className="msa-fin-talk">{coach.face ? <img src={coach.face} alt=""/> : null}<p>{coach.name ? <b>{coach.name}</b> : null}{coach.line}</p></div> : null}
+    <div className={`msa-final ${k}`} data-msa-finish={k === 'w' ? 'win' : k === 'd' ? 'draw' : 'lose'} onClick={go} role="button" aria-label="結果を見る" style={venueImg ? { backgroundImage: `url(${venueImg})` } : null}>
+      {k === 'w' && <i className="msa-final-rays" aria-hidden="true"/>}
+      <div className="msa-final-big">{k === 'w' ? 'WIN!' : k === 'd' ? 'DRAW' : 'LOSE…'}</div>
+      <div className="msa-final-sub">{k === 'w' ? '勝利!' : k === 'd' ? '引き分け' : '敗北'}・{rounds} ラウンド・{reason === 'judge' ? '判定' : '全滅で決着'}</div>
+      {hero && <div className="msa-final-hero"><img src={mscMonImg(hero.species)} alt=""/><em>{k === 'w' ? 'MVP' : '勝者'} {hero.name}</em></div>}
+      {coach && coach.line ? <div className="msa-final-talk">{coach.face ? <img src={coach.face} alt=""/> : null}<p>{coach.name ? <b>{coach.name}</b> : null}{coach.line}</p></div> : null}
       <div className="msa-tap">タップで結果へ ▶</div>
     </div>
   );
