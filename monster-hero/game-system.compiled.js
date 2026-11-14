@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b1fc8146c515415f
+// source-sha256: fc06df1279da3581
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -114015,6 +114015,28 @@ function AssistantLifeRoomSheet({
       disabled: !!bi.disabled,
       why: bi.why || ''
     });
+  })(), (() => {
+    let si = null;
+    try {
+      si = typeof assistantLifeSuccessRowInfo === 'function' ? assistantLifeSuccessRowInfo(id) : null;
+    } catch (_) {
+      si = null;
+    }
+    if (!si) return null;
+    return React.createElement(AssistantLifeDoRow, {
+      k: "monhero-success",
+      icon: "🌱",
+      label: si.label.replace(/^🌱\s*/, ''),
+      sub: si.sub,
+      on: () => {
+        try {
+          assistantLifeSuccessOpen({
+            assistantId: id,
+            from: 'room'
+          });
+        } catch (_) {}
+      }
+    });
   })(), soloOn && React.createElement(AssistantLifeDoRow, {
     k: "give-solo",
     icon: "🎁",
@@ -117006,6 +117028,31 @@ function AssistantLifeTownMap({
       },
       className: "rounded-xl bg-gradient-to-r from-amber-500 to-rose-500 min-h-[44px] px-2 py-1 text-[12px] font-black text-white active:scale-95 disabled:opacity-50"
     }, bi.label || '⚔ マスモンで対戦(β)');
+    let si = null;
+    if (place === 'battle') {
+      try {
+        si = typeof assistantLifeSuccessRowInfo === 'function' ? assistantLifeSuccessRowInfo(id) : null;
+      } catch (_) {
+        si = null;
+      }
+    }
+    const successBtn = si && React.createElement("button", {
+      type: "button",
+      title: si.sub,
+      "data-assistant-life-map-act": "monhero-success",
+      onClick: () => {
+        setSheet(null);
+        try {
+          assistantLifeSuccessOpen({
+            assistantId: id,
+            from: 'place'
+          });
+        } catch (_) {}
+      },
+      className: "w-full rounded-xl bg-gradient-to-r from-emerald-600 to-lime-600 min-h-[44px] px-2 py-1 text-[12px] font-black text-white active:scale-95"
+    }, si.label, React.createElement("span", {
+      className: "ml-1 text-[10px] font-bold text-emerald-50"
+    }, si.sub));
     const tiLine = ti && (ti.today ? `🥋 ${ti.today.nick}・${ti.today.kind}${ti.today.learned ? ` NEW ${ti.today.learned}を覚えた` : ''}${ti.today.main ? ` ・ ${ti.today.main} 熟練 +${ti.today.gain}` : ''}` : '🥋 きょうはまだ修行していません');
     return React.createElement("div", {
       key: id,
@@ -117154,7 +117201,7 @@ function AssistantLifeTownMap({
       className: "rounded-xl bg-emerald-700 min-h-[44px] px-1 py-1 text-[12px] font-black leading-tight text-white active:scale-95 disabled:opacity-50"
     }, "📣 応援する", React.createElement("span", {
       className: "block text-[10px] font-bold"
-    }, "今日", ti.perDay - ti.left, "/", ti.perDay)), battleBtn), ti && !ti.canCheer && ti.why && React.createElement("p", {
+    }, "今日", ti.perDay - ti.left, "/", ti.perDay)), battleBtn), successBtn, ti && !ti.canCheer && ti.why && React.createElement("p", {
       className: "w-full text-[10.5px] font-bold text-slate-300",
       "data-assistant-life-map-cheer-why": id
     }, ti.why), cheerMsg && cheerMsg.id === id && cheerMsg.text && React.createElement("p", {
@@ -117552,6 +117599,71 @@ function AssistantLifeFindCard() {
     onClick: close,
     className: "shrink-0 rounded-lg border border-amber-300/60 px-2 py-1 text-[11px] font-black text-amber-100 active:scale-95"
   }, "閉じる"));
+}
+const ALSX_HOST = {
+  open: null,
+  subs: new Set(),
+  set(v) {
+    this.open = v;
+    this.subs.forEach(f => {
+      try {
+        f(v);
+      } catch (_) {}
+    });
+  }
+};
+const assistantLifeSuccessOn = () => {
+  try {
+    return typeof msxReleased === 'function' && !!msxReleased() && typeof MonheroSuccessScreen === 'function';
+  } catch (_) {
+    return false;
+  }
+};
+const assistantLifeSuccessOpen = (opts = {}) => {
+  if (!assistantLifeSuccessOn()) return false;
+  const o = opts && typeof opts === 'object' ? opts : {};
+  ALSX_HOST.set({
+    assistantId: typeof o.assistantId === 'string' ? o.assistantId : '',
+    from: typeof o.from === 'string' ? o.from : 'room',
+    at: Date.now()
+  });
+  return true;
+};
+const assistantLifeSuccessRowInfo = assistantId => {
+  if (!assistantLifeSuccessOn()) return null;
+  const open = (typeof MSX_SCENARIOS !== 'undefined' && Array.isArray(MSX_SCENARIOS) ? MSX_SCENARIOS : []).filter(x => x && (typeof msxBetaAidOk !== 'function' || msxBetaAidOk(x.aid))).map(x => x.aid);
+  const own = open.includes(assistantId);
+  const name = typeof assistantById === 'function' && assistantById(assistantId) ? assistantById(assistantId).name : '';
+  return {
+    label: '🌱 モンヒロサクセス(β)',
+    sub: own ? `${name}編でモンスターを育てる` : 'モンスターを育てる(いまはみゅあ編だけ)'
+  };
+};
+function AssistantLifeSuccessHost({
+  callNameOf,
+  bondLvOf,
+  onOpenChange
+}) {
+  const [open, setOpen] = useState(ALSX_HOST.open);
+  useEffect(() => {
+    const f = v => setOpen(v);
+    ALSX_HOST.subs.add(f);
+    return () => {
+      ALSX_HOST.subs.delete(f);
+    };
+  }, []);
+  useEffect(() => {
+    try {
+      if (onOpenChange) onOpenChange(!!open);
+    } catch (_) {}
+  }, [!!open]);
+  if (!open || !assistantLifeSuccessOn()) return null;
+  return React.createElement(MonheroSuccessScreen, {
+    key: open.at,
+    onClose: () => ALSX_HOST.set(null),
+    callNameOf: callNameOf,
+    bondLvOf: bondLvOf
+  });
 }
 const ASSISTANT_LIFE_ROOM_FRONT = Object.freeze({
   mua: 'sofa',
@@ -240776,7 +240888,11 @@ function MonsterHeroGame() {
       }) : null
     }), masmonBattleWatchOpen && typeof AssistantMasmonBattleWatch === 'function' && React.createElement(AssistantMasmonBattleWatch, {
       onClose: () => setMasmonBattleWatchOpen(false)
-    }), typeof AssistantMasmonBattleHost === 'function' && React.createElement(AssistantMasmonBattleHost, null), assistantChatOpen && activeAssistant && (() => {
+    }), typeof AssistantMasmonBattleHost === 'function' && React.createElement(AssistantMasmonBattleHost, null), typeof AssistantLifeSuccessHost === 'function' && React.createElement(AssistantLifeSuccessHost, {
+      onOpenChange: setSuccessScreenOpen,
+      callNameOf: id => assistantCallName(breederName, assistantBondLevelOf(normalizeAssistantBond(assistantBondsRef.current[id]).points), assistantCallStyles[id] || null, id),
+      bondLvOf: id => assistantBondLevelOf(normalizeAssistantBond(assistantBondsRef.current[id]).points)
+    }), assistantChatOpen && activeAssistant && (() => {
       const chatWho = assistantChatWith && ASSISTANT_LIST.find(a => a.id === assistantChatWith.id) || activeAssistant;
       const id = chatWho.id;
       const lv = id === activeAssistant.id ? assistantBondLevelNow : assistantBondLevelOf(normalizeAssistantBond(assistantBonds[id]).points);
