@@ -48,6 +48,16 @@ SPLIT_SHEETS = {
 }
 
 
+# えるびん(2026-11-15 社長から)。1024×1536 に 2×2(1体 512×768)。通常は背後の茶色い光(半透明)・石油王はふちの赤いにじみを仕上げで取る。
+#   キー → [(シート, [表情…(左上・右上・左下・右下)], 段の切れ目の行, 列の切れ目)]。倍率は ふつう(normal)の体を基準(SELF_BASE と同じ考え方)
+GRID_SHEETS = {
+    'erubin': [('erubin-normal-sheet1.png', ['normal', 'happy', 'wink', 'surprise'], 768, 512),
+               ('erubin-normal-sheet2.png', ['troubled', 'angry', 'crying', 'excited'], 768, 512)],
+    'erubin:sekiyuou': [('erubin-sekiyuou-sheet1.png', ['normal', 'happy', 'wink', 'surprise'], 768, 512),
+                        ('erubin-sekiyuou-sheet2.png', ['troubled', 'angry', 'crying', 'excited'], 768, 512)],
+}
+
+
 def split_cells(file, cut_y, cut_x):
     """2×2 のシートを、空いた行 cut_y と空いた列 cut_x(上の段・下の段で違うときは (上, 下))で4つに分ける。"""
     a = np.array(Image.open(os.path.join(SRC, file)).convert('RGBA'))
@@ -731,6 +741,20 @@ def main():
                 jobs.append(('%s__%s' % (key.replace(':', '_'), e),
                              lambda arr=arr: clean(None, min_frac=0.004, arr=arr, glow_cut=True, soft=1.0),
                              ((lambda arr0=cells[0][1]: fit_scale(arr_to_im(arr0))) if key in SELF_BASE else (lambda key=key, ratio=ratio: fit_scale(make_art(key)) * ratio))))
+    for key, sheets in GRID_SHEETS.items():
+        if only and key.replace(':', '_') != only:
+            continue
+        base_name = key.replace(':', '_')
+        cells = [(e, arr) for file, exprs, cy, cx in sheets for e, arr in zip(exprs, split_cells(file, cy, cx))]
+        base_arr = cells[0][1]
+        for e, arr in cells:
+            arr[..., 3] = np.where(arr[..., 3] >= 245, 255, arr[..., 3])
+            # となりの段・列の体のかけら(シートの切れ目で切れた靴の先など)を消す: 体の最大の塊から離れた小さい塊を捨てる
+            main = dil(label_keep(arr[..., 3] > 40, 0.3), 4)
+            arr[..., 3] = np.where(main, arr[..., 3], 0)
+            jobs.append(('%s__%s' % (base_name, e),
+                         lambda arr=arr, key=key: clean(None, min_frac=0.004, arr=arr, glow_cut=True, soft=1.0, halo=(key == 'erubin:sekiyuou')),
+                         (lambda base_arr=base_arr: fit_scale(Image.fromarray(base_arr)))))
     for key, sheets in SPLIT_SHEETS.items():
         base_name = key.replace(':', '_')
         for file, exprs, cy, cx in sheets:
