@@ -327,7 +327,7 @@ function AssistantLifeRoomEditor({ id, land = false, room = {}, onClose }) {
       </div>
       <div className="flex items-center gap-1.5">
         <button type="button" data-assistant-life-layout-omakase disabled={got.length === 0} onClick={omakase} className="min-h-[44px] flex-1 rounded-xl bg-gradient-to-r from-pink-500 to-rose-500 px-2 text-[12.5px] font-black text-white shadow active:scale-95 disabled:opacity-40">🎀 {who.name}におまかせ</button>
-        <button type="button" data-assistant-life-layout-undo onClick={() => { if (first.current) commit(first.current); setSel(null); }} className="min-h-[44px] shrink-0 rounded-xl border border-slate-500 px-2.5 text-[12px] font-black text-slate-200 active:scale-95">もとに戻す</button>
+        <button type="button" data-assistant-life-layout-undo onClick={() => { if (first.current) commit(first.current); setSel(null); }} className="min-h-[44px] shrink-0 rounded-xl border border-slate-500 px-2.5 text-[12px] font-black text-slate-200 active:scale-95">元に戻す</button>
         <button type="button" data-assistant-life-layout-done onClick={onClose} className="min-h-[44px] shrink-0 rounded-xl bg-emerald-600 px-3 text-[12.5px] font-black text-white shadow active:scale-95">✓ できた</button>
       </div>
     </div>);
