@@ -278,10 +278,15 @@ const AMBB_CSS = `
 .ambw.ambb-full [data-ambb-watch]{flex:1;min-height:0;display:flex;flex-direction:column}
 .ambw.ambb-full .ambb-stagewrap{flex:1;min-height:0;display:flex;flex-direction:column;margin-top:6px!important}
 .ambw.ambb-full .ambb-stagewrap .msa-stage{flex:1}
+.ambb-stagewrap{position:relative}
+.ambb-foe-tech{position:absolute;right:8px;top:104px;z-index:6;min-height:30px;padding:2px 10px;border-radius:15px;border:1px solid rgba(255,255,255,.35);background:rgba(15,10,40,.78);color:#fff;font-size:11.5px;font-weight:900;white-space:nowrap}
 .ambw.ambb-full [data-ambb-watch]>*:not(.ambb-stagewrap){flex-shrink:0}
-.ambw.ambb-full .ambw-log{margin-top:6px;padding:5px 8px;min-height:44px}
-.ambw.ambb-full .ambw-log p:nth-last-child(n+3){display:none}
-.ambw.ambb-full .ambw-seek{margin-top:8px}
+.ambw.ambb-full .ambw-log{margin-top:4px;padding:4px 8px;min-height:0}
+.ambw.ambb-full .ambw-log p:not(:last-of-type){display:none}
+.ambw.ambb-full .ambw-log .ambb-why{margin-top:3px;gap:6px}
+.ambw.ambb-full .ambw-log .ambb-why .ambw-face{width:22px;height:22px}
+.ambw.ambb-full .ambw-log .ambb-why .ambw-bubble{padding:3px 8px;font-size:11.5px;line-height:1.35}
+.ambw.ambb-full .ambw-seek{margin-top:10px}
 .ambw.ambb-full .ambw-ctl{margin-top:8px;flex-wrap:nowrap;gap:4px;justify-content:center}
 .ambw.ambb-full .ambw-ctl button{min-height:38px;padding:4px 8px;font-size:12px;white-space:nowrap;min-width:0}
 .ambw.ambb-full .ambw-top{min-height:34px}
@@ -292,9 +297,9 @@ const AMBB_CSS = `
 .ambw.ambb-full .ambb-bar-wrap .msxm-btn small{white-space:nowrap}
 .ambw.ambb-full .ambb-bar-wrap .msxm-sec{margin-top:5px}
 .ambw.ambb-full .ambb-bar-wrap .msxm-foot{margin-top:5px}
-.ambw.ambb-full [data-ambw-panel]{padding:6px 8px;margin-top:6px}
+.ambw.ambb-full [data-ambw-panel]{padding:5px 8px;margin-top:4px}
 .ambw.ambb-full [data-ambw-panel]>.ambw-row+.ambw-row{display:none}
-.ambw.ambb-full [data-ambw-panel] .ambw-face{width:28px;height:28px}
+.ambw.ambb-full [data-ambw-panel] .ambw-face{width:24px;height:24px}
 .ambw.ambb-full [data-ambw-panel] .ambw-small{display:none}
 .ambw.ambb-full [data-ambw-panel] .ambw-chips{margin-top:5px}
 /* 背の低い画面(高さ740以下)では全画面の詰め方をやめ、場は決まった高さ・画面ごと縦にスクロール(ミハリ6 #5891: 場が手動の帯に重なった) */
@@ -934,13 +939,13 @@ function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, preview, tryPv
             </div>
           </div>
         )}
-        {!review && <AmbwPanel side="B" catalog={catalog} teams={{ A: battle.teamA, B: battle.teamB }} team={battle.teamB} frame={shownF || f} maxHp={battle.maxHp} moves={battle.moves.B} lastMove={e.side === 'B' && e.ev === 'tech' ? e.move : null} mine={false} cards onOpen={(sd, d) => setTechList({ side: sd, d })}/>}
         {/* 場は試合の画面と同じ部品(立ち位置・技の動き・数字・音。56-monhero-success-arena.jsx の MsaStage。2026-11-12 社長「ちゃんとバトル部分作りこんで」) */}
         {review ? null : typeof MsaStage === 'function' ? (
           <div className="msa ambb-stagewrap" style={{ marginTop: 8 }}><style>{MSA_CSS}</style>
             <MsaStage key={opening ? 'op' : 'go'} log={log} frames={battle.frames} pos={pos} teams={{ A: battle.teamA, B: battle.teamB }} venueImg={venue}
               ended={finish} win={battle.r.winner} endSub={finish ? `${battle.r.rounds} ラウンド` : ''} sound={phase === 'watch' && !paused && !opening}
               introTitle={battle.teamA.members.length > 1 ? '先頭どうし' : (battle.pvp ? 'フレンド対戦' : 'マスモン対戦')} speedF={{ x1: 1, x2: 0.55, x4: 0.3 }[speed] || 1} fill lite={lite}/>
+            <button type="button" className="ambb-foe-tech" data-ambb-foe-tech onClick={() => setTechList({ side: 'B', d: null })}>👀 相手の技</button>
             {nextOn && (() => {
               const sd = e.side, t = sd === 'A' ? battle.teamA : battle.teamB, fr = battle.frames[pos] || f;
               return <MsaNext key={`nx-${pos}`} side={sd} name={who(sd, e.i)} hp={fr.hp} names={{ A: me.name, B: foeName }} face={ambbFace(t.assistantId, 'normal')} line={ambbTalk(t.assistantId, 'next', who(sd, e.i))}/>;
@@ -964,7 +969,7 @@ function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, preview, tryPv
             {call && <div key={`call-${call.at}`} className={`msa-call ${call.k}`} data-msa-call={call.k}>🎙 {call.t}</div>}
             {recent.map(x => <p key={x.k} className={x.side}><small>R{x.r}</small>{x.t}</p>)}
             {actor && e.why && WHY[e.why] && (
-              <div className="ambw-row" style={{ marginTop: 6 }}><img className="ambw-face" src={assistantFaceSrc(actor, 'normal')} alt=""/><div className="ambw-bubble">{actor.name}「{WHY[e.why]}」</div></div>
+              <div className="ambw-row ambb-why" style={{ marginTop: 6 }}><img className="ambw-face" src={assistantFaceSrc(actor, 'normal')} alt=""/><div className="ambw-bubble">{actor.name}「{WHY[e.why]}」</div></div>
             )}
           </div>
         )}
