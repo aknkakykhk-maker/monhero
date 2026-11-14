@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 33c5b1c5dbe18db6
+// source-sha256: d9be2b050cc306ee
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -108600,7 +108600,33 @@ function AssistantPeerMap({
     style: v2 ? {
       wordBreak: 'auto-phrase'
     } : undefined
-  }, "助手どうしも仲良くなります。", assistantPeerLvLabel(3), " になった2人は線で結ばれます。ペアを押すと思い出アルバムが開きます。"), !assistantPeerLifeOn() && dailyPair && dailyPair.every(id => ids.includes(id)) && React.createElement("button", {
+  }, "助手どうしも仲良くなります。", assistantPeerLvLabel(3), " になった2人は線で結ばれます。ペアを押すと思い出アルバムが開きます。"), v2 && React.createElement("div", {
+    "data-assistant-peer-legend": true,
+    className: "mb-2 rounded-xl border border-white/10 bg-slate-900/70 px-2.5 py-2"
+  }, React.createElement("p", {
+    className: "text-[11.5px] font-black text-slate-100"
+  }, "線の見方(太さ・色=友情Lv。数字は Lv)"), React.createElement("div", {
+    className: "mt-1 flex flex-wrap gap-1"
+  }, [['Lv3', '#93c5fd', 3], ['Lv4', '#c4b5fd', 4], ['Lv5〜6', '#f9a8d4', 5], ['Lv7〜8', '#fcd34d', 7], ['Lv9〜', '#fde68a', 9]].map(([t, c, n]) => React.createElement("span", {
+    key: t,
+    className: "inline-flex items-center gap-1 rounded-full bg-slate-800 px-2 py-0.5 text-[11px] font-black text-slate-100"
+  }, React.createElement("i", {
+    className: "inline-block w-5 rounded-full",
+    style: {
+      background: c,
+      height: Math.min(8, n * 0.9)
+    }
+  }), t))), React.createElement("p", {
+    className: "mt-1 text-[11.5px] font-bold leading-snug text-slate-200",
+    style: {
+      wordBreak: 'auto-phrase'
+    }
+  }, "Lv1〜2 はまだ線がありません。Lv3 で線が結ばれます。線や下のペアを押すと、そのペアの思い出アルバムが開きます。"), React.createElement("p", {
+    className: "mt-1 text-[11.5px] font-bold leading-snug text-emerald-200",
+    style: {
+      wordBreak: 'auto-phrase'
+    }
+  }, "友情ポイントがたまる: 掛け合いを見る +2・返事をする +3・おやつ屋さんや広場で一緒に過ごす +2・贈り物(いちばん多くて +45)。「あと」はこのポイントです。")), !assistantPeerLifeOn() && dailyPair && dailyPair.every(id => ids.includes(id)) && React.createElement("button", {
     type: "button",
     "data-assistant-peer-daily": true,
     onClick: () => setAlbumPair(dailyPair),
@@ -108624,6 +108650,9 @@ function AssistantPeerMap({
     width: size,
     height: size,
     className: "absolute inset-0",
+    style: v2 ? {
+      pointerEvents: 'none'
+    } : undefined,
     "aria-hidden": "true"
   }, rows.filter(x => x.lv >= 3).map(x => React.createElement("line", {
     key: `${x.a}-${x.b}`,
@@ -108653,7 +108682,73 @@ function AssistantPeerMap({
     }), React.createElement("span", {
       className: `mt-0.5 whitespace-nowrap ${v2 ? 'text-[10.5px]' : 'text-[9px]'} font-black text-slate-200`
     }, who.name));
-  })), React.createElement("div", {
+  }), v2 && React.createElement("svg", {
+    width: size,
+    height: size,
+    className: "absolute inset-0",
+    style: {
+      pointerEvents: 'none'
+    }
+  }, v2 && (() => {
+    const put = [];
+    return rows.filter(x => x.lv >= 3).map(x => {
+      const at = t => ({
+        x: pos[x.a].x + (pos[x.b].x - pos[x.a].x) * t,
+        y: pos[x.a].y + (pos[x.b].y - pos[x.a].y) * t
+      });
+      const hit = q => ids.some(id => Math.abs(q.x - pos[id].x) < 38 && q.y > pos[id].y - 32 && q.y < pos[id].y + 40) || put.some(o => Math.abs(q.x - o.x) < 30 && Math.abs(q.y - o.y) < 18);
+      const dx = pos[x.b].x - pos[x.a].x,
+        dy = pos[x.b].y - pos[x.a].y,
+        dl = Math.hypot(dx, dy) || 1,
+        nx = -dy / dl,
+        ny = dx / dl;
+      const cand = [];
+      for (const t of [0.5, 0.4, 0.6, 0.33, 0.67, 0.27, 0.73]) for (const o of [0, 16, -16, 26, -26]) {
+        const c = at(t);
+        cand.push({
+          x: c.x + nx * o,
+          y: c.y + ny * o
+        });
+      }
+      const inside = c => c.x > 16 && c.x < size - 16 && c.y > 8 && c.y < size - 8;
+      const q = cand.find(c => inside(c) && !hit(c)) || at(0.5);
+      put.push(q);
+      const mx = q.x,
+        my = q.y;
+      return React.createElement("g", {
+        key: `t-${x.a}-${x.b}`,
+        "data-assistant-peer-link-lv": assistantPeerPairKey(x.a, x.b),
+        style: {
+          pointerEvents: 'auto',
+          cursor: 'pointer'
+        },
+        onClick: () => setAlbumPair([x.a, x.b])
+      }, React.createElement("line", {
+        x1: pos[x.a].x,
+        y1: pos[x.a].y,
+        x2: pos[x.b].x,
+        y2: pos[x.b].y,
+        stroke: "transparent",
+        strokeWidth: "22"
+      }), React.createElement("rect", {
+        x: mx - 13,
+        y: my - 8,
+        width: "26",
+        height: "16",
+        rx: "8",
+        fill: "#0f172a",
+        stroke: lineColor(x.lv),
+        strokeWidth: "1.5"
+      }), React.createElement("text", {
+        x: mx,
+        y: my + 3.5,
+        textAnchor: "middle",
+        fontSize: "10",
+        fontWeight: "900",
+        fill: "#fff"
+      }, "Lv", x.lv));
+    });
+  })())), React.createElement("div", {
     className: "mt-3 space-y-1"
   }, (showAll ? rows : rows.slice(0, 6)).map(x => {
     const A = assistantById(x.a),
@@ -108679,9 +108774,9 @@ function AssistantPeerMap({
         className: "text-[12px] font-black text-slate-300",
         "aria-hidden": "true"
       }, "›")), React.createElement("span", {
-        className: "mt-1 flex items-center gap-2"
+        className: "mt-1 flex items-start gap-2"
       }, React.createElement("span", {
-        className: "h-1.5 w-16 shrink-0 overflow-hidden rounded-full bg-slate-700",
+        className: "mt-1.5 h-1.5 w-16 shrink-0 overflow-hidden rounded-full bg-slate-700",
         "aria-hidden": "true"
       }, React.createElement("span", {
         className: "block h-full bg-pink-400",
@@ -108690,8 +108785,19 @@ function AssistantPeerMap({
         }
       })), React.createElement("span", {
         "data-assistant-peer-next": true,
-        className: "min-w-0 flex-1 truncate text-[11px] font-bold text-emerald-300"
-      }, nextStage ? `あと${nextStage.min - x.pts}で Lv${nextStage.level}${opens ? ` → ${opens}` : `「${assistantPeerStageName(nextStage)}」`}` : '一番上まで来ました')));
+        className: "min-w-0 flex-1 text-[11.5px] font-bold leading-snug text-emerald-300",
+        style: {
+          wordBreak: 'auto-phrase'
+        }
+      }, nextStage ? React.createElement(React.Fragment, null, "あと", React.createElement("b", {
+        className: "text-amber-200"
+      }, nextStage.min - x.pts, "ポイント"), "で Lv", nextStage.level, "「", assistantPeerStageName(nextStage), "」", (() => {
+        const gain = typeof ASSISTANT_LIFE_PEER_LV_GAIN !== 'undefined' && ASSISTANT_LIFE_PEER_LV_GAIN[nextStage.level] || opens;
+        return gain ? React.createElement("span", {
+          "data-assistant-peer-gain": true,
+          className: "block text-emerald-200"
+        }, "Lv", nextStage.level, "になると → ", gain) : null;
+      })()) : '一番上まで来ました')));
     }
     return React.createElement("button", {
       key: `${x.a}-${x.b}`,
@@ -121272,10 +121378,10 @@ function AssistantLifeRewardRoad({
 }) {
   const [all, setAll] = React.useState(false);
   const r = assistantLifeRewardItems(ids, peerSt);
-  const total = r.bond.length + r.masmon.length + r.peer.length;
+  const total = r.bond.length + r.masmon.length;
   if (!total) return null;
   const cut = (list, n) => all ? list : list.slice(0, n);
-  const hidden = r.bond.length - Math.min(3, r.bond.length) + (r.masmon.length - Math.min(2, r.masmon.length)) + (r.peer.length - Math.min(2, r.peer.length));
+  const hidden = r.bond.length - Math.min(3, r.bond.length) + (r.masmon.length - Math.min(2, r.masmon.length));
   const sec = (title, list, n, open) => list.length > 0 && React.createElement("div", {
     key: title
   }, React.createElement("p", {
@@ -121298,7 +121404,7 @@ function AssistantLifeRewardRoad({
     style: {
       wordBreak: 'auto-phrase'
     }
-  }, "💗 仲良し度=あなたと助手・🤝 友情Lv=助手どうし。見守る・贈る・おしゃべりで上がります。「あと」が小さい順です。"), sec('💗 仲良し度(あなたと助手)', r.bond, 3, onRoom), sec('🐾 次に迎えるマスモン', r.masmon, 2, onRoom), sec('🤝 友情Lv(助手どうし)', r.peer, 2, null), r.maxed > 0 && React.createElement("p", {
+  }, "💗 仲良し度=あなたと助手。見守る・贈る・おしゃべりで上がります。「あと」が小さい順です。助手どうしの友情Lvは、下にあります。"), sec('💗 仲良し度(あなたと助手)', r.bond, 3, onRoom), sec('🐾 次に迎えるマスモン', r.masmon, 2, onRoom), r.maxed > 0 && React.createElement("p", {
     className: "mt-1.5 text-[11.5px] font-bold text-slate-300"
   }, "💗 ", r.maxed, "人は、仲良し度がいちばん上まで来ました"), hidden > 0 && React.createElement("button", {
     type: "button",
