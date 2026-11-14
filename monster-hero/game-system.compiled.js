@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 97f38976bcc934fb
+// source-sha256: 61396dd02c5dff87
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -5819,6 +5819,13 @@ const BGM_TRACKS = [{
   gain: 1,
   loop: true
 }, {
+  id: 'monsuc_rest',
+  name: 'モンヒロサクセス 休養',
+  creator: 'オリジナル',
+  src: 'audio/bgm-monsuc-rest.mp3',
+  gain: 1,
+  loop: true
+}, {
   id: 'original_prep',
   name: '強化テーマ',
   creator: 'オリジナル',
@@ -8093,7 +8100,8 @@ const Audio_ = (() => {
     "audio/bgm-monster-hero-theme.mp3": "083a1d9db281",
     "audio/bgm-monster-short.mp3": "415b771e9bbf",
     "audio/bgm-monster.mp3": "6b190639c3fa",
-    "audio/bgm-monsuc-training.mp3": "382505072d6c",
+    "audio/bgm-monsuc-rest.mp3": "b3370581c8fd",
+    "audio/bgm-monsuc-training.mp3": "f91a320ce8c7",
     "audio/bgm-mou-hitotsu-no-sekai-e.mp3": "633ed0ee2501",
     "audio/bgm-nothing-without-you.mp3": "4cb261cf1cd9",
     "audio/bgm-only-my-railgun.mp3": "62fb741fe3f1",

@@ -20,7 +20,7 @@ const audioSrc = read('monster-hero/src/parts/14-audio.jsx');
 const bgmSrc = read('monster-hero/src/parts/13-bgm-and-rhythm-settings.jsx');
 const partSrc = read('monster-hero/src/parts/14-success-sound.jsx');
 
-const REQUIRED = ['main', 'training', 'trainGreat', 'trainOk', 'trainFail', 'trainSkip', 'scold', 'praise', 'trainLvUp', 'ascetic',
+const REQUIRED = ['main', 'training', 'rest', 'trainGreat', 'trainOk', 'trainFail', 'trainSkip', 'scold', 'praise', 'trainLvUp', 'ascetic',
   'cupEntry', 'cupMatch', 'cupWin', 'cupLose', 'issa', 'gameOver', 'retire'];
 const trackIds = new Set([...bgmSrc.matchAll(/\{\s*id:'([a-z0-9_]+)'/g)].map((m) => m[1]));
 const fgStart = audioSrc.indexOf('const fgSe = {');
