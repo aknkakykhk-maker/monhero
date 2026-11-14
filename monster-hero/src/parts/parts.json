@@ -521,6 +521,10 @@
       "role": "部品: モンヒロサクセスの覚醒・超覚醒の見せる部分(バトルカードのキラで絵を包む MsxKira・前触れの光 MsxOmenFx・起きたときの演出 MsxAwakeShow・印 msxKiraOf)。計算は芯 MONHERO_SUCCESS の awakeOpen。何も保存しない・公開の印 monheroSuccess の後ろ"
     },
     {
+      "file": "56-monsuc-birth.jsx",
+      "role": "部品: モンヒロサクセスの育成のはじまりの演出 MsxBirth(ベースモンでも合体円盤石でも、円盤石から生まれる。r1113-008)。新しい育成は phase 'birth' で始まり、終わると 'begin'。何も保存しない・公開の印 monheroSuccess の後ろ"
+    },
+    {
       "file": "56-monsuc-dex.jsx",
       "role": "部品: モンヒロサクセスの見た出来事(新しいキー mh_monsuc_event_seen_v1 = { v:1, ch, ev }・msxSeenMark)・選択肢の詳細ボタンの中身 MsxChoiceInfo(芯の出来事の表から効果の文を作る・まだは「？？？」)・イベント図鑑 MsxDex(全体と種類ごとの ◯/◯・見たものは読み直せる)。公開の印 monheroSuccess の後ろ"
     },

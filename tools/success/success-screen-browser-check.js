@@ -120,6 +120,8 @@ const advance = (page, react) => page.evaluate((react) => {
   const all = [...root.querySelectorAll('button')].filter((b) => !b.disabled && b.offsetParent !== null);
   const by = (re, sel) => all.find((b) => (!sel || b.matches(sel)) && re.test((b.innerText || '').replace(/\s+/g, ' ').trim()));
   const press = (b, why) => { if (!b) return null; b.click(); return why; };
+  // 円盤石から生まれる演出(再開したときにも出る): 短縮 → 育成をはじめる
+  if (root.querySelector('[data-msx-birth]')) { const nx = root.querySelector('[data-msx-birth-next]:not([disabled])'); if (nx) return press(nx, 'birth'); const sk = root.querySelector('[data-msx-birth-skip]'); if (sk) return press(sk, 'birth-skip'); }
   // 確かめの小窓(はい/やめておく)
   const ask = root.querySelector('.msx-btn.go'); if (ask && /はい|する|使う|やめる/.test(ask.innerText) && ask.closest('[class*="ask"], [class*="modal"], [class*="sheet"]')) return press(ask, 'ask');
   // 叱る・褒める
@@ -228,6 +230,15 @@ const sameState = (a, b) => {
         }
         check(`${tag}: はじめる6段を通ってメインへ`, steps === 5, `${steps + 1} 段`);
         await page.waitForSelector('.msx[data-msx-view]:not([data-msx-view="home"])', { timeout: 15000 }).catch(() => {});
+        // 円盤石から生まれる演出(2026-11-13 r1113-008): 出たら「短縮」→「育成をはじめる」
+        const birth = await page.evaluate(async () => {
+          if (!document.querySelector('[data-msx-birth]')) return 'none';
+          const sk = document.querySelector('[data-msx-birth-skip]'); if (sk) sk.click();
+          await new Promise((r) => setTimeout(r, 300));
+          const nx = document.querySelector('[data-msx-birth-next]:not([disabled])'); if (nx) { nx.click(); return 'ok'; } return 'stuck';
+        });
+        check(`${tag}: 円盤石から生まれる演出を通る`, birth !== 'stuck', birth);
+        await page.waitForTimeout(400);
         m = await see('main');
         check(`${tag}: 1ターン目のメインが出る`, m.turn === 1, `turn=${m.turn} view=${m.view}`);
         // 数ターン進める
