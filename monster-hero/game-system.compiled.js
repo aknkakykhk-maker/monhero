@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 4c6656f5d7b2a485
+// source-sha256: c75cdb6a8954c2b5
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -164262,6 +164262,8 @@ const msxNormRun = (raw, SUC) => {
     out: msxIsObj(raw.out) ? raw.out : null,
     log: Array.isArray(raw.log) ? raw.log.filter(msxIsObj).slice(-20) : [],
     startAt: msxNum(raw.startAt, 0),
+    beatSent: msxNum(raw.beatSent, 0),
+    beatEnd: raw.beatEnd === true,
     ki: msxIsObj(raw.ki) && Number.isInteger(raw.ki.p) && Number.isFinite(raw.ki.fame) && Number.isFinite(raw.ki.power) ? {
       p: Math.max(0, Math.min(9, raw.ki.p)),
       fame: Math.round(Math.min(1e7, raw.ki.fame * kiFameMul)),
@@ -164419,9 +164421,9 @@ const msxBeatMark = run => {
   } : run;
 };
 let msxSaveChain = Promise.resolve();
-const msxSaveRunNow = async run => {
+const msxSaveRunNow = async (run, noPay) => {
   const sent = Number.isFinite(Number(run && run.beatSent)) ? Math.max(0, Math.floor(Number(run.beatSent))) : 0;
-  if (!sent || typeof saveStoredValuesOrRollback !== 'function' || typeof loadRhythmEventPoints !== 'function' || typeof RHYTHM_EVENT_POINTS_KEY === 'undefined') return storeSet(MSX_KEYS.run, run);
+  if (noPay || !sent || typeof saveStoredValuesOrRollback !== 'function' || typeof loadRhythmEventPoints !== 'function' || typeof RHYTHM_EVENT_POINTS_KEY === 'undefined') return storeSet(MSX_KEYS.run, run);
   const stored = await storeGet(MSX_KEYS.run, null);
   const storedSent = stored && run && stored.id === run.id && Number.isFinite(Number(stored.beatSent)) ? Math.max(0, Math.floor(Number(stored.beatSent))) : 0;
   const add = sent - storedSent;
@@ -164437,8 +164439,8 @@ const msxSaveRunNow = async run => {
     next: run
   }], storeGet, storeSet);
 };
-const msxSaveRun = run => {
-  msxSaveChain = msxSaveChain.then(() => msxSaveRunNow(run)).catch(() => false);
+const msxSaveRun = (run, noPay) => {
+  msxSaveChain = msxSaveChain.then(() => msxSaveRunNow(run, noPay)).catch(() => false);
   return msxSaveChain;
 };
 const msxClearRun = () => {
@@ -166567,7 +166569,7 @@ function MonheroSuccessScreen({
   const setRun = r0 => {
     const r = r0 && typeof msxBeatMark === 'function' ? msxBeatMark(r0) : r0;
     setRunState(r);
-    if (r) msxSaveRun(r);
+    if (r) msxSaveRun(r, !!debug);
   };
   const setMeta = meta => {
     setData(d => ({
@@ -173069,6 +173071,17 @@ function MsxR3Retire({
       lv
     });
     if (AT) assists = AT.normPicks(assists, points).picks;
+    if (!run.beatEnd && SUC && typeof SUC.beatOfEnd === 'function') {
+      const bonus = SUC.beatOfEnd((SUC.evaluate(ws) || {}).rank);
+      setRun({
+        ...run,
+        s: {
+          ...run.s,
+          beatEarned: (Number(run.s.beatEarned) || 0) + bonus
+        },
+        beatEnd: true
+      });
+    }
     let r = null;
     try {
       r = await msxR3Retire({
