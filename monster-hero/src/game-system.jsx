@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 598873e181080b53
+// generated-sha256: 47cf87af76af8b96
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -86326,7 +86326,20 @@ const MSX_CSS = `
 .msx-md-bot{margin-top:6px}
 .msx-md-cap{font-size:12px;font-weight:900;color:#f9a8d4}.msx-md-cap small{font-size:10px;color:#cbd5e1;margin-left:6px;font-weight:700}
 .msx-md-dists{display:grid;grid-template-columns:repeat(5,1fr);gap:2px;margin-top:3px}
-.msx-md-tw{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:6px;background:#0f172a;border-radius:0 0 10px 10px;padding:5px}
+.msx-md-tw{display:grid;grid-template-columns:minmax(0,54%) minmax(0,1fr);gap:6px;background:#0f172a;border-radius:10px;padding:5px;margin-top:3px}
+/* 技の升目(参考 monster-detail-basic): 見出しと升を同じ4列にそろえる */
+.msx-md-tg{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;align-content:start}
+.msx-md-tg .tgh{font-size:10.5px;font-weight:900;text-align:center;border-radius:99px;padding:1px 0;color:#fff}
+.msx-md-tg .tgh.d3{background:#2563eb}.msx-md-tg .tgh.d2{background:#16a34a}.msx-md-tg .tgh.d1{background:#d97706}.msx-md-tg .tgh.d0{background:#dc2626}
+.msx .msx-md-tg .tc,.msx-md-tg .no{position:relative;aspect-ratio:1/1;min-height:0;border-radius:8px;display:flex;align-items:center;justify-content:center}
+.msx .msx-md-tg .tc{background:#3b2a6b;border:1.5px solid #a78bfa;padding:0}
+.msx .msx-md-tg .tc.w{background:#14532d;border-color:#4ade80}
+.msx .msx-md-tg .tc.lk{background:#1e293b;border-color:#475569}
+.msx .msx-md-tg .tc.on{border-color:#fde047;box-shadow:0 0 0 2px #fde047}
+.msx-md-tg .tc .ti{font-size:17px;line-height:1}
+.msx-md-tg .tc .g{position:absolute;right:2px;bottom:0;font-size:10px;font-weight:900;color:#fff;text-shadow:0 1px 2px #000}
+.msx-md-tg .tc.lk .g{color:#94a3b8}
+.msx-md-tg .no{background:#0b0920;border:1px solid #334155;color:#475569;font-size:16px;font-weight:900}
 .msx-md-tl{display:flex;flex-direction:column;gap:3px;max-height:200px;overflow-y:auto}.msx-md-tl>*{flex:none}
 .msx .msx-md-tl button{display:block;text-align:left;border-radius:8px;padding:3px 6px;background:#1e1a36;border:1px solid #334155;color:#cbd5e1}
 .msx .msx-md-tl button.got{color:#fff;border-color:#a78bfa}.msx .msx-md-tl button.on{border-color:#fde047;background:#3b2f0b}
@@ -86953,6 +86966,14 @@ const msxStartPreview = (SUC, species, type, aptBase, startSt) => {
   return out;
 };
 const MSX_DIST_NAMES = ['零', '近', '中', '遠'];
+const MSX_TG_COLS = Object.freeze([3, 2, 1, 0]); // 技の升目の列の並び(参考どおり左から 遠・中・近・零)
+// まだ覚えていない技の覚え方(技表の learn: { start } / { by:修行の系統, st:{ 能力: 数 } })
+const msxTechHow = (t) => {
+  const L = t && t.learn; if (!L) return '修行で覚える';
+  if (L.start) return 'はじめから';
+  const need = L.st && typeof L.st === 'object' ? Object.entries(L.st).map(([k, v]) => `${MSX_STAT_NAME[k] || k}${v}`).join('・') : '';
+  return need ? `修行で覚える(${need}で)` : '修行で覚える';
+};
 const msxLineName = (id) => (id && typeof MONSTER_LINEAGES === 'object' && MONSTER_LINEAGES && MONSTER_LINEAGES[id] ? MONSTER_LINEAGES[id].name : '');
 // モンスターの詳細(2026-11-14 社長の手本 monster-detail-basic の組み立て: 左上に絵・名前・総合力/右上に 基礎・特徴・適性/下に技の一覧と選んだ技の詳細)。
 //   見るだけ。選ぶ画面の「くわしく」と、育成中の場面の「くわしく」で同じ部品を使う。絵・用語・見た目はうちの物
@@ -86961,14 +86982,16 @@ const MSX_STAT_COLOR = Object.freeze({ life: '#facc15', pow: '#f87171', wise: '#
 // head … 名前の横に置く物(マスモンボックスのハート・✏)/ more … 特徴のタブの下に足す行 [[見出し, 中身], …] / foot … 「とじる」の上に置くボタン(貸し出し・お別れ)/ grade … 総合力の横の評価(A2 など)
 function MsxMonDetail({ species, name, art, st, apt, type, peak, grades, known, power, rank, sub, onClose, SUC, head = null, more = null, foot = null, grade: gradeLabel = null }) {
   const [tab, setTab] = useState('base');
-  const [dist, setDist] = useState(-1); // 技の一覧の間合いのしぼり(-1 = 全部)
   const line = typeof MONSTER_LINEAGE_MAP === 'object' && MONSTER_LINEAGE_MAP ? MONSTER_LINEAGE_MAP[species] : null;
   const main = line ? msxLineName(line.main) : ''; const subL = line ? msxLineName(line.sub || line.main) : '';
   const dex = typeof MONSTER_DEX_DESCRIPTIONS === 'object' && MONSTER_DEX_DESCRIPTIONS && MONSTER_DEX_DESCRIPTIONS[species];
   const typeName = type != null && typeof MASMON_CALC !== 'undefined' ? MASMON_CALC.typeOf(type).name : '—';
   const all = typeof SUC.techsOf === 'function' ? SUC.techsOf(species).filter(Boolean) : [];
   const has = (t) => (Array.isArray(known) ? known.includes(t.id) : !!(t.learn && t.learn.start));
-  const list = all.filter((t) => dist < 0 || (Array.isArray(t.dist) && t.dist.includes(dist))).sort((x, y) => (has(y) - has(x)) || (Number(x.rank) || 0) - (Number(y.rank) || 0));
+  const list = all.slice().sort((x, y) => (has(y) - has(x)) || (Number(x.rank) || 0) - (Number(y.rank) || 0));
+  // 間合いごとの列(1つの技が2つの間合いに出ることもある)。覚えた技を上に、そのあとは段の低い順
+  const tgCols = [0, 1, 2, 3].map((d) => list.filter((t) => Array.isArray(t.dist) && t.dist.includes(d)));
+  const tgRows = Math.max(3, ...tgCols.map((c) => c.length));
   const [pickT, setPickT] = useState(() => (all.find(has) || all[0] || {}).id || null);
   const tech = all.find((t) => t.id === pickT) || list[0] || null;
   const grade = (k, v) => (typeof msaTechGrade === 'function' ? msaTechGrade(k, v) : '') || '−';
@@ -87004,24 +87027,28 @@ function MsxMonDetail({ species, name, art, st, apt, type, peak, grades, known, 
                 <div className="msx-note" style={{ marginTop: 4 }}>適性が高い間合いほど、その間合いの技がよく当たる</div></div>) : null}
             </div>
           </div>
+          {/* 技の欄(2026-11-14 社長「今なんの技を覚えてるかわかんない」→ 参考 monster-detail-basic の形): 左から 遠・中・近・零 の4列の升目+右に技の詳細。
+              升の中は技の絵と右下に消費ガッツ。覚えていない技は暗い升に錠、出ない枠は×。升を押すと右に詳細。参考の「移動間合い・技能力・連動能力」はこのゲームに無いので出さない */}
           <div className="msx-md-bot" data-msx-detail-techs>
-            <div className="msx-md-cap">技<small>{Array.isArray(known) ? '★ 覚えている技' : '★ はじめから使える技'}・ほかは修行で覚える</small></div>
-            <div className="msx-md-dists">{[-1, 3, 2, 1, 0].map((d) => <button type="button" key={d} className={dist === d ? 'on' : ''} onClick={() => setDist(d)}>{d < 0 ? '全部' : MSX_DIST_NAMES[d]}</button>)}</div>
+            <div className="msx-md-cap">技<small>{Array.isArray(known) ? '覚えた技' : 'はじめから使える技'} {all.filter(has).length}/{all.length}</small></div>
             <div className="msx-md-tw">
-              <div className="msx-md-tl">{list.length ? list.map((t) => (
-                <button type="button" key={t.id} className={`${tech && tech.id === t.id ? 'on' : ''}${has(t) ? ' got' : ''}`} data-msx-tech={t.id} onClick={() => setPickT(t.id)}>
-                  <b>{has(t) ? '★' : ''}{t.name}</b><small>{t.kind === 'wise' ? '🧠' : '💪'}{(Array.isArray(t.dist) ? t.dist : []).map((d) => MSX_DIST_NAMES[d]).join('')}・ガッツ{t.guts}</small></button>
-              )) : <div className="msx-note">この間合いの技はない</div>}</div>
+              <div className="msx-md-tg">
+                {MSX_TG_COLS.map((d) => <span key={`h${d}`} className={`tgh d${d}`}>{MSX_DIST_NAMES[d]}</span>)}
+                {Array.from({ length: tgRows }).map((_, r) => MSX_TG_COLS.map((d) => { const t = tgCols[d][r];
+                  if (!t) return <span key={`${r}-${d}`} className="no" aria-hidden="true">×</span>;
+                  const got = has(t);
+                  return <button type="button" key={`${r}-${d}`} className={`tc${got ? ' got' : ' lk'}${tech && tech.id === t.id ? ' on' : ''}${t.kind === 'wise' ? ' w' : ''}`} data-msx-tech={t.id} aria-label={`${t.name}${got ? '' : '(まだ覚えていない)'}`} onClick={() => setPickT(t.id)}>
+                    <span className="ti" aria-hidden="true">{got ? (t.kind === 'wise' ? '🧠' : '💪') : '🔒'}</span><span className="g">{t.guts}</span></button>; }))}
+              </div>
               {tech ? (<div className="msx-md-td">
-                <div className="tn">{tech.name}</div>
-                <div className="msx-md-kv"><b>種類</b><span>{tech.kind === 'wise' ? '🧠 かしこさ' : '💪 ちから'}</span></div>
-                <div className="msx-md-kv"><b>間合い</b><span>{(Array.isArray(tech.dist) ? tech.dist : []).map((d) => MSX_DIST_NAMES[d]).join('・') || '—'}</span></div>
+                <div className="tn">{has(tech) ? '' : '🔒 '}{tech.name}</div>
+                <div className="msx-md-kv"><b>技種</b><span>{tech.kind === 'wise' ? 'かしこさ' : 'ちから'}</span></div>
                 <div className="msx-md-kv"><b>消費ガッツ</b><span>{tech.guts}</span></div>
                 <div className="msx-md-kv"><b>ダメージ</b><span className="gd">{grade('power', tech.power)}</span></div>
-                <div className="msx-md-kv"><b>命中</b><span className="gd">{grade('hit', tech.hit)}</span></div>
+                <div className="msx-md-kv"><b>命中率</b><span className="gd">{grade('hit', tech.hit)}</span></div>
                 <div className="msx-md-kv"><b>ガッツダウン</b><span className="gd">{grade('gd', tech.gd)}</span></div>
-                <div className="msx-md-kv"><b>クリティカル</b><span className="gd">{grade('crit', tech.crit)}</span></div>
-                <div className="msx-md-kv"><b>覚え方</b><span>{has(tech) ? (Array.isArray(known) ? '覚えている' : 'はじめから') : '修行で覚える'}</span></div>
+                <div className="msx-md-kv"><b>クリティカル率</b><span className="gd">{grade('crit', tech.crit)}</span></div>
+                <div className="msx-md-kv"><b>覚え方</b><span>{has(tech) ? (Array.isArray(known) ? '覚えている' : 'はじめから') : msxTechHow(tech)}</span></div>
               </div>) : null}
             </div>
           </div>
