@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d20f2e5e64760d85
+// source-sha256: 9a48730ab45b00d4
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -43292,6 +43292,7 @@ const RhythmTapTest = ({
       const songTimeMs = run.audio.songTimeMs();
       RHYTHM_PERF.songTime(songTimeMs);
       RHYTHM_TIMING_DIAG.frame(songTimeMs, typeof run.audio.rawSongTimeMs === 'function' ? run.audio.rawSongTimeMs() : null);
+      rhythmSmoothClockLiveCheck();
       const RHYTHM_MISS_RECLAIM_MS = rhythmMissReclaimMs();
       const travel = measureTravel(),
         visualTime = songTimeMs - settings.judgmentTimingOffsetMs,
@@ -44999,13 +45000,17 @@ const RhythmTapTest = ({
           }
           if (!back && e.type !== 'touchstart') RHYTHM_TOUCH_BRIDGE.touchStart(touch.identifier, touch.clientX, touch.clientY, e.timeStamp, nowPerf, null);
         }
+        const revealedStart = !ownStart;
         if (RHYTHM_TOUCH_BRIDGE.isIgnoredTouch(touch.identifier)) return;
         if (lane !== null && subLaneCoordinate !== null) starts.push({
           lane,
           subLaneCoordinate,
           inputKey,
           sky: rhythmSkyTouch(tp.y, rect),
-          subLaneCoordinateAtLine: rhythmSubLaneCoordinateAtLineIfBelow(tp.x, tp.y, rect)
+          subLaneCoordinateAtLine: rhythmSubLaneCoordinateAtLineIfBelow(tp.x, tp.y, rect),
+          ...(revealedStart ? {
+            revealed: true
+          } : {})
         });else {
           RHYTHM_PERF.touchIgnored();
           (current.outsideStartInputs = current.outsideStartInputs || new Set()).add(inputKey);
@@ -45015,7 +45020,19 @@ const RhythmTapTest = ({
       liveTouchSkySubLanesRef.current = liveSkySubLanes;
       setPressedLanes(pressedLanesNow());
       const ageMs = rhythmInputAgeMs(e.timeStamp, typeof performance !== 'undefined' ? performance.now() : NaN);
-      if (starts.length) inputStarts(starts, ageMs);
+      const revealedStarts = rhythmTouchFixOn('lateStampTypical') ? starts.filter(s => s.revealed) : [];
+      if (!revealedStarts.length) {
+        if (starts.length) inputStarts(starts, ageMs);
+      } else {
+        const ownStarts = starts.filter(s => !s.revealed);
+        if (ownStarts.length) inputStarts(ownStarts, ageMs);
+        RHYTHM_TIMING_DIAG.revealed(true);
+        try {
+          inputStarts(revealedStarts, rhythmRevealedAgeMs(ageMs));
+        } finally {
+          RHYTHM_TIMING_DIAG.revealed(false);
+        }
+      }
       const ended = [];
       Array.from(current.activeTouchInputs).forEach(inputKey => {
         if (live.has(inputKey)) {
