@@ -36,7 +36,10 @@ const STORY_BG_FOREST_EVENING = "images/story-bg/forest_evening.jpg?v=bd1ff69881
 const STORY_BG_FOREST_NIGHT = "images/story-bg/forest_night.jpg?v=c81c56738292";       // 森の奥(夜・蛍)
 const STORY_BG_FOREST_MORNING = "images/story-bg/forest_morning.jpg?v=f4ff723a3e67";   // 森の奥(朝・もや)
 const STORY_BG_DARK_VOID = "images/story-bg/dark_void.jpg?v=6c4987dd8307";             // 暗やみ(心の中・箱の中など。うすい鎖の影と光の粒)
+// モンヒロサクセスの育成場の町の門(2026-11-14 お話「モンヒロサクセス 第1話」)。社長の絵が届くまでは、モンサクのデビュー戦の会場の絵で代える(届いたらここを差し替える)
+const STORY_BG_MONSUC_GATE = "images/success/scenes/venue-debut.png?v=d2380d73411c";
 const STORY_SCENE_IMAGES = Object.freeze({
+  monsuc_gate: STORY_BG_MONSUC_GATE,
   desert_palace: STORY_BG_DESERT_PALACE,
   desert_oilfield: STORY_BG_DESERT_OILFIELD,
   desert_hall: STORY_BG_DESERT_HALL,

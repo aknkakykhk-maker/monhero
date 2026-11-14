@@ -35,6 +35,14 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    // 2026-11-14 社長「β版公開の前に1話(急ぎ)」「更新履歴は第1話の先出しに1件付ける(案の文で)」(窓口経由)。お話は monsuc_beta_ep1(data/assistants.js)
+    date: "2026-11-14 11:32", type:'update', title:'新しいお話「モンヒロサクセス 第1話 ～一番乗りは、だれだ～」', group:'success', status:'new', releaseFlag:'monsucStoryEp1',
+    items:[
+      'HOMEで、助手たちのお話が見られます。',
+      '見のがしたら、プロフィールの「イベント回想」から見られます。',
+    ],
+  },
+  {
     // 2026-11-14 社長「バトル中の背景がサッカー場みたいなのが気になった。参考資料にならって。サッカー場みたいのもオプションで選べるように」。公開前の機能の作業メモなので dev
     date: "2026-11-14 10:32", type:'update', title:'試合の場が闘技場になりました', group:'success', releaseFlag:'monheroSuccess', dev:true,
     items:[
