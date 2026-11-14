@@ -124,6 +124,26 @@ const FAKE_WS = () => {
     check('カードの知らせ: 定型の番号・言葉どちらにも番号が乗る・古い版の知らせはそのまま', pure.cNew && pure.cX && pure.cOld);
     check('助手8人×8表情の顔の絵がすべて決まる', pure.srcs);
     check('モンスターの顔セットの30体の絵が決まる', pure.monsters.length === 0, pure.monsters.join(','));
+    // ===== 自由入力の文字(2026-11-15 r1115-026・社長「A 無料」) =====
+    const free = await A.evaluate(() => {
+      const mk = (slot) => normalizeMultiStamps({ owned: [], slots: [slot] }).slots[0];
+      const long = mk({ f: 'a.kiki.happy', w: 'x', t: '1234567890あいう' });
+      const lines = mk({ f: 'a.kiki.happy', w: 'x', t: 'い\nく\tぞ' });
+      const empty = mk({ f: 'a.kiki.happy', w: 'x', t: '  ' });
+      const keep = mk({ f: 'a.kiki.happy', w: 'w02' });
+      const rLong = rhythmMultiCleanMessage({ t: 'chat', id: 'p1', name: 'た', text: '一二三四五六七八九十', cid: 'c9', sf: 'a.kiki.happy', sw: 'x' });
+      const rOld = multiStampCleanWord('x');
+      const store = multiStampToStore({ owned: [], slots: [{ f: 'a.kiki.happy', w: 'x', t: 'いくぞ！' }, { f: 'a.kiki.happy', w: 'w02' }] });
+      const cX = cardPvpCleanMessage({ t: 'chat', from: 'f', x: '一二三四五六七八九十', sf: 'a.dra.happy', sw: 'x' });
+      return { long: long && long.t, lines: lines && lines.t, empty, keep: keep && !('t' in keep), rLong: rLong && rLong.text, sw: rLong && rLong.sw, rOld, store: JSON.stringify(store.slots), cX: cX && cX.x };
+    });
+    check('自由入力: 全角8文字までに切る', free.long === '12345678', free.long);
+    check('自由入力: 改行・タブは1行の空白にする', free.lines === 'い く ぞ', free.lines);
+    check('自由入力: 空の文字は枠に入らない', free.empty === null);
+    check('自由入力: 決まった言葉の枠は今までの形のまま(t を持たない)', free.keep);
+    check('自由入力: 受け取った文字は8文字に切って番号 x のまま出す(長い文字を札に出さない)', free.rLong === '一二三四五六七八' && free.sw === 'x', `${free.rLong} / ${free.sw}`);
+    check('自由入力: 保存の形(自由入力の枠だけ t を持つ)', free.store === '[{"f":"a.kiki.happy","w":"x","t":"いくぞ！"},{"f":"a.kiki.happy","w":"w02"}]', free.store);
+    check('自由入力: カードの知らせも8文字に切る', free.cX === '一二三四五六七八', free.cX);
     console.log(`  全部そろえるビートP: ${pure.all.toLocaleString()}P`);
     // 絵が実際に読めるか(道が合っているか)
     const broken = await A.evaluate(async () => {
@@ -249,6 +269,35 @@ const FAKE_WS = () => {
       check(`ビート: 席の札のスタンプが札に収まる(${label})`, !fit.none && !fit.bad, fit.none ? '吹き出しが出ない' : `${fit.bad || 'OK'} / 札${fit.card}・絵${fit.img}px`);
     }
     await B.setViewportSize({ width: 390, height: 844 });
+    // 自由入力の文字を、編集画面で打って枠に入れ、送って、相手に届く(2026-11-15 r1115-026)
+    await A.waitForTimeout(2300);
+    await A.locator('[data-multi-stamp-edit-open]').click();
+    await A.waitForSelector('[data-multi-stamp-free-input]', { timeout: 5000 });
+    await A.locator('[data-multi-stamp-slot="6"]').click();
+    await A.locator('[data-multi-stamp-free-input]').fill('いくぞ！はやく来て、みんな');
+    const typed = await A.locator('[data-multi-stamp-free-input]').inputValue();
+    check('自由入力: 入力欄は全角8文字までしか入らない', typed.length === 8, `${typed.length}文字`);
+    if (SHOT) for (const [nm, w, h] of [['390', 390, 844], ['320', 320, 568], ['yoko844', 844, 390]]) { await A.setViewportSize({ width: w, height: h }); await A.waitForTimeout(500); await A.screenshot({ path: path.join(SHOT, `free-editor-${nm}.png`) }); }
+    if (SHOT) await A.setViewportSize({ width: 390, height: 844 });
+    await A.locator('[data-multi-stamp-put]').click();
+    const slotLabel = await A.evaluate(() => { const b = document.querySelector('[data-multi-stamp-slot="6"] b'); return b ? b.textContent : ''; });
+    check('自由入力: 打った文字が枠に入る', slotLabel === typed && typed.length > 0, slotLabel);
+    await A.locator('[data-multi-stamp-editor-close]').click();
+    await A.waitForTimeout(300);
+    await A.locator('[data-multi-stamp-send="6"]').click();
+    const gotFree = await B.waitForFunction((t) => (RHYTHM_MULTI.view().chat || []).some((c) => c.sw === 'x' && c.text === t), typed, { timeout: 8000 }).then(() => true, () => false);
+    check('自由入力: 打った文字のスタンプが相手に届く', gotFree);
+    const freeBubble = await B.evaluate((t) => { const b = document.querySelector('[data-rhythm-multi-stamp-bubble] b'); return b ? b.textContent === t : false; }, typed);
+    check('自由入力: 相手の席の上に、打った文字のスタンプが出る', freeBubble);
+    if (SHOT) {
+      await B.screenshot({ path: path.join(SHOT, 'free-seat-390.png') }); await A.screenshot({ path: path.join(SHOT, 'free-chat-390.png') });
+      for (const [nm, w, h] of [['320', 320, 568], ['yoko844', 844, 390]]) {
+        await A.setViewportSize({ width: w, height: h }); await B.setViewportSize({ width: w, height: h }); await A.waitForTimeout(2300);
+        await A.locator('[data-multi-stamp-send="6"]').click().catch(() => {}); await B.waitForTimeout(500);
+        await B.screenshot({ path: path.join(SHOT, `free-seat-${nm}.png`) }); await A.screenshot({ path: path.join(SHOT, `free-chat-${nm}.png`) });
+      }
+      await A.setViewportSize({ width: 390, height: 844 }); await B.setViewportSize({ width: 390, height: 844 });
+    }
     // 同じスタンプは続けて3回まで
     const same = await A.evaluate(async () => {
       const slot = MULTI_STAMP.get().slots[0];

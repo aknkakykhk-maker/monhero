@@ -289,6 +289,8 @@ const rhythmMultiCleanMessage = (raw) => {
     const sf = typeof multiStampCleanFace === 'function' ? multiStampCleanFace(raw.sf) : null;
     const sw = typeof multiStampCleanWord === 'function' ? multiStampCleanWord(raw.sw) : null;
     if (sf && sw) { out.sf = sf; out.sw = sw; }
+    // 自由入力のスタンプ(sw が 'x')の文字は、受け取る側でも全角8文字・1行へそろえる(2026-11-15 r1115-026。改造した相手が長い文字を送っても札に出さない)
+    if (out.sw === 'x' && typeof multiStampCleanText === 'function') out.text = multiStampCleanText(out.text);
     return out.text && out.cid ? out : null;
   }
   if (raw.t === 'bye') return out;
@@ -1413,7 +1415,10 @@ const RHYTHM_MULTI = (() => {
       if (!clean || !me || Date.now() - s.lastChatAt < RHYTHM_MULTI_CHAT_INTERVAL_MS) return false;
       s.lastChatAt = Date.now();
       const st = stamp && multiStampCleanFace(stamp.f) && multiStampCleanWord(stamp.w) ? { sf: stamp.f, sw: stamp.w } : {};
-      return socket.send({ t: 'chat', id: s.selfId, name: me.name, text: clean, cid: `c${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`, ...st });
+      // 自由入力のスタンプ(sw が 'x')は、文字を全角8文字・1行へそろえる(2026-11-15 r1115-026)
+      const sendText = st.sw === 'x' ? multiStampCleanText(clean) : clean;
+      if (!sendText) return false;
+      return socket.send({ t: 'chat', id: s.selfId, name: me.name, text: sendText, cid: `c${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`, ...st });
     },
     hasReported(round) { const me = selfMember(); return !!(me && me.res && me.res.startId === round); },
     // 自分が選んだ難易度(演奏の結果へ添える)
@@ -1786,7 +1791,7 @@ function RhythmMultiChatBubble({ text: raw }) {
           横・🔄横の低いカードでは名前に重なっていた(2026-11-15 r1115-025)。縦は「絵の下に言葉」、横・🔄横は「絵の右に言葉」 */}
       <span className="mh-seat-stamp flex max-h-full max-w-full items-center rounded-xl bg-white p-0.5 shadow-lg">
         <img src={multiStampFaceSrc(stamp.sf) || undefined} alt="" draggable={false} decoding="async" className="mh-seat-stamp-img block shrink-0 rounded-lg object-cover" />
-        <b className="mh-seat-stamp-word block min-w-0 truncate text-[10px] font-black leading-tight text-slate-900">{text}</b>
+        <b className="mh-seat-stamp-word block min-w-0 text-[10px] font-black leading-tight text-slate-900">{text}</b>
       </span>
     </span>
   );

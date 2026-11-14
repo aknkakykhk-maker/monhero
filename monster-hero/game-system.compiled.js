@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: fed3cec15aa9dc4f
+// source-sha256: 3c611cca13f4d990
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -61005,6 +61005,9 @@ const MULTI_STAMP_RECV_GAP_MS = 2000;
 const MULTI_STAMP_SLOT_BASE = 8;
 const MULTI_STAMP_SLOT_STEP = 4;
 const MULTI_STAMP_SLOT_BUY_MAX = 2;
+const MULTI_STAMP_CUSTOM_ID = 'x';
+const MULTI_STAMP_CUSTOM_MAX = 8;
+const multiStampCleanText = v => String(v == null ? '' : v).replace(/[\u0000-\u001f\u007f-\u009f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, MULTI_STAMP_CUSTOM_MAX);
 const MULTI_STAMP_ASSISTANT_IDS = Object.freeze(['mua', 'kiki', 'momosuke', 'dra', 'atsu', 'kyuko', 'sorashido', 'erubin']);
 const MULTI_STAMP_EXPRESSIONS = Object.freeze(['happy', 'excited', 'wink', 'surprise', 'troubled', 'crying', 'angry', 'normal']);
 const MULTI_STAMP_START_EXPRESSION = 'happy';
@@ -61262,7 +61265,7 @@ const multiStampFaceName = fid => {
 };
 const multiStampWord = wid => MULTI_STAMP_WORDS.find(w => w.id === wid) || null;
 const multiStampCleanFace = v => typeof v === 'string' && v.length <= 40 && multiStampFaceSrc(v) ? v : null;
-const multiStampCleanWord = v => typeof v === 'string' && multiStampWord(v) ? v : null;
+const multiStampCleanWord = v => typeof v === 'string' && (v === MULTI_STAMP_CUSTOM_ID || multiStampWord(v)) ? v : null;
 const MULTI_STAMP_SHOP_OFFERS = Object.freeze([...MULTI_STAMP_ASSISTANT_IDS.map(id => ({
   id: `stamp_face_${id}`,
   kind: 'stamp',
@@ -61301,19 +61304,27 @@ const multiStampOwnsFace = (owned, fid) => {
   return false;
 };
 const multiStampOwnsWord = (owned, wid) => {
+  if (wid === MULTI_STAMP_CUSTOM_ID) return true;
   const w = multiStampWord(wid);
   return !!w && (w.pack === 'base' || owned.includes(`stamp_words_${w.pack}`));
 };
+const multiStampSlotClean = x => x.w === MULTI_STAMP_CUSTOM_ID ? {
+  f: x.f,
+  w: x.w,
+  t: multiStampCleanText(x.t)
+} : {
+  f: x.f,
+  w: x.w
+};
+const multiStampSlotLabel = x => x ? x.w === MULTI_STAMP_CUSTOM_ID ? multiStampCleanText(x.t) : (multiStampWord(x.w) || {}).text || '' : '';
+const multiStampSlotKey = x => `${x.f}|${x.w}${x.w === MULTI_STAMP_CUSTOM_ID ? `|${multiStampCleanText(x.t)}` : ''}`;
 const multiStampSlotMax = owned => MULTI_STAMP_SLOT_BASE + MULTI_STAMP_SLOT_STEP * Math.min(MULTI_STAMP_SLOT_BUY_MAX, owned.filter(x => x === 'stamp_slot').length);
 const normalizeMultiStamps = raw => {
   const o = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : null;
   const owned = (o && Array.isArray(o.owned) ? o.owned : []).filter(x => typeof x === 'string' && multiStampOffer(x) && x !== 'stamp_face_all').slice(0, 60);
   const ownedClean = [...new Set(owned.filter(x => x !== 'stamp_slot')), ...owned.filter(x => x === 'stamp_slot').slice(0, MULTI_STAMP_SLOT_BUY_MAX)];
   const max = multiStampSlotMax(ownedClean);
-  const slots = o && Array.isArray(o.slots) ? o.slots.slice(0, max).map(x => x && typeof x === 'object' && multiStampOwnsFace(ownedClean, x.f) && multiStampOwnsWord(ownedClean, x.w) ? {
-    f: x.f,
-    w: x.w
-  } : null) : multiStampDefaultSlots();
+  const slots = o && Array.isArray(o.slots) ? o.slots.slice(0, max).map(x => x && typeof x === 'object' && multiStampOwnsFace(ownedClean, x.f) && multiStampOwnsWord(ownedClean, x.w) && (x.w !== MULTI_STAMP_CUSTOM_ID || multiStampCleanText(x.t)) ? multiStampSlotClean(x) : null) : multiStampDefaultSlots();
   while (slots.length < max) slots.push(null);
   return {
     owned: ownedClean,
@@ -61323,10 +61334,7 @@ const normalizeMultiStamps = raw => {
 const multiStampToStore = st => ({
   v: 1,
   owned: st.owned.slice(),
-  slots: st.slots.map(x => x ? {
-    f: x.f,
-    w: x.w
-  } : null)
+  slots: st.slots.map(x => x ? multiStampSlotClean(x) : null)
 });
 const normalizeMultiStampPrefs = v => ({
   pic: !(v && typeof v === 'object' && v.pic === false)
@@ -61444,12 +61452,9 @@ const MULTI_STAMP = (() => {
     },
     setSlot: (i, slot) => {
       if (!Number.isInteger(i) || i < 0 || i >= st.slots.length) return false;
-      if (slot && !(multiStampOwnsFace(st.owned, slot.f) && multiStampOwnsWord(st.owned, slot.w))) return false;
+      if (slot && !(multiStampOwnsFace(st.owned, slot.f) && multiStampOwnsWord(st.owned, slot.w) && (slot.w !== MULTI_STAMP_CUSTOM_ID || multiStampCleanText(slot.t)))) return false;
       const slots = st.slots.slice();
-      slots[i] = slot ? {
-        f: slot.f,
-        w: slot.w
-      } : null;
+      slots[i] = slot ? multiStampSlotClean(slot) : null;
       st = {
         ...st,
         slots
@@ -61485,7 +61490,7 @@ const MULTI_STAMP = (() => {
       emit();
     },
     check: slot => {
-      if (!slot || !multiStampOwnsFace(st.owned, slot.f) || !multiStampOwnsWord(st.owned, slot.w)) return {
+      if (!slot || !multiStampOwnsFace(st.owned, slot.f) || !multiStampOwnsWord(st.owned, slot.w) || slot.w === MULTI_STAMP_CUSTOM_ID && !multiStampCleanText(slot.t)) return {
         ok: false,
         why: ''
       };
@@ -61493,7 +61498,7 @@ const MULTI_STAMP = (() => {
         ok: false,
         why: '少しあけてから送ってね'
       };
-      if (lastKey === `${slot.f}|${slot.w}` && sameCount >= MULTI_STAMP_SAME_MAX) return {
+      if (lastKey === multiStampSlotKey(slot) && sameCount >= MULTI_STAMP_SAME_MAX) return {
         ok: false,
         why: '同じスタンプは続けて3回までです'
       };
@@ -61503,7 +61508,7 @@ const MULTI_STAMP = (() => {
       };
     },
     sent: slot => {
-      const k = `${slot.f}|${slot.w}`;
+      const k = multiStampSlotKey(slot);
       sameCount = k === lastKey ? sameCount + 1 : 1;
       lastKey = k;
       sentAt = Date.now();
@@ -61625,11 +61630,10 @@ function MultiStampPalette({
       });
       return;
     }
-    const word = multiStampWord(slot.w);
     const ok = onSend({
       f: slot.f,
       w: slot.w,
-      text: word ? word.text : ''
+      text: multiStampSlotLabel(slot)
     }) !== false;
     if (ok) MULTI_STAMP.sent(slot);
     setWhy(ok ? '' : 'いまは送れません');
@@ -61656,7 +61660,7 @@ function MultiStampPalette({
     s,
     i
   }) => {
-    const word = multiStampWord(s.w);
+    const label = multiStampSlotLabel(s);
     const src = multiStampFaceSrc(s.f);
     const hit = flash && flash.i === i;
     return React.createElement("button", {
@@ -61674,7 +61678,7 @@ function MultiStampPalette({
       className: "mx-auto block aspect-square w-full rounded-lg object-cover"
     }), React.createElement("b", {
       className: "mt-0.5 block truncate text-[11px] font-black leading-tight text-white"
-    }, hit && flash.ok ? '✓ 送信' : word ? word.text : ''));
+    }, hit && flash.ok ? '✓ 送信' : label));
   }), onEdit && React.createElement("button", {
     type: "button",
     "data-multi-stamp-edit-open": true,
@@ -61704,6 +61708,7 @@ function MultiStampEditor({
   });
   const [face, setFace] = React.useState(cur ? cur.f : `a.${MULTI_STAMP_ASSISTANT_IDS[0]}.${MULTI_STAMP_START_EXPRESSION}`);
   const [word, setWord] = React.useState(cur ? cur.w : MULTI_STAMP_WORDS[0].id);
+  const [freeText, setFreeText] = React.useState(cur && cur.w === MULTI_STAMP_CUSTOM_ID ? multiStampCleanText(cur.t) : '');
   const [lockNote, setLockNote] = React.useState('');
   const pickSlot = i => {
     setSel(i);
@@ -61712,6 +61717,7 @@ function MultiStampEditor({
     if (s) {
       setFace(s.f);
       setWord(s.w);
+      if (s.w === MULTI_STAMP_CUSTOM_ID) setFreeText(multiStampCleanText(s.t));
       const a = /^a\.([a-z]+)\./.exec(s.f);
       if (a) {
         setTab('assistant');
@@ -61721,7 +61727,7 @@ function MultiStampEditor({
   };
   const faces = tab === 'assistant' ? MULTI_STAMP_EXPRESSIONS.map(e => `a.${who}.${e}`) : MULTI_STAMP_MONSTER_SETS.flat().filter(id => multiStampMonster(id)).map(id => `m.${id}`);
   const lockedBuy = what => setLockNote(`${what}は、ビートP交換所の「スタンプ」で買えます`);
-  const canPut = multiStampOwnsFace(st.owned, face) && multiStampOwnsWord(st.owned, word);
+  const canPut = multiStampOwnsFace(st.owned, face) && multiStampOwnsWord(st.owned, word) && (word !== MULTI_STAMP_CUSTOM_ID || !!multiStampCleanText(freeText));
   const max = st.slots.length;
   return React.createElement("div", {
     "data-multi-stamp-editor": true,
@@ -61778,7 +61784,7 @@ function MultiStampEditor({
     className: "mx-auto block aspect-square w-full rounded-lg object-cover"
   }), React.createElement("b", {
     className: "mt-0.5 block truncate text-[10.5px] font-black leading-tight"
-  }, (multiStampWord(s.w) || {}).text)) : React.createElement("span", {
+  }, multiStampSlotLabel(s))) : React.createElement("span", {
     className: "flex aspect-[4/5] items-center justify-center text-xl text-slate-500"
   }, "＋")))), React.createElement("div", {
     className: "mt-1.5 flex gap-1.5"
@@ -61810,6 +61816,7 @@ function MultiStampEditor({
   }, React.createElement(MultiStampView, {
     f: face,
     w: word,
+    text: multiStampCleanText(freeText),
     size: 76,
     forcePic: true
   }), React.createElement("div", {
@@ -61820,7 +61827,8 @@ function MultiStampEditor({
     disabled: !canPut,
     onClick: () => MULTI_STAMP.setSlot(sel, {
       f: face,
-      w: word
+      w: word,
+      t: freeText
     }),
     className: "min-h-[44px] rounded-xl bg-gradient-to-b from-cyan-500 to-cyan-700 px-2 text-[13px] font-black disabled:opacity-40"
   }, "⭐ ", sel + 1, "番に入れる"), lockNote && React.createElement("p", {
@@ -61911,6 +61919,29 @@ function MultiStampEditor({
       },
       className: `min-h-[34px] whitespace-nowrap rounded-full px-2.5 text-[12px] font-black ${word === wd.id ? 'bg-cyan-600 text-white' : own ? 'bg-slate-800 text-slate-100' : 'bg-slate-800/60 text-slate-500'}`
     }, own ? '' : '🔒', wd.text);
+  })), React.createElement("div", {
+    "data-multi-stamp-free": true,
+    className: `mt-2 rounded-xl border p-2 ${word === MULTI_STAMP_CUSTOM_ID ? 'border-cyan-300 bg-cyan-500/10' : 'border-slate-700'}`
+  }, React.createElement("label", {
+    htmlFor: "multi-stamp-free-input",
+    className: "mb-1 block text-[12px] font-black text-cyan-100"
+  }, "✏️ 自分で文字を打つ", React.createElement("small", {
+    className: "ml-1 text-[11px] text-slate-400"
+  }, "(全角", MULTI_STAMP_CUSTOM_MAX, "文字まで・1行)")), React.createElement("input", {
+    id: "multi-stamp-free-input",
+    "data-multi-stamp-free-input": true,
+    value: freeText,
+    maxLength: MULTI_STAMP_CUSTOM_MAX,
+    autoComplete: "off",
+    enterKeyHint: "done",
+    onFocus: () => setWord(MULTI_STAMP_CUSTOM_ID),
+    onChange: e => {
+      setFreeText(e.target.value.replace(/[\u0000-\u001f\u007f-\u009f]/g, '').slice(0, MULTI_STAMP_CUSTOM_MAX));
+      setWord(MULTI_STAMP_CUSTOM_ID);
+      setLockNote('');
+    },
+    placeholder: "例:いくぞ！",
+    className: "min-h-[44px] w-full min-w-0 rounded-xl border border-white/20 bg-slate-950 px-3 text-base font-bold text-white"
   }))))));
 }
 function MultiStampShopList({
@@ -93794,6 +93825,7 @@ const rhythmMultiCleanMessage = raw => {
       out.sf = sf;
       out.sw = sw;
     }
+    if (out.sw === 'x' && typeof multiStampCleanText === 'function') out.text = multiStampCleanText(out.text);
     return out.text && out.cid ? out : null;
   }
   if (raw.t === 'bye') return out;
@@ -95650,11 +95682,13 @@ const RHYTHM_MULTI = (() => {
         sf: stamp.f,
         sw: stamp.w
       } : {};
+      const sendText = st.sw === 'x' ? multiStampCleanText(clean) : clean;
+      if (!sendText) return false;
       return socket.send({
         t: 'chat',
         id: s.selfId,
         name: me.name,
-        text: clean,
+        text: sendText,
         cid: `c${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`,
         ...st
       });
@@ -96300,7 +96334,7 @@ function RhythmMultiChatBubble({
     decoding: "async",
     className: "mh-seat-stamp-img block shrink-0 rounded-lg object-cover"
   }), React.createElement("b", {
-    className: "mh-seat-stamp-word block min-w-0 truncate text-[10px] font-black leading-tight text-slate-900"
+    className: "mh-seat-stamp-word block min-w-0 text-[10px] font-black leading-tight text-slate-900"
   }, text)));
   return React.createElement("span", {
     "data-rhythm-multi-chat-bubble": true,
@@ -208997,7 +209031,8 @@ const cardPvpCleanMessage = raw => {
       sw
     } : {};
     if (typeof raw.x === 'string') {
-      const x = cardChatClean(raw.x);
+      const x0 = cardChatClean(raw.x);
+      const x = st.sw === 'x' && typeof multiStampCleanText === 'function' ? multiStampCleanText(x0) : x0;
       return x ? {
         t: 'chat',
         from,
@@ -210672,7 +210707,7 @@ const CARD_PVP = (() => {
     },
     stamp: x => {
       if (!s || s.phase !== 'playing' || !x || !multiStampCleanFace(x.f) || !multiStampCleanWord(x.w) || Date.now() - s.chatAt < CARD_PVP_CHAT_GAP_MS) return false;
-      const text = cardChatClean((multiStampWord(x.w) || {}).text || '');
+      const text = cardChatClean(x.w === 'x' ? multiStampCleanText(x.text) : (multiStampWord(x.w) || {}).text || '');
       if (!text) return false;
       const i = CARD_PVP_STAMPS.indexOf(text);
       s = {
