@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a7d03bdc827e0c26
+// source-sha256: 0ed325d9d6e1abb6
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -108565,12 +108565,19 @@ function AssistantPeerMap({
   const st = useAssistantPeerState();
   const [showAll, setShowAll] = React.useState(false);
   const [albumPair, setAlbumPair] = React.useState(null);
+  const mapRef = React.useRef(null);
+  const [mapW, setMapW] = React.useState(0);
+  React.useLayoutEffect(() => {
+    const w = mapRef.current && mapRef.current.parentElement ? mapRef.current.parentElement.clientWidth : 0;
+    if (w && w !== mapW) setMapW(w);
+  });
   const ids = (metIds || []).filter(id => assistantById(id) && assistantById(id).id === id);
   if (ids.length < 2) return null;
-  const size = 260,
+  const size = v2 ? Math.max(240, Math.min(320, mapW || 260)) : 260,
     cx = size / 2,
-    cy = size / 2,
-    r = 98;
+    cy = v2 ? size / 2 + 2 : size / 2,
+    r = v2 ? Math.round((size - 58) / 2) : 98;
+  const boxH = v2 ? size + 12 : size;
   const pos = Object.fromEntries(ids.map((id, i) => {
     const a = -Math.PI / 2 + 2 * Math.PI * i / ids.length;
     return [id, {
@@ -108641,14 +108648,15 @@ function AssistantPeerMap({
     "data-assistant-peer-playing": true,
     className: "mb-2 text-[10px] font-bold text-sky-200"
   }, "🎮 遊びに連れているペア: ", st.play.pair.split('-').map(id => assistantById(id).name).join(' × ')), React.createElement("div", {
+    ref: mapRef,
     className: "relative mx-auto",
     style: {
       width: size,
-      height: size
+      height: boxH
     }
   }, React.createElement("svg", {
     width: size,
-    height: size,
+    height: boxH,
     className: "absolute inset-0",
     style: v2 ? {
       pointerEvents: 'none'
@@ -108669,6 +108677,7 @@ function AssistantPeerMap({
     const who = assistantById(id);
     return React.createElement("div", {
       key: id,
+      "data-assistant-peer-node": id,
       className: "absolute flex flex-col items-center",
       style: {
         left: pos[id].x - 24,
@@ -108684,7 +108693,7 @@ function AssistantPeerMap({
     }, who.name));
   }), v2 && React.createElement("svg", {
     width: size,
-    height: size,
+    height: boxH,
     className: "absolute inset-0",
     style: {
       pointerEvents: 'none'
@@ -108696,21 +108705,21 @@ function AssistantPeerMap({
         x: pos[x.a].x + (pos[x.b].x - pos[x.a].x) * t,
         y: pos[x.a].y + (pos[x.b].y - pos[x.a].y) * t
       });
-      const hit = q => ids.some(id => Math.abs(q.x - pos[id].x) < 38 && q.y > pos[id].y - 32 && q.y < pos[id].y + 40) || put.some(o => Math.abs(q.x - o.x) < 30 && Math.abs(q.y - o.y) < 18);
+      const hit = q => ids.some(id => Math.abs(q.x - pos[id].x) < 40 && q.y > pos[id].y - 34 && q.y < pos[id].y + 52) || put.some(o => Math.abs(q.x - o.x) < 30 && Math.abs(q.y - o.y) < 18);
       const dx = pos[x.b].x - pos[x.a].x,
         dy = pos[x.b].y - pos[x.a].y,
         dl = Math.hypot(dx, dy) || 1,
         nx = -dy / dl,
         ny = dx / dl;
       const cand = [];
-      for (const t of [0.5, 0.4, 0.6, 0.33, 0.67, 0.27, 0.73]) for (const o of [0, 16, -16, 26, -26]) {
+      for (const t of [0.5, 0.45, 0.55, 0.4, 0.6, 0.35, 0.65, 0.3, 0.7, 0.25, 0.75, 0.2, 0.8]) for (const o of [0, 14, -14, 24, -24, 34, -34]) {
         const c = at(t);
         cand.push({
           x: c.x + nx * o,
           y: c.y + ny * o
         });
       }
-      const inside = c => c.x > 16 && c.x < size - 16 && c.y > 8 && c.y < size - 8;
+      const inside = c => c.x > 16 && c.x < size - 16 && c.y > 8 && c.y < boxH - 8;
       const q = cand.find(c => inside(c) && !hit(c)) || at(0.5);
       put.push(q);
       const mx = q.x,
@@ -114099,6 +114108,7 @@ function AssistantLifeRoom({
     const n = Number((String(t[1] || '').match(/^(\d+)人で/) || [])[1]) || 0;
     const ml = [...assistantLifeName(id)].length * 10 + 20;
     const names = t[2] ? assistantLifeTagNames(t[2], Math.floor((w - 6 - ml - 10) / (v2 ? 10.8 : 8.8))) : null;
+    const tagLand = typeof window !== 'undefined' && window.innerWidth > window.innerHeight;
     const tagFit = assistantLifeTagFit(t[0], w - 26, 10.5, 0);
     const short = [...String(t[0])].length <= 9;
     return React.createElement("span", {
@@ -114118,7 +114128,7 @@ function AssistantLifeRoom({
     }, React.createElement(AssistantLifeNames, {
       text: names
     })), React.createElement("b", {
-      style: w < 150 ? tagFit >= 10.5 ? {
+      style: w < 150 && !tagLand ? tagFit >= 10.5 ? {
         whiteSpace: 'nowrap',
         fontSize: 10.5
       } : {
@@ -114129,7 +114139,7 @@ function AssistantLifeRoom({
     }, v2 && w >= 150 ? React.createElement("span", {
       "data-assistant-life-room-out": true,
       className: "mr-1 rounded bg-slate-600 px-1 text-white"
-    }, "留守") : null, w < 150 && tagFit < 10.5 ? assistantLifeTagChunks(t[0]) : t[0], React.createElement("i", {
+    }, "留守") : null, w < 150 && !tagLand && tagFit < 10.5 ? assistantLifeTagChunks(t[0]) : t[0], React.createElement("i", {
       "data-assistant-life-room-tag-short": true
     }, n > 1 && short ? `・${n}人` : '', mark ? ` ${[...t[1]][0]}` : '')));
   })(), !met && React.createElement("span", {
