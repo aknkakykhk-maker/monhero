@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 73f7b30e4983300a
+// generated-sha256: a1e0dadad07aef10
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -68502,6 +68502,88 @@ function AssistantLifeMapFig({ who, h, sleep, spent = false }) {
     </span>);
 }
 
+// 場所の窓の1行(顔・名前・だれと何をしているか・できること)。町の地図の窓と、モンヒロバトルの選択画面(AssistantLifeBattleHall)の両方で使う
+//   close … ボタンを押したあとに窓を閉じる/onRoom … 「部屋へ」/cheerMsg・setCheerMsg … 応援の知らせ(親が持つ)
+function AssistantLifeMapRow({ id, place, town = false, life, selected = false, cheerMsg = null, setCheerMsg = () => {}, close = () => {}, onRoom = null, onBeat = null, onCard = null }) {
+    const a = assistantById(id); if (!a) return null;
+    const w = assistantLifeWhereOf(life, id); const d = w && ASSISTANT_LIFE_DOINGS[w.doing];
+    const withNames = w && w.with && w.with.length ? `${w.with.map(assistantLifeName).join('・')}と` : 'ひとりで';
+    const spent = place === 'cardroom' && typeof assistantLifeCardSpent === 'function' ? assistantLifeCardSpent(id) : null; // { next } か null
+    // モンヒロバトルの助手: きょうの修行の1行と「👀 修行を見る・📣 応援する・⚔ 対戦(β)」(シュギョウ2の口。印 assistantMasmonCheer が偽なら null で何も出さない)
+    let ti = null; if (place === 'battle') { try { ti = typeof assistantMasmonTrainRowInfo === 'function' ? assistantMasmonTrainRowInfo(id) : null; } catch (_) { ti = null; } }
+    let bi = null; if (place === 'battle') { try { bi = typeof assistantMasmonBattleRowInfo === 'function' && typeof assistantMasmonBattleOpen === 'function' ? assistantMasmonBattleRowInfo(id) : null; } catch (_) { bi = null; } }
+    const battleBtn = bi && <button type="button" disabled={!!bi.disabled} title={bi.disabled ? (bi.why || '') : (bi.sub || '')} data-assistant-life-map-act="masmon-battle" onClick={() => { close(); try { assistantMasmonBattleOpen({ assistantId: id, from: 'place' }); } catch (_) {} }} className="rounded-xl bg-gradient-to-r from-amber-500 to-rose-500 min-h-[44px] px-2 py-1 text-[12px] font-black text-white active:scale-95 disabled:opacity-50" style={JA_LABEL_STYLE}>{jaWrap(String(bi.label || '⚔ マスモンで対戦(β)').replace('で対戦', 'で\u200B対戦'))}</button>;
+    // モンヒロサクセス(β)の入口(2026-11-14 社長・印 monheroSuccess が偽なら null)。モンヒロバトルにいる助手の札にだけ
+    let si = null; if (place === 'battle') { try { si = typeof assistantLifeSuccessRowInfo === 'function' ? assistantLifeSuccessRowInfo(id) : null; } catch (_) { si = null; } }
+    const successBtn = si && <button type="button" title={si.sub} data-assistant-life-map-act="monhero-success" onClick={() => { close(); try { assistantLifeSuccessOpen({ assistantId: id, from: 'place' }); } catch (_) {} }} className="w-full rounded-xl bg-gradient-to-r from-emerald-600 to-lime-600 min-h-[44px] px-2 py-1 text-[12px] font-black text-white active:scale-95"><span style={JA_LABEL_STYLE}>{jaWrap(si.label)}</span><span className="block text-[10px] font-bold text-emerald-50" style={JA_LABEL_STYLE}>{jaWrap(si.sub)}</span></button>;
+    const tiLine = ti && (ti.today ? `🥋 ${ti.today.nick}・${ti.today.kind}${ti.today.learned ? ` NEW ${ti.today.learned}を覚えた` : ''}${ti.today.main ? ` ・ ${ti.today.main} 熟練 +${ti.today.gain}` : ''}` : '🥋 今日はまだ修行していません');
+    return (
+      <div key={id} className={`mt-2 flex flex-wrap items-center gap-2 rounded-2xl border bg-slate-900/85 p-2 ${selected ? "border-sky-300 ring-2 ring-sky-300/70" : "border-white/10"}`} data-assistant-life-map-sheet-selected={selected ? "1" : undefined} data-assistant-life-map-sheet-who={id} data-assistant-life-map-sheet-at={place}>
+        <span className="shrink-0" style={typeof assistantLifePartnerOk === 'function' && !assistantLifePartnerOk(id) ? { filter: 'grayscale(.55) brightness(.85)' } : undefined}><AssistantFace who={a} size={36} accent={a.accent}/></span>
+        <div className="min-w-0 flex-1">
+          <p className="text-[13px] font-black text-white" style={JA_WRAP_STYLE}>{a.name}{spent && <span className="ml-1 rounded-full bg-slate-200 px-1.5 text-[9.5px] font-black text-slate-900" data-assistant-life-map-sheet-spent>済 ごほうび済み</span>}</p>
+          <p className="text-[10.5px] font-bold text-slate-300" style={JA_WRAP_STYLE}>{town ? jaWrap(`${assistantLifeMapSpotWord(place)}で `) : ''}{w && ASSISTANT_LIFE_DOING_ICON[w.doing]} {jaWrap(`${withNames}${d ? d.label : '過ごしている'}${w && w.reason === 'lonely' ? '(さみしそう)' : ''}`)}</p>
+          {place === 'ranch' && (() => { let x = null; try { x = typeof assistantMasmonRanchRowInfo === 'function' ? assistantMasmonRanchRowInfo(id) : null; } catch (_) { x = null; } return x ? <p className="text-[10.5px] font-bold text-lime-200" style={JA_WRAP_STYLE} data-assistant-life-map-ranch-ask>{jaWrap(x.used && x.last && x.last.rows[0] ? `✓ ${x.last.nick} ${amgrStatName(x.last.rows[0].k)} ${x.last.rows[0].from} → ${x.last.rows[0].to}` : `「${typeof assistantMasmonRanchAskText === 'function' ? assistantMasmonRanchAskText(id, x.ask, x.abs) : `${x.ask.nick}の${x.ask.stat}を鍛えたいな`}」`)}</p> : null; })()}
+          {tiLine && <p className="text-[10.5px] font-bold text-emerald-200" style={JA_WRAP_STYLE} data-assistant-life-map-train-line={id}>{jaWrap(tiLine)}</p>}
+          {spent && <p className="text-[10.5px] font-bold text-amber-200" style={JA_WRAP_STYLE} data-assistant-life-map-sheet-next>{jaWrap(typeof cardLifeSpentText === 'function' ? cardLifeSpentText(spent) : '🃏 ごほうびアップは次の時間帯から')}</p>}
+        </div>
+        {typeof assistantLifePartnerOk === 'function' && !assistantLifePartnerOk(id) ? (
+        <div className="flex shrink-0 flex-col gap-1">
+          <button type="button" data-assistant-life-map-act="town" onClick={() => { close(); if (typeof assistantLifeShowTownPerson === 'function') assistantLifeShowTownPerson(id); }} className="rounded-xl border border-slate-400/60 min-h-[44px] px-3 py-1 text-[12px] font-black text-slate-100 active:scale-95">🔒 町の人 ›</button>
+        </div>) : (
+        <div className="flex shrink-0 flex-col gap-1">
+          {place === 'studio' && typeof onBeat === 'function' && typeof ASSISTANT_LIFE_LINKS !== 'undefined' && typeof ASSISTANT_LIFE_LINKS.beatInvite === 'function' && <button type="button" data-assistant-life-map-act="beat" onClick={() => { close(); onBeat(id); }} className="rounded-xl bg-gradient-to-r from-cyan-600 to-violet-600 min-h-[44px] px-3 py-1 text-[12px] font-black text-white active:scale-95">🎵 一緒に遊ぶ</button>}
+          {place === 'cardroom' && !spent && typeof onCard === 'function' && typeof ASSISTANT_LIFE_LINKS !== 'undefined' && typeof ASSISTANT_LIFE_LINKS.cardInvite === 'function' && <button type="button" data-assistant-life-map-act="card" onClick={() => { close(); onCard(id); }} className="rounded-xl bg-gradient-to-r from-blue-700 to-violet-700 min-h-[44px] px-3 py-1 text-[12px] font-black text-white active:scale-95">🃏 対戦する</button>}
+          {place === 'ranch' && (() => { // M/B管理: 助手のマスモンにチケットを使ってあげる(ボクジョウ・印 assistantMasmonRanchTicket が偽なら null で出さない・2026-11-11)
+            let info = null; try { info = typeof assistantMasmonRanchRowInfo === 'function' ? assistantMasmonRanchRowInfo(id) : null; } catch (_) { info = null; }
+            if (!info || typeof assistantMasmonRanchOpen !== 'function') return null;
+            return <button type="button" disabled={info.used} title={`${info.ask.nick}の${info.ask.stat}を鍛えたい`} data-assistant-life-map-act="ranch-ticket" onClick={() => { close(); try { assistantMasmonRanchOpen(id); } catch (_) {} }} className={`rounded-xl min-h-[44px] px-3 py-1 text-[12px] font-black active:scale-95 ${info.used ? 'border border-slate-500/60 text-slate-300' : 'bg-gradient-to-r from-emerald-600 to-lime-600 text-white'}`}>{info.used ? '✓ チケット済み' : '🎫 チケットを使う'}</button>;
+          })()}
+          {place === 'battle' && !ti && battleBtn}
+          <button type="button" data-assistant-life-map-act="room" onClick={() => { if (typeof onRoom === 'function') onRoom(id); }} className="rounded-xl border border-pink-300/60 min-h-[44px] px-3 py-1 text-[12px] font-black text-pink-100 active:scale-95">🏡 部屋へ ›</button>
+        </div>)}
+        {ti && (
+          <div className="grid w-full gap-1" style={{ gridTemplateColumns: battleBtn ? '1fr 1fr 1fr' : '1fr 1fr' }} data-assistant-life-map-train-acts={id}>
+            <button type="button" data-assistant-life-map-act="train-watch" onClick={() => { try { assistantMasmonTrainWatchOpen(id); } catch (_) {} }} className="rounded-xl bg-sky-700 min-h-[44px] px-1 py-1 text-[12px] font-black text-white active:scale-95" style={JA_LABEL_STYLE}>{jaWrap('👀 修行を見る')}</button>
+            <button type="button" data-assistant-life-map-act="cheer" disabled={!ti.canCheer} title={ti.why || ''} onClick={() => { let r = null; try { r = assistantMasmonCheer(id); } catch (_) { r = null; } setCheerMsg(r && r.ok ? { id, text: `📣 ${r.nick} ${r.tech} 熟練 +1・💗 +${r.bond}` } : { id, text: (r && r.why) || ti.why || '' }); }} className="rounded-xl bg-emerald-700 min-h-[44px] px-1 py-1 text-[12px] font-black leading-tight text-white active:scale-95 disabled:opacity-50" style={JA_LABEL_STYLE}>{jaWrap('📣 応援する')}<span className="block text-[10px] font-bold">今日{ti.perDay - ti.left}/{ti.perDay}</span></button>
+            {battleBtn}
+          </div>)}
+        {successBtn}
+        {ti && !ti.canCheer && ti.why && <p className="w-full text-[10.5px] font-bold text-slate-300" data-assistant-life-map-cheer-why={id} style={JA_WRAP_STYLE}>{jaWrap(ti.why)}</p>}
+        {cheerMsg && cheerMsg.id === id && cheerMsg.text && <p className="w-full rounded-lg bg-emerald-900/70 px-2 py-1 text-[11px] font-black text-emerald-100" data-assistant-life-map-cheer-msg={id} style={JA_WRAP_STYLE}>{jaWrap(cheerMsg.text)}</p>}
+      </div>);
+  }
+
+// モンヒロバトルの選択画面に出す「いまここにいる助手」(2026-11-14 社長・台帳 #6150)。HOME の「モンヒロバトル」の札の下に顔が出ている助手を、
+//   選択画面の中にも出し、町の窓と同じ部品(AssistantLifeMapRow)で 👀 修行を見る・📣 応援する・⚔ マスモンで対戦(β)・🏡 部屋へ ができる。
+//   いないとき・助手ライフが開いているときは何も出さない(今のまま)
+function AssistantLifeBattleHall({ metIds }) {
+  const st = useAssistantLifeNow(metIds);
+  const [cheerMsg, setCheerMsg] = React.useState(null);
+  const [, redraw] = React.useState(0);
+  // 助手のマスモンと応援の保存は、助手ライフを開いたときに読まれる。選択画面だけ開いた人でも修行・応援・対戦が出せるよう、ここでも読む(読み終わるたびに描き直す)
+  React.useEffect(() => {
+    const stores = [typeof ASSISTANT_MASMON_STORE !== 'undefined' ? ASSISTANT_MASMON_STORE : null, typeof AMGC_STORE !== 'undefined' ? AMGC_STORE : null].filter(Boolean);
+    const f = () => redraw(n => n + 1);
+    for (const x of stores) { try { x.subs.add(f); if (!x.loaded && typeof x.load === 'function') void x.load().then(f).catch(() => {}); } catch (_) {} }
+    return () => { for (const x of stores) { try { x.subs.delete(f); } catch (_) {} } };
+  }, []);
+  if (typeof assistantLifeEnabled !== 'function' || !assistantLifeEnabled() || !st.loaded || st.open) return null;
+  const life = st.life;
+  if (!life || life.abs !== assistantLifeSlotAt().abs) return null;
+  const met = new Set((metIds || []).filter(id => ASSISTANT_LIFE_PREFS[id]));
+  const ids = ASSISTANT_LIFE_HOUSE_ORDER.filter(id => { if (!met.has(id)) return false; const w = assistantLifeWhereOf(life, id); return !!w && w.place === 'battle'; });
+  if (!ids.length) return null;
+  return (
+    <section data-assistant-life-battle-hall={ids.length} className="mhms-glass rounded-2xl border border-amber-300/50 bg-slate-950/70 p-2 text-white">
+      {typeof AssistantMasmonTrainWatchHost === 'function' && <AssistantMasmonTrainWatchHost/>}
+      <p className="text-[12px] font-black text-amber-200" style={JA_WRAP_STYLE}>{jaWrap('🏡 いまモンヒロバトルにいる助手')}</p>
+      {ids.map(id => (
+        <AssistantLifeMapRow key={id} id={id} place="battle" life={life} cheerMsg={cheerMsg} setCheerMsg={setCheerMsg}
+          onRoom={(rid) => { try { ASSISTANT_LIFE_STORE.set({ open: true, focus: rid }); } catch (_) {} }}/>))}
+    </section>);
+}
+
 // 地図の本体(家の「📋 居場所」のタブ。画面いっぱい・下に今までの一覧)
 function AssistantLifeTownMap({ life, ids, onPick, onView = null, onBeat = null, onCard = null, onGo = null, onBack, list = null, nav = null, land = false, initialPlace = null, initialAssistantId = null, initialKey = 0 }) {
   const [home, setHome] = React.useState(() => assistantLifeMapReadHome());
@@ -68649,55 +68731,9 @@ function AssistantLifeTownMap({ life, ids, onPick, onView = null, onBeat = null,
   const fac = sheetPlace ? assistantLifeFacilityOf({ place: sheetPlace }) : null;
   const sheetTown = sheetPlace === 'home' ? assistantLifeMapTownOnlyNow().flatMap(p => (at[p] || []).map(id => [id, p])) : [];
   // シートの1行(顔・名前・だれと何をしているか・できること)。town … 町の場所の人を家の札のシートに並べるとき(場所の名前も出す)
-  const row = (id, place, town) => {
-    const a = assistantById(id); if (!a) return null;
-    const w = assistantLifeWhereOf(life, id); const d = w && ASSISTANT_LIFE_DOINGS[w.doing];
-    const withNames = w && w.with && w.with.length ? `${w.with.map(assistantLifeName).join('・')}と` : 'ひとりで';
-    const spent = place === 'cardroom' && typeof assistantLifeCardSpent === 'function' ? assistantLifeCardSpent(id) : null; // { next } か null
-    // モンヒロバトルの助手: きょうの修行の1行と「👀 修行を見る・📣 応援する・⚔ 対戦(β)」(シュギョウ2の口。印 assistantMasmonCheer が偽なら null で何も出さない)
-    let ti = null; if (place === 'battle') { try { ti = typeof assistantMasmonTrainRowInfo === 'function' ? assistantMasmonTrainRowInfo(id) : null; } catch (_) { ti = null; } }
-    let bi = null; if (place === 'battle') { try { bi = typeof assistantMasmonBattleRowInfo === 'function' && typeof assistantMasmonBattleOpen === 'function' ? assistantMasmonBattleRowInfo(id) : null; } catch (_) { bi = null; } }
-    const battleBtn = bi && <button type="button" disabled={!!bi.disabled} title={bi.disabled ? (bi.why || '') : (bi.sub || '')} data-assistant-life-map-act="masmon-battle" onClick={() => { setSheet(null); try { assistantMasmonBattleOpen({ assistantId: id, from: 'place' }); } catch (_) {} }} className="rounded-xl bg-gradient-to-r from-amber-500 to-rose-500 min-h-[44px] px-2 py-1 text-[12px] font-black text-white active:scale-95 disabled:opacity-50" style={JA_LABEL_STYLE}>{jaWrap(String(bi.label || '⚔ マスモンで対戦(β)').replace('で対戦', 'で\u200B対戦'))}</button>;
-    // モンヒロサクセス(β)の入口(2026-11-14 社長・印 monheroSuccess が偽なら null)。モンヒロバトルにいる助手の札にだけ
-    let si = null; if (place === 'battle') { try { si = typeof assistantLifeSuccessRowInfo === 'function' ? assistantLifeSuccessRowInfo(id) : null; } catch (_) { si = null; } }
-    const successBtn = si && <button type="button" title={si.sub} data-assistant-life-map-act="monhero-success" onClick={() => { setSheet(null); try { assistantLifeSuccessOpen({ assistantId: id, from: 'place' }); } catch (_) {} }} className="w-full rounded-xl bg-gradient-to-r from-emerald-600 to-lime-600 min-h-[44px] px-2 py-1 text-[12px] font-black text-white active:scale-95"><span style={JA_LABEL_STYLE}>{jaWrap(si.label)}</span><span className="block text-[10px] font-bold text-emerald-50" style={JA_LABEL_STYLE}>{jaWrap(si.sub)}</span></button>;
-    const tiLine = ti && (ti.today ? `🥋 ${ti.today.nick}・${ti.today.kind}${ti.today.learned ? ` NEW ${ti.today.learned}を覚えた` : ''}${ti.today.main ? ` ・ ${ti.today.main} 熟練 +${ti.today.gain}` : ''}` : '🥋 今日はまだ修行していません');
-    return (
-      <div key={id} className={`mt-2 flex flex-wrap items-center gap-2 rounded-2xl border bg-slate-900/85 p-2 ${initialAssistantId === id ? "border-sky-300 ring-2 ring-sky-300/70" : "border-white/10"}`} data-assistant-life-map-sheet-selected={initialAssistantId === id ? "1" : undefined} data-assistant-life-map-sheet-who={id} data-assistant-life-map-sheet-at={place}>
-        <span className="shrink-0" style={typeof assistantLifePartnerOk === 'function' && !assistantLifePartnerOk(id) ? { filter: 'grayscale(.55) brightness(.85)' } : undefined}><AssistantFace who={a} size={36} accent={a.accent}/></span>
-        <div className="min-w-0 flex-1">
-          <p className="text-[13px] font-black text-white" style={JA_WRAP_STYLE}>{a.name}{spent && <span className="ml-1 rounded-full bg-slate-200 px-1.5 text-[9.5px] font-black text-slate-900" data-assistant-life-map-sheet-spent>済 ごほうび済み</span>}</p>
-          <p className="text-[10.5px] font-bold text-slate-300" style={JA_WRAP_STYLE}>{town ? jaWrap(`${assistantLifeMapSpotWord(place)}で `) : ''}{w && ASSISTANT_LIFE_DOING_ICON[w.doing]} {jaWrap(`${withNames}${d ? d.label : '過ごしている'}${w && w.reason === 'lonely' ? '(さみしそう)' : ''}`)}</p>
-          {place === 'ranch' && (() => { let x = null; try { x = typeof assistantMasmonRanchRowInfo === 'function' ? assistantMasmonRanchRowInfo(id) : null; } catch (_) { x = null; } return x ? <p className="text-[10.5px] font-bold text-lime-200" style={JA_WRAP_STYLE} data-assistant-life-map-ranch-ask>{jaWrap(x.used && x.last && x.last.rows[0] ? `✓ ${x.last.nick} ${amgrStatName(x.last.rows[0].k)} ${x.last.rows[0].from} → ${x.last.rows[0].to}` : `「${typeof assistantMasmonRanchAskText === 'function' ? assistantMasmonRanchAskText(id, x.ask, x.abs) : `${x.ask.nick}の${x.ask.stat}を鍛えたいな`}」`)}</p> : null; })()}
-          {tiLine && <p className="text-[10.5px] font-bold text-emerald-200" style={JA_WRAP_STYLE} data-assistant-life-map-train-line={id}>{jaWrap(tiLine)}</p>}
-          {spent && <p className="text-[10.5px] font-bold text-amber-200" style={JA_WRAP_STYLE} data-assistant-life-map-sheet-next>{jaWrap(typeof cardLifeSpentText === 'function' ? cardLifeSpentText(spent) : '🃏 ごほうびアップは次の時間帯から')}</p>}
-        </div>
-        {typeof assistantLifePartnerOk === 'function' && !assistantLifePartnerOk(id) ? (
-        <div className="flex shrink-0 flex-col gap-1">
-          <button type="button" data-assistant-life-map-act="town" onClick={() => { setSheet(null); if (typeof assistantLifeShowTownPerson === 'function') assistantLifeShowTownPerson(id); }} className="rounded-xl border border-slate-400/60 min-h-[44px] px-3 py-1 text-[12px] font-black text-slate-100 active:scale-95">🔒 町の人 ›</button>
-        </div>) : (
-        <div className="flex shrink-0 flex-col gap-1">
-          {place === 'studio' && typeof onBeat === 'function' && typeof ASSISTANT_LIFE_LINKS !== 'undefined' && typeof ASSISTANT_LIFE_LINKS.beatInvite === 'function' && <button type="button" data-assistant-life-map-act="beat" onClick={() => { setSheet(null); onBeat(id); }} className="rounded-xl bg-gradient-to-r from-cyan-600 to-violet-600 min-h-[44px] px-3 py-1 text-[12px] font-black text-white active:scale-95">🎵 一緒に遊ぶ</button>}
-          {place === 'cardroom' && !spent && typeof onCard === 'function' && typeof ASSISTANT_LIFE_LINKS !== 'undefined' && typeof ASSISTANT_LIFE_LINKS.cardInvite === 'function' && <button type="button" data-assistant-life-map-act="card" onClick={() => { setSheet(null); onCard(id); }} className="rounded-xl bg-gradient-to-r from-blue-700 to-violet-700 min-h-[44px] px-3 py-1 text-[12px] font-black text-white active:scale-95">🃏 対戦する</button>}
-          {place === 'ranch' && (() => { // M/B管理: 助手のマスモンにチケットを使ってあげる(ボクジョウ・印 assistantMasmonRanchTicket が偽なら null で出さない・2026-11-11)
-            let info = null; try { info = typeof assistantMasmonRanchRowInfo === 'function' ? assistantMasmonRanchRowInfo(id) : null; } catch (_) { info = null; }
-            if (!info || typeof assistantMasmonRanchOpen !== 'function') return null;
-            return <button type="button" disabled={info.used} title={`${info.ask.nick}の${info.ask.stat}を鍛えたい`} data-assistant-life-map-act="ranch-ticket" onClick={() => { setSheet(null); try { assistantMasmonRanchOpen(id); } catch (_) {} }} className={`rounded-xl min-h-[44px] px-3 py-1 text-[12px] font-black active:scale-95 ${info.used ? 'border border-slate-500/60 text-slate-300' : 'bg-gradient-to-r from-emerald-600 to-lime-600 text-white'}`}>{info.used ? '✓ チケット済み' : '🎫 チケットを使う'}</button>;
-          })()}
-          {place === 'battle' && !ti && battleBtn}
-          <button type="button" data-assistant-life-map-act="room" onClick={() => { if (typeof onView === 'function') onView(id); else { setSheet(null); onPick(id); } }} className="rounded-xl border border-pink-300/60 min-h-[44px] px-3 py-1 text-[12px] font-black text-pink-100 active:scale-95">🏡 部屋へ ›</button>
-        </div>)}
-        {ti && (
-          <div className="grid w-full gap-1" style={{ gridTemplateColumns: battleBtn ? '1fr 1fr 1fr' : '1fr 1fr' }} data-assistant-life-map-train-acts={id}>
-            <button type="button" data-assistant-life-map-act="train-watch" onClick={() => { try { assistantMasmonTrainWatchOpen(id); } catch (_) {} }} className="rounded-xl bg-sky-700 min-h-[44px] px-1 py-1 text-[12px] font-black text-white active:scale-95" style={JA_LABEL_STYLE}>{jaWrap('👀 修行を見る')}</button>
-            <button type="button" data-assistant-life-map-act="cheer" disabled={!ti.canCheer} title={ti.why || ''} onClick={() => { let r = null; try { r = assistantMasmonCheer(id); } catch (_) { r = null; } setCheerMsg(r && r.ok ? { id, text: `📣 ${r.nick} ${r.tech} 熟練 +1・💗 +${r.bond}` } : { id, text: (r && r.why) || ti.why || '' }); }} className="rounded-xl bg-emerald-700 min-h-[44px] px-1 py-1 text-[12px] font-black leading-tight text-white active:scale-95 disabled:opacity-50" style={JA_LABEL_STYLE}>{jaWrap('📣 応援する')}<span className="block text-[10px] font-bold">今日{ti.perDay - ti.left}/{ti.perDay}</span></button>
-            {battleBtn}
-          </div>)}
-        {successBtn}
-        {ti && !ti.canCheer && ti.why && <p className="w-full text-[10.5px] font-bold text-slate-300" data-assistant-life-map-cheer-why={id} style={JA_WRAP_STYLE}>{jaWrap(ti.why)}</p>}
-        {cheerMsg && cheerMsg.id === id && cheerMsg.text && <p className="w-full rounded-lg bg-emerald-900/70 px-2 py-1 text-[11px] font-black text-emerald-100" data-assistant-life-map-cheer-msg={id} style={JA_WRAP_STYLE}>{jaWrap(cheerMsg.text)}</p>}
-      </div>);
-  };
+  const row = (id, place, town) => (
+    <AssistantLifeMapRow key={id} id={id} place={place} town={town} life={life} selected={initialAssistantId === id} cheerMsg={cheerMsg} setCheerMsg={setCheerMsg} close={() => setSheet(null)}
+      onRoom={(rid) => { if (typeof onView === 'function') onView(rid); else { setSheet(null); onPick(rid); } }} onBeat={onBeat} onCard={onCard}/>);
   return (
     <div className="absolute inset-0 z-[4] overflow-y-auto overflow-x-hidden bg-[#0b1020]" data-assistant-life-where data-assistant-life-map-art={art}>
       {typeof AssistantMasmonRanchHost === 'function' && <AssistantMasmonRanchHost/>}
@@ -135110,6 +135146,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   <button data-battle-system-help type="button" disabled={!!battleTutorial} onClick={()=>openHelp()}
                     className="mhms-glass flex min-h-[48px] min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-xl px-1 leading-none text-amber-100 active:scale-95 disabled:opacity-40"><span aria-hidden="true" className="text-lg">📖</span><b className="text-[11px] font-black">ヘルプ</b></button>
                 </div>
+                {typeof AssistantLifeBattleHall==='function'&&!battleTutorial&&<AssistantLifeBattleHall metIds={assistantsUnlockedFrom(rhythmEventStorySeen).filter(who=>who.id!=='momosuke'||momosukeIntroSeenFlag).map(who=>who.id)}/>}
               </div>
             </div>}
           </div>);

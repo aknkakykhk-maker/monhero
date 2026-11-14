@@ -20934,6 +20934,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   <button data-battle-system-help type="button" disabled={!!battleTutorial} onClick={()=>openHelp()}
                     className="mhms-glass flex min-h-[48px] min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-xl px-1 leading-none text-amber-100 active:scale-95 disabled:opacity-40"><span aria-hidden="true" className="text-lg">📖</span><b className="text-[11px] font-black">ヘルプ</b></button>
                 </div>
+                {typeof AssistantLifeBattleHall==='function'&&!battleTutorial&&<AssistantLifeBattleHall metIds={assistantsUnlockedFrom(rhythmEventStorySeen).filter(who=>who.id!=='momosuke'||momosukeIntroSeenFlag).map(who=>who.id)}/>}
               </div>
             </div>}
           </div>);
