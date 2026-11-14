@@ -170,7 +170,7 @@ function MsxR3Box({ onClose }) {
     const locked = [...teamIds, ...(lendId ? [lendId] : []), ...(runFrom ? [runFrom] : [])];
     return (<>
       <style>{MSX_R3_CSS}</style><style>{MSX_MM_CSS}</style>
-      <MonsucFuseSheet box={box} locked={locked} readBox={msxR3ReadBox} keepNote={assist && assist.mons.length >= MSX_ASSIST_CAP ? `アシスト用がいっぱい(${MSX_ASSIST_CAP}/${MSX_ASSIST_CAP})なので、\u200b親の2体は残りません(置き場から外すと残せます)` : `親の2体は、アシスト用に残ります(${assist ? Math.min(MSX_ASSIST_CAP, assist.mons.length + 2) : 2}/${MSX_ASSIST_CAP})。\u200b育成には使えず、\u200b編成にだけ入れられます`}
+      <MonsucFuseSheet box={box} locked={locked} readBox={msxR3ReadBox} onName={async (id, nick, cols) => { const r = await msxR3EditMon(id, nick, cols); if (r && r.ok && r.box) setBox(r.box); return r; }} keepNote={assist && assist.mons.length >= MSX_ASSIST_CAP ? `アシスト用がいっぱい(${MSX_ASSIST_CAP}/${MSX_ASSIST_CAP})なので、\u200b親の2体は残りません(置き場から外すと残せます)` : `親の2体は、アシスト用に残ります(${assist ? Math.min(MSX_ASSIST_CAP, assist.mons.length + 2) : 2}/${MSX_ASSIST_CAP})。\u200b育成には使えず、\u200b編成にだけ入れられます`}
         onSave={async (n) => { let old = null; try { old = await msxR3ReadBox(); } catch (e) { old = null; } const r = await storeSet(MSX_KEYS.box, n); if (r === true && old && n && Array.isArray(n.mons)) { try { const left = old.mons.filter((m) => !n.mons.some((x) => x.id === m.id)); const k = await msxAssistKeep(left, 'fuse'); if (k && k.assist) setAssist(k.assist); } catch (e) {} } return r; }} onDone={() => { msxR3ReadBox().then(setBox); }} onClose={() => { setPage('gate'); msxR3ReadBox().then(setBox); }}/>
     </>);
   }
@@ -200,7 +200,7 @@ function MsxR3Box({ onClose }) {
     title = 'アシスト用の置き場';
     const stock = assist ? assist.mons : [];
     body = (<>
-      <div className="mm-hint msx-kp">合体の親にしたモンスター・お別れしたモンスターが残っています。\u200b育成には使えず、\u200b育成を始めるときの編成にだけ入れられます。\u200bアシスト効果と得意な能力が効きます</div>
+      <div className="mm-hint msx-kp">合体の親にしたモンスター・お別れしたモンスターが残っています。{'\u200b'}育成には使えず、{'\u200b'}育成を始めるときの編成にだけ入れられます。{'\u200b'}アシスト効果と得意な能力が効きます</div>
       {msg ? <div className="mm-hint ok">{msg}</div> : null}
       <div className="mm-gridw">{stock.length ? <MsxMmGrid mons={stock} label={view.label} mark={() => 'アシスト用'} isOn={(m) => apick.includes(m.id)}
         attrs={(m) => ({ 'data-msx-assist-mon': m.id })} onPick={(m) => setApick(apick.includes(m.id) ? apick.filter((x) => x !== m.id) : [...apick, m.id])}/>

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9de3ec4f13bf78b4
+// source-sha256: 1701c1ac9fdfac65
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -156741,12 +156741,16 @@ function MonsucFuseSheet({
   onDone,
   onClose,
   suc = null,
-  keepNote = ''
+  keepNote = '',
+  onName = null
 }) {
   const SUC = suc || monsucFuseCore();
   const [mainId, setMain] = React.useState(null);
   const [matId, setMat] = React.useState(null);
   const [sure, setSure] = React.useState(0);
+  const [nm, setNm] = React.useState('');
+  const [nmErr, setNmErr] = React.useState('');
+  const [named, setNamed] = React.useState(null);
   const [err, setErr] = React.useState('');
   const [done, setDone] = React.useState(null);
   const [ready, setReady] = React.useState(true);
@@ -156798,6 +156802,9 @@ function MonsucFuseSheet({
         child: plan.child,
         lost: [monsucFuseNick(main), monsucFuseNick(mat)]
       });
+      setNm(typeof plan.child.nick === 'string' ? plan.child.nick : '');
+      setNmErr('');
+      setNamed(null);
       setErr('');
       if (typeof onDone === 'function') onDone(plan.child);
     } else {
@@ -156826,8 +156833,53 @@ function MonsucFuseSheet({
   }, typeof amgpMonIcon === 'function' ? amgpMonIcon(done.child.species) : null, monsucFuseSpName(done.child.species), "が生まれました(", done.child.gen, "代目)"), React.createElement("p", {
     className: "mt-1 text-[11px] font-bold text-slate-200"
   }, "マスモンボックスに入りました。まだ育てていないので、このまま育成を始められます"), React.createElement("small", {
-    className: "mt-1 block text-[11px] font-bold text-slate-300"
-  }, done.lost.join('と'), "は、思い出に名前・ランク・代が残ります")), React.createElement("button", {
+    className: "mt-1 block text-[11px] font-bold text-slate-300",
+    style: {
+      wordBreak: 'keep-all',
+      overflowWrap: 'anywhere'
+    }
+  }, done.lost.join('と'), "は、アシスト用に残ります。", '\u200b', "思い出の記録(名前・ランク・代)も残ります")), typeof onName === 'function' ? React.createElement("div", {
+    className: "mt-2 rounded-xl border border-amber-300/60 bg-amber-950/40 p-3",
+    "data-monsuc-fuse-name": true
+  }, React.createElement("p", {
+    className: "text-[13px] font-black"
+  }, "生まれたモンスターに名前をつけましょう"), React.createElement("p", {
+    className: "mt-0.5 text-[10.5px] font-bold text-slate-300",
+    style: {
+      wordBreak: 'keep-all',
+      overflowWrap: 'anywhere'
+    }
+  }, "育成を始めるときも、この名前が入っています。", '\u200b', "そこで変えることもできます"), named ? React.createElement("p", {
+    className: "mt-2 text-[13px] font-black text-amber-200",
+    "data-monsuc-fuse-named": true
+  }, "「", named, "」と名づけました") : React.createElement(React.Fragment, null, React.createElement("input", {
+    type: "text",
+    value: nm,
+    maxLength: 8,
+    placeholder: monsucFuseSpName(done.child.species).slice(0, 8),
+    onChange: e => {
+      setNm(e.target.value.slice(0, 8));
+      setNmErr('');
+    },
+    "data-monsuc-fuse-nameinput": true,
+    className: "mt-2 w-full rounded-lg bg-slate-800 px-3 py-2 text-[14px] font-black text-white"
+  }), React.createElement("small", {
+    className: "mt-0.5 block text-[10px] font-bold text-slate-400"
+  }, (nm || '').length, " / 8文字"), nmErr && React.createElement("p", {
+    className: "mt-1 text-[11px] font-bold text-rose-200",
+    "data-monsuc-fuse-nameerr": true
+  }, nmErr), React.createElement("button", {
+    type: "button",
+    "data-monsuc-fuse-namego": true,
+    onClick: async () => {
+      const r = await onName(done.child.id, nm || monsucFuseSpName(done.child.species).slice(0, 8), Array.isArray(done.child.colors) ? done.child.colors : []);
+      if (r && r.ok) {
+        setNamed(r.mon && r.mon.nick ? r.mon.nick : nm);
+        setNmErr('');
+      } else setNmErr(r && r.why === 'name' ? 'その名前は使えません。ほかの名前にしてね' : '名前を保存できませんでした');
+    },
+    className: "mt-2 min-h-[44px] w-full rounded-xl bg-amber-400 text-[14px] font-black text-slate-900"
+  }, "この名前にする"))) : null, React.createElement("button", {
     type: "button",
     onClick: onClose,
     "data-mhl-sheet-close": true,
@@ -156890,16 +156942,22 @@ function MonsucFuseSheet({
     "data-monsuc-fuse-lose": true
   }, React.createElement("p", {
     className: "text-[12px] font-black text-rose-100"
-  }, monsucFuseNick(main), "と", monsucFuseNick(mat), "は、マスモンボックスからいなくなります。元に戻せません"), React.createElement("p", {
-    className: "mt-0.5 text-[10.5px] font-bold text-rose-200"
-  }, "思い出に名前・ランク・代が残ります"), keepNote ? React.createElement("p", {
+  }, monsucFuseNick(main), "と", monsucFuseNick(mat), "は、マスモンボックスからいなくなります。元に戻せません"), keepNote ? React.createElement("p", {
     className: "mt-0.5 text-[10.5px] font-bold text-indigo-200",
     style: {
       wordBreak: 'keep-all',
       overflowWrap: 'anywhere'
     },
     "data-monsuc-fuse-keep": true
-  }, keepNote) : null), err && React.createElement("p", {
+  }, keepNote) : React.createElement("p", {
+    className: "mt-0.5 text-[10.5px] font-bold text-rose-200"
+  }, "思い出に名前・ランク・代が残ります"), keepNote ? React.createElement("p", {
+    className: "mt-0.5 text-[10.5px] font-bold text-rose-200",
+    style: {
+      wordBreak: 'keep-all',
+      overflowWrap: 'anywhere'
+    }
+  }, "思い出の記録(名前・ランク・代)もそのまま残ります") : null), err && React.createElement("p", {
     className: "mt-1 text-[11px] font-bold text-rose-200",
     "data-monsuc-fuse-err": true
   }, err), React.createElement("button", {
@@ -167572,6 +167630,10 @@ function MsxStart({
   const apt = msxAptOf(species);
   const [detail, setDetail] = useState(false);
   const fromMon = pick.box ? box.mons.find(m => m.id === pick.box) || null : null;
+  useEffect(() => {
+    setNick(fromMon && typeof fromMon.nick === 'string' ? fromMon.nick.slice(0, MSX_NAME_MAX) : '');
+    setNameErr('');
+  }, [pick.box]);
   const growType = fromMon && Number.isInteger(fromMon.gt) ? fromMon.gt : typeof SUC.speciesType === 'function' ? SUC.speciesType(species) : null;
   const growName = growType != null && typeof MASMON_CALC !== 'undefined' ? MASMON_CALC.typeOf(growType).name : '—';
   const startSt = useMemo(() => fromMon && fromMon.st && typeof fromMon.st === 'object' && typeof SUC.normStats === 'function' ? SUC.normStats(fromMon.st, species) : typeof SUC.initStats === 'function' ? SUC.initStats(species) : {}, [SUC, species, fromMon]);
@@ -176478,6 +176540,11 @@ function MsxR3Box({
       box: box,
       locked: locked,
       readBox: msxR3ReadBox,
+      onName: async (id, nick, cols) => {
+        const r = await msxR3EditMon(id, nick, cols);
+        if (r && r.ok && r.box) setBox(r.box);
+        return r;
+      },
       keepNote: assist && assist.mons.length >= MSX_ASSIST_CAP ? `アシスト用がいっぱい(${MSX_ASSIST_CAP}/${MSX_ASSIST_CAP})なので、\u200b親の2体は残りません(置き場から外すと残せます)` : `親の2体は、アシスト用に残ります(${assist ? Math.min(MSX_ASSIST_CAP, assist.mons.length + 2) : 2}/${MSX_ASSIST_CAP})。\u200b育成には使えず、\u200b編成にだけ入れられます`,
       onSave: async n => {
         let old = null;
@@ -176576,7 +176643,7 @@ function MsxR3Box({
     const stock = assist ? assist.mons : [];
     body = React.createElement(React.Fragment, null, React.createElement("div", {
       className: "mm-hint msx-kp"
-    }, "合体の親にしたモンスター・お別れしたモンスターが残っています。\\u200b育成には使えず、\\u200b育成を始めるときの編成にだけ入れられます。\\u200bアシスト効果と得意な能力が効きます"), msg ? React.createElement("div", {
+    }, "合体の親にしたモンスター・お別れしたモンスターが残っています。", '\u200b', "育成には使えず、", '\u200b', "育成を始めるときの編成にだけ入れられます。", '\u200b', "アシスト効果と得意な能力が効きます"), msg ? React.createElement("div", {
       className: "mm-hint ok"
     }, msg) : null, React.createElement("div", {
       className: "mm-gridw"

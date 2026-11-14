@@ -90,6 +90,8 @@ const makeRun = async (kind) => {
     ['F1', 'box', ['@openbox', '@mmlist', '@mmbye', '@boxmon=b2', '#mm-bye']], ['F2', 'box', ['@openbox', '@fuse', '~fuse-pick=b1', '~fuse-pick=b2']],
     ['T1', 'box', [/新しく育成/, /次へ/, /このモンスターにする/, '^assist-note']], ['T2', 'box', [/新しく育成/, /次へ/, /このモンスターにする/, '#team-assist=as1', '#team-assist=as3', '^assist-note']],
     ['F3', 'box', ['@openbox', '@mmlist', '@mmbye', '@boxmon=b2', '#mm-bye', '#mm-bye-yes']], ['K9', 'box', ['@openbox']],
+    ['F4', 'box', ['@openbox', '@fuse', '~fuse-pick=b1', '~fuse-pick=b2', '~fuse-go', 'w1100', '~fuse-go']], ['F5', 'box', ['@openbox', '@fuse', '~fuse-pick=b1', '~fuse-pick=b2', '~fuse-go', 'w1100', '~fuse-go', '=fuse-nameinput:ぷにお', '~fuse-namego']],
+    ['F6', 'box', ['@openbox', '@fuse', '~fuse-pick=b1', '~fuse-pick=b2', '~fuse-go', 'w1100', '~fuse-go', '=fuse-nameinput:ぷにお', '~fuse-namego', '!sheet-close', '#mm-open-assist']],
     ['X7', 'box', ['@openbox', '@mmlist', '@mmbye']], ['X8', 'box', ['@openbox', '@mmlist', '@mmlabel']],
     ['X1', 'box', ['@openbox', '@mmlist', '@boxmon=b1', '@edit']], ['X2', 'box', ['@openbox', '@mmlist', '@boxmon=b1', '@edit', '@editsave']],
     // 引退: 能力ポイントが残っていれば E3(使う)→ E0(最終の評価)→ E1(振り返り)→ E2(アシスト)→ マスモンボックス(2026-11-14 参考 v4 の順)
@@ -137,14 +139,16 @@ const makeRun = async (kind) => {
           const done = await page.evaluate(async (st) => {
             if (st.re) { const re = new RegExp(st.re); const b = [...document.querySelectorAll('.msx button')].find((x) => re.test((x.innerText || '').replace(/\s+/g, '')) && !x.disabled); if (b) b.click(); return !!b; }
             if (st === 'cont') { const b = [...document.querySelectorAll('.msx button')].find((x) => /続きから|結果を見る/.test(x.innerText || '')); if (b) b.click(); return !!b; }
+            if (/^w\d+$/.test(st)) return true; // 'w1000' は待つだけ
+            if (st[0] === '=') { const [k, v] = st.slice(1).split(':'); const e = document.querySelector(`[data-monsuc-${k}]`); if (!e) return false; const set = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set; set.call(e, v); e.dispatchEvent(new Event('input', { bubbles: true })); return true; } // '=k:文字' は [data-monsuc-k] の入力に文字を入れる
             if (st[0] === '^') { const e = document.querySelector(`[data-msx-${st.slice(1)}]`); if (e) e.scrollIntoView({ block: 'center' }); return !!e; } // '^x' は [data-msx-x] が見える所までスクロール
             const [k, val] = st.slice(1).split('=');
-            const pre = st[0] === '%' ? 'data-msc-' : st[0] === '#' ? 'data-msx-' : st[0] === '~' ? 'data-monsuc-' : 'data-msx-r3-'; // '#x' は [data-msx-x](詳細の窓 MsxMonDetail のタブなど)
+            const pre = st[0] === '%' ? 'data-msc-' : st[0] === '#' ? 'data-msx-' : st[0] === '~' ? 'data-monsuc-' : st[0] === '!' ? 'data-mhl-' : 'data-msx-r3-'; // '#x' は [data-msx-x](詳細の窓 MsxMonDetail のタブなど)
             const b = document.querySelector(`[${pre}${k}${val ? `="${val}"` : ''}]`);
             if (b && !b.disabled) b.click(); return !!(b && !b.disabled);
           }, st instanceof RegExp ? { re: st.source } : st);
           if (!done) check(`${label}: 「${st}」が押せる`, false);
-          await page.waitForTimeout(st === '%ready' ? 2500 : 700);
+          await page.waitForTimeout(st === '%ready' ? 2500 : /^w\d+$/.test(st) ? Number(st.slice(1)) : 700);
         }
         await page.waitForTimeout(500 + (Number(process.env.SHOT_WAIT) || 0)); // SHOT_WAIT=<ms> で、動く演出の途中を撮る
         const m = await page.evaluate(() => {
