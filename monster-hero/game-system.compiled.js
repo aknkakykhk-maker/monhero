@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 84f1d7609033033b
+// source-sha256: 3c7a391ccd1c5ac5
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -166657,7 +166657,21 @@ const MSX_CSS = `
 .msx .msx-md-tg .tc.wise.tg-not{background:linear-gradient(160deg,#2f8050,#145230);border-color:#3f9a62}
 .msx-md-tg .tc.tg-not .ti{filter:brightness(.8)}
 .msx-md-tg .tc{position:relative}
-.msx-md-tg .tc .tg-alt{position:absolute;top:1px;right:3px;font-size:11px;font-weight:900;line-height:1;color:#fff;text-shadow:0 1px 2px #000}
+.msx .msx-md-alt{margin-top:6px;width:100%;padding:6px 8px;border-radius:10px;font-size:12px;font-weight:900;color:#fff;background:linear-gradient(160deg,#6d4cd9,#4a2fa6);border:1.5px solid #a78bfa}
+.msx .msx-tp{display:flex;align-items:center;gap:8px;width:100%;margin:0 0 6px;padding:6px 8px;border-radius:12px;text-align:left;color:#fff;background:#1e1b3a;border:1.5px solid #3b3566}
+.msx .msx-tp.on{border-color:#facc15;background:#2a2547}
+.msx .msx-tp:disabled{opacity:.55}
+.msx .msx-tp .tc{position:relative;flex:0 0 44px;width:44px;height:44px;border-radius:8px;display:flex;align-items:center;justify-content:center;border:1.5px solid transparent}
+.msx .msx-tp .tc.pow{background:linear-gradient(160deg,#fde68a,#d97706);border-color:#f59e0b}
+.msx .msx-tp .tc.wise{background:linear-gradient(160deg,#bbf7d0,#16a34a);border-color:#4ade80}
+.msx .msx-tp .tc.pow.tg-not{background:linear-gradient(160deg,#9a7420,#5e420c);border-color:#a8801f}
+.msx .msx-tp .tc.wise.tg-not{background:linear-gradient(160deg,#2f8050,#145230);border-color:#3f9a62}
+.msx .msx-tp .tpb{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.msx .msx-tp .tpb b{font-size:13px}
+.msx .msx-tp .tpb small{font-size:10.5px;opacity:.85;line-height:1.35}
+.msx .msx-tp .tpb small.tp-nb i{font-style:normal;display:inline-block;white-space:nowrap;margin-right:.6em}
+.msx .msx-tp .tpm{flex:0 0 auto;font-size:11px;font-weight:900;color:#facc15}
+.msx-md-tg .tc .tg-alt{position:absolute;top:0;right:0;min-width:22px;height:22px;display:flex;align-items:flex-start;justify-content:flex-end;padding:1px 3px 0 0;font-size:12px;font-weight:900;line-height:1;color:#fff;text-shadow:0 1px 2px #000;cursor:pointer}
 
 .msx-md-not{display:block;font-size:10px;color:#94a3b8;font-weight:800}
 .msx-md-howrow{flex-direction:column;align-items:flex-start;gap:1px}.msx-md-howrow>span{width:100%}
@@ -167167,6 +167181,61 @@ const msxNormAssist = raw => {
     cap: MSX_ASSIST_CAP,
     mons
   };
+};
+const MSX_PICK_KEY = 'mh_monsuc_techpick_v1';
+const msxNormPickMap = raw => {
+  const o = {};
+  if (!msxIsObj(raw)) return o;
+  Object.keys(raw).slice(0, 32).forEach(c => {
+    if (/^[1-5]-[0-3]$/.test(c) && typeof raw[c] === 'string' && raw[c].length <= 48) o[c] = raw[c];
+  });
+  return o;
+};
+const msxNormTechPick = raw => {
+  const o = msxIsObj(raw) ? raw : {};
+  const base = {};
+  const mon = {};
+  if (msxIsObj(o.base)) Object.keys(o.base).slice(0, 64).forEach(k => {
+    if (k.length <= 32) base[k] = msxNormPickMap(o.base[k]);
+  });
+  if (msxIsObj(o.mon)) Object.keys(o.mon).slice(0, 300).forEach(k => {
+    if (k.length <= 64) mon[k] = msxNormPickMap(o.mon[k]);
+  });
+  return {
+    v: 1,
+    base,
+    mon
+  };
+};
+const msxReadTechPick = async () => {
+  let raw = null;
+  try {
+    raw = await storeGet(MSX_PICK_KEY, null);
+  } catch (e) {
+    raw = null;
+  }
+  if (raw != null && !msxIsObj(raw)) {
+    try {
+      await storeSet(MSX_PICK_KEY + '_broken', raw);
+    } catch (e) {}
+  }
+  return msxNormTechPick(raw);
+};
+const msxWriteTechPick = async (kind, key, map) => {
+  const cur = await msxReadTechPick();
+  const out = {
+    ...cur,
+    [kind]: {
+      ...cur[kind],
+      [key]: msxNormPickMap(map)
+    }
+  };
+  try {
+    await storeSet(MSX_PICK_KEY, out);
+  } catch (e) {
+    return cur;
+  }
+  return out;
 };
 const msxReadAssist = async () => {
   let raw = null;
@@ -167921,9 +167990,11 @@ function MsxMonDetail({
   head = null,
   more = null,
   foot = null,
-  grade: gradeLabel = null
+  grade: gradeLabel = null,
+  pick = null
 }) {
   const [tab, setTab] = useState('base');
+  const [pickCell, setPickCell] = useState(null);
   const line = typeof MONSTER_LINEAGE_MAP === 'object' && MONSTER_LINEAGE_MAP ? MONSTER_LINEAGE_MAP[species] : null;
   const main = line ? msxLineName(line.main) : '';
   const subL = line ? msxLineName(line.sub || line.main) : '';
@@ -168039,19 +168110,22 @@ function MsxMonDetail({
     className: `tgh d${d}`
   }, MSX_DIST_NAMES[d])), tgLines.map(r => MSX_TG_COLS.map(d => {
     const alts = tgAt(r, d);
-    const t = alts[0];
+    const cellK = `${r}-${d}`;
+    const t = alts.find(has) || alts.find(x => pick && pick.sel && pick.sel[cellK] === x.id) || alts[0];
     if (!t) return React.createElement("span", {
       key: `${r}-${d}`,
       className: "no",
       "aria-hidden": "true"
     }, "×");
     const got = has(t);
+    const canAlt = !!pick && alts.length > 1;
     return React.createElement("button", {
       type: "button",
       key: `${r}-${d}`,
       className: `tc ${t.kind === 'wise' ? 'wise' : 'pow'}${got ? ' got' : ' tg-not'}${tech && tech.id === t.id ? ' on' : ''}`,
       "data-msx-tech": t.id,
-      "aria-label": `${t.name}${got ? '' : '(まだ覚えていない)'}${alts.length > 1 ? '(選べる技が' + alts.length + 'つ)' : ''}`,
+      "data-msx-cell": cellK,
+      "aria-label": `${t.name}${got ? '' : '(まだ覚えていない)'}${canAlt ? '(選べる技が' + alts.length + 'つ)' : ''}`,
       onClick: () => setPickT(t.id)
     }, React.createElement("span", {
       className: "ti",
@@ -168062,9 +168136,15 @@ function MsxMonDetail({
       uid: `${r}${d}`
     })), React.createElement("span", {
       className: "g"
-    }, t.guts), alts.length > 1 ? React.createElement("span", {
+    }, t.guts), canAlt ? React.createElement("span", {
       className: "tg-alt",
-      "aria-hidden": "true"
+      role: "button",
+      "aria-label": "覚える技を選ぶ",
+      "data-msx-alt": cellK,
+      onClick: e => {
+        e.stopPropagation();
+        setPickCell(cellK);
+      }
     }, "⇄") : null);
   }))), tech ? React.createElement("div", {
     className: "msx-md-td"
@@ -168099,7 +168179,71 @@ function MsxMonDetail({
     return how.startsWith('修行で覚える(') ? React.createElement(React.Fragment, null, "修行で覚える", React.createElement("small", {
       className: "msx-md-how"
     }, how.slice('修行で覚える'.length))) : how;
-  })()))) : null))), foot ? React.createElement("div", {
+  })())), pick && tgAt(tech.rank, Math.min(...(tech.dist || [1]))).length > 1 ? React.createElement("button", {
+    type: "button",
+    className: "msx-md-alt",
+    "data-msx-alt-open": true,
+    onClick: () => setPickCell(`${tech.rank}-${Math.min(...(tech.dist || [1]))}`)
+  }, "⇄ 覚える技を選ぶ") : null) : null))), pick && pickCell ? (() => {
+    const [pr, pd] = pickCell.split('-').map(Number);
+    const alts = tgAt(pr, pd);
+    const lock = !!pick.locked(pickCell);
+    const cur = alts.find(has) || alts.find(x => pick.sel && pick.sel[pickCell] === x.id) || alts[0];
+    return React.createElement("div", {
+      className: "msx-ov msx-fade",
+      "data-msx-techpick": true,
+      onClick: e => {
+        e.stopPropagation();
+        setPickCell(null);
+      }
+    }, React.createElement("div", {
+      className: "msx-sheet msx-dt",
+      onClick: e => e.stopPropagation()
+    }, React.createElement("h3", null, "覚える技を選ぶ"), React.createElement("div", {
+      className: "msx-note msx-kp"
+    }, msxPh(`${MSX_DIST_NAMES[pd]}の間合い・ランク${pr}。｜${lock ? 'この升の技は｜もう覚えたので、｜選び直せません' : '選ばなかった技は、｜この升では｜覚えません。｜覚えるまでは｜選び直せます'}`)), React.createElement("div", {
+      className: "msx-dt-body"
+    }, alts.map(t => {
+      const on = cur && cur.id === t.id;
+      const how = has(t) ? '覚えている' : msxTechHow(t, all);
+      return React.createElement("button", {
+        type: "button",
+        key: t.id,
+        className: `msx-tp${on ? ' on' : ''}`,
+        disabled: lock && !on,
+        "data-msx-techpick-opt": t.id,
+        onClick: () => {
+          if (!lock) {
+            pick.onPick(pickCell, t.id);
+            setPickT(t.id);
+            setPickCell(null);
+          }
+        }
+      }, React.createElement("span", {
+        className: `tc ${t.kind === 'wise' ? 'wise' : 'pow'}${has(t) ? ' got' : ' tg-not'}`
+      }, React.createElement("span", {
+        className: "ti",
+        "aria-hidden": "true"
+      }, React.createElement(MsxTechIcon, {
+        kind: t.kind === 'wise' ? 'wise' : 'pow',
+        rank: t.rank,
+        uid: `p${t.id}`
+      }))), React.createElement("span", {
+        className: "tpb"
+      }, React.createElement("b", null, t.name), React.createElement("small", null, t.kind === 'wise' ? 'かしこさ' : 'ちから', "・消費ガッツ ", t.guts), React.createElement("small", {
+        className: "tp-nb"
+      }, React.createElement("i", null, "ダメージ ", grade('power', t.power)), React.createElement("i", null, "命中率 ", grade('hit', t.hit)), React.createElement("i", null, "クリティカル率 ", grade('crit', t.crit))), React.createElement("small", {
+        className: "tp-nb"
+      }, how.startsWith('修行で覚える(') ? React.createElement(React.Fragment, null, React.createElement("i", null, "修行で覚える"), React.createElement("i", null, how.slice('修行で覚える'.length))) : React.createElement("i", null, how))), React.createElement("span", {
+        className: "tpm"
+      }, on ? '✅ 選択中' : '選ぶ'));
+    })), React.createElement("button", {
+      type: "button",
+      className: "msx-dt-close",
+      "data-msx-techpick-close": true,
+      onClick: () => setPickCell(null)
+    }, "閉じる")));
+  })() : null, foot ? React.createElement("div", {
     className: "msx-md-foot"
   }, foot) : null, React.createElement("button", {
     type: "button",
@@ -168434,6 +168578,7 @@ function MsxStart({
     onStart({
       scn: typeof msxScenarioId === 'function' ? msxScenarioId(scn) : 'hero',
       species,
+      techPick: tpSel,
       from: pick.box ? {
         box: pick.box
       } : {
@@ -168458,12 +168603,46 @@ function MsxStart({
   };
   const apt = msxAptOf(species);
   const [detail, setDetail] = useState(false);
+  const [tpAll, setTpAll] = useState(null);
+  useEffect(() => {
+    let on = true;
+    msxReadTechPick().then(t => {
+      if (on) setTpAll(t);
+    }).catch(() => {
+      if (on) setTpAll(msxNormTechPick(null));
+    });
+    return () => {
+      on = false;
+    };
+  }, []);
   const fromMon = pick.box ? box.mons.find(m => m.id === pick.box) || null : null;
   useEffect(() => {
     setNick(fromMon && typeof fromMon.nick === 'string' ? fromMon.nick.slice(0, MSX_NAME_MAX) : '');
     setNameErr('');
   }, [pick.box]);
   const growType = fromMon && Number.isInteger(fromMon.gt) ? fromMon.gt : typeof SUC.speciesType === 'function' ? SUC.speciesType(species) : null;
+  const tpKind = fromMon ? 'mon' : 'base';
+  const tpKey = fromMon ? fromMon.id : species;
+  const tpSel = typeof SUC.techPickNorm === 'function' ? SUC.techPickNorm(tpAll && tpAll[tpKind] ? tpAll[tpKind][tpKey] : null, species) : {};
+  const onTechPick = async (cell, id) => {
+    const next = {
+      ...tpSel,
+      [cell]: id
+    };
+    try {
+      setTpAll(await msxWriteTechPick(tpKind, tpKey, next));
+    } catch (e) {}
+    setTpAll(cur => {
+      const c = cur || msxNormTechPick(null);
+      return {
+        ...c,
+        [tpKind]: {
+          ...c[tpKind],
+          [tpKey]: next
+        }
+      };
+    });
+  };
   const growName = growType != null && typeof MASMON_CALC !== 'undefined' ? MASMON_CALC.typeOf(growType).name : '—';
   const startSt = useMemo(() => fromMon && fromMon.st && typeof fromMon.st === 'object' && typeof SUC.normStats === 'function' ? SUC.normStats(fromMon.st, species) : typeof SUC.initStats === 'function' ? SUC.initStats(species) : {}, [SUC, species, fromMon]);
   const preview = useMemo(() => msxStartPreview(SUC, species, growType, fromMon && fromMon.aptBase, startSt), [SUC, species, growType, fromMon, startSt]);
@@ -168616,6 +168795,11 @@ function MsxStart({
     }, MSX_STAT_NAME[k]), React.createElement("b", null, startSt[k]), React.createElement("i", {
       className: apt[i] > 'B' ? 'lo' : ''
     }, "素質 ", apt[i]))))), detail && React.createElement(MsxMonDetail, {
+      pick: {
+        sel: tpSel,
+        locked: () => false,
+        onPick: onTechPick
+      },
       species: species,
       name: fromMon && fromMon.nick ? fromMon.nick : msxMonName(species),
       sub: fromMon ? '合体で生まれたモンスター' : 'ベースモン',
@@ -170137,6 +170321,9 @@ function MonheroSuccessScreen({
     const s = SUC.newRun({
       id,
       species: cfg.species,
+      ...(cfg.techPick && typeof cfg.techPick === 'object' ? {
+        techPick: cfg.techPick
+      } : {}),
       aid: cfg.aid,
       team: cfg.team,
       aidBondLv: cfg.aidBondLv,
@@ -171925,6 +172112,17 @@ function MsxPlay({
       power: ev.power,
       rank: ev.rank,
       SUC: SUC,
+      pick: typeof SUC.setTechPick === 'function' && s.techPick ? {
+        sel: s.techPick,
+        locked: c => SUC.techPickLocked(s, c),
+        onPick: (c, id) => {
+          const n = JSON.parse(JSON.stringify(s));
+          if (SUC.setTechPick(n, c, id)) setRun({
+            ...run,
+            s: n
+          });
+        }
+      } : null,
       onClose: () => setDetail(false)
     });
   })() : null, sheet === 'dex' && typeof MsxDex === 'function' ? React.createElement(MsxDex, {
@@ -177401,6 +177599,16 @@ function MsxR3Box({
   const [tab, setTab] = useState('list');
   const [pick, setPick] = useState([]);
   const [byeAsk, setByeAsk] = useState(null);
+  const [tpAll, setTpAll] = useState(null);
+  useEffect(() => {
+    let on = true;
+    msxReadTechPick().then(t => {
+      if (on) setTpAll(t);
+    }).catch(() => {});
+    return () => {
+      on = false;
+    };
+  }, []);
   const [assist, setAssist] = useState(null);
   const fuseKept = React.useRef(null);
   const [apick, setApick] = useState([]);
@@ -177872,6 +178080,32 @@ function MsxR3Box({
           } catch (e) {
             return null;
           }
+        })() : null,
+        pick: cur.raised === false && SUC && typeof SUC.techPickNorm === 'function' ? (() => {
+          const sel = SUC.techPickNorm(tpAll && tpAll.mon ? tpAll.mon[cur.id] : null, cur.species);
+          return {
+            sel,
+            locked: () => false,
+            onPick: async (c, id) => {
+              const next = {
+                ...sel,
+                [c]: id
+              };
+              setTpAll(t0 => {
+                const t = t0 || msxNormTechPick(null);
+                return {
+                  ...t,
+                  mon: {
+                    ...t.mon,
+                    [cur.id]: next
+                  }
+                };
+              });
+              try {
+                setTpAll(await msxWriteTechPick('mon', cur.id, next));
+              } catch (e) {}
+            }
+          };
         })() : null,
         known: Array.isArray(cur.techs) ? cur.techs : [],
         power: cur.raised === false ? null : msxMmPow(cur),
