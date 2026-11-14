@@ -54,6 +54,14 @@ const CHANGELOG = [
     ],
   },
   {
+    date: "2026-11-14 11:02", type:'update', title:'育成を始める前に、ストーリーを選べるようになりました', group:'success', releaseFlag:'monheroSuccess', dev:true,
+    items:[
+      '新しく育成を始めると、まず「ストーリー選択」が出ます。いまのお話は「ヒーローへの道」です。',
+      '「ストーリー詳細」で、お話の流れ・大会・登場人物・めざすものが見られます。',
+      '始める前の確認の画面に、選んだストーリーが出ます。「変える」で選び直せます。',
+    ],
+  },
+  {
     date: "2026-11-14 10:46", type:'update', group:'success', releaseFlag:'monheroSuccess', dev:true,
     title:'トレーニングと修行に、動きと音が入りました',
     items:[
