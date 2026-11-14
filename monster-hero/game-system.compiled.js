@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 4e5e6834f9e8adbd
+// source-sha256: fc5929ee4afb3a7d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -148282,6 +148282,8 @@ const AMBB_CSS = `
 .ambw.ambb-full [data-ambb-watch]{flex:1;min-height:0;display:flex;flex-direction:column}
 .ambw.ambb-full .ambb-stagewrap{flex:1;min-height:0;display:flex;flex-direction:column;margin-top:6px!important}
 .ambw.ambb-full .ambb-stagewrap .msa-stage{flex:1}
+.ambb-stagewrap{position:relative}
+.ambb-foe-tech{position:absolute;right:8px;bottom:8px;z-index:6;min-height:30px;padding:2px 10px;border-radius:15px;border:1px solid rgba(255,255,255,.35);background:rgba(15,10,40,.78);color:#fff;font-size:11.5px;font-weight:900;white-space:nowrap}
 .ambw.ambb-full [data-ambb-watch]>*:not(.ambb-stagewrap){flex-shrink:0}
 .ambw.ambb-full .ambw-log{margin-top:4px;padding:4px 8px;min-height:0}
 .ambw.ambb-full .ambw-log p:not(:last-of-type){display:none}
@@ -149678,25 +149680,7 @@ function AssistantMasmonBattleBeta({
       className: "ambw-btn2",
       "data-ambb-rank-open": true,
       onClick: () => setPhase('rank')
-    }, "🏆 ランキング"))), !review && React.createElement(AmbwPanel, {
-      side: "B",
-      catalog: catalog,
-      teams: {
-        A: battle.teamA,
-        B: battle.teamB
-      },
-      team: battle.teamB,
-      frame: shownF || f,
-      maxHp: battle.maxHp,
-      moves: battle.moves.B,
-      lastMove: e.side === 'B' && e.ev === 'tech' ? e.move : null,
-      mine: false,
-      cards: true,
-      onOpen: (sd, d) => setTechList({
-        side: sd,
-        d
-      })
-    }), review ? null : typeof MsaStage === 'function' ? React.createElement("div", {
+    }, "🏆 ランキング"))), review ? null : typeof MsaStage === 'function' ? React.createElement("div", {
       className: "msa ambb-stagewrap",
       style: {
         marginTop: 8
@@ -149723,7 +149707,15 @@ function AssistantMasmonBattleBeta({
       }[speed] || 1,
       fill: true,
       lite: lite
-    }), nextOn && (() => {
+    }), React.createElement("button", {
+      type: "button",
+      className: "ambb-foe-tech",
+      "data-ambb-foe-tech": true,
+      onClick: () => setTechList({
+        side: 'B',
+        d: null
+      })
+    }, "👀 相手の技"), nextOn && (() => {
       const sd = e.side,
         t = sd === 'A' ? battle.teamA : battle.teamB,
         fr = battle.frames[pos] || f;
