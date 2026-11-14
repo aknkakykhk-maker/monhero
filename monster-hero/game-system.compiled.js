@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b95ca0622d852125
+// source-sha256: e9ba2ed0d342cc65
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -6378,6 +6378,20 @@ const BGM_TRACKS = [{
   gain: 1,
   loop: true
 }, {
+  id: 'melo_hopes_and_dreams',
+  name: 'Hopes and Dreams',
+  creator: 'Toby Fox',
+  src: 'audio/bgm-hopes-and-dreams.mp3',
+  gain: 1,
+  loop: true
+}, {
+  id: 'melo_hopes_and_dreams_short',
+  name: 'Hopes and Dreams short ver.',
+  creator: 'Toby Fox',
+  src: 'audio/bgm-hopes-and-dreams-short.mp3',
+  gain: 1,
+  loop: true
+}, {
   id: 'melo_tsuki_ga_michiru_mae_ni_short',
   name: '月が満ちる前に short ver.',
   creator: 'Fuki Commune',
@@ -8164,6 +8178,8 @@ const Audio_ = (() => {
     "audio/bgm-haruka.mp3": "7a7164dbf152",
     "audio/bgm-home-2.mp3": "71bf51ba1f71",
     "audio/bgm-home-ichika.mp3": "29295336d1af",
+    "audio/bgm-hopes-and-dreams-short.mp3": "46bd73c5d860",
+    "audio/bgm-hopes-and-dreams.mp3": "227e0de43aa1",
     "audio/bgm-humanoid.mp3": "763466fbbf97",
     "audio/bgm-journey.mp3": "816f0cdab93e",
     "audio/bgm-kaze-ga-soyogu-basho.mp3": "e986277401a6",
@@ -53088,6 +53104,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     woke: [['troubled', 'ふぁ…{name}？ 起こされたけど、行く〜'], ['happy', 'ん〜…目、半分閉じてるけど叩くｗ'], ['wink', '寝ぐせのままだけど、来ちゃった♪']],
     refuse: [['normal', 'むにゃ…あと5曲…ぢゃなくて5分…'], ['normal', '…ん…あしたなら、まぢで行く…'], ['happy', 'すぅ…{name}…またあとでね…']],
     'listen:departure': [['excited', '3:59からいちばん強くなるの！ ずっとアガるよ♪']],
+    'listen:hopes_and_dreams': [['excited', '1:15と1:55と2:11がいちばん強いの！ ずっとアガるのー♪']],
     'listen:mf_ichika_mix': [['excited', 'サビは1:48から！ そこからテンションまぢ上がるやつ♪']],
     'listen:monster_hero': [['excited', '1:50からずーっといちばん強いの！ 最後までアゲてこ♪']],
     'listen:monster_hero_another': [['excited', 'こっちもサビは1:49から！ 最後までずっと盛り上がるの♪']],
@@ -53168,6 +53185,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     woke: [['troubled', '…ふぁ。起きまつ。お供しまつね'], ['wink', '眠いでつが、ちから全開でいきまつ♪'], ['happy', '早寝の私を呼ぶなんて、大胆でつね']],
     refuse: [['normal', '…すぅ…明日の朝なら、ぜひ…'], ['normal', '…むにゃ…お茶は…あとで…'], ['troubled', '…ごめんなさい…もう、夢の中でつ…']],
     'listen:departure': [['normal', '最初の静かなところ、そっと始まってきれいでつ']],
+    'listen:hopes_and_dreams': [['normal', '最初の2秒からの静かなところ、星空みたいできれいでつ']],
     'listen:mf_ichika_mix': [['normal', '2分25秒の曲でつ。終わりの手前の盛り上がりまで、ていねいにいきましょう']],
     'listen:monster_hero': [['normal', '最初の45秒くらいは静かなんでつ。そこから少しずつ強くなっていきます']],
     'listen:monster_hero_another': [['normal', '0:48までは、静かな時間が長いんでつ。そこが好きです']],
@@ -53248,6 +53266,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     woke: [['angry', 'ふぁ…ももを起こすなんて！ でも行く！！'], ['excited', '寝起きでもセンターは、もも！！'], ['wink', '目こすりながら叩くねw']],
     refuse: [['normal', '…むにゃ…アンコールは…あした…'], ['happy', '…もも、いま夢でライブ中…♡'], ['normal', '…すぅ…起こさないで…w']],
     'listen:departure': [['excited', '4:36でもう一回いちばん強くなるの！！ 最高だよ♡']],
+    'listen:hopes_and_dreams': [['excited', 'いちばん強いところが3回もあるよ♡ 最高潮だよ♡']],
     'listen:mf_ichika_mix': [['excited', '1:48からがいちばん盛り上がるとこ！！ そこでももが決めるね♡']],
     'listen:monster_hero': [['excited', '1:50からいちばん強いとこが続くの！！ 最高に盛り上がるやつ♡']],
     'listen:monster_hero_another': [['excited', '1:49からの盛り上がり、もとの曲に負けてないよ！！']],
@@ -53328,6 +53347,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     woke: [['troubled', '…ぐぅ…はっ、起きたぞ。行くからな'], ['normal', '寝ぼけてるが、叩くのはできるぞ'], ['happy', 'おでを起こすとは…しょうがないな']],
     refuse: [['normal', '…ぐぅ…あと10時間…'], ['happy', '…むにゃ…グジラ…でっかい…'], ['troubled', '…すまん…膝が、まだ寝てる…']],
     'listen:departure': [['happy', 'BPM156で強い音がいっぱいだぞ。旅の出発みたいだな']],
+    'listen:hopes_and_dreams': [['happy', 'BPM171で走るぞ。夜の大冒険みたいでいいな']],
     'listen:mf_ichika_mix': [['happy', 'サビは1:48から2:14までだな。そこまでは体力をとっとけよ']],
     'listen:monster_hero': [['happy', '静かに始まって、だんだん強くなる。冒険の始まりみたいな曲だな']],
     'listen:monster_hero_another': [['normal', '0:48で急に強くなるからな。そこで置いていかれるなよ']],
@@ -53408,6 +53428,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     woke: [['surprise', '…ん！？ 起きた起きた！ 行くぞ笑'], ['happy', '寝起きだけど、とりあえずやる！'], ['happy', '眠いけど、{name}の頼みなら！']],
     refuse: [['normal', '…朝練…6時…だから…！'], ['troubled', '…わり…明日な…笑'], ['normal', '…すぅ…ノーカン…だろ…']],
     'listen:departure': [['happy', '4:48でスッと静かに終わるの、きれいだよね笑']],
+    'listen:hopes_and_dreams': [['happy', '2:59で静かに終わるの、余韻があっていいよね笑']],
     'listen:mf_ichika_mix': [['wink', '自分の大会の曲はちょっと照れる笑 でも1:48からのサビは全力でいくよ！']],
     'listen:monster_hero': [['happy', '最後の2:30でいきなり静かになるから、きれいに締めよ笑']],
     'listen:monster_hero_another': [['happy', 'サビは2:34まで続くから、最後の1秒までちゃんと締めよ！']],
@@ -53488,6 +53509,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     woke: [['troubled', 'ぇ…起こされたぁ。ほい、行くよぉ'], ['happy', 'ふぁ…ありがとん。目、さめたかも笑'], ['normal', '寝ぼけてても、だいたい叩けるっしょ笑']],
     refuse: [['normal', '…むにゃ…あと1章…だけぇ…'], ['troubled', '…ぐぬぬぬ…眠い…またあとでぇ…'], ['happy', '…すぅ…{name}…おやすみぃ…']],
     'listen:departure': [['happy', '1:51でいったん落として、2:04からまた上げるのがいいんだよね〜']],
+    'listen:hopes_and_dreams': [['happy', '0:47でいったん落として、1:10からまた上げるのがいいんだよね〜']],
     'listen:mf_ichika_mix': [['normal', 'サビは1:48から2:14。終わりの近くに山があるから、前半はためていこ']],
     'listen:monster_hero': [['normal', '0:46でふつう、0:57で強め、1:50でいちばん強い。段の上がり方がきれいなんだよねぇ']],
     'listen:monster_hero_another': [['normal', '0:48で強くなって、1:14で一回ふつうに戻るんだよねぇ。そこが休みどころ']],
@@ -53568,6 +53590,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     woke: [['surprise', '・・・はっ！？ 起きました、行きます！'], ['normal', '寝起きの指でも、計算どおり叩きます'], ['happy', 'ふぁ・・・目ざましより効きました笑']],
     refuse: [['normal', '・・・表の・・・3行目・・・むにゃ・・・'], ['troubled', '・・・すみません・・・朝は弱いんです・・・'], ['happy', '・・・なんくるないさ・・・すぅ・・・']],
     'listen:departure': [['normal', 'BPM156です。強く打つ音が45%・・・！ 力強いです']],
+    'listen:hopes_and_dreams': [['normal', 'BPM171です。強く打つ音が48%・・・！ ガツンとくる音です']],
     'listen:mf_ichika_mix': [['excited', 'いちばん上はLv.23で434ノーツです・・・！ サビは1:48からですね笑']],
     'listen:monster_hero': [['excited', '強く打つ音が62%、軽い音は3%です・・・！ 553ノーツ、全部数えたいです笑']],
     'listen:monster_hero_another': [['happy', 'BPMはおよそ171。もとの曲より少しだけゆっくりです笑']],
@@ -53648,6 +53671,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     woke: [['surprise', '…あ、呼ばれた？ うん、行くよ'], ['happy', 'ふぁ…起こされちゃった笑 いいよ'], ['happy', '眠いけど、{name}と叩きたいしね']],
     refuse: [['troubled', '…ごめんね…今日はもう寝るね…'], ['normal', '…すぅ…また明日、いっしょにね…'], ['happy', '…むにゃ…デュラハン…いけ…']],
     'listen:departure': [['normal', '0:45の静かなところ、ひと息つけるね']],
+    'listen:hopes_and_dreams': [['normal', '0:47の静かなところ、ひと息つけるね']],
     'listen:mf_ichika_mix': [['happy', '2分半くらいの曲だね。サビの1:48までは、落ち着いて合わせようか']],
     'listen:monster_hero': [['normal', 'はじめの静かなところで、気持ちを落ち着けておくといいよ']],
     'listen:monster_hero_another': [['happy', '1:14から少し落ち着く所があるね。そこでひと息つこうか']],
@@ -60715,12 +60739,14 @@ const RHYTHM_SONG_DEFAULT_PRICE = 500;
 const RHYTHM_SONG_PRICES = Object.freeze({
   departure: 500,
   rpg: 500,
-  midnight_studio: 500
+  midnight_studio: 500,
+  hopes_and_dreams: 500
 });
 const RHYTHM_SONG_BUNDLE_OWNER = Object.freeze({
   departure_short: 'departure',
   rpg_short: 'rpg',
-  midnight_studio_short: 'midnight_studio'
+  midnight_studio_short: 'midnight_studio',
+  hopes_and_dreams_short: 'hopes_and_dreams'
 });
 const rhythmSongOwnerId = songId => {
   const id = String(songId || '');
@@ -114068,7 +114094,7 @@ function AssistantLifeRoom({
       accent: who.accent
     }), met && typeof AssistantLifeSleepEyes === 'function' && state.sleep && (() => {
       const sz = Math.round(Math.min(40, h * .44)) - 4;
-      return React.createElement(AssistantLifeSleepEyes, {
+      return React.createElement(React.Fragment, null, React.createElement(AssistantLifeSleepEyes, {
         pid: pid,
         src: assistantFaceSrc(who, null),
         w: sz,
@@ -114077,7 +114103,15 @@ function AssistantLifeRoom({
           left: 2,
           top: 2
         }
-      });
+      }), typeof AssistantLifeSleepGlassesPut === 'function' && React.createElement(AssistantLifeSleepGlassesPut, {
+        pid: pid,
+        src: assistantFaceSrc(who, null),
+        gw: sz * 0.46,
+        style: {
+          left: -sz * 0.34,
+          bottom: -sz * 0.12
+        }
+      }));
     })()) : null;
   })), ppl && state.bub && React.createElement("span", {
     className: "bb",
@@ -115400,7 +115434,17 @@ function AssistantLifeStands({
       style: {
         left: p.left,
         top: p.top,
-        filter,
+        filter: 'brightness(.45) saturate(.6)',
+        zIndex: 1
+      }
+    }), zz && p && typeof AssistantLifeSleepGlassesPut === 'function' && React.createElement(AssistantLifeSleepGlassesPut, {
+      pid: x.pid,
+      src: x.src,
+      gw: p.width * 0.3,
+      style: {
+        left: p.left + p.width * 0.76,
+        top: p.top + p.height * 0.7,
+        filter: 'brightness(.5) saturate(.6)',
         zIndex: 1
       }
     }), zz && p && React.createElement("span", {
@@ -117322,7 +117366,16 @@ function AssistantLifeMapFig({
       top,
       filter: 'brightness(.62) saturate(.7)'
     }
-  })), sleep && React.createElement("span", {
+  })), sleep && typeof AssistantLifeSleepGlassesPut === 'function' && React.createElement(AssistantLifeSleepGlassesPut, {
+    pid: who && who.id,
+    src: src,
+    gw: w * 0.42,
+    style: {
+      left: w * 0.72,
+      top: h * 0.56,
+      filter: 'brightness(.7) saturate(.8)'
+    }
+  }), sleep && React.createElement("span", {
     className: "absolute right-0 top-0 text-[10px]",
     "aria-hidden": "true"
   }, "💤"), spent && typeof AssistantLifeSpentMark === 'function' && React.createElement(AssistantLifeSpentMark, {
@@ -118977,6 +119030,147 @@ const assistantLifeSleepSrc = (pid, src) => {
   const f = face ? assistantLifeSleepArt(pid, String(face).replace(/\/face\/([^/]+)$/, '/$1')) : null;
   return f || src;
 };
+const ASSISTANT_LIFE_SLEEP_GLASSES = Object.freeze({
+  dra: {
+    skin: '#f6be96',
+    line: '#372a24',
+    lens: '#b2bdc6',
+    full: {
+      lw: 0.034,
+      cover: [[0.35, 0.44, 0.35, 0.44, 0.2], [0.622, 0.437, 0.622, 0.437, 0.19], [0.42, 0.435, 0.56, 0.43, 0.07], [0.225, 0.435, 0.28, 0.435, 0.06], [0.69, 0.43, 0.757, 0.419, 0.075], [0.685, 0.372, 0.7, 0.362, 0.05]],
+      eyes: [[0.355, 0.445, 0.075, 0.105], [0.615, 0.44, 0.075, 0.105]]
+    },
+    face: {
+      lw: 0.046,
+      cover: [[0.297, 0.51, 0.297, 0.51, 0.27], [0.67, 0.505, 0.67, 0.505, 0.265], [0.4, 0.50, 0.58, 0.495, 0.09], [0.14, 0.495, 0.2, 0.5, 0.085], [0.76, 0.50, 0.832, 0.48, 0.095], [0.755, 0.42, 0.78, 0.4, 0.07]],
+      eyes: [[0.30, 0.515, 0.10, 0.14], [0.66, 0.51, 0.10, 0.14]]
+    }
+  }
+});
+function assistantLifeSleepGlassesDef(pid, src) {
+  const g = ASSISTANT_LIFE_SLEEP_GLASSES[pid],
+    who = typeof assistantById === 'function' ? assistantById(pid) : null;
+  if (!g || !who || !who.imagePrefix || !String(src || '').includes(`/${who.imagePrefix}_normal`)) return null;
+  return g;
+}
+function AssistantLifeSleepGlassesPut({
+  pid,
+  src,
+  gw,
+  style
+}) {
+  const g = assistantLifeSleepGlassesDef(pid, src);
+  if (!g || !(gw > 0)) return null;
+  const W = gw * 1.2,
+    H = gw * 0.72,
+    x = W / 2,
+    y = H * 0.56,
+    r = gw * 0.2,
+    lw = Math.max(1.1, gw * 0.075),
+    c1 = x - gw * 0.27,
+    c2 = x + gw * 0.27;
+  return React.createElement("svg", {
+    "aria-hidden": "true",
+    "data-assistant-life-sleep-glasses-put": pid,
+    width: W,
+    height: H,
+    viewBox: `0 0 ${W} ${H}`,
+    style: {
+      position: 'absolute',
+      overflow: 'visible',
+      pointerEvents: 'none',
+      ...style
+    }
+  }, React.createElement("ellipse", {
+    cx: x,
+    cy: y + r * 1.25,
+    rx: gw * 0.56,
+    ry: r * 0.3,
+    fill: "#000",
+    opacity: ".22"
+  }), React.createElement("path", {
+    d: `M${c1 - r},${y - r * 0.2} L${c1 - r - gw * 0.02},${y - r * 1.05} L${c2 + r * 0.2},${y - r * 1.3}`,
+    fill: "none",
+    stroke: g.line,
+    strokeWidth: lw * 0.8,
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+    opacity: ".85"
+  }), React.createElement("path", {
+    d: `M${c2 + r},${y - r * 0.2} L${c2 + r + gw * 0.02},${y - r * 1.05}`,
+    fill: "none",
+    stroke: g.line,
+    strokeWidth: lw * 0.8,
+    strokeLinecap: "round",
+    opacity: ".85"
+  }), [c1, c2].map((c, i) => React.createElement("g", {
+    key: i
+  }, React.createElement("ellipse", {
+    cx: c,
+    cy: y,
+    rx: r,
+    ry: r * 0.95,
+    fill: g.lens,
+    stroke: g.line,
+    strokeWidth: lw
+  }), React.createElement("path", {
+    d: `M${c - r * 0.45},${y - r * 0.1} l${r * 0.4},${-r * 0.45}`,
+    fill: "none",
+    stroke: "#fff",
+    strokeWidth: lw * 0.6,
+    strokeLinecap: "round",
+    opacity: ".8"
+  }))), React.createElement("path", {
+    d: `M${c1 + r},${y - r * 0.1} Q${x},${y - r * 0.5} ${c2 - r},${y - r * 0.1}`,
+    fill: "none",
+    stroke: g.line,
+    strokeWidth: lw,
+    strokeLinecap: "round"
+  }));
+}
+function AssistantLifeSleepGlassesOff({
+  g,
+  pid,
+  isFace,
+  w,
+  h,
+  style
+}) {
+  const d = isFace ? g.face : g.full;
+  const three = (cx, cy, s, eh) => {
+    const X = v => (cx + v * s).toFixed(2),
+      Y = v => (cy + v * eh).toFixed(2);
+    return `M${X(-0.45)},${Y(-0.5)} C${X(0.6)},${Y(-0.62)} ${X(0.6)},${Y(-0.04)} ${X(-0.12)},${Y(-0.02)} C${X(0.7)},${Y(0)} ${X(0.62)},${Y(0.62)} ${X(-0.5)},${Y(0.5)}`;
+  };
+  return React.createElement("svg", {
+    "data-assistant-life-roomview-sleep-eyes": pid,
+    "data-assistant-life-sleep-glasses-off": pid,
+    width: w,
+    height: h,
+    viewBox: `0 0 ${w} ${h}`,
+    style: {
+      position: 'absolute',
+      overflow: 'visible',
+      pointerEvents: 'none',
+      ...style
+    }
+  }, d.cover.map(([x1, y1, x2, y2, t], i) => React.createElement("path", {
+    key: i,
+    d: `M${x1 * w},${y1 * h} L${x2 * w + 0.01},${y2 * h}`,
+    fill: "none",
+    stroke: g.skin,
+    strokeWidth: t * w,
+    strokeLinecap: "round"
+  })), d.eyes.map(([cx, cy, ew, eh], i) => React.createElement("path", {
+    key: `e${i}`,
+    d: three(cx * w, cy * h, ew * w, eh * h),
+    fill: "none",
+    stroke: g.line,
+    strokeWidth: Math.max(1, d.lw * w),
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  })));
+}
 function AssistantLifeSleepEyes({
   pid,
   src,
@@ -118984,6 +119178,15 @@ function AssistantLifeSleepEyes({
   h,
   style
 }) {
+  const gl = assistantLifeSleepGlassesDef(pid, src);
+  if (gl) return React.createElement(AssistantLifeSleepGlassesOff, {
+    g: gl,
+    pid: pid,
+    isFace: /\/face\//.test(String(src || '')),
+    w: w,
+    h: h,
+    style: style
+  });
   if (/_sleep\.PNG/i.test(String(src || ''))) return null;
   {
     const art = assistantLifeSleepArt(pid, src);
@@ -119204,6 +119407,54 @@ function AssistantLifeRoomBed({
       background: 'linear-gradient(#ffffff,#e2e8f0)',
       boxShadow: 'inset 0 -4px 0 #cbd5e1, 0 2px 3px #0003'
     }
+  }), items.filter(x => assistantLifeSleepGlassesDef(x.pid, x.src)).slice(0, 1).map(x => {
+    const tw = Math.min(34, Math.max(24, left - 6)),
+      tx = left - tw - 1,
+      ty = mattTop - 12;
+    return React.createElement("span", {
+      key: `g-${x.pid}`,
+      "data-assistant-life-roomview-nightstand": x.pid
+    }, React.createElement("span", {
+      style: {
+        position: 'absolute',
+        left: tx + tw * 0.38,
+        top: ty + 4,
+        width: tw * 0.24,
+        height: bottom - ty - 4,
+        borderRadius: 2,
+        background: 'linear-gradient(90deg,#8a5a33,#6b4426)'
+      }
+    }), React.createElement("span", {
+      style: {
+        position: 'absolute',
+        left: tx + tw * 0.14,
+        top: bottom - 3,
+        width: tw * 0.72,
+        height: 5,
+        borderRadius: 3,
+        background: '#5c3a1f'
+      }
+    }), React.createElement("span", {
+      style: {
+        position: 'absolute',
+        left: tx,
+        top: ty,
+        width: tw,
+        height: 7,
+        borderRadius: 4,
+        background: 'linear-gradient(#c89060,#a06a3c)',
+        boxShadow: '0 2px 3px #0005'
+      }
+    }), React.createElement(AssistantLifeSleepGlassesPut, {
+      pid: x.pid,
+      src: x.src,
+      gw: tw * 0.74,
+      style: {
+        left: tx + tw * 0.055,
+        top: ty - tw * 0.74 * 0.6,
+        filter: night ? 'brightness(.78)' : undefined
+      }
+    }));
   }), items.map((x, i) => {
     const box = boxes[x.src];
     if (!box) return null;
@@ -146948,7 +147199,7 @@ function AssistantLifePlanHost({
     "data-assistant-life-plan-clear": true,
     onClick: () => assistantLifePlanClearWho(who),
     className: "mt-1.5 min-h-[44px] w-full rounded-xl bg-white/10 text-[12px] font-black text-slate-100"
-  }, assistantLifePlanName(who), "を ぜんぶおまかせに"), who && React.createElement("p", {
+  }, assistantLifePlanName(who), "を 全部おまかせに"), who && React.createElement("p", {
     className: "mt-1 text-[11px] font-bold text-pink-200"
   }, "💗 仲良し度が高いほど、お願いを聞いてくれます(いま 約", Math.round(assistantLifePlanTrust(lv) * 100), "%)")))));
 }
@@ -199548,7 +199799,7 @@ const CardPlaylistRows = ({
     }, React.createElement("span", {
       className: "min-w-0 flex-1 rounded-xl border border-amber-300/50 bg-amber-500/15 px-2 py-2 text-[12px] font-black text-amber-100",
       style: JA_LABEL_STYLE
-    }, jaWrap('🔀 ランダム(選べる曲ぜんぶから、毎回ちがう順で)')), bgmPreview && React.createElement("button", {
+    }, jaWrap('🔀 ランダム(選べる曲全部から、毎回ちがう順で)')), bgmPreview && React.createElement("button", {
       type: "button",
       "data-card-playlist-preview": CARD_BGM_RANDOM,
       onClick: () => {
@@ -199623,7 +199874,7 @@ const CardPlaylistRows = ({
     "data-card-playlist-random-on": true,
     onClick: () => onChange([CARD_BGM_RANDOM]),
     className: "mt-1.5 min-h-[44px] w-full rounded-xl border border-amber-300/50 bg-slate-900 px-2 text-[11px] font-black text-amber-100"
-  }, jaWrap('🔀 ランダムにする(選べる曲ぜんぶから)')));
+  }, jaWrap('🔀 ランダムにする(選べる曲全部から)')));
 };
 const CardQuickRunDetail = ({
   quickRun,
@@ -202659,7 +202910,7 @@ const CardBattleScreen = ({
     }, "フリー対戦"), React.createElement("p", {
       className: "mt-0.5 text-[10px] font-bold leading-snug text-slate-400",
       style: JA_WRAP_STYLE
-    }, jaWrap('助手1人につき5曲まで選べます。対戦中は、選んだ曲を毎回ちがう順番で、続けて流します。「ランダム」にすると、選べる曲ぜんぶから流します')), React.createElement("div", {
+    }, jaWrap('助手1人につき5曲まで選べます。対戦中は、選んだ曲を毎回ちがう順番で、続けて流します。「ランダム」にすると、選べる曲全部から流します')), React.createElement("div", {
       className: "mt-2 grid grid-cols-3 gap-1.5"
     }, plWhoList.map(a => React.createElement("button", {
       key: a.id,
@@ -260476,7 +260727,7 @@ function MonsterHeroGame() {
         }
       }, c.title), React.createElement("span", {
         className: "block text-[10px] text-slate-400 leading-tight mt-0.5"
-      }, c.summary)), (c.topics || []).some(t => helpTopicIsNew(t, helpSeen)) && helpNewBadge, React.createElement(ChevronRight, {
+      }, helpWrap(c.summary))), (c.topics || []).some(t => helpTopicIsNew(t, helpSeen)) && helpNewBadge, React.createElement(ChevronRight, {
         size: 16,
         className: "shrink-0 text-slate-500"
       })))), cat && !topic && React.createElement("div", {

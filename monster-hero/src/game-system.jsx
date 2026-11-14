@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 2580ba8e9c380043
+// generated-sha256: c468e26a779fba44
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -4846,6 +4846,8 @@ const BGM_TRACKS = [
   { id:'melo_rpg_short', name:'RPG short ver.', creator:'school food punishment', src:'audio/bgm-rpg-short.mp3', gain:1, loop:true },
   { id:'melo_midnight_studio', name:'Midnight Studio', creator:'music studio 9 for 5', src:'audio/bgm-midnight-studio.mp3', gain:1, loop:true },
   { id:'melo_midnight_studio_short', name:'Midnight Studio short ver.', creator:'music studio 9 for 5', src:'audio/bgm-midnight-studio-short.mp3', gain:1, loop:true },
+  { id:'melo_hopes_and_dreams', name:'Hopes and Dreams', creator:'Toby Fox', src:'audio/bgm-hopes-and-dreams.mp3', gain:1, loop:true },
+  { id:'melo_hopes_and_dreams_short', name:'Hopes and Dreams short ver.', creator:'Toby Fox', src:'audio/bgm-hopes-and-dreams-short.mp3', gain:1, loop:true },
   { id:'melo_tsuki_ga_michiru_mae_ni_short', name:'月が満ちる前に short ver.', creator:'Fuki Commune', src:'audio/bgm-tsuki-ga-michiru-mae-ni-short.mp3', gain:1, loop:true },
   { id:'melo_dullahan_clockwork_alt', name:'呪われた騎士の時計仕掛け -Another-', creator:'オリジナル', src:'audio/bgm-dullahan-clockwork-alt.mp3', gain:1, loop:true },
   { id:'melo_dullahan_steel_ghost', name:'鋼鉄の亡霊', creator:'オリジナル', src:'audio/bgm-dullahan-steel-ghost.mp3', gain:1, loop:true },
@@ -6261,6 +6263,8 @@ const Audio_ = (() => {
     "audio/bgm-haruka.mp3": "7a7164dbf152",
     "audio/bgm-home-2.mp3": "71bf51ba1f71",
     "audio/bgm-home-ichika.mp3": "29295336d1af",
+    "audio/bgm-hopes-and-dreams-short.mp3": "46bd73c5d860",
+    "audio/bgm-hopes-and-dreams.mp3": "227e0de43aa1",
     "audio/bgm-humanoid.mp3": "763466fbbf97",
     "audio/bgm-journey.mp3": "816f0cdab93e",
     "audio/bgm-kaze-ga-soyogu-basho.mp3": "e986277401a6",
@@ -32591,6 +32595,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     woke: [['troubled', 'ふぁ…{name}？ 起こされたけど、行く〜'], ['happy', 'ん〜…目、半分閉じてるけど叩くｗ'], ['wink', '寝ぐせのままだけど、来ちゃった♪']],
     refuse: [['normal', 'むにゃ…あと5曲…ぢゃなくて5分…'], ['normal', '…ん…あしたなら、まぢで行く…'], ['happy', 'すぅ…{name}…またあとでね…']],
     'listen:departure': [['excited', '3:59からいちばん強くなるの！ ずっとアガるよ♪']],
+    'listen:hopes_and_dreams': [['excited', '1:15と1:55と2:11がいちばん強いの！ ずっとアガるのー♪']],
     'listen:mf_ichika_mix': [['excited', 'サビは1:48から！ そこからテンションまぢ上がるやつ♪']],
     'listen:monster_hero': [['excited', '1:50からずーっといちばん強いの！ 最後までアゲてこ♪']],
     'listen:monster_hero_another': [['excited', 'こっちもサビは1:49から！ 最後までずっと盛り上がるの♪']],
@@ -32671,6 +32676,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     woke: [['troubled', '…ふぁ。起きまつ。お供しまつね'], ['wink', '眠いでつが、ちから全開でいきまつ♪'], ['happy', '早寝の私を呼ぶなんて、大胆でつね']],
     refuse: [['normal', '…すぅ…明日の朝なら、ぜひ…'], ['normal', '…むにゃ…お茶は…あとで…'], ['troubled', '…ごめんなさい…もう、夢の中でつ…']],
     'listen:departure': [['normal', '最初の静かなところ、そっと始まってきれいでつ']],
+    'listen:hopes_and_dreams': [['normal', '最初の2秒からの静かなところ、星空みたいできれいでつ']],
     'listen:mf_ichika_mix': [['normal', '2分25秒の曲でつ。終わりの手前の盛り上がりまで、ていねいにいきましょう']],
     'listen:monster_hero': [['normal', '最初の45秒くらいは静かなんでつ。そこから少しずつ強くなっていきます']],
     'listen:monster_hero_another': [['normal', '0:48までは、静かな時間が長いんでつ。そこが好きです']],
@@ -32751,6 +32757,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     woke: [['angry', 'ふぁ…ももを起こすなんて！ でも行く！！'], ['excited', '寝起きでもセンターは、もも！！'], ['wink', '目こすりながら叩くねw']],
     refuse: [['normal', '…むにゃ…アンコールは…あした…'], ['happy', '…もも、いま夢でライブ中…♡'], ['normal', '…すぅ…起こさないで…w']],
     'listen:departure': [['excited', '4:36でもう一回いちばん強くなるの！！ 最高だよ♡']],
+    'listen:hopes_and_dreams': [['excited', 'いちばん強いところが3回もあるよ♡ 最高潮だよ♡']],
     'listen:mf_ichika_mix': [['excited', '1:48からがいちばん盛り上がるとこ！！ そこでももが決めるね♡']],
     'listen:monster_hero': [['excited', '1:50からいちばん強いとこが続くの！！ 最高に盛り上がるやつ♡']],
     'listen:monster_hero_another': [['excited', '1:49からの盛り上がり、もとの曲に負けてないよ！！']],
@@ -32831,6 +32838,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     woke: [['troubled', '…ぐぅ…はっ、起きたぞ。行くからな'], ['normal', '寝ぼけてるが、叩くのはできるぞ'], ['happy', 'おでを起こすとは…しょうがないな']],
     refuse: [['normal', '…ぐぅ…あと10時間…'], ['happy', '…むにゃ…グジラ…でっかい…'], ['troubled', '…すまん…膝が、まだ寝てる…']],
     'listen:departure': [['happy', 'BPM156で強い音がいっぱいだぞ。旅の出発みたいだな']],
+    'listen:hopes_and_dreams': [['happy', 'BPM171で走るぞ。夜の大冒険みたいでいいな']],
     'listen:mf_ichika_mix': [['happy', 'サビは1:48から2:14までだな。そこまでは体力をとっとけよ']],
     'listen:monster_hero': [['happy', '静かに始まって、だんだん強くなる。冒険の始まりみたいな曲だな']],
     'listen:monster_hero_another': [['normal', '0:48で急に強くなるからな。そこで置いていかれるなよ']],
@@ -32911,6 +32919,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     woke: [['surprise', '…ん！？ 起きた起きた！ 行くぞ笑'], ['happy', '寝起きだけど、とりあえずやる！'], ['happy', '眠いけど、{name}の頼みなら！']],
     refuse: [['normal', '…朝練…6時…だから…！'], ['troubled', '…わり…明日な…笑'], ['normal', '…すぅ…ノーカン…だろ…']],
     'listen:departure': [['happy', '4:48でスッと静かに終わるの、きれいだよね笑']],
+    'listen:hopes_and_dreams': [['happy', '2:59で静かに終わるの、余韻があっていいよね笑']],
     'listen:mf_ichika_mix': [['wink', '自分の大会の曲はちょっと照れる笑 でも1:48からのサビは全力でいくよ！']],
     'listen:monster_hero': [['happy', '最後の2:30でいきなり静かになるから、きれいに締めよ笑']],
     'listen:monster_hero_another': [['happy', 'サビは2:34まで続くから、最後の1秒までちゃんと締めよ！']],
@@ -32991,6 +33000,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     woke: [['troubled', 'ぇ…起こされたぁ。ほい、行くよぉ'], ['happy', 'ふぁ…ありがとん。目、さめたかも笑'], ['normal', '寝ぼけてても、だいたい叩けるっしょ笑']],
     refuse: [['normal', '…むにゃ…あと1章…だけぇ…'], ['troubled', '…ぐぬぬぬ…眠い…またあとでぇ…'], ['happy', '…すぅ…{name}…おやすみぃ…']],
     'listen:departure': [['happy', '1:51でいったん落として、2:04からまた上げるのがいいんだよね〜']],
+    'listen:hopes_and_dreams': [['happy', '0:47でいったん落として、1:10からまた上げるのがいいんだよね〜']],
     'listen:mf_ichika_mix': [['normal', 'サビは1:48から2:14。終わりの近くに山があるから、前半はためていこ']],
     'listen:monster_hero': [['normal', '0:46でふつう、0:57で強め、1:50でいちばん強い。段の上がり方がきれいなんだよねぇ']],
     'listen:monster_hero_another': [['normal', '0:48で強くなって、1:14で一回ふつうに戻るんだよねぇ。そこが休みどころ']],
@@ -33071,6 +33081,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     woke: [['surprise', '・・・はっ！？ 起きました、行きます！'], ['normal', '寝起きの指でも、計算どおり叩きます'], ['happy', 'ふぁ・・・目ざましより効きました笑']],
     refuse: [['normal', '・・・表の・・・3行目・・・むにゃ・・・'], ['troubled', '・・・すみません・・・朝は弱いんです・・・'], ['happy', '・・・なんくるないさ・・・すぅ・・・']],
     'listen:departure': [['normal', 'BPM156です。強く打つ音が45%・・・！ 力強いです']],
+    'listen:hopes_and_dreams': [['normal', 'BPM171です。強く打つ音が48%・・・！ ガツンとくる音です']],
     'listen:mf_ichika_mix': [['excited', 'いちばん上はLv.23で434ノーツです・・・！ サビは1:48からですね笑']],
     'listen:monster_hero': [['excited', '強く打つ音が62%、軽い音は3%です・・・！ 553ノーツ、全部数えたいです笑']],
     'listen:monster_hero_another': [['happy', 'BPMはおよそ171。もとの曲より少しだけゆっくりです笑']],
@@ -33151,6 +33162,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     woke: [['surprise', '…あ、呼ばれた？ うん、行くよ'], ['happy', 'ふぁ…起こされちゃった笑 いいよ'], ['happy', '眠いけど、{name}と叩きたいしね']],
     refuse: [['troubled', '…ごめんね…今日はもう寝るね…'], ['normal', '…すぅ…また明日、いっしょにね…'], ['happy', '…むにゃ…デュラハン…いけ…']],
     'listen:departure': [['normal', '0:45の静かなところ、ひと息つけるね']],
+    'listen:hopes_and_dreams': [['normal', '0:47の静かなところ、ひと息つけるね']],
     'listen:mf_ichika_mix': [['happy', '2分半くらいの曲だね。サビの1:48までは、落ち着いて合わせようか']],
     'listen:monster_hero': [['normal', 'はじめの静かなところで、気持ちを落ち着けておくといいよ']],
     'listen:monster_hero_another': [['happy', '1:14から少し落ち着く所があるね。そこでひと息つこうか']],
@@ -37420,10 +37432,10 @@ const sbPutBeatRank = (row) => sbPutPlayerRank('beat', row);
 const RHYTHM_SONG_OWNED_KEY = 'mh_rhythm_owned_songs_v1';
 const RHYTHM_SONG_DEFAULT_PRICE = 500;
 // 有料の曲: { 曲の id: ビートP }。2026-11-14 の新曲3つから(departure!・RPG・Midnight Studio。LAMIA・サウダージ・メガロバニアは無料のまま)
-const RHYTHM_SONG_PRICES = Object.freeze({ departure: 500, rpg: 500, midnight_studio: 500 });
+const RHYTHM_SONG_PRICES = Object.freeze({ departure: 500, rpg: 500, midnight_studio: 500, hopes_and_dreams: 500 });
 // 1曲の値段で、組の別の版(short ver.)もいっしょに遊べる(2026-11-14 社長「1曲500で両方ついてくる」)。{ 別の版の id: 買う曲の id }。
 // 保存するのは買った曲(全編)の id だけ。別の版は、全編を持っていれば開く(保存の形は変えない)
-const RHYTHM_SONG_BUNDLE_OWNER = Object.freeze({ departure_short: 'departure', rpg_short: 'rpg', midnight_studio_short: 'midnight_studio' });
+const RHYTHM_SONG_BUNDLE_OWNER = Object.freeze({ departure_short: 'departure', rpg_short: 'rpg', midnight_studio_short: 'midnight_studio', hopes_and_dreams_short: 'hopes_and_dreams' });
 const rhythmSongOwnerId = (songId) => { const id = String(songId || ''); return RHYTHM_SONG_BUNDLE_OWNER[id] || id; };
 const rhythmSongHasBundle = (songId) => Object.values(RHYTHM_SONG_BUNDLE_OWNER).includes(rhythmSongOwnerId(songId));
 
@@ -67403,7 +67415,7 @@ function AssistantLifeRoom({ id, met, look, x, y, w, h, state, onOpen, idx, othe
       {ppl && <div className="pp">{ppl.map(pid => { const who = assistantById(pid); return who ? (
         <span key={pid} className={state.lonely && pid === id ? 'lonely' : state.after ? 'after' : ''} data-assistant-life-room-face={pid} style={{ position: 'relative', ...(v2 && !other && typeof assistantLifePartnerOk === 'function' && !assistantLifePartnerOk(pid) ? { filter: 'grayscale(.55) brightness(.85)' } : {}) }}><AssistantFace who={who} size={Math.round(Math.min(40, h * .44))} accent={who.accent}/>
           {/* 寝ているときは目を閉じた形を重ねる(2026-11-11 社長「目を開けっぱなしの人がいる」・顔の枠の線2pxの内側)。部屋の「寝ている」印で決める(フレンドの家も同じ) */}
-          {met && typeof AssistantLifeSleepEyes === 'function' && state.sleep && (() => { const sz = Math.round(Math.min(40, h * .44)) - 4; return <AssistantLifeSleepEyes pid={pid} src={assistantFaceSrc(who, null)} w={sz} h={sz} style={{ left: 2, top: 2 }}/>; })()}</span>) : null; })}</div>}
+          {met && typeof AssistantLifeSleepEyes === 'function' && state.sleep && (() => { const sz = Math.round(Math.min(40, h * .44)) - 4; return <><AssistantLifeSleepEyes pid={pid} src={assistantFaceSrc(who, null)} w={sz} h={sz} style={{ left: 2, top: 2 }}/>{typeof AssistantLifeSleepGlassesPut === 'function' && <AssistantLifeSleepGlassesPut pid={pid} src={assistantFaceSrc(who, null)} gw={sz * 0.46} style={{ left: -sz * 0.34, bottom: -sz * 0.12 }}/>}</>; })()}</span>) : null; })}</div>}
       {ppl && state.bub && <span className="bb" data-assistant-life-room-bub style={{ ...(w < 110 ? { top: 22, bottom: 'auto' } : { bottom: Math.round(Math.min(40, h * .44)) + 14 }), fontSize: w < 150 ? 8.5 : undefined }}>{[].concat(state.lonely && !state.sleep && !state.after && w < 150 ? ['💭 さみしいな…'] : state.bub).map((x, i) => <React.Fragment key={i}>{i ? <wbr/> : null}<span className="whitespace-nowrap" data-assistant-life-chunk>{x}</span></React.Fragment>)}</span>}
       {typeof AssistantLifeRelRoomLayer === 'function' && <AssistantLifeRelRoomLayer state={state} h={h}/>}
       {/* 出かけ札は床にかけない(2026-11-08 社長: 助手のマスモンが部屋の床を歩く。キズナ2)。縦は名札の右に2行(行き先/一緒の全員の名前・ひとりなら何をしているか・けんかや仲直りの印)、
@@ -67859,7 +67871,8 @@ function AssistantLifeStands({ ids, sleepIds = [] }) {
         style={p ? { left: p.left, top: p.top, height: p.height, width: p.width, maxWidth: 'none', bottom: 'auto', objectFit: 'fill', filter,
           clipPath: `inset(${p.clip[0].toFixed(1)}px 0 ${p.clip[1].toFixed(1)}px 0)`,
           ...(p.fade ? { WebkitMaskImage: `linear-gradient(to bottom,#000 ${(p.fade[0] * 100).toFixed(1)}%,transparent ${(p.fade[1] * 100).toFixed(1)}%)`, maskImage: `linear-gradient(to bottom,#000 ${(p.fade[0] * 100).toFixed(1)}%,transparent ${(p.fade[1] * 100).toFixed(1)}%)` } : {}) } : { opacity: 0, height: '50%', filter }}/>
-      {zz && p && typeof AssistantLifeSleepEyes === 'function' && <AssistantLifeSleepEyes pid={x.pid} src={x.src} w={p.width} h={p.height} style={{ left: p.left, top: p.top, filter, zIndex: 1 }}/>}
+      {zz && p && typeof AssistantLifeSleepEyes === 'function' && <AssistantLifeSleepEyes pid={x.pid} src={x.src} w={p.width} h={p.height} style={{ left: p.left, top: p.top, filter: 'brightness(.45) saturate(.6)', zIndex: 1 }}/>}{/* 重ねには影を付けない(影が顔の上に落ちて、まわりの肌が暗くなる) */}
+      {zz && p && typeof AssistantLifeSleepGlassesPut === 'function' && <AssistantLifeSleepGlassesPut pid={x.pid} src={x.src} gw={p.width * 0.3} style={{ left: p.left + p.width * 0.76, top: p.top + p.height * 0.7, filter: 'brightness(.5) saturate(.6)', zIndex: 1 }}/>}
       {zz && p && <span className="absolute text-[34px]" style={{ left: p.cx + 20, top: Math.max(40, p.visTop) }} aria-hidden="true">💤</span>}
     </React.Fragment>); })}</>);
 }
@@ -68608,6 +68621,8 @@ function AssistantLifeMapFig({ who, h, sleep, spent = false }) {
         {/* 寝ているときは目を閉じた形を重ねる(2026-11-11 社長「目を開けっぱなしの人がいる」) */}
         {sleep && typeof AssistantLifeSleepEyes === 'function' && <AssistantLifeSleepEyes pid={who && who.id} src={src} w={iw} h={ih} style={{ left: w / 2 - cx, top, filter: 'brightness(.62) saturate(.7)' }}/>}
       </span>
+      {/* 眼鏡の人は、外した眼鏡を足もとに置く(ぼかしの外側) */}
+      {sleep && typeof AssistantLifeSleepGlassesPut === 'function' && <AssistantLifeSleepGlassesPut pid={who && who.id} src={src} gw={w * 0.42} style={{ left: w * 0.72, top: h * 0.56, filter: 'brightness(.7) saturate(.8)' }}/>}
       {sleep && <span className="absolute right-0 top-0 text-[10px]" aria-hidden="true">💤</span>}
       {spent && typeof AssistantLifeSpentMark === 'function' && <AssistantLifeSpentMark size={Math.round(h * 0.5)}/>}
     </span>);
@@ -69197,7 +69212,7 @@ function AssistantLifeRoomFront({ kind, cx, top, w, items = [] }) {
 const ASSISTANT_LIFE_ROOM_QUILT = Object.freeze({ mua: ['#fbcfe8', '#f472b6'], kiki: ['#ddd6fe', '#a78bfa'], momosuke: ['#fed7aa', '#fb923c'], dra: ['#bbf7d0', '#4ade80'], atsu: ['#fecaca', '#ef4444'], kyuko: ['#bae6fd', '#38bdf8'], sorashido: ['#fef08a', '#facc15'], erubin: ['#e2e8f0', '#94a3b8'] });
 // 寝ているときの閉じた目(2026-11-08 社長「寝てるときは目を閉じるようにできないの？ どらちゃんは眼鏡だからそのままでいい」)。
 //   寝顔の絵は無いので、ふつうの顔(normal)の絵の上に、まわりの肌の色で目をふさぎ、閉じたまぶたの線(下向きの弧)とまつ毛を描く。
-//   描くのは目を開いた絵の みゅあ・きき・ももすけ・あつ・きゅうこ(ソラシドは元から目を閉じた絵、ドラは眼鏡、えるびんは社長「そのままでいい」)。
+//   描くのは目を開いた絵の みゅあ・きき・ももすけ・あつ・きゅうこ(ソラシドは元から目を閉じた絵、ドラは眼鏡 → 2026-11-11 から眼鏡を外した顔 ASSISTANT_LIFE_SLEEP_GLASSES、えるびんは社長「そのままでいい」)。
 //   2026-11-11 社長「寝ているときに目を開けっぱなしの人がいる。えるびんだけそのままでいい」: みゅあ・きゅうこを足し、顔アイコン(face/)の絵の表も持つ。
 //   ベッドだけでなく、家の部屋の顔・場面の立ち絵・地図の全身(寝ている姿が出る所すべて)に重ねる
 //   eyes … [x, y, 幅, 高さ, 肌の色](絵の幅・高さに対する割合。左右の目)/ang … 顔の傾き(度)/line … まぶたの線の色。測り方: 絵を目盛りつきで切り出して手で読んだ
@@ -69242,7 +69257,50 @@ const assistantLifeSleepSrc = (pid, src) => {
   const f = face ? assistantLifeSleepArt(pid, String(face).replace(/\/face\/([^/]+)$/, '/$1')) : null;
   return f || src;
 };
+// 眼鏡の人の寝顔(2026-11-11 社長「ドラはメガネ外してメガネをどこかに置いてメガネ3の字になってるみたいにできる？」)。
+//   元の絵は描き直さず、眼鏡(レンズ・つる・鼻あて)を肌の色の太い線でふさぎ、「3」の字の目を重ねる。外した眼鏡はそばに置く(AssistantLifeSleepGlassesPut)。
+//   cover … 肌でふさぐ線 [x1, y1, x2, y2, 太さ](絵の幅に対する割合。始点=終点は丸)/eyes … 3の字の目 [中心x, 中心y, 幅, 高さ]/lw … 目の線の太さ。測り方は閉じた目と同じ
+const ASSISTANT_LIFE_SLEEP_GLASSES = Object.freeze({
+  dra: { skin: '#f6be96', line: '#372a24', lens: '#b2bdc6',
+    full: { lw: 0.034, cover: [[0.35, 0.44, 0.35, 0.44, 0.2], [0.622, 0.437, 0.622, 0.437, 0.19], [0.42, 0.435, 0.56, 0.43, 0.07], [0.225, 0.435, 0.28, 0.435, 0.06], [0.69, 0.43, 0.757, 0.419, 0.075], [0.685, 0.372, 0.7, 0.362, 0.05]],
+      eyes: [[0.355, 0.445, 0.075, 0.105], [0.615, 0.44, 0.075, 0.105]] },
+    face: { lw: 0.046, cover: [[0.297, 0.51, 0.297, 0.51, 0.27], [0.67, 0.505, 0.67, 0.505, 0.265], [0.4, 0.50, 0.58, 0.495, 0.09], [0.14, 0.495, 0.2, 0.5, 0.085], [0.76, 0.50, 0.832, 0.48, 0.095], [0.755, 0.42, 0.78, 0.4, 0.07]],
+      eyes: [[0.30, 0.515, 0.10, 0.14], [0.66, 0.51, 0.10, 0.14]] } },
+});
+// その絵に「眼鏡を外した寝顔」を重ねられるか(その助手のふつうの顔の絵のときだけ。着替えなど別の絵では位置がちがう)
+function assistantLifeSleepGlassesDef(pid, src) {
+  const g = ASSISTANT_LIFE_SLEEP_GLASSES[pid], who = typeof assistantById === 'function' ? assistantById(pid) : null;
+  if (!g || !who || !who.imagePrefix || !String(src || '').includes(`/${who.imagePrefix}_normal`)) return null;
+  return g;
+}
+// 外してそばに置いた眼鏡(つるをたたんだ形)。gw … 眼鏡の幅(px)。置けるのは眼鏡を外した寝顔が出るときだけ
+function AssistantLifeSleepGlassesPut({ pid, src, gw, style }) {
+  const g = assistantLifeSleepGlassesDef(pid, src); if (!g || !(gw > 0)) return null;
+  const W = gw * 1.2, H = gw * 0.72, x = W / 2, y = H * 0.56, r = gw * 0.2, lw = Math.max(1.1, gw * 0.075), c1 = x - gw * 0.27, c2 = x + gw * 0.27;
+  return (
+    <svg aria-hidden="true" data-assistant-life-sleep-glasses-put={pid} width={W} height={H} viewBox={`0 0 ${W} ${H}`} style={{ position: 'absolute', overflow: 'visible', pointerEvents: 'none', ...style }}>
+      <ellipse cx={x} cy={y + r * 1.25} rx={gw * 0.56} ry={r * 0.3} fill="#000" opacity=".22"/>
+      <path d={`M${c1 - r},${y - r * 0.2} L${c1 - r - gw * 0.02},${y - r * 1.05} L${c2 + r * 0.2},${y - r * 1.3}`} fill="none" stroke={g.line} strokeWidth={lw * 0.8} strokeLinecap="round" strokeLinejoin="round" opacity=".85"/>
+      <path d={`M${c2 + r},${y - r * 0.2} L${c2 + r + gw * 0.02},${y - r * 1.05}`} fill="none" stroke={g.line} strokeWidth={lw * 0.8} strokeLinecap="round" opacity=".85"/>
+      {[c1, c2].map((c, i) => (<g key={i}>
+        <ellipse cx={c} cy={y} rx={r} ry={r * 0.95} fill={g.lens} stroke={g.line} strokeWidth={lw}/>
+        <path d={`M${c - r * 0.45},${y - r * 0.1} l${r * 0.4},${-r * 0.45}`} fill="none" stroke="#fff" strokeWidth={lw * 0.6} strokeLinecap="round" opacity=".8"/></g>))}
+      <path d={`M${c1 + r},${y - r * 0.1} Q${x},${y - r * 0.5} ${c2 - r},${y - r * 0.1}`} fill="none" stroke={g.line} strokeWidth={lw} strokeLinecap="round"/>
+    </svg>);
+}
+function AssistantLifeSleepGlassesOff({ g, pid, isFace, w, h, style }) {
+  const d = isFace ? g.face : g.full;
+  const three = (cx, cy, s, eh) => { const X = v => (cx + v * s).toFixed(2), Y = v => (cy + v * eh).toFixed(2);
+    return `M${X(-0.45)},${Y(-0.5)} C${X(0.6)},${Y(-0.62)} ${X(0.6)},${Y(-0.04)} ${X(-0.12)},${Y(-0.02)} C${X(0.7)},${Y(0)} ${X(0.62)},${Y(0.62)} ${X(-0.5)},${Y(0.5)}`; };
+  return (
+    <svg data-assistant-life-roomview-sleep-eyes={pid} data-assistant-life-sleep-glasses-off={pid} width={w} height={h} viewBox={`0 0 ${w} ${h}`} style={{ position: 'absolute', overflow: 'visible', pointerEvents: 'none', ...style }}>
+      {d.cover.map(([x1, y1, x2, y2, t], i) => <path key={i} d={`M${x1 * w},${y1 * h} L${x2 * w + 0.01},${y2 * h}`} fill="none" stroke={g.skin} strokeWidth={t * w} strokeLinecap="round"/>)}
+      {d.eyes.map(([cx, cy, ew, eh], i) => <path key={`e${i}`} d={three(cx * w, cy * h, ew * w, eh * h)} fill="none" stroke={g.line} strokeWidth={Math.max(1, d.lw * w)} strokeLinecap="round" strokeLinejoin="round"/>)}
+    </svg>);
+}
 function AssistantLifeSleepEyes({ pid, src, w, h, style }) {
+  const gl = assistantLifeSleepGlassesDef(pid, src);
+  if (gl) return <AssistantLifeSleepGlassesOff g={gl} pid={pid} isFace={/\/face\//.test(String(src || ''))} w={w} h={h} style={style}/>;
   // すでに社長の寝顔の絵を出している(全身を差し替えた)ときは何も重ねない
   if (/_sleep\.PNG/i.test(String(src || ''))) return null;
   {
@@ -69302,6 +69360,14 @@ function AssistantLifeRoomBed({ id, W, floorY, sleepers = [], look }) {
       <span style={{ position: 'absolute', left: left + 14, top: mattTop + 2, width: bw - 26, height: 20, borderRadius: 6, background: '#f8fafc' }}/>
       {/* 枕 */}
       <span data-assistant-life-roomview-pillow style={{ position: 'absolute', left: pillow.left, top: pillow.top, width: pillow.w, height: pillow.h, borderRadius: 16, background: 'linear-gradient(#ffffff,#e2e8f0)', boxShadow: 'inset 0 -4px 0 #cbd5e1, 0 2px 3px #0003' }}/>
+      {/* 眼鏡の人が寝ているときは、頭板の横の小さな台に外した眼鏡を置く(2026-11-11 社長) */}
+      {items.filter(x => assistantLifeSleepGlassesDef(x.pid, x.src)).slice(0, 1).map(x => { const tw = Math.min(34, Math.max(24, left - 6)), tx = left - tw - 1, ty = mattTop - 12; return (
+        <span key={`g-${x.pid}`} data-assistant-life-roomview-nightstand={x.pid}>
+          <span style={{ position: 'absolute', left: tx + tw * 0.38, top: ty + 4, width: tw * 0.24, height: bottom - ty - 4, borderRadius: 2, background: 'linear-gradient(90deg,#8a5a33,#6b4426)' }}/>
+          <span style={{ position: 'absolute', left: tx + tw * 0.14, top: bottom - 3, width: tw * 0.72, height: 5, borderRadius: 3, background: '#5c3a1f' }}/>
+          <span style={{ position: 'absolute', left: tx, top: ty, width: tw, height: 7, borderRadius: 4, background: 'linear-gradient(#c89060,#a06a3c)', boxShadow: '0 2px 3px #0005' }}/>
+          <AssistantLifeSleepGlassesPut pid={x.pid} src={x.src} gw={tw * 0.74} style={{ left: tx + tw * 0.055, top: ty - tw * 0.74 * 0.6, filter: night ? 'brightness(.78)' : undefined }}/>
+        </span>); })}
       {/* 寝ている頭(倒して枕の上) */}
       {items.map((x, i) => {
         const box = boxes[x.src]; if (!box) return null;
@@ -77067,7 +77133,7 @@ function AssistantLifePlanHost({ ids = [], land = false }) {
                 <button key={id} type="button" data-assistant-life-plan-tab={id} onClick={() => setWho(id)} className={`min-h-[44px] shrink-0 rounded-xl border-2 px-2 text-[11.5px] font-black ${who === id ? 'border-pink-300 bg-pink-900/70' : 'border-transparent bg-white/10'}`}>{assistantLifePlanName(id)}</button>))}</div>
               {land && who && <button type="button" data-assistant-life-plan-back onClick={() => setWho(null)} className="mb-1 min-h-[44px] rounded-xl bg-white/10 px-3 text-[12px] font-black text-sky-100 active:scale-95">◀ 8人の表へ</button>}
               {who && <AssistantLifePlanWho id={who} cur={cur}/>}
-              {who && <button type="button" data-assistant-life-plan-clear onClick={() => assistantLifePlanClearWho(who)} className="mt-1.5 min-h-[44px] w-full rounded-xl bg-white/10 text-[12px] font-black text-slate-100">{assistantLifePlanName(who)}を ぜんぶおまかせに</button>}
+              {who && <button type="button" data-assistant-life-plan-clear onClick={() => assistantLifePlanClearWho(who)} className="mt-1.5 min-h-[44px] w-full rounded-xl bg-white/10 text-[12px] font-black text-slate-100">{assistantLifePlanName(who)}を 全部おまかせに</button>}
               {who && <p className="mt-1 text-[11px] font-bold text-pink-200">💗 仲良し度が高いほど、お願いを聞いてくれます(いま 約{Math.round(assistantLifePlanTrust(lv) * 100)}%)</p>}
             </>}
         </div>
@@ -103572,7 +103638,7 @@ const CardPlaylistRows = ({ list, onChange, bgmPreview, tag }) => {
     return (
       <div data-card-playlist-rows={tag} data-card-playlist-count={1} data-card-playlist-random>
         <div className="mt-1 flex items-center gap-1.5">
-          <span className="min-w-0 flex-1 rounded-xl border border-amber-300/50 bg-amber-500/15 px-2 py-2 text-[12px] font-black text-amber-100" style={JA_LABEL_STYLE}>{jaWrap('🔀 ランダム(選べる曲ぜんぶから、毎回ちがう順で)')}</span>
+          <span className="min-w-0 flex-1 rounded-xl border border-amber-300/50 bg-amber-500/15 px-2 py-2 text-[12px] font-black text-amber-100" style={JA_LABEL_STYLE}>{jaWrap('🔀 ランダム(選べる曲全部から、毎回ちがう順で)')}</span>
           {bgmPreview && <button type="button" data-card-playlist-preview={CARD_BGM_RANDOM} onClick={() => { if (bgmPreview.playing) bgmPreview.stop(); else { const one = cardBgmRandomOne(); if (one) bgmPreview.toggle(one); } }} className="min-h-[44px] min-w-[52px] shrink-0 rounded-xl bg-indigo-700 px-2 text-xs font-black">{bgmPreview.playing ? '停止' : '試聴'}</button>}
         </div>
         <button type="button" data-card-playlist-random-off onClick={() => onChange([tracks[0] ? tracks[0].id : ''].filter(Boolean))} className="mt-1.5 min-h-[44px] w-full rounded-xl bg-slate-700 px-2 text-[11px] font-black text-white">{jaWrap('ランダムをやめて、曲を選ぶ')}</button>
@@ -103601,7 +103667,7 @@ const CardPlaylistRows = ({ list, onChange, bgmPreview, tag }) => {
             {choices(null).map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
           </select>
         : <p data-card-playlist-full className="mt-1.5 text-[10px] font-bold text-slate-400" style={JA_LABEL_STYLE}>{jaWrap(`入れられるのは${CARD_PLAYLIST_MAX}曲までです`)}</p>}
-      <button type="button" data-card-playlist-random-on onClick={() => onChange([CARD_BGM_RANDOM])} className="mt-1.5 min-h-[44px] w-full rounded-xl border border-amber-300/50 bg-slate-900 px-2 text-[11px] font-black text-amber-100">{jaWrap('🔀 ランダムにする(選べる曲ぜんぶから)')}</button>
+      <button type="button" data-card-playlist-random-on onClick={() => onChange([CARD_BGM_RANDOM])} className="mt-1.5 min-h-[44px] w-full rounded-xl border border-amber-300/50 bg-slate-900 px-2 text-[11px] font-black text-amber-100">{jaWrap('🔀 ランダムにする(選べる曲全部から)')}</button>
     </div>
   );
 };
@@ -105084,7 +105150,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     const cpuPlaylistPanel = (
           <div data-card-playlist className="mt-3 border-t border-white/10 pt-2.5">
             <b className="block text-[12px] font-black text-slate-200">フリー対戦</b>
-            <p className="mt-0.5 text-[10px] font-bold leading-snug text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('助手1人につき5曲まで選べます。対戦中は、選んだ曲を毎回ちがう順番で、続けて流します。「ランダム」にすると、選べる曲ぜんぶから流します')}</p>
+            <p className="mt-0.5 text-[10px] font-bold leading-snug text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('助手1人につき5曲まで選べます。対戦中は、選んだ曲を毎回ちがう順番で、続けて流します。「ランダム」にすると、選べる曲全部から流します')}</p>
             <div className="mt-2 grid grid-cols-3 gap-1.5">
               {plWhoList.map((a) => (
                 <button key={a.id} type="button" data-card-playlist-who={a.id} aria-pressed={a.id === plCur} onClick={() => { Audio_.fgSe.tap(); setPlWho(a.id); }}
@@ -141471,7 +141537,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     <span className="shrink-0 text-base leading-none">{c.emoji}{c.subEmoji}</span>
                     <span className="flex-1 min-w-0">
                       <span className="block text-[13px] font-black leading-tight" style={{color:c.color}}>{c.title}</span>
-                      <span className="block text-[10px] text-slate-400 leading-tight mt-0.5">{c.summary}</span>
+                      <span className="block text-[10px] text-slate-400 leading-tight mt-0.5">{helpWrap(c.summary)}</span>
                     </span>
                     {(c.topics||[]).some(t=>helpTopicIsNew(t,helpSeen))&&helpNewBadge}
                     <ChevronRight size={16} className="shrink-0 text-slate-500"/>

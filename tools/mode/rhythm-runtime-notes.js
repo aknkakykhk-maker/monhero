@@ -238,6 +238,8 @@ const RELEASED_MARKERS=Object.freeze({
   rpg_short:'rpg-short-v3',
   midnight_studio:'midnight-studio-v3',
   midnight_studio_short:'midnight-studio-short-v3',
+  hopes_and_dreams:'hopes-and-dreams-v3',
+  hopes_and_dreams_short:'hopes-and-dreams-short-v3',
   megalovania_sans:'megalovania-sans-v3',
   megalovania_smash:'megalovania-smash-v3',
 });
@@ -311,6 +313,8 @@ const RELEASED_TRACKS=Object.freeze({
   rpg_short:'rpg_short',
   midnight_studio:'midnight_studio',
   midnight_studio_short:'midnight_studio_short',
+  hopes_and_dreams:'hopes_and_dreams',
+  hopes_and_dreams_short:'hopes_and_dreams_short',
   megalovania_sans:'megalovania_sans',
   megalovania_smash:'megalovania_smash',
 });

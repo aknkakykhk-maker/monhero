@@ -1782,6 +1782,34 @@
     "subdivisionsPerBeat": 4,
     "source": "command"
    }
+  },
+  "hopes_and_dreams": {
+   "flowPlacement": true,
+   "audio": "monster-hero/audio/bgm-hopes-and-dreams.mp3",
+   "chartRevision": 39,
+   "audioSha256": "227e0de43aa1cbaa15d4aa6b5f1c8c6b685c927d5d586e9e94fcf0cbc56f5e78",
+   "durationMs": 183380,
+   "analyzedTiming": {
+    "bpm": 170.68,
+    "beatZeroMs": 2057.8,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   }
+  },
+  "hopes_and_dreams_short": {
+   "flowPlacement": true,
+   "audio": "monster-hero/audio/bgm-hopes-and-dreams-short.mp3",
+   "chartRevision": 39,
+   "audioSha256": "46bd73c5d8603a3aae3bd4a657ab8da4110f7377f961250b25431e6cb1f3480a",
+   "durationMs": 139598,
+   "analyzedTiming": {
+    "bpm": 171.8,
+    "beatZeroMs": 1082.2,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   }
   }
  }
 }

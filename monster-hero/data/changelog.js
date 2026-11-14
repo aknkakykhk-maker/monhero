@@ -52,6 +52,12 @@ const CHANGELOG = [
     ],
   },
   {
+    date: "2026-11-15 02:01", type:'fix', title:'ヘルプの目次の説明が、言葉の途中で折れないようにしました', status:'new', group:'ui',
+    items:[
+      'ヘルプ(攻略情報局)の目次で、項目の説明が「ランキ/ング」のように言葉の途中で次の行へ折れていたのを直しました。',
+    ],
+  },
+  {
     // 2026-11-15 社長(r1115-007): 助手の好き嫌いは遊んでいくうちに変わる(案 GROW-PLAN 8)。公開の印 assistantLifeTaste
     date: "2026-11-15 01:18", type:'update', title:'助手の好き・苦手が、遊んでいくうちに変わるようになりました', status:'new', group:'assistant', releaseFlag:'assistantLifeTaste',
     items:[
@@ -69,6 +75,28 @@ const CHANGELOG = [
       '助手に贈る品の名前も、一部が漢字になりました(例: 振り子時計・金魚鉢)。持っている物はそのままです。',
       '助手やキャラクターのセリフは、これまでどおりの話し方です。',
     ],
+  },
+  {
+    // 2026-11-11 社長「ドラはメガネ外して…」→ 公開の落ちを r1115-012 で出す
+    date: "2026-11-15 00:58", type:'update', title:'寝ているドラが眼鏡を外すようになりました', status:'new', group:'assistant',
+    items:[
+      'ドラが寝ているとき、眼鏡を外した「3」の字の目の寝顔になります。',
+      '外した眼鏡は、ベッドの横の台や、足もとに置かれます。',
+    ],
+  },
+  {
+    // 新曲「Hopes and Dreams」(2026-11-15 社長「新曲」。通常版と short ver.・Lv.・ノーツ数は作ったあとの値)
+    date: "2026-11-15 00:48", type:'update', group:'rhythm', title:'新曲「Hopes and Dreams」を追加しました', status:'new',
+    image:'images/song-art/hopes-and-dreams.jpg?v=9cc45492d41a',
+    items:[
+      'モンヒロビートに「Hopes and Dreams」（3分3秒）と「Hopes and Dreams short ver.」（2分19秒）を追加しました。曲えらびからすぐ遊べます。',
+      '【通常版】レベルは EASY Lv.8 ／ NORMAL Lv.9 ／ HARD Lv.14 ／ EXPERT Lv.22 ／ MASTER Lv.26 ／ HELL Lv.42 です。',
+      '【通常版】ノーツ数は 323 ／ 374 ／ 515 ／ 608 ／ 700 ／ 840 です。',
+      '【short ver.】レベルは EASY Lv.7 ／ NORMAL Lv.9 ／ HARD Lv.13 ／ EXPERT Lv.22 ／ MASTER Lv.27 ／ HELL Lv.42 です。',
+      '【short ver.】ノーツ数は 197 ／ 222 ／ 316 ／ 393 ／ 435 ／ 523 です。',
+      'この曲は1曲ビートP500で買って遊びます。買うと通常版と short ver. の両方を、全部の難易度で遊べます。曲えらびの「🔒 500P」か、ビートP交換所の「曲」から買えます。',
+    ],
+    assistantNotice:{ id:'update_notice_hopes_and_dreams_v1', type:'content' },
   },
   {
     // 2026-11-14 社長(r1114-091): 助手ライフの友情が分かりにくい → A+B(文は社長「この文で」)
