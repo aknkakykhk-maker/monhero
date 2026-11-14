@@ -78,7 +78,11 @@ function AssistantLifeMapFig({ who, h, sleep, spent = false }) {
   // 大きさは「見えている体の高さ」ではなく顔でそろえる(2026-11-11 社長「助手の立ち絵も見直して」: 高さでそろえると、体の長い絵=みゅあ・きき・あつ の顔が 4px、
   //   顔だけの絵=ドラ が 11px と 2.8倍ちがい、羽や耳のある絵は左右も切れていた)。場面の立ち絵と同じ表(assistantLifeStandFace)と決まり(assistantLifeStandRule)を使う:
   //   頭(てっぺんから顎)が箱の高さの半分・頭のてっぺんは上から 25%(うさ耳が入る。魔女の帽子・大きな耳の着替え=above のある絵は 38% まで下げる)・胸から下は箱の下でぼかして消す。測れないうちは今までの出し方
-  const face = typeof assistantLifeStandFace === 'function' ? assistantLifeStandFace(who && who.id, src) : null;
+  const face0 = typeof assistantLifeStandFace === 'function' ? assistantLifeStandFace(who && who.id, src) : null;
+  // 町の地図は、頭の高さ(髪のてっぺん〜顎)を全員そろえる(2026-11-15 社長 r1115-031「助手ごとに絵の大きさがばらばら」。場面の立ち絵の表は目〜顎と頬の幅でそろえているので、髪やうさ耳で頭が大きく見える人が出ていた)。
+  //   表の top・chin から見えている体の高さを決め直す(顔だけの絵=ドラは、頭の円=絵の下端まで)。着替え・寝ている絵など表に chin が無い絵は、いままでどおり
+  const face = face0 && Number.isFinite(face0.top) && (Number.isFinite(face0.chin) || face0.head) && typeof ASSISTANT_LIFE_STAND_EC === 'number'
+    ? { ...face0, m: ((face0.head ? 1 : face0.chin) - face0.top) / (ASSISTANT_LIFE_STAND_EC * ASSISTANT_LIFE_STAND_FACE_LEN), fit: 1 } : face0;
   const rule = box && face && typeof assistantLifeStandRule === 'function' ? assistantLifeStandRule({ face, box, F: (h * 0.5) / ASSISTANT_LIFE_STAND_FACE_LEN, topY: h * Math.max(0.25, Math.min(0.38, (face.above || 0) * 0.4)), cx: 0 }) : null;
   const ih = rule ? rule.height : h / Math.max(0.2, b.b - b.t), iw = rule ? rule.width : ih * (b.ar || 0.6);
   const w = Math.round(Math.min((b.r - b.l) * iw, h * 0.78));

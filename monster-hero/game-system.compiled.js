@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e9ba2ed0d342cc65
+// source-sha256: c8c74d44c7d15bda
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -117314,7 +117314,12 @@ function AssistantLifeMapFig({
     r: 1,
     ar: 0.6
   };
-  const face = typeof assistantLifeStandFace === 'function' ? assistantLifeStandFace(who && who.id, src) : null;
+  const face0 = typeof assistantLifeStandFace === 'function' ? assistantLifeStandFace(who && who.id, src) : null;
+  const face = face0 && Number.isFinite(face0.top) && (Number.isFinite(face0.chin) || face0.head) && typeof ASSISTANT_LIFE_STAND_EC === 'number' ? {
+    ...face0,
+    m: ((face0.head ? 1 : face0.chin) - face0.top) / (ASSISTANT_LIFE_STAND_EC * ASSISTANT_LIFE_STAND_FACE_LEN),
+    fit: 1
+  } : face0;
   const rule = box && face && typeof assistantLifeStandRule === 'function' ? assistantLifeStandRule({
     face,
     box,
