@@ -308,12 +308,13 @@
     oilyoil: { name: 'オイリーオイル（大）', use: 'during', hp: 0.4 },                 // 大きいオイル(体力 上限の40%。2026-11-13 社長)
     herb: { name: '夏美草', use: 'during', stress: -20 },                          // 2026-11-14 社長「薬草は夏美草」。 詰め合わせの中身(ストレス −20)
     // 大会の賞品(2026-11-13 大会の第2版)。秘薬=そのターンの修行でその間合いの技を覚えやすい/実=そのターンの訓練でその能力が伸びやすい
-    elixir0: { name: '零の秘薬', use: 'during', elixir: 0 }, elixir1: { name: '近の秘薬', use: 'during', elixir: 1 },
-    elixir2: { name: '中の秘薬', use: 'during', elixir: 2 }, elixir3: { name: '遠の秘薬', use: 'during', elixir: 3 },
-    fruit_life: { name: '命の実', use: 'during', fruit: 'life' }, fruit_pow: { name: 'ちからの実', use: 'during', fruit: 'pow' },
-    fruit_wise: { name: '知恵の実', use: 'during', fruit: 'wise' }, fruit_hit: { name: '狙いの実', use: 'during', fruit: 'hit' },
-    fruit_eva: { name: 'かわしの実', use: 'during', fruit: 'eva' }, fruit_tough: { name: '硬さの実', use: 'during', fruit: 'tough' },
-    stamina: { name: 'スタミナ団子', use: 'during', hpMax: 15 }, // モンスターダービーの賞品: 使うと体力の最大値 +15(体力も同じだけ回復)
+    elixir0: { name: '赤汁', use: 'during', elixir: 0 }, elixir1: { name: '橙汁', use: 'during', elixir: 1 },
+    elixir2: { name: '緑汁', use: 'during', elixir: 2 }, elixir3: { name: '藍汁', use: 'during', elixir: 3 },
+    fruit_life: { name: 'ヒルマズの果実', use: 'during', fruit: 'life' }, fruit_pow: { name: 'セメールの果実', use: 'during', fruit: 'pow' },
+    fruit_wise: { name: 'テキパキの果実', use: 'during', fruit: 'wise' }, fruit_hit: { name: 'アタールの果実', use: 'during', fruit: 'hit' },
+    fruit_eva: { name: 'サケールの果実', use: 'during', fruit: 'eva' }, fruit_tough: { name: 'カチコチの果実', use: 'during', fruit: 'tough' },
+    stamina: { name: 'モモまん（大盛）', use: 'during', hpMax: 15 },
+    prune: { name: 'スタープルーン', use: 'during', popTurn: true }, // ごはんでもらう: 使ったターンだけ人気の上がり ×1.5(POP_TURN_MULT)回復)
     // 覚醒の実・超覚醒の実(2026-11-13 社長 r1113-038・053)。使うとその場で起きる(中身は AWAKE と同じ: 全能力 +30/+40・間合いの適性 1段/2段)
     //   覚醒の実: 覚醒していない子に、育成中いつでも(参考 mo-14「育成中に覚醒する」)/ 超覚醒の実: 期の条件なし・覚醒していなければ覚醒してから超覚醒まで(覚醒の実の完全な上位互換)
     awakeFruit: { name: '覚醒の実', use: 'during', awake: 1 },
@@ -343,16 +344,17 @@
   // 2026-11-13 社長: 「いまのごはんは効果が高すぎる」→ 9種に作り直す(体力はどれも回復で、上限は上がらない)。値段なし(社長: 大会後限定なら値段なしでいい)
   //   前の3種(hp・loyal・stat)は途中の育成に保存されない(大会のあとに選ぶ画面の中だけ)ので、読み替えは要らない。知らない名前は食べられない(ok:false)
   const MEAL_WATCH_MULT = 1.5; // えるびんの見守りの大会に勝ったあと、次のごはんの効き目(1回)
+  // 2026-11-14 社長「名前も効き目も参考に合わせる」(参考 docs/reference/line-mf/taikai/REWARDS.md)。id と保存は変えない。体力は回復しない
   const MEALS = Object.freeze({
-    vitamin: { name: 'ビタミンもどき', hp: 0.2, fear: 3 },               // 体力 上限の20%回復・恐れ度 +3
-    gochiso: { name: 'ごちそうもどき', hp: 0.2, ama: 3 },                // 体力 上限の20%回復・甘え度 +3
-    f_life: { name: 'もりもりニンジン', hp: 0.1, stat: 'life', add: 15, fear: 2 }, // 体力 上限の10%回復・その能力 +15(6種)
-    f_pow: { name: 'がっつりお肉', hp: 0.1, stat: 'pow', add: 15, ama: 2 },
-    f_wise: { name: 'ひらめきクルミ', hp: 0.1, stat: 'wise', add: 15, fear: 2 },
-    f_hit: { name: '狙い撃ちベリー', hp: 0.1, stat: 'hit', add: 15, fear: 2 },
-    f_eva: { name: 'ひらりリンゴ', hp: 0.1, stat: 'eva', add: 15, ama: 2 },
-    f_tough: { name: 'かちかちイモ', hp: 0.1, stat: 'tough', add: 15, ama: 2 },
-    prune: { name: 'スタープルーン', hp: 0.05, pop: 5, pts: 10, ama: 2 },        // 体力 上限の5%回復・人気 +5・能力ポイント +10
+    vitamin: { name: 'ホッカイイラブ（一尾）', fear: 5 },                     // 強いニオイの海ヘビの串焼き: 恐れ度 +5
+    gochiso: { name: 'アルタケーキ（ホール）', ama: 5 },                      // ヘルシーなケーキ: 甘え度 +5
+    f_life: { name: 'マインドジャム', stat: 'life', add: 15, ama: 2, fear: 2 }, // その能力 +15・忠誠度 +4(甘え +2・恐れ +2)(6種)
+    f_pow: { name: 'パワフルーツ', stat: 'pow', add: 15, ama: 2, fear: 2 },
+    f_wise: { name: 'インテリンゴ', stat: 'wise', add: 15, ama: 2, fear: 2 },
+    f_hit: { name: 'アタールスナック', stat: 'hit', add: 15, ama: 2, fear: 2 },
+    f_eva: { name: 'サケールジュース', stat: 'eva', add: 15, ama: 2, fear: 2 },
+    f_tough: { name: 'カチコチソース', stat: 'tough', add: 15, ama: 2, fear: 2 },
+    prune: { name: 'スタープルーン', gives: 'prune' },                       // 持ち物にスタープルーン(使ったターンだけ人気の上がり ×1.5)が1つ入る
   });
   // 2026-11-14 社長: ごはんでも甘え度・恐れ度が上がる(上の ama/fear。方針の段の補正は addLoyal のまま)。あげずに進んだら恐れ度 +1
   const MEAL_SKIP_FEAR = 1;
@@ -493,6 +495,7 @@
   const FOUR_DONE = Object.freeze({ all: 15, pts: 40, pop: 15, title: '四大の覇者' }); // 四大大会制覇(一度きり)
   const ELIXIR_ADD = 20; // 秘薬: 使ったターンの修行で、その間合いの技の覚える率 +20
   const FRUIT_MULT = 1.5; // 実: 使ったターンの訓練で、その能力の伸び ×1.5
+  const POP_TURN_MULT = 1.5; // スタープルーン: 使ったターンだけ人気の上がり ×1.5
   // シナリオの大会(TOURNAMENT §4b・助手ごとに1〜2つ。並びの月に1つ足す)。sys は 'sc' + 助手
   const SC_CUPS = Object.freeze({
     mua: [{ p: 'junior', m: 8, star: 2 }, { p: 'middle', m: 8, star: 2 }],
@@ -737,7 +740,8 @@
         v: VERSION, id, species, aid, type: typeIdx, turn: 1, stats, hpMax, hp: hpMax, stress: 0, carry, bag, good, issaForce, issaSure: false, itemTurn: 0,
         ama: LOYAL.start[0], fear: LOYAL.start[1], pol: clamp(Math.round(num(src.pol)), -3, 3), pp: 0, pop: 0, pts: 0, ptsLost: 0, lv: 1, xp: 0,
         team, bond: team.map(m => m.bond0), story: team.map(() => 0), aidBond: clamp(aidLv * BOND.aidPerLv + (hn ? aOf('hitonatsu', 'start', hn) : 0), 0, BOND.aidStartMax), // 途中の育成は restore が保存の aidBond で上書きするので変わらない
-        techs: startTechsRun(species), mastery: Object.fromEntries(startTechsRun(species).map(t => [t, 0])), masterySpent: {}, tickets: SHUGYO.ticket0 + stayT('ticket0'), shugyoUsed: {}, pity: 0, techMiss: {}, superLeft: SHUGYO.superMax + stayT('chokyo'), fame: 0, fameTotal: 0, fameV: FAME_V, beatEarned: 0, fourDone: false, elixir: null, fruit: null, mealReady: false, trainXp: {}, aidLv, astory: { ep: 0, path: null, done: false }, rivalMet: null, ending: null, aptUp: [0, 0, 0, 0], aptLog: { quest: 0, cup: 0, event: 0 }, aptBase: aptBaseNorm(src.aptBase), awake: 0, awakeTurn: 0, aptAwake: [0, 0, 0, 0], omen: null,
+        ...(src.techPick && typeof src.techPick === 'object' ? { techPick: techPickNorm(src.techPick, species) } : {}),
+        techs: startTechsRun(species), mastery: Object.fromEntries(startTechsRun(species).map(t => [t, 0])), masterySpent: {}, tickets: SHUGYO.ticket0 + stayT('ticket0'), shugyoUsed: {}, pity: 0, techMiss: {}, superLeft: SHUGYO.superMax + stayT('chokyo'), fame: 0, fameTotal: 0, fameV: FAME_V, beatEarned: 0, fourDone: false, elixir: null, fruit: null, popTurn: 0, mealReady: false, trainXp: {}, aidLv, astory: { ep: 0, path: null, done: false }, rivalMet: null, ending: null, aptUp: [0, 0, 0, 0], aptLog: { quest: 0, cup: 0, event: 0 }, aptBase: aptBaseNorm(src.aptBase), awake: 0, awakeTurn: 0, aptAwake: [0, 0, 0, 0], omen: null,
         items: { sand: clamp(Math.round(num(src.items && src.items.sand)), 0, REMATCH.carry), rainbow: clamp(Math.round(num(src.items && src.items.rainbow)), 0, REMATCH.carry) }, rematchUsed: 0, wonBefore: Array.isArray(src.wonBefore) ? src.wonBefore.filter(k => typeof k === 'string').slice(0, 64) : [], wonNow: [], rivals: (Array.isArray(src.rivals) ? src.rivals : []).filter(RIVALS_OK0).slice(0, 8).map(r => ({ name: String(r.name || '').slice(0, 24), breeder: typeof r.breeder === 'string' ? r.breeder.slice(0, 24) : null, kind: r.kind === 'friend' ? 'friend' : 'aid', species: r.species, stats: normStats(r.stats, r.species) })),
         cond: null, yosu: {}, hirameki: false, shBoost: false, idle: 0, issaMet: 0, issaWon: 0, issaDone: false,
         debutLoss: 0, debutWon: false, fameRank: 0, crowns: 0, titles: [], battle: null, over: null, last: null, acted: false, reacted: false,
@@ -851,9 +855,32 @@
     };
     // ---- 技を覚える(修行のくじ・連続イベントの伝授) ----
     const techById = (sp, id) => techsOf(sp).find(t => t.id === id) || null;
+    // ---- 技の升(ランク×間合い)の選び(2026-11-14 社長 r1114-128・131) ----
+    // 升 = `${ランク}-${間合い}`。1つの升に技が2つ以上ある所は、プレイヤーが覚える1つを選ぶ。選ばなかった技はその升では覚えない。
+    //   s.techPick = { 升: 技id }。項目が無い育成(古い保存・選ぶ画面を通らない育成)は絞らない(いままでどおり全部の技が候補)
+    const techCellOf = (t) => `${techRank(t)}-${Math.min(...(Array.isArray(t && t.dist) && t.dist.length ? t.dist : [1]))}`;
+    const techCells = (sp) => { const m = {}; techsOf(sp).forEach(t => { (m[techCellOf(t)] = m[techCellOf(t)] || []).push(t); }); return m; };
+    // 選びの正規化: 2つ以上ある升だけ残し、無い・知らない技は並びの1つ目。はじめから覚えている技がその升にあれば、それで固定
+    const techPickNorm = (raw, sp) => {
+      const src = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {}; const out = {};
+      Object.entries(techCells(sp)).forEach(([c, list]) => {
+        if (list.length < 2) return;
+        const st = list.find(t => t.learn && t.learn.start);
+        const want = typeof src[c] === 'string' ? techCanon(src[c]) : '';
+        out[c] = st ? st.id : (list.some(t => t.id === want) ? want : list[0].id);
+      });
+      return out;
+    };
+    // 升の選びを変えてよいか(その升の技を1つでも覚えたら変えられない)
+    const techPickLocked = (s, c) => (techCells(s.species)[c] || []).some(t => s.techs.includes(t.id));
+    const setTechPick = (s, c, id) => {
+      const list = techCells(s.species)[c]; if (!list || list.length < 2 || !list.some(t => t.id === id) || techPickLocked(s, c)) return false;
+      s.techPick = { ...techPickNorm(s.techPick, s.species), [c]: id }; return true;
+    };
     const canLearn = (s, t) => {
       if (!t || s.techs.includes(t.id) || s.techs.length >= TECH_MAX) return false;
       const L = t.learn || {}; if (L.start) return true;
+      if (s.techPick && typeof s.techPick === 'object') { const pk = s.techPick[techCellOf(t)]; if (pk && pk !== t.id && techById(s.species, pk)) return false; } // 選ばなかった技はその升では覚えない
       if (L.st && Object.entries(L.st).some(([k, v]) => num(s.stats[k]) < num(v))) return false;
       if (L.need && Object.entries(L.need).some(([id, v]) => num(s.mastery[id]) < num(v))) return false;
       return true;
@@ -1197,6 +1224,7 @@
       if (m.stat && KEYS.includes(m.stat)) addStat(s, m.stat, Math.round(m.add * kui));
       if (m.pop) s.pop = clamp(s.pop + popGain(s, Math.round(m.pop * kui)), 0, 100);
       if (m.pts) gainPts(s, Math.round(m.pts * kui));
+      if (m.gives && ITEMS[m.gives]) { s.bag = s.bag && typeof s.bag === 'object' ? s.bag : {}; s.bag[m.gives] = num(s.bag[m.gives]) + 1; } // 持ち物を1つもらう(スタープルーン)
       s.log.meal = (s.log.meal || 0) + 1;
       return { state: s, out: { ok: true, meal: key, boost } };
     };
@@ -1248,6 +1276,7 @@
       for (const k of ['debutWon', 'issaDone', 'issaForce', 'issaSure', 'hirameki', 'acted', 'reacted', 'mealReady', 'special', 'freeMeal', 'fourDone', 'shBoost']) out[k] = raw[k] === true;
       out.mealOpts = out.mealReady && mealOptsOk(raw.mealOpts) ? raw.mealOpts.slice() : null; // 壊れた・無いときは null(画面は mealOpts() で同じくじを引く)
       out.elixir = raw.elixir && Number.isInteger(raw.elixir.d) && raw.elixir.d >= 0 && raw.elixir.d <= 3 ? { d: raw.elixir.d, turn: Math.round(n(raw.elixir.turn, 0, 0, TOTAL_TURNS + 1)) } : null;
+      out.popTurn = Math.round(n(raw.popTurn, 0, 0, TOTAL_TURNS + 1)); // スタープルーンを使ったターン(無い・壊れている → 0)
       out.fruit = raw.fruit && KEYS.includes(raw.fruit.stat) ? { stat: raw.fruit.stat, turn: Math.round(n(raw.fruit.turn, 0, 0, TOTAL_TURNS + 1)) } : null;
       out.cond = raw.cond && typeof raw.cond === 'object' && ['injury', 'ill', 'away'].includes(raw.cond.kind) ? { kind: raw.cond.kind, left: Math.round(n(raw.cond.left, 1, 1, 9)) } : null;
       out.over = ['done', 'lost', 'gameover'].includes(raw.over) ? raw.over : null;
@@ -1255,6 +1284,7 @@
       out.rivalMet = typeof raw.rivalMet === 'string' ? raw.rivalMet.slice(0, 24) : null;
       out.ending = raw.ending && typeof raw.ending === 'object' && ['bad', 'good', 'super'].includes(raw.ending.kind) ? { kind: raw.ending.kind, parties: partiesOf(raw.ending.kind), seen: raw.ending.seen === true } : null;
       out.aidLv = Math.round(n(raw.aidLv, out.aidLv, 1, 10));
+      if (raw.techPick && typeof raw.techPick === 'object' && !Array.isArray(raw.techPick)) out.techPick = techPickNorm(raw.techPick, raw.species); // 技の升の選び(無い → 絞らない)
       out.aptBase = aptBaseNorm(raw.aptBase); // 合体円盤石から継いだ段数(無い → 0)
       out.aptUp = aptUpOf({ aptUp: raw.aptUp }); // 上げた段数(無い・壊れている → 0)。上げ方ごとの数も上限で切りそろえる
       // 覚醒・超覚醒(2026-11-13): 印 awake 0〜2・起きたターン・覚醒で上げた段・前触れ { k, turn }(無い・壊れている → 起きていない)
@@ -1349,7 +1379,7 @@
       put(battleMods(s));
       const a = {}; BUFF_KEYS.forEach(k => { if (m[k] !== undefined) a[k] = m[k]; }); return Object.keys(a).length ? { A: a } : undefined; };
     const stayV = (s, id) => { const lv = stayLv(s.team, id); return lv ? aOf(id, 'v', lv) : 0; };
-    const popGain = (s, v) => Math.round(v * (s.good && s.good.star ? GOOD.star.pop : 1) * (v > 0 ? 1 + stayNum(s, 'ninki') / 100 : 1)); // 🌟人気者のお手本: 上がる分だけ
+    const popGain = (s, v) => Math.round(v * (s.good && s.good.star ? GOOD.star.pop : 1) * (v > 0 ? 1 + stayNum(s, 'ninki') / 100 : 1) * (v > 0 && s.popTurn === s.turn ? POP_TURN_MULT : 1)); // 🌟人気者のお手本: 上がる分だけ
     // 育成中に使うアイテム(1ターンに1個まで・ターンを使わない)
     const useItem = (s0, key) => {
       const s = clone(s0); const it = ITEMS[key];
@@ -1368,6 +1398,7 @@
       if (it.gives) for (const [k, n] of Object.entries(it.gives)) s.bag[k] = num(s.bag[k]) + n;
       if (Number.isInteger(it.elixir)) s.elixir = { d: it.elixir, turn: s.turn };
       if (it.fruit) s.fruit = { stat: it.fruit, turn: s.turn };
+      if (it.popTurn) s.popTurn = s.turn;
       if (it.hpMax) { s.hpMax = Math.min(HP_MAX_CAP, s.hpMax + it.hpMax); s.hp = Math.min(s.hpMax, s.hp + it.hpMax); }
       s.log.items = (s.log.items || 0) + 1;
       return { state: s, out: fires.length ? { ok: true, item: key, fires } : { ok: true, item: key } };
@@ -1966,7 +1997,7 @@
     return Object.freeze({
       events: EV,
       VERSION, STORY, KEYS, STAT_NAMES, PERIODS, TOTAL_TURNS, FORCED, SUMMIT, BASE, RESULTS, RATE, REST, PLAY, CLINIC, COND, LOYAL, GATHER, BOND, STORY, LOTTERY,
-      GROW_BY_SPECIES, speciesType, gatherChanceOf, normStats, ASSISTS, ISSA, PTS, XP, SHUGYO, TECH_POWER, MASTERY, techRowsOf, techPowerOfRows, powerOf, techBoostOf, techUseOf, ITEMS, GOOD, CARRY_MAX, useItem, FAME_V, FAME_SCALE, TICKET_BASE, TRAIN_LV, trainLvOf, REMATCH, canRematch, rematch, canSkip, battleKey, PRIZE, BEAT_PRIZE, beatOfPrize, BEAT_END, beatOfEnd, MEALS, meal, mealSkip, MEAL_SKIP_FEAR, mealOpts, MEAL_PICK, MEAL_WATCH_MULT, ticketsOfPrize, TECH_MAX, techsOf, canLearn, techRate, learnable, techRank, shugyoQ, superLeft, techMissOf, techCanon, canonTechList, shugyoLeft, teachFrom, BENCH: BENCH_USE, STAR_MULT, TAG_POWER, BOND_START, RANK_ADD, TRAIN_COMBO, AIDS, speciesList, shugyoGainOf, EX_CUPS, EX_BY_SYS, cupItemsOf, CUP_REWARD, FAME_RANK, FAME_RANK_MAX, rankStepOf, rankNameOf, rankNeedG, WIN_TICKET, FOUR_DONE, fourWinsOf, forecastOf, ELIXIR_ADD, FRUIT_MULT,
+      techCellOf, techCells, techPickNorm, techPickLocked, setTechPick, GROW_BY_SPECIES, speciesType, gatherChanceOf, normStats, ASSISTS, ISSA, PTS, XP, SHUGYO, TECH_POWER, MASTERY, POP_TURN_MULT, techRowsOf, techPowerOfRows, powerOf, techBoostOf, techUseOf, ITEMS, GOOD, CARRY_MAX, useItem, FAME_V, FAME_SCALE, TICKET_BASE, TRAIN_LV, trainLvOf, REMATCH, canRematch, rematch, canSkip, battleKey, PRIZE, BEAT_PRIZE, beatOfPrize, BEAT_END, beatOfEnd, MEALS, meal, mealSkip, MEAL_SKIP_FEAR, mealOpts, MEAL_PICK, MEAL_WATCH_MULT, ticketsOfPrize, TECH_MAX, techsOf, canLearn, techRate, learnable, techRank, shugyoQ, superLeft, techMissOf, techCanon, canonTechList, shugyoLeft, teachFrom, BENCH: BENCH_USE, STAR_MULT, TAG_POWER, BOND_START, RANK_ADD, TRAIN_COMBO, AIDS, speciesList, shugyoGainOf, EX_CUPS, EX_BY_SYS, cupItemsOf, CUP_REWARD, FAME_RANK, FAME_RANK_MAX, rankStepOf, rankNameOf, rankNeedG, WIN_TICKET, FOUR_DONE, fourWinsOf, forecastOf, ELIXIR_ADD, FRUIT_MULT,
       rngOf, periodOf, aptMult, initStats, memberOf, memberEffect, newRun, gatherOf, cardMult, peek, failRateOf, sabRateOf, greatRateOf,
       act, react, reactOf, issa, issaComes, issaRate, endTurn, opponents: opponentsOf, settle, cupsOf, canEnter, bracketOf, gradeOf, GRADE_STEP, stayV, SC_CUPS, SC_NAME, ASST_STORY, storyEnd, markSpecial, battleMods, battleBuffs, peakTurn, ASTORY, storyDue, storyStep, preview, restore, ARC, PARTY, summitPick, endingOf, endingSeen, CUP_SYS, YEAR, RIVAL, CUP_PRIZE, spendPts, autoPts, ptsCost, evaluate, assistPointsOf, loyalOf, loyalMult, top3Of, sumOf,
       FUSE, fuseOk, fuseKinds, fusePlan, fuseId,
