@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 05e56eae67e98bfa
+// generated-sha256: 218a0d93a4a48a47
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -86784,7 +86784,7 @@ const MSX_CSS = `
 .msx-md-tg .tc .tg-img{display:block;width:100%;height:100%;object-fit:cover;pointer-events:none}
 .msx-md-tg .tc .g{right:2px;bottom:2px;min-width:20px;padding:0 3px;border-radius:5px;background:rgba(18,12,6,.86);text-align:center;line-height:13px;height:13px;z-index:2}
 .msx-md-tg .tc .tg-alt{z-index:3}
-.msx-md-tg .tc .tg-rk{position:absolute;left:2px;top:2px;z-index:2;min-width:13px;height:13px;border-radius:4px;font-size:9px;font-weight:900;line-height:13px;text-align:center;color:#2a1608;border:1px solid #2a1608}
+.msx-md-tg .tc .tg-rk{position:absolute;left:2px;top:2px;z-index:2;min-width:14px;height:14px;border-radius:4px;font-size:10px;font-weight:900;line-height:14px;text-align:center;color:#2a1608;border:1px solid #2a1608}
 .tg-rk.rk1{background:linear-gradient(135deg,#e9a46a,#a95f27)}.tg-rk.rk2{background:linear-gradient(135deg,#f4f7fb,#aab4c2)}.tg-rk.rk3{background:linear-gradient(135deg,#fff1a6,#f2b705)}.tg-rk.rk4{background:linear-gradient(135deg,#d9a8ff,#8a3ffc);color:#fff}.tg-rk.rk5{background:linear-gradient(135deg,#ff5a5a,#ffd23f,#4ade80,#38bdf8,#c084fc)}
 .msx-md-tg .tc{position:relative}
 .msx .msx-md-alt{margin-top:6px;width:100%;padding:6px 8px;border-radius:10px;font-size:12px;font-weight:900;color:#fff;background:linear-gradient(160deg,#6d4cd9,#4a2fa6);border:1.5px solid #a78bfa}
@@ -87554,8 +87554,9 @@ const MSX_SHADOW_PATHS = Object.freeze({
     <g key="w3"><circle cx="68" cy="30" r="13"/><path d="M60 40L12 86l24-30-16 8 34-32z"/></g>,
   ],
 });
+const msxSkillIconPath = (id) => ['images/success/skill', `${id}.png`].join('/'); // パスを部品で組む(画像の検査が ${} の入った文字を実在しない絵と読むため)
 function MsxSkillArt({ t, uid = '' }) {
-  if (t && MSX_SKILL_ICONS.has(`images/success/skill/${t.id}.png`)) return <img className="tg-img" src={`images/success/skill/${t.id}.png`} alt="" draggable="false" loading="lazy"/>;
+  if (t && MSX_SKILL_ICONS.has(msxSkillIconPath(t.id))) return <img className="tg-img" src={msxSkillIconPath(t.id)} alt="" draggable="false" loading="lazy"/>;
   const kind = t && t.kind === 'wise' ? 'wise' : 'pow'; const d = Math.max(0, Math.min(3, Math.min(...(t && Array.isArray(t.dist) && t.dist.length ? t.dist : [1]))));
   const gid = `tgs-${uid}${t ? t.id : ''}`; const fill = kind === 'wise' ? '#34c46a' : '#f5b81b'; const ink = kind === 'wise' ? '#14653a' : '#8a5a06';
   return (

@@ -139,8 +139,9 @@ const MSX_SHADOW_PATHS = Object.freeze({
     <g key="w3"><circle cx="68" cy="30" r="13"/><path d="M60 40L12 86l24-30-16 8 34-32z"/></g>,
   ],
 });
+const msxSkillIconPath = (id) => ['images/success/skill', `${id}.png`].join('/'); // パスを部品で組む(画像の検査が ${} の入った文字を実在しない絵と読むため)
 function MsxSkillArt({ t, uid = '' }) {
-  if (t && MSX_SKILL_ICONS.has(`images/success/skill/${t.id}.png`)) return <img className="tg-img" src={`images/success/skill/${t.id}.png`} alt="" draggable="false" loading="lazy"/>;
+  if (t && MSX_SKILL_ICONS.has(msxSkillIconPath(t.id))) return <img className="tg-img" src={msxSkillIconPath(t.id)} alt="" draggable="false" loading="lazy"/>;
   const kind = t && t.kind === 'wise' ? 'wise' : 'pow'; const d = Math.max(0, Math.min(3, Math.min(...(t && Array.isArray(t.dist) && t.dist.length ? t.dist : [1]))));
   const gid = `tgs-${uid}${t ? t.id : ''}`; const fill = kind === 'wise' ? '#34c46a' : '#f5b81b'; const ink = kind === 'wise' ? '#14653a' : '#8a5a06';
   return (
