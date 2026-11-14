@@ -35,7 +35,7 @@ const OUTFIT = arg('--outfit') ? OUTFITS[arg('--outfit')] : null;
 const SFX = arg('--outfit') ? `-outfit${arg('--outfit')}` : '';
 const WHO = OUTFIT ? WHO0.filter(id => OUTFIT[id]) : WHO0;
 const want0 = (scene) => !ONLY || ONLY.includes(scene);
-const LIMIT = { stretch: 0.03, blur: 1.0, cutTop: 0.04, cutTopDeco: 0.1, cutSide: 0.06, faceCut: 0.05, cutBottom: 0.04, faceMin: 5, iconMin: 12, spread: 1.25, overlay: 1.5 };
+const LIMIT = { stretch: 0.03, blur: 1.0, cutTop: 0.04, cutTopDeco: 0.1, cutSide: 0.06, faceCut: 0.05, cutBottom: 0.04, faceMin: 5, iconMin: 12, spread: 1.25, sceneSpread: 1.2, overlay: 1.5 };
 
 // 画面の中で、助手の絵を全部拾って測る
 const probe = () => (async () => {
@@ -328,12 +328,12 @@ const notes = [];
   }
   // ばらつき: 同じ場面・同じ画面の大きさ・同じ使いどころ(tag)で、助手ごとの顔の大きさ
   const groups = new Map();
-  for (const r of rows) { if (r.kind !== 'full' || r.facePx == null || r.seen <= 0.02 || r.tilt) continue; const k = `${r.scene}|${r.view}|${r.tag}${/^(scene|album)/.test(r.scene) ? `|${r.label}` : ''}`; if (!groups.has(k)) groups.set(k, new Map()); const g = groups.get(k); g.set(r.who, Math.max(g.get(r.who) || 0, r.facePx)); }
+  for (const r of rows) { if (r.kind !== 'full' || r.facePx == null || r.seen <= 0.02 || r.tilt) continue; const k = `${r.scene}|${r.view}|${r.tag}${/^album/.test(r.scene) ? `|${r.label}` : ''}`; if (!groups.has(k)) groups.set(k, new Map()); const g = groups.get(k); g.set(r.who, Math.max(g.get(r.who) || 0, r.facePx)); }
   // 並んで立つ場面(地図・場面・アルバム・部屋・家)は NG。1人ずつ枠いっぱいに出す場面(モードえらび・カード)は、絵ごとの余白のちがいと
   //   社長が1人ずつ決めた寄せ方(あつ・きゅうこ)があるので、参考として出すだけ(--all)
   const SIDE_BY_SIDE = /^(map|scene|album|room|house)/;
   const spreads = [], soloSpreads = [];
-  for (const [k, g] of groups) { if (g.size < 2) continue; const e = [...g.entries()].sort((a, b) => a[1] - b[1]); const ratio = e[e.length - 1][1] / e[0][1]; if (ratio > LIMIT.spread) (SIDE_BY_SIDE.test(k) ? spreads : soloSpreads).push({ k, ratio, min: e[0], max: e[e.length - 1] }); }
+  for (const [k, g] of groups) { if (g.size < 2) continue; const e = [...g.entries()].sort((a, b) => a[1] - b[1]); const ratio = e[e.length - 1][1] / e[0][1]; if (ratio > (/^scene/.test(k) ? LIMIT.sceneSpread : LIMIT.spread)) (SIDE_BY_SIDE.test(k) ? spreads : soloSpreads).push({ k, ratio, min: e[0], max: e[e.length - 1] }); }
   const overlayBad = overlayRows.filter(o => o.d > LIMIT.overlay);
 
   // 問題の大きい順(場面 × 種類ごとにまとめる)
