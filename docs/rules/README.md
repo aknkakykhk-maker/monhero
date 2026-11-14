@@ -33,6 +33,7 @@ node tools/ctx.js rules 音量       その語に触れている節だけ
 | [`REVIEW_GATE.md`](REVIEW_GATE.md) | ⑪ | 公開の前(ミハリの確認が要る変更・要らない変更。判定は `node tools/ctx.js gate`) |
 | [`EDGE_REDEPLOY.md`](EDGE_REDEPLOY.md) | ⑪ | Edge Function(assistant-chat)を配り直すとき(送るのは数行。窓口が打つもの) |
 | [`DECISION_LOCKS.md`](DECISION_LOCKS.md) | 台帳 | 台帳の「進め方」に決めごとを足すとき・道具やフックの文を変えるとき(決めごとの錠。検査は `node tools/team/decision-lock-check.js`) |
+| [`REQUEST_TRACKING.md`](REQUEST_TRACKING.md) | 台帳 | 社長の頼みを受けた・部へ頼んだ・報告が来たとき(追跡表 `node tools/ctx.js todo`)。部から止め絵が届いたとき(窓口の止め絵の点検 `node tools/ctx.js still`) |
 
 ## 部署別の手引き(2026-11-11)
 

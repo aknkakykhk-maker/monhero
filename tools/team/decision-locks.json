@@ -742,6 +742,51 @@
           "語": "REF-MAP.md でその画面の行を引き"
         }
       ]
+    },
+    {
+      "id": "request-tracking",
+      "台帳": {
+        "日付": "2026-11-14",
+        "ことば": "社長の頼みは追跡表に入れ、完了まで追う"
+      },
+      "決めごと": "社長の頼みは追跡表に入れ、頼んだ先・状態・PR を完了まで追う。窓口は止め絵を見せる前に5つを点検する",
+      "守らせ方": "道具",
+      "仕組み": [
+        "tools/team/requests.js",
+        "tools/team/requests.json",
+        "tools/team/still-check.js",
+        "tools/team/newsession.js",
+        "tools/team/handoff.js",
+        "tools/hooks/session-length-nudge.js"
+      ],
+      "検査": [
+        {
+          "file": "tools/team/requests-check.js",
+          "ことば": "台帳の行が表に入っている"
+        }
+      ],
+      "要る": [
+        {
+          "どこ": "CLAUDE.md",
+          "語": "完了でない社長の頼み(追跡表)"
+        },
+        {
+          "どこ": "docs/depts/hq.md",
+          "語": "node tools/ctx.js todo sync"
+        },
+        {
+          "どこ": "docs/depts/hq.md",
+          "語": "node tools/ctx.js still"
+        },
+        {
+          "どこ": "依頼文",
+          "語": "済ませた頼みの id(追跡表)"
+        },
+        {
+          "どこ": "依頼文",
+          "語": "node tools/ctx.js todo "
+        }
+      ]
     }
   ]
 }
