@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c5d6328833657e75
+// source-sha256: 4818c1de2b069441
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -153377,7 +153377,10 @@ function AssistantMasmonTrainWatch({
       flexDirection: 'column'
     }
   }, React.createElement("style", null, AMBW_CSS, `
+.amgc-root>*{flex-shrink:0}
+.amgc-root>.amgc-wrap{flex:1 0 auto}
 .amgc-wrap{flex:1 1 auto;display:flex;flex-direction:column;gap:5px;min-height:340px}
+.amgc-head{display:block;color:#fde68a}.amgc-head span{display:inline-block;white-space:nowrap}.amgc-head .who{margin-top:2px;font-size:12.5px;color:#fde68a}
 .amgc-wrap .msa-stagebox{flex:1 1 auto;min-height:260px}
 .amgc-side{display:flex;align-items:center;gap:8px;padding:4px 10px;border-radius:12px;background:#1e1a36;border:1px solid #3b3566}
 .amgc-side.me{border-color:#f472b6}.amgc-side.foe{border-color:#38bdf8}
@@ -153463,10 +153466,13 @@ function AssistantMasmonTrainWatch({
     className: "ambw-card",
     "data-amgc-result": true
   }, React.createElement("b", {
+    className: "amgc-head"
+  }, React.createElement("span", null, "🥋 ", last ? last.today ? '今日の修行の結果' : '前回の修行の結果' : 'まだ修行していません'), last ? React.createElement("span", {
+    className: "who",
     style: {
-      color: '#fde68a'
+      display: 'block'
     }
-  }, "🥋 ", last ? last.today ? '今日の修行の結果' : '前回の修行の結果' : 'まだ修行していません', last ? ` ${row.nick}(${(AMGT_KINDS[last.log.k] || {}).name || ''})` : ''), last && last.log.l && React.createElement("p", {
+  }, React.createElement("span", null, row.nick), " ", React.createElement("span", null, "(", (AMGT_KINDS[last.log.k] || {}).name || '', ")")) : null), last && last.log.l && React.createElement("p", {
     "data-amgc-learned": true,
     style: {
       margin: '4px 0 0',

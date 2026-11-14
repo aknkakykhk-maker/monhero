@@ -261,7 +261,10 @@ function AssistantMasmonTrainWatch({ assistantId, onClose }) {
   return (
     <div className="ambw-root amgc-root" style={{ position: 'fixed', inset: 0, zIndex: 9000, overflowY: 'auto', background: 'linear-gradient(180deg,#221a44,#141026 40%)', color: '#fff', padding: 'calc(10px + env(safe-area-inset-top)) calc(12px + env(safe-area-inset-right)) calc(16px + env(safe-area-inset-bottom)) calc(12px + env(safe-area-inset-left))', display: 'flex', flexDirection: 'column' }}>
       <style>{AMBW_CSS}{`
+.amgc-root>*{flex-shrink:0}
+.amgc-root>.amgc-wrap{flex:1 0 auto}
 .amgc-wrap{flex:1 1 auto;display:flex;flex-direction:column;gap:5px;min-height:340px}
+.amgc-head{display:block;color:#fde68a}.amgc-head span{display:inline-block;white-space:nowrap}.amgc-head .who{margin-top:2px;font-size:12.5px;color:#fde68a}
 .amgc-wrap .msa-stagebox{flex:1 1 auto;min-height:260px}
 .amgc-side{display:flex;align-items:center;gap:8px;padding:4px 10px;border-radius:12px;background:#1e1a36;border:1px solid #3b3566}
 .amgc-side.me{border-color:#f472b6}.amgc-side.foe{border-color:#38bdf8}
@@ -289,7 +292,7 @@ function AssistantMasmonTrainWatch({ assistantId, onClose }) {
         <div className="ambw-card" data-amgc-result-wait style={{ textAlign: 'center' }}><b style={{ color: '#fde68a', fontSize: 12.5 }}>🥋 試合が終わると、今日の修行の結果が出ます</b></div>
       ) : (
       <div className="ambw-card" data-amgc-result>
-        <b style={{ color: '#fde68a' }}>🥋 {last ? (last.today ? '今日の修行の結果' : '前回の修行の結果') : 'まだ修行していません'}{last ? ` ${row.nick}(${(AMGT_KINDS[last.log.k] || {}).name || ''})` : ''}</b>
+        <b className="amgc-head"><span>🥋 {last ? (last.today ? '今日の修行の結果' : '前回の修行の結果') : 'まだ修行していません'}</span>{last ? <span className="who" style={{ display: 'block' }}><span>{row.nick}</span> <span>({(AMGT_KINDS[last.log.k] || {}).name || ''})</span></span> : null}</b>
         {last && last.log.l && <p data-amgc-learned style={{ margin: '4px 0 0', fontWeight: 800 }}><span style={{ background: '#fbbf24', color: '#111', borderRadius: 6, padding: '0 4px', fontSize: 10 }}>NEW</span> {amgcTechName(row.monster, last.log.l)} を覚えた</p>}
         {gains.map(([k, n]) => { const to = me ? me.m[k] || 0 : 0; const from = Math.max(0, to - n); return <p key={k} data-amgc-gain={k} style={{ margin: '3px 0 0', fontSize: 12, fontWeight: 800 }}>{amgcTechName(row.monster, k)} {from}→{to}(+{n}) <span style={{ color: '#fde68a' }}>{amgtRankOf(from) === amgtRankOf(to) ? amgtRankOf(to) : `${amgtRankOf(from)}→${amgtRankOf(to)}`}</span></p>; })}
         {gift && gift.ok && <p data-amgc-gift style={{ margin: '6px 0 0', color: '#fdba74', fontWeight: 900 }}>{who ? who.name : ''}「見に来てくれてうれしいです！」 🥋 {gift.nick} {gift.tech} 熟練 +{gift.to - gift.from} ・ 💗 +{gift.bond}</p>}

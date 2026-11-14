@@ -96,11 +96,22 @@ const seed = () => {
       await page.evaluate(() => { const b = document.querySelector('[data-amgc-skip]'); if (b) b.click(); });
       await page.waitForTimeout(700);
       if (SHOTS) await page.screenshot({ path: path.join(shotDir, `cheer-end-${width}.png`) });
+      // 操作の段(⏸・×2・見せ場だけ・結果へ)が、ほかの札・実況の帯に重ならない(幅320でも)。結果欄の見出しは言葉の途中で折れない
+      const ov = await page.evaluate(() => {
+        const ctl = document.querySelector('.amgc-root .ambw-ctl'); if (!ctl) return null; const C = ctl.getBoundingClientRect();
+        const others = [...document.querySelectorAll('.amgc-root [data-amgc-side], .amgc-root [data-msa-say]')].map((e) => e.getBoundingClientRect());
+        const hit = others.filter((r) => r.height > 0 && !(r.bottom <= C.top + 1 || r.top >= C.bottom - 1)).length;
+        const bs = [...ctl.querySelectorAll('button')].map((b) => b.getBoundingClientRect()); const bov = bs.some((a, i) => bs.some((b, j) => j > i && !(a.right <= b.left + 1 || b.right <= a.left + 1 || a.bottom <= b.top + 1 || b.bottom <= a.top + 1)));
+        return { hit, bov };
+      });
+      if (ov) check(`(幅${width}) 操作の段が札・実況の帯・ボタンどうしで重ならない`, ov.hit === 0 && !ov.bov, JSON.stringify(ov));
       // 倒れた子・勝った子が、場の左右の端から切れない(2026-11-14 社長)
       const clip = await page.evaluate(() => { const st = document.querySelector('[data-msa-stage]'); if (!st) return null; const R = st.getBoundingClientRect(); return [...st.querySelectorAll('[data-msa-fighter] img')].map((i) => { const r = i.getBoundingClientRect(); return { l: Math.round(r.left - R.left), r: Math.round(R.right - r.right) }; }); });
       if (clip) check(`(幅${width}) 倒れた子・勝った子が場の左右の端から切れない`, clip.every((c) => c.l >= -2 && c.r >= -2), JSON.stringify(clip));
       await page.waitForTimeout(1200);
       const res = await page.evaluate(() => { const r = document.querySelector('[data-amgc-result]'); return r ? r.innerText.replace(/\s+/g, ' ') : ''; });
+      const headOk = await page.evaluate(() => { const h = document.querySelector('.amgc-head'); if (!h) return true; return [...h.querySelectorAll('span')].filter((sp) => !sp.classList.contains('who')).every((sp) => sp.getBoundingClientRect().height <= (parseFloat(getComputedStyle(sp).lineHeight) || 20) * 1.5); });
+      check(`(幅${width}) 結果欄の見出しが言葉の途中で折れない`, headOk);
       check(`(幅${width}) 最後に「今日の修行の結果」(覚えた技・熟練の伸び)が出る`, /今日の修行の結果/.test(res) && /NEW/.test(res) && /→/.test(res), res.slice(0, 120));
       if (SHOTS && width === 390) await page.screenshot({ path: path.join(shotDir, 'cheer-result-390.png') });
       await page.close();
