@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 54a4dcd68d9fce1b
+// source-sha256: 16c260695cbb1c1d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -60836,6 +60836,18 @@ const rhythmSongBuy = async songId => {
   };
 };
 const rhythmSongBuyReasonText = reason => reason === 'points' ? 'ビートPが足りません。' : reason === 'owned' ? 'この曲はもう持っています。' : reason === 'save' ? '買うのを保存できませんでした。ビートPと持っている曲は変わっていません。' : '買えませんでした。';
+const rhythmSongShopMeta = song => {
+  const charts = song && song.difficulties ? Object.values(song.difficulties) : [];
+  const hell = typeof RHYTHM_HELL_CHARTS !== 'undefined' && song ? RHYTHM_HELL_CHARTS[song.songId] : null;
+  const levels = [...charts, hell].map(c => Number(c && c.level)).filter(n => Number.isFinite(n) && n > 0);
+  const track = typeof BGM_TRACK_BY_ID !== 'undefined' && song ? BGM_TRACK_BY_ID[song.bgmTrackId] : null;
+  const first = charts.find(c => c && Number(c.durationMs) > 0) || null;
+  return {
+    creator: track && typeof track.creator === 'string' ? track.creator : '',
+    length: typeof rhythmSongLengthLabel === 'function' ? rhythmSongLengthLabel(song, first) : '',
+    levels: levels.length ? Math.min(...levels) === Math.max(...levels) ? `Lv.${levels[0]}` : `Lv.${Math.min(...levels)}〜${Math.max(...levels)}` : ''
+  };
+};
 function RhythmSongShopList({
   points = 0,
   busy = false,
@@ -60846,7 +60858,23 @@ function RhythmSongShopList({
 }) {
   const owned = useRhythmOwnedSongs();
   const songs = rhythmPaidSongList();
+  const [playingId, setPlayingId] = React.useState('');
+  React.useEffect(() => () => {
+    try {
+      Audio_.stopPreview();
+    } catch (_) {}
+  }, []);
   if (!songs.length) return null;
+  const toggleListen = async song => {
+    try {
+      await Audio_.unlock();
+      const started = await Audio_.previewBGM(song.bgmTrackId);
+      setPlayingId(started ? song.songId : '');
+    } catch (_) {
+      setPlayingId('');
+    }
+  };
+  const anyBundle = songs.some(song => rhythmSongHasBundle(song.songId));
   return React.createElement(React.Fragment, null, React.createElement("p", {
     "data-rhythm-song-shop-note": true,
     className: "col-span-full -mt-1 text-[11px] font-bold leading-snug text-slate-300",
@@ -60854,10 +60882,20 @@ function RhythmSongShopList({
       wordBreak: 'keep-all',
       overflowWrap: 'anywhere'
     }
-  }, "買うと、その曲を全部の難易度で遊べます(short ver. がある曲は、short ver. もいっしょに遊べます)。みんなで対戦なら、持っていなくてもその回だけ遊べます"), songs.map(song => {
+  }, React.createElement("span", {
+    className: "inline-block"
+  }, "買うと、その曲を全部の難易度で遊べます。"), ' ', anyBundle && React.createElement(React.Fragment, null, React.createElement("span", {
+    className: "inline-block"
+  }, "short ver. も一緒に遊べます。"), ' '), React.createElement("span", {
+    className: "inline-block"
+  }, "みんなで対戦なら、"), React.createElement("span", {
+    className: "inline-block"
+  }, "持っていなくてもその回だけ遊べます")), songs.map(song => {
     const price = rhythmSongPrice(song.songId);
     const has = owned.includes(song.songId);
     const src = typeof rhythmSongArtSrc === 'function' ? rhythmSongArtSrc(song) : '';
+    const meta = rhythmSongShopMeta(song);
+    const bundle = rhythmSongHasBundle(song.songId);
     const item = {
       id: `song_${song.songId}`,
       name: rhythmSongFullName(song),
@@ -60866,7 +60904,7 @@ function RhythmSongShopList({
       type: 'song',
       currency: 'beatPoint',
       cost: price,
-      desc: rhythmSongHasBundle(song.songId) ? '新曲(全難易度・short ver. もセット)' : '新曲(全難易度で遊べます)'
+      desc: bundle ? '新曲(全難易度・short ver. もセット)' : '新曲(全難易度で遊べます)'
     };
     const offer = {
       id: `song_${song.songId}`,
@@ -60874,22 +60912,62 @@ function RhythmSongShopList({
       songId: song.songId,
       cost: price
     };
-    return React.createElement(MarketProductCard, {
+    const canBuy = !has && points >= price && !busy && !disabled;
+    const listening = playingId === song.songId;
+    return React.createElement("div", {
       key: song.songId,
-      dataAttrs: {
-        'data-rhythm-song-offer': song.songId
-      },
-      item: item,
-      owned: has,
-      comingSoon: false,
-      canBuy: !has && points >= price && !busy,
-      disabled: disabled,
-      onZoom: () => onZoomIcon && src && onZoomIcon(item),
-      onBuy: () => openSheet({
+      "data-rhythm-song-offer": song.songId,
+      className: `relative flex min-w-0 flex-col items-center gap-1 rounded-2xl border p-2 ${has ? 'border-emerald-500/60 bg-emerald-900/30' : 'border-white/10 bg-slate-900'}`
+    }, React.createElement("div", {
+      className: "w-full [container-type:inline-size]"
+    }, typeof RhythmSongArt === 'function' ? React.createElement(RhythmSongArt, {
+      song: song,
+      large: true,
+      onZoom: src && onZoomIcon ? () => onZoomIcon(item) : null
+    }) : null), React.createElement("b", {
+      "data-rhythm-song-offer-name": true,
+      className: "w-full text-center text-[11px] font-black leading-tight text-white",
+      style: {
+        wordBreak: 'keep-all',
+        overflowWrap: 'anywhere'
+      }
+    }, item.name), React.createElement("small", {
+      "data-rhythm-song-offer-meta": true,
+      className: "w-full text-center text-[9px] font-bold leading-tight text-slate-300",
+      style: {
+        wordBreak: 'keep-all',
+        overflowWrap: 'anywhere'
+      }
+    }, meta.creator && React.createElement("span", {
+      className: "block"
+    }, meta.creator), React.createElement("span", {
+      className: "block"
+    }, [meta.length, meta.levels].filter(Boolean).join(' ／ ')), bundle && React.createElement("span", {
+      className: "block text-lime-300"
+    }, "short ver. つき")), React.createElement("button", {
+      type: "button",
+      "data-rhythm-song-listen": song.songId,
+      onClick: () => toggleListen(song),
+      "aria-pressed": listening,
+      "aria-label": `${item.name}を試し聴き${listening ? '(止める)' : ''}`,
+      className: `mh-hit-expand relative min-h-[32px] w-full rounded-lg border px-1 text-[11px] font-black active:scale-95 ${listening ? 'border-lime-300/70 bg-lime-500/25 text-lime-100' : 'border-white/20 bg-white/10 text-white'}`
+    }, listening ? '■ とめる' : '▶ 試し聴き'), React.createElement("div", {
+      className: "mt-auto flex w-full items-center justify-center pt-1"
+    }, has ? React.createElement("div", {
+      className: "whitespace-nowrap rounded-full bg-emerald-950/50 px-2 py-1 text-[10px] font-black text-emerald-400"
+    }, "所持済み") : React.createElement("button", {
+      type: "button",
+      "data-rhythm-song-buy": song.songId,
+      onClick: () => openSheet({
         item,
         confirm: () => onExchange ? onExchange(offer, 1) : false
-      })
-    });
+      }),
+      disabled: !canBuy,
+      "aria-label": `${item.name}を${price}ビートPで交換`,
+      className: `mh-button mh-button-primary flex min-h-[44px] w-full max-w-full items-center justify-center gap-1 whitespace-nowrap rounded-xl px-2 text-[11px] font-black ${canBuy ? 'bg-violet-500 text-white active:scale-95' : 'bg-slate-800 text-slate-500'}`
+    }, React.createElement("span", {
+      "aria-hidden": "true"
+    }, "🎟️"), React.createElement("span", null, price.toLocaleString()))));
   }));
 }
 const MULTI_STAMP_KEY = 'mh_multi_stamps_v1';
@@ -254984,7 +255062,7 @@ function MonsterHeroGame() {
       const item = marketIconZoom;
       const round = item.type === 'icon' || item.type === 'assist';
       return React.createElement(MarketModal, {
-        narrow: true,
+        narrow: item.type !== 'song',
         label: `${item.name}の拡大表示`,
         onClose: () => setMarketIconZoom(null)
       }, React.createElement("div", {
@@ -255002,7 +255080,10 @@ function MonsterHeroGame() {
           className: "h-full w-full rounded-full bg-slate-800/80"
         })
       })) : React.createElement("div", {
-        className: `w-full aspect-square overflow-hidden bg-black/40 border border-white/10 flex items-center justify-center ${round ? 'rounded-full' : 'rounded-2xl'}`
+        className: `w-full aspect-square overflow-hidden bg-black/40 border border-white/10 flex items-center justify-center ${round ? 'rounded-full' : 'rounded-2xl'}`,
+        style: item.type === 'song' ? {
+          maxWidth: 'min(100%, max(240px, calc(var(--mh-vh) - 190px)))'
+        } : undefined
       }, item.icon ? item.type === 'icon' ? React.createElement(BreederIcon, {
         src: item.icon,
         id: item.id,
