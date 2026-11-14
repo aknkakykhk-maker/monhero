@@ -58,7 +58,7 @@ check('advanceRunStage は呼ばれた時点の値(ref)で画面を切り替え�
 check('画面を切り替える入口は1つで、そこで判断材料も同時に更新する',
   // 2026-11-07: 入口で画面の出来事の記録(MH_SCREEN_TRAIL)にも1行足すようになった。判断材料を先に更新してから切り替える順は同じ
   // 2026-11-08: 助手ライフの判断に使う「いまの画面」の控え(gameStateNowRef)も、判断材料の前に入れる
-  /const setGameState = \(next\) => \{ (?:gameStateNowRef\.current = next; )?runBackgroundAllowedRef\.current = isBackgroundRunScreen\(next\);(?: if \(typeof MH_SCREEN_TRAIL !== 'undefined'\) MH_SCREEN_TRAIL\.push\('gs', `\$\{next\}<\$\{gameStateCaller\(\)\}`\);)? setGameStateRaw\(next\); \};/.test(screenEntry)
+  /const setGameState = \(next\) => \{ (?:if \(stopStrayGameState\(next\)\) return; )?(?:gameStateNowRef\.current = next; )?runBackgroundAllowedRef\.current = isBackgroundRunScreen\(next\);(?: if \(typeof MH_SCREEN_TRAIL !== 'undefined'\) MH_SCREEN_TRAIL\.push\('gs', `\$\{next\}<\$\{gameStateCaller\(\)\}`\);)? setGameStateRaw\(next\); \};/.test(screenEntry)
   && source.includes("const [gameState, setGameStateRaw] = useState('HOME');"));
 check('useStateのsetterを直接呼んでいない(必ず入口を通す)',
   (source.match(/setGameStateRaw\(/g) || []).length === 1

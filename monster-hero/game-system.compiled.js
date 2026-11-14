@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 095082bf04737570
+// source-sha256: 42fe696135c19480
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -91,6 +91,25 @@ const MH_SCREEN_TRAIL = (() => {
     list: () => list.slice(),
     sinceLast,
     compact
+  };
+})();
+const MH_MULTI_PLAY_GUARD = (() => {
+  const GRACE_MS = 1500;
+  let lastClick = 0;
+  if (typeof document !== 'undefined' && document.addEventListener) {
+    try {
+      document.addEventListener('click', e => {
+        if (!e || e.isTrusted !== false) lastClick = Date.now();
+      }, true);
+    } catch (_) {}
+  }
+  const shouldBlock = (current, next, playFrom, now = Date.now()) => current === 'RHYTHM_PLAY' && playFrom === 'multi' && typeof next === 'string' && !next.startsWith('RHYTHM_') && now - lastClick > GRACE_MS;
+  return {
+    shouldBlock,
+    touch: () => {
+      lastClick = Date.now();
+    },
+    lastClickAt: () => lastClick
   };
 })();
 const MH_PAGE_OFFSET_GUARD = (() => {
@@ -40726,6 +40745,30 @@ const rhythmTouchDiagReport = async report => {
       stats: {
         kind: 'report',
         playId: report.playId
+      },
+      schema_version: RHYTHM_TOUCH_DIAG_VERSION
+    });
+  } catch {
+    return false;
+  }
+};
+const rhythmTouchDiagStray = async info => {
+  try {
+    if (!info || typeof sbSendRhythmTouchDiag !== 'function' || !RHYTHM_DEMO_SONG_IDS.includes(info.song_id)) return false;
+    const deviceKey = await rhythmPlayLogDeviceKey();
+    const scr = typeof MH_SCREEN_TRAIL !== 'undefined' ? MH_SCREEN_TRAIL.compact(MH_SCREEN_TRAIL.list().slice(-12)) : [];
+    return await sbSendRhythmTouchDiag({
+      device_key: deviceKey,
+      app_build: typeof BUILD_DATE === 'string' ? BUILD_DATE : '',
+      platform: rhythmTouchPlatform(),
+      standalone: !!rhythmTouchStandalone(),
+      song_id: info.song_id,
+      difficulty: info.difficulty,
+      note_count: 1,
+      stats: {
+        kind: 'stray',
+        to: String(info.to || '').slice(0, 60),
+        scr
       },
       schema_version: RHYTHM_TOUCH_DIAG_VERSION
     });
@@ -157736,13 +157779,30 @@ const assistantLifeTasteDaily = () => {
       if (!a || !a.id) continue;
       for (const r of assistantMasmonRowsOf(ASSISTANT_MASMON_STORE.state, a.id) || []) if (r && r.monster) assistantLifeTasteBump(a.id, r.monster, 'raise');
     }
+    if (typeof ASSISTANT_PEER_STORE !== 'undefined' && ASSISTANT_PEER_STORE.state && ASSISTANT_PEER_STORE.state.loaded && typeof assistantPeerLevel === 'function') {
+      const st = ASSISTANT_PEER_STORE.state;
+      for (const a of ASSISTANT_MASMON_PLAN) {
+        if (!a || !a.id) continue;
+        for (const b of ASSISTANT_MASMON_PLAN) {
+          if (!b || !b.id || b.id === a.id || !Array.isArray(b.likeMon)) continue;
+          let lv = 0;
+          try {
+            lv = Number(assistantPeerLevel(st, a.id, b.id));
+          } catch (_) {
+            lv = 0;
+          }
+          if (!(lv >= 5)) continue;
+          for (const x of b.likeMon) if (x && typeof x.monster === 'string' && x.monster) assistantLifeTasteBump(a.id, x.monster, 'friend');
+        }
+      }
+    }
   } catch (_) {}
 };
 let amtDailyDay = '';
 const amtDailyTry = () => {
   try {
     const d = typeof assistantLifeDayKey === 'function' ? assistantLifeDayKey() : '';
-    if (!d || amtDailyDay === d || !AMT_STORE || !AMT_STORE.loaded || typeof ASSISTANT_MASMON_STORE === 'undefined' || !ASSISTANT_MASMON_STORE.loaded) return;
+    if (!d || amtDailyDay === d || !AMT_STORE || !AMT_STORE.loaded || typeof ASSISTANT_MASMON_STORE === 'undefined' || !ASSISTANT_MASMON_STORE.loaded || typeof ASSISTANT_PEER_STORE !== 'undefined' && ASSISTANT_PEER_STORE.state && !ASSISTANT_PEER_STORE.state.loaded) return;
     amtDailyDay = d;
     assistantLifeTasteDaily();
   } catch (_) {}
@@ -157753,6 +157813,7 @@ try {
       if (amtOn() && AMT_STORE) {
         void AMT_STORE.load().then(amtDailyTry).catch(() => {});
         if (typeof ASSISTANT_MASMON_STORE !== 'undefined' && ASSISTANT_MASMON_STORE.subs) ASSISTANT_MASMON_STORE.subs.add(amtDailyTry);
+        if (typeof ASSISTANT_PEER_STORE !== 'undefined' && ASSISTANT_PEER_STORE.listeners) ASSISTANT_PEER_STORE.listeners.add(amtDailyTry);
       }
     } catch (_) {}
   }, 0);
@@ -223734,7 +223795,24 @@ function MonsterHeroGame() {
       return '';
     }
   };
+  const rhythmPlayGuardRef = useRef(null);
+  const stopStrayGameState = next => {
+    try {
+      const play = rhythmPlayGuardRef.current;
+      if (typeof MH_MULTI_PLAY_GUARD !== 'undefined' && MH_MULTI_PLAY_GUARD.shouldBlock(gameStateNowRef.current, next, play && play.from)) {
+        if (typeof MH_SCREEN_TRAIL !== 'undefined') MH_SCREEN_TRAIL.push('blk', `${next}<${gameStateCaller()}`);
+        if (typeof rhythmTouchDiagStray === 'function' && play && play.song) void rhythmTouchDiagStray({
+          song_id: play.song.songId,
+          difficulty: play.difficulty && play.difficulty.id,
+          to: `${next}<${gameStateCaller()}`
+        });
+        return true;
+      }
+    } catch (_) {}
+    return false;
+  };
   const setGameState = next => {
+    if (stopStrayGameState(next)) return;
     gameStateNowRef.current = next;
     runBackgroundAllowedRef.current = isBackgroundRunScreen(next);
     if (typeof MH_SCREEN_TRAIL !== 'undefined') MH_SCREEN_TRAIL.push('gs', `${next}<${gameStateCaller()}`);
@@ -223888,6 +223966,7 @@ function MonsterHeroGame() {
   const [rhythmSettings, setRhythmSettings] = useState(DEFAULT_RHYTHM_SETTINGS);
   const [rhythmBestRecords, setRhythmBestRecords] = useState(() => normalizeRhythmBestRecords(null));
   const [rhythmPlay, setRhythmPlayState] = useState(null);
+  rhythmPlayGuardRef.current = rhythmPlay;
   const setRhythmPlay = next => {
     if (next && typeof next === 'object' && next.from !== 'multi' && typeof RHYTHM_MULTI !== 'undefined' && RHYTHM_MULTI.view()) {
       if (!window.confirm('みんなで対戦の部屋で待っています。部屋を出てから遊びますか?')) return;
