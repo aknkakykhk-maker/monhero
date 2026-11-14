@@ -367,7 +367,7 @@ const ASSISTANT_LIFE_HOUSE_CSS = `
 @media (orientation:landscape) and (max-height:420px){[data-assistant-life-room-acts] .mhl-btn{min-height:34px;font-size:11.5px}[data-assistant-life-room-acts]{gap:5px}}
 .mhl-scene{position:absolute;inset:0;z-index:30;overflow:hidden;background:#000}
 .mhl-scene .bg{position:absolute;inset:0;background-size:cover;background-position:center}
-.mhl-scene .st{position:absolute;bottom:0;object-fit:contain;object-position:bottom;filter:drop-shadow(0 6px 12px #0008)}
+.mhl-scene .st{position:absolute;bottom:0;object-fit:contain;object-position:bottom}/* 2026-11-15 drop-shadow は絵の箱で切れて、後ろに四角い影の面が出た(窓口の指摘)のでやめた */
 @keyframes mhlIntroTitle{0%{opacity:0;transform:scale(.9)}30%{opacity:1;transform:scale(1)}100%{opacity:1}}
 @keyframes mhlDoorL{from{transform:translateX(0)}to{transform:translateX(-102%)}}
 @keyframes mhlDoorR{from{transform:translateX(0)}to{transform:translateX(102%)}}
