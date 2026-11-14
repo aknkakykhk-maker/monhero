@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 546181787166e06b
+// source-sha256: 0ed20c12a1ba6e2a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -168044,6 +168044,8 @@ const MSX_CSS = `
 .msx .v-sl .ic{max-width:100%;white-space:normal;word-break:keep-all;overflow-wrap:anywhere}
 .msx .v-sl{display:flex;flex-direction:column;align-items:center;justify-content:center}
 .msx .v-heat .hi{display:block;font-size:16px;line-height:1.15;margin-bottom:1px}
+/* r1114-065: 札の中の言葉は語の切れ目でだけ折る */
+.msx .v-hm-tile b{word-break:keep-all;overflow-wrap:normal}
 `;
 const MSX_KEYS = Object.freeze({
   run: 'mh_monsuc_run_v1',
@@ -168767,7 +168769,7 @@ function MonheroSuccessDebugEntry({
     debug: true
   }));
 }
-const msxItemNameNode = name => String(name || '').split(/(?<=[の!！])(?=.)|(?<=ブリーダー)(?=ライセンス)|(?<=オイリー)(?=パック|オイル)|(?<=野菜)(?=ジュース)|(?<=スタミナ)(?=だんご)/).map((x, i) => React.createElement(React.Fragment, {
+const msxItemNameNode = name => String(name || '').split(/(?<=[の!！])(?=.)|(?<=ブリーダー)(?=ライセンス)|(?<=オイリー)(?=パック|オイル)|(?<=野菜)(?=ジュース)|(?<=スタミナ)(?=だんご)|(?<=キビ)(?=ダンゴ)/).map((x, i) => React.createElement(React.Fragment, {
   key: i
 }, i > 0 ? React.createElement("wbr", null) : null, x));
 const MSX_STEP_NAMES = Object.freeze(['育てるモンスター', '編成', '助手', '持ちこみ', '名前と染色', '確認']);
@@ -170139,7 +170141,7 @@ function MsxStart({
       className: "bs"
     }, React.createElement("span", null, "親密度 ", m.bond0), React.createElement("span", null, "タッグ +", m.tag, "%")), React.createElement("div", {
       className: "ic"
-    }, m.kind === 'base' ? m.auto ? 'ベースモン・✎選ぶ' : 'ベースモン・✎変える' : m.friend ? `借: ${m.friend.name || 'フレンド'}` : '✎変える')))), React.createElement("div", {
+    }, m.kind === 'base' ? m.auto ? 'ベースモン ✎⁠選ぶ' : 'ベースモン ✎⁠変える' : m.friend ? `借: ${m.friend.name || 'フレンド'}` : '✎変える')))), React.createElement("div", {
       className: "msx-note msx-sl-legend",
       "data-msx-slot-legend": true
     }, "札の見方: 「+4%」はその能力のトレーニングの伸びが上がる分・親密度は初めの値・タッグは友情タッグのときの伸び"), React.createElement("button", {
@@ -171841,7 +171843,7 @@ function MsxHome({
     onClick: t.on
   }, t.attr), React.createElement("span", {
     className: "e"
-  }, t.e), React.createElement("b", null, t.name), t.sub ? React.createElement("small", null, t.sub) : null))) : null, debug && React.createElement("div", {
+  }, t.e), React.createElement("b", null, t.name === 'マスモンボックス' ? React.createElement(React.Fragment, null, "マスモン", React.createElement("wbr", null), "ボックス") : t.name), t.sub ? React.createElement("small", null, t.sub) : null))) : null, debug && React.createElement("div", {
     className: "v-card",
     style: {
       borderColor: '#a3e63566'
