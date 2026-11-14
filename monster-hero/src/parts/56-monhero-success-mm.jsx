@@ -53,6 +53,49 @@ function MsxMmArt({ m, size, thumb = false }) {
   return <span className="mm-art" style={{ width: size, height: size }}>{kira ? <MsxKira kind={msxKiraOf(m.awake)} small={thumb}>{img}</MsxKira> : img}</span>;
 }
 
+// ---- マスモンを並べて見せる所は全部この升目(ボックス式)にそろえる(2026-11-14 社長)。一覧・はじめる画面の編成えらび・合体の親えらびで使う ----
+// mons … 並べる子 / onPick(m) … 押したとき / isOn(m) … 選んでいる印 / lockOf(m) … 選べない理由(文字)か null / label … 顔の下に出す物(無ければ端末に覚えた表示)
+// attrs(m) … 検査用の data 属性など。見た目は .msx の外(合体の画面)でも同じになるよう、.mmg の中で閉じる
+function MsxMmGrid({ mons, onPick, isOn, lockOf, label, attrs, fav }) {
+  const [saved, setSaved] = useState(null);
+  const [favs, setFavs] = useState(Array.isArray(fav) ? fav : []);
+  useEffect(() => {
+    let alive = true;
+    if (!label) storeGet(MSX_MM_VIEW_KEY, null).then((v) => { if (alive) setSaved(msxMmNormView(v).label); }).catch(() => {});
+    if (!Array.isArray(fav)) storeGet(MSX_MM_FAV_KEY, []).then((v) => { if (alive) setFavs(msxMmNormFav(v)); }).catch(() => {});
+    return () => { alive = false; };
+  }, []);
+  const lb = label || saved || 'power'; const fv = Array.isArray(fav) ? fav : favs;
+  return (<div className="mmg" data-msx-mm-grid>
+    <style>{MSX_MM_GRID_CSS}</style>
+    {mons.map((m) => { const lock = lockOf ? lockOf(m) : null; const on = isOn ? isOn(m) : false;
+      return (
+        <button type="button" key={m.id} className={`mmg-c${on ? ' on' : ''}${lock ? ' lk' : ''}`} disabled={!!lock} onClick={() => onPick && onPick(m)} {...(attrs ? attrs(m) : {})}>
+          <span className="fc"><MsxMmArt m={m} size="100%" thumb/></span>
+          {m.grade || m.rank ? <i className="gd">{m.grade || m.rank}</i> : null}
+          {fv.includes(m.id) ? <i className="hr" aria-label="お気に入り">❤</i> : null}
+          {on ? <i className="ck" aria-hidden="true">✓</i> : null}
+          {lock ? <i className="lk2">{lock}</i> : null}
+          <span className="lb">{msxMmLabelOf(m, lb)}</span>
+        </button>);
+    })}
+  </div>);
+}
+const MSX_MM_GRID_CSS = `
+.mmg{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px 6px;align-content:start;padding:8px 2px 6px}
+.mmg .mmg-c{position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;min-width:0;min-height:44px;text-align:center;background:none;border:0;padding:0;margin:0;color:#fff;font:inherit;cursor:pointer}
+.mmg .mmg-c:disabled{cursor:default}
+.mmg .fc{display:block;width:100%;aspect-ratio:1;border-radius:50%;overflow:hidden;background:radial-gradient(circle at 50% 35%,#e0e7ff 0,#a5b4fc 75%);border:2.5px solid #fde047;box-shadow:0 2px 0 #0006}
+.mmg .mmg-c.on .fc{border-color:#f472b6;box-shadow:0 0 0 3px #f472b6}
+.mmg .mmg-c.lk{opacity:.5}
+.mmg .gd{position:absolute;right:-2px;top:-2px;font-style:normal;font-size:10px;font-weight:900;color:#fff;background:#7c3aed;border:1.5px solid #fde047;border-radius:8px;padding:0 4px;line-height:15px}
+.mmg .hr{position:absolute;left:-1px;top:-2px;font-style:normal;font-size:14px;color:#f43f5e;text-shadow:0 1px 0 #fff}
+.mmg .ck{position:absolute;left:50%;top:22%;transform:translateX(-50%);font-style:normal;font-size:22px;font-weight:900;color:#fff;text-shadow:0 2px 4px #000}
+.mmg .lk2{position:absolute;left:50%;top:30%;transform:translateX(-50%);font-style:normal;font-size:10px;font-weight:900;background:#0f0d24e0;border-radius:6px;padding:0 4px;white-space:nowrap}
+.mmg .lb{max-width:100%;font-size:10.5px;font-weight:900;background:#0f0d24;border-radius:8px;padding:1px 5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mmg .mm-art{display:block;position:relative}
+`;
+
 function MsxR3Box({ onClose }) {
   const [box, setBox] = useState(null);
   const [meta, setMeta] = useState(null);
@@ -122,17 +165,17 @@ function MsxR3Box({ onClose }) {
     </>);
   }
 
-  let body = null; let foot = null; let title = 'マスモン一覧(モンサク)';
+  let body = null; let foot = null; let title = 'マスモンボックス(モンサク)';
   if (!box) body = <div className="msx-note" style={{ margin: 'auto' }}>読み込んでいます…</div>;
   // ---- 入口(mm-02 型) ----
   else if (page === 'gate') {
-    title = 'マスモン(モンサク)';
+    title = 'マスモンボックス(モンサク)';
     body = (<div className="mm-gate">
       <div className="mm-desk"><img className="mm-aid" src={msxFace(aid, 'happy')} alt=""/>
         <div className="mm-bub">{box.mons.length ? '育てたマスモンの様子を見にきたの?' : 'まだマスモンはいないみたい。育成を最後まで終えると、ここに来るよ!'}</div></div>
       <div className="mm-cards">
         <button type="button" className="mm-card" onClick={() => { setPage('list'); setTab('list'); setMsg(''); }} data-msx-mm-open-list data-msx-r3-mmlist>
-          <span className="e" aria-hidden="true">🐾</span><b>マスモン一覧</b><small>{box.mons.length} / {box.cap}体</small></button>
+          <span className="e" aria-hidden="true">🐾</span><b>マスモンボックス</b><small>{box.mons.length} / {box.cap}体</small></button>
         {typeof MonsucFuseSheet === 'function' ? <button type="button" className="mm-card" onClick={() => setPage('fuse')} disabled={box.mons.length < 2} data-msx-r3-fuse>
           <span className="e" aria-hidden="true">🧬</span><b>合体</b><small>{box.mons.length < 2 ? '2体からできる' : '2体から新しいマスモン'}</small></button> : null}
       </div>
@@ -150,19 +193,11 @@ function MsxR3Box({ onClose }) {
         <button type="button" className={tab === 'bye' ? 'on' : ''} onClick={() => { setTab('bye'); setPick([]); setMsg(''); }} data-msx-mm-tab-bye data-msx-r3-mmbye>お別れ</button></div>
       {tab === 'bye' ? <div className="mm-hint">お別れするマスモンを選んでね(ハート・貸し出し中・育成中のマスモンは選べない)</div> : null}
       {msg ? <div className="mm-hint ok">{msg}</div> : null}
-      <div className="mm-grid" data-msx-mm-grid>{list.length ? list.map((m) => {
-        const lock = tab === 'bye' ? byeLock(m) : null; const on = pick.includes(m.id);
-        return (
-          <button type="button" key={m.id} className={`mm-cell${on ? ' on' : ''}${lock ? ' lk' : ''}`} disabled={!!lock} data-msx-r3-boxmon={m.id}
-            onClick={() => { if (tab === 'bye') setPick(on ? pick.filter((x) => x !== m.id) : [...pick, m.id]); else { setSel(m.id); setPage('detail'); setTechSel(null); setMsg(''); } }}>
-            <span className="fc"><MsxMmArt m={m} size="100%" thumb/></span>
-            {m.grade || m.rank ? <i className="gd">{m.grade || m.rank}</i> : null}
-            {fav.includes(m.id) ? <i className="hr" aria-label="お気に入り">❤</i> : null}
-            {tab === 'bye' && on ? <i className="ck" aria-hidden="true">✓</i> : null}
-            {lock ? <i className="lk2">{lock}</i> : null}
-            <span className="lb">{msxMmLabelOf(m, view.label)}</span>
-          </button>);
-      }) : <div className="msx-note" style={{ gridColumn: '1/-1' }}>まだマスモンはいません。育成を最後まで終えると、ここに入ります</div>}</div>
+      <div className="mm-gridw">{list.length ? <MsxMmGrid mons={list} label={view.label} fav={fav}
+        isOn={(m) => tab === 'bye' && pick.includes(m.id)} lockOf={tab === 'bye' ? byeLock : null}
+        attrs={(m) => ({ 'data-msx-r3-boxmon': m.id })}
+        onPick={(m) => { if (tab === 'bye') setPick(pick.includes(m.id) ? pick.filter((x) => x !== m.id) : [...pick, m.id]); else { setSel(m.id); setPage('detail'); setTechSel(null); setMsg(''); } }}/>
+        : <div className="msx-note" style={{ padding: 8 }}>まだマスモンはいません。育成を最後まで終えると、ここに入ります</div>}</div>
       <div className="mm-bar">
         <span className="cnt">所持数 <b>{box.mons.length}</b>/{box.cap}体</span>
         <button type="button" className="mm-sel" onClick={() => setMenu('sort')} data-msx-mm-sort>並べ替え: {sortName}▼</button>
@@ -308,17 +343,8 @@ const MSX_MM_CSS = `
 .msx .mm-tabs button.on{background:linear-gradient(90deg,#f472b6,#fb923c);border-color:#fde047}
 .msx .mm-tabs.sm{margin-top:0}.msx .mm-tabs.sm button{font-size:12px;border-radius:10px}
 .msx .mm-hint{font-size:11px;font-weight:800;color:#f9a8d4;margin-top:6px;line-height:1.4}.msx .mm-hint.ok{color:#86efac}
-.msx .mm-grid{flex:1 1 0;min-height:0;overflow-y:auto;display:grid;grid-template-columns:repeat(5,1fr);gap:8px 6px;align-content:start;padding:8px 2px 6px}
-.msx .mm-cell{position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;min-width:0;min-height:44px;text-align:center}
-.msx .mm-cell .fc{display:block;width:100%;aspect-ratio:1;border-radius:50%;overflow:hidden;background:radial-gradient(circle at 50% 35%,#e0e7ff 0,#a5b4fc 75%);border:2.5px solid #fde047;box-shadow:0 2px 0 #0006}
-.msx .mm-cell.on .fc{border-color:#f472b6;box-shadow:0 0 0 3px #f472b6}
-.msx .mm-cell.lk{opacity:.5}
-.msx .mm-cell .gd{position:absolute;right:-2px;top:-2px;font-style:normal;font-size:10px;font-weight:900;color:#fff;background:#7c3aed;border:1.5px solid #fde047;border-radius:8px;padding:0 4px;line-height:15px}
-.msx .mm-cell .hr{position:absolute;left:-1px;top:-2px;font-style:normal;font-size:14px;color:#f43f5e;text-shadow:0 1px 0 #fff}
-.msx .mm-cell .ck{position:absolute;left:50%;top:22%;transform:translateX(-50%);font-style:normal;font-size:22px;font-weight:900;color:#fff;text-shadow:0 2px 4px #000}
-.msx .mm-cell .lk2{position:absolute;left:50%;top:30%;transform:translateX(-50%);font-style:normal;font-size:10px;font-weight:900;background:#0f0d24e0;border-radius:6px;padding:0 4px;white-space:nowrap}
-.msx .mm-cell .lb{max-width:100%;font-size:10.5px;font-weight:900;background:#0f0d24;border-radius:8px;padding:1px 5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .msx .mm-art{display:block;position:relative}
+.msx .mm-gridw{flex:1 1 0;min-height:0;overflow-y:auto}
 .msx .mm-bar{display:flex;align-items:center;gap:6px;margin-top:4px;flex-wrap:wrap}
 .msx .mm-bar .cnt{flex:1;font-size:11px;font-weight:900;color:#e2e8f0;white-space:nowrap}.msx .mm-bar .cnt b{font-size:14px;color:#fde047}
 .msx .mm-sel{min-height:44px;border-radius:12px;background:#1e1a36;border:1.5px solid #fde047;padding:4px 10px;font-size:11.5px;font-weight:900;white-space:nowrap}
@@ -358,3 +384,16 @@ const MSX_MM_CSS = `
 .msx .mm-td div{display:flex;justify-content:space-between;gap:4px;font-size:10.5px;font-weight:800}.msx .mm-td em{font-style:normal;color:#fff}
 .msx .mm-td .nt{color:#94a3b8;font-size:10.5px}
 `;
+
+// ---- 本編の M/B管理 から開く口(2026-11-14 社長「M/B管理からもマスモンボックス(モンサク)を開けるように」) ----
+// 公開の印 monheroSuccess が偽のあいだは札を出さない(msxReleased)。開くのはモンサクと同じマスモンボックス(見る・詳細・ハート・お別れ)
+// 本体(60-app.jsx)は M/B管理 の札で msxOpenBox() を呼び、MonheroSuccessBoxHost を1つ置くだけ(助手ライフの AssistantLifeSuccessHost と同じ形)
+const MSX_BOX_HOST = { open: null, subs: new Set(), set(v) { this.open = v; this.subs.forEach((f) => { try { f(v); } catch (e) {} }); } };
+const msxOpenBox = () => { if (typeof msxReleased === 'function' && msxReleased()) MSX_BOX_HOST.set({ at: Date.now() }); };
+function MonheroSuccessBoxHost({ callNameOf, bondLvOf, onOpenChange }) {
+  const [open, setOpen] = useState(MSX_BOX_HOST.open);
+  useEffect(() => { const f = (v) => setOpen(v); MSX_BOX_HOST.subs.add(f); return () => { MSX_BOX_HOST.subs.delete(f); }; }, []);
+  useEffect(() => { try { if (onOpenChange) onOpenChange(!!open); } catch (e) {} }, [!!open]);
+  if (!open || typeof msxReleased !== 'function' || !msxReleased()) return null;
+  return <MonheroSuccessScreen key={open.at} startView="box" onClose={() => MSX_BOX_HOST.set(null)} callNameOf={callNameOf} bondLvOf={bondLvOf}/>;
+}

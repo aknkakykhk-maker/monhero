@@ -46,7 +46,9 @@ const MSX_TRAIN_TAIL = Object.freeze(['ときあかし', 'ダッシュ', 'かけ
 const msxTrainNameParts = (stat, lv) => { const n = msxTrainName(stat, lv); const t = MSX_TRAIN_TAIL.find((x) => n.endsWith(x) && n.length > x.length); return t ? [n.slice(0, n.length - t.length), t] : [n]; };
 const msxTrainIcon = (stat, lv) => { const t = MSX_TRAIN_LV[stat]; return t ? t[msxTrainLvAt(lv) - 1][1] : '💪'; };
 const MSX_STATS = Object.freeze(['life', 'pow', 'wise', 'hit', 'eva', 'tough']);
-const MSX_BOX_CAP0 = 30;
+// マスモンボックスに入れられる数(2026-11-14 社長「とりあえず100」。前は はじめ30・引退10回ごとに+5・最大60)。保存の形 mh_monsuc_box_v1 は変えない(cap の値が 100 になるだけ)
+const MSX_BOX_CAP0 = 100;
+const MSX_BOX_CAP_MAX = 100;
 
 // ---- 公開の印(偽のあいだはデバッグの入口から開いたときだけ) ----
 let msxDebugOpened = false;
@@ -171,7 +173,7 @@ const msxNormBoxMon = (m) => {
 const msxNormBox = (raw) => {
   const o = msxIsObj(raw) ? raw : {};
   const mons = (Array.isArray(o.mons) ? o.mons : []).map(msxNormBoxMon).filter(Boolean);
-  return { ...o, v: 1, cap: Math.max(MSX_BOX_CAP0, Math.min(60, msxNum(o.cap, MSX_BOX_CAP0))), mons, memory: Array.isArray(o.memory) ? o.memory.filter(msxIsObj).slice(-100) : [] };
+  return { ...o, v: 1, cap: Math.max(MSX_BOX_CAP0, Math.min(MSX_BOX_CAP_MAX, msxNum(o.cap, MSX_BOX_CAP0))), mons, memory: Array.isArray(o.memory) ? o.memory.filter(msxIsObj).slice(-100) : [] };
 };
 const MSX_ITEM_IDS = Object.freeze(['guide', 'loupe', 'band', 'mag', 'hachi', 'omamori', 'dango', 'grass', 'juice', 'powder', 'license', 'pack', 'oil', 'oilyoil', 'herb', 'hourglass', 'hourglass2', 'ticket']);
 const msxNormMeta = (raw) => {
