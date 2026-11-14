@@ -81,9 +81,9 @@ const MONSUC_SCRIPT_KIKI = Object.freeze([
   { id:'scn.kiki.sp.retire.kiki1', who:'kiki', e:'happy', t:'最後まで押し切りましたね。{mon}は、私の自慢の火力でつ (´ー`*)ウンウン' },
 
   // ═══════════ ターンごとのことば(turn.js と同じ場面) ═══════════
-  { id:'turn.start.great.kiki1', who:'kiki', e:'excited', t:'{mon}、今日はとっても調子がいいでつね。重い訓練で押し切りましょ ( ˘ω˘)9グッ!' },
+  { id:'turn.start.great.kiki1', who:'kiki', e:'excited', t:'{mon}、今日はとっても調子がいいでつね。重いトレーニングで押し切りましょ ( ˘ω˘)9グッ!' },
   { id:'turn.start.great.kiki2', who:'kiki', e:'happy', t:'あれま、目がきらきらしてまつ。こういう日は、ちからをぐっと伸ばせまつよ♪♪' },
-  { id:'turn.start.good.kiki1', who:'kiki', e:'happy', t:'動きが軽いでつね。いつもの訓練で大丈夫でつ' },
+  { id:'turn.start.good.kiki1', who:'kiki', e:'happy', t:'動きが軽いでつね。いつものトレーニングで大丈夫でつ' },
   { id:'turn.start.good.kiki2', who:'kiki', e:'normal', t:'{mon}、いい感じでつ。このまま積み重ねていきまつね' },
   { id:'turn.start.normal.kiki1', who:'kiki', e:'normal', t:'ふつうの日、でつね。{name}、今日はどうしまつか？' },
   { id:'turn.start.normal.kiki2', who:'kiki', e:'normal', t:'可もなく不可もなく、でつ。こういう日の一本が、あとで火力になりまつよ' },
@@ -125,7 +125,7 @@ const MONSUC_SCRIPT_KIKI = Object.freeze([
   { id:'turn.food.feast.kiki1', who:'kiki', e:'happy', t:'ごちそうでつ♪♪ いい食べっぷりでつね (´ω`)' },
   { id:'turn.rest.little.kiki1', who:'kiki', e:'troubled', t:'あまり休めなかったみたいでつ……。今日は軽めにしとこ' },
   { id:'turn.rest.normal.kiki1', who:'kiki', e:'normal', t:'よく休めましたね。これでまた押せまつ' },
-  { id:'turn.rest.deep.kiki1', who:'kiki', e:'happy', t:'ぐっすりでしたね。今なら重い訓練もいけまつよ♪♪' },
+  { id:'turn.rest.deep.kiki1', who:'kiki', e:'happy', t:'ぐっすりでしたね。今なら重いトレーニングもいけまつよ♪♪' },
   { id:'turn.play.kiki1', who:'kiki', e:'happy', t:'たまにはこういう日も大事でつ。{mon}、楽しそうでよかった♪♪' },
   { id:'turn.drill.learn.kiki1', who:'kiki', e:'excited', t:'{tech}、覚えましたね！ 大会で見せてあげましょ ٩(´ᵕ`)۶' },
   { id:'turn.drill.master.kiki1', who:'kiki', e:'happy', t:'{tech}の重みが増してまつ。いい修行でした' },
@@ -189,6 +189,7 @@ const MONSUC_SCRIPT_KIKI = Object.freeze([
   { id:'ev.team.tagwake.kiki1', who:'kiki', e:'excited', t:'友情タッグでつ。ここから、火力がぐっと上がりまつよ' },
   { id:'ev.self.peakin.kiki1', who:'kiki', e:'excited', t:'伸びどきに入りました。今は押すときでつ' },
   { id:'ev.self.peakout.kiki1', who:'kiki', e:'normal', t:'少し落ち着いてきましたね。休むか続けるか、{name}にお任せしまつ' },
+  { id:'ev.self.anniv.kiki1', who:'kiki', e:'happy', t:'{mon}、今日で1年でつ。おめでとうございまつ ( ˘ω˘)' },
   { id:'ev.self.slump.kiki1', who:'kiki', e:'normal', t:'こういうときは、気分を変えるのもひとつでつね' },
   { id:'ev.self.favtrain.kiki1', who:'kiki', e:'happy', t:'好きなことは、伸びるのも早いでつ♪♪' },
   { id:'ev.self.selfish.kiki1', who:'kiki', e:'troubled', t:'そっぽを向いてまつね……。合わせるか、きちんと言うか、でつ' },
@@ -225,7 +226,7 @@ const MONSUC_SCRIPT_KIKI = Object.freeze([
   { id:'ev.cup.interview.kiki1', who:'kiki', e:'happy', t:'取材でつね……。私は、少しうしろにいまつ' },
   { id:'ev.cup.after.kiki1', who:'kiki', e:'normal', t:'励ますか、反省するか。どちらも大事でつ' },
 
-  // ═══════════ 編成の子との訓練イベント(cheer.js と同じ場面) ═══════════
+  // ═══════════ 編成の子とのトレーニングイベント(cheer.js と同じ場面) ═══════════
   { id:'cheer.attacker.ep1.kiki1', who:'kiki', e:'happy', t:'{cheer}が相手をしてくれるそうでつ。えんりょなく、ぶつかりましょ' },
   { id:'cheer.attacker.ep2.kiki1', who:'kiki', e:'excited', t:'ここで鍛えていたんでつね。あの火力にも、納得でつ' },
   { id:'cheer.attacker.ep3.kiki1', who:'kiki', e:'normal', t:'あれは{cheer}の全部でつ。受け取るかは、{mon}しだいでつよ' },
@@ -280,7 +281,7 @@ const MONSUC_SCRIPT_KIKI = Object.freeze([
   { id:'item.guide.kiki1', who:'kiki', e:'normal', t:'博士の書類でつね。持っていれば、そのうち取りに来られまつ' },
   { id:'item.loupe.kiki1', who:'kiki', e:'happy', t:'博士、ルーペでつよ。これで、えんりょなく実験できまつね♪♪' },
   { id:'item.misanga.kiki1', who:'kiki', e:'normal', t:'ミサンガを結びました。いい出会いがありそうでつ (´ー`*)' },
-  { id:'item.weekly.kiki1', who:'kiki', e:'happy', t:'週刊!トレーニング、読んでおきました。重い訓練のコツも載ってまつよ' },
+  { id:'item.weekly.kiki1', who:'kiki', e:'happy', t:'週刊!トレーニング、読んでおきました。重いトレーニングのコツも載ってまつよ' },
   { id:'item.hachimaki.kiki1', who:'kiki', e:'excited', t:'ハチマキ、似合ってまつ。修行も押し切りましょ ( ˘ω˘)9グッ!' },
   { id:'item.omamori.kiki1', who:'kiki', e:'happy', t:'縁結びのお守りでつね。応援してくれる人、増えそうでつ' },
   { id:'item.kibidango.kiki1', who:'kiki', e:'normal', t:'キビダンゴを食べました。体力の底上げは、火力の土台でつ' },

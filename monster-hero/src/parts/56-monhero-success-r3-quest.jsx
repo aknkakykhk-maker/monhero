@@ -2,7 +2,7 @@
 // 見本: docs/progress/player-raise/mock/png/v3-Q.png(v3-phone-Q1・Q2)
 // ・1ターン使う・チケット1枚(芯の act({kind:'shugyo', course, techs}))。2段で能力2つずつ → 最後に技のくじ(選んだ技それぞれ)
 // ・技を2つ選ぶと超修行(2026-11-13 社長: 育成中2回まで・2つとも覚えることがある・率 +15・能力の上がりと疲れは2回分)。技ごとにランク(1〜5)と今の率を出す
-// ・結果のあとは訓練と同じく叱る/褒める(回2の react の段)へ。保存は act のすぐあと(run.phase = 'react')なので、閉じても同じ所から続く
+// ・結果のあとはトレーニングと同じく叱る/褒める(回2の react の段)へ。保存は act のすぐあと(run.phase = 'react')なので、閉じても同じ所から続く
 const MSX_R3_DIST = Object.freeze(['零', '近', '中', '遠']);
 const MSX_R3_COURSE_BG = Object.freeze({ fire: 'forest_evening', ice: 'forest_morning', wind: 'forest_deep', star: 'monhero_night' });
 function MsxR3Shugyo({ run, setRun, v, ev, onBack, onPause }) {
@@ -14,6 +14,8 @@ function MsxR3Shugyo({ run, setRun, v, ev, onBack, onPause }) {
   const [want, setWant] = useState([]);
   const [res, setRes] = useState(null); // { out, before, after }
   const [fxDone, setFxDone] = useState(false);
+  // 結果の前の段(助手の一言 → STAGE 1 → STAGE 2。56-monsuc-actfx.jsx)。押した直後だけ・保存しない
+  const [stOn, setStOn] = useState(false);
   useSuccessSound('ascetic', { season: msxCalendar(s0.turn).season });
   const all = typeof SUC.techsOf === 'function' ? SUC.techsOf(s0.species) : [];
   const superLeft = typeof SUC.superLeft === 'function' ? SUC.superLeft(s0) : 0;
@@ -32,9 +34,17 @@ function MsxR3Shugyo({ run, setRun, v, ev, onBack, onPause }) {
     const names = (r.out.learnedAll || (r.out.learned ? [r.out.learned] : [])).map((id) => (all.find((t) => t.id === id) || {}).name).filter(Boolean);
     const next = { ...run, s: r.state, phase: 'react', out: { ...r.out, kind: 'shugyo' }, log: [...(run.log || []), { turn: s0.turn, t: `${r.out.super ? '超修行' : '修行'}(${(SH.courses[course] || {}).name || ''}): ${names.length ? names.map((n) => `「${n}」`).join('と') + 'を覚えた' : '能力が上がった'}` }].slice(-20) };
     setRun(next);
+    setStOn(typeof MsxShugyoStages === 'function');
     setRes({ out: r.out, before: s0.stats, hp0: s0.hp, s: r.state });
   };
 
+  // ---- 結果の前の段 ----
+  if (res && stOn) {
+    const s = res.s;
+    const body = (<><MsxBand s={s} v={SUC.peek(s)} ev={SUC.evaluate(s)}/>
+      <div className="v-scene" style={{ flex: '1 1 0', minHeight: 200 }}><MsxShugyoStages key={`qs-${s0.turn}`} run={{ ...run, s }} o={res.out} onDone={() => setStOn(false)}/></div></>);
+    return <MsxR3Frame run={{ ...run, s }} back="中断" onBack={onPause} body={body} foot={<div className="v-ft"><button type="button" className="go" onClick={() => setStOn(false)} data-msx-r3-qskip>⏩ 結果へ</button></div>}/>;
+  }
   // ---- 結果(Q2) ----
   if (res) {
     const o = res.out; const s = res.s; const gains = o.gain || {};

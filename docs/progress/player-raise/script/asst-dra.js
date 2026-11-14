@@ -61,7 +61,7 @@ const MONSUC_SCRIPT_DRA = Object.freeze([
   { id:'scn.dra.cup1.lose.dra1', who:'dra', e:'troubled', t:'おしかったな。でも形はできてた。あとは間だけだ、おでが詰めとくからな' },
 
   // ── 4話「直伝」(プロ期・親密度70〜。3話でまじめに=いい結末 / 冗談まじり=ほろ苦い結末) ──
-  { id:'scn.dra.ep4.narr1', who:'narr', t:'プロ期の{cup}の前の晩。ドラが、{mon}を訓練場に呼び出した。' },
+  { id:'scn.dra.ep4.narr1', who:'narr', t:'プロ期の{cup}の前の晩。ドラが、{mon}をトレーニング場に呼び出した。' },
   { id:'scn.dra.ep4.good.dra1', who:'dra', e:'normal', end:'good', t:'約束だったからな。いちばんむずかしいところ、今日は冗談なしだ' },
   { id:'scn.dra.ep4.good.narr1', who:'narr', end:'good', t:'ドラは膝をかばいながら、ゆっくり、何度も、同じ動きをくり返して見せた。' },
   { id:'scn.dra.ep4.good.dra2', who:'dra', e:'excited', end:'good', t:'そう、そこだ！ {mon}、それがおでの全部だ。持っていけ' },
@@ -76,7 +76,7 @@ const MONSUC_SCRIPT_DRA = Object.freeze([
   { id:'scn.dra.cup2.lose.dra1', who:'dra', e:'troubled', t:'残念だったな。でも、教えたことは全部出てた。……それで十分だよ' },
 
   // ── 特別な1話「膝と約束」(最後の期・仲良し度Lv5〜・4話がいい結末) ──
-  { id:'scn.dra.sp.narr1', who:'narr', t:'頂への道の前の夜。ドラは訓練場のベンチで、膝に湿布をはっていた。' },
+  { id:'scn.dra.sp.narr1', who:'narr', t:'頂への道の前の夜。ドラはトレーニング場のベンチで、膝に湿布をはっていた。' },
   { id:'scn.dra.sp.dra1', who:'dra', e:'normal', t:'お、{name}。……ちょうどよかった。たまには、おでの話を聞いてくれ' },
   { id:'scn.dra.sp.dra2', who:'dra', e:'normal', t:'おで、ずっと冗談に逃げてたんだよ。まじめに言うと、照れくさくてな' },
   { id:'scn.dra.sp.narr2', who:'narr', t:'ドラは少し黙ってから、{mon}の頭に手をのせた。' },
@@ -86,12 +86,12 @@ const MONSUC_SCRIPT_DRA = Object.freeze([
   // ═══════════ ターンごとのことば(turn.js と同じ場面) ═══════════
   { id:'turn.start.great.dra1', who:'dra', e:'excited', t:'{mon}、今日は動きがいいな。重いのいっとくか' },
   { id:'turn.start.great.dra2', who:'dra', e:'happy', t:'いい顔してるわ。こういう日は何やっても身につくからな' },
-  { id:'turn.start.good.dra1', who:'dra', e:'happy', t:'調子いいな。ふつうに訓練でいいよ' },
+  { id:'turn.start.good.dra1', who:'dra', e:'happy', t:'調子いいな。ふつうにトレーニングでいいよ' },
   { id:'turn.start.good.dra2', who:'dra', e:'normal', t:'ふむ、悪くない。このまま積んでいこう' },
   { id:'turn.start.normal.dra1', who:'dra', e:'normal', t:'まあ、ふつうの日だな。どうする？' },
   { id:'turn.start.normal.dra2', who:'dra', e:'normal', t:'可もなく不可もなく。おでの膝よりはだいぶ調子いいぞ。えへへ' },
   { id:'turn.start.tired.dra1', who:'dra', e:'troubled', t:'ちょっと疲れてるな。今日は様子見ながらいこう' },
-  { id:'turn.start.tired.dra2', who:'dra', e:'normal', t:'疲れてるときは失敗しやすいんだよ。休むのも立派な訓練だからな' },
+  { id:'turn.start.tired.dra2', who:'dra', e:'normal', t:'疲れてるときは失敗しやすいんだよ。休むのも立派なトレーニングだからな' },
   { id:'turn.start.worn.dra1', who:'dra', e:'troubled', t:'これは休みだ。今むりすると、おでの膝みたいになるぞ' },
   { id:'turn.start.worn.dra2', who:'dra', e:'angry', t:'{name}、今日はやめとけ。けがしたら全部止まるからな' },
   { id:'turn.start.stress.dra1', who:'dra', e:'troubled', t:'{mon}、ちょっとピリピリしてるな。一回遊ばせてやろう' },
@@ -192,6 +192,7 @@ const MONSUC_SCRIPT_DRA = Object.freeze([
   { id:'ev.team.tagwake.dra1', who:'dra', e:'excited', t:'きたな、友情タッグ。ここから一気に伸びるぞ' },
   { id:'ev.self.peakin.dra1', who:'dra', e:'excited', t:'いい時期に入ったな。今は何でも吸いこむぞ' },
   { id:'ev.self.peakout.dra1', who:'dra', e:'normal', t:'少し落ち着いてきたな。休むか、続けるか。どっちも間違いじゃないよ' },
+  { id:'ev.self.anniv.dra1', who:'dra', e:'happy', t:'{mon}、1年か。……よくついてきたな。おめでとさん' },
   { id:'ev.self.slump.dra1', who:'dra', e:'normal', t:'ふむ、こういうときは流れを変えるか、我慢して続けるかだな' },
   { id:'ev.self.favtrain.dra1', who:'dra', e:'happy', t:'好きこそ物の上手なれ、ってやつだな' },
   { id:'ev.self.selfish.dra1', who:'dra', e:'troubled', t:'わがままだな。言うこと聞かせるか、合わせるか……おでなら一回合わせるわ' },
@@ -228,7 +229,7 @@ const MONSUC_SCRIPT_DRA = Object.freeze([
   { id:'ev.cup.interview.dra1', who:'dra', e:'happy', t:'取材か。決めぜりふでも、控えめでも、{mon}らしければいいよ' },
   { id:'ev.cup.after.dra1', who:'dra', e:'normal', t:'切りかえるか、反省するか。どっちも大事だよ' },
 
-  // ═══════════ 編成の子との訓練イベント(cheer.js と同じ場面) ═══════════
+  // ═══════════ 編成の子とのトレーニングイベント(cheer.js と同じ場面) ═══════════
   { id:'cheer.attacker.ep1.dra1', who:'dra', e:'happy', t:'{cheer}が相手してくれるってさ。遠慮すんなよ' },
   { id:'cheer.attacker.ep2.dra1', who:'dra', e:'excited', t:'ここで鍛えてたのか。そりゃ強いわけだ' },
   { id:'cheer.attacker.ep3.dra1', who:'dra', e:'normal', t:'あれは{cheer}の全部だな。受け取るかどうかは{mon}しだいだよ' },

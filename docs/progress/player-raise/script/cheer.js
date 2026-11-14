@@ -1,4 +1,4 @@
-// モンヒロサクセス 台本 第1弾: 編成の子との訓練イベント(連続イベント3話)
+// モンヒロサクセス 台本 第1弾: 編成の子とのトレーニングイベント(連続イベント3話)
 // ASSIST.md §4b。話の筋はタイプ(5つ)ごとの型に、その子の名前・得意な能力・技を差しこむ。ベースモンは短い3話(3話目は技の伝授なし)。
 // 形は README.md。
 //   {cheer} … 編成の子の名前(フレンドから借りた子は「◯◯さんの◯◯」を画面側で差しこむ)
@@ -8,7 +8,7 @@
 // 選択肢の中身(ASSIST.md §4b): 1話 a=張り切る・b=ていねいに / 2話 a=思いきり・b=のんびり / 3話 a=教わる・b=自分のやり方で
 const MONSUC_SCRIPT_CHEER = Object.freeze([
   // ═══════════ アタッカー ═══════════
-  { id:'cheer.attacker.ep1.narr1', who:'narr', t:'訓練場に{cheer}がやってきた。拳をぶつけ合う音が、あたりに響く。' },
+  { id:'cheer.attacker.ep1.narr1', who:'narr', t:'トレーニング場に{cheer}がやってきた。拳をぶつけ合う音が、あたりに響く。' },
   { id:'cheer.attacker.ep1.narr2', who:'narr', t:'{cheer}が、{mon}に「打ちこんでこい」と構えてみせた。' },
   { id:'cheer.attacker.ep1.choice.a', who:'choice', c:'a', t:'全力で打ちこむ' },
   { id:'cheer.attacker.ep1.choice.b', who:'choice', c:'b', t:'型をていねいに確かめる' },
@@ -28,7 +28,7 @@ const MONSUC_SCRIPT_CHEER = Object.freeze([
   { id:'cheer.attacker.ep3.atsu1', who:'atsu', e:'normal', t:'あれは{cheer}の全部だな。受け取るかどうかは{mon}しだい…' },
 
   // ═══════════ タンク ═══════════
-  { id:'cheer.tank.ep1.narr1', who:'narr', t:'{cheer}がどっしりと訓練場の真ん中に立った。{mon}がぶつかっても、びくともしない。' },
+  { id:'cheer.tank.ep1.narr1', who:'narr', t:'{cheer}がどっしりとトレーニング場の真ん中に立った。{mon}がぶつかっても、びくともしない。' },
   { id:'cheer.tank.ep1.narr2', who:'narr', t:'「もっと来い」とでも言うように、{cheer}は胸を張っている。' },
   { id:'cheer.tank.ep1.choice.a', who:'choice', c:'a', t:'何度でもぶつかる' },
   { id:'cheer.tank.ep1.choice.b', who:'choice', c:'b', t:'受け止め方をまねる' },
@@ -48,7 +48,7 @@ const MONSUC_SCRIPT_CHEER = Object.freeze([
   { id:'cheer.tank.ep3.atsu1', who:'atsu', e:'normal', t:'仲間を守る技だな。いいもん見せてもらった…' },
 
   // ═══════════ サポーター ═══════════
-  { id:'cheer.supporter.ep1.narr1', who:'narr', t:'{cheer}が、訓練の道具をきちんと並べて待っていた。' },
+  { id:'cheer.supporter.ep1.narr1', who:'narr', t:'{cheer}が、トレーニングの道具をきちんと並べて待っていた。' },
   { id:'cheer.supporter.ep1.narr2', who:'narr', t:'{mon}の動きに合わせて、次の道具をすっと差し出してくれる。' },
   { id:'cheer.supporter.ep1.choice.a', who:'choice', c:'a', t:'どんどん次へ進む' },
   { id:'cheer.supporter.ep1.choice.b', who:'choice', c:'b', t:'ひとつずつ確かめる' },
@@ -68,9 +68,9 @@ const MONSUC_SCRIPT_CHEER = Object.freeze([
   { id:'cheer.supporter.ep3.atsu1', who:'atsu', e:'happy', t:'教える側が一番うれしそうだな笑' },
 
   // ═══════════ ヒーラー ═══════════
-  { id:'cheer.healer.ep1.narr1', who:'narr', t:'訓練で転んだ{mon}のそばに、{cheer}がそっと寄ってきた。' },
+  { id:'cheer.healer.ep1.narr1', who:'narr', t:'トレーニングで転んだ{mon}のそばに、{cheer}がそっと寄ってきた。' },
   { id:'cheer.healer.ep1.narr2', who:'narr', t:'すり傷に手をかざすと、あたたかい光がふわりと広がる。' },
-  { id:'cheer.healer.ep1.choice.a', who:'choice', c:'a', t:'すぐ訓練にもどる' },
+  { id:'cheer.healer.ep1.choice.a', who:'choice', c:'a', t:'すぐトレーニングにもどる' },
   { id:'cheer.healer.ep1.choice.b', who:'choice', c:'b', t:'動き方を見直す' },
   { id:'cheer.healer.ep1.mua1', who:'mua', e:'happy', t:'{cheer}やさしー…。いっしょにいるだけで元気出る♪' },
   { id:'cheer.healer.ep1.atsu1', who:'atsu', e:'normal', t:'助かるわ、{cheer}。ケガしても止まらなくていいからな笑' },
@@ -108,7 +108,7 @@ const MONSUC_SCRIPT_CHEER = Object.freeze([
   { id:'cheer.shadow.ep3.atsu1', who:'atsu', e:'normal', t:'秘密の技を見せたってことは、{mon}を認めたってことだよ…' },
 
   // ═══════════ ベースモン(短い3話・3話目は技の伝授なし) ═══════════
-  { id:'cheer.base.ep1.narr1', who:'narr', t:'{cheer}が、少し照れくさそうに訓練に加わった。' },
+  { id:'cheer.base.ep1.narr1', who:'narr', t:'{cheer}が、少し照れくさそうにトレーニングに加わった。' },
   { id:'cheer.base.ep1.choice.a', who:'choice', c:'a', t:'いっしょに張り切る' },
   { id:'cheer.base.ep1.choice.b', who:'choice', c:'b', t:'ていねいに教え合う' },
   { id:'cheer.base.ep1.mua1', who:'mua', e:'happy', t:'{cheer}もがんばってるね♪ いっしょにいこ！' },
@@ -130,7 +130,7 @@ const MONSUC_SCRIPT_CHEER = Object.freeze([
   // ── 3話を見終わった子の、小さなごほうびのくじ(ASSIST.md §4b) ──
   { id:'cheer.lot.drill.narr1', who:'narr', t:'{cheer}が自主練に付き合ってくれた。' },
   { id:'cheer.lot.rest.narr1', who:'narr', t:'{cheer}といっしょに、木かげでひと休み。' },
-  { id:'cheer.lot.chat.narr1', who:'narr', t:'{cheer}と、訓練のあとにのんびりおしゃべり。' },
+  { id:'cheer.lot.chat.narr1', who:'narr', t:'{cheer}と、トレーニングのあとにのんびりおしゃべり。' },
   { id:'cheer.lot.tip.narr1', who:'narr', t:'{cheer}が、ちょっとしたコツを教えてくれた。' },
   { id:'cheer.lot.friend.narr1', who:'narr', t:'{cheer}が、うれしそうに{mon}にすり寄ってきた。' },
 ]);

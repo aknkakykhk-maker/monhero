@@ -20109,6 +20109,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             /* 公式杯の札(2026-10-31 社長・案A)。MFバトルカードに入れる人に、大会があるあいだだけ出る(大会の行を足すだけで出る)。押すと大会のトップを開き、戻ると HOME */
             cardTourVisible={(EVENT_REPLAY_RELEASE_FLAGS.cardBattle&&cardBattleIntroSeenFlag)||cardBattleDebugHome}
             onOpenCardTour={(tourId)=>{if(typeof cardShareIntentSet==='function')cardShareIntentSet({kind:'tour',tourId});setCardOrigin('home');setGameState('CARD_TOP');}}
+            /* モンヒロサクセス β の札(2026-11-13 社長)。公開の印 monheroSuccess が偽のあいだは中で null を返す */
+            successEntry={typeof MonheroSuccessHomeEntry==='function'?<MonheroSuccessHomeEntry onOpenChange={setSuccessScreenOpen} callNameOf={(id)=>assistantCallName(breederName,assistantBondLevelOf(normalizeAssistantBond(assistantBondsRef.current[id]).points),assistantCallStyles[id]||null,id)} bondLvOf={(id)=>assistantBondLevelOf(normalizeAssistantBond(assistantBondsRef.current[id]).points)}/>:null}
           />
         )}
         {/* 助手とおしゃべり(2026-10-14)。話す相手は、いま選んでいる助手。返事が来た1往復ごとにその助手の仲良し度(chat)が増える */}

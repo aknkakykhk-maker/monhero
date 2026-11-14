@@ -12,7 +12,7 @@ const MONSUC_SCRIPT_TURN_BOND12 = Object.freeze([
   { id:'turn.start.tired.mua1b', who:'mua', e:'troubled', bond:[1,2], t:'{mon}、ちょっとあくびが多いかもしれません…。無理しすぎないでいきましょう' },
   { id:'turn.start.tired.mua2b', who:'mua', e:'troubled', bond:[1,2], t:'足どりが少し重そうです💦 そろそろ休ませてあげてもいいかもしれません' },
   { id:'turn.start.worn.mua1b', who:'mua', e:'crying', bond:[1,2], t:'えっ、{mon}がぐったりしています！ 今日は休みましょう！' },
-  { id:'turn.start.worn.mua2b', who:'mua', e:'troubled', bond:[1,2], t:'{name}、{mon}はもう限界みたいです…。このまま訓練するのはあぶないと思います' },
+  { id:'turn.start.worn.mua2b', who:'mua', e:'troubled', bond:[1,2], t:'{name}、{mon}はもう限界みたいです…。このままトレーニングするのはあぶないと思います' },
   { id:'turn.start.stress.mua1b', who:'mua', e:'troubled', bond:[1,2], t:'{mon}、なんだかムスッとしています…。たまには思いきり遊びませんか？' },
   { id:'turn.start.stress.mua2b', who:'mua', e:'troubled', bond:[1,2], t:'最近ため息が多いの、気づきましたか？ 気分転換しましょう！' },
   { id:'turn.result.great.mua1b', who:'mua', e:'excited', bond:[1,2], t:'えっ、すごいです(๑°ロ°๑)‼️ 大成功です！ {mon}、天才かもしれません！' },
