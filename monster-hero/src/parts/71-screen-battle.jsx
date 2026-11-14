@@ -1375,7 +1375,7 @@ function InfernoShieldBadge({ view, rule = 'INFERNO', growthPct = 30 }) {
       data-shield-badge-theme={rule}
       style={{ background: theme.bg, border: `2px solid ${col[1]}`, boxShadow: `0 0 12px ${col[1]}${theme.ring ? `,0 0 0 1px ${theme.ring} inset` : ''}` }}>
       <div className="text-[10px] font-black tracking-wide" style={{ color: theme.titleColor, textShadow: `0 0 6px ${theme.titleGlow}` }}>{theme.title}</div>
-      <div className="mt-[1px] text-[8px] font-black" style={{ color: theme.sub }}>のこりシールド</div>
+      <div className="mt-[1px] text-[8px] font-black" style={{ color: theme.sub }}>残りシールド</div>
       <div className="mt-0.5 text-[30px] font-black leading-none text-white" style={{ textShadow: `0 0 10px ${col[1]},0 2px 2px #000` }}>×{view.left}</div>
       {view.left > 0 && <div className="mt-[3px] text-[9px] font-black" style={{ color: col[0] }}>いま {INFERNO_SHIELD_MARKS[view.broken] || view.broken + 1}</div>}
       {view.left > 1 && growthPct > 0 && <div className="mt-[1px] text-[8px] font-extrabold text-amber-200">次の1枚 +{growthPct}%</div>}
@@ -3868,7 +3868,7 @@ function BattleScreen({
                 </dl>)}
               <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-[12px]">
                 <dt className="font-bold text-slate-400">使える回数</dt>
-                <dd data-tactics-ex-uses className="font-black text-white">{exPanel.remaining.unlimited?'無制限':`のこり ${exPanel.remaining.left} / ${exPanel.remaining.max}（${exPanel.def.usesPerWave?'このWAVE':'このラン'}）`}</dd>
+                <dd data-tactics-ex-uses className="font-black text-white">{exPanel.remaining.unlimited?'無制限':`残り ${exPanel.remaining.left} / ${exPanel.remaining.max}（${exPanel.def.usesPerWave?'このWAVE':'このラン'}）`}</dd>
                 <dt className="font-bold text-slate-400">カード</dt>
                 <dd data-tactics-ex-with-cards={exPanel.def.withCards?'yes':'no'} className="font-black text-white">{exPanel.def.withCards?'同じターンにこのモンスターも通常カードを使える':'使ったターン、このモンスターはカードを使えない（ほかのモンスターは使える）'}</dd>
                 {tacticsHateOn&&(()=>{const lv=tacticsHateExLevel(exPanel.def.effect,slots[exPanel.slot]?.id||null); return lv>0?<><dt className="font-bold text-slate-400">狙われやすさ</dt><dd data-tactics-ex-hate={lv} className="font-black text-orange-200">使うと{'🔥'.repeat(lv)} {TACTICS_HATE_LEVEL_LABELS[lv]}</dd></>:null;})()}

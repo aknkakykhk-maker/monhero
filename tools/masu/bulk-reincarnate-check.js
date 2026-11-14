@@ -145,7 +145,7 @@ check('本体: 仲良し度は1体ずつ転生したときと同じく、1体ご
 // ⑤ 画面
 const screen = fs.readFileSync(path.join(REPO_ROOT, 'monster-hero/src/parts/62-screen-masu-temple.jsx'), 'utf8');
 check('画面: 転生できる子にだけ選ぶ印(role=checkbox)を出す', /\{can&&<button type="button" role="checkbox" aria-checked=\{on\}/.test(screen));
-check('画面: 「すべて選択」は編成中とお気に入りの子を選ばない', screen.includes('eligible.filter(masu=>!inParty(masu)&&!isFavorite(masu))'));
+check('画面: 「全て選択」は編成中とお気に入りの子を選ばない', screen.includes('eligible.filter(masu=>!inParty(masu)&&!isFavorite(masu))'));
 check('画面: 「選択を外す」がある', screen.includes('onClick={()=>setBulkIds([])}') && screen.includes('選択を外す'));
 check('画面: 確認の窓は実行と同じ計算(buildMasuReincarnationMulti)で見積もる', screen.includes('buildMasuReincarnationMulti({masuMons,ids:picked,gold,lockedIds:rebirthLockedMasuIds,times:bulkTimes})')
   && screen.includes('executeMasuReincarnationBulk(picked,bulkTimes)'));

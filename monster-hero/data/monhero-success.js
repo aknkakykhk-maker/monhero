@@ -136,15 +136,16 @@
   const COND = Object.freeze({
     injLowHp: 0.3, injTrain: 0.08, injLen: [1, 2],
     illStress: 70, illRate: 0.10, illLen: 1,
-    awayLoyal: 20, awayStress: 80, awayRate: 0.2, awayLen: 1, awayAma: -8, awayFear: -4,
+    awayLoyal: 20, awayStress: 80, awayRate: 0.2, awayLen: 1, awayAma: 0, awayFear: 0, // 家出でも甘え度・恐れ度は下げない(社長 2026-11-14)
+   
     rec: 0.3, sorashido: 0.7,
   });
 
   // ---- 忠誠度 = 甘え度 + 恐れ度(各50まで・ASSIST §4c) ----
   const LOYAL = Object.freeze({
     half: 50, start: [10, 10], capBoost: 60, // 補正 = 1 + min(忠誠,60)/100
-    praiseGood: [4, 0], praiseBad: [2, -2], scoldBad: [0, 4], scoldGood: [-3, 1],
-    win: [2, 0], loseScold: [0, 3], idleTurns: 4, idle: [-1, -1],
+    praiseGood: [4, 0], praiseBad: [2, 0], scoldBad: [0, 4], scoldGood: [0, 1], // 甘え度・恐れ度は下げない(社長 2026-11-14「マイナスになると忠誠度が下がる」)
+    win: [2, 0], loseScold: [0, 3], idleTurns: 4, idle: [0, 0],
     // ターンの終わりに、残りの体力で忠誠度が育つ(2026-11-14 社長・台帳 #6108): 上限の50%以上なら甘え度+1・下なら恐れ度+1。方針の段の補正は addLoyal のまま
     turnHpLine: 0.5, turnAma: 1, turnFear: 1,
   });
@@ -302,10 +303,10 @@
     juice: { name: 'ガロエ印の野菜ジュース', use: 'during', hpFull: true },                 // 体力を完全に回復
     powder: { name: '悪様散', use: 'during', cure: true, hp: 0.3 },               // 悪いようすを治して体力を回復
     license: { name: 'ブリーダーライセンス', use: 'during', ama: 10, fear: 10 },       // 甘え度 +10・恐れ度 +10(忠誠度 +20。2026-11-13 社長)
-    pack: { name: 'オイリーパック', use: 'during', gives: { oilyoil: 2, herb: 1 } }, // 中身はオイリーオイル2個と薬草(2026-11-13 社長: 案)
-    oil: { name: 'オイル', use: 'during', hp: 0.2 },                                 // 小さいオイル(体力 上限の20%。2026-11-13 社長)
-    oilyoil: { name: 'オイリーオイル', use: 'during', hp: 0.4 },                     // 大きいオイル(体力 上限の40%。2026-11-13 社長)
-    herb: { name: '薬草', use: 'during', stress: -20 },                          // 詰め合わせの中身(ストレス −20)
+    pack: { name: 'オイリーパック', use: 'during', gives: { oilyoil: 2, herb: 1 } }, // 中身はオイリーオイル（大）2個と夏美草(2026-11-13 社長: 案)
+    oil: { name: 'オイリーオイル（小）', use: 'during', hp: 0.2 },                     // 2026-11-14 社長「オイリーオイル(小)とかでいいよ」。 小さいオイル(体力 上限の20%。2026-11-13 社長)
+    oilyoil: { name: 'オイリーオイル（大）', use: 'during', hp: 0.4 },                 // 大きいオイル(体力 上限の40%。2026-11-13 社長)
+    herb: { name: '夏美草', use: 'during', stress: -20 },                          // 2026-11-14 社長「薬草は夏美草」。 詰め合わせの中身(ストレス −20)
     // 大会の賞品(2026-11-13 大会の第2版)。秘薬=そのターンの修行でその間合いの技を覚えやすい/実=そのターンの訓練でその能力が伸びやすい
     elixir0: { name: '零の秘薬', use: 'during', elixir: 0 }, elixir1: { name: '近の秘薬', use: 'during', elixir: 1 },
     elixir2: { name: '中の秘薬', use: 'during', elixir: 2 }, elixir3: { name: '遠の秘薬', use: 'during', elixir: 3 },
@@ -922,8 +923,9 @@
     const addLoyal = (s, ama, fear) => {
       if (s.yosu.utsu) return; // うつ病のあいだ忠誠度(甘え度・恐れ度)は動かない(台帳 2026-11-12)
       const i = clamp(s.pol, -3, 3) + 3;
-      s.ama = clamp(Math.round(num(s.ama) + (ama > 0 ? ama * POL_AMA[i] : ama)), 0, LOYAL.half);
-      s.fear = clamp(Math.round(num(s.fear) + (fear > 0 ? fear * POL_FEAR[i] : fear)), 0, LOYAL.half);
+      // 甘え度・恐れ度は下げない(社長 2026-11-14): 負の値は0として数える
+      s.ama = clamp(Math.round(num(s.ama) + (ama > 0 ? ama * POL_AMA[i] : 0)), 0, LOYAL.half);
+      s.fear = clamp(Math.round(num(s.fear) + (fear > 0 ? fear * POL_FEAR[i] : 0)), 0, LOYAL.half);
     };
     const addXp = (s, x) => { s.xp += x; while (s.lv < LV_MAX && s.xp >= XP.need(s.lv)) { s.xp -= XP.need(s.lv); s.lv += 1; } };
     const recover = (s, frac) => { s.hp = clamp(Math.round(s.hp + s.hpMax * frac), 0, s.hpMax); };
@@ -1137,7 +1139,7 @@
       s.reacted = true;
       const shk = 1 + stayNum(s, 'shitsuke') / 100; const up = (x) => (x > 0 ? x * shk : x); // 📏しつけ上手: 上がる分だけ増える
       if (how === 'praise') { const d = good ? LOYAL.praiseGood : LOYAL.praiseBad; addLoyal(s, up(d[0] + (s.aid === 'mua' ? 1 : 0)), up(d[1])); const m = C.policyMove(s.pol, s.pp, -1); s.pol = m.pol; s.pp = m.pp; s.idle = 0; }
-      else if (how === 'scold') { const d = good ? LOYAL.scoldGood : LOYAL.scoldBad; addLoyal(s, up(d[0] + evMod(s, 'scold')), up(d[1])); const m = C.policyMove(s.pol, s.pp, 1); s.pol = m.pol; s.pp = m.pp; s.idle = 0; }
+      else if (how === 'scold') { const d = good ? LOYAL.scoldGood : LOYAL.scoldBad; addLoyal(s, up(d[0]), Math.max(0, up(d[1]) + evMod(s, 'scold'))); const m = C.policyMove(s.pol, s.pp, 1); s.pol = m.pol; s.pp = m.pp; s.idle = 0; }
       else { s.idle += 1; if (s.idle >= LOYAL.idleTurns) { addLoyal(s, LOYAL.idle[0], LOYAL.idle[1]); s.idle = 0; } }
       // 変わった物(画面の結果の札): 甘え度・恐れ度・忠誠度・方針
       const d = { ama: num(s.ama) - num(b0.ama), fear: num(s.fear) - num(b0.fear), loy: loyalOf(s) - b0.loy, pol: num(s.pol) - num(b0.pol) };
@@ -1154,14 +1156,14 @@
       if (key === 'stat') { KEYS.forEach(k => addStat(s, k, win ? 50 : -10)); if (!win) s.yosu.sabori = { visits: 0 }; else if (!s.titles.includes('秘めた力')) s.titles.push('秘めた力'); }
       else if (key === 'hpmax') { if (win) { s.hpMax = Math.min(HP_MAX_CAP, s.hpMax + 20); s.hp = Math.min(s.hpMax, s.hp + 20); } else s.hp = clamp(s.hp - 20, 0, s.hpMax); }
       else if (key === 'hp') { if (win) recover(s, 0.8); else { s.hp = clamp(s.hp - 30, 0, s.hpMax); s.yosu.utsu = { visits: 0 }; } }
-      else if (key === 'loyal') { if (win) { const half = 15 / 2; addLoyalRaw(s, Math.ceil(half), Math.floor(half)); } else addLoyalRaw(s, -3, -2); }
+      else if (key === 'loyal') { if (win) { const half = 15 / 2; addLoyalRaw(s, Math.ceil(half), Math.floor(half)); } } // 負けても甘え度・恐れ度は下げない(社長 2026-11-14)
       else if (key === 'pop') s.pop = clamp(s.pop + (win ? 15 : -5), 0, 100);
       if (win) s.issaWon += 1;
       s.log.issa.push(`${key}:${win ? 'win' : 'lose'}`);
       return { state: s, out: { ok: true, choice: key, win, p: r2(p) } };
     };
     // 博士の忠誠度は甘え度・恐れ度に半分ずつ(方針の倍率はかけない・うつ病なら動かない)
-    const addLoyalRaw = (s, ama, fear) => { if (s.yosu.utsu) return; s.ama = clamp(s.ama + ama, 0, LOYAL.half); s.fear = clamp(s.fear + fear, 0, LOYAL.half); };
+    const addLoyalRaw = (s, ama, fear) => { if (s.yosu.utsu) return; s.ama = clamp(s.ama + Math.max(0, num(ama)), 0, LOYAL.half); s.fear = clamp(s.fear + Math.max(0, num(fear)), 0, LOYAL.half); }; // 下げない(社長 2026-11-14)
 
     // 大会のあとに並ぶごはん(2026-11-14 社長「ご褒美はランダムで3個選ばれる」)。9種から3つ(同じ物は出さない)。
     //   くじは育成ごとの決まった乱数(育成の id + 勝った回数)で引くので、開き直し・中断のあとでも引き直しにならない。

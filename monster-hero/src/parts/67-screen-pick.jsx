@@ -227,7 +227,7 @@ function ProMonsterGridPicker({ list, selectedId=null, selectedIds=null, isDisab
       {header}
       {lineageTabs.length>1&&(
         <div data-pro-pick-tabs role="tablist" aria-label="血統" className={`shrink-0 pb-1.5 flex gap-1.5 overflow-x-auto mh-scroll${header?' [@media(max-height:640px)]:hidden':''}`}>
-          {[{id:'all',name:'すべて',count:list.length},...lineageTabs].map(t=>(
+          {[{id:'all',name:'全て',count:list.length},...lineageTabs].map(t=>(
             <button key={t.id} role="tab" aria-selected={activeTab===t.id} onClick={()=>{setLineageTab(t.id);const inTab=t.id==='all'?list:list.filter(m=>lineageOfMon(m).id===t.id);if(!inTab.some(m=>m.id===focusId)){const first=inTab.find(m=>!disabled(m));if(first)setFocusId(first.id);}}}
               className={`shrink-0 min-h-[34px] [@media(max-height:760px)]:min-h-[30px] px-2.5 rounded-full border text-[11px] font-black active:scale-95 ${activeTab===t.id?ac.tab:'border-slate-700 bg-slate-900 text-slate-400'}`}>{t.name}<span className="ml-1 text-[9px] font-mono opacity-70">{t.count}</span></button>
           ))}
@@ -239,7 +239,7 @@ function ProMonsterGridPicker({ list, selectedId=null, selectedIds=null, isDisab
         <div className={`px-1 mb-1 text-[9px] font-black ${ac.head}`}>★お気に入り・前回使ったモンスター</div>
         <div className="grid grid-cols-4 gap-1.5 mb-3">{pinnedIds.map(id=>tile(byId.get(id),'pin-'))}</div>
       </>)}
-      <div className={`px-1 mb-1 text-[9px] font-black text-slate-400${header?' [@media(max-height:760px)]:hidden':''}`}>{activeTab==='all'?'すべて':`${(lineageTabs.find(t=>t.id===activeTab)||{}).name}血統`}（{shownList.length}体）</div>
+      <div className={`px-1 mb-1 text-[9px] font-black text-slate-400${header?' [@media(max-height:760px)]:hidden':''}`}>{activeTab==='all'?'全て':`${(lineageTabs.find(t=>t.id===activeTab)||{}).name}血統`}（{shownList.length}体）</div>
       <div className="grid grid-cols-4 gap-1.5 pb-3">{shownList.map(m=>tile(m,'all-'))}</div>
       </div>
       {/* 詳細パネルはスクロールの外に固定する。スクロール領域の中へ sticky で置くと、iPhoneのSafariで
@@ -256,8 +256,8 @@ function ProMonsterGridPicker({ list, selectedId=null, selectedIds=null, isDisab
               </div>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center justify-between gap-2"><b className="truncate text-[14px] text-white leading-tight">{focus.name}</b><span className="ml-auto shrink-0 text-[9px] text-slate-500 font-black">総合力 <b className="text-[12px] text-amber-300 font-mono">{formatMonsterPower(monsterPowerOf(focus))}</b></span>
-                  <button type="button" data-pro-pick-fold aria-expanded={!detailFolded} aria-label={detailFolded?'詳しい情報をひらく':'詳しい情報をたたむ'} onClick={()=>setDetailFolded(v=>!v)}
-                    className="shrink-0 -my-1 min-h-[28px] rounded-lg border border-white/15 bg-slate-900 px-1.5 text-[9px] font-black text-slate-300 active:scale-95">{detailFolded?'▲ ひらく':'▼ たたむ'}</button></div>
+                  <button type="button" data-pro-pick-fold aria-expanded={!detailFolded} aria-label={detailFolded?'詳しい情報を開く':'詳しい情報をたたむ'} onClick={()=>setDetailFolded(v=>!v)}
+                    className="shrink-0 -my-1 min-h-[28px] rounded-lg border border-white/15 bg-slate-900 px-1.5 text-[9px] font-black text-slate-300 active:scale-95">{detailFolded?'▲ 開く':'▼ たたむ'}</button></div>
                 {!detailFolded&&<>
                 {monsterTypeProtoOn()&&<div data-pick-type-row className={`flex${header?' [@media(orientation:landscape)_and_(max-height:520px)]:hidden':''}`}><MonsterTypeBadge monId={focus.id}/></div>}
                 {/* 血統と固有技は1行にまとめる(2026-10-22。一覧を広げるため) */}
@@ -332,12 +332,12 @@ function ProPartyPicker({ list, need, initialIds=[], isDisabled, onDone, onDetai
       </button>
     );
   };
-  const guide=step==='hero'?(hero?`${hero.name}が勇者モンです。ほかのモンスターを押すと替えられます`:'勇者モンにするモンスターを、上の枠から1体えらんでください')
-    :full?'そろいました。枠を押すとそのモンスターを外せます。勇者モンは次でえらびます'
+  const guide=step==='hero'?(hero?`${hero.name}が勇者モンです。ほかのモンスターを押すと替えられます`:'勇者モンにするモンスターを、上の枠から1体選んでください')
+    :full?'そろいました。枠を押すとそのモンスターを外せます。勇者モンは次で選びます'
     :`枠を押して、下のモンスターを「枠に入れる」(どの順でもOK・あと${need-filled}体)`;
   const top=(
     <section data-pro-party className="mb-2 shrink-0 rounded-2xl border border-indigo-300/30 bg-black/30 p-2 [@media(max-height:640px)]:mb-1 [@media(max-height:640px)]:py-1.5">
-      <div className="mb-1 flex items-baseline justify-between gap-1 text-[11px] font-black text-indigo-200 [@media(orientation:landscape)_and_(max-height:520px)]:mb-0 [@media(orientation:landscape)_and_(max-height:520px)]:text-[10px]"><span>{step==='hero'?'② 勇者モンをえらぶ':'① 編成するモンスターをえらぶ'}</span><span className="text-[9px] text-slate-400">{filled} / {need}</span></div>
+      <div className="mb-1 flex items-baseline justify-between gap-1 text-[11px] font-black text-indigo-200 [@media(orientation:landscape)_and_(max-height:520px)]:mb-0 [@media(orientation:landscape)_and_(max-height:520px)]:text-[10px]"><span>{step==='hero'?'② 勇者モンを選ぶ':'① 編成するモンスターを選ぶ'}</span><span className="text-[9px] text-slate-400">{filled} / {need}</span></div>
       <div className={`grid gap-1 ${need>4?'grid-cols-6':'grid-cols-4'} pt-1`}>{ids.map(slot)}</div>
       <div data-pro-party-guide title={guide} className="mt-1 rounded-lg bg-indigo-950/40 px-2 py-1 text-[10px] font-bold text-indigo-100 [@media(max-height:640px)]:hidden">{guide}</div>
     </section>
@@ -354,7 +354,7 @@ function ProPartyPicker({ list, need, initialIds=[], isDisabled, onDone, onDetai
       <div className="shrink-0 flex gap-2 pt-2">
         <button type="button" data-pro-party-back onClick={()=>setStep('members')} className="min-h-[48px] shrink-0 rounded-2xl border-2 border-white/15 bg-slate-800 px-3 text-[12px] font-black text-slate-100 active:scale-95">← 選び直す</button>
         <button type="button" data-pro-party-done disabled={!hero} onClick={()=>onDone(hero,ids.filter(id=>id&&id!==hero.id).map(id=>byId.get(id)))}
-          className="min-h-[48px] flex-1 rounded-2xl bg-indigo-600 px-3 text-[13px] font-black text-white active:scale-95 disabled:bg-slate-800 disabled:text-slate-500" style={JA_LABEL_STYLE}>{jaWrap(hero?'次へ(距離をえらぶ)':'勇者モンをえらんでください')}</button>
+          className="min-h-[48px] flex-1 rounded-2xl bg-indigo-600 px-3 text-[13px] font-black text-white active:scale-95 disabled:bg-slate-800 disabled:text-slate-500" style={JA_LABEL_STYLE}>{jaWrap(hero?'次へ(距離を選ぶ)':'勇者モンを選んでください')}</button>
       </div>
     </div>
   );
@@ -365,7 +365,7 @@ function ProPartyPicker({ list, need, initialIds=[], isDisabled, onDone, onDetai
         confirmAria={m=>ids.includes(m.id)?`${m.name}を枠から外す`:`${m.name}を枠に入れる`}
         onSelect={m=>{if(!ids.includes(m.id)&&full)return;put(m);}} onDetail={onDetail}/>
       <button type="button" data-pro-party-next disabled={!full} onClick={()=>setStep('hero')}
-        className="mt-1.5 [@media(orientation:landscape)_and_(max-height:520px)]:mt-1 shrink-0 min-h-[44px] [@media(orientation:landscape)_and_(max-height:520px)]:min-h-[34px] w-full rounded-2xl bg-indigo-600 px-3 text-[13px] font-black text-white active:scale-95 disabled:bg-slate-800 disabled:text-slate-500">{full?'次へ(勇者モンをえらぶ)':`あと${need-filled}体えらんでください`}</button>
+        className="mt-1.5 [@media(orientation:landscape)_and_(max-height:520px)]:mt-1 shrink-0 min-h-[44px] [@media(orientation:landscape)_and_(max-height:520px)]:min-h-[34px] w-full rounded-2xl bg-indigo-600 px-3 text-[13px] font-black text-white active:scale-95 disabled:bg-slate-800 disabled:text-slate-500">{full?'次へ(勇者モンを選ぶ)':`あと${need-filled}体選んでください`}</button>
     </div>
   );
 }
@@ -393,7 +393,7 @@ function PickHeroAllyScreen({
       {/* 戻るボタン。勇者モン選択はバトルを始める前なので、来た場所(難易度の画面)へ戻す。
           供モン選択はバトルの途中なので、これまでどおりHOMEへ戻る(挑戦をやめる)扱いにする */}
       {/* 戻るボタンは ScreenHead と同じ枠つきの形にそろえる(2026-10-05。この画面だけ枠の無い矢印だった) */}
-      <div className="mb-2 [@media(orientation:landscape)_and_(max-height:520px)]:mb-1 text-center flex items-center justify-between px-2 shrink-0"><button type="button" aria-label="戻る" disabled={!!battleTutorial} onClick={onBack} className="mh-button mh-button-secondary -ml-1 shrink-0 p-3 text-slate-400 active:scale-90 disabled:opacity-25"><ArrowLeft size={20}/></button><div className="min-w-0"><h2 className={`text-xl font-black italic uppercase tracking-widest ${pickMode==='ally'?'mh-ph-title':'text-indigo-400'}`}>{pickMode==='hero'?'勇者モンをえらぶ':'供モンをえらぶ'}</h2>
+      <div className="mb-2 [@media(orientation:landscape)_and_(max-height:520px)]:mb-1 text-center flex items-center justify-between px-2 shrink-0"><button type="button" aria-label="戻る" disabled={!!battleTutorial} onClick={onBack} className="mh-button mh-button-secondary -ml-1 shrink-0 p-3 text-slate-400 active:scale-90 disabled:opacity-25"><ArrowLeft size={20}/></button><div className="min-w-0"><h2 className={`text-xl font-black italic uppercase tracking-widest ${pickMode==='ally'?'mh-ph-title':'text-indigo-400'}`}>{pickMode==='hero'?'勇者モンを選ぶ':'供モンを選ぶ'}</h2>
         {/* 呼び名の説明を1行(2026-10-09 G7。呼び名は変えず、何のことかを足す) */}
         <p data-pick-term-note className={`mt-0.5 text-[10px] font-bold leading-snug text-slate-400${pickMode==='hero'&&isProMode(runMode)&&!battleTutorial?' [@media(max-height:760px)]:hidden':''}${pickMode==='hero'||pickMode==='ally'?' [@media(orientation:landscape)_and_(max-height:520px)]:hidden':''}`}>{helpWrap(pickMode==='hero'?'勇者モン＝バトルの主役。このモンスターの勇者特性が効く':'供モン＝勇者モンと一緒に戦う仲間')}</p></div><div className="w-10"></div></div>
       {/* 供モン合流はバトルの途中に挟まる場面なので、どのWAVEを抜けたごほうびなのかを見出しの下に出す */}
@@ -523,7 +523,7 @@ function PickHeroAllyScreen({
               onDetail={m=>setCurrentPickingMon(m)}/>
           );
           return (<>
-        {allyCarousel&&<div className="text-center text-[8px] tracking-[.18em] text-slate-400 font-black shrink-0 mb-1">左右にスワイプして供モンをえらぶ</div>}
+        {allyCarousel&&<div className="text-center text-[8px] tracking-[.18em] text-slate-400 font-black shrink-0 mb-1">左右にスワイプして供モンを選ぶ</div>}
         {allyCarousel&&<div className="relative h-0">
           <button aria-label="前の供モン" disabled={allyCardIndex===0} onClick={()=>stepAlly(-1)} className="absolute left-0 top-[70px] z-20 w-9 h-12 rounded-r-xl bg-black/70 disabled:opacity-20"><ChevronLeft/></button>
           <button aria-label="次の供モン" disabled={allyCardIndex>=list.length-1} onClick={()=>stepAlly(1)} className="absolute right-0 top-[70px] z-20 w-9 h-12 rounded-l-xl bg-black/70 disabled:opacity-20"><ChevronRight/></button>
@@ -597,7 +597,7 @@ function PickHeroAllyScreen({
                   ))}
                 </div>
               </>);})()}
-              <div className={`min-h-[32px] w-full rounded-xl font-black mt-1 flex items-center justify-center gap-1 ${pickMode==='ally'?'mh-ph-btn':'border border-indigo-400/40 bg-indigo-950/50 text-indigo-200'}`} style={{fontSize:'10px'}}>くわしく見る <ChevronRight size={11}/></div>
+              <div className={`min-h-[32px] w-full rounded-xl font-black mt-1 flex items-center justify-center gap-1 ${pickMode==='ally'?'mh-ph-btn':'border border-indigo-400/40 bg-indigo-950/50 text-indigo-200'}`} style={{fontSize:'10px'}}>詳しく見る <ChevronRight size={11}/></div>
             </>),
           })}
         </button>);})}
@@ -806,7 +806,7 @@ function PickSlotScreen({
       {/* タクティクスは合算しない(その距離に立っている子の適性だけが、その子の攻撃に効く)。従来のモードは編成全員ぶんの合算 */}
       <div className="mh-phase-mid shrink-0 text-[10px] text-slate-400 font-bold mt-2 leading-relaxed px-2">{perSlotApt
         ?<>間合い適性は、置いた距離にいるモンスターのぶんだけが、そのモンスターの攻撃に効きます(足し算にはなりません)。<br/>どの距離に誰を置くかで、そのモンスターの適性が決まります。</>
-        :<>間合い適性はどこに置いても4距離すべてに加算されます。<br/>配置は「敵と同じ距離で攻撃する」ことと、覚える距離撃に影響します。</>}</div>
+        :<>間合い適性はどこに置いても4距離全てに加算されます。<br/>配置は「敵と同じ距離で攻撃する」ことと、覚える距離撃に影響します。</>}</div>
       {/* 練習中は押せる枠だけを光らせる。枠全体を囲むと「どれを押すのか」が分からなかった */}
       {/* 背の低い端末では、ここが縮んでスクロールする。戻るボタンを画面の外へ押し出さないため。
           となりの教えカードえらび(PickTeachingScreen)と同じ作りにそろえてある */}
