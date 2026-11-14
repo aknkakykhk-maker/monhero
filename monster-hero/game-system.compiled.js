@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5b3647c72b4b0445
+// source-sha256: f6c3ad2f0ce2d89e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -164821,7 +164821,7 @@ function MsxSlotPicker({
     }, React.createElement("img", {
       src: msxMonThumb(sp),
       alt: ""
-    }), React.createElement("b", null, msxMonName(sp)), React.createElement("small", null, sp === own ? '育てる子と同じ種' : topTxt({
+    }), React.createElement("b", null, msxMonName(sp)), React.createElement("small", null, sp === own ? '育てるモンスターと同じ種' : topTxt({
       kind: 'base',
       species: sp
     })));
@@ -164915,7 +164915,7 @@ function MsxGatherTable({
       }, "得意", RANK[j], ch != null ? `・来やすさ${Math.round(ch * 100)}%` : '', "・伸び+", Math.round(m.bonus[k] || 0), "%"));
     }) : React.createElement("div", {
       className: "msx-gt-none"
-    }, "集まりやすい子なし"));
+    }, "集まりやすいモンスターなし"));
   })), React.createElement("button", {
     type: "button",
     className: "msx-dt-close",
@@ -164945,7 +164945,7 @@ function MsxStart({
     base: unlocked[0] || 'Mocchi'
   }));
   const species = pick.box ? (box.mons.find(m => m.id === pick.box) || {}).species || 'Mocchi' : pick.base;
-  const [slots, setSlots] = useState(() => {
+  const [teamSlotsSt, setTeamSlotsSt] = useState(() => {
     const own0 = unlocked[0] || 'Mocchi';
     let nb = 0;
     const o = (meta.team || []).slice(0, 6).map(t => {
@@ -164964,7 +164964,7 @@ function MsxStart({
   });
   const [slotPick, setSlotPick] = useState(null);
   const [gatherOpen, setGatherOpen] = useState(false);
-  const teamBox = slots.filter(t => t && t.box).map(t => t.box);
+  const teamBox = teamSlotsSt.filter(t => t && t.box).map(t => t.box);
   const [friend, setFriend] = useState(null);
   const [lendList, setLendList] = useState(null);
   const autoBases = useMemo(() => {
@@ -164974,7 +164974,7 @@ function MsxStart({
   const team = useMemo(() => {
     const room = friend ? 5 : 6;
     let ai = 0;
-    const list = slots.slice(0, room).map(t => t || {
+    const list = teamSlotsSt.slice(0, room).map(t => t || {
       base: autoBases[ai++ % autoBases.length],
       auto: true
     });
@@ -164982,7 +164982,7 @@ function MsxStart({
       friend
     });
     return list;
-  }, [slots, autoBases, friend]);
+  }, [teamSlotsSt, autoBases, friend]);
   const members = useMemo(() => team.map(t => {
     const src = t.friend ? t.friend : msxTeamSrc(t, box, species);
     const m = SUC.memberOf(src);
@@ -165228,7 +165228,7 @@ function MsxStart({
     }));
     go = 'このモンスターにする ▶';
   } else if (step === 1) {
-    const toggleBox = id => setSlots(cur => {
+    const toggleBox = id => setTeamSlotsSt(cur => {
       const n = cur.slice();
       const at = n.findIndex(t => t && t.box === id);
       if (at >= 0) {
@@ -165244,7 +165244,7 @@ function MsxStart({
       };
       return n;
     });
-    const putSlot = (i, v) => setSlots(cur => {
+    const putSlot = (i, v) => setTeamSlotsSt(cur => {
       const n = cur.slice();
       if (v && v.box) {
         const at = n.findIndex(t => t && t.box === v.box);
