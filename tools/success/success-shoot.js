@@ -70,7 +70,7 @@ const makeRun = async (kind) => {
     ['M1', 'mid', ['cont']], ['M2', 'yosu', ['cont']], ['M3', 'mid', ['cont', 'bag']], ['T1', 'mid', ['cont', 'train']],
     ['K1', 'mid', ['cont', 'train', 'go']], ['K3', 'mid', ['cont', 'train', 'go', 'next']], ['K5', 'mid', ['cont', 'train', 'go', 'next', 'praise']],
     ['I1', 'mid', ['cont', 'issa']], ['P1', 'mid', ['cont', 'stats']],
-    ['E1', 'mid', ['cont', 'event']],
+    ['E1', 'mid', ['cont', 'event']], ['E3', 'mid', ['cont', 'event', 'three']], ['E4', 'mid', ['cont', 'event', 'three', 'long']],
   ];
   // SHOT_ONLY=H0,H1 のように名前を並べると、その場面だけ撮る
   const only = (process.env.SHOT_ONLY || '').split(',').map((x) => x.trim()).filter(Boolean);
@@ -108,6 +108,14 @@ const makeRun = async (kind) => {
             if (st === 'train') return click(/^💪 トレーニング/);
             if (st === 'go') return click(/をする$/); // 2026-11-14 トレーニングのボタンは「丸太割りをする」のようにトレーニングの名前になった
             if (st === 'praise') return click(/褒める/);
+            if (st === 'three') { // 選択肢を3つにして見る(撮るときだけ、最後の行を複製して字を替える)
+              const box = document.querySelector('.msx .v-opts'); const last = box && box.lastElementChild; if (!last) return false;
+              const cp = last.cloneNode(true); const b = cp.querySelector('.v-opt') || cp; b.firstChild.textContent = 'そっと見守る'; box.appendChild(cp); return true;
+            }
+            if (st === 'long') { // 選択肢の文を長く(2行に)して崩れないかを見る
+              const b = document.querySelector('.msx .v-opt'); if (!b) return false;
+              b.firstChild.textContent = 'みんなで分けあって、いちばん大きいのをあの子にあげる'; return true;
+            }
             if (st === 'event') {
               // ランダムイベントが出るターンを芯で探して、その場面を開く(撮るときだけ id を変えて探す)
               const SUC = msxSuc.SUC; const raw = JSON.parse(localStorage.getItem(MSX_KEYS.run));

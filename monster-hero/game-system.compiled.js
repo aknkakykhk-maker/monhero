@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 068347f1c6ee86a0
+// source-sha256: 897506e09401357c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -163688,6 +163688,21 @@ const MSX_CSS = `
 .msx .v-hm-tile small{font-size:10px;font-weight:800;color:#fde047}
 .msx.land .v-hm .v-hm-cont{margin-top:5px}
 .msx.s320 .v-hm-cont .t{font-size:18px}.msx.s320 .v-hm-tile{min-height:54px}.msx.s320 .v-hm-tile .e{font-size:19px}
+/* トレーニングを選ぶ画面: スライドで替わったとき、場面の中身が少し横に流れる(左へスライド=右から入る) */
+@keyframes msxSwL{from{transform:translateX(22px);opacity:.55}to{transform:none;opacity:1}}
+@keyframes msxSwR{from{transform:translateX(-22px);opacity:.55}to{transform:none;opacity:1}}
+.msx .v-scene.msx-swl>*:not(.sh):not(.bg){animation:msxSwL .22s ease-out}
+.msx .v-scene.msx-swr>*:not(.sh):not(.bg){animation:msxSwR .22s ease-out}
+/* 育成イベントの選択肢(2026-11-14 社長「選択肢が押しにくい。詳細ボタンがずれてる」): 押せる高さ52px以上・塗りと押したときの沈み・「i」は選択肢と同じ高さで中心をそろえる */
+.msx .v-opts{gap:10px;margin-top:8px}
+.msx .v-opts .v-opt{min-height:52px;display:flex;flex-direction:column;justify-content:center;padding:8px 14px;border-radius:16px;background:linear-gradient(180deg,#43307a,#2a2052);border:2px solid #f472b6;border-bottom-width:5px;box-shadow:0 2px 8px #0006;font-size:14px;font-weight:900;line-height:1.35;color:#fff;text-align:left}
+.msx .v-opts .v-opt:not(:disabled):active{transform:translateY(3px);border-bottom-width:2px;margin-bottom:3px;background:linear-gradient(180deg,#5b3f9e,#3b2a6b)}
+.msx .v-opts .v-opt small{display:block;font-size:10.5px;color:#86efac;font-weight:800;margin-top:1px}
+.msx .v-opts .msx-optrow{display:flex;gap:8px;align-items:stretch}
+.msx .v-opts .msx-optrow>.v-opt{flex:1;min-width:0}
+.msx .v-opts .msx-info{flex:none;align-self:stretch;width:52px;min-height:52px;display:flex;align-items:center;justify-content:center;padding:0;border-radius:16px;background:linear-gradient(180deg,#164e74,#0c3350);border:2px solid #7dd3fc;border-bottom-width:5px;color:#e0f2fe;font-size:20px;font-weight:900;line-height:1}
+.msx .v-opts .msx-info.on{background:#0369a1;color:#fff}
+.msx .v-opts .msx-info:not(:disabled):active{transform:translateY(3px);border-bottom-width:2px;margin-bottom:3px}
 `;
 const MSX_KEYS = Object.freeze({
   run: 'mh_monsuc_run_v1',
@@ -166013,6 +166028,11 @@ function MsxPlay({
   const ev = useMemo(() => SUC.evaluate(s), [s]);
   const [sub, setSub] = useState('main');
   const [sel, setSel] = useState(null);
+  const swipeRef = useRef(null);
+  const [swipe, setSwipe] = useState({
+    n: 0,
+    dir: 0
+  });
   useEffect(() => {
     if (onSub) onSub(sub);
   }, [sub]);
@@ -166858,16 +166878,61 @@ function MsxPlay({
       bandProps.use = Math.round(pv.hp || 0);
       bandProps.stAdd = Math.round(pv.stress || 0);
     }
+    const swipeOn = {
+      style: {
+        touchAction: 'pan-y'
+      },
+      onPointerDown: e => {
+        swipeRef.current = {
+          x: e.clientX,
+          y: e.clientY,
+          moved: false
+        };
+      },
+      onPointerUp: e => {
+        const st = swipeRef.current;
+        if (!st) return;
+        const dx = e.clientX - st.x;
+        const dy = e.clientY - st.y;
+        if (Math.abs(dx) < 48 || Math.abs(dx) < Math.abs(dy) * 1.5) {
+          swipeRef.current = null;
+          return;
+        }
+        st.moved = true;
+        const i = MSX_STATS.indexOf(stat);
+        const j = i + (dx < 0 ? 1 : -1);
+        if (j < 0 || j >= MSX_STATS.length) return;
+        setSel(MSX_STATS[j]);
+        setSwipe(w => ({
+          n: w.n + 1,
+          dir: dx < 0 ? 1 : -1
+        }));
+      },
+      onPointerCancel: () => {
+        swipeRef.current = null;
+      },
+      onClickCapture: e => {
+        if (swipeRef.current && swipeRef.current.moved) {
+          e.stopPropagation();
+          e.preventDefault();
+        }
+        swipeRef.current = null;
+      }
+    };
     body = React.createElement(React.Fragment, null, React.createElement(MsxBand, _extends({
       s: s,
       v: v,
       ev: ev
-    }, bandProps)), React.createElement("div", {
-      className: "v-scene",
+    }, bandProps)), React.createElement("div", _extends({
+      className: `v-scene${swipe.n ? swipe.dir > 0 ? ' msx-swl' : ' msx-swr' : ''}`,
+      key: `trsw${swipe.n}`,
+      "data-msx-train-swipe": true
+    }, swipeOn, {
       style: {
+        ...swipeOn.style,
         flex: '1 1 0'
       }
-    }, React.createElement("img", {
+    }), React.createElement("img", {
       className: "bg",
       src: msxSceneBg(s.turn).bg,
       alt: ""
@@ -166974,9 +167039,10 @@ function MsxPlay({
       ups: pv ? pv.gain : null,
       main: stat,
       preview: true
-    }), React.createElement("div", {
-      className: "v-trs"
-    }, MSX_STATS.map(k => {
+    }), React.createElement("div", _extends({
+      className: "v-trs",
+      "data-msx-train-swipe-row": true
+    }, swipeOn), MSX_STATS.map(k => {
       const c = msxCardOf(v, k);
       const lv = lvOf(c);
       return React.createElement("button", {
@@ -167177,26 +167243,16 @@ function MsxPlay({
     }, "🎈"), "遊ぶ", React.createElement("small", null, "体力+・甘え+")), React.createElement("button", {
       type: "button",
       className: "v-p",
-      onClick: () => typeof MsxR3 === 'function' ? setSub('shugyo') : setSheet({
-        soon: '⚔ 修行',
-        text: '技を覚える修行は、次の回で入ります'
-      })
+      onClick: () => setSub('shugyo')
     }, React.createElement("div", {
       className: "e"
-    }, "⚔"), "修行", React.createElement("small", null, "技を覚える"), React.createElement("span", {
-      className: "bd"
-    }, "準備中")), React.createElement("button", {
+    }, "⚔"), "修行", React.createElement("small", null, "技を覚える")), React.createElement("button", {
       type: "button",
       className: "v-p",
-      onClick: () => typeof MsxR3 === 'function' ? setSub('cup') : setSheet({
-        soon: '🏆 大会',
-        text: '毎月の大会は、次の回で入ります(期末の大会は自動で始まります)'
-      })
+      onClick: () => setSub('cup')
     }, React.createElement("div", {
       className: "e"
-    }, "🏆"), "大会", React.createElement("small", null, "今月の大会"), React.createElement("span", {
-      className: "bd"
-    }, "準備中")))));
+    }, "🏆"), "大会", React.createElement("small", null, "今月の大会")))));
     foot = React.createElement("div", {
       className: "v-ft"
     }, React.createElement("button", {
@@ -167275,11 +167331,7 @@ function MsxPlay({
       setSheet(null);
       onQuit();
     }
-  }, "この育成をやめる")) : React.createElement(React.Fragment, null, React.createElement("h3", null, sheet.soon, React.createElement("span", {
-    className: "msx-soon"
-  }, "準備中")), React.createElement("div", {
-    className: "msx-note"
-  }, sheet.text)), React.createElement("button", {
+  }, "この育成をやめる")) : null, React.createElement("button", {
     type: "button",
     className: "msx-btn",
     onClick: () => setSheet(null)
@@ -167639,14 +167691,24 @@ function MsxStats({
   }, msxAidName(s.aid), React.createElement("small", {
     className: "sub"
   }, " 助手")), React.createElement("b", null, s.aidBond))), React.createElement("div", {
-    className: "v-card"
+    className: "v-card",
+    "data-msx-stats-techs": true
   }, React.createElement("div", {
     className: "h2"
   }, "技", React.createElement("span", {
-    className: "msx-soon"
-  }, "準備中")), React.createElement("div", {
     className: "sub"
-  }, "技と修行は次の回で入ります"))));
+  }, "(修行で覚える)")), (() => {
+    const all = typeof SUC.techsOf === 'function' ? SUC.techsOf(s.species) : [];
+    const got = (Array.isArray(s.techs) ? s.techs : []).map(id => all.find(t => t.id === id)).filter(Boolean);
+    return got.length ? React.createElement("div", {
+      className: "sub",
+      style: {
+        lineHeight: 1.6
+      }
+    }, got.map(t => t.name).join('・')) : React.createElement("div", {
+      className: "sub"
+    }, "まだ覚えていません。修行に行くと技を覚えることがあります");
+  })())));
 }
 function MsxIssa({
   run,
