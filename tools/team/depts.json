@@ -20,7 +20,8 @@
         "見た目が変わる仕上げは、公開の前に必ず社長に止め絵を見せて OK をもらう(部へ「公開まで」と回すのは社長の OK のあと)",
         "モンサクは社長に見せる前・β公開の前に、1回の育成を始めから引退・合体まで通して遊ぶ点検を挟む(画面ごとに止め絵・プレイヤーの目で拾い、各部へ振り分け、直したらもう一度通す)",
         "社長が寝る・離れるときは、相当重要なこと以外は窓口の判断で進める。同時に進める仕事は3〜5つ(優先順位は窓口が決める)。20時を過ぎたら作業の数を減らし、モンサクを優先する(モンヒロビートの新曲はいつも優先)",
-        "表は画像(PNG)で見せる(送る前に拡大して確かめる。返事に表の記法が残るとフックが止める)。仕上がりは社長に報告する前にカゲあつくんに見てもらう"
+        "表は画像(PNG)で見せる(送る前に拡大して確かめる。返事に表の記法が残るとフックが止める)。仕上がりは社長に報告する前にカゲあつくんに見てもらう",
+        "モンサクの画面を作る・直す前に docs/reference/line-mf/REF-MAP.md でその画面の行を引き、参考の実物(画像・動画のコマ)を自分の目で見てから作る(要約のメモだけで作らない)"
       ],
       "板": []
     },
@@ -72,7 +73,8 @@
       "決まり": [
         "敵の数字・まだ出ていない敵は更新履歴・ヘルプに書かない(ネタバレ)",
         "ランキング対象外の遊び方(スキップチケット・クイック)は、送信しないだけでなく自己ベストも上書きしない(CLAUDE.md ⑦)",
-        "数字の釣り合いは自分で決めず、案を窓口へ"
+        "数字の釣り合いは自分で決めず、案を窓口へ",
+        "モンサクの画面を作る・直す前に docs/reference/line-mf/REF-MAP.md でその画面の行を引き、参考の実物(画像・動画のコマ)を自分の目で見てから作る(要約のメモだけで作らない)"
       ],
       "板": ["docs/progress/battle-board.md", "docs/progress/battle-backlog.md"]
     },
@@ -107,7 +109,8 @@
         "P/60-app.jsx(2MB超)・P/70-bootstrap.jsx は全部の部が通る場所。開かずに node tools/ctx.js read <名前> で切り出す。ほかの部の場所を触るときは先に窓口へ",
         "P/25-storage.jsx・P/26-supabase.jsx は保存データとランキングの土台。変えたら ミハリ確認が要る",
         "はじめての人だけに書く印(!wasOnboarded の分岐・finishOnboarding)を足したら、復元で片づける一覧 MH_FIRST_TIMER_MARK_KEYS(data/mhsave-backup.js)にも足す。見張り: node tools/boot/restore-first-timer-marks-check.js",
-        "デバッグ専用の変更は更新履歴にもヘルプにも載せない"
+        "デバッグ専用の変更は更新履歴にもヘルプにも載せない",
+        "モンサクの画面を作る・直す前に docs/reference/line-mf/REF-MAP.md でその画面の行を引き、参考の実物(画像・動画のコマ)を自分の目で見てから作る(要約のメモだけで作らない)"
       ],
       "板": ["docs/progress/dev-board.md", "docs/progress/craft-backlog.md", "docs/progress/tsugihagi-backlog.md", "docs/progress/speed-backlog.md"]
     },
@@ -135,7 +138,7 @@
       "部長": "ナカヨシ",
       "受け持ち": "助手ライフ本体(家・部屋・時間帯・仲良し度・けんかと仲直り)・地図・助手どうしの掛け合い",
       "語": ["助手ライフ", "地図", "マップ", "掛け合い", "仲良し", "見守る", "部屋", "ナカヨシ"],
-      "files": ["P/56-assistant-life.jsx", "P/56-assistant-life-house.jsx", "P/56-assistant-life-roomview.jsx", "P/56-assistant-life-rel.jsx", "P/56-assistant-life-map.jsx", "P/56-assistant-life-ux.jsx", "P/56-assistant-life-guide.jsx", "P/56-assistant-life-profile.jsx", "P/56-assistant-life-partner.jsx", "P/56-assistant-peer.jsx", "P/44-time-of-day.jsx", "tools/assistant/life-*", "tools/assistant/peer-*", "P/56-assistant-life-plan.jsx", "P/56-assistant-life-body.jsx", "P/56-assistant-life-finds.jsx"],
+      "files": ["P/56-assistant-life.jsx", "P/56-assistant-life-house.jsx", "P/56-assistant-life-roomview.jsx", "P/56-assistant-life-rel.jsx", "P/56-assistant-life-map.jsx", "P/56-assistant-life-ux.jsx", "P/56-assistant-life-guide.jsx", "P/56-assistant-life-profile.jsx", "P/56-assistant-life-partner.jsx", "P/56-assistant-peer.jsx", "P/44-time-of-day.jsx", "tools/assistant/life-*", "tools/assistant/peer-*", "P/56-assistant-life-plan.jsx", "P/56-assistant-life-body.jsx", "P/56-assistant-life-finds.jsx", "P/56-assistant-life-success.jsx"],
       "入口": ["AssistantLifeScreen", "AssistantLifeRoomSheet"],
       "検査": ["node tools/run-checks.js --changed(tools/assistant から選ばれる)"],
       "資料": ["docs/progress/assistant-peer/STATUS.md", "docs/progress/assistant-peer-plan.md", "docs/progress/assistant-peer/LIFE-HOUSE-RELEASE.md"],
@@ -227,7 +230,8 @@
         "見るだけ。直さない・コミットしない。見つけた物は作った部へ返す",
         "呼ばれるのは node tools/ctx.js gate が「要る」と出した変更だけ。「要らない」の変更の確認は断ってよい",
         "保存データ: 既存のキー(mh_*)が消えない・古い形が読める・移行が1回だけ、を確かめる。ランキング: 既存の記録と送信が壊れない・対象外の遊び方が自己ベストを上書きしない",
-        "新機能の最終確認だけ claude-fable-5-2 で(docs/rules/MODEL_ROUTING.md)"
+        "新機能の最終確認だけ claude-fable-5-2 で(docs/rules/MODEL_ROUTING.md)",
+        "モンサクの画面を作る・直す前に docs/reference/line-mf/REF-MAP.md でその画面の行を引き、参考の実物(画像・動画のコマ)を自分の目で見てから作る(要約のメモだけで作らない)"
       ],
       "板": []
     }
