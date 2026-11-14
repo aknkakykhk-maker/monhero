@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: aee6496984529559
+// source-sha256: d17f34749a33e301
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -164284,6 +164284,11 @@ const MSX_HOME_CSS = `
 .mh-home-success>span{display:flex;align-items:center;gap:4px;padding:8px 12px;border:1.5px solid #f9a8d4dd;border-radius:13px;background:linear-gradient(135deg,#831843ee,#4c1d95ee);color:#fff;font-size:12px;font-weight:900;line-height:1.2;box-shadow:0 3px 10px #0007;white-space:nowrap}
 .mh-home-success b.beta{margin-left:2px;padding:1px 6px;border-radius:6px;background:#f472b6;color:#fff;font-size:11px;line-height:1.4}
 .mh-home-success:active>span{transform:scale(.96)}
+.mh-home-success>span{flex-wrap:wrap;max-width:178px}
+/* 札の一言は、縦に余裕のある縦長の HOME(場面の高さ640以上)だけ出し、伸びたぶん札を下へずらす(上の MFバトルカードの顔の列にかからない)。小さい画面・横画面は名前とリボンだけ */
+.mh-home-success .ln{display:none;flex-basis:100%;font-size:10px;font-weight:800;color:#fbcfe8;line-height:1.3;white-space:normal;text-align:left}
+@container (min-height:640px) and (max-aspect-ratio:1/1){.mh-home-success .ln{display:block}.mh-home-success{margin-bottom:-28px}}
+.mh-home-success .rb{position:absolute;right:-6px;top:-9px;z-index:1;font-style:normal;font-size:10px;font-weight:900;color:#422006;background:linear-gradient(90deg,#fde047,#fbbf24);border-radius:6px;padding:1px 7px;box-shadow:0 2px 4px #0008;transform:rotate(4deg);white-space:nowrap}
 @media (orientation:landscape){.mh-home-success,.mh-home-scene:has(.mh-home-card-battle.raised) .mh-home-success,.mh-home-scene:has(.mh-home-card-battle.below-tour) .mh-home-success{left:146px;bottom:12px}
 .mh-home-scene:has(.mh-home-facility.life) .mh-home-success{bottom:32px}}
 `;
@@ -164305,11 +164310,16 @@ function MonheroSuccessHomeEntry({
     "data-home-monhero-success": true,
     onClick: () => setOpen(true),
     "aria-label": "モンヒロサクセス β"
-  }, React.createElement("span", null, React.createElement("span", {
+  }, React.createElement("i", {
+    className: "rb",
+    "aria-hidden": "true"
+  }, "β版 開幕！"), React.createElement("span", null, React.createElement("span", {
     "aria-hidden": "true"
   }, "🌱"), "モンヒロサクセス", React.createElement("b", {
     className: "beta"
-  }, "β"))), open && React.createElement(MonheroSuccessScreen, {
+  }, "β"), React.createElement("small", {
+    className: "ln"
+  }, "デビュー戦からヒーローズファイナルまで、1体をじっくり育てよう"))), open && React.createElement(MonheroSuccessScreen, {
     onClose: () => setOpen(false),
     callNameOf: callNameOf,
     bondLvOf: bondLvOf

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: eeaafcc6886efd7a
+// generated-sha256: d469c534ab03a1e3
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -85807,6 +85807,11 @@ const MSX_HOME_CSS = `
 .mh-home-success>span{display:flex;align-items:center;gap:4px;padding:8px 12px;border:1.5px solid #f9a8d4dd;border-radius:13px;background:linear-gradient(135deg,#831843ee,#4c1d95ee);color:#fff;font-size:12px;font-weight:900;line-height:1.2;box-shadow:0 3px 10px #0007;white-space:nowrap}
 .mh-home-success b.beta{margin-left:2px;padding:1px 6px;border-radius:6px;background:#f472b6;color:#fff;font-size:11px;line-height:1.4}
 .mh-home-success:active>span{transform:scale(.96)}
+.mh-home-success>span{flex-wrap:wrap;max-width:178px}
+/* 札の一言は、縦に余裕のある縦長の HOME(場面の高さ640以上)だけ出し、伸びたぶん札を下へずらす(上の MFバトルカードの顔の列にかからない)。小さい画面・横画面は名前とリボンだけ */
+.mh-home-success .ln{display:none;flex-basis:100%;font-size:10px;font-weight:800;color:#fbcfe8;line-height:1.3;white-space:normal;text-align:left}
+@container (min-height:640px) and (max-aspect-ratio:1/1){.mh-home-success .ln{display:block}.mh-home-success{margin-bottom:-28px}}
+.mh-home-success .rb{position:absolute;right:-6px;top:-9px;z-index:1;font-style:normal;font-size:10px;font-weight:900;color:#422006;background:linear-gradient(90deg,#fde047,#fbbf24);border-radius:6px;padding:1px 7px;box-shadow:0 2px 4px #0008;transform:rotate(4deg);white-space:nowrap}
 @media (orientation:landscape){.mh-home-success,.mh-home-scene:has(.mh-home-card-battle.raised) .mh-home-success,.mh-home-scene:has(.mh-home-card-battle.below-tour) .mh-home-success{left:146px;bottom:12px}
 .mh-home-scene:has(.mh-home-facility.life) .mh-home-success{bottom:32px}}
 `;
@@ -85818,7 +85823,9 @@ function MonheroSuccessHomeEntry({ callNameOf, bondLvOf, onOpenChange }) {
     <>
       <style>{MSX_HOME_CSS}</style>
       <button type="button" className="mh-home-success" data-home-monhero-success onClick={() => setOpen(true)} aria-label="モンヒロサクセス β">
-        <span><span aria-hidden="true">🌱</span>モンヒロサクセス<b className="beta">β</b></span>
+        {/* 公開の日の入口の文(2026-11-14 ココロ・窓口経由): 上のリボン「β版 開幕！」と札の一言 */}
+        <i className="rb" aria-hidden="true">β版 開幕！</i>
+        <span><span aria-hidden="true">🌱</span>モンヒロサクセス<b className="beta">β</b><small className="ln">デビュー戦からヒーローズファイナルまで、1体をじっくり育てよう</small></span>
       </button>
       {open && <MonheroSuccessScreen onClose={() => setOpen(false)} callNameOf={callNameOf} bondLvOf={bondLvOf}/>}
     </>
