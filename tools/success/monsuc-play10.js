@@ -229,7 +229,7 @@ if (require.main === module) (async () => {
         if (turn && turn !== (log.tt || 0)) { log.tt = turn; log.ttAt = guard; } else if (guard - (log.ttAt || 0) > 150) { note('止まる', `T${turn} 150押しても次のターンへ進まない: ${info.text.slice(0, 200)} / 直前の押し: ${(log.hist || []).slice(-14).join(',')} / ボタン: ${info.btns.join(',')}`); await page.screenshot({ path: path.join(OUT, 'shots', `lap${lap}-loop.png`) }); break; }
         if (same > 25) { note('止まる', `T${turn} 同じ画面で25回押しても変わらない: ${info.text.slice(0, 160)} / ボタン: ${info.btns.join(',')}`); break; }
         // ターンの記録(保存から)
-        if (turn && turn !== lastTurn && info.view === 'play') { const s = await runState(page); if (s) log.turns.push({ t: s.turn, stats: s.stats, hp: s.hp, hpMax: s.hpMax, stress: s.stress, loy: s.loy, ama: s.ama, fear: s.fear, pop: s.pop, pts: s.pts, gold: s.gold, money: s.money, items: s.items }); lastTurn = turn; }
+        if (turn && turn !== lastTurn && info.view === 'play') { const s = await runState(page); if (s) log.turns.push({ t: s.turn, stats: s.stats, hp: s.hp, hpMax: s.hpMax, stress: s.stress, loy: s.loy, ama: s.ama, fear: s.fear, pop: s.pop, pts: s.pts, gold: s.gold, money: s.money, items: s.items, techs: s.techs, mastery: s.mastery, tickets: s.tickets }); lastTurn = turn; }
         // 育成の終わり(結果・評価・保存)
         if (/ゲームオーバー|育成おわり|育成を終え|引退|評価|殿堂|マスモンボックスへ/.test(info.text) && (info.view !== 'play' || /引退|評価|ゲームオーバー/.test(info.text)) && !info.btns.some((b) => /^💪 トレーニング/.test(b))) { log.endText = info.text.slice(0, 900); if (!log.endShot) { log.endShot = 1; await page.screenshot({ path: path.join(OUT, 'shots', `lap${lap}-end1.png`) }); } }
         if (info.view === 'home' && guard > 20) { log.over = true; break; }
