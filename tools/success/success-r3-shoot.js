@@ -18,6 +18,8 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
 let chromium;
 try { ({ chromium } = require(path.join(ROOT, 'tools', 'node_modules', 'playwright'))); } catch (e) { console.log('SKIP: playwright が入っていないので確かめられません'); process.exit(0); }
 const { quietBootSeed, updateNoticeSeed } = require(path.resolve(__dirname, '..', 'boot', 'quiet-boot-seed'));
+const { scanTextWrap } = require(path.resolve(__dirname, '..', 'playbot', 'lib', 'text-wrap')); // 言葉・値の途中の折れ(r1114-077)
+const { msxUiRulesMeasure, msxScrollStripTexts, BLANK_MAX } = require('./msx-ui-rules'); // 画面の決まり(docs/spec/MONSUC_UI.md)の見張り
 const PORT = 8973;
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.PNG': 'image/png', '.jpg': 'image/jpeg', '.webp': 'image/webp', '.json': 'application/json', '.mp3': 'audio/mpeg' };
 
@@ -28,7 +30,7 @@ const makeRun = async (kind) => {
   const SUC = msxSuc.SUC;
   const team = ['Tiger', 'Undine', 'Golem', 'Pixie', 'Suezo', 'Kyubi'].filter((x) => SUC.speciesList.includes(x)).map((species) => ({ kind: 'base', species }));
   let s = SUC.newRun({ id: 'r3-shot-1', species: 'Mocchi', aid: 'mua', team, aidBondLv: 4, items: { sand: 2, rainbow: 1 } });
-  const goal = kind === 'debut' ? 5 : 22;
+  const goal = window.__SHOT_GOAL || (kind === 'debut' ? 5 : 22); // SHOT_GOAL=<ターン> で、大会の名前の見え方を月ごとに撮れる
   let guard = 0;
   while (s.turn < goal && !s.over && guard++ < 200) {
     const v = SUC.peek(s);
@@ -75,25 +77,30 @@ const makeRun = async (kind) => {
     ['B2', 'win', ['cont', '@cupintro-go', '%quick']], ['R1', 'win', ['cont', '@cupintro-go', '%quick', '%next']], ['C3', 'win', ['cont', '@cupintro-go', '%quick', '%next', '@next']], ['C3b', 'win', ['cont', '@cupintro-go', '%quick', '%next', '@next', '@meal=f_pow']], // R1: 賞金ランク UP!(段が上がったときだけ)
     ['C4', 'lose', ['cont', '@cupintro-go', '%quick']], ['C4r', 'lose', ['cont', '@cupintro-go', '%quick', '%rematch=sand']], ['C4g', 'lose', ['cont', '@cupintro-go', '%quick', '%giveup']],
     ['C4d', 'debutlose', ['cont', '@cupintro-go', '%quick']],
-    ['Q1', 'mid', ['cont', /^⚔修行/]], ['Q2', 'mid', ['cont', /^⚔修行/, '@shugyo']], ['Q3', 'mid', ['cont', /^⚔修行/, '@shugyo', '@qnext']],
+    ['Q1', 'mid', ['cont', /^⚔修行/]], ['Q2', 'mid', ['cont', /^⚔修行/, '@shugyo']], ['Q3', 'mid', ['cont', /^⚔修行/, '@shugyo', '@qskip', '@qnext']],
     // 期末の大会の当日(参考 te-30〜34): 当日のメイン(能力と大会だけ)→ 受付に1つ → 参加の確認 → 紋章の入り → 表
     ['K0', 'kimatsu', ['cont']], ['K1', 'kimatsu', ['cont', '@precup']], ['K2', 'kimatsu', ['cont', '@precup', '@enter']], ['K2c', 'kimatsu', ['cont', '@precup', '@enter', '@pre-cancel']],
     ['K3', 'kimatsu', ['cont', '@precup', '@enter', '@yes']], ['K4', 'kimatsu', ['cont', '@precup', '@enter', '@yes', '@cupintro-go']],
     ['S0', 'summit', ['cont']], ['S2', 'summit', ['cont', '@precup', '@enter']],
     ['G1', 'gameover', ['cont']],
     ['X1', 'box', ['@openbox', '@boxmon=b1', '@edit']], ['X2', 'box', ['@openbox', '@boxmon=b1', '@edit', '@editsave']],
-    ['E0', 'retire', ['cont']], ['E3', 'retire', ['cont', '@e0']], ['E3b', 'retire', ['cont', '@e0', '@bal']], ['E1', 'retire', ['cont', '@e0', '@bal', '@e3']],
-    ['E2', 'retire', ['cont', '@e0', '@bal', '@e3', '@e1', '@auto']], ['E9', 'retire', ['cont', '@e0', '@bal', '@e3', '@e1', '@auto', '@decide', '@decide']],
+    // 引退: 能力ポイントが残っていれば E3(使う)→ E0(最終の評価)→ E1(振り返り)→ E2(アシスト)→ 保存枠(2026-11-14 参考 v4 の順)
+    ['E3', 'retire', ['cont']], ['E3b', 'retire', ['cont', '@bal']], ['E0', 'retire', ['cont', '@bal', '@e3']], ['E1', 'retire', ['cont', '@bal', '@e3', '@e0']],
+    ['E2', 'retire', ['cont', '@bal', '@e3', '@e0', '@e1', '@auto']], ['E9', 'retire', ['cont', '@bal', '@e3', '@e0', '@e1', '@auto', '@decide', '@decide']],
   ];
   try {
     for (const [w, h, tag] of sizes) {
       const page = await browser.newPage({ viewport: { width: w, height: h } });
       page.on('pageerror', (e) => errors.push(String(e && e.message || e)));
+      await page.addInitScript((g) => { window.__SHOT_GOAL = g; }, Number(process.env.SHOT_GOAL) || 0);
+      await page.addInitScript((r) => { if (r) window.__MSC_BK_RESULT = r; }, process.env.SHOT_BK_RESULT || ''); // win / lose: 決勝のあとの表(勝った側の線が優勝の札へ)
+      await page.addInitScript((k) => { if (k) window.__MSC_BK_T = k; }, Number(process.env.SHOT_BK) || 0); // SHOT_BK=<倍率> で、組み合わせ表の演出をゆっくりにして段ごとに撮る
       await page.addInitScript(quietBootSeed()); await page.addInitScript(updateNoticeSeed());
       await page.addInitScript(() => { try { localStorage.setItem('mh_monsuc_beta_v1', JSON.stringify({ v: 1, seen: { open: 1, firstend: 1, prep: 1, turn: 1, train: 1, result: 1, rest: 1, shugyo: 1, cup: 1, match: 1, rematch: 1, event: 1, awake: 1, retire: 1 } })); /* β版の説明は monsuc-beta-browser-check.js が見る */ localStorage.setItem('mh_unlocked_monsters', JSON.stringify(['Mocchi', 'Suezo', 'Golem', 'Tiger', 'Pixie', 'Undine', 'Kyubi'])); } catch (e) {} });
       await page.goto(`http://localhost:${PORT}/monster-hero/index.html`, { waitUntil: 'load', timeout: 90000 });
       await page.waitForFunction(() => typeof MonheroSuccessScreen === 'function' && typeof MsxR3 === 'function' && typeof msxLoad === 'function' && typeof MASMON_CALC !== 'undefined', undefined, { timeout: 90000 });
       for (const [name, kind, steps] of SHOTS) {
+        if (process.env.ONLY && !process.env.ONLY.split(',').includes(name)) continue; // ONLY=C1,C1w で撮る画面だけにする
         const label = `${name}${tag ? `(${tag})` : ''}`;
         await page.evaluate(async ({ kind, mk }) => {
           // eslint-disable-next-line no-new-func
@@ -127,7 +134,7 @@ const makeRun = async (kind) => {
           if (!done) check(`${label}: 「${st}」が押せる`, false);
           await page.waitForTimeout(st === '%ready' ? 2500 : 700);
         }
-        await page.waitForTimeout(500);
+        await page.waitForTimeout(500 + (Number(process.env.SHOT_WAIT) || 0)); // SHOT_WAIT=<ms> で、動く演出の途中を撮る
         const m = await page.evaluate(() => {
           const root = document.querySelector('.msx'); if (!root) return { ok: false };
           const R = root.getBoundingClientRect();
@@ -136,6 +143,19 @@ const makeRun = async (kind) => {
           const box = JSON.parse(localStorage.getItem('mh_monsuc_box_v1') || 'null');
           return { ok: true, text: root.innerText.length, over, head: root.innerText.slice(0, 160).replace(/\s+/g, ' '), boxN: box && Array.isArray(box.mons) ? box.mons.length : 0, run: localStorage.getItem('mh_monsuc_run_v1') };
         });
+        const u = await page.evaluate(msxUiRulesMeasure);
+        // 演出の飾り(舞う葉っぱ・炎など、絵文字だけの粒)が画面の外へ出るのは見ない
+        const strip = await page.evaluate(msxScrollStripTexts);
+        const wr = (await scanTextWrap(page)).filter((x) => !(x.kind === '画面の外へはみ出した文字' && (!/[0-9A-Za-zぁ-んァ-ヶ一-龠]/.test(x.text) || strip.some((t) => t.startsWith(x.text.slice(0, 12))))));
+        // 基準の大きさ(縦390・横844)では止める。小さい画面・大きい文字は、直す順番待ちの一覧として知らせるだけ(2026-11-14)
+        if (!tag) check(`${label}: 文字が値・札の途中で折れない(scanTextWrap)`, wr.length === 0, wr.slice(0, 3).map((x) => `${x.kind}「${x.text}」`).join(' / '));
+        else if (wr.length) console.log(`  見張り ${label}: 文字の折れ ${wr.length}件 ${wr.slice(0, 2).map((x) => `${x.kind}「${x.text}」`).join(' / ')}`);
+        // 保存枠(マスモンの画面)はクラフト12が参考 mm-01〜04 の形へ作り直し中。それまでは知らせるだけ(作り直したら外す)
+        // 大会の1戦の画面(B・C2〜C4・W・R)はバトル部の受け持ち(MonsucCupShow)。決まりは渡してあるので、直るまでは知らせるだけ
+        const blankLater = ['X1', 'X2'].includes(name) || /^(B\d|C[2-4]|W\d|R\d)/.test(name);
+        if (u && u.blank != null && blankLater && u.blank > BLANK_MAX) console.log(`  見張り ${label}: 下の空き ${u.blank}px(作り直し待ち)`);
+        else if (u && u.blank != null) check(`${label}: 下に大きな空きが無い(${BLANK_MAX}px まで)`, u.blank <= BLANK_MAX, `${u.blank}px`);
+        if (u) check(`${label}: 見せ場の数字(.v-num)が真ん中`, u.offNum.length === 0, u.offNum.slice(0, 3).join(' / '));
         check(`${label}: 画面が出る`, m.ok && m.text > 20, m.head);
         check(`${label}: 枠からはみ出さない`, m.ok && m.over.length === 0, m.over && m.over.slice(0, 3).join(' / '));
         if (name === 'X2') { const b = await page.evaluate(() => JSON.parse(localStorage.getItem('mh_monsuc_box_v1') || 'null')); const m = b && b.mons.find((x) => x.id === 'b1');

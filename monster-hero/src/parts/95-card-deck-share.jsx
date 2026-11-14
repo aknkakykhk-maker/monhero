@@ -453,13 +453,13 @@ const CardDeckShare = ({ db, decks, collection, frame = null, onBack, unlocked =
           {msg && tab === 'fight' && <p className="rounded-xl bg-slate-900 p-2 text-[13px] font-bold text-amber-100" style={JA_WRAP_STYLE}>{jaWrap(msg)}</p>}
           {foes === null ? <p className="text-[13px] font-bold text-slate-300">読み込み中…</p> : (<>
             <div data-card-share-filters className="flex gap-1.5 overflow-x-auto pb-0.5" role="tablist">
-              {[['all', 'すべて'], ...CARD_SHARE_FOE_TAGS.map(([k, label]) => [k, label])].map(([k, label]) => <button key={k} type="button" role="tab" aria-selected={foeFilter === k} data-card-share-filter={k} className={`shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 text-[12px] font-black ${foeFilter === k ? 'bg-amber-300 text-slate-950' : 'border border-white/20 bg-slate-900 text-slate-200'}`} onClick={() => { Audio_.fgSe.tap(); setFoeFilter(k); }}>{label}</button>)}
+              {[['all', '全て'], ...CARD_SHARE_FOE_TAGS.map(([k, label]) => [k, label])].map(([k, label]) => <button key={k} type="button" role="tab" aria-selected={foeFilter === k} data-card-share-filter={k} className={`shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 text-[12px] font-black ${foeFilter === k ? 'bg-amber-300 text-slate-950' : 'border border-white/20 bg-slate-900 text-slate-200'}`} onClick={() => { Audio_.fgSe.tap(); setFoeFilter(k); }}>{label}</button>)}
             </div>
             <div data-card-share-list={foeFilter}>
               {foeShown.length ? <ul className="space-y-1.5">{foeShown.map(foeRow)}</ul> : <p className={`${SCREEN_PANEL_CLASS} text-[12px] font-bold text-slate-400`}>{foeEmptyText}</p>}
             </div>
             <p data-card-share-replay-note className="px-1 text-[11px] font-bold leading-snug text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('戦った試合は、デッキを登録した人があとから見返せます(あなたの名前とアイコンが出ます)')}</p>
-            <button type="button" data-card-share-reload className="w-full rounded-xl border border-white/15 bg-slate-900 py-2 text-[12px] font-black text-slate-200" onClick={() => { Audio_.fgSe.tap(); void loadFoes(); }}>ほかの人をさがす</button>
+            <button type="button" data-card-share-reload className="w-full rounded-xl border border-white/15 bg-slate-900 py-2 text-[12px] font-black text-slate-200" onClick={() => { Audio_.fgSe.tap(); void loadFoes(); }}>ほかの人を探す</button>
           </>)}
         </>)}
         {mine !== undefined && !off && tab === 'mine' && (<>
@@ -509,7 +509,7 @@ const CardDeckShare = ({ db, decks, collection, frame = null, onBack, unlocked =
   if (embedded) return <div data-card-share data-card-share-part={part}>{body}{detailNode}</div>;
   return (
     <div data-mh-screen data-card-share data-card-share-part={part} className={SCREEN_SHELL_CLASS}>
-      <ScreenHead title={title} accent="text-amber-200" onBack={onBack} note={part === 'fight' ? 'だれと戦うかをえらびます' : '自分のデッキを1組登録すると、ほかのブリーダーが戦えます'}/>
+      <ScreenHead title={title} accent="text-amber-200" onBack={onBack} note={part === 'fight' ? 'だれと戦うかを選びます' : '自分のデッキを1組登録すると、ほかのブリーダーが戦えます'}/>
       {headExtra}
       {body}
       {mine !== undefined && !off && tab === 'mine' && <div className={SCREEN_FOOTER_CLASS}>{registerButton}</div>}
@@ -659,7 +659,7 @@ const CardShareDeckDetail = ({ entry, onClose, fight = null, rent = null }) => {
             {rent && <button type="button" data-card-share-detail-rent disabled={rent.disabled} onClick={() => { onClose(); rent.go(); }} className="min-h-[44px] flex-1 rounded-xl border border-emerald-300/50 bg-slate-900 text-[13px] font-black text-emerald-100 disabled:opacity-50">{rent.label}</button>}
           </div>
         )}
-        <button type="button" data-card-share-deck-detail-close onClick={onClose} className="mt-2 w-full rounded-xl bg-slate-800 py-2 text-[13px] font-black text-white">とじる</button>
+        <button type="button" data-card-share-deck-detail-close onClick={onClose} className="mt-2 w-full rounded-xl bg-slate-800 py-2 text-[13px] font-black text-white">閉じる</button>
       </div>
     </div>
   );
@@ -779,7 +779,7 @@ const CardDeckReplays = ({ onBack, onOpenDeck, onOpenTour, known = null }) => {
     <div data-mh-screen data-card-deck-replays className={SCREEN_SHELL_CLASS}>
       <ScreenHead title="戦われた試合" accent="text-amber-200" onBack={onBack} note={`登録中のデッキが戦った試合。フリー対戦は新しい${CARD_SHARE_REPLAY_SLOTS}試合まで`}/>
       <div className="mb-2 grid shrink-0 grid-cols-3 gap-1.5" role="tablist">
-        {[['all', 'ぜんぶ'], ['free', 'フリー対戦'], ['tour', '大会']].map(([k, label]) => (
+        {[['all', '全部'], ['free', 'フリー対戦'], ['tour', '大会']].map(([k, label]) => (
           <button key={k} type="button" role="tab" aria-selected={tab === k} data-card-deck-replays-tab={k} onClick={() => { Audio_.fgSe.tap(); setTab(k); }}
             className={`min-h-[40px] rounded-xl border text-[13px] font-black ${tab === k ? 'border-amber-300 bg-amber-500/25 text-amber-50' : 'border-white/10 bg-slate-900/80 text-slate-300'}`}>{label}</button>
         ))}

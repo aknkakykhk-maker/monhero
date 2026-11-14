@@ -409,8 +409,8 @@ check('モードカードの最高スコアは全難易度の自己ベスト最�
 check('バトル中もクイックはスコアを出さない', has('{!isQuickMode(runMode)&&<div data-battle-score'));
 // スコアの数字は TrainingCountUp でカウントアップする形になった。枠は mh-end-score(クリア・敗北・リタイアの3画面)
 check('最終リザルト3画面のスコア枠をクイックでは出さない',
-  (source.match(/\{!isQuickMode\(runMode\)&&<div className="mh-end-score [^"]*"><div className="text-(?:5xl|3xl) font-mono font-black text-white(?: [^"]*)?"><TrainingCountUp from=\{0\} to=\{score\}/g) || []).length === 3,
-  `${(source.match(/\{!isQuickMode\(runMode\)&&<div className="mh-end-score [^"]*"><div className="text-(?:5xl|3xl) font-mono font-black text-white(?: [^"]*)?"><TrainingCountUp from=\{0\} to=\{score\}/g) || []).length}か所`);
+  (source.match(/\{!isQuickMode\(runMode\)&&<div className="mh-end-score [^"]*"><div className="text-(?:5xl|3xl) font-mono font-black text-white(?: [^"]*)?">(?:<FitNumber finalText=\{Number\(score\)\.toLocaleString\(\)\}>)?<TrainingCountUp from=\{0\} to=\{score\}/g) || []).length === 3,
+  `${(source.match(/\{!isQuickMode\(runMode\)&&<div className="mh-end-score [^"]*"><div className="text-(?:5xl|3xl) font-mono font-black text-white(?: [^"]*)?">(?:<FitNumber finalText=\{Number\(score\)\.toLocaleString\(\)\}>)?<TrainingCountUp from=\{0\} to=\{score\}/g) || []).length}か所`);
 check('WAVEリザルトのスコア内訳をクイックでは出さない',
   has('{/* スコアの内訳。クイックモードはスコアを競わないので出さない */}') && has('{!isQuickMode(runMode)&&(<>'));
 check('WAVE別ログのスコア列もクイックでは出さない',

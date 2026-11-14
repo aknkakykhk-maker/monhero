@@ -192,11 +192,11 @@ const MSX_CSS = `
 .msx .v-st.gs-a div.up{transition:transform .35s cubic-bezier(.2,.9,.3,1.25),box-shadow .35s;transform-origin:50% 100%}
 .msx .v-st.gs-a.zin div.up{transform:translateY(-6px) scale(1.1);z-index:3;box-shadow:0 0 16px #fde047aa,0 8px 14px #000a}
 .msx .v-st.gs-a u.g{transition:height .35s,margin .35s}
-.msx .v-st.gs-a.zin u.g i,.msx .v-st.gs-a.zin u.g s.gu{transition:none}
-.msx .v-st.gs-a:not(.zin) u.g i,.msx .v-st.gs-a:not(.zin) u.g s{transition:left .45s ease-in-out,width .45s ease-in-out}
+.msx .v-st.gs-a.zs u.g i,.msx .v-st.gs-a.zs u.g s.gu{transition:none}
+.msx .v-st.gs-a:not(.zs) u.g i,.msx .v-st.gs-a:not(.zs) u.g s{transition:left .45s ease-in-out,width .45s ease-in-out}
 .msx .v-st.gs-a.zin.many div.up{transform:none;box-shadow:0 0 8px #fde04766}
-.msx .v-st.gs-a.zin div.up u.g{height:12px;margin:2px 3px 12px;background-color:#334155;background-image:linear-gradient(90deg,transparent calc(100% - 1px),#cbd5e1aa 0)}
-.msx .v-st.gs-a.zin div.up u.g i,.msx .v-st.gs-a.zin div.up u.g s{border-radius:2px}
+.msx .v-st.gs-a.zs div.up u.g,.msx .v-st.gs-a.zs div.dn u.g{height:12px;margin:2px 3px 12px;background-color:#334155;background-image:linear-gradient(90deg,transparent calc(100% - 1px),#cbd5e1aa 0)}
+.msx .v-st.gs-a.zs div.up u.g i,.msx .v-st.gs-a.zs div.up u.g s,.msx .v-st.gs-a.zs div.dn u.g i,.msx .v-st.gs-a.zs div.dn u.g s{border-radius:2px}
 .msx .v-st.gs-a u.g q{quotes:none;position:absolute;left:0;right:0;top:100%;display:flex;justify-content:space-between;font-size:10px;font-weight:800;color:#fde68a;line-height:11px;pointer-events:none}
 .msx .v-st.gs-a u.g q::before,.msx .v-st.gs-a u.g q::after{content:none}
 @container (max-width:340px){.msx .v-st.gs-a u.g q{font-size:9.5px;letter-spacing:-.06em;left:-3px;right:-3px}}
@@ -288,7 +288,7 @@ const MSX_CSS = `
 .msx .v-q .ask{background:#fff;color:#1e1b4b;border-radius:12px;padding:6px 10px;font-size:12.5px;font-weight:900;text-align:center;border:2px solid #f9a8d4}
 .msx .v-q .bt{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px}
 .msx .v-ch{background:linear-gradient(180deg,#fff,#fde7f3);color:#1e1b4b;border:2px solid #f472b6;border-bottom-width:4px;border-radius:13px;padding:6px 6px;text-align:center;font-size:13.5px;font-weight:900;line-height:1.25;min-width:0}
-.msx .v-ch small{display:block;font-size:10px;font-weight:800;color:#9d174d;white-space:nowrap}
+.msx .v-ch small{display:block;font-size:10px;font-weight:800;color:#9d174d;white-space:normal} /* 狭い画面では「・」のあとで折る(jaWrap。言葉の途中では折らない) */
 .msx .v-ch.b{border-color:#38bdf8;background:linear-gradient(180deg,#fff,#e0f2fe)}.msx .v-ch.b small{color:#075985}
 .msx .v-ch.n{grid-column:1/-1;background:#1e293b;color:#cbd5e1;border-color:#475569;font-size:11.5px;padding:4px}
 .msx .v-pol{background:#1e1a36;border:1px solid #3b3566;border-radius:12px;padding:6px 9px;margin-top:6px}
@@ -365,7 +365,7 @@ const MSX_CSS = `
 .msx .v-sw i{flex:1;aspect-ratio:1;max-width:30px;border-radius:50%;border:2px solid #ffffff55}
 .msx .v-sw i.on{border-color:#fff;box-shadow:0 0 0 2px #fde047}
 .msx .v-sum{display:flex;align-items:center;gap:8px;background:#1e1a36;border:1px solid #3b3566;border-radius:12px;padding:6px 9px;margin-top:5px;font-size:11.5px;font-weight:900;line-height:1.35;min-width:0}
-.msx .v-sum .k{width:46px;font-size:10px;color:#f9a8d4;flex:none}
+.msx .v-sum .k{min-width:46px;font-size:10px;color:#f9a8d4;flex:none;white-space:nowrap} /* 見出しは折らない(大きい文字で「持ちこ/み」になっていた) */
 .msx .v-sum .ed{margin-left:auto;font-size:10px;color:#7dd3fc;flex:none}
 .msx .v-big{display:block;margin-top:8px;border-radius:99px;padding:12px;text-align:center;font-size:16px;font-weight:900;background:linear-gradient(90deg,#f472b6,#fb923c);box-shadow:0 4px 0 #9d174d,0 0 18px #f472b688;white-space:nowrap}
 .msx .v-issa{position:absolute;left:2%;bottom:-58%;height:150%;filter:drop-shadow(0 6px 6px #000a)}
@@ -711,7 +711,7 @@ const MSX_CSS = `
 .msx-gt-mon{display:flex;align-items:center;gap:5px;margin-top:3px;font-size:11px}
 .msx-gt-mon img{flex:none;width:24px;height:24px;border-radius:7px;object-fit:contain;background:#1e1a36}.msx-gt-mon .nm{flex:1;min-width:0;overflow-wrap:anywhere}.msx-gt-mon .v{flex:0 1 auto;font-size:10px;color:#cbd5e1;text-align:right}
 .msx-gt-none{font-size:10.5px;color:#94a3b8;margin-top:2px}
-/* 選ぶ画面: はじめの能力(数字を大きく・伸びやすさは小さく)と「くわしく」の窓(2026-11-14) */
+/* 選ぶ画面: はじめの能力(数字を大きく・素質は小さく)と「くわしく」の窓(2026-11-14) */
 .msx-dt-hd{display:flex;align-items:center;gap:6px}.msx-dt-hd .h1{flex:1;min-width:0}
 .msx .msx-dt-more{flex:none;border-radius:999px;padding:3px 10px;font-size:11px;font-weight:900;background:#f472b6;color:#fff;box-shadow:0 2px 0 #9d174d}
 .msx-dt-sm{font-size:10px;font-weight:700;color:#cbd5e1}
@@ -773,6 +773,17 @@ const MSX_CSS = `
 .msx .v-ft{height:auto;min-height:52px;padding-top:4px;padding-bottom:4px}
 .msx .v-ft button{min-height:44px}
 .msx .v-hd{height:auto;min-height:32px}
+/* 文は言葉の途中で折らない(docs/spec/MONSUC_UI.md の 4)。対応していない端末ではいままでどおり */
+.msx button,.msx .v-opt,.msx .bub,.msx .v-log,.msx .v-talk,.msx .v-h{word-break:auto-phrase}
+/* 画面の決まり(docs/spec/MONSUC_UI.md)の共通の部品: 見せ場の数字 .v-num(真ん中そろえ)・動いた数字の札 .v-gains */
+.msx .v-num{text-align:center;line-height:1.15}
+.msx .v-num>small{display:block;font-size:11px;font-weight:900;color:#e2e8f0}
+.msx .v-num>b{display:inline-flex;align-items:baseline;justify-content:center;gap:8px;font-size:28px;font-weight:900;color:#fde047;font-variant-numeric:tabular-nums}
+.msx .v-num>b>small{font-size:.55em;margin-left:-6px}
+.msx .v-num>b>em{font-style:normal;font-size:14px;color:#fde047}.msx .v-num>b>em.dn{color:#fca5a5}
+.msx .v-gains{display:flex;flex-wrap:wrap;justify-content:center;gap:5px;margin-top:6px}
+.msx .v-gains>span{background:#1e1a36;border:1px solid #3b3566;border-radius:10px;padding:3px 10px;font-size:12px;font-weight:900;text-align:center;white-space:nowrap}
+.msx .v-gains>span b{color:#fde047;margin-left:4px;font-variant-numeric:tabular-nums}.msx .v-gains>span.dn b{color:#fca5a5}
 @media (prefers-reduced-motion:reduce){.msx *{animation:none!important}}
 /* はじめの画面(MsxHome・2026-11-14 作り直し): 題字ロゴ・大きな「続きから」・3つの札 */
 .msx .v-scene.hm{--mb:14%}

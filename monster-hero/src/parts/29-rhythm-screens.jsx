@@ -551,7 +551,7 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,onLineAdjust=null,cal
 <section data-rhythm-options-group="その他" className={card}>
 {!wide&&<h3 className={head}>◆ その他</h3>}
 <div className={wide?`mt-1 ${grid}`:`mt-3 ${grid}`}>
-{field('曲えらびで試聴する',toggle('songPreviewEnabled'))}
+{field('曲選びで試聴する',toggle('songPreviewEnabled'))}
 {field('タップ時の振動',<>
               {toggle('vibrationEnabled')}
               {/* この端末で振動できるかを出す。iPhoneのSafariには振動のしくみが無い時期が長く、
@@ -1227,7 +1227,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
                     className="ml-1 shrink-0 rounded-md border border-sky-300/40 bg-sky-500/10 px-1 py-0.5 text-[10px] font-black leading-none text-sky-200">{row.versions}つの版</small>}
                   {favoriteIds.has(entry.songId)&&<small {...(main?{'data-rhythm-song-row-favorite':''}:{})} aria-label="お気に入り" className="ml-auto shrink-0 text-[12px] leading-none text-rose-300">♥</small>}
                   {firstSongId&&row.members.some(item=>item.songId===firstSongId)&&<small {...(main?{'data-rhythm-song-first':firstSongId}:{})}
-                    className="ml-auto shrink-0 rounded-md border border-emerald-300/60 bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-black text-emerald-200">🔰 はじめての1曲</small>}
+                    className="ml-auto shrink-0 rounded-md border border-emerald-300/60 bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-black text-emerald-200">🔰 初めての1曲</small>}
                   {lockedSong(entry)&&<small {...(main?{'data-rhythm-song-locked':entry.songId}:{})}
                     className="ml-auto shrink-0 rounded-md border border-amber-300/60 bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-black text-amber-200">🔒 {rhythmSongPrice(entry.songId).toLocaleString()}P</small>}
                   {eventSong&&<small {...(main?{'data-rhythm-song-event':entry.songId}:{})}
@@ -1372,7 +1372,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
       onClick={()=>{if(!buyBusy)setBuyAsk(null);}}>
       <div className="w-full max-w-sm rounded-2xl border border-amber-300/50 bg-slate-900 p-4 text-center" onClick={e=>e.stopPropagation()}>
         <p style={JA_WRAP_STYLE} className="text-sm font-black text-white">{jaWrap(`「${rhythmSongFullName(buyAsk)}」を買いますか？`)}</p>
-        <p style={JA_WRAP_STYLE} className="mt-1 text-xs font-bold text-slate-300">{jaWrap(`${rhythmSongPrice(buyAsk.songId).toLocaleString()}ビートPで、全部の難易度で遊べるようになります。`)}</p>
+        <p style={JA_WRAP_STYLE} className="mt-1 text-xs font-bold text-slate-300">{jaWrap(`${rhythmSongPrice(buyAsk.songId).toLocaleString()}ビートPで、全部の難易度で遊べるようになります。${typeof rhythmSongHasBundle==='function'&&rhythmSongHasBundle(buyAsk.songId)?'short ver. もいっしょに遊べます。':''}`)}</p>
         <p className="mt-1 text-[11px] font-bold tabular-nums text-amber-200">いまのビートP {songLock.balance==null?'—':Number(songLock.balance).toLocaleString()}</p>
         {buyError&&<p data-rhythm-song-buy-error style={JA_WRAP_STYLE} className="mt-2 text-[11px] font-black text-red-300">{jaWrap(buyError)}</p>}
         <div className="mt-3 flex gap-2">
@@ -1461,7 +1461,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
       <img src={lyricFull} alt="歌詞カード" className="block h-auto max-w-none" style={{width:'max(100%, 900px)'}}/>
       <button type="button" data-rhythm-song-lyric-full-close onClick={()=>setLyricFull(null)}
         className="fixed right-3 top-3 min-h-[48px] rounded-xl bg-slate-800/90 px-4 text-sm font-black text-white"
-        style={{position:'fixed',top:'max(12px, env(safe-area-inset-top))',right:12,minHeight:'48px'}}>✕ もどる</button>
+        style={{position:'fixed',top:'max(12px, var(--mh-sa-top))',right:12,minHeight:'48px'}}>✕ 戻る</button>
     </div>}
     {/* ジャンルのシート。並び替えと同じ形で下から出す。選んだらすぐ閉じる */}
     {genreOpen&&<div data-rhythm-genre-sheet className="fixed inset-0 z-[9000] flex items-end justify-center"
@@ -1533,11 +1533,60 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
 // ===== お知らせの予告動画(2026-11-02 イベント「鍵の向こう側へ」・社長「BGMを止めて公開」) =====
 // 押すまで読み込まない(preload none)。再生しているあいだだけゲームの音を絞り(Audio_.setVideoHold)、
 // 終わる・一時停止する・枠を閉じる(この部品が消える)と元に戻す。読めなかったら外枠(figure)ごと消す
+// ===== 動画の音をゲームの音量の設定に合わせる(2026-11-14 社長「予告動画の音が、設定の音量と関係なく鳴る」iPhone の Safari) =====
+// 音量は Audio_.videoGain()(BGM の音量・音を切っているかで決まる 0〜1)。0 なら消音(muted)にする。
+// iPhone の Safari は video.volume を書いても効かないので、Web Audio の音量の節(GainNode)を通す。
+// その節は、動画を押した手の動きの中でだけ作る(iPhone は手の動きの外で作ると音の出口が止まったままになり、つないだ動画がずっと無音になる)。作れなかったら volume だけ書く(前と同じ鳴り方)。
+// 再生のあいだは 0.5秒ごとに設定を読み直す(途中で音量を変えても効く)
+let mhVideoAudioCtx=null;
+const mhVideoGainNow=()=>{try{if(typeof Audio_==='undefined'||!Audio_||typeof Audio_.videoGain!=='function')return 1;const g=Number(Audio_.videoGain());return Number.isFinite(g)?Math.max(0,Math.min(1,g)):1;}catch(e){return 1;}};
+const useVideoVolume=(ref,key='')=>{ // key … 動画の枠が作り直される(src が替わる)たびに付け直す
+  const node=useRef(null);
+  const mutedByUs=useRef(false);
+  const apply=()=>{
+    const el=ref.current;if(!el)return;
+    const g=mhVideoGainNow();
+    try{el.dataset.mhVideoGain=g.toFixed(3);el.dataset.mhVideoWired=node.current?'1':'0';}catch(e){} // 検査が読む印(画面には出ない)
+    // 消音は「設定が 0 なのでこちらで消した」ときだけ解く(プレイヤーが消した・ふだん無音で流す動画はそのまま)
+    if(g<=0){if(!el.muted){el.muted=true;mutedByUs.current=true;}return;}
+    if(mutedByUs.current){mutedByUs.current=false;el.muted=false;}
+    if(node.current){try{node.current.gain.value=g;}catch(e){}try{el.volume=1;}catch(e){}return;}
+    try{el.volume=g;}catch(e){}
+  };
+  // 押した手の動きの中で呼ぶ: 音の出口を起こし、まだなら動画を音量の節へつなぐ
+  const wire=()=>{
+    const el=ref.current;if(!el)return;
+    // つないだあとに iPhone が音の出口を止めた(アプリの切り替え・電話など)ときも、押した手の中で起こし直す
+    if(node.current){if(mhVideoAudioCtx&&mhVideoAudioCtx.state!=='running'){try{const p=mhVideoAudioCtx.resume();if(p&&typeof p.catch==='function')p.catch(()=>{});}catch(e){}}apply();return;}
+    try{
+      const AC=typeof window!=='undefined'?(window.AudioContext||window.webkitAudioContext):null;if(!AC)return;
+      if(!mhVideoAudioCtx)mhVideoAudioCtx=new AC();
+      const ctx=mhVideoAudioCtx;
+      if(ctx.state!=='running'){try{const p=ctx.resume();if(p&&typeof p.catch==='function')p.catch(()=>{});}catch(e){}}
+      const src=ctx.createMediaElementSource(el);const gn=ctx.createGain();gn.gain.value=mhVideoGainNow();
+      src.connect(gn);gn.connect(ctx.destination);node.current=gn;
+    }catch(e){node.current=null;}
+    apply();
+  };
+  useEffect(()=>{
+    const el=ref.current;if(!el)return undefined;
+    apply();
+    let id=0;
+    const onPlay=()=>{if(mhVideoAudioCtx&&mhVideoAudioCtx.state!=='running'){try{mhVideoAudioCtx.resume();}catch(e){}}apply();clearInterval(id);id=setInterval(apply,500);};
+    const stop=()=>{clearInterval(id);};
+    el.addEventListener('play',onPlay);el.addEventListener('pause',stop);el.addEventListener('ended',stop);
+    return ()=>{clearInterval(id);el.removeEventListener('play',onPlay);el.removeEventListener('pause',stop);el.removeEventListener('ended',stop);
+      if(node.current){try{node.current.disconnect();}catch(e){}node.current=null;}mutedByUs.current=false;};
+  },[key]);
+  return {wire,apply};
+};
 const ChangelogVideo=({src,poster})=>{
   const ref=useRef(null);
+  const vol=useVideoVolume(ref,src);
   const hold=(on)=>{try{if(typeof Audio_!=='undefined'&&Audio_&&typeof Audio_.setVideoHold==='function')Audio_.setVideoHold(on);}catch(e){}};
   useEffect(()=>()=>{try{if(ref.current)ref.current.pause();}catch(e){}hold(false);},[]);
   return <video ref={ref} src={src} poster={poster} controls playsInline preload="none"
+    onPointerDown={vol.wire} onTouchEnd={vol.wire} onClick={vol.wire}
     onPlay={()=>hold(true)} onPause={()=>hold(false)} onEnded={()=>hold(false)}
     onError={e=>{hold(false);const f=e.currentTarget.closest('figure');if(f)f.style.display='none';}}
     style={{display:'block',width:'100%',maxWidth:'320px',margin:'0 auto',borderRadius:'12px',background:'#000'}}/>;
@@ -1549,12 +1598,14 @@ const RhythmHellVideo=({id})=>{
   const [failed,setFailed]=useState(false);
   const [ready,setReady]=useState(false);
   const [sound,setSound]=useState(false);
+  const vol=useVideoVolume(ref,info?info.src:'');
   useEffect(()=>{setFailed(false);setReady(false);setSound(false);},[id]);
   useEffect(()=>()=>{try{if(ref.current)ref.current.pause();}catch(e){}},[]);
   if(!info||failed)return null;
   const toggleSound=()=>{
     const el=ref.current;if(!el)return;
     const next=!sound;setSound(next);el.muted=!next;
+    if(next){vol.wire();vol.apply();} // 音ありにしたら、ゲームの音量の設定に合わせる(押した手の動きの中でつなぐ)
     if(next){try{el.currentTime=0;}catch(e){}}
     try{const p=el.play();if(p&&typeof p.catch==='function')p.catch(()=>{el.muted=true;setSound(false);});}catch(e){}
   };
@@ -1582,7 +1633,7 @@ const RhythmHellGuide=({pageIndex,onPage,onClose})=>{
   const nextVideo=!last?rhythmHellGuideVideo(pages[index+1]&&pages[index+1].video):null;
   // 動画のあるページは横に広げる(横持ちでは 動画|文 の2列、狭い画面では縦に並ぶ)
   return <div data-rhythm-hell-guide role="dialog" aria-modal="true" aria-label={`HELL の遊び方 ${index+1}/${pages.length}`}
-    style={{position:'fixed',inset:0,zIndex:77500,display:'flex',alignItems:'center',justifyContent:'center',padding:'12px calc(16px + env(safe-area-inset-right)) 12px calc(16px + env(safe-area-inset-left))',background:'radial-gradient(ellipse at center,rgba(30,27,75,.96),rgba(2,6,23,.98) 72%)'}}>
+    style={{position:'fixed',inset:0,zIndex:77500,display:'flex',alignItems:'center',justifyContent:'center',padding:'12px calc(16px + var(--mh-sa-right)) 12px calc(16px + var(--mh-sa-left))',background:'radial-gradient(ellipse at center,rgba(30,27,75,.96),rgba(2,6,23,.98) 72%)'}}>
     <section data-rhythm-hell-guide-card style={{width:'100%',maxWidth:video?'760px':'460px',maxHeight:'100%',overflowY:'auto',borderRadius:'20px',border:'1px solid rgba(244,114,182,.45)',background:'rgba(15,23,42,.92)',boxShadow:'0 0 28px rgba(244,114,182,.25)',padding:'16px 18px'}}>
       <small style={{display:'block',fontSize:'10px',fontWeight:900,letterSpacing:'.28em',color:'#f9a8d4'}}>HELL の遊び方 {index+1}/{pages.length}</small>
       <div style={video?{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(220px,1fr))',gap:'12px 16px',alignItems:'start',marginTop:'6px'}:undefined}>
@@ -1601,7 +1652,7 @@ const RhythmHellGuide=({pageIndex,onPage,onClose})=>{
       <div aria-hidden="true" style={{display:'flex',justifyContent:'center',gap:'6px',marginTop:'14px'}}>{pages.map((_,i)=><i key={i} style={{display:'block',width:i===index?'18px':'6px',height:'6px',borderRadius:'999px',background:i===index?'#f472b6':'rgba(148,163,184,.5)'}}/>)}</div>
       <div style={{display:'grid',gridTemplateColumns:index>0?'1fr 2fr':'1fr',gap:'8px',marginTop:'14px'}}>
         {index>0&&<button type="button" data-rhythm-hell-guide-prev onClick={()=>onPage(index-1)} style={{minHeight:'48px',borderRadius:'14px',border:'1px solid rgba(148,163,184,.4)',background:'rgba(30,41,59,.9)',color:'#e2e8f0',fontSize:'14px',fontWeight:900}}>戻る</button>}
-        <button type="button" data-rhythm-hell-guide-next onClick={()=>last?onClose():onPage(index+1)} style={{minHeight:'48px',borderRadius:'14px',border:'0',background:'linear-gradient(135deg,#db2777,#7c3aed)',color:'#fff',fontSize:'14px',fontWeight:900}}>{last?'閉じる':'つぎへ'}</button>
+        <button type="button" data-rhythm-hell-guide-next onClick={()=>last?onClose():onPage(index+1)} style={{minHeight:'48px',borderRadius:'14px',border:'0',background:'linear-gradient(135deg,#db2777,#7c3aed)',color:'#fff',fontSize:'14px',fontWeight:900}}>{last?'閉じる':'次へ'}</button>
       </div>
     </section>
   </div>;
