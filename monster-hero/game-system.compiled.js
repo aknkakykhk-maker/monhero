@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a68ab297a6b23e96
+// source-sha256: b98006d65bc0f526
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -110574,6 +110574,11 @@ const assistantLifeNow = async ({
       void assistantLifeFriendOnSlot(life, slot, now);
     } catch {}
   }
+  if (typeof assistantLifeFindOnSlot === 'function') {
+    try {
+      void assistantLifeFindOnSlot(life, slot, now);
+    } catch {}
+  }
   if (typeof assistantLifeRelTick === 'function') {
     try {
       void assistantLifeRelTick(now);
@@ -115772,7 +115777,22 @@ function AssistantLifeHouse({
   }, React.createElement(AssistantLifeHouseStyle, null), typeof AssistantLifeRelStyle === 'function' && React.createElement(AssistantLifeRelStyle, null), typeof AssistantLifePlanHost === 'function' && React.createElement(AssistantLifePlanHost, {
     ids: ids,
     land: land
-  }), React.createElement("div", {
+  }), typeof AssistantLifeFindCard === 'function' && React.createElement("div", {
+    style: {
+      position: 'fixed',
+      left: 0,
+      right: 0,
+      bottom: 'calc(78px + env(safe-area-inset-bottom))',
+      zIndex: 9100,
+      pointerEvents: 'none'
+    }
+  }, React.createElement("div", {
+    style: {
+      pointerEvents: 'auto',
+      maxWidth: 480,
+      margin: '0 auto'
+    }
+  }, React.createElement(AssistantLifeFindCard, null))), React.createElement("div", {
     className: "mhl-page",
     style: {
       maxWidth: land || tab === 'where' ? 'none' : 480
@@ -117294,6 +117314,150 @@ function AssistantLifeTownMap({
     onClick: () => setSheet(null),
     className: "mt-3 min-h-[44px] w-full rounded-xl border border-slate-600 text-[12px] font-black text-slate-300 active:scale-[.98]"
   }, "閉じる"))));
+}
+const ASSISTANT_LIFE_FIND_KEY = 'mh_msx_find_v1';
+const ASSISTANT_LIFE_FIND_DAILY = 2;
+const ASSISTANT_LIFE_FIND_CHANCE = Object.freeze({
+  trip: 0.08,
+  gift: 0.04,
+  masmon: 0.05
+});
+const ASSISTANT_LIFE_FIND_TABLE = Object.freeze([['juice', 12], ['powder', 12], ['pack', 12], ['dango', 12], ['grass', 12], ['mag', 6], ['hachi', 6], ['band', 6], ['omamori', 6], ['license', 6], ['guide', 5], ['loupe', 5]]);
+const ASSISTANT_LIFE_FIND_LINES = Object.freeze({
+  trip: ['これ、道で見つけたよ。使うかなって', '落ちてたの拾ってきたんだ。あげる'],
+  gift: ['あなたに持っててほしいの', 'これ、きっと役に立つよ'],
+  masmon: ['(マスモンが何かくわえて戻ってきた!)', '(マスモンが得意げに持ってきた!)']
+});
+const assistantLifeFindNorm = raw => {
+  const o = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
+  const last = {};
+  if (o.last && typeof o.last === 'object') for (const [k, v] of Object.entries(o.last)) if (typeof v === 'string' && v.length < 24) last[String(k).slice(0, 24)] = v;
+  const pending = (Array.isArray(o.pending) ? o.pending : []).filter(p => p && typeof p.item === 'string' && typeof p.kind === 'string').slice(-5).map(p => ({
+    item: p.item.slice(0, 24),
+    kind: p.kind.slice(0, 12),
+    who: typeof p.who === 'string' ? p.who.slice(0, 24) : '',
+    line: Number.isFinite(p.line) ? p.line : 0
+  }));
+  return {
+    day: typeof o.day === 'string' ? o.day.slice(0, 12) : '',
+    n: Math.max(0, Math.min(99, Math.floor(Number(o.n) || 0))),
+    last,
+    pending
+  };
+};
+const assistantLifeFindPick = (rand = Math.random) => {
+  const total = ASSISTANT_LIFE_FIND_TABLE.reduce((a, t) => a + t[1], 0);
+  let x = rand() * total;
+  for (const [id, w] of ASSISTANT_LIFE_FIND_TABLE) {
+    x -= w;
+    if (x < 0) return id;
+  }
+  return ASSISTANT_LIFE_FIND_TABLE[0][0];
+};
+const assistantLifeFindOnSlot = async (life, slot, now = Date.now(), rand = Math.random) => {
+  try {
+    if (typeof msxReleased !== 'function' || !msxReleased() || typeof storeGet !== 'function' || typeof storeSet !== 'function' || !life) return null;
+    const st = assistantLifeFindNorm(await storeGet(ASSISTANT_LIFE_FIND_KEY, null));
+    const day = typeof assistantLifeDayKey === 'function' ? String(assistantLifeDayKey(now)) : '';
+    if (st.day !== day) {
+      st.day = day;
+      st.n = 0;
+    }
+    const where = {};
+    for (const [id, s] of Object.entries(life.solo || {})) if (s) where[id] = {
+      place: s.place,
+      grouped: false
+    };
+    for (const g of life.groups || []) for (const id of g.ids || []) where[id] = {
+      place: g.place,
+      grouped: (g.ids || []).length >= 2
+    };
+    const found = [];
+    for (const [id, w] of Object.entries(where)) {
+      if (st.n + found.length >= ASSISTANT_LIFE_FIND_DAILY) break;
+      const was = st.last[id];
+      let kind = null;
+      if (was && was !== 'home' && w.place === 'home') kind = 'trip';else if (w.place === 'home' && w.grouped) kind = 'gift';else if (w.place === 'battle') kind = 'masmon';
+      if (kind && rand() < ASSISTANT_LIFE_FIND_CHANCE[kind]) found.push({
+        item: assistantLifeFindPick(rand),
+        kind,
+        who: id,
+        line: Math.floor(rand() * 2)
+      });
+    }
+    st.last = Object.fromEntries(Object.entries(where).map(([id, w]) => [id, w.place]));
+    if (found.length) {
+      const K = typeof MSX_KEYS !== 'undefined' ? MSX_KEYS.meta : 'mh_monsuc_meta_v1';
+      const meta = msxNormMeta(await storeGet(K, null));
+      const ok = [];
+      for (const f of found) {
+        if (typeof MSX_ITEM_BY_ID !== 'undefined' && !MSX_ITEM_BY_ID[f.item]) continue;
+        meta.items[f.item] = Math.min(999, (meta.items[f.item] || 0) + 1);
+        ok.push(f);
+      }
+      if (ok.length) {
+        await storeSet(K, msxNormMeta(meta));
+        st.n += ok.length;
+        st.pending = [...st.pending, ...ok].slice(-5);
+      }
+    }
+    await storeSet(ASSISTANT_LIFE_FIND_KEY, st);
+    if (found.length && typeof window !== 'undefined') {
+      try {
+        window.dispatchEvent(new Event('mh-life-find'));
+      } catch (_) {}
+    }
+    return found;
+  } catch (_) {
+    return null;
+  }
+};
+function AssistantLifeFindCard() {
+  const [st, setSt] = React.useState(null);
+  const read = React.useCallback(async () => {
+    try {
+      if (typeof msxReleased !== 'function' || !msxReleased()) {
+        setSt(null);
+        return;
+      }
+      setSt(assistantLifeFindNorm(await storeGet(ASSISTANT_LIFE_FIND_KEY, null)));
+    } catch (_) {}
+  }, []);
+  React.useEffect(() => {
+    void read();
+    window.addEventListener('mh-life-find', read);
+    return () => window.removeEventListener('mh-life-find', read);
+  }, [read]);
+  const p = st && st.pending[0];
+  if (!p) return null;
+  const item = typeof MSX_ITEM_BY_ID !== 'undefined' ? MSX_ITEM_BY_ID[p.item] : null;
+  const who = typeof assistantById === 'function' && p.who ? assistantById(p.who) : null;
+  const lines = ASSISTANT_LIFE_FIND_LINES[p.kind] || ASSISTANT_LIFE_FIND_LINES.trip;
+  const close = async () => {
+    try {
+      const n = assistantLifeFindNorm(await storeGet(ASSISTANT_LIFE_FIND_KEY, null));
+      n.pending = n.pending.slice(1);
+      await storeSet(ASSISTANT_LIFE_FIND_KEY, n);
+      setSt(n);
+    } catch (_) {}
+  };
+  return React.createElement("div", {
+    "data-assistant-life-find": true,
+    className: "mx-2 mb-1 flex items-center gap-2 rounded-xl border border-amber-300/70 bg-slate-950/90 px-2.5 py-1.5"
+  }, React.createElement("span", {
+    className: "text-[24px]",
+    "aria-hidden": "true"
+  }, item ? item.e : '🎁'), React.createElement("div", {
+    className: "min-w-0 flex-1"
+  }, React.createElement("p", {
+    className: "text-[12px] font-black text-amber-100"
+  }, "🎁 ", item ? item.name : '持ちこみアイテム', "をもらった"), React.createElement("p", {
+    className: "text-[10.5px] font-bold leading-snug text-slate-200"
+  }, who ? `${who.name}「${lines[p.line % lines.length]}」` : lines[p.line % lines.length], "(モンヒロサクセスで使えます)")), React.createElement("button", {
+    type: "button",
+    onClick: close,
+    className: "shrink-0 rounded-lg border border-amber-300/60 px-2 py-1 text-[11px] font-black text-amber-100 active:scale-95"
+  }, "閉じる"));
 }
 const ASSISTANT_LIFE_ROOM_FRONT = Object.freeze({
   mua: 'sofa',
