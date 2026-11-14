@@ -517,6 +517,8 @@ const assistantLifeNow = async ({ members, now = Date.now() } = {}) => {
   if (typeof amgtOnLifeSlot === 'function') { try { amgtOnLifeSlot(life, slot, now); } catch {} }
   // フレンドの家との行き来(控えを送る・ときどき助手が自分で遊びに行く。56-assistant-life-friend.jsx。印が偽なら何もしない)
   if (typeof assistantLifeFriendOnSlot === 'function') { try { void assistantLifeFriendOnSlot(life, slot, now); } catch {} }
+  // モンヒロサクセスの持ちこみアイテムの拾い物・贈り物(56-assistant-life-finds.jsx。印 monheroSuccess が偽なら何もしない)
+  if (typeof assistantLifeFindOnSlot === 'function') { try { void assistantLifeFindOnSlot(life, slot, now); } catch {} }
   if (typeof assistantLifeRelTick === 'function') { try { void assistantLifeRelTick(now); } catch {} } // 前の日からのけんかは朝4時までに仲直り(rel.jsx)
   return life;
 };
