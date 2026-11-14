@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 0a05d7fe4505b97b
+// source-sha256: fdc42570d5ee73f8
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -169531,6 +169531,7 @@ const MSX_R3_COURSE_BG = Object.freeze({
   wind: 'forest_deep',
   star: 'monhero_night'
 });
+const MSX_STAT_KEYS_R3 = ['life', 'pow', 'wise', 'hit', 'eva', 'tough'];
 function MsxR3Shugyo({
   run,
   setRun,
@@ -169650,7 +169651,7 @@ function MsxR3Shugyo({
     const missed = (o.tries || []).filter(t => !t.hit).map(t => (all.find(x => x.id === t.id) || {}).name).filter(Boolean);
     const stg = (SH.courses[o.course] || {}).stages || [];
     const helpers = Array.from(new Set((o.stages || []).flat()));
-    const R = MSX_RES[o.result] || MSX_RES.ok;
+    void stg;
     const body = React.createElement(React.Fragment, null, React.createElement(MsxBand, {
       s: s,
       v: SUC.peek(s),
@@ -169685,21 +169686,20 @@ function MsxR3Shugyo({
         })
       }
     }), React.createElement("div", {
-      className: `v-stamp msx-pop ${learned ? '' : R.cls}`,
+      className: `v-stamp msx-pop ${learned ? '' : 'ok'}`,
       style: {
         top: '5%',
         fontSize: learned ? 38 : 32
       }
-    }, learned ? '技をおぼえた!' : o.result === 'sab' ? 'サボった…' : o.result === 'fail' ? '修行は失敗…' : '修行おわり!', React.createElement("small", null, learnedAll.length > 1 ? `✨ ${learnedAll.map(x => x.name).join('・')}` : learned ? `✨ ${learned.name}(${MSX_R3_DIST[Math.min(...(learned.dist || [1]))]}い間合い)` : R.word)), React.createElement("div", {
+    }, learned ? '技をおぼえた!' : '修行おわり!', React.createElement("small", null, learnedAll.length > 1 ? `✨ ${learnedAll.map(x => x.name).join('・')}` : learned ? `✨ ${learned.name}(${MSX_R3_DIST[Math.min(...(learned.dist || [1]))]}い間合い)` : '技は覚えられなかった')), React.createElement("div", {
       className: "v-chips",
       style: {
         top: 'auto',
         bottom: 8
       }
-    }, stg.map((pair, i) => React.createElement("span", {
-      key: i,
+    }, React.createElement("span", {
       className: "v-chip"
-    }, "第", i + 1, "段 ", pair.map(k => `${MSX_STAT_ICON[k]}${gains[k] ? `+${gains[k]}` : '±0'}`).join(' '))), helpers.length ? React.createElement("span", {
+    }, MSX_STAT_KEYS_R3.filter(k => gains[k]).map(k => `${MSX_STAT_ICON[k]}+${gains[k]}`).join(' ') || '±0'), helpers.length ? React.createElement("span", {
       className: "v-chip ylw"
     }, "👥 編成のおかげ ×", helpers.length, "体") : null)), React.createElement(MsxStRow, {
       stats: s.stats,
@@ -169708,7 +169708,7 @@ function MsxR3Shugyo({
       className: "v-log"
     }, React.createElement("span", {
       className: "hd2"
-    }, "⚔ 修行のけっか(", R.word, ")"), React.createElement("br", null), Object.keys(gains).length ? Object.entries(gains).map(([k, g], i) => React.createElement("span", {
+    }, "⚔ 修行のけっか"), React.createElement("br", null), Object.keys(gains).length ? Object.entries(gains).map(([k, g], i) => React.createElement("span", {
       key: k
     }, i ? '・' : '', MSX_STAT_NAME[k], " ", React.createElement("b", {
       className: "gu"
