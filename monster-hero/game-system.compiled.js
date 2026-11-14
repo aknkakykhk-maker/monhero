@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 2c6f9d7ac09d5ffa
+// source-sha256: fdfede3f7d8d042d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -151365,17 +151365,19 @@ const MSC_CSS = `
 .msc-lines path{fill:none;stroke-linecap:round}
 .msc-lines .base{stroke:#cbb48b;stroke-width:2}
 .msc-lines .win{stroke:#f97316;stroke-width:3.2;stroke-dasharray:1;stroke-dashoffset:1;animation:msc-draw .55s ease-out forwards}
-.msc-lines .win.me{stroke:#f43f5e}
+.msc-lines .win.me{stroke:#ef4444}
 @keyframes msc-draw{to{stroke-dashoffset:0}}
 .msc-cupbadge{position:absolute;right:4px;top:50%;transform:translateY(-50%);width:48px;padding:6px 0;border-radius:10px;background:linear-gradient(180deg,#7f1d1d,#4c0519);border:2px solid #f59e0b;color:#fde68a;font-weight:900;font-size:11px;text-align:center;line-height:1.2}
 .msc-cupbadge.lit{animation:msc-glow 1.2s ease-in-out infinite alternate}
 @keyframes msc-glow{from{box-shadow:0 0 0 rgba(251,191,36,0)}to{box-shadow:0 0 16px rgba(251,191,36,.9)}}
 .msc-note{font-size:12px;color:#fde68a;line-height:1.5}
-.msc-note small{display:block;color:#cbd5e1;font-size:11px}
+.msc-note .nw{white-space:nowrap}.msc-note small{display:block;color:#cbd5e1;font-size:11px}
 .msc-talk{display:flex;gap:8px;align-items:flex-start;background:#fffaf0;color:#3b2a14;border-radius:14px;padding:8px 10px;border:2px solid #e2c89a}
 .msc-talk img{width:52px;height:52px;border-radius:50%;object-fit:cover;flex:0 0 auto;background:#fde68a}
 .msc-talk p{margin:0;font-size:13px;font-weight:700;line-height:1.55}
 .msc-talk em{font-style:normal;color:#e11d48}
+.msc-talk{position:relative}.msc-sk{position:absolute;right:8px;bottom:5px;border:0;border-radius:99px;background:#a67c3c;color:#fff;font-size:10px;font-weight:900;padding:2px 9px}
+.msc-row{transition:opacity .5s}
 .msc-vs{position:relative;height:200px;border-radius:16px;overflow:hidden;background:#3b2a52 center/cover no-repeat}
 .msc-vs::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(20,16,38,.25),rgba(20,16,38,.05) 50%,rgba(20,16,38,.75))}
 .msc-vs .cap{position:absolute;z-index:2;top:6px;left:50%;transform:translateX(-50%);background:rgba(20,16,38,.8);border-radius:999px;padding:3px 12px;font-size:12px;font-weight:900;color:#fde68a;white-space:nowrap}
@@ -151522,81 +151524,82 @@ function MonsucBracket({
   suc,
   s,
   info,
-  result,
+  result: resultProp,
   onFight,
   onResultOnly,
   onClose,
   canSkip
 }) {
+  const result = resultProp || typeof window !== 'undefined' && window.__MSC_BK_RESULT || null;
   const bk = info.bracket;
   const [stage, setStage] = useState(0);
   useEffect(() => {
-    const ts = [setTimeout(() => setStage(1), 350), setTimeout(() => setStage(2), 1050), setTimeout(() => setStage(3), 1700)];
+    const k = typeof window !== 'undefined' && Number(window.__MSC_BK_T) || 1;
+    const ts = [setTimeout(() => setStage(1), 1200 * k), setTimeout(() => setStage(2), 3000 * k), setTimeout(() => setStage(3), 4800 * k)];
     return () => ts.forEach(clearTimeout);
   }, []);
+  const [vh, setVh] = useState(() => typeof window !== 'undefined' ? window.innerHeight : 844);
+  useEffect(() => {
+    const f = () => setVh(window.innerHeight);
+    window.addEventListener('resize', f);
+    return () => window.removeEventListener('resize', f);
+  }, []);
   if (!bk) return null;
+  const Z = '\u200b';
   const E = bk.entrants;
-  const no = monsucPopOrder(suc, s, E);
+  const st = result ? 3 : stage;
+  const no = bk.pop && bk.pop.length === E.length ? bk.pop : monsucPopOrder(suc, s, E);
   const r1 = bk.rounds[0] || [];
   const r2 = bk.rounds[1] || [];
-  const out = i => stage >= 1 && !r1.includes(i) || stage >= 2 && r1.includes(i) && !r2.includes(i) || result === 'win' && i === 4 || result === 'lose' && i === 0;
-  const H = 40;
+  const fi = bk.final && bk.final[1] || 4;
+  const out = i => st >= 1 && !r1.includes(i) || st >= 2 && r1.includes(i) && !r2.includes(i) || result === 'win' && i === fi || result === 'lose' && i === 0;
+  const H = Math.max(36, Math.min(68, Math.floor((vh - 318) / 8)));
   const yOf = i => i * H + H / 2;
-  const X = [0, 22, 44, 66, 80];
-  const W = 84;
-  const pair = (a, b, lv) => `M${X[lv]} ${a}H${X[lv + 1]}M${X[lv]} ${b}H${X[lv + 1]}M${X[lv + 1]} ${a}V${b}`;
-  const base = [];
-  for (let k = 0; k < 4; k++) base.push(pair(yOf(2 * k), yOf(2 * k + 1), 0));
-  const mid1 = [0, 1, 2, 3].map(k => (yOf(2 * k) + yOf(2 * k + 1)) / 2);
-  base.push(pair(mid1[0], mid1[1], 1), pair(mid1[2], mid1[3], 1));
-  const mid2 = [(mid1[0] + mid1[1]) / 2, (mid1[2] + mid1[3]) / 2];
-  base.push(pair(mid2[0], mid2[1], 2));
-  const mid3 = (mid2[0] + mid2[1]) / 2;
-  base.push(`M${X[3]} ${mid3}H${X[4]}`);
+  const X = [0, 22, 44, 66, 84];
+  const W = 90;
+  const pair = (a, c, lv) => `M${X[lv]} ${a}H${X[lv + 1]}M${X[lv]} ${c}H${X[lv + 1]}M${X[lv + 1]} ${a}V${c}`;
+  const m1 = [0, 1, 2, 3].map(k => (yOf(2 * k) + yOf(2 * k + 1)) / 2);
+  const m2 = [0, 1].map(j => (m1[2 * j] + m1[2 * j + 1]) / 2);
+  const m3 = (m2[0] + m2[1]) / 2;
+  const base = [0, 1, 2, 3].map(k => pair(yOf(2 * k), yOf(2 * k + 1), 0)).concat(pair(m1[0], m1[1], 1), pair(m1[2], m1[3], 1), pair(m2[0], m2[1], 2), `M${X[3]} ${m3}H${X[4]}`);
   const win = [];
-  if (stage >= 1) r1.forEach((i, k) => win.push({
-    d: `M${X[0]} ${yOf(i)}H${X[1]}V${mid1[k]}`,
-    me: i === 0 || i === 4,
-    key: `a${i}`
+  if (st >= 1) r1.forEach((w, k) => win.push({
+    d: `M${X[0]} ${yOf(w)}H${X[1]}V${m1[k]}`,
+    key: `a${k}`
   }));
-  if (stage >= 2) r2.forEach((i, k) => win.push({
-    d: `M${X[1]} ${mid1[k * 2 + (i === r1[k * 2] ? 0 : 1)]}H${X[2]}V${mid2[k]}`,
-    me: true,
-    key: `b${i}`
+  if (st >= 2) r2.forEach((w, j) => win.push({
+    d: `M${X[1]} ${m1[2 * j + (w === r1[2 * j] ? 0 : 1)]}H${X[2]}V${m2[j]}`,
+    key: `b${j}`
   }));
-  if (stage >= 3) {
-    win.push({
-      d: `M${X[2]} ${mid2[0]}H${X[3]}`,
-      me: true,
-      key: 'c0'
-    }, {
-      d: `M${X[2]} ${mid2[1]}H${X[3]}`,
-      me: true,
-      key: 'c1'
-    });
-  }
-  if (result === 'win') win.push({
-    d: `M${X[3]} ${mid2[0]}V${mid3}H${X[4]}`,
-    me: true,
+  if (st >= 3) [0, 1].forEach(j => win.push({
+    d: `M${X[2]} ${m2[j]}H${X[3]}`,
+    key: `c${j}`
+  }));
+  if (result === 'win' || result === 'lose') win.push({
+    d: `M${X[3]} ${m2[result === 'win' ? 0 : 1]}V${m3}H${X[4]}`,
     key: 'f'
   });
-  const champ = E.find(e => e.champ) || E[4];
-  const foe = E[4];
+  const foe = E[fi];
+  const champ = E.find(e => e.champ) || foe;
   const nm = e => e.you ? info.meName : e.name || mscMonName(e.species);
   const coach = mscAssistant(s.aid);
+  const top = E[no.indexOf(1)] || E[0];
+  const upsets = r1.filter(w => w !== 0 && w !== fi && no[w] >= 5);
+  const foeNo = no[fi];
+  const lines = [top.you ? React.createElement(React.Fragment, null, "「", React.createElement("em", null, "1番人気は", Z, " ", info.meName, "!"), Z, " まずは", Z, " 1回戦から", Z, " 見ていこう」") : React.createElement(React.Fragment, null, "「", React.createElement("em", null, "1番人気は", Z, " ", top.champ ? '王者の ' : '', nm(top), "!"), Z, " ", info.meName, "の", Z, "1回戦は", Z, " これからだよ」"), upsets.length ? React.createElement(React.Fragment, null, "「", React.createElement("em", null, "大穴!", Z, " ", nm(E[upsets[0]])), " が", Z, " 勝ち上がったぞ!", Z, " ", info.meName, "も", Z, " 1回戦を", Z, " 勝ち上がり!」") : React.createElement(React.Fragment, null, "「1回戦が", Z, " おわったよ。", Z, React.createElement("em", null, info.meName), "は", Z, " 順当に", Z, " 勝ち上がり!」"), foeNo >= 4 ? React.createElement(React.Fragment, null, "「", React.createElement("em", null, "大穴!", Z, " ", nm(foe)), Z, " 決勝まで", Z, " きたぞ!", Z, " ", info.meName, "は", Z, " 準決勝も", Z, " 勝って", Z, " 決勝へ!」") : React.createElement(React.Fragment, null, "「準決勝も", Z, " おわったよ。", Z, React.createElement("em", null, info.meName), "は", Z, " 決勝へ!", Z, " 反対の山からは", Z, " ", React.createElement("em", null, nm(foe)), "」")];
   const champNo1 = no[E.indexOf(champ)] === 1;
-  const line = foe.rival ? React.createElement(React.Fragment, null, "「", champNo1 && champ !== foe ? React.createElement(React.Fragment, null, "1番人気は 王者の ", nm(champ), "! でも、") : null, info.meName, "の相手は ", React.createElement("em", null, "ライバルの ", nm(foe)), " だよ。勝てば ごほうび大!」") : foe.champ ? React.createElement(React.Fragment, null, "「1番人気は 王者の ", React.createElement("em", null, nm(foe)), "! ", info.meName, "が当たるのは 決勝。", info.opp && info.opp.note ? `${info.opp.note}、だって。` : '', "ここで勝てば 大金星だよ!」") : React.createElement(React.Fragment, null, "「", info.meName, "の相手は ", React.createElement("em", null, nm(foe)), "! あわてずに いこうね」");
+  const finalLine = foe.rival ? React.createElement(React.Fragment, null, "「", champNo1 && champ !== foe ? React.createElement(React.Fragment, null, "1番人気は", Z, " 王者の ", nm(champ), "!", Z, " でも、", Z) : null, "決勝の相手は", Z, " ", React.createElement("em", null, "ライバルの ", nm(foe)), " だよ。", Z, "勝てば", Z, " ごほうび大!」") : foe.champ ? React.createElement(React.Fragment, null, "「決勝の相手は", Z, " 1番人気の王者", Z, " ", React.createElement("em", null, nm(foe)), "!", Z, " ", info.opp && info.opp.note ? `${info.opp.note}、だって。` : '', Z, "ここで勝てば", Z, " 大金星だよ!」") : React.createElement(React.Fragment, null, "「決勝の相手は", Z, " ", React.createElement("em", null, nm(foe)), "!", Z, " あわてずに", Z, " いこうね」");
   return React.createElement("div", {
     className: "msc-wrap",
     "data-msc-bracket": true,
-    "data-msc-stage": stage
+    "data-msc-stage": st
   }, React.createElement("div", {
     className: "msc-top"
   }, React.createElement("button", {
     className: "msc-btn g s",
     "data-msc-close": true,
     onClick: onClose
-  }, "← もどる"), React.createElement("b", null, info.title, " ", MSC_STARS(info.star))), React.createElement("div", {
+  }, "← 戻る"), React.createElement("b", null, info.title, " ", MSC_STARS(info.star))), React.createElement("div", {
     className: "msc-panel"
   }, React.createElement("div", {
     className: "msc-head"
@@ -151606,15 +151609,16 @@ function MonsucBracket({
     key: i,
     className: `msc-row ${out(i) ? 'out' : ''}`,
     style: {
-      paddingRight: W
+      paddingRight: W,
+      height: H
     },
-    "data-msc-entrant": e.you ? 'you' : i === 4 ? 'foe' : i
+    "data-msc-entrant": e.you ? 'you' : i === fi ? 'foe' : i
   }, React.createElement("span", {
     className: "msc-no",
     title: `${no[i]}番人気`,
     "aria-label": `${no[i]}番人気`
   }, no[i]), React.createElement("span", {
-    className: `msc-name ${e.you ? 'you' : i === 4 ? 'foe' : ''}`
+    className: `msc-name ${e.you ? 'you' : i === fi ? 'foe' : ''}`
   }, React.createElement("span", null, nm(e)), e.you && React.createElement("i", {
     className: "msc-tag you"
   }, "あなた"), e.rival && React.createElement("i", {
@@ -151622,7 +151626,7 @@ function MonsucBracket({
   }, "ライバル"), e.champ && React.createElement("i", {
     className: "msc-tag ch"
   }, "👑王者")), React.createElement("span", {
-    className: `msc-face ${e.you ? 'you' : i === 4 ? 'foe' : ''}`
+    className: `msc-face ${e.you ? 'you' : i === fi ? 'foe' : ''}`
   }, e.you ? React.createElement(MscMyMon, {
     sp: e.species,
     colors: info.colors
@@ -151644,7 +151648,7 @@ function MonsucBracket({
     d: d
   })), win.map(w => React.createElement("path", {
     key: w.key,
-    className: `win ${w.me ? 'me' : ''}`,
+    className: "win me",
     d: w.d,
     pathLength: "1"
   }))), React.createElement("div", {
@@ -151654,18 +151658,37 @@ function MonsucBracket({
     }
   }, "🏆", React.createElement("br", null), "優勝"))), React.createElement("div", {
     className: "msc-note"
-  }, "左の数字は人気の順(1が いちばん人気)。あなたの1戦は 赤い丸の2体のあいだ(", info.meName, " VS ", nm(foe), ")。", React.createElement("small", null, "ほかの試合の結果は、見せるだけの演出です")), React.createElement("div", {
+  }, React.createElement("b", null, "決勝は ", React.createElement("span", {
+    className: "nw"
+  }, info.meName, " VS ", nm(foe))), "。", React.createElement("span", {
+    className: "nw"
+  }, "左の数字は人気の順"), React.createElement("span", {
+    className: "nw"
+  }, "(1が いちばん人気)。"), React.createElement("small", null, React.createElement("span", {
+    className: "nw"
+  }, "ほかの試合の結果は、"), React.createElement("span", {
+    className: "nw"
+  }, "見せるだけの演出です"), React.createElement("span", {
+    className: "nw"
+  }, "(戦うのは決勝の1戦だけ)"))), React.createElement("div", {
     className: "msc-talk"
   }, React.createElement("img", {
     src: mscFace(s.aid),
     alt: ""
-  }), React.createElement("p", null, coach ? React.createElement("b", {
+  }), React.createElement("p", {
+    className: "msx-kp"
+  }, coach ? React.createElement("b", {
     style: {
       display: 'block',
       fontSize: 11,
       color: '#b45309'
     }
-  }, "解説 ", coach.name) : null, line)), React.createElement("div", {
+  }, "解説 ", coach.name) : null, st >= 3 ? finalLine : lines[st]), st < 3 ? React.createElement("button", {
+    type: "button",
+    className: "msc-sk",
+    "data-msc-skip": true,
+    onClick: () => setStage(3)
+  }, "SKIP ▸▸") : null), React.createElement("div", {
     className: "msc-foot"
   }, React.createElement("button", {
     className: "msc-btn y s",
@@ -151675,7 +151698,7 @@ function MonsucBracket({
     className: "msc-btn",
     "data-msc-go": true,
     onClick: onFight
-  }, "⚔ 1戦へ")));
+  }, "⚔ 決勝へ")));
 }
 function MonsucBattleCard({
   suc,
@@ -158123,7 +158146,7 @@ const MSX_STORIES = Object.freeze([Object.freeze({
   badge: '頂への道',
   lead: ['町の育成場で、きみと1体のモンスターの物語が始まる', '大会で勝ち、修行で技を覚え、仲間と強くなろう。', 'めざすは頂への道——ヒーローと呼ばれる日まで。'],
   about: 'デビュー戦から始まり、ジュニア・ミドル・プロの3つの期を経て、最後は「頂への道」に挑む、モンヒロサクセスのいちばん最初のお話。',
-  rows: Object.freeze([['📅', '流れ', 'デビュー期 → ジュニア期 → ミドル期 → プロ期 → 頂への道(3戦)'], ['🏆', '大会', 'ルーキーズ・クラウン/四大大会/季節の賞 ほか。賞金ランクは ルーキー〜ヒーローの10段'], ['👥', '登場人物', '助手(いまはみゅあ)・イッサ博士・ライバルたち'], ['🎯', 'めざすもの', '頂への道の決勝に勝って「ヒーロー」に。']]),
+  rows: Object.freeze([['📅', '流れ', 'デビュー期 → ジュニア期 → ミドル期 → プロ期 → 頂への道(3戦)'], ['🏆', '大会', 'モンスターダービー/四大大会/季節の賞 ほか。賞金ランクは ルーキー〜ヒーローの10段'], ['👥', '登場人物', '助手(いまはみゅあ)・イッサ博士・ライバルたち'], ['🎯', 'めざすもの', '頂への道の決勝に勝って「ヒーロー」に。']]),
   cast: Object.freeze({
     left: 'issa',
     center: 'mua',
@@ -170295,6 +170318,11 @@ const MSX_R3_CSS = `
 .msx .r3 .v-ann .pic span{position:absolute;left:0;right:0;bottom:-2px;text-align:center;background:#a67c3c;color:#fff;font-size:10px;font-weight:900;border-radius:5px}
 .msx .r3 .v-ann .tx{flex:1;font-size:12.5px;font-weight:800;line-height:1.55;align-self:center}
 .msx .r3 .v-ann .tx b{color:#b45309}
+.msx .r3 .v-br{transition:opacity .5s}.msx .r3 .v-br.out{opacity:.38}
+.msx .r3 .v-brl .bs{fill:none;stroke:#a89a78;stroke-width:2;stroke-linecap:round}
+.msx .r3 .v-brl .wl{fill:none;stroke:#ef4444;stroke-width:3.2;stroke-linecap:round;stroke-dasharray:1;stroke-dashoffset:1;animation:msxBkD .7s ease-out forwards}
+@keyframes msxBkD{to{stroke-dashoffset:0}}
+.msx .r3 .v-ann{position:relative}.msx .r3 .v-ann .sk{position:absolute;right:8px;bottom:4px;border:0;border-radius:99px;background:#a67c3c;color:#fff;font-size:10px;font-weight:900;padding:2px 9px}
 .msx .r3 .v-bcs{position:relative;height:150px;flex:none;margin-top:6px;border-radius:14px;overflow:hidden;border:1.5px solid #64748b}
 .msx .r3 .v-bcs .bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .msx .r3 .v-bcs .sh{position:absolute;inset:0;background:linear-gradient(180deg,#0f0d2488,#0f0d2400 40%,#0f0d24aa)}
@@ -170447,7 +170475,8 @@ const MSX_R3_CUP_GRADE = Object.freeze({
   rainbow: '特別'
 });
 const msxR3Stars = n => n >= 4 ? '👑' : '★'.repeat(Math.max(1, n || 1));
-const msxR3CupName = sys => {
+const msxR3CupName = (sys, own) => {
+  if (own && own !== sys) return own;
   const S0 = msxSuc && msxSuc.SUC;
   if (S0 && S0.EX_BY_SYS && S0.EX_BY_SYS[sys]) return S0.EX_BY_SYS[sys].name;
   const names = typeof window !== 'undefined' && window.MONSUC_REGULAR_CUPS ? window.MONSUC_REGULAR_CUPS : {};
@@ -170460,7 +170489,7 @@ const msxR3CupName = sys => {
 const msxR3BattleName = (SUC, b) => {
   if (!b) return '';
   if (b.kind === 'summit') return (SUC.SUMMIT[b.round] || {}).name || '頂への道';
-  if (b.kind === 'cup') return `${msxR3CupName(b.sys)} ${msxR3Stars(b.star)}`;
+  if (b.kind === 'cup') return `${msxR3CupName(b.sys, b.name)} ${msxR3Stars(b.star)}`;
   return (SUC.FORCED[b.kind] || {}).name || '大会';
 };
 const msxR3BattleIcon = b => !b ? '🏆' : b.kind === 'cup' ? MSX_R3_CUP_ICON[b.sys] || '🏆' : b.kind === 'summit' ? '🗻' : b.kind === 'debut' ? '🎀' : b.kind === 'pro' ? '👑' : '🏆';
@@ -171215,7 +171244,7 @@ function MsxR3Cup({
       r3skip: skip ? true : undefined,
       log: [...(run.log || []), {
         turn: s.turn,
-        t: `${msxR3CupName(cur.sys)}に出た`
+        t: `${msxR3CupName(cur.sys, cur.name)}に出た`
       }].slice(-20)
     };
     onActed(next);
@@ -171229,7 +171258,7 @@ function MsxR3Cup({
   }, []);
   const nOk = cupsNow.filter(c => c.entry && c.entry.ok).length;
   const openLine = msxR3Line('turn.cup.open', run, {
-    cup: cur ? msxR3CupName(cur.sys) : ''
+    cup: cur ? msxR3CupName(cur.sys, cur.name) : ''
   }, nOk ? `「今月は ${nOk}つ 出られるよ! 出ると1ターン使うから、トレーニングとどっちにするか考えてね」` : '「今月は出られる大会がないみたい。トレーニングでじっくり力をつけよ!」');
   const rankStep = typeof SUC.rankStepOf === 'function' ? SUC.rankStepOf(s) : 0;
   const rank = rankStep ? {
@@ -171314,7 +171343,7 @@ function MsxR3Cup({
       className: "e"
     }, c.scenario ? '📖' : MSX_R3_CUP_ICON[c.sys] || '🏆'), fc ? React.createElement("span", {
       className: `fcst ${MSX_R3_FC_CLASS[fc.key] || ''}`
-    }, fc.label) : null), React.createElement("div", {
+    }, fc.key === 'none' ? 'ほぼ無理' : fc.label) : null), React.createElement("div", {
       className: "tx"
     }, React.createElement("div", {
       className: "hd"
@@ -171324,7 +171353,7 @@ function MsxR3Cup({
       className: "cs"
     }, msxR3Stars(c.star)), c.done ? React.createElement("span", {
       className: "dn"
-    }, "優勝済") : null), React.createElement("b", null, c.scenario ? c.name : msxR3CupName(c.sys)), !(c.entry && c.entry.ok) ? React.createElement("span", {
+    }, "優勝済") : null), React.createElement("b", null, c.scenario ? c.name : msxR3CupName(c.sys, c.name)), !(c.entry && c.entry.ok) ? React.createElement("span", {
       className: "why"
     }, "✖ ", msxR3WhyText(c.entry, s)) : null, React.createElement("span", {
       className: "g"
@@ -171350,7 +171379,11 @@ function MsxR3Cup({
     }
   }, React.createElement("b", null, "出ると"), React.createElement("span", null, "1戦だけ・1ターン使う・勝つと賞金と賞品。", toForced ? React.createElement("span", {
     className: "yel"
-  }, ` 期末の大会まで あと${toForced}ターン`) : null))), wc ? React.createElement("div", {
+  }, ' 期末の大会まで ', React.createElement("span", {
+    style: {
+      whiteSpace: 'nowrap'
+    }
+  }, `あと${toForced}ターン`)) : null))), wc ? React.createElement("div", {
     className: "v-cupwin",
     onClick: () => {
       setWin(null);
@@ -171366,7 +171399,7 @@ function MsxR3Cup({
     className: `sign g-${wc.grade || 'n'}`
   }, React.createElement("span", {
     className: "e"
-  }, wc.scenario ? '📖' : MSX_R3_CUP_ICON[wc.sys] || '🏆'), React.createElement("b", null, wc.scenario ? wc.name : msxR3CupName(wc.sys)), React.createElement("small", null, kindOf(wc), " ", msxR3Stars(wc.star))), React.createElement("div", {
+  }, wc.scenario ? '📖' : MSX_R3_CUP_ICON[wc.sys] || '🏆'), React.createElement("b", null, wc.scenario ? wc.name : msxR3CupName(wc.sys, wc.name)), React.createElement("small", null, kindOf(wc), " ", msxR3Stars(wc.star))), React.createElement("div", {
     className: "sub"
   }, "獲得物"), React.createElement(MsxR3PrizeBox, {
     prizes: msxR3Prizes(SUC, wc),
@@ -171397,7 +171430,7 @@ function MsxR3Cup({
           out: null,
           log: [...(run.log || []), {
             turn: s.turn,
-            t: `${msxR3CupName(wc.sys)}に出た`
+            t: `${msxR3CupName(wc.sys, wc.name)}に出た`
           }].slice(-20)
         });
       }
@@ -171539,6 +171572,208 @@ function MsxR3Watch({
     "data-msx-r3-towatch-end": true,
     onClick: () => onDone()
   }, "⏭ 結果へ")));
+}
+function MsxR3Bracket({
+  run,
+  s,
+  v,
+  ev,
+  b,
+  name,
+  opp,
+  foeName,
+  skip,
+  debug,
+  settle,
+  result,
+  toCard,
+  onPause
+}) {
+  const br = msxSuc.SUC.bracketOf(s) || {
+    entrants: [],
+    rounds: [[], []],
+    final: [0, 4],
+    pop: []
+  };
+  const E = br.entrants;
+  const r1 = br.rounds[0] || [];
+  const r2 = br.rounds[1] || [];
+  const fi = br.final && br.final[1] || 4;
+  const [stage, setStage] = useState(0);
+  useEffect(() => {
+    const ts = [setTimeout(() => setStage(1), 1200), setTimeout(() => setStage(2), 3000), setTimeout(() => setStage(3), 4800)];
+    return () => ts.forEach(clearTimeout);
+  }, []);
+  const [vh, setVh] = useState(() => typeof window !== 'undefined' ? window.innerHeight : 844);
+  useEffect(() => {
+    const f = () => setVh(window.innerHeight);
+    window.addEventListener('resize', f);
+    return () => window.removeEventListener('resize', f);
+  }, []);
+  const RH = Math.max(34, Math.min(50, Math.floor((vh - 500) / 8)));
+  const no = br.pop && br.pop.length === E.length ? br.pop : E.map((_, i) => i + 1);
+  const nm = e => e.you ? run.nick : e.name || msxMonName(e.species);
+  const out = i => stage >= 1 && !r1.includes(i) || stage >= 2 && r1.includes(i) && !r2.includes(i);
+  const X = [0, 16, 32, 48, 64];
+  const yOf = i => i * RH + RH / 2;
+  const m1 = [0, 1, 2, 3].map(k => (yOf(2 * k) + yOf(2 * k + 1)) / 2);
+  const m2 = [0, 1].map(j => (m1[2 * j] + m1[2 * j + 1]) / 2);
+  const m3 = (m2[0] + m2[1]) / 2;
+  const pair = (a, c, lv) => `M${X[lv]} ${a}H${X[lv + 1]}M${X[lv]} ${c}H${X[lv + 1]}M${X[lv + 1]} ${a}V${c}`;
+  const base = [0, 1, 2, 3].map(k => pair(yOf(2 * k), yOf(2 * k + 1), 0)).join('') + pair(m1[0], m1[1], 1) + pair(m1[2], m1[3], 1) + pair(m2[0], m2[1], 2) + `M${X[3]} ${m3}H${X[4]}`;
+  const wins = [];
+  if (stage >= 1) r1.forEach((w, k) => wins.push({
+    d: `M${X[0]} ${yOf(w)}H${X[1]}V${m1[k]}`,
+    key: `a${k}`
+  }));
+  if (stage >= 2) r2.forEach((w, j) => wins.push({
+    d: `M${X[1]} ${m1[2 * j + (w === r1[2 * j] ? 0 : 1)]}H${X[2]}V${m2[j]}`,
+    key: `b${j}`
+  }));
+  if (stage >= 3) [0, 1].forEach(j => wins.push({
+    d: `M${X[2]} ${m2[j]}H${X[3]}`,
+    key: `c${j}`
+  }));
+  const top = E[no.indexOf(1)] || E[0];
+  const upsets = r1.filter(w => w !== 0 && w !== fi && no[w] >= 5);
+  const foeNo = no[fi];
+  const lines = [top && top.you ? React.createElement(React.Fragment, null, "「", React.createElement("b", null, "1番人気は ", run.nick, "!"), " まずは 1回戦から 見ていこう」") : React.createElement(React.Fragment, null, "「", React.createElement("b", null, "1番人気は ", top && top.champ ? '王者の ' : '', top ? nm(top) : '', "!"), " ", run.nick, "の1回戦は これからだよ」"), upsets.length ? React.createElement(React.Fragment, null, "「", React.createElement("b", null, "大穴! ", nm(E[upsets[0]])), " が 勝ち上がったぞ! ", run.nick, "も 1回戦を 勝ち上がり!」") : React.createElement(React.Fragment, null, "「1回戦が おわったよ。", React.createElement("b", null, run.nick), "は 順当に 勝ち上がり!」"), foeNo >= 4 ? React.createElement(React.Fragment, null, "「", React.createElement("b", null, "大穴! ", foeName), " 決勝まで きたぞ! ", run.nick, "は 準決勝も 勝って 決勝へ!」") : React.createElement(React.Fragment, null, "「準決勝も おわったよ。", React.createElement("b", null, run.nick), "は 決勝へ! 反対の山からは ", React.createElement("b", null, foeName), "」")];
+  const finalLine = (() => {
+    const l = msxR3Line('turn.cup.before', run, {
+      cup: name,
+      rival: opp.rival ? foeName : ''
+    }, '');
+    return l.t ? l.t : null;
+  })() || (opp.rival ? React.createElement(React.Fragment, null, "「決勝の相手は ", React.createElement("b", null, "ライバルの ", foeName), "! 勝てば ごほうび大!」") : opp.champ ? React.createElement(React.Fragment, null, "「決勝の相手は ", React.createElement("b", null, "王者の ", foeName), "! ", opp.note || '強敵だよ', "。胸を借りるつもりでいこう!」") : React.createElement(React.Fragment, null, "「決勝の相手は ", React.createElement("b", null, foeName), "。", opp.note || 'しっかり見ていこう', "!」"));
+  const body = React.createElement(React.Fragment, null, React.createElement(MsxBand, {
+    s: s,
+    v: v,
+    ev: ev
+  }), React.createElement("div", {
+    className: "v-bk1"
+  }, React.createElement("img", {
+    className: "bg",
+    src: "images/story-bg/monhero_plaza_evening.jpg",
+    alt: ""
+  }), React.createElement("div", {
+    className: "sh"
+  }), React.createElement("div", {
+    className: "tt"
+  }, name, b.retry ? `(再挑戦 ${b.retry}回目)` : '')), React.createElement("div", {
+    className: "v-bkc",
+    "data-msx-r3-bracket": stage
+  }, React.createElement("div", {
+    className: "rows"
+  }, E.map((x, i) => {
+    const k = x.you ? 'me' : x.rival ? 'rv' : x.champ ? 'ch' : '';
+    return React.createElement("div", {
+      key: i,
+      className: `v-br ${k}${i === 0 || i === fi ? ' mine' : ''}${out(i) ? ' out' : ''}`,
+      style: {
+        height: RH
+      },
+      "data-msx-r3-brrow": i
+    }, React.createElement("b", {
+      className: "no"
+    }, no[i]), React.createElement("span", {
+      className: "nm"
+    }, nm(x), x.champ ? React.createElement("em", {
+      className: "mk ch"
+    }, "👑王者") : null, x.rival ? React.createElement("em", {
+      className: "mk rv"
+    }, "ライバル") : null, x.you ? React.createElement("em", {
+      className: "mk me"
+    }, "あなた") : null), React.createElement("i", {
+      className: "cn"
+    }), React.createElement("span", {
+      className: "fc2"
+    }, React.createElement("img", {
+      src: msxMonThumb(x.species),
+      alt: ""
+    })));
+  })), React.createElement("div", {
+    className: "rt",
+    style: {
+      height: RH * 8
+    }
+  }, React.createElement("svg", {
+    className: "v-brl",
+    width: "64",
+    height: RH * 8,
+    viewBox: `0 0 64 ${RH * 8}`
+  }, React.createElement("path", {
+    className: "bs",
+    d: base
+  }), wins.map(w => React.createElement("path", {
+    key: w.key,
+    className: "wl",
+    d: w.d,
+    pathLength: "1"
+  }))), React.createElement("div", {
+    className: "win"
+  }, React.createElement("span", null, "🏆"), React.createElement("b", null, "優勝")))), React.createElement("div", {
+    className: "v-bnt"
+  }, React.createElement("b", null, "決勝は ", run.nick, " VS ", foeName), "。", React.createElement("span", null, "ほかの試合の結果は、見せるだけの演出です(戦うのは決勝の1戦だけ)")), React.createElement("div", {
+    className: "v-ann"
+  }, React.createElement("div", {
+    className: "pic"
+  }, React.createElement("img", {
+    src: msxFace(s.aid, 'excited'),
+    alt: ""
+  }), React.createElement("span", null, "解説")), React.createElement("div", {
+    className: "tx"
+  }, stage >= 3 ? finalLine : lines[stage]), stage < 3 ? React.createElement("button", {
+    type: "button",
+    className: "sk",
+    onClick: () => setStage(3),
+    "data-msx-r3-bsk": true
+  }, "SKIP ▸▸") : null));
+  const foot = debug ? React.createElement("div", {
+    className: "v-ft"
+  }, React.createElement("button", {
+    type: "button",
+    onClick: () => settle(false)
+  }, "負けたことにする"), React.createElement("button", {
+    type: "button",
+    className: "on",
+    onClick: () => settle(true),
+    "data-msx-r3-dbgwin": true
+  }, "勝ったことにする(デバッグ)"), React.createElement("button", {
+    type: "button",
+    className: "go",
+    onClick: toCard,
+    "data-msx-r3-tocard": true
+  }, "⚔ 決勝へ")) : React.createElement("div", {
+    className: "v-ft"
+  }, skip ? React.createElement("button", {
+    type: "button",
+    className: "on",
+    style: {
+      flex: 1.6
+    },
+    onClick: result,
+    "data-msx-r3-bskip": true
+  }, "⏩ スキップ(結果だけ)") : React.createElement("button", {
+    type: "button",
+    className: "on",
+    style: {
+      flex: 1.6
+    },
+    onClick: result,
+    "data-msx-r3-bresult": true
+  }, "⏩ 結果だけ見る"), React.createElement("button", {
+    type: "button",
+    className: "go",
+    onClick: toCard,
+    "data-msx-r3-tocard": true
+  }, "⚔ 決勝へ"));
+  return React.createElement(MsxR3Frame, {
+    run: run,
+    back: "中断",
+    onBack: onPause,
+    body: body,
+    foot: foot
+  });
 }
 const msxR3Diff = (a, b) => {
   const d = {
@@ -172606,7 +172841,7 @@ function MsxR3Battle({
   const foeName = opp.name || msxMonName(opp.species);
   const introKey = `${s.turn}|${b.kind}|${b.round || 0}`;
   if (!st3 && step === 'bracket' && introSeen !== introKey && !run.r3skip) {
-    const title = b.kind === 'cup' ? msxR3CupName(b.sys) : name;
+    const title = b.kind === 'cup' ? msxR3CupName(b.sys, b.name) : name;
     return React.createElement(MsxR3Frame, {
       run: run,
       back: "中断",
@@ -172641,7 +172876,7 @@ function MsxR3Battle({
           name: run.nick || msxMonName(s.species),
           colors: Array.isArray(run.colors) ? run.colors : null
         },
-        title: b.kind === 'cup' ? msxR3CupName(b.sys) : name,
+        title: b.kind === 'cup' ? msxR3CupName(b.sys, b.name) : name,
         opp: {
           loy: opp.loy,
           pop: opp.pop
@@ -172996,140 +173231,21 @@ function MsxR3Battle({
       foot: foot
     });
   }
-  const br = SUC.bracketOf(s) || {
-    entrants: []
-  };
-  const pops = br.entrants.map((x, i) => x.champ ? 1 : i === 4 ? 2 : x.you ? 3 : 0);
-  let nx = 4;
-  const no = pops.map(p => p || nx++);
-  const lines = [0, 1, 2, 3].map(q => {
-    const y1 = 17 + 68 * q;
-    const y2 = y1 + 34;
-    return `M0 ${y1}H14V${y2}H0M14 ${(y1 + y2) / 2}H30`;
-  }).join('') + 'M30 34V102H46M30 170V238H46M46 68V204M46 136H64';
-  const champ = br.entrants.find(x => x && x.champ);
-  const body = React.createElement(React.Fragment, null, React.createElement(MsxBand, {
+  return React.createElement(MsxR3Bracket, {
+    run: run,
     s: s,
     v: v,
-    ev: ev
-  }), React.createElement("div", {
-    className: "v-bk1"
-  }, React.createElement("img", {
-    className: "bg",
-    src: "images/story-bg/monhero_plaza_evening.jpg",
-    alt: ""
-  }), React.createElement("div", {
-    className: "sh"
-  }), React.createElement("div", {
-    className: "tt"
-  }, name, b.retry ? `(再挑戦 ${b.retry}回目)` : '')), React.createElement("div", {
-    className: "v-bkc"
-  }, React.createElement("div", {
-    className: "rows"
-  }, br.entrants.map((x, i) => {
-    const k = x.you ? 'me' : x.rival ? 'rv' : x.champ ? 'ch' : '';
-    return React.createElement("div", {
-      key: i,
-      className: `v-br ${k}${i === 0 || i === 4 ? ' mine' : ''}`
-    }, React.createElement("b", {
-      className: "no"
-    }, no[i]), React.createElement("span", {
-      className: "nm"
-    }, x.you ? run.nick : x.name || msxMonName(x.species), x.champ ? React.createElement("em", {
-      className: "mk ch"
-    }, "👑王者") : null, x.rival ? React.createElement("em", {
-      className: "mk rv"
-    }, "ライバル") : null, x.you ? React.createElement("em", {
-      className: "mk me"
-    }, "あなた") : null), React.createElement("i", {
-      className: "cn"
-    }), React.createElement("span", {
-      className: "fc2"
-    }, React.createElement("img", {
-      src: msxMonThumb(x.species),
-      alt: ""
-    })));
-  })), React.createElement("div", {
-    className: "rt"
-  }, React.createElement("svg", {
-    className: "v-brl",
-    viewBox: "0 0 64 272",
-    preserveAspectRatio: "none"
-  }, React.createElement("g", {
-    fill: "none",
-    stroke: "#a89a78",
-    strokeWidth: "2"
-  }, React.createElement("path", {
-    d: lines
-  }))), React.createElement("div", {
-    className: "win"
-  }, React.createElement("span", null, "🏆"), React.createElement("b", null, "優勝")))), React.createElement("div", {
-    className: "v-bnt"
-  }, React.createElement("b", null, "あなたの1戦"), "は 赤い丸の2体のあいだ(", run.nick, " VS ", foeName, ")。", React.createElement("span", null, "ほかの試合の結果は、見せるだけの演出")), React.createElement("div", {
-    style: {
-      flex: 1
-    }
-  }), React.createElement("div", {
-    className: "v-ann"
-  }, React.createElement("div", {
-    className: "pic"
-  }, React.createElement("img", {
-    src: msxFace(s.aid, 'excited'),
-    alt: ""
-  }), React.createElement("span", null, "解説")), React.createElement("div", {
-    className: "tx"
-  }, (() => {
-    const l = msxR3Line('turn.cup.before', run, {
-      cup: name,
-      rival: opp.rival ? foeName : ''
-    }, '');
-    return l.t ? l.t : null;
-  })() || (champ && !opp.champ ? React.createElement(React.Fragment, null, "「", React.createElement("b", null, "1番人気は 王者の ", champ.name || msxMonName(champ.species), "!"), " でも、", run.nick, "の相手は ", opp.rival ? 'ライバルの ' : '', foeName, " だよ。」") : opp.champ ? React.createElement(React.Fragment, null, "「相手は ", React.createElement("b", null, "王者の ", foeName), "! ", opp.note || '強敵だよ', "。胸を借りるつもりでいこう!」") : React.createElement(React.Fragment, null, "「相手は ", React.createElement("b", null, foeName), "。", opp.note || 'しっかり見ていこう', "!」")))));
-  const foot = debug ? React.createElement("div", {
-    className: "v-ft"
-  }, React.createElement("button", {
-    type: "button",
-    onClick: () => settle(false)
-  }, "負けたことにする"), React.createElement("button", {
-    type: "button",
-    className: "on",
-    onClick: () => settle(true),
-    "data-msx-r3-dbgwin": true
-  }, "勝ったことにする(デバッグ)"), React.createElement("button", {
-    type: "button",
-    className: "go",
-    onClick: () => setStep('card'),
-    "data-msx-r3-tocard": true
-  }, "⚔ 1戦へ")) : React.createElement("div", {
-    className: "v-ft"
-  }, skip ? React.createElement("button", {
-    type: "button",
-    className: "on",
-    style: {
-      flex: 1.6
-    },
-    onClick: result,
-    "data-msx-r3-bskip": true
-  }, "⏩ スキップ(結果だけ)") : React.createElement("button", {
-    type: "button",
-    className: "on",
-    style: {
-      flex: 1.6
-    },
-    onClick: result,
-    "data-msx-r3-bresult": true
-  }, "⏩ 結果だけ見る"), React.createElement("button", {
-    type: "button",
-    className: "go",
-    onClick: () => setStep('card'),
-    "data-msx-r3-tocard": true
-  }, "⚔ 1戦へ"));
-  return React.createElement(MsxR3Frame, {
-    run: run,
-    back: "中断",
-    onBack: onPause,
-    body: body,
-    foot: foot
+    ev: ev,
+    b: b,
+    name: name,
+    opp: opp,
+    foeName: foeName,
+    skip: skip,
+    debug: debug,
+    settle: settle,
+    result: result,
+    toCard: () => setStep('card'),
+    onPause: onPause
   });
 }
 const MSX_R3_DIST = Object.freeze(['零', '近', '中', '遠']);
