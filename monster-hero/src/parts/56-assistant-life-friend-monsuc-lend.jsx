@@ -56,7 +56,10 @@ const monsucLendPayloadOf = (child) => {
     stats[k] = Math.max(0, Math.min(999, Math.round(v)));
   }
   const picks = c.asp && c.asp.picks && typeof c.asp.picks === 'object' && !Array.isArray(c.asp.picks) ? c.asp.picks : {};
-  const assists = Object.entries(picks).filter(([, lv]) => Number.isInteger(lv) && lv >= 1 && lv <= 3).slice(0, 4).map(([id, lv]) => ({ id, lv }));
+  let assists = Object.entries(picks).filter(([, lv]) => Number.isInteger(lv) && lv >= 1 && lv <= 3).slice(0, 4).map(([id, lv]) => ({ id, lv }));
+  // 第3版(2026-11-14): 保存枠の子の assists [{ id, lv, n }] を、表の形(toSaved)で8つまで送る
+  const AT3 = typeof window !== 'undefined' ? window.MONHERO_SUCCESS_ASSIST : null;
+  if (!assists.length && Array.isArray(c.assists) && AT3 && AT3.VERSION === 3) assists = c.assists.filter((a) => a && AT3.BY_ID[a.id]).slice(0, AT3.MAX_KINDS).map((a) => AT3.toSaved(a.id, AT3.fromSaved(a)));
   const nameRaw = typeof c.nick === 'string' && c.nick.trim() ? c.nick : (typeof c.name === 'string' ? c.name : '');
   const name = [...nameRaw.trim()].slice(0, 12).join('') || c.species.slice(0, 12);
   const out = { species: c.species, name, stats, assists };
@@ -84,7 +87,11 @@ const monsucLendMember = (row, SUC) => {
   let assists = [];
   const list = Array.isArray(m.assists) ? m.assists : [];
   const known = SUC.ASSISTS && typeof SUC.ASSISTS === 'object' ? SUC.ASSISTS : {};
-  const okShape = list.length <= 4 && list.every((a) => a && known[a.id] && Number.isInteger(a.lv) && a.lv >= 1 && a.lv <= 3)
+  // 第3版の表のときは8種類まで・目盛り(n があればそれ・無ければ古い段 lv を表で読み替え)
+  const AT3 = typeof window !== 'undefined' ? window.MONHERO_SUCCESS_ASSIST : null;
+  const v3 = !!(AT3 && AT3.VERSION === 3);
+  const lvOk = (a) => (v3 ? Number.isInteger(a.lv) && a.lv >= 1 && a.lv <= 25 && (a.n == null || (Number.isInteger(a.n) && a.n >= 1 && a.n <= 25)) : Number.isInteger(a.lv) && a.lv >= 1 && a.lv <= 3);
+  const okShape = list.length <= (v3 ? 8 : 4) && list.every((a) => a && known[a.id] && lvOk(a))
     && new Set(list.map((a) => a.id)).size === list.length;
   if (okShape && list.length) {
     // 6能力から出せる最大の総合力(Lv・技の熟練・忠誠度・人気を全部いちばん上にしたとき)
@@ -93,8 +100,9 @@ const monsucLendMember = (row, SUC) => {
       const best = SUC.memberOf({ kind: 'raised', species: m.species, stats, lv: 999, loy: 100, pop: 100, masteries: [100, 100, 100, 100, 100, 100, 100, 100] });
       budget = SUC.assistPointsOf(best.power);
     } catch (_) { budget = 0; }
-    const cost = list.reduce((t, a) => t + (Number((known[a.id].cost || [])[a.lv - 1]) || 0), 0);
-    if (cost <= budget) assists = list.map((a) => ({ id: a.id, lv: a.lv }));
+    const nOf = (a) => (v3 ? AT3.fromSaved(a) : a.lv);
+    const cost = list.reduce((t, a) => t + (Number((known[a.id].cost || [])[nOf(a) - 1]) || 0), 0);
+    if (cost <= budget) assists = list.map((a) => (v3 ? { id: a.id, lv: a.lv, ...(a.n != null ? { n: a.n } : {}) } : { id: a.id, lv: a.lv }));
   }
   const name = typeof m.name === 'string' && m.name.trim() ? [...m.name.trim()].slice(0, 12).join('') : m.species;
   return {

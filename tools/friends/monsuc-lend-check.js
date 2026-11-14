@@ -46,9 +46,9 @@ const check = (label, ok, detail) => {
   check('A 能力 1000 は断る', p({ ...good, stats: { ...good.stats, pow: 1000 } }).error === 'stats');
   check('A 能力が小数・文字は断る', p({ ...good, stats: { ...good.stats, pow: 1.5 } }).error === 'stats' && p({ ...good, stats: { ...good.stats, pow: '9' } }).error === 'stats');
   check('A 知らない種は断る', p({ ...good, species: 'NoSuchMon' }).error === 'species');
-  check('A アシスト5種類・同じ id 2つ・段6・段0・知らない id は断る', [
-    [{ id: 'sokoji', lv: 1 }, { id: 'kaketsuke', lv: 1 }, { id: 'hirameki', lv: 1 }, { id: 'atooshi', lv: 1 }, { id: 'kizuna', lv: 1 }],
-    [{ id: 'sokoji', lv: 1 }, { id: 'sokoji', lv: 2 }], [{ id: 'sokoji', lv: 6 }], [{ id: 'sokoji', lv: 0 }], [{ id: 'boost', lv: 1 }],
+  check('A アシスト9種類・同じ id 2つ・目盛り26・0・n が小数・知らない id は断る(第3版 2026-11-14: 8種類・目盛り25まで)', [
+    ['sokoji', 'kaketsuke', 'hirameki', 'atooshi', 'kizuna', 'miharu', 'ninzu', 'shoki', 'waza'].map((id) => ({ id, lv: 1 })),
+    [{ id: 'sokoji', lv: 1 }, { id: 'sokoji', lv: 2 }], [{ id: 'sokoji', lv: 26 }], [{ id: 'sokoji', lv: 0 }], [{ id: 'sokoji', lv: 1, n: 1.5 }], [{ id: 'boost', lv: 1 }],
   ].every((a) => p({ ...good, assists: a }).error === 'assists'));
   check('A 段5・第2版の新しい種類は通る', !p({ ...good, assists: [{ id: 'sokoji', lv: 5 }, { id: 'miharu', lv: 3 }] }).error);
   check('A 名前に URL・長すぎ・< は断る', ['http://x', 'あ'.repeat(13), 'a<b'].every((n) => p({ ...good, name: n }).error === 'name'));
@@ -110,7 +110,7 @@ const check = (label, ok, detail) => {
 
   // ---- C ----
   const partSrc = fs.readFileSync(PART, 'utf8');
-  const ctx = vm.createContext({});
+  const ctx = vm.createContext({ window: { MONHERO_SUCCESS_ASSIST: AT } }); // 第3版の表(ゲームでは window に載っている)
   vm.runInContext([sliceConst(partSrc, 'MONSUC_LEND_STAT_KEYS'), sliceConst(partSrc, 'monsucLendPayloadOf'), sliceConst(partSrc, 'monsucLendMember'),
     'globalThis.__o = { monsucLendPayloadOf, monsucLendMember };'].join('\n'), ctx);
   const { monsucLendPayloadOf, monsucLendMember } = ctx.__o;
