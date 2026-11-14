@@ -20,6 +20,9 @@ try { playwright = require(path.join(ROOT, 'tools', 'node_modules', 'playwright'
 const SHOT = process.env.MH_SHOT_DIR || '';
 if (SHOT) fs.mkdirSync(SHOT, { recursive: true });
 
+// 有料の曲の数(RHYTHM_SONG_PRICES の行数。short ver. は全編につくので数えない)
+const PAID_COUNT = (() => { const m = fs.readFileSync(path.join(ROOT, 'monster-hero/src/parts/39-rhythm-song-owned.jsx'), 'utf8').match(/RHYTHM_SONG_PRICES = Object\.freeze\(\{([^}]*)\}\)/); return m ? m[1].split(',').filter((x) => x.trim()).length : 3; })();
+
 let failed = 0;
 const check = (name, ok, detail = '') => {
   console.log(`${ok ? 'OK' : 'NG'}: ${name}${detail ? ` — ${detail}` : ''}`);
@@ -117,7 +120,8 @@ const WRAP_PROBE = (sel) => {
         await page.getByRole('tab', { name: '曲' }).first().click({ timeout: 5000 }).catch(() => {});
         await page.waitForTimeout(900);
         const n = await page.evaluate(() => document.querySelectorAll('[data-rhythm-song-offer]').length);
-        check(`${tag}: 曲の札が3つ並ぶ`, n === 3, `${n}個`);
+        // 有料の曲(買える全編)の数だけ並ぶ。曲を足すたびに数が増える(2026-11-15 Hopes and Dreams で4つ)
+        check(`${tag}: 曲の札が有料の曲の数(${PAID_COUNT}つ)並ぶ`, n === PAID_COUNT, `${n}個`);
         if (SHOT) await page.screenshot({ path: path.join(SHOT, `shop-${owned ? 'own' : 'none'}-${label}.png`) });
         const info = await page.evaluate(() => [...document.querySelectorAll('[data-rhythm-song-offer]')].map((c) => { const r = c.getBoundingClientRect(); const img = c.querySelector('img'); const ir = img && img.getBoundingClientRect(); return { h: Math.round(r.height), w: Math.round(r.width), img: ir ? `${Math.round(ir.width)}x${Math.round(ir.height)}` : '-', text: c.innerText.replace(/\n/g, ' / ') }; }));
         console.log(`INFO: ${tag}: ${JSON.stringify(info)}`);
@@ -131,7 +135,7 @@ const WRAP_PROBE = (sel) => {
           const used = kids.length ? Math.max(...kids.map((r) => r.bottom)) : 0;
           return { max: Math.round(max), tail: Math.round(cr.bottom - used), h: Math.round(cr.height) };
         }));
-        check(`${tag}: 札の中に大きな空きが無い(部品どうしのすき間 32px 以内。前は90px以上)`, gaps.length === 3 && gaps.every((g) => g.max <= 32 && g.tail <= 16), JSON.stringify(gaps));
+        check(`${tag}: 札の中に大きな空きが無い(部品どうしのすき間 32px 以内。前は90px以上)`, gaps.length === PAID_COUNT && gaps.every((g) => g.max <= 32 && g.tail <= 16), JSON.stringify(gaps));
         // ジャケットを押すと大きく見られる
         const art = await page.evaluate(() => { const b = document.querySelector('[data-rhythm-song-offer] [data-rhythm-song-art-zoom]'); if (!b) return { found: false }; const r = b.getBoundingClientRect(); return { found: true, w: Math.round(r.width) }; });
         // 本物の指のように押す(要素に click を撃つだけでは、上に別の物が重なっていても押せたことになる)

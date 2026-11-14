@@ -2290,7 +2290,7 @@ const CardBattleBoard = ({ db, game, onFinish, onProgress = null, quickRun = nul
     </>);
   })();
   // 黄色の案内は1行に収まる短い文に(長くて2行になり、手札を押し下げていた。2026-10-26 改良の案 E・カゲあつくん 8)。運ぶ操作の話はヘルプへ
-  const guide = tutorial && (tutStage.next || tutQ.length > 1) ? '' : mode === 'attack' ? (sel ? (monChosen === undefined ? '使うモンスターをタップ' : setPending ? '光っているカードを押して足してね' : needTarget ? '狙う相手をタップ' : pickCands.length ? '「使う」か、光っているカードを足す' : '「使う」をタップ') : attackOpts.length ? '技をタップ → 相手をタップ' : '使える技がありません →「攻撃おわり」でガッツへ')
+  const guide = tutorial && (tutStage.next || tutQ.length > 1) ? '' : mode === 'attack' ? (sel ? (monChosen === undefined ? '使うモンスターをタップ' : setPending ? '光っているカードを押して足してね' : needTarget ? '狙う相手をタップ' : pickCands.length ? '「使う」か、光っているカードを足す' : '「使う」をタップ') : attackOpts.length ? '技をタップ → 相手をタップ' : '使える技がありません →「攻撃終わり」でガッツへ')
     : mode === 'guard' ? (guardOpts.length ? '明るいカードで守れます' : '使える回避・防御はありません')
     : mode === 'guts' ? (gutsMax < 99 ? `ガッツにするカードをタップ(長期戦の予感: ${gutsMax}枚まで)` : 'ガッツにするカードをタップ(何枚でも)')
     : mode === 'setup' ? '後攻: 始める前に2枚までガッツにできます'
@@ -3039,20 +3039,24 @@ const CardAssistantArt = ({ src, alt, className = '', style = null, knownBox = n
   const fit = (() => {
     const W = size.w, H = size.h;
     if (!box || !W || !H) return null;
-    const sc = Math.min(H / box.h, W / box.w);
+    // 幅は枠の 1.2 倍まではみ出してよい(2026-11-15 立ち絵を左右を切らない形にしたので、腕を広げた絵が広くなる。幅で縮めると高さが枠より1割ほど小さくなった)
+    const sc = Math.min(H / box.h, (W * 1.2) / box.w);
     // 顔の大きさをそろえる(2026-11-11 社長「助手の立ち絵も見直して、使う場面全部でうまく表示させるようにして」)。
     //   描かれている範囲いっぱいに収めるだけだと、羽や大きな耳のある絵(みゅあ・ももすけ)は顔が小さく、助手ごとに顔の大きさが 1.7〜2.8倍ちがった。
-    //   助手ライフの場面と同じ顔の点の表(assistantLifeStandFace)と決まり(assistantLifeStandRule)で、頭(てっぺんから顎)を枠の高さの 44%・頭のてっぺんを上から 18% に置く。
+    //   助手ライフの場面と同じ顔の点の表(assistantLifeStandFace)と決まり(assistantLifeStandRule)で、頭(てっぺんから顎)を枠の高さの 44%・頭のてっぺんを上から 12〜30% に置く(2026-11-15 18%→12%: きゅうこの絵が欄より1割以上小さくなっていた)。
     //   羽・肩は枠の外へ出てよい(顔は切らない)。今までの収め方より小さくなる絵(ソラシド・えるびん・きゅうこ)と、顔だけの絵(ドラ)は今までどおり
     const face = cardArtFaceBySrc(src);
     if (face && !face.head && typeof assistantLifeStandRule === 'function') {
       const lb = { t: box.y / box.nh, b: (box.y + box.h) / box.nh, l: box.x / box.nw, r: (box.x + box.w) / box.nw, ar: box.nw / box.nh };
       const U = Math.min(H * 0.44, W * 0.95);
-      const r = assistantLifeStandRule({ face, box: lb, F: U / ASSISTANT_LIFE_STAND_FACE_LEN, topY: H * Math.max(0.18, Math.min(0.3, (face.above || 0) * 0.32)), cx: W / 2 }); // 魔女の帽子・大きな耳の着替え(above のある絵)は、頭を少し下げて飾りを入れる
+      const r = assistantLifeStandRule({ face, box: lb, F: U / ASSISTANT_LIFE_STAND_FACE_LEN, topY: H * Math.max(0.12, Math.min(0.3, (face.above || 0) * 0.32)), cx: W / 2 }); // 魔女の帽子・大きな耳の着替え(above のある絵)は、頭を少し下げて飾りを入れる
       if (r && r.width > box.nw * sc * 1.02) {
         const dy = Math.max(0, H - r.visBottom); // 体が枠の下まで届かない絵は、下の端にそろえる
         const visW = (lb.r - lb.l) * r.width;
-        return { width: r.width, left: r.left, top: r.top + dy, artH: Math.round(Math.min(H, r.visBottom + dy) - Math.max(0, r.visTop + dy)), artW: Math.round(Math.min(W, visW)), byFace: true };
+        const byFace = { width: r.width, left: r.left, top: r.top + dy, artH: Math.round(Math.min(H, r.visBottom + dy) - Math.max(0, r.visTop + dy)), artW: Math.round(Math.min(W, visW)), byFace: true };
+        // 顔で置いた絵が、高さも幅も枠の 92% に届かない(上が空いて小さく見える)ときは、枠いっぱいに収める今までの置き方にする
+        //   (2026-11-15 左右を切らない立ち絵で、腕を広げたきゅうこがこうなった)
+        if (byFace.artH >= H * 0.92 || byFace.artW >= W * 0.92) return byFace;
       }
     }
     return { width: box.nw * sc, left: W / 2 - (box.x + box.w / 2) * sc, top: H - (box.y + box.h) * sc, artH: Math.round(box.h * sc), artW: Math.round(box.w * sc) };
@@ -3077,7 +3081,7 @@ const CardPlaylistRows = ({ list, onChange, bgmPreview, tag }) => {
     return (
       <div data-card-playlist-rows={tag} data-card-playlist-count={1} data-card-playlist-random>
         <div className="mt-1 flex items-center gap-1.5">
-          <span className="min-w-0 flex-1 rounded-xl border border-amber-300/50 bg-amber-500/15 px-2 py-2 text-[12px] font-black text-amber-100" style={JA_LABEL_STYLE}>{jaWrap('🔀 ランダム(選べる曲ぜんぶから、毎回ちがう順で)')}</span>
+          <span className="min-w-0 flex-1 rounded-xl border border-amber-300/50 bg-amber-500/15 px-2 py-2 text-[12px] font-black text-amber-100" style={JA_LABEL_STYLE}>{jaWrap('🔀 ランダム(選べる曲全部から、毎回ちがう順で)')}</span>
           {bgmPreview && <button type="button" data-card-playlist-preview={CARD_BGM_RANDOM} onClick={() => { if (bgmPreview.playing) bgmPreview.stop(); else { const one = cardBgmRandomOne(); if (one) bgmPreview.toggle(one); } }} className="min-h-[44px] min-w-[52px] shrink-0 rounded-xl bg-indigo-700 px-2 text-xs font-black">{bgmPreview.playing ? '停止' : '試聴'}</button>}
         </div>
         <button type="button" data-card-playlist-random-off onClick={() => onChange([tracks[0] ? tracks[0].id : ''].filter(Boolean))} className="mt-1.5 min-h-[44px] w-full rounded-xl bg-slate-700 px-2 text-[11px] font-black text-white">{jaWrap('ランダムをやめて、曲を選ぶ')}</button>
@@ -3106,7 +3110,7 @@ const CardPlaylistRows = ({ list, onChange, bgmPreview, tag }) => {
             {choices(null).map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
           </select>
         : <p data-card-playlist-full className="mt-1.5 text-[10px] font-bold text-slate-400" style={JA_LABEL_STYLE}>{jaWrap(`入れられるのは${CARD_PLAYLIST_MAX}曲までです`)}</p>}
-      <button type="button" data-card-playlist-random-on onClick={() => onChange([CARD_BGM_RANDOM])} className="mt-1.5 min-h-[44px] w-full rounded-xl border border-amber-300/50 bg-slate-900 px-2 text-[11px] font-black text-amber-100">{jaWrap('🔀 ランダムにする(選べる曲ぜんぶから)')}</button>
+      <button type="button" data-card-playlist-random-on onClick={() => onChange([CARD_BGM_RANDOM])} className="mt-1.5 min-h-[44px] w-full rounded-xl border border-amber-300/50 bg-slate-900 px-2 text-[11px] font-black text-amber-100">{jaWrap('🔀 ランダムにする(選べる曲全部から)')}</button>
     </div>
   );
 };
@@ -4589,7 +4593,7 @@ const CardBattleScreen = ({ screen, onNavigate, onExit, exitLabel = '戻る', se
     const cpuPlaylistPanel = (
           <div data-card-playlist className="mt-3 border-t border-white/10 pt-2.5">
             <b className="block text-[12px] font-black text-slate-200">フリー対戦</b>
-            <p className="mt-0.5 text-[10px] font-bold leading-snug text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('助手1人につき5曲まで選べます。対戦中は、選んだ曲を毎回ちがう順番で、続けて流します。「ランダム」にすると、選べる曲ぜんぶから流します')}</p>
+            <p className="mt-0.5 text-[10px] font-bold leading-snug text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('助手1人につき5曲まで選べます。対戦中は、選んだ曲を毎回ちがう順番で、続けて流します。「ランダム」にすると、選べる曲全部から流します')}</p>
             <div className="mt-2 grid grid-cols-3 gap-1.5">
               {plWhoList.map((a) => (
                 <button key={a.id} type="button" data-card-playlist-who={a.id} aria-pressed={a.id === plCur} onClick={() => { Audio_.fgSe.tap(); setPlWho(a.id); }}

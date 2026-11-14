@@ -1,0 +1,161 @@
+<title>モンヒロ 残り作業</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;700;800&display=swap">
+<style>
+/* 一覧の板: 上に件数と絞り込み、下に部ごとの札。札ごとに社長の印(OK・先に・いらない・保留)とメモ */
+:root{
+  --bg:#f3f1f8; --panel:#ffffff; --ink:#1f1b2e; --sub:#615a78; --line:#dcd6ea;
+  --accent:#6b3fd1; --accent-soft:#ece4ff;
+  --ok:#1f8a4c; --ok-soft:#dff5e7; --first:#c4510f; --first-soft:#ffe9d8;
+  --drop:#8a8496; --drop-soft:#ecebef; --hold:#2a6fb5; --hold-soft:#e0eefc;
+  --font:"M PLUS Rounded 1c","Hiragino Maru Gothic ProN","Hiragino Sans","Noto Sans JP",system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#15121f; --panel:#1f1a2e; --ink:#eeeaf8; --sub:#a59fbd; --line:#342c4a;
+  --accent:#a98bff; --accent-soft:#2c2347;
+  --ok:#5fd394; --ok-soft:#173326; --first:#ff9a5c; --first-soft:#3a2416;
+  --drop:#9b95ab; --drop-soft:#29253a; --hold:#79b6f5; --hold-soft:#172b42; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#15121f; --panel:#1f1a2e; --ink:#eeeaf8; --sub:#a59fbd; --line:#342c4a;
+  --accent:#a98bff; --accent-soft:#2c2347;
+  --ok:#5fd394; --ok-soft:#173326; --first:#ff9a5c; --first-soft:#3a2416;
+  --drop:#9b95ab; --drop-soft:#29253a; --hold:#79b6f5; --hold-soft:#172b42; color-scheme:dark}
+body{background:var(--bg);color:var(--ink);font-family:var(--font);font-size:15px;line-height:1.6}
+.wrap{max-width:860px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 60px}
+h1{font-size:22px;font-weight:800;margin:0 0 4px;text-wrap:balance}
+.lead{color:var(--sub);font-size:13px;margin:0 0 14px}
+.stats{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:6px 12px;font-size:13px;font-variant-numeric:tabular-nums}
+.stat b{font-size:17px;margin-left:4px}
+.filters{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;position:sticky;top:env(safe-area-inset-top,0px);background:var(--bg);padding-block:8px;z-index:5}
+select,input[type=search]{font:inherit;font-size:14px;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:6px 10px;min-width:0}
+input[type=search]{flex:1 1 160px}
+.note{font-size:13px;color:var(--sub);padding:10px 12px;border:1px dashed var(--line);border-radius:10px;margin-bottom:12px}
+.dept{margin-top:22px}
+.dept h2{font-size:16px;font-weight:800;margin:0 0 8px;display:flex;gap:8px;align-items:baseline}
+.dept h2 small{font-size:12px;color:var(--sub);font-weight:500}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:10px;display:grid;gap:8px}
+.card.m-ok{border-color:var(--ok)} .card.m-first{border-color:var(--first)} .card.m-drop{opacity:.6} .card.m-hold{border-color:var(--hold)}
+.top{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:12px;color:var(--sub)}
+.pill{display:inline-block;border-radius:999px;padding:1px 9px;font-size:12px;font-weight:700;background:var(--accent-soft);color:var(--accent)}
+.st-確認待ち,.st-OK済み{background:var(--ok-soft);color:var(--ok)}
+.st-止め中{background:var(--hold-soft);color:var(--hold)}
+.st-作業中{background:var(--first-soft);color:var(--first)}
+.st-依頼済み,.st-未依頼{background:var(--drop-soft);color:var(--sub)}
+.text{font-size:14.5px;min-width:0;overflow-wrap:anywhere}
+.reply{font-size:13px;background:var(--accent-soft);border-radius:8px;padding:6px 10px}
+.reply b{color:var(--accent)}
+.marks{display:flex;flex-wrap:wrap;gap:6px}
+.mk{font:inherit;font-size:13px;font-weight:700;border-radius:8px;padding:6px 12px;border:1.5px solid var(--line);background:transparent;color:var(--ink);cursor:pointer;min-height:36px}
+.mk:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.mk[data-m=ok].on{background:var(--ok-soft);border-color:var(--ok);color:var(--ok)}
+.mk[data-m=first].on{background:var(--first-soft);border-color:var(--first);color:var(--first)}
+.mk[data-m=drop].on{background:var(--drop-soft);border-color:var(--drop);color:var(--drop)}
+.mk[data-m=hold].on{background:var(--hold-soft);border-color:var(--hold);color:var(--hold)}
+.memo{display:flex;gap:6px}
+textarea{font:inherit;font-size:13.5px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:6px 10px;flex:1;min-width:0;resize:vertical;min-height:36px}
+.save{font:inherit;font-size:13px;font-weight:700;border:0;border-radius:8px;padding:6px 12px;background:var(--accent);color:#fff;cursor:pointer}
+.save[disabled]{opacity:.4;cursor:default}
+.saved{font-size:12px;color:var(--ok)}
+.empty{padding:30px 10px;text-align:center;color:var(--sub)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+  <h1>モンヒロ 残り作業</h1>
+  <p class="lead">社長の頼みのうち、まだ完了していない物です。札ごとに「OK」「先にやって」「いらない」「保留」を押し、ひとことメモを残せます。押した印は窓口が読んで各部へ回します。</p>
+  <div class="stats" id="stats"></div>
+  <div class="filters">
+    <select id="fDept" aria-label="部で絞る"><option value="">すべての部</option></select>
+    <select id="fState" aria-label="状態で絞る"><option value="">すべての状態</option></select>
+    <select id="fMark" aria-label="印で絞る">
+      <option value="">印すべて</option><option value="none">まだ印なし</option>
+      <option value="ok">OK</option><option value="first">先にやって</option><option value="drop">いらない</option><option value="hold">保留</option>
+    </select>
+    <input type="search" id="fText" placeholder="言葉で探す" aria-label="言葉で探す">
+  </div>
+  <div class="note" id="status">一覧を読み込んでいます…</div>
+  <div id="list"></div>
+</div>
+
+<script>
+const DEPT={hq:"本社",beat:"モンヒロビート",card:"MFバトルカード",battle:"モンヒロバトル",dev:"モンサク・開発",'assistant-ai':"助手(ココロ)",'assistant-life':"助手ライフ",friend:"フレンド"};
+const STATE_ORDER=["確認待ち","OK済み","作業中","依頼済み","未依頼","止め中"];
+const MARKS=[["ok","OK"],["first","先にやって"],["drop","いらない"],["hold","保留"]];
+let tasks=[], marks={}, db=null, gotTasks=false;
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+function render(){
+  const fd=$("#fDept").value, fs=$("#fState").value, fm=$("#fMark").value, ft=$("#fText").value.trim();
+  const cnt={all:tasks.length,ok:0,first:0,drop:0,hold:0,none:0};
+  tasks.forEach(t=>{const m=marks[t.id]?.mark; m?cnt[m]++:cnt.none++;});
+  $("#stats").innerHTML=`<span class="stat">残り<b>${cnt.all}</b></span><span class="stat">まだ印なし<b>${cnt.none}</b></span><span class="stat">OK<b>${cnt.ok}</b></span><span class="stat">先にやって<b>${cnt.first}</b></span><span class="stat">いらない<b>${cnt.drop}</b></span><span class="stat">保留<b>${cnt.hold}</b></span>`;
+  const shown=tasks.filter(t=>(!fd||t.dept===fd)&&(!fs||t.state===fs)&&(!fm||(fm==="none"?!marks[t.id]?.mark:marks[t.id]?.mark===fm))&&(!ft||(t.text+t.id+(t.owner||"")).includes(ft)));
+  const groups={};
+  shown.forEach(t=>{(groups[t.dept]=groups[t.dept]||[]).push(t)});
+  const list=$("#list");
+  if(!shown.length){list.innerHTML=gotTasks?'<div class="empty">条件に合う作業はありません。</div>':'';return;}
+  list.innerHTML=Object.keys(DEPT).filter(d=>groups[d]).concat(Object.keys(groups).filter(d=>!DEPT[d])).map(d=>{
+    const rows=groups[d].sort((a,b)=>STATE_ORDER.indexOf(a.state)-STATE_ORDER.indexOf(b.state)||a.id.localeCompare(b.id));
+    return `<section class="dept"><h2>${esc(DEPT[d]||d)}<small>${rows.length}件</small></h2>${rows.map(card).join("")}</section>`;
+  }).join("");
+}
+function card(t){
+  const m=marks[t.id]||{};
+  return `<article class="card ${m.mark?"m-"+m.mark:""}" data-id="${esc(t.id)}">
+    <div class="top"><span class="pill st-${esc(t.state)}">${esc(t.state)}</span><span>${esc(t.id)}</span>${t.owner?`<span>担当: ${esc(t.owner)}</span>`:""}</div>
+    <div class="text">${esc(t.text)}</div>
+    ${t.reply?`<div class="reply"><b>窓口より:</b> ${esc(t.reply)}</div>`:""}
+    <div class="marks">${MARKS.map(([k,l])=>`<button class="mk ${m.mark===k?"on":""}" data-m="${k}" type="button" aria-pressed="${m.mark===k}">${l}</button>`).join("")}</div>
+    <div class="memo"><textarea id="memo-${esc(t.id)}" rows="1" placeholder="ひとことメモ(任意)">${esc(m.note||"")}</textarea><button class="save" type="button" disabled>保存</button></div>
+    <span class="saved" hidden>保存しました</span>
+  </article>`;
+}
+function fillFilters(){
+  const ds=[...new Set(tasks.map(t=>t.dept))];
+  $("#fDept").innerHTML='<option value="">すべての部</option>'+ds.map(d=>`<option value="${esc(d)}">${esc(DEPT[d]||d)}</option>`).join("");
+  const ss=[...new Set(tasks.map(t=>t.state))].sort((a,b)=>STATE_ORDER.indexOf(a)-STATE_ORDER.indexOf(b));
+  $("#fState").innerHTML='<option value="">すべての状態</option>'+ss.map(s=>`<option>${esc(s)}</option>`).join("");
+}
+["#fDept","#fState","#fMark"].forEach(s=>$(s).addEventListener("change",render));
+$("#fText").addEventListener("input",render);
+
+async function writeMark(id,patch){
+  if(!db) return false;
+  const cur=marks[id]||{};
+  const body={mark:cur.mark||"",note:cur.note||"",...patch,at:new Date().toISOString()};
+  marks[id]=body; render();
+  try{await db.doc("marks/"+id).set(body);return true;}
+  catch(e){$("#status").hidden=false;$("#status").textContent="保存できませんでした。もう一度押してください。("+(e.code||"error")+")";return false;}
+}
+$("#list").addEventListener("click",async e=>{
+  const b=e.target.closest(".mk"); const c=e.target.closest(".card"); if(!c) return;
+  const id=c.dataset.id;
+  if(b){const m=b.dataset.m; await writeMark(id,{mark:marks[id]?.mark===m?"":m});}
+  if(e.target.closest(".save")){
+    const ta=c.querySelector("textarea"); const ok=await writeMark(id,{note:ta.value.trim()});
+    const s=document.querySelector(`.card[data-id="${CSS.escape(id)}"] .saved`); if(ok&&s){s.hidden=false;setTimeout(()=>{s.hidden=true},2000)}
+  }
+});
+$("#list").addEventListener("input",e=>{
+  if(e.target.tagName!=="TEXTAREA") return;
+  const c=e.target.closest(".card"); c.querySelector(".save").disabled=(e.target.value.trim()===(marks[c.dataset.id]?.note||""));
+});
+
+(async()=>{
+  const timer=setTimeout(()=>{if(!gotTasks)$("#status").textContent="一覧にまだつながりません。少し待つか、ページを開き直してください。"},10000);
+  try{db=await window.claude?.use?.("db");}catch(e){db=null}
+  if(!db){clearTimeout(timer);$("#status").textContent="このページの保存先につながりません。claude.ai にログインした状態で開いてください。";return;}
+  db.collection("tasks").onSnapshot(s=>{
+    tasks=s.docs.map(d=>({id:d.id,...d.data()}));
+    if(!s.metadata.fromCache){gotTasks=true;clearTimeout(timer);}
+    $("#status").hidden=tasks.length>0;
+    if(!tasks.length&&gotTasks) $("#status").textContent="残り作業はまだ入っていません。窓口が一覧を入れると、ここに並びます。";
+    fillFilters(); render();
+  },e=>{clearTimeout(timer);$("#status").hidden=false;$("#status").textContent="一覧を読めませんでした("+(e.code||"error")+")。";});
+  db.collection("marks").onSnapshot(s=>{
+    const n={}; s.docs.forEach(d=>{n[d.id]=d.data()}); marks=n; render();
+  },()=>{});
+})();
+</script>
