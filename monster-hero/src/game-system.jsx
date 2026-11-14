@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: de439fac1ca90b16
+// generated-sha256: d4757023af1510b0
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -57354,8 +57354,9 @@ function RhythmMultiChatBubble({ text: raw }) {
     </span>
   );
   return (
-    <span data-rhythm-multi-chat-bubble className="pointer-events-none absolute inset-x-0.5 bottom-0.5 top-3 z-40 flex items-start justify-center overflow-hidden">
-      <span className="line-clamp-2 max-h-full max-w-full break-words rounded-xl bg-white px-1.5 py-0.5 text-center text-[10px] font-black leading-tight text-slate-900 shadow-lg">{text}</span>
+    <span data-rhythm-multi-chat-bubble className="pointer-events-none absolute inset-x-0.5 bottom-0.5 top-3 z-40 flex items-start justify-center overflow-hidden landscape:top-0.5 [[data-mh-view-rotation=true]_&]:top-0.5">
+      {/* 席のカードが低い横(高さ38px)でも2行が白い箱に入るよう、箱の上の余白を詰める。字は言葉の切れ目(jaWrap)で折り、2行を超える分は「…」で省く(2026-11-14 社長の止め絵: 2行目が箱の下へはみ出して切れていた) */}
+      <span className="line-clamp-2 max-h-full max-w-full overflow-hidden rounded-xl bg-white px-1.5 py-0.5 text-center text-[10px] font-black leading-tight text-slate-900 shadow-lg" style={typeof JA_WRAP_STYLE !== 'undefined' ? JA_WRAP_STYLE : { wordBreak: 'keep-all', overflowWrap: 'anywhere' }}>{typeof jaWrap === 'function' ? jaWrap(text) : text}</span>
     </span>
   );
 }
@@ -60897,7 +60898,7 @@ function RhythmBuddyListSheet({ tab, settings, onChange, onTab, onClose }) {
         )}
         {tab === 'lineage' && (
           <div>
-            <p className="mb-2.5 text-[10px] leading-relaxed text-slate-400">選んだ種族だけを表示します。並べ替え・しぼりこみはそのまま効きます。</p>
+            <p className="mb-2.5 text-[10px] leading-relaxed text-slate-400">選んだ種族だけを表示します。並べ替え・絞り込みはそのまま効きます。</p>
             <div className="grid grid-cols-2 gap-2.5">
               {[{ id: 'all', label: '全て' }, ...lineages.map((l) => ({ id: l.id, label: `${l.name}種` }))].map((opt) => (
                 <button key={opt.id} type="button" onClick={() => onChange({ lineage: opt.id })} className={chip(settings.lineage === opt.id)}>{opt.label}</button>
@@ -60916,7 +60917,7 @@ function RhythmBuddyListSheet({ tab, settings, onChange, onTab, onClose }) {
               </div>
             </section>
             <section>
-              <h4 className="mb-1.5 text-[11px] font-black text-slate-300">性格<small className="ml-1 font-bold text-slate-500">(何も選ばなければすべて)</small></h4>
+              <h4 className="mb-1.5 text-[11px] font-black text-slate-300">性格<small className="ml-1 font-bold text-slate-500">(何も選ばなければ全て)</small></h4>
               <div className="grid grid-cols-2 gap-2">
                 {[...RHYTHM_BUDDY_TRAITS.map((t) => ({ id: t.id, label: t.label })), { id: 'none', label: 'まだ見えない' }].map((opt) => (
                   <button key={opt.id} type="button" onClick={() => onChange({ traits: toggle(settings.traits, opt.id) })} className={chip(settings.traits.includes(opt.id))}>{opt.label}</button>
@@ -60924,7 +60925,7 @@ function RhythmBuddyListSheet({ tab, settings, onChange, onTab, onClose }) {
               </div>
             </section>
             <section>
-              <h4 className="mb-1.5 text-[11px] font-black text-slate-300">今日の調子<small className="ml-1 font-bold text-slate-500">(何も選ばなければすべて)</small></h4>
+              <h4 className="mb-1.5 text-[11px] font-black text-slate-300">今日の調子<small className="ml-1 font-bold text-slate-500">(何も選ばなければ全て)</small></h4>
               <div className="grid grid-cols-2 gap-2">
                 {RHYTHM_BUDDY_MOODS.map((mood) => (
                   <button key={mood.id} type="button" onClick={() => onChange({ moods: toggle(settings.moods, mood.id) })} className={chip(settings.moods.includes(mood.id))}>
@@ -60952,7 +60953,7 @@ const useRhythmBuddyListControls = () => {
 // マスモンの一覧(1行ずつ)。onPick を渡すと「呼ぶ」ボタンが付く
 function RhythmBuddyList({ masuMons, state, dayKey, onOpen, onPick = null, busy = false, canPay = true, calledIds = [], settings = null }) {
   const list = rhythmBuddyListRows(masuMons, state, dayKey, settings);
-  if (list.length === 0) return <p className="py-6 text-center text-[12px] font-bold text-slate-400">{helpWrap((masuMons || []).length ? 'しぼりこみに当てはまるマスモンがいません' : 'マスモンがまだいません。モンヒロバトルのランを終えて、勇者モンをマスモンに登録すると、ここに並びます')}</p>;
+  if (list.length === 0) return <p className="py-6 text-center text-[12px] font-bold text-slate-400">{helpWrap((masuMons || []).length ? '絞り込みに当てはまるマスモンがいません' : 'マスモンがまだいません。モンヒロバトルのランを終えて、勇者モンをマスモンに登録すると、ここに並びます')}</p>;
   if (settings && settings.view === 'card') {
     // バトル側と同じ3列のカード。絵・名前・ビートLv・調子の顔。呼ぶボタンは下に付ける(「マスモンを呼ぶ」のとき)
     return (

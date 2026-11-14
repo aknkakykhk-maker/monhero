@@ -40,7 +40,7 @@ window.addEventListener('unhandledrejection', function(ev){ window.__mhErr('[pro
 // ここでは各ファイルの実サイズを重みにして、実際に受け取ったバイト数で動かす。
 window.__mhBoot = (function () {
   // 起動時に読み込むファイルの実サイズ(バイト)。tools/build.js が実ファイルから書き込む
-  var SIZES = {"vendor/react.production.min.js":10751,"vendor/react-dom.production.min.js":131835,"data/images/images-ally.js":81722,"data/images/images-enemy.js":2926,"data/ally-monsters.js":60897,"data/lineages.js":26476,"data/breeder.js":140992,"data/enemy-monsters.js":7879,"data/skills.js":4375,"data/rhythm-mode.js":5093864,"data/rhythm-lane-svg.js":13321,"data/rhythm-geometry-calibration.js":15552,"data/rhythm-result-replay-remount.js":5743,"data/rhythm-event.js":96816,"data/changelog.js":1770343,"data/help.js":860501,"data/rhythm-step3-release.js":8517,"data/assistants.js":2155895,"data/card-battle-cards.js":124624,"data/assistant-masmon-techs.js":110880,"data/success-sounds.js":9908,"tailwind.css":307052,"game-system.compiled.js":11609541,"data/images/title-screen-halloween.jpg":368790,"audio/bgm-title-theme.mp3":270378}; /* BOOT_SIZES */
+  var SIZES = {"vendor/react.production.min.js":10751,"vendor/react-dom.production.min.js":131835,"data/images/images-ally.js":81722,"data/images/images-enemy.js":2926,"data/ally-monsters.js":60897,"data/lineages.js":26476,"data/breeder.js":140992,"data/enemy-monsters.js":7879,"data/skills.js":4375,"data/rhythm-mode.js":5093864,"data/rhythm-lane-svg.js":13321,"data/rhythm-geometry-calibration.js":15552,"data/rhythm-result-replay-remount.js":5743,"data/rhythm-event.js":96816,"data/changelog.js":1771370,"data/help.js":860501,"data/rhythm-step3-release.js":8517,"data/assistants.js":2155895,"data/card-battle-cards.js":124624,"data/assistant-masmon-techs.js":110880,"data/success-sounds.js":9908,"tailwind.css":307238,"game-system.compiled.js":11609773,"data/images/title-screen-halloween.jpg":368790,"audio/bgm-title-theme.mp3":270378}; /* BOOT_SIZES */
   var total = 0, k;
   for (k in SIZES) total += SIZES[k];
   var got = {};   // ファイルごとに「いま何バイト受け取ったか」
@@ -98,11 +98,11 @@ window.__mhBoot = (function () {
 })();
 // 本体JSのキャッシュキー。ここで一度だけ宣言し、下の読み込み処理でも同じ値を使う。
 // 先読みと <script> のURLがずれると、同じ2.7MBを2回取りに行くことになる
-var GAME_BUILD = '8e358042f4e3';
+var GAME_BUILD = 'cfb15710f23e';
 window.__mhGameBuild = GAME_BUILD;
 // 画面に出す版の日時(BUILD_DATE)。本体の中に書くと、ビルドのたびに本体の中身(と GAME_BUILD)が変わり、
 // 事前ダウンロードにためた本体が使えなくなるので、ここから渡す。tools/stamp-version.js が version.json と同じ値を打つ
-window.__mhBuildDate = '2026-11-14 22:31';
+window.__mhBuildDate = '2026-11-14 22:35';
 // 起動でいちばん大きいのは本体JS(約2.7MB)。いちばん後ろで読むため、そこへ来ると
 // ゲージが止まって見えていた。先に取りはじめて、受け取ったバイト数をそのまま出す。
 // ここで取ったものはブラウザのキャッシュに載るので、下の <script> は取り直さない
@@ -135,7 +135,7 @@ window.__mhBoot.prefetch('game-system.compiled.js', 'game-system.compiled.js?v='
      作るのは tools/build-tailwind.js(node tools/build.js が中身の変化を見て必要なときだけ呼ぶ)。
      landscape: の差し替え(自前で画面を回したときにも効かせる)もそちらの設定へ移してある。
      ?v= は中身のハッシュ。tools/stamp-version.js が data/*.js と同じ仕組みで打つ。 -->
-<link rel="stylesheet" href="tailwind.css?v=e9630df426cf" onload="__mhBoot.done('tailwind.css','見た目を読み込み中')" onerror="__mhBoot.fail('tailwind.css')">
+<link rel="stylesheet" href="tailwind.css?v=966895c3eec9" onload="__mhBoot.done('tailwind.css','見た目を読み込み中')" onerror="__mhBoot.fail('tailwind.css')">
 <style>
   html, body { margin:0; padding:0; background:#000; overscroll-behavior:none; -webkit-tap-highlight-color:transparent; height:100%; }
   /* ページそのものの拡大(2本指のピンチ・連続タップの拡大)を止める(2026-11-11 社長「たまにタップズレが起きる。モンビー中や、起動直後の更新情報を見るとき」)。
@@ -659,6 +659,39 @@ window.__mhBoot.prefetch('game-system.compiled.js', 'game-system.compiled.js?v='
     /* 行を畳んでも8px足りなかったので、右の列の行と行の間(6px)も2pxに詰める */
     [data-rhythm-song-detail-grid]:not([data-mh-view-rotation="true"] *) { row-gap: 2px; }
   }
+  /* モンヒロビートの曲えらび: 高さが低い横(440px以下)と🔄横は、曲の詳しい欄を詰めて、「この曲で決定」の帯が難易度の札に重ならないようにする(2026-11-14 社長の止め絵)。
+     横 844×390 のマルチは、上の見出しと席の列で116px使い、詳しい欄に残るのは254px。中身(ジャケット・自己ベスト・曲名・難易度・決定)が351pxあり、
+     下に貼り付く決定の帯が、止まったまま難易度の札(EASY〜HELL)の上へ重なっていた。ジャケットを小さく・自己ベストの箱の「MAX COMBO」と曲名の下の長さの行を畳み・
+     ボタンの高さを少し低くして、254px に収める。tools/ui/rhythm-multi-select-fit-check.js が重なりを見張る。
+     ★素のCSSで当てる(Tailwind の landscape: に頼らない)。🔄横は、端末の高さが縦のままなので media が効かず、器(data-mh-view-rotation)で当てる */
+  @media (orientation: landscape) and (max-height: 440px) {
+    [data-rhythm-song-detail-grid]:not([data-mh-view-rotation="true"] *) { row-gap: 4px; grid-template-columns: 5.5rem minmax(0, 1fr); }
+    [data-rhythm-song-detail-art]:not([data-mh-view-rotation="true"] *) { width: 5.5rem; }
+    [data-rhythm-song-detail] [data-rhythm-demo-combo]:not([data-mh-view-rotation="true"] *) { display: none; }
+    [data-rhythm-song-detail] [data-rhythm-song-meta]:not([data-mh-view-rotation="true"] *) { display: none; }
+    [data-rhythm-song-detail] [data-rhythm-song-footer] button:not([data-mh-view-rotation="true"] *) { min-height: 34px; }
+    [data-rhythm-song-detail] [data-rhythm-difficulty-row] > button:not([data-mh-view-rotation="true"] *) { height: 42px; }
+    [data-rhythm-song-detail] [data-rhythm-song-act] button:not([data-mh-view-rotation="true"] *) { min-height: 36px; }
+    [data-rhythm-song-detail]:not([data-mh-view-rotation="true"] *) { padding-top: 4px; }
+  }
+  /* 高さが380px以下(iPhone SE・mini の横 667×375 など)は、詰めても残りの高さ(約190px)に入らないので、
+     難易度の札と決定の帯をいちばん上に置き、ジャケット・自己ベスト・おまかせ(下の段)は送って見る。決定の帯は貼り付けず、難易度の札の下に並べる */
+  @media (orientation: landscape) and (max-height: 380px) {
+    [data-rhythm-song-detail-grid]:not([data-mh-view-rotation="true"] *) { grid-template-areas: 'diff diff' 'act act' 'art title' 'art stats' 'art foot'; }
+    [data-rhythm-song-detail] [data-rhythm-song-act]:not([data-mh-view-rotation="true"] *) { position: static; }
+  }
+  @media (max-width: 380px) {
+    [data-mh-view-rotation="true"] [data-rhythm-song-detail-grid] { grid-template-areas: 'diff diff' 'act act' 'art title' 'art stats' 'art foot'; }
+    [data-mh-view-rotation="true"] [data-rhythm-song-detail] [data-rhythm-song-act] { position: static; }
+  }
+  [data-mh-view-rotation="true"] [data-rhythm-song-detail-grid] { row-gap: 4px; grid-template-columns: 5.5rem minmax(0, 1fr); }
+  [data-mh-view-rotation="true"] [data-rhythm-song-detail-art] { width: 5.5rem; }
+  [data-mh-view-rotation="true"] [data-rhythm-song-detail] [data-rhythm-demo-combo] { display: none; }
+  [data-mh-view-rotation="true"] [data-rhythm-song-detail] [data-rhythm-song-meta] { display: none; }
+  [data-mh-view-rotation="true"] [data-rhythm-song-detail] [data-rhythm-song-footer] button { min-height: 34px; }
+  [data-mh-view-rotation="true"] [data-rhythm-song-detail] [data-rhythm-difficulty-row] > button { height: 42px; }
+  [data-mh-view-rotation="true"] [data-rhythm-song-detail] [data-rhythm-song-act] button { min-height: 36px; }
+  [data-mh-view-rotation="true"] [data-rhythm-song-detail] { padding-top: 4px; }
   /* モンヒロビートの曲えらび: 縦が低い画面(高さ700px以下)では、曲の詳細のジャケットを小さくして曲の一覧に場所を残す(2026-10-07)。
      幅320×高さ568では一覧の高さが16pxしかなく、曲を1つも選べなかった(プレイボットの小さい画面係が見つけた)。
      ★助手のひとことを畳むのは部品の側(29-rhythm-screens.jsx の noticeOpenShort)。絵を90度回しているときは横持ちの並びなので触らない */
@@ -2334,7 +2367,7 @@ window.__mhBoot.prefetch('game-system.compiled.js', 'game-system.compiled.js?v='
 <script src="data/rhythm-geometry-calibration.js?v=02534cca12f6" onload="__mhBoot.done('data/rhythm-geometry-calibration.js','音ゲー座標校正を読み込み中')" onerror="__mhBoot.fail('data/rhythm-geometry-calibration.js')"></script>
 <script src="data/rhythm-result-replay-remount.js?v=381554180360" onload="__mhBoot.done('data/rhythm-result-replay-remount.js','音ゲー再プレイ処理を読み込み中')" onerror="__mhBoot.fail('data/rhythm-result-replay-remount.js')"></script>
 <script src="data/rhythm-event.js?v=09e53d5ca313" onload="__mhBoot.done('data/rhythm-event.js','週間ランキングを読み込み中')" onerror="__mhBoot.fail('data/rhythm-event.js')"></script>
-<script src="data/changelog.js?v=60fc7337a3f5" onload="__mhBoot.done('data/changelog.js','更新情報を読み込み中')" onerror="__mhBoot.fail('data/changelog.js')"></script>
+<script src="data/changelog.js?v=7bbf85841b72" onload="__mhBoot.done('data/changelog.js','更新情報を読み込み中')" onerror="__mhBoot.fail('data/changelog.js')"></script>
 <script src="data/help.js?v=bb3229826f4d" onload="__mhBoot.done('data/help.js','ヘルプを読み込み中')" onerror="__mhBoot.fail('data/help.js')"></script>
 <script data-mhsave-backup src="data/mhsave-backup.js?v=7845a4fd261f" onload="__mhBoot.done('data/mhsave-backup.js','バックアップ機能を読み込み中')" onerror="__mhBoot.fail('data/mhsave-backup.js')"></script>
 <script src="data/rhythm-step3-release.js?v=ae1d7f73f23a" onload="__mhBoot.done('data/rhythm-step3-release.js','音ゲー更新情報を読み込み中')" onerror="__mhBoot.fail('data/rhythm-step3-release.js')"></script>
