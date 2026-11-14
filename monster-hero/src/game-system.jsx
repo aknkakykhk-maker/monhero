@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: b2b6d6b7766bf8ce
+// generated-sha256: 0d1d48483d5ce74a
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -67610,7 +67610,7 @@ function AssistantLifeRoomSheet({ id, life, peerSt, bondLevelOf, diary, onClose,
       {land ? (rvScene && <div className="absolute inset-y-0 left-0 bg-[#0b1020]" style={{ width: rvSheetW === '42%' ? '58%' : '50%' }}>{rvScene}</div>) : null}
       <div ref={scrollRef} className={land ? 'contents' : 'absolute inset-0 overflow-y-auto overflow-x-hidden bg-[#0b1020]'} data-assistant-life-roomview-scroll>
       {/* 縦の部屋の高さは幅に合わせる(画面いっぱいだと上が大きく空いた・2026-11-08 社長「画面変」)。すぐ下に中身が見え始める */}
-      {!land && rvScene && <div style={{ height: uiV2 ? 'min(46vh, 112vw)' : 'min(calc(100% - 52px), max(470px, 132vw))' }}>{rvScene}</div>}
+      {!land && rvScene && <div style={{ height: uiV2 ? 'min(60vh, 134vw)' : 'min(calc(100% - 52px), max(470px, 132vw))' }}>{rvScene}</div>}
       <div ref={sheetRef} className="mhl-sheet" style={land ? { left: 'auto', width: rvSheetW, top: 0, maxHeight: '100%', borderRadius: '22px 0 0 22px', borderTop: 0, borderLeft: '2px solid #f9a8d4', paddingTop: 10 } : { position: 'relative', maxHeight: 'none', zIndex: 1 }}>
         {/* 新UIは部屋の絵の上に名前が出ているので、同じ題を2度出さない */}
         {!uiV2 && <p className="mhl-en">ROOM · {String(who.id).toUpperCase()}</p>}

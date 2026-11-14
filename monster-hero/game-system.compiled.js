@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 79cc3a40dfd335d8
+// source-sha256: d92a26b63c7dd3f5
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -114650,7 +114650,7 @@ function AssistantLifeRoomSheet({
     "data-assistant-life-roomview-scroll": true
   }, !land && rvScene && React.createElement("div", {
     style: {
-      height: uiV2 ? 'min(46vh, 112vw)' : 'min(calc(100% - 52px), max(470px, 132vw))'
+      height: uiV2 ? 'min(60vh, 134vw)' : 'min(calc(100% - 52px), max(470px, 132vw))'
     }
   }, rvScene), React.createElement("div", {
     ref: sheetRef,
