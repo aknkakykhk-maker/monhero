@@ -17,10 +17,10 @@
 
   const VERSION = 1;
   const ASSTS = Object.freeze(['mua', 'atsu', 'kiki', 'momosuke', 'dra', 'kyuko', 'sorashido', 'erubin']);
-  const SLOTS = Object.freeze(['name', 'mon', 'cheer', 'cheer2', 'stat', 'train', 'tech', 'cup', 'food', 'rival', 'owner', 'cry']);
+  const SLOTS = Object.freeze(['name', 'mon', 'cheer', 'cheer2', 'stat', 'train', 'tech', 'cup', 'food', 'rival', 'owner', 'cry', 'item']);
   // 差しこみが渡されなかったときの言葉(「{」「}」を画面に出さない・モンスターを「子」と呼ばない)
   const FALLBACK = Object.freeze({ name: 'きみ', mon: 'モンスター', cheer: '編成の仲間', cheer2: '編成の仲間', stat: '能力', train: 'トレーニング',
-    tech: '技', cup: '大会', food: '苦手なもの', rival: 'ライバル', owner: 'ライバルの育て手', cry: '…' });
+    tech: '技', cup: '大会', food: '苦手なもの', rival: 'ライバル', owner: 'ライバルの育て手', cry: '…', item: 'アイテム' });
   const ctxKey = Object.freeze({ name: 'callName' });
 
   // ---- 決まった乱数(芯 monhero-success.js と同じ作り) ----

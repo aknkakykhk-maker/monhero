@@ -148,7 +148,7 @@ const handNames = (page) => page.locator('[data-card-hand-card]').evaluateAll((e
     check('② タップすると大写しがすぐ消えて、技が出る', took < 700 && (/でこぴん/.test(log) || mode === 'wait'), `${took}ms・${mode}・${log.replace(/\s+/g, ' ').slice(-50)}`);
     // ④ 自分のガッツ: 2枚が飛ぶ
     await page.waitForFunction(() => !document.querySelector('[data-card-big]'), null, { timeout: 5000 }).catch(() => {});
-    await page.getByRole('button', { name: '攻撃おわり → ガッツへ' }).click();
+    await page.getByRole('button', { name: '攻撃終わり → ガッツへ' }).click();
     await page.waitForTimeout(200);
     await page.locator('[data-card-hand-card="0"]').click(); await page.locator('[data-card-hand-card="1"]').click();
     await page.getByRole('button', { name: /ターン終了$/ }).click();
@@ -171,7 +171,7 @@ const handNames = (page) => page.locator('[data-card-hand-card]').evaluateAll((e
       const mode = await page.evaluate(() => (document.querySelector('[data-card-battle]') || { getAttribute: () => '' }).getAttribute('data-card-mode'));
       if (mode === 'guard') { const pass = page.getByRole('button', { name: /守らない/ }); if (await pass.count()) await pass.click().catch(() => {}); }
       // 自分の番は何もせずに終える(相手の番を何度も回して、相手が技を出す場面を待つ)
-      if (mode === 'attack') await page.getByRole('button', { name: '攻撃おわり → ガッツへ' }).click({ timeout: 1000 }).catch(() => {});
+      if (mode === 'attack') await page.getByRole('button', { name: '攻撃終わり → ガッツへ' }).click({ timeout: 1000 }).catch(() => {});
       if (mode === 'guts') await page.getByRole('button', { name: /ターン終了$/ }).click({ timeout: 1000 }).catch(() => {});
     }
     check('③ 相手(助手)が技を出すときも、先に大きく出る(「相手」の札)', /相手/.test(bigFoe), bigFoe.replace(/\s+/g, ' ').slice(0, 60));

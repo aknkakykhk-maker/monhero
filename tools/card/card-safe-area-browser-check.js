@@ -3,7 +3,7 @@
 //   node tools/card/card-safe-area-browser-check.js
 //
 // 【なぜ要るか】
-// 戦術カードをえらぶ窓(「基本の型(メイン)をえらぶ」)の「←戻る」が、iPhone の時計の帯に重なって押せなかった。
+// 戦術カードを選ぶ窓(「基本の型(メイン)を選ぶ」)の「←戻る」が、iPhone の時計の帯に重なって押せなかった。
 // 窓は fixed inset-0 で画面の端まで広がるので、body が取っているセーフエリアの余白が効かない。窓ごとに cardSafePad(84)で取る。
 // 後ろが透ける背景(bg-slate-950/95)だと、後ろの画面の「決める」の帯がうっすら見えていたので、画面いっぱいの窓は不透明にする。
 //
@@ -66,7 +66,7 @@ check('② 画面いっぱいの窓の背景が、後ろの透ける bg-slate-95
       const d = document.createElement('div'); d.id = '__safe'; document.body.appendChild(d);
       const db = CARD_BATTLE_DATA, tactics = cardNormalizeTactics(null), none = () => {};
       const el = scene === 'detail' ? React.createElement(CardDetailModal, { db, no: '101', onClose: none })
-        : React.createElement(CardTacticPicker, { db, tactics, cat: scene, title: scene === 'base' ? '基本の型(メイン)をえらぶ' : '条件(〜なら)をえらぶ', onPick: none, onClose: none });
+        : React.createElement(CardTacticPicker, { db, tactics, cat: scene, title: scene === 'base' ? '基本の型(メイン)を選ぶ' : '条件(〜なら)をえらぶ', onPick: none, onClose: none });
       window.__safeRoot = ReactDOM.createRoot(d); window.__safeRoot.render(el);
       return new Promise((res) => setTimeout(() => {
         const root = d.firstElementChild; const cs = root ? getComputedStyle(root) : null;

@@ -189,7 +189,7 @@ const ICON = '(⚔️|🛡️|⚖️|💖|⭐|🎭)';
         await page.getByRole('button', { name: 'トップへ' }).click();
         await page.locator('[data-card-top="top"]').waitFor({ timeout: 20000 });
         await page.locator('[data-card-cpu]').click();
-        await page.getByRole('button', { name: 'わかった' }).click({ timeout: 3000 }).catch(() => {});
+        await page.getByRole('button', { name: /^(分かった|わかった)$/ }).click({ timeout: 3000 }).catch(() => {});
         await page.locator('[data-card-top] button').filter({ hasText: 'フリー対戦' }).first().click();
         // 今日のデッキは毎回ちがう顔になる。いちばん長い名前(ドラの好き「メダマ焼きのギャグ劇場」)に決めてから選ぶ(83 の cardAiDeckNextMemo)
         await page.evaluate(() => { cardAiDeckNextMemo.dra = 'oshi'; }); // eslint-disable-line no-undef
