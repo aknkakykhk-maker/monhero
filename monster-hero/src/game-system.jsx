@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 920b8fd79cfef652
+// generated-sha256: 0165758180ee4aa2
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -82487,7 +82487,7 @@ const MSX_BETA_AIDS = Object.freeze(['mua']);
 const msxBetaAidOk = (aid) => MSX_BETA_AIDS.includes(aid);
 // 最初の1回だけ出す説明の名前(台本の tut.<名前>)と、β版の話(scn.mua.beta.<名前>)
 const MSX_BETA_TUT = Object.freeze(['scn', 'prep', 'turn', 'train', 'result', 'rest', 'shugyo', 'cup', 'rank', 'meal', 'match', 'rematch', 'event', 'awake', 'retire']);
-const MSX_BETA_STORY = Object.freeze(['open', 'firstend']);
+const MSX_BETA_STORY = Object.freeze(['open', 'firstend', 'start']); // start … 育成の始まりの場面を1回見た(2回目から「とばす」を出す。56-monsuc-intro.jsx)
 const msxBetaScene = (k) => (MSX_BETA_STORY.includes(k) ? `scn.mua.beta.${k}` : `tut.${k}`);
 const msxBetaKnown = (k) => MSX_BETA_TUT.includes(k) || MSX_BETA_STORY.includes(k);
 const msxBetaNorm = (raw) => {
@@ -83245,6 +83245,69 @@ function MsxBondChips({ s, card, add }) {
     </div>
   );
 }
+
+// ---- part: 56-monsuc-intro.jsx ----
+// ===== モンヒロサクセスの育成の始まりの場面(2026-11-14 社長「始まったときに最初にシナリオ固有のイベントも流して」・案A・r1114-100) =====
+// 流れ: 育成を始める(円盤石から生まれる演出)→ この場面 → 1ターン目。毎回の育成で流す。2回目からは「とばす」で飛ばせる。
+// 台本: docs/progress/player-raise/script/start-<助手>.js の scn.<助手>.start.*(選択肢なし)。台本が無い助手は何も出さずに1ターン目へ。
+// 保存: 「1回見た」の印だけ、β版のキー mh_monsuc_beta_v1 の seen.start に足す(56-monsuc-beta.jsx の msxBetaMark)。育成の保存の形は変えない
+//   (phase 'intro' は保存の読み込みで main に戻るので、途中で読み直したときは場面を飛ばして1ターン目から)。
+
+const msxIntroScene = (aid) => `scn.${aid}.start`;
+
+function MsxRunIntro({ run, ctx, onDone }) {
+  const s = run.s;
+  if (typeof useMsxBeta === 'function') useMsxBeta(); // 「1回見た」の印を読み終わったら描き直す
+  const [loaded, setLoaded] = useState(false);
+  const [i, setI] = useState(0);
+  useEffect(() => { let alive = true; Promise.resolve(typeof msxScriptLoad === 'function' ? msxScriptLoad(s.aid) : null).catch(() => null).then(() => { if (alive) setLoaded(true); }); return () => { alive = false; }; }, [s.aid]);
+  const se = msxSuc && msxSuc.script;
+  let ev = null;
+  try { ev = loaded && se && typeof se.event === 'function' ? se.event(msxIntroScene(s.aid), { ...ctx, aid: s.aid }) : null; } catch (e) { ev = null; }
+  const lines = ev && Array.isArray(ev.lines) ? ev.lines : [];
+  const seenBefore = typeof msxBetaSeen === 'function' && msxBetaSeen('start');
+  const finish = () => { if (typeof msxBetaMark === 'function') msxBetaMark('start'); onDone(); };
+  // 台本が無いシナリオ(準備中の助手など)は、場面を出さずに1ターン目へ
+  useEffect(() => { if (loaded && !lines.length) onDone(); }, [loaded, lines.length]);
+  if (!loaded || !lines.length) return <><style>{MSX_INTRO_CSS}</style><div className="v-body"/></>;
+  const n = Math.min(i, lines.length - 1);
+  const l = lines[n];
+  const last = n + 1 >= lines.length;
+  const who = l.who === 'narr' ? null : l.who === 'mon' ? run.nick : msxAidName(l.who);
+  const next = () => { if (last) finish(); else setI(n + 1); };
+  return (<>
+    <style>{MSX_INTRO_CSS}</style>
+    <div className="v-body msx-intro-body">
+      <div className="v-scene msx-intro" style={{ flex: '1 1 0' }} onClick={next} data-msx-intro={n}>
+        <img className="bg" src={msxSceneBg(s.turn).bg} alt=""/><div className="sh"/>
+        <div className="gr" style={{ left: '30%', bottom: 'calc(30% - 5px)' }}/>
+        <MsxMonArt run={run} className="mon" style={{ left: '30%', bottom: '30%', height: '28%' }} live/>
+        <img className="msx-intro-aid" src={msxBody(s.aid, l.who === s.aid ? (l.e || 'happy') : 'happy')} alt=""/>
+        <div className="v-ev-h"><small>メインのお話</small>{msxAidName(s.aid)}編のはじまり</div>
+        <div className="v-talk msx-intro-talk">{who ? <><span className="who">{who}</span>{`「${l.t}」`}</> : l.t}<small className="pg">{n + 1}/{lines.length}</small></div>
+      </div>
+    </div>
+    <div className="v-ft">
+      {seenBefore ? <button type="button" onClick={finish} data-msx-intro-skip>⏩ とばす</button> : null}
+      <button type="button" className="go" onClick={next} data-msx-intro-next>{last ? '育成をはじめる ▶' : '次へ ▶'}</button>
+    </div>
+  </>);
+}
+
+
+const MSX_INTRO_CSS = `
+.msx .msx-intro{cursor:pointer}
+/* 横画面: ほかの画面の2列の並べ方を使わず、場面を画面いっぱいに。文の窓は右下 */
+.msx.land .v-body.msx-intro-body{display:flex;flex-direction:column}
+.msx.land .msx-intro{flex:1 1 auto;min-height:0}
+.msx.land .msx-intro-talk{left:auto;width:52%}
+.msx.land .msx-intro-aid{right:auto;left:48%;width:30%;height:88%;bottom:0}
+.msx.land .msx-intro .mon{height:60%!important;bottom:12%!important;left:24%!important}
+.msx.land .msx-intro .gr{left:24%!important;bottom:calc(12% - 5px)!important}
+.msx .msx-intro-aid{position:absolute;right:-6%;bottom:16%;height:66%;width:62%;object-fit:contain;object-position:right bottom;filter:drop-shadow(0 6px 4px #0008)}
+.msx .msx-intro-talk{position:absolute;left:10px;right:10px;bottom:10px;z-index:3;word-break:auto-phrase}
+.msx .msx-intro-talk .pg{display:block;text-align:right;font-size:10px;color:#64748b;margin-top:2px}
+`;
 
 // ---- part: 56-monsuc-kifx.jsx ----
 // ===== モンヒロサクセスの期の区切りの演出(2026-11-13 窓口の頼み・参考画像 40・41・112・113・173・176 の流れだけを取り入れる) =====
@@ -88021,10 +88084,12 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
   let body = null; let foot = null;
   // はじめたばかりの育成は、1ターン目のはじめの出来事を立ててからメインへ(描いている途中で保存を書き換えないよう、あとで1回だけ)
   // 期のはじめの控え run.ki(期の区切りの演出で、期のあいだに増えた賞金と総合力を出す)もここで1回だけ取る
-  useEffect(() => { if (run.phase === 'begin') toMain({ ...run, out: null, ki: run.ki || { p: 0, fame: Number.isFinite(run.s.fameTotal) ? run.s.fameTotal : 0, power: SUC.evaluate(run.s).power } }); }, [run.phase]);
+  // 育成の始まり: シナリオの始まりの場面(56-monsuc-intro.jsx)→ 1ターン目。部品が無いときはすぐ1ターン目へ
+  useEffect(() => { if (run.phase === 'begin') { const r0 = { ...run, out: null, ki: run.ki || { p: 0, fame: Number.isFinite(run.s.fameTotal) ? run.s.fameTotal : 0, power: SUC.evaluate(run.s).power } }; if (typeof MsxRunIntro === 'function') setRun({ ...r0, phase: 'intro' }); else toMain(r0); } }, [run.phase]);
   if (phase === 'begin') return <><MsxHd back="中断" onBack={onPause}/><div className="v-body"/></>;
   // 育成のはじまり: 円盤石から生まれる演出(56-monsuc-birth.jsx・2026-11-13 社長 r1113-008)。終わったら 'begin' → 最初のターンへ
   if (phase === 'birth' && typeof MsxBirth === 'function') return <MsxBirth run={run} v={v} ev={ev} onDone={() => setRun({ ...run, phase: 'begin' })}/>;
+  if (phase === 'intro' && typeof MsxRunIntro === 'function') return <><MsxHd back="中断" onBack={onPause} sub={`${msxAidName(s.aid)}編`} right={`${s.turn} / ${msxSuc.core.TOTAL_TURNS}ターン`}/><MsxRunIntro key={`intro-${s.id}`} run={run} ctx={ctx} onDone={() => toMain({ ...run, out: null })}/></>;
   // 回3(大会・修行・引退・ゲームオーバー・保存枠)の画面 MsxR3 が入っていれば、そちらへ渡す(回3の担当と決めた口)。
   //   MsxR3 はヘッダ・帯・v-body・v-ft まで自分で出す。修行・大会の受付は act のあと onActed(next) でこちらの流れ(叱る/褒める・博士・ターンを閉じる)へ戻す
   const r3 = typeof MsxR3 === 'function' ? (phase === 'battle' && !preOn ? 'battle' : phase === 'battle' ? null : (phase === 'over' || s.over) ? 'over' : sub === 'cup' ? 'cup' : sub === 'shugyo' ? 'shugyo' : null) : null;

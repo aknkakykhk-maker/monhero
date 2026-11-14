@@ -108,6 +108,13 @@ const CHANGELOG = [
     ],
   },
   {
+    date: "2026-11-14 19:07", type:'update', title:'育成の始めに、シナリオの始まりの場面が流れるようになりました', group:'success', releaseFlag:'monheroSuccess', status:'new',
+    items:[
+      '育成を始めると、1ターン目の前に、選んだシナリオの始まりの場面が流れます。みゅあ編では、生まれたばかりのモンスターとみゅあの出会いと、目指す大会が分かります。',
+      '2回目の育成からは「とばす」で飛ばせます。',
+    ],
+  },
+  {
     date: "2026-11-14 18:50", type:'update', title:'能力の列を押すと、素質を見られるようになりました', group:'success', releaseFlag:'monheroSuccess', status:'new',
     items:[
       '育成中の能力6つの札の列を押すと、能力ごとの素質(A〜E)の表示に切り替わります。もう一度押すと元に戻ります。',
