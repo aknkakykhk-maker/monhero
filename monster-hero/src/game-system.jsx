@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 570191fdd4828b2d
+// generated-sha256: 246a4b92ef0d1992
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -80089,6 +80089,9 @@ function AssistantMasmonTrainWatch({ assistantId, onClose }) {
   const [done, setDone] = useState(false);
   const [gift, setGift] = useState(null);
   const [failed, setFailed] = useState(false);
+  const [paused, setPaused] = useState(false);
+  const [bg, setBg] = useState(() => (typeof msaBgRead === 'function' ? msaBgRead() : 'arena'));
+  const reduce = useMemo(() => (typeof msaReduce === 'function' ? msaReduce() : false), []);
   const last = amgcLastShugyo(aid);
   const row = last ? last.row : amgcRowsOf(aid).slice().sort((a, b) => a.slot - b.slot)[0];
   useEffect(() => {
@@ -80115,28 +80118,31 @@ function AssistantMasmonTrainWatch({ assistantId, onClose }) {
     })();
     return () => { alive = false; };
   }, [engine]);
-  // 再生(βと同じ進め方。短く見せるので ★見せ場だけ から始める)
+  // 再生(モンサクの試合と同じ進め方・同じ間。短く見せるので ★見せ場だけ から始める。2026-11-14 社長「ここも見直して」)
   const len = battle ? (battle.solo ? battle.techs.length + 1 : battle.r.log.length) : 0;
+  const sf = speed === 'x2' ? 0.55 : 1;
   useEffect(() => {
-    if (!battle || done) return undefined;
+    if (!battle || done || paused) return undefined;
     if (pos >= len - 1) { const t = setTimeout(() => setDone(true), 800); return () => clearTimeout(t); }
-    const sp = AMBW_SPEEDS.find(s => s.id === speed) || AMBW_SPEEDS[0];
-    const t = setTimeout(() => {
-      let n = pos + 1;
-      if (!battle.solo && speed === 'hl') while (n < len - 1 && !ambwIsHighlight(battle.r.log[n], battle.maxHp)) n++;
-      setPos(n);
-    }, sp.ms);
+    const next = () => { let n = pos + 1; if (!battle.solo && speed === 'hl') while (n < len - 1 && !ambwIsHighlight(battle.r.log[n], battle.maxHp)) n++; return n; };
+    let ms = 1100;
+    if (!battle.solo && typeof msaStepMs === 'function') { const cur = battle.r.log[pos] || {}; ms = Math.round(msaStepMs(cur, cur.side === 'B' ? battle.teamB : battle.teamA, reduce, battle.r.log, sf) * sf); }
+    const t = setTimeout(() => setPos(next()), ms);
     return () => clearTimeout(t);
-  }, [battle, pos, speed, done]);
+  }, [battle, pos, speed, done, paused]);
   const info = assistantMasmonTrainRowInfo(aid);
   // 見終えたら応援と同じ得(社長「応援と同じで」)。できない時間帯なら何もしない
   useEffect(() => { if (done && !gift) setGift(assistantMasmonCheer(aid, 'watch')); }, [done]);
   const g = last ? last.log.g || {} : {};
   const gains = Object.entries(g).filter(([, n]) => n > 0).sort((a, b) => b[1] - a[1]).slice(0, 3);
   const me = last ? last.me : null;
-  const ring = () => {
+  // ねらい(この修行で何を伸ばす試合か)。結果は修行の記録に決まっている。ここでは「何のための練習試合か」を最初に出す
+  const aimNames = gains.map(([k]) => amgcTechName(row.monster, k));
+  const aim = last ? (last.log.l ? `新しい技「${amgcTechName(row.monster, last.log.l)}」を覚えるための練習試合` : aimNames.length ? `${aimNames.join('・')}の熟練(見習い→熟練)を伸ばす練習試合` : '技の熟練を伸ばす練習試合') : '技の熟練を伸ばす練習試合';
+  const faceOf = (aId) => { const a = typeof ASSISTANT_LIST !== 'undefined' ? ASSISTANT_LIST.find(x => x.id === aId) : null; return a ? { a, src: assistantFaceSrc(a, 'normal') } : null; };
+  const stageBlock = () => {
     if (failed) return <p className="ambw-small" style={{ padding: 24, textAlign: 'center' }}>練習試合を読み込めませんでした。もう一度開いてください</p>;
-    if (!battle) return <p className="ambw-small" style={{ padding: 24, textAlign: 'center' }} data-amgc-loading>練習の相手をさがしています…</p>;
+    if (!battle) return <p className="ambw-small" style={{ padding: 24, textAlign: 'center' }} data-amgc-loading>練習の相手を探しています…</p>;
     if (battle.solo) {
       const tch = battle.techs[Math.min(pos, battle.techs.length - 1)] || {};
       return (
@@ -80146,45 +80152,57 @@ function AssistantMasmonTrainWatch({ assistantId, onClose }) {
           {tch.name && <div key={`s-${pos}`} className={`ambw-cut ${tch.kind || 'pow'}`}><small>ひとりで型の稽古</small><b>{tch.name}</b></div>}
         </div>);
     }
-    const e = battle.r.log[pos] || {}; const f = battle.frames[pos]; const foeSide = e.side === 'A' ? 'B' : 'A';
-    const fighter = (side) => {
-      const team = side === 'A' ? battle.teamA : battle.teamB; const m = team.members[f.act[side]] || team.members[0];
-      return (
-        <div key={`${side}-${pos}`} className={`ambw-f ${f.hp[side][f.act[side]] <= 0 ? 'down' : ''} ${e.side === side && e.ev === 'tech' ? `ambw-lunge${side}` : ''} ${e.ev === 'tech' && foeSide === side && e.hit ? 'ambw-hit' : ''}`}>
-          <img className={side === 'A' ? 'ambw-flip' : ''} src={(ALL_PLAYER_MONSTERS[m.species] || {}).imgUrl} alt=""/><em>{m.name}</em>
-          {e.ev === 'tech' && foeSide === side && (e.hit ? <div className="ambw-dmg">−{e.dmg}</div> : <div className="ambw-dmg miss">はずれ</div>)}
-        </div>);
-    };
+    if (typeof MsaStage !== 'function') return null;
+    const log = battle.r.log, frames = battle.frames, f = frames[Math.min(pos, frames.length - 1)] || frames[0], e = log[pos] || {};
+    const teams = { A: battle.teamA, B: battle.teamB };
+    const nm = (side, i) => { const t = teams[side]; const ms = (t && t.members) || []; const m = ms[Number.isFinite(i) ? i : f.act[side]] || ms[0]; return (m && m.name) || ''; };
+    let call = null;
+    if (typeof msaCallOf === 'function') for (let q = pos; q >= Math.max(1, pos - 2) && !call; q--) { const c = msaCallOf(log, frames, q, battle.maxHp, nm); if (c) call = { ...c, at: q }; }
+    const foeFace = faceOf(battle.teamB.assistantId), meFace = faceOf(aid);
+    const foeLine = battle.foe.kind === 'friend' ? battle.foe.label : `${foeFace ? foeFace.a.name : ''}の${battle.foe.label}`;
+    const venue = typeof msaVenueBg === 'function' ? msaVenueBg('cup', bg) : null;
     return (
-      <>
-        <AmbwPanel side="B" team={battle.teamB} frame={f} maxHp={battle.maxHp} moves={battle.moves.B} lastMove={e.side === 'B' && e.ev === 'tech' ? e.move : null} mine={false}/>
-        <div className="ambw-ring">
-          <div className="ambw-stage">{fighter('A')}<div className="ambw-gap" style={{ width: [6, 44, 92, 146][f.d] || 44 }}/>{fighter('B')}</div>
-          <div className="ambw-dist">{AMBW_DIST.map((n, d) => <span key={d} className={d === f.d ? 'cur' : ''}>{n}</span>)}</div>
-          {e.ev === 'tech' && <div key={`c-${pos}`} className={`ambw-cut ${e.kind} ${e.side === 'B' ? 'B' : ''}`}><small>{e.kind === 'pow' ? '💪 ちから技' : '🧠 かしこさ技'}</small><b>{e.name}</b></div>}
+      <div className="msa amgc-wrap" data-amgc-match data-msa-pos={pos}>
+        <style>{MSA_CSS}{typeof MSA_SHOW_CSS === 'string' ? MSA_SHOW_CSS : ''}</style>
+        <div className="amgc-side foe" data-amgc-side="foe">{foeFace ? <img src={foeFace.src} alt=""/> : null}<span><small>練習相手</small><b>{foeLine}</b></span></div>
+        <div className="msa-stagebox amgc-stagebox" data-msa-stagebox>
+          <MsaStage log={log} frames={frames} pos={pos} teams={teams} venueImg={venue} ended={done} win={battle.r.winner} introTitle="練習試合" speedF={sf} fill lite={speed === 'hl'}/>
         </div>
-        <AmbwPanel side="A" team={battle.teamA} frame={f} maxHp={battle.maxHp} moves={battle.moves.A} lastMove={e.side === 'A' && e.ev === 'tech' ? e.move : null} mine/>
-      </>);
+        <div className="amgc-side me" data-amgc-side="me">{meFace ? <img src={meFace.src} alt=""/> : null}<span><small>修行中</small><b>{who ? who.name : ''}の{row.nick}</b></span></div>
+        <div className="msa-say" data-msa-say>{call ? <div key={`call-${call.at}`} className={`msa-call ${call.k}`} data-msa-call={call.k}>🎙 {call.t}</div> : msaSay(e, nm)}</div>
+      </div>);
   };
   return (
-    <div className="ambw-root" style={{ position: 'fixed', inset: 0, zIndex: 9000, overflowY: 'auto', background: 'linear-gradient(180deg,#221a44,#141026 40%)', color: '#fff', padding: 'calc(10px + env(safe-area-inset-top)) calc(12px + env(safe-area-inset-right)) calc(16px + env(safe-area-inset-bottom)) calc(12px + env(safe-area-inset-left))' }} data-amgc-watch>
-      <style>{AMBW_CSS}</style>
-      <div className="ambw-row" style={{ marginBottom: 8 }}>
+    <div className="ambw-root amgc-root" style={{ position: 'fixed', inset: 0, zIndex: 9000, overflowY: 'auto', background: 'linear-gradient(180deg,#221a44,#141026 40%)', color: '#fff', padding: 'calc(10px + env(safe-area-inset-top)) calc(12px + env(safe-area-inset-right)) calc(16px + env(safe-area-inset-bottom)) calc(12px + env(safe-area-inset-left))', display: 'flex', flexDirection: 'column' }}>
+      <style>{AMBW_CSS}{`
+.amgc-wrap{flex:1 1 auto;display:flex;flex-direction:column;gap:5px;min-height:340px}
+.amgc-wrap .msa-stagebox{flex:1 1 auto;min-height:260px}
+.amgc-side{display:flex;align-items:center;gap:8px;padding:4px 10px;border-radius:12px;background:#1e1a36;border:1px solid #3b3566}
+.amgc-side.me{border-color:#f472b6}.amgc-side.foe{border-color:#38bdf8}
+.amgc-side img{width:30px;height:30px;border-radius:50%;object-fit:cover;object-position:top;background:#312e5a;flex:none}
+.amgc-side span{display:flex;flex-direction:column;min-width:0}.amgc-side small{font-size:10px;color:#a5b4fc}.amgc-side b{font-size:13px;white-space:normal;word-break:keep-all;overflow-wrap:anywhere}
+.amgc-aim{margin:0 0 6px;padding:6px 10px;border-radius:12px;background:#312e5a;border:1px solid #6b64a8;font-size:12px;font-weight:800;line-height:1.45}
+.amgc-aim b{color:#fde68a}
+`}</style>
+      <div className="ambw-row" style={{ marginBottom: 6 }}>
         <button className="ambw-btn2" data-amgc-close onClick={onClose}>← 戻る</button>
         <b style={{ flex: 1, fontSize: 15, color: '#a5f3fc' }}>👀 {who ? who.name : ''}の修行</b>
-        <span className="ambw-small" data-amgc-foe={battle ? (battle.solo ? 'solo' : battle.foe.kind) : ''}>{battle ? (battle.solo ? 'ひとりで稽古' : battle.foe.kind === 'friend' ? `練習試合 vs ${battle.foe.label}` : `練習試合 vs ${battle.foe.label}`) : '練習試合'}</span>
+        <span className="ambw-small" data-amgc-foe={battle ? (battle.solo ? 'solo' : battle.foe.kind) : ''}>{battle ? (battle.solo ? 'ひとりで稽古' : '練習試合') : '練習試合'}</span>
       </div>
-      {ring()}
-      <div className="ambw-ctl">
-        {AMBW_SPEEDS.filter(s => s.id === 'hl' || s.id === 'x2').map(s => <button key={s.id} className={speed === s.id ? 'ambw-btn' : 'ambw-btn2'} onClick={() => setSpeed(s.id)}>{s.label}</button>)}
+      <div className="amgc-aim" data-amgc-aim>🎯 <b>ねらい</b>: {row ? `${row.nick}の${aim}` : aim}</div>
+      {stageBlock()}
+      <div className="ambw-ctl" style={{ marginTop: 6 }}>
+        <button className="ambw-btn2" data-amgc-pause onClick={() => setPaused(v => !v)}>{paused ? '▶' : '⏸'}</button>
+        {AMBW_SPEEDS.filter(s => s.id === 'hl' || s.id === 'x2').map(s => <button key={s.id} className={speed === s.id ? 'ambw-btn' : 'ambw-btn2'} onClick={() => { setSpeed(s.id); setPaused(false); }}>{s.label}</button>)}
+        {typeof msaBgWrite === 'function' && <button className="ambw-btn2" data-msa-bg={bg} aria-label="背景を切り替える" onClick={() => { const nx = bg === 'stadium' ? 'arena' : 'stadium'; msaBgWrite(nx); setBg(nx); }}>{bg === 'stadium' ? '🏟️' : '🏛️'}</button>}
         <button className="ambw-btn2" data-amgc-skip onClick={() => { setPos(Math.max(0, len - 1)); setDone(true); }}>⏭ 結果へ</button>
       </div>
       {battle && !battle.solo && battle.foe && battle.foe.kind === 'friend' && <p className="ambw-small" style={{ textAlign: 'center' }}>フレンドが練習相手です(編成を見つけてから7日間は、この相手として数えます)</p>}
       {battle && battle.solo && <p className="ambw-small" style={{ textAlign: 'center' }}>いまはひとりで稽古中なので、修行の伸びが半分になります。👀で見るか、マスモンをもう1体迎えると相手ができます(フレンドが相手になるのは、編成を見つけてから7日間です)</p>}
       <div className="ambw-card" data-amgc-result>
-        <b style={{ color: '#fde68a' }}>🥋 {last ? (last.today ? 'きょうの修行' : '前回の修行') : 'まだ修行していません'}{last ? ` ${row.nick}(${(AMGT_KINDS[last.log.k] || {}).name || ''})` : ''}</b>
+        <b style={{ color: '#fde68a' }}>🥋 {last ? (last.today ? '今日の修行の結果' : '前回の修行の結果') : 'まだ修行していません'}{last ? ` ${row.nick}(${(AMGT_KINDS[last.log.k] || {}).name || ''})` : ''}</b>
         {last && last.log.l && <p data-amgc-learned style={{ margin: '4px 0 0', fontWeight: 800 }}><span style={{ background: '#fbbf24', color: '#111', borderRadius: 6, padding: '0 4px', fontSize: 10 }}>NEW</span> {amgcTechName(row.monster, last.log.l)} を覚えた</p>}
-        {gains.map(([k, n]) => { const to = me ? me.m[k] || 0 : 0; return <p key={k} data-amgc-gain={k} style={{ margin: '3px 0 0', fontSize: 12, fontWeight: 800 }}>{amgcTechName(row.monster, k)} {Math.max(0, to - n)}→{to}(+{n}・{amgtRankOf(to)})</p>; })}
+        {gains.map(([k, n]) => { const to = me ? me.m[k] || 0 : 0; const from = Math.max(0, to - n); return <p key={k} data-amgc-gain={k} style={{ margin: '3px 0 0', fontSize: 12, fontWeight: 800 }}>{amgcTechName(row.monster, k)} {from}→{to}(+{n}) <span style={{ color: '#fde68a' }}>{amgtRankOf(from)}→{amgtRankOf(to)}</span></p>; })}
         {gift && gift.ok && <p data-amgc-gift style={{ margin: '6px 0 0', color: '#fdba74', fontWeight: 900 }}>{who ? who.name : ''}「見に来てくれてうれしいです！」 🥋 {gift.nick} {gift.tech} 熟練 +{gift.to - gift.from} ・ 💗 +{gift.bond}</p>}
         {done && gift && !gift.ok && info && info.why && <p className="ambw-small" style={{ marginTop: 6 }} data-amgc-nogift>{info.why}</p>}
       </div>

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5058403a095d44a0
+// source-sha256: 6be98219c5f9cee3
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -152876,6 +152876,9 @@ function AssistantMasmonTrainWatch({
   const [done, setDone] = useState(false);
   const [gift, setGift] = useState(null);
   const [failed, setFailed] = useState(false);
+  const [paused, setPaused] = useState(false);
+  const [bg, setBg] = useState(() => typeof msaBgRead === 'function' ? msaBgRead() : 'arena');
+  const reduce = useMemo(() => typeof msaReduce === 'function' ? msaReduce() : false, []);
   const last = amgcLastShugyo(aid);
   const row = last ? last.row : amgcRowsOf(aid).slice().sort((a, b) => a.slot - b.slot)[0];
   useEffect(() => {
@@ -152961,20 +152964,26 @@ function AssistantMasmonTrainWatch({
     };
   }, [engine]);
   const len = battle ? battle.solo ? battle.techs.length + 1 : battle.r.log.length : 0;
+  const sf = speed === 'x2' ? 0.55 : 1;
   useEffect(() => {
-    if (!battle || done) return undefined;
+    if (!battle || done || paused) return undefined;
     if (pos >= len - 1) {
       const t = setTimeout(() => setDone(true), 800);
       return () => clearTimeout(t);
     }
-    const sp = AMBW_SPEEDS.find(s => s.id === speed) || AMBW_SPEEDS[0];
-    const t = setTimeout(() => {
+    const next = () => {
       let n = pos + 1;
       if (!battle.solo && speed === 'hl') while (n < len - 1 && !ambwIsHighlight(battle.r.log[n], battle.maxHp)) n++;
-      setPos(n);
-    }, sp.ms);
+      return n;
+    };
+    let ms = 1100;
+    if (!battle.solo && typeof msaStepMs === 'function') {
+      const cur = battle.r.log[pos] || {};
+      ms = Math.round(msaStepMs(cur, cur.side === 'B' ? battle.teamB : battle.teamA, reduce, battle.r.log, sf) * sf);
+    }
+    const t = setTimeout(() => setPos(next()), ms);
     return () => clearTimeout(t);
-  }, [battle, pos, speed, done]);
+  }, [battle, pos, speed, done, paused]);
   const info = assistantMasmonTrainRowInfo(aid);
   useEffect(() => {
     if (done && !gift) setGift(assistantMasmonCheer(aid, 'watch'));
@@ -152982,7 +152991,16 @@ function AssistantMasmonTrainWatch({
   const g = last ? last.log.g || {} : {};
   const gains = Object.entries(g).filter(([, n]) => n > 0).sort((a, b) => b[1] - a[1]).slice(0, 3);
   const me = last ? last.me : null;
-  const ring = () => {
+  const aimNames = gains.map(([k]) => amgcTechName(row.monster, k));
+  const aim = last ? last.log.l ? `新しい技「${amgcTechName(row.monster, last.log.l)}」を覚えるための練習試合` : aimNames.length ? `${aimNames.join('・')}の熟練(見習い→熟練)を伸ばす練習試合` : '技の熟練を伸ばす練習試合' : '技の熟練を伸ばす練習試合';
+  const faceOf = aId => {
+    const a = typeof ASSISTANT_LIST !== 'undefined' ? ASSISTANT_LIST.find(x => x.id === aId) : null;
+    return a ? {
+      a,
+      src: assistantFaceSrc(a, 'normal')
+    } : null;
+  };
+  const stageBlock = () => {
     if (failed) return React.createElement("p", {
       className: "ambw-small",
       style: {
@@ -152997,7 +153015,7 @@ function AssistantMasmonTrainWatch({
         textAlign: 'center'
       },
       "data-amgc-loading": true
-    }, "練習の相手をさがしています…");
+    }, "練習の相手を探しています…");
     if (battle.solo) {
       const tch = battle.techs[Math.min(pos, battle.techs.length - 1)] || {};
       return React.createElement("div", {
@@ -153031,62 +153049,75 @@ function AssistantMasmonTrainWatch({
         className: `ambw-cut ${tch.kind || 'pow'}`
       }, React.createElement("small", null, "ひとりで型の稽古"), React.createElement("b", null, tch.name)));
     }
-    const e = battle.r.log[pos] || {};
-    const f = battle.frames[pos];
-    const foeSide = e.side === 'A' ? 'B' : 'A';
-    const fighter = side => {
-      const team = side === 'A' ? battle.teamA : battle.teamB;
-      const m = team.members[f.act[side]] || team.members[0];
-      return React.createElement("div", {
-        key: `${side}-${pos}`,
-        className: `ambw-f ${f.hp[side][f.act[side]] <= 0 ? 'down' : ''} ${e.side === side && e.ev === 'tech' ? `ambw-lunge${side}` : ''} ${e.ev === 'tech' && foeSide === side && e.hit ? 'ambw-hit' : ''}`
-      }, React.createElement("img", {
-        className: side === 'A' ? 'ambw-flip' : '',
-        src: (ALL_PLAYER_MONSTERS[m.species] || {}).imgUrl,
-        alt: ""
-      }), React.createElement("em", null, m.name), e.ev === 'tech' && foeSide === side && (e.hit ? React.createElement("div", {
-        className: "ambw-dmg"
-      }, "−", e.dmg) : React.createElement("div", {
-        className: "ambw-dmg miss"
-      }, "はずれ")));
+    if (typeof MsaStage !== 'function') return null;
+    const log = battle.r.log,
+      frames = battle.frames,
+      f = frames[Math.min(pos, frames.length - 1)] || frames[0],
+      e = log[pos] || {};
+    const teams = {
+      A: battle.teamA,
+      B: battle.teamB
     };
-    return React.createElement(React.Fragment, null, React.createElement(AmbwPanel, {
-      side: "B",
-      team: battle.teamB,
-      frame: f,
-      maxHp: battle.maxHp,
-      moves: battle.moves.B,
-      lastMove: e.side === 'B' && e.ev === 'tech' ? e.move : null,
-      mine: false
-    }), React.createElement("div", {
-      className: "ambw-ring"
-    }, React.createElement("div", {
-      className: "ambw-stage"
-    }, fighter('A'), React.createElement("div", {
-      className: "ambw-gap",
-      style: {
-        width: [6, 44, 92, 146][f.d] || 44
-      }
-    }), fighter('B')), React.createElement("div", {
-      className: "ambw-dist"
-    }, AMBW_DIST.map((n, d) => React.createElement("span", {
-      key: d,
-      className: d === f.d ? 'cur' : ''
-    }, n))), e.ev === 'tech' && React.createElement("div", {
-      key: `c-${pos}`,
-      className: `ambw-cut ${e.kind} ${e.side === 'B' ? 'B' : ''}`
-    }, React.createElement("small", null, e.kind === 'pow' ? '💪 ちから技' : '🧠 かしこさ技'), React.createElement("b", null, e.name))), React.createElement(AmbwPanel, {
-      side: "A",
-      team: battle.teamA,
-      frame: f,
-      maxHp: battle.maxHp,
-      moves: battle.moves.A,
-      lastMove: e.side === 'A' && e.ev === 'tech' ? e.move : null,
-      mine: true
-    }));
+    const nm = (side, i) => {
+      const t = teams[side];
+      const ms = t && t.members || [];
+      const m = ms[Number.isFinite(i) ? i : f.act[side]] || ms[0];
+      return m && m.name || '';
+    };
+    let call = null;
+    if (typeof msaCallOf === 'function') for (let q = pos; q >= Math.max(1, pos - 2) && !call; q--) {
+      const c = msaCallOf(log, frames, q, battle.maxHp, nm);
+      if (c) call = {
+        ...c,
+        at: q
+      };
+    }
+    const foeFace = faceOf(battle.teamB.assistantId),
+      meFace = faceOf(aid);
+    const foeLine = battle.foe.kind === 'friend' ? battle.foe.label : `${foeFace ? foeFace.a.name : ''}の${battle.foe.label}`;
+    const venue = typeof msaVenueBg === 'function' ? msaVenueBg('cup', bg) : null;
+    return React.createElement("div", {
+      className: "msa amgc-wrap",
+      "data-amgc-match": true,
+      "data-msa-pos": pos
+    }, React.createElement("style", null, MSA_CSS, typeof MSA_SHOW_CSS === 'string' ? MSA_SHOW_CSS : ''), React.createElement("div", {
+      className: "amgc-side foe",
+      "data-amgc-side": "foe"
+    }, foeFace ? React.createElement("img", {
+      src: foeFace.src,
+      alt: ""
+    }) : null, React.createElement("span", null, React.createElement("small", null, "練習相手"), React.createElement("b", null, foeLine))), React.createElement("div", {
+      className: "msa-stagebox amgc-stagebox",
+      "data-msa-stagebox": true
+    }, React.createElement(MsaStage, {
+      log: log,
+      frames: frames,
+      pos: pos,
+      teams: teams,
+      venueImg: venue,
+      ended: done,
+      win: battle.r.winner,
+      introTitle: "練習試合",
+      speedF: sf,
+      fill: true,
+      lite: speed === 'hl'
+    })), React.createElement("div", {
+      className: "amgc-side me",
+      "data-amgc-side": "me"
+    }, meFace ? React.createElement("img", {
+      src: meFace.src,
+      alt: ""
+    }) : null, React.createElement("span", null, React.createElement("small", null, "修行中"), React.createElement("b", null, who ? who.name : '', "の", row.nick))), React.createElement("div", {
+      className: "msa-say",
+      "data-msa-say": true
+    }, call ? React.createElement("div", {
+      key: `call-${call.at}`,
+      className: `msa-call ${call.k}`,
+      "data-msa-call": call.k
+    }, "🎙 ", call.t) : msaSay(e, nm)));
   };
   return React.createElement("div", {
-    className: "ambw-root",
+    className: "ambw-root amgc-root",
     style: {
       position: 'fixed',
       inset: 0,
@@ -153094,13 +153125,23 @@ function AssistantMasmonTrainWatch({
       overflowY: 'auto',
       background: 'linear-gradient(180deg,#221a44,#141026 40%)',
       color: '#fff',
-      padding: 'calc(10px + env(safe-area-inset-top)) calc(12px + env(safe-area-inset-right)) calc(16px + env(safe-area-inset-bottom)) calc(12px + env(safe-area-inset-left))'
-    },
-    "data-amgc-watch": true
-  }, React.createElement("style", null, AMBW_CSS), React.createElement("div", {
+      padding: 'calc(10px + env(safe-area-inset-top)) calc(12px + env(safe-area-inset-right)) calc(16px + env(safe-area-inset-bottom)) calc(12px + env(safe-area-inset-left))',
+      display: 'flex',
+      flexDirection: 'column'
+    }
+  }, React.createElement("style", null, AMBW_CSS, `
+.amgc-wrap{flex:1 1 auto;display:flex;flex-direction:column;gap:5px;min-height:340px}
+.amgc-wrap .msa-stagebox{flex:1 1 auto;min-height:260px}
+.amgc-side{display:flex;align-items:center;gap:8px;padding:4px 10px;border-radius:12px;background:#1e1a36;border:1px solid #3b3566}
+.amgc-side.me{border-color:#f472b6}.amgc-side.foe{border-color:#38bdf8}
+.amgc-side img{width:30px;height:30px;border-radius:50%;object-fit:cover;object-position:top;background:#312e5a;flex:none}
+.amgc-side span{display:flex;flex-direction:column;min-width:0}.amgc-side small{font-size:10px;color:#a5b4fc}.amgc-side b{font-size:13px;white-space:normal;word-break:keep-all;overflow-wrap:anywhere}
+.amgc-aim{margin:0 0 6px;padding:6px 10px;border-radius:12px;background:#312e5a;border:1px solid #6b64a8;font-size:12px;font-weight:800;line-height:1.45}
+.amgc-aim b{color:#fde68a}
+`), React.createElement("div", {
     className: "ambw-row",
     style: {
-      marginBottom: 8
+      marginBottom: 6
     }
   }, React.createElement("button", {
     className: "ambw-btn2",
@@ -153115,13 +153156,35 @@ function AssistantMasmonTrainWatch({
   }, "👀 ", who ? who.name : '', "の修行"), React.createElement("span", {
     className: "ambw-small",
     "data-amgc-foe": battle ? battle.solo ? 'solo' : battle.foe.kind : ''
-  }, battle ? battle.solo ? 'ひとりで稽古' : battle.foe.kind === 'friend' ? `練習試合 vs ${battle.foe.label}` : `練習試合 vs ${battle.foe.label}` : '練習試合')), ring(), React.createElement("div", {
-    className: "ambw-ctl"
-  }, AMBW_SPEEDS.filter(s => s.id === 'hl' || s.id === 'x2').map(s => React.createElement("button", {
+  }, battle ? battle.solo ? 'ひとりで稽古' : '練習試合' : '練習試合')), React.createElement("div", {
+    className: "amgc-aim",
+    "data-amgc-aim": true
+  }, "🎯 ", React.createElement("b", null, "ねらい"), ": ", row ? `${row.nick}の${aim}` : aim), stageBlock(), React.createElement("div", {
+    className: "ambw-ctl",
+    style: {
+      marginTop: 6
+    }
+  }, React.createElement("button", {
+    className: "ambw-btn2",
+    "data-amgc-pause": true,
+    onClick: () => setPaused(v => !v)
+  }, paused ? '▶' : '⏸'), AMBW_SPEEDS.filter(s => s.id === 'hl' || s.id === 'x2').map(s => React.createElement("button", {
     key: s.id,
     className: speed === s.id ? 'ambw-btn' : 'ambw-btn2',
-    onClick: () => setSpeed(s.id)
-  }, s.label)), React.createElement("button", {
+    onClick: () => {
+      setSpeed(s.id);
+      setPaused(false);
+    }
+  }, s.label)), typeof msaBgWrite === 'function' && React.createElement("button", {
+    className: "ambw-btn2",
+    "data-msa-bg": bg,
+    "aria-label": "背景を切り替える",
+    onClick: () => {
+      const nx = bg === 'stadium' ? 'arena' : 'stadium';
+      msaBgWrite(nx);
+      setBg(nx);
+    }
+  }, bg === 'stadium' ? '🏟️' : '🏛️'), React.createElement("button", {
     className: "ambw-btn2",
     "data-amgc-skip": true,
     onClick: () => {
@@ -153145,7 +153208,7 @@ function AssistantMasmonTrainWatch({
     style: {
       color: '#fde68a'
     }
-  }, "🥋 ", last ? last.today ? 'きょうの修行' : '前回の修行' : 'まだ修行していません', last ? ` ${row.nick}(${(AMGT_KINDS[last.log.k] || {}).name || ''})` : ''), last && last.log.l && React.createElement("p", {
+  }, "🥋 ", last ? last.today ? '今日の修行の結果' : '前回の修行の結果' : 'まだ修行していません', last ? ` ${row.nick}(${(AMGT_KINDS[last.log.k] || {}).name || ''})` : ''), last && last.log.l && React.createElement("p", {
     "data-amgc-learned": true,
     style: {
       margin: '4px 0 0',
@@ -153161,6 +153224,7 @@ function AssistantMasmonTrainWatch({
     }
   }, "NEW"), " ", amgcTechName(row.monster, last.log.l), " を覚えた"), gains.map(([k, n]) => {
     const to = me ? me.m[k] || 0 : 0;
+    const from = Math.max(0, to - n);
     return React.createElement("p", {
       key: k,
       "data-amgc-gain": k,
@@ -153169,7 +153233,11 @@ function AssistantMasmonTrainWatch({
         fontSize: 12,
         fontWeight: 800
       }
-    }, amgcTechName(row.monster, k), " ", Math.max(0, to - n), "→", to, "(+", n, "・", amgtRankOf(to), ")");
+    }, amgcTechName(row.monster, k), " ", from, "→", to, "(+", n, ") ", React.createElement("span", {
+      style: {
+        color: '#fde68a'
+      }
+    }, amgtRankOf(from), "→", amgtRankOf(to)));
   }), gift && gift.ok && React.createElement("p", {
     "data-amgc-gift": true,
     style: {
