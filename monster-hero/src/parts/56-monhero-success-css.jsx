@@ -485,7 +485,45 @@ const MSX_CSS = `
 .msx .v-cup .e .gr.g-green{background:#86efac}.msx .v-cup .e .gr.g-four{background:#c4b5fd}.msx .v-cup .e .gr.g-rainbow{background:linear-gradient(90deg,#fda4af,#fde047,#86efac,#93c5fd);color:#1e1b4b}
 .msx .v-cup.ex .e{position:relative}
 .msx .v-cup.ex.g-four{border-color:#a78bfa}.msx .v-cup.ex.g-gold{border-color:#fde047}.msx .v-cup.ex.g-rainbow{border-color:#fda4af}
-.msx .v-cup.hard .tx small{color:#fca5a5}.msx .v-cup.ng .tx small{color:#fca5a5}
+.msx .v-cup.hard .tx small{color:#fca5a5}
+/* 大会の受付(2026-11-13 作り直し): 賞金の帯・月の切り替え・大きな札・確認の窓 */
+.msx .v-cupbar{display:flex;align-items:center;gap:8px;margin-top:6px;background:linear-gradient(90deg,#3b2f0b,#1e1a36);border:1px solid #a16207;border-radius:10px;padding:4px 10px;font-size:11px;font-weight:900;color:#fde68a}
+.msx .v-cupbar b{margin-left:auto;font-size:17px;color:#fde047;text-align:right}.msx .v-cupbar b small{font-size:11px;margin-left:1px}.msx .v-cupbar i{font-style:normal;font-size:10px;background:#0f172a;border-radius:6px;padding:1px 6px;color:#e2e8f0}
+.msx .v-cupmon{display:flex;align-items:center;gap:6px;margin-top:5px}
+.msx .v-cupmon b{flex:1;text-align:center;font-size:13px;font-weight:900}.msx .v-cupmon b small{margin-left:6px;font-size:10px;border-radius:6px;padding:1px 6px;background:#334155;color:#cbd5e1}.msx .v-cupmon b small.now{background:#f472b6;color:#fff}
+.msx .v-cupmon .ar{width:44px;min-height:30px;border-radius:9px;background:#1e293b;border:1px solid #475569;color:#fde047;font-size:13px;text-align:center}
+.msx .v-cup2{align-items:stretch;padding:6px 8px;min-height:66px;flex:none}
+.msx .v-cup2 .lg{flex:none;width:66px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;background:#0f172a;border-radius:10px;padding:3px 0}
+.msx .v-cup2 .lg .e{font-size:26px;line-height:1}
+.msx .v-cup2 .fcst{display:block;width:auto;height:auto;font-size:9px;letter-spacing:-.02em;font-weight:900;border-radius:5px;padding:0 4px;white-space:nowrap;text-align:center;line-height:1.5}
+.msx .v-cup2 .fcst.fc-e{background:#86efac;color:#14532d}.msx .v-cup2 .fcst.fc-g{background:#bef264;color:#365314}.msx .v-cup2 .fcst.fc-v{background:#fde047;color:#713f12}.msx .v-cup2 .fcst.fc-h{background:#fdba74;color:#7c2d12}.msx .v-cup2 .fcst.fc-n{background:#ef4444;color:#fff}
+.msx .v-cup2 .tx{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;gap:1px;text-align:left}
+.msx .v-cup2 .tx .hd{display:flex;align-items:center;gap:4px;font-size:9.5px;font-weight:900;height:16px;line-height:16px}.msx .v-cup2 .tx .hd>span{display:inline-block;height:auto;line-height:1.5}
+.msx .v-cup2 .tx .hd .gr2{background:#475569;border-radius:5px;padding:0 5px;color:#fff}.msx .v-cup2.g-gold .gr2{background:#ca8a04}.msx .v-cup2.g-silver .gr2{background:#64748b}.msx .v-cup2.g-green .gr2{background:#16a34a}.msx .v-cup2.g-four .gr2{background:#7c3aed}.msx .v-cup2.g-rainbow .gr2{background:linear-gradient(90deg,#f43f5e,#eab308,#22c55e,#3b82f6)}
+.msx .v-cup2 .tx .hd .cs{color:#fde047;font-size:11px}.msx .v-cup2 .tx .hd .dn{margin-left:auto;background:#fde047;color:#422006;border-radius:5px;padding:0 5px}
+.msx .v-cup2 .tx>b{font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.msx .v-cup2 .tx .g{display:block;font-size:18px;font-weight:900;color:#fde047;text-align:right;line-height:1.1}.msx .v-cup2 .tx .g small{display:inline;font-size:11px;margin-left:1px;color:#fde047}
+.msx .v-cup2.ng{opacity:1;background:#14121f;border-color:#334155}.msx .v-cup2.ng .lg,.msx .v-cup2.ng .tx>b,.msx .v-cup2.ng .tx .hd,.msx .v-cup2.ng .tx .g{opacity:.45}.msx .v-cup2.later{filter:saturate(.7)}
+.msx .v-cup2 .why{display:block;color:#fca5a5;font-size:10.5px;font-weight:900;line-height:1.3;white-space:normal}
+.msx .v-cupwin{position:absolute;inset:0;z-index:40;background:#0009;display:flex;align-items:center;justify-content:center;padding:16px}
+.msx .v-cupwin .in{position:relative;width:100%;max-width:360px;background:#fffbeb;color:#1e1b4b;border-radius:16px;border:3px solid #f59e0b;padding:10px 12px 12px;box-shadow:0 8px 0 #0006}
+.msx .v-cupwin .h{text-align:center;font-weight:900;font-size:14px;background:#f59e0b;color:#fff;border-radius:10px;padding:3px 0;margin:-2px -2px 8px}
+.msx .v-cupwin .sign{display:flex;flex-direction:column;align-items:center;gap:2px;background:linear-gradient(180deg,#1e1a36,#3b3566);color:#fff;border-radius:12px;padding:8px 6px;text-align:center}
+.msx .v-cupwin .sign .e{font-size:40px;line-height:1}.msx .v-cupwin .sign b{font-size:15px}.msx .v-cupwin .sign small{font-size:10.5px;color:#fde68a}
+.msx .v-cupwin .sign.g-four{background:linear-gradient(180deg,#2e1065,#6d28d9)}.msx .v-cupwin .sign.g-rainbow{background:linear-gradient(180deg,#7f1d1d,#a16207)}
+.msx .v-cupwin .sub{margin-top:8px;font-size:11px;font-weight:900;color:#92400e;text-align:left}
+.msx .v-cupwin .pz{display:flex;gap:6px;overflow-x:auto;padding:4px 0}
+.msx .v-cupwin .pz button{flex:none;width:72px;display:flex;flex-direction:column;align-items:center;gap:2px;background:#fff;border:2px solid #e5e7eb;border-radius:10px;padding:4px 2px;text-align:center}
+.msx .v-cupwin .pz button span{font-size:24px;line-height:1}.msx .v-cupwin .pz button small{font-size:9.5px;font-weight:900;line-height:1.2;color:#1e1b4b}
+.msx .v-cupwin .pz button.rare{border-color:transparent;background:linear-gradient(#fff,#fff) padding-box,linear-gradient(90deg,#f43f5e,#eab308,#22c55e,#3b82f6,#a855f7) border-box}
+.msx .v-cupwin .q{margin-top:8px;text-align:center;font-weight:900;font-size:13px}.msx .v-cupwin .q.ng{color:#dc2626;font-size:12px}
+.msx .v-cupwin .bt{display:flex;gap:8px;margin-top:8px}
+.msx .v-cupwin .bt button{flex:1;min-height:40px;border-radius:99px;background:#e5e7eb;color:#1e1b4b;font-weight:900;font-size:13.5px;text-align:center}
+.msx .v-cupwin .bt button.go{background:linear-gradient(90deg,#f472b6,#fb923c);color:#fff}
+.msx .v-cupwin .det{position:absolute;inset:0;background:#0007;border-radius:14px;display:flex;align-items:center;justify-content:center;padding:12px}
+.msx .v-cupwin .dbox{background:#fff;border-radius:12px;padding:10px;text-align:center;width:100%;border:2px solid #f59e0b}
+.msx .v-cupwin .dbox .e{font-size:38px}.msx .v-cupwin .dbox b{display:block;font-size:14px}.msx .v-cupwin .dbox p{font-size:11.5px;margin:4px 0 8px;text-align:left;line-height:1.45}
+.msx .v-cupwin .dbox button{min-height:36px;width:100%;border-radius:99px;background:#e5e7eb;font-weight:900;text-align:center}.msx .v-cup.ng .tx small{color:#fca5a5}
 .msx .v-vsh{display:flex;align-items:center;gap:4px;margin-top:6px;border-radius:16px;overflow:hidden;border:1px solid #4a4380;background:linear-gradient(100deg,#9d174d 0,#3b2a6b 49%,#0f0d24 50%,#1e3a8a 100%);padding:6px 6px;min-height:104px}
 .msx .v-vsh .sd{flex:1;min-width:0;display:flex;align-items:center;gap:4px;line-height:1.3}.msx .v-vsh .sd.op{justify-content:flex-end;text-align:right}
 .msx .v-vsh .sd img{height:70px;aspect-ratio:1;object-fit:contain;flex:none;filter:drop-shadow(0 5px 3px #0008)}.msx .v-vsh .sd.op img{transform:scaleX(-1)}

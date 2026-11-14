@@ -98,11 +98,12 @@ const serve = () => new Promise(r => { const s = http.createServer((req, res) =>
     const t1 = await sheetText();
     ok('② 窓の合計が割引き後の値段', t1.includes(`合計 ${pick.off.toLocaleString()}ダイヤ`) || t1.includes(`${pick.off.toLocaleString()}ダイヤ`), t1.slice(0, 160));
     ok('② 割引き中は1個だけ(数を選ぶ欄が出ない)', !/\+10/.test(t1));
+    const it0 = await items(); // 買う前の数(種の持ち物と今日のおすすめ品が重なる日がある。2026-11-14 はトレーニングチケット)
     await press('購入'); await page.waitForTimeout(1200);
     // ③ 買えた
     const it1 = await items(); const perkSaved = await store('mh_assistant_market_perk_v1');
     ok('③ 割引きの値段だけダイヤが減る', (await store('mh_gold')) === 50000 - pick.off, `${await store('mh_gold')}`);
-    ok('③ 品が1つ増える', (it1[pick.id] || 0) === 1, JSON.stringify(it1));
+    ok('③ 品が1つ増える', (it1[pick.id] || 0) === (it0[pick.id] || 0) + 1, `${it0[pick.id] || 0} → ${JSON.stringify(it1)}`);
     ok('③ 保存キーに { day, used:true } が足される', !!perkSaved && perkSaved.used === true && /^\d{4}-\d{2}-\d{2}$/.test(perkSaved.day), JSON.stringify(perkSaved));
     ok('③ ほかの保存(ダイヤ以外の持ち物)は壊れない', (await store('mh_rhythm_event_points_v1')) === 3000);
     // ④ 1日1回

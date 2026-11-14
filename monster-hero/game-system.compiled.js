@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 4bf964866bf94f5d
+// source-sha256: b1fc8146c515415f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -148095,7 +148095,401 @@ const AMBB_CSS = `
 }
 @media (max-width:360px){.ambw.ambb-full .ambw-ctl{flex-wrap:wrap}.ambw.ambb-full .ambw-ctl button{padding:4px 8px;font-size:12px}}
 @media (max-width:360px){.ambw-top{font-size:11px;gap:4px}.ambw-top>span{white-space:nowrap}.ambw-top .ambw-btn2{padding-left:8px;padding-right:8px}}
+/* ---- 試合の見せ方(2026-11-14): 入場・NEXT・実況・決着・結果 ---- */
+.ambb-op{position:fixed;inset:0;z-index:9700;overflow:hidden;background:radial-gradient(ellipse at 50% 50%,#3b1d6e 0%,#160f2e 60%,#0b0818 100%);color:#fff;cursor:pointer;animation:ambbFade .3s ease-out both}
+.ambb-op:before{content:"";position:absolute;inset:-20%;background:linear-gradient(160deg,#38bdf833 0 46%,#0000 46% 54%,#f472b633 54% 100%);animation:ambbSlash .5s ease-out both}
+.ambb-op-in{position:relative;max-width:460px;height:100%;margin:0 auto;padding:max(14px,env(safe-area-inset-top)) 14px max(14px,env(safe-area-inset-bottom));display:flex;flex-direction:column;justify-content:center;gap:10px}
+.ambb-op-ttl{text-align:center;animation:ambbDrop .5s cubic-bezier(.2,1.5,.4,1) both}
+.ambb-op-ttl b{display:block;font-size:30px;font-weight:900;letter-spacing:.06em;color:#fde047;text-shadow:0 3px 0 #92400e,0 0 18px #fde04788}
+.ambb-op-ttl small{display:inline-block;margin-top:4px;font-size:11.5px;font-weight:900;color:#e2e8f0;background:#0f172acc;border-radius:99px;padding:2px 12px}
+.ambb-op-side{border-radius:16px;padding:9px 10px;background:#0f172a99;border:2px solid #38bdf8aa;animation:ambbInR .45s .15s cubic-bezier(.2,.9,.3,1) both}
+.ambb-op-side.A{border-color:#f472b6aa;animation:ambbInL .45s .5s cubic-bezier(.2,.9,.3,1) both}
+.ambb-op-who{display:flex;align-items:center;gap:8px}
+.ambb-op-side.B .ambb-op-who{flex-direction:row-reverse;text-align:right}
+.ambb-op-who img{width:46px;height:46px;border-radius:50%;object-fit:cover;object-position:top;border:2px solid #fff6;background:#312e5a;flex:none}
+.ambb-op-who b{display:block;font-size:15px;font-weight:900}
+.ambb-op-who small{display:block;font-size:11px;color:#cbd5e1}
+.ambb-op-mons{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:6px}
+.ambb-op-mons>div{text-align:center;animation:ambbPop .4s cubic-bezier(.2,1.6,.4,1) both;min-width:0}
+.ambb-op-mons img{display:block;width:100%;height:64px;object-fit:contain;filter:drop-shadow(0 4px 6px #0008)}
+.ambb-op-side.A .ambb-op-mons img{transform:scaleX(-1)}
+.ambb-op-mons em{display:block;font-style:normal;font-size:11px;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ambb-op-mons i{display:block;font-style:normal;font-size:9.5px;color:#a5b4fc}
+.ambb-op-say{margin:6px 0 0;font-size:12px;line-height:1.45;color:#fff;background:#ffffff14;border-radius:10px;padding:5px 8px;animation:ambbFade .4s 1s both}
+.ambb-op-side.A .ambb-op-say{animation-delay:1.5s}
+.ambb-op-vs{display:flex;align-items:center;gap:10px;animation:ambbStamp .5s .35s cubic-bezier(.2,1.6,.4,1) both}
+.ambb-op-vs i{flex:1;height:3px;background:linear-gradient(90deg,#0000,#fde047,#0000)}
+.ambb-op-vs b{font-size:40px;font-weight:900;font-style:italic;color:#fde047;text-shadow:3px 0 0 #b91c1c,-3px 0 0 #b91c1c,0 3px 0 #b91c1c,0 -3px 0 #b91c1c,0 0 22px #f87171}
+.ambb-op-tap{text-align:center;font-size:12px;font-weight:900;color:#fde68a;animation:ambbBlink 1.2s 1.8s ease-in-out infinite both}
+.ambb-next{position:absolute;inset:0;z-index:12;pointer-events:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;background:radial-gradient(circle,#0009,#0003 75%);animation:ambbNext 1.5s ease-in-out both}
+.ambb-next-band{width:100%;text-align:center;padding:6px 0;background:linear-gradient(90deg,#0000,#ec4899 18%,#ec4899 82%,#0000);transform:skewY(-4deg)}
+.ambb-next.B .ambb-next-band{background:linear-gradient(90deg,#0000,#0284c7 18%,#0284c7 82%,#0000)}
+.ambb-next-band small{display:block;font-size:11px;font-weight:900;letter-spacing:.4em;color:#fde68a}
+.ambb-next-band b{display:block;font-size:22px;font-weight:900;text-shadow:0 2px 0 #0008}
+.ambb-next-left{display:flex;gap:14px;font-size:11.5px;font-weight:900;background:#0f172acc;border-radius:99px;padding:3px 12px}
+.ambb-next-left span{display:flex;align-items:center;gap:4px}
+.ambb-next-left u{display:inline-block;width:9px;height:9px;border-radius:50%;background:#64748b;text-decoration:none}
+.ambb-next-left .A u.on{background:#f472b6}.ambb-next-left .B u.on{background:#38bdf8}
+.ambb-next-talk{display:flex;align-items:center;gap:6px;max-width:92%;background:#fff;color:#1e1b4b;border-radius:12px;padding:4px 10px 4px 4px;font-size:12px}
+.ambb-next-talk img{width:30px;height:30px;border-radius:50%;object-fit:cover;object-position:top;flex:none}
+.ambb-call{margin:0 0 4px;padding:3px 8px;border-radius:8px;background:linear-gradient(90deg,#7c3aed55,#0000);font-size:12px;font-weight:900;color:#fde68a;animation:ambbCall .35s ease-out both;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ambb-call.crit,.ambb-call.big{color:#fde047;background:linear-gradient(90deg,#b4530999,#0000)}
+.ambb-call.ko,.ambb-call.pinch{color:#fecaca;background:linear-gradient(90deg,#b91c1c99,#0000)}
+.ambb-call.rev,.ambb-call.last{color:#a5f3fc;background:linear-gradient(90deg,#0e749099,#0000)}
+.ambw.ambb-full .ambw-log .ambb-call+p:nth-last-child(n+2){display:none}
+.ambb-fin{position:fixed;inset:0;z-index:9700;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:16px;background:#160f2e center/cover no-repeat;color:#fff;cursor:pointer;overflow:hidden;animation:ambbFade .35s ease-out both}
+.ambb-fin:before{content:"";position:absolute;inset:0;background:radial-gradient(circle at 50% 45%,#0000 0,#0009 70%)}
+.ambb-fin.l:before{background:linear-gradient(180deg,#0f172acc,#020617ee)}
+.ambb-fin>*{position:relative}
+.ambb-fin-rays{position:absolute!important;left:50%;top:44%;width:640px;height:640px;margin:-320px 0 0 -320px;border-radius:50%;background:repeating-conic-gradient(#fde04700 0 9deg,#fde04740 9deg 18deg);-webkit-mask:radial-gradient(circle,#000 18%,#0000 66%);mask:radial-gradient(circle,#000 18%,#0000 66%);animation:ambbSpin 8s linear infinite}
+.ambb-fin-big{font-size:58px;font-weight:900;font-style:italic;letter-spacing:.04em;color:#fde047;text-shadow:3px 0 0 #92400e,-3px 0 0 #92400e,0 -3px 0 #92400e,0 5px 0 #92400e,0 0 24px #fde047aa;animation:ambbStamp .6s .15s cubic-bezier(.2,1.6,.4,1) both}
+.ambb-fin.l .ambb-fin-big{color:#cbd5e1;text-shadow:3px 0 0 #334155,-3px 0 0 #334155,0 -3px 0 #334155,0 5px 0 #1e293b;animation:ambbDrop .7s .1s ease-out both}
+.ambb-fin.d .ambb-fin-big{color:#e2e8f0;text-shadow:0 4px 0 #475569}
+.ambb-fin-sub{font-size:12px;font-weight:900;background:#0f172acc;border-radius:99px;padding:3px 14px;animation:ambbFade .4s .5s both}
+.ambb-fin-hero{text-align:center;animation:ambbHero .7s .35s cubic-bezier(.2,1.4,.4,1) both}
+.ambb-fin-hero img{display:block;width:200px;height:200px;object-fit:contain;margin:0 auto;filter:drop-shadow(0 8px 14px #000a)}
+.ambb-fin.w .ambb-fin-hero img{animation:ambbHop 1.1s 1.1s ease-in-out infinite}
+.ambb-fin.l .ambb-fin-hero img{filter:grayscale(.5) brightness(.75) drop-shadow(0 8px 14px #000a)}
+.ambb-fin-hero em{display:inline-block;margin-top:2px;font-style:normal;font-size:14px;font-weight:900;background:#0f172acc;border-radius:99px;padding:2px 14px}
+.ambb-fin-talk{display:flex;align-items:center;gap:8px;max-width:420px;width:100%;background:#fff;color:#1e1b4b;border-radius:14px;padding:6px 10px 6px 6px;font-size:13px;line-height:1.45;animation:ambbInL .45s 1s ease-out both}
+.ambb-fin-talk img{width:48px;height:48px;border-radius:50%;object-fit:cover;object-position:top;flex:none;background:#ede9fe}
+.ambb-fin-talk b{display:block;font-size:11px;color:#be185d}
+.ambb-fin .ambb-op-tap{margin-top:6px;animation-delay:2s}
+.ambb-hero{position:relative;overflow:hidden;border-radius:16px;margin-top:8px;padding:12px 10px 10px;background:#1e1a36 center/cover no-repeat;border:2px solid #fde04788;text-align:center}
+.ambb-hero.l{border-color:#64748b}
+.ambb-hero:before{content:"";position:absolute;inset:0;background:linear-gradient(180deg,#0008,#160f2ee6 80%)}
+.ambb-hero>*{position:relative}
+.ambb-hero .ambw-res{margin:0;background:none;border:0;padding:0}
+.ambb-hero-stamp{display:inline-block;font-size:30px;font-weight:900;font-style:italic;color:#fde047;text-shadow:2px 0 0 #92400e,-2px 0 0 #92400e,0 3px 0 #92400e;animation:ambbStamp .5s cubic-bezier(.2,1.6,.4,1) both}
+.ambb-hero.l .ambb-hero-stamp{color:#cbd5e1;text-shadow:0 3px 0 #334155}
+.ambb-mvp{display:flex;align-items:center;gap:10px;margin-top:8px;padding:8px;border-radius:12px;background:#0f172acc;text-align:left}
+.ambb-mvp img{width:76px;height:76px;object-fit:contain;flex:none;filter:drop-shadow(0 4px 6px #000a)}
+.ambb-mvp-badge{display:inline-block;font-size:11px;font-weight:900;color:#422006;background:linear-gradient(90deg,#fde047,#f59e0b);border-radius:6px;padding:0 8px;margin-bottom:2px}
+.ambb-mvp b{display:block;font-size:16px}
+.ambb-mvp small{display:block;font-size:11px;color:#cbd5e1}
+.ambb-hero-talk{display:flex;align-items:center;gap:8px;margin-top:8px;text-align:left;font-size:12.5px;line-height:1.45}
+.ambb-hero-talk img{width:40px;height:40px;border-radius:50%;object-fit:cover;object-position:top;border:2px solid #fff6;background:#312e5a;flex:none}
+.ambb-hero-talk p{margin:0;background:#fff;color:#1e1b4b;border-radius:12px;padding:5px 9px;flex:1}
+.ambb-star{display:grid;grid-template-columns:40px 1fr auto;align-items:center;gap:8px;padding:6px 0;border-top:1px dashed rgba(255,255,255,.12)}
+.ambb-star:first-of-type{border-top:0}
+.ambb-star img{width:40px;height:40px;object-fit:contain}
+.ambb-star b{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
+.ambb-star .ambw-small{font-size:10.5px}
+.ambb-star em{font-style:normal;font-size:16px;font-weight:900;color:#fde047;text-align:right}
+.ambb-star em small{display:block;font-size:9.5px;color:#cbd5e1}
+.ambb-star.mvp b:after{content:"MVP";margin-left:6px;font-size:9.5px;color:#422006;background:#fde047;border-radius:5px;padding:0 5px;vertical-align:1px}
+.ambb-stagewrap{position:relative}
+@keyframes ambbFade{from{opacity:0}to{opacity:1}}
+@keyframes ambbSlash{from{transform:translateX(-30%) skewX(-10deg);opacity:0}to{transform:none;opacity:1}}
+@keyframes ambbDrop{0%{opacity:0;transform:translateY(-30px) scale(1.3)}100%{opacity:1;transform:none}}
+@keyframes ambbInL{from{opacity:0;transform:translateX(-60px)}to{opacity:1;transform:none}}
+@keyframes ambbInR{from{opacity:0;transform:translateX(60px)}to{opacity:1;transform:none}}
+@keyframes ambbPop{0%{opacity:0;transform:translateY(16px) scale(.5)}100%{opacity:1;transform:none}}
+@keyframes ambbStamp{0%{opacity:0;transform:scale(2.6)}60%{opacity:1;transform:scale(.9)}100%{opacity:1;transform:scale(1)}}
+@keyframes ambbBlink{0%,100%{opacity:.35}50%{opacity:1}}
+@keyframes ambbNext{0%{opacity:0}12%{opacity:1}82%{opacity:1}100%{opacity:0}}
+@keyframes ambbCall{from{opacity:0;transform:translateX(-14px)}to{opacity:1;transform:none}}
+@keyframes ambbSpin{to{transform:rotate(360deg)}}
+@keyframes ambbHero{0%{opacity:0;transform:translateY(40px) scale(.6)}100%{opacity:1;transform:none}}
+@keyframes ambbHop{0%,100%{transform:none}30%{transform:translateY(-14px)}50%{transform:none}}
+@media (prefers-reduced-motion:reduce){.ambb-op,.ambb-op *,.ambb-fin,.ambb-fin *,.ambb-next,.ambb-call,.ambb-hero-stamp{animation:none!important}}
+@media (max-height:640px){.ambb-op-mons img{height:46px}.ambb-op-ttl b{font-size:24px}.ambb-op-vs b{font-size:30px}.ambb-fin-hero img{width:140px;height:140px}.ambb-fin-big{font-size:44px}}
 `;
+const AMBB_TALK = Object.freeze({
+  mua: {
+    in: '「みんな見てるよ! いつもどおりで だいじょうぶ!」',
+    next: '「つぎ、おねがい! {n}!」',
+    win: '「やったー! みんな すごかったよ!」',
+    lose: '「くやしいね… でも次は きっと勝てるよ!」',
+    mvp: '「{n}、いちばん がんばってたね!」'
+  },
+  atsu: {
+    in: '「最初から全開でいけ!」',
+    next: '「{n}、出番だ! ぶちかませ!」',
+    win: '「よっしゃあ! これが おれたちの力だ!」',
+    lose: '「…チッ。鍛え直しだな」',
+    mvp: '「{n}、今日の主役は おまえだ!」'
+  },
+  kiki: {
+    in: '「そのまま、まっすぐ…!」',
+    next: '「{n}… おねがい」',
+    win: '「…勝てた。すごく うれしい」',
+    lose: '「…つぎは、負けない」',
+    mvp: '「{n}… かっこよかった」'
+  },
+  momosuke: {
+    in: '「ここが見せ場だよ! いちばん目立っちゃお!」',
+    next: '「{n}、主役交代〜! かましちゃって!」',
+    win: '「最高のステージだったね〜!」',
+    lose: '「あ〜ん、くやしい! リベンジするよ!」',
+    mvp: '「{n}、今日いちばん目立ってた!」'
+  },
+  dra: {
+    in: '「教えたとおりに。おまえならできる」',
+    next: '「{n}、落ち着いていけ」',
+    win: '「よくやった。胸を張れ」',
+    lose: '「負けから学べ。次へつなげるぞ」',
+    mvp: '「{n}、見事だった」'
+  },
+  kyuko: {
+    in: '「相手の動き、もう見えてるよ」',
+    next: '「{n}、読みどおりに動いて」',
+    win: '「ふふ、読みどおりだったね」',
+    lose: '「読み負けたか… 作戦を練り直そう」',
+    mvp: '「{n}、いい動きだったよ」'
+  },
+  sorashido: {
+    in: '「計算どおりっす! 落ち着いていきましょう!」',
+    next: '「{n}、ここからが見せどころっす!」',
+    win: '「完璧っす! 計算どおりっすね!」',
+    lose: '「計算ちがいっす… データを取り直しましょう」',
+    mvp: '「{n}の数字、すごいっす!」'
+  },
+  erubin: {
+    in: '「ちゃんと見てるからね」',
+    next: '「{n}、だいじょうぶ。見てるよ」',
+    win: '「えらかったね。ちゃんと見てたよ」',
+    lose: '「よくがんばったよ。ゆっくり次に備えよう」',
+    mvp: '「{n}、えらかったね」'
+  }
+});
+const AMBB_TALK_DEF = Object.freeze({
+  in: '「いっしょに がんばろう!」',
+  next: '「{n}、おねがい!」',
+  win: '「やったね! 勝ったよ!」',
+  lose: '「くやしいね… 次はがんばろう」',
+  mvp: '「{n}、がんばったね!」'
+});
+const ambbTalk = (aid, k, n) => String((AMBB_TALK[aid] || {})[k] || AMBB_TALK_DEF[k] || '').split('{n}').join(n || '');
+const ambbAsst = id => typeof ASSISTANT_LIST !== 'undefined' ? ASSISTANT_LIST.find(a => a.id === id) || null : null;
+const ambbFace = (id, ex) => {
+  const a = ambbAsst(id);
+  return a && typeof assistantFaceSrc === 'function' ? assistantFaceSrc(a, ex || 'normal') : '';
+};
+const ambbMonImg = sp => (typeof ALL_PLAYER_MONSTERS !== 'undefined' && ALL_PLAYER_MONSTERS[sp] || {}).imgUrl || '';
+const ambbSe = k => {
+  if (typeof msaSe === 'function') msaSe(k);
+};
+const ambbIsNext = (log, k) => {
+  const e = log[k];
+  if (!e || e.ev !== 'enter' || !e.side) return false;
+  for (let j = k - 1; j >= 1; j--) if (log[j].ev === 'ko') return true;
+  return false;
+};
+const AMBB_NEXT_MS = 1500;
+const ambbCallOf = (log, frames, k, maxHp, who) => {
+  const e = log[k] || {},
+    f = frames[k],
+    pf = frames[k - 1];
+  if (!e.side || !f) return null;
+  const left = sd => (f.hp[sd] || []).filter(h => h > 0).length;
+  const many = sd => (maxHp[sd] || []).length > 1;
+  const ratio = (fr, sd) => {
+    const mx = (maxHp[sd] || []).reduce((a, b) => a + (Number(b) || 0), 0) || 1;
+    return (fr.hp[sd] || []).reduce((a, h) => a + Math.max(0, Number(h) || 0), 0) / mx;
+  };
+  if (e.ev === 'ko') {
+    const n = left(e.side);
+    return {
+      k: 'ko',
+      t: n ? `${e.name}、ダウン! のこりは ${n}体!` : `${e.name}、ダウン! 勝負あり!`
+    };
+  }
+  if (e.ev === 'enter' && ambbIsNext(log, k) && many(e.side) && left(e.side) === 1) return {
+    k: 'last',
+    t: `最後の1体、${who(e.side, e.i)}が出てきた!`
+  };
+  if (e.ev === 'swap') return {
+    k: 'swap',
+    t: `ここで交代! ${who(e.side, e.i)}が前へ!`
+  };
+  if (e.ev !== 'tech' || !e.hit) return null;
+  const foe = e.side === 'A' ? 'B' : 'A';
+  if (pf && k > 3) {
+    const a0 = ratio(pf, 'A') - ratio(pf, 'B'),
+      a1 = ratio(f, 'A') - ratio(f, 'B');
+    if (a0 * a1 < 0 && Math.abs(a1) > 0.04) return {
+      k: 'rev',
+      t: `逆転! ${e.name}で 形勢が入れかわった!`
+    };
+  }
+  if (e.crit) return {
+    k: 'crit',
+    t: `会心の一撃! ${who(e.side, e.i)}の${e.name}!`
+  };
+  const ti = Number.isFinite(e.ti) ? e.ti : f.act[foe];
+  const mx = (maxHp[foe] || [])[ti] || 1,
+    hp = (f.hp[foe] || [])[ti];
+  if (e.dmg >= mx * 0.3) return {
+    k: 'big',
+    t: `大きい! ${e.name}で ${e.dmg}ダメージ!`
+  };
+  if (hp > 0 && hp <= mx * 0.2) return {
+    k: 'pinch',
+    t: `${who(foe, ti)}、あとがない!`
+  };
+  return null;
+};
+const ambbStarsOf = (log, side, n) => {
+  const out = Array.from({
+    length: n
+  }, () => ({
+    dmg: 0,
+    hit: 0,
+    n: 0,
+    crit: 0,
+    ko: 0
+  }));
+  let act = 0,
+    foeAct = 0;
+  const foe = side === 'A' ? 'B' : 'A';
+  for (const e of log) {
+    if ((e.ev === 'enter' || e.ev === 'swap') && e.side === side && Number.isFinite(e.i)) act = e.i;
+    if ((e.ev === 'enter' || e.ev === 'swap') && e.side === foe) foeAct = e.i;
+    const i = e.side === side && Number.isFinite(e.i) ? e.i : act;
+    if (e.ev === 'tech' && e.side === side && out[i]) {
+      out[i].n++;
+      if (e.hit) {
+        out[i].hit++;
+        out[i].dmg += e.dmg || 0;
+      }
+      if (e.crit) out[i].crit++;
+    }
+    if (e.ev === 'ko' && e.side === foe && out[act]) out[act].ko++;
+  }
+  void foeAct;
+  return out;
+};
+const ambbMvpOf = stars => {
+  let b = -1,
+    bs = -1;
+  stars.forEach((s, i) => {
+    const sc = s.dmg + s.ko * 120;
+    if (sc > bs) {
+      bs = sc;
+      b = i;
+    }
+  });
+  return b;
+};
+function AmbbOpening({
+  teams,
+  title,
+  sub,
+  plan,
+  nameA,
+  nameB,
+  quick,
+  onGo
+}) {
+  const done = useRef(false);
+  const go = () => {
+    if (done.current) return;
+    done.current = true;
+    ambbSe('card');
+    onGo();
+  };
+  useEffect(() => {
+    ambbSe('join');
+    const t = setTimeout(go, quick ? 1800 : 4600);
+    return () => clearTimeout(t);
+  }, []);
+  const side = sd => {
+    const t = teams[sd],
+      aid = t.assistantId;
+    return React.createElement("div", {
+      className: `ambb-op-side ${sd}`
+    }, React.createElement("div", {
+      className: "ambb-op-who"
+    }, React.createElement("img", {
+      src: ambbFace(aid, 'normal'),
+      alt: ""
+    }), React.createElement("div", null, React.createElement("b", null, sd === 'A' ? nameA : nameB), sd === 'A' && plan ? React.createElement("small", null, "作戦: ", plan) : React.createElement("small", null, t.members.length, "体"))), React.createElement("div", {
+      className: "ambb-op-mons"
+    }, t.members.map((m, i) => React.createElement("div", {
+      key: i,
+      style: {
+        animationDelay: `${(sd === 'B' ? 0.25 : 0.65) + i * 0.12}s`
+      }
+    }, React.createElement("img", {
+      src: ambbMonImg(m.species),
+      alt: ""
+    }), React.createElement("em", null, m.name), React.createElement("i", null, i === 0 ? '先頭' : `${i + 1}番手`)))), React.createElement("p", {
+      className: "ambb-op-say"
+    }, ambbTalk(aid, 'in')));
+  };
+  return React.createElement("div", {
+    className: "ambb-op",
+    "data-ambb-opening": true,
+    onClick: go,
+    role: "button",
+    "aria-label": "試合を始める"
+  }, React.createElement("div", {
+    className: "ambb-op-in"
+  }, React.createElement("div", {
+    className: "ambb-op-ttl"
+  }, React.createElement("b", null, title), React.createElement("small", null, sub)), side('B'), React.createElement("div", {
+    className: "ambb-op-vs",
+    "aria-hidden": "true"
+  }, React.createElement("i", null), React.createElement("b", null, "VS"), React.createElement("i", null)), side('A'), React.createElement("div", {
+    className: "ambb-op-tap"
+  }, "タップで試合開始 ▶")));
+}
+function AmbbFinish({
+  win,
+  hero,
+  rounds,
+  reason,
+  meId,
+  venueImg,
+  onGo
+}) {
+  const done = useRef(false);
+  const go = () => {
+    if (done.current) return;
+    done.current = true;
+    onGo();
+  };
+  useEffect(() => {
+    ambbSe(win === 'A' ? 'victory' : 'trainingFail');
+    const f = win === 'A' ? setTimeout(() => ambbSe('rankFanfare'), 650) : null;
+    const t = setTimeout(go, 7000);
+    return () => {
+      clearTimeout(t);
+      if (f) clearTimeout(f);
+    };
+  }, []);
+  const k = win === 'A' ? 'w' : win === 'draw' ? 'd' : 'l';
+  return React.createElement("div", {
+    className: `ambb-fin ${k}`,
+    "data-ambb-finish": k === 'w' ? 'win' : k === 'd' ? 'draw' : 'lose',
+    onClick: go,
+    role: "button",
+    "aria-label": "結果を見る",
+    style: venueImg ? {
+      backgroundImage: `url(${venueImg})`
+    } : null
+  }, k === 'w' && React.createElement("i", {
+    className: "ambb-fin-rays",
+    "aria-hidden": "true"
+  }), React.createElement("div", {
+    className: "ambb-fin-big"
+  }, k === 'w' ? 'WIN!' : k === 'd' ? 'DRAW' : 'LOSE…'), React.createElement("div", {
+    className: "ambb-fin-sub"
+  }, k === 'w' ? '勝利!' : k === 'd' ? '引き分け' : '敗北', "・", rounds, " ラウンド・", reason === 'judge' ? '判定' : '全滅で決着'), hero && React.createElement("div", {
+    className: "ambb-fin-hero"
+  }, React.createElement("img", {
+    src: ambbMonImg(hero.species),
+    alt: ""
+  }), React.createElement("em", null, k === 'w' ? 'MVP' : '勝者', " ", hero.name)), React.createElement("div", {
+    className: "ambb-fin-talk"
+  }, React.createElement("img", {
+    src: ambbFace(meId, k === 'w' ? 'happy' : k === 'l' ? 'sad' : 'normal'),
+    alt: ""
+  }), React.createElement("p", null, React.createElement("b", null, (ambbAsst(meId) || {}).name || ''), ambbTalk(meId, k === 'w' ? 'win' : 'lose'))), React.createElement("div", {
+    className: "ambb-op-tap"
+  }, "タップで結果へ ▶"));
+}
 function AssistantMasmonBattleBeta({
   assistantId,
   foeAssistantId,
@@ -148108,7 +148502,9 @@ function AssistantMasmonBattleBeta({
   const [loadFailed, setLoadFailed] = useState(false);
   const [ticked, setTicked] = useState(false);
   const [phase, setPhase] = useState('prep');
-  if (typeof useMhBattleBgmHold === 'function') useMhBattleBgmHold(phase === 'watch' || phase === 'review');
+  const [opening, setOpening] = useState(false);
+  const finSeenRef = useRef('');
+  if (typeof useMhBattleBgmHold === 'function') useMhBattleBgmHold(phase === 'watch' || phase === 'finish' || phase === 'review');
   const [battle, setBattle] = useState(null);
   const [pos, setPos] = useState(0);
   const [paused, setPaused] = useState(false);
@@ -148296,6 +148692,7 @@ function AssistantMasmonBattleBeta({
     setPos(0);
     setPaused(false);
     setIfs(null);
+    setOpening(true);
     setPhase('watch');
     ambbSave(s => ({
       ...s,
@@ -148387,6 +148784,7 @@ function AssistantMasmonBattleBeta({
     setPos(0);
     setPaused(false);
     setIfs(null);
+    setOpening(true);
     setPhase('watch');
   };
   const speed = save.speed || 'x1';
@@ -148400,11 +148798,15 @@ function AssistantMasmonBattleBeta({
     });
   };
   useEffect(() => {
-    if (phase !== 'watch' || !battle || paused) return undefined;
+    if (phase !== 'watch' || !battle || paused || opening) return undefined;
     const log = battle.r.log;
     if (pos >= log.length - 1) {
       if (battle.match && !battle.match.done()) return undefined;
-      const t = setTimeout(() => setPhase('review'), 900);
+      const t = setTimeout(() => {
+        const first = finSeenRef.current !== battle.id;
+        finSeenRef.current = battle.id;
+        setPhase(first ? 'finish' : 'review');
+      }, 1100);
       return () => clearTimeout(t);
     }
     const sp = AMBW_SPEEDS.find(s => s.id === speed) || AMBW_SPEEDS[0];
@@ -148415,16 +148817,17 @@ function AssistantMasmonBattleBeta({
       x2: 0.55,
       x4: 0.3
     }[speed];
-    const ms = f && typeof msaStepMs === 'function' ? Math.round(msaStepMs(cur, team, lite || typeof msaReduce === 'function' && msaReduce(), log, f) * f) : sp.ms;
+    const ms0 = f && typeof msaStepMs === 'function' ? Math.round(msaStepMs(cur, team, lite || typeof msaReduce === 'function' && msaReduce(), log, f) * f) : sp.ms;
+    const ms = ms0 + (ambbIsNext(log, pos) ? Math.round(AMBB_NEXT_MS * (f && !lite ? f : 0.4)) : 0);
     const t = setTimeout(() => {
       let next = pos + 1;
       if (speed === 'hl') while (next < log.length - 1 && !ambwIsHighlight(log[next], battle.maxHp)) next++;
       setPos(next);
     }, ms);
     return () => clearTimeout(t);
-  }, [phase, battle, pos, paused, speed, lite]);
+  }, [phase, battle, pos, paused, speed, lite, opening]);
   useEffect(() => {
-    if (phase !== 'review' || !battle || battle.pvp) return;
+    if (phase !== 'review' && phase !== 'finish' || !battle || battle.pvp) return;
     ambbSave(s => {
       if (s.done.includes(battle.id)) return s;
       const rc = s.rec[meId] || {
@@ -148447,7 +148850,7 @@ function AssistantMasmonBattleBeta({
     });
   }, [phase, battle]);
   useEffect(() => {
-    if (preview || phase !== 'review' || !battle || typeof amgbBattleOnce !== 'function') return;
+    if (preview || phase !== 'review' && phase !== 'finish' || !battle || typeof amgbBattleOnce !== 'function') return;
     try {
       amgbBattleOnce(battle.id, meId, (battle.units || []).map(u => u && u.row).filter(Boolean), battle.pvp ? 'pvp' : 'peer', battle.r && battle.r.winner === 'A');
     } catch (_) {}
@@ -148898,7 +149301,8 @@ function AssistantMasmonBattleBeta({
     const log = battle.r.log,
       e = log[pos] || {},
       f = battle.frames[pos] || battle.frames[0];
-    const review = phase === 'review';
+    const review = phase === 'review',
+      finish = phase === 'finish';
     const manualWait = !!(battle.match && !battle.match.done() && pos >= log.length - 1 && battle.match.pending());
     const mem = (side, i) => (side === 'A' ? battle.teamA : battle.teamB).members[i];
     const who = (side, i) => (mem(side, i) || {}).name || '';
@@ -148975,6 +149379,19 @@ function AssistantMasmonBattleBeta({
       }
     }));
     const bestStat = ifs && ifs.best;
+    const stars = ambbStarsOf(log, 'A', battle.teamA.members.length),
+      mvp = ambbMvpOf(stars),
+      mvpM = battle.teamA.members[mvp] || null;
+    const venue = typeof msaVenueBg === 'function' ? msaVenueBg('cup', msaBgRead()) : typeof MSC_VENUE_IMG !== 'undefined' ? MSC_VENUE_IMG.cup : null;
+    let call = null;
+    for (let k = pos; k >= Math.max(1, pos - 2) && !call; k--) {
+      const c = ambbCallOf(log, battle.frames, k, battle.maxHp, who);
+      if (c) call = {
+        ...c,
+        at: k
+      };
+    }
+    const nextOn = !review && !finish && !opening && ambbIsNext(log, pos);
     const lead = bestStat ? battle.units.slice().sort((a, b) => (Number(a.unit.stats && a.unit.stats[bestStat.k]) || 0) - (Number(b.unit.stats && b.unit.stats[bestStat.k]) || 0))[0] : null;
     body = React.createElement("div", {
       "data-ambb-watch": true,
@@ -148983,8 +149400,50 @@ function AssistantMasmonBattleBeta({
     }, review && React.createElement("div", {
       "data-ambb-review": true
     }, React.createElement("div", {
+      className: `ambb-hero ${won ? 'w' : 'l'}`,
+      "data-ambb-hero": true,
+      style: venue ? {
+        backgroundImage: `url(${venue})`
+      } : null
+    }, React.createElement("div", {
+      className: "ambb-hero-stamp"
+    }, draw ? '引き分け' : won ? '勝利!' : '敗北'), React.createElement("div", {
       className: "ambw-res"
-    }, React.createElement("b", null, draw ? '引き分け' : won ? `${me.name} の勝ち!` : `${foeName} の勝ち`), React.createElement("span", null, battle.r.rounds, " ラウンド・", battle.r.reason === 'judge' ? '判定' : '全滅で決着')), battle.pvp && React.createElement("div", {
+    }, React.createElement("b", null, draw ? '引き分け' : won ? `${me.name} の勝ち!` : `${foeName} の勝ち`), React.createElement("span", null, battle.r.rounds, " ラウンド・", battle.r.reason === 'judge' ? '判定' : '全滅で決着')), mvpM && React.createElement("div", {
+      className: "ambb-mvp",
+      "data-ambb-mvp": true
+    }, React.createElement("img", {
+      src: ambbMonImg(mvpM.species),
+      alt: ""
+    }), React.createElement("div", {
+      style: {
+        minWidth: 0
+      }
+    }, React.createElement("span", {
+      className: "ambb-mvp-badge"
+    }, "MVP"), React.createElement("b", null, mvpM.name), React.createElement("small", null, "与えたダメージ ", stars[mvp].dmg, "・たおした数 ", stars[mvp].ko, "・命中 ", stars[mvp].hit, "/", stars[mvp].n))), React.createElement("div", {
+      className: "ambb-hero-talk"
+    }, React.createElement("img", {
+      src: ambbFace(meId, won ? 'happy' : draw ? 'normal' : 'sad'),
+      alt: ""
+    }), React.createElement("p", null, mvpM && (won || stars[mvp].dmg > 0) ? ambbTalk(meId, 'mvp', mvpM.name) : ambbTalk(meId, won ? 'win' : 'lose')))), React.createElement("div", {
+      className: "ambw-card",
+      "data-ambb-stars": true
+    }, React.createElement("div", {
+      className: "ambw-small"
+    }, "マスモンごとの活躍"), battle.teamA.members.map((m, i) => React.createElement("div", {
+      key: i,
+      className: `ambb-star ${i === mvp ? 'mvp' : ''}`
+    }, React.createElement("img", {
+      src: ambbMonImg(m.species),
+      alt: ""
+    }), React.createElement("div", {
+      style: {
+        minWidth: 0
+      }
+    }, React.createElement("b", null, m.name), React.createElement("div", {
+      className: "ambw-small"
+    }, "命中 ", stars[i].hit, "/", stars[i].n, stars[i].crit ? `・会心 ${stars[i].crit}` : '', "・たおした数 ", stars[i].ko)), React.createElement("em", null, stars[i].dmg, React.createElement("small", null, "ダメージ"))))), battle.pvp && React.createElement("div", {
       className: "ambw-card",
       "data-ambb-pvp-result": true
     }, React.createElement("div", {
@@ -149103,7 +149562,7 @@ function AssistantMasmonBattleBeta({
       className: "ambw-btn2",
       "data-ambb-rank-open": true,
       onClick: () => setPhase('rank')
-    }, "🏆 ランキング"))), React.createElement(AmbwPanel, {
+    }, "🏆 ランキング"))), !review && React.createElement(AmbwPanel, {
       side: "B",
       catalog: catalog,
       teams: {
@@ -149121,12 +149580,13 @@ function AssistantMasmonBattleBeta({
         side: sd,
         d
       })
-    }), typeof MsaStage === 'function' ? React.createElement("div", {
+    }), review ? null : typeof MsaStage === 'function' ? React.createElement("div", {
       className: "msa ambb-stagewrap",
       style: {
         marginTop: 8
       }
     }, React.createElement("style", null, MSA_CSS), React.createElement(MsaStage, {
+      key: opening ? 'op' : 'go',
       log: log,
       frames: battle.frames,
       pos: pos,
@@ -149134,20 +149594,44 @@ function AssistantMasmonBattleBeta({
         A: battle.teamA,
         B: battle.teamB
       },
-      venueImg: typeof msaVenueBg === 'function' ? msaVenueBg('cup', msaBgRead()) : null,
-      ended: review,
+      venueImg: venue,
+      ended: finish,
       win: battle.r.winner,
-      endSub: review ? `${battle.r.rounds} ラウンド` : '',
-      sound: phase === 'watch' && !paused,
-      introTitle: battle.pvp ? 'フレンド対戦' : 'マスモン対戦',
+      endSub: finish ? `${battle.r.rounds} ラウンド` : '',
+      sound: phase === 'watch' && !paused && !opening,
+      introTitle: battle.teamA.members.length > 1 ? '先頭どうし' : battle.pvp ? 'フレンド対戦' : 'マスモン対戦',
       speedF: {
         x1: 1,
         x2: 0.55,
         x4: 0.3
       }[speed] || 1,
-      fill: !review,
+      fill: true,
       lite: lite
-    })) : React.createElement("div", {
+    }), nextOn && (() => {
+      const sd = e.side,
+        t = sd === 'A' ? battle.teamA : battle.teamB,
+        fr = battle.frames[pos] || f;
+      return React.createElement("div", {
+        key: `nx-${pos}`,
+        className: `ambb-next ${sd}`,
+        "data-ambb-next": sd
+      }, React.createElement("div", {
+        className: "ambb-next-band"
+      }, React.createElement("small", null, "NEXT"), React.createElement("b", null, who(sd, e.i))), React.createElement("div", {
+        className: "ambb-next-left"
+      }, ['A', 'B'].map(x => React.createElement("span", {
+        key: x,
+        className: x
+      }, x === 'A' ? me.name : foeName, " ", (fr.hp[x] || []).map((h, k) => React.createElement("u", {
+        key: k,
+        className: h > 0 ? 'on' : ''
+      }))))), React.createElement("div", {
+        className: "ambb-next-talk"
+      }, React.createElement("img", {
+        src: ambbFace(t.assistantId, 'normal'),
+        alt: ""
+      }), React.createElement("span", null, ambbTalk(t.assistantId, 'next', who(sd, e.i)))));
+    })()) : review ? null : React.createElement("div", {
       className: "ambw-ring"
     }, React.createElement("div", {
       className: "ambw-stage"
@@ -149164,7 +149648,7 @@ function AssistantMasmonBattleBeta({
     }, n))), cutText && e.ev !== 'end' && React.createElement("div", {
       key: `cut-${pos}`,
       className: `ambw-cut ${e.ev === 'tech' ? e.kind : 'etc'} ${e.side === 'B' ? 'B' : ''}`
-    }, React.createElement("small", null, cutSmall), React.createElement("b", null, cutText))), !manualWait && React.createElement(AmbwPanel, {
+    }, React.createElement("small", null, cutSmall), React.createElement("b", null, cutText))), !manualWait && !review && React.createElement(AmbwPanel, {
       side: "A",
       catalog: catalog,
       teams: {
@@ -149199,7 +149683,11 @@ function AssistantMasmonBattleBeta({
       });
     })()), !review && !manualWait && React.createElement("div", {
       className: "ambw-card ambw-log"
-    }, recent.map(x => React.createElement("p", {
+    }, call && React.createElement("div", {
+      key: `call-${call.at}`,
+      className: `ambb-call ${call.k}`,
+      "data-ambb-call": call.k
+    }, "🎙 ", call.t), recent.map(x => React.createElement("p", {
       key: x.k,
       className: x.side
     }, React.createElement("small", null, "R", x.r), x.t)), actor && e.why && WHY[e.why] && React.createElement("div", {
@@ -149213,7 +149701,12 @@ function AssistantMasmonBattleBeta({
       alt: ""
     }), React.createElement("div", {
       className: "ambw-bubble"
-    }, actor.name, "「", WHY[e.why], "」"))), React.createElement("div", {
+    }, actor.name, "「", WHY[e.why], "」"))), review && React.createElement("div", {
+      className: "ambw-small",
+      style: {
+        marginTop: 8
+      }
+    }, "見返す: ✖ はたおれた所。押すとそこから見られます"), React.createElement("div", {
       className: "ambw-seek"
     }, React.createElement("i", {
       style: {
@@ -149230,7 +149723,33 @@ function AssistantMasmonBattleBeta({
         setPaused(true);
         setPhase('watch');
       }
-    }, "✖"))), !review && React.createElement("div", {
+    }, "✖"))), opening && phase === 'watch' && React.createElement(AmbbOpening, {
+      teams: {
+        A: battle.teamA,
+        B: battle.teamB
+      },
+      title: battle.pvp ? 'フレンド対戦' : 'マスモン対戦',
+      sub: `${battle.teamA.members.length}対${battle.teamB.members.length}${battle.match ? '・手動' : ''}`,
+      plan: battle.pvp ? '' : (AMBB_PLANS.find(x => x.id === battle.plan) || {}).label || '',
+      nameA: me.name,
+      nameB: foeName,
+      quick: speed === 'x4' || speed === 'hl' || lite,
+      onGo: () => setOpening(false)
+    }), finish && React.createElement(AmbbFinish, {
+      win: battle.r.winner,
+      rounds: battle.r.rounds,
+      reason: battle.r.reason,
+      meId: meId,
+      venueImg: venue,
+      hero: (() => {
+        const sd = battle.r.winner === 'B' ? 'B' : 'A',
+          t = sd === 'A' ? battle.teamA : battle.teamB,
+          fr = battle.frames[battle.frames.length - 1] || f;
+        const i = sd === 'A' ? mvp : (fr.hp.B || []).findIndex(h => h > 0);
+        return t.members[i >= 0 ? i : fr.act[sd]] || t.members[0];
+      })(),
+      onGo: () => setPhase('review')
+    }), !review && !finish && React.createElement("div", {
       className: "ambw-ctl"
     }, React.createElement("button", {
       className: "ambw-btn2",
@@ -149249,6 +149768,8 @@ function AssistantMasmonBattleBeta({
       "data-ambb-skip": true,
       onClick: () => {
         const n = battle.match && !battle.match.done() ? (battle.match.auto('A'), syncManual(battle.match)) : log.length;
+        finSeenRef.current = battle.id;
+        setOpening(false);
         setPos(n - 1);
         setPhase('review');
       }
@@ -149256,7 +149777,7 @@ function AssistantMasmonBattleBeta({
   }
   const back = phase === 'prep' || !battle ? onClose : () => setPhase('prep');
   return React.createElement("div", {
-    className: `ambw${phase === 'watch' && battle ? ' ambb-full' : ''}`,
+    className: `ambw${(phase === 'watch' || phase === 'finish') && battle ? ' ambb-full' : ''}`,
     "data-ambb-root": true,
     ref: rootRef
   }, React.createElement("style", null, AMBW_CSS, AMBB_CSS), React.createElement("div", {
@@ -162963,7 +163484,45 @@ const MSX_CSS = `
 .msx .v-cup .e .gr.g-green{background:#86efac}.msx .v-cup .e .gr.g-four{background:#c4b5fd}.msx .v-cup .e .gr.g-rainbow{background:linear-gradient(90deg,#fda4af,#fde047,#86efac,#93c5fd);color:#1e1b4b}
 .msx .v-cup.ex .e{position:relative}
 .msx .v-cup.ex.g-four{border-color:#a78bfa}.msx .v-cup.ex.g-gold{border-color:#fde047}.msx .v-cup.ex.g-rainbow{border-color:#fda4af}
-.msx .v-cup.hard .tx small{color:#fca5a5}.msx .v-cup.ng .tx small{color:#fca5a5}
+.msx .v-cup.hard .tx small{color:#fca5a5}
+/* 大会の受付(2026-11-13 作り直し): 賞金の帯・月の切り替え・大きな札・確認の窓 */
+.msx .v-cupbar{display:flex;align-items:center;gap:8px;margin-top:6px;background:linear-gradient(90deg,#3b2f0b,#1e1a36);border:1px solid #a16207;border-radius:10px;padding:4px 10px;font-size:11px;font-weight:900;color:#fde68a}
+.msx .v-cupbar b{margin-left:auto;font-size:17px;color:#fde047;text-align:right}.msx .v-cupbar b small{font-size:11px;margin-left:1px}.msx .v-cupbar i{font-style:normal;font-size:10px;background:#0f172a;border-radius:6px;padding:1px 6px;color:#e2e8f0}
+.msx .v-cupmon{display:flex;align-items:center;gap:6px;margin-top:5px}
+.msx .v-cupmon b{flex:1;text-align:center;font-size:13px;font-weight:900}.msx .v-cupmon b small{margin-left:6px;font-size:10px;border-radius:6px;padding:1px 6px;background:#334155;color:#cbd5e1}.msx .v-cupmon b small.now{background:#f472b6;color:#fff}
+.msx .v-cupmon .ar{width:44px;min-height:30px;border-radius:9px;background:#1e293b;border:1px solid #475569;color:#fde047;font-size:13px;text-align:center}
+.msx .v-cup2{align-items:stretch;padding:6px 8px;min-height:66px;flex:none}
+.msx .v-cup2 .lg{flex:none;width:66px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;background:#0f172a;border-radius:10px;padding:3px 0}
+.msx .v-cup2 .lg .e{font-size:26px;line-height:1}
+.msx .v-cup2 .fcst{display:block;width:auto;height:auto;font-size:9px;letter-spacing:-.02em;font-weight:900;border-radius:5px;padding:0 4px;white-space:nowrap;text-align:center;line-height:1.5}
+.msx .v-cup2 .fcst.fc-e{background:#86efac;color:#14532d}.msx .v-cup2 .fcst.fc-g{background:#bef264;color:#365314}.msx .v-cup2 .fcst.fc-v{background:#fde047;color:#713f12}.msx .v-cup2 .fcst.fc-h{background:#fdba74;color:#7c2d12}.msx .v-cup2 .fcst.fc-n{background:#ef4444;color:#fff}
+.msx .v-cup2 .tx{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;gap:1px;text-align:left}
+.msx .v-cup2 .tx .hd{display:flex;align-items:center;gap:4px;font-size:9.5px;font-weight:900;height:16px;line-height:16px}.msx .v-cup2 .tx .hd>span{display:inline-block;height:auto;line-height:1.5}
+.msx .v-cup2 .tx .hd .gr2{background:#475569;border-radius:5px;padding:0 5px;color:#fff}.msx .v-cup2.g-gold .gr2{background:#ca8a04}.msx .v-cup2.g-silver .gr2{background:#64748b}.msx .v-cup2.g-green .gr2{background:#16a34a}.msx .v-cup2.g-four .gr2{background:#7c3aed}.msx .v-cup2.g-rainbow .gr2{background:linear-gradient(90deg,#f43f5e,#eab308,#22c55e,#3b82f6)}
+.msx .v-cup2 .tx .hd .cs{color:#fde047;font-size:11px}.msx .v-cup2 .tx .hd .dn{margin-left:auto;background:#fde047;color:#422006;border-radius:5px;padding:0 5px}
+.msx .v-cup2 .tx>b{font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.msx .v-cup2 .tx .g{display:block;font-size:18px;font-weight:900;color:#fde047;text-align:right;line-height:1.1}.msx .v-cup2 .tx .g small{display:inline;font-size:11px;margin-left:1px;color:#fde047}
+.msx .v-cup2.ng{opacity:1;background:#14121f;border-color:#334155}.msx .v-cup2.ng .lg,.msx .v-cup2.ng .tx>b,.msx .v-cup2.ng .tx .hd,.msx .v-cup2.ng .tx .g{opacity:.45}.msx .v-cup2.later{filter:saturate(.7)}
+.msx .v-cup2 .why{display:block;color:#fca5a5;font-size:10.5px;font-weight:900;line-height:1.3;white-space:normal}
+.msx .v-cupwin{position:absolute;inset:0;z-index:40;background:#0009;display:flex;align-items:center;justify-content:center;padding:16px}
+.msx .v-cupwin .in{position:relative;width:100%;max-width:360px;background:#fffbeb;color:#1e1b4b;border-radius:16px;border:3px solid #f59e0b;padding:10px 12px 12px;box-shadow:0 8px 0 #0006}
+.msx .v-cupwin .h{text-align:center;font-weight:900;font-size:14px;background:#f59e0b;color:#fff;border-radius:10px;padding:3px 0;margin:-2px -2px 8px}
+.msx .v-cupwin .sign{display:flex;flex-direction:column;align-items:center;gap:2px;background:linear-gradient(180deg,#1e1a36,#3b3566);color:#fff;border-radius:12px;padding:8px 6px;text-align:center}
+.msx .v-cupwin .sign .e{font-size:40px;line-height:1}.msx .v-cupwin .sign b{font-size:15px}.msx .v-cupwin .sign small{font-size:10.5px;color:#fde68a}
+.msx .v-cupwin .sign.g-four{background:linear-gradient(180deg,#2e1065,#6d28d9)}.msx .v-cupwin .sign.g-rainbow{background:linear-gradient(180deg,#7f1d1d,#a16207)}
+.msx .v-cupwin .sub{margin-top:8px;font-size:11px;font-weight:900;color:#92400e;text-align:left}
+.msx .v-cupwin .pz{display:flex;gap:6px;overflow-x:auto;padding:4px 0}
+.msx .v-cupwin .pz button{flex:none;width:72px;display:flex;flex-direction:column;align-items:center;gap:2px;background:#fff;border:2px solid #e5e7eb;border-radius:10px;padding:4px 2px;text-align:center}
+.msx .v-cupwin .pz button span{font-size:24px;line-height:1}.msx .v-cupwin .pz button small{font-size:9.5px;font-weight:900;line-height:1.2;color:#1e1b4b}
+.msx .v-cupwin .pz button.rare{border-color:transparent;background:linear-gradient(#fff,#fff) padding-box,linear-gradient(90deg,#f43f5e,#eab308,#22c55e,#3b82f6,#a855f7) border-box}
+.msx .v-cupwin .q{margin-top:8px;text-align:center;font-weight:900;font-size:13px}.msx .v-cupwin .q.ng{color:#dc2626;font-size:12px}
+.msx .v-cupwin .bt{display:flex;gap:8px;margin-top:8px}
+.msx .v-cupwin .bt button{flex:1;min-height:40px;border-radius:99px;background:#e5e7eb;color:#1e1b4b;font-weight:900;font-size:13.5px;text-align:center}
+.msx .v-cupwin .bt button.go{background:linear-gradient(90deg,#f472b6,#fb923c);color:#fff}
+.msx .v-cupwin .det{position:absolute;inset:0;background:#0007;border-radius:14px;display:flex;align-items:center;justify-content:center;padding:12px}
+.msx .v-cupwin .dbox{background:#fff;border-radius:12px;padding:10px;text-align:center;width:100%;border:2px solid #f59e0b}
+.msx .v-cupwin .dbox .e{font-size:38px}.msx .v-cupwin .dbox b{display:block;font-size:14px}.msx .v-cupwin .dbox p{font-size:11.5px;margin:4px 0 8px;text-align:left;line-height:1.45}
+.msx .v-cupwin .dbox button{min-height:36px;width:100%;border-radius:99px;background:#e5e7eb;font-weight:900;text-align:center}.msx .v-cup.ng .tx small{color:#fca5a5}
 .msx .v-vsh{display:flex;align-items:center;gap:4px;margin-top:6px;border-radius:16px;overflow:hidden;border:1px solid #4a4380;background:linear-gradient(100deg,#9d174d 0,#3b2a6b 49%,#0f0d24 50%,#1e3a8a 100%);padding:6px 6px;min-height:104px}
 .msx .v-vsh .sd{flex:1;min-width:0;display:flex;align-items:center;gap:4px;line-height:1.3}.msx .v-vsh .sd.op{justify-content:flex-end;text-align:right}
 .msx .v-vsh .sd img{height:70px;aspect-ratio:1;object-fit:contain;flex:none;filter:drop-shadow(0 5px 3px #0008)}.msx .v-vsh .sd.op img{transform:scaleX(-1)}
@@ -168369,6 +168928,53 @@ const msxR3CupReward = (SUC, c, s) => {
   if (c.scenario) out.push(c.sys === 'scerubin' ? `忠誠度 +5・次のごはんの効き目 ×${SUC.MEAL_WATCH_MULT || 1.5}` : 'シナリオのごほうび');
   return out.length ? out.join('・') : '賞金と修行チケット';
 };
+const msxR3Prizes = (SUC, c) => {
+  const out = [{
+    id: 'g',
+    e: '💰',
+    name: `賞金 ${msxFmt(c.prize)}G`,
+    desc: '勝つともらえる賞金。ごはんや買い物に使える(負けても ★★ 以上は一部もらえる)'
+  }];
+  const ex = SUC.EX_BY_SYS ? SUC.EX_BY_SYS[c.sys] : null;
+  if (ex && ex.rw && ex.rw.bag) Object.entries(ex.rw.bag).forEach(([k, n]) => {
+    const it = typeof msxItemView === 'function' ? msxItemView(k) : {
+      name: k,
+      e: '🎁',
+      desc: ''
+    };
+    out.push({
+      id: k,
+      e: it.e,
+      name: `${it.name} ×${n}`,
+      desc: it.desc,
+      rare: true
+    });
+  });
+  const wtk = ex && ex.four || c.star >= 3 ? 1 : 0;
+  const rtk = c.rival ? 1 : 0;
+  out.push({
+    id: 'tk',
+    e: '🎫',
+    name: '修行チケット',
+    desc: `${wtk + rtk ? `勝つと修行チケット +${wtk + rtk}${rtk ? '(ライバルの分 +1)' : ''}。` : ''}賞金ランクが上がると1段ごとに +1(負けても獲得賞金の合計で上がる)`
+  });
+  const rw = msxR3CupReward(SUC, c);
+  if (rw && rw !== '賞金と修行チケット') out.push({
+    id: 'rw',
+    e: ex && ex.four ? '🏆' : '✨',
+    name: 'ごほうび',
+    desc: rw,
+    rare: !!(ex && (ex.four || ex.hard))
+  });
+  return out;
+};
+const MSX_R3_FC_CLASS = Object.freeze({
+  easy: 'fc-e',
+  good: 'fc-g',
+  even: 'fc-v',
+  hard: 'fc-h',
+  none: 'fc-n'
+});
 function MsxR3Cup({
   run,
   setRun,
@@ -168381,12 +168987,22 @@ function MsxR3Cup({
     SUC
   } = msxSuc;
   const s = run.s;
-  const cups = Array.isArray(v.cups) ? v.cups : [];
+  const P = SUC.periodOf(s.turn);
+  const lastTurn = Math.min(SUC.TOTAL_TURNS || 46, s.turn + (P.key === 'final' ? 0 : Math.max(0, P.left - 1)));
+  const [vt, setVt] = useState(s.turn);
+  const now = vt === s.turn;
+  const cupsNow = Array.isArray(v.cups) ? v.cups : [];
+  const cups = now ? cupsNow : typeof SUC.cupsOf === 'function' ? SUC.cupsOf({
+    ...s,
+    turn: vt
+  }) : [];
   const [pick, setPick] = useState(() => {
-    const c = cups.find(x => x.entry && x.entry.ok);
+    const c = cupsNow.find(x => x.entry && x.entry.ok);
     return c ? c.id : null;
   });
-  const cur = cups.find(c => c.id === pick) || null;
+  const [win, setWin] = useState(null);
+  const [prz, setPrz] = useState(null);
+  const cur = cupsNow.find(c => c.id === pick) || null;
   const go = skip => {
     if (!cur || !cur.entry || !cur.entry.ok) return;
     const r = SUC.act(s, {
@@ -168406,17 +169022,24 @@ function MsxR3Cup({
     };
     onActed(next);
   };
-  const P = SUC.periodOf(s.turn);
   const toForced = P.key === 'final' ? null : P.left;
   const cal = msxCalendar(s.turn);
+  const calV = msxCalendar(vt);
   useMsxR3Lines(s.aid);
   useSuccessSound('cupEntry', {
     season: cal.season
   });
-  const nOk = cups.filter(c => c.entry && c.entry.ok).length;
+  const nOk = cupsNow.filter(c => c.entry && c.entry.ok).length;
   const openLine = msxR3Line('turn.cup.open', run, {
     cup: cur ? msxR3CupName(cur.sys) : ''
   }, nOk ? `「今月は ${nOk}つ 出られるよ! 出ると1ターン使うから、トレーニングとどっちにするか考えてね」` : '「今月は出られる大会がないみたい。トレーニングでじっくり力をつけよ!」');
+  const rankStep = typeof SUC.rankStepOf === 'function' ? SUC.rankStepOf(s) : 0;
+  const rank = rankStep ? {
+    name: SUC.rankNameOf(rankStep)
+  } : null;
+  const kindOf = c => c.scenario ? 'シナリオ' : c.ex ? MSX_R3_CUP_GRADE[c.grade] || '' : (SUC.CUP_SYS[c.sys] || {}).stat ? '自慢' : (SUC.CUP_SYS[c.sys] || {}).dist !== undefined ? '間合い' : (SUC.CUP_SYS[c.sys] || {}).type ? 'タイプ' : ['spring', 'summer', 'autumn', 'winter'].includes(c.sys) ? '四季' : 'ふつう';
+  const wc = win ? cups.find(c => c.id === win) : null;
+  const wcOk = !!(wc && now && wc.entry && wc.entry.ok);
   const body = React.createElement(React.Fragment, null, React.createElement(MsxBand, {
     s: s,
     v: v,
@@ -168426,7 +169049,7 @@ function MsxR3Cup({
     className: "v-scene low",
     style: {
       flex: '0 0 auto',
-      minHeight: 150
+      minHeight: 128
     }
   }, React.createElement("img", {
     className: "bg",
@@ -168450,37 +169073,64 @@ function MsxR3Cup({
     style: {
       left: '38%',
       top: 'auto',
-      bottom: 10
+      bottom: 8
     }
   }, openLine.t)), React.createElement("div", {
+    className: "v-cupbar",
+    "data-msx-r3-fame": true
+  }, React.createElement("span", null, "いまの賞金"), React.createElement("b", null, msxFmt(s.fame), React.createElement("small", null, "G")), rank ? React.createElement("i", null, "賞金の段 ", rank.name) : null), React.createElement("div", {
+    className: "v-cupmon"
+  }, React.createElement("button", {
+    type: "button",
+    className: "ar",
+    disabled: vt <= s.turn,
+    onClick: () => setVt(t => Math.max(s.turn, t - 1)),
+    "aria-label": "前の月"
+  }, "◀"), React.createElement("b", null, calV.year, "年目 ", calV.month, "月", now ? React.createElement("small", {
+    className: "now"
+  }, "今月") : React.createElement("small", null, "予定")), React.createElement("button", {
+    type: "button",
+    className: "ar",
+    disabled: vt >= lastTurn,
+    onClick: () => setVt(t => Math.min(lastTurn, t + 1)),
+    "aria-label": "次の月",
+    "data-msx-r3-next-month": true
+  }, "▶")), React.createElement("div", {
     className: "v-cups"
   }, cups.length ? cups.map(c => {
-    const ok = c.entry && c.entry.ok;
-    const cls = `${!ok ? 'ng' : c.id === pick ? 'sel' : c.rival ? 'rv' : c.done ? 'won' : ''}${c.ex ? ` ex g-${c.grade || 'gold'}` : ''}${c.hard ? ' hard' : ''}`;
+    const ok = now && c.entry && c.entry.ok;
+    const fc = typeof SUC.forecastOf === 'function' ? SUC.forecastOf(s, c) : null;
+    const cls = `${!(c.entry && c.entry.ok) ? 'ng' : now && c.id === pick ? 'sel' : c.rival ? 'rv' : c.done ? 'won' : ''}${c.ex ? ` ex g-${c.grade || 'gold'}` : ''}${c.hard ? ' hard' : ''}${now ? '' : ' later'}`;
     return React.createElement("button", {
       type: "button",
       key: c.id,
-      className: `v-cup ${cls}`,
-      disabled: !ok,
-      onClick: () => setPick(c.id),
+      className: `v-cup v-cup2 ${cls}`,
+      onClick: () => {
+        if (ok) setPick(c.id);
+        setWin(c.id);
+      },
       "data-msx-r3-cup": c.id
     }, React.createElement("div", {
-      className: "e"
-    }, c.scenario ? '📖' : MSX_R3_CUP_ICON[c.sys] || '🏆', c.ex && c.grade ? React.createElement("small", {
-      className: `gr g-${c.grade}`
-    }, MSX_R3_CUP_GRADE[c.grade] || '') : null), React.createElement("div", {
-      className: "tx"
-    }, React.createElement("b", null, c.scenario ? c.name : msxR3CupName(c.sys)), React.createElement("small", null, !ok ? `✖ ${msxR3WhyText(c.entry, s)}` : c.hard ? '🔥 勝ち目なし… 相手がとても強い' : c.rival ? `ライバル: ${c.rival.name}` : c.done ? '👑 優勝したことがある → ⏩ スキップできる' : '出られる ✔'), React.createElement("span", {
-      className: "rw"
-    }, "🎁 ", msxR3CupReward(SUC, c, s))), React.createElement("div", {
-      className: "rt"
+      className: "lg"
     }, React.createElement("span", {
-      className: "st"
-    }, msxR3Stars(c.star)), React.createElement("span", {
+      className: "e"
+    }, c.scenario ? '📖' : MSX_R3_CUP_ICON[c.sys] || '🏆'), fc ? React.createElement("span", {
+      className: `fcst ${MSX_R3_FC_CLASS[fc.key] || ''}`
+    }, fc.label) : null), React.createElement("div", {
+      className: "tx"
+    }, React.createElement("div", {
+      className: "hd"
+    }, React.createElement("span", {
+      className: "gr2"
+    }, kindOf(c)), React.createElement("span", {
+      className: "cs"
+    }, msxR3Stars(c.star)), c.done ? React.createElement("span", {
+      className: "dn"
+    }, "優勝済") : null), React.createElement("b", null, c.scenario ? c.name : msxR3CupName(c.sys)), !(c.entry && c.entry.ok) ? React.createElement("span", {
+      className: "why"
+    }, "✖ ", msxR3WhyText(c.entry, s)) : null, React.createElement("span", {
       className: "g"
-    }, "💰 ", msxFmt(c.prize), "G"), React.createElement("span", {
-      className: "kd"
-    }, c.scenario ? 'シナリオ' : (SUC.CUP_SYS[c.sys] || {}).stat ? '自慢' : (SUC.CUP_SYS[c.sys] || {}).dist !== undefined ? '間合い' : (SUC.CUP_SYS[c.sys] || {}).type ? 'タイプ' : ['spring', 'summer', 'autumn', 'winter'].includes(c.sys) ? '四季' : 'ふつう')), c.rival ? React.createElement(React.Fragment, null, React.createElement("span", {
+    }, msxFmt(c.prize), React.createElement("small", null, "G"))), c.rival ? React.createElement(React.Fragment, null, React.createElement("span", {
       className: "rvi"
     }, React.createElement("img", {
       src: msxMonThumb(c.rival.species),
@@ -168490,19 +169140,92 @@ function MsxR3Cup({
     }, "ごほうび大")) : null);
   }) : React.createElement("div", {
     className: "msx-note"
-  }, "今月の大会はありません")), React.createElement("div", {
+  }, now ? '今月の大会はありません' : 'この月の大会はありません')), React.createElement("div", {
     className: "v-card",
     style: {
-      padding: '6px 9px'
+      padding: '5px 9px'
     }
   }, React.createElement("div", {
     className: "v-kv",
     style: {
       margin: 0
     }
-  }, React.createElement("b", null, "出ると"), React.createElement("span", null, "1戦だけ・1ターン使う・勝つと賞金(G)と修行チケット。", toForced ? React.createElement("span", {
+  }, React.createElement("b", null, "出ると"), React.createElement("span", null, "1戦だけ・1ターン使う・勝つと賞金と賞品。", toForced ? React.createElement("span", {
     className: "yel"
-  }, ` 期末の大会まで あと${toForced}ターン`) : null))));
+  }, ` 期末の大会まで あと${toForced}ターン`) : null))), wc ? React.createElement("div", {
+    className: "v-cupwin",
+    onClick: () => {
+      setWin(null);
+      setPrz(null);
+    },
+    "data-msx-r3-cupwin": true
+  }, React.createElement("div", {
+    className: "in",
+    onClick: e => e.stopPropagation()
+  }, React.createElement("div", {
+    className: "h"
+  }, "大会参加確認"), React.createElement("div", {
+    className: `sign g-${wc.grade || 'n'}`
+  }, React.createElement("span", {
+    className: "e"
+  }, wc.scenario ? '📖' : MSX_R3_CUP_ICON[wc.sys] || '🏆'), React.createElement("b", null, wc.scenario ? wc.name : msxR3CupName(wc.sys)), React.createElement("small", null, kindOf(wc), " ", msxR3Stars(wc.star))), React.createElement("div", {
+    className: "sub"
+  }, "獲得物"), React.createElement("div", {
+    className: "pz"
+  }, msxR3Prizes(SUC, wc).map(x => React.createElement("button", {
+    type: "button",
+    key: x.id,
+    className: x.rare ? 'rare' : '',
+    onClick: () => setPrz(x),
+    "data-msx-r3-prize": x.id
+  }, React.createElement("span", null, x.e), React.createElement("small", null, x.name)))), wcOk ? React.createElement("div", {
+    className: "q"
+  }, "この大会に参加しますか?") : React.createElement("div", {
+    className: "q ng"
+  }, now ? `この大会には出られません(${msxR3WhyText(wc.entry, s)})` : 'この大会は、その月になると出られます'), React.createElement("div", {
+    className: "bt"
+  }, wcOk ? React.createElement(React.Fragment, null, React.createElement("button", {
+    type: "button",
+    onClick: () => setWin(null)
+  }, "キャンセル"), React.createElement("button", {
+    type: "button",
+    className: "go",
+    onClick: () => {
+      setPick(wc.id);
+      setWin(null);
+      if (cur && cur.id === wc.id) go(false);else {
+        const r = SUC.act(s, {
+          kind: 'cup',
+          id: wc.id
+        });
+        if (r.out.ok) onActed({
+          ...run,
+          s: r.state,
+          out: null,
+          log: [...(run.log || []), {
+            turn: s.turn,
+            t: `${msxR3CupName(wc.sys)}に出た`
+          }].slice(-20)
+        });
+      }
+    },
+    "data-msx-r3-yes": true
+  }, "はい")) : React.createElement("button", {
+    type: "button",
+    onClick: () => setWin(null),
+    "data-msx-r3-close": true
+  }, "とじる")), prz ? React.createElement("div", {
+    className: "det",
+    onClick: () => setPrz(null)
+  }, React.createElement("div", {
+    className: "dbox",
+    onClick: e => e.stopPropagation()
+  }, React.createElement("div", {
+    className: "e"
+  }, prz.e), React.createElement("b", null, prz.name), React.createElement("p", null, prz.desc), React.createElement("button", {
+    type: "button",
+    onClick: () => setPrz(null)
+  }, "とじる"))) : null)) : null);
   const foot = React.createElement("div", {
     className: "v-ft"
   }, React.createElement("button", {
@@ -168518,9 +169241,12 @@ function MsxR3Cup({
     type: "button",
     className: "go",
     disabled: !(cur && cur.entry && cur.entry.ok),
-    onClick: () => go(false),
+    onClick: () => {
+      setVt(s.turn);
+      setWin(cur.id);
+    },
     "data-msx-r3-enter": true
-  }, cur ? `${MSX_R3_CUP_ICON[cur.sys] || '🏆'} 出る ▶` : '大会をえらぶ'));
+  }, cur ? '出場 ▶' : '大会をえらぶ'));
   return React.createElement(MsxR3Frame, {
     run: run,
     onBack: onBack,
@@ -172900,6 +173626,8 @@ function MsxManualBar({
   }, "オートにする") : null));
 }
 const MSA_GAP = [0.13, 0.32, 0.5, 0.68];
+const MSA_C_LIM = 0.24;
+const MSA_PAN_K = 0.35;
 const MSA_SPEEDS = Object.freeze([{
   id: 'x1',
   label: '×1',
@@ -172964,7 +173692,7 @@ const MSA_CSS = `
 .msa-floor{position:absolute;left:4%;right:4%;bottom:30px;height:2px;background:linear-gradient(90deg,#fff0,#ffffff55 20%,#ffffff55 80%,#fff0);z-index:1}
 .msa-spot{position:absolute;bottom:23px;width:16px;height:16px;margin-left:-8px;border-radius:50%;border:2px solid #ffffff40;background:#0f0b2280;z-index:1;transition:all .35s}
 .msa-spot.on{border-color:#fde047;background:#fde04766;box-shadow:0 0 10px #fde047aa}
-.msa-f{position:absolute;bottom:30px;width:96px;margin-left:-48px;height:120px;display:flex;align-items:flex-end;justify-content:center;z-index:3;transition:left .45s cubic-bezier(.3,.8,.4,1)}
+.msa-f{position:absolute;bottom:30px;width:96px;margin-left:-48px;height:120px;display:flex;align-items:flex-end;justify-content:center;z-index:3;transition:left .64s cubic-bezier(.45,.05,.35,1)}
 .msa-f.act{z-index:6}
 .msa-f img.msa-img{max-width:96px;max-height:112px;object-fit:contain;filter:drop-shadow(0 6px 5px rgba(0,0,0,.55))}
 .msa-f .msa-flip{transform:scaleX(-1)}
@@ -172978,7 +173706,11 @@ const MSA_CSS = `
 .msa-charge{animation:msaCharge .7s ease-out both}
 .msa-aura{position:absolute;left:50%;bottom:0;width:90px;height:90px;margin-left:-45px;border-radius:50%;background:radial-gradient(circle,#fde04788 0,#f9731644 45%,#f9731600 70%);animation:msaAura .7s ease-out both;z-index:-1;pointer-events:none}
 .msa-sulk{animation:msaSulk .7s ease-in-out both}
-.msa-step{animation:msaStep .45s ease-out both}
+.msa-step{transform-origin:50% 100%;animation:msaWalk .64s linear both}
+.msa-pan{position:absolute;inset:0;transition:transform .64s cubic-bezier(.45,.05,.35,1);will-change:transform}
+/* 横に送っても背景の端が見えないよう、絵は左右に広げて描く(広げるのは ::before だけ。要素の枠は場の中のまま) */
+.msa-pan .msa-bg{background-size:0 0}
+.msa-pan .msa-bg::before{content:'';position:absolute;top:0;bottom:0;left:-24%;right:-24%;background-color:#2a2147;background-image:inherit;background-size:cover;background-position:center;background-repeat:no-repeat}
 .msa-in{animation:msaIn .45s ease-out both}
 .msa-dist{position:absolute;left:0;right:0;bottom:4px;display:flex;justify-content:center;gap:5px;z-index:2}
 .msa-dist span{font-size:11px;font-weight:900;padding:1px 9px;border-radius:99px;background:#0f0b2299;color:#94a3b8;transition:all .3s}
@@ -173051,6 +173783,8 @@ const MSA_CSS = `
 @keyframes msaAura{0%{opacity:0;transform:scale(.4)}40%{opacity:1}100%{opacity:0;transform:scale(1.5)}}
 @keyframes msaSulk{0%,100%{transform:none}30%,70%{transform:rotate(-8deg) translateX(-4px)}}
 @keyframes msaStep{0%{transform:none}45%{transform:translateY(-14px)}100%{transform:none}}
+/* 歩いて寄る: 3歩の弾み(上がる→着く)と前のめり/のけぞり。最後は元の姿勢へ */
+@keyframes msaWalk{0%{transform:none;animation-timing-function:ease-out}14%{transform:translateY(-10px) rotate(var(--msa-lean,0deg));animation-timing-function:ease-in}28%{transform:translateY(0) rotate(var(--msa-lean,0deg)) scale(1.04,.95);animation-timing-function:ease-out}45%{transform:translateY(-11px) rotate(var(--msa-lean,0deg));animation-timing-function:ease-in}60%{transform:translateY(0) rotate(var(--msa-lean,0deg)) scale(1.04,.95);animation-timing-function:ease-out}76%{transform:translateY(-6px) rotate(calc(var(--msa-lean,0deg) * .5));animation-timing-function:ease-in}90%{transform:translateY(0) scale(1.05,.94)}100%{transform:none}}
 @keyframes msaIn{0%{opacity:0;transform:translateY(16px) scale(.8)}100%{opacity:1;transform:none}}
 /* ---- 2026-11-13 社長「参考動画を見てもっと改良して」: 入り・カメラ・技の札・効果の帯・DAMAGE ---- */
 /* 白飛びの直し: 閃光(msa-flash)は animation-delay の待ちの間も 0% のコマが当たる(fill both)。0% を透明にして当たる瞬間から光らせる */
@@ -173311,7 +174045,7 @@ const msaStepMs = (e, team, reduce, log, sf = 1) => {
   return {
     start: MSA_INTRO_MS,
     enter: 350,
-    move: 650,
+    move: 820,
     guard: 750,
     charge: 800,
     swap: 700,
@@ -173375,7 +174109,8 @@ function MsaFighter({
   fx,
   motionOn = true,
   maxHp = 0,
-  gutsNow = null
+  gutsNow = null,
+  lean = 0
 }) {
   fx = fx || {
     pre: 0,
@@ -173488,16 +174223,20 @@ function MsaFighter({
       }));
     }
   }
+  let bodyStyle;
   if (me && e.ev === 'move') {
     cls = 'msa-step';
+    bodyStyle = {
+      '--msa-lean': `${lean}deg`
+    };
     if (!reduce) [0, 1, 2].forEach(j => extra.push(React.createElement("i", {
       key: `du-${e.k}-${j}`,
       className: "msa-dust",
       "aria-hidden": "true",
       style: {
         left: `${18 + j * 22}%`,
-        animationDelay: `${j * 60}ms`,
-        '--msa-dx': `${(j - 1) * 16}px`
+        animationDelay: `${120 + j * 190}ms`,
+        '--msa-dx': `${(lean >= 0 ? -1 : 1) * (side === 'A' ? 1 : -1) * 16}px`
       }
     })));
   }
@@ -173542,7 +174281,8 @@ function MsaFighter({
     }) : still0;
     body = React.createElement("div", {
       key: `b-${e ? e.k : 0}-${cls}`,
-      className: `flex items-end justify-center ${cls}`
+      className: `flex items-end justify-center ${cls}`,
+      style: bodyStyle
     }, still);
   }
   return React.createElement("div", {
@@ -173893,9 +174633,26 @@ function MsaStage({
     const g = MSA_GAP[d] != null ? MSA_GAP[d] : MSA_GAP[1];
     return d === 0 ? Math.max(g, Math.min(MSA_GAP[1] - 0.04, (fill ? 140 : 96) * 0.6 / Math.max(200, stageW))) : g;
   };
+  const cs = useMemo(() => {
+    const out = [0.5];
+    let c = 0.5;
+    for (let k = 1; k < frames.length; k++) {
+      const r = log[k] || {};
+      const g0 = gapOf(frames[k - 1] ? frames[k - 1].d : 1);
+      const g1 = gapOf(frames[k] ? frames[k].d : 1);
+      if (r.ev === 'move' && (r.side === 'A' || r.side === 'B') && g0 !== g1) c = r.side === 'A' ? c + g0 / 2 - g1 / 2 : c - g0 / 2 + g1 / 2;
+      c = Math.max(Math.max(0.5 - MSA_C_LIM, 0.09 + g1 / 2), Math.min(Math.min(0.5 + MSA_C_LIM, 0.91 - g1 / 2), c));
+      out.push(c);
+    }
+    return out;
+  }, [log, frames, stageW, fill]);
   const gap = gapOf(f ? f.d : 1);
-  const xA = 0.5 - gap / 2;
-  const xB = 0.5 + gap / 2;
+  const cNow = cs[Math.min(pos, cs.length - 1)] != null ? cs[Math.min(pos, cs.length - 1)] : 0.5;
+  const xA = cNow - gap / 2;
+  const xB = cNow + gap / 2;
+  const panX = reduce ? 0 : (0.5 - cNow) * stageW * MSA_PAN_K;
+  const scrX = x => x + (reduce ? 0 : (0.5 - cNow) * MSA_PAN_K);
+  const walkLean = e0.ev === 'move' && pf && f && e0.side ? (f.d < pf.d ? 1 : -0.6) * (e0.side === 'A' ? 1 : -1) * 7 : 0;
   const fx = msaFxOf(log, e0, reduce, Number(speedF) || 1);
   const hitMs = e.ev === 'tech' && !reduce ? fx.pre + msaMotionMs(msaMotionKind(e.atkSp, e.tech)).hit : 0;
   useEffect(() => {
@@ -173904,7 +174661,7 @@ function MsaStage({
     if (reduce || ended || !el || !e1 || typeof el.animate !== 'function') return undefined;
     const total = Math.round(msaStepMs(e1, teams[e1.side], reduce, log, Number(speedF) || 1) * (Number(speedF) || 1));
     const w = el.clientWidth || stageW;
-    const sx = sd => sd === 'A' ? xA : xB;
+    const sx = sd => scrX(sd === 'A' ? xA : xB);
     let kf = null;
     if (e1.ev === 'tech' && e1.side) {
       if (total < hitMs + 300) return undefined;
@@ -173915,7 +174672,7 @@ function MsaStage({
       kf = msaCamFrames([...(fx.pre > 0 ? [[Math.max(110, fx.pre * 0.5), msaCamAt(ax, sw, w)], [fx.pre, msaCamAt(ax, sw, w)]] : []), [fx.pre > 0 ? fx.pre + 90 : Math.min(280, Math.max(120, hitMs * 0.45)), msaCamAt(ax, s1, w)], [hitMs - 60, msaCamAt(ax * 0.55 + dx * 0.45, s1, w)], [hitMs + 110, msaCamAt(dx, e1.hit ? s1 + 0.08 : s1, w)], [total - 280, msaCamAt(dx, s1 - 0.04, w)]], total);
     } else if (e1.ev === 'ko' && e1.side) {
       kf = msaCamFrames([[260, msaCamAt(sx(e1.side), 1.28, w)], [total - 320, msaCamAt(sx(e1.side), 1.3, w)]], total);
-    } else if ((e1.ev === 'guard' || e1.ev === 'charge' || e1.ev === 'move' || e1.ev === 'swap') && e1.side) {
+    } else if ((e1.ev === 'guard' || e1.ev === 'charge' || e1.ev === 'swap') && e1.side) {
       kf = msaCamFrames([[220, msaCamAt(sx(e1.side), 1.1, w)], [total - 260, msaCamAt(sx(e1.side), 1.1, w)]], total);
     }
     if (!kf) return undefined;
@@ -173938,7 +174695,7 @@ function MsaStage({
   if (!f) return null;
   const spots = MSA_GAP.map((_, d) => {
     const g = gapOf(d);
-    return [0.5 - g / 2, 0.5 + g / 2];
+    return [cNow - g / 2, cNow + g / 2];
   });
   const hpOf = side => (f.hp[side] || [])[f.act[side]];
   const gdOf = side => {
@@ -174023,6 +174780,12 @@ function MsaStage({
     ref: camRef,
     "data-msa-cam": true
   }, React.createElement("div", {
+    className: "msa-pan",
+    style: {
+      transform: `translateX(${Math.round(panX)}px)`
+    },
+    "data-msa-pan": true
+  }, React.createElement("div", {
     className: "msa-bg",
     "aria-hidden": "true",
     style: {
@@ -174070,6 +174833,7 @@ function MsaStage({
     }
   }), React.createElement(MsaFighter, {
     side: "A",
+    lean: e0.side === 'A' ? walkLean : 0,
     member: mA,
     x: xA,
     e: e,
@@ -174087,6 +174851,7 @@ function MsaStage({
     gutsNow: gutsOf('A')
   }), React.createElement(MsaFighter, {
     side: "B",
+    lean: e0.side === 'B' ? walkLean : 0,
     member: mB,
     x: xB,
     e: e,
@@ -174115,7 +174880,7 @@ function MsaStage({
     style: {
       animationDelay: `${hitMs}ms`
     }
-  }))), !intro && !ended && ['A', 'B'].map(hud), !intro && React.createElement("div", {
+  })))), !intro && !ended && ['A', 'B'].map(hud), !intro && React.createElement("div", {
     className: "msa-rnd",
     "data-msa-round": f.r || 0
   }, React.createElement("small", null, "ラウンド"), React.createElement("b", null, f.r || 1)), ['A', 'B'].map(sd => bands[sd].length ? React.createElement("div", {

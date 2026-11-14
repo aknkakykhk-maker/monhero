@@ -1549,6 +1549,16 @@
         if (!s.titles.includes(FOUR_DONE.title)) s.titles.push(FOUR_DONE.title); out.fourDone = { ...FOUR_DONE };
       }
     };
+    // 大会の予想(受付の札): 自分の6能力の合計 ÷ 相手の強さ(ゆらぎ・ライバルは入れない)。敵の数字は見せず、ことばだけ返す
+    const FORECAST = Object.freeze([[1.25, 'easy', '楽勝'], [1.06, 'good', '有利'], [0.94, 'even', '互角'], [0.8, 'hard', '苦戦'], [0, 'none', '勝ち目なし…']]);
+    const forecastOf = (s, c) => {
+      if (!c) return null; const pk = periodOf(s.turn).key; const ex = EX_BY_SYS[c.sys];
+      const opp = ex ? benchAt(s) * ex.str : benchOf(pk === 'final' ? 'pro' : pk) * (c.sys === 'scatsu' ? STAR_MULT[4] : (STAR_MULT[c.star] || 1)) * (c.rival ? RIVAL.str : 1);
+      const ratio = sumOf(s.stats) / Math.max(1, opp);
+      let f = FORECAST.find(([min]) => ratio >= min) || FORECAST[FORECAST.length - 1];
+      if (ex && ex.hard && ratio < 1.1) f = FORECAST[4]; // 大一番・最後の四大大会は、よほど勝っていないと「勝ち目なし…」
+      return { key: f[1], label: f[2] };
+    };
     const fourWinsOf = (s) => EX_CUPS.filter(c => c.four && s.wonNow.includes(`${c.sys}:${c.star}`)).length;
     // 戦う1体(王者かライバル。頂への道は1・2戦目が常連・決勝が王者)
     const cupOfBattle = (b) => (b.kind === 'cup' ? b.sys : b.kind === 'summit' ? 'peak' : (FORCED[b.kind] && FORCED[b.kind].cup) || 'normal');
@@ -1791,7 +1801,7 @@
     return Object.freeze({
       events: EV,
       VERSION, STORY, KEYS, STAT_NAMES, PERIODS, TOTAL_TURNS, FORCED, SUMMIT, BASE, RESULTS, RATE, REST, PLAY, CLINIC, COND, LOYAL, GATHER, BOND, STORY, LOTTERY,
-      ASSISTS, ISSA, PTS, XP, SHUGYO, TECH_POWER, MASTERY, techRowsOf, techPowerOfRows, powerOf, techBoostOf, techUseOf, ITEMS, GOOD, CARRY_MAX, useItem, FAME_V, FAME_SCALE, TICKET_BASE, TRAIN_LV, trainLvOf, REMATCH, canRematch, rematch, canSkip, battleKey, PRIZE, MEALS, meal, MEAL_WATCH_MULT, ticketsOfPrize, TECH_MAX, techsOf, canLearn, techRate, learnable, techRank, shugyoQ, superLeft, techMissOf, techCanon, canonTechList, shugyoLeft, teachFrom, BENCH: BENCH_USE, STAR_MULT, TAG_POWER, BOND_START, RANK_ADD, TRAIN_COMBO, AIDS, speciesList, shugyoGainOf, EX_CUPS, EX_BY_SYS, cupItemsOf, CUP_REWARD, FAME_RANK, FAME_RANK_MAX, rankStepOf, rankNameOf, rankNeedG, WIN_TICKET, FOUR_DONE, fourWinsOf, ELIXIR_ADD, FRUIT_MULT,
+      ASSISTS, ISSA, PTS, XP, SHUGYO, TECH_POWER, MASTERY, techRowsOf, techPowerOfRows, powerOf, techBoostOf, techUseOf, ITEMS, GOOD, CARRY_MAX, useItem, FAME_V, FAME_SCALE, TICKET_BASE, TRAIN_LV, trainLvOf, REMATCH, canRematch, rematch, canSkip, battleKey, PRIZE, MEALS, meal, MEAL_WATCH_MULT, ticketsOfPrize, TECH_MAX, techsOf, canLearn, techRate, learnable, techRank, shugyoQ, superLeft, techMissOf, techCanon, canonTechList, shugyoLeft, teachFrom, BENCH: BENCH_USE, STAR_MULT, TAG_POWER, BOND_START, RANK_ADD, TRAIN_COMBO, AIDS, speciesList, shugyoGainOf, EX_CUPS, EX_BY_SYS, cupItemsOf, CUP_REWARD, FAME_RANK, FAME_RANK_MAX, rankStepOf, rankNameOf, rankNeedG, WIN_TICKET, FOUR_DONE, fourWinsOf, forecastOf, ELIXIR_ADD, FRUIT_MULT,
       rngOf, periodOf, aptMult, initStats, memberOf, memberEffect, newRun, gatherOf, cardMult, peek, failRateOf, sabRateOf, greatRateOf,
       act, react, issa, issaComes, issaRate, endTurn, opponents: opponentsOf, settle, cupsOf, canEnter, bracketOf, gradeOf, GRADE_STEP, stayV, SC_CUPS, SC_NAME, ASST_STORY, storyEnd, markSpecial, battleMods, battleBuffs, peakTurn, ASTORY, storyDue, storyStep, preview, restore, ARC, PARTY, summitPick, endingOf, endingSeen, CUP_SYS, YEAR, RIVAL, CUP_PRIZE, spendPts, autoPts, ptsCost, evaluate, assistPointsOf, loyalOf, loyalMult, top3Of, sumOf,
       FUSE, fuseOk, fuseKinds, fusePlan, fuseId,

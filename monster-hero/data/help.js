@@ -2903,7 +2903,7 @@ const HELP_CATEGORIES = [
           { t:'note', releaseFlag:'assistantMasmonRanchTicket', title:'トレーニングチケット', text:'選んだ能力が上がります。伸びやすさ(A〜E)が高い能力ほどよく上がります。' },
           { t:'note', releaseFlag:'assistantMasmonRanchTicket', title:'重トレーニングチケット', text:'選んだ能力が大きく上がり、決まった能力も少し上がりますが、かわりに決まった能力が少し下がり、マスモンが少し疲れます。何が上がって何が下がるかは、使う前に表示されます。' },
           { t:'note', releaseFlag:'assistantMasmonRanchTicket', title:'自分のモンスターには入りません', text:'助手のマスモンに使ったチケットは、自分のマスモンの絆経験値にはなりません。絆ランキングにも効きません。上がった能力は、助手のマスモンのフレンド対戦にはそのまま入ります。' },
-          { t:'note', releaseFlag:'assistantMasmonBattleBeta', title:'⚔ マスモンで対戦(β)', text:'助手が育てているマスモンを、ほかの助手のマスモンと対戦させて観戦できます。' },
+          { t:'note', releaseFlag:'assistantMasmonBattleBeta', title:'⚔ マスモンで対戦(β)', text:'助手が育てているマスモンを、ほかの助手のマスモンと対戦させて観戦できます。試合は両方の助手と3体の並びが向かい合う入場から始まり、実況や「NEXT」の交代、決着の大写しのあと、結果でMVPとマスモンごとの活躍を見られます。' },
           { t:'note', releaseFlag:'assistantMasmonBattleBeta', title:'💪 能力の効き方', text:'ちからはちから技、かしこさはかしこさ技のダメージを上げます。相手から同じ種類の技を受けたときは、そのダメージを少し減らします。丈夫さは、どちらの技のダメージも減らします。' },
           { t:'note', releaseFlag:'assistantMasmonBattleBeta', title:'⚡ ガッツのたまり方', text:'ガッツは毎ラウンド少しずつたまります。たまる速さはモンスターの種類ごとに違い、たまるのが速い種類ほど与えるダメージが控えめで、遅い種類ほど大きめです。間合いを動く・守るでもいくらかたまり、「ためる」ではいちばん多くたまります。' },
           { t:'note', releaseFlag:'assistantMasmonBattleBeta', title:'📏 間合いの得手', text:'モンスターには間合い(零・近・中・遠)ごとの得手・不得手があります。いまの間合いが得意なほど、与えるダメージと命中が上がり、受けるダメージと相手の命中が下がります。苦手な間合いではその逆です。' },
