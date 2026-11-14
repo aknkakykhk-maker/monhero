@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 374ec75e1d03706a
+// generated-sha256: 18219cb0ebcda9a2
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -115958,16 +115958,18 @@ function MonsterHeroGame() {
   // マルチの演奏中に、ボタンを押していないのに外の画面(HOME など)へ替わろうとしたら止める(2026-11-15・r1115-006。本文は 10-core.jsx の MH_MULTI_PLAY_GUARD)。
   //   止めたら、画面の記録に blk と残し、診断へ kind:'stray' を1行送る。演奏の終わりの切り替え(RHYTHM_MULTI へ)は RHYTHM_ なので通る
   const rhythmPlayGuardRef = useRef(null);
-  const setGameState = (next) => {
+  const stopStrayGameState = (next) => {
     try {
       const play = rhythmPlayGuardRef.current;
       if (typeof MH_MULTI_PLAY_GUARD !== 'undefined' && MH_MULTI_PLAY_GUARD.shouldBlock(gameStateNowRef.current, next, play && play.from)) {
         if (typeof MH_SCREEN_TRAIL !== 'undefined') MH_SCREEN_TRAIL.push('blk', `${next}<${gameStateCaller()}`);
         if (typeof rhythmTouchDiagStray === 'function' && play && play.song) void rhythmTouchDiagStray({ song_id: play.song.songId, difficulty: play.difficulty && play.difficulty.id, to: `${next}<${gameStateCaller()}` });
-        return;
+        return true;
       }
     } catch (_) { /* 守りが落ちても、画面の切り替えは今までどおり通す */ }
-    gameStateNowRef.current = next; runBackgroundAllowedRef.current = isBackgroundRunScreen(next); if (typeof MH_SCREEN_TRAIL !== 'undefined') MH_SCREEN_TRAIL.push('gs', `${next}<${gameStateCaller()}`); setGameStateRaw(next); };
+    return false;
+  };
+  const setGameState = (next) => { if (stopStrayGameState(next)) return; gameStateNowRef.current = next; runBackgroundAllowedRef.current = isBackgroundRunScreen(next); if (typeof MH_SCREEN_TRAIL !== 'undefined') MH_SCREEN_TRAIL.push('gs', `${next}<${gameStateCaller()}`); setGameStateRaw(next); };
   const [debugThrowScreenError, setDebugThrowScreenError] = useState(false); // デバッグ設定から画面エラーの受け止めを試すためだけの印
   const debugMenuRootRef = useRef(null); // デバッグメニューの名前で絞り込む欄が、どの範囲を探すか(2026-10-27)
   const [battleMenuTab, setBattleMenuTab] = useState('difficulty');
