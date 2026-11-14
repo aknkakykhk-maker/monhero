@@ -78,7 +78,7 @@ const makeRun = async (kind) => {
     ['B2', 'win', ['cont', '@cupintro-go', '%quick']], ['R1', 'win', ['cont', '@cupintro-go', '%quick', '%next']], ['C3', 'win', ['cont', '@cupintro-go', '%quick', '%next', '@next']], ['C3b', 'win', ['cont', '@cupintro-go', '%quick', '%next', '@next', '@meal=f_tough']], // R1: 賞金ランク UP!(段が上がったときだけ)
     ['C4', 'lose', ['cont', '@cupintro-go', '%quick']], ['C4r', 'lose', ['cont', '@cupintro-go', '%quick', '%rematch=sand']], ['C4g', 'lose', ['cont', '@cupintro-go', '%quick', '%giveup']],
     ['C4d', 'debutlose', ['cont', '@cupintro-go', '%quick']],
-    ['Q1', 'mid', ['cont', /^⚔修行/]], ['Q2', 'mid', ['cont', /^⚔修行/, '@shugyo']], ['Q2b', 'mid', ['cont', /^⚔修行/, '@shugyo', '@qskip']], ['Q3', 'mid', ['cont', /^⚔修行/, '@shugyo', '@qskip', '@qnext']], // 修行の段の演出 → 「結果へ」(Fable ①-12)
+    ['Q1', 'mid', ['cont', /^⚔修行/]], ['Q4', 'mid', ['cont', /^⚔修行/, '$qok0']], ['Q5', 'mid', ['cont', /^⚔修行/, '$qok0', '$qok1']], ['Q2', 'mid', ['cont', /^⚔修行/, '@shugyo']], ['Q2b', 'mid', ['cont', /^⚔修行/, '@shugyo', '@qskip']], ['Q3', 'mid', ['cont', /^⚔修行/, '@shugyo', '@qskip', '@qnext']], // 修行の段の演出 → 「結果へ」(Fable ①-12)
     // 期末の大会の当日(参考 te-30〜34): 当日のメイン(能力と大会だけ)→ 受付に1つ → 参加の確認 → 紋章の入り → 表
     ['K0', 'kimatsu', ['cont']], ['K1', 'kimatsu', ['cont', '@precup']], ['K2', 'kimatsu', ['cont', '@precup', '@enter']], ['K2c', 'kimatsu', ['cont', '@precup', '@enter', '@pre-cancel']],
     ['K3', 'kimatsu', ['cont', '@precup', '@enter', '@yes']], ['K4', 'kimatsu', ['cont', '@precup', '@enter', '@yes', '@cupintro-go']],
@@ -148,6 +148,7 @@ const makeRun = async (kind) => {
             if (st === 'cont') { const b = [...document.querySelectorAll('.msx button')].find((x) => /続きから|結果を見る/.test(x.innerText || '')); if (b) b.click(); return !!b; }
             if (/^w\d+$/.test(st)) return true; // 'w1000' は待つだけ
             if (st[0] === '=') { const [k, v] = st.slice(1).split(':'); const e = document.querySelector(`[data-monsuc-${k}]`); if (!e) return false; const set = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set; set.call(e, v); e.dispatchEvent(new Event('input', { bubbles: true })); return true; } // '=k:文字' は [data-monsuc-k] の入力に文字を入れる
+            if (st.startsWith('$qok')) { const n = Number(st.slice(4)) || 0; const c = [...document.querySelectorAll('.q-card.ok')][n]; if (!c) return false; c.click(); return true; } // '$qokN' は修行の「覚えられる技」の緑の札を上からN番目(0始まり)で選ぶ(r1113-034)
             if (st[0] === '^') { const e = document.querySelector(`[data-msx-${st.slice(1)}]`); if (e) e.scrollIntoView({ block: 'start' }); return !!e; } // '^x' は [data-msx-x] が見出しの頭に来るところまでスクロール
             const [k, val] = st.slice(1).split('=');
             const pre = st[0] === '%' ? 'data-msc-' : st[0] === '#' ? 'data-msx-' : st[0] === '~' ? 'data-monsuc-' : st[0] === '!' ? 'data-mhl-' : 'data-msx-r3-'; // '#x' は [data-msx-x](詳細の窓 MsxMonDetail のタブなど)
