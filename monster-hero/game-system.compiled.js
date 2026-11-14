@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 83e419af81af7e16
+// source-sha256: ebefdc5f349928b5
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -166445,7 +166445,15 @@ const MSX_CSS = `
 .msx .v-tr .lv{display:block;position:static;background:none;border:0;font-style:normal;font-size:10px;font-weight:800;color:#94a3b8;line-height:1.3}
 .msx .v-tr.tag .o{box-shadow:0 0 0 2px #fde04788,0 0 14px 3px #fde047,0 0 24px 6px #fb923c88}
 .msx .v-tr.tag .nm{color:#fde047}
-.msx .v-tr.sel .o{transform:scale(1.1)}
+.msx .v-tr.sel .o{transform:translateY(-8px) scale(1.18)}
+.msx .v-tr .o{transition:transform .14s ease-out,box-shadow .14s}
+.msx .v-tr:not(.sel) .o{transform:translateY(2px) scale(.96)}
+.msx .v-trs{position:relative;padding-top:17px;padding-bottom:12px;touch-action:pan-y}
+.msx .v-tr .fb{position:absolute;left:50%;top:-17px;transform:translateX(-50%);background:#fff;color:#7f1d1d;border-radius:8px;padding:1px 6px;font-size:10px;font-weight:900;white-space:nowrap;line-height:1.4;z-index:3;box-shadow:0 1px 4px #0006}
+.msx .v-tr .fb::after{content:'';position:absolute;left:50%;bottom:-4px;margin-left:-4px;border:4px solid transparent;border-bottom:0;border-top-color:#fff}
+.msx .v-tr .ke{position:absolute;left:50%;bottom:-13px;transform:translateX(-50%);color:#fde047;font-size:11px;font-weight:900;text-shadow:0 1px 2px #000;white-space:nowrap}
+.msx .v-trail{position:absolute;left:0;top:0;pointer-events:none;z-index:4;opacity:.85;filter:drop-shadow(0 0 2px #fff8)}
+.msx .v-trail.out{opacity:0;transition:opacity .5s ease-out}
 .msx .v-tr.sel .nm{color:#fff}
 .msx .v-lvx{display:flex;align-items:center;gap:6px;margin-top:5px;font-size:10px;font-weight:900;white-space:nowrap}
 .msx .v-lvx b{color:#7dd3fc}.msx .v-lvx i{flex:1;height:6px;border-radius:4px;background:#334155;position:relative;overflow:hidden}
@@ -170358,6 +170366,8 @@ function MsxPlay({
     n: 0,
     dir: 0
   });
+  const scrubRef = useRef(null);
+  const [trail, setTrail] = useState(null);
   useEffect(() => {
     if (onSub) onSub(sub);
   }, [sub]);
@@ -171288,6 +171298,85 @@ function MsxPlay({
         swipeRef.current = null;
       }
     };
+    const scrubIdx = e => {
+      const r = e.currentTarget.getBoundingClientRect();
+      return Math.max(0, Math.min(MSX_STATS.length - 1, Math.floor((e.clientX - r.left) / Math.max(1, r.width) * MSX_STATS.length)));
+    };
+    const scrubPt = e => {
+      const r = e.currentTarget.getBoundingClientRect();
+      return {
+        x: e.clientX - r.left,
+        y: e.clientY - r.top,
+        w: r.width,
+        h: r.height
+      };
+    };
+    const scrubOn = {
+      style: {
+        touchAction: 'pan-y',
+        userSelect: 'none',
+        WebkitUserSelect: 'none'
+      },
+      onPointerDown: e => {
+        scrubRef.current = {
+          x: e.clientX,
+          moved: false,
+          last: MSX_STATS.indexOf(stat),
+          id: e.pointerId
+        };
+      },
+      onPointerMove: e => {
+        const st = scrubRef.current;
+        if (!st) return;
+        if (!st.moved) {
+          if (Math.abs(e.clientX - st.x) < 6) return;
+          st.moved = true;
+          try {
+            e.currentTarget.setPointerCapture(e.pointerId);
+          } catch (_) {}
+        }
+        const i = scrubIdx(e);
+        const p = scrubPt(e);
+        setTrail(t => ({
+          pts: [...(t && t.live ? t.pts : []), {
+            x: p.x,
+            y: p.y
+          }].slice(-28),
+          live: true,
+          w: p.w,
+          h: p.h
+        }));
+        if (i !== st.last) {
+          st.last = i;
+          setSel(MSX_STATS[i]);
+          if (typeof msaSe === 'function') msaSe('tap');
+        }
+      },
+      onPointerUp: () => {
+        const st = scrubRef.current;
+        if (st && st.moved) {
+          setTrail(t => t ? {
+            ...t,
+            live: false
+          } : t);
+          setTimeout(() => setTrail(null), 600);
+        } else {
+          scrubRef.current = null;
+        }
+      },
+      onPointerCancel: () => {
+        scrubRef.current = null;
+        setTrail(null);
+      },
+      onClickCapture: e => {
+        const st = scrubRef.current;
+        scrubRef.current = null;
+        if (st && st.moved) {
+          e.stopPropagation();
+          e.preventDefault();
+        }
+      }
+    };
     body = React.createElement(React.Fragment, null, React.createElement(MsxBand, _extends({
       s: s,
       v: v,
@@ -171411,16 +171500,38 @@ function MsxPlay({
       preview: true
     }), React.createElement("div", _extends({
       className: "v-trs",
-      "data-msx-train-swipe-row": true
-    }, swipeOn), MSX_STATS.map(k => {
+      "data-msx-train-swipe-row": true,
+      "data-msx-train-scrub": true
+    }, scrubOn), trail && trail.pts.length > 1 ? React.createElement("svg", {
+      className: `v-trail${trail.live ? '' : ' out'}`,
+      width: trail.w,
+      height: trail.h,
+      viewBox: `0 0 ${trail.w} ${trail.h}`,
+      "aria-hidden": "true"
+    }, React.createElement("polyline", {
+      points: trail.pts.map(q => `${q.x.toFixed(1)},${q.y.toFixed(1)}`).join(' '),
+      fill: "none",
+      stroke: "#fff",
+      strokeWidth: "2",
+      strokeLinecap: "round",
+      strokeLinejoin: "round"
+    })) : null, MSX_STATS.map(k => {
       const c = msxCardOf(v, k);
       const lv = lvOf(c);
       return React.createElement("button", {
         type: "button",
         key: k,
         className: `v-tr${c && c.tags.length ? ' tag' : ''}${k === stat ? ' sel' : ''}`,
-        onClick: () => setSel(k)
-      }, React.createElement("div", {
+        onClick: () => {
+          if (k === stat && c) doAct({
+            kind: c.kind,
+            stat: k
+          });else setSel(k);
+        }
+      }, k === stat && c ? React.createElement("span", {
+        className: "fb",
+        "data-msx-train-fail": true
+      }, "失敗率 ", Math.round(c.fail * 100), "%") : null, React.createElement("div", {
         className: "o"
       }, MSX_STAT_ICON[k]), React.createElement("b", {
         className: "nm"
@@ -171430,7 +171541,10 @@ function MsxPlay({
         key: i
       }, i ? React.createElement("wbr", null) : null, x))), lv ? React.createElement("i", {
         className: "lv"
-      }, "Lv.", lv) : null);
+      }, "Lv.", lv) : null, k === stat && c ? React.createElement("span", {
+        className: "ke",
+        "data-msx-train-ok": true
+      }, "決定") : null);
     })));
     foot = React.createElement("div", {
       className: "v-ft"

@@ -404,6 +404,10 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
   //   左へスライドで次・右へで前。端で止める。横に 48px 以上、しかも縦の動きより大きいときだけ替える(縦のスクロールやタップの邪魔をしない)
   const swipeRef = useRef(null);
   const [swipe, setSwipe] = useState({ n: 0, dir: 0 });
+  // 下のトレーニングの札の列: 指を置いたまま左右になぞると、指の下の札がその場で浮き上がって選ばれる(2026-11-15 r1115-002 社長が参考の録画を見せて)。
+  //   通った跡に白い細い線を少し残す。離した所の札が選ばれたまま。替わるたびにタップ音(既存の効果音 tap・SE の音量に従う)
+  const scrubRef = useRef(null);
+  const [trail, setTrail] = useState(null); // { pts: [{x,y}], live, w, h }
   useEffect(() => { if (onSub) onSub(sub); }, [sub]);
   useEffect(() => () => { if (onSub) onSub('main'); }, []);
   // 期の区切りの演出(56-monsuc-kifx.jsx)を見終えたターン(保存しない。読み直したときはもう一度出る)
@@ -682,6 +686,25 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
       onPointerCancel: () => { swipeRef.current = null; },
       onClickCapture: (e) => { if (swipeRef.current && swipeRef.current.moved) { e.stopPropagation(); e.preventDefault(); } swipeRef.current = null; },
     };
+    const scrubIdx = (e) => { const r = e.currentTarget.getBoundingClientRect(); return Math.max(0, Math.min(MSX_STATS.length - 1, Math.floor((e.clientX - r.left) / Math.max(1, r.width) * MSX_STATS.length))); };
+    const scrubPt = (e) => { const r = e.currentTarget.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top, w: r.width, h: r.height }; };
+    const scrubOn = {
+      style: { touchAction: 'pan-y', userSelect: 'none', WebkitUserSelect: 'none' },
+      onPointerDown: (e) => { scrubRef.current = { x: e.clientX, moved: false, last: MSX_STATS.indexOf(stat), id: e.pointerId }; },
+      onPointerMove: (e) => {
+        const st = scrubRef.current; if (!st) return;
+        if (!st.moved) {
+          if (Math.abs(e.clientX - st.x) < 6) return;
+          st.moved = true; try { e.currentTarget.setPointerCapture(e.pointerId); } catch (_) {}
+        }
+        const i = scrubIdx(e); const p = scrubPt(e);
+        setTrail((t) => ({ pts: [...(t && t.live ? t.pts : []), { x: p.x, y: p.y }].slice(-28), live: true, w: p.w, h: p.h }));
+        if (i !== st.last) { st.last = i; setSel(MSX_STATS[i]); if (typeof msaSe === 'function') msaSe('tap'); }
+      },
+      onPointerUp: () => { const st = scrubRef.current; if (st && st.moved) { setTrail((t) => (t ? { ...t, live: false } : t)); setTimeout(() => setTrail(null), 600); } else { scrubRef.current = null; } },
+      onPointerCancel: () => { scrubRef.current = null; setTrail(null); },
+      onClickCapture: (e) => { const st = scrubRef.current; scrubRef.current = null; if (st && st.moved) { e.stopPropagation(); e.preventDefault(); } },
+    };
     body = (<>
       <MsxBand s={s} v={v} ev={ev} {...bandProps}/>
       <div className={`v-scene${swipe.n ? (swipe.dir > 0 ? ' msx-swl' : ' msx-swr') : ''}`} key={`trsw${swipe.n}`} data-msx-train-swipe {...swipeOn} style={{ ...swipeOn.style, flex: '1 1 0' }}>
@@ -701,10 +724,12 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
         </div>}
       </div>
       <MsxStRow who={s} stats={s.stats} ups={pv ? pv.gain : null} main={stat} preview/>
-      <div className="v-trs" data-msx-train-swipe-row {...swipeOn}>
+      <div className="v-trs" data-msx-train-swipe-row data-msx-train-scrub {...scrubOn}>
+        {trail && trail.pts.length > 1 ? <svg className={`v-trail${trail.live ? '' : ' out'}`} width={trail.w} height={trail.h} viewBox={`0 0 ${trail.w} ${trail.h}`} aria-hidden="true"><polyline points={trail.pts.map((q) => `${q.x.toFixed(1)},${q.y.toFixed(1)}`).join(' ')} fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg> : null}
         {MSX_STATS.map((k) => { const c = msxCardOf(v, k); const lv = lvOf(c); return (
-          <button type="button" key={k} className={`v-tr${c && c.tags.length ? ' tag' : ''}${k === stat ? ' sel' : ''}`} onClick={() => setSel(k)}>
-            <div className="o">{MSX_STAT_ICON[k]}</div><b className="nm">{MSX_STAT_NAME[k]}</b><small className="tn">{msxTrainNameParts(k, lv).map((x, i) => <React.Fragment key={i}>{i ? <wbr/> : null}{x}</React.Fragment>)}</small>{lv ? <i className="lv">Lv.{lv}</i> : null}</button>); })}
+          <button type="button" key={k} className={`v-tr${c && c.tags.length ? ' tag' : ''}${k === stat ? ' sel' : ''}`} onClick={() => { if (k === stat && c) doAct({ kind: c.kind, stat: k }); else setSel(k); }}>
+            {k === stat && c ? <span className="fb" data-msx-train-fail>失敗率 {Math.round(c.fail * 100)}%</span> : null}
+            <div className="o">{MSX_STAT_ICON[k]}</div><b className="nm">{MSX_STAT_NAME[k]}</b><small className="tn">{msxTrainNameParts(k, lv).map((x, i) => <React.Fragment key={i}>{i ? <wbr/> : null}{x}</React.Fragment>)}</small>{lv ? <i className="lv">Lv.{lv}</i> : null}{k === stat && c ? <span className="ke" data-msx-train-ok>決定</span> : null}</button>); })}
       </div>
     </>);
     foot = <div className="v-ft"><button type="button" onClick={() => { setSub('main'); setSel(null); }}>← もどる</button><button type="button" className="go" disabled={!card} onClick={() => doAct({ kind: card.kind, stat })}>{msxTrainIcon(stat, trainLv)} {msxTrainName(stat, trainLv)}をする</button></div>;
