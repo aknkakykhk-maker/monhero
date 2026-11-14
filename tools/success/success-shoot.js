@@ -67,7 +67,7 @@ const makeRun = async (kind) => {
     ['H0', null, []], ['H1', 'mid', []],
     ['S1', null, ['new']], ['S2', null, ['new', 'next']], ['S3', null, ['new', 'next', 'next']], ['S4', null, ['new', 'next', 'next', 'next']],
     ['S5', null, ['new', 'next', 'next', 'next', 'next']], ['S6', null, ['new', 'next', 'next', 'next', 'next', 'next']],
-    ['M1', 'mid', ['cont']], ['M2', 'yosu', ['cont']], ['M3', 'mid', ['cont', 'bag']], ['T1', 'mid', ['cont', 'train']],
+    ['M1', 'mid', ['cont']], ['M2', 'yosu', ['cont']], ['M3', 'mid', ['cont', 'bag']], ['T1', 'mid', ['cont', 'train']], ['T2', 'mid', ['cont', 'train', 'swipe']],
     ['K1', 'mid', ['cont', 'train', 'go']], ['K3', 'mid', ['cont', 'train', 'go', 'next']], ['K5', 'mid', ['cont', 'train', 'go', 'next', 'praise']],
     ['I1', 'mid', ['cont', 'issa']], ['P1', 'mid', ['cont', 'stats']],
     ['E1', 'mid', ['cont', 'event']], ['E3', 'mid', ['cont', 'event', 'three']], ['E4', 'mid', ['cont', 'event', 'three', 'long']],
@@ -108,6 +108,17 @@ const makeRun = async (kind) => {
             if (st === 'train') return click(/^💪 トレーニング/);
             if (st === 'go') return click(/をする$/); // 2026-11-14 トレーニングのボタンは「丸太割りをする」のようにトレーニングの名前になった
             if (st === 'praise') return click(/褒める/);
+            if (st === 'swipe') { // トレーニングを選ぶ画面: 場面を左へスライドすると次のトレーニングに替わる(縦の小さな動きでは替わらない)
+              const el = document.querySelector('[data-msx-train-swipe]'); if (!el) return false;
+              const names = () => [...document.querySelectorAll('.msx .v-tr')].map((b) => b.classList.contains('sel'));
+              const ev = (type, x, y) => el.dispatchEvent(new PointerEvent(type, { bubbles: true, clientX: x, clientY: y, pointerId: 1, isPrimary: true }));
+              const before = names().indexOf(true);
+              ev('pointerdown', 200, 300); ev('pointerup', 190, 380); await new Promise((r) => setTimeout(r, 200));
+              if (names().indexOf(true) !== before) return false; // 縦の動きでは替わらない
+              ev('pointerdown', 260, 300); ev('pointerup', 120, 310); await new Promise((r) => setTimeout(r, 200));
+              const after = names().indexOf(true);
+              return before === 5 ? after === 5 : after === before + 1;
+            }
             if (st === 'three') { // 選択肢を3つにして見る(撮るときだけ、最後の行を複製して字を替える)
               const box = document.querySelector('.msx .v-opts'); const last = box && box.lastElementChild; if (!last) return false;
               const cp = last.cloneNode(true); const b = cp.querySelector('.v-opt') || cp; b.firstChild.textContent = 'そっと見守る'; box.appendChild(cp); return true;
