@@ -25,7 +25,8 @@ const MSX_R3_CUP_ICON = Object.freeze({
 // 第2版の札の格(色)。CSS は .v-cup.g-<格>
 const MSX_R3_CUP_GRADE = Object.freeze({ bronze: '銅', silver: '銀', gold: '金', green: '緑', four: '四大', rainbow: '特別' });
 const msxR3Stars = (n) => (n >= 4 ? '👑' : '★'.repeat(Math.max(1, n || 1)));
-const msxR3CupName = (sys) => {
+const msxR3CupName = (sys, own) => {
+  if (own && own !== sys) return own; // 芯が並びの位置で決めた名前(同じ sys でも期・月で名前が違う)
   const S0 = msxSuc && msxSuc.SUC; // 大会の第2版(四大大会・季節の賞・選抜→記念 など)は芯が名前を持つ
   if (S0 && S0.EX_BY_SYS && S0.EX_BY_SYS[sys]) return S0.EX_BY_SYS[sys].name;
   const names = typeof window !== 'undefined' && window.MONSUC_REGULAR_CUPS ? window.MONSUC_REGULAR_CUPS : {};
@@ -38,7 +39,7 @@ const msxR3CupName = (sys) => {
 const msxR3BattleName = (SUC, b) => {
   if (!b) return '';
   if (b.kind === 'summit') return (SUC.SUMMIT[b.round] || {}).name || '頂への道';
-  if (b.kind === 'cup') return `${msxR3CupName(b.sys)} ${msxR3Stars(b.star)}`;
+  if (b.kind === 'cup') return `${msxR3CupName(b.sys, b.name)} ${msxR3Stars(b.star)}`;
   return (SUC.FORCED[b.kind] || {}).name || '大会';
 };
 const msxR3BattleIcon = (b) => (!b ? '🏆' : b.kind === 'cup' ? (MSX_R3_CUP_ICON[b.sys] || '🏆') : b.kind === 'summit' ? '🗻' : b.kind === 'debut' ? '🎀' : b.kind === 'pro' ? '👑' : '🏆');
@@ -99,7 +100,7 @@ const msxR3ReadBox = async () => {
   const raw = await storeGet(MSX_KEYS.box, null);
   if (raw == null) return { v: 1, cap: MSX_BOX_CAP0, mons: [], memory: [] };
   if (!msxR3Obj(raw) || !Array.isArray(raw.mons)) { try { await storeSet('mh_monsuc_box_v1_broken', raw); } catch (e) {} return { v: 1, cap: MSX_BOX_CAP0, mons: [], memory: [] }; }
-  return { ...raw, v: 1, cap: Math.max(MSX_BOX_CAP0, Math.min(60, Number.isFinite(raw.cap) ? raw.cap : MSX_BOX_CAP0)), mons: raw.mons.filter(msxR3Obj), memory: Array.isArray(raw.memory) ? raw.memory.filter(msxR3Obj) : [] };
+  return { ...raw, v: 1, cap: Math.max(MSX_BOX_CAP0, Math.min(MSX_BOX_CAP_MAX, Number.isFinite(raw.cap) ? raw.cap : MSX_BOX_CAP0)), mons: raw.mons.filter(msxR3Obj), memory: Array.isArray(raw.memory) ? raw.memory.filter(msxR3Obj) : [] };
 };
 const msxR3ReadMeta = async () => {
   const raw = await storeGet(MSX_KEYS.meta, null);
@@ -112,7 +113,7 @@ const msxR3AddWon = (meta, s) => {
   const won = Array.isArray(s.wonNow) ? s.wonNow.filter((k) => typeof k === 'string') : [];
   return { ...meta, wonCups: Array.from(new Set([...(meta.wonCups || []), ...won])).slice(0, 200) };
 };
-const msxR3BoxCap = (retired) => Math.min(60, MSX_BOX_CAP0 + 5 * Math.floor(Math.max(0, retired) / 10)); // 引退10回ごとに +5・最大60(PLAN §3)
+const msxR3BoxCap = (retired) => Math.min(MSX_BOX_CAP_MAX, MSX_BOX_CAP0 + 5 * Math.floor(Math.max(0, retired) / 10)); // 引退10回ごとに +5。いまははじめから上限の100(2026-11-14 社長「とりあえず100」)なので、実質いつも100
 const msxR3FinalTitles = (s, ev) => {
   const T = msxR3T().titles;
   try { if (T) return T.finalize(s.titles, ev, s); } catch (e) {}

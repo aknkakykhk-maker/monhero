@@ -359,7 +359,7 @@ function AlfFavEditor({ s, card, sec }) {
   const sel = 'mt-0.5 w-full rounded-lg border border-slate-500 bg-slate-800 px-1.5 py-1 text-[11.5px] text-slate-100';
   const row = (k, label, value, opts, onChange) => (
     <label className="mt-1 block text-[10.5px] font-bold text-slate-300" data-alb-fav-row={k}>{label}
-      <select className={sel} value={value} onChange={e => onChange(e.target.value)}><option value="">えらばない</option>{opts.map(o => <option key={o.v} value={o.v}>{o.label}</option>)}</select>
+      <select className={sel} value={value} onChange={e => onChange(e.target.value)}><option value="">選ばない</option>{opts.map(o => <option key={o.v} value={o.v}>{o.label}</option>)}</select>
     </label>);
   return (<>
     <p className={sec}>🏆 お気に入りの棚</p>

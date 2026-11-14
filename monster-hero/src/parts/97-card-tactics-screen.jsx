@@ -43,9 +43,9 @@ const CardTacticDetail = ({ card, onClose }) => {
         {/* 一文(2026-10-31 案A)を大きく、カードの名前と細かい効果は「くわしく」として下に */}
         <b data-card-tactic-detail-line className="mt-2 block text-[19px] font-black leading-snug" style={JA_WRAP_STYLE}>{jaWrap(card.line || card.name)}</b>
         <p className="mt-2 text-[12px] font-black text-white/80">{`カードの名前「${card.name}」`}</p>
-        <p className="mt-1 rounded-lg bg-black/25 px-2 py-1.5 text-[13px] font-bold leading-relaxed" style={JA_WRAP_STYLE}><small className="block text-[10px] font-black text-white/70">くわしく</small>{jaWrap(card.desc)}</p>
+        <p className="mt-1 rounded-lg bg-black/25 px-2 py-1.5 text-[13px] font-bold leading-relaxed" style={JA_WRAP_STYLE}><small className="block text-[10px] font-black text-white/70">詳しく</small>{jaWrap(card.desc)}</p>
         <p className="mt-2 text-[11px] font-bold text-white/80" style={JA_WRAP_STYLE}>{jaWrap(CARD_TACTIC_CAT_TEXT[card.cat] || '')}</p>
-        <button type="button" data-card-tactic-detail-close onClick={() => { Audio_.fgSe.tap(); onClose && onClose(); }} className="mh-button mt-3 min-h-[44px] w-full rounded-xl bg-black/40 text-[14px] font-black">とじる</button>
+        <button type="button" data-card-tactic-detail-close onClick={() => { Audio_.fgSe.tap(); onClose && onClose(); }} className="mh-button mt-3 min-h-[44px] w-full rounded-xl bg-black/40 text-[14px] font-black">閉じる</button>
       </div>
     </div>
   );
@@ -145,7 +145,7 @@ const CardTacticPicker = ({ db, tactics, cat, title, onPick, onClose, allowNone 
   if (sp) {
     return (
       <div data-card-tactic-species className="fixed inset-0 z-[80] flex flex-col bg-slate-950 p-3" style={cardSafePad('.75rem')}>
-        <ScreenHead title="種族をえらぶ" accent="text-amber-200" onBack={() => setSp(null)}/>
+        <ScreenHead title="種族を選ぶ" accent="text-amber-200" onBack={() => setSp(null)}/>
         <div className="grid min-h-0 flex-1 grid-cols-3 content-start gap-1.5 overflow-y-auto">
           {cardTacticSpeciesList(db).map((x) => (
             <button key={x.id} type="button" data-card-tactic-species-pick={x.id} onClick={() => { Audio_.fgSe.tap(); pick(sp, x.id); }}
@@ -174,11 +174,11 @@ const CardTacticPicker = ({ db, tactics, cat, title, onPick, onClose, allowNone 
   return (
     <div data-card-tactic-picker={cat} className="fixed inset-0 z-[80] flex flex-col bg-slate-950 p-3" style={cardSafePad('.75rem')}>
       <ScreenHead title={title} accent="text-amber-200" onBack={onClose}/>
-      <input data-card-tactic-search value={q} onChange={(e) => setQ(e.target.value.slice(0, 20))} placeholder="🔍 ことばでさがす(例: ライフ・大技・守る)" autoComplete="off"
+      <input data-card-tactic-search value={q} onChange={(e) => setQ(e.target.value.slice(0, 20))} placeholder="🔍 言葉で探す(例: ライフ・大技・守る)" autoComplete="off"
         className="mb-1.5 min-h-[40px] w-full shrink-0 rounded-xl border-2 border-sky-400/60 bg-black/50 px-3 text-[14px] text-white"/>
       {secs.length > 1 && (
         <div data-card-tactic-secs className="mb-1 flex shrink-0 gap-1 overflow-x-auto pb-1">
-          <button type="button" data-card-tactic-sec="" onClick={() => setSec('')} className={chip(!sec)}>すべて</button>
+          <button type="button" data-card-tactic-sec="" onClick={() => setSec('')} className={chip(!sec)}>全て</button>
           {secs.map((s) => <button key={s} type="button" data-card-tactic-sec={s} onClick={() => setSec(sec === s ? '' : s)} className={chip(sec === s)}>{s}</button>)}
         </div>
       )}
@@ -406,7 +406,7 @@ const CardTacticPackOpen = ({ packs, onDone }) => {
         )}
         {phase === 'open' && allOpen && (
           <div data-card-tactic-open-summary className="mt-3 text-center text-[12px] font-bold text-slate-300">
-            {shards > 0 ? <>持っていたカードは <b className="text-amber-200">かけら +{shards}</b> になりました(10個でまだ持っていないカードを1枚えらべます)</> : 'ぜんぶ新しいカードです'}
+            {shards > 0 ? <>持っていたカードは <b className="text-amber-200">かけら +{shards}</b> になりました(10個でまだ持っていないカードを1枚選べます)</> : '全部新しいカードです'}
           </div>
         )}
       </div>
@@ -429,8 +429,8 @@ const CardTacticPackOpen = ({ packs, onDone }) => {
       <div className={SCREEN_FOOTER_CLASS}>
         {phase !== 'open' ? <div className="text-center text-[12px] font-bold text-slate-400">パックをタップしてください</div>
           : !allOpen ? <div className="flex gap-2"><button type="button" data-card-tactic-open-all className="mh-button mh-button-primary min-h-[52px] w-full flex-1 rounded-2xl font-black active:scale-[.98]" onClick={flipAll}>全部めくる</button>{fx && <button type="button" data-card-tactic-skip className="mh-button min-h-[52px] shrink-0 rounded-2xl border border-slate-500 bg-slate-800 px-4 font-black text-slate-100 active:scale-[.98]" onClick={skipAll}>とばす</button>}</div>
-          : !last ? <button type="button" data-card-tactic-open-next className="mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black active:scale-[.98]" onClick={next}>つぎのパック</button>
-          : <button type="button" data-card-tactic-open-done className="mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black active:scale-[.98]" onClick={() => { Audio_.fgSe.tap(); onDone(); }}>とじる</button>}
+          : !last ? <button type="button" data-card-tactic-open-next className="mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black active:scale-[.98]" onClick={next}>次のパック</button>
+          : <button type="button" data-card-tactic-open-done className="mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black active:scale-[.98]" onClick={() => { Audio_.fgSe.tap(); onDone(); }}>閉じる</button>}
       </div>
     </div>
   );
@@ -482,7 +482,7 @@ const CardTacticsScreen = ({ db, decks, point = 0, onPay, onBack, share = null, 
   const catOf = (k) => (k === 'breeder' ? 'breeder' : 'monster');
   const editRow = (k, i, which) => {
     const rows = rowsOf(k);
-    setPick({ cat: which === 'c' ? 'cond' : catOf(k), hideSecs: which === 'c' && k === 'breeder' ? ['このモンスター', '守るとき'] : [], title: which === 'c' ? '条件カードをえらぶ' : `${CARD_TACTIC_CAT_STYLE[catOf(k)].label}カードをえらぶ`,
+    setPick({ cat: which === 'c' ? 'cond' : catOf(k), hideSecs: which === 'c' && k === 'breeder' ? ['このモンスター', '守るとき'] : [], title: which === 'c' ? '条件カードを選ぶ' : `${CARD_TACTIC_CAT_STYLE[catOf(k)].label}カードを選ぶ`,
       onPick: (id, sp) => { setPick(null); if (!id) return; const r = { ...rows[i], [which]: id }; if (which === 'c') { if (sp) r.sp = sp; else delete r.sp; } void setRows(k, rows.map((x, j) => (j === i ? r : x))); } });
   };
   const addRow = (k) => {
@@ -520,7 +520,7 @@ const CardTacticsScreen = ({ db, decks, point = 0, onPay, onBack, share = null, 
     ...[0, 1, 2].map((i) => ({ k: i, label: (monOf(i) || {}).name || ['左のモンスター', '真ん中のモンスター', '右のモンスター'][i], mon: monOf(i), sub: `${f.mons[i].length}/${open.mon}枚` }))];
   return (
     <div data-mh-screen data-card-tactics className={SCREEN_SHELL_CLASS}>
-      <ScreenHead title={screenTitle} accent="text-amber-200" onBack={onBack} note={(share ? cardShareOpen() : cardTacticsOpen()) ? '' : 'つくっている途中(デバッグ)'}/>
+      <ScreenHead title={screenTitle} accent="text-amber-200" onBack={onBack} note={(share ? cardShareOpen() : cardTacticsOpen()) ? '' : '作っている途中(デバッグ)'}/>
       <div className={`${SCREEN_LIST_CLASS} space-y-2 pb-2`}>
         <div data-card-tactics-level className={`${SCREEN_PANEL_CLASS} py-2`}>
           <PlayerRankBadge kind="card" rank={lv} size="sm"/>
@@ -603,9 +603,9 @@ const CardTacticsScreen = ({ db, decks, point = 0, onPay, onBack, share = null, 
             </div>
             <button type="button" data-card-tactics-buy="1" disabled={busy || point < cardTacticsPrice(1)} onClick={() => { void pay(1, 'point'); }} className="mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black disabled:opacity-40">1回引く(300ビートP)</button>
             <button type="button" data-card-tactics-buy="5" disabled={busy || point < cardTacticsPrice(5)} onClick={() => { void pay(5, 'point'); }} className="mh-button min-h-[52px] w-full rounded-2xl font-black disabled:opacity-40">5回まとめて引く(1,350ビートP)</button>
-            <button type="button" data-card-tactics-ticket disabled={busy || t.tickets < 1} onClick={() => { void pay(1, 'ticket'); }} className="mh-button min-h-[48px] w-full rounded-2xl font-black disabled:opacity-40">{`カードパック券で1回引く(のこり${t.tickets}枚)`}</button>
-            <button type="button" data-card-tactics-exchange disabled={t.shards < CARD_TACTICS_SHARD_COST} onClick={() => setPick({ cat: 'all-missing', title: 'かけら10個で1枚えらぶ', onPick: exchange })}
-              className="mh-button min-h-[48px] w-full rounded-2xl font-black disabled:opacity-40">{t.shards >= CARD_TACTICS_SHARD_COST ? `かけらで1枚えらぶ(かけら${t.shards}個)` : `かけらで1枚えらぶ(あと${CARD_TACTICS_SHARD_COST - t.shards}個)`}</button>
+            <button type="button" data-card-tactics-ticket disabled={busy || t.tickets < 1} onClick={() => { void pay(1, 'ticket'); }} className="mh-button min-h-[48px] w-full rounded-2xl font-black disabled:opacity-40">{`カードパック券で1回引く(残り${t.tickets}枚)`}</button>
+            <button type="button" data-card-tactics-exchange disabled={t.shards < CARD_TACTICS_SHARD_COST} onClick={() => setPick({ cat: 'all-missing', title: 'かけら10個で1枚選ぶ', onPick: exchange })}
+              className="mh-button min-h-[48px] w-full rounded-2xl font-black disabled:opacity-40">{t.shards >= CARD_TACTICS_SHARD_COST ? `かけらで1枚選ぶ(かけら${t.shards}個)` : `かけらで1枚選ぶ(あと${CARD_TACTICS_SHARD_COST - t.shards}個)`}</button>
           </div>
         )}
         {detailCard && <CardTacticDetail card={detailCard} onClose={() => setDetailCard(null)}/>}
@@ -688,8 +688,8 @@ const CardTacticsBand = ({ point = 0, busy = false, onBuy, onExchange }) => {
             {tickets > 0 && <button type="button" data-card-tactics-ticket disabled={busy} onClick={() => { Audio_.fgSe.tap(); setConfirm(true); }} className="mh-button min-h-[30px] shrink-0 rounded-lg bg-amber-400 px-2 text-[11px] font-black text-stone-900 active:scale-95 disabled:opacity-40">使う</button>}
           </div>
           <div data-card-tactics-shards={shards} className={`flex min-h-[36px] items-center gap-1 rounded-xl px-2 ${canPick ? 'bg-sky-400/20 ring-1 ring-sky-300' : 'bg-white/5'}`}>
-            <span className={`min-w-0 flex-1 text-[11px] font-black leading-tight ${canPick ? 'text-sky-100' : 'text-slate-400'}`}>かけら<b className="ml-1 text-[14px] text-white tabular-nums">{shards}</b><small className="ml-1 text-[10px]">{canPick ? '1枚えらべます' : `あと${CARD_TACTICS_SHARD_COST - shards}で1枚`}</small></span>
-            {canPick && <button type="button" data-card-tactics-exchange disabled={busy} onClick={() => { Audio_.fgSe.tap(); setPicking(true); }} className="mh-button min-h-[30px] shrink-0 rounded-lg bg-sky-400 px-2 text-[11px] font-black text-slate-950 active:scale-95 disabled:opacity-40">えらぶ</button>}
+            <span className={`min-w-0 flex-1 text-[11px] font-black leading-tight ${canPick ? 'text-sky-100' : 'text-slate-400'}`}>かけら<b className="ml-1 text-[14px] text-white tabular-nums">{shards}</b><small className="ml-1 text-[10px]">{canPick ? '1枚選べます' : `あと${CARD_TACTICS_SHARD_COST - shards}で1枚`}</small></span>
+            {canPick && <button type="button" data-card-tactics-exchange disabled={busy} onClick={() => { Audio_.fgSe.tap(); setPicking(true); }} className="mh-button min-h-[30px] shrink-0 rounded-lg bg-sky-400 px-2 text-[11px] font-black text-slate-950 active:scale-95 disabled:opacity-40">選ぶ</button>}
           </div>
         </div>
         {msg && <p data-card-tactics-shop-msg className="mt-1 text-[11px] font-bold text-amber-100">{msg}</p>}
@@ -697,7 +697,7 @@ const CardTacticsBand = ({ point = 0, busy = false, onBuy, onExchange }) => {
       {confirm && <ConfirmSheet title="戦術カードパックを1パック開けますか？" message={`カードパック券を1枚使います(いま ${tickets}枚)`} confirmLabel="券で開ける" onCancel={() => setConfirm(false)} onConfirm={() => { void useTicket(); }}/>}
       {picking && t && (
         <div data-card-tactic-picker="missing" className="fixed inset-0 z-[85] flex flex-col bg-slate-950 p-3" style={{ paddingTop: 'max(.75rem, env(safe-area-inset-top))', paddingBottom: 'max(.75rem, env(safe-area-inset-bottom))' }}>
-          <ScreenHead title="かけら10個で1枚えらぶ" accent="text-amber-200" onBack={() => setPicking(false)}/>
+          <ScreenHead title="かけら10個で1枚選ぶ" accent="text-amber-200" onBack={() => setPicking(false)}/>
           <div className="grid min-h-0 flex-1 grid-cols-3 content-start gap-1.5 overflow-y-auto pb-3">
             {CARD_TACTIC_CARDS.filter((c) => !cardTacticsOwns(t, c.id)).map((c) => <CardTacticFace key={c.id} card={c} small onClick={() => { Audio_.fgSe.tap(); void exchange(c.id); }}/>)}
           </div>
@@ -743,7 +743,7 @@ const CardTacticPackRates = ({ onClose }) => (
       </tbody></table>
       <p>{jaWrap(`1パック${CARD_TACTICS_PULL.n}枚。1枚ずつ、上の割合で出ます。`)}</p>
       <p>{jaWrap(`SR が出ないまま${CARD_TACTICS_PULL.pityAt}パック開けると、${CARD_TACTICS_PULL.pityAt + 1}パック目の最後の1枚は SR です。`)}</p>
-      <p>{jaWrap(`もう持っているカードが出たときは「かけら」1個になります。かけら${CARD_TACTICS_SHARD_COST}個で、まだ持っていないカードを1枚えらべます。`)}</p>
+      <p>{jaWrap(`もう持っているカードが出たときは「かけら」1個になります。かけら${CARD_TACTICS_SHARD_COST}個で、まだ持っていないカードを1枚選べます。`)}</p>
       <p>{jaWrap('カードパック券(カードランクのごほうび)1枚でも、1パック開けられます。')}</p>
     </div>
   </CardShopSheet>
@@ -810,7 +810,7 @@ const cardRankUpcoming = (lv, n = 4) => {
 const CardRankChip = ({ xp = 0, onOpen = null, showName = true, cls = '' }) => {
   const info = cardLevelInfo(xp);
   return (
-    <button type="button" data-card-rank-chip={info.level} aria-label={`カードランク ${info.level}。くわしく見る`} onClick={() => { Audio_.fgSe.tap(); onOpen && onOpen(); }}
+    <button type="button" data-card-rank-chip={info.level} aria-label={`カードランク ${info.level}。詳しく見る`} onClick={() => { Audio_.fgSe.tap(); onOpen && onOpen(); }}
       className={`inline-flex shrink-0 items-center rounded-full border border-white/20 bg-slate-950/60 py-0.5 pl-1 pr-2.5 active:scale-95 ${cls}`}>
       <PlayerRankBadge kind="card" rank={info.level} size="sm" showName={showName}/>
     </button>
@@ -831,7 +831,7 @@ const cardRankRewardItems = (r, got = false) => {
 // 札を押した先: 大きい札・棒・ランクごとのごほうびの一覧・経験値のたまり方(2026-10-30 社長「報酬が全部見れるように」。43 の共通の画面。ビートランクと同じ)
 const CardRankDetail = ({ xp = 0, onClose }) => (
   <PlayerRankDetail kind="card" xp={xp} rewardsOf={cardRankRewardItems} onClose={onClose}
-    how={'フリー対戦・マルチ対戦で戦うと経験値がたまります。強い相手ほど多く、マルチがいちばん多くたまります。その日はじめての勝ちは +30。投了・練習試合ではたまりません。'}/>
+    how={'フリー対戦・マルチ対戦で戦うと経験値がたまります。強い相手ほど多く、マルチが一番多くたまります。その日初めての勝ちは +30。投了・練習試合ではたまりません。'}/>
 );
 // 対戦の結果: 経験値の札(棒が前の量から伸びる)と、ランクが上がったときの演出(43 の PlayerRankUpFx。ビートランクと同じ。帯が変わると自動で豪華になる)。
 //   一度に何ランク上がっても、上がった先のランクで1回だけ出し、もらった物をまとめて渡す。5ランクごとのおまけは bonus(桃色の光)

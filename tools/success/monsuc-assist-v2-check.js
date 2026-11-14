@@ -127,10 +127,10 @@ const playOk = L5.every((lv) => { const a = hpAfter([{ id: 'asobi', lv }], 'play
 const amaUp = (as) => { const s = runOf(as); return S2.act(s, { kind: 'play' }).state.ama - s.ama; };
 check('⑦ 遊び上手: 遊んだときの体力の回復と甘え度が段ごとに増える', playOk && amaUp([{ id: 'asobi', lv: 5 }]) > amaUp([]), `甘え度 ${amaUp([])} → ${amaUp([{ id: 'asobi', lv: 5 }])}`);
 // 褒める: 上がる甘え度が増える(下がる方は変えない)
-const praiseUp = (as) => { let s = runOf(as); s.last = { kind: 'train', res: 'ok' }; s.reacted = false; const r = S2.react(s, 'praise').state; return r.ama - s.ama; };
+const praiseUp = (as) => { let s = runOf(as); s.last = { kind: 'train', res: 'great' }; /* 2026-11-14 ほめる・しかるは大成功・失敗・サボり・修行のあとだけ */ s.reacted = false; const r = S2.react(s, 'praise').state; return r.ama - s.ama; };
 check('⑦ しつけ上手: 褒めて上がる忠誠度が増える', praiseUp([{ id: 'shitsuke', lv: 5 }]) > praiseUp([]), `${praiseUp([])} → ${praiseUp([{ id: 'shitsuke', lv: 5 }])}`);
 // ごはん
-const mealHp = (as) => { const s = runOf(as); s.hp = 0; s.mealReady = true; s.fame = 99999; const k = Object.keys(S2.MEALS || {}).find(x => S2.MEALS[x].hp); if (!k) return null; return S2.meal(s, k).state.hp; };
+const mealHp = (as) => { const s = runOf(as); s.hp = 0; s.mealReady = true; s.fame = 99999; const k = Object.keys(S2.MEALS || {}).find(x => S2.MEALS[x].hp); if (!k) return null; s.mealOpts = [k, ...Object.keys(S2.MEALS).filter(x => x !== k).slice(0, 2)]; /* ごはんは並んだ3つからだけ選べる(2026-11-14) */ return S2.meal(s, k).state.hp; };
 check('⑦ 食いしん坊: ごはんの体力の効き目が増える', mealHp([]) !== null && mealHp([{ id: 'kuishinbo', lv: 5 }]) > mealHp([]), `${mealHp([])} → ${mealHp([{ id: 'kuishinbo', lv: 5 }])}`);
 // 通院: 1回目に治る率が上がる(多くの育成 id で数える)
 const cureRate = (as) => { let n = 0; for (let t = 0; t < 600; t++) { const s = S2.newRun({ id: `cl${t}`, species: sp, aid: 'kiki', team: [child([]), child(as)] }); s.yosu.sabori = { visits: 0 }; if ((S2.act(s, { kind: 'clinic' }).out.cured || []).includes('sabori')) n++; } return n / 600; };

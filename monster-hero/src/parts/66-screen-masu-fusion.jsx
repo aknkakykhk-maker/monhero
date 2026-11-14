@@ -143,7 +143,7 @@ function MasuFusionScreen({
             <div className="shrink-0 mb-2 rounded-2xl border border-violet-400/60 bg-violet-950/50 p-3">
               <div className="flex items-center justify-between gap-2">
                 <div className="text-[13px] font-black text-white">副 <span className="text-violet-300">{selectedSubs.length}体</span>選択中</div>
-                {selectedSubs.length>0&&<button onClick={()=>{setFusionSubId(null); setFusionSubIds([]);}} className="shrink-0 min-h-[44px] px-4 rounded-xl border border-white/15 bg-slate-900 text-[11px] font-black text-slate-200 active:scale-95">すべて解除</button>}
+                {selectedSubs.length>0&&<button onClick={()=>{setFusionSubId(null); setFusionSubIds([]);}} className="shrink-0 min-h-[44px] px-4 rounded-xl border border-white/15 bg-slate-900 text-[11px] font-black text-slate-200 active:scale-95">全て解除</button>}
               </div>
               <div className="mt-2 grid grid-cols-2 gap-2 text-[11px] font-bold">
                 <div className={`${SCREEN_PANEL_FLAT_CLASS} text-slate-300`}>獲得予定XP<span className="block text-sm text-cyan-300 font-black">+{totalSubXp.toLocaleString()}</span></div>
@@ -246,7 +246,7 @@ function MasuFusionScreen({
                 <div className="flex flex-col items-center gap-1">
                   <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-slate-500 shrink-0"><DyedMonsterImage baseId={sub.baseId} src={subBase.iconUrl} alt={sub.name} masuColors={getMasuColors(sub)} className="w-full h-full object-cover"/></div>
                   <div className="text-[11px] font-black text-slate-300">{sub.name}</div>
-                  <div className="rounded-full border border-white/10 bg-slate-700/40 px-2 py-0.5 text-[10px] font-black text-slate-300">副{selectedSubs.length}体(すべて消える)</div>
+                  <div className="rounded-full border border-white/10 bg-slate-700/40 px-2 py-0.5 text-[10px] font-black text-slate-300">副{selectedSubs.length}体(全て消える)</div>
                 </div>
               </div>
               {/* 合体後にどう変わるかの内訳。実行前に結果が分かるようにしている */}
@@ -322,7 +322,7 @@ function MasuFusionScreen({
                 <div className="flex justify-between text-[11px] font-bold"><span className="text-slate-400">失われるXP</span><span className={wastedXp>0?"text-amber-300 font-black":"text-slate-300 font-black"}>{wastedXp.toLocaleString()} XP</span></div>
                 <div className="flex justify-between text-[11px] font-bold"><span className="text-slate-400">合体後予定Lv</span><span className="text-pink-300 font-black">Lv.{afterLvl.level}</span></div>
                 <div className="flex justify-between text-[11px] font-bold"><span className="text-slate-400">転生育成ボーナス</span><span className="text-amber-300 font-black">{reincarnateTransfer.count}回分 / +{reincarnateTransfer.points}P</span></div>
-                {reincarnateTransfer.count>0&&<div className="text-[10px] leading-relaxed text-slate-400">{selectedSubs.length===1?`副自身 ${normalizeMasuProgression(sub).reincarnateCount}回＋継承済み ${inheritedReincarnateCountOf(sub)}回分を全量継承します`:`選択した副${selectedSubs.length}体の転生由来分をすべて累積します`}</div>}
+                {reincarnateTransfer.count>0&&<div className="text-[10px] leading-relaxed text-slate-400">{selectedSubs.length===1?`副自身 ${normalizeMasuProgression(sub).reincarnateCount}回＋継承済み ${inheritedReincarnateCountOf(sub)}回分を全量継承します`:`選択した副${selectedSubs.length}体の転生由来分を全て累積します`}</div>}
                 <div className="pt-2 border-t border-white/10 text-[11px] font-black text-violet-200 tracking-wider">ダイヤ消費</div>
                 <div className="flex justify-between text-[11px] font-bold"><span className="text-slate-400">所持ダイヤ</span><span className="text-white font-black">{Math.max(0, Math.floor(Number(gold)||0)).toLocaleString()}</span></div>
                 {fusionInheritSoulRank&&soulInheritancePreview.eligible&&<>
