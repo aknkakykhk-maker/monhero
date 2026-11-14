@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 7fbbad9f983a8823
+// source-sha256: 110f5cf68ecc2f87
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -157807,7 +157807,7 @@ const MSX_BETA_KEY = 'mh_monsuc_beta_v1';
 const MSX_BETA_AIDS = Object.freeze(['mua']);
 const msxBetaAidOk = aid => MSX_BETA_AIDS.includes(aid);
 const MSX_BETA_TUT = Object.freeze(['scn', 'prep', 'turn', 'train', 'result', 'rest', 'shugyo', 'cup', 'rank', 'meal', 'match', 'rematch', 'event', 'awake', 'retire']);
-const MSX_BETA_STORY = Object.freeze(['open', 'firstend']);
+const MSX_BETA_STORY = Object.freeze(['open', 'firstend', 'start']);
 const msxBetaScene = k => MSX_BETA_STORY.includes(k) ? `scn.mua.beta.${k}` : `tut.${k}`;
 const msxBetaKnown = k => MSX_BETA_TUT.includes(k) || MSX_BETA_STORY.includes(k);
 const msxBetaNorm = raw => {
@@ -158913,6 +158913,115 @@ const msxActEnsureCss = () => {
   el.textContent = MSX_ACT_CSS;
   document.head.appendChild(el);
 };
+const msxIntroScene = aid => `scn.${aid}.start`;
+function MsxRunIntro({
+  run,
+  ctx,
+  onDone
+}) {
+  const s = run.s;
+  if (typeof useMsxBeta === 'function') useMsxBeta();
+  const [loaded, setLoaded] = useState(false);
+  const [i, setI] = useState(0);
+  useEffect(() => {
+    let alive = true;
+    Promise.resolve(typeof msxScriptLoad === 'function' ? msxScriptLoad(s.aid) : null).catch(() => null).then(() => {
+      if (alive) setLoaded(true);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [s.aid]);
+  const se = msxSuc && msxSuc.script;
+  let ev = null;
+  try {
+    ev = loaded && se && typeof se.event === 'function' ? se.event(msxIntroScene(s.aid), {
+      ...ctx,
+      aid: s.aid
+    }) : null;
+  } catch (e) {
+    ev = null;
+  }
+  const lines = ev && Array.isArray(ev.lines) ? ev.lines : [];
+  const seenBefore = typeof msxBetaSeen === 'function' && msxBetaSeen('start');
+  const finish = () => {
+    if (typeof msxBetaMark === 'function') msxBetaMark('start');
+    onDone();
+  };
+  useEffect(() => {
+    if (loaded && !lines.length) onDone();
+  }, [loaded, lines.length]);
+  if (!loaded || !lines.length) return React.createElement(React.Fragment, null, React.createElement("style", null, MSX_INTRO_CSS), React.createElement("div", {
+    className: "v-body"
+  }));
+  const n = Math.min(i, lines.length - 1);
+  const l = lines[n];
+  const last = n + 1 >= lines.length;
+  const who = l.who === 'narr' ? null : l.who === 'mon' ? run.nick : msxAidName(l.who);
+  const next = () => {
+    if (last) finish();else setI(n + 1);
+  };
+  return React.createElement(React.Fragment, null, React.createElement("style", null, MSX_INTRO_CSS), React.createElement("div", {
+    className: "v-body"
+  }, React.createElement("div", {
+    className: "v-scene msx-intro",
+    style: {
+      flex: '1 1 0'
+    },
+    onClick: next,
+    "data-msx-intro": n
+  }, React.createElement("img", {
+    className: "bg",
+    src: msxSceneBg(s.turn).bg,
+    alt: ""
+  }), React.createElement("div", {
+    className: "sh"
+  }), React.createElement("div", {
+    className: "gr",
+    style: {
+      left: '30%',
+      bottom: 'calc(30% - 5px)'
+    }
+  }), React.createElement(MsxMonArt, {
+    run: run,
+    className: "mon",
+    style: {
+      left: '30%',
+      bottom: '30%',
+      height: '28%'
+    },
+    live: true
+  }), React.createElement("img", {
+    className: "msx-intro-aid",
+    src: msxBody(s.aid, l.who === s.aid ? l.e || 'happy' : 'happy'),
+    alt: ""
+  }), React.createElement("div", {
+    className: "v-ev-h"
+  }, React.createElement("small", null, "メインのお話"), msxAidName(s.aid), "編のはじまり"), React.createElement("div", {
+    className: "v-talk msx-intro-talk"
+  }, who ? React.createElement(React.Fragment, null, React.createElement("span", {
+    className: "who"
+  }, who), `「${l.t}」`) : l.t, React.createElement("small", {
+    className: "pg"
+  }, n + 1, "/", lines.length)))), React.createElement("div", {
+    className: "v-ft"
+  }, seenBefore ? React.createElement("button", {
+    type: "button",
+    onClick: finish,
+    "data-msx-intro-skip": true
+  }, "⏩ とばす") : null, React.createElement("button", {
+    type: "button",
+    className: "go",
+    onClick: next,
+    "data-msx-intro-next": true
+  }, last ? '育成をはじめる ▶' : 'つぎへ ▶')));
+}
+const MSX_INTRO_CSS = `
+.msx .msx-intro{cursor:pointer}
+.msx .msx-intro-aid{position:absolute;right:-6%;bottom:16%;height:66%;width:62%;object-fit:contain;object-position:right bottom;filter:drop-shadow(0 6px 4px #0008)}
+.msx .msx-intro-talk{position:absolute;left:10px;right:10px;bottom:10px;z-index:3;word-break:auto-phrase}
+.msx .msx-intro-talk .pg{display:block;text-align:right;font-size:10px;color:#64748b;margin-top:2px}
+`;
 const MSX_KI_CHAPTER = Object.freeze(['第一章', '第二章', '第三章', '第四章', '最終章']);
 const MSX_KI_MS = Object.freeze([2600, 2600]);
 const msxKiCalm = () => typeof msxFxCalm === 'function' && msxFxCalm();
@@ -168236,21 +168345,41 @@ function MsxPlay({
   let body = null;
   let foot = null;
   useEffect(() => {
-    if (run.phase === 'begin') toMain({
-      ...run,
-      out: null,
-      ki: run.ki || {
-        p: 0,
-        fame: Number.isFinite(run.s.fameTotal) ? run.s.fameTotal : 0,
-        power: SUC.evaluate(run.s).power
-      }
-    });
+    if (run.phase === 'begin') {
+      const r0 = {
+        ...run,
+        out: null,
+        ki: run.ki || {
+          p: 0,
+          fame: Number.isFinite(run.s.fameTotal) ? run.s.fameTotal : 0,
+          power: SUC.evaluate(run.s).power
+        }
+      };
+      if (typeof MsxRunIntro === 'function') setRun({
+        ...r0,
+        phase: 'intro'
+      });else toMain(r0);
+    }
   }, [run.phase]);
   if (phase === 'begin') return React.createElement(React.Fragment, null, React.createElement(MsxHd, {
     back: "中断",
     onBack: onPause
   }), React.createElement("div", {
     className: "v-body"
+  }));
+  if (phase === 'intro' && typeof MsxRunIntro === 'function') return React.createElement(React.Fragment, null, React.createElement(MsxHd, {
+    back: "中断",
+    onBack: onPause,
+    sub: `${msxAidName(s.aid)}編`,
+    right: `${s.turn} / ${msxSuc.core.TOTAL_TURNS}ターン`
+  }), React.createElement(MsxRunIntro, {
+    key: `intro-${s.id}`,
+    run: run,
+    ctx: ctx,
+    onDone: () => toMain({
+      ...run,
+      out: null
+    })
   }));
   const r3 = typeof MsxR3 === 'function' ? phase === 'battle' && !preOn ? 'battle' : phase === 'battle' ? null : phase === 'over' || s.over ? 'over' : sub === 'cup' ? 'cup' : sub === 'shugyo' ? 'shugyo' : null : null;
   if (preOn && preDesk) return React.createElement(MsxR3PreDesk, {

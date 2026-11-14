@@ -440,8 +440,10 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
   let body = null; let foot = null;
   // はじめたばかりの育成は、1ターン目のはじめの出来事を立ててからメインへ(描いている途中で保存を書き換えないよう、あとで1回だけ)
   // 期のはじめの控え run.ki(期の区切りの演出で、期のあいだに増えた賞金と総合力を出す)もここで1回だけ取る
-  useEffect(() => { if (run.phase === 'begin') toMain({ ...run, out: null, ki: run.ki || { p: 0, fame: Number.isFinite(run.s.fameTotal) ? run.s.fameTotal : 0, power: SUC.evaluate(run.s).power } }); }, [run.phase]);
+  // 育成の始まり: シナリオの始まりの場面(56-monsuc-intro.jsx)→ 1ターン目。部品が無いときはすぐ1ターン目へ
+  useEffect(() => { if (run.phase === 'begin') { const r0 = { ...run, out: null, ki: run.ki || { p: 0, fame: Number.isFinite(run.s.fameTotal) ? run.s.fameTotal : 0, power: SUC.evaluate(run.s).power } }; if (typeof MsxRunIntro === 'function') setRun({ ...r0, phase: 'intro' }); else toMain(r0); } }, [run.phase]);
   if (phase === 'begin') return <><MsxHd back="中断" onBack={onPause}/><div className="v-body"/></>;
+  if (phase === 'intro' && typeof MsxRunIntro === 'function') return <><MsxHd back="中断" onBack={onPause} sub={`${msxAidName(s.aid)}編`} right={`${s.turn} / ${msxSuc.core.TOTAL_TURNS}ターン`}/><MsxRunIntro key={`intro-${s.id}`} run={run} ctx={ctx} onDone={() => toMain({ ...run, out: null })}/></>;
   // 回3(大会・修行・引退・ゲームオーバー・保存枠)の画面 MsxR3 が入っていれば、そちらへ渡す(回3の担当と決めた口)。
   //   MsxR3 はヘッダ・帯・v-body・v-ft まで自分で出す。修行・大会の受付は act のあと onActed(next) でこちらの流れ(叱る/褒める・博士・ターンを閉じる)へ戻す
   const r3 = typeof MsxR3 === 'function' ? (phase === 'battle' && !preOn ? 'battle' : phase === 'battle' ? null : (phase === 'over' || s.over) ? 'over' : sub === 'cup' ? 'cup' : sub === 'shugyo' ? 'shugyo' : null) : null;
