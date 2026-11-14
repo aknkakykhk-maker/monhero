@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e9ba2ed0d342cc65
+// source-sha256: 9f39608164fd8d46
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -173046,11 +173046,12 @@ function MsxPlay({
       className: "e"
     }, "⚔"), "修行", React.createElement("small", null, "技を覚える")), React.createElement("button", {
       type: "button",
-      className: "v-p",
+      className: `v-p${Array.isArray(v.cups) && !v.cups.length ? ' off' : ''}`,
+      disabled: Array.isArray(v.cups) && !v.cups.length,
       onClick: () => setSub('cup')
     }, React.createElement("div", {
       className: "e"
-    }, "🏆"), "大会", React.createElement("small", null, "今月の大会")))));
+    }, "🏆"), "大会", React.createElement("small", null, Array.isArray(v.cups) && !v.cups.length ? '今月はなし' : '今月の大会')))));
     foot = React.createElement("div", {
       className: "v-ft"
     }, React.createElement("button", {
@@ -174936,9 +174937,11 @@ function MsxR3Cup({
     if (typeof SuccessSound !== 'undefined') SuccessSound.se('cupEntry');
   }, []);
   const nOk = cupsNow.filter(c => c.entry && c.entry.ok).length;
-  const openLine = msxR3Line('turn.cup.open', run, {
-    cup: cur ? msxR3CupName(cur.sys, cur.name) : ''
-  }, nOk ? `「今月は ${nOk}つ 出られるよ! 出ると1ターン使うから、トレーニングとどっちにするか考えてね」` : '「今月は出られる大会がないみたい。トレーニングでじっくり力をつけよ!」');
+  const openTexts = nOk ? [`「今月は ${nOk}つ 出られるよ! 出ると1ターン使うから、トレーニングとどっちにするか考えてね」`, `「出られる大会が ${nOk}つ あるよ。賞品もチェックしてみて!」`, `「${cur ? msxR3CupName(cur.sys, cur.name) : '大会'}、気になるね。体力は大丈夫?」`, `「大会は1ターン使うよ。調子がいいなら行ってみよ!」`] : ['「今月は出られる大会がないみたい。トレーニングでじっくり力をつけよ!」', '「出られる大会が今月は無いよ。次の月の予定も見てみてね」'];
+  const openLine = {
+    t: msxR3Q(openTexts[Math.abs(Number(s.turn) || 0) % openTexts.length]),
+    e: null
+  };
   const rankStep = typeof SUC.rankStepOf === 'function' ? SUC.rankStepOf(s) : 0;
   const rank = rankStep ? {
     name: SUC.rankNameOf(rankStep)
@@ -174949,8 +174952,7 @@ function MsxR3Cup({
   const body = React.createElement(React.Fragment, null, React.createElement(MsxBand, {
     s: s,
     v: v,
-    ev: ev,
-    use: 20
+    ev: ev
   }), React.createElement("div", {
     className: "v-scene low",
     style: {
