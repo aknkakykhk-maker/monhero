@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 9c66c623596f6eaa
+// generated-sha256: f9510917d1b3a70e
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -67615,7 +67615,7 @@ function AssistantLifeRoomSheet({ id, life, peerSt, bondLevelOf, diary, onClose,
         {/* 新UIは部屋の絵の上に名前が出ているので、同じ題を2度出さない */}
         {!uiV2 && <p className="mhl-en">ROOM · {String(who.id).toUpperCase()}</p>}
         {!uiV2 && <p className="text-[21px] font-black">{who.name}の部屋</p>}
-        <p className="mt-1 max-w-[62%] text-[12px] font-bold" style={{ ...JA_WRAP_STYLE, ...(land ? { maxWidth: 'none' } : {}) }} data-assistant-life-room-where>{jaWrap(where)}{groupNames && <> ・ {w.group.ids.length}人(<AssistantLifeNames text={groupNames}/>)</>}</p>
+        <p className="mt-1 max-w-[62%] text-[12px] font-bold" style={{ ...JA_WRAP_STYLE, ...(land ? { maxWidth: 'none' } : {}) }} data-assistant-life-room-where>{jaWrap(where)}{groupNames && (w.group.ids.length <= 2 ? <> ・ <span className="whitespace-nowrap">{w.group.ids.length}人(<AssistantLifeNames text={groupNames}/>)</span></> : <> ・ {w.group.ids.length}人(<AssistantLifeNames text={groupNames}/>)</>)}</p>
         {!home && <p className="text-[11px] font-bold text-violet-200">⏱ {slotDef ? `${slotDef.to % 24}時まで` : ''}いる</p>}
         {(() => { const sh = assistantLifeRhythmShiftOn(((ASSISTANT_LIFE_STORE.state.rhythm || {})[id]), assistantLifeDayKey()); const rh = ASSISTANT_LIFE_RHYTHM[id]; return <p className="text-[10.5px] font-bold text-sky-200" data-assistant-life-room-rhythm={assistantLifeRhythmLabel(sh)}>🕰 生活のリズム: {rh ? rh.label : ''}{Math.abs(sh) >= 0.3 ? `(いまは ${assistantLifeRhythmLabel(sh)})` : ''}</p>; })()}
         {typeof assistantLifeBodyCondShort === 'function' && assistantLifeBodyCondShort(id) && <p className="text-[11px] font-bold text-rose-200" data-assistant-life-room-cond={id}>{assistantLifeBodyCondShort(id)}</p>}
@@ -69092,12 +69092,14 @@ function AssistantLifeRoomFigure({ who, src, p, look, sleep = false, onPress = n
   const tone = night ? 'linear-gradient(100deg,#ffd08a 0%,#c9c2ee 45%,#8a86c0 100%)'
     : evening ? 'linear-gradient(100deg,#fff6ec 0%,#fbeee4 60%,#f0dcd4 100%)'
     : 'linear-gradient(100deg,#ffffff 0%,#fbf5f3 60%,#efe3df 100%)';
+  // 胸から上だけの絵(肩が絵の左右の端で切れている)は、左右のふちも薄く消す(2026-11-14 社長「表示の切るとこがへん」)
+  const sideMask = sleep ? null : 'linear-gradient(to right,transparent 0,#000 7%,#000 93%,transparent 100%)';
   const fadeMask = p.fade ? `linear-gradient(to bottom,#000 ${(p.fade[0] * 100).toFixed(1)}%,transparent ${(p.fade[1] * 100).toFixed(1)}%)` : null;
   const box = { position: 'absolute', left: p.left, top: p.top, width: p.width, height: p.height,
-    clipPath: `inset(${p.clip[0].toFixed(1)}px 0 ${p.clip[1].toFixed(1)}px 0)`, ...(fadeMask ? { WebkitMaskImage: fadeMask, maskImage: fadeMask } : {}) };
+    clipPath: `inset(${p.clip[0].toFixed(1)}px 0 ${p.clip[1].toFixed(1)}px 0)`, ...(fadeMask || sideMask ? { WebkitMaskImage: [fadeMask, sideMask].filter(Boolean).join(','), maskImage: [fadeMask, sideMask].filter(Boolean).join(','), WebkitMaskComposite: 'source-in', maskComposite: 'intersect' } : {}) };
   const shape = { WebkitMaskImage: `url(${src})`, WebkitMaskSize: '100% 100%', maskImage: `url(${src})`, maskSize: '100% 100%' };
   return (<>
-    <span aria-hidden="true" style={{ position: 'absolute', left: p.cx - p.w * 0.45, top: p.frameBottom - 30, width: p.w * 0.9, height: 26, borderRadius: '50%', background: 'radial-gradient(#0007,transparent 70%)', pointerEvents: 'none' }}/>
+    {sleep && <span aria-hidden="true" style={{ position: 'absolute', left: p.cx - p.w * 0.45, top: p.frameBottom - 30, width: p.w * 0.9, height: 26, borderRadius: '50%', background: 'radial-gradient(#0007,transparent 70%)', pointerEvents: 'none' }}/>}
     <div style={box} data-assistant-life-roomview-person={who.id} data-assistant-life-roomview-face={Math.round(p.face)} data-assistant-life-roomview-head={Math.round(p.headTop)}>
       <img src={src} alt="" draggable={false} data-assistant-life-roomview-fig={who.id} onClick={onPress || undefined}
         style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', maxWidth: 'none', filter: `drop-shadow(0 0 .6px #2a1414cc)${sleep ? ' brightness(.6)' : ''}`, cursor: onPress ? 'pointer' : undefined }}/>
@@ -69244,14 +69246,20 @@ function AssistantLifeRoomBed({ id, W, floorY, sleepers = [], look }) {
         const box = boxes[x.src]; if (!box) return null;
         const r = assistantLifeRoomPlace({ ...x, box }, F, 0, 0);
         const U = r.U || F * 2.63;
-        const cw = U * 1.2, ch = U * 1.32, y0 = -0.22 * U; // 切り出す枠(頭のてっぺんの少し上〜顎の少し下・頭の幅)
+        const cw0 = U * 1.2, ch0 = U * 1.32; // 頭の絵の大きさ(これまでの枠)。頭の位置はここから決める
+        // 枠は頭より広く取り、四角い切れ目を見せない(2026-11-14 社長「寝てるときの表示も上が切れてた」: 頭の上の飾り・角・髪が枠の上で四角く切れていた)。
+        //   上へ 0.7U・左右へ 0.35U ずつ広げ、枠の縁は薄く消す。頭の位置は変えない(広げた分だけ枠の中心をずらす)
+        const ex = 0.7 * U, ey = 0.35 * U, cw = cw0 + ey * 2, ch = ch0 + ex, y0 = -0.22 * U - ex;
         // 倒すと縦横が入れかわる(見た目の幅 ch・高さ cw)。頭の後ろを枕の左端に、下端を枕の6割の高さに沈める
-        const cx = pillow.left + ch / 2 + 2 + i * 14, cy = pillow.top + pillow.h * 0.6 - cw / 2 - i * 6;
+        const cx = pillow.left + ch0 / 2 + 2 + i * 14 - ex / 2, cy = pillow.top + pillow.h * 0.6 - cw0 / 2 - i * 6;
+        const fadeAt = `${(((0.82 * ch0 + ex) / ch) * 100).toFixed(1)}%`; // 顎の側(布団の側)の消え始めは、これまでと同じ位置
+        const feather = `linear-gradient(to right,transparent,#000 9%,#000 91%,transparent),linear-gradient(to bottom,transparent,#000 6%,#000 ${fadeAt},transparent)`;
+        const imgLeft = r.left + cw / 2;
         return (
-          <div key={x.pid} data-assistant-life-roomview-sleeper={x.pid} style={{ position: 'absolute', left: cx - cw / 2, top: cy - ch / 2, width: cw, height: ch, transform: 'rotate(-78deg)', transformOrigin: '50% 50%', overflow: 'hidden',
-            WebkitMaskImage: 'linear-gradient(#000 82%,transparent)', maskImage: 'linear-gradient(#000 82%,transparent)' }}>
-            <img src={x.src} alt="" draggable={false} style={{ position: 'absolute', left: r.left + cw / 2, top: r.top - y0, width: r.width, height: r.height, maxWidth: 'none', filter: `saturate(.9) brightness(${night ? 0.72 : 0.9})` }}/>
-            <AssistantLifeSleepEyes pid={x.pid} src={x.src} w={r.width} h={r.height} style={{ left: r.left + cw / 2, top: r.top - y0, filter: `saturate(.9) brightness(${night ? 0.72 : 0.9})` }}/>
+          <div key={x.pid} data-assistant-life-roomview-sleeper={x.pid} style={{ position: 'absolute', left: cx - cw / 2, top: cy - ch / 2, width: cw, height: ch, transform: 'rotate(-78deg)', transformOrigin: '50% 50%',
+            WebkitMaskImage: feather, maskImage: feather, WebkitMaskComposite: 'source-in', maskComposite: 'intersect' }}>
+            <img src={x.src} alt="" draggable={false} style={{ position: 'absolute', left: imgLeft, top: r.top - y0, width: r.width, height: r.height, maxWidth: 'none', filter: `saturate(.9) brightness(${night ? 0.72 : 0.9})` }}/>
+            <AssistantLifeSleepEyes pid={x.pid} src={x.src} w={r.width} h={r.height} style={{ left: imgLeft, top: r.top - y0, filter: `saturate(.9) brightness(${night ? 0.72 : 0.9})` }}/>
           </div>); })}
       {/* 掛け布団(2026-11-08 社長「布団を膨らませて顔にちょっとかかる感じに」): 肩・体・足のふくらみのある形で、顔の下半分〜目のあたりまでかぶせる(髪と頭のてっぺんは見せる) */}
       {(() => {
@@ -69411,7 +69419,7 @@ function AssistantLifeRoomScene({ id, look = 'noon', land = false, people = [], 
       {asleep && <AssistantLifeRoomBed id={id} W={W} floorY={floorY} sleepers={people} look={look}/>}
       {!asleep && lay && standItems.map((x, i) => (sleepIds.includes(x.pid)
         ? <AssistantLifeRoomFigure key={x.pid} who={x.who} src={x.src} p={lay[i]} look={look} sleep onPress={onPerson ? () => onPerson(x.pid) : null}/> : null))}
-      {people.length > 0 && !asleep && <AssistantLifeRoomFront kind={frontKind} cx={W / 2} top={lay && !asleep ? Math.max(...lay.map(p => p.frameBottom - 4)) : deskTop} w={frontW} items={ASSISTANT_LIFE_ROOM_DESK_ITEMS[id] || []}/>}
+      {people.length > 0 && !asleep && <AssistantLifeRoomFront kind={frontKind} cx={W / 2} top={lay && !asleep ? Math.max(...lay.map(p => Math.min(p.frameBottom, p.top + p.height) - 6)) /* 絵の下の端が机に隠れる高さ(胸から上だけの絵が宙に浮いて見えない) */ : deskTop} w={frontW} items={ASSISTANT_LIFE_ROOM_DESK_ITEMS[id] || []}/>}
       {/* 助手より前に出した家具(机の前) */}
       {layoutOn && <AssistantLifeRoomLayoutLayer who={layoutWho} items={layoutEdit ? layoutEdit.items : layoutItems} geom={layoutGeom} front={true} onTip={layoutEdit ? null : setTip}/>}
       {away && (
@@ -69493,7 +69501,7 @@ function AssistantLifeDoRow({ k, icon, label, sub = '', gain = '', on = null, di
       <span className="w-7 shrink-0 text-center text-[22px] leading-none" aria-hidden="true">{icon}</span>
       <span className="min-w-0 flex-1">
         <b className="block text-[14px] leading-tight text-white">{label}</b>
-        {(off && why ? why : sub) && <small className="block text-[11.5px] font-bold leading-snug text-slate-300" style={JA_WRAP_STYLE}>{jaWrap(off && why ? why : sub)}</small>}
+        {(off && why ? why : sub) && <small className="block text-[11.5px] font-bold leading-snug text-slate-300" style={JA_WRAP_STYLE}>{(() => { const t = off && why ? why : sub, m = String(t).match(/^(.*?)(\([^()]{1,9}\))$/); return m && m[1] ? <>{jaWrap(m[1])}<span className="whitespace-nowrap">{m[2]}</span></> : jaWrap(t); })()}</small>}
       </span>
       {gain && !off && <span className="shrink-0 text-right text-[11.5px] font-black leading-tight text-emerald-300" data-assistant-life-room-do-gain>{gain}</span>}
     </button>);
