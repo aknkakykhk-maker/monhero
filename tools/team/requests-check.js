@@ -10,6 +10,7 @@
 //   B 取り込み忘れ: 台帳の「追跡の始まり」からの行(と、さかのぼった分)が、全部表に入っている(無ければ todo sync)
 //   C 古い印: 表の「台帳」の印が、台帳の行にいまもある(台帳の行を直したら todo sync が付け替える)
 //   D 自動で出る: 完了でない頼みが newsession の依頼文・handoff のメモ・brief・窓口の知らせに出る
+//   F 聞く前に引く: node tools/ctx.js asked <語> が台帳の決めごとを出し、窓口の手引きに打ち方がある
 //   E 止め絵の点検: 見る所の5つ(言葉の途中の折れ・下の空き・数字のそろえ方・参考との比べ・台帳の決めごと)が道具と窓口の手引きにある
 'use strict';
 const fs = require('fs');
@@ -75,6 +76,13 @@ for (const w of ['言葉の途中の折れ', '下の空き', '数字のそろえ
   check(`E 止め絵の点検「${w}」が窓口の手引きにある`, hq.includes(w));
 }
 check('E 窓口の手引きに todo がある', hq.includes('node tools/ctx.js todo sync'));
+
+// F 聞く前に引く道具: 台帳にある語で行が出る・窓口の手引きに打ち方がある
+{
+  const out = spawnSync('node', ['tools/ctx.js', 'asked', 'モンヒロサクセス', '略称'], { cwd: ROOT, encoding: 'utf8' }).stdout || '';
+  check('F asked が台帳の決めごとを出す', /決めごと [1-9]\d* 件/.test(out) && out.includes('聞かずに'));
+  check('F 窓口の手引きに asked がある', hq.includes('node tools/ctx.js asked'));
+}
 
 if (failed) { console.log(`\nNG: 追跡表の見張りで ${failed} 件(docs/rules/REQUEST_TRACKING.md)`); process.exit(1); }
 console.log(`OK: 追跡表(全 ${rows.length} 件・完了でない物 ${R.openFor().length} 件)は台帳とそろっていて、依頼文・メモ・brief・窓口の知らせに出る`);
