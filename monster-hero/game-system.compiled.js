@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 05992159d48260cc
+// source-sha256: 9f644a14c3a6626b
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -119177,16 +119177,23 @@ function AssistantLifeRoomBed({
     const U = r.U || F * 2.63;
     const cw0 = U * 1.2,
       ch0 = U * 1.32;
-    const ex = 0.7 * U,
-      ey = 0.35 * U,
+    const ex = 0.38 * U,
+      ey = 0.18 * U,
       cw = cw0 + ey * 2,
       ch = ch0 + ex,
       y0 = -0.22 * U - ex;
     const cx = pillow.left + ch0 / 2 + 2 + i * 14 - ex / 2,
       cy = pillow.top + pillow.h * 0.6 - cw0 / 2 - i * 6;
     const fadeAt = `${((0.82 * ch0 + ex) / ch * 100).toFixed(1)}%`;
-    const feather = `linear-gradient(to right,transparent,#000 9%,#000 91%,transparent),linear-gradient(to bottom,transparent,#000 6%,#000 ${fadeAt},transparent)`;
+    const feather = `linear-gradient(to right,transparent,#000 22%,#000 78%,transparent),linear-gradient(to bottom,transparent,#000 20%,#000 ${fadeAt},transparent)`;
     const imgLeft = r.left + cw / 2;
+    const visH = r.height * (box.b - box.t),
+      k = Math.min(1, 2.0 * U / Math.max(1, visH));
+    const eyeOrigin = `${((box.l + box.r) / 2 * 100).toFixed(1)}% ${((box.t + (x.face.eye || 0.33) * (box.b - box.t)) * 100).toFixed(1)}%`;
+    const shrink = k < 0.999 ? {
+      transform: `scale(${k.toFixed(3)})`,
+      transformOrigin: eyeOrigin
+    } : {};
     return React.createElement("div", {
       key: x.pid,
       "data-assistant-life-roomview-sleeper": x.pid,
@@ -119214,6 +119221,7 @@ function AssistantLifeRoomBed({
         width: r.width,
         height: r.height,
         maxWidth: 'none',
+        ...shrink,
         filter: `saturate(.9) brightness(${night ? 0.72 : 0.9})`
       }
     }), React.createElement(AssistantLifeSleepEyes, {
@@ -119224,6 +119232,7 @@ function AssistantLifeRoomBed({
       style: {
         left: imgLeft,
         top: r.top - y0,
+        ...shrink,
         filter: `saturate(.9) brightness(${night ? 0.72 : 0.9})`
       }
     }));
