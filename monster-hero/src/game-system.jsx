@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: ccc78ebc0a972e47
+// generated-sha256: 7b625ee754250a4c
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -64852,9 +64852,12 @@ function AssistantPeerMap({ metIds, onReplay, peerItems = null, onUseItem = null
   // 一覧は仲良し度の高い6組だけ出し、残りは「全部のペアを見る」で広げる
   const [showAll, setShowAll] = React.useState(false);
   const [albumPair, setAlbumPair] = React.useState(null);
+  const mapRef = React.useRef(null); const [mapW, setMapW] = React.useState(0); // 新UI: 関係図の幅を画面に合わせる(札が顔・名前に重ならないよう、できるだけ大きく)
+  React.useLayoutEffect(() => { const w = mapRef.current && mapRef.current.parentElement ? mapRef.current.parentElement.clientWidth : 0; if (w && w !== mapW) setMapW(w); });
   const ids = (metIds || []).filter(id => assistantById(id) && assistantById(id).id === id);
   if (ids.length < 2) return null;
-  const size = 260, cx = size / 2, cy = size / 2, r = 98;
+  const size = v2 ? Math.max(240, Math.min(320, mapW || 260)) : 260, cx = size / 2, cy = v2 ? size / 2 + 2 : size / 2, r = v2 ? Math.round((size - 58) / 2) : 98;
+  const boxH = v2 ? size + 12 : size;
   const pos = Object.fromEntries(ids.map((id, i) => {
     const a = -Math.PI / 2 + (2 * Math.PI * i) / ids.length;
     return [id, { x: cx + r * Math.cos(a), y: cy + r * Math.sin(a) }];
@@ -64889,25 +64892,25 @@ function AssistantPeerMap({ metIds, onReplay, peerItems = null, onUseItem = null
         </button>)}
       {st.play && st.play.pair && st.play.pair.split('-').every(id => ids.includes(id)) && (
         <p data-assistant-peer-playing className="mb-2 text-[10px] font-bold text-sky-200">🎮 遊びに連れているペア: {st.play.pair.split('-').map(id => assistantById(id).name).join(' × ')}</p>)}
-      <div className="relative mx-auto" style={{ width: size, height: size }}>
-        <svg width={size} height={size} className="absolute inset-0" style={v2 ? { pointerEvents: 'none' } : undefined} aria-hidden="true">
+      <div ref={mapRef} className="relative mx-auto" style={{ width: size, height: boxH }}>
+        <svg width={size} height={boxH} className="absolute inset-0" style={v2 ? { pointerEvents: 'none' } : undefined} aria-hidden="true">
           {rows.filter(x => x.lv >= 3).map(x => (
             <line key={`${x.a}-${x.b}`} data-assistant-peer-link={assistantPeerPairKey(x.a, x.b)} x1={pos[x.a].x} y1={pos[x.a].y} x2={pos[x.b].x} y2={pos[x.b].y}
               stroke={lineColor(x.lv)} strokeWidth={Math.min(10, x.lv * 0.9)} strokeLinecap="round" opacity="0.85"/>))}
         </svg>
         {ids.map(id => { const who = assistantById(id); return (
-          <div key={id} className="absolute flex flex-col items-center" style={{ left: pos[id].x - 24, top: pos[id].y - 24, width: 48 }}>
+          <div key={id} data-assistant-peer-node={id} className="absolute flex flex-col items-center" style={{ left: pos[id].x - 24, top: pos[id].y - 24, width: 48 }}>
             <AssistantFace who={who} size={48} accent={who.accent}/>
             <span className={`mt-0.5 whitespace-nowrap ${v2 ? 'text-[10.5px]' : 'text-[9px]'} font-black text-slate-200`}>{who.name}</span>
           </div>); })}
-        {v2 && (<svg width={size} height={size} className="absolute inset-0" style={{ pointerEvents: 'none' }}>
+        {v2 && (<svg width={size} height={boxH} className="absolute inset-0" style={{ pointerEvents: 'none' }}>
           {v2 && (() => { const put = []; return rows.filter(x => x.lv >= 3).map(x => {
               // 札(Lv)は、顔と名前・ほかの札に重ならない位置(線の上の 50%→40%→60%…)に置く
               const at = (t) => ({ x: pos[x.a].x + (pos[x.b].x - pos[x.a].x) * t, y: pos[x.a].y + (pos[x.b].y - pos[x.a].y) * t });
-              const hit = (q) => ids.some(id => Math.abs(q.x - pos[id].x) < 38 && q.y > pos[id].y - 32 && q.y < pos[id].y + 40) || put.some(o => Math.abs(q.x - o.x) < 30 && Math.abs(q.y - o.y) < 18);
+              const hit = (q) => ids.some(id => Math.abs(q.x - pos[id].x) < 40 && q.y > pos[id].y - 34 && q.y < pos[id].y + 52) || put.some(o => Math.abs(q.x - o.x) < 30 && Math.abs(q.y - o.y) < 18);
               const dx = pos[x.b].x - pos[x.a].x, dy = pos[x.b].y - pos[x.a].y, dl = Math.hypot(dx, dy) || 1, nx = -dy / dl, ny = dx / dl;
-              const cand = []; for (const t of [0.5, 0.4, 0.6, 0.33, 0.67, 0.27, 0.73]) for (const o of [0, 16, -16, 26, -26]) { const c = at(t); cand.push({ x: c.x + nx * o, y: c.y + ny * o }); }
-              const inside = (c) => c.x > 16 && c.x < size - 16 && c.y > 8 && c.y < size - 8;
+              const cand = []; for (const t of [0.5, 0.45, 0.55, 0.4, 0.6, 0.35, 0.65, 0.3, 0.7, 0.25, 0.75, 0.2, 0.8]) for (const o of [0, 14, -14, 24, -24, 34, -34]) { const c = at(t); cand.push({ x: c.x + nx * o, y: c.y + ny * o }); }
+              const inside = (c) => c.x > 16 && c.x < size - 16 && c.y > 8 && c.y < boxH - 8;
               const q = cand.find(c => inside(c) && !hit(c)) || at(0.5); put.push(q); const mx = q.x, my = q.y; return (
             <g key={`t-${x.a}-${x.b}`} data-assistant-peer-link-lv={assistantPeerPairKey(x.a, x.b)} style={{ pointerEvents: 'auto', cursor: 'pointer' }} onClick={() => setAlbumPair([x.a, x.b])}>
               <line x1={pos[x.a].x} y1={pos[x.a].y} x2={pos[x.b].x} y2={pos[x.b].y} stroke="transparent" strokeWidth="22"/>
