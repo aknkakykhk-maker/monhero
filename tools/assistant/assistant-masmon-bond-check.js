@@ -44,6 +44,8 @@ const run = (ctx, rows, slots, each = null, step = 1) => {
 };
 const entry = (st, row) => st.mons.kiki[`${row.slot}:${row.monster}`];
 const sumSt = (e) => Object.values(e.st).reduce((a, b) => a + b, 0);
+// 能力の総合力(2026-11-14 直線: 能力1あたり 2.5 + 2.0×能力÷900。能力は 0〜999 に切る)
+const stPow = (e) => Object.values(e.st).reduce((a, v) => { const x = Math.max(0, Math.min(999, Number(v) || 0)); return a + x * (2.5 + 2 * x / 900); }, 0);
 const OFF = { assistantMasmonGrow: true, assistantMasmonPlan: true, assistantMasmonBond: false };
 const ON = { assistantMasmonGrow: true, assistantMasmonPlan: true, assistantMasmonBond: true };
 
@@ -183,8 +185,8 @@ if (process.argv.includes('--sim')) {
 {
   const ctx = make(ON); const T = ctx.T; run(ctx, [ROW], 0);
   const p = T.amgPowerOf('kiki', ROW); const e = entry(T.AMG_STORE.state, ROW);
-  const want = Math.round(sumSt(e) * 2.5 + e.lv * 15 + 50 * 10);
-  check('⑧ 総合力 = 6能力の合計×2.5 + 技 + Lv×15 + 忠誠×10 + 人気×10(技なし)', p && p.power === want, `${p && p.power} / ${want}`);
+  const want = Math.round(stPow(e) + e.lv * 15 + 50 * 10);
+  check('⑧ 総合力 = 6能力の総合力(1あたり 2.5 + 2.0×能力÷900) + 技 + Lv×15 + 忠誠×10 + 人気×10(技なし)', p && p.power === want, `${p && p.power} / ${want}`);
   check('⑧ ランクは区切りどおり', p && p.rank.key === T.MASMON_CALC.rankOf(want).key);
   check('⑧ 育成の値が無い子は null(「—」)', T.amgPowerOf('kiki', { slot: 7, monster: 'Golem' }) === null);
 }
@@ -204,8 +206,8 @@ if (process.argv.includes('--sim')) {
   check('⑫ 合体の子: 忠誠=主・人気=高い方の半分・方針と型=主・年齢0', c.loy === 77 && c.pop === 45 && c.pol === 2 && c.pp === 0 && c.gt === bd.gt && c.age === 0 && c.life === 0 && c.last === -1);
   const e = entry(T.AMG_STORE.state, ROW);
   const bp = T.amgbBedPower({ g: e, t: { learn: ['a', 'b'], m: { a: 20, b: 0 } }, bd });
-  check('⑫ 冬眠の行の総合力(写しから)', bp && bp.power === Math.round(sumSt(e) * 2.5 + 220 + e.lv * 15 + 77 * 10 + 40 * 10), String(bp && bp.power));
-  check('⑫ 写しの無い冬眠の行は忠誠50・人気0で数える・育成の写しが無ければ null', T.amgbBedPower({ g: e }).power === Math.round(sumSt(e) * 2.5 + e.lv * 15 + 500) && T.amgbBedPower({}) === null);
+  check('⑫ 冬眠の行の総合力(写しから)', bp && bp.power === Math.round(stPow(e) + 220 + e.lv * 15 + 77 * 10 + 40 * 10), String(bp && bp.power));
+  check('⑫ 写しの無い冬眠の行は忠誠50・人気0で数える・育成の写しが無ければ null', T.amgbBedPower({ g: e }).power === Math.round(stPow(e) + e.lv * 15 + 500) && T.amgbBedPower({}) === null);
   const ctx2 = make(ON); const T2 = ctx2.T; run(ctx2, [ROW, ROW2], 3);
   T2.amgbBattleOnce('pvp-1', 'kiki', [ROW, ROW2], 'pvp', true, slotAt(S0 + 3)); T2.amgbBattleOnce('pvp-1', 'kiki', [ROW, ROW2], 'pvp', true, slotAt(S0 + 3));
   T2.amgbBattleOnce('ambb-2', 'kiki', [ROW], 'peer', false, slotAt(S0 + 3));

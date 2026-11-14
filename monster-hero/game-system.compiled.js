@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ae8271e311d1e3ec
+// source-sha256: 2c4d5c5c23deb303
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -664,6 +664,9 @@ const EVENT_REPLAY_RELEASE_FLAGS = Object.freeze({
   get rhythmGrandOpenTeaser() {
     return typeof RELEASE_FLAGS !== 'undefined' && (RELEASE_FLAGS.rhythmGrandOpenTeaser === true || RELEASE_FLAGS.rhythmGrandOpen === true);
   },
+  get monsucStoryEp1() {
+    return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.monsucStoryEp1 === true;
+  },
   get cardCup() {
     return typeof cardCupOpen === 'function' && cardCupOpen() === true;
   }
@@ -692,6 +695,12 @@ const EVENT_REPLAY_GROUPS = Object.freeze([{
   label: '鍵の向こう側へ',
   note: 'パンドラとふたつの翼のお話',
   color: '#c084fc'
+}, {
+  id: 'monsuc',
+  emoji: '🌱',
+  label: 'モンヒロサクセス',
+  note: '新しい育成場のお話',
+  color: '#4ade80'
 }, {
   id: 'halloween',
   emoji: '🎃',
@@ -14126,6 +14135,7 @@ const RELEASE_FLAGS = {
   assistantPartnerUnlock: true,
   cardBattle: true,
   monheroSuccess: false,
+  monsucStoryEp1: true,
   cardAssistantTalk: true,
   missionDailyLine: true,
   cardGrowStyle: true,
@@ -14552,6 +14562,7 @@ const HELP_PLAYER_FLAGS = {
 const helpPlayerFlagOn = name => !!name && HELP_PLAYER_FLAGS[name] === true;
 const CARD_CUP_STORY_ID = 'card_cup_2026_10_31';
 const RHYTHM_GRAND_OPEN_TEASER_STORY_ID = 'rhythm_grand_open_teaser';
+const MONSUC_BETA_EP1_STORY_ID = 'monsuc_beta_ep1';
 const RHYTHM_GRAND_OPEN_STORY_ID = 'rhythm_grand_open';
 const SORASHIDO_GIFT_KEY = 'mh_sorashido_gift_v1';
 const SORASHIDO_GIFT_BEAT_POINTS = 10000;
@@ -81025,6 +81036,13 @@ const HOME_EVENT_BADGE_CSS = `
 @media(prefers-reduced-motion:reduce){
   .mh-home-event-badge{animation:none;transform:none}
   .mh-home-event-badge::after{display:none}}
+/* イベントの札の題の2行目(title2)。背の低い横画面では、2行のまま字と余白を詰めて札の高さを1行の題のときと同じくらいにする
+   (2026-11-14 横 568×320 の長い台詞で、背が伸びた札が M/B管理 にかかった。1行に並べると横に伸びてモンヒロビートの顔の列にかかる) */
+.mh-home-event-banner .t2{display:block}
+@media(orientation:landscape) and (max-height:430px){
+  .mh-home-scene .mh-home-event-banner{padding:3px 10px;gap:0}
+  .mh-home-scene .mh-home-event-banner b{font-size:10px;line-height:1.1}
+  .mh-home-scene .mh-home-event-banner small{line-height:1.1}}
 `;
 const HOME_RAID_JACK_CSS = `
 .mh-home-raid-jack-img{animation:mhRaidJackHop 1.15s cubic-bezier(.3,.1,.4,1) infinite;transform-origin:50% 100%}
@@ -81711,8 +81729,17 @@ function HomeScreen({
           }
         }
         push = Math.min(push, Math.max(0, room));
+        if (push <= 0 && mg && mg.offsetParent && offTop(rh) >= offTop(mg) + mg.offsetHeight) {
+          let top = Infinity;
+          for (const el of scene.querySelectorAll('.mh-home-event-banner,.mh-home-tour-banner,.mh-home-card-battle,.mh-home-success')) {
+            if (!el.offsetParent) continue;
+            const t = offTop(el);
+            if (t > offTop(rh) && offLeft(el) < rr) top = Math.min(top, t);
+          }
+          if (Number.isFinite(top) && top > rb + 4) push = rb + 4 - top;
+        }
       }
-      scene.style.setProperty('--mh-home-left-push', `${Math.max(0, Math.ceil(push))}px`);
+      scene.style.setProperty('--mh-home-left-push', `${Math.ceil(push)}px`);
       const bt = scene.querySelector('.mh-home-facility.battle');
       let nudge = 0;
       if (bt && bt.offsetParent) {
@@ -81953,8 +81980,10 @@ function HomeScreen({
     "data-home-event-banner": true,
     className: "mh-home-event-banner",
     onClick: openChangelog,
-    "aria-label": `${homeEventCampaign.banner.title} ${homeEventCampaign.banner.sub}`
-  }, React.createElement("b", null, homeEventCampaign.banner.emoji, " ", homeEventCampaign.banner.title), React.createElement("small", null, homeEventCampaign.banner.sub)), homeCardTour && typeof onOpenCardTour === 'function' && React.createElement("button", {
+    "aria-label": `${homeEventCampaign.banner.title}${homeEventCampaign.banner.title2 || ''} ${homeEventCampaign.banner.sub}`
+  }, React.createElement("b", null, homeEventCampaign.banner.emoji, " ", homeEventCampaign.banner.title, homeEventCampaign.banner.title2 ? React.createElement("span", {
+    className: "t2"
+  }, homeEventCampaign.banner.title2) : null), React.createElement("small", null, homeEventCampaign.banner.sub)), homeCardTour && typeof onOpenCardTour === 'function' && React.createElement("button", {
     type: "button",
     "data-home-card-tour": homeCardTour.id,
     className: `mh-home-tour-banner${homeEventCampaign ? '' : ' raised'}`,
@@ -114027,6 +114056,28 @@ function AssistantLifeRoomSheet({
       disabled: !!bi.disabled,
       why: bi.why || ''
     });
+  })(), (() => {
+    let si = null;
+    try {
+      si = typeof assistantLifeSuccessRowInfo === 'function' ? assistantLifeSuccessRowInfo(id) : null;
+    } catch (_) {
+      si = null;
+    }
+    if (!si) return null;
+    return React.createElement(AssistantLifeDoRow, {
+      k: "monhero-success",
+      icon: "🌱",
+      label: si.label.replace(/^🌱\s*/, ''),
+      sub: si.sub,
+      on: () => {
+        try {
+          assistantLifeSuccessOpen({
+            assistantId: id,
+            from: 'room'
+          });
+        } catch (_) {}
+      }
+    });
   })(), soloOn && React.createElement(AssistantLifeDoRow, {
     k: "give-solo",
     icon: "🎁",
@@ -117018,6 +117069,34 @@ function AssistantLifeTownMap({
       },
       className: "rounded-xl bg-gradient-to-r from-amber-500 to-rose-500 min-h-[44px] px-2 py-1 text-[12px] font-black text-white active:scale-95 disabled:opacity-50"
     }, bi.label || '⚔ マスモンで対戦(β)');
+    let si = null;
+    if (place === 'battle') {
+      try {
+        si = typeof assistantLifeSuccessRowInfo === 'function' ? assistantLifeSuccessRowInfo(id) : null;
+      } catch (_) {
+        si = null;
+      }
+    }
+    const successBtn = si && React.createElement("button", {
+      type: "button",
+      title: si.sub,
+      "data-assistant-life-map-act": "monhero-success",
+      onClick: () => {
+        setSheet(null);
+        try {
+          assistantLifeSuccessOpen({
+            assistantId: id,
+            from: 'place'
+          });
+        } catch (_) {}
+      },
+      className: "w-full rounded-xl bg-gradient-to-r from-emerald-600 to-lime-600 min-h-[44px] px-2 py-1 text-[12px] font-black text-white active:scale-95"
+    }, si.label, React.createElement("span", {
+      className: "block text-[10px] font-bold text-emerald-50",
+      style: {
+        wordBreak: 'auto-phrase'
+      }
+    }, si.sub));
     const tiLine = ti && (ti.today ? `🥋 ${ti.today.nick}・${ti.today.kind}${ti.today.learned ? ` NEW ${ti.today.learned}を覚えた` : ''}${ti.today.main ? ` ・ ${ti.today.main} 熟練 +${ti.today.gain}` : ''}` : '🥋 きょうはまだ修行していません');
     return React.createElement("div", {
       key: id,
@@ -117166,7 +117245,7 @@ function AssistantLifeTownMap({
       className: "rounded-xl bg-emerald-700 min-h-[44px] px-1 py-1 text-[12px] font-black leading-tight text-white active:scale-95 disabled:opacity-50"
     }, "📣 応援する", React.createElement("span", {
       className: "block text-[10px] font-bold"
-    }, "今日", ti.perDay - ti.left, "/", ti.perDay)), battleBtn), ti && !ti.canCheer && ti.why && React.createElement("p", {
+    }, "今日", ti.perDay - ti.left, "/", ti.perDay)), battleBtn), successBtn, ti && !ti.canCheer && ti.why && React.createElement("p", {
       className: "w-full text-[10.5px] font-bold text-slate-300",
       "data-assistant-life-map-cheer-why": id
     }, ti.why), cheerMsg && cheerMsg.id === id && cheerMsg.text && React.createElement("p", {
@@ -117564,6 +117643,71 @@ function AssistantLifeFindCard() {
     onClick: close,
     className: "shrink-0 rounded-lg border border-amber-300/60 px-2 py-1 text-[11px] font-black text-amber-100 active:scale-95"
   }, "閉じる"));
+}
+const ALSX_HOST = {
+  open: null,
+  subs: new Set(),
+  set(v) {
+    this.open = v;
+    this.subs.forEach(f => {
+      try {
+        f(v);
+      } catch (_) {}
+    });
+  }
+};
+const assistantLifeSuccessOn = () => {
+  try {
+    return typeof msxReleased === 'function' && !!msxReleased() && typeof MonheroSuccessScreen === 'function';
+  } catch (_) {
+    return false;
+  }
+};
+const assistantLifeSuccessOpen = (opts = {}) => {
+  if (!assistantLifeSuccessOn()) return false;
+  const o = opts && typeof opts === 'object' ? opts : {};
+  ALSX_HOST.set({
+    assistantId: typeof o.assistantId === 'string' ? o.assistantId : '',
+    from: typeof o.from === 'string' ? o.from : 'room',
+    at: Date.now()
+  });
+  return true;
+};
+const assistantLifeSuccessRowInfo = assistantId => {
+  if (!assistantLifeSuccessOn()) return null;
+  const open = (typeof MSX_SCENARIOS !== 'undefined' && Array.isArray(MSX_SCENARIOS) ? MSX_SCENARIOS : []).filter(x => x && (typeof msxBetaAidOk !== 'function' || msxBetaAidOk(x.aid))).map(x => x.aid);
+  const own = open.includes(assistantId);
+  const name = typeof assistantById === 'function' && assistantById(assistantId) ? assistantById(assistantId).name : '';
+  return {
+    label: '🌱 モンヒロサクセス(β)',
+    sub: own ? `${name}編でモンスターを育てる` : 'モンスターを育てる(いまはみゅあ編だけ)'
+  };
+};
+function AssistantLifeSuccessHost({
+  callNameOf,
+  bondLvOf,
+  onOpenChange
+}) {
+  const [open, setOpen] = useState(ALSX_HOST.open);
+  useEffect(() => {
+    const f = v => setOpen(v);
+    ALSX_HOST.subs.add(f);
+    return () => {
+      ALSX_HOST.subs.delete(f);
+    };
+  }, []);
+  useEffect(() => {
+    try {
+      if (onOpenChange) onOpenChange(!!open);
+    } catch (_) {}
+  }, [!!open]);
+  if (!open || !assistantLifeSuccessOn()) return null;
+  return React.createElement(MonheroSuccessScreen, {
+    key: open.at,
+    onClose: () => ALSX_HOST.set(null),
+    callNameOf: callNameOf,
+    bondLvOf: bondLvOf
+  });
 }
 const ASSISTANT_LIFE_ROOM_FRONT = Object.freeze({
   mua: 'sofa',
@@ -142025,6 +142169,8 @@ const MASMON_CALC = (() => {
   const STAT_MAX = 999;
   const POWER_W = Object.freeze({
     stat: 2.5,
+    statUp: 2,
+    statAt: 900,
     tech: 100,
     mastery: 1,
     lv: 15,
@@ -142032,7 +142178,24 @@ const MASMON_CALC = (() => {
     pop: 10,
     techMax: 8
   });
+  const statPower = v => {
+    const x = clamp(num(v), 0, STAT_MAX);
+    return x * (POWER_W.stat + POWER_W.statUp * x / POWER_W.statAt);
+  };
   const power = o => {
+    const {
+      stats,
+      masteries,
+      lv = 1,
+      loyal = 0,
+      pop = 0
+    } = o && typeof o === 'object' ? o : {};
+    const st = stats && typeof stats === 'object' ? stats : {};
+    const sum = KEYS.reduce((a, k) => a + statPower(st[k]), 0);
+    const tech = (Array.isArray(masteries) ? masteries : []).slice(0, POWER_W.techMax).reduce((a, m) => a + POWER_W.tech + clamp(num(m), 0, 100) * POWER_W.mastery, 0);
+    return Math.round(sum + tech + clamp(num(lv, 1), 1, 99) * POWER_W.lv + clamp(num(loyal), 0, 100) * POWER_W.loyal + clamp(num(pop), 0, 100) * POWER_W.pop);
+  };
+  const powerClassic = o => {
     const {
       stats,
       masteries,
@@ -142045,18 +142208,46 @@ const MASMON_CALC = (() => {
     const tech = (Array.isArray(masteries) ? masteries : []).slice(0, POWER_W.techMax).reduce((a, m) => a + POWER_W.tech + clamp(num(m), 0, 100) * POWER_W.mastery, 0);
     return Math.round(sum * POWER_W.stat + tech + clamp(num(lv, 1), 1, 99) * POWER_W.lv + clamp(num(loyal), 0, 100) * POWER_W.loyal + clamp(num(pop), 0, 100) * POWER_W.pop);
   };
-  const RANKS = Object.freeze([['G', 0], ['F', 2000], ['E', 3000], ['D', 4500], ['C', 6000], ['B', 8000], ['A', 11000], ['S', 14000], ['SS', 16000], ['SSS', 18000], ['M', 19500]]);
+  const RANKS_CLASSIC = Object.freeze([['G', 0], ['F', 2000], ['E', 3000], ['D', 4500], ['C', 6000], ['B', 8000], ['A', 11000], ['S', 14000], ['SS', 16000], ['SSS', 18000], ['M', 19500]]);
+  const rankClassicOf = p => {
+    const v = num(p);
+    let i = 0;
+    RANKS_CLASSIC.forEach(([, min], j) => {
+      if (v >= min) i = j;
+    });
+    return RANKS_CLASSIC[i][0];
+  };
+  const RANKS = Object.freeze([['G', 0], ['F', 2000], ['E', 3000], ['D', 4500], ['C', 6000], ['B', 8000], ['A', 11000], ['S', 14000], ['SS', 16000], ['SSS', 18000], ['M', 20000]]);
+  const M_STEP = 500;
+  const M_LETTERS = Object.freeze(['', 'G', 'F', 'E', 'D', 'C', 'B', 'A']);
+  const mLabelOf = v => {
+    const i = Math.min(M_LETTERS.length * 10 - 1, Math.max(0, Math.floor((v - RANKS[RANKS.length - 1][1]) / M_STEP)));
+    const b = Math.floor(i / 10),
+      n = i % 10;
+    return {
+      label: `M${M_LETTERS[b]}${n ? n : ''}`,
+      labelMin: RANKS[RANKS.length - 1][1] + i * M_STEP,
+      labelNext: i + 1 < M_LETTERS.length * 10 ? RANKS[RANKS.length - 1][1] + (i + 1) * M_STEP : null
+    };
+  };
   const rankOf = p => {
     const v = num(p);
     let i = 0;
     RANKS.forEach(([, min], j) => {
       if (v >= min) i = j;
     });
+    const key = RANKS[i][0];
+    const m = key === 'M' ? mLabelOf(v) : {
+      label: key,
+      labelMin: RANKS[i][1],
+      labelNext: RANKS[i + 1] ? RANKS[i + 1][1] : null
+    };
     return {
-      key: RANKS[i][0],
+      key,
       min: RANKS[i][1],
       next: RANKS[i + 1] ? RANKS[i + 1][1] : null,
-      index: i
+      index: i,
+      ...m
     };
   };
   const FUSE = Object.freeze({
@@ -142316,8 +142507,14 @@ const MASMON_CALC = (() => {
     KEYS,
     STAT_MAX,
     POWER_W,
+    statPower,
     power,
+    powerClassic,
+    RANKS_CLASSIC,
+    rankClassicOf,
     RANKS,
+    M_STEP,
+    M_LETTERS,
     rankOf,
     FUSE,
     fuseBonus,
@@ -142837,7 +143034,7 @@ function AmgbRankChip({
       boxShadow: frame ? `0 0 0 2px #fde68a` : 'none'
     },
     "data-amgb-rank": rank.key
-  }, rank.key);
+  }, rank.label || rank.key);
 }
 function AmgbPowerTag({
   aid,
@@ -143015,9 +143212,9 @@ function AmgbPanel({
     rank: p.rank
   }), p.power.toLocaleString()) : React.createElement("p", {
     className: "text-[12px] font-bold text-slate-400"
-  }, "—")), p && p.rank.next && React.createElement("p", {
+  }, "—")), p && (p.rank.labelNext || p.rank.next) && React.createElement("p", {
     className: "text-right text-[9.5px] font-bold text-slate-400"
-  }, "次のランクまで ", (p.rank.next - p.power).toLocaleString()), React.createElement("div", {
+  }, "次のランクまで ", ((p.rank.labelNext || p.rank.next) - p.power).toLocaleString()), React.createElement("div", {
     className: "mt-1.5 grid grid-cols-2 gap-x-3 gap-y-1"
   }, React.createElement("div", {
     className: "flex items-center gap-1.5 text-[10.5px] font-bold text-slate-200"
@@ -146792,7 +146989,8 @@ const ambwIsHighlight = (e, maxHp) => {
 };
 const AMBW_CSS = `
 .ambw{position:fixed;inset:0;z-index:9500;overflow-y:auto;background:linear-gradient(180deg,#221a44,#141026 40%);color:#fff;font-weight:700;-webkit-overflow-scrolling:touch}
-.ambw-in{max-width:460px;margin:0 auto;padding:10px 12px 28px}
+/* iPhone の時計・電波の帯(上)とホームの棒(下)・横向きの切り欠きにかからないよう、端の安全な余白を足す(2026-11-14 えるびんさん「もどるが押せない」) */
+.ambw-in{max-width:460px;margin:0 auto;padding:max(10px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) max(28px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left))}
 .ambw-top{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12px;font-weight:900;color:#f9a8d4}
 .ambw-top b{color:#fff;background:#3b3566;border-radius:99px;padding:2px 10px;white-space:nowrap}
 .ambw-card{background:#1e1a36;border:1px solid #3b3566;border-radius:14px;padding:9px;margin-top:8px}
@@ -155815,7 +156013,7 @@ function MonsucFuseSheet({
     className: "mt-3 min-h-[44px] w-full rounded-xl bg-slate-700 text-[13px] font-black"
   }, "閉じる")) : !main ? React.createElement(React.Fragment, null, React.createElement("p", {
     className: "text-[11px] font-bold text-slate-300"
-  }, "① 主の親を選んでください。生まれるモンスターの主血統と型は、主の親から受け継ぎます"), usable.map(m => card(m, () => setMain(m.id), 'border-white/15 bg-slate-800')), usable.length < 2 && React.createElement("p", {
+  }, "① 主の親を選んでください。生まれるモンスターの主血統は、主の親から受け継ぎます。成長の型は、生まれたモンスターの種類で決まります"), usable.map(m => card(m, () => setMain(m.id), 'border-white/15 bg-slate-800')), usable.length < 2 && React.createElement("p", {
     className: "mt-2 text-[11px] font-bold text-slate-400",
     "data-monsuc-fuse-none": true
   }, "育て終えたモンスターが2体そろうと合体できます(編成・貸し出し中のモンスターは使えません)")) : !mat ? React.createElement(React.Fragment, null, React.createElement("p", {
@@ -155831,7 +156029,7 @@ function MonsucFuseSheet({
     className: "text-[11px] text-amber-200"
   }, plan.child.gen, "代目 ・ 未育成"), React.createElement("small", {
     className: "block text-[10px] font-bold text-slate-300"
-  }, "型: ", typeof MASMON_CALC !== 'undefined' && MASMON_CALC.typeOf ? MASMON_CALC.typeOf(plan.child.gt).name : '', plan.typeChanged ? '(主の親とは別の型になりました)' : '(主の親から)'))), React.createElement("div", {
+  }, "型: ", typeof MASMON_CALC !== 'undefined' && MASMON_CALC.typeOf ? MASMON_CALC.typeOf(plan.child.gt).name : '', "(生まれたモンスターの種類の型)"))), React.createElement("div", {
     className: "mt-1 rounded-xl bg-slate-800 p-2",
     "data-monsuc-fuse-plan": true
   }, React.createElement("p", {
@@ -163184,6 +163382,7 @@ const MSX_CSS = `
 .msx .v-hd .rt{background:#3b3566;border-radius:99px;padding:3px 9px;font-size:11px;font-weight:900;white-space:nowrap}
 .msx .v-body{flex:1;min-height:0;display:flex;flex-direction:column;padding:0 10px 8px}
 .msx .v-body>*{flex:none}
+.msx .v-body>.msx-scroll{flex:1 1 0;min-height:0}
 .msx .v-band{background:linear-gradient(180deg,#241d4a,#1a1636);border:1px solid #4a4380;border-radius:14px;padding:6px 8px 6px;margin-top:5px;box-shadow:inset 0 1px 0 #ffffff14}
 .msx .v-b1{display:flex;align-items:center;gap:6px}
 .msx .v-turn{flex:1;min-width:0;display:flex;align-items:center;gap:6px}
@@ -163729,6 +163928,85 @@ const MSX_CSS = `
 .msx-sheet{width:100%;max-height:100%;overflow-y:auto;background:linear-gradient(180deg,#241d4a,#16122e);border:1px solid #f472b6aa;border-radius:16px;padding:12px;box-shadow:0 10px 30px #000a}
 .msx-sheet h3{margin:0 0 6px;font-size:15px;font-weight:900;color:#f9a8d4}
 .msx-row{display:flex;align-items:center;gap:6px}
+/* モンスターの詳細(2026-11-14 手本の組み立て・見た目はうちの物) */
+.msx-md{padding:8px 10px}
+.msx-md-ti{text-align:center}
+.msx .msx-sheet h3.msx-md-ti{margin:0 0 4px}
+.msx-md-scroll{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+.msx-md-top{display:grid;grid-template-columns:minmax(0,38%) minmax(0,1fr);gap:6px}
+.msx-md-art{position:relative;display:flex;flex-direction:column;align-items:center;border-radius:12px;background:linear-gradient(180deg,#3b2f6b,#1b1638);padding:4px;min-height:150px}
+.msx-md-art .nm{align-self:stretch;font-size:12px;font-weight:900;color:#fde047;line-height:1.3;overflow-wrap:anywhere}.msx-md-art .nm small{display:block;font-size:10px;color:#cbd5e1}
+.msx-md-art img,.msx-md-art>span{flex:1 1 auto;width:100%;max-height:min(150px,30cqh);object-fit:contain;filter:drop-shadow(0 4px 3px #0008)}
+.msx-md-art .pw{align-self:stretch;display:flex;align-items:center;gap:3px;background:#0f172acc;border-radius:999px;padding:2px 8px;margin-top:2px}
+.msx-md-art .pw small{flex:none;font-size:10px;color:#cbd5e1;white-space:nowrap}.msx-md-art .pw b{flex:1;min-width:0;font-size:14px;text-align:right;white-space:nowrap}.msx-md-art .pw i{flex:none}
+.msx-md-panel{min-width:0;display:flex;flex-direction:column}
+.msx-md-tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:2px}
+.msx .msx-md-tabs button,.msx .msx-md-dists button{border-radius:8px 8px 0 0;padding:4px 0;text-align:center;font-size:11px;font-weight:900;background:#2b2550;color:#cbd5e1}
+.msx .msx-md-tabs button.on,.msx .msx-md-dists button.on{background:#fde047;color:#1e1b4b}
+.msx-md-box{flex:1;background:#0f172a;border-radius:0 0 10px 10px;padding:5px 6px}
+.msx-md-box .cap{display:flex;justify-content:space-between;font-size:10px;color:#f9a8d4;font-weight:900}
+.msx-md-st{display:flex;align-items:center;gap:4px;margin:3px 0;font-size:11px}
+.msx-md-st .n{flex:none;width:5.2em;white-space:nowrap;font-size:10.5px}
+.msx-md-st .v{flex:1;min-width:0;display:flex;flex-direction:column}
+.msx-md-st .v b{font-size:14px;line-height:1.1;text-align:right}
+.msx-md-st .g{height:4px;border-radius:2px;background:#334155;overflow:hidden}.msx-md-st .g i{display:block;height:100%}
+.msx-md-st .a{flex:none;width:1.4em;text-align:center;font-weight:900;color:#fde047}.msx-md-st .a.lo{color:#94a3b8}
+.msx-md-kv{display:flex;gap:6px;align-items:baseline;font-size:11px;padding:2px 0;border-bottom:1px solid #1e293b}
+.msx-md-kv>b{flex:none;width:6em;color:#f9a8d4;font-size:10.5px}.msx-md-kv>span{flex:1;min-width:0;overflow-wrap:anywhere}.msx-md-kv .gd{font-size:14px;font-weight:900;color:#fde047}
+.msx-md-dex{font-size:11px;font-weight:500;line-height:1.6;margin-top:4px}
+.msx-md-bot{margin-top:6px}
+.msx-md-cap{font-size:12px;font-weight:900;color:#f9a8d4}.msx-md-cap small{font-size:10px;color:#cbd5e1;margin-left:6px;font-weight:700}
+.msx-md-dists{display:grid;grid-template-columns:repeat(5,1fr);gap:2px;margin-top:3px}
+.msx-md-tw{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:6px;background:#0f172a;border-radius:0 0 10px 10px;padding:5px}
+.msx-md-tl{display:flex;flex-direction:column;gap:3px;max-height:200px;overflow-y:auto}.msx-md-tl>*{flex:none}
+.msx .msx-md-tl button{display:block;text-align:left;border-radius:8px;padding:3px 6px;background:#1e1a36;border:1px solid #334155;color:#cbd5e1}
+.msx .msx-md-tl button.got{color:#fff;border-color:#a78bfa}.msx .msx-md-tl button.on{border-color:#fde047;background:#3b2f0b}
+.msx-md-tl b{display:block;font-size:11px;overflow-wrap:anywhere}.msx-md-tl small{display:block;font-size:10px;color:#cbd5e1}
+.msx-md-td .tn{font-size:12px;font-weight:900;color:#fde047;margin-bottom:2px;overflow-wrap:anywhere}
+@container (max-width: 359px){.msx-md-top{grid-template-columns:1fr}.msx-md-art{flex-direction:row;flex-wrap:wrap;min-height:0}.msx-md-art img,.msx-md-art>span{width:34%;max-height:90px}.msx-md-tw{grid-template-columns:1fr}.msx-md-tl{max-height:150px}}
+/* 育成中の「能力」(いじる物だけ・2026-11-14) */
+.msx-ab-row{display:flex;align-items:center;gap:6px;margin-top:5px}
+.msx-ab-row .n{flex:1;min-width:0;font-size:12px;font-weight:900}.msx-ab-row b{width:3em;text-align:right}
+.msx-ab-tech{display:inline-block;background:#0f172a;border:1px solid #a78bfa;border-radius:8px;padding:2px 7px;margin:3px 3px 0 0;font-size:11px}
+/* 編成: 枠を押して選ぶ・集まりやすいトレーニングの表(2026-11-14) */
+.msx .msx-slot-tap{cursor:pointer;outline:1px dashed #f9a8d488;outline-offset:-2px}
+.msx .msx-heat-btn{display:block;width:100%;text-align:left;cursor:pointer}
+.msx-pick-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:4px}
+.msx .msx-pick{display:flex;flex-direction:column;align-items:center;gap:1px;background:#0f172a;border:1px solid #334155;border-radius:10px;padding:4px 2px;min-width:0;color:#fff}
+.msx .msx-pick.on{border-color:#fde047;background:#3b2f0b}
+.msx-pick img{width:40px;height:40px;object-fit:contain}.msx-pick b{font-size:11px;max-width:100%;overflow-wrap:anywhere;text-align:center}.msx-pick small{font-size:10px;color:#cbd5e1;text-align:center;line-height:1.25}
+.msx-gt-row{background:#0f172a;border-radius:10px;padding:5px 8px;margin:4px 0}
+.msx-gt-row .hd{display:flex;align-items:center;gap:5px;font-size:12px}.msx-gt-row .hd .ic{font-size:16px}.msx-gt-row .hd b{flex:1;min-width:0}
+.msx-gt-row .hd .st{font-size:10.5px;color:#fde047}.msx-gt-row .hd .n{font-size:11px;color:#f9a8d4;font-weight:900}
+.msx-gt-mon{display:flex;align-items:center;gap:5px;margin-top:3px;font-size:11px}
+.msx-gt-mon img{flex:none;width:24px;height:24px;border-radius:7px;object-fit:contain;background:#1e1a36}.msx-gt-mon .nm{flex:1;min-width:0;overflow-wrap:anywhere}.msx-gt-mon .v{flex:0 1 auto;font-size:10px;color:#cbd5e1;text-align:right}
+.msx-gt-none{font-size:10.5px;color:#94a3b8;margin-top:2px}
+/* 選ぶ画面: はじめの能力(数字を大きく・伸びやすさは小さく)と「くわしく」の窓(2026-11-14) */
+.msx-dt-hd{display:flex;align-items:center;gap:6px}.msx-dt-hd .h1{flex:1;min-width:0}
+.msx .msx-dt-more{flex:none;border-radius:999px;padding:3px 10px;font-size:11px;font-weight:900;background:#f472b6;color:#fff;box-shadow:0 2px 0 #9d174d}
+.msx-dt-sm{font-size:10px;font-weight:700;color:#cbd5e1}
+.msx-st6{display:grid;grid-template-columns:repeat(3,1fr);gap:3px;margin-top:4px;text-align:center}
+.msx-st6 div{background:#0f172a;border-radius:8px;padding:2px 0 3px;line-height:1.15;min-width:0}
+.msx-st6 .n{display:block;font-size:10px;color:#cbd5e1}
+.msx-st6 b{display:block;font-size:20px;color:#fff;letter-spacing:.5px}
+.msx-st6 i{display:block;font-style:normal;font-size:10px;color:#fde047}.msx-st6 i.lo{color:#94a3b8}
+.msx-dt{display:flex;flex-direction:column;max-height:100%;padding:10px}.msx-dt>*{flex:none}.msx-dt>.msx-dt-body{flex:1 1 auto}
+.msx-dt-top{display:flex;align-items:flex-end;gap:8px}
+.msx-dt-top img{flex:none;width:30%;max-width:min(120px,24cqh);aspect-ratio:1;object-fit:contain;filter:drop-shadow(0 4px 3px #0008)}
+.msx-dt-top .nm{flex:1;min-width:0;line-height:1.5}
+.msx-dt-tabs{margin-top:6px}
+.msx-dt-body{flex:1 1 auto;min-height:0;overflow-y:auto;margin-top:6px;padding-right:2px}
+.msx-dt-cap{font-size:11px;font-weight:900;color:#f9a8d4;margin:2px 0 4px}
+.msx-dt-bar{display:flex;align-items:center;gap:6px;margin:3px 0;font-size:11px}
+.msx-dt-bar .n{flex:none;width:4.5em}.msx-dt-bar b{flex:none;width:2.4em;text-align:right;font-size:15px}
+.msx-dt-bar .g{flex:1;min-width:0;height:8px;border-radius:4px;background:#0f172a;overflow:hidden}.msx-dt-bar .g i{display:block;height:100%;background:linear-gradient(90deg,#f472b6,#fde047)}
+.msx-dt-bar .a{flex:none;width:1.6em;text-align:center;font-weight:900;color:#fde047}.msx-dt-bar .a.lo{color:#94a3b8}
+.msx-dt-dist{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;text-align:center}
+.msx-dt-dist div{background:#0f172a;border-radius:8px;padding:4px 0}.msx-dt-dist span{display:block;font-size:11px;color:#cbd5e1}.msx-dt-dist b{display:block;font-size:18px;color:#fde047}
+.msx-dt-tech{display:flex;align-items:center;gap:6px;background:#0f172a;border-radius:8px;padding:4px 8px;margin:3px 0;font-size:11px}
+.msx-dt-tech .k{flex:none;font-size:10px;color:#7dd3fc}.msx-dt-tech b{flex:1;min-width:0;overflow-wrap:anywhere}.msx-dt-tech .d{flex:none;font-size:10px;color:#cbd5e1}
+.msx .msx-dt-close{display:block;width:100%;margin-top:8px;border-radius:12px;padding:10px;font-size:13px;font-weight:900;text-align:center;color:#fff;background:#1e1a36;border:1px solid #4a4380}
+.msx-dt-dex{font-size:12px;font-weight:500;line-height:1.7;background:#0f172a;border-radius:10px;padding:8px 10px}
 .msx-btn{display:block;width:100%;border-radius:12px;padding:10px;font-size:13px;font-weight:900;text-align:center;background:#2b3348;margin-top:6px}
 .msx-btn.go{background:linear-gradient(90deg,#f472b6,#fb923c);box-shadow:0 2px 0 #9d174d}
 .msx-btn.sub{background:#1e1a36;border:1px solid #4a4380}
@@ -163771,6 +164049,7 @@ const MSX_KEYS = Object.freeze({
   meta: 'mh_monsuc_meta_v1'
 });
 const MSX_CORE_SRC = 'data/monhero-success.js';
+const MSX_LOGO_ART = 'images/success/logo-monhero-success.png';
 const MSX_ASSIST_SRC = 'data/monhero-success-assist.js';
 const MSX_SCRIPT_SRC = 'data/monhero-success-script-engine.js';
 const MSX_EVENTS_SRC = 'data/monhero-success-events.js';
@@ -164437,7 +164716,7 @@ const msxAptOf = sp => {
   const a = typeof AMG_APT !== 'undefined' && AMG_APT && typeof AMG_APT[sp] === 'string' && AMG_APT[sp].length === 6 ? AMG_APT[sp] : 'CCCCCC';
   return a.split('');
 };
-const msxTeamSrc = (slot, box) => {
+const msxTeamSrc = (slot, box, own) => {
   if (slot && slot.box) {
     const m = box.mons.find(x => x.id === slot.box);
     if (m) return {
@@ -164461,7 +164740,7 @@ const msxTeamSrc = (slot, box) => {
   return {
     kind: 'base',
     species: sp,
-    name: msxMonName(sp)
+    name: sp === own ? `${msxMonName(sp)}(ベースモン)` : msxMonName(sp)
   };
 };
 function MsxSteps({
@@ -164494,6 +164773,377 @@ function MsxHd({
     className: "rt"
   }, right));
 }
+const msxStartPreview = (SUC, species, type, aptBase, startSt) => {
+  const out = {
+    peak: '',
+    grades: null,
+    power: null,
+    rank: null
+  };
+  try {
+    if (typeof SUC.newRun !== 'function') return out;
+    const s = SUC.newRun({
+      id: 'peek',
+      species,
+      ...(Number.isInteger(type) ? {
+        type
+      } : {}),
+      ...(Array.isArray(aptBase) ? {
+        aptBase
+      } : {})
+    });
+    const pk = typeof SUC.peakInfo === 'function' ? SUC.peakInfo(s) : null;
+    if (pk && Number.isInteger(pk.from) && typeof SUC.periodOf === 'function') {
+      const a = SUC.periodOf(pk.from).name;
+      const b = SUC.periodOf(pk.to).name;
+      out.peak = a === b ? a : `${a}〜${b}`;
+    }
+    if (typeof SUC.aptGradesOf === 'function') out.grades = SUC.aptGradesOf(s);
+    if (typeof SUC.evaluate === 'function') {
+      const e = SUC.evaluate({
+        ...s,
+        stats: startSt || (typeof SUC.initStats === 'function' ? SUC.initStats(species) : s.stats)
+      });
+      out.power = e.power;
+      out.rank = e.rank;
+    }
+  } catch (e) {}
+  return out;
+};
+const MSX_DIST_NAMES = ['零', '近', '中', '遠'];
+const msxLineName = id => id && typeof MONSTER_LINEAGES === 'object' && MONSTER_LINEAGES && MONSTER_LINEAGES[id] ? MONSTER_LINEAGES[id].name : '';
+const MSX_STAT_COLOR = Object.freeze({
+  life: '#facc15',
+  pow: '#f87171',
+  wise: '#4ade80',
+  hit: '#f472b6',
+  eva: '#60a5fa',
+  tough: '#818cf8'
+});
+function MsxMonDetail({
+  species,
+  name,
+  art,
+  st,
+  apt,
+  type,
+  peak,
+  grades,
+  known,
+  power,
+  rank,
+  sub,
+  onClose,
+  SUC
+}) {
+  const [tab, setTab] = useState('base');
+  const [dist, setDist] = useState(-1);
+  const line = typeof MONSTER_LINEAGE_MAP === 'object' && MONSTER_LINEAGE_MAP ? MONSTER_LINEAGE_MAP[species] : null;
+  const main = line ? msxLineName(line.main) : '';
+  const subL = line ? msxLineName(line.sub || line.main) : '';
+  const dex = typeof MONSTER_DEX_DESCRIPTIONS === 'object' && MONSTER_DEX_DESCRIPTIONS && MONSTER_DEX_DESCRIPTIONS[species];
+  const typeName = type != null && typeof MASMON_CALC !== 'undefined' ? MASMON_CALC.typeOf(type).name : '—';
+  const all = typeof SUC.techsOf === 'function' ? SUC.techsOf(species).filter(Boolean) : [];
+  const has = t => Array.isArray(known) ? known.includes(t.id) : !!(t.learn && t.learn.start);
+  const list = all.filter(t => dist < 0 || Array.isArray(t.dist) && t.dist.includes(dist)).sort((x, y) => has(y) - has(x) || (Number(x.rank) || 0) - (Number(y.rank) || 0));
+  const [pickT, setPickT] = useState(() => (all.find(has) || all[0] || {}).id || null);
+  const tech = all.find(t => t.id === pickT) || list[0] || null;
+  const grade = (k, v) => (typeof msaTechGrade === 'function' ? msaTechGrade(k, v) : '') || '−';
+  const maxSt = Math.max(300, ...MSX_STATS.map(k => Number(st[k]) || 0));
+  const TOP = [['base', '基礎'], ['feat', '特徴'], ['apt', '適性']];
+  return React.createElement("div", {
+    className: "msx-ov msx-fade",
+    "data-msx-detail": true,
+    onClick: onClose
+  }, React.createElement("div", {
+    className: "msx-sheet msx-dt msx-md",
+    onClick: e => e.stopPropagation()
+  }, React.createElement("h3", {
+    className: "msx-md-ti"
+  }, "モンスターの詳細"), React.createElement("div", {
+    className: "msx-md-scroll"
+  }, React.createElement("div", {
+    className: "msx-md-top"
+  }, React.createElement("div", {
+    className: "msx-md-art"
+  }, React.createElement("div", {
+    className: "nm"
+  }, name || msxMonName(species), sub ? React.createElement("small", null, sub) : null), art || React.createElement("img", {
+    src: msxMonImg(species),
+    alt: ""
+  }), power != null ? React.createElement("div", {
+    className: "pw"
+  }, React.createElement("small", null, "総合力"), React.createElement("b", null, msxFmt(power)), rank ? React.createElement("i", {
+    className: msxRankCls(rank)
+  }, rank) : null) : null), React.createElement("div", {
+    className: "msx-md-panel"
+  }, React.createElement("div", {
+    className: "msx-md-tabs"
+  }, TOP.map(([k, n]) => React.createElement("button", {
+    type: "button",
+    key: k,
+    className: tab === k ? 'on' : '',
+    "data-msx-detail-tab": k,
+    onClick: () => setTab(k)
+  }, n))), tab === 'base' ? React.createElement("div", {
+    className: "msx-md-box"
+  }, React.createElement("div", {
+    className: "cap"
+  }, "能力", React.createElement("span", null, "伸び")), MSX_STATS.map((k, i) => React.createElement("div", {
+    key: k,
+    className: "msx-md-st"
+  }, React.createElement("span", {
+    className: "n"
+  }, MSX_STAT_ICON[k], MSX_STAT_NAME[k]), React.createElement("span", {
+    className: "v"
+  }, React.createElement("b", null, st[k]), React.createElement("span", {
+    className: "g"
+  }, React.createElement("i", {
+    style: {
+      width: `${Math.max(2, Math.min(100, (Number(st[k]) || 0) / maxSt * 100))}%`,
+      background: MSX_STAT_COLOR[k]
+    }
+  }))), React.createElement("span", {
+    className: `a${apt[i] > 'B' ? ' lo' : ''}`
+  }, apt[i])))) : null, tab === 'feat' ? React.createElement("div", {
+    className: "msx-md-box"
+  }, React.createElement("div", {
+    className: "msx-md-kv"
+  }, React.createElement("b", null, "成長の型"), React.createElement("span", {
+    className: "yel"
+  }, typeName)), React.createElement("div", {
+    className: "msx-md-kv"
+  }, React.createElement("b", null, "伸びどき"), React.createElement("span", null, peak || '—')), React.createElement("div", {
+    className: "msx-md-kv"
+  }, React.createElement("b", null, "血統"), React.createElement("span", null, main ? `${main}${subL && subL !== main ? ` × ${subL}` : '(純血)'}` : '—')), React.createElement("div", {
+    className: "msx-md-dex"
+  }, dex || 'このモンスターの図鑑は調査中')) : null, tab === 'apt' ? React.createElement("div", {
+    className: "msx-md-box"
+  }, React.createElement("div", {
+    className: "cap"
+  }, "間合い適性"), React.createElement("div", {
+    className: "msx-dt-dist"
+  }, MSX_DIST_NAMES.map((d, i) => React.createElement("div", {
+    key: d
+  }, React.createElement("span", null, d), React.createElement("b", null, grades ? grades[i] : '—')))), React.createElement("div", {
+    className: "msx-note",
+    style: {
+      marginTop: 4
+    }
+  }, "適性が高い間合いほど、その間合いの技がよく当たる")) : null)), React.createElement("div", {
+    className: "msx-md-bot",
+    "data-msx-detail-techs": true
+  }, React.createElement("div", {
+    className: "msx-md-cap"
+  }, "技", React.createElement("small", null, Array.isArray(known) ? '★ 覚えている技' : '★ はじめから使える技', "・ほかは修行で覚える")), React.createElement("div", {
+    className: "msx-md-dists"
+  }, [-1, 3, 2, 1, 0].map(d => React.createElement("button", {
+    type: "button",
+    key: d,
+    className: dist === d ? 'on' : '',
+    onClick: () => setDist(d)
+  }, d < 0 ? '全部' : MSX_DIST_NAMES[d]))), React.createElement("div", {
+    className: "msx-md-tw"
+  }, React.createElement("div", {
+    className: "msx-md-tl"
+  }, list.length ? list.map(t => React.createElement("button", {
+    type: "button",
+    key: t.id,
+    className: `${tech && tech.id === t.id ? 'on' : ''}${has(t) ? ' got' : ''}`,
+    "data-msx-tech": t.id,
+    onClick: () => setPickT(t.id)
+  }, React.createElement("b", null, has(t) ? '★' : '', t.name), React.createElement("small", null, t.kind === 'wise' ? '🧠' : '💪', (Array.isArray(t.dist) ? t.dist : []).map(d => MSX_DIST_NAMES[d]).join(''), "・ガッツ", t.guts))) : React.createElement("div", {
+    className: "msx-note"
+  }, "この間合いの技はない")), tech ? React.createElement("div", {
+    className: "msx-md-td"
+  }, React.createElement("div", {
+    className: "tn"
+  }, tech.name), React.createElement("div", {
+    className: "msx-md-kv"
+  }, React.createElement("b", null, "種類"), React.createElement("span", null, tech.kind === 'wise' ? '🧠 かしこさ' : '💪 ちから')), React.createElement("div", {
+    className: "msx-md-kv"
+  }, React.createElement("b", null, "間合い"), React.createElement("span", null, (Array.isArray(tech.dist) ? tech.dist : []).map(d => MSX_DIST_NAMES[d]).join('・') || '—')), React.createElement("div", {
+    className: "msx-md-kv"
+  }, React.createElement("b", null, "消費ガッツ"), React.createElement("span", null, tech.guts)), React.createElement("div", {
+    className: "msx-md-kv"
+  }, React.createElement("b", null, "ダメージ"), React.createElement("span", {
+    className: "gd"
+  }, grade('power', tech.power))), React.createElement("div", {
+    className: "msx-md-kv"
+  }, React.createElement("b", null, "命中"), React.createElement("span", {
+    className: "gd"
+  }, grade('hit', tech.hit))), React.createElement("div", {
+    className: "msx-md-kv"
+  }, React.createElement("b", null, "ガッツダウン"), React.createElement("span", {
+    className: "gd"
+  }, grade('gd', tech.gd))), React.createElement("div", {
+    className: "msx-md-kv"
+  }, React.createElement("b", null, "クリティカル"), React.createElement("span", {
+    className: "gd"
+  }, grade('crit', tech.crit))), React.createElement("div", {
+    className: "msx-md-kv"
+  }, React.createElement("b", null, "覚え方"), React.createElement("span", null, has(tech) ? Array.isArray(known) ? '覚えている' : 'はじめから' : '修行で覚える'))) : null))), React.createElement("button", {
+    type: "button",
+    className: "msx-dt-close",
+    "data-msx-detail-close": true,
+    onClick: onClose
+  }, "とじる")));
+}
+function MsxSlotPicker({
+  idx,
+  cur,
+  own,
+  unlocked,
+  raised,
+  teamBox,
+  SUC,
+  onPick,
+  onClose
+}) {
+  const thumb = {
+    width: 34,
+    height: 34,
+    borderRadius: 9,
+    objectFit: 'contain',
+    background: '#0f172a'
+  };
+  const topTxt = src => {
+    try {
+      const m = SUC.memberOf(src);
+      return m.top.slice(0, 2).map(k => `${MSX_STAT_ICON[k]}${MSX_STAT_NAME[k]}`).join(' ');
+    } catch (e) {
+      return '';
+    }
+  };
+  const boxFull = teamBox.length >= 5 && !(cur && cur.box);
+  return React.createElement("div", {
+    className: "msx-ov msx-fade",
+    "data-msx-slot-picker": true,
+    onClick: onClose
+  }, React.createElement("div", {
+    className: "msx-sheet msx-dt",
+    onClick: e => e.stopPropagation()
+  }, React.createElement("h3", null, idx + 1, "枠目に入れるモンスター"), React.createElement("div", {
+    className: "msx-dt-body"
+  }, React.createElement("div", {
+    className: "msx-dt-cap"
+  }, "ベースモン"), React.createElement("div", {
+    className: "msx-pick-grid"
+  }, unlocked.map(sp => {
+    const on = cur && !cur.box && cur.base === sp && !cur.auto;
+    return React.createElement("button", {
+      type: "button",
+      key: sp,
+      className: `msx-pick${on ? ' on' : ''}`,
+      "data-msx-pick-base": sp,
+      onClick: () => onPick({
+        base: sp
+      })
+    }, React.createElement("img", {
+      src: msxMonThumb(sp),
+      alt: ""
+    }), React.createElement("b", null, msxMonName(sp)), React.createElement("small", null, sp === own ? '育てるモンスターと同じ種' : topTxt({
+      kind: 'base',
+      species: sp
+    })));
+  })), React.createElement("div", {
+    className: "msx-dt-cap",
+    style: {
+      marginTop: 8
+    }
+  }, "保存枠のモンスター(5体まで)"), raised.length ? raised.map(m => {
+    const on = cur && cur.box === m.id;
+    const used = !on && teamBox.includes(m.id);
+    return React.createElement("button", {
+      type: "button",
+      key: m.id,
+      className: `v-item${on ? ' sel' : ''}`,
+      disabled: !on && boxFull && !used,
+      style: {
+        padding: '4px 8px',
+        width: '100%'
+      },
+      onClick: () => onPick({
+        box: m.id
+      })
+    }, React.createElement("img", {
+      src: msxMonThumb(m.species),
+      alt: "",
+      style: thumb
+    }), React.createElement("div", null, m.nick || msxMonName(m.species), " ", m.rank ? React.createElement("i", {
+      className: msxRankCls(m.rank)
+    }, m.rank) : null, React.createElement("small", null, msxMonName(m.species), used ? '・ほかの枠から移す' : '')), React.createElement("span", {
+      className: "pr"
+    }, on ? '✅ この枠' : '入れる'));
+  }) : React.createElement("div", {
+    className: "msx-note"
+  }, "まだいません。育て終えたモンスターが入ります")), React.createElement("button", {
+    type: "button",
+    className: "msx-dt-close",
+    "data-msx-slot-close": true,
+    onClick: onClose
+  }, "とじる")));
+}
+function MsxGatherTable({
+  members,
+  SUC,
+  onClose
+}) {
+  const RANK = ['1位', '2位', '3位'];
+  return React.createElement("div", {
+    className: "msx-ov msx-fade",
+    "data-msx-gather": true,
+    onClick: onClose
+  }, React.createElement("div", {
+    className: "msx-sheet msx-dt",
+    onClick: e => e.stopPropagation()
+  }, React.createElement("h3", null, "集まりやすいトレーニング"), React.createElement("div", {
+    className: "msx-note"
+  }, "編成のモンスターは、得意な能力(1位〜3位)のトレーニングに来やすい。来ると、そのトレーニングの伸びが上がる"), React.createElement("div", {
+    className: "msx-dt-body"
+  }, MSX_STATS.map(k => {
+    const rows = members.map(m => ({
+      m,
+      j: Array.isArray(m.top) ? m.top.indexOf(k) : -1
+    })).filter(x => x.j >= 0 && x.j < 3).sort((a, b) => a.j - b.j);
+    return React.createElement("div", {
+      key: k,
+      className: "msx-gt-row",
+      "data-msx-gather-row": k
+    }, React.createElement("div", {
+      className: "hd"
+    }, React.createElement("span", {
+      className: "ic"
+    }, msxTrainIcon(k, 1)), React.createElement("b", null, msxTrainName(k, 1)), React.createElement("span", {
+      className: "st"
+    }, MSX_STAT_ICON[k], MSX_STAT_NAME[k]), React.createElement("span", {
+      className: "n"
+    }, rows.length, "体")), rows.length ? rows.map(({
+      m,
+      j
+    }, i) => {
+      const ch = typeof SUC.gatherChanceOf === 'function' ? SUC.gatherChanceOf(m)[k] : null;
+      return React.createElement("div", {
+        key: i,
+        className: "msx-gt-mon"
+      }, React.createElement("img", {
+        src: msxMonThumb(m.species),
+        alt: ""
+      }), React.createElement("span", {
+        className: "nm"
+      }, m.name), React.createElement("span", {
+        className: "v"
+      }, "得意", RANK[j], ch != null ? `・来やすさ${Math.round(ch * 100)}%` : '', "・伸び+", Math.round(m.bonus[k] || 0), "%"));
+    }) : React.createElement("div", {
+      className: "msx-gt-none"
+    }, "集まりやすいモンスターなし"));
+  })), React.createElement("button", {
+    type: "button",
+    className: "msx-dt-close",
+    "data-msx-gather-close": true,
+    onClick: onClose
+  }, "とじる")));
+}
 function MsxStart({
   data,
   SUC,
@@ -164516,37 +165166,55 @@ function MsxStart({
     base: unlocked[0] || 'Mocchi'
   }));
   const species = pick.box ? (box.mons.find(m => m.id === pick.box) || {}).species || 'Mocchi' : pick.base;
-  const [teamBox, setTeamBox] = useState(() => (meta.team || []).filter(t => t && t.box && raised.some(m => m.id === t.box)).map(t => t.box).slice(0, 5));
+  const [teamSlotsSt, setTeamSlotsSt] = useState(() => {
+    const own0 = unlocked[0] || 'Mocchi';
+    let nb = 0;
+    const o = (meta.team || []).slice(0, 6).map(t => {
+      if (t && t.box && raised.some(m => m.id === t.box) && nb < 5) {
+        nb += 1;
+        return {
+          box: t.box
+        };
+      }
+      return t && t.base && unlocked.includes(t.base) && t.base !== own0 ? {
+        base: t.base
+      } : null;
+    });
+    while (o.length < 6) o.push(null);
+    return o;
+  });
+  const [slotPick, setSlotPick] = useState(null);
+  const [gatherOpen, setGatherOpen] = useState(false);
+  const teamBox = teamSlotsSt.filter(t => t && t.box).map(t => t.box);
   const [friend, setFriend] = useState(null);
   const [lendList, setLendList] = useState(null);
+  const autoBases = useMemo(() => {
+    const o = unlocked.filter(id => id !== species);
+    return o.length ? o : [species];
+  }, [unlocked, species]);
   const team = useMemo(() => {
-    const list = teamBox.map(id => ({
-      box: id
-    }));
-    const bases = [species, ...unlocked.filter(id => id !== species)];
     const room = friend ? 5 : 6;
-    let bi = 0;
-    while (list.length < room) {
-      list.push({
-        base: bases[bi % bases.length] || species
-      });
-      bi += 1;
-    }
+    let ai = 0;
+    const list = teamSlotsSt.slice(0, room).map(t => t || {
+      base: autoBases[ai++ % autoBases.length],
+      auto: true
+    });
     if (friend) list.push({
       friend
     });
     return list;
-  }, [teamBox, species, unlocked, friend]);
+  }, [teamSlotsSt, autoBases, friend]);
   const members = useMemo(() => team.map(t => {
-    const src = t.friend ? t.friend : msxTeamSrc(t, box);
+    const src = t.friend ? t.friend : msxTeamSrc(t, box, species);
     const m = SUC.memberOf(src);
     return {
       ...m,
       name: src.name,
       boxId: src.boxId || null,
-      friend: t.friend ? t.friend.friend : null
+      friend: t.friend ? t.friend.friend : null,
+      auto: !!t.auto
     };
-  }), [team, box, SUC]);
+  }), [team, box, SUC, species]);
   const openLend = async () => {
     if (typeof monsucLendFriends !== 'function') return;
     setLendList('loading');
@@ -164596,18 +165264,29 @@ function MsxStart({
       } : {
         base: species
       },
-      team: team.map(t => t.friend ? t.friend : msxTeamSrc(t, box)),
-      teamSlots: team.filter(t => !t.friend),
+      team: team.map(t => t.friend ? t.friend : msxTeamSrc(t, box, species)),
+      teamSlots: team.filter(t => !t.friend).map(t => t.box ? {
+        box: t.box
+      } : {
+        base: t.base
+      }),
       aid,
       aidBondLv: aidLv,
       items,
       nick: name,
       colors,
       friendId: friend && friend.friend ? friend.friend.id : null,
-      baseFill: [species, ...unlocked.filter(id => id !== species)][5 % Math.max(1, unlocked.length)] || species
+      baseFill: autoBases[0] || species
     });
   };
   const apt = msxAptOf(species);
+  const [detail, setDetail] = useState(false);
+  const fromMon = pick.box ? box.mons.find(m => m.id === pick.box) || null : null;
+  const growType = fromMon && Number.isInteger(fromMon.gt) ? fromMon.gt : typeof SUC.speciesType === 'function' ? SUC.speciesType(species) : null;
+  const growName = growType != null && typeof MASMON_CALC !== 'undefined' ? MASMON_CALC.typeOf(growType).name : '—';
+  const startSt = useMemo(() => fromMon && fromMon.st && typeof fromMon.st === 'object' && typeof SUC.normStats === 'function' ? SUC.normStats(fromMon.st, species) : typeof SUC.initStats === 'function' ? SUC.initStats(species) : {}, [SUC, species, fromMon]);
+  const preview = useMemo(() => msxStartPreview(SUC, species, growType, fromMon && fromMon.aptBase, startSt), [SUC, species, growType, fromMon, startSt]);
+  const peakText = preview.peak;
   const heat = MSX_STATS.map(k => members.filter(m => Array.isArray(m.top) && m.top.includes(k)).length);
   const scene = (style, inner) => React.createElement("div", {
     className: "v-scene",
@@ -164722,35 +165401,97 @@ function MsxStart({
     }, "えらんだ回数 ", picked, "回") : null)), React.createElement("div", {
       className: "v-card sel"
     }, React.createElement("div", {
+      className: "msx-dt-hd"
+    }, React.createElement("div", {
       className: "h1"
-    }, msxMonName(species)), React.createElement("div", {
-      className: "v-kv"
-    }, React.createElement("b", null, "成長の型"), React.createElement("span", null, "はじめるとくじで決まる ", React.createElement("span", {
+    }, msxMonName(species)), React.createElement("button", {
+      type: "button",
+      className: "msx-dt-more",
+      "data-msx-detail-open": true,
+      onClick: () => setDetail(true)
+    }, "🔍 くわしく")), React.createElement("div", {
+      className: "v-kv",
+      "data-msx-start-type": true
+    }, React.createElement("b", null, "成長の型"), React.createElement("span", null, React.createElement("span", {
       className: "yel"
-    }, "(早熟〜晩成)"))), React.createElement("div", {
+    }, growName), peakText ? React.createElement("span", {
+      className: "msx-dt-sm"
+    }, " ピーク ", peakText) : null)), React.createElement("div", {
       className: "sub",
       style: {
         marginTop: 6,
         color: '#f9a8d4',
         fontWeight: 900
       }
-    }, "伸びやすさ(素質)"), React.createElement("div", {
-      className: "v-apt"
+    }, "はじめの能力", React.createElement("span", {
+      className: "msx-dt-sm"
+    }, "(小さい字は伸びやすさ)")), React.createElement("div", {
+      className: "msx-st6",
+      "data-msx-start-stats": true
     }, MSX_STATS.map((k, i) => React.createElement("div", {
-      key: k,
+      key: k
+    }, React.createElement("span", {
+      className: "n"
+    }, MSX_STAT_NAME[k]), React.createElement("b", null, startSt[k]), React.createElement("i", {
       className: apt[i] > 'B' ? 'lo' : ''
-    }, MSX_STAT_NAME[k], React.createElement("b", null, apt[i]))))));
+    }, "伸び ", apt[i]))))), detail && React.createElement(MsxMonDetail, {
+      species: species,
+      name: fromMon && fromMon.nick ? fromMon.nick : msxMonName(species),
+      sub: fromMon ? '合体で生まれたモンスター' : 'ベースモン',
+      st: startSt,
+      apt: apt,
+      type: growType,
+      grades: preview.grades,
+      peak: peakText,
+      power: preview.power,
+      rank: preview.rank,
+      onClose: () => setDetail(false),
+      SUC: SUC
+    }));
     go = 'このモンスターにする ▶';
   } else if (step === 1) {
-    const toggleBox = id => setTeamBox(cur => cur.includes(id) ? cur.filter(x => x !== id) : cur.length >= 5 ? cur : [...cur, id]);
+    const toggleBox = id => setTeamSlotsSt(cur => {
+      const n = cur.slice();
+      const at = n.findIndex(t => t && t.box === id);
+      if (at >= 0) {
+        n[at] = null;
+        return n;
+      }
+      if (n.filter(t => t && t.box).length >= 5) return cur;
+      let i = n.slice(0, 5).findIndex(t => !t);
+      if (i < 0) i = n.slice(0, 5).findIndex(t => t && t.base);
+      if (i < 0) return cur;
+      n[i] = {
+        box: id
+      };
+      return n;
+    });
+    const putSlot = (i, v) => setTeamSlotsSt(cur => {
+      const n = cur.slice();
+      if (v && v.box) {
+        const at = n.findIndex(t => t && t.box === v.box);
+        if (at >= 0) n[at] = null;
+        if (n.filter(t => t && t.box).length >= 5 && !(n[i] && n[i].box)) return cur;
+      }
+      n[i] = v;
+      return n;
+    });
     body = React.createElement(React.Fragment, null, React.createElement("div", {
       className: "v-h"
-    }, "編成の6体", React.createElement("small", null, "保存枠から5体まで+フレンドから1体。強いモンスターほどトレーニングがよく伸びる")), React.createElement("div", {
+    }, "編成の6体", React.createElement("small", null, "枠を押すと、ベースモンか保存枠のモンスターから選べる(保存枠は5体まで)+フレンドから1体。強いモンスターほどトレーニングがよく伸びる")), React.createElement("div", {
       className: "v-slots"
-    }, members.map((m, i) => React.createElement("div", {
+    }, members.map((m, i) => React.createElement("div", _extends({
       key: i,
-      className: `v-sl${m.kind === 'base' ? ' base' : ''}${m.friend ? ' fr' : ''}`
-    }, React.createElement("span", {
+      className: `v-sl${m.kind === 'base' ? ' base' : ''}${m.friend ? ' fr' : ''}${m.friend ? '' : ' msx-slot-tap'}`,
+      "data-msx-slot": i
+    }, m.friend ? {} : {
+      role: 'button',
+      tabIndex: 0,
+      onClick: () => setSlotPick(i),
+      onKeyDown: e => {
+        if (e.key === 'Enter' || e.key === ' ') setSlotPick(i);
+      }
+    }), React.createElement("span", {
       className: `v-pf lg r${m.rank === 'base' ? 'G' : m.rank}${m.kind === 'base' ? ' base' : ''}`
     }, (() => {
       const img = React.createElement("img", {
@@ -164766,24 +165507,29 @@ function MsxStart({
       className: msxRankCls(m.rank)
     }, m.rank), React.createElement("div", {
       className: "t3"
-    }, m.top.slice(0, 2).map(k => `${MSX_STAT_NAME[k]}${Math.round(m.bonus[k] || 0)}%`).join(' ')), React.createElement("div", {
+    }, m.top.slice(0, 2).map(k => `${MSX_STAT_ICON[k]}${MSX_STAT_NAME[k]}${Math.round(m.bonus[k] || 0)}%`).join(' ')), React.createElement("div", {
       className: "bs"
     }, "親密度", m.bond0, "・タッグ+", m.tag, "%"), React.createElement("div", {
       className: "ic"
-    }, m.kind === 'base' ? 'ベースモン' : m.friend ? `借: ${m.friend.name || 'フレンド'}` : '')))), React.createElement("div", {
-      className: "v-card"
+    }, m.kind === 'base' ? m.auto ? 'ベースモン・✎選ぶ' : 'ベースモン・✎変える' : m.friend ? `借: ${m.friend.name || 'フレンド'}` : '✎変える')))), React.createElement("button", {
+      type: "button",
+      className: "v-card msx-heat-btn",
+      "data-msx-gather-open": true,
+      onClick: () => setGatherOpen(true)
     }, React.createElement("div", {
       className: "sub",
       style: {
         color: '#f9a8d4',
         fontWeight: 900
       }
-    }, "この編成が集まりやすいトレーニング"), React.createElement("div", {
+    }, "この編成が集まりやすいトレーニング", React.createElement("span", {
+      className: "msx-dt-sm"
+    }, " 押すと表 ▶")), React.createElement("div", {
       className: "v-heat"
     }, MSX_STATS.map((k, i) => React.createElement("div", {
       key: k,
       className: heat[i] >= 3 ? 'x3' : heat[i] === 2 ? 'x2' : ''
-    }, MSX_STAT_NAME[k], React.createElement("b", null, heat[i], "体"))))), React.createElement("div", {
+    }, msxTrainIcon(k, 1), MSX_STAT_NAME[k], React.createElement("b", null, heat[i], "体"))))), React.createElement("div", {
       className: "v-card",
       style: {
         flex: '1 1 0',
@@ -164837,7 +165583,7 @@ function MsxStart({
       style: {
         marginTop: 4
       }
-    }, "保存枠はまだ空です。育て終えたモンスターがここに入ります(いまは空いた枠をベースモンで埋めます)"), React.createElement("div", {
+    }, "保存枠はまだ空です。上の枠を押すと、入れるベースモンを選べます。育て終えたモンスターは、ここに入ります"), React.createElement("div", {
       className: "sub",
       style: {
         color: '#7dd3fc',
@@ -164904,6 +165650,25 @@ function MsxStart({
       }, on ? '✅ 借りている' : '借りる'));
     })) : null));
     go = 'この編成でいく ▶';
+    if (slotPick != null) body = React.createElement(React.Fragment, null, body, React.createElement(MsxSlotPicker, {
+      idx: slotPick,
+      cur: team[slotPick],
+      own: species,
+      unlocked: unlocked,
+      raised: raised,
+      teamBox: teamBox,
+      SUC: SUC,
+      onPick: v => {
+        putSlot(slotPick, v);
+        setSlotPick(null);
+      },
+      onClose: () => setSlotPick(null)
+    }));
+    if (gatherOpen) body = React.createElement(React.Fragment, null, body, React.createElement(MsxGatherTable, {
+      members: members,
+      SUC: SUC,
+      onClose: () => setGatherOpen(false)
+    }));
   } else if (step === 2) {
     const combo = SUC.TRAIN_COMBO && SUC.TRAIN_COMBO[aid];
     body = React.createElement(React.Fragment, null, React.createElement("div", {
@@ -165064,7 +165829,7 @@ function MsxStart({
       className: "v-chips"
     }, React.createElement("span", {
       className: "v-chip"
-    }, "成長の型: はじめるとくじで決まる"))), React.createElement("label", {
+    }, "成長の型: ", growName))), React.createElement("label", {
       className: "v-inp",
       style: {
         display: 'flex'
@@ -165802,7 +166567,7 @@ function MonheroSuccessScreen({
     cfg.items.filter(k => MSX_ITEM_BY_ID[k] && MSX_ITEM_BY_ID[k].when === 'both').forEach(k => {
       bag[k] = 1;
     });
-    const fromMon = cfg.from && typeof cfg.from.box === 'string' ? data.box.mons.find(m => m.id === cfg.from.box) : null;
+    const fromMon = cfg.from && typeof cfg.from.box === 'string' ? data.box.mons.find(m => m.id === cfg.from.box && !m.raised) || null : null;
     const s = SUC.newRun({
       id,
       species: cfg.species,
@@ -165813,6 +166578,12 @@ function MonheroSuccessScreen({
       bag,
       ...(fromMon && Array.isArray(fromMon.aptBase) ? {
         aptBase: fromMon.aptBase
+      } : {}),
+      ...(fromMon && Number.isInteger(fromMon.gt) ? {
+        type: fromMon.gt
+      } : {}),
+      ...(fromMon && fromMon.st && typeof fromMon.st === 'object' ? {
+        startSt: fromMon.st
       } : {}),
       wonBefore: Array.isArray(data.meta.wonCups) ? data.meta.wonCups : []
     });
@@ -166118,6 +166889,7 @@ function MsxPlay({
   const [kiAt, setKiAt] = useState(null);
   const [actAt, setActAt] = useState(null);
   const [sheet, setSheet] = useState(null);
+  const [detail, setDetail] = useState(false);
   const [, setScriptTick] = useState(0);
   useEffect(() => {
     let alive = true;
@@ -167197,7 +167969,8 @@ function MsxPlay({
     }, "🎒", React.createElement("small", null, "持ち物"), bag.length ? React.createElement("i", null, bag.length) : null), React.createElement("button", {
       type: "button",
       className: "v-bagb r",
-      onClick: () => setSub('stats')
+      "data-msx-detail-open": true,
+      onClick: () => setDetail(true)
     }, "🔍", React.createElement("small", null, "くわしく"))), React.createElement(MsxStRow, {
       stats: s.stats
     }), can.includes('retry') ? React.createElement("div", {
@@ -167334,7 +168107,33 @@ function MsxPlay({
     right: `${s.turn} / ${msxSuc.core.TOTAL_TURNS}ターン`
   }), React.createElement("div", {
     className: "v-body"
-  }, body), foot, sheet === 'dex' && typeof MsxDex === 'function' ? React.createElement(MsxDex, {
+  }, body), foot, detail && typeof MsxMonDetail === 'function' ? (() => {
+    const pk = typeof SUC.peakInfo === 'function' ? SUC.peakInfo(s) : null;
+    const peak = pk && Number.isInteger(pk.from) ? (() => {
+      const a = SUC.periodOf(pk.from).name;
+      const b = SUC.periodOf(pk.to).name;
+      return a === b ? a : `${a}〜${b}`;
+    })() : '';
+    return React.createElement(MsxMonDetail, {
+      species: s.species,
+      name: run.nick,
+      sub: msxMonName(s.species),
+      art: React.createElement(MsxMonArt, {
+        run: run,
+        noPeak: true
+      }),
+      st: s.stats,
+      apt: msxAptOf(s.species),
+      type: s.type,
+      peak: peak,
+      grades: typeof SUC.aptGradesOf === 'function' ? SUC.aptGradesOf(s) : null,
+      known: Array.isArray(s.techs) ? s.techs : [],
+      power: ev.power,
+      rank: ev.rank,
+      SUC: SUC,
+      onClose: () => setDetail(false)
+    });
+  })() : null, sheet === 'dex' && typeof MsxDex === 'function' ? React.createElement(MsxDex, {
     aid: s.aid,
     nick: run.nick,
     onClose: () => setSheet(null)
@@ -167600,12 +168399,23 @@ function MsxStats({
       s: r.state
     });
   };
+  const own = typeof SUC.techsOf === 'function' ? SUC.techsOf(s.species) : [];
+  const techs = (Array.isArray(s.techs) ? s.techs : []).map(id => own.find(t => t && t.id === id)).filter(Boolean);
+  const pk = typeof SUC.peakInfo === 'function' ? SUC.peakInfo(s) : {
+    state: null
+  };
+  const peakSpan = Number.isInteger(pk.from) ? (() => {
+    const a = SUC.periodOf(pk.from).name;
+    const b = SUC.periodOf(pk.to).name;
+    return a === b ? a : `${a}〜${b}`;
+  })() : '';
   return React.createElement(React.Fragment, null, React.createElement(MsxBand, {
     s: s,
     v: v,
     ev: ev
   }), React.createElement("div", {
-    className: "msx-scroll"
+    className: "msx-scroll",
+    "data-msx-ability": true
   }, React.createElement("div", {
     className: "v-card pk"
   }, React.createElement("div", {
@@ -167623,31 +168433,10 @@ function MsxStats({
     className: "msx-note"
   }, "大会でもらえる。好きな能力へ 1点で +1(期の目安を超えると 2点で +1)"), MSX_STATS.map(k => React.createElement("div", {
     key: k,
-    className: "msx-row",
-    style: {
-      marginTop: 5
-    }
+    className: "msx-ab-row"
   }, React.createElement("span", {
-    style: {
-      width: 84,
-      fontSize: 12,
-      fontWeight: 900
-    }
-  }, MSX_STAT_ICON[k], " ", MSX_STAT_NAME[k]), React.createElement("span", {
-    className: "bar",
-    style: {
-      flex: 1
-    }
-  }, React.createElement("i", {
-    style: {
-      width: `${s.stats[k] / 9.99}%`
-    }
-  })), React.createElement("b", {
-    style: {
-      width: 34,
-      textAlign: 'right'
-    }
-  }, s.stats[k]), React.createElement("button", {
+    className: "n"
+  }, MSX_STAT_ICON[k], " ", MSX_STAT_NAME[k]), React.createElement("b", null, s.stats[k]), React.createElement("button", {
     type: "button",
     className: "chip on",
     style: {
@@ -167660,6 +168449,27 @@ function MsxStats({
       fontSize: 10
     }
   }, "(", SUC.ptsCost(s, k), "点)"))))), React.createElement("div", {
+    className: "v-card",
+    "data-msx-ability-techs": true
+  }, React.createElement("div", {
+    className: "h2"
+  }, "⚔ 覚えている技 ", techs.length), techs.length ? React.createElement("div", null, techs.map(t => React.createElement("span", {
+    key: t.id,
+    className: "msx-ab-tech"
+  }, t.kind === 'wise' ? '🧠' : '💪', t.name))) : React.createElement("div", {
+    className: "sub"
+  }, "まだない"), React.createElement("div", {
+    className: "sub",
+    style: {
+      marginTop: 4
+    }
+  }, "新しい技は修行で覚える。技の性能は場面の「🔍 くわしく」で見られる")), React.createElement("div", {
+    className: "v-card"
+  }, React.createElement("div", {
+    className: "h2"
+  }, "🌱 成長の型 ", typeof MASMON_CALC !== 'undefined' ? MASMON_CALC.typeOf(s.type).name : '—'), React.createElement("div", {
+    className: "sub"
+  }, pk.state === 'in' ? `ピーク中(あと${pk.left}ターン)。トレーニングがよく伸びる` : pk.state === 'soon' ? `あと${pk.in}ターンでピーク(伸びどき)が始まる` : peakSpan ? `伸びどき: ${peakSpan}` : '')), React.createElement("div", {
     className: "v-card"
   }, React.createElement("div", {
     className: "h2"
@@ -167667,19 +168477,7 @@ function MsxStats({
     className: "sub"
   }, "(甘え度 ", s.ama, "+恐れ度 ", s.fear, ")")), React.createElement("div", {
     className: "sub"
-  }, "方針: ", MSX_POLICY_SCALE[Math.max(-3, Math.min(3, s.pol || 0)) + 3], "・人気 ", s.pop, "・Lv ", s.lv, "・成長の型: ", typeof MASMON_CALC !== 'undefined' ? MASMON_CALC.typeOf(s.type).name : '—')), (() => {
-    const pk = typeof SUC.peakInfo === 'function' ? SUC.peakInfo(s) : {
-      state: null
-    };
-    return pk.state ? React.createElement("div", {
-      className: "v-card",
-      "data-msx-peak-stats": true
-    }, React.createElement("div", {
-      className: "h2"
-    }, "🔥 成長のピーク"), React.createElement("div", {
-      className: "sub"
-    }, pk.state === 'in' ? `ピーク中(あと${pk.left}ターン)。トレーニングがよく伸びる` : `あと${pk.in}ターンでピーク(伸びどき)が始まる`)) : null;
-  })(), s.omen || s.awake ? React.createElement("div", {
+  }, "方針: ", MSX_POLICY_SCALE[Math.max(-3, Math.min(3, s.pol || 0)) + 3], "・人気 ", s.pop, "・Lv ", s.lv)), s.omen || s.awake ? React.createElement("div", {
     className: "v-card",
     "data-msx-yosu": true
   }, React.createElement("div", {
@@ -167693,7 +168491,8 @@ function MsxStats({
   }, "なにか起きそう"), "(体がうっすら", s.omen.k === 2 ? '虹色に' : '', "光っている)") : null, s.awake ? React.createElement("div", {
     className: "sub"
   }, s.awake >= 2 ? '🌈 超覚醒している(全能力 +70・レアキラ)' : '✨ 覚醒している(全能力 +30・キラ)') : null) : null, React.createElement("div", {
-    className: "v-card"
+    className: "v-card",
+    "data-msx-ability-bond": true
   }, React.createElement("div", {
     className: "h2"
   }, "編成の親密度", React.createElement("span", {
@@ -167735,15 +168534,7 @@ function MsxStats({
     }
   }, msxAidName(s.aid), React.createElement("small", {
     className: "sub"
-  }, " 助手")), React.createElement("b", null, s.aidBond))), React.createElement("div", {
-    className: "v-card"
-  }, React.createElement("div", {
-    className: "h2"
-  }, "技", React.createElement("span", {
-    className: "msx-soon"
-  }, "準備中")), React.createElement("div", {
-    className: "sub"
-  }, "技と修行は次の回で入ります"))));
+  }, " 助手")), React.createElement("b", null, s.aidBond)))));
 }
 function MsxIssa({
   run,
@@ -168363,7 +169154,7 @@ const MSX_R3_GEAR = Object.freeze({
   pro: 30,
   final: 40
 });
-const MSX_R3_RANKS = Object.freeze([['G', 0], ['F', 2000], ['E', 3000], ['D', 4500], ['C', 6000], ['B', 8000], ['A', 11000], ['S', 14000], ['SS', 16000], ['SSS', 18000], ['M', 19500]]);
+const MSX_R3_RANKS = Object.freeze([['G', 0], ['F', 2000], ['E', 3000], ['D', 4500], ['C', 6000], ['B', 8000], ['A', 11000], ['S', 14000], ['SS', 16000], ['SSS', 18000], ['M', 20000]]);
 const msxR3Ranks = () => typeof MASMON_CALC !== 'undefined' && MASMON_CALC && Array.isArray(MASMON_CALC.RANKS) ? MASMON_CALC.RANKS : MSX_R3_RANKS;
 const MSX_R3_CUP_ICON = Object.freeze({
   str: '💪',
@@ -175887,7 +176678,7 @@ function MonsucRankGrade({
   grade
 }) {
   const g = typeof grade === 'string' && /^[A-Z]{1,3}[0-9]{0,3}$/.test(grade) ? grade : 'G';
-  const letter = g.replace(/[0-9]+$/, '');
+  const letter = /^M/.test(g) ? 'M' : g.replace(/[0-9]+$/, '');
   return React.createElement("span", {
     className: "inline-flex items-center justify-center min-w-[26px] h-[22px] px-1 rounded-md text-[12px] font-black text-slate-900",
     style: {
@@ -221989,7 +222780,7 @@ function MonsterHeroGame() {
   const PANDORA_WINGS_STORY_IDS = PANDORA_WINGS_STORIES.map(story => story.id);
   const PANDORA_WINGS_EVENT_ID = 'pandora_wings_2026_11_02';
   const PANDORA_WINGS_THANKS_STORY_ID = 'pandora_wings_2026_ep8';
-  const RHYTHM_EVENT_STORY_IDS = [...HALLOWEEN_NIGHT_STORY_IDS, ...RAID_JACK_STORY_IDS, ...PANDORA_WINGS_STORY_IDS, PANDORA_WINGS_THANKS_STORY_ID, MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, RAID_JACK_RHYTHM_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RAID_JACK_HOWTO_STORY_ID, ATSU_JOIN_STORY_ID, KYUKO_JOIN_STORY_ID, SORASHIDO_JOIN_STORY_ID, ERUBIN_JOIN_STORY_ID, CARD_CUP_STORY_ID, RHYTHM_GRAND_OPEN_TEASER_STORY_ID, RHYTHM_GRAND_OPEN_STORY_ID];
+  const RHYTHM_EVENT_STORY_IDS = [...HALLOWEEN_NIGHT_STORY_IDS, ...RAID_JACK_STORY_IDS, ...PANDORA_WINGS_STORY_IDS, PANDORA_WINGS_THANKS_STORY_ID, MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, RAID_JACK_RHYTHM_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RAID_JACK_HOWTO_STORY_ID, ATSU_JOIN_STORY_ID, KYUKO_JOIN_STORY_ID, SORASHIDO_JOIN_STORY_ID, ERUBIN_JOIN_STORY_ID, CARD_CUP_STORY_ID, RHYTHM_GRAND_OPEN_TEASER_STORY_ID, RHYTHM_GRAND_OPEN_STORY_ID, MONSUC_BETA_EP1_STORY_ID];
   const RHYTHM_EVENT_STORY_BY_EVENT = {
     [MONBEAT_CUP_EVENT_ID]: MONBEAT_CUP_STORY_ID,
     [SYMPHONY_EVENT_ID]: SYMPHONY_STORY_ID,
@@ -222443,6 +223234,13 @@ function MonsterHeroGame() {
     if (!(bootPhase === 'GAME' && gameState === 'HOME') || eventReplay || rhythmEventStoryPending || rhythmHellGuide) return;
     if (rhythmEventStoryStartedRef.current.includes(id)) return;
     setRhythmEventStoryPending(prev => prev || id);
+  }, [rhythmEventStorySeen, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
+  useEffect(() => {
+    if (!EVENT_REPLAY_RELEASE_FLAGS.monsucStoryEp1) return;
+    if (!Array.isArray(rhythmEventStorySeen) || rhythmEventStorySeen.includes(MONSUC_BETA_EP1_STORY_ID)) return;
+    if (!(bootPhase === 'GAME' && gameState === 'HOME') || eventReplay || rhythmEventStoryPending || rhythmHellGuide) return;
+    if (rhythmEventStoryStartedRef.current.includes(MONSUC_BETA_EP1_STORY_ID)) return;
+    setRhythmEventStoryPending(prev => prev || MONSUC_BETA_EP1_STORY_ID);
   }, [rhythmEventStorySeen, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
   useEffect(() => {
     if (typeof setSorashidoJoinSeenForShop === 'function') setSorashidoJoinSeenForShop(Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SORASHIDO_JOIN_STORY_ID));
@@ -225713,6 +226511,7 @@ function MonsterHeroGame() {
     cardCupStorySeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(CARD_CUP_STORY_ID),
     rhythmGrandOpenTeaserSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(RHYTHM_GRAND_OPEN_TEASER_STORY_ID),
     rhythmGrandOpenSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(RHYTHM_GRAND_OPEN_STORY_ID),
+    monsucBetaEp1Seen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(MONSUC_BETA_EP1_STORY_ID),
     symphonyEventSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SYMPHONY_STORY_ID)
   };
   const isEventReplayUnlocked = event => !!(event && event.alwaysUnlocked) || !!EVENT_REPLAY_UNLOCK_FLAGS[event && event.unlockedKey];
@@ -241158,7 +241957,11 @@ function MonsterHeroGame() {
       }) : null
     }), masmonBattleWatchOpen && typeof AssistantMasmonBattleWatch === 'function' && React.createElement(AssistantMasmonBattleWatch, {
       onClose: () => setMasmonBattleWatchOpen(false)
-    }), typeof AssistantMasmonBattleHost === 'function' && React.createElement(AssistantMasmonBattleHost, null), assistantChatOpen && activeAssistant && (() => {
+    }), typeof AssistantMasmonBattleHost === 'function' && React.createElement(AssistantMasmonBattleHost, null), typeof AssistantLifeSuccessHost === 'function' && React.createElement(AssistantLifeSuccessHost, {
+      onOpenChange: setSuccessScreenOpen,
+      callNameOf: id => assistantCallName(breederName, assistantBondLevelOf(normalizeAssistantBond(assistantBondsRef.current[id]).points), assistantCallStyles[id] || null, id),
+      bondLvOf: id => assistantBondLevelOf(normalizeAssistantBond(assistantBondsRef.current[id]).points)
+    }), assistantChatOpen && activeAssistant && (() => {
       const chatWho = assistantChatWith && ASSISTANT_LIST.find(a => a.id === assistantChatWith.id) || activeAssistant;
       const id = chatWho.id;
       const lv = id === activeAssistant.id ? assistantBondLevelNow : assistantBondLevelOf(normalizeAssistantBond(assistantBonds[id]).points);
@@ -252392,7 +253195,36 @@ function MonsterHeroGame() {
           style: iris ? {
             animation: `storyOpenOut .4s ease-in ${dur - .2}s both`
           } : undefined
-        }, parts.series && React.createElement("p", {
+        }, event?.openingLogo ? React.createElement("div", {
+          "data-story-opening-logo": true,
+          className: "mb-3",
+          style: {
+            animation: 'storyOpenTitle 1.3s ease-out .1s both'
+          }
+        }, (() => {
+          const art = event.openingLogo.art === 'MSX_LOGO_ART' && typeof MSX_LOGO_ART !== 'undefined' ? MSX_LOGO_ART : null;
+          return art;
+        })() ? React.createElement("img", {
+          "data-story-opening-logo-art": true,
+          src: MSX_LOGO_ART,
+          alt: event.openingLogo.text || '',
+          className: "mx-auto block w-full max-w-[340px] h-auto object-contain",
+          style: {
+            filter: 'drop-shadow(0 0 18px rgba(96,165,250,.45))'
+          }
+        }) : React.createElement("p", {
+          className: "relative inline-block text-[34px] font-black leading-tight",
+          style: {
+            background: 'linear-gradient(180deg,#fef3c7,#fbbf24 55%,#b45309)',
+            WebkitBackgroundClip: 'text',
+            backgroundClip: 'text',
+            color: 'transparent',
+            filter: 'drop-shadow(0 0 14px rgba(251,191,36,.55))'
+          }
+        }, event.openingLogo.text), event.openingLogo.badge && React.createElement("span", {
+          "data-story-opening-badge": true,
+          className: "ml-2 mt-1 inline-block rounded-full border border-amber-300/80 bg-amber-400/20 px-2 align-top text-[13px] font-black text-amber-100"
+        }, event.openingLogo.badge)) : parts.series && React.createElement("p", {
           className: "text-[12px] font-black tracking-[.3em] text-fuchsia-200/80",
           style: {
             animation: 'storyEndCard 1s ease-out .2s both'
@@ -252432,7 +253264,7 @@ function MonsterHeroGame() {
         const rich = STORY_ENDING_STYLE !== 'card';
         const delay = pull ? 1.1 : 0;
         const allEv = (typeof EVENT_REPLAYS !== 'undefined' ? EVENT_REPLAYS : []).filter(ev => ev && ev.id && ev.title);
-        const series = parts.serial ? allEv.filter(ev => ev.group === event.group && storyEpisodeTitleParts(ev.title).serial && storyEpisodeTitleParts(ev.title).series === parts.series).sort((a, b) => String(a.date || '').localeCompare(String(b.date || ''))) : [];
+        const series = parts.serial ? allEv.filter(ev => ev.group === event.group && eventReplayReleased(ev) && storyEpisodeTitleParts(ev.title).serial && storyEpisodeTitleParts(ev.title).series === parts.series).sort((a, b) => String(a.date || '').localeCompare(String(b.date || ''))) : [];
         const nextEv = parts.serial && !parts.final ? series[series.findIndex(ev => ev.id === event.id) + 1] || null : null;
         const nextParts = nextEv ? storyEpisodeTitleParts(nextEv.title) : null;
         if (nextParts && nextParts.final && series.filter(ev => storyEpisodeTitleParts(ev.title).final).length > 1) nextParts.sub = '';
@@ -252511,7 +253343,19 @@ function MonsterHeroGame() {
           className: "text-[12px] font-bold text-slate-300"
         }, left > 0 ? React.createElement(React.Fragment, null, when, " から ", React.createElement("b", {
           className: "text-amber-200"
-        }, leftText)) : 'もう見られます(プロフィールの「イベント回想」)')), rich && !nextEv && allSeen && React.createElement("p", {
+        }, leftText)) : 'もう見られます(プロフィールの「イベント回想」)')), rich && !nextEv && event?.endingTeaser && React.createElement("div", {
+          "data-story-ending-teaser": true,
+          className: "mx-auto mt-5 rounded-2xl border border-amber-300/50 bg-slate-900/80 px-3 py-2",
+          style: {
+            animation: `storyEndCard 1s ease-out ${delay + 1.5}s both`
+          }
+        }, React.createElement("p", {
+          className: "text-[11px] font-black text-amber-200"
+        }, "次のお話"), React.createElement("p", {
+          className: "text-[14px] font-black text-white"
+        }, storyCenter(String(event.endingTeaser.title || ''), Math.min(storyBoxW, 384) - 80, 14)), event.endingTeaser.note && React.createElement("p", {
+          className: "mt-0.5 inline-block rounded-full bg-amber-400/20 px-3 text-[12px] font-black text-amber-100"
+        }, event.endingTeaser.note)), rich && !nextEv && allSeen && React.createElement("p", {
           "data-story-ending-all": true,
           className: "mx-auto mt-4 inline-block rounded-full border border-amber-300/60 bg-amber-500/15 px-4 py-1 text-[13px] font-black text-amber-100",
           style: {

@@ -56,7 +56,8 @@ const startAt = (release.match(/const RHYTHM_GRAND_OPEN_START_AT = '([^']+)'/) |
 const def = A.RHYTHM_EVENT_POINT_CAMPAIGNS.find((c) => c.id === 'grand_open_2026');
 check('始まりは本オープンの時刻と同じ', !!def && !!startAt && Date.parse(def.startAt) === Date.parse(startAt), `${def && def.startAt} / ${startAt}`);
 check('終わりは月曜4:00(週の区切り)・案内は3:59', !!def && new Date(Date.parse(def.endAt) + 9 * 3600e3).getUTCDay() === 1 && def.endAt.endsWith('T04:00:00+09:00') && def.displayEndAt === '2026-11-23T03:59:00+09:00');
-check('HOMEの札は「本オープン記念 開催中 〜11/23 3:59」', !!def && def.banner && def.banner.title === '本オープン記念' && def.banner.sub === '開催中 〜11/23 3:59');
+// 2026-11-14 社長: 何の本オープンか分かるよう、題を2行「モンヒロビート/本オープン記念」に(案B)
+check('HOMEの札は「モンヒロビート/本オープン記念 開催中 〜11/23 3:59」', !!def && def.banner && def.banner.title === 'モンヒロビート' && def.banner.title2 === '本オープン記念' && def.banner.sub === '開催中 〜11/23 3:59');
 check('ランキングのイベント(RHYTHM_EVENTS)には足していない', !/grand_open_2026/.test((eventSrc.match(/const RHYTHM_EVENTS = [\s\S]*?\n\]\);/) || [''])[0]));
 console.log(failed ? `${failed}件のNGがあります` : 'すべてOK');
 process.exit(failed ? 1 : 0);

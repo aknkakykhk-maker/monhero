@@ -61,7 +61,8 @@ ok(SUC.failRateOf({ ...base, hp: 200, hpMax: 200 }) < SUC.failRateOf({ ...base, 
 ok(near(SUC.failRateOf({ ...base, yosu: { sabori: { visits: 0 } } }) - fFull, 0.05, 1e-9), 'サボりグセが失敗率の下限 +5% になっていない');
 // 失敗は上がらない・サボりは3割(同じ札・同じ時期で比べる)
 {
-  let s = SUC.newRun({ id: 'mult', species: 'Mocchi', aid: 'mua', pol: -3 });
+  // 編成は前と同じ全員モッチーで比べる(2026-11-14 から空き枠は育てる子と別の種で埋まり、編成の出来事が混ざるため)
+  let s = SUC.newRun({ id: 'mult', species: 'Mocchi', aid: 'mua', pol: -3, team: Array.from({ length: 6 }, () => ({ kind: 'base', species: 'Mocchi' })) });
   const seen = {};
   for (let i = 0; i < 400 && Object.keys(seen).length < 4; i++) {
     const t = { ...s, id: `mult-${i}`, hp: i % 2 ? 100 : 5 };
@@ -191,7 +192,7 @@ ok(near(SUC.failRateOf({ ...base, yosu: { sabori: { visits: 0 } } }) - fFull, 0.
   ok(w.over === 'done' && w.titles.includes('ヒーローの頂') && w.ending && ['good', 'super'].includes(w.ending.kind)
     && w.stats.life === Math.min(999, pre.life + SUC.PARTY[w.ending.kind].reduce((a, n) => a + n, 0)), `決勝に勝ったあとのエンディングとお祝いがずれている: ${JSON.stringify(w.ending)}`);
   ok(lose.ending && lose.ending.kind === 'bad' && lose.ending.parties.length === 1, '頂への道で負けてもバッドエンディングが付かない');
-  const ev = SUC.evaluate(w); ok(Number.isFinite(ev.power) && ev.points === SUC.assistPointsOf(ev.power), '評価(総合力・アシストポイント)が出ない');
+  const ev = SUC.evaluate(w); ok(Number.isFinite(ev.power) && Number.isFinite(ev.powerS) && ev.powerS <= ev.power && ev.points === SUC.assistPointsOf(ev.powerS), '評価(総合力・アシストポイント)が出ない(アシストポイントは今までの数え方の総合力 powerS から・案A)');
 }
 
 // ---- 能力ポイント ----
@@ -203,7 +204,7 @@ ok(near(SUC.failRateOf({ ...base, yosu: { sabori: { visits: 0 } } }) - fFull, 0.
 
 // ---- 修行(社長 2026-11-12: チケット・2段で能力2つずつ・最後に技のくじ・外すと次の率が上がる) ----
 {
-  const s0 = SUC.newRun({ id: 'shu', species: 'Mocchi', aid: 'mua' });
+  const s0 = SUC.newRun({ id: 'shu', species: 'Mocchi', aid: 'mua', team: Array.from({ length: 6 }, () => ({ kind: 'base', species: 'Mocchi' })) }); // 編成の得意の上乗せを前と同じにそろえる
   ok(s0.techs.length === 2 && s0.tickets === SUC.SHUGYO.ticket0, `はじめの技(はじめから覚えている2つ)・チケットがずれている: ${s0.techs} ${s0.tickets}`);
   ok(SUC.peek(s0).can.includes('shugyo') && SUC.shugyoLeft(s0) === s0.tickets, '修行がチケットの数だけ行けない(期ごとの回数は決めない)');
   const j = { ...s0, turn: 8, tickets: 3 };
@@ -550,8 +551,9 @@ ok(near(SUC.failRateOf({ ...base, yosu: { sabori: { visits: 0 } } }) - fFull, 0.
 // ---- 評価の表示(gradeOf)・ひらめきのアシスト5つ ----
 {
   const g = (p) => SUC.gradeOf(p).label;
-  ok(g(6000) === 'C1' && g(6499) === 'C1' && g(6500) === 'C2' && g(7999) === 'C4' && g(8000) === 'B1' && g(19500) === 'M1' && g(25100) === 'M12' && g(0) === 'G1', `評価の番号がずれている: ${[6000, 6500, 7999, 8000, 19500, 25100].map(g)}`);
-  ok(SUC.gradeOf(7200).toNext === 300 && SUC.gradeOf(19500).next === null, '次の番号までの数がずれている');
+  // 2026-11-14 社長「M は 20,000」: M より上は名前そのものが500ごと(M・M1〜M9・MG・MG1…)で番号を付けない
+  ok(g(6000) === 'C1' && g(6499) === 'C1' && g(6500) === 'C2' && g(7999) === 'C4' && g(8000) === 'B1' && g(19500) === 'SSS4' && g(20000) === 'M' && g(20500) === 'M1' && g(25100) === 'MG' && g(0) === 'G1', `評価の番号がずれている: ${[6000, 6500, 7999, 8000, 19500, 20000, 20500, 25100].map(g)}`);
+  ok(SUC.gradeOf(7200).toNext === 300 && SUC.gradeOf(19500).next === 20000 && SUC.gradeOf(20000).next === 20500 && SUC.gradeOf(99999).next === null, '次の番号までの数がずれている');
   ok(['gatsu', 'miseba', 'mitate', 'kensho', 'mimamori'].every(id => SUC.ASSISTS[id] && SUC.ASSISTS[id].type === 'battle'), 'ひらめきのアシスト5つ(型 battle)がない');
   const st = { life: 600, pow: 700, wise: 300, hit: 500, eva: 400, tough: 600 };
   const mk = (as) => SUC.newRun({ id: 'hint', species: 'Mocchi', aid: 'mua', team: [{ kind: 'raised', species: 'Golem', stats: st, lv: 30, loy: 70, assists: as }, { kind: 'raised', species: 'Golem', stats: st, lv: 30, loy: 70, assists: [{ id: 'gatsu', lv: 1 }] }] });
@@ -592,9 +594,17 @@ ok(near(SUC.failRateOf({ ...base, yosu: { sabori: { visits: 0 } } }) - fFull, 0.
     ok(tp.child.techs.length === 2 && tp.child.techs.every(t => all.includes(t)) && tp.child.mast.length === 2 && tp.child.mast.every(x => x === 0), '受け継ぐ技が2つまで・熟練0になっていない');
     ok(tp.child.gen === 6, '世代が「親の大きい方 + 1」になっていない');
   }
-  // 型: 主の親の型が多い(くじで少し別)
-  let same = 0; for (let i = 0; i < 200; i++) { const r = SUC.fusePlan(mk('m' + i, 'Mocchi', 500, { gt: 5 }), mk('n' + i, 'Mocchi', 500)); if (r.child.gt === 5) same += 1; }
-  ok(same >= 160 && same < 200, `主の親の型を受け継ぐ割合がおかしい(${same}/200)`);
+  // 型: いつも生まれた種類の決まった型(2026-11-14 社長。親の型は継がない・くじなし)
+  let same = 0; for (let i = 0; i < 200; i++) { const r = SUC.fusePlan(mk('m' + i, 'Mocchi', 500, { gt: 5 }), mk('n' + i, 'Mocchi', 500)); if (r.child.gt === SUC.speciesType(r.child.species)) same += 1; }
+  ok(same === 200, `合体の子の型が種類の決まった型になっていない(${same}/200)`);
+  // 新しく始める育成の型は種族の型・30種すべて表にある・空き枠に育てる子と同じ種を入れない
+  ok(SUC.speciesList.every(sp => Number.isInteger(SUC.GROW_BY_SPECIES[sp]) && [1, 2, 3].includes(SUC.GROW_BY_SPECIES[sp])), '種族の成長の型の表に無い種族がある');
+  ok(SUC.newRun({ id: 'gt', species: 'Golem' }).type === 3 && SUC.newRun({ id: 'gt', species: 'Pixie' }).type === 1 && SUC.newRun({ id: 'gt', species: 'Golem', type: 5 }).type === 5, '新しい育成の型が種族の型でない(または途中の育成の型を書き換えている)');
+  ok(SUC.newRun({ id: 'self', species: 'Pixie' }).team.every(m => m.species !== 'Pixie'), '空いた編成の枠に、育てる子と同じ種が入っている');
+  // 合体で生まれたモンスターから始めるときは、その能力(st)から始まる(2026-11-14 社長・台帳 #6108)。壊れた値なら種族の値
+  { const T6 = Array.from({ length: 6 }, () => ({ kind: 'base', species: 'Mocchi' })); const st = { life: 300, pow: 250, wise: 200, hit: 220, eva: 210, tough: 230 };
+    const a = SUC.newRun({ id: 'fz', species: 'Golem', team: T6, startSt: st }); const b = SUC.newRun({ id: 'fz', species: 'Golem', team: T6 }); const c = SUC.newRun({ id: 'fz', species: 'Golem', team: T6, startSt: 'x' });
+    ok(K.every(k => a.stats[k] - b.stats[k] === st[k] - SUC.initStats('Golem')[k]) && JSON.stringify(c.stats) === JSON.stringify(b.stats), '合体で生まれたモンスターの能力から育成が始まっていない'); }
   // 壊れた保存値でも落ちない
   const bad = SUC.fusePlan({ id: 'x', species: 'Mocchi', raised: true, st: { life: 'abc', pow: -5, wise: 1e9 }, techs: 'zz', gen: NaN }, mk('y', 'Mocchi', 500));
   ok(bad.ok && SUC.KEYS.every(k => Number.isFinite(bad.child.st[k]) && bad.child.st[k] >= 1 && bad.child.st[k] <= 999) && bad.child.gen === 2, '壊れた保存値で合体の値がおかしくなる');
