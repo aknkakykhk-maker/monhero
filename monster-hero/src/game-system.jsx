@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: f97776989b505a17
+// generated-sha256: 1166895b547f2f69
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -86332,13 +86332,17 @@ const MSX_CSS = `
 .msx-md-tg .tgh{font-size:10.5px;font-weight:900;text-align:center;border-radius:99px;padding:1px 0;color:#fff}
 .msx-md-tg .tgh.d3{background:#2563eb}.msx-md-tg .tgh.d2{background:#16a34a}.msx-md-tg .tgh.d1{background:#d97706}.msx-md-tg .tgh.d0{background:#dc2626}
 .msx .msx-md-tg .tc,.msx-md-tg .no{position:relative;aspect-ratio:1/1;min-height:0;border-radius:8px;display:flex;align-items:center;justify-content:center}
-.msx .msx-md-tg .tc{background:#3b2a6b;border:1.5px solid #a78bfa;padding:0}
-.msx .msx-md-tg .tc.w{background:#14532d;border-color:#4ade80}
-.msx .msx-md-tg .tc.lk{background:#1e293b;border-color:#475569}
+.msx .msx-md-tg .tc{padding:0;border:1.5px solid transparent}
+/* 技の種類で色分け(参考 monster-detail-basic・mm-04: ちから技=金・かしこさ技=緑)。覚えていない技は同じ色のまま暗くくすませる */
+.msx .msx-md-tg .tc.pow{background:linear-gradient(160deg,#fde68a,#d97706);border-color:#f59e0b}
+.msx .msx-md-tg .tc.wise{background:linear-gradient(160deg,#bbf7d0,#16a34a);border-color:#4ade80}
+.msx .msx-md-tg .tc.lk{filter:grayscale(.55) brightness(.5)}
+.msx .msx-md-tg .tc.lk.on{filter:grayscale(.3) brightness(.75)}
+.msx-md-tg .tc .nd{position:absolute;left:2px;top:1px;font-size:10px;font-weight:900;color:#fff;background:#0f0d24cc;border-radius:5px;padding:0 3px;line-height:13px}
+.msx-md-not{display:block;font-size:10px;color:#94a3b8;font-weight:800}
 .msx .msx-md-tg .tc.on{border-color:#fde047;box-shadow:0 0 0 2px #fde047}
 .msx-md-tg .tc .ti{font-size:17px;line-height:1}
 .msx-md-tg .tc .g{position:absolute;right:2px;bottom:0;font-size:10px;font-weight:900;color:#fff;text-shadow:0 1px 2px #000}
-.msx-md-tg .tc.lk .g{color:#94a3b8}
 .msx-md-tg .no{background:#0b0920;border:1px solid #334155;color:#475569;font-size:16px;font-weight:900}
 .msx-md-tl{display:flex;flex-direction:column;gap:3px;max-height:200px;overflow-y:auto}.msx-md-tl>*{flex:none}
 .msx .msx-md-tl button{display:block;text-align:left;border-radius:8px;padding:3px 6px;background:#1e1a36;border:1px solid #334155;color:#cbd5e1}
@@ -87037,11 +87041,13 @@ function MsxMonDetail({ species, name, art, st, apt, type, peak, grades, known, 
                 {Array.from({ length: tgRows }).map((_, r) => MSX_TG_COLS.map((d) => { const t = tgCols[d][r];
                   if (!t) return <span key={`${r}-${d}`} className="no" aria-hidden="true">×</span>;
                   const got = has(t);
-                  return <button type="button" key={`${r}-${d}`} className={`tc${got ? ' got' : ' lk'}${tech && tech.id === t.id ? ' on' : ''}${t.kind === 'wise' ? ' w' : ''}`} data-msx-tech={t.id} aria-label={`${t.name}${got ? '' : '(まだ覚えていない)'}`} onClick={() => setPickT(t.id)}>
-                    <span className="ti" aria-hidden="true">{got ? (t.kind === 'wise' ? '🧠' : '💪') : '🔒'}</span><span className="g">{t.guts}</span></button>; }))}
+                  // 技の種類で升の色を分ける(参考どおり ちから=金・かしこさ=緑)。覚えていない技も絵を出し、暗くくすませて左上に必要な数(2026-11-14 社長「鍵じゃなくて覚えてないやつも表示して色分けして」)
+                  const need = !got && t.learn && t.learn.st && typeof t.learn.st === 'object' ? Object.values(t.learn.st)[0] : null;
+                  return <button type="button" key={`${r}-${d}`} className={`tc ${t.kind === 'wise' ? 'wise' : 'pow'}${got ? ' got' : ' lk'}${tech && tech.id === t.id ? ' on' : ''}`} data-msx-tech={t.id} aria-label={`${t.name}${got ? '' : '(まだ覚えていない)'}`} onClick={() => setPickT(t.id)}>
+                    <span className="ti" aria-hidden="true">{t.kind === 'wise' ? '🧠' : '💪'}</span>{need != null ? <span className="nd">{need}</span> : null}<span className="g">{t.guts}</span></button>; }))}
               </div>
               {tech ? (<div className="msx-md-td">
-                <div className="tn">{has(tech) ? '' : '🔒 '}{tech.name}</div>
+                <div className="tn">{tech.name}{has(tech) ? null : <small className="msx-md-not">まだ覚えていない</small>}</div>
                 <div className="msx-md-kv"><b>技種</b><span>{tech.kind === 'wise' ? 'かしこさ' : 'ちから'}</span></div>
                 <div className="msx-md-kv"><b>消費ガッツ</b><span>{tech.guts}</span></div>
                 <div className="msx-md-kv"><b>ダメージ</b><span className="gd">{grade('power', tech.power)}</span></div>

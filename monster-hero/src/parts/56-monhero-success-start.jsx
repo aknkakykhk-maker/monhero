@@ -170,11 +170,13 @@ function MsxMonDetail({ species, name, art, st, apt, type, peak, grades, known, 
                 {Array.from({ length: tgRows }).map((_, r) => MSX_TG_COLS.map((d) => { const t = tgCols[d][r];
                   if (!t) return <span key={`${r}-${d}`} className="no" aria-hidden="true">×</span>;
                   const got = has(t);
-                  return <button type="button" key={`${r}-${d}`} className={`tc${got ? ' got' : ' lk'}${tech && tech.id === t.id ? ' on' : ''}${t.kind === 'wise' ? ' w' : ''}`} data-msx-tech={t.id} aria-label={`${t.name}${got ? '' : '(まだ覚えていない)'}`} onClick={() => setPickT(t.id)}>
-                    <span className="ti" aria-hidden="true">{got ? (t.kind === 'wise' ? '🧠' : '💪') : '🔒'}</span><span className="g">{t.guts}</span></button>; }))}
+                  // 技の種類で升の色を分ける(参考どおり ちから=金・かしこさ=緑)。覚えていない技も絵を出し、暗くくすませて左上に必要な数(2026-11-14 社長「鍵じゃなくて覚えてないやつも表示して色分けして」)
+                  const need = !got && t.learn && t.learn.st && typeof t.learn.st === 'object' ? Object.values(t.learn.st)[0] : null;
+                  return <button type="button" key={`${r}-${d}`} className={`tc ${t.kind === 'wise' ? 'wise' : 'pow'}${got ? ' got' : ' lk'}${tech && tech.id === t.id ? ' on' : ''}`} data-msx-tech={t.id} aria-label={`${t.name}${got ? '' : '(まだ覚えていない)'}`} onClick={() => setPickT(t.id)}>
+                    <span className="ti" aria-hidden="true">{t.kind === 'wise' ? '🧠' : '💪'}</span>{need != null ? <span className="nd">{need}</span> : null}<span className="g">{t.guts}</span></button>; }))}
               </div>
               {tech ? (<div className="msx-md-td">
-                <div className="tn">{has(tech) ? '' : '🔒 '}{tech.name}</div>
+                <div className="tn">{tech.name}{has(tech) ? null : <small className="msx-md-not">まだ覚えていない</small>}</div>
                 <div className="msx-md-kv"><b>技種</b><span>{tech.kind === 'wise' ? 'かしこさ' : 'ちから'}</span></div>
                 <div className="msx-md-kv"><b>消費ガッツ</b><span>{tech.guts}</span></div>
                 <div className="msx-md-kv"><b>ダメージ</b><span className="gd">{grade('power', tech.power)}</span></div>
