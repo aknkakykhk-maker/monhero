@@ -279,7 +279,7 @@ const AMBB_CSS = `
 .ambw.ambb-full .ambb-stagewrap{flex:1;min-height:0;display:flex;flex-direction:column;margin-top:6px!important}
 .ambw.ambb-full .ambb-stagewrap .msa-stage{flex:1}
 .ambb-stagewrap{position:relative}
-.ambb-foe-tech{position:absolute;right:8px;bottom:8px;z-index:6;min-height:30px;padding:2px 10px;border-radius:15px;border:1px solid rgba(255,255,255,.35);background:rgba(15,10,40,.78);color:#fff;font-size:11.5px;font-weight:900;white-space:nowrap}
+.ambb-foe-tech{position:absolute;right:8px;top:104px;z-index:6;min-height:30px;padding:2px 10px;border-radius:15px;border:1px solid rgba(255,255,255,.35);background:rgba(15,10,40,.78);color:#fff;font-size:11.5px;font-weight:900;white-space:nowrap}
 .ambw.ambb-full [data-ambb-watch]>*:not(.ambb-stagewrap){flex-shrink:0}
 .ambw.ambb-full .ambw-log{margin-top:4px;padding:4px 8px;min-height:0}
 .ambw.ambb-full .ambw-log p:not(:last-of-type){display:none}
