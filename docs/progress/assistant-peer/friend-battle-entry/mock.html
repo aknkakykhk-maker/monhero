@@ -1,0 +1,43 @@
+<!doctype html><meta charset=utf-8><style>
+body{margin:0;background:#0b1020;font-family:sans-serif;color:#fff}
+.wrap{display:flex;gap:16px;padding:12px;align-items:flex-start}
+.ph{background:#1e293b;border-radius:18px;overflow:hidden;position:relative;height:620px;border:2px solid #475569;flex:none}
+.cap{font:800 12px sans-serif;color:#fde68a;margin:0 0 6px}
+.sheet{position:absolute;left:0;right:0;bottom:0;background:#172033;border-radius:20px 20px 0 0;padding:12px}
+.t{font-weight:900;font-size:16px}.s{font-size:11px;font-weight:700;color:#e2e8f0;margin-top:2px}
+.sm{font-size:10.5px;color:#cbd5e1;margin-top:6px}
+.b{display:block;width:100%;box-sizing:border-box;border-radius:12px;padding:11px 6px;margin-top:8px;font-weight:900;font-size:13px;text-align:center}
+.g{background:#047857}.sky{background:#0284c7}.r{background:#e11d48;outline:3px solid #fde047}.a{background:#f59e0b;color:#0f172a}
+.hl{position:absolute;right:6px;top:-8px;background:#fde047;color:#7c2d12;font-size:9px;font-weight:900;padding:1px 5px;border-radius:8px}
+.card{background:#ffffff14;border-radius:12px;padding:9px;margin:8px 10px}
+.tabs{display:flex;gap:6px}.tabs div{flex:1;text-align:center;border:2px solid #fff3;border-radius:12px;padding:8px 2px;font-weight:900;font-size:12px;background:#ffffff0f}
+.tabs .on{border-color:#f9a8d4;background:#9d174d66}
+.btn{margin:8px 10px;text-align:center;padding:12px;border-radius:14px;background:#e11d48;font-weight:900;font-size:15px}
+.btn2{margin:8px 10px;text-align:center;padding:10px;border-radius:14px;background:#334155;font-weight:900;font-size:13px}
+.top{padding:10px;font-weight:900;font-size:14px;background:#0f172a}
+</style><body>
+<div id=root></div>
+<script>
+const W=+new URLSearchParams(location.search).get('w')||390;
+const sheet=`<div class=top style="background:#334155">🏠 ゆうきさんの家(フレンドの家)</div><div style="padding:30px;color:#94a3b8;font-size:12px">(家の絵)</div>
+<div class=sheet><div class=t>ゆうきさんのミュアの部屋</div><div class=s>🏠 部屋でのんびり</div>
+<div class=sm>🪑 贈られた家具: ソファ・ランプ</div>
+<div class=sm>🐾 ゆうきさんのマスモン</div>
+<div style="display:flex;gap:6px;margin-top:4px">${[1,2,3,4].map(i=>`<div style="flex:1;background:#ffffff10;border-radius:10px;height:48px"></div>`).join('')}</div>
+<div class="b sky">💬 ミュアに話しかける</div>
+<div class="b g">🐾 ミュアのマスモン ›</div>
+<div style="position:relative"><div class="b r">⚔ ミュアのマスモンに挑む ›</div><span class=hl>NEW</span></div>
+<div class=sm style="text-align:center">相手の登録編成と対戦(今日あと5回)</div>
+<div class="b a">✉️ 置き手紙を残して帰る</div></div>`;
+const prep=`<div class=top>⚔ マスモンで対戦<small style="font-weight:700"> β</small></div>
+<div class=card><div class=tabs><div>🏠 この端末の助手</div><div class=on>👥 フレンドの助手</div></div></div>
+<div class=card><div class=sm style="margin:0">あなたの助手: ミュア・出す編成 3体</div></div>
+<div class=card><div class=sm style="margin:0">相手(フレンドが登録している助手の編成)</div>
+<div class=tabs style="margin-top:6px"><div class=on style="border-color:#fde047">ゆうきさんのミュア<br><small>ガルー・ピコ・ナナ</small></div></div>
+<div class=sm>✅ 家から選んだ相手です(ほかのフレンドにも変えられます)</div>
+<div class=sm>ランキングの区分</div><div class=tabs style="margin-top:4px"><div class=on>育成値そのまま</div><div>公平</div></div>
+<div class=sm>3対3 だけランキングに数えます。今日あと 5 回 挑めます。</div></div>
+<div class=btn>⚔ 挑む</div><div class=btn2>← 戻る(フレンドの家へ)</div>`;
+root.innerHTML=`<div class=wrap><div><p class=cap>① フレンドの家 部屋シート(幅${W})</p><div class=ph style="width:${W}px">${sheet}</div></div>
+<div><p class=cap>② 「挑む」を押した後(相手が選んである)</p><div class=ph style="width:${W}px">${prep}</div></div></div>`;
+</script>

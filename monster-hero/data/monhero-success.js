@@ -55,7 +55,7 @@
   // 期末の強制大会(ターンを使わない)。星: 1=★ 2=★★ 3=★★★ 4=👑
   const FORCED = Object.freeze({
     // 大会で戦うのは基本1戦(社長 2026-11-12・TOURNAMENT §15)。組み合わせ表は演出(bracketOf)
-    debut: { key: 'debut', name: 'デビュー戦', star: 1, cup: 'debut', all: 0, pts: 5, pop: 3, title: 'はじめの一歩' },
+    debut: { key: 'debut', name: 'デビュー戦', star: 1, cup: 'debut', all: 0, pts: 5, pop: 3, title: '初めの一歩' },
     junior: { key: 'junior', name: 'ヒーローズリーグ', star: 2, cup: 'normal', all: 2, pts: 5, pop: 2, title: 'ジュニアの星' },
     middle: { key: 'middle', name: 'ヒーローズリーグ', star: 3, cup: 'normal', all: 3, pts: 10, pop: 4, title: 'ミドルの星' },
     pro: { key: 'pro', name: 'ヒーローズリーグ', star: 4, cup: 'herowinter', all: 4, pts: 20, pop: 8, title: 'ヒーロー記念', crown: true },
@@ -172,17 +172,17 @@
   // 第2版で足した「トレーニングに効く11種」(ASSISTS_V2_TRAIN)は表があるときだけ出る
   const ASSISTS_V1 = Object.freeze({
     sokoji: { name: '特訓の底力', type: 'with', v: [4, 7, 10], cost: [40, 80, 128] },
-    kaketsuke: { name: 'かけつけ', type: 'self', v: [8, 14, 20], cost: [32, 64, 104] },
+    kaketsuke: { name: '駆け付け', type: 'self', v: [8, 14, 20], cost: [32, 64, 104] },
     hirameki: { name: 'ひらめき', type: 'with', v: [3, 5, 8], cost: [32, 64, 104] },
     atooshi: { name: '得意の後押し', type: 'with', v: [8, 14, 20], cost: [24, 48, 80] },
-    kizuna: { name: '信頼のきずな', type: 'with', v: [6, 10, 14], cost: [40, 80, 128] },
+    kizuna: { name: '信頼の絆', type: 'with', v: [6, 10, 14], cost: [40, 80, 128] },
     ochitsuki: { name: '落ち着き', type: 'with', v: [15, 25, 35], cost: [24, 48, 80] },
     itawari: { name: 'いたわり', type: 'with', v: [8, 14, 20], cost: [24, 48, 80] },
     shugyo: { name: '修行の手ほどき', type: 'stay', v: [10, 18, 25], cost: [24, 48, 80] },
-    hitonatsu: { name: '人なつっこさ', type: 'stay', v: [1.2, 1.4, 1.6], cost: [32, 64, 104], start: [5, 10, 15] },
+    hitonatsu: { name: '人懐っこさ', type: 'stay', v: [1.2, 1.4, 1.6], cost: [32, 64, 104], start: [5, 10, 15] },
     // 助手のお話のひらめきで取れる5つ(型 battle・社長 2026-11-12): 編成にいると、育てる子の大会の試合で効く(いちばん高い段の1つだけ)。トレーニングには効かない
     //   数字は data/monhero-success-assist.js と同じ(buff は対戦の芯の buffs の形)
-    gatsu: { name: '試合のはじめのガッツ', type: 'battle', v: [3, 5, 8], cost: [24, 48, 80], hint: 'atsu', buff: [{ guts: 3 }, { guts: 5 }, { guts: 8 }] },
+    gatsu: { name: '試合の初めのガッツ', type: 'battle', v: [3, 5, 8], cost: [24, 48, 80], hint: 'atsu', buff: [{ guts: 3 }, { guts: 5 }, { guts: 8 }] },
     miseba: { name: '見せ場', type: 'battle', v: [3, 5, 8], cost: [24, 48, 80], hint: 'momosuke', buff: [{ crit: 0.03 }, { crit: 0.05 }, { crit: 0.08 }] },
     mitate: { name: '見立て', type: 'battle', v: [3, 5, 8], cost: [24, 48, 80], hint: 'kyuko', buff: [{ eva: 0.03 }, { eva: 0.05 }, { eva: 0.08 }] },
     kensho: { name: '検証', type: 'battle', v: [15, 25, 35], cost: [24, 48, 80], hint: 'sorashido', buff: [{ missCut: 0.15 }, { missCut: 0.25 }, { missCut: 0.35 }] },
@@ -299,7 +299,7 @@
     hachi: { name: '修行のハチマキ', use: 'before', good: 'shugyoGood' },
     omamori: { name: '縁結びのお守り', use: 'before', good: 'star' },
     dango: { name: 'モモのキビダンゴ', use: 'before', hpMax: 20 },                // 体力の最大値が初めから上がる
-    grass: { name: 'うけつぎ草', use: 'before', good: 'uketsugu' },
+    grass: { name: '受け継ぎ草', use: 'before', good: 'uketsugu' },
     juice: { name: 'ガロエ印の野菜ジュース', use: 'during', hpFull: true },                 // 体力を完全に回復
     powder: { name: '悪様散', use: 'during', cure: true, hp: 0.3 },               // 悪いようすを治して体力を回復
     license: { name: 'ブリーダーライセンス', use: 'during', ama: 10, fear: 10 },       // 甘え度 +10・恐れ度 +10(忠誠度 +20。2026-11-13 社長)
@@ -314,7 +314,7 @@
     fruit_wise: { name: 'テキパキの果実', use: 'during', fruit: 'wise' }, fruit_hit: { name: 'アタールの果実', use: 'during', fruit: 'hit' },
     fruit_eva: { name: 'サケールの果実', use: 'during', fruit: 'eva' }, fruit_tough: { name: 'カチコチの果実', use: 'during', fruit: 'tough' },
     stamina: { name: 'モモまん（大盛）', use: 'during', hpMax: 15 },
-    prune: { name: 'スタープルーン', use: 'during', popTurn: true }, // ごはんでもらう: 使ったターンだけ人気の上がり ×1.5(POP_TURN_MULT) // モンスターダービーの賞品: 使うと体力の最大値 +15(体力も同じだけ回復)
+    prune: { name: 'スタープルーン', use: 'during', popTurn: true }, // ごはんでもらう: 使ったターンだけ人気の上がり ×1.5(POP_TURN_MULT)回復)
     // 覚醒の実・超覚醒の実(2026-11-13 社長 r1113-038・053)。使うとその場で起きる(中身は AWAKE と同じ: 全能力 +30/+40・間合いの適性 1段/2段)
     //   覚醒の実: 覚醒していない子に、育成中いつでも(参考 mo-14「育成中に覚醒する」)/ 超覚醒の実: 期の条件なし・覚醒していなければ覚醒してから超覚醒まで(覚醒の実の完全な上位互換)
     awakeFruit: { name: '覚醒の実', use: 'during', awake: 1 },
@@ -325,7 +325,7 @@
     trainGood: { name: 'トレーニング得意', train: 0.10 },                  // トレーニングの伸び +10%
     shugyoGood: { name: '修行得意', shugyo: 0.20, techRate: 10 },          // 修行の伸び +20%・技を覚える率 +10
     star: { name: 'スターの素質○', pop: 1.5, bond: 1.2 },                // 人気の上がり ×1.5・親密度の上がり ×1.2(良縁)
-    uketsugu: { name: 'うけつぐ魂', story: 0.15, teach: 2, start: 2 },  // start: 編成から受け継ぐはじめの能力 ×2(2026-11-13 社長)               // 連続の話が進む率 +15%・3話(伝授)の能力が2倍
+    uketsugu: { name: '受け継ぐ魂', story: 0.15, teach: 2, start: 2 },  // start: 編成から受け継ぐはじめの能力 ×2(2026-11-13 社長)               // 連続の話が進む率 +15%・3話(伝授)の能力が2倍
   });
   const CARRY_MAX = 2; // 持ちこみは1回の育成で2つまで(社長 2026-11-12。始める前の物と育成中の袋を合わせて)
 
@@ -426,8 +426,8 @@
   //   条件: 1 デビュー戦に出る/2 大会で1勝/3〜10 これまでの賞金の合計。段が1つ上がるたびに修行チケット1枚(チケット運で もう1枚)
   //   step は 1〜10(0 はまだデビュー戦の前)。四大大会の出る条件(need.rank)もこの段
   const FAME_RANK = Object.freeze([
-    { name: 'ルーキー', cond: 'debut' }, { name: 'はじめの一勝', cond: 'win' }, { name: '一人前', min: 1500 }, { name: 'うできき', min: 3000 }, { name: '期待の星', min: 5000 },
-    { name: 'はなまる', min: 8000 }, { name: 'エース', min: 14000 }, { name: 'スター', min: 22000 }, { name: 'チャンピオン', min: 34000 }, { name: 'ヒーロー', min: 50000 },
+    { name: 'ルーキー', cond: 'debut' }, { name: '初めの一勝', cond: 'win' }, { name: '一人前', min: 1500 }, { name: '腕利き', min: 3000 }, { name: '期待の星', min: 5000 },
+    { name: '花丸', min: 8000 }, { name: 'エース', min: 14000 }, { name: 'スター', min: 22000 }, { name: 'チャンピオン', min: 34000 }, { name: 'ヒーロー', min: 50000 },
   ].map(Object.freeze));
   const FAME_RANK_MAX = FAME_RANK.length; // 10
   const rankStepOf = (s) => { // いまの段(0〜10)
@@ -514,7 +514,7 @@
     // special は対戦の芯の buffs の形(guts・hit1・crit・missCut・eva・noSulk。docs/spec/ASSISTANT_MASMON_BATTLE.md「その試合だけの上乗せ」)
     //   と、画面・サクセス側の印(line = 最後の一言が変わる・showFirst = 相手の1手目を見せる・noInjury = 試合中のけがなし)
     mua: { good: { hint: 'tech', name: 'みんなの声' }, bitter: { pop: 10 }, special: { line: true } },
-    atsu: { good: { hint: 'assist', name: '試合のはじめのガッツ' }, bitter: { pts: 10 }, special: { guts: 10 } },
+    atsu: { good: { hint: 'assist', name: '試合の初めのガッツ' }, bitter: { pts: 10 }, special: { guts: 10 } },
     kiki: { good: { hint: 'tech', name: '静かな一撃' }, bitter: { stat: 'tough' }, special: { hit1: 0.15 } },
     momosuke: { good: { hint: 'assist', name: '見せ場' }, bitter: { pop: 10 }, special: { crit: 0.10 } },
     dra: { good: { hint: 'tech', name: 'ドラ直伝' }, bitter: { mastery: 10 }, special: { missCut: 0.5 } },

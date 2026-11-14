@@ -598,7 +598,7 @@ const CardTacticsScreen = ({ db, decks, point = 0, onPay, onBack, share = null, 
         {tab === 'pull' && (
           <div data-card-tactics-pull className="space-y-2">
             <div className={`${SCREEN_PANEL_CLASS} py-2 text-[12px] font-bold text-slate-200`} style={JA_WRAP_STYLE}>
-              1回で8枚(N 70%・R 25%・SR 5%)。SR が出ないまま7回引いたら、8回目の最後の1枚は SR。だぶったカードは「かけら」になり、10個でまだ持っていないカードを1枚えらべます。
+              1回で8枚(N 70%・R 25%・SR 5%)。SR が出ないまま7回引いたら、8回目の最後の1枚は SR。だぶったカードは「かけら」になり、10個でまだ持っていないカードを1枚選べます。
               <div className="mt-1 flex flex-wrap gap-x-3 text-[12px] font-black text-amber-200"><span data-card-tactics-point>{`ビートP ${point.toLocaleString()}`}</span><span data-card-tactics-tickets>{`カードパック券 ${t.tickets}枚`}</span><span data-card-tactics-shards>{`かけら ${t.shards}個`}</span></div>
             </div>
             <button type="button" data-card-tactics-buy="1" disabled={busy || point < cardTacticsPrice(1)} onClick={() => { void pay(1, 'point'); }} className="mh-button mh-button-primary min-h-[52px] w-full rounded-2xl font-black disabled:opacity-40">1回引く(300ビートP)</button>

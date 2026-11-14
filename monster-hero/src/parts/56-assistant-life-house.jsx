@@ -467,11 +467,12 @@ function AssistantLifeRoom({ id, met, look, x, y, w, h, state, onOpen, idx, othe
         // 縦: 上の行(名札の右)に一緒の全員の名前か、ひとりなら何をしているか・印。下の行(札の幅いっぱい)に行き先。名前は札に入る数まで(残りは「ほか◯人」)
         const ml = [...assistantLifeName(id)].length * 10 + 20; // 名札の幅(字10px+余白)。上の行はその右から
         const names = t[2] ? assistantLifeTagNames(t[2], Math.floor((w - 6 - ml - 10) / (v2 ? 10.8 : 8.8))) : null;
+        const tagLand = typeof window !== 'undefined' && window.innerWidth > window.innerHeight; // 横画面は札の高さが床の帯(マスモンが歩く所)に響くので、これまでの折り方のまま
         const tagFit = assistantLifeTagFit(t[0], w - 26, 10.5, 0); // 1行に入る字の大きさ(10.5 に入らない狭い部屋は、意味の切れ目で2行にする)
         const short = [...String(t[0])].length <= 9; // 横は1行。行き先が長いときは人数を付けない(「…」で切らない)
         return <span className="tag" data-assistant-life-room-away={id} data-assistant-life-room-tag-mark={mark ? '1' : '0'}>
           {mark || !names ? <small data-assistant-life-room-what style={{ marginLeft: ml }}>{t[1]}</small> : <small data-assistant-life-room-with style={{ marginLeft: ml }}><AssistantLifeNames text={names}/></small>}
-          <b style={w < 150 ? (tagFit >= 10.5 ? { whiteSpace: 'nowrap', fontSize: 10.5 } : { whiteSpace: 'normal', fontSize: Math.max(9, Math.min(10.5, Math.floor((w - 26) / 5.2 * 10) / 10)), lineHeight: '12px' }) : undefined}>{v2 && w >= 150 ? <span data-assistant-life-room-out className="mr-1 rounded bg-slate-600 px-1 text-white">留守</span> : null}{w < 150 && tagFit < 10.5 ? assistantLifeTagChunks(t[0]) : t[0]}<i data-assistant-life-room-tag-short>{n > 1 && short ? `・${n}人` : ''}{mark ? ` ${[...t[1]][0]}` : ''}</i></b></span>; })()}
+          <b style={w < 150 && !tagLand ? (tagFit >= 10.5 ? { whiteSpace: 'nowrap', fontSize: 10.5 } : { whiteSpace: 'normal', fontSize: Math.max(9, Math.min(10.5, Math.floor((w - 26) / 5.2 * 10) / 10)), lineHeight: '12px' }) : undefined}>{v2 && w >= 150 ? <span data-assistant-life-room-out className="mr-1 rounded bg-slate-600 px-1 text-white">留守</span> : null}{w < 150 && !tagLand && tagFit < 10.5 ? assistantLifeTagChunks(t[0]) : t[0]}<i data-assistant-life-room-tag-short>{n > 1 && short ? `・${n}人` : ''}{mark ? ` ${[...t[1]][0]}` : ''}</i></b></span>; })()}
       {!met && <span className="lock">{other ? 'まだいない' : 'まだ会っていない'}</span>}
       {met && state && state.ev && <span className="evm" data-assistant-life-room-ev={id} aria-label="いま、できごとがあります">❗</span>}
       {met && !other && typeof assistantLifeBodyCondShort === 'function' && assistantLifeBodyCondShort(id) && <span className="evm" style={{ right: 'auto', left: 2 }} data-assistant-life-room-body={id} aria-label={assistantLifeBodyCondShort(id)}>{assistantLifeBodyBadge(id)}</span>}
