@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ae6c3e08af487723
+// source-sha256: e9ba2e83ebe8cf50
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -167148,9 +167148,32 @@ const MSX_CSS = `
 .msx .msx-md-tg .tc.wise{background:linear-gradient(160deg,#bbf7d0,#16a34a);border-color:#4ade80}
 .msx .msx-md-tg .tc.pow.tg-not{background:linear-gradient(160deg,#9a7420,#5e420c);border-color:#a8801f}
 .msx .msx-md-tg .tc.wise.tg-not{background:linear-gradient(160deg,#2f8050,#145230);border-color:#3f9a62}
-.msx-md-tg .tc.tg-not .ti{filter:brightness(.8)}
+.msx-md-tg .tc.tg-not .ti{filter:brightness(.55) saturate(.65)}
+/* 技の絵(資料の技アイコン・2026-11-15 社長 r1115-003): 升いっぱいに敷く。元絵に焼き込まれた数字は、右下の数字の札(.g)でかぶせる */
+.msx-md-tg .tc .ti{position:absolute;inset:0;border-radius:6px;overflow:hidden;display:block}
+.msx-md-tg .tc .tg-img{display:block;width:100%;height:100%;object-fit:cover;pointer-events:none}
+.msx-md-tg .tc .g{right:2px;bottom:2px;min-width:20px;padding:0 3px;border-radius:5px;background:rgba(18,12,6,.86);text-align:center;line-height:13px;height:13px;z-index:2}
+.msx-md-tg .tc .tg-alt{z-index:3}
+.msx-md-tg .tc .tg-rk{position:absolute;left:2px;top:2px;z-index:2;min-width:14px;height:14px;border-radius:4px;font-size:10px;font-weight:900;line-height:14px;text-align:center;color:#2a1608;border:1px solid #2a1608}
+.tg-rk.rk1{background:linear-gradient(135deg,#e9a46a,#a95f27)}.tg-rk.rk2{background:linear-gradient(135deg,#f4f7fb,#aab4c2)}.tg-rk.rk3{background:linear-gradient(135deg,#fff1a6,#f2b705)}.tg-rk.rk4{background:linear-gradient(135deg,#d9a8ff,#8a3ffc);color:#fff}.tg-rk.rk5{background:linear-gradient(135deg,#ff5a5a,#ffd23f,#4ade80,#38bdf8,#c084fc)}
 .msx-md-tg .tc{position:relative}
-.msx-md-tg .tc .tg-alt{position:absolute;top:1px;right:3px;font-size:11px;font-weight:900;line-height:1;color:#fff;text-shadow:0 1px 2px #000}
+.msx .msx-md-alt{margin-top:6px;width:100%;padding:6px 8px;border-radius:10px;font-size:12px;font-weight:900;color:#fff;background:linear-gradient(160deg,#6d4cd9,#4a2fa6);border:1.5px solid #a78bfa}
+.msx .msx-tp{display:flex;align-items:center;gap:8px;width:100%;margin:0 0 6px;padding:6px 8px;border-radius:12px;text-align:left;color:#fff;background:#1e1b3a;border:1.5px solid #3b3566}
+.msx .msx-tp.on{border-color:#facc15;background:#2a2547}
+.msx .msx-tp:disabled{opacity:.55}
+.msx .msx-tp .tc{position:relative;overflow:hidden;flex:0 0 44px;width:44px;height:44px;border-radius:8px;display:flex;align-items:center;justify-content:center;border:1.5px solid transparent}
+.msx .msx-tp .tc.pow{background:linear-gradient(160deg,#fde68a,#d97706);border-color:#f59e0b}
+.msx .msx-tp .tc.wise{background:linear-gradient(160deg,#bbf7d0,#16a34a);border-color:#4ade80}
+.msx .msx-tp .tc.pow.tg-not{background:linear-gradient(160deg,#9a7420,#5e420c);border-color:#a8801f}
+.msx .msx-tp .tc.wise.tg-not{background:linear-gradient(160deg,#2f8050,#145230);border-color:#3f9a62}
+.msx .msx-tp .tc{overflow:hidden}.msx .msx-tp .tc .ti{position:absolute;inset:0;display:block}.msx .msx-tp .tc .tg-img{width:100%;height:100%;object-fit:cover;display:block}
+.msx .msx-tp .tc.tg-not .ti{filter:brightness(.55) saturate(.65)}
+.msx .msx-tp .tpb{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.msx .msx-tp .tpb b{font-size:13px}
+.msx .msx-tp .tpb small{font-size:10.5px;opacity:.85;line-height:1.35}
+.msx .msx-tp .tpb small.tp-nb i{font-style:normal;display:inline-block;white-space:nowrap;margin-right:.6em}
+.msx .msx-tp .tpm{flex:0 0 auto;font-size:11px;font-weight:900;color:#facc15}
+.msx-md-tg .tc .tg-alt{position:absolute;top:0;right:0;min-width:22px;height:22px;display:flex;align-items:flex-start;justify-content:flex-end;padding:1px 3px 0 0;font-size:12px;font-weight:900;line-height:1;color:#fff;text-shadow:0 1px 2px #000;cursor:pointer}
 
 .msx-md-not{display:block;font-size:10px;color:#94a3b8;font-weight:800}
 .msx-md-howrow{flex-direction:column;align-items:flex-start;gap:1px}.msx-md-howrow>span{width:100%}
@@ -167660,6 +167683,61 @@ const msxNormAssist = raw => {
     cap: MSX_ASSIST_CAP,
     mons
   };
+};
+const MSX_PICK_KEY = 'mh_monsuc_techpick_v1';
+const msxNormPickMap = raw => {
+  const o = {};
+  if (!msxIsObj(raw)) return o;
+  Object.keys(raw).slice(0, 32).forEach(c => {
+    if (/^[1-5]-[0-3]$/.test(c) && typeof raw[c] === 'string' && raw[c].length <= 48) o[c] = raw[c];
+  });
+  return o;
+};
+const msxNormTechPick = raw => {
+  const o = msxIsObj(raw) ? raw : {};
+  const base = {};
+  const mon = {};
+  if (msxIsObj(o.base)) Object.keys(o.base).slice(0, 64).forEach(k => {
+    if (k.length <= 32) base[k] = msxNormPickMap(o.base[k]);
+  });
+  if (msxIsObj(o.mon)) Object.keys(o.mon).slice(0, 300).forEach(k => {
+    if (k.length <= 64) mon[k] = msxNormPickMap(o.mon[k]);
+  });
+  return {
+    v: 1,
+    base,
+    mon
+  };
+};
+const msxReadTechPick = async () => {
+  let raw = null;
+  try {
+    raw = await storeGet(MSX_PICK_KEY, null);
+  } catch (e) {
+    raw = null;
+  }
+  if (raw != null && !msxIsObj(raw)) {
+    try {
+      await storeSet(MSX_PICK_KEY + '_broken', raw);
+    } catch (e) {}
+  }
+  return msxNormTechPick(raw);
+};
+const msxWriteTechPick = async (kind, key, map) => {
+  const cur = await msxReadTechPick();
+  const out = {
+    ...cur,
+    [kind]: {
+      ...cur[kind],
+      [key]: msxNormPickMap(map)
+    }
+  };
+  try {
+    await storeSet(MSX_PICK_KEY, out);
+  } catch (e) {
+    return cur;
+  }
+  return out;
 };
 const msxReadAssist = async () => {
   let raw = null;
@@ -168291,6 +168369,7 @@ const msxStartPreview = (SUC, species, type, aptBase, startSt) => {
   } catch (e) {}
   return out;
 };
+const MSX_SKILL_ICONS = new Set(['images/success/skill/sk-0001.png', 'images/success/skill/sk-0002.png', 'images/success/skill/sk-0003.png', 'images/success/skill/sk-0004.png', 'images/success/skill/sk-0005.png', 'images/success/skill/sk-0008.png', 'images/success/skill/sk-0009.png', 'images/success/skill/sk-0010.png', 'images/success/skill/sk-0015.png', 'images/success/skill/sk-0016.png', 'images/success/skill/sk-0017.png', 'images/success/skill/sk-0018.png', 'images/success/skill/sk-0023.png', 'images/success/skill/sk-0025.png', 'images/success/skill/sk-0026.png', 'images/success/skill/sk-0027.png', 'images/success/skill/sk-0028.png', 'images/success/skill/sk-0035.png', 'images/success/skill/sk-0036.png', 'images/success/skill/sk-0037.png', 'images/success/skill/sk-0039.png', 'images/success/skill/sk-0040.png', 'images/success/skill/sk-0041.png', 'images/success/skill/sk-0042.png', 'images/success/skill/sk-0043.png', 'images/success/skill/sk-0044.png', 'images/success/skill/sk-0045.png', 'images/success/skill/sk-0046.png', 'images/success/skill/sk-0047.png', 'images/success/skill/sk-0048.png', 'images/success/skill/sk-0049.png', 'images/success/skill/sk-0050.png', 'images/success/skill/sk-0051.png', 'images/success/skill/sk-0052.png', 'images/success/skill/sk-0053.png', 'images/success/skill/sk-0054.png', 'images/success/skill/sk-0055.png', 'images/success/skill/sk-0064.png', 'images/success/skill/sk-0065.png', 'images/success/skill/sk-0066.png', 'images/success/skill/sk-0067.png', 'images/success/skill/sk-0068.png', 'images/success/skill/sk-0069.png', 'images/success/skill/sk-0070.png', 'images/success/skill/sk-0071.png', 'images/success/skill/sk-0072.png', 'images/success/skill/sk-0073.png', 'images/success/skill/sk-0074.png', 'images/success/skill/sk-0075.png', 'images/success/skill/sk-0076.png', 'images/success/skill/sk-0077.png', 'images/success/skill/sk-0078.png', 'images/success/skill/sk-0079.png', 'images/success/skill/sk-0080.png', 'images/success/skill/sk-0082.png', 'images/success/skill/sk-0083.png', 'images/success/skill/sk-0084.png', 'images/success/skill/sk-0110.png', 'images/success/skill/sk-0111.png', 'images/success/skill/sk-0112.png', 'images/success/skill/sk-0113.png', 'images/success/skill/sk-0114.png', 'images/success/skill/sk-0115.png', 'images/success/skill/sk-0116.png', 'images/success/skill/sk-0117.png', 'images/success/skill/sk-0118.png', 'images/success/skill/sk-0119.png', 'images/success/skill/sk-0120.png', 'images/success/skill/sk-0121.png', 'images/success/skill/sk-0122.png', 'images/success/skill/sk-0123.png', 'images/success/skill/sk-0124.png', 'images/success/skill/sk-0125.png', 'images/success/skill/sk-0129.png', 'images/success/skill/sk-0258.png', 'images/success/skill/sk-0259.png', 'images/success/skill/sk-0260.png', 'images/success/skill/sk-0261.png', 'images/success/skill/sk-0262.png', 'images/success/skill/sk-0263.png', 'images/success/skill/sk-0264.png', 'images/success/skill/sk-0265.png', 'images/success/skill/sk-0266.png', 'images/success/skill/sk-0267.png', 'images/success/skill/sk-0268.png', 'images/success/skill/sk-0269.png', 'images/success/skill/sk-0270.png', 'images/success/skill/sk-0271.png', 'images/success/skill/sk-0272.png', 'images/success/skill/sk-0273.png', 'images/success/skill/sk-0274.png', 'images/success/skill/sk-0292.png', 'images/success/skill/sk-0293.png', 'images/success/skill/sk-0294.png', 'images/success/skill/sk-0295.png', 'images/success/skill/sk-0296.png', 'images/success/skill/sk-0297.png', 'images/success/skill/sk-0298.png', 'images/success/skill/sk-0299.png', 'images/success/skill/sk-0300.png', 'images/success/skill/sk-0301.png', 'images/success/skill/sk-0302.png', 'images/success/skill/sk-0303.png', 'images/success/skill/sk-0304.png', 'images/success/skill/sk-0305.png', 'images/success/skill/sk-0306.png', 'images/success/skill/sk-0307.png', 'images/success/skill/sk-0338.png', 'images/success/skill/sk-0339.png', 'images/success/skill/sk-0340.png', 'images/success/skill/sk-0341.png', 'images/success/skill/sk-0342.png', 'images/success/skill/sk-0343.png', 'images/success/skill/sk-0344.png', 'images/success/skill/sk-0345.png', 'images/success/skill/sk-0346.png', 'images/success/skill/sk-0347.png', 'images/success/skill/sk-0348.png', 'images/success/skill/sk-0349.png', 'images/success/skill/sk-0350.png', 'images/success/skill/sk-0351.png', 'images/success/skill/sk-0384.png', 'images/success/skill/sk-0385.png', 'images/success/skill/sk-0386.png', 'images/success/skill/sk-0387.png', 'images/success/skill/sk-0388.png', 'images/success/skill/sk-0389.png', 'images/success/skill/sk-0390.png', 'images/success/skill/sk-0391.png', 'images/success/skill/sk-0392.png', 'images/success/skill/sk-0393.png', 'images/success/skill/sk-0394.png', 'images/success/skill/sk-0395.png', 'images/success/skill/sk-0396.png', 'images/success/skill/sk-0397.png', 'images/success/skill/sk-0398.png', 'images/success/skill/sk-0399.png', 'images/success/skill/sk-0400.png', 'images/success/skill/sk-0401.png', 'images/success/skill/sk-0402.png', 'images/success/skill/sk-0403.png', 'images/success/skill/sk-0404.png', 'images/success/skill/sk-0405.png', 'images/success/skill/sk-0406.png', 'images/success/skill/sk-0407.png', 'images/success/skill/sk-0408.png', 'images/success/skill/sk-0409.png', 'images/success/skill/sk-0410.png', 'images/success/skill/sk-0411.png', 'images/success/skill/sk-0412.png', 'images/success/skill/sk-0413.png', 'images/success/skill/sk-0414.png', 'images/success/skill/sk-0415.png', 'images/success/skill/sk-0416.png', 'images/success/skill/sk-0446.png', 'images/success/skill/sk-0447.png', 'images/success/skill/sk-0448.png', 'images/success/skill/sk-0449.png', 'images/success/skill/sk-0450.png', 'images/success/skill/sk-0451.png', 'images/success/skill/sk-0452.png', 'images/success/skill/sk-0453.png', 'images/success/skill/sk-0454.png', 'images/success/skill/sk-0455.png', 'images/success/skill/sk-0456.png', 'images/success/skill/sk-0457.png', 'images/success/skill/sk-0458.png', 'images/success/skill/sk-0459.png', 'images/success/skill/sk-0460.png', 'images/success/skill/sk-0461.png', 'images/success/skill/sk-0462.png', 'images/success/skill/sk-0463.png', 'images/success/skill/sk-0464.png', 'images/success/skill/sk-0465.png', 'images/success/skill/sk-0466.png', 'images/success/skill/sk-0467.png', 'images/success/skill/sk-0468.png', 'images/success/skill/sk-0469.png', 'images/success/skill/sk-0470.png', 'images/success/skill/sk-0471.png', 'images/success/skill/sk-0472.png', 'images/success/skill/sk-0473.png', 'images/success/skill/sk-0474.png', 'images/success/skill/sk-0475.png', 'images/success/skill/sk-0476.png', 'images/success/skill/sk-0477.png', 'images/success/skill/sk-0478.png', 'images/success/skill/sk-0479.png', 'images/success/skill/sk-0480.png', 'images/success/skill/sk-0481.png', 'images/success/skill/sk-0482.png', 'images/success/skill/sk-0483.png', 'images/success/skill/sk-0484.png', 'images/success/skill/sk-0485.png', 'images/success/skill/sk-0486.png', 'images/success/skill/sk-0487.png', 'images/success/skill/sk-0488.png', 'images/success/skill/sk-0489.png', 'images/success/skill/sk-0490.png', 'images/success/skill/sk-0491.png', 'images/success/skill/sk-0496.png', 'images/success/skill/sk-0511.png', 'images/success/skill/sk-0512.png', 'images/success/skill/sk-0513.png', 'images/success/skill/sk-0514.png', 'images/success/skill/sk-0515.png', 'images/success/skill/sk-0516.png', 'images/success/skill/sk-0517.png', 'images/success/skill/sk-0518.png', 'images/success/skill/sk-0519.png', 'images/success/skill/sk-0520.png', 'images/success/skill/sk-0521.png', 'images/success/skill/sk-0522.png', 'images/success/skill/sk-0523.png', 'images/success/skill/sk-0524.png', 'images/success/skill/sk-0525.png', 'images/success/skill/sk-0526.png', 'images/success/skill/sk-0573.png', 'images/success/skill/sk-0574.png', 'images/success/skill/sk-0575.png', 'images/success/skill/sk-0576.png', 'images/success/skill/sk-0577.png', 'images/success/skill/sk-0578.png', 'images/success/skill/sk-0579.png', 'images/success/skill/sk-0580.png', 'images/success/skill/sk-0581.png', 'images/success/skill/sk-0582.png', 'images/success/skill/sk-0583.png', 'images/success/skill/sk-0584.png', 'images/success/skill/sk-0585.png', 'images/success/skill/sk-0586.png', 'images/success/skill/sk-0587.png', 'images/success/skill/sk-0588.png', 'images/success/skill/sk-0589.png', 'images/success/skill/sk-0590.png', 'images/success/skill/sk-0591.png', 'images/success/skill/sk-0592.png', 'images/success/skill/sk-0593.png', 'images/success/skill/sk-0594.png', 'images/success/skill/sk-0595.png', 'images/success/skill/sk-0596.png', 'images/success/skill/sk-0597.png', 'images/success/skill/sk-0598.png', 'images/success/skill/sk-0599.png', 'images/success/skill/sk-0742.png', 'images/success/skill/sk-0743.png', 'images/success/skill/sk-0744.png', 'images/success/skill/sk-0785.png', 'images/success/skill/sk-0787.png', 'images/success/skill/sk-0788.png', 'images/success/skill/sk-0797.png', 'images/success/skill/sk-0798.png', 'images/success/skill/sk-0799.png', 'images/success/skill/sk-0824.png']);
 const MSX_TG_RANK_COL = Object.freeze({
   1: ['#e9a46a', '#a95f27'],
   2: ['#f4f7fb', '#aab4c2'],
@@ -168304,77 +168383,130 @@ const MSX_TG_RANK_NAME = Object.freeze({
   4: '紫',
   5: '虹'
 });
-function MsxTechIcon({
-  kind,
-  rank,
-  size = 28,
+const MSX_SHADOW_PATHS = Object.freeze({
+  pow: [React.createElement("g", {
+    key: "p0"
+  }, React.createElement("path", {
+    d: "M22 38h30a10 10 0 0 1 10 10v16a10 10 0 0 1-10 10H32a10 10 0 0 1-10-10z"
+  }), React.createElement("path", {
+    d: "M66 30l14-8-6 16 16 4-16 8 8 16-16-8z"
+  })), React.createElement("g", {
+    key: "p1"
+  }, React.createElement("path", {
+    d: "M16 74Q40 14 82 20Q54 32 44 76z"
+  }), React.createElement("path", {
+    d: "M30 82Q56 50 88 44Q66 62 56 84z"
+  })), React.createElement("g", {
+    key: "p2"
+  }, React.createElement("path", {
+    d: "M26 28Q58 48 26 68",
+    fill: "none",
+    strokeWidth: "9",
+    strokeLinecap: "round"
+  }), React.createElement("path", {
+    d: "M44 20Q86 48 44 76",
+    fill: "none",
+    strokeWidth: "9",
+    strokeLinecap: "round"
+  }), React.createElement("circle", {
+    cx: "20",
+    cy: "48",
+    r: "8"
+  })), React.createElement("g", {
+    key: "p3"
+  }, React.createElement("path", {
+    d: "M10 56h46V42l30 20-30 20V68H10z"
+  }), React.createElement("path", {
+    d: "M14 36h30M20 90h30",
+    fill: "none",
+    strokeWidth: "6",
+    strokeLinecap: "round"
+  }))],
+  wise: [React.createElement("g", {
+    key: "w0"
+  }, React.createElement("path", {
+    d: "M48 52C48 44 58 44 58 52C58 64 40 64 40 48C40 30 66 30 66 52C66 76 32 76 32 46C32 18 72 18 72 52",
+    fill: "none",
+    strokeWidth: "7",
+    strokeLinecap: "round"
+  })), React.createElement("g", {
+    key: "w1"
+  }, React.createElement("path", {
+    d: "M56 10L26 54h20L36 86l34-48H50z"
+  })), React.createElement("g", {
+    key: "w2"
+  }, React.createElement("circle", {
+    cx: "48",
+    cy: "48",
+    r: "30",
+    fill: "none",
+    strokeWidth: "6"
+  }), React.createElement("path", {
+    d: "M48 22l6 20 20 6-20 6-6 20-6-20-20-6 20-6z"
+  })), React.createElement("g", {
+    key: "w3"
+  }, React.createElement("circle", {
+    cx: "68",
+    cy: "30",
+    r: "13"
+  }), React.createElement("path", {
+    d: "M60 40L12 86l24-30-16 8 34-32z"
+  }))]
+});
+const msxSkillIconPath = id => ['images/success/skill', `${id}.png`].join('/');
+function MsxSkillArt({
+  t,
   uid = ''
 }) {
-  const r = Math.max(1, Math.min(5, Number(rank) || 1));
-  const gid = `tgi-${uid}${kind}${r}`;
-  const stops = r === 5 ? [['0', '#ff5a5a'], ['.25', '#ffd23f'], ['.5', '#4ade80'], ['.75', '#38bdf8'], ['1', '#c084fc']] : [['0', MSX_TG_RANK_COL[r][0]], ['1', MSX_TG_RANK_COL[r][1]]];
-  const ink = '#2a1608';
+  if (t && MSX_SKILL_ICONS.has(msxSkillIconPath(t.id))) return React.createElement("img", {
+    className: "tg-img",
+    src: msxSkillIconPath(t.id),
+    alt: "",
+    draggable: "false",
+    loading: "lazy"
+  });
+  const kind = t && t.kind === 'wise' ? 'wise' : 'pow';
+  const d = Math.max(0, Math.min(3, Math.min(...(t && Array.isArray(t.dist) && t.dist.length ? t.dist : [1]))));
+  const gid = `tgs-${uid}${t ? t.id : ''}`;
+  const fill = kind === 'wise' ? '#34c46a' : '#f5b81b';
+  const ink = kind === 'wise' ? '#14653a' : '#8a5a06';
   return React.createElement("svg", {
-    className: "tg-ic",
-    "data-tg-rank": r,
-    width: size,
-    height: size,
-    viewBox: "0 0 24 24",
+    className: "tg-img tg-shadow",
+    viewBox: "0 0 96 96",
     "aria-hidden": "true",
-    focusable: "false"
+    focusable: "false",
+    "data-tg-shadow": `${kind}${d}`
   }, React.createElement("defs", null, React.createElement("linearGradient", {
     id: gid,
     x1: "0",
     y1: "0",
-    x2: "1",
+    x2: "0",
     y2: "1"
-  }, stops.map(([o, c]) => React.createElement("stop", {
-    key: o,
-    offset: o,
-    stopColor: c
-  })))), kind === 'wise' ? React.createElement("g", {
+  }, React.createElement("stop", {
+    offset: "0",
+    stopColor: "#ecebef"
+  }), React.createElement("stop", {
+    offset: "1",
+    stopColor: "#c3c0c8"
+  }))), React.createElement("rect", {
+    x: "2",
+    y: "2",
+    width: "92",
+    height: "92",
+    rx: "8",
     fill: `url(#${gid})`,
-    stroke: ink,
-    strokeWidth: "1.3",
-    strokeLinejoin: "round"
-  }, React.createElement("path", {
-    d: "M12 6.6C9.6 4.6 6 4.1 2.2 5v12.6c3.8-.9 7.4-.4 9.8 1.6z"
+    stroke: "#8e8b95",
+    strokeWidth: "2"
   }), React.createElement("path", {
-    d: "M12 6.6c2.4-2 6-2.5 9.8-1.6v12.6c-3.8-.9-7.4-.4-9.8 1.6z"
-  }), React.createElement("path", {
-    d: "M12 6.6v12.6M2.2 19.6c3.8-.9 7.4-.4 9.8 1.6 2.4-2 6-2.5 9.8-1.6",
-    fill: "none",
-    strokeLinecap: "round"
-  }), React.createElement("path", {
-    d: "M4.6 8.4c2-.3 4 0 5.6.9M4.6 11.4c2-.3 4 0 5.6.9M19.4 8.4c-2-.3-4 0-5.6.9M19.4 11.4c-2-.3-4 0-5.6.9",
-    fill: "none",
-    strokeLinecap: "round",
-    strokeWidth: "1"
-  })) : React.createElement("g", {
-    fill: `url(#${gid})`,
-    stroke: ink,
-    strokeWidth: "1.3",
+    d: "M2 70h92v16a8 8 0 0 1-8 8H10a8 8 0 0 1-8-8z",
+    fill: "#00000014"
+  }), React.createElement("g", {
+    fill: fill,
+    stroke: fill === '#f5b81b' ? ink : ink,
+    strokeWidth: "3",
     strokeLinejoin: "round",
-    transform: "rotate(45 12 12)"
-  }, React.createElement("path", {
-    d: "M12 0.8l2.3 3.3v9.6H9.7V4.1z"
-  }), React.createElement("rect", {
-    x: "6",
-    y: "13.7",
-    width: "12",
-    height: "2.5",
-    rx: "1.2"
-  }), React.createElement("rect", {
-    x: "10.6",
-    y: "16.2",
-    width: "2.8",
-    height: "4.2",
-    rx: "0.8"
-  }), React.createElement("circle", {
-    cx: "12",
-    cy: "21.6",
-    r: "1.7"
-  })));
+    transform: "translate(0 -4)"
+  }, MSX_SHADOW_PATHS[kind][d]));
 }
 const MSX_DIST_NAMES = ['零', '近', '中', '遠'];
 const MSX_TG_COLS = Object.freeze([3, 2, 1, 0]);
@@ -168414,9 +168546,11 @@ function MsxMonDetail({
   head = null,
   more = null,
   foot = null,
-  grade: gradeLabel = null
+  grade: gradeLabel = null,
+  pick = null
 }) {
   const [tab, setTab] = useState('base');
+  const [pickCell, setPickCell] = useState(null);
   const line = typeof MONSTER_LINEAGE_MAP === 'object' && MONSTER_LINEAGE_MAP ? MONSTER_LINEAGE_MAP[species] : null;
   const main = line ? msxLineName(line.main) : '';
   const subL = line ? msxLineName(line.sub || line.main) : '';
@@ -168532,32 +168666,43 @@ function MsxMonDetail({
     className: `tgh d${d}`
   }, MSX_DIST_NAMES[d])), tgLines.map(r => MSX_TG_COLS.map(d => {
     const alts = tgAt(r, d);
-    const t = alts[0];
+    const cellK = `${r}-${d}`;
+    const t = alts.find(has) || alts.find(x => pick && pick.sel && pick.sel[cellK] === x.id) || alts[0];
     if (!t) return React.createElement("span", {
       key: `${r}-${d}`,
       className: "no",
       "aria-hidden": "true"
     }, "×");
     const got = has(t);
+    const canAlt = !!pick && alts.length > 1;
     return React.createElement("button", {
       type: "button",
       key: `${r}-${d}`,
       className: `tc ${t.kind === 'wise' ? 'wise' : 'pow'}${got ? ' got' : ' tg-not'}${tech && tech.id === t.id ? ' on' : ''}`,
       "data-msx-tech": t.id,
-      "aria-label": `${t.name}${got ? '' : '(まだ覚えていない)'}${alts.length > 1 ? '(選べる技が' + alts.length + 'つ)' : ''}`,
+      "data-msx-cell": cellK,
+      "aria-label": `${t.name}${got ? '' : '(まだ覚えていない)'}${canAlt ? '(選べる技が' + alts.length + 'つ)' : ''}`,
       onClick: () => setPickT(t.id)
     }, React.createElement("span", {
       className: "ti",
       "aria-hidden": "true"
-    }, React.createElement(MsxTechIcon, {
-      kind: t.kind === 'wise' ? 'wise' : 'pow',
-      rank: t.rank,
+    }, React.createElement(MsxSkillArt, {
+      t: t,
       uid: `${r}${d}`
     })), React.createElement("span", {
-      className: "g"
-    }, t.guts), alts.length > 1 ? React.createElement("span", {
-      className: "tg-alt",
+      className: `tg-rk rk${Math.max(1, Math.min(5, Number(t.rank) || 1))}`,
       "aria-hidden": "true"
+    }, Math.max(1, Math.min(5, Number(t.rank) || 1))), React.createElement("span", {
+      className: "g"
+    }, t.guts), canAlt ? React.createElement("span", {
+      className: "tg-alt",
+      role: "button",
+      "aria-label": "覚える技を選ぶ",
+      "data-msx-alt": cellK,
+      onClick: e => {
+        e.stopPropagation();
+        setPickCell(cellK);
+      }
     }, "⇄") : null);
   }))), tech ? React.createElement("div", {
     className: "msx-md-td"
@@ -168592,7 +168737,70 @@ function MsxMonDetail({
     return how.startsWith('修行で覚える(') ? React.createElement(React.Fragment, null, "修行で覚える", React.createElement("small", {
       className: "msx-md-how"
     }, how.slice('修行で覚える'.length))) : how;
-  })()))) : null))), foot ? React.createElement("div", {
+  })())), pick && tgAt(tech.rank, Math.min(...(tech.dist || [1]))).length > 1 ? React.createElement("button", {
+    type: "button",
+    className: "msx-md-alt",
+    "data-msx-alt-open": true,
+    onClick: () => setPickCell(`${tech.rank}-${Math.min(...(tech.dist || [1]))}`)
+  }, "⇄ 覚える技を選ぶ") : null) : null))), pick && pickCell ? (() => {
+    const [pr, pd] = pickCell.split('-').map(Number);
+    const alts = tgAt(pr, pd);
+    const lock = !!pick.locked(pickCell);
+    const cur = alts.find(has) || alts.find(x => pick.sel && pick.sel[pickCell] === x.id) || alts[0];
+    return React.createElement("div", {
+      className: "msx-ov msx-fade",
+      "data-msx-techpick": true,
+      onClick: e => {
+        e.stopPropagation();
+        setPickCell(null);
+      }
+    }, React.createElement("div", {
+      className: "msx-sheet msx-dt",
+      onClick: e => e.stopPropagation()
+    }, React.createElement("h3", null, "覚える技を選ぶ"), React.createElement("div", {
+      className: "msx-note msx-kp"
+    }, msxPh(`${MSX_DIST_NAMES[pd]}の間合い・ランク${pr}。｜${lock ? 'この升の技は｜もう覚えたので、｜選び直せません' : '選ばなかった技は、｜この升では｜覚えません。｜覚えるまでは｜選び直せます'}`)), React.createElement("div", {
+      className: "msx-dt-body"
+    }, alts.map(t => {
+      const on = cur && cur.id === t.id;
+      const how = has(t) ? '覚えている' : msxTechHow(t, all);
+      return React.createElement("button", {
+        type: "button",
+        key: t.id,
+        className: `msx-tp${on ? ' on' : ''}`,
+        disabled: lock && !on,
+        "data-msx-techpick-opt": t.id,
+        onClick: () => {
+          if (!lock) {
+            pick.onPick(pickCell, t.id);
+            setPickT(t.id);
+            setPickCell(null);
+          }
+        }
+      }, React.createElement("span", {
+        className: `tc ${t.kind === 'wise' ? 'wise' : 'pow'}${has(t) ? ' got' : ' tg-not'}`
+      }, React.createElement("span", {
+        className: "ti",
+        "aria-hidden": "true"
+      }, React.createElement(MsxSkillArt, {
+        t: t,
+        uid: "p"
+      }))), React.createElement("span", {
+        className: "tpb"
+      }, React.createElement("b", null, t.name), React.createElement("small", null, t.kind === 'wise' ? 'かしこさ' : 'ちから', "・消費ガッツ ", t.guts), React.createElement("small", {
+        className: "tp-nb"
+      }, React.createElement("i", null, "ダメージ ", grade('power', t.power)), React.createElement("i", null, "命中率 ", grade('hit', t.hit)), React.createElement("i", null, "クリティカル率 ", grade('crit', t.crit))), React.createElement("small", {
+        className: "tp-nb"
+      }, how.startsWith('修行で覚える(') ? React.createElement(React.Fragment, null, React.createElement("i", null, "修行で覚える"), React.createElement("i", null, how.slice('修行で覚える'.length))) : React.createElement("i", null, how))), React.createElement("span", {
+        className: "tpm"
+      }, on ? '✅ 選択中' : '選ぶ'));
+    })), React.createElement("button", {
+      type: "button",
+      className: "msx-dt-close",
+      "data-msx-techpick-close": true,
+      onClick: () => setPickCell(null)
+    }, "閉じる")));
+  })() : null, foot ? React.createElement("div", {
     className: "msx-md-foot"
   }, foot) : null, React.createElement("button", {
     type: "button",
@@ -168927,6 +169135,7 @@ function MsxStart({
     onStart({
       scn: typeof msxScenarioId === 'function' ? msxScenarioId(scn) : 'hero',
       species,
+      techPick: tpSel,
       from: pick.box ? {
         box: pick.box
       } : {
@@ -168951,12 +169160,46 @@ function MsxStart({
   };
   const apt = msxAptOf(species);
   const [detail, setDetail] = useState(false);
+  const [tpAll, setTpAll] = useState(null);
+  useEffect(() => {
+    let on = true;
+    msxReadTechPick().then(t => {
+      if (on) setTpAll(t);
+    }).catch(() => {
+      if (on) setTpAll(msxNormTechPick(null));
+    });
+    return () => {
+      on = false;
+    };
+  }, []);
   const fromMon = pick.box ? box.mons.find(m => m.id === pick.box) || null : null;
   useEffect(() => {
     setNick(fromMon && typeof fromMon.nick === 'string' ? fromMon.nick.slice(0, MSX_NAME_MAX) : '');
     setNameErr('');
   }, [pick.box]);
   const growType = fromMon && Number.isInteger(fromMon.gt) ? fromMon.gt : typeof SUC.speciesType === 'function' ? SUC.speciesType(species) : null;
+  const tpKind = fromMon ? 'mon' : 'base';
+  const tpKey = fromMon ? fromMon.id : species;
+  const tpSel = typeof SUC.techPickNorm === 'function' ? SUC.techPickNorm(tpAll && tpAll[tpKind] ? tpAll[tpKind][tpKey] : null, species) : {};
+  const onTechPick = async (cell, id) => {
+    const next = {
+      ...tpSel,
+      [cell]: id
+    };
+    try {
+      setTpAll(await msxWriteTechPick(tpKind, tpKey, next));
+    } catch (e) {}
+    setTpAll(cur => {
+      const c = cur || msxNormTechPick(null);
+      return {
+        ...c,
+        [tpKind]: {
+          ...c[tpKind],
+          [tpKey]: next
+        }
+      };
+    });
+  };
   const growName = growType != null && typeof MASMON_CALC !== 'undefined' ? MASMON_CALC.typeOf(growType).name : '—';
   const startSt = useMemo(() => fromMon && fromMon.st && typeof fromMon.st === 'object' && typeof SUC.normStats === 'function' ? SUC.normStats(fromMon.st, species) : typeof SUC.initStats === 'function' ? SUC.initStats(species) : {}, [SUC, species, fromMon]);
   const preview = useMemo(() => msxStartPreview(SUC, species, growType, fromMon && fromMon.aptBase, startSt), [SUC, species, growType, fromMon, startSt]);
@@ -169109,6 +169352,11 @@ function MsxStart({
     }, MSX_STAT_NAME[k]), React.createElement("b", null, startSt[k]), React.createElement("i", {
       className: apt[i] > 'B' ? 'lo' : ''
     }, "素質 ", apt[i]))))), detail && React.createElement(MsxMonDetail, {
+      pick: {
+        sel: tpSel,
+        locked: () => false,
+        onPick: onTechPick
+      },
       species: species,
       name: fromMon && fromMon.nick ? fromMon.nick : msxMonName(species),
       sub: fromMon ? '合体で生まれたモンスター' : 'ベースモン',
@@ -170630,6 +170878,9 @@ function MonheroSuccessScreen({
     const s = SUC.newRun({
       id,
       species: cfg.species,
+      ...(cfg.techPick && typeof cfg.techPick === 'object' ? {
+        techPick: cfg.techPick
+      } : {}),
       aid: cfg.aid,
       team: cfg.team,
       aidBondLv: cfg.aidBondLv,
@@ -172418,6 +172669,17 @@ function MsxPlay({
       power: ev.power,
       rank: ev.rank,
       SUC: SUC,
+      pick: typeof SUC.setTechPick === 'function' && s.techPick ? {
+        sel: s.techPick,
+        locked: c => SUC.techPickLocked(s, c),
+        onPick: (c, id) => {
+          const n = JSON.parse(JSON.stringify(s));
+          if (SUC.setTechPick(n, c, id)) setRun({
+            ...run,
+            s: n
+          });
+        }
+      } : null,
       onClose: () => setDetail(false)
     });
   })() : null, sheet === 'dex' && typeof MsxDex === 'function' ? React.createElement(MsxDex, {
@@ -177894,6 +178156,16 @@ function MsxR3Box({
   const [tab, setTab] = useState('list');
   const [pick, setPick] = useState([]);
   const [byeAsk, setByeAsk] = useState(null);
+  const [tpAll, setTpAll] = useState(null);
+  useEffect(() => {
+    let on = true;
+    msxReadTechPick().then(t => {
+      if (on) setTpAll(t);
+    }).catch(() => {});
+    return () => {
+      on = false;
+    };
+  }, []);
   const [assist, setAssist] = useState(null);
   const fuseKept = React.useRef(null);
   const [apick, setApick] = useState([]);
@@ -178365,6 +178637,32 @@ function MsxR3Box({
           } catch (e) {
             return null;
           }
+        })() : null,
+        pick: cur.raised === false && SUC && typeof SUC.techPickNorm === 'function' ? (() => {
+          const sel = SUC.techPickNorm(tpAll && tpAll.mon ? tpAll.mon[cur.id] : null, cur.species);
+          return {
+            sel,
+            locked: () => false,
+            onPick: async (c, id) => {
+              const next = {
+                ...sel,
+                [c]: id
+              };
+              setTpAll(t0 => {
+                const t = t0 || msxNormTechPick(null);
+                return {
+                  ...t,
+                  mon: {
+                    ...t.mon,
+                    [cur.id]: next
+                  }
+                };
+              });
+              try {
+                setTpAll(await msxWriteTechPick('mon', cur.id, next));
+              } catch (e) {}
+            }
+          };
         })() : null,
         known: Array.isArray(cur.techs) ? cur.techs : [],
         power: cur.raised === false ? null : msxMmPow(cur),

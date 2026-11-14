@@ -75,6 +75,7 @@ const makeRun = async (kind) => {
   const SHOTS_ALL = [
     ['H0', null, []], ['H1', 'mid', []],
     ['S0', null, ['new']], // ストーリー選択(2026-11-14)。S1〜S6 はその「次へ」のあと
+    ['TP1', null, ['new', 'next', 'pickmon:Snegurochka', 'detail']], ['TP2', null, ['new', 'next', 'pickmon:Snegurochka', 'detail', 'alt:2-1']], ['TP3', null, ['new', 'next', 'pickmon:Snegurochka', 'detail', 'alt:2-1', 'altopt:sk-0480']], // 技の升の選び(被った升の ⇄ → 窓 → 選ぶ)
     ['S1', null, ['new', 'next']], ['S1D', null, ['new', 'next', 'detail']], ['S1A', null, ['new', 'next', 'detail', 'tab:apt']], ['S1F', null, ['new', 'next', 'detail', 'tab:feat']], ['S1Z', null, ['seedfuse', 'new', 'next', 'tabfuse', 'pickfirst']], ['S1ZD', null, ['seedfuse', 'new', 'next', 'tabfuse', 'pickfirst', 'detail']],
     ['S2', null, ['new', 'next', 'next']], ['S2P', null, ['new', 'next', 'next', 'slot:1']], ['S2B', null, ['new', 'next', 'next', 'slot:1', 'base:Golem']], ['S2G', null, ['new', 'next', 'next', 'gather']],
     ['S3', null, ['new', 'next', 'next', 'next']], ['S4', null, ['new', 'next', 'next', 'next', 'next']], ['S4L', null, ['new', 'next', 'next', 'next', 'next', 'carry:oil']], ['S4E', null, ['new', 'next', 'next', 'next', 'next', 'scrollend']],
@@ -103,7 +104,7 @@ const makeRun = async (kind) => {
       const page = await browser.newPage({ viewport: { width: w, height: h } });
       page.on('pageerror', (e) => errors.push(String(e && e.message || e)));
       await page.addInitScript(quietBootSeed()); await page.addInitScript(updateNoticeSeed());
-      await page.addInitScript(() => { try { localStorage.setItem('mh_monsuc_beta_v1', JSON.stringify({ v: 1, seen: { open: 1, firstend: 1, prep: 1, turn: 1, train: 1, result: 1, rest: 1, shugyo: 1, cup: 1, match: 1, rematch: 1, event: 1, awake: 1, retire: 1 } })); /* β版の説明の窓は monsuc-beta-browser-check.js が見る。ここは画面そのものを測る */ localStorage.setItem('mh_unlocked_monsters', JSON.stringify(['Mocchi', 'Suezo', 'Golem', 'Tiger', 'Pixie', 'Undine', 'Kyubi', 'Hare', 'Plant', 'Ghost'])); localStorage.setItem('mh_monsuc_meta_v1', JSON.stringify({ v: 1, items: { dango: 2, mag: 1, juice: 3, loupe: 1, license: 1 } })); } catch (e) {} });
+      await page.addInitScript(() => { try { localStorage.setItem('mh_monsuc_beta_v1', JSON.stringify({ v: 1, seen: { open: 1, firstend: 1, prep: 1, turn: 1, train: 1, result: 1, rest: 1, shugyo: 1, cup: 1, match: 1, rematch: 1, event: 1, awake: 1, retire: 1 } })); /* β版の説明の窓は monsuc-beta-browser-check.js が見る。ここは画面そのものを測る */ localStorage.setItem('mh_unlocked_monsters', JSON.stringify(['Mocchi', 'Suezo', 'Golem', 'Tiger', 'Pixie', 'Undine', 'Kyubi', 'Hare', 'Plant', 'Ghost', 'Snegurochka'])); localStorage.setItem('mh_monsuc_meta_v1', JSON.stringify({ v: 1, items: { dango: 2, mag: 1, juice: 3, loupe: 1, license: 1 } })); } catch (e) {} });
       await page.goto(`http://localhost:${PORT}/monster-hero/index.html`, { waitUntil: 'load', timeout: 90000 });
       await page.waitForFunction(() => typeof MonheroSuccessScreen === 'function' && typeof msxLoad === 'function' && typeof MASMON_CALC !== 'undefined', undefined, { timeout: 90000 });
       for (const [name, kind, steps] of SHOTS) {
@@ -138,6 +139,9 @@ const makeRun = async (kind) => {
             if (st.startsWith('slot:')) { const d = document.querySelector(`[data-msx-slot="${st.slice(5)}"]`); if (d) d.click(); return !!d; } // 編成の枠を押す(2026-11-14)
             if (st.startsWith('base:')) { const d = document.querySelector(`[data-msx-pick-base="${st.slice(5)}"]`); if (d) d.click(); return !!d; }
             if (st === 'gather') { const d = document.querySelector('[data-msx-gather-open]'); if (d) d.click(); return !!d; }
+            if (st.startsWith('pickmon:')) { const d = [...document.querySelectorAll('.v-grid6 button')].find((b) => { const i = b.querySelector('img'); return i && i.alt === (typeof msxMonName === 'function' ? msxMonName(st.slice(8)) : st.slice(8)); }); if (d) d.click(); return !!d; } // 育てるモンスターを種族で選ぶ
+            if (st.startsWith('alt:')) { const d = document.querySelector(`[data-msx-alt="${st.slice(4)}"]`); if (d) d.click(); return !!d; } // 被った升の ⇄ を押す(2026-11-14 技を選ぶ窓)
+            if (st.startsWith('altopt:')) { const d = document.querySelector(`[data-msx-techpick-opt="${st.slice(7)}"]`); if (d) d.click(); return !!d; }
             if (st.startsWith('tab:')) { const d = document.querySelector(`[data-msx-detail-tab="${st.slice(4)}"]`); if (d) d.click(); return !!d; }
             if (st.startsWith('carry:')) { const d = document.querySelector(`[data-msx-carry-item="${st.slice(6)}"]`); if (d) d.click(); return !!d; } // 持ちこみの升目を押す(持っていない物も・2026-11-14)
             if (st === 'scrollend') { document.querySelectorAll('.msx *').forEach((e) => { const o = getComputedStyle(e).overflowY; if ((o === 'auto' || o === 'scroll') && e.scrollHeight > e.clientHeight) e.scrollTop = e.scrollHeight; }); return true; } // 下まで送る(最後の行が下の帯に隠れないかを見る)
