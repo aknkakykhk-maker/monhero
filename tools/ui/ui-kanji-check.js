@@ -16,14 +16,17 @@ const { scanFile, applyFile, targetFiles } = require('./ui-kanji-scan.js');
 // まだ置き換えていない部品(r1114-089 で部品ごとに PR を分けて進めている。済んだら消す)
 const PENDING = [
   /src\/parts\/(?:56-monhero-success|56-monsuc-)/, // まだ: モンサク(最後)
-  /data\/(?!card-battle-cards\.js)/, // data(help.js・名前の表)
+  /data\/(?:monhero-success|success-)/, // モンサクの名前の表(最後)
 ];
+
+// モンサクの物の名前は、モンサクの PR で名前の表と一緒に変える(ヘルプの中の字もそのときに)
+const NAME_PENDING = /^(?:いのちの実|ちえの実|ねらいの実|かたさの実|うけつぎ草|うけつぐ魂|スタミナだんご|ねらいうちベリー|うできき|はなまる|信頼のきずな|人なつっこさ|かけつけ|仲よし特訓|通院の付きそい|博士の目じるし|ねぼけ|ゆるがない絆|しめくくり杯)$/;
 
 const args = process.argv.slice(2);
 if (args[0] === '--fix') {
   const rel = args[1];
   if (!rel) { console.log('使い方: --fix <ファイル>'); process.exit(1); }
-  const n = applyFile(rel, null, {});
+  const n = applyFile(rel, null, { skipName: (h) => NAME_PENDING.test(h) });
   console.log(`${rel}: ${n} か所を置き換えた`);
   process.exit(0);
 }
@@ -33,6 +36,7 @@ for (const f of targetFiles()) {
   if (PENDING.some(re => re.test(f))) continue;
   for (const it of scanFile(f)) {
     for (const h of it.hits) {
+      if (NAME_PENDING.test(h.h)) continue;
       found.push(`${f.replace('monster-hero/', '')}:${it.line} 「${h.h}」→「${h.k}」 … ${it.text.replace(/\s+/g, ' ').slice(Math.max(0, h.at - 8), h.at + h.h.length + 8)}`);
     }
   }
