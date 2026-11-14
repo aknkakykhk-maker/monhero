@@ -1360,6 +1360,7 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
       <AssistantLifeHouseStyle/>
       {typeof AssistantLifeRelStyle === 'function' && <AssistantLifeRelStyle/>}
       {typeof AssistantLifePlanHost === 'function' && <AssistantLifePlanHost ids={ids} land={land}/>}
+      {typeof AssistantLifeFindCard === 'function' && <div style={{ position: 'fixed', left: 0, right: 0, bottom: 'calc(78px + env(safe-area-inset-bottom))', zIndex: 9100, pointerEvents: 'none' }}><div style={{ pointerEvents: 'auto', maxWidth: 480, margin: '0 auto' }}><AssistantLifeFindCard/></div></div>}
       <div className="mhl-page" style={{ maxWidth: land || tab === 'where' ? 'none' : 480 }}>
         <div className={`mhl-sky t-${look}`}/>
         <div className="mhl-wood" style={{ backgroundImage: `url(${ASSISTANT_LIFE_VIEW[look][1]})` }}/>
