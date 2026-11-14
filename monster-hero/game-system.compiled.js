@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e6b8176599a1c73a
+// source-sha256: bee385b62b9d19ab
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -113956,7 +113956,7 @@ const ASSISTANT_LIFE_HOUSE_CSS = `
 @media (orientation:landscape) and (max-height:420px){[data-assistant-life-room-acts] .mhl-btn{min-height:34px;font-size:11.5px}[data-assistant-life-room-acts]{gap:5px}}
 .mhl-scene{position:absolute;inset:0;z-index:30;overflow:hidden;background:#000}
 .mhl-scene .bg{position:absolute;inset:0;background-size:cover;background-position:center}
-.mhl-scene .st{position:absolute;bottom:0;object-fit:contain;object-position:bottom;filter:drop-shadow(0 6px 12px #0008)}
+.mhl-scene .st{position:absolute;bottom:0;object-fit:contain;object-position:bottom}/* 2026-11-15 drop-shadow は絵の箱で切れて、後ろに四角い影の面が出た(窓口の指摘)のでやめた */
 @keyframes mhlIntroTitle{0%{opacity:0;transform:scale(.9)}30%{opacity:1;transform:scale(1)}100%{opacity:1}}
 @keyframes mhlDoorL{from{transform:translateX(0)}to{transform:translateX(-102%)}}
 @keyframes mhlDoorR{from{transform:translateX(0)}to{transform:translateX(102%)}}
@@ -115379,7 +115379,8 @@ const assistantLifeStandLayout = (items, W, H) => {
     4: 0.055
   }[Math.min(4, n)];
   const visH = (x, F) => assistantLifeStandVisH(x.face, F);
-  const visW = (x, F) => visH(x, F) * (x.box.r - x.box.l) * x.box.ar / (x.box.b - x.box.t);
+  const VIS_W_MAX_F = 5.6;
+  const visW = (x, F) => Math.min(visH(x, F) * (x.box.r - x.box.l) * x.box.ar / (x.box.b - x.box.t), F * VIS_W_MAX_F);
   let F = fh;
   for (const x of items) {
     const w1 = visW(x, 1);
@@ -199792,30 +199793,30 @@ const CARD_ART_KNOWN_BOX = Object.freeze({
   sorashido_surprise: [384, 512, 0, 2, 384, 510],
   sorashido_troubled: [384, 512, 0, 0, 384, 512],
   sorashido_wink: [384, 512, 0, 2, 384, 510],
-  'stand-normal/atsu_angry': [344, 552, 29, 7, 314, 545],
-  'stand-normal/atsu_crying': [344, 552, 14, 6, 329, 546],
-  'stand-normal/atsu_excited': [344, 552, 1, 6, 342, 546],
-  'stand-normal/atsu_happy': [344, 552, 12, 7, 331, 545],
-  'stand-normal/atsu_normal': [344, 552, 1, 7, 342, 545],
-  'stand-normal/atsu_surprise': [344, 552, 1, 7, 342, 545],
-  'stand-normal/atsu_troubled': [344, 552, 3, 7, 340, 545],
-  'stand-normal/atsu_wink': [344, 552, 1, 8, 342, 544],
-  'stand-normal/kiki_angry': [552, 832, 1, 8, 550, 824],
+  'stand-normal/atsu_angry': [540, 552, 83, 7, 407, 545],
+  'stand-normal/atsu_crying': [606, 552, 108, 6, 390, 546],
+  'stand-normal/atsu_excited': [618, 552, 89, 7, 503, 545],
+  'stand-normal/atsu_happy': [494, 552, 47, 7, 420, 545],
+  'stand-normal/atsu_normal': [586, 552, 43, 7, 439, 545],
+  'stand-normal/atsu_surprise': [624, 552, 118, 7, 434, 545],
+  'stand-normal/atsu_troubled': [556, 552, 47, 7, 458, 545],
+  'stand-normal/atsu_wink': [626, 552, 81, 7, 537, 545],
+  'stand-normal/kiki_angry': [616, 832, 8, 8, 601, 824],
   'stand-normal/kiki_crying': [436, 832, 8, 6, 420, 826],
-  'stand-normal/kiki_excited': [552, 832, 1, 8, 550, 824],
+  'stand-normal/kiki_excited': [946, 832, 8, 8, 929, 824],
   'stand-normal/kiki_happy': [392, 832, 7, 8, 377, 824],
   'stand-normal/kiki_normal': [414, 832, 12, 8, 394, 824],
-  'stand-normal/kiki_surprise': [486, 832, 1, 8, 476, 824],
+  'stand-normal/kiki_surprise': [554, 832, 8, 8, 537, 824],
   'stand-normal/kiki_troubled': [456, 832, 8, 8, 439, 824],
-  'stand-normal/kiki_wink': [550, 832, 8, 6, 541, 826],
-  'stand-normal/kyuko_angry': [430, 590, 16, 7, 413, 583],
-  'stand-normal/kyuko_crying': [396, 590, 23, 8, 361, 582],
-  'stand-normal/kyuko_excited': [418, 590, 6, 8, 405, 582],
-  'stand-normal/kyuko_happy': [424, 590, 61, 8, 356, 582],
+  'stand-normal/kiki_wink': [566, 832, 8, 6, 550, 826],
+  'stand-normal/kyuko_angry': [492, 590, 15, 7, 470, 583],
+  'stand-normal/kyuko_crying': [416, 590, 23, 8, 364, 582],
+  'stand-normal/kyuko_excited': [452, 590, 12, 8, 433, 582],
+  'stand-normal/kyuko_happy': [448, 590, 85, 8, 356, 582],
   'stand-normal/kyuko_normal': [410, 590, 19, 8, 381, 582],
   'stand-normal/kyuko_surprise': [410, 590, 43, 8, 342, 582],
   'stand-normal/kyuko_troubled': [366, 590, 21, 7, 337, 583],
-  'stand-normal/kyuko_wink': [416, 590, 30, 8, 380, 582],
+  'stand-normal/kyuko_wink': [424, 590, 30, 8, 386, 582],
   'stand-normal/myua_angry': [592, 672, 12, 0, 520, 672],
   'stand-normal/myua_crying': [592, 672, 0, 0, 591, 672],
   'stand-normal/myua_excited': [592, 672, 0, 0, 583, 672],
@@ -199824,14 +199825,14 @@ const CARD_ART_KNOWN_BOX = Object.freeze({
   'stand-normal/myua_surprise': [592, 672, 0, 10, 509, 662],
   'stand-normal/myua_troubled': [592, 672, 27, 0, 516, 672],
   'stand-normal/myua_wink': [592, 672, 12, 10, 579, 662],
-  'stand-normal/sorashido_angry': [456, 542, 11, 6, 441, 536],
-  'stand-normal/sorashido_crying': [456, 542, 21, 7, 434, 535],
-  'stand-normal/sorashido_excited': [456, 542, 1, 8, 454, 534],
-  'stand-normal/sorashido_happy': [456, 542, 1, 4, 454, 538],
-  'stand-normal/sorashido_normal': [456, 542, 1, 7, 454, 535],
-  'stand-normal/sorashido_surprise': [456, 542, 20, 7, 435, 535],
-  'stand-normal/sorashido_troubled': [456, 542, 1, 8, 454, 534],
-  'stand-normal/sorashido_wink': [456, 542, 1, 9, 440, 533]
+  'stand-normal/sorashido_angry': [698, 542, 113, 7, 443, 535],
+  'stand-normal/sorashido_crying': [684, 542, 98, 7, 477, 535],
+  'stand-normal/sorashido_excited': [772, 542, 53, 8, 674, 534],
+  'stand-normal/sorashido_happy': [732, 542, 47, 6, 655, 536],
+  'stand-normal/sorashido_normal': [762, 542, 121, 8, 569, 534],
+  'stand-normal/sorashido_surprise': [766, 542, 105, 7, 586, 535],
+  'stand-normal/sorashido_troubled': [730, 542, 31, 9, 672, 533],
+  'stand-normal/sorashido_wink': [646, 542, 97, 9, 446, 533]
 });
 const cardArtBoxOf = v => Array.isArray(v) && v.length === 6 ? {
   nw: v[0],
@@ -199922,7 +199923,7 @@ const CardAssistantArt = ({
     const W = size.w,
       H = size.h;
     if (!box || !W || !H) return null;
-    const sc = Math.min(H / box.h, W / box.w);
+    const sc = Math.min(H / box.h, W * 1.2 / box.w);
     const face = cardArtFaceBySrc(src);
     if (face && !face.head && typeof assistantLifeStandRule === 'function') {
       const lb = {
@@ -199937,13 +199938,13 @@ const CardAssistantArt = ({
         face,
         box: lb,
         F: U / ASSISTANT_LIFE_STAND_FACE_LEN,
-        topY: H * Math.max(0.18, Math.min(0.3, (face.above || 0) * 0.32)),
+        topY: H * Math.max(0.12, Math.min(0.3, (face.above || 0) * 0.32)),
         cx: W / 2
       });
       if (r && r.width > box.nw * sc * 1.02) {
         const dy = Math.max(0, H - r.visBottom);
         const visW = (lb.r - lb.l) * r.width;
-        return {
+        const byFace = {
           width: r.width,
           left: r.left,
           top: r.top + dy,
@@ -199951,6 +199952,7 @@ const CardAssistantArt = ({
           artW: Math.round(Math.min(W, visW)),
           byFace: true
         };
+        if (byFace.artH >= H * 0.92 || byFace.artW >= W * 0.92) return byFace;
       }
     }
     return {

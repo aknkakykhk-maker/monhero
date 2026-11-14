@@ -367,7 +367,7 @@ const ASSISTANT_LIFE_HOUSE_CSS = `
 @media (orientation:landscape) and (max-height:420px){[data-assistant-life-room-acts] .mhl-btn{min-height:34px;font-size:11.5px}[data-assistant-life-room-acts]{gap:5px}}
 .mhl-scene{position:absolute;inset:0;z-index:30;overflow:hidden;background:#000}
 .mhl-scene .bg{position:absolute;inset:0;background-size:cover;background-position:center}
-.mhl-scene .st{position:absolute;bottom:0;object-fit:contain;object-position:bottom;filter:drop-shadow(0 6px 12px #0008)}
+.mhl-scene .st{position:absolute;bottom:0;object-fit:contain;object-position:bottom}/* 2026-11-15 drop-shadow は絵の箱で切れて、後ろに四角い影の面が出た(窓口の指摘)のでやめた */
 @keyframes mhlIntroTitle{0%{opacity:0;transform:scale(.9)}30%{opacity:1;transform:scale(1)}100%{opacity:1}}
 @keyframes mhlDoorL{from{transform:translateX(0)}to{transform:translateX(-102%)}}
 @keyframes mhlDoorR{from{transform:translateX(0)}to{transform:translateX(102%)}}
@@ -873,7 +873,11 @@ const assistantLifeStandLayout = (items, W, H) => {
   // 2人の場面(助手どうしの会話)の顔の大きさ: 全身画の助手(体の幅が広い)が並んでも、みゅあ・ももすけ(34px 前後)とそろえる(2026-11-14 社長「ききときゅうこがでかい？」)
   const fh = H * ({ 1: 0.085, 2: 0.04, 3: 0.064, 4: 0.055 }[Math.min(4, n)]);
   const visH = (x, F) => assistantLifeStandVisH(x.face, F);
-  const visW = (x, F) => visH(x, F) * (x.box.r - x.box.l) * x.box.ar / (x.box.b - x.box.t);
+  // 幅の上限(顔の長さ F の何倍まで数えるか): 全身画の胸から上は、腕・羽・耳・髪を入れると体の幅が顔の7〜8倍になる。そのまま数えると
+  //   並ぶ場面で顔が小さくなる(2026-11-15 社長「ききときゅうこがでかい？」で顔を 34px にそろえたとき)。絵は切らず、広がった所は
+  //   となりと少し重ねてよいことにして、数える幅だけ顔の 5.6 倍までにする
+  const VIS_W_MAX_F = 5.6;
+  const visW = (x, F) => Math.min(visH(x, F) * (x.box.r - x.box.l) * x.box.ar / (x.box.b - x.box.t), F * VIS_W_MAX_F);
   let F = fh;
   for (const x of items) { const w1 = visW(x, 1); if (w1 > 0) F = Math.min(F, (sw * 1.08) / w1); }
   // 頭のてっぺんの高さ: 目の高さの平均が、縦は場面の上から4割・横は3割5分に来るところ
