@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 129585411d241e82
+// source-sha256: c1abe20925224235
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -165928,7 +165928,9 @@ function MsxStart({
         fontSize: 22,
         lineHeight: 1
       }
-    }, t.e), React.createElement("i", null, "×", has(t.id)), React.createElement("small", null, t.name.replace('ガロエ印の', '')), items.includes(t.id) ? React.createElement("u", null, "✔") : null))), React.createElement("div", {
+    }, t.e), React.createElement("i", null, "×", has(t.id)), React.createElement("small", {
+      style: JA_LABEL_STYLE
+    }, jaWrap(t.name.replace('ガロエ印の', ''))), items.includes(t.id) ? React.createElement("u", null, "✔") : null))), React.createElement("div", {
       className: "v-ileg"
     }, React.createElement("span", null, React.createElement("b", {
       className: "sw1"
@@ -172710,10 +172712,9 @@ function MsxR3Retire({
   if (step === 'e1') {
     const cupWins = ws.log && ws.log.wins || 0;
     const cupLoss = ws.log && ws.log.losses || 0;
-    const sc = (typeof MSX_SCENARIOS !== 'undefined' ? MSX_SCENARIOS : []).find(x => x.aid === ws.aid);
     const body = React.createElement(React.Fragment, null, React.createElement("div", {
       className: "v-h"
-    }, "🎓 引退 ── ", run.nick || msxMonName(ws.species), "の育成がおわった", React.createElement("small", null, msxAidName(ws.aid), "編", sc ? `「${sc.title}」` : '', "・", ws.over === 'lost' ? '頂への道で負けた' : '最後まで走り切った')), React.createElement("div", {
+    }, "🎓 引退 ── ", run.nick || msxMonName(ws.species), "の育成がおわった", React.createElement("small", null, msxAidName(ws.aid), "編・", ws.over === 'lost' ? 'ヒーローズファイナルで負けた' : '最後まで走り切った')), React.createElement("div", {
       className: "v-scene r3-mscene",
       style: {
         flex: '1 1 0'
