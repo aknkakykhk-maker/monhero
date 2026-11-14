@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9312f57ee27d1299
+// source-sha256: 061a16215df22982
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -156005,12 +156005,23 @@ const msxTevEnsureCss = () => {
   el.textContent = MSX_TEV_CSS;
   document.head.appendChild(el);
 };
-const MSX_ACT_MS = 1700;
+const MSX_ACT_MS = 2000;
+const MSX_ACT_MOVE = Object.freeze({
+  life: 1,
+  pow: 1,
+  eva: 1
+});
 const MSX_QSTAGE_BG = Object.freeze({
   fire: [['forest_evening', 'rgba(255,90,20,.35)'], ['desert_oilfield', 'rgba(255,40,0,.38)']],
   ice: [['forest_morning', 'rgba(120,200,255,.35)'], ['forest_night', 'rgba(150,220,255,.4)']],
   wind: [['forest_deep', 'rgba(120,255,170,.25)'], ['desert_hall', 'rgba(200,255,220,.25)']],
   star: [['monhero_night', 'rgba(150,120,255,.3)'], ['dark_void', 'rgba(200,170,255,.3)']]
+});
+const MSX_QSTAGE_PT = Object.freeze({
+  fire: '🔥',
+  ice: '❄️',
+  wind: '🍃',
+  star: '✨'
 });
 const msxActCalm = () => typeof msxFxCalm === 'function' && msxFxCalm();
 const msxQstageBgUrl = name => 'images/story-bg/' + String(name || 'forest_evening') + '.jpg';
@@ -156171,17 +156182,38 @@ function MsxTrainAct({
     }, "💨")));
   }
   const front = k === 'tough' || k === 'eva';
+  const mv = !!MSX_ACT_MOVE[k];
   return React.createElement("div", {
-    className: `msx-act t-${k} lv${lv}`,
+    className: `msx-act t-${k} lv${lv}${mv ? ' mv-on' : ''}`,
     onClick: finish,
     "data-msx-act": k,
     "data-msx-act-lv": lv
   }, React.createElement("span", {
     className: k === 'life' ? 'lines h' : 'lines',
     "aria-hidden": "true"
-  }), front ? null : prop, React.createElement("div", {
-    className: "me"
+  }), mv && k === 'life' ? React.createElement("span", {
+    className: "road",
+    "aria-hidden": "true"
+  }) : null, front ? null : prop, mv && k === 'eva' ? [2, 1].map(g => React.createElement("div", {
+    key: g,
+    className: `me gh g${g}`,
+    "aria-hidden": "true"
+  }, React.createElement("div", {
+    className: "mv"
   }, React.createElement(MsxMonArt, {
+    run: run,
+    className: "mon"
+  })))) : null, React.createElement("div", {
+    className: "me"
+  }, mv ? React.createElement("div", {
+    className: "mv"
+  }, React.createElement(MsxMonArt, {
+    run: run,
+    className: "mon",
+    live: true
+  }), k === 'life' ? React.createElement("i", {
+    className: "sweat"
+  }, "💦") : null) : React.createElement(MsxMonArt, {
     run: run,
     className: "mon",
     live: true
@@ -156227,7 +156259,7 @@ function MsxShugyoStages({
   const pair = stages[st - 1] || [];
   const [bg, tint] = bgs[Math.max(0, st - 1)] || bgs[0];
   return React.createElement("div", {
-    className: `msx-qst st${st}`,
+    className: `msx-qst st${st} c-${o.course || 'fire'}`,
     onClick: finish,
     "data-msx-qstage": st
   }, React.createElement("img", {
@@ -156252,9 +156284,23 @@ function MsxShugyoStages({
     key: `ban${st}`,
     className: "ban"
   }, React.createElement("small", null, "STAGE ", st), pair.map(x => `${MSX_STAT_ICON[x]} ${MSX_STAT_NAME[x]}`).join(' & ')), React.createElement("div", {
+    key: `pt${st}`,
+    className: "pts",
+    "aria-hidden": "true"
+  }, Array.from({
+    length: 12
+  }, (_, i) => React.createElement("i", {
+    key: i,
+    style: {
+      '--i': i
+    }
+  }, MSX_QSTAGE_PT[o.course] || '✨'))), React.createElement("div", {
     key: `me${st}`,
-    className: "me"
-  }, React.createElement(MsxMonArt, {
+    className: `me m${st}`
+  }, React.createElement("span", {
+    className: "aura",
+    "aria-hidden": "true"
+  }), React.createElement(MsxMonArt, {
     run: run,
     className: "mon",
     live: true,
@@ -156262,7 +156308,15 @@ function MsxShugyoStages({
       kind: 'great',
       id: `qs-${st}`
     }
-  })), helpers.length ? React.createElement("div", {
+  })), React.createElement("span", {
+    key: `sl${st}`,
+    className: `slash s${st}`,
+    "aria-hidden": "true"
+  }), React.createElement("span", {
+    key: `fl${st}`,
+    className: "qflash",
+    "aria-hidden": "true"
+  }), helpers.length ? React.createElement("div", {
     className: "faces"
   }, helpers.map(i => s.team[i]).filter(Boolean).map((m, j) => React.createElement("img", {
     key: j,
@@ -156388,6 +156442,58 @@ const MSX_ACT_CSS = `
 .msx .msx-qst .skip{position:absolute;right:10px;top:8px;font-size:10px;font-weight:800;color:#e2e8f0aa}
 @keyframes msxQbg{from{opacity:0;transform:scale(1.08)}to{opacity:1;transform:none}}
 @keyframes msxQban{from{opacity:0;transform:translateX(60px)}to{opacity:1;transform:none}}
+/* ---- その動きをしているトレーニング(mv-on)・修行の技の動き(2026-11-14) ---- */
+.msx .msx-act.mv-on .me{animation:none}
+.msx .msx-act .mv{position:absolute;inset:0}
+.msx .msx-act.t-life .mv{transform-origin:50% 88%;animation:msxMvRun .26s ease-in-out infinite alternate}
+.msx .msx-act.t-life .mv .sweat{position:absolute;left:58%;bottom:60%;font-style:normal;font-size:26px;animation:msxMvSweat .5s ease-out .9s both}
+.msx .msx-act .road{position:absolute;left:-30%;right:-30%;bottom:-6%;height:26%;z-index:1;transform:rotate(-7deg);background:repeating-linear-gradient(90deg,#65a30d 0 36px,#4d7c0f 36px 42px);box-shadow:0 -4px 0 #a3e635aa;animation:msxMvRoad .3s linear infinite}
+.msx .msx-act.lv3 .road{background:repeating-linear-gradient(90deg,#78716c 0 36px,#57534e 36px 42px);box-shadow:0 -4px 0 #d6d3d1aa}
+.msx .msx-act.lv4 .road{background:repeating-linear-gradient(90deg,#f1f5f9 0 36px,#cbd5e1 36px 42px);box-shadow:0 -4px 0 #fff}
+.msx .msx-act.lv5 .road{background:repeating-linear-gradient(90deg,#b91c1c 0 36px,#7f1d1d 36px 42px);box-shadow:0 -4px 0 #f97316,0 -10px 18px #f9731688}
+.msx .msx-act.t-life.mv-on .run .land{display:none}
+.msx .msx-act.t-pow .mv{transform-origin:70% 88%;animation:msxMvChop 1.3s cubic-bezier(.35,.1,.3,1) .1s both}
+.msx .msx-act.t-pow.mv-on{animation:msxActShake .3s linear .78s 1}
+.msx .msx-act.t-pow.mv-on .logs .boom,.msx .msx-act.t-pow.mv-on .hard .boom{animation-delay:.74s}
+.msx .msx-act.t-pow.mv-on .logs i{animation-delay:.84s}
+.msx .msx-act.t-pow.mv-on .logs i b{animation-delay:.74s}
+.msx .msx-act.t-pow.mv-on .hard .obj{animation-delay:.84s}
+.msx .msx-act.t-pow.mv-on .hard .chip{animation-delay:.8s}
+.msx .msx-act.t-eva .mv{transform-origin:50% 88%;animation:msxMvDodge 1.7s ease-in-out .1s both}
+.msx .msx-act.t-eva .gh{opacity:.32;filter:saturate(.3) brightness(1.4)}
+.msx .msx-act.t-eva .gh.g1 .mv{animation-delay:.16s}
+.msx .msx-act.t-eva .gh.g2 .mv{animation-delay:.22s;opacity:.6}
+@keyframes msxMvRun{from{transform:translateY(0) rotate(-6deg)}to{transform:translateY(-7%) rotate(-11deg) scaleX(.97)}}
+@keyframes msxMvRoad{to{background-position:-42px 0}}
+@keyframes msxMvSweat{0%{opacity:0;transform:none}30%{opacity:1}100%{opacity:0;transform:translate(26px,-30px)}}
+@keyframes msxMvChop{0%{transform:none}22%{transform:translateY(3%) scale(1.05,.88)}42%{transform:translate(-26%,-36%) rotate(-18deg)}50%{transform:translate(-36%,-6%) rotate(10deg)}55%{transform:translate(-36%,0) rotate(8deg) scale(1.1,.86)}75%{transform:translate(-33%,0) rotate(0) scale(1)}86%{transform:translate(-33%,-6%)}100%{transform:translate(-30%,0)}}
+@keyframes msxMvDodge{0%{transform:none}12%{transform:translateX(-22%) rotate(-10deg)}24%{transform:translate(-22%,-20%) rotate(-4deg)}36%{transform:translateX(-4%)}50%{transform:translateX(20%) rotate(9deg) scale(1.06,.82)}64%{transform:translate(12%,-16%) rotate(4deg)}78%{transform:translateX(-14%) rotate(-8deg)}90%{transform:translateX(0) scale(1.04,.92)}100%{transform:none}}
+.msx .msx-qst .pts{position:absolute;inset:0;pointer-events:none}
+.msx .msx-qst .pts i{position:absolute;font-style:normal;font-size:22px;left:calc(var(--i) * 8.5%);bottom:-8%;animation:msxQup 1.3s linear both;animation-delay:calc(var(--i) * .07s)}
+.msx .msx-qst.c-ice .pts i{bottom:auto;top:-8%;animation-name:msxQdown}
+.msx .msx-qst.c-wind .pts i{left:-10%;bottom:calc(10% + var(--i) * 7%);animation-name:msxQside}
+.msx .msx-qst.c-star .pts i{bottom:calc(8% + (var(--i) * 37 % 80) * 1%);animation-name:msxQtw}
+.msx .msx-qst .me .aura{position:absolute;left:50%;bottom:16%;width:60%;height:46%;margin-left:-30%;border-radius:50%;background:radial-gradient(circle,#fde04799,#f9731655 45%,transparent 70%);opacity:0;animation:msxQaura 1.2s ease-out both}
+.msx .msx-qst.c-ice .me .aura{background:radial-gradient(circle,#e0f2fecc,#38bdf866 45%,transparent 70%)}
+.msx .msx-qst.c-wind .me .aura{background:radial-gradient(circle,#dcfce7cc,#4ade8066 45%,transparent 70%)}
+.msx .msx-qst.c-star .me .aura{background:radial-gradient(circle,#f5f3ffcc,#a78bfa77 45%,transparent 70%)}
+.msx .msx-qst .me.m1{transform-origin:50% 82%;animation:msxQstrike 1.2s cubic-bezier(.4,.1,.3,1) .15s both}
+.msx .msx-qst .me.m2{transform-origin:50% 82%;animation:msxQslam 1.2s cubic-bezier(.4,.1,.3,1) .15s both}
+.msx .msx-qst .slash{position:absolute;left:8%;top:38%;width:70%;height:12px;border-radius:50%;background:linear-gradient(90deg,transparent,#fff 30%,#fde047 60%,transparent);box-shadow:0 0 16px #fde047;transform:rotate(-24deg) scaleX(0);transform-origin:100% 50%;opacity:0;animation:msxQslash .35s ease-out .72s both}
+.msx .msx-qst .slash.s2{left:15%;top:auto;bottom:16%;width:70%;height:22%;border-radius:50%;background:none;border:5px solid #fde047;box-shadow:0 0 20px #f97316,inset 0 0 14px #fde047;transform:scale(.2);transform-origin:50% 50%;animation:msxQring .45s ease-out .78s both}
+.msx .msx-qst.c-ice .slash{background:linear-gradient(90deg,transparent,#fff 30%,#7dd3fc 60%,transparent);box-shadow:0 0 16px #38bdf8}
+.msx .msx-qst.c-ice .slash.s2{background:none;border-color:#bae6fd;box-shadow:0 0 20px #38bdf8,inset 0 0 14px #e0f2fe}
+.msx .msx-qst .qflash{position:absolute;inset:0;pointer-events:none;background:radial-gradient(circle at 50% 60%,#fff,#fff0 65%);opacity:0;animation:msxActFlash .45s ease-out .76s both}
+.msx .msx-qst.st1 .ban,.msx .msx-qst.st2 .ban{z-index:3}
+@keyframes msxQup{0%{opacity:0;transform:none}15%{opacity:1}100%{opacity:0;transform:translate(calc((var(--i) - 6) * 4px),-420px) scale(1.3)}}
+@keyframes msxQdown{0%{opacity:0;transform:none}15%{opacity:1}100%{opacity:0;transform:translate(-40px,420px) rotate(200deg)}}
+@keyframes msxQside{0%{opacity:0;transform:none}15%{opacity:1}100%{opacity:0;transform:translate(520px,-40px) rotate(300deg)}}
+@keyframes msxQtw{0%,100%{opacity:0;transform:scale(.4)}50%{opacity:1;transform:scale(1.3)}}
+@keyframes msxQaura{0%{opacity:0;transform:scale(.6)}40%{opacity:1;transform:scale(1.1)}55%{opacity:.4}100%{opacity:0;transform:scale(1.4)}}
+@keyframes msxQstrike{0%{transform:none}30%{transform:translate(4%,2%) scale(.94,1.04)}36%{transform:translate(-2%,2%) scale(.94,1.04)}42%{transform:translate(3%,2%) scale(.94,1.04)}52%{transform:translate(-30%,0) skewX(10deg)}62%{transform:translate(-34%,0)}82%{transform:translate(-12%,0)}100%{transform:none}}
+@keyframes msxQslam{0%{transform:none}25%{transform:translateY(3%) scale(1.06,.88)}45%{transform:translateY(-30%) rotate(-12deg)}58%{transform:translateY(-34%) rotate(10deg)}66%{transform:translateY(0) scale(1.1,.86)}80%{transform:translateY(-4%)}100%{transform:none}}
+@keyframes msxQslash{0%{opacity:0;transform:rotate(-24deg) scaleX(0)}40%{opacity:1;transform:rotate(-24deg) scaleX(1)}100%{opacity:0;transform:rotate(-24deg) scaleX(1.1)}}
+@keyframes msxQring{0%{opacity:1;transform:scale(.2)}100%{opacity:0;transform:scale(1.5)}}
 @media (prefers-reduced-motion: reduce){.msx .msx-act,.msx .msx-qst{display:none}}
 `;
 let msxActCssDone = false;
