@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c3623a9850a5f14b
+// source-sha256: c8c75750a2bb83ca
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -166592,8 +166592,16 @@ function MsxMonDetail({
   const all = typeof SUC.techsOf === 'function' ? SUC.techsOf(species).filter(Boolean) : [];
   const has = t => Array.isArray(known) ? known.includes(t.id) : !!(t.learn && t.learn.start);
   const list = all.slice().sort((x, y) => has(y) - has(x) || (Number(x.rank) || 0) - (Number(y.rank) || 0));
-  const tgCols = [0, 1, 2, 3].map(d => list.filter(t => Array.isArray(t.dist) && t.dist.includes(d)));
-  const tgRows = Math.max(3, ...tgCols.map(c => c.length));
+  const tgAt = (r, d) => all.filter(t => (Number(t.rank) || 1) === r && Array.isArray(t.dist) && t.dist.includes(d));
+  const tgLines = [1, 2, 3, 4, 5].flatMap(r => {
+    const k = Math.max(1, ...[0, 1, 2, 3].map(d => tgAt(r, d).length));
+    return Array.from({
+      length: k
+    }, (_, i) => ({
+      r,
+      i
+    }));
+  });
   const [pickT, setPickT] = useState(() => (all.find(has) || all[0] || {}).id || null);
   const tech = all.find(t => t.id === pickT) || list[0] || null;
   const grade = (k, v) => (typeof msaTechGrade === 'function' ? msaTechGrade(k, v) : '') || '−';
@@ -166697,19 +166705,20 @@ function MsxMonDetail({
   }, MSX_TG_COLS.map(d => React.createElement("span", {
     key: `h${d}`,
     className: `tgh d${d}`
-  }, MSX_DIST_NAMES[d])), Array.from({
-    length: tgRows
-  }).map((_, r) => MSX_TG_COLS.map(d => {
-    const t = tgCols[d][r];
+  }, MSX_DIST_NAMES[d])), tgLines.map(({
+    r,
+    i
+  }) => MSX_TG_COLS.map(d => {
+    const t = tgAt(r, d)[i];
     if (!t) return React.createElement("span", {
-      key: `${r}-${d}`,
+      key: `${r}-${i}-${d}`,
       className: "no",
       "aria-hidden": "true"
     }, "×");
     const got = has(t);
     return React.createElement("button", {
       type: "button",
-      key: `${r}-${d}`,
+      key: `${r}-${i}-${d}`,
       className: `tc ${t.kind === 'wise' ? 'wise' : 'pow'}${got ? ' got' : ' tg-not'}${tech && tech.id === t.id ? ' on' : ''}`,
       "data-msx-tech": t.id,
       "aria-label": `${t.name}${got ? '' : '(まだ覚えていない)'}`,
@@ -176106,7 +176115,7 @@ const MSX_MM_CSS = `
 .msx .mm-td b{font-size:12.5px;font-weight:900;color:#fde047;line-height:1.3}
 .msx .mm-td div{display:flex;justify-content:space-between;gap:4px;font-size:10.5px;font-weight:800}.msx .mm-td em{font-style:normal;color:#fff}
 .msx .mm-td .nt{color:#94a3b8;font-size:10.5px}
-.msx .msx-md-head{display:inline-flex;gap:4px;margin-right:4px;vertical-align:middle}
+.msx .msx-md-head{display:flex;gap:4px;margin-bottom:3px}
 .msx .msx-md-grade{font-style:normal;font-size:10px;font-weight:900;color:#fff;background:#7c3aed;border:1.5px solid #fde047;border-radius:8px;padding:0 5px;margin-left:3px}
 .msx .mm-acts{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:6px;margin-top:6px}
 .msx .mm-acts button{min-height:44px;border-radius:12px;background:#2b3348;font-size:12.5px;font-weight:900;text-align:center}

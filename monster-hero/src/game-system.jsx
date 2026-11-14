@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: d056a69e17d5a404
+// generated-sha256: 6929c7d4606d169d
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -86999,9 +86999,10 @@ function MsxMonDetail({ species, name, art, st, apt, type, peak, grades, known, 
   const all = typeof SUC.techsOf === 'function' ? SUC.techsOf(species).filter(Boolean) : [];
   const has = (t) => (Array.isArray(known) ? known.includes(t.id) : !!(t.learn && t.learn.start));
   const list = all.slice().sort((x, y) => (has(y) - has(x)) || (Number(x.rank) || 0) - (Number(y.rank) || 0));
-  // 間合いごとの列(1つの技が2つの間合いに出ることもある)。覚えた技を上に、そのあとは段の低い順
-  const tgCols = [0, 1, 2, 3].map((d) => list.filter((t) => Array.isArray(t.dist) && t.dist.includes(d)));
-  const tgRows = Math.max(3, ...tgCols.map((c) => c.length));
+  // 升目の段は技のランク(1〜5)で固定する(2026-11-14 社長「ランク別に技表示されてるんじゃなくて上から詰めて置かれてるのか。段をランク別に変えて」)。
+  //   1つの間合い・同じランクに技が2つ以上ある種族(固有技の多い子)は、そのランクの段だけ行を増やす。そのランクの技が無い升は ×
+  const tgAt = (r, d) => all.filter((t) => (Number(t.rank) || 1) === r && Array.isArray(t.dist) && t.dist.includes(d));
+  const tgLines = [1, 2, 3, 4, 5].flatMap((r) => { const k = Math.max(1, ...[0, 1, 2, 3].map((d) => tgAt(r, d).length)); return Array.from({ length: k }, (_, i) => ({ r, i })); });
   const [pickT, setPickT] = useState(() => (all.find(has) || all[0] || {}).id || null);
   const tech = all.find((t) => t.id === pickT) || list[0] || null;
   const grade = (k, v) => (typeof msaTechGrade === 'function' ? msaTechGrade(k, v) : '') || '−';
@@ -87044,12 +87045,12 @@ function MsxMonDetail({ species, name, art, st, apt, type, peak, grades, known, 
             <div className="msx-md-tw">
               <div className="msx-md-tg">
                 {MSX_TG_COLS.map((d) => <span key={`h${d}`} className={`tgh d${d}`}>{MSX_DIST_NAMES[d]}</span>)}
-                {Array.from({ length: tgRows }).map((_, r) => MSX_TG_COLS.map((d) => { const t = tgCols[d][r];
-                  if (!t) return <span key={`${r}-${d}`} className="no" aria-hidden="true">×</span>;
+                {tgLines.map(({ r, i }) => MSX_TG_COLS.map((d) => { const t = tgAt(r, d)[i];
+                  if (!t) return <span key={`${r}-${i}-${d}`} className="no" aria-hidden="true">×</span>;
                   const got = has(t);
                   // 技の種類で升の色を分ける(参考どおり ちから=金・かしこさ=緑)。覚えていない技も絵を出し、升の地を暗くして見分ける(2026-11-14 社長「鍵じゃなくて覚えてないやつも表示して色分けして」)。
                   // 覚える条件の数は升に出さず、押したときの右の「覚え方」に出す(社長「150とかその数字何?」→ 升目から消す)
-                  return <button type="button" key={`${r}-${d}`} className={`tc ${t.kind === 'wise' ? 'wise' : 'pow'}${got ? ' got' : ' tg-not'}${tech && tech.id === t.id ? ' on' : ''}`} data-msx-tech={t.id} aria-label={`${t.name}${got ? '' : '(まだ覚えていない)'}`} onClick={() => setPickT(t.id)}>
+                  return <button type="button" key={`${r}-${i}-${d}`} className={`tc ${t.kind === 'wise' ? 'wise' : 'pow'}${got ? ' got' : ' tg-not'}${tech && tech.id === t.id ? ' on' : ''}`} data-msx-tech={t.id} aria-label={`${t.name}${got ? '' : '(まだ覚えていない)'}`} onClick={() => setPickT(t.id)}>
                     <span className="ti" aria-hidden="true">{t.kind === 'wise' ? '🧠' : '💪'}</span><span className="g">{t.guts}</span></button>; }))}
               </div>
               {tech ? (<div className="msx-md-td">
@@ -90353,7 +90354,7 @@ const MSX_MM_CSS = `
 .msx .mm-td b{font-size:12.5px;font-weight:900;color:#fde047;line-height:1.3}
 .msx .mm-td div{display:flex;justify-content:space-between;gap:4px;font-size:10.5px;font-weight:800}.msx .mm-td em{font-style:normal;color:#fff}
 .msx .mm-td .nt{color:#94a3b8;font-size:10.5px}
-.msx .msx-md-head{display:inline-flex;gap:4px;margin-right:4px;vertical-align:middle}
+.msx .msx-md-head{display:flex;gap:4px;margin-bottom:3px}
 .msx .msx-md-grade{font-style:normal;font-size:10px;font-weight:900;color:#fff;background:#7c3aed;border:1.5px solid #fde047;border-radius:8px;padding:0 5px;margin-left:3px}
 .msx .mm-acts{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:6px;margin-top:6px}
 .msx .mm-acts button{min-height:44px;border-radius:12px;background:#2b3348;font-size:12.5px;font-weight:900;text-align:center}

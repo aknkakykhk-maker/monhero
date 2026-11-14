@@ -86,7 +86,8 @@ const makeRun = async (kind) => {
     // マスモン一覧(モンサク)の画面(2026-11-14 作り直し): X0 入口・X3 一覧・X4 詳細(基礎・技)・X5 特徴と育成情報・X6 適性とアシスト・X7 お別れのタブ・X8 表示の切り替えの小窓
     ['X0', 'box', ['@openbox']], ['X3', 'box', ['@openbox', '@mmlist']], ['X4', 'box', ['@openbox', '@mmlist', '@boxmon=b1']],
     ['X5', 'box', ['@openbox', '@mmlist', '@boxmon=b1', '#detail-tab=feat']], ['X6', 'box', ['@openbox', '@mmlist', '@boxmon=b1', '#detail-tab=apt']],
-    ['X9', 'box', ['@openbox', '@mmlist', '@boxmon=b1', '#tech=sk-0405']], // 詳細の技の升目で、覚えていない技を押した所(右の詳細に覚え方の条件)
+    ['X9', 'box', ['@openbox', '@mmlist', '@boxmon=b1', '#tech=sk-0405']],
+    ['X10', 'box', ['@openbox', '@mmlist', '@boxmon=bx0']], // 同じ間合い・同じランクに技が2つある種族(スネグーラチカ): そのランクの段が2行になる // 詳細の技の升目で、覚えていない技を押した所(右の詳細に覚え方の条件)
     ['X7', 'box', ['@openbox', '@mmlist', '@mmbye']], ['X8', 'box', ['@openbox', '@mmlist', '@mmlabel']],
     ['X1', 'box', ['@openbox', '@mmlist', '@boxmon=b1', '@edit']], ['X2', 'box', ['@openbox', '@mmlist', '@boxmon=b1', '@edit', '@editsave']],
     // 引退: 能力ポイントが残っていれば E3(使う)→ E0(最終の評価)→ E1(振り返り)→ E2(アシスト)→ マスモンボックス(2026-11-14 参考 v4 の順)
@@ -117,7 +118,7 @@ const makeRun = async (kind) => {
             localStorage.setItem('mh_monsuc_box_v1', JSON.stringify({ v: 1, cap: 30, memory: [], mons: [
               { id: 'b1', species: 'Mocchi', nick: 'もちまる', colors: [], gen: 1, st, techs: ['sk-0402', 'sk-0400', 'sk-0401'], mast: [40, 12, 0], fav: ['pow', 'tough'], coach: 'mua', endAt: Date.parse('2026-11-14T12:00:00+09:00'), ending: 'good', loy: 80, pop: 60, lv: 8, rank: 'A', grade: 'A2', score: 11800, raised: true, assists: [], titles: [], keepMe: 'x' },
               { id: 'b2', species: 'Golem', nick: 'いわお', colors: [], gen: 1, st, techs: [], mast: [], loy: 70, pop: 40, lv: 6, rank: 'B', grade: 'B3', score: 9200, raised: true, assists: [], titles: [] },
-              ...['Mocchi', 'Golem', 'Mocchi', 'Golem', 'Mocchi', 'Golem'].map((sp, i) => ({ id: `bx${i}`, species: sp, nick: '', colors: [], gen: 1 + (i % 3), st, techs: [], mast: [], loy: 50, pop: 30, lv: 3 + i, rank: 'C', grade: `C${i + 1}`, score: 6000 + i * 350, raised: true, assists: [], titles: [] }))] }));
+              ...['Snegurochka', 'Golem', 'Mocchi', 'Golem', 'Mocchi', 'Golem'].map((sp, i) => ({ id: `bx${i}`, species: sp, nick: '', colors: [], gen: 1 + (i % 3), st, techs: [], mast: [], loy: 50, pop: 30, lv: 3 + i, rank: 'C', grade: `C${i + 1}`, score: 6000 + i * 350, raised: true, assists: [], titles: [] }))] }));
             localStorage.removeItem('mh_monsuc_run_v1');
           } else { const run = await make(kind); localStorage.setItem('mh_monsuc_run_v1', JSON.stringify(run)); }
           const el = document.getElementById('msx-shot') || Object.assign(document.createElement('div'), { id: 'msx-shot' });
