@@ -94,7 +94,8 @@ const serve = () => new Promise((resolve) => {
         const textOut = tiles.filter(t => { const r = t.getBoundingClientRect(); const x = t.lastElementChild.getBoundingClientRect(); return x.top < r.top - 1 || x.bottom > r.bottom + 1; }).length;
         return {
           cards: cards.length,
-          content: scroller ? Math.round(scroller.scrollHeight) : 0,
+          // 「いまモンヒロバトルにいる助手」の枠(助手ライフ・2026-11-14)は札の下に足した続きなので、1画面に収める対象から外す
+          content: scroller ? Math.round(scroller.scrollHeight) - (() => { const h = document.querySelector('[data-assistant-life-battle-hall]'); return h ? Math.round(h.getBoundingClientRect().height) + 8 : 0; })() : 0,
           frame: scroller ? Math.round(scroller.clientHeight) : 0,
           tileOut, textOut,
           wide: document.documentElement.scrollWidth > window.innerWidth,
