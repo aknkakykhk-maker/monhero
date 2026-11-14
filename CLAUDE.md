@@ -2,8 +2,7 @@
 
 **全員がいつも守ることだけをここに置く。** 部ごとの話は [`docs/depts/`](docs/depts/README.md)(自分の部の1枚だけ読む)、
 経緯・失敗例・手順は [`docs/rules/`](docs/rules/README.md)(`node tools/ctx.js rules <語>` で節だけ引く)。
-このファイルは会話のたびに全文が読み込まれるので、**膨らませない**
-(`node tools/rules-index-check.js` が大きさと、要のことばが消えていないかを見張る)。
+このファイルは会話のたびに全文が読み込まれるので、**膨らませない**(`node tools/rules-index-check.js` が見張る)。
 
 ブラウザで動くカードバトルゲーム(静的サイト、ビルドツールなし)で、GitHub Pages により
 `https://aknkakykhk-maker.github.io/monhero/` として公開されている。個人開発。
@@ -35,6 +34,7 @@ Claudeアプリでのチャット時の言語は**日本語に固定**する。�
 node tools/ctx.js brief                 いまの状態(ブランチ・未コミットの変更・次に打つもの)
 node tools/ctx.js dept <自分の部>        部の手引き(受け持つファイル・入口の関数・検査・決まり)
 node tools/ctx.js rules <語>            関係するルールの節だけを読む
+node tools/ctx.js todo <部>  完了でない社長の頼み(追跡表)
 node tools/run-checks.js --changed      変更内容から要る検査を選んで回す(最後にミハリ確認の要否も出る)
 ```
 
