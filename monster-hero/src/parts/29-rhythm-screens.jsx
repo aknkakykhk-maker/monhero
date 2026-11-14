@@ -1536,7 +1536,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
 // ===== 動画の音をゲームの音量の設定に合わせる(2026-11-14 社長「予告動画の音が、設定の音量と関係なく鳴る」iPhone の Safari) =====
 // 音量は Audio_.videoGain()(BGM の音量・音を切っているかで決まる 0〜1)。0 なら消音(muted)にする。
 // iPhone の Safari は video.volume を書いても効かないので、Web Audio の音量の節(GainNode)を通す。
-// その節は、動画を押した手の動きの中で作る(iPhone は手の動きの中でないと音の出口が動かない)。作れなかったら volume だけ書く(前と同じ鳴り方)。
+// その節は、動画を押した手の動きの中でだけ作る(iPhone は手の動きの外で作ると音の出口が止まったままになり、つないだ動画がずっと無音になる)。作れなかったら volume だけ書く(前と同じ鳴り方)。
 // 再生のあいだは 0.5秒ごとに設定を読み直す(途中で音量を変えても効く)
 let mhVideoAudioCtx=null;
 const mhVideoGainNow=()=>{try{if(typeof Audio_==='undefined'||!Audio_||typeof Audio_.videoGain!=='function')return 1;const g=Number(Audio_.videoGain());return Number.isFinite(g)?Math.max(0,Math.min(1,g)):1;}catch(e){return 1;}};
@@ -1555,7 +1555,9 @@ const useVideoVolume=(ref,key='')=>{ // key … 動画の枠が作り直され�
   };
   // 押した手の動きの中で呼ぶ: 音の出口を起こし、まだなら動画を音量の節へつなぐ
   const wire=()=>{
-    const el=ref.current;if(!el||node.current)return;
+    const el=ref.current;if(!el)return;
+    // つないだあとに iPhone が音の出口を止めた(アプリの切り替え・電話など)ときも、押した手の中で起こし直す
+    if(node.current){if(mhVideoAudioCtx&&mhVideoAudioCtx.state!=='running'){try{const p=mhVideoAudioCtx.resume();if(p&&typeof p.catch==='function')p.catch(()=>{});}catch(e){}}apply();return;}
     try{
       const AC=typeof window!=='undefined'?(window.AudioContext||window.webkitAudioContext):null;if(!AC)return;
       if(!mhVideoAudioCtx)mhVideoAudioCtx=new AC();
@@ -1585,7 +1587,7 @@ const ChangelogVideo=({src,poster})=>{
   useEffect(()=>()=>{try{if(ref.current)ref.current.pause();}catch(e){}hold(false);},[]);
   return <video ref={ref} src={src} poster={poster} controls playsInline preload="none"
     onPointerDown={vol.wire} onTouchEnd={vol.wire} onClick={vol.wire}
-    onPlay={()=>{hold(true);vol.wire();}} onPause={()=>hold(false)} onEnded={()=>hold(false)}
+    onPlay={()=>hold(true)} onPause={()=>hold(false)} onEnded={()=>hold(false)}
     onError={e=>{hold(false);const f=e.currentTarget.closest('figure');if(f)f.style.display='none';}}
     style={{display:'block',width:'100%',maxWidth:'320px',margin:'0 auto',borderRadius:'12px',background:'#000'}}/>;
 };
