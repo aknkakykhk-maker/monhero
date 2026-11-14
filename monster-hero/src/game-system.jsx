@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 9a3dee89bc311dab
+// generated-sha256: 50f204728472cba5
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -52,6 +52,24 @@ const MH_SCREEN_TRAIL=(()=>{
     }catch(_){}
   }
   return {push,list:()=>list.slice(),sinceLast,compact};
+})();
+// ==== マルチの演奏中に、勝手に別の画面へ替わらないようにする守り(2026-11-15・r1115-006) ====
+// 社長の報告(11/7)「モンビー中に音は流れてるのにいきなりホームに戻された。時間がたってまたモンビーに戻った。マルチをしてたとき」。
+// 演奏の画面は gameState が 'RHYTHM_PLAY' のときだけ描かれ、音は画面と別の部品なので、gameState が演奏中に HOME などへ替わると
+// 「音は鳴っているのに画面だけホーム」になる。原因の道はまだ見つかっていない(記録に gs:HOME が無い)ので、
+// 「マルチの演奏中に、ボタンを押していないのに、モンヒロビートの外の画面(RHYTHM_ で始まらない画面)へ替わろうとした」ものだけを止める。
+//   ・止めるのは gameState の切り替えだけ(演奏・通信・保存には触れない)。演奏が終わったあとの切り替え(RHYTHM_MULTI へ)は RHYTHM_ なので通る
+//   ・「押した」= 画面を押して click が起きたとき(trusted)。演奏中の指の動きは click にならない(touchstart で止めている)ので、押した扱いにならない
+//   ・止めたら MH_SCREEN_TRAIL に blk と残し、診断(rhythm_touch_diagnostics)へ kind:'stray' の行を足す(呼ぶ側 60-app.jsx)
+const MH_MULTI_PLAY_GUARD=(()=>{
+  const GRACE_MS=1500;
+  let lastClick=0;
+  if(typeof document!=='undefined'&&document.addEventListener){
+    try{document.addEventListener('click',(e)=>{if(!e||e.isTrusted!==false)lastClick=Date.now();},true);}catch(_){}
+  }
+  const shouldBlock=(current,next,playFrom,now=Date.now())=>
+    current==='RHYTHM_PLAY'&&playFrom==='multi'&&typeof next==='string'&&!next.startsWith('RHYTHM_')&&now-lastClick>GRACE_MS;
+  return {shouldBlock,touch:()=>{lastClick=Date.now();},lastClickAt:()=>lastClick};
 })();
 // ==== 見えないページのずれを戻す(全画面) ====
 // 【2026-11-02 社長「押した所と反応する所がたまにずれる。横向きにしたり、更新情報の窓を開いたりしたあとになる気がする」→ 決定「A+B 両方入れる」】
@@ -25332,6 +25350,17 @@ const rhythmTouchDiagReport=async(report)=>{
     const deviceKey=await rhythmPlayLogDeviceKey();
     return await sbSendRhythmTouchDiag({device_key:deviceKey,app_build:typeof BUILD_DATE==='string'?BUILD_DATE:'',platform:report.platform,standalone:!!report.standalone,
       song_id:report.song_id,difficulty:report.difficulty,note_count:Math.max(1,report.note_count),stats:{kind:'report',playId:report.playId},schema_version:RHYTHM_TOUCH_DIAG_VERSION});
+  }catch{return false;}
+};
+// マルチの演奏中に画面が勝手に替わろうとして止めたとき(10-core.jsx の MH_MULTI_PLAY_GUARD・2026-11-15 r1115-006)。
+// 診断の行に stats:{kind:'stray',to,scr} を1行足す(表は足すだけ・stats は4KBまで)。足すだけで、既存の診断の形は変えない
+const rhythmTouchDiagStray=async(info)=>{
+  try{
+    if(!info||typeof sbSendRhythmTouchDiag!=='function'||!RHYTHM_DEMO_SONG_IDS.includes(info.song_id))return false;
+    const deviceKey=await rhythmPlayLogDeviceKey();
+    const scr=typeof MH_SCREEN_TRAIL!=='undefined'?MH_SCREEN_TRAIL.compact(MH_SCREEN_TRAIL.list().slice(-12)):[];
+    return await sbSendRhythmTouchDiag({device_key:deviceKey,app_build:typeof BUILD_DATE==='string'?BUILD_DATE:'',platform:rhythmTouchPlatform(),standalone:!!rhythmTouchStandalone(),
+      song_id:info.song_id,difficulty:info.difficulty,note_count:1,stats:{kind:'stray',to:String(info.to||'').slice(0,60),scr},schema_version:RHYTHM_TOUCH_DIAG_VERSION});
   }catch{return false;}
 };
 const RHYTHM_CHART_NOTES_KEY='mh_rhythm_chart_notes_v1';
@@ -115964,7 +115993,21 @@ function MonsterHeroGame() {
   // ここで控えも一緒に更新すれば、切り替えたその瞬間から正しい判断になる。
   // 画面を変えるたびに、どの処理が変えたかを記録に残す(MH_SCREEN_TRAIL・10-core.jsx)
   const gameStateCaller = () => { try { const line = String(new Error().stack || '').split('\n').slice(2).find((l) => !/setGameState|gameStateCaller/.test(l)) || ''; const m = /at\s+([\w$.]+)/.exec(line) || /^([\w$.]+)@/.exec(line.trim()); return m ? m[1] : ''; } catch (_) { return ''; } };
-  const setGameState = (next) => { gameStateNowRef.current = next; runBackgroundAllowedRef.current = isBackgroundRunScreen(next); if (typeof MH_SCREEN_TRAIL !== 'undefined') MH_SCREEN_TRAIL.push('gs', `${next}<${gameStateCaller()}`); setGameStateRaw(next); };
+  // マルチの演奏中に、ボタンを押していないのに外の画面(HOME など)へ替わろうとしたら止める(2026-11-15・r1115-006。本文は 10-core.jsx の MH_MULTI_PLAY_GUARD)。
+  //   止めたら、画面の記録に blk と残し、診断へ kind:'stray' を1行送る。演奏の終わりの切り替え(RHYTHM_MULTI へ)は RHYTHM_ なので通る
+  const rhythmPlayGuardRef = useRef(null);
+  const stopStrayGameState = (next) => {
+    try {
+      const play = rhythmPlayGuardRef.current;
+      if (typeof MH_MULTI_PLAY_GUARD !== 'undefined' && MH_MULTI_PLAY_GUARD.shouldBlock(gameStateNowRef.current, next, play && play.from)) {
+        if (typeof MH_SCREEN_TRAIL !== 'undefined') MH_SCREEN_TRAIL.push('blk', `${next}<${gameStateCaller()}`);
+        if (typeof rhythmTouchDiagStray === 'function' && play && play.song) void rhythmTouchDiagStray({ song_id: play.song.songId, difficulty: play.difficulty && play.difficulty.id, to: `${next}<${gameStateCaller()}` });
+        return true;
+      }
+    } catch (_) { /* 守りが落ちても、画面の切り替えは今までどおり通す */ }
+    return false;
+  };
+  const setGameState = (next) => { if (stopStrayGameState(next)) return; gameStateNowRef.current = next; runBackgroundAllowedRef.current = isBackgroundRunScreen(next); if (typeof MH_SCREEN_TRAIL !== 'undefined') MH_SCREEN_TRAIL.push('gs', `${next}<${gameStateCaller()}`); setGameStateRaw(next); };
   const [debugThrowScreenError, setDebugThrowScreenError] = useState(false); // デバッグ設定から画面エラーの受け止めを試すためだけの印
   const debugMenuRootRef = useRef(null); // デバッグメニューの名前で絞り込む欄が、どの範囲を探すか(2026-10-27)
   const [battleMenuTab, setBattleMenuTab] = useState('difficulty');
@@ -116088,6 +116131,7 @@ function MonsterHeroGame() {
   const [rhythmSettings, setRhythmSettings] = useState(DEFAULT_RHYTHM_SETTINGS);
   const [rhythmBestRecords, setRhythmBestRecords] = useState(()=>normalizeRhythmBestRecords(null));
   const [rhythmPlay,setRhythmPlayState]=useState(null);
+  rhythmPlayGuardRef.current = rhythmPlay; // マルチの演奏中の守り(setGameState)が見る控え
   // 招待の部屋を開いたままほかの画面へ出られる(2026-10-29・案A)ので、部屋にいるまま対戦でない曲を始めるときは、先に部屋を抜けるかを聞く
   // (部屋の中の曲と、ひとりの曲を同時には鳴らせない)。曲を始める入口が多いので、ここ1か所で見る
   const setRhythmPlay=(next)=>{
