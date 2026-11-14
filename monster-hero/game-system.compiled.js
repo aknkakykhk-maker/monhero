@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 653018efef2582ee
+// source-sha256: b7849c4ba4bfd210
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -119416,7 +119416,35 @@ function AssistantLifeRoomScene({
       borderRadius: '8px 4px 4px 8px',
       background: 'linear-gradient(90deg,#f472b6,#f9a8d4)'
     }
-  })), layoutOn && React.createElement(AssistantLifeRoomLayoutLayer, {
+  })), night && !lit && React.createElement("div", {
+    "aria-hidden": "true",
+    className: "pointer-events-none absolute inset-0",
+    style: {
+      background: 'radial-gradient(circle at 18% 30%,#ffc46b40 0,#ffc46b18 110px,transparent 220px),#050a2480'
+    }
+  }), lit && React.createElement("div", {
+    "aria-hidden": "true",
+    "data-assistant-life-roomview-lit": true,
+    className: "pointer-events-none absolute inset-0",
+    style: {
+      background: `${lights.map(l => `radial-gradient(circle at ${l.x.toFixed(0)}px ${l.y.toFixed(0)}px,#fff3c8d0 0,#ffd88a88 ${Math.round(l.r * 0.7)}px,#ffc46b38 ${Math.round(W * 0.45)}px,transparent ${Math.round(W * 0.8)}px)`).join(',')},#0a1030${'26'}`,
+      mixBlendMode: 'normal'
+    }
+  }), night && !lit && React.createElement("span", {
+    "aria-hidden": "true",
+    className: "pointer-events-none absolute",
+    style: {
+      left: W * 0.08,
+      top: topH + 2,
+      fontSize: 26
+    }
+  }, "🏮"), evening && React.createElement("div", {
+    "aria-hidden": "true",
+    className: "pointer-events-none absolute inset-0",
+    style: {
+      background: '#ff8a3018'
+    }
+  }), layoutOn && React.createElement(AssistantLifeRoomLayoutLayer, {
     who: layoutWho,
     items: layoutEdit ? layoutEdit.items : layoutItems,
     geom: layoutGeom,
@@ -119474,7 +119502,14 @@ function AssistantLifeRoomScene({
     className: "whitespace-nowrap text-[14px] font-black text-white"
   }, away.title), away.sub && React.createElement("p", {
     className: "whitespace-nowrap text-[10.5px] font-bold text-slate-300"
-  }, away.sub)), layoutOn && layoutEdit && React.createElement(AssistantLifeRoomLayoutHandles, {
+  }, away.sub)), asleep && night && !lit && React.createElement("div", {
+    "aria-hidden": "true",
+    "data-assistant-life-roomview-sleepdark": true,
+    className: "pointer-events-none absolute inset-0",
+    style: {
+      background: 'radial-gradient(circle at 18% 30%,#ffc46b40 0,#ffc46b18 110px,transparent 220px),#050a2480'
+    }
+  }), layoutOn && layoutEdit && React.createElement(AssistantLifeRoomLayoutHandles, {
     items: layoutEdit.items,
     geom: layoutGeom,
     sel: layoutEdit.sel,
@@ -119482,34 +119517,6 @@ function AssistantLifeRoomScene({
     onMove: layoutEdit.onMove,
     onDrop: layoutEdit.onDrop,
     onScale: layoutEdit.onScale
-  }), night && !lit && React.createElement("div", {
-    "aria-hidden": "true",
-    className: "pointer-events-none absolute inset-0",
-    style: {
-      background: 'radial-gradient(circle at 18% 30%,#ffc46b40 0,#ffc46b18 110px,transparent 220px),#050a2480'
-    }
-  }), lit && React.createElement("div", {
-    "aria-hidden": "true",
-    "data-assistant-life-roomview-lit": true,
-    className: "pointer-events-none absolute inset-0",
-    style: {
-      background: `${lights.map(l => `radial-gradient(circle at ${l.x.toFixed(0)}px ${l.y.toFixed(0)}px,#fff3c8d0 0,#ffd88a88 ${Math.round(l.r * 0.7)}px,#ffc46b38 ${Math.round(W * 0.45)}px,transparent ${Math.round(W * 0.8)}px)`).join(',')},#0a1030${'26'}`,
-      mixBlendMode: 'normal'
-    }
-  }), night && !lit && React.createElement("span", {
-    "aria-hidden": "true",
-    className: "pointer-events-none absolute",
-    style: {
-      left: W * 0.08,
-      top: topH + 2,
-      fontSize: 26
-    }
-  }, "🏮"), evening && React.createElement("div", {
-    "aria-hidden": "true",
-    className: "pointer-events-none absolute inset-0",
-    style: {
-      background: '#ff8a3018'
-    }
   }), people.length > 0 && !asleep && minis.length > 0 && React.createElement("div", {
     "aria-hidden": "true",
     "data-assistant-life-roomview-floorlight": true,
@@ -137041,7 +137048,7 @@ function AssistantLifeRoomEditor({
       setSel(null);
     },
     className: "min-h-[44px] shrink-0 rounded-xl border border-slate-500 px-2.5 text-[12px] font-black text-slate-200 active:scale-95"
-  }, "もとに戻す"), React.createElement("button", {
+  }, "元に戻す"), React.createElement("button", {
     type: "button",
     "data-assistant-life-layout-done": true,
     onClick: onClose,
