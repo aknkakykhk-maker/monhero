@@ -75,10 +75,10 @@ const assistantLifeProfileLikes = (id, giftSt) => {
   const hintCell = cells.find(c => c.like && !c.shown && hints[c.k] && typeof hints[c.k].t === 'string');
   // モンスター(マスモンの表の好き・苦手。贈る仕組みが無いので最初から出す)
   const plan = typeof assistantMasmonBasePlanOf === 'function' ? assistantMasmonBasePlanOf(id) : null;
-  const monOf = (x) => { const m = x && typeof assistantMasmonMon === 'function' ? assistantMasmonMon(x.monster) : null; return m ? { id: x.monster, name: m.name, icon: m.faceIconUrl || m.iconUrl || '', emoji: m.emoji || '🐾' } : null; };
+  const monOf = (x) => { const m = x && typeof assistantMasmonMon === 'function' ? assistantMasmonMon(x.monster) : null; return m ? { id: x.monster, name: m.name, icon: m.faceIconUrl || m.iconUrl || '', emoji: m.emoji || '🐾', grown: x.grown === true } : null; };
   const monLike = plan && Array.isArray(plan.likeMon) ? plan.likeMon.map(monOf).filter(Boolean) : [];
   const monBad = plan && Array.isArray(plan.dislikeMon) ? plan.dislikeMon.map(monOf).filter(Boolean) : [];
-  return { rows, known: cells.filter(c => c.shown).length, total: cells.length, hint: hintCell ? hints[hintCell.k] : null, monLike, monBad };
+  return { rows, known: cells.filter(c => c.shown).length, total: cells.length, hint: hintCell ? hints[hintCell.k] : null, monLike, monBad, recent: typeof assistantLifeTasteRecent === 'function' ? assistantLifeTasteRecent(id, 14) : [] };
 };
 
 // 台詞の最初に聞ける Lv(bond が無い行は Lv1 から)
@@ -324,7 +324,7 @@ function AssistantLifeProfileSheet({ id, bondLevelOf = null, land = false, giftS
       {c.like ? '💗' : '💧'} {c.shown ? `${c.it.emoji} ${c.it.name}` : '？'}</span>);
   const monChip = (m, like) => (
     <span key={`${like}-${m.id}`} className={`inline-flex items-center gap-1 rounded-xl border px-1.5 py-1 text-[11.5px] font-black ${like ? 'border-pink-400 text-pink-100' : 'border-sky-400 text-sky-100'}`}>
-      {like ? '💗' : '💧'}{m.icon ? <img src={m.icon} alt="" className="h-5 w-5 rounded-md object-contain"/> : m.emoji} {m.name}</span>);
+      {like ? '💗' : '💧'}{m.icon ? <img src={m.icon} alt="" className="h-5 w-5 rounded-md object-contain"/> : m.emoji} {m.name}{m.grown && <em data-assistant-life-taste-new className="whitespace-nowrap rounded-md bg-amber-300 px-1 text-[9.5px] font-black not-italic text-slate-900">✨ 新しく</em>}</span>);
   const hero = (
     <div className="relative overflow-hidden" data-assistant-life-profile-hero style={{ height: land ? '100%' : 300, backgroundImage: `linear-gradient(160deg, ${who.accent}55, #0f172a 72%)` }}>
       {/* 立ち絵は右側の枠の中で、顔の大きさと頭の高さをそろえる(縦は右6割・横は名前の下から) */}
@@ -352,10 +352,15 @@ function AssistantLifeProfileSheet({ id, bondLevelOf = null, land = false, giftS
   const secLikes = (
     <div ref={refs.likes} className={card} data-assistant-life-profile-sec="likes">
       <p className={h3}><span className="whitespace-nowrap">{land ? '💗 好き・💧 苦手' : '💗 好きなもの・💧 苦手なもの'}</span>{likes.total > 0 && <em className="whitespace-nowrap text-[10.5px] font-bold not-italic text-slate-400">分かったもの {likes.known}/{likes.total}</em>}</p>
+      {likes.recent.length > 0 && (() => { const x = likes.recent[0]; return (
+        <p data-assistant-life-taste-say className="my-1.5 rounded-xl bg-slate-950/80 px-2 py-1.5 text-[11.5px] font-bold leading-snug text-pink-100">🗨 {who.name}「{assistantLifeTasteSay(x).map((t, i) => <span key={i} className="inline-block whitespace-nowrap">{t}</span>)}」</p>); })()}
       {likes.rows.map(r => (
         <div key={r.label} className="my-1 flex flex-wrap items-center gap-1"><span className="w-[4.6em] shrink-0 whitespace-nowrap text-[11px] font-bold text-slate-400">{r.label}</span>{r.cells.map(chip)}</div>))}
       {(likes.monLike.length > 0 || likes.monBad.length > 0) && (
         <div className="my-1 flex flex-wrap items-center gap-1"><span className="w-[4.6em] shrink-0 whitespace-nowrap text-[11px] font-bold text-slate-400">モンスター</span>{likes.monLike.map(m => monChip(m, true))}{likes.monBad.map(m => monChip(m, false))}</div>)}
+      {likes.recent.length > 0 && (
+        <div data-assistant-life-taste-log className="mt-1.5 rounded-xl border border-white/10 px-2 py-1.5"><p className="mb-0.5 text-[11px] font-black text-slate-300">🌱 最近の変化</p>
+          {likes.recent.slice(0, 3).map((x, i) => (<p key={i} className="text-[10.5px] font-bold leading-snug text-slate-300"><span className="inline-block whitespace-nowrap">{x.day.slice(5).replace('-', '/')}</span> <span className="inline-block whitespace-nowrap">{x.name}:</span> <span className="inline-block whitespace-nowrap">{{ like: '好き', dislike: '苦手', normal: 'ふつう' }[x.from]} →</span> <span className="inline-block whitespace-nowrap">{{ like: '好き', dislike: '苦手', normal: 'ふつう' }[x.to]}</span></p>))}</div>)}
       {likes.hint && <p data-assistant-life-profile-hint className="mt-1.5 rounded-xl bg-slate-950/80 px-2 py-1.5 text-[11px] font-bold leading-snug text-slate-200">💭 {who.name}の話から:「{String(likes.hint.t).replace(/\{name\}/g, call)}」</p>}
       {likes.total > 0 && <p className="mt-1 text-[10.5px] font-bold text-slate-400">？は贈ると分かります。分かった好みはここに残ります。</p>}
     </div>);

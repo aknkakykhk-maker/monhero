@@ -3,7 +3,7 @@
 正本の案: docs/progress/assistant-peer/GROW-PLAN.md 8(#4951)。社長の答え(❶〜❹ すべて A)のとおり作る。作るのは社長の OK のあと。
 
 ## 何を保存するか(新しいキーを足すだけ)
-- 新キー `mh_assistant_life_taste_v1`: `{ v:1, [助手id]: { mon:{[モンスターid]:点}, lin:{[血統]:点}, day:{[日付]:{[対象]:増減}}, log:[{day,target,from,to}] } }`
+- 新キー `mh_assistant_life_taste_v1`: `{ v:1, by:{ [助手id]: { mon:{[モンスターid]:点}, lin:{[血統]:点}, day:{[日付]:{[対象]:増減}}, log:[{day,target,from,to}] } }`
 - 点は -100〜+100。はじめの好き +60・苦手 -60・ふつう 0。はじめの好み(`masmon-plan.json`)は書き換えない・消さない
 - 読み込みは壊れていても既定値(差分なし=はじめの好み)を通す。型は `Number.isFinite`/`Array.isArray` で確かめる
 - 既存の `mh_*` キーは変えない。移行・補償はなし(二重適用の心配なし)。今の好みを消せばはじめに戻る(裏の安全策)

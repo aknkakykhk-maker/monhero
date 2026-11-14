@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: a26a90493375d0bc
+// generated-sha256: ff674632960d8692
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -9921,6 +9921,7 @@ const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, tact
   assistantMasmonRanchTicket: true, // 2026-11-12 社長「この文で公開」・masmon-pvp 版4(DAILY_GROWTH_CAP 40)を配り終えてから真にした。2026-11-11 M/B管理にいる助手のマスモンにトレーニングチケット/重トレーニングチケットを使ってあげる(ボクジョウ)。真にすると今の「次の育成が1.2倍」は止まる。ミハリの確認と Fable の最終確認のあと、更新履歴とヘルプと一緒に真にする
   assistantMasmonPlan: true, // 2026-11-12 ミハリ5 OK・窓口の最終確認のあと公開。 育成ノート(助手のマスモンを計画して育てる・けが/病気/家出/サボり・56-assistant-life-masmon-plan.jsx・キズナ)。保存 mh_assistant_masmon_plan_v1・mh_assistant_masmon_cond_v1。gate → ミハリ → 窓口の最終確認のあと、更新履歴とヘルプと一緒に真にする
   assistantMasmonSleep: true, // 2026-11-12 公開(社長「この文で」・ミハリ fable 確認済み・真にしたら偽へ戻さない)。2026-11-12 助手のマスモンの冬眠(育てた中身を保ったまま眠らせ、あとで起こす・56-assistant-life-masmon-sleep.jsx・キズナ)。保存 mh_assistant_masmon_sleep_v1。育成ノートの印も真のときだけ動く。ミハリ → 窓口の確認のあと真にする
+  assistantLifeTaste: false, // 2026-11-15 助手の好き嫌いが遊んでいくうちに変わる(56-assistant-life-masmon-taste.jsx・キズナ8・社長「この形で作る」)。止め絵と更新履歴の「この文で」・ミハリ10の確認のあと真にする。保存 mh_assistant_life_taste_v1
   assistantMasmonBond: true, // 2026-11-12 助手のマスモンの総合力とランク・忠誠度・人気・育成方針と叱る/褒める・年齢と寿命・成長の型・育ちの速さ×3(56-assistant-life-masmon-bond.jsx・キズナ・案 masmon-plan/POWER.md 第3版)。保存 mh_assistant_masmon_bond_v1。真にするのは masmon-pvp の配り直し(DAILY_GROWTH_CAP 200)・止め絵と更新履歴の「この文で」・ミハリ・Fable の確認のあと
   // モンヒロサクセス(プレイヤー側のターン制の育成・PLAN.md)。回2(育成の画面)を作っている途中なので偽。入口はデバッグ設定の「🌱 モンヒロサクセス(試す)」だけ(56-monhero-success-*.jsx)
   monheroSuccess: false,
@@ -70501,10 +70502,10 @@ const assistantLifeProfileLikes = (id, giftSt) => {
   const hintCell = cells.find(c => c.like && !c.shown && hints[c.k] && typeof hints[c.k].t === 'string');
   // モンスター(マスモンの表の好き・苦手。贈る仕組みが無いので最初から出す)
   const plan = typeof assistantMasmonBasePlanOf === 'function' ? assistantMasmonBasePlanOf(id) : null;
-  const monOf = (x) => { const m = x && typeof assistantMasmonMon === 'function' ? assistantMasmonMon(x.monster) : null; return m ? { id: x.monster, name: m.name, icon: m.faceIconUrl || m.iconUrl || '', emoji: m.emoji || '🐾' } : null; };
+  const monOf = (x) => { const m = x && typeof assistantMasmonMon === 'function' ? assistantMasmonMon(x.monster) : null; return m ? { id: x.monster, name: m.name, icon: m.faceIconUrl || m.iconUrl || '', emoji: m.emoji || '🐾', grown: x.grown === true } : null; };
   const monLike = plan && Array.isArray(plan.likeMon) ? plan.likeMon.map(monOf).filter(Boolean) : [];
   const monBad = plan && Array.isArray(plan.dislikeMon) ? plan.dislikeMon.map(monOf).filter(Boolean) : [];
-  return { rows, known: cells.filter(c => c.shown).length, total: cells.length, hint: hintCell ? hints[hintCell.k] : null, monLike, monBad };
+  return { rows, known: cells.filter(c => c.shown).length, total: cells.length, hint: hintCell ? hints[hintCell.k] : null, monLike, monBad, recent: typeof assistantLifeTasteRecent === 'function' ? assistantLifeTasteRecent(id, 14) : [] };
 };
 
 // 台詞の最初に聞ける Lv(bond が無い行は Lv1 から)
@@ -70750,7 +70751,7 @@ function AssistantLifeProfileSheet({ id, bondLevelOf = null, land = false, giftS
       {c.like ? '💗' : '💧'} {c.shown ? `${c.it.emoji} ${c.it.name}` : '？'}</span>);
   const monChip = (m, like) => (
     <span key={`${like}-${m.id}`} className={`inline-flex items-center gap-1 rounded-xl border px-1.5 py-1 text-[11.5px] font-black ${like ? 'border-pink-400 text-pink-100' : 'border-sky-400 text-sky-100'}`}>
-      {like ? '💗' : '💧'}{m.icon ? <img src={m.icon} alt="" className="h-5 w-5 rounded-md object-contain"/> : m.emoji} {m.name}</span>);
+      {like ? '💗' : '💧'}{m.icon ? <img src={m.icon} alt="" className="h-5 w-5 rounded-md object-contain"/> : m.emoji} {m.name}{m.grown && <em data-assistant-life-taste-new className="whitespace-nowrap rounded-md bg-amber-300 px-1 text-[9.5px] font-black not-italic text-slate-900">✨ 新しく</em>}</span>);
   const hero = (
     <div className="relative overflow-hidden" data-assistant-life-profile-hero style={{ height: land ? '100%' : 300, backgroundImage: `linear-gradient(160deg, ${who.accent}55, #0f172a 72%)` }}>
       {/* 立ち絵は右側の枠の中で、顔の大きさと頭の高さをそろえる(縦は右6割・横は名前の下から) */}
@@ -70778,10 +70779,15 @@ function AssistantLifeProfileSheet({ id, bondLevelOf = null, land = false, giftS
   const secLikes = (
     <div ref={refs.likes} className={card} data-assistant-life-profile-sec="likes">
       <p className={h3}><span className="whitespace-nowrap">{land ? '💗 好き・💧 苦手' : '💗 好きなもの・💧 苦手なもの'}</span>{likes.total > 0 && <em className="whitespace-nowrap text-[10.5px] font-bold not-italic text-slate-400">分かったもの {likes.known}/{likes.total}</em>}</p>
+      {likes.recent.length > 0 && (() => { const x = likes.recent[0]; return (
+        <p data-assistant-life-taste-say className="my-1.5 rounded-xl bg-slate-950/80 px-2 py-1.5 text-[11.5px] font-bold leading-snug text-pink-100">🗨 {who.name}「{assistantLifeTasteSay(x).map((t, i) => <span key={i} className="inline-block whitespace-nowrap">{t}</span>)}」</p>); })()}
       {likes.rows.map(r => (
         <div key={r.label} className="my-1 flex flex-wrap items-center gap-1"><span className="w-[4.6em] shrink-0 whitespace-nowrap text-[11px] font-bold text-slate-400">{r.label}</span>{r.cells.map(chip)}</div>))}
       {(likes.monLike.length > 0 || likes.monBad.length > 0) && (
         <div className="my-1 flex flex-wrap items-center gap-1"><span className="w-[4.6em] shrink-0 whitespace-nowrap text-[11px] font-bold text-slate-400">モンスター</span>{likes.monLike.map(m => monChip(m, true))}{likes.monBad.map(m => monChip(m, false))}</div>)}
+      {likes.recent.length > 0 && (
+        <div data-assistant-life-taste-log className="mt-1.5 rounded-xl border border-white/10 px-2 py-1.5"><p className="mb-0.5 text-[11px] font-black text-slate-300">🌱 最近の変化</p>
+          {likes.recent.slice(0, 3).map((x, i) => (<p key={i} className="text-[10.5px] font-bold leading-snug text-slate-300"><span className="inline-block whitespace-nowrap">{x.day.slice(5).replace('-', '/')}</span> <span className="inline-block whitespace-nowrap">{x.name}:</span> <span className="inline-block whitespace-nowrap">{{ like: '好き', dislike: '苦手', normal: 'ふつう' }[x.from]} →</span> <span className="inline-block whitespace-nowrap">{{ like: '好き', dislike: '苦手', normal: 'ふつう' }[x.to]}</span></p>))}</div>)}
       {likes.hint && <p data-assistant-life-profile-hint className="mt-1.5 rounded-xl bg-slate-950/80 px-2 py-1.5 text-[11px] font-bold leading-snug text-slate-200">💭 {who.name}の話から:「{String(likes.hint.t).replace(/\{name\}/g, call)}」</p>}
       {likes.total > 0 && <p className="mt-1 text-[10.5px] font-bold text-slate-400">？は贈ると分かります。分かった好みはここに残ります。</p>}
     </div>);
@@ -73126,7 +73132,8 @@ const ASSISTANT_MASMON_PLAN = [
 ];
 // >>> ASSISTANT_MASMON_PLAN
 
-const assistantMasmonBasePlanOf = (id) => ASSISTANT_MASMON_PLAN.find(a => a && a.id === id) || null;
+// 好き嫌いは、遊んで変わった分(56-assistant-life-masmon-taste.jsx・公開の印 assistantLifeTaste)を重ねた「いまの好み」を返す。差分が無い・印が偽のときは表のまま
+const assistantMasmonBasePlanOf = (id) => { const b = ASSISTANT_MASMON_PLAN.find(a => a && a.id === id) || null; if (!b) return null; try { return typeof assistantLifeTasteOverlay === 'function' ? assistantLifeTasteOverlay(b) : b; } catch (_) { return b; } };
 // プレイヤーごとのマスモン(2026-11-08 社長の選び ❶B): 保存した made があれば、表の team・extra をそれに差し替えて見せる(表は作る前の控え)
 const assistantMasmonPlanOf = (id) => {
   const base = assistantMasmonBasePlanOf(id);
@@ -74399,16 +74406,17 @@ const assistantLifeCardStyle = (id) => {
   return ASSISTANT_MASMON_CARD_STYLE[id] || null;
 };
 // ココロ(AI のおしゃべり)が読む口: いまの好き・苦手を表示名で(2026-11-08 ココロとすり合わせ)。
-//   changed は「好き嫌いが変わる」(GROW-PLAN 8)が入ってから埋まる。いまは空
+//   changed は遊んで段が変わった分(14日以内・3つまで。56-assistant-life-masmon-taste.jsx)
 const assistantLifeTasteOf = (id) => {
   try { if (typeof assistantLifeEnabled === 'function' && !assistantLifeEnabled()) return null; } catch (_) { return null; }
   const p = assistantMasmonPlanOf(id);
   if (!p) return null;
   const names = (xs) => [...new Set((xs || []).map(assistantMasmonTasteName).filter(Boolean))].slice(0, 5);
-  return { likes: names(p.likeMon), dislikes: names(p.dislikeMon), changed: [] };
+  let changed = []; try { changed = typeof assistantLifeTasteRecent === 'function' ? assistantLifeTasteRecent(id, 14).slice(0, 3).map(x => ({ name: x.name, to: x.to })) : []; } catch (_) { changed = []; }
+  return { likes: names(p.likeMon), dislikes: names(p.dislikeMon), changed };
 };
 
-// ココロの受け口(56-assistant-chat.jsx の入れ物)へ渡す。onTalk は「好き嫌いが変わる」を作るときに足す
+// ココロの受け口(56-assistant-chat.jsx の入れ物)へ渡す。onTalk は 56-assistant-life-masmon-taste.jsx が入れる
 if (typeof ASSISTANT_CHAT_TASTE_HOOKS === 'object' && ASSISTANT_CHAT_TASTE_HOOKS) { ASSISTANT_CHAT_TASTE_HOOKS.of = assistantLifeTasteOf; }
 
 // 能力のゲージ(見た目用)。プレイヤーと同じ4つ。基礎値 × Lv の伸び × 育ち方
@@ -81634,6 +81642,186 @@ function AmgsFuseSheet({ beds, onClose }) {
       </div>
     </div>);
 }
+
+// ---- part: 56-assistant-life-masmon-taste.jsx ----
+// 助手の好き嫌いが遊んでいくうちに変わる仕組み(2026-11-15 キズナ8・r1115-007・社長「この形で作る」)。
+//   案 docs/progress/assistant-peer/GROW-PLAN.md 8・docs/progress/assistant-peer/taste-change/PROPOSAL.md
+//   はじめの好み(masmon-plan の likeMon/dislikeMon)は書き換えない。今の好みは「はじめとの差分」だけを新しいキー mh_assistant_life_taste_v1 に持つ
+//   点は -100〜+100。はじめの好き +60・苦手 -60・ふつう 0(好きなモンスターの血統の仲間は ±18)。段: +40 以上 好き / -40 以下 苦手 / その間 ふつう
+//   1日の上限は1つのモンスターにつき +6・-3。推し(性格の芯)の血統は動き方が5分の1で、好きの段より下がらない
+//   数字(点)は画面に出さない。段が変わった日だけ、助手のひとこと・家の掲示板1件・部屋の「好き・苦手」の変化に出す
+//   スコア・ランキング・強さ・ごほうびには効かせない(反応の台詞とマスモンの選び方だけ)
+//   公開の印 RELEASE_FLAGS.assistantLifeTaste が真のときだけ動く。今の好みを消せば、はじめの好みに戻る
+//   他の部の入口(呼ぶ口): assistantLifeTasteBump(助手id, モンスターid, 種類) 種類 = win / praise / gift / color / friend / raise / lose
+const ASSISTANT_TASTE_KEY = 'mh_assistant_life_taste_v1';
+const AMT_LIKE_AT = 40; // この点以上で「好き」、マイナスの同じ点以下で「苦手」
+const AMT_UP_DAY = 6, AMT_DOWN_DAY = 3; // 1日・1モンスターの上限
+const AMT_CORE_RATE = 0.2; // 推し(芯)の血統は動き方が5分の1
+const AMT_SPREAD = 0.3; // 点の3割は血統の仲間へ広がる
+const AMT_KINDS = Object.freeze({
+  win: { p: 3, once: false }, // 一緒に使って勝つ(バトル・モンヒロビート)
+  praise: { p: 4, once: true }, // 会話で良さを伝える(1日1回)
+  gift: { p: 5, once: false }, // そのモンスターの道具・家具を贈る
+  color: { p: 3, once: false }, // 好きな色の物を贈る・その色に染めたマスモンを見せる
+  friend: { p: 1, once: true }, // 友情Lv5以上の助手がそのモンスターを好き(1日1回)
+  raise: { p: 1, once: true }, // 自分のマスモンとして育てている(1日1回)
+  lose: { p: -2, once: false }, // いやな思い(同じ日に3回負ける・苦手なのに何度も連れていく)
+});
+const amtOn = () => { try { return typeof RELEASE_FLAGS !== 'undefined' && !!RELEASE_FLAGS && RELEASE_FLAGS.assistantLifeTaste === true; } catch (_) { return false; } };
+const amtNum = (v, lim) => (Number.isFinite(Number(v)) ? Math.max(-lim, Math.min(lim, Math.round(Number(v) * 100) / 100)) : 0);
+const amtMonKey = (k) => typeof k === 'string' && /^\w{2,40}$/.test(k);
+const amtEmptyRec = () => ({ mon: {}, lin: {}, day: { d: '', m: {} }, log: [], raised: '' });
+// 保存の形: { v:1, by:{ [助手id]: { mon:{[モンスター]:差}, lin:{[血統]:差}, day:{d,m:{[モンスター]:{up,down,k:[種類]}}}, log:[{day,target,from,to}], raised:'YYYY-MM-DD' } } }
+const normalizeAssistantLifeTaste = (raw) => {
+  const out = { v: 1, by: {} };
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw) || !raw.by || typeof raw.by !== 'object' || Array.isArray(raw.by)) return out;
+  for (const [aid, r] of Object.entries(raw.by)) {
+    if (!r || typeof r !== 'object' || Array.isArray(r) || !/^[a-z0-9_]{2,24}$/.test(aid)) continue;
+    const rec = amtEmptyRec();
+    for (const [k, v] of Object.entries(r.mon && typeof r.mon === 'object' && !Array.isArray(r.mon) ? r.mon : {}).slice(0, 80)) if (amtMonKey(k)) { const n = amtNum(v, 100); if (n) rec.mon[k] = n; }
+    for (const [k, v] of Object.entries(r.lin && typeof r.lin === 'object' && !Array.isArray(r.lin) ? r.lin : {}).slice(0, 60)) if (amtMonKey(k)) { const n = amtNum(v, 100); if (n) rec.lin[k] = n; }
+    const d = r.day && typeof r.day === 'object' ? r.day : null;
+    if (d && typeof d.d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d.d) && d.m && typeof d.m === 'object' && !Array.isArray(d.m)) {
+      rec.day.d = d.d;
+      for (const [k, v] of Object.entries(d.m).slice(0, 80)) if (amtMonKey(k) && v && typeof v === 'object') rec.day.m[k] = { up: Math.max(0, amtNum(v.up, 99)), down: Math.max(0, amtNum(v.down, 99)), k: (Array.isArray(v.k) ? v.k : []).filter(x => typeof x === 'string' && AMT_KINDS[x]).slice(0, 8) };
+    }
+    rec.log = (Array.isArray(r.log) ? r.log : []).filter(x => x && typeof x === 'object' && typeof x.day === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(x.day) && amtMonKey(x.target) && ['like', 'dislike', 'normal'].includes(x.from) && ['like', 'dislike', 'normal'].includes(x.to)).map(x => ({ day: x.day, target: x.target, from: x.from, to: x.to })).slice(-30);
+    rec.raised = typeof r.raised === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(r.raised) ? r.raised : '';
+    out.by[aid] = rec;
+  }
+  return out;
+};
+const AMT_STORE = typeof amgpMakeStore === 'function' ? amgpMakeStore(ASSISTANT_TASTE_KEY, normalizeAssistantLifeTaste) : null;
+const amtRawPlan = (aid) => { try { return ASSISTANT_MASMON_PLAN.find(a => a && a.id === aid) || null; } catch (_) { return null; } };
+const amtLin = (m) => { try { return typeof assistantMasmonLineage === 'function' ? assistantMasmonLineage(m) : null; } catch (_) { return null; } };
+const amtTier = (v) => (v >= AMT_LIKE_AT ? 'like' : v <= -AMT_LIKE_AT ? 'dislike' : 'normal');
+// はじめの点(表の likeMon/dislikeMon から)
+const amtBase = (raw, m) => {
+  if (!raw) return 0;
+  const lin = amtLin(m);
+  const some = (xs, f) => (Array.isArray(xs) ? xs : []).some(x => x && f(x));
+  if (some(raw.dislikeMon, x => x.monster === m)) return -60;
+  if (some(raw.likeMon, x => x.monster === m)) return 60;
+  if (lin && some(raw.dislikeMon, x => x.lineage === lin)) return -60;
+  if (lin && some(raw.likeMon, x => x.lineage === lin)) return 60;
+  let s = 0;
+  if (lin && some(raw.likeMon, x => x.monster && x.monster !== m && amtLin(x.monster) === lin)) s += 18;
+  if (lin && some(raw.dislikeMon, x => x.monster && x.monster !== m && amtLin(x.monster) === lin)) s -= 18;
+  return s;
+};
+const amtCoreLin = (aid) => { try { const mat = typeof assistantLifeCardMaterial === 'function' ? assistantLifeCardMaterial(aid) : null; return mat && mat.core ? mat.core : null; } catch (_) { return null; } };
+const amtIsCore = (aid, m) => { const c = amtCoreLin(aid); return !!c && amtLin(m) === c; };
+// いまの点(はじめ + 差分)。推しの血統で、はじめが好きなら、好きの段より下がらない
+const amtEff = (aid, raw, rec, m) => {
+  const b = amtBase(raw, m), lin = amtLin(m);
+  let v = b + (rec && rec.mon[m] || 0) + (lin && rec && rec.lin[lin] || 0);
+  v = Math.max(-100, Math.min(100, v));
+  if (b >= AMT_LIKE_AT && amtIsCore(aid, m)) v = Math.max(AMT_LIKE_AT, v);
+  return v;
+};
+const amtAllMons = () => (typeof ALL_PLAYER_MONSTERS !== 'undefined' && ALL_PLAYER_MONSTERS ? Object.keys(ALL_PLAYER_MONSTERS) : []);
+const amtMonName = (m) => { try { const x = typeof assistantMasmonMon === 'function' ? assistantMasmonMon(m) : null; return x ? x.name : m; } catch (_) { return m; } };
+// はじめの好みに、遊んで変わった分を重ねた「いまの好み」(likeMon/dislikeMon だけを差し替える。差分が無ければそのまま返す)
+const amtCache = { st: null, by: {} };
+function assistantLifeTasteOverlay(base) {
+  try {
+    if (!base || !amtOn() || !AMT_STORE || !AMT_STORE.loaded) return base;
+    const st = AMT_STORE.state; const rec = st.by[base.id];
+    if (!rec || (!Object.keys(rec.mon).length && !Object.keys(rec.lin).length)) return base;
+    if (amtCache.st !== st) { amtCache.st = st; amtCache.by = {}; }
+    if (amtCache.by[base.id]) return amtCache.by[base.id];
+    let like = [...(base.likeMon || [])], dis = [...(base.dislikeMon || [])];
+    for (const m of amtAllMons()) {
+      const bt = amtTier(amtBase(base, m)), t = amtTier(amtEff(base.id, base, rec, m));
+      if (bt === t) continue;
+      if (bt === 'like') like = like.filter(x => !(x && x.monster === m));
+      if (bt === 'dislike') dis = dis.filter(x => !(x && x.monster === m));
+      if (t === 'like') like.push({ monster: m, why: '遊んでいるうちに好きになった', grown: true });
+      if (t === 'dislike') dis.push({ monster: m, why: '遊んでいるうちに苦手になった', grown: true });
+    }
+    return (amtCache.by[base.id] = { ...base, likeMon: like, dislikeMon: dis });
+  } catch (_) { return base; }
+}
+// 段が変わったときの助手のひとこと(言葉の切れ目ごとの配列。画面で切れ目だけで折る)
+const AMT_SAY = Object.freeze({
+  like: (c) => ['最近', c, 'のこと…', 'ちょっと好きに', 'なってきた', 'かも'],
+  normal_from_dislike: (c) => [c, 'のこと、', '前ほど', '苦手じゃ', 'なくなってきた', 'かも'],
+  normal_from_like: (c) => [c, 'は、', '前ほど', '夢中じゃ', 'なくなった', 'かも'],
+  dislike: (c) => [c, 'は、', 'ちょっと', '苦手に', 'なってきた', 'かも'],
+});
+const assistantLifeTasteSay = (x) => {
+  const c = amtMonName(x.target);
+  if (x.to === 'like') return AMT_SAY.like(c);
+  if (x.to === 'dislike') return AMT_SAY.dislike(c);
+  return x.from === 'dislike' ? AMT_SAY.normal_from_dislike(c) : AMT_SAY.normal_from_like(c);
+};
+// 変わった記録(新しい順)。days 日以内
+const assistantLifeTasteRecent = (aid, days = 14) => {
+  try {
+    if (!amtOn() || !AMT_STORE || !AMT_STORE.loaded) return [];
+    const rec = AMT_STORE.state.by[aid]; if (!rec) return [];
+    const now = typeof assistantLifeDayKey === 'function' ? assistantLifeDayKey() : '';
+    const t0 = Date.parse(`${now}T00:00:00Z`);
+    return rec.log.filter(x => !Number.isFinite(t0) || (t0 - Date.parse(`${x.day}T00:00:00Z`)) / 86400000 <= days).slice().reverse().map(x => ({ ...x, name: amtMonName(x.target) }));
+  } catch (_) { return []; }
+};
+// 好き嫌いを動かす入口。他の部は種類だけ決めて呼ぶ。変わった段があれば [{ target, from, to }] を返す(無ければ空)
+const assistantLifeTasteBump = (aid, monsterId, kind, now = Date.now()) => {
+  try {
+    if (!amtOn() || !AMT_STORE || !AMT_STORE.loaded) return [];
+    const k = AMT_KINDS[kind], raw = amtRawPlan(aid);
+    if (!k || !raw || !amtMonKey(monsterId) || !(typeof assistantMasmonMon === 'function' && assistantMasmonMon(monsterId))) return [];
+    const st = AMT_STORE.state, old = st.by[aid] || amtEmptyRec();
+    const rec = { mon: { ...old.mon }, lin: { ...old.lin }, day: { d: old.day.d, m: { ...old.day.m } }, log: [...old.log], raised: old.raised };
+    const day = typeof assistantLifeDayKey === 'function' ? assistantLifeDayKey(now) : '';
+    if (!day) return [];
+    if (rec.day.d !== day) rec.day = { d: day, m: {} };
+    const dm = { up: 0, down: 0, k: [], ...(rec.day.m[monsterId] || {}) }; dm.k = [...dm.k];
+    if (k.once && dm.k.includes(kind)) return [];
+    let p = k.p * (amtIsCore(aid, monsterId) ? AMT_CORE_RATE : 1);
+    if (p > 0) { p = Math.min(p, Math.max(0, AMT_UP_DAY - dm.up)); dm.up += p; } else { p = -Math.min(-p, Math.max(0, AMT_DOWN_DAY - dm.down)); dm.down += -p; }
+    if (!p) return [];
+    if (k.once) dm.k.push(kind);
+    rec.day.m[monsterId] = dm;
+    const lin = amtLin(monsterId);
+    rec.mon[monsterId] = amtNum((rec.mon[monsterId] || 0) + p * (1 - AMT_SPREAD), 100);
+    if (lin) rec.lin[lin] = amtNum((rec.lin[lin] || 0) + p * AMT_SPREAD, 100);
+    const changes = [];
+    for (const m of amtAllMons()) {
+      const a = amtTier(amtEff(aid, raw, old, m)), b = amtTier(amtEff(aid, raw, rec, m));
+      if (a !== b) changes.push({ target: m, from: a, to: b });
+    }
+    for (const c of changes.slice(0, 3)) rec.log.push({ day, target: c.target, from: c.from, to: c.to });
+    rec.log = rec.log.slice(-30);
+    AMT_STORE.save({ ...st, by: { ...st.by, [aid]: rec } });
+    for (const c of changes.slice(0, 3)) {
+      try {
+        if (typeof assistantLifeDiaryAdd === 'function') {
+          const who = typeof assistantLifeName === 'function' ? assistantLifeName(aid) : aid, n = amtMonName(c.target);
+          const txt = c.to === 'like' ? `${who}が${n}を好きになってきたみたい` : c.to === 'dislike' ? `${who}は${n}が苦手になってきたみたい` : c.from === 'dislike' ? `${who}は${n}が前ほど苦手じゃなくなってきたみたい` : `${who}は${n}に前ほど夢中じゃなくなったみたい`;
+          void assistantLifeDiaryAdd(txt, [aid], { kind: 'note' });
+        }
+      } catch (_) {}
+    }
+    return changes;
+  } catch (_) { return []; }
+};
+// ココロ(AI のおしゃべり)の手がかり: 良い言葉が出たら「ほめた」(1日1回)。悪い言葉は数えない(控えめ)
+const assistantLifeTasteOnTalk = (x) => {
+  try { if (x && x.positive === true && typeof x.assistantId === 'string' && typeof x.monsterId === 'string') assistantLifeTasteBump(x.assistantId, x.monsterId, 'praise'); } catch (_) {}
+};
+if (typeof ASSISTANT_CHAT_TASTE_HOOKS === 'object' && ASSISTANT_CHAT_TASTE_HOOKS) { ASSISTANT_CHAT_TASTE_HOOKS.onTalk = assistantLifeTasteOnTalk; }
+// 自分のマスモンとして育てているモンスター: 1日1回、+1(読み込みのあとに1回走る)
+const assistantLifeTasteDaily = () => {
+  try {
+    if (!amtOn() || !AMT_STORE || !AMT_STORE.loaded || typeof ASSISTANT_MASMON_STORE === 'undefined' || !ASSISTANT_MASMON_STORE.loaded || typeof assistantMasmonRowsOf !== 'function') return;
+    for (const a of ASSISTANT_MASMON_PLAN) {
+      if (!a || !a.id) continue;
+      for (const r of assistantMasmonRowsOf(ASSISTANT_MASMON_STORE.state, a.id) || []) if (r && r.monster) assistantLifeTasteBump(a.id, r.monster, 'raise');
+    }
+  } catch (_) {}
+};
+try { setTimeout(() => { try { if (amtOn() && AMT_STORE) { const w = [AMT_STORE.load()]; if (typeof ASSISTANT_MASMON_STORE !== 'undefined' && ASSISTANT_MASMON_STORE.load) w.push(ASSISTANT_MASMON_STORE.load()); void Promise.all(w).then(assistantLifeTasteDaily).catch(() => {}); } } catch (_) {} }, 0); } catch (_) {}
 
 // ---- part: 56-monsuc-fuse.jsx ----
 // ---------- モンヒロサクセスの合体(保存枠の育て終えた子どうし・2026-11-12 開発部・段取りの回3) ----------
