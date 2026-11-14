@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9b8e735466aeb72a
+// source-sha256: 97a5f1e4730825c2
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -175526,7 +175526,7 @@ function MsxR3Retire({
     }, "マスモンボックス"), React.createElement("span", null, box ? `${box.mons.length + 1} / ${box.cap}体 に入る。次の育成の編成・対戦・合体に使える` : '…'))));
     return React.createElement(MsxR3Frame, {
       run: run,
-      back: "もどる",
+      back: "戻る",
       onBack: () => setStep('e0'),
       right: right,
       body: body,
@@ -175926,7 +175926,7 @@ function MsxR3Retire({
   }, sure ? '本当に決める(変えられない)▶' : 'これで決める ▶'));
   return React.createElement(MsxR3Frame, {
     run: run,
-    back: "もどる",
+    back: "戻る",
     onBack: () => setStep('e1'),
     right: `1体${maxKinds}種類まで`,
     body: body,
