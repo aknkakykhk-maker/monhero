@@ -22,7 +22,8 @@ const ASSISTANT_MASMON_PLAN = [
 ];
 // >>> ASSISTANT_MASMON_PLAN
 
-const assistantMasmonBasePlanOf = (id) => ASSISTANT_MASMON_PLAN.find(a => a && a.id === id) || null;
+// 好き嫌いは、遊んで変わった分(56-assistant-life-masmon-taste.jsx・公開の印 assistantLifeTaste)を重ねた「いまの好み」を返す。差分が無い・印が偽のときは表のまま
+const assistantMasmonBasePlanOf = (id) => { const b = ASSISTANT_MASMON_PLAN.find(a => a && a.id === id) || null; if (!b) return null; try { return typeof assistantLifeTasteOverlay === 'function' ? assistantLifeTasteOverlay(b) : b; } catch (_) { return b; } };
 // プレイヤーごとのマスモン(2026-11-08 社長の選び ❶B): 保存した made があれば、表の team・extra をそれに差し替えて見せる(表は作る前の控え)
 const assistantMasmonPlanOf = (id) => {
   const base = assistantMasmonBasePlanOf(id);
@@ -1295,16 +1296,17 @@ const assistantLifeCardStyle = (id) => {
   return ASSISTANT_MASMON_CARD_STYLE[id] || null;
 };
 // ココロ(AI のおしゃべり)が読む口: いまの好き・苦手を表示名で(2026-11-08 ココロとすり合わせ)。
-//   changed は「好き嫌いが変わる」(GROW-PLAN 8)が入ってから埋まる。いまは空
+//   changed は遊んで段が変わった分(14日以内・3つまで。56-assistant-life-masmon-taste.jsx)
 const assistantLifeTasteOf = (id) => {
   try { if (typeof assistantLifeEnabled === 'function' && !assistantLifeEnabled()) return null; } catch (_) { return null; }
   const p = assistantMasmonPlanOf(id);
   if (!p) return null;
   const names = (xs) => [...new Set((xs || []).map(assistantMasmonTasteName).filter(Boolean))].slice(0, 5);
-  return { likes: names(p.likeMon), dislikes: names(p.dislikeMon), changed: [] };
+  let changed = []; try { changed = typeof assistantLifeTasteRecent === 'function' ? assistantLifeTasteRecent(id, 14).slice(0, 3).map(x => ({ name: x.name, to: x.to })) : []; } catch (_) { changed = []; }
+  return { likes: names(p.likeMon), dislikes: names(p.dislikeMon), changed };
 };
 
-// ココロの受け口(56-assistant-chat.jsx の入れ物)へ渡す。onTalk は「好き嫌いが変わる」を作るときに足す
+// ココロの受け口(56-assistant-chat.jsx の入れ物)へ渡す。onTalk は 56-assistant-life-masmon-taste.jsx が入れる
 if (typeof ASSISTANT_CHAT_TASTE_HOOKS === 'object' && ASSISTANT_CHAT_TASTE_HOOKS) { ASSISTANT_CHAT_TASTE_HOOKS.of = assistantLifeTasteOf; }
 
 // 能力のゲージ(見た目用)。プレイヤーと同じ4つ。基礎値 × Lv の伸び × 育ち方
