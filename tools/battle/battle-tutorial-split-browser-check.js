@@ -130,7 +130,7 @@ const driveOnce = async (page, log) => {
     sys: !!document.querySelector('[data-battle-system="systemClassic"]'),
     diff: /BATTLE DIFFICULTY/.test(document.body.innerText),
     mode: !!document.querySelector('[data-battle-mode="challenge"]'),
-    hero: /勇者モンをえらぶ/.test(document.body.innerText),
+    hero: /勇者モンを選ぶ/.test(document.body.innerText),
     battle: !!document.querySelector('[data-battle-action]'),
     spotCard: (() => { const s = document.querySelector('.is-battle-tutorial-spot [data-hand-card], [data-hand-card].is-battle-tutorial-spot'); return s ? (s.innerText || '').replace(/\s+/g, ' ') : null; })(),
     body: document.body.innerText.replace(/\s+/g, ' ').slice(0, 4000),
@@ -286,7 +286,7 @@ const driveOnce = async (page, log) => {
         await page.waitForTimeout(800);
         const moreBubble = await bubbleText(page);
         check('「つづき」は勇者モン選択から始まる',
-          !!moreBubble && moreBubble.includes('つづきのれんしゅう') && /勇者モンをえらぶ/.test(await page.evaluate(() => document.body.innerText)),
+          !!moreBubble && moreBubble.includes('つづきのれんしゅう') && /勇者モンを選ぶ/.test(await page.evaluate(() => document.body.innerText)),
           String(moreBubble).slice(0, 40));
         if (SHOTS) await page.screenshot({ path: path.join(SHOT_DIR, `more-start-${tag}.png`) });
         await page.locator('button').filter({ hasText: /^やめる$/ }).first().dispatchEvent('click');

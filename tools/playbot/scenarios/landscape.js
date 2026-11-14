@@ -4,7 +4,7 @@
 // を見る。2026-10-06 に、横画面のときだけイベント詳細の「閉じる」が押せない不具合があった(プレイボットが見つけた)。
 const { installPlayer, collectFingerSuspects, installArgs, unlockHarderCharts } = require('./rhythm');
 
-const CLOSE = /^(閉じる|とじる|×|✕|戻る|もどる|モードえらびへ戻る|ルームを出る|OK)$/;
+const CLOSE = /^(閉じる|とじる|×|✕|戻る|もどる|モード選びへ戻る|ルームを出る|OK)$/;
 
 // いまの画面の文字(閉じられたかを見る)
 const textNow = async (s) => (((await s.health()) || {}).text || '').slice(0, 600);
@@ -16,7 +16,7 @@ async function createPrivateRoom(s) {
   if (await s.tapLabel(/^＋ 作成$/, 800)) return true;
   if (!(await s.tapLabel(/プライベート/, 1500))) return false;
   await s.dismissOverlays(3);
-  return s.tapLabel(/^[＋+] ?(部屋をつくる|部屋を作る|作成)$|^作成$/, 2500);
+  return s.tapLabel(/^[＋+] ?(部屋を作る|部屋を作る|作成)$|^作成$/, 2500);
 }
 async function closeIt(s, what) {
   const before = await textNow(s);
