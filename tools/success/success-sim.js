@@ -74,7 +74,7 @@ const PRESETS = {
   M6as5: { name: 'M 6体・全員アシスト段5(底力・きずな・後押し・かけつけ)', team: (rng) => Array.from({ length: 6 }, () => makeRaised(rng, 'M', null, [{ id: 'sokoji', lv: 5 }, { id: 'kizuna', lv: 5 }, { id: 'atooshi', lv: 5 }, { id: 'kaketsuke', lv: 5 }])) },
   // トレーニングに効く新しい11種 段5(第2版・依頼②・2026-11-12)
   B6kun5: { name: 'B 6体・得意そろえ・全員 ちから/命中/回避特訓 段5+タッグの息 段5', team: (rng) => Array.from({ length: 6 }, () => makeRaised(rng, 'B', ['pow', 'hit', 'eva'], [{ id: 'kunpow', lv: 5 }, { id: 'kunhit', lv: 5 }, { id: 'kuneva', lv: 5 }, { id: 'tagpow', lv: 5 }])) },
-  B6care5: { name: 'B 6体・全員 見張り役・気晴らし・仲よし特訓・はじめの親しさ 段5', team: (rng) => Array.from({ length: 6 }, () => makeRaised(rng, 'B', null, [{ id: 'miharu', lv: 5 }, { id: 'kibarashi', lv: 5 }, { id: 'nakayoshi', lv: 5 }, { id: 'shitashi', lv: 5 }])) },
+  B6care5: { name: 'B 6体・全員 見張り役・気晴らし・仲良し特訓・はじめの親しさ 段5', team: (rng) => Array.from({ length: 6 }, () => makeRaised(rng, 'B', null, [{ id: 'miharu', lv: 5 }, { id: 'kibarashi', lv: 5 }, { id: 'nakayoshi', lv: 5 }, { id: 'shitashi', lv: 5 }])) },
   M6new5: { name: 'M 6体・得意そろえ・全員 底力・後押し・ちから特訓・タッグの息 段5', team: (rng) => Array.from({ length: 6 }, () => makeRaised(rng, 'M', ['pow', 'hit', 'eva'], [{ id: 'sokoji', lv: 5 }, { id: 'atooshi', lv: 5 }, { id: 'kunpow', lv: 5 }, { id: 'tagpow', lv: 5 }])) },
   // いるだけ型(体力・ようす・編成の7つ)段5(依頼③の1つ目)。いるだけ型は編成でいちばん高い段の1つだけなので、7つを4体と2体に分けて持たせる
   B6stay5: { name: 'B 6体・いるだけ型7つ 段5(体力自慢・ぐっすり・食いしん坊・しつけ上手/遊び上手・元気のお守り・通院の付きそい)', team: (rng) => Array.from({ length: 6 }, (_, i) => makeRaised(rng, 'B', null, i < 4 ? STAY7[0] : STAY7[1])) },
