@@ -1,5 +1,7 @@
 // ===== モンヒロサクセス: 始めるまでの6段(育てるモンスター → 編成 → 助手(シナリオ) → 持ちこみ → 名前と染色 → 確認) =====
 // 見本: docs/progress/player-raise/mock/png/v3-S.png(S1〜S6)。計算は芯の memberOf / newRun を呼ぶだけ
+// 品の名前の折り目: 「の」のあとと、カタカナ語の「ー」のあと(「縁結びの/お守り」「ブリーダー/ライセンス」)。狭い升目で言葉の途中で折れないように(2026-11-14)
+const msxItemNameNode = (name) => String(name || '').split(/(?<=の)|(?<=ー)(?=[ァ-ヶ])/).map((x, i) => <React.Fragment key={i}>{i > 0 ? <wbr/> : null}{x}</React.Fragment>);
 const MSX_STEP_NAMES = Object.freeze(['育てるモンスター', '編成', '助手', '持ちこみ', '名前と染色', '確認']);
 // 持ちこみ12種(ITEMS-REF.md・名前と効き目は参考のまま・博士はイッサ博士)。before = はじめる前に効く / both = 育成中にも使える
 const MSX_ITEMS = Object.freeze([
@@ -427,7 +429,7 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf }) {
       <div className="v-igrid">
         {MSX_ITEMS.map((t) => (
           <button type="button" key={t.id} className={`${items.includes(t.id) ? 'in' : ''}${t.when === 'both' ? ' bo' : ''}`} onClick={() => toggle(t.id)} disabled={!has(t.id) && !items.includes(t.id)}>
-            <span style={{ fontSize: 22, lineHeight: 1 }}>{t.e}</span><i>×{has(t.id)}</i><small style={JA_LABEL_STYLE}>{jaWrap(t.name.replace('ガロエ印の', ''))}</small>{items.includes(t.id) ? <u>✔</u> : null}
+            <span style={{ fontSize: 22, lineHeight: 1 }}>{t.e}</span><i>×{has(t.id)}</i><small style={JA_LABEL_STYLE}>{msxItemNameNode(t.name.replace('ガロエ印の', ''))}</small>{items.includes(t.id) ? <u>✔</u> : null}
           </button>
         ))}
       </div>
@@ -474,7 +476,7 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf }) {
       <button type="button" className="v-sum" onClick={() => setStep(1)}><span className="k">編成</span>{members.map((m, i) => <span key={i} className={`v-pf sm r${m.rank === 'base' ? 'G' : m.rank}${m.kind === 'base' ? ' base' : ''}`}><img src={msxMonThumb(m.species)} alt=""/></span>)}<span className="ed">変える</span></button>
       {typeof msxScenarioOf === 'function' ? <button type="button" className="v-sum" onClick={() => setScn(null)}><span className="k">シナリオ</span><span>{msxScenarioOf(scn).name}</span><span className="ed">変える</span></button> : null}
       <button type="button" className="v-sum" onClick={() => setStep(2)}><span className="k">助手</span><span>{msxAidName(aid)}編「{sc.title}」</span><span className="ed">変える</span></button>
-      <button type="button" className="v-sum" onClick={() => setStep(3)}><span className="k">持ちこみ</span><span>{items.length ? items.map((id) => `${MSX_ITEM_BY_ID[id].e}${MSX_ITEM_BY_ID[id].name}`).join('・') : 'なし'}</span><span className="ed">変える</span></button>
+      <button type="button" className="v-sum" onClick={() => setStep(3)}><span className="k">持ちこみ</span><span style={JA_LABEL_STYLE}>{jaWrap(items.length ? items.map((id) => `${MSX_ITEM_BY_ID[id].e}${MSX_ITEM_BY_ID[id].name}`).join('・') : 'なし')}</span><span className="ed">変える</span></button>
       <div className="v-sum"><span className="k">はじめの上乗せ</span><span>{Object.keys(startAdd).length ? `編成から ${Object.entries(startAdd).map(([k, v]) => `${MSX_STAT_NAME[k]} +${v}`).join('・')}` : '編成からの上乗せなし'}</span></div>
       <button type="button" className="v-big" onClick={start}>🌱 育成をはじめる</button>
     </>);
