@@ -35,7 +35,7 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
-    date: "2026-11-14 11:10", type:'update', group:'success', status:'new',
+    date: "2026-11-14 11:10", type:'update', group:'success', releaseFlag:'monheroSuccess', dev:true,
     title:'試合で間合いを変えるときの動きが、なめらかになりました',
     items:[
       '間合いを詰めたり下がったりするとき、動いたモンスターだけが歩いて寄る・下がるようになりました。相手はその場に残ります。',
@@ -44,7 +44,7 @@ const CHANGELOG = [
     ],
   },
   {
-    date: "2026-11-14 10:46", type:'update', group:'success', status:'new',
+    date: "2026-11-14 10:46", type:'update', group:'success', releaseFlag:'monheroSuccess', dev:true,
     title:'トレーニングと修行に、動きと音が入りました',
     items:[
       'トレーニングを選ぶと、6つそれぞれの動き(坂道を駆ける・丸太を割る・パズルを解く・的に当てる・よける・受け止める)を見せてから結果が出ます。トレーニングLvが上がると場面が派手になります。',
