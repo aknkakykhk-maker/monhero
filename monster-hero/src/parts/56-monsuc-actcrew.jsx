@@ -88,7 +88,7 @@ function MsxActCrew({ run, o }) {
   if (!ms.length && !aidImg) return null;
   const meSp = run && run.s ? run.s.species : '';
   return (
-    <div className="crew" aria-hidden="true" data-msx-crew={ms.length} data-msx-crew-tag={tagMs.length} data-msx-crew-aid={aidImg ? 1 : 0} data-msx-tag-scene={tagged ? 1 : 0}>
+    <div className="crew" aria-hidden="true" data-msx-crew={ms.length} data-msx-crew-tag={tagMs.length} data-msx-crew-aid={aidImg ? 1 : 0} data-msx-tagscene={tagged ? 1 : 0}>
       {tagged ? <span className="tagglow"/> : null}
       {tagged ? Array.from({ length: 8 }, (_, i) => <i key={`st${i}`} className="tagstar" style={{ '--i': i }}>✨</i>) : null}
       {tagMs.map((i, n) => { const img = typeof msxMonImg === 'function' ? msxMonImg(team[i].species) : ''; return img ? (

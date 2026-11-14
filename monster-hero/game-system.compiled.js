@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1cb230c2d11fe86e
+// source-sha256: da123921a36e78a4
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -158144,7 +158144,7 @@ function MsxActCrew({
     "data-msx-crew": ms.length,
     "data-msx-crew-tag": tagMs.length,
     "data-msx-crew-aid": aidImg ? 1 : 0,
-    "data-msx-tag-scene": tagged ? 1 : 0
+    "data-msx-tagscene": tagged ? 1 : 0
   }, tagged ? React.createElement("span", {
     className: "tagglow"
   }) : null, tagged ? Array.from({

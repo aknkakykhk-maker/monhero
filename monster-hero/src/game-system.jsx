@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 797db03c397c8dbb
+// generated-sha256: 8eb447d2c6d32586
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -82479,7 +82479,7 @@ function MsxActCrew({ run, o }) {
   if (!ms.length && !aidImg) return null;
   const meSp = run && run.s ? run.s.species : '';
   return (
-    <div className="crew" aria-hidden="true" data-msx-crew={ms.length} data-msx-crew-tag={tagMs.length} data-msx-crew-aid={aidImg ? 1 : 0} data-msx-tag-scene={tagged ? 1 : 0}>
+    <div className="crew" aria-hidden="true" data-msx-crew={ms.length} data-msx-crew-tag={tagMs.length} data-msx-crew-aid={aidImg ? 1 : 0} data-msx-tagscene={tagged ? 1 : 0}>
       {tagged ? <span className="tagglow"/> : null}
       {tagged ? Array.from({ length: 8 }, (_, i) => <i key={`st${i}`} className="tagstar" style={{ '--i': i }}>✨</i>) : null}
       {tagMs.map((i, n) => { const img = typeof msxMonImg === 'function' ? msxMonImg(team[i].species) : ''; return img ? (
