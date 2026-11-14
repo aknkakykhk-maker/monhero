@@ -11,7 +11,7 @@ const MONSUC_REGULAR_CUPS = Object.freeze({
   dist0:'間合い(零)', dist1:'間合い(近)', dist2:'間合い(中)', dist3:'間合い(遠)',
   attacker:'タイプ(アタッカー)', tank:'タイプ(タンク)', supporter:'タイプ(サポーター)', healer:'タイプ(ヒーラー)', shadow:'タイプ(シャドウ)',
   spring:'春の大会', summer:'夏の大会', autumn:'秋の大会', winter:'冬の大会', normal:'ふつうの大会',
-  herosummer:'夏のヒーロー記念', herowinter:'冬のヒーロー記念', peak:'頂への道', scmua:'笑顔の大会(みゅあのシナリオ)', scatsu:'格上への挑戦(あつのシナリオ)',
+  herosummer:'夏のヒーロー記念', herowinter:'冬のヒーロー記念', peak:'ヒーローズファイナル', scmua:'笑顔の大会(みゅあのシナリオ)', scatsu:'格上への挑戦(あつのシナリオ)',
 });
 const MONSUC_REGULARS = Object.freeze([
   { id:'reg.debut.1', cup:'debut', breeder:'小春ひより', mon:'おもち丸', species:'Mocchi', note:'はじめての大会で緊張ぎみ' },
@@ -82,7 +82,7 @@ const MONSUC_REGULARS = Object.freeze([
   { id:'reg.supporter.1', cup:'supporter', breeder:'舟木ノア', mon:'ハコブネ', species:'Ark', note:'仲間を運ぶように支える' },
   { id:'reg.supporter.2', cup:'supporter', breeder:'人魚川ナギ', mon:'ウタカタ', species:'Yaobikuni', note:'歌で流れを変える' },
   { id:'reg.supporter.3', cup:'supporter', breeder:'眠田ユメ', mon:'ふわゆめ', species:'Dreamy', note:'相手のペースを崩す' },
-  { id:'reg.supporter.c', cup:'supporter', breeder:'天野ナナセ', mon:'タナバタ', species:'Orihime', champ:true, note:'支える戦い方の頂点' },
+  { id:'reg.supporter.c', cup:'supporter', breeder:'天野ナナセ', mon:'タナバタ', species:'Orihime', champ:true, note:'支える戦い方の第一人者' },
 
   { id:'reg.healer.1', cup:'healer', breeder:'若葉ミノリ', mon:'ハッパ', species:'Plant', note:'自分で傷を治す' },
   { id:'reg.healer.2', cup:'healer', breeder:'夕霧ヨル', mon:'オボロヅキ', species:'Oboro', note:'ゆっくり回復しながら粘る' },
@@ -132,7 +132,7 @@ const MONSUC_REGULARS = Object.freeze([
   { id:'reg.peak.1', cup:'peak', breeder:'高嶺ソラ', mon:'イタダキ', species:'Kyubi', note:'1回戦の壁' },
   { id:'reg.peak.2', cup:'peak', breeder:'雲井アオイ', mon:'クモノウエ', species:'Yggdrasil', note:'準決勝で待つ' },
   { id:'reg.peak.3', cup:'peak', breeder:'天城タケル', mon:'テンカ', species:'Golem', note:'決勝までは負けない' },
-  { id:'reg.peak.c', cup:'peak', breeder:'勇崎ヒイロ', mon:'イチバンボシ', species:'Orihime', champ:true, note:'頂への道の決勝で待つ' },
+  { id:'reg.peak.c', cup:'peak', breeder:'勇崎ヒイロ', mon:'イチバンボシ', species:'Orihime', champ:true, note:'ヒーローズファイナルの決勝で待つ' },
 
   { id:'reg.scmua.1', cup:'scmua', breeder:'笑原ニコ', mon:'ニコニコ', species:'Pixie', note:'いつも笑っている' },
   { id:'reg.scmua.2', cup:'scmua', breeder:'陽向ポカ', mon:'ポカポカ', species:'Mia', note:'まわりを明るくする' },
@@ -142,7 +142,7 @@ const MONSUC_REGULARS = Object.freeze([
   { id:'reg.scatsu.1', cup:'scatsu', breeder:'挑戸タカシ', mon:'ノボリリュウ', species:'Eiki', note:'上の星から下りてきた' },
   { id:'reg.scatsu.2', cup:'scatsu', breeder:'闇沢クロエ', mon:'ハテナキヨル', species:'Iblis', note:'格上の貫禄' },
   { id:'reg.scatsu.3', cup:'scatsu', breeder:'朱雀アカネ', mon:'ベニホムラ', species:'Kyubi', note:'挑戦者をはね返す' },
-  { id:'reg.scatsu.c', cup:'scatsu', breeder:'頂ゴウキ', mon:'ハガネヤマ', species:'Golem', champ:true, note:'格上への挑戦の門番' },
+  { id:'reg.scatsu.c', cup:'scatsu', breeder:'峰ゴウキ', mon:'ハガネヤマ', species:'Golem', champ:true, note:'格上への挑戦の門番' },
 ]);
 
 if (typeof module !== 'undefined') module.exports = { MONSUC_REGULAR_CUPS, MONSUC_REGULARS };

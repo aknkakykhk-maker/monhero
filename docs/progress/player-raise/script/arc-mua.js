@@ -1,7 +1,7 @@
 // モンヒロサクセス 台本: みゅあ編の「1連のストーリー」(2026-11-13 開発部・設計 docs/progress/player-raise/STORY-ARC.md)
-// 固有イベント4つ・頂への道の3連戦(みゅあが相手を選ぶ・試合の前後)・エンディング3つ・お祝い・特別演出。
+// 固有イベント4つ・ヒーローズファイナルの3連戦(みゅあが相手を選ぶ・試合の前後)・エンディング3つ・お祝い・特別演出。
 // 形は README.md。みゅあの行は仲良し度 Lv1・2 のていねい語版(id の最後に b・bond:[1,2])つき。
-//   {rival} … 頂への道で選んだ相手のモンスターの名前 / {owner} … その子を育てている人
+//   {rival} … ヒーローズファイナルで選んだ相手のモンスターの名前 / {owner} … その子を育てている人
 //   場面の id: scn.mua.uq.<名前>(固有イベント)/ scn.mua.summit.r<1〜3>.(pick|win|lose)/ scn.mua.end.(bad|good|super)/
 //             scn.mua.party.(bad1|good1〜3|super1〜3)/ scn.mua.fx.super(特別演出)
 const MONSUC_SCRIPT_ARC_MUA = Object.freeze([
@@ -52,7 +52,7 @@ const MONSUC_SCRIPT_ARC_MUA = Object.freeze([
   { id:'scn.mua.uq.call.b.mua1b', who:'mua', e:'wink', c:'b', bond:[1,2], t:'そうですよね！ 明日も{mon}といっしょに、がんばりましょう！' },
 
   // D 応援うちわ作り(プロ期)
-  { id:'scn.mua.uq.uchiwa.narr1', who:'narr', t:'机の上に、色紙とはさみとシールの山。みゅあが頂への道に向けて、応援うちわを作っている。' },
+  { id:'scn.mua.uq.uchiwa.narr1', who:'narr', t:'机の上に、色紙とはさみとシールの山。みゅあがヒーローズファイナルに向けて、応援うちわを作っている。' },
   { id:'scn.mua.uq.uchiwa.mua1', who:'mua', e:'excited', t:'「{mon} 世界一」って入れたいの！ でっかく、キラッキラに✨' },
   { id:'scn.mua.uq.uchiwa.mua1b', who:'mua', e:'excited', bond:[1,2], t:'「{mon} 世界一」って入れたいんです！ 大きく、キラキラにしたくて✨' },
   { id:'scn.mua.uq.uchiwa.mua2', who:'mua', e:'happy', t:'{name}も手伝ってくれる？ それとも{mon}の練習見てる？' },
@@ -66,9 +66,9 @@ const MONSUC_SCRIPT_ARC_MUA = Object.freeze([
   { id:'scn.mua.uq.uchiwa.b.mua1', who:'mua', e:'happy', c:'b', t:'いい動き！ うちわはあたしにまかせて、{mon}はいちばんの武器みがいてこ！' },
   { id:'scn.mua.uq.uchiwa.b.mua1b', who:'mua', e:'happy', c:'b', bond:[1,2], t:'いい動きです！ うちわはあたしにまかせて、{mon}は得意をみがいてくださいね！' },
 
-  // ═══════════ 頂への道の3連戦(みゅあが相手を選ぶ) ═══════════
+  // ═══════════ ヒーローズファイナルの3連戦(みゅあが相手を選ぶ) ═══════════
   // 1回戦: 人気がいちばん高い常連
-  { id:'scn.mua.summit.r1.pick.narr1', who:'narr', t:'頂への道の朝。出場するモンスターの名前が並ぶ紙を、みゅあがじっと見ている。' },
+  { id:'scn.mua.summit.r1.pick.narr1', who:'narr', t:'ヒーローズファイナルの朝。出場するモンスターの名前が並ぶ紙を、みゅあがじっと見ている。' },
   { id:'scn.mua.summit.r1.pick.mua1', who:'mua', e:'wink', t:'1回戦は{rival}にしたよ！ この中でいちばん人気のモンスターなんだって' },
   { id:'scn.mua.summit.r1.pick.mua1b', who:'mua', e:'wink', bond:[1,2], t:'1回戦は、{rival}にしました。この中でいちばん人気があるモンスターなんです' },
   { id:'scn.mua.summit.r1.pick.mua2', who:'mua', e:'excited', t:'客席ぜんぶ向こうの応援かもだけど…{mon}の笑顔で、ぜんぶこっちに向けちゃお！' },
@@ -97,26 +97,26 @@ const MONSUC_SCRIPT_ARC_MUA = Object.freeze([
   { id:'scn.mua.summit.r3.pick.mua1b', who:'mua', e:'troubled', bond:[1,2], t:'最後は、いちばん上の相手です。…足がふるえているのは、あたしのほうですね' },
   { id:'scn.mua.summit.r3.pick.mua2', who:'mua', e:'excited', t:'{mon}なら届くって、あたし知ってる。いってらっしゃい、{mon}！' },
   { id:'scn.mua.summit.r3.pick.mua2b', who:'mua', e:'excited', bond:[1,2], t:'{mon}なら届くって、あたしは信じています。いってらっしゃい、{mon}！' },
-  { id:'scn.mua.summit.r3.win.mua1', who:'mua', e:'excited', t:'うそ…勝った…？ 勝ったぁぁーーー！！ {mon}、てっぺんだよ！！' },
+  { id:'scn.mua.summit.r3.win.mua1', who:'mua', e:'excited', t:'うそ…勝った…？ 勝ったぁぁーーー！！ {mon}、優勝だよ！！ ヒーローズファイナル優勝！！' },
   { id:'scn.mua.summit.r3.win.mua1b', who:'mua', e:'excited', bond:[1,2], t:'勝った…？ 勝ちました！！ {mon}、いちばん上です！！' },
   { id:'scn.mua.summit.r3.lose.mua1', who:'mua', e:'crying', t:'…あとちょっとだった。でも、ここまで来たの、ほんとにすごいことなんだよ' },
   { id:'scn.mua.summit.r3.lose.mua1b', who:'mua', e:'crying', bond:[1,2], t:'…あと少しでした。でも、ここまで来られたのは、本当にすごいことなんです' },
 
   // ═══════════ エンディング ═══════════
-  // バッド: 頂への道で負けて終わる
+  // バッド: ヒーローズファイナルで負けて終わる
   { id:'scn.mua.end.bad.narr1', who:'narr', t:'夕暮れの帰り道。みゅあと{mon}の影が、長くのびている。' },
-  { id:'scn.mua.end.bad.mua1', who:'mua', e:'crying', t:'…くやしいね。てっぺん、見せてあげたかったな' },
+  { id:'scn.mua.end.bad.mua1', who:'mua', e:'crying', t:'…くやしいね。ヒーローズファイナルの優勝、見せてあげたかったな' },
   { id:'scn.mua.end.bad.mua1b', who:'mua', e:'crying', bond:[1,2], t:'…くやしいですね。いちばん上からの景色、見せてあげたかったです' },
   { id:'scn.mua.end.bad.narr2', who:'narr', t:'{mon}が、みゅあの手をそっとつついた。' },
   { id:'scn.mua.end.bad.mua2', who:'mua', e:'happy', t:'…うん。{mon}と来れたとこ、ぜんぶ宝物だよ。帰ったら、おつかれさま会しよ♪' },
   { id:'scn.mua.end.bad.mua2b', who:'mua', e:'happy', bond:[1,2], t:'…はい。{mon}と来られたところは、ぜんぶ宝物です。帰ったら、おつかれさま会をしましょう♪' },
   // グッド: 決勝に勝つ
   { id:'scn.mua.end.good.narr1', who:'narr', t:'表彰台のいちばん上。紙吹雪の中で、{mon}がトロフィーを掲げた。' },
-  { id:'scn.mua.end.good.mua1', who:'mua', e:'excited', t:'{mon}が世界でいちばん！ ねぇ{name}、あたしの声、ちゃんと届いてた？' },
-  { id:'scn.mua.end.good.mua1b', who:'mua', e:'excited', bond:[1,2], t:'{mon}がいちばんです！ {name}、あたしの声、ちゃんと届いていましたか？' },
+  { id:'scn.mua.end.good.mua1', who:'mua', e:'excited', t:'{mon}、ヒーローズファイナル優勝！！ ねぇ{name}、あたしの応援、ちゃんと聞こえてた？' },
+  { id:'scn.mua.end.good.mua1b', who:'mua', e:'excited', bond:[1,2], t:'{mon}、ヒーローズファイナル優勝です！ {name}、あたしの応援、ちゃんと聞こえていましたか？' },
   { id:'scn.mua.end.good.narr2', who:'narr', t:'{mon}が、客席のうちわに向かって大きく手をふった。' },
-  { id:'scn.mua.end.good.mua2', who:'mua', e:'happy', t:'…届いてたみたい！ よーし、今日はお祝いいっぱいしよ✨' },
-  { id:'scn.mua.end.good.mua2b', who:'mua', e:'happy', bond:[1,2], t:'…届いていたみたいです！ 今日は、たくさんお祝いしましょう✨' },
+  { id:'scn.mua.end.good.mua2', who:'mua', e:'happy', t:'…聞こえてたみたい！ よーし、今日は優勝のお祝いいっぱいしよ✨' },
+  { id:'scn.mua.end.good.mua2b', who:'mua', e:'happy', bond:[1,2], t:'…聞こえていたみたいです！ 今日は、優勝のお祝いをたくさんしましょう✨' },
   // 超グッド: 決勝に勝つ・親密度が最大・連続イベントを完走
   { id:'scn.mua.end.super.narr1', who:'narr', t:'表彰台のいちばん上。拍手が鳴りやまない。町じゅうの人が、{mon}の名前を呼んでいる。' },
   { id:'scn.mua.end.super.mua1', who:'mua', e:'crying', t:'得意を探しに町を歩いたあの日から、ずっといっしょだったね…' },
