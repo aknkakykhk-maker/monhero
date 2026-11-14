@@ -791,7 +791,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
           <button type="button" className={`v-p ${yosu ? 'hosp' : 'off'}`} disabled={!can.includes('clinic')} onClick={() => doAct({ kind: 'clinic' })}><div className="e">🏥</div>通院<small>{yosu ? 'ようすを治す' : 'ようすなし'}</small>{yosu ? <span className="bd r">!</span> : null}</button>
           <button type="button" className="v-p" onClick={() => doAct({ kind: 'play' })}><div className="e">🎈</div>遊ぶ<small>体力+・甘え+</small></button>
           <button type="button" className="v-p" onClick={() => setSub('shugyo')}><div className="e">⚔</div>修行<small>技を覚える</small></button>
-          <button type="button" className="v-p" onClick={() => setSub('cup')}><div className="e">🏆</div>大会<small>今月の大会</small></button>
+          <button type="button" className={`v-p${Array.isArray(v.cups) && !v.cups.length ? ' off' : ''}`} disabled={Array.isArray(v.cups) && !v.cups.length} onClick={() => setSub('cup')}><div className="e">🏆</div>大会<small>{Array.isArray(v.cups) && !v.cups.length ? '今月はなし' : '今月の大会'}</small></button>
         </div>
       </>)}
     </>);
