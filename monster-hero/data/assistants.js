@@ -783,6 +783,8 @@ const assistantFaceImage = (who, expression) => (who && who.imagePrefix)
 //   無い助手・服は今までの立ち絵のまま。足すときは、絵を tools/assistant/life-expression-sheets.py で作り、ここへ1行と、顔の表(56-assistant-life-house.jsx の ASSISTANT_LIFE_STAND_FACE_OUTFIT)へ顔の点を足す
 const ASSISTANT_STAND_ART = Object.freeze({
   mua: 'stand-normal', 'mua:halloween': 'stand-halloween', 'mua:card-master': 'stand-card-master',
+  // 8表情の全身画がある助手(2026-11-14)。作り方は tools/assistant/life-stand-from-fullbody.py
+  kiki: 'stand-normal', 'kiki:halloween': 'stand-halloween', atsu: 'stand-normal', kyuko: 'stand-normal', sorashido: 'stand-normal',
 });
 const ASSISTANT_STAND_EXPRESSIONS = Object.freeze(['normal', 'happy', 'wink', 'surprise', 'troubled', 'angry', 'crying', 'excited']);
 // outfit … 服の名前(ふだんの服は '')。表情が8つのどれでもない・絵が無い助手・服は null(今までの立ち絵へ)

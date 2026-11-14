@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5fcefb8d679ae477
+// source-sha256: 8b7fb5b9f9c1706c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -114778,6 +114778,30 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
       eye: 0.3072,
       chin: 0.4187,
       m: 0.829
+    },
+    kiki: {
+      top: 0.0777,
+      eye: 0.3325,
+      chin: 0.4296,
+      m: 0.722
+    },
+    atsu: {
+      top: 0.0699,
+      eye: 0.3272,
+      chin: 0.4301,
+      m: 0.766
+    },
+    kyuko: {
+      top: 0.0344,
+      eye: 0.3093,
+      chin: 0.4296,
+      m: 0.895
+    },
+    sorashido: {
+      top: 0.0562,
+      eye: 0.2921,
+      chin: 0.4307,
+      m: 1.031
     }
   },
   'stand-halloween': {
@@ -114787,6 +114811,13 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
       chin: 0.4334,
       m: 0.711,
       above: 0.85
+    },
+    kiki: {
+      top: 0.1496,
+      eye: 0.3349,
+      chin: 0.4299,
+      m: 0.707,
+      above: 0.95
     }
   },
   'stand-card-master': {
@@ -194823,6 +194854,30 @@ const CARD_ART_KNOWN_BOX = Object.freeze({
   sorashido_surprise: [384, 512, 0, 2, 384, 510],
   sorashido_troubled: [384, 512, 0, 0, 384, 512],
   sorashido_wink: [384, 512, 0, 2, 384, 510],
+  'stand-normal/atsu_angry': [540, 552, 83, 7, 407, 545],
+  'stand-normal/atsu_crying': [606, 552, 108, 6, 390, 546],
+  'stand-normal/atsu_excited': [618, 552, 89, 7, 503, 545],
+  'stand-normal/atsu_happy': [494, 552, 47, 7, 420, 545],
+  'stand-normal/atsu_normal': [586, 552, 43, 7, 439, 545],
+  'stand-normal/atsu_surprise': [624, 552, 118, 7, 434, 545],
+  'stand-normal/atsu_troubled': [556, 552, 47, 7, 458, 545],
+  'stand-normal/atsu_wink': [626, 552, 81, 7, 537, 545],
+  'stand-normal/kiki_angry': [616, 832, 8, 8, 601, 824],
+  'stand-normal/kiki_crying': [436, 832, 8, 6, 420, 826],
+  'stand-normal/kiki_excited': [946, 832, 8, 8, 929, 824],
+  'stand-normal/kiki_happy': [392, 832, 7, 8, 377, 824],
+  'stand-normal/kiki_normal': [414, 832, 12, 8, 394, 824],
+  'stand-normal/kiki_surprise': [554, 832, 8, 8, 537, 824],
+  'stand-normal/kiki_troubled': [456, 832, 8, 8, 439, 824],
+  'stand-normal/kiki_wink': [566, 832, 8, 6, 550, 826],
+  'stand-normal/kyuko_angry': [492, 590, 15, 7, 470, 583],
+  'stand-normal/kyuko_crying': [416, 590, 23, 8, 364, 582],
+  'stand-normal/kyuko_excited': [452, 590, 12, 8, 433, 582],
+  'stand-normal/kyuko_happy': [448, 590, 85, 8, 356, 582],
+  'stand-normal/kyuko_normal': [410, 590, 19, 8, 381, 582],
+  'stand-normal/kyuko_surprise': [410, 590, 43, 8, 342, 582],
+  'stand-normal/kyuko_troubled': [366, 590, 21, 7, 337, 583],
+  'stand-normal/kyuko_wink': [424, 590, 30, 8, 386, 582],
   'stand-normal/myua_angry': [592, 672, 12, 0, 520, 672],
   'stand-normal/myua_crying': [592, 672, 0, 0, 591, 672],
   'stand-normal/myua_excited': [592, 672, 0, 0, 583, 672],
@@ -194830,7 +194885,15 @@ const CARD_ART_KNOWN_BOX = Object.freeze({
   'stand-normal/myua_normal': [592, 672, 31, 7, 500, 665],
   'stand-normal/myua_surprise': [592, 672, 0, 10, 509, 662],
   'stand-normal/myua_troubled': [592, 672, 27, 0, 516, 672],
-  'stand-normal/myua_wink': [592, 672, 12, 10, 579, 662]
+  'stand-normal/myua_wink': [592, 672, 12, 10, 579, 662],
+  'stand-normal/sorashido_angry': [698, 542, 113, 7, 443, 535],
+  'stand-normal/sorashido_crying': [684, 542, 98, 7, 477, 535],
+  'stand-normal/sorashido_excited': [772, 542, 53, 8, 674, 534],
+  'stand-normal/sorashido_happy': [732, 542, 47, 6, 655, 536],
+  'stand-normal/sorashido_normal': [762, 542, 121, 8, 569, 534],
+  'stand-normal/sorashido_surprise': [766, 542, 105, 7, 586, 535],
+  'stand-normal/sorashido_troubled': [730, 542, 31, 9, 672, 533],
+  'stand-normal/sorashido_wink': [646, 542, 97, 9, 446, 533]
 });
 const cardArtBoxOf = v => Array.isArray(v) && v.length === 6 ? {
   nw: v[0],
