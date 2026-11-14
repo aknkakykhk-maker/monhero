@@ -7,12 +7,12 @@
 //   ・「14個では少ない。30〜40個に」→ 40種類 /「種類ごとに数値も多く。トレ効果アップ 5%・10%・15% など」→ どれも5段
 //   ・お話のひらめき5つは「試合の中で効く形」(対戦の芯の buffs #5722)
 // ★参考(docs/reference/line-mf/assist-*.json)からは「どんな種類があるか」だけを拾い、名前と数字はモンサクの物差しで作り直した。
-// ★この第2版が正。芯(monhero-success.js の ASSISTS)はこの表を読み、第1版の9種類と「訓練に効く11種」(見張り役・気晴らし・
+// ★この第2版が正。芯(monhero-success.js の ASSISTS)はこの表を読み、第1版の9種類と「トレーニングに効く11種」(見張り役・気晴らし・
 //   能力ごとの特訓6つ・仲よし特訓・タッグの息・はじめの親しさ)といるだけ型15(#5814・#5815 と続き)の40種類すべてを段1〜5で効かせる。
 //   試合型5つ(お話のひらめき)は社長の保留中なので芯は第1版の数字のまま(見張り tools/success/monsuc-assist-v2-check.js)。
 //
 //   id    … 英小文字だけ(保存枠の子の assists:[{ id, lv }] に入る)
-//   type  … with(いっしょ型: その子が集まった訓練でだけ)/ self(その子自身)/ stay(いるだけ型: 編成でいちばん高い段の1つだけ)
+//   type  … with(いっしょ型: その子が集まったトレーニングでだけ)/ self(その子自身)/ stay(いるだけ型: 編成でいちばん高い段の1つだけ)
 //           battle(試合型: 編成にいると、育てる子の大会の試合で効く。いるだけ型と同じく、編成でいちばん高い段の1つだけ)
 //   scene … 画面で並べる組(SCENES)
 //   v     … 段1〜5の効き目(単位は unit)/ cost … 段1〜5を取るのに要るポイント(段の合計。値段の組 COST の1つ)
@@ -27,7 +27,7 @@
   //   高: 誰にでもよく効く(段5 = 210 → 総合力 10,500〜 = A ランクから)/ 中: よく効く / 低: 場面が限られる(段1 = 16 → どの子も1つは取れる)
   const COST = Object.freeze({ high: [30, 60, 100, 150, 210], mid: [24, 48, 80, 120, 170], low: [16, 32, 56, 88, 128] });
   const SCENES = Object.freeze([
-    ['train', '訓練'], ['stat', '能力ごとの訓練'], ['team', '編成・親密度'], ['care', '体力・ようす'], ['cup', '大会'], ['event', '出来事・博士'], ['battle', '試合'],
+    ['train', 'トレーニング'], ['stat', '能力ごとのトレーニング'], ['team', '編成・親密度'], ['care', '体力・ようす'], ['cup', '大会'], ['event', '出来事・博士'], ['battle', '試合'],
   ].map(([key, name]) => fz({ key, name })));
 
   const STAT = [['pow', 'ちから'], ['wise', 'かしこさ'], ['hit', '命中'], ['eva', '回避'], ['tough', '丈夫さ'], ['life', 'ライフ']];
@@ -36,37 +36,37 @@
   const L = [];
   const add = (o) => L.push(fz({ from: 'core', ...o, cost: COST[o.cls] }));
 
-  // ---- 訓練(いっしょ型) ----
+  // ---- トレーニング(いっしょ型) ----
   add({ id: 'sokoji', icon: '🔥', name: '特訓の底力', type: 'with', scene: 'train', cls: 'high', unit: '%', v: [5, 10, 15, 20, 25],
-    text: 'この子がいっしょに訓練すると、伸びが{v}%上がる' });
+    text: 'この子がいっしょにトレーニングすると、伸びが{v}%上がる' });
   add({ id: 'kizuna', icon: '💞', name: '信頼のきずな', type: 'with', scene: 'train', cls: 'high', unit: '%', v: [4, 8, 12, 16, 20],
-    text: 'この子がいっしょに訓練すると、忠誠度が高いほど伸びが上がる(忠誠100で +{v}%)' });
+    text: 'この子がいっしょにトレーニングすると、忠誠度が高いほど伸びが上がる(忠誠100で +{v}%)' });
   add({ id: 'atooshi', icon: '🎯', name: '得意の後押し', type: 'with', scene: 'train', cls: 'mid', unit: '%', v: [6, 12, 18, 24, 30],
-    text: 'この子のいちばん高い能力の訓練に来ると、伸びがさらに{v}%上がる' });
+    text: 'この子のいちばん高い能力のトレーニングに来ると、伸びがさらに{v}%上がる' });
   add({ id: 'hirameki', icon: '✨', name: 'ひらめき', type: 'with', scene: 'train', cls: 'mid', unit: '点', v: [2, 4, 6, 8, 10],
-    text: 'この子がいっしょに訓練すると、大成功しやすくなる(+{v}点)' });
+    text: 'この子がいっしょにトレーニングすると、大成功しやすくなる(+{v}点)' });
   add({ id: 'ochitsuki', icon: '🧘', name: '落ち着き', type: 'with', scene: 'train', cls: 'mid', unit: '%', v: [10, 20, 30, 40, 50],
-    text: 'この子がいっしょに訓練すると、失敗しにくくなる(失敗の率 −{v}%)' });
+    text: 'この子がいっしょにトレーニングすると、失敗しにくくなる(失敗の率 −{v}%)' });
   add({ id: 'itawari', icon: '🩹', name: 'いたわり', type: 'with', scene: 'train', cls: 'mid', unit: '%', v: [5, 10, 15, 20, 25],
-    text: 'この子がいっしょに訓練すると、減る体力が{v}%少なくなる' });
+    text: 'この子がいっしょにトレーニングすると、減る体力が{v}%少なくなる' });
   add({ id: 'miharu', icon: '👀', name: '見張り役', type: 'with', scene: 'train', cls: 'low', unit: '%', v: [15, 30, 45, 60, 75],
-    text: 'この子がいっしょに訓練すると、サボりにくくなる(サボりの率 −{v}%)' });
+    text: 'この子がいっしょにトレーニングすると、サボりにくくなる(サボりの率 −{v}%)' });
   add({ id: 'kibarashi', icon: '🎈', name: '気晴らし', type: 'with', scene: 'train', cls: 'low', unit: '%', v: [10, 20, 30, 40, 50],
-    text: 'この子がいっしょに訓練すると、たまるストレスが{v}%少なくなる' });
+    text: 'この子がいっしょにトレーニングすると、たまるストレスが{v}%少なくなる' });
 
-  // ---- 能力ごとの訓練(いっしょ型・その能力の訓練に来たときだけ) ----
+  // ---- 能力ごとのトレーニング(いっしょ型・その能力のトレーニングに来たときだけ) ----
   STAT.forEach(([k, n]) => add({ id: `kun${k}`, icon: STAT_ICON[k], name: `${n}特訓`, type: 'with', scene: 'stat', cls: 'low', unit: '%', v: [6, 12, 18, 24, 30], stat: k,
-    text: `この子が「${n}」の訓練にいっしょに来ると、伸びが{v}%上がる` }));
+    text: `この子が「${n}」のトレーニングにいっしょに来ると、伸びが{v}%上がる` }));
 
   // ---- 編成・親密度 ----
   add({ id: 'kaketsuke', icon: '📯', name: 'かけつけ', type: 'self', scene: 'team', cls: 'mid', unit: '点', v: [4, 8, 12, 16, 20],
-    text: 'この子が得意な訓練に来やすくなる(得意率 +{v}点・90%まで)' });
+    text: 'この子が得意なトレーニングに来やすくなる(得意率 +{v}点・90%まで)' });
   add({ id: 'hitonatsu', icon: '🤝', name: '人なつっこさ', type: 'stay', scene: 'team', cls: 'mid', unit: '倍', v: [1.1, 1.2, 1.3, 1.4, 1.5], start: [3, 6, 9, 12, 15],
     text: '編成にいるだけで、みんなの親密度の上がりが{v}倍(この子のはじめの親密度も +{start})' });
   add({ id: 'shitashi', icon: '🌱', name: 'はじめの親しさ', type: 'self', scene: 'team', cls: 'low', unit: '', v: [5, 10, 15, 20, 25],
     text: 'この子のはじめの親密度が +{v}' });
   add({ id: 'nakayoshi', icon: '🫶', name: '仲よし特訓', type: 'with', scene: 'team', cls: 'low', unit: '', v: [1, 2, 3, 4, 5],
-    text: 'この子といっしょに訓練すると、親密度の上がりが +{v}' });
+    text: 'この子といっしょにトレーニングすると、親密度の上がりが +{v}' });
   add({ id: 'tagpow', icon: '⚡', name: 'タッグの息', type: 'with', scene: 'team', cls: 'mid', unit: '%', v: [3, 6, 9, 12, 15],
     text: 'この子が友情タッグになったとき、タッグの強さが +{v}%' });
   add({ id: 'shitsuke', icon: '📏', name: 'しつけ上手', type: 'stay', scene: 'team', cls: 'mid', unit: '%', v: [5, 10, 15, 20, 25],
@@ -94,7 +94,7 @@
   add({ id: 'kokoroe', icon: '📜', name: '勝負の心得', type: 'stay', scene: 'cup', cls: 'mid', unit: '%', v: [5, 10, 15, 20, 25],
     text: '編成にいるだけで、大会で勝ったときの能力ポイントが{v}%増える' });
   add({ id: 'ticket', icon: '🎫', name: 'チケット運', type: 'stay', scene: 'cup', cls: 'low', unit: '%', v: [10, 20, 30, 40, 50],
-    text: '編成にいるだけで、大会に勝ったとき{v}%で修行チケットがもう1枚もらえる' });
+    text: '編成にいるだけで、賞金ランクが1段上がるたびに{v}%で修行チケットがもう1枚もらえる' });
   add({ id: 'rivaldamashii', icon: '🏁', name: 'ライバル魂', type: 'stay', scene: 'cup', cls: 'low', unit: '%', v: [10, 20, 30, 40, 50],
     text: '編成にいるだけで、ライバルに勝ったときのごほうび(全能力)が{v}%増える' });
   add({ id: 'ninki', icon: '🌟', name: '人気者のお手本', type: 'stay', scene: 'cup', cls: 'low', unit: '%', v: [10, 20, 30, 40, 50],
@@ -141,7 +141,7 @@
   const num = (v, d = 0) => (Number.isFinite(Number(v)) ? Number(v) : d);
   const lvOf = (lv) => Math.min(LV_MAX, Math.max(1, Math.round(num(lv, 1))));
 
-  // 説明の1行(段つき)。例: describe('sokoji', 2) → 'この子がいっしょに訓練すると、伸びが10%上がる'
+  // 説明の1行(段つき)。例: describe('sokoji', 2) → 'この子がいっしょにトレーニングすると、伸びが10%上がる'
   const describe = (id, lv) => {
     const a = BY_ID[id]; if (!a) return '';
     const i = lvOf(lv) - 1;

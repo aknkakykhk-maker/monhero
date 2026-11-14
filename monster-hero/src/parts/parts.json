@@ -417,6 +417,10 @@
       "role": "助手ライフの「📋 みんなの居場所」の地図(案A・2026-11-08 社長): HOME の画面そのもの(同じ絵・同じ札の部品と位置)に、助手が小さな全身で立つ。町だけの場所は同じ形の札を絵の中の建物に。場所を押すと、いる助手とできることのシート。公開の印 assistantLife の後ろ。何も保存しない"
     },
     {
+      "file": "56-assistant-life-finds.jsx",
+      "role": "助手ライフの拾い物・贈り物(2026-11-14 社長): 助手が出かけ先から帰った・家で誰かと過ごした・マスモンが修行から戻ったときに、モンヒロサクセスの持ちこみアイテムが手に入る(1日2個まで)。公開の印 monheroSuccess が偽のあいだは何もしない。新しいキー mh_msx_find_v1(1日の数・直前の居場所・知らせの待ち)と、持ちこみの数 meta.items への +1 だけを保存する"
+    },
+    {
       "file": "56-assistant-life-roomview.jsx",
       "role": "助手の部屋を大きく見る(2026-11-08 社長 案A): 部屋の絵(壁・床・窓・置いた家具)に助手が立ち(①色味と影 ②腰から下は家具の後ろ ③見えている体で大きさ)、マスモン全部が床を歩く。部品 AssistantLifeRoomScene は見せるだけで、部屋のシートが上(横は左)に置く。フレンドの家でも使える形。何も保存しない"
     },
@@ -517,8 +521,20 @@
       "role": "部品: モンヒロサクセスの見た出来事(新しいキー mh_monsuc_event_seen_v1 = { v:1, ch, ev }・msxSeenMark)・選択肢の詳細ボタンの中身 MsxChoiceInfo(芯の出来事の表から効果の文を作る・まだは「？？？」)・イベント図鑑 MsxDex(全体と種類ごとの ◯/◯・見たものは読み直せる)。公開の印 monheroSuccess の後ろ"
     },
     {
+      "file": "56-monsuc-beta.jsx",
+      "role": "部品: モンヒロサクセスのβ版(選べる助手はみゅあだけ msxBetaAidOk・はじめて開いたとき/はじめての育成を終えたときのβ版の話・最初の1回だけのみゅあの説明の重ね窓 MsxBetaTalk・タイトルの「β」MsxBetaMark)。台本は script/beta-mua.js。新しいキー mh_monsuc_beta_v1 = { v:1, seen }(見た印だけ・足すだけ)。公開の印 monheroSuccess の後ろ"
+    },
+    {
       "file": "56-monsuc-tevent.jsx",
       "role": "部品: モンヒロサクセスの訓練のあとの出来事(編成のモンスターとのお話・小さな出来事)を1枚の場面で見せる MsxTrainEvent(背景・2体の立ち絵・見出し・台詞・変わった数字・入り方)。何も保存しない・公開の印 monheroSuccess の後ろ"
+    },
+    {
+      "file": "56-monsuc-actfx.jsx",
+      "role": "部品: モンヒロサクセスの訓練・修行の演出。訓練の結果の前に訓練している場面 MsxTrainAct(約1.3秒・押すと飛ばせる)と、修行の結果の前の段 MsxShugyoStages(助手の一言→STAGE 1→STAGE 2)。何も保存しない・動きを減らす設定では出さない。公開の印 monheroSuccess の後ろ"
+    },
+    {
+      "file": "56-monsuc-kifx.jsx",
+      "role": "部品: モンヒロサクセスの期の区切りの演出 MsxKiShow(「第◯章 終了/◯◯期」と獲得賞金・総合力の増えた分 →「NEXT あと◯ターン」と期のはしご・最上段は頂への道)。新しい期の1ターン目の区切りで1回。何も保存しない(控え run.ki の書きかえは呼ぶ側)。公開の印 monheroSuccess の後ろ"
     },
     {
       "file": "56-assistant-life-friend.jsx",

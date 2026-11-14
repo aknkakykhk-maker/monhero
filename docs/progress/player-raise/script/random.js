@@ -14,7 +14,7 @@ const MONSUC_SCRIPT_RANDOM = Object.freeze([
   { id:'ev.daily.nut.choice.a', who:'choice', c:'a', t:'持ち主に届ける' },
   { id:'ev.daily.nut.choice.b', who:'choice', c:'b', t:'食べちゃう' },
 
-  { id:'ev.daily.rain.narr1', who:'narr', t:'朝から大つぶの雨。訓練場は水たまりだらけだ。' },
+  { id:'ev.daily.rain.narr1', who:'narr', t:'朝から大つぶの雨。トレーニング場は水たまりだらけだ。' },
   { id:'ev.daily.rain.mua1', who:'mua', e:'troubled', t:'雨すごー💦 今日は屋根の下でやる？ それとも…？' },
   { id:'ev.daily.rain.atsu1', who:'atsu', e:'happy', t:'雨か。こういう日に走るのも悪くないけどな笑' },
   { id:'ev.daily.rain.choice.a', who:'choice', c:'a', t:'屋根の下で軽く体を動かす' },
@@ -100,12 +100,12 @@ const MONSUC_SCRIPT_RANDOM = Object.freeze([
   { id:'ev.daily.gift.mua1', who:'mua', e:'crying', t:'えー、うれしすぎる…😭 {mon}、ファンがいるんだよ！' },
   { id:'ev.daily.gift.atsu1', who:'atsu', e:'happy', t:'見てくれてる人がいるんだな。ありがたくいただこ笑' },
 
-  { id:'ev.daily.alone.narr1', who:'narr', t:'気づけば、{mon}がひとりで黙々と訓練の続きをしていた。' },
+  { id:'ev.daily.alone.narr1', who:'narr', t:'気づけば、{mon}がひとりで黙々とトレーニングの続きをしていた。' },
   { id:'ev.daily.alone.mua1', who:'mua', e:'happy', t:'{mon}、えらすぎる…。あたしも見習わなきゃ！' },
   { id:'ev.daily.alone.atsu1', who:'atsu', e:'happy', t:'言われなくてもやる。そういうとこ、好きだわ笑' },
 
   // ═══════════ ③ 編成の出来事 ═══════════
-  { id:'ev.team.selfdrill.narr1', who:'narr', t:'訓練のあと、{cheer}が「もう少しやろう」と{mon}を誘ってきた。' },
+  { id:'ev.team.selfdrill.narr1', who:'narr', t:'トレーニングのあと、{cheer}が「もう少しやろう」と{mon}を誘ってきた。' },
   { id:'ev.team.selfdrill.mua1', who:'mua', e:'happy', t:'{cheer}、やる気満々ぢゃん♪ どうする？' },
   { id:'ev.team.selfdrill.atsu1', who:'atsu', e:'normal', t:'{cheer}からの誘いか。乗るかどうかは体力と相談な笑' },
   { id:'ev.team.selfdrill.choice.a', who:'choice', c:'a', t:'いっしょに自主練する' },
@@ -117,7 +117,7 @@ const MONSUC_SCRIPT_RANDOM = Object.freeze([
   { id:'ev.team.senpai.choice.a', who:'choice', c:'a', t:'見て学ぶ' },
   { id:'ev.team.senpai.choice.b', who:'choice', c:'b', t:'手合わせを挑む' },
 
-  { id:'ev.team.fight.narr1', who:'narr', t:'{cheer}と{cheer2}が、訓練場の取り合いでにらみ合っている。' },
+  { id:'ev.team.fight.narr1', who:'narr', t:'{cheer}と{cheer2}が、トレーニング場の取り合いでにらみ合っている。' },
   { id:'ev.team.fight.mua1', who:'mua', e:'troubled', t:'ちょ、ケンカはだめだってー💦' },
   { id:'ev.team.fight.atsu1', who:'atsu', e:'normal', t:'似た者どうしだからぶつかるんだよな笑 どうする？' },
   { id:'ev.team.fight.choice.a', who:'choice', c:'a', t:'仲直りさせる' },
@@ -157,7 +157,12 @@ const MONSUC_SCRIPT_RANDOM = Object.freeze([
   { id:'ev.self.peakout.choice.a', who:'choice', c:'a', t:'しっかり休ませる' },
   { id:'ev.self.peakout.choice.b', who:'choice', c:'b', t:'まだまだやる' },
 
-  { id:'ev.self.slump.narr1', who:'narr', t:'このところ、{mon}は訓練がうまくいかずにしょんぼりしている。' },
+  // 育成の記念日(ジュニア期8月・一度きり。体力 +50%・ストレス −10)
+  { id:'ev.self.anniv.narr1', who:'narr', t:'{mon}を育て始めて、ちょうど1年。今日は、はじめての育成記念日だ。' },
+  { id:'ev.self.anniv.mua1', who:'mua', e:'excited', t:'{mon}、育成記念日おめでとう♪ 1年、ほんとによくがんばったね！' },
+  { id:'ev.self.anniv.atsu1', who:'atsu', e:'happy', t:'{mon}、1年おめでとう！ もっと強くなれよ笑' },
+
+  { id:'ev.self.slump.narr1', who:'narr', t:'このところ、{mon}はトレーニングがうまくいかずにしょんぼりしている。' },
   { id:'ev.self.slump.mua1', who:'mua', e:'troubled', t:'最近うまくいかないね…。気分変えに遊びいこっか？' },
   { id:'ev.self.slump.atsu1', who:'atsu', e:'normal', t:'こういうときは、流れを変えるか、我慢して続けるか笑' },
   { id:'ev.self.slump.choice.a', who:'choice', c:'a', t:'気分を変えに出かける' },
@@ -167,7 +172,7 @@ const MONSUC_SCRIPT_RANDOM = Object.freeze([
   { id:'ev.self.favtrain.mua1', who:'mua', e:'happy', t:'{mon}、{train}好きになったんだね♪ 楽しそー！' },
   { id:'ev.self.favtrain.atsu1', who:'atsu', e:'happy', t:'好きこそ物の上手なれってやつだな笑' },
 
-  { id:'ev.self.selfish.narr1', who:'narr', t:'{mon}がそっぽを向いて、訓練場に入ろうとしない。' },
+  { id:'ev.self.selfish.narr1', who:'narr', t:'{mon}がそっぽを向いて、トレーニング場に入ろうとしない。' },
   { id:'ev.self.selfish.mua1', who:'mua', e:'troubled', t:'今日はご機嫌ななめだね…。どうしよ？' },
   { id:'ev.self.selfish.atsu1', who:'atsu', e:'angry', t:'わがままだな。言うこと聞かせる？ それとも合わせる？' },
   { id:'ev.self.selfish.choice.a', who:'choice', c:'a', t:'言うことを聞いてあげる' },
@@ -221,7 +226,7 @@ const MONSUC_SCRIPT_RANDOM = Object.freeze([
   // 8月 夏祭り
   { id:'ev.season.aug1.narr1', who:'narr', t:'夏祭りの夜。金魚すくいの屋台に{mon}がくぎづけだ。' },
   { id:'ev.season.aug1.mua1', who:'mua', e:'excited', t:'金魚すくいやろ！ あたし下手だけど！' },
-  { id:'ev.season.aug1.atsu1', who:'atsu', e:'normal', t:'手元の集中力の訓練になるな。…まぁ遊びだけど笑' },
+  { id:'ev.season.aug1.atsu1', who:'atsu', e:'normal', t:'手元の集中力のトレーニングになるな。…まぁ遊びだけど笑' },
   { id:'ev.season.aug1.choice.a', who:'choice', c:'a', t:'金魚すくいに挑戦' },
   { id:'ev.season.aug1.choice.b', who:'choice', c:'b', t:'屋台を食べ歩き' },
   { id:'ev.season.aug2.narr1', who:'narr', t:'今年の夏祭りには、力自慢の出し物がある。大きなたるを持ち上げる勝負だ。' },
@@ -284,11 +289,11 @@ const MONSUC_SCRIPT_RANDOM = Object.freeze([
   { id:'ev.small.nut.ng.narr1', who:'narr', c:'a', t:'…{mon}がおなかを押さえてうずくまった。どうやら合わなかったらしい。' },
 
   // ═══════════ ⑦ 体調の出来事 ═══════════
-  { id:'ev.body.injury.narr1', who:'narr', t:'訓練に向かおうとした{mon}の足が、ふらりともつれた。' },
-  { id:'ev.body.injury.mua1', who:'mua', e:'troubled', t:'待って待って！ 今のまま訓練したら、けがしちゃうかも…' },
+  { id:'ev.body.injury.narr1', who:'narr', t:'トレーニングに向かおうとした{mon}の足が、ふらりともつれた。' },
+  { id:'ev.body.injury.mua1', who:'mua', e:'troubled', t:'待って待って！ 今のままトレーニングしたら、けがしちゃうかも…' },
   { id:'ev.body.injury.atsu1', who:'atsu', e:'angry', t:'ストップ。今やったらけがする。それでも行く？' },
   { id:'ev.body.injury.choice.a', who:'choice', c:'a', t:'休ませる' },
-  { id:'ev.body.injury.choice.b', who:'choice', c:'b', t:'それでも訓練する' },
+  { id:'ev.body.injury.choice.b', who:'choice', c:'b', t:'それでもトレーニングする' },
 
   { id:'ev.body.runaway.narr1', who:'narr', t:'このところ{mon}は、窓の外ばかり見ている。ごはんも少し残しがちだ。' },
   { id:'ev.body.runaway.mua1', who:'mua', e:'troubled', t:'最近、{mon}元気ないね…。どっか連れてってあげたいな' },

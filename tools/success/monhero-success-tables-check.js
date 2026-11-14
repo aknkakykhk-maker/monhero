@@ -52,7 +52,7 @@ const hintNames = Object.values(SUC.ASST_STORY).filter(s => s.good.hint === 'ass
 for (const n of hintNames) ok(AS.LIST.some(a => a.name === n && a.from === 'hint'), `お話のひらめき「${n}」が表にない`);
 ok(AS.MAX_KINDS === 4, '1体に持てる数が4でない');
 for (const p of [0, 999, 2000, 8000, 14000, 19500, 20070, 99999]) ok(AS.pointsOf(p) === SUC.assistPointsOf(p), `ポイントの式が芯と違う(総合力 ${p})`);
-ok(AS.describe('sokoji', 2) === 'この子がいっしょに訓練すると、伸びが10%上がる', '説明の差しこみがおかしい');
+ok(AS.describe('sokoji', 2) === 'この子がいっしょにトレーニングすると、伸びが10%上がる', '説明の差しこみがおかしい');
 for (const pts of [20, 40, 160, 288, 400]) {
   const r = AS.autoPick(pts, []);
   ok(r.picks.length <= 4 && r.used <= pts && r.used > 0, `おまかせ(${pts})がポイント・4種類を超える/何も取らない`);

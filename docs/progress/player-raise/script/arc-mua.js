@@ -7,7 +7,7 @@
 const MONSUC_SCRIPT_ARC_MUA = Object.freeze([
   // ═══════════ 固有イベント ═══════════
   // A 写真とろ！(ジュニア期)
-  { id:'scn.mua.uq.photo.narr1', who:'narr', t:'訓練のあいま。みゅあがスマホを構えて、{mon}のまわりをぐるぐる回っている。' },
+  { id:'scn.mua.uq.photo.narr1', who:'narr', t:'トレーニングのあいま。みゅあがスマホを構えて、{mon}のまわりをぐるぐる回っている。' },
   { id:'scn.mua.uq.photo.mua1', who:'mua', e:'excited', t:'ちょ、{mon}こっち向いて！ この角度まぢ盛れるｗ' },
   { id:'scn.mua.uq.photo.mua1b', who:'mua', e:'excited', bond:[1,2], t:'{mon}、こっちを向いてもらえますか？ この角度、すごくかわいいです！' },
   { id:'scn.mua.uq.photo.mua2', who:'mua', e:'wink', t:'{name}も入っちゃう？ それともベストショット狙う？' },
@@ -44,7 +44,7 @@ const MONSUC_SCRIPT_ARC_MUA = Object.freeze([
   { id:'scn.mua.uq.call.mua2b', who:'mua', e:'troubled', bond:[1,2], t:'ごめんなさい、変なことを言いました。…{name}はどう思いますか？' },
   { id:'scn.mua.uq.call.choice.a', who:'choice', c:'a', t:'ゆっくり話を聞く' },
   { id:'scn.mua.uq.call.choice.b', who:'choice', c:'b', t:'「明日も早いし、もう寝よう」' },
-  { id:'scn.mua.uq.call.a.narr1', who:'narr', c:'a', t:'今日の訓練のこと、{mon}の寝ぐせのこと。話しているうちに、みゅあの声がだんだん明るくなった。' },
+  { id:'scn.mua.uq.call.a.narr1', who:'narr', c:'a', t:'今日のトレーニングのこと、{mon}の寝ぐせのこと。話しているうちに、みゅあの声がだんだん明るくなった。' },
   { id:'scn.mua.uq.call.a.mua1', who:'mua', e:'happy', c:'a', t:'…聞いてくれてありがと。{name}がいてくれて、まぢでよかった。おやすみ♪' },
   { id:'scn.mua.uq.call.a.mua1b', who:'mua', e:'happy', c:'a', bond:[1,2], t:'聞いてくれて、ありがとうございます。{name}がいてくれて、よかったです。おやすみなさい♪' },
   { id:'scn.mua.uq.call.b.narr1', who:'narr', c:'b', t:'電話の向こうで、みゅあがふふっと笑った。' },
@@ -129,7 +129,7 @@ const MONSUC_SCRIPT_ARC_MUA = Object.freeze([
   { id:'scn.mua.party.bad1.narr1', who:'narr', t:'おつかれさま会。テーブルには、みゅあが焼いたちょっと焦げたクッキー。' },
   { id:'scn.mua.party.bad1.mua1', who:'mua', e:'happy', t:'今日までほんとにおつかれさま！ {mon}、またいっしょに遊ぼーね♪' },
   { id:'scn.mua.party.bad1.mua1b', who:'mua', e:'happy', bond:[1,2], t:'今日まで本当におつかれさまでした！ {mon}、またいっしょに遊びましょうね♪' },
-  { id:'scn.mua.party.good1.narr1', who:'narr', t:'祝勝会。訓練場が、風船とごちそうでいっぱいになった。' },
+  { id:'scn.mua.party.good1.narr1', who:'narr', t:'祝勝会。トレーニング場が、風船とごちそうでいっぱいになった。' },
   { id:'scn.mua.party.good1.mua1', who:'mua', e:'excited', t:'かんぱーい！ 今日は{mon}が主役だから、いちばん大きいの食べてｗ' },
   { id:'scn.mua.party.good1.mua1b', who:'mua', e:'excited', bond:[1,2], t:'かんぱい！ 今日は{mon}が主役ですから、いちばん大きいのをどうぞ！' },
   { id:'scn.mua.party.good2.narr1', who:'narr', t:'町のパレード。{mon}が通るたびに、子どもたちが手をふって追いかけてくる。' },
