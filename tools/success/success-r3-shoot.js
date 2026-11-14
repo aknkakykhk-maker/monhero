@@ -152,9 +152,12 @@ const makeRun = async (kind) => {
             // デバッグの入口からの育成: 渡した量の印は進むが、財布は増えない
             const more = { ...run, s: { ...run.s, beatEarned: (run.s.beatEarned || 0) + 100 } }; more.beatSent = more.s.beatEarned; await msxSaveRun(more, true);
             const w3 = await loadRhythmEventPoints(); const st = await storeGet(MSX_KEYS.run, null); if (run) await msxSaveRun(run, true);
-            return { sent: run && run.beatSent, earned: run && run.s && run.s.beatEarned, d1: w1 - w0, d2: w2 - w1, dbg: w3 - w2, dbgSent: st && st.beatSent === more.beatSent }; }, beat0);
+            // ほかのタブで引退・やめたあとの古い画面: 途中の育成を消してから古い run で保存 → 財布は増えず、育成も戻らない
+            await msxClearRun(); const stale = { ...run, s: { ...run.s, beatEarned: (run.s.beatEarned || 0) + 50 } }; stale.beatSent = stale.s.beatEarned; await msxSaveRun(stale); const w4 = await loadRhythmEventPoints(); const back = await storeGet(MSX_KEYS.run, null); if (run) await storeSet(MSX_KEYS.run, run);
+            return { sent: run && run.beatSent, earned: run && run.s && run.s.beatEarned, d1: w1 - w0, d2: w2 - w1, dbg: w3 - w2, dbgSent: st && st.beatSent === more.beatSent, stale: w4 - w3, staleBack: !!back }; }, beat0);
           check(`${label}: 優勝のビートPが本編へ1回だけ足される`, bp.sent > 0 && bp.sent === bp.earned && bp.d1 === bp.sent && bp.d2 === 0, JSON.stringify(bp));
-          check(`${label}: デバッグの入口からの育成では、本編のビートPに足さない`, bp.dbg === 0 && bp.dbgSent, JSON.stringify(bp)); }
+          check(`${label}: デバッグの入口からの育成では、本編のビートPに足さない`, bp.dbg === 0 && bp.dbgSent, JSON.stringify(bp));
+          check(`${label}: 途中の育成を消したあとの古い画面の保存では、財布が増えず育成も戻らない`, bp.stale === 0 && !bp.staleBack, JSON.stringify(bp)); }
         if (name === 'K2c') check(`${label}: キャンセルで受付へ戻る`, await page.evaluate(() => !document.querySelector('[data-msx-r3-cupwin]') && !!document.querySelector('[data-msx-r3-pre-card]')));
         if (name === 'K3') check(`${label}: 「はい」で紋章の入り`, await page.evaluate(() => !!document.querySelector('[data-msx-r3-cupintro="junior"]')));
         if (name === 'E9') { const e = await page.evaluate(async (w0) => { const b = await storeGet(MSX_KEYS.box, null); const m = b && b.mons && b.mons[0]; const w1 = await loadRhythmEventPoints(); return { rank: m && m.rank, d: w1 - w0, end: msxSuc.SUC.beatOfEnd(m && m.rank) }; }, beat0); e.want = e.end + pend0;
