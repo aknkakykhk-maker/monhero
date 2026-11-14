@@ -262,7 +262,9 @@ ok(near(SUC.failRateOf({ ...base, yosu: { sabori: { visits: 0 } } }) - fFull, 0.
     const lg = (w, l) => ({ ...s0.log, wins: w, losses: l });
     ok(SUC.rankStepOf({ ...s0, log: lg(0, 1), fameTotal: 99999 }) === 1 && SUC.rankStepOf({ ...s0, log: lg(1, 0), fameTotal: 1499 }) === 2 && SUC.rankStepOf({ ...s0, log: lg(1, 0), fameTotal: 8000 }) === 6 && SUC.rankStepOf({ ...s0, log: lg(3, 0), fameTotal: 50000 }) === 10, '賞金ランクの段の数え方がずれている');
     const rs = SUC.restore(JSON.parse(JSON.stringify({ ...s0, log: lg(2, 0), fameTotal: 9000, fameRank: undefined }))); ok(rs.fameRank === 6, `古い途中の育成の賞金ランクが いまの段で埋まらない: ${rs.fameRank}`);
-    const k2 = SUC.settle({ ...b, turn: 6, acted: false, battle: { kind: 'cup', sys: 'str', star: 1, round: 0 } }, [false]); ok(k2.out.rankKeep && k2.state.tickets === b.tickets, '段が上がらないのにチケットが入る・KEEP が出ない'); }
+    const k2 = SUC.settle({ ...b, turn: 6, acted: false, battle: { kind: 'cup', sys: 'str', star: 1, round: 0 } }, [false]); ok(k2.out.rankKeep && k2.state.tickets === b.tickets, '段が上がらないのにチケットが入る・KEEP が出ない');
+    // 負けても獲得賞金の合計で段が上がる(2026-11-14 社長): 準優勝の賞金で 一人前(1500G) を越えたら1段・チケット1枚
+    const k3 = SUC.settle({ ...b, fameTotal: 1490, turn: 6, acted: false, battle: { kind: 'cup', sys: 'str', star: 3, round: 0 } }, [false]); ok(k3.out.rankUp && k3.state.fameRank === 3 && k3.state.tickets === b.tickets + 1 && !k3.state.mealReady, `負けたとき獲得賞金の合計で賞金ランクが上がらない: ${k3.state.fameRank}`); }
   const pro = SUC.settle({ ...s0, turn: 41, acted: false, battle: { kind: 'pro', round: 0 } }, [true, true, true]).state;
   ok(pro.tickets - s0.tickets > b.tickets - s0.tickets, '賞金の大きい大会ほどチケットが多くない');
   const runner = SUC.settle({ ...s0, turn: 41, acted: false, battle: { kind: 'pro', round: 0 } }, [false]).state;
