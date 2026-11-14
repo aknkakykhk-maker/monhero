@@ -190,7 +190,7 @@ function MsxSlotPicker({ idx, cur, own, unlocked, raised, teamBox, SUC, onPick, 
           <div className="msx-pick-grid">{unlocked.map((sp) => { const on = cur && !cur.box && cur.base === sp && !cur.auto; return (
             <button type="button" key={sp} className={`msx-pick${on ? ' on' : ''}`} data-msx-pick-base={sp} onClick={() => onPick({ base: sp })}>
               <img src={msxMonThumb(sp)} alt=""/><b>{msxMonName(sp)}</b><small style={JA_LABEL_STYLE}>{sp === own ? jaWrap('育てるモンスターと同じ種') : topTxt({ kind: 'base', species: sp })}</small></button>); })}</div>
-          <div className="msx-dt-cap" style={{ marginTop: 8 }}>保存枠のモンスター(5体まで)</div>
+          <div className="msx-dt-cap" style={{ marginTop: 8 }}>マスモンボックスのモンスター(5体まで)</div>
           {raised.length ? raised.map((m) => { const on = cur && cur.box === m.id; const used = !on && teamBox.includes(m.id); return (
             <button type="button" key={m.id} className={`v-item${on ? ' sel' : ''}`} disabled={!on && boxFull && !used} style={{ padding: '4px 8px', width: '100%' }} onClick={() => onPick({ box: m.id })}>
               <img src={msxMonThumb(m.species)} alt="" style={thumb}/>
@@ -354,22 +354,24 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf }) {
       n[i] = v; return n;
     });
     body = (<>
-      <div className="v-h">編成の6体<small>枠を押すと、ベースモンか保存枠のモンスターから選べる(保存枠は5体まで)+フレンドから1体。強いモンスターほどトレーニングがよく伸びる</small></div>
+      <div className="v-h">編成の6体<small>枠を押すと、ベースモンかマスモンボックスのモンスターから選べる(マスモンボックスからは5体まで)+フレンドから1体。強いモンスターほどトレーニングがよく伸びる</small></div>
       <div className="v-slots">
         {members.map((m, i) => (
           <div key={i} className={`v-sl${m.kind === 'base' ? ' base' : ''}${m.friend ? ' fr' : ''}${m.friend ? '' : ' msx-slot-tap'}`} data-msx-slot={i} {...(m.friend ? {} : { role: 'button', tabIndex: 0, onClick: () => setSlotPick(i), onKeyDown: (e) => { if (e.key === 'Enter' || e.key === ' ') setSlotPick(i); } })}>
             <span className={`v-pf lg r${m.rank === 'base' ? 'G' : m.rank}${m.kind === 'base' ? ' base' : ''}`}>{(() => { const img = <img src={msxMonThumb(m.species)} alt=""/>; const bm = m.boxId && box && Array.isArray(box.mons) ? box.mons.find((x) => x.id === m.boxId) : null; return bm && bm.awake && typeof MsxKira === 'function' && typeof msxKiraOf === 'function' ? <MsxKira kind={msxKiraOf(bm.awake)} small>{img}</MsxKira> : img; })()}</span>
             {m.name} {m.kind !== 'base' && <i className={msxRankCls(m.rank)}>{m.rank}</i>}
-            <div className="t3">{m.top.slice(0, 2).map((k) => `${MSX_STAT_ICON[k]}${MSX_STAT_NAME[k]}${Math.round(m.bonus[k] || 0)}%`).join(' ')}</div>
-            <div className="bs">親密度{m.bond0}・タッグ+{m.tag}%</div>
+            {/* 1項目ずつ途中で折らない(幅320で「🧠かしこさ4% 🎯命中4%」が札の外へ切れていた。2026-11-14 社長「編成の文字のはみ出し」) */}
+            <div className="t3">{m.top.slice(0, 2).map((k) => <span key={k}>{`${MSX_STAT_ICON[k]}${MSX_STAT_NAME[k]} +${Math.round(m.bonus[k] || 0)}%`}</span>)}</div>
+            <div className="bs"><span>親密度 {m.bond0}</span><span>タッグ +{m.tag}%</span></div>
             <div className="ic">{m.kind === 'base' ? (m.auto ? 'ベースモン・✎選ぶ' : 'ベースモン・✎変える') : m.friend ? `借: ${m.friend.name || 'フレンド'}` : '✎変える'}</div>
           </div>
         ))}
       </div>
+      <div className="msx-note msx-sl-legend" data-msx-slot-legend>札の見方: 「+4%」はその能力のトレーニングの伸びが上がる分・親密度ははじめの値・タッグは友情タッグのときの伸び</div>
       <button type="button" className="v-card msx-heat-btn" data-msx-gather-open onClick={() => setGatherOpen(true)}><div className="sub" style={{ color: '#f9a8d4', fontWeight: 900 }}>この編成が集まりやすいトレーニング<span className="msx-dt-sm"> 押すと表 ▶</span></div>
         <div className="v-heat">{MSX_STATS.map((k, i) => <div key={k} className={heat[i] >= 3 ? 'x3' : heat[i] === 2 ? 'x2' : ''}>{msxTrainIcon(k, 1)}{MSX_STAT_NAME[k]}<b>{heat[i]}体</b></div>)}</div></button>
       <div className="v-card" style={{ flex: '1 1 0', minHeight: 0, overflowY: 'auto' }}>
-        <div className="sub" style={{ color: '#f9a8d4', fontWeight: 900 }}>保存枠から選ぶ({teamBox.length}/5)</div>
+        <div className="sub" style={{ color: '#f9a8d4', fontWeight: 900 }}>マスモンボックスから選ぶ({teamBox.length}/5)</div>
         {raised.length ? raised.map((m) => (
           <button type="button" key={m.id} className={`v-item${teamBox.includes(m.id) ? ' sel' : ''}`} style={{ padding: '4px 8px', width: '100%' }} onClick={() => toggleBox(m.id)}>
             {m.awake && typeof MsxKira === 'function' && typeof msxKiraOf === 'function' ? <MsxKira kind={msxKiraOf(m.awake)} small><img src={msxMonThumb(m.species)} alt="" style={{ width: 30, height: 30, borderRadius: 9, objectFit: 'contain', background: '#0f172a' }}/></MsxKira>
@@ -377,7 +379,7 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf }) {
             <div>{m.nick || msxMonName(m.species)} {m.rank ? <i className={msxRankCls(m.rank)}>{m.rank}</i> : null}<small>{msxMonName(m.species)}{m.awake ? (m.awake >= 2 ? '・超覚醒' : '・覚醒') : ''}</small></div>
             <span className="pr">{teamBox.includes(m.id) ? '✅ 入れている' : '入れる'}</span>
           </button>
-        )) : <div className="msx-note" style={{ marginTop: 4 }}>保存枠はまだ空です。上の枠を押すと、入れるベースモンを選べます。育て終えたモンスターは、ここに入ります</div>}
+        )) : <div className="msx-note" style={{ marginTop: 4 }}>マスモンボックスはまだ空です。上の枠を押すと、入れるベースモンを選べます。育て終えたモンスターは、ここに入ります</div>}
         <div className="sub" style={{ color: '#7dd3fc', fontWeight: 900, marginTop: 8 }}>🤝 フレンドから借りる(1体){typeof monsucLendFriends !== 'function' ? <span className="msx-soon">準備中</span> : null}</div>
         {typeof monsucLendFriends === 'function' ? (<>
           {friend ? <button type="button" className="v-item sel" style={{ padding: '4px 8px', width: '100%' }} onClick={() => setFriend(null)}>
@@ -483,12 +485,12 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf }) {
   }
   return (
     <>
-      <MsxHd back={step ? 'もどる' : 'やめる'} onBack={back} right={`${step + 1} / 6`}/>
+      <MsxHd back={step ? '戻る' : 'やめる'} onBack={back} right={`${step + 1} / 6`}/>
       <div className="v-body">
         <MsxSteps n={step}/>
         {body}
       </div>
-      {go && <div className="v-ft"><button type="button" onClick={back}>{step ? '← もどる' : '← やめる'}</button><button type="button" className="go" onClick={next}>{go}</button></div>}
+      {go && <div className="v-ft"><button type="button" onClick={back}>{step ? '← 戻る' : '← やめる'}</button><button type="button" className="go" onClick={next}>{go}</button></div>}
       {typeof MsxBetaTalk === 'function' ? (lockTalk ? <MsxBetaTalk key={`lock${lockTalk}`} keys={['lock']} always ctx={betaCtx} onDone={() => setLockTalk(0)}/> : <MsxBetaTalk keys={['prep']} ctx={betaCtx}/>) : null}
     </>
   );

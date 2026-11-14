@@ -521,12 +521,20 @@
       "role": "部品: モンヒロサクセスの覚醒・超覚醒の見せる部分(バトルカードのキラで絵を包む MsxKira・前触れの光 MsxOmenFx・起きたときの演出 MsxAwakeShow・印 msxKiraOf)。計算は芯 MONHERO_SUCCESS の awakeOpen。何も保存しない・公開の印 monheroSuccess の後ろ"
     },
     {
+      "file": "56-monsuc-birth.jsx",
+      "role": "部品: モンヒロサクセスの育成のはじまりの演出 MsxBirth(ベースモンでも合体円盤石でも、円盤石から生まれる。r1113-008)。新しい育成は phase 'birth' で始まり、終わると 'begin'。何も保存しない・公開の印 monheroSuccess の後ろ"
+    },
+    {
       "file": "56-monsuc-issa.jsx",
       "role": "部品: モンヒロサクセスのイッサ博士「大きな賭け」の場面(登場 MsxIssaMeet・溜めと結果 MsxIssaResult・動いた数字の札 MsxIssaGains・入口 MsxIssa)。計算は芯 MONHERO_SUCCESS の issa。保存は run.out だけ・公開の印 monheroSuccess の後ろ"
     },
     {
       "file": "56-monsuc-dex.jsx",
       "role": "部品: モンヒロサクセスの見た出来事(新しいキー mh_monsuc_event_seen_v1 = { v:1, ch, ev }・msxSeenMark)・選択肢の詳細ボタンの中身 MsxChoiceInfo(芯の出来事の表から効果の文を作る・まだは「？？？」)・イベント図鑑 MsxDex(全体と種類ごとの ◯/◯・見たものは読み直せる)。公開の印 monheroSuccess の後ろ"
+    },
+    {
+      "file": "56-monsuc-evres.jsx",
+      "role": "部品: モンヒロサクセスの育成イベントの選んだあとの結果の札(芯の out.delta から体力・人気・忠誠などの増減を並べる msxEvDeltaChips・MsxEvResult)。何も保存しない・公開の印 monheroSuccess の後ろ"
     },
     {
       "file": "56-monsuc-beta.jsx",
@@ -543,6 +551,10 @@
     {
       "file": "56-monsuc-actfx.jsx",
       "role": "部品: モンヒロサクセスの訓練・修行の演出。訓練の結果の前に訓練している場面 MsxTrainAct(約1.3秒・押すと飛ばせる)と、修行の結果の前の段 MsxShugyoStages(助手の一言→STAGE 1→STAGE 2)。何も保存しない・動きを減らす設定では出さない。公開の印 monheroSuccess の後ろ"
+    },
+    {
+      "file": "56-monsuc-actcrew.jsx",
+      "role": "部品: モンヒロサクセスのトレーニングの演出(MsxTrainAct)に重ねる、いっしょにいた編成の子と助手の絵 MsxActCrew(友情タッグの子は大きく金色に・助手はひとこと)。何も保存しない・公開の印 monheroSuccess の後ろ"
     },
     {
       "file": "56-monsuc-kifx.jsx",
