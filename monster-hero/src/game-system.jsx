@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 841f4c3c08f9d388
+// generated-sha256: 02226454147b374f
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -103115,7 +103115,8 @@ const CardAssistantArt = ({ src, alt, className = '', style = null, knownBox = n
   const fit = (() => {
     const W = size.w, H = size.h;
     if (!box || !W || !H) return null;
-    const sc = Math.min(H / box.h, W / box.w);
+    // 幅は枠の 1.2 倍まではみ出してよい(2026-11-15 立ち絵を左右を切らない形にしたので、腕を広げた絵が広くなる。幅で縮めると高さが枠より1割ほど小さくなった)
+    const sc = Math.min(H / box.h, (W * 1.2) / box.w);
     // 顔の大きさをそろえる(2026-11-11 社長「助手の立ち絵も見直して、使う場面全部でうまく表示させるようにして」)。
     //   描かれている範囲いっぱいに収めるだけだと、羽や大きな耳のある絵(みゅあ・ももすけ)は顔が小さく、助手ごとに顔の大きさが 1.7〜2.8倍ちがった。
     //   助手ライフの場面と同じ顔の点の表(assistantLifeStandFace)と決まり(assistantLifeStandRule)で、頭(てっぺんから顎)を枠の高さの 44%・頭のてっぺんを上から 12〜30% に置く(2026-11-15 18%→12%: きゅうこの絵が欄より1割以上小さくなっていた)。
@@ -103128,7 +103129,10 @@ const CardAssistantArt = ({ src, alt, className = '', style = null, knownBox = n
       if (r && r.width > box.nw * sc * 1.02) {
         const dy = Math.max(0, H - r.visBottom); // 体が枠の下まで届かない絵は、下の端にそろえる
         const visW = (lb.r - lb.l) * r.width;
-        return { width: r.width, left: r.left, top: r.top + dy, artH: Math.round(Math.min(H, r.visBottom + dy) - Math.max(0, r.visTop + dy)), artW: Math.round(Math.min(W, visW)), byFace: true };
+        const byFace = { width: r.width, left: r.left, top: r.top + dy, artH: Math.round(Math.min(H, r.visBottom + dy) - Math.max(0, r.visTop + dy)), artW: Math.round(Math.min(W, visW)), byFace: true };
+        // 顔で置いた絵が、高さも幅も枠の 92% に届かない(上が空いて小さく見える)ときは、枠いっぱいに収める今までの置き方にする
+        //   (2026-11-15 左右を切らない立ち絵で、腕を広げたきゅうこがこうなった)
+        if (byFace.artH >= H * 0.92 || byFace.artW >= W * 0.92) return byFace;
       }
     }
     return { width: box.nw * sc, left: W / 2 - (box.x + box.w / 2) * sc, top: H - (box.y + box.h) * sc, artH: Math.round(box.h * sc), artW: Math.round(box.w * sc) };

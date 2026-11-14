@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d27bbedfd9d6bc1d
+// source-sha256: 5be7207e1e7c397d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -198266,7 +198266,7 @@ const CardAssistantArt = ({
     const W = size.w,
       H = size.h;
     if (!box || !W || !H) return null;
-    const sc = Math.min(H / box.h, W / box.w);
+    const sc = Math.min(H / box.h, W * 1.2 / box.w);
     const face = cardArtFaceBySrc(src);
     if (face && !face.head && typeof assistantLifeStandRule === 'function') {
       const lb = {
@@ -198287,7 +198287,7 @@ const CardAssistantArt = ({
       if (r && r.width > box.nw * sc * 1.02) {
         const dy = Math.max(0, H - r.visBottom);
         const visW = (lb.r - lb.l) * r.width;
-        return {
+        const byFace = {
           width: r.width,
           left: r.left,
           top: r.top + dy,
@@ -198295,6 +198295,7 @@ const CardAssistantArt = ({
           artW: Math.round(Math.min(W, visW)),
           byFace: true
         };
+        if (byFace.artH >= H * 0.92 || byFace.artW >= W * 0.92) return byFace;
       }
     }
     return {
