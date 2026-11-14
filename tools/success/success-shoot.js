@@ -83,7 +83,10 @@ const makeRun = async (kind) => {
   ];
   // SHOT_ONLY=H0,H1 のように名前を並べると、その場面だけ撮る
   const only = (process.env.SHOT_ONLY || '').split(',').map((x) => x.trim()).filter(Boolean);
-  const SHOTS = only.length ? SHOTS_ALL.filter(([n]) => only.includes(n)) : SHOTS_ALL;
+  // 名指ししたときだけ撮る場面(全サイズで回すと success-layout-check が 600秒を超えるため。2026-11-14)
+  //   M3A = 持ち物に育成中の物を全部並べた所 / S4L = 持ちこみで升目を押した所。名前の折れは S4・M3 で全サイズ見張っている
+  const OPT_IN = ['M3A', 'S4L'];
+  const SHOTS = only.length ? SHOTS_ALL.filter(([n]) => only.includes(n)) : SHOTS_ALL.filter(([n]) => !OPT_IN.includes(n));
   try {
     const page0 = await browser.newPage({ viewport: { width: 390, height: 844 } });
     for (const [w, h, tag, fscale] of sizes) {
