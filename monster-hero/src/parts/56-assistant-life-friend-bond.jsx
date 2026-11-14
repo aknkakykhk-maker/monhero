@@ -320,7 +320,7 @@ function AlfBondView({ friend, more, land = false }) {
   const ids = ((friend.house && friend.house.ids) || []).filter(id => ALF_IDS.includes(id));
   const card = 'rounded-2xl border border-white/10 bg-slate-800/90 px-3 py-2.5';
   const sec = 'mt-3 mb-1 text-[12px] font-black text-amber-200';
-  const names = typeof ALF_BOND_TIER_NAMES !== 'undefined' ? ALF_BOND_TIER_NAMES : ['はじめのころ', 'なかよし', 'ずっと仲良し'];
+  const names = typeof ALF_BOND_TIER_NAMES !== 'undefined' ? ALF_BOND_TIER_NAMES : ['初めのころ', 'なかよし', 'ずっと仲良し'];
   return (
     <div className="px-3 pb-4 pt-2" data-alf-bond-view>
       <div className={card} data-alf-bond-view-friend>
