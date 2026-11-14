@@ -63,6 +63,7 @@ const makeRun = async (kind) => {
   const sizes = process.env.SHOT_QUICK ? [[390, 844, '']] : [[390, 844, ''], [844, 390, 'land'], [667, 375, 'land667'], [320, 568, 's320'], [390, 844, 'big', 1.3], [844, 390, 'landbig', 1.3], [320, 568, 's320big', 1.3]];
   // [名前, 作る育成, 開いたあとの操作]
   const SHOTS = [
+    ['H0', null, []], ['H1', 'mid', []], // ホーム(育成なし・途中の育成あり)。保存枠・ランキング・図鑑のボタンの高さと当たり判定を見る(Fable の点検 ①-2)
     ['S0', null, ['new']], // ストーリー選択(2026-11-14)。S1〜S6 はその「次へ」のあと
     ['S1', null, ['new', 'next']], ['S2', null, ['new', 'next', 'next']], ['S3', null, ['new', 'next', 'next', 'next']], ['S4', null, ['new', 'next', 'next', 'next', 'next']],
     ['S5', null, ['new', 'next', 'next', 'next', 'next', 'next']], ['S6', null, ['new', 'next', 'next', 'next', 'next', 'next', 'next']],
@@ -156,7 +157,21 @@ const makeRun = async (kind) => {
           // 重なり: 押せる物どうしが 6px 角以上かぶる
           const bs = [...root.querySelectorAll('button')].filter((e) => vis(e) && !clipped(e)).map((e) => ({ e, r: e.getBoundingClientRect() }));
           const lap = []; for (let i = 0; i < bs.length; i++) for (let j = i + 1; j < bs.length; j++) { const a = bs[i].r, b = bs[j].r; if (bs[i].e.contains(bs[j].e) || bs[j].e.contains(bs[i].e)) continue; if (Math.min(a.right, b.right) - Math.max(a.left, b.left) > 6 && Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > 6) lap.push(`${lab(bs[i].e)}×${lab(bs[j].e)}`); }
-          return { ok: true, text: root.innerText.length, over, taps, cut, tiny, topBlank, lap, land: window.innerWidth > window.innerHeight };
+          // 主なボタンの見た目の高さ(::after で広げた範囲でなく、目に見える枠)。.msx button の余白の打ち消しで 17px に潰れていた(Fable ①-2)
+          const MAIN = '.msx-btn, .msc-btn, .msc-pick, .msxm-btn, .v-ft button';
+          const flat = [...root.querySelectorAll(MAIN)].filter((e) => vis(e) && !e.disabled && e.getBoundingClientRect().height < 32).map((e) => `${lab(e)}(${Math.round(e.getBoundingClientRect().height)}px)`);
+          // 当たり判定の横取り: ボタンの真ん中を押すと、別のボタン(の ::after で広げた範囲)が取る。取ったボタンの見た目の枠がその点を含まなければ NG
+          const steal = [];
+          for (const e of [...root.querySelectorAll('button, [role=button]')]) {
+            if (!vis(e) || e.disabled || clipped(e)) continue;
+            const r = e.getBoundingClientRect(); const x = r.left + r.width / 2, y = r.top + r.height / 2;
+            if (x < 0 || y < 0 || x >= innerWidth || y >= innerHeight) continue;
+            const at = document.elementFromPoint(x, y); const b = at && at.closest('button, [role=button]');
+            if (!b || b === e || e.contains(b) || b.contains(e)) continue;
+            const q = b.getBoundingClientRect();
+            if (x < q.left || x > q.right || y < q.top || y > q.bottom) steal.push(`${lab(e)}→${lab(b)}`);
+          }
+          return { ok: true, text: root.innerText.length, over, taps, cut, tiny, topBlank, lap, flat, steal, land: window.innerWidth > window.innerHeight };
         }, fscale || 0);
         const L = `${name}${tag ? `(${tag})` : ''}`;
         const warn = (what, arr) => { if (arr && arr.length) console.log(`  見張り ${L}: ${what} ${arr.length}件 ${arr.slice(0, 4).join(' / ')}`); };
@@ -165,6 +180,8 @@ const makeRun = async (kind) => {
           check(`${L}: 字が枠で切れない`, m.cut.length === 0, m.cut.slice(0, 4).join(' / '));
           check(`${L}: 字が小さすぎない`, m.tiny.length === 0, m.tiny.slice(0, 4).join(' / '));
           check(`${L}: 押せる物が重ならない`, m.lap.length === 0, m.lap.slice(0, 3).join(' / '));
+          check(`${L}: 主なボタンが潰れていない(見た目の高さ 32px 以上)`, m.flat.length === 0, m.flat.slice(0, 4).join(' / '));
+          check(`${L}: ボタンの真ん中を押すと、そのボタンが押される(下のボタンに取られない)`, m.steal.length === 0, m.steal.slice(0, 4).join(' / '));
           if (m.land) check(`${L}: 横画面の上に空白が無い`, m.topBlank <= 50, `${m.topBlank}px`);
         }
         check(`${name}${tag ? `(${tag})` : ''}: 画面が出る`, m.ok && m.text > 20);

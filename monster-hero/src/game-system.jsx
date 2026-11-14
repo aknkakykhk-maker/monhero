@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: eeaafcc6886efd7a
+// generated-sha256: 1ce5ad2c0975a86d
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -85479,7 +85479,8 @@ const MSX_CSS = `
 .msx{width:100%;max-width:520px;height:100%;font-family:inherit;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
 .msx.land{max-width:none}
 .msx img{display:block}
-.msx button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cursor:pointer;text-align:inherit;-webkit-appearance:none;appearance:none}
+/* 下げる前は .msx button(0,1,1)が .msx-btn・.msc-btn などの余白・背景を消し、ボタンが17px に潰れて当たり判定が下のボタンに取られていた(Fable の点検 ①-2)。:where で 0,0,1 にして、クラスで書いた見た目を勝たせる */
+:where(.msx) button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cursor:pointer;text-align:inherit;-webkit-appearance:none;appearance:none}
 .msx button:active{transform:scale(.97)}
 .msx button[disabled]{opacity:.45;cursor:default}
 .msx .v-ft span,.msx .v-ft button{flex:1;text-align:center}
