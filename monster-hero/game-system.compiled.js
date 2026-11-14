@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 4807e28d2d465494
+// source-sha256: c3bcd1b12f4bee1a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -167770,6 +167770,8 @@ const msxR3Diff = (a, b) => {
     const g = b.stats[k] - a.stats[k];
     if (g) d.stats[k] = g;
   });
+  d.rankFrom = Number(a.fameRank) || 0;
+  d.rankTo = Number(b.fameRank) || 0;
   d.items = {};
   Object.keys(b.bag || {}).forEach(k => {
     const g = (Number((b.bag || {})[k]) || 0) - (Number((a.bag || {})[k]) || 0);
@@ -167777,8 +167779,87 @@ const msxR3Diff = (a, b) => {
   });
   return d;
 };
+const msxR3RankName = step => {
+  const S = msxSuc && msxSuc.SUC ? msxSuc.SUC : null;
+  return S && typeof S.rankNameOf === 'function' ? S.rankNameOf(step) : String(step);
+};
+function MsxR3RankPyramid({
+  step,
+  up
+}) {
+  const S = msxSuc && msxSuc.SUC ? msxSuc.SUC : null;
+  const R = S && S.FAME_RANK ? S.FAME_RANK : [];
+  if (!R.length) return null;
+  const COL = ['#bae6fd', '#86efac', '#fb923c', '#7dd3fc', '#facc15', '#c084fc', '#f43f5e', '#14b8a6', '#e879f9', '#6d28d9'];
+  const cond = x => x.cond === 'debut' ? 'デビュー戦に出る' : x.cond === 'win' ? '大会で1勝' : `${msxFmt(x.min)}G`;
+  return React.createElement("div", {
+    "data-msx-r3-rank": true,
+    style: {
+      margin: '4px 10px 0',
+      padding: '5px 6px 6px',
+      borderRadius: 10,
+      background: '#0f172acc'
+    }
+  }, React.createElement("div", {
+    style: {
+      fontSize: 11,
+      fontWeight: 800,
+      color: '#fde68a',
+      textAlign: 'center',
+      marginBottom: 3
+    }
+  }, "賞金ランク"), R.map((x, i) => i).reverse().map(i => {
+    const x = R[i];
+    const me = i + 1 === step;
+    const w = 46 + (R.length - 1 - i) * 5.5;
+    return React.createElement("div", {
+      key: i,
+      style: {
+        display: 'flex',
+        alignItems: 'center',
+        height: 15,
+        gap: 4
+      }
+    }, React.createElement("span", {
+      style: {
+        width: 40,
+        fontSize: 9,
+        fontWeight: 900,
+        textAlign: 'right',
+        color: up ? '#fef08a' : '#a7f3d0'
+      }
+    }, me ? up ? 'UP!▶' : 'KEEP▶' : ''), React.createElement("span", {
+      style: {
+        flex: '1 1 0',
+        display: 'flex',
+        justifyContent: 'center'
+      }
+    }, React.createElement("span", {
+      style: {
+        width: `${w}%`,
+        background: COL[i],
+        opacity: i + 1 <= step ? 1 : 0.35,
+        borderRadius: 3,
+        fontSize: 10,
+        fontWeight: 800,
+        color: '#111827',
+        textAlign: 'center',
+        lineHeight: '14px',
+        outline: me ? '2px solid #fff' : 'none'
+      }
+    }, x.name)), React.createElement("span", {
+      style: {
+        width: 74,
+        fontSize: 9.5,
+        textAlign: 'right',
+        color: '#e5e7eb'
+      }
+    }, cond(x)));
+  }));
+}
 const msxR3PrizeRows = (d, s) => {
   const rows = [];
+  if (d.rankTo > d.rankFrom) rows.push(['🏆', '賞金ランク', `${msxR3RankName(d.rankFrom || 0)} → ${msxR3RankName(d.rankTo)}`, 'new', 'UP']);else if (d.rankTo > 0) rows.push(['🏆', '賞金ランク', `${msxR3RankName(d.rankTo)}(KEEP)`, '', '']);
   (d.titles || []).forEach(t => rows.push(['🏅', '称号', `「${typeof msxR3TitleName === 'function' ? msxR3TitleName(t) : t}」を手に入れた!`, 'new', 'NEW']));
   (d.apt || []).forEach(i => rows.push(['📏', '間合い適性', `「${['零', '近', '中', '遠'][i]}」の間合い適性が1段上がった!`, 'new', 'UP']));
   if (d.pts) rows.push(['🔷', '能力ポイント', `+${d.pts}(いま ${s.pts})`, '', '']);
@@ -168061,7 +168142,10 @@ function MsxR3Battle({
         alt: ""
       }), "ライバルの ", st3.rivalName, " に 勝った!", React.createElement("b", null, "ごほうび大")) : null, React.createElement("div", {
         className: "v-trophy"
-      }, "🏆")), React.createElement("div", {
+      }, "🏆")), React.createElement(MsxR3RankPyramid, {
+        step: d.rankTo || 0,
+        up: d.rankTo > d.rankFrom
+      }), React.createElement("div", {
         className: "v-prz"
       }, rows.length ? rows.map(([e, n, t, c, nw], i) => React.createElement("div", {
         key: i,
