@@ -54,6 +54,7 @@
   const TYPE_STAT = Object.freeze({ attacker: 'pow', tank: 'tough', supporter: 'wise', healer: 'life', shadow: 'eva' });
   const SEASON_MONTHS = [1, 4, 8, 10, 12];
   const SEASON_KEY = { 1: 'jan', 4: 'apr', 8: 'aug', 10: 'oct', 12: 'dec' };
+  const ANNIV_TURN = 13; // 育成の記念日のターン(ジュニア期8月)
   const SEASON_PER_YEAR = 2; // 1年に2つ(EVENTS §0・§5 の「約15回」に収めるため。§5 の表の3つより1つ少ない)。どの2つかは育成ごとに決まった乱数で選ぶ(くり返し遊んでも同じにならない)
 
   // ---- 出来事の表 ----
@@ -110,6 +111,8 @@
     { id: 'ev.self.slump', kind: 'self', slot: 'start', w: 30, when: (s) => (s.ev.bad || 0) >= 3, ch: { a: { fx: [['str', -20], ['hp', 10]] }, b: { fx: [['buff', 'yaruki']] } } },
     { id: 'ev.self.favtrain', kind: 'self', slot: 'start', w: 20, when: (s, x) => Boolean(x.favCand(s)), ch: { fx: [['flag', 'fav']] } },
     { id: 'ev.self.selfish', kind: 'self', slot: 'start', w: 25, when: (s, x) => x.loyal(s) <= 30 && s.turn >= 4, ch: { a: { fx: [['str', -20], ['loy', -3]] }, b: { fx: [['loy', 3], ['buff', 'futekusare']] } } },
+    // 育成の記念日(2026-11-13 社長): 育て始めて1年(ジュニア期8月=ターン13)のはじめに一度きり。体力が上限の50%回復・ストレス −10。ほかの病気などで出せなければ2ターンまで待つ
+    { id: 'ev.self.anniv', kind: 'self', slot: 'fixed', when: (s) => s.turn >= ANNIV_TURN && s.turn <= ANNIV_TURN + 2, ch: { fx: [['hp', 50], ['str', -10]] } },
     { id: 'ev.self.clingy', kind: 'self', slot: 'start', w: 12, when: (s, x) => x.loyal(s) >= 80, ch: { a: { fx: [['loy', 3], ['str', -10]] } } },
 
     // ═══ ⑤ 期の目標(ジュニア・ミドル・プロのはじめ)と季節の行事(決まって起きる) ═══
@@ -238,7 +241,7 @@
     const fixedDue = (s) => {
       const ev = evOf(s); const p = periodOf(s.turn); const mo = monthOf(s.turn);
       const seen = (id) => ev.seen.includes(id);
-      for (const id of ['ev.body.home', 'ev.body.healed', 'ev.goal.pick', 'ev.self.peakin', 'ev.self.peakout']) { const e = BYX[id]; if (e.when(s, X, {}) && (e.repeat || !seen(id))) return e; }
+      for (const id of ['ev.self.anniv', 'ev.body.home', 'ev.body.healed', 'ev.goal.pick', 'ev.self.peakin', 'ev.self.peakout']) { const e = BYX[id]; if (e.when(s, X, {}) && (e.repeat || !seen(id))) return e; }
       const uq = uniqDue(s); if (uq) return uq;
       if (p.key === 'final') { for (const [m, id] of [[1, 'ev.season.finaljan'], [4, 'ev.season.finalapr']]) if ((mo === m || mo === m + 1) && !seen(id)) return BYX[id]; return null; }
       const y = yearOf(s); if (!y) return null;

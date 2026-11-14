@@ -189,6 +189,7 @@ const MONSUC_SCRIPT_MOMOSUKE = Object.freeze([
   { id:'ev.team.tagwake.momosuke1', who:'momosuke', e:'excited', t:'友情タッグきた！！ ここから一気に伸びるよ♡' },
   { id:'ev.self.peakin.momosuke1', who:'momosuke', e:'excited', t:'いい時期きた！！ 今いちばん伸びるよ♡' },
   { id:'ev.self.peakout.momosuke1', who:'momosuke', e:'normal', t:'ちょっと落ち着いてきたね。休ませる？ まだやる？' },
+  { id:'ev.self.anniv.momosuke1', who:'momosuke', e:'excited', t:'{mon}、1周年おめでと♡ 今日はももが主役じゃなくていい日！' },
   { id:'ev.self.slump.momosuke1', who:'momosuke', e:'normal', t:'元気ないじゃん。気分変える？ それともがまん？' },
   { id:'ev.self.favtrain.momosuke1', who:'momosuke', e:'happy', t:'好きなことは伸びるの早いよね w えらい♡' },
   { id:'ev.self.selfish.momosuke1', who:'momosuke', e:'angry', t:'わがまま w ももより自由じゃん。どうする？' },

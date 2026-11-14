@@ -250,6 +250,7 @@
     {"id":"ev.self.peakout.narr1","who":"narr","t":"最近の{mon}は、前より少し落ち着いて見える。"},
     {"id":"ev.self.peakout.choice.a","who":"choice","c":"a","t":"しっかり休ませる"},
     {"id":"ev.self.peakout.choice.b","who":"choice","c":"b","t":"まだまだやる"},
+    {"id":"ev.self.anniv.narr1","who":"narr","t":"{mon}を育て始めて、ちょうど1年。今日は、はじめての育成記念日だ。"},
     {"id":"ev.self.slump.narr1","who":"narr","t":"このところ、{mon}はトレーニングがうまくいかずにしょんぼりしている。"},
     {"id":"ev.self.slump.choice.a","who":"choice","c":"a","t":"気分を変えに出かける"},
     {"id":"ev.self.slump.choice.b","who":"choice","c":"b","t":"このまま続ける"},
@@ -366,7 +367,7 @@
     {"id":"ev.rival.meet.friend.narr1","who":"narr","t":"会場の入口で、{owner}さんの{rival}が待っていた。礼儀正しくおじぎをしてくる。"},
     {"id":"ev.rival.reward.narr1","who":"narr","t":"ライバルに勝った！ いつもよりごほうびが多くもらえた。"},
   ];
-  const heads = [{"prefix":"scn.","head":"main","label":"メインのお話"},{"prefix":"cheer.","head":"cheer","label":"編成の子のイベント"},{"prefix":"ev.team.","head":"cheer","label":"編成の子のイベント"},{"prefix":"ev.","head":"train","label":"育成イベント"},{"prefix":"issa.","head":"train","label":"育成イベント"},{"prefix":"turn.","head":"none","label":""},{"prefix":"mon.","head":"none","label":""},{"prefix":"item.","head":"none","label":""}];
+  const heads = [{"prefix":"scn.","head":"main","label":"メインのお話"},{"prefix":"cheer.","head":"cheer","label":"編成の子のイベント"},{"prefix":"ev.team.","head":"cheer","label":"編成の子のイベント"},{"prefix":"ev.","head":"train","label":"育成イベント"},{"prefix":"issa.","head":"train","label":"育成イベント"},{"prefix":"turn.","head":"none","label":""},{"prefix":"mon.","head":"none","label":""},{"prefix":"item.","head":"none","label":""},{"prefix":"tut.","head":"none","label":""}];
   const part = Object.freeze({ rows: Object.freeze(rows), heads });
   if (root) { root.MONSUC_SCRIPT_PARTS = root.MONSUC_SCRIPT_PARTS || {}; root.MONSUC_SCRIPT_PARTS["common"] = part; }
   if (typeof module !== 'undefined' && module.exports) module.exports = part;

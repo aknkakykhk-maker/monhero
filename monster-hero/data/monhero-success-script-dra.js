@@ -155,6 +155,7 @@
     {"id":"ev.team.tagwake.dra1","who":"dra","e":"excited","t":"きたな、友情タッグ。ここから一気に伸びるぞ"},
     {"id":"ev.self.peakin.dra1","who":"dra","e":"excited","t":"いい時期に入ったな。今は何でも吸いこむぞ"},
     {"id":"ev.self.peakout.dra1","who":"dra","e":"normal","t":"少し落ち着いてきたな。休むか、続けるか。どっちも間違いじゃないよ"},
+    {"id":"ev.self.anniv.dra1","who":"dra","e":"happy","t":"{mon}、1年か。……よくついてきたな。おめでとさん"},
     {"id":"ev.self.slump.dra1","who":"dra","e":"normal","t":"ふむ、こういうときは流れを変えるか、我慢して続けるかだな"},
     {"id":"ev.self.favtrain.dra1","who":"dra","e":"happy","t":"好きこそ物の上手なれ、ってやつだな"},
     {"id":"ev.self.selfish.dra1","who":"dra","e":"troubled","t":"わがままだな。言うこと聞かせるか、合わせるか……おでなら一回合わせるわ"},
