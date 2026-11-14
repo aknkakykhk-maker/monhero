@@ -42,6 +42,14 @@ const CHANGELOG = [
     ],
   },
   {
+    // 2026-11-14 社長の指摘(iPhone の Safari): 更新履歴の予告動画の音が、設定の音量と関係なく鳴る。ChangelogVideo・HELL の説明動画を Audio_.videoGain に合わせた
+    date: "2026-11-14 17:19", type:'fix', title:'お知らせの動画の音が、設定の音量と関係なく鳴っていたのを直しました', status:'new',
+    items:[
+      'お知らせの予告動画の音が、設定の音量に合わせて鳴るようになりました(BGMの音量と同じ大きさ)。',
+      'BGMの音量を0にしているとき・音を切っているときは、動画の音も鳴りません。再生中に音量を変えても、すぐに反映されます。',
+    ],
+  },
+  {
     // 新曲をビートPで買えるようになった(2026-11-14 社長「1曲500で両方ついてくる」。文はテンポの案)
     date: "2026-11-14 17:03", type:'update', group:'rhythm', title:'新曲をビートPで買えるようになりました', status:'new',
     items:[
@@ -121,8 +129,8 @@ const CHANGELOG = [
     // 2026-11-14 社長「β近日公開予定のお知らせと、そこに紹介動画と、作ったストーリーを出そう。紹介動画はイッサ博士と覚醒のシーン」。動画は実際の画面を本物のブラウザで録った(博士の大きな賭け → 覚醒の前触れ → 覚醒 → 超覚醒)。
     // 第1話のお知らせ(releaseFlag monsucStoryEp1)と同じ日に出す。みゅあの告知は第1話の側の1つにまとめ、ここには付けない(2回続けて話さないように)
     date: "2026-11-14 15:40", type:'content', title:'モンヒロサクセス β版 近日公開予定', status:'new', group:'success',
-    video: 'movies/monsaku-beta-soon.mp4?v=d873ea8d02e3',
-    videoPoster: 'images/events/monsaku-beta-soon-poster.jpg?v=cca884327653',
+    video: 'movies/monsaku-beta-soon.mp4?v=3672929619a8',
+    videoPoster: 'images/events/monsaku-beta-soon-poster.jpg?v=d08f377c5f26',
     items:[
       '開発中の新コンテンツ「モンヒロサクセス」は、β版を近日公開予定です。',
       '動画では、育成の途中にふらりと現れる博士との「大きな賭け」と、モンスターがまばゆい光をまとって強くなる「覚醒」の様子をお見せします。',
@@ -131,6 +139,15 @@ const CHANGELOG = [
       'お楽しみに！',
     ],
     unreleasedFlag:'monheroSuccess', // 公開したら消える(第1弾〜第3弾の予告と同じ)
+  },
+  {
+    date: "2026-11-14 15:26", type:'update', title:'育成の終わりの評価が、大きく見やすくなりました', group:'success', releaseFlag:'monheroSuccess', status:'new',
+    items:[
+      '育成が終わったときの評価は「育成グレード」の画面で、モンスターと大きなグレードの印が画面いっぱいに出ます。総合力と、次のグレードまであとどれくらいかを棒で見られます。',
+      '能力ポイントが残っているときは、先に能力へ使ってから評価を見るようになりました。使ったぶんも評価に入ります。',
+      '章の終わりの獲得賞金と総合力を、真ん中にそろえて見やすくしました。',
+      '通院のあと、何が治ったか(サボりグセ・うつ病)を名前で出すようにしました。',
+    ],
   },
   {
     date: "2026-11-14 14:39", type:'update', group:'success', releaseFlag:'monheroSuccess', dev:true,
