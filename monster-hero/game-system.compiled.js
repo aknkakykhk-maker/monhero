@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c64aac195cb717d1
+// source-sha256: 43cf55b2a82c53c1
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -253778,18 +253778,22 @@ function MonsterHeroGame() {
       }))), line.fxText && !storyOpening && React.createElement("div", {
         key: `banner${step}-${eventReplay.opened ? 1 : 0}`,
         "data-story-banner": true,
-        className: "px-4 text-center text-[17px] font-black",
+        className: "px-4 py-2.5 text-center text-[17px] font-black",
         style: {
           position: 'absolute',
           top: '42%',
           left: '50%',
-          width: '100%',
-          maxWidth: '28rem',
+          width: 'calc(100% - 32px)',
+          maxWidth: '26rem',
           color: '#fff',
-          textShadow: `0 0 14px rgba(${fxColors[fx] || '255,255,255'},1), 0 2px 0 rgba(0,0,0,.6)`,
-          animation: 'storyBanner 2.2s ease-out both'
+          background: 'rgba(2,6,23,.74)',
+          border: `1px solid rgba(${fxColors[fx] || '255,255,255'},.45)`,
+          borderRadius: 14,
+          boxShadow: '0 4px 18px rgba(0,0,0,.45)',
+          textShadow: `0 0 2px #000, 0 1px 3px rgba(0,0,0,.95), 0 0 12px rgba(${fxColors[fx] || '255,255,255'},.75)`,
+          animation: 'storyBanner .7s ease-out both'
         }
-      }, storyCenter(line.fxText, storyBoxW - 32, 17))), React.createElement("div", {
+      }, storyCenter(line.fxText, storyBoxW - 64, 17))), React.createElement("div", {
         ref: storyMeasureRef('--story-sheet-h', 'height'),
         onClick: next,
         "data-story-sheet": true,
@@ -260079,7 +260083,7 @@ const createAnimationStyle = () => {
     [data-event-story][data-story-ending-pull] > :not([data-story-ending]) { transform: scale(.88); filter: brightness(.3) blur(1px); }
     @media (prefers-reduced-motion: reduce) { [data-story-ending] *, [data-story-ending] { animation-duration: .01s !important; animation-delay: 0s !important; } }
     @keyframes storyShrink { 0% { opacity: 0; transform: scale(1.7); filter: brightness(1.9); } 50% { opacity: 1; } 100% { transform: scale(1); filter: brightness(1); } }
-    @keyframes storyBanner { 0% { opacity: 0; transform: translate(-50%, -8px) scale(.9); } 12% { opacity: 1; transform: translate(-50%, 0) scale(1.06); } 22% { transform: translate(-50%, 0) scale(1); } 82% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, 0) scale(1); } }
+    @keyframes storyBanner { 0% { opacity: 0; transform: translate(-50%, -8px) scale(.9); } 45% { opacity: 1; transform: translate(-50%, 0) scale(1.06); } 70%, 100% { opacity: 1; transform: translate(-50%, 0) scale(1); } }
     @keyframes storyShakeA { 0%, 100% { transform: translate(0,0); } 12% { transform: translate(-6px,3px); } 24% { transform: translate(6px,-4px); } 36% { transform: translate(-5px,-3px); } 48% { transform: translate(5px,3px); } 62% { transform: translate(-3px,2px); } 78% { transform: translate(3px,-2px); } }
     @keyframes storyShakeB { 0%, 100% { transform: translate(0,0); } 12% { transform: translate(-6px,3px); } 24% { transform: translate(6px,-4px); } 36% { transform: translate(-5px,-3px); } 48% { transform: translate(5px,3px); } 62% { transform: translate(-3px,2px); } 78% { transform: translate(3px,-2px); } }
     [data-story-shake="0"] { animation: storyShakeA .7s ease-in-out both; }
