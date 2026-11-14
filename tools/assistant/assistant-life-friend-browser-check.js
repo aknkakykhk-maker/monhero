@@ -34,7 +34,7 @@ const route = (posted) => async (r) => {
   if (/assistant_life_friend_switch/.test(url)) return json([{ mode: 'on' }]);
   if (/assistant_life_friend_house_more/.test(url)) {
     if (method !== 'GET') { try { posted.push({ more: JSON.parse(r.request().postData()) }); } catch {} return json('', 201); }
-    return json(/aoi-0001/.test(url) ? [{ more: { v: 1, fu: { mua: { p: { c: 'lantern', w: 'starpic', f: 'sofa' }, k: ['bear', 'plant'] }, dra: { p: { w: 'trophy', f: 'bear' }, k: [] } }, ms: { kiki: [{ mo: 'Mocchi', n: 'ごろちゃん', c: ['custom:120:40:85@70', null], l: 1 }, { mo: 'Pandora', n: 'のあ', c: [] }] }, mn: { kiki: 5 }, ac: [{ k: 'masmon', x: '新しいマスモン「ゴーレム」を迎えた', at: Date.now() - 1800000 }, { k: 'beat', x: '「風がそよぐ」を遊んだ', at: Date.now() - 3600000 }], dy: [{ t: '11:00', x: '昼: ももすけ・あつが練習スタジオで練習' }, { t: '10:10', x: '朝: みゅあ・ききが居間でおやつ' }, { t: '09:00', x: 'ドラ セッション → 🎵Lv2' }] }, updated_at: fresh }] : []);
+    return json(/aoi-0001/.test(url) ? [{ more: { v: 1, bd: { mua: 2, kiki: 1, dra: 0 }, fv: { a: 'mua', s: 'テスト曲' }, fu: { mua: { p: { c: 'lantern', w: 'starpic', f: 'sofa' }, k: ['bear', 'plant'] }, dra: { p: { w: 'trophy', f: 'bear' }, k: [] } }, ms: { kiki: [{ mo: 'Mocchi', n: 'ごろちゃん', c: ['custom:120:40:85@70', null], l: 1 }, { mo: 'Pandora', n: 'のあ', c: [] }] }, mn: { kiki: 5 }, ac: [{ k: 'masmon', x: '新しいマスモン「ゴーレム」を迎えた', at: Date.now() - 1800000 }, { k: 'beat', x: '「風がそよぐ」を遊んだ', at: Date.now() - 3600000 }], dy: [{ t: '11:00', x: '昼: ももすけ・あつが練習スタジオで練習' }, { t: '10:10', x: '朝: みゅあ・ききが居間でおやつ' }, { t: '09:00', x: 'ドラ セッション → 🎵Lv2' }] }, updated_at: fresh }] : []);
   }
   if (/assistant_life_friend_houses/.test(url)) return method === 'GET' ? json(HOUSES) : json('', 201);
   if (/assistant_life_friend_visits/.test(url)) {
@@ -109,7 +109,7 @@ const badgeProblems = (page) => page.evaluate(() => {
   });
   await new Promise(r => server.listen(PORT, r));
   const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
-  const shot = async (page, name) => { if (shotDir) await page.screenshot({ path: path.join(shotDir, `${name}.png`) }); };
+  const shot = async (page, name) => { if (shotDir) await page.evaluate(() => { for (const e of document.querySelectorAll('div[style*="2147483647"] > span')) e.style.visibility = 'hidden'; }).catch(() => {}); if (shotDir) await page.screenshot({ path: path.join(shotDir, `${name}.png`) }); };
   const open = async ({ w, h, on = true, stub = [] }) => {
     const page = await browser.newPage({ viewport: { width: w, height: h }, deviceScaleFactor: shotDir ? 2 : 1 });
     const errors = []; page.on('pageerror', e => errors.push(String(e)));
@@ -177,6 +177,44 @@ const badgeProblems = (page) => page.evaluate(() => {
       await page.locator('[data-alf-house="aoi-0001"] [data-alf-act="look"]').click();
       await page.locator('[data-alf-visit]').waitFor({ timeout: 5000 });
       { const ng = await textProblems(page, '[data-alf-visit]'); check(`⑥ 訪ねた家の部屋の並びがはみ出さない・字が切れない(${v.id})`, ng.length === 0, [...new Set(ng)].join(' / ')); }
+      // r1115-019 第1弾: フレンドの家の見る専用のタブ(家・町・紹介)。町はその人の助手を札で置く・紹介は人となりだけ(仲良し度・好み・NEW は出さない)
+      { await page.locator('[data-alf-vtabs]').waitFor({ timeout: 3000 }).catch(() => {});
+        check(`㉑ フレンドの家に、家・町・きずな・紹介のタブが出る(${v.id})`, (await page.locator('[data-alf-visit] [data-alf-vtab]').count()) === 4);
+        const tabNg = await page.evaluate(() => { const b = document.querySelector('[data-alf-vtabs]'); if (!b) return ['無い']; const r = b.getBoundingClientRect(); return (r.left < -1 || r.right > innerWidth + 1) ? ['はみ出し'] : []; });
+        check(`㉑ タブの列が画面からはみ出さない(${v.id})`, tabNg.length === 0, tabNg.join(' / '));
+        await shot(page, `${v.id}-21-vtab-house`);
+        await page.locator('[data-alf-vtab="where"]').click();
+        await page.locator('[data-alf-vview="where"] [data-assistant-life-where]').waitFor({ timeout: 8000 }).catch(() => {});
+        await page.waitForTimeout(800);
+        const where = await page.evaluate(() => { const w = document.querySelector('[data-alf-vview="where"]'); return { n: w ? w.querySelectorAll('[data-assistant-life-map-who]').length : -1, act: w ? w.querySelectorAll('[data-assistant-life-map-act]').length : -1, title: (w && ((w.querySelector('[data-assistant-life-map-time]') || {}).previousElementSibling || {}).textContent) || '' }; });
+        check(`㉑ 町の地図に、あおいさんの助手が札で並ぶ(自分の操作ボタンは無い)(${v.id})`, where.n > 0 && where.act === 0 && /さんの町/.test(where.title), JSON.stringify(where));
+        await shot(page, `${v.id}-21-vtab-where`);
+        const tabNg2 = await page.evaluate(() => { const b = document.querySelector('[data-alf-vview="where"] [data-alf-vtabs]'); if (!b) return ['無い']; const r = b.getBoundingClientRect(); return (r.left < -1 || r.right > innerWidth + 1) ? ['はみ出し'] : []; });
+        check(`㉑ 町でもタブの列が画面からはみ出さない(${v.id})`, tabNg2.length === 0, tabNg2.join(' / '));
+        await page.locator('[data-alf-vview="where"] [data-assistant-life-map-place="home"]').click();
+        await page.locator('[data-alf-vview="where"] [data-assistant-life-map-sheet]').waitFor({ timeout: 3000 }).catch(() => {});
+        check(`㉑ 町の札を押すと、いる助手の一覧(見る専用の行)が出る(${v.id})`, (await page.locator('[data-assistant-life-map-view-row]').count()) > 0 && (await page.locator('[data-assistant-life-map-act]').count()) === 0);
+        await shot(page, `${v.id}-21-vtab-where-sheet`);
+        await page.locator('[data-assistant-life-map-sheet-close]').click();
+        await page.locator('[data-alf-vview="where"] [data-alf-vtab="bond"]').click();
+        await page.locator('[data-alf-vview="bond"] [data-alf-bond-view]').waitFor({ timeout: 5000 }).catch(() => {});
+        const bondV = await page.evaluate(() => { const w = document.querySelector('[data-alf-vview="bond"]'); const t = w ? w.innerText : ''; return { lv: /友情 Lv\d/.test(t), tiers: w ? w.querySelectorAll('[data-alf-bond-view-tier]').length : -1, mua: /ずっと仲良し/.test(t), kiki: /なかよし/.test(t), none: /Lv\d+ ?(はじめ|なか|ずっと)/.test(t), shelf: !!(w && w.querySelector('[data-alb-shelf]')) }; });
+        check(`㉑ きずなに、友情Lv・助手ごとの段(数は出ない)・お気に入りの棚が出る(${v.id})`, bondV.lv && bondV.tiers > 0 && bondV.mua && bondV.kiki && !bondV.none && bondV.shelf, JSON.stringify(bondV));
+        await shot(page, `${v.id}-21-vtab-bond`);
+        await page.locator('[data-alf-vview="bond"] [data-alf-vtab="profile"]').click();
+        await page.locator('[data-alf-vview="profile"] [data-assistant-life-profile-list]').waitFor({ timeout: 5000 }).catch(() => {});
+        const prof = await page.evaluate(() => { const w = document.querySelector('[data-alf-vview="profile"]'); const t = w ? w.innerText : ''; return { cards: w ? w.querySelectorAll('[data-assistant-life-profile-card]:not([data-assistant-life-profile-card="unmet"])').length : -1, bond: /💗 Lv/.test(t), isNew: !!(w && w.querySelector('[data-assistant-life-profile-new]')), tiers: w ? w.querySelectorAll('[data-assistant-life-profile-tier]').length : -1 }; });
+        check(`㉑ 紹介に、会っている助手の札が出る(仲良し度の数・NEW は出ない・段は出る)(${v.id})`, prof.cards > 0 && !prof.bond && !prof.isNew && prof.tiers > 0, JSON.stringify(prof));
+        await shot(page, `${v.id}-21-vtab-profile`);
+        await page.locator('[data-alf-vview="profile"] [data-assistant-life-profile-card]:not([data-assistant-life-profile-card="unmet"])').first().click();
+        await page.locator('[data-assistant-life-profile]').waitFor({ timeout: 3000 }).catch(() => {});
+        const sec = await page.evaluate(() => { const w = document.querySelector('[data-assistant-life-profile]'); return { who: !!(w && w.querySelector('[data-assistant-life-profile-sec="who"]')), likes: !!(w && w.querySelector('[data-assistant-life-profile-sec="likes"]')), bond: !!(w && w.querySelector('[data-assistant-life-profile-sec="bond"]')), voice: !!(w && w.querySelector('[data-assistant-life-profile-sec="voice"]')) }; });
+        check(`㉑ 紹介の詳細は「人となり」だけ(好き・きずな・台詞は出ない)(${v.id})`, sec.who && !sec.likes && !sec.bond && !sec.voice, JSON.stringify(sec));
+        await shot(page, `${v.id}-21-vtab-profile-sheet`);
+        await page.locator('[data-assistant-life-profile-close]').first().click();
+        await page.locator('[data-alf-vview="profile"] [data-alf-vtab="house"]').click();
+        check(`㉑ 家のタブへ戻ると、いつもの家が見える(${v.id})`, (await page.locator('[data-alf-vview]').count()) === 0 && (await page.locator('[data-alf-visit] [data-assistant-life-room]').count()) > 0);
+      }
       // 「仲良し度 +10」などの知らせ(右上の .mh-gfx-chips)が、部屋の名前・顔・吹き出しを隠さない
       // 知らせは画面が組み替わると置き直す(44-growth-fx の MutationObserver)。置き直すまで少し待ってから測る
       const chipNg = async () => { await page.waitForTimeout(400); return chipNgNow(); };
@@ -219,6 +257,21 @@ const badgeProblems = (page) => page.evaluate(() => {
         await page.locator('[data-alf-visit-roomview-close]').click(); check(`⑲ 「← 家へ」で家に戻る(${v.id})`, (await page.locator('[data-alf-visit-sheet]').count()) === 0);
         await page.locator('[data-alf-visit] [data-assistant-life-room="dra"]').click(); }
       await page.locator('[data-alf-visit-room="dra"]').click();
+      // r1115-004: 部屋のシートに「⚔ ◯◯のマスモンに挑む」(対戦の印が真のときだけ)。字が切れない・言葉の途中で折れない・押すと対戦の画面が開く
+      { const bt = page.locator('[data-alf-battle-open="dra"]');
+        await bt.waitFor({ timeout: 3000 }).catch(() => {});
+        check(`⑳ 部屋のシートに「⚔ ドラのマスモンに挑む」が出る(${v.id})`, (await bt.count()) === 1 && /マスモンに挑む/.test(await bt.innerText()));
+        const ng = await page.evaluate(() => { const b = document.querySelector('[data-alf-battle-open]'); if (!b) return ['無い']; const r = b.getBoundingClientRect(); return (r.left < -1 || r.right > innerWidth + 1 || b.scrollWidth > b.clientWidth + 1) ? [`はみ出し ${Math.round(r.left)}〜${Math.round(r.right)} / ${innerWidth}`] : []; });
+        check(`⑳ 挑むボタンが画面からはみ出さない(${v.id})`, ng.length === 0, ng.join(' / '));
+        await shot(page, `${v.id}-20-battle-entry`);
+        await bt.click();
+        await page.locator('[data-ambb-prep],[data-ambb-empty]').first().waitFor({ timeout: 8000 }).catch(() => {});
+        await page.waitForTimeout(600);
+        await shot(page, `${v.id}-20-battle-opened`);
+        check(`⑳ 押すと対戦の画面が開く(${v.id})`, (await page.locator('[data-ambb-prep],[data-ambb-empty]').count()) >= 1);
+        const cl = page.locator('[data-ambb-close], .ambw-btn2:has-text("戻る"), button:has-text("閉じる")').first();
+        await page.evaluate(() => { try { AMBB_HOST.set(null); } catch (_) {} }).catch(() => {});
+      }
       await page.locator('[data-alf-visit-replies]').waitFor({ timeout: 3000 });
       { const ng = await chipNg(); check(`⑥ 仲良し度の知らせが、声をかけた吹き出し・返事を隠さない(${v.id})`, ng.length === 0, ng.join(' / ')); }
       await shot(page, `${v.id}-6-visit-talk`);
