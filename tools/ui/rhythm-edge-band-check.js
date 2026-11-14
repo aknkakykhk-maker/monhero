@@ -133,17 +133,17 @@ const bandsOf = async (buf, rot) => {
       check(`${name}: しぼりこみの窓を出して測れる`, mounted);
       if (mounted) {
         await page.waitForSelector('[data-rhythm-buddy-list-sheet]', { timeout: 5000 }).catch(() => {});
-        await shoot('マルチ・呼ぶ(並べ替え・しぼりこみの窓)');
+        await shoot('マルチ・呼ぶ(並べ替え・絞り込みの窓)');
         await page.evaluate(() => { try { window.__bandProbeRoot.unmount(); document.getElementById('__bandProbe').remove(); } catch (e) {} });
       }
-      // 「呼ぶ」の画面と、その中の並べ替え・しぼりこみの窓(部屋の中で開く。env() を直に書いた窓がここにあった)
+      // 「呼ぶ」の画面と、その中の並べ替え・絞り込みの窓(部屋の中で開く。env() を直に書いた窓がここにあった)
       const clickIf = (sel) => page.evaluate((q) => { const e = document.querySelector(q); if (!e) return false; e.click(); return true; }, sel);
       if (await clickIf('[data-rhythm-buddy-open]')) {
         await page.waitForTimeout(900);
         await shoot('マルチ・呼ぶ画面');
         if (await clickIf('[data-rhythm-buddy-list-bar] button')) {
           await page.waitForSelector('[data-rhythm-buddy-list-sheet]', { timeout: 5000 }).catch(() => {});
-          await shoot('マルチ・呼ぶ(並べ替え・しぼりこみ)');
+          await shoot('マルチ・呼ぶ(並べ替え・絞り込み)');
           await page.evaluate(() => { const sheet = document.querySelector('[data-rhythm-buddy-list-sheet]'); const x = sheet && [...sheet.querySelectorAll('button')].find((e) => /✕|×|閉じる|とじる|もどる/.test((e.innerText || e.getAttribute('aria-label') || '').trim())); x && x.click(); });
           await page.waitForTimeout(500);
         }

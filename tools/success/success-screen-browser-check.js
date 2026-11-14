@@ -82,7 +82,7 @@ const toHome = async (page, port) => {
   await page.getByRole('button', { name: 'トップ画面へ進む' }).click({ timeout: 30000 });
   await page.getByRole('button', { name: 'モンヒロバトル' }).waitFor({ timeout: 30000 });
   for (let i = 0; i < 6; i++) { // ログインボーナス・お知らせ
-    const btn = page.getByRole('button', { name: /受け取る|閉じる|はじめる|OK/ }).first();
+    const btn = page.getByRole('button', { name: /受け取る|閉じる|(?:始|はじ)める|OK/ }).first();
     if (await btn.count() === 0 || !(await btn.isVisible().catch(() => false))) break;
     await btn.dispatchEvent('click').catch(() => {}); await page.waitForTimeout(250);
   }
@@ -91,7 +91,7 @@ const openEntry = async (page) => {
   await page.getByRole('button', { name: '設定' }).first().dispatchEvent('click');
   await page.getByRole('button', { name: 'ヘルプ' }).first().waitFor({ timeout: 20000 });
   await page.getByRole('button', { name: 'ヘルプ' }).first().dispatchEvent('click');
-  await page.getByRole('button', { name: 'わかった！冒険に戻る' }).waitFor({ timeout: 20000 });
+  await page.getByRole('button', { name: '分かった！冒険に戻る' }).waitFor({ timeout: 20000 });
   await page.locator('footer button[aria-label=""]').dispatchEvent('click');
   await page.getByText('DEBUG MENU').first().waitFor({ timeout: 20000 });
   const btn = page.locator('[data-debug-monhero-success]');
@@ -151,7 +151,7 @@ const advance = (page, react) => page.evaluate((react) => {
   // 結果・ターンが進む・博士: 足もとの「▶」のボタン
   const go = root.querySelector('.v-ft button.go:not([disabled])'); if (go) return press(go, 'go');
   const nomeal = root.querySelector('[data-msx-r3-nomeal]:not([disabled])'); if (nomeal) return press(nomeal, 'next'); // ごはんの段(2026-11-14 ボタンは「あげずに つぎへ」1つ)
-  const nx = by(/つぎへ ▶|^▶/); if (nx) return press(nx, 'next');
+  const nx = by(/(つぎへ|次へ) ▶|^▶/); if (nx) return press(nx, 'next');
   // メイン: 体力が少なければ休む・ふだんはトレーニング
   const hp = (root.innerText.match(/体力\s*(\d+)\s*\/\s*(\d+)/) || []);
   if (hp[1] && Number(hp[1]) < Number(hp[2]) * 0.35) { const rest = by(/^🛌\s*休む/, '.v-p'); if (rest) return press(rest, 'rest'); }
@@ -211,7 +211,7 @@ const sameState = (a, b) => {
         await openEntry(page);
         let m = await see('home');
         check(`${tag}: 入口から開く`, m.ok && m.view === 'home' && m.text > 20, `view=${m.view}`);
-        const startNew = await page.evaluate(() => { const b = [...document.querySelectorAll('.msx button')].find((x) => /新しく育成をはじめる/.test(x.innerText)); if (b) b.click(); return !!b; });
+        const startNew = await page.evaluate(() => { const b = [...document.querySelectorAll('.msx button')].find((x) => /新しく育成を(?:始|はじ)める/.test(x.innerText)); if (b) b.click(); return !!b; });
         check(`${tag}: 「新しく育成をはじめる」が押せる`, startNew);
         // ストーリー選択(2026-11-14): シナリオの名前が出て、「次へ」で育てるモンスターを選ぶ段へ
         await page.waitForSelector('[data-msx-scenario]', { timeout: 10000 }).catch(() => {});
@@ -223,7 +223,7 @@ const sameState = (a, b) => {
           await page.waitForTimeout(250);
           const r = await page.evaluate(() => {
             const root = document.querySelector('.msx'); const btns = [...root.querySelectorAll('button')].filter((b) => !b.disabled);
-            const big = btns.find((b) => /育成をはじめる$/.test(b.innerText.trim()) && b.classList.contains('v-big')); if (big) { big.click(); return 'start'; }
+            const big = btns.find((b) => /育成を(?:始|はじ)める$/.test(b.innerText.trim()) && b.classList.contains('v-big')); if (big) { big.click(); return 'start'; }
             const go = root.querySelector('.v-ft button.go:not([disabled])'); if (go) { go.click(); return 'next'; }
             return null;
           });

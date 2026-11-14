@@ -77,7 +77,7 @@ const HISTORY = [
     const sleep = (ms) => page.waitForTimeout(ms);
     const dismiss = async () => {
       for (let i = 0; i < 8; i++) {
-        const b = page.getByRole('button', { name: /^(受け取る|閉じる|はじめる|OK|スキップ|あとで読む)$/ }).first();
+        const b = page.getByRole('button', { name: /^(受け取る|閉じる|(?:始|はじ)める|OK|スキップ|あとで読む)$/ }).first();
         if (await b.count() === 0 || !(await b.isVisible().catch(() => false))) break;
         await b.dispatchEvent('click').catch(() => {}); await sleep(250);
       }

@@ -517,6 +517,14 @@
       "role": "部品: モンヒロサクセスの合体(保存枠の育て終えた子どうし)。計算は芯 MONHERO_SUCCESS の fusePlan。画面 MonsucFuseSheet({ box, saveBox, locked, onDone, onClose })・口 monsucFuse・monsucFuseApply。箱 mh_monsuc_box_v1 の読み書きは保存枠の部品から受け取る。記録は新しいキー mh_monsuc_fuse_v1 を先に書く。公開の印 monheroSuccess。案 docs/progress/player-raise/PLAN.md §3"
     },
     {
+      "file": "56-monsuc-shop.jsx",
+      "role": "部品: モンヒロサクセスの持ちこみをマーケットのビートP交換所で交換する(値段の表 MONSUC_SHOP_OFFERS・口 monsucShopBuy・交換所の「モンサク」タブ MonsucShopList)。ビートPと mh_monsuc_meta_v1 の items を1つの取引で保存(足すだけ)。公開の印 monheroSuccess"
+    },
+    {
+      "file": "56-monsuc-best3.jsx",
+      "role": "部品: モンヒロサクセスの自分だけのベスト3の段 MsxBest3(引退のあと・入ったら下からせり上がる)。記録は msxR3Retire が mh_monsuc_meta_v1 の best3 に足す。見せるだけ・公開の印 monheroSuccess の後ろ"
+    },
+    {
       "file": "56-monsuc-awake.jsx",
       "role": "部品: モンヒロサクセスの覚醒・超覚醒の見せる部分(バトルカードのキラで絵を包む MsxKira・前触れの光 MsxOmenFx・起きたときの演出 MsxAwakeShow・印 msxKiraOf)。計算は芯 MONHERO_SUCCESS の awakeOpen。何も保存しない・公開の印 monheroSuccess の後ろ"
     },
@@ -555,6 +563,10 @@
     {
       "file": "56-monsuc-actcrew.jsx",
       "role": "部品: モンヒロサクセスのトレーニングの演出(MsxTrainAct)に重ねる、いっしょにいた編成の子と助手の絵 MsxActCrew(友情タッグの子は大きく金色に・助手はひとこと)。何も保存しない・公開の印 monheroSuccess の後ろ"
+    },
+    {
+      "file": "56-monsuc-intro.jsx",
+      "role": "部品: モンヒロサクセスの育成の始まりの場面 MsxRunIntro(シナリオごとの台本 scn.<助手>.start.* を1行ずつ・毎回の育成の最初に1回・2回目から「とばす」)。保存は mh_monsuc_beta_v1 の seen.start だけ。公開の印 monheroSuccess の後ろ"
     },
     {
       "file": "56-monsuc-kifx.jsx",

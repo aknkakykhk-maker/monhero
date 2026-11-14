@@ -239,7 +239,7 @@ const extremeTabInfo = () => {
         if (confirm) { confirm.click(); return; }
         const teaching = [...document.querySelectorAll('button')].find(x => !x.disabled && /新規習得|強化後/.test(x.textContent));
         if (teaching) { teaching.click(); return; }
-        const b = [...document.querySelectorAll('button')].find(x => /この子を|決定|選ぶ|選ぶ|はじめる|OK|閉じる|スキップ/.test(x.textContent) && !x.disabled);
+        const b = [...document.querySelectorAll('button')].find(x => /この子を|決定|選ぶ|選ぶ|(?:始|はじ)める|OK|閉じる|スキップ/.test(x.textContent) && !x.disabled);
         if (b) { b.click(); return; }
         const card = [...document.querySelectorAll('button')].find(x => !x.disabled && x.offsetParent);
         card && card.click();
