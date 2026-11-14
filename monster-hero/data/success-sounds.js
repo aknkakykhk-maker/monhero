@@ -21,6 +21,33 @@
     { id: 'scold', name: '叱る', se: 'trainingBad' },
     { id: 'praise', name: '褒める', se: 'trainingReward' },
     { id: 'trainLvUp', name: '訓練Lvアップ', se: 'levelUp' },
+    // トレーニングしている場面(56-monsuc-actfx.jsx の MsxTrainAct・2026-11-14 社長「演出に音を」)。場面に入っても曲は替えない。
+    // 動きの音は場面の中から時間を合わせて鳴らす(MSX_ACT_SE)。足音・跳ぶ・割る/当たる・よける・投げる・落ちてくる・受け止める・積む・ひらめく・閃光
+    { id: 'trainAct', name: 'トレーニングの場面', se: null },
+    { id: 'actStep', name: 'トレーニングの場面: 足音', se: 'trainingDice' },
+    { id: 'actLeap', name: 'トレーニングの場面: 跳ぶ', se: 'enemyMove' },
+    { id: 'actHit', name: 'トレーニングの場面: 割る・当たる', se: 'attack' },
+    { id: 'actDodge', name: 'トレーニングの場面: よける', se: 'zanSlash' },
+    { id: 'actThrow', name: 'トレーニングの場面: 投げる', se: 'card' },
+    { id: 'actDrop', name: 'トレーニングの場面: 落ちてくる', se: 'enemyMove' },
+    { id: 'actGuard', name: 'トレーニングの場面: 受け止める', se: 'guard' },
+    { id: 'actBlock', name: 'トレーニングの場面: 積む', se: 'tap' },
+    { id: 'actIdea', name: 'トレーニングの場面: ひらめく', se: 'trainingTool' },
+    { id: 'actFlash', name: 'トレーニングの場面: Lv5の閃光', se: 'crit' },
+    // 修行の段(MsxShugyoStages)。曲は修行(ascetic)のまま。段の切り替え・溜め・斬る・跳ぶ・叩きつけ
+    { id: 'qStage', name: '修行の段: 切り替え', se: 'trainingDecide' },
+    { id: 'qCharge', name: '修行の段: 溜め', se: 'enemyCharge' },
+    { id: 'qStrike', name: '修行の段: 斬る', se: 'zanSlash' },
+    { id: 'qLeap', name: '修行の段: 跳ぶ', se: 'enemyMove' },
+    { id: 'qSlam', name: '修行の段: 叩きつけ', se: 'crit' },
+    // 覚醒の入り(56-monsuc-awake.jsx の MsxAwakeShow)。曲は社長の曲が来るまで「合体テーマ」を当てる
+    { id: 'awakeShow', name: '覚醒の入り', bgm: 'original_fusion', se: 'enemyCharge' },
+    { id: 'awQi', name: '覚醒: 気が噴き出す', se: 'special' },
+    { id: 'awFlash', name: '覚醒: 閃光と札', se: 'fusion' },
+    { id: 'awKira', name: '覚醒: キラをまとう', se: 'levelUp' },
+    // 期の区切り(56-monsuc-kifx.jsx の MsxKiShow)。曲は社長の曲が来るまで「Monster Hero」を当てる
+    { id: 'kiShow', name: '期の区切り: 第◯章 終了', bgm: 'monster_hero_theme', se: 'rankFanfare' },
+    { id: 'kiNext', name: '期の区切り: NEXT', se: 'join' },
     // 修行
     { id: 'ascetic', name: '修行', bgm: 'original_prep', se: 'trainingDecide' },
     // 大会

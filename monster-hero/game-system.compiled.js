@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 061a16215df22982
+// source-sha256: d7164b1fbceff315
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -154920,6 +154920,7 @@ function MsxAwakeShow({
     const id = setTimeout(() => setSt(n => Math.min(3, n + 1)), MSX_AW_STEPS[k][st] - (st ? MSX_AW_STEPS[k][st - 1] : 0));
     return () => clearTimeout(id);
   }, [st]);
+  if (typeof msxUseTimedSe === 'function') msxUseTimedSe(st === 1 ? [['awQi', 0]] : st === 2 ? [['awFlash', 0]] : st === 3 && !calm ? [['awKira', 0]] : [], [st]);
   const s = run.s;
   const shown = {
     ...run,
@@ -156023,6 +156024,29 @@ const MSX_QSTAGE_PT = Object.freeze({
   wind: '🍃',
   star: '✨'
 });
+const MSX_ACT_SE = Object.freeze({
+  life: [150, 420, 690, 960, 1230, 1500].map(t => ['actStep', t]),
+  pow: [['actLeap', 380], ['actHit', 740]],
+  wise: [150, 330, 510, 690, 870].map(t => ['actBlock', t]).concat([['actIdea', 1100]]),
+  hit: [['actThrow', 350], ['actHit', 740]],
+  eva: [['actDodge', 250], ['actDodge', 900], ['actDodge', 1420]],
+  tough: [['actDrop', 100], ['actGuard', 620]]
+});
+const MSX_QSTAGE_SE = Object.freeze({
+  1: [['qStage', 0], ['qCharge', 150], ['qStrike', 720]],
+  2: [['qStage', 0], ['qLeap', 450], ['qSlam', 780]]
+});
+const msxUseTimedSe = (list, deps) => {
+  React.useEffect(() => {
+    if (!Array.isArray(list) || !list.length || typeof SuccessSound === 'undefined' || !SuccessSound.isActive()) return undefined;
+    const ids = list.map(([id, ms]) => setTimeout(() => {
+      try {
+        SuccessSound.se(id);
+      } catch (e) {}
+    }, Math.max(0, Number(ms) || 0)));
+    return () => ids.forEach(clearTimeout);
+  }, deps);
+};
 const msxActCalm = () => typeof msxFxCalm === 'function' && msxFxCalm();
 const msxQstageBgUrl = name => 'images/story-bg/' + String(name || 'forest_evening') + '.jpg';
 function MsxTrainAct({
@@ -156047,6 +156071,7 @@ function MsxTrainAct({
     const id = setTimeout(finish, MSX_ACT_MS);
     return () => clearTimeout(id);
   }, []);
+  msxUseTimedSe(msxActCalm() ? [] : (MSX_ACT_SE[k] || []).concat(lv === 5 ? [['actFlash', 600]] : []), []);
   if (msxActCalm()) return null;
   const n = c => Array.from({
     length: c
@@ -156250,6 +156275,7 @@ function MsxShugyoStages({
     const ids = [setTimeout(() => setSt(1), 1000), setTimeout(() => setSt(2), 2300), setTimeout(finish, 3600)];
     return () => ids.forEach(clearTimeout);
   }, []);
+  msxUseTimedSe(msxActCalm() ? [] : MSX_QSTAGE_SE[st] || [], [st]);
   if (msxActCalm()) return null;
   const s = run.s;
   const say = line ? line('turn.drill.start', 'よし、集中していこう！') : {
@@ -156535,6 +156561,7 @@ function MsxKiShow({
     const id = setTimeout(step, MSX_KI_MS[st] || 2600);
     return () => clearTimeout(id);
   }, [st]);
+  if (typeof msxUseTimedSe === 'function') msxUseTimedSe(st === 1 ? [['kiNext', 0]] : [], [st]);
   const s = run.s;
   const fame = Number.isFinite(s.fameTotal) ? s.fameTotal : 0;
   const has = ki && ki.p === prev && Number.isFinite(ki.fame) && Number.isFinite(ki.power);
@@ -164719,7 +164746,9 @@ function MsxPlay({
       alive = false;
     };
   }, [s.aid]);
-  const soundId = run.phase === 'awake' && run.out && run.out.fire ? run.out.fire.kind === 2 ? 'trainGreat' : 'trainLvUp' : run.phase === 'result' && run.out && run.out.result ? run.out.lvUp ? 'trainLvUp' : MSX_RES_SOUND[run.out.result] : run.phase === 'issa' ? 'issa' : s.over === 'gameover' ? 'gameOver' : 'main';
+  const actOn = run.phase === 'result' && actAt === s.turn && typeof MsxTrainAct === 'function';
+  const kiOn = run.phase === 'turn' && typeof MsxKiShow === 'function' && v.period && v.period.at === 1 && v.period.index > 0 && kiAt !== s.turn;
+  const soundId = actOn ? 'trainAct' : kiOn ? 'kiShow' : run.phase === 'awake' && run.out && run.out.fire && typeof MsxAwakeShow === 'function' ? 'awakeShow' : run.phase === 'awake' && run.out && run.out.fire ? run.out.fire.kind === 2 ? 'trainGreat' : 'trainLvUp' : run.phase === 'result' && run.out && run.out.kind === 'rest' ? 'rest' : run.phase === 'result' && run.out && run.out.result ? run.out.lvUp ? 'trainLvUp' : MSX_RES_SOUND[run.out.result] : run.phase === 'issa' ? 'issa' : s.over === 'gameover' ? 'gameOver' : sub === 'train' ? 'training' : 'main';
   msxUseSound(soundId, {
     season: msxCalendar(s.turn).season
   });

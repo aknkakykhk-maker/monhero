@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 0beaa6b829d49bbd
+// generated-sha256: 48cb563c55587b44
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -80822,6 +80822,8 @@ function MsxAwakeShow({ run, fire, v, ev, line }) {
     const id = setTimeout(() => setSt((n) => Math.min(3, n + 1)), MSX_AW_STEPS[k][st] - (st ? MSX_AW_STEPS[k][st - 1] : 0));
     return () => clearTimeout(id);
   }, [st]);
+  // 段ごとの音(2026-11-14 社長「演出に音を」。溜めの音と曲は場面の音 awakeShow が鳴らす)
+  if (typeof msxUseTimedSe === 'function') msxUseTimedSe(st === 1 ? [['awQi', 0]] : st === 2 ? [['awFlash', 0]] : st === 3 && !calm ? [['awKira', 0]] : [], [st]);
   const s = run.s;
   const shown = { ...run, s: { ...s, awake: st >= 3 ? k : k - 1, omen: null } };
   const say = line(k === 2 ? 'turn.awake.fire2' : 'turn.awake.fire', k === 2 ? 'うそ…まだ光が強くなっていく！' : 'えっ…この光、なに！？');
@@ -81393,6 +81395,24 @@ const MSX_QSTAGE_BG = Object.freeze({
 });
 // 修行の行き先ごとの舞うもの
 const MSX_QSTAGE_PT = Object.freeze({ fire: '🔥', ice: '❄️', wind: '🍃', star: '✨' });
+// 演出の動きに合わせて鳴らす効果音(場面の id と、場面に入ってからのミリ秒)。音は表 data/success-sounds.js、鳴らす口は SuccessSound
+const MSX_ACT_SE = Object.freeze({
+  life: [150, 420, 690, 960, 1230, 1500].map((t) => ['actStep', t]),
+  pow: [['actLeap', 380], ['actHit', 740]],
+  wise: [150, 330, 510, 690, 870].map((t) => ['actBlock', t]).concat([['actIdea', 1100]]),
+  hit: [['actThrow', 350], ['actHit', 740]],
+  eva: [['actDodge', 250], ['actDodge', 900], ['actDodge', 1420]],
+  tough: [['actDrop', 100], ['actGuard', 620]],
+});
+const MSX_QSTAGE_SE = Object.freeze({ 1: [['qStage', 0], ['qCharge', 150], ['qStrike', 720]], 2: [['qStage', 0], ['qLeap', 450], ['qSlam', 780]] });
+// 鳴らして、場面が替わる・とばす(消える)と、まだ鳴っていない音を捨てる。消音・音量は SuccessSound(Audio_)側が見る
+const msxUseTimedSe = (list, deps) => {
+  React.useEffect(() => {
+    if (!Array.isArray(list) || !list.length || typeof SuccessSound === 'undefined' || !SuccessSound.isActive()) return undefined;
+    const ids = list.map(([id, ms]) => setTimeout(() => { try { SuccessSound.se(id); } catch (e) { /* 鳴らせなくても演出は続ける */ } }, Math.max(0, Number(ms) || 0)));
+    return () => ids.forEach(clearTimeout);
+  }, deps);
+};
 const msxActCalm = () => typeof msxFxCalm === 'function' && msxFxCalm();
 // 修行の段の背景(行き先ごとの表 MSX_QSTAGE_BG の名前から作る。どれも story-bg の絵)
 const msxQstageBgUrl = (name) => 'images/story-bg/' + String(name || 'forest_evening') + '.jpg';
@@ -81405,6 +81425,7 @@ function MsxTrainAct({ run, o, onDone }) {
   const done = React.useRef(false);
   const finish = () => { if (done.current) return; done.current = true; onDone(); };
   React.useEffect(() => { if (msxActCalm()) { finish(); return undefined; } const id = setTimeout(finish, MSX_ACT_MS); return () => clearTimeout(id); }, []);
+  msxUseTimedSe(msxActCalm() ? [] : (MSX_ACT_SE[k] || []).concat(lv === 5 ? [['actFlash', 600]] : []), []);
   if (msxActCalm()) return null;
   const n = (c) => Array.from({ length: c }, (_, i) => i);
   // 訓練ごと・段ごとの小物(絵は使わず CSS と絵文字で描く。段が上がるほど大きく・多く)
@@ -81456,6 +81477,7 @@ function MsxShugyoStages({ run, o, line, onDone }) {
     const ids = [setTimeout(() => setSt(1), 1000), setTimeout(() => setSt(2), 2300), setTimeout(finish, 3600)];
     return () => ids.forEach(clearTimeout);
   }, []);
+  msxUseTimedSe(msxActCalm() ? [] : MSX_QSTAGE_SE[st] || [], [st]);
   if (msxActCalm()) return null;
   const s = run.s;
   const say = line ? line('turn.drill.start', 'よし、集中していこう！') : { t: 'よし、集中していこう！' };
@@ -81683,6 +81705,8 @@ function MsxKiShow({ run, v, ev, ki, onDone }) {
     const id = setTimeout(step, MSX_KI_MS[st] || 2600);
     return () => clearTimeout(id);
   }, [st]);
+  // 段ごとの音(2026-11-14。「第◯章 終了」の音と曲は場面の音 kiShow が鳴らす)
+  if (typeof msxUseTimedSe === 'function') msxUseTimedSe(st === 1 ? [['kiNext', 0]] : [], [st]);
   const s = run.s;
   const fame = Number.isFinite(s.fameTotal) ? s.fameTotal : 0;
   const has = ki && ki.p === prev && Number.isFinite(ki.fame) && Number.isFinite(ki.power);
@@ -85707,7 +85731,10 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
   const [, setScriptTick] = useState(0);
   // 台本(共通 + 助手の分)を読む。読み終わったら描き直して台詞を出す
   useEffect(() => { let alive = true; msxScriptLoad(s.aid).then(() => { if (alive) setScriptTick((n) => n + 1); }); return () => { alive = false; }; }, [s.aid]);
-  const soundId = run.phase === 'awake' && run.out && run.out.fire ? (run.out.fire.kind === 2 ? 'trainGreat' : 'trainLvUp') : run.phase === 'result' && run.out && run.out.result ? (run.out.lvUp ? 'trainLvUp' : MSX_RES_SOUND[run.out.result]) : run.phase === 'issa' ? 'issa' : s.over === 'gameover' ? 'gameOver' : 'main';
+  // 演出のあいだは演出の場面の音(2026-11-14 社長「演出に音を」)。トレーニングの結果の音は、演出が終わって結果の字が出たときに鳴らす
+  const actOn = run.phase === 'result' && actAt === s.turn && typeof MsxTrainAct === 'function';
+  const kiOn = run.phase === 'turn' && typeof MsxKiShow === 'function' && v.period && v.period.at === 1 && v.period.index > 0 && kiAt !== s.turn;
+  const soundId = actOn ? 'trainAct' : kiOn ? 'kiShow' : run.phase === 'awake' && run.out && run.out.fire && typeof MsxAwakeShow === 'function' ? 'awakeShow' : run.phase === 'awake' && run.out && run.out.fire ? (run.out.fire.kind === 2 ? 'trainGreat' : 'trainLvUp') : run.phase === 'result' && run.out && run.out.kind === 'rest' ? 'rest' : run.phase === 'result' && run.out && run.out.result ? (run.out.lvUp ? 'trainLvUp' : MSX_RES_SOUND[run.out.result]) : run.phase === 'issa' ? 'issa' : s.over === 'gameover' ? 'gameOver' : sub === 'train' ? 'training' : 'main';
   msxUseSound(soundId, { season: msxCalendar(s.turn).season });
   const tagAt = (SUC.BOND && SUC.BOND.tag) || 80;
   const bondLv = bondLvOf ? Number(bondLvOf(s.aid)) || 1 : 1;

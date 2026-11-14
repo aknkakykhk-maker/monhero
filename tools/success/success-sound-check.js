@@ -21,7 +21,10 @@ const bgmSrc = read('monster-hero/src/parts/13-bgm-and-rhythm-settings.jsx');
 const partSrc = read('monster-hero/src/parts/14-success-sound.jsx');
 
 const REQUIRED = ['main', 'trainGreat', 'trainOk', 'trainFail', 'trainSkip', 'scold', 'praise', 'trainLvUp', 'ascetic',
-  'cupEntry', 'cupMatch', 'cupWin', 'cupLose', 'issa', 'gameOver', 'retire'];
+  'cupEntry', 'cupMatch', 'cupWin', 'cupLose', 'issa', 'gameOver', 'retire',
+  // 2026-11-14 演出の音(トレーニングの場面・修行の段・覚醒の入り・期の区切り)
+  'trainAct', 'actStep', 'actLeap', 'actHit', 'actDodge', 'actThrow', 'actDrop', 'actGuard', 'actBlock', 'actIdea', 'actFlash',
+  'qStage', 'qCharge', 'qStrike', 'qLeap', 'qSlam', 'awakeShow', 'awQi', 'awFlash', 'awKira', 'kiShow', 'kiNext'];
 const trackIds = new Set([...bgmSrc.matchAll(/\{\s*id:'([a-z0-9_]+)'/g)].map((m) => m[1]));
 const fgStart = audioSrc.indexOf('const fgSe = {');
 const fgEnd = audioSrc.indexOf('const se = Object.fromEntries', fgStart);
