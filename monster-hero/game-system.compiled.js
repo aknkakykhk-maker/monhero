@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e2206b33b85ebacd
+// source-sha256: 87c5b99c33083183
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -151264,12 +151264,13 @@ function MonsucBracket({
   suc,
   s,
   info,
-  result,
+  result: resultProp,
   onFight,
   onResultOnly,
   onClose,
   canSkip
 }) {
+  const result = resultProp || typeof window !== 'undefined' && window.__MSC_BK_RESULT || null;
   const bk = info.bracket;
   const [stage, setStage] = useState(0);
   useEffect(() => {
@@ -151311,11 +151312,11 @@ function MonsucBracket({
     key: `b${j}`
   }));
   if (st >= 3) [0, 1].forEach(j => win.push({
-    d: `M${X[2]} ${m2[j]}H${X[3]}V${m3}`,
+    d: `M${X[2]} ${m2[j]}H${X[3]}`,
     key: `c${j}`
   }));
-  if (result === 'win') win.push({
-    d: `M${X[3]} ${m3}H${X[4]}`,
+  if (result === 'win' || result === 'lose') win.push({
+    d: `M${X[3]} ${m2[result === 'win' ? 0 : 1]}V${m3}H${X[4]}`,
     key: 'f'
   });
   const foe = E[fi];
@@ -171266,7 +171267,7 @@ function MsxR3Bracket({
     key: `b${j}`
   }));
   if (stage >= 3) [0, 1].forEach(j => wins.push({
-    d: `M${X[2]} ${m2[j]}H${X[3]}V${m3}`,
+    d: `M${X[2]} ${m2[j]}H${X[3]}`,
     key: `c${j}`
   }));
   const top = E[no.indexOf(1)] || E[0];
