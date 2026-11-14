@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 6f4720568ec68311
+// source-sha256: 4fc967076a65ec45
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -113703,6 +113703,22 @@ const assistantLifeBoardShort = (text, max = 2) => {
   const ps = String(text || '').split(' / ');
   return ps.length > max ? `${ps.slice(0, max).join(' / ')} ほか${ps.length - max}組` : String(text || '');
 };
+const assistantLifeTagFit = (text, availPx, max = 10.5, min = 7.5) => {
+  const em = [...String(text || '')].reduce((n, c) => n + (/[\u0000-\u00ff]/.test(c) ? 0.6 : /\p{Extended_Pictographic}/u.test(c) ? 1.2 : 1), 0) || 1;
+  return Math.max(min, Math.min(max, Math.floor(availPx / em * 10) / 10));
+};
+const ASSISTANT_LIFE_TAG_SPLIT = Object.freeze([['モンヒロバトル', 'モンヒロ', 'バトル'], ['モンヒロビート', 'モンヒロ', 'ビート'], ['MFバトルカード', 'MFバトル', 'カード']]);
+const assistantLifeTagChunks = text => {
+  const t = String(text || ''),
+    hit = ASSISTANT_LIFE_TAG_SPLIT.find(x => t.includes(x[0]));
+  if (!hit) return t;
+  const i = t.indexOf(hit[0]),
+    nb = (x, k) => React.createElement("span", {
+      key: k,
+      className: "whitespace-nowrap"
+    }, x);
+  return React.createElement(React.Fragment, null, t.slice(0, i), nb(hit[1], 'a'), React.createElement("wbr", null), nb(hit[2] + t.slice(i + hit[0].length), 'b'));
+};
 const assistantLifeTagNames = (text, budget) => {
   const m = String(text || '').match(/^(.*?)(?: ほか(\d+)人)?$/);
   const list = String(m[1] || '').split('・').filter(Boolean);
@@ -113773,7 +113789,7 @@ function AssistantLifeRoom({
       top: 24
     },
     "data-assistant-life-room-town": id
-  }, "町の人"), v2 && met && ppl && ppl.includes(id) && React.createElement("span", {
+  }, "町の人"), v2 && met && ppl && ppl.includes(id) && (w >= 150 || state.sleep || w - [...assistantLifeName(id)].length * 10 - 23 >= 14) && React.createElement("span", {
     className: `meet${state.sleep ? ' zz' : ''}`,
     "data-assistant-life-room-meet": id,
     style: w >= 150 ? {
@@ -113781,7 +113797,10 @@ function AssistantLifeRoom({
     } : {
       right: 3
     }
-  }, w >= 150 ? state.sleep ? '💤 おやすみ中' : '● いま会える' : state.sleep ? '💤' : [...assistantLifeName(id)].length >= 4 ? '●' : '会える'), met && sess && sess.level > 1 && React.createElement("span", {
+  }, w >= 150 ? state.sleep ? '💤 おやすみ中' : '● いま会える' : state.sleep ? '💤' : (() => {
+    const room = w - [...assistantLifeName(id)].length * 10 - 17 - 3 - 3;
+    return room >= 48 ? '会える' : room >= 14 ? '●' : '';
+  })()), met && sess && sess.level > 1 && React.createElement("span", {
     className: "lv",
     "data-assistant-life-room-session": sess.level
   }, "🎵Lv", sess.level), React.createElement("span", {
@@ -113865,6 +113884,7 @@ function AssistantLifeRoom({
     const n = Number((String(t[1] || '').match(/^(\d+)人で/) || [])[1]) || 0;
     const ml = [...assistantLifeName(id)].length * 10 + 20;
     const names = t[2] ? assistantLifeTagNames(t[2], Math.floor((w - 6 - ml - 10) / (v2 ? 10.8 : 8.8))) : null;
+    const tagFit = assistantLifeTagFit(t[0], w - 26, 10.5, 0);
     const short = [...String(t[0])].length <= 9;
     return React.createElement("span", {
       className: "tag",
@@ -113882,10 +113902,19 @@ function AssistantLifeRoom({
       }
     }, React.createElement(AssistantLifeNames, {
       text: names
-    })), React.createElement("b", null, v2 && w >= 150 ? React.createElement("span", {
+    })), React.createElement("b", {
+      style: w < 150 ? tagFit >= 8.6 ? {
+        whiteSpace: 'nowrap',
+        fontSize: tagFit
+      } : {
+        whiteSpace: 'normal',
+        fontSize: 9,
+        lineHeight: '11px'
+      } : undefined
+    }, v2 && w >= 150 ? React.createElement("span", {
       "data-assistant-life-room-out": true,
       className: "mr-1 rounded bg-slate-600 px-1 text-white"
-    }, "留守") : null, t[0], React.createElement("i", {
+    }, "留守") : null, w < 150 && tagFit < 8.6 ? assistantLifeTagChunks(t[0]) : t[0], React.createElement("i", {
       "data-assistant-life-room-tag-short": true
     }, n > 1 && short ? `・${n}人` : '', mark ? ` ${[...t[1]][0]}` : '')));
   })(), !met && React.createElement("span", {
@@ -115895,8 +115924,20 @@ function AssistantLifeHouse({
       if (itemsLeft > 0 && giveGroup) openGive(giveGroup.ids);else if (soloLeft > 0 && giveSoloId) openGiveSolo(giveSoloId, giveGroup && giveGroup.ids.includes(giveSoloId) ? giveGroup.ids : [giveSoloId]);else setTab('items');
     }
   }, React.createElement("em", null, uiV2 ? giveLeftAll : soloOn ? itemsLeft + soloLeft : itemsLeft, "回"), React.createElement("i", null, "🎁"), React.createElement("b", null, "贈る"), React.createElement("small", {
-    "data-assistant-life-today-gain": "give"
-  }, !uiV2 ? `道具 ${itemsHave}個` : giveLeftAll <= 0 ? '✓ 今日は贈った' : itemsHave > 0 ? `🤝💗 アップ・${itemsHave}個` : '道具0個・買える')), React.createElement("button", {
+    "data-assistant-life-today-gain": "give",
+    style: {
+      whiteSpace: 'normal',
+      overflow: 'visible'
+    }
+  }, !uiV2 ? `道具 ${itemsHave}個` : giveLeftAll <= 0 ? '✓ 今日は贈った' : itemsHave > 0 ? React.createElement(React.Fragment, null, React.createElement("span", {
+    className: "whitespace-nowrap"
+  }, "🤝💗アップ"), " ", React.createElement("span", {
+    className: "whitespace-nowrap"
+  }, "道具", itemsHave, "個")) : React.createElement(React.Fragment, null, React.createElement("span", {
+    className: "whitespace-nowrap"
+  }, "道具0個"), " ", React.createElement("span", {
+    className: "whitespace-nowrap"
+  }, "買える")))), React.createElement("button", {
     type: "button",
     className: "mhl-tile mhl-beat flex-1",
     "data-assistant-life-today-act": "beat",
