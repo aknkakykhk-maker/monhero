@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 0804fd3af1a82be6
+// source-sha256: ffaa9d6275ede446
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -10509,20 +10509,18 @@ const MASU_COLOR_REGION_HUES = {
     vMin: 0.7
   }, 355],
   Pixie: [{
-    hue: 321,
-    sMin: 0.15,
-    bbox: [0.25, 0.0, 0.75, 0.30]
+    hue: 0,
+    noAAGuard: true,
+    noEdgeGuard: true
   }, {
-    white: true,
-    sMax: 0.2,
-    vMin: 0.6
-  }, [{
-    hue: 347,
-    sMin: 0.15,
-    bbox: [0.0, 0.28, 1.0, 1.0]
+    hue: 120,
+    noAAGuard: true,
+    noEdgeGuard: true
   }, {
-    posBbox: [[0.02, 0.28, 0.30, 0.55], [0.68, 0.28, 0.98, 0.55]]
-  }]],
+    hue: 240,
+    noAAGuard: true,
+    noEdgeGuard: true
+  }],
   Monol: [{
     band: [0, 1 / 3]
   }, {
@@ -11279,6 +11277,7 @@ const EXACT_DYE_MASKS = Object.freeze({
   Tiger: TIGER_DYE_MASK,
   Suezo: SUEZO_DYE_MASK,
   Golem: GOLEM_DYE_MASK,
+  Pixie: PIXIE_DYE_MASK,
   Kyubi: KYUBI_DYE_MASK,
   Orihime: ORIHIME_DYE_MASK
 });
@@ -147845,12 +147844,12 @@ const AMBB_SET_OPTS = Object.freeze({
     label: '少なめ'
   }],
   ctl: [{
-    id: 'auto',
-    label: 'オートで観戦'
-  }, {
     id: 'manual',
     label: '手動',
     note: '手番ごとに自分で選ぶ'
+  }, {
+    id: 'auto',
+    label: 'オートで観戦'
   }],
   balance: [{
     id: 'A',
@@ -148698,10 +148697,25 @@ function AssistantMasmonBattleBeta({
       members: units.map(u => u.unit)
     };
   };
-  const set = save.set || normalizeAmbbSet(null);
-  const setSet = patch => {
+  const [ctlNow, setCtlNow] = useState(() => typeof msaCtlRead === 'function' ? msaCtlRead() : 'manual');
+  const putCtl = v => {
+    const n = v === 'auto' ? 'auto' : 'manual';
+    if (!preview && typeof msaCtlWrite === 'function') msaCtlWrite(n);
+    setCtlNow(n);
+  };
+  const set = {
+    ...(save.set || normalizeAmbbSet(null)),
+    ctl: ctlNow
+  };
+  const setSet = patch0 => {
+    const {
+      ctl: ctlP,
+      ...patch
+    } = patch0 || {};
+    if (ctlP) putCtl(ctlP);
+    if (!Object.keys(patch).length) return;
     const next = normalizeAmbbSet({
-      ...set,
+      ...(save.set || normalizeAmbbSet(null)),
       ...patch
     });
     if (!ambbSave(s => ({
@@ -149024,6 +149038,7 @@ function AssistantMasmonBattleBeta({
   const manualAuto = () => {
     const m = battle && battle.match;
     if (!m) return;
+    putCtl('auto');
     m.auto('A');
     syncManual(m);
     setPaused(false);
@@ -150709,6 +150724,23 @@ const monsucBuffsOf = mods => {
 const mscNum = (v, d = 0) => Number.isFinite(Number(v)) ? Number(v) : d;
 const mscMonName = sp => (typeof ALL_PLAYER_MONSTERS !== 'undefined' && ALL_PLAYER_MONSTERS[sp] ? ALL_PLAYER_MONSTERS[sp].name : sp) || '';
 const mscMonImg = sp => (typeof ALL_PLAYER_MONSTERS !== 'undefined' && ALL_PLAYER_MONSTERS[sp] ? ALL_PLAYER_MONSTERS[sp].imgUrl : '') || '';
+const mscDyed = colors => Array.isArray(colors) && colors.some(Boolean) && typeof DyedMonsterImage === 'function';
+const MscMyMon = ({
+  sp,
+  colors,
+  className
+}) => mscDyed(colors) ? React.createElement(DyedMonsterImage, {
+  baseId: sp,
+  src: mscMonImg(sp),
+  masuColors: colors,
+  alt: "",
+  draggable: false,
+  className: className
+}) : React.createElement("img", {
+  className: className,
+  src: mscMonImg(sp),
+  alt: ""
+});
 const mscAssistant = id => typeof ASSISTANT_LIST !== 'undefined' ? ASSISTANT_LIST.find(a => a.id === id) || ASSISTANT_LIST[0] : null;
 const mscFace = (id, ex) => {
   const a = mscAssistant(id);
@@ -151000,6 +151032,16 @@ const MSC_CSS = `
 .msc-hero.win .who img{animation:msc-hop 1.1s ease-in-out infinite}
 .msc-hero.lose .who img{filter:grayscale(.65) brightness(.8) drop-shadow(0 8px 8px rgba(0,0,0,.5))}
 @keyframes msc-hop{0%,100%{transform:translateY(0)}45%{transform:translateY(-14px)}}
+/* 優勝の画面(2026-11-14 社長): 勝ったモンスターを大きく・明るく、字と帯に隠れない所へ。上から 優勝! → モンスター → 大会の帯 → ライバルの帯 と縦に並べて重ねない */
+.msc-hero.hi{display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 8px 10px}
+.msc-hero.hi::after{content:'';position:absolute;inset:0;z-index:1;pointer-events:none;background:radial-gradient(ellipse 58% 42% at 50% 52%,rgba(255,251,225,.62),rgba(255,236,170,.18) 58%,rgba(24,14,48,.5) 100%)}
+.msc-hero.hi .big{position:relative;top:auto;left:auto;right:auto;z-index:3;font-size:50px;line-height:1.05}
+.msc-hero.hi .who{position:relative;z-index:2;left:auto;bottom:auto;transform:none;width:92%;height:clamp(200px,44vh,340px);flex:none}
+.msc-hero.hi .who img{filter:brightness(1.1) saturate(1.08) drop-shadow(0 0 16px rgba(255,236,150,.95)) drop-shadow(0 10px 10px rgba(0,0,0,.45))}
+.msc-hero.hi .who::after{content:'';position:absolute;left:33%;right:33%;bottom:-6px;height:18px;border-radius:50%;background:rgba(0,0,0,.35);z-index:-1}
+.msc-hero.hi .sub{position:relative;top:auto;left:auto;right:auto;z-index:3;max-width:100%;border-radius:999px;background:rgba(15,23,42,.82);border:1.5px solid #fde04799;padding:4px 14px;text-shadow:none}
+.msc-hero.hi .rival{position:relative;left:auto;right:auto;bottom:auto;width:100%;box-sizing:border-box}
+@media (max-height:500px) and (orientation:landscape){.msc-hero.hi .who{height:clamp(190px,58vh,260px)}.msc-hero.hi .big{font-size:42px}}
 .msc-hero .rival{position:absolute;z-index:3;left:8px;right:8px;bottom:10px;display:flex;align-items:center;gap:6px;border-radius:999px;background:rgba(76,5,25,.9);border:1.5px solid #fb7185;padding:5px 10px;font-size:12.5px;font-weight:900}
 .msc-hero .rival span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .msc-hero .rival em{font-style:normal;background:#fde047;color:#3b2a05;border-radius:999px;padding:1px 8px;font-size:11px}
@@ -151150,7 +151192,10 @@ function MonsucBracket({
     className: "msc-tag ch"
   }, "👑王者")), React.createElement("span", {
     className: `msc-face ${e.you ? 'you' : i === 4 ? 'foe' : ''}`
-  }, React.createElement("img", {
+  }, e.you ? React.createElement(MscMyMon, {
+    sp: e.species,
+    colors: info.colors
+  }) : React.createElement("img", {
     src: mscMonImg(e.species),
     alt: ""
   })))), React.createElement("svg", {
@@ -151263,9 +151308,9 @@ function MonsucBattleCard({
   }, info.title, " ", MSC_STARS(info.star), "・1戦"), React.createElement("div", {
     className: "mon a"
   }, (() => {
-    const im = React.createElement("img", {
-      src: mscMonImg(s.species),
-      alt: ""
+    const im = React.createElement(MscMyMon, {
+      sp: s.species,
+      colors: info.colors
     });
     const k = s.awake && typeof msxKiraOf === 'function' ? msxKiraOf(s.awake) : null;
     return k && typeof cardKiraWrap === 'function' ? cardKiraWrap(k, im, {
@@ -151421,10 +151466,10 @@ function MonsucCutin({
     className: "sub"
   }, sp.sub), React.createElement("div", {
     className: "duo"
-  }, React.createElement("img", {
+  }, React.createElement(MscMyMon, {
     className: "a",
-    src: mscMonImg(s.species),
-    alt: ""
+    sp: s.species,
+    colors: info.colors
   }), React.createElement("img", {
     src: mscMonImg(o.species),
     alt: ""
@@ -151537,7 +151582,8 @@ function MonsucCupWin({
     className: "msc-wrap",
     "data-msc-win": true
   }, React.createElement("div", {
-    className: "msc-hero win",
+    className: "msc-hero win hi",
+    "data-msc-win-hero": true,
     style: {
       backgroundImage: `url(${MSC_VENUE_IMG[info.venue] || MSC_VENUE_IMG.cup})`
     }
@@ -151546,20 +151592,20 @@ function MonsucCupWin({
   }), React.createElement("div", {
     className: "big"
   }, "優勝!"), React.createElement("div", {
-    className: "sub"
-  }, info.title, " ", MSC_STARS(info.star), "・1戦: ", o.name || mscMonName(o.species), " に 勝ち", match && match.r ? `(${match.r.rounds} ラウンド)` : ''), React.createElement("div", {
     className: "who"
   }, (() => {
-    const im = React.createElement("img", {
-      src: mscMonImg(s.species),
-      alt: ""
+    const im = React.createElement(MscMyMon, {
+      sp: s.species,
+      colors: info.colors
     });
     const k = s.awake && typeof msxKiraOf === 'function' ? msxKiraOf(s.awake) : null;
     return k && typeof cardKiraWrap === 'function' ? cardKiraWrap(k, im, {
       src: mscMonImg(s.species),
       calm: typeof msxAwCalm === 'function' && msxAwCalm()
     }) : im;
-  })()), info.rival && React.createElement("div", {
+  })()), React.createElement("div", {
+    className: "sub"
+  }, info.title, " ", MSC_STARS(info.star), "・1戦: ", o.name || mscMonName(o.species), " に 勝ち", match && match.r ? `(${match.r.rounds} ラウンド)` : ''), info.rival && React.createElement("div", {
     className: "rival"
   }, React.createElement("span", null, "ライバルの ", o.name || mscMonName(o.species), " にも 勝った!"), React.createElement("em", null, "ごほうび大"))), rows.map((r, k) => React.createElement("div", {
     key: k,
@@ -151628,9 +151674,9 @@ function MonsucCupLose({
   }, info.title, " ", MSC_STARS(info.star), "・", o.name || mscMonName(o.species), " に 負け"), React.createElement("div", {
     className: "who"
   }, (() => {
-    const im = React.createElement("img", {
-      src: mscMonImg(s.species),
-      alt: ""
+    const im = React.createElement(MscMyMon, {
+      sp: s.species,
+      colors: info.colors
     });
     const k = s.awake && typeof msxKiraOf === 'function' ? msxKiraOf(s.awake) : null;
     return k && typeof cardKiraWrap === 'function' ? cardKiraWrap(k, im, {
@@ -151721,7 +151767,11 @@ function MonsucCupShowInner({
   }, [phase]);
   const info = useMemo(() => {
     if (!s || !s.battle) return null;
-    const i0 = monsucCupInfo(suc, s, me);
+    const i1 = monsucCupInfo(suc, s, me);
+    const i0 = me && Array.isArray(me.colors) ? {
+      ...i1,
+      colors: me.colors.slice(0, 6)
+    } : i1;
     const i = title ? {
       ...i0,
       title
@@ -171539,16 +171589,19 @@ function MsxR3Battle({
       }, "会場へ ▶"))
     });
   }
-  if (showOn) {
+  const showDbg = debug && typeof MonsucCupShow === 'function' && (step === 'card' || step === 'watch');
+  if (showOn || showDbg) {
     return React.createElement(MsxR3Frame, {
       run: run,
       back: "中断",
       onBack: onPause,
       body: React.createElement(MonsucCupShow, {
+        startAt: showDbg ? 'card' : undefined,
         suc: SUC,
         s: s,
         me: {
-          name: run.nick || msxMonName(s.species)
+          name: run.nick || msxMonName(s.species),
+          colors: Array.isArray(run.colors) ? run.colors : null
         },
         title: b.kind === 'cup' ? msxR3CupName(b.sys) : name,
         opp: {
@@ -175129,6 +175182,52 @@ function MsaBgToggle({
     }
   }, "背景 ", MSA_BG_LABEL[msaBgNorm(bg)]);
 }
+const MSA_CTL_KEY = 'mh_monsuc_arena_ctl_v1';
+const msaCtlNorm = v => v === 'auto' ? 'auto' : 'manual';
+const msaCtlRead = () => {
+  try {
+    return msaCtlNorm(localStorage.getItem(MSA_CTL_KEY));
+  } catch (_) {
+    return 'manual';
+  }
+};
+const msaCtlWrite = v => {
+  try {
+    localStorage.setItem(MSA_CTL_KEY, msaCtlNorm(v));
+  } catch (_) {}
+};
+const msaAutoChoice = opt => {
+  if (!opt) return null;
+  if (opt.kind === 'enter') {
+    const x = (opt.enter || []).find(y => y && y.ok);
+    return x ? {
+      type: 'enter',
+      to: x.to
+    } : null;
+  }
+  return opt.hint && opt.hint.type ? {
+    ...opt.hint
+  } : null;
+};
+function MsaCtlToggle({
+  ctl,
+  onChange,
+  save = true
+}) {
+  const now = msaCtlNorm(ctl);
+  const next = now === 'auto' ? 'manual' : 'auto';
+  return React.createElement("button", {
+    type: "button",
+    className: "msa-ctlsw",
+    "data-msa-ctl": now,
+    "aria-label": next === 'auto' ? 'オートにする' : '手動にする',
+    onClick: () => {
+      msaSe('tap');
+      if (save) msaCtlWrite(next);
+      onChange(next);
+    }
+  }, now === 'auto' ? '🤖 オート中' : '🎮 手動', React.createElement("small", null, next === 'auto' ? 'オートへ' : '手動へ'));
+}
 const MSA_CSS = `
 .msa{display:flex;flex-direction:column;gap:6px}
 .msa-stage{position:relative;height:clamp(200px,34vh,290px);border-radius:16px;overflow:hidden;background:#2a2147 center/cover no-repeat}
@@ -175161,9 +175260,10 @@ const MSA_CSS = `
 .msa-round{position:absolute;left:8px;top:6px;z-index:2;font-size:11px;font-weight:900;color:#fde68a;background:#0f0b2299;border-radius:99px;padding:1px 8px}
 .msa-say{min-height:22px;font-size:12.5px;font-weight:800;text-align:center;color:#fff}
 .msa-tools{display:flex;gap:5px;align-items:center}
-.msa-tools button{flex:1;min-height:34px;border-radius:10px;border:1px solid #4c4680;background:#2b2650;color:#fff;font-weight:900;font-size:12px}
+.msa-tools button{flex:1;min-height:44px;border-radius:10px;border:1px solid #4c4680;background:#2b2650;color:#fff;font-weight:900;font-size:12px}
 .msa-tools button.on{background:#fde047;color:#422006;border-color:#fde047}
 .msx .msa-tools button{text-align:center}
+.msa-tools button.msa-ctlsw{flex:1.3;font-size:11.5px;white-space:nowrap;background:#3b1d5e;border-color:#a78bfa;line-height:1.05}.msa-tools button.msa-ctlsw small{display:block;font-size:9.5px;color:#ddd6fe}.msa-tools button.msa-ctlsw[data-msa-ctl=auto]{background:#14532d;border-color:#4ade80}
 .msa-tools button.msa-bgsw{flex:1.4;font-size:11px;white-space:nowrap;background:#1e1b3a;border-color:#6b64a8}
 .msa-wait{font-size:11.5px;color:#cbd5e1;text-align:center}
 .msa-gtag{position:absolute;z-index:8;bottom:-16px;left:50%;transform:translateX(-50%);white-space:nowrap;border-radius:99px;padding:0 7px;font-size:10.5px;font-weight:900;line-height:16px;animation:msaPop .45s ease-out both}
@@ -175331,6 +175431,21 @@ const MSA_CSS = `
 @keyframes msaFocus{0%{opacity:0;transform:scale(1.25)}40%{opacity:1}85%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(1)}}
 @keyframes msaAim{0%{opacity:0;transform:scale(2.2) rotate(-60deg)}45%{opacity:1;transform:scale(1) rotate(0)}80%{opacity:1;transform:scale(.92)}100%{opacity:0;transform:scale(.6)}}
 .msa-stage.fill{height:100%;min-height:220px}
+/* モンサクの試合の場の入れ物(2026-11-14 社長「バトルの画面が小さい」)。オートは縦の6割ほど、手動は手番の帯が入るぶんだけ低く(それでも画面の半分ほど) */
+/* 縦は 帯 → 場 → 札 → ボタン列。場が残りの高さを全部もらう(画面の決まり docs/spec/MONSUC_UI.md ①)。手番の帯が高くて入らないときだけ画面ごと送る */
+.msc-wrap.msa{height:100%;min-height:0}
+.msa-stagebox{flex:1 1 auto;min-height:300px}
+.msa[data-msa-mode=manual] .msa-stagebox{min-height:280px}
+.msa-stage.fill.big .msa-f,.msa-stage.fill.big .msa-dmgwrap{width:var(--msa-fw);margin-left:calc(var(--msa-fw) / -2);height:var(--msa-fh);bottom:36%}
+.msa-stage.fill.big .msa-f img.msa-img{max-width:var(--msa-fw);max-height:calc(var(--msa-fh) - 10px)}
+.msa-stage.fill.big .msa-f .msa-shadow{width:calc(var(--msa-fw) * .56);margin-left:calc(var(--msa-fw) * -.28)}
+.msa-stage.big .msa-floor{bottom:36%}
+.msa-stage.big .msa-spot{bottom:calc(36% - 7px)}
+.msa-stage.big .msa-aim{bottom:calc(36% + 28px)}
+.msa-topline{flex-wrap:wrap;row-gap:2px}
+.msa-topline .msc-buff{font-style:normal;font-size:10.5px}
+.msa-topline .msa-breeder{font-size:11px;color:#cbd5e1;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:55%}
+@media (max-height:500px) and (orientation:landscape){.msc-wrap.msa{height:auto}.msa-stagebox,.msa[data-msa-mode=manual] .msa-stagebox{flex:none;height:calc(var(--mh-vh) - 70px);min-height:240px}}
 .msa-stage.fill .msa-f,.msa-stage.fill .msa-dmgwrap{width:140px;margin-left:-70px;height:176px}
 .msa-stage.fill .msa-f img.msa-img{max-width:140px;max-height:166px}
 .msa-stage.fill .msa-f .msa-shadow{width:80px;margin-left:-40px}
@@ -175563,7 +175678,14 @@ function MsaFighter({
   };
   const sp = member ? member.species : '';
   const src = mscMonImg(sp);
-  const img = React.createElement("img", {
+  const img = member && Array.isArray(member.colors) && member.colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? React.createElement(DyedMonsterImage, {
+    baseId: sp,
+    src: src,
+    masuColors: member.colors,
+    alt: member.name || '',
+    draggable: false,
+    className: `msa-img ${side === 'A' ? 'msa-flip' : ''}`
+  }) : React.createElement("img", {
     className: `msa-img ${side === 'A' ? 'msa-flip' : ''}`,
     src: src,
     alt: member ? member.name : '',
@@ -175991,16 +176113,23 @@ function MsaStage({
   introTitle = '',
   speedF = 1,
   fill = false,
-  lite = false
+  lite = false,
+  wide = false
 }) {
   const reduce = useMemo(() => !!lite || msaReduce(), [lite]);
   const [stageW, setStageW] = useState(340);
+  const [stageH, setStageH] = useState(300);
+  const bigFh = Math.round(Math.max(110, Math.min(300, stageH * 0.5, stageH * 0.66 - 72, stageW * 0.51)));
+  const bigFw = Math.round(bigFh * 0.82);
   const stageRef = useRef(null);
   const camRef = useRef(null);
   useEffect(() => {
     const el = stageRef.current;
     if (!el) return undefined;
-    const fit = () => setStageW(el.clientWidth || 340);
+    const fit = () => {
+      setStageW(el.clientWidth || 340);
+      setStageH(el.clientHeight || 300);
+    };
     fit();
     if (typeof ResizeObserver === 'undefined') {
       window.addEventListener('resize', fit);
@@ -176073,6 +176202,12 @@ function MsaStage({
     tech: msaTechInfo(log, e0)
   };
   const gapOf = d => {
+    if (wide) {
+      const g0 = Math.max(MSA_GAP[0], Math.min(0.44, bigFw * 0.72 / Math.max(200, stageW)));
+      const k = Math.max(0, Math.min(3, Number.isFinite(d) ? d : 1));
+      const gMax = Math.max(g0, 0.98 - bigFw / Math.max(200, stageW));
+      return Math.min(gMax, Math.max(MSA_GAP[k], g0 + (gMax - g0) * k / 3));
+    }
     const g = MSA_GAP[d] != null ? MSA_GAP[d] : MSA_GAP[1];
     return d === 0 ? Math.max(g, Math.min(MSA_GAP[1] - 0.04, (fill ? 140 : 96) * 0.6 / Math.max(200, stageW))) : g;
   };
@@ -176084,11 +176219,12 @@ function MsaStage({
       const g0 = gapOf(frames[k - 1] ? frames[k - 1].d : 1);
       const g1 = gapOf(frames[k] ? frames[k].d : 1);
       if (r.ev === 'move' && (r.side === 'A' || r.side === 'B') && g0 !== g1) c = r.side === 'A' ? c + g0 / 2 - g1 / 2 : c - g0 / 2 + g1 / 2;
-      c = Math.max(Math.max(0.5 - MSA_C_LIM, 0.09 + g1 / 2), Math.min(Math.min(0.5 + MSA_C_LIM, 0.91 - g1 / 2), c));
+      const eM = wide ? Math.max(0.09, bigFw / 2 / Math.max(200, stageW) + 0.01) : 0.09;
+      c = Math.max(Math.max(0.5 - MSA_C_LIM, eM + g1 / 2), Math.min(Math.min(0.5 + MSA_C_LIM, 1 - eM - g1 / 2), c));
       out.push(c);
     }
     return out;
-  }, [log, frames, stageW, fill]);
+  }, [log, frames, stageW, fill, wide, bigFw]);
   const gap = gapOf(f ? f.d : 1);
   const cNow = cs[Math.min(pos, cs.length - 1)] != null ? cs[Math.min(pos, cs.length - 1)] : 0.5;
   const xA = cNow - gap / 2;
@@ -176209,9 +176345,13 @@ function MsaStage({
   const mA = memberOf('A');
   const mB = memberOf('B');
   return React.createElement("div", {
-    className: `msa-stage${fill ? ' fill' : ''}`,
+    className: `msa-stage${fill ? ' fill' : ''}${wide ? ' big' : ''}`,
     ref: stageRef,
-    "data-msa-stage": true
+    "data-msa-stage": true,
+    style: wide ? {
+      '--msa-fw': `${bigFw}px`,
+      '--msa-fh': `${bigFh}px`
+    } : undefined
   }, React.createElement("div", {
     className: `msa-shk ${shake ? `shake s${shakeLv}` : ''}`,
     key: shake ? `sh-${pos}` : 'st',
@@ -176370,7 +176510,13 @@ function MsaStage({
     className: "ttl"
   }, introTitle || '試合開始'), React.createElement("div", {
     className: "pa"
-  }, mA ? React.createElement("img", {
+  }, mA ? Array.isArray(mA.colors) && mA.colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? React.createElement(DyedMonsterImage, {
+    baseId: mA.species,
+    src: mscMonImg(mA.species),
+    masuColors: mA.colors,
+    alt: "",
+    draggable: false
+  }) : React.createElement("img", {
     src: mscMonImg(mA.species),
     alt: ""
   }) : null, React.createElement("span", {
@@ -176420,7 +176566,8 @@ function MonsucArena({
   const [pos, setPos] = useState(0);
   const [speed, setSpeed] = useState('x1');
   const [bg, setBg] = useState(msaBgRead);
-  const [auto, setAuto] = useState(!manual);
+  const [ctl, setCtl] = useState(msaCtlRead);
+  const auto = !manual || ctl === 'auto';
   const [ended, setEnded] = useState(false);
   const endRef = useRef(false);
   useMhBattleBgmHold(true);
@@ -176456,6 +176603,17 @@ function MonsucArena({
     const over = r.bottom - b.bottom + 8;
     if (over > 0) box.scrollTop += Math.min(over, Math.max(0, r.top - b.top - 8));
   }, [barOn, pos]);
+  const autoWait = Boolean(manual && ctl === 'auto' && pos >= last && !ended && mm.pending);
+  useEffect(() => {
+    if (!autoWait) return undefined;
+    const t = setTimeout(() => {
+      const c = msaAutoChoice(mm.pending);
+      if (c && mm.pick(c)) setPos(p => p + 1);else {
+        mm.toAuto();
+      }
+    }, reduce ? 60 : 220);
+    return () => clearTimeout(t);
+  }, [autoWait, pos, mm.tick]);
   useEffect(() => {
     if (!ended || endRef.current) return undefined;
     const t = setTimeout(() => {
@@ -176469,6 +176627,20 @@ function MonsucArena({
     }, 1700);
     return () => clearTimeout(t);
   }, [ended]);
+  const stageTeams = useMemo(() => {
+    const c = info && Array.isArray(info.colors) && info.colors.some(Boolean) ? info.colors : null;
+    if (!c || !teams.A || !Array.isArray(teams.A.members)) return teams;
+    return {
+      ...teams,
+      A: {
+        ...teams.A,
+        members: teams.A.members.map((m, i) => i === 0 && m ? {
+          ...m,
+          colors: c
+        } : m)
+      }
+    };
+  }, [teams.A, teams.B, info && info.colors]);
   const fShowH = useMsaShownFrame(log, frames, pos, teams, (MSA_SPEEDS.find(x => x.id === speed) || MSA_SPEEDS[0]).f);
   if (!log.length) return React.createElement("div", {
     className: "msc-wrap"
@@ -176501,13 +176673,17 @@ function MonsucArena({
   const goAuto = () => {
     if (!manual) return;
     msaSe('tap');
-    mm.toAuto();
-    setAuto(true);
-    setSpeed('x2');
+    msaCtlWrite('auto');
+    setCtl('auto');
   };
   const skip = () => {
-    if (manual && !done) return;
     msaSe('tap');
+    if (manual && !done) {
+      mm.toAuto();
+      const n = mm.match ? mm.match.log.length : 0;
+      setPos(Math.max(0, n - 1));
+      return;
+    }
     setPos(last);
   };
   const showBar = Boolean(manual && !auto && !busy && !ended && mm.pending);
@@ -176517,33 +176693,27 @@ function MonsucArena({
     "data-msa-pos": pos,
     "data-msa-mode": manual ? auto ? 'auto' : 'manual' : 'watch'
   }, React.createElement("style", null, MSA_CSS), React.createElement("div", {
-    className: "msc-top"
-  }, React.createElement("b", null, info.title, " ", MSC_STARS(info.star))), React.createElement(MscPanel, {
-    side: "B",
-    team: teams.B,
-    frame: fShow,
-    maxHp: maxHp,
-    info: info,
-    s: s
-  }), React.createElement(MsaStage, {
+    className: "msc-top msa-topline"
+  }, React.createElement("b", null, info.title, " ", MSC_STARS(info.star)), info.buffs ? React.createElement("i", {
+    className: "msc-buff"
+  }, "✨ 特別な1話") : null, (info.opp || {}).breeder ? React.createElement("small", {
+    className: "msa-breeder"
+  }, "相手 ", nm('B'), "・", info.opp.breeder) : null), React.createElement("div", {
+    className: "msa-stagebox",
+    "data-msa-stagebox": true
+  }, React.createElement(MsaStage, {
     log: log,
     frames: frames,
     pos: pos,
-    teams: teams,
+    teams: stageTeams,
     venueImg: msaVenueBg(info.venue, bg),
     ended: ended,
     win: result ? result.winner : null,
     introTitle: info.title,
-    speedF: (MSA_SPEEDS.find(x => x.id === speed) || MSA_SPEEDS[0]).f
-  }), React.createElement(MscPanel, {
-    side: "A",
-    team: teams.A,
-    frame: fShow,
-    maxHp: maxHp,
-    info: info,
-    s: s,
-    buffed: Boolean(info.buffs)
-  }), React.createElement("div", {
+    speedF: (MSA_SPEEDS.find(x => x.id === speed) || MSA_SPEEDS[0]).f,
+    fill: true,
+    wide: true
+  })), React.createElement("div", {
     className: "msa-say",
     "data-msa-say": true
   }, msaSay(e, nm)), React.createElement("div", {
@@ -176569,10 +176739,10 @@ function MonsucArena({
     type: "button",
     "data-msc-skip": true,
     onClick: skip
-  }, "⏭ とばす"), React.createElement(MsaBgToggle, {
+  }, "⏭ とばす"), !manual ? React.createElement(MsaBgToggle, {
     bg: bg,
     onChange: setBg
-  })) : null, manual && !auto && !ended ? React.createElement("div", {
+  }) : null) : null, manual && !auto && !ended ? React.createElement("div", {
     className: "msa-tools"
   }, MSA_SPEEDS.slice(0, 2).map(x => React.createElement("button", {
     key: x.id,
@@ -176582,7 +176752,13 @@ function MonsucArena({
       msaSe('tap');
       setSpeed(x.id);
     }
-  }, "見せる速さ ", x.label)), React.createElement(MsaBgToggle, {
+  }, "見せる速さ ", x.label))) : null, manual && !ended ? React.createElement("div", {
+    className: "msa-tools",
+    "data-msa-tools2": true
+  }, React.createElement(MsaCtlToggle, {
+    ctl: ctl,
+    onChange: setCtl
+  }), React.createElement(MsaBgToggle, {
     bg: bg,
     onChange: setBg
   })) : null);
