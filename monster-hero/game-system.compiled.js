@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 546181787166e06b
+// source-sha256: 4760f925aae6db5f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -115286,6 +115286,20 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
       eye: 0.2921,
       chin: 0.4307,
       m: 1.031
+    },
+    erubin: {
+      top: 0.0083,
+      eye: 0.2521,
+      chin: 0.4298,
+      m: 1.322
+    }
+  },
+  'stand-sekiyuou': {
+    erubin: {
+      top: 0.004,
+      eye: 0.249,
+      chin: 0.4297,
+      m: 1.345
     }
   },
   'stand-halloween': {
@@ -199830,6 +199844,14 @@ const CARD_ART_KNOWN_BOX = Object.freeze({
   'stand-normal/atsu_surprise': [624, 552, 118, 7, 434, 545],
   'stand-normal/atsu_troubled': [556, 552, 47, 7, 458, 545],
   'stand-normal/atsu_wink': [626, 552, 81, 7, 537, 545],
+  'stand-normal/erubin_angry': [454, 492, 33, 7, 389, 485],
+  'stand-normal/erubin_crying': [548, 492, 7, 7, 528, 485],
+  'stand-normal/erubin_excited': [576, 492, 7, 7, 535, 485],
+  'stand-normal/erubin_happy': [550, 492, 18, 8, 524, 484],
+  'stand-normal/erubin_normal': [484, 492, 19, 9, 454, 483],
+  'stand-normal/erubin_surprise': [698, 492, 39, 6, 620, 486],
+  'stand-normal/erubin_troubled': [552, 492, 8, 7, 533, 485],
+  'stand-normal/erubin_wink': [516, 492, 7, 7, 498, 485],
   'stand-normal/kiki_angry': [616, 832, 8, 8, 601, 824],
   'stand-normal/kiki_crying': [436, 832, 8, 6, 420, 826],
   'stand-normal/kiki_excited': [946, 832, 8, 8, 929, 824],

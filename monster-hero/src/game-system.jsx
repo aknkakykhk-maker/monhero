@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 801cad183855486f
+// generated-sha256: aadf21aaa23c3b1e
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -67817,7 +67817,8 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
   sekiyuou: { erubin: { top: 0.02, eye: 0.225, chin: 0.47, m: 1.25 } },
   // 社長の全身画の8表情から切り出した、みゅあの胸から上の立ち絵(2026-11-11)。測り方は上と同じ。m は、いまの立ち絵と目から顎の見た目の長さが同じになるように決めた
   //   数字は tools/assistant/life-expression-sheets.py が出す(絵を作り直したら、出た数字へ直す)。stand-normal=ふだんの服
-  'stand-normal': { mua: { top: 0.1386, eye: 0.3072, chin: 0.4187, m: 0.829 }, kiki: { top: 0.0777, eye: 0.3325, chin: 0.4296, m: 0.722 }, atsu: { top: 0.0699, eye: 0.3272, chin: 0.4301, m: 0.766 }, kyuko: { top: 0.0344, eye: 0.3093, chin: 0.4296, m: 0.895 }, sorashido: { top: 0.0562, eye: 0.2921, chin: 0.4307, m: 1.031 } },
+  'stand-normal': { mua: { top: 0.1386, eye: 0.3072, chin: 0.4187, m: 0.829 }, kiki: { top: 0.0777, eye: 0.3325, chin: 0.4296, m: 0.722 }, atsu: { top: 0.0699, eye: 0.3272, chin: 0.4301, m: 0.766 }, kyuko: { top: 0.0344, eye: 0.3093, chin: 0.4296, m: 0.895 }, sorashido: { top: 0.0562, eye: 0.2921, chin: 0.4307, m: 1.031 } , erubin: { top: 0.0083, eye: 0.2521, chin: 0.4298, m: 1.322 } },
+  'stand-sekiyuou': { erubin: { top: 0.004, eye: 0.249, chin: 0.4297, m: 1.345 } },
   'stand-halloween': { mua: { top: 0.1502, eye: 0.3379, chin: 0.4334, m: 0.711, above: 0.85 }, kiki: { top: 0.1496, eye: 0.3349, chin: 0.4299, m: 0.707, above: 0.95 } },
   'stand-card-master': { mua: { top: 0.1166, eye: 0.2283, chin: 0.2953, m: 0.499, above: 0.75 } },
 });
@@ -103617,6 +103618,14 @@ const CARD_ART_KNOWN_BOX = Object.freeze({
   'stand-normal/atsu_surprise': [624, 552, 118, 7, 434, 545],
   'stand-normal/atsu_troubled': [556, 552, 47, 7, 458, 545],
   'stand-normal/atsu_wink': [626, 552, 81, 7, 537, 545],
+  'stand-normal/erubin_angry': [454, 492, 33, 7, 389, 485],
+  'stand-normal/erubin_crying': [548, 492, 7, 7, 528, 485],
+  'stand-normal/erubin_excited': [576, 492, 7, 7, 535, 485],
+  'stand-normal/erubin_happy': [550, 492, 18, 8, 524, 484],
+  'stand-normal/erubin_normal': [484, 492, 19, 9, 454, 483],
+  'stand-normal/erubin_surprise': [698, 492, 39, 6, 620, 486],
+  'stand-normal/erubin_troubled': [552, 492, 8, 7, 533, 485],
+  'stand-normal/erubin_wink': [516, 492, 7, 7, 498, 485],
   'stand-normal/kiki_angry': [616, 832, 8, 8, 601, 824],
   'stand-normal/kiki_crying': [436, 832, 8, 6, 420, 826],
   'stand-normal/kiki_excited': [946, 832, 8, 8, 929, 824],
