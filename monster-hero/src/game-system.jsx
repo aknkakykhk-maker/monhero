@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: a4007687e51846f6
+// generated-sha256: 771dcc358e69fea4
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -89481,7 +89481,7 @@ const MSA_CSS = `
 .msa-topline{flex-wrap:wrap;row-gap:2px}
 .msa-topline .msc-buff{font-style:normal;font-size:10.5px}
 .msa-topline .msa-breeder{font-size:11px;color:#cbd5e1;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:55%}
-@media (max-height:500px) and (orientation:landscape){.msc-wrap.msa{height:auto}.msa-stagebox,.msa[data-msa-mode=manual] .msa-stagebox{flex:none;height:calc(100vh - 70px);min-height:240px}}
+@media (max-height:500px) and (orientation:landscape){.msc-wrap.msa{height:auto}.msa-stagebox,.msa[data-msa-mode=manual] .msa-stagebox{flex:none;height:calc(var(--mh-vh) - 70px);min-height:240px}}
 .msa-stage.fill .msa-f,.msa-stage.fill .msa-dmgwrap{width:140px;margin-left:-70px;height:176px}
 .msa-stage.fill .msa-f img.msa-img{max-width:140px;max-height:166px}
 .msa-stage.fill .msa-f .msa-shadow{width:80px;margin-left:-40px}

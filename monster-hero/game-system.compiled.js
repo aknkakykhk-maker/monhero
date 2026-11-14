@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b71b5730d9f4ee79
+// source-sha256: b6f9d21f78f0dee9
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -174269,7 +174269,7 @@ const MSA_CSS = `
 .msa-topline{flex-wrap:wrap;row-gap:2px}
 .msa-topline .msc-buff{font-style:normal;font-size:10.5px}
 .msa-topline .msa-breeder{font-size:11px;color:#cbd5e1;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:55%}
-@media (max-height:500px) and (orientation:landscape){.msc-wrap.msa{height:auto}.msa-stagebox,.msa[data-msa-mode=manual] .msa-stagebox{flex:none;height:calc(100vh - 70px);min-height:240px}}
+@media (max-height:500px) and (orientation:landscape){.msc-wrap.msa{height:auto}.msa-stagebox,.msa[data-msa-mode=manual] .msa-stagebox{flex:none;height:calc(var(--mh-vh) - 70px);min-height:240px}}
 .msa-stage.fill .msa-f,.msa-stage.fill .msa-dmgwrap{width:140px;margin-left:-70px;height:176px}
 .msa-stage.fill .msa-f img.msa-img{max-width:140px;max-height:166px}
 .msa-stage.fill .msa-f .msa-shadow{width:80px;margin-left:-40px}
