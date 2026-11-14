@@ -21,9 +21,10 @@
   'use strict';
 
   const fz = (o) => Object.freeze(o);
+  // タブ(社長 2026-11-14「いつ・どこで効くかが一目で分かる名前に」): 効く場面の名前・育成で出会う順
   const SCENES = Object.freeze([
-    ['train', 'トレーニング'], ['stat', '能力ごと'], ['team', '編成・親密度'], ['start', 'はじめ'], ['care', '体力・ようす'],
-    ['shugyo', '修行'], ['cup', '大会'], ['event', '出来事'], ['aid', '助手'], ['battle', '試合'],
+    ['train', 'トレーニング全般'], ['stat', '能力別トレーニング'], ['aid', '助手のトレーニング'], ['team', '編成・親密度'], ['start', '育成スタート'],
+    ['care', '休養・体調'], ['shugyo', '修行'], ['event', 'イベント・博士'], ['cup', '大会'], ['battle', '大会の試合'],
   ].map(([key, name]) => fz({ key, name })));
 
   const STAT = [['pow', 'ちから'], ['wise', 'かしこさ'], ['hit', '命中'], ['eva', '回避'], ['tough', '丈夫さ'], ['life', 'ライフ']];
@@ -52,6 +53,7 @@
     kunhit: ['grow', '「命中」のトレーニングにいっしょに来たとき、伸び {v}'], kuneva: ['grow', '「回避」のトレーニングにいっしょに来たとき、伸び {v}'],
     kuntough: ['grow', '「丈夫さ」のトレーニングにいっしょに来たとき、伸び {v}'], kunlife: ['grow', '「ライフ」のトレーニングにいっしょに来たとき、伸び {v}'],
     kaketsuke: ['rate', 'このモンスターが得意なトレーニングに来る確率 {v}(90%まで)'], shutsugen: ['rateDown', 'このモンスターがトレーニングに来ない確率 {v}(はじめは15%)'],
+    shuugou: ['rate', ST + 'ほかのモンスターが、いちばん集まっているトレーニングへ移る確率 {v}'],
     shitashi: ['val', 'このモンスターのはじめの親密度 {v}'], tagpow: ['grow', 'このモンスターが友情タッグになったとき、タッグの強さ {v}'],
     hitonatsu: ['mul', ST + 'みんなの親密度の上がり {v}(このモンスターのはじめの親密度も +{start})'], nakayoshi: ['val', T1 + 'このモンスターの親密度の上がり {v}'],
     shitsuke: ['mul', ST + '褒める・叱るで上がる忠誠度 {v}'],
@@ -67,9 +69,9 @@
     aptq: ['rate', ST + '修行で間合いの適性が上がる確率 {v}(はじめは10%)'],
     shokin: ['mul', ST + '大会の賞金 {v}'], ikioi: ['rate', ST + '賞金の合計が多いほどトレーニングの大成功の確率 {v}(18,000G のとき)'],
     ninki: ['mul', ST + '人気の上がり {v}'], kokoroe: ['mul', ST + '大会に勝ったときの能力ポイント {v}'],
-    ticket: ['rate', ST + '大会に勝ったとき修行チケットがもう1枚もらえる確率 {v}'], rivaldamashii: ['mul', ST + 'ライバルに勝ったときのごほうび(全能力) {v}'],
-    event: ['mul', ST + '出来事で上がる能力 {v}'], peak: ['cnt', ST + 'ピークの伸びが、成長のピークのあとも {v} 続く', 'ターン'],
-    yobimizu: ['rate', ST + '編成のモンスターとの出来事が起きる確率 {v}'], mejirushi: ['rate', ST + 'イッサ博士が来る確率(1ターンごと) {v}'],
+    ticket: ['rate', ST + '賞金ランクが1段上がったとき修行チケットがもう1枚もらえる確率 {v}'], rivaldamashii: ['mul', ST + 'ライバルに勝ったときのごほうび(全能力) {v}'],
+    event: ['mul', ST + 'イベントで上がる能力 {v}'], peak: ['cnt', ST + 'ピークの伸びが、成長のピークのあとも {v} 続く', 'ターン'],
+    yobimizu: ['rate', ST + '編成のモンスターとのイベントが起きる確率 {v}'], mejirushi: ['rate', ST + 'イッサ博士が来る確率(1ターンごと) {v}'],
     joshu: ['rate', ST + 'イッサ博士の実験が成功する確率 {v}'],
     aidcome: ['rate', ST + '助手がトレーニングに来る確率 {v}(はじめは60%)'], aidtrain: ['grow', ST + '助手が来たトレーニングの伸び {v}'],
     aidluck: ['rate', ST + '助手が来たトレーニングの大成功の確率 {v}'], aidtrust: ['mul', ST + '助手が来たトレーニングで忠誠度の効き目 {v}'],
@@ -115,6 +117,7 @@
   // ---- 編成・親密度 ----
   add({ id: 'kaketsuke', icon: '📯', name: '得意率アップ', type: 'self', scene: 'team', unit: 1, max: 20, pt: 4, u: '点', v2: [4, 8, 12, 16, 20], text: 'この子が得意なトレーニングに来やすくなる(得意率 +{v}点・90%まで)' });
   add({ id: 'shutsugen', icon: '🚪', name: 'トレーニング出現率アップ', type: 'self', scene: 'team', unit: 1, max: 15, pt: 3, u: '点', text: 'この子がトレーニングに来ない率が{v}点下がる(はじめは15%)' });
+  add({ id: 'shuugou', icon: '🧲', name: '集合率アップ', type: 'stay', scene: 'team', unit: 2, max: 10, pt: 6, u: '%', text: '編成にいるだけで、ほかのモンスターがいちばん集まっているトレーニングへ移る確率 +{v}%' });
   add({ id: 'shitashi', icon: '🌱', name: '初期親密度アップ', type: 'self', scene: 'team', unit: 1, max: 25, pt: 2, u: '', v2: [5, 10, 15, 20, 25], text: 'この子のはじめの親密度が +{v}' });
   add({ id: 'tagpow', icon: '⚡', name: '応援効果アップ', type: 'with', scene: 'team', unit: 1, max: 15, pt: 5, u: '%', v2: [3, 6, 9, 12, 15], text: 'この子が友情タッグになったとき、タッグの強さが +{v}%' });
   add({ id: 'hitonatsu', icon: '🤝', name: '人なつっこさ', ref: false, type: 'stay', scene: 'team', base: 1, unit: 0.05, max: 10, pt: 7, u: '倍', v2: [1.1, 1.2, 1.3, 1.4, 1.5],

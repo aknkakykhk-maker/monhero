@@ -690,6 +690,18 @@
         if (!stat && evMod(s, 'iki', i) && rngOf(s.id, s.turn, 'iki', i)() < evMod(s, 'iki', i)) stat = m.top[0]; // 🤝息ぴったり(並びを変えない別の乱数)
         if (stat) cards[cardKey(kind, stat)].members.push(i);
       });
+      // 🧲集合率アップ(社長 2026-11-14「みんなが同じとこに集まりやすく」): くじのあと、いちばん多く集まった札にいない子が、それぞれ v% でそこへ移る。
+      //   来なかった子は対象外。同じ数なら、その札の能力を得意(上位3つ)にしている子が多い札 → 能力の並び順。別の乱数で並び(記録・ランキングの再現)を変えない
+      const gv = stayNum(s, 'shuugou');
+      if (gv > 0) {
+        const list = Object.values(cards); const fanOf = (c) => s.team.filter(m => m.top.includes(c.stat)).length;
+        const big = list.slice().sort((p, q) => (q.members.length - p.members.length) || (fanOf(q) - fanOf(p)) || (KEYS.indexOf(p.stat) - KEYS.indexOf(q.stat)))[0];
+        if (big && big.members.length > 0) {
+          const gr = rngOf(s.id, s.turn, 'shuugou');
+          list.forEach(c => { if (c === big) return; c.members = c.members.filter(i => { if (gr() < gv / 100) { big.members.push(i); return false; } return true; }); });
+          big.members.sort((p, q) => p - q);
+        }
+      }
       if (rng() < GATHER.aidRate + stayNum(s, 'aidcome') / 100) { const all = Object.keys(cards); cards[all[Math.floor(rng() * all.length)]].aid = true; } // 🙋助手の出現率アップ
       return cards;
     };
