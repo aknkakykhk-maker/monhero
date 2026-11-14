@@ -118,7 +118,7 @@ const serve = () => new Promise((resolve) => {
           await slowCarry(await center(page.locator(`[data-card-hand-card="${usable[0]}"]`)), await center(page.locator('[data-card-mon="0-1"]')), await center(page.locator('[data-card-mon="1-1"]')));
           if ((await page.locator('[data-card-log]').textContent()) !== before) { attacked = true; await page.waitForTimeout(1500); continue; }
         }
-        await page.getByRole('button', { name: '攻撃おわり → ガッツへ' }).click(); continue;
+        await page.getByRole('button', { name: '攻撃終わり → ガッツへ' }).click(); continue;
       }
       if (mode === 'guts') {
         if (!gutsDone && attacked) { await slowCarry(await center(page.locator('[data-card-hand-card="0"]')), null, await center(page.locator('[data-card-guts-drop]'))); gutsDone = true; await page.waitForTimeout(600); }
