@@ -69,7 +69,7 @@
     // 大会: 受付と、試合が始まる前の画面(相手の紹介・トーナメント表)は大会の曲。試合中はバトルの曲(2026-11-14 社長の「モンサク 大会BGM」)
     { id: 'cupEntry', name: '大会: 受付', bgm: 'monsuc_cup', se: 'join' },
     { id: 'cupPre', name: '大会: 試合の前', bgm: 'monsuc_cup', se: null },
-    { id: 'cupMatch', name: '大会: 試合', bgm: 'original_battle', se: 'trainingDice' },
+    { id: 'cupMatch', name: '大会: 試合', bgm: 'ichika_battle', se: 'trainingDice' },
     // 勝ち・負けは短いジングルを1回だけ流して無音(2026-11-14 社長)。ジングルが効果音のかわりなので se は付けない
     { id: 'cupWin', name: '大会: 勝ち', bgm: 'monsuc_win', se: null },
     { id: 'cupLose', name: '大会: 負け', bgm: 'monsuc_lose', se: null },

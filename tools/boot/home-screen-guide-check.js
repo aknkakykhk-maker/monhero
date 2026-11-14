@@ -108,7 +108,7 @@ const seed=(guide)=>{ if (sessionStorage.getItem('s')) return; sessionStorage.se
       await page.getByRole('button',{name:'TAP TO START'}).click({force:true});
       await page.getByRole('button',{name:'トップ画面へ進む'}).click({timeout:30000});
       await page.waitForFunction(()=>document.querySelector('.mh-home-assistant'),{timeout:40000});
-      for(let i=0;i<14;i++){const did=await page.evaluate(()=>{const l=[...document.querySelectorAll('button')].filter(b=>!b.closest('[data-home-screen-guide]')&&/^(確認|閉じる|OK|受け取る|次へ|わかった|はい|スキップ|あとで読む)$/.test((b.innerText||'').trim()));if(!l.length)return false;l[0].click();return true;});if(!did)break;await page.waitForTimeout(300);}
+      for(let i=0;i<14;i++){const did=await page.evaluate(()=>{const l=[...document.querySelectorAll('button')].filter(b=>!b.closest('[data-home-screen-guide]')&&/^(確認|閉じる|OK|受け取る|次へ|(?:分|わ)かった|はい|スキップ|あとで読む)$/.test((b.innerText||'').trim()));if(!l.length)return false;l[0].click();return true;});if(!did)break;await page.waitForTimeout(300);}
       return {ctx,page};
     };
     {

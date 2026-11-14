@@ -100,7 +100,7 @@ const makeMasus = (n) => Array.from({ length: n }, (_, i) => ({ id: 'm' + i, bas
       await page.waitForTimeout(2500);
       await page.mouse.click(195, 422);
       await page.waitForTimeout(2000);
-      await page.evaluate(() => { setInterval(() => { const d = document.querySelector('[role=dialog]'); if (!d) return; const b = d.querySelector('button[aria-label="次へ"],button[aria-label="閉じる"]') || [...d.querySelectorAll('button')].find((x) => /受け取|閉じる|とじる|OK|はじめる|わかった|^次へ|あとで|見た/.test(x.innerText)); if (b) b.click(); }, 250); });
+      await page.evaluate(() => { setInterval(() => { const d = document.querySelector('[role=dialog]'); if (!d) return; const b = d.querySelector('button[aria-label="次へ"],button[aria-label="閉じる"]') || [...d.querySelectorAll('button')].find((x) => /受け取|閉じる|とじる|OK|(?:始|はじ)める|(?:分|わ)かった|^次へ|あとで|見た/.test(x.innerText)); if (b) b.click(); }, 250); });
       await page.waitForFunction(() => document.querySelector('button.mh-home-facility.management') && !document.querySelector('[role=dialog]'), null, { timeout: 60000 });
       await page.waitForTimeout(1500);
       await page.locator('button.mh-home-facility.management').click();

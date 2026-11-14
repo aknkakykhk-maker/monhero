@@ -18,7 +18,7 @@ async function raidBeatScenario(s, { maxSongMs = 240000 } = {}) {
   await s.tap(entry, 'レイドを開く');
   await s.wait(1200);
   await s.dismissOverlays(6);
-  await s.tapLabel(/^わかった$/, 600);
+  await s.tapLabel(/^(?:分|わ)かった$/, 600);
   if (!(await s.tapLabel(/^モンヒロビートで 挑戦する$/, 2500))) return { ok: true, note: 'レイドにモンヒロビートの挑戦が無い(公開前か終わった)' };
   await s.dismissOverlays(6);
   await s.tapLabel(/^この案内を閉じる$/, 600);

@@ -22,7 +22,7 @@ const arena = fs.readFileSync(path.join(PARTS, '56-monhero-success-arena.jsx'), 
 const beta = fs.readFileSync(path.join(PARTS, '56-assistant-masmon-battle-beta.jsx'), 'utf8');
 const app = fs.readFileSync(path.join(PARTS, '60-app.jsx'), 'utf8');
 check('① MonsucArena と β の観戦が同じ場 MsaStage を使う', /<MsaStage /.test(arena.slice(arena.indexOf('function MonsucArena'))) && /<MsaStage /.test(beta));
-check('② 60-app が試合の画面の口を見て、バトルの曲を返す', /useMhBattleBgmOverlay\(\)/.test(app) && /if \(battleBgmOverlay\) return bgmArrangement\.battle/.test(app) && /assistantLifeOpenNow, battleBgmOverlay\]\);/.test(app));
+check('② 60-app が試合の画面の口を見て、バトルの曲を返す', /useMhBattleBgmOverlay\(\)/.test(app) && /if \(battleBgmOverlay\) return \(typeof battleBgmOverlay === 'string'/.test(app) && /assistantLifeOpenNow, battleBgmOverlay\]\);/.test(app));
 
 const PORT = 8984;
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json', '.css': 'text/css', '.png': 'image/png', '.jpg': 'image/jpeg', '.webp': 'image/webp', '.svg': 'image/svg+xml', '.woff2': 'font/woff2', '.mp3': 'audio/mpeg' };
@@ -32,15 +32,15 @@ const server = http.createServer((req, res) => {
   res.writeHead(200, { 'Content-Type': MIME[path.extname(f).toLowerCase()] || 'application/octet-stream' }); fs.createReadStream(f).pipe(res);
 });
 
-const open = async (browser, reducedMotion) => {
-  const page = await browser.newPage({ viewport: { width: 390, height: 844 }, reducedMotion });
+const open = async (browser, reducedMotion, width = 390, species = 'Mocchi', loy = null, seed = null) => {
+  const page = await browser.newPage({ viewport: { width, height: width < 360 ? 700 : 844 }, reducedMotion });
   const errs = []; page.on('pageerror', (e) => errs.push(String(e)));
   await page.goto(`http://localhost:${PORT}/monster-hero/index.html`, { waitUntil: 'domcontentloaded' });
   await page.waitForFunction(() => typeof MonsucCupShow === 'function' && typeof MsaStage === 'function', null, { timeout: 60000 });
   await page.addScriptTag({ url: '/monster-hero/data/monhero-success-regulars.js' });
   await page.addScriptTag({ url: '/monster-hero/data/monhero-success.js' });
   await page.waitForTimeout(1000);
-  await page.evaluate(() => {
+  await page.evaluate(([SPECIES, LOY, SEED]) => {
     // 効果音を数える(鳴らさない)
     window.__se = {};
     Object.keys(Audio_.fgSe).forEach((k) => { Audio_.fgSe[k] = () => { window.__se[k] = (window.__se[k] || 0) + 1; }; });
@@ -48,13 +48,15 @@ const open = async (browser, reducedMotion) => {
     window.__acc = {};
     new MutationObserver(() => { if (document.querySelector('[data-skill-fx]')) window.__fx++; ['.msa-dim', '.msa-flash', '.msa-critcut', '.msa-dust', '.msa-fin', '.msa-burst', '[data-msa-tier]', '.msa-ko.big'].forEach((q) => { if (document.querySelector(q)) window.__acc[q] = (window.__acc[q] || 0) + 1; }); }).observe(document.body, { subtree: true, childList: true });
     const SUC = MONHERO_SUCCESS.create({ calc: MASMON_CALC, apt: AMG_APT, init: AMG_INIT, techs: ASSISTANT_MASMON_TECHS, monsters: ALL_PLAYER_MONSTERS, regulars: MONSUC_REGULARS, cupNames: MONSUC_REGULAR_CUPS });
-    const s = JSON.parse(JSON.stringify(SUC.newRun({ id: 'arena-check', species: 'Mocchi', aid: 'mua', rivals: [{ name: 'こんこ', species: 'Kyubi', stats: { life: 455, pow: 472, wise: 180, hit: 341, eva: 260, tough: 498 } }] })));
+    const s = JSON.parse(JSON.stringify(SUC.newRun({ id: 'arena-check', species: SPECIES, aid: 'mua', rivals: [{ name: 'こんこ', species: 'Kyubi', stats: { life: 455, pow: 472, wise: 180, hit: 341, eva: 260, tough: 498 } }] })));
     s.stats = { life: 412, pow: 506, wise: 233, hit: 380, eva: 198, tough: 441 }; s.turn = 24;
+    if (LOY != null) { s.ama = 0; s.fear = LOY; }
+    if (SEED) try { localStorage.setItem('mh_monsuc_arena_ctl_run_v1', JSON.stringify(SEED)); } catch (_) {}
     s.battle = { kind: 'cup', id: 'middle:4:spring:3', sys: 'spring', star: 3, rival: { name: 'こんこ' }, round: 0 };
     const d = document.createElement('div'); document.body.appendChild(d);
     window.__root = ReactDOM.createRoot(d);
     window.__root.render(React.createElement(MonsucCupShow, { suc: SUC, s, me: { name: 'もちまる' }, startAt: 'match', settle: () => ({}), onRematch() {}, onNext() {}, onClose() {} }));
-  });
+  }, [species, loy, seed]);
   return { page, errs };
 };
 
@@ -64,6 +66,94 @@ const open = async (browser, reducedMotion) => {
   const exe = '/opt/pw-browsers/chromium';
   const browser = await chromium.launch(fs.existsSync(exe) ? { executablePath: exe } : {});
   try {
+    // 段C(2026-11-14 社長): 技の札の技名が札からはみ出さない(幅390・320)。「前へ」は右向き・「後ろへ」は左向きで、ボタンも左に後ろへ・右に前へ
+    for (const [w, sp] of [[390, 'Mocchi'], [320, 'Mocchi'], [390, 'Pandora'], [320, 'Pandora']]) {
+      const { page } = await open(browser, 'no-preference', w, sp);
+      await page.waitForFunction(() => document.querySelector('[data-msxm="act"]'), null, { timeout: 30000 });
+      await page.waitForTimeout(500);
+      const ov = await page.evaluate(() => {
+        const bad = [];
+        document.querySelectorAll('.msa-dc-c').forEach((c) => { const r = c.getBoundingClientRect(); c.querySelectorAll('*').forEach((x) => { const q = x.getBoundingClientRect(); if (q.width && (q.right > r.right + 0.5 || q.left < r.left - 0.5)) bad.push((x.textContent || '').slice(0, 14)); }); const t = c.querySelector('[data-msa-tn]'); if (t && t.scrollWidth > t.clientWidth + 1) bad.push(`scroll:${t.textContent.slice(0, 14)}`); });
+        const sw = document.querySelector('.msa-ctlsw'); if (sw && sw.scrollWidth > sw.clientWidth + 1) bad.push('ctlsw');
+        return bad;
+      });
+      if (process.argv.includes('--shots') && sp === 'Pandora') await page.screenshot({ path: path.join(ROOT, 'docs', 'progress', 'masmon-battle', 'stage-c', `monsuc-manual-${w}.png`) });
+      check(`段C: 技の札・手動/オートの札から字がはみ出さない(幅${w}・${sp})`, ov.length === 0, JSON.stringify(ov));
+      if (w === 390) {
+        const mv = await page.evaluate(() => { const b = [...document.querySelectorAll('[data-msxm-move]')]; return b.map((x) => ({ step: Number(x.dataset.msxmMove), left: x.getBoundingClientRect().left, text: x.textContent.slice(0, 5) })); });
+        const back = mv.find((x) => x.step > 0), fwd = mv.find((x) => x.step < 0);
+        check('段C: 左に「◀ 後ろへ」・右に「前へ ▶」(矢印は画面の向き)', !!back && !!fwd && back.left < fwd.left && /^◀ 後ろへ/.test(back.text) && /^前へ ▶/.test(fwd.text), JSON.stringify(mv));
+      }
+      await page.close();
+    }
+    // 段C(2026-11-14 社長「マニュアルなのに勝手にオートになる」): 手動で1試合を最後まで自分で打つ。途中で一度もオートにならない(画面の印は最後まで manual・「オートにする」は押さない)
+    {
+      const { page } = await open(browser, 'reduce', 390, 'Mocchi');
+      let modes = new Set(), mine = 0, guard = 0, ended = false;
+      while (guard++ < 2500) {
+        const st = await page.evaluate(() => ({ end: !!document.querySelector('[data-msc-end]'), act: !!document.querySelector('[data-msxm="act"]'), mode: (document.querySelector('[data-msc-match]') || {}).dataset ? document.querySelector('[data-msc-match]').dataset.msaMode : null }));
+        if (st.mode) modes.add(st.mode);
+        if (st.end) { ended = true; break; }
+        if (st.act) {
+          const did = await page.evaluate(() => {
+            const c = document.querySelector('[data-msa-dc="manual"] [data-msa-dc-card].now:not([disabled])');
+            if (c) { c.click(); const t = document.querySelector('[data-msa-sheet] [data-msxm-tech]:not([disabled])'); if (t) { t.click(); return 'tech'; } const x = document.querySelector('[data-msa-sheet-close]'); if (x) x.click(); }
+            const b = [...document.querySelectorAll('.msxm-btn:not([disabled])')].find((y) => /ためる|ガード|前へ|後ろへ/.test(y.textContent)); if (b) { b.click(); return 'other'; }
+            return null;
+          });
+          if (did) mine++;
+        }
+        await page.waitForTimeout(120);
+      }
+      check('段C: 手動で最後まで打っても、一度もオートにならない', ended && mine >= 3 && modes.size === 1 && modes.has('manual'), JSON.stringify({ modes: [...modes], mine, guard, ended }));
+      await page.close();
+    }
+    // 段C(2026-11-14 社長): 意味不明な行動の番は「意味不明!」とはっきり見せる(大きな判子・実況の行)。手動のまま
+    {
+      const { page } = await open(browser, 'reduce', 390, 'Mocchi', 0);
+      let seen = false, callSeen = false, guard = 0;
+      while (guard++ < 2500 && !seen) {
+        const st = await page.evaluate(() => ({ end: !!document.querySelector('[data-msc-end]'), act: !!document.querySelector('[data-msxm="act"]'), sulk: !!document.querySelector('[data-msa-sulk="A"]'), call: !!document.querySelector('[data-msa-call="sulk"]') }));
+        if (st.sulk) { seen = true; callSeen = st.call; break; }
+        if (st.end) break;
+        if (st.act) await page.evaluate(() => { const b = [...document.querySelectorAll('.msxm-btn:not([disabled])')].find((y) => /ためる/.test(y.textContent)); if (b) b.click(); });
+        await page.waitForTimeout(80);
+      }
+      if (seen && process.argv.includes('--shots')) await page.screenshot({ path: path.join(ROOT, 'docs', 'progress', 'masmon-battle', 'stage-c', 'monsuc-imi-fumei.png') });
+      const bandOk = seen ? await page.evaluate(() => /意味不明/.test(document.querySelector('[data-msa-sulk]').textContent)) : false;
+      check('段C: 意味不明な行動の番に「意味不明!」の判子が出る(手動のまま)', seen && bandOk, JSON.stringify({ seen, bandOk, callSeen, guard }));
+      await page.close();
+    }
+    // 段C(2026-11-14 社長): 手動/オートの記憶は、その育成の中だけ。新しい育成は手動から。別の育成で選んだオートは引き継がない。前のキー(mh_monsuc_arena_ctl_v1)は読まない
+    {
+      const { page } = await open(browser, 'reduce', 390, 'Mocchi', null, { id: 'other-run', ctl: 'auto' });
+      await page.evaluate(() => { try { localStorage.setItem('mh_monsuc_arena_ctl_v1', 'auto'); } catch (_) {} });
+      await page.waitForFunction(() => document.querySelector('[data-msc-match]'), null, { timeout: 30000 });
+      const m1 = await page.evaluate(() => document.querySelector('[data-msc-match]').dataset.msaMode);
+      check('段C: 新しい育成の最初の試合は手動(別の育成のオートも前のキーも引き継がない)', m1 === 'manual', m1);
+      await page.close();
+      const { page: p2 } = await open(browser, 'reduce', 390, 'Mocchi', null, { id: 'arena-check', ctl: 'auto' });
+      await p2.waitForFunction(() => document.querySelector('[data-msc-match]'), null, { timeout: 30000 });
+      const m2 = await p2.evaluate(() => document.querySelector('[data-msc-match]').dataset.msaMode);
+      check('段C: 同じ育成で選んだオートは、その育成の次の試合でも続く', m2 === 'auto', m2);
+      await p2.close();
+    }
+    // 段C(2026-11-14 社長「βの試合の曲もそろえる」): 曲名つきの保持は、その曲(試合の曲 cupMatch)を返し、離すと戻る。曲名なしの保持は今までどおり(アレンジの「バトル」)
+    {
+      const { page } = await open(browser, 'reduce', 390, 'Mocchi');
+      const r = await page.evaluate(async () => {
+        window.__root.unmount(); await new Promise((q) => setTimeout(q, 300)); // 試合の画面を閉じて、保持が無い所から
+        const out = {}; const cm = successSoundBgm('cupMatch');
+        out.cm = cm; out.v0 = MH_BATTLE_BGM.val;
+        const r1 = mhBattleBgmHold(cm); out.v1 = MH_BATTLE_BGM.val;
+        const r2 = mhBattleBgmHold(); out.v2 = MH_BATTLE_BGM.val;     // 曲名なしが上に重なったら、アレンジの「バトル」(true)
+        r2(); out.v3 = MH_BATTLE_BGM.val;
+        r1(); out.v4 = MH_BATTLE_BGM.val;
+        return out;
+      });
+      check('段C: βの試合の曲は cupMatch(ichika_battle)・曲名なしの保持は従来どおり', r.cm === 'ichika_battle' && r.v0 === false && r.v1 === 'ichika_battle' && r.v2 === true && r.v3 === 'ichika_battle' && r.v4 === false, JSON.stringify(r));
+      await page.close();
+    }
     // ②〜④ ふつうの動き
     {
       const { page, errs } = await open(browser, 'no-preference');
@@ -94,6 +184,21 @@ const open = async (browser, reducedMotion) => {
       check('④ 技の名前の帯に命中%', cutP);
       await page.waitForFunction(() => document.querySelector('.msxm-auto'), null, { timeout: 30000 });
       await page.evaluate(() => { const a = document.querySelector('.msxm-auto'); if (a) a.click(); });
+      // 段C(2026-11-14): オートでも、自分の側の技の札4枚・⏸・見せ場だけ・実況が付く(助手マスモン対戦と同じ操作)
+      await page.waitForTimeout(700);
+      const SHOT_DIR = path.join(ROOT, 'docs', 'progress', 'masmon-battle', 'stage-c');
+      if (process.argv.includes('--shots')) await page.screenshot({ path: path.join(SHOT_DIR, 'monsuc-auto.png') });
+      const stc = await page.evaluate(async () => {
+        const cards = document.querySelectorAll('[data-msa-cards] [data-msa-dc-card]').length;
+        const pause = document.querySelector('[data-msc-pause]'), hl = document.querySelector('[data-msc-hl]');
+        if (!pause || !hl) return { cards, pause: !!pause, hl: !!hl };
+        const posOf = () => Number(document.querySelector('[data-msc-match]').dataset.msaPos);
+        pause.click(); await new Promise((r) => setTimeout(r, 200));
+        const p0 = posOf(); await new Promise((r) => setTimeout(r, 2500)); const p1 = posOf();
+        pause.click();
+        return { cards, pause: true, hl: true, held: p0 === p1 };
+      });
+      check('段C: オートで、技の札4枚・⏸(押すと止まる)・★見せ場が出る', stc.cards === 4 && stc.pause && stc.hl && stc.held === true, JSON.stringify(stc));
       await page.evaluate(() => { const b = [...document.querySelectorAll('.msa-tools button')].find((x) => x.textContent === '×4'); if (b) b.click(); });
       await page.waitForFunction(() => document.querySelector('[data-msc-end]'), null, { timeout: 180000 }).catch(() => {});
       await page.waitForTimeout(600);

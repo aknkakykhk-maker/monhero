@@ -57,7 +57,7 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
     const sleep = (ms) => page.waitForTimeout(ms);
     const dismiss = async () => {
       for (let i = 0; i < 8; i++) {
-        const b = page.getByRole('button', { name: /^(受け取る|閉じる|はじめる|OK|スキップ|あとで読む)$/ }).first();
+        const b = page.getByRole('button', { name: /^(受け取る|閉じる|(?:始|はじ)める|OK|スキップ|あとで読む)$/ }).first();
         if (await b.count() === 0 || !(await b.isVisible().catch(() => false))) break;
         await b.dispatchEvent('click').catch(() => {}); await sleep(250);
       }
@@ -131,7 +131,7 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
       if (m === 'attack' && (await page.locator('[data-card-hand-card]:not([class*="opacity-45"])').count())) break;
       if (m === 'setup') await page.locator('[data-card-footer] button').first().click().catch(() => {});
       else if (m === 'guard') await page.getByRole('button', { name: /^守らない/ }).click().catch(() => {});
-      else if (m === 'attack') await page.getByRole('button', { name: /攻撃おわり/ }).click().catch(() => {});
+      else if (m === 'attack') await page.getByRole('button', { name: /攻撃(?:おわり|終わり)/ }).click().catch(() => {});
       // ガッツの段の下のボタンは、先頭に「← 攻撃に戻る」が出ることがある(2026-10-27)。先頭を押すと攻撃の番へ戻り、行き来したまま時間切れになっていた
       else if (m === 'guts') await page.locator('[data-card-footer] button').filter({ hasText: /ターン終了$/ }).first().click().catch(() => {});
       await sleep(400);

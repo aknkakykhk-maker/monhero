@@ -177,7 +177,7 @@ const ICON = '(⚔️|🛡️|⚖️|💖|⭐|🎭)';
         await page.getByRole('button', { name: 'TAP TO START' }).click({ timeout: 120000 });
         await page.getByRole('button', { name: 'トップ画面へ進む' }).click({ timeout: 30000 });
         await page.locator('[data-home-card-battle]').waitFor({ timeout: 30000 });
-        for (let i = 0; i < 8; i++) { const c = await page.evaluate(() => { const x = [...document.querySelectorAll('button')].find((y) => y.offsetParent && /^(受け取る|閉じる|OK|わかった！?|あとで)$/.test((y.innerText || '').trim())); if (x) { x.click(); return true; } return false; }); if (!c) break; await page.waitForTimeout(400); }
+        for (let i = 0; i < 8; i++) { const c = await page.evaluate(() => { const x = [...document.querySelectorAll('button')].find((y) => y.offsetParent && /^(受け取る|閉じる|OK|(?:分|わ)かった！?|あとで)$/.test((y.innerText || '').trim())); if (x) { x.click(); return true; } return false; }); if (!c) break; await page.waitForTimeout(400); }
         await page.locator('[data-home-card-battle]').dispatchEvent('click');
         await page.locator('[data-card-top="starter"]').waitFor({ timeout: 30000 });
         await page.locator('[data-card-kit="powerful"]').click();
@@ -189,7 +189,7 @@ const ICON = '(⚔️|🛡️|⚖️|💖|⭐|🎭)';
         await page.getByRole('button', { name: 'トップへ' }).click();
         await page.locator('[data-card-top="top"]').waitFor({ timeout: 20000 });
         await page.locator('[data-card-cpu]').click();
-        await page.getByRole('button', { name: /^(分かった|わかった)$/ }).click({ timeout: 3000 }).catch(() => {});
+        await page.getByRole('button', { name: /^(分かった|(?:分|わ)かった)$/ }).click({ timeout: 3000 }).catch(() => {});
         await page.locator('[data-card-top] button').filter({ hasText: 'フリー対戦' }).first().click();
         // 今日のデッキは毎回ちがう顔になる。いちばん長い名前(ドラの好き「メダマ焼きのギャグ劇場」)に決めてから選ぶ(83 の cardAiDeckNextMemo)
         await page.evaluate(() => { cardAiDeckNextMemo.dra = 'oshi'; }); // eslint-disable-line no-undef

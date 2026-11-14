@@ -67,7 +67,7 @@ const storage = (s) => s.page.evaluate((id) => ({ preview: localStorage.getItem(
 async function playMaster(s, title) {
   const picked = await openSoloLive(s, { songName: title, difficulty: 'MASTER', strict: true });
   if (!picked || picked.difficulty !== 'MASTER') return { ok: false, why: `曲えらびで ${title} の MASTER を選べない(${JSON.stringify(picked)})` };
-  await s.tapLabel(/^(▶\s*)?(決定|START|スタート|演奏する|演奏開始|PLAY|はじめる)$/i, 2500);
+  await s.tapLabel(/^(▶\s*)?(決定|START|スタート|演奏する|演奏開始|PLAY|(?:始|はじ)める)$/i, 2500);
   await s.dismissOverlays(4);
   const ready = await s.page.waitForFunction(() => !!document.querySelector('[data-rhythm-play-area]') && window.__mhTestHooks && typeof window.__mhTestHooks.rhythmNotes === 'function' && (window.__mhTestHooks.rhythmNotes() || []).length > 0, null, { timeout: 60000 }).then(() => true).catch(() => false);
   if (!ready) return { ok: false, why: '演奏画面が開かない' };

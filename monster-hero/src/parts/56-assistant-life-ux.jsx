@@ -215,7 +215,7 @@ async function assistantLifeUiV2Load() {
   let done = null;
   try { done = await storeGet('mh_assistant_life_ui_v2_default_v1', null, false); } catch (_) { return v; }
   if (done === true) return v;
-  try { await storeSet('mh_assistant_life_ui_v2_default_v1', true, false); await storeSet('mh_assistant_life_ui_v2', true, false); } catch (_) { return v; }
+  try { await storeSet('mh_assistant_life_ui_v2', true, false); await storeSet('mh_assistant_life_ui_v2_default_v1', true, false); } catch (_) { return v; }
   return true;
 }
 // 新UIのタブ(下の列と、町の上の帯で同じ並び)
@@ -299,7 +299,7 @@ function AssistantLifeUiSettingRow() {
   const [v2, setV2] = React.useState(() => assistantLifeUiV2Of(assistantLifeUiV2Last));
   React.useEffect(() => { let alive = true; assistantLifeUiV2Load().then(v => { assistantLifeUiV2Last = v === true || v === false ? v : null; if (alive) setV2(assistantLifeUiV2Of(v)); }).catch(() => {}); return () => { alive = false; }; }, []);
   if (typeof assistantLifeEnabled === 'function' && !assistantLifeEnabled()) return null;
-  const pick = (on) => { setV2(on); assistantLifeUiV2Last = on; try { void storeSet('mh_assistant_life_ui_v2_default_v1', true, false); void storeSet('mh_assistant_life_ui_v2', on, false); } catch (_) {} }; // 自分で選んだ印も残す(移行で選びを上書きしない)
+  const pick = (on) => { setV2(on); assistantLifeUiV2Last = on; try { void storeSet('mh_assistant_life_ui_v2', on, false); void storeSet('mh_assistant_life_ui_v2_default_v1', true, false); } catch (_) {} }; // 自分で選んだ印も残す(移行で選びを上書きしない)
   return (
     <div data-assistant-life-ui-setting className={`${SCREEN_PANEL_CLASS} w-full text-left`}>
       <b className="block text-[13px] font-black text-slate-200">助手ライフの画面</b>

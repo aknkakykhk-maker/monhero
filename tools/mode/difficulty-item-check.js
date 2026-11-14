@@ -60,7 +60,7 @@ const check = (name, ok, detail = '') => { results.push({ name, ok }); console.l
   await page.getByRole('button', { name: 'モンヒロバトル' }).waitFor({ timeout: 30000 });
   // ログインボーナスなどの重なりを閉じてHOMEを出す
   for (let i = 0; i < 6; i++) {
-    const btn = page.getByRole('button', { name: /受け取る|閉じる|はじめる|OK/ }).first();
+    const btn = page.getByRole('button', { name: /受け取る|閉じる|(?:始|はじ)める|OK/ }).first();
     if (await btn.count() === 0 || !(await btn.isVisible().catch(() => false))) break;
     await btn.dispatchEvent('click').catch(() => {});
     await page.waitForTimeout(300);

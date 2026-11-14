@@ -65,7 +65,7 @@ const toHome = async (page, port) => {
   await page.getByRole('button', { name: 'トップ画面へ進む' }).click({ timeout: 30000 });
   await page.getByRole('button', { name: 'モンヒロバトル' }).waitFor({ timeout: 30000 });
   for (let i = 0; i < 6; i++) { // ログインボーナス・お知らせ
-    const btn = page.getByRole('button', { name: /受け取る|閉じる|はじめる|OK/ }).first();
+    const btn = page.getByRole('button', { name: /受け取る|閉じる|(?:始|はじ)める|OK/ }).first();
     if (await btn.count() === 0 || !(await btn.isVisible().catch(() => false))) break;
     await btn.dispatchEvent('click').catch(() => {}); await page.waitForTimeout(250);
   }
@@ -74,7 +74,7 @@ const openEntry = async (page) => {
   await page.getByRole('button', { name: '設定' }).first().dispatchEvent('click');
   await page.getByRole('button', { name: 'ヘルプ' }).first().waitFor({ timeout: 20000 });
   await page.getByRole('button', { name: 'ヘルプ' }).first().dispatchEvent('click');
-  await page.getByRole('button', { name: 'わかった！冒険に戻る' }).waitFor({ timeout: 20000 });
+  await page.getByRole('button', { name: '分かった！冒険に戻る' }).waitFor({ timeout: 20000 });
   await page.locator('footer button[aria-label=""]').dispatchEvent('click');
   await page.getByText('DEBUG MENU').first().waitFor({ timeout: 20000 });
   const btn = page.locator('[data-debug-monster-lab]');
