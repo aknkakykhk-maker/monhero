@@ -35,6 +35,13 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    date: "2026-11-14 12:32", type:'update', title:'育成のはじめの助手の親密度を見直しました', group:'success', releaseFlag:'monheroSuccess', status:'new',
+    items:[
+      '育成を始めたときの助手の親密度は、仲良し度Lv1ごとに +4、いちばん高くて 40 になりました。はじめから友情タッグにはならず、いっしょにトレーニングして親密度を上げていきます。',
+      'いま育成中のモンスターの親密度は、そのままです。',
+    ],
+  },
+  {
     date: "2026-11-14 11:10", type:'update', group:'success', releaseFlag:'monheroSuccess', dev:true,
     title:'試合で間合いを変えるときの動きが、なめらかになりました',
     items:[
