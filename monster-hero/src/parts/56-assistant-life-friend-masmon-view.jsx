@@ -20,3 +20,13 @@ function AlfMsRoomLink({ friend, aid, land = false }) {
     </div>)}
   </>);
 }
+
+// ---------- 家から挑む入口(2026-11-14・案 docs/progress/assistant-peer/friend-battle-entry/PLAN.md)----------
+// 「⚔ ◯◯のマスモンに挑む ›」→ 既存の対戦画面(assistantMasmonBattleOpen)を、フレンドの助手の側・この相手を選んだ状態で開く。新しい対戦の仕組みは作らない
+function AlfMsBattleLink({ friend, aid }) {
+  if (typeof ambbPvpOn !== 'function' || !ambbPvpOn() || typeof assistantMasmonBattleOpen !== 'function' || !friend || !alfSafeOther(friend.id) || !ALF_IDS.includes(aid)) return null;
+  return (<>
+    <button type="button" className="mhl-btn mt-2 w-full bg-rose-600" data-alf-battle-open={aid} onClick={() => { assistantMasmonBattleOpen({ from: 'friend-house', friendId: friend.id, friendAssistantId: aid }); }}>⚔ {assistantLifeName(aid)}のマスモンに挑む ›</button>
+    <p className="mt-0.5 text-center text-[10px] text-slate-300"><span className="whitespace-nowrap">相手の登録した編成と対戦します。</span></p>
+  </>);
+}

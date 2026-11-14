@@ -513,6 +513,10 @@
       "role": "部品: 助手のマスモンの冬眠(育てた中身を写して箱にしまい、眠らせた助手の枠へ起こす・入れ替えで外れた前の子も並べる・はじめ10体〜育成ノートの段で最大30体)。口 amgsSwap・amgsSyncFormer、画面 AmgsSection・AmgsDetail・AmgsSleepButton(育成ノートの一覧から)。masmon 側の入れ替えは assistantMasmonSleepSwap。公開の印 assistantMasmonSleep。保存は新しいキー mh_assistant_masmon_sleep_v1 だけ。案 docs/progress/assistant-peer/masmon-plan/HIBERNATE.md"
     },
     {
+      "file": "56-assistant-life-masmon-taste.jsx",
+      "role": "部品: 助手の好き嫌いが遊んでいくうちに変わる(はじめの好みは変えず、差分だけ新しいキー mh_assistant_life_taste_v1 に持つ・点は画面に出さず段だけ・1日 +6/-3・推しは5分の1・段が変わった日にひとこと/掲示板/部屋の変化)。口 assistantLifeTasteBump(助手id, モンスターid, 種類)・assistantLifeTasteOverlay・assistantLifeTasteRecent。公開の印 assistantLifeTaste。案 docs/progress/assistant-peer/taste-change/PROPOSAL.md"
+    },
+    {
       "file": "56-monsuc-fuse.jsx",
       "role": "部品: モンヒロサクセスの合体(保存枠の育て終えた子どうし)。計算は芯 MONHERO_SUCCESS の fusePlan。画面 MonsucFuseSheet({ box, saveBox, locked, onDone, onClose })・口 monsucFuse・monsucFuseApply。箱 mh_monsuc_box_v1 の読み書きは保存枠の部品から受け取る。記録は新しいキー mh_monsuc_fuse_v1 を先に書く。公開の印 monheroSuccess。案 docs/progress/player-raise/PLAN.md §3"
     },

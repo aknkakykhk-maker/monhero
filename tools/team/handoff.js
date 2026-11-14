@@ -16,6 +16,7 @@ const fs = require('fs');
 const path = require('path');
 const { ROOT, findDept, git, pathspecs, today, cut, deptList } = require('./lib');
 const { collect } = require('./decisions');
+const B = require('./branch-scan');
 
 const OUT_DIR = path.join(ROOT, 'docs', 'progress', 'handoff');
 const LEDGER = path.join(ROOT, 'docs', 'playbot', 'dashboard', 'ledger.json');
@@ -31,6 +32,22 @@ function latest(d) {
   if (!fs.existsSync(OUT_DIR)) return '';
   const f = fs.readdirSync(OUT_DIR).filter(n => n.startsWith(d.id + '-') && n.endsWith('.md')).sort().pop();
   return f ? `docs/progress/handoff/${f}` : '';
+}
+
+
+// この会話が作った枝のうち、main に入っていない物と開いている PR(会話を替えるとき枝が抜けないように機械で載せる)
+function ownBranches() {
+  const prs = B.openPRs();
+  const out = [];
+  for (const n of B.ownNames()) {
+    const ref = B.ok(['rev-parse', '--verify', '-q', `refs/heads/${n}`]) ? n : (B.ok(['rev-parse', '--verify', '-q', `refs/remotes/origin/${n}`]) ? `origin/${n}` : '');
+    if (!ref || B.ok(['merge-base', '--is-ancestor', ref, 'origin/main'])) continue;
+    const s = B.scan(ref);
+    if (B.landed(s)) continue;
+    const pr = prs && prs.find(p => p.head === n);
+    out.push(`- \`${n}\` ${pr ? `PR #${pr.number}(開いている)` : (prs ? 'PR なし(★作るか捨てるか)' : 'PR は取れず')} / 本体の追加行 ${s.added} のうち main に ${Math.round(s.ratio * 100)}%`);
+  }
+  return { lines: out, prs };
 }
 
 function draft(d) {
@@ -56,6 +73,10 @@ function draft(d) {
   if (jobs.length) { L.push('頼みの台帳(docs/playbot/dashboard/ledger.json)で、まだ済んでいないもの:'); for (const x of jobs.slice(-12)) L.push(`- [${x['いま']}] ${cut(x['頼み'], 110)}${(x.PR || []).length ? ' ' + x.PR.join(' ') : ''}`); L.push(''); }
   if (d['板'].length) { L.push('仕事の板(細かい残りはここ。全文は開かず見出しから):'); for (const f of d['板']) L.push(`- \`${f}\``); L.push(''); }
   if (!jobs.length && !d['板'].length) L.push('- (台帳・板に残りなし)', '');
+  const own = ownBranches();
+  L.push(`## マージしていない自分の枝(機械・${own.lines.length} 件${own.prs ? '' : '・PR 一覧は取れず'})`, '');
+  if (own.lines.length) { for (const l of own.lines.slice(0, 12)) L.push(l); L.push('', '★ PR なしの枝は、いまの main に合わせて入れ直して公開するか、捨てる理由を「手で書く所」に書く(枝のまま引き継がない)。'); } else L.push('- (なし)');
+  L.push('');
   L.push('## 手で書く所(ここだけ人が書く。無ければ「なし」)', '');
   L.push('- やりかけ(どのファイルのどこまで・次の1手): ');
   L.push('- 社長・窓口の返事待ち(何を聞いているか): ');
