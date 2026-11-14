@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e18288db7d161349
+// source-sha256: 37a749bba8d6663f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -68780,7 +68780,10 @@ function BreederMarketScreen({
       }] : []), {
         key: 'item',
         label: 'アイテム'
-      }, {
+      }, ...(typeof monsucShopOpen === 'function' && monsucShopOpen() ? [{
+        key: 'monsuc',
+        label: 'モンサク'
+      }] : []), {
         key: 'stamp',
         label: 'スタンプ'
       }, ...(typeof rhythmPaidSongList === 'function' && rhythmPaidSongList().length ? [{
@@ -69497,6 +69500,12 @@ function BreederMarketScreen({
     openSheet: openSheet,
     onExchange: onExchangeEventPoints,
     onZoomIcon: onZoomIcon
+  }), eventTab === 'monsuc' && typeof MonsucShopList === 'function' && React.createElement(MonsucShopList, {
+    points: safeEventPoints,
+    busy: busy,
+    disabled: purchaseProcessing,
+    openSheet: openSheet,
+    onExchange: onExchangeEventPoints
   }), eventTab === 'stamp' && React.createElement(MultiStampShopList, {
     points: safeEventPoints,
     busy: busy,
@@ -96268,10 +96277,14 @@ function RhythmMultiChatBubble({
   }, text)));
   return React.createElement("span", {
     "data-rhythm-multi-chat-bubble": true,
-    className: "pointer-events-none absolute inset-x-0.5 bottom-0.5 top-3 z-40 flex items-start justify-center overflow-hidden"
+    className: "pointer-events-none absolute inset-x-0.5 bottom-0.5 top-3 z-40 flex items-start justify-center overflow-hidden landscape:top-0.5 [[data-mh-view-rotation=true]_&]:top-0.5"
   }, React.createElement("span", {
-    className: "line-clamp-2 max-h-full max-w-full break-words rounded-xl bg-white px-1.5 py-0.5 text-center text-[10px] font-black leading-tight text-slate-900 shadow-lg"
-  }, text));
+    className: "line-clamp-2 max-h-full max-w-full overflow-hidden rounded-xl bg-white px-1.5 py-0.5 text-center text-[10px] font-black leading-tight text-slate-900 shadow-lg",
+    style: typeof JA_WRAP_STYLE !== 'undefined' ? JA_WRAP_STYLE : {
+      wordBreak: 'keep-all',
+      overflowWrap: 'anywhere'
+    }
+  }, typeof jaWrap === 'function' ? jaWrap(text) : text));
 }
 function RhythmMultiResultBubble({
   text: raw
@@ -102291,7 +102304,7 @@ function RhythmBuddyListSheet({
     }, opt.label, active && React.createElement("span", null, settings.dir === 'asc' ? '▲' : '▼'));
   })), tab === 'lineage' && React.createElement("div", null, React.createElement("p", {
     className: "mb-2.5 text-[10px] leading-relaxed text-slate-400"
-  }, "選んだ種族だけを表示します。並べ替え・しぼりこみはそのまま効きます。"), React.createElement("div", {
+  }, "選んだ種族だけを表示します。並べ替え・絞り込みはそのまま効きます。"), React.createElement("div", {
     className: "grid grid-cols-2 gap-2.5"
   }, [{
     id: 'all',
@@ -102332,7 +102345,7 @@ function RhythmBuddyListSheet({
     className: "mb-1.5 text-[11px] font-black text-slate-300"
   }, "性格", React.createElement("small", {
     className: "ml-1 font-bold text-slate-500"
-  }, "(何も選ばなければすべて)")), React.createElement("div", {
+  }, "(何も選ばなければ全て)")), React.createElement("div", {
     className: "grid grid-cols-2 gap-2"
   }, [...RHYTHM_BUDDY_TRAITS.map(t => ({
     id: t.id,
@@ -102351,7 +102364,7 @@ function RhythmBuddyListSheet({
     className: "mb-1.5 text-[11px] font-black text-slate-300"
   }, "今日の調子", React.createElement("small", {
     className: "ml-1 font-bold text-slate-500"
-  }, "(何も選ばなければすべて)")), React.createElement("div", {
+  }, "(何も選ばなければ全て)")), React.createElement("div", {
     className: "grid grid-cols-2 gap-2"
   }, RHYTHM_BUDDY_MOODS.map(mood => React.createElement("button", {
     key: mood.id,
@@ -102409,7 +102422,7 @@ function RhythmBuddyList({
   const list = rhythmBuddyListRows(masuMons, state, dayKey, settings);
   if (list.length === 0) return React.createElement("p", {
     className: "py-6 text-center text-[12px] font-bold text-slate-400"
-  }, helpWrap((masuMons || []).length ? 'しぼりこみに当てはまるマスモンがいません' : 'マスモンがまだいません。モンヒロバトルのランを終えて、勇者モンをマスモンに登録すると、ここに並びます'));
+  }, helpWrap((masuMons || []).length ? '絞り込みに当てはまるマスモンがいません' : 'マスモンがまだいません。モンヒロバトルのランを終えて、勇者モンをマスモンに登録すると、ここに並びます'));
   if (settings && settings.view === 'card') {
     return React.createElement("div", {
       "data-rhythm-buddy-cards": true,
@@ -114650,7 +114663,7 @@ function AssistantLifeRoomSheet({
     "data-assistant-life-roomview-scroll": true
   }, !land && rvScene && React.createElement("div", {
     style: {
-      height: uiV2 ? 'min(46vh, 112vw)' : 'min(calc(100% - 52px), max(470px, 132vw))'
+      height: uiV2 ? 'min(70vh, 150vw)' : 'min(calc(100% - 52px), max(470px, 132vw))'
     }
   }, rvScene), React.createElement("div", {
     ref: sheetRef,
@@ -114682,9 +114695,11 @@ function AssistantLifeRoomSheet({
       } : {})
     },
     "data-assistant-life-room-where": true
-  }, jaWrap(where), groupNames && React.createElement(React.Fragment, null, " ・ ", w.group.ids.length, "人(", React.createElement(AssistantLifeNames, {
+  }, jaWrap(where), groupNames && (w.group.ids.length <= 2 ? React.createElement(React.Fragment, null, " ・ ", React.createElement("span", {
+    className: "whitespace-nowrap"
+  }, w.group.ids.length, "人(", groupNames, ")")) : React.createElement(React.Fragment, null, " ・ ", w.group.ids.length, "人(", React.createElement(AssistantLifeNames, {
     text: groupNames
-  }), ")")), !home && React.createElement("p", {
+  }), ")"))), !home && React.createElement("p", {
     className: "text-[11px] font-bold text-violet-200"
   }, "⏱ ", slotDef ? `${slotDef.to % 24}時まで` : '', "いる"), (() => {
     const sh = assistantLifeRhythmShiftOn((ASSISTANT_LIFE_STORE.state.rhythm || {})[id], assistantLifeDayKey());
@@ -115546,7 +115561,7 @@ function AssistantLifeHouse({
   const [mapFocusKey, setMapFocusKey] = React.useState(0);
   React.useEffect(() => {
     let alive = true;
-    Promise.resolve(storeGet('mh_assistant_life_ui_v2', null, false)).then(v => {
+    assistantLifeUiV2Load().then(v => {
       assistantLifeUiV2Last = v === true || v === false ? v : null;
       if (alive) setUiV2(assistantLifeUiV2Of(v));
     }).catch(() => {});
@@ -118461,6 +118476,7 @@ function AssistantLifeRoomFigure({
   const night = look === 'night' && sleep,
     evening = look === 'evening';
   const tone = night ? 'linear-gradient(100deg,#ffd08a 0%,#c9c2ee 45%,#8a86c0 100%)' : evening ? 'linear-gradient(100deg,#fff6ec 0%,#fbeee4 60%,#f0dcd4 100%)' : 'linear-gradient(100deg,#ffffff 0%,#fbf5f3 60%,#efe3df 100%)';
+  const sideMask = sleep ? null : 'linear-gradient(to right,transparent 0,#000 7%,#000 93%,transparent 100%)';
   const fadeMask = p.fade ? `linear-gradient(to bottom,#000 ${(p.fade[0] * 100).toFixed(1)}%,transparent ${(p.fade[1] * 100).toFixed(1)}%)` : null;
   const box = {
     position: 'absolute',
@@ -118469,9 +118485,11 @@ function AssistantLifeRoomFigure({
     width: p.width,
     height: p.height,
     clipPath: `inset(${p.clip[0].toFixed(1)}px 0 ${p.clip[1].toFixed(1)}px 0)`,
-    ...(fadeMask ? {
-      WebkitMaskImage: fadeMask,
-      maskImage: fadeMask
+    ...(fadeMask || sideMask ? {
+      WebkitMaskImage: [fadeMask, sideMask].filter(Boolean).join(','),
+      maskImage: [fadeMask, sideMask].filter(Boolean).join(','),
+      WebkitMaskComposite: 'source-in',
+      maskComposite: 'intersect'
     } : {})
   };
   const shape = {
@@ -118480,7 +118498,7 @@ function AssistantLifeRoomFigure({
     maskImage: `url(${src})`,
     maskSize: '100% 100%'
   };
-  return React.createElement(React.Fragment, null, React.createElement("span", {
+  return React.createElement(React.Fragment, null, sleep && React.createElement("span", {
     "aria-hidden": "true",
     style: {
       position: 'absolute',
@@ -118984,11 +119002,18 @@ function AssistantLifeRoomBed({
       box
     }, F, 0, 0);
     const U = r.U || F * 2.63;
-    const cw = U * 1.2,
-      ch = U * 1.32,
-      y0 = -0.22 * U;
-    const cx = pillow.left + ch / 2 + 2 + i * 14,
-      cy = pillow.top + pillow.h * 0.6 - cw / 2 - i * 6;
+    const cw0 = U * 1.2,
+      ch0 = U * 1.32;
+    const ex = 0.7 * U,
+      ey = 0.35 * U,
+      cw = cw0 + ey * 2,
+      ch = ch0 + ex,
+      y0 = -0.22 * U - ex;
+    const cx = pillow.left + ch0 / 2 + 2 + i * 14 - ex / 2,
+      cy = pillow.top + pillow.h * 0.6 - cw0 / 2 - i * 6;
+    const fadeAt = `${((0.82 * ch0 + ex) / ch * 100).toFixed(1)}%`;
+    const feather = `linear-gradient(to right,transparent,#000 9%,#000 91%,transparent),linear-gradient(to bottom,transparent,#000 6%,#000 ${fadeAt},transparent)`;
+    const imgLeft = r.left + cw / 2;
     return React.createElement("div", {
       key: x.pid,
       "data-assistant-life-roomview-sleeper": x.pid,
@@ -119000,9 +119025,10 @@ function AssistantLifeRoomBed({
         height: ch,
         transform: 'rotate(-78deg)',
         transformOrigin: '50% 50%',
-        overflow: 'hidden',
-        WebkitMaskImage: 'linear-gradient(#000 82%,transparent)',
-        maskImage: 'linear-gradient(#000 82%,transparent)'
+        WebkitMaskImage: feather,
+        maskImage: feather,
+        WebkitMaskComposite: 'source-in',
+        maskComposite: 'intersect'
       }
     }, React.createElement("img", {
       src: x.src,
@@ -119010,7 +119036,7 @@ function AssistantLifeRoomBed({
       draggable: false,
       style: {
         position: 'absolute',
-        left: r.left + cw / 2,
+        left: imgLeft,
         top: r.top - y0,
         width: r.width,
         height: r.height,
@@ -119023,7 +119049,7 @@ function AssistantLifeRoomBed({
       w: r.width,
       h: r.height,
       style: {
-        left: r.left + cw / 2,
+        left: imgLeft,
         top: r.top - y0,
         filter: `saturate(.9) brightness(${night ? 0.72 : 0.9})`
       }
@@ -119567,7 +119593,7 @@ function AssistantLifeRoomScene({
   }) : null), people.length > 0 && !asleep && React.createElement(AssistantLifeRoomFront, {
     kind: frontKind,
     cx: W / 2,
-    top: lay && !asleep ? Math.max(...lay.map(p => p.frameBottom - 4)) : deskTop,
+    top: lay && !asleep ? Math.max(...lay.map(p => Math.min(p.frameBottom, p.top + p.height) - 6)) : deskTop,
     w: frontW,
     items: ASSISTANT_LIFE_ROOM_DESK_ITEMS[id] || []
   }), layoutOn && React.createElement(AssistantLifeRoomLayoutLayer, {
@@ -119786,7 +119812,13 @@ function AssistantLifeDoRow({
   }, label), (off && why ? why : sub) && React.createElement("small", {
     className: "block text-[11.5px] font-bold leading-snug text-slate-300",
     style: JA_WRAP_STYLE
-  }, jaWrap(off && why ? why : sub))), gain && !off && React.createElement("span", {
+  }, (() => {
+    const t = off && why ? why : sub,
+      m = String(t).match(/^(.*?)(\([^()]{1,9}\))$/);
+    return m && m[1] ? React.createElement(React.Fragment, null, jaWrap(m[1]), React.createElement("span", {
+      className: "whitespace-nowrap"
+    }, m[2])) : jaWrap(t);
+  })())), gain && !off && React.createElement("span", {
     className: "shrink-0 text-right text-[11.5px] font-black leading-tight text-emerald-300",
     "data-assistant-life-room-do-gain": true
   }, gain));
@@ -120064,6 +120096,29 @@ let assistantLifeUiV2Last = null;
 function assistantLifeUiV2Of(saved) {
   return saved === true ? true : saved === false ? false : ASSISTANT_LIFE_UI_V2_DEFAULT;
 }
+async function assistantLifeUiV2Load() {
+  let v = null;
+  try {
+    v = await storeGet('mh_assistant_life_ui_v2', null, false);
+  } catch (_) {
+    v = null;
+  }
+  if (v !== false) return v;
+  let done = null;
+  try {
+    done = await storeGet('mh_assistant_life_ui_v2_default_v1', null, false);
+  } catch (_) {
+    return v;
+  }
+  if (done === true) return v;
+  try {
+    await storeSet('mh_assistant_life_ui_v2_default_v1', true, false);
+    await storeSet('mh_assistant_life_ui_v2', true, false);
+  } catch (_) {
+    return v;
+  }
+  return true;
+}
 function assistantLifeUiV2Tabs() {
   const profile = typeof assistantLifeProfileOn === 'function' && assistantLifeProfileOn() ? [['profile', '📖', '紹介']] : [];
   return [['house', '🏡', '家'], ['where', '🗺', '町'], ['friends', '🤝', 'きずな'], ...profile, ...(typeof alfEnabled === 'function' && alfEnabled() ? [['visit', '🏘', 'フレンド']] : [])];
@@ -120198,7 +120253,7 @@ function AssistantLifeUiSettingRow() {
   const [v2, setV2] = React.useState(() => assistantLifeUiV2Of(assistantLifeUiV2Last));
   React.useEffect(() => {
     let alive = true;
-    Promise.resolve(storeGet('mh_assistant_life_ui_v2', null, false)).then(v => {
+    assistantLifeUiV2Load().then(v => {
       assistantLifeUiV2Last = v === true || v === false ? v : null;
       if (alive) setV2(assistantLifeUiV2Of(v));
     }).catch(() => {});
@@ -120211,6 +120266,7 @@ function AssistantLifeUiSettingRow() {
     setV2(on);
     assistantLifeUiV2Last = on;
     try {
+      void storeSet('mh_assistant_life_ui_v2_default_v1', true, false);
       void storeSet('mh_assistant_life_ui_v2', on, false);
     } catch (_) {}
   };
@@ -156919,6 +156975,358 @@ function MonsucFuseSheet({
     className: "mt-2 min-h-[44px] w-full rounded-xl bg-slate-700 text-[13px] font-black"
   }, "やめる")));
 }
+const MONSUC_SHOP_OFFERS = Object.freeze([{
+  itemId: 'oil',
+  cost: 75
+}, {
+  itemId: 'herb',
+  cost: 75
+}, {
+  itemId: 'band',
+  cost: 225
+}, {
+  itemId: 'mag',
+  cost: 225
+}, {
+  itemId: 'hachi',
+  cost: 225
+}, {
+  itemId: 'omamori',
+  cost: 225
+}, {
+  itemId: 'grass',
+  cost: 225
+}, {
+  itemId: 'dango',
+  cost: 225
+}, {
+  itemId: 'guide',
+  cost: 225
+}, {
+  itemId: 'juice',
+  cost: 300
+}, {
+  itemId: 'powder',
+  cost: 300
+}, {
+  itemId: 'loupe',
+  cost: 300
+}, {
+  itemId: 'license',
+  cost: 300
+}, {
+  itemId: 'pack',
+  cost: 375
+}, {
+  itemId: 'awakeFruit',
+  cost: 450
+}, {
+  itemId: 'superAwakeFruit',
+  cost: 1200
+}].map(o => Object.freeze({
+  ...o,
+  id: `monsuc_${o.itemId}`,
+  kind: 'monsuc'
+})));
+const MONSUC_SHOP_MAX = 999;
+const monsucShopOpen = () => typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.monheroSuccess === true;
+const monsucShopOffer = id => MONSUC_SHOP_OFFERS.find(o => o.id === id) || null;
+const monsucShopBuy = async (offerId, quantity = 1) => {
+  const offer = monsucShopOffer(offerId);
+  if (!offer) return {
+    ok: false,
+    reason: 'unknown'
+  };
+  if (!monsucShopOpen()) return {
+    ok: false,
+    reason: 'soon'
+  };
+  const q = Math.max(1, Math.min(99, Math.floor(Number(quantity) || 1)));
+  const cost = offer.cost * q;
+  const beforePoints = await loadRhythmEventPoints();
+  const stored = await storeGet(MSX_KEYS.meta, null, false);
+  const base = stored && typeof stored === 'object' && !Array.isArray(stored) ? stored : {
+    v: 1
+  };
+  const items = base.items && typeof base.items === 'object' && !Array.isArray(base.items) ? base.items : {};
+  const had = Number.isFinite(Number(items[offer.itemId])) ? Math.max(0, Math.floor(Number(items[offer.itemId]))) : 0;
+  if (had + q > MONSUC_SHOP_MAX) return {
+    ok: false,
+    reason: 'max',
+    eventPoints: beforePoints
+  };
+  if (!(beforePoints >= cost)) return {
+    ok: false,
+    reason: 'points',
+    eventPoints: beforePoints,
+    cost
+  };
+  const next = {
+    ...base,
+    v: 1,
+    items: {
+      ...items,
+      [offer.itemId]: had + q
+    }
+  };
+  const nextPoints = beforePoints - cost;
+  const saved = await saveStoredValuesOrRollback([{
+    key: RHYTHM_EVENT_POINTS_KEY,
+    before: beforePoints,
+    next: nextPoints
+  }, {
+    key: MSX_KEYS.meta,
+    before: stored,
+    next
+  }], storeGet, storeSet);
+  if (!saved) return {
+    ok: false,
+    reason: 'save',
+    eventPoints: beforePoints
+  };
+  return {
+    ok: true,
+    eventPoints: nextPoints,
+    cost,
+    have: had + q
+  };
+};
+const monsucShopReasonText = r => r === 'points' ? 'ビートPが足りません。' : r === 'max' ? `持てるのは${MONSUC_SHOP_MAX}個までです。` : r === 'soon' ? 'まだ交換できません。' : '交換を保存できませんでした。ビートPと持ちこみの数は変えていません。';
+function MonsucShopList({
+  points = 0,
+  busy = false,
+  disabled = false,
+  openSheet,
+  onExchange
+}) {
+  const [have, setHave] = React.useState({});
+  const [ready, setReady] = React.useState(false);
+  const reload = React.useCallback(async () => {
+    try {
+      const m = await storeGet(MSX_KEYS.meta, null, false);
+      setHave(m && m.items && typeof m.items === 'object' ? m.items : {});
+    } catch (e) {
+      setHave({});
+    }
+  }, []);
+  React.useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        if (typeof msxLoad === 'function') await msxLoad();
+      } catch (e) {}
+      await reload();
+      if (alive) setReady(true);
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [reload]);
+  if (!ready) return React.createElement("p", {
+    className: "col-span-full text-center text-[12px] font-bold text-slate-300"
+  }, "読み込んでいます…");
+  return React.createElement(React.Fragment, null, React.createElement("p", {
+    "data-monsuc-shop-note": true,
+    className: "col-span-full text-[11px] font-bold leading-snug text-slate-300",
+    style: typeof JA_WRAP_STYLE !== 'undefined' ? JA_WRAP_STYLE : undefined
+  }, typeof jaWrap === 'function' ? jaWrap('モンヒロサクセスの育成に持っていくアイテムです。交換した物は、育成をはじめるときの「持ちこみ」で選べます') : 'モンヒロサクセスの育成に持っていくアイテムです。交換した物は、育成をはじめるときの「持ちこみ」で選べます'), MONSUC_SHOP_OFFERS.map(offer => {
+    const t = typeof MSX_ITEM_BY_ID !== 'undefined' ? MSX_ITEM_BY_ID[offer.itemId] : null;
+    if (!t) return null;
+    const n = Math.max(0, Math.floor(Number(have[offer.itemId]) || 0));
+    const desc = typeof msxItemDesc === 'function' ? msxItemDesc(offer.itemId) : t.desc;
+    const when = t.when === 'before' ? 'はじめる前に効く' : '育成中にも使える';
+    const item = {
+      id: offer.id,
+      name: t.name,
+      emoji: t.e,
+      type: 'item',
+      currency: 'beatPoint',
+      cost: offer.cost,
+      desc: `${when}。${desc}`
+    };
+    return React.createElement(MarketProductCard, {
+      key: offer.id,
+      dataAttrs: {
+        'data-monsuc-shop-offer': offer.itemId
+      },
+      item: item,
+      owned: false,
+      comingSoon: false,
+      canBuy: points >= offer.cost && !busy && n < MONSUC_SHOP_MAX,
+      disabled: disabled,
+      onBuy: () => openSheet({
+        item,
+        stackable: true,
+        confirm: async count => {
+          const r = onExchange ? await onExchange(offer, count || 1) : false;
+          await reload();
+          return r;
+        }
+      }),
+      middle: React.createElement("span", {
+        "data-monsuc-shop-have": true,
+        className: "block px-1 text-center text-[10px] font-bold leading-tight text-slate-300"
+      }, when, "・持っている数 ", n.toLocaleString())
+    });
+  }));
+}
+const msxB3Row = () => typeof window !== 'undefined' && window.innerHeight < 520 ? 46 : 64;
+const msxB3Calm = () => {
+  if (typeof msxFxCalm === 'function' && msxFxCalm()) return true;
+  try {
+    return typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  } catch (e) {
+    return false;
+  }
+};
+function MsxBest3({
+  b,
+  run
+}) {
+  msxB3EnsureCss();
+  const calm = msxB3Calm();
+  const MSX_B3_ROW = msxB3Row();
+  const [go, setGo] = React.useState(calm);
+  React.useEffect(() => {
+    if (calm) return undefined;
+    const id = setTimeout(() => setGo(true), 650);
+    return () => clearTimeout(id);
+  }, []);
+  if (typeof msxUseTimedSe === 'function') msxUseTimedSe(go && b.place >= 0 && !calm ? [['awKira', 250]] : [], [go]);
+  const next = Array.isArray(b.next) ? b.next : [];
+  const prev = Array.isArray(b.prev) ? b.prev : [];
+  const inIt = b.place >= 0;
+  const startOf = (i, e) => {
+    if (!inIt) return 0;
+    if (e.id === next[b.place].id) return (3 - b.place) * MSX_B3_ROW;
+    const was = prev.findIndex(x => x.id === e.id);
+    return was >= 0 ? (was - i) * MSX_B3_ROW : 0;
+  };
+  const third = next.length >= 3 ? next[2].power : null;
+  const fmt = n => typeof msxFmt === 'function' ? msxFmt(n) : Number(n).toLocaleString();
+  const name = e => e.nick || (typeof msxMonName === 'function' ? msxMonName(e.species) : e.species);
+  const thumb = sp => typeof msxMonThumb === 'function' ? msxMonThumb(sp) : '';
+  const stamp = !inIt ? null : b.place === 0 ? '自己ベスト更新!' : 'ベスト3入り!';
+  return React.createElement(React.Fragment, null, run && typeof MsxMonArt === 'function' ? React.createElement("div", {
+    className: "v-scene",
+    style: {
+      flex: '1 1 0',
+      minHeight: 150
+    },
+    "data-msx-best3-scene": true
+  }, React.createElement("img", {
+    className: "bg",
+    src: msxSceneBg().bg,
+    alt: ""
+  }), React.createElement("div", {
+    className: "sh"
+  }), inIt ? React.createElement("div", {
+    className: "v-burst"
+  }) : null, React.createElement("div", {
+    className: "gr",
+    style: {
+      bottom: 'calc(10% - 5px)'
+    }
+  }), React.createElement(MsxMonArt, {
+    run: run,
+    className: "mon",
+    style: {
+      bottom: '10%',
+      height: '70%'
+    }
+  }), React.createElement("div", {
+    className: "v-stamp msx-pop",
+    style: {
+      top: '6%',
+      fontSize: 22
+    }
+  }, run.nick || msxMonName(run.s.species), React.createElement("small", null, "総合力 ", fmt(b.power)))) : null, React.createElement("div", {
+    className: "v-h"
+  }, "🏆 自分だけのベスト3", React.createElement("small", null, "これまでに育てたモンスターの、総合力の上位3つ")), React.createElement("div", {
+    className: `msx-b3${go ? ' go' : ''}${calm ? ' calm' : ''}`,
+    "data-msx-best3": inIt ? b.place + 1 : 0,
+    style: {
+      height: MSX_B3_ROW * 3 + 16
+    }
+  }, [0, 1, 2].map(i => React.createElement("div", {
+    key: `slot-${i}`,
+    className: "slot",
+    style: {
+      top: 8 + i * MSX_B3_ROW,
+      height: MSX_B3_ROW - 8
+    }
+  }, React.createElement("b", {
+    className: `pl p${i + 1}`
+  }, i + 1), next[i] ? null : React.createElement("span", {
+    className: "none"
+  }, "まだない"))), next.map((e, i) => {
+    const me = inIt && i === b.place;
+    return React.createElement("div", {
+      key: e.id,
+      className: `row${me ? ' me' : ''}`,
+      "data-msx-best3-row": i + 1,
+      style: {
+        top: 8 + i * MSX_B3_ROW,
+        height: MSX_B3_ROW - 8,
+        transform: go ? 'translateY(0)' : `translateY(${startOf(i, e)}px)`
+      }
+    }, React.createElement("b", {
+      className: `pl p${i + 1}`
+    }, i + 1), thumb(e.species) ? React.createElement("img", {
+      src: thumb(e.species),
+      alt: ""
+    }) : null, React.createElement("span", {
+      className: "nm"
+    }, name(e), me ? React.createElement("small", null, "今回") : null), React.createElement("span", {
+      className: "rk"
+    }, e.rank), React.createElement("b", {
+      className: "pw"
+    }, fmt(e.power)));
+  })), stamp ? React.createElement("div", {
+    className: `msx-b3-stamp${go ? ' on' : ''}`,
+    "data-msx-best3-stamp": true
+  }, stamp) : React.createElement("div", {
+    className: "v-card",
+    "data-msx-best3-miss": true
+  }, React.createElement("div", {
+    className: "v-kv"
+  }, React.createElement("b", null, "今回"), React.createElement("span", null, "総合力 ", React.createElement("b", null, fmt(b.power)))), third != null ? React.createElement("div", {
+    className: "v-kv"
+  }, React.createElement("b", null, "3位まで"), React.createElement("span", null, "あと ", React.createElement("b", {
+    className: "yel"
+  }, fmt(Math.max(1, third - b.power + 1))))) : null), typeof MsxSay === 'function' && run ? React.createElement(MsxSay, {
+    aid: run.s.aid,
+    ex: inIt ? 'excited' : 'happy',
+    text: inIt ? b.place === 0 ? '「新記録! いちばん強いモンスターが生まれたね!」' : `「ベスト3に入ったよ! ${b.place + 1}番目!」` : '「次はベスト3をめざそ!」'
+  }) : null);
+}
+const MSX_B3_CSS = `
+.msx-b3{position:relative;margin:4px 0 6px;overflow:hidden}
+.msx-b3 .slot{position:absolute;left:0;right:0;border-radius:12px;border:1.5px dashed #47556988;display:flex;align-items:center;gap:8px;padding:0 10px}
+.msx-b3 .slot .none{flex:1;text-align:center;color:#94a3b8;font-size:12px;font-weight:800}
+.msx-b3 .row{position:absolute;left:0;right:0;border-radius:12px;background:#0f172a;border:1.5px solid #475569;display:flex;align-items:center;gap:8px;padding:0 10px;transition:transform .8s cubic-bezier(.2,1.2,.4,1)}
+.msx-b3.calm .row{transition:none}
+.msx-b3 .row.me{border-color:#fde047;background:#3b2f0b;box-shadow:0 0 12px #fde04788;z-index:2}
+.msx-b3 .pl{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:900;background:#334155;color:#fff;flex:0 0 auto}
+.msx-b3 .pl.p1{background:linear-gradient(#fde68a,#d97706);color:#422006}.msx-b3 .pl.p2{background:linear-gradient(#f1f5f9,#94a3b8);color:#1e293b}.msx-b3 .pl.p3{background:linear-gradient(#fdba74,#b45309);color:#431407}
+.msx-b3 .row img{width:40px;height:min(40px,100%);object-fit:contain;flex:0 0 auto}
+.msx-b3 .row .nm{flex:1;min-width:0;font-size:13px;font-weight:900;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.msx-b3 .row .nm small{display:inline-block;margin-left:6px;padding:1px 6px;border-radius:8px;background:#fde047;color:#422006;font-size:10px}
+.msx-b3 .row .rk{font-size:13px;font-weight:900;color:#a5f3fc;min-width:26px;text-align:center}
+.msx-b3 .row .pw{font-size:16px;font-weight:900;color:#fde047;min-width:62px;text-align:center}
+.msx-b3-stamp{align-self:center;margin:2px auto 6px;padding:6px 18px;border-radius:14px;background:linear-gradient(90deg,#f59e0b,#ec4899);color:#fff;font-size:20px;font-weight:900;text-align:center;opacity:0;transform:scale(.6);transition:opacity .4s .6s,transform .5s .6s cubic-bezier(.2,1.6,.4,1)}
+.msx-b3-stamp.on{opacity:1;transform:scale(1)}
+@media (prefers-reduced-motion: reduce){.msx-b3 .row,.msx-b3-stamp{transition:none}}
+`;
+let msxB3CssDone = false;
+const msxB3EnsureCss = () => {
+  if (msxB3CssDone || typeof document === 'undefined') return;
+  msxB3CssDone = true;
+  const el = document.createElement('style');
+  el.setAttribute('data-msx-best3-css', '1');
+  el.textContent = MSX_B3_CSS;
+  document.head.appendChild(el);
+};
 const MSX_AW_DIST = Object.freeze(['零', '近', '中', '遠']);
 const MSX_AW_NAME = Object.freeze({
   1: '覚醒',
@@ -171983,6 +172391,15 @@ const msxR3BoxMonOf = (run, s, ev, assists, parent) => ({
   titles: msxR3FinalTitles(s, ev),
   from: run.from || null
 });
+const msxBest3Norm = raw => (Array.isArray(raw) ? raw : []).filter(e => msxR3Obj(e) && typeof e.id === 'string' && Number.isFinite(e.power) && typeof e.species === 'string').map(e => ({
+  id: e.id.slice(0, 64),
+  power: Math.max(0, Math.round(e.power)),
+  rank: typeof e.rank === 'string' ? e.rank.slice(0, 4) : '',
+  species: e.species.slice(0, 40),
+  nick: typeof e.nick === 'string' ? e.nick.slice(0, 16) : '',
+  at: Number.isFinite(e.at) ? e.at : 0
+})).filter((e, i, a) => a.findIndex(x => x.id === e.id) === i).sort((a, b) => b.power - a.power || a.at - b.at).slice(0, 3);
+const msxBest3Add = (list, e) => msxBest3Norm([...msxBest3Norm(list).filter(x => x.id !== e.id), e]);
 const msxR3Retire = async (run, s, ev, assists, debug) => {
   const box = await msxR3ReadBox();
   let meta = await msxR3ReadMeta();
@@ -172013,6 +172430,21 @@ const msxR3Retire = async (run, s, ev, assists, debug) => {
       id: run.id
     }
   };
+  const best3Prev = msxBest3Norm(meta.best3);
+  meta.best3 = msxBest3Add(best3Prev, {
+    id: run.id,
+    power: ev.power,
+    rank: ev.rank,
+    species: s.species,
+    nick: run.nick || '',
+    at: Date.now()
+  });
+  const best3 = {
+    prev: best3Prev,
+    next: meta.best3,
+    place: meta.best3.findIndex(e => e.id === run.id),
+    power: ev.power
+  };
   meta.titles = Array.from(new Set([...(meta.titles || []), ...(Array.isArray(s.titles) ? s.titles : [])])).slice(0, 200);
   const next = {
     ...box,
@@ -172027,7 +172459,8 @@ const msxR3Retire = async (run, s, ev, assists, debug) => {
     ok: true,
     box: next,
     meta,
-    mon
+    mon,
+    best3
   };
 };
 const msxR3GameOver = async s => {
@@ -175666,15 +176099,36 @@ function MsxR3Retire({
       } catch (e) {}
       setRes({
         ok: true,
-        mon: r.mon
+        mon: r.mon,
+        best3: r.best3 || null
       });
-      setStep('done');
+      setStep(r.best3 && typeof MsxBest3 === 'function' ? 'best3' : 'done');
     } else setRes(r || {
       ok: false
     });
     setBusy(false);
     setSure(false);
   };
+  if (step === 'best3' && res && res.best3 && typeof MsxBest3 === 'function') {
+    return React.createElement(MsxR3Frame, {
+      run: run,
+      back: "とじる",
+      onBack: () => setStep('done'),
+      right: right,
+      body: React.createElement(MsxBest3, {
+        b: res.best3,
+        run: run
+      }),
+      foot: React.createElement("div", {
+        className: "v-ft"
+      }, React.createElement("button", {
+        type: "button",
+        className: "go",
+        onClick: () => setStep('done'),
+        "data-msx-best3-next": true
+      }, "つぎへ ▶"))
+    });
+  }
   if (step === 'done') {
     const body = React.createElement(React.Fragment, null, React.createElement("div", {
       className: "v-scene",
@@ -230546,6 +231000,26 @@ function MonsterHeroGame() {
         return r;
       } catch {
         setMarketExchangeError(rhythmSongBuyReasonText('save'));
+        return {
+          ok: false,
+          reason: 'save'
+        };
+      } finally {
+        marketPurchaseProcessingRef.current = false;
+      }
+    }
+    if (offer?.kind === 'monsuc' && typeof monsucShopBuy === 'function') {
+      marketPurchaseProcessingRef.current = true;
+      setMarketExchangeError('');
+      try {
+        const r = await monsucShopBuy(offer.id, quantity);
+        if (r.ok) {
+          setRhythmEventPoints(r.eventPoints);
+          saveMissionProgress('market');
+        } else setMarketExchangeError(monsucShopReasonText(r.reason));
+        return r;
+      } catch {
+        setMarketExchangeError(monsucShopReasonText('save'));
         return {
           ok: false,
           reason: 'save'

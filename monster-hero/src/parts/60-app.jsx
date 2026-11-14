@@ -9582,6 +9582,20 @@ function MonsterHeroGame() {
         return { ok:false, reason:'save' };
       } finally { marketPurchaseProcessingRef.current = false; }
     }
+    // モンヒロサクセスの持ちこみ(2026-11-14 r1113-057)。ビートPと持ちこみの数(mh_monsuc_meta_v1 の items)を1つの取引で保存する(56-monsuc-shop.jsx)
+    if (offer?.kind==='monsuc' && typeof monsucShopBuy==='function') {
+      marketPurchaseProcessingRef.current = true;
+      setMarketExchangeError('');
+      try {
+        const r = await monsucShopBuy(offer.id, quantity);
+        if (r.ok) { setRhythmEventPoints(r.eventPoints); saveMissionProgress('market'); }
+        else setMarketExchangeError(monsucShopReasonText(r.reason));
+        return r;
+      } catch {
+        setMarketExchangeError(monsucShopReasonText('save'));
+        return { ok:false, reason:'save' };
+      } finally { marketPurchaseProcessingRef.current = false; }
+    }
     if (offer?.kind==='stamp') {
       marketPurchaseProcessingRef.current = true;
       setMarketExchangeError('');
