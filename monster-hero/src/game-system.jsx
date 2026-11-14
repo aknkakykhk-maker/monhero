@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 24178e8908631c09
+// generated-sha256: 00622861e84f5047
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -86687,7 +86687,16 @@ const MSX_CSS = `
 .msx .v-tr .lv{display:block;position:static;background:none;border:0;font-style:normal;font-size:10px;font-weight:800;color:#94a3b8;line-height:1.3}
 .msx .v-tr.tag .o{box-shadow:0 0 0 2px #fde04788,0 0 14px 3px #fde047,0 0 24px 6px #fb923c88}
 .msx .v-tr.tag .nm{color:#fde047}
-.msx .v-tr.sel .o{transform:scale(1.1)}
+.msx .v-tr.sel .o{transform:translateY(-8px) scale(1.18)}
+.msx .v-tr .o{transition:transform .14s ease-out,box-shadow .14s}
+.msx .v-tr:not(.sel) .o{transform:translateY(2px) scale(.96)}
+.msx .v-trs{position:relative;padding-top:17px;padding-bottom:12px;touch-action:pan-y}
+.msx .v-tr .tn.one{white-space:nowrap;letter-spacing:-.06em;margin:0 -4px;display:flex;align-items:flex-start;justify-content:center}
+.msx .v-tr .fb{position:absolute;left:50%;top:-17px;transform:translateX(-50%);background:#fff;color:#7f1d1d;border-radius:8px;padding:1px 6px;font-size:10px;font-weight:900;white-space:nowrap;line-height:1.4;z-index:3;box-shadow:0 1px 4px #0006}
+.msx .v-tr .fb::after{content:'';position:absolute;left:50%;bottom:-4px;margin-left:-4px;border:4px solid transparent;border-bottom:0;border-top-color:#fff}
+.msx .v-tr .ke{position:absolute;left:50%;bottom:-13px;transform:translateX(-50%);color:#fde047;font-size:11px;font-weight:900;text-shadow:0 1px 2px #000;white-space:nowrap}
+.msx .v-trail{position:absolute;left:0;top:0;pointer-events:none;z-index:4;opacity:.85;filter:drop-shadow(0 0 2px #fff8)}
+.msx .v-trail.out{opacity:0;transition:opacity .5s ease-out}
 .msx .v-tr.sel .nm{color:#fff}
 .msx .v-lvx{display:flex;align-items:center;gap:6px;margin-top:5px;font-size:10px;font-weight:900;white-space:nowrap}
 .msx .v-lvx b{color:#7dd3fc}.msx .v-lvx i{flex:1;height:6px;border-radius:4px;background:#334155;position:relative;overflow:hidden}
@@ -88416,6 +88425,10 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
   //   左へスライドで次・右へで前。端で止める。横に 48px 以上、しかも縦の動きより大きいときだけ替える(縦のスクロールやタップの邪魔をしない)
   const swipeRef = useRef(null);
   const [swipe, setSwipe] = useState({ n: 0, dir: 0 });
+  // 下のトレーニングの札の列: 指を置いたまま左右になぞると、指の下の札がその場で浮き上がって選ばれる(2026-11-15 r1115-002 社長が参考の録画を見せて)。
+  //   通った跡に白い細い線を少し残す。離した所の札が選ばれたまま。替わるたびにタップ音(既存の効果音 tap・SE の音量に従う)
+  const scrubRef = useRef(null);
+  const [trail, setTrail] = useState(null); // { pts: [{x,y}], live, w, h }
   useEffect(() => { if (onSub) onSub(sub); }, [sub]);
   useEffect(() => () => { if (onSub) onSub('main'); }, []);
   // 期の区切りの演出(56-monsuc-kifx.jsx)を見終えたターン(保存しない。読み直したときはもう一度出る)
@@ -88694,6 +88707,25 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
       onPointerCancel: () => { swipeRef.current = null; },
       onClickCapture: (e) => { if (swipeRef.current && swipeRef.current.moved) { e.stopPropagation(); e.preventDefault(); } swipeRef.current = null; },
     };
+    const scrubIdx = (e) => { const r = e.currentTarget.getBoundingClientRect(); return Math.max(0, Math.min(MSX_STATS.length - 1, Math.floor((e.clientX - r.left) / Math.max(1, r.width) * MSX_STATS.length))); };
+    const scrubPt = (e) => { const r = e.currentTarget.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top, w: r.width, h: r.height }; };
+    const scrubOn = {
+      style: { touchAction: 'pan-y', userSelect: 'none', WebkitUserSelect: 'none' },
+      onPointerDown: (e) => { scrubRef.current = { x: e.clientX, moved: false, last: MSX_STATS.indexOf(stat), id: e.pointerId }; },
+      onPointerMove: (e) => {
+        const st = scrubRef.current; if (!st) return;
+        if (!st.moved) {
+          if (Math.abs(e.clientX - st.x) < 6) return;
+          st.moved = true; try { e.currentTarget.setPointerCapture(e.pointerId); } catch (_) {}
+        }
+        const i = scrubIdx(e); const p = scrubPt(e);
+        setTrail((t) => ({ pts: [...(t && t.live ? t.pts : []), { x: p.x, y: p.y }].slice(-28), live: true, w: p.w, h: p.h }));
+        if (i !== st.last) { st.last = i; setSel(MSX_STATS[i]); if (typeof msaSe === 'function') msaSe('tap'); }
+      },
+      onPointerUp: () => { const st = scrubRef.current; if (st && st.moved) { setTrail((t) => (t ? { ...t, live: false } : t)); setTimeout(() => setTrail(null), 600); } else { scrubRef.current = null; } },
+      onPointerCancel: () => { scrubRef.current = null; setTrail(null); },
+      onClickCapture: (e) => { const st = scrubRef.current; scrubRef.current = null; if (st && st.moved) { e.stopPropagation(); e.preventDefault(); } },
+    };
     body = (<>
       <MsxBand s={s} v={v} ev={ev} {...bandProps}/>
       <div className={`v-scene${swipe.n ? (swipe.dir > 0 ? ' msx-swl' : ' msx-swr') : ''}`} key={`trsw${swipe.n}`} data-msx-train-swipe {...swipeOn} style={{ ...swipeOn.style, flex: '1 1 0' }}>
@@ -88713,10 +88745,12 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
         </div>}
       </div>
       <MsxStRow who={s} stats={s.stats} ups={pv ? pv.gain : null} main={stat} preview/>
-      <div className="v-trs" data-msx-train-swipe-row {...swipeOn}>
+      <div className="v-trs" data-msx-train-swipe-row data-msx-train-scrub {...scrubOn}>
+        {trail && trail.pts.length > 1 ? <svg className={`v-trail${trail.live ? '' : ' out'}`} width={trail.w} height={trail.h} viewBox={`0 0 ${trail.w} ${trail.h}`} aria-hidden="true"><polyline points={trail.pts.map((q) => `${q.x.toFixed(1)},${q.y.toFixed(1)}`).join(' ')} fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg> : null}
         {MSX_STATS.map((k) => { const c = msxCardOf(v, k); const lv = lvOf(c); return (
-          <button type="button" key={k} className={`v-tr${c && c.tags.length ? ' tag' : ''}${k === stat ? ' sel' : ''}`} onClick={() => setSel(k)}>
-            <div className="o">{MSX_STAT_ICON[k]}</div><b className="nm">{MSX_STAT_NAME[k]}</b><small className="tn">{msxTrainNameParts(k, lv).map((x, i) => <React.Fragment key={i}>{i ? <wbr/> : null}{x}</React.Fragment>)}</small>{lv ? <i className="lv">Lv.{lv}</i> : null}</button>); })}
+          <button type="button" key={k} className={`v-tr${c && c.tags.length ? ' tag' : ''}${k === stat ? ' sel' : ''}`} onClick={() => { if (k === stat && c) doAct({ kind: c.kind, stat: k }); else setSel(k); }}>
+            {k === stat && c ? <span className="fb" data-msx-train-fail>失敗率 {Math.round(c.fail * 100)}%</span> : null}
+            <div className="o">{MSX_STAT_ICON[k]}</div><b className="nm">{MSX_STAT_NAME[k]}</b><small className={`tn${msxTrainName(k, lv).length <= 5 ? ' one' : ''}`}>{msxTrainName(k, lv).length <= 5 ? msxTrainName(k, lv) : msxTrainNameParts(k, lv).map((x, i) => <React.Fragment key={i}>{i ? <wbr/> : null}{x}</React.Fragment>)}</small>{lv ? <i className="lv">Lv.{lv}</i> : null}{k === stat && c ? <span className="ke" data-msx-train-ok>決定</span> : null}</button>); })}
       </div>
     </>);
     foot = <div className="v-ft"><button type="button" onClick={() => { setSub('main'); setSel(null); }}>← 戻る</button><button type="button" className="go" disabled={!card} onClick={() => doAct({ kind: card.kind, stat })}>{msxTrainIcon(stat, trainLv)} {msxTrainName(stat, trainLv)}をする</button></div>;
