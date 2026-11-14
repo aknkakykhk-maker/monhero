@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 400dca23c16227c5
+// generated-sha256: 8b2217e4dfc98cca
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -58314,6 +58314,8 @@ const RHYTHM_MODE_ASSISTANT_FRAMES = Object.freeze({
   // きゅうこ(2026-10-22)。大きい絵は 384x512(胸から上・髪のてっぺんが絵の上端近く)。
   // 社長「立ち絵もうちょい引かせたい」(2026-10-23)で、3案から「もう少し引く」を選んだ: 枠の幅の0.75倍。髪全体と胸元のフリルまで入る
   kyuko: { zoom: 0.75, cx: 0.5, cy: 0, top: 0.06, show: 0.8 },
+  // ソラシド(2026-11-15 全身画の立ち絵 馬骨・横長の絵・髪のてっぺんが絵の上端近く)。ももすけと同じ置き方(絵の上端を枠の上から 6%・幅は枠いっぱい)
+  sorashido: { zoom: 1, cx: 0.5, cy: 0, top: 0.06, show: 0.8 },
 });
 // 舞台の飾り(スポットライト3本・音符・キラキラ・床の光)。位置と遅れは固定(描くたびに変わらないように)
 const RHYTHM_MODE_SELECT_NOTES = Object.freeze([
