@@ -928,7 +928,7 @@ const helpDataRows = (id) => {
             // 大王が倒されたら買える枠(ハロウィン・恐)は、条件の文がそのまま文になっている
             : sales.length && cond && cond.kind === 'raidJackBossDown' ? `${cond.text}（マーケットの${sales.map(label).join(' か ')}）。`
             : sales.length ? `${gated.length ? `「${cond.text}」を達成すると、マーケットの${gated.map(label).join(' か ')}で買えます。${free.length ? `${free.map(label).join(' か ')}なら条件なしで買えます。` : ''}` : `マーケットの${free.map(label).join(' か ')}で買えます。`}`
-            : 'はじめから選べます。';
+            : '初めから選べます。';
           return [frame.name, `${how}${frame.desc ? ` ${frame.desc}` : ''}`];
         });
     // 助手の一覧。名前と性格の違いを実データから出す
@@ -944,7 +944,7 @@ const helpDataRows = (id) => {
         ['ちから 1', `+${Math.round(MONSTER_POWER_STAT_WEIGHT.atk * 100) / 100}（強化P1つ=ちから+${STAT_POINT_GAIN.atk} で +10）`],
         ['丈夫さ 1', `+${Math.round(MONSTER_POWER_STAT_WEIGHT.def * 100) / 100}（強化P1つ=丈夫さ+${STAT_POINT_GAIN.def} で +10）`],
         ['ガッツ 1', `+${Math.round(MONSTER_POWER_STAT_WEIGHT.guts * 100) / 100}（強化P1つ=ガッツ+${STAT_POINT_GAIN.guts} で +10）`],
-        ['間合い適性', DIST_APTITUDE_GRADES.slice().reverse().map(g => `${g} ${MONSTER_POWER_APTITUDE[g] > 0 ? '+' : ''}${MONSTER_POWER_APTITUDE[g]}`).join(' ／ ') + '（4距離すべてを合計）'],
+        ['間合い適性', DIST_APTITUDE_GRADES.slice().reverse().map(g => `${g} ${MONSTER_POWER_APTITUDE[g] > 0 ? '+' : ''}${MONSTER_POWER_APTITUDE[g]}`).join(' ／ ') + '（4距離全てを合計）'],
         ['固有技を1つ持つ', `+${MONSTER_POWER_UNIQUE_OWNED}（Lv0でも付く。継承した固有技も同じ）`],
         ['固有技の強化Lv 1段階', `+${Math.round(MONSTER_POWER_UNIQUE_PER_LEVEL * 100) / 100}（3段階でちょうど+200）`],
       ];
@@ -973,7 +973,7 @@ const helpDataRows = (id) => {
     // はじめての HELL の目安(2026-10-21 改善部 N6)。Lv. がいちばん低い HELL を実データから選ぶ(rhythmHellEntrySong)
     case 'rhythmHellEntry': {
       const entry = typeof rhythmHellEntrySong === 'function' ? rhythmHellEntrySong() : null;
-      return entry ? [['はじめての HELL', `「${entry.name}」Lv.${entry.level} から(HELL の中でいちばんやさしい曲)`]] : [];
+      return entry ? [['初めての HELL', `「${entry.name}」Lv.${entry.level} から(HELL の中で一番やさしい曲)`]] : [];
     }
     case 'rhythmHellSongs': {
       const songs = typeof RHYTHM_SONGS !== 'undefined' ? RHYTHM_SONGS : [];
@@ -1032,7 +1032,7 @@ const helpDataRows = (id) => {
         const low = entries[levels.indexOf(Math.min(...levels))];
         const high = entries[levels.indexOf(Math.max(...levels))];
         return [id, `Lv.${Math.min(...levels)}〜${Math.max(...levels)}`
-          + `（やさしい順の先頭: ${rhythmSongFullName(low.song)} ／ いちばん重い: ${rhythmSongFullName(high.song)}）`];
+          + `（やさしい順の先頭: ${rhythmSongFullName(low.song)} ／ 一番重い: ${rhythmSongFullName(high.song)}）`];
       }).filter(Boolean);
     }
     // 曲えらびの四角い枠に絵が出るかどうか。ヘルプへ「いまはこの4曲」と手で書くと、
@@ -1110,12 +1110,12 @@ const HELP_DATA_TITLES = {
   monsterLineages: 'モンスターの血統一覧',
   psycheRewards: '難易度別にもらえる虹のプシュケー',
   rhythmDifficultyRanks: 'モンヒロビートの難易度別の満点と上限ランク',
-  rhythmHellEntry: 'はじめての HELL の目安',
+  rhythmHellEntry: '初めての HELL の目安',
   rhythmHellSongs: 'HELL がある曲',
   rhythmDemoSongLevels: '遊べる難易度とレベル',
   rhythmDemoSongList: '先行公開している曲',
   rhythmDifficultySpread: '同じ難易度でも曲でどれだけ違うか',
-  rhythmSongArtwork: '曲えらびに絵が出る曲',
+  rhythmSongArtwork: '曲選びに絵が出る曲',
   rhythmMonsterAbilities: 'モンスターノーツで出る能力',
 };
 

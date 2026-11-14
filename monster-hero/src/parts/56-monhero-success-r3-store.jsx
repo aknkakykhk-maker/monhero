@@ -100,7 +100,7 @@ const msxR3ReadBox = async () => {
   const raw = await storeGet(MSX_KEYS.box, null);
   if (raw == null) return { v: 1, cap: MSX_BOX_CAP0, mons: [], memory: [] };
   if (!msxR3Obj(raw) || !Array.isArray(raw.mons)) { try { await storeSet('mh_monsuc_box_v1_broken', raw); } catch (e) {} return { v: 1, cap: MSX_BOX_CAP0, mons: [], memory: [] }; }
-  return { ...raw, v: 1, cap: Math.max(MSX_BOX_CAP0, Math.min(60, Number.isFinite(raw.cap) ? raw.cap : MSX_BOX_CAP0)), mons: raw.mons.filter(msxR3Obj), memory: Array.isArray(raw.memory) ? raw.memory.filter(msxR3Obj) : [] };
+  return { ...raw, v: 1, cap: Math.max(MSX_BOX_CAP0, Math.min(MSX_BOX_CAP_MAX, Number.isFinite(raw.cap) ? raw.cap : MSX_BOX_CAP0)), mons: raw.mons.filter(msxR3Obj), memory: Array.isArray(raw.memory) ? raw.memory.filter(msxR3Obj) : [] };
 };
 const msxR3ReadMeta = async () => {
   const raw = await storeGet(MSX_KEYS.meta, null);
@@ -113,7 +113,7 @@ const msxR3AddWon = (meta, s) => {
   const won = Array.isArray(s.wonNow) ? s.wonNow.filter((k) => typeof k === 'string') : [];
   return { ...meta, wonCups: Array.from(new Set([...(meta.wonCups || []), ...won])).slice(0, 200) };
 };
-const msxR3BoxCap = (retired) => Math.min(60, MSX_BOX_CAP0 + 5 * Math.floor(Math.max(0, retired) / 10)); // 引退10回ごとに +5・最大60(PLAN §3)
+const msxR3BoxCap = (retired) => Math.min(MSX_BOX_CAP_MAX, MSX_BOX_CAP0 + 5 * Math.floor(Math.max(0, retired) / 10)); // 引退10回ごとに +5。いまははじめから上限の100(2026-11-14 社長「とりあえず100」)なので、実質いつも100
 const msxR3FinalTitles = (s, ev) => {
   const T = msxR3T().titles;
   try { if (T) return T.finalize(s.titles, ev, s); } catch (e) {}

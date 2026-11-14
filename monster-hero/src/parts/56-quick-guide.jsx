@@ -266,7 +266,7 @@ const QuickGuideOverlay = ({ guideId, pages, assistant, callName, onDone, onGoAu
         <div className="mt-2 flex flex-wrap items-center justify-end gap-2 landscape:max-[500px]:mt-1">
           {!last && <button type="button" data-quick-guide-later onClick={() => onDone(false)} className="min-h-[40px] rounded-xl border border-slate-500/60 px-3 text-[11px] font-black text-slate-300 active:scale-[.97]">あとで</button>}
           {last && page.goAutoSettings && onGoAutoSettings && <button type="button" data-quick-guide-go-auto onClick={() => { onDone(true); onGoAutoSettings(); }} className="min-h-[40px] rounded-xl border border-cyan-300/70 bg-cyan-800/70 px-3 text-[11px] font-black text-cyan-50 active:scale-[.97]">AUTO設定を見に行く</button>}
-          <button type="button" data-quick-guide-next onClick={() => (last ? onDone(true) : setStep(step + 1))} className="min-h-[40px] min-w-[84px] rounded-xl border border-fuchsia-300/70 bg-fuchsia-700/80 px-3 text-[12px] font-black text-white active:scale-[.97]">{last ? (pages.length > 1 ? 'わかった！' : 'OK') : '次へ'}</button>
+          <button type="button" data-quick-guide-next onClick={() => (last ? onDone(true) : setStep(step + 1))} className="min-h-[40px] min-w-[84px] rounded-xl border border-fuchsia-300/70 bg-fuchsia-700/80 px-3 text-[12px] font-black text-white active:scale-[.97]">{last ? (pages.length > 1 ? '分かった！' : 'OK') : '次へ'}</button>
         </div>
       </div>
     </div>
