@@ -8,7 +8,7 @@
 //   ① モデルの表: 小さな直し → sonnet / 設計・原因不明 → opus / 見張り → haiku / 2回直しても直らない・最終確認 → fable
 //   ② 保存データ・ランキング・SQL の語がある仕事は、ほかの語が何でも opus 以上
 //   ③ 会話の区切りのフック: 目安の前は黙る・超えたら1行・毎回は出さない・壊れた入力でも止めない
-//   ④ 新しい会話の依頼文: 部の手引き・decisions・gate・報告先が入り、台帳の全文を読ませない。短い(3KB 未満)
+//   ④ 新しい会話の依頼文: 部の手引き・decisions・gate・報告先が入り、台帳の全文を読ませない。短い(4KB 未満。うち追跡表の完了でない頼みが6行まで・2026-11-14)
 //   ⑤ 台帳の絞り込み: どの部も 30KB 未満(台帳そのものは 300KB 超)・「進め方」が全部入る
 //   ⑥ 部の手引き: どの部も 1枚 5KB 未満
 //   ⑦ 新しい会話の立ち上がりで読む量が、どの部も 60KB 未満
@@ -93,7 +93,7 @@ for (const d of loadDepts()) {
   ok(s.prompt.includes(`docs/depts/${d.id}.md`) && s.prompt.includes(`node tools/ctx.js decisions ${d.id}`), `④ ${d.id}: 依頼文に手引きと decisions が入ること`);
   ok(s.prompt.includes('node tools/ctx.js gate') && /session_[0-9A-Za-z]+/.test(s.prompt) && s.prompt.includes('日本語'), `④ ${d.id}: 依頼文に gate・報告先・日本語が入ること`);
   ok(!/PRESIDENT_DECISIONS\.md を読/.test(s.prompt), `④ ${d.id}: 依頼文で台帳の全文を読ませないこと`);
-  ok(Buffer.byteLength(s.prompt) < 3000, `④ ${d.id}: 依頼文は 3KB 未満のはずが ${Buffer.byteLength(s.prompt)}`);
+  ok(Buffer.byteLength(s.prompt) < 4000, `④ ${d.id}: 依頼文は 4KB 未満のはずが ${Buffer.byteLength(s.prompt)}`);
   const c = collect(d, {});
   const bytes = Buffer.byteLength([...c.how, ...c.undated, ...c.recent].join('\n'));
   ok(bytes < 30000, `⑤ ${d.id}: 台帳の絞り込みは 30KB 未満のはずが ${bytes}(tools/team/depts.json の「語」が広すぎる)`);

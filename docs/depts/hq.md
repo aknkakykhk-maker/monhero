@@ -22,6 +22,7 @@ node tools/ctx.js brief               いまの状態
 
 - node tools/rules-index-check.js(決まり・手引きを触ったとき)
 - node tools/team/decision-lock-check.js(台帳の進め方・道具・フックを触ったとき)
+- node tools/team/requests-check.js(台帳・追跡表を触ったとき)
 - 公開の前: `node tools/ctx.js gate`(ミハリ確認が要るかを機械が判定。`run-checks.js --changed` の最後にも出る)
 
 ## 関係する決まり
@@ -31,8 +32,11 @@ node tools/ctx.js brief               いまの状態
 - 配り直しは node tools/ctx.js redeploy assistant-chat の出力をそのまま deploy_edge_function に渡す
 - SQL は消す・書き換える・既存の表を変えるものも含めて、窓口の判断で社長に聞かずに流す(2026-11-12 社長。CLAUDE.md ⑦)。保存データ・ランキングを壊さない決まりは変わらない
 - 社長が決めたら、その場で PRESIDENT_DECISIONS.md に1行足す。進め方の決めごとは「<日付> 進め方:」で書き、同じ PR で tools/team/decision-locks.json に錠を足す(docs/rules/DECISION_LOCKS.md)
+- 社長の頼みは追跡表に入れ、完了まで追う: 台帳に足したら node tools/ctx.js todo sync → 頼んだら todo set <id> 依頼済み --to <会話> → 報告を確かめて todo set <id> 完了 --pr <番号>。区切り・要約の前と社長に「できた」と言う前に node tools/ctx.js todo(未依頼・★ を残さない)
 - 見た目が変わる仕上げは、公開の前に必ず社長に止め絵を見せて OK をもらう(部へ「公開まで」と回すのは社長の OK のあと)
+- 止め絵は社長に見せる前に node tools/ctx.js still <絵…> --screen <語> で点検し、拡大の切り出しを開いて5つを見る: 言葉の途中の折れ・下の空き・数字のそろえ方・参考との比べ・台帳の決めごととの突き合わせ。外れたら部へ返す
 - モンサクは社長に見せる前・β公開の前に、1回の育成を始めから引退・合体まで通して遊ぶ点検を挟む(画面ごとに止め絵・プレイヤーの目で拾い、各部へ振り分け、直したらもう一度通す)
+- 社長に聞く前に台帳を語で引く(node tools/ctx.js asked <語>)。もう決まっていることは聞かずにそれで進める
 - 社長が寝る・離れるときは、相当重要なこと以外は窓口の判断で進める。同時に進める仕事は3〜5つ(優先順位は窓口が決める)。20時を過ぎたら作業の数を減らし、モンサクを優先する(モンヒロビートの新曲はいつも優先)
 - 表は画像(PNG)で見せる(送る前に拡大して確かめる。返事に表の記法が残るとフックが止める)。仕上がりは社長に報告する前にカゲあつくんに見てもらう
 - モンサクの画面を作る・直す前に docs/reference/line-mf/REF-MAP.md でその画面の行を引き、参考の実物(画像・動画のコマ)を自分の目で見てから作る(要約のメモだけで作らない)
@@ -46,5 +50,6 @@ node tools/ctx.js brief               いまの状態
 - [`docs/rules/REVIEW_GATE.md`](../../docs/rules/REVIEW_GATE.md)
 - [`docs/rules/EDGE_REDEPLOY.md`](../../docs/rules/EDGE_REDEPLOY.md)
 - [`docs/rules/NEW_DEPT_BRIEF.md`](../../docs/rules/NEW_DEPT_BRIEF.md)
+- [`docs/rules/REQUEST_TRACKING.md`](../../docs/rules/REQUEST_TRACKING.md)
 
 会話が長くなったら: `node tools/ctx.js handoff hq --write`(引き継ぎメモ → 新しい会話。[`SESSION_HANDOFF.md`](../rules/SESSION_HANDOFF.md))
