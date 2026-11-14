@@ -79,6 +79,20 @@ const CHANGELOG = [
     ],
   },
   {
+    // 新曲「Hopes and Dreams」(2026-11-15 社長「新曲」。通常版と short ver.・Lv.・ノーツ数は作ったあとの値)
+    date: "2026-11-15 00:48", type:'update', group:'rhythm', title:'新曲「Hopes and Dreams」を追加しました', status:'new',
+    image:'images/song-art/hopes-and-dreams.jpg?v=9cc45492d41a',
+    items:[
+      'モンヒロビートに「Hopes and Dreams」（3分3秒）と「Hopes and Dreams short ver.」（2分19秒）を追加しました。曲えらびからすぐ遊べます。',
+      '【通常版】レベルは EASY Lv.8 ／ NORMAL Lv.9 ／ HARD Lv.14 ／ EXPERT Lv.22 ／ MASTER Lv.26 ／ HELL Lv.42 です。',
+      '【通常版】ノーツ数は 323 ／ 374 ／ 515 ／ 608 ／ 700 ／ 840 です。',
+      '【short ver.】レベルは EASY Lv.7 ／ NORMAL Lv.9 ／ HARD Lv.13 ／ EXPERT Lv.22 ／ MASTER Lv.27 ／ HELL Lv.42 です。',
+      '【short ver.】ノーツ数は 197 ／ 222 ／ 316 ／ 393 ／ 435 ／ 523 です。',
+      'この曲は1曲ビートP500で買って遊びます。買うと通常版と short ver. の両方を、全部の難易度で遊べます。曲えらびの「🔒 500P」か、ビートP交換所の「曲」から買えます。',
+    ],
+    assistantNotice:{ id:'update_notice_hopes_and_dreams_v1', type:'content' },
+  },
+  {
     // 2026-11-14 社長(r1114-091): 助手ライフの友情が分かりにくい → A+B(文は社長「この文で」)
     date: "2026-11-15 00:39", type:'update', title:'助手ライフの「きずな」が分かりやすくなりました', status:'new', group:'assistant',
     items:[
