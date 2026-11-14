@@ -302,10 +302,10 @@
     juice: { name: 'ガロエ印の野菜ジュース', use: 'during', hpFull: true },                 // 体力を完全に回復
     powder: { name: '悪様散', use: 'during', cure: true, hp: 0.3 },               // 悪いようすを治して体力を回復
     license: { name: 'ブリーダーライセンス', use: 'during', ama: 10, fear: 10 },       // 甘え度 +10・恐れ度 +10(忠誠度 +20。2026-11-13 社長)
-    pack: { name: 'オイリーパック', use: 'during', gives: { oilyoil: 2, herb: 1 } }, // 中身はオイリーオイル2個と薬草(2026-11-13 社長: 案)
-    oil: { name: 'オイル', use: 'during', hp: 0.2 },                                 // 小さいオイル(体力 上限の20%。2026-11-13 社長)
-    oilyoil: { name: 'オイリーオイル', use: 'during', hp: 0.4 },                     // 大きいオイル(体力 上限の40%。2026-11-13 社長)
-    herb: { name: '薬草', use: 'during', stress: -20 },                          // 詰め合わせの中身(ストレス −20)
+    pack: { name: 'オイリーパック', use: 'during', gives: { oilyoil: 2, herb: 1 } }, // 中身はオイリーオイル（大）2個と夏美草(2026-11-13 社長: 案)
+    oil: { name: 'オイリーオイル（小）', use: 'during', hp: 0.2 },                     // 2026-11-14 社長「オイリーオイル(小)とかでいいよ」。 小さいオイル(体力 上限の20%。2026-11-13 社長)
+    oilyoil: { name: 'オイリーオイル（大）', use: 'during', hp: 0.4 },                 // 大きいオイル(体力 上限の40%。2026-11-13 社長)
+    herb: { name: '夏美草', use: 'during', stress: -20 },                          // 2026-11-14 社長「薬草は夏美草」。 詰め合わせの中身(ストレス −20)
     // 大会の賞品(2026-11-13 大会の第2版)。秘薬=そのターンの修行でその間合いの技を覚えやすい/実=そのターンの訓練でその能力が伸びやすい
     elixir0: { name: '零の秘薬', use: 'during', elixir: 0 }, elixir1: { name: '近の秘薬', use: 'during', elixir: 1 },
     elixir2: { name: '中の秘薬', use: 'during', elixir: 2 }, elixir3: { name: '遠の秘薬', use: 'during', elixir: 3 },
