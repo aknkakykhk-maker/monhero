@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 91969a2e40d1c2b9
+// source-sha256: 53d90acbdf865835
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -146797,6 +146797,10 @@ const ambwHitPct = (catalog, teams, side, frame, id) => {
   return Number.isFinite(v) ? v : null;
 };
 const AMBW_HIT_BASE = 75;
+const ambwHitOf = (hitPct, extra) => {
+  const eng = typeof ASSISTANT_MASMON_BATTLE !== 'undefined' ? ASSISTANT_MASMON_BATTLE : null;
+  return eng && typeof eng.techHitPreview === 'function' ? eng.techHitPreview(hitPct, extra) : AMBW_HIT_BASE + (Number(hitPct) || 0) + (Number(extra) || 0) * 100;
+};
 const ambwTechItems = (catalog, member, list) => {
   const sp = catalog && member && catalog.species && catalog.species[member.species];
   const byId = {};
@@ -146806,7 +146810,7 @@ const ambwTechItems = (catalog, member, list) => {
     return {
       ...mv,
       dist: Array.isArray(mv.dist) ? mv.dist : [],
-      hit: t ? AMBW_HIT_BASE + (Number(t.hit) || 0) : 0,
+      hit: t ? ambwHitOf(t.hit) : 0,
       power: t ? Number(t.power) || 0 : 0,
       ...(t ? {
         base: {
@@ -147554,7 +147558,7 @@ const AMBB_SET_OPTS = Object.freeze({
   }],
   rounds: [30, 50, 100, 150],
   dist: ['auto', 0, 1, 2, 3],
-  guts: [30, 50, 70, 100],
+  guts: [30, 50, 70, 99],
   fx: [{
     id: 'full',
     label: 'たっぷり'
@@ -147587,7 +147591,7 @@ const normalizeAmbbSet = raw => {
     team: x.team === 'ko' ? 'ko' : 'team',
     rounds: ambbInt(x.rounds, 10, 300, AMBB_SET_DEF.rounds),
     dist: Number.isInteger(x.dist) && x.dist >= 0 && x.dist <= 3 ? x.dist : 'auto',
-    guts: ambbInt(x.guts, 0, 100, AMBB_SET_DEF.guts),
+    guts: ambbInt(x.guts, 0, 99, AMBB_SET_DEF.guts),
     fx: x.fx === 'lite' ? 'lite' : 'full',
     balance: ['A', 'B', 'C'].includes(x.balance) ? x.balance : 'A',
     seedLock: x.seedLock === true,
@@ -147845,14 +147849,14 @@ const ambbUnitTechItems = (engine, catalog, unit) => {
       kind: t.kind,
       dist: t.dist,
       power: t.power,
-      hit: 75 + t.hit,
+      hit: ambwHitOf(t.hit),
       base: {
         power: t.power,
         hit: t.hit,
         gd: t.gd,
         crit: t.crit
       },
-      shown: Math.round((75 + t.hit + m * hitMax) * 10) / 10,
+      shown: ambwHitOf(t.hit, m / 100 * hitMax),
       guts: Math.round(t.guts * (1 - m / 100 * cut))
     };
   });
@@ -149535,8 +149539,8 @@ function AmbbSettings({
   }, React.createElement("span", null, "ガッツの初期値"), React.createElement("div", null, React.createElement("input", {
     type: "range",
     min: "0",
-    max: "100",
-    step: "5",
+    max: "99",
+    step: "1",
     value: set.guts,
     "data-ambb-tune-guts": true,
     onChange: ev => onSet({
@@ -173362,7 +173366,7 @@ function MsaStage({
     }), React.createElement(MsaGauge, {
       kind: "gt",
       value: gutsOf(sd),
-      max: 100,
+      max: typeof ASSISTANT_MASMON_BATTLE !== 'undefined' && ASSISTANT_MASMON_BATTLE.GUTS_MAX ? ASSISTANT_MASMON_BATTLE.GUTS_MAX : 99,
       delay: foe ? hitMs : 0,
       sf: sf,
       reduce: reduce
