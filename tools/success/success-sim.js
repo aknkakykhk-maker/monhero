@@ -20,6 +20,7 @@ const ONLY = opt('--only', '');
 const ISSA_PICK = opt('--issa', 'hp');
 const CALIBRATE = args.includes('--calibrate');
 const JSON_OUT = opt('--json', '');
+const CUPS_ALL = opt('--cups', '') === 'all'; // 出られる大会に毎ターン出る作戦(大会の並び・賞金を変えたときの、勝率・賞金ランク・ビートPをくらべる用)
 const NO_EVENTS = args.includes('--no-events'); // ランダムイベント(monhero-success-events.js)を起こさない(くらべる用)
 
 const loaded = load();
@@ -154,6 +155,10 @@ const chooseAction = (s, v) => {
   if (v.can.includes('retry')) return { kind: 'retry' };
   if (v.can.includes('clinic')) return { kind: 'clinic' };
   if (CUP_MODE && v.can.includes('cup') && s.hp >= s.hpMax * 0.5) { const c = v.cups.find(x => x.rival && x.entry.ok); if (c) return { kind: 'cup', id: c.id }; }
+  if (CUPS_ALL && v.can.includes('cup') && s.hp >= s.hpMax * 0.5) { // 勝てそうな(予想が「互角」以上の)出られる大会のうち、賞金がいちばん高い物
+    const ok = v.cups.filter(x => x.entry.ok && ['easy', 'good', 'even'].includes((SUC.forecastOf(s, x) || {}).key)).sort((x, y) => y.prize - x.prize)[0];
+    if (ok) return { kind: 'cup', id: ok.id };
+  }
   const ratio = s.hp / s.hpMax;
   // 修行: 体力が上限の70%以上あれば行く。行き先は素質と低い能力に合うところ・技は「強さ × 覚える率」の上から2つ
   // 修行はチケットの数だけ。札の倍率が低いとき(よく伸びる札が無い)か、いまより強い技を覚えられそうなときに行く
@@ -205,7 +210,7 @@ const playRun = (id, preset, aidLv, species, aid, rematch, carry, bag, rivals) =
       const bk = s.battle.kind; const rv = Boolean(s.battle.rival);
       const st = SUC.settle(s, wins, LAST_USE); s = st.state;
       s = runEvent(s, 'cup', { won: st.out.won, kind: bk });
-      if (bk === 'cup') { trace.cups = (trace.cups || 0) + 1; if (rv) { trace.rivalCups = (trace.rivalCups || 0) + 1; if (st.out.won) trace.rivalWins = (trace.rivalWins || 0) + 1; } }
+      if (bk === 'cup') { trace.cups = (trace.cups || 0) + 1; if (st.out.won) trace.cupWins = (trace.cupWins || 0) + 1; if (rv) { trace.rivalCups = (trace.rivalCups || 0) + 1; if (st.out.won) trace.rivalWins = (trace.rivalWins || 0) + 1; } }
       // 大会のあとのごはん(9種から並ぶ3つ): 忠誠60未満 → ごちそう、体力が少ない → ビタミン、賞金があれば いちばん高い能力の餌
       if (s.mealReady && !s.over) {
         const topK = Object.keys(s.stats).sort((x, y) => s.stats[y] - s.stats[x])[0]; const opts = typeof SUC.mealOpts === 'function' ? SUC.mealOpts(s) : Object.keys(SUC.MEALS); const can = (k) => !!SUC.MEALS[k] && opts.includes(k);
@@ -228,6 +233,7 @@ const playRun = (id, preset, aidLv, species, aid, rematch, carry, bag, rivals) =
     if (p.left === 1) trace.periodSums[p.key] = SUC.sumOf(s.stats);
     if (trace.loyal60 === null && SUC.loyalOf(s) >= 60) trace.loyal60 = s.turn;
     s = SUC.endTurn(s).state;
+    { const st = SUC.rankStepOf(s); trace.fameTurn = trace.fameTurn || {}; [8, 9, 10].forEach(k => { if (st >= k && trace.fameTurn[k] === undefined) trace.fameTurn[k] = s.turn; }); }
   }
   s = SUC.autoPts(s).state;
   return { s, ev: SUC.evaluate(s), trace };
@@ -243,6 +249,7 @@ const runVariant = (vr) => {
   const ranks = {}; const powers = []; const sums = []; const loy60 = []; const loys = []; const tags = [0, 0, 0, 0];
   const lg = { rematch: 0, meal: 0, shugyo: 0, learned: 0, taught: 0, train: 0, great: 0, fail: 0, sab: 0, events: 0, story: 0, cond: 0, rest: 0, play: 0, clinic: 0 };
   const per = {}; const bt = {}; let over = { done: 0, lost: 0, gameover: 0 }; let story3 = 0; const techN = []; let rivalCups = 0; let rivalWins = 0; let issaMet = 0; let issaWon = 0; let pts = 0;
+  const fameT = { 8: [], 9: [], 10: [] }; const fameFin = []; const beatFin = []; let cupN = 0; let cupW = 0;
   const endK = {}; const endPow = {}; // エンディング(2026-11-13)の割合と、その子の総合力
   EVT.n = 0; EVT.st = 0; EVT.kinds = {};
   for (let i = 0; i < RUNS; i++) {
@@ -250,6 +257,7 @@ const runVariant = (vr) => {
     const sp = SPECIES[i % SPECIES.length]; const aid = AIDS[i % AIDS.length];
     CUP_MODE = Boolean(vr.cups);
     const { s, ev, trace } = playRun(id, vr.key, vr.aidLv, sp, aid, vr.rematch, vr.carry, vr.bag, vr.cups);
+    cupN += trace.cups || 0; cupW += trace.cupWins || 0; fameFin.push(s.fameTotal || 0); beatFin.push(s.beatEarned || 0); [8, 9, 10].forEach(k => { if (trace.fameTurn && trace.fameTurn[k] !== undefined) fameT[k].push(trace.fameTurn[k]); });
     rivalCups += trace.rivalCups || 0; rivalWins += trace.rivalWins || 0;
     ranks[ev.rank] = (ranks[ev.rank] || 0) + 1; powers.push(ev.power); sums.push(ev.sum); loys.push(ev.loyal);
     if (trace.loyal60 !== null) loy60.push(trace.loyal60);
@@ -273,6 +281,7 @@ const runVariant = (vr) => {
     end: Object.fromEntries(Object.entries(over).map(([k, v]) => [k, pct(v, RUNS)])),
     ending: Object.fromEntries(['bad', 'good', 'super', 'none'].filter(k => endK[k]).map(k => [k, `${pct(endK[k], RUNS)}%(総合力 ${median(endPow[k])}・${SUC.gradeOf(median(endPow[k])).label})`])),
     randomEvents: { perRun: Math.round(EVT.n / RUNS * 10) / 10, statPerRun: Math.round(EVT.st / RUNS), kinds: Object.fromEntries(Object.entries(EVT.kinds).map(([k, v]) => [k, Math.round(v / RUNS * 10) / 10])) },
+    cupStat: CUPS_ALL ? { perRun: Math.round(cupN / RUNS * 10) / 10, winRate: pct(cupW, cupN), fameMedian: median(fameFin), beatMedian: median(beatFin), reach: Object.fromEntries([8, 9, 10].map(k => [k, `${pct(fameT[k].length, RUNS)}%・中央値 ${fameT[k].length ? median(fameT[k]) : '-'}ターン`])) } : null,
     battles: Object.fromEntries(Object.entries(bt).map(([k, [w, n]]) => [k, `${pct(w, n)}% (${n})`])),
     periodSumMedian: Object.fromEntries(Object.entries(per).map(([k, v]) => [k, median(v)])),
   };
@@ -317,6 +326,7 @@ for (const v of list) {
   console.log(`  タッグ 0/1/2/3+ 体のトレーニング: ${r.tagsPerRun.join(' / ')} 回・3話を見終わる子 ${r.story3}体・博士 ${r.issa}・技 平均 ${r.techs}つ`);
   console.log(`  1回あたり: ${Object.entries(r.perRun).map(([k, v]) => `${k} ${v}`).join('・')}`);
   console.log(`  大会の勝率: ${Object.entries(r.battles).map(([k, v]) => `${k} ${v}`).join('・')}`);
+  if (r.cupStat) console.log(`  【大会に毎ターン出る】1回の育成で ${r.cupStat.perRun}回・勝率 ${r.cupStat.winRate}%・賞金の合計 中央値 ${r.cupStat.fameMedian}G・ビートP 中央値 ${r.cupStat.beatMedian}・賞金の段 8(スター)に届く ${r.cupStat.reach[8]} / 9(チャンピオン) ${r.cupStat.reach[9]} / 10(ヒーロー) ${r.cupStat.reach[10]}`);
   if (r.rival) console.log(`  ライバルの大会: ${r.rival}`);
   if (!NO_EVENTS) console.log(`  ランダムイベント: 1回の育成で ${r.randomEvents.perRun}回(${Object.entries(r.randomEvents.kinds).map(([k, v]) => `${k} ${v}`).join('・')})・能力の合計 +${r.randomEvents.statPerRun}`);
   console.log(`  終わり方: ${Object.entries(r.end).map(([k, v]) => `${k} ${v}%`).join('・')}`);
