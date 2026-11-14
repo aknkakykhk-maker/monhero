@@ -20131,6 +20131,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         {/* 助手マスモンの対戦 β(2026-11-11)。開くのは assistantMasmonBattleOpen(部屋の「できること」・居場所「モンヒロバトル」・デバッグ設定) */}
         {typeof AssistantMasmonBattleHost==='function'&&<AssistantMasmonBattleHost/>}
         {typeof AssistantLifeSuccessHost==='function'&&<AssistantLifeSuccessHost onOpenChange={setSuccessScreenOpen} callNameOf={(id)=>assistantCallName(breederName,assistantBondLevelOf(normalizeAssistantBond(assistantBondsRef.current[id]).points),assistantCallStyles[id]||null,id)} bondLvOf={(id)=>assistantBondLevelOf(normalizeAssistantBond(assistantBondsRef.current[id]).points)}/>}
+        {/* M/B管理 から開くマスモンボックス(モンサク) */}
+        {typeof MonheroSuccessBoxHost==='function'&&<MonheroSuccessBoxHost onOpenChange={setSuccessScreenOpen} callNameOf={(id)=>assistantCallName(breederName,assistantBondLevelOf(normalizeAssistantBond(assistantBondsRef.current[id]).points),assistantCallStyles[id]||null,id)} bondLvOf={(id)=>assistantBondLevelOf(normalizeAssistantBond(assistantBondsRef.current[id]).points)}/>}
         {assistantChatOpen&&activeAssistant&&(()=>{
           // 助手ライフの部屋から開いたときは、その助手(選んでいない助手でもよい)。仲良し度もその助手のぶん(社長 ❿A)
           const chatWho=(assistantChatWith&&ASSISTANT_LIST.find(a=>a.id===assistantChatWith.id))||activeAssistant;
@@ -20277,6 +20279,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 {managementLink(<Star size={18}/>,'マスモン一覧(バトル)','マスモン＝自分で育てたモンスター。絆・状態を見る',()=>setGameState('MASU_MONS'))}
                 {/* モンヒロビートのマルチに呼んだマスモンの育ち具合(ビートLv)。バトルの育ちとは別(docs/spec/RHYTHM_BUDDY.md) */}
                 {RELEASE_FLAGS.rhythmMulti===true&&managementLink(<Activity size={18}/>,'マスモン一覧(モンヒロビート)','マルチに呼んだマスモンのビートLv・調子・得意な曲を見る',()=>openMasuBeat('MB_MANAGEMENT'),{'data-mb-masu-beat':true})}
+                {/* モンサク(モンヒロサクセス)で育てたマスモン。公開の印 monheroSuccess が偽のあいだは出さない(2026-11-14 社長) */}
+                {typeof msxOpenBox==='function'&&typeof msxReleased==='function'&&msxReleased()&&managementLink(<Star size={18}/>,'マスモンボックス(モンサク)','モンサクで育てたマスモン。詳細・ハート・お別れ',()=>msxOpenBox(),{'data-mb-monsuc-box':true})}
                 {managementLink(<BookOpen size={18}/>,'モンスター図鑑','出会ったモンスターと血統をふり返る',()=>{setDexLineageFilter('all');setGameState('MONSTER_DEX');})}
                 {managementLink(<Users size={18}/>,'モンスター編成','バトルへ連れていくモンスターを決める',()=>{setDraftMonsterRoster(monsterRosterIds);setDraftTeachingRoster(normalizeTeachingRoster(teachingRosterIds,unlockedTeachingIds));setRosterTab('monster');setGameState('ROSTER');})}
                 {managementLink(<Flag size={18}/>,'放牧設定','HOMEに出しておくマスモンを選ぶ',openPastureSettings)}
