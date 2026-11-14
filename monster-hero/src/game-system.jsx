@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: a0553db17fda5ae4
+// generated-sha256: 8ac3e2429e95faf6
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -135452,7 +135452,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             )}
             {!systemRankTab&&<div className={`relative z-[1] flex min-h-0 flex-1 flex-col overflow-y-auto landscape:flex-row landscape:overflow-hidden ${assistShown?'':'portrait:justify-center'}`}>
               <ModeSelectAssistantPanel assistant={battleSelectAssistant} showArt={battleSelectAssist.modeSelectArt} showComment={battleSelectAssist.modeSelectComment} onToggle={toggleBattleSelectAssist}/>
-              <div className="shrink-0 space-y-2 p-3 landscape:flex landscape:min-h-0 landscape:flex-1 landscape:shrink landscape:flex-col landscape:justify-center landscape:overflow-y-auto landscape:py-2">
+              <div className="shrink-0 space-y-2 p-3 landscape:flex landscape:min-h-0 landscape:flex-1 landscape:shrink landscape:flex-col landscape:justify-center landscape:[justify-content:safe_center] landscape:overflow-y-auto landscape:py-2">
                 {!assistShown&&battleSelectAssistant&&<ModeSelectAssistToggles assistant={battleSelectAssistant} showArt={battleSelectAssist.modeSelectArt} showComment={battleSelectAssist.modeSelectComment} onToggle={toggleBattleSelectAssist} cls="justify-end" withLabel/>}
                 <div data-battle-systems={systems.length} className={`flex flex-col gap-2${battleTutorialSpotClass('systemCards')}`}>
                   {systems.map((sys,idx)=>{

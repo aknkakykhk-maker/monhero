@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c5dba9e798e8720f
+// source-sha256: f8e7e92d4326acba
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -246932,7 +246932,7 @@ function MonsterHeroGame() {
         showComment: battleSelectAssist.modeSelectComment,
         onToggle: toggleBattleSelectAssist
       }), React.createElement("div", {
-        className: "shrink-0 space-y-2 p-3 landscape:flex landscape:min-h-0 landscape:flex-1 landscape:shrink landscape:flex-col landscape:justify-center landscape:overflow-y-auto landscape:py-2"
+        className: "shrink-0 space-y-2 p-3 landscape:flex landscape:min-h-0 landscape:flex-1 landscape:shrink landscape:flex-col landscape:justify-center landscape:[justify-content:safe_center] landscape:overflow-y-auto landscape:py-2"
       }, !assistShown && battleSelectAssistant && React.createElement(ModeSelectAssistToggles, {
         assistant: battleSelectAssistant,
         showArt: battleSelectAssist.modeSelectArt,
