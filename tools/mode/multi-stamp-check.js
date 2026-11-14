@@ -226,6 +226,29 @@ const FAKE_WS = () => {
       await B.waitForTimeout(600);
       await B.screenshot({ path: path.join(SHOT, 'real-room-bubble-yoko.png') });
     }
+    // 席の札に出るスタンプが、札の中に収まる(下の言葉が切れない・横では札からはみ出さない。2026-11-15 r1115-025)
+    const fitOf = () => B.evaluate(() => {
+      const bub = document.querySelector('[data-rhythm-multi-stamp-bubble]'); if (!bub) return { none: true };
+      const card = bub.parentElement.getBoundingClientRect(); const box = bub.firstElementChild.getBoundingClientRect();
+      const img = bub.querySelector('img').getBoundingClientRect(); const word = bub.querySelector('b').getBoundingClientRect();
+      const bad = [];
+      if (box.bottom > card.bottom + 1) bad.push(`白い箱が札の下へ ${Math.round(box.bottom - card.bottom)}px`);
+      if (box.top < card.top - 1) bad.push(`白い箱が札の上へ ${Math.round(card.top - box.top)}px`);
+      if (word.bottom > box.bottom + 0.5 || word.height < 8) bad.push(`言葉が切れている(高さ${Math.round(word.height)}px)`);
+      if (img.width < 14) bad.push(`絵が小さすぎる(${Math.round(img.width)}px)`);
+      return { bad: bad.join(' / '), card: `${Math.round(card.width)}x${Math.round(card.height)}`, img: Math.round(img.width) };
+    });
+    let slotNo = 3;
+    for (const [label, w, h] of [['縦390', 390, 844], ['縦320', 320, 568], ['横844', 844, 390]]) {
+      await B.setViewportSize({ width: w, height: h });
+      await A.waitForTimeout(2300);
+      await A.locator(`[data-multi-stamp-send="${slotNo++}"]`).click().catch(() => {});
+      await B.waitForSelector('[data-rhythm-multi-stamp-bubble] img', { timeout: 4000 }).catch(() => {});
+      await B.waitForTimeout(300);
+      const fit = await fitOf();
+      check(`ビート: 席の札のスタンプが札に収まる(${label})`, !fit.none && !fit.bad, fit.none ? '吹き出しが出ない' : `${fit.bad || 'OK'} / 札${fit.card}・絵${fit.img}px`);
+    }
+    await B.setViewportSize({ width: 390, height: 844 });
     // 同じスタンプは続けて3回まで
     const same = await A.evaluate(async () => {
       const slot = MULTI_STAMP.get().slots[0];

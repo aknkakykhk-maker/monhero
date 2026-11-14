@@ -134,13 +134,20 @@ function MsxR3Cup({ run, setRun, v, ev, onBack, onActed }) {
   // 受付(月の大会を選ぶ)のあいだは育成中の曲のまま(2026-11-14 社長)。大会の曲 cupPre は組み合わせ表に入ってから(MsxR3Battle)
   useEffect(() => { if (typeof SuccessSound !== 'undefined') SuccessSound.se('cupEntry'); }, []);
   const nOk = cupsNow.filter((c) => c.entry && c.entry.ok).length;
-  const openLine = msxR3Line('turn.cup.open', run, { cup: cur ? msxR3CupName(cur.sys, cur.name) : '' }, nOk ? `「今月は ${nOk}つ 出られるよ! 出ると1ターン使うから、トレーニングとどっちにするか考えてね」` : '「今月は出られる大会がないみたい。トレーニングでじっくり力をつけよ!」');
+  // 受付のひとこと: 「上の星が開いた」の台本(turn.cup.open)は毎月は合わないので使わない。出られる数に合わせて、月ごとに言い回しを替える(2026-11-14 点検 ①-14: 毎回同じ台詞)
+  const openTexts = nOk ? [
+    `「今月は ${nOk}つ 出られるよ! 出ると1ターン使うから、トレーニングとどっちにするか考えてね」`,
+    `「出られる大会が ${nOk}つ あるよ。賞品もチェックしてみて!」`,
+    `「${cur ? msxR3CupName(cur.sys, cur.name) : '大会'}、気になるね。体力は大丈夫?」`,
+    `「大会は1ターン使うよ。調子がいいなら行ってみよ!」`,
+  ] : ['「今月は出られる大会がないみたい。トレーニングでじっくり力をつけよ!」', '「出られる大会が今月は無いよ。次の月の予定も見てみてね」'];
+  const openLine = { t: msxR3Q(openTexts[Math.abs(Number(s.turn) || 0) % openTexts.length]), e: null };
   const rankStep = typeof SUC.rankStepOf === 'function' ? SUC.rankStepOf(s) : 0; const rank = rankStep ? { name: SUC.rankNameOf(rankStep) } : null; // 賞金ランク10段(2026-11-14)
   const kindOf = (c) => (c.scenario ? 'シナリオ' : c.ex ? (MSX_R3_CUP_GRADE[c.grade] || '') : (SUC.CUP_SYS[c.sys] || {}).stat ? '自慢' : (SUC.CUP_SYS[c.sys] || {}).dist !== undefined ? '間合い' : (SUC.CUP_SYS[c.sys] || {}).type ? 'タイプ' : ['spring', 'summer', 'autumn', 'winter'].includes(c.sys) ? '四季' : 'ふつう');
   const wc = win ? cups.find((c) => c.id === win) : null;
   const wcOk = !!(wc && now && wc.entry && wc.entry.ok);
   const body = (<>
-    <MsxBand s={s} v={v} ev={ev} use={20}/>
+    <MsxBand s={s} v={v} ev={ev}/>
     <div className="v-scene low" style={{ flex: '0 0 auto', minHeight: 128 }}><img className="bg" src="images/story-bg/monhero_town.jpg" alt=""/><div className="sh"/>
       <img src={msxBody(s.aid, 'happy')} alt="" style={{ position: 'absolute', left: '-2%', bottom: '-98%', height: '190%' }}/>
       <div className="v-ev-h"><small>{cal.year}年目 {cal.month}月・{v.period.name}</small>🏆 大会の受付</div>

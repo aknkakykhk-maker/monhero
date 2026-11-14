@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 205b192d6d1aaa00
+// source-sha256: a06d4b14bd6bc010
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -96290,17 +96290,17 @@ function RhythmMultiChatBubble({
   if (stamp) return React.createElement("span", {
     "data-rhythm-multi-chat-bubble": true,
     "data-rhythm-multi-stamp-bubble": true,
-    className: "pointer-events-none absolute inset-x-0.5 bottom-0.5 top-3 z-40 flex items-start justify-center overflow-hidden"
+    className: "pointer-events-none absolute inset-x-0.5 bottom-0.5 top-3 z-40 flex items-start justify-center overflow-hidden landscape:top-0.5 [[data-mh-view-rotation=true]_&]:top-0.5 [container-type:size]"
   }, React.createElement("span", {
-    className: "flex max-h-full max-w-full flex-col items-center rounded-xl bg-white p-0.5 shadow-lg"
+    className: "mh-seat-stamp flex max-h-full max-w-full items-center rounded-xl bg-white p-0.5 shadow-lg"
   }, React.createElement("img", {
     src: multiStampFaceSrc(stamp.sf) || undefined,
     alt: "",
     draggable: false,
     decoding: "async",
-    className: "block aspect-square min-h-0 w-14 max-w-full shrink rounded-lg object-cover"
+    className: "mh-seat-stamp-img block shrink-0 rounded-lg object-cover"
   }), React.createElement("b", {
-    className: "block max-w-full truncate text-[10px] font-black leading-tight text-slate-900"
+    className: "mh-seat-stamp-word block min-w-0 truncate text-[10px] font-black leading-tight text-slate-900"
   }, text)));
   return React.createElement("span", {
     "data-rhythm-multi-chat-bubble": true,
@@ -99409,6 +99409,41 @@ function RhythmMultiScreenBody({
     }
     if (!inRoom && !searching && onBack) onBack();
   }, [inRoom, !!searching]);
+  const [chatVV, setChatVV] = React.useState(null);
+  React.useEffect(() => {
+    if (!chatOpen) {
+      setChatVV(null);
+      return undefined;
+    }
+    const vv = typeof window !== 'undefined' ? window.visualViewport : null;
+    if (!vv || typeof vv.addEventListener !== 'function') return undefined;
+    const update = () => {
+      const rotated = !!document.querySelector('[data-mh-view-rotation="true"]');
+      const portrait = window.innerHeight >= window.innerWidth;
+      const lost = window.innerHeight - vv.height;
+      setChatVV(!rotated && portrait && Number.isFinite(lost) && lost > 100 ? {
+        top: Math.max(0, vv.offsetTop || 0),
+        left: Math.max(0, vv.offsetLeft || 0),
+        width: vv.width,
+        height: vv.height
+      } : null);
+    };
+    update();
+    const toBottom = () => requestAnimationFrame(() => {
+      const l = document.querySelector('[data-rhythm-multi-chat-list]');
+      if (l) l.scrollTop = l.scrollHeight;
+    });
+    const onResize = () => {
+      update();
+      toBottom();
+    };
+    vv.addEventListener('resize', onResize);
+    vv.addEventListener('scroll', update);
+    return () => {
+      vv.removeEventListener('resize', onResize);
+      vv.removeEventListener('scroll', update);
+    };
+  }, [chatOpen]);
   const shareCode = async () => {
     if (!view) return;
     const url = mhRoomLinkUrl('beat', view.code);
@@ -99709,15 +99744,36 @@ function RhythmMultiScreenBody({
   }, "✕")), inviteListBody));
   const askBuddy = view ? (view.myCpus || []).map(c => view.members.find(m => m.id === c.id)).find(m => m && !m.as) : null;
   const askBuddyName = askBuddy ? askBuddy.name || 'マスモン' : '';
-  const chatSheet = chatOpen && view && React.createElement("div", {
-    className: "absolute inset-0 z-[80000]"
-  }, React.createElement("button", {
+  const chatSheet = chatOpen && view && React.createElement("div", _extends({
+    "data-rhythm-multi-chat-layer": true
+  }, chatVV ? {
+    'data-kb': '1',
+    ...(chatVV.height < 420 ? {
+      'data-kb-small': '1'
+    } : {})
+  } : {}, {
+    className: "absolute inset-0 z-[80000]",
+    style: chatVV ? {
+      position: 'fixed',
+      top: chatVV.top,
+      left: chatVV.left,
+      width: chatVV.width,
+      height: chatVV.height,
+      right: 'auto',
+      bottom: 'auto'
+    } : undefined
+  }), React.createElement("button", {
     type: "button",
     "aria-label": "チャットを閉じる",
     className: "absolute inset-0 bg-slate-950/55",
     onClick: () => setChatOpen(false)
   }), React.createElement("div", {
     "data-rhythm-multi-chat-sheet": true,
+    style: chatVV ? {
+      height: '100%',
+      maxHeight: '100%',
+      borderRadius: 0
+    } : undefined,
     className: "absolute inset-x-0 bottom-0 flex h-[80%] flex-col rounded-t-2xl border-t border-cyan-400/40 bg-slate-900 p-2.5 shadow-2xl landscape:inset-y-0 [[data-mh-view-rotation=true]_&]:inset-y-0 landscape:left-auto [[data-mh-view-rotation=true]_&]:left-auto landscape:right-0 [[data-mh-view-rotation=true]_&]:right-0 landscape:h-full [[data-mh-view-rotation=true]_&]:h-full landscape:w-[50%] [[data-mh-view-rotation=true]_&]:w-[50%] landscape:rounded-none [[data-mh-view-rotation=true]_&]:rounded-none landscape:rounded-l-2xl [[data-mh-view-rotation=true]_&]:rounded-l-2xl landscape:border-l [[data-mh-view-rotation=true]_&]:border-l landscape:border-t-0 [[data-mh-view-rotation=true]_&]:border-t-0 landscape:pt-[calc(.6rem+var(--mh-sa-top))] [[data-mh-view-rotation=true]_&]:pt-[calc(.6rem+var(--mh-sa-top))]",
     style: {
       paddingBottom: 'calc(.6rem + var(--mh-sa-bottom))'
@@ -100558,11 +100614,11 @@ function RhythmMultiScreenBody({
       className: "landscape:hidden"
     }, buddyCallButton()), React.createElement("div", {
       "data-rhythm-multi-exit-row": true,
-      className: "space-y-2 landscape:grid landscape:grid-flow-col landscape:auto-cols-fr landscape:gap-2 landscape:space-y-0"
+      className: "space-y-2 landscape:grid landscape:grid-cols-2 landscape:gap-2 landscape:space-y-0"
     }, view && rankingWideButton('w-full'), view && !publicRoom && !view.full && onStepAway && React.createElement("button", {
       "data-rhythm-multi-step-away": true,
       type: "button",
-      className: `${btn} w-full bg-cyan-800`,
+      className: `${btn} w-full bg-cyan-800 landscape:order-first landscape:col-span-2`,
       style: JA_WRAP_STYLE,
       onClick: onStepAway
     }, jaWrap('部屋はそのままで、ほかの画面へ')), React.createElement("button", {
@@ -101168,13 +101224,16 @@ function RhythmMultiScreenBody({
       style: JA_WRAP_STYLE
     }, jaWrap('全員が選ぶか時間になると、全員の選曲からシャッフルで1曲が決まります。'), !room.deadline && jaWrap('いまは人があなたひとりなので、制限時間はありません。ゆっくり選べます。')), isHost && selectTimeButton('min-[481px]:hidden', true)),
     footer: () => React.createElement("div", {
-      className: "grid grid-cols-3 gap-1.5"
-    }, rankingWideButton(), React.createElement("button", {
+      className: "mh-multi-select-footer-box"
+    }, React.createElement("div", {
+      "data-rhythm-multi-select-footer": true,
+      className: "mh-multi-select-footer"
+    }, rankingWideButton('whitespace-nowrap'), React.createElement("button", {
       "data-rhythm-multi-omakase": true,
       type: "button",
       "aria-pressed": myPick === RHYTHM_MULTI_OMAKASE,
       onClick: () => RHYTHM_MULTI.pick(RHYTHM_MULTI_OMAKASE),
-      className: `flex min-h-[44px] flex-col items-center justify-center rounded-xl border px-1 text-[11px] font-black leading-tight ${myPick === RHYTHM_MULTI_OMAKASE ? 'border-amber-300 bg-amber-600/80 text-white' : 'border-white/15 bg-slate-900/80 text-slate-300'}`
+      className: `mh-multi-select-omakase flex min-h-[44px] flex-col items-center justify-center rounded-xl border px-1 text-[11px] font-black leading-tight landscape:min-h-[34px] ${myPick === RHYTHM_MULTI_OMAKASE ? 'border-amber-300 bg-amber-600/80 text-white' : 'border-white/15 bg-slate-900/80 text-slate-300'}`
     }, "🔀 おまかせ", myPick === RHYTHM_MULTI_OMAKASE ? '(選曲済)' : '', React.createElement("small", {
       "data-rhythm-multi-omakase-note": true,
       className: "block text-[8px] font-bold opacity-80"
@@ -101182,8 +101241,8 @@ function RhythmMultiScreenBody({
       "data-rhythm-multi-leave": true,
       type: "button",
       onClick: leaveRoom,
-      className: "flex min-h-[44px] items-center justify-center rounded-xl border border-white/15 bg-slate-900/80 px-1 text-[11px] font-black text-slate-300"
-    }, "ルームを出る"))
+      className: "flex min-h-[44px] items-center justify-center whitespace-nowrap rounded-xl border border-white/15 bg-slate-900/80 px-1 text-[11px] font-black text-slate-300 landscape:min-h-[34px]"
+    }, "ルームを出る")))
   }), chatSheet, inviteSheetLayer, rankingLayer, buddyInfoLayer, buddySheetLayer, countdownLayer);
 }
 const RHYTHM_BUDDY_STORE = (() => {
@@ -122318,7 +122377,9 @@ function AssistantLifeProfilePage({
   bondLevelOf = null,
   land = false,
   onMasmon = null,
-  viewOnly = false
+  viewOnly = false,
+  ownerName = '',
+  tierOf = null
 }) {
   const giftStAll = typeof useAssistantLifeGiftState === 'function' ? useAssistantLifeGiftState() : null;
   const giftSt = viewOnly ? null : giftStAll;
@@ -122389,7 +122450,11 @@ function AssistantLifeProfilePage({
     className: "text-[16px] font-black text-white"
   }, "📖 助手紹介"), React.createElement("p", {
     className: "text-[11px] font-bold text-indigo-200"
-  }, "選ぶと、その助手のことが分かります")), React.createElement("span", {
+  }, viewOnly && ownerName ? React.createElement(React.Fragment, null, React.createElement("span", {
+    className: "whitespace-nowrap"
+  }, ownerName, "さんが会った助手です。"), " ", React.createElement("span", {
+    className: "whitespace-nowrap"
+  }, "選ぶと人となりが分かります")) : '選ぶと、その助手のことが分かります')), React.createElement("span", {
     "data-assistant-life-profile-count": `${metList.length}/${roster.length}`,
     className: "shrink-0 whitespace-nowrap rounded-full border border-white/15 bg-slate-950/80 px-2.5 py-1 text-[11px] font-black text-slate-100"
   }, "会った助手 ", metList.length, "/", roster.length)), React.createElement("div", {
@@ -122439,7 +122504,10 @@ function AssistantLifeProfilePage({
       style: typeof JA_LABEL_STYLE !== 'undefined' ? JA_LABEL_STYLE : undefined
     }, typeof jaWrap === 'function' ? jaWrap(w.tagline || '') : w.tagline || ''), b && React.createElement("span", {
       className: "mt-1 inline-block rounded-full bg-slate-950/80 px-2 py-0.5 text-[10.5px] font-black text-pink-100"
-    }, "💗 Lv", b.lv));
+    }, "💗 Lv", b.lv), viewOnly && typeof tierOf === 'function' && tierOf(w.id) && React.createElement("span", {
+      "data-assistant-life-profile-tier": w.id,
+      className: "mt-1 inline-block whitespace-nowrap rounded-full bg-slate-950/80 px-2 py-0.5 text-[10.5px] font-black text-pink-100"
+    }, "💗 ", tierOf(w.id)));
   })), React.createElement("p", {
     className: "mt-2 text-[10.5px] font-bold leading-snug text-slate-300"
   }, viewOnly ? metList.length < roster.length ? 'まだ会っていない助手は、この家の人も会うと紹介が開きます。' : '' : React.createElement(React.Fragment, null, "💗 好きなものは、贈ると分かって紹介に残ります。", metList.length < roster.length ? 'まだ会っていない助手は、お話で出会うと紹介が開きます。' : '')), openId && (() => {
@@ -161930,6 +161998,19 @@ const alfDiaryShare = n => {
     return [];
   }
 };
+const ALF_BOND_TIER_NAMES = Object.freeze(['初めのころ', 'なかよし', 'ずっと仲良し']);
+const alfBondTierOfLv = lv => !Number.isFinite(lv) || lv < 3 ? 0 : lv < 6 ? 1 : 2;
+const alfBondTiers = ids => {
+  const out = {};
+  if (typeof assistantLifeProfileBond !== 'function') return out;
+  for (const id of (ids || []).filter(alfValidId)) {
+    try {
+      const b = assistantLifeProfileBond(id);
+      if (b && Number.isFinite(b.lv)) out[id] = alfBondTierOfLv(b.lv);
+    } catch {}
+  }
+  return out;
+};
 const alfBuildMore = ids => {
   const fu = {};
   for (const id of (ids || []).filter(alfValidId)) {
@@ -161950,10 +162031,14 @@ const alfBuildMore = ids => {
     } catch {}
   }
   const dy = alfDiaryShare(8);
+  const bd = alfBondTiers(ids);
   return {
     v: 1,
     fu,
-    dy
+    dy,
+    ...(Object.keys(bd).length ? {
+      bd
+    } : {})
   };
 };
 const ALF_MORE_FIT = 5600;
@@ -162191,6 +162276,11 @@ const assistantLifeFriendNormalizeMore = raw => {
     if (Number.isInteger(k) && k > one.length && k <= 8) mn[id] = k;
   }
   const fv = typeof albNormalizeFavShare === 'function' ? albNormalizeFavShare(raw.fv) : null;
+  const bd = {};
+  if (raw.bd && typeof raw.bd === 'object' && !Array.isArray(raw.bd)) for (const id of ALF_IDS) {
+    const t = raw.bd[id];
+    if (t === 0 || t === 1 || t === 2) bd[id] = t;
+  }
   return {
     v: 1,
     fu,
@@ -162200,6 +162290,9 @@ const assistantLifeFriendNormalizeMore = raw => {
     mn,
     ...(fv ? {
       fv
+    } : {}),
+    ...(Object.keys(bd).length ? {
+      bd
     } : {})
   };
 };
@@ -163994,7 +164087,7 @@ function AlfFriendHouseView({
     act: a.k
   })) : [];
   const diaryItems = [...actItems, ...(more && more.dy.length ? more.dy : h.dy || [])].slice(0, 10);
-  const vtabs = [['house', '🏡', '家'], ...(typeof AssistantLifeTownMap === 'function' && typeof assistantLifeMapReadHome === 'function' ? [['where', '🗺', '町']] : []), ...(typeof AssistantLifeProfilePage === 'function' && typeof assistantLifeProfileOn === 'function' && assistantLifeProfileOn() ? [['profile', '📖', '紹介']] : [])];
+  const vtabs = [['house', '🏡', '家'], ...(typeof AssistantLifeTownMap === 'function' && typeof assistantLifeMapReadHome === 'function' ? [['where', '🗺', '町']] : []), ...(typeof AlfBondView === 'function' && typeof albEnabled === 'function' && albEnabled() ? [['bond', '🤝', 'きずな']] : []), ...(typeof AssistantLifeProfilePage === 'function' && typeof assistantLifeProfileOn === 'function' && assistantLifeProfileOn() ? [['profile', '📖', '紹介']] : [])];
   const goTab = k => {
     setRoomId(null);
     setTalk(null);
@@ -164003,7 +164096,20 @@ function AlfFriendHouseView({
     setBoardOpen(false);
     setVtab(k);
   };
-  const vIcons = flat => vtabs.length > 1 ? React.createElement("div", {
+  const vIcons = flat => vtabs.length > 1 && land && !flat ? React.createElement("div", {
+    className: "flex min-w-0 flex-1 gap-1",
+    role: "tablist",
+    "data-alf-vtabs": true
+  }, vtabs.map(([k, ic, label]) => React.createElement("button", {
+    key: k,
+    type: "button",
+    role: "tab",
+    "aria-selected": vtab === k,
+    "data-alf-vtab": k,
+    className: `min-h-[30px] flex-1 whitespace-nowrap rounded-xl border px-1 text-[11px] font-black ${vtab === k ? 'border-pink-300 bg-pink-900/50 text-white' : 'border-white/20 bg-slate-800/80 text-slate-200'}`,
+    "aria-label": label,
+    onClick: () => goTab(k)
+  }, ic, vw >= 800 ? ` ${label}` : ''))) : vtabs.length > 1 ? React.createElement("div", {
     className: "mhl-icons",
     role: "tablist",
     "data-alf-vtabs": true,
@@ -164081,13 +164187,22 @@ function AlfFriendHouseView({
   }, "👀 見る専用です")), vIcons(false)), React.createElement("div", {
     className: "relative min-h-0 flex-1 overflow-y-auto",
     "data-alf-vview-body": true
-  }, vtab === 'profile' && React.createElement(AssistantLifeProfilePage, {
+  }, vtab === 'bond' && React.createElement(AlfBondView, {
+    friend: friend,
+    more: more,
+    land: land
+  }), vtab === 'profile' && React.createElement(AssistantLifeProfilePage, {
     metIds: metIds,
     viewOnly: true,
-    land: land
+    land: land,
+    ownerName: friend.name,
+    tierOf: id => {
+      const t = more && more.bd ? more.bd[id] : undefined;
+      return t === 0 || t === 1 || t === 2 ? ALF_BOND_TIER_NAMES[t] : null;
+    }
   })))) : null;
   const header = React.createElement("div", {
-    className: "mhl-hdr flex flex-wrap items-start gap-2",
+    className: `mhl-hdr flex items-start gap-2${land ? '' : ' flex-wrap'}`,
     style: {
       paddingTop: land ? 6 : 'calc(8px + env(safe-area-inset-top))'
     }
@@ -164116,7 +164231,7 @@ function AlfFriendHouseView({
   }, friend.name, "さんが最後に開いたとき")), now && now.online && React.createElement("p", {
     className: `mt-0.5 inline-block max-w-full truncate rounded-full px-2 py-0.5 text-[10.5px] font-black ${now.auto ? 'bg-amber-950/80 text-amber-200' : 'bg-emerald-950/70 text-emerald-200'}`,
     "data-alf-visit-now": true
-  }, "いま ", land ? now.long || now.text : now.text)), vIcons(false));
+  }, "いま ", land ? now.long || now.text : now.text)), land ? null : vIcons(false));
   const tiles = React.createElement("div", {
     "data-alf-visit-acts": true
   }, typeof AlfBondBar === 'function' && React.createElement(AlfBondBar, {
@@ -164607,12 +164722,19 @@ function AlfFriendHouseView({
       flex: '0 0 64%'
     }
   }, houseView), React.createElement("div", {
-    className: "flex min-w-0 flex-1 flex-col gap-1.5 overflow-y-auto bg-gradient-to-b from-[#1a0f2e] to-[#0b1020] px-2.5 pb-2",
+    className: "relative flex min-w-0 flex-1 flex-col gap-1.5 overflow-y-auto bg-gradient-to-b from-[#1a0f2e] to-[#0b1020] px-2.5 pb-2",
     style: {
       paddingTop: 88
     },
     "data-alf-visit-side": true
-  }, header, board, tiles)) : React.createElement(React.Fragment, null, header, React.createElement("div", {
+  }, React.createElement("div", {
+    className: "absolute z-[3] flex",
+    style: {
+      left: 10,
+      right: 10,
+      top: 6
+    }
+  }, vIcons(false)), header, board, tiles)) : React.createElement(React.Fragment, null, header, React.createElement("div", {
     className: "mhl-body"
   }, houseView), React.createElement("div", {
     className: "relative z-[3] bg-gradient-to-t from-[#0b1020] via-[#0b1020ee] to-transparent px-3 pt-1.5",
@@ -165811,6 +165933,89 @@ function AlfBondSheet({
     className: "mhl-btn mt-3 w-full bg-slate-700",
     onClick: onClose
   }, "閉じる")));
+}
+function AlfBondView({
+  friend,
+  more,
+  land = false
+}) {
+  const s = useAssistantLifeFriendState();
+  React.useEffect(() => {
+    if (albEnabled()) void albLoad();
+  }, []);
+  if (!albEnabled() || !s.bond) return null;
+  const x = albOne(s.bond, friend.id);
+  const nx = albNext(x.st);
+  const fv = more && more.fv ? more.fv : null;
+  const bd = more && more.bd ? more.bd : null;
+  const ids = (friend.house && friend.house.ids || []).filter(id => ALF_IDS.includes(id));
+  const card = 'rounded-2xl border border-white/10 bg-slate-800/90 px-3 py-2.5';
+  const sec = 'mt-3 mb-1 text-[12px] font-black text-amber-200';
+  const names = typeof ALF_BOND_TIER_NAMES !== 'undefined' ? ALF_BOND_TIER_NAMES : ['初めのころ', 'なかよし', 'ずっと仲良し'];
+  return React.createElement("div", {
+    className: "px-3 pb-4 pt-2",
+    "data-alf-bond-view": true
+  }, React.createElement("div", {
+    className: card,
+    "data-alf-bond-view-friend": true
+  }, React.createElement("p", {
+    className: "text-[15px] font-black text-pink-100"
+  }, "🤝 ", friend.name, "さんとの友情 Lv", albLv(x.st)), React.createElement("p", {
+    className: "text-[11px] font-bold text-slate-200"
+  }, React.createElement("span", {
+    className: "whitespace-nowrap"
+  }, "「", albTitle(x.st), "」"), " ", React.createElement("span", {
+    className: "whitespace-nowrap"
+  }, "スタンプ ", x.st, "個"), nx ? React.createElement(React.Fragment, null, " ", React.createElement("span", {
+    className: "whitespace-nowrap"
+  }, "あと", nx.need, "個で「", ALB_TITLES[albLv(x.st) + 1], "」")) : null), React.createElement("div", {
+    className: "mt-1.5 h-2 overflow-hidden rounded-full bg-white/15"
+  }, React.createElement("div", {
+    className: "h-full rounded-full bg-gradient-to-r from-pink-400 to-amber-300",
+    style: {
+      width: `${nx ? Math.round((x.st - nx.from) / Math.max(1, nx.to - nx.from) * 100) : 100}%`
+    }
+  })), React.createElement("p", {
+    className: "mt-2 text-[12px] font-black text-amber-200"
+  }, "今日のスタンプ", x.done ? ' ✔' : ''), React.createElement("div", {
+    className: "mt-1 grid grid-cols-3 gap-1",
+    "data-alb-view-tasks": true
+  }, ALB_TASKS.map(([k, icon, label]) => React.createElement("div", {
+    key: k,
+    className: `whitespace-nowrap rounded-xl px-0.5 py-1.5 text-center text-[10.5px] font-black ${x.t[k] ? 'border border-amber-300 bg-amber-300/20 text-amber-100' : 'border border-white/15 bg-white/5 text-slate-300'}`
+  }, icon, " ", label, x.t[k] ? ' ✔' : ''))), React.createElement("p", {
+    className: "mt-1 text-[10px] leading-snug text-slate-300"
+  }, "この家で3つすると、今日のスタンプが1個たまります。")), React.createElement("p", {
+    className: sec
+  }, "💗 ", friend.name, "さんの助手との仲(段)"), React.createElement("div", {
+    className: card,
+    "data-alf-bond-view-tiers": true
+  }, ids.length ? ids.map(id => {
+    const t = bd ? bd[id] : undefined;
+    const a = typeof assistantById === 'function' ? assistantById(id) : null;
+    return React.createElement("div", {
+      key: id,
+      className: "flex items-center gap-2 border-b border-slate-700/60 py-1 last:border-0",
+      "data-alf-bond-view-tier": id
+    }, React.createElement("span", {
+      className: "shrink-0"
+    }, a && typeof AssistantFace === 'function' ? React.createElement(AssistantFace, {
+      who: a,
+      size: 30
+    }) : null), React.createElement("span", {
+      className: "min-w-0 flex-1 truncate text-[12.5px] font-black text-white"
+    }, assistantLifeName(id)), React.createElement("span", {
+      className: "shrink-0 whitespace-nowrap rounded-full bg-slate-950/80 px-2 py-0.5 text-[11px] font-black text-pink-100"
+    }, t === 0 || t === 1 || t === 2 ? `💗 ${names[t]}` : '—'));
+  }) : React.createElement("p", {
+    className: "text-[11px] text-slate-300"
+  }, "まだ会っている助手がいません。"), React.createElement("p", {
+    className: "mt-1.5 text-[10px] leading-snug text-slate-300"
+  }, friend.name, "さんとそれぞれの助手の仲の段です。くわしい数は出ません。")), fv ? React.createElement(React.Fragment, null, React.createElement("p", {
+    className: sec
+  }, "🏆 ", friend.name, "さんのお気に入りの棚"), React.createElement(AlfFavShelf, {
+    fv: fv
+  })) : null);
 }
 function AlfGuestBook({
   s,
@@ -173075,11 +173280,12 @@ function MsxPlay({
       className: "e"
     }, "⚔"), "修行", React.createElement("small", null, "技を覚える")), React.createElement("button", {
       type: "button",
-      className: "v-p",
+      className: `v-p${Array.isArray(v.cups) && !v.cups.length ? ' off' : ''}`,
+      disabled: Array.isArray(v.cups) && !v.cups.length,
       onClick: () => setSub('cup')
     }, React.createElement("div", {
       className: "e"
-    }, "🏆"), "大会", React.createElement("small", null, "今月の大会")))));
+    }, "🏆"), "大会", React.createElement("small", null, Array.isArray(v.cups) && !v.cups.length ? '今月はなし' : '今月の大会')))));
     foot = React.createElement("div", {
       className: "v-ft"
     }, React.createElement("button", {
@@ -174965,9 +175171,11 @@ function MsxR3Cup({
     if (typeof SuccessSound !== 'undefined') SuccessSound.se('cupEntry');
   }, []);
   const nOk = cupsNow.filter(c => c.entry && c.entry.ok).length;
-  const openLine = msxR3Line('turn.cup.open', run, {
-    cup: cur ? msxR3CupName(cur.sys, cur.name) : ''
-  }, nOk ? `「今月は ${nOk}つ 出られるよ! 出ると1ターン使うから、トレーニングとどっちにするか考えてね」` : '「今月は出られる大会がないみたい。トレーニングでじっくり力をつけよ!」');
+  const openTexts = nOk ? [`「今月は ${nOk}つ 出られるよ! 出ると1ターン使うから、トレーニングとどっちにするか考えてね」`, `「出られる大会が ${nOk}つ あるよ。賞品もチェックしてみて!」`, `「${cur ? msxR3CupName(cur.sys, cur.name) : '大会'}、気になるね。体力は大丈夫?」`, `「大会は1ターン使うよ。調子がいいなら行ってみよ!」`] : ['「今月は出られる大会がないみたい。トレーニングでじっくり力をつけよ!」', '「出られる大会が今月は無いよ。次の月の予定も見てみてね」'];
+  const openLine = {
+    t: msxR3Q(openTexts[Math.abs(Number(s.turn) || 0) % openTexts.length]),
+    e: null
+  };
   const rankStep = typeof SUC.rankStepOf === 'function' ? SUC.rankStepOf(s) : 0;
   const rank = rankStep ? {
     name: SUC.rankNameOf(rankStep)
@@ -174978,8 +175186,7 @@ function MsxR3Cup({
   const body = React.createElement(React.Fragment, null, React.createElement(MsxBand, {
     s: s,
     v: v,
-    ev: ev,
-    use: 20
+    ev: ev
   }), React.createElement("div", {
     className: "v-scene low",
     style: {

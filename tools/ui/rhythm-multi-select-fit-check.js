@@ -106,8 +106,16 @@ const MEASURE = () => {
       await cdp.send('Emulation.setSafeAreaInsetsOverride', { insets: { top: safeInset.top, bottom: safeInset.bottom, left: safeInset.left, right: safeInset.right } });
       page.on('pageerror', (e) => errors.push(String(e && e.message || e)));
       await page.addInitScript(() => { class FakeWS { constructor() { this.readyState = 0; this.topic = null; setTimeout(() => { this.readyState = 1; this.onopen && this.onopen({}); }, 0); } deliver(obj) { const data = JSON.stringify(obj); setTimeout(() => { if (this.readyState === 1 && this.onmessage) this.onmessage({ data }); }, 0); } send(raw) { let m = null; try { m = JSON.parse(raw); } catch (_) { return; } if (m.event === 'phx_join') { this.topic = m.topic; this.deliver({ topic: m.topic, event: 'phx_reply', ref: m.ref, payload: { status: 'ok', response: {} } }); return; } if (m.event !== 'broadcast') return; this.deliver({ topic: this.topic, event: 'broadcast', payload: { type: 'broadcast', event: 'msg', payload: m.payload && m.payload.payload } }); } close() { this.readyState = 3; setTimeout(() => this.onclose && this.onclose({}), 0); } } window.WebSocket = FakeWS; });
-      await page.addInitScript(() => { const put = (k, v) => localStorage.setItem(k, JSON.stringify(v)); put('mh_breeder_name', 'けんさ'); put('mh_breeder_icon', 'Mocchi'); put('mh_onboarded', true); put('mh_tutorial_seen_v1', true); put('mh_battle_tutorial_seen_v1', true); put('mh_battle_tutorial_guide_shown_v1', true); put('mh_rhythm_tutorial_seen_v1', true); });
+      await page.addInitScript(() => { const put = (k, v) => localStorage.setItem(k, JSON.stringify(v)); put('mh_breeder_name', 'けんさ'); put('mh_rhythm_best_v2', { mf_ichika_mix: Object.fromEntries(['EASY','NORMAL','HARD','EXPERT','MASTER'].map((d) => [d, { bestScore: 950000, maxCombo: 400, played: true, clear: true, fullCombo: true }])) }); put('mh_breeder_icon', 'Mocchi'); put('mh_onboarded', true); put('mh_tutorial_seen_v1', true); put('mh_battle_tutorial_seen_v1', true); put('mh_battle_tutorial_guide_shown_v1', true); put('mh_rhythm_tutorial_seen_v1', true); });
       await page.addInitScript(quietBootSeed()); await page.addInitScript(updateNoticeSeed());
+      // 偽の visualViewport(キーボードの出入りを模す。iPhone は画面の大きさを変えず、見える範囲だけを縮めてずらす)。window.__vvSet(高さ, 上のずれ)
+      await page.addInitScript(() => {
+        const ls = { resize: [], scroll: [] };
+        const fake = { width: window.innerWidth, height: window.innerHeight, offsetTop: 0, offsetLeft: 0, scale: 1, pageTop: 0, pageLeft: 0,
+          addEventListener(t, f) { (ls[t] || (ls[t] = [])).push(f); }, removeEventListener(t, f) { ls[t] = (ls[t] || []).filter((x) => x !== f); } };
+        window.__vvSet = (h, top) => { fake.height = h; fake.offsetTop = top; for (const t of ['resize', 'scroll']) (ls[t] || []).forEach((f) => f()); };
+        try { Object.defineProperty(window, 'visualViewport', { value: fake, configurable: true }); } catch (e) {}
+      });
       const shoot = async (label) => {
         const buf = await page.screenshot();
         if (SHOT_DIR) { fs.mkdirSync(SHOT_DIR, { recursive: true }); fs.writeFileSync(path.join(SHOT_DIR, `${name}-${label}.png`), buf); }
@@ -130,6 +138,14 @@ const MEASURE = () => {
       await page.waitForSelector('[data-rhythm-multi-step="matching"]', { timeout: 30000 });
       await page.waitForTimeout(1500);
       await shoot('マルチ・待ち');
+      // 「部屋はそのままで、ほかの画面へ」が言葉の途中で折れない(窓口の確認 2026-11-15。「そのまま/で」と折れていた)
+      const stepAway = await page.evaluate(() => {
+        const b = document.querySelector('[data-rhythm-multi-step-away]'); if (!b || !b.offsetParent) return '';
+        const out = []; const walker = document.createTreeWalker(b, NodeFilter.SHOW_TEXT); let n;
+        while ((n = walker.nextNode())) { const t = (n.textContent || '').trim(); if (!t) continue; const r = document.createRange(); r.selectNodeContents(n); const tops = new Set([...r.getClientRects()].filter((q) => q.width > 0).map((q) => Math.round(q.top / 4))); if (tops.size > 1 && /^(部屋はそのままで、|ほかの画面へ)$/.test(t)) out.push(`「${t}」${tops.size}行`); }
+        return out.join(' / ');
+      });
+      check(`${name}: 「部屋はそのままで、ほかの画面へ」が言葉の途中で折れない`, !stepAway, stepAway);
       await page.evaluate(() => { for (const id of ['erubin', 'kiki', 'momosuke']) { const who = assistantById(id); RHYTHM_MULTI.summon({ masuId: `as:${id}`, assistantId: id, name: who ? who.name : id, level: 1, baseId: '', colors: null }); } });
       await page.waitForTimeout(2500);
       await page.evaluate(() => document.querySelector('[data-rhythm-multi-confirm]')?.click());
@@ -147,6 +163,64 @@ const MEASURE = () => {
         await page.waitForTimeout(700);
       }
       await shoot('マルチ・曲えらび');
+      // 選曲の下のボタン(🏆ランキング・おまかせ・ルームを出る)の字が、言葉の途中で折れない(2026-11-15 r1115-020「🏆ラン/キン/グ・おまか/せ」)
+      const wrapBroken = await page.evaluate(() => {
+        const out = [];
+        for (const sel of ['[data-rhythm-multi-ranking]', '[data-rhythm-multi-omakase]', '[data-rhythm-multi-leave]']) {
+          const b = document.querySelector(sel); if (!b || !b.offsetParent) continue;
+          const walker = document.createTreeWalker(b, NodeFilter.SHOW_TEXT);
+          let n; while ((n = walker.nextNode())) {
+            const t = (n.textContent || '').trim(); if (!t || /\s/.test(t) || t.length < 2) continue;
+            const r = document.createRange(); r.selectNodeContents(n);
+            const tops = new Set([...r.getClientRects()].filter((q) => q.width > 0).map((q) => Math.round(q.top / 4)));
+            if (tops.size > 1) out.push(`${sel.replace(/[\[\]]/g, '')}「${t}」${tops.size}行`);
+          }
+        }
+        return out.join(' / ');
+      });
+      check(`${name}: 選曲の下のボタンの字が、言葉の途中で折れない`, !wrapBroken, wrapBroken);
+      // ボタンの中身が、ボタンの枠からはみ出さない(nowrap にしたので、幅が足りないとはみ出す)
+      const overflowed = await page.evaluate(() => ['[data-rhythm-multi-ranking]', '[data-rhythm-multi-omakase]', '[data-rhythm-multi-leave]'].map((q) => { const e = document.querySelector(q); return e && e.offsetParent && e.scrollWidth > e.clientWidth + 1 ? `${q.replace(/[\[\]]/g, '')}(${e.scrollWidth}>${e.clientWidth})` : ''; }).filter(Boolean).join(' / '));
+      check(`${name}: 選曲の下のボタンの中身が、枠からはみ出さない`, !overflowed, overflowed);
+      // FULL COMBO の帯が、ジャケットにかからない(2026-11-15 r1115-022 社長「フルコンボの位置がジャケット消しちゃってる」)
+      const ribbonOver = await page.evaluate(() => {
+        const art = document.querySelector('[data-rhythm-song-detail-art] > :first-child'); const rb = document.querySelector('[data-rhythm-song-detail] [data-rhythm-achieve-ribbon]');
+        if (!art) return 'ジャケットが見つからない'; if (!rb) return '帯が出ていない(検査の下ごしらえ: mf_ichika_mix のフルコンボの記録)';
+        const a = art.getBoundingClientRect(); const b = rb.getBoundingClientRect();
+        const w = Math.min(a.right, b.right) - Math.max(a.left, b.left); const h = Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top);
+        return w > 1 && h > 1 ? `帯がジャケットに ${Math.round(w)}×${Math.round(h)}px かかっている` : '';
+      });
+      check(`${name}: FULL COMBO の帯が、ジャケットにかからない`, !ribbonOver, ribbonOver);
+      const btnRects = await page.evaluate(() => ['[data-rhythm-multi-ranking]', '[data-rhythm-multi-omakase]', '[data-rhythm-multi-leave]'].map((q) => { const e = document.querySelector(q); if (!e) return q + ':なし'; const r = e.getBoundingClientRect(); return `${q.replace(/[\[\]]/g, '')}:${Math.round(r.width)}x${Math.round(r.height)}`; }).join(' '));
+      console.log(`INFO: ${name}: ${btnRects}`);
+      // チャットを開いてキーボードが出たとき、見出し(閉じる)・やりとり・入力欄が、見えている範囲に収まる(2026-11-15 r1115-024)
+      if (!rot && h > w) {
+        await page.evaluate(() => document.querySelector('[data-rhythm-multi-chat-open]')?.click());
+        await page.waitForSelector('[data-rhythm-multi-chat-input]', { timeout: 8000 }).catch(() => {});
+        const kbH = Math.round(h * 0.6); const kbTop = Math.round(h * 0.18);
+        await page.evaluate(([a, b]) => window.__vvSet(a, b), [kbH, kbTop]);
+        await page.waitForTimeout(500);
+        const kb = await page.evaluate(([vh, vt]) => {
+          const R = (q) => { const e = document.querySelector(q); return e ? e.getBoundingClientRect() : null; };
+          const sheet = R('[data-rhythm-multi-chat-sheet]'); const close = R('[data-rhythm-multi-chat-close]'); const list = R('[data-rhythm-multi-chat-list]'); const input = R('[data-rhythm-multi-chat-input]');
+          if (!sheet || !input) return '板か入力欄が見つからない';
+          const bad = [];
+          const inside = (n, r) => { if (r && (r.top < vt - 1 || r.bottom > vt + vh + 1)) bad.push(`${n}が見える範囲(${vt}〜${vt + vh})の外(${Math.round(r.top)}〜${Math.round(r.bottom)})`); };
+          inside('板', sheet); inside('閉じる', close); inside('やりとり', list); inside('入力欄', input);
+          // いちばん新しい発言(吹き出し)が、欠けずに全部見える(下までずらした位置で。2026-11-15 窓口の確認)
+          const ul = document.querySelector('[data-rhythm-multi-chat-list]'); const lines = ul ? [...ul.querySelectorAll('[data-rhythm-multi-chat-line]')] : [];
+          const last = lines[lines.length - 1];
+          if (ul && last) { ul.scrollTop = ul.scrollHeight; const lr = ul.getBoundingClientRect(); const br = last.getBoundingClientRect(); if (br.top < lr.top - 1 || br.bottom > lr.bottom + 1) bad.push(`いちばん新しい発言が欠ける(やりとり${Math.round(lr.height)}px・発言${Math.round(br.height)}px)`); }
+          if (list && list.height < 84) bad.push(`やりとりが低すぎる(${Math.round(list.height)}px。吹き出し1つが入る高さ)`);
+          return bad.join(' / ');
+        }, [kbH, kbTop]);
+        check(`${name}: チャットに文字を打つとき、見出し・やりとり・入力欄が見える範囲に収まる`, !kb, kb);
+        if (SHOT_DIR) { fs.mkdirSync(SHOT_DIR, { recursive: true }); fs.writeFileSync(path.join(SHOT_DIR, `${name}-チャットとキーボード.png`), await page.screenshot()); }
+        await page.evaluate(([a]) => window.__vvSet(a, 0), [h]);
+        await page.waitForTimeout(300);
+        await page.evaluate(() => document.querySelector('[data-rhythm-multi-chat-close]')?.click());
+        await page.waitForTimeout(300);
+      }
       const bubbles = await page.evaluate(() => document.querySelectorAll('[data-rhythm-multi-chat-bubble]').length);
       check(`${name}: 席の上の吹き出しの字が、吹き出しの中に収まる`, !worst.bubble, worst.bubble);
       check(`${name}: 「この曲で決定」の帯が、難易度の札に重ならない`, !worst.overlap, worst.overlap);
