@@ -417,7 +417,9 @@ ok(near(SUC.failRateOf({ ...base, yosu: { sabori: { visits: 0 } } }) - fFull, 0.
   // 王者・常連・組み合わせ表
   const d = { ...s0, turn: 5, battle: { kind: 'debut', round: 0 } };
   const od = SUC.opponents(d); ok(od.length === 1 && od[0].champ && od[0].name, 'デビュー戦の相手が王者1体になっていない');
-  const br = SUC.bracketOf(d); ok(br && br.entrants.length === 8 && br.entrants[0].you && br.entrants[4].name === od[0].name && br.final.join() === '0,4', '組み合わせ表(8人・決勝で自分と相手)がずれている');
+  const br = SUC.bracketOf(d); ok(br && br.entrants.length === 8 && br.entrants[0].you && br.final[0] === 0 && br.final[1] >= 4 && br.entrants[br.final[1]].name === od[0].name && br.rounds[1].join() === br.final.join() && br.rounds[0][0] === 0 && br.rounds[0][br.final[1] >> 1] === br.final[1] && br.pop.slice().sort((x, y) => x - y).join() === '1,2,3,4,5,6,7,8', '組み合わせ表(8人・決勝で自分と反対の山の相手・人気の番号が1〜8・勝ち上がり)がずれている');
+  { // どの大会の日でも、人気は1〜8が1つずつ・王者は反対の山の相手か自分の山・勝ち上がりが筋の通る形
+    let bad = 0; for (let t = 1; t <= 40; t++) for (const kind of ['debut', 'junior', 'middle', 'pro']) { const w = { ...d, turn: t, battle: { kind, round: 0 } }; let x; try { x = SUC.bracketOf(w); } catch (e) { bad++; continue; } if (!x) continue; const f = x.final[1]; const okp = x.pop.slice().sort((p, q) => p - q).join() === '1,2,3,4,5,6,7,8'; const okr = x.rounds[0].length === 4 && x.rounds[1].length === 2 && x.rounds[0].every((q, k) => q >> 1 === k) && x.rounds[1].every((q, j) => x.rounds[0].slice(2 * j, 2 * j + 2).includes(q)) && x.rounds[0][0] === 0 && x.rounds[0][f >> 1] === f && f >= 4 && x.rounds[1].join() === `0,${f}`; if (!okp || !okr) bad++; } ok(bad === 0, `組み合わせ表の人気の番号・勝ち上がりが筋に合わない場面 ${bad}件`); }
   ok(JSON.stringify(br) === JSON.stringify(SUC.bracketOf(d)), '組み合わせ表が決まった乱数になっていない');
   const r1 = SUC.opponents(SUC.rematch({ ...d, items: { sand: 0, rainbow: 1 } }, 'rainbow').state)[0]; ok(r1.name !== od[0].name, '虹の砂時計で相手(王者)が変わらない');
   // 月の大会に出る(ターンを使う・ターンの終わりに1戦)

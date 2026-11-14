@@ -217,17 +217,19 @@ const MSC_CSS = `
 .msc-lines path{fill:none;stroke-linecap:round}
 .msc-lines .base{stroke:#cbb48b;stroke-width:2}
 .msc-lines .win{stroke:#f97316;stroke-width:3.2;stroke-dasharray:1;stroke-dashoffset:1;animation:msc-draw .55s ease-out forwards}
-.msc-lines .win.me{stroke:#f43f5e}
+.msc-lines .win.me{stroke:#ef4444}
 @keyframes msc-draw{to{stroke-dashoffset:0}}
 .msc-cupbadge{position:absolute;right:4px;top:50%;transform:translateY(-50%);width:48px;padding:6px 0;border-radius:10px;background:linear-gradient(180deg,#7f1d1d,#4c0519);border:2px solid #f59e0b;color:#fde68a;font-weight:900;font-size:11px;text-align:center;line-height:1.2}
 .msc-cupbadge.lit{animation:msc-glow 1.2s ease-in-out infinite alternate}
 @keyframes msc-glow{from{box-shadow:0 0 0 rgba(251,191,36,0)}to{box-shadow:0 0 16px rgba(251,191,36,.9)}}
 .msc-note{font-size:12px;color:#fde68a;line-height:1.5}
-.msc-note small{display:block;color:#cbd5e1;font-size:11px}
+.msc-note .nw{white-space:nowrap}.msc-note small{display:block;color:#cbd5e1;font-size:11px}
 .msc-talk{display:flex;gap:8px;align-items:flex-start;background:#fffaf0;color:#3b2a14;border-radius:14px;padding:8px 10px;border:2px solid #e2c89a}
 .msc-talk img{width:52px;height:52px;border-radius:50%;object-fit:cover;flex:0 0 auto;background:#fde68a}
 .msc-talk p{margin:0;font-size:13px;font-weight:700;line-height:1.55}
 .msc-talk em{font-style:normal;color:#e11d48}
+.msc-talk{position:relative}.msc-sk{position:absolute;right:8px;bottom:5px;border:0;border-radius:99px;background:#a67c3c;color:#fff;font-size:10px;font-weight:900;padding:2px 9px}
+.msc-row{transition:opacity .5s}
 .msc-vs{position:relative;height:200px;border-radius:16px;overflow:hidden;background:#3b2a52 center/cover no-repeat}
 .msc-vs::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(20,16,38,.25),rgba(20,16,38,.05) 50%,rgba(20,16,38,.75))}
 .msc-vs .cap{position:absolute;z-index:2;top:6px;left:50%;transform:translateX(-50%);background:rgba(20,16,38,.8);border-radius:999px;padding:3px 12px;font-size:12px;font-weight:900;color:#fde68a;white-space:nowrap}
@@ -373,74 +375,80 @@ const MSC_CSS = `
 
 // ---- 組み合わせ表(B1)。勝ち上がりの線が段ごとに伸びる。result が 'win' なら決勝の線が優勝まで伸びる ----
 function MonsucBracket({ suc, s, info, result, onFight, onResultOnly, onClose, canSkip }) {
+  // 2026-11-14 社長「トーナメントの表示がおかしい。最初に1回戦が動く演出がない。バトルは決勝の一戦だけ」で作り直し(参考 taikai-bracket.png・v2 84〜90秒・v4 48〜52秒)
+  //   8体・自分はいちばん上・番号は人気順(1〜8)・1番人気の王者は反対の山。開いたら 1回戦→準決勝 が自動で進む(勝った側へ線が赤く伸び、負けた側は暗くなる・自分も演出で勝ち上がる)。
+  //   解説のひとこと・SKIP。戦うのは決勝の1戦だけ。線は行の高さ H から px で引く(行と線がずれない)
   const bk = info.bracket;
-  const [stage, setStage] = useState(0);
+  const [stage, setStage] = useState(0); // 0=開いた直後 1=1回戦のあと 2=準決勝のあと 3=決勝の前
   useEffect(() => {
-    const ts = [setTimeout(() => setStage(1), 350), setTimeout(() => setStage(2), 1050), setTimeout(() => setStage(3), 1700)];
+    const ts = [setTimeout(() => setStage(1), 1200), setTimeout(() => setStage(2), 3000), setTimeout(() => setStage(3), 4800)];
     return () => ts.forEach(clearTimeout);
   }, []);
+  const [vh, setVh] = useState(() => (typeof window !== 'undefined' ? window.innerHeight : 844));
+  useEffect(() => { const f = () => setVh(window.innerHeight); window.addEventListener('resize', f); return () => window.removeEventListener('resize', f); }, []);
   if (!bk) return null;
   const E = bk.entrants;
-  const no = monsucPopOrder(suc, s, E);
+  const st = result ? 3 : stage;
+  const no = bk.pop && bk.pop.length === E.length ? bk.pop : monsucPopOrder(suc, s, E);
   const r1 = bk.rounds[0] || []; const r2 = bk.rounds[1] || [];
-  const out = (i) => (stage >= 1 && !r1.includes(i)) || (stage >= 2 && r1.includes(i) && !r2.includes(i)) || (result === 'win' && i === 4) || (result === 'lose' && i === 0);
-  // 線: 8行 × 40px。x は 0(顔の右)→ 22 → 44 → 66 → 優勝の札
-  const H = 40; const yOf = (i) => i * H + H / 2;
-  const X = [0, 22, 44, 66, 80];
-  const W = 84;
-  const pair = (a, b, lv) => `M${X[lv]} ${a}H${X[lv + 1]}M${X[lv]} ${b}H${X[lv + 1]}M${X[lv + 1]} ${a}V${b}`;
-  const base = [];
-  for (let k = 0; k < 4; k++) base.push(pair(yOf(2 * k), yOf(2 * k + 1), 0));
-  const mid1 = [0, 1, 2, 3].map(k => (yOf(2 * k) + yOf(2 * k + 1)) / 2);
-  base.push(pair(mid1[0], mid1[1], 1), pair(mid1[2], mid1[3], 1));
-  const mid2 = [(mid1[0] + mid1[1]) / 2, (mid1[2] + mid1[3]) / 2];
-  base.push(pair(mid2[0], mid2[1], 2));
-  const mid3 = (mid2[0] + mid2[1]) / 2;
-  base.push(`M${X[3]} ${mid3}H${X[4]}`);
+  const fi = (bk.final && bk.final[1]) || 4; // 決勝の相手の行(4〜7)
+  const out = (i) => (st >= 1 && !r1.includes(i)) || (st >= 2 && r1.includes(i) && !r2.includes(i)) || (result === 'win' && i === fi) || (result === 'lose' && i === 0);
+  const H = Math.max(36, Math.min(68, Math.floor((vh - 318) / 8))); // 行の高さ(下に大きな空きを残さない)
+  const yOf = (i) => i * H + H / 2;
+  const X = [0, 22, 44, 66, 84]; const W = 90;
+  const pair = (a, c, lv) => `M${X[lv]} ${a}H${X[lv + 1]}M${X[lv]} ${c}H${X[lv + 1]}M${X[lv + 1]} ${a}V${c}`;
+  const m1 = [0, 1, 2, 3].map(k => (yOf(2 * k) + yOf(2 * k + 1)) / 2);
+  const m2 = [0, 1].map(j => (m1[2 * j] + m1[2 * j + 1]) / 2); const m3 = (m2[0] + m2[1]) / 2;
+  const base = [0, 1, 2, 3].map(k => pair(yOf(2 * k), yOf(2 * k + 1), 0)).concat(pair(m1[0], m1[1], 1), pair(m1[2], m1[3], 1), pair(m2[0], m2[1], 2), `M${X[3]} ${m3}H${X[4]}`);
   const win = [];
-  if (stage >= 1) r1.forEach((i, k) => win.push({ d: `M${X[0]} ${yOf(i)}H${X[1]}V${mid1[k]}`, me: i === 0 || i === 4, key: `a${i}` }));
-  if (stage >= 2) r2.forEach((i, k) => win.push({ d: `M${X[1]} ${mid1[k * 2 + (i === r1[k * 2] ? 0 : 1)]}H${X[2]}V${mid2[k]}`, me: true, key: `b${i}` }));
-  if (stage >= 3) { win.push({ d: `M${X[2]} ${mid2[0]}H${X[3]}`, me: true, key: 'c0' }, { d: `M${X[2]} ${mid2[1]}H${X[3]}`, me: true, key: 'c1' }); }
-  if (result === 'win') win.push({ d: `M${X[3]} ${mid2[0]}V${mid3}H${X[4]}`, me: true, key: 'f' });
-  const champ = E.find(e => e.champ) || E[4];
-  const foe = E[4];
+  if (st >= 1) r1.forEach((w, k) => win.push({ d: `M${X[0]} ${yOf(w)}H${X[1]}V${m1[k]}`, key: `a${k}` }));
+  if (st >= 2) r2.forEach((w, j) => win.push({ d: `M${X[1]} ${m1[2 * j + (w === r1[2 * j] ? 0 : 1)]}H${X[2]}V${m2[j]}`, key: `b${j}` }));
+  if (st >= 3) [0, 1].forEach(j => win.push({ d: `M${X[2]} ${m2[j]}H${X[3]}V${m3}`, key: `c${j}` }));
+  if (result === 'win') win.push({ d: `M${X[3]} ${m3}H${X[4]}`, key: 'f' });
+  const foe = E[fi]; const champ = E.find(e => e.champ) || foe;
   const nm = (e) => (e.you ? info.meName : e.name || mscMonName(e.species));
   const coach = mscAssistant(s.aid);
+  const top = E[no.indexOf(1)] || E[0]; const upsets = r1.filter(w => w !== 0 && w !== fi && no[w] >= 5); const foeNo = no[fi];
+  const lines = [
+    top.you ? <>「<em>1番人気は {info.meName}!</em> まずは 1回戦から 見ていこう」</> : <>「<em>1番人気は {top.champ ? '王者の ' : ''}{nm(top)}!</em> {info.meName}の1回戦は これからだよ」</>,
+    upsets.length ? <>「<em>大穴! {nm(E[upsets[0]])}</em> が 勝ち上がったぞ! {info.meName}も 1回戦を 勝ち上がり!」</> : <>「1回戦が おわったよ。<em>{info.meName}</em>は 順当に 勝ち上がり!」</>,
+    foeNo >= 4 ? <>「<em>大穴! {nm(foe)}</em> 決勝まで きたぞ! {info.meName}は 準決勝も 勝って 決勝へ!」</> : <>「準決勝も おわったよ。<em>{info.meName}</em>は 決勝へ! 反対の山からは <em>{nm(foe)}</em>」</>,
+  ];
   const champNo1 = no[E.indexOf(champ)] === 1;
-  const line = foe.rival
-    ? <>「{champNo1 && champ !== foe ? <>1番人気は 王者の {nm(champ)}! でも、</> : null}{info.meName}の相手は <em>ライバルの {nm(foe)}</em> だよ。勝てば ごほうび大!」</>
+  const finalLine = foe.rival
+    ? <>「{champNo1 && champ !== foe ? <>1番人気は 王者の {nm(champ)}! でも、</> : null}決勝の相手は <em>ライバルの {nm(foe)}</em> だよ。勝てば ごほうび大!」</>
     : foe.champ
-      ? <>「1番人気は 王者の <em>{nm(foe)}</em>! {info.meName}が当たるのは 決勝。{info.opp && info.opp.note ? `${info.opp.note}、だって。` : ''}ここで勝てば 大金星だよ!」</>
-      : <>「{info.meName}の相手は <em>{nm(foe)}</em>! あわてずに いこうね」</>;
+      ? <>「決勝の相手は 1番人気の王者 <em>{nm(foe)}</em>! {info.opp && info.opp.note ? `${info.opp.note}、だって。` : ''}ここで勝てば 大金星だよ!」</>
+      : <>「決勝の相手は <em>{nm(foe)}</em>! あわてずに いこうね」</>;
   return (
-    <div className="msc-wrap" data-msc-bracket data-msc-stage={stage}>
+    <div className="msc-wrap" data-msc-bracket data-msc-stage={st}>
       <div className="msc-top"><button className="msc-btn g s" data-msc-close onClick={onClose}>← もどる</button><b>{info.title} {MSC_STARS(info.star)}</b></div>
       <div className="msc-panel">
         <div className="msc-head">{info.title} {MSC_STARS(info.star)}</div>
         <div className="msc-bk">
           {E.map((e, i) => (
-            <div key={i} className={`msc-row ${out(i) ? 'out' : ''}`} style={{ paddingRight: W }} data-msc-entrant={e.you ? 'you' : i === 4 ? 'foe' : i}>
+            <div key={i} className={`msc-row ${out(i) ? 'out' : ''}`} style={{ paddingRight: W, height: H }} data-msc-entrant={e.you ? 'you' : i === fi ? 'foe' : i}>
               <span className="msc-no" title={`${no[i]}番人気`} aria-label={`${no[i]}番人気`}>{no[i]}</span>
-              <span className={`msc-name ${e.you ? 'you' : i === 4 ? 'foe' : ''}`}><span>{nm(e)}</span>
+              <span className={`msc-name ${e.you ? 'you' : i === fi ? 'foe' : ''}`}><span>{nm(e)}</span>
                 {e.you && <i className="msc-tag you">あなた</i>}
                 {e.rival && <i className="msc-tag rv">ライバル</i>}
                 {e.champ && <i className="msc-tag ch">👑王者</i>}
               </span>
-              <span className={`msc-face ${e.you ? 'you' : i === 4 ? 'foe' : ''}`}>{e.you ? <MscMyMon sp={e.species} colors={info.colors}/> : <img src={mscMonImg(e.species)} alt=""/>}</span>
+              <span className={`msc-face ${e.you ? 'you' : i === fi ? 'foe' : ''}`}>{e.you ? <MscMyMon sp={e.species} colors={info.colors}/> : <img src={mscMonImg(e.species)} alt=""/>}</span>
             </div>
           ))}
           <svg className="msc-lines" width={W} height={H * 8} viewBox={`0 0 ${W} ${H * 8}`} style={{ width: W, height: H * 8 }}>
             {base.map((d, k) => <path key={k} className="base" d={d}/>)}
-            {win.map(w => <path key={w.key} className={`win ${w.me ? 'me' : ''}`} d={w.d} pathLength="1"/>)}
+            {win.map(w => <path key={w.key} className="win me" d={w.d} pathLength="1"/>)}
           </svg>
           <div className={`msc-cupbadge ${result === 'win' ? 'lit' : ''}`} style={{ right: 4 }}>🏆<br/>優勝</div>
         </div>
       </div>
-      <div className="msc-note">左の数字は人気の順(1が いちばん人気)。あなたの1戦は 赤い丸の2体のあいだ({info.meName} VS {nm(foe)})。<small>ほかの試合の結果は、見せるだけの演出です</small></div>
-      <div className="msc-talk"><img src={mscFace(s.aid)} alt=""/><p>{coach ? <b style={{ display: 'block', fontSize: 11, color: '#b45309' }}>解説 {coach.name}</b> : null}{line}</p></div>
+      <div className="msc-note"><b>決勝は <span className="nw">{info.meName} VS {nm(foe)}</span></b>。<span className="nw">左の数字は人気の順</span><span className="nw">(1が いちばん人気)。</span><small><span className="nw">ほかの試合の結果は、</span><span className="nw">見せるだけの演出です</span><span className="nw">(戦うのは決勝の1戦だけ)</span></small></div>
+      <div className="msc-talk"><img src={mscFace(s.aid)} alt=""/><p>{coach ? <b style={{ display: 'block', fontSize: 11, color: '#b45309' }}>解説 {coach.name}</b> : null}{st >= 3 ? finalLine : lines[st]}</p>{st < 3 ? <button type="button" className="msc-sk" data-msc-skip onClick={() => setStage(3)}>SKIP ▸▸</button> : null}</div>
       <div className="msc-foot">
         <button className="msc-btn y s" data-msc-quick onClick={onResultOnly}>{canSkip ? '⏩ 結果だけ見る(優勝ずみ)' : '⏩ 結果だけ見る'}</button>
-        <button className="msc-btn" data-msc-go onClick={onFight}>⚔ 1戦へ</button>
+        <button className="msc-btn" data-msc-go onClick={onFight}>⚔ 決勝へ</button>
       </div>
     </div>
   );

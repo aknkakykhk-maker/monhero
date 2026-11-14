@@ -129,7 +129,7 @@ const makeRun = async (kind) => {
           if (!done) check(`${label}: 「${st}」が押せる`, false);
           await page.waitForTimeout(st === '%ready' ? 2500 : 700);
         }
-        await page.waitForTimeout(500);
+        await page.waitForTimeout(500 + (Number(process.env.SHOT_WAIT) || 0)); // SHOT_WAIT=<ms> で、動く演出の途中を撮る
         const m = await page.evaluate(() => {
           const root = document.querySelector('.msx'); if (!root) return { ok: false };
           const R = root.getBoundingClientRect();

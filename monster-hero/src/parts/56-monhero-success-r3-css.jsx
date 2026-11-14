@@ -164,6 +164,11 @@ const MSX_R3_CSS = `
 .msx .r3 .v-ann .pic span{position:absolute;left:0;right:0;bottom:-2px;text-align:center;background:#a67c3c;color:#fff;font-size:10px;font-weight:900;border-radius:5px}
 .msx .r3 .v-ann .tx{flex:1;font-size:12.5px;font-weight:800;line-height:1.55;align-self:center}
 .msx .r3 .v-ann .tx b{color:#b45309}
+.msx .r3 .v-br{transition:opacity .5s}.msx .r3 .v-br.out{opacity:.38}
+.msx .r3 .v-brl .bs{fill:none;stroke:#a89a78;stroke-width:2;stroke-linecap:round}
+.msx .r3 .v-brl .wl{fill:none;stroke:#ef4444;stroke-width:3.2;stroke-linecap:round;stroke-dasharray:1;stroke-dashoffset:1;animation:msxBkD .7s ease-out forwards}
+@keyframes msxBkD{to{stroke-dashoffset:0}}
+.msx .r3 .v-ann{position:relative}.msx .r3 .v-ann .sk{position:absolute;right:8px;bottom:4px;border:0;border-radius:99px;background:#a67c3c;color:#fff;font-size:10px;font-weight:900;padding:2px 9px}
 .msx .r3 .v-bcs{position:relative;height:150px;flex:none;margin-top:6px;border-radius:14px;overflow:hidden;border:1.5px solid #64748b}
 .msx .r3 .v-bcs .bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .msx .r3 .v-bcs .sh{position:absolute;inset:0;background:linear-gradient(180deg,#0f0d2488,#0f0d2400 40%,#0f0d24aa)}

@@ -1687,22 +1687,37 @@
         name: rv ? rv.name : who ? who.mon : null, breeder: rv ? (rv.breeder || null) : who ? who.breeder : null, champ: Boolean(who && who.champ), rival: Boolean(rv), note: who ? who.note : null, ...(sp0 ? { pick: sp0.pick } : {}) }];
     };
 
-    // 組み合わせ表の演出(8人のトーナメント)。決まった乱数で、ほかの試合の勝ち上がりも決める。戦うのは決勝の1戦だけ
+    // 組み合わせ表の演出(8人のトーナメント・2026-11-14 社長「トーナメントの表示がおかしい」で作り直し)。決まった乱数で、ほかの試合の勝ち上がりも決める。戦うのは決勝の1戦だけ
+    //   並び: 0=自分(いちばん上)。1〜3=自分の山。4〜7=反対の山(決勝の相手 foe が 4〜7 のどこか)。1回戦=(0,1)(2,3)(4,5)(6,7)・準決勝=上の山と下の山の勝ち同士
+    //   pop = 人気の番号(1〜8が1つずつ・王者が1番・ライバルが次)。王者(決勝の相手でないとき)は自分の山。自分と決勝の相手は、かならず勝ち上がる
+    //   rounds = [1回戦の勝ち(4人の番号), 準決勝の勝ち(2人の番号)]・final = [自分, 決勝の相手]
     const bracketOf = (s) => {
       const b = s.battle; if (!b) return null;
       const rng = rngOf(s.id, s.turn, 'bracket', b.kind, b.round || 0, b.retry || 0);
       const cup = cupOfBattle(b); const opp = opponentsOf(s)[0];
       const regs = regularsOf(cup).filter(r => !opp || r.mon !== opp.name);
-      const others = regs.map(r => ({ name: r.mon, breeder: r.breeder, species: r.species }));
+      const champs = regs.filter(r => r.champ).map(r => ({ name: r.mon, breeder: r.breeder, species: r.species, champ: true }));
+      const rest = regs.filter(r => !r.champ).map(r => ({ name: r.mon, breeder: r.breeder, species: r.species }));
+      const others = [...champs, ...rest];
       while (others.length < 6) others.push({ name: null, breeder: null, species: speciesList[Math.floor(rng() * speciesList.length)] || 'Mocchi' });
       const you = { you: true, species: s.species };
       const foe = { name: opp ? opp.name : null, breeder: opp ? opp.breeder : null, species: opp ? opp.species : 'Mocchi', champ: opp ? opp.champ : false, rival: opp ? opp.rival : false };
-      // 左の山に自分、右の山に相手(決勝で当たる)。ほかの6体を並べる
-      const pick = others.slice(0, 6).map(x => ({ x, r: rng() })).sort((p, q) => p.r - q.r).map(o => o.x);
-      const entrants = [you, pick[0], pick[1], pick[2], foe, pick[3], pick[4], pick[5]];
-      const r1 = [0, 2 + (rng() < 0.5 ? 0 : 1), 4, 6 + (rng() < 0.5 ? 0 : 1)]; // 1回戦の勝ち(自分と相手はかならず勝ち上がる)
-      const r2 = [0, 4];
-      return { cup, entrants, rounds: [r1, r2], final: [0, 4] };
+      // ほかの6体: 王者(決勝の相手でないとき)は自分の山の1〜3番、残りはばらばらに
+      const shuf = (arr) => arr.map(x => ({ x, r: rng() })).sort((p, q) => p.r - q.r).map(o => o.x);
+      const ch = others.filter(x => x.champ); const rs = shuf(others.filter(x => !x.champ));
+      const upper = shuf([...ch.slice(0, 1), ...rs.splice(0, 3 - Math.min(1, ch.length))]);
+      const lower = shuf([...ch.slice(1), ...rs]).slice(0, 3);
+      const f = 4 + Math.floor(rng() * 4);
+      const entrants = [you, ...upper.slice(0, 3)]; const low = lower.slice(); const lowRow = []; for (let i = 4; i < 8; i++) lowRow.push(i === f ? foe : low.shift());
+      entrants.push(...lowRow);
+      // 人気の番号(1〜8)
+      const score = entrants.map((e, i) => (e.champ ? 1000 : e.rival ? 900 : e.you ? 300 + Math.min(100, num(s.pop)) * 3 : 100 + rng() * 400));
+      const order = score.map((v, i) => ({ v, i })).sort((p, q) => q.v - p.v); const pop = []; order.forEach((o, k) => { pop[o.i] = k + 1; });
+      // 勝ち上がり: 自分と決勝の相手はかならず。ほかは人気が上の方が7割で勝つ
+      const win = (i, j) => { if (i === 0 || i === f) return i; if (j === 0 || j === f) return j; const hi = pop[i] < pop[j] ? i : j; const lo = hi === i ? j : i; return rng() < 0.7 ? hi : lo; };
+      const r1 = [win(0, 1), win(2, 3), win(4, 5), win(6, 7)];
+      const r2 = [win(r1[0], r1[1]), win(r1[2], r1[3])];
+      return { cup, entrants, rounds: [r1, r2], final: [0, f], pop, foe: f };
     };
 
     // 再戦: 負けた試合の直後(settle の前)に呼ぶ。同じ相手ともう一度(試合の乱数は again で変える)
