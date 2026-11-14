@@ -79,6 +79,7 @@ const makeRun = async (kind) => {
     ['S2', null, ['new', 'next', 'next']], ['S2P', null, ['new', 'next', 'next', 'slot:1']], ['S2B', null, ['new', 'next', 'next', 'slot:1', 'base:Golem']], ['S2G', null, ['new', 'next', 'next', 'gather']],
     ['S3', null, ['new', 'next', 'next', 'next']], ['S4', null, ['new', 'next', 'next', 'next', 'next']], ['S4L', null, ['new', 'next', 'next', 'next', 'next', 'carry:oil']],
     ['S5', null, ['new', 'next', 'next', 'next', 'next', 'next']], ['S6', null, ['new', 'next', 'next', 'next', 'next', 'next', 'next']],
+    ['IN', null, ['new', 'next', 'next', 'next', 'next', 'next', 'next', 'begin', 'birthSkip']], ['IN2', null, ['new', 'next', 'next', 'next', 'next', 'next', 'next', 'begin', 'birthSkip', 'introNext', 'introNext']], // 育成の始まりの場面(2026-11-14)
     ['M1', 'mid', ['cont']], ['M2', 'yosu', ['cont']], ['M3', 'mid', ['cont', 'bag']], ['M3A', 'bagall', ['cont', 'bag']], ['T1', 'mid', ['cont', 'train']], ['T2', 'mid', ['cont', 'train', 'swipe']], ['Q0', 'mid', ['ki']], ['Q1', 'mid', ['ki', 'kitap']], ['R1', 'mid', ['cont', 'rest']],
     ['M1A', 'mid', ['cont', 'apt']], ['K3A', 'mid', ['cont', 'apt', 'train', 'go', 'next']], // 能力の列を押して素質の表示に(2026-11-14)
     ['K1', 'mid', ['cont', 'train', 'go']], ['K3', 'mid', ['cont', 'train', 'go', 'next']], ['K5', 'mid', ['cont', 'train', 'go', 'next', 'praise']],
@@ -146,6 +147,12 @@ const makeRun = async (kind) => {
             if (st === 'go') return click(/をする$/); // 2026-11-14 トレーニングのボタンは「丸太割りをする」のようにトレーニングの名前になった
             if (st === 'praise') { const b = document.querySelector('[data-msx-react-how="praise"]'); if (b) { b.click(); return true; } return !document.querySelector('[data-msx-react]'); } // 2026-11-14 成功のあとは叱る・褒めるの段が出ない
             if (st === 'clinic') return click(/通院/);
+            if (st === 'begin') return click(/育成をはじめる/);
+            if (st === 'birthSkip') { // 円盤石から生まれる演出(56-monsuc-birth.jsx)を飛ばして「育成をはじめる」
+              const k = document.querySelector('[data-msx-birth-skip]'); if (k) k.click(); await new Promise((r) => setTimeout(r, 400));
+              const b = document.querySelector('[data-msx-birth-next]'); if (b) b.click(); return !!(k || b);
+            }
+            if (st === 'introNext') { const b = document.querySelector('[data-msx-intro-next]'); if (!b) return false; b.click(); return true; }
             if (st === 'apt') { const r = document.querySelector('.msx [data-msx-st-toggle]'); if (!r) return false; r.click(); return true; }
             if (st === 'rest') return click(/^🛌/);
             if (st === 'kitap') { const k = document.querySelector('[data-msx-ki]'); if (!k) return false; k.click(); return true; }
