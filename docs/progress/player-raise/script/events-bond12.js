@@ -29,6 +29,7 @@ const MONSUC_SCRIPT_EVENTS_BOND12 = Object.freeze([
   { id:'ev.team.tagwake.mua1b', who:'mua', e:'excited', bond:[1,2], t:'今の、見ましたか！？ ふたりの心がつながりました✨' },
   { id:'ev.self.peakin.mua1b', who:'mua', e:'excited', bond:[1,2], t:'{mon}、急にたくましくなっていませんか！？ 伸びどきが来たかもしれません！' },
   { id:'ev.self.peakout.mua1b', who:'mua', e:'normal', bond:[1,2], t:'無理はしないでいきましょう。{mon}のペースが大事です♪' },
+  { id:'ev.self.anniv.mua1b', who:'mua', e:'happy', bond:[1,2], t:'{mon}、育成記念日おめでとうございます♪ 1年、ほんとうによくがんばりましたね！' },
   { id:'ev.self.slump.mua1b', who:'mua', e:'troubled', bond:[1,2], t:'最近うまくいきませんね…。気分を変えに遊びに行きましょうか？' },
   { id:'ev.self.favtrain.mua1b', who:'mua', e:'happy', bond:[1,2], t:'{mon}、{train}が好きになったんですね♪ 楽しそうです！' },
   { id:'ev.self.selfish.mua1b', who:'mua', e:'troubled', bond:[1,2], t:'今日はご機嫌ななめですね…。どうしましょう？' },

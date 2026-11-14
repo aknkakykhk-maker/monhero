@@ -13,6 +13,7 @@ const MONSUC_SCRIPT_HEADS = Object.freeze([
   { prefix:'turn.', head:'none', label:'' },
   { prefix:'mon.', head:'none', label:'' },
   { prefix:'item.', head:'none', label:'' },
+  { prefix:'tut.', head:'none', label:'' }, // β版のチュートリアル(みゅあの説明。出来事ではない)
 ]);
 
 // 行の id から見出しを引く(上から順に、最初に当たったもの)
