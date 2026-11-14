@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 19fe830134287df5
+// generated-sha256: 71cf2966f3215dc5
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -81683,7 +81683,7 @@ const MSX_BETA_KEY = 'mh_monsuc_beta_v1';
 const MSX_BETA_AIDS = Object.freeze(['mua']);
 const msxBetaAidOk = (aid) => MSX_BETA_AIDS.includes(aid);
 // 最初の1回だけ出す説明の名前(台本の tut.<名前>)と、β版の話(scn.mua.beta.<名前>)
-const MSX_BETA_TUT = Object.freeze(['prep', 'turn', 'train', 'result', 'rest', 'shugyo', 'cup', 'rank', 'meal', 'match', 'rematch', 'event', 'awake', 'retire']);
+const MSX_BETA_TUT = Object.freeze(['scn', 'prep', 'turn', 'train', 'result', 'rest', 'shugyo', 'cup', 'rank', 'meal', 'match', 'rematch', 'event', 'awake', 'retire']);
 const MSX_BETA_STORY = Object.freeze(['open', 'firstend']);
 const msxBetaScene = (k) => (MSX_BETA_STORY.includes(k) ? `scn.mua.beta.${k}` : `tut.${k}`);
 const msxBetaKnown = (k) => MSX_BETA_TUT.includes(k) || MSX_BETA_STORY.includes(k);
@@ -81837,8 +81837,8 @@ const MSX_SCN_CSS = `
 .msx .scn-win .cl{display:block;margin:10px auto 0;padding:8px 28px;border-radius:9px;background:#fff;border:2px solid #d6d3d1;font-weight:900;font-size:14px;color:#1f2937}
 `;
 
-// ストーリー選択の画面。value: いま選んでいるシナリオの id。onNext(id): 次へ(育てるモンスターを選ぶ段)
-function MsxScenarioSelect({ value, onBack, onNext }) {
+// ストーリー選択の画面。value: いま選んでいるシナリオの id。onNext(id): 次へ(育てるモンスターを選ぶ段)。ctx: みゅあの説明(tut.scn)に渡す呼び名など
+function MsxScenarioSelect({ value, onBack, onNext, ctx }) {
   const [idx, setIdx] = useState(() => Math.max(0, MSX_STORIES.findIndex((x) => x.id === msxScenarioId(value))));
   const [detail, setDetail] = useState(false);
   const sc = MSX_STORIES[idx] || MSX_STORIES[0];
@@ -81886,6 +81886,7 @@ function MsxScenarioSelect({ value, onBack, onNext }) {
           </div>
         </div>
       ) : null}
+      {typeof MsxBetaTalk === 'function' ? <MsxBetaTalk keys={['scn']} ctx={ctx}/> : null}
     </div>
   );
 }
@@ -85955,7 +85956,7 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf }) {
     </div>
   );
 
-  if (scn == null && typeof MsxScenarioSelect === 'function') return <MsxScenarioSelect value={scn} onBack={onCancel} onNext={(id) => { setScn(id); setStep(0); }}/>;
+  if (scn == null && typeof MsxScenarioSelect === 'function') return <MsxScenarioSelect value={scn} ctx={betaCtx} onBack={onCancel} onNext={(id) => { setScn(id); setStep(0); }}/>;
   let body = null; let go = null;
   if (step === 0) {
     const list = tab === 'base' ? unlocked.map((id) => ({ key: id, sp: id, on: !pick.box && pick.base === id, pick: { base: id } }))
@@ -86039,7 +86040,7 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf }) {
           <div style={{ marginTop: 5 }}><span className="chip on">{sc.tag}</span> <span className="chip p">仲良し度 Lv{aidLv}</span></div></div></div>
         <div className="v-kv"><b>助手の効き</b><span>{sc.perk}</span></div>
         {combo && <div className="v-kv"><b>トレーニングの組み合わせ</b><span>{MSX_STATS.slice(0, 3).map((k) => `${MSX_STAT_ICON[k]}${MSX_STAT_NAME[k]} → +${combo[k].map((c) => MSX_STAT_ICON[c]).join('+')}`).join(' / ')} …</span></div>}
-        <div className="v-kv"><b>はじめの親密度</b><span>{Math.min(100, aidLv * ((SUC.BOND && SUC.BOND.aidPerLv) || 8))}(仲良し度 Lv{aidLv})。助手もトレーニングに来て、タッグになる</span></div>
+        <div className="v-kv"><b>はじめの親密度</b><span>{Math.min((SUC.BOND && SUC.BOND.aidStartMax) || 40, aidLv * ((SUC.BOND && SUC.BOND.aidPerLv) || 4))}(仲良し度 Lv{aidLv})。助手もトレーニングに来て、タッグになる</span></div>
         <div className="v-eps">{sc.eps.map((t, i) => <div key={i}><b>{i + 1}話</b>{t}</div>)}<div className="lk"><b>4話</b>🔒 ？？？</div></div>
         <div className="row" style={{ marginTop: 'auto' }}><img className="fc" src={msxFace(aid, 'wink')} alt=""/><div className="bub f1">「{aid === 'atsu' ? 'よし、いっちょ仕上げてくか。よろしくな笑' : 'いっしょに てっぺん めざそ! まぢで楽しいから!'}」</div></div>
       </div>
@@ -88299,7 +88300,7 @@ function MsxR3Retire({ run, setRun, onPause, debug, SUC }) {
         const nextCost = got < a.max ? a.pt : 0; const canUp = got < a.max && left >= nextCost && !dim;
         return (<div key={id} className={`v-a3${got ? ' got' : ''}${dim ? ' dim' : ''}`} data-msx-r3-assist={id}>
           <div className="h">{cardIconNode(a.icon, 16)}<span className="nm">{a.name}</span><span className={`rf${a.ref ? '' : ' o'}`}>{a.ref ? '参考' : 'オリジナル'}</span><b className="val">{got ? AT.valueText(id, got) : '—'}</b></div>
-          <div className="ex">{a.ex[Math.max(0, (got || 1) - 1)]}{a.max > 1 ? `(1目盛り ${a.pt}pt・最大 ${AT.valueText(id, a.max)})` : `(${a.pt}pt)`}</div>
+          <div className="ex">{a.ex[Math.max(0, (got || 1) - 1)]}{a.max > 1 ? `(1目盛り ${AT.valueText(id, 1)}・${a.pt}pt/最大 ${AT.valueText(id, a.max)})` : `(${a.pt}pt)`}</div>
           <div className="ctl"><button type="button" disabled={!got} onClick={() => tap(id, got - 1)} data-msx-r3-minus={id}>−</button>
             <div className="gauge" onClick={(e) => { const r = e.currentTarget.getBoundingClientRect(); const n = Math.max(1, Math.round((e.clientX - r.left) / Math.max(1, r.width) * a.max)); tap(id, n); }}>
               <i style={{ width: `${got / a.max * 100}%` }}/>{a.max <= 25 ? Array.from({ length: a.max - 1 }, (_, j) => <s key={j} style={{ left: `${(j + 1) / a.max * 100}%` }}/>) : null}</div>

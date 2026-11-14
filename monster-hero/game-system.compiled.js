@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 36bc855ff37eaff5
+// source-sha256: e9b0910f25d779f2
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -156700,7 +156700,7 @@ const msxDexEnsureCss = () => {
 const MSX_BETA_KEY = 'mh_monsuc_beta_v1';
 const MSX_BETA_AIDS = Object.freeze(['mua']);
 const msxBetaAidOk = aid => MSX_BETA_AIDS.includes(aid);
-const MSX_BETA_TUT = Object.freeze(['prep', 'turn', 'train', 'result', 'rest', 'shugyo', 'cup', 'rank', 'meal', 'match', 'rematch', 'event', 'awake', 'retire']);
+const MSX_BETA_TUT = Object.freeze(['scn', 'prep', 'turn', 'train', 'result', 'rest', 'shugyo', 'cup', 'rank', 'meal', 'match', 'rematch', 'event', 'awake', 'retire']);
 const MSX_BETA_STORY = Object.freeze(['open', 'firstend']);
 const msxBetaScene = k => MSX_BETA_STORY.includes(k) ? `scn.mua.beta.${k}` : `tut.${k}`;
 const msxBetaKnown = k => MSX_BETA_TUT.includes(k) || MSX_BETA_STORY.includes(k);
@@ -156934,7 +156934,8 @@ const MSX_SCN_CSS = `
 function MsxScenarioSelect({
   value,
   onBack,
-  onNext
+  onNext,
+  ctx
 }) {
   const [idx, setIdx] = useState(() => Math.max(0, MSX_STORIES.findIndex(x => x.id === msxScenarioId(value))));
   const [detail, setDetail] = useState(false);
@@ -157050,7 +157051,10 @@ function MsxScenarioSelect({
     type: "button",
     className: "cl",
     onClick: () => setDetail(false)
-  }, "とじる"))) : null);
+  }, "とじる"))) : null, typeof MsxBetaTalk === 'function' ? React.createElement(MsxBetaTalk, {
+    keys: ['scn'],
+    ctx: ctx
+  }) : null);
 }
 const MSX_TEV_STYLE = 'b';
 const MSX_TEV_LOT = Object.freeze({
@@ -164631,6 +164635,7 @@ function MsxStart({
   }), inner);
   if (scn == null && typeof MsxScenarioSelect === 'function') return React.createElement(MsxScenarioSelect, {
     value: scn,
+    ctx: betaCtx,
     onBack: onCancel,
     onNext: id => {
       setScn(id);
@@ -164943,7 +164948,7 @@ function MsxStart({
       className: "v-kv"
     }, React.createElement("b", null, "トレーニングの組み合わせ"), React.createElement("span", null, MSX_STATS.slice(0, 3).map(k => `${MSX_STAT_ICON[k]}${MSX_STAT_NAME[k]} → +${combo[k].map(c => MSX_STAT_ICON[c]).join('+')}`).join(' / '), " …")), React.createElement("div", {
       className: "v-kv"
-    }, React.createElement("b", null, "はじめの親密度"), React.createElement("span", null, Math.min(100, aidLv * (SUC.BOND && SUC.BOND.aidPerLv || 8)), "(仲良し度 Lv", aidLv, ")。助手もトレーニングに来て、タッグになる")), React.createElement("div", {
+    }, React.createElement("b", null, "はじめの親密度"), React.createElement("span", null, Math.min(SUC.BOND && SUC.BOND.aidStartMax || 40, aidLv * (SUC.BOND && SUC.BOND.aidPerLv || 4)), "(仲良し度 Lv", aidLv, ")。助手もトレーニングに来て、タッグになる")), React.createElement("div", {
       className: "v-eps"
     }, sc.eps.map((t, i) => React.createElement("div", {
       key: i
@@ -171907,7 +171912,7 @@ function MsxR3Retire({
         className: "val"
       }, got ? AT.valueText(id, got) : '—')), React.createElement("div", {
         className: "ex"
-      }, a.ex[Math.max(0, (got || 1) - 1)], a.max > 1 ? `(1目盛り ${a.pt}pt・最大 ${AT.valueText(id, a.max)})` : `(${a.pt}pt)`), React.createElement("div", {
+      }, a.ex[Math.max(0, (got || 1) - 1)], a.max > 1 ? `(1目盛り ${AT.valueText(id, 1)}・${a.pt}pt/最大 ${AT.valueText(id, a.max)})` : `(${a.pt}pt)`), React.createElement("div", {
         className: "ctl"
       }, React.createElement("button", {
         type: "button",
