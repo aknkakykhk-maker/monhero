@@ -496,7 +496,7 @@ function AssistantMasmonBattleWatch({ onClose }) {
       <style>{AMBW_CSS}</style>
       <div className="ambw-in">
         <div className="ambw-top">
-          <button className="ambw-btn2" data-ambw-close onClick={phase === 'setup' || !battle ? onClose : () => setPhase('setup')}>← {phase === 'setup' || !battle ? 'もどる' : '設定へ'}</button>
+          <button className="ambw-btn2" data-ambw-close onClick={phase === 'setup' || !battle ? onClose : () => setPhase('setup')}>← {phase === 'setup' || !battle ? '戻る' : '設定へ'}</button>
           <span>⚔ 助手マスモンの対戦(観戦の試作)</span>
           <b>{phase !== 'setup' && battle ? `ラウンド ${(battle.frames[pos] || {}).r || 0}` : '試作'}</b>
         </div>

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 49d2ba69677e3822
+// generated-sha256: 8a57293bed8862e7
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -311,10 +311,10 @@ const BATTLE_FX_SETTING_ITEMS = Object.freeze([
   { key:'load', title:'画面の軽さ',
     desc:'バトル画面の飾りと演出の量です。スマホが熱くなる・動きがかくつくときは、軽いほうを選んでください。仲良し度などが上がったときの演出も、軽いほど控えめになります。ダメージや進行は変わりません。',
     options:[
-      { id:'RICH', label:'豪華', note:'すべての飾りと演出' },
+      { id:'RICH', label:'豪華', note:'全ての飾りと演出' },
       { id:'STANDARD', label:'標準', note:'飾りの動きを止める' },
       { id:'LIGHT', label:'軽め', note:'待機の動きも止める' },
-      { id:'MINIMAL', label:'最軽量', note:'いちばん軽い表示' },
+      { id:'MINIMAL', label:'最軽量', note:'一番軽い表示' },
     ] },
   { key:'autoLoad', title:'重いときは自動で軽く',
     desc:'タクティクス新画面で動きのかくつきが続いたとき、画面の軽さを一段ずつ自動で下げます（「軽め」まで）。下げたぶんは、アプリを開き直すか画面の軽さを選び直すと元に戻ります。ダメージや進行は変わりません。',
@@ -568,7 +568,7 @@ const isSpeciesChallengeUnlocked = (clearCounts) => SPECIES_CHALLENGE_UNLOCK_DIF
 // ここへ書かない(カード側のDEBUGバッジで分ける)。
 const SPECIES_CHALLENGE_MODE = Object.freeze({
   id:BATTLE_MODE_SPECIES_CHALLENGE, label:'種族チャレンジ', short:'種族', emoji:'🧬', color:'#67e8f9',
-  tagline:'ひとつの種族だけで挑む、しばりプレイのモード',
+  tagline:'一つの種族だけで挑む、しばりプレイのモード',
   highlights:[
     ['🧬','ひとつの種族だけでWAVE1〜10'],
     ['🔓','種族別に難易度を解放していく'],
@@ -629,7 +629,7 @@ const TACTICS_SPECIES_MODE = Object.freeze({
   id:BATTLE_MODE_TACTICS_SPECIES, label:'タクティクス種族チャレンジ', cardLabel:'種族チャレンジ', short:'種族', emoji:'🧬', color:'#67e8f9',
   // ★「敵の予告を読んで誰を守るか」はタクティクスの3モードすべてにあるので売りに書かない。
   //   クラシックの種族チャレンジと同じ3行にそろえる(見比べる列をそろえるため)
-  tagline:'ひとつの種族だけで挑む、しばりプレイのモード',
+  tagline:'一つの種族だけで挑む、しばりプレイのモード',
   highlights:[
     ['🧬','ひとつの種族だけでWAVE1〜10'],
     ['🔓','種族別に難易度を解放していく'],
@@ -662,7 +662,7 @@ const TACTICS_PRO_MODE = Object.freeze({
     ['⚔️','編成','育てたマスモンは1体も連れていけません。全員が素のベースモンです。積み上げたステータス・強化ポイント・固有技レベル・限界突破は、このモードでは一切使えません。'],
     ['❤️','ステータスの持ち方','ライフ・ちから・丈夫さ・ガッツを1体ずつ持ちます(クラシックバトルはパーティ全員ぶんの合計)。倒れたモンスターはその場では戦えなくなり、ライフが満タンまで戻ると立ち上がります。全員が倒れたときだけ負けです。'],
     ['📈','WAVEのあいだの強化','WAVEをクリアするたびに強化フェーズがあります。素の状態から始まるぶん、誰をどこまで伸ばすかの判断がそのまま結果に出ます。'],
-    ['👹','難しさ','難易度は通常9段階と極限5段階です。敵は間合い攻撃・連撃・貫通撃・攻撃力アップなどを使い分け、どの技が来るかは1ターン前に予告されます。育てた個体に頼れないぶん、読み合いの比重がいちばん大きいモードです。'],
+    ['👹','難しさ','難易度は通常9段階と極限5段階です。敵は間合い攻撃・連撃・貫通撃・攻撃力アップなどを使い分け、どの技が来るかは1ターン前に予告されます。育てた個体に頼れないぶん、読み合いの比重が一番大きいモードです。'],
     ['💎','もらえる経験値とダイヤ','絆経験値が3倍、ブリーダー経験値が1.5倍になります（難易度の倍率にさらにかかります）。ダイヤとスコアの倍率は難易度の設定どおりです。'],
     ['🏆','スコアと記録','スコアはこのモード専用の全国ランキングに反映されます。自己ベスト・最高到達WAVE・クリア回数も専用の場所に残り、ほかのモードの記録は書き換わりません。'],
     ['🤝','供モンの加入','始める前に供モンの候補を5体選びます。実際に加入候補として出るのは、その5体からランダムに選ばれた3体です。加わるとそのぶん敵も強くなります。'],
@@ -951,7 +951,7 @@ const BATTLE_MODES = [
     points: [
       ['⚔️', '編成', 'ベースモンもマスモンも自由に連れていけます。勇者モン1体と供モンで挑みます。'],
       ['📈', 'WAVEのあいだの強化', 'WAVEをクリアするたびに強化フェーズがあります。ちから・丈夫さ・ライフ・ガッツのどれを伸ばすかを自分で選べるので、編成のかみ合わせを考えながら組み立てられます。ブリーダーの教えもここで選びます。'],
-      ['👹', '難しさ', '9段階の難易度から選べます。強化を自分で選べるぶん、うまく組み立てれば高い難易度でも十分に戦えます。育てたマスモンをそのまま活かせる、いちばん素直な難しさです。'],
+      ['👹', '難しさ', '9段階の難易度から選べます。強化を自分で選べるぶん、うまく組み立てれば高い難易度でも十分に戦えます。育てたマスモンをそのまま活かせる、一番素直な難しさです。'],
       ['💎', 'もらえる経験値とダイヤ', 'ブリーダー経験値・絆経験値・ダイヤは、どれも難易度の設定どおりの倍率です。モードによる上乗せはありません。'],
       ['🏆', 'スコアと記録', 'スコアは難易度ごとの全国ランキングに反映されます。自己ベストスコア・最高到達WAVE・クリア回数も難易度ごとに残ります。'],
       ['🤝', '供モンの加入', '決まったWAVEで供モンが加わります。加わるモンスターは所持しているモンスターから選べます。'],
@@ -969,10 +969,10 @@ const BATTLE_MODES = [
       ['🚫', 'スコアランキングは無し'],
     ],
     points: [
-      ['⚔️', '編成', 'ベースモンもマスモンも自由に連れていけます。育てたいモンスターを勇者モンにすると、そのモンスターの絆経験値がいちばん多く貯まります。'],
+      ['⚔️', '編成', 'ベースモンもマスモンも自由に連れていけます。育てたいモンスターを勇者モンにすると、そのモンスターの絆経験値が一番多く貯まります。'],
       ['📈', 'WAVEのあいだの強化', '強化を選ぶ画面は出ません。かわりにWAVEをクリアするたび、味方全員の全ステータス（ライフ・ちから・丈夫さ・ガッツ）がそのときの値から10%上がり、ライフとガッツが満タンまで回復します。'],
       ['👹', '難しさ', '9段階の難易度から選べます。強化を選べないぶん苦手をふさぎにくく、チャレンジモードとは違う難しさがあります。育成が目的なので、無理のない難易度で回すのが向いています。'],
-      ['💎', 'もらえる経験値とダイヤ', 'ブリーダー経験値・絆経験値・ダイヤが、難易度の倍率にさらに1.5倍かかります。同じ時間でいちばん多く育つのがこのモードです。'],
+      ['💎', 'もらえる経験値とダイヤ', 'ブリーダー経験値・絆経験値・ダイヤが、難易度の倍率にさらに1.5倍かかります。同じ時間で一番多く育つのがこのモードです。'],
       ['🏆', 'スコアと記録', 'スコアは競いません。ランキングには載らず、チャレンジモードの自己ベストも書き換わりません。記録はクイック専用の場所に、最高到達WAVEとクリア回数として残ります。'],
       ['🤝', '供モンの加入', '決まったWAVEで供モンが加わります。加わったあと、味方の誰か1体の固有技がランダムで1レベル上がります（上限Lv.8）。技を選ぶ画面は出ません。'],
       ['⭐', 'マスモン登録', '勇者モンにしたモンスターは、プレイが終わったあとマスモンとして登録できます。'],
@@ -1050,7 +1050,7 @@ const BATTLE_SYSTEMS = Object.freeze([
       Object.freeze(['✨', '勇者特性', '勇者モンにしたモンスターの特性だけが、パーティ全体へ効きます。供モンが同じ特性を持っていても効かないので、誰を勇者モンにするかが編成の要になります。']),
       Object.freeze(['📈', 'WAVEのあいだの強化', 'WAVEをクリアするたびに強化フェーズがあります。ちから・丈夫さ・ライフ・ガッツのどれを伸ばすかを自分で選び、ブリーダーの教えもここで選びます。編成のかみ合わせを考えながら組み立てられます。']),
       Object.freeze(['👹', '難しさ', '通常の9段階に加えて、その上に極限の段があります。難易度えらびの「極限」タブから挑め、段ごとに特殊ルールが付きます。']),
-      Object.freeze(['🎮', '中にあるモード', 'チャレンジモード（基本）、種族チャレンジ（ひとつの種族だけで挑む）、プロモード（ベースモンだけで挑む）の3つです。']),
+      Object.freeze(['🎮', '中にあるモード', 'チャレンジモード（基本）、種族チャレンジ（一つの種族だけで挑む）、プロモード（ベースモンだけで挑む）の3つです。']),
       Object.freeze(['🏆', 'スコアと記録', 'スコアは難易度ごとの全国ランキングに反映されます。自己ベスト・最高到達WAVE・クリア回数はモードごとに別々に残ります。']),
       Object.freeze(['🎯', 'こんな人におすすめ', 'じっくり考えて攻略したい人、ランキング上位や自己ベスト更新を狙いたい人向けです。']),
     ]),
@@ -1087,9 +1087,9 @@ const BATTLE_SYSTEMS = Object.freeze([
       Object.freeze(['⚡', '強化を選ばないから1周が速い']),
       Object.freeze(['🔁', 'AUTO∞で放置したまま何周でも']),
     ]),
-    note: '中のモードは1つだけなので、選ぶとそのまま難易度えらびへ進みます',
+    note: '中のモードは1つだけなので、選ぶとそのまま難易度選びへ進みます',
     points: Object.freeze([
-      Object.freeze(['💎', 'もらえるもの', 'ブリーダー経験値・絆経験値・ダイヤが、難易度の倍率にさらに1.5倍かかります。同じ時間でいちばん多く育つのがこのモードです。']),
+      Object.freeze(['💎', 'もらえるもの', 'ブリーダー経験値・絆経験値・ダイヤが、難易度の倍率にさらに1.5倍かかります。同じ時間で一番多く育つのがこのモードです。']),
       Object.freeze(['📈', '強化のかわり', '強化を選ぶ画面は出ません。かわりにWAVEをクリアするたび、味方全員のライフ・ちから・丈夫さ・ガッツがそのときの値から10%上がり、ライフとガッツが満タンまで回復します。']),
       Object.freeze(['🔁', '放置で周回する', 'AUTO∞を使うと、10WAVEをクリアしたあとそのまま次の周へ入ります。置いておくだけで育つので、育成の周回と相性がいい遊び方です。']),
       Object.freeze(['⏩', 'スキップチケット', 'このモードでだけ使えます。チケットのある難易度は、戦わずに一気にクリアぶんの報酬を受け取れます。']),
@@ -9708,7 +9708,7 @@ const AudioTroubleshootPanel = ({ info, peak, muted, onTest, onRepair, repairing
   return (
     <div data-audio-troubleshoot className="mt-2 rounded-2xl border border-white/10 bg-slate-950/70 p-3 text-left">
       {muted && <p className="mb-2 rounded-xl border border-amber-400/40 bg-amber-950/40 px-2 py-1.5 text-[10px] font-black text-amber-200">いまゲームの音はオフです。上の「🔇 音がオフです」を押してオンにしてください。</p>}
-      {lowVolume && <p data-audio-low-volume className="mb-2 rounded-xl border border-amber-400/40 bg-amber-950/40 px-2 py-1.5 text-[10px] font-black leading-relaxed text-amber-200">音量がとても小さいままです（BGM {info.bgmVolumePct} ／ SE {info.seVolumePct}）。はじめて遊ぶときは音量1から始まるので、上のスライダーを右へ動かしてください。</p>}
+      {lowVolume && <p data-audio-low-volume className="mb-2 rounded-xl border border-amber-400/40 bg-amber-950/40 px-2 py-1.5 text-[10px] font-black leading-relaxed text-amber-200">音量がとても小さいままです（BGM {info.bgmVolumePct} ／ SE {info.seVolumePct}）。初めて遊ぶときは音量1から始まるので、上のスライダーを右へ動かしてください。</p>}
       {row('音の出口', stateView.label, stateView.tone)}
       {row('効果音エンジン', seView.label, seView.tone)}
       {/* 曲の名前で出す(名前の分からない音だけファイル名)。2026-10-26 ダメダシの見回り s02 */}
@@ -10750,7 +10750,7 @@ const NEW_PLAYER_CAMPAIGN_KEY = 'mh_monhiro_beat_preopen_new_player_campaign_v1'
 const NEW_PLAYER_CAMPAIGN_GIFT = Object.freeze({
   id: 'monhiro_beat_preopen_new_player_v1',
   title: 'モンヒロビート プレオープン記念',
-  description: '新規プレイヤーキャンペーンのプレゼントです。モンヒロビートのプレオープンを記念して、はじめた方へお贈りします。',
+  description: '新規プレイヤーキャンペーンのプレゼントです。モンヒロビートのプレオープンを記念して、始めた方へお贈りします。',
   rewards: [
     { type:'diamond', amount:100000 },
     { type:'rainbowPsyche', amount:100 },
@@ -10763,7 +10763,7 @@ const NEW_PLAYER_CAMPAIGN_GIFT = Object.freeze({
 const NEW_PLAYER_CAMPAIGN_GIFT_GRAND = Object.freeze({
   id: 'monhiro_beat_grand_open_new_player_v1',
   title: 'モンヒロビート 本オープン記念',
-  description: '新規プレイヤーキャンペーンのプレゼントです。モンヒロビートの本オープンを記念して、はじめた方へお贈りします。',
+  description: '新規プレイヤーキャンペーンのプレゼントです。モンヒロビートの本オープンを記念して、始めた方へお贈りします。',
   rewards: [
     { type:'diamond', amount:149000 },
     { type:'rainbowPsyche', amount:150 },
@@ -11350,7 +11350,7 @@ const beatRankRewardItems = (rank) => {
   return [
     { icon: '🎟️', text: `ビートP ${(r * 100).toLocaleString()}` },
     { icon: '🎶', text: 'セッション券 1枚' },
-    ...(bonus ? [{ icon: '🎟️', text: `ビートP ${(r * 200).toLocaleString()}`, bonus: true }, { icon: '🎶', text: `セッション券 ${r.toLocaleString()}枚`, bonus: true }, { icon: '🌱', text: '性格のたね 1個', bonus: true }] : []),
+    ...(bonus ? [{ icon: '🎟️', text: `ビートP ${(r * 200).toLocaleString()}`, bonus: true }, { icon: '🎶', text: `セッション券 ${r.toLocaleString()}枚`, bonus: true }, { icon: '🌱', text: '性格の種 1個', bonus: true }] : []),
   ];
 };
 const beatRankRewardText = (rank) => `ビートP ${playerRankBeatPointsFor(rank).toLocaleString()}・セッション券 ${beatRankTicketsFor(rank).toLocaleString()}枚`;
@@ -11403,7 +11403,7 @@ const beatRankAfter = (prev, { difficultyId, cleared = true, fullCombo, allMarve
   if (!play.xp) return { next: cur, add: 0, parts: [], from, to: from, tickets: 0, beatPoints: 0, seeds: 0 };
   const day = typeof today === 'string' ? today.slice(0, 10) : '';
   const first = cleared !== false && !!day && !(cur.day === day && cur.dayFirst);
-  const parts = first ? [...play.parts, { label: 'その日はじめての1曲', xp: BEAT_RANK_BONUS.dayFirst }] : play.parts;
+  const parts = first ? [...play.parts, { label: 'その日初めての1曲', xp: BEAT_RANK_BONUS.dayFirst }] : play.parts;
   const add = play.xp + (first ? BEAT_RANK_BONUS.dayFirst : 0);
   const xp = playerRankSafeXp(cur.xp + add);
   const to = playerRankInfo(xp).rank;
@@ -14167,7 +14167,7 @@ const helpDataRows = (id) => {
             // 大王が倒されたら買える枠(ハロウィン・恐)は、条件の文がそのまま文になっている
             : sales.length && cond && cond.kind === 'raidJackBossDown' ? `${cond.text}（マーケットの${sales.map(label).join(' か ')}）。`
             : sales.length ? `${gated.length ? `「${cond.text}」を達成すると、マーケットの${gated.map(label).join(' か ')}で買えます。${free.length ? `${free.map(label).join(' か ')}なら条件なしで買えます。` : ''}` : `マーケットの${free.map(label).join(' か ')}で買えます。`}`
-            : 'はじめから選べます。';
+            : '初めから選べます。';
           return [frame.name, `${how}${frame.desc ? ` ${frame.desc}` : ''}`];
         });
     // 助手の一覧。名前と性格の違いを実データから出す
@@ -14183,7 +14183,7 @@ const helpDataRows = (id) => {
         ['ちから 1', `+${Math.round(MONSTER_POWER_STAT_WEIGHT.atk * 100) / 100}（強化P1つ=ちから+${STAT_POINT_GAIN.atk} で +10）`],
         ['丈夫さ 1', `+${Math.round(MONSTER_POWER_STAT_WEIGHT.def * 100) / 100}（強化P1つ=丈夫さ+${STAT_POINT_GAIN.def} で +10）`],
         ['ガッツ 1', `+${Math.round(MONSTER_POWER_STAT_WEIGHT.guts * 100) / 100}（強化P1つ=ガッツ+${STAT_POINT_GAIN.guts} で +10）`],
-        ['間合い適性', DIST_APTITUDE_GRADES.slice().reverse().map(g => `${g} ${MONSTER_POWER_APTITUDE[g] > 0 ? '+' : ''}${MONSTER_POWER_APTITUDE[g]}`).join(' ／ ') + '（4距離すべてを合計）'],
+        ['間合い適性', DIST_APTITUDE_GRADES.slice().reverse().map(g => `${g} ${MONSTER_POWER_APTITUDE[g] > 0 ? '+' : ''}${MONSTER_POWER_APTITUDE[g]}`).join(' ／ ') + '（4距離全てを合計）'],
         ['固有技を1つ持つ', `+${MONSTER_POWER_UNIQUE_OWNED}（Lv0でも付く。継承した固有技も同じ）`],
         ['固有技の強化Lv 1段階', `+${Math.round(MONSTER_POWER_UNIQUE_PER_LEVEL * 100) / 100}（3段階でちょうど+200）`],
       ];
@@ -14212,7 +14212,7 @@ const helpDataRows = (id) => {
     // はじめての HELL の目安(2026-10-21 改善部 N6)。Lv. がいちばん低い HELL を実データから選ぶ(rhythmHellEntrySong)
     case 'rhythmHellEntry': {
       const entry = typeof rhythmHellEntrySong === 'function' ? rhythmHellEntrySong() : null;
-      return entry ? [['はじめての HELL', `「${entry.name}」Lv.${entry.level} から(HELL の中でいちばんやさしい曲)`]] : [];
+      return entry ? [['初めての HELL', `「${entry.name}」Lv.${entry.level} から(HELL の中で一番やさしい曲)`]] : [];
     }
     case 'rhythmHellSongs': {
       const songs = typeof RHYTHM_SONGS !== 'undefined' ? RHYTHM_SONGS : [];
@@ -14271,7 +14271,7 @@ const helpDataRows = (id) => {
         const low = entries[levels.indexOf(Math.min(...levels))];
         const high = entries[levels.indexOf(Math.max(...levels))];
         return [id, `Lv.${Math.min(...levels)}〜${Math.max(...levels)}`
-          + `（やさしい順の先頭: ${rhythmSongFullName(low.song)} ／ いちばん重い: ${rhythmSongFullName(high.song)}）`];
+          + `（やさしい順の先頭: ${rhythmSongFullName(low.song)} ／ 一番重い: ${rhythmSongFullName(high.song)}）`];
       }).filter(Boolean);
     }
     // 曲えらびの四角い枠に絵が出るかどうか。ヘルプへ「いまはこの4曲」と手で書くと、
@@ -14349,12 +14349,12 @@ const HELP_DATA_TITLES = {
   monsterLineages: 'モンスターの血統一覧',
   psycheRewards: '難易度別にもらえる虹のプシュケー',
   rhythmDifficultyRanks: 'モンヒロビートの難易度別の満点と上限ランク',
-  rhythmHellEntry: 'はじめての HELL の目安',
+  rhythmHellEntry: '初めての HELL の目安',
   rhythmHellSongs: 'HELL がある曲',
   rhythmDemoSongLevels: '遊べる難易度とレベル',
   rhythmDemoSongList: '先行公開している曲',
   rhythmDifficultySpread: '同じ難易度でも曲でどれだけ違うか',
-  rhythmSongArtwork: '曲えらびに絵が出る曲',
+  rhythmSongArtwork: '曲選びに絵が出る曲',
   rhythmMonsterAbilities: 'モンスターノーツで出る能力',
 };
 
@@ -14844,7 +14844,7 @@ const AssistantBubble = ({ scene=null, assistantId=null, line=null, detail=null,
     return (
       <div data-bubble-collapsed className="w-full flex items-center gap-2">
         <AssistantFace who={who} size={32} accent={color} expression={face}/>
-        <button type="button" onClick={() => setCollapsed(false)} aria-label={`${who.name}のひとことをひらく`}
+        <button type="button" onClick={() => setCollapsed(false)} aria-label={`${who.name}のひとことを開く`}
           className="mh-hit-expand relative min-h-[32px] rounded-full border px-3 text-[10px] font-black active:scale-95"
           style={{ borderColor:color, color, backgroundColor:'var(--mh-bubble-bg, rgba(15,23,42,0.92))' }}>💬 {who.name}のひとこと ▾</button>
       </div>
@@ -22055,7 +22055,7 @@ const DyeMaskTouchEditor=({onClose,onTryInGame,onReleaseTemporary,onReleaseAllTe
  <section className="shrink-0 px-2 pb-1"><div className="grid grid-cols-[38px_1fr_38px] gap-1"><button onClick={()=>selectTarget((targetIndex-1+targets.length)%targets.length)} className="rounded-lg bg-slate-800" aria-label="前のモンスター">←</button><select aria-label="モンスター選択" value={targetIndex} onChange={e=>selectTarget(+e.target.value)} className="min-h-[34px] min-w-0 rounded-lg bg-slate-800 px-2 text-[9px] font-black">{targets.map((t,i)=><option key={t.baseId} value={i}>{t.name}／{t.hasMask?'染色マスクあり':'染色マスクなし'}</option>)}</select><button onClick={()=>selectTarget((targetIndex+1)%targets.length)} className="rounded-lg bg-slate-800" aria-label="次のモンスター">→</button></div><input value={search} onChange={e=>setSearch(e.target.value)} list="dye-mask-monsters" placeholder="名前検索" className="mt-1 min-h-[30px] w-full rounded-lg bg-slate-800 px-2 text-[9px]"/><datalist id="dye-mask-monsters">{filtered.map(({t})=><option key={t.baseId} value={t.name}/>)}</datalist>{search&&filtered.length>0&&<button onClick={()=>{selectTarget(filtered[0].i);setSearch('');}} className="mt-1 w-full rounded bg-cyan-900 py-1 text-[8px]">「{filtered[0].t.name}」を選択</button>}<p className={`text-center text-[8px] font-black ${target.hasMask?'text-emerald-300':'text-amber-300'}`}>{target.name}・{target.hasMask?'既存の染色マスクを読込':'染色マスクなし（完全透明から開始）'}{dirty?'・未書き出し':''}</p></section>
  <div className="grid shrink-0 grid-cols-4 gap-1 px-2">{[['composite','合成'],['body','本体のみ'],['mask','マスクのみ'],['boundary','境界確認']].map(([id,label])=><button key={id} onClick={()=>setView(id)} className={`min-h-[30px] rounded-lg text-[8px] font-black ${view===id?'bg-cyan-700':'bg-slate-800'}`}>{label}</button>)}</div>
  <section className="relative m-2 min-h-0 flex-1 overflow-hidden rounded-xl bg-slate-600" style={{touchAction:'none'}} onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up}>{error?<p className="p-4 text-center text-red-200">{error}</p>:!ready&&<p className="p-4 text-center">画像を読み込み中…</p>}<div className="absolute inset-0 flex items-center justify-center" style={{transform:`translate(${pan.x}px,${pan.y}px) scale(${zoom})`,pointerEvents:ready?'auto':'none'}}><div className="relative max-h-full max-w-full" style={{height:'100%',aspectRatio:`${imageSize.width} / ${imageSize.height}`}}>{view==='composite'&&previewMaskUrl&&<DyedMonsterImage baseId={target.baseId} src={target.imageUrl} alt={`${target.name}合成`} masuColors={previewColors} debugMaskPlacement={{maskUrl:previewMaskUrl}} className="absolute inset-0 h-full w-full object-contain"/>}<canvas ref={bodyRef} aria-label={`${target.name}本体レイヤー`} className="absolute inset-0 h-full w-full" style={{display:view==='mask'||view==='composite'?'none':'block'}}/><canvas ref={maskRef} aria-label="染色マスク編集レイヤー" className="absolute inset-0 h-full w-full" style={{display:view==='body'?'none':'block',opacity:view==='composite'?0:view==='boundary'?opacity/100:1}}/>{view==='boundary'&&outlineRef.current&&<img src={outlineRef.current.toDataURL()} alt="本体の外周" className="pointer-events-none absolute inset-0 h-full w-full"/>}<canvas ref={warningRef} aria-label="本体範囲外のマスク警告" className="pointer-events-none absolute inset-0 h-full w-full" style={{display:view==='boundary'?'block':'none'}}/></div></div>{loupe&&pointer&&<canvas ref={loupeRef} width="120" height="120" aria-label="拡大鏡" className="pointer-events-none absolute left-2 top-2 rounded-full border-2 border-white bg-slate-950 shadow-xl"/>}{pointer&&<div className="pointer-events-none fixed z-10 rounded-full border-2" style={{left:pointer.x-size*zoom/2,top:pointer.y-size*zoom/2,width:size*zoom,height:size*zoom,borderColor:colorCss[color],background:color==='eraser'?'repeating-linear-gradient(45deg,transparent,transparent 3px,rgba(255,255,255,.7) 3px,rgba(255,255,255,.7) 5px)':'transparent'}}><span className="absolute left-1/2 top-1/2 h-px w-3 -translate-x-1/2 bg-white"/><span className="absolute left-1/2 top-1/2 h-3 w-px -translate-y-1/2 bg-white"/></div>}</section>
- <section className="shrink-0 rounded-t-2xl border-t-2 border-cyan-400 bg-slate-900 px-2 pt-1" style={{paddingBottom:'max(.4rem,env(safe-area-inset-bottom))'}}><div className="grid grid-cols-5 gap-1">{MASK_PALETTE.slice(0,Math.max(3,dyeRegionCount(target.baseId))).map(([id,label,bg],idx)=><React.Fragment key={id}>{colorButton(id,`${'①②③④⑤'[idx]}${label}`,bg)}</React.Fragment>)}{colorButton('eraser','消す','#475569')}<button onClick={undo} disabled={!history.undo.length} className="rounded-xl bg-slate-700 text-[7px] disabled:opacity-30">Undo</button><button onClick={redo} disabled={!history.redo.length} className="rounded-xl bg-slate-700 text-[7px] disabled:opacity-30">Redo</button><button onClick={()=>setTool('brush')} className={`rounded-xl text-[7px] ${tool==='brush'?'bg-violet-700':'bg-slate-700'}`}>ブラシ</button><button onClick={()=>setTool('fill')} className={`rounded-xl text-[7px] ${tool==='fill'?'bg-violet-700':'bg-slate-700'}`}>塗りつぶし</button></div><div className="mt-1 grid grid-cols-3 gap-1"><button onClick={tryInGame} disabled={!ready} className="min-h-[38px] rounded-lg bg-fuchsia-700 text-[8px] font-black disabled:opacity-40">ゲームで試す</button><button onClick={()=>onReleaseTemporary(target.baseId)} disabled={!temporaryMasks[target.baseId]} className="rounded-lg bg-amber-800 text-[7px] font-black disabled:opacity-30">一時反映を解除</button><button onClick={onReleaseAllTemporary} disabled={!Object.keys(temporaryMasks).length} className="rounded-lg bg-red-900 text-[8px] font-black disabled:opacity-30">すべて解除</button></div>{temporaryMasks[target.baseId]&&<p className="pt-0.5 text-center text-[8px] font-black text-fuchsia-300">● 一時反映中</p>}<button onClick={()=>setDetails(v=>!v)} className="mt-1 min-h-[28px] w-full rounded-lg bg-slate-700 text-[8px]">詳細 {details?'▲':'▼'}</button>{details&&<div className="mt-1 grid grid-cols-2 gap-2 rounded-xl bg-slate-800 p-2 text-[8px]"><div className="col-span-2 grid grid-cols-3 gap-1">{Array.from({length:dyeRegionCount(target.baseId)},(_,idx)=><label key={idx} className="text-[7px] text-fuchsia-200">染色{'①②③④⑤'[idx]}<select value={previewColors[idx]||''} onChange={e=>setPreviewColors(current=>{const next=[...current];next[idx]=e.target.value||null;return next;})} className="block min-h-[28px] w-full rounded bg-slate-700 text-[8px]"><option value="">元の色</option>{Object.keys(MASU_COLOR_TARGET).map(id=><option key={id} value={id}>{MASU_COLOR_LABELS[id]}</option>)}</select></label>)}</div><label>ブラシ {size}px<input className="block w-full" type="range" min="2" max="100" step="2" value={size} onChange={e=>setSize(+e.target.value)}/></label><label>透明度 {opacity}%<input className="block w-full" type="range" min="25" max="100" step="25" value={opacity} onChange={e=>setOpacity(+e.target.value)}/></label><label>ポインター距離<select value={pointerDistance} onChange={e=>setPointerDistance(+e.target.value)} className="block w-full bg-slate-700">{[0,30,50,70].map(n=><option key={n} value={n}>{n}px</option>)}</select></label><label>方向<select value={pointerDirection} onChange={e=>setPointerDirection(e.target.value)} className="block w-full bg-slate-700"><option value="up">真上</option><option value="left">左上</option><option value="right">右上</option></select></label><button onClick={()=>setLoupe(v=>!v)} className="rounded bg-slate-700">拡大鏡 {loupe?'ON':'OFF'}</button><button onClick={()=>{setZoom(1);setPan({x:0,y:0});}} className="rounded bg-slate-700">全体表示</button><button onClick={cleanOutside} className="rounded bg-fuchsia-900">範囲外を掃除</button><button onClick={clearAll} className="rounded bg-red-900">全消去</button><button onClick={resetOriginal} className="rounded bg-amber-900">元マスク再読込</button></div>}<p className="pt-1 text-center text-[7px] text-slate-400">1本指：描画・2本指：パン/ピンチ・ダブルタップ：全体表示・{Math.round(zoom*100)}%</p></section></main>;
+ <section className="shrink-0 rounded-t-2xl border-t-2 border-cyan-400 bg-slate-900 px-2 pt-1" style={{paddingBottom:'max(.4rem,env(safe-area-inset-bottom))'}}><div className="grid grid-cols-5 gap-1">{MASK_PALETTE.slice(0,Math.max(3,dyeRegionCount(target.baseId))).map(([id,label,bg],idx)=><React.Fragment key={id}>{colorButton(id,`${'①②③④⑤'[idx]}${label}`,bg)}</React.Fragment>)}{colorButton('eraser','消す','#475569')}<button onClick={undo} disabled={!history.undo.length} className="rounded-xl bg-slate-700 text-[7px] disabled:opacity-30">Undo</button><button onClick={redo} disabled={!history.redo.length} className="rounded-xl bg-slate-700 text-[7px] disabled:opacity-30">Redo</button><button onClick={()=>setTool('brush')} className={`rounded-xl text-[7px] ${tool==='brush'?'bg-violet-700':'bg-slate-700'}`}>ブラシ</button><button onClick={()=>setTool('fill')} className={`rounded-xl text-[7px] ${tool==='fill'?'bg-violet-700':'bg-slate-700'}`}>塗りつぶし</button></div><div className="mt-1 grid grid-cols-3 gap-1"><button onClick={tryInGame} disabled={!ready} className="min-h-[38px] rounded-lg bg-fuchsia-700 text-[8px] font-black disabled:opacity-40">ゲームで試す</button><button onClick={()=>onReleaseTemporary(target.baseId)} disabled={!temporaryMasks[target.baseId]} className="rounded-lg bg-amber-800 text-[7px] font-black disabled:opacity-30">一時反映を解除</button><button onClick={onReleaseAllTemporary} disabled={!Object.keys(temporaryMasks).length} className="rounded-lg bg-red-900 text-[8px] font-black disabled:opacity-30">全て解除</button></div>{temporaryMasks[target.baseId]&&<p className="pt-0.5 text-center text-[8px] font-black text-fuchsia-300">● 一時反映中</p>}<button onClick={()=>setDetails(v=>!v)} className="mt-1 min-h-[28px] w-full rounded-lg bg-slate-700 text-[8px]">詳細 {details?'▲':'▼'}</button>{details&&<div className="mt-1 grid grid-cols-2 gap-2 rounded-xl bg-slate-800 p-2 text-[8px]"><div className="col-span-2 grid grid-cols-3 gap-1">{Array.from({length:dyeRegionCount(target.baseId)},(_,idx)=><label key={idx} className="text-[7px] text-fuchsia-200">染色{'①②③④⑤'[idx]}<select value={previewColors[idx]||''} onChange={e=>setPreviewColors(current=>{const next=[...current];next[idx]=e.target.value||null;return next;})} className="block min-h-[28px] w-full rounded bg-slate-700 text-[8px]"><option value="">元の色</option>{Object.keys(MASU_COLOR_TARGET).map(id=><option key={id} value={id}>{MASU_COLOR_LABELS[id]}</option>)}</select></label>)}</div><label>ブラシ {size}px<input className="block w-full" type="range" min="2" max="100" step="2" value={size} onChange={e=>setSize(+e.target.value)}/></label><label>透明度 {opacity}%<input className="block w-full" type="range" min="25" max="100" step="25" value={opacity} onChange={e=>setOpacity(+e.target.value)}/></label><label>ポインター距離<select value={pointerDistance} onChange={e=>setPointerDistance(+e.target.value)} className="block w-full bg-slate-700">{[0,30,50,70].map(n=><option key={n} value={n}>{n}px</option>)}</select></label><label>方向<select value={pointerDirection} onChange={e=>setPointerDirection(e.target.value)} className="block w-full bg-slate-700"><option value="up">真上</option><option value="left">左上</option><option value="right">右上</option></select></label><button onClick={()=>setLoupe(v=>!v)} className="rounded bg-slate-700">拡大鏡 {loupe?'ON':'OFF'}</button><button onClick={()=>{setZoom(1);setPan({x:0,y:0});}} className="rounded bg-slate-700">全体表示</button><button onClick={cleanOutside} className="rounded bg-fuchsia-900">範囲外を掃除</button><button onClick={clearAll} className="rounded bg-red-900">全消去</button><button onClick={resetOriginal} className="rounded bg-amber-900">元マスク再読込</button></div>}<p className="pt-1 text-center text-[7px] text-slate-400">1本指：描画・2本指：パン/ピンチ・ダブルタップ：全体表示・{Math.round(zoom*100)}%</p></section></main>;
 };
 
 // タップは1回、長押しは一定間隔で繰り返す。Pointer Eventsを使ってタッチを優先し、
@@ -39328,7 +39328,7 @@ function ScrollMoreList({ className = '', moreText, children, ...rest }) {
 //   chips        … [{ id, label, count }]。chip が選ばれている id、onChip で切り替え
 //   footerExtra  … 一覧の下・閉じるの上に置くもの(鍵の説明など。省略可)
 //   onClose      … 閉じる(背景を押しても閉じる)
-const PickerSheet = ({ title, note = '', preview = null, search = '', onSearch = null, searchPlaceholder = '名前でさがす',
+const PickerSheet = ({ title, note = '', preview = null, search = '', onSearch = null, searchPlaceholder = '名前で探す',
   chips = null, chip = null, onChip = null, footerExtra = null, onClose, accent = 'border-indigo-500', dataPicker = '', children }) => (
   <div {...(dataPicker ? { 'data-picker-sheet': dataPicker } : {})} className="fixed inset-0 flex items-end justify-center" role="dialog" aria-modal="true" aria-label={title}
     onClick={onClose} style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.92)', zIndex: 90000 }}>
@@ -39568,7 +39568,7 @@ function PlayerRankDetail({ kind = 'beat', xp = 0, rewardsOf, how = '', onClose 
         <p className="mb-1 text-[10px] font-bold text-slate-300 [@media(max-height:480px)]:hidden" style={JA_WRAP_STYLE}>{jaWrap('ランクが上がると、そのランクの物をもらえます。下へ送ると先のランクも見られます。')}</p>
         <PlayerRankRewards kind={kind} rank={info.rank} rewardsOf={rewardsOf} cls="min-h-[96px] shrink"/>
         {how && <p className="mt-2 shrink-0 text-[11px] font-bold leading-relaxed text-slate-300 [@media(max-height:480px)]:hidden" style={JA_WRAP_STYLE}>{jaWrap(how)}</p>}
-        <button type="button" data-player-rank-detail-close onClick={close} className="mh-button mt-2 min-h-[44px] w-full shrink-0 rounded-xl text-[14px] font-black">とじる</button>
+        <button type="button" data-player-rank-detail-close onClick={close} className="mh-button mt-2 min-h-[44px] w-full shrink-0 rounded-xl text-[14px] font-black">閉じる</button>
       </div>
     </div>
   );
@@ -41176,7 +41176,7 @@ class MhErrorBoundary extends React.Component {
         {this.props.onRecover && <button onClick={recover} className="w-full bg-emerald-600 text-white py-3 rounded-2xl font-black shadow-lg active:scale-95" style={{maxWidth:'20rem'}}>ホームへ戻る</button>}
         <button onClick={reload} className="w-full bg-slate-700 text-white py-3 rounded-2xl font-black shadow-lg active:scale-95" style={{maxWidth:'20rem'}}>ゲームを読み込み直す</button>
         <details className="text-left text-xs text-slate-500" style={{maxWidth:'22rem',width:'100%'}}>
-          <summary>くわしい内容(不具合報告に添えてください)</summary>
+          <summary>詳しい内容(不具合報告に添えてください)</summary>
           <pre style={{whiteSpace:'pre-wrap',wordBreak:'break-all',marginTop:'8px'}}>{this.props.screen ? `画面: ${this.props.screen}\n` : ''}{detail}</pre>
         </details>
       </main>
@@ -41338,7 +41338,7 @@ function AssetDownloadPage({ onBack }) {
       <ScreenHead title="ダウンロード" accent="text-emerald-200" onBack={onBack} backLabel="設定へ戻る"/>
       {/* 下の余白(pb-20)は、ハロウィンの画面のかぼちゃの飾り(背景の左右下・高さ約60px)に最後の行が隠れないため */}
       <div className={`${SCREEN_LIST_CLASS} w-full max-w-md mx-auto space-y-3 pb-20`}>
-        <p className="px-1 text-[11px] font-bold leading-relaxed text-slate-300">曲や画像を前もってこの端末に入れておくと、はじめて開く画面や曲がすぐ始まります。アップデートで変わったものだけを入れ直し、古いものは自動で消えます。</p>
+        <p className="px-1 text-[11px] font-bold leading-relaxed text-slate-300">曲や画像を前もってこの端末に入れておくと、初めて開く画面や曲がすぐ始まります。アップデートで変わったものだけを入れ直し、古いものは自動で消えます。</p>
         {asset.supported && !asset.enabled && (
           <div data-asset-disabled className="rounded-xl border border-cyan-400/40 bg-cyan-950/30 px-3 py-2 text-[11px] font-bold leading-relaxed text-cyan-100">
             <p>いまはダウンロードを使わない設定になっています。</p>
@@ -41779,8 +41779,8 @@ function HomeScreenGuideSheet({ onClose, onNever = null, onOpenBackup, mode = nu
         <div data-home-screen-guide-warning className="mt-3 rounded-2xl border border-red-300/70 bg-red-950/60 p-3 text-left">
           <div className="text-[12px] font-black text-red-200">{w(inApp ? '⚠ 開き直す前に、必ずバックアップを作ってください' : '⚠ 追加する前に、必ずバックアップを作ってください')}</div>
           <div className="mt-1 text-[11px] font-bold leading-relaxed text-red-100/90">{w(inApp
-            ? 'アプリの中の画面と、Safari・ホーム画面のアプリでは、保存データが別々です。そのまま開き直すと、はじめからになります。'
-            : 'iPhone では、ホーム画面のアプリと Safari で保存データが別々です。そのまま追加すると、アプリのほうは はじめからになります。')}</div>
+            ? 'アプリの中の画面と、Safari・ホーム画面のアプリでは、保存データが別々です。そのまま開き直すと、初めからになります。'
+            : 'iPhone では、ホーム画面のアプリと Safari で保存データが別々です。そのまま追加すると、アプリのほうは 初めからになります。')}</div>
         </div>
         {inApp && <img data-home-screen-guide-image="steps" src={MH_HOME_SCREEN_HOWTO_STEPS_IMAGE} alt="ホーム画面に追加する方法(リンクを押す → ブラウザで開く → ホーム画面に追加)" loading="lazy" className="mt-3 block w-full rounded-2xl"/>}
         <ol className="mt-3 space-y-2">
@@ -42019,7 +42019,7 @@ function MissionsScreen({ gifts, missions, missionTab, onSelectTab, onBack, onCl
         {id:'weekly',color:'#7c3aed',label:<>ウィークリー{tabCountBadge(missionClaimableList(state,'weekly').length)}</>},
         {id:'monthly',color:'#c026d3',label:<>マンスリー{tabCountBadge(missionClaimableList(state,'monthly').length)}</>},
       ]}/>
-      {(()=>{const nowMs=Date.now();const backlog=(Array.isArray(gifts)?gifts:[]).filter(g=>g?.source==='mission'&&!g.claimedAt&&giftIsClaimable(g,nowMs)).length;const total=missionClaimableCount(state)+backlog;return <button type="button" data-mission-claim-all disabled={!total} onClick={()=>onClaimAll()} className={`shrink-0 mb-2 min-h-[52px] rounded-xl bg-gradient-to-r ${bulkGradient} text-[13px] font-black text-white shadow-lg active:scale-[.98] disabled:opacity-40`}>すべて受け取る{total>0&&` (${total})`}</button>;})()}
+      {(()=>{const nowMs=Date.now();const backlog=(Array.isArray(gifts)?gifts:[]).filter(g=>g?.source==='mission'&&!g.claimedAt&&giftIsClaimable(g,nowMs)).length;const total=missionClaimableCount(state)+backlog;return <button type="button" data-mission-claim-all disabled={!total} onClick={()=>onClaimAll()} className={`shrink-0 mb-2 min-h-[52px] rounded-xl bg-gradient-to-r ${bulkGradient} text-[13px] font-black text-white shadow-lg active:scale-[.98] disabled:opacity-40`}>全て受け取る{total>0&&` (${total})`}</button>;})()}
       <div className="mb-2 flex shrink-0 justify-center"><span className="rounded-full border border-white/10 bg-slate-900/70 px-3 py-1 text-[10px] font-black text-slate-300">次回更新: {new Date(resetAt).toLocaleString('ja-JP',{timeZone:'Asia/Tokyo',month:'numeric',day:'numeric',weekday:'short',hour:'2-digit',minute:'2-digit'})}</span></div>
       <div className={`${SCREEN_LIST_CLASS} space-y-2 pb-4`}>{defs.length===0?<ScreenEmpty emoji="🗒️" lines={['このタブのミッションはありません','ほかのタブに受け取れるものがあるかもしれません']}/>:defs.map(m=>{const shownRewards=missionRewardsFor(m.rewards,{ownedItems,room}),swapped=shownRewards.filter(r=>r.swappedFrom),value=missionValue(state,missionTab,m),done=value>=m.target,isSent=sent.includes(m.id),pct=Math.min(100,Math.floor(value/m.target*100));return <article key={m.id} className={`rounded-2xl border p-3 ${isSent?'bg-slate-900/70 border-white/10':done?'bg-amber-950/40 border-amber-400/60':'bg-slate-900 border-white/10'}`}>
         <div className="flex items-start justify-between gap-2"><div className="min-w-0"><h3 className="flex flex-wrap items-center gap-1.5 font-black text-sm text-white break-words">{m.tag&&<span data-mission-tag className="shrink-0 whitespace-nowrap rounded-full border border-white/10 bg-slate-800 px-2 py-0.5 text-[11px] font-black text-slate-200">{m.tag}</span>}<span className="min-w-0">{m.name}</span></h3><p className="mt-0.5 text-[11px] font-bold leading-snug text-slate-400 break-words">{m.condition}</p></div><b className="shrink-0 text-[12px] text-amber-200">{Math.min(value,m.target)} / {m.target}</b></div>
@@ -42064,7 +42064,7 @@ function GiftBoxScreen({ gifts, giftTab, onSelectTab, onBack, onClaim, onOpenLog
         {id:'unclaimed',color:'#0891b2',label:<>未受取 ({unclaimed.filter(g=>!giftIsExpired(g,now)).length}){tabCountBadge(claimable.length)}</>},
         {id:'history',color:'#4f46e5',label:`受取済み (${history.length})`},
       ]}/>
-      {giftTab==='unclaimed'&&<button type="button" disabled={!claimable.length} onClick={()=>onClaim(claimable.map(g=>g.id))} className="mh-button mh-button-primary shrink-0 mb-2 min-h-[52px] rounded-xl bg-gradient-to-r from-cyan-600 to-indigo-600 text-[13px] font-black text-white shadow-lg active:scale-[.98] disabled:opacity-40">すべて受け取る</button>}
+      {giftTab==='unclaimed'&&<button type="button" disabled={!claimable.length} onClick={()=>onClaim(claimable.map(g=>g.id))} className="mh-button mh-button-primary shrink-0 mb-2 min-h-[52px] rounded-xl bg-gradient-to-r from-cyan-600 to-indigo-600 text-[13px] font-black text-white shadow-lg active:scale-[.98] disabled:opacity-40">全て受け取る</button>}
       <button type="button" onClick={onOpenLoginBonusList} className="mh-button mh-button-secondary shrink-0 mb-2 min-h-[44px] rounded-xl bg-slate-800 border border-amber-400/60 text-amber-200 font-black text-[12px] active:scale-95">ログインボーナス一覧を見る</button>
       {/* 札の地は不透明(2026-10-20 改善部 M10)。半透明だと、ハロウィンの画面の殻の背景にあるかぼちゃが字の上に透けて見えた。
           色は前の半透明の色を夜空の地(#170a26)に重ねたときと同じにしてある */}
@@ -42958,7 +42958,7 @@ function ProfileScreen({
           return(
           <div className="mb-4 rounded-2xl border border-indigo-400/60 bg-indigo-950/50 p-3">
             {onboardingPreview&&<div className="-mx-3 -mt-3 mb-2 px-3 py-1.5 rounded-t-xl bg-fuchsia-700 text-white text-[10px] font-black tracking-widest">DEBUG・見るだけの表示です。名前もアイコンも保存されません</div>}
-            <div className="mb-2"><ScreenSectionLabel>はじめての設定</ScreenSectionLabel></div>
+            <div className="mb-2"><ScreenSectionLabel>初めての設定</ScreenSectionLabel></div>
             <AssistantBubble line={step?.t||null} expression={step?.e||null} helpRef="basics/onboarding" compact/>
             <div className="grid grid-cols-2 gap-2 mt-3">
               <button onClick={()=>onOpenNameEdit(hasName?breederName:'')} className={`min-h-[44px] rounded-xl border text-[11px] font-black active:scale-95 ${hasName?'bg-emerald-950/60 border-emerald-400/60 text-emerald-200':'bg-slate-900 border-indigo-400/60 text-white'}`}>{hasName?'✓ 名前':'名前を決める'}</button>
@@ -43013,7 +43013,7 @@ function ProfileScreen({
                   「えらびなおす」は truncate だと幅320で「えらびな…」と切れて読めなかったので、2行にする(2026-10-21 窓口) */}
               <button type="button" data-profile-tile="icon" onClick={onOpenIconPicker} className={tile}>
                 <span className="flex h-8 w-8 shrink-0 items-center justify-center text-xl max-[359px]:h-6 max-[359px]:w-6 max-[359px]:text-base" aria-hidden="true">🖼️</span>
-                <span className="min-w-0 flex-1"><small className="block text-[10px] font-black text-indigo-300">アイコン</small><b className="block text-[11px] max-[359px]:text-[10px] font-black leading-tight text-white" style={JA_LABEL_STYLE}>えらび<wbr/>なおす</b></span>
+                <span className="min-w-0 flex-1"><small className="block text-[10px] font-black text-indigo-300">アイコン</small><b className="block text-[11px] max-[359px]:text-[10px] font-black leading-tight text-white" style={JA_LABEL_STYLE}>選び<wbr/>なおす</b></span>
               </button>
               <button type="button" data-profile-tile="frame" onClick={onOpenFramePicker} className={tile}>
                 <Sparkles size={18} className="mx-1.5 shrink-0 text-amber-300 max-[359px]:mx-0.5"/>
@@ -43077,7 +43077,7 @@ function ProfileScreen({
           </div>
         </div>
         <details data-profile-playtime className="mb-3 rounded-xl border border-indigo-500/20 bg-indigo-950/30 px-3 py-2">
-          <summary className="cursor-pointer text-[11px] font-black text-indigo-200">プレイ時間のくわしい記録</summary>
+          <summary className="cursor-pointer text-[11px] font-black text-indigo-200">プレイ時間の詳しい記録</summary>
           <div className="mt-2 flex flex-col items-center gap-1">
             <div className="flex items-center gap-2 text-[11px] font-black text-indigo-300">
               <span>今日 <span className="text-white font-mono">{formatPlaytime(playtimeTodayMs(playtimeView))}</span></span>
@@ -43085,7 +43085,7 @@ function ProfileScreen({
               <span>遊んだ日 <span className="text-white font-mono">{playtimeView.days}</span>日</span>
             </div>
             {playtimeView.longest.day&&(
-              <div className="text-[10px] text-slate-400 font-bold">いちばん長かった日 {formatPlaytime(playtimeView.longest.ms)}（{playtimeView.longest.day}）</div>
+              <div className="text-[10px] text-slate-400 font-bold">一番長かった日 {formatPlaytime(playtimeView.longest.ms)}（{playtimeView.longest.day}）</div>
             )}
             <div className="text-[10px] text-slate-400 font-bold">{playtimeView.since?`${playtimeView.since} から数えています`:'いま数え始めたところです'}</div>
             {(Number(playtimeAllDevicesMs) || 0) > playtimeView.totalMs&&(
@@ -43137,7 +43137,7 @@ function ProfileScreen({
                 )}
               </div>
               <div className="mt-2 h-2 rounded-full border border-white/5 bg-black/40 overflow-hidden"><i className="block h-full rounded-full" style={{width:`${width}%`,background:`linear-gradient(90deg,${accent},#fbbf24)`}}/></div>
-              <div className="text-[10px] text-slate-400 font-bold mt-1 text-right">{next?`次のLv.${next.level}まで あと${next.remain}`:'いちばん仲良し！'}</div>
+              <div className="text-[10px] text-slate-400 font-bold mt-1 text-right">{next?`次のLv.${next.level}まで あと${next.remain}`:'一番仲良し！'}</div>
               {/* ごほうび一覧(2026-10-21)。Lvごとにもらえるもの(ギフト・飾り枠・呼び方)を見る */}
               <button type="button" data-assistant-bond-reward-open onClick={()=>setBondRewardListOpen(true)}
                 className="mt-2 flex w-full min-h-[44px] items-center justify-center gap-1.5 rounded-xl border border-pink-400/50 bg-pink-950/40 px-3 text-[12px] font-black text-pink-100 active:scale-[.98]">
@@ -43555,7 +43555,7 @@ function MonsterDexScreen({ dexLineageFilter, unlockedMonsterIds, onSelectLineag
         </div>
         {/* 選んだ札まで送ったとき、左はしに札の切れはし(「・」だけ)が残らないよう、札の頭で止める(2026-10-27 見回り) */}
         <div className="shrink-0 w-full max-w-md mx-auto mb-2 flex gap-1.5 overflow-x-auto snap-x snap-mandatory pb-1" role="group" aria-label="主血統で絞り込む">
-          <button type="button" aria-pressed={dexLineageFilter==='all'} onClick={()=>onSelectLineage('all')} className={chipClass(dexLineageFilter==='all')}>すべて</button>
+          <button type="button" aria-pressed={dexLineageFilter==='all'} onClick={()=>onSelectLineage('all')} className={chipClass(dexLineageFilter==='all')}>全て</button>
           {filters.map(lineage=>(
             <button key={lineage.id} type="button" aria-pressed={dexLineageFilter===lineage.id} onClick={()=>onSelectLineage(lineage.id)} className={chipClass(dexLineageFilter===lineage.id)}>{lineage.name}</button>
           ))}
@@ -48884,7 +48884,7 @@ const HomeRaidJack = ({ eventId, onOpen }) => {
             keep-all で字の間では折らず、<wbr/> の所だけで折る。それでも入らないときだけ anywhere で折る。
             幅360未満の画面は字を9pxにして1行に収める(2026-10-24 窓口「幅320で『ジャック大王／あらわれた』と折れている」) */}
         <span data-home-raid-jack-title style={{ display:'block', ...JA_WRAP_STYLE, ...(typeof window !== 'undefined' && window.innerWidth < HOME_RAID_SAY_NARROW_VW ? { fontSize:'9px' } : {}) }}>{allDone ? <>{RAID_JACK_PUMPKIN.name}が<wbr/>遊びに来た！</> : <>{tier.name}が<wbr/>あらわれた！</>}</span>
-        {allDone ? <span data-home-raid-pumpkin-note style={{ display:'block', marginTop:'2px', fontSize:'8px', opacity:.9, ...JA_LABEL_STYLE }}>{jaWrap('ジャックを倒した！あそんでダメージを競おう')}</span> : <>
+        {allDone ? <span data-home-raid-pumpkin-note style={{ display:'block', marginTop:'2px', fontSize:'8px', opacity:.9, ...JA_LABEL_STYLE }}>{jaWrap('ジャックを倒した！遊んでダメージを競おう')}</span> : <>
         <span style={{ display:'block', height:'7px', marginTop:'3px', borderRadius:'999px', overflow:'hidden', background:'#000a', border:'1px solid #fff3' }} role="progressbar" aria-valuemin={0} aria-valuemax={tier.hp} aria-valuenow={left}>
           <span style={{ display:'block', height:'100%', width:`${rate * 100}%`, background:'#f97316' }} />
         </span>
@@ -48920,8 +48920,8 @@ const HomeRaidJack = ({ eventId, onOpen }) => {
       {/* 狭い幅(横へ置いたとき)でも「聞こえるの／う」と言葉の途中で折らず、行の長さをならす(2026-10-21) */}
       {/* いちばん狭い120pxのときは「▶ つぎ」を下の枠線の上に乗せ、行を使わない(幅320で、かぼちゃの顔を隠さないため。2026-10-24) */}
       <span data-home-raid-say-text style={{ display:'block', ...JA_LABEL_STYLE }}>{jaWrap(speech)}</span>
-      <span aria-hidden="true" data-say-next-inline style={{ display:sayInline ? 'block' : 'none', position:'absolute', right:'10px', bottom:'-6px', padding:'0 4px', borderRadius:'4px', background:'#1c0a02', color:'#ffedd5', fontSize:'8px', lineHeight:'10px', whiteSpace:'nowrap' }}>▶ つぎ</span>
-      <span aria-hidden="true" data-say-next-row style={{ display:sayInline ? 'none' : 'block', textAlign:'right', fontSize:'8px', opacity:.7 }}>▶ つぎ</span>
+      <span aria-hidden="true" data-say-next-inline style={{ display:sayInline ? 'block' : 'none', position:'absolute', right:'10px', bottom:'-6px', padding:'0 4px', borderRadius:'4px', background:'#1c0a02', color:'#ffedd5', fontSize:'8px', lineHeight:'10px', whiteSpace:'nowrap' }}>▶ 次</span>
+      <span aria-hidden="true" data-say-next-row style={{ display:sayInline ? 'none' : 'block', textAlign:'right', fontSize:'8px', opacity:.7 }}>▶ 次</span>
       {/* しっぽはジャックのほうへ向ける(上に置いたら下向き、右に置いたら左向き、左に置いたら右向き) */}
       {(!sayPlace || sayPlace.side === 'top') && <span aria-hidden="true" style={{ position:'absolute', left:sayPlace ? sayPlace.tail : '50%', bottom:-9, marginLeft:-8, width:0, height:0, borderLeft:'8px solid transparent', borderRight:'8px solid transparent', borderTop:`9px solid ${speechAccent}` }} />}
     </button>
@@ -49118,8 +49118,8 @@ function HomeScreen({
               モンヒロビートと同じく、字が長くても略さずそのまま入れる(CLAUDE.md ⑤) */}
           <button className={`mh-home-facility battle${spotClass('battle')}`} onClick={onOpenBattle} aria-label="モンヒロバトル"><span><Sword size={25}/>モンヒロバトル</span></button>
         </nav>
-        {nextStep&&<button type="button" className="mh-home-nextstep" data-home-next-step={nextStep.n} onClick={nextStep.onTap} aria-label={`つぎにやること ${nextStep.n}/3 ${nextStep.title}`}>
-          <span className="mh-home-nextstep-lab">つぎに<br/>やること<b>{nextStep.n}/3</b></span>
+        {nextStep&&<button type="button" className="mh-home-nextstep" data-home-next-step={nextStep.n} onClick={nextStep.onTap} aria-label={`次にやること ${nextStep.n}/3 ${nextStep.title}`}>
+          <span className="mh-home-nextstep-lab">次に<br/>やること<b>{nextStep.n}/3</b></span>
           <span className="mh-home-nextstep-body"><b>{['①','②','③'][nextStep.n-1]} {nextStep.title}</b><small>{nextStep.sub}</small></span>
           <i aria-hidden="true">›</i>
         </button>}
@@ -49177,7 +49177,7 @@ function KikiIntroOverlay({
       {/* どこを押しても次へ進む。最後の1回で見たことにする */}
       <button type="button" onClick={next} aria-label="次へ" className="absolute inset-0 w-full h-full" style={{background:'transparent'}}/>
       <div className="relative w-full max-w-md max-h-[calc(var(--mh-vh)-env(safe-area-inset-top))] overflow-y-auto mh-scroll rounded-t-3xl border-t-2 border-x-2 border-pink-400 bg-slate-950 p-4" style={{paddingBottom:'calc(1rem + env(safe-area-inset-bottom))',pointerEvents:'none'}}>
-        <p className="mb-2 text-center text-[10px] font-black tracking-widest text-pink-300">あたらしい助手</p>
+        <p className="mb-2 text-center text-[10px] font-black tracking-widest text-pink-300">新しい助手</p>
         {/* 2人を並べて出し、いま話しているほうを明るくする */}
         <div className="mb-3 flex items-end justify-center gap-3">
           {cast.map(who=>{
@@ -49224,7 +49224,7 @@ function MomosukeIntroOverlay({
     <div className="fixed inset-0 flex items-end justify-center" style={{position:'fixed',inset:0,zIndex:77000,backgroundColor:'rgba(2,6,23,.95)'}} role="dialog" aria-modal="true" aria-label="ももすけが助手に加わりました">
       <button type="button" onClick={next} aria-label="次へ" className="absolute inset-0 w-full h-full" style={{background:'transparent'}}/>
       <div className="relative w-full max-w-md max-h-[calc(var(--mh-vh)-env(safe-area-inset-top))] overflow-y-auto mh-scroll rounded-t-3xl border-t-2 border-x-2 border-pink-300 bg-slate-950 p-4" style={{paddingBottom:'calc(1rem + env(safe-area-inset-bottom))',pointerEvents:'none'}}>
-        <p className="mb-2 text-center text-[10px] font-black tracking-widest text-pink-200">あたらしい助手</p>
+        <p className="mb-2 text-center text-[10px] font-black tracking-widest text-pink-200">新しい助手</p>
         {/* 3人を並べて、いま話しているひとりを明るくする */}
         <div className="mb-3 flex items-end justify-center gap-3">
           {cast.map(who=>{
@@ -49299,7 +49299,7 @@ return(
       <div className="flex items-center gap-2"><AssistantFace who={who} size={56} accent={who.accent} expression="happy"/><div className="flex-1 rounded-2xl border-2 border-pink-400 bg-slate-900 p-2.5 text-sm font-bold text-white">新しいお知らせが{updateGuideQueue.length}件あるよ♪ 読みたいものだけ「くわしく」で開いてね。</div></div>
       <div className="mt-3 min-h-0 flex-1 space-y-2 overflow-y-auto">{updateGuideQueue.map(n=><div key={n.id} data-update-guide-bundle-item={n.id} className="flex items-center gap-2 rounded-2xl border border-pink-400/40 bg-slate-900/80 p-2.5">
         <div className="min-w-0 flex-1"><div className="text-[13px] font-black leading-snug text-pink-200">{n.title}</div><div className="mt-0.5 truncate text-[10px] font-bold text-slate-400">{headline(n)}</div></div>
-        <button type="button" onClick={()=>openUpdateGuideDetail(n.id)} className="min-h-[44px] shrink-0 rounded-xl bg-pink-500 px-3 text-xs font-black text-slate-950">くわしく</button>
+        <button type="button" onClick={()=>openUpdateGuideDetail(n.id)} className="min-h-[44px] shrink-0 rounded-xl bg-pink-500 px-3 text-xs font-black text-slate-950">詳しく</button>
       </div>)}</div>
       <button type="button" data-update-guide-bundle-later onClick={dismissUpdateGuideAll} className="mt-4 min-h-[50px] w-full shrink-0 rounded-2xl bg-slate-700 text-sm font-black text-white">あとで読む</button>
       <p data-update-guide-bundle-foot className="mt-2 shrink-0 text-center text-[10px] font-bold text-slate-500">更新履歴からいつでも読めます</p>
@@ -54779,7 +54779,7 @@ const FRIENDS_RESULT_TEXT = Object.freeze({
   cancelled: ['申請を取り消しました', 'info'],
   removed: ['フレンドを解除しました', 'info'],
   notready: ['フレンド機能はただいま準備中です', 'warn'],
-  error: ['通信がうまくいきませんでした。少し待ってからもう一度ためしてください', 'warn'],
+  error: ['通信がうまくいきませんでした。少し待ってからもう一度試してください', 'warn'],
 });
 const FRIENDS_TONE_CLASS = Object.freeze({
   ok: 'border-emerald-400/60 bg-emerald-950/50 text-emerald-100',
@@ -55035,9 +55035,9 @@ function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack
   // ---- 状態が整っていないとき ----
   if (phase !== 'ready') {
     const lines = phase === 'loading' ? ['フレンドを読み込んでいます…']
-      : phase === 'notready' ? ['フレンド機能はただいま準備中です', 'しばらくしてからもう一度ひらいてください']
-      : phase === 'noid' ? ['この端末ではフレンドを使えません', 'セーブデータを保存できる状態でひらいてください']
-      : ['フレンドを読み込めませんでした', '通信を確かめて、もう一度ひらいてください'];
+      : phase === 'notready' ? ['フレンド機能はただいま準備中です', 'しばらくしてからもう一度開いてください']
+      : phase === 'noid' ? ['この端末ではフレンドを使えません', 'セーブデータを保存できる状態で開いてください']
+      : ['フレンドを読み込めませんでした', '通信を確かめて、もう一度開いてください'];
     return (
       <div data-mh-screen data-friends-phase={phase} className={SCREEN_SHELL_CLASS}>
         <ScreenHead title="フレンド" accent="text-pink-300" onBack={onBack} backLabel="プロフィールへ戻る"/>
@@ -55164,7 +55164,7 @@ function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack
                         <b className="min-w-0 flex-1 truncate text-[12px] font-black text-white">{labels[e.id].label}</b>
                         <strong className="shrink-0 text-[13px] font-black text-amber-200">{e.k === 'w' ? `WAVE ${e.v.toLocaleString()}` : `${e.v.toLocaleString()} pt`}</strong>
                       </div>))}
-                    <p className="px-1 text-[10px] font-bold text-slate-500">モード別の、いちばん良い記録です。</p>
+                    <p className="px-1 text-[10px] font-bold text-slate-500">モード別の、一番良い記録です。</p>
                   </div>);
               })()}
               {fold('songs', '曲のベスト')}
@@ -55274,7 +55274,7 @@ function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack
           : <div className="flex flex-col gap-2">
               {groups.friends.length >= 6 && (
                 <input type="search" value={query} onChange={(event) => setQuery(event.target.value.slice(0, 20))} data-friend-search
-                  placeholder="名前でさがす" aria-label="フレンドを名前でさがす" autoComplete="off" spellCheck={false}
+                  placeholder="名前で探す" aria-label="フレンドを名前で探す" autoComplete="off" spellCheck={false}
                   className="min-h-[44px] w-full rounded-xl border border-white/15 bg-black/40 px-3 text-[13px] font-bold text-white placeholder:text-slate-500"/>
               )}
               <p data-friend-online-count className="px-1 text-[10px] font-black text-slate-400">
@@ -63607,7 +63607,7 @@ function AssistantChatWindow({ assistant, playerName, callName, bondLevel, bondT
                   </div>)}
               </div>
               {callCard.kind !== 'reset' && <p className="mt-1 text-center text-[10px] font-bold text-slate-400 [word-break:keep-all] [overflow-wrap:anywhere]">
-                {callCard.kind === 'nick' ? 'おしゃべりの中で使うあだ名です。' : <>{callCard.kind === 'ask' ? 'えらぶと' : '「うん」を押すと'}、<span style={{ color: accent }}>{assistant.name}</span>だけ呼び方が変わります。</>}プロフィールで元に戻せます</p>}
+                {callCard.kind === 'nick' ? 'おしゃべりの中で使うあだ名です。' : <>{callCard.kind === 'ask' ? '選ぶと' : '「うん」を押すと'}、<span style={{ color: accent }}>{assistant.name}</span>だけ呼び方が変わります。</>}プロフィールで元に戻せます</p>}
             </div>)}
           {sending && <p data-assistant-chat-sending className="text-[11px] text-slate-400">{assistant.name}が考え中…</p>}
         </div>
@@ -64831,7 +64831,7 @@ function AssistantPeerMap({ metIds, onReplay, peerItems = null, onUseItem = null
               </span>
               <span className="mt-1 flex items-center gap-2">
                 <span className="h-1.5 w-16 shrink-0 overflow-hidden rounded-full bg-slate-700" aria-hidden="true"><span className="block h-full bg-pink-400" style={{ width: `${nextStage ? Math.min(100, Math.round(100 * (x.pts - stage.min) / (nextStage.min - stage.min))) : 100}%` }}/></span>
-                <span data-assistant-peer-next className="min-w-0 flex-1 truncate text-[11px] font-bold text-emerald-300">{nextStage ? `あと${nextStage.min - x.pts}で Lv${nextStage.level}${opens ? ` → ${opens}` : `「${assistantPeerStageName(nextStage)}」`}` : 'いちばん上まで来ました'}</span>
+                <span data-assistant-peer-next className="min-w-0 flex-1 truncate text-[11px] font-bold text-emerald-300">{nextStage ? `あと${nextStage.min - x.pts}で Lv${nextStage.level}${opens ? ` → ${opens}` : `「${assistantPeerStageName(nextStage)}」`}` : '一番上まで来ました'}</span>
               </span>
             </button>); }
           return (
@@ -65167,7 +65167,7 @@ const QuickGuideOverlay = ({ guideId, pages, assistant, callName, onDone, onGoAu
         <div className="mt-2 flex flex-wrap items-center justify-end gap-2 landscape:max-[500px]:mt-1">
           {!last && <button type="button" data-quick-guide-later onClick={() => onDone(false)} className="min-h-[40px] rounded-xl border border-slate-500/60 px-3 text-[11px] font-black text-slate-300 active:scale-[.97]">あとで</button>}
           {last && page.goAutoSettings && onGoAutoSettings && <button type="button" data-quick-guide-go-auto onClick={() => { onDone(true); onGoAutoSettings(); }} className="min-h-[40px] rounded-xl border border-cyan-300/70 bg-cyan-800/70 px-3 text-[11px] font-black text-cyan-50 active:scale-[.97]">AUTO設定を見に行く</button>}
-          <button type="button" data-quick-guide-next onClick={() => (last ? onDone(true) : setStep(step + 1))} className="min-h-[40px] min-w-[84px] rounded-xl border border-fuchsia-300/70 bg-fuchsia-700/80 px-3 text-[12px] font-black text-white active:scale-[.97]">{last ? (pages.length > 1 ? 'わかった！' : 'OK') : '次へ'}</button>
+          <button type="button" data-quick-guide-next onClick={() => (last ? onDone(true) : setStep(step + 1))} className="min-h-[40px] min-w-[84px] rounded-xl border border-fuchsia-300/70 bg-fuchsia-700/80 px-3 text-[12px] font-black text-white active:scale-[.97]">{last ? (pages.length > 1 ? '分かった！' : 'OK') : '次へ'}</button>
         </div>
       </div>
     </div>
@@ -65584,7 +65584,7 @@ const ASSISTANT_LIFE_SLOTS = Object.freeze([
 ]);
 // 気分。急には変わらない(前の時間の気分が残りやすい)
 const ASSISTANT_LIFE_MOODS = Object.freeze({
-  happy: 'ごきげん', lonely: 'さみしい', restless: 'そわそわ', sulky: 'すねてる', sleepy: 'ねむい', eager: 'やる気',
+  happy: 'ご機嫌', lonely: 'さみしい', restless: 'そわそわ', sulky: 'すねてる', sleepy: 'ねむい', eager: 'やる気',
 });
 // していること。label … 台本の {doing}(名詞)/ te … {doing_te}(「〜して」の形)。group … 2人以上でもする(2人の掛け合いの「していること」5つ・コトバと決めた 2026-11-07)
 const ASSISTANT_LIFE_DOINGS = Object.freeze({
@@ -66699,7 +66699,7 @@ function AssistantLifeScreenBody({ metIds, onReplay, peerItems = null, onUseItem
           <div data-assistant-life-tier={tier.id} className="rounded-2xl border border-pink-300/40 bg-pink-400/10 p-2.5">
             <div className="flex items-baseline gap-2">
               <p className="text-[12px] font-black text-pink-100">今日のにぎわい「{tier.label}」</p>
-              <p className="ml-auto whitespace-nowrap text-[10px] font-bold text-pink-200">{next ? `あと${next.min - play.points}で「${next.label}」` : 'いちばん上の段'}</p>
+              <p className="ml-auto whitespace-nowrap text-[10px] font-bold text-pink-200">{next ? `あと${next.min - play.points}で「${next.label}」` : '一番上の段'}</p>
             </div>
             <div className="mt-1 h-2 overflow-hidden rounded-full bg-slate-800" aria-hidden="true">
               <div className="h-full bg-pink-400" style={{ width: `${next ? Math.min(100, Math.round(100 * (play.points - tier.min) / (next.min - tier.min))) : 100}%` }}/>
@@ -66830,7 +66830,7 @@ function AssistantLifeItemIntro({ peerItems }) {
       <div className="w-full max-w-sm rounded-2xl border-2 border-amber-300 bg-[#1c1405] p-3 shadow-2xl">
         <div className="flex items-center gap-2">
           {guide && <AssistantFace who={guide} size={44} accent={guide.accent} expression="wink"/>}
-          <p className="text-[14px] font-black text-amber-200">はじめての {info.emoji} {info.name}！</p>
+          <p className="text-[14px] font-black text-amber-200">初めての {info.emoji} {info.name}！</p>
         </div>
         <p className="mt-2 text-[12px] leading-relaxed text-white">① 「🏡 助手ライフ」で、一緒にいる2人に贈れるよ<br/>② 2人の<span className="whitespace-nowrap">友情Lv と</span>、あなたとの仲良し度が上がる<br/>③ 好きな物だと多めに上がるよ。好みは<span className="whitespace-nowrap">贈ると分かる！</span><br/>④ 同じ道具は1日1回・<span className="whitespace-nowrap">合わせて1日3回まで</span></p>
         <div className="mt-2 flex gap-2">
@@ -67448,7 +67448,7 @@ function AssistantLifeRoomSheet({ id, life, peerSt, bondLevelOf, diary, onClose,
   const rvAct = (k, label, cls, fn, dis = false) => <button key={k} type="button" data-assistant-life-roomview-act={k} disabled={dis} onClick={fn} className={`rounded-xl px-1 py-2 min-h-[44px] text-[12px] font-black text-white shadow active:scale-95 disabled:opacity-40 ${cls}`}>{label}</button>;
   const rvDock = land || uiV2 ? null : (
     <div className="grid grid-cols-3 gap-1.5" data-assistant-life-roomview-dock>
-      {rvAct('sheet', home ? '👀 ようす' : '👀 くわしく', 'bg-gradient-to-br from-rose-400 to-amber-500', toSheet)}
+      {rvAct('sheet', home ? '👀 ようす' : '👀 詳しく', 'bg-gradient-to-br from-rose-400 to-amber-500', toSheet)}
       {rvAct('chat', asleep ? '💤 起こす' : '💬 おしゃべり', 'bg-gradient-to-br from-sky-400 to-indigo-500', () => (onChat ? onChat(id, null) : toSheet()), !onChat && !home)}
       {rvAct('give', '🎁 贈る', 'bg-pink-600', () => { if (soloOn && canGiveSolo) onGiveSolo(id, w && w.group ? w.group.ids : [id]); else if (w && w.group && canGive) onGive(w.group); else toSheet(); })}
       {rvAct('furn', '🪑 家具', 'bg-orange-600', () => setFurnOpen(true), !(typeof assistantLifeFurnEnabled === 'function' && assistantLifeFurnEnabled() && onGiveFurn))}
@@ -67523,7 +67523,7 @@ function AssistantLifeRoomSheet({ id, life, peerSt, bondLevelOf, diary, onClose,
         return pi ? <AssistantLifeDoRow k="plan" icon="📅" label="次の行き先を決める" sub={pi.sub} on={() => assistantLifePlanOpen({ who: id })}/> : null;
       })()}
       {furnOn && <AssistantLifeDoRow k="furn" icon="🪑" label="部屋の家具" sub={`置いてある家具 ${rvFurn.length}個`} on={() => setFurnOpen(true)}/>}
-      <p className="mt-3 text-[11px] font-black text-slate-300">くわしく</p>
+      <p className="mt-3 text-[11px] font-black text-slate-300">詳しく</p>
     </div>) : null;
   return (
     <div className="absolute inset-0" style={{ zIndex: 25 }} data-assistant-life-room-sheet={id}>
@@ -68131,7 +68131,7 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
       <div className="mt-1 flex items-center gap-1.5" data-assistant-life-tier={tier.id} title={ASSISTANT_LIFE_TIER_NOTES[tier.id]}>
         {uiV2 ? <button type="button" className="mhl-chip" data-assistant-life-tier-help aria-label="にぎわいの説明" onClick={() => setNote(`🎉 にぎわい「${tier.label}」: 今日 🤝 友情Lv の上がり方が ×${tier.mult}。モンヒロビート・バトル・MFバトルカード・見守るで遊ぶほど上がります${next ? `(あと ${next.min - play.points} で「${next.label}」×${next.mult})` : ''}。朝4時に戻ります`)} style={{ minHeight: 32, padding: '0 10px' }}>🎉 {tier.label} ×{tier.mult} <span aria-hidden="true">ⓘ</span></button> : <span className="mhl-chip">🎉 {tier.label} ×{tier.mult}</span>}
         <span className="mhl-bar" aria-hidden="true"><i style={{ width: `${next ? Math.min(100, Math.round(100 * (play.points - tier.min) / (next.min - tier.min))) : 100}%` }}/></span>
-        <span className="whitespace-nowrap text-[9.5px] font-bold text-slate-200">{next ? `${next.label}まで ${next.min - play.points}` : 'いちばん上'}</span>
+        <span className="whitespace-nowrap text-[9.5px] font-bold text-slate-200">{next ? `${next.label}まで ${next.min - play.points}` : '一番上'}</span>
       </div>
     </div>);
   const findBtn = <button type="button" className="mhl-find" data-assistant-life-find onClick={() => { if (uiV2) { setMapFocusPlace(null); setMapFocusAssistantId(null); } setTab('where'); }}>📋 みんなの居場所 ›</button>;
@@ -69361,7 +69361,7 @@ function AssistantLifeBondRoad({ id, points = null, level = null, land = false }
     <div className={`rounded-2xl border border-pink-300/70 bg-pink-950/60 px-3 py-2 ${land ? 'mt-1.5' : 'mt-2'}`} data-assistant-life-bond-road={lv}>
       <p className="flex items-baseline gap-2 text-[13px] font-black text-pink-50">💗 仲良し度 <b className="text-[16px]">Lv{lv}</b>
         {next && <span className="ml-auto text-[11.5px] font-bold text-pink-200" data-assistant-life-bond-road-remain={next.remain}>あと {next.remain} で Lv{next.level}</span>}
-        {!next && <span className="ml-auto text-[11.5px] font-bold text-pink-200">いちばん上まで来ました</span>}
+        {!next && <span className="ml-auto text-[11.5px] font-bold text-pink-200">一番上まで来ました</span>}
       </p>
       <div className="mt-1 h-2 overflow-hidden rounded-full bg-white/15"><i className="block h-full rounded-full bg-pink-400" style={{ width: `${pct}%` }}/></div>
       {next && opens.length > 0 && <p className="mt-1 text-[11.5px] font-bold leading-snug text-pink-100" style={JA_WRAP_STYLE} data-assistant-life-bond-road-opens>{jaWrap(`Lv${next.level} で: ${opens.join('・')}`)}</p>}
@@ -70138,7 +70138,7 @@ function AssistantLifeRewardRoad({ ids, peerSt, nameOf, onRoom = null }) {
       {sec('🐾 次に迎えるマスモン', r.masmon, 2, onRoom)}
       {sec('🤝 友情Lv(助手どうし)', r.peer, 2, null)}
       {r.maxed > 0 && <p className="mt-1.5 text-[11.5px] font-bold text-slate-300">💗 {r.maxed}人は、仲良し度がいちばん上まで来ました</p>}
-      {hidden > 0 && <button type="button" data-assistant-life-reward-more aria-expanded={all} onClick={() => setAll(v => !v)} className="mt-1.5 min-h-[44px] w-full rounded-xl border border-white/20 text-[12px] font-black text-slate-100 active:scale-[.98]">{all ? '近い所だけにする ▲' : `ぜんぶ見る(あと ${hidden} 件)▼`}</button>}
+      {hidden > 0 && <button type="button" data-assistant-life-reward-more aria-expanded={all} onClick={() => setAll(v => !v)} className="mt-1.5 min-h-[44px] w-full rounded-xl border border-white/20 text-[12px] font-black text-slate-100 active:scale-[.98]">{all ? '近い所だけにする ▲' : `全部見る(あと ${hidden} 件)▼`}</button>}
     </section>);
 }
 
@@ -70160,7 +70160,7 @@ function AssistantLifeFirstGuide({ land = false, canWatch = false, onClose, onWa
       <p className="mt-1.5 text-[11.5px] font-bold text-amber-100">まずは 光っている「👀 見守る」を押してみよう</p>
       <div className="mt-1.5 flex gap-1.5">
         {canWatch && onWatch && <button type="button" data-assistant-life-guide-watch onClick={onWatch} className="min-h-[44px] flex-1 rounded-xl border border-amber-200 bg-amber-400/90 px-2 text-[12.5px] font-black text-slate-900 active:scale-[.98]">👀 見守ってみる</button>}
-        <button type="button" data-assistant-life-guide-close onClick={onClose} className="min-h-[44px] flex-1 rounded-xl border border-white/25 bg-slate-800 px-2 text-[12.5px] font-black text-slate-100 active:scale-[.98]">わかった</button>
+        <button type="button" data-assistant-life-guide-close onClick={onClose} className="min-h-[44px] flex-1 rounded-xl border border-white/25 bg-slate-800 px-2 text-[12.5px] font-black text-slate-100 active:scale-[.98]">分かった</button>
       </div>
     </section>);
 }
@@ -71846,7 +71846,7 @@ const assistantLifeWeightOf = (pts, lo, hi, levels, key) => {
 function AssistantLifeGiftWeight({ w, tone, gainText, kind }) {
   if (!w) return null;
   const col = tone === 'peer' ? ['bg-orange-400', 'bg-orange-200'] : ['bg-pink-500', 'bg-pink-200'];
-  if (w.max) return <p data-assistant-life-give-weight={`${kind}:max`} className="mt-0.5 text-[10px] font-bold leading-snug text-slate-300">Lv{w.lv}(いちばん上の段)</p>;
+  if (w.max) return <p data-assistant-life-give-weight={`${kind}:max`} className="mt-0.5 text-[10px] font-bold leading-snug text-slate-300">Lv{w.lv}(一番上の段)</p>;
   return (
     <div data-assistant-life-give-weight={`${kind}:${w.lv}`} className="mt-0.5">
       <div className="flex h-[6px] overflow-hidden rounded-full bg-slate-950/80" aria-hidden="true">
@@ -72315,7 +72315,7 @@ const assistantLifeFurnMove = async (who, key, toPut) => {
 // 台詞はツムギ(assistants.js の ASSISTANT_LIFE_FURNUSE_LINES・ASSISTANT_LIFE_VISITFURN_LINES)。保存は増やさない(部屋に置いてある家具を見るだけ)
 const ASSISTANT_LIFE_FURN_SHORT = Object.freeze({ sofa: 'ソファ', bear: 'くま', plant: '植物', record: 'レコード', nyacushion: 'クッション', starpic: '星空の絵',
   trophy: 'トロフィー', bookshelf: '本棚', heartmirror: '鏡', lantern: 'ランタン', mirrorball: 'ミラーボール', windbell: '風鈴',
-  clock: 'ふりこ時計', map: '地図', guitar: 'ギター', tv: 'テレビ', windowflower: '窓辺の花', fishbowl: '金魚ばち', pendant: 'ライト', garland: 'ガーランド' });
+  clock: '振り子時計', map: '地図', guitar: 'ギター', tv: 'テレビ', windowflower: '窓辺の花', fishbowl: '金魚鉢', pendant: 'ライト', garland: 'ガーランド' });
 const assistantLifeFurnPlaced = (who, st = ASSISTANT_LIFE_GIFT_STORE.state) => (typeof assistantLifeRoomEditEnabled === 'function' && assistantLifeRoomEditEnabled() && typeof assistantLifeLayoutOf === 'function' && ASSISTANT_LIFE_LAYOUT_STORE.loaded
   ? assistantLifeLayoutOf(who, undefined, st).map(it => it.k) : Object.values(assistantLifeRoomOf(who, st).put).filter(Boolean));
 // 吹き出しは2行に分ける(言葉の区切り「で・を・に・の・が・と・、」のうち、真ん中にいちばん近い所で)
@@ -75507,7 +75507,7 @@ function AmgbPanel({ who, t }) {
       {f < 1 && left <= AMGB_NUM.warnDays && <p className="mt-1 rounded-lg bg-amber-900/50 p-1.5 text-[10.5px] font-bold text-amber-100" data-amgb-warn>{who.name || '助手'}「そろそろ伸びが止まりそう。{typeof amgsFuseOn === 'function' && amgsFuseOn() ? '合体も考えてみる?' : 'いまのうちに、たくさん鍛えておこうね'}」</p>}
       {f >= 1 && <p className="mt-1 text-[10px] font-bold text-slate-400">寿命が来ても、いなくなったりはしません。対戦にも出られます</p>}
       <div className="mt-2 rounded-xl border border-white/10 p-2" data-amgb-result>
-        <p className="text-[10.5px] font-bold text-slate-200">{last ? `いちばん新しい訓練: ${AMGB_RESULT_ICON[last.r]} ${MASMON_CALC.RESULTS[last.r].name}${last.a ? `(${last.a === 'praise' ? '褒めた' : '叱った'})` : ''}` : 'まだ訓練の結果はありません'}</p>
+        <p className="text-[10.5px] font-bold text-slate-200">{last ? `一番新しい訓練: ${AMGB_RESULT_ICON[last.r]} ${MASMON_CALC.RESULTS[last.r].name}${last.a ? `(${last.a === 'praise' ? '褒めた' : '叱った'})` : ''}` : 'まだ訓練の結果はありません'}</p>
         {pend && <div className="mt-1.5 flex gap-2">
           <button type="button" className="min-h-[40px] flex-1 rounded-xl bg-sky-700 px-2 text-[12px] font-black" onClick={() => react('scold')} data-amgb-act="scold">📣 叱る</button>
           <button type="button" className="min-h-[40px] flex-1 rounded-xl bg-pink-600 px-2 text-[12px] font-black" onClick={() => react('praise')} data-amgb-act="praise">👏 褒める</button>
@@ -76035,7 +76035,7 @@ const AMGT_TRAIT = Object.freeze({
 });
 // ブリーダー能力の効き目(能力100のとき・社長 11-11「大きく」: 伸び×1.20・失敗とストレスの軽減も合わせて)
 const AMGT_BR_EFFECT = Object.freeze({ lead: 0.20, know: 0.60, trust: 0.60, obs: 10 });
-const AMGT_BR_RANKS = Object.freeze([[80, 'ベテラン'], [60, '一人前'], [40, 'なかなか'], [20, '駆け出し'], [0, 'はじめたて']]);
+const AMGT_BR_RANKS = Object.freeze([[80, 'ベテラン'], [60, '一人前'], [40, 'なかなか'], [20, '駆け出し'], [0, '始めたて']]);
 const amgtBrRankOf = (v) => (AMGT_BR_RANKS.find(r => v >= r[0]) || AMGT_BR_RANKS[AMGT_BR_RANKS.length - 1])[1];
 // 行動ごとに経験が入るブリーダー能力
 const AMGT_BR_XP = Object.freeze({
@@ -76757,7 +76757,7 @@ function AssistantLifePlanPicker({ id, abs, onDone }) {
             {assistantLifePlanPerk(p) && <span className="block text-[10px] font-bold text-amber-200">得: {assistantLifePlanPerk(p)}</span>}
             {typeof AssistantLifeBodyPlaceStat === 'function' && <AssistantLifeBodyPlaceStat place={p} abs={abs}/>}
           </button>))}
-        <button type="button" data-assistant-life-plan-place="auto" onClick={() => { assistantLifePlanSet(abs, id, null); onDone && onDone(); }} className="col-span-2 min-h-[44px] rounded-xl bg-white/5 text-[12px] font-black text-slate-200 active:scale-95">おまかせにもどす</button>
+        <button type="button" data-assistant-life-plan-place="auto" onClick={() => { assistantLifePlanSet(abs, id, null); onDone && onDone(); }} className="col-span-2 min-h-[44px] rounded-xl bg-white/5 text-[12px] font-black text-slate-200 active:scale-95">おまかせに戻す</button>
       </div>
     </div>);
 }
@@ -77809,7 +77809,7 @@ function AssistantMasmonBattleWatch({ onClose }) {
       <style>{AMBW_CSS}</style>
       <div className="ambw-in">
         <div className="ambw-top">
-          <button className="ambw-btn2" data-ambw-close onClick={phase === 'setup' || !battle ? onClose : () => setPhase('setup')}>← {phase === 'setup' || !battle ? 'もどる' : '設定へ'}</button>
+          <button className="ambw-btn2" data-ambw-close onClick={phase === 'setup' || !battle ? onClose : () => setPhase('setup')}>← {phase === 'setup' || !battle ? '戻る' : '設定へ'}</button>
           <span>⚔ 助手マスモンの対戦(観戦の試作)</span>
           <b>{phase !== 'setup' && battle ? `ラウンド ${(battle.frames[pos] || {}).r || 0}` : '試作'}</b>
         </div>
@@ -77841,7 +77841,7 @@ const AMBB_PLANS = Object.freeze([
   { id: 'attack', label: 'ガンガン攻める', note: '攻めを強く・守りは少なめ' },
   { id: 'guard', label: 'じっくり守る', note: 'ガードとガッツの節約を多めに' },
   { id: 'range', label: '間合いを取る', note: '得意な距離へ動く' },
-  { id: 'big', label: '大技ねらい', note: '威力の大きい技を好む' },
+  { id: 'big', label: '大技狙い', note: '威力の大きい技を好む' },
 ]);
 const AMBB_SWAPS = Object.freeze([
   { id: 'omakase', label: 'おまかせ' },
@@ -78629,7 +78629,7 @@ function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, preview, tryPv
           <p className="ambw-small" style={{ marginTop: 6 }}>順位は1週間ごと(月曜 4:00 に切り替わり)。</p>
         </div>
         <div className="ambw-card"><div className="ambw-small">{me.name}のこの端末での戦績</div><b>{rec.w}勝 {rec.l}敗{rec.d ? ` ${rec.d}分` : ''}</b></div>
-        <div className="ambw-ctl"><button className="ambw-btn2" onClick={() => setPhase(battle ? 'review' : 'prep')}>← もどる</button></div>
+        <div className="ambw-ctl"><button className="ambw-btn2" onClick={() => setPhase(battle ? 'review' : 'prep')}>← 戻る</button></div>
       </div>
     );
   } else if (battle) {
@@ -78832,7 +78832,7 @@ function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, preview, tryPv
       <style>{AMBW_CSS}{AMBB_CSS}{typeof MSA_SHOW_CSS === 'string' ? MSA_SHOW_CSS : ''}</style>
       <div className="ambw-in">
         <div className="ambw-top">
-          <button className="ambw-btn2" data-ambb-close onClick={phase === 'rank' && !battle ? () => setPhase('prep') : back}>← {phase === 'prep' ? 'もどる' : 'じゅんびへ'}</button>
+          <button className="ambw-btn2" data-ambb-close onClick={phase === 'rank' && !battle ? () => setPhase('prep') : back}>← {phase === 'prep' ? '戻る' : 'じゅんびへ'}</button>
           <span>⚔ マスモンで対戦<span className="ambb-beta">β</span></span>
           <b>{phase === 'watch' && battle ? `ラウンド ${(battle.frames[pos] || {}).r || 0}` : ''}</b>
         </div>
@@ -79095,7 +79095,7 @@ function AmbbRanking({ me, faceOf, nameOf, onBack }) {
           <div key={t.id} className="ambb-tier"><span>{cardIconNode(t.icon, 14)} {t.label}</span><span className="ambw-small">{Number.isFinite(t.min) ? `${t.min}〜${i > 0 ? arr[i - 1].min - 1 : ''}` : `〜${arr[i - 1].min - 1}`}</span></div>
         ))}
       </div>
-      <div className="ambw-ctl"><button className="ambw-btn2" onClick={onBack}>← もどる</button></div>
+      <div className="ambw-ctl"><button className="ambw-btn2" onClick={onBack}>← 戻る</button></div>
     </div>
   );
 }
@@ -80389,7 +80389,7 @@ function AssistantMasmonRanchSheet({ assistantId, onClose }) {
               </button>); })}
           </div>}
           <div className="mt-2 grid grid-cols-2 gap-1.5">
-            {['light', 'heavy'].map(x => <button key={x} type="button" onClick={() => setKind(x)} data-amgr-kind={x} className={`min-h-[44px] rounded-xl border text-[12px] font-black ${kind === x ? (x === 'heavy' ? 'border-orange-300 bg-orange-800' : 'border-emerald-300 bg-emerald-800') : 'border-white/20 bg-slate-800'}`}>{x === 'heavy' ? '🎟️ 重トレーニング' : '🎫 トレーニング'}<small className="block text-[10px] font-bold text-slate-200">のこり {info ? info[x] : 0}枚</small></button>)}
+            {['light', 'heavy'].map(x => <button key={x} type="button" onClick={() => setKind(x)} data-amgr-kind={x} className={`min-h-[44px] rounded-xl border text-[12px] font-black ${kind === x ? (x === 'heavy' ? 'border-orange-300 bg-orange-800' : 'border-emerald-300 bg-emerald-800') : 'border-white/20 bg-slate-800'}`}>{x === 'heavy' ? '🎟️ 重トレーニング' : '🎫 トレーニング'}<small className="block text-[10px] font-bold text-slate-200">残り {info ? info[x] : 0}枚</small></button>)}
           </div>
           <div className="mt-2 grid grid-cols-3 gap-1.5" data-amgr-stats>
             {AMG_KEYS.map(s => <button key={s} type="button" onClick={() => setK(s)} data-amgr-stat={s} className={`flex min-h-[52px] flex-col items-center justify-center rounded-xl border text-[12px] font-black ${k === s ? 'border-2 border-emerald-300 bg-emerald-900' : 'border-white/15 bg-slate-800'}`}>
@@ -80402,7 +80402,7 @@ function AssistantMasmonRanchSheet({ assistantId, onClose }) {
           {(err || block) && <p className="mt-1 text-[11px] font-bold text-rose-200" data-amgr-why>{err || block}</p>}
           <div className="mt-2 grid grid-cols-2 gap-1.5">
             <button type="button" onClick={onClose} data-mhl-sheet-close className={`${btn} bg-slate-700`}>やめる</button>
-            <button type="button" disabled={!!block} onClick={use} data-amgr-use className={`${btn} ${block ? 'bg-slate-700 text-slate-400' : kind === 'heavy' ? 'bg-orange-700' : 'bg-emerald-700'}`}>この1枚を使う<small className="block text-[10px] font-bold">{AMGR_TICKET_NAME[kind]} のこり {have} → {Math.max(0, have - 1)}枚</small></button>
+            <button type="button" disabled={!!block} onClick={use} data-amgr-use className={`${btn} ${block ? 'bg-slate-700 text-slate-400' : kind === 'heavy' ? 'bg-orange-700' : 'bg-emerald-700'}`}>この1枚を使う<small className="block text-[10px] font-bold">{AMGR_TICKET_NAME[kind]} 残り {have} → {Math.max(0, have - 1)}枚</small></button>
           </div>
         </>)}
       </div>
@@ -80819,7 +80819,7 @@ function AmgpFsGauge({ kind, start, ends }) {
       <div className="flex items-baseline gap-1.5 text-[11px] font-black">
         <span className="w-[56px] shrink-0 text-left">{label}</span>
         <span className="flex-1 text-left text-[10px] font-bold" style={{ color: over ? over[1] : '#94a3b8' }}>{over ? `⚠ ${over[2]}の線をこえる` : 'だいじょうぶ'}</span>
-        <b className="shrink-0 text-right text-amber-200" data-amgp-gauge-num>{start} → {last}{peak > last ? `(いちばん高い ${peak})` : ''}</b>
+        <b className="shrink-0 text-right text-amber-200" data-amgp-gauge-num>{start} → {last}{peak > last ? `(一番高い ${peak})` : ''}</b>
       </div>
       <div className="relative mt-1 h-3 overflow-hidden rounded-full bg-slate-700">
         <i className="absolute inset-y-0 left-0 bg-slate-300" style={{ width: pct(Math.min(start, peak)) }}/>
@@ -84105,7 +84105,7 @@ function AlfSceneSheet({ scene, onClose }) {
             </div>))}
         </div>
         {scene.reward && <p className="mt-2 text-[11px] font-black text-amber-200" data-alf-scene-reward>{scene.reward}</p>}
-        <button type="button" className="mt-3 w-full rounded-2xl bg-amber-300 py-2 text-[13px] font-black text-slate-950" data-alf-scene-close data-mhl-sheet-close onClick={onClose}>とじる</button>
+        <button type="button" className="mt-3 w-full rounded-2xl bg-amber-300 py-2 text-[13px] font-black text-slate-950" data-alf-scene-close data-mhl-sheet-close onClick={onClose}>閉じる</button>
       </div>
     </div>);
 }
@@ -84219,7 +84219,7 @@ function AlfFriendHouseView({ friend, onClose }) {
   const diaryItems = [...actItems, ...(more && more.dy.length ? more.dy : (h.dy || []))].slice(0, 10);
   const header = (
     <div className="mhl-hdr flex items-start gap-2" style={{ paddingTop: land ? 6 : 'calc(8px + env(safe-area-inset-top))' }}>
-      <button type="button" className="h-9 w-8 shrink-0 text-[19px] text-slate-100" aria-label="もどる" data-alf-visit-close onClick={onClose}>←</button>
+      <button type="button" className="h-9 w-8 shrink-0 text-[19px] text-slate-100" aria-label="戻る" data-alf-visit-close onClick={onClose}>←</button>
       {/* 右上は「仲良し度 +10」などの知らせ(44-growth-fx の .mh-gfx-chips)が出る所なので、題は左に寄せて右を空ける */}
       <div className="min-w-0" style={{ maxWidth: land ? '100%' : '48%' }}>
         <p className="mhl-en whitespace-nowrap">VISIT · FRIEND HOUSE</p>
@@ -84261,7 +84261,7 @@ function AlfFriendHouseView({ friend, onClose }) {
   const rvDock = land || !roomId ? null : (
     <div className="grid grid-cols-3 gap-1.5" data-alf-visit-roomview-dock>
       {rvAct('talk', roomState === 'sleep' ? '💤 おやすみ中' : '💬 話しかける', 'bg-gradient-to-br from-sky-400 to-indigo-500', () => { greet(roomId); setTimeout(rvToSheet, 60); }, roomState !== 'home')}
-      {rvAct('sheet', '👀 くわしく', 'bg-gradient-to-br from-rose-400 to-amber-500', rvToSheet)}
+      {rvAct('sheet', '👀 詳しく', 'bg-gradient-to-br from-rose-400 to-amber-500', rvToSheet)}
       {rvAct('note', '✉️ 一言', 'bg-amber-500', () => { setRoomId(null); setNoteWarn(''); setLeaving(roomId); }, can !== 'ok' || !!done)}
     </div>);
   const rvScene = rvOk && roomId && r0 ? (
@@ -84288,7 +84288,7 @@ function AlfFriendHouseView({ friend, onClose }) {
             <p className="text-[16px] font-black text-white">{alfTheirLabel(friend.name, roomId)}の部屋</p>
             <p className="text-[11px] font-bold text-slate-200" data-alf-visit-room-state={roomState}>{alfNoBreak(roomState === 'out' ? (r0.p && typeof assistantLifePlaceShow === 'function' ? `${(typeof ASSISTANT_LIFE_PLACE_ICON !== 'undefined' && ASSISTANT_LIFE_PLACE_ICON[r0.p]) || '🚶'} ${assistantLifePlaceShow(r0.p)}へおでかけ中。部屋は見られます` : '🚶 いまはおでかけ中。部屋は見られます') : roomState === 'sleep' ? '💤 すやすや…起こさないように、そっと見るだけ' : `🏠 部屋で${(ASSISTANT_LIFE_DOINGS[r0.d] || {}).label || 'のんびり'}`)}</p>
           </div>
-          <button type="button" data-mhl-sheet-close className="shrink-0 rounded-xl border border-slate-500 px-3 py-1.5 text-[12px] font-black text-slate-100" onClick={closeRoom}>とじる</button>
+          <button type="button" data-mhl-sheet-close className="shrink-0 rounded-xl border border-slate-500 px-3 py-1.5 text-[12px] font-black text-slate-100" onClick={closeRoom}>閉じる</button>
         </div>
         <p className="mt-2 text-[11px] font-bold text-slate-200" data-alf-visit-furn>🪑 贈られた家具: {furnNames(roomId).length ? furnNames(roomId).join('・') : 'まだありません'}</p>
         {keptNames(roomId).length > 0 && <p className="mt-0.5 text-[10.5px] text-slate-300" data-alf-visit-kept>📦 押し入れ: {keptNames(roomId).join('・')}</p>}
@@ -84447,7 +84447,7 @@ function AssistantLifeFriendPage({ life }) {
       {!s.intro && !alfEmpty && (
         <div className={card} data-alf-intro>
           <p className="text-[11px] leading-snug text-slate-200" data-alf-intro-text>{['助手たちは、', 'ときどき自分で', 'フレンドの家へ', '遊びに行きます。', 'フレンドの助手が', '遊びに来ることも', 'あります。', 'あなたも', '「🚪 訪ねる」で', 'フレンドの家を', '見て回れます。'].map((t, i) => <span key={i} className="whitespace-nowrap">{t}</span>)}</p>
-          <button type="button" className="mt-1.5 min-h-[40px] rounded-xl bg-amber-300 px-4 py-1 text-[12px] font-black text-slate-950" data-alf-intro-ok onClick={() => { ALF_STORE.set({ intro: true }); try { storeSet(ALF_INTRO_KEY, true, false); } catch {} }}>わかった</button>
+          <button type="button" className="mt-1.5 min-h-[40px] rounded-xl bg-amber-300 px-4 py-1 text-[12px] font-black text-slate-950" data-alf-intro-ok onClick={() => { ALF_STORE.set({ intro: true }); try { storeSet(ALF_INTRO_KEY, true, false); } catch {} }}>分かった</button>
         </div>)}
       <p className={sec} style={hideIfEmpty}>🏘 いまの行き来</p>
       <div className={card} data-alf-now style={hideIfEmpty}>
@@ -84929,7 +84929,7 @@ function AlfFavEditor({ s, card, sec }) {
   const sel = 'mt-0.5 w-full rounded-lg border border-slate-500 bg-slate-800 px-1.5 py-1 text-[11.5px] text-slate-100';
   const row = (k, label, value, opts, onChange) => (
     <label className="mt-1 block text-[10.5px] font-bold text-slate-300" data-alb-fav-row={k}>{label}
-      <select className={sel} value={value} onChange={e => onChange(e.target.value)}><option value="">えらばない</option>{opts.map(o => <option key={o.v} value={o.v}>{o.label}</option>)}</select>
+      <select className={sel} value={value} onChange={e => onChange(e.target.value)}><option value="">選ばない</option>{opts.map(o => <option key={o.v} value={o.v}>{o.label}</option>)}</select>
     </label>);
   return (<>
     <p className={sec}>🏆 お気に入りの棚</p>
@@ -85048,7 +85048,7 @@ function AlfSentNotes({ s, card, sec, onVisit }) {
           <AlfSentRow n={n}/>
           <p className="mt-0.5 text-[10px] text-slate-400">{f ? <span className="text-amber-200">🚪 この家へ遊びに行く ›</span> : 'いまはこの家へ行けません(家がまだ届いていません)'}</p>
         </button>); })}
-      {list.length > 5 && <button type="button" className="mt-1 w-full rounded-xl border border-slate-500 py-1 text-[11px] text-slate-200" data-alf-sent-more onClick={() => setMore(!more)}>{more ? '少なく見る' : `ぜんぶ見る(${list.length}通)`}</button>}
+      {list.length > 5 && <button type="button" className="mt-1 w-full rounded-xl border border-slate-500 py-1 text-[11px] text-slate-200" data-alf-sent-more onClick={() => setMore(!more)}>{more ? '少なく見る' : `全部見る(${list.length}通)`}</button>}
       <p className="mt-1 text-[9.5px] leading-snug text-slate-400">この端末に{ALF_SENT_MAX.days}日・{ALF_SENT_MAX.count}通まで残ります(古いものから消えます)</p>
     </div>
   </>);
@@ -92055,7 +92055,7 @@ function MlabDetail({ sp, mon, fuse, engine, onBack }) {
           <div>称号: {mon && Array.isArray(mon.titles) && mon.titles.length ? `${mon.titles.length}個` : 'なし'}</div>
         </MlabBox>
       )}
-      <div className="mt-auto p-2.5 text-center"><button type="button" onClick={onBack} className="rounded-xl bg-amber-400 px-8 py-2 text-[13px] font-black text-amber-950 active:scale-95">もどる</button></div>
+      <div className="mt-auto p-2.5 text-center"><button type="button" onClick={onBack} className="rounded-xl bg-amber-400 px-8 py-2 text-[13px] font-black text-amber-950 active:scale-95">戻る</button></div>
     </div>
   );
 }
@@ -92079,7 +92079,7 @@ function MonsterLabScreen({ onClose, onOpenDex }) {
   return (
     <div className="fixed inset-0 z-[300] flex flex-col bg-[#141a33] text-white" style={{ wordBreak: 'keep-all', overflowWrap: 'anywhere' }} data-monster-lab>
       <div className="flex items-center justify-between border-b-2 border-indigo-500/60 bg-indigo-950 px-3 py-2.5">
-        <button type="button" onClick={back} className="text-[13px] font-black text-pink-200 active:scale-95">← もどる</button>
+        <button type="button" onClick={back} className="text-[13px] font-black text-pink-200 active:scale-95">← 戻る</button>
         <span className="text-[15px] font-black">{title}</span>
         <button type="button" onClick={onClose} className="text-[13px] font-black text-indigo-200 active:scale-95">✕</button>
       </div>

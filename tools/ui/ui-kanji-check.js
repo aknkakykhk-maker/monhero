@@ -13,7 +13,8 @@ const { scanFile, applyFile, targetFiles } = require('./ui-kanji-scan.js');
 
 // まだ置き換えていない部品(r1114-089 で部品ごとに PR を分けて進めている。済んだら消す)
 const PENDING = [
-  /src\/parts\/(?!8[2-9]-|9[0-9]-|13-|2[89]-|30-|39-|58-|77-|80-)/, // まだの parts(済み: カードバトル 82〜99・モンヒロビート 13/28/29/30/39/58/77/80)
+  /src\/parts\/(?:60-app|70-bootstrap|56-monhero-success|56-monsuc-)/, // まだ: 60-app・起動・モンサク(最後)
+  /src\/parts\/(?:19-|32-|59-|6[1-7]-|7[12]-|79-)/, // マスモン・勇者選び・レイド(#6213 で置き換え。入ったら消す)
   /data\/(?!card-battle-cards\.js)/, // data(help.js・名前の表)
 ];
 
