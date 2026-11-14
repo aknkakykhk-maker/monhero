@@ -725,7 +725,7 @@ function MsaStage({ log, frames, pos, teams, venueImg, ended = false, win = null
       <div key={sd} className={`msa-hud ${sd}`} data-msa-hud={sd}>
         <div className="nm">{m ? m.name : ''}</div>
         <MsaGauge kind="hp" value={hpOf(sd)} max={maxHpOf(sd)} delay={foe ? hitMs : 0} sf={sf} reduce={reduce}/>
-        <MsaGauge kind="gt" value={gutsOf(sd)} max={100} delay={foe ? hitMs : 0} sf={sf} reduce={reduce}/>
+        <MsaGauge kind="gt" value={gutsOf(sd)} max={typeof window !== 'undefined' && window.ASSISTANT_MASMON_BATTLE && window.ASSISTANT_MASMON_BATTLE.GUTS_MAX ? window.ASSISTANT_MASMON_BATTLE.GUTS_MAX : 99} delay={foe ? hitMs : 0} sf={sf} reduce={reduce}/>
         <div className="msa-gtags">{tags.map((t, j) => <span key={`${pos}-${j}`} className={`msa-gt ${t.cls}`} data-msa-gtag={t.t} style={{ animationDelay: `${t.delay}ms` }}>{t.t}</span>)}</div>
       </div>
     );

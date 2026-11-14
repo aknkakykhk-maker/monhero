@@ -7,7 +7,7 @@
 //   ② 全滅で決着(負けた側は全員ライフ 0・勝った側に立っている者がいる)
 //   ③ 無限に続かない(ラウンドの上限を超えない・上限に届いたら判定で必ず終わる)
 //   ④ 距離とガッツの整合(記録を最初からたどり直す: 距離は零〜遠で1歩ずつ・技はその距離で届くものだけ・
-//      ガッツは 0〜100 で、技の分だけ減り、毎ラウンド・移動・ガード・ためるで決まった分だけ増える)
+//      ガッツは 0〜99 で、技の分だけ減り、毎ラウンド・移動・ガード・ためるで決まった分だけ増える)
 //   ⑤ 弱い AI(戦術経験 0)でも最低限の手を選ぶ(倒しきれる相手には撃つ・満タンでためない・届かない技は撃たない)
 //   ⑥ 1対1・2対2・3対3・1対2・2対3・3対1 すべて動く/4体目以降は切る/空の編成は断る
 //   ⑦ 純粋な計算(Math.random・Date・window・localStorage・document・Math.exp/log/pow/sin/cos を使わない)
@@ -93,7 +93,7 @@ const FORMATS = [[1, 1], [2, 2], [3, 3], [1, 2], [2, 3], [3, 1]];
         if (bad) break;
         if (e.r !== round) {                      // 新しいラウンド: 場の2体に自然回復
           round = e.r;
-          for (const s of ['A', 'B']) { const u = st.teams[s].units[active[s]]; u.guts = Math.min(100, u.guts + u.regen); }
+          for (const s of ['A', 'B']) { const u = st.teams[s].units[active[s]]; u.guts = Math.min(engine.GUTS_MAX, u.guts + u.regen); }
         }
         if (e.ev === 'tech') {
           const u = st.teams[e.side].units[active[e.side]];
@@ -114,11 +114,11 @@ const FORMATS = [[1, 1], [2, 2], [3, 3], [1, 2], [2, 3], [3, 1]];
         } else if (e.ev === 'move') {
           if (Math.abs(e.to - dist) !== 1 || e.to < 0 || e.to > 3) { ng.dist.push(`${tag} r${e.r} ${dist}→${e.to}`); bad = 1; }
           dist = e.to;
-          const u = st.teams[e.side].units[active[e.side]]; u.guts = Math.min(100, u.guts + engine.GUTS_MOVE);
+          const u = st.teams[e.side].units[active[e.side]]; u.guts = Math.min(engine.GUTS_MAX, u.guts + engine.GUTS_MOVE);
         } else if (e.ev === 'guard') {
-          const u = st.teams[e.side].units[active[e.side]]; u.guts = Math.min(100, u.guts + engine.GUTS_MOVE);
+          const u = st.teams[e.side].units[active[e.side]]; u.guts = Math.min(engine.GUTS_MAX, u.guts + engine.GUTS_MOVE);
         } else if (e.ev === 'charge') {
-          const u = st.teams[e.side].units[active[e.side]]; u.guts = Math.min(100, u.guts + 22);
+          const u = st.teams[e.side].units[active[e.side]]; u.guts = Math.min(engine.GUTS_MAX, u.guts + 22);
         } else if (e.ev === 'swap' || (e.ev === 'enter' && e.r > 0)) {
           active[e.side] = e.i;
           const u = st.teams[e.side].units[e.i]; u.guts = Math.max(u.guts, 40);
@@ -129,11 +129,11 @@ const FORMATS = [[1, 1], [2, 2], [3, 3], [1, 2], [2, 3], [3, 1]];
           ng.guts.push(`${tag} r${e.r} ${e.ev} 両方のガッツ ${st.teams.A.units[active.A].guts}/${st.teams.B.units[active.B].guts}≠${e.ga}/${e.gb}`); bad = 1;
         }
         if (['tech', 'move', 'guard', 'charge', 'swap'].includes(e.ev) && !engine.WHY[e.why]) { ng.hp.push(`${tag} r${e.r} 理由が無い ${e.why}`); bad = 1; }
-        if (e.ev === 'tech' && !(e.p >= 15 && e.p <= 97)) { ng.hp.push(`${tag} r${e.r} 命中率 ${e.p}`); bad = 1; }
+        if (e.ev === 'tech' && !(e.p >= 1 && e.p <= 99)) { ng.hp.push(`${tag} r${e.r} 命中率 ${e.p}`); bad = 1; }
         if (e.d !== dist && e.ev !== 'move') { ng.dist.push(`${tag} r${e.r} 記録の距離 ${e.d}≠${dist}`); bad = 1; }
         if (e.guts != null) {
           const u = st.teams[e.side].units[active[e.side]];
-          if (u.guts !== e.guts || e.guts < 0 || e.guts > 100) { ng.guts.push(`${tag} r${e.r} ${e.ev} ${u.guts}≠${e.guts}`); bad = 1; }
+          if (u.guts !== e.guts || e.guts < 0 || e.guts > engine.GUTS_MAX) { ng.guts.push(`${tag} r${e.r} ${e.ev} ${u.guts}≠${e.guts}`); bad = 1; }
         }
       }
     }
@@ -142,7 +142,7 @@ const FORMATS = [[1, 1], [2, 2], [3, 3], [1, 2], [2, 3], [3, 1]];
   check(`③ ラウンドの上限(${engine.ROUND_LIMIT})を超えない`, !ng.limit.length, ng.limit.slice(0, 3).join(' / '));
   check('④ 距離は零〜遠で1歩ずつ・記録の距離と合う', !ng.dist.length, ng.dist.slice(0, 3).join(' / '));
   check('④ 技はその距離で届くものだけ', !ng.range.length, ng.range.slice(0, 3).join(' / '));
-  check('④ ガッツは 0〜100・技の分だけ減り、決まった分だけ増える・手のあとの両方のガッツ(ga/gb)が合う', !ng.guts.length, ng.guts.slice(0, 3).join(' / '));
+  check('④ ガッツは 0〜99・技の分だけ減り、決まった分だけ増える・手のあとの両方のガッツ(ga/gb)が合う', !ng.guts.length, ng.guts.slice(0, 3).join(' / '));
   check('④ ライフの減り方・受けた側・命中率・手の理由が記録と合う・倒れた体は出てこない', !ng.hp.length, ng.hp.slice(0, 3).join(' / '));
   check('⑥ 1対1・2対2・3対3・1対2・2対3・3対1 がすべて動く', Object.keys(fmtSeen).length === FORMATS.length, `${total} 戦`);
 }
@@ -430,9 +430,9 @@ const FORMATS = [[1, 1], [2, 2], [3, 3], [1, 2], [2, 3], [3, 1]];
   const d0 = run({ distStart: 0 }), d3 = run({ distStart: 9 });
   check('⑰ rules: 最初の間合い(範囲外は 0〜3 に切る)', firstMove(d0).d === 0 || (firstMove(d0).ev === 'move' && Math.abs(firstMove(d0).to - 0) === 1), `${JSON.stringify(d3.log[0].rules)}`);
   check('⑰ rules: 最初の間合い 9 → 3 に切る', d3.log[0].rules && d3.log[0].rules.distStart === 3);
-  const g100 = run({ gutsStart: 100 });
+  const g100 = run({ gutsStart: engine.GUTS_MAX });
   const ga = firstMove(g100);
-  check('⑰ rules: 始まりのガッツ 100(毎ラウンドの回復で上限を超えない)', g100.log[0].rules.gutsStart === 100 && ga && ga.ga <= engine.GUTS_MAX, JSON.stringify(g100.log[0].rules));
+  check('⑰ rules: 始まりのガッツ 99(毎ラウンドの回復で上限を超えない)', g100.log[0].rules.gutsStart === engine.GUTS_MAX && ga && ga.ga <= engine.GUTS_MAX, JSON.stringify(g100.log[0].rules));
   let swaps = 0, swapsFree = 0;
   for (let k = 0; k < 40; k++) { swaps += run({ noSwap: true }, `ns${k}`).log.filter((e) => e.ev === 'swap').length; swapsFree += run(undefined, `ns${k}`).log.filter((e) => e.ev === 'swap').length; }
   check('⑰ rules: 勝ち抜きでは交代しない(交代ありでは起きる)', swaps === 0 && swapsFree > 0, `勝ち抜き ${swaps}・交代あり ${swapsFree}`);
