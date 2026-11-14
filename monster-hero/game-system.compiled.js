@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1baf25a6c1d75fc7
+// source-sha256: bf10fb72d643258f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -61946,25 +61946,8 @@ function MultiStampEditor({
       className: "absolute right-0.5 top-0 text-[11px]"
     }, "🔒"));
   })), React.createElement("div", {
-    className: "flex flex-wrap gap-1.5"
-  }, MULTI_STAMP_WORDS.map(wd => {
-    const own = multiStampOwnsWord(st.owned, wd.id);
-    return React.createElement("button", {
-      key: wd.id,
-      type: "button",
-      "data-multi-stamp-word": wd.id,
-      "aria-pressed": word === wd.id,
-      onClick: () => {
-        if (own) {
-          setWord(wd.id);
-          setLockNote('');
-        } else lockedBuy('この言葉');
-      },
-      className: `min-h-[34px] whitespace-nowrap rounded-full px-2.5 text-[12px] font-black ${word === wd.id ? 'bg-cyan-600 text-white' : own ? 'bg-slate-800 text-slate-100' : 'bg-slate-800/60 text-slate-500'}`
-    }, own ? '' : '🔒', wd.text);
-  })), React.createElement("div", {
     "data-multi-stamp-free": true,
-    className: `mt-2 rounded-xl border p-2 ${word === MULTI_STAMP_CUSTOM_ID ? 'border-cyan-300 bg-cyan-500/10' : 'border-slate-700'}`
+    className: `mb-2 rounded-xl border p-2 ${word === MULTI_STAMP_CUSTOM_ID ? 'border-cyan-300 bg-cyan-500/10' : 'border-slate-700'}`
   }, React.createElement("label", {
     htmlFor: "multi-stamp-free-input",
     className: "mb-1 block text-[12px] font-black text-cyan-100"
@@ -61985,6 +61968,23 @@ function MultiStampEditor({
     },
     placeholder: "例:いくぞ！",
     className: "min-h-[44px] w-full min-w-0 rounded-xl border border-white/20 bg-slate-950 px-3 text-base font-bold text-white"
+  })), React.createElement("div", {
+    className: "flex flex-wrap gap-1.5"
+  }, MULTI_STAMP_WORDS.map(wd => {
+    const own = multiStampOwnsWord(st.owned, wd.id);
+    return React.createElement("button", {
+      key: wd.id,
+      type: "button",
+      "data-multi-stamp-word": wd.id,
+      "aria-pressed": word === wd.id,
+      onClick: () => {
+        if (own) {
+          setWord(wd.id);
+          setLockNote('');
+        } else lockedBuy('この言葉');
+      },
+      className: `min-h-[34px] whitespace-nowrap rounded-full px-2.5 text-[12px] font-black ${word === wd.id ? 'bg-cyan-600 text-white' : own ? 'bg-slate-800 text-slate-100' : 'bg-slate-800/60 text-slate-500'}`
+    }, own ? '' : '🔒', wd.text);
   }))))));
 }
 function MultiStampShopList({

@@ -399,6 +399,13 @@ function MultiStampEditor({ onClose, onShop = null }) {
                 );
               })}
             </div>
+            <div data-multi-stamp-free className={`mb-2 rounded-xl border p-2 ${word === MULTI_STAMP_CUSTOM_ID ? 'border-cyan-300 bg-cyan-500/10' : 'border-slate-700'}`}>
+              <label htmlFor="multi-stamp-free-input" className="mb-1 block text-[12px] font-black text-cyan-100">✏️ 自分で文字を打つ<small className="ml-1 text-[11px] text-slate-400">(全角{MULTI_STAMP_CUSTOM_MAX}文字まで・1行)</small></label>
+              <input id="multi-stamp-free-input" data-multi-stamp-free-input value={freeText} maxLength={MULTI_STAMP_CUSTOM_MAX} autoComplete="off" enterKeyHint="done"
+                onFocus={() => setWord(MULTI_STAMP_CUSTOM_ID)}
+                onChange={(e) => { setFreeText(e.target.value.replace(/[\u0000-\u001f\u007f-\u009f]/g, '').slice(0, MULTI_STAMP_CUSTOM_MAX)); setWord(MULTI_STAMP_CUSTOM_ID); setLockNote(''); }}
+                placeholder="例:いくぞ！" className="min-h-[44px] w-full min-w-0 rounded-xl border border-white/20 bg-slate-950 px-3 text-base font-bold text-white" />
+            </div>
             <div className="flex flex-wrap gap-1.5">
               {MULTI_STAMP_WORDS.map((wd) => {
                 const own = multiStampOwnsWord(st.owned, wd.id);
@@ -409,13 +416,6 @@ function MultiStampEditor({ onClose, onShop = null }) {
                   </button>
                 );
               })}
-            </div>
-            <div data-multi-stamp-free className={`mt-2 rounded-xl border p-2 ${word === MULTI_STAMP_CUSTOM_ID ? 'border-cyan-300 bg-cyan-500/10' : 'border-slate-700'}`}>
-              <label htmlFor="multi-stamp-free-input" className="mb-1 block text-[12px] font-black text-cyan-100">✏️ 自分で文字を打つ<small className="ml-1 text-[11px] text-slate-400">(全角{MULTI_STAMP_CUSTOM_MAX}文字まで・1行)</small></label>
-              <input id="multi-stamp-free-input" data-multi-stamp-free-input value={freeText} maxLength={MULTI_STAMP_CUSTOM_MAX} autoComplete="off" enterKeyHint="done"
-                onFocus={() => setWord(MULTI_STAMP_CUSTOM_ID)}
-                onChange={(e) => { setFreeText(e.target.value.replace(/[\u0000-\u001f\u007f-\u009f]/g, '').slice(0, MULTI_STAMP_CUSTOM_MAX)); setWord(MULTI_STAMP_CUSTOM_ID); setLockNote(''); }}
-                placeholder="例:いくぞ！" className="min-h-[44px] w-full min-w-0 rounded-xl border border-white/20 bg-slate-950 px-3 text-base font-bold text-white" />
             </div>
           </section>
         </div>

@@ -277,7 +277,7 @@ const FAKE_WS = () => {
     await A.locator('[data-multi-stamp-free-input]').fill('いくぞ！はやく来て、みんな');
     const typed = await A.locator('[data-multi-stamp-free-input]').inputValue();
     check('自由入力: 入力欄は全角8文字までしか入らない', typed.length === 8, `${typed.length}文字`);
-    if (SHOT) for (const [nm, w, h] of [['390', 390, 844], ['320', 320, 568], ['yoko844', 844, 390]]) { await A.setViewportSize({ width: w, height: h }); await A.waitForTimeout(500); await A.screenshot({ path: path.join(SHOT, `free-editor-${nm}.png`) }); }
+    if (SHOT) for (const [nm, w, h] of [['390', 390, 844], ['320', 320, 568], ['yoko844', 844, 390]]) { await A.setViewportSize({ width: w, height: h }); await A.waitForTimeout(500); await A.locator('[data-multi-stamp-free]').scrollIntoViewIfNeeded().catch(() => {}); await A.waitForTimeout(200); await A.screenshot({ path: path.join(SHOT, `free-editor-${nm}.png`) }); }
     if (SHOT) await A.setViewportSize({ width: 390, height: 844 });
     await A.locator('[data-multi-stamp-put]').click();
     const slotLabel = await A.evaluate(() => { const b = document.querySelector('[data-multi-stamp-slot="6"] b'); return b ? b.textContent : ''; });
