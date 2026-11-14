@@ -129,3 +129,13 @@
 | ダークオーロラ | かしこさ | 中 | オーロラ | sk-0524 オーロラゲート | 黒(元は白) |
 | 悪夢フィナーレ | かしこさ | 遠 | 悪夢 | sk-0127 絶望の時間 | 黒 |
 
+
+## 絵を足す・直すとき(道具の使い方)
+
+1. `tools/success/skill-icons-original/recipe.json` に1行足す(直す): `"技id": ["種類", "sk-####(土台にする資料の絵) か new:<形>", "地のオーラ色(省くと土台のまま。無/白/黄/黒/赤/青/緑)"]`
+   - 色(ちから=黄/かしこさ=緑)は技表の kind を見て自動で塗り替える。黄の地にちからの技・緑の地にかしこさの技は、形と地が同じ色で見えなくなるので避ける
+   - 土台が 82×82 の資料の絵(右下に数字入り)は、地も色も替えられない(道具が止める)。123×124 の絵を選ぶ
+   - 同じ子の中で同じ土台を2回使うと道具が止める。`new:` の形は make.py の SHAPES(umbrella・cookie・piano・tact・hearts)に足して描く
+2. `python3 tools/success/skill-icons-original/make.py`(`--sheet <png> --only=pandora` で子ごとの見本も作る)→ `monster-hero/images/success/skill/<技id>.png`
+3. `node tools/success/build-skill-icons.js`(一覧 MSX_SKILL_ICONS へ登録)→ `node tools/build.js` → `node tools/image-asset-check.js`
+   - 資料に同じ名前の技がある技(ピクシーの技を元にした技など)は、技 id を資料の sk-#### にすれば資料の絵がそのまま出る。別の id にしたら recipe.json に1行足す
