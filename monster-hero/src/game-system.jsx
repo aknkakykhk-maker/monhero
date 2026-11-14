@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: ef6cf84b55245b24
+// generated-sha256: 9df3806252bd69f3
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -68593,11 +68593,11 @@ const assistantLifeMapReadHome = () => {
   return out;
 };
 
-// 町の地図の頭の高さの表(2026-11-15 r1115-031)。キーは絵の置き場所(images/assistant/ の下)から表情の名前を取ったもの。値は [頭のてっぺん, 顎](絵の見えている範囲の上を0・下を1)
+// 町の地図の頭の高さの表(2026-11-15 r1115-031)。キーは絵の置き場所(images/assistant/ の下)から表情の名前を取ったもの。値は [頭のてっぺん, 顎, (任意)大きさの倍率](絵の見えている範囲の上を0・下を1。倍率は、見た目で他の人より大きい絵だけ)
 const ASSISTANT_LIFE_MAP_HEAD = Object.freeze({
   myua_sleep: [0.15, 0.51], kiki_sleep: [0.22, 0.60], momosuke_sleep: [0.07, 0.58], atsu_sleep: [0.08, 0.60], kyuko_sleep: [0.05, 0.52],
   'halloween/myua_sleep': [0.20, 0.51], 'halloween/kiki_sleep': [0.22, 0.585], 'halloween/momosuke_sleep': [0.12, 0.58], 'card-master/myua_sleep': [0.07, 0.39],
-  momosuke: [0.065, 0.51], 'halloween/momosuke': [0.065, 0.51], erubin: [0.01, 0.45],
+  momosuke: [0.065, 0.51, 0.85], 'halloween/momosuke': [0.065, 0.51, 0.8], erubin: [0.01, 0.45],
 });
 // 小さな全身(絵の描かれている範囲を測って、見た目の高さを h にそろえる。胸から上の絵は下をぼかす)
 function AssistantLifeMapFig({ who, h, sleep, spent = false }) {
@@ -68620,7 +68620,7 @@ function AssistantLifeMapFig({ who, h, sleep, spent = false }) {
   const head = ASSISTANT_LIFE_MAP_HEAD[headKey] || null;
   const topChin = head ? { top: head[0], chin: head[1] } : (face0 && Number.isFinite(face0.top) && (Number.isFinite(face0.chin) || face0.head) ? { top: face0.top, chin: face0.head ? 1 : face0.chin } : null);
   const face = face0 && topChin && typeof ASSISTANT_LIFE_STAND_EC === 'number'
-    ? { ...face0, top: topChin.top, m: (topChin.chin - topChin.top) / (ASSISTANT_LIFE_STAND_EC * ASSISTANT_LIFE_STAND_FACE_LEN), fit: 1 } : face0;
+    ? { ...face0, top: topChin.top, m: (topChin.chin - topChin.top) / (ASSISTANT_LIFE_STAND_EC * ASSISTANT_LIFE_STAND_FACE_LEN), fit: (head && head[2]) || 1 } : face0;
   const rule = box && face && typeof assistantLifeStandRule === 'function' ? assistantLifeStandRule({ face, box, F: (h * 0.5) / ASSISTANT_LIFE_STAND_FACE_LEN, topY: h * Math.max(0.25, Math.min(0.38, (face.above || 0) * 0.4)), cx: 0 }) : null;
   const ih = rule ? rule.height : h / Math.max(0.2, b.b - b.t), iw = rule ? rule.width : ih * (b.ar || 0.6);
   const w = Math.round(Math.min((b.r - b.l) * iw, h * 0.78));
