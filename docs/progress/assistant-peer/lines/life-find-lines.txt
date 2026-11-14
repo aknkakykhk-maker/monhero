@@ -1,5 +1,6 @@
 # 助手ライフの拾い物・贈り物のひとこと(2026-11-14 ナカヨシ案・キズナ2と相談)
 # 形: <助手> <trip|gift|masmon> | <ひとこと>   … 1人・1場面に2本ずつ。取り込み: node tools/assistant/life-find-lines-import.js
+# キズナ2の見直し(2026-11-14): えるびんの「おけ」は相づちだけ・ソラシドは Lv1〜3 が笑なしの段なので全Lv共通の行に笑を付けない
 # trip=出かけ先から帰って拾い物を渡す / gift=家で過ごしている助手の贈り物 / masmon=その助手のマスモンが拾ってきた(助手が言う)
 mua trip | これ道で見つけたんだけど、まぢ使えそうぢゃん？あげる！
 mua trip | 帰りに拾ったー！あたしの分もがんばってｗ
@@ -37,15 +38,15 @@ kyuko gift | これ、俺から。使ってくれたらうれしいなぁ笑
 kyuko gift | おけ、これ渡しとくね。役に立つはずw
 kyuko masmon | うちの子がなんかくわえてきたぁw
 kyuko masmon | うちの子えらすぎて泣ける😭
-sorashido trip | 帰り道で見つけました。使えると思いますよ笑
-sorashido trip | ほほー！道に落ちてたので拾ってきました笑
-sorashido gift | これ、自分からです。役に立つと思います笑
-sorashido gift | よかったらどうぞ。育成で効いてくると思います笑
-sorashido masmon | うちの子が何か持って戻ってきましたね笑
-sorashido masmon | そうか・・・！うちの子、拾ってきてくれたんですね笑
+sorashido trip | 帰り道で見つけました。使えると思いますよ！
+sorashido trip | ほほー！道に落ちてたので拾ってきました
+sorashido gift | これ、自分からです。役に立つと思います
+sorashido gift | よかったらどうぞ。育成で効いてくると思います
+sorashido masmon | うちの子が何か持って戻ってきましたね
+sorashido masmon | そうか・・・！うちの子、拾ってきてくれたんですね
 erubin trip | 道で見つけたよ！使ってw
 erubin trip | 帰りに拾ったー！これいいね笑
-erubin gift | 俺からのプレゼント！おけ？笑
+erubin gift | 俺からのプレゼント！受け取ってね笑
 erubin gift | これ渡しとくね。さすがに役立つはずw
 erubin masmon | うちの子がなんか持ってきたw さすが！
 erubin masmon | うちの子、拾ってきてくれたー！☺️

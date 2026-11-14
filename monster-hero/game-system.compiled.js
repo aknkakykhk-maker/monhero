@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 20a821408ce8e380
+// source-sha256: e9f04096fdb1a8b9
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -117360,13 +117360,13 @@ const ASSISTANT_LIFE_FIND_LINES_BY = Object.freeze({
     "masmon": ["うちの子がなんかくわえてきたぁw", "うちの子えらすぎて泣ける😭"]
   },
   "sorashido": {
-    "trip": ["帰り道で見つけました。使えると思いますよ笑", "ほほー！道に落ちてたので拾ってきました笑"],
-    "gift": ["これ、自分からです。役に立つと思います笑", "よかったらどうぞ。育成で効いてくると思います笑"],
-    "masmon": ["うちの子が何か持って戻ってきましたね笑", "そうか・・・！うちの子、拾ってきてくれたんですね笑"]
+    "trip": ["帰り道で見つけました。使えると思いますよ！", "ほほー！道に落ちてたので拾ってきました"],
+    "gift": ["これ、自分からです。役に立つと思います", "よかったらどうぞ。育成で効いてくると思います"],
+    "masmon": ["うちの子が何か持って戻ってきましたね", "そうか・・・！うちの子、拾ってきてくれたんですね"]
   },
   "erubin": {
     "trip": ["道で見つけたよ！使ってw", "帰りに拾ったー！これいいね笑"],
-    "gift": ["俺からのプレゼント！おけ？笑", "これ渡しとくね。さすがに役立つはずw"],
+    "gift": ["俺からのプレゼント！受け取ってね笑", "これ渡しとくね。さすがに役立つはずw"],
     "masmon": ["うちの子がなんか持ってきたw さすが！", "うちの子、拾ってきてくれたー！☺️"]
   }
 });
