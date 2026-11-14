@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 17103495d99f7760
+// source-sha256: 75f3129dbb0faee0
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -118149,7 +118149,9 @@ function AssistantLifeRoomMini({
   calm,
   delay = 0,
   onPress = null,
-  noTouch = false
+  noTouch = false,
+  walk = 0,
+  dur = 12
 }) {
   const h = Math.round(g.s * 1.3),
     w = Math.round(h * 0.5);
@@ -118168,7 +118170,9 @@ function AssistantLifeRoomMini({
       background: 'none',
       border: 0,
       cursor: onPress ? 'pointer' : 'default',
-      pointerEvents: noTouch ? 'none' : undefined
+      pointerEvents: noTouch ? 'none' : undefined,
+      '--d': `${walk}px`,
+      animation: calm || !walk ? 'none' : `mhlRvMiniWalk ${dur}s ease-in-out ${delay}s infinite`
     }
   }, React.createElement("span", {
     "aria-hidden": "true",
@@ -118334,6 +118338,16 @@ function AssistantLifeRoomScene({
       left: Math.max(4, Math.min(W - s - 4, x))
     };
   };
+  const miniWalk = j => {
+    const g = rvSlot(j),
+      row = rows === 2 && j < perRow ? 0 : 1,
+      cnt = rows === 2 ? row === 0 ? perRow : mN - perRow : mN;
+    const room = (W - 24) / cnt - g.s * 0.85;
+    return Math.round(Math.max(6, Math.min(26, room))) * (j % 2 ? -1 : 1);
+  };
+  const LIGHT_KEYS = ['lantern', 'pendant'];
+  const lightSt = typeof useAssistantLifeLayoutState === 'function' ? useAssistantLifeLayoutState() : null;
+  const lightGift = typeof useAssistantLifeGiftState === 'function' ? useAssistantLifeGiftState() : null;
   const layoutOn = (!!layoutWho || Array.isArray(layoutItems)) && typeof assistantLifeRoomEditEnabled === 'function' && assistantLifeRoomEditEnabled() && typeof AssistantLifeRoomLayoutLayer === 'function';
   const layoutGeom = {
     W,
@@ -118354,6 +118368,33 @@ function AssistantLifeRoomScene({
     top: floorY - 58,
     fs: 52
   };
+  const lights = (() => {
+    try {
+      if (layoutOn) {
+        const list = layoutEdit ? layoutEdit.items : Array.isArray(layoutItems) ? layoutItems : typeof assistantLifeLayoutOf === 'function' ? assistantLifeLayoutOf(layoutWho, lightSt || undefined, lightGift || undefined) : [];
+        return (Array.isArray(list) ? list : []).filter(it => it && LIGHT_KEYS.includes(it.k)).map(it => {
+          const q = assistantLifeLayoutPx(it, layoutGeom);
+          const fs = Math.round(assistantLifeLayoutBase(layoutGeom) * (it.s || 1));
+          return {
+            x: q.left,
+            y: q.top,
+            r: fs
+          };
+        });
+      }
+      return furn.filter(f => LIGHT_KEYS.includes(f.key)).map(f => {
+        const b = furnBox(f.slot);
+        return {
+          x: b.left + b.fs / 2,
+          y: b.top + b.fs / 2,
+          r: b.fs
+        };
+      });
+    } catch (_) {
+      return [];
+    }
+  })();
+  const lit = night && !asleep && lights.length > 0;
   return React.createElement("div", {
     ref: ref,
     className: "relative h-full w-full overflow-hidden",
@@ -118362,7 +118403,7 @@ function AssistantLifeRoomScene({
     style: {
       background: `linear-gradient(${roomLook.wall[0]},${roomLook.wall[1]})`
     }
-  }, React.createElement("style", null, `@keyframes mhlRvBob{0%,100%{transform:translateX(-50%) scaleY(1)}50%{transform:translateX(-50%) scaleY(1.025)}}@keyframes mhlRvWalk{0%,18%{transform:translateX(0)}45%,62%{transform:translateX(var(--d))}90%,100%{transform:translateX(0)}}`), React.createElement("div", {
+  }, React.createElement("style", null, `@keyframes mhlRvBob{0%,100%{transform:translateX(-50%) scaleY(1)}50%{transform:translateX(-50%) scaleY(1.025)}}@keyframes mhlRvMiniWalk{0%,12%{transform:translateX(0) scaleX(1)}38%{transform:translateX(var(--d)) scaleX(1)}38.1%,52%{transform:translateX(var(--d)) scaleX(-1)}52.1%,54%{transform:translateX(var(--d)) scaleX(1)}78%{transform:translateX(0) scaleX(1)}78.1%,92%{transform:translateX(0) scaleX(-1)}92.1%,100%{transform:translateX(0) scaleX(1)}}@keyframes mhlRvWalk{0%,18%{transform:translateX(0)}45%,62%{transform:translateX(var(--d))}90%,100%{transform:translateX(0)}}`), React.createElement("div", {
     "aria-hidden": "true",
     style: {
       position: 'absolute',
@@ -118463,13 +118504,21 @@ function AssistantLifeRoomScene({
     onMove: layoutEdit.onMove,
     onDrop: layoutEdit.onDrop,
     onScale: layoutEdit.onScale
-  }), night && React.createElement("div", {
+  }), night && !lit && React.createElement("div", {
     "aria-hidden": "true",
     className: "pointer-events-none absolute inset-0",
     style: {
       background: 'radial-gradient(circle at 18% 30%,#ffc46b40 0,#ffc46b18 110px,transparent 220px),#050a2480'
     }
-  }), night && React.createElement("span", {
+  }), lit && React.createElement("div", {
+    "aria-hidden": "true",
+    "data-assistant-life-roomview-lit": true,
+    className: "pointer-events-none absolute inset-0",
+    style: {
+      background: `${lights.map(l => `radial-gradient(circle at ${l.x.toFixed(0)}px ${l.y.toFixed(0)}px,#fff3c8d0 0,#ffd88a88 ${Math.round(l.r * 0.7)}px,#ffc46b38 ${Math.round(W * 0.45)}px,transparent ${Math.round(W * 0.8)}px)`).join(',')},#0a1030${'26'}`,
+      mixBlendMode: 'normal'
+    }
+  }), night && !lit && React.createElement("span", {
     "aria-hidden": "true",
     className: "pointer-events-none absolute",
     style: {
@@ -118545,7 +118594,9 @@ function AssistantLifeRoomScene({
       calm: calm,
       delay: j * 0.6,
       noTouch: !!(layoutOn && layoutEdit),
-      onPress: onPerson ? () => onPerson(m.pid) : null
+      onPress: onPerson ? () => onPerson(m.pid) : null,
+      walk: miniWalk(j),
+      dur: 10 + j % 3 * 2.5
     });
   }), !asleep && lay && standItems.map((x, i) => sleepIds.includes(x.pid) ? null : React.createElement(AssistantLifeRoomFigure, {
     key: x.pid,
