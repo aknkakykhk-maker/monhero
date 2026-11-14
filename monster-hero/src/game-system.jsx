@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 902925e1d3829bcd
+// generated-sha256: 45c8e6ef3f6c83f9
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -57424,9 +57424,9 @@ function RhythmMultiChatBubble({ text: raw, strip = false }) {
   const text = rhythmMultiBubbleText(raw);
   // 縦の細い帯(札の高さ60px)では、絵を札の中の名前の上に大きく置き、言葉は札の下へ出す(名前を隠さない・2026-11-15 r1115-039)
   if (stamp && strip && !wide) return (
-    <span data-rhythm-multi-chat-bubble data-rhythm-multi-stamp-bubble data-rhythm-multi-stamp-strip className="mh-seat-stamp-strip pointer-events-none absolute inset-x-0.5 bottom-[22px] top-[3px] z-40 flex items-start justify-center [container-type:size]">
-      <img src={multiStampFaceSrc(stamp.sf) || undefined} alt="" draggable={false} decoding="async" className="mh-seat-stamp-strip-img block rounded-lg bg-white object-cover shadow-lg" />
-      <b className="mh-seat-stamp-strip-word absolute left-0 right-0 top-[calc(100%+22px+2px)] block rounded-lg bg-white px-1 py-0.5 text-center text-[10px] font-black leading-tight text-slate-900 shadow-lg">{text}</b>
+    <span data-rhythm-multi-chat-bubble data-rhythm-multi-stamp-bubble data-rhythm-multi-stamp-strip className="mh-seat-stamp-strip pointer-events-none absolute inset-x-0.5 bottom-0.5 top-[3px] z-40 flex flex-col items-center gap-0.5 [container-type:size]">
+      <img src={multiStampFaceSrc(stamp.sf) || undefined} alt="" draggable={false} decoding="async" className="mh-seat-stamp-strip-img block shrink-0 rounded-lg bg-white object-cover shadow-lg" />
+      <b className="mh-seat-stamp-strip-word block w-full min-w-0 rounded-lg bg-white px-0.5 py-px text-center text-[9px] font-black leading-[1.1] text-slate-900 shadow-lg">{text}</b>
     </span>
   );
   if (stamp) return (
