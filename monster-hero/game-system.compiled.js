@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: bf093349229c89dd
+// source-sha256: 79ebd4b984b95dfd
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -118131,7 +118131,7 @@ function AssistantLifeRoomFigure({
     style: {
       position: 'absolute',
       left: p.cx - p.w * 0.45,
-      top: p.frameBottom - 16,
+      top: p.frameBottom - 30,
       width: p.w * 0.9,
       height: 26,
       borderRadius: '50%',
@@ -119185,7 +119185,7 @@ function AssistantLifeRoomScene({
   }) : null), people.length > 0 && !asleep && React.createElement(AssistantLifeRoomFront, {
     kind: frontKind,
     cx: W / 2,
-    top: lay && !asleep ? Math.max(...lay.map(p => p.frameBottom - 0.2 * p.U)) : deskTop,
+    top: lay && !asleep ? Math.max(...lay.map(p => p.frameBottom - 4)) : deskTop,
     w: frontW,
     items: ASSISTANT_LIFE_ROOM_DESK_ITEMS[id] || []
   }), layoutOn && React.createElement(AssistantLifeRoomLayoutLayer, {
