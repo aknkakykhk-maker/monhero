@@ -35,6 +35,13 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    date: "2026-11-14 17:44", type:'update', title:'マスモンで対戦の試合の場が、大きく見やすくなりました', group:'assistant', status:'new', releaseFlag:'assistantMasmonBattleBeta',
+    items:[
+      'マスモンで対戦の試合の画面で、2体が戦う場を大きく見せるようにしました。',
+      '相手の技は、場の右上の「相手の技」ボタンで一覧を開いて見られます。',
+    ],
+  },
+  {
     // 2026-11-14 社長の指摘(iPhone の Safari): 更新履歴の予告動画の音が、設定の音量と関係なく鳴る。ChangelogVideo・HELL の説明動画を Audio_.videoGain に合わせた
     date: "2026-11-14 17:19", type:'fix', title:'お知らせの動画の音が、設定の音量と関係なく鳴っていたのを直しました', status:'new',
     items:[
