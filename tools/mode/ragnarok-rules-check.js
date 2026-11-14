@@ -81,7 +81,7 @@ check('壊れた敵データでも落ちない',(()=>{const r=revive({maxHp:'x',
 const groups=G('extremeRuleDetailGroups')('RAGNAROK');
 const groupTitles=groups.map(g=>g.title);
 check('ルール詳細に黄昏と不死が並ぶ',groupTitles.includes('黄昏')&&groupTitles.includes('不死（死者の再起）')&&groupTitles.includes('DISTANCE BREAK'),groupTitles.join(' / '));
-check('安全距離なしをそのまま書く',JSON.stringify(groups.find(g=>g.title==='DISTANCE BREAK')?.lines||[]).includes('なし（4距離すべて弱体化する）'));
+check('安全距離なしをそのまま書く',JSON.stringify(groups.find(g=>g.title==='DISTANCE BREAK')?.lines||[]).includes('なし（4距離全て弱体化する）'));
 check('不死の対象WAVEと回数を実データから書く',JSON.stringify(groups.find(g=>g.title==='不死（死者の再起）')?.lines||[]).includes('WAVE5（1回） / WAVE10（2回）'));
 check('複合特殊ルールありと出す',G('extremeRuleSummaryText')('RAGNAROK')==='複合特殊ルールあり');
 

@@ -254,16 +254,16 @@ const seed = () => {
     await clickSel('[data-ambb-start]');
     await page.waitForFunction(() => !!document.querySelector('[data-ambb-manual] [data-msxm="act"]'), { timeout: 30000 }).catch(() => {});
     // 帯が出た直後は札がまだ描き直しの途中(0枚)のことがある(main でも 1/5〜1/6 で落ちた)。帯と上の欄の札がそろうまで待ってから測る。測る条件は下のまま
-    await page.waitForFunction(() => document.querySelectorAll('[data-msa-dc="manual"] [data-msa-dc-card]').length === 4 && document.querySelectorAll('[data-ambw-cards="B"] [data-msa-dc-card]').length === 4 && !!document.querySelector('[data-msa-dc="manual"] [data-msa-dc-card].now'), { timeout: 5000 }).catch(() => {});
+    await page.waitForFunction(() => document.querySelectorAll('[data-msa-dc="manual"] [data-msa-dc-card]').length === 4 && !!document.querySelector('[data-msa-dc="manual"] [data-msa-dc-card].now'), { timeout: 5000 }).catch(() => {});
     // 段3の作り直し(2026-11-13 社長): 技の札は間合いごとの4枚・押したら必ずその間合いの一覧(いちばん上が代表)・「☆ 代表にする」
     const man = await page.evaluate(() => {
       const cards = (sel) => [...document.querySelectorAll(`${sel} [data-msa-dc-card]`)];
-      const bar = cards('[data-msa-dc="manual"]'), top = cards('[data-ambw-cards="B"]');
+      const bar = cards('[data-msa-dc="manual"]'), top = cards('[data-ambw-cards="A"]');
       const now = bar.filter((x) => x.classList.contains('now'));
       return { bar: !!document.querySelector('[data-ambb-manual]'), barCards: bar.length, topCards: top.length, now: now.length === 1 && /いま/.test(now[0].textContent),
         techBtns: document.querySelectorAll('[data-msxm-tech]').length, pos: Number(document.querySelector('[data-ambb-watch]').dataset.ambwPos) };
     });
-    check('段3: 手動では自分の手番で帯が出る・技の札は間合いごとの4枚(帯も上の欄も)・いまの間合いの札に「いま」', man.bar && man.barCards === 4 && man.topCards === 4 && man.now && man.techBtns === 0, JSON.stringify(man));
+    check('段3: 手動では自分の手番で帯が出る・技の札は間合いごとの4枚(帯。相手の欄は外し「相手の技」の札で一覧)・いまの間合いの札に「いま」', man.bar && man.barCards === 4 && man.topCards === 0 && man.now && man.techBtns === 0, JSON.stringify(man));
     // いまの間合いの札を押すと一覧。代表でない技に「☆ 代表にする」→ 札の代表が変わり、保存の rep に入る
     const nowCard = '[data-msa-dc="manual"] [data-msa-dc-card].now';
     const hasNow = await page.evaluate((sel) => { const c = document.querySelector(sel); return !!(c && !c.disabled); }, nowCard);
@@ -298,10 +298,11 @@ const seed = () => {
     const pos2 = await page.evaluate(() => Number(document.querySelector('[data-ambb-watch]').dataset.ambwPos));
     check('段3: 一覧の技(か帯の手)を選ぶと試合が進み、一覧は閉じる', !!picked && pos2 > man.pos && !(await page.evaluate(() => !!document.querySelector('[data-ambb-manual] [data-msa-sheet]'))), `${picked} ${man.pos}→${pos2}`);
     // 相手の札: 押すと一覧(見るだけ・☆ なし)
-    await page.evaluate(() => { const c = [...document.querySelectorAll('[data-ambw-cards="B"] [data-msa-dc-card]')].find((x) => !x.disabled); if (c) c.click(); });
+    await page.evaluate(() => { const c = document.querySelector('[data-ambb-foe-tech]'); if (c) c.click(); });
     await page.waitForTimeout(300);
     const foeSheet = await page.evaluate(() => ({ rows: document.querySelectorAll('[data-ambb-techlist="B"] [data-msa-sheet-row]').length, use: document.querySelectorAll('[data-ambb-techlist="B"] [data-msxm-tech]').length, star: document.querySelectorAll('[data-ambb-techlist="B"] [data-msa-rep]').length }));
-    check('段3: 相手の札を押すと、その間合いの一覧(見るだけ・代表は決められない)', foeSheet.rows > 0 && foeSheet.use === 0 && foeSheet.star === 0, JSON.stringify(foeSheet));
+    await shot('8-foe-techs');
+    check('段3: 「相手の技」を押すと、相手の技の一覧(見るだけ・代表は決められない)', foeSheet.rows > 0 && foeSheet.use === 0 && foeSheet.star === 0, JSON.stringify(foeSheet));
     await page.evaluate(() => { const b = document.querySelector('[data-ambb-techlist] [data-msa-sheet-close]'); if (b) b.click(); });
     // 全部の技(帯のボタン)。相手の手を見せている間は帯が出ないので、帯が出るまで待つ
     //   試合の種は時刻から作るので、先に決着して振り返りになっていたら、手動の試合をやり直して帯を待つ(ミハリ6: 5回中2回落ちた)。
