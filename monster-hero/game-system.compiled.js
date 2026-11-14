@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8daba111d07b0b21
+// source-sha256: d4c7a4742d497144
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -5826,6 +5826,34 @@ const BGM_TRACKS = [{
   gain: 1,
   loop: true
 }, {
+  id: 'monsuc_cup',
+  name: 'モンヒロサクセス 大会',
+  creator: 'オリジナル',
+  src: 'audio/bgm-monsuc-cup.mp3',
+  gain: 1,
+  loop: true
+}, {
+  id: 'monsuc_menu',
+  name: 'モンヒロサクセス メイン',
+  creator: 'オリジナル',
+  src: 'audio/bgm-monsuc-menu.mp3',
+  gain: 1,
+  loop: true
+}, {
+  id: 'monsuc_win',
+  name: 'モンヒロサクセス 勝利(1回だけ)',
+  creator: 'オリジナル',
+  src: 'audio/bgm-monsuc-win.mp3',
+  gain: 1,
+  loop: false
+}, {
+  id: 'monsuc_lose',
+  name: 'モンヒロサクセス 敗北(1回だけ)',
+  creator: 'オリジナル',
+  src: 'audio/bgm-monsuc-lose.mp3',
+  gain: 1,
+  loop: false
+}, {
   id: 'original_prep',
   name: '強化テーマ',
   creator: 'オリジナル',
@@ -8100,8 +8128,12 @@ const Audio_ = (() => {
     "audio/bgm-monster-hero-theme.mp3": "083a1d9db281",
     "audio/bgm-monster-short.mp3": "415b771e9bbf",
     "audio/bgm-monster.mp3": "6b190639c3fa",
+    "audio/bgm-monsuc-cup.mp3": "4e4cf0ca4ae6",
+    "audio/bgm-monsuc-lose.mp3": "eff2057aa49e",
+    "audio/bgm-monsuc-menu.mp3": "7fdee580d090",
     "audio/bgm-monsuc-rest.mp3": "3bf37f96821c",
     "audio/bgm-monsuc-training.mp3": "9bfeb31fb38a",
+    "audio/bgm-monsuc-win.mp3": "b708c1a263da",
     "audio/bgm-mou-hitotsu-no-sekai-e.mp3": "633ed0ee2501",
     "audio/bgm-nothing-without-you.mp3": "4cb261cf1cd9",
     "audio/bgm-only-my-railgun.mp3": "62fb741fe3f1",

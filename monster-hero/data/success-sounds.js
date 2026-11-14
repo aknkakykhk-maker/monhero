@@ -16,6 +16,11 @@
     { id: 'training', name: 'トレーニング', bgm: 'monsuc_training', se: null },
     // 休む(2026-11-14 社長の「モンサク 休養BGM」)。休むを選んだ場面のあいだこの曲(遊ぶ・通院の曲は決まっていない)
     { id: 'rest', name: '休む', bgm: 'monsuc_rest', se: null },
+    // 遊ぶ・通院(2026-11-14 社長「なにか曲を当てはめといて」)。専用の曲が届くまで、ゲームにある曲から仮に当てた(曲を替えるときはここ)
+    { id: 'play', name: '遊ぶ', bgm: 'ichika_home', se: null },
+    { id: 'hospital', name: '通院', bgm: 'original_profile', se: null },
+    // 育成の外の画面(モンヒロサクセスを開いたときのメニュー・ボックス・ランキング・図鑑・始めるまでの準備)。2026-11-14 社長の「モンサク メインBGM」
+    { id: 'menu', name: 'メニュー(育成の外)', bgm: 'monsuc_menu', se: null },
     // トレーニングの結果4種(曲は替えない)
     { id: 'trainGreat', name: 'トレーニング: 大成功', se: 'trainingGoal' },
     { id: 'trainOk', name: 'トレーニング: 成功', se: 'trainingGood' },
@@ -28,10 +33,13 @@
     // 修行
     { id: 'ascetic', name: '修行', bgm: 'original_prep', se: 'trainingDecide' },
     // 大会
-    { id: 'cupEntry', name: '大会: 受付', se: 'join' },
+    // 大会: 受付と、試合が始まる前の画面(相手の紹介・トーナメント表)は大会の曲。試合中はバトルの曲(2026-11-14 社長の「モンサク 大会BGM」)
+    { id: 'cupEntry', name: '大会: 受付', bgm: 'monsuc_cup', se: 'join' },
+    { id: 'cupPre', name: '大会: 試合の前', bgm: 'monsuc_cup', se: null },
     { id: 'cupMatch', name: '大会: 試合', bgm: 'original_battle', se: 'trainingDice' },
-    { id: 'cupWin', name: '大会: 勝ち', bgm: 'ichika_clear', se: 'rankFanfare' },
-    { id: 'cupLose', name: '大会: 負け', se: 'trainingFail' },
+    // 勝ち・負けは短いジングルを1回だけ流して無音(2026-11-14 社長)。ジングルが効果音のかわりなので se は付けない
+    { id: 'cupWin', name: '大会: 勝ち', bgm: 'monsuc_win', se: null },
+    { id: 'cupLose', name: '大会: 負け', bgm: 'monsuc_lose', se: null },
     // イッサ博士・ゲームオーバー・引退
     { id: 'issa', name: 'イッサ博士', bgm: 'original_event_01', se: 'trainingTool' },
     { id: 'gameOver', name: 'ゲームオーバー', bgm: 'original_game_over', se: null },
