@@ -142,6 +142,21 @@ const MONSUC_SCRIPT_RANDOM = Object.freeze([
   { id:'ev.team.sync.mua1', who:'mua', e:'excited', t:'息ぴったりすぎ！ いいチームになってきたぢゃん✨' },
   { id:'ev.team.sync.atsu1', who:'atsu', e:'happy', t:'いい連携だな。こういうのが試合で効くんだよ笑' },
 
+  // 2026-11-14 アイテムを拾ってくる(見るだけ)・同じ血統の編成の仲間がアイテムをくれる(r1113-037)。{item} はアイテムの名前
+  { id:'ev.daily.find.narr1', who:'narr', t:'散歩から戻った{mon}が、なにかをくわえている。……{item}だ！' },
+  { id:'ev.daily.find.mua1', who:'mua', e:'happy', t:'{mon}、お手柄ぢゃん！ {item}、ありがたく使わせてもらお♪' },
+  { id:'ev.daily.find.atsu1', who:'atsu', e:'happy', t:'お、{item}じゃん。いい鼻してるな、{mon}笑' },
+
+  { id:'ev.team.kin.narr1', who:'narr', t:'トレーニングのあと、同じ血統の{cheer}が、{item}を持って{mon}のところへやってきた。' },
+  { id:'ev.team.kin.mua1', who:'mua', e:'happy', t:'{cheer}、やさしー！ 同じ血統だと、やっぱ通じ合うのかな？' },
+  { id:'ev.team.kin.atsu1', who:'atsu', e:'happy', t:'同じ血統どうし、気が合うんだな。どうする？笑' },
+  { id:'ev.team.kin.choice.a', who:'choice', c:'a', t:'ありがたく受け取る' },
+  { id:'ev.team.kin.choice.b', who:'choice', c:'b', t:'お礼に、もう少しいっしょに練習する' },
+  { id:'ev.team.kin.a.mua1', who:'mua', e:'happy', c:'a', t:'{cheer}、ありがと〜！ {item}、大事に使うね♪' },
+  { id:'ev.team.kin.a.atsu1', who:'atsu', e:'happy', c:'a', t:'もらっとけもらっとけ。{cheer}も、うれしそうだし笑' },
+  { id:'ev.team.kin.b.mua1', who:'mua', e:'excited', c:'b', t:'お礼の練習、いいぢゃん！ {cheer}の得意なとこ、教えてもらお✨' },
+  { id:'ev.team.kin.b.atsu1', who:'atsu', e:'excited', c:'b', t:'いいね。{cheer}の得意なとこ、盗んでこい笑' },
+
   { id:'ev.team.tagwake.narr1', who:'narr', t:'{cheer}と{mon}の目が合った。それだけで、次に何をするか分かる。' },
   { id:'ev.team.tagwake.mua1', who:'mua', e:'excited', t:'今の見た！？ ふたりの心、つながったよ✨' },
   { id:'ev.team.tagwake.atsu1', who:'atsu', e:'excited', t:'きたな、友情タッグ。ここから一気に伸びるよ笑' },
