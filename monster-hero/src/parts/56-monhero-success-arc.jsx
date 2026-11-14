@@ -46,7 +46,7 @@ const msxArcAfterOf = (SUC, s, b, won, foe) => (b && b.kind === 'summit' && msxA
   ? { round: b.round, won: !!won, foe: foe ? (foe.name || msxMonName(foe.species)) : '', species: foe ? foe.species : null, turn: s.turn } : null);
 
 // 会話の1画面(行を3つずつめくる)。lines が空なら fallback を1行だけ出す
-function MsxArcTalk({ run, v, ev, onPause, aid, lines, fallback, head, bg, ex = 'happy', dark = false, top = null, onDone, doneText = 'つぎへ ▶', mon = true }) {
+function MsxArcTalk({ run, v, ev, onPause, aid, lines, fallback, head, bg, ex = 'happy', dark = false, top = null, onDone, doneText = '次へ ▶', mon = true }) {
   const [page, setPage] = useState(0);
   const all = lines && lines.length ? lines : [{ who: aid, t: fallback || '……' }];
   const per = 3; const pages = Math.max(1, Math.ceil(all.length / per));
@@ -67,7 +67,7 @@ function MsxArcTalk({ run, v, ev, onPause, aid, lines, fallback, head, bg, ex = 
         {head ? <div className="v-ev-h"><small>メインのお話</small>{head}</div> : null}
         <div className="v-talk">{shown.map((l, i) => <div key={`${page}-${i}`}>{who(l) ? <span className="who">{who(l)}</span> : null}{who(l) ? `「${l.t}」` : l.t}</div>)}</div>
       </div>
-    </>)} foot={<div className="v-ft"><button type="button" className="go" onClick={next} data-msx-arc-next>{page + 1 < pages ? 'つぎへ ▶' : doneText}</button></div>}/>
+    </>)} foot={<div className="v-ft"><button type="button" className="go" onClick={next} data-msx-arc-next>{page + 1 < pages ? '次へ ▶' : doneText}</button></div>}/>
   );
 }
 
@@ -122,7 +122,7 @@ function MsxArcSpecial({ run, v, ev, onPause, ctx, bondLv, onDone }) {
         <div className="arc-flash"/>
         <div className="v-talk">{shown.map((l, i) => <div key={`${page}-${i}`}>{who(l) ? <span className="who">{who(l)}</span> : null}{who(l) ? `「${l.t}」` : l.t}</div>)}</div>
       </div>
-    </>)} foot={<div className="v-ft">{ready || page > 0 ? <button type="button" className="go" onClick={next} data-msx-arc-next>{page + 1 < pages ? 'つぎへ ▶' : '引退へ ▶'}</button> : <button type="button" className="on" style={{ flex: 2 }}>…</button>}</div>}/>
+    </>)} foot={<div className="v-ft">{ready || page > 0 ? <button type="button" className="go" onClick={next} data-msx-arc-next>{page + 1 < pages ? '次へ ▶' : '引退へ ▶'}</button> : <button type="button" className="on" style={{ flex: 2 }}>…</button>}</div>}/>
   );
 }
 

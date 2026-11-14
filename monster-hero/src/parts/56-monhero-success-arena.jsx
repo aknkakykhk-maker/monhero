@@ -913,7 +913,7 @@ function MonsucArena({ s, info, engine, input, watch, onEnd }) {
       {(!manual || auto) && !ended ? (
         <div className="msa-tools">
           {MSA_SPEEDS.map(x => <button key={x.id} type="button" className={speed === x.id ? 'on' : ''} onClick={() => { msaSe('tap'); setSpeed(x.id); }}>{x.label}</button>)}
-          <button type="button" data-msc-skip onClick={skip}>⏭ とばす</button>
+          <button type="button" data-msc-skip onClick={skip}>⏭ 飛ばす</button>
           {!manual ? <MsaBgToggle bg={bg} onChange={setBg}/> : null}
         </div>
       ) : null}

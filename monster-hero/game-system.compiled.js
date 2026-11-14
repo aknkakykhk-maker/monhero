@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 97a5f1e4730825c2
+// source-sha256: 38fa3c0b7d1a5b86
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -109782,7 +109782,7 @@ function MsxFxMoment({
     className: "msxfx-sub"
   }, sub) : null), React.createElement("div", {
     className: "msxfx-skip"
-  }, "タップでとばす"));
+  }, "タップで飛ばす"));
 }
 const MSXFX_CSS = `
 .msxfx-light{position:absolute;inset:0;pointer-events:none;mix-blend-mode:soft-light;z-index:1}
@@ -157789,7 +157789,7 @@ function MsxIssaResult({
     className: "go",
     onClick: onNext,
     "data-msx-issa-next": true
-  }, "つぎへ ▶"))) : React.createElement(React.Fragment, null, React.createElement("div", {
+  }, "次へ ▶"))) : React.createElement(React.Fragment, null, React.createElement("div", {
     className: "v-log",
     style: MSX_IS_WRAP
   }, msxIsJw(`${k ? `${k.icon} ${k.name}に賭けた。` : ''}のびのび装置が、ガタガタと震えている…`)), React.createElement("div", {
@@ -158020,7 +158020,7 @@ function MsxChoiceInfo({
     "data-msx-chinfo": known ? 'known' : 'unknown'
   }, lines.map((l, i) => React.createElement("div", {
     key: i
-  }, l)), known ? null : React.createElement("small", null, "一度えらぶと、効果がわかるようになる"));
+  }, l)), known ? null : React.createElement("small", null, "一度選ぶと、効果がわかるようになる"));
 }
 const MSX_EV_TITLE = Object.freeze({
   'ev.daily.nut': '道ばたの木の実',
@@ -158329,7 +158329,7 @@ function MsxDex({
     type: "button",
     className: "msx-btn",
     onClick: onClose
-  }, "とじる")));
+  }, "閉じる")));
 }
 const MSX_DEX_CSS = `
 .msx .msx-optrow{display:flex;gap:6px;align-items:stretch}
@@ -158600,7 +158600,7 @@ function MsxBetaTalk({
     }
   }, ch.t))) : React.createElement("div", {
     className: "msx-beta-nx"
-  }, i + 1 >= lines.length ? 'とじる ▶' : 'つぎへ ▶', React.createElement("small", null, Math.min(i, lines.length - 1) + 1, "/", lines.length))));
+  }, i + 1 >= lines.length ? '閉じる ▶' : '次へ ▶', React.createElement("small", null, Math.min(i, lines.length - 1) + 1, "/", lines.length))));
 }
 function MsxBetaMark() {
   return React.createElement("span", {
@@ -158768,7 +158768,7 @@ function MsxScenarioSelect({
     type: "button",
     className: "bk",
     onClick: onBack,
-    "aria-label": "もどる"
+    "aria-label": "戻る"
   }, "↩"), React.createElement("button", {
     type: "button",
     className: "go",
@@ -158795,7 +158795,7 @@ function MsxScenarioSelect({
     type: "button",
     className: "cl",
     onClick: () => setDetail(false)
-  }, "とじる"))) : null, typeof MsxBetaTalk === 'function' ? React.createElement(MsxBetaTalk, {
+  }, "閉じる"))) : null, typeof MsxBetaTalk === 'function' ? React.createElement(MsxBetaTalk, {
     keys: ['scn'],
     ctx: ctx
   }) : null);
@@ -159357,7 +159357,7 @@ function MsxShugyoStages({
     alt: ""
   })), React.createElement("small", null, "いっしょに修行")) : null), React.createElement("div", {
     className: "skip"
-  }, "タップでとばす"));
+  }, "タップで飛ばす"));
 }
 const MSX_ACT_CSS = `
 .msx .msx-act .ban small b{display:inline-block;margin-left:4px;padding:0 6px;border-radius:8px;background:#fde047;color:#7c2d12;font-size:11px;font-style:normal}
@@ -159915,7 +159915,7 @@ function MsxRunIntro({
     type: "button",
     onClick: finish,
     "data-msx-intro-skip": true
-  }, "⏩ とばす") : null, React.createElement("button", {
+  }, "⏩ 飛ばす") : null, React.createElement("button", {
     type: "button",
     className: "go",
     onClick: next,
@@ -167101,7 +167101,7 @@ function MsxMonDetail({
     className: "msx-dt-close",
     "data-msx-detail-close": true,
     onClick: onClose
-  }, "とじる")));
+  }, "閉じる")));
 }
 function MsxSlotPicker({
   idx,
@@ -167198,7 +167198,7 @@ function MsxSlotPicker({
     className: "msx-dt-close",
     "data-msx-slot-close": true,
     onClick: onClose
-  }, "とじる")));
+  }, "閉じる")));
 }
 function MsxGatherTable({
   members,
@@ -167258,7 +167258,7 @@ function MsxGatherTable({
     className: "msx-dt-close",
     "data-msx-gather-close": true,
     onClick: onClose
-  }, "とじる")));
+  }, "閉じる")));
 }
 function MsxStart({
   data,
@@ -169116,7 +169116,7 @@ function MonheroSuccessScreen({
   }, React.createElement("div", {
     className: "msx-note"
   }, "読み込んでいます…"));else if (view === 'fail') content = React.createElement(React.Fragment, null, React.createElement(MsxHd, {
-    back: "とじる",
+    back: "閉じる",
     onBack: onClose
   }), React.createElement("div", {
     className: "v-body"
@@ -169174,7 +169174,7 @@ function MonheroSuccessScreen({
   } else if (view === 'play' && run && run.s) {
     const s = run.s;
     const ph = run.phase;
-    const keys = s.over || ph === 'over' ? ['retire'] : ph === 'battle' ? [run.out && run.out.r3 ? run.out.r3.stage === 'rank' ? 'rank' : run.out.r3.stage === 'meal' ? 'meal' : null : 'match'] : playSub === 'cup' ? ['cup'] : playSub === 'shugyo' ? ['shugyo'] : ph === 'event' || ph === 'story' ? ['event'] : ph === 'awake' ? ['awake'] : ph === 'result' && run.out && run.out.result ? ['result'] : ph === 'main' && playSub === 'main' ? ['turn', 'train', s.hpMax > 0 && s.hp < s.hpMax * 0.5 && 'rest', Number(s.tickets) > 0 && 'shugyo'] : null;
+    const keys = s.over || ph === 'over' ? s.over !== 'gameover' && (run.arcAfter || s.ending && !s.ending.seen) ? null : ['retire'] : ph === 'battle' ? [run.out && run.out.r3 ? run.out.r3.stage === 'rank' ? 'rank' : run.out.r3.stage === 'meal' ? 'meal' : null : 'match'] : playSub === 'cup' ? ['cup'] : playSub === 'shugyo' ? ['shugyo'] : ph === 'event' || ph === 'story' ? ['event'] : ph === 'awake' ? ['awake'] : ph === 'result' && run.out && run.out.result ? ['result'] : ph === 'main' && playSub === 'main' ? ['turn', 'train', s.hpMax > 0 && s.hp < s.hpMax * 0.5 && 'rest', Number(s.tickets) > 0 && 'shugyo'] : null;
     if (keys) betaKeys = {
       keys,
       ctx: {
@@ -169266,7 +169266,7 @@ function MsxHome({
     nick: run ? run.nick : '',
     onClose: () => setDex(false)
   }) : null, React.createElement(MsxHd, {
-    back: "とじる",
+    back: "閉じる",
     onBack: onClose
   }), React.createElement("div", {
     className: "v-body v-hm"
@@ -169843,14 +169843,14 @@ function MsxPlay({
         ...run,
         phase: 'main'
       }) : afterAct(run)
-    }, "⏩ とばす"), React.createElement("button", {
+    }, "⏩ 飛ばす"), React.createElement("button", {
       type: "button",
       className: "go",
       onClick: () => tev ? setRun({
         ...run,
         phase: 'tevent'
       }) : isTrain ? toReact(run) : afterAct(run)
-    }, "つぎへ ▶"));
+    }, "次へ ▶"));
   } else if (phase === 'tevent' && run.out && run.out.event && typeof MsxTrainEvent === 'function') {
     body = React.createElement(React.Fragment, null, React.createElement(MsxBand, {
       s: s,
@@ -169870,12 +169870,12 @@ function MsxPlay({
         ...run,
         phase: 'main'
       })
-    }, "⏩ とばす"), React.createElement("button", {
+    }, "⏩ 飛ばす"), React.createElement("button", {
       type: "button",
       className: "go",
       onClick: () => toReact(run),
       "data-msx-tev-next": true
-    }, "つぎへ ▶"));
+    }, "次へ ▶"));
   } else if (phase === 'awake' && run.out && run.out.fire && typeof MsxAwakeShow === 'function') {
     const f = run.out.fire;
     const then = run.out.then;
@@ -169925,7 +169925,7 @@ function MsxPlay({
       className: "go",
       onClick: done,
       "data-msx-awake-next": true
-    }, "つぎへ ▶"));
+    }, "次へ ▶"));
   } else if (phase === 'event' && run.out && run.out.ev || phase === 'story' && run.out && run.out.ep != null) {
     body = React.createElement(MsxEvent, {
       run: run,
@@ -170112,12 +170112,12 @@ function MsxPlay({
         phase: 'main'
       }),
       "data-msx-react-next": true
-    }, "つぎへ ▶")) : React.createElement("div", {
+    }, "次へ ▶")) : React.createElement("div", {
       className: "v-ft"
     }, React.createElement("button", {
       type: "button",
       onClick: () => choose(null)
-    }, "⏩ とばす"), React.createElement("button", {
+    }, "⏩ 飛ばす"), React.createElement("button", {
       type: "button",
       className: "on",
       disabled: true
@@ -170170,7 +170170,7 @@ function MsxPlay({
       className: "go",
       onClick: doneKi,
       "data-msx-ki-skip": true
-    }, "⏩ とばす"));
+    }, "⏩ 飛ばす"));
   } else if (phase === 'turn') {
     const cal = msxCalendar(s.turn);
     const prev = msxCalendar(Math.max(1, s.turn - 1));
@@ -170237,7 +170237,7 @@ function MsxPlay({
         ...run,
         out: null
       })
-    }, "つぎへ ▶"));
+    }, "次へ ▶"));
   } else if (sub === 'train') {
     const pull = k => {
       const c = msxCardOf(v, k);
@@ -170450,7 +170450,7 @@ function MsxPlay({
         setSub('main');
         setSel(null);
       }
-    }, "← もどる"), React.createElement("button", {
+    }, "← 戻る"), React.createElement("button", {
       type: "button",
       className: "go",
       disabled: !card,
@@ -170764,7 +170764,7 @@ function MsxPlay({
     type: "button",
     className: "msx-btn",
     onClick: () => setSheet(null)
-  }, "とじる"))));
+  }, "閉じる"))));
 }
 const MSX_EXTRA_ITEM = Object.freeze({
   oil: {
@@ -171357,7 +171357,7 @@ function MsxEvent({
     type: "button",
     className: "go",
     onClick: () => onDone(run)
-  }, "つぎへ ▶"))) : choices.length ? React.createElement("div", {
+  }, "次へ ▶"))) : choices.length ? React.createElement("div", {
     className: "v-opts"
   }, choices.map(ch => typeof MsxChoiceInfo === 'function' && seenId ? React.createElement(React.Fragment, {
     key: ch.c
@@ -171397,7 +171397,7 @@ function MsxEvent({
     type: "button",
     className: "go",
     onClick: () => isStory ? choose('a') : choose(null)
-  }, "つぎへ ▶")));
+  }, "次へ ▶")));
 }
 const MSX_R3_CSS = `
 .msx .r3 .q-say{display:flex;gap:8px;align-items:center;margin-top:5px}
@@ -172242,7 +172242,7 @@ const msxR3Line = (scene, run, extra, fallback, opt) => {
   };
 };
 function MsxR3Frame({
-  back = 'もどる',
+  back = '戻る',
   onBack,
   run,
   right,
@@ -172684,7 +172684,7 @@ function MsxR3Cup({
     type: "button",
     onClick: () => setWin(null),
     "data-msx-r3-close": true
-  }, "とじる")), prz ? React.createElement("div", {
+  }, "閉じる")), prz ? React.createElement("div", {
     className: "det",
     onClick: () => setPrz(null)
   }, React.createElement("div", {
@@ -172697,13 +172697,13 @@ function MsxR3Cup({
   }, msxPh(prz.desc)), React.createElement("button", {
     type: "button",
     onClick: () => setPrz(null)
-  }, "とじる"))) : null)) : null);
+  }, "閉じる"))) : null)) : null);
   const foot = React.createElement("div", {
     className: "v-ft"
   }, React.createElement("button", {
     type: "button",
     onClick: onBack
-  }, "← もどる"), React.createElement("button", {
+  }, "← 戻る"), React.createElement("button", {
     type: "button",
     className: cur && cur.done && cur.entry.ok ? 'on' : 'off',
     disabled: !(cur && cur.done && cur.entry.ok),
@@ -173429,13 +173429,13 @@ function MsxR3PreDesk({
   }, msxPh(prz.desc)), React.createElement("button", {
     type: "button",
     onClick: () => setPrz(null)
-  }, "とじる"))) : null)) : null);
+  }, "閉じる"))) : null)) : null);
   const foot = React.createElement("div", {
     className: "v-ft"
   }, React.createElement("button", {
     type: "button",
     onClick: onBack
-  }, "← もどる"), React.createElement("button", {
+  }, "← 戻る"), React.createElement("button", {
     type: "button",
     className: "go",
     onClick: () => setWin(true),
@@ -173725,7 +173725,7 @@ function MsxR3Battle({
           className: "go",
           onClick: next,
           "data-msx-r3-next": true
-        }, st3.meal ? '🍽 ごはんへ ▶' : 'つぎへ ▶'))
+        }, st3.meal ? '🍽 ごはんへ ▶' : '次へ ▶'))
       });
     }
     if (st3.stage === 'prize') {
@@ -173821,7 +173821,7 @@ function MsxR3Battle({
           className: "go",
           onClick: next,
           "data-msx-r3-next": true
-        }, s.mealReady && !s.over ? '🍽 ごはんへ ▶' : 'つぎへ ▶'))
+        }, s.mealReady && !s.over ? '🍽 ごはんへ ▶' : '次へ ▶'))
       });
     }
     const M = SUC.MEALS || {};
@@ -174017,7 +174017,7 @@ function MsxR3Battle({
       className: "go",
       onClick: () => finish(s),
       "data-msx-r3-nomeal": true
-    }, "つぎへ ▶")) : React.createElement("div", {
+    }, "次へ ▶")) : React.createElement("div", {
       className: "v-ft"
     }, React.createElement("button", {
       type: "button",
@@ -174057,7 +174057,7 @@ function MsxR3Battle({
       type: "button",
       className: "go",
       onClick: () => finish(s)
-    }, "つぎへ ▶"))
+    }, "次へ ▶"))
   });
   if (failed) return React.createElement(MsxR3Frame, {
     run: run,
@@ -174756,7 +174756,7 @@ function MsxR3Shugyo({
         className: "go",
         onClick: onBack,
         "data-msx-r3-qnext": true
-      }, "つぎへ ▶(叱る/褒める)"))
+      }, "次へ ▶(叱る/褒める)"))
     });
   }
   const cur = SH.courses[course] || {
@@ -174911,13 +174911,13 @@ function MsxR3Shugyo({
   }, React.createElement("button", {
     type: "button",
     onClick: () => setLockT(null)
-  }, "とじる")))) : null);
+  }, "閉じる")))) : null);
   const foot = React.createElement("div", {
     className: "v-ft"
   }, React.createElement("button", {
     type: "button",
     onClick: onBack
-  }, "← もどる"), React.createElement("button", {
+  }, "← 戻る"), React.createElement("button", {
     type: "button",
     className: "go",
     disabled: tickets <= 0,
@@ -175254,7 +175254,7 @@ function MsxR3Retire({
         className: "go",
         onClick: () => setStep('e1'),
         "data-msx-r3-e0": true
-      }, "つぎへ ▶"))
+      }, "次へ ▶"))
     });
   }
   if (step === 'e3') {
@@ -176328,7 +176328,7 @@ function MsxR3Box({
     }, React.createElement("button", {
       type: "button",
       onClick: onClose
-    }, "← もどる"));
+    }, "← 戻る"));
   } else if (page === 'list' || page === 'detail' && cur) {
     const list = msxMmSorted(box.mons, view.sort);
     const sortName = (MSX_MM_SORTS.find(([k]) => k === view.sort) || [])[1];
@@ -176421,7 +176421,7 @@ function MsxR3Box({
       type: "button",
       className: "msx-btn",
       onClick: () => setMenu(null)
-    }, "とじる"))) : null, byeAsk ? React.createElement("div", {
+    }, "閉じる"))) : null, byeAsk ? React.createElement("div", {
       className: "msx-ov msx-fade"
     }, React.createElement("div", {
       className: "msx-sheet"
@@ -176555,7 +176555,7 @@ function MsxR3Box({
         setPage('gate');
         setMsg('');
       }
-    }, "← もどる"));
+    }, "← 戻る"));
   } else if (page === 'edit' && cur && edit) {
     title = '名前と染色';
     body = React.createElement("div", {
@@ -176657,10 +176657,10 @@ function MsxR3Box({
     }, React.createElement("button", {
       type: "button",
       onClick: () => setPage('list')
-    }, "← もどる"));
+    }, "← 戻る"));
   }
   return React.createElement(React.Fragment, null, React.createElement("style", null, MSX_R3_CSS), React.createElement("style", null, MSX_MM_CSS), React.createElement(MsxHd, {
-    back: "もどる",
+    back: "戻る",
     onBack: page === 'gate' ? onClose : page === 'list' ? () => setPage('gate') : page === 'edit' ? () => {
       setEdit(null);
       setPage('detail');
@@ -176873,7 +176873,7 @@ function MsxArcTalk({
   dark = false,
   top = null,
   onDone,
-  doneText = 'つぎへ ▶',
+  doneText = '次へ ▶',
   mon = true
 }) {
   const [page, setPage] = useState(0);
@@ -176953,7 +176953,7 @@ function MsxArcTalk({
       className: "go",
       onClick: next,
       "data-msx-arc-next": true
-    }, page + 1 < pages ? 'つぎへ ▶' : doneText))
+    }, page + 1 < pages ? '次へ ▶' : doneText))
   });
 }
 function MsxArcPick({
@@ -177123,7 +177123,7 @@ function MsxArcSpecial({
       className: "go",
       onClick: next,
       "data-msx-arc-next": true
-    }, page + 1 < pages ? 'つぎへ ▶' : '引退へ ▶') : React.createElement("button", {
+    }, page + 1 < pages ? '次へ ▶' : '引退へ ▶') : React.createElement("button", {
       type: "button",
       className: "on",
       style: {
@@ -179670,7 +179670,7 @@ function MonsucArena({
     type: "button",
     "data-msc-skip": true,
     onClick: skip
-  }, "⏭ とばす"), !manual ? React.createElement(MsaBgToggle, {
+  }, "⏭ 飛ばす"), !manual ? React.createElement(MsaBgToggle, {
     bg: bg,
     onChange: setBg
   }) : null) : null, manual && !auto && !ended ? React.createElement("div", {
@@ -180362,7 +180362,7 @@ function MonsucRankScreen({
     type: "button",
     onClick: onBack,
     className: "rounded-full bg-slate-700/80 px-3 py-1 text-[12px] font-bold"
-  }, "← もどる"), React.createElement("div", {
+  }, "← 戻る"), React.createElement("div", {
     className: "text-[13px] font-black text-pink-300"
   }, "🌱 モンヒロサクセス")), React.createElement("div", {
     className: "px-3 pt-2"
@@ -180417,7 +180417,7 @@ function MonsucRankScreen({
     type: "button",
     onClick: onBack,
     className: "rounded-full bg-slate-700/80 py-2 text-[13px] font-bold"
-  }, "← もどる"), React.createElement("div", {
+  }, "← 戻る"), React.createElement("div", {
     className: "rounded-full bg-yellow-300 text-slate-900 py-2 text-[12px] font-black text-center"
   }, tab === 'lineage' ? '血統は 種類のまとまり' : '押すと6能力が開く')));
 }
