@@ -108,7 +108,7 @@ check('マスモン強化でも補正値(%)を出す', ((source.match(/formatApt
 // ヘルプの本文は data/help.js にデータとして持っている
 const helpSrc = fs.readFileSync(path.join(root, 'monster-hero/data/help.js'), 'utf8');
 check('ヘルプが新しい仕様を説明している',
-  helpSrc.includes('置いた距離だけでなく4つの距離すべて') && helpSrc.includes('零距離の補正は+31%になります'));
+  helpSrc.includes('置いた距離だけでなく4つの距離全て') && helpSrc.includes('零距離の補正は+31%になります'));
 check('ヘルプから旧仕様の段階表記を消した', !helpSrc.includes('Aなら+2段階、Eなら-2段階') && !has('Aなら+2段階、Eなら-2段階'));
 
 console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
