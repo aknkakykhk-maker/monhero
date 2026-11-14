@@ -167,12 +167,28 @@ check('visibleFrom が読めない値でも項目は消えない',
 // releaseFlag:'monheroSuccess' を付け忘れ、まだ遊べない遊びのお知らせが本番の全員に出た。
 // 公開の印 monheroSuccess が偽のあいだは、group:'success' の項に releaseFlag:'monheroSuccess'
 // か unreleasedFlag:'monheroSuccess'(公開したら消える予告)のどちらかが要る
+// β より先に出してよい印(2026-11-14 窓口の判断・案A): β の前に出す予告など、わざと別の公開の印を付けた項。
+//   いまは monsucStoryEp1(ココロの第1話 #6096)だけ。足すときは窓口に断ってから
+const SUCCESS_EARLY_FLAGS = Object.freeze(['monsucStoryEp1']);
+const successBare = (list) => list.filter(e => e.releaseFlag !== 'monheroSuccess' && e.unreleasedFlag !== 'monheroSuccess' && !SUCCESS_EARLY_FLAGS.includes(e.releaseFlag));
+// 一覧の印の項は通り、印の無い項・ほかの印の項は今までどおり止まる
+{
+  const probe = [
+    { title:'a', group:'success', releaseFlag:'monheroSuccess' },
+    { title:'b', group:'success', unreleasedFlag:'monheroSuccess' },
+    { title:'c', group:'success', releaseFlag:'monsucStoryEp1' },
+    { title:'d', group:'success' },
+    { title:'e', group:'success', releaseFlag:'somethingElse' },
+  ];
+  const got = successBare(probe).map(e => e.title).join(',');
+  check('β より先に出してよい印の項は通り、印の無い項・一覧に無い印の項は止まる', got === 'd,e', got);
+}
 const successOpen = !!(RELEASE_FLAGS && RELEASE_FLAGS.monheroSuccess === true);
 const successEntries = CHANGELOG.filter(e => e && e.group === 'success');
 check('モンヒロサクセスの項がある(まとまりの印が消えていない)', successEntries.length > 0, `${successEntries.length}件`);
 if (!successOpen) {
-  const bare = successEntries.filter(e => e.releaseFlag !== 'monheroSuccess' && e.unreleasedFlag !== 'monheroSuccess');
-  check('公開前のモンヒロサクセスの項に、公開の印(releaseFlag か unreleasedFlag の monheroSuccess)が付いている',
+  const bare = successBare(successEntries);
+  check(`公開前のモンヒロサクセスの項に、公開の印(releaseFlag か unreleasedFlag の monheroSuccess・β より先に出してよい印 ${SUCCESS_EARLY_FLAGS.join('・')})が付いている`,
     bare.length === 0, bare.map(e => `${e.date} ${e.title}`).join(' / '));
   // 印の付いた項は、本番の判定でも一覧に出ない(公開前の予告 unreleasedFlag だけは出てよい)
   const leaked = successEntries.filter(e => e.releaseFlag === 'monheroSuccess' && shownTitles.has(e.title));
