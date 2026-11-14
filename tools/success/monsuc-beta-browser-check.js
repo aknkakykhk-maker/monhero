@@ -130,6 +130,7 @@ const annivCheck = () => {
     check('見た印 mh_monsuc_beta_v1 に open が残る', !!(saved && saved.seen && saved.seen.open), JSON.stringify(saved));
     // 新しく育成をはじめる → 準備の説明(最初の1回)
     await page.getByRole('button', { name: /新しく育成をはじめる/ }).click();
+    await page.locator('[data-msx-scenario-next]').click(); // ストーリー選択(2026-11-14)の次へ
     const prep = page.locator('[data-msx-beta="prep"]');
     await prep.waitFor({ timeout: 10000 }).catch(() => {});
     check('準備の画面で説明が出る', await prep.count() === 1);

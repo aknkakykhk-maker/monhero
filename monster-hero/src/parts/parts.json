@@ -525,6 +525,10 @@
       "role": "部品: モンヒロサクセスのβ版(選べる助手はみゅあだけ msxBetaAidOk・はじめて開いたとき/はじめての育成を終えたときのβ版の話・最初の1回だけのみゅあの説明の重ね窓 MsxBetaTalk・タイトルの「β」MsxBetaMark)。台本は script/beta-mua.js。新しいキー mh_monsuc_beta_v1 = { v:1, seen }(見た印だけ・足すだけ)。公開の印 monheroSuccess の後ろ"
     },
     {
+      "file": "56-monsuc-scenario.jsx",
+      "role": "部品: モンヒロサクセスのストーリー選択(育成を始める前にシナリオを選ぶ段 MsxScenarioSelect・シナリオの表 MSX_STORIES・いまは「ヒーローへの道」1つ・ストーリー詳細の窓)。途中の育成 mh_monsuc_run_v1 に scn を足すだけ(無ければ hero・msxScenarioId)。公開の印 monheroSuccess の後ろ"
+    },
+    {
       "file": "56-monsuc-tevent.jsx",
       "role": "部品: モンヒロサクセスの訓練のあとの出来事(編成のモンスターとのお話・小さな出来事)を1枚の場面で見せる MsxTrainEvent(背景・2体の立ち絵・見出し・台詞・変わった数字・入り方)。何も保存しない・公開の印 monheroSuccess の後ろ"
     },
