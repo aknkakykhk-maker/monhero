@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: b7e5195700ba19e5
+// generated-sha256: fd70ab3376402d8c
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -48515,6 +48515,13 @@ const HOME_EVENT_BADGE_CSS = `
 @media(prefers-reduced-motion:reduce){
   .mh-home-event-badge{animation:none;transform:none}
   .mh-home-event-badge::after{display:none}}
+/* イベントの札の題の2行目(title2)。背の低い横画面では、2行のまま字と余白を詰めて札の高さを1行の題のときと同じくらいにする
+   (2026-11-14 横 568×320 の長い台詞で、背が伸びた札が M/B管理 にかかった。1行に並べると横に伸びてモンヒロビートの顔の列にかかる) */
+.mh-home-event-banner .t2{display:block}
+@media(orientation:landscape) and (max-height:430px){
+  .mh-home-scene .mh-home-event-banner{padding:3px 10px;gap:0}
+  .mh-home-scene .mh-home-event-banner b{font-size:10px;line-height:1.1}
+  .mh-home-scene .mh-home-event-banner small{line-height:1.1}}
 `;
 // ★イベント・レイドボス「ジャック」(docs/spec/RAID_BOSS_JACK.md)。開催中だけ、HOMEの真ん中でぴょこぴょこ跳ねる。
 //   タップでレイド画面を開く。近くに、いま挑める段階の共有HPバーを出す。ときどき両腕を上げたポーズに変わる(HPとは連動しない)。
@@ -48853,8 +48860,13 @@ function HomeScreen({
         // 押し下げても、いちばん下の札とその下の顔の列(助手ライフ・22px)が画面の下に収まる所まで(2026-11-08 横 568×320 で MFバトルカードの札と顔が画面の外へ出た)
         let room=Infinity;
         for(const el of scene.querySelectorAll('.mh-home-event-banner,.mh-home-tour-banner,.mh-home-card-battle')){if(!el.offsetParent)continue;const t=offTop(el);if(t>offTop(rh)&&offLeft(el)<rr){push=Math.max(push,rb-t);room=Math.min(room,scene.clientHeight-(t+el.offsetHeight)-(el.classList.contains('mh-home-card-battle')?24:4));}}
-        push=Math.min(push,Math.max(0,room));}
-      scene.style.setProperty('--mh-home-left-push',`${Math.max(0,Math.ceil(push))}px`);
+        push=Math.min(push,Math.max(0,room));
+        // 縦画面(モンヒロビートが M/B管理 より下に積まれている)で、下の札の束がビートの札から離れすぎているときは、束ごとビートの札(と顔の列)のすぐ下まで引き上げる。
+        // 2026-11-14 社長「モンヒロビートと本オープン記念のあいだが大きく空いている」(390×844 で札1つぶん以上空き、左の列が上下に分かれて見えた)
+        if(push<=0&&mg&&mg.offsetParent&&offTop(rh)>=offTop(mg)+mg.offsetHeight){let top=Infinity;
+          for(const el of scene.querySelectorAll('.mh-home-event-banner,.mh-home-tour-banner,.mh-home-card-battle,.mh-home-success')){if(!el.offsetParent)continue;const t=offTop(el);if(t>offTop(rh)&&offLeft(el)<rr)top=Math.min(top,t);}
+          if(Number.isFinite(top)&&top>rb+4)push=rb+4-top;}}
+      scene.style.setProperty('--mh-home-left-push',`${Math.ceil(push)}px`);
       // 「モンヒロバトル」(下の真ん中)が右下の「ミッション」「ギフト」と横に重なるときは、重なった分だけ左へ寄せる(2026-11-08 横 568×320 で重なった)。
       // バトルの札は translateX(-50%) で真ん中に置いているので、左端は offsetLeft − 幅/2
       const bt=scene.querySelector('.mh-home-facility.battle');let nudge=0;
@@ -48968,8 +48980,9 @@ function HomeScreen({
         {typeof TimeOfDayClock==='function'&&<TimeOfDayClock home/>}
         <button onClick={openChangelog} className="mh-home-update"><RefreshCcw size={15}/>更新履歴{hasUnreadChangelog&&<em className="mh-unread-badge" aria-label="未読あり">!</em>}</button>
         {/* 期間限定イベントのバナー(2026-10-04)。押すと更新履歴(イベントの詳細)を開く。ゲーム全体のイベントなので、特定の遊びのボタンには付けない。縦持ちの左下(モンヒロバトルのすぐ上)。右側のボタン列・上の吹き出しとかぶらない場所。横持ちでは出さない */}
-        {homeEventCampaign&&<button type="button" data-home-event-banner className="mh-home-event-banner" onClick={openChangelog} aria-label={`${homeEventCampaign.banner.title} ${homeEventCampaign.banner.sub}`}>
-          <b>{homeEventCampaign.banner.emoji} {homeEventCampaign.banner.title}</b><small>{homeEventCampaign.banner.sub}</small>
+        {homeEventCampaign&&<button type="button" data-home-event-banner className="mh-home-event-banner" onClick={openChangelog} aria-label={`${homeEventCampaign.banner.title}${homeEventCampaign.banner.title2||''} ${homeEventCampaign.banner.sub}`}>
+          {/* title2 … 題の2行目(2026-11-14「本オープン記念」だけでは何の本オープンか分からないため、題を2行に分けられるようにした) */}
+          <b>{homeEventCampaign.banner.emoji} {homeEventCampaign.banner.title}{homeEventCampaign.banner.title2?<span className="t2">{homeEventCampaign.banner.title2}</span>:null}</b><small>{homeEventCampaign.banner.sub}</small>
         </button>}
         {/* 公式杯(2026-10-31 社長・案A): ハロウィン・ナイトの札の下、MFバトルカードの上。イベントの札が無いときは1段上がる。押すといつも大会のトップ */}
         {homeCardTour&&typeof onOpenCardTour==='function'&&<button type="button" data-home-card-tour={homeCardTour.id} className={`mh-home-tour-banner${homeEventCampaign?'':' raised'}`} onClick={()=>onOpenCardTour(homeCardTour.id)} aria-label={`${homeCardTour.name} ${homeCardTour.sub}`}>
@@ -74858,16 +74871,34 @@ const MASMON_CALC = (() => {
   const STAT_MAX = 999;
 
   // ---- 総合力とランク(POWER.md 1・2章) ----
-  const POWER_W = Object.freeze({ stat: 2.5, tech: 100, mastery: 1, lv: 15, loyal: 10, pop: 10, techMax: 8 });
+  // 能力の重み(2026-11-14 社長「能力が高いほど1あたりの総合力が増える」・直線): 能力1あたり = stat + statUp × 能力 ÷ statAt(0 で 2.5・900 で 4.5・999 で 約4.72)
+  const POWER_W = Object.freeze({ stat: 2.5, statUp: 2, statAt: 900, tech: 100, mastery: 1, lv: 15, loyal: 10, pop: 10, techMax: 8 });
+  const statPower = (v) => { const x = clamp(num(v), 0, STAT_MAX); return x * (POWER_W.stat + POWER_W.statUp * x / POWER_W.statAt); };
   // stats: { life, pow, ... } / masteries: 覚えた技ごとの熟練(0〜100)の配列 / lv / loyal / pop
   const power = (o) => {
     const { stats, masteries, lv = 1, loyal = 0, pop = 0 } = o && typeof o === 'object' ? o : {}; const st = stats && typeof stats === 'object' ? stats : {}; // どんな値でも数を返す(ミハリ5)
+    const sum = KEYS.reduce((a, k) => a + statPower(st[k]), 0);
+    const tech = (Array.isArray(masteries) ? masteries : []).slice(0, POWER_W.techMax).reduce((a, m) => a + POWER_W.tech + clamp(num(m), 0, 100) * POWER_W.mastery, 0);
+    return Math.round(sum + tech + clamp(num(lv, 1), 1, 99) * POWER_W.lv + clamp(num(loyal), 0, 100) * POWER_W.loyal + clamp(num(pop), 0, 100) * POWER_W.pop);
+  };
+  // 強さの段(2026-11-14 社長・案A): モンヒロサクセスの育成の強さの表(能力の補正・タッグ・仲良しの始まり・アシストポイント)を引くときだけ、
+  //   能力の重みを今までどおり一律 ×2.5 で数え、ランクの区切りも今まで(M 19,500)のまま。画面に出す総合力・ランクは上の power・rankOf
+  const powerClassic = (o) => {
+    const { stats, masteries, lv = 1, loyal = 0, pop = 0 } = o && typeof o === 'object' ? o : {}; const st = stats && typeof stats === 'object' ? stats : {};
     const sum = KEYS.reduce((a, k) => a + clamp(num(st[k]), 0, STAT_MAX), 0);
     const tech = (Array.isArray(masteries) ? masteries : []).slice(0, POWER_W.techMax).reduce((a, m) => a + POWER_W.tech + clamp(num(m), 0, 100) * POWER_W.mastery, 0);
     return Math.round(sum * POWER_W.stat + tech + clamp(num(lv, 1), 1, 99) * POWER_W.lv + clamp(num(loyal), 0, 100) * POWER_W.loyal + clamp(num(pop), 0, 100) * POWER_W.pop);
   };
-  const RANKS = Object.freeze([['G', 0], ['F', 2000], ['E', 3000], ['D', 4500], ['C', 6000], ['B', 8000], ['A', 11000], ['S', 14000], ['SS', 16000], ['SSS', 18000], ['M', 19500]]);
-  const rankOf = (p) => { const v = num(p); let i = 0; RANKS.forEach(([, min], j) => { if (v >= min) i = j; }); return { key: RANKS[i][0], min: RANKS[i][1], next: RANKS[i + 1] ? RANKS[i + 1][1] : null, index: i }; };
+  const RANKS_CLASSIC = Object.freeze([['G', 0], ['F', 2000], ['E', 3000], ['D', 4500], ['C', 6000], ['B', 8000], ['A', 11000], ['S', 14000], ['SS', 16000], ['SSS', 18000], ['M', 19500]]);
+  const rankClassicOf = (p) => { const v = num(p); let i = 0; RANKS_CLASSIC.forEach(([, min], j) => { if (v >= min) i = j; }); return RANKS_CLASSIC[i][0]; };
+  // ランク(2026-11-14 社長「M は 20,000」)。key は 11 種のまま(表で引く所はこれ)。M より上は 500 ごとに M1〜M9 → MG → MG1〜MG9 → MF …(画面に出すのは label)
+  const RANKS = Object.freeze([['G', 0], ['F', 2000], ['E', 3000], ['D', 4500], ['C', 6000], ['B', 8000], ['A', 11000], ['S', 14000], ['SS', 16000], ['SSS', 18000], ['M', 20000]]);
+  const M_STEP = 500; const M_LETTERS = Object.freeze(['', 'G', 'F', 'E', 'D', 'C', 'B', 'A']); // M・MG・MF … MA(それぞれ番号なし+1〜9)
+  const mLabelOf = (v) => { const i = Math.min(M_LETTERS.length * 10 - 1, Math.max(0, Math.floor((v - RANKS[RANKS.length - 1][1]) / M_STEP))); const b = Math.floor(i / 10), n = i % 10;
+    return { label: `M${M_LETTERS[b]}${n ? n : ''}`, labelMin: RANKS[RANKS.length - 1][1] + i * M_STEP, labelNext: i + 1 < M_LETTERS.length * 10 ? RANKS[RANKS.length - 1][1] + (i + 1) * M_STEP : null }; };
+  const rankOf = (p) => { const v = num(p); let i = 0; RANKS.forEach(([, min], j) => { if (v >= min) i = j; });
+    const key = RANKS[i][0]; const m = key === 'M' ? mLabelOf(v) : { label: key, labelMin: RANKS[i][1], labelNext: RANKS[i + 1] ? RANKS[i + 1][1] : null };
+    return { key, min: RANKS[i][1], next: RANKS[i + 1] ? RANKS[i + 1][1] : null, index: i, ...m }; };
 
   // ---- 合体の上乗せ(FUSE.md 第2版): 平均 × √(弱い方÷強い方) を効く値にし、200 ×(効く値÷999)^1.5 ----
   const FUSE = Object.freeze({ top: 200, pow: 1.5, ref: 999 });
@@ -74967,7 +74998,7 @@ const MASMON_CALC = (() => {
   // ---- けが・病気・家出の長さ(社長: 重さで幅): 軽い1回・ふつう3回・重い6回。疲れ・ストレスが高いほど重い ----
   const condLen = (load, r) => { const v = clamp(num(load), 0, 100); const x = clamp(num(r), 0, 0.999999); const heavy = v >= 90 ? 0.3 : v >= 80 ? 0.15 : 0.05; const light = v >= 90 ? 0.2 : v >= 80 ? 0.35 : 0.5; return x < heavy ? 6 : x < heavy + light ? 1 : 3; };
 
-  return Object.freeze({ KEYS, STAT_MAX, POWER_W, power, RANKS, rankOf, FUSE, fuseBonus, fuseStats, PACE, GROW_TYPES, typeOf, ageMult, peakOf, typeFromApt,
+  return Object.freeze({ KEYS, STAT_MAX, POWER_W, statPower, power, powerClassic, RANKS_CLASSIC, rankClassicOf, RANKS, M_STEP, M_LETTERS, rankOf, FUSE, fuseBonus, fuseStats, PACE, GROW_TYPES, typeOf, ageMult, peakOf, typeFromApt,
     POLICIES, policyOf, POLICY_STEP, policyMove, lifeLen, lifeStep, ageLabel, noActChance, critBonus, CRIT_CAP, critOf, sabLoyalMult, POP, popAfterBattle, RESULTS, resultOf, reactOf, condLen });
 })();
 
@@ -75211,7 +75242,7 @@ const useAmgbState = () => {
 function AmgbRankChip({ rank, small = false }) {
   if (!rank) return null;
   const c = AMGB_RANK_COLOR[rank.key] || '#94a3b8'; const frame = ['SS', 'SSS', 'M'].includes(rank.key);
-  return <b className={`inline-flex items-center justify-center rounded-md px-1 font-black leading-none ${small ? 'min-w-[22px] text-[10px] py-[2px]' : 'min-w-[30px] text-[13px] py-[3px]'}`} style={{ color: '#0f172a', background: rank.key === 'M' ? 'linear-gradient(90deg,#f472b6,#facc15,#4ade80,#60a5fa,#c084fc)' : c, boxShadow: frame ? `0 0 0 2px #fde68a` : 'none' }} data-amgb-rank={rank.key}>{rank.key}</b>;
+  return <b className={`inline-flex items-center justify-center rounded-md px-1 font-black leading-none ${small ? 'min-w-[22px] text-[10px] py-[2px]' : 'min-w-[30px] text-[13px] py-[3px]'}`} style={{ color: '#0f172a', background: rank.key === 'M' ? 'linear-gradient(90deg,#f472b6,#facc15,#4ade80,#60a5fa,#c084fc)' : c, boxShadow: frame ? `0 0 0 2px #fde68a` : 'none' }} data-amgb-rank={rank.key}>{rank.label || rank.key}</b>; // M より上は M1・MG・MG9 などの名前(幅は px-1 と最小幅で広がる)
 }
 // 名前の横に置く「ランク + 総合力」(印が偽なら何も出さない)
 function AmgbPowerTag({ aid, row }) {
@@ -75288,7 +75319,7 @@ function AmgbPanel({ who, t }) {
         <p className="text-[10px] font-black text-slate-400">総合力</p>
         {p ? <p className="flex items-center gap-1.5 text-[18px] font-black text-amber-100" data-amgb-total={p.power}><AmgbRankChip rank={p.rank}/>{p.power.toLocaleString()}</p> : <p className="text-[12px] font-bold text-slate-400">—</p>}
       </div>
-      {p && p.rank.next && <p className="text-right text-[9.5px] font-bold text-slate-400">次のランクまで {(p.rank.next - p.power).toLocaleString()}</p>}
+      {p && (p.rank.labelNext || p.rank.next) && <p className="text-right text-[9.5px] font-bold text-slate-400">次のランクまで {((p.rank.labelNext || p.rank.next) - p.power).toLocaleString()}</p>}
       <div className="mt-1.5 grid grid-cols-2 gap-x-3 gap-y-1">
         <div className="flex items-center gap-1.5 text-[10.5px] font-bold text-slate-200"><span className="w-[40px] shrink-0">忠誠度</span><span className="mhm-bar"><i style={{ width: `${b.loy}%`, background: 'linear-gradient(90deg,#34d399,#22d3ee)' }}/></span><b className="w-[26px] text-right text-amber-200" data-amgb-loy>{Math.round(b.loy)}</b></div>
         <div className="flex items-center gap-1.5 text-[10.5px] font-bold text-slate-200"><span className="w-[40px] shrink-0">人気</span><span className="mhm-bar"><i style={{ width: `${b.pop}%`, background: 'linear-gradient(90deg,#f472b6,#facc15)' }}/></span><b className="w-[26px] text-right text-amber-200" data-amgb-pop>{Math.round(b.pop)}</b></div>
@@ -77230,7 +77261,8 @@ const ambwIsHighlight = (e, maxHp) => {
 
 const AMBW_CSS = `
 .ambw{position:fixed;inset:0;z-index:9500;overflow-y:auto;background:linear-gradient(180deg,#221a44,#141026 40%);color:#fff;font-weight:700;-webkit-overflow-scrolling:touch}
-.ambw-in{max-width:460px;margin:0 auto;padding:10px 12px 28px}
+/* iPhone の時計・電波の帯(上)とホームの棒(下)・横向きの切り欠きにかからないよう、端の安全な余白を足す(2026-11-14 えるびんさん「もどるが押せない」) */
+.ambw-in{max-width:460px;margin:0 auto;padding:max(10px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) max(28px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left))}
 .ambw-top{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12px;font-weight:900;color:#f9a8d4}
 .ambw-top b{color:#fff;background:#3b3566;border-radius:99px;padding:2px 10px;white-space:nowrap}
 .ambw-card{background:#1e1a36;border:1px solid #3b3566;border-radius:14px;padding:9px;margin-top:8px}
@@ -81725,7 +81757,7 @@ const MSX_BETA_KEY = 'mh_monsuc_beta_v1';
 const MSX_BETA_AIDS = Object.freeze(['mua']);
 const msxBetaAidOk = (aid) => MSX_BETA_AIDS.includes(aid);
 // 最初の1回だけ出す説明の名前(台本の tut.<名前>)と、β版の話(scn.mua.beta.<名前>)
-const MSX_BETA_TUT = Object.freeze(['prep', 'turn', 'train', 'result', 'rest', 'shugyo', 'cup', 'match', 'rematch', 'event', 'awake', 'retire']);
+const MSX_BETA_TUT = Object.freeze(['scn', 'prep', 'turn', 'train', 'result', 'rest', 'shugyo', 'cup', 'rank', 'meal', 'match', 'rematch', 'event', 'awake', 'retire']);
 const MSX_BETA_STORY = Object.freeze(['open', 'firstend']);
 const msxBetaScene = (k) => (MSX_BETA_STORY.includes(k) ? `scn.mua.beta.${k}` : `tut.${k}`);
 const msxBetaKnown = (k) => MSX_BETA_TUT.includes(k) || MSX_BETA_STORY.includes(k);
@@ -81879,8 +81911,8 @@ const MSX_SCN_CSS = `
 .msx .scn-win .cl{display:block;margin:10px auto 0;padding:8px 28px;border-radius:9px;background:#fff;border:2px solid #d6d3d1;font-weight:900;font-size:14px;color:#1f2937}
 `;
 
-// ストーリー選択の画面。value: いま選んでいるシナリオの id。onNext(id): 次へ(育てるモンスターを選ぶ段)
-function MsxScenarioSelect({ value, onBack, onNext }) {
+// ストーリー選択の画面。value: いま選んでいるシナリオの id。onNext(id): 次へ(育てるモンスターを選ぶ段)。ctx: みゅあの説明(tut.scn)に渡す呼び名など
+function MsxScenarioSelect({ value, onBack, onNext, ctx }) {
   const [idx, setIdx] = useState(() => Math.max(0, MSX_STORIES.findIndex((x) => x.id === msxScenarioId(value))));
   const [detail, setDetail] = useState(false);
   const sc = MSX_STORIES[idx] || MSX_STORIES[0];
@@ -81928,6 +81960,7 @@ function MsxScenarioSelect({ value, onBack, onNext }) {
           </div>
         </div>
       ) : null}
+      {typeof MsxBetaTalk === 'function' ? <MsxBetaTalk keys={['scn']} ctx={ctx}/> : null}
     </div>
   );
 }
@@ -85997,7 +86030,7 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf }) {
     </div>
   );
 
-  if (scn == null && typeof MsxScenarioSelect === 'function') return <MsxScenarioSelect value={scn} onBack={onCancel} onNext={(id) => { setScn(id); setStep(0); }}/>;
+  if (scn == null && typeof MsxScenarioSelect === 'function') return <MsxScenarioSelect value={scn} ctx={betaCtx} onBack={onCancel} onNext={(id) => { setScn(id); setStep(0); }}/>;
   let body = null; let go = null;
   if (step === 0) {
     const list = tab === 'base' ? unlocked.map((id) => ({ key: id, sp: id, on: !pick.box && pick.base === id, pick: { base: id } }))
@@ -86081,7 +86114,7 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf }) {
           <div style={{ marginTop: 5 }}><span className="chip on">{sc.tag}</span> <span className="chip p">仲良し度 Lv{aidLv}</span></div></div></div>
         <div className="v-kv"><b>助手の効き</b><span>{sc.perk}</span></div>
         {combo && <div className="v-kv"><b>トレーニングの組み合わせ</b><span>{MSX_STATS.slice(0, 3).map((k) => `${MSX_STAT_ICON[k]}${MSX_STAT_NAME[k]} → +${combo[k].map((c) => MSX_STAT_ICON[c]).join('+')}`).join(' / ')} …</span></div>}
-        <div className="v-kv"><b>はじめの親密度</b><span>{Math.min(100, aidLv * ((SUC.BOND && SUC.BOND.aidPerLv) || 8))}(仲良し度 Lv{aidLv})。助手もトレーニングに来て、タッグになる</span></div>
+        <div className="v-kv"><b>はじめの親密度</b><span>{Math.min((SUC.BOND && SUC.BOND.aidStartMax) || 40, aidLv * ((SUC.BOND && SUC.BOND.aidPerLv) || 4))}(仲良し度 Lv{aidLv})。助手もトレーニングに来て、タッグになる</span></div>
         <div className="v-eps">{sc.eps.map((t, i) => <div key={i}><b>{i + 1}話</b>{t}</div>)}<div className="lk"><b>4話</b>🔒 ？？？</div></div>
         <div className="row" style={{ marginTop: 'auto' }}><img className="fc" src={msxFace(aid, 'wink')} alt=""/><div className="bub f1">「{aid === 'atsu' ? 'よし、いっちょ仕上げてくか。よろしくな笑' : 'いっしょに てっぺん めざそ! まぢで楽しいから!'}」</div></div>
       </div>
@@ -86391,7 +86424,7 @@ function MonheroSuccessScreen({ onClose, callNameOf, bondLvOf, debug = false }) 
     betaKeys = { keys: ['open', raisedMons.length > 0 && !(run && run.s && !run.s.over) && 'firstend'], ctx: { ...betaCtx, mon: lastRaised ? (lastRaised.nick || msxMonName(lastRaised.species)) : undefined } };
   } else if (view === 'play' && run && run.s) {
     const s = run.s; const ph = run.phase;
-    const keys = s.over || ph === 'over' ? ['retire'] : ph === 'battle' ? ['match'] : playSub === 'cup' ? ['cup'] : playSub === 'shugyo' ? ['shugyo']
+    const keys = s.over || ph === 'over' ? ['retire'] : ph === 'battle' ? [run.out && run.out.r3 ? (run.out.r3.stage === 'rank' ? 'rank' : run.out.r3.stage === 'meal' ? 'meal' : null) : 'match'] /* 賞金ランク UP!・ごはんの段(2026-11-14) */ : playSub === 'cup' ? ['cup'] : playSub === 'shugyo' ? ['shugyo']
       : ph === 'event' || ph === 'story' ? ['event'] : ph === 'awake' ? ['awake'] : ph === 'result' && run.out && run.out.result ? ['result']
         : ph === 'main' && playSub === 'main' ? ['turn', 'train', s.hpMax > 0 && s.hp < s.hpMax * 0.5 && 'rest', Number(s.tickets) > 0 && 'shugyo'] : null;
     if (keys) betaKeys = { keys, ctx: { ...betaCtx, mon: run.nick } };
@@ -87219,7 +87252,7 @@ const MSX_R3_CSS = `
 //   引退の画面を開いたときにだけ読む(msxR3LoadTables)。読めなければ芯の表だけで動く。
 const MSX_R3_GEAR = Object.freeze({ debut: 5, junior: 10, middle: 20, pro: 30, final: 40 }); // 育てる子の作戦(試算の fight と同じ)
 // 評価は助手マスモンと同じ11段(G〜M)+500ごとの番号(芯の gradeOf → { rank, step, label:'A2', min, next, toNext })。PLAN §1・RANKING §7
-const MSX_R3_RANKS = Object.freeze([['G', 0], ['F', 2000], ['E', 3000], ['D', 4500], ['C', 6000], ['B', 8000], ['A', 11000], ['S', 14000], ['SS', 16000], ['SSS', 18000], ['M', 19500]]);
+const MSX_R3_RANKS = Object.freeze([['G', 0], ['F', 2000], ['E', 3000], ['D', 4500], ['C', 6000], ['B', 8000], ['A', 11000], ['S', 14000], ['SS', 16000], ['SSS', 18000], ['M', 20000]]);
 const msxR3Ranks = () => (typeof MASMON_CALC !== 'undefined' && MASMON_CALC && Array.isArray(MASMON_CALC.RANKS) ? MASMON_CALC.RANKS : MSX_R3_RANKS);
 const MSX_R3_CUP_ICON = Object.freeze({
   str: '💪', int: '🧠', aim: '🎯', dodge: '💨', hard: '🛡️', life: '❤️', dist0: '🤜', dist1: '👊', dist2: '🏹', dist3: '🔭',
@@ -87848,7 +87881,7 @@ function MsxR3Battle({ run, setRun, v, ev, ctx, bondLv, onPause, debug }) {
             <div className="row" style={{ marginTop: 6 }}><img className="fc" src={msxFace(s.aid, st3.won ? 'excited' : 'troubled')} alt=""/><div className="bub f1">{st3.won ? '「優勝だもん、今日は ごちそう にしちゃお!」' : '「おつかれさま。おいしいもの食べて、また がんばろ!」'}</div></div></div>
         ) : !st3.won && !s.over ? (
           // 2026-11-13 社長: 負けたらごはんはなし。画面は出さず、助手の慰めの一言だけ
-          <div className="v-meal" data-msx-r3-lostnote><div className="row"><img className="fc" src={msxFace(s.aid, 'troubled')} alt=""/><div className="bub f1">{msxR3Line('turn.cup.lose', run, { cup: st3.name }, '「おつかれさま。負けちゃったけど、ここまでよくがんばったよ。次、いこ!」')}</div></div></div>
+          <div className="v-meal" data-msx-r3-lostnote><div className="row"><img className="fc" src={msxFace(s.aid, 'troubled')} alt=""/><div className="bub f1">{msxR3Line('turn.cup.lose', run, { cup: st3.name }, '「おつかれさま。負けちゃったけど、ここまでよくがんばったよ。次、いこ!」').t}</div></div></div>
         ) : null}
       </div>
     </>);
@@ -88341,7 +88374,7 @@ function MsxR3Retire({ run, setRun, onPause, debug, SUC }) {
         const nextCost = got < a.max ? a.pt : 0; const canUp = got < a.max && left >= nextCost && !dim;
         return (<div key={id} className={`v-a3${got ? ' got' : ''}${dim ? ' dim' : ''}`} data-msx-r3-assist={id}>
           <div className="h">{cardIconNode(a.icon, 16)}<span className="nm">{a.name}</span><span className={`rf${a.ref ? '' : ' o'}`}>{a.ref ? '参考' : 'オリジナル'}</span><b className="val">{got ? AT.valueText(id, got) : '—'}</b></div>
-          <div className="ex">{a.ex[Math.max(0, (got || 1) - 1)]}{a.max > 1 ? `(1目盛り ${a.pt}pt・最大 ${AT.valueText(id, a.max)})` : `(${a.pt}pt)`}</div>
+          <div className="ex">{a.ex[Math.max(0, (got || 1) - 1)]}{a.max > 1 ? `(1目盛り ${AT.valueText(id, 1)}・${a.pt}pt/最大 ${AT.valueText(id, a.max)})` : `(${a.pt}pt)`}</div>
           <div className="ctl"><button type="button" disabled={!got} onClick={() => tap(id, got - 1)} data-msx-r3-minus={id}>−</button>
             <div className="gauge" onClick={(e) => { const r = e.currentTarget.getBoundingClientRect(); const n = Math.max(1, Math.round((e.clientX - r.left) / Math.max(1, r.width) * a.max)); tap(id, n); }}>
               <i style={{ width: `${got / a.max * 100}%` }}/>{a.max <= 25 ? Array.from({ length: a.max - 1 }, (_, j) => <s key={j} style={{ left: `${(j + 1) / a.max * 100}%` }}/>) : null}</div>
@@ -90338,7 +90371,7 @@ function MonsucRankMonImg({ species, dye, size = 36 }) {
 }
 function MonsucRankGrade({ grade }) {
   const g = typeof grade === 'string' && /^[A-Z]{1,3}[0-9]{0,3}$/.test(grade) ? grade : 'G'; // 評価は 500 ごとの数字つき(C2・M3 など)。色は字の部分で決める
-  const letter = g.replace(/[0-9]+$/, '');
+  const letter = /^M/.test(g) ? 'M' : g.replace(/[0-9]+$/, ''); // M より上(M1・MG・MG3…)は M の色
   return <span className="inline-flex items-center justify-center min-w-[26px] h-[22px] px-1 rounded-md text-[12px] font-black text-slate-900" style={{ background: MONSUC_RANK_GRADE_COLOR[letter] || '#94a3b8' }}>{g}</span>;
 }
 function MonsucRankStats({ stats }) {

@@ -11,7 +11,7 @@ const MSX_BETA_KEY = 'mh_monsuc_beta_v1';
 const MSX_BETA_AIDS = Object.freeze(['mua']);
 const msxBetaAidOk = (aid) => MSX_BETA_AIDS.includes(aid);
 // 最初の1回だけ出す説明の名前(台本の tut.<名前>)と、β版の話(scn.mua.beta.<名前>)
-const MSX_BETA_TUT = Object.freeze(['prep', 'turn', 'train', 'result', 'rest', 'shugyo', 'cup', 'match', 'rematch', 'event', 'awake', 'retire']);
+const MSX_BETA_TUT = Object.freeze(['scn', 'prep', 'turn', 'train', 'result', 'rest', 'shugyo', 'cup', 'rank', 'meal', 'match', 'rematch', 'event', 'awake', 'retire']);
 const MSX_BETA_STORY = Object.freeze(['open', 'firstend']);
 const msxBetaScene = (k) => (MSX_BETA_STORY.includes(k) ? `scn.mua.beta.${k}` : `tut.${k}`);
 const msxBetaKnown = (k) => MSX_BETA_TUT.includes(k) || MSX_BETA_STORY.includes(k);
