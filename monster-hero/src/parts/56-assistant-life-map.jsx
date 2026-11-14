@@ -65,7 +65,7 @@ const assistantLifeMapReadHome = () => {
   return out;
 };
 
-// 町の地図の頭の高さの表(2026-11-15 r1115-031)。キーは絵の置き場所(images/assistant/ の下)から表情の名前を取ったもの。値は [頭のてっぺん, 顎, (任意)大きさの倍率](絵の見えている範囲の上を0・下を1。倍率は、見た目で他の人より大きい絵だけ)
+// 町の地図の頭の高さの表(2026-11-15 r1115-031)。キーは絵の置き場所(助手の絵のフォルダの下)から表情の名前を取ったもの。値は [頭のてっぺん, 顎, (任意)大きさの倍率](絵の見えている範囲の上を0・下を1。倍率は、見た目で他の人より大きい絵だけ)
 const ASSISTANT_LIFE_MAP_HEAD = Object.freeze({
   myua_sleep: [0.15, 0.51], kiki_sleep: [0.22, 0.60], momosuke_sleep: [0.07, 0.58], atsu_sleep: [0.08, 0.60], kyuko_sleep: [0.05, 0.52],
   'halloween/myua_sleep': [0.20, 0.51], 'halloween/kiki_sleep': [0.22, 0.585], 'halloween/momosuke_sleep': [0.12, 0.58], 'card-master/myua_sleep': [0.07, 0.39],
@@ -88,7 +88,7 @@ function AssistantLifeMapFig({ who, h, sleep, spent = false }) {
   //   場面の立ち絵の表は目〜顎と頬の幅でそろえていて、髪やうさ耳で頭が大きく見える人が出ていた。さらに、寝ている絵・ハロウィンのももすけなど表の点が合わない絵が大きく出ていた。
   //   表(assistantLifeStandFace)に顎の点がある絵はそれを使い、無い絵は下の ASSISTANT_LIFE_MAP_HEAD(絵を目盛りつきで切り出して手で読んだ 上・顎。見えている体の高さに対する割合)を使う
   const face0 = typeof assistantLifeStandFace === 'function' ? assistantLifeStandFace(who && who.id, src) : null;
-  const headKey = String(src || '').replace(/[?#].*$/, '').replace(/^.*images\/assistant\//, '').replace(/\.png$/i, '').replace(/_(?!sleep$)[a-z]+$/i, '');
+  const headKey = String(src || '').replace(/[?#].*$/, '').replace(/^.*assistant\//, '').replace(/\.png$/i, '').replace(/_(?!sleep$)[a-z]+$/i, '');
   const head = ASSISTANT_LIFE_MAP_HEAD[headKey] || null;
   const topChin = head ? { top: head[0], chin: head[1] } : (face0 && Number.isFinite(face0.top) && (Number.isFinite(face0.chin) || face0.head) ? { top: face0.top, chin: face0.head ? 1 : face0.chin } : null);
   const face = face0 && topChin && typeof ASSISTANT_LIFE_STAND_EC === 'number'
