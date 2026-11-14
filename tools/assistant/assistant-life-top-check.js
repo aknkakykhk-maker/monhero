@@ -110,17 +110,19 @@ const SAMPLE = (() => {
       await go.click(); await page.waitForTimeout(700);
       await shot(page, v, '3-scene-talk');
       for (let i = 0; i < 4 && (await page.locator('[data-assistant-life-daily-phase="talk"]').count()); i++) { await page.locator('[data-assistant-life-daily-talk]').click(); await page.waitForTimeout(250); }
-      check(`${T}④ 掛け合いのあと2択が出る`, (await page.locator('[data-assistant-life-daily-choice]').count()) === 2);
+      // その日・その時間帯の抽選で「めずらしいできごと」が当たった日は、2択が無い(掛け合いだけで終わる)。日付で決まるので、その形も確かめる(2026-11-14)
+      const isRare = (await page.locator('[data-assistant-life-daily-scene="rare"]').count()) === 1;
+      check(`${T}④ 掛け合いのあと${isRare ? 'めずらしいできごとは2択なしで終わる' : '2択が出る'}`, (await page.locator('[data-assistant-life-daily-choice]').count()) === (isRare ? 0 : 2));
       await shot(page, v, '4-scene-choice');
       const l2 = await layout(page);
       check(`${T}⑥ 押せる所は44px以上(場面)`, l2.small.length === 0, JSON.stringify(l2));
-      await page.locator('[data-assistant-life-daily-choice="0"]').click(); await page.waitForTimeout(900);
+      if (!isRare) { await page.locator('[data-assistant-life-daily-choice="0"]').click(); await page.waitForTimeout(900); }
       const r = await page.evaluate(() => ({ phase: (document.querySelector('[data-assistant-life-daily-scene]') || {}).getAttribute?.('data-assistant-life-daily-phase'), res: (document.querySelector('[data-assistant-life-daily-result]') || {}).textContent || '',
         saved: JSON.parse(localStorage.getItem('mh_assistant_life_daily_v1') || 'null'), lines: document.querySelectorAll('[data-assistant-life-daily-line]').length }));
-      check(`${T}④ 返事のあと: 結果の札・見た時間帯が保存に入る`, r.phase === 'done' && /ふれあい1回/.test(r.res) && /\+4/.test(r.res) && !!r.saved && Array.isArray(r.saved.heard) && r.saved.heard.length === 1 && r.lines === 3, JSON.stringify(r));
+      check(`${T}④ 返事のあと: 結果の札・見た時間帯が保存に入る`, r.phase === 'done' && /ふれあい1回/.test(r.res) && (isRare || /\+4/.test(r.res)) && !!r.saved && Array.isArray(r.saved.heard) && r.saved.heard.length === 1 && r.lines === (isRare ? 2 : 3), JSON.stringify(r));
       await shot(page, v, '5-scene-done');
       const bondAfter = await page.evaluate((pair) => Object.fromEntries(pair.map(id => [id, (JSON.parse(localStorage.getItem(`mh_assistant_bond_${id}_v1`) || localStorage.getItem(`mh_assistant_bond_${id}`) || 'null') || {}).points || 0])), pair);
-      check(`${T}④ 出てきた2人の 💗 が +4`, pair.every(id => bondAfter[id] - bondBefore[id] === 4), JSON.stringify({ bondBefore, bondAfter }));
+      check(`${T}④ 出てきた2人の 💗 が +${isRare ? 8 : 4}`, pair.every(id => bondAfter[id] - bondBefore[id] === (isRare ? 8 : 4)), JSON.stringify({ bondBefore, bondAfter }));
       await page.locator('[data-assistant-life-daily-scene-close]').click(); await page.waitForTimeout(500);
       const after = await page.evaluate(() => ({ scene: !!document.querySelector('[data-assistant-life-daily-scene]'), go: !!document.querySelector('[data-assistant-life-daily-go]'), ev: document.querySelectorAll('[data-assistant-life-room-ev]').length }));
       check(`${T}④ 閉じると札は「見ました」・❗ が消える`, !after.scene && !after.go && after.ev === 0, JSON.stringify(after));
