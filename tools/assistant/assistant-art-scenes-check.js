@@ -29,8 +29,8 @@ const VIEWS = [
   { id: 'rot', name: '🔄横 390×844', w: 390, h: 844, rot: true },
 ].filter(v => !list('--views') || list('--views').includes(v.id));
 const ONLY = list('--only');
-// 着替え: --outfit a(みゅあ・きき・ももすけ=ハロウィン、えるびん=石油王)/ --outfit b(みゅあ=カードマスター)。着ている助手だけ回す
-const OUTFITS = { a: { mua: 'mua_halloween_2026', kiki: 'kiki_halloween_2026', momosuke: 'momosuke_halloween_2026', erubin: 'erubin_sekiyuou_v1' }, b: { mua: 'mua_card_master_v1' } };
+// 着替え: --outfit a(みゅあ・きき・ももすけ=ハロウィン、えるびん=石油王)/ --outfit b(みゅあ=カードマスター)/ --outfit c(ソラシド=補正)。着ている助手だけ回す
+const OUTFITS = { a: { mua: 'mua_halloween_2026', kiki: 'kiki_halloween_2026', momosuke: 'momosuke_halloween_2026', erubin: 'erubin_sekiyuou_v1' }, b: { mua: 'mua_card_master_v1' }, c: { sorashido: 'sorashido_hosei_v1' } };
 const OUTFIT = arg('--outfit') ? OUTFITS[arg('--outfit')] : null;
 const SFX = arg('--outfit') ? `-outfit${arg('--outfit')}` : '';
 const WHO = OUTFIT ? WHO0.filter(id => OUTFIT[id]) : WHO0;
@@ -328,12 +328,12 @@ const notes = [];
   }
   // ばらつき: 同じ場面・同じ画面の大きさ・同じ使いどころ(tag)で、助手ごとの顔の大きさ
   const groups = new Map();
-  for (const r of rows) { if (r.kind !== 'full' || r.facePx == null || r.seen <= 0.02 || r.tilt) continue; const k = `${r.scene}|${r.view}|${r.tag}${/^album/.test(r.scene) ? `|${r.label}` : ''}`; if (!groups.has(k)) groups.set(k, new Map()); const g = groups.get(k); g.set(r.who, Math.max(g.get(r.who) || 0, r.facePx)); }
+  for (const r of rows) { if (r.kind !== 'full' || r.facePx == null || r.seen <= 0.02 || r.tilt) continue; const k = `${r.scene}|${r.view}|${r.tag}${/^(album|scene-outfit)/.test(r.scene) ? `|${r.label}` : ''}`; if (!groups.has(k)) groups.set(k, new Map()); const g = groups.get(k); g.set(r.who, Math.max(g.get(r.who) || 0, r.facePx)); }
   // 並んで立つ場面(地図・場面・アルバム・部屋・家)は NG。1人ずつ枠いっぱいに出す場面(モードえらび・カード)は、絵ごとの余白のちがいと
   //   社長が1人ずつ決めた寄せ方(あつ・きゅうこ)があるので、参考として出すだけ(--all)
   const SIDE_BY_SIDE = /^(map|scene|album|room|house)/;
   const spreads = [], soloSpreads = [];
-  for (const [k, g] of groups) { if (g.size < 2) continue; const e = [...g.entries()].sort((a, b) => a[1] - b[1]); const ratio = e[e.length - 1][1] / e[0][1]; if (ratio > (/^scene/.test(k) ? LIMIT.sceneSpread : LIMIT.spread)) (SIDE_BY_SIDE.test(k) ? spreads : soloSpreads).push({ k, ratio, min: e[0], max: e[e.length - 1] }); }
+  for (const [k, g] of groups) { if (g.size < 2) continue; const e = [...g.entries()].sort((a, b) => a[1] - b[1]); const ratio = e[e.length - 1][1] / e[0][1]; if (ratio > (/^scene\|/.test(k) ? LIMIT.sceneSpread : LIMIT.spread)) (SIDE_BY_SIDE.test(k) ? spreads : soloSpreads).push({ k, ratio, min: e[0], max: e[e.length - 1] }); }
   const overlayBad = overlayRows.filter(o => o.d > LIMIT.overlay);
 
   // 問題の大きい順(場面 × 種類ごとにまとめる)
