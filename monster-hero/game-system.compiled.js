@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ba8074d229601277
+// source-sha256: 0939fda3a5da25da
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -117344,6 +117344,20 @@ const assistantLifeMapReadHome = () => {
   } catch (_) {}
   return out;
 };
+const ASSISTANT_LIFE_MAP_HEAD = Object.freeze({
+  myua_sleep: [0.15, 0.51],
+  kiki_sleep: [0.22, 0.60],
+  momosuke_sleep: [0.07, 0.58],
+  atsu_sleep: [0.08, 0.60],
+  kyuko_sleep: [0.05, 0.52],
+  'halloween/myua_sleep': [0.20, 0.51],
+  'halloween/kiki_sleep': [0.22, 0.585],
+  'halloween/momosuke_sleep': [0.12, 0.58],
+  'card-master/myua_sleep': [0.07, 0.39],
+  momosuke: [0.065, 0.51, 0.85],
+  'halloween/momosuke': [0.065, 0.51, 0.8],
+  erubin: [0.01, 0.45]
+});
 function AssistantLifeMapFig({
   who,
   h,
@@ -117374,7 +117388,22 @@ function AssistantLifeMapFig({
     r: 1,
     ar: 0.6
   };
-  const face = typeof assistantLifeStandFace === 'function' ? assistantLifeStandFace(who && who.id, src) : null;
+  const face0 = typeof assistantLifeStandFace === 'function' ? assistantLifeStandFace(who && who.id, src) : null;
+  const headKey = String(src || '').replace(/[?#].*$/, '').replace(/^.*assistant\//, '').replace(/\.png$/i, '').replace(/_(?!sleep$)[a-z]+$/i, '');
+  const head = ASSISTANT_LIFE_MAP_HEAD[headKey] || null;
+  const topChin = head ? {
+    top: head[0],
+    chin: head[1]
+  } : face0 && Number.isFinite(face0.top) && (Number.isFinite(face0.chin) || face0.head) ? {
+    top: face0.top,
+    chin: face0.head ? 1 : face0.chin
+  } : null;
+  const face = face0 && topChin && typeof ASSISTANT_LIFE_STAND_EC === 'number' ? {
+    ...face0,
+    top: topChin.top,
+    m: (topChin.chin - topChin.top) / (ASSISTANT_LIFE_STAND_EC * ASSISTANT_LIFE_STAND_FACE_LEN),
+    fit: head && head[2] || 1
+  } : face0;
   const rule = box && face && typeof assistantLifeStandRule === 'function' ? assistantLifeStandRule({
     face,
     box,
@@ -168033,6 +168062,8 @@ const MSX_CSS = `
 .msx .v-sl .ic{max-width:100%;white-space:normal;word-break:keep-all;overflow-wrap:anywhere}
 .msx .v-sl{display:flex;flex-direction:column;align-items:center;justify-content:center}
 .msx .v-heat .hi{display:block;font-size:16px;line-height:1.15;margin-bottom:1px}
+/* r1114-065: 札の中の言葉は語の切れ目でだけ折る */
+.msx .v-hm-tile b{word-break:keep-all;overflow-wrap:normal}
 `;
 const MSX_KEYS = Object.freeze({
   run: 'mh_monsuc_run_v1',
@@ -168756,7 +168787,7 @@ function MonheroSuccessDebugEntry({
     debug: true
   }));
 }
-const msxItemNameNode = name => String(name || '').split(/(?<=[の!！])(?=.)|(?<=ブリーダー)(?=ライセンス)|(?<=オイリー)(?=パック|オイル)|(?<=野菜)(?=ジュース)|(?<=スタミナ)(?=だんご)/).map((x, i) => React.createElement(React.Fragment, {
+const msxItemNameNode = name => String(name || '').split(/(?<=[の!！])(?=.)|(?<=ブリーダー)(?=ライセンス)|(?<=オイリー)(?=パック|オイル)|(?<=野菜)(?=ジュース)|(?<=スタミナ)(?=だんご)|(?<=キビ)(?=ダンゴ)/).map((x, i) => React.createElement(React.Fragment, {
   key: i
 }, i > 0 ? React.createElement("wbr", null) : null, x));
 const MSX_STEP_NAMES = Object.freeze(['育てるモンスター', '編成', '助手', '持ちこみ', '名前と染色', '確認']);
@@ -170128,7 +170159,7 @@ function MsxStart({
       className: "bs"
     }, React.createElement("span", null, "親密度 ", m.bond0), React.createElement("span", null, "タッグ +", m.tag, "%")), React.createElement("div", {
       className: "ic"
-    }, m.kind === 'base' ? m.auto ? 'ベースモン・✎選ぶ' : 'ベースモン・✎変える' : m.friend ? `借: ${m.friend.name || 'フレンド'}` : '✎変える')))), React.createElement("div", {
+    }, m.kind === 'base' ? m.auto ? 'ベースモン ✎⁠選ぶ' : 'ベースモン ✎⁠変える' : m.friend ? `借: ${m.friend.name || 'フレンド'}` : '✎変える')))), React.createElement("div", {
       className: "msx-note msx-sl-legend",
       "data-msx-slot-legend": true
     }, "札の見方: 「+4%」はその能力のトレーニングの伸びが上がる分・親密度は初めの値・タッグは友情タッグのときの伸び"), React.createElement("button", {
@@ -171830,7 +171861,7 @@ function MsxHome({
     onClick: t.on
   }, t.attr), React.createElement("span", {
     className: "e"
-  }, t.e), React.createElement("b", null, t.name), t.sub ? React.createElement("small", null, t.sub) : null))) : null, debug && React.createElement("div", {
+  }, t.e), React.createElement("b", null, t.name === 'マスモンボックス' ? React.createElement(React.Fragment, null, "マスモン", React.createElement("wbr", null), "ボックス") : t.name), t.sub ? React.createElement("small", null, t.sub) : null))) : null, debug && React.createElement("div", {
     className: "v-card",
     style: {
       borderColor: '#a3e63566'
