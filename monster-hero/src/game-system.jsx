@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: fac7419f1db4b3a1
+// generated-sha256: 9b6c5e844f2585fb
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -103703,15 +103703,15 @@ const CARD_ART_KNOWN_BOX = Object.freeze({
   myua_surprise: [1536, 1024, 325, 27, 852, 997],
   myua_troubled: [1536, 1024, 323, 15, 866, 1009],
   myua_wink: [1536, 1024, 379, 28, 760, 996],
-  sorashido_angry: [384, 512, 49, 37, 314, 475],
-  sorashido_crying: [384, 512, 8, 39, 375, 473],
-  sorashido_excited: [384, 512, 0, 37, 384, 475],
-  sorashido_happy: [384, 512, 43, 37, 319, 475],
-  sorashido_normal: [384, 512, 17, 37, 367, 475],
-  sorashido_sleep: [384, 512, 4, 27, 380, 485],
-  sorashido_surprise: [384, 512, 4, 38, 380, 474],
-  sorashido_troubled: [384, 512, 6, 39, 378, 473],
-  sorashido_wink: [384, 512, 33, 38, 351, 474],
+  sorashido_angry: [384, 512, 50, 37, 314, 475],
+  sorashido_crying: [384, 512, 5, 39, 375, 473],
+  sorashido_excited: [384, 512, 5, 37, 379, 475],
+  sorashido_happy: [384, 512, 28, 38, 317, 474],
+  sorashido_normal: [384, 512, 16, 37, 368, 475],
+  sorashido_sleep: [384, 512, 5, 27, 379, 485],
+  sorashido_surprise: [384, 512, 0, 38, 384, 474],
+  sorashido_troubled: [384, 512, 0, 39, 384, 473],
+  sorashido_wink: [384, 512, 27, 38, 357, 474],
   'stand-normal/atsu_angry': [540, 552, 83, 7, 407, 545],
   'stand-normal/atsu_crying': [606, 552, 108, 6, 390, 546],
   'stand-normal/atsu_excited': [618, 552, 89, 7, 503, 545],
