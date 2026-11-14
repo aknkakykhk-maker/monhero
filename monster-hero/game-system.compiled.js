@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 44ad6e59bee6e4d7
+// source-sha256: e9238faac1f8f408
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -168568,7 +168568,7 @@ function MsxR3Battle({
     const d = msxR3Diff(before, r.state);
     const out = {
       r3: {
-        stage: won ? 'prize' : 'meal',
+        stage: won ? 'prize' : d.rankTo > d.rankFrom ? 'rank' : 'meal',
         won,
         name,
         icon: msxR3BattleIcon(b),
