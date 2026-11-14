@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 7eb82d9f92e61b26
+// source-sha256: abb248a23806935f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -9932,6 +9932,57 @@ const Audio_ = (() => {
           bell.dispose();
         } catch (e) {}
       }, 3000);
+    },
+    friendTag: async () => {
+      if (!enabled) return;
+      await ensure();
+      if (!Tone) return;
+      const t = Tone.now();
+      const sw = new Tone.NoiseSynth({
+        noise: {
+          type: 'pink'
+        },
+        envelope: {
+          attack: 0.04,
+          decay: 0.22,
+          sustain: 0
+        },
+        volume: -16
+      }).connect(seBus);
+      sw.triggerAttackRelease('8n', t);
+      const duo = new Tone.PolySynth(Tone.Synth, {
+        oscillator: {
+          type: 'triangle'
+        },
+        envelope: {
+          attack: 0.005,
+          decay: 0.12,
+          sustain: 0.2,
+          release: 0.2
+        },
+        volume: -13
+      }).connect(reverb);
+      [[0.12, ['C5', 'E5']], [0.24, ['E5', 'G5']], [0.36, ['G5', 'C6']]].forEach(([tt, ns]) => duo.triggerAttackRelease(ns, '16n', t + tt));
+      const bell = new Tone.PolySynth(Tone.Synth, {
+        oscillator: {
+          type: 'sine'
+        },
+        envelope: {
+          attack: 0.002,
+          decay: 0.7,
+          sustain: 0,
+          release: 0.3
+        },
+        volume: -11
+      }).connect(reverb);
+      bell.triggerAttackRelease(['C6', 'E6', 'G6', 'C7'], '4n', t + 0.5);
+      setTimeout(() => {
+        try {
+          sw.dispose();
+          duo.dispose();
+          bell.dispose();
+        } catch (e) {}
+      }, 1800);
     },
     fusion: async () => {
       if (!enabled) return;
@@ -157531,7 +157582,7 @@ function MsxTrainAct({
   const front = k === 'tough' || k === 'eva';
   const mv = !!MSX_ACT_MOVE[k];
   return React.createElement("div", {
-    className: `msx-act t-${k} lv${lv}${mv ? ' mv-on' : ''}`,
+    className: `msx-act t-${k} lv${lv}${mv ? ' mv-on' : ''}${o && o.card && Array.isArray(o.card.tags) && o.card.tags.length ? ' tagx' : ''}`,
     onClick: finish,
     "data-msx-act": k,
     "data-msx-act-lv": lv
@@ -157912,7 +157963,57 @@ const MSX_CREW_SPOT_AID = Object.freeze([{
   left: '72%',
   bottom: '70%'
 }]);
+const MSX_CREW_SPOT_TAG = Object.freeze([{
+  left: '22%',
+  bottom: '12%'
+}, {
+  left: '78%',
+  bottom: '12%'
+}, {
+  left: '12%',
+  bottom: '34%'
+}, {
+  left: '88%',
+  bottom: '34%'
+}]);
+const MSX_CREW_SPOT_TAG_AID = Object.freeze([{
+  left: '20%',
+  bottom: '10%'
+}, {
+  left: '10%',
+  bottom: '33%'
+}, {
+  left: '84%',
+  bottom: '58%'
+}, {
+  left: '14%',
+  bottom: '56%'
+}]);
 const MSX_CREW_CSS = `
+.msx .msx-act .crew .cm.duo{height:27%;animation:msxCrewIn .3s cubic-bezier(.2,1.4,.4,1) both}
+.msx .msx-act .crew .cm.duo img{animation:msxCrewJump .7s cubic-bezier(.3,0,.4,1) .35s 2 both}
+.msx .msx-act.tagx .me .mon{animation:msxCrewJumpMe .7s cubic-bezier(.3,0,.4,1) .35s 2 both}
+.msx .msx-act .tagglow{position:absolute;inset:0;z-index:0;pointer-events:none;background:radial-gradient(circle at 50% 60%,#fde04755,#f59e0b22 45%,transparent 70%);animation:msxTagGlow .9s ease-in-out .1s 2 alternate both}
+.msx .msx-act .tagstar{position:absolute;z-index:5;pointer-events:none;font-style:normal;font-size:20px;left:calc(8% + var(--i) * 12%);top:calc(30% + (var(--i) * 37 % 40) * 1%);animation:msxTagStar .9s ease-out both;animation-delay:calc(.5s + var(--i) * .06s);filter:drop-shadow(0 0 6px #fde047)}
+.msx .msx-act .tagcut{position:absolute;left:-4%;right:-4%;top:9%;z-index:7;pointer-events:none;height:76px;transform:rotate(-4deg);background:linear-gradient(90deg,#78350fee,#f59e0bf2 30%,#fde047f5 50%,#f59e0bf2 70%,#78350fee);border-top:3px solid #fff7c2;border-bottom:3px solid #fff7c2;box-shadow:0 0 24px #fde047aa;display:flex;align-items:center;justify-content:center;gap:3px;padding:0 6%;animation:msxTagCut 1.25s cubic-bezier(.2,.9,.3,1) .05s both}
+.msx .msx-act .tagcut .fc{width:min(44px,11vw);height:min(44px,11vw);flex:none;border-radius:50%;background:#fff;border:3px solid #fff7c2;box-shadow:0 0 0 2px #b45309,0 3px 0 #0006;overflow:hidden;display:flex;align-items:center;justify-content:center}
+.msx .msx-act .tagcut .fc img{width:100%;height:100%;object-fit:cover}
+.msx .msx-act .tagcut .x{font-size:15px;font-weight:900;color:#7c2d12}
+.msx .msx-act .tagcut b{margin-left:4px;font-size:min(26px,6.6vw);font-weight:900;font-style:italic;color:#fff;-webkit-text-stroke:2px #7c2d12;paint-order:stroke fill;text-shadow:0 3px 0 #7c2d12;white-space:nowrap}
+.msx .msx-act .tagcut b small{display:block;font-size:12px;-webkit-text-stroke:0;text-shadow:none;color:#7c2d12;font-style:normal}
+@keyframes msxCrewJump{0%,100%{transform:translateY(0)}40%{transform:translateY(-34%) scale(1.05)}70%{transform:translateY(0) scaleY(.92)}}
+@keyframes msxCrewJumpMe{0%,100%{translate:0 0}40%{translate:0 -18%}70%{translate:0 0}}
+@keyframes msxTagGlow{from{opacity:.2}to{opacity:1}}
+@keyframes msxTagStar{0%{opacity:0;transform:scale(.3) rotate(0)}40%{opacity:1;transform:scale(1.2) rotate(90deg)}100%{opacity:0;transform:scale(.6) translateY(-30px) rotate(180deg)}}
+@keyframes msxTagCut{0%{opacity:0;transform:rotate(-4deg) translateX(-110%)}18%{opacity:1;transform:rotate(-4deg) translateX(0)}80%{opacity:1;transform:rotate(-4deg) translateX(0) scale(1)}100%{opacity:0;transform:rotate(-4deg) translateX(30%) scale(.96)}}
+.msx .v-bchips{position:absolute;right:7px;bottom:8px;display:flex;flex-direction:column;align-items:flex-end;gap:3px;max-width:calc(100% - 14px);z-index:3}
+.msx .v-bchip{display:flex;align-items:center;gap:4px;max-width:100%;background:#0f0d24d0;border:1px solid #ffffff33;border-radius:99px;padding:1px 8px 1px 2px;font-size:10.5px;font-weight:900;white-space:nowrap}
+.msx .v-bchip img{width:20px;height:20px;flex:none;border-radius:50%;object-fit:cover;background:#ffffff22;border:1.5px solid #ffffff66}
+.msx .v-bchip .bc-nm{overflow:hidden;text-overflow:ellipsis;min-width:0;max-width:9em}
+.msx .v-bchip .bc-up{flex:none}
+.msx .v-bchip.tag{border-color:#fbbf24;background:linear-gradient(90deg,#78350fd8,#0f0d24d0 70%);box-shadow:0 0 6px #f59e0b88}
+.msx .v-bchip.tag img{border-color:#fde047;box-shadow:0 0 5px #fde047}
+.msx .v-bchip .bc-tg{flex:none;font-size:11px}
 .msx .msx-act .crew{position:absolute;inset:0;z-index:4;pointer-events:none}
 .msx .msx-act .crew .cm{position:absolute;transform:translateX(-50%);height:15%;aspect-ratio:1/1;display:flex;align-items:flex-end;justify-content:center;animation:msxCrewIn .35s cubic-bezier(.2,1.4,.4,1) both;animation-delay:calc(.08s + var(--i) * .07s)}
 .msx .msx-act .crew .cm img{max-height:100%;max-width:100%;object-fit:contain;filter:drop-shadow(0 3px 0 #0007);animation:msxCrewHop .5s ease-in-out infinite alternate;animation-delay:calc(var(--i) * .11s)}
@@ -157955,29 +158056,58 @@ function MsxActCrew({
   const aid = Boolean(card.aid || tags.includes('aid')) && s.aid;
   const aidImg = aid && typeof msxBody === 'function' ? msxBody(s.aid, 'happy') : '';
   const SPOT = aidImg ? MSX_CREW_SPOT_AID : MSX_CREW_SPOT;
+  const tagMs = ms.filter(i => tags.includes(i)).slice(0, MSX_CREW_SPOT_TAG.length);
+  const restMs = ms.filter(i => !tagMs.includes(i));
+  const tagged = tagMs.length > 0 || tags.includes('aid');
+  if (typeof msxUseTimedSe === 'function') msxUseTimedSe(tagged ? [['actTag', 60]] : [], []);
+  const thumb = sp => typeof msxMonThumb === 'function' ? msxMonThumb(sp) : typeof msxMonImg === 'function' ? msxMonImg(sp) : '';
   if (!ms.length && !aidImg) return null;
+  const meSp = run && run.s ? run.s.species : '';
   return React.createElement("div", {
     className: "crew",
     "aria-hidden": "true",
     "data-msx-crew": ms.length,
-    "data-msx-crew-tag": ms.filter(i => tags.includes(i)).length,
-    "data-msx-crew-aid": aidImg ? 1 : 0
-  }, ms.map((i, n) => {
-    const tag = tags.includes(i);
+    "data-msx-crew-tag": tagMs.length,
+    "data-msx-crew-aid": aidImg ? 1 : 0,
+    "data-msx-tag-scene": tagged ? 1 : 0
+  }, tagged ? React.createElement("span", {
+    className: "tagglow"
+  }) : null, tagged ? Array.from({
+    length: 8
+  }, (_, i) => React.createElement("i", {
+    key: `st${i}`,
+    className: "tagstar",
+    style: {
+      '--i': i
+    }
+  }, "✨")) : null, tagMs.map((i, n) => {
     const img = typeof msxMonImg === 'function' ? msxMonImg(team[i].species) : '';
     return img ? React.createElement("div", {
-      key: i,
-      className: `cm${tag ? ' tag' : ''}`,
+      key: `t${i}`,
+      className: "cm tag duo",
       style: {
-        ...SPOT[n],
+        ...(aidImg ? MSX_CREW_SPOT_TAG_AID : MSX_CREW_SPOT_TAG)[n],
         '--i': n
       }
     }, React.createElement("img", {
       src: img,
       alt: ""
-    }), tag ? React.createElement("b", {
+    }), React.createElement("b", {
       className: "tg"
-    }, "🤝 タッグ") : React.createElement("i", {
+    }, "🤝 タッグ")) : null;
+  }), restMs.map((i, n) => {
+    const img = typeof msxMonImg === 'function' ? msxMonImg(team[i].species) : '';
+    return img ? React.createElement("div", {
+      key: i,
+      className: "cm",
+      style: {
+        ...SPOT[Math.min(SPOT.length - 1, n + (aidImg ? tagMs.length : 0))],
+        '--i': n
+      }
+    }, React.createElement("img", {
+      src: img,
+      alt: ""
+    }), React.createElement("i", {
       className: "ch"
     }, "📣")) : null;
   }), aidImg ? React.createElement("div", {
@@ -157987,7 +158117,78 @@ function MsxActCrew({
     alt: ""
   }), React.createElement("b", {
     className: "say"
-  }, tags.includes('aid') ? '🤝 いっしょに!' : 'がんばれ〜!')) : null);
+  }, tags.includes('aid') ? '🤝 いっしょに!' : 'がんばれ〜!')) : null, tagged ? React.createElement("div", {
+    className: "tagcut",
+    "data-msx-tag-cutin": tagMs.length + (tags.includes('aid') ? 1 : 0)
+  }, React.createElement("span", {
+    className: "fc"
+  }, React.createElement("img", {
+    src: thumb(meSp),
+    alt: ""
+  })), tagMs.slice(0, 3).map(i => React.createElement(React.Fragment, {
+    key: i
+  }, React.createElement("span", {
+    className: "x"
+  }, "×"), React.createElement("span", {
+    className: "fc"
+  }, React.createElement("img", {
+    src: thumb(team[i].species),
+    alt: ""
+  })))), tags.includes('aid') && typeof msxFace === 'function' ? React.createElement(React.Fragment, null, React.createElement("span", {
+    className: "x"
+  }, "×"), React.createElement("span", {
+    className: "fc"
+  }, React.createElement("img", {
+    src: msxFace(s.aid, 'excited') || msxFace(s.aid, 'happy'),
+    alt: ""
+  }))) : null, React.createElement("b", null, "友情タッグ!", React.createElement("small", null, "いっしょに 力を合わせる"))) : null);
+}
+function MsxBondChips({
+  s,
+  card,
+  add
+}) {
+  msxCrewEnsureCss();
+  if (!s || !card) return null;
+  const tags = Array.isArray(card.tags) ? card.tags : [];
+  const team = Array.isArray(s.team) ? s.team : [];
+  const ms = (Array.isArray(card.members) ? card.members : []).filter(i => Number.isInteger(i) && team[i]);
+  const aid = Boolean(card.aid) && s.aid;
+  if (!ms.length && !aid) return null;
+  const thumb = m => typeof msxMonThumb === 'function' ? msxMonThumb(m.species) : typeof msxMonImg === 'function' ? msxMonImg(m.species) : '';
+  const nameOf = m => typeof msxMemberName === 'function' ? msxMemberName(m) : m.species;
+  return React.createElement("div", {
+    className: "v-bchips",
+    "data-msx-bond-chips": ms.length + (aid ? 1 : 0)
+  }, ms.map(i => {
+    const tag = tags.includes(i);
+    return React.createElement("span", {
+      key: i,
+      className: `v-bchip${tag ? ' tag' : ''}`,
+      "data-msx-bond-chip": tag ? 'tag' : 'm'
+    }, React.createElement("img", {
+      src: thumb(team[i]),
+      alt: ""
+    }), tag ? React.createElement("i", {
+      className: "bc-tg"
+    }, "🤝") : null, React.createElement("span", {
+      className: "bc-nm"
+    }, nameOf(team[i])), React.createElement("span", {
+      className: "bc-up"
+    }, "親密度 +", add));
+  }), aid ? React.createElement("span", {
+    className: `v-bchip${tags.includes('aid') ? ' tag' : ''}`,
+    "data-msx-bond-chip": "aid"
+  }, React.createElement("img", {
+    src: typeof msxFace === 'function' ? msxFace(s.aid, 'happy') : '',
+    alt: ""
+  }), tags.includes('aid') ? React.createElement("i", {
+    className: "bc-tg"
+  }, "🤝") : null, React.createElement("span", {
+    className: "bc-nm"
+  }, typeof msxAidName === 'function' ? msxAidName(s.aid) : ''), React.createElement("span", {
+    className: "bc-up"
+  }, "親密度 +", add)) : null);
 }
 const MSX_KI_CHAPTER = Object.freeze(['第一章', '第二章', '第三章', '第四章', '最終章']);
 const MSX_KI_MS = Object.freeze([2600, 2600]);
@@ -166602,7 +166803,11 @@ function MsxPlay({
       }
     }), acting ? null : React.createElement("div", {
       className: `v-stamp msx-pop ${isTrain ? R.cls : 'ok'}`
-    }, isTrain ? R.word : o.kind === 'rest' ? restName || '休んだ' : o.kind === 'play' ? '遊んだ!' : o.kind === 'clinic' ? '通院' : '休み', isTrain && o.card && o.card.tags && o.card.tags.length ? React.createElement("small", null, "🤝 友情タッグ ×", o.card.tags.length, o.result === 'great' ? '・伸び ×1.5' : '') : null), !acting && members.length ? React.createElement("div", {
+    }, isTrain ? R.word : o.kind === 'rest' ? restName || '休んだ' : o.kind === 'play' ? '遊んだ!' : o.kind === 'clinic' ? '通院' : '休み', isTrain && o.card && o.card.tags && o.card.tags.length ? React.createElement("small", null, "🤝 友情タッグ ×", o.card.tags.length, o.result === 'great' ? '・伸び ×1.5' : '') : null), !acting && typeof MsxBondChips === 'function' ? React.createElement(MsxBondChips, {
+      s: s,
+      card: o.card,
+      add: SUC.BOND && SUC.BOND.train || 8
+    }) : !acting && members.length ? React.createElement("div", {
       className: "v-chips",
       style: {
         top: 'auto',
