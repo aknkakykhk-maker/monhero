@@ -62,12 +62,12 @@ ok(AS.describe('sokoji', 10) === 'いっしょにトレーニングしたとき�
 // 書き方の型(社長 2026-11-14): どの効果も型(k)を持ち、「点」「段」を使わない・文頭は効く場面
 const SCENE_HEAD = /^(いっしょにトレーニングしたとき、|成長のピークの外でいっしょに|\d+〜\d+月にいっしょに|「.+」のトレーニングにいっしょに来たとき、|このモンスター|編成にいるだけで、|助手が来たトレーニングでは、)/;
 for (const a of AS.LIST) {
-  ok(['grow', 'rate', 'rateDown', 'mul', 'cut', 'val', 'cnt', 'on'].includes(a.k), `${a.id} に書き方の型(k)がない`);
+  ok(['grow', 'rate', 'rateDown', 'mul', 'cut', 'hard', 'val', 'cnt', 'on'].includes(a.k), `${a.id} に書き方の型(k)がない`);
   for (let n = 1; n <= a.max; n++) { const t = AS.describe(a.id, n) + AS.valueText(a.id, n); ok(!/\d点|段\d|\d段(?!上)/.test(t), `${a.id} 目盛り${n}: 「点」「段」を単位に使っている: ${t}`); }
   ok(SCENE_HEAD.test(AS.describe(a.id, 1)), `${a.id} の説明の文頭が効く場面でない: ${AS.describe(a.id, 1)}`);
 }
-ok(AS.valueText('hirameki', 5) === '確率+5%' && AS.describe('hirameki', 5) === 'いっしょにトレーニングしたとき、大成功の確率 +5%' && AS.valueText('ochitsuki', 1) === '×0.95' && AS.valueText('shokin', 5) === '×1.05' && AS.valueText('chokyo', 1) === '+1回', '型ごとの数字の書き方がおかしい');
-ok(AS.valueText('sokoji', 12) === '+12%' && AS.valueText('hitonatsu', 2) === '×1.1', `効き目の短い字がおかしい: ${AS.valueText('sokoji', 12)} ${AS.valueText('hitonatsu', 2)}`);
+ok(AS.valueText('hirameki', 5) === '確率+5%' && AS.describe('hirameki', 5) === 'いっしょにトレーニングしたとき、大成功の確率 +5%' && AS.valueText('ochitsuki', 1) === 'しにくさ+5%' && AS.describe('ochitsuki', 1).includes('失敗しにくさ +5%') && AS.valueText('shokin', 5) === '+5%' && AS.valueText('itawari', 1) === '−1%' && !AS.LIST.some(x => /×/.test(AS.valueText(x.id, 1))) && AS.valueText('chokyo', 1) === '+1回', '型ごとの数字の書き方がおかしい');
+ok(AS.valueText('sokoji', 12) === '+12%' && AS.valueText('hitonatsu', 2) === '+10%', `効き目の短い字がおかしい: ${AS.valueText('sokoji', 12)} ${AS.valueText('hitonatsu', 2)}`);
 for (const pts of [20, 40, 160, 288, 400]) {
   const r = AS.autoPick(pts, []);
   ok(r.picks.length <= 8 && r.used <= pts && r.used > 0 && r.left < 13, `おまかせ(${pts})がポイント・8種類を超える/何も取らない/余りが多い: ${r.used}`);
