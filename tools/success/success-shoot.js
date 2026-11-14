@@ -241,7 +241,8 @@ const makeRun = async (kind) => {
           check(`${L}: 持ち物・くわしくが編成の列や札に重ならず、編成の列が場面に収まる`, !m.partyBag, `${m.partyBag}px`);
         }
         const u = await page.evaluate(msxUiRulesMeasure);
-        const wr = await scanTextWrap(page);
+        // 演出の飾り(舞う葉っぱ・炎など、絵文字だけの粒)が画面の外へ出るのは見ない
+        const wr = (await scanTextWrap(page)).filter((x) => !(x.kind === '画面の外へはみ出した文字' && !/[0-9A-Za-zぁ-んァ-ヶ一-龠]/.test(x.text)));
         check(`${name}${tag ? `(${tag})` : ''}: 文字が値・札の途中で折れない(scanTextWrap)`, wr.length === 0, wr.slice(0, 3).map((x) => `${x.kind}「${x.text}」`).join(' / '));
         if (u && u.blank != null) check(`${name}${tag ? `(${tag})` : ''}: 下に大きな空きが無い(${BLANK_MAX}px まで)`, u.blank <= BLANK_MAX, `${u.blank}px`);
         if (u) check(`${name}${tag ? `(${tag})` : ''}: 見せ場の数字(.v-num)が真ん中`, u.offNum.length === 0, u.offNum.slice(0, 3).join(' / '));
