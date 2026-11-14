@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d17f34749a33e301
+// source-sha256: 9380aa3ab82540f2
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -14316,7 +14316,8 @@ const changelogTypeOf = entry => CHANGELOG_TYPE_LABELS[entry?.type] || CHANGELOG
 const changelogEventLive = (entry, nowMs = Date.now()) => {
   if (entry && entry.pinTop && typeof entry.pinTop === 'object' && entry.type !== 'event') {
     const pinFrom = Date.parse(entry.visibleFrom || '');
-    const pinEnd = Date.parse(entry.pinTop.until || '');
+    const dayMs = Number(entry.pinTop.days) > 0 && /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/.test(String(entry.date || '')) ? Date.parse(`${String(entry.date).replace(' ', 'T')}:00+09:00`) + Number(entry.pinTop.days) * 86400e3 : NaN;
+    const pinEnd = entry.pinTop.until ? Date.parse(entry.pinTop.until) : dayMs;
     return Number.isFinite(pinEnd) && nowMs < pinEnd && (!Number.isFinite(pinFrom) || nowMs >= pinFrom);
   }
   const notice = entry && entry.type === 'event' ? entry.assistantNotice : null;
@@ -164289,8 +164290,10 @@ const MSX_HOME_CSS = `
 .mh-home-success .ln{display:none;flex-basis:100%;font-size:10px;font-weight:800;color:#fbcfe8;line-height:1.3;white-space:normal;text-align:left}
 @container (min-height:640px) and (max-aspect-ratio:1/1){.mh-home-success .ln{display:block}.mh-home-success{margin-bottom:-28px}}
 .mh-home-success .rb{position:absolute;right:-6px;top:-9px;z-index:1;font-style:normal;font-size:10px;font-weight:900;color:#422006;background:linear-gradient(90deg,#fde047,#fbbf24);border-radius:6px;padding:1px 7px;box-shadow:0 2px 4px #0008;transform:rotate(4deg);white-space:nowrap}
-@media (orientation:landscape){.mh-home-success,.mh-home-scene:has(.mh-home-card-battle.raised) .mh-home-success,.mh-home-scene:has(.mh-home-card-battle.below-tour) .mh-home-success{left:146px;bottom:12px}
-.mh-home-scene:has(.mh-home-facility.life) .mh-home-success{bottom:32px}}
+/* 横持ちは、下の真ん中の「モンヒロバトル」のすぐ上(村の絵の真ん中の空き)に置く。前は MFバトルカードの右に置いていて、横 568×320 ではモンヒロバトルのボタンにかかっていた(2026-11-14) */
+@media (orientation:landscape){.mh-home-success,.mh-home-scene:has(.mh-home-card-battle.raised) .mh-home-success,.mh-home-scene:has(.mh-home-card-battle.below-tour) .mh-home-success,.mh-home-scene:has(.mh-home-facility.life) .mh-home-success{left:50%;bottom:66px;translate:-50% 0}}
+/* 背の低い横画面(568×320 など)は、右の「助手ライフ」にかからないよう少し左へ寄せる */
+@media (orientation:landscape) and (max-height:340px){.mh-home-scene.mh-home-scene.mh-home-scene .mh-home-success{left:calc(50% - 34px)}}
 `;
 function MonheroSuccessHomeEntry({
   callNameOf,
