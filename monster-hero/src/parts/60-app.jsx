@@ -24538,7 +24538,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 <ProfileAvatar src={resolveIconUrl(breederIcon)} id={breederIcon} frameId={item.id} alt={item.name} className="h-40 w-40" fallback={<span className="h-full w-full rounded-full bg-slate-800/80"/>}/>
               </div>
             ):
-            <div className={`w-full aspect-square overflow-hidden bg-black/40 border border-white/10 flex items-center justify-center ${round?'rounded-full':'rounded-2xl'}`} style={item.type==='song'?{maxWidth:'min(100%, max(240px, calc(100dvh - 190px)))'}:undefined}>
+            <div className={`w-full aspect-square overflow-hidden bg-black/40 border border-white/10 flex items-center justify-center ${round?'rounded-full':'rounded-2xl'}`} style={item.type==='song'?{maxWidth:'min(100%, max(240px, calc(var(--mh-vh) - 190px)))'}:undefined}>
               {item.icon
                 ? (item.type==='icon'?<BreederIcon src={item.icon} id={item.id} alt={item.name} className="w-full h-full"/>:item.type==='assist'&&ASSIST_CARD_ICON_STYLES[item.id]?<AssistCardIcon icon={item.icon} cardId={item.id} className="w-full h-full"/>:<img src={item.icon} alt={item.name} className={`w-full h-full ${round?'object-cover':'object-contain'}`}/>)
                 : <span style={{fontSize:'96px'}}>{item.emoji}</span>}
