@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 2829f4af4e9021b0
+// source-sha256: 0e5ae19599ea7947
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -114650,7 +114650,7 @@ function AssistantLifeRoomSheet({
     "data-assistant-life-roomview-scroll": true
   }, !land && rvScene && React.createElement("div", {
     style: {
-      height: uiV2 ? 'min(46vh, 112vw)' : 'min(calc(100% - 52px), max(470px, 132vw))'
+      height: uiV2 ? 'min(70vh, 150vw)' : 'min(calc(100% - 52px), max(470px, 132vw))'
     }
   }, rvScene), React.createElement("div", {
     ref: sheetRef,
@@ -114682,9 +114682,11 @@ function AssistantLifeRoomSheet({
       } : {})
     },
     "data-assistant-life-room-where": true
-  }, jaWrap(where), groupNames && React.createElement(React.Fragment, null, " ・ ", w.group.ids.length, "人(", React.createElement(AssistantLifeNames, {
+  }, jaWrap(where), groupNames && (w.group.ids.length <= 2 ? React.createElement(React.Fragment, null, " ・ ", React.createElement("span", {
+    className: "whitespace-nowrap"
+  }, w.group.ids.length, "人(", groupNames, ")")) : React.createElement(React.Fragment, null, " ・ ", w.group.ids.length, "人(", React.createElement(AssistantLifeNames, {
     text: groupNames
-  }), ")")), !home && React.createElement("p", {
+  }), ")"))), !home && React.createElement("p", {
     className: "text-[11px] font-bold text-violet-200"
   }, "⏱ ", slotDef ? `${slotDef.to % 24}時まで` : '', "いる"), (() => {
     const sh = assistantLifeRhythmShiftOn((ASSISTANT_LIFE_STORE.state.rhythm || {})[id], assistantLifeDayKey());
@@ -118461,6 +118463,7 @@ function AssistantLifeRoomFigure({
   const night = look === 'night' && sleep,
     evening = look === 'evening';
   const tone = night ? 'linear-gradient(100deg,#ffd08a 0%,#c9c2ee 45%,#8a86c0 100%)' : evening ? 'linear-gradient(100deg,#fff6ec 0%,#fbeee4 60%,#f0dcd4 100%)' : 'linear-gradient(100deg,#ffffff 0%,#fbf5f3 60%,#efe3df 100%)';
+  const sideMask = sleep ? null : 'linear-gradient(to right,transparent 0,#000 7%,#000 93%,transparent 100%)';
   const fadeMask = p.fade ? `linear-gradient(to bottom,#000 ${(p.fade[0] * 100).toFixed(1)}%,transparent ${(p.fade[1] * 100).toFixed(1)}%)` : null;
   const box = {
     position: 'absolute',
@@ -118469,9 +118472,11 @@ function AssistantLifeRoomFigure({
     width: p.width,
     height: p.height,
     clipPath: `inset(${p.clip[0].toFixed(1)}px 0 ${p.clip[1].toFixed(1)}px 0)`,
-    ...(fadeMask ? {
-      WebkitMaskImage: fadeMask,
-      maskImage: fadeMask
+    ...(fadeMask || sideMask ? {
+      WebkitMaskImage: [fadeMask, sideMask].filter(Boolean).join(','),
+      maskImage: [fadeMask, sideMask].filter(Boolean).join(','),
+      WebkitMaskComposite: 'source-in',
+      maskComposite: 'intersect'
     } : {})
   };
   const shape = {
@@ -118480,7 +118485,7 @@ function AssistantLifeRoomFigure({
     maskImage: `url(${src})`,
     maskSize: '100% 100%'
   };
-  return React.createElement(React.Fragment, null, React.createElement("span", {
+  return React.createElement(React.Fragment, null, sleep && React.createElement("span", {
     "aria-hidden": "true",
     style: {
       position: 'absolute',
@@ -118984,11 +118989,18 @@ function AssistantLifeRoomBed({
       box
     }, F, 0, 0);
     const U = r.U || F * 2.63;
-    const cw = U * 1.2,
-      ch = U * 1.32,
-      y0 = -0.22 * U;
-    const cx = pillow.left + ch / 2 + 2 + i * 14,
-      cy = pillow.top + pillow.h * 0.6 - cw / 2 - i * 6;
+    const cw0 = U * 1.2,
+      ch0 = U * 1.32;
+    const ex = 0.7 * U,
+      ey = 0.35 * U,
+      cw = cw0 + ey * 2,
+      ch = ch0 + ex,
+      y0 = -0.22 * U - ex;
+    const cx = pillow.left + ch0 / 2 + 2 + i * 14 - ex / 2,
+      cy = pillow.top + pillow.h * 0.6 - cw0 / 2 - i * 6;
+    const fadeAt = `${((0.82 * ch0 + ex) / ch * 100).toFixed(1)}%`;
+    const feather = `linear-gradient(to right,transparent,#000 9%,#000 91%,transparent),linear-gradient(to bottom,transparent,#000 6%,#000 ${fadeAt},transparent)`;
+    const imgLeft = r.left + cw / 2;
     return React.createElement("div", {
       key: x.pid,
       "data-assistant-life-roomview-sleeper": x.pid,
@@ -119000,9 +119012,10 @@ function AssistantLifeRoomBed({
         height: ch,
         transform: 'rotate(-78deg)',
         transformOrigin: '50% 50%',
-        overflow: 'hidden',
-        WebkitMaskImage: 'linear-gradient(#000 82%,transparent)',
-        maskImage: 'linear-gradient(#000 82%,transparent)'
+        WebkitMaskImage: feather,
+        maskImage: feather,
+        WebkitMaskComposite: 'source-in',
+        maskComposite: 'intersect'
       }
     }, React.createElement("img", {
       src: x.src,
@@ -119010,7 +119023,7 @@ function AssistantLifeRoomBed({
       draggable: false,
       style: {
         position: 'absolute',
-        left: r.left + cw / 2,
+        left: imgLeft,
         top: r.top - y0,
         width: r.width,
         height: r.height,
@@ -119023,7 +119036,7 @@ function AssistantLifeRoomBed({
       w: r.width,
       h: r.height,
       style: {
-        left: r.left + cw / 2,
+        left: imgLeft,
         top: r.top - y0,
         filter: `saturate(.9) brightness(${night ? 0.72 : 0.9})`
       }
@@ -119567,7 +119580,7 @@ function AssistantLifeRoomScene({
   }) : null), people.length > 0 && !asleep && React.createElement(AssistantLifeRoomFront, {
     kind: frontKind,
     cx: W / 2,
-    top: lay && !asleep ? Math.max(...lay.map(p => p.frameBottom - 4)) : deskTop,
+    top: lay && !asleep ? Math.max(...lay.map(p => Math.min(p.frameBottom, p.top + p.height) - 6)) : deskTop,
     w: frontW,
     items: ASSISTANT_LIFE_ROOM_DESK_ITEMS[id] || []
   }), layoutOn && React.createElement(AssistantLifeRoomLayoutLayer, {
@@ -119786,7 +119799,13 @@ function AssistantLifeDoRow({
   }, label), (off && why ? why : sub) && React.createElement("small", {
     className: "block text-[11.5px] font-bold leading-snug text-slate-300",
     style: JA_WRAP_STYLE
-  }, jaWrap(off && why ? why : sub))), gain && !off && React.createElement("span", {
+  }, (() => {
+    const t = off && why ? why : sub,
+      m = String(t).match(/^(.*?)(\([^()]{1,9}\))$/);
+    return m && m[1] ? React.createElement(React.Fragment, null, jaWrap(m[1]), React.createElement("span", {
+      className: "whitespace-nowrap"
+    }, m[2])) : jaWrap(t);
+  })())), gain && !off && React.createElement("span", {
     className: "shrink-0 text-right text-[11.5px] font-black leading-tight text-emerald-300",
     "data-assistant-life-room-do-gain": true
   }, gain));
@@ -159943,7 +159962,7 @@ function MsxRunIntro({
     type: "button",
     onClick: finish,
     "data-msx-intro-skip": true
-  }, "⏩ とばす") : null, React.createElement("button", {
+  }, "⏩ 飛ばす") : null, React.createElement("button", {
     type: "button",
     className: "go",
     onClick: next,
@@ -169859,7 +169878,7 @@ function MsxPlay({
         ...run,
         phase: 'main'
       }) : afterAct(run)
-    }, "⏩ とばす"), React.createElement("button", {
+    }, "⏩ 飛ばす"), React.createElement("button", {
       type: "button",
       className: "go",
       onClick: () => tev ? setRun({
@@ -169886,7 +169905,7 @@ function MsxPlay({
         ...run,
         phase: 'main'
       })
-    }, "⏩ とばす"), React.createElement("button", {
+    }, "⏩ 飛ばす"), React.createElement("button", {
       type: "button",
       className: "go",
       onClick: () => toReact(run),
@@ -170133,7 +170152,7 @@ function MsxPlay({
     }, React.createElement("button", {
       type: "button",
       onClick: () => choose(null)
-    }, "⏩ とばす"), React.createElement("button", {
+    }, "⏩ 飛ばす"), React.createElement("button", {
       type: "button",
       className: "on",
       disabled: true
@@ -170186,7 +170205,7 @@ function MsxPlay({
       className: "go",
       onClick: doneKi,
       "data-msx-ki-skip": true
-    }, "⏩ とばす"));
+    }, "⏩ 飛ばす"));
   } else if (phase === 'turn') {
     const cal = msxCalendar(s.turn);
     const prev = msxCalendar(Math.max(1, s.turn - 1));
