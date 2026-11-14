@@ -64,6 +64,18 @@ function MsxBand({ s, v, ev, use = 0, stAdd = 0 }) {
 // ups … 上がった(下がった)分。stats は変わったあとの値。preview … トレーニングを選ぶ画面の見込み(まだ上がっていない)
 //   結果の画面では、上がる前の長さからゲージが伸び、伸びた分が光る(下がるときは縮み、減った分が赤く消える。2026-11-13 社長)。
 //   「動きを減らす」設定では、はじめから変わったあとの長さで出す
+// 通院の結果のひとこと: 治った物・治らなかった物を名前で書く(「ようすが治った」で済ませない。docs/spec/MONSUC_UI.md の 3)
+const MSX_YOSU_NAME = { sabori: 'サボりグセ', utsu: 'うつ病' };
+function msxClinicText(cured, yosu) {
+  const nm = (ks) => ks.map((k) => `「${MSX_YOSU_NAME[k] || k}」`).join('と');
+  const c = (Array.isArray(cured) ? cured : []).filter((k) => MSX_YOSU_NAME[k]);
+  const left = Object.keys(yosu || {}).filter((k) => MSX_YOSU_NAME[k] && yosu[k]);
+  const parts = [];
+  if (c.length) parts.push(`${nm(c)}が治った!`);
+  if (left.length) parts.push(`${nm(left)}は今回は治らなかった。もう1回来れば必ず治る。`);
+  parts.push('体力も少し回復した');
+  return parts.join(' ');
+}
 function MsxStRow({ stats, ups, main, preview = false }) {
   const grow = Boolean(ups) && !preview && MSX_STATS.some((k) => ups[k]);
   const calm = typeof msxFxCalm === 'function' && msxFxCalm();
@@ -421,8 +433,8 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
         {isTrain && o.lvUp ? <div className="v-lvup">⬆ トレーニングLvアップ! {MSX_STAT_ICON[o.card.stat]} {MSX_STAT_NAME[o.card.stat]} <b>Lv.{o.trainLv - 1} → Lv.{o.trainLv}</b><small>次から、{MSX_STAT_NAME[o.card.stat]}のトレーニングの基本の伸びが上がる</small></div> : null}
         {isTrain ? <><span className="hd2">{msxTrainIcon(o.card.stat, tlv)} {msxTrainName(o.card.stat, tlv)}({MSX_STAT_NAME[o.card.stat]}のトレーニング)</span><br/>
           {Object.keys(gains).length ? <>{Object.entries(gains).map(([k, g], i) => <span key={k}>{i ? '・' : ''}{MSX_STAT_NAME[k]} <b className="gu">{g > 0 ? `+${g}` : g}</b></span>)}</> : '能力は上がらなかった'}{hpLost ? <><br/><span data-msx-hp-lost>体力が <b style={{ color: '#dc2626' }}>{hpLost}</b> 下がった</span></> : null}</>
-          : o.kind === 'rest' || o.kind === 'play' ? <><span className="hd2">{o.kind === 'rest' ? '🛌 休む' : '🎈 遊ぶ'}</span><br/>体力が回復した{(o.cured || []).includes('utsu') ? '。ようす「うつ病」が治った' : ''}</>
-          : o.kind === 'clinic' ? <><span className="hd2">🏥 通院</span><br/>{(o.cured || []).length ? 'ようすが治った' : '今回は治らなかった。もう1回来れば治る'}</>
+          : o.kind === 'rest' || o.kind === 'play' ? <><span className="hd2">{o.kind === 'rest' ? '🛌 休む' : '🎈 遊ぶ'}</span><br/>体力が回復した{(o.cured || []).includes('utsu') ? '。「うつ病」が治った' : ''}</>
+          : o.kind === 'clinic' ? <><span className="hd2">🏥 通院</span><br/>{msxClinicText(o.cured, s.yosu)}</>
           : <><span className="hd2">🛌 休み</span><br/>{MSX_COND[o.cond] || '体調'}のため、このターンは休んだ</>}
         {o.event && typeof MsxTrainEvent !== 'function' ? <><br/><b className="ga">{msxMemberName(evMember)}</b>{o.event.story ? `との出来事 第${o.event.story}話` : 'との小さな出来事'}{evLine ? `: ${evLine.t}` : ''}</> : null}
         {o.cond && isTrain ? <><br/><b style={{ color: '#fca5a5' }}>{MSX_COND[o.cond]}</b>をしてしまった…しばらく休み</> : null}

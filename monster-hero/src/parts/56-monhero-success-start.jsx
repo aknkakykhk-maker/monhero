@@ -246,8 +246,10 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf }) {
         ))}
       </div>
       <div className="v-ileg"><span><b className="sw1"/>はじめる前に効く物</span><span><b className="sw2"/>育成中にも使える物(1ターン1個まで)</span></div>
-      <div className="msx-scroll">
+      <div className="msx-scroll" style={{ flex: '1 1 0' }}>
         {items.map((id) => <div key={id} className="v-item sel"><span style={{ fontSize: 22 }}>{MSX_ITEM_BY_ID[id].e}</span><div>{MSX_ITEM_BY_ID[id].name}<small>{msxItemDesc(id)}</small></div><span className="pr">✅ 持っていく・あと{has(id) - 1}</span></div>)}
+        {/* 持っている物の効き目も下に並べる(下を空けない。docs/spec/MONSUC_UI.md の 1) */}
+        {MSX_ITEMS.filter((t) => has(t.id) > 0 && !items.includes(t.id)).map((t) => <div key={t.id} className="v-item" style={{ opacity: .85 }}><span style={{ fontSize: 22 }}>{t.e}</span><div>{t.name}<small>{msxItemDesc(t.id)}</small></div><span className="pr" style={{ color: '#cbd5e1' }}>×{has(t.id)}</span></div>)}
         {items.some((id) => !coreItems(id)) && <div className="msx-note" style={{ marginTop: 6 }}>まだ効き目が入っていない物があります(その物は持っていっても数は減りません)</div>}
       </div>
     </>);

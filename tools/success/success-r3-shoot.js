@@ -18,6 +18,7 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
 let chromium;
 try { ({ chromium } = require(path.join(ROOT, 'tools', 'node_modules', 'playwright'))); } catch (e) { console.log('SKIP: playwright が入っていないので確かめられません'); process.exit(0); }
 const { quietBootSeed, updateNoticeSeed } = require(path.resolve(__dirname, '..', 'boot', 'quiet-boot-seed'));
+const { msxUiRulesMeasure, BLANK_MAX } = require('./msx-ui-rules'); // 画面の決まり(docs/spec/MONSUC_UI.md)の見張り
 const PORT = 8973;
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.PNG': 'image/png', '.jpg': 'image/jpeg', '.webp': 'image/webp', '.json': 'application/json', '.mp3': 'audio/mpeg' };
 
@@ -73,8 +74,9 @@ const makeRun = async (kind) => {
     ['Q1', 'mid', ['cont', /^⚔修行/]], ['Q2', 'mid', ['cont', /^⚔修行/, '@shugyo']], ['Q3', 'mid', ['cont', /^⚔修行/, '@shugyo', '@qnext']],
     ['G1', 'gameover', ['cont']],
     ['X1', 'box', ['@openbox', '@boxmon=b1', '@edit']], ['X2', 'box', ['@openbox', '@boxmon=b1', '@edit', '@editsave']],
-    ['E0', 'retire', ['cont']], ['E3', 'retire', ['cont', '@e0']], ['E3b', 'retire', ['cont', '@e0', '@bal']], ['E1', 'retire', ['cont', '@e0', '@bal', '@e3']],
-    ['E2', 'retire', ['cont', '@e0', '@bal', '@e3', '@e1', '@auto']], ['E9', 'retire', ['cont', '@e0', '@bal', '@e3', '@e1', '@auto', '@decide', '@decide']],
+    // 引退: 能力ポイントが残っていれば E3(使う)→ E0(最終の評価)→ E1(振り返り)→ E2(アシスト)→ 保存枠(2026-11-14 参考 v4 の順)
+    ['E3', 'retire', ['cont']], ['E3b', 'retire', ['cont', '@bal']], ['E0', 'retire', ['cont', '@bal', '@e3']], ['E1', 'retire', ['cont', '@bal', '@e3', '@e0']],
+    ['E2', 'retire', ['cont', '@bal', '@e3', '@e0', '@e1', '@auto']], ['E9', 'retire', ['cont', '@bal', '@e3', '@e0', '@e1', '@auto', '@decide', '@decide']],
   ];
   try {
     for (const [w, h, tag] of sizes) {
@@ -125,6 +127,12 @@ const makeRun = async (kind) => {
           const box = JSON.parse(localStorage.getItem('mh_monsuc_box_v1') || 'null');
           return { ok: true, text: root.innerText.length, over, head: root.innerText.slice(0, 160).replace(/\s+/g, ' '), boxN: box && Array.isArray(box.mons) ? box.mons.length : 0, run: localStorage.getItem('mh_monsuc_run_v1') };
         });
+        const u = await page.evaluate(msxUiRulesMeasure);
+        // 保存枠(マスモンの画面)はクラフト12が参考 mm-01〜04 の形へ作り直し中。それまでは知らせるだけ(作り直したら外す)
+        const blankLater = ['X1', 'X2'].includes(name);
+        if (u && u.blank != null && blankLater && u.blank > BLANK_MAX) console.log(`  見張り ${label}: 下の空き ${u.blank}px(作り直し待ち)`);
+        else if (u && u.blank != null) check(`${label}: 下に大きな空きが無い(${BLANK_MAX}px まで)`, u.blank <= BLANK_MAX, `${u.blank}px`);
+        if (u) check(`${label}: 見せ場の数字(.v-num)が真ん中`, u.offNum.length === 0, u.offNum.slice(0, 3).join(' / '));
         check(`${label}: 画面が出る`, m.ok && m.text > 20, m.head);
         check(`${label}: 枠からはみ出さない`, m.ok && m.over.length === 0, m.over && m.over.slice(0, 3).join(' / '));
         if (name === 'X2') { const b = await page.evaluate(() => JSON.parse(localStorage.getItem('mh_monsuc_box_v1') || 'null')); const m = b && b.mons.find((x) => x.id === 'b1');

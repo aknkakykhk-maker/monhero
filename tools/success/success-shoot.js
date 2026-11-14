@@ -18,6 +18,7 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
 let chromium;
 try { ({ chromium } = require(path.join(ROOT, 'tools', 'node_modules', 'playwright'))); } catch (e) { console.log('SKIP: playwright が入っていないので確かめられません'); process.exit(0); }
 const { quietBootSeed, updateNoticeSeed } = require(path.resolve(__dirname, '..', 'boot', 'quiet-boot-seed'));
+const { msxUiRulesMeasure, BLANK_MAX } = require('./msx-ui-rules'); // 画面の決まり(docs/spec/MONSUC_UI.md)の見張り
 const PORT = 8971;
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.PNG': 'image/png', '.jpg': 'image/jpeg', '.webp': 'image/webp', '.json': 'application/json', '.mp3': 'audio/mpeg' };
 
@@ -32,6 +33,7 @@ const makeRun = async (kind) => {
   let guard = 0;
   while (s.turn < goal && !s.over && guard++ < 200) {
     const v = SUC.peek(s);
+    if (kind === 'ki' && v.period && v.period.at === 1 && v.period.index > 0) break; // 章の終わり: 期が替わった最初のターンで止める
     let a;
     if (v.can.includes('cond')) a = { kind: 'cond' };
     else if (v.can.includes('retry')) a = { kind: 'retry' };
@@ -48,6 +50,7 @@ const makeRun = async (kind) => {
     let g2 = 0; while (s.battle && g2++ < 5) { const opp = SUC.opponents(s); s = SUC.settle(s, opp.map(() => true)).state; }
   }
   if (kind === 'yosu') s = { ...s, yosu: { sabori: { visits: 0 } } };
+  if (kind === 'ki') { const pv = SUC.peek(s).period.index - 1; const pw = SUC.evaluate(s).power; s = { ...s, fameTotal: Math.max(s.fameTotal || 0, 1000) }; return { v: 1, id: s.id, s, nick: 'もちまる', colors: [], from: { base: 'Mocchi' }, items: [], used: 0, phase: 'turn', out: null, log: [], startAt: 1, ki: { p: pv, fame: 0, power: Math.max(0, pw - 616) } }; }
   const run = { v: 1, id: s.id, s, nick: 'もちまる', colors: [], from: { base: 'Mocchi' }, items: ['juice', 'dango'], used: 0, phase: 'main', out: null, log: [], startAt: 1 };
   return run;
 };
@@ -70,6 +73,7 @@ const makeRun = async (kind) => {
     ['K1', 'mid', ['cont', 'train', 'go']], ['K3', 'mid', ['cont', 'train', 'go', 'next']], ['K5', 'mid', ['cont', 'train', 'go', 'next', 'praise']],
     ['I1', 'mid', ['cont', 'issa']], ['P1', 'mid', ['cont', 'stats']],
     ['E1', 'mid', ['cont', 'event']],
+    ['KI', 'ki', ['cont']], ['CL', 'yosu', ['cont', 'clinic']], // 章の終わり(数字は真ん中)・通院の結果(何が治ったかを名前で)
   ];
   try {
     const page0 = await browser.newPage({ viewport: { width: 390, height: 844 } });
@@ -104,6 +108,7 @@ const makeRun = async (kind) => {
             if (st === 'train') return click(/^💪 トレーニング/);
             if (st === 'go') return click(/をする$/); // 2026-11-14 トレーニングのボタンは「丸太割りをする」のようにトレーニングの名前になった
             if (st === 'praise') return click(/褒める/);
+            if (st === 'clinic') return click(/通院/);
             if (st === 'event') {
               // ランダムイベントが出るターンを芯で探して、その場面を開く(撮るときだけ id を変えて探す)
               const SUC = msxSuc.SUC; const raw = JSON.parse(localStorage.getItem(MSX_KEYS.run));
@@ -167,6 +172,9 @@ const makeRun = async (kind) => {
           check(`${L}: 押せる物が重ならない`, m.lap.length === 0, m.lap.slice(0, 3).join(' / '));
           if (m.land) check(`${L}: 横画面の上に空白が無い`, m.topBlank <= 50, `${m.topBlank}px`);
         }
+        const u = await page.evaluate(msxUiRulesMeasure);
+        if (u && u.blank != null) check(`${name}${tag ? `(${tag})` : ''}: 下に大きな空きが無い(${BLANK_MAX}px まで)`, u.blank <= BLANK_MAX, `${u.blank}px`);
+        if (u) check(`${name}${tag ? `(${tag})` : ''}: 見せ場の数字(.v-num)が真ん中`, u.offNum.length === 0, u.offNum.slice(0, 3).join(' / '));
         check(`${name}${tag ? `(${tag})` : ''}: 画面が出る`, m.ok && m.text > 20);
         check(`${name}${tag ? `(${tag})` : ''}: 枠からはみ出さない`, m.ok && m.over.length === 0, m.over && m.over.slice(0, 3).join(' / '));
         if (SHOT_DIR) { fs.mkdirSync(SHOT_DIR, { recursive: true }); await page.screenshot({ path: path.join(SHOT_DIR, `msx-${name}${tag ? `-${tag}` : ''}.png`) }); }

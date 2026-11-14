@@ -44,9 +44,9 @@ function MsxKiShow({ run, v, ev, ki, onDone }) {
         <div className="msx-ki-ttl" key="t0"><b>{MSX_KI_CHAPTER[prev]} 終了</b><span>{P[prev].name}</span></div>
         <div className="msx-ki-sum" key="s0">
           <div className="h">獲得賞金</div>
-          <div className="r"><b>{msxFmt(fame)}<small>G</small></b>{dFame != null ? <em>{sign(dFame)}<small>G</small></em> : <em/>}</div>
+          <div className="v-num r"><b>{msxFmt(fame)}<small>G</small>{dFame != null ? <em className={dFame < 0 ? 'dn' : ''}>{sign(dFame)}G</em> : null}</b></div>
           <div className="h">総合力</div>
-          <div className="r"><b>{msxFmt(ev.power)}</b>{dPow != null ? <em>{sign(dPow)}</em> : <em/>}</div>
+          <div className="v-num r"><b>{msxFmt(ev.power)}{dPow != null ? <em className={dPow < 0 ? 'dn' : ''}>{sign(dPow)}</em> : null}</b></div>
         </div>
       </>) : (<>
         <div className="msx-ki-next" key="t1"><small>NEXT</small><div><span>あと</span><b>{left}</b><span className="tn">ターン</span></div></div>
@@ -78,9 +78,9 @@ const MSX_KI_CSS = `
 .msx .msx-ki-sum{position:absolute;left:10px;right:10px;bottom:10px;z-index:4;background:#0f0d24e6;border:1.5px solid #64748b;border-radius:12px;padding:6px 14px 8px;animation:msxKiUp .45s ease-out .35s both}
 .msx .msx-ki-sum .h{font-size:11px;font-weight:900;color:#e2e8f0;text-align:center;display:flex;align-items:center;gap:8px}
 .msx .msx-ki-sum .h::before,.msx .msx-ki-sum .h::after{content:'';flex:1;border-top:1px dashed #94a3b8}
-.msx .msx-ki-sum .r{display:grid;grid-template-columns:1fr 6.5em;align-items:baseline;gap:8px;margin:1px 0 3px}
-.msx .msx-ki-sum .r b{font-size:24px;font-weight:900;color:#fff;text-align:right;font-variant-numeric:tabular-nums}
-.msx .msx-ki-sum .r em{font-style:normal;font-size:14px;font-weight:900;color:#fde047;text-align:right;font-variant-numeric:tabular-nums}
+.msx .msx-ki-sum .r{margin:1px 0 3px}
+.msx .msx-ki-sum .r>b{font-size:26px;color:#fff}
+.msx .msx-ki-sum .r>b>em{font-size:15px}
 .msx .msx-ki-sum small{font-size:.6em;margin-left:2px}
 .msx .msx-ki-next{position:absolute;left:0;right:0;top:4%;z-index:4;text-align:center;color:#fde047;font-weight:900;-webkit-text-stroke:2px #7c2d12;paint-order:stroke fill;text-shadow:0 4px 0 #7c2d12;animation:msxKiDrop .45s cubic-bezier(.2,1.3,.4,1) both}
 .msx .msx-ki-next small{display:block;font-size:34px;font-style:italic;letter-spacing:.08em;line-height:1}

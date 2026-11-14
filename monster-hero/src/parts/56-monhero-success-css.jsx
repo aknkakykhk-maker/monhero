@@ -685,5 +685,14 @@ const MSX_CSS = `
 .msx .v-ft,.msx.land .v-ft{height:auto;min-height:48px;padding-top:2px;padding-bottom:2px}
 .msx .v-ft button{min-height:40px}
 .msx .v-hd{height:auto;min-height:32px}
+/* 画面の決まり(docs/spec/MONSUC_UI.md)の共通の部品: 見せ場の数字 .v-num(真ん中そろえ)・動いた数字の札 .v-gains */
+.msx .v-num{text-align:center;line-height:1.15}
+.msx .v-num>small{display:block;font-size:11px;font-weight:900;color:#e2e8f0}
+.msx .v-num>b{display:inline-flex;align-items:baseline;justify-content:center;gap:8px;font-size:28px;font-weight:900;color:#fde047;font-variant-numeric:tabular-nums}
+.msx .v-num>b>small{font-size:.55em;margin-left:-6px}
+.msx .v-num>b>em{font-style:normal;font-size:14px;color:#fde047}.msx .v-num>b>em.dn{color:#fca5a5}
+.msx .v-gains{display:flex;flex-wrap:wrap;justify-content:center;gap:5px;margin-top:6px}
+.msx .v-gains>span{background:#1e1a36;border:1px solid #3b3566;border-radius:10px;padding:3px 10px;font-size:12px;font-weight:900;text-align:center;white-space:nowrap}
+.msx .v-gains>span b{color:#fde047;margin-left:4px;font-variant-numeric:tabular-nums}.msx .v-gains>span.dn b{color:#fca5a5}
 @media (prefers-reduced-motion:reduce){.msx *{animation:none!important}}
 `;
