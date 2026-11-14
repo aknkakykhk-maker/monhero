@@ -507,7 +507,7 @@ const CardReplayList = ({ onOpen, onBack }) => {
   const assistants = typeof ASSISTANTS !== 'undefined' ? ASSISTANTS : [];
   return (
     <div data-mh-screen data-card-replay-list className={SCREEN_SHELL_CLASS}>
-      <ScreenHead title="過去の対戦" accent="text-sky-200" onBack={onBack} note="押すと、はじめから見返せます"/>
+      <ScreenHead title="過去の対戦" accent="text-sky-200" onBack={onBack} note="押すと、初めから見返せます"/>
       {/* 一覧の外は、横画面では左の列に積まれる。残っている数と★の数を出す(2026-10-27 ツナグくんの見回り「左が見出しだけで空いている」) */}
       <div data-card-replay-side className={`${SCREEN_PANEL_CLASS} mb-2 shrink-0`}>
         <div className="grid grid-cols-2 gap-1.5 text-center">
