@@ -198,7 +198,7 @@ const ambwHitPct = (catalog, teams, side, frame, id) => {
 //   (能力の差はどの技にも同じだけ効くので、目安には入れない。札と一覧に出す命中%は hitPreviewer のいまの値)。技表に無い技は 0
 const AMBW_HIT_BASE = 75;
 const ambwHitOf = (hitPct, extra) => {
-  const eng = typeof ASSISTANT_MASMON_BATTLE !== 'undefined' ? ASSISTANT_MASMON_BATTLE : null;
+  const eng = typeof window !== 'undefined' && window.ASSISTANT_MASMON_BATTLE ? window.ASSISTANT_MASMON_BATTLE : null;
   return eng && typeof eng.techHitPreview === 'function' ? eng.techHitPreview(hitPct, extra) : AMBW_HIT_BASE + (Number(hitPct) || 0) + (Number(extra) || 0) * 100;
 };
 const ambwTechItems = (catalog, member, list) => {

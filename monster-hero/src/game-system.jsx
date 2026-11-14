@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: eac1601c3a90609e
+// generated-sha256: eaa0c0f3e541afc4
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -77254,7 +77254,7 @@ const ambwHitPct = (catalog, teams, side, frame, id) => {
 //   (能力の差はどの技にも同じだけ効くので、目安には入れない。札と一覧に出す命中%は hitPreviewer のいまの値)。技表に無い技は 0
 const AMBW_HIT_BASE = 75;
 const ambwHitOf = (hitPct, extra) => {
-  const eng = typeof ASSISTANT_MASMON_BATTLE !== 'undefined' ? ASSISTANT_MASMON_BATTLE : null;
+  const eng = typeof window !== 'undefined' && window.ASSISTANT_MASMON_BATTLE ? window.ASSISTANT_MASMON_BATTLE : null;
   return eng && typeof eng.techHitPreview === 'function' ? eng.techHitPreview(hitPct, extra) : AMBW_HIT_BASE + (Number(hitPct) || 0) + (Number(extra) || 0) * 100;
 };
 const ambwTechItems = (catalog, member, list) => {
@@ -89157,7 +89157,7 @@ function MsaStage({ log, frames, pos, teams, venueImg, ended = false, win = null
       <div key={sd} className={`msa-hud ${sd}`} data-msa-hud={sd}>
         <div className="nm">{m ? m.name : ''}</div>
         <MsaGauge kind="hp" value={hpOf(sd)} max={maxHpOf(sd)} delay={foe ? hitMs : 0} sf={sf} reduce={reduce}/>
-        <MsaGauge kind="gt" value={gutsOf(sd)} max={typeof ASSISTANT_MASMON_BATTLE !== 'undefined' && ASSISTANT_MASMON_BATTLE.GUTS_MAX ? ASSISTANT_MASMON_BATTLE.GUTS_MAX : 99} delay={foe ? hitMs : 0} sf={sf} reduce={reduce}/>
+        <MsaGauge kind="gt" value={gutsOf(sd)} max={typeof window !== 'undefined' && window.ASSISTANT_MASMON_BATTLE && window.ASSISTANT_MASMON_BATTLE.GUTS_MAX ? window.ASSISTANT_MASMON_BATTLE.GUTS_MAX : 99} delay={foe ? hitMs : 0} sf={sf} reduce={reduce}/>
         <div className="msa-gtags">{tags.map((t, j) => <span key={`${pos}-${j}`} className={`msa-gt ${t.cls}`} data-msa-gtag={t.t} style={{ animationDelay: `${t.delay}ms` }}>{t.t}</span>)}</div>
       </div>
     );
