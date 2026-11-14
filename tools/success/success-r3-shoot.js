@@ -88,6 +88,12 @@ const makeRun = async (kind) => {
     ['X5', 'box', ['@openbox', '@mmlist', '@boxmon=b1', '#detail-tab=feat']], ['X6', 'box', ['@openbox', '@mmlist', '@boxmon=b1', '#detail-tab=apt']],
     ['X9', 'box', ['@openbox', '@mmlist', '@boxmon=b1', '#tech=sk-0405']],
     ['X10', 'box', ['@openbox', '@mmlist', '@boxmon=bx0']], // 同じ間合い・同じランクに技が2つある種族(スネグーラチカ): そのランクの段が2行になる // 詳細の技の升目で、覚えていない技を押した所(右の詳細に覚え方の条件)
+    ['A1', 'box', ['@openbox', '#mm-open-assist']], ['A2', 'box', ['@openbox', '#mm-open-assist', '#assist-mon=as1', '#assist-mon=as3']], ['A3', 'box', ['@openbox', '#mm-open-assist', '#assist-mon=as1', '#assist-remove']],
+    ['F1', 'box', ['@openbox', '@mmlist', '@mmbye', '@boxmon=b2', '#mm-bye']], ['F2', 'box', ['@openbox', '@fuse', '~fuse-pick=b1', '~fuse-pick=b2']],
+    ['T1', 'box', [/新しく育成/, /次へ/, /このモンスターにする/, '^assist-head']], ['T2', 'box', [/新しく育成/, /次へ/, /このモンスターにする/, '#team-assist=as1', '#team-assist=as3', '^assist-head']],
+    ['F3', 'box', ['@openbox', '@mmlist', '@mmbye', '@boxmon=b2', '#mm-bye', '#mm-bye-yes']], ['K9', 'box', ['@openbox']],
+    ['F4', 'box', ['@openbox', '@fuse', '~fuse-pick=b1', '~fuse-pick=b2', '~fuse-go', 'w1100', '~fuse-go']], ['F5', 'box', ['@openbox', '@fuse', '~fuse-pick=b1', '~fuse-pick=b2', '~fuse-go', 'w1100', '~fuse-go', '=fuse-nameinput:ぷにお', '~fuse-namego']],
+    ['F6', 'box', ['@openbox', '@fuse', '~fuse-pick=b1', '~fuse-pick=b2', '~fuse-go', 'w1100', '~fuse-go', '=fuse-nameinput:ぷにお', '~fuse-namego', '!sheet-close', '#mm-open-assist']],
     ['X7', 'box', ['@openbox', '@mmlist', '@mmbye']], ['X8', 'box', ['@openbox', '@mmlist', '@mmlabel']],
     ['X1', 'box', ['@openbox', '@mmlist', '@boxmon=b1', '@edit']], ['X2', 'box', ['@openbox', '@mmlist', '@boxmon=b1', '@edit', '@editsave']],
     // 引退: 能力ポイントが残っていれば E3(使う)→ E0(最終の評価)→ E1(振り返り)→ E2(アシスト)→ マスモンボックス(2026-11-14 参考 v4 の順)
@@ -112,13 +118,15 @@ const makeRun = async (kind) => {
           // eslint-disable-next-line no-new-func
           const make = new Function(`return (${mk})`)();
           if (window.__msxRoot) { window.__msxRoot.unmount(); window.__msxRoot = null; }
-          localStorage.removeItem('mh_monsuc_box_v1');
+          localStorage.removeItem('mh_monsuc_box_v1'); localStorage.removeItem('mh_monsuc_assist_v1');
           if (kind === 'box') { // 保存枠に2体(名前と染色を変える画面を見る)
             const st = { life: 600, pow: 700, wise: 400, hit: 500, eva: 450, tough: 650 };
             localStorage.setItem('mh_monsuc_box_v1', JSON.stringify({ v: 1, cap: 30, memory: [], mons: [
               { id: 'b1', species: 'Mocchi', nick: 'もちまる', colors: [], gen: 1, st, techs: ['sk-0402', 'sk-0400', 'sk-0401'], mast: [40, 12, 0], fav: ['pow', 'tough'], coach: 'mua', endAt: Date.parse('2026-11-14T12:00:00+09:00'), ending: 'good', loy: 80, pop: 60, lv: 8, rank: 'A', grade: 'A2', score: 11800, raised: true, assists: [], titles: [], keepMe: 'x' },
               { id: 'b2', species: 'Golem', nick: 'いわお', colors: [], gen: 1, st, techs: [], mast: [], loy: 70, pop: 40, lv: 6, rank: 'B', grade: 'B3', score: 9200, raised: true, assists: [], titles: [] },
               ...['Snegurochka', 'Golem', 'Mocchi', 'Golem', 'Mocchi', 'Golem'].map((sp, i) => ({ id: `bx${i}`, species: sp, nick: '', colors: [], gen: 1 + (i % 3), st, techs: [], mast: [], loy: 50, pop: 30, lv: 3 + i, rank: 'C', grade: `C${i + 1}`, score: 6000 + i * 350, raised: true, assists: [], titles: [] }))] }));
+            // アシスト用に残した子(合体の親・お別れした子)。育成には使えず、編成にだけ入る(2026-11-14 社長)
+            localStorage.setItem('mh_monsuc_assist_v1', JSON.stringify({ v: 1, cap: 100, mons: ['Pixie', 'Tiger', 'Ghost', 'Plant'].map((sp, i) => ({ id: `as${i + 1}`, species: sp, nick: i === 0 ? 'ぴくる' : '', colors: [], gen: 1, st, techs: [], mast: [], loy: 60, pop: 40, lv: 5, rank: ['A', 'B', 'S', 'C'][i], grade: ['A1', 'B2', 'S1', 'C3'][i], score: 9000, raised: true, assists: [], titles: [], keep: { from: i % 2 ? 'farewell' : 'fuse', at: 1 } })) }));
             localStorage.removeItem('mh_monsuc_run_v1');
           } else { const run = await make(kind); localStorage.setItem('mh_monsuc_run_v1', JSON.stringify(run)); }
           const el = document.getElementById('msx-shot') || Object.assign(document.createElement('div'), { id: 'msx-shot' });
@@ -133,13 +141,16 @@ const makeRun = async (kind) => {
           const done = await page.evaluate(async (st) => {
             if (st.re) { const re = new RegExp(st.re); const b = [...document.querySelectorAll('.msx button')].find((x) => re.test((x.innerText || '').replace(/\s+/g, '')) && !x.disabled); if (b) b.click(); return !!b; }
             if (st === 'cont') { const b = [...document.querySelectorAll('.msx button')].find((x) => /続きから|結果を見る/.test(x.innerText || '')); if (b) b.click(); return !!b; }
+            if (/^w\d+$/.test(st)) return true; // 'w1000' は待つだけ
+            if (st[0] === '=') { const [k, v] = st.slice(1).split(':'); const e = document.querySelector(`[data-monsuc-${k}]`); if (!e) return false; const set = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set; set.call(e, v); e.dispatchEvent(new Event('input', { bubbles: true })); return true; } // '=k:文字' は [data-monsuc-k] の入力に文字を入れる
+            if (st[0] === '^') { const e = document.querySelector(`[data-msx-${st.slice(1)}]`); if (e) e.scrollIntoView({ block: 'start' }); return !!e; } // '^x' は [data-msx-x] が見出しの頭に来るところまでスクロール
             const [k, val] = st.slice(1).split('=');
-            const pre = st[0] === '%' ? 'data-msc-' : st[0] === '#' ? 'data-msx-' : 'data-msx-r3-'; // '#x' は [data-msx-x](詳細の窓 MsxMonDetail のタブなど)
+            const pre = st[0] === '%' ? 'data-msc-' : st[0] === '#' ? 'data-msx-' : st[0] === '~' ? 'data-monsuc-' : st[0] === '!' ? 'data-mhl-' : 'data-msx-r3-'; // '#x' は [data-msx-x](詳細の窓 MsxMonDetail のタブなど)
             const b = document.querySelector(`[${pre}${k}${val ? `="${val}"` : ''}]`);
             if (b && !b.disabled) b.click(); return !!(b && !b.disabled);
           }, st instanceof RegExp ? { re: st.source } : st);
           if (!done) check(`${label}: 「${st}」が押せる`, false);
-          await page.waitForTimeout(st === '%ready' ? 2500 : 700);
+          await page.waitForTimeout(st === '%ready' ? 2500 : /^w\d+$/.test(st) ? Number(st.slice(1)) : 700);
         }
         await page.waitForTimeout(500 + (Number(process.env.SHOT_WAIT) || 0)); // SHOT_WAIT=<ms> で、動く演出の途中を撮る
         const m = await page.evaluate(() => {
@@ -185,6 +196,19 @@ const makeRun = async (kind) => {
           check(`${label}: 優勝のビートPが本編へ1回だけ足される`, bp.sent > 0 && bp.sent === bp.earned && bp.d1 === bp.sent && bp.d2 === 0, JSON.stringify(bp));
           check(`${label}: デバッグの入口からの育成では、本編のビートPに足さない`, bp.dbg === 0 && bp.dbgSent, JSON.stringify(bp));
           check(`${label}: 途中の育成を消したあとの古い画面の保存では、財布が増えず育成も戻らない`, bp.stale === 0 && !bp.staleBack, JSON.stringify(bp)); }
+        if (name === 'F3') { // お別れすると、箱から消え、アシスト用の置き場に残る(5体目)・もう一度お別れしても二重に入らない
+          const f = await page.evaluate(async () => { const a = JSON.parse(localStorage.getItem('mh_monsuc_assist_v1') || 'null'); const b = JSON.parse(localStorage.getItem('mh_monsuc_box_v1') || 'null'); const m = a && a.mons.find((x) => x.id === 'b2'); const again = await msxAssistKeep([{ id: 'b2', species: 'Golem' }], 'farewell'); return { n: a && a.mons.length, kept: !!m, from: m && m.keep && m.keep.from, inBox: !!(b && b.mons.some((x) => x.id === 'b2')), again: again.kept }; });
+          check(`${label}: お別れで、箱から消え、アシスト用に残る(二重には入らない)`, f.n === 5 && f.kept && f.from === 'farewell' && !f.inBox && f.again === 0, JSON.stringify(f)); }
+        if (name === 'K9') { // 置き場は100体まで: いっぱいなら入れず、読めない値は壊さず空で始める
+          const k = await page.evaluate(async () => {
+            const many = Array.from({ length: 120 }, (_, i) => ({ id: `z${i}`, species: 'Mocchi', st: {}, techs: [], mast: [] }));
+            await storeSet('mh_monsuc_assist_v1', { v: 1, cap: 100, mons: [] });
+            const r = await msxAssistKeep(many, 'fuse'); const a = JSON.parse(localStorage.getItem('mh_monsuc_assist_v1'));
+            const r2 = await msxAssistKeep([{ id: 'zz', species: 'Mocchi', st: {}, techs: [], mast: [] }], 'farewell');
+            const rm = await msxAssistRemove(['z0', 'z1']); const r3 = await msxAssistKeep([{ id: 'zz', species: 'Mocchi', st: {}, techs: [], mast: [] }], 'farewell');
+            localStorage.setItem('mh_monsuc_assist_v1', JSON.stringify('こわれた')); const broken = await msxReadAssist();
+            return { kept: r.kept, full: r.full, n: a.mons.length, r2: r2.kept, r2full: r2.full, rm: rm.mons.length, r3: r3.kept, brokenN: broken.mons.length, copy: !!localStorage.getItem('mh_monsuc_assist_v1_broken') }; });
+          check(`${label}: 置き場は100体まで・外すと空く・壊れた値は写して空で始める`, k.kept === 100 && k.full === 20 && k.n === 100 && k.r2 === 0 && k.r2full === 1 && k.rm === 98 && k.r3 === 1 && k.brokenN === 0 && k.copy, JSON.stringify(k)); }
         if (name === 'K2c') check(`${label}: キャンセルで受付へ戻る`, await page.evaluate(() => !document.querySelector('[data-msx-r3-cupwin]') && !!document.querySelector('[data-msx-r3-pre-card]')));
         if (name === 'K3') check(`${label}: 「はい」で紋章の入り`, await page.evaluate(() => !!document.querySelector('[data-msx-r3-cupintro="junior"]')));
         if (name === 'E9') { const e = await page.evaluate(async (w0) => { const b = await storeGet(MSX_KEYS.box, null); const m = b && b.mons && b.mons[0]; const w1 = await loadRhythmEventPoints(); return { rank: m && m.rank, d: w1 - w0, end: msxSuc.SUC.beatOfEnd(m && m.rank) }; }, beat0); e.want = e.end + pend0;

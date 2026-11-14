@@ -38,7 +38,7 @@ const MIX = { groups: [{ ids: ['mua', 'kiki'], doing: 'snack', place: 'cafe' }, 
   const open = async (v, v2) => {
     const page = await browser.newPage({ viewport: { width: v.w, height: v.h }, deviceScaleFactor: 1 });
     page.on('pageerror', e => errors.push(`${v.name}: ${e.message}`));
-    await page.addInitScript((on) => { window.__mhSupabaseStubbed = true; localStorage.setItem('mh_assistant_life_ui_v2', on ? 'true' : 'false'); }, v2);
+    await page.addInitScript((on) => { window.__mhSupabaseStubbed = true; localStorage.setItem('mh_assistant_life_ui_v2', on ? 'true' : 'false'); localStorage.setItem('mh_assistant_life_ui_v2_default_v1', 'true'); }, v2);
     await page.addInitScript(quietBootSeed()); await page.addInitScript(updateNoticeSeed()); await page.addInitScript(oneTimeNoticeSeed());
     await page.addInitScript(seed, { storyIds: STORY_IDS, introKeys: INTRO_KEYS, life: true, intro: false, bondAll: null });
     await page.route(/supabase|functions\/v1/, r => r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));

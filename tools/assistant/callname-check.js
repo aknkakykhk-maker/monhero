@@ -228,7 +228,7 @@ const browser = async () => {
       // ⑫ プロフィール
       await page.locator('[data-profile-call-style]').first().waitFor({ timeout: 8000 }).catch(() => {});
       // プロフィールで1回だけ出る案内(飾り枠など)を読み進めてから押す
-      for (let i = 0; i < 12; i++) { const n = page.getByRole('button', { name: /^(次へ|閉じる|OK|わかった！?)$/ }).first(); if (!(await n.count()) || !(await n.isVisible().catch(() => false))) break; await n.click({ timeout: 1500 }).catch(() => {}); await page.waitForTimeout(250); }
+      for (let i = 0; i < 12; i++) { const n = page.getByRole('button', { name: /^(次へ|閉じる|OK|(?:分|わ)かった！?)$/ }).first(); if (!(await n.count()) || !(await n.isVisible().catch(() => false))) break; await n.click({ timeout: 1500 }).catch(() => {}); await page.waitForTimeout(250); }
       await page.locator('[data-profile-call-style]').first().click({ timeout: 8000 }).catch(() => {});
       await page.waitForTimeout(400);
       // ミハリ 2026-11-08: 知らせが小窓のいちばん上の行に重なっていた。小窓が開いているあいだは出さない

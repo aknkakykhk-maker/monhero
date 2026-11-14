@@ -85,7 +85,7 @@ const check = (name, ok, detail = '') => {
     await page.getByRole('button', { name: 'トップ画面へ進む' }).click({ timeout: 30000 });
     await page.getByRole('button', { name: 'モンヒロバトル' }).waitFor({ timeout: 30000 });
     for (let i = 0; i < 6; i++) {
-      const btn = page.getByRole('button', { name: /受け取る|閉じる|はじめる|OK/ }).first();
+      const btn = page.getByRole('button', { name: /受け取る|閉じる|(?:始|はじ)める|OK/ }).first();
       if (await btn.count() === 0 || !(await btn.isVisible().catch(() => false))) break;
       await btn.dispatchEvent('click').catch(() => {});
       await page.waitForTimeout(250);
@@ -278,7 +278,7 @@ const check = (name, ok, detail = '') => {
         if (confirm) { confirm.click(); return '確定'; }
         const teaching = pick(/新規習得|強化後/);
         if (teaching) { teaching.click(); return 'アシストカード'; }
-        const decide = pick(/この子を|この子で|決定|選ぶ|選ぶ|はじめる/);
+        const decide = pick(/この子を|この子で|決定|選ぶ|選ぶ|(?:始|はじ)める/);
         if (decide) { decide.click(); return decide.textContent.trim().slice(0, 10); }
         return null;
       });
