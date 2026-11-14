@@ -60,7 +60,7 @@ const makeRun = async (kind) => {
     res.writeHead(200, { 'Content-Type': TYPES[path.extname(f)] || 'application/octet-stream' }); fs.createReadStream(f).pipe(res); }); s.listen(PORT, () => r(s)); });
   const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
   const errors = [];
-  const sizes = SHOT_DIR ? [[390, 844, ''], [320, 568, 's320']] : [[390, 844, '']];
+  const sizes = SHOT_DIR ? [[390, 844, ''], [844, 390, 'land'], [320, 568, 's320']] : [[390, 844, '']]; // 撮るときは横画面も(社長に見せる止め絵は縦と横)
   // [名前, 作る育成, 操作(data 属性 か テキストの正規表現)]。'@x' は [data-msx-r3-x] を押す
   const SHOTS = [
     ['C1', 'mid', ['cont', /^🏆大会/]],
