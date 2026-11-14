@@ -193,6 +193,29 @@ const msxNormAssist = (raw) => {
   });
   return { v: 1, cap: MSX_ASSIST_CAP, mons };
 };
+// ---- 技の升の選び(2026-11-14 社長 r1114-128・131) ----
+//   新しいキー mh_monsuc_techpick_v1 = { v:1, base:{ 種族: { 升: 技id } }, mon:{ マスモンボックスの子のid: { 升: 技id } } }。升 = `${ランク}-${間合い}`。
+//   育成を始めるときに、その種族(または合体で生まれた子)の分を育成の状態 techPick へ写す(芯 data/monhero-success.js の techPick)。既存のキーは変えない。
+//   読めない値は _broken へ写して空で始める。項目が無い・壊れた升は「並びの1つ目」(芯の techPickNorm と同じ)
+const MSX_PICK_KEY = 'mh_monsuc_techpick_v1';
+const msxNormPickMap = (raw) => { const o = {}; if (!msxIsObj(raw)) return o; Object.keys(raw).slice(0, 32).forEach((c) => { if (/^[1-5]-[0-3]$/.test(c) && typeof raw[c] === 'string' && raw[c].length <= 48) o[c] = raw[c]; }); return o; };
+const msxNormTechPick = (raw) => {
+  const o = msxIsObj(raw) ? raw : {}; const base = {}; const mon = {};
+  if (msxIsObj(o.base)) Object.keys(o.base).slice(0, 64).forEach((k) => { if (k.length <= 32) base[k] = msxNormPickMap(o.base[k]); });
+  if (msxIsObj(o.mon)) Object.keys(o.mon).slice(0, 300).forEach((k) => { if (k.length <= 64) mon[k] = msxNormPickMap(o.mon[k]); });
+  return { v: 1, base, mon };
+};
+const msxReadTechPick = async () => {
+  let raw = null; try { raw = await storeGet(MSX_PICK_KEY, null); } catch (e) { raw = null; }
+  if (raw != null && !msxIsObj(raw)) { try { await storeSet(MSX_PICK_KEY + '_broken', raw); } catch (e) {} }
+  return msxNormTechPick(raw);
+};
+// kind … 'base'(ベースモン・key は種族) / 'mon'(合体で生まれた子・key は箱の子の id)。書いた結果の全体を返す
+const msxWriteTechPick = async (kind, key, map) => {
+  const cur = await msxReadTechPick(); const out = { ...cur, [kind]: { ...cur[kind], [key]: msxNormPickMap(map) } };
+  try { await storeSet(MSX_PICK_KEY, out); } catch (e) { return cur; }
+  return out;
+};
 const msxReadAssist = async () => {
   let raw = null; try { raw = await storeGet(MSX_ASSIST_KEY, null); } catch (e) { raw = null; }
   if (raw != null && (!msxIsObj(raw) || !Array.isArray(raw.mons))) { try { await storeSet(MSX_ASSIST_KEY + '_broken', raw); } catch (e) {} }
