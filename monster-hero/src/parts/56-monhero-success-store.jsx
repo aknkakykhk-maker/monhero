@@ -119,6 +119,7 @@ const msxNormRun = (raw, SUC) => {
   }
   return {
     v: 1, id: msxStr(raw.id, 64, s.id), s,
+    scn: typeof msxScenarioId === 'function' ? msxScenarioId(raw.scn) : 'hero', // シナリオ(2026-11-14 足した項目。無い保存は ヒーローへの道)
     nick: msxStr(raw.nick, 8) || '', colors: msxColors(raw.colors),
     from: msxIsObj(raw.from) && typeof raw.from.box === 'string' ? { box: raw.from.box.slice(0, 64) } : { base: msxStr(raw.from && raw.from.base, 24, s.species) },
     items: Array.isArray(raw.items) ? raw.items.filter((x) => typeof x === 'string').slice(0, 2) : [],
