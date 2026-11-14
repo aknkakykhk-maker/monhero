@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ec14b3662fed66db
+// source-sha256: b1951b0c1bc197d4
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -174211,7 +174211,9 @@ const MSX_R3_CSS = `
 .msx .r3 .q-slot ul{list-style:none;margin:2px 0 0;padding:0;font-size:9.5px;color:#e2e8f0}
 .msx .r3 .q-slot li{display:flex;gap:4px;align-items:center}
 .msx .r3 .q-slot li i{font-style:normal;color:#94a3b8;flex:0 0 auto}
-.msx .r3 .q-slot li em{font-style:normal;margin-left:auto;background:#16a34a;color:#fff;border-radius:4px;padding:0 4px;font-size:9px}
+.msx .r3 .q-slot li em.no{background:#475569;color:#cbd5e1}
+.msx .r3 .q-slot li span{min-width:0;flex:1 1 auto}
+.msx .r3 .q-slot li em{white-space:nowrap;flex:0 0 auto;font-style:normal;margin-left:auto;background:#16a34a;color:#fff;border-radius:4px;padding:0 4px;font-size:9px}
 .msx .r3 .q-list{flex:1 1 auto;min-height:0;overflow-y:auto}
 .msx .r3 .q-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px}
 .msx .r3 .q-col{display:flex;flex-direction:column;gap:5px;min-width:0}
@@ -177642,7 +177644,17 @@ function MsxR3Shugyo({
       "data-msx-r3-qslot": "0"
     }, want.length ? superWhy ? `超修行は できない(${superWhy})` : '+ もう1つ選ぶと 🔥超修行' : '+ 下の緑の札から 技を選ぶ');
     const t = all.find(x => x.id === id) || {};
-    const cs = condsOf(t);
+    const bc = typeof SUC.techBoostConds === 'function' ? SUC.techBoostConds(s0, t, want) : [];
+    const rate = typeof SUC.techRate === 'function' ? SUC.techRate(s0, t, {
+      course,
+      super: isSuper,
+      picks: want
+    }) : rateOf[id] || 0;
+    const BC = {
+      n: c => `覚えた技 ${c.need}つ以上`,
+      pop: c => `人気 ${c.need}以上`,
+      sum: c => `選んだ技の段の合計 ${c.need}以上`
+    };
     return React.createElement("div", {
       className: "q-slot on msx-kp",
       onClick: () => toggle(id),
@@ -177650,10 +177662,16 @@ function MsxR3Shugyo({
     }, React.createElement("small", null, MSX_R3_DIST[Math.min(...(t.dist || [1]))], "・R", rankOf[id] || '-'), React.createElement("b", {
       className: "n"
     }, t.name), React.createElement("b", {
-      className: "r"
-    }, Math.round((rateOf[id] || 0) * 100), "%"), cs.length ? React.createElement("ul", null, cs.slice(0, 4).map((c, i) => React.createElement("li", {
-      key: c.k
-    }, React.createElement("i", null, "条件", i + 1), c.short.replace(/で$/, ' 以上'), React.createElement("em", null, "済")))) : React.createElement("ul", null, React.createElement("li", null, React.createElement("i", null, "条件"), "なし")));
+      className: "r",
+      "data-msx-r3-qrate": true
+    }, Math.round(rate * 100), "%"), bc.length ? React.createElement("ul", {
+      "data-msx-r3-qconds": true
+    }, bc.slice(0, 4).map((c, i) => React.createElement("li", {
+      key: `${c.type}${i}`,
+      className: c.ok ? 'ok' : ''
+    }, React.createElement("i", null, "条件", i + 1), React.createElement("span", null, (BC[c.type] || (() => ''))(c)), React.createElement("em", {
+      className: c.ok ? '' : 'no'
+    }, c.ok ? '済 +5%' : 'まだ')))) : React.createElement("ul", null, React.createElement("li", null, React.createElement("i", null, "条件"), "なし")));
   };
   const body = React.createElement(React.Fragment, null, React.createElement(MsxBand, {
     s: s0,
