@@ -307,6 +307,46 @@ function AlfBondSheet({ friend, more, land, onClose, onRoom }) {
       </div>
     </div>);
 }
+// ---------- フレンドの家の見る専用「🤝 きずな」(2026-11-14 社長 r1115-019 第2弾)----------
+// 友情Lv・今日のスタンプ(この人との間の記録)・お気に入りの棚・その人の助手との仲良しの「段」(数ではなく3つの段。控えの bd)。見るだけ(押して動く物は無い)
+function AlfBondView({ friend, more, land = false }) {
+  const s = useAssistantLifeFriendState();
+  React.useEffect(() => { if (albEnabled()) void albLoad(); }, []);
+  if (!albEnabled() || !s.bond) return null;
+  const x = albOne(s.bond, friend.id);
+  const nx = albNext(x.st);
+  const fv = more && more.fv ? more.fv : null;
+  const bd = more && more.bd ? more.bd : null;
+  const ids = ((friend.house && friend.house.ids) || []).filter(id => ALF_IDS.includes(id));
+  const card = 'rounded-2xl border border-white/10 bg-slate-800/90 px-3 py-2.5';
+  const sec = 'mt-3 mb-1 text-[12px] font-black text-amber-200';
+  const names = typeof ALF_BOND_TIER_NAMES !== 'undefined' ? ALF_BOND_TIER_NAMES : ['はじめのころ', 'なかよし', 'ずっと仲良し'];
+  return (
+    <div className="px-3 pb-4 pt-2" data-alf-bond-view>
+      <div className={card} data-alf-bond-view-friend>
+        <p className="text-[15px] font-black text-pink-100">🤝 {friend.name}さんとの友情 Lv{albLv(x.st)}</p>
+        <p className="text-[11px] font-bold text-slate-200"><span className="whitespace-nowrap">「{albTitle(x.st)}」</span> <span className="whitespace-nowrap">スタンプ {x.st}個</span>{nx ? <> <span className="whitespace-nowrap">あと{nx.need}個で「{ALB_TITLES[albLv(x.st) + 1]}」</span></> : null}</p>
+        <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-white/15"><div className="h-full rounded-full bg-gradient-to-r from-pink-400 to-amber-300" style={{ width: `${nx ? Math.round(((x.st - nx.from) / Math.max(1, nx.to - nx.from)) * 100) : 100}%` }}/></div>
+        <p className="mt-2 text-[12px] font-black text-amber-200">今日のスタンプ{x.done ? ' ✔' : ''}</p>
+        <div className="mt-1 grid grid-cols-3 gap-1" data-alb-view-tasks>{ALB_TASKS.map(([k, icon, label]) => <div key={k} className={`whitespace-nowrap rounded-xl px-0.5 py-1.5 text-center text-[10.5px] font-black ${x.t[k] ? 'border border-amber-300 bg-amber-300/20 text-amber-100' : 'border border-white/15 bg-white/5 text-slate-300'}`}>{icon} {label}{x.t[k] ? ' ✔' : ''}</div>)}</div>
+        <p className="mt-1 text-[10px] leading-snug text-slate-300">この家で3つすると、今日のスタンプが1個たまります。</p>
+      </div>
+      <p className={sec}>💗 {friend.name}さんの助手との仲(段)</p>
+      <div className={card} data-alf-bond-view-tiers>
+        {ids.length ? ids.map(id => {
+          const t = bd ? bd[id] : undefined; const a = typeof assistantById === 'function' ? assistantById(id) : null;
+          return (
+            <div key={id} className="flex items-center gap-2 border-b border-slate-700/60 py-1 last:border-0" data-alf-bond-view-tier={id}>
+              <span className="shrink-0">{a && typeof AssistantFace === 'function' ? <AssistantFace who={a} size={30}/> : null}</span>
+              <span className="min-w-0 flex-1 truncate text-[12.5px] font-black text-white">{assistantLifeName(id)}</span>
+              <span className="shrink-0 whitespace-nowrap rounded-full bg-slate-950/80 px-2 py-0.5 text-[11px] font-black text-pink-100">{t === 0 || t === 1 || t === 2 ? `💗 ${names[t]}` : '—'}</span>
+            </div>);
+        }) : <p className="text-[11px] text-slate-300">まだ会っている助手がいません。</p>}
+        <p className="mt-1.5 text-[10px] leading-snug text-slate-300">{friend.name}さんとそれぞれの助手の仲の段です。くわしい数は出ません。</p>
+      </div>
+      {fv ? <><p className={sec}>🏆 {friend.name}さんのお気に入りの棚</p><AlfFavShelf fv={fv}/></> : null}
+    </div>);
+}
 // 「🏘 フレンド」のページ: 📖 お客さん帳(今週、だれが・いつ・何をしたか。返しに行く)
 function AlfGuestBook({ s, card, sec, onVisit }) {
   React.useEffect(() => { if (albEnabled()) void (async () => { await albLoad(); await albCountIncoming(); await albFetchLikes(); })(); }, [s.visits]);
