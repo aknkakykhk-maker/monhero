@@ -22,7 +22,7 @@ const arena = fs.readFileSync(path.join(PARTS, '56-monhero-success-arena.jsx'), 
 const beta = fs.readFileSync(path.join(PARTS, '56-assistant-masmon-battle-beta.jsx'), 'utf8');
 const app = fs.readFileSync(path.join(PARTS, '60-app.jsx'), 'utf8');
 check('① MonsucArena と β の観戦が同じ場 MsaStage を使う', /<MsaStage /.test(arena.slice(arena.indexOf('function MonsucArena'))) && /<MsaStage /.test(beta));
-check('② 60-app が試合の画面の口を見て、バトルの曲を返す', /useMhBattleBgmOverlay\(\)/.test(app) && /if \(battleBgmOverlay\) return bgmArrangement\.battle/.test(app) && /assistantLifeOpenNow, battleBgmOverlay\]\);/.test(app));
+check('② 60-app が試合の画面の口を見て、バトルの曲を返す', /useMhBattleBgmOverlay\(\)/.test(app) && /if \(battleBgmOverlay\) return \(typeof battleBgmOverlay === 'string'/.test(app) && /assistantLifeOpenNow, battleBgmOverlay\]\);/.test(app));
 
 const PORT = 8984;
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json', '.css': 'text/css', '.png': 'image/png', '.jpg': 'image/jpeg', '.webp': 'image/webp', '.svg': 'image/svg+xml', '.woff2': 'font/woff2', '.mp3': 'audio/mpeg' };
@@ -137,6 +137,22 @@ const open = async (browser, reducedMotion, width = 390, species = 'Mocchi', loy
       const m2 = await p2.evaluate(() => document.querySelector('[data-msc-match]').dataset.msaMode);
       check('段C: 同じ育成で選んだオートは、その育成の次の試合でも続く', m2 === 'auto', m2);
       await p2.close();
+    }
+    // 段C(2026-11-14 社長「βの試合の曲もそろえる」): 曲名つきの保持は、その曲(試合の曲 cupMatch)を返し、離すと戻る。曲名なしの保持は今までどおり(アレンジの「バトル」)
+    {
+      const { page } = await open(browser, 'reduce', 390, 'Mocchi');
+      const r = await page.evaluate(async () => {
+        window.__root.unmount(); await new Promise((q) => setTimeout(q, 300)); // 試合の画面を閉じて、保持が無い所から
+        const out = {}; const cm = successSoundBgm('cupMatch');
+        out.cm = cm; out.v0 = MH_BATTLE_BGM.val;
+        const r1 = mhBattleBgmHold(cm); out.v1 = MH_BATTLE_BGM.val;
+        const r2 = mhBattleBgmHold(); out.v2 = MH_BATTLE_BGM.val;     // 曲名なしが上に重なったら、アレンジの「バトル」(true)
+        r2(); out.v3 = MH_BATTLE_BGM.val;
+        r1(); out.v4 = MH_BATTLE_BGM.val;
+        return out;
+      });
+      check('段C: βの試合の曲は cupMatch(ichika_battle)・曲名なしの保持は従来どおり', r.cm === 'ichika_battle' && r.v0 === false && r.v1 === 'ichika_battle' && r.v2 === true && r.v3 === 'ichika_battle' && r.v4 === false, JSON.stringify(r));
+      await page.close();
     }
     // ②〜④ ふつうの動き
     {

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 792c1b48439020d3
+// source-sha256: b5b22d10bd8cf893
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -148952,7 +148952,7 @@ function AssistantMasmonBattleBeta({
   const [opening, setOpening] = useState(false);
   const finSeenRef = useRef('');
   const [bg, setBg] = useState(() => typeof msaBgRead === 'function' ? msaBgRead() : 'arena');
-  if (typeof useMhBattleBgmHold === 'function') useMhBattleBgmHold(phase === 'watch' || phase === 'finish' || phase === 'review');
+  if (typeof useMhBattleBgmHold === 'function') useMhBattleBgmHold(phase === 'watch' || phase === 'finish' || phase === 'review', typeof successSoundBgm === 'function' ? successSoundBgm('cupMatch') : null);
   const [battle, setBattle] = useState(null);
   const [pos, setPos] = useState(0);
   const [paused, setPaused] = useState(false);
@@ -176857,42 +176857,52 @@ const msaSe = k => {
 const MH_BATTLE_BGM = {
   n: 0,
   on: false,
+  val: false,
+  stack: [],
   subs: new Set()
 };
 const mhBattleBgmEmit = () => {
   const on = MH_BATTLE_BGM.n > 0;
-  if (on === MH_BATTLE_BGM.on) return;
+  const top = MH_BATTLE_BGM.stack.length ? MH_BATTLE_BGM.stack[MH_BATTLE_BGM.stack.length - 1].track : null;
+  const val = on ? top || true : false;
   MH_BATTLE_BGM.on = on;
+  if (val === MH_BATTLE_BGM.val) return;
+  MH_BATTLE_BGM.val = val;
   MH_BATTLE_BGM.subs.forEach(f => {
     try {
-      f(on);
+      f(val);
     } catch (_) {}
   });
 };
-const mhBattleBgmHold = () => {
+const mhBattleBgmHold = (track = null) => {
   MH_BATTLE_BGM.n++;
+  const tok = {
+    track: typeof track === 'string' && track ? track : null
+  };
+  MH_BATTLE_BGM.stack.push(tok);
   mhBattleBgmEmit();
   let done = false;
   return () => {
     if (done) return;
     done = true;
     MH_BATTLE_BGM.n = Math.max(0, MH_BATTLE_BGM.n - 1);
+    MH_BATTLE_BGM.stack = MH_BATTLE_BGM.stack.filter(x => x !== tok);
     mhBattleBgmEmit();
   };
 };
-function useMhBattleBgmHold(on) {
-  useEffect(() => on ? mhBattleBgmHold() : undefined, [on]);
+function useMhBattleBgmHold(on, track = null) {
+  useEffect(() => on ? mhBattleBgmHold(track) : undefined, [on, track]);
 }
 function useMhBattleBgmOverlay() {
-  const [on, setOn] = useState(MH_BATTLE_BGM.on);
+  const [val, setVal] = useState(MH_BATTLE_BGM.val);
   useEffect(() => {
-    MH_BATTLE_BGM.subs.add(setOn);
-    setOn(MH_BATTLE_BGM.on);
+    MH_BATTLE_BGM.subs.add(setVal);
+    setVal(MH_BATTLE_BGM.val);
     return () => {
-      MH_BATTLE_BGM.subs.delete(setOn);
+      MH_BATTLE_BGM.subs.delete(setVal);
     };
   }, []);
-  return on;
+  return val;
 }
 const msaMotionKind = (species, tech) => {
   if (!tech) return null;
@@ -178199,7 +178209,7 @@ function MonsucArena({
     type: "button",
     "data-msc-skip": true,
     onClick: skip
-  }, "⏭ とばす"), !manual ? React.createElement(MsaBgToggle, {
+  }, "⏭ 飛ばす"), !manual ? React.createElement(MsaBgToggle, {
     bg: bg,
     onChange: setBg
   }) : null) : null, manual && !auto && !ended ? React.createElement("div", {
@@ -225864,7 +225874,7 @@ function MonsterHeroGame() {
   const bgmKeyForState = (state, currentWave, enemyId, wavesDone, isGameOver, allowKeep = true) => {
     if (eventLineBgm) return eventLineBgm;
     if (eventBgmScene) return bgmArrangementWithEventDefault(bgmArrangement, eventBgmScene);
-    if (battleBgmOverlay) return bgmArrangement.battle || DEFAULT_BGM_ARRANGEMENT.battle;
+    if (battleBgmOverlay) return typeof battleBgmOverlay === 'string' && typeof BGM_TRACK_BY_ID !== 'undefined' && BGM_TRACK_BY_ID[battleBgmOverlay] ? battleBgmOverlay : bgmArrangement.battle || DEFAULT_BGM_ARRANGEMENT.battle;
     if (assistantLifeOpenNow && (state === 'HOME' || state === 'PROFILE' || state === 'ITEM_INVENTORY') && typeof ASSISTANT_LIFE_BGM_TRACK === 'string') return ASSISTANT_LIFE_BGM_TRACK;
     if (state === 'BATTLE' && raidJackRunRef.current) return RAID_JACK_BATTLE_BGM_TRACK;
     if (RAID_JACK_BGM_STATES.includes(state)) return RAID_JACK_BGM_TRACK;
