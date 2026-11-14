@@ -44,6 +44,14 @@ const CHANGELOG = [
     ],
   },
   {
+    // 2026-11-15 社長(r1115-027): 修行の結果の言葉が分かりにくい
+    date: "2026-11-15 02:09", type:'update', title:'修行の結果の言葉が分かりやすくなりました', status:'new', group:'assistant',
+    items:[
+      '「今日の修行の結果」で、どんな修行か(「ちからを伸ばす修行」など)が文で分かります。',
+      '覚えた技は「新しい技「◯◯」を覚えた」、伸びた数は「技の熟練度」と「熟練の段」と書くようにしました。',
+    ],
+  },
+  {
     // 2026-11-15 社長(r1115-007): 助手の好き嫌いは遊んでいくうちに変わる(案 GROW-PLAN 8)。公開の印 assistantLifeTaste
     date: "2026-11-15 01:18", type:'update', title:'助手の好き・苦手が、遊んでいくうちに変わるようになりました', status:'new', group:'assistant', releaseFlag:'assistantLifeTaste',
     items:[
