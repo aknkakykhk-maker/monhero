@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 80d3643b53d3dfe9
+// source-sha256: 69fe8808126d9059
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -164802,7 +164802,8 @@ const MSX_CSS = `
 .msx .v-igrid .v-icw{width:30px;height:30px;display:block;margin:0 auto}
 .msx .v-igrid i{position:absolute;right:3px;top:2px;font-style:normal;font-size:10px;font-weight:900;color:#fde047}
 .msx .v-igrid small{display:block;font-size:10px;font-weight:800;line-height:1.2;min-height:19px;margin-top:2px;overflow:hidden}
-.msx .v-igrid div.bo,.msx .v-igrid button.bo{border-color:#38bdf8}.msx .v-igrid div.in,.msx .v-igrid button.in{border-color:#fde047;background:#3b2f0b;box-shadow:0 0 9px #fde04788}
+.msx .v-igrid div.bo,.msx .v-igrid button.bo{border-color:#38bdf8}
+.msx .v-igrid button.none{opacity:.45}.msx .v-igrid button.look{outline:2px solid #f9a8d4;outline-offset:1px}.msx .v-igrid div.in,.msx .v-igrid button.in{border-color:#fde047;background:#3b2f0b;box-shadow:0 0 9px #fde04788}
 .msx .v-igrid u{position:absolute;left:3px;top:2px;text-decoration:none;font-size:10px;font-weight:900;color:#86efac}
 .msx .v-ileg{display:flex;gap:10px;font-size:10px;font-weight:800;color:#cbd5e1;margin-top:5px;white-space:nowrap}
 .msx .v-ileg b{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:3px;vertical-align:-1px}.msx .v-ileg .sw1{background:#475569}.msx .v-ileg .sw2{background:#38bdf8}
@@ -166221,6 +166222,18 @@ function MsxStart({
   const [step, setStep] = useState(0);
   const [scn, setScn] = useState(null);
   const [tab, setTab] = useState('base');
+  const [look, setLook] = useState(null);
+  useEffect(() => {
+    if (!look || typeof document === 'undefined') return;
+    const el = document.querySelector('[data-msx-carry-look]');
+    if (el && el.scrollIntoView) {
+      try {
+        el.scrollIntoView({
+          block: 'nearest'
+        });
+      } catch (e) {}
+    }
+  }, [look]);
   const [pick, setPick] = useState(() => ({
     base: unlocked[0] || 'Mocchi'
   }));
@@ -166835,9 +166848,12 @@ function MsxStart({
     }, MSX_ITEMS.map(t => React.createElement("button", {
       type: "button",
       key: t.id,
-      className: `${items.includes(t.id) ? 'in' : ''}${t.when === 'both' ? ' bo' : ''}`,
-      onClick: () => toggle(t.id),
-      disabled: !has(t.id) && !items.includes(t.id)
+      className: `${items.includes(t.id) ? 'in' : ''}${t.when === 'both' ? ' bo' : ''}${!has(t.id) && !items.includes(t.id) ? ' none' : ''}${look === t.id ? ' look' : ''}`,
+      onClick: () => {
+        setLook(t.id);
+        toggle(t.id);
+      },
+      "data-msx-carry-item": t.id
     }, React.createElement("span", {
       style: {
         fontSize: 22,
@@ -166854,9 +166870,48 @@ function MsxStart({
     }), "育成中にも使える物(1ターン1個まで)")), React.createElement("div", {
       className: "msx-scroll",
       style: {
-        flex: '1 1 0'
+        flex: '1 1 0',
+        minHeight: 128
       }
-    }, items.map(id => React.createElement("div", {
+    }, look && MSX_ITEM_BY_ID[look] ? (() => {
+      const t = MSX_ITEM_BY_ID[look];
+      const n = has(look);
+      return React.createElement("div", {
+        className: "v-bsel",
+        style: {
+          marginBottom: 6
+        },
+        "data-msx-carry-look": look
+      }, React.createElement("span", {
+        className: "e",
+        style: {
+          fontSize: 30
+        }
+      }, t.e), React.createElement("div", {
+        style: {
+          minWidth: 0
+        }
+      }, React.createElement("b", null, t.name, React.createElement("span", {
+        className: "yel"
+      }, " ×", n)), React.createElement("small", {
+        style: JA_WRAP_STYLE
+      }, jaWrap(msxItemDesc(look))), React.createElement("small", {
+        style: {
+          ...JA_WRAP_STYLE,
+          color: '#7dd3fc'
+        }
+      }, jaWrap(t.when === 'before' ? 'いつ: 育成をはじめる前に効き、その育成のあいだ続く' : 'いつ: 育成中の自分のターンに使う(1ターン1個まで・ターンは進まない)')), React.createElement("small", {
+        style: {
+          ...JA_WRAP_STYLE,
+          color: '#fcd34d'
+        }
+      }, jaWrap(n > 0 ? items.includes(look) ? '持っていく物に入っている(もう一度押すと外す)' : items.length >= 2 ? '持っていけるのは2つまで(ほかを外すと選べる)' : '押すと持っていく物に入る' : '手に入れ方: マーケットのビートP交換所・助手ライフの拾い物や贈り物'))));
+    })() : React.createElement("div", {
+      className: "msx-note",
+      style: {
+        marginBottom: 6
+      }
+    }, "升目を押すと、効き目と手に入れ方が出ます"), items.map(id => React.createElement("div", {
       key: id,
       className: "v-item sel"
     }, React.createElement("span", {
@@ -169528,8 +169583,9 @@ function MsxBag({
   }, "持ちこんだ物はありません") : null, React.createElement("div", {
     className: "v-bnote"
   }, "⏳ 時渡りの砂時計: バトルに敗北したときにやり直せる", React.createElement("br", null), "🌈 虹の時渡りの砂時計: 敗北したとき相手を変えてやり直せる", React.createElement("br", null), React.createElement("span", {
-    className: "dim2"
-  }, "色のうすい物は、ここでは使えません(はじめる前から効いている物と、大会で負けたときに使う砂時計)")), React.createElement("button", {
+    className: "dim2",
+    style: JA_WRAP_STYLE
+  }, jaWrap('色のうすい物は、ここでは使えません(はじめる前から効く物・大会で負けたときの砂時計)'))), React.createElement("button", {
     type: "button",
     className: "v-big",
     style: {

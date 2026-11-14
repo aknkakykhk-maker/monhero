@@ -768,7 +768,7 @@ function MsxBag({ run, setRun, v, ev, onClose }) {
           <div className="no"><span className="e">⏳</span><i>×{sand}</i><small><MsxItemName name="時渡りの砂時計"/></small></div><div className="no"><span className="e">🌈</span><i>×{rainbow}</i><small><MsxItemName name="虹の時渡りの砂時計"/></small></div>
         </div>
         {!bagList.length && !carryList.length ? <div className="msx-note">持ちこんだ物はありません</div> : null}
-        <div className="v-bnote">⏳ 時渡りの砂時計: バトルに敗北したときにやり直せる<br/>🌈 虹の時渡りの砂時計: 敗北したとき相手を変えてやり直せる<br/><span className="dim2">色のうすい物は、ここでは使えません(はじめる前から効いている物と、大会で負けたときに使う砂時計)</span></div>
+        <div className="v-bnote">⏳ 時渡りの砂時計: バトルに敗北したときにやり直せる<br/>🌈 虹の時渡りの砂時計: 敗北したとき相手を変えてやり直せる<br/><span className="dim2" style={JA_WRAP_STYLE}>{jaWrap('色のうすい物は、ここでは使えません(はじめる前から効く物・大会で負けたときの砂時計)')}</span></div>
         <button type="button" className="v-big" style={{ fontSize: 14, padding: 9, marginTop: 0, color: '#fff' }} disabled={!t || t.carry || usedNow || blocked} onClick={use}>
           {usedNow ? 'このターンはもう使った' : blocked ? 'いまは使えない' : t && !t.carry ? `${t.e} ${t.name}を使う` : '使う'}</button>
       </div>

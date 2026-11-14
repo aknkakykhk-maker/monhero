@@ -633,7 +633,8 @@ const MSX_CSS = `
 .msx .v-igrid .v-icw{width:30px;height:30px;display:block;margin:0 auto}
 .msx .v-igrid i{position:absolute;right:3px;top:2px;font-style:normal;font-size:10px;font-weight:900;color:#fde047}
 .msx .v-igrid small{display:block;font-size:10px;font-weight:800;line-height:1.2;min-height:19px;margin-top:2px;overflow:hidden}
-.msx .v-igrid div.bo,.msx .v-igrid button.bo{border-color:#38bdf8}.msx .v-igrid div.in,.msx .v-igrid button.in{border-color:#fde047;background:#3b2f0b;box-shadow:0 0 9px #fde04788}
+.msx .v-igrid div.bo,.msx .v-igrid button.bo{border-color:#38bdf8}
+.msx .v-igrid button.none{opacity:.45}.msx .v-igrid button.look{outline:2px solid #f9a8d4;outline-offset:1px}.msx .v-igrid div.in,.msx .v-igrid button.in{border-color:#fde047;background:#3b2f0b;box-shadow:0 0 9px #fde04788}
 .msx .v-igrid u{position:absolute;left:3px;top:2px;text-decoration:none;font-size:10px;font-weight:900;color:#86efac}
 .msx .v-ileg{display:flex;gap:10px;font-size:10px;font-weight:800;color:#cbd5e1;margin-top:5px;white-space:nowrap}
 .msx .v-ileg b{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:3px;vertical-align:-1px}.msx .v-ileg .sw1{background:#475569}.msx .v-ileg .sw2{background:#38bdf8}
