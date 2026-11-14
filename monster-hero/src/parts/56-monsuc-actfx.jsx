@@ -126,7 +126,7 @@ function MsxShugyoStages({ run, o, line, onDone }) {
         <span key={`fl${st}`} className="qflash" aria-hidden="true"/>
         {helpers.length ? <div className="faces">{helpers.map((i) => s.team[i]).filter(Boolean).map((m, j) => <img key={j} src={msxMonThumb(m.species)} alt=""/>)}<small>いっしょに修行</small></div> : null}
       </>)}
-      <div className="skip">タップでとばす</div>
+      <div className="skip">タップで飛ばす</div>
     </div>
   );
 }

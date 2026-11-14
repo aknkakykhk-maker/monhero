@@ -238,6 +238,27 @@ if (problems.length > 15) console.log(`  … ほか ${problems.length - 15}件`)
   check('ゲームが読む台本(生成物)が台本と同じ(node tools/success/build-script.js)', stale.length === 0, stale.join(', '));
 }
 
+// 「頂」「てっぺん」を使わない(2026-11-14 社長・台帳 #6112: 最後の大会は「ヒーローズファイナル」。達成した物で言う)。
+//   台本の正本・モンサクの画面(56-monhero-success-*・56-monsuc-*)・ヘルプを、コメントを除いて見る。四大大会「天頂杯」は大会名の見直し(クラフト15)まで数えない
+{
+  const R0 = path.resolve(__dirname, '..', '..');
+  const PD = path.join(R0, 'monster-hero', 'src', 'parts');
+  const SD = path.join(R0, 'docs', 'progress', 'player-raise', 'script');
+  const files = [
+    ...fs.readdirSync(SD).filter((f) => f.endsWith('.js')).map((f) => path.join(SD, f)),
+    ...fs.readdirSync(PD).filter((f) => /^56-(monhero-success|monsuc)-.*\.jsx$/.test(f)).map((f) => path.join(PD, f)),
+    path.join(R0, 'monster-hero', 'data', 'help.js'),
+  ];
+  const hits = [];
+  for (const f of files) {
+    fs.readFileSync(f, 'utf8').split('\n').forEach((line, i) => {
+      const code = line.replace(/^\s*\/\/.*$/, '').replace(/\s\/\/ .*$/, '').replace(/\/\*.*?\*\//g, '');
+      if (/頂(?!杯)|てっぺん|保存枠/.test(code)) hits.push(`${path.basename(f)}:${i + 1}`);
+    });
+  }
+  check('モンサクの文に「頂」「てっぺん」「保存枠」が出ない(ヒーローズファイナル・達成した物で言う・置き場はマスモンボックス)', hits.length === 0, hits.slice(0, 6).join(' / '));
+}
+
 if (SHOW_COUNT) {
   const byWho = {};
   for (const r of rows) byWho[r.who] = (byWho[r.who] || 0) + 1;
