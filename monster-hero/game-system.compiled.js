@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5058403a095d44a0
+// source-sha256: 5e17de188841ad8f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -156596,7 +156596,8 @@ function MonsucFuseSheet({
   locked = [],
   onDone,
   onClose,
-  suc = null
+  suc = null,
+  keepNote = ''
 }) {
   const SUC = suc || monsucFuseCore();
   const [mainId, setMain] = React.useState(null);
@@ -156747,7 +156748,14 @@ function MonsucFuseSheet({
     className: "text-[12px] font-black text-rose-100"
   }, monsucFuseNick(main), "と", monsucFuseNick(mat), "は、マスモンボックスからいなくなります。元に戻せません"), React.createElement("p", {
     className: "mt-0.5 text-[10.5px] font-bold text-rose-200"
-  }, "思い出に名前・ランク・代が残ります")), err && React.createElement("p", {
+  }, "思い出に名前・ランク・代が残ります"), keepNote ? React.createElement("p", {
+    className: "mt-0.5 text-[10.5px] font-bold text-indigo-200",
+    style: {
+      wordBreak: 'keep-all',
+      overflowWrap: 'anywhere'
+    },
+    "data-monsuc-fuse-keep": true
+  }, keepNote) : null), err && React.createElement("p", {
     className: "mt-1 text-[11px] font-bold text-rose-200",
     "data-monsuc-fuse-err": true
   }, err), React.createElement("button", {
@@ -166083,6 +166091,104 @@ const msxNormBox = raw => {
     memory: Array.isArray(o.memory) ? o.memory.filter(msxIsObj).slice(-100) : []
   };
 };
+const MSX_ASSIST_KEY = 'mh_monsuc_assist_v1';
+const MSX_ASSIST_CAP = 100;
+const msxNormAssist = raw => {
+  const o = msxIsObj(raw) ? raw : {};
+  const seen = new Set();
+  const mons = [];
+  (Array.isArray(o.mons) ? o.mons : []).forEach(x => {
+    const m = msxNormBoxMon(x);
+    if (!m || seen.has(m.id) || mons.length >= MSX_ASSIST_CAP) return;
+    seen.add(m.id);
+    mons.push({
+      ...m,
+      keep: msxIsObj(x.keep) ? {
+        from: x.keep.from === 'fuse' ? 'fuse' : 'farewell',
+        at: Math.floor(msxNum(x.keep.at, 0))
+      } : {
+        from: 'farewell',
+        at: 0
+      }
+    });
+  });
+  return {
+    v: 1,
+    cap: MSX_ASSIST_CAP,
+    mons
+  };
+};
+const msxReadAssist = async () => {
+  let raw = null;
+  try {
+    raw = await storeGet(MSX_ASSIST_KEY, null);
+  } catch (e) {
+    raw = null;
+  }
+  if (raw != null && (!msxIsObj(raw) || !Array.isArray(raw.mons))) {
+    try {
+      await storeSet(MSX_ASSIST_KEY + '_broken', raw);
+    } catch (e) {}
+  }
+  return msxNormAssist(raw);
+};
+const msxAssistKeep = async (mons, from) => {
+  const cur = await msxReadAssist();
+  const list = (Array.isArray(mons) ? mons : []).filter(m => msxIsObj(m) && typeof m.id === 'string');
+  let kept = 0;
+  let full = 0;
+  const next = cur.mons.slice();
+  list.forEach(m => {
+    if (next.some(x => x.id === m.id)) return;
+    if (next.length >= MSX_ASSIST_CAP) {
+      full += 1;
+      return;
+    }
+    const c = msxNormBoxMon(JSON.parse(JSON.stringify(m)));
+    if (!c) return;
+    next.push({
+      ...c,
+      keep: {
+        from: from === 'fuse' ? 'fuse' : 'farewell',
+        at: Date.now()
+      }
+    });
+    kept += 1;
+  });
+  const out = {
+    v: 1,
+    cap: MSX_ASSIST_CAP,
+    mons: next
+  };
+  if (kept > 0) {
+    try {
+      await storeSet(MSX_ASSIST_KEY, out);
+    } catch (e) {
+      return {
+        kept: 0,
+        full,
+        left: MSX_ASSIST_CAP - cur.mons.length,
+        assist: cur
+      };
+    }
+  }
+  return {
+    kept,
+    full,
+    left: MSX_ASSIST_CAP - out.mons.length,
+    assist: out
+  };
+};
+const msxAssistRemove = async ids => {
+  const cur = await msxReadAssist();
+  const drop = new Set(Array.isArray(ids) ? ids : []);
+  const out = {
+    ...cur,
+    mons: cur.mons.filter(m => !drop.has(m.id))
+  };
+  await storeSet(MSX_ASSIST_KEY, out);
+  return out;
+};
 const MSX_ITEM_IDS = Object.freeze(['guide', 'loupe', 'band', 'mag', 'hachi', 'omamori', 'dango', 'grass', 'juice', 'powder', 'license', 'pack', 'oil', 'oilyoil', 'herb', 'hourglass', 'hourglass2', 'ticket']);
 const msxNormMeta = raw => {
   const o = msxIsObj(raw) ? raw : {};
@@ -166094,6 +166200,8 @@ const msxNormMeta = raw => {
   });
   const team = (Array.isArray(o.team) ? o.team : []).slice(0, 6).map(t => msxIsObj(t) && typeof t.box === 'string' ? {
     box: t.box.slice(0, 64)
+  } : msxIsObj(t) && typeof t.assist === 'string' ? {
+    assist: t.assist.slice(0, 64)
   } : msxIsObj(t) && typeof t.base === 'string' ? {
     base: t.base.slice(0, 24)
   } : null);
@@ -166140,7 +166248,7 @@ const msxTech2Backup = async (run, box) => {
   }
 };
 const msxReadAll = async SUC => {
-  const [run, box, meta, unlocked] = await Promise.all([storeGet(MSX_KEYS.run, null), storeGet(MSX_KEYS.box, null), storeGet(MSX_KEYS.meta, null), storeGet('mh_unlocked_monsters', null)]);
+  const [run, box, meta, unlocked, assistRaw] = await Promise.all([storeGet(MSX_KEYS.run, null), storeGet(MSX_KEYS.box, null), storeGet(MSX_KEYS.meta, null), storeGet('mh_unlocked_monsters', null), storeGet(MSX_ASSIST_KEY, null).catch(() => null)]);
   await msxTech2Backup(run, box);
   const all = typeof ALL_PLAYER_MONSTERS === 'object' && ALL_PLAYER_MONSTERS ? ALL_PLAYER_MONSTERS : {};
   const list = SUC && Array.isArray(SUC.speciesList) ? SUC.speciesList : Object.keys(all);
@@ -166148,6 +166256,7 @@ const msxReadAll = async SUC => {
   return {
     run: msxNormRun(run, SUC),
     box: msxNormBox(box),
+    assist: msxNormAssist(assistRaw),
     meta: msxNormMeta(meta),
     unlocked: un.length ? Array.from(new Set(un)) : list.filter(id => all[id]).slice(0, 1)
   };
@@ -166507,7 +166616,22 @@ const msxAptOf = sp => {
   const a = typeof AMG_APT !== 'undefined' && AMG_APT && typeof AMG_APT[sp] === 'string' && AMG_APT[sp].length === 6 ? AMG_APT[sp] : 'CCCCCC';
   return a.split('');
 };
-const msxTeamSrc = (slot, box, own) => {
+const msxTeamSrc = (slot, box, own, assist) => {
+  if (slot && slot.assist) {
+    const a = (assist && assist.mons || []).find(x => x.id === slot.assist);
+    if (a) {
+      const t = msxTeamSrc({
+        box: a.id
+      }, {
+        mons: [a]
+      }, own);
+      return {
+        ...t,
+        boxId: null,
+        assistId: a.id
+      };
+    }
+  }
   if (slot && slot.box) {
     const m = box.mons.find(x => x.id === slot.box);
     if (m) return {
@@ -166799,7 +166923,9 @@ function MsxSlotPicker({
   own,
   unlocked,
   raised,
+  stock = [],
   teamBox,
+  teamRaisedN,
   SUC,
   onPick,
   onClose
@@ -166819,7 +166945,7 @@ function MsxSlotPicker({
       return '';
     }
   };
-  const boxFull = teamBox.length >= 5 && !(cur && cur.box);
+  const boxFull = (Number.isFinite(teamRaisedN) ? teamRaisedN : teamBox.length) >= 5 && !(cur && (cur.box || cur.assist));
   return React.createElement("div", {
     className: "msx-ov msx-fade",
     "data-msx-slot-picker": true,
@@ -166883,7 +167009,36 @@ function MsxSlotPicker({
     }, on ? '✅ この枠' : '入れる'));
   }) : React.createElement("div", {
     className: "msx-note"
-  }, "まだいません。育て終えたモンスターが入ります")), React.createElement("button", {
+  }, "まだいません。育て終えたモンスターが入ります"), stock.length ? React.createElement(React.Fragment, null, React.createElement("div", {
+    className: "msx-dt-cap",
+    style: {
+      marginTop: 8
+    }
+  }, "アシスト用に残したモンスター(育成には使えません)"), stock.map(m => {
+    const on = cur && cur.assist === m.id;
+    return React.createElement("button", {
+      type: "button",
+      key: m.id,
+      className: `v-item${on ? ' sel' : ''}`,
+      disabled: !on && boxFull,
+      style: {
+        padding: '4px 8px',
+        width: '100%'
+      },
+      "data-msx-pick-assist": m.id,
+      onClick: () => onPick({
+        assist: m.id
+      })
+    }, React.createElement("img", {
+      src: msxMonThumb(m.species),
+      alt: "",
+      style: thumb
+    }), React.createElement("div", null, m.nick || msxMonName(m.species), " ", m.rank ? React.createElement("i", {
+      className: msxRankCls(m.rank)
+    }, m.rank) : null, React.createElement("small", null, msxMonName(m.species), "・アシスト用")), React.createElement("span", {
+      className: "pr"
+    }, on ? '✅ この枠' : '入れる'));
+  })) : null), React.createElement("button", {
     type: "button",
     className: "msx-dt-close",
     "data-msx-slot-close": true,
@@ -166963,6 +167118,7 @@ function MsxStart({
     meta,
     unlocked
   } = data;
+  const stock = data.assist && Array.isArray(data.assist.mons) ? data.assist.mons : [];
   const unraised = box.mons.filter(m => !m.raised);
   const raised = box.mons.filter(m => m.raised);
   const [step, setStep] = useState(0);
@@ -166982,6 +167138,12 @@ function MsxStart({
           box: t.box
         };
       }
+      if (t && t.assist && stock.some(m => m.id === t.assist) && nb < 5) {
+        nb += 1;
+        return {
+          assist: t.assist
+        };
+      }
       return t && t.base && unlocked.includes(t.base) && t.base !== own0 ? {
         base: t.base
       } : null;
@@ -166992,6 +167154,8 @@ function MsxStart({
   const [slotPick, setSlotPick] = useState(null);
   const [gatherOpen, setGatherOpen] = useState(false);
   const teamBox = teamSlotsSt.filter(t => t && t.box).map(t => t.box);
+  const teamAssist = teamSlotsSt.filter(t => t && t.assist).map(t => t.assist);
+  const teamRaisedN = teamBox.length + teamAssist.length;
   const [friend, setFriend] = useState(null);
   const [lendList, setLendList] = useState(null);
   const autoBases = useMemo(() => {
@@ -167011,16 +167175,17 @@ function MsxStart({
     return list;
   }, [teamSlotsSt, autoBases, friend]);
   const members = useMemo(() => team.map(t => {
-    const src = t.friend ? t.friend : msxTeamSrc(t, box, species);
+    const src = t.friend ? t.friend : msxTeamSrc(t, box, species, data.assist);
     const m = SUC.memberOf(src);
     return {
       ...m,
       name: src.name,
       boxId: src.boxId || null,
+      assistId: src.assistId || null,
       friend: t.friend ? t.friend.friend : null,
       auto: !!t.auto
     };
-  }), [team, box, SUC, species]);
+  }), [team, box, SUC, species, data.assist]);
   const openLend = async () => {
     if (typeof monsucLendFriends !== 'function') return;
     setLendList('loading');
@@ -167070,9 +167235,11 @@ function MsxStart({
       } : {
         base: species
       },
-      team: team.map(t => t.friend ? t.friend : msxTeamSrc(t, box, species)),
+      team: team.map(t => t.friend ? t.friend : msxTeamSrc(t, box, species, data.assist)),
       teamSlots: team.filter(t => !t.friend).map(t => t.box ? {
         box: t.box
+      } : t.assist ? {
+        assist: t.assist
       } : {
         base: t.base
       }),
@@ -167263,7 +167430,7 @@ function MsxStart({
         n[at] = null;
         return n;
       }
-      if (n.filter(t => t && t.box).length >= 5) return cur;
+      if (n.filter(t => t && (t.box || t.assist)).length >= 5) return cur;
       let i = n.slice(0, 5).findIndex(t => !t);
       if (i < 0) i = n.slice(0, 5).findIndex(t => t && t.base);
       if (i < 0) return cur;
@@ -167272,12 +167439,33 @@ function MsxStart({
       };
       return n;
     });
+    const toggleAssist = id => setTeamSlotsSt(cur => {
+      const n = cur.slice();
+      const at = n.findIndex(t => t && t.assist === id);
+      if (at >= 0) {
+        n[at] = null;
+        return n;
+      }
+      if (n.filter(t => t && (t.box || t.assist)).length >= 5) return cur;
+      let i = n.slice(0, 5).findIndex(t => !t);
+      if (i < 0) i = n.slice(0, 5).findIndex(t => t && t.base);
+      if (i < 0) return cur;
+      n[i] = {
+        assist: id
+      };
+      return n;
+    });
     const putSlot = (i, v) => setTeamSlotsSt(cur => {
       const n = cur.slice();
       if (v && v.box) {
         const at = n.findIndex(t => t && t.box === v.box);
         if (at >= 0) n[at] = null;
-        if (n.filter(t => t && t.box).length >= 5 && !(n[i] && n[i].box)) return cur;
+        if (n.filter(t => t && (t.box || t.assist)).length >= 5 && !(n[i] && (n[i].box || n[i].assist))) return cur;
+      }
+      if (v && v.assist) {
+        const at = n.findIndex(t => t && t.assist === v.assist);
+        if (at >= 0) n[at] = null;
+        if (n.filter(t => t && (t.box || t.assist)).length >= 5 && !(n[i] && (n[i].box || n[i].assist))) return cur;
       }
       n[i] = v;
       return n;
@@ -167358,7 +167546,7 @@ function MsxStart({
         color: '#f9a8d4',
         fontWeight: 900
       }
-    }, "マスモンボックスから選ぶ(", teamBox.length, "/5)"), raised.length && typeof MsxMmGrid === 'function' ? React.createElement(MsxMmGrid, {
+    }, "マスモンボックスから選ぶ(", teamRaisedN, "/5)"), raised.length && typeof MsxMmGrid === 'function' ? React.createElement(MsxMmGrid, {
       mons: raised,
       isOn: m => teamBox.includes(m.id),
       onPick: m => toggleBox(m.id),
@@ -167406,7 +167594,28 @@ function MsxStart({
       style: {
         marginTop: 4
       }
-    }, "マスモンボックスはまだ空です。上の枠を押すと、入れるベースモンを選べます。育て終えたモンスターは、ここに入ります"), React.createElement("div", {
+    }, "マスモンボックスはまだ空です。上の枠を押すと、入れるベースモンを選べます。育て終えたモンスターは、ここに入ります"), stock.length ? React.createElement(React.Fragment, null, React.createElement("div", {
+      className: "sub",
+      style: {
+        color: '#a5b4fc',
+        fontWeight: 900,
+        marginTop: 8
+      }
+    }, "アシスト用に残したモンスターから選ぶ(", stock.length, "/100)"), React.createElement("div", {
+      className: "msx-note",
+      style: {
+        marginTop: 2
+      },
+      "data-msx-assist-note": true
+    }, "育成には使えません。アシスト効果と得意な能力だけ効きます"), typeof MsxMmGrid === 'function' ? React.createElement(MsxMmGrid, {
+      mons: stock,
+      mark: () => 'アシスト用',
+      isOn: m => teamAssist.includes(m.id),
+      onPick: m => toggleAssist(m.id),
+      attrs: m => ({
+        'data-msx-team-assist': m.id
+      })
+    }) : null) : null, React.createElement("div", {
       className: "sub",
       style: {
         color: '#7dd3fc',
@@ -167479,7 +167688,9 @@ function MsxStart({
       own: species,
       unlocked: unlocked,
       raised: raised,
+      stock: stock,
       teamBox: teamBox,
+      teamRaisedN: teamRaisedN,
       SUC: SUC,
       onPick: v => {
         putSlot(slotPick, v);
@@ -175492,7 +175703,8 @@ function MsxMmGrid({
   lockOf,
   label,
   attrs,
-  fav
+  fav,
+  mark
 }) {
   const [saved, setSaved] = useState(null);
   const [favs, setFavs] = useState(Array.isArray(fav) ? fav : []);
@@ -175538,7 +175750,9 @@ function MsxMmGrid({
       "aria-hidden": "true"
     }, "✓") : null, lock ? React.createElement("i", {
       className: "mmg-lk"
-    }, lock) : null, React.createElement("span", {
+    }, lock) : null, mark && mark(m) ? React.createElement("i", {
+      className: "mmg-as"
+    }, mark(m)) : null, React.createElement("span", {
       className: "mmg-lb"
     }, msxMmLabelOf(m, lb)));
   }));
@@ -175554,6 +175768,7 @@ const MSX_MM_GRID_CSS = `
 .mmg .mmg-hr{position:absolute;left:-1px;top:-2px;font-style:normal;font-size:14px;color:#f43f5e;text-shadow:0 1px 0 #fff}
 .mmg .mmg-ck{position:absolute;left:50%;top:22%;transform:translateX(-50%);font-style:normal;font-size:22px;font-weight:900;color:#fff;text-shadow:0 2px 4px #000}
 .mmg .mmg-lk{position:absolute;left:50%;top:30%;transform:translateX(-50%);font-style:normal;font-size:10px;font-weight:900;background:#0f0d24e0;border-radius:6px;padding:0 4px;white-space:nowrap}
+.mmg .mmg-as{position:absolute;left:50%;bottom:20px;transform:translateX(-50%);font-style:normal;font-size:8.5px;font-weight:900;color:#fff;background:#4f46e5;border:1.5px solid #c7d2fe;border-radius:8px;padding:0 4px;line-height:13px;white-space:nowrap}
 .mmg .mmg-lb{max-width:100%;font-size:10.5px;font-weight:900;background:#0f0d24;border-radius:8px;padding:1px 5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .mmg .mm-art{display:block;position:relative;width:100%;height:100%}
 .mmg .mmg-fc img{width:100%!important;height:100%!important;object-fit:cover;object-position:50% 30%}
@@ -175569,6 +175784,9 @@ function MsxR3Box({
   const [tab, setTab] = useState('list');
   const [pick, setPick] = useState([]);
   const [byeAsk, setByeAsk] = useState(null);
+  const [assist, setAssist] = useState(null);
+  const [apick, setApick] = useState([]);
+  const [aAsk, setAAsk] = useState(false);
   const [menu, setMenu] = useState(null);
   const [sel, setSel] = useState(null);
   const [runFrom, setRunFrom] = useState(null);
@@ -175585,6 +175803,9 @@ function MsxR3Box({
     msxR3ReadMeta().then(m => {
       if (alive) setMeta(m);
     });
+    msxReadAssist().then(a => {
+      if (alive) setAssist(a);
+    }).catch(() => {});
     storeGet(MSX_MM_FAV_KEY, []).then(v => {
       if (alive) setFav(msxMmNormFav(v));
     }).catch(() => {});
@@ -175646,9 +175867,19 @@ function MsxR3Box({
   };
   const farewell = async ids => {
     let b = box;
+    const gone = [];
     for (const id of ids) {
+      const m0 = b.mons.find(x => x.id === id);
       if (lendId === id) await unlend();
       b = await msxR3Farewell(id);
+      if (m0) gone.push(m0);
+    }
+    let kept = null;
+    try {
+      kept = await msxAssistKeep(gone, 'farewell');
+      if (kept && kept.assist) setAssist(kept.assist);
+    } catch (e) {
+      kept = null;
     }
     setBox(b);
     setPick([]);
@@ -175656,7 +175887,7 @@ function MsxR3Box({
     setSel(null);
     setPage('list');
     setTab('list');
-    setMsg(`${ids.length}体とお別れしました`);
+    setMsg(`${ids.length}体とお別れしました` + (kept ? kept.kept ? `。${kept.kept}体はアシスト用に残りました(${kept.assist.mons.length}/${MSX_ASSIST_CAP})` : kept.full ? '。アシスト用がいっぱいなので、残りませんでした' : '' : ''));
   };
   const saveEdit = async () => {
     if (!cur || !edit) return;
@@ -175685,7 +175916,24 @@ function MsxR3Box({
       box: box,
       locked: locked,
       readBox: msxR3ReadBox,
-      onSave: n => storeSet(MSX_KEYS.box, n),
+      keepNote: assist && assist.mons.length >= MSX_ASSIST_CAP ? `アシスト用がいっぱい(${MSX_ASSIST_CAP}/${MSX_ASSIST_CAP})なので、\u200b親の2体は残りません(置き場から外すと残せます)` : `親の2体は、アシスト用に残ります(${assist ? Math.min(MSX_ASSIST_CAP, assist.mons.length + 2) : 2}/${MSX_ASSIST_CAP})。\u200b育成には使えず、\u200b編成にだけ入れられます`,
+      onSave: async n => {
+        let old = null;
+        try {
+          old = await msxR3ReadBox();
+        } catch (e) {
+          old = null;
+        }
+        const r = await storeSet(MSX_KEYS.box, n);
+        if (r === true && old && n && Array.isArray(n.mons)) {
+          try {
+            const left = old.mons.filter(m => !n.mons.some(x => x.id === m.id));
+            const k = await msxAssistKeep(left, 'fuse');
+            if (k && k.assist) setAssist(k.assist);
+          } catch (e) {}
+        }
+        return r;
+      },
       onDone: () => {
         msxR3ReadBox().then(setBox);
       },
@@ -175743,7 +175991,16 @@ function MsxR3Box({
     }, React.createElement("span", {
       className: "e",
       "aria-hidden": "true"
-    }, "🧬"), React.createElement("b", null, "合体"), React.createElement("small", null, box.mons.length < 2 ? '2体からできる' : '2体から新しいマスモン')) : null), box.memory.length ? React.createElement("div", {
+    }, "🧬"), React.createElement("b", null, "合体"), React.createElement("small", null, box.mons.length < 2 ? '2体からできる' : '2体から新しいマスモン')) : null), React.createElement("button", {
+      type: "button",
+      className: "mm-card mm-asb",
+      onClick: () => {
+        setPage('assist');
+        setApick([]);
+        setMsg('');
+      },
+      "data-msx-mm-open-assist": true
+    }, React.createElement("b", null, "アシスト用の置き場"), React.createElement("small", null, assist ? assist.mons.length : 0, " / ", MSX_ASSIST_CAP, "体(合体・お別れしたモンスター。編成にだけ入れられる)")), box.memory.length ? React.createElement("div", {
       className: "mm-memo"
     }, "思い出: ", box.memory.slice(-5).reverse().map(m => `${m.nick || msxMonName(m.species)}(${m.rank || '—'})`).join('・')) : null);
     foot = React.createElement("div", {
@@ -175752,6 +176009,78 @@ function MsxR3Box({
       type: "button",
       onClick: onClose
     }, "← もどる"));
+  } else if (page === 'assist') {
+    title = 'アシスト用の置き場';
+    const stock = assist ? assist.mons : [];
+    body = React.createElement(React.Fragment, null, React.createElement("div", {
+      className: "mm-hint msx-kp"
+    }, "合体の親にしたモンスター・お別れしたモンスターが残っています。\\u200b育成には使えず、\\u200b育成を始めるときの編成にだけ入れられます。\\u200bアシスト効果と得意な能力が効きます"), msg ? React.createElement("div", {
+      className: "mm-hint ok"
+    }, msg) : null, React.createElement("div", {
+      className: "mm-gridw"
+    }, stock.length ? React.createElement(MsxMmGrid, {
+      mons: stock,
+      label: view.label,
+      mark: () => 'アシスト用',
+      isOn: m => apick.includes(m.id),
+      attrs: m => ({
+        'data-msx-assist-mon': m.id
+      }),
+      onPick: m => setApick(apick.includes(m.id) ? apick.filter(x => x !== m.id) : [...apick, m.id])
+    }) : React.createElement("div", {
+      className: "msx-note",
+      style: {
+        padding: 8
+      }
+    }, "まだいません。合体の親にしたモンスター・お別れしたモンスターが、ここに残ります")), React.createElement("div", {
+      className: "mm-bar"
+    }, React.createElement("span", {
+      className: "cnt"
+    }, "置き場 ", React.createElement("b", null, stock.length), "/", MSX_ASSIST_CAP, "体"), React.createElement("button", {
+      type: "button",
+      className: "mm-sel",
+      disabled: !apick.length,
+      onClick: () => setAAsk(true),
+      "data-msx-assist-remove": true
+    }, "外す(", apick.length, "体)")), aAsk ? React.createElement("div", {
+      className: "msx-ov msx-fade"
+    }, React.createElement("div", {
+      className: "msx-sheet"
+    }, React.createElement("div", {
+      style: {
+        fontSize: 13,
+        fontWeight: 900,
+        lineHeight: 1.6
+      }
+    }, apick.length, "体をアシスト用の置き場から外しますか? 外したモンスターは元に戻せません"), React.createElement("button", {
+      type: "button",
+      className: "msx-btn go",
+      "data-msx-assist-remove-yes": true,
+      onClick: async () => {
+        try {
+          const a = await msxAssistRemove(apick);
+          setAssist(a);
+          setMsg(`${apick.length}体を外しました`);
+        } catch (e) {
+          setMsg('外せませんでした');
+        }
+        setApick([]);
+        setAAsk(false);
+      }
+    }, "外す"), React.createElement("button", {
+      type: "button",
+      className: "msx-btn sub",
+      onClick: () => setAAsk(false)
+    }, "やめておく"))) : null);
+    foot = React.createElement("div", {
+      className: "v-ft"
+    }, React.createElement("button", {
+      type: "button",
+      onClick: () => {
+        setPage('gate');
+        setApick([]);
+      }
+    }, "← 戻る"));
   } else if (page === 'list' || page === 'detail' && cur) {
     const list = msxMmSorted(box.mons, view.sort);
     const sortName = (MSX_MM_SORTS.find(([k]) => k === view.sort) || [])[1];
@@ -175855,6 +176184,9 @@ function MsxR3Box({
         lineHeight: 1.6
       }
     }, byeAsk.ids.length === 1 && box.mons.find(x => x.id === byeAsk.ids[0]) ? msxMmName(box.mons.find(x => x.id === byeAsk.ids[0])) : `${byeAsk.ids.length}体`, "とお別れしますか? お別れしたマスモンは元に戻せません(思い出に名前とランクだけ残ります)"), React.createElement("div", {
+      className: "mm-keep msx-kp",
+      "data-msx-mm-keepnote": true
+    }, assist && assist.mons.length + byeAsk.ids.length > MSX_ASSIST_CAP ? `アシスト用がいっぱい(${assist.mons.length}/${MSX_ASSIST_CAP})なので、\u200b入りきらない分は残りません` : `アシスト用に残ります(${assist ? Math.min(MSX_ASSIST_CAP, assist.mons.length + byeAsk.ids.length) : byeAsk.ids.length}/${MSX_ASSIST_CAP})。\u200b育成には使えず、\u200b編成にだけ入れられます`), React.createElement("div", {
       className: "mm-byelist"
     }, byeAsk.ids.map(id => {
       const m = box.mons.find(x => x.id === id);
@@ -176106,6 +176438,8 @@ const MSX_MM_CSS = `
 .msx .mm-card{min-height:88px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;border-radius:16px;background:linear-gradient(180deg,#43307a,#2a2052);border:2px solid #fde047;border-bottom-width:5px;padding:8px 6px;text-align:center}
 .msx .mm-card .e{font-size:30px;line-height:1.1}
 .msx .mm-card b{font-size:15px;font-weight:900}
+.msx .mm-asb{grid-column:1/-1;min-height:46px;margin-top:6px;width:100%;flex-direction:column}
+.msx .mm-keep{margin-top:4px;font-size:11px;font-weight:800;color:#c7d2fe;line-height:1.5}
 .msx .mm-card small{font-size:10.5px;font-weight:800;color:#fde68a}
 .msx .mm-memo{font-size:10.5px;color:#cbd5e1;font-weight:700;line-height:1.5}
 .msx .mm-tabs{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:6px;margin-top:6px}
