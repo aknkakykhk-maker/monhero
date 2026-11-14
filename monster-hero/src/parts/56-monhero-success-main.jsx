@@ -905,8 +905,17 @@ function MsxStats({ run, setRun, v, ev, onClose }) {
   const { SUC } = msxSuc;
   const s = run.s;
   const tagAt = (SUC.BOND && SUC.BOND.tag) || 80;
-  const spend = (k) => { const r = SUC.spendPts(s, k, 1); if (r.out.ok) setRun({ ...run, s: r.state }); };
-  const auto = () => { const r = SUC.autoPts(s); setRun({ ...run, s: r.state }); };
+  // 仮振り: 画面の中だけ(draft=振った能力の順)。「決定」で初めて芯の spendPts を通して確定。画面を離れれば捨てる
+  const [draft, setDraft] = useState([]);
+  const replay = (list) => { let w = s; for (const k of list) { const r = SUC.spendPts(w, k, 1); if (!r.out.ok) break; w = r.state; } return w; };
+  const ws = replay(draft);
+  const addOf = (k) => draft.filter((x) => x === k).length;
+  const plus = (k) => { const r = SUC.spendPts(ws, k, 1); if (r.out.ok) setDraft([...draft, k]); };
+  const minus = (k) => { const i = draft.lastIndexOf(k); if (i >= 0) setDraft(draft.filter((_, j) => j !== i)); };
+  const auto = () => { let w = replay(draft); const list = draft.slice(); while (w.pts > 0) { const k = MSX_STATS.slice().sort((x, y) => w.stats[x] - w.stats[y])[0]; const r = SUC.spendPts(w, k, 1); if (!r.out.ok) break; w = r.state; list.push(k); } setDraft(list); };
+  const commit = () => { if (!draft.length) return; setRun({ ...run, s: ws }); setDraft([]); };
+  const used = s.pts - ws.pts;
+  const lineOf = SUC.PTS && SUC.PTS.line ? SUC.PTS.line[SUC.periodOf(s.turn).key] : null;
   const own = typeof SUC.techsOf === 'function' ? SUC.techsOf(s.species) : [];
   const techs = (Array.isArray(s.techs) ? s.techs : []).map((id) => own.find((t) => t && t.id === id)).filter(Boolean);
   const pk = typeof SUC.peakInfo === 'function' ? SUC.peakInfo(s) : { state: null };
@@ -914,13 +923,24 @@ function MsxStats({ run, setRun, v, ev, onClose }) {
   return (<>
     <MsxBand s={s} v={v} ev={ev}/>
     <div className="msx-scroll" data-msx-ability>
-      <div className="v-card pk"><div className="msx-row" style={{ justifyContent: 'space-between' }}><b className="h2">📊 能力ポイント {s.pts}</b>{s.pts ? <button type="button" className="chip on" onClick={auto}>おまかせで振る</button> : null}</div>
-        <div className="msx-note">大会でもらえる。好きな能力へ 1点で +1(期の目安を超えると 2点で +1)</div>
-        {MSX_STATS.map((k) => (
-          <div key={k} className="msx-ab-row"><span className="n">{MSX_STAT_ICON[k]} {MSX_STAT_NAME[k]}</span><b>{s.stats[k]}</b>
-            <button type="button" className="chip on" style={{ minWidth: 52 }} disabled={!s.pts || s.pts < SUC.ptsCost(s, k)} onClick={() => spend(k)}>+1<small style={{ fontSize: 10 }}>({SUC.ptsCost(s, k)}点)</small></button>
-          </div>
-        ))}
+      <div className="v-card pk" data-msx-pts>
+        <div className="msx-row" style={{ justifyContent: 'space-between' }}><b className="h2">📊 能力ポイント</b><button type="button" className="chip on" disabled={!ws.pts} onClick={auto}>おまかせで振る</button></div>
+        <div className="msx-row" style={{ justifyContent: 'space-around', margin: '6px 0' }}>
+          <div className="v-num"><small>持っている点</small><b>{s.pts}</b></div>
+          <div className="v-num"><small>使う点</small><b style={{ color: used ? '#fde047' : undefined }}>{used}</b></div>
+          <div className="v-num"><small>残りの点</small><b>{ws.pts}</b></div>
+        </div>
+        <div className="msx-note">＋で仮に振り、「決定」で確定する。1点で +1(期の目安{lineOf ? ` ${lineOf}` : ''}を超えると 2点で +1)</div>
+        {MSX_STATS.map((k) => { const n = addOf(k); const cost = SUC.ptsCost(ws, k); const over = lineOf != null && ws.stats[k] >= lineOf; return (
+          <div key={k} className="msx-ab-row" data-msx-pts-row={k}><span className="n">{MSX_STAT_ICON[k]} {MSX_STAT_NAME[k]}<small className="sub" style={{ display: 'block', fontSize: 10, color: over ? '#fbbf24' : '#94a3b8' }}>{over ? '目安超え・2点で +1' : '1点で +1'}</small></span>
+            <span style={{ fontSize: 12, fontWeight: 900, whiteSpace: 'nowrap' }}>{n ? <>{s.stats[k]} → <b style={{ width: 'auto', color: '#fde047' }}>{ws.stats[k]}</b> <small style={{ color: '#fde047' }}>(+{n})</small></> : <b style={{ width: 'auto' }}>{s.stats[k]}</b>}</span>
+            <button type="button" className="chip" style={{ minWidth: 40, minHeight: 36 }} disabled={!n} onClick={() => minus(k)} aria-label={`${MSX_STAT_NAME[k]}を戻す`}>−</button>
+            <button type="button" className="chip on" style={{ minWidth: 44, minHeight: 36 }} disabled={ws.pts < cost} onClick={() => plus(k)} aria-label={`${MSX_STAT_NAME[k]}を上げる`}>＋</button>
+          </div>); })}
+        <div className="msx-row" style={{ marginTop: 8, gap: 6 }}>
+          <button type="button" className="chip" style={{ flex: 1, minHeight: 44 }} disabled={!draft.length} onClick={() => setDraft([])}>元に戻す</button>
+          <button type="button" className="chip on" style={{ flex: 2, minHeight: 44 }} disabled={!draft.length} onClick={commit}>決定</button>
+        </div>
       </div>
       <div className="v-card" data-msx-ability-techs><div className="h2">⚔ 覚えている技 {techs.length}</div>
         {techs.length ? <div>{techs.map((t) => <span key={t.id} className="msx-ab-tech">{t.kind === 'wise' ? '🧠' : '💪'}{t.name}</span>)}</div> : <div className="sub">まだない</div>}
