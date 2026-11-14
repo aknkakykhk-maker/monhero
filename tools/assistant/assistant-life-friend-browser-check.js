@@ -196,7 +196,7 @@ const badgeProblems = (page) => page.evaluate(() => {
         check(`㉑ 町の札を押すと、いる助手の一覧(見る専用の行)が出る(${v.id})`, (await page.locator('[data-assistant-life-map-view-row]').count()) > 0 && (await page.locator('[data-assistant-life-map-act]').count()) === 0);
         await shot(page, `${v.id}-21-vtab-where-sheet`);
         await page.locator('[data-assistant-life-map-sheet-close]').click();
-        await page.locator('[data-alf-vtab="profile"]').click();
+        await page.locator('[data-alf-vview="where"] [data-alf-vtab="profile"]').click();
         await page.locator('[data-alf-vview="profile"] [data-assistant-life-profile-list]').waitFor({ timeout: 5000 }).catch(() => {});
         const prof = await page.evaluate(() => { const w = document.querySelector('[data-alf-vview="profile"]'); const t = w ? w.innerText : ''; return { cards: w ? w.querySelectorAll('[data-assistant-life-profile-card]:not([data-assistant-life-profile-card="unmet"])').length : -1, bond: /💗 Lv/.test(t), isNew: !!(w && w.querySelector('[data-assistant-life-profile-new]')) }; });
         check(`㉑ 紹介に、会っている助手の札が出る(仲良し度・NEW は出ない)(${v.id})`, prof.cards > 0 && !prof.bond && !prof.isNew, JSON.stringify(prof));
@@ -207,7 +207,7 @@ const badgeProblems = (page) => page.evaluate(() => {
         check(`㉑ 紹介の詳細は「人となり」だけ(好き・きずな・台詞は出ない)(${v.id})`, sec.who && !sec.likes && !sec.bond && !sec.voice, JSON.stringify(sec));
         await shot(page, `${v.id}-21-vtab-profile-sheet`);
         await page.locator('[data-assistant-life-profile-close]').first().click();
-        await page.locator('[data-alf-vtab="house"]').click();
+        await page.locator('[data-alf-vview="profile"] [data-alf-vtab="house"]').click();
         check(`㉑ 家のタブへ戻ると、いつもの家が見える(${v.id})`, (await page.locator('[data-alf-vview]').count()) === 0 && (await page.locator('[data-alf-visit] [data-assistant-life-room]').count()) > 0);
       }
       // 「仲良し度 +10」などの知らせ(右上の .mh-gfx-chips)が、部屋の名前・顔・吹き出しを隠さない
