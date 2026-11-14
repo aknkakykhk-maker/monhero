@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ac37471b70ee5a76
+// source-sha256: b1fc8146c515415f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -20277,6 +20277,8 @@ const helpDataRows = id => {
       }
     case 'monsakuAssists':
       {
+        const T3 = globalThis.MONHERO_SUCCESS_ASSIST;
+        if (T3 && T3.VERSION === 3 && Array.isArray(T3.LIST)) return T3.LIST.filter(a => a.from === 'core').map(a => [`${a.icon} ${a.name}`, a.max > 1 ? `1目盛り ${T3.valueText(a.id, 1)}・${a.pt}ポイント ／ 最大 ${T3.valueText(a.id, a.max)}(${a.cost[a.max - 1]}ポイント)` : `${T3.valueText(a.id, 1)} ／ ${a.pt}ポイント`]);
         const list = globalThis.MONHERO_SUCCESS && globalThis.MONHERO_SUCCESS.ASSISTS || null;
         if (!list || typeof list !== 'object') return [['アシスト能力', '育て終えたとき、画面で選べます']];
         return Object.values(list).filter(a => a && a.name && Array.isArray(a.v) && Array.isArray(a.cost)).map(a => [a.name, `段1〜${a.v.length} ／ ポイント ${a.cost.join('・')}`]);
@@ -163391,6 +163393,19 @@ const MSX_CSS = `
 .msx .v-pt .n{font-size:10px;font-weight:900;color:#fde047;line-height:1.2;white-space:nowrap}.msx .v-pt .n b{display:block;font-size:26px;color:#fff;text-shadow:0 2px 0 #9a3412}
 .msx .v-pt .r{flex:1;min-width:0;font-size:10px;font-weight:800;line-height:1.4}
 .msx .v-pt .r .bar{height:7px;margin-top:3px}
+.msx .v-as3{display:flex;flex-direction:column;gap:5px;margin-top:6px;flex:1 1 0!important;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.msx .v-a3{background:#1e1a36;border:1px solid #475569;border-radius:12px;padding:6px 8px;flex:0 0 auto}
+.msx .v-a3.got{border-color:#fbbf24;background:#33270f}.msx .v-a3.dim{opacity:.45}
+.msx .v-a3 .h{display:flex;align-items:center;gap:5px;text-align:left}.msx .v-a3 .nm{flex:1 1 auto;min-width:0;font-size:12.5px;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.msx .v-a3 .rf{flex:0 0 auto;display:inline-block;width:auto;font-size:9px;font-weight:800;padding:1px 6px;border-radius:8px;background:#1d4ed8;color:#fff}.msx .v-a3 .rf.o{background:#7e22ce}
+.msx .r3 .r3-bar.sc{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}.msx .r3 .r3-bar.sc::-webkit-scrollbar{display:none}.msx .r3 .r3-bar.sc .r3-chip{flex:0 0 auto}
+.msx .v-a3 .val{flex:0 0 auto;min-width:54px;text-align:right;font-size:14px;color:#fde68a}
+.msx .v-a3 .ex{font-size:10px;color:#cbd5e1;font-weight:700;text-align:left;margin:2px 0 4px;line-height:1.35}
+.msx .v-a3 .ctl{display:flex;align-items:center;gap:6px}.msx .v-a3 .ctl button{flex:0 0 34px;height:28px;border-radius:8px;border:1px solid #6d5fa6;background:#2f2550;color:#fff;font-size:16px;font-weight:900;text-align:center;padding:0}
+.msx .v-a3 .ctl button:disabled{opacity:.35}
+.msx .v-a3 .gauge{flex:1 1 auto;height:12px;border-radius:6px;background:#3a3054;position:relative;overflow:hidden;cursor:pointer}.msx .v-a3 .gauge i{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,#f59e0b,#fde68a)}
+.msx .v-a3 .gauge s{position:absolute;top:0;bottom:0;width:1px;background:rgba(15,10,30,.55)}
+.msx .v-a3 .c{flex:0 0 46px;text-align:right;font-size:10.5px;font-weight:800;color:#fde68a}
 .msx .v-as{display:grid;grid-template-columns:1fr 1fr;grid-auto-rows:1fr;gap:5px;margin-top:6px;flex:1 1 0!important;min-height:0}
 .msx .v-a{background:#1e1a36;border:1px solid #475569;border-radius:12px;padding:5px 6px 6px;min-width:0;position:relative;display:flex;flex-direction:column;justify-content:center}
 .msx .v-a .nm{font-size:11.5px;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -163936,7 +163951,7 @@ const msxNormBoxMon = m => {
     rank: msxStr(m.rank, 4, ''),
     score: msxNum(m.score, 0),
     raised: m.raised !== false,
-    assists: Array.isArray(m.assists) ? m.assists.filter(msxIsObj).slice(0, 4) : [],
+    assists: Array.isArray(m.assists) ? m.assists.filter(msxIsObj).slice(0, 8) : [],
     masteries: tm.mast,
     coach: msxStr(m.coach, 16),
     endAt: msxNum(m.endAt, 0),
@@ -168537,6 +168552,12 @@ const msxR3FinalTitles = (s, ev) => {
   } catch (e) {}
   return Array.isArray(s.titles) ? s.titles.filter(t => typeof t === 'string').slice(0, 64) : [];
 };
+const msxR3AssistsToSave = assists => {
+  const AT = typeof window !== 'undefined' ? window.MONHERO_SUCCESS_ASSIST : null;
+  const list = Array.isArray(assists) ? assists : [];
+  if (!AT || AT.VERSION !== 3) return list.slice(0, 4);
+  return list.map(a => a && AT.BY_ID[a.id] ? AT.toSaved(a.id, AT.fromSaved(a)) : null).filter(Boolean).slice(0, AT.MAX_KINDS);
+};
 const msxR3BoxMonOf = (run, s, ev, assists, parent) => ({
   id: run.id,
   species: s.species,
@@ -168562,7 +168583,7 @@ const msxR3BoxMonOf = (run, s, ev, assists, parent) => ({
   endAt: Date.now(),
   paid: true,
   over: s.over || 'done',
-  assists: (assists || []).slice(0, 4),
+  assists: msxR3AssistsToSave(assists),
   ...(s.masterySpent && (Array.isArray(s.techs) ? s.techs : []).some(t => s.masterySpent[t] > 0) ? {
     mastSpent: s.techs.slice(0, 99).map(t => Math.round(s.masterySpent[t] || 0))
   } : {}),
@@ -171288,7 +171309,7 @@ function MsxR3Retire({
       className: "yel"
     }, ws.pts), "(使うと総合力が上がる)")), React.createElement("div", {
       className: "v-kv"
-    }, React.createElement("b", null, "そのあと"), React.createElement("span", null, "アシスト能力をポイントで取る → 保存枠へ"))), React.createElement("div", {
+    }, React.createElement("b", null, "そのあと"), React.createElement("span", null, "アシスト効果をポイントで取る → 保存枠へ"))), React.createElement("div", {
       style: {
         flex: 1
       }
@@ -171539,13 +171560,28 @@ function MsxR3Retire({
         className: "go",
         onClick: () => setStep('e2'),
         "data-msx-r3-e1": true
-      }, "✨ アシスト能力を取る(", msxR3T().assist ? msxR3T().assist.pointsOf(ev.power) : ev.points, "ポイント)"))
+      }, "✨ アシスト効果を取る(", msxR3T().assist ? msxR3T().assist.pointsOf(ev.power) : ev.points, "ポイント)"))
     });
   }
   const AT = msxR3T().assist;
   const A = {};
   const LVN = AT && AT.LV_MAX ? AT.LV_MAX : 3;
-  if (AT) AT.candidates(ws.hints).forEach(a => {
+  const V3 = !!(AT && AT.VERSION === 3);
+  if (V3) AT.candidates(ws.hints).forEach(a => {
+    A[a.id] = {
+      name: a.name,
+      icon: a.icon,
+      cost: a.cost.slice(),
+      scene: a.scene || null,
+      type: a.type,
+      ref: a.ref,
+      max: a.max,
+      pt: a.pt,
+      ex: Array.from({
+        length: a.max
+      }, (_, i) => AT.describe(a.id, i + 1))
+    };
+  });else if (AT) AT.candidates(ws.hints).forEach(a => {
     A[a.id] = {
       name: a.name,
       icon: a.icon,
@@ -171573,7 +171609,12 @@ function MsxR3Retire({
     const now = {
       ...pick
     };
-    if (now[id] === lv) delete now[id];else {
+    if (V3) {
+      if (lv <= 0) delete now[id];else {
+        if (!now[id] && kinds >= maxKinds) return;
+        now[id] = Math.min(A[id].max, lv);
+      }
+    } else if (now[id] === lv) delete now[id];else {
       if (!now[id] && kinds >= maxKinds) return;
       now[id] = lv;
     }
@@ -171587,7 +171628,7 @@ function MsxR3Retire({
       const r = AT.autoPick(points, ws.hints);
       const now = {};
       r.picks.forEach(x => {
-        now[x.id] = x.lv;
+        now[x.id] = V3 ? x.n : x.lv;
       });
       setPick(now);
       setSure(false);
@@ -171627,10 +171668,13 @@ function MsxR3Retire({
     }
     if (busy) return;
     setBusy(true);
-    let assists = Object.entries(pick).map(([id, lv]) => ({
+    let assists = Object.entries(pick).map(([id, lv]) => V3 ? {
+      id,
+      n: lv
+    } : {
       id,
       lv
-    }));
+    });
     if (AT) assists = AT.normPicks(assists, points).picks;
     let r = null;
     try {
@@ -171745,23 +171789,81 @@ function MsxR3Retire({
       width: `${Math.min(100, cost / Math.max(1, points) * 100)}%`
     }
   })))), AT && Array.isArray(AT.SCENES) ? React.createElement("div", {
-    className: "r3-bar",
+    className: `r3-bar${V3 ? ' sc' : ''}`,
     "data-msx-r3-scenes": true
   }, AT.SCENES.filter(sc => Object.values(A).some(a => a.scene === sc.key)).map(sc => {
     const n = Object.keys(pick).filter(id => A[id] && A[id].scene === sc.key).length;
     return React.createElement("button", {
       type: "button",
       key: sc.key,
+      ref: el => {
+        if (el && V3 && atab === sc.key && el.parentElement && typeof centerCarouselChild === 'function') {
+          try {
+            centerCarouselChild(el.parentElement, [...el.parentElement.children].indexOf(el));
+          } catch (e) {}
+        }
+      },
       className: `r3-chip ${(atab || AT.SCENES[0].key) === sc.key ? 'on' : ''}`,
       onClick: () => setAtab(sc.key),
       "data-msx-r3-scene": sc.key
     }, sc.name, n ? ` ●${n}` : '');
   })) : null, React.createElement("div", {
-    className: "v-as"
+    className: V3 ? 'v-as3' : 'v-as'
   }, Object.keys(A).filter(id => !AT || !A[id].scene || A[id].scene === (atab || (AT.SCENES && AT.SCENES[0] ? AT.SCENES[0].key : A[id].scene))).map((id, i, arr) => {
     const a = A[id];
     const got = pick[id] || 0;
     const dim = !got && kinds >= maxKinds;
+    if (V3) {
+      const nextCost = got < a.max ? a.pt : 0;
+      const canUp = got < a.max && left >= nextCost && !dim;
+      return React.createElement("div", {
+        key: id,
+        className: `v-a3${got ? ' got' : ''}${dim ? ' dim' : ''}`,
+        "data-msx-r3-assist": id
+      }, React.createElement("div", {
+        className: "h"
+      }, cardIconNode(a.icon, 16), React.createElement("span", {
+        className: "nm"
+      }, a.name), React.createElement("span", {
+        className: `rf${a.ref ? '' : ' o'}`
+      }, a.ref ? '参考' : 'オリジナル'), React.createElement("b", {
+        className: "val"
+      }, got ? AT.valueText(id, got) : '—')), React.createElement("div", {
+        className: "ex"
+      }, a.ex[Math.max(0, (got || 1) - 1)], a.max > 1 ? `(1目盛り ${a.pt}pt・最大 ${AT.valueText(id, a.max)})` : `(${a.pt}pt)`), React.createElement("div", {
+        className: "ctl"
+      }, React.createElement("button", {
+        type: "button",
+        disabled: !got,
+        onClick: () => tap(id, got - 1),
+        "data-msx-r3-minus": id
+      }, "−"), React.createElement("div", {
+        className: "gauge",
+        onClick: e => {
+          const r = e.currentTarget.getBoundingClientRect();
+          const n = Math.max(1, Math.round((e.clientX - r.left) / Math.max(1, r.width) * a.max));
+          tap(id, n);
+        }
+      }, React.createElement("i", {
+        style: {
+          width: `${got / a.max * 100}%`
+        }
+      }), a.max <= 25 ? Array.from({
+        length: a.max - 1
+      }, (_, j) => React.createElement("s", {
+        key: j,
+        style: {
+          left: `${(j + 1) / a.max * 100}%`
+        }
+      })) : null), React.createElement("button", {
+        type: "button",
+        disabled: !canUp,
+        onClick: () => tap(id, got + 1),
+        "data-msx-r3-plus": id
+      }, "＋"), React.createElement("span", {
+        className: "c"
+      }, got ? `${a.cost[got - 1]}pt` : `${a.pt}pt`)));
+    }
     return React.createElement("div", {
       key: id,
       className: `v-a${got ? ' got' : ''}${dim ? ' dim' : ''}${i === arr.length - 1 && arr.length % 2 ? ' wide' : ''}`,
@@ -171792,7 +171894,7 @@ function MsxR3Retire({
     className: "v-pick"
   }, "取るもの(", kinds, " / ", maxKinds, "種類): ", kinds ? Object.entries(pick).map(([id, lv], i) => React.createElement(React.Fragment, {
     key: id
-  }, i ? '・' : '', React.createElement("b", null, A[id] ? `${A[id].icon} ${A[id].name}` : id, " 段", lv))) : 'まだ選んでいない', React.createElement("br", null), "⚠ 決めたあとは変えられない"), res && res.full ? React.createElement("div", {
+  }, i ? '・' : '', React.createElement("b", null, A[id] ? `${A[id].icon} ${A[id].name}` : id, " ", V3 ? AT.valueText(id, lv) : `段${lv}`))) : 'まだ選んでいない', React.createElement("br", null), "⚠ 決めたあとは変えられない"), res && res.full ? React.createElement("div", {
     className: "v-card",
     style: {
       borderColor: '#f87171'
@@ -171833,7 +171935,7 @@ function MsxR3Retire({
     run: run,
     back: "もどる",
     onBack: () => setStep('e1'),
-    right: "1体4種類まで",
+    right: `1体${maxKinds}種類まで`,
     body: body,
     foot: foot
   });
@@ -172162,7 +172264,10 @@ function MsxR3Box({
     className: "v-kv"
   }, React.createElement("b", null, "忠誠 / 人気"), React.createElement("span", null, Math.round(cur.loy || 0), " / ", Math.round(cur.pop || 0))), React.createElement("div", {
     className: "v-kv"
-  }, React.createElement("b", null, "アシスト能力"), React.createElement("span", null, Array.isArray(cur.assists) && cur.assists.length ? cur.assists.map(a => `${(msxSuc && msxSuc.SUC.ASSISTS[a.id] || {}).name || a.id} 段${a.lv}`).join('・') : 'なし')), Array.isArray(cur.titles) && cur.titles.length ? React.createElement("div", {
+  }, React.createElement("b", null, "アシスト効果"), React.createElement("span", null, Array.isArray(cur.assists) && cur.assists.length ? cur.assists.map(a => {
+    const T3 = msxR3T().assist;
+    return T3 && T3.VERSION === 3 && T3.BY_ID[a.id] ? `${T3.BY_ID[a.id].name} ${T3.valueText(a.id, T3.fromSaved(a))}` : `${(msxSuc && msxSuc.SUC.ASSISTS[a.id] || {}).name || a.id} 段${a.lv}`;
+  }).join('・') : 'なし')), Array.isArray(cur.titles) && cur.titles.length ? React.createElement("div", {
     className: "v-kv"
   }, React.createElement("b", null, "称号"), React.createElement("span", null, cur.titles.slice(0, 4).map(t => `「${msxR3TitleName(t)}」`).join(''))) : null, lendOn && cur.raised !== false ? lendId === cur.id ? React.createElement("button", {
     type: "button",
@@ -172755,10 +172860,12 @@ const monsucLendPayloadOf = child => {
     stats[k] = Math.max(0, Math.min(999, Math.round(v)));
   }
   const picks = c.asp && c.asp.picks && typeof c.asp.picks === 'object' && !Array.isArray(c.asp.picks) ? c.asp.picks : {};
-  const assists = Object.entries(picks).filter(([, lv]) => Number.isInteger(lv) && lv >= 1 && lv <= 3).slice(0, 4).map(([id, lv]) => ({
+  let assists = Object.entries(picks).filter(([, lv]) => Number.isInteger(lv) && lv >= 1 && lv <= 3).slice(0, 4).map(([id, lv]) => ({
     id,
     lv
   }));
+  const AT3 = typeof window !== 'undefined' ? window.MONHERO_SUCCESS_ASSIST : null;
+  if (!assists.length && Array.isArray(c.assists) && AT3 && AT3.VERSION === 3) assists = c.assists.filter(a => a && AT3.BY_ID[a.id]).slice(0, AT3.MAX_KINDS).map(a => AT3.toSaved(a.id, AT3.fromSaved(a)));
   const nameRaw = typeof c.nick === 'string' && c.nick.trim() ? c.nick : typeof c.name === 'string' ? c.name : '';
   const name = [...nameRaw.trim()].slice(0, 12).join('') || c.species.slice(0, 12);
   const out = {
@@ -172787,7 +172894,10 @@ const monsucLendMember = (row, SUC) => {
   let assists = [];
   const list = Array.isArray(m.assists) ? m.assists : [];
   const known = SUC.ASSISTS && typeof SUC.ASSISTS === 'object' ? SUC.ASSISTS : {};
-  const okShape = list.length <= 4 && list.every(a => a && known[a.id] && Number.isInteger(a.lv) && a.lv >= 1 && a.lv <= 3) && new Set(list.map(a => a.id)).size === list.length;
+  const AT3 = typeof window !== 'undefined' ? window.MONHERO_SUCCESS_ASSIST : null;
+  const v3 = !!(AT3 && AT3.VERSION === 3);
+  const lvOk = a => v3 ? Number.isInteger(a.lv) && a.lv >= 1 && a.lv <= 25 && (a.n == null || Number.isInteger(a.n) && a.n >= 1 && a.n <= 25) : Number.isInteger(a.lv) && a.lv >= 1 && a.lv <= 3;
+  const okShape = list.length <= (v3 ? 8 : 4) && list.every(a => a && known[a.id] && lvOk(a)) && new Set(list.map(a => a.id)).size === list.length;
   if (okShape && list.length) {
     let budget = 0;
     try {
@@ -172804,11 +172914,18 @@ const monsucLendMember = (row, SUC) => {
     } catch (_) {
       budget = 0;
     }
-    const cost = list.reduce((t, a) => t + (Number((known[a.id].cost || [])[a.lv - 1]) || 0), 0);
-    if (cost <= budget) assists = list.map(a => ({
+    const nOf = a => v3 ? AT3.fromSaved(a) : a.lv;
+    const cost = list.reduce((t, a) => t + (Number((known[a.id].cost || [])[nOf(a) - 1]) || 0), 0);
+    if (cost <= budget) assists = list.map(a => v3 ? {
+      id: a.id,
+      lv: a.lv,
+      ...(a.n != null ? {
+        n: a.n
+      } : {})
+    } : {
       id: a.id,
       lv: a.lv
-    }));
+    });
   }
   const name = typeof m.name === 'string' && m.name.trim() ? [...m.name.trim()].slice(0, 12).join('') : m.species;
   return {
