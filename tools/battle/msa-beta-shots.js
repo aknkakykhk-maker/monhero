@@ -14,6 +14,20 @@ const STILL_DIR = process.env.STILL_DIR || '';
 const OUT = process.env.VIDEO_OUT || '';
 if (!OUT && !STILL_DIR) { console.log('VIDEO_OUT か STILL_DIR を渡してください'); process.exit(0); }
 const PORT = 8977;
+// TECHS_JSON=<技表の json(species: { 種: [技…] })> … 試しの技表で開く(資料の技で12〜24技になったときの見た目。全部の技を覚えている形にする)
+// MANUAL=1 … 手動で対戦する場面を撮る(段3)
+const TECHS = process.env.TECHS_JSON ? JSON.parse(fs.readFileSync(process.env.TECHS_JSON, 'utf8')).species : null;
+const MANUAL = process.env.MANUAL === '1';
+// LONGEST=1 … TECHS_JSON の中で名前の長い技24個を、どの種類にも全部の間合いで持たせる(技名が切れないかの確かめ)。WIDTH=<幅> … 画面の幅
+const LONGEST = process.env.LONGEST === '1';
+const WIDTH = Number(process.env.WIDTH) || 390;
+const HEIGHT = Number(process.env.HEIGHT) || 844;
+let TECHS_USE = TECHS;
+if (TECHS && LONGEST) {
+  const all = Object.values(TECHS).flat().sort((a, b) => [...b.name].length - [...a.name].length);
+  const seen = new Set(); const top = all.filter((t) => (seen.has(t.name) ? false : seen.add(t.name))).slice(0, 24).map((t, i) => ({ ...t, id: `long_${i}`, dist: [0, 1, 2, 3], guts: 5 + i }));
+  TECHS_USE = Object.fromEntries(Object.keys(TECHS).map((k) => [k, top]));
+}
 const URL = `http://localhost:${PORT}/monster-hero/index.html`;
 
 const seed = () => {
@@ -30,7 +44,7 @@ const seed = () => {
   const tmp = OUT ? path.join(path.dirname(OUT), `.rec-${process.pid}`) : '';
   const errs = [];
   try {
-    const ctx = await browser.newContext(STILL_DIR ? { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 } : { viewport: { width: 390, height: 844 }, recordVideo: { dir: tmp, size: { width: 390, height: 844 } } });
+    const ctx = await browser.newContext(STILL_DIR ? { viewport: { width: WIDTH, height: HEIGHT }, deviceScaleFactor: 2 } : { viewport: { width: WIDTH, height: HEIGHT }, recordVideo: { dir: tmp, size: { width: WIDTH, height: HEIGHT } } });
     const page = await ctx.newPage();
     const t0 = Date.now(); let tPrep = 0;
     page.on('pageerror', (e) => errs.push(String(e)));
@@ -56,6 +70,7 @@ const seed = () => {
       await page.waitForTimeout(700);
       if (!closed && !(await page.evaluate(() => !!document.querySelector('[role="dialog"]')))) break;
     }
+    if (TECHS_USE) await page.evaluate((t) => { for (const [k, v] of Object.entries(t)) ASSISTANT_MASMON_TECHS.species[k] = v.map((x) => ({ ...x, learn: { start: true } })); }, TECHS_USE);
     await page.evaluate(async () => {
       await ASSISTANT_MASMON_STORE.load(); await assistantMasmonEnsureMade();
       const st = ASSISTANT_MASMON_STORE.state, w = { ...st.draw.welcomed };
@@ -76,13 +91,63 @@ const seed = () => {
     await still('2-compare');
     if (await clickSel('[data-ambb-cmp-pair="1"]')) { await page.waitForTimeout(OUT ? 1200 : 700); await still('2b-compare-pair2'); await clickSel('[data-ambb-cmp-pair="0"]'); }
     await scrollTo('[data-ambb-settings]'); await page.waitForTimeout(OUT ? 900 : 300);
-    for (const s of ['[data-ambb-set="team:ko"]', '[data-ambb-set="dist:0"]', '[data-ambb-set="guts:70"]', '[data-ambb-set="rounds:50"]']) { await clickSel(s); await page.waitForTimeout(OUT ? 600 : 100); }
+    for (const s of MANUAL ? ['[data-ambb-set="ctl:manual"]', '[data-ambb-size="2"]'] : ['[data-ambb-set="team:ko"]', '[data-ambb-set="dist:0"]', '[data-ambb-set="guts:70"]', '[data-ambb-set="rounds:50"]']) { await clickSel(s); await page.waitForTimeout(OUT ? 600 : 100); }
     await page.evaluate(() => { const d = document.querySelector('[data-ambb-tune]'); if (d) d.open = true; });
     await page.waitForTimeout(OUT ? 900 : 300);
     await still('3-settings');
+    if (MANUAL) {
+      // 準備画面の「🃏 技の札を決める」→ 札を押して一覧 →「☆ 代表にする」
+      if (await clickSel('[data-ambb-rep-open]')) {
+        await page.waitForTimeout(OUT ? 1400 : 300); await still('7a-prep-rep');
+        for (let d = 0; d < 4; d++) {
+          await page.evaluate((k) => { const c = document.querySelector(`[data-ambb-rep-edit] [data-msa-dc-card="${k}"]`); if (c && !c.disabled) c.click(); }, d);
+          await page.waitForTimeout(OUT ? 1200 : 250);
+          if (await page.evaluate(() => !!document.querySelector('[data-msa-sheet] [data-msa-rep]'))) { await still('7b-prep-rep-list'); await clickSel('[data-msa-sheet] [data-msa-rep]'); await page.waitForTimeout(OUT ? 1200 : 300); await still('7c-prep-rep-set'); break; }
+          await page.evaluate(() => { const x = document.querySelector('[data-msa-sheet] [data-msa-sheet-close]'); if (x) x.click(); });
+        }
+        await page.evaluate(() => { document.querySelectorAll('[data-msa-sheet-close]').forEach((b) => b.click()); const b = [...document.querySelectorAll('[data-ambb-rep-edit] button')].find((x) => /閉じる/.test(x.textContent)); if (b) b.click(); });
+        await page.waitForTimeout(300);
+      }
+    }
     await clickSel('[data-ambb-start]');
     await page.waitForFunction(() => !!document.querySelector('[data-ambb-watch] [data-msa-stage]'), { timeout: 10000 });
-    if (STILL_DIR) {
+    if (MANUAL) {
+      // 手動(段3・技の札は間合いごとの4枚): 帯 → いまの間合いの札を押して一覧 → ☆ 代表にする → 一覧の技を使う → 全部の技 → 相手の札の一覧
+      const waitBar = () => page.waitForFunction(() => !!document.querySelector('[data-ambb-manual] [data-msxm="act"]'), { timeout: 15000 });
+      const closeSheet = () => page.evaluate(() => { document.querySelectorAll('[data-msa-sheet-close]').forEach((b) => b.click()); });
+      await waitBar(); await page.waitForTimeout(400); await still('8-manual-cards');
+      const fit = await page.evaluate(() => { const st = document.querySelector('[data-msa-stage]').getBoundingClientRect(); const r = document.querySelector('[data-ambb-root]'); return { stageH: Math.round(st.height), scroll: r.scrollHeight - r.clientHeight, cards: document.querySelectorAll('[data-msa-dc-card]').length }; });
+      console.log('手動の帯:', JSON.stringify(fit));
+      await clickSel('[data-msa-dc="manual"] [data-msa-dc-card].now'); await page.waitForTimeout(OUT ? 1400 : 300); await still('9-manual-list');
+      if (await clickSel('[data-msa-sheet] [data-msa-rep]')) { await page.waitForTimeout(OUT ? 1400 : 300); await still('9b-manual-rep'); }
+      const used = await page.evaluate(() => { const b = [...document.querySelectorAll('[data-msa-sheet] [data-msxm-tech]')].find((x) => !x.disabled); if (b) { b.click(); return true; } return false; });
+      if (!used) { await closeSheet(); await page.evaluate(() => { const b = [...document.querySelectorAll('[data-msxm] .msxm-btn')].find((x) => !x.disabled); if (b) b.click(); }); }
+      await page.waitForTimeout(OUT ? 3500 : 2500); await still('10-manual-after');
+      await waitBar().catch(() => {});
+      // 技名が切れていないか(枠からはみ出さない・言葉の途中で折れない・字が 7px 以上)を、札・一覧で数える
+      const fitOf = () => page.evaluate(() => { const els = [...document.querySelectorAll('[data-msa-tn]')]; const bad = els.filter((el) => el.scrollWidth > el.clientWidth + 1 || [...el.querySelectorAll('.msa-tn-s')].some((s) => s.getClientRects().length > 1) || parseFloat(getComputedStyle(el).fontSize) < 7).map((el) => el.textContent); return { n: els.length, bad: bad.length, ex: bad.slice(0, 3) }; });
+      const fitCards = await fitOf();
+      await clickSel('[data-msxm-all]'); await page.waitForTimeout(OUT ? 1400 : 300); await still('11-manual-all'); const fitAll = await fitOf(); await closeSheet();
+      await page.evaluate(() => { const c = [...document.querySelectorAll('[data-ambw-cards="B"] [data-msa-dc-card]')].find((x) => !x.disabled); if (c) c.click(); });
+      await page.waitForTimeout(OUT ? 1500 : 400); await still('12-foe-list');
+      const fitList = await fitOf();
+      console.log(`技名(幅 ${WIDTH}): 札 ${JSON.stringify(fitCards)} / 全部 ${JSON.stringify(fitAll)} / 相手の一覧 ${JSON.stringify(fitList)}`);
+      await closeSheet();
+      if (OUT) {
+        // もう1手(札 → 一覧の技)選んでから「オートにする」で進むところまで(終わっていたら待たない)
+        const hasBar = () => page.evaluate(() => !!document.querySelector('[data-ambb-manual] [data-msxm="act"]'));
+        await page.waitForFunction(() => !!document.querySelector('[data-ambb-manual] [data-msxm="act"]') || !!document.querySelector('[data-ambb-review]'), { timeout: 15000 }).catch(() => {});
+        if (await hasBar()) {
+          await page.waitForTimeout(700); await clickSel('[data-msa-dc="manual"] [data-msa-dc-card].now'); await page.waitForTimeout(1200);
+          const ok = await page.evaluate(() => { const b = [...document.querySelectorAll('[data-msa-sheet] [data-msxm-tech]')].find((x) => !x.disabled); if (b) { b.click(); return true; } return false; });
+          if (!ok) { await closeSheet(); await page.evaluate(() => { const b = [...document.querySelectorAll('[data-msxm] .msxm-btn')].find((x) => !x.disabled); if (b) b.click(); }); }
+        }
+        await page.waitForFunction(() => !!document.querySelector('[data-ambb-manual] .msxm-auto') || !!document.querySelector('[data-ambb-review]'), { timeout: 15000 }).catch(() => {});
+        await page.waitForTimeout(700);
+        await page.evaluate(() => { const b = document.querySelector('[data-ambb-manual] .msxm-auto'); if (b) b.click(); });
+        await page.waitForTimeout(9000);
+      }
+    } else if (STILL_DIR) {
       // 構え・当たり・その先(ラウンドが進んだ所)
       for (const [name, ms] of [['4-watch-intro', 1200], ['5-watch-fight', 3200], ['6-watch-mid', 6000]]) { await page.waitForTimeout(ms); await still(name); }
       const fit = await page.evaluate(() => {

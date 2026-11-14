@@ -94,7 +94,9 @@ const SCENES = [
           let ok = false;
           for (let k = 0; k < 4 && !ok; k++) {
             const r = await page.evaluate((q) => {
+              const card = document.querySelector('[data-msa-dc="manual"] [data-msa-dc-card].now:not([disabled])'); if (card) card.click();   // 技の札(間合いごと4枚): いまの間合いの札を押すと一覧
               const b = document.querySelector(q); if (b) { b.click(); return 'tech'; }
+              const x = document.querySelector('[data-msa-sheet-close]'); if (x) x.click();
               const f = [...document.querySelectorAll('.msxm-btn:not([disabled])')].find(x => /前へ/.test(x.textContent)); if (f) { f.click(); return 'move'; }
               return '';
             }, sc.click);
