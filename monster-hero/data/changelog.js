@@ -35,6 +35,13 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    date: "2026-11-14 17:44", type:'update', title:'マスモンで対戦の試合の場が、大きく見やすくなりました', group:'assistant', status:'new', releaseFlag:'assistantMasmonBattleBeta',
+    items:[
+      'マスモンで対戦の試合の画面で、2体が戦う場を大きく見せるようにしました。',
+      '相手の技は、場の右上の「相手の技」ボタンで一覧を開いて見られます。',
+    ],
+  },
+  {
     // 新曲をビートPで買えるようになった(2026-11-14 社長「1曲500で両方ついてくる」。文はテンポの案)
     date: "2026-11-14 17:03", type:'update', group:'rhythm', title:'新曲をビートPで買えるようになりました', status:'new',
     items:[
