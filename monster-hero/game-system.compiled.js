@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 6f4720568ec68311
+// source-sha256: 54a4dcd68d9fce1b
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -173173,8 +173173,8 @@ function MsxR3Battle({
       });
     }
     const M = SUC.MEALS || {};
-    const keys = Object.keys(M);
-    const can = k => s.mealReady && !s.over && !!M[k];
+    const keys = typeof SUC.mealOpts === 'function' ? SUC.mealOpts(s) : Object.keys(M);
+    const can = k => s.mealReady && !s.over && !!M[k] && keys.includes(k);
     const tryMeal = k => {
       try {
         const r = SUC.meal(s, k);
@@ -173210,9 +173210,10 @@ function MsxR3Battle({
       const e = effOf(k);
       if (!e) return '';
       const hp = e.hp > 0 ? `体力+${e.hp}` : '体力 満タン';
-      if (e.m.stat) return `${MSX_STAT_NAME[e.m.stat]}+${e.st}・${hp}`;
-      if (e.m.pop || e.m.pts) return `人気+${e.pop}・能力P+${e.pts}・${hp}`;
-      return `${e.m.fear ? `恐れ+${e.fear}` : `甘え+${e.ama}`}・${hp}`;
+      const ly = e.m.fear ? e.fear > 0 ? `恐れ+${e.fear}` : '恐れ 上限' : e.m.ama ? e.ama > 0 ? `甘え+${e.ama}` : '甘え 上限' : '';
+      if (e.m.stat) return [`${MSX_STAT_NAME[e.m.stat]}+${e.st}`, ly, hp].filter(Boolean).join('・');
+      if (e.m.pop || e.m.pts) return [`人気+${e.pop}`, `能力P+${e.pts}`, ly, hp].filter(Boolean).join('・');
+      return [ly, hp].filter(Boolean).join('・');
     };
     const fxLong = k => {
       const e = effOf(k);
@@ -173220,7 +173221,11 @@ function MsxR3Battle({
       const hp = e.hp > 0 ? `体力を上限の${Math.round(e.m.hp * 100)}%回復(+${e.hp}・いま ${s.hp}→${s.hp + e.hp} / ${s.hpMax})` : `体力はもう満タン(上限 ${s.hpMax})`;
       const parts = [hp];
       if (e.m.stat) parts.push(`${MSX_STAT_NAME[e.m.stat]} +${e.st}(${s.stats[e.m.stat]}→${s.stats[e.m.stat] + e.st})`);
-      if (e.m.fear || e.m.ama) parts.push(`${e.m.fear ? '恐れ度' : '甘え度'} +${e.m.fear ? e.fear : e.ama}(忠誠度 ${e.loy0}→${e.loy1})`);
+      if (e.m.fear || e.m.ama) {
+        const d = e.m.fear ? e.fear : e.ama;
+        const nm = e.m.fear ? '恐れ度' : '甘え度';
+        parts.push(d > 0 ? `${nm} +${d}(忠誠度 ${e.loy0}→${e.loy1})` : `${nm}はもう上限(50)`);
+      }
       if (e.m.pop) parts.push(`人気 +${e.pop}(${s.pop}→${s.pop + e.pop})`);
       if (e.m.pts) parts.push(`能力ポイント +${e.pts}`);
       return parts.join('・');
@@ -173287,7 +173292,7 @@ function MsxR3Battle({
       className: "v-meal"
     }, React.createElement("div", {
       className: "t"
-    }, "🍽 がんばったごほうびに、ごはんをあげよう", React.createElement("small", null, "優勝したときだけ あげられる(1回・ただ)", s.freeMeal === true ? `・見守りで効き目 ×${SUC.MEAL_WATCH_MULT || 1.5}` : '')), React.createElement("div", {
+    }, "🍽 がんばったごほうびに、ごはんをあげよう", React.createElement("small", null, "優勝したときだけ あげられる(今日の3品から1回・ただ)", s.freeMeal === true ? `・見守りで効き目 ×${SUC.MEAL_WATCH_MULT || 1.5}` : '')), React.createElement("div", {
       className: "ms"
     }, keys.map(k => React.createElement("button", {
       type: "button",
@@ -173303,7 +173308,13 @@ function MsxR3Battle({
       className: "e"
     }, MEAL_ICON[k] || '🍙'), React.createElement("b", null, M[k].name), React.createElement("small", {
       "data-msx-r3-mealfx": k
-    }, fx(k))))), React.createElement("div", {
+    }, fx(k).split('・').map((x, i) => React.createElement(React.Fragment, {
+      key: i
+    }, i > 0 ? React.createElement(React.Fragment, null, "・", React.createElement("wbr", null)) : null, React.createElement("span", {
+      style: {
+        whiteSpace: 'nowrap'
+      }
+    }, x))))))), React.createElement("div", {
       className: "msx-note",
       "data-msx-r3-mealdetail": true,
       style: {
@@ -173358,14 +173369,21 @@ function MsxR3Battle({
       className: "v-ft"
     }, React.createElement("button", {
       type: "button",
-      onClick: () => finish(s),
+      onClick: () => finish(typeof SUC.mealSkip === 'function' ? SUC.mealSkip(s).state : s),
       "data-msx-r3-nomeal": true
-    }, "あげない"), React.createElement("button", {
+    }, "あげずに つぎへ", React.createElement("small", {
+      style: {
+        display: 'block',
+        fontSize: 9.5,
+        opacity: 0.85
+      }
+    }, "恐れ度 +", SUC.MEAL_SKIP_FEAR || 1)), React.createElement("button", {
       type: "button",
       className: "go",
-      onClick: () => mealPick && can(mealPick) ? give() : finish(s),
+      disabled: !(mealPick && can(mealPick)),
+      onClick: () => mealPick && can(mealPick) ? give() : null,
       "data-msx-r3-give": true
-    }, mealPick && can(mealPick) ? `${M[mealPick].name}をあげる` : 'あげずに つぎへ ▶'));
+    }, mealPick && can(mealPick) ? `${M[mealPick].name}をあげる` : 'ごはんを選んでね'));
     return React.createElement(MsxR3Frame, {
       run: run,
       back: "中断",
