@@ -127,6 +127,7 @@ const MONSUC_SCRIPT_RANDOM = Object.freeze([
   { id:'ev.team.base.mua1', who:'mua', e:'crying', t:'{cheer}、がんばってる…。声かけてあげよ？' },
   { id:'ev.team.base.atsu1', who:'atsu', e:'happy', t:'いい根性してんな。{cheer}、ちゃんと見てるよ笑' },
   { id:'ev.team.base.choice.a', who:'choice', c:'a', t:'励ます' },
+  { id:'ev.team.base.choice.b', who:'choice', c:'b', t:'そっと見守る' },
 
   { id:'ev.team.friend.narr1', who:'narr', t:'{cheer}が、ぺこりと頭を下げてあいさつしてきた。' },
   { id:'ev.team.friend.mua1', who:'mua', e:'happy', t:'来てくれてありがと！ いっしょにがんばろーね♪' },
@@ -371,6 +372,7 @@ const MONSUC_SCRIPT_RANDOM = Object.freeze([
   { id:'ev.team.senpai.b.ng.narr1', who:'narr', t:'{cheer}には、まったく歯が立たなかった。…でも、{mon}の目はまだあきらめていない。' },
   { id:'ev.team.fight.a.narr1', who:'narr', t:'話を聞いてあげると、{cheer}と{cheer2}は照れくさそうに握手をした。' },
   { id:'ev.team.fight.b.narr1', who:'narr', t:'三つどもえの競争になった！ {mon}はぐんと力をつけたけど、ふたりは少しむくれている。' },
+  { id:'ev.team.base.b.narr1', who:'narr', t:'声はかけずに、少し離れたところで練習を見守った。気づいた{cheer}が、照れたように小さくうなずいた。' },
   { id:'ev.team.base.a.narr1', who:'narr', t:'声をかけると、{cheer}の顔がぱっと明るくなった。明日からは、もっと力を貸してくれそうだ。' },
   { id:'ev.team.friend.a.narr1', who:'narr', t:'あいさつを返すと、{cheer}はうれしそうに笑った。少し仲良くなれた気がする。' },
   { id:'ev.team.typeskill.a.narr1', who:'narr', t:'{cheer}に教わった動きを、{mon}は何度もまねした。新しいこつが見えてきたようだ。' },
