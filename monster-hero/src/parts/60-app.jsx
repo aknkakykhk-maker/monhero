@@ -11992,7 +11992,7 @@ function MonsterHeroGame() {
         <div className={`mb-2 text-[10px] font-black ${r.saved?'text-emerald-200':'text-amber-200'}`}>{r.failed?'保存に失敗しました':r.saved?'種族チャレンジ クリア':'種族チャレンジ クリア（保存なし確認）'}</div>
         <div className="grid grid-cols-2 gap-1 text-[10px] text-slate-200">
           <span>種族 / 難易度</span><b className="text-right">{speciesName}／{labelOf(r.difficultyId)}</b>
-          <span>今回のスコア</span><b className="text-right">{r.score.toLocaleString()}</b>
+          <span>今回のスコア</span><b className="text-right break-all min-w-0">{r.score.toLocaleString()}</b>
           <span>クリアターン</span><b className="text-right">{r.clearTurns!==null?`${r.clearTurns}T`:'—'}</b>
           <span>初回報酬</span><b className="text-right">{r.rewardGranted?`超越の実（${speciesName}）×${r.rewardAmount}`:'なし（取得済み）'}</b>
           <span>次の解放</span><b className="text-right">{nextLabel||'これ以上なし'}</b>
@@ -19980,7 +19980,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         </span>
         {empty
           ? <small className="shrink-0 text-right text-[9px] font-black text-slate-500">記録なし</small>
-          : <b className="shrink-0 text-right text-[13px] font-black text-cyan-200">{score.toLocaleString()}<small className="ml-0.5 text-[8px] text-slate-400">pt</small></b>}
+          : <b className="min-w-0 max-w-[60%] break-all text-right text-[13px] font-black text-cyan-200">{score.toLocaleString()}<small className="ml-0.5 text-[8px] text-slate-400">pt</small></b>}
       </div>
     );
     // 「自己ベスト」タブの中身。自分の種族別ベストをその難易度で並べて比べる(通信しない)
@@ -26281,7 +26281,7 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
           <div className="mh-rjresult-in w-full max-w-xs rounded-2xl border border-orange-400/50 bg-orange-950/30 p-4 text-left mb-3" style={{'--d':'1250ms'}}>
             <div className="text-[10px] text-orange-200 font-black mb-1">与えたダメージ</div>
             <div data-raid-jack-damage className="text-3xl font-black text-white text-right"><TrainingCountUp from={0} to={r.damage} delay={1400} duration={1300} format={v=>v.toLocaleString()}/></div>
-            {r.way==='rhythm'?<><div data-raid-jack-rhythm-rows className="mt-2 grid grid-cols-2 gap-1 text-[10px] text-slate-200"><span>曲</span><b className="truncate text-right">{r.songName||'-'}{r.difficultyName?`(${r.difficultyName})`:''}</b><span>スコア</span><b className="text-right">{r.score.toLocaleString()}</b>{r.assist&&<><span>アシストモード</span><b className="text-right">ダメージにならない</b></>}{r.pumpkin?<><span>体力</span><b className="text-right">∞</b></>:<><span>ジャックの残りライフ(みんなの分を引いた計算)</span><b className="text-right">{r.lifeLeft.toLocaleString()}</b></>}</div>{!r.pumpkin&&Number.isFinite(r.lifeBefore)&&r.lifeMax>0&&<div data-raid-jack-life-bar className="mt-2"><div className="mh-rjresult-bar" aria-hidden="true"><i style={{'--from':Math.min(1,r.lifeBefore/r.lifeMax),'--to':Math.min(1,r.lifeLeft/r.lifeMax)}}/></div><div className="mt-0.5 text-right text-[9px] font-black text-red-200">{r.lifeBefore.toLocaleString()} → {r.lifeLeft.toLocaleString()}</div></div>}</>:<div className="mt-2 grid grid-cols-2 gap-1 text-[10px] text-slate-200"><span>使ったターン</span><b className="text-right">{r.turns} / {RAID_JACK_TURNS}</b>{r.kind==='a'&&<><span>ジャックの残りライフ(みんなの分を引いた計算)</span><b className="text-right">{r.lifeLeft.toLocaleString()}</b><span>固有技とアシカの成長</span><b data-raid-jack-levelups className="text-right">{r.levelUps}回</b><span hidden data-raid-jack-growths>{r.growths||0}</span></>}</div>}
+            {r.way==='rhythm'?<><div data-raid-jack-rhythm-rows className="mt-2 grid grid-cols-2 gap-1 text-[10px] text-slate-200"><span>曲</span><b className="truncate text-right">{r.songName||'-'}{r.difficultyName?`(${r.difficultyName})`:''}</b><span>スコア</span><b className="text-right break-all min-w-0">{r.score.toLocaleString()}</b>{r.assist&&<><span>アシストモード</span><b className="text-right">ダメージにならない</b></>}{r.pumpkin?<><span>体力</span><b className="text-right">∞</b></>:<><span>ジャックの残りライフ(みんなの分を引いた計算)</span><b className="text-right">{r.lifeLeft.toLocaleString()}</b></>}</div>{!r.pumpkin&&Number.isFinite(r.lifeBefore)&&r.lifeMax>0&&<div data-raid-jack-life-bar className="mt-2"><div className="mh-rjresult-bar" aria-hidden="true"><i style={{'--from':Math.min(1,r.lifeBefore/r.lifeMax),'--to':Math.min(1,r.lifeLeft/r.lifeMax)}}/></div><div className="mt-0.5 text-right text-[9px] font-black text-red-200">{r.lifeBefore.toLocaleString()} → {r.lifeLeft.toLocaleString()}</div></div>}</>:<div className="mt-2 grid grid-cols-2 gap-1 text-[10px] text-slate-200"><span>使ったターン</span><b className="text-right">{r.turns} / {RAID_JACK_TURNS}</b>{r.kind==='a'&&<><span>ジャックの残りライフ(みんなの分を引いた計算)</span><b className="text-right">{r.lifeLeft.toLocaleString()}</b><span>固有技とアシカの成長</span><b data-raid-jack-levelups className="text-right">{r.levelUps}回</b><span hidden data-raid-jack-growths>{r.growths||0}</span></>}</div>}
           </div>
           {r.opened&&<div className="mh-rjresult-in mh-rjresult-pop mb-2 text-sm font-black text-emerald-300" style={{'--d':'2700ms'}}>次の段階が開きました！</div>}
           {r.quickAward&&r.quickAward.loops>0&&(

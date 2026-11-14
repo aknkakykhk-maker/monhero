@@ -759,6 +759,36 @@ const TrainingCountUp = ({ from, to, delay = 0, duration = 900, format = null })
   }, [from, to, delay, duration]);
   return <span ref={holderRef}>{format ? format(value) : value}</span>;
 };
+// 大きな数字を、枠の幅に収まるように字の大きさを自動で縮める入れ物(はみ出し防止)。
+//   finalText … 最後に出る文字。これの幅で縮み方を決める(数え上げの途中は短いので、縮み方は途中で変わらない)
+//   子 … 実際に出す数字(TrainingCountUp など)。親の字の大きさ(em)を基準に、倍率だけ掛ける
+const FitNumber = ({ finalText, children, className = '', style = null }) => {
+  const outerRef = React.useRef(null);
+  const sizerRef = React.useRef(null);
+  const [scale, setScale] = React.useState(1);
+  const text = String(finalText == null ? '' : finalText);
+  React.useLayoutEffect(() => {
+    const fit = () => {
+      const o = outerRef.current, z = sizerRef.current;
+      if (!o || !z) return;
+      const avail = o.clientWidth, need = z.scrollWidth;
+      if (!(avail > 0) || !(need > 0)) return;
+      const next = need > avail ? Math.max(0.05, Math.floor((avail / need) * 1000) / 1000) : 1;
+      setScale(prev => (Math.abs(prev - next) < 0.002 ? prev : next));
+    };
+    fit();
+    let ro = null;
+    try { if (typeof ResizeObserver === 'function') { ro = new ResizeObserver(fit); ro.observe(outerRef.current); } } catch (e) {}
+    window.addEventListener('resize', fit);
+    return () => { window.removeEventListener('resize', fit); if (ro) ro.disconnect(); };
+  }, [text]);
+  return (
+    <div ref={outerRef} data-fit-number className={`relative w-full min-w-0 ${className}`} style={style || undefined}>
+      <span ref={sizerRef} aria-hidden="true" style={{ position: 'absolute', left: 0, top: 0, width: 0, height: 0, overflow: 'hidden', visibility: 'hidden', whiteSpace: 'nowrap', pointerEvents: 'none' }}>{text}</span>
+      <div data-fit-number-inner style={{ fontSize: `${scale}em`, whiteSpace: 'nowrap', lineHeight: 1.1 }}>{children}</div>
+    </div>
+  );
+};
 // 「いくつから いくつへ」の1項目。元の値を小さく、新しい値を大きく(増えたぶんは駆け上がる)、増えた量を「+○○」で出す。
 const PhaseGrowthCell = ({ row, d = 0, countMs = 900, compact = false, single = false }) => {
   const st = TRAINING_FX_STATS[row.key] || TRAINING_FX_STATS.hp;
