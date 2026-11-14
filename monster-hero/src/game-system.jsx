@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: c5abae686cb99622
+// generated-sha256: 5fa8a49859fe0c7b
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -90517,7 +90517,7 @@ function MsxManualBar({ opt, onPick, onAuto, busy, rep = null, onRep = null, tit
       </div>
       <div className="msxm-sec">
         <div className="msxm-h" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 6 }}>
-          <span>⚔ 攻撃{reachN ? '(札を押して技を選ぶ)' : '(この間合いでは届く技がありません)'}</span>
+          <span>⚔ 攻撃{reachN ? '(札を押して技を選ぶ)' : '(この間合いの技なし)'}</span>
           {items.length ? <button type="button" className="msxm-all" data-msxm-all onClick={() => setSheet('all')}>📜 全部の技({items.length})</button> : null}
         </div>
         <MsaDistCards list={items} rep={ids} dist={opt.dist} guts={opt.guts} hitAt={hitAt} hintId={hintId} busy={busy} onOpen={(d) => setSheet(d)} dataSide="manual"/>
