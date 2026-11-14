@@ -529,6 +529,10 @@
       "role": "部品: モンヒロサクセスの覚醒・超覚醒の見せる部分(バトルカードのキラで絵を包む MsxKira・前触れの光 MsxOmenFx・起きたときの演出 MsxAwakeShow・印 msxKiraOf)。計算は芯 MONHERO_SUCCESS の awakeOpen。何も保存しない・公開の印 monheroSuccess の後ろ"
     },
     {
+      "file": "56-monsuc-issa.jsx",
+      "role": "部品: モンヒロサクセスのイッサ博士「大きな賭け」の場面(登場 MsxIssaMeet・溜めと結果 MsxIssaResult・動いた数字の札 MsxIssaGains・入口 MsxIssa)。計算は芯 MONHERO_SUCCESS の issa。保存は run.out だけ・公開の印 monheroSuccess の後ろ"
+    },
+    {
       "file": "56-monsuc-dex.jsx",
       "role": "部品: モンヒロサクセスの見た出来事(新しいキー mh_monsuc_event_seen_v1 = { v:1, ch, ev }・msxSeenMark)・選択肢の詳細ボタンの中身 MsxChoiceInfo(芯の出来事の表から効果の文を作る・まだは「？？？」)・イベント図鑑 MsxDex(全体と種類ごとの ◯/◯・見たものは読み直せる)。公開の印 monheroSuccess の後ろ"
     },
