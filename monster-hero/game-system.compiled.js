@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 0b7be20509541b15
+// source-sha256: bbcc8ec16f2a6db2
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -7904,7 +7904,7 @@ const SCREEN_THEME_CATEGORIES = [{
 }, {
   id: 'rhythm',
   label: 'モンヒロビート',
-  desc: '曲えらび・演奏画面'
+  desc: '曲選び・演奏画面'
 }];
 const SCREEN_THEME_READY_CATEGORIES = SCREEN_THEME_CATEGORIES.filter(category => category.ready !== false);
 const screenThemeFor = (screenTheme, category, now = Date.now()) => SCREEN_THEME_READY_CATEGORIES.some(c => c.id === category) ? resolveScreenTheme(screenTheme && screenTheme[category], now) : 'classic';
@@ -35817,8 +35817,8 @@ const rhythmQuietModeCan = () => ({
 const rhythmQuietModeSupportText = () => {
   const can = rhythmQuietModeCan();
   const tail = '通知そのものを止めることはブラウザからはできないので、確実に止めたいときは端末の「集中モード」もお使いください。';
-  if (can.fullscreen && can.wakeLock) return `この端末では、演奏のあいだだけ全画面にして、画面が消えないようにできます。全画面のあいだは画面いちばん上の通知バーが隠れるので、通知が降りてくる表示も出にくくなります。${tail}`;
-  if (can.fullscreen) return `この端末では、演奏のあいだだけ全画面にできます。全画面のあいだは画面いちばん上の通知バーが隠れます。画面が消えないようにする機能はこのブラウザにはありません。${tail}`;
+  if (can.fullscreen && can.wakeLock) return `この端末では、演奏のあいだだけ全画面にして、画面が消えないようにできます。全画面のあいだは画面一番上の通知バーが隠れるので、通知が降りてくる表示も出にくくなります。${tail}`;
+  if (can.fullscreen) return `この端末では、演奏のあいだだけ全画面にできます。全画面のあいだは画面一番上の通知バーが隠れます。画面が消えないようにする機能はこのブラウザにはありません。${tail}`;
   if (can.wakeLock) return `この端末では、演奏のあいだ画面が消えないようにできます。全画面にする機能がこのブラウザには無いため、通知バーは隠せません。${tail}`;
   return `この端末のブラウザでは、全画面にすることも画面が消えないようにすることもできません。ONにしても何も起きないので、通知を止めたいときは端末の「集中モード」をお使いください。`;
 };
@@ -37078,7 +37078,7 @@ const RhythmOptions = ({
     className: head
   }, "◆ その他"), React.createElement("div", {
     className: wide ? `mt-1 ${grid}` : `mt-3 ${grid}`
-  }, field('曲えらびで試聴する', toggle('songPreviewEnabled')), field('タップ時の振動', React.createElement(React.Fragment, null, toggle('vibrationEnabled'), React.createElement("button", {
+  }, field('曲選びで試聴する', toggle('songPreviewEnabled')), field('タップ時の振動', React.createElement(React.Fragment, null, toggle('vibrationEnabled'), React.createElement("button", {
     type: "button",
     "data-rhythm-vibration-test": true,
     disabled: !RHYTHM_HAPTICS.supported(),
@@ -37902,7 +37902,7 @@ const RhythmSongSelect = ({
       'data-rhythm-song-first': firstSongId
     } : {}, {
       className: "ml-auto shrink-0 rounded-md border border-emerald-300/60 bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-black text-emerald-200"
-    }), "🔰 はじめての1曲"), lockedSong(entry) && React.createElement("small", _extends({}, main ? {
+    }), "🔰 初めての1曲"), lockedSong(entry) && React.createElement("small", _extends({}, main ? {
       'data-rhythm-song-locked': entry.songId
     } : {}, {
       className: "ml-auto shrink-0 rounded-md border border-amber-300/60 bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-black text-amber-200"
@@ -38330,11 +38330,11 @@ const RhythmSongSelect = ({
     className: "fixed right-3 top-3 min-h-[48px] rounded-xl bg-slate-800/90 px-4 text-sm font-black text-white",
     style: {
       position: 'fixed',
-      top: 'max(12px, env(safe-area-inset-top))',
+      top: 'max(12px, var(--mh-sa-top))',
       right: 12,
       minHeight: '48px'
     }
-  }, "✕ もどる")), genreOpen && React.createElement("div", {
+  }, "✕ 戻る")), genreOpen && React.createElement("div", {
     "data-rhythm-genre-sheet": true,
     className: "fixed inset-0 z-[9000] flex items-end justify-center",
     style: {
@@ -38753,7 +38753,7 @@ const RhythmHellGuide = ({
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      padding: '12px calc(16px + env(safe-area-inset-right)) 12px calc(16px + env(safe-area-inset-left))',
+      padding: '12px calc(16px + var(--mh-sa-right)) 12px calc(16px + var(--mh-sa-left))',
       background: 'radial-gradient(ellipse at center,rgba(30,27,75,.96),rgba(2,6,23,.98) 72%)'
     }
   }, React.createElement("section", {
@@ -38889,7 +38889,7 @@ const RhythmHellGuide = ({
       fontSize: '14px',
       fontWeight: 900
     }
-  }, last ? '閉じる' : 'つぎへ'))));
+  }, last ? '閉じる' : '次へ'))));
 };
 const RHYTHM_HAPTICS = (() => {
   let holder = null,
@@ -43706,7 +43706,7 @@ const RhythmTapTest = ({
             const counted = Math.max(0, taps - RHYTHM_CALIBRATION_WARMUP_COUNT);
             const remain = Math.max(0, RHYTHM_CALIBRATION_TAP_COUNT - counted);
             const now = counted > 0 ? rhythmCalibrationOffsetFromTaps(run.deltas.slice(RHYTHM_CALIBRATION_WARMUP_COUNT)) : null;
-            if (title) title.textContent = taps < RHYTHM_CALIBRATION_WARMUP_COUNT ? `かまえて（はじめの${RHYTHM_CALIBRATION_WARMUP_COUNT}回は数えません）` : remain > 0 ? `あと ${remain} 回` : 'おしまい！';
+            if (title) title.textContent = taps < RHYTHM_CALIBRATION_WARMUP_COUNT ? `かまえて（初めの${RHYTHM_CALIBRATION_WARMUP_COUNT}回は数えません）` : remain > 0 ? `あと ${remain} 回` : 'おしまい！';
             if (body) body.textContent = now ? `いまのずれ ${now.rawMeanMs > 0 ? '+' : ''}${now.rawMeanMs}ms（${counted}回ぶん）／ 判定とFAST・SLOWを見ながら、判定ラインに重なった瞬間に叩いてください` : '判定ラインにノーツが重なった瞬間に叩いてください。判定とFAST・SLOWはいつもどおり出ます';
           }
         }
@@ -45836,7 +45836,7 @@ const RhythmTapTest = ({
       className: "block text-3xl font-black leading-tight"
     }, result.allMarvelous ? 'ALL MARVELOUS!!' : result.allExcellent ? 'ALL EXCELLENT!!' : 'FULL COMBO!'), React.createElement("small", {
       className: "mt-1 block text-[10px] font-black text-amber-200"
-    }, result.allMarvelous ? 'すべてMARVELOUS。文句なしの完璧です' : result.allExcellent ? 'すべてEXCELLENT以上。ほぼ完璧です' : '一度もコンボを切らずに完走しました')), React.createElement("div", {
+    }, result.allMarvelous ? '全てMARVELOUS。文句なしの完璧です' : result.allExcellent ? '全てEXCELLENT以上。ほぼ完璧です' : '一度もコンボを切らずに完走しました')), React.createElement("div", {
       className: "my-3 flex flex-wrap justify-center gap-2 text-xs font-black text-slate-300"
     }, result.fullCombo && React.createElement("span", null, "FULL COMBO"), result.allExcellent && React.createElement("span", null, "ALL EXCELLENT"), result.allMarvelous && React.createElement("span", null, "ALL MARVELOUS")), quickRunAward && quickRunAward.loops === 0 && quickRunAward.cleared === false && React.createElement("div", {
       "data-rhythm-result-quick-run-failed": true,
@@ -45925,7 +45925,7 @@ const RhythmTapTest = ({
         className: "block text-base font-black text-amber-100"
       }, "🔓 ", opened, " が解放されました！"), React.createElement("small", {
         className: "mt-0.5 block text-[10px] font-bold text-amber-200/90"
-      }, "この曲の ", openedIds.map(id => `${id}（Lv.${song.difficulties[id].level}）`).join('・'), " を曲えらびで選べます"));
+      }, "この曲の ", openedIds.map(id => `${id}（Lv.${song.difficulties[id].level}）`).join('・'), " を曲選びで選べます"));
     })(), result.luck && (result.luck.draws > 0 || result.luck.points > 0) && React.createElement("div", {
       "data-rhythm-result-luck": true,
       className: "mx-auto my-2 max-w-xs rounded-2xl border border-lime-300/50 bg-lime-950/30 px-3 py-2 text-center [@container(min-width:680px)]:hidden"
@@ -45998,7 +45998,7 @@ const RhythmTapTest = ({
       }, React.createElement("span", null, "0:00"), React.createElement("span", null, rhythmClockLabel(result.liveLogEndMs))), React.createElement("p", {
         "data-rhythm-live-log-worst": true,
         className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-300"
-      }, worst ? `いちばん崩れたのは ${rhythmClockLabel(worst.fromMs)}〜${rhythmClockLabel(worst.toMs)} の区間でした（BAD・MISS ${worst.bad + worst.miss}回）。` : 'どの区間も BAD・MISS なしで通せました。'));
+      }, worst ? `一番崩れたのは ${rhythmClockLabel(worst.fromMs)}〜${rhythmClockLabel(worst.toMs)} の区間でした（BAD・MISS ${worst.bad + worst.miss}回）。` : 'どの区間も BAD・MISS なしで通せました。'));
     })(), result.touchReport && React.createElement("div", {
       "data-rhythm-touch-report": true,
       className: "mb-2 text-center"
@@ -46043,7 +46043,7 @@ const RhythmTapTest = ({
       "data-rhythm-raid-result-back": raidPlay ? "" : undefined,
       className: "min-h-[48px] rounded-xl bg-indigo-700 font-black",
       onClick: abort
-    }, multi && 'みんなの結果を見る', !multi && raidPlay && 'レイドの結果を見る', !multi && !raidPlay && React.createElement(React.Fragment, null, debugPlay ? '音ゲーデバッグへ戻る' : '曲えらびへ戻る'))))))));
+    }, multi && 'みんなの結果を見る', !multi && raidPlay && 'レイドの結果を見る', !multi && !raidPlay && React.createElement(React.Fragment, null, debugPlay ? '音ゲーデバッグへ戻る' : '曲選びへ戻る'))))))));
   }
   return React.createElement("main", _extends({
     "data-rhythm-tap-test": true,
@@ -46762,7 +46762,7 @@ const RhythmTapTest = ({
       fontSize: isLandscape ? '12px' : '14px',
       lineHeight: 1.2
     }
-  }, "かまえて（はじめの", RHYTHM_CALIBRATION_WARMUP_COUNT, "回は数えません）"), React.createElement("span", {
+  }, "かまえて（初めの", RHYTHM_CALIBRATION_WARMUP_COUNT, "回は数えません）"), React.createElement("span", {
     "data-rhythm-calibration-text": true,
     className: "mt-1 block font-bold text-slate-200",
     style: {
@@ -46834,7 +46834,7 @@ const RhythmTapTest = ({
     "data-rhythm-pause-exit": true,
     className: "min-h-[48px] w-full rounded-xl bg-rose-800 font-black",
     onClick: abort
-  }, multi && '中断してルームへ戻る', !multi && React.createElement(React.Fragment, null, calibrating ? 'やめてオプションへ戻る' : tutorial ? '練習をやめて曲えらびへ戻る' : debugPlay ? '中断して音ゲーデバッグへ戻る' : '中断して曲えらびへ戻る')))));
+  }, multi && '中断してルームへ戻る', !multi && React.createElement(React.Fragment, null, calibrating ? 'やめてオプションへ戻る' : tutorial ? '練習をやめて曲選びへ戻る' : debugPlay ? '中断して音ゲーデバッグへ戻る' : '中断して曲選びへ戻る')))));
 };
 const rhythmPreviewHandsStart = area => {
   if (typeof window === 'undefined' || !area) return () => {};
@@ -61574,7 +61574,7 @@ function MultiStampEditor({
   }, React.createElement("div", {
     className: "flex max-h-[96dvh] [[data-mh-view-rotation=true]_&]:max-h-[94vw] w-full max-w-[880px] flex-col overflow-hidden rounded-t-2xl border-t-2 border-cyan-400 bg-slate-950 text-white landscape:rounded-2xl landscape:border-2",
     style: {
-      paddingBottom: 'max(8px, env(safe-area-inset-bottom))'
+      paddingBottom: 'max(8px, var(--mh-sa-bottom))'
     },
     onClick: e => e.stopPropagation()
   }, React.createElement("div", {
@@ -62914,6 +62914,69 @@ const TrainingCountUp = ({
   return React.createElement("span", {
     ref: holderRef
   }, format ? format(value) : value);
+};
+const FitNumber = ({
+  finalText,
+  children,
+  className = '',
+  style = null
+}) => {
+  const outerRef = React.useRef(null);
+  const sizerRef = React.useRef(null);
+  const [scale, setScale] = React.useState(1);
+  const text = String(finalText == null ? '' : finalText);
+  React.useLayoutEffect(() => {
+    const fit = () => {
+      const o = outerRef.current,
+        z = sizerRef.current;
+      if (!o || !z) return;
+      const avail = o.clientWidth,
+        need = z.scrollWidth;
+      if (!(avail > 0) || !(need > 0)) return;
+      const next = need > avail ? Math.max(0.05, Math.floor(avail / need * 1000) / 1000) : 1;
+      setScale(prev => Math.abs(prev - next) < 0.002 ? prev : next);
+    };
+    fit();
+    let ro = null;
+    try {
+      if (typeof ResizeObserver === 'function') {
+        ro = new ResizeObserver(fit);
+        ro.observe(outerRef.current);
+      }
+    } catch (e) {}
+    window.addEventListener('resize', fit);
+    return () => {
+      window.removeEventListener('resize', fit);
+      if (ro) ro.disconnect();
+    };
+  }, [text]);
+  return React.createElement("div", {
+    ref: outerRef,
+    "data-fit-number": true,
+    className: `relative w-full min-w-0 ${className}`,
+    style: style || undefined
+  }, React.createElement("span", {
+    ref: sizerRef,
+    "aria-hidden": "true",
+    style: {
+      position: 'absolute',
+      left: 0,
+      top: 0,
+      width: 0,
+      height: 0,
+      overflow: 'hidden',
+      visibility: 'hidden',
+      whiteSpace: 'nowrap',
+      pointerEvents: 'none'
+    }
+  }, text), React.createElement("div", {
+    "data-fit-number-inner": true,
+    style: {
+      fontSize: `${scale}em`,
+      whiteSpace: 'nowrap',
+      lineHeight: 1.1
+    }
+  }, children));
 };
 const PhaseGrowthCell = ({
   row,
@@ -71534,8 +71597,8 @@ function RhythmSongSelectScreen({
   }, React.createElement("button", {
     "data-rhythm-song-select-back": true,
     type: "button",
-    "aria-label": debugAll ? 'モンヒロビートのデバッグへ戻る' : 'モードえらびへ戻る',
-    title: debugAll ? 'デバッグへ戻る' : 'モードえらびへ戻る',
+    "aria-label": debugAll ? 'モンヒロビートのデバッグへ戻る' : 'モード選びへ戻る',
+    title: debugAll ? 'デバッグへ戻る' : 'モード選びへ戻る',
     onClick: onExit,
     className: "min-h-[44px] min-w-[44px] shrink-0 text-slate-300"
   }, React.createElement(ArrowLeft, {
@@ -71554,7 +71617,7 @@ function RhythmSongSelectScreen({
     className: "truncate text-sm font-black leading-tight tracking-widest text-cyan-200 max-[359px]:tracking-normal"
   }, React.createElement("span", {
     className: "max-[359px]:hidden"
-  }, "🎵 "), "曲えらび"), beatPointReleased && Number.isFinite(beatPointBalance) && React.createElement("small", {
+  }, "🎵 "), "曲選び"), beatPointReleased && Number.isFinite(beatPointBalance) && React.createElement("small", {
     "data-rhythm-beat-point-balance": true,
     "aria-label": `所持ビートP ${beatPointBalance.toLocaleString()}`,
     className: "block truncate text-[9px] font-black leading-tight text-violet-200/90"
@@ -71609,7 +71672,7 @@ function RhythmSongSelectScreen({
       role: "radiogroup",
       "aria-label": "並べる曲",
       className: "grid shrink-0 grid-cols-2 gap-1.5 border-b border-amber-400/30 bg-amber-950/30 px-2 py-1.5"
-    }, [['all', `すべての曲(${allCount})`], ['proto', `🧪 試作だけ(${protoCount})`]].map(([id, label]) => {
+    }, [['all', `全ての曲(${allCount})`], ['proto', `🧪 試作だけ(${protoCount})`]].map(([id, label]) => {
       const on = debugSongFilter === id;
       return React.createElement("button", {
         key: id,
@@ -71742,7 +71805,7 @@ function RhythmSongSelectScreen({
     className: "min-h-[44px] min-w-0 flex-1 text-left text-[11px] font-black leading-tight text-amber-200 active:scale-[.99]"
   }, "🏆 ", rhythmEventNotice.kind === 'limited' ? React.createElement(React.Fragment, null, jaWrap(rhythmEventNotice.name), " 開催中！") : jaWrap('今週の対象曲'), React.createElement("span", {
     className: "ml-1 text-[10px] text-fuchsia-200"
-  }, "▼ ひらく")), React.createElement("button", {
+  }, "▼ 開く")), React.createElement("button", {
     type: "button",
     "data-rhythm-event-notice-close": true,
     onClick: dismissRhythmEventNotice,
@@ -72131,7 +72194,7 @@ function RhythmHelpScreen({
   }, jaWrap('🎓 もう一度チュートリアルを見る')), React.createElement("p", {
     className: "mt-2 text-[10px] leading-relaxed text-slate-400",
     style: JA_WRAP_STYLE
-  }, jaWrap('曲えらびへ戻って、助手が最初から説明します。何度でも見られます。')), React.createElement("div", {
+  }, jaWrap('曲選びへ戻って、助手が最初から説明します。何度でも見られます。')), React.createElement("div", {
     "data-rhythm-demo-help-list": true,
     className: "mt-4 space-y-2"
   }, topics.length === 0 ? React.createElement("p", {
@@ -72274,7 +72337,7 @@ function RhythmEventRewardModal({
     className: "mt-2 rounded-2xl border border-cyan-300/40 bg-cyan-500/5 p-2"
   }, React.createElement("p", {
     className: "text-[10px] font-black text-cyan-200"
-  }, "参加報酬（", weekly ? `その週に${participation.plays}回遊びました` : `対象曲を${participation.songs}曲すべて`, "）"), React.createElement("p", {
+  }, "参加報酬（", weekly ? `その週に${participation.plays}回遊びました` : `対象曲を${participation.songs}曲全て`, "）"), React.createElement("p", {
     className: "mt-1 text-[10px] leading-tight text-white"
   }, helpWrap(rhythmEventParticipationText(participation)))), React.createElement("button", {
     type: "button",
@@ -72888,7 +72951,7 @@ function RhythmRankingScreen({
     className: "rounded-2xl border border-fuchsia-300/40 bg-fuchsia-500/5 p-2 text-[10px] leading-tight text-slate-200"
   }, React.createElement("b", {
     className: "text-fuchsia-200"
-  }, "参加報酬"), "\u3000", eventWeekly ? `その週に${eventParticipation.plays}回遊ぶと` : `対象曲を${eventParticipation.songs}曲すべて遊ぶと`, " ", rhythmEventParticipationText(eventParticipation)), eventWeekly && React.createElement("p", {
+  }, "参加報酬"), "\u3000", eventWeekly ? `その週に${eventParticipation.plays}回遊ぶと` : `対象曲を${eventParticipation.songs}曲全て遊ぶと`, " ", rhythmEventParticipationText(eventParticipation)), eventWeekly && React.createElement("p", {
     style: JA_WRAP_STYLE,
     "data-rhythm-week-score-rule": true,
     className: "rounded-2xl border border-fuchsia-300/40 bg-fuchsia-500/5 p-2 text-[10px] leading-tight text-slate-200"
@@ -72896,7 +72959,7 @@ function RhythmRankingScreen({
     className: "text-fuchsia-200"
   }, "スコアの数え方"), "\u3000その週に遊んだぶんを", React.createElement("b", {
     className: "text-white"
-  }, "すべて足します"), jaWrap('。曲も難易度も問わず、同じ曲を何度遊んでもそのつど積み上がります（上限なし）。満点は難易度ごとに違います（EASY 80万〜MASTER 100万）。「総合」タブが曲ごとのベストを合計するのに対し、こちらは'), React.createElement("b", {
+  }, "全て足します"), jaWrap('。曲も難易度も問わず、同じ曲を何度遊んでもそのつど積み上がります（上限なし）。満点は難易度ごとに違います（EASY 80万〜MASTER 100万）。「総合」タブが曲ごとのベストを合計するのに対し、こちらは'), React.createElement("b", {
     className: "text-white"
   }, "遊んだ量"), "で競います。"), !eventWeekly && React.createElement("p", {
     style: JA_WRAP_STYLE,
@@ -80507,26 +80570,36 @@ function WaveResultScreen({
     }, React.createElement("span", {
       className: "text-indigo-400 text-xs font-black uppercase"
     }, "獲得スコア"), React.createElement("span", {
-      className: "text-white font-mono font-black text-xl"
+      className: "text-white font-mono font-black text-xl min-w-0 flex-1 pl-2"
+    }, React.createElement(FitNumber, {
+      finalText: Number(waveResult.roundScore).toLocaleString(),
+      style: {
+        textAlign: 'right'
+      }
     }, React.createElement(TrainingCountUp, {
       from: 0,
       to: waveResult.roundScore,
       delay: 600,
       duration: 1000,
       format: v => v.toLocaleString()
-    })))), React.createElement("div", {
+    }))))), React.createElement("div", {
       className: "pt-1 flex justify-between items-end border-t border-white/20"
     }, React.createElement("span", {
       className: "text-amber-500 text-[11px] font-black uppercase"
     }, "累計スコア"), React.createElement("span", {
-      className: "text-amber-400 font-mono font-black text-lg"
+      className: "text-amber-400 font-mono font-black text-lg min-w-0 flex-1 pl-2"
+    }, React.createElement(FitNumber, {
+      finalText: Number(waveResult.totalScore).toLocaleString(),
+      style: {
+        textAlign: 'right'
+      }
     }, React.createElement(TrainingCountUp, {
       from: Math.max(0, waveResult.totalScore - waveResult.roundScore),
       to: waveResult.totalScore,
       delay: 900,
       duration: 1000,
       format: v => v.toLocaleString()
-    })))))), React.createElement("button", {
+    }))))))), React.createElement("button", {
       onClick: handleNextWave,
       disabled: runFinalizing,
       "aria-busy": runFinalizing,
@@ -80984,7 +81057,7 @@ function ChampionScreen({
       background: 'linear-gradient(to bottom right,#fbbf24,#78350f)'
     }
   }, React.createElement(EndConfetti, null), React.createElement("div", {
-    className: "relative z-10 shrink-0 flex flex-col items-center [@media(orientation:landscape)_and_(max-height:520px)]:col-start-1 [@media(orientation:landscape)_and_(max-height:520px)]:self-center"
+    className: "relative z-10 shrink-0 w-full flex flex-col items-center [@media(orientation:landscape)_and_(max-height:520px)]:col-start-1 [@media(orientation:landscape)_and_(max-height:520px)]:self-center"
   }, React.createElement(Crown, {
     size: 64,
     className: "mh-end-crown text-white animate-bounce mb-3 [@media(max-height:700px)]:h-10 [@media(max-height:700px)]:w-10 [@media(max-height:700px)]:mb-1"
@@ -80994,13 +81067,15 @@ function ChampionScreen({
     className: "mh-end-score w-full max-w-xs bg-black/40 border border-white/20 rounded-3xl p-6 mb-3 mt-3 shadow-2xl [@media(max-height:700px)]:p-2 [@media(max-height:700px)]:my-1.5 [@media(max-height:700px)]:rounded-2xl"
   }, React.createElement("div", {
     className: "text-5xl font-mono font-black text-white [@media(max-height:700px)]:text-3xl"
+  }, React.createElement(FitNumber, {
+    finalText: Number(score).toLocaleString()
   }, React.createElement(TrainingCountUp, {
     from: 0,
     to: score,
     delay: 500,
     duration: 1400,
     format: v => v.toLocaleString()
-  })))), React.createElement("div", {
+  }))))), React.createElement("div", {
     "data-champion-rewards": true,
     className: "relative z-10 flex-1 min-h-0 w-full flex flex-col items-center overflow-y-auto mh-scroll [@media(orientation:landscape)_and_(max-height:520px)]:col-start-2 [@media(orientation:landscape)_and_(max-height:520px)]:row-start-1 [@media(orientation:landscape)_and_(max-height:520px)]:row-span-5 [@media(orientation:landscape)_and_(max-height:520px)]:h-full"
   }, React.createElement("div", {
@@ -81081,13 +81156,15 @@ function GameOverScreen({
     className: "mh-end-score bg-white/5 border border-white/10 rounded-2xl p-4 mb-3 mt-3 w-full max-w-xs"
   }, React.createElement("div", {
     className: "text-3xl font-mono font-black text-white"
+  }, React.createElement(FitNumber, {
+    finalText: Number(score).toLocaleString()
   }, React.createElement(TrainingCountUp, {
     from: 0,
     to: score,
     delay: 500,
     duration: 1000,
     format: v => v.toLocaleString()
-  })))), React.createElement("div", {
+  }))))), React.createElement("div", {
     className: "flex-1 min-h-0 w-full flex flex-col items-center overflow-y-auto mh-scroll"
   }, React.createElement("div", {
     className: "m-auto w-full flex flex-col items-center"
@@ -81142,13 +81219,15 @@ function GaveUpScreen({
     className: "mh-end-score bg-white/5 border border-white/10 rounded-2xl p-4 mb-3 mt-3 w-full max-w-xs"
   }, React.createElement("div", {
     className: "text-3xl font-mono font-black text-white"
+  }, React.createElement(FitNumber, {
+    finalText: Number(score).toLocaleString()
   }, React.createElement(TrainingCountUp, {
     from: 0,
     to: score,
     delay: 500,
     duration: 1000,
     format: v => v.toLocaleString()
-  })))), React.createElement("div", {
+  }))))), React.createElement("div", {
     className: "flex-1 min-h-0 w-full flex flex-col items-center overflow-y-auto mh-scroll"
   }, React.createElement("div", {
     className: "m-auto w-full flex flex-col items-center"
@@ -96403,7 +96482,7 @@ function RhythmBeatPresenceList({
     "data-rhythm-beat-presence-list-close": true,
     className: "block w-full rounded-xl bg-slate-700 py-2.5 text-sm font-black text-white active:scale-[.98]",
     onClick: onClose
-  }, "とじる")));
+  }, "閉じる")));
 }
 function RhythmBeatPresenceSheet({
   pick,
@@ -96421,7 +96500,7 @@ function RhythmBeatPresenceSheet({
   const k = !isAssistant && friend ? RHYTHM_BEAT_PRESENCE_KIND[friend.kind] || RHYTHM_BEAT_PRESENCE_KIND.here : null;
   const src = isAssistant ? rhythmBeatAssistantFace(pick.id) : friend && friend.icon && typeof resolveIconUrl === 'function' ? resolveIconUrl(friend.icon) : '';
   const title = isAssistant ? `${name} は いま練習中` : friend && friend.kind === 'room' ? `${name} さんが部屋を開いています` : friend && friend.kind === 'busy' ? `${name} さんは部屋で遊び中` : friend && friend.kind === 'private' ? `${name} さんは合言葉の部屋にいます` : `${name} さんが いまモンヒロビートにいます`;
-  const sub = isAssistant ? 'モンヒロビートにいるあいだは券なし' : friend && friend.kind === 'room' && friend.room ? `フリーマッチ ${friend.room.n}/${RHYTHM_MULTI_ROOM_MAX}人${friend.room.ph === 'select' ? '・曲えらび中' : '・待合い'}` : k ? k.tag : '';
+  const sub = isAssistant ? 'モンヒロビートにいるあいだは券なし' : friend && friend.kind === 'room' && friend.room ? `フリーマッチ ${friend.room.n}/${RHYTHM_MULTI_ROOM_MAX}人${friend.room.ph === 'select' ? '・曲選び中' : '・待合い'}` : k ? k.tag : '';
   const line = isAssistant ? 'フリーマッチかプライベートの部屋で「呼ぶ」と、セッション券なしで一緒に演奏できます(何曲でも)。ソロライブには来られません。' : friend && friend.kind === 'room' ? '「入る」で、その部屋へ入れます。' : friend && friend.kind === 'busy' ? '合言葉の部屋か、演奏中の部屋にいるので、いまは入れません。部屋に誘ってもらうか、終わってから誘ってみましょう。' : friend && friend.kind === 'private' ? '合言葉(プライベート)の部屋にいるので、いまは入れません。合言葉を教えてもらうか、終わってから誘ってみましょう。' : '部屋を作って 💌 で誘うと、一緒に遊べます。';
   const action = isAssistant ? {
     label: '部屋を作って呼ぶ',
@@ -96494,7 +96573,7 @@ function RhythmBeatPresenceSheet({
     type: "button",
     onClick: onClose,
     className: "min-h-[44px] rounded-xl border border-white/20 text-sm font-black"
-  }, "とじる"), action && React.createElement("button", {
+  }, "閉じる"), action && React.createElement("button", {
     type: "button",
     "data-rhythm-beat-presence-go": true,
     onClick: action.go,
@@ -96528,14 +96607,14 @@ function RhythmMultiRoomList({
     "data-rhythm-multi-room-list-back": true,
     onClick: onBack,
     className: "min-h-[44px] shrink-0 rounded-xl bg-slate-800 px-3 text-xs font-black"
-  }, "← もどる"), React.createElement("b", {
+  }, "← 戻る"), React.createElement("b", {
     className: "min-w-0 flex-1 truncate text-base font-black text-white"
   }, "部屋に入る")), React.createElement("p", {
     className: "text-[11px] font-bold leading-snug text-slate-400",
     style: JA_WRAP_STYLE
   }, jaWrap('いま人を待っている部屋です。自動で新しくなります')), list == null ? React.createElement("p", {
     className: "rounded-xl bg-slate-950/50 p-3 text-center text-[12px] font-bold text-slate-300"
-  }, "部屋をさがしています…") : list.length === 0 ? React.createElement("p", {
+  }, "部屋を探しています…") : list.length === 0 ? React.createElement("p", {
     "data-rhythm-multi-room-list-empty": true,
     className: "rounded-xl border border-dashed border-slate-500/60 p-3 text-center text-[12px] font-bold leading-snug text-slate-300",
     style: JA_WRAP_STYLE
@@ -96560,7 +96639,7 @@ function RhythmMultiRoomList({
     className: "block truncate text-[13px] font-black text-white"
   }, r.hn ? `${r.hn} の部屋` : `部屋 ${r.code}`), React.createElement("small", {
     className: "block truncate text-[10px] font-bold text-slate-400"
-  }, [r.hr > 0 ? `ブリーダーLv.${r.hr}` : '', r.ph === 'select' ? '曲えらび中' : '待っています'].filter(Boolean).join(' ・ '))), React.createElement("span", {
+  }, [r.hr > 0 ? `ブリーダーLv.${r.hr}` : '', r.ph === 'select' ? '曲選び中' : '待っています'].filter(Boolean).join(' ・ '))), React.createElement("span", {
     className: "shrink-0 rounded-md bg-cyan-800/70 px-1.5 py-0.5 text-[10px] font-black text-cyan-100"
   }, r.n, "/", RHYTHM_MULTI_ROOM_MAX, "人"), React.createElement("button", {
     type: "button",
@@ -96595,7 +96674,7 @@ function RhythmMultiAloneHint({
     type: "button",
     onClick: onLeave,
     className: "mt-1 block min-h-[36px] w-full rounded-lg bg-slate-700 text-[11px] font-black"
-  }, "モードえらびへ戻る"));
+  }, "モード選びへ戻る"));
 }
 let rhythmMultiPendingInvite = null;
 const MH_ROOM_LINK_KEY = 'mh_pending_room_link_v1';
@@ -96802,7 +96881,7 @@ function MultiAwayBar({
   return React.createElement("div", {
     "data-multi-away-bar": hot ? 'hot' : 'wait',
     "data-multi-away-game": game,
-    className: "pointer-events-none fixed inset-x-0 top-0 z-[1000] flex justify-center px-2 pt-[max(env(safe-area-inset-top),6px)]"
+    className: "pointer-events-none fixed inset-x-0 top-0 z-[1000] flex justify-center px-2 pt-[max(var(--mh-sa-top),6px)]"
   }, React.createElement("div", {
     className: `pointer-events-auto flex w-full max-w-[420px] items-center gap-2 rounded-2xl border px-3 py-1.5 text-white shadow-lg ${hot ? 'border-amber-200/80 bg-fuchsia-800/95' : 'border-cyan-300/50 bg-slate-900/95'}`
   }, React.createElement("span", {
@@ -96941,7 +97020,7 @@ function RhythmMultiMemberSheet({
     }
     setBusy(false);
   };
-  const text = state && typeof FRIENDS_RESULT_TEXT !== 'undefined' && FRIENDS_RESULT_TEXT[state] ? FRIENDS_RESULT_TEXT[state][0] : state === 'error' ? '申請を送れませんでした。もう一度ためしてください' : '';
+  const text = state && typeof FRIENDS_RESULT_TEXT !== 'undefined' && FRIENDS_RESULT_TEXT[state] ? FRIENDS_RESULT_TEXT[state][0] : state === 'error' ? '申請を送れませんでした。もう一度試してください' : '';
   return React.createElement("div", {
     className: "absolute inset-0 z-[86000] flex items-center justify-center p-4"
   }, React.createElement("button", {
@@ -97053,7 +97132,7 @@ function RhythmMultiBuddyInfoSheet({
     className: "block text-[12px] font-black text-lime-200"
   }, "ビートLv.", m.level), React.createElement("p", {
     className: "mt-3 text-[11px] font-bold leading-relaxed text-slate-300"
-  }, "ほかのメンバーが呼んだマスモンです。くわしいステータスは、呼んだ人だけが見られます"), React.createElement("button", {
+  }, "ほかのメンバーが呼んだマスモンです。詳しいステータスは、呼んだ人だけが見られます"), React.createElement("button", {
     type: "button",
     onClick: onClose,
     className: "mt-3 min-h-[42px] w-full rounded-xl bg-slate-700 text-sm font-black"
@@ -98176,8 +98255,8 @@ function RhythmWatchScreen({
     "data-rhythm-watch-phase": v.phase,
     className: "fixed inset-0 z-[95000] flex flex-col bg-slate-950 text-white",
     style: {
-      paddingTop: 'max(env(safe-area-inset-top), 6px)',
-      paddingBottom: 'max(env(safe-area-inset-bottom), 6px)'
+      paddingTop: 'max(var(--mh-sa-top), 6px)',
+      paddingBottom: 'max(var(--mh-sa-bottom), 6px)'
     }
   }, React.createElement("style", null, '@keyframes mhWatchPop{0%{opacity:0;transform:translateY(8px)}15%{opacity:1;transform:none}85%{opacity:1}100%{opacity:0}}'), React.createElement("header", {
     className: "flex shrink-0 items-center gap-2 px-3"
@@ -98831,7 +98910,7 @@ function RhythmMultiScreenBody({
         [friendId]: true
       }));
       setInviteMessage('');
-    } else setInviteMessage(result === 'notready' ? 'フレンド機能はただいま準備中です' : '招待を送れませんでした。もう一度ためしてください');
+    } else setInviteMessage(result === 'notready' ? 'フレンド機能はただいま準備中です' : '招待を送れませんでした。もう一度試してください');
   };
   React.useEffect(() => RHYTHM_MULTI.onStart(info => {
     setCountdown({
@@ -99521,7 +99600,7 @@ function RhythmMultiScreenBody({
       className: "block truncate text-[8px] font-black tracking-[0.2em] text-fuchsia-300 max-[359px]:tracking-normal"
     }, "MONBEAT ・ SELECT MODE"), React.createElement("b", {
       className: "mhms-title block truncate text-lg font-black leading-tight tracking-wider"
-    }, "モードえらび"), (ms.beatPointText || Number.isFinite(ms.beatRankXp)) && React.createElement("div", {
+    }, "モード選び"), (ms.beatPointText || Number.isFinite(ms.beatRankXp)) && React.createElement("div", {
       className: "mt-0.5 flex min-w-0 items-center gap-2"
     }, ms.beatPointText && React.createElement("small", {
       "data-rhythm-beat-point-balance": true,
@@ -99530,7 +99609,7 @@ function RhythmMultiScreenBody({
       role: "button",
       tabIndex: 0,
       "data-beat-rank-open": true,
-      "aria-label": "ビートランク。くわしく見る",
+      "aria-label": "ビートランク。詳しく見る",
       className: "min-w-0 flex-1 cursor-pointer active:scale-[.98]",
       onClick: () => {
         Audio_.fgSe.tap();
@@ -99556,7 +99635,7 @@ function RhythmMultiScreenBody({
       kind: "beat",
       xp: ms.beatRankXp,
       rewardsOf: beatRankRewardItems,
-      how: "曲を遊ぶと経験値がたまります。難しい難易度ほど多く、HELL がいちばん多くたまります。その日はじめてクリアした1曲は +30 です。",
+      how: "曲を遊ぶと経験値がたまります。難しい難易度ほど多く、HELL が一番多くたまります。その日初めてクリアした1曲は +30 です。",
       onClose: () => setBeatRankOpen(false)
     }), ms.exiting && React.createElement("div", {
       "data-quick-run-exit-overlay": true,
@@ -99935,7 +100014,7 @@ function RhythmMultiScreenBody({
         className: "block truncate text-[13px] font-black text-white"
       }, f.kind === 'room' ? `${f.userName} さんの部屋` : `${f.userName} さん`), React.createElement("small", {
         className: "block truncate text-[10px] font-bold text-slate-300"
-      }, f.kind === 'room' ? `${f.room.n}/${RHYTHM_MULTI_ROOM_MAX}人${f.room.ph === 'select' ? '・曲えらび中' : '・待合い'}` : 'モンヒロビートにいる・部屋はまだ')), f.kind === 'room' ? React.createElement("button", {
+      }, f.kind === 'room' ? `${f.room.n}/${RHYTHM_MULTI_ROOM_MAX}人${f.room.ph === 'select' ? '・曲選び中' : '・待合い'}` : 'モンヒロビートにいる・部屋はまだ')), f.kind === 'room' ? React.createElement("button", {
         type: "button",
         "data-rhythm-free-friend-join": f.room.code,
         onClick: () => joinFreeRoom(f.room.code),
@@ -99999,7 +100078,7 @@ function RhythmMultiScreenBody({
       className: "mt-1 flex items-center gap-1.5 text-[12px] font-black"
     }, freeRoomCount == null ? React.createElement("span", {
       className: "text-sky-100/80"
-    }, "部屋をさがしています…") : freeRoomCount === 0 ? React.createElement("span", {
+    }, "部屋を探しています…") : freeRoomCount === 0 ? React.createElement("span", {
       className: "text-amber-200"
     }, "いま部屋はありません → 部屋を作ろう") : React.createElement(React.Fragment, null, React.createElement("span", {
       className: "flex"
@@ -100072,7 +100151,7 @@ function RhythmMultiScreenBody({
       className: "space-y-1.5 rounded-2xl border border-sky-300/25 bg-slate-950/50 p-3"
     }, React.createElement("b", {
       className: "block text-[13px] font-black text-white"
-    }, "部屋をつくる"), React.createElement("p", {
+    }, "部屋を作る"), React.createElement("p", {
       className: "text-[11px] font-bold leading-snug text-slate-300",
       style: JA_WRAP_STYLE
     }, jaWrap('合言葉(ルームコード)ができます。フレンドに伝えて入ってもらいましょう')), React.createElement("button", {
@@ -100080,7 +100159,7 @@ function RhythmMultiScreenBody({
       type: "button",
       onClick: createPrivate,
       className: "min-h-[48px] w-full rounded-xl bg-gradient-to-b from-sky-400 to-blue-600 text-sm font-black shadow-[inset_0_1px_0_rgba(255,255,255,.35)] active:scale-[.98]"
-    }, "＋ 部屋をつくる")), React.createElement("section", {
+    }, "＋ 部屋を作る")), React.createElement("section", {
       className: "space-y-1.5 rounded-2xl border border-violet-300/25 bg-slate-950/50 p-3"
     }, React.createElement("b", {
       className: "block text-[13px] font-black text-white"
@@ -100192,7 +100271,7 @@ function RhythmMultiScreenBody({
       type: "button",
       className: `${btn} mt-2 w-full bg-slate-700`,
       onClick: leaveRoom
-    }, "モードえらびへ戻る"))) : React.createElement(React.Fragment, null, React.createElement(RhythmMultiMemberCards, {
+    }, "モード選びへ戻る"))) : React.createElement(React.Fragment, null, React.createElement(RhythmMultiMemberCards, {
       onOpen: openBuddyInfo,
       bubbleOf: chatBubbleOf,
       members: members,
@@ -100216,7 +100295,7 @@ function RhythmMultiScreenBody({
       className: "rounded-2xl border border-white/15 bg-slate-900/85 p-2"
     }, React.createElement("p", {
       className: "animate-pulse text-sm font-black text-amber-200"
-    }, !view ? `${RHYTHM_MULTI_MODE_LABELS[searching]}ルームをさがしています…` : 'メンバーを待っています…'), React.createElement("p", {
+    }, !view ? `${RHYTHM_MULTI_MODE_LABELS[searching]}ルームを探しています…` : 'メンバーを待っています…'), React.createElement("p", {
       className: "mt-0.5 text-[10px] font-bold leading-snug text-slate-400"
     }, !view ? '' : publicRoom ? `${RHYTHM_MULTI_ROOM_MAX}人そろうか、2人以上でしばらく待つとメンバーが確定します` : isHost ? '2人以上そろったら「メンバー確定」を押してください' : 'ホストがメンバーを確定するのを待っています'), React.createElement(RhythmMultiAloneHint, {
       alone: !!view && publicRoom && members.length <= 1,
@@ -100906,7 +100985,7 @@ function RhythmMultiScreenBody({
     }, React.createElement("p", {
       className: "min-w-0 flex-1 rounded-lg bg-slate-900/80 px-2 py-1 text-[10px] font-bold leading-snug text-slate-300",
       style: JA_WRAP_STYLE
-    }, jaWrap('全員がえらぶか時間になると、全員の選曲からシャッフルで1曲が決まります。'), !room.deadline && jaWrap('いまは人があなたひとりなので、制限時間はありません。ゆっくり選べます。')), isHost && selectTimeButton('min-[481px]:hidden', true)),
+    }, jaWrap('全員が選ぶか時間になると、全員の選曲からシャッフルで1曲が決まります。'), !room.deadline && jaWrap('いまは人があなたひとりなので、制限時間はありません。ゆっくり選べます。')), isHost && selectTimeButton('min-[481px]:hidden', true)),
     footer: () => React.createElement("div", {
       className: "grid grid-cols-2 gap-1.5"
     }, React.createElement("button", {
@@ -101593,7 +101672,7 @@ function RhythmBuddyScoreChart({
     className: "mt-1 text-[11px] font-black leading-snug text-slate-200"
   }, React.createElement("span", {
     className: "text-slate-400"
-  }, list.length - pickedIndex === 1 ? 'いちばん新しい回' : `${list.length - pickedIndex}回前`, ": "), songName(picked.songId), " ", picked.diffId ? rhythmBuddyDiffShort[picked.diffId] : '', " ", React.createElement("b", {
+  }, list.length - pickedIndex === 1 ? '一番新しい回' : `${list.length - pickedIndex}回前`, ": "), songName(picked.songId), " ", picked.diffId ? rhythmBuddyDiffShort[picked.diffId] : '', " ", React.createElement("b", {
     className: "text-lime-200"
   }, picked.score.toLocaleString(), "点"), React.createElement("span", {
     className: "text-slate-400"
@@ -101751,7 +101830,7 @@ function RhythmBuddyDetail({
     className: "flex items-center justify-between gap-2"
   }, React.createElement("small", {
     className: "text-[11px] font-black text-lime-100"
-  }, "🌱 性格のたね ", React.createElement("b", {
+  }, "🌱 性格の種 ", React.createElement("b", {
     "data-rhythm-buddy-seed-count": true,
     className: "text-amber-200"
   }, seeds, "個")), React.createElement("button", {
@@ -101855,7 +101934,7 @@ function RhythmBuddyDetail({
     type: "button",
     onClick: () => setAllSongs(v => !v),
     className: "mt-1 min-h-[36px] w-full rounded-lg bg-slate-800 text-[11px] font-black text-slate-200"
-  }, allSongs ? '上位5曲だけにする' : `遊んだ曲をすべて見る(${songCount}曲)`)), onBack && React.createElement("button", {
+  }, allSongs ? '上位5曲だけにする' : `遊んだ曲を全て見る(${songCount}曲)`)), onBack && React.createElement("button", {
     type: "button",
     onClick: onBack,
     className: "min-h-[44px] w-full rounded-xl bg-slate-700 text-sm font-black"
@@ -102004,7 +102083,7 @@ function RhythmBuddyListBar({
     className: `${btn} shrink-0 ${filterCount ? 'border-lime-400 bg-lime-950' : 'border-white/10 bg-slate-900'}`
   }, React.createElement("span", {
     className: "text-[11px] font-black text-white"
-  }, "しぼりこみ"), filterCount > 0 && React.createElement("span", {
+  }, "絞り込み"), filterCount > 0 && React.createElement("span", {
     className: "text-[10px] font-black text-lime-300"
   }, filterCount)), React.createElement("button", {
     "data-rhythm-buddy-view-toggle": settings.view,
@@ -102034,13 +102113,13 @@ function RhythmBuddyListSheet({
     className: "fixed inset-0 z-[87000] flex flex-col",
     style: {
       backgroundColor: 'rgba(2,6,23,0.98)',
-      paddingTop: 'env(safe-area-inset-top)'
+      paddingTop: 'var(--mh-sa-top)'
     }
   }, React.createElement("div", {
     className: "flex shrink-0 items-center gap-2 border-b border-white/10 p-4"
   }, React.createElement("h3", {
     className: "flex-1 text-base font-black text-white"
-  }, "並べ替え・しぼりこみ"), React.createElement("button", {
+  }, "並べ替え・絞り込み"), React.createElement("button", {
     type: "button",
     "aria-label": "閉じる",
     onClick: onClose,
@@ -102055,7 +102134,7 @@ function RhythmBuddyListSheet({
     label: '種族'
   }, {
     key: 'filter',
-    label: 'しぼりこみ'
+    label: '絞り込み'
   }].map(t => React.createElement("button", {
     key: t.key,
     type: "button",
@@ -102087,7 +102166,7 @@ function RhythmBuddyListSheet({
     className: "grid grid-cols-2 gap-2.5"
   }, [{
     id: 'all',
-    label: 'すべて'
+    label: '全て'
   }, ...lineages.map(l => ({
     id: l.id,
     label: `${l.name}種`
@@ -102106,7 +102185,7 @@ function RhythmBuddyListSheet({
     className: "grid grid-cols-3 gap-2"
   }, [{
     id: 'all',
-    label: 'すべて'
+    label: '全て'
   }, {
     id: 'yes',
     label: '遊んだモンスター'
@@ -102164,7 +102243,7 @@ function RhythmBuddyListSheet({
       moods: []
     }),
     className: "min-h-[44px] w-full rounded-xl bg-slate-700 text-sm font-black"
-  }, "しぼりこみをすべて外す"))));
+  }, "絞り込みを全て外す"))));
 }
 const useRhythmBuddyListControls = () => {
   const [settings, update] = useRhythmBuddyListSettings();
@@ -102437,7 +102516,7 @@ function RhythmBuddySheet({
     type: "button",
     onClick: () => setDetailId(singleMasu.id),
     className: "min-h-[44px] shrink-0 rounded-xl bg-slate-700 px-2 text-[11px] font-black"
-  }, "くわしく"), React.createElement("button", {
+  }, "詳しく"), React.createElement("button", {
     "data-rhythm-buddy-call-all": true,
     type: "button",
     disabled: busy || !picks.length || shortTickets > 0,
@@ -104121,7 +104200,7 @@ function RhythmAssistSessionGuide({
     "aria-label": "閉じる",
     onClick: close,
     className: "min-h-[36px] shrink-0 rounded-lg bg-slate-800 px-2 text-[11px] font-black"
-  }, "わかった"));
+  }, "分かった"));
 }
 const RAID_JACK_DEBUG_NOW_CHOICES = Object.freeze([{
   id: 'real',
@@ -118008,6 +118087,7 @@ const ASSISTANT_LIFE_ROOM_STAND_DEF = Object.freeze({
     fade: 0.45
   })
 });
+const ASSISTANT_LIFE_ROOM_STAND_EXT = 0.6;
 const assistantLifeRoomVisH = (face, F) => {
   try {
     if (typeof assistantLifeStandVisH === 'function') {
@@ -118072,23 +118152,26 @@ const assistantLifeRoomStandLayout = (items, W, usable, deskTop, land, bed = fal
     if (w1 > 0) F = Math.min(F, sw * 0.98 / w1);
   }
   const U = F * D.len;
-  const topY = bed ? deskTop + 0.15 * U - U : deskTop + 0.2 * U - D.cut.below * U;
+  const topY = bed ? deskTop + 0.15 * U - U : deskTop + 0.2 * U - 1.8 * U;
   return items.map((x, i) => {
     const cx = x0 + sw * (i + 0.5);
     const r = assistantLifeRoomPlace(x, F, topY, cx);
+    const ext = bed ? 0 : ASSISTANT_LIFE_ROOM_STAND_EXT * U,
+      ih = Math.max(1, r.height);
     return {
       left: r.left,
       top: r.top,
       width: r.width,
       height: r.height,
-      clip: r.clip,
-      fade: r.fade,
+      clip: [r.clip[0], Math.max(0, r.clip[1] - ext)],
+      fade: r.fade ? [r.fade[0] + ext / ih, Math.min(1, r.fade[1] + ext / ih)] : r.fade,
       cx,
       face: F,
       visTop: r.visTop,
       headTop: topY,
-      frameBottom: r.frameBottom,
-      w: visW(x, F)
+      frameBottom: r.frameBottom + ext,
+      w: visW(x, F),
+      U
     };
   });
 };
@@ -118102,7 +118185,7 @@ function AssistantLifeRoomFigure({
 }) {
   const night = look === 'night' && sleep,
     evening = look === 'evening';
-  const tone = night ? 'linear-gradient(100deg,#ffd08a 0%,#c9c2ee 45%,#8a86c0 100%)' : evening ? 'linear-gradient(100deg,#ffe0b0 0%,#f2c9b0 60%,#c99a90 100%)' : 'linear-gradient(100deg,#ffffff 0%,#f6ece8 60%,#d9c2bc 100%)';
+  const tone = night ? 'linear-gradient(100deg,#ffd08a 0%,#c9c2ee 45%,#8a86c0 100%)' : evening ? 'linear-gradient(100deg,#fff6ec 0%,#fbeee4 60%,#f0dcd4 100%)' : 'linear-gradient(100deg,#ffffff 0%,#fbf5f3 60%,#efe3df 100%)';
   const fadeMask = p.fade ? `linear-gradient(to bottom,#000 ${(p.fade[0] * 100).toFixed(1)}%,transparent ${(p.fade[1] * 100).toFixed(1)}%)` : null;
   const box = {
     position: 'absolute',
@@ -118127,7 +118210,7 @@ function AssistantLifeRoomFigure({
     style: {
       position: 'absolute',
       left: p.cx - p.w * 0.45,
-      top: p.frameBottom - 16,
+      top: p.frameBottom - 30,
       width: p.w * 0.9,
       height: 26,
       borderRadius: '50%',
@@ -118151,7 +118234,7 @@ function AssistantLifeRoomFigure({
       width: '100%',
       height: '100%',
       maxWidth: 'none',
-      filter: `drop-shadow(0 0 .6px #2a1414cc) saturate(.92) sepia(.1)${sleep ? ' brightness(.6)' : ''}`,
+      filter: `drop-shadow(0 0 .6px #2a1414cc)${sleep ? ' brightness(.6)' : ''}`,
       cursor: onPress ? 'pointer' : undefined
     }
   }), React.createElement("span", {
@@ -119091,7 +119174,58 @@ function AssistantLifeRoomScene({
       border: '6px solid #ffffff99',
       background: night ? 'radial-gradient(circle at 70% 30%,#fff 0 5px,transparent 6px),linear-gradient(#0b1030,#1e2a5a)' : evening ? 'linear-gradient(#f59e0b,#fb7185)' : look === 'morning' ? 'linear-gradient(#93c5fd,#fde68a)' : 'linear-gradient(#7cc4ff,#d6f0ff)'
     }
-  }), layoutOn && React.createElement(AssistantLifeRoomLayoutLayer, {
+  }, React.createElement("span", {
+    style: {
+      position: 'absolute',
+      left: '50%',
+      top: 0,
+      bottom: 0,
+      width: 4,
+      marginLeft: -2,
+      background: '#ffffffcc'
+    }
+  }), React.createElement("span", {
+    style: {
+      position: 'absolute',
+      top: '50%',
+      left: 0,
+      right: 0,
+      height: 4,
+      marginTop: -2,
+      background: '#ffffffcc'
+    }
+  }), React.createElement("span", {
+    style: {
+      position: 'absolute',
+      left: -10,
+      right: -10,
+      bottom: -13,
+      height: 8,
+      borderRadius: 3,
+      background: '#ffffffd9',
+      boxShadow: '0 2px 3px #0003'
+    }
+  }), React.createElement("span", {
+    style: {
+      position: 'absolute',
+      left: -9,
+      top: -6,
+      bottom: -4,
+      width: 14,
+      borderRadius: '4px 8px 8px 4px',
+      background: 'linear-gradient(90deg,#f9a8d4,#f472b6)'
+    }
+  }), React.createElement("span", {
+    style: {
+      position: 'absolute',
+      right: -9,
+      top: -6,
+      bottom: -4,
+      width: 14,
+      borderRadius: '8px 4px 4px 8px',
+      background: 'linear-gradient(90deg,#f472b6,#f9a8d4)'
+    }
+  })), layoutOn && React.createElement(AssistantLifeRoomLayoutLayer, {
     who: layoutWho,
     items: layoutEdit ? layoutEdit.items : layoutItems,
     geom: layoutGeom,
@@ -119130,7 +119264,7 @@ function AssistantLifeRoomScene({
   }) : null), people.length > 0 && !asleep && React.createElement(AssistantLifeRoomFront, {
     kind: frontKind,
     cx: W / 2,
-    top: deskTop,
+    top: lay && !asleep ? Math.max(...lay.map(p => p.frameBottom - 4)) : deskTop,
     w: frontW,
     items: ASSISTANT_LIFE_ROOM_DESK_ITEMS[id] || []
   }), layoutOn && React.createElement(AssistantLifeRoomLayoutLayer, {
@@ -151231,17 +151365,19 @@ const MSC_CSS = `
 .msc-lines path{fill:none;stroke-linecap:round}
 .msc-lines .base{stroke:#cbb48b;stroke-width:2}
 .msc-lines .win{stroke:#f97316;stroke-width:3.2;stroke-dasharray:1;stroke-dashoffset:1;animation:msc-draw .55s ease-out forwards}
-.msc-lines .win.me{stroke:#f43f5e}
+.msc-lines .win.me{stroke:#ef4444}
 @keyframes msc-draw{to{stroke-dashoffset:0}}
 .msc-cupbadge{position:absolute;right:4px;top:50%;transform:translateY(-50%);width:48px;padding:6px 0;border-radius:10px;background:linear-gradient(180deg,#7f1d1d,#4c0519);border:2px solid #f59e0b;color:#fde68a;font-weight:900;font-size:11px;text-align:center;line-height:1.2}
 .msc-cupbadge.lit{animation:msc-glow 1.2s ease-in-out infinite alternate}
 @keyframes msc-glow{from{box-shadow:0 0 0 rgba(251,191,36,0)}to{box-shadow:0 0 16px rgba(251,191,36,.9)}}
 .msc-note{font-size:12px;color:#fde68a;line-height:1.5}
-.msc-note small{display:block;color:#cbd5e1;font-size:11px}
+.msc-note .nw{white-space:nowrap}.msc-note small{display:block;color:#cbd5e1;font-size:11px}
 .msc-talk{display:flex;gap:8px;align-items:flex-start;background:#fffaf0;color:#3b2a14;border-radius:14px;padding:8px 10px;border:2px solid #e2c89a}
 .msc-talk img{width:52px;height:52px;border-radius:50%;object-fit:cover;flex:0 0 auto;background:#fde68a}
 .msc-talk p{margin:0;font-size:13px;font-weight:700;line-height:1.55}
 .msc-talk em{font-style:normal;color:#e11d48}
+.msc-talk{position:relative}.msc-sk{position:absolute;right:8px;bottom:5px;border:0;border-radius:99px;background:#a67c3c;color:#fff;font-size:10px;font-weight:900;padding:2px 9px}
+.msc-row{transition:opacity .5s}
 .msc-vs{position:relative;height:200px;border-radius:16px;overflow:hidden;background:#3b2a52 center/cover no-repeat}
 .msc-vs::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(20,16,38,.25),rgba(20,16,38,.05) 50%,rgba(20,16,38,.75))}
 .msc-vs .cap{position:absolute;z-index:2;top:6px;left:50%;transform:translateX(-50%);background:rgba(20,16,38,.8);border-radius:999px;padding:3px 12px;font-size:12px;font-weight:900;color:#fde68a;white-space:nowrap}
@@ -151388,81 +151524,82 @@ function MonsucBracket({
   suc,
   s,
   info,
-  result,
+  result: resultProp,
   onFight,
   onResultOnly,
   onClose,
   canSkip
 }) {
+  const result = resultProp || typeof window !== 'undefined' && window.__MSC_BK_RESULT || null;
   const bk = info.bracket;
   const [stage, setStage] = useState(0);
   useEffect(() => {
-    const ts = [setTimeout(() => setStage(1), 350), setTimeout(() => setStage(2), 1050), setTimeout(() => setStage(3), 1700)];
+    const k = typeof window !== 'undefined' && Number(window.__MSC_BK_T) || 1;
+    const ts = [setTimeout(() => setStage(1), 1200 * k), setTimeout(() => setStage(2), 3000 * k), setTimeout(() => setStage(3), 4800 * k)];
     return () => ts.forEach(clearTimeout);
   }, []);
+  const [vh, setVh] = useState(() => typeof window !== 'undefined' ? window.innerHeight : 844);
+  useEffect(() => {
+    const f = () => setVh(window.innerHeight);
+    window.addEventListener('resize', f);
+    return () => window.removeEventListener('resize', f);
+  }, []);
   if (!bk) return null;
+  const Z = '\u200b';
   const E = bk.entrants;
-  const no = monsucPopOrder(suc, s, E);
+  const st = result ? 3 : stage;
+  const no = bk.pop && bk.pop.length === E.length ? bk.pop : monsucPopOrder(suc, s, E);
   const r1 = bk.rounds[0] || [];
   const r2 = bk.rounds[1] || [];
-  const out = i => stage >= 1 && !r1.includes(i) || stage >= 2 && r1.includes(i) && !r2.includes(i) || result === 'win' && i === 4 || result === 'lose' && i === 0;
-  const H = 40;
+  const fi = bk.final && bk.final[1] || 4;
+  const out = i => st >= 1 && !r1.includes(i) || st >= 2 && r1.includes(i) && !r2.includes(i) || result === 'win' && i === fi || result === 'lose' && i === 0;
+  const H = Math.max(36, Math.min(68, Math.floor((vh - 318) / 8)));
   const yOf = i => i * H + H / 2;
-  const X = [0, 22, 44, 66, 80];
-  const W = 84;
-  const pair = (a, b, lv) => `M${X[lv]} ${a}H${X[lv + 1]}M${X[lv]} ${b}H${X[lv + 1]}M${X[lv + 1]} ${a}V${b}`;
-  const base = [];
-  for (let k = 0; k < 4; k++) base.push(pair(yOf(2 * k), yOf(2 * k + 1), 0));
-  const mid1 = [0, 1, 2, 3].map(k => (yOf(2 * k) + yOf(2 * k + 1)) / 2);
-  base.push(pair(mid1[0], mid1[1], 1), pair(mid1[2], mid1[3], 1));
-  const mid2 = [(mid1[0] + mid1[1]) / 2, (mid1[2] + mid1[3]) / 2];
-  base.push(pair(mid2[0], mid2[1], 2));
-  const mid3 = (mid2[0] + mid2[1]) / 2;
-  base.push(`M${X[3]} ${mid3}H${X[4]}`);
+  const X = [0, 22, 44, 66, 84];
+  const W = 90;
+  const pair = (a, c, lv) => `M${X[lv]} ${a}H${X[lv + 1]}M${X[lv]} ${c}H${X[lv + 1]}M${X[lv + 1]} ${a}V${c}`;
+  const m1 = [0, 1, 2, 3].map(k => (yOf(2 * k) + yOf(2 * k + 1)) / 2);
+  const m2 = [0, 1].map(j => (m1[2 * j] + m1[2 * j + 1]) / 2);
+  const m3 = (m2[0] + m2[1]) / 2;
+  const base = [0, 1, 2, 3].map(k => pair(yOf(2 * k), yOf(2 * k + 1), 0)).concat(pair(m1[0], m1[1], 1), pair(m1[2], m1[3], 1), pair(m2[0], m2[1], 2), `M${X[3]} ${m3}H${X[4]}`);
   const win = [];
-  if (stage >= 1) r1.forEach((i, k) => win.push({
-    d: `M${X[0]} ${yOf(i)}H${X[1]}V${mid1[k]}`,
-    me: i === 0 || i === 4,
-    key: `a${i}`
+  if (st >= 1) r1.forEach((w, k) => win.push({
+    d: `M${X[0]} ${yOf(w)}H${X[1]}V${m1[k]}`,
+    key: `a${k}`
   }));
-  if (stage >= 2) r2.forEach((i, k) => win.push({
-    d: `M${X[1]} ${mid1[k * 2 + (i === r1[k * 2] ? 0 : 1)]}H${X[2]}V${mid2[k]}`,
-    me: true,
-    key: `b${i}`
+  if (st >= 2) r2.forEach((w, j) => win.push({
+    d: `M${X[1]} ${m1[2 * j + (w === r1[2 * j] ? 0 : 1)]}H${X[2]}V${m2[j]}`,
+    key: `b${j}`
   }));
-  if (stage >= 3) {
-    win.push({
-      d: `M${X[2]} ${mid2[0]}H${X[3]}`,
-      me: true,
-      key: 'c0'
-    }, {
-      d: `M${X[2]} ${mid2[1]}H${X[3]}`,
-      me: true,
-      key: 'c1'
-    });
-  }
-  if (result === 'win') win.push({
-    d: `M${X[3]} ${mid2[0]}V${mid3}H${X[4]}`,
-    me: true,
+  if (st >= 3) [0, 1].forEach(j => win.push({
+    d: `M${X[2]} ${m2[j]}H${X[3]}`,
+    key: `c${j}`
+  }));
+  if (result === 'win' || result === 'lose') win.push({
+    d: `M${X[3]} ${m2[result === 'win' ? 0 : 1]}V${m3}H${X[4]}`,
     key: 'f'
   });
-  const champ = E.find(e => e.champ) || E[4];
-  const foe = E[4];
+  const foe = E[fi];
+  const champ = E.find(e => e.champ) || foe;
   const nm = e => e.you ? info.meName : e.name || mscMonName(e.species);
   const coach = mscAssistant(s.aid);
+  const top = E[no.indexOf(1)] || E[0];
+  const upsets = r1.filter(w => w !== 0 && w !== fi && no[w] >= 5);
+  const foeNo = no[fi];
+  const lines = [top.you ? React.createElement(React.Fragment, null, "「", React.createElement("em", null, "1番人気は", Z, " ", info.meName, "!"), Z, " まずは", Z, " 1回戦から", Z, " 見ていこう」") : React.createElement(React.Fragment, null, "「", React.createElement("em", null, "1番人気は", Z, " ", top.champ ? '王者の ' : '', nm(top), "!"), Z, " ", info.meName, "の", Z, "1回戦は", Z, " これからだよ」"), upsets.length ? React.createElement(React.Fragment, null, "「", React.createElement("em", null, "大穴!", Z, " ", nm(E[upsets[0]])), " が", Z, " 勝ち上がったぞ!", Z, " ", info.meName, "も", Z, " 1回戦を", Z, " 勝ち上がり!」") : React.createElement(React.Fragment, null, "「1回戦が", Z, " おわったよ。", Z, React.createElement("em", null, info.meName), "は", Z, " 順当に", Z, " 勝ち上がり!」"), foeNo >= 4 ? React.createElement(React.Fragment, null, "「", React.createElement("em", null, "大穴!", Z, " ", nm(foe)), Z, " 決勝まで", Z, " きたぞ!", Z, " ", info.meName, "は", Z, " 準決勝も", Z, " 勝って", Z, " 決勝へ!」") : React.createElement(React.Fragment, null, "「準決勝も", Z, " おわったよ。", Z, React.createElement("em", null, info.meName), "は", Z, " 決勝へ!", Z, " 反対の山からは", Z, " ", React.createElement("em", null, nm(foe)), "」")];
   const champNo1 = no[E.indexOf(champ)] === 1;
-  const line = foe.rival ? React.createElement(React.Fragment, null, "「", champNo1 && champ !== foe ? React.createElement(React.Fragment, null, "1番人気は 王者の ", nm(champ), "! でも、") : null, info.meName, "の相手は ", React.createElement("em", null, "ライバルの ", nm(foe)), " だよ。勝てば ごほうび大!」") : foe.champ ? React.createElement(React.Fragment, null, "「1番人気は 王者の ", React.createElement("em", null, nm(foe)), "! ", info.meName, "が当たるのは 決勝。", info.opp && info.opp.note ? `${info.opp.note}、だって。` : '', "ここで勝てば 大金星だよ!」") : React.createElement(React.Fragment, null, "「", info.meName, "の相手は ", React.createElement("em", null, nm(foe)), "! あわてずに いこうね」");
+  const finalLine = foe.rival ? React.createElement(React.Fragment, null, "「", champNo1 && champ !== foe ? React.createElement(React.Fragment, null, "1番人気は", Z, " 王者の ", nm(champ), "!", Z, " でも、", Z) : null, "決勝の相手は", Z, " ", React.createElement("em", null, "ライバルの ", nm(foe)), " だよ。", Z, "勝てば", Z, " ごほうび大!」") : foe.champ ? React.createElement(React.Fragment, null, "「決勝の相手は", Z, " 1番人気の王者", Z, " ", React.createElement("em", null, nm(foe)), "!", Z, " ", info.opp && info.opp.note ? `${info.opp.note}、だって。` : '', Z, "ここで勝てば", Z, " 大金星だよ!」") : React.createElement(React.Fragment, null, "「決勝の相手は", Z, " ", React.createElement("em", null, nm(foe)), "!", Z, " あわてずに", Z, " いこうね」");
   return React.createElement("div", {
     className: "msc-wrap",
     "data-msc-bracket": true,
-    "data-msc-stage": stage
+    "data-msc-stage": st
   }, React.createElement("div", {
     className: "msc-top"
   }, React.createElement("button", {
     className: "msc-btn g s",
     "data-msc-close": true,
     onClick: onClose
-  }, "← もどる"), React.createElement("b", null, info.title, " ", MSC_STARS(info.star))), React.createElement("div", {
+  }, "← 戻る"), React.createElement("b", null, info.title, " ", MSC_STARS(info.star))), React.createElement("div", {
     className: "msc-panel"
   }, React.createElement("div", {
     className: "msc-head"
@@ -151472,15 +151609,16 @@ function MonsucBracket({
     key: i,
     className: `msc-row ${out(i) ? 'out' : ''}`,
     style: {
-      paddingRight: W
+      paddingRight: W,
+      height: H
     },
-    "data-msc-entrant": e.you ? 'you' : i === 4 ? 'foe' : i
+    "data-msc-entrant": e.you ? 'you' : i === fi ? 'foe' : i
   }, React.createElement("span", {
     className: "msc-no",
     title: `${no[i]}番人気`,
     "aria-label": `${no[i]}番人気`
   }, no[i]), React.createElement("span", {
-    className: `msc-name ${e.you ? 'you' : i === 4 ? 'foe' : ''}`
+    className: `msc-name ${e.you ? 'you' : i === fi ? 'foe' : ''}`
   }, React.createElement("span", null, nm(e)), e.you && React.createElement("i", {
     className: "msc-tag you"
   }, "あなた"), e.rival && React.createElement("i", {
@@ -151488,7 +151626,7 @@ function MonsucBracket({
   }, "ライバル"), e.champ && React.createElement("i", {
     className: "msc-tag ch"
   }, "👑王者")), React.createElement("span", {
-    className: `msc-face ${e.you ? 'you' : i === 4 ? 'foe' : ''}`
+    className: `msc-face ${e.you ? 'you' : i === fi ? 'foe' : ''}`
   }, e.you ? React.createElement(MscMyMon, {
     sp: e.species,
     colors: info.colors
@@ -151510,7 +151648,7 @@ function MonsucBracket({
     d: d
   })), win.map(w => React.createElement("path", {
     key: w.key,
-    className: `win ${w.me ? 'me' : ''}`,
+    className: "win me",
     d: w.d,
     pathLength: "1"
   }))), React.createElement("div", {
@@ -151520,18 +151658,37 @@ function MonsucBracket({
     }
   }, "🏆", React.createElement("br", null), "優勝"))), React.createElement("div", {
     className: "msc-note"
-  }, "左の数字は人気の順(1が いちばん人気)。あなたの1戦は 赤い丸の2体のあいだ(", info.meName, " VS ", nm(foe), ")。", React.createElement("small", null, "ほかの試合の結果は、見せるだけの演出です")), React.createElement("div", {
+  }, React.createElement("b", null, "決勝は ", React.createElement("span", {
+    className: "nw"
+  }, info.meName, " VS ", nm(foe))), "。", React.createElement("span", {
+    className: "nw"
+  }, "左の数字は人気の順"), React.createElement("span", {
+    className: "nw"
+  }, "(1が いちばん人気)。"), React.createElement("small", null, React.createElement("span", {
+    className: "nw"
+  }, "ほかの試合の結果は、"), React.createElement("span", {
+    className: "nw"
+  }, "見せるだけの演出です"), React.createElement("span", {
+    className: "nw"
+  }, "(戦うのは決勝の1戦だけ)"))), React.createElement("div", {
     className: "msc-talk"
   }, React.createElement("img", {
     src: mscFace(s.aid),
     alt: ""
-  }), React.createElement("p", null, coach ? React.createElement("b", {
+  }), React.createElement("p", {
+    className: "msx-kp"
+  }, coach ? React.createElement("b", {
     style: {
       display: 'block',
       fontSize: 11,
       color: '#b45309'
     }
-  }, "解説 ", coach.name) : null, line)), React.createElement("div", {
+  }, "解説 ", coach.name) : null, st >= 3 ? finalLine : lines[st]), st < 3 ? React.createElement("button", {
+    type: "button",
+    className: "msc-sk",
+    "data-msc-skip": true,
+    onClick: () => setStage(3)
+  }, "SKIP ▸▸") : null), React.createElement("div", {
     className: "msc-foot"
   }, React.createElement("button", {
     className: "msc-btn y s",
@@ -151541,7 +151698,7 @@ function MonsucBracket({
     className: "msc-btn",
     "data-msc-go": true,
     onClick: onFight
-  }, "⚔ 1戦へ")));
+  }, "⚔ 決勝へ")));
 }
 function MonsucBattleCard({
   suc,
@@ -157989,7 +158146,7 @@ const MSX_STORIES = Object.freeze([Object.freeze({
   badge: '頂への道',
   lead: ['町の育成場で、きみと1体のモンスターの物語が始まる', '大会で勝ち、修行で技を覚え、仲間と強くなろう。', 'めざすは頂への道——ヒーローと呼ばれる日まで。'],
   about: 'デビュー戦から始まり、ジュニア・ミドル・プロの3つの期を経て、最後は「頂への道」に挑む、モンヒロサクセスのいちばん最初のお話。',
-  rows: Object.freeze([['📅', '流れ', 'デビュー期 → ジュニア期 → ミドル期 → プロ期 → 頂への道(3戦)'], ['🏆', '大会', 'ルーキーズ・クラウン/四大大会/季節の賞 ほか。賞金ランクは ルーキー〜ヒーローの10段'], ['👥', '登場人物', '助手(いまはみゅあ)・イッサ博士・ライバルたち'], ['🎯', 'めざすもの', '頂への道の決勝に勝って「ヒーロー」に。']]),
+  rows: Object.freeze([['📅', '流れ', 'デビュー期 → ジュニア期 → ミドル期 → プロ期 → 頂への道(3戦)'], ['🏆', '大会', 'モンスターダービー/四大大会/季節の賞 ほか。賞金ランクは ルーキー〜ヒーローの10段'], ['👥', '登場人物', '助手(いまはみゅあ)・イッサ博士・ライバルたち'], ['🎯', 'めざすもの', '頂への道の決勝に勝って「ヒーロー」に。']]),
   cast: Object.freeze({
     left: 'issa',
     center: 'mua',
@@ -164880,7 +165037,7 @@ const MSX_CSS = `
 .msx-gt-mon{display:flex;align-items:center;gap:5px;margin-top:3px;font-size:11px}
 .msx-gt-mon img{flex:none;width:24px;height:24px;border-radius:7px;object-fit:contain;background:#1e1a36}.msx-gt-mon .nm{flex:1;min-width:0;overflow-wrap:anywhere}.msx-gt-mon .v{flex:0 1 auto;font-size:10px;color:#cbd5e1;text-align:right}
 .msx-gt-none{font-size:10.5px;color:#94a3b8;margin-top:2px}
-/* 選ぶ画面: はじめの能力(数字を大きく・伸びやすさは小さく)と「くわしく」の窓(2026-11-14) */
+/* 選ぶ画面: はじめの能力(数字を大きく・素質は小さく)と「くわしく」の窓(2026-11-14) */
 .msx-dt-hd{display:flex;align-items:center;gap:6px}.msx-dt-hd .h1{flex:1;min-width:0}
 .msx .msx-dt-more{flex:none;border-radius:999px;padding:3px 10px;font-size:11px;font-weight:900;background:#f472b6;color:#fff;box-shadow:0 2px 0 #9d174d}
 .msx-dt-sm{font-size:10px;font-weight:700;color:#cbd5e1}
@@ -165909,7 +166066,7 @@ function MsxMonDetail({
     className: "msx-md-box"
   }, React.createElement("div", {
     className: "cap"
-  }, "能力", React.createElement("span", null, "伸び")), MSX_STATS.map((k, i) => React.createElement("div", {
+  }, "能力", React.createElement("span", null, "素質")), MSX_STATS.map((k, i) => React.createElement("div", {
     key: k,
     className: "msx-md-st"
   }, React.createElement("span", {
@@ -166447,7 +166604,7 @@ function MsxStart({
       }
     }, "はじめの能力", React.createElement("span", {
       className: "msx-dt-sm"
-    }, "(小さい字は伸びやすさ)")), React.createElement("div", {
+    }, "(小さい字は素質)")), React.createElement("div", {
       className: "msx-st6",
       "data-msx-start-stats": true
     }, MSX_STATS.map((k, i) => React.createElement("div", {
@@ -166456,7 +166613,7 @@ function MsxStart({
       className: "n"
     }, MSX_STAT_NAME[k]), React.createElement("b", null, startSt[k]), React.createElement("i", {
       className: apt[i] > 'B' ? 'lo' : ''
-    }, "伸び ", apt[i]))))), detail && React.createElement(MsxMonDetail, {
+    }, "素質 ", apt[i]))))), detail && React.createElement(MsxMonDetail, {
       species: species,
       name: fromMon && fromMon.nick ? fromMon.nick : msxMonName(species),
       sub: fromMon ? '合体で生まれたモンスター' : 'ベースモン',
@@ -170161,6 +170318,11 @@ const MSX_R3_CSS = `
 .msx .r3 .v-ann .pic span{position:absolute;left:0;right:0;bottom:-2px;text-align:center;background:#a67c3c;color:#fff;font-size:10px;font-weight:900;border-radius:5px}
 .msx .r3 .v-ann .tx{flex:1;font-size:12.5px;font-weight:800;line-height:1.55;align-self:center}
 .msx .r3 .v-ann .tx b{color:#b45309}
+.msx .r3 .v-br{transition:opacity .5s}.msx .r3 .v-br.out{opacity:.38}
+.msx .r3 .v-brl .bs{fill:none;stroke:#a89a78;stroke-width:2;stroke-linecap:round}
+.msx .r3 .v-brl .wl{fill:none;stroke:#ef4444;stroke-width:3.2;stroke-linecap:round;stroke-dasharray:1;stroke-dashoffset:1;animation:msxBkD .7s ease-out forwards}
+@keyframes msxBkD{to{stroke-dashoffset:0}}
+.msx .r3 .v-ann{position:relative}.msx .r3 .v-ann .sk{position:absolute;right:8px;bottom:4px;border:0;border-radius:99px;background:#a67c3c;color:#fff;font-size:10px;font-weight:900;padding:2px 9px}
 .msx .r3 .v-bcs{position:relative;height:150px;flex:none;margin-top:6px;border-radius:14px;overflow:hidden;border:1.5px solid #64748b}
 .msx .r3 .v-bcs .bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .msx .r3 .v-bcs .sh{position:absolute;inset:0;background:linear-gradient(180deg,#0f0d2488,#0f0d2400 40%,#0f0d24aa)}
@@ -170313,7 +170475,8 @@ const MSX_R3_CUP_GRADE = Object.freeze({
   rainbow: '特別'
 });
 const msxR3Stars = n => n >= 4 ? '👑' : '★'.repeat(Math.max(1, n || 1));
-const msxR3CupName = sys => {
+const msxR3CupName = (sys, own) => {
+  if (own && own !== sys) return own;
   const S0 = msxSuc && msxSuc.SUC;
   if (S0 && S0.EX_BY_SYS && S0.EX_BY_SYS[sys]) return S0.EX_BY_SYS[sys].name;
   const names = typeof window !== 'undefined' && window.MONSUC_REGULAR_CUPS ? window.MONSUC_REGULAR_CUPS : {};
@@ -170326,7 +170489,7 @@ const msxR3CupName = sys => {
 const msxR3BattleName = (SUC, b) => {
   if (!b) return '';
   if (b.kind === 'summit') return (SUC.SUMMIT[b.round] || {}).name || '頂への道';
-  if (b.kind === 'cup') return `${msxR3CupName(b.sys)} ${msxR3Stars(b.star)}`;
+  if (b.kind === 'cup') return `${msxR3CupName(b.sys, b.name)} ${msxR3Stars(b.star)}`;
   return (SUC.FORCED[b.kind] || {}).name || '大会';
 };
 const msxR3BattleIcon = b => !b ? '🏆' : b.kind === 'cup' ? MSX_R3_CUP_ICON[b.sys] || '🏆' : b.kind === 'summit' ? '🗻' : b.kind === 'debut' ? '🎀' : b.kind === 'pro' ? '👑' : '🏆';
@@ -171081,7 +171244,7 @@ function MsxR3Cup({
       r3skip: skip ? true : undefined,
       log: [...(run.log || []), {
         turn: s.turn,
-        t: `${msxR3CupName(cur.sys)}に出た`
+        t: `${msxR3CupName(cur.sys, cur.name)}に出た`
       }].slice(-20)
     };
     onActed(next);
@@ -171095,7 +171258,7 @@ function MsxR3Cup({
   }, []);
   const nOk = cupsNow.filter(c => c.entry && c.entry.ok).length;
   const openLine = msxR3Line('turn.cup.open', run, {
-    cup: cur ? msxR3CupName(cur.sys) : ''
+    cup: cur ? msxR3CupName(cur.sys, cur.name) : ''
   }, nOk ? `「今月は ${nOk}つ 出られるよ! 出ると1ターン使うから、トレーニングとどっちにするか考えてね」` : '「今月は出られる大会がないみたい。トレーニングでじっくり力をつけよ!」');
   const rankStep = typeof SUC.rankStepOf === 'function' ? SUC.rankStepOf(s) : 0;
   const rank = rankStep ? {
@@ -171180,7 +171343,7 @@ function MsxR3Cup({
       className: "e"
     }, c.scenario ? '📖' : MSX_R3_CUP_ICON[c.sys] || '🏆'), fc ? React.createElement("span", {
       className: `fcst ${MSX_R3_FC_CLASS[fc.key] || ''}`
-    }, fc.label) : null), React.createElement("div", {
+    }, fc.key === 'none' ? 'ほぼ無理' : fc.label) : null), React.createElement("div", {
       className: "tx"
     }, React.createElement("div", {
       className: "hd"
@@ -171190,7 +171353,7 @@ function MsxR3Cup({
       className: "cs"
     }, msxR3Stars(c.star)), c.done ? React.createElement("span", {
       className: "dn"
-    }, "優勝済") : null), React.createElement("b", null, c.scenario ? c.name : msxR3CupName(c.sys)), !(c.entry && c.entry.ok) ? React.createElement("span", {
+    }, "優勝済") : null), React.createElement("b", null, c.scenario ? c.name : msxR3CupName(c.sys, c.name)), !(c.entry && c.entry.ok) ? React.createElement("span", {
       className: "why"
     }, "✖ ", msxR3WhyText(c.entry, s)) : null, React.createElement("span", {
       className: "g"
@@ -171216,7 +171379,11 @@ function MsxR3Cup({
     }
   }, React.createElement("b", null, "出ると"), React.createElement("span", null, "1戦だけ・1ターン使う・勝つと賞金と賞品。", toForced ? React.createElement("span", {
     className: "yel"
-  }, ` 期末の大会まで あと${toForced}ターン`) : null))), wc ? React.createElement("div", {
+  }, ' 期末の大会まで ', React.createElement("span", {
+    style: {
+      whiteSpace: 'nowrap'
+    }
+  }, `あと${toForced}ターン`)) : null))), wc ? React.createElement("div", {
     className: "v-cupwin",
     onClick: () => {
       setWin(null);
@@ -171232,7 +171399,7 @@ function MsxR3Cup({
     className: `sign g-${wc.grade || 'n'}`
   }, React.createElement("span", {
     className: "e"
-  }, wc.scenario ? '📖' : MSX_R3_CUP_ICON[wc.sys] || '🏆'), React.createElement("b", null, wc.scenario ? wc.name : msxR3CupName(wc.sys)), React.createElement("small", null, kindOf(wc), " ", msxR3Stars(wc.star))), React.createElement("div", {
+  }, wc.scenario ? '📖' : MSX_R3_CUP_ICON[wc.sys] || '🏆'), React.createElement("b", null, wc.scenario ? wc.name : msxR3CupName(wc.sys, wc.name)), React.createElement("small", null, kindOf(wc), " ", msxR3Stars(wc.star))), React.createElement("div", {
     className: "sub"
   }, "獲得物"), React.createElement(MsxR3PrizeBox, {
     prizes: msxR3Prizes(SUC, wc),
@@ -171263,7 +171430,7 @@ function MsxR3Cup({
           out: null,
           log: [...(run.log || []), {
             turn: s.turn,
-            t: `${msxR3CupName(wc.sys)}に出た`
+            t: `${msxR3CupName(wc.sys, wc.name)}に出た`
           }].slice(-20)
         });
       }
@@ -171405,6 +171572,208 @@ function MsxR3Watch({
     "data-msx-r3-towatch-end": true,
     onClick: () => onDone()
   }, "⏭ 結果へ")));
+}
+function MsxR3Bracket({
+  run,
+  s,
+  v,
+  ev,
+  b,
+  name,
+  opp,
+  foeName,
+  skip,
+  debug,
+  settle,
+  result,
+  toCard,
+  onPause
+}) {
+  const br = msxSuc.SUC.bracketOf(s) || {
+    entrants: [],
+    rounds: [[], []],
+    final: [0, 4],
+    pop: []
+  };
+  const E = br.entrants;
+  const r1 = br.rounds[0] || [];
+  const r2 = br.rounds[1] || [];
+  const fi = br.final && br.final[1] || 4;
+  const [stage, setStage] = useState(0);
+  useEffect(() => {
+    const ts = [setTimeout(() => setStage(1), 1200), setTimeout(() => setStage(2), 3000), setTimeout(() => setStage(3), 4800)];
+    return () => ts.forEach(clearTimeout);
+  }, []);
+  const [vh, setVh] = useState(() => typeof window !== 'undefined' ? window.innerHeight : 844);
+  useEffect(() => {
+    const f = () => setVh(window.innerHeight);
+    window.addEventListener('resize', f);
+    return () => window.removeEventListener('resize', f);
+  }, []);
+  const RH = Math.max(34, Math.min(50, Math.floor((vh - 500) / 8)));
+  const no = br.pop && br.pop.length === E.length ? br.pop : E.map((_, i) => i + 1);
+  const nm = e => e.you ? run.nick : e.name || msxMonName(e.species);
+  const out = i => stage >= 1 && !r1.includes(i) || stage >= 2 && r1.includes(i) && !r2.includes(i);
+  const X = [0, 16, 32, 48, 64];
+  const yOf = i => i * RH + RH / 2;
+  const m1 = [0, 1, 2, 3].map(k => (yOf(2 * k) + yOf(2 * k + 1)) / 2);
+  const m2 = [0, 1].map(j => (m1[2 * j] + m1[2 * j + 1]) / 2);
+  const m3 = (m2[0] + m2[1]) / 2;
+  const pair = (a, c, lv) => `M${X[lv]} ${a}H${X[lv + 1]}M${X[lv]} ${c}H${X[lv + 1]}M${X[lv + 1]} ${a}V${c}`;
+  const base = [0, 1, 2, 3].map(k => pair(yOf(2 * k), yOf(2 * k + 1), 0)).join('') + pair(m1[0], m1[1], 1) + pair(m1[2], m1[3], 1) + pair(m2[0], m2[1], 2) + `M${X[3]} ${m3}H${X[4]}`;
+  const wins = [];
+  if (stage >= 1) r1.forEach((w, k) => wins.push({
+    d: `M${X[0]} ${yOf(w)}H${X[1]}V${m1[k]}`,
+    key: `a${k}`
+  }));
+  if (stage >= 2) r2.forEach((w, j) => wins.push({
+    d: `M${X[1]} ${m1[2 * j + (w === r1[2 * j] ? 0 : 1)]}H${X[2]}V${m2[j]}`,
+    key: `b${j}`
+  }));
+  if (stage >= 3) [0, 1].forEach(j => wins.push({
+    d: `M${X[2]} ${m2[j]}H${X[3]}`,
+    key: `c${j}`
+  }));
+  const top = E[no.indexOf(1)] || E[0];
+  const upsets = r1.filter(w => w !== 0 && w !== fi && no[w] >= 5);
+  const foeNo = no[fi];
+  const lines = [top && top.you ? React.createElement(React.Fragment, null, "「", React.createElement("b", null, "1番人気は ", run.nick, "!"), " まずは 1回戦から 見ていこう」") : React.createElement(React.Fragment, null, "「", React.createElement("b", null, "1番人気は ", top && top.champ ? '王者の ' : '', top ? nm(top) : '', "!"), " ", run.nick, "の1回戦は これからだよ」"), upsets.length ? React.createElement(React.Fragment, null, "「", React.createElement("b", null, "大穴! ", nm(E[upsets[0]])), " が 勝ち上がったぞ! ", run.nick, "も 1回戦を 勝ち上がり!」") : React.createElement(React.Fragment, null, "「1回戦が おわったよ。", React.createElement("b", null, run.nick), "は 順当に 勝ち上がり!」"), foeNo >= 4 ? React.createElement(React.Fragment, null, "「", React.createElement("b", null, "大穴! ", foeName), " 決勝まで きたぞ! ", run.nick, "は 準決勝も 勝って 決勝へ!」") : React.createElement(React.Fragment, null, "「準決勝も おわったよ。", React.createElement("b", null, run.nick), "は 決勝へ! 反対の山からは ", React.createElement("b", null, foeName), "」")];
+  const finalLine = (() => {
+    const l = msxR3Line('turn.cup.before', run, {
+      cup: name,
+      rival: opp.rival ? foeName : ''
+    }, '');
+    return l.t ? l.t : null;
+  })() || (opp.rival ? React.createElement(React.Fragment, null, "「決勝の相手は ", React.createElement("b", null, "ライバルの ", foeName), "! 勝てば ごほうび大!」") : opp.champ ? React.createElement(React.Fragment, null, "「決勝の相手は ", React.createElement("b", null, "王者の ", foeName), "! ", opp.note || '強敵だよ', "。胸を借りるつもりでいこう!」") : React.createElement(React.Fragment, null, "「決勝の相手は ", React.createElement("b", null, foeName), "。", opp.note || 'しっかり見ていこう', "!」"));
+  const body = React.createElement(React.Fragment, null, React.createElement(MsxBand, {
+    s: s,
+    v: v,
+    ev: ev
+  }), React.createElement("div", {
+    className: "v-bk1"
+  }, React.createElement("img", {
+    className: "bg",
+    src: "images/story-bg/monhero_plaza_evening.jpg",
+    alt: ""
+  }), React.createElement("div", {
+    className: "sh"
+  }), React.createElement("div", {
+    className: "tt"
+  }, name, b.retry ? `(再挑戦 ${b.retry}回目)` : '')), React.createElement("div", {
+    className: "v-bkc",
+    "data-msx-r3-bracket": stage
+  }, React.createElement("div", {
+    className: "rows"
+  }, E.map((x, i) => {
+    const k = x.you ? 'me' : x.rival ? 'rv' : x.champ ? 'ch' : '';
+    return React.createElement("div", {
+      key: i,
+      className: `v-br ${k}${i === 0 || i === fi ? ' mine' : ''}${out(i) ? ' out' : ''}`,
+      style: {
+        height: RH
+      },
+      "data-msx-r3-brrow": i
+    }, React.createElement("b", {
+      className: "no"
+    }, no[i]), React.createElement("span", {
+      className: "nm"
+    }, nm(x), x.champ ? React.createElement("em", {
+      className: "mk ch"
+    }, "👑王者") : null, x.rival ? React.createElement("em", {
+      className: "mk rv"
+    }, "ライバル") : null, x.you ? React.createElement("em", {
+      className: "mk me"
+    }, "あなた") : null), React.createElement("i", {
+      className: "cn"
+    }), React.createElement("span", {
+      className: "fc2"
+    }, React.createElement("img", {
+      src: msxMonThumb(x.species),
+      alt: ""
+    })));
+  })), React.createElement("div", {
+    className: "rt",
+    style: {
+      height: RH * 8
+    }
+  }, React.createElement("svg", {
+    className: "v-brl",
+    width: "64",
+    height: RH * 8,
+    viewBox: `0 0 64 ${RH * 8}`
+  }, React.createElement("path", {
+    className: "bs",
+    d: base
+  }), wins.map(w => React.createElement("path", {
+    key: w.key,
+    className: "wl",
+    d: w.d,
+    pathLength: "1"
+  }))), React.createElement("div", {
+    className: "win"
+  }, React.createElement("span", null, "🏆"), React.createElement("b", null, "優勝")))), React.createElement("div", {
+    className: "v-bnt"
+  }, React.createElement("b", null, "決勝は ", run.nick, " VS ", foeName), "。", React.createElement("span", null, "ほかの試合の結果は、見せるだけの演出です(戦うのは決勝の1戦だけ)")), React.createElement("div", {
+    className: "v-ann"
+  }, React.createElement("div", {
+    className: "pic"
+  }, React.createElement("img", {
+    src: msxFace(s.aid, 'excited'),
+    alt: ""
+  }), React.createElement("span", null, "解説")), React.createElement("div", {
+    className: "tx"
+  }, stage >= 3 ? finalLine : lines[stage]), stage < 3 ? React.createElement("button", {
+    type: "button",
+    className: "sk",
+    onClick: () => setStage(3),
+    "data-msx-r3-bsk": true
+  }, "SKIP ▸▸") : null));
+  const foot = debug ? React.createElement("div", {
+    className: "v-ft"
+  }, React.createElement("button", {
+    type: "button",
+    onClick: () => settle(false)
+  }, "負けたことにする"), React.createElement("button", {
+    type: "button",
+    className: "on",
+    onClick: () => settle(true),
+    "data-msx-r3-dbgwin": true
+  }, "勝ったことにする(デバッグ)"), React.createElement("button", {
+    type: "button",
+    className: "go",
+    onClick: toCard,
+    "data-msx-r3-tocard": true
+  }, "⚔ 決勝へ")) : React.createElement("div", {
+    className: "v-ft"
+  }, skip ? React.createElement("button", {
+    type: "button",
+    className: "on",
+    style: {
+      flex: 1.6
+    },
+    onClick: result,
+    "data-msx-r3-bskip": true
+  }, "⏩ スキップ(結果だけ)") : React.createElement("button", {
+    type: "button",
+    className: "on",
+    style: {
+      flex: 1.6
+    },
+    onClick: result,
+    "data-msx-r3-bresult": true
+  }, "⏩ 結果だけ見る"), React.createElement("button", {
+    type: "button",
+    className: "go",
+    onClick: toCard,
+    "data-msx-r3-tocard": true
+  }, "⚔ 決勝へ"));
+  return React.createElement(MsxR3Frame, {
+    run: run,
+    back: "中断",
+    onBack: onPause,
+    body: body,
+    foot: foot
+  });
 }
 const msxR3Diff = (a, b) => {
   const d = {
@@ -172472,7 +172841,7 @@ function MsxR3Battle({
   const foeName = opp.name || msxMonName(opp.species);
   const introKey = `${s.turn}|${b.kind}|${b.round || 0}`;
   if (!st3 && step === 'bracket' && introSeen !== introKey && !run.r3skip) {
-    const title = b.kind === 'cup' ? msxR3CupName(b.sys) : name;
+    const title = b.kind === 'cup' ? msxR3CupName(b.sys, b.name) : name;
     return React.createElement(MsxR3Frame, {
       run: run,
       back: "中断",
@@ -172507,7 +172876,7 @@ function MsxR3Battle({
           name: run.nick || msxMonName(s.species),
           colors: Array.isArray(run.colors) ? run.colors : null
         },
-        title: b.kind === 'cup' ? msxR3CupName(b.sys) : name,
+        title: b.kind === 'cup' ? msxR3CupName(b.sys, b.name) : name,
         opp: {
           loy: opp.loy,
           pop: opp.pop
@@ -172862,140 +173231,21 @@ function MsxR3Battle({
       foot: foot
     });
   }
-  const br = SUC.bracketOf(s) || {
-    entrants: []
-  };
-  const pops = br.entrants.map((x, i) => x.champ ? 1 : i === 4 ? 2 : x.you ? 3 : 0);
-  let nx = 4;
-  const no = pops.map(p => p || nx++);
-  const lines = [0, 1, 2, 3].map(q => {
-    const y1 = 17 + 68 * q;
-    const y2 = y1 + 34;
-    return `M0 ${y1}H14V${y2}H0M14 ${(y1 + y2) / 2}H30`;
-  }).join('') + 'M30 34V102H46M30 170V238H46M46 68V204M46 136H64';
-  const champ = br.entrants.find(x => x && x.champ);
-  const body = React.createElement(React.Fragment, null, React.createElement(MsxBand, {
+  return React.createElement(MsxR3Bracket, {
+    run: run,
     s: s,
     v: v,
-    ev: ev
-  }), React.createElement("div", {
-    className: "v-bk1"
-  }, React.createElement("img", {
-    className: "bg",
-    src: "images/story-bg/monhero_plaza_evening.jpg",
-    alt: ""
-  }), React.createElement("div", {
-    className: "sh"
-  }), React.createElement("div", {
-    className: "tt"
-  }, name, b.retry ? `(再挑戦 ${b.retry}回目)` : '')), React.createElement("div", {
-    className: "v-bkc"
-  }, React.createElement("div", {
-    className: "rows"
-  }, br.entrants.map((x, i) => {
-    const k = x.you ? 'me' : x.rival ? 'rv' : x.champ ? 'ch' : '';
-    return React.createElement("div", {
-      key: i,
-      className: `v-br ${k}${i === 0 || i === 4 ? ' mine' : ''}`
-    }, React.createElement("b", {
-      className: "no"
-    }, no[i]), React.createElement("span", {
-      className: "nm"
-    }, x.you ? run.nick : x.name || msxMonName(x.species), x.champ ? React.createElement("em", {
-      className: "mk ch"
-    }, "👑王者") : null, x.rival ? React.createElement("em", {
-      className: "mk rv"
-    }, "ライバル") : null, x.you ? React.createElement("em", {
-      className: "mk me"
-    }, "あなた") : null), React.createElement("i", {
-      className: "cn"
-    }), React.createElement("span", {
-      className: "fc2"
-    }, React.createElement("img", {
-      src: msxMonThumb(x.species),
-      alt: ""
-    })));
-  })), React.createElement("div", {
-    className: "rt"
-  }, React.createElement("svg", {
-    className: "v-brl",
-    viewBox: "0 0 64 272",
-    preserveAspectRatio: "none"
-  }, React.createElement("g", {
-    fill: "none",
-    stroke: "#a89a78",
-    strokeWidth: "2"
-  }, React.createElement("path", {
-    d: lines
-  }))), React.createElement("div", {
-    className: "win"
-  }, React.createElement("span", null, "🏆"), React.createElement("b", null, "優勝")))), React.createElement("div", {
-    className: "v-bnt"
-  }, React.createElement("b", null, "あなたの1戦"), "は 赤い丸の2体のあいだ(", run.nick, " VS ", foeName, ")。", React.createElement("span", null, "ほかの試合の結果は、見せるだけの演出")), React.createElement("div", {
-    style: {
-      flex: 1
-    }
-  }), React.createElement("div", {
-    className: "v-ann"
-  }, React.createElement("div", {
-    className: "pic"
-  }, React.createElement("img", {
-    src: msxFace(s.aid, 'excited'),
-    alt: ""
-  }), React.createElement("span", null, "解説")), React.createElement("div", {
-    className: "tx"
-  }, (() => {
-    const l = msxR3Line('turn.cup.before', run, {
-      cup: name,
-      rival: opp.rival ? foeName : ''
-    }, '');
-    return l.t ? l.t : null;
-  })() || (champ && !opp.champ ? React.createElement(React.Fragment, null, "「", React.createElement("b", null, "1番人気は 王者の ", champ.name || msxMonName(champ.species), "!"), " でも、", run.nick, "の相手は ", opp.rival ? 'ライバルの ' : '', foeName, " だよ。」") : opp.champ ? React.createElement(React.Fragment, null, "「相手は ", React.createElement("b", null, "王者の ", foeName), "! ", opp.note || '強敵だよ', "。胸を借りるつもりでいこう!」") : React.createElement(React.Fragment, null, "「相手は ", React.createElement("b", null, foeName), "。", opp.note || 'しっかり見ていこう', "!」")))));
-  const foot = debug ? React.createElement("div", {
-    className: "v-ft"
-  }, React.createElement("button", {
-    type: "button",
-    onClick: () => settle(false)
-  }, "負けたことにする"), React.createElement("button", {
-    type: "button",
-    className: "on",
-    onClick: () => settle(true),
-    "data-msx-r3-dbgwin": true
-  }, "勝ったことにする(デバッグ)"), React.createElement("button", {
-    type: "button",
-    className: "go",
-    onClick: () => setStep('card'),
-    "data-msx-r3-tocard": true
-  }, "⚔ 1戦へ")) : React.createElement("div", {
-    className: "v-ft"
-  }, skip ? React.createElement("button", {
-    type: "button",
-    className: "on",
-    style: {
-      flex: 1.6
-    },
-    onClick: result,
-    "data-msx-r3-bskip": true
-  }, "⏩ スキップ(結果だけ)") : React.createElement("button", {
-    type: "button",
-    className: "on",
-    style: {
-      flex: 1.6
-    },
-    onClick: result,
-    "data-msx-r3-bresult": true
-  }, "⏩ 結果だけ見る"), React.createElement("button", {
-    type: "button",
-    className: "go",
-    onClick: () => setStep('card'),
-    "data-msx-r3-tocard": true
-  }, "⚔ 1戦へ"));
-  return React.createElement(MsxR3Frame, {
-    run: run,
-    back: "中断",
-    onBack: onPause,
-    body: body,
-    foot: foot
+    ev: ev,
+    b: b,
+    name: name,
+    opp: opp,
+    foeName: foeName,
+    skip: skip,
+    debug: debug,
+    settle: settle,
+    result: result,
+    toCard: () => setStep('card'),
+    onPause: onPause
   });
 }
 const MSX_R3_DIST = Object.freeze(['零', '近', '中', '遠']);
@@ -232391,7 +232641,7 @@ function MonsterHeroGame() {
     }, React.createElement("span", null, "種族 / 難易度"), React.createElement("b", {
       className: "text-right"
     }, speciesName, "／", labelOf(r.difficultyId)), React.createElement("span", null, "今回のスコア"), React.createElement("b", {
-      className: "text-right"
+      className: "text-right break-all min-w-0"
     }, r.score.toLocaleString()), React.createElement("span", null, "クリアターン"), React.createElement("b", {
       className: "text-right"
     }, r.clearTurns !== null ? `${r.clearTurns}T` : '—'), React.createElement("span", null, "初回報酬"), React.createElement("b", {
@@ -243188,7 +243438,7 @@ function MonsterHeroGame() {
     }, sub)), empty ? React.createElement("small", {
       className: "shrink-0 text-right text-[9px] font-black text-slate-500"
     }, "記録なし") : React.createElement("b", {
-      className: "shrink-0 text-right text-[13px] font-black text-cyan-200"
+      className: "min-w-0 max-w-[60%] break-all text-right text-[13px] font-black text-cyan-200"
     }, score.toLocaleString(), React.createElement("small", {
       className: "ml-0.5 text-[8px] text-slate-400"
     }, "pt")));
@@ -257058,7 +257308,7 @@ function MonsterHeroGame() {
       }, React.createElement("span", null, "曲"), React.createElement("b", {
         className: "truncate text-right"
       }, r.songName || '-', r.difficultyName ? `(${r.difficultyName})` : ''), React.createElement("span", null, "スコア"), React.createElement("b", {
-        className: "text-right"
+        className: "text-right break-all min-w-0"
       }, r.score.toLocaleString()), r.assist && React.createElement(React.Fragment, null, React.createElement("span", null, "アシストモード"), React.createElement("b", {
         className: "text-right"
       }, "ダメージにならない")), r.pumpkin ? React.createElement(React.Fragment, null, React.createElement("span", null, "体力"), React.createElement("b", {

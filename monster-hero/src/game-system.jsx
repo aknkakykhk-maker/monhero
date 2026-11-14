@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: b42125f23de43ef6
+// generated-sha256: 12673c2fcae23ec4
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -6037,7 +6037,7 @@ const SCREEN_THEME_CATEGORIES = [
   { id: 'temple', label: '神殿', desc: '神殿と、マスモンの再生・合体・転生など' },
   // バトルとモンヒロビートは、見やすさを1画面ずつ確かめてから出す(ready:false のあいだは設定に並べず、クラシックのまま)
   { id: 'battle', label: 'モンヒロバトル', desc: 'バトル選択・バトル中・リザルト' },
-  { id: 'rhythm', label: 'モンヒロビート', desc: '曲えらび・演奏画面' },
+  { id: 'rhythm', label: 'モンヒロビート', desc: '曲選び・演奏画面' },
 ];
 const SCREEN_THEME_READY_CATEGORIES = SCREEN_THEME_CATEGORIES.filter(category => category.ready !== false);
 // いまの画面に出すテーマ('halloween' / 'classic')。まだ仕上げていない種類はクラシック
@@ -22420,9 +22420,9 @@ const rhythmQuietModeSupportText=()=>{
   const can=rhythmQuietModeCan();
   const tail='通知そのものを止めることはブラウザからはできないので、確実に止めたいときは端末の「集中モード」もお使いください。';
   if(can.fullscreen&&can.wakeLock)
-    return `この端末では、演奏のあいだだけ全画面にして、画面が消えないようにできます。全画面のあいだは画面いちばん上の通知バーが隠れるので、通知が降りてくる表示も出にくくなります。${tail}`;
+    return `この端末では、演奏のあいだだけ全画面にして、画面が消えないようにできます。全画面のあいだは画面一番上の通知バーが隠れるので、通知が降りてくる表示も出にくくなります。${tail}`;
   if(can.fullscreen)
-    return `この端末では、演奏のあいだだけ全画面にできます。全画面のあいだは画面いちばん上の通知バーが隠れます。画面が消えないようにする機能はこのブラウザにはありません。${tail}`;
+    return `この端末では、演奏のあいだだけ全画面にできます。全画面のあいだは画面一番上の通知バーが隠れます。画面が消えないようにする機能はこのブラウザにはありません。${tail}`;
   if(can.wakeLock)
     return `この端末では、演奏のあいだ画面が消えないようにできます。全画面にする機能がこのブラウザには無いため、通知バーは隠せません。${tail}`;
   return `この端末のブラウザでは、全画面にすることも画面が消えないようにすることもできません。ONにしても何も起きないので、通知を止めたいときは端末の「集中モード」をお使いください。`;
@@ -23258,7 +23258,7 @@ const RhythmOptions=({value,onSave,onBack,onCalibrate=null,onLineAdjust=null,cal
 <section data-rhythm-options-group="その他" className={card}>
 {!wide&&<h3 className={head}>◆ その他</h3>}
 <div className={wide?`mt-1 ${grid}`:`mt-3 ${grid}`}>
-{field('曲えらびで試聴する',toggle('songPreviewEnabled'))}
+{field('曲選びで試聴する',toggle('songPreviewEnabled'))}
 {field('タップ時の振動',<>
               {toggle('vibrationEnabled')}
               {/* この端末で振動できるかを出す。iPhoneのSafariには振動のしくみが無い時期が長く、
@@ -23934,7 +23934,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
                     className="ml-1 shrink-0 rounded-md border border-sky-300/40 bg-sky-500/10 px-1 py-0.5 text-[10px] font-black leading-none text-sky-200">{row.versions}つの版</small>}
                   {favoriteIds.has(entry.songId)&&<small {...(main?{'data-rhythm-song-row-favorite':''}:{})} aria-label="お気に入り" className="ml-auto shrink-0 text-[12px] leading-none text-rose-300">♥</small>}
                   {firstSongId&&row.members.some(item=>item.songId===firstSongId)&&<small {...(main?{'data-rhythm-song-first':firstSongId}:{})}
-                    className="ml-auto shrink-0 rounded-md border border-emerald-300/60 bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-black text-emerald-200">🔰 はじめての1曲</small>}
+                    className="ml-auto shrink-0 rounded-md border border-emerald-300/60 bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-black text-emerald-200">🔰 初めての1曲</small>}
                   {lockedSong(entry)&&<small {...(main?{'data-rhythm-song-locked':entry.songId}:{})}
                     className="ml-auto shrink-0 rounded-md border border-amber-300/60 bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-black text-amber-200">🔒 {rhythmSongPrice(entry.songId).toLocaleString()}P</small>}
                   {eventSong&&<small {...(main?{'data-rhythm-song-event':entry.songId}:{})}
@@ -24168,7 +24168,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
       <img src={lyricFull} alt="歌詞カード" className="block h-auto max-w-none" style={{width:'max(100%, 900px)'}}/>
       <button type="button" data-rhythm-song-lyric-full-close onClick={()=>setLyricFull(null)}
         className="fixed right-3 top-3 min-h-[48px] rounded-xl bg-slate-800/90 px-4 text-sm font-black text-white"
-        style={{position:'fixed',top:'max(12px, env(safe-area-inset-top))',right:12,minHeight:'48px'}}>✕ もどる</button>
+        style={{position:'fixed',top:'max(12px, var(--mh-sa-top))',right:12,minHeight:'48px'}}>✕ 戻る</button>
     </div>}
     {/* ジャンルのシート。並び替えと同じ形で下から出す。選んだらすぐ閉じる */}
     {genreOpen&&<div data-rhythm-genre-sheet className="fixed inset-0 z-[9000] flex items-end justify-center"
@@ -24340,7 +24340,7 @@ const RhythmHellGuide=({pageIndex,onPage,onClose})=>{
   const nextVideo=!last?rhythmHellGuideVideo(pages[index+1]&&pages[index+1].video):null;
   // 動画のあるページは横に広げる(横持ちでは 動画|文 の2列、狭い画面では縦に並ぶ)
   return <div data-rhythm-hell-guide role="dialog" aria-modal="true" aria-label={`HELL の遊び方 ${index+1}/${pages.length}`}
-    style={{position:'fixed',inset:0,zIndex:77500,display:'flex',alignItems:'center',justifyContent:'center',padding:'12px calc(16px + env(safe-area-inset-right)) 12px calc(16px + env(safe-area-inset-left))',background:'radial-gradient(ellipse at center,rgba(30,27,75,.96),rgba(2,6,23,.98) 72%)'}}>
+    style={{position:'fixed',inset:0,zIndex:77500,display:'flex',alignItems:'center',justifyContent:'center',padding:'12px calc(16px + var(--mh-sa-right)) 12px calc(16px + var(--mh-sa-left))',background:'radial-gradient(ellipse at center,rgba(30,27,75,.96),rgba(2,6,23,.98) 72%)'}}>
     <section data-rhythm-hell-guide-card style={{width:'100%',maxWidth:video?'760px':'460px',maxHeight:'100%',overflowY:'auto',borderRadius:'20px',border:'1px solid rgba(244,114,182,.45)',background:'rgba(15,23,42,.92)',boxShadow:'0 0 28px rgba(244,114,182,.25)',padding:'16px 18px'}}>
       <small style={{display:'block',fontSize:'10px',fontWeight:900,letterSpacing:'.28em',color:'#f9a8d4'}}>HELL の遊び方 {index+1}/{pages.length}</small>
       <div style={video?{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(220px,1fr))',gap:'12px 16px',alignItems:'start',marginTop:'6px'}:undefined}>
@@ -24359,7 +24359,7 @@ const RhythmHellGuide=({pageIndex,onPage,onClose})=>{
       <div aria-hidden="true" style={{display:'flex',justifyContent:'center',gap:'6px',marginTop:'14px'}}>{pages.map((_,i)=><i key={i} style={{display:'block',width:i===index?'18px':'6px',height:'6px',borderRadius:'999px',background:i===index?'#f472b6':'rgba(148,163,184,.5)'}}/>)}</div>
       <div style={{display:'grid',gridTemplateColumns:index>0?'1fr 2fr':'1fr',gap:'8px',marginTop:'14px'}}>
         {index>0&&<button type="button" data-rhythm-hell-guide-prev onClick={()=>onPage(index-1)} style={{minHeight:'48px',borderRadius:'14px',border:'1px solid rgba(148,163,184,.4)',background:'rgba(30,41,59,.9)',color:'#e2e8f0',fontSize:'14px',fontWeight:900}}>戻る</button>}
-        <button type="button" data-rhythm-hell-guide-next onClick={()=>last?onClose():onPage(index+1)} style={{minHeight:'48px',borderRadius:'14px',border:'0',background:'linear-gradient(135deg,#db2777,#7c3aed)',color:'#fff',fontSize:'14px',fontWeight:900}}>{last?'閉じる':'つぎへ'}</button>
+        <button type="button" data-rhythm-hell-guide-next onClick={()=>last?onClose():onPage(index+1)} style={{minHeight:'48px',borderRadius:'14px',border:'0',background:'linear-gradient(135deg,#db2777,#7c3aed)',color:'#fff',fontSize:'14px',fontWeight:900}}>{last?'閉じる':'次へ'}</button>
       </div>
     </section>
   </div>;
@@ -26891,7 +26891,7 @@ if(calibrating){const taps=Array.isArray(run.deltas)?run.deltas.length:0;
       const remain=Math.max(0,RHYTHM_CALIBRATION_TAP_COUNT-counted);
       const now=counted>0?rhythmCalibrationOffsetFromTaps(run.deltas.slice(RHYTHM_CALIBRATION_WARMUP_COUNT)):null;
       if(title)title.textContent=taps<RHYTHM_CALIBRATION_WARMUP_COUNT
-        ?`かまえて（はじめの${RHYTHM_CALIBRATION_WARMUP_COUNT}回は数えません）`
+        ?`かまえて（初めの${RHYTHM_CALIBRATION_WARMUP_COUNT}回は数えません）`
         :remain>0?`あと ${remain} 回`:'おしまい！';
       if(body)body.textContent=now
         ?`いまのずれ ${now.rawMeanMs>0?'+':''}${now.rawMeanMs}ms（${counted}回ぶん）／ 判定とFAST・SLOWを見ながら、判定ラインに重なった瞬間に叩いてください`
@@ -27741,7 +27741,7 @@ current.missingHeld?.delete(inputKey);current.activeTouchInputs.delete(inputKey)
     ALL MARVELOUS > ALL EXCELLENT > FULL COMBO の順に上位。残りは下に小さく並べる。 */}
 {(result.fullCombo||result.allExcellent||result.allMarvelous)&&<div data-rhythm-result-celebrate className="my-3 text-center">
   <b className="block text-3xl font-black leading-tight">{result.allMarvelous?'ALL MARVELOUS!!':result.allExcellent?'ALL EXCELLENT!!':'FULL COMBO!'}</b>
-  <small className="mt-1 block text-[10px] font-black text-amber-200">{result.allMarvelous?'すべてMARVELOUS。文句なしの完璧です':result.allExcellent?'すべてEXCELLENT以上。ほぼ完璧です':'一度もコンボを切らずに完走しました'}</small>
+  <small className="mt-1 block text-[10px] font-black text-amber-200">{result.allMarvelous?'全てMARVELOUS。文句なしの完璧です':result.allExcellent?'全てEXCELLENT以上。ほぼ完璧です':'一度もコンボを切らずに完走しました'}</small>
 </div>}
 <div className="my-3 flex flex-wrap justify-center gap-2 text-xs font-black text-slate-300">{result.fullCombo&&<span>FULL COMBO</span>}{result.allExcellent&&<span>ALL EXCELLENT</span>}{result.allMarvelous&&<span>ALL MARVELOUS</span>}</div>{/* クイック∞周回を裏で回していたときだけ。曲の長さぶんが周回クリア扱いで入る */}
 {/* ビートランクの経験値の棒は、リザルトのいちばん上へ移した(2026-10-30) */}
@@ -27787,7 +27787,7 @@ current.missingHeld?.delete(inputKey);current.activeTouchInputs.delete(inputKey)
     {heroArt&&<img src={heroArt} alt="" aria-hidden="true" className="h-12 w-12 shrink-0 object-contain"/>}
     <div className="min-w-0 flex-1"><small className="block truncate text-[10px] font-black text-sky-200">{monsters[index].name}</small><p style={JA_WRAP_STYLE} className="text-[12px] font-bold leading-snug text-white">{jaWrap(line)}</p></div>
   </div>;})()}
-{(()=>{if(tutorial||calibrating||debugPlay||multi||result.assist||result.cleared===false)return null;const before=runRef.current?.startBest;if(before&&before.clear===true)return null;/* 新曲は HARD のクリアで EXPERT と MASTER が一度に開く(2026-10-09・rhythmDifficultyUnlockRequirement)ので、開いたものを全部並べる */const openedIds=RHYTHM_SELECTABLE_DIFFICULTY_IDS.filter(id=>rhythmDifficultyUnlockRequirement(id,song.songId)===difficulty.id&&rhythmChartPlayable(song,id));if(!openedIds.length)return null;const opened=openedIds.join('・');return <div data-rhythm-result-unlock={openedIds.join(',')} className="mx-auto my-3 max-w-xs rounded-2xl border-2 border-amber-300/70 bg-amber-500/15 px-3 py-2 text-center"><b className="block text-base font-black text-amber-100">🔓 {opened} が解放されました！</b><small className="mt-0.5 block text-[10px] font-bold text-amber-200/90">この曲の {openedIds.map(id=>`${id}（Lv.${song.difficulties[id].level}）`).join('・')} を曲えらびで選べます</small></div>;})()}
+{(()=>{if(tutorial||calibrating||debugPlay||multi||result.assist||result.cleared===false)return null;const before=runRef.current?.startBest;if(before&&before.clear===true)return null;/* 新曲は HARD のクリアで EXPERT と MASTER が一度に開く(2026-10-09・rhythmDifficultyUnlockRequirement)ので、開いたものを全部並べる */const openedIds=RHYTHM_SELECTABLE_DIFFICULTY_IDS.filter(id=>rhythmDifficultyUnlockRequirement(id,song.songId)===difficulty.id&&rhythmChartPlayable(song,id));if(!openedIds.length)return null;const opened=openedIds.join('・');return <div data-rhythm-result-unlock={openedIds.join(',')} className="mx-auto my-3 max-w-xs rounded-2xl border-2 border-amber-300/70 bg-amber-500/15 px-3 py-2 text-center"><b className="block text-base font-black text-amber-100">🔓 {opened} が解放されました！</b><small className="mt-0.5 block text-[10px] font-bold text-amber-200/90">この曲の {openedIds.map(id=>`${id}（Lv.${song.difficulties[id].level}）`).join('・')} を曲選びで選べます</small></div>;})()}
 {result.luck&&(result.luck.draws>0||result.luck.points>0)&&<div data-rhythm-result-luck className="mx-auto my-2 max-w-xs rounded-2xl border border-lime-300/50 bg-lime-950/30 px-3 py-2 text-center [@container(min-width:680px)]:hidden"><small className="block text-[10px] font-black tracking-wider text-lime-200">🍀 ラッキーラッシュ</small><b className="mt-0.5 block text-lg font-black tabular-nums text-white">{Number(result.luck.points).toLocaleString()}pt</b><span className="mt-0.5 block text-[10px] font-bold text-lime-100">抽選 {result.luck.draws}回・RUSH {result.luck.rush}回{result.luck.bonus>0?`・おまけビートP +${result.luck.bonus}P`:''}</span></div>}
 {result.eventPointAward&&result.eventPointAward.amount>0&&<div data-rhythm-result-beat-points className="mx-auto my-3 max-w-xs rounded-2xl border border-violet-400/50 bg-violet-950/35 px-3 py-2 text-center [@container(min-width:680px)]:hidden"><small className="block text-[10px] font-black tracking-wider text-violet-200">🎟️ ビートP獲得</small><b className="mt-0.5 block text-2xl font-black text-white">+{result.eventPointAward.amount.toLocaleString()}P</b>{result.eventPointAward.multiScale>1&&<span data-rhythm-result-beat-points-multi className="mt-1 block text-[9px] font-black text-cyan-200">👥 みんなで対戦のボーナス(人数・連続) ×{result.eventPointAward.multiScale}</span>}{result.eventPointAward.target&&<span className="mt-1 block text-[9px] font-black text-amber-200">イベント対象曲 1.5倍</span>}{result.eventPointAward.lengthBonusPercent>0&&<span data-rhythm-result-beat-points-length className="mt-1 block text-[10px] font-black text-sky-200">曲の長さ +{result.eventPointAward.lengthBonusPercent}%</span>}{result.eventPointAward.campaign&&<span data-rhythm-result-beat-points-campaign className="mt-1 block text-[9px] font-black text-amber-200">ビートPアップキャンペーン いつもの{result.eventPointAward.boost}倍</span>}{result.eventPointAward.offEvent&&<span data-rhythm-result-beat-points-off-event className="mt-1 block text-[9px] font-black text-violet-200">イベント開催中はこの5倍もらえます</span>}</div>}{/* ライブログ(バンドリ！アワーノーツの演奏後の振り返り)。曲を8つの区間に分け、区間ごとに
     MARVELOUS・EXCELLENTの割合を棒の高さで、BAD・MISSの数を下の数字で出す。いちばん崩れた区間を一言で言う */}
@@ -27796,7 +27796,7 @@ current.missingHeld?.delete(inputKey);current.activeTouchInputs.delete(inputKey)
   <div className="mt-2 grid grid-cols-8 items-end gap-1" style={{height:'44px'}}>{sections.map((section,i)=>{const rate=section.rate==null?0:section.rate;const color=section.total===0?'#334155':rate>=.9?'#fbbf24':rate>=.7?'#e879f9':rate>=.5?'#f87171':'#60a5fa';return <i key={i} data-rhythm-live-log-bar={String(i)} className="block rounded-t" style={{height:`${Math.max(6,Math.round(rate*100))}%`,background:color,opacity:section.total===0?.4:(section===worst?1:.85),outline:section===worst?'2px solid rgba(251,113,133,.9)':'none'}}/>;})}</div>
   <div className="mt-1 grid grid-cols-8 gap-1 text-center text-[9px] font-black tabular-nums">{sections.map((section,i)=><span key={i} className={section.bad+section.miss>0?'text-rose-300':'text-slate-500'}>{section.total===0?'−':section.bad+section.miss}</span>)}</div>
   <div className="mt-0.5 flex justify-between text-[8px] font-bold tabular-nums text-slate-500"><span>0:00</span><span>{rhythmClockLabel(result.liveLogEndMs)}</span></div>
-  <p data-rhythm-live-log-worst className="mt-1 text-[10px] font-bold leading-relaxed text-slate-300">{worst?`いちばん崩れたのは ${rhythmClockLabel(worst.fromMs)}〜${rhythmClockLabel(worst.toMs)} の区間でした（BAD・MISS ${worst.bad+worst.miss}回）。`:'どの区間も BAD・MISS なしで通せました。'}</p>
+  <p data-rhythm-live-log-worst className="mt-1 text-[10px] font-bold leading-relaxed text-slate-300">{worst?`一番崩れたのは ${rhythmClockLabel(worst.fromMs)}〜${rhythmClockLabel(worst.toMs)} の区間でした（BAD・MISS ${worst.bad+worst.miss}回）。`:'どの区間も BAD・MISS なしで通せました。'}</p>
 </div>;})()}
 {/* 押したのに反応しないことがあった(2026-10-01・ユーザー指示)。押すと、この曲の指の記録に印を付けて送る。
     印の付いた曲と付いていない曲の数字を比べて、指がどこで消えているかを絞る(docs/spec/RHYTHM_TOUCH_DIAG.md)。
@@ -27809,7 +27809,7 @@ current.missingHeld?.delete(inputKey);current.activeTouchInputs.delete(inputKey)
 {debugPlay&&!tutorial&&!calibrating&&<RhythmChartNotePanel song={song} difficulty={difficulty} chart={chart}/>}
 </div>
 <div data-rhythm-result-actions className="relative shrink-0 border-t border-white/10 bg-slate-950/90 px-4 pt-2" style={{paddingBottom:'calc(.5rem + var(--mh-sa-bottom))'}}><RhythmResultMoreHint label={[result.eventPointAward&&result.eventPointAward.amount>0?'ビートP':null,Array.isArray(result.liveLog)&&result.liveLog.some(section=>section.total>0)?'ライブログ':null].filter(Boolean).join('・')||'続き'}/>{/* マルチだけ、縦⇄横の切り替えを左に置く(部屋の見出しと同じ部品。2026-10-10・社長「マルチの演奏後の結果画面でも縦横切り替えボタンほしい」)。
-  ソロ・レイドの結果は今のまま。上は曲の札とランクの丸で埋まっているので、指の届く下の列へ置く */}<div className={multi?"flex items-center gap-2":""}>{multi&&<div data-rhythm-result-orientation className="shrink-0"><RhythmOrientationButton/></div>}<div className={multi?"grid min-w-0 flex-1 grid-cols-1 gap-2":(raidPlay?"grid grid-cols-1 gap-2":"grid grid-cols-2 gap-2")}>{!multi&&!raidPlay&&<button className="min-h-[48px] rounded-xl bg-fuchsia-700 font-black" disabled={startLockRef.current} onClick={()=>beginRun(mergeRhythmBestRecord(runRef.current?.startBest,result))}>もう一度プレイ</button>}<button data-rhythm-multi-result-back={multi?"":undefined} data-rhythm-raid-result-back={raidPlay?"":undefined} className="min-h-[48px] rounded-xl bg-indigo-700 font-black" onClick={abort}>{multi&&'みんなの結果を見る'}{!multi&&raidPlay&&'レイドの結果を見る'}{!multi&&!raidPlay&&<>{debugPlay?'音ゲーデバッグへ戻る':'曲えらびへ戻る'}</>}</button></div></div></div></div></div></main>}
+  ソロ・レイドの結果は今のまま。上は曲の札とランクの丸で埋まっているので、指の届く下の列へ置く */}<div className={multi?"flex items-center gap-2":""}>{multi&&<div data-rhythm-result-orientation className="shrink-0"><RhythmOrientationButton/></div>}<div className={multi?"grid min-w-0 flex-1 grid-cols-1 gap-2":(raidPlay?"grid grid-cols-1 gap-2":"grid grid-cols-2 gap-2")}>{!multi&&!raidPlay&&<button className="min-h-[48px] rounded-xl bg-fuchsia-700 font-black" disabled={startLockRef.current} onClick={()=>beginRun(mergeRhythmBestRecord(runRef.current?.startBest,result))}>もう一度プレイ</button>}<button data-rhythm-multi-result-back={multi?"":undefined} data-rhythm-raid-result-back={raidPlay?"":undefined} className="min-h-[48px] rounded-xl bg-indigo-700 font-black" onClick={abort}>{multi&&'みんなの結果を見る'}{!multi&&raidPlay&&'レイドの結果を見る'}{!multi&&!raidPlay&&<>{debugPlay?'音ゲーデバッグへ戻る':'曲選びへ戻る'}</>}</button></div></div></div></div></div></main>}
   /* ★演奏画面そのものを器(container-type:inline-size)にして、HUDの幅や字の大きさは vw ではなく cqw で決める
      (2026-09-26・ユーザー報告「演奏中の曲名が切れてる / 時間バーが難易度に被ってる」)。
      「🔄 横」で絵を回したとき、vw は端末の縦の幅(390px)のままなので、左上の欄が109pxまで縮んで曲名が「SIX…」になり、
@@ -27977,13 +27977,13 @@ current.missingHeld?.delete(inputKey);current.activeTouchInputs.delete(inputKey)
       ?{left:'19%',right:'39%',top:'calc(2% + 18px)',padding:'4px 10px'}
       // 縦持ち: 判定ラインの下の空き(bottom 12%より下)。上に置くとコンボ数と重なった
       //   (2026-09-13、実画面で確認)。ここなら目線も判定ラインの近くで済む
-      :{left:'12px',right:'12px',bottom:'1.5%',padding:'8px 12px'}}><b data-rhythm-calibration-title className="block font-black text-amber-200" style={{fontSize:isLandscape?'12px':'14px',lineHeight:1.2}}>かまえて（はじめの{RHYTHM_CALIBRATION_WARMUP_COUNT}回は数えません）</b><span data-rhythm-calibration-text className="mt-1 block font-bold text-slate-200" style={{fontSize:isLandscape?'9px':'11px',lineHeight:isLandscape?1.3:1.6}}>判定ラインにノーツが重なった瞬間に叩いてください。判定とFAST・SLOWはいつもどおり出ます</span></div>}{tutorialProp&&<div ref={tutorialBannerRef} data-rhythm-tutorial-banner className="pointer-events-none absolute inset-x-3 top-[14%] z-20 rounded-2xl border border-cyan-300/50 bg-slate-950/92 px-3 py-2.5 text-center shadow-[0_0_18px_rgba(34,211,238,.18)]"><b data-rhythm-tutorial-title className="block text-[14px] font-black text-cyan-100">{(song.tutorialSteps||RHYTHM_TUTORIAL_STEPS)[0].title}</b><span data-rhythm-tutorial-text className="mt-1 block text-[11px] font-bold leading-relaxed text-slate-200">{helpWrap((song.tutorialSteps||RHYTHM_TUTORIAL_STEPS)[0].text)}</span></div>}{view.status==='paused'&&!resumeCountdown&&<div data-rhythm-pause-menu data-rhythm-debug-play={debugPlay?'1':undefined} className="absolute inset-0 z-40 flex flex-col items-center justify-center gap-3 bg-slate-950/95 p-5"><h3 className="text-2xl font-black">PAUSE</h3>{/* いま何を・どこまで遊んでいるか。止めた位置・スコア・コンボをここで見られる */}
+      :{left:'12px',right:'12px',bottom:'1.5%',padding:'8px 12px'}}><b data-rhythm-calibration-title className="block font-black text-amber-200" style={{fontSize:isLandscape?'12px':'14px',lineHeight:1.2}}>かまえて（初めの{RHYTHM_CALIBRATION_WARMUP_COUNT}回は数えません）</b><span data-rhythm-calibration-text className="mt-1 block font-bold text-slate-200" style={{fontSize:isLandscape?'9px':'11px',lineHeight:isLandscape?1.3:1.6}}>判定ラインにノーツが重なった瞬間に叩いてください。判定とFAST・SLOWはいつもどおり出ます</span></div>}{tutorialProp&&<div ref={tutorialBannerRef} data-rhythm-tutorial-banner className="pointer-events-none absolute inset-x-3 top-[14%] z-20 rounded-2xl border border-cyan-300/50 bg-slate-950/92 px-3 py-2.5 text-center shadow-[0_0_18px_rgba(34,211,238,.18)]"><b data-rhythm-tutorial-title className="block text-[14px] font-black text-cyan-100">{(song.tutorialSteps||RHYTHM_TUTORIAL_STEPS)[0].title}</b><span data-rhythm-tutorial-text className="mt-1 block text-[11px] font-bold leading-relaxed text-slate-200">{helpWrap((song.tutorialSteps||RHYTHM_TUTORIAL_STEPS)[0].text)}</span></div>}{view.status==='paused'&&!resumeCountdown&&<div data-rhythm-pause-menu data-rhythm-debug-play={debugPlay?'1':undefined} className="absolute inset-0 z-40 flex flex-col items-center justify-center gap-3 bg-slate-950/95 p-5"><h3 className="text-2xl font-black">PAUSE</h3>{/* いま何を・どこまで遊んでいるか。止めた位置・スコア・コンボをここで見られる */}
 {(()=>{const endMs=Number.isFinite(Number(song.playDurationMs))?Number(song.playDurationMs):chart.durationMs;const ratio=endMs>0?Math.max(0,Math.min(1,pausedSongMs/endMs)):0;return <div data-rhythm-pause-info className="w-full max-w-sm rounded-2xl border border-white/10 bg-slate-900/80 px-3 py-2.5">
   <b className="block truncate text-[12px] font-black text-slate-100">♪ {rhythmSongFullName(song)}</b>
   <div className="mt-1 flex items-center gap-1.5 text-[10px] font-black"><span className={`shrink-0 rounded ${difficulty.id==='HELL'?'bg-red-900/90 text-red-200 ring-1 ring-red-500/70':'bg-fuchsia-700/85'} px-1.5 py-0.5 leading-none`}>{difficulty.id}</span>{!calibrating&&!tutorial&&<span className="text-cyan-300">Lv.{chart.level}</span>}<span className="ml-auto tabular-nums text-slate-300">SCORE <b className="text-white">{hudRef.current.get().score.toLocaleString()}</b></span><span className="tabular-nums text-slate-300">COMBO <b className="text-white">{hudRef.current.get().combo}</b></span></div>
   <div className="mt-2 flex items-center gap-2"><div className="relative h-1.5 flex-1 overflow-hidden rounded-full bg-white/10"><i className="absolute inset-y-0 left-0 block rounded-full bg-gradient-to-r from-cyan-300 to-fuchsia-400" style={{width:`${(ratio*100).toFixed(1)}%`}}/></div><small data-rhythm-pause-time className="shrink-0 text-[10px] font-black tabular-nums text-slate-300">{rhythmClockLabel(pausedSongMs)} / {rhythmClockLabel(endMs)}</small></div>
 </div>;})()}
-<p className="text-[10px] font-bold text-slate-400">「再開」を押すと 3・2・1 と数えてから続きが始まります</p><button data-rhythm-pause-resume className="min-h-[48px] w-full rounded-xl bg-cyan-700 font-black" onClick={resume}>再開</button>{!multi&&!raidPlay&&<button data-rhythm-pause-restart className="min-h-[48px] w-full rounded-xl bg-fuchsia-700 font-black" onClick={restart}>リスタート</button>}<button data-rhythm-pause-exit className="min-h-[48px] w-full rounded-xl bg-rose-800 font-black" onClick={abort}>{multi&&'中断してルームへ戻る'}{!multi&&<>{calibrating?'やめてオプションへ戻る':tutorial?'練習をやめて曲えらびへ戻る':debugPlay?'中断して音ゲーデバッグへ戻る':'中断して曲えらびへ戻る'}</>}</button></div>}</div></main>;
+<p className="text-[10px] font-bold text-slate-400">「再開」を押すと 3・2・1 と数えてから続きが始まります</p><button data-rhythm-pause-resume className="min-h-[48px] w-full rounded-xl bg-cyan-700 font-black" onClick={resume}>再開</button>{!multi&&!raidPlay&&<button data-rhythm-pause-restart className="min-h-[48px] w-full rounded-xl bg-fuchsia-700 font-black" onClick={restart}>リスタート</button>}<button data-rhythm-pause-exit className="min-h-[48px] w-full rounded-xl bg-rose-800 font-black" onClick={abort}>{multi&&'中断してルームへ戻る'}{!multi&&<>{calibrating?'やめてオプションへ戻る':tutorial?'練習をやめて曲選びへ戻る':debugPlay?'中断して音ゲーデバッグへ戻る':'中断して曲選びへ戻る'}</>}</button></div>}</div></main>;
 };
 
 // ---- part: 30-rhythm-preview-hands.jsx ----
@@ -37850,7 +37850,7 @@ function MultiStampEditor({ onClose, onShop = null }) {
   const max = st.slots.length;
   return (
     <div data-multi-stamp-editor className="fixed inset-0 z-[80] flex items-end justify-center bg-black/60 landscape:items-center" onClick={onClose}>
-      <div className="flex max-h-[96dvh] [[data-mh-view-rotation=true]_&]:max-h-[94vw] w-full max-w-[880px] flex-col overflow-hidden rounded-t-2xl border-t-2 border-cyan-400 bg-slate-950 text-white landscape:rounded-2xl landscape:border-2" style={{ paddingBottom: 'max(8px, env(safe-area-inset-bottom))' }} onClick={(e) => e.stopPropagation()}>
+      <div className="flex max-h-[96dvh] [[data-mh-view-rotation=true]_&]:max-h-[94vw] w-full max-w-[880px] flex-col overflow-hidden rounded-t-2xl border-t-2 border-cyan-400 bg-slate-950 text-white landscape:rounded-2xl landscape:border-2" style={{ paddingBottom: 'max(8px, var(--mh-sa-bottom))' }} onClick={(e) => e.stopPropagation()}>
         <div className="flex shrink-0 items-center gap-2 px-3 pb-1 pt-2">
           <b className="flex-1 text-[15px] text-cyan-100">😊 マイスタンプ</b>
           {onShop && <button type="button" data-multi-stamp-shop onClick={onShop} className="min-h-[36px] rounded-xl bg-slate-800 px-2.5 text-[12px] font-black text-amber-100">🛒 買い足す</button>}
@@ -38911,6 +38911,36 @@ const TrainingCountUp = ({ from, to, delay = 0, duration = 900, format = null })
     return () => { clearTimeout(timer); if (raf) cancelAnimationFrame(raf); };
   }, [from, to, delay, duration]);
   return <span ref={holderRef}>{format ? format(value) : value}</span>;
+};
+// 大きな数字を、枠の幅に収まるように字の大きさを自動で縮める入れ物(はみ出し防止)。
+//   finalText … 最後に出る文字。これの幅で縮み方を決める(数え上げの途中は短いので、縮み方は途中で変わらない)
+//   子 … 実際に出す数字(TrainingCountUp など)。親の字の大きさ(em)を基準に、倍率だけ掛ける
+const FitNumber = ({ finalText, children, className = '', style = null }) => {
+  const outerRef = React.useRef(null);
+  const sizerRef = React.useRef(null);
+  const [scale, setScale] = React.useState(1);
+  const text = String(finalText == null ? '' : finalText);
+  React.useLayoutEffect(() => {
+    const fit = () => {
+      const o = outerRef.current, z = sizerRef.current;
+      if (!o || !z) return;
+      const avail = o.clientWidth, need = z.scrollWidth;
+      if (!(avail > 0) || !(need > 0)) return;
+      const next = need > avail ? Math.max(0.05, Math.floor((avail / need) * 1000) / 1000) : 1;
+      setScale(prev => (Math.abs(prev - next) < 0.002 ? prev : next));
+    };
+    fit();
+    let ro = null;
+    try { if (typeof ResizeObserver === 'function') { ro = new ResizeObserver(fit); ro.observe(outerRef.current); } } catch (e) {}
+    window.addEventListener('resize', fit);
+    return () => { window.removeEventListener('resize', fit); if (ro) ro.disconnect(); };
+  }, [text]);
+  return (
+    <div ref={outerRef} data-fit-number className={`relative w-full min-w-0 ${className}`} style={style || undefined}>
+      <span ref={sizerRef} aria-hidden="true" style={{ position: 'absolute', left: 0, top: 0, width: 0, height: 0, overflow: 'hidden', visibility: 'hidden', whiteSpace: 'nowrap', pointerEvents: 'none' }}>{text}</span>
+      <div data-fit-number-inner style={{ fontSize: `${scale}em`, whiteSpace: 'nowrap', lineHeight: 1.1 }}>{children}</div>
+    </div>
+  );
 };
 // 「いくつから いくつへ」の1項目。元の値を小さく、新しい値を大きく(増えたぶんは駆け上がる)、増えた量を「+○○」で出す。
 const PhaseGrowthCell = ({ row, d = 0, countMs = 900, compact = false, single = false }) => {
@@ -43996,7 +44026,7 @@ function RhythmSongSelectScreen({
           {/* ★押したあとはHOMEへ抜けるまで数秒かかる(報酬の付与・送信・バトルの演出の終わり待ち)。
               そのあいだは押せなくし、何を待っているのかを畫面で言う(2026-09-13) */}
           {/* 曲えらびの戻るはモードえらびへ(2026-10-03)。∞周回を締めてHOMEへ戻るボタンは、モードえらびの左上へ移した */}
-          <button data-rhythm-song-select-back type="button" aria-label={debugAll?'モンヒロビートのデバッグへ戻る':'モードえらびへ戻る'} title={debugAll?'デバッグへ戻る':'モードえらびへ戻る'}
+          <button data-rhythm-song-select-back type="button" aria-label={debugAll?'モンヒロビートのデバッグへ戻る':'モード選びへ戻る'} title={debugAll?'デバッグへ戻る':'モード選びへ戻る'}
             onClick={onExit}
             className="min-h-[44px] min-w-[44px] shrink-0 text-slate-300"><ArrowLeft size={20}/></button>
           {/* ボタンが4つ並ぶので、題名は縮んでも1行のまま(truncate)にする。
@@ -44006,7 +44036,7 @@ function RhythmSongSelectScreen({
                 題名はヘルプや案内と同じ呼び名「曲えらび」にそろえた(以前は「楽曲選択」) */}
             <small className="flex items-center gap-1.5 text-[8px] font-black leading-none tracking-[0.2em] text-fuchsia-300"><span className="max-[359px]:hidden">MONBEAT</span>{/* 本オープン(2026-11-09 10:00)のあとは「体験版」を出さない(2026-11-08 ミハリ S1)。デバッグの「記録しない」は今までどおり */}{(debugAll||!(typeof RELEASE_FLAGS!=='undefined'&&RELEASE_FLAGS.rhythmGrandOpen===true))&&<span data-rhythm-demo-badge data-rhythm-debug-select-badge={debugAll?true:undefined} className="rounded-full border border-amber-300/60 bg-amber-500/15 px-1.5 py-px text-[8px] tracking-normal text-amber-200">{debugAll?'記録しない':'体験版'}</span>}</small>
             {/* 幅の狭い端末(320px など)は縦の題名の行にアシスト・ミラーが入るので、♪と字の間隔を詰めて「曲えらび」を収める(2026-10-19) */}
-            <h2 className="truncate text-sm font-black leading-tight tracking-widest text-cyan-200 max-[359px]:tracking-normal"><span className="max-[359px]:hidden">🎵 </span>曲えらび</h2>
+            <h2 className="truncate text-sm font-black leading-tight tracking-widest text-cyan-200 max-[359px]:tracking-normal"><span className="max-[359px]:hidden">🎵 </span>曲選び</h2>
             {beatPointReleased&&Number.isFinite(beatPointBalance)&&<small data-rhythm-beat-point-balance aria-label={`所持ビートP ${beatPointBalance.toLocaleString()}`}
               className="block truncate text-[9px] font-black leading-tight text-violet-200/90">🎟️ {beatPointBalance.toLocaleString()} <span className="text-violet-300/80">ビートP</span></small>}
           </div>
@@ -44044,7 +44074,7 @@ function RhythmSongSelectScreen({
         {/* デバッグの全解放のときだけ: 試作の枠だけに絞る切り替え(社長室「試作の切り替えを目立つ形で」)。曲の数も出す */}
         {debugAll&&(()=>{const protoCount=rhythmDebugSelectRowCount('proto'),allCount=rhythmDebugSelectRowCount('all');
           return <div data-rhythm-debug-song-filter role="radiogroup" aria-label="並べる曲" className="grid shrink-0 grid-cols-2 gap-1.5 border-b border-amber-400/30 bg-amber-950/30 px-2 py-1.5">
-            {[['all',`すべての曲(${allCount})`],['proto',`🧪 試作だけ(${protoCount})`]].map(([id,label])=>{const on=debugSongFilter===id;
+            {[['all',`全ての曲(${allCount})`],['proto',`🧪 試作だけ(${protoCount})`]].map(([id,label])=>{const on=debugSongFilter===id;
               return <button key={id} type="button" role="radio" aria-checked={on} data-rhythm-debug-song-filter-option={id} onClick={()=>setDebugSongFilter(id)}
                 className={`min-h-[44px] rounded-xl border px-2 text-[12px] font-black leading-tight ${on?'border-amber-300 bg-amber-500/80 text-slate-950':'border-white/15 bg-slate-900/80 text-amber-100'}`}>{label}</button>;})}
           </div>;})()}
@@ -44134,7 +44164,7 @@ function RhythmSongSelectScreen({
           <div className="flex items-center gap-1">
             <button style={JA_WRAP_STYLE} type="button" data-rhythm-event-notice-toggle aria-expanded="false" onClick={()=>setEventNoticeOpen(true)}
               className="min-h-[44px] min-w-0 flex-1 text-left text-[11px] font-black leading-tight text-amber-200 active:scale-[.99]">
-              🏆 {rhythmEventNotice.kind==='limited'?<>{jaWrap(rhythmEventNotice.name)} 開催中！</>:jaWrap('今週の対象曲')}<span className="ml-1 text-[10px] text-fuchsia-200">▼ ひらく</span>
+              🏆 {rhythmEventNotice.kind==='limited'?<>{jaWrap(rhythmEventNotice.name)} 開催中！</>:jaWrap('今週の対象曲')}<span className="ml-1 text-[10px] text-fuchsia-200">▼ 開く</span>
             </button>
             <button type="button" data-rhythm-event-notice-close onClick={dismissRhythmEventNotice} aria-label="この案内を閉じる" className="min-h-[44px] min-w-[44px] shrink-0 rounded-lg text-slate-400 font-black">×</button>
           </div>
@@ -44361,7 +44391,7 @@ function RhythmHelpScreen({
             </>}
             <button style={JA_WRAP_STYLE} data-rhythm-demo-help-tutorial onClick={startRhythmTutorial}
               className="mt-3 min-h-[52px] w-full rounded-2xl bg-gradient-to-r from-cyan-500 to-fuchsia-600 text-sm font-black text-white">{jaWrap('🎓 もう一度チュートリアルを見る')}</button>
-            <p className="mt-2 text-[10px] leading-relaxed text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('曲えらびへ戻って、助手が最初から説明します。何度でも見られます。')}</p>
+            <p className="mt-2 text-[10px] leading-relaxed text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('曲選びへ戻って、助手が最初から説明します。何度でも見られます。')}</p>
             <div data-rhythm-demo-help-list className="mt-4 space-y-2">
               {topics.length===0
                 ?<p className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-xs text-slate-300">説明がまだありません。</p>
@@ -44453,7 +44483,7 @@ function RhythmEventRewardModal({ prize, onClaim, claiming }) {
         </ul>
         {participation&&(
           <div data-rhythm-event-reward-participation className="mt-2 rounded-2xl border border-cyan-300/40 bg-cyan-500/5 p-2">
-            <p className="text-[10px] font-black text-cyan-200">参加報酬（{weekly?`その週に${participation.plays}回遊びました`:`対象曲を${participation.songs}曲すべて`}）</p>
+            <p className="text-[10px] font-black text-cyan-200">参加報酬（{weekly?`その週に${participation.plays}回遊びました`:`対象曲を${participation.songs}曲全て`}）</p>
             <p className="mt-1 text-[10px] leading-tight text-white">{helpWrap(rhythmEventParticipationText(participation))}</p>
           </div>
         )}
@@ -44996,13 +45026,13 @@ function RhythmRankingScreen({
               {/* 参加報酬。入賞しなくてももらえるので、順位の表とは分けて出す */}
               {eventParticipation&&<p data-rhythm-event-participation
                 className="rounded-2xl border border-fuchsia-300/40 bg-fuchsia-500/5 p-2 text-[10px] leading-tight text-slate-200">
-                <b className="text-fuchsia-200">参加報酬</b>　{eventWeekly?`その週に${eventParticipation.plays}回遊ぶと`:`対象曲を${eventParticipation.songs}曲すべて遊ぶと`} {rhythmEventParticipationText(eventParticipation)}
+                <b className="text-fuchsia-200">参加報酬</b>　{eventWeekly?`その週に${eventParticipation.plays}回遊ぶと`:`対象曲を${eventParticipation.songs}曲全て遊ぶと`} {rhythmEventParticipationText(eventParticipation)}
               </p>}
               {/* 週間の数え方(2026-09-13・ユーザーが決めた)。「ベストが載る」と思って遊ぶと
                   何度も遊ぶ意味が伝わらないので、報酬の表と同じ場所で先に伝える */}
               {eventWeekly&&<p style={JA_WRAP_STYLE} data-rhythm-week-score-rule
                 className="rounded-2xl border border-fuchsia-300/40 bg-fuchsia-500/5 p-2 text-[10px] leading-tight text-slate-200">
-                <b className="text-fuchsia-200">スコアの数え方</b>　その週に遊んだぶんを<b className="text-white">すべて足します</b>{jaWrap('。曲も難易度も問わず、同じ曲を何度遊んでもそのつど積み上がります（上限なし）。満点は難易度ごとに違います（EASY 80万〜MASTER 100万）。「総合」タブが曲ごとのベストを合計するのに対し、こちらは')}<b className="text-white">遊んだ量</b>で競います。
+                <b className="text-fuchsia-200">スコアの数え方</b>　その週に遊んだぶんを<b className="text-white">全て足します</b>{jaWrap('。曲も難易度も問わず、同じ曲を何度遊んでもそのつど積み上がります（上限なし）。満点は難易度ごとに違います（EASY 80万〜MASTER 100万）。「総合」タブが曲ごとのベストを合計するのに対し、こちらは')}<b className="text-white">遊んだ量</b>で競います。
               </p>}
               {/* ∞周回の倍率(2026-09-11・ユーザー指示「イベント時は対象曲は3倍」)。
                   報酬の表と同じ場所に置く。対象曲を遊ぶ理由が順位だけではなくなるため */}
@@ -48241,8 +48271,8 @@ function WaveResultScreen({
         {!isQuickMode(runMode)&&(<>
         <div className="flex justify-between items-center border-b border-white/10 pb-0.5"><span className="text-slate-400 text-[11px] font-bold uppercase">WAVE ボーナス ({waveResult.wave} WAVE)</span><span className="text-yellow-400 font-mono font-black text-base">x{waveResult.waveMult.toFixed(2)}</span></div>
         <div className="flex justify-between items-center border-b border-white/10 pb-0.5"><span className="text-slate-400 text-[11px] font-bold uppercase">残りターン数ボーナス ({waveResult.remainingTurns})</span><span className="text-blue-400 font-mono font-black text-base">x{waveResult.turnMult.toFixed(2)}</span></div>
-        <div className="pt-1 flex flex-col gap-0.5 text-right"><div className="text-[9px] text-slate-500 font-bold uppercase italic">難易度ボーナス ({extremeRun?extremeDifficulty:difficulty}): x{scoreMultiplier}</div><div className="flex justify-between items-end"><span className="text-indigo-400 text-xs font-black uppercase">獲得スコア</span><span className="text-white font-mono font-black text-xl"><TrainingCountUp from={0} to={waveResult.roundScore} delay={600} duration={1000} format={v=>v.toLocaleString()}/></span></div></div>
-        <div className="pt-1 flex justify-between items-end border-t border-white/20"><span className="text-amber-500 text-[11px] font-black uppercase">累計スコア</span><span className="text-amber-400 font-mono font-black text-lg"><TrainingCountUp from={Math.max(0,waveResult.totalScore-waveResult.roundScore)} to={waveResult.totalScore} delay={900} duration={1000} format={v=>v.toLocaleString()}/></span></div>
+        <div className="pt-1 flex flex-col gap-0.5 text-right"><div className="text-[9px] text-slate-500 font-bold uppercase italic">難易度ボーナス ({extremeRun?extremeDifficulty:difficulty}): x{scoreMultiplier}</div><div className="flex justify-between items-end"><span className="text-indigo-400 text-xs font-black uppercase">獲得スコア</span><span className="text-white font-mono font-black text-xl min-w-0 flex-1 pl-2"><FitNumber finalText={Number(waveResult.roundScore).toLocaleString()} style={{textAlign:'right'}}><TrainingCountUp from={0} to={waveResult.roundScore} delay={600} duration={1000} format={v=>v.toLocaleString()}/></FitNumber></span></div></div>
+        <div className="pt-1 flex justify-between items-end border-t border-white/20"><span className="text-amber-500 text-[11px] font-black uppercase">累計スコア</span><span className="text-amber-400 font-mono font-black text-lg min-w-0 flex-1 pl-2"><FitNumber finalText={Number(waveResult.totalScore).toLocaleString()} style={{textAlign:'right'}}><TrainingCountUp from={Math.max(0,waveResult.totalScore-waveResult.roundScore)} to={waveResult.totalScore} delay={900} duration={1000} format={v=>v.toLocaleString()}/></FitNumber></span></div>
         </>)}
       </div>
       </div>
@@ -48540,7 +48570,7 @@ function ChampionScreen({
   speciesChallengeFromDebugRef, speciesChallengeSaveRunRef, speciesChallengeBattleRunRef,
 }) {
   return (
-<div data-champion-screen className="fixed inset-0 flex flex-col items-center p-6 text-center [@media(orientation:landscape)_and_(max-height:520px)]:grid [@media(orientation:landscape)_and_(max-height:520px)]:grid-cols-2 [@media(orientation:landscape)_and_(max-height:520px)]:grid-rows-[1fr_auto_auto_auto_auto] [@media(orientation:landscape)_and_(max-height:520px)]:gap-x-4 [@media(orientation:landscape)_and_(max-height:520px)]:justify-items-center [@media(orientation:landscape)_and_(max-height:520px)]:content-stretch" style={{position:'fixed',inset:0,paddingTop:'max(24px, env(safe-area-inset-top))',paddingBottom:'max(24px, env(safe-area-inset-bottom))',zIndex:80000,background:'linear-gradient(to bottom right,#fbbf24,#78350f)'}}><EndConfetti/><div className="relative z-10 shrink-0 flex flex-col items-center [@media(orientation:landscape)_and_(max-height:520px)]:col-start-1 [@media(orientation:landscape)_and_(max-height:520px)]:self-center"><Crown size={64} className="mh-end-crown text-white animate-bounce mb-3 [@media(max-height:700px)]:h-10 [@media(max-height:700px)]:w-10 [@media(max-height:700px)]:mb-1"/><h1 className="mh-end-title text-3xl font-black italic text-white uppercase [@media(max-height:700px)]:text-2xl">CHAMPION</h1>{!isQuickMode(runMode)&&<div className="mh-end-score w-full max-w-xs bg-black/40 border border-white/20 rounded-3xl p-6 mb-3 mt-3 shadow-2xl [@media(max-height:700px)]:p-2 [@media(max-height:700px)]:my-1.5 [@media(max-height:700px)]:rounded-2xl"><div className="text-5xl font-mono font-black text-white [@media(max-height:700px)]:text-3xl"><TrainingCountUp from={0} to={score} delay={500} duration={1400} format={v=>v.toLocaleString()}/></div></div>}</div>{/* もらった物の一覧。背の低い画面では見出しと「HOMEへ」を小さくして、ここを広く取る。横向きの背の低い画面では右の列にまとめる
+<div data-champion-screen className="fixed inset-0 flex flex-col items-center p-6 text-center [@media(orientation:landscape)_and_(max-height:520px)]:grid [@media(orientation:landscape)_and_(max-height:520px)]:grid-cols-2 [@media(orientation:landscape)_and_(max-height:520px)]:grid-rows-[1fr_auto_auto_auto_auto] [@media(orientation:landscape)_and_(max-height:520px)]:gap-x-4 [@media(orientation:landscape)_and_(max-height:520px)]:justify-items-center [@media(orientation:landscape)_and_(max-height:520px)]:content-stretch" style={{position:'fixed',inset:0,paddingTop:'max(24px, env(safe-area-inset-top))',paddingBottom:'max(24px, env(safe-area-inset-bottom))',zIndex:80000,background:'linear-gradient(to bottom right,#fbbf24,#78350f)'}}><EndConfetti/><div className="relative z-10 shrink-0 w-full flex flex-col items-center [@media(orientation:landscape)_and_(max-height:520px)]:col-start-1 [@media(orientation:landscape)_and_(max-height:520px)]:self-center"><Crown size={64} className="mh-end-crown text-white animate-bounce mb-3 [@media(max-height:700px)]:h-10 [@media(max-height:700px)]:w-10 [@media(max-height:700px)]:mb-1"/><h1 className="mh-end-title text-3xl font-black italic text-white uppercase [@media(max-height:700px)]:text-2xl">CHAMPION</h1>{!isQuickMode(runMode)&&<div className="mh-end-score w-full max-w-xs bg-black/40 border border-white/20 rounded-3xl p-6 mb-3 mt-3 shadow-2xl [@media(max-height:700px)]:p-2 [@media(max-height:700px)]:my-1.5 [@media(max-height:700px)]:rounded-2xl"><div className="text-5xl font-mono font-black text-white [@media(max-height:700px)]:text-3xl"><FitNumber finalText={Number(score).toLocaleString()}><TrainingCountUp from={0} to={score} delay={500} duration={1400} format={v=>v.toLocaleString()}/></FitNumber></div></div>}</div>{/* もらった物の一覧。背の低い画面では見出しと「HOMEへ」を小さくして、ここを広く取る。横向きの背の低い画面では右の列にまとめる
     (320 は2〜3行、844×390 は1行しか見えなかった。2026-10-27 ダメダシくん) */}
 <div data-champion-rewards className="relative z-10 flex-1 min-h-0 w-full flex flex-col items-center overflow-y-auto mh-scroll [@media(orientation:landscape)_and_(max-height:520px)]:col-start-2 [@media(orientation:landscape)_and_(max-height:520px)]:row-start-1 [@media(orientation:landscape)_and_(max-height:520px)]:row-span-5 [@media(orientation:landscape)_and_(max-height:520px)]:h-full"><div className="m-auto w-full flex flex-col items-center">{masuRegisterButtonNode()}{speciesChallengeClearCardNode()}{finalRewardSummary&&<RewardSummaryCard key={resultProcessing?'locked':'ready'} summary={finalRewardSummary} onPresentationComplete={resultProcessing?undefined:()=>setChampionPresentationComplete(true)}/>}{runHighlights.rankingFailed&&<RankingFailedNote/>}</div></div>{/* みゅあの吹き出しは一覧の外に置き、いつも見えるようにする(320 では一覧の下に隠れていた) */}<div data-champion-bubble className="relative z-10 w-full max-w-xs mx-auto mt-2 shrink-0 text-left [@media(orientation:landscape)_and_(max-height:520px)]:col-start-1"><AssistantBubble scene="resultWin" condition={runHighlights.firstWin?'firstWin':runHighlights.newRecord?'newRecord':runHighlights.firstClear?'firstClear':null} compact/></div>{isQuickMode(runMode)&&autoRepeat&&<div className="grid grid-cols-2 gap-2 w-full max-w-xs mt-2 [@media(orientation:landscape)_and_(max-height:520px)]:col-start-1"><button onClick={()=>setAutoRepeatEnabled(false)} className="min-h-[40px] rounded-xl bg-fuchsia-950/70 border border-fuchsia-300 text-fuchsia-100 text-xs font-black">∞周回 OFF</button><button onClick={()=>setAutoBattleEnabled(false)} className="min-h-[40px] rounded-xl bg-slate-900/70 border border-white/30 text-white text-xs font-black">AUTO OFF</button></div>}{/* 種族チャレンジは続けて別の種族・難易度へ挑みやすいよう、選択画面への導線を足す */}
 {speciesChallengeBattleRun&&<button data-species-champion-back onClick={()=>{const keepSaving=speciesChallengeSaveRunRef.current;const keepDebug=speciesChallengeFromDebugRef.current;const keepMode=speciesChallengeRunMode(speciesChallengeBattleRunRef.current);runResultActionOnce(()=>{returnToHome();openSpeciesChallengeSelection({saveProgress:keepSaving,fromDebug:keepDebug,mode:keepMode});});}} disabled={resultActionPending} className="w-full max-w-xs bg-cyan-700 text-white py-3.5 rounded-2xl font-black shrink-0 mt-2 disabled:opacity-50 [@media(max-height:700px)]:py-2.5 [@media(orientation:landscape)_and_(max-height:520px)]:col-start-1">種族チャレンジ選択へ戻る</button>}<button onClick={()=>runResultActionOnce(returnToHome)} disabled={resultActionPending} aria-busy={resultActionPending} className="w-full max-w-xs bg-white text-amber-900 py-4 rounded-3xl font-black text-xl uppercase shadow-2xl active:scale-95 transition-transform shrink-0 mt-2 disabled:opacity-50 disabled:cursor-not-allowed [@media(max-height:700px)]:py-2.5 [@media(max-height:700px)]:text-base [@media(max-height:700px)]:rounded-2xl [@media(orientation:landscape)_and_(max-height:520px)]:col-start-1">{resultActionPending?'処理中…':'HOMEへ'}</button></div>
@@ -48552,7 +48582,7 @@ function GameOverScreen({
   runHighlights, runMode, runResultActionOnce, score,
 }) {
   return (
-<div className="mh-game-over-screen fixed inset-0 flex flex-col items-center text-center" style={{position:'fixed',inset:0,zIndex:80000,backgroundColor:'rgba(0,0,0,0.97)'}}><span aria-hidden="true" className="mh-end-vignette"/><div className="mh-game-over-head relative z-10 shrink-0 flex flex-col items-center"><Skull size={48} className="mh-end-skull text-red-700 mb-3"/><h2 className="mh-end-title text-2xl font-black italic text-white uppercase">敗 北</h2>{!isQuickMode(runMode)&&<div className="mh-end-score bg-white/5 border border-white/10 rounded-2xl p-4 mb-3 mt-3 w-full max-w-xs"><div className="text-3xl font-mono font-black text-white"><TrainingCountUp from={0} to={score} delay={500} duration={1000} format={v=>v.toLocaleString()}/></div></div>}</div><div className="flex-1 min-h-0 w-full flex flex-col items-center overflow-y-auto mh-scroll"><div className="m-auto w-full flex flex-col items-center">{masuRegisterButtonNode()}{finalRewardSummary&&<RewardSummaryCard summary={finalRewardSummary}/>}{runHighlights.rankingFailed&&<RankingFailedNote/>}<div className="w-full max-w-xs mx-auto mt-3 text-left"><AssistantBubble scene="resultLose" condition={runHighlights.firstLose?'firstLose':null} compact/></div></div></div><div className="mh-game-over-actions flex flex-col gap-3 w-full max-w-xs shrink-0 mt-2"><button onClick={()=>runResultActionOnce(handleRetry)} disabled={resultActionPending} className="w-full bg-red-600 text-white py-4 rounded-2xl font-black text-lg uppercase shadow-2xl flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"><RotateCcw size={20}/> {resultActionPending?'処理中…':'再挑戦'}</button><button onClick={()=>runResultActionOnce(returnToHome)} disabled={resultActionPending} className="w-full bg-slate-800 text-slate-400 py-3 rounded-2xl font-black text-sm uppercase disabled:opacity-50 disabled:cursor-not-allowed">トップへ</button></div></div>
+<div className="mh-game-over-screen fixed inset-0 flex flex-col items-center text-center" style={{position:'fixed',inset:0,zIndex:80000,backgroundColor:'rgba(0,0,0,0.97)'}}><span aria-hidden="true" className="mh-end-vignette"/><div className="mh-game-over-head relative z-10 shrink-0 flex flex-col items-center"><Skull size={48} className="mh-end-skull text-red-700 mb-3"/><h2 className="mh-end-title text-2xl font-black italic text-white uppercase">敗 北</h2>{!isQuickMode(runMode)&&<div className="mh-end-score bg-white/5 border border-white/10 rounded-2xl p-4 mb-3 mt-3 w-full max-w-xs"><div className="text-3xl font-mono font-black text-white"><FitNumber finalText={Number(score).toLocaleString()}><TrainingCountUp from={0} to={score} delay={500} duration={1000} format={v=>v.toLocaleString()}/></FitNumber></div></div>}</div><div className="flex-1 min-h-0 w-full flex flex-col items-center overflow-y-auto mh-scroll"><div className="m-auto w-full flex flex-col items-center">{masuRegisterButtonNode()}{finalRewardSummary&&<RewardSummaryCard summary={finalRewardSummary}/>}{runHighlights.rankingFailed&&<RankingFailedNote/>}<div className="w-full max-w-xs mx-auto mt-3 text-left"><AssistantBubble scene="resultLose" condition={runHighlights.firstLose?'firstLose':null} compact/></div></div></div><div className="mh-game-over-actions flex flex-col gap-3 w-full max-w-xs shrink-0 mt-2"><button onClick={()=>runResultActionOnce(handleRetry)} disabled={resultActionPending} className="w-full bg-red-600 text-white py-4 rounded-2xl font-black text-lg uppercase shadow-2xl flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"><RotateCcw size={20}/> {resultActionPending?'処理中…':'再挑戦'}</button><button onClick={()=>runResultActionOnce(returnToHome)} disabled={resultActionPending} className="w-full bg-slate-800 text-slate-400 py-3 rounded-2xl font-black text-sm uppercase disabled:opacity-50 disabled:cursor-not-allowed">トップへ</button></div></div>
   );
 }
 
@@ -48561,7 +48591,7 @@ function GaveUpScreen({
   runMode, runResultActionOnce, score,
 }) {
   return (
-<div className="mh-game-over-screen fixed inset-0 flex flex-col items-center text-center" style={{position:'fixed',inset:0,zIndex:80000,backgroundColor:'rgba(0,0,0,0.97)'}}><div className="mh-game-over-head shrink-0 flex flex-col items-center"><Flag size={48} className="mh-end-flag text-slate-400 mb-3"/><h2 className="mh-end-title text-2xl font-black italic text-white uppercase">リタイア</h2>{!isQuickMode(runMode)&&<div className="mh-end-score bg-white/5 border border-white/10 rounded-2xl p-4 mb-3 mt-3 w-full max-w-xs"><div className="text-3xl font-mono font-black text-white"><TrainingCountUp from={0} to={score} delay={500} duration={1000} format={v=>v.toLocaleString()}/></div></div>}</div><div className="flex-1 min-h-0 w-full flex flex-col items-center overflow-y-auto mh-scroll"><div className="m-auto w-full flex flex-col items-center">{masuRegisterButtonNode()}{finalRewardSummary&&<RewardSummaryCard summary={finalRewardSummary}/>}<div className="w-full max-w-xs mx-auto mt-3 text-left"><AssistantBubble scene="resultRetire" compact/></div></div></div><div className="mh-game-over-actions flex flex-col gap-3 w-full max-w-xs shrink-0 mt-2"><button onClick={()=>runResultActionOnce(handleRetry)} disabled={resultActionPending} className="w-full bg-red-600 text-white py-4 rounded-2xl font-black text-lg uppercase shadow-2xl flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"><RotateCcw size={20}/> {resultActionPending?'処理中…':'再挑戦'}</button><button onClick={()=>runResultActionOnce(returnToHome)} disabled={resultActionPending} className="w-full bg-slate-800 text-slate-400 py-3 rounded-2xl font-black text-sm uppercase disabled:opacity-50 disabled:cursor-not-allowed">トップへ</button></div></div>
+<div className="mh-game-over-screen fixed inset-0 flex flex-col items-center text-center" style={{position:'fixed',inset:0,zIndex:80000,backgroundColor:'rgba(0,0,0,0.97)'}}><div className="mh-game-over-head shrink-0 flex flex-col items-center"><Flag size={48} className="mh-end-flag text-slate-400 mb-3"/><h2 className="mh-end-title text-2xl font-black italic text-white uppercase">リタイア</h2>{!isQuickMode(runMode)&&<div className="mh-end-score bg-white/5 border border-white/10 rounded-2xl p-4 mb-3 mt-3 w-full max-w-xs"><div className="text-3xl font-mono font-black text-white"><FitNumber finalText={Number(score).toLocaleString()}><TrainingCountUp from={0} to={score} delay={500} duration={1000} format={v=>v.toLocaleString()}/></FitNumber></div></div>}</div><div className="flex-1 min-h-0 w-full flex flex-col items-center overflow-y-auto mh-scroll"><div className="m-auto w-full flex flex-col items-center">{masuRegisterButtonNode()}{finalRewardSummary&&<RewardSummaryCard summary={finalRewardSummary}/>}<div className="w-full max-w-xs mx-auto mt-3 text-left"><AssistantBubble scene="resultRetire" compact/></div></div></div><div className="mh-game-over-actions flex flex-col gap-3 w-full max-w-xs shrink-0 mt-2"><button onClick={()=>runResultActionOnce(handleRetry)} disabled={resultActionPending} className="w-full bg-red-600 text-white py-4 rounded-2xl font-black text-lg uppercase shadow-2xl flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"><RotateCcw size={20}/> {resultActionPending?'処理中…':'再挑戦'}</button><button onClick={()=>runResultActionOnce(returnToHome)} disabled={resultActionPending} className="w-full bg-slate-800 text-slate-400 py-3 rounded-2xl font-black text-sm uppercase disabled:opacity-50 disabled:cursor-not-allowed">トップへ</button></div></div>
   );
 }
 
@@ -57433,7 +57463,7 @@ function RhythmBeatPresenceList({ open, assistants, friends, onPick, onClose, re
       <button type="button" aria-label="閉じる" className="absolute inset-0 bg-slate-950/70" onClick={onClose} />
       <div className="relative w-full max-w-sm space-y-2">
         <RhythmBeatPresenceStrip assistants={assistants} friends={friends} onPick={onPick} resolveIconUrl={resolveIconUrl} />
-        <button type="button" data-rhythm-beat-presence-list-close className="block w-full rounded-xl bg-slate-700 py-2.5 text-sm font-black text-white active:scale-[.98]" onClick={onClose}>とじる</button>
+        <button type="button" data-rhythm-beat-presence-list-close className="block w-full rounded-xl bg-slate-700 py-2.5 text-sm font-black text-white active:scale-[.98]" onClick={onClose}>閉じる</button>
       </div>
     </div>
   );
@@ -57448,7 +57478,7 @@ function RhythmBeatPresenceSheet({ pick, friend = null, onClose, onCallAssistant
   const src = isAssistant ? rhythmBeatAssistantFace(pick.id)
     : (friend && friend.icon && typeof resolveIconUrl === 'function' ? resolveIconUrl(friend.icon) : '');
   const title = isAssistant ? `${name} は いま練習中` : friend && friend.kind === 'room' ? `${name} さんが部屋を開いています` : friend && friend.kind === 'busy' ? `${name} さんは部屋で遊び中` : friend && friend.kind === 'private' ? `${name} さんは合言葉の部屋にいます` : `${name} さんが いまモンヒロビートにいます`;
-  const sub = isAssistant ? 'モンヒロビートにいるあいだは券なし' : friend && friend.kind === 'room' && friend.room ? `フリーマッチ ${friend.room.n}/${RHYTHM_MULTI_ROOM_MAX}人${friend.room.ph === 'select' ? '・曲えらび中' : '・待合い'}` : (k ? k.tag : '');
+  const sub = isAssistant ? 'モンヒロビートにいるあいだは券なし' : friend && friend.kind === 'room' && friend.room ? `フリーマッチ ${friend.room.n}/${RHYTHM_MULTI_ROOM_MAX}人${friend.room.ph === 'select' ? '・曲選び中' : '・待合い'}` : (k ? k.tag : '');
   const line = isAssistant
     ? 'フリーマッチかプライベートの部屋で「呼ぶ」と、セッション券なしで一緒に演奏できます(何曲でも)。ソロライブには来られません。'
     : friend && friend.kind === 'room' ? '「入る」で、その部屋へ入れます。'
@@ -57481,7 +57511,7 @@ function RhythmBeatPresenceSheet({ pick, friend = null, onClose, onCallAssistant
         </div>
         <p data-rhythm-beat-presence-line className="mt-2.5 rounded-xl bg-slate-800 px-2.5 py-2 text-[12px] font-bold leading-relaxed text-slate-100" style={JA_WRAP_STYLE}>{jaWrap(line)}</p>
         <div className={`mt-2.5 grid gap-2 ${action ? 'grid-cols-2' : 'grid-cols-1'}`}>
-          <button type="button" onClick={onClose} className="min-h-[44px] rounded-xl border border-white/20 text-sm font-black">とじる</button>
+          <button type="button" onClick={onClose} className="min-h-[44px] rounded-xl border border-white/20 text-sm font-black">閉じる</button>
           {action && <button type="button" data-rhythm-beat-presence-go onClick={action.go} className="min-h-[44px] rounded-xl bg-gradient-to-r from-pink-600 to-violet-600 text-sm font-black">{action.label}</button>}
         </div>
       </div>
@@ -57510,12 +57540,12 @@ function RhythmMultiRoomList({ onJoin, onCreate, onBack, resolveIconUrl }) {
   return (
     <div data-rhythm-multi-room-list={list ? list.length : ''} className="flex flex-col gap-2">
       <div className="flex items-center gap-2">
-        <button type="button" data-rhythm-multi-room-list-back onClick={onBack} className="min-h-[44px] shrink-0 rounded-xl bg-slate-800 px-3 text-xs font-black">← もどる</button>
+        <button type="button" data-rhythm-multi-room-list-back onClick={onBack} className="min-h-[44px] shrink-0 rounded-xl bg-slate-800 px-3 text-xs font-black">← 戻る</button>
         <b className="min-w-0 flex-1 truncate text-base font-black text-white">部屋に入る</b>
       </div>
       <p className="text-[11px] font-bold leading-snug text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('いま人を待っている部屋です。自動で新しくなります')}</p>
       {list == null
-        ? <p className="rounded-xl bg-slate-950/50 p-3 text-center text-[12px] font-bold text-slate-300">部屋をさがしています…</p>
+        ? <p className="rounded-xl bg-slate-950/50 p-3 text-center text-[12px] font-bold text-slate-300">部屋を探しています…</p>
         : list.length === 0
           ? <p data-rhythm-multi-room-list-empty className="rounded-xl border border-dashed border-slate-500/60 p-3 text-center text-[12px] font-bold leading-snug text-slate-300" style={JA_WRAP_STYLE}>{jaWrap('いま開いている部屋はありません。部屋を作って待ってみましょう')}</p>
           : <ul className="flex flex-col gap-1.5">{list.map((r) => (
@@ -57523,7 +57553,7 @@ function RhythmMultiRoomList({ onJoin, onCreate, onBack, resolveIconUrl }) {
               <span className="h-9 w-9 shrink-0"><RhythmMultiAvatar m={{ icon: r.hi }} resolveIconUrl={resolveIconUrl} sizeClass="h-9 w-9" small /></span>
               <span className="min-w-0 flex-1 leading-tight">
                 <b className="block truncate text-[13px] font-black text-white">{r.hn ? `${r.hn} の部屋` : `部屋 ${r.code}`}</b>
-                <small className="block truncate text-[10px] font-bold text-slate-400">{[r.hr > 0 ? `ブリーダーLv.${r.hr}` : '', r.ph === 'select' ? '曲えらび中' : '待っています'].filter(Boolean).join(' ・ ')}</small>
+                <small className="block truncate text-[10px] font-bold text-slate-400">{[r.hr > 0 ? `ブリーダーLv.${r.hr}` : '', r.ph === 'select' ? '曲選び中' : '待っています'].filter(Boolean).join(' ・ ')}</small>
               </span>
               <span className="shrink-0 rounded-md bg-cyan-800/70 px-1.5 py-0.5 text-[10px] font-black text-cyan-100">{r.n}/{RHYTHM_MULTI_ROOM_MAX}人</span>
               <button type="button" data-rhythm-multi-room-join={r.code} onClick={() => onJoin(r.code)} className="min-h-[44px] shrink-0 rounded-lg bg-sky-600 px-3 text-[13px] font-black active:scale-[.97]">入る</button>
@@ -57543,7 +57573,7 @@ function RhythmMultiAloneHint({ alone, onLeave }) {
   return (
     <div data-rhythm-multi-alone-hint className="mt-1.5 rounded-xl border border-amber-300/40 bg-amber-950/40 p-2 text-[11px] font-bold leading-snug text-amber-100">
       いまはメンバーが集まりにくいようです。このまま待つか、フレンドとプライベートルームで遊ぶのもおすすめです。
-      {onLeave && <button type="button" onClick={onLeave} className="mt-1 block min-h-[36px] w-full rounded-lg bg-slate-700 text-[11px] font-black">モードえらびへ戻る</button>}
+      {onLeave && <button type="button" onClick={onLeave} className="mt-1 block min-h-[36px] w-full rounded-lg bg-slate-700 text-[11px] font-black">モード選びへ戻る</button>}
     </div>
   );
 }
@@ -57693,7 +57723,7 @@ function RhythmMultiAwayBar({ hidden = false, busy = false, onReturn = null }) {
 function MultiAwayBar({ text, hot = false, busy = false, onReturn = null, onLeave = null, icon = '🎵', game = '' }) {
   const leave = () => { if (onLeave && window.confirm('ルームを出ますか?')) onLeave(); };
   return (
-    <div data-multi-away-bar={hot ? 'hot' : 'wait'} data-multi-away-game={game} className="pointer-events-none fixed inset-x-0 top-0 z-[1000] flex justify-center px-2 pt-[max(env(safe-area-inset-top),6px)]">
+    <div data-multi-away-bar={hot ? 'hot' : 'wait'} data-multi-away-game={game} className="pointer-events-none fixed inset-x-0 top-0 z-[1000] flex justify-center px-2 pt-[max(var(--mh-sa-top),6px)]">
       <div className={`pointer-events-auto flex w-full max-w-[420px] items-center gap-2 rounded-2xl border px-3 py-1.5 text-white shadow-lg ${hot ? 'border-amber-200/80 bg-fuchsia-800/95' : 'border-cyan-300/50 bg-slate-900/95'}`}>
         <span className={`min-w-0 flex-1 text-[12px] font-black leading-snug ${hot ? 'animate-pulse' : ''}`} style={JA_WRAP_STYLE}>{icon ? `${icon} ` : ''}{jaWrap(text)}</span>
         {busy ? <small className="shrink-0 text-[10px] font-bold text-amber-100">終わったら戻れます</small>
@@ -57780,7 +57810,7 @@ function RhythmMultiMemberSheet({ m, res, resolveIconUrl, friendsOn, friendSelfI
     setBusy(false);
   };
   const text = state && typeof FRIENDS_RESULT_TEXT !== 'undefined' && FRIENDS_RESULT_TEXT[state] ? FRIENDS_RESULT_TEXT[state][0]
-    : state === 'error' ? '申請を送れませんでした。もう一度ためしてください' : '';
+    : state === 'error' ? '申請を送れませんでした。もう一度試してください' : '';
   return (
     <div className="absolute inset-0 z-[86000] flex items-center justify-center p-4">
       <button type="button" aria-label="閉じる" className="absolute inset-0 bg-slate-950/70" onClick={onClose} />
@@ -57830,7 +57860,7 @@ function RhythmMultiBuddyInfoSheet({ m, masu, songName, resolveIconUrl, onClose 
         <div className="mx-auto w-fit"><RhythmMultiAvatar m={m} resolveIconUrl={resolveIconUrl} sizeClass="h-16 w-16" /></div>
         <b className="mt-2 block truncate text-base font-black">{m.name}</b>
         <small className="block text-[12px] font-black text-lime-200">ビートLv.{m.level}</small>
-        <p className="mt-3 text-[11px] font-bold leading-relaxed text-slate-300">ほかのメンバーが呼んだマスモンです。くわしいステータスは、呼んだ人だけが見られます</p>
+        <p className="mt-3 text-[11px] font-bold leading-relaxed text-slate-300">ほかのメンバーが呼んだマスモンです。詳しいステータスは、呼んだ人だけが見られます</p>
         <button type="button" onClick={onClose} className="mt-3 min-h-[42px] w-full rounded-xl bg-slate-700 text-sm font-black">閉じる</button>
       </div>
     </div>
@@ -58518,7 +58548,7 @@ function RhythmWatchScreen({ songs = [], resolveIconUrl = null }) {
     </span>
   );
   const body = (
-    <div data-rhythm-watch data-rhythm-watch-phase={v.phase} className="fixed inset-0 z-[95000] flex flex-col bg-slate-950 text-white" style={{ paddingTop: 'max(env(safe-area-inset-top), 6px)', paddingBottom: 'max(env(safe-area-inset-bottom), 6px)' }}>
+    <div data-rhythm-watch data-rhythm-watch-phase={v.phase} className="fixed inset-0 z-[95000] flex flex-col bg-slate-950 text-white" style={{ paddingTop: 'max(var(--mh-sa-top), 6px)', paddingBottom: 'max(var(--mh-sa-bottom), 6px)' }}>
       <style>{'@keyframes mhWatchPop{0%{opacity:0;transform:translateY(8px)}15%{opacity:1;transform:none}85%{opacity:1}100%{opacity:0}}'}</style>
       <header className="flex shrink-0 items-center gap-2 px-3">
         <button data-rhythm-watch-close type="button" aria-label="観戦をやめる" onClick={close} className="min-h-[44px] min-w-[44px] rounded-xl text-lg font-black text-slate-300">←</button>
@@ -58924,7 +58954,7 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
     if (!view || !friendSelfId) return;
     const result = await sbSendRoomInvite(friendSelfId, friendId, view.code);
     if (result === 'invited') { setInvitedIds((prev) => ({ ...prev, [friendId]: true })); setInviteMessage(''); }
-    else setInviteMessage(result === 'notready' ? 'フレンド機能はただいま準備中です' : '招待を送れませんでした。もう一度ためしてください');
+    else setInviteMessage(result === 'notready' ? 'フレンド機能はただいま準備中です' : '招待を送れませんでした。もう一度試してください');
   };
 
   // ライブ開始の合図が来たら 3・2・1 を数えて演奏へ入る。数えるのは受け取った時刻から(端末の時計のずれに左右されない)
@@ -59406,14 +59436,14 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
           </button>
           <div className="min-w-0 flex-1 leading-none">
             <small className="block truncate text-[8px] font-black tracking-[0.2em] text-fuchsia-300 max-[359px]:tracking-normal">MONBEAT ・ SELECT MODE</small>
-            <b className="mhms-title block truncate text-lg font-black leading-tight tracking-wider">モードえらび</b>
+            <b className="mhms-title block truncate text-lg font-black leading-tight tracking-wider">モード選び</b>
             {/* ビートランク(2026-10-29 社長)。立ち絵を小さくしないよう、上の帯に細い1行で出す(ボタンの列には置かない)。
                 ビートPと同じ行に、小さい札で並べる(2段にすると帯が高くなり、縦画面で立ち絵の枠が画面の半分を割った・2026-10-30)。
                 押すと詳しい画面(ランクごとのごほうびの一覧)が開く(2026-10-30 社長「報酬が全部見れるように」。カードランクと同じ) */}
             {(ms.beatPointText || Number.isFinite(ms.beatRankXp)) && (
               <div className="mt-0.5 flex min-w-0 items-center gap-2">
                 {ms.beatPointText && <small data-rhythm-beat-point-balance className="block min-w-0 shrink truncate text-[9px] font-black text-violet-200/90">{ms.beatPointText}</small>}
-                {Number.isFinite(ms.beatRankXp) && <div role="button" tabIndex={0} data-beat-rank-open aria-label="ビートランク。くわしく見る" className="min-w-0 flex-1 cursor-pointer active:scale-[.98]"
+                {Number.isFinite(ms.beatRankXp) && <div role="button" tabIndex={0} data-beat-rank-open aria-label="ビートランク。詳しく見る" className="min-w-0 flex-1 cursor-pointer active:scale-[.98]"
                   onClick={() => { Audio_.fgSe.tap(); setBeatRankOpen(true); }} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); Audio_.fgSe.tap(); setBeatRankOpen(true); } }}><PlayerRankStrip kind="beat" xp={ms.beatRankXp} size="xs"/></div>}
               </div>
             )}
@@ -59422,7 +59452,7 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
           <RhythmOrientationButton/>
         </header>
         {beatRankOpen && Number.isFinite(ms.beatRankXp) && <PlayerRankDetail kind="beat" xp={ms.beatRankXp} rewardsOf={beatRankRewardItems}
-          how="曲を遊ぶと経験値がたまります。難しい難易度ほど多く、HELL がいちばん多くたまります。その日はじめてクリアした1曲は +30 です。" onClose={() => setBeatRankOpen(false)}/>}
+          how="曲を遊ぶと経験値がたまります。難しい難易度ほど多く、HELL が一番多くたまります。その日初めてクリアした1曲は +30 です。" onClose={() => setBeatRankOpen(false)}/>}
         {ms.exiting && <div data-quick-run-exit-overlay className="absolute inset-0 z-[90000] flex items-center justify-center bg-slate-950/60 px-6 text-center"><b className="text-sm font-black text-amber-200">周回を終えています…</b></div>}
         {/* 縦画面: 上に助手の立ち絵(余った高さを使って大きく)、下にボタン。
             横画面: 左に立ち絵、右にボタン(2026-10-03・ユーザー指摘「サイズ感悪い」で組み直し) */}
@@ -59564,7 +59594,7 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
                         </span>
                         <span className="min-w-0 flex-1 leading-tight">
                           <b className="block truncate text-[13px] font-black text-white">{f.kind === 'room' ? `${f.userName} さんの部屋` : `${f.userName} さん`}</b>
-                          <small className="block truncate text-[10px] font-bold text-slate-300">{f.kind === 'room' ? `${f.room.n}/${RHYTHM_MULTI_ROOM_MAX}人${f.room.ph === 'select' ? '・曲えらび中' : '・待合い'}` : 'モンヒロビートにいる・部屋はまだ'}</small>
+                          <small className="block truncate text-[10px] font-bold text-slate-300">{f.kind === 'room' ? `${f.room.n}/${RHYTHM_MULTI_ROOM_MAX}人${f.room.ph === 'select' ? '・曲選び中' : '・待合い'}` : 'モンヒロビートにいる・部屋はまだ'}</small>
                         </span>
                         {f.kind === 'room'
                           ? <button type="button" data-rhythm-free-friend-join={f.room.code} onClick={() => joinFreeRoom(f.room.code)} className="min-h-[40px] shrink-0 rounded-xl bg-emerald-500 px-4 text-[13px] font-black text-white">入る</button>
@@ -59584,7 +59614,7 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
                   <button type="button" data-rhythm-multi-free-list-open onClick={() => setFreeList(true)} className="flex min-h-[60px] w-full items-center gap-3 rounded-2xl bg-gradient-to-b from-sky-500 to-blue-700 px-4 text-left active:scale-[.98]">
                     <span aria-hidden="true" className="text-2xl">🚪</span><span className="min-w-0 flex-1 leading-tight"><b className="block text-base font-black">部屋に入る</b><small className="block text-[11px] font-bold opacity-90" style={JA_WRAP_STYLE}>{jaWrap('いま開いている部屋の一覧から選ぶ')}</small>
                       <small data-rhythm-multi-free-room-count={freeRoomCount == null ? '' : String(freeRoomCount)} className="mt-1 flex items-center gap-1.5 text-[12px] font-black">
-                        {freeRoomCount == null ? <span className="text-sky-100/80">部屋をさがしています…</span>
+                        {freeRoomCount == null ? <span className="text-sky-100/80">部屋を探しています…</span>
                           : freeRoomCount === 0 ? <span className="text-amber-200">いま部屋はありません → 部屋を作ろう</span>
                           : <><span className="flex">{freeRooms.slice(0, 3).map((r, n) => <span key={r.code} className="h-6 w-6 shrink-0 overflow-hidden rounded-full border border-white/70 bg-slate-900" style={n ? { marginLeft: '-6px' } : undefined}><RhythmMultiAvatar m={{ icon: r.hi }} resolveIconUrl={resolveIconUrl} sizeClass="h-6 w-6" small /></span>)}</span>
                             <span className="text-lime-200">🟢 {freeRoomCount}部屋 待っています</span></>}
@@ -59607,9 +59637,9 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
                 <button type="button" aria-label="閉じる" onClick={() => setPrivateOpen(false)} className="min-h-[44px] min-w-[44px] rounded-xl bg-slate-800 text-sm font-black">✕</button>
               </div>
               <section className="space-y-1.5 rounded-2xl border border-sky-300/25 bg-slate-950/50 p-3">
-                <b className="block text-[13px] font-black text-white">部屋をつくる</b>
+                <b className="block text-[13px] font-black text-white">部屋を作る</b>
                 <p className="text-[11px] font-bold leading-snug text-slate-300" style={JA_WRAP_STYLE}>{jaWrap('合言葉(ルームコード)ができます。フレンドに伝えて入ってもらいましょう')}</p>
-                <button data-rhythm-multi-create type="button" onClick={createPrivate} className="min-h-[48px] w-full rounded-xl bg-gradient-to-b from-sky-400 to-blue-600 text-sm font-black shadow-[inset_0_1px_0_rgba(255,255,255,.35)] active:scale-[.98]">＋ 部屋をつくる</button>
+                <button data-rhythm-multi-create type="button" onClick={createPrivate} className="min-h-[48px] w-full rounded-xl bg-gradient-to-b from-sky-400 to-blue-600 text-sm font-black shadow-[inset_0_1px_0_rgba(255,255,255,.35)] active:scale-[.98]">＋ 部屋を作る</button>
               </section>
               <section className="space-y-1.5 rounded-2xl border border-violet-300/25 bg-slate-950/50 p-3">
                 <b className="block text-[13px] font-black text-white">合言葉で入る</b>
@@ -59679,7 +59709,7 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
         {view && view.full
           ? <div className="min-h-0 flex-1 overflow-y-auto p-3"><section data-rhythm-multi-full className={card}>
             <p className="text-sm font-black text-rose-300">このルームは満員です(最大{RHYTHM_MULTI_ROOM_MAX}人)</p>
-            <button type="button" className={`${btn} mt-2 w-full bg-slate-700`} onClick={leaveRoom}>モードえらびへ戻る</button>
+            <button type="button" className={`${btn} mt-2 w-full bg-slate-700`} onClick={leaveRoom}>モード選びへ戻る</button>
           </section></div>
           : <>
             <RhythmMultiMemberCards onOpen={openBuddyInfo} bubbleOf={chatBubbleOf} members={members} hostId={view ? view.hostId : ''} selfId={view ? view.selfId : ''} resolveIconUrl={resolveIconUrl} size="tall"
@@ -59689,7 +59719,7 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
             {/* 下の欄は、上のメンバーの札の残りに縮む(2026-11-08 社長「下が少し切れてる」。札と欄の7割を足すと画面より高くなり、「ルームを出る」が下で切れていた)。入りきらないぶんは中で送る */}
             <div data-rhythm-multi-wait-panel className="max-h-[70%] min-h-0 shrink overflow-y-auto border-t border-white/10 bg-slate-950/90 p-2 landscape:mt-auto landscape:grid landscape:max-h-[58%] landscape:grid-cols-2 landscape:gap-2" style={{ paddingBottom: 'calc(.5rem + var(--mh-sa-bottom))' }}>
               <section data-rhythm-multi-matching className="rounded-2xl border border-white/15 bg-slate-900/85 p-2">
-                <p className="animate-pulse text-sm font-black text-amber-200">{!view ? `${RHYTHM_MULTI_MODE_LABELS[searching]}ルームをさがしています…` : 'メンバーを待っています…'}</p>
+                <p className="animate-pulse text-sm font-black text-amber-200">{!view ? `${RHYTHM_MULTI_MODE_LABELS[searching]}ルームを探しています…` : 'メンバーを待っています…'}</p>
                 <p className="mt-0.5 text-[10px] font-bold leading-snug text-slate-400">
                   {!view ? '' : publicRoom ? `${RHYTHM_MULTI_ROOM_MAX}人そろうか、2人以上でしばらく待つとメンバーが確定します` : isHost ? '2人以上そろったら「メンバー確定」を押してください' : 'ホストがメンバーを確定するのを待っています'}
                 </p>
@@ -60082,7 +60112,7 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
         hideRandom
         notice={(
           <div className="flex items-center gap-1.5">
-            <p className="min-w-0 flex-1 rounded-lg bg-slate-900/80 px-2 py-1 text-[10px] font-bold leading-snug text-slate-300" style={JA_WRAP_STYLE}>{jaWrap('全員がえらぶか時間になると、全員の選曲からシャッフルで1曲が決まります。')}{!room.deadline && jaWrap('いまは人があなたひとりなので、制限時間はありません。ゆっくり選べます。')}</p>
+            <p className="min-w-0 flex-1 rounded-lg bg-slate-900/80 px-2 py-1 text-[10px] font-bold leading-snug text-slate-300" style={JA_WRAP_STYLE}>{jaWrap('全員が選ぶか時間になると、全員の選曲からシャッフルで1曲が決まります。')}{!room.deadline && jaWrap('いまは人があなたひとりなので、制限時間はありません。ゆっくり選べます。')}</p>
             {/* 狭い画面では、制限時間の切り替えを注意書きの右に置く(行を増やさない。広い画面はヘッダーに出る) */}
             {isHost && selectTimeButton('min-[481px]:hidden', true)}
           </div>
@@ -60492,7 +60522,7 @@ function RhythmBuddyScoreChart({ recent, songName }) {
         ))}
       </svg>
       <p data-rhythm-buddy-chart-pick className="mt-1 text-[11px] font-black leading-snug text-slate-200">
-        <span className="text-slate-400">{list.length - pickedIndex === 1 ? 'いちばん新しい回' : `${list.length - pickedIndex}回前`}: </span>
+        <span className="text-slate-400">{list.length - pickedIndex === 1 ? '一番新しい回' : `${list.length - pickedIndex}回前`}: </span>
         {songName(picked.songId)} {picked.diffId ? rhythmBuddyDiffShort[picked.diffId] : ''} <b className="text-lime-200">{picked.score.toLocaleString()}点</b>
         <span className="text-slate-400">(満点の{pct(picked)}%)</span>
       </p>
@@ -60609,7 +60639,7 @@ function RhythmBuddyDetail({ masu, mon, dayKey, songName, onBack, ownerName = ''
       {onUseSeed && (
         <section data-rhythm-buddy-seed className="rounded-xl border border-lime-300/30 bg-slate-950/60 p-2">
           <div className="flex items-center justify-between gap-2">
-            <small className="text-[11px] font-black text-lime-100">🌱 性格のたね <b data-rhythm-buddy-seed-count className="text-amber-200">{seeds}個</b></small>
+            <small className="text-[11px] font-black text-lime-100">🌱 性格の種 <b data-rhythm-buddy-seed-count className="text-amber-200">{seeds}個</b></small>
             <button data-rhythm-buddy-seed-open type="button" disabled={seeds <= 0} onClick={() => { setSeedOpen((v) => !v); setSeedPick(''); }}
               className={`min-h-[34px] rounded-lg px-3 text-[11px] font-black ${seeds > 0 ? 'bg-lime-500 text-slate-950' : 'bg-slate-800 text-slate-500'}`}>{seedOpen ? 'やめる' : '性格を選び直す'}</button>
           </div>
@@ -60674,7 +60704,7 @@ function RhythmBuddyDetail({ masu, mon, dayKey, songName, onBack, ownerName = ''
         ))}
         {songCount > 5 && (
           <button data-rhythm-buddy-songs-all type="button" onClick={() => setAllSongs((v) => !v)} className="mt-1 min-h-[36px] w-full rounded-lg bg-slate-800 text-[11px] font-black text-slate-200">
-            {allSongs ? '上位5曲だけにする' : `遊んだ曲をすべて見る(${songCount}曲)`}
+            {allSongs ? '上位5曲だけにする' : `遊んだ曲を全て見る(${songCount}曲)`}
           </button>
         )}
       </section>
@@ -60764,7 +60794,7 @@ function RhythmBuddyListBar({ settings, onOpen, onChange }) {
         <span className="truncate text-[11px] font-black text-white">{lineage ? `${lineage.name}種` : '種族'}</span>
       </button>
       <button type="button" onClick={() => onOpen('filter')} className={`${btn} shrink-0 ${filterCount ? 'border-lime-400 bg-lime-950' : 'border-white/10 bg-slate-900'}`}>
-        <span className="text-[11px] font-black text-white">しぼりこみ</span>
+        <span className="text-[11px] font-black text-white">絞り込み</span>
         {filterCount > 0 && <span className="text-[10px] font-black text-lime-300">{filterCount}</span>}
       </button>
       <button data-rhythm-buddy-view-toggle={settings.view} type="button" onClick={() => onChange({ view: settings.view === 'card' ? 'list' : 'card' })}
@@ -60780,13 +60810,13 @@ function RhythmBuddyListSheet({ tab, settings, onChange, onTab, onClose }) {
   const toggle = (list, id) => (list.includes(id) ? list.filter((x) => x !== id) : [...list, id]);
   const lineages = typeof dexMainLineages === 'function' ? dexMainLineages() : [];
   return (
-    <div data-rhythm-buddy-list-sheet className="fixed inset-0 z-[87000] flex flex-col" style={{ backgroundColor: 'rgba(2,6,23,0.98)', paddingTop: 'env(safe-area-inset-top)' }}>
+    <div data-rhythm-buddy-list-sheet className="fixed inset-0 z-[87000] flex flex-col" style={{ backgroundColor: 'rgba(2,6,23,0.98)', paddingTop: 'var(--mh-sa-top)' }}>
       <div className="flex shrink-0 items-center gap-2 border-b border-white/10 p-4">
-        <h3 className="flex-1 text-base font-black text-white">並べ替え・しぼりこみ</h3>
+        <h3 className="flex-1 text-base font-black text-white">並べ替え・絞り込み</h3>
         <button type="button" aria-label="閉じる" onClick={onClose} className="min-h-[44px] min-w-[44px] rounded-full bg-white/5 text-lg font-black">✕</button>
       </div>
       <div className="flex shrink-0 gap-2 px-4 pt-3">
-        {[{ key: 'sort', label: '並べ替え' }, { key: 'lineage', label: '種族' }, { key: 'filter', label: 'しぼりこみ' }].map((t) => (
+        {[{ key: 'sort', label: '並べ替え' }, { key: 'lineage', label: '種族' }, { key: 'filter', label: '絞り込み' }].map((t) => (
           <button key={t.key} type="button" onClick={() => onTab(t.key)} className={`min-h-[44px] flex-1 rounded-xl text-xs font-black active:scale-95 ${tab === t.key ? 'bg-lime-500 text-slate-950' : 'border border-slate-800 bg-slate-900 text-slate-400'}`}>{t.label}</button>
         ))}
       </div>
@@ -60807,7 +60837,7 @@ function RhythmBuddyListSheet({ tab, settings, onChange, onTab, onClose }) {
           <div>
             <p className="mb-2.5 text-[10px] leading-relaxed text-slate-400">選んだ種族だけを表示します。並べ替え・しぼりこみはそのまま効きます。</p>
             <div className="grid grid-cols-2 gap-2.5">
-              {[{ id: 'all', label: 'すべて' }, ...lineages.map((l) => ({ id: l.id, label: `${l.name}種` }))].map((opt) => (
+              {[{ id: 'all', label: '全て' }, ...lineages.map((l) => ({ id: l.id, label: `${l.name}種` }))].map((opt) => (
                 <button key={opt.id} type="button" onClick={() => onChange({ lineage: opt.id })} className={chip(settings.lineage === opt.id)}>{opt.label}</button>
               ))}
             </div>
@@ -60818,7 +60848,7 @@ function RhythmBuddyListSheet({ tab, settings, onChange, onTab, onClose }) {
             <section>
               <h4 className="mb-1.5 text-[11px] font-black text-slate-300">一緒に遊んだか</h4>
               <div className="grid grid-cols-3 gap-2">
-                {[{ id: 'all', label: 'すべて' }, { id: 'yes', label: '遊んだモンスター' }, { id: 'no', label: 'まだのモンスター' }].map((opt) => (
+                {[{ id: 'all', label: '全て' }, { id: 'yes', label: '遊んだモンスター' }, { id: 'no', label: 'まだのモンスター' }].map((opt) => (
                   <button key={opt.id} type="button" onClick={() => onChange({ played: opt.id })} className={chip(settings.played === opt.id)}>{opt.label}</button>
                 ))}
               </div>
@@ -60841,7 +60871,7 @@ function RhythmBuddyListSheet({ tab, settings, onChange, onTab, onClose }) {
                 ))}
               </div>
             </section>
-            <button type="button" onClick={() => onChange({ lineage: 'all', played: 'all', traits: [], moods: [] })} className="min-h-[44px] w-full rounded-xl bg-slate-700 text-sm font-black">しぼりこみをすべて外す</button>
+            <button type="button" onClick={() => onChange({ lineage: 'all', played: 'all', traits: [], moods: [] })} className="min-h-[44px] w-full rounded-xl bg-slate-700 text-sm font-black">絞り込みを全て外す</button>
           </div>
         )}
       </div>
@@ -61006,7 +61036,7 @@ function RhythmBuddySheet({ masuMons = [], masuPicker = null, songName, tickets 
               )}
             {pickNote && <p data-rhythm-buddy-multi-note className="text-[10px] font-black text-amber-200">{pickNote}</p>}
             <div className="mt-1 flex gap-1.5">
-              {singleMasu && <button type="button" onClick={() => setDetailId(singleMasu.id)} className="min-h-[44px] shrink-0 rounded-xl bg-slate-700 px-2 text-[11px] font-black">くわしく</button>}
+              {singleMasu && <button type="button" onClick={() => setDetailId(singleMasu.id)} className="min-h-[44px] shrink-0 rounded-xl bg-slate-700 px-2 text-[11px] font-black">詳しく</button>}
               <button data-rhythm-buddy-call-all type="button" disabled={busy || !picks.length || shortTickets > 0} onClick={callAll}
                 className="min-h-[44px] flex-1 rounded-xl bg-gradient-to-b from-lime-400 to-emerald-600 px-3 text-sm font-black text-slate-950 disabled:opacity-40">{picks.length > 1 ? `まとめて呼ぶ(${picks.length}人)` : '呼ぶ'}</button>
             </div>
@@ -62021,7 +62051,7 @@ function RhythmAssistSessionGuide({ assistantId = '' }) {
     <div data-rhythm-assist-guide className="mb-2 flex shrink-0 items-start gap-2 rounded-2xl border border-pink-300/50 bg-pink-950/60 p-2">
       <AssistantFace who={who} size={40} accent={who.accent} expression="happy" />
       <p className="min-w-0 flex-1 text-[11px] font-bold leading-snug text-pink-50" style={JA_WRAP_STYLE}>{jaWrap(rhythmAssistSessionSpeak(id, RHYTHM_ASSIST_SESSION_GUIDE_LINES[id]))}</p>
-      <button type="button" data-rhythm-assist-guide-close aria-label="閉じる" onClick={close} className="min-h-[36px] shrink-0 rounded-lg bg-slate-800 px-2 text-[11px] font-black">わかった</button>
+      <button type="button" data-rhythm-assist-guide-close aria-label="閉じる" onClick={close} className="min-h-[36px] shrink-0 rounded-lg bg-slate-800 px-2 text-[11px] font-black">分かった</button>
     </div>
   );
 }
@@ -68903,6 +68933,8 @@ const assistantLifeRoomFaceOf = (pid, src) => {
 //   ・assistantLifeStandVisH(face, F) … 見えている体の高さ(fit を含む)
 //   ・assistantLifeStandRule({ face, box, F, topY, cx }) … 1人ぶんの { top, height, width, left, clip, fade, frameTop, frameBottom, visTop, visBottom, U }
 const ASSISTANT_LIFE_ROOM_STAND_DEF = Object.freeze({ ec: 0.1639, len: 2.63, cut: Object.freeze({ above: 0.55, below: 1.8, fade: 0.45 }) });
+// 見せる範囲を下へ広げる分(顔の長さ U の何個ぶんか)。前の家具の天板はこの分だけ下がる
+const ASSISTANT_LIFE_ROOM_STAND_EXT = 0.6;
 const assistantLifeRoomVisH = (face, F) => {
   try { if (typeof assistantLifeStandVisH === 'function') { const v = assistantLifeStandVisH(face, F); if (Number.isFinite(v) && v > 0) return v; } } catch (_) { /* 既定へ */ }
   return F / (ASSISTANT_LIFE_ROOM_STAND_DEF.ec * (face.m || 1)) * (face.fit || 1);
@@ -68927,11 +68959,13 @@ const assistantLifeRoomStandLayout = (items, W, usable, deskTop, land, bed = fal
   const visW = (x, f) => assistantLifeRoomVisH(x.face, f) * (x.box.r - x.box.l) * x.box.ar / (x.box.b - x.box.t);
   for (const x of items) { const w1 = visW(x, 1); if (w1 > 0) F = Math.min(F, (sw * 0.98) / w1); }
   const U = F * D.len;
-  const topY = bed ? deskTop + 0.15 * U - U : deskTop + 0.2 * U - D.cut.below * U;
+  const topY = bed ? deskTop + 0.15 * U - U : deskTop + 0.2 * U - 1.8 * U; // 頭の高さは今までどおり(見せる範囲だけ下へ広げ、前の家具をその下へ下げる)
   return items.map((x, i) => {
     const cx = x0 + sw * (i + 0.5);
     const r = assistantLifeRoomPlace(x, F, topY, cx);
-    return { left: r.left, top: r.top, width: r.width, height: r.height, clip: r.clip, fade: r.fade, cx, face: F, visTop: r.visTop, headTop: topY, frameBottom: r.frameBottom, w: visW(x, F) };
+    // 助手のアップは前の家具に隠されない(2026-11-14 社長「机みたいのが前に出ちゃってる」): 見せる範囲を腰まで下へ広げ、前の家具は見せる範囲の下から始める
+    const ext = bed ? 0 : ASSISTANT_LIFE_ROOM_STAND_EXT * U, ih = Math.max(1, r.height);
+    return { left: r.left, top: r.top, width: r.width, height: r.height, clip: [r.clip[0], Math.max(0, r.clip[1] - ext)], fade: r.fade ? [r.fade[0] + ext / ih, Math.min(1, r.fade[1] + ext / ih)] : r.fade, cx, face: F, visTop: r.visTop, headTop: topY, frameBottom: r.frameBottom + ext, w: visW(x, F), U };
   });
 };
 
@@ -68940,17 +68974,17 @@ function AssistantLifeRoomFigure({ who, src, p, look, sleep = false, onPress = n
   // 夜に部屋が暗くなっても、起きている助手は暗くしない(2026-11-12 社長「起きてるのに夜だと暗くなる」)。夜の色味は寝ている助手だけ
   const night = look === 'night' && sleep, evening = look === 'evening';
   const tone = night ? 'linear-gradient(100deg,#ffd08a 0%,#c9c2ee 45%,#8a86c0 100%)'
-    : evening ? 'linear-gradient(100deg,#ffe0b0 0%,#f2c9b0 60%,#c99a90 100%)'
-    : 'linear-gradient(100deg,#ffffff 0%,#f6ece8 60%,#d9c2bc 100%)';
+    : evening ? 'linear-gradient(100deg,#fff6ec 0%,#fbeee4 60%,#f0dcd4 100%)'
+    : 'linear-gradient(100deg,#ffffff 0%,#fbf5f3 60%,#efe3df 100%)';
   const fadeMask = p.fade ? `linear-gradient(to bottom,#000 ${(p.fade[0] * 100).toFixed(1)}%,transparent ${(p.fade[1] * 100).toFixed(1)}%)` : null;
   const box = { position: 'absolute', left: p.left, top: p.top, width: p.width, height: p.height,
     clipPath: `inset(${p.clip[0].toFixed(1)}px 0 ${p.clip[1].toFixed(1)}px 0)`, ...(fadeMask ? { WebkitMaskImage: fadeMask, maskImage: fadeMask } : {}) };
   const shape = { WebkitMaskImage: `url(${src})`, WebkitMaskSize: '100% 100%', maskImage: `url(${src})`, maskSize: '100% 100%' };
   return (<>
-    <span aria-hidden="true" style={{ position: 'absolute', left: p.cx - p.w * 0.45, top: p.frameBottom - 16, width: p.w * 0.9, height: 26, borderRadius: '50%', background: 'radial-gradient(#0007,transparent 70%)', pointerEvents: 'none' }}/>
+    <span aria-hidden="true" style={{ position: 'absolute', left: p.cx - p.w * 0.45, top: p.frameBottom - 30, width: p.w * 0.9, height: 26, borderRadius: '50%', background: 'radial-gradient(#0007,transparent 70%)', pointerEvents: 'none' }}/>
     <div style={box} data-assistant-life-roomview-person={who.id} data-assistant-life-roomview-face={Math.round(p.face)} data-assistant-life-roomview-head={Math.round(p.headTop)}>
       <img src={src} alt="" draggable={false} data-assistant-life-roomview-fig={who.id} onClick={onPress || undefined}
-        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', maxWidth: 'none', filter: `drop-shadow(0 0 .6px #2a1414cc) saturate(.92) sepia(.1)${sleep ? ' brightness(.6)' : ''}`, cursor: onPress ? 'pointer' : undefined }}/>
+        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', maxWidth: 'none', filter: `drop-shadow(0 0 .6px #2a1414cc)${sleep ? ' brightness(.6)' : ''}`, cursor: onPress ? 'pointer' : undefined }}/>
       <span aria-hidden="true" style={{ position: 'absolute', inset: 0, ...shape, background: tone, mixBlendMode: 'multiply', pointerEvents: 'none' }}/>
     </div>
     {sleep && <span aria-hidden="true" style={{ position: 'absolute', left: p.cx + p.w * 0.2, top: p.visTop, fontSize: 18, pointerEvents: 'none' }}>💤</span>}
@@ -69239,7 +69273,14 @@ function AssistantLifeRoomScene({ id, look = 'noon', land = false, people = [], 
       <div aria-hidden="true" style={{ position: 'absolute', left: 0, right: 0, top: floorY - 64, height: 64, background: 'linear-gradient(#ffffff40,#00000018)', borderTop: '3px solid #00000022' }}/>
       <div aria-hidden="true" style={{ position: 'absolute', left: 0, right: 0, top: floorY, bottom: 0, background: 'repeating-linear-gradient(90deg,#c4895a 0 64px,#b87c4d 64px 66px),linear-gradient(#cf9562,#9a6a40)', backgroundBlendMode: 'multiply', borderTop: '4px solid #6b4426' }}/>
       <div aria-hidden="true" style={{ position: 'absolute', right: W * 0.06, top: topH + usable * 0.06, width: Math.min(130, W * 0.3), height: Math.min(96, usable * 0.22), borderRadius: 8, border: '6px solid #ffffff99',
-        background: night ? 'radial-gradient(circle at 70% 30%,#fff 0 5px,transparent 6px),linear-gradient(#0b1030,#1e2a5a)' : evening ? 'linear-gradient(#f59e0b,#fb7185)' : look === 'morning' ? 'linear-gradient(#93c5fd,#fde68a)' : 'linear-gradient(#7cc4ff,#d6f0ff)' }}/>
+        background: night ? 'radial-gradient(circle at 70% 30%,#fff 0 5px,transparent 6px),linear-gradient(#0b1030,#1e2a5a)' : evening ? 'linear-gradient(#f59e0b,#fb7185)' : look === 'morning' ? 'linear-gradient(#93c5fd,#fde68a)' : 'linear-gradient(#7cc4ff,#d6f0ff)' }}>
+        {/* 窓だと分かるように、まどわく(十字)・窓台・カーテンを描く */}
+        <span style={{ position: 'absolute', left: '50%', top: 0, bottom: 0, width: 4, marginLeft: -2, background: '#ffffffcc' }}/>
+        <span style={{ position: 'absolute', top: '50%', left: 0, right: 0, height: 4, marginTop: -2, background: '#ffffffcc' }}/>
+        <span style={{ position: 'absolute', left: -10, right: -10, bottom: -13, height: 8, borderRadius: 3, background: '#ffffffd9', boxShadow: '0 2px 3px #0003' }}/>
+        <span style={{ position: 'absolute', left: -9, top: -6, bottom: -4, width: 14, borderRadius: '4px 8px 8px 4px', background: 'linear-gradient(90deg,#f9a8d4,#f472b6)' }}/>
+        <span style={{ position: 'absolute', right: -9, top: -6, bottom: -4, width: 14, borderRadius: '8px 4px 4px 8px', background: 'linear-gradient(90deg,#f472b6,#f9a8d4)' }}/>
+      </div>
       {/* 置いた家具(天井・壁・床)。押すと名前 */}
       {/* 模様替え(公開の印 assistantLifeRoomEdit・56-assistant-life-roomedit.jsx): 自分の家の部屋は、保存してある並びで描く。助手の後ろの層 */}
       {layoutOn && <AssistantLifeRoomLayoutLayer who={layoutWho} items={layoutEdit ? layoutEdit.items : layoutItems} geom={layoutGeom} front={false} onTip={layoutEdit ? null : setTip}/>}
@@ -69249,7 +69290,7 @@ function AssistantLifeRoomScene({ id, look = 'noon', land = false, people = [], 
       {asleep && <AssistantLifeRoomBed id={id} W={W} floorY={floorY} sleepers={people} look={look}/>}
       {!asleep && lay && standItems.map((x, i) => (sleepIds.includes(x.pid)
         ? <AssistantLifeRoomFigure key={x.pid} who={x.who} src={x.src} p={lay[i]} look={look} sleep onPress={onPerson ? () => onPerson(x.pid) : null}/> : null))}
-      {people.length > 0 && !asleep && <AssistantLifeRoomFront kind={frontKind} cx={W / 2} top={deskTop} w={frontW} items={ASSISTANT_LIFE_ROOM_DESK_ITEMS[id] || []}/>}
+      {people.length > 0 && !asleep && <AssistantLifeRoomFront kind={frontKind} cx={W / 2} top={lay && !asleep ? Math.max(...lay.map(p => p.frameBottom - 4)) : deskTop} w={frontW} items={ASSISTANT_LIFE_ROOM_DESK_ITEMS[id] || []}/>}
       {/* 助手より前に出した家具(机の前) */}
       {layoutOn && <AssistantLifeRoomLayoutLayer who={layoutWho} items={layoutEdit ? layoutEdit.items : layoutItems} geom={layoutGeom} front={true} onTip={layoutEdit ? null : setTip}/>}
       {away && (
@@ -79277,17 +79318,19 @@ const MSC_CSS = `
 .msc-lines path{fill:none;stroke-linecap:round}
 .msc-lines .base{stroke:#cbb48b;stroke-width:2}
 .msc-lines .win{stroke:#f97316;stroke-width:3.2;stroke-dasharray:1;stroke-dashoffset:1;animation:msc-draw .55s ease-out forwards}
-.msc-lines .win.me{stroke:#f43f5e}
+.msc-lines .win.me{stroke:#ef4444}
 @keyframes msc-draw{to{stroke-dashoffset:0}}
 .msc-cupbadge{position:absolute;right:4px;top:50%;transform:translateY(-50%);width:48px;padding:6px 0;border-radius:10px;background:linear-gradient(180deg,#7f1d1d,#4c0519);border:2px solid #f59e0b;color:#fde68a;font-weight:900;font-size:11px;text-align:center;line-height:1.2}
 .msc-cupbadge.lit{animation:msc-glow 1.2s ease-in-out infinite alternate}
 @keyframes msc-glow{from{box-shadow:0 0 0 rgba(251,191,36,0)}to{box-shadow:0 0 16px rgba(251,191,36,.9)}}
 .msc-note{font-size:12px;color:#fde68a;line-height:1.5}
-.msc-note small{display:block;color:#cbd5e1;font-size:11px}
+.msc-note .nw{white-space:nowrap}.msc-note small{display:block;color:#cbd5e1;font-size:11px}
 .msc-talk{display:flex;gap:8px;align-items:flex-start;background:#fffaf0;color:#3b2a14;border-radius:14px;padding:8px 10px;border:2px solid #e2c89a}
 .msc-talk img{width:52px;height:52px;border-radius:50%;object-fit:cover;flex:0 0 auto;background:#fde68a}
 .msc-talk p{margin:0;font-size:13px;font-weight:700;line-height:1.55}
 .msc-talk em{font-style:normal;color:#e11d48}
+.msc-talk{position:relative}.msc-sk{position:absolute;right:8px;bottom:5px;border:0;border-radius:99px;background:#a67c3c;color:#fff;font-size:10px;font-weight:900;padding:2px 9px}
+.msc-row{transition:opacity .5s}
 .msc-vs{position:relative;height:200px;border-radius:16px;overflow:hidden;background:#3b2a52 center/cover no-repeat}
 .msc-vs::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(20,16,38,.25),rgba(20,16,38,.05) 50%,rgba(20,16,38,.75))}
 .msc-vs .cap{position:absolute;z-index:2;top:6px;left:50%;transform:translateX(-50%);background:rgba(20,16,38,.8);border-radius:999px;padding:3px 12px;font-size:12px;font-weight:900;color:#fde68a;white-space:nowrap}
@@ -79432,75 +79475,85 @@ const MSC_CSS = `
 `;
 
 // ---- 組み合わせ表(B1)。勝ち上がりの線が段ごとに伸びる。result が 'win' なら決勝の線が優勝まで伸びる ----
-function MonsucBracket({ suc, s, info, result, onFight, onResultOnly, onClose, canSkip }) {
+function MonsucBracket({ suc, s, info, result: resultProp, onFight, onResultOnly, onClose, canSkip }) {
+  const result = resultProp || (typeof window !== 'undefined' && window.__MSC_BK_RESULT) || null; // 後ろは撮影用(決勝のあとの表の止め絵)
+  // 2026-11-14 社長「トーナメントの表示がおかしい。最初に1回戦が動く演出がない。バトルは決勝の一戦だけ」で作り直し(参考 taikai-bracket.png・v2 84〜90秒・v4 48〜52秒)
+  //   8体・自分はいちばん上・番号は人気順(1〜8)・1番人気の王者は反対の山。開いたら 1回戦→準決勝 が自動で進む(勝った側へ線が赤く伸び、負けた側は暗くなる・自分も演出で勝ち上がる)。
+  //   解説のひとこと・SKIP。戦うのは決勝の1戦だけ。線は行の高さ H から px で引く(行と線がずれない)
   const bk = info.bracket;
-  const [stage, setStage] = useState(0);
+  const [stage, setStage] = useState(0); // 0=開いた直後 1=1回戦のあと 2=準決勝のあと 3=決勝の前
   useEffect(() => {
-    const ts = [setTimeout(() => setStage(1), 350), setTimeout(() => setStage(2), 1050), setTimeout(() => setStage(3), 1700)];
+    const k = (typeof window !== 'undefined' && Number(window.__MSC_BK_T)) || 1; // 撮影用: 動きをゆっくりにする倍率(ふだんは 1)
+    const ts = [setTimeout(() => setStage(1), 1200 * k), setTimeout(() => setStage(2), 3000 * k), setTimeout(() => setStage(3), 4800 * k)];
     return () => ts.forEach(clearTimeout);
   }, []);
+  const [vh, setVh] = useState(() => (typeof window !== 'undefined' ? window.innerHeight : 844));
+  useEffect(() => { const f = () => setVh(window.innerHeight); window.addEventListener('resize', f); return () => window.removeEventListener('resize', f); }, []);
   if (!bk) return null;
+  const Z = '\u200b'; // 折ってよい所の印(字の札は msx-kp で、ここと句読点でだけ折れる)
   const E = bk.entrants;
-  const no = monsucPopOrder(suc, s, E);
+  const st = result ? 3 : stage;
+  const no = bk.pop && bk.pop.length === E.length ? bk.pop : monsucPopOrder(suc, s, E);
   const r1 = bk.rounds[0] || []; const r2 = bk.rounds[1] || [];
-  const out = (i) => (stage >= 1 && !r1.includes(i)) || (stage >= 2 && r1.includes(i) && !r2.includes(i)) || (result === 'win' && i === 4) || (result === 'lose' && i === 0);
-  // 線: 8行 × 40px。x は 0(顔の右)→ 22 → 44 → 66 → 優勝の札
-  const H = 40; const yOf = (i) => i * H + H / 2;
-  const X = [0, 22, 44, 66, 80];
-  const W = 84;
-  const pair = (a, b, lv) => `M${X[lv]} ${a}H${X[lv + 1]}M${X[lv]} ${b}H${X[lv + 1]}M${X[lv + 1]} ${a}V${b}`;
-  const base = [];
-  for (let k = 0; k < 4; k++) base.push(pair(yOf(2 * k), yOf(2 * k + 1), 0));
-  const mid1 = [0, 1, 2, 3].map(k => (yOf(2 * k) + yOf(2 * k + 1)) / 2);
-  base.push(pair(mid1[0], mid1[1], 1), pair(mid1[2], mid1[3], 1));
-  const mid2 = [(mid1[0] + mid1[1]) / 2, (mid1[2] + mid1[3]) / 2];
-  base.push(pair(mid2[0], mid2[1], 2));
-  const mid3 = (mid2[0] + mid2[1]) / 2;
-  base.push(`M${X[3]} ${mid3}H${X[4]}`);
+  const fi = (bk.final && bk.final[1]) || 4; // 決勝の相手の行(4〜7)
+  const out = (i) => (st >= 1 && !r1.includes(i)) || (st >= 2 && r1.includes(i) && !r2.includes(i)) || (result === 'win' && i === fi) || (result === 'lose' && i === 0);
+  const H = Math.max(36, Math.min(68, Math.floor((vh - 318) / 8))); // 行の高さ(下に大きな空きを残さない)
+  const yOf = (i) => i * H + H / 2;
+  const X = [0, 22, 44, 66, 84]; const W = 90;
+  const pair = (a, c, lv) => `M${X[lv]} ${a}H${X[lv + 1]}M${X[lv]} ${c}H${X[lv + 1]}M${X[lv + 1]} ${a}V${c}`;
+  const m1 = [0, 1, 2, 3].map(k => (yOf(2 * k) + yOf(2 * k + 1)) / 2);
+  const m2 = [0, 1].map(j => (m1[2 * j] + m1[2 * j + 1]) / 2); const m3 = (m2[0] + m2[1]) / 2;
+  const base = [0, 1, 2, 3].map(k => pair(yOf(2 * k), yOf(2 * k + 1), 0)).concat(pair(m1[0], m1[1], 1), pair(m1[2], m1[3], 1), pair(m2[0], m2[1], 2), `M${X[3]} ${m3}H${X[4]}`);
   const win = [];
-  if (stage >= 1) r1.forEach((i, k) => win.push({ d: `M${X[0]} ${yOf(i)}H${X[1]}V${mid1[k]}`, me: i === 0 || i === 4, key: `a${i}` }));
-  if (stage >= 2) r2.forEach((i, k) => win.push({ d: `M${X[1]} ${mid1[k * 2 + (i === r1[k * 2] ? 0 : 1)]}H${X[2]}V${mid2[k]}`, me: true, key: `b${i}` }));
-  if (stage >= 3) { win.push({ d: `M${X[2]} ${mid2[0]}H${X[3]}`, me: true, key: 'c0' }, { d: `M${X[2]} ${mid2[1]}H${X[3]}`, me: true, key: 'c1' }); }
-  if (result === 'win') win.push({ d: `M${X[3]} ${mid2[0]}V${mid3}H${X[4]}`, me: true, key: 'f' });
-  const champ = E.find(e => e.champ) || E[4];
-  const foe = E[4];
+  if (st >= 1) r1.forEach((w, k) => win.push({ d: `M${X[0]} ${yOf(w)}H${X[1]}V${m1[k]}`, key: `a${k}` }));
+  if (st >= 2) r2.forEach((w, j) => win.push({ d: `M${X[1]} ${m1[2 * j + (w === r1[2 * j] ? 0 : 1)]}H${X[2]}V${m2[j]}`, key: `b${j}` }));
+  // 決勝の前は、赤い線は決勝の入口(準決勝を勝ったところ)で止める。優勝の札へ伸びるのは、決勝が終わって勝った側の1本だけ
+  if (st >= 3) [0, 1].forEach(j => win.push({ d: `M${X[2]} ${m2[j]}H${X[3]}`, key: `c${j}` }));
+  if (result === 'win' || result === 'lose') win.push({ d: `M${X[3]} ${m2[result === 'win' ? 0 : 1]}V${m3}H${X[4]}`, key: 'f' });
+  const foe = E[fi]; const champ = E.find(e => e.champ) || foe;
   const nm = (e) => (e.you ? info.meName : e.name || mscMonName(e.species));
   const coach = mscAssistant(s.aid);
+  const top = E[no.indexOf(1)] || E[0]; const upsets = r1.filter(w => w !== 0 && w !== fi && no[w] >= 5); const foeNo = no[fi];
+  const lines = [
+    top.you ? <>「<em>1番人気は{Z} {info.meName}!</em>{Z} まずは{Z} 1回戦から{Z} 見ていこう」</> : <>「<em>1番人気は{Z} {top.champ ? '王者の ' : ''}{nm(top)}!</em>{Z} {info.meName}の{Z}1回戦は{Z} これからだよ」</>,
+    upsets.length ? <>「<em>大穴!{Z} {nm(E[upsets[0]])}</em> が{Z} 勝ち上がったぞ!{Z} {info.meName}も{Z} 1回戦を{Z} 勝ち上がり!」</> : <>「1回戦が{Z} おわったよ。{Z}<em>{info.meName}</em>は{Z} 順当に{Z} 勝ち上がり!」</>,
+    foeNo >= 4 ? <>「<em>大穴!{Z} {nm(foe)}</em>{Z} 決勝まで{Z} きたぞ!{Z} {info.meName}は{Z} 準決勝も{Z} 勝って{Z} 決勝へ!」</> : <>「準決勝も{Z} おわったよ。{Z}<em>{info.meName}</em>は{Z} 決勝へ!{Z} 反対の山からは{Z} <em>{nm(foe)}</em>」</>,
+  ];
   const champNo1 = no[E.indexOf(champ)] === 1;
-  const line = foe.rival
-    ? <>「{champNo1 && champ !== foe ? <>1番人気は 王者の {nm(champ)}! でも、</> : null}{info.meName}の相手は <em>ライバルの {nm(foe)}</em> だよ。勝てば ごほうび大!」</>
+  const finalLine = foe.rival
+    ? <>「{champNo1 && champ !== foe ? <>1番人気は{Z} 王者の {nm(champ)}!{Z} でも、{Z}</> : null}決勝の相手は{Z} <em>ライバルの {nm(foe)}</em> だよ。{Z}勝てば{Z} ごほうび大!」</>
     : foe.champ
-      ? <>「1番人気は 王者の <em>{nm(foe)}</em>! {info.meName}が当たるのは 決勝。{info.opp && info.opp.note ? `${info.opp.note}、だって。` : ''}ここで勝てば 大金星だよ!」</>
-      : <>「{info.meName}の相手は <em>{nm(foe)}</em>! あわてずに いこうね」</>;
+      ? <>「決勝の相手は{Z} 1番人気の王者{Z} <em>{nm(foe)}</em>!{Z} {info.opp && info.opp.note ? `${info.opp.note}、だって。` : ''}{Z}ここで勝てば{Z} 大金星だよ!」</>
+      : <>「決勝の相手は{Z} <em>{nm(foe)}</em>!{Z} あわてずに{Z} いこうね」</>;
   return (
-    <div className="msc-wrap" data-msc-bracket data-msc-stage={stage}>
-      <div className="msc-top"><button className="msc-btn g s" data-msc-close onClick={onClose}>← もどる</button><b>{info.title} {MSC_STARS(info.star)}</b></div>
+    <div className="msc-wrap" data-msc-bracket data-msc-stage={st}>
+      <div className="msc-top"><button className="msc-btn g s" data-msc-close onClick={onClose}>← 戻る</button><b>{info.title} {MSC_STARS(info.star)}</b></div>
       <div className="msc-panel">
         <div className="msc-head">{info.title} {MSC_STARS(info.star)}</div>
         <div className="msc-bk">
           {E.map((e, i) => (
-            <div key={i} className={`msc-row ${out(i) ? 'out' : ''}`} style={{ paddingRight: W }} data-msc-entrant={e.you ? 'you' : i === 4 ? 'foe' : i}>
+            <div key={i} className={`msc-row ${out(i) ? 'out' : ''}`} style={{ paddingRight: W, height: H }} data-msc-entrant={e.you ? 'you' : i === fi ? 'foe' : i}>
               <span className="msc-no" title={`${no[i]}番人気`} aria-label={`${no[i]}番人気`}>{no[i]}</span>
-              <span className={`msc-name ${e.you ? 'you' : i === 4 ? 'foe' : ''}`}><span>{nm(e)}</span>
+              <span className={`msc-name ${e.you ? 'you' : i === fi ? 'foe' : ''}`}><span>{nm(e)}</span>
                 {e.you && <i className="msc-tag you">あなた</i>}
                 {e.rival && <i className="msc-tag rv">ライバル</i>}
                 {e.champ && <i className="msc-tag ch">👑王者</i>}
               </span>
-              <span className={`msc-face ${e.you ? 'you' : i === 4 ? 'foe' : ''}`}>{e.you ? <MscMyMon sp={e.species} colors={info.colors}/> : <img src={mscMonImg(e.species)} alt=""/>}</span>
+              <span className={`msc-face ${e.you ? 'you' : i === fi ? 'foe' : ''}`}>{e.you ? <MscMyMon sp={e.species} colors={info.colors}/> : <img src={mscMonImg(e.species)} alt=""/>}</span>
             </div>
           ))}
           <svg className="msc-lines" width={W} height={H * 8} viewBox={`0 0 ${W} ${H * 8}`} style={{ width: W, height: H * 8 }}>
             {base.map((d, k) => <path key={k} className="base" d={d}/>)}
-            {win.map(w => <path key={w.key} className={`win ${w.me ? 'me' : ''}`} d={w.d} pathLength="1"/>)}
+            {win.map(w => <path key={w.key} className="win me" d={w.d} pathLength="1"/>)}
           </svg>
           <div className={`msc-cupbadge ${result === 'win' ? 'lit' : ''}`} style={{ right: 4 }}>🏆<br/>優勝</div>
         </div>
       </div>
-      <div className="msc-note">左の数字は人気の順(1が いちばん人気)。あなたの1戦は 赤い丸の2体のあいだ({info.meName} VS {nm(foe)})。<small>ほかの試合の結果は、見せるだけの演出です</small></div>
-      <div className="msc-talk"><img src={mscFace(s.aid)} alt=""/><p>{coach ? <b style={{ display: 'block', fontSize: 11, color: '#b45309' }}>解説 {coach.name}</b> : null}{line}</p></div>
+      <div className="msc-note"><b>決勝は <span className="nw">{info.meName} VS {nm(foe)}</span></b>。<span className="nw">左の数字は人気の順</span><span className="nw">(1が いちばん人気)。</span><small><span className="nw">ほかの試合の結果は、</span><span className="nw">見せるだけの演出です</span><span className="nw">(戦うのは決勝の1戦だけ)</span></small></div>
+      <div className="msc-talk"><img src={mscFace(s.aid)} alt=""/><p className="msx-kp">{coach ? <b style={{ display: 'block', fontSize: 11, color: '#b45309' }}>解説 {coach.name}</b> : null}{st >= 3 ? finalLine : lines[st]}</p>{st < 3 ? <button type="button" className="msc-sk" data-msc-skip onClick={() => setStage(3)}>SKIP ▸▸</button> : null}</div>
       <div className="msc-foot">
         <button className="msc-btn y s" data-msc-quick onClick={onResultOnly}>{canSkip ? '⏩ 結果だけ見る(優勝ずみ)' : '⏩ 結果だけ見る'}</button>
-        <button className="msc-btn" data-msc-go onClick={onFight}>⚔ 1戦へ</button>
+        <button className="msc-btn" data-msc-go onClick={onFight}>⚔ 決勝へ</button>
       </div>
     </div>
   );
@@ -82314,7 +82367,7 @@ const MSX_STORIES = Object.freeze([
     about: 'デビュー戦から始まり、ジュニア・ミドル・プロの3つの期を経て、最後は「頂への道」に挑む、モンヒロサクセスのいちばん最初のお話。',
     rows: Object.freeze([
       ['📅', '流れ', 'デビュー期 → ジュニア期 → ミドル期 → プロ期 → 頂への道(3戦)'],
-      ['🏆', '大会', 'ルーキーズ・クラウン/四大大会/季節の賞 ほか。賞金ランクは ルーキー〜ヒーローの10段'],
+      ['🏆', '大会', 'モンスターダービー/四大大会/季節の賞 ほか。賞金ランクは ルーキー〜ヒーローの10段'],
       ['👥', '登場人物', '助手(いまはみゅあ)・イッサ博士・ライバルたち'],
       ['🎯', 'めざすもの', '頂への道の決勝に勝って「ヒーロー」に。'],
     ]),
@@ -86046,7 +86099,7 @@ const MSX_CSS = `
 .msx-gt-mon{display:flex;align-items:center;gap:5px;margin-top:3px;font-size:11px}
 .msx-gt-mon img{flex:none;width:24px;height:24px;border-radius:7px;object-fit:contain;background:#1e1a36}.msx-gt-mon .nm{flex:1;min-width:0;overflow-wrap:anywhere}.msx-gt-mon .v{flex:0 1 auto;font-size:10px;color:#cbd5e1;text-align:right}
 .msx-gt-none{font-size:10.5px;color:#94a3b8;margin-top:2px}
-/* 選ぶ画面: はじめの能力(数字を大きく・伸びやすさは小さく)と「くわしく」の窓(2026-11-14) */
+/* 選ぶ画面: はじめの能力(数字を大きく・素質は小さく)と「くわしく」の窓(2026-11-14) */
 .msx-dt-hd{display:flex;align-items:center;gap:6px}.msx-dt-hd .h1{flex:1;min-width:0}
 .msx .msx-dt-more{flex:none;border-radius:999px;padding:3px 10px;font-size:11px;font-weight:900;background:#f472b6;color:#fff;box-shadow:0 2px 0 #9d174d}
 .msx-dt-sm{font-size:10px;font-weight:700;color:#cbd5e1}
@@ -86643,7 +86696,7 @@ const MSX_DIST_NAMES = ['零', '近', '中', '遠'];
 const msxLineName = (id) => (id && typeof MONSTER_LINEAGES === 'object' && MONSTER_LINEAGES && MONSTER_LINEAGES[id] ? MONSTER_LINEAGES[id].name : '');
 // モンスターの詳細(2026-11-14 社長の手本 monster-detail-basic の組み立て: 左上に絵・名前・総合力/右上に 基礎・特徴・適性/下に技の一覧と選んだ技の詳細)。
 //   見るだけ。選ぶ画面の「くわしく」と、育成中の場面の「くわしく」で同じ部品を使う。絵・用語・見た目はうちの物
-//   st 能力6つ / apt 伸びやすさの字 / type 成長の型 / peak ピークの期 / grades 間合い適性 [零,近,中,遠] / known 覚えている技の id(無ければ はじめから使える技) / power・rank 総合力
+//   st 能力6つ / apt 素質の字(画面の呼び名。2026-11-14 社長「伸びは素質って表記にして」) / type 成長の型 / peak ピークの期 / grades 間合い適性 [零,近,中,遠] / known 覚えている技の id(無ければ はじめから使える技) / power・rank 総合力
 const MSX_STAT_COLOR = Object.freeze({ life: '#facc15', pow: '#f87171', wise: '#4ade80', hit: '#f472b6', eva: '#60a5fa', tough: '#818cf8' });
 function MsxMonDetail({ species, name, art, st, apt, type, peak, grades, known, power, rank, sub, onClose, SUC }) {
   const [tab, setTab] = useState('base');
@@ -86673,7 +86726,7 @@ function MsxMonDetail({ species, name, art, st, apt, type, peak, grades, known, 
             </div>
             <div className="msx-md-panel">
               <div className="msx-md-tabs">{TOP.map(([k, n]) => <button type="button" key={k} className={tab === k ? 'on' : ''} data-msx-detail-tab={k} onClick={() => setTab(k)}>{n}</button>)}</div>
-              {tab === 'base' ? (<div className="msx-md-box"><div className="cap">能力<span>伸び</span></div>
+              {tab === 'base' ? (<div className="msx-md-box"><div className="cap">能力<span>素質</span></div>
                 {MSX_STATS.map((k, i) => (
                   <div key={k} className="msx-md-st"><span className="n">{MSX_STAT_ICON[k]}{MSX_STAT_NAME[k]}</span>
                     <span className="v"><b>{st[k]}</b><span className="g"><i style={{ width: `${Math.max(2, Math.min(100, (Number(st[k]) || 0) / maxSt * 100))}%`, background: MSX_STAT_COLOR[k] }}/></span></span>
@@ -86874,8 +86927,8 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf }) {
       <div className="v-card sel">
         <div className="msx-dt-hd"><div className="h1">{msxMonName(species)}</div><button type="button" className="msx-dt-more" data-msx-detail-open onClick={() => setDetail(true)}>🔍 くわしく</button></div>
         <div className="v-kv" data-msx-start-type><b>成長の型</b><span><span className="yel">{growName}</span>{peakText ? <span className="msx-dt-sm"> ピーク {peakText}</span> : null}</span></div>
-        <div className="sub" style={{ marginTop: 6, color: '#f9a8d4', fontWeight: 900 }}>はじめの能力<span className="msx-dt-sm">(小さい字は伸びやすさ)</span></div>
-        <div className="msx-st6" data-msx-start-stats>{MSX_STATS.map((k, i) => <div key={k}><span className="n">{MSX_STAT_NAME[k]}</span><b>{startSt[k]}</b><i className={apt[i] > 'B' ? 'lo' : ''}>伸び {apt[i]}</i></div>)}</div>
+        <div className="sub" style={{ marginTop: 6, color: '#f9a8d4', fontWeight: 900 }}>はじめの能力<span className="msx-dt-sm">(小さい字は素質)</span></div>
+        <div className="msx-st6" data-msx-start-stats>{MSX_STATS.map((k, i) => <div key={k}><span className="n">{MSX_STAT_NAME[k]}</span><b>{startSt[k]}</b><i className={apt[i] > 'B' ? 'lo' : ''}>素質 {apt[i]}</i></div>)}</div>
       </div>
       {detail && <MsxMonDetail species={species} name={fromMon && fromMon.nick ? fromMon.nick : msxMonName(species)} sub={fromMon ? '合体で生まれたモンスター' : 'ベースモン'} st={startSt} apt={apt} type={growType} grades={preview.grades} peak={peakText} power={preview.power} rank={preview.rank} onClose={() => setDetail(false)} SUC={SUC}/>}
     </>);
@@ -88123,6 +88176,11 @@ const MSX_R3_CSS = `
 .msx .r3 .v-ann .pic span{position:absolute;left:0;right:0;bottom:-2px;text-align:center;background:#a67c3c;color:#fff;font-size:10px;font-weight:900;border-radius:5px}
 .msx .r3 .v-ann .tx{flex:1;font-size:12.5px;font-weight:800;line-height:1.55;align-self:center}
 .msx .r3 .v-ann .tx b{color:#b45309}
+.msx .r3 .v-br{transition:opacity .5s}.msx .r3 .v-br.out{opacity:.38}
+.msx .r3 .v-brl .bs{fill:none;stroke:#a89a78;stroke-width:2;stroke-linecap:round}
+.msx .r3 .v-brl .wl{fill:none;stroke:#ef4444;stroke-width:3.2;stroke-linecap:round;stroke-dasharray:1;stroke-dashoffset:1;animation:msxBkD .7s ease-out forwards}
+@keyframes msxBkD{to{stroke-dashoffset:0}}
+.msx .r3 .v-ann{position:relative}.msx .r3 .v-ann .sk{position:absolute;right:8px;bottom:4px;border:0;border-radius:99px;background:#a67c3c;color:#fff;font-size:10px;font-weight:900;padding:2px 9px}
 .msx .r3 .v-bcs{position:relative;height:150px;flex:none;margin-top:6px;border-radius:14px;overflow:hidden;border:1.5px solid #64748b}
 .msx .r3 .v-bcs .bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .msx .r3 .v-bcs .sh{position:absolute;inset:0;background:linear-gradient(180deg,#0f0d2488,#0f0d2400 40%,#0f0d24aa)}
@@ -88230,7 +88288,8 @@ const MSX_R3_CUP_ICON = Object.freeze({
 // 第2版の札の格(色)。CSS は .v-cup.g-<格>
 const MSX_R3_CUP_GRADE = Object.freeze({ bronze: '銅', silver: '銀', gold: '金', green: '緑', four: '四大', rainbow: '特別' });
 const msxR3Stars = (n) => (n >= 4 ? '👑' : '★'.repeat(Math.max(1, n || 1)));
-const msxR3CupName = (sys) => {
+const msxR3CupName = (sys, own) => {
+  if (own && own !== sys) return own; // 芯が並びの位置で決めた名前(同じ sys でも期・月で名前が違う)
   const S0 = msxSuc && msxSuc.SUC; // 大会の第2版(四大大会・季節の賞・選抜→記念 など)は芯が名前を持つ
   if (S0 && S0.EX_BY_SYS && S0.EX_BY_SYS[sys]) return S0.EX_BY_SYS[sys].name;
   const names = typeof window !== 'undefined' && window.MONSUC_REGULAR_CUPS ? window.MONSUC_REGULAR_CUPS : {};
@@ -88243,7 +88302,7 @@ const msxR3CupName = (sys) => {
 const msxR3BattleName = (SUC, b) => {
   if (!b) return '';
   if (b.kind === 'summit') return (SUC.SUMMIT[b.round] || {}).name || '頂への道';
-  if (b.kind === 'cup') return `${msxR3CupName(b.sys)} ${msxR3Stars(b.star)}`;
+  if (b.kind === 'cup') return `${msxR3CupName(b.sys, b.name)} ${msxR3Stars(b.star)}`;
   return (SUC.FORCED[b.kind] || {}).name || '大会';
 };
 const msxR3BattleIcon = (b) => (!b ? '🏆' : b.kind === 'cup' ? (MSX_R3_CUP_ICON[b.sys] || '🏆') : b.kind === 'summit' ? '🗻' : b.kind === 'debut' ? '🎀' : b.kind === 'pro' ? '👑' : '🏆');
@@ -88597,7 +88656,7 @@ function MsxR3Cup({ run, setRun, v, ev, onBack, onActed }) {
     if (!cur || !cur.entry || !cur.entry.ok) return;
     const r = SUC.act(s, { kind: 'cup', id: cur.id });
     if (!r.out.ok) return;
-    const next = { ...run, s: r.state, out: null, r3skip: skip ? true : undefined, log: [...(run.log || []), { turn: s.turn, t: `${msxR3CupName(cur.sys)}に出た` }].slice(-20) };
+    const next = { ...run, s: r.state, out: null, r3skip: skip ? true : undefined, log: [...(run.log || []), { turn: s.turn, t: `${msxR3CupName(cur.sys, cur.name)}に出た` }].slice(-20) };
     onActed(next);
   };
   const toForced = P.key === 'final' ? null : P.left;
@@ -88606,7 +88665,7 @@ function MsxR3Cup({ run, setRun, v, ev, onBack, onActed }) {
   // 受付(月の大会を選ぶ)のあいだは育成中の曲のまま(2026-11-14 社長)。大会の曲 cupPre は組み合わせ表に入ってから(MsxR3Battle)
   useEffect(() => { if (typeof SuccessSound !== 'undefined') SuccessSound.se('cupEntry'); }, []);
   const nOk = cupsNow.filter((c) => c.entry && c.entry.ok).length;
-  const openLine = msxR3Line('turn.cup.open', run, { cup: cur ? msxR3CupName(cur.sys) : '' }, nOk ? `「今月は ${nOk}つ 出られるよ! 出ると1ターン使うから、トレーニングとどっちにするか考えてね」` : '「今月は出られる大会がないみたい。トレーニングでじっくり力をつけよ!」');
+  const openLine = msxR3Line('turn.cup.open', run, { cup: cur ? msxR3CupName(cur.sys, cur.name) : '' }, nOk ? `「今月は ${nOk}つ 出られるよ! 出ると1ターン使うから、トレーニングとどっちにするか考えてね」` : '「今月は出られる大会がないみたい。トレーニングでじっくり力をつけよ!」');
   const rankStep = typeof SUC.rankStepOf === 'function' ? SUC.rankStepOf(s) : 0; const rank = rankStep ? { name: SUC.rankNameOf(rankStep) } : null; // 賞金ランク10段(2026-11-14)
   const kindOf = (c) => (c.scenario ? 'シナリオ' : c.ex ? (MSX_R3_CUP_GRADE[c.grade] || '') : (SUC.CUP_SYS[c.sys] || {}).stat ? '自慢' : (SUC.CUP_SYS[c.sys] || {}).dist !== undefined ? '間合い' : (SUC.CUP_SYS[c.sys] || {}).type ? 'タイプ' : ['spring', 'summer', 'autumn', 'winter'].includes(c.sys) ? '四季' : 'ふつう');
   const wc = win ? cups.find((c) => c.id === win) : null;
@@ -88631,10 +88690,10 @@ function MsxR3Cup({ run, setRun, v, ev, onBack, onActed }) {
         const cls = `${!(c.entry && c.entry.ok) ? 'ng' : now && c.id === pick ? 'sel' : c.rival ? 'rv' : c.done ? 'won' : ''}${c.ex ? ` ex g-${c.grade || 'gold'}` : ''}${c.hard ? ' hard' : ''}${now ? '' : ' later'}`;
         return (
           <button type="button" key={c.id} className={`v-cup v-cup2 ${cls}`} onClick={() => { if (ok) setPick(c.id); setWin(c.id); }} data-msx-r3-cup={c.id}>
-            <div className="lg"><span className="e">{c.scenario ? '📖' : (MSX_R3_CUP_ICON[c.sys] || '🏆')}</span>{fc ? <span className={`fcst ${MSX_R3_FC_CLASS[fc.key] || ''}`}>{fc.label}</span> : null}</div>
+            <div className="lg"><span className="e">{c.scenario ? '📖' : (MSX_R3_CUP_ICON[c.sys] || '🏆')}</span>{fc ? <span className={`fcst ${MSX_R3_FC_CLASS[fc.key] || ''}`}>{fc.key === 'none' ? 'ほぼ無理' : fc.label}</span> : null}</div>
             <div className="tx">
               <div className="hd"><span className="gr2">{kindOf(c)}</span><span className="cs">{msxR3Stars(c.star)}</span>{c.done ? <span className="dn">優勝済</span> : null}</div>
-              <b>{c.scenario ? c.name : msxR3CupName(c.sys)}</b>
+              <b>{c.scenario ? c.name : msxR3CupName(c.sys, c.name)}</b>
               {!(c.entry && c.entry.ok) ? <span className="why">✖ {msxR3WhyText(c.entry, s)}</span> : null}
               <span className="g">{msxFmt(c.prize)}<small>G</small></span>
             </div>
@@ -88642,16 +88701,16 @@ function MsxR3Cup({ run, setRun, v, ev, onBack, onActed }) {
           </button>);
       }) : <div className="msx-note">{now ? '今月の大会はありません' : 'この月の大会はありません'}</div>}
     </div>
-    <div className="v-card" style={{ padding: '5px 9px' }}><div className="v-kv" style={{ margin: 0 }}><b>出ると</b><span>1戦だけ・1ターン使う・勝つと賞金と賞品。{toForced ? <span className="yel">{` 期末の大会まで あと${toForced}ターン`}</span> : null}</span></div></div>
+    <div className="v-card" style={{ padding: '5px 9px' }}><div className="v-kv" style={{ margin: 0 }}><b>出ると</b><span>1戦だけ・1ターン使う・勝つと賞金と賞品。{toForced ? <span className="yel">{' 期末の大会まで '}<span style={{ whiteSpace: 'nowrap' }}>{`あと${toForced}ターン`}</span></span> : null}</span></div></div>
     {wc ? (
       <div className="v-cupwin" onClick={() => { setWin(null); setPrz(null); }} data-msx-r3-cupwin>
         <div className="in" onClick={(e) => e.stopPropagation()}>
           <div className="h">大会参加確認</div>
-          <div className={`sign g-${wc.grade || 'n'}`}><span className="e">{wc.scenario ? '📖' : (MSX_R3_CUP_ICON[wc.sys] || '🏆')}</span><b>{wc.scenario ? wc.name : msxR3CupName(wc.sys)}</b><small>{kindOf(wc)} {msxR3Stars(wc.star)}</small></div>
+          <div className={`sign g-${wc.grade || 'n'}`}><span className="e">{wc.scenario ? '📖' : (MSX_R3_CUP_ICON[wc.sys] || '🏆')}</span><b>{wc.scenario ? wc.name : msxR3CupName(wc.sys, wc.name)}</b><small>{kindOf(wc)} {msxR3Stars(wc.star)}</small></div>
           <div className="sub">獲得物</div>
           <MsxR3PrizeBox prizes={msxR3Prizes(SUC, wc)} onPick={setPrz}/>
           {wcOk ? <div className="q">この大会に参加しますか?</div> : <div className="q ng">{now ? `この大会には出られません(${msxR3WhyText(wc.entry, s)})` : 'この大会は、その月になると出られます'}</div>}
-          <div className="bt">{wcOk ? <><button type="button" onClick={() => setWin(null)}>キャンセル</button><button type="button" className="go" onClick={() => { setPick(wc.id); setWin(null); if (cur && cur.id === wc.id) go(false); else { const r = SUC.act(s, { kind: 'cup', id: wc.id }); if (r.out.ok) onActed({ ...run, s: r.state, out: null, log: [...(run.log || []), { turn: s.turn, t: `${msxR3CupName(wc.sys)}に出た` }].slice(-20) }); } }} data-msx-r3-yes>はい</button></> : <button type="button" onClick={() => setWin(null)} data-msx-r3-close>とじる</button>}</div>
+          <div className="bt">{wcOk ? <><button type="button" onClick={() => setWin(null)}>キャンセル</button><button type="button" className="go" onClick={() => { setPick(wc.id); setWin(null); if (cur && cur.id === wc.id) go(false); else { const r = SUC.act(s, { kind: 'cup', id: wc.id }); if (r.out.ok) onActed({ ...run, s: r.state, out: null, log: [...(run.log || []), { turn: s.turn, t: `${msxR3CupName(wc.sys, wc.name)}に出た` }].slice(-20) }); } }} data-msx-r3-yes>はい</button></> : <button type="button" onClick={() => setWin(null)} data-msx-r3-close>とじる</button>}</div>
           {prz ? <div className="det" onClick={() => setPrz(null)}><div className="dbox" onClick={(e) => e.stopPropagation()}><div className="e">{prz.e}</div><b>{prz.name}</b><p className="msx-kp">{msxPh(prz.desc)}</p><button type="button" onClick={() => setPrz(null)}>とじる</button></div></div> : null}
         </div>
       </div>) : null}
@@ -88707,6 +88766,74 @@ function MsxR3Watch({ fight, onDone }) {
       </div>
     </div>
   );
+}
+
+// 組み合わせ表(2026-11-14 社長「トーナメントの表示がおかしい。最初に1回戦が動く演出がない。バトルは決勝の一戦だけ」・参考 taikai-bracket.png・v2 84〜90秒・v4 48〜52秒)
+//   8体・自分はいちばん上(橙)・番号は人気順(1〜8)・1番人気の王者は反対の山。開いたら 1回戦→準決勝 が自動で進む:
+//   勝った側へ線が赤く伸び、負けた側は暗くなる(自分も演出で勝ち上がる)。解説のひとこと。SKIP で飛ばせる。戦うのは決勝の1戦だけ
+//   線は行の高さ RH から px で引く(行と線がずれない)。芯の bracketOf: entrants・rounds[1回戦の勝ち4・準決勝の勝ち2]・final[自分, 相手]・pop
+function MsxR3Bracket({ run, s, v, ev, b, name, opp, foeName, skip, debug, settle, result, toCard, onPause }) {
+  const br = msxSuc.SUC.bracketOf(s) || { entrants: [], rounds: [[], []], final: [0, 4], pop: [] };
+  const E = br.entrants; const r1 = br.rounds[0] || []; const r2 = br.rounds[1] || []; const fi = (br.final && br.final[1]) || 4;
+  const [stage, setStage] = useState(0); // 0=開いた直後 1=1回戦のあと 2=準決勝のあと 3=決勝の前
+  useEffect(() => {
+    const ts = [setTimeout(() => setStage(1), 1200), setTimeout(() => setStage(2), 3000), setTimeout(() => setStage(3), 4800)];
+    return () => ts.forEach(clearTimeout);
+  }, []);
+  const [vh, setVh] = useState(() => (typeof window !== 'undefined' ? window.innerHeight : 844));
+  useEffect(() => { const f = () => setVh(window.innerHeight); window.addEventListener('resize', f); return () => window.removeEventListener('resize', f); }, []);
+  const RH = Math.max(34, Math.min(50, Math.floor((vh - 500) / 8))); // 行の高さ(下に大きな空きを残さない)
+  const no = br.pop && br.pop.length === E.length ? br.pop : E.map((_, i) => i + 1);
+  const nm = (e) => (e.you ? run.nick : (e.name || msxMonName(e.species)));
+  const out = (i) => (stage >= 1 && !r1.includes(i)) || (stage >= 2 && r1.includes(i) && !r2.includes(i));
+  const X = [0, 16, 32, 48, 64]; const yOf = (i) => i * RH + RH / 2;
+  const m1 = [0, 1, 2, 3].map((k) => (yOf(2 * k) + yOf(2 * k + 1)) / 2); const m2 = [0, 1].map((j) => (m1[2 * j] + m1[2 * j + 1]) / 2); const m3 = (m2[0] + m2[1]) / 2;
+  const pair = (a, c, lv) => `M${X[lv]} ${a}H${X[lv + 1]}M${X[lv]} ${c}H${X[lv + 1]}M${X[lv + 1]} ${a}V${c}`;
+  const base = [0, 1, 2, 3].map((k) => pair(yOf(2 * k), yOf(2 * k + 1), 0)).join('') + pair(m1[0], m1[1], 1) + pair(m1[2], m1[3], 1) + pair(m2[0], m2[1], 2) + `M${X[3]} ${m3}H${X[4]}`;
+  const wins = [];
+  if (stage >= 1) r1.forEach((w, k) => wins.push({ d: `M${X[0]} ${yOf(w)}H${X[1]}V${m1[k]}`, key: `a${k}` }));
+  if (stage >= 2) r2.forEach((w, j) => wins.push({ d: `M${X[1]} ${m1[2 * j + (w === r1[2 * j] ? 0 : 1)]}H${X[2]}V${m2[j]}`, key: `b${j}` }));
+  if (stage >= 3) [0, 1].forEach((j) => wins.push({ d: `M${X[2]} ${m2[j]}H${X[3]}`, key: `c${j}` })); // 決勝の前は入口で止める(優勝の札へは決勝のあと)
+  // 解説のひとこと(段ごと)
+  const top = E[no.indexOf(1)] || E[0]; const upsets = r1.filter((w) => w !== 0 && w !== fi && no[w] >= 5);
+  const foeNo = no[fi];
+  const lines = [
+    top && top.you ? <>「<b>1番人気は {run.nick}!</b> まずは 1回戦から 見ていこう」</> : <>「<b>1番人気は {top && top.champ ? '王者の ' : ''}{top ? nm(top) : ''}!</b> {run.nick}の1回戦は これからだよ」</>,
+    upsets.length ? <>「<b>大穴! {nm(E[upsets[0]])}</b> が 勝ち上がったぞ! {run.nick}も 1回戦を 勝ち上がり!」</> : <>「1回戦が おわったよ。<b>{run.nick}</b>は 順当に 勝ち上がり!」</>,
+    foeNo >= 4 ? <>「<b>大穴! {foeName}</b> 決勝まで きたぞ! {run.nick}は 準決勝も 勝って 決勝へ!」</> : <>「準決勝も おわったよ。<b>{run.nick}</b>は 決勝へ! 反対の山からは <b>{foeName}</b>」</>,
+  ];
+  const finalLine = (() => { const l = msxR3Line('turn.cup.before', run, { cup: name, rival: opp.rival ? foeName : '' }, ''); return l.t ? l.t : null; })()
+    || (opp.rival ? <>「決勝の相手は <b>ライバルの {foeName}</b>! 勝てば ごほうび大!」</> : opp.champ ? <>「決勝の相手は <b>王者の {foeName}</b>! {opp.note || '強敵だよ'}。胸を借りるつもりでいこう!」</> : <>「決勝の相手は <b>{foeName}</b>。{opp.note || 'しっかり見ていこう'}!」</>);
+  const body = (<>
+    <MsxBand s={s} v={v} ev={ev}/>
+    <div className="v-bk1"><img className="bg" src="images/story-bg/monhero_plaza_evening.jpg" alt=""/><div className="sh"/><div className="tt">{name}{b.retry ? `(再挑戦 ${b.retry}回目)` : ''}</div></div>
+    <div className="v-bkc" data-msx-r3-bracket={stage}>
+      <div className="rows">{E.map((x, i) => {
+        const k = x.you ? 'me' : x.rival ? 'rv' : x.champ ? 'ch' : '';
+        return (<div key={i} className={`v-br ${k}${i === 0 || i === fi ? ' mine' : ''}${out(i) ? ' out' : ''}`} style={{ height: RH }} data-msx-r3-brrow={i}><b className="no">{no[i]}</b>
+          <span className="nm">{nm(x)}{x.champ ? <em className="mk ch">👑王者</em> : null}{x.rival ? <em className="mk rv">ライバル</em> : null}{x.you ? <em className="mk me">あなた</em> : null}</span>
+          <i className="cn"/><span className="fc2"><img src={msxMonThumb(x.species)} alt=""/></span></div>);
+      })}</div>
+      <div className="rt" style={{ height: RH * 8 }}><svg className="v-brl" width="64" height={RH * 8} viewBox={`0 0 64 ${RH * 8}`}><path className="bs" d={base}/>{wins.map((w) => <path key={w.key} className="wl" d={w.d} pathLength="1"/>)}</svg><div className="win"><span>🏆</span><b>優勝</b></div></div>
+    </div>
+    <div className="v-bnt"><b>決勝は {run.nick} VS {foeName}</b>。<span>ほかの試合の結果は、見せるだけの演出です(戦うのは決勝の1戦だけ)</span></div>
+    <div className="v-ann"><div className="pic"><img src={msxFace(s.aid, 'excited')} alt=""/><span>解説</span></div>
+      <div className="tx">{stage >= 3 ? finalLine : lines[stage]}</div>
+      {stage < 3 ? <button type="button" className="sk" onClick={() => setStage(3)} data-msx-r3-bsk>SKIP ▸▸</button> : null}</div>
+  </>);
+  const foot = debug ? (
+    <div className="v-ft">
+      <button type="button" onClick={() => settle(false)}>負けたことにする</button>
+      <button type="button" className="on" onClick={() => settle(true)} data-msx-r3-dbgwin>勝ったことにする(デバッグ)</button>
+      <button type="button" className="go" onClick={toCard} data-msx-r3-tocard>⚔ 決勝へ</button>
+    </div>
+  ) : (
+    <div className="v-ft">
+      {skip ? <button type="button" className="on" style={{ flex: 1.6 }} onClick={result} data-msx-r3-bskip>⏩ スキップ(結果だけ)</button> : <button type="button" className="on" style={{ flex: 1.6 }} onClick={result} data-msx-r3-bresult>⏩ 結果だけ見る</button>}
+      <button type="button" className="go" onClick={toCard} data-msx-r3-tocard>⚔ 決勝へ</button>
+    </div>
+  );
+  return <MsxR3Frame run={run} back="中断" onBack={onPause} body={body} foot={foot}/>;
 }
 
 // ---- 試合のまわり ----
@@ -89036,7 +89163,7 @@ function MsxR3Battle({ run, setRun, v, ev, ctx, bondLv, onPause, debug }) {
   // ---- 大会の入り(紋章と大会名。組み合わせ表の前に1回)。大会の曲 cupPre はここから ----
   const introKey = `${s.turn}|${b.kind}|${b.round || 0}`;
   if (!st3 && step === 'bracket' && introSeen !== introKey && !run.r3skip) {
-    const title = b.kind === 'cup' ? msxR3CupName(b.sys) : name;
+    const title = b.kind === 'cup' ? msxR3CupName(b.sys, b.name) : name;
     return <MsxR3Frame run={run} back="中断" onBack={onPause} body={<MsxR3CupIntro key={introKey} b={b} title={title} onGo={() => setIntroSeen(introKey)}/>}
       foot={<div className="v-ft"><button type="button" className="go" onClick={() => setIntroSeen(introKey)} data-msx-r3-cupintro-go>SKIP ▸▸</button></div>}/>;
   }
@@ -89046,7 +89173,7 @@ function MsxR3Battle({ run, setRun, v, ev, ctx, bondLv, onPause, debug }) {
   const showDbg = debug && typeof MonsucCupShow === 'function' && (step === 'card' || step === 'watch');
   if (showOn || showDbg) {
     return <MsxR3Frame run={run} back="中断" onBack={onPause} body={
-      <MonsucCupShow startAt={showDbg ? 'card' : undefined} suc={SUC} s={s} me={{ name: run.nick || msxMonName(s.species), colors: Array.isArray(run.colors) ? run.colors : null }} title={b.kind === 'cup' ? msxR3CupName(b.sys) : name} opp={{ loy: opp.loy, pop: opp.pop }}
+      <MonsucCupShow startAt={showDbg ? 'card' : undefined} suc={SUC} s={s} me={{ name: run.nick || msxMonName(s.species), colors: Array.isArray(run.colors) ? run.colors : null }} title={b.kind === 'cup' ? msxR3CupName(b.sys, b.name) : name} opp={{ loy: opp.loy, pop: opp.pop }}
         fight={() => fight} settle={settleShow} onRematch={rematchWith} onNext={nextShow} onClose={onPause} onPhase={setShowPh}/>} foot={null}/>;
   }
   // ---- 負けた(C4): やり直す/あきらめる ----
@@ -89123,42 +89250,8 @@ function MsxR3Battle({ run, setRun, v, ev, ctx, bondLv, onPause, debug }) {
     return <MsxR3Frame run={run} back="中断" onBack={onPause} body={body} foot={foot}/>;
   }
 
-  // ---- 組み合わせ表(B1)。演出。戦うのは あなたの1戦だけ ----
-  const br = SUC.bracketOf(s) || { entrants: [] };
-  const pops = br.entrants.map((x, i) => (x.champ ? 1 : i === 4 ? 2 : x.you ? 3 : 0));
-  let nx = 4; const no = pops.map((p) => (p || nx++));
-  const lines = [0, 1, 2, 3].map((q) => { const y1 = 17 + 68 * q; const y2 = y1 + 34; return `M0 ${y1}H14V${y2}H0M14 ${(y1 + y2) / 2}H30`; }).join('') + 'M30 34V102H46M30 170V238H46M46 68V204M46 136H64';
-  const champ = br.entrants.find((x) => x && x.champ);
-  const body = (<>
-    <MsxBand s={s} v={v} ev={ev}/>
-    <div className="v-bk1"><img className="bg" src="images/story-bg/monhero_plaza_evening.jpg" alt=""/><div className="sh"/><div className="tt">{name}{b.retry ? `(再挑戦 ${b.retry}回目)` : ''}</div></div>
-    <div className="v-bkc">
-      <div className="rows">{br.entrants.map((x, i) => {
-        const k = x.you ? 'me' : x.rival ? 'rv' : x.champ ? 'ch' : '';
-        return (<div key={i} className={`v-br ${k}${i === 0 || i === 4 ? ' mine' : ''}`}><b className="no">{no[i]}</b>
-          <span className="nm">{x.you ? run.nick : (x.name || msxMonName(x.species))}{x.champ ? <em className="mk ch">👑王者</em> : null}{x.rival ? <em className="mk rv">ライバル</em> : null}{x.you ? <em className="mk me">あなた</em> : null}</span>
-          <i className="cn"/><span className="fc2"><img src={msxMonThumb(x.species)} alt=""/></span></div>);
-      })}</div>
-      <div className="rt"><svg className="v-brl" viewBox="0 0 64 272" preserveAspectRatio="none"><g fill="none" stroke="#a89a78" strokeWidth="2"><path d={lines}/></g></svg><div className="win"><span>🏆</span><b>優勝</b></div></div>
-    </div>
-    <div className="v-bnt"><b>あなたの1戦</b>は 赤い丸の2体のあいだ({run.nick} VS {foeName})。<span>ほかの試合の結果は、見せるだけの演出</span></div>
-    <div style={{ flex: 1 }}/>
-    <div className="v-ann"><div className="pic"><img src={msxFace(s.aid, 'excited')} alt=""/><span>解説</span></div>
-      <div className="tx">{(() => { const l = msxR3Line('turn.cup.before', run, { cup: name, rival: opp.rival ? foeName : '' }, ''); return l.t ? l.t : null; })() || (champ && !opp.champ ? <>「<b>1番人気は 王者の {champ.name || msxMonName(champ.species)}!</b> でも、{run.nick}の相手は {opp.rival ? 'ライバルの ' : ''}{foeName} だよ。」</> : opp.champ ? <>「相手は <b>王者の {foeName}</b>! {opp.note || '強敵だよ'}。胸を借りるつもりでいこう!」</> : <>「相手は <b>{foeName}</b>。{opp.note || 'しっかり見ていこう'}!」</>)}</div></div>
-  </>);
-  const foot = debug ? (
-    <div className="v-ft">
-      <button type="button" onClick={() => settle(false)}>負けたことにする</button>
-      <button type="button" className="on" onClick={() => settle(true)} data-msx-r3-dbgwin>勝ったことにする(デバッグ)</button>
-      <button type="button" className="go" onClick={() => setStep('card')} data-msx-r3-tocard>⚔ 1戦へ</button>
-    </div>
-  ) : (
-    <div className="v-ft">
-      {skip ? <button type="button" className="on" style={{ flex: 1.6 }} onClick={result} data-msx-r3-bskip>⏩ スキップ(結果だけ)</button> : <button type="button" className="on" style={{ flex: 1.6 }} onClick={result} data-msx-r3-bresult>⏩ 結果だけ見る</button>}
-      <button type="button" className="go" onClick={() => setStep('card')} data-msx-r3-tocard>⚔ 1戦へ</button>
-    </div>
-  );
-  return <MsxR3Frame run={run} back="中断" onBack={onPause} body={body} foot={foot}/>;
+  // ---- 組み合わせ表(B1)。1回戦→準決勝が自動で進む演出。戦うのは決勝の1戦だけ(MsxR3Bracket) ----
+  return <MsxR3Bracket run={run} s={s} v={v} ev={ev} b={b} name={name} opp={opp} foeName={foeName} skip={skip} debug={debug} settle={settle} result={result} toCard={() => setStep('card')} onPause={onPause}/>;
 }
 
 // ---- part: 56-monhero-success-r3-quest.jsx ----
@@ -125815,7 +125908,7 @@ function MonsterHeroGame() {
         <div className={`mb-2 text-[10px] font-black ${r.saved?'text-emerald-200':'text-amber-200'}`}>{r.failed?'保存に失敗しました':r.saved?'種族チャレンジ クリア':'種族チャレンジ クリア（保存なし確認）'}</div>
         <div className="grid grid-cols-2 gap-1 text-[10px] text-slate-200">
           <span>種族 / 難易度</span><b className="text-right">{speciesName}／{labelOf(r.difficultyId)}</b>
-          <span>今回のスコア</span><b className="text-right">{r.score.toLocaleString()}</b>
+          <span>今回のスコア</span><b className="text-right break-all min-w-0">{r.score.toLocaleString()}</b>
           <span>クリアターン</span><b className="text-right">{r.clearTurns!==null?`${r.clearTurns}T`:'—'}</b>
           <span>初回報酬</span><b className="text-right">{r.rewardGranted?`超越の実（${speciesName}）×${r.rewardAmount}`:'なし（取得済み）'}</b>
           <span>次の解放</span><b className="text-right">{nextLabel||'これ以上なし'}</b>
@@ -133803,7 +133896,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         </span>
         {empty
           ? <small className="shrink-0 text-right text-[9px] font-black text-slate-500">記録なし</small>
-          : <b className="shrink-0 text-right text-[13px] font-black text-cyan-200">{score.toLocaleString()}<small className="ml-0.5 text-[8px] text-slate-400">pt</small></b>}
+          : <b className="min-w-0 max-w-[60%] break-all text-right text-[13px] font-black text-cyan-200">{score.toLocaleString()}<small className="ml-0.5 text-[8px] text-slate-400">pt</small></b>}
       </div>
     );
     // 「自己ベスト」タブの中身。自分の種族別ベストをその難易度で並べて比べる(通信しない)
@@ -140112,7 +140205,7 @@ const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapsh
           <div className="mh-rjresult-in w-full max-w-xs rounded-2xl border border-orange-400/50 bg-orange-950/30 p-4 text-left mb-3" style={{'--d':'1250ms'}}>
             <div className="text-[10px] text-orange-200 font-black mb-1">与えたダメージ</div>
             <div data-raid-jack-damage className="text-3xl font-black text-white text-right"><TrainingCountUp from={0} to={r.damage} delay={1400} duration={1300} format={v=>v.toLocaleString()}/></div>
-            {r.way==='rhythm'?<><div data-raid-jack-rhythm-rows className="mt-2 grid grid-cols-2 gap-1 text-[10px] text-slate-200"><span>曲</span><b className="truncate text-right">{r.songName||'-'}{r.difficultyName?`(${r.difficultyName})`:''}</b><span>スコア</span><b className="text-right">{r.score.toLocaleString()}</b>{r.assist&&<><span>アシストモード</span><b className="text-right">ダメージにならない</b></>}{r.pumpkin?<><span>体力</span><b className="text-right">∞</b></>:<><span>ジャックの残りライフ(みんなの分を引いた計算)</span><b className="text-right">{r.lifeLeft.toLocaleString()}</b></>}</div>{!r.pumpkin&&Number.isFinite(r.lifeBefore)&&r.lifeMax>0&&<div data-raid-jack-life-bar className="mt-2"><div className="mh-rjresult-bar" aria-hidden="true"><i style={{'--from':Math.min(1,r.lifeBefore/r.lifeMax),'--to':Math.min(1,r.lifeLeft/r.lifeMax)}}/></div><div className="mt-0.5 text-right text-[9px] font-black text-red-200">{r.lifeBefore.toLocaleString()} → {r.lifeLeft.toLocaleString()}</div></div>}</>:<div className="mt-2 grid grid-cols-2 gap-1 text-[10px] text-slate-200"><span>使ったターン</span><b className="text-right">{r.turns} / {RAID_JACK_TURNS}</b>{r.kind==='a'&&<><span>ジャックの残りライフ(みんなの分を引いた計算)</span><b className="text-right">{r.lifeLeft.toLocaleString()}</b><span>固有技とアシカの成長</span><b data-raid-jack-levelups className="text-right">{r.levelUps}回</b><span hidden data-raid-jack-growths>{r.growths||0}</span></>}</div>}
+            {r.way==='rhythm'?<><div data-raid-jack-rhythm-rows className="mt-2 grid grid-cols-2 gap-1 text-[10px] text-slate-200"><span>曲</span><b className="truncate text-right">{r.songName||'-'}{r.difficultyName?`(${r.difficultyName})`:''}</b><span>スコア</span><b className="text-right break-all min-w-0">{r.score.toLocaleString()}</b>{r.assist&&<><span>アシストモード</span><b className="text-right">ダメージにならない</b></>}{r.pumpkin?<><span>体力</span><b className="text-right">∞</b></>:<><span>ジャックの残りライフ(みんなの分を引いた計算)</span><b className="text-right">{r.lifeLeft.toLocaleString()}</b></>}</div>{!r.pumpkin&&Number.isFinite(r.lifeBefore)&&r.lifeMax>0&&<div data-raid-jack-life-bar className="mt-2"><div className="mh-rjresult-bar" aria-hidden="true"><i style={{'--from':Math.min(1,r.lifeBefore/r.lifeMax),'--to':Math.min(1,r.lifeLeft/r.lifeMax)}}/></div><div className="mt-0.5 text-right text-[9px] font-black text-red-200">{r.lifeBefore.toLocaleString()} → {r.lifeLeft.toLocaleString()}</div></div>}</>:<div className="mt-2 grid grid-cols-2 gap-1 text-[10px] text-slate-200"><span>使ったターン</span><b className="text-right">{r.turns} / {RAID_JACK_TURNS}</b>{r.kind==='a'&&<><span>ジャックの残りライフ(みんなの分を引いた計算)</span><b className="text-right">{r.lifeLeft.toLocaleString()}</b><span>固有技とアシカの成長</span><b data-raid-jack-levelups className="text-right">{r.levelUps}回</b><span hidden data-raid-jack-growths>{r.growths||0}</span></>}</div>}
           </div>
           {r.opened&&<div className="mh-rjresult-in mh-rjresult-pop mb-2 text-sm font-black text-emerald-300" style={{'--d':'2700ms'}}>次の段階が開きました！</div>}
           {r.quickAward&&r.quickAward.loops>0&&(
