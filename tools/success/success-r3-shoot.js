@@ -121,6 +121,7 @@ const makeRun = async (kind) => {
         const pend0 = name === 'E9' ? await page.evaluate(async () => { const r = await storeGet(MSX_KEYS.run, null); return r && r.s ? (r.s.beatEarned || 0) - (r.beatSent || 0) : 0; }) : 0; // まだ本編へ渡していない大会の分
         // 曲の呼び出しを記録する(段C 2026-11-14 社長「バトルに入ったらバトル用の音楽に」: 試合に入ったら大会の曲から original_battle へ)
         await page.evaluate(() => { window.__bgmLog = []; if (!window.__bgmHooked && typeof SuccessSound !== 'undefined') { window.__bgmHooked = true; const o = SuccessSound.scene; SuccessSound.scene = function (id) { window.__bgmLog.push(id); return o.apply(this, arguments); }; } });
+        const keysSeen = [];
         for (const st of steps) {
           const done = await page.evaluate(async (st) => {
             if (st.re) { const re = new RegExp(st.re); const b = [...document.querySelectorAll('.msx button')].find((x) => re.test((x.innerText || '').replace(/\s+/g, '')) && !x.disabled); if (b) b.click(); return !!b; }
@@ -132,9 +133,13 @@ const makeRun = async (kind) => {
           }, st instanceof RegExp ? { re: st.source } : st);
           if (!done) check(`${label}: 「${st}」が押せる`, false);
           await page.waitForTimeout(st === '%ready' ? 2500 : 700);
+          keysSeen.push(await page.evaluate(() => (window.Audio_ && Audio_.currentBgmKey ? Audio_.currentBgmKey() : null)));
         }
         if (name === 'W1') { const lg = await page.evaluate(() => window.__bgmLog.slice()); const iC = lg.lastIndexOf('cupPre'), iB = lg.lastIndexOf('cupMatch');
-          check(`${label}: 試合に入ったら、場面の曲が cupPre から cupMatch(バトルの曲 original_battle)へ替わる`, iC >= 0 && iB > iC, lg.join('>')); }
+          check(`${label}: 試合に入ったら、場面の曲が cupPre から cupMatch(バトルの曲 original_battle)へ替わる`, iC >= 0 && iB > iC, lg.join('>'));
+          // 実際に鳴らす曲の id(Audio_.currentBgmKey)も、試合の前の画面(能力を見るバトルカード)は大会の曲・試合は original_battle で、別の曲
+          const kc = keysSeen.indexOf('monsuc_cup'), kb = keysSeen.lastIndexOf('original_battle');
+          check(`${label}: 前の画面(バトルカード)の曲 monsuc_cup と、試合の曲 original_battle は別の曲`, kc >= 0 && kb > kc && keysSeen[keysSeen.length - 1] === 'original_battle', keysSeen.join('>')); }
         await page.waitForTimeout(500);
         const m = await page.evaluate(() => {
           const root = document.querySelector('.msx'); if (!root) return { ok: false };

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3bfd6538fa2711b6
+// source-sha256: d7b2b09db06868cd
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -143469,7 +143469,7 @@ function AmgbPanel({
     "data-amgb-pop": true
   }, Math.round(b.pop)))), React.createElement("p", {
     className: "mt-1 text-[9.5px] font-bold text-slate-400"
-  }, "忠誠度が低いと対戦でそっぽを向く番が出ることがあります ・ 人気が高いほど会心の一撃が出やすくなります", amgbStars(b.pop) ? ` ・ 人気 ${amgbStars(b.pop)}` : ''), React.createElement("div", {
+  }, "忠誠度が低いと対戦で意味不明な行動をする番が出ることがあります ・ 人気が高いほど会心の一撃が出やすくなります", amgbStars(b.pop) ? ` ・ 人気 ${amgbStars(b.pop)}` : ''), React.createElement("div", {
     className: "mt-1.5 text-[10.5px] font-bold text-slate-200",
     "data-amgb-policy": b.pol
   }, React.createElement("div", {
@@ -146988,6 +146988,7 @@ const assistantLifeBodyBadge = id => {
 };
 const AMBW_ENGINE_SRC = 'data/assistant-masmon-battle.js';
 const AMBW_DIST = ['零', '近', '中', '遠'];
+const ambwWhyOf = (k, why) => k === 'sulk' ? '意味不明な行動をしてしまった…' : (why || {})[k];
 const AMBW_STAT_JP = Object.freeze({
   life: 'ライフ',
   pow: 'ちから',
@@ -147761,7 +147762,7 @@ function AssistantMasmonBattleWatch({
       const n = who(x.side, x.i);
       if (x.ev === 'tech') return x.hit ? `${n}の ${x.name}${x.crit ? ' 会心!' : ''} → ${x.dmg}${x.guarded ? '(ガード)' : ''}` : `${n}の ${x.name} … はずれ`;
       if (x.ev === 'move') return `${n}が ${AMBW_DIST[x.to]}距離へ ${x.step > 0 ? 'さがる' : 'つめる'}`;
-      if (x.ev === 'charge') return x.why === 'sulk' ? `${n}は そっぽを向いた…(ガッツだけたまった)` : `${n}は ガッツをためた`;
+      if (x.ev === 'charge') return x.why === 'sulk' ? `${n}は 意味不明な行動をした…(ガッツだけたまった)` : `${n}は ガッツをためた`;
       if (x.ev === 'guard') return `${n}は 身を守った`;
       if (x.ev === 'swap') return `交代! ${who(x.side, x.from)} → ${n}`;
       if (x.ev === 'ko') return `${x.name} は たおれた`;
@@ -147928,7 +147929,7 @@ function AssistantMasmonBattleWatch({
     }, recent.map(x => React.createElement("p", {
       key: x.k,
       className: x.side
-    }, React.createElement("small", null, "R", x.r), x.t)), actor && e.why && WHY[e.why] && React.createElement("div", {
+    }, React.createElement("small", null, "R", x.r), x.t)), actor && e.why && ambwWhyOf(e.why) && React.createElement("div", {
       className: "ambw-row",
       style: {
         marginTop: 6
@@ -147939,7 +147940,7 @@ function AssistantMasmonBattleWatch({
       alt: ""
     }), React.createElement("div", {
       className: "ambw-bubble"
-    }, actor.name, "「", WHY[e.why], "」"))), React.createElement("div", {
+    }, actor.name, "「", ambwWhyOf(e.why, WHY), "」"))), React.createElement("div", {
       className: "ambw-seek"
     }, React.createElement("i", {
       style: {
@@ -150008,7 +150009,7 @@ function AssistantMasmonBattleBeta({
     }, "🎙 ", call.t), recent.map(x => React.createElement("p", {
       key: x.k,
       className: x.side
-    }, React.createElement("small", null, "R", x.r), x.t)), actor && e.why && WHY[e.why] && React.createElement("div", {
+    }, React.createElement("small", null, "R", x.r), x.t)), actor && e.why && ambwWhyOf(e.why, WHY) && React.createElement("div", {
       className: "ambw-row ambb-why",
       style: {
         marginTop: 6
@@ -150019,7 +150020,7 @@ function AssistantMasmonBattleBeta({
       alt: ""
     }), React.createElement("div", {
       className: "ambw-bubble"
-    }, actor.name, "「", WHY[e.why], "」"))), review && React.createElement("div", {
+    }, actor.name, "「", ambwWhyOf(e.why, WHY), "」"))), review && React.createElement("div", {
       className: "ambw-small",
       style: {
         marginTop: 8
@@ -150908,7 +150909,7 @@ const monsucLossWhy = (log, meName) => {
     } else if (e.side === 'B' && e.ev === 'tech' && e.hit && e.name) foe[e.name] = (foe[e.name] || 0) + 1;
   }
   const me = meName || 'こちら';
-  if (sulk >= 2 && sulk / Math.max(1, acts) >= 0.15) return `${me}が そっぽを向いて、${sulk}回 技を出さなかった(忠誠が低いと 言うことを聞かない)`;
+  if (sulk >= 2 && sulk / Math.max(1, acts) >= 0.15) return `${me}が 意味不明な行動で、${sulk}回 技を出さなかった(忠誠が低いと 言うことを聞かない)`;
   if (stuck >= 2 && stuck / Math.max(1, acts) >= 0.15) return `技の届く間合いへ動くのに ${stuck}回 番を使って、そのあいだ 技を撃てなかった`;
   const foeAll = Object.values(foe).reduce((x, y) => x + y, 0);
   if (foeAll > 0 && foeAll <= 5) return `相手の技が重く、${foeAll}回 受けただけで 倒れた`;
@@ -150999,7 +151000,7 @@ const monsucBuffsOf = mods => {
   }
   if (m.noSulk || m.noIdle) {
     buffs.noSulk = true;
-    rows.push('そっぽを 向かない');
+    rows.push('意味不明な行動をしない');
   }
   if (m.noInjury) rows.push('この試合では けがをしない');
   if (m.showFirst) rows.push('相手の 最初の手が 見える');
@@ -151600,7 +151601,7 @@ function MonsucBattleCard({
   const foeKind = kindOf(foeTechs);
   const myKind = kindOf(myTechs);
   const kindWhy = foeKind && mscNum(op[foeKind]) < mscNum(op[other(foeKind)]) * 0.7 ? React.createElement(React.Fragment, null, "相手の技は ", React.createElement("em", null, MSC_STAT_JP[foeKind], "技"), "が中心。相手の", MSC_STAT_JP[foeKind], "は低めで、こちらへの痛手は小さいよ!") : myKind && mscNum(me[myKind]) < mscNum(me[other(myKind)]) * 0.7 ? React.createElement(React.Fragment, null, "こちらの技は ", React.createElement("em", null, MSC_STAT_JP[myKind], "技"), "が中心。", MSC_STAT_JP[myKind], "が低めで、痛手を与えにくいよ…") : null;
-  const hint = loy < 40 ? React.createElement(React.Fragment, null, "忠誠が ", loy, " だと、", React.createElement("em", null, "そっぽを向いて"), " 技を出さない番が あるよ…") : kindWhy ? kindWhy : noReach.includes(foeBest.d) ? React.createElement(React.Fragment, null, "相手の得意な", AMBW_DIST[foeBest.d], "の間合いに、", React.createElement("em", null, "届く技が無い"), "よ。入られたら 動いて離れよう!") : allAhead ? React.createElement(React.Fragment, null, "6つの能力は ", React.createElement("em", null, "どれも"), " 勝ってる! ", distWord, "で 押していこう!") : ahead.length ? React.createElement(React.Fragment, null, ahead.map(x => MSC_STAT_JP[x.k]).join('と'), "は 勝ってる! ", React.createElement("em", null, distWord), " で押していこう!") : React.createElement(React.Fragment, null, "能力は 相手が上…。", React.createElement("em", null, distWord), " で 技を当てていこう!");
+  const hint = loy < 40 ? React.createElement(React.Fragment, null, "忠誠が ", loy, " だと、", React.createElement("em", null, "意味不明な行動"), "で 技を出さない番が あるよ…") : kindWhy ? kindWhy : noReach.includes(foeBest.d) ? React.createElement(React.Fragment, null, "相手の得意な", AMBW_DIST[foeBest.d], "の間合いに、", React.createElement("em", null, "届く技が無い"), "よ。入られたら 動いて離れよう!") : allAhead ? React.createElement(React.Fragment, null, "6つの能力は ", React.createElement("em", null, "どれも"), " 勝ってる! ", distWord, "で 押していこう!") : ahead.length ? React.createElement(React.Fragment, null, ahead.map(x => MSC_STAT_JP[x.k]).join('と'), "は 勝ってる! ", React.createElement("em", null, distWord), " で押していこう!") : React.createElement(React.Fragment, null, "能力は 相手が上…。", React.createElement("em", null, distWord), " で 技を当てていこう!");
   const aptRow = (sp, me) => React.createElement("div", {
     className: "msc-apt"
   }, aptOf(sp, me).map((g, d) => React.createElement("span", {
@@ -176506,7 +176507,7 @@ const msaSay = (e, nm) => {
   if (!e) return '';
   if (e.ev === 'tech') return e.hit ? `${nm(e.side, e.i)}の ${e.name}!${e.crit ? ' 会心の一撃!' : e.guarded ? ' …ガードされた' : ''}` : `${nm(e.side, e.i)}の ${e.name} … よけられた`;
   if (e.ev === 'move') return `${nm(e.side, e.i)}が ${AMBW_DIST[e.to] || ''}の間合いへ`;
-  if (e.ev === 'charge') return e.why === 'sulk' ? `${nm(e.side, e.i)}は そっぽを向いた…` : `${nm(e.side, e.i)}は ガッツをためた`;
+  if (e.ev === 'charge') return e.why === 'sulk' ? `${nm(e.side, e.i)}は 意味不明な行動をした…` : `${nm(e.side, e.i)}は ガッツをためた`;
   if (e.ev === 'guard') return `${nm(e.side, e.i)}は 身を守った`;
   if (e.ev === 'swap') return `${nm(e.side, e.i)}に 交代!`;
   if (e.ev === 'ko') return `${e.name} は たおれた`;
@@ -176637,7 +176638,7 @@ function MsaFighter({
       extra.push(React.createElement("span", {
         key: "t",
         className: "msa-tag"
-      }, "そっぽ…"));
+      }, "意味不明…"));
     } else {
       cls = 'msa-charge';
       extra.push(React.createElement("span", {
@@ -176909,7 +176910,7 @@ const msaBandsOf = (log, frames, k) => {
     t: '🛡 守りの構え'
   });else if (r.ev === 'charge') out.push({
     side: r.side,
-    t: r.why === 'sulk' ? '💢 そっぽを向いた' : '⚡ ガッツをためた'
+    t: r.why === 'sulk' ? '💢 意味不明' : '⚡ ガッツをためた'
   });else if (r.ev === 'move') out.push({
     side: r.side,
     t: `👣 間合い ${AMBW_DIST[pf.d] || ''}→${AMBW_DIST[f.d] || ''}`
@@ -177336,7 +177337,7 @@ function MsaStage({
     key: `sk-${pos}`,
     className: `msa-sulkstamp ${e.side === 'B' ? 'B' : 'A'}`,
     "data-msa-sulk": e.side
-  }, React.createElement("b", null, "💢 そっぽを向いた!"), React.createElement("small", null, e.side === 'A' ? '言うことを聞かず、何もしなかった' : '相手は言うことを聞かず、何もしなかった')), e.ev !== 'tech' && React.createElement("div", {
+  }, React.createElement("b", null, "💢 意味不明!"), React.createElement("small", null, e.side === 'A' ? '言うことを聞かず、何もしなかった' : '相手は言うことを聞かず、何もしなかった')), e.ev !== 'tech' && React.createElement("div", {
     className: "msa-dist"
   }, AMBW_DIST.map((n, d) => React.createElement("span", {
     key: d,
@@ -177796,7 +177797,7 @@ const msaCallOf = (log, frames, k, maxHp, who) => {
   };
   if (e.ev === 'charge' && e.why === 'sulk') return {
     k: 'sulk',
-    t: `${who(e.side, e.i)}は そっぽを向いた! 言うことを聞かない…`
+    t: `${who(e.side, e.i)}は 意味不明! 言うことを聞かない…`
   };
   if (e.ev === 'swap') return {
     k: 'swap',

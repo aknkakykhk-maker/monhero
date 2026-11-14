@@ -108,7 +108,7 @@ const open = async (browser, reducedMotion, width = 390, species = 'Mocchi', loy
       check('段C: 手動で最後まで打っても、一度もオートにならない', ended && mine >= 3 && modes.size === 1 && modes.has('manual'), JSON.stringify({ modes: [...modes], mine, guard, ended }));
       await page.close();
     }
-    // 段C(2026-11-14 社長): そっぽの番は「そっぽを向いた!」とはっきり見せる(大きな判子・実況の行)。手動のまま
+    // 段C(2026-11-14 社長): 意味不明な行動の番は「意味不明!」とはっきり見せる(大きな判子・実況の行)。手動のまま
     {
       const { page } = await open(browser, 'reduce', 390, 'Mocchi', 0);
       let seen = false, callSeen = false, guard = 0;
@@ -119,8 +119,8 @@ const open = async (browser, reducedMotion, width = 390, species = 'Mocchi', loy
         if (st.act) await page.evaluate(() => { const b = [...document.querySelectorAll('.msxm-btn:not([disabled])')].find((y) => /ためる/.test(y.textContent)); if (b) b.click(); });
         await page.waitForTimeout(80);
       }
-      const bandOk = seen ? await page.evaluate(() => /そっぽを向いた/.test(document.querySelector('[data-msa-sulk]').textContent)) : false;
-      check('段C: そっぽの番に「そっぽを向いた!」の判子が出る(手動のまま)', seen && bandOk, JSON.stringify({ seen, bandOk, callSeen, guard }));
+      const bandOk = seen ? await page.evaluate(() => /意味不明/.test(document.querySelector('[data-msa-sulk]').textContent)) : false;
+      check('段C: 意味不明な行動の番に「意味不明!」の判子が出る(手動のまま)', seen && bandOk, JSON.stringify({ seen, bandOk, callSeen, guard }));
       await page.close();
     }
     // 段C(2026-11-14 社長): 手動/オートの記憶は、その育成の中だけ。新しい育成は手動から。別の育成で選んだオートは引き継がない。前のキー(mh_monsuc_arena_ctl_v1)は読まない
