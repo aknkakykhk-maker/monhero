@@ -94,6 +94,21 @@ const open = async (browser, reducedMotion) => {
       check('④ 技の名前の帯に命中%', cutP);
       await page.waitForFunction(() => document.querySelector('.msxm-auto'), null, { timeout: 30000 });
       await page.evaluate(() => { const a = document.querySelector('.msxm-auto'); if (a) a.click(); });
+      // 段C(2026-11-14): オートでも、自分の側の技の札4枚・⏸・見せ場だけ・実況が付く(助手マスモン対戦と同じ操作)
+      await page.waitForTimeout(700);
+      const SHOT_DIR = path.join(ROOT, 'docs', 'progress', 'masmon-battle', 'stage-c');
+      if (process.argv.includes('--shots')) await page.screenshot({ path: path.join(SHOT_DIR, 'monsuc-auto.png') });
+      const stc = await page.evaluate(async () => {
+        const cards = document.querySelectorAll('[data-msa-cards] [data-msa-dc-card]').length;
+        const pause = document.querySelector('[data-msc-pause]'), hl = document.querySelector('[data-msc-hl]');
+        if (!pause || !hl) return { cards, pause: !!pause, hl: !!hl };
+        const posOf = () => Number(document.querySelector('[data-msc-match]').dataset.msaPos);
+        pause.click(); await new Promise((r) => setTimeout(r, 200));
+        const p0 = posOf(); await new Promise((r) => setTimeout(r, 2500)); const p1 = posOf();
+        pause.click();
+        return { cards, pause: true, hl: true, held: p0 === p1 };
+      });
+      check('段C: オートで、技の札4枚・⏸(押すと止まる)・★見せ場が出る', stc.cards === 4 && stc.pause && stc.hl && stc.held === true, JSON.stringify(stc));
       await page.evaluate(() => { const b = [...document.querySelectorAll('.msa-tools button')].find((x) => x.textContent === '×4'); if (b) b.click(); });
       await page.waitForFunction(() => document.querySelector('[data-msc-end]'), null, { timeout: 180000 }).catch(() => {});
       await page.waitForTimeout(600);
