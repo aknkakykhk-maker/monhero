@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: bcf44602b943b521
+// generated-sha256: d12c8af4062bc93c
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -86210,6 +86210,7 @@ const msxLoad = () => {
           techs: typeof ASSISTANT_MASMON_TECHS !== 'undefined' ? ASSISTANT_MASMON_TECHS : null,
           types: typeof MONSTER_TYPE_OF !== 'undefined' ? MONSTER_TYPE_OF : null,
           monsters: typeof ALL_PLAYER_MONSTERS !== 'undefined' ? ALL_PLAYER_MONSTERS : null,
+          lineage: typeof MONSTER_LINEAGE_MAP !== 'undefined' ? MONSTER_LINEAGE_MAP : null, // 血統(同じ血統の子のおすそわけ ev.team.kin。読むだけ)
           regulars: regOk ? msxGlobalConst('MONSUC_REGULARS') : null, cupNames: regOk ? msxGlobalConst('MONSUC_REGULAR_CUPS') : null,
           assist: typeof window !== 'undefined' ? window.MONHERO_SUCCESS_ASSIST || null : null, // 第2版の表(無ければ芯は第1版で動く)
           arc: typeof window !== 'undefined' ? window.MONHERO_SUCCESS_ARC || null : null, // 助手1人分のストーリー(無ければ固有イベントなし・相手えらびは今までの並び)
@@ -87816,7 +87817,10 @@ function MsxEvent({ run, setRun, v, ev, ctx, bondLv, onDone }) {
   useEffect(() => { if (seenId && typeof msxSeenMark === 'function') msxSeenMark(seenId); }, [seenId]);
   const isUniq = !isStory && !!view && view.kind === 'uniq'; // 助手の固有イベント(56-monhero-success-arc.jsx・data/monhero-success-arc.js)
   const scene = isStory ? (se && se.SCENE ? se.SCENE.story(s.aid, o.ep) : `scn.${s.aid}.ep${o.ep}`) : view && view.lines;
-  const c2 = { ...ctx, bond: bondLv, cheer: view && view.cheerName, cheer2: view && view.cheer2Name, train: view && view.train ? MSX_STAT_NAME[view.train] : undefined };
+  // 拾い物・おすそわけ(ev.daily.find / ev.team.kin・r1113-037): もらう物の名前を台本の {item} へ。もらったかは芯の印 gift_<種類> がこのターンか
+  const giftItem = view && view.item ? msxItemView(view.item) : null;
+  const gotGift = giftItem && s.ev && s.ev.flags && s.ev.flags[`gift_${view.id === 'ev.team.kin' ? 'kin' : 'find'}`] === s.turn;
+  const c2 = { ...ctx, bond: bondLv, cheer: view && view.cheerName, cheer2: view && view.cheer2Name, train: view && view.train ? MSX_STAT_NAME[view.train] : undefined, item: giftItem ? giftItem.name : undefined };
   const evOf = (sc) => { try { return se && typeof se.event === 'function' && sc ? se.event(sc, c2) : null; } catch (e) { return null; } };
   const main = evOf(scene) || { lines: [], choices: [], after: [], head: null, label: '' };
   const picked = o.picked || null;
@@ -87835,7 +87839,7 @@ function MsxEvent({ run, setRun, v, ev, ctx, bondLv, onDone }) {
   };
   const ups = {}; if (picked && picked.before) MSX_STATS.forEach((k) => { const d = s.stats[k] - picked.before[k]; if (d) ups[k] = d; });
   const afterLines = picked ? picked.scenes.flatMap((sc) => (evOf(sc) || { lines: [] }).lines.concat((evOf(sc) || { after: [] }).after)) : [];
-  const shown = (picked ? afterLines : main.lines).slice(0, 4);
+  const shown = (picked && (afterLines.length || !(view && view.watch)) ? afterLines : main.lines).slice(0, 4); // 見るだけの出来事(拾い物など)は、結果のあとも台詞を残す
   const head = isStory ? `${msxAidName(s.aid)}のお話 ${o.ep === 'special' ? '特別な1話' : `第${o.ep}話`}` : isUniq ? `${msxAidName(s.aid)}の${view.title ? `「${view.title}」` : 'お話'}` : view && view.id === 'ev.self.anniv' ? 'はじめての育成記念日' : (view && view.head) || main.label || '育成イベント';
   const cheerIdx = view && Number.isInteger(view.cheer) ? view.cheer : null;
   const who = (l) => (l.who === 'narr' ? null : l.who === 'issa' ? 'イッサ博士' : l.who === 'mon' ? run.nick : msxAidName(l.who));
@@ -87853,6 +87857,7 @@ function MsxEvent({ run, setRun, v, ev, ctx, bondLv, onDone }) {
     </div>
     {picked ? (<>
       {Object.keys(ups).length ? <MsxStRow stats={s.stats} ups={ups}/> : null}
+      {gotGift ? <div className="v-log" data-msx-ev-gift>{giftItem.e} <b className="gu">{giftItem.name}</b> を手に入れた!(🎒持ち物に入った)<br/><small>{giftItem.desc}</small></div> : null}
       {picked.apt ? <div className="v-log" data-msx-ev-apt>📏 「{['零', '近', '中', '遠'][picked.apt.dist]}」の間合い適性が <b className="ga">{picked.apt.from} → {picked.apt.grade}</b> に上がった!</div> : null}
       <div className="v-ft" style={{ marginTop: 6 }}><button type="button" className="go" onClick={() => onDone(run)}>つぎへ ▶</button></div>
     </>) : choices.length ? (
