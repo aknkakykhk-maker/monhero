@@ -22,7 +22,7 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
 let chromium; let sharp;
 try { ({ chromium } = require(path.join(ROOT, 'tools', 'node_modules', 'playwright'))); sharp = require(path.join(ROOT, 'tools', 'node_modules', 'sharp')); } catch (e) { console.log('SKIP: playwright か sharp が入っていないので確かめられません'); process.exit(0); }
 const { quietBootSeed, updateNoticeSeed } = require(path.resolve(__dirname, '..', 'boot', 'quiet-boot-seed'));
-const PORT = 8967;
+const PORT = 9317;
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.PNG': 'image/png', '.jpg': 'image/jpeg', '.webp': 'image/webp', '.json': 'application/json', '.mp3': 'audio/mpeg', '.svg': 'image/svg+xml', '.woff2': 'font/woff2' };
 const TOL = 24; // 画面の端のふつうの余白(見出しの上の数px〜20px弱)と、線のにじみ・丸め(px)。env() の取り違えで出る帯(上59・左右47・下34)より小さい
 // 姿勢: [名前, 幅, 高さ, 回す, 安全域(上・下・左・右)]。安全域は index.html の --mh-safe-* で差し込む(env() は作れない)
