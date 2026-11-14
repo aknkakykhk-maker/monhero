@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 96f0a0d71178c13b
+// source-sha256: ef82d64f0a921731
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -122189,8 +122189,8 @@ function AssistantLifeProfileSheet({
     next: null,
     rate: 0
   } : assistantLifeProfileBond(id, bondLevelOf);
-  const likes = assistantLifeProfileLikes(id, giftSt);
-  const voices = assistantLifeProfileVoices(id, b.lv, giftSt);
+  const likes = viewOnly ? null : assistantLifeProfileLikes(id, giftSt);
+  const voices = viewOnly ? [] : assistantLifeProfileVoices(id, b.lv, giftSt);
   const vg = voices.find(g => g.key === vKey) || voices[0] || null;
   const vLine = vg && vg.open.length ? vg.open[vIdx % vg.open.length] : null;
   const team = typeof assistantLifeMasmonTeamOf === 'function' ? assistantLifeMasmonTeamOf(id) : [];
@@ -122308,7 +122308,7 @@ function AssistantLifeProfileSheet({
   }, React.createElement("p", {
     className: h3
   }, who.emoji || '🌟', " 人となり"), who.intro && kv('性格', who.intro), assistantLifeProfileRhythm(id) && kv('生活', assistantLifeProfileRhythm(id)), b.tone && kv('話し方(いま)', b.tone));
-  const secLikes = React.createElement("div", {
+  const secLikes = viewOnly ? null : React.createElement("div", {
     ref: refs.likes,
     className: card,
     "data-assistant-life-profile-sec": "likes"
@@ -122333,7 +122333,7 @@ function AssistantLifeProfileSheet({
   }, "💭 ", who.name, "の話から:「", String(likes.hint.t).replace(/\{name\}/g, call), "」"), likes.total > 0 && React.createElement("p", {
     className: "mt-1 text-[10.5px] font-bold text-slate-400"
   }, "？は贈ると分かります。分かった好みはここに残ります。"));
-  const secBond = React.createElement("div", {
+  const secBond = viewOnly ? null : React.createElement("div", {
     ref: refs.bond,
     className: card,
     "data-assistant-life-profile-sec": "bond"
@@ -122389,7 +122389,7 @@ function AssistantLifeProfileSheet({
     },
     className: "mt-2 min-h-[44px] w-full rounded-xl bg-slate-700 text-[12.5px] font-black text-white active:scale-[.98]"
   }, "🐾 マスモンをくわしく見る ›")));
-  const secVoice = React.createElement("div", {
+  const secVoice = viewOnly ? null : React.createElement("div", {
     ref: refs.voice,
     className: card,
     "data-assistant-life-profile-sec": "voice"

@@ -305,8 +305,8 @@ function AssistantLifeProfileSheet({ id, bondLevelOf = null, land = false, giftS
   const refs = { who: React.useRef(null), likes: React.useRef(null), bond: React.useRef(null), voice: React.useRef(null) };
   if (!who) return null;
   const b = viewOnly ? { lv: 0, title: '', tone: '', next: null, rate: 0 } : assistantLifeProfileBond(id, bondLevelOf);
-  const likes = assistantLifeProfileLikes(id, giftSt);
-  const voices = assistantLifeProfileVoices(id, b.lv, giftSt);
+  const likes = viewOnly ? null : assistantLifeProfileLikes(id, giftSt);
+  const voices = viewOnly ? [] : assistantLifeProfileVoices(id, b.lv, giftSt);
   const vg = voices.find(g => g.key === vKey) || voices[0] || null;
   const vLine = vg && vg.open.length ? vg.open[vIdx % vg.open.length] : null;
   const team = typeof assistantLifeMasmonTeamOf === 'function' ? assistantLifeMasmonTeamOf(id) : [];
@@ -352,7 +352,7 @@ function AssistantLifeProfileSheet({ id, bondLevelOf = null, land = false, giftS
       {assistantLifeProfileRhythm(id) && kv('生活', assistantLifeProfileRhythm(id))}
       {b.tone && kv('話し方(いま)', b.tone)}
     </div>);
-  const secLikes = (
+  const secLikes = viewOnly ? null : (
     <div ref={refs.likes} className={card} data-assistant-life-profile-sec="likes">
       <p className={h3}><span className="whitespace-nowrap">{land ? '💗 好き・💧 苦手' : '💗 好きなもの・💧 苦手なもの'}</span>{likes.total > 0 && <em className="whitespace-nowrap text-[10.5px] font-bold not-italic text-slate-400">分かったもの {likes.known}/{likes.total}</em>}</p>
       {likes.rows.map(r => (
@@ -362,7 +362,7 @@ function AssistantLifeProfileSheet({ id, bondLevelOf = null, land = false, giftS
       {likes.hint && <p data-assistant-life-profile-hint className="mt-1.5 rounded-xl bg-slate-950/80 px-2 py-1.5 text-[11px] font-bold leading-snug text-slate-200">💭 {who.name}の話から:「{String(likes.hint.t).replace(/\{name\}/g, call)}」</p>}
       {likes.total > 0 && <p className="mt-1 text-[10.5px] font-bold text-slate-400">？は贈ると分かります。分かった好みはここに残ります。</p>}
     </div>);
-  const secBond = (
+  const secBond = viewOnly ? null : (
     <div ref={refs.bond} className={card} data-assistant-life-profile-sec="bond">
       <p className={h3}>🤝 いまのきずな</p>
       <div className="flex flex-wrap items-baseline justify-between gap-x-2"><span className="whitespace-nowrap text-[14px] font-black text-white">💗 仲良し度 Lv{b.lv} <span className="text-[11px] text-pink-200">{b.title}</span></span>{b.next && <span className="whitespace-nowrap text-[11px] font-bold text-slate-400">あと {b.next.remain} で Lv{b.next.level}</span>}</div>
@@ -379,7 +379,7 @@ function AssistantLifeProfileSheet({ id, bondLevelOf = null, land = false, giftS
         {onMasmon && <button type="button" data-assistant-life-profile-masmon onClick={() => { onClose(); onMasmon(id); }} className="mt-2 min-h-[44px] w-full rounded-xl bg-slate-700 text-[12.5px] font-black text-white active:scale-[.98]">🐾 マスモンをくわしく見る ›</button>}
       </>}
     </div>);
-  const secVoice = (
+  const secVoice = viewOnly ? null : (
     <div ref={refs.voice} className={card} data-assistant-life-profile-sec="voice">
       <p className={h3}><span>🔊 台詞を聞く</span>{vg && <em className="whitespace-nowrap text-[10.5px] font-bold not-italic text-slate-400">聞ける台詞 {voices.reduce((a, g) => a + g.open.length, 0)}</em>}</p>
       <div className="flex items-start gap-2">
