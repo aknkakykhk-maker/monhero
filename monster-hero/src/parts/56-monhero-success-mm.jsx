@@ -108,7 +108,7 @@ function MsxR3Box({ onClose }) {
   const [tab, setTab] = useState('list'); // 一覧のタブ 'list' / 'bye'(お別れをまとめて選ぶ)
   const [pick, setPick] = useState([]); // お別れで選んだ子の id
   const [byeAsk, setByeAsk] = useState(null); // お別れの確かめ { ids }
-  const [assist, setAssist] = useState(null); // アシスト用に残したモンスターの置き場(mh_monsuc_assist_v1)
+  const [assist, setAssist] = useState(null); // メモリアルモンスターの置き場(mh_monsuc_assist_v1)
   const fuseKept = React.useRef(null); // 合体で置き場に残った親の数(生まれたあとの文に使う)
   const [apick, setApick] = useState([]); // 置き場で、外すために選んだ子の id
   const [aAsk, setAAsk] = useState(false); // 外す確かめ
@@ -153,7 +153,7 @@ function MsxR3Box({ onClose }) {
     for (const id of ids) { const m0 = b.mons.find((x) => x.id === id); if (lendId === id) await unlend(); b = await msxR3Farewell(id); if (m0) gone.push(m0); }
     let kept = null; try { kept = await msxAssistKeep(gone, 'farewell'); if (kept && kept.assist) setAssist(kept.assist); } catch (e) { kept = null; }
     setBox(b); setPick([]); setByeAsk(null); setSel(null); setPage('list'); setTab('list');
-    setMsg(`${ids.length}体とお別れしました` + (kept ? (kept.kept ? `。${kept.kept}体はアシスト用に残りました(${kept.assist.mons.length}/${MSX_ASSIST_CAP})` : kept.full ? '。アシスト用がいっぱいなので、残りませんでした' : '') : ''));
+    setMsg(`${ids.length}体とお別れしました` + (kept ? (kept.kept ? `。${kept.kept}体はメモリアルモンスターとして残りました(${kept.assist.mons.length}/${MSX_ASSIST_CAP})` : kept.full ? '。アシスト用がいっぱいなので、残りませんでした' : '') : ''));
   };
   const saveEdit = async () => {
     if (!cur || !edit) return;
@@ -171,7 +171,7 @@ function MsxR3Box({ onClose }) {
     const locked = [...teamIds, ...(lendId ? [lendId] : []), ...(runFrom ? [runFrom] : [])];
     return (<>
       <style>{MSX_R3_CSS}</style><style>{MSX_MM_CSS}</style>
-      <MonsucFuseSheet box={box} locked={locked} readBox={msxR3ReadBox} onName={async (id, nick, cols) => { const r = await msxR3EditMon(id, nick, cols); if (r && r.ok && r.box) setBox(r.box); return r; }} keepNote={(() => { const have = assist ? assist.mons.length : 0; const room = Math.max(0, MSX_ASSIST_CAP - have); if (room >= 2) return `アシスト用の置き場に残ります(${have + 2}/${MSX_ASSIST_CAP})。\u200b育成には使えず、\u200b編成にだけ入れられます`; if (room <= 0) return `置き場がいっぱいなので、\u200bアシスト用には残りません(思い出に名前・ランク・代だけ残ります)`; return `片方だけ、\u200bアシスト用の置き場に残ります。\u200bもう一方は置き場がいっぱいなので残りません`; })()}
+      <MonsucFuseSheet box={box} locked={locked} readBox={msxR3ReadBox} onName={async (id, nick, cols) => { const r = await msxR3EditMon(id, nick, cols); if (r && r.ok && r.box) setBox(r.box); return r; }} keepNote={(() => { const have = assist ? assist.mons.length : 0; const room = Math.max(0, MSX_ASSIST_CAP - have); if (room >= 2) return `メモリアルモンスターとして残ります(${have + 2}/${MSX_ASSIST_CAP})。\u200b育成には使えず、\u200b編成にだけ入れられます`; if (room <= 0) return `置き場がいっぱいなので、\u200bメモリアルモンスターには残りません(思い出に名前・ランク・代だけ残ります)`; return `片方だけ、\u200bメモリアルモンスターとして残ります。\u200bもう一方は置き場がいっぱいなので残りません`; })()}
         keptOf={() => (fuseKept.current)}
         onSave={async (n) => { let old = null; try { old = await msxR3ReadBox(); } catch (e) { old = null; } const r = await storeSet(MSX_KEYS.box, n); if (r === true && old && n && Array.isArray(n.mons)) { try { const left = old.mons.filter((m) => !n.mons.some((x) => x.id === m.id)); const k = await msxAssistKeep(left, 'fuse'); fuseKept.current = k ? k.kept : 0; if (k && k.assist) setAssist(k.assist); } catch (e) {} } return r; }} onDone={() => { msxR3ReadBox().then(setBox); }} onClose={() => { setPage('gate'); msxR3ReadBox().then(setBox); }}/>
     </>);
@@ -192,25 +192,25 @@ function MsxR3Box({ onClose }) {
           <span className="e" aria-hidden="true">🧬</span><b>合体</b><small>{box.mons.length < 2 ? '2体からできる' : '2体から新しいマスモン'}</small></button> : null}
       </div>
       <button type="button" className="mm-card mm-asb" onClick={() => { setPage('assist'); setApick([]); setMsg(''); }} data-msx-mm-open-assist>
-        <b>アシスト用の置き場</b><small>{assist ? assist.mons.length : 0} / {MSX_ASSIST_CAP}体(合体・お別れしたモンスター。編成にだけ入れられる)</small></button>
+        <b>メモリアルモンスター</b><small>{assist ? assist.mons.length : 0} / {MSX_ASSIST_CAP}体(合体・お別れしたモンスター。編成にだけ入れられる)</small></button>
       {box.memory.length ? <div className="mm-memo">思い出: {box.memory.slice(-5).reverse().map((m) => `${m.nick || msxMonName(m.species)}(${m.rank || '—'})`).join('・')}</div> : null}
     </div>);
     foot = <div className="v-ft"><button type="button" onClick={onClose}>← 戻る</button></div>;
   }
-  // ---- アシスト用の置き場(合体の親・お別れしたモンスター。育成には使えない・編成にだけ入れる。外すと消える) ----
+  // ---- メモリアルモンスター(合体の親・お別れしたモンスター。育成には使えない・編成にだけ入れる。外すと消える) ----
   else if (page === 'assist') {
-    title = 'アシスト用の置き場';
+    title = 'メモリアルモンスター';
     const stock = assist ? assist.mons : [];
     body = (<>
       <div className="mm-hint msx-kp">合体の親にしたモンスター・お別れしたモンスターが残っています。{'\u200b'}育成には使えず、{'\u200b'}育成を始めるときの編成にだけ入れられます。{'\u200b'}アシスト効果と得意な能力が効きます</div>
       {msg ? <div className="mm-hint ok">{msg}</div> : null}
-      <div className="mm-gridw">{stock.length ? <MsxMmGrid mons={stock} label={view.label} mark={() => 'アシスト用'} isOn={(m) => apick.includes(m.id)}
+      <div className="mm-gridw">{stock.length ? <MsxMmGrid mons={stock} label={view.label} mark={() => 'メモモン'} isOn={(m) => apick.includes(m.id)}
         attrs={(m) => ({ 'data-msx-assist-mon': m.id })} onPick={(m) => setApick(apick.includes(m.id) ? apick.filter((x) => x !== m.id) : [...apick, m.id])}/>
         : <div className="msx-note" style={{ padding: 8 }}>まだいません。合体の親にしたモンスター・お別れしたモンスターが、ここに残ります</div>}</div>
       <div className="mm-bar"><span className="cnt">置き場 <b>{stock.length}</b>/{MSX_ASSIST_CAP}体</span>
         <button type="button" className="mm-sel" disabled={!apick.length} onClick={() => setAAsk(true)} data-msx-assist-remove>外す({apick.length}体)</button></div>
       {aAsk ? <div className="msx-ov msx-fade"><div className="msx-sheet">
-        <div style={{ fontSize: 13, fontWeight: 900, lineHeight: 1.6 }}>{apick.length}体をアシスト用の置き場から外しますか? 外したモンスターは元に戻せません</div>
+        <div style={{ fontSize: 13, fontWeight: 900, lineHeight: 1.6 }}>{apick.length}体をメモリアルモンスターから外しますか? 外したモンスターは元に戻せません</div>
         <button type="button" className="msx-btn go" data-msx-assist-remove-yes onClick={async () => { try { const a = await msxAssistRemove(apick); setAssist(a); setMsg(`${apick.length}体を外しました`); } catch (e) { setMsg('外せませんでした'); } setApick([]); setAAsk(false); }}>外す</button>
         <button type="button" className="msx-btn sub" onClick={() => setAAsk(false)}>やめておく</button></div></div> : null}
     </>);
@@ -244,9 +244,9 @@ function MsxR3Box({ onClose }) {
       {byeAsk ? <div className="msx-ov msx-fade"><div className="msx-sheet">
         <div style={{ fontSize: 13, fontWeight: 900, lineHeight: 1.6 }}>{byeAsk.ids.length === 1 && box.mons.find((x) => x.id === byeAsk.ids[0]) ? msxMmName(box.mons.find((x) => x.id === byeAsk.ids[0])) : `${byeAsk.ids.length}体`}とお別れしますか?</div>
         <div className="mm-keep msx-kp" data-msx-mm-keepnote>{(() => { const have = assist ? assist.mons.length : 0; const room = Math.max(0, MSX_ASSIST_CAP - have); const n = byeAsk.ids.length;
-          if (room >= n) return `マスモンボックスからはいなくなります。\u200bアシスト用の置き場に残ります(${have + n}/${MSX_ASSIST_CAP})。\u200b育成には使えず、\u200b編成にだけ入れられます。\u200b思い出にも名前とランクが残ります`;
-          if (room <= 0) return `マスモンボックスからはいなくなります。\u200b置き場がいっぱいなので、\u200bアシスト用には残りません(思い出に名前とランクだけ残ります)。\u200b元に戻せません`;
-          return `マスモンボックスからはいなくなります。\u200b${n}体のうち${room}体は、\u200bアシスト用の置き場に残ります。\u200b置き場がいっぱいなので、\u200bのこりは残りません(思い出に名前とランクだけ残ります)`; })()}</div>
+          if (room >= n) return `マスモンボックスからはいなくなり、\u200bメモリアルモンスターとして残ります(${have + n}/${MSX_ASSIST_CAP})。\u200b育成には使えず、\u200b編成にだけ入れられます。\u200b思い出にも名前とランクが残ります`;
+          if (room <= 0) return `マスモンボックスからはいなくなります。\u200b置き場がいっぱいなので、\u200bメモリアルモンスターには残りません(思い出に名前とランクだけ残ります)。\u200b元に戻せません`;
+          return `マスモンボックスからはいなくなります。\u200b${n}体のうち${room}体は、\u200bメモリアルモンスターとして残ります。\u200b置き場がいっぱいなので、\u200bのこりは残りません(思い出に名前とランクだけ残ります)`; })()}</div>
         <div className="mm-byelist">{byeAsk.ids.map((id) => { const m = box.mons.find((x) => x.id === id); return m ? <span key={id}>{msxMmName(m)}</span> : null; })}</div>
         <button type="button" className="msx-btn go" onClick={() => farewell(byeAsk.ids)} data-msx-mm-bye-yes>お別れする</button>
         <button type="button" className="msx-btn sub" onClick={() => setByeAsk(null)}>やめておく</button></div></div> : null}
