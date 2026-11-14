@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9f644a14c3a6626b
+// source-sha256: ac4d155830a84b4b
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -115299,7 +115299,8 @@ const assistantLifeStandLayout = (items, W, H) => {
     4: 0.055
   }[Math.min(4, n)];
   const visH = (x, F) => assistantLifeStandVisH(x.face, F);
-  const visW = (x, F) => visH(x, F) * (x.box.r - x.box.l) * x.box.ar / (x.box.b - x.box.t);
+  const VIS_W_MAX_F = 5.6;
+  const visW = (x, F) => Math.min(visH(x, F) * (x.box.r - x.box.l) * x.box.ar / (x.box.b - x.box.t), F * VIS_W_MAX_F);
   let F = fh;
   for (const x of items) {
     const w1 = visW(x, 1);
