@@ -104,8 +104,10 @@ const cutProblems = (page, sel) => page.evaluate((s) => {
       await page.locator('[data-assistant-life-room-act="give-solo"]').click(); await page.waitForTimeout(400);
       const sheet = await page.locator('[data-assistant-life-give-sheet]').innerText().catch(() => '');
       const tiles = await page.locator('[data-assistant-life-give-kind]').count();
+      // 好き嫌いの印 assistantLifeTaste が真なら 🧸 モンスターのぬいぐるみ(r1115-035)も並ぶ
+      const plush = await page.evaluate(() => (typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantLifeTaste === true ? 1 : 0));
       const weights = await page.locator('[data-assistant-life-give-sheet] [data-assistant-life-give-weight]').count();
-      check('③ 1人に贈るシート: 題が「◯◯に贈る」・友情Lv の行が無い・道具14種類・重みは1行', /に贈る/.test(await page.locator('[data-assistant-life-give-title]').innerText()) && (await page.locator('[data-assistant-life-give-peer]').count()) === 0 && tiles === 14 && weights === 1, `${tiles}種類 重み${weights}`);
+      check('③ 1人に贈るシート: 題が「◯◯に贈る」・友情Lv の行が無い・道具14種類・重みは1行', /に贈る/.test(await page.locator('[data-assistant-life-give-title]').innerText()) && (await page.locator('[data-assistant-life-give-peer]').count()) === 0 && tiles === 14 + plush && weights === 1, `${tiles}種類 重み${weights}`);
       check('③ 「2人に」「◯◯だけに」の切りかえが出る', (await page.locator('[data-assistant-life-give-pair]').count()) >= 1 && (await page.locator('[data-assistant-life-give-solo]').count()) >= 2);
       // 切りかえ: 2人に → 友情Lv の行が出る・1人用は並ばない
       await page.locator('[data-assistant-life-give-pair]').first().click(); await page.waitForTimeout(200);
@@ -149,7 +151,7 @@ const cutProblems = (page, sel) => page.evaluate((s) => {
       // ⑦ 道具タブ・交換所
       await page.locator('[data-assistant-life-icon="items"]').click(); await page.waitForTimeout(300);
       const items = await page.locator('[data-assistant-life-items]').innerText().catch(() => '');
-      check('⑦ 道具の一覧に「💗 1人に贈る道具」と4種類・「上の10種類も1人に贈れます」', /1人に贈る道具/.test(items) && /手書きの手紙/.test(items) && /小さなお守り/.test(items) && /上の10種類も1人に贈れます/.test(items) && (await page.locator('[data-assistant-life-item-solo-amt]').count()) === 4);
+      check('⑦ 道具の一覧に「💗 1人に贈る道具」と4種類・「上の10種類も1人に贈れます」', /1人に贈る道具/.test(items) && /手書きの手紙/.test(items) && /小さなお守り/.test(items) && /上の10種類も1人に贈れます/.test(items) && (await page.locator('[data-assistant-life-item-solo-amt]').count()) === 4 + (await page.evaluate(() => (typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.assistantLifeTaste === true ? 1 : 0))));
       if (SHOTS) { await page.locator('[data-assistant-life-items-solo]').scrollIntoViewIfNeeded(); await page.screenshot({ path: path.join(shotDir, 'tate-6-items.png') }); }
       await page.locator('[data-assistant-life-items] [data-assistant-life-shop="item"]').last().click(); await page.waitForTimeout(900);
       const shop = await page.locator('[data-event-point-shop]').innerText().catch(() => '');

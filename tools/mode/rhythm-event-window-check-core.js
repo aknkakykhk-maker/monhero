@@ -737,7 +737,8 @@ check('STEP2の更新履歴は開発メモとして残し、未完成機能を�
 //   tools/assistant/assistant-life-gift-check.js が値段・印まで見張るので、ここでは除いて見る(オクリモノ)
 // ★2026-11-08 助手1人に贈る道具(solo_*・印 assistantLifeSolo)も同じく除く(オクリモノ2・assistant-life-solo-browser-check が見る)
 // ★2026-11-12 助手の🏥特別な治療(life_cure・300P・印 assistantLifeBody)も同じく除く(ナカヨシ・tools/assistant/life-body-check.js ⑩ が値段と印を見る)
-const LIFE_SHOP_FLAGS=['assistantLife','assistantLifeFurniture','assistantLifeSolo','assistantLifeBody'];
+// ★2026-11-15 🧸 モンスターのぬいぐるみ(solo_monplush・300P・印 assistantLifeTaste)も同じく除く(ナカヨシ・tools/assistant/life-taste-gift-browser-check.js ⓪ が値段と印を見る)
+const LIFE_SHOP_FLAGS=['assistantLife','assistantLifeFurniture','assistantLifeSolo','assistantLifeBody','assistantLifeTaste'];
 const BEAT_SHOP_FIXED=(O.RHYTHM_EVENT_POINT_SHOP_OFFERS||[]).filter(o=>!LIFE_SHOP_FLAGS.includes(o.releaseFlag));
 check('助手ライフの道具・家具は、それぞれの公開の印の後ろにあり、助手ライフの持ち物だけ',
   (O.RHYTHM_EVENT_POINT_SHOP_OFFERS||[]).filter(o=>LIFE_SHOP_FLAGS.includes(o.releaseFlag)).every(o=>o.kind==='item'&&/^(peer|furn|solo|life)_[a-z]+$/.test(o.itemId||'')));
