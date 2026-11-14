@@ -65,6 +65,14 @@ const cutProblems = (page, sel) => page.evaluate((s) => {
     return id;
   };
   try {
+    // ⓪ 品の表(交換所の値段・印・道具の表・持ち物)
+    {
+      const page = await open(390, 844, true);
+      const d = await page.evaluate(() => ({ offer: RHYTHM_EVENT_POINT_SHOP_OFFERS.find(o => o.itemId === 'solo_monplush') || null, def: ASSISTANT_LIFE_SOLO_GIFTS.find(g => g.key === 'monplush') || null, item: BREEDER_MARKET_ITEMS.find(x => x.id === 'solo_monplush') || null }));
+      check('⓪ 交換所の「モンスターのぬいぐるみ」は 300P・好き嫌いの印 assistantLifeTaste の後ろ', !!d.offer && d.offer.cost === 300 && d.offer.releaseFlag === 'assistantLifeTaste' && d.offer.grantAmount === 1, JSON.stringify(d.offer));
+      check('⓪ 1人用の道具の表と持ち物にある(仲良し度 +40)', !!d.def && d.def.itemId === 'solo_monplush' && d.def.player === 40 && !!d.item && d.item.shop === false);
+      await page.close();
+    }
     // ① 印が偽
     {
       const page = await open(390, 844, false);

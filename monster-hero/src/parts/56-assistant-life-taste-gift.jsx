@@ -2,7 +2,7 @@
 //   2026-11-15 社長「オクリモノに付ける」→ 窓口経由で案A・300P(案 docs/progress/assistant-peer/taste-change/GIFT-COLOR-PLAN.md)
 //   1人に贈る道具の1つ(データは assistants.js の ASSISTANT_LIFE_SOLO_GIFTS の key 'monplush')。贈るときにモンスターとリボンの色を選ぶ
 //   贈ると assistantLifeTasteBump(助手, モンスター, 'gift')。リボンがその助手の好きな色(favColors。淡い色も同じ色として数える)なら 'color' も
-//   仲良し度の量・1日の回数・持ち物の減らし方は、ほかの1人用の道具と同じ(56-assistant-life-gifts.jsx がそのまま扱う)
+//   1日の回数・持ち物の数え方・仲良し度の量は、ほかの1人用の道具と同じ(56-assistant-life-gifts.jsx がそのまま扱う)
 //   助手のひとことだけ、選んだモンスターがいまの好み(好き/ふつう/苦手)のどれかで変える
 //   公開の印は好き嫌いの印 RELEASE_FLAGS.assistantLifeTaste(偽の間は贈る窓にも交換所にも出ない)
 //   保存は新しいキーを足すだけ(CLAUDE.md ⑦): mh_assistant_life_taste_gift_v1 { v:1, last:{ [助手]: { mon, color, day } }, n:{ [助手]: 贈った回数 } }

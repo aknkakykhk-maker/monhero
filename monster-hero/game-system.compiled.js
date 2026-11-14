@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c4336fed18fac607
+// source-sha256: a264c3f75be32226
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -116315,7 +116315,7 @@ function AssistantLifeHouse({
   const groupLeft = typeof assistantLifeGiftLeft === 'function' ? Math.max(0, Number(assistantLifeGiftLeft(peerSt)) || 0) : 0;
   const giveLeftAll = groupLeft + (soloOn ? soloLeft : 0);
   const itemsLeft = Math.min(typeof assistantLifeGiftLeft === 'function' ? assistantLifeGiftLeft(peerSt) : 0, itemInfos.filter(x => !usedOf(x.kind) && haveOf(x.kind) > 0).length);
-  const soloInfos = soloOn ? assistantLifeSoloDefs().map(g => assistantLifeItemInfo(g.kind)).filter(Boolean) : [];
+  const soloInfos = soloOn ? assistantLifeSoloDefs().filter(g => !(typeof assistantLifeTasteGiftHidden === 'function' && assistantLifeTasteGiftHidden(g))).map(g => assistantLifeItemInfo(g.kind)).filter(Boolean) : [];
   const itemsHave = [...itemInfos, ...soloInfos].reduce((n, x) => n + haveOf(x.kind), 0);
   const giveGroup = (life.groups || [])[0];
   const giveSoloId = soloOn ? Object.keys(life.solo || {}).find(id => !awayFriend(id)) || giveGroup && giveGroup.ids[0] || null : null;
@@ -135570,7 +135570,7 @@ function AssistantLifeGiftLikesRow({
   const st = useAssistantLifeGiftState();
   const [open, setOpen] = React.useState(false);
   if (typeof assistantLifeEnabled !== 'function' || !assistantLifeEnabled()) return null;
-  const gifts = [...assistantLifeGiftKinds(), ...(assistantLifeSoloOn() ? assistantLifeSoloDefs() : [])].map(g => assistantLifeGiftOf(g.kind)).filter(Boolean);
+  const gifts = [...assistantLifeGiftKinds(), ...(assistantLifeSoloOn() ? assistantLifeSoloDefs() : [])].filter(g => g.key !== 'monplush').map(g => assistantLifeGiftOf(g.kind)).filter(Boolean);
   const known = gifts.filter(g => assistantLifeGiftKnown(id, g.key, st)).length;
   const liked = gifts.filter(g => assistantLifeGiftShownLike(id, g.key, st) === 'like');
   const told = st.likes.told.filter(x => x.who === id).slice(-1)[0] || null;

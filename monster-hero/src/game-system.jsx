@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: d9cf96e6b39842a5
+// generated-sha256: 3c67c25ce9004127
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -68301,7 +68301,7 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
   const groupLeft = typeof assistantLifeGiftLeft === 'function' ? Math.max(0, Number(assistantLifeGiftLeft(peerSt)) || 0) : 0;
   const giveLeftAll = groupLeft + (soloOn ? soloLeft : 0);
   const itemsLeft = Math.min(typeof assistantLifeGiftLeft === 'function' ? assistantLifeGiftLeft(peerSt) : 0, itemInfos.filter(x => !usedOf(x.kind) && haveOf(x.kind) > 0).length);
-  const soloInfos = soloOn ? assistantLifeSoloDefs().map(g => assistantLifeItemInfo(g.kind)).filter(Boolean) : [];
+  const soloInfos = soloOn ? assistantLifeSoloDefs().filter(g => !(typeof assistantLifeTasteGiftHidden === 'function' && assistantLifeTasteGiftHidden(g))).map(g => assistantLifeItemInfo(g.kind)).filter(Boolean) : [];
   const itemsHave = [...itemInfos, ...soloInfos].reduce((n, x) => n + haveOf(x.kind), 0);
   const giveGroup = (life.groups || [])[0];
   // ひとりの助手しかいない時間も、1人に贈れる(❶B: 1人には別に1日3回)
@@ -72161,7 +72161,8 @@ function AssistantLifeGiftLikesRow({ id, compact = false }) {
   const [open, setOpen] = React.useState(false);
   if (typeof assistantLifeEnabled !== 'function' || !assistantLifeEnabled()) return null;
   // ❹A: 1人に贈る道具が開いていれば、1人用の4種類も並べて「分かった ◯/14」
-  const gifts = [...assistantLifeGiftKinds(), ...(assistantLifeSoloOn() ? assistantLifeSoloDefs() : [])].map(g => assistantLifeGiftOf(g.kind)).filter(Boolean);
+  // 🧸 モンスターのぬいぐるみは選んだモンスターで喜び方が変わるので、道具の好みの一覧には並べない(r1115-035)
+  const gifts = [...assistantLifeGiftKinds(), ...(assistantLifeSoloOn() ? assistantLifeSoloDefs() : [])].filter(g => g.key !== 'monplush').map(g => assistantLifeGiftOf(g.kind)).filter(Boolean);
   const known = gifts.filter(g => assistantLifeGiftKnown(id, g.key, st)).length;
   const liked = gifts.filter(g => assistantLifeGiftShownLike(id, g.key, st) === 'like');
   const told = st.likes.told.filter(x => x.who === id).slice(-1)[0] || null;
@@ -82065,7 +82066,7 @@ try { setTimeout(() => { try { if (amtOn() && AMT_STORE) { void AMT_STORE.load()
 //   2026-11-15 社長「オクリモノに付ける」→ 窓口経由で案A・300P(案 docs/progress/assistant-peer/taste-change/GIFT-COLOR-PLAN.md)
 //   1人に贈る道具の1つ(データは assistants.js の ASSISTANT_LIFE_SOLO_GIFTS の key 'monplush')。贈るときにモンスターとリボンの色を選ぶ
 //   贈ると assistantLifeTasteBump(助手, モンスター, 'gift')。リボンがその助手の好きな色(favColors。淡い色も同じ色として数える)なら 'color' も
-//   仲良し度の量・1日の回数・持ち物の減らし方は、ほかの1人用の道具と同じ(56-assistant-life-gifts.jsx がそのまま扱う)
+//   1日の回数・持ち物の数え方・仲良し度の量は、ほかの1人用の道具と同じ(56-assistant-life-gifts.jsx がそのまま扱う)
 //   助手のひとことだけ、選んだモンスターがいまの好み(好き/ふつう/苦手)のどれかで変える
 //   公開の印は好き嫌いの印 RELEASE_FLAGS.assistantLifeTaste(偽の間は贈る窓にも交換所にも出ない)
 //   保存は新しいキーを足すだけ(CLAUDE.md ⑦): mh_assistant_life_taste_gift_v1 { v:1, last:{ [助手]: { mon, color, day } }, n:{ [助手]: 贈った回数 } }
