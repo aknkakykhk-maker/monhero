@@ -8,7 +8,7 @@
 //   resolve(文字) でこの表の行に引き当てる。保存枠の子(mh_monsuc_box_v1 の titles)には id を入れる(名前を直しても記録が変わらない)。
 //   知らない文字はそのまま残し、画面ではその文字を出す(消さない・CLAUDE.md ⑦)。
 //
-//   group … cup(大会)/ crown(👑)/ conquer(制覇)/ summit(頂への道)/ rival(ライバル)/ story(助手のお話)/ issa(イッサ博士)/ grade(評価)/ feat(育成の記録)
+//   group … cup(大会)/ crown(👑)/ conquer(制覇)/ summit(ヒーローズファイナル)/ rival(ライバル)/ story(助手のお話)/ issa(イッサ博士)/ grade(評価)/ feat(育成の記録)
 //   how   … 取り方(プレイヤー向けの1行)/ reward … 取ったときに芯が付けるもの(無ければ null)/ effect … 持っている間の効き目(第1弾はすべて null)
 //   match … 芯が s.titles に積む文字(いまの芯が積んでいない行は null。芯が積むようになったらこの文字で積む)
 //   rare  … 1〜3(札の色: 1 銅・2 銀・3 金)
@@ -27,11 +27,11 @@
     dra: ['ドラの直弟子', 'ドラの宿題'],
     kyuko: ['計画表のその先', '書き直しの計画表'],
     sorashido: ['組み直しの名人', '検証のつづき'],
-    erubin: ['ふたつの食卓', '見守られた子'],
+    erubin: ['二つの食卓', '見守られた子'],
   });
   const STORY_REWARD = Object.freeze({
     mua: ['全能力 特大アップ・技「みんなの声」のひらめき', '人気 大アップ'],
-    atsu: ['全能力 特大アップ・アシスト能力「試合のはじめのガッツ」のひらめき', '能力ポイント +10'],
+    atsu: ['全能力 特大アップ・アシスト能力「試合の初めのガッツ」のひらめき', '能力ポイント +10'],
     kiki: ['全能力 特大アップ・技「静かな一撃」のひらめき', '丈夫さ 大アップ'],
     momosuke: ['全能力 特大アップ・アシスト能力「見せ場」のひらめき', '人気 大アップ'],
     dra: ['全能力 特大アップ・技「ドラ直伝」のひらめき', '技の熟練アップ'],
@@ -44,15 +44,15 @@
   const add = (r) => rows.push(Object.freeze({ effect: null, reward: null, match: null, rare: 1, ...r }));
 
   // ---- 大会(期末の強制大会・芯の FORCED) ----
-  add({ id: 'debut', group: 'cup', name: 'はじめの一歩', how: 'デビュー戦に1回目で勝つ', reward: '人気 +3・能力ポイント +5', match: 'はじめの一歩' });
+  add({ id: 'debut', group: 'cup', name: '初めの一歩', how: 'デビュー戦に1回目で勝つ', reward: '人気 +3・能力ポイント +5', match: '初めの一歩' });
   add({ id: 'debut-late', group: 'cup', name: '遅咲きの一歩', how: 'デビュー戦に負けたあと、再挑戦で勝つ', reward: '人気 +3・能力ポイント +5', match: '遅咲きの一歩' });
   add({ id: 'junior', group: 'cup', name: 'ジュニアの星', how: 'ジュニア期の終わりのヒーローズリーグで優勝する', reward: '全能力 +2・能力ポイント +5・人気 +2', match: 'ジュニアの星' });
   add({ id: 'middle', group: 'cup', name: 'ミドルの星', how: 'ミドル期の終わりのヒーローズリーグで優勝する', reward: '全能力 +3・能力ポイント +10・人気 +4', match: 'ミドルの星', rare: 2 });
 
   // ---- ★★★ の大会(TOURNAMENT §8: 系統ごと。芯はまだ積んでいない) ----
   const STAR3 = [
-    ['str', 'ちから自慢の頂点', 'ちから自慢'], ['int', 'かしこさ自慢の頂点', 'かしこさ自慢'], ['aim', 'ねらい自慢の頂点', 'ねらい自慢'],
-    ['dodge', 'かわし自慢の頂点', 'かわし自慢'], ['hard', 'かたさ自慢の頂点', 'かたさ自慢'], ['life', 'しぶとさ自慢の頂点', 'しぶとさ自慢'],
+    ['str', 'ちから自慢の王者', 'ちから自慢'], ['int', 'かしこさ自慢の王者', 'かしこさ自慢'], ['aim', '狙い自慢の王者', '狙い自慢'],
+    ['dodge', 'かわし自慢の王者', 'かわし自慢'], ['hard', 'かたさ自慢の王者', 'かたさ自慢'], ['life', 'しぶとさ自慢の王者', 'しぶとさ自慢'],
     ['dist0', '零の間合いの名手', '間合い(零)'], ['dist1', '近の間合いの名手', '間合い(近)'], ['dist2', '中の間合いの名手', '間合い(中)'], ['dist3', '遠の間合いの名手', '間合い(遠)'],
     ['attacker', 'アタッカーの誇り', 'タイプ(アタッカー)'], ['tank', 'タンクの誇り', 'タイプ(タンク)'], ['supporter', 'サポーターの誇り', 'タイプ(サポーター)'],
     ['healer', 'ヒーラーの誇り', 'タイプ(ヒーラー)'], ['shadow', 'シャドウの誇り', 'タイプ(シャドウ)'],
@@ -69,11 +69,11 @@
   // ---- 制覇(TOURNAMENT §8。芯はまだ積んでいない) ----
   add({ id: 'conquer-pride', group: 'conquer', name: '六つの自慢', how: '6つの自慢の大会でどれも1回は優勝する(星は問わない)', reward: '全能力 +5・能力ポイント +15・人気 +10', rare: 3 });
   add({ id: 'conquer-season', group: 'conquer', name: '四季を知る子', how: '同じ1年のうちに四季の大会を4つとも優勝する', reward: '全能力 +3・能力ポイント +15・人気 +8', rare: 3 });
-  add({ id: 'conquer-dist', group: 'conquer', name: '間合いの達人', how: '零・近・中・遠の間合いの大会をどれも1回は優勝する', reward: '全能力 +3・能力ポイント +15・いちばん低い間合いの適性が1段上がる', rare: 3 });
+  add({ id: 'conquer-dist', group: 'conquer', name: '間合いの達人', how: '零・近・中・遠の間合いの大会をどれも1回は優勝する', reward: '全能力 +3・能力ポイント +15・一番低い間合いの適性が1段上がる', rare: 3 });
 
-  // ---- 頂への道(芯の SUMMIT_FINAL) ----
-  add({ id: 'summit', group: 'summit', name: '頂に立った子', how: '頂への道で優勝する', reward: '全能力 +8・能力ポイント +30・人気 +10', match: '頂に立った子', rare: 3 });
-  add({ id: 'summit-big', group: 'summit', name: 'ヒーローの頂', how: '👑 を1つ以上勝つか四大大会を2つ以上勝ったうえで、頂への道で優勝する', reward: '全能力 +15・能力ポイント +60・人気 +20', match: 'ヒーローの頂', rare: 3 });
+  // ---- ヒーローズファイナル(芯の SUMMIT_FINAL) ----
+  add({ id: 'summit', group: 'summit', name: 'ヒーローズファイナル王者', how: 'ヒーローズファイナルで優勝する', reward: '全能力 +8・能力ポイント +30・人気 +10', match: 'ヒーローズファイナル王者', oldMatch: ['頂に立った子'], rare: 3 }); // 2026-11-14 名前を直した。前の育成・保存枠に積まれた古い文字(oldMatch)も同じ行に引き当てる
+  add({ id: 'summit-big', group: 'summit', name: '真のヒーロー', how: '👑 を1つ以上勝つか四大大会を2つ以上勝ったうえで、ヒーローズファイナルで優勝する', reward: '全能力 +15・能力ポイント +60・人気 +20', match: '真のヒーロー', oldMatch: ['ヒーローの頂'], rare: 3 });
 
   // ---- ライバル(芯の RIVAL) ----
   // 大会の第2版(2026-11-13)
@@ -96,20 +96,23 @@
   GRADE.forEach(([rank, name, rare]) => add({ id: `grade-${rank}`, group: 'grade', name, how: rank === 'SS' ? '育成ランク SS か SSS で引退する' : `育成ランク ${rank}${rank === 'M' ? '' : ' 以上'}で引退する`, rank, rare }));
 
   // ---- 育成の記録(引退のときに見る) ----
-  add({ id: 'feat-loyal', group: 'feat', name: 'ゆるがない絆', how: '忠誠度 100 で引退する', rare: 2 });
+  add({ id: 'feat-loyal', group: 'feat', name: '揺るがない絆', how: '忠誠度 100 で引退する', rare: 2 });
   add({ id: 'feat-pop', group: 'feat', name: 'みんなの人気者', how: '人気 100 で引退する', rare: 2 });
   add({ id: 'feat-techs', group: 'feat', name: '技の宝庫', how: '技を8つ覚えて引退する', rare: 2 });
 
   const TITLES = Object.freeze(rows);
   const BY_ID = Object.freeze(Object.fromEntries(TITLES.map(t => [t.id, t])));
-  const BY_MATCH = Object.freeze(Object.fromEntries(TITLES.filter(t => t.match).map(t => [t.match, t])));
+  const BY_MATCH = Object.freeze(Object.fromEntries(TITLES.filter(t => t.match).flatMap(t => [[t.match, t], ...(Array.isArray(t.oldMatch) ? t.oldMatch.map(m => [m, t]) : [])])));
   const GROUPS = Object.freeze([
-    ['cup', '大会'], ['crown', 'ヒーロー記念'], ['conquer', '制覇'], ['summit', '頂への道'], ['rival', 'ライバル'],
+    ['cup', '大会'], ['crown', 'ヒーロー記念'], ['conquer', '制覇'], ['summit', 'ヒーローズファイナル'], ['rival', 'ライバル'],
     ['story', '助手のお話'], ['issa', 'イッサ博士'], ['grade', '評価'], ['feat', '育成の記録'],
   ].map(([key, name]) => Object.freeze({ key, name })));
 
   // 芯が積んだ文字 → 表の行(id でも引ける)。知らないものは null
-  const resolve = (str) => (typeof str !== 'string' ? null : BY_MATCH[str] || BY_ID[str] || null);
+  // 古い字の読み替え(2026-11-14 画面の文を漢字にした・r1114-089)。育成の途中の保存(mh_monsuc_run_v1 の titles)には古い字が積まれている
+  //   ので、古い字でも同じ称号に引き当てる。消さない(⑦)
+  const OLD_MATCH = Object.freeze({ 'はじめの一歩': '初めの一歩' });
+  const resolve = (str) => (typeof str !== 'string' ? null : BY_MATCH[str] || BY_MATCH[OLD_MATCH[str]] || BY_ID[str] || null);
 
   // 引退のときに付く称号(評価・育成の記録・博士の一番弟子)。ev は芯の evaluate(s)、s は育成の状態
   const RANK_ORDER = ['G', 'F', 'E', 'D', 'C', 'B', 'A', 'S', 'SS', 'SSS', 'M'];

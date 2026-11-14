@@ -16,7 +16,7 @@
 //                                                  見てくれた人を大事にしよう(→ いい結末へ)/今度こそ1位を取ろう(→ ほろ苦い結末へ)
 //   シナリオの大会          3話の翌月の{cup}(ミドルの11月の人気投票の大会)
 //   4話「声援の海」         プロ期・親密度70〜      いい結末: アシスト能力「見せ場」系のひらめき+全能力 特大/ほろ苦い: 人気 大+・称号
-//   特別な1話「ももの特等席」 最後の期・仲良し度Lv5〜・4話がいい結末  手作りのうちわで最前列。見るだけ(頂への道の1回戦に「声援」の案)
+//   特別な1話「ももの特等席」 最後の期・仲良し度Lv5〜・4話がいい結末  手作りのうちわで最前列。見るだけ(ヒーローズファイナルの1回戦に「声援」の案)
 const MONSUC_SCRIPT_MOMOSUKE = Object.freeze([
   // ═══════════ シナリオ ═══════════
   // ── 1話「かわいいは作れる」(デビュー期・必ず出る) ──
@@ -73,7 +73,7 @@ const MONSUC_SCRIPT_MOMOSUKE = Object.freeze([
   { id:'scn.momosuke.cup2.lose.momosuke1', who:'momosuke', e:'troubled', t:'あーん、くやしい！！ でもさ、客席の声、ぜんぶ{mon}の名前だったよ' },
 
   // ── 特別な1話「ももの特等席」(最後の期・仲良し度Lv5〜・4話がいい結末) ──
-  { id:'scn.momosuke.sp.narr1', who:'narr', t:'頂への道の前の日。ももすけが、手作りのうちわを両手に持ってあらわれた。' },
+  { id:'scn.momosuke.sp.narr1', who:'narr', t:'ヒーローズファイナルの前の日。ももすけが、手作りのうちわを両手に持ってあらわれた。' },
   { id:'scn.momosuke.sp.momosuke1', who:'momosuke', e:'wink', t:'じゃーん、{mon}うちわ！！ 夜なべしたんだからね w' },
   { id:'scn.momosuke.sp.narr2', who:'narr', t:'裏には小さく「ももの推し」と書いてあった。' },
   { id:'scn.momosuke.sp.momosuke2', who:'momosuke', e:'normal', t:'ももね、昔は見られる側になりたかったの。でも今は、{mon}を見てる席がいちばん好き' },
@@ -140,7 +140,7 @@ const MONSUC_SCRIPT_MOMOSUKE = Object.freeze([
   { id:'turn.retire.r1.momosuke1', who:'momosuke', e:'normal', t:'おつかれ、{mon}。次はもっと目立てるよ、ももが保証する' },
   { id:'turn.retire.r2.momosuke1', who:'momosuke', e:'happy', t:'いい仕上がりじゃん！！ 胸はっていいよ♡' },
   { id:'turn.retire.r3.momosuke1', who:'momosuke', e:'excited', t:'まって、強すぎ w {name}、育て方うますぎない？' },
-  { id:'turn.retire.r4.momosuke1', who:'momosuke', e:'excited', t:'てっぺん！！ {mon}、いちばん高いとこがいちばん似合ってた♡' },
+  { id:'turn.retire.r4.momosuke1', who:'momosuke', e:'excited', t:'ヒーローズファイナル優勝！！ {mon}、優勝のトロフィーがいちばん似合ってた♡' },
   { id:'turn.cond.injury.in.momosuke1', who:'momosuke', e:'troubled', t:'けがしちゃった……今は治すことだけ考えよ' },
   { id:'turn.cond.injury.out.momosuke1', who:'momosuke', e:'happy', t:'もう平気そう！！ 取り返していこ♡' },
   { id:'turn.cond.sick.in.momosuke1', who:'momosuke', e:'troubled', t:'具合わるそう……今日はぬくぬく寝かせとこ' },

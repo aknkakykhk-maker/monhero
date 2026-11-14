@@ -48,23 +48,23 @@
     aki: ['grow', '9〜11月に' + T1 + '伸び {v}'], fuyu: ['grow', '12〜2月に' + T1 + '伸び {v}'],
     ninkigreat: ['rate', T1 + '人気が高いほど大成功の確率 {v}(人気100のとき)'], challenge: ['rate', T1 + '取った称号1つにつき大成功の確率 {v}'],
     tsuika: ['rate', T1 + 'あとからどれか1つの能力がさらに +5〜20 になる確率 {v}'], kaifuku: ['val', T1 + 'トレーニングのあと体力 {v}'],
-    atooshi: ['grow', 'このモンスターのいちばん高い能力のトレーニングにいっしょに来たとき、伸び {v}'],
+    atooshi: ['grow', 'このモンスターの一番高い能力のトレーニングにいっしょに来たとき、伸び {v}'],
     miharu: ['hard', T1 + 'サボりにくさ {v}'], kibarashi: ['cut', T1 + 'たまるストレス {v}'],
     kunpow: ['grow', '「ちから」のトレーニングにいっしょに来たとき、伸び {v}'], kunwise: ['grow', '「かしこさ」のトレーニングにいっしょに来たとき、伸び {v}'],
     kunhit: ['grow', '「命中」のトレーニングにいっしょに来たとき、伸び {v}'], kuneva: ['grow', '「回避」のトレーニングにいっしょに来たとき、伸び {v}'],
     kuntough: ['grow', '「丈夫さ」のトレーニングにいっしょに来たとき、伸び {v}'], kunlife: ['grow', '「ライフ」のトレーニングにいっしょに来たとき、伸び {v}'],
     kaketsuke: ['rate', 'このモンスターが得意なトレーニングに来る確率 {v}(90%まで)'], shutsugen: ['rateDown', 'このモンスターがトレーニングに来ない確率 {v}(はじめは15%)'],
-    shuugou: ['rate', ST + 'ほかのモンスターが、いちばん集まっているトレーニングへ移る確率 {v}'],
-    shitashi: ['val', 'このモンスターのはじめの親密度 {v}'], tagpow: ['grow', 'このモンスターが友情タッグになったとき、タッグの強さ {v}'],
-    hitonatsu: ['mul', ST + 'みんなの親密度の上がり {v}(このモンスターのはじめの親密度も +{start})'], nakayoshi: ['val', T1 + 'このモンスターの親密度の上がり {v}'],
+    shuugou: ['rate', ST + 'ほかのモンスターが、一番集まっているトレーニングへ移る確率 {v}'],
+    shitashi: ['val', 'このモンスターの初めの親密度 {v}'], tagpow: ['grow', 'このモンスターが友情タッグになったとき、タッグの強さ {v}'],
+    hitonatsu: ['mul', ST + 'みんなの親密度の上がり {v}(このモンスターの初めの親密度も +{start})'], nakayoshi: ['val', T1 + 'このモンスターの親密度の上がり {v}'],
     shitsuke: ['mul', ST + '褒める・叱るで上がる忠誠度 {v}'],
-    shoki: ['val', ST + '育成のはじめの6つの能力 {v}'], ticket0: ['cnt', ST + '育成のはじめの修行チケット {v}', '枚'], tairyoku: ['val', ST + '育成のはじめの体力の上限 {v}'],
+    shoki: ['val', ST + '育成の初めの6つの能力 {v}'], ticket0: ['cnt', ST + '育成の初めの修行チケット {v}', '枚'], tairyoku: ['val', ST + '育成の初めの体力の上限 {v}'],
     kuishinbo: ['mul', ST + '大会のあとのごはんの効き目 {v}'],
     trchance: ['rate', ST + '遊んだとき「ひらめき」(次のトレーニングの大成功の確率 +10%)になる確率 {v}'],
     shchance: ['rate', ST + '遊んだとき「修行の気合い」(次の修行で上がる能力 +20%)になる確率 {v}'],
     gussuri: ['mul', ST + '休んだときの体力の回復 {v}'], asobi: ['mul', ST + '遊んだときの体力の回復と甘え度の上がり {v}'],
     tsukisoi: ['rate', ST + '通院で治る確率 {v}'], genki: ['hard', ST + 'けが・悪いようすになりにくさ {v}'],
-    shugyo: ['mul', ST + '修行で上がる能力の合計と熟練 {v}(いちばん最後にかける)'], shugyotoku: ['val', ST + '修行で上がる能力 それぞれ {v}(修行効果アップの前に足す)'],
+    shugyo: ['mul', ST + '修行で上がる能力の合計と熟練 {v}(一番最後にかける)'], shugyotoku: ['val', ST + '修行で上がる能力 それぞれ {v}(修行効果アップの前に足す)'],
     waza: ['rate', ST + '修行で技を覚える確率 {v}'], chokyo: ['cnt', ST + '超修行できる回数 {v}', '回'],
     wazakazu: ['grow', ST + '覚えた技1つにつき修行の伸び {v}'], shugyohp: ['cut', ST + '修行で減る体力 {v}'],
     aptq: ['rate', ST + '修行で間合いの適性が上がる確率 {v}(はじめは10%)'],
@@ -77,7 +77,7 @@
     aidcome: ['rate', ST + '助手がトレーニングに来る確率 {v}(はじめは60%)'], aidtrain: ['grow', ST + '助手が来たトレーニングの伸び {v}'],
     aidluck: ['rate', ST + '助手が来たトレーニングの大成功の確率 {v}'], aidtrust: ['mul', ST + '助手が来たトレーニングで忠誠度の効き目 {v}'],
     aidkeisho: ['on', '助手が来たトレーニングでは、このモンスターが来ていなくても「いっしょにトレーニングしたとき」の効果が効く(編成で1体まで)'],
-    gatsu: ['val', ST + '大会の試合のはじめのガッツ {v}'], miseba: ['rate', ST + '大会の試合で会心が出る確率 {v}'],
+    gatsu: ['val', ST + '大会の試合の初めのガッツ {v}'], miseba: ['rate', ST + '大会の試合で会心が出る確率 {v}'],
     mitate: ['rateDown', ST + '大会の試合で相手の攻撃が当たる確率 {v}'], kensho: ['hard', ST + '大会の試合で技の外れにくさ {v}'],
     mimamori: ['rate', ST + '大会の試合の最初の攻撃が当たる確率 {v}', null, ST + '大会の試合の最初の攻撃が当たる確率 {v}・言うことを聞かない番も出ない'],
   };
@@ -107,7 +107,7 @@
   add({ id: 'challenge', icon: '🎖', name: 'チャレンジ・幸運', type: 'with', scene: 'train', unit: 0.5, max: 3, pt: 13, u: '点', text: T('取った称号1つにつき大成功しやすくなる(+{v}点ずつ)') });
   add({ id: 'tsuika', icon: '➕', name: '追加トレボーナス', type: 'with', scene: 'train', unit: 2, max: 10, pt: 4, u: '%', text: T('{v}%で、あとからどれか1つの能力がさらに +5〜20') });
   add({ id: 'kaifuku', icon: '💧', name: 'トレ後回復効果アップ', type: 'with', scene: 'train', unit: 1, max: 10, pt: 4, u: '', text: T('トレーニングのあと体力が{v}回復する') });
-  add({ id: 'atooshi', icon: '🎯', name: '得意の後押し', ref: false, type: 'with', scene: 'train', unit: 2, max: 15, pt: 5, u: '%', v2: [6, 12, 18, 24, 30], text: 'この子のいちばん高い能力のトレーニングに来ると、伸びが{v}%上がる' });
+  add({ id: 'atooshi', icon: '🎯', name: '得意の後押し', ref: false, type: 'with', scene: 'train', unit: 2, max: 15, pt: 5, u: '%', v2: [6, 12, 18, 24, 30], text: 'この子の一番高い能力のトレーニングに来ると、伸びが{v}%上がる' });
   add({ id: 'miharu', icon: '👀', name: '見張り役', ref: false, type: 'with', scene: 'train', unit: 5, max: 15, pt: 3, u: '%', v2: [15, 30, 45, 60, 75], text: T('サボりにくくなる(サボりの率 −{v}%)') });
   add({ id: 'kibarashi', icon: '🎈', name: '気晴らし', ref: false, type: 'with', scene: 'train', unit: 5, max: 10, pt: 4, u: '%', v2: [10, 20, 30, 40, 50], text: T('たまるストレスが{v}%少なくなる') });
 
@@ -118,16 +118,16 @@
   // ---- 編成・親密度 ----
   add({ id: 'kaketsuke', icon: '📯', name: '得意率アップ', type: 'self', scene: 'team', unit: 1, max: 20, pt: 4, u: '点', v2: [4, 8, 12, 16, 20], text: 'この子が得意なトレーニングに来やすくなる(得意率 +{v}点・90%まで)' });
   add({ id: 'shutsugen', icon: '🚪', name: 'トレーニング出現率アップ', type: 'self', scene: 'team', unit: 1, max: 15, pt: 3, u: '点', text: 'この子がトレーニングに来ない率が{v}点下がる(はじめは15%)' });
-  add({ id: 'shuugou', icon: '🧲', name: '集合率アップ', type: 'stay', scene: 'team', unit: 2, max: 15, pt: 6, u: '%', text: '編成にいるだけで、ほかのモンスターがいちばん集まっているトレーニングへ移る確率 +{v}%' });
-  add({ id: 'shitashi', icon: '🌱', name: '初期親密度アップ', type: 'self', scene: 'team', unit: 1, max: 25, pt: 2, u: '', v2: [5, 10, 15, 20, 25], text: 'この子のはじめの親密度が +{v}' });
+  add({ id: 'shuugou', icon: '🧲', name: '集合率アップ', type: 'stay', scene: 'team', unit: 2, max: 15, pt: 6, u: '%', text: '編成にいるだけで、ほかのモンスターが一番集まっているトレーニングへ移る確率 +{v}%' });
+  add({ id: 'shitashi', icon: '🌱', name: '初期親密度アップ', type: 'self', scene: 'team', unit: 1, max: 25, pt: 2, u: '', v2: [5, 10, 15, 20, 25], text: 'この子の初めの親密度が +{v}' });
   add({ id: 'tagpow', icon: '⚡', name: '応援効果アップ', type: 'with', scene: 'team', unit: 1, max: 15, pt: 5, u: '%', v2: [3, 6, 9, 12, 15], text: 'この子が友情タッグになったとき、タッグの強さが +{v}%' });
-  add({ id: 'hitonatsu', icon: '🤝', name: '人なつっこさ', ref: false, type: 'stay', scene: 'team', base: 1, unit: 0.05, max: 10, pt: 7, u: '倍', v2: [1.1, 1.2, 1.3, 1.4, 1.5],
-    start: Object.freeze(Array.from({ length: 10 }, (_, i) => Math.round(1.5 * (i + 1)))), text: '編成にいるだけで、みんなの親密度の上がりが{v}倍(この子のはじめの親密度も +{start})' });
-  add({ id: 'nakayoshi', icon: '🫶', name: '仲よし特訓', ref: false, type: 'with', scene: 'team', unit: 1, max: 5, pt: 8, u: '', v2: [1, 2, 3, 4, 5], text: T('親密度の上がりが +{v}') });
+  add({ id: 'hitonatsu', icon: '🤝', name: '人懐っこさ', ref: false, type: 'stay', scene: 'team', base: 1, unit: 0.05, max: 10, pt: 7, u: '倍', v2: [1.1, 1.2, 1.3, 1.4, 1.5],
+    start: Object.freeze(Array.from({ length: 10 }, (_, i) => Math.round(1.5 * (i + 1)))), text: '編成にいるだけで、みんなの親密度の上がりが{v}倍(この子の初めの親密度も +{start})' });
+  add({ id: 'nakayoshi', icon: '🫶', name: '仲良し特訓', ref: false, type: 'with', scene: 'team', unit: 1, max: 5, pt: 8, u: '', v2: [1, 2, 3, 4, 5], text: T('親密度の上がりが +{v}') });
   add({ id: 'shitsuke', icon: '📏', name: 'しつけ上手', ref: false, type: 'stay', scene: 'team', unit: 1, max: 25, pt: 3, u: '%', v2: [5, 10, 15, 20, 25], text: '編成にいるだけで、褒める・叱るで上がる忠誠度が{v}%増える' });
 
   // ---- はじめ ----
-  add({ id: 'shoki', icon: '🌅', name: '初期ステータスアップ', type: 'stay', scene: 'start', unit: 5, max: 10, pt: 7, u: '', text: '編成にいるだけで、育てる子の6つの能力がはじめから +{v}' });
+  add({ id: 'shoki', icon: '🌅', name: '初期ステータスアップ', type: 'stay', scene: 'start', unit: 5, max: 10, pt: 7, u: '', text: '編成にいるだけで、育てる子の6つの能力が初めから +{v}' });
   add({ id: 'ticket0', icon: '🎟', name: '修行チケットボーナス', type: 'stay', scene: 'start', unit: 1, max: 1, pt: 40, u: '枚', text: '編成にいるだけで、育成のはじめに修行チケットが +{v}枚' });
   add({ id: 'tairyoku', icon: '🔋', name: '体力自慢', ref: false, type: 'stay', scene: 'start', unit: 2, max: 10, pt: 4, u: '', v2: [4, 8, 12, 16, 20], text: '編成にいるだけで、育てる子の体力の上限が初めから +{v}' });
 
@@ -137,7 +137,7 @@
   add({ id: 'shchance', icon: '🔮', name: '修行チャンス', type: 'stay', scene: 'care', unit: 5, max: 10, pt: 4, u: '%', text: '編成にいるだけで、遊んだとき{v}%で「修行の気合い」(次の修行の伸び +20%)になる' });
   add({ id: 'gussuri', icon: '💤', name: 'ぐっすり', ref: false, type: 'stay', scene: 'care', unit: 1, max: 25, pt: 2, u: '%', v2: [5, 10, 15, 20, 25], text: '編成にいるだけで、休んだときの体力の回復が{v}%増える' });
   add({ id: 'asobi', icon: '🪁', name: '遊び上手', ref: false, type: 'stay', scene: 'care', unit: 2, max: 25, pt: 2, u: '%', v2: [10, 20, 30, 40, 50], text: '編成にいるだけで、遊んだときの体力の回復と甘え度の上がりが{v}%増える' });
-  add({ id: 'tsukisoi', icon: '🏥', name: '通院の付きそい', ref: false, type: 'stay', scene: 'care', unit: 2, max: 15, pt: 3, u: '点', v2: [6, 12, 18, 24, 30], text: '編成にいるだけで、通院で治りやすくなる(+{v}点)' });
+  add({ id: 'tsukisoi', icon: '🏥', name: '通院の付き添い', ref: false, type: 'stay', scene: 'care', unit: 2, max: 15, pt: 3, u: '点', v2: [6, 12, 18, 24, 30], text: '編成にいるだけで、通院で治りやすくなる(+{v}点)' });
   add({ id: 'genki', icon: '🍀', name: '元気のお守り', ref: false, type: 'stay', scene: 'care', unit: 2, max: 25, pt: 2, u: '%', v2: [10, 20, 30, 40, 50], text: '編成にいるだけで、けがや悪いようすになりにくくなる(なる率 −{v}%)' });
 
   // ---- 修行 ----
@@ -162,7 +162,7 @@
   add({ id: 'event', icon: '🎉', name: 'イベント効果アップ', type: 'stay', scene: 'event', unit: 3, max: 10, pt: 5, u: '%', text: '編成にいるだけで、出来事で上がる能力が{v}%増える' });
   add({ id: 'peak', icon: '📈', name: 'ピークターンアップ', type: 'stay', scene: 'event', unit: 1, max: 2, pt: 25, u: 'ターン', text: '編成にいるだけで、成長のピークが終わったあとも{v}ターン、ピークの伸びが続く' });
   add({ id: 'yobimizu', icon: '💬', name: '出来事の呼び水', ref: false, type: 'stay', scene: 'event', unit: 1, max: 15, pt: 5, u: '点', v2: [3, 6, 9, 12, 15], text: '編成にいるだけで、編成の子との出来事が起きやすくなる(+{v}点)' });
-  add({ id: 'mejirushi', icon: '🧪', name: '博士の目じるし', ref: false, type: 'stay', scene: 'event', unit: 0.5, max: 5, pt: 8, u: '点', v2: [0.5, 1, 1.5, 2, 2.5], text: '編成にいるだけで、イッサ博士が来やすくなる(1ターン +{v}点)' });
+  add({ id: 'mejirushi', icon: '🧪', name: '博士の目印', ref: false, type: 'stay', scene: 'event', unit: 0.5, max: 5, pt: 8, u: '点', v2: [0.5, 1, 1.5, 2, 2.5], text: '編成にいるだけで、イッサ博士が来やすくなる(1ターン +{v}点)' });
   add({ id: 'joshu', icon: '🔬', name: '博士の助手', ref: false, type: 'stay', scene: 'event', unit: 1, max: 10, pt: 7, u: '点', v2: [2, 4, 6, 8, 10], text: '編成にいるだけで、イッサ博士の実験が成功しやすくなる(+{v}点)' });
 
   // ---- 助手(参考の「ブリーダー」を助手に当てた) ----
@@ -175,8 +175,8 @@
   // ---- お話のひらめき(試合型・社長 2026-11-12「試合の中で効く形」)。いい結末で見終えると引退のときの候補に並ぶ ----
   //   目盛り5つ(第2版の段と同じ数字)。buff は対戦の芯 ASSISTANT_MASMON_BATTLE.simulate の buffs.A に入る形(#5722)
   const hint = (o) => add({ ...o, type: 'battle', scene: 'battle', ref: false, pt: 12, from: 'hint', v2: o.v });
-  hint({ id: 'gatsu', icon: '💪', name: '試合のはじめのガッツ', aid: 'atsu', u: '', v: [2, 4, 6, 8, 10],
-    buff: [{ guts: 2 }, { guts: 4 }, { guts: 6 }, { guts: 8 }, { guts: 10 }], text: '編成にいるだけで、大会の試合のはじめのガッツが +{v}' });
+  hint({ id: 'gatsu', icon: '💪', name: '試合の初めのガッツ', aid: 'atsu', u: '', v: [2, 4, 6, 8, 10],
+    buff: [{ guts: 2 }, { guts: 4 }, { guts: 6 }, { guts: 8 }, { guts: 10 }], text: '編成にいるだけで、大会の試合の初めのガッツが +{v}' });
   hint({ id: 'miseba', icon: '🎤', name: '見せ場', aid: 'momosuke', u: '%', v: [2, 4, 6, 8, 10],
     buff: [{ crit: 0.02 }, { crit: 0.04 }, { crit: 0.06 }, { crit: 0.08 }, { crit: 0.1 }], text: '編成にいるだけで、大会の試合で会心が出やすくなる(+{v}%)' });
   hint({ id: 'mitate', icon: '🔍', name: '見立て', aid: 'kyuko', u: '%', v: [2, 4, 6, 8, 10],

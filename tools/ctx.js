@@ -28,6 +28,7 @@
 //   node tools/ctx.js still <絵…> [--screen 語] … 窓口の止め絵の点検（空きの帯を測る・拡大の切り出し・参考と台帳の行）
 //   node tools/ctx.js asked <語>             … 社長に聞く前に、その語の決めごとを台帳から引く（もう決まっていれば聞かない）
 //   node tools/ctx.js todo [部]              … 社長の頼みの追跡表（完了でない頼み。sync / add / set / show / find）
+//   node tools/ctx.js stale-branches         … 見回り: 本体を変えたのに main に入っていない枝（直近7日・上位10件）
 //   node tools/ctx.js model "<仕事の文>"      … その仕事に合うモデルを表から引く
 //   node tools/ctx.js newsession <部> "<仕事>" … 新しい会話のモデルと依頼文（窓口が create_session に渡す）
 //   node tools/ctx.js redeploy assistant-chat … Edge Function の配り直しで窓口が渡すもの（数行）
@@ -628,6 +629,7 @@ function main() {
     // 部・会話・モデル・確認の段数(tools/team/ の道具へ渡すだけ。2026-11-11 トークン節約の仕組み)
     case 'dept': return cmdTeam('team/dept-guide.js', rest);
     case 'decisions': return cmdTeam('team/decisions.js', rest);
+    case 'stale-branches': return cmdTeam('team/stale-branches.js', rest);
     case 'handoff': return cmdTeam('team/handoff.js', rest);
     case 'todo': return cmdTeam('team/requests.js', rest);
     case 'asked': return cmdTeam('team/requests.js', ['asked', ...rest]);

@@ -19,7 +19,9 @@ const SKIP_FILE = /(?:^|\/)(?:changelog\.js|assistants\.js|assistant-chat-digest
 const DIALOG_FILE = /assistant|buddy|lines|persona|story|convo|talk|peer|chat|sorashido|card-battle-vs|card-battle-multi|finds|gifts|arc|card-ai-deck|tevent|issa|scenario/;
 const SHORT = 12;
 // 台詞らしい文
-const SPEECH = /[「」『』♪〜]|だよ|だね|よね|かな[?？!！。…]|かな$|ます(?:ね|よ)|でつ|じゃん|ねっ|よっ|ね[!！。…]|よ[!！。…]|ね$|よ$|わ[!！]|ぞ[!！]?$|っす|でしょ|なぁ|ねぇ|よぉ|だぞ|ぜ[!！]|ちゃう/;
+// 「」は説明の中でボタン名を引くのにも使うので、台詞の部品のときだけ台詞の印にする
+const QUOTE = /[「」『』]/;
+const SPEECH = /[♪〜]|「…|だよ|だね|よね|かな[?？!！。…]|かな$|ます(?:ね|よ)|でつ|じゃん|ねっ|よっ|ね[!！。…]|よ[!！。…]|ね$|よ$|わ[!！]|ぞ[!！]?$|っす|でしょ|なぁ|ねぇ|よぉ|だぞ|ぜ[!！]|ちゃう/;
 // 名前・決まった言い回しで、表の語を含んでいても置き換えない物(曲名・あいさつ・お話の題など)
 const EXCEPT = /愛はひとつじゃない|ごきげんモッチー|ふたつの翼|はじめまして|はじめての おでかけ|はじめての特訓|ひとつぶ|いけにえ|ぜんぶ見せ場|ぜんぶ必殺技|ちから|かしこさ/;
 const PARTICLE = /[をにでがはもとへのやかよ]/;
@@ -96,7 +98,7 @@ function scanFile(rel, opts = {}) {
     if (n.type === 'StringLiteral' || n.type === 'TemplateElement' || n.type === 'JSXText') {
       const text = n.type === 'TemplateElement' ? (n.value.cooked || '') : n.value;
       if (/[ぁ-ん]/.test(text) && !skipByParent(n, parent, grand)) {
-        const speech = SPEECH.test(text) || (dialog && (text.trim().length > SHORT || /[!！?？…]/.test(text)));
+        const speech = SPEECH.test(text) || (dialog && (QUOTE.test(text) || text.trim().length > SHORT || /[!！?？…]/.test(text)));
         if (!speech || opts.all) {
           const hits = findInText(text);
           if (hits.length) out.push({ line: n.loc.start.line, start: n.start, end: n.end, raw: src.slice(n.start, n.end), text, hits, speech });

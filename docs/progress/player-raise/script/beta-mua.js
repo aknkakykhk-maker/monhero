@@ -21,16 +21,16 @@
 //   tut.rematch            … はじめて大会で負けたとき(砂時計でやり直す)
 //   tut.event              … はじめての出来事(選択肢・見出し)
 //   tut.awake              … はじめての覚醒の前触れ(体が光った)
-//   tut.retire             … はじめての引退(評価・アシスト能力・保存枠・次の育成の編成)
+//   tut.retire             … はじめての引退(評価・アシスト能力・マスモンボックス・次の育成の編成)
 // 読み方: SE.event('tut.train', ctx) の lines を順に出す(tut.* は2択なし)。tut.lock だけは SE.say で1本。
 const MONSUC_SCRIPT_BETA_MUA = Object.freeze([
   // ═══════════ β版の始まりの話 ═══════════
   { id:'scn.mua.beta.open.narr1', who:'narr', t:'ホームでひと息ついていると、みゅあが1枚のチラシを手に走ってきた。' },
   { id:'scn.mua.beta.open.mua1', who:'mua', e:'excited', t:'{name}、見て見て！ 新しい育成場ができたんだって！ 名前は「モンヒロサクセス」✨' },
   { id:'scn.mua.beta.open.mua1b', who:'mua', e:'excited', bond:[1,2], t:'{name}、見てください！ 新しい育成場ができたそうです。名前は「モンヒロサクセス」です！' },
-  { id:'scn.mua.beta.open.narr2', who:'narr', t:'チラシには、デビューしたてのモンスターが、ヒーローの頂を目指して駆けていく絵が描かれている。' },
-  { id:'scn.mua.beta.open.mua2', who:'mua', e:'happy', t:'モンスターを1体、デビューから頂点までじっくり育てるとこなの。トレーニングして、大会に出て、いっしょに強くなってくやつ！' },
-  { id:'scn.mua.beta.open.mua2b', who:'mua', e:'happy', bond:[1,2], t:'モンスターを1体、デビューから頂点まで、じっくり育てる場所なんです。トレーニングをして、大会に出て、いっしょに強くなっていきます。' },
+  { id:'scn.mua.beta.open.narr2', who:'narr', t:'チラシには、デビューしたてのモンスターが、ヒーローズファイナルの優勝を目指して駆けていく絵が描かれている。' },
+  { id:'scn.mua.beta.open.mua2', who:'mua', e:'happy', t:'モンスターを1体、デビューからヒーローズファイナルまでじっくり育てるとこなの。トレーニングして、大会に出て、いっしょに強くなってくやつ！' },
+  { id:'scn.mua.beta.open.mua2b', who:'mua', e:'happy', bond:[1,2], t:'モンスターを1体、デビューからヒーローズファイナルまで、じっくり育てる場所なんです。トレーニングをして、大会に出て、いっしょに強くなっていきます。' },
   { id:'scn.mua.beta.open.mua3', who:'mua', e:'normal', t:'あたし、いつもは横で応援してるだけぢゃん？ 今度はいちばん最初から、{name}といっしょに育ててみたいなって' },
   { id:'scn.mua.beta.open.mua3b', who:'mua', e:'normal', bond:[1,2], t:'あたし、いつもは横で応援しているだけでした。今度はいちばん最初から、{name}といっしょに育ててみたいんです。' },
   { id:'scn.mua.beta.open.mua4', who:'mua', e:'wink', t:'だから助手の一番乗り、手あげてきちゃったｗ' },
@@ -56,8 +56,8 @@ const MONSUC_SCRIPT_BETA_MUA = Object.freeze([
   { id:'scn.mua.beta.firstend.narr1', who:'narr', t:'育成場からの帰り道。みゅあは、{mon}といっしょに撮った写真を何度も見返している。' },
   { id:'scn.mua.beta.firstend.mua1', who:'mua', e:'happy', t:'おつかれさま〜！ デビューから引退まで、ほんとにいっしょに走りきっちゃったね' },
   { id:'scn.mua.beta.firstend.mua1b', who:'mua', e:'happy', bond:[1,2], t:'おつかれさまでした！ デビューから引退まで、いっしょに走りきりましたね。' },
-  { id:'scn.mua.beta.firstend.mua2', who:'mua', e:'excited', t:'{mon}は保存枠でひと休み。次の育成では、編成で力を貸してくれるんだって！ まぢ頼もしい✨' },
-  { id:'scn.mua.beta.firstend.mua2b', who:'mua', e:'excited', bond:[1,2], t:'{mon}は保存枠でひと休みです。次の育成では、編成で力を貸してくれるそうですよ。' },
+  { id:'scn.mua.beta.firstend.mua2', who:'mua', e:'excited', t:'{mon}はマスモンボックスでひと休み。次の育成では、編成で力を貸してくれるんだって！ まぢ頼もしい✨' },
+  { id:'scn.mua.beta.firstend.mua2b', who:'mua', e:'excited', bond:[1,2], t:'{mon}はマスモンボックスでひと休みです。次の育成では、編成で力を貸してくれるそうですよ。' },
   { id:'scn.mua.beta.firstend.mua3', who:'mua', e:'wink', t:'β版はまだまだこれから。新しいことが増えたら、また{name}といっしょに育てたいな♪' },
   { id:'scn.mua.beta.firstend.mua3b', who:'mua', e:'wink', bond:[1,2], t:'β版は、まだまだこれからです。新しいことが増えたら、また{name}といっしょに育てたいです。' },
 
@@ -67,8 +67,8 @@ const MONSUC_SCRIPT_BETA_MUA = Object.freeze([
 
   // ═══════════ チュートリアル(説明の台詞) ═══════════
   // 育成の準備
-  { id:'tut.scn.mua1', who:'mua', e:'excited', t:'ストーリーは『ヒーローへの道』！ デビュー戦から頂への道まで、いっしょに駆け上がろ♪ くわしくは『ストーリー詳細』で見られるよ' },
-  { id:'tut.scn.mua1b', who:'mua', e:'excited', bond:[1,2], t:'ストーリーは『ヒーローへの道』です。デビュー戦から頂への道まで、いっしょに駆け上がりましょう。くわしくは『ストーリー詳細』で見られますよ。' },
+  { id:'tut.scn.mua1', who:'mua', e:'excited', t:'ストーリーは『ヒーローへの道』！ デビュー戦からヒーローズファイナルまで、いっしょに駆け上がろ♪ くわしくは『ストーリー詳細』で見られるよ' },
+  { id:'tut.scn.mua1b', who:'mua', e:'excited', bond:[1,2], t:'ストーリーは『ヒーローへの道』です。デビュー戦からヒーローズファイナルまで、いっしょに駆け上がりましょう。くわしくは『ストーリー詳細』で見られますよ。' },
   { id:'tut.prep.mua1', who:'mua', e:'happy', t:'まずは育てるモンスターを1体えらぼ！ ベースモンか、合体で生まれたモンスターから選べるよ' },
   { id:'tut.prep.mua1b', who:'mua', e:'happy', bond:[1,2], t:'まずは、育てるモンスターを1体選びましょう。ベースモンか、合体で生まれたモンスターから選べます。' },
   { id:'tut.prep.mua2', who:'mua', e:'normal', t:'次は編成。ここに入れたマスモンが、トレーニングを手伝いに来てくれるの' },
@@ -121,8 +121,8 @@ const MONSUC_SCRIPT_BETA_MUA = Object.freeze([
   // 大会
   { id:'tut.cup.mua1', who:'mua', e:'excited', t:'大会の札が出てきたよ！ 出るとそのターンを使うけど、勝てば賞金と賞品のアイテムがもらえて、ごはんも1つ選べるの🔥' },
   { id:'tut.cup.mua1b', who:'mua', e:'excited', bond:[1,2], t:'大会の札が出てきました。出るとそのターンを使いますが、勝つと賞金と賞品のアイテムがもらえて、ごはんも1つ選べます。' },
-  { id:'tut.cup.mua2', who:'mua', e:'normal', t:'期の終わりにも大会があるよ。まずはデビュー戦！ 最後の期は「頂への道」で、いちばん上を目指すの' },
-  { id:'tut.cup.mua2b', who:'mua', e:'normal', bond:[1,2], t:'期の終わりにも大会があります。まずはデビュー戦です。最後の期は「頂への道」で、いちばん上を目指します。' },
+  { id:'tut.cup.mua2', who:'mua', e:'normal', t:'期の終わりにも大会があるよ。まずはデビュー戦！ 最後の期は「ヒーローズファイナル」で、いちばん上を目指すの' },
+  { id:'tut.cup.mua2b', who:'mua', e:'normal', bond:[1,2], t:'期の終わりにも大会があります。まずはデビュー戦です。最後の期は「ヒーローズファイナル」で、いちばん上を目指します。' },
   { id:'tut.rank.mua1', who:'mua', e:'excited', t:'ランク UP！ 大会でもらった賞金の合計で、賞金ランクが上がるの。1段上がるたびに修行チケットが1枚もらえるよ。負けても賞金が入れば上がるからね♪' },
   { id:'tut.rank.mua1b', who:'mua', e:'excited', bond:[1,2], t:'ランク UP です！ 大会でもらった賞金の合計で、賞金ランクが上がります。1段上がるたびに修行チケットが1枚もらえます。負けても、賞金が入れば上がりますよ。' },
   { id:'tut.meal.mua1', who:'mua', e:'happy', t:'勝ったごほうびに、ごはんを1つ選べるよ！ 体力が回復したり、能力が上がったりするの。負けたときはごはんなしだから、がんばろ！' },
@@ -163,8 +163,8 @@ const MONSUC_SCRIPT_BETA_MUA = Object.freeze([
   { id:'tut.retire.mua1b', who:'mua', e:'happy', bond:[1,2], t:'育成はここまでです。最後の総合力で、評価が決まります。' },
   { id:'tut.retire.mua2', who:'mua', e:'normal', t:'もらったポイントでアシスト効果を選んでね。次の育成でこのモンスターを編成に連れていくと、効いてくれるの' },
   { id:'tut.retire.mua2b', who:'mua', e:'normal', bond:[1,2], t:'もらったポイントで、アシスト効果を選んでください。次の育成でこのモンスターを編成に連れていくと、効いてくれます。' },
-  { id:'tut.retire.mua3', who:'mua', e:'wink', t:'引退しても、いなくなるわけぢゃないよ！ 保存枠に入って、名前や色もあとから変えられるからね' },
-  { id:'tut.retire.mua3b', who:'mua', e:'wink', bond:[1,2], t:'引退しても、いなくなるわけではありません。保存枠に入って、名前や色もあとから変えられますよ。' },
+  { id:'tut.retire.mua3', who:'mua', e:'wink', t:'引退しても、いなくなるわけぢゃないよ！ マスモンボックスに入って、名前や色もあとから変えられるからね' },
+  { id:'tut.retire.mua3b', who:'mua', e:'wink', bond:[1,2], t:'引退しても、いなくなるわけではありません。マスモンボックスに入って、名前や色もあとから変えられますよ。' },
 ]);
 
 if (typeof module !== 'undefined') module.exports = { MONSUC_SCRIPT_BETA_MUA };

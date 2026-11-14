@@ -16,7 +16,7 @@
 //   s = SUC.act(s, { kind:'train', stat:'pow' }).state;   // トレーニング(6つ)・shugyo・rest・play・clinic・retry(デビュー戦の再挑戦)
 //   s = SUC.react(s, 'praise').state;      // トレーニングの結果のあとに 褒める/叱る/なし(null)
 //   s = SUC.issa(s, 'hp').state;           // 博士が来ていれば(peek().issa)、選ぶ(none でもよい)
-//   s = SUC.endTurn(s).state;              // ターンを閉じる。期末・頂への道なら s.battle に「戦う大会」が入る
+//   s = SUC.endTurn(s).state;              // ターンを閉じる。期末・ヒーローズファイナルなら s.battle に「戦う大会」が入る
 //   while (s.battle) { const opp = SUC.opponents(s); /* 対戦の芯で戦う */ s = SUC.settle(s, wins).state; }
 //   if (s.over) { const ev = SUC.evaluate(s); }  // 引退(総合力・ランク・アシストポイント)
 (function (root) {
@@ -55,16 +55,16 @@
   // 期末の強制大会(ターンを使わない)。星: 1=★ 2=★★ 3=★★★ 4=👑
   const FORCED = Object.freeze({
     // 大会で戦うのは基本1戦(社長 2026-11-12・TOURNAMENT §15)。組み合わせ表は演出(bracketOf)
-    debut: { key: 'debut', name: 'デビュー戦', star: 1, cup: 'debut', all: 0, pts: 5, pop: 3, title: 'はじめの一歩' },
+    debut: { key: 'debut', name: 'デビュー戦', star: 1, cup: 'debut', all: 0, pts: 5, pop: 3, title: '初めの一歩' },
     junior: { key: 'junior', name: 'ヒーローズリーグ', star: 2, cup: 'normal', all: 2, pts: 5, pop: 2, title: 'ジュニアの星' },
     middle: { key: 'middle', name: 'ヒーローズリーグ', star: 3, cup: 'normal', all: 3, pts: 10, pop: 4, title: 'ミドルの星' },
     pro: { key: 'pro', name: 'ヒーローズリーグ', star: 4, cup: 'herowinter', all: 4, pts: 20, pop: 8, title: 'ヒーロー記念', crown: true },
   });
-  // 頂への道(最後の期の 3・4・5ターン目の終わりに1戦ずつ・負けたら終わり)
-  const SUMMIT = Object.freeze([{ round: 1, name: '頂への道 1回戦', mult: 1.2 }, { round: 2, name: '頂への道 準決勝', mult: 1.3 }, { round: 3, name: '頂への道 決勝', mult: 1.4 }]);
+  // ヒーローズファイナル(最後の期の 3・4・5ターン目の終わりに1戦ずつ・負けたら終わり)
+  const SUMMIT = Object.freeze([{ round: 1, name: 'ヒーローズファイナル 1回戦', mult: 1.2 }, { round: 2, name: 'ヒーローズファイナル 準決勝', mult: 1.3 }, { round: 3, name: 'ヒーローズファイナル 決勝', mult: 1.4 }]);
   // 決勝に勝ったときの全能力の上乗せ(前は +8 / 👑ありで +15)は、エンディングのお祝い(data/monhero-success-arc.js の PARTY)へ置きかえた(2026-11-13・二重にしない)
-  const SUMMIT_FINAL = Object.freeze({ plain: { all: 0, pts: 30, pop: 10, title: '頂に立った子' }, big: { all: 0, pts: 60, pop: 20, title: 'ヒーローの頂' } });
-  // エンディング(STORY-ARC.md §4・社長 2026-11-13): bad = 頂への道で負けて終わる / good = 決勝に勝つ /
+  const SUMMIT_FINAL = Object.freeze({ plain: { all: 0, pts: 30, pop: 10, title: 'ヒーローズファイナル王者' }, big: { all: 0, pts: 60, pop: 20, title: '真のヒーロー' } });
+  // エンディング(STORY-ARC.md §4・社長 2026-11-13): bad = ヒーローズファイナルで負けて終わる / good = 決勝に勝つ /
   //   super = 決勝に勝つ・育成中の助手の親密度が最大・連続イベントを4話まで見た(特別演出つき)。どれも育成完了
   const PARTY0 = Object.freeze({ bad: [5], good: [10, 10, 10], super: [15, 17, 20] }); // 表が無いときの既定(arc.js と同じ)
   // 再戦(社長 2026-11-12・TOURNAMENT.md §14): 大会に負けたとき、アイテムでやり直せる。2種類あわせて1回の育成で3回まで
@@ -172,17 +172,17 @@
   // 第2版で足した「トレーニングに効く11種」(ASSISTS_V2_TRAIN)は表があるときだけ出る
   const ASSISTS_V1 = Object.freeze({
     sokoji: { name: '特訓の底力', type: 'with', v: [4, 7, 10], cost: [40, 80, 128] },
-    kaketsuke: { name: 'かけつけ', type: 'self', v: [8, 14, 20], cost: [32, 64, 104] },
+    kaketsuke: { name: '駆け付け', type: 'self', v: [8, 14, 20], cost: [32, 64, 104] },
     hirameki: { name: 'ひらめき', type: 'with', v: [3, 5, 8], cost: [32, 64, 104] },
     atooshi: { name: '得意の後押し', type: 'with', v: [8, 14, 20], cost: [24, 48, 80] },
-    kizuna: { name: '信頼のきずな', type: 'with', v: [6, 10, 14], cost: [40, 80, 128] },
+    kizuna: { name: '信頼の絆', type: 'with', v: [6, 10, 14], cost: [40, 80, 128] },
     ochitsuki: { name: '落ち着き', type: 'with', v: [15, 25, 35], cost: [24, 48, 80] },
     itawari: { name: 'いたわり', type: 'with', v: [8, 14, 20], cost: [24, 48, 80] },
     shugyo: { name: '修行の手ほどき', type: 'stay', v: [10, 18, 25], cost: [24, 48, 80] },
-    hitonatsu: { name: '人なつっこさ', type: 'stay', v: [1.2, 1.4, 1.6], cost: [32, 64, 104], start: [5, 10, 15] },
+    hitonatsu: { name: '人懐っこさ', type: 'stay', v: [1.2, 1.4, 1.6], cost: [32, 64, 104], start: [5, 10, 15] },
     // 助手のお話のひらめきで取れる5つ(型 battle・社長 2026-11-12): 編成にいると、育てる子の大会の試合で効く(いちばん高い段の1つだけ)。トレーニングには効かない
     //   数字は data/monhero-success-assist.js と同じ(buff は対戦の芯の buffs の形)
-    gatsu: { name: '試合のはじめのガッツ', type: 'battle', v: [3, 5, 8], cost: [24, 48, 80], hint: 'atsu', buff: [{ guts: 3 }, { guts: 5 }, { guts: 8 }] },
+    gatsu: { name: '試合の初めのガッツ', type: 'battle', v: [3, 5, 8], cost: [24, 48, 80], hint: 'atsu', buff: [{ guts: 3 }, { guts: 5 }, { guts: 8 }] },
     miseba: { name: '見せ場', type: 'battle', v: [3, 5, 8], cost: [24, 48, 80], hint: 'momosuke', buff: [{ crit: 0.03 }, { crit: 0.05 }, { crit: 0.08 }] },
     mitate: { name: '見立て', type: 'battle', v: [3, 5, 8], cost: [24, 48, 80], hint: 'kyuko', buff: [{ eva: 0.03 }, { eva: 0.05 }, { eva: 0.08 }] },
     kensho: { name: '検証', type: 'battle', v: [15, 25, 35], cost: [24, 48, 80], hint: 'sorashido', buff: [{ missCut: 0.15 }, { missCut: 0.25 }, { missCut: 0.35 }] },
@@ -299,7 +299,7 @@
     hachi: { name: '修行のハチマキ', use: 'before', good: 'shugyoGood' },
     omamori: { name: '縁結びのお守り', use: 'before', good: 'star' },
     dango: { name: 'モモのキビダンゴ', use: 'before', hpMax: 20 },                // 体力の最大値が初めから上がる
-    grass: { name: 'うけつぎ草', use: 'before', good: 'uketsugu' },
+    grass: { name: '受け継ぎ草', use: 'before', good: 'uketsugu' },
     juice: { name: 'ガロエ印の野菜ジュース', use: 'during', hpFull: true },                 // 体力を完全に回復
     powder: { name: '悪様散', use: 'during', cure: true, hp: 0.3 },               // 悪いようすを治して体力を回復
     license: { name: 'ブリーダーライセンス', use: 'during', ama: 10, fear: 10 },       // 甘え度 +10・恐れ度 +10(忠誠度 +20。2026-11-13 社長)
@@ -310,10 +310,10 @@
     // 大会の賞品(2026-11-13 大会の第2版)。秘薬=そのターンの修行でその間合いの技を覚えやすい/実=そのターンの訓練でその能力が伸びやすい
     elixir0: { name: '零の秘薬', use: 'during', elixir: 0 }, elixir1: { name: '近の秘薬', use: 'during', elixir: 1 },
     elixir2: { name: '中の秘薬', use: 'during', elixir: 2 }, elixir3: { name: '遠の秘薬', use: 'during', elixir: 3 },
-    fruit_life: { name: 'いのちの実', use: 'during', fruit: 'life' }, fruit_pow: { name: 'ちからの実', use: 'during', fruit: 'pow' },
-    fruit_wise: { name: 'ちえの実', use: 'during', fruit: 'wise' }, fruit_hit: { name: 'ねらいの実', use: 'during', fruit: 'hit' },
-    fruit_eva: { name: 'かわしの実', use: 'during', fruit: 'eva' }, fruit_tough: { name: 'かたさの実', use: 'during', fruit: 'tough' },
-    stamina: { name: 'スタミナだんご', use: 'during', hpMax: 15 }, // モンスターダービーの賞品: 使うと体力の最大値 +15(体力も同じだけ回復)
+    fruit_life: { name: '命の実', use: 'during', fruit: 'life' }, fruit_pow: { name: 'ちからの実', use: 'during', fruit: 'pow' },
+    fruit_wise: { name: '知恵の実', use: 'during', fruit: 'wise' }, fruit_hit: { name: '狙いの実', use: 'during', fruit: 'hit' },
+    fruit_eva: { name: 'かわしの実', use: 'during', fruit: 'eva' }, fruit_tough: { name: '硬さの実', use: 'during', fruit: 'tough' },
+    stamina: { name: 'スタミナ団子', use: 'during', hpMax: 15 }, // モンスターダービーの賞品: 使うと体力の最大値 +15(体力も同じだけ回復)
     // 覚醒の実・超覚醒の実(2026-11-13 社長 r1113-038・053)。使うとその場で起きる(中身は AWAKE と同じ: 全能力 +30/+40・間合いの適性 1段/2段)
     //   覚醒の実: 覚醒していない子に、育成中いつでも(参考 mo-14「育成中に覚醒する」)/ 超覚醒の実: 期の条件なし・覚醒していなければ覚醒してから超覚醒まで(覚醒の実の完全な上位互換)
     awakeFruit: { name: '覚醒の実', use: 'during', awake: 1 },
@@ -324,12 +324,12 @@
     trainGood: { name: 'トレーニング得意', train: 0.10 },                  // トレーニングの伸び +10%
     shugyoGood: { name: '修行得意', shugyo: 0.20, techRate: 10 },          // 修行の伸び +20%・技を覚える率 +10
     star: { name: 'スターの素質○', pop: 1.5, bond: 1.2 },                // 人気の上がり ×1.5・親密度の上がり ×1.2(良縁)
-    uketsugu: { name: 'うけつぐ魂', story: 0.15, teach: 2, start: 2 },  // start: 編成から受け継ぐはじめの能力 ×2(2026-11-13 社長)               // 連続の話が進む率 +15%・3話(伝授)の能力が2倍
+    uketsugu: { name: '受け継ぐ魂', story: 0.15, teach: 2, start: 2 },  // start: 編成から受け継ぐはじめの能力 ×2(2026-11-13 社長)               // 連続の話が進む率 +15%・3話(伝授)の能力が2倍
   });
   const CARRY_MAX = 2; // 持ちこみは1回の育成で2つまで(社長 2026-11-12。始める前の物と育成中の袋を合わせて)
 
   // ---- 賞金(保存は fame)と修行チケット(社長 2026-11-12: チケットは大会でもらい、賞金が大きい大会ほど多い) ----
-  // 賞金は TOURNAMENT §2 の星の賞金 × 期の倍率(ジュニア ×1・ミドル ×1.25・プロ ×1.5)。頂への道は 800/1500/3000
+  // 賞金は TOURNAMENT §2 の星の賞金 × 期の倍率(ジュニア ×1・ミドル ×1.25・プロ ×1.5)。ヒーローズファイナルは 800/1500/3000
   // 2026-11-13 社長: 賞金の桁を参考に寄せる(千〜万G。銅2,500〜3,000・銀4,000・金5,000〜7,500・四大12,500・期末 6,000/7,000/8,000・最後の大会 8,000→9,000→10,000)
   const PRIZE = Object.freeze({ debut: 1000, junior: 6000, middle: 7000, pro: 8000, summit: [8000, 9000, 10000] });
   // 修行チケットの数は桁を上げる前の賞金で決める(釣り合いを変えない): 100→1・750→2・1500→3・2250→4
@@ -349,7 +349,7 @@
     f_life: { name: 'もりもりニンジン', hp: 0.1, stat: 'life', add: 15, fear: 2 }, // 体力 上限の10%回復・その能力 +15(6種)
     f_pow: { name: 'がっつりお肉', hp: 0.1, stat: 'pow', add: 15, ama: 2 },
     f_wise: { name: 'ひらめきクルミ', hp: 0.1, stat: 'wise', add: 15, fear: 2 },
-    f_hit: { name: 'ねらいうちベリー', hp: 0.1, stat: 'hit', add: 15, fear: 2 },
+    f_hit: { name: '狙い撃ちベリー', hp: 0.1, stat: 'hit', add: 15, fear: 2 },
     f_eva: { name: 'ひらりリンゴ', hp: 0.1, stat: 'eva', add: 15, ama: 2 },
     f_tough: { name: 'かちかちイモ', hp: 0.1, stat: 'tough', add: 15, ama: 2 },
     prune: { name: 'スタープルーン', hp: 0.05, pop: 5, pts: 10, ama: 2 },        // 体力 上限の5%回復・人気 +5・能力ポイント +10
@@ -366,7 +366,7 @@
 
   // ---- 大会の相手(TOURNAMENT §9) ----
   // 基準の強さ B(6能力の合計)。試算(success-sim.js --calibrate)で「ふつうに育てた子」の勝率が
-  // ★ 約80%・★★ 約60%・★★★ 約45%・👑 約30%・頂への道の決勝 約25% になるよう求めた値(TOURNAMENT §9 の 8)
+  // ★ 約80%・★★ 約60%・★★★ 約45%・👑 約30%・ヒーローズファイナルの決勝 約25% になるよう求めた値(TOURNAMENT §9 の 8)
   const BENCH = Object.freeze({ debut: 620, junior: 1080, middle: 1820, pro: 2020, summit: 2050 });
   const STAR_MULT = Object.freeze({ 1: 0.75, 2: 0.95, 3: 1.1, 4: 1.25 });
   // ---- 月ごとの大会(TOURNAMENT §4: ジュニア・ミドル・プロは同じ月の並び。最後の期の1・2月はプロと同じ) ----
@@ -424,8 +424,8 @@
   //   条件: 1 デビュー戦に出る/2 大会で1勝/3〜10 これまでの賞金の合計。段が1つ上がるたびに修行チケット1枚(チケット運で もう1枚)
   //   step は 1〜10(0 はまだデビュー戦の前)。四大大会の出る条件(need.rank)もこの段
   const FAME_RANK = Object.freeze([
-    { name: 'ルーキー', cond: 'debut' }, { name: 'はじめの一勝', cond: 'win' }, { name: '一人前', min: 1500 }, { name: 'うできき', min: 3000 }, { name: '期待の星', min: 5000 },
-    { name: 'はなまる', min: 8000 }, { name: 'エース', min: 14000 }, { name: 'スター', min: 22000 }, { name: 'チャンピオン', min: 34000 }, { name: 'ヒーロー', min: 50000 },
+    { name: 'ルーキー', cond: 'debut' }, { name: '初めの一勝', cond: 'win' }, { name: '一人前', min: 1500 }, { name: '腕利き', min: 3000 }, { name: '期待の星', min: 5000 },
+    { name: '花丸', min: 8000 }, { name: 'エース', min: 14000 }, { name: 'スター', min: 22000 }, { name: 'チャンピオン', min: 34000 }, { name: 'ヒーロー', min: 50000 },
   ].map(Object.freeze));
   const FAME_RANK_MAX = FAME_RANK.length; // 10
   const rankStepOf = (s) => { // いまの段(0〜10)
@@ -436,7 +436,7 @@
   };
   const rankNameOf = (step) => (step >= 1 && step <= FAME_RANK_MAX ? FAME_RANK[step - 1].name : 'デビュー前');
   const rankNeedG = (step) => num((FAME_RANK[step - 1] || {}).min);
-  // 段のほかに、優勝の獲得物に付く修行チケット(期末の大会・頂への道の各戦・★★★以上・四大大会)
+  // 段のほかに、優勝の獲得物に付く修行チケット(期末の大会・ヒーローズファイナルの各戦・★★★以上・四大大会)
   const WIN_TICKET = Object.freeze({ forced: Object.freeze(['junior', 'middle', 'pro']), cupStar: 3, add: 1 });
   const DIST_JA = ['零', '近', '中', '遠'];
   const DIST_T_NAME = ['インファイト・トーナメント', 'ニアライト・トーナメント', 'ミドルレンジ・トーナメント', 'ロングレール・トーナメント'];
@@ -506,12 +506,12 @@
   });
   const SC_NAME = Object.freeze({ mua: '笑顔の大会', kiki: '静かな一撃の大会', momosuke: '人気投票の大会', dra: '技くらべの大会', atsu: '格上への挑戦', kyuko: 'ピークの大会', sorashido: '計算どおりの大会', erubin: '見守りの大会' });
   // 助手のお話(EVENTS ②・台本 scenario.js / asst-*.js・台本の担当の案 2026-11-12。数字は仕組み側の案)
-  //   good = 4話のいい結末(全能力 特大 + ひらめき)/ bitter = ほろ苦い結末 / special = 特別な1話を見たとき、頂への道の1回戦だけ効く(重ねがけなし)
+  //   good = 4話のいい結末(全能力 特大 + ひらめき)/ bitter = ほろ苦い結末 / special = 特別な1話を見たとき、ヒーローズファイナルの1回戦だけ効く(重ねがけなし)
   const ASST_STORY = Object.freeze({
     // special は対戦の芯の buffs の形(guts・hit1・crit・missCut・eva・noSulk。docs/spec/ASSISTANT_MASMON_BATTLE.md「その試合だけの上乗せ」)
     //   と、画面・サクセス側の印(line = 最後の一言が変わる・showFirst = 相手の1手目を見せる・noInjury = 試合中のけがなし)
     mua: { good: { hint: 'tech', name: 'みんなの声' }, bitter: { pop: 10 }, special: { line: true } },
-    atsu: { good: { hint: 'assist', name: '試合のはじめのガッツ' }, bitter: { pts: 10 }, special: { guts: 10 } },
+    atsu: { good: { hint: 'assist', name: '試合の初めのガッツ' }, bitter: { pts: 10 }, special: { guts: 10 } },
     kiki: { good: { hint: 'tech', name: '静かな一撃' }, bitter: { stat: 'tough' }, special: { hit1: 0.15 } },
     momosuke: { good: { hint: 'assist', name: '見せ場' }, bitter: { pop: 10 }, special: { crit: 0.10 } },
     dra: { good: { hint: 'tech', name: 'ドラ直伝' }, bitter: { mastery: 10 }, special: { missCut: 0.5 } },
@@ -1335,7 +1335,7 @@
       const t = kind === 'good' ? 'お話の結末(いい結末)' : 'お話の結末(ほろ苦い結末)'; s.titles.push(`${s.aid}:${t}`);
       return { state: s, out: { ok: true, kind } };
     };
-    // 特別な1話を見たら印を付ける。効き目は頂への道の1回戦の試合だけ(battleMods が返す・対戦の芯に渡す)
+    // 特別な1話を見たら印を付ける。効き目はヒーローズファイナルの1回戦の試合だけ(battleMods が返す・対戦の芯に渡す)
     const markSpecial = (s0) => { const s = clone(s0); s.special = true; return { state: s, out: { ok: true } }; };
     const battleMods = (s) => (s.special && s.battle && s.battle.kind === 'summit' && s.battle.round === 0 && ASST_STORY[s.aid] ? { ...ASST_STORY[s.aid].special } : {});
     // 対戦の芯にそのまま渡す上乗せ(育てる子の側 A)。画面・サクセス側の印は外す。何も無ければ undefined(今までと同じ試合)
@@ -1376,7 +1376,7 @@
     const awakeItemOk = (s, k) => (k >= 2 ? num(s.awake) < 2 : num(s.awake) < 1);
     const itemUsable = (s, key) => { const it = ITEMS[key]; if (!it || it.use !== 'during' || !s || s.over) return false; return it.awake ? awakeItemOk(s, it.awake) : true; };
 
-    // ---- ターンを閉じる(期末の強制大会・頂への道・デビュー戦の再挑戦をここで立てる) ----
+    // ---- ターンを閉じる(期末の強制大会・ヒーローズファイナル・デビュー戦の再挑戦をここで立てる) ----
     const endTurn = (s0) => {
       const s = clone(s0);
       if (s.over || s.battle) return { state: s, out: { ok: false } };
@@ -1416,7 +1416,7 @@
     const ARCX = (deps && deps.arc) || (root && root.MONHERO_SUCCESS_ARC) || null;
     const ARC = ARCX && ARCX.ARC && typeof ARCX.ARC === 'object' ? ARCX.ARC : {};
     const PARTY = ARCX && ARCX.PARTY && typeof ARCX.PARTY === 'object' ? ARCX.PARTY : PARTY0;
-    // 頂への道で助手が選ぶ相手(round 0〜2)。{ pick, who(常連か王者)| rival(この育成のライバル) }
+    // ヒーローズファイナルで助手が選ぶ相手(round 0〜2)。{ pick, who(常連か王者)| rival(この育成のライバル) }
     const summitPick = (s, round) => {
       const a = ARC[s.aid]; const pick = a && Array.isArray(a.summit) && a.summit[round] ? a.summit[round] : (round === SUMMIT.length - 1 ? 'champ' : 'reg');
       const regs = regularsOf('peak').filter(r => !r.champ);
@@ -1429,7 +1429,7 @@
       }
       return { pick, who: regs[round] || regs[0] || null };
     };
-    // エンディングの判定(頂への道の最後の結果で決まる)
+    // エンディングの判定(ヒーローズファイナルの最後の結果で決まる)
     const endingOf = (s, wonFinal) => (!wonFinal ? 'bad' : (num(s.aidBond) >= BOND.max && num(s.astory && s.astory.ep) >= 4 ? 'super' : 'good'));
     const partiesOf = (kind) => (Array.isArray(PARTY[kind]) ? PARTY[kind].map(n => Math.max(0, Math.round(num(n)))) : []);
     // エンディングを付ける: お祝いの能力をまとめて足す(画面は s.ending を見て順に見せる)
@@ -1594,7 +1594,7 @@
       const p = periodOf(s.turn);
       if (!CUP_STAR[p.key] && !(s.aid === 'kyuko' && peakTurn(s))) return [];
       if (s.over) return [];
-      if (p.key === 'final' && p.at > 2) return []; // 最後の期の3〜5ターン目は頂への道だけ
+      if (p.key === 'final' && p.at > 2) return []; // 最後の期の3〜5ターン目はヒーローズファイナルだけ
       const m = monthOf(s.turn);
       // ふだんの大会は銀と銅の2つ(2026-11-14 社長「基本は参考どおり」・参考の並び)。1つ目=銀(その期の星どおりの賞金)・2つ目=銅(銀の半分)
       //   季節の月(3・6・9・12)の2つ目は、ジュニアは四季の大会・ミドルとプロは「ふつうの大会」。プロ6月だけ夏のヒーロー記念(👑)が加わる。
@@ -1703,14 +1703,14 @@
       return { key: f[1], label: f[2] };
     };
     const fourWinsOf = (s) => EX_CUPS.filter(c => c.four && s.wonNow.includes(`${c.sys}:${c.star}`)).length;
-    // 戦う1体(王者かライバル。頂への道は1・2戦目が常連・決勝が王者)
+    // 戦う1体(王者かライバル。ヒーローズファイナルは1・2戦目が常連・決勝が王者)
     const cupOfBattle = (b) => (b.kind === 'cup' ? b.sys : b.kind === 'summit' ? 'peak' : (FORCED[b.kind] && FORCED[b.kind].cup) || 'normal');
     const opponentsOf = (s) => {
       const b = s.battle; if (!b) return [];
       const rng = rngOf(s.id, s.turn, 'opp', b.kind, b.retry || 0, b.round || 0, ...(b.reroll ? ['re', b.reroll] : []));
       let sum; let gear; let who = null;
       const cup = cupOfBattle(b); const regs = regularsOf(cup);
-      let sp0 = null; // 頂への道: 助手が選んだ相手(STORY-ARC §3)。強さはいままでどおり
+      let sp0 = null; // ヒーローズファイナル: 助手が選んだ相手(STORY-ARC §3)。強さはいままでどおり
       if (b.kind === 'summit') { sum = benchOf('summit') * SUMMIT[b.round].mult; gear = OPP_GEAR.final; sp0 = summitPick(s, b.round); who = sp0.who || null; }
       else if (b.kind === 'debut') { sum = benchOf('debut') * STAR_MULT[1] * Math.max(DEBUT_RETRY_FLOOR, 1 - DEBUT_RETRY_WEAKEN * (b.retry || 0)); gear = OPP_GEAR.debut; who = champOf(cup); }
       else if (b.kind === 'cup' && EX_BY_SYS[b.sys]) { const pk = periodOf(s.turn).key; sum = benchAt(s) * EX_BY_SYS[b.sys].str * (b.rival ? RIVAL.str : 1); gear = OPP_GEAR[pk]; who = b.rival ? null : champOf(cup); }
@@ -1727,7 +1727,7 @@
       const ws = w.reduce((a, x) => a + x, 0);
       const ease = b.kind === 'debut' ? debutEase(s, sp, gear.techs) : 1; // 初めの技の強さの差(DEBUT_TECH_FLOOR)
       const stats = {}; KEYS.forEach((k, i) => { stats[k] = clamp(Math.round(total * ease * w[i] / ws), 1, STAT_MAX); });
-      // 人気と忠誠度(社長 2026-11-12「敵も人気と忠誠度を設定して」): 期の基準 + 王者/ライバル/頂への道の上乗せ + ±5 のくじ。
+      // 人気と忠誠度(社長 2026-11-12「敵も人気と忠誠度を設定して」): 期の基準 + 王者/ライバル/ヒーローズファイナルの上乗せ + ±5 のくじ。
       //   忠誠度は試合の「言うことを聞かない番」、人気は会心に効く(育てる子と同じ)。乱数は能力を決めたあとに引く(能力は今までと同じ)
       const pk0 = b.kind === 'summit' ? 'final' : b.kind === 'cup' ? periodOf(s.turn).key : b.kind;
       const OP = OPP_POPLOY[pk0] || OPP_POPLOY.junior;
@@ -1784,7 +1784,7 @@
     const battleKey = (b) => (b ? (b.kind === 'summit' ? `summit${b.round + 1}` : b.kind === 'cup' ? `${b.sys}:${b.star}` : b.kind) : '');
     const canSkip = (s) => Boolean(s.battle) && (s.wonBefore.includes(battleKey(s.battle)) || s.wonNow.includes(battleKey(s.battle)));
 
-    // 期末・頂への道の大会(ターンの区切りで立つもの)
+    // 期末・ヒーローズファイナルの大会(ターンの区切りで立つもの)
     const forcedBattle = (s) => {
       const p = periodOf(s.turn);
       if (p.left === 1 && FORCED[p.key] && p.key !== 'final') return { kind: p.key, round: 0 };
@@ -1798,7 +1798,7 @@
       const won = Array.isArray(wins) ? Boolean(wins[0]) : Boolean(wins);
       const out = { ok: true, kind: b.kind, won };
       addXp(s, XP.match);
-      if (b.rival && b.rival.name) s.rivalMet = String(b.rival.name).slice(0, 24); // 頂への道で助手が選ぶ「この育成のライバル」
+      if (b.rival && b.rival.name) s.rivalMet = String(b.rival.name).slice(0, 24); // ヒーローズファイナルで助手が選ぶ「この育成のライバル」
       if (won) { s.log.wins += 1; addLoyal(s, LOYAL.win[0], LOYAL.win[1]); const bk = battleKey(b); if (!s.wonNow.includes(bk)) s.wonNow.push(bk); } else s.log.losses += 1;
       // 賞金(保存は fame)とチケット。負けたら準優勝の扱い(★★ 以上)
       const pk = periodOf(s.turn).key;
@@ -1814,7 +1814,7 @@
       s.fame += prize; s.fameTotal += prize; out.prize = prize;
       if (won) { const bp = beatOfPrize(full); if (bp) { s.beatEarned = num(s.beatEarned) + bp; out.beat = bp; } } // ビートP(優勝の賞品・この大会で1回)
       void tkFull; // 2026-11-14 社長: 修行チケットは賞金ランクの段が上がるたびに(勝つたびの1〜4枚はやめた)
-      if (won) { // 優勝の獲得物のチケット(期末の大会・頂への道・★★★以上・四大大会)とライバル
+      if (won) { // 優勝の獲得物のチケット(期末の大会・ヒーローズファイナル・★★★以上・四大大会)とライバル
         const winTk = (WIN_TICKET.forced.includes(b.kind) || b.kind === 'summit' || (b.kind === 'cup' && (b.star >= WIN_TICKET.cupStar || (exB && exB.four)))) ? WIN_TICKET.add : 0;
         const t = winTk + (b.rival ? RIVAL.tickets : 0); if (t) { s.tickets += t; out.tickets = t; out.winTickets = t; }
       }

@@ -11,6 +11,7 @@
 //   C 古い印: 表の「台帳」の印が、台帳の行にいまもある(台帳の行を直したら todo sync が付け替える)
 //   D 自動で出る: 完了でない頼みが newsession の依頼文・handoff のメモ・brief・窓口の知らせに出る
 //   F 聞く前に引く: node tools/ctx.js asked <語> が台帳の決めごとを出し、窓口の手引きに打ち方がある
+//   G OK済みの追い: 状態「OK済み」があり、OK済み・確認待ちで PR 無し・未マージなら ★(公開されるまで出続ける)
 //   E 止め絵の点検: 見る所の5つ(言葉の途中の折れ・下の空き・数字のそろえ方・参考との比べ・台帳の決めごと)が道具と窓口の手引きにある
 'use strict';
 const fs = require('fs');
@@ -35,7 +36,7 @@ for (const r of rows) {
   if (!depts.has(r['部'])) bad.push(`${r.id}: 部「${r['部']}」は無い`);
   if (!/^20\d\d-\d\d-\d\d$/.test(r['日付'] || '') || !r['中身'] || !Array.isArray(r.PR)) bad.push(`${r.id}: 日付・中身・PR の形`);
   if (r['状態'] === '完了' && !r.PR.length && !r['メモ']) bad.push(`${r.id}: 完了なのに PR もメモも無い`);
-  if (['上書き済み', 'やめた'].includes(r['状態']) && !r['メモ']) bad.push(`${r.id}: ${r['状態']}なのに理由(メモ)が無い`);
+  if (['上書き済み', 'やめた', '止め中'].includes(r['状態']) && !r['メモ']) bad.push(`${r.id}: ${r['状態']}なのに理由(メモ)が無い`);
 }
 check('A 表の形', bad.length === 0, bad.slice(0, 5).join(' / ') + (bad.length > 5 ? ` ほか${bad.length - 5}件` : ''));
 
@@ -66,6 +67,20 @@ if (open.length) {
   check('D 窓口の「長くなってきた」に数が入る', /社長の頼みで完了でない物: \d+ 件/.test(msg));
   const b = spawnSync('node', ['tools/ctx.js', 'brief'], { cwd: ROOT, encoding: 'utf8' }).stdout || '';
   check('D brief に数が出る', /社長の頼みで完了でない物: \d+ 件/.test(b));
+}
+
+// G OK済み・確認待ちは PR がマージされるまで ★(2026-11-15 ドラの寝顔: 社長が OK を出したのに枝のまま落ちた)
+{
+  const mk = (s, pr) => ({ id: 'rX', '状態': s, PR: pr, '日付': '2026-01-01', '更新': '2999-01-01' });
+  const merged = R.mergedPRs();
+  const one = merged && [...merged][0];
+  check('G 状態に OK済み がある', R.STATES.includes('OK済み') && !R.CLOSED.includes('OK済み'));
+  check('G OK済みで PR 無しは★', R.unmerged(mk('OK済み', [])) === 'PR無し' && R.stale(mk('OK済み', [])));
+  if (merged) {
+    check('G 確認待ちで未マージの PR は★', R.unmerged(mk('確認待ち', ['#99999999'])) === 'PR未マージ');
+    check('G マージ済みの PR は★にしない', !one || R.unmerged(mk('OK済み', ['#' + one])) === '');
+  }
+  check('G 作業中は PR 無しでも未マージ扱いにしない', R.unmerged(mk('作業中', [])) === '');
 }
 
 // E

@@ -34,8 +34,8 @@
   // ---- ひとときの状態(EVENTS §3)。同時に2つまで。ようす(サボりグセ・うつ病)は芯の s.yosu で別 ----
   const BUFFS = Object.freeze({
     yaruki: { icon: '🔥', name: 'やる気満々', left: 3, good: true, text: 'トレーニングの大成功 +10%' },
-    gokigen: { icon: '🎵', name: 'ごきげん', left: 3, good: true, text: 'ストレスの増え −50%' },
-    neboke: { icon: '💤', name: 'ねぼけ', left: 2, good: false, text: 'サボり +10%' },
+    gokigen: { icon: '🎵', name: 'ご機嫌', left: 3, good: true, text: 'ストレスの増え −50%' },
+    neboke: { icon: '💤', name: '寝ぼけ', left: 2, good: false, text: 'サボり +10%' },
     futekusare: { icon: '🌀', name: 'ふてくされ', left: 2, good: false, text: '叱っても恐れ度が上がりにくい' },
     hirameki: { icon: '✨', name: 'ひらめき中', left: 0, good: true, text: '次の修行で技を覚えやすい' }, // left 0 = 次の修行まで
     iki: { icon: '🤝', name: '息ぴったり', left: 3, good: true, text: 'その編成の子がトレーニングに来やすい(+20%)' },
@@ -235,7 +235,7 @@
       return null;
     };
     const favCand = (s) => { const k = KEYS.find(k => num(s.trainXp && s.trainXp[`train:${k}`]) >= 4); return evOf(s).fav ? null : (k || null); };
-    // ★★★・👑 の前の晩: 期の最後のターン(強制大会が星3以上)か、最後の期の頂への道の前
+    // ★★★・👑 の前の晩: 期の最後のターン(強制大会が星3以上)か、最後の期のヒーローズファイナルの前
     const bigCupTonight = (s) => { const p = periodOf(s.turn); if (p.left !== 1) return false; if (p.key === 'final') return true; const f = FORCED[p.key]; return Boolean(f && f.star >= 3); };
     const lineMain = (sp) => { const l = typeof h.lineOf === 'function' ? h.lineOf(sp) : null; return l && l.main ? l.main : null; };
     // いまのトレーニングに来た編成の子のうち、育成する子と主血統が同じ子(芯の s.last.members)
