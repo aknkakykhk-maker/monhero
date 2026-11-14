@@ -179,7 +179,10 @@ const makeRun = async (kind) => {
           // 重なり: 押せる物どうしが 6px 角以上かぶる
           const bs = [...root.querySelectorAll('button')].filter((e) => vis(e) && !clipped(e)).map((e) => ({ e, r: e.getBoundingClientRect() }));
           const lap = []; for (let i = 0; i < bs.length; i++) for (let j = i + 1; j < bs.length; j++) { const a = bs[i].r, b = bs[j].r; if (bs[i].e.contains(bs[j].e) || bs[j].e.contains(bs[i].e)) continue; if (Math.min(a.right, b.right) - Math.max(a.left, b.left) > 6 && Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > 6) lap.push(`${lab(bs[i].e)}×${lab(bs[j].e)}`); }
-          return { ok: true, text: root.innerText.length, over, taps, cut, tiny, topBlank, lap, land: window.innerWidth > window.innerHeight };
+          // 育成のメイン画面: 編成の顔の列が「持ち物」のボタンに重ならない(2026-11-14 社長「持ち物と編成がかぶってる」)
+          const pt = root.querySelector('.v-scene.home .v-party'); const bg = root.querySelector('.v-scene.home .v-bagb:not(.r)');
+          let partyBag = 0; if (pt && bg && vis(pt) && vis(bg)) { const a = pt.getBoundingClientRect(), b = bg.getBoundingClientRect(); partyBag = Math.max(0, Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top)) * (Math.min(a.right, b.right) > Math.max(a.left, b.left) ? 1 : 0); }
+          return { ok: true, text: root.innerText.length, over, taps, cut, tiny, topBlank, lap, partyBag: Math.round(partyBag), land: window.innerWidth > window.innerHeight };
         }, fscale || 0);
         const L = `${name}${tag ? `(${tag})` : ''}`;
         const warn = (what, arr) => { if (arr && arr.length) console.log(`  見張り ${L}: ${what} ${arr.length}件 ${arr.slice(0, 4).join(' / ')}`); };
@@ -189,6 +192,7 @@ const makeRun = async (kind) => {
           check(`${L}: 字が小さすぎない`, m.tiny.length === 0, m.tiny.slice(0, 4).join(' / '));
           check(`${L}: 押せる物が重ならない`, m.lap.length === 0, m.lap.slice(0, 3).join(' / '));
           if (m.land) check(`${L}: 横画面の上に空白が無い`, m.topBlank <= 50, `${m.topBlank}px`);
+          check(`${L}: 編成の顔の列が持ち物に重ならない`, !m.partyBag, `${m.partyBag}px`);
         }
         check(`${name}${tag ? `(${tag})` : ''}: 画面が出る`, m.ok && m.text > 20);
         check(`${name}${tag ? `(${tag})` : ''}: 枠からはみ出さない`, m.ok && m.over.length === 0, m.over && m.over.slice(0, 3).join(' / '));

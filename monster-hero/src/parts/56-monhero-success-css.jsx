@@ -706,4 +706,12 @@ const MSX_CSS = `
 .msx .v-opts .msx-info{flex:none;align-self:stretch;width:52px;min-height:52px;display:flex;align-items:center;justify-content:center;padding:0;border-radius:16px;background:linear-gradient(180deg,#164e74,#0c3350);border:2px solid #7dd3fc;border-bottom-width:5px;color:#e0f2fe;font-size:20px;font-weight:900;line-height:1}
 .msx .v-opts .msx-info.on{background:#0369a1;color:#fff}
 .msx .v-opts .msx-info:not(:disabled):active{transform:translateY(3px);border-bottom-width:2px;margin-bottom:3px}
+/* 育成のメイン画面: 編成の顔の列(6体+助手)が左下の「持ち物」に重ならないよう、場面の高さに合わせて顔を縮める(2026-11-14 社長「持ち物と編成がかぶってる」)。
+   使える高さ = 場面の高さ − 上6 − 持ち物46 − 下7 − すき間6。列の中 = 枠の内側9 + 「編成」の字(大きい文字でも収まるよう16) + すき間 + 顔×7(幅320は2列×4段) */
+.msx .v-scene.home{container-type:size}
+.msx .v-scene.home .v-party{--pfs:clamp(14px,calc((100cqh - 65px - 25px - 24px) / 7),30px)}
+.msx.land .v-scene.home .v-party{--pfs:clamp(14px,calc((100cqh - 65px - 25px - 18px) / 7),24px)}
+.msx.s320 .v-scene.home .v-party{--pfs:clamp(14px,calc((100cqh - 65px - 25px - 12px) / 4),22px)}
+.msx .v-scene.home .v-party .v-pf,.msx .v-scene.home .v-party .v-pf img{width:var(--pfs)}
+.msx .v-scene.home .v-party .v-pf img{height:var(--pfs)}
 `;
