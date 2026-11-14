@@ -34,7 +34,7 @@ for (const r of MONSUC_SCRIPT_RANDOM) {
   scenes.add(scene); scenes.add(parts.slice(0, 3).join('.'));
   if (r.who === 'choice') (choiceRows[parts.slice(0, 3).join('.')] = choiceRows[parts.slice(0, 3).join('.')] || []).push(r.c);
 }
-const OPS = ['st', 'loy', 'fear', 'pop', 'popHi', 'hp', 'str', 'bond', 'buff', 'fame', 'pts', 'mas', 'flag', 'goal', 'apt']; // apt = 間合い適性を1段(2026-11-13)
+const OPS = ['st', 'loy', 'fear', 'pop', 'popHi', 'hp', 'str', 'bond', 'buff', 'fame', 'pts', 'mas', 'flag', 'goal', 'apt', 'item']; // item = アイテムを1つもらう(拾い物・おすそわけ。2026-11-14) // apt = 間合い適性を1段(2026-11-13)
 const ids = new Set();
 const checkFx = (id, fx, where) => {
   if (!Array.isArray(fx)) { errors.push(`${id} ${where}: 結果が並びでない`); return; }
@@ -126,6 +126,39 @@ s.ev.pend = { id: 'ev.season.dec3', slot: 'start', turn: s.turn };
 s = EV.pick(s, null).state;
 ok(s.ev.buff.length === 2 && s.ev.buff[0].k === 'gokigen' && s.ev.buff[1].k === 'yaruki', '状態が2つを超えた・古いほうが消えない');
 ok(EV.buffs(s).every(b => b.icon && b.name), '画面の印(buffs)に絵文字と名前が無い');
+
+// 拾い物とおすそわけ(2026-11-13 社長 r1113-037): 同じ主血統の子がトレーニングに来たあとだけ ev.team.kin・もらった物は持ち物に入る
+{
+  const KIN = EV.BY_ID['ev.team.kin']; const FIND = EV.BY_ID['ev.daily.find'];
+  ok(KIN && FIND, '拾い物・おすそわけの出来事が表に無い');
+  if (KIN && FIND) {
+    const team = ['Mitarashi', 'Golem', 'Pixie', 'Suezo', 'Tiger', 'Undine'].map((species) => ({ kind: 'base', species }));
+    const base = SUC.newRun({ id: 'kin-1', species: 'Mocchi', aid: 'mua', team, aidBondLv: 4 });
+    const x = (s) => ({ ...s, ev: s.ev });
+    const withLast = (mem) => ({ ...base, turn: 12, acted: true, last: { kind: 'train', res: 'ok', members: mem } });
+    // pickA は X を通すので、出来事の中の when / pickA を直接呼ぶ代わりに、pick までの流れで見る
+    const tryKin = (s) => { const p = { ...s, ev: { ...(s.ev || {}), pend: { id: 'ev.team.kin', slot: 'after', turn: s.turn, cheer: 0 } } }; return EV.pick(p, 'a'); };
+    const r = tryKin(withLast([0]));
+    ok(r.out.ok && r.out.delta.items && r.out.delta.items[0] === 'fruit_life' && r.state.bag.fruit_life === 1, 'モッチー系のおすそわけで いのちの実 が持ち物に入らない');
+    const rb = (() => { const s = withLast([0]); return EV.pick({ ...s, ev: { ...(s.ev || {}), pend: { id: 'ev.team.kin', slot: 'after', turn: s.turn, cheer: 0 } } }, 'b'); })();
+    ok(rb.out.ok && !(rb.out.delta.items) && Object.keys(rb.out.delta.stats).length > 0, 'おすそわけの b(いっしょに練習)で能力が上がらない');
+    // 起きる条件: 来た子に同じ主血統がいるときだけ(ゴーレムは別の血統)。何度引いても、条件に合わないときは出ない
+    let hitNo = 0, hitYes = 0;
+    for (let i = 0; i < 300; i++) {
+      const sNo = { ...withLast([1]), id: `kin-n-${i}` }; const v1 = EV.due(sNo, 'after'); if (v1 && v1.id === 'ev.team.kin') hitNo++;
+      const sYes = { ...withLast([0]), id: `kin-y-${i}` }; const v2 = EV.due(sYes, 'after'); if (v2 && v2.id === 'ev.team.kin') { hitYes++; if (v2.cheer !== 0 || v2.item !== 'fruit_life') errors.push('おすそわけの出来事の子・物がずれている'); }
+    }
+    ok(hitNo === 0, `同じ血統の子が来ていないのに おすそわけ が出た(${hitNo}回)`);
+    ok(hitYes > 0, '同じ血統の子が来ても おすそわけ が一度も出ない');
+    // 拾い物: 見るだけ・持ち物に1つ・もらってから6ターンは出ない
+    const sf = { ...base, turn: 9 }; const pf = EV.pick({ ...sf, ev: { ...(sf.ev || {}), pend: { id: 'ev.daily.find', slot: 'start', turn: 9 } } }, null);
+    ok(pf.out.ok && pf.out.delta.items && pf.out.delta.items.length === 1 && Object.values(pf.state.bag).reduce((a, b) => a + b, 0) >= 1, '拾い物で持ち物が増えない');
+    let again = 0; for (let i = 0; i < 300; i++) { const v = EV.due({ ...pf.state, id: `find-${i}`, turn: 11, acted: false, cond: null }, 'start'); if (v && v.id === 'ev.daily.find') again++; }
+    ok(again === 0, `拾ったすぐあとに また拾い物が出た(${again}回)`);
+    const rs = SUC.restore(JSON.parse(JSON.stringify(pf.state)));
+    ok(rs.ev && rs.ev.flags && rs.ev.flags.gift_find === 9, '拾い物の印が読み直しで消える');
+  }
+}
 
 if (errors.length) { console.error('NG monhero-success-events-check'); errors.slice(0, 30).forEach(e => console.error('  - ' + e)); if (errors.length > 30) console.error(`  …ほか ${errors.length - 30} 件`); process.exit(1); }
 console.log(`OK monhero-success-events-check: 出来事 ${EV.LIST.length}種・台本と同じ選択肢・決まった乱数(保存して戻しても同じ)・1回の育成で平均 ${avg.toFixed(1)}回(${Object.entries(kinds).map(([k, v]) => `${k} ${(v / 60).toFixed(1)}`).join('・')})`);
