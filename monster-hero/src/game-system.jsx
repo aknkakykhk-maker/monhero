@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 1ddc6cee35299090
+// generated-sha256: da81a958cbc1ac8d
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -12865,7 +12865,7 @@ const extremeRuleDetailGroups = (difficultyId, quick=false) => {
       ['Lv5','与ダメ低下 -2.0pt/T・最低10%'],
     ]);
     push('敵の強さ',[
-      adjust.lifeRate>1&&['敵ライフ',`すべての敵が${adjust.lifeRate}倍`],
+      adjust.lifeRate>1&&['敵ライフ',`全ての敵が${adjust.lifeRate}倍`],
       durahan&&['デュラハン',`ライフ・攻撃力が さらに${durahan.lifeRate}倍`],
     ]);
     push('距離強化',[
@@ -12881,7 +12881,7 @@ const extremeRuleDetailGroups = (difficultyId, quick=false) => {
     if(difficultyId===EREBUS_SETTING.id) push('層のシールド',[
       ['蘇り','ムーだけ1回、本体を倒すとライフ全回復・最大ライフ1.5倍で蘇る。シールドは張り直さない'],
       ['層の数','W1・W2の敵 4枚 / W3〜W8の敵(ボスも) 5枚 / W9 デュラハン 5枚 / W10 ムー 5枚'],
-      ['WAVEのはじめのシールド','エターナルの50%のシールドは、層のシールドに置き換わる'],
+      ['WAVEの初めのシールド','エターナルの50%のシールドは、層のシールドに置き換わる'],
       ['シールドの量','1枚目はその敵の最大ライフの1.8倍(デュラハン2.6倍・ムー3倍)。割れるたびに次の1枚が30%ずつ大きくなる。割りきったあとのボスのライフにも同じ倍率(ふつうの敵のライフは元のまま)'],
       ['割れるたび','ふつうの敵の攻撃力 +20%・ボスの攻撃力 +30%(最後の1枚も。ムーは蘇るときにも+30%)'],
       ['連撃','デュラハンは4枚目が割れたら必殺技が2連撃、ムーは4枚目で2連撃・5枚目で3連撃(合計の威力は同じ。ガードは1枚で1発ずつ止まり、2枚以上で全部止まる)'],
@@ -12889,7 +12889,7 @@ const extremeRuleDetailGroups = (difficultyId, quick=false) => {
     if(difficultyId===COCYTUS_SETTING.id) push('層のシールド',[
       ['蘇り','デュラハンは1回・ムーは2回、本体を倒すとライフ全回復・最大ライフ1.5倍で蘇る(ムーの2回目は2.25倍)。シールドは張り直さない'],
       ['層の数','W1・W2の敵 4枚 / W3〜W8の敵(ボスも) 5枚 / W9 デュラハン 5枚 / W10 ムー 5枚'],
-      ['WAVEのはじめのシールド','エターナルの50%のシールドは、層のシールドに置き換わる'],
+      ['WAVEの初めのシールド','エターナルの50%のシールドは、層のシールドに置き換わる'],
       ['シールドの量','1枚目はその敵の最大ライフの3倍(デュラハン3.8倍・ムー4.4倍)。割れるたびに次の1枚が30%ずつ大きくなる。割りきったあとのボスのライフにも同じ倍率(ふつうの敵のライフはそのまま)'],
       ['割れるたび','敵の攻撃力 +20%(最後の1枚も。蘇るたびにも+20%)'],
       ['連撃','デュラハンは4枚目が割れたら必殺技が2連撃、ムーは4枚目で2連撃・5枚目で3連撃(合計の威力は同じ。ガードは1枚で1発ずつ止まり、2枚以上で全部止まる)'],
@@ -12931,7 +12931,7 @@ const extremeRuleDetailGroups = (difficultyId, quick=false) => {
   if(breakRule)push('DISTANCE BREAK',[
     ['進行',`累計${breakRule.interval}ターンごとに1距離の弱体Lv上昇`],
     ['弱体倍率',`Lv1 ${specialRulePercent(breakRule.damageDealtPerLevel)} / Lv2 ${specialRulePercent(breakRule.damageDealtPerLevel**2)} / Lv3 ${compactPercent(breakRule.damageDealtPerLevel**3)}（以降も半減）`],
-    ['安全距離',breakRule.safeDistanceCount>0?`${breakRule.safeDistanceCount}距離は最後まで弱体化しない`:'なし（4距離すべて弱体化する）'],
+    ['安全距離',breakRule.safeDistanceCount>0?`${breakRule.safeDistanceCount}距離は最後まで弱体化しない`:'なし（4距離全て弱体化する）'],
   ]);
   const revivalRule=extremeRevivalRule(difficultyId);
   // COCYTUSの蘇り(全回復・最大ライフが増える)は「層のシールド」の欄に書くので、ここ(半分で起き上がる形)には出さない
@@ -29591,7 +29591,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
     id: 'monol_cover_all',
     name: 'みんなをかばう',
     useNote: '敵の攻撃を全部モノリスが受ける',
-    desc: 'このターン、敵の攻撃をすべてモノリスが引き受ける。\n・単体攻撃も全体攻撃も、モノリスが受ける（全体攻撃は、本来当たる人数ぶんを受ける）\n・連撃や貫通撃も、モノリスが受ける（貫通撃はガードで防げない）',
+    desc: 'このターン、敵の攻撃を全てモノリスが引き受ける。\n・単体攻撃も全体攻撃も、モノリスが受ける（全体攻撃は、本来当たる人数ぶんを受ける）\n・連撃や貫通撃も、モノリスが受ける（貫通撃はガードで防げない）',
     // ★2026-09-25 ユーザー指示で 1ラン3回 → 10回
     maxUses: 10, unlimited: false, withCards: true, duration: 'turn',
     effect: 'coverAll',
@@ -29850,13 +29850,13 @@ const TACTICS_EX_SKILLS = Object.freeze({
     desc: '戦い方（スタイル）を3つから選び直す。いまのスタイルは選べない。\n'
       + '片手剣：いつもの戦い方。固有技でソードスキルも出る。\n'
       + '片手盾：力と同じ数値を丈夫さへ足す。固有技を使ってもソードスキルは出ない。\n'
-      + '二刀流：丈夫さが半分になる代わりに、連撃がすべて2回ぶん入る（メインのダメージは1回のまま）。',
+      + '二刀流：丈夫さが半分になる代わりに、連撃が全て2回ぶん入る（メインのダメージは1回のまま）。',
     // ★2026-10-04 ユーザー指示「ラン5回・併用可」(それまでは無制限・カードと併用できない。いったん10回と言われ、すぐ5回に直った)
     maxUses: 5, unlimited: false, withCards: true, duration: 'style',
     styles: Object.freeze([
       Object.freeze({ id: 'sword', label: '片手剣', desc: 'いつもの戦い方。ソードスキルも出る' }),
       Object.freeze({ id: 'shield', label: '片手盾', desc: '力と同じ数値を丈夫さへ足す。固有技を使ってもソードスキルは出ない' }),
-      Object.freeze({ id: 'dual', label: '二刀流', desc: '丈夫さが半分になる代わりに、連撃がすべて2回ぶん入る（メインのダメージは1回のまま）' }),
+      Object.freeze({ id: 'dual', label: '二刀流', desc: '丈夫さが半分になる代わりに、連撃が全て2回ぶん入る（メインのダメージは1回のまま）' }),
     ]),
     defaultStyle: 'sword',
     heroInitialStyle: true,
@@ -29978,7 +29978,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
     id: 'dreamy_millefeuille_shield',
     name: 'ミルフィーシールド',
     useNote: '全員に最大ライフぶんのシールド・3ターン シールドのあるモンスターは全ステータス+5%(楔1つごとに+5%)',
-    desc: '夢の雲を何層にも重ねて、味方を包む。\n・使った瞬間に、立っている味方全員（ドリーミィも）へ、それぞれ自分の最大ライフと同じ量のシールドを張る。敵の攻撃はシールドが先に受け、0になってからライフが減る\n・シールドが残っているモンスターは、ちから・丈夫さ・ライフ上限・ガッツ上限が+5%。さらに、使った瞬間の敵の楔の数（いちばん多いもの）1つごとに+5%（楔0で+5%・3つで+20%・6つで+35%）\n・シールドが0になったモンスターは、アップもなくなる（ライフ・ガッツが元の上限より多ければ上限まで戻る。ほかのモンスターはそのまま）\n・3ターンたつと、残ったシールドもアップも消える\n・効いているあいだにもう一度使うと、シールドは残りに足され、残りターンは3に戻る。アップは、そのときの楔の数で決め直した値になる（重ならない）',
+    desc: '夢の雲を何層にも重ねて、味方を包む。\n・使った瞬間に、立っている味方全員（ドリーミィも）へ、それぞれ自分の最大ライフと同じ量のシールドを張る。敵の攻撃はシールドが先に受け、0になってからライフが減る\n・シールドが残っているモンスターは、ちから・丈夫さ・ライフ上限・ガッツ上限が+5%。さらに、使った瞬間の敵の楔の数（一番多いもの）1つごとに+5%（楔0で+5%・3つで+20%・6つで+35%）\n・シールドが0になったモンスターは、アップもなくなる（ライフ・ガッツが元の上限より多ければ上限まで戻る。ほかのモンスターはそのまま）\n・3ターンたつと、残ったシールドもアップも消える\n・効いているあいだにもう一度使うと、シールドは残りに足され、残りターンは3に戻る。アップは、そのときの楔の数で決め直した値になる（重ならない）',
     maxUses: 5, unlimited: false, withCards: true, duration: 'turns', turns: 3,
     millefeuille: Object.freeze({ statBase: 0.05, statPer: 0.05 }),
     effect: 'millefeuille',
@@ -45107,7 +45107,7 @@ function MasuMonsScreen({
           {(()=>{
             const entries = unifiedMonsterEntriesSingleType.filter(e=>e.type==='masu');
             if (entries.length===0) return (
-              <ScreenEmpty emoji="🐾" lines={masuMons.length===0?['まだマスモンがいません。','勇者モンでランを終えると登録できます。']:['表示設定で対象がすべてオフになっています。']}/>
+              <ScreenEmpty emoji="🐾" lines={masuMons.length===0?['まだマスモンがいません。','勇者モンでランを終えると登録できます。']:['表示設定で対象が全てオフになっています。']}/>
             );
             return (
               <div className="grid grid-cols-3 gap-2.5 pb-4">
@@ -45383,12 +45383,12 @@ function MasuReincarnateScreen({
             if(r?.ok){ setBulkIds([]); setBulkConfirmOpen(false); }
           } finally { setBulkPending(false); }
         };
-        return <div data-mh-screen className={SCREEN_SHELL_CLASS}><ScreenHead title="転生" accent="text-violet-300" onBack={onBackToTemple} backLabel="神殿へ戻る"/><div className="shrink-0 w-full max-w-md mx-auto mb-2">{/* 札の欄を広く取れるよう、吹き出しは右上の「たたむ」で顔と小さな札だけにできる(覚えるのは既存の mh_bubble_collapsed_v1 の中の印。2026-10-27 社長「助手のコメントのオンオフ」) */}<AssistantBubble scene="reincarnate" compact collapseKey="temple:reincarnate"/></div>{renderScreenNote('reincarnate',`絆Lv.${REINCARNATE_MIN_LEVEL}以上のマスモンは、強化を振り直せます。`,[`レベルが${REINCARNATE_LEVEL_DROP}下がる代わりに、振った強化をすべて振り直せます。`,'限界突破の回数や★はそのまま残ります。','「すべて選択」は編成中とお気に入りのモンスターを選びません。','左上の□で選ぶと、何体かをまとめて転生できます。1体あたりの回数と「最大」も選べます。'])}{renderMonsterSortFilterBar({singleType:true})}<div className={SCREEN_LIST_CLASS}>{entries.length===0?<ScreenEmpty emoji="🔄" lines={masuMons.length===0?['まだマスモンがいません。','勇者モンでランを終えると登録できます。']:['表示できるマスモンがいません。','並べ替え・絞り込みの設定を見直してください。']}/>:<div className="grid grid-cols-3 gap-2 pb-3">{entries.map(({masu})=>{const base=ALL_PLAYER_MONSTERS[masu.baseId];if(!base)return null;const lvl=masuBondLevelInfo(masu);const locked=isMasuLocked(rebirthLockedMasuIds,masu.id);const can=lvl.level>=REINCARNATE_MIN_LEVEL&&!locked;const on=can&&picked.some(id=>String(id)===String(masu.id));return <div key={masu.id} className="relative" data-reincarnate-card={masu.id}><button disabled={!can} data-reincarnate-locked={locked?'1':undefined} onClick={()=>{setReincarnateSelectedId(masu.id);setReincarnateSkillKey(null);setReincarnateTimes(1);setReincarnateError('');}} style={MONSTER_CARD_STYLE} className={`${MONSTER_CARD_CLASS} w-full ${on?'border-violet-200 ring-2 ring-violet-300':'border-violet-500/40'} bg-slate-900 disabled:opacity-60`}>{renderMonsterCardBody({masu,base,status:locked?<span className="text-[10px] font-black px-1.5 py-0.5 rounded-full bg-amber-500/25 border border-amber-300/50 text-amber-100">🔁 転生ロック</span>:lvl.level<REINCARNATE_MIN_LEVEL?<span className="block text-center text-[10px] font-bold leading-tight text-slate-300">あとLv.{REINCARNATE_MIN_LEVEL-lvl.level}で転生</span>:<ReincarnateBadge count={masu.reincarnateCount} className="is-inline"/>})}</button>{can&&<button type="button" role="checkbox" aria-checked={on} aria-label={`${masu.name}をまとめて転生に選ぶ`} data-reincarnate-pick={masu.id} disabled={busy} onClick={()=>togglePick(masu.id)} className="absolute left-0 top-0 z-10 flex h-11 w-11 items-start justify-start p-1.5"><span aria-hidden="true" className={`flex h-6 w-6 items-center justify-center rounded-md border-2 text-[13px] font-black ${on?'border-violet-100 bg-violet-500 text-white':'border-white/70 bg-slate-950/80 text-transparent'}`}>✓</span></button>}</div>})}</div>}</div>
+        return <div data-mh-screen className={SCREEN_SHELL_CLASS}><ScreenHead title="転生" accent="text-violet-300" onBack={onBackToTemple} backLabel="神殿へ戻る"/><div className="shrink-0 w-full max-w-md mx-auto mb-2">{/* 札の欄を広く取れるよう、吹き出しは右上の「たたむ」で顔と小さな札だけにできる(覚えるのは既存の mh_bubble_collapsed_v1 の中の印。2026-10-27 社長「助手のコメントのオンオフ」) */}<AssistantBubble scene="reincarnate" compact collapseKey="temple:reincarnate"/></div>{renderScreenNote('reincarnate',`絆Lv.${REINCARNATE_MIN_LEVEL}以上のマスモンは、強化を振り直せます。`,[`レベルが${REINCARNATE_LEVEL_DROP}下がる代わりに、振った強化を全て振り直せます。`,'限界突破の回数や★はそのまま残ります。','「すべて選択」は編成中とお気に入りのモンスターを選びません。','左上の□で選ぶと、何体かをまとめて転生できます。1体あたりの回数と「最大」も選べます。'])}{renderMonsterSortFilterBar({singleType:true})}<div className={SCREEN_LIST_CLASS}>{entries.length===0?<ScreenEmpty emoji="🔄" lines={masuMons.length===0?['まだマスモンがいません。','勇者モンでランを終えると登録できます。']:['表示できるマスモンがいません。','並べ替え・絞り込みの設定を見直してください。']}/>:<div className="grid grid-cols-3 gap-2 pb-3">{entries.map(({masu})=>{const base=ALL_PLAYER_MONSTERS[masu.baseId];if(!base)return null;const lvl=masuBondLevelInfo(masu);const locked=isMasuLocked(rebirthLockedMasuIds,masu.id);const can=lvl.level>=REINCARNATE_MIN_LEVEL&&!locked;const on=can&&picked.some(id=>String(id)===String(masu.id));return <div key={masu.id} className="relative" data-reincarnate-card={masu.id}><button disabled={!can} data-reincarnate-locked={locked?'1':undefined} onClick={()=>{setReincarnateSelectedId(masu.id);setReincarnateSkillKey(null);setReincarnateTimes(1);setReincarnateError('');}} style={MONSTER_CARD_STYLE} className={`${MONSTER_CARD_CLASS} w-full ${on?'border-violet-200 ring-2 ring-violet-300':'border-violet-500/40'} bg-slate-900 disabled:opacity-60`}>{renderMonsterCardBody({masu,base,status:locked?<span className="text-[10px] font-black px-1.5 py-0.5 rounded-full bg-amber-500/25 border border-amber-300/50 text-amber-100">🔁 転生ロック</span>:lvl.level<REINCARNATE_MIN_LEVEL?<span className="block text-center text-[10px] font-bold leading-tight text-slate-300">あとLv.{REINCARNATE_MIN_LEVEL-lvl.level}で転生</span>:<ReincarnateBadge count={masu.reincarnateCount} className="is-inline"/>})}</button>{can&&<button type="button" role="checkbox" aria-checked={on} aria-label={`${masu.name}をまとめて転生に選ぶ`} data-reincarnate-pick={masu.id} disabled={busy} onClick={()=>togglePick(masu.id)} className="absolute left-0 top-0 z-10 flex h-11 w-11 items-start justify-start p-1.5"><span aria-hidden="true" className={`flex h-6 w-6 items-center justify-center rounded-md border-2 text-[13px] font-black ${on?'border-violet-100 bg-violet-500 text-white':'border-white/70 bg-slate-950/80 text-transparent'}`}>✓</span></button>}</div>})}</div>}</div>
           {eligible.length>0&&<div className={SCREEN_FOOTER_CLASS} data-reincarnate-bulk-bar>
             <div data-reincarnate-bulk-times className="mb-2 flex items-center gap-1.5"><span className="shrink-0 text-[11px] font-black text-slate-300">1体あたりの回数</span><button type="button" disabled={busy||bulkTimes!=='max'&&timesNum<=1} onClick={()=>setTimes(timesNum-1)} className="mh-button mh-button-secondary min-h-[44px] min-w-[44px] rounded-xl bg-slate-800 font-black active:scale-95 disabled:opacity-30">−</button>{/* 回数は直接打ち込める(2026-10-20)。打つと「最大」から数の指定に変わる */}<CountInput value={timesNum} max={timesMax} onChange={(n)=>setBulkTimes(n)} unit="回" label="1体あたりの回数" disabled={busy||!picked.length} className="w-14 shrink-0"/><button type="button" disabled={busy||bulkTimes!=='max'&&timesNum>=timesMax} onClick={()=>setTimes(timesNum+1)} className="mh-button mh-button-secondary min-h-[44px] min-w-[44px] rounded-xl bg-slate-800 font-black active:scale-95 disabled:opacity-30">＋</button><button type="button" disabled={busy} onClick={()=>setBulkTimes('max')} className={`mh-button mh-button-secondary min-h-[44px] flex-1 rounded-xl text-xs font-black active:scale-95 disabled:opacity-30 ${bulkTimes==='max'?'bg-violet-600 text-white':'bg-slate-800'}`}>最大{picked.length?`（${timesMax}回）`:''}</button></div>
             {/* 札の欄を広く取れるよう、「すべて選択・選択を外す・まとめて転生」を1段にまとめる(前は3段+注意書きで、375×667 では札が1段しか見えなかった。
                 注意書きは上の説明の「詳しく」へ移した。2026-10-27 社長「狭くて見づらい」) */}
-            <div className="grid grid-cols-[auto_auto_minmax(0,1fr)] gap-1.5"><button type="button" disabled={busy} onClick={pickAll} className="mh-button mh-button-secondary min-h-[44px] rounded-xl bg-slate-800 px-2.5 text-[11px] font-black active:scale-95 disabled:opacity-30">すべて選択</button><button type="button" disabled={busy||picked.length===0} onClick={()=>setBulkIds([])} className="mh-button mh-button-secondary min-h-[44px] rounded-xl bg-slate-800 px-2.5 text-[11px] font-black active:scale-95 disabled:opacity-30">選択を外す</button>
+            <div className="grid grid-cols-[auto_auto_minmax(0,1fr)] gap-1.5"><button type="button" disabled={busy} onClick={pickAll} className="mh-button mh-button-secondary min-h-[44px] rounded-xl bg-slate-800 px-2.5 text-[11px] font-black active:scale-95 disabled:opacity-30">全て選択</button><button type="button" disabled={busy||picked.length===0} onClick={()=>setBulkIds([])} className="mh-button mh-button-secondary min-h-[44px] rounded-xl bg-slate-800 px-2.5 text-[11px] font-black active:scale-95 disabled:opacity-30">選択を外す</button>
             <button type="button" data-reincarnate-bulk-open disabled={busy||picked.length===0} onClick={()=>{setReincarnateError('');setBulkConfirmOpen(true);}} className="mh-button mh-button-primary w-full min-h-[44px] rounded-xl bg-violet-600 px-2 text-[12px] font-black leading-tight active:scale-[.98] disabled:opacity-30">{picked.length?`まとめて転生（${picked.length}体${preview?.ok&&preview.total>preview.count?`・計${preview.total}回`:''}）`:'□で選んで転生'}</button></div>
           </div>}
           {bulkConfirmOpen&&picked.length>0&&<ModalFrame label="まとめて転生の確認" border="border-violet-400/70" onClose={busy?null:()=>setBulkConfirmOpen(false)}>
@@ -45784,9 +45784,9 @@ function MasuOfferingScreen({
           その画面だけ「わかった」を題名の横へ小さく置き、手順の字と行の間を詰める。縦の画面は変えない */}
       {introVisible&&<div data-offering-intro className="shrink-0 mb-2 rounded-xl border border-violet-400/40 bg-violet-950/50 p-3 [@media(orientation:landscape)_and_(max-height:520px)]:p-2 [@media(orientation:landscape)_and_(max-height:520px)]:mb-1.5">
         <div className="flex items-center justify-between gap-2"><div className="text-[11px] font-black text-violet-200">お布施の使い方</div>
-          <button type="button" onClick={onDismissIntro} className="mh-button mh-button-secondary hidden [@media(orientation:landscape)_and_(max-height:520px)]:block min-h-[32px] shrink-0 rounded-lg border border-white/20 bg-slate-900 px-3 text-[11px] font-black active:scale-[.98]">わかった</button></div>
+          <button type="button" onClick={onDismissIntro} className="mh-button mh-button-secondary hidden [@media(orientation:landscape)_and_(max-height:520px)]:block min-h-[32px] shrink-0 rounded-lg border border-white/20 bg-slate-900 px-3 text-[11px] font-black active:scale-[.98]">分かった</button></div>
         <ol className="mt-1 list-decimal space-y-0.5 pl-4 text-[10px] font-bold leading-relaxed text-slate-300 [@media(orientation:landscape)_and_(max-height:520px)]:mt-0.5 [@media(orientation:landscape)_and_(max-height:520px)]:space-y-0 [@media(orientation:landscape)_and_(max-height:520px)]:text-[9px] [@media(orientation:landscape)_and_(max-height:520px)]:leading-snug"><li>お布施をするマスモンを選びます。</li><li>「ダイヤ指定」「レベル指定」「転生」から頼み方を選びます。</li><li>見積もりを見て「お布施する」を押します。</li></ol>
-        <button type="button" onClick={onDismissIntro} className="mh-button mh-button-secondary mt-2 min-h-[44px] w-full rounded-xl border border-white/20 bg-slate-900 text-xs font-black active:scale-[.98] [@media(orientation:landscape)_and_(max-height:520px)]:hidden">わかった</button>
+        <button type="button" onClick={onDismissIntro} className="mh-button mh-button-secondary mt-2 min-h-[44px] w-full rounded-xl border border-white/20 bg-slate-900 text-xs font-black active:scale-[.98] [@media(orientation:landscape)_and_(max-height:520px)]:hidden">分かった</button>
       </div>}
       {renderScreenNote('offering','ダイヤを払って、マスモンへ直接絆経験値を与えられます。',['ダイヤと経験値の割合はトレーニングチケットと同じです（100ダイヤ＝経験値15）。','上限に届いたら限界突破、Lv.100になったら転生まで続けて行えます。'])}
       {renderMonsterSortFilterBar({singleType:true})}
@@ -46088,7 +46088,7 @@ function MasuSoulTraitsScreen({
             <div className="mt-4 grid grid-cols-1 gap-2">
               <button type="button" data-soul-crystal-use-1 disabled={soulTraitProcessingRef.current||crystalHave<1} onClick={()=>commitSoulCrystalUse(masu.id,1)} className="mh-button mh-button-primary min-h-[48px] rounded-xl bg-fuchsia-600 text-slate-950 text-[11px] font-black active:scale-95 disabled:opacity-30">1個使う(+1P)</button>
               {crystalHave>=10&&<button type="button" data-soul-crystal-use-10 disabled={soulTraitProcessingRef.current} onClick={()=>commitSoulCrystalUse(masu.id,10)} className="mh-button mh-button-primary min-h-[48px] rounded-xl bg-fuchsia-600 text-slate-950 text-[11px] font-black active:scale-95 disabled:opacity-30">10個使う(+10P)</button>}
-              {crystalHave>1&&<button type="button" data-soul-crystal-use-all disabled={soulTraitProcessingRef.current} onClick={()=>commitSoulCrystalUse(masu.id,crystalHave)} className="mh-button mh-button-primary min-h-[48px] rounded-xl bg-fuchsia-600 text-slate-950 text-[11px] font-black active:scale-95 disabled:opacity-30">ぜんぶ使う({crystalHave}個・+{crystalHave}P)</button>}
+              {crystalHave>1&&<button type="button" data-soul-crystal-use-all disabled={soulTraitProcessingRef.current} onClick={()=>commitSoulCrystalUse(masu.id,crystalHave)} className="mh-button mh-button-primary min-h-[48px] rounded-xl bg-fuchsia-600 text-slate-950 text-[11px] font-black active:scale-95 disabled:opacity-30">全部使う({crystalHave}個・+{crystalHave}P)</button>}
               <button type="button" disabled={soulTraitProcessingRef.current} onClick={()=>setSoulCrystalOpen(false)} className="mh-button mh-button-secondary min-h-[48px] rounded-xl bg-slate-700 text-[11px] font-black active:scale-95 disabled:opacity-30">やめる</button>
             </div>
           </div>
@@ -46097,7 +46097,7 @@ function MasuSoulTraitsScreen({
         {soulTraitRespecOpen&&<div className="fixed inset-0 z-[32100] flex items-center justify-center bg-black/80 p-4" role="dialog" aria-modal="true" aria-label="魂格特性の全リセット確認">
           <div data-soul-trait-respec-sheet className="w-full max-w-sm rounded-2xl border-2 border-cyan-500/60 bg-slate-950 p-5">
             <div className="text-center text-xl mb-1">🌀</div><h3 className="text-center text-base font-black text-cyan-200">魂格特性を全リセット</h3>
-            <p className="mt-2 text-[10px] font-bold leading-relaxed text-slate-300">{spent>0?<>「{masu.name}」が使用した魂格P <b className="text-amber-300">{spent}P</b> をすべて未使用へ戻します。</>:<>「{masu.name}」は、魂格特性にはまだ振っていません。</>}魂格段階・Lv・最高初到達Lvは変わりません。</p>
+            <p className="mt-2 text-[10px] font-bold leading-relaxed text-slate-300">{spent>0?<>「{masu.name}」が使用した魂格P <b className="text-amber-300">{spent}P</b> を全て未使用へ戻します。</>:<>「{masu.name}」は、魂格特性にはまだ振っていません。</>}魂格段階・Lv・最高初到達Lvは変わりません。</p>
             {/* 結晶で増やしたぶんは結晶として持ち物へ戻る(2026-10-21 社長「結晶で使った分は結晶にもどる仕様にしたい」)。0個のときは出さない */}
             {bonusPoints>0&&<p data-soul-trait-respec-crystal={bonusPoints} className="mt-2 rounded-xl border border-fuchsia-400/40 bg-fuchsia-950/40 px-3 py-2 text-[10px] font-black leading-relaxed text-fuchsia-100">🔮 魂格の結晶 <b className="text-fuchsia-200">{bonusPoints}個</b> が持ち物に戻ります。結晶で増やした魂格P {bonusPoints}P はこのモンスターから無くなり、戻った結晶はほかのマスモンにも使えます。</p>}
             <div className="mt-2 rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-[10px] font-black flex justify-between"><span className="text-slate-400">魂格再編の書</span><span className="text-cyan-300">{scrollHave} → {Math.max(0,scrollHave-1)}冊</span></div>
@@ -46725,7 +46725,7 @@ function MasuEnhanceScreen({
           {points>0&&(
             <div className={`${SCREEN_FOOTER_CLASS} w-full max-w-md mx-auto`} aria-label="強化の確定操作">
               <div className="flex items-center justify-between mb-2"><span className="text-[11px] font-black text-slate-300">残りpt</span><span className="font-mono font-black"><b className={planLeft>0?'text-amber-300':'text-slate-400'}>{planLeft}</b><small className="text-slate-400"> / {points} pt</small></span></div>
-              <div className="flex gap-2"><button type="button" disabled={planUsed<=0} onClick={()=>setBulkPlan(null)} className="mh-button mh-button-secondary min-h-[52px] px-3 rounded-xl font-black text-[12px] bg-slate-800 text-slate-300 active:scale-95 disabled:opacity-30">配分をすべて取消</button><button type="button" disabled={planUsed<=0} onClick={applyPlan} className="mh-button mh-button-primary min-h-[52px] flex-1 rounded-xl font-black text-[13px] bg-gradient-to-r from-amber-600 to-orange-600 text-white active:scale-95 disabled:opacity-30 disabled:from-slate-700 disabled:to-slate-700">{planUsed>0?`${planUsed}ptを使って強化する`:'振り分けてください'}</button></div>
+              <div className="flex gap-2"><button type="button" disabled={planUsed<=0} onClick={()=>setBulkPlan(null)} className="mh-button mh-button-secondary min-h-[52px] px-3 rounded-xl font-black text-[12px] bg-slate-800 text-slate-300 active:scale-95 disabled:opacity-30">配分を全て取消</button><button type="button" disabled={planUsed<=0} onClick={applyPlan} className="mh-button mh-button-primary min-h-[52px] flex-1 rounded-xl font-black text-[13px] bg-gradient-to-r from-amber-600 to-orange-600 text-white active:scale-95 disabled:opacity-30 disabled:from-slate-700 disabled:to-slate-700">{planUsed>0?`${planUsed}ptを使って強化する`:'振り分けてください'}</button></div>
             </div>
           )}
         </div>
@@ -46879,7 +46879,7 @@ function MasuFusionScreen({
             <div className="shrink-0 mb-2 rounded-2xl border border-violet-400/60 bg-violet-950/50 p-3">
               <div className="flex items-center justify-between gap-2">
                 <div className="text-[13px] font-black text-white">副 <span className="text-violet-300">{selectedSubs.length}体</span>選択中</div>
-                {selectedSubs.length>0&&<button onClick={()=>{setFusionSubId(null); setFusionSubIds([]);}} className="shrink-0 min-h-[44px] px-4 rounded-xl border border-white/15 bg-slate-900 text-[11px] font-black text-slate-200 active:scale-95">すべて解除</button>}
+                {selectedSubs.length>0&&<button onClick={()=>{setFusionSubId(null); setFusionSubIds([]);}} className="shrink-0 min-h-[44px] px-4 rounded-xl border border-white/15 bg-slate-900 text-[11px] font-black text-slate-200 active:scale-95">全て解除</button>}
               </div>
               <div className="mt-2 grid grid-cols-2 gap-2 text-[11px] font-bold">
                 <div className={`${SCREEN_PANEL_FLAT_CLASS} text-slate-300`}>獲得予定XP<span className="block text-sm text-cyan-300 font-black">+{totalSubXp.toLocaleString()}</span></div>
@@ -46982,7 +46982,7 @@ function MasuFusionScreen({
                 <div className="flex flex-col items-center gap-1">
                   <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-slate-500 shrink-0"><DyedMonsterImage baseId={sub.baseId} src={subBase.iconUrl} alt={sub.name} masuColors={getMasuColors(sub)} className="w-full h-full object-cover"/></div>
                   <div className="text-[11px] font-black text-slate-300">{sub.name}</div>
-                  <div className="rounded-full border border-white/10 bg-slate-700/40 px-2 py-0.5 text-[10px] font-black text-slate-300">副{selectedSubs.length}体(すべて消える)</div>
+                  <div className="rounded-full border border-white/10 bg-slate-700/40 px-2 py-0.5 text-[10px] font-black text-slate-300">副{selectedSubs.length}体(全て消える)</div>
                 </div>
               </div>
               {/* 合体後にどう変わるかの内訳。実行前に結果が分かるようにしている */}
@@ -47058,7 +47058,7 @@ function MasuFusionScreen({
                 <div className="flex justify-between text-[11px] font-bold"><span className="text-slate-400">失われるXP</span><span className={wastedXp>0?"text-amber-300 font-black":"text-slate-300 font-black"}>{wastedXp.toLocaleString()} XP</span></div>
                 <div className="flex justify-between text-[11px] font-bold"><span className="text-slate-400">合体後予定Lv</span><span className="text-pink-300 font-black">Lv.{afterLvl.level}</span></div>
                 <div className="flex justify-between text-[11px] font-bold"><span className="text-slate-400">転生育成ボーナス</span><span className="text-amber-300 font-black">{reincarnateTransfer.count}回分 / +{reincarnateTransfer.points}P</span></div>
-                {reincarnateTransfer.count>0&&<div className="text-[10px] leading-relaxed text-slate-400">{selectedSubs.length===1?`副自身 ${normalizeMasuProgression(sub).reincarnateCount}回＋継承済み ${inheritedReincarnateCountOf(sub)}回分を全量継承します`:`選択した副${selectedSubs.length}体の転生由来分をすべて累積します`}</div>}
+                {reincarnateTransfer.count>0&&<div className="text-[10px] leading-relaxed text-slate-400">{selectedSubs.length===1?`副自身 ${normalizeMasuProgression(sub).reincarnateCount}回＋継承済み ${inheritedReincarnateCountOf(sub)}回分を全量継承します`:`選択した副${selectedSubs.length}体の転生由来分を全て累積します`}</div>}
                 <div className="pt-2 border-t border-white/10 text-[11px] font-black text-violet-200 tracking-wider">ダイヤ消費</div>
                 <div className="flex justify-between text-[11px] font-bold"><span className="text-slate-400">所持ダイヤ</span><span className="text-white font-black">{Math.max(0, Math.floor(Number(gold)||0)).toLocaleString()}</span></div>
                 {fusionInheritSoulRank&&soulInheritancePreview.eligible&&<>
@@ -47417,7 +47417,7 @@ function ProMonsterGridPicker({ list, selectedId=null, selectedIds=null, isDisab
       {header}
       {lineageTabs.length>1&&(
         <div data-pro-pick-tabs role="tablist" aria-label="血統" className={`shrink-0 pb-1.5 flex gap-1.5 overflow-x-auto mh-scroll${header?' [@media(max-height:640px)]:hidden':''}`}>
-          {[{id:'all',name:'すべて',count:list.length},...lineageTabs].map(t=>(
+          {[{id:'all',name:'全て',count:list.length},...lineageTabs].map(t=>(
             <button key={t.id} role="tab" aria-selected={activeTab===t.id} onClick={()=>{setLineageTab(t.id);const inTab=t.id==='all'?list:list.filter(m=>lineageOfMon(m).id===t.id);if(!inTab.some(m=>m.id===focusId)){const first=inTab.find(m=>!disabled(m));if(first)setFocusId(first.id);}}}
               className={`shrink-0 min-h-[34px] [@media(max-height:760px)]:min-h-[30px] px-2.5 rounded-full border text-[11px] font-black active:scale-95 ${activeTab===t.id?ac.tab:'border-slate-700 bg-slate-900 text-slate-400'}`}>{t.name}<span className="ml-1 text-[9px] font-mono opacity-70">{t.count}</span></button>
           ))}
@@ -47429,7 +47429,7 @@ function ProMonsterGridPicker({ list, selectedId=null, selectedIds=null, isDisab
         <div className={`px-1 mb-1 text-[9px] font-black ${ac.head}`}>★お気に入り・前回使ったモンスター</div>
         <div className="grid grid-cols-4 gap-1.5 mb-3">{pinnedIds.map(id=>tile(byId.get(id),'pin-'))}</div>
       </>)}
-      <div className={`px-1 mb-1 text-[9px] font-black text-slate-400${header?' [@media(max-height:760px)]:hidden':''}`}>{activeTab==='all'?'すべて':`${(lineageTabs.find(t=>t.id===activeTab)||{}).name}血統`}（{shownList.length}体）</div>
+      <div className={`px-1 mb-1 text-[9px] font-black text-slate-400${header?' [@media(max-height:760px)]:hidden':''}`}>{activeTab==='all'?'全て':`${(lineageTabs.find(t=>t.id===activeTab)||{}).name}血統`}（{shownList.length}体）</div>
       <div className="grid grid-cols-4 gap-1.5 pb-3">{shownList.map(m=>tile(m,'all-'))}</div>
       </div>
       {/* 詳細パネルはスクロールの外に固定する。スクロール領域の中へ sticky で置くと、iPhoneのSafariで
@@ -47446,8 +47446,8 @@ function ProMonsterGridPicker({ list, selectedId=null, selectedIds=null, isDisab
               </div>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center justify-between gap-2"><b className="truncate text-[14px] text-white leading-tight">{focus.name}</b><span className="ml-auto shrink-0 text-[9px] text-slate-500 font-black">総合力 <b className="text-[12px] text-amber-300 font-mono">{formatMonsterPower(monsterPowerOf(focus))}</b></span>
-                  <button type="button" data-pro-pick-fold aria-expanded={!detailFolded} aria-label={detailFolded?'詳しい情報をひらく':'詳しい情報をたたむ'} onClick={()=>setDetailFolded(v=>!v)}
-                    className="shrink-0 -my-1 min-h-[28px] rounded-lg border border-white/15 bg-slate-900 px-1.5 text-[9px] font-black text-slate-300 active:scale-95">{detailFolded?'▲ ひらく':'▼ たたむ'}</button></div>
+                  <button type="button" data-pro-pick-fold aria-expanded={!detailFolded} aria-label={detailFolded?'詳しい情報を開く':'詳しい情報をたたむ'} onClick={()=>setDetailFolded(v=>!v)}
+                    className="shrink-0 -my-1 min-h-[28px] rounded-lg border border-white/15 bg-slate-900 px-1.5 text-[9px] font-black text-slate-300 active:scale-95">{detailFolded?'▲ 開く':'▼ たたむ'}</button></div>
                 {!detailFolded&&<>
                 {monsterTypeProtoOn()&&<div data-pick-type-row className={`flex${header?' [@media(orientation:landscape)_and_(max-height:520px)]:hidden':''}`}><MonsterTypeBadge monId={focus.id}/></div>}
                 {/* 血統と固有技は1行にまとめる(2026-10-22。一覧を広げるため) */}
@@ -47522,12 +47522,12 @@ function ProPartyPicker({ list, need, initialIds=[], isDisabled, onDone, onDetai
       </button>
     );
   };
-  const guide=step==='hero'?(hero?`${hero.name}が勇者モンです。ほかのモンスターを押すと替えられます`:'勇者モンにするモンスターを、上の枠から1体えらんでください')
-    :full?'そろいました。枠を押すとそのモンスターを外せます。勇者モンは次でえらびます'
+  const guide=step==='hero'?(hero?`${hero.name}が勇者モンです。ほかのモンスターを押すと替えられます`:'勇者モンにするモンスターを、上の枠から1体選んでください')
+    :full?'そろいました。枠を押すとそのモンスターを外せます。勇者モンは次で選びます'
     :`枠を押して、下のモンスターを「枠に入れる」(どの順でもOK・あと${need-filled}体)`;
   const top=(
     <section data-pro-party className="mb-2 shrink-0 rounded-2xl border border-indigo-300/30 bg-black/30 p-2 [@media(max-height:640px)]:mb-1 [@media(max-height:640px)]:py-1.5">
-      <div className="mb-1 flex items-baseline justify-between gap-1 text-[11px] font-black text-indigo-200 [@media(orientation:landscape)_and_(max-height:520px)]:mb-0 [@media(orientation:landscape)_and_(max-height:520px)]:text-[10px]"><span>{step==='hero'?'② 勇者モンをえらぶ':'① 編成するモンスターをえらぶ'}</span><span className="text-[9px] text-slate-400">{filled} / {need}</span></div>
+      <div className="mb-1 flex items-baseline justify-between gap-1 text-[11px] font-black text-indigo-200 [@media(orientation:landscape)_and_(max-height:520px)]:mb-0 [@media(orientation:landscape)_and_(max-height:520px)]:text-[10px]"><span>{step==='hero'?'② 勇者モンを選ぶ':'① 編成するモンスターを選ぶ'}</span><span className="text-[9px] text-slate-400">{filled} / {need}</span></div>
       <div className={`grid gap-1 ${need>4?'grid-cols-6':'grid-cols-4'} pt-1`}>{ids.map(slot)}</div>
       <div data-pro-party-guide title={guide} className="mt-1 rounded-lg bg-indigo-950/40 px-2 py-1 text-[10px] font-bold text-indigo-100 [@media(max-height:640px)]:hidden">{guide}</div>
     </section>
@@ -47544,7 +47544,7 @@ function ProPartyPicker({ list, need, initialIds=[], isDisabled, onDone, onDetai
       <div className="shrink-0 flex gap-2 pt-2">
         <button type="button" data-pro-party-back onClick={()=>setStep('members')} className="min-h-[48px] shrink-0 rounded-2xl border-2 border-white/15 bg-slate-800 px-3 text-[12px] font-black text-slate-100 active:scale-95">← 選び直す</button>
         <button type="button" data-pro-party-done disabled={!hero} onClick={()=>onDone(hero,ids.filter(id=>id&&id!==hero.id).map(id=>byId.get(id)))}
-          className="min-h-[48px] flex-1 rounded-2xl bg-indigo-600 px-3 text-[13px] font-black text-white active:scale-95 disabled:bg-slate-800 disabled:text-slate-500" style={JA_LABEL_STYLE}>{jaWrap(hero?'次へ(距離をえらぶ)':'勇者モンをえらんでください')}</button>
+          className="min-h-[48px] flex-1 rounded-2xl bg-indigo-600 px-3 text-[13px] font-black text-white active:scale-95 disabled:bg-slate-800 disabled:text-slate-500" style={JA_LABEL_STYLE}>{jaWrap(hero?'次へ(距離を選ぶ)':'勇者モンを選んでください')}</button>
       </div>
     </div>
   );
@@ -47555,7 +47555,7 @@ function ProPartyPicker({ list, need, initialIds=[], isDisabled, onDone, onDetai
         confirmAria={m=>ids.includes(m.id)?`${m.name}を枠から外す`:`${m.name}を枠に入れる`}
         onSelect={m=>{if(!ids.includes(m.id)&&full)return;put(m);}} onDetail={onDetail}/>
       <button type="button" data-pro-party-next disabled={!full} onClick={()=>setStep('hero')}
-        className="mt-1.5 [@media(orientation:landscape)_and_(max-height:520px)]:mt-1 shrink-0 min-h-[44px] [@media(orientation:landscape)_and_(max-height:520px)]:min-h-[34px] w-full rounded-2xl bg-indigo-600 px-3 text-[13px] font-black text-white active:scale-95 disabled:bg-slate-800 disabled:text-slate-500">{full?'次へ(勇者モンをえらぶ)':`あと${need-filled}体えらんでください`}</button>
+        className="mt-1.5 [@media(orientation:landscape)_and_(max-height:520px)]:mt-1 shrink-0 min-h-[44px] [@media(orientation:landscape)_and_(max-height:520px)]:min-h-[34px] w-full rounded-2xl bg-indigo-600 px-3 text-[13px] font-black text-white active:scale-95 disabled:bg-slate-800 disabled:text-slate-500">{full?'次へ(勇者モンを選ぶ)':`あと${need-filled}体選んでください`}</button>
     </div>
   );
 }
@@ -47583,7 +47583,7 @@ function PickHeroAllyScreen({
       {/* 戻るボタン。勇者モン選択はバトルを始める前なので、来た場所(難易度の画面)へ戻す。
           供モン選択はバトルの途中なので、これまでどおりHOMEへ戻る(挑戦をやめる)扱いにする */}
       {/* 戻るボタンは ScreenHead と同じ枠つきの形にそろえる(2026-10-05。この画面だけ枠の無い矢印だった) */}
-      <div className="mb-2 [@media(orientation:landscape)_and_(max-height:520px)]:mb-1 text-center flex items-center justify-between px-2 shrink-0"><button type="button" aria-label="戻る" disabled={!!battleTutorial} onClick={onBack} className="mh-button mh-button-secondary -ml-1 shrink-0 p-3 text-slate-400 active:scale-90 disabled:opacity-25"><ArrowLeft size={20}/></button><div className="min-w-0"><h2 className={`text-xl font-black italic uppercase tracking-widest ${pickMode==='ally'?'mh-ph-title':'text-indigo-400'}`}>{pickMode==='hero'?'勇者モンをえらぶ':'供モンをえらぶ'}</h2>
+      <div className="mb-2 [@media(orientation:landscape)_and_(max-height:520px)]:mb-1 text-center flex items-center justify-between px-2 shrink-0"><button type="button" aria-label="戻る" disabled={!!battleTutorial} onClick={onBack} className="mh-button mh-button-secondary -ml-1 shrink-0 p-3 text-slate-400 active:scale-90 disabled:opacity-25"><ArrowLeft size={20}/></button><div className="min-w-0"><h2 className={`text-xl font-black italic uppercase tracking-widest ${pickMode==='ally'?'mh-ph-title':'text-indigo-400'}`}>{pickMode==='hero'?'勇者モンを選ぶ':'供モンを選ぶ'}</h2>
         {/* 呼び名の説明を1行(2026-10-09 G7。呼び名は変えず、何のことかを足す) */}
         <p data-pick-term-note className={`mt-0.5 text-[10px] font-bold leading-snug text-slate-400${pickMode==='hero'&&isProMode(runMode)&&!battleTutorial?' [@media(max-height:760px)]:hidden':''}${pickMode==='hero'||pickMode==='ally'?' [@media(orientation:landscape)_and_(max-height:520px)]:hidden':''}`}>{helpWrap(pickMode==='hero'?'勇者モン＝バトルの主役。このモンスターの勇者特性が効く':'供モン＝勇者モンと一緒に戦う仲間')}</p></div><div className="w-10"></div></div>
       {/* 供モン合流はバトルの途中に挟まる場面なので、どのWAVEを抜けたごほうびなのかを見出しの下に出す */}
@@ -47713,7 +47713,7 @@ function PickHeroAllyScreen({
               onDetail={m=>setCurrentPickingMon(m)}/>
           );
           return (<>
-        {allyCarousel&&<div className="text-center text-[8px] tracking-[.18em] text-slate-400 font-black shrink-0 mb-1">左右にスワイプして供モンをえらぶ</div>}
+        {allyCarousel&&<div className="text-center text-[8px] tracking-[.18em] text-slate-400 font-black shrink-0 mb-1">左右にスワイプして供モンを選ぶ</div>}
         {allyCarousel&&<div className="relative h-0">
           <button aria-label="前の供モン" disabled={allyCardIndex===0} onClick={()=>stepAlly(-1)} className="absolute left-0 top-[70px] z-20 w-9 h-12 rounded-r-xl bg-black/70 disabled:opacity-20"><ChevronLeft/></button>
           <button aria-label="次の供モン" disabled={allyCardIndex>=list.length-1} onClick={()=>stepAlly(1)} className="absolute right-0 top-[70px] z-20 w-9 h-12 rounded-l-xl bg-black/70 disabled:opacity-20"><ChevronRight/></button>
@@ -47787,7 +47787,7 @@ function PickHeroAllyScreen({
                   ))}
                 </div>
               </>);})()}
-              <div className={`min-h-[32px] w-full rounded-xl font-black mt-1 flex items-center justify-center gap-1 ${pickMode==='ally'?'mh-ph-btn':'border border-indigo-400/40 bg-indigo-950/50 text-indigo-200'}`} style={{fontSize:'10px'}}>くわしく見る <ChevronRight size={11}/></div>
+              <div className={`min-h-[32px] w-full rounded-xl font-black mt-1 flex items-center justify-center gap-1 ${pickMode==='ally'?'mh-ph-btn':'border border-indigo-400/40 bg-indigo-950/50 text-indigo-200'}`} style={{fontSize:'10px'}}>詳しく見る <ChevronRight size={11}/></div>
             </>),
           })}
         </button>);})}
@@ -47996,7 +47996,7 @@ function PickSlotScreen({
       {/* タクティクスは合算しない(その距離に立っている子の適性だけが、その子の攻撃に効く)。従来のモードは編成全員ぶんの合算 */}
       <div className="mh-phase-mid shrink-0 text-[10px] text-slate-400 font-bold mt-2 leading-relaxed px-2">{perSlotApt
         ?<>間合い適性は、置いた距離にいるモンスターのぶんだけが、そのモンスターの攻撃に効きます(足し算にはなりません)。<br/>どの距離に誰を置くかで、そのモンスターの適性が決まります。</>
-        :<>間合い適性はどこに置いても4距離すべてに加算されます。<br/>配置は「敵と同じ距離で攻撃する」ことと、覚える距離撃に影響します。</>}</div>
+        :<>間合い適性はどこに置いても4距離全てに加算されます。<br/>配置は「敵と同じ距離で攻撃する」ことと、覚える距離撃に影響します。</>}</div>
       {/* 練習中は押せる枠だけを光らせる。枠全体を囲むと「どれを押すのか」が分からなかった */}
       {/* 背の低い端末では、ここが縮んでスクロールする。戻るボタンを画面の外へ押し出さないため。
           となりの教えカードえらび(PickTeachingScreen)と同じ作りにそろえてある */}
@@ -50729,7 +50729,7 @@ function InfernoShieldBadge({ view, rule = 'INFERNO', growthPct = 30 }) {
       data-shield-badge-theme={rule}
       style={{ background: theme.bg, border: `2px solid ${col[1]}`, boxShadow: `0 0 12px ${col[1]}${theme.ring ? `,0 0 0 1px ${theme.ring} inset` : ''}` }}>
       <div className="text-[10px] font-black tracking-wide" style={{ color: theme.titleColor, textShadow: `0 0 6px ${theme.titleGlow}` }}>{theme.title}</div>
-      <div className="mt-[1px] text-[8px] font-black" style={{ color: theme.sub }}>のこりシールド</div>
+      <div className="mt-[1px] text-[8px] font-black" style={{ color: theme.sub }}>残りシールド</div>
       <div className="mt-0.5 text-[30px] font-black leading-none text-white" style={{ textShadow: `0 0 10px ${col[1]},0 2px 2px #000` }}>×{view.left}</div>
       {view.left > 0 && <div className="mt-[3px] text-[9px] font-black" style={{ color: col[0] }}>いま {INFERNO_SHIELD_MARKS[view.broken] || view.broken + 1}</div>}
       {view.left > 1 && growthPct > 0 && <div className="mt-[1px] text-[8px] font-extrabold text-amber-200">次の1枚 +{growthPct}%</div>}
@@ -53222,7 +53222,7 @@ function BattleScreen({
                 </dl>)}
               <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-[12px]">
                 <dt className="font-bold text-slate-400">使える回数</dt>
-                <dd data-tactics-ex-uses className="font-black text-white">{exPanel.remaining.unlimited?'無制限':`のこり ${exPanel.remaining.left} / ${exPanel.remaining.max}（${exPanel.def.usesPerWave?'このWAVE':'このラン'}）`}</dd>
+                <dd data-tactics-ex-uses className="font-black text-white">{exPanel.remaining.unlimited?'無制限':`残り ${exPanel.remaining.left} / ${exPanel.remaining.max}（${exPanel.def.usesPerWave?'このWAVE':'このラン'}）`}</dd>
                 <dt className="font-bold text-slate-400">カード</dt>
                 <dd data-tactics-ex-with-cards={exPanel.def.withCards?'yes':'no'} className="font-black text-white">{exPanel.def.withCards?'同じターンにこのモンスターも通常カードを使える':'使ったターン、このモンスターはカードを使えない（ほかのモンスターは使える）'}</dd>
                 {tacticsHateOn&&(()=>{const lv=tacticsHateExLevel(exPanel.def.effect,slots[exPanel.slot]?.id||null); return lv>0?<><dt className="font-bold text-slate-400">狙われやすさ</dt><dd data-tactics-ex-hate={lv} className="font-black text-orange-200">使うと{'🔥'.repeat(lv)} {TACTICS_HATE_LEVEL_LABELS[lv]}</dd></>:null;})()}
@@ -53678,7 +53678,7 @@ function MasuAutoEnhanceScreen({
 
             {/* かんたん設定: 細かい上限や順番を決めなくても、押すだけで ON になって働く */}
             <div data-auto-enhance-presets className="rounded-2xl border border-lime-500/40 bg-slate-900 p-3">
-              <div className="text-[13px] font-black text-lime-300">かんたん設定（押すと案が出て、確定でON）</div>
+              <div className="text-[13px] font-black text-lime-300">簡単設定（押すと案が出て、確定でON）</div>
               <div className="mt-2 grid grid-cols-3 gap-2">
                 <button type="button" data-auto-enhance-preset="all" onClick={()=>applyPreset('all')} className="min-h-[56px] rounded-xl bg-lime-600 text-slate-950 text-[11px] font-black active:scale-95 px-1 leading-tight">おまかせ<br/><span className="text-[9px] font-bold">全部上げる</span></button>
                 <button type="button" data-auto-enhance-preset="stat" onClick={()=>applyPreset('stat')} className="min-h-[56px] rounded-xl bg-slate-800 border border-lime-400/40 text-lime-200 text-[11px] font-black active:scale-95 px-1 leading-tight">ステータスだけ<br/><span className="text-[9px] font-bold text-slate-400">適性は振らない</span></button>
@@ -53690,7 +53690,7 @@ function MasuAutoEnhanceScreen({
             {/* 上限の一括操作 */}
             <div className="grid grid-cols-2 gap-2">
               <button type="button" onClick={captureCurrent} className="min-h-[44px] rounded-xl bg-slate-800 border border-lime-400/40 text-lime-200 text-[11px] font-black active:scale-95 px-2 leading-tight">いまの値を<br/>目標として取り込む</button>
-              <button type="button" onClick={clearAll} className="min-h-[44px] rounded-xl bg-slate-800 border border-white/10 text-slate-300 text-[11px] font-black active:scale-95 px-2 leading-tight">すべて<br/>「振らない」に戻す</button>
+              <button type="button" onClick={clearAll} className="min-h-[44px] rounded-xl bg-slate-800 border border-white/10 text-slate-300 text-[11px] font-black active:scale-95 px-2 leading-tight">全て<br/>「振らない」に戻す</button>
             </div>
             <div className="text-[10px] text-slate-400 font-bold leading-relaxed px-1">「いまの値を目標として取り込む」は、このモンスターのいまの数値をそのまま目標に写します。転生する前に押しておくと、転生後の周回で同じ数値まで自動で戻ります。</div>
 
@@ -62524,10 +62524,10 @@ const RaidJackRankingList = ({ onClose, eventId, initialTab = 'a', initialTier =
           <span className="font-black text-orange-200">{title}</span>
           {myTotal > 0 && <span data-raid-jack-ranking-mine className="shrink-0 text-[10px] text-slate-200">あなた {myTotal.toLocaleString()}{ahead !== null ? `(${ahead + 1}位)` : ''}</span>}
         </div>
-        <div className="mb-2 text-[9px] text-slate-400">{useSrc && maxHit ? `${src === 'rhythm' ? '1曲' : '1回の戦い'}で出した、いちばん大きいダメージで競います。難易度ごとにも見られます。順位報酬はありません。` : useSrc ? `${srcName}だけで与えたダメージで競います。順位報酬はありません(報酬は全体の貢献ランキングで決まります)。` : maxHit ? '1回の戦いで出した、いちばん大きいダメージで競います。難易度ごとにも見られます。順位報酬はありません。' : useAll ? '全段階へ与えたダメージの合計です。この順位に報酬はありません(報酬は段階ごとの貢献で決まります)。' : tab === 'a' ? '1〜5位に報酬があります。男爵〜公爵は倒れた時点、大王は期間の終わりに順位が決まります(報酬一覧)。' : '1〜5位に報酬があります。期間の終わりに順位が決まります(報酬一覧)。'}</div>
+        <div className="mb-2 text-[9px] text-slate-400">{useSrc && maxHit ? `${src === 'rhythm' ? '1曲' : '1回の戦い'}で出した、一番大きいダメージで競います。難易度ごとにも見られます。順位報酬はありません。` : useSrc ? `${srcName}だけで与えたダメージで競います。順位報酬はありません(報酬は全体の貢献ランキングで決まります)。` : maxHit ? '1回の戦いで出した、一番大きいダメージで競います。難易度ごとにも見られます。順位報酬はありません。' : useAll ? '全段階へ与えたダメージの合計です。この順位に報酬はありません(報酬は段階ごとの貢献で決まります)。' : tab === 'a' ? '1〜5位に報酬があります。男爵〜公爵は倒れた時点、大王は期間の終わりに順位が決まります(報酬一覧)。' : '1〜5位に報酬があります。期間の終わりに順位が決まります(報酬一覧)。'}</div>
         {rows === undefined && <div className="py-3 text-center text-[10px] text-slate-400">読み込み中…</div>}
         {rows === null && <div className="py-3 text-center text-[10px] text-slate-400">ランキングは準備中です</div>}
-        {Array.isArray(rows) && rows.length === 0 && <div className="py-3 text-center text-[10px] text-slate-400">まだ記録がありません。いちばんのりを目指そう！</div>}
+        {Array.isArray(rows) && rows.length === 0 && <div className="py-3 text-center text-[10px] text-slate-400">まだ記録がありません。一番乗りを目指そう！</div>}
         <RaidJackRankingRows rows={rows} myId={myId} renderPlace={renderPlace} renderIcon={renderIcon} cardClass={cardClass} />
       </div>
     </div>
@@ -62627,7 +62627,7 @@ const RaidJackScreen = ({ initialTier = 0, onBack, onChallenge, onPurchase, onCl
     try {
       const result = await onPurchase(tab);
       if (result && result.ok) { setMessage(`追加の挑戦を1回ぶん買いました(ビートP ${RAID_JACK_EXTRA_COST_BEAT_P})`); setTick((n) => n + 1); }
-      else setMessage(result && result.reason === 'short' ? 'ビートPが足りません' : '買えませんでした。もう一度ためしてください');
+      else setMessage(result && result.reason === 'short' ? 'ビートPが足りません' : '買えませんでした。もう一度試してください');
     } finally { setBusy(false); }
   };
 
@@ -62646,7 +62646,7 @@ const RaidJackScreen = ({ initialTier = 0, onBack, onChallenge, onPurchase, onCl
         <div data-raid-jack-guide className="mb-2 shrink-0">
           <AssistantBubble scene="raidJackIntro" compact />
           <button type="button" data-raid-jack-guide-close onClick={onDismissGuide}
-            className="mt-1 w-full min-h-[44px] rounded-xl border border-orange-300/50 bg-orange-950/40 text-[12px] font-black text-orange-100 active:scale-95">わかった</button>
+            className="mt-1 w-full min-h-[44px] rounded-xl border border-orange-300/50 bg-orange-950/40 text-[12px] font-black text-orange-100 active:scale-95">分かった</button>
         </div>
       )}
       <ScreenTabs items={[{ id: 'a', label: 'レイドバトル' }, { id: 'b', label: 'グランドスラム' }]} value={tab} onChange={setTab} />
@@ -62738,7 +62738,7 @@ const RaidJackScreen = ({ initialTier = 0, onBack, onChallenge, onPurchase, onCl
           )}
           {rows === undefined && <div className="py-3 text-center text-[10px] text-slate-400">読み込み中…</div>}
           {rows === null && <div className="py-3 text-center text-[10px] text-slate-400">ランキングは準備中です</div>}
-          {Array.isArray(rows) && rows.length === 0 && <div className="py-3 text-center text-[10px] text-slate-400">まだ記録がありません。いちばんのりを目指そう！</div>}
+          {Array.isArray(rows) && rows.length === 0 && <div className="py-3 text-center text-[10px] text-slate-400">まだ記録がありません。一番乗りを目指そう！</div>}
           <RaidJackRankingRows rows={rows} myId={myId} renderPlace={renderPlace} renderIcon={renderIcon} cardClass={cardClass} />
         </div>
       </div>
@@ -62891,10 +62891,10 @@ const RaidJackPrepScreen = ({ kind, tierIndex, candidates, teachings, onBack, on
       </div>
     );
   };
-  const guide = step === 'hero' ? (hero ? `${hero.name}が勇者モンです。ほかのモンスターを押すと替えられます` : '勇者モンにするモンスターを、上の枠から1体えらんでください')
-    : placedCount === 0 ? '好きな距離の枠を押してから、下の一覧で置くモンスターをえらんでください(どの順でもOK)'
+  const guide = step === 'hero' ? (hero ? `${hero.name}が勇者モンです。ほかのモンスターを押すと替えられます` : '勇者モンにするモンスターを、上の枠から1体選んでください')
+    : placedCount === 0 ? '好きな距離の枠を押してから、下の一覧で置くモンスターを選んでください(どの順でもOK)'
     : Number.isInteger(pickRange) && placedCount < 4 ? `次は${RANGE_LABELS[pickRange]}距離(ほかの枠を押すとそこに置けます)。全部で${1 + RAID_JACK_ALLY_MAX}体まで`
-    : '置けました。枠を押すとそのモンスターを外せます。勇者モンは次でえらびます';
+    : '置けました。枠を押すとそのモンスターを外せます。勇者モンは次で選びます';
   // ②の説明と、挑戦回数の説明。横向きの背の低い画面では、下の「詳しく」にたたんで出す(2026-10-28・844×390 で
   //   オリヒメの相方の行が増えたぶん、下の欄の高さがほぼ0になって読めなかった。ジン部長)
   const heroAboutText = '戦いの主役になる1体です。ちから・丈夫さは勇者モンをもとに、供モンのぶんが足されます。勇者モンを置いた距離から戦いが始まり、少しだけ狙われやすくなります(🔥)。';
@@ -62924,7 +62924,7 @@ const RaidJackPrepScreen = ({ kind, tierIndex, candidates, teachings, onBack, on
   return (
     <div className={`${SCREEN_SHELL_CLASS} overflow-hidden`} data-raid-jack-prep data-raid-prep-step={step}>
       <ScreenHead title={`${tier.name}に挑む`} icon="🎃" accent="text-orange-200" onBack={step === 'teach' ? () => setStep('hero') : step === 'hero' ? () => setStep('party') : onBack}
-        note={step === 'teach' ? '③ アシカをえらぶ' : step === 'hero' ? '② 勇者モンをえらぶ' : `① ${isB ? 'マスモン' : 'ベースモン'}を距離に置く・20ターン勝負`} />
+        note={step === 'teach' ? '③ アシカを選ぶ' : step === 'hero' ? '② 勇者モンを選ぶ' : `① ${isB ? 'マスモン' : 'ベースモン'}を距離に置く・20ターン勝負`} />
       {partyRow}
       <div className={`${SCREEN_LIST_CLASS} space-y-3`} data-raid-prep-list>
         {step === 'party' && (
@@ -62952,9 +62952,9 @@ const RaidJackPrepScreen = ({ kind, tierIndex, candidates, teachings, onBack, on
         )}
         {step === 'hero' && heroIsOrihime && (
         <section className="rounded-2xl border border-sky-300/40 bg-sky-950/30 p-3 text-[10px] leading-relaxed text-slate-200 [@media(max-height:640px)]:hidden" data-raid-orihime-partner>
-          <div className="mb-1 text-[11px] font-black text-sky-200">🎐 相方をえらぶ(天河の契り)</div>
+          <div className="mb-1 text-[11px] font-black text-sky-200">🎐 相方を選ぶ(天河の契り)</div>
           <div className="mb-1.5" style={JA_WRAP_STYLE}>{jaWrap(`上の「🎐相方」で、${hero.masuName || hero.name}の相方を1体えらびます。相方との距離の差(1〜3)で効き目が変わります。えらばなければ、いちばん近いモンスターが相方になります。`)}</div>
-          {!Number.isInteger(partnerIdx) && <div className="text-slate-300" style={JA_WRAP_STYLE}>{jaWrap('ほかの距離にもモンスターを置くと、相方をえらべます。')}</div>}
+          {!Number.isInteger(partnerIdx) && <div className="text-slate-300" style={JA_WRAP_STYLE}>{jaWrap('ほかの距離にもモンスターを置くと、相方を選べます。')}</div>}
           {Number.isInteger(partnerIdx) && <div className="mt-1 text-[9px] text-sky-100">{partnerChosen ? '相方' : '相方(自動)'}: {slotMons[partnerIdx].masuName || slotMons[partnerIdx].name}・距離の差 {Math.abs(partnerIdx - heroIdx)}</div>}
         </section>
         )}
@@ -62989,7 +62989,7 @@ const RaidJackPrepScreen = ({ kind, tierIndex, candidates, teachings, onBack, on
         {step === 'party' ? (
           <button type="button" data-raid-prep-next disabled={placedCount === 0} onClick={() => setStep('hero')}
             className="w-full min-h-[48px] rounded-2xl border-2 border-orange-300/70 bg-orange-700 px-3 text-[13px] font-black text-white active:scale-95 disabled:border-white/10 disabled:bg-slate-800 disabled:text-slate-400">
-            {placedCount > 0 ? '次へ(勇者モンをえらぶ)' : '距離にモンスターを置いてください'}
+            {placedCount > 0 ? '次へ(勇者モンを選ぶ)' : '距離にモンスターを置いてください'}
           </button>
         ) : (
           <div className="flex gap-2">
@@ -62998,7 +62998,7 @@ const RaidJackPrepScreen = ({ kind, tierIndex, candidates, teachings, onBack, on
             {step === 'hero' ? (
               <button type="button" data-raid-prep-hero-next disabled={!hero} onClick={() => setStep('teach')}
                 className="min-h-[48px] flex-1 rounded-2xl border-2 border-orange-300/70 bg-orange-700 px-3 text-[13px] font-black text-white active:scale-95 disabled:border-white/10 disabled:bg-slate-800 disabled:text-slate-400">
-                {hero ? '次へ(アシカをえらぶ)' : '勇者モンをえらんでください'}
+                {hero ? '次へ(アシカを選ぶ)' : '勇者モンを選んでください'}
               </button>
             ) : (
               <button type="button" data-raid-prep-start disabled={!hero}

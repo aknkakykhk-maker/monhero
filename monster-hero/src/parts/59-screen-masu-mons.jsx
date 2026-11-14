@@ -23,7 +23,7 @@ function MasuMonsScreen({
           {(()=>{
             const entries = unifiedMonsterEntriesSingleType.filter(e=>e.type==='masu');
             if (entries.length===0) return (
-              <ScreenEmpty emoji="🐾" lines={masuMons.length===0?['まだマスモンがいません。','勇者モンでランを終えると登録できます。']:['表示設定で対象がすべてオフになっています。']}/>
+              <ScreenEmpty emoji="🐾" lines={masuMons.length===0?['まだマスモンがいません。','勇者モンでランを終えると登録できます。']:['表示設定で対象が全てオフになっています。']}/>
             );
             return (
               <div className="grid grid-cols-3 gap-2.5 pb-4">

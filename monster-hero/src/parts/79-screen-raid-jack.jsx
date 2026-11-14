@@ -262,10 +262,10 @@ const RaidJackRankingList = ({ onClose, eventId, initialTab = 'a', initialTier =
           <span className="font-black text-orange-200">{title}</span>
           {myTotal > 0 && <span data-raid-jack-ranking-mine className="shrink-0 text-[10px] text-slate-200">あなた {myTotal.toLocaleString()}{ahead !== null ? `(${ahead + 1}位)` : ''}</span>}
         </div>
-        <div className="mb-2 text-[9px] text-slate-400">{useSrc && maxHit ? `${src === 'rhythm' ? '1曲' : '1回の戦い'}で出した、いちばん大きいダメージで競います。難易度ごとにも見られます。順位報酬はありません。` : useSrc ? `${srcName}だけで与えたダメージで競います。順位報酬はありません(報酬は全体の貢献ランキングで決まります)。` : maxHit ? '1回の戦いで出した、いちばん大きいダメージで競います。難易度ごとにも見られます。順位報酬はありません。' : useAll ? '全段階へ与えたダメージの合計です。この順位に報酬はありません(報酬は段階ごとの貢献で決まります)。' : tab === 'a' ? '1〜5位に報酬があります。男爵〜公爵は倒れた時点、大王は期間の終わりに順位が決まります(報酬一覧)。' : '1〜5位に報酬があります。期間の終わりに順位が決まります(報酬一覧)。'}</div>
+        <div className="mb-2 text-[9px] text-slate-400">{useSrc && maxHit ? `${src === 'rhythm' ? '1曲' : '1回の戦い'}で出した、一番大きいダメージで競います。難易度ごとにも見られます。順位報酬はありません。` : useSrc ? `${srcName}だけで与えたダメージで競います。順位報酬はありません(報酬は全体の貢献ランキングで決まります)。` : maxHit ? '1回の戦いで出した、一番大きいダメージで競います。難易度ごとにも見られます。順位報酬はありません。' : useAll ? '全段階へ与えたダメージの合計です。この順位に報酬はありません(報酬は段階ごとの貢献で決まります)。' : tab === 'a' ? '1〜5位に報酬があります。男爵〜公爵は倒れた時点、大王は期間の終わりに順位が決まります(報酬一覧)。' : '1〜5位に報酬があります。期間の終わりに順位が決まります(報酬一覧)。'}</div>
         {rows === undefined && <div className="py-3 text-center text-[10px] text-slate-400">読み込み中…</div>}
         {rows === null && <div className="py-3 text-center text-[10px] text-slate-400">ランキングは準備中です</div>}
-        {Array.isArray(rows) && rows.length === 0 && <div className="py-3 text-center text-[10px] text-slate-400">まだ記録がありません。いちばんのりを目指そう！</div>}
+        {Array.isArray(rows) && rows.length === 0 && <div className="py-3 text-center text-[10px] text-slate-400">まだ記録がありません。一番乗りを目指そう！</div>}
         <RaidJackRankingRows rows={rows} myId={myId} renderPlace={renderPlace} renderIcon={renderIcon} cardClass={cardClass} />
       </div>
     </div>
@@ -365,7 +365,7 @@ const RaidJackScreen = ({ initialTier = 0, onBack, onChallenge, onPurchase, onCl
     try {
       const result = await onPurchase(tab);
       if (result && result.ok) { setMessage(`追加の挑戦を1回ぶん買いました(ビートP ${RAID_JACK_EXTRA_COST_BEAT_P})`); setTick((n) => n + 1); }
-      else setMessage(result && result.reason === 'short' ? 'ビートPが足りません' : '買えませんでした。もう一度ためしてください');
+      else setMessage(result && result.reason === 'short' ? 'ビートPが足りません' : '買えませんでした。もう一度試してください');
     } finally { setBusy(false); }
   };
 
@@ -384,7 +384,7 @@ const RaidJackScreen = ({ initialTier = 0, onBack, onChallenge, onPurchase, onCl
         <div data-raid-jack-guide className="mb-2 shrink-0">
           <AssistantBubble scene="raidJackIntro" compact />
           <button type="button" data-raid-jack-guide-close onClick={onDismissGuide}
-            className="mt-1 w-full min-h-[44px] rounded-xl border border-orange-300/50 bg-orange-950/40 text-[12px] font-black text-orange-100 active:scale-95">わかった</button>
+            className="mt-1 w-full min-h-[44px] rounded-xl border border-orange-300/50 bg-orange-950/40 text-[12px] font-black text-orange-100 active:scale-95">分かった</button>
         </div>
       )}
       <ScreenTabs items={[{ id: 'a', label: 'レイドバトル' }, { id: 'b', label: 'グランドスラム' }]} value={tab} onChange={setTab} />
@@ -476,7 +476,7 @@ const RaidJackScreen = ({ initialTier = 0, onBack, onChallenge, onPurchase, onCl
           )}
           {rows === undefined && <div className="py-3 text-center text-[10px] text-slate-400">読み込み中…</div>}
           {rows === null && <div className="py-3 text-center text-[10px] text-slate-400">ランキングは準備中です</div>}
-          {Array.isArray(rows) && rows.length === 0 && <div className="py-3 text-center text-[10px] text-slate-400">まだ記録がありません。いちばんのりを目指そう！</div>}
+          {Array.isArray(rows) && rows.length === 0 && <div className="py-3 text-center text-[10px] text-slate-400">まだ記録がありません。一番乗りを目指そう！</div>}
           <RaidJackRankingRows rows={rows} myId={myId} renderPlace={renderPlace} renderIcon={renderIcon} cardClass={cardClass} />
         </div>
       </div>
@@ -629,10 +629,10 @@ const RaidJackPrepScreen = ({ kind, tierIndex, candidates, teachings, onBack, on
       </div>
     );
   };
-  const guide = step === 'hero' ? (hero ? `${hero.name}が勇者モンです。ほかのモンスターを押すと替えられます` : '勇者モンにするモンスターを、上の枠から1体えらんでください')
-    : placedCount === 0 ? '好きな距離の枠を押してから、下の一覧で置くモンスターをえらんでください(どの順でもOK)'
+  const guide = step === 'hero' ? (hero ? `${hero.name}が勇者モンです。ほかのモンスターを押すと替えられます` : '勇者モンにするモンスターを、上の枠から1体選んでください')
+    : placedCount === 0 ? '好きな距離の枠を押してから、下の一覧で置くモンスターを選んでください(どの順でもOK)'
     : Number.isInteger(pickRange) && placedCount < 4 ? `次は${RANGE_LABELS[pickRange]}距離(ほかの枠を押すとそこに置けます)。全部で${1 + RAID_JACK_ALLY_MAX}体まで`
-    : '置けました。枠を押すとそのモンスターを外せます。勇者モンは次でえらびます';
+    : '置けました。枠を押すとそのモンスターを外せます。勇者モンは次で選びます';
   // ②の説明と、挑戦回数の説明。横向きの背の低い画面では、下の「詳しく」にたたんで出す(2026-10-28・844×390 で
   //   オリヒメの相方の行が増えたぶん、下の欄の高さがほぼ0になって読めなかった。ジン部長)
   const heroAboutText = '戦いの主役になる1体です。ちから・丈夫さは勇者モンをもとに、供モンのぶんが足されます。勇者モンを置いた距離から戦いが始まり、少しだけ狙われやすくなります(🔥)。';
@@ -662,7 +662,7 @@ const RaidJackPrepScreen = ({ kind, tierIndex, candidates, teachings, onBack, on
   return (
     <div className={`${SCREEN_SHELL_CLASS} overflow-hidden`} data-raid-jack-prep data-raid-prep-step={step}>
       <ScreenHead title={`${tier.name}に挑む`} icon="🎃" accent="text-orange-200" onBack={step === 'teach' ? () => setStep('hero') : step === 'hero' ? () => setStep('party') : onBack}
-        note={step === 'teach' ? '③ アシカをえらぶ' : step === 'hero' ? '② 勇者モンをえらぶ' : `① ${isB ? 'マスモン' : 'ベースモン'}を距離に置く・20ターン勝負`} />
+        note={step === 'teach' ? '③ アシカを選ぶ' : step === 'hero' ? '② 勇者モンを選ぶ' : `① ${isB ? 'マスモン' : 'ベースモン'}を距離に置く・20ターン勝負`} />
       {partyRow}
       <div className={`${SCREEN_LIST_CLASS} space-y-3`} data-raid-prep-list>
         {step === 'party' && (
@@ -690,9 +690,9 @@ const RaidJackPrepScreen = ({ kind, tierIndex, candidates, teachings, onBack, on
         )}
         {step === 'hero' && heroIsOrihime && (
         <section className="rounded-2xl border border-sky-300/40 bg-sky-950/30 p-3 text-[10px] leading-relaxed text-slate-200 [@media(max-height:640px)]:hidden" data-raid-orihime-partner>
-          <div className="mb-1 text-[11px] font-black text-sky-200">🎐 相方をえらぶ(天河の契り)</div>
+          <div className="mb-1 text-[11px] font-black text-sky-200">🎐 相方を選ぶ(天河の契り)</div>
           <div className="mb-1.5" style={JA_WRAP_STYLE}>{jaWrap(`上の「🎐相方」で、${hero.masuName || hero.name}の相方を1体えらびます。相方との距離の差(1〜3)で効き目が変わります。えらばなければ、いちばん近いモンスターが相方になります。`)}</div>
-          {!Number.isInteger(partnerIdx) && <div className="text-slate-300" style={JA_WRAP_STYLE}>{jaWrap('ほかの距離にもモンスターを置くと、相方をえらべます。')}</div>}
+          {!Number.isInteger(partnerIdx) && <div className="text-slate-300" style={JA_WRAP_STYLE}>{jaWrap('ほかの距離にもモンスターを置くと、相方を選べます。')}</div>}
           {Number.isInteger(partnerIdx) && <div className="mt-1 text-[9px] text-sky-100">{partnerChosen ? '相方' : '相方(自動)'}: {slotMons[partnerIdx].masuName || slotMons[partnerIdx].name}・距離の差 {Math.abs(partnerIdx - heroIdx)}</div>}
         </section>
         )}
@@ -727,7 +727,7 @@ const RaidJackPrepScreen = ({ kind, tierIndex, candidates, teachings, onBack, on
         {step === 'party' ? (
           <button type="button" data-raid-prep-next disabled={placedCount === 0} onClick={() => setStep('hero')}
             className="w-full min-h-[48px] rounded-2xl border-2 border-orange-300/70 bg-orange-700 px-3 text-[13px] font-black text-white active:scale-95 disabled:border-white/10 disabled:bg-slate-800 disabled:text-slate-400">
-            {placedCount > 0 ? '次へ(勇者モンをえらぶ)' : '距離にモンスターを置いてください'}
+            {placedCount > 0 ? '次へ(勇者モンを選ぶ)' : '距離にモンスターを置いてください'}
           </button>
         ) : (
           <div className="flex gap-2">
@@ -736,7 +736,7 @@ const RaidJackPrepScreen = ({ kind, tierIndex, candidates, teachings, onBack, on
             {step === 'hero' ? (
               <button type="button" data-raid-prep-hero-next disabled={!hero} onClick={() => setStep('teach')}
                 className="min-h-[48px] flex-1 rounded-2xl border-2 border-orange-300/70 bg-orange-700 px-3 text-[13px] font-black text-white active:scale-95 disabled:border-white/10 disabled:bg-slate-800 disabled:text-slate-400">
-                {hero ? '次へ(アシカをえらぶ)' : '勇者モンをえらんでください'}
+                {hero ? '次へ(アシカを選ぶ)' : '勇者モンを選んでください'}
               </button>
             ) : (
               <button type="button" data-raid-prep-start disabled={!hero}

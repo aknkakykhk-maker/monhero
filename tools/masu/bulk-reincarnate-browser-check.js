@@ -60,16 +60,16 @@ const GOLD = 100000000;
     let p = await picks();
     ok('転生できる子(4体)にだけ選ぶ印が付く(Lvが足りない子には付かない)', p.map(x => x.id).sort().join() === 'm1,m2,m3,m4', p.map(x => x.id).join());
     ok('最初は何も選ばれていない', p.every(x => !x.on));
-    ok('「すべて選択」を押せる', await clickText('^すべて選択$')); await page.waitForTimeout(300);
+    ok('「全て選択」を押せる', await clickText('^全て選択$')); await page.waitForTimeout(300);
     p = await picks();
-    ok('「すべて選択」は編成中(m1)とお気に入り(m2)を選ばない', p.filter(x => x.on).map(x => x.id).sort().join() === 'm3,m4', p.filter(x => x.on).map(x => x.id).join());
+    ok('「全て選択」は編成中(m1)とお気に入り(m2)を選ばない', p.filter(x => x.on).map(x => x.id).sort().join() === 'm3,m4', p.filter(x => x.on).map(x => x.id).join());
     await page.evaluate(() => document.querySelector('[data-reincarnate-pick="m1"]').click()); await page.waitForTimeout(300);
     p = await picks();
     ok('印を押すと編成中の子も自分で足せる', p.filter(x => x.on).map(x => x.id).sort().join() === 'm1,m3,m4');
     const barText = await page.evaluate(() => document.querySelector('[data-reincarnate-bulk-open]')?.innerText || '');
     ok('ボタンに選んだ数が出る', /まとめて転生（3体）/.test(barText), barText);
     ok('「選択を外す」で全部外れる', await clickText('^選択を外す$') && (await picks()).every(x => !x.on));
-    await clickText('^すべて選択$'); await page.evaluate(() => document.querySelector('[data-reincarnate-pick="m1"]').click()); await page.waitForTimeout(300);
+    await clickText('^全て選択$'); await page.evaluate(() => document.querySelector('[data-reincarnate-pick="m1"]').click()); await page.waitForTimeout(300);
 
     // 1体あたりの回数(2026-10-18)。＋で2回、「最大」で子ごとに続けられるいちばん多い回数(アーク・スエゾー4回、モッチー2回)
     const timesText = () => page.evaluate(() => document.querySelector('[data-reincarnate-bulk-times]')?.innerText.replace(/\s+/g, ' ') || '');

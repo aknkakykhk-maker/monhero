@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c108e8ee96c04bd7
+// source-sha256: dc578c58b6eec3b6
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -18797,11 +18797,11 @@ const extremeRuleDetailGroups = (difficultyId, quick = false) => {
     const adjust = rules.enemyAdjust || {};
     const durahan = adjust.byEnemy?.Durahan;
     push('冥府', [['進行', '2WAVEごとにLv上昇（WAVE1-2でLv1 ～ WAVE9-10でLv5）'], ['敵ライフ/攻撃力', '冥府Lvごと +30% / +60% / +90% / +120% / +150%'], ['味方の最大ライフ', '冥府Lvごと -5%（Lv5で-25%）'], ['Lv3', '消費ガッツ 200%→225%'], ['Lv4', '＋補正 30%→20%・−補正 300%→350%'], ['Lv5', '与ダメ低下 -2.0pt/T・最低10%']]);
-    push('敵の強さ', [adjust.lifeRate > 1 && ['敵ライフ', `すべての敵が${adjust.lifeRate}倍`], durahan && ['デュラハン', `ライフ・攻撃力が さらに${durahan.lifeRate}倍`]]);
+    push('敵の強さ', [adjust.lifeRate > 1 && ['敵ライフ', `全ての敵が${adjust.lifeRate}倍`], durahan && ['デュラハン', `ライフ・攻撃力が さらに${durahan.lifeRate}倍`]]);
     push('距離強化', [['WAVEごとに薄れる', 'WAVE1で10%、1WAVEごとに1%ずつ下がり、WAVE10で1%']]);
     if (difficultyId === INFERNO_SETTING.id) push('ボスの層のシールド', [['起き上がり', 'ボスは起き上がらない'], ['層の数', 'W3・W5・W7のボス 3枚 / W9 デュラハン 4枚 / W10 ムー 5枚'], ['シールドの量', '1枚目はエターナルのそのボスのライフと同じ。割れるたびに次の1枚が30%ずつ大きくなる。割りきったあとのボスのライフにも同じ倍率'], ['割れるたび', 'ボスの攻撃力 +60%(最後の1枚も)'], ['連撃', 'デュラハンは4枚目が割れたら必殺技が2連撃、ムーは4枚目で2連撃・5枚目で3連撃(合計の威力は同じ。ガードは1枚で1発ずつ止まり、2枚以上で全部止まる)']]);
-    if (difficultyId === EREBUS_SETTING.id) push('層のシールド', [['蘇り', 'ムーだけ1回、本体を倒すとライフ全回復・最大ライフ1.5倍で蘇る。シールドは張り直さない'], ['層の数', 'W1・W2の敵 4枚 / W3〜W8の敵(ボスも) 5枚 / W9 デュラハン 5枚 / W10 ムー 5枚'], ['WAVEのはじめのシールド', 'エターナルの50%のシールドは、層のシールドに置き換わる'], ['シールドの量', '1枚目はその敵の最大ライフの1.8倍(デュラハン2.6倍・ムー3倍)。割れるたびに次の1枚が30%ずつ大きくなる。割りきったあとのボスのライフにも同じ倍率(ふつうの敵のライフは元のまま)'], ['割れるたび', 'ふつうの敵の攻撃力 +20%・ボスの攻撃力 +30%(最後の1枚も。ムーは蘇るときにも+30%)'], ['連撃', 'デュラハンは4枚目が割れたら必殺技が2連撃、ムーは4枚目で2連撃・5枚目で3連撃(合計の威力は同じ。ガードは1枚で1発ずつ止まり、2枚以上で全部止まる)']]);
-    if (difficultyId === COCYTUS_SETTING.id) push('層のシールド', [['蘇り', 'デュラハンは1回・ムーは2回、本体を倒すとライフ全回復・最大ライフ1.5倍で蘇る(ムーの2回目は2.25倍)。シールドは張り直さない'], ['層の数', 'W1・W2の敵 4枚 / W3〜W8の敵(ボスも) 5枚 / W9 デュラハン 5枚 / W10 ムー 5枚'], ['WAVEのはじめのシールド', 'エターナルの50%のシールドは、層のシールドに置き換わる'], ['シールドの量', '1枚目はその敵の最大ライフの3倍(デュラハン3.8倍・ムー4.4倍)。割れるたびに次の1枚が30%ずつ大きくなる。割りきったあとのボスのライフにも同じ倍率(ふつうの敵のライフはそのまま)'], ['割れるたび', '敵の攻撃力 +20%(最後の1枚も。蘇るたびにも+20%)'], ['連撃', 'デュラハンは4枚目が割れたら必殺技が2連撃、ムーは4枚目で2連撃・5枚目で3連撃(合計の威力は同じ。ガードは1枚で1発ずつ止まり、2枚以上で全部止まる)']]);
+    if (difficultyId === EREBUS_SETTING.id) push('層のシールド', [['蘇り', 'ムーだけ1回、本体を倒すとライフ全回復・最大ライフ1.5倍で蘇る。シールドは張り直さない'], ['層の数', 'W1・W2の敵 4枚 / W3〜W8の敵(ボスも) 5枚 / W9 デュラハン 5枚 / W10 ムー 5枚'], ['WAVEの初めのシールド', 'エターナルの50%のシールドは、層のシールドに置き換わる'], ['シールドの量', '1枚目はその敵の最大ライフの1.8倍(デュラハン2.6倍・ムー3倍)。割れるたびに次の1枚が30%ずつ大きくなる。割りきったあとのボスのライフにも同じ倍率(ふつうの敵のライフは元のまま)'], ['割れるたび', 'ふつうの敵の攻撃力 +20%・ボスの攻撃力 +30%(最後の1枚も。ムーは蘇るときにも+30%)'], ['連撃', 'デュラハンは4枚目が割れたら必殺技が2連撃、ムーは4枚目で2連撃・5枚目で3連撃(合計の威力は同じ。ガードは1枚で1発ずつ止まり、2枚以上で全部止まる)']]);
+    if (difficultyId === COCYTUS_SETTING.id) push('層のシールド', [['蘇り', 'デュラハンは1回・ムーは2回、本体を倒すとライフ全回復・最大ライフ1.5倍で蘇る(ムーの2回目は2.25倍)。シールドは張り直さない'], ['層の数', 'W1・W2の敵 4枚 / W3〜W8の敵(ボスも) 5枚 / W9 デュラハン 5枚 / W10 ムー 5枚'], ['WAVEの初めのシールド', 'エターナルの50%のシールドは、層のシールドに置き換わる'], ['シールドの量', '1枚目はその敵の最大ライフの3倍(デュラハン3.8倍・ムー4.4倍)。割れるたびに次の1枚が30%ずつ大きくなる。割りきったあとのボスのライフにも同じ倍率(ふつうの敵のライフはそのまま)'], ['割れるたび', '敵の攻撃力 +20%(最後の1枚も。蘇るたびにも+20%)'], ['連撃', 'デュラハンは4枚目が割れたら必殺技が2連撃、ムーは4枚目で2連撃・5枚目で3連撃(合計の威力は同じ。ガードは1枚で1発ずつ止まり、2枚以上で全部止まる)']]);
     if (difficultyId === ETERNAL_SETTING.id || difficultyId === INFERNO_SETTING.id || difficultyId === EREBUS_SETTING.id || difficultyId === COCYTUS_SETTING.id) push('シールドと貫き', [['シールド', 'WAVEの始めに、敵が最大ライフ50%ぶんのシールドをまとう。シールドを割るまで敵のライフは減らない'], ['シールドと距離強化', 'シールドに当てたダメージは、距離強化(間合いのボーナス)に数えない'], ['貫き', '敵の攻撃の一部が丈夫さを無視する（冥府Lvごと 30% / 35% / 40% / 45% / 50%）']]);
   }
   push('カード', [rules.assistCardEffect != null && ['アシストカード効果', specialRulePercent(rules.assistCardEffect)]]);
@@ -18810,7 +18810,7 @@ const extremeRuleDetailGroups = (difficultyId, quick = false) => {
   push('累計ターン', [rules.enemyTurnRate != null && ['敵ライフ/攻撃力', `累計1ターンごと+${precisePercent(rules.enemyTurnRate)}`], rules.allyJoinPenaltyRate != null && ['加入B倍率', `累計1ターンごと-${turnPointText(rules.allyJoinPenaltyRate)}${rules.minimumAllyJoinBonus != null ? `（最低${specialRulePercent(rules.minimumAllyJoinBonus)}）` : ''}`], rules.damageTurnRate != null && ['与ダメ倍率', `経過1ターンごと-${turnPointText(rules.damageTurnRate)}（${specialRulePercent(rules.minimumDamageDealt ?? 0)}で停止）`]]);
   push('WAVEターン', [quick ? rules.awakeningPenaltyRate != null && ['自動成長', `WAVE内1ターンごと-${turnPointText(rules.awakeningPenaltyRate)}`] : rules.awakeningZeroTurns > 0 && ['トレーニング', `強化量が WAVE内1ターンごと-${precisePercent(1 / rules.awakeningZeroTurns)}（${rules.awakeningZeroTurns}ターンで0%）`], (quick ? rules.awakeningPenaltyRate != null : rules.awakeningZeroTurns > 0) && Array.isArray(rules.awakeningPenaltyExcludes) && rules.awakeningPenaltyExcludes.includes('distance') && ['対象外', '距離強化は下がらない']]);
   const breakRule = extremeDistanceBreakRule(difficultyId);
-  if (breakRule) push('DISTANCE BREAK', [['進行', `累計${breakRule.interval}ターンごとに1距離の弱体Lv上昇`], ['弱体倍率', `Lv1 ${specialRulePercent(breakRule.damageDealtPerLevel)} / Lv2 ${specialRulePercent(breakRule.damageDealtPerLevel ** 2)} / Lv3 ${compactPercent(breakRule.damageDealtPerLevel ** 3)}（以降も半減）`], ['安全距離', breakRule.safeDistanceCount > 0 ? `${breakRule.safeDistanceCount}距離は最後まで弱体化しない` : 'なし（4距離すべて弱体化する）']]);
+  if (breakRule) push('DISTANCE BREAK', [['進行', `累計${breakRule.interval}ターンごとに1距離の弱体Lv上昇`], ['弱体倍率', `Lv1 ${specialRulePercent(breakRule.damageDealtPerLevel)} / Lv2 ${specialRulePercent(breakRule.damageDealtPerLevel ** 2)} / Lv3 ${compactPercent(breakRule.damageDealtPerLevel ** 3)}（以降も半減）`], ['安全距離', breakRule.safeDistanceCount > 0 ? `${breakRule.safeDistanceCount}距離は最後まで弱体化しない` : 'なし（4距離全て弱体化する）']]);
   const revivalRule = extremeRevivalRule(difficultyId);
   if (revivalRule && !(Number(revivalRule.maxHpRatePerRevival) > 0)) push('不死（死者の再起）', [['対象', Object.entries(revivalRule.waves).map(([waveNumber, count]) => `WAVE${waveNumber}（${count}回）`).join(' / ')], ['復活時', `ライフ${specialRulePercent(revivalRule.hpRate)}で起き上がる（最大ライフは変わらない）`], ['起き上がるたび', `敵の攻撃力 +${specialRulePercent(revivalRule.atkBoostPerRevival)}`]]);
   if (isUnderworldDifficultyId(difficultyId)) {
@@ -48552,7 +48552,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
     id: 'monol_cover_all',
     name: 'みんなをかばう',
     useNote: '敵の攻撃を全部モノリスが受ける',
-    desc: 'このターン、敵の攻撃をすべてモノリスが引き受ける。\n・単体攻撃も全体攻撃も、モノリスが受ける（全体攻撃は、本来当たる人数ぶんを受ける）\n・連撃や貫通撃も、モノリスが受ける（貫通撃はガードで防げない）',
+    desc: 'このターン、敵の攻撃を全てモノリスが引き受ける。\n・単体攻撃も全体攻撃も、モノリスが受ける（全体攻撃は、本来当たる人数ぶんを受ける）\n・連撃や貫通撃も、モノリスが受ける（貫通撃はガードで防げない）',
     maxUses: 10,
     unlimited: false,
     withCards: true,
@@ -48901,7 +48901,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
     id: 'kenshi_mocchi_weapon_change',
     name: 'ソード・コンバージョン',
     useNote: '戦い方を切り替えた',
-    desc: '戦い方（スタイル）を3つから選び直す。いまのスタイルは選べない。\n' + '片手剣：いつもの戦い方。固有技でソードスキルも出る。\n' + '片手盾：力と同じ数値を丈夫さへ足す。固有技を使ってもソードスキルは出ない。\n' + '二刀流：丈夫さが半分になる代わりに、連撃がすべて2回ぶん入る（メインのダメージは1回のまま）。',
+    desc: '戦い方（スタイル）を3つから選び直す。いまのスタイルは選べない。\n' + '片手剣：いつもの戦い方。固有技でソードスキルも出る。\n' + '片手盾：力と同じ数値を丈夫さへ足す。固有技を使ってもソードスキルは出ない。\n' + '二刀流：丈夫さが半分になる代わりに、連撃が全て2回ぶん入る（メインのダメージは1回のまま）。',
     maxUses: 5,
     unlimited: false,
     withCards: true,
@@ -48917,7 +48917,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
     }), Object.freeze({
       id: 'dual',
       label: '二刀流',
-      desc: '丈夫さが半分になる代わりに、連撃がすべて2回ぶん入る（メインのダメージは1回のまま）'
+      desc: '丈夫さが半分になる代わりに、連撃が全て2回ぶん入る（メインのダメージは1回のまま）'
     })]),
     defaultStyle: 'sword',
     heroInitialStyle: true,
@@ -49079,7 +49079,7 @@ const TACTICS_EX_SKILLS = Object.freeze({
     id: 'dreamy_millefeuille_shield',
     name: 'ミルフィーシールド',
     useNote: '全員に最大ライフぶんのシールド・3ターン シールドのあるモンスターは全ステータス+5%(楔1つごとに+5%)',
-    desc: '夢の雲を何層にも重ねて、味方を包む。\n・使った瞬間に、立っている味方全員（ドリーミィも）へ、それぞれ自分の最大ライフと同じ量のシールドを張る。敵の攻撃はシールドが先に受け、0になってからライフが減る\n・シールドが残っているモンスターは、ちから・丈夫さ・ライフ上限・ガッツ上限が+5%。さらに、使った瞬間の敵の楔の数（いちばん多いもの）1つごとに+5%（楔0で+5%・3つで+20%・6つで+35%）\n・シールドが0になったモンスターは、アップもなくなる（ライフ・ガッツが元の上限より多ければ上限まで戻る。ほかのモンスターはそのまま）\n・3ターンたつと、残ったシールドもアップも消える\n・効いているあいだにもう一度使うと、シールドは残りに足され、残りターンは3に戻る。アップは、そのときの楔の数で決め直した値になる（重ならない）',
+    desc: '夢の雲を何層にも重ねて、味方を包む。\n・使った瞬間に、立っている味方全員（ドリーミィも）へ、それぞれ自分の最大ライフと同じ量のシールドを張る。敵の攻撃はシールドが先に受け、0になってからライフが減る\n・シールドが残っているモンスターは、ちから・丈夫さ・ライフ上限・ガッツ上限が+5%。さらに、使った瞬間の敵の楔の数（一番多いもの）1つごとに+5%（楔0で+5%・3つで+20%・6つで+35%）\n・シールドが0になったモンスターは、アップもなくなる（ライフ・ガッツが元の上限より多ければ上限まで戻る。ほかのモンスターはそのまま）\n・3ターンたつと、残ったシールドもアップも消える\n・効いているあいだにもう一度使うと、シールドは残りに足され、残りターンは3に戻る。アップは、そのときの楔の数で決め直した値になる（重ならない）',
     maxUses: 5,
     unlimited: false,
     withCards: true,
@@ -73078,7 +73078,7 @@ function MasuMonsScreen({
     const entries = unifiedMonsterEntriesSingleType.filter(e => e.type === 'masu');
     if (entries.length === 0) return React.createElement(ScreenEmpty, {
       emoji: "🐾",
-      lines: masuMons.length === 0 ? ['まだマスモンがいません。', '勇者モンでランを終えると登録できます。'] : ['表示設定で対象がすべてオフになっています。']
+      lines: masuMons.length === 0 ? ['まだマスモンがいません。', '勇者モンでランを終えると登録できます。'] : ['表示設定で対象が全てオフになっています。']
     });
     return React.createElement("div", {
       className: "grid grid-cols-3 gap-2.5 pb-4"
@@ -73966,7 +73966,7 @@ function MasuReincarnateScreen({
       scene: "reincarnate",
       compact: true,
       collapseKey: "temple:reincarnate"
-    })), renderScreenNote('reincarnate', `絆Lv.${REINCARNATE_MIN_LEVEL}以上のマスモンは、強化を振り直せます。`, [`レベルが${REINCARNATE_LEVEL_DROP}下がる代わりに、振った強化をすべて振り直せます。`, '限界突破の回数や★はそのまま残ります。', '「すべて選択」は編成中とお気に入りのモンスターを選びません。', '左上の□で選ぶと、何体かをまとめて転生できます。1体あたりの回数と「最大」も選べます。']), renderMonsterSortFilterBar({
+    })), renderScreenNote('reincarnate', `絆Lv.${REINCARNATE_MIN_LEVEL}以上のマスモンは、強化を振り直せます。`, [`レベルが${REINCARNATE_LEVEL_DROP}下がる代わりに、振った強化を全て振り直せます。`, '限界突破の回数や★はそのまま残ります。', '「すべて選択」は編成中とお気に入りのモンスターを選びません。', '左上の□で選ぶと、何体かをまとめて転生できます。1体あたりの回数と「最大」も選べます。']), renderMonsterSortFilterBar({
       singleType: true
     }), React.createElement("div", {
       className: SCREEN_LIST_CLASS
@@ -74061,7 +74061,7 @@ function MasuReincarnateScreen({
       disabled: busy,
       onClick: pickAll,
       className: "mh-button mh-button-secondary min-h-[44px] rounded-xl bg-slate-800 px-2.5 text-[11px] font-black active:scale-95 disabled:opacity-30"
-    }, "すべて選択"), React.createElement("button", {
+    }, "全て選択"), React.createElement("button", {
       type: "button",
       disabled: busy || picked.length === 0,
       onClick: () => setBulkIds([]),
@@ -75243,13 +75243,13 @@ function MasuOfferingScreen({
       type: "button",
       onClick: onDismissIntro,
       className: "mh-button mh-button-secondary hidden [@media(orientation:landscape)_and_(max-height:520px)]:block min-h-[32px] shrink-0 rounded-lg border border-white/20 bg-slate-900 px-3 text-[11px] font-black active:scale-[.98]"
-    }, "わかった")), React.createElement("ol", {
+    }, "分かった")), React.createElement("ol", {
       className: "mt-1 list-decimal space-y-0.5 pl-4 text-[10px] font-bold leading-relaxed text-slate-300 [@media(orientation:landscape)_and_(max-height:520px)]:mt-0.5 [@media(orientation:landscape)_and_(max-height:520px)]:space-y-0 [@media(orientation:landscape)_and_(max-height:520px)]:text-[9px] [@media(orientation:landscape)_and_(max-height:520px)]:leading-snug"
     }, React.createElement("li", null, "お布施をするマスモンを選びます。"), React.createElement("li", null, "「ダイヤ指定」「レベル指定」「転生」から頼み方を選びます。"), React.createElement("li", null, "見積もりを見て「お布施する」を押します。")), React.createElement("button", {
       type: "button",
       onClick: onDismissIntro,
       className: "mh-button mh-button-secondary mt-2 min-h-[44px] w-full rounded-xl border border-white/20 bg-slate-900 text-xs font-black active:scale-[.98] [@media(orientation:landscape)_and_(max-height:520px)]:hidden"
-    }, "わかった")), renderScreenNote('offering', 'ダイヤを払って、マスモンへ直接絆経験値を与えられます。', ['ダイヤと経験値の割合はトレーニングチケットと同じです（100ダイヤ＝経験値15）。', '上限に届いたら限界突破、Lv.100になったら転生まで続けて行えます。']), renderMonsterSortFilterBar({
+    }, "分かった")), renderScreenNote('offering', 'ダイヤを払って、マスモンへ直接絆経験値を与えられます。', ['ダイヤと経験値の割合はトレーニングチケットと同じです（100ダイヤ＝経験値15）。', '上限に届いたら限界突破、Lv.100になったら転生まで続けて行えます。']), renderMonsterSortFilterBar({
       singleType: true
     }), React.createElement("div", {
       className: SCREEN_LIST_CLASS
@@ -76073,7 +76073,7 @@ function MasuSoulTraitsScreen({
     disabled: soulTraitProcessingRef.current,
     onClick: () => commitSoulCrystalUse(masu.id, crystalHave),
     className: "mh-button mh-button-primary min-h-[48px] rounded-xl bg-fuchsia-600 text-slate-950 text-[11px] font-black active:scale-95 disabled:opacity-30"
-  }, "ぜんぶ使う(", crystalHave, "個・+", crystalHave, "P)"), React.createElement("button", {
+  }, "全部使う(", crystalHave, "個・+", crystalHave, "P)"), React.createElement("button", {
     type: "button",
     disabled: soulTraitProcessingRef.current,
     onClick: () => setSoulCrystalOpen(false),
@@ -76094,7 +76094,7 @@ function MasuSoulTraitsScreen({
     className: "mt-2 text-[10px] font-bold leading-relaxed text-slate-300"
   }, spent > 0 ? React.createElement(React.Fragment, null, "「", masu.name, "」が使用した魂格P ", React.createElement("b", {
     className: "text-amber-300"
-  }, spent, "P"), " をすべて未使用へ戻します。") : React.createElement(React.Fragment, null, "「", masu.name, "」は、魂格特性にはまだ振っていません。"), "魂格段階・Lv・最高初到達Lvは変わりません。"), bonusPoints > 0 && React.createElement("p", {
+  }, spent, "P"), " を全て未使用へ戻します。") : React.createElement(React.Fragment, null, "「", masu.name, "」は、魂格特性にはまだ振っていません。"), "魂格段階・Lv・最高初到達Lvは変わりません。"), bonusPoints > 0 && React.createElement("p", {
     "data-soul-trait-respec-crystal": bonusPoints,
     className: "mt-2 rounded-xl border border-fuchsia-400/40 bg-fuchsia-950/40 px-3 py-2 text-[10px] font-black leading-relaxed text-fuchsia-100"
   }, "🔮 魂格の結晶 ", React.createElement("b", {
@@ -77589,7 +77589,7 @@ function MasuEnhanceScreen({
     disabled: planUsed <= 0,
     onClick: () => setBulkPlan(null),
     className: "mh-button mh-button-secondary min-h-[52px] px-3 rounded-xl font-black text-[12px] bg-slate-800 text-slate-300 active:scale-95 disabled:opacity-30"
-  }, "配分をすべて取消"), React.createElement("button", {
+  }, "配分を全て取消"), React.createElement("button", {
     type: "button",
     disabled: planUsed <= 0,
     onClick: applyPlan,
@@ -77806,7 +77806,7 @@ function MasuFusionScreen({
         setFusionSubIds([]);
       },
       className: "shrink-0 min-h-[44px] px-4 rounded-xl border border-white/15 bg-slate-900 text-[11px] font-black text-slate-200 active:scale-95"
-    }, "すべて解除")), React.createElement("div", {
+    }, "全て解除")), React.createElement("div", {
       className: "mt-2 grid grid-cols-2 gap-2 text-[11px] font-bold"
     }, React.createElement("div", {
       className: `${SCREEN_PANEL_FLAT_CLASS} text-slate-300`
@@ -78007,7 +78007,7 @@ function MasuFusionScreen({
       className: "text-[11px] font-black text-slate-300"
     }, sub.name), React.createElement("div", {
       className: "rounded-full border border-white/10 bg-slate-700/40 px-2 py-0.5 text-[10px] font-black text-slate-300"
-    }, "副", selectedSubs.length, "体(すべて消える)"))), soulInheritancePreview.eligible && React.createElement("button", {
+    }, "副", selectedSubs.length, "体(全て消える)"))), soulInheritancePreview.eligible && React.createElement("button", {
       type: "button",
       "data-soul-rank-inherit-fusion": true,
       onClick: () => setFusionInheritSoulRank(v => !v),
@@ -78154,7 +78154,7 @@ function MasuFusionScreen({
       className: "text-amber-300 font-black"
     }, reincarnateTransfer.count, "回分 / +", reincarnateTransfer.points, "P")), reincarnateTransfer.count > 0 && React.createElement("div", {
       className: "text-[10px] leading-relaxed text-slate-400"
-    }, selectedSubs.length === 1 ? `副自身 ${normalizeMasuProgression(sub).reincarnateCount}回＋継承済み ${inheritedReincarnateCountOf(sub)}回分を全量継承します` : `選択した副${selectedSubs.length}体の転生由来分をすべて累積します`), React.createElement("div", {
+    }, selectedSubs.length === 1 ? `副自身 ${normalizeMasuProgression(sub).reincarnateCount}回＋継承済み ${inheritedReincarnateCountOf(sub)}回分を全量継承します` : `選択した副${selectedSubs.length}体の転生由来分を全て累積します`), React.createElement("div", {
       className: "pt-2 border-t border-white/10 text-[11px] font-black text-violet-200 tracking-wider"
     }, "ダイヤ消費"), React.createElement("div", {
       className: "flex justify-between text-[11px] font-bold"
@@ -78927,7 +78927,7 @@ function ProMonsterGridPicker({
     className: `shrink-0 pb-1.5 flex gap-1.5 overflow-x-auto mh-scroll${header ? ' [@media(max-height:640px)]:hidden' : ''}`
   }, [{
     id: 'all',
-    name: 'すべて',
+    name: '全て',
     count: list.length
   }, ...lineageTabs].map(t => React.createElement("button", {
     key: t.id,
@@ -78953,7 +78953,7 @@ function ProMonsterGridPicker({
     className: "grid grid-cols-4 gap-1.5 mb-3"
   }, pinnedIds.map(id => tile(byId.get(id), 'pin-')))), React.createElement("div", {
     className: `px-1 mb-1 text-[9px] font-black text-slate-400${header ? ' [@media(max-height:760px)]:hidden' : ''}`
-  }, activeTab === 'all' ? 'すべて' : `${(lineageTabs.find(t => t.id === activeTab) || {}).name}血統`, "（", shownList.length, "体）"), React.createElement("div", {
+  }, activeTab === 'all' ? '全て' : `${(lineageTabs.find(t => t.id === activeTab) || {}).name}血統`, "（", shownList.length, "体）"), React.createElement("div", {
     className: "grid grid-cols-4 gap-1.5 pb-3"
   }, shownList.map(m => tile(m, 'all-')))), React.createElement("div", {
     className: "shrink-0 pt-1.5 [@media(orientation:landscape)_and_(max-height:520px)]:pt-1"
@@ -78989,10 +78989,10 @@ function ProMonsterGridPicker({
     type: "button",
     "data-pro-pick-fold": true,
     "aria-expanded": !detailFolded,
-    "aria-label": detailFolded ? '詳しい情報をひらく' : '詳しい情報をたたむ',
+    "aria-label": detailFolded ? '詳しい情報を開く' : '詳しい情報をたたむ',
     onClick: () => setDetailFolded(v => !v),
     className: "shrink-0 -my-1 min-h-[28px] rounded-lg border border-white/15 bg-slate-900 px-1.5 text-[9px] font-black text-slate-300 active:scale-95"
-  }, detailFolded ? '▲ ひらく' : '▼ たたむ')), !detailFolded && React.createElement(React.Fragment, null, monsterTypeProtoOn() && React.createElement("div", {
+  }, detailFolded ? '▲ 開く' : '▼ たたむ')), !detailFolded && React.createElement(React.Fragment, null, monsterTypeProtoOn() && React.createElement("div", {
     "data-pick-type-row": true,
     className: `flex${header ? ' [@media(orientation:landscape)_and_(max-height:520px)]:hidden' : ''}`
   }, React.createElement(MonsterTypeBadge, {
@@ -79157,13 +79157,13 @@ function ProPartyPicker({
       className: "absolute -top-1.5 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full border border-amber-200 bg-amber-500 px-1 text-[8px] font-black leading-[12px] text-black"
     }, "👑勇者"));
   };
-  const guide = step === 'hero' ? hero ? `${hero.name}が勇者モンです。ほかのモンスターを押すと替えられます` : '勇者モンにするモンスターを、上の枠から1体えらんでください' : full ? 'そろいました。枠を押すとそのモンスターを外せます。勇者モンは次でえらびます' : `枠を押して、下のモンスターを「枠に入れる」(どの順でもOK・あと${need - filled}体)`;
+  const guide = step === 'hero' ? hero ? `${hero.name}が勇者モンです。ほかのモンスターを押すと替えられます` : '勇者モンにするモンスターを、上の枠から1体選んでください' : full ? 'そろいました。枠を押すとそのモンスターを外せます。勇者モンは次で選びます' : `枠を押して、下のモンスターを「枠に入れる」(どの順でもOK・あと${need - filled}体)`;
   const top = React.createElement("section", {
     "data-pro-party": true,
     className: "mb-2 shrink-0 rounded-2xl border border-indigo-300/30 bg-black/30 p-2 [@media(max-height:640px)]:mb-1 [@media(max-height:640px)]:py-1.5"
   }, React.createElement("div", {
     className: "mb-1 flex items-baseline justify-between gap-1 text-[11px] font-black text-indigo-200 [@media(orientation:landscape)_and_(max-height:520px)]:mb-0 [@media(orientation:landscape)_and_(max-height:520px)]:text-[10px]"
-  }, React.createElement("span", null, step === 'hero' ? '② 勇者モンをえらぶ' : '① 編成するモンスターをえらぶ'), React.createElement("span", {
+  }, React.createElement("span", null, step === 'hero' ? '② 勇者モンを選ぶ' : '① 編成するモンスターを選ぶ'), React.createElement("span", {
     className: "text-[9px] text-slate-400"
   }, filled, " / ", need)), React.createElement("div", {
     className: `grid gap-1 ${need > 4 ? 'grid-cols-6' : 'grid-cols-4'} pt-1`
@@ -79195,7 +79195,7 @@ function ProPartyPicker({
     onClick: () => onDone(hero, ids.filter(id => id && id !== hero.id).map(id => byId.get(id))),
     className: "min-h-[48px] flex-1 rounded-2xl bg-indigo-600 px-3 text-[13px] font-black text-white active:scale-95 disabled:bg-slate-800 disabled:text-slate-500",
     style: JA_LABEL_STYLE
-  }, jaWrap(hero ? '次へ(距離をえらぶ)' : '勇者モンをえらんでください'))));
+  }, jaWrap(hero ? '次へ(距離を選ぶ)' : '勇者モンを選んでください'))));
   return React.createElement("div", {
     "data-pro-party-step": "members",
     className: "w-full flex-1 min-h-0 flex flex-col"
@@ -79218,7 +79218,7 @@ function ProPartyPicker({
     disabled: !full,
     onClick: () => setStep('hero'),
     className: "mt-1.5 [@media(orientation:landscape)_and_(max-height:520px)]:mt-1 shrink-0 min-h-[44px] [@media(orientation:landscape)_and_(max-height:520px)]:min-h-[34px] w-full rounded-2xl bg-indigo-600 px-3 text-[13px] font-black text-white active:scale-95 disabled:bg-slate-800 disabled:text-slate-500"
-  }, full ? '次へ(勇者モンをえらぶ)' : `あと${need - filled}体えらんでください`));
+  }, full ? '次へ(勇者モンを選ぶ)' : `あと${need - filled}体選んでください`));
 }
 function PickHeroAllyScreen({
   MONSTER_CARD_CLASS,
@@ -79308,7 +79308,7 @@ function PickHeroAllyScreen({
       className: "min-w-0"
     }, React.createElement("h2", {
       className: `text-xl font-black italic uppercase tracking-widest ${pickMode === 'ally' ? 'mh-ph-title' : 'text-indigo-400'}`
-    }, pickMode === 'hero' ? '勇者モンをえらぶ' : '供モンをえらぶ'), React.createElement("p", {
+    }, pickMode === 'hero' ? '勇者モンを選ぶ' : '供モンを選ぶ'), React.createElement("p", {
       "data-pick-term-note": true,
       className: `mt-0.5 text-[10px] font-bold leading-snug text-slate-400${pickMode === 'hero' && isProMode(runMode) && !battleTutorial ? ' [@media(max-height:760px)]:hidden' : ''}${pickMode === 'hero' || pickMode === 'ally' ? ' [@media(orientation:landscape)_and_(max-height:520px)]:hidden' : ''}`
     }, helpWrap(pickMode === 'hero' ? '勇者モン＝バトルの主役。このモンスターの勇者特性が効く' : '供モン＝勇者モンと一緒に戦う仲間'))), React.createElement("div", {
@@ -79486,7 +79486,7 @@ function PickHeroAllyScreen({
       });
       return React.createElement(React.Fragment, null, allyCarousel && React.createElement("div", {
         className: "text-center text-[8px] tracking-[.18em] text-slate-400 font-black shrink-0 mb-1"
-      }, "左右にスワイプして供モンをえらぶ"), allyCarousel && React.createElement("div", {
+      }, "左右にスワイプして供モンを選ぶ"), allyCarousel && React.createElement("div", {
         className: "relative h-0"
       }, React.createElement("button", {
         "aria-label": "前の供モン",
@@ -79657,7 +79657,7 @@ function PickHeroAllyScreen({
             style: {
               fontSize: '10px'
             }
-          }, "くわしく見る ", React.createElement(ChevronRight, {
+          }, "詳しく見る ", React.createElement(ChevronRight, {
             size: 11
           })))
         }));
@@ -80016,7 +80016,7 @@ function PickSlotScreen({
       className: "mt-1 text-[9px] font-bold leading-snug text-slate-300"
     }, partnerOffer.heroName, "の「天河の契り」の相方になります。相方は1体だけで、置いた距離とのへだたりで効き目が変わります。")), React.createElement("div", {
       className: "mh-phase-mid shrink-0 text-[10px] text-slate-400 font-bold mt-2 leading-relaxed px-2"
-    }, perSlotApt ? React.createElement(React.Fragment, null, "間合い適性は、置いた距離にいるモンスターのぶんだけが、そのモンスターの攻撃に効きます(足し算にはなりません)。", React.createElement("br", null), "どの距離に誰を置くかで、そのモンスターの適性が決まります。") : React.createElement(React.Fragment, null, "間合い適性はどこに置いても4距離すべてに加算されます。", React.createElement("br", null), "配置は「敵と同じ距離で攻撃する」ことと、覚える距離撃に影響します。")), React.createElement("div", {
+    }, perSlotApt ? React.createElement(React.Fragment, null, "間合い適性は、置いた距離にいるモンスターのぶんだけが、そのモンスターの攻撃に効きます(足し算にはなりません)。", React.createElement("br", null), "どの距離に誰を置くかで、そのモンスターの適性が決まります。") : React.createElement(React.Fragment, null, "間合い適性はどこに置いても4距離全てに加算されます。", React.createElement("br", null), "配置は「敵と同じ距離で攻撃する」ことと、覚える距離撃に影響します。")), React.createElement("div", {
       className: "grid grid-cols-2 gap-3 w-full max-w-xs overflow-y-auto min-h-0 p-1 mt-2 flex-1 content-center mh-scroll"
     }, slots.map((s, i) => {
       const grade = getDistAptitude(mon, i);
@@ -85570,7 +85570,7 @@ function InfernoShieldBadge({
     style: {
       color: theme.sub
     }
-  }, "のこりシールド"), React.createElement("div", {
+  }, "残りシールド"), React.createElement("div", {
     className: "mt-0.5 text-[30px] font-black leading-none text-white",
     style: {
       textShadow: `0 0 10px ${col[1]},0 2px 2px #000`
@@ -89900,7 +89900,7 @@ function BattleScreen({
   }, "使える回数"), React.createElement("dd", {
     "data-tactics-ex-uses": true,
     className: "font-black text-white"
-  }, exPanel.remaining.unlimited ? '無制限' : `のこり ${exPanel.remaining.left} / ${exPanel.remaining.max}（${exPanel.def.usesPerWave ? 'このWAVE' : 'このラン'}）`), React.createElement("dt", {
+  }, exPanel.remaining.unlimited ? '無制限' : `残り ${exPanel.remaining.left} / ${exPanel.remaining.max}（${exPanel.def.usesPerWave ? 'このWAVE' : 'このラン'}）`), React.createElement("dt", {
     className: "font-bold text-slate-400"
   }, "カード"), React.createElement("dd", {
     "data-tactics-ex-with-cards": exPanel.def.withCards ? 'yes' : 'no',
@@ -90833,7 +90833,7 @@ function MasuAutoEnhanceScreen({
     className: "rounded-2xl border border-lime-500/40 bg-slate-900 p-3"
   }, React.createElement("div", {
     className: "text-[13px] font-black text-lime-300"
-  }, "かんたん設定（押すと案が出て、確定でON）"), React.createElement("div", {
+  }, "簡単設定（押すと案が出て、確定でON）"), React.createElement("div", {
     className: "mt-2 grid grid-cols-3 gap-2"
   }, React.createElement("button", {
     type: "button",
@@ -90868,7 +90868,7 @@ function MasuAutoEnhanceScreen({
     type: "button",
     onClick: clearAll,
     className: "min-h-[44px] rounded-xl bg-slate-800 border border-white/10 text-slate-300 text-[11px] font-black active:scale-95 px-2 leading-tight"
-  }, "すべて", React.createElement("br", null), "「振らない」に戻す")), React.createElement("div", {
+  }, "全て", React.createElement("br", null), "「振らない」に戻す")), React.createElement("div", {
     className: "text-[10px] text-slate-400 font-bold leading-relaxed px-1"
   }, "「いまの値を目標として取り込む」は、このモンスターのいまの数値をそのまま目標に写します。転生する前に押しておくと、転生後の周回で同じ数値まで自動で戻ります。"), React.createElement("div", {
     className: "rounded-2xl border border-lime-500/40 bg-black/30 p-3"
@@ -105066,13 +105066,13 @@ const RaidJackRankingList = ({
     className: "shrink-0 text-[10px] text-slate-200"
   }, "あなた ", myTotal.toLocaleString(), ahead !== null ? `(${ahead + 1}位)` : '')), React.createElement("div", {
     className: "mb-2 text-[9px] text-slate-400"
-  }, useSrc && maxHit ? `${src === 'rhythm' ? '1曲' : '1回の戦い'}で出した、いちばん大きいダメージで競います。難易度ごとにも見られます。順位報酬はありません。` : useSrc ? `${srcName}だけで与えたダメージで競います。順位報酬はありません(報酬は全体の貢献ランキングで決まります)。` : maxHit ? '1回の戦いで出した、いちばん大きいダメージで競います。難易度ごとにも見られます。順位報酬はありません。' : useAll ? '全段階へ与えたダメージの合計です。この順位に報酬はありません(報酬は段階ごとの貢献で決まります)。' : tab === 'a' ? '1〜5位に報酬があります。男爵〜公爵は倒れた時点、大王は期間の終わりに順位が決まります(報酬一覧)。' : '1〜5位に報酬があります。期間の終わりに順位が決まります(報酬一覧)。'), rows === undefined && React.createElement("div", {
+  }, useSrc && maxHit ? `${src === 'rhythm' ? '1曲' : '1回の戦い'}で出した、一番大きいダメージで競います。難易度ごとにも見られます。順位報酬はありません。` : useSrc ? `${srcName}だけで与えたダメージで競います。順位報酬はありません(報酬は全体の貢献ランキングで決まります)。` : maxHit ? '1回の戦いで出した、一番大きいダメージで競います。難易度ごとにも見られます。順位報酬はありません。' : useAll ? '全段階へ与えたダメージの合計です。この順位に報酬はありません(報酬は段階ごとの貢献で決まります)。' : tab === 'a' ? '1〜5位に報酬があります。男爵〜公爵は倒れた時点、大王は期間の終わりに順位が決まります(報酬一覧)。' : '1〜5位に報酬があります。期間の終わりに順位が決まります(報酬一覧)。'), rows === undefined && React.createElement("div", {
     className: "py-3 text-center text-[10px] text-slate-400"
   }, "読み込み中…"), rows === null && React.createElement("div", {
     className: "py-3 text-center text-[10px] text-slate-400"
   }, "ランキングは準備中です"), Array.isArray(rows) && rows.length === 0 && React.createElement("div", {
     className: "py-3 text-center text-[10px] text-slate-400"
-  }, "まだ記録がありません。いちばんのりを目指そう！"), React.createElement(RaidJackRankingRows, {
+  }, "まだ記録がありません。一番乗りを目指そう！"), React.createElement(RaidJackRankingRows, {
     rows: rows,
     myId: myId,
     renderPlace: renderPlace,
@@ -105193,7 +105193,7 @@ const RaidJackScreen = ({
       if (result && result.ok) {
         setMessage(`追加の挑戦を1回ぶん買いました(ビートP ${RAID_JACK_EXTRA_COST_BEAT_P})`);
         setTick(n => n + 1);
-      } else setMessage(result && result.reason === 'short' ? 'ビートPが足りません' : '買えませんでした。もう一度ためしてください');
+      } else setMessage(result && result.reason === 'short' ? 'ビートPが足りません' : '買えませんでした。もう一度試してください');
     } finally {
       setBusy(false);
     }
@@ -105222,7 +105222,7 @@ const RaidJackScreen = ({
     "data-raid-jack-guide-close": true,
     onClick: onDismissGuide,
     className: "mt-1 w-full min-h-[44px] rounded-xl border border-orange-300/50 bg-orange-950/40 text-[12px] font-black text-orange-100 active:scale-95"
-  }, "わかった")), React.createElement(ScreenTabs, {
+  }, "分かった")), React.createElement(ScreenTabs, {
     items: [{
       id: 'a',
       label: 'レイドバトル'
@@ -105370,7 +105370,7 @@ const RaidJackScreen = ({
     className: "py-3 text-center text-[10px] text-slate-400"
   }, "ランキングは準備中です"), Array.isArray(rows) && rows.length === 0 && React.createElement("div", {
     className: "py-3 text-center text-[10px] text-slate-400"
-  }, "まだ記録がありません。いちばんのりを目指そう！"), React.createElement(RaidJackRankingRows, {
+  }, "まだ記録がありません。一番乗りを目指そう！"), React.createElement(RaidJackRankingRows, {
     rows: rows,
     myId: myId,
     renderPlace: renderPlace,
@@ -105608,7 +105608,7 @@ const RaidJackPrepScreen = ({
       className: "pointer-events-none absolute -bottom-1.5 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full border border-white/30 bg-slate-800 px-1 text-[9px] font-black leading-[14px] text-slate-200 shadow"
     }, "押して👑"));
   };
-  const guide = step === 'hero' ? hero ? `${hero.name}が勇者モンです。ほかのモンスターを押すと替えられます` : '勇者モンにするモンスターを、上の枠から1体えらんでください' : placedCount === 0 ? '好きな距離の枠を押してから、下の一覧で置くモンスターをえらんでください(どの順でもOK)' : Number.isInteger(pickRange) && placedCount < 4 ? `次は${RANGE_LABELS[pickRange]}距離(ほかの枠を押すとそこに置けます)。全部で${1 + RAID_JACK_ALLY_MAX}体まで` : '置けました。枠を押すとそのモンスターを外せます。勇者モンは次でえらびます';
+  const guide = step === 'hero' ? hero ? `${hero.name}が勇者モンです。ほかのモンスターを押すと替えられます` : '勇者モンにするモンスターを、上の枠から1体選んでください' : placedCount === 0 ? '好きな距離の枠を押してから、下の一覧で置くモンスターを選んでください(どの順でもOK)' : Number.isInteger(pickRange) && placedCount < 4 ? `次は${RANGE_LABELS[pickRange]}距離(ほかの枠を押すとそこに置けます)。全部で${1 + RAID_JACK_ALLY_MAX}体まで` : '置けました。枠を押すとそのモンスターを外せます。勇者モンは次で選びます';
   const heroAboutText = '戦いの主役になる1体です。ちから・丈夫さは勇者モンをもとに、供モンのぶんが足されます。勇者モンを置いた距離から戦いが始まり、少しだけ狙われやすくなります(🔥)。';
   const raidRuleText = `ライフ ${tier.hp.toLocaleString()} / 技 ${tier.actionCount}本 / 20ターンで終わります。始めると今日の挑戦回数を1回使います。途中でやめても回数は戻りませんが、そこまでのダメージは記録されます。`;
   const partyRow = React.createElement("section", {
@@ -105649,7 +105649,7 @@ const RaidJackPrepScreen = ({
     icon: "🎃",
     accent: "text-orange-200",
     onBack: step === 'teach' ? () => setStep('hero') : step === 'hero' ? () => setStep('party') : onBack,
-    note: step === 'teach' ? '③ アシカをえらぶ' : step === 'hero' ? '② 勇者モンをえらぶ' : `① ${isB ? 'マスモン' : 'ベースモン'}を距離に置く・20ターン勝負`
+    note: step === 'teach' ? '③ アシカを選ぶ' : step === 'hero' ? '② 勇者モンを選ぶ' : `① ${isB ? 'マスモン' : 'ベースモン'}を距離に置く・20ターン勝負`
   }), partyRow, React.createElement("div", {
     className: `${SCREEN_LIST_CLASS} space-y-3`,
     "data-raid-prep-list": true
@@ -105686,13 +105686,13 @@ const RaidJackPrepScreen = ({
     "data-raid-orihime-partner": true
   }, React.createElement("div", {
     className: "mb-1 text-[11px] font-black text-sky-200"
-  }, "🎐 相方をえらぶ(天河の契り)"), React.createElement("div", {
+  }, "🎐 相方を選ぶ(天河の契り)"), React.createElement("div", {
     className: "mb-1.5",
     style: JA_WRAP_STYLE
   }, jaWrap(`上の「🎐相方」で、${hero.masuName || hero.name}の相方を1体えらびます。相方との距離の差(1〜3)で効き目が変わります。えらばなければ、いちばん近いモンスターが相方になります。`)), !Number.isInteger(partnerIdx) && React.createElement("div", {
     className: "text-slate-300",
     style: JA_WRAP_STYLE
-  }, jaWrap('ほかの距離にもモンスターを置くと、相方をえらべます。')), Number.isInteger(partnerIdx) && React.createElement("div", {
+  }, jaWrap('ほかの距離にもモンスターを置くと、相方を選べます。')), Number.isInteger(partnerIdx) && React.createElement("div", {
     className: "mt-1 text-[9px] text-sky-100"
   }, partnerChosen ? '相方' : '相方(自動)', ": ", slotMons[partnerIdx].masuName || slotMons[partnerIdx].name, "・距離の差 ", Math.abs(partnerIdx - heroIdx))), step === 'teach' && React.createElement("section", {
     className: "rounded-2xl border border-white/10 bg-black/30 p-3",
@@ -105738,7 +105738,7 @@ const RaidJackPrepScreen = ({
     disabled: placedCount === 0,
     onClick: () => setStep('hero'),
     className: "w-full min-h-[48px] rounded-2xl border-2 border-orange-300/70 bg-orange-700 px-3 text-[13px] font-black text-white active:scale-95 disabled:border-white/10 disabled:bg-slate-800 disabled:text-slate-400"
-  }, placedCount > 0 ? '次へ(勇者モンをえらぶ)' : '距離にモンスターを置いてください') : React.createElement("div", {
+  }, placedCount > 0 ? '次へ(勇者モンを選ぶ)' : '距離にモンスターを置いてください') : React.createElement("div", {
     className: "flex gap-2"
   }, React.createElement("button", {
     type: "button",
@@ -105751,7 +105751,7 @@ const RaidJackPrepScreen = ({
     disabled: !hero,
     onClick: () => setStep('teach'),
     className: "min-h-[48px] flex-1 rounded-2xl border-2 border-orange-300/70 bg-orange-700 px-3 text-[13px] font-black text-white active:scale-95 disabled:border-white/10 disabled:bg-slate-800 disabled:text-slate-400"
-  }, hero ? '次へ(アシカをえらぶ)' : '勇者モンをえらんでください') : React.createElement("button", {
+  }, hero ? '次へ(アシカを選ぶ)' : '勇者モンを選んでください') : React.createElement("button", {
     type: "button",
     "data-raid-prep-start": true,
     disabled: !hero,
