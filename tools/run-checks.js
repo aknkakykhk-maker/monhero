@@ -122,6 +122,8 @@ function alwaysChecks() {
 const FORCE_CHECKS = [
   // 選び方そのもの(2026-11-11)。選び方を直したら、名指しで読む検査が漏れていないか・どの領域にも入らない検査が無いかを確かめる
   { re: /^tools\/run-checks(-deps)?\.js$|^tools\/run-checks-always\.json$/, checks: ['run-checks-select-check.js'], why: '--changed の選び方(漏れ・どこにも入らない検査)' },
+  // ビートP交換所の「曲」の売り場(2026-11-14 社長「ジャケットがアップで見れない・視聴ができない」)。札・拡大の窓・試し聴き・説明の折れ・札の空きを本物の画面で見る
+  { re: /^monster-hero\/src\/parts\/(39-rhythm-song-owned|20-market-notices-help|55-screen-breeder-market|41-screen-ui)\.jsx$|^tools\/mode\/rhythm-song-shop-check\.js$/, checks: ['mode/rhythm-song-shop-check.js'], why: 'ビートP交換所の「曲」の売り場(ジャケットの拡大・試し聴き・説明の折れ・札の空き)' },
   // 本体を読み込む検査が、用を終えたら抜けるか(2026-11-07・#4832 の見張りで harness を使う検査が600秒止まった)。本体や harness を触ったら確かめる
   { re: /^monster-hero\/src\/parts\/.+\.jsx$|^tools\/harness\.js$/, checks: ['boot/harness-exit-check.js'], why: '本体を読み込む検査が、終わったら抜けるか(止まらないタイマーが無いか)' },
   // 保存キー(mh_*)は docs/spec/SAVE_DATA.md の一覧に載せる決まり。本体・データを触ったら必ず確かめる
