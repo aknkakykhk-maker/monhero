@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 8e2688df8204f99c
+// generated-sha256: ee287470b85f627b
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -38499,8 +38499,9 @@ const jaWrapPoints = (text) => {
         || (/[一-龯][きしちひみりっ]$/.test(cur) && !/少し$/.test(cur) && /^[一-龯]/.test(seg))
         || (/[」』？！?!]$/.test(prev) && /^[ぁ-ゖ笑ｗwW]/.test(seg))
         // 数とそのあとの助数詞・単位は離さない(「1／曲ずつ」「5／倍」「30／%」「3回／目」。2026-10-26 クラフト)。
+        //   2026-11-14 社長「トレーニングごとに1／列ずつ」(r1114-080)で、列・行・戦・話・期 などの助数詞も足した
         //   手前の「Lv.」「×」「約」「第」と数も離さない(「Lv.／12」「約／20秒」)
-        || (/[0-9０-９]$/.test(prev) && /^(?:[曲回枚人体つ個周倍秒分日週件位番本段字連万千百年月時%％]|時間|ms|px|P|Lv|コンボ|ノーツ|ビートP)/.test(seg))
+        || (/[0-9０-９]$/.test(prev) && /^(?:[曲回枚人体つ個周倍秒分日週件位番本段字連万千百年月時%％列行戦着歩杯匹頭色種点部話期歳才冊台組品]|時間|ms|px|P|Lv|コンボ|ノーツ|ビートP)/.test(seg))
         || (/[0-9０-９][回人体個枚曲周倍つ番件位本段連]$/.test(cur) && /^目/.test(seg))
         || (/(?:Lv\.?|LV\.?|×|x|約|第|全|各|計|最大|最高)$/.test(cur) && /^[0-9０-９]/.test(seg))
         // カタカナどうしの間は離さない。道具は造語を「マス|モン」「モン|ヒロ|ビート」と分ける(2026-10-26 ダメダシ「(モンヒロ／ビート)」)。
@@ -138280,6 +138281,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         if(typeof STORY_SCENE_IMAGES!=='undefined'&&typeof window!=='undefined'){
           const pre=window.__mhStoryScenePreloaded||(window.__mhStoryScenePreloaded=new Set());
           script.forEach(l=>{const src=l&&STORY_SCENE_IMAGES[l.bg];if(src&&!pre.has(src)){pre.add(src);try{const im=new Image();im.src=src;}catch(e){}}});
+        }
+        // 出てくる全員の顔(その行の表情と、話していないときの normal)も、開いたときに先に読んでおく
+        //   (2026-11-14 社長「あつだけ顔の絵の表示が遅い」r1114-080。途中から初めて出る話し手は、出た瞬間に読み始めて遅れて見えていた)
+        if(typeof window!=='undefined'&&typeof assistantFaceSrc==='function'){
+          const preFace=window.__mhStoryFacePreloaded||(window.__mhStoryFacePreloaded=new Set());
+          script.forEach(l=>{const w=l&&assistantById(l.who);if(!w)return;[l.e,'normal'].forEach(e=>{const src=assistantFaceSrc(w,e||'normal');if(src&&!preFace.has(src)){preFace.add(src);try{const im=new Image();im.decoding='async';im.src=src;}catch(err){}}});});
         }
         const finishOpening=()=>setEventReplay(r=>r&&!r.opened?{...r,opened:true,shownAt:Date.now()}:r);
         // ゲスト(ジャック・ぱんぷきん)は、下の助手の列には入れない。初めて話す行(か stage で呼ばれる行)から、画面の上部の「ステージ」に出る

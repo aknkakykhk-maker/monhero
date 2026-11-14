@@ -24895,6 +24895,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const pre=window.__mhStoryScenePreloaded||(window.__mhStoryScenePreloaded=new Set());
           script.forEach(l=>{const src=l&&STORY_SCENE_IMAGES[l.bg];if(src&&!pre.has(src)){pre.add(src);try{const im=new Image();im.src=src;}catch(e){}}});
         }
+        // 出てくる全員の顔(その行の表情と、話していないときの normal)も、開いたときに先に読んでおく
+        //   (2026-11-14 社長「あつだけ顔の絵の表示が遅い」r1114-080。途中から初めて出る話し手は、出た瞬間に読み始めて遅れて見えていた)
+        if(typeof window!=='undefined'&&typeof assistantFaceSrc==='function'){
+          const preFace=window.__mhStoryFacePreloaded||(window.__mhStoryFacePreloaded=new Set());
+          script.forEach(l=>{const w=l&&assistantById(l.who);if(!w)return;[l.e,'normal'].forEach(e=>{const src=assistantFaceSrc(w,e||'normal');if(src&&!preFace.has(src)){preFace.add(src);try{const im=new Image();im.decoding='async';im.src=src;}catch(err){}}});});
+        }
         const finishOpening=()=>setEventReplay(r=>r&&!r.opened?{...r,opened:true,shownAt:Date.now()}:r);
         // ゲスト(ジャック・ぱんぷきん)は、下の助手の列には入れない。初めて話す行(か stage で呼ばれる行)から、画面の上部の「ステージ」に出る
         //  (2026-10-04・ユーザー指示「はじめからジャックやぱんぷきんが会話画面にいるのは違和感。出すタイミングをちゃんと」)
