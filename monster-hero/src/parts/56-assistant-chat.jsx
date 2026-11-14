@@ -599,7 +599,7 @@ function AssistantChatWindow({ assistant, playerName, callName, bondLevel, bondT
                   </div>)}
               </div>
               {callCard.kind !== 'reset' && <p className="mt-1 text-center text-[10px] font-bold text-slate-400 [word-break:keep-all] [overflow-wrap:anywhere]">
-                {callCard.kind === 'nick' ? 'おしゃべりの中で使うあだ名です。' : <>{callCard.kind === 'ask' ? 'えらぶと' : '「うん」を押すと'}、<span style={{ color: accent }}>{assistant.name}</span>だけ呼び方が変わります。</>}プロフィールで元に戻せます</p>}
+                {callCard.kind === 'nick' ? 'おしゃべりの中で使うあだ名です。' : <>{callCard.kind === 'ask' ? '選ぶと' : '「うん」を押すと'}、<span style={{ color: accent }}>{assistant.name}</span>だけ呼び方が変わります。</>}プロフィールで元に戻せます</p>}
             </div>)}
           {sending && <p data-assistant-chat-sending className="text-[11px] text-slate-400">{assistant.name}が考え中…</p>}
         </div>
