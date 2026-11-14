@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 7bce4b6e11393348
+// generated-sha256: 4728b236189b1d26
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -141125,7 +141125,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     <span className="shrink-0 text-base leading-none">{c.emoji}{c.subEmoji}</span>
                     <span className="flex-1 min-w-0">
                       <span className="block text-[13px] font-black leading-tight" style={{color:c.color}}>{c.title}</span>
-                      <span className="block text-[10px] text-slate-400 leading-tight mt-0.5">{c.summary}</span>
+                      <span className="block text-[10px] text-slate-400 leading-tight mt-0.5">{helpWrap(c.summary)}</span>
                     </span>
                     {(c.topics||[]).some(t=>helpTopicIsNew(t,helpSeen))&&helpNewBadge}
                     <ChevronRight size={16} className="shrink-0 text-slate-500"/>
