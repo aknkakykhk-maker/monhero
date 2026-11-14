@@ -32,7 +32,7 @@ const server = http.createServer((req, res) => {
   res.writeHead(200, { 'Content-Type': MIME[path.extname(f).toLowerCase()] || 'application/octet-stream' }); fs.createReadStream(f).pipe(res);
 });
 
-const open = async (browser, reducedMotion, width = 390, species = 'Mocchi') => {
+const open = async (browser, reducedMotion, width = 390, species = 'Mocchi', loy = null, seed = null) => {
   const page = await browser.newPage({ viewport: { width, height: width < 360 ? 700 : 844 }, reducedMotion });
   const errs = []; page.on('pageerror', (e) => errs.push(String(e)));
   await page.goto(`http://localhost:${PORT}/monster-hero/index.html`, { waitUntil: 'domcontentloaded' });
@@ -40,7 +40,7 @@ const open = async (browser, reducedMotion, width = 390, species = 'Mocchi') => 
   await page.addScriptTag({ url: '/monster-hero/data/monhero-success-regulars.js' });
   await page.addScriptTag({ url: '/monster-hero/data/monhero-success.js' });
   await page.waitForTimeout(1000);
-  await page.evaluate((SPECIES) => {
+  await page.evaluate(([SPECIES, LOY, SEED]) => {
     // 効果音を数える(鳴らさない)
     window.__se = {};
     Object.keys(Audio_.fgSe).forEach((k) => { Audio_.fgSe[k] = () => { window.__se[k] = (window.__se[k] || 0) + 1; }; });
@@ -50,11 +50,13 @@ const open = async (browser, reducedMotion, width = 390, species = 'Mocchi') => 
     const SUC = MONHERO_SUCCESS.create({ calc: MASMON_CALC, apt: AMG_APT, init: AMG_INIT, techs: ASSISTANT_MASMON_TECHS, monsters: ALL_PLAYER_MONSTERS, regulars: MONSUC_REGULARS, cupNames: MONSUC_REGULAR_CUPS });
     const s = JSON.parse(JSON.stringify(SUC.newRun({ id: 'arena-check', species: SPECIES, aid: 'mua', rivals: [{ name: 'こんこ', species: 'Kyubi', stats: { life: 455, pow: 472, wise: 180, hit: 341, eva: 260, tough: 498 } }] })));
     s.stats = { life: 412, pow: 506, wise: 233, hit: 380, eva: 198, tough: 441 }; s.turn = 24;
+    if (LOY != null) { s.ama = 0; s.fear = LOY; }
+    if (SEED) try { localStorage.setItem('mh_monsuc_arena_ctl_run_v1', JSON.stringify(SEED)); } catch (_) {}
     s.battle = { kind: 'cup', id: 'middle:4:spring:3', sys: 'spring', star: 3, rival: { name: 'こんこ' }, round: 0 };
     const d = document.createElement('div'); document.body.appendChild(d);
     window.__root = ReactDOM.createRoot(d);
     window.__root.render(React.createElement(MonsucCupShow, { suc: SUC, s, me: { name: 'もちまる' }, startAt: 'match', settle: () => ({}), onRematch() {}, onNext() {}, onClose() {} }));
-  }, species);
+  }, [species, loy, seed]);
   return { page, errs };
 };
 
@@ -105,6 +107,35 @@ const open = async (browser, reducedMotion, width = 390, species = 'Mocchi') => 
       }
       check('段C: 手動で最後まで打っても、一度もオートにならない', ended && mine >= 3 && modes.size === 1 && modes.has('manual'), JSON.stringify({ modes: [...modes], mine, guard, ended }));
       await page.close();
+    }
+    // 段C(2026-11-14 社長): そっぽの番は「そっぽを向いた!」とはっきり見せる(大きな判子・実況の行)。手動のまま
+    {
+      const { page } = await open(browser, 'reduce', 390, 'Mocchi', 0);
+      let seen = false, callSeen = false, guard = 0;
+      while (guard++ < 2500 && !seen) {
+        const st = await page.evaluate(() => ({ end: !!document.querySelector('[data-msc-end]'), act: !!document.querySelector('[data-msxm="act"]'), sulk: !!document.querySelector('[data-msa-sulk="A"]'), call: !!document.querySelector('[data-msa-call="sulk"]') }));
+        if (st.sulk) { seen = true; callSeen = st.call; break; }
+        if (st.end) break;
+        if (st.act) await page.evaluate(() => { const b = [...document.querySelectorAll('.msxm-btn:not([disabled])')].find((y) => /ためる/.test(y.textContent)); if (b) b.click(); });
+        await page.waitForTimeout(80);
+      }
+      const bandOk = seen ? await page.evaluate(() => /そっぽを向いた/.test(document.querySelector('[data-msa-sulk]').textContent)) : false;
+      check('段C: そっぽの番に「そっぽを向いた!」の判子が出る(手動のまま)', seen && bandOk, JSON.stringify({ seen, bandOk, callSeen, guard }));
+      await page.close();
+    }
+    // 段C(2026-11-14 社長): 手動/オートの記憶は、その育成の中だけ。新しい育成は手動から。別の育成で選んだオートは引き継がない。前のキー(mh_monsuc_arena_ctl_v1)は読まない
+    {
+      const { page } = await open(browser, 'reduce', 390, 'Mocchi', null, { id: 'other-run', ctl: 'auto' });
+      await page.evaluate(() => { try { localStorage.setItem('mh_monsuc_arena_ctl_v1', 'auto'); } catch (_) {} });
+      await page.waitForFunction(() => document.querySelector('[data-msc-match]'), null, { timeout: 30000 });
+      const m1 = await page.evaluate(() => document.querySelector('[data-msc-match]').dataset.msaMode);
+      check('段C: 新しい育成の最初の試合は手動(別の育成のオートも前のキーも引き継がない)', m1 === 'manual', m1);
+      await page.close();
+      const { page: p2 } = await open(browser, 'reduce', 390, 'Mocchi', null, { id: 'arena-check', ctl: 'auto' });
+      await p2.waitForFunction(() => document.querySelector('[data-msc-match]'), null, { timeout: 30000 });
+      const m2 = await p2.evaluate(() => document.querySelector('[data-msc-match]').dataset.msaMode);
+      check('段C: 同じ育成で選んだオートは、その育成の次の試合でも続く', m2 === 'auto', m2);
+      await p2.close();
     }
     // ②〜④ ふつうの動き
     {
