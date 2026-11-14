@@ -43,6 +43,7 @@
     { id: 'actGuard', name: 'トレーニングの場面: 受け止める', se: 'guard' },
     { id: 'actBlock', name: 'トレーニングの場面: 積む', se: 'tap' },
     { id: 'actIdea', name: 'トレーニングの場面: ひらめく', se: 'trainingTool' },
+    { id: 'actTag', name: 'トレーニングの場面: 友情タッグのカットイン', se: 'friendTag' }, // 2026-11-14 社長「友情タッグのときは、特別な演出や効果音を入れて」
     { id: 'actFlash', name: 'トレーニングの場面: Lv5の閃光', se: 'crit' },
     // 修行の段(MsxShugyoStages)。曲は修行(ascetic)のまま。段の切り替え・溜め・斬る・跳ぶ・叩きつけ
     { id: 'qStage', name: '修行の段: 切り替え', se: 'trainingDecide' },

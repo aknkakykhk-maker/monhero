@@ -47,7 +47,7 @@ check('台本を読めた(200本以上)', rows.length >= 200, `${rows.length}本
 const ASSTS = new Set(['mua', 'atsu', 'kiki', 'momosuke', 'dra', 'kyuko', 'sorashido', 'erubin']);
 const WHO = new Set([...ASSTS, 'issa', 'narr', 'choice', 'mon']);
 const EXPR = new Set(['normal', 'happy', 'wink', 'surprise', 'troubled', 'angry', 'crying', 'excited']);
-const SLOTS = new Set(['name', 'mon', 'cheer', 'cheer2', 'stat', 'train', 'tech', 'cup', 'food', 'rival', 'owner', 'cry']);
+const SLOTS = new Set(['name', 'mon', 'cheer', 'cheer2', 'stat', 'train', 'tech', 'cup', 'food', 'rival', 'owner', 'cry', 'item']);
 const seen = new Set();
 for (const r of rows) {
   if (!r.id || !/^[a-z0-9]+(\.[a-z0-9]+)+$/.test(r.id)) bad('id の形', r);

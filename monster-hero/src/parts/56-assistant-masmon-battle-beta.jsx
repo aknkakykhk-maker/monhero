@@ -19,7 +19,7 @@ const AMBB_PLANS = Object.freeze([
   { id: 'attack', label: 'ガンガン攻める', note: '攻めを強く・守りは少なめ' },
   { id: 'guard', label: 'じっくり守る', note: 'ガードとガッツの節約を多めに' },
   { id: 'range', label: '間合いを取る', note: '得意な距離へ動く' },
-  { id: 'big', label: '大技ねらい', note: '威力の大きい技を好む' },
+  { id: 'big', label: '大技狙い', note: '威力の大きい技を好む' },
 ]);
 const AMBB_SWAPS = Object.freeze([
   { id: 'omakase', label: 'おまかせ' },
@@ -807,7 +807,7 @@ function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, preview, tryPv
           <p className="ambw-small" style={{ marginTop: 6 }}>順位は1週間ごと(月曜 4:00 に切り替わり)。</p>
         </div>
         <div className="ambw-card"><div className="ambw-small">{me.name}のこの端末での戦績</div><b>{rec.w}勝 {rec.l}敗{rec.d ? ` ${rec.d}分` : ''}</b></div>
-        <div className="ambw-ctl"><button className="ambw-btn2" onClick={() => setPhase(battle ? 'review' : 'prep')}>← もどる</button></div>
+        <div className="ambw-ctl"><button className="ambw-btn2" onClick={() => setPhase(battle ? 'review' : 'prep')}>← 戻る</button></div>
       </div>
     );
   } else if (battle) {
@@ -1010,7 +1010,7 @@ function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, preview, tryPv
       <style>{AMBW_CSS}{AMBB_CSS}{typeof MSA_SHOW_CSS === 'string' ? MSA_SHOW_CSS : ''}</style>
       <div className="ambw-in">
         <div className="ambw-top">
-          <button className="ambw-btn2" data-ambb-close onClick={phase === 'rank' && !battle ? () => setPhase('prep') : back}>← {phase === 'prep' ? 'もどる' : 'じゅんびへ'}</button>
+          <button className="ambw-btn2" data-ambb-close onClick={phase === 'rank' && !battle ? () => setPhase('prep') : back}>← {phase === 'prep' ? '戻る' : 'じゅんびへ'}</button>
           <span>⚔ マスモンで対戦<span className="ambb-beta">β</span></span>
           <b>{phase === 'watch' && battle ? `ラウンド ${(battle.frames[pos] || {}).r || 0}` : ''}</b>
         </div>
@@ -1273,7 +1273,7 @@ function AmbbRanking({ me, faceOf, nameOf, onBack }) {
           <div key={t.id} className="ambb-tier"><span>{cardIconNode(t.icon, 14)} {t.label}</span><span className="ambw-small">{Number.isFinite(t.min) ? `${t.min}〜${i > 0 ? arr[i - 1].min - 1 : ''}` : `〜${arr[i - 1].min - 1}`}</span></div>
         ))}
       </div>
-      <div className="ambw-ctl"><button className="ambw-btn2" onClick={onBack}>← もどる</button></div>
+      <div className="ambw-ctl"><button className="ambw-btn2" onClick={onBack}>← 戻る</button></div>
     </div>
   );
 }

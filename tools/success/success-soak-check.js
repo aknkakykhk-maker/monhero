@@ -202,7 +202,7 @@ const step = (s, c, st) => {
     checkState(s2, `${where} settle`);
     let s3 = s2;
     if (s3.mealReady && !s3.over) {
-      const mr = rngAt(s3, 'meal'); const key = pick(mr, [...Object.keys(SUC.MEALS), null]);
+      const mr = rngAt(s3, 'meal'); const key = pick(mr, [...(typeof SUC.mealOpts === 'function' ? SUC.mealOpts(s3) : Object.keys(SUC.MEALS)), null]);
       if (key) { const fame0 = s3.fame; const m = SUC.meal(s3, key); if (m.out.ok) { s3 = m.state; st.meal += 1; if (s3.fame !== fame0) fail(`${where}: ごはんで賞金が動いた(ただのはず)`); checkState(s3, `${where} meal`); } }
     }
     return s3;

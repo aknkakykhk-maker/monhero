@@ -475,7 +475,7 @@ const AssistantBubble = ({ scene=null, assistantId=null, line=null, detail=null,
     return (
       <div data-bubble-collapsed className="w-full flex items-center gap-2">
         <AssistantFace who={who} size={32} accent={color} expression={face}/>
-        <button type="button" onClick={() => setCollapsed(false)} aria-label={`${who.name}のひとことをひらく`}
+        <button type="button" onClick={() => setCollapsed(false)} aria-label={`${who.name}のひとことを開く`}
           className="mh-hit-expand relative min-h-[32px] rounded-full border px-3 text-[10px] font-black active:scale-95"
           style={{ borderColor:color, color, backgroundColor:'var(--mh-bubble-bg, rgba(15,23,42,0.92))' }}>💬 {who.name}のひとこと ▾</button>
       </div>

@@ -47,7 +47,7 @@
 ```js
 const SE = MONHERO_SUCCESS_SCRIPT_ENGINE;           // engine.js を読んだあと
 await SE.load(s.aid);                               // 共通 + その助手(配列で複数も可)。2回目からはすぐ返る
-const ctx = { id: s.id, turn: s.turn, aid: s.aid, bond: 仲良し度Lv, callName, mon, species, cup, rival, owner, cheer, stat, train, tech, food };
+const ctx = { id: s.id, turn: s.turn, aid: s.aid, bond: 仲良し度Lv, callName, mon, species, cup, rival, owner, cheer, stat, train, tech, food, item };
 SE.say(SE.SCENE.start(s), ctx)          // 1本 { id, who, e, t, head, label, … } か null(助手の台詞)
 SE.say('issa.offer', ctx, { who: 'issa' }) // 話す人を変える(issa / mon / ライバルの持ち主の助手)
 SE.event('ev.daily.nut', ctx)           // { head, label, lines, choices:[{c,t}], after }(地の文→助手→札)
@@ -87,6 +87,7 @@ SE.mon('joy', ctx)                      // モンスターの声({cry} は種ご
 | `{food}` | 苦手な食べ物の名前(種ごと) |
 | `{rival}` / `{owner}` | ライバルのモンスターの名前 / その持ち主(助手の名前か、フレンドの名前) |
 | `{cry}` | 種ごとの鳴き声(`mon.cry.<種>` の台詞) |
+| `{item}` | 拾ってきた・もらったアイテムの名前(オイル・薬草・いのちの実など。渡されないときは「アイテム」)。`ev.daily.find`・`ev.team.kin` で使う |
 
 - 同じ場面に2本以上あるときは、くじで1本を出す
 - 結果の数字(能力 +中 など)は台本に書かない。画面側が出す。助手は数字を言わない(PLAN §6)

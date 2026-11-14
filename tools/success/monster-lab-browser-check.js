@@ -107,14 +107,14 @@ const openEntry = async (page) => {
     await press('ぴくりん'); await page.waitForTimeout(400); t = await text();
     // 言葉の途中で折り返さない: 入口と一覧の見出し・説明が1行に収まる(札・ボタンの中の文字の高さが1行ぶん)
     check(`${tag} 詳細にベースモンからの伸び ▲`, /ベースモン 50 → ▲590/.test(t) || /ベースモン \d+ → ▲\d+/.test(t), t.replace(/\s+/g, ' ').slice(0, 160)); await shot('mas-detail');
-    await press('もどる'); await page.waitForTimeout(200); await press('もどる'); await page.waitForTimeout(200); await press('合体円盤石'); await page.waitForTimeout(300); await shot('fuse'); await press('ライガー'); await page.waitForTimeout(300); t = await text();
+    await press('戻る'); await page.waitForTimeout(200); await press('戻る'); await page.waitForTimeout(200); await press('合体円盤石'); await page.waitForTimeout(300); await shot('fuse'); await press('ライガー'); await page.waitForTimeout(300); t = await text();
     check(`${tag} 合体円盤石の詳細に ▲ が出ない`, /合体円盤石詳細/.test(t) && !/▲/.test(t)); await shot('fuse-detail');
-    await press('もどる'); await page.waitForTimeout(200); await press('もどる'); await page.waitForTimeout(200); await press('マスモン'); await page.waitForTimeout(300); await press('ぴくりん'); await page.waitForTimeout(300);
+    await press('戻る'); await page.waitForTimeout(200); await press('戻る'); await page.waitForTimeout(200); await press('マスモン'); await page.waitForTimeout(300); await press('ぴくりん'); await page.waitForTimeout(300);
     await press('適性'); await page.waitForTimeout(200); t = await text();
     check(`${tag} 間合い適性は 遠A・中B・近F・零G`, /遠\s*A\s*中\s*B\s*近\s*F\s*零\s*G/.test(t.replace(/\s+/g, ' ').replace(/\s/g, '')) || /遠A中B近F零G/.test(t.replace(/\s/g, '')), t.replace(/\s+/g, ' ').slice(0, 200)); await shot('apt');
     await press('特徴'); await page.waitForTimeout(200); t = await text();
     check(`${tag} 特徴にガッツ回復力・移動速度・サイズ`, /ガッツ回復力/.test(t) && /移動速度/.test(t) && /サイズ/.test(t)); await shot('feature');
-    await press('もどる'); await page.waitForTimeout(200); await press('もどる'); await page.waitForTimeout(200);
+    await press('戻る'); await page.waitForTimeout(200); await press('戻る'); await page.waitForTimeout(200);
     await press('ベースモン'); await page.waitForTimeout(400); t = await text();
     check(`${tag} ベースモン一覧`, /ピクシー/.test(t) && /ベース/.test(t)); await shot('base');
     const box0 = await page.evaluate(() => localStorage.getItem('mh_monsuc_box_v1'));

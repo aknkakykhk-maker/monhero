@@ -256,7 +256,7 @@ function AssistantMasmonRanchSheet({ assistantId, onClose }) {
               </button>); })}
           </div>}
           <div className="mt-2 grid grid-cols-2 gap-1.5">
-            {['light', 'heavy'].map(x => <button key={x} type="button" onClick={() => setKind(x)} data-amgr-kind={x} className={`min-h-[44px] rounded-xl border text-[12px] font-black ${kind === x ? (x === 'heavy' ? 'border-orange-300 bg-orange-800' : 'border-emerald-300 bg-emerald-800') : 'border-white/20 bg-slate-800'}`}>{x === 'heavy' ? '🎟️ 重トレーニング' : '🎫 トレーニング'}<small className="block text-[10px] font-bold text-slate-200">のこり {info ? info[x] : 0}枚</small></button>)}
+            {['light', 'heavy'].map(x => <button key={x} type="button" onClick={() => setKind(x)} data-amgr-kind={x} className={`min-h-[44px] rounded-xl border text-[12px] font-black ${kind === x ? (x === 'heavy' ? 'border-orange-300 bg-orange-800' : 'border-emerald-300 bg-emerald-800') : 'border-white/20 bg-slate-800'}`}>{x === 'heavy' ? '🎟️ 重トレーニング' : '🎫 トレーニング'}<small className="block text-[10px] font-bold text-slate-200">残り {info ? info[x] : 0}枚</small></button>)}
           </div>
           <div className="mt-2 grid grid-cols-3 gap-1.5" data-amgr-stats>
             {AMG_KEYS.map(s => <button key={s} type="button" onClick={() => setK(s)} data-amgr-stat={s} className={`flex min-h-[52px] flex-col items-center justify-center rounded-xl border text-[12px] font-black ${k === s ? 'border-2 border-emerald-300 bg-emerald-900' : 'border-white/15 bg-slate-800'}`}>
@@ -269,7 +269,7 @@ function AssistantMasmonRanchSheet({ assistantId, onClose }) {
           {(err || block) && <p className="mt-1 text-[11px] font-bold text-rose-200" data-amgr-why>{err || block}</p>}
           <div className="mt-2 grid grid-cols-2 gap-1.5">
             <button type="button" onClick={onClose} data-mhl-sheet-close className={`${btn} bg-slate-700`}>やめる</button>
-            <button type="button" disabled={!!block} onClick={use} data-amgr-use className={`${btn} ${block ? 'bg-slate-700 text-slate-400' : kind === 'heavy' ? 'bg-orange-700' : 'bg-emerald-700'}`}>この1枚を使う<small className="block text-[10px] font-bold">{AMGR_TICKET_NAME[kind]} のこり {have} → {Math.max(0, have - 1)}枚</small></button>
+            <button type="button" disabled={!!block} onClick={use} data-amgr-use className={`${btn} ${block ? 'bg-slate-700 text-slate-400' : kind === 'heavy' ? 'bg-orange-700' : 'bg-emerald-700'}`}>この1枚を使う<small className="block text-[10px] font-bold">{AMGR_TICKET_NAME[kind]} 残り {have} → {Math.max(0, have - 1)}枚</small></button>
           </div>
         </>)}
       </div>
