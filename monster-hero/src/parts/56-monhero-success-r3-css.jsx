@@ -20,6 +20,8 @@ const MSX_R3_CSS = `
 .msx .r3 .q-ri .rs{display:grid;justify-items:end;text-align:right}.msx .r3 .q-ri .rs b{font-size:15px;font-weight:900;white-space:nowrap}.msx .r3 .q-ri .rs small{font-size:11px;font-weight:900;color:#fde047;white-space:nowrap}
 .msx .r3 .q-ri.hit{border-color:#facc15;background:linear-gradient(90deg,#422006,#713f12);box-shadow:0 0 12px #facc1566}.msx .r3 .q-ri.hit .rs b{color:#fde047;font-size:18px;text-shadow:0 0 8px #f59e0b}
 .msx .r3 .q-ri.miss .rs b{color:#cbd5e1}.msx .r3 .q-ri.miss .ti{filter:grayscale(.7) brightness(.8)}
+.msx .q-hpng{flex:none;background:#3f1d2b;border-top:1px solid #9f1239;color:#fecdd3;font-size:11px;font-weight:800;line-height:1.4;padding:4px 10px;text-align:center}.msx .q-hpng b{color:#fda4af;font-size:13px}
+.msx .v-ft button.go.off,.msx .v-ft button.go:disabled{background:#334155;color:#94a3b8;box-shadow:0 3px 0 #1e293b}
 .msx .r3 .q-note.y{color:#fde047}
 .msx .r3 .q-slots{display:grid;grid-template-columns:1fr 1fr;gap:6px}
 .msx .r3 .q-slot{min-height:56px;border-radius:12px;padding:5px 8px;border:2px dashed #ffffff40;font-size:11px;font-weight:800;color:#cbd5e1;display:flex;flex-direction:column;justify-content:center;gap:1px;cursor:pointer}

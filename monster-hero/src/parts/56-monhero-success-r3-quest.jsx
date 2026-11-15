@@ -32,7 +32,10 @@ function MsxR3Shugyo({ run, setRun, v, ev, onBack, onPause }) {
   const tickets = (v.shugyo && v.shugyo.tickets) || s0.tickets || 0;
   // 1つ目はそのまま。2つ目は超修行の残りがあるときだけ(無ければ入れ替え)
   const superTk = SH.superTickets || 2; const tk0 = (v.shugyo && v.shugyo.tickets) || s0.tickets || 0;
-  const superWhy = superLeft <= 0 ? 'この育成の超修行は使いきった' : tk0 < superTk ? `超修行はチケットが${superTk}枚いる` : '';
+  // 体力が足りないと行けない(2026-11-15 社長 r1115-062)。修行と超修行で使う体力が違う(超修行は2回分)
+  const hpOf = (sup) => (typeof SUC.shugyoHpOf === 'function' ? SUC.shugyoHpOf(s0, sup) : (SH.hp || 30) * (sup ? 2 : 1));
+  const shortOf = (sup) => Math.max(0, hpOf(sup) - Math.round(Number(s0.hp) || 0));
+  const superWhy = superLeft <= 0 ? 'この育成の超修行は使いきった' : tk0 < superTk ? `超修行はチケットが${superTk}枚いる` : shortOf(true) ? `超修行は体力が${hpOf(true)}いる。体力があと${shortOf(true)}足りない` : '';
   const toggle = (id) => setWant((w) => (w.includes(id) ? w.filter((x) => x !== id) : w.length === 0 ? [id] : w.length === 1 && !superWhy ? [...w, id] : [id]));
   const go = () => {
     const r = SUC.act(s0, { kind: 'shugyo', course, techs: want });
@@ -99,6 +102,9 @@ function MsxR3Shugyo({ run, setRun, v, ev, onBack, onPause }) {
   // ① 行き先(4つ)と、2段で上がる能力 → 技を覚える ② 覚えたい技の枠2つ(2つで超修行。札に覚える条件と「済」)
   // ③ 覚えられる技を間合いごとの4列の札で(率・覚えた・🔒と覚えられる条件)。🔒の札を押すと条件をくわしく
   const cur = SH.courses[course] || { stages: [] };
+  // 間合いの見出しに、育てる子のその間合いの適性と、覚える率の増減(C が ±0・1段 5%。芯の techAptAdd と同じ数え方)(2026-11-15 社長 r1115-080)
+  const aptG = typeof SUC.aptGradesOf === 'function' ? SUC.aptGradesOf(s0) : null; const GR = (SUC.DIST_UP && SUC.DIST_UP.grades) || [];
+  const aptHead = aptG ? (d) => { const g = aptG[d] || SH.aptBase || 'C'; const i = GR.indexOf(g); const b = GR.indexOf(SH.aptBase || 'C'); return { g, add: i >= 0 && b >= 0 ? (i - b) * (SH.aptStep || 5) : 0 }; } : null;
   const tkMax = SUC.TECH_MAX || 99; const full = (s0.techs || []).length >= tkMax;
   const techName = (id) => (all.find((x) => x.id === id) || {}).name || id;
   // 覚えられる条件(芯の canLearn と同じ: t.learn.st = 能力の下限・t.learn.need = 前の技の熟練の下限)。ok は満たしているか
@@ -123,7 +129,7 @@ function MsxR3Shugyo({ run, setRun, v, ev, onBack, onPause }) {
     </div>);
   };
   const body = (<>
-    <MsxBand s={s0} v={v} ev={ev} use={(SH.hp || 30) * (isSuper ? 2 : 1)}/>
+    <MsxBand s={s0} v={v} ev={ev} use={hpOf(isSuper)}/>
     <div className="q-say"><img src={typeof msxFace === 'function' ? msxFace(s0.aid, 'happy') : msxBody(s0.aid, 'happy')} alt=""/><p className="msx-kp" data-msx-r3-qsay>{say}</p></div>
     <div className="q-sec"><h3><i>1</i>行き先<span className="tk">🎫 チケット {tickets}枚</span></h3>
       <div className="r3-bar q-dest">{courses.map((k) => <button type="button" key={k} className={`r3-chip ${k === course ? 'on' : ''}`} onClick={() => setCourse(k)} data-msx-r3-course={k}>{SH.courses[k].name}</button>)}</div>
@@ -136,7 +142,7 @@ function MsxR3Shugyo({ run, setRun, v, ev, onBack, onPause }) {
       {superWhy && want.length ? <div className="q-note msx-kp" data-msx-r3-superwhy>🔥 {superWhy}ので、技は1つだけ選べる(別の技を押すと入れ替わる)</div> : null}
     </div>
     <div className="q-sec q-list" data-msx-r3-techlist><h3><i>3</i>覚えられる技<span className="tk">緑の札をタップ</span></h3>
-      {all.length ? <MsxTechGrid className="q" all={all} cell={(alts, r, d, cellK) => {
+      {all.length ? <MsxTechGrid className="q" all={all} head={aptHead} cell={(alts, r, d, cellK) => {
         // 詳細の技の升目と同じ部品(2026-11-15 社長 r1115-040)。升の技: 覚えた技 → 選んだ技(その升の選び) → 並びの1つ目
         const gotOf = (x) => (s0.techs || []).includes(x.id);
         const pk = s0.techPick && typeof s0.techPick === 'object' ? s0.techPick[cellK] : null;
@@ -165,6 +171,9 @@ function MsxR3Shugyo({ run, setRun, v, ev, onBack, onPause }) {
         </div>
       </div>) : null}
   </>);
-  const foot = <div className="v-ft"><button type="button" onClick={onBack}>← 戻る</button><button type="button" className="go" disabled={tickets <= 0} onClick={go} data-msx-r3-shugyo>{isSuper ? '🔥 超修行する' : '⚔ 修行する'}(🎫 {tickets} → {Math.max(0, tickets - (isSuper ? superTk : 1))})</button></div>;
+  const hpShort = shortOf(isSuper);
+  const foot = (<>
+    {hpShort ? <div className="q-hpng msx-kp" data-msx-r3-qhp>💔 {isSuper ? '超修行' : '修行'}は体力を {hpOf(isSuper)} 使う。体力があと <b>{hpShort}</b> 足りない(休む・遊ぶで回復)</div> : null}
+    <div className="v-ft"><button type="button" onClick={onBack}>← 戻る</button><button type="button" className={`go${hpShort ? ' off' : ''}`} disabled={tickets <= 0 || hpShort > 0} onClick={go} data-msx-r3-shugyo>{hpShort ? `体力があと${hpShort}足りない` : <>{isSuper ? '🔥 超修行する' : '⚔ 修行する'}(🎫 {tickets} → {Math.max(0, tickets - (isSuper ? superTk : 1))})</>}</button></div></>);
   return <MsxR3Frame run={run} onBack={onBack} body={body} foot={foot}/>;
 }
