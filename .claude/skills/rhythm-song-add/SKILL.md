@@ -131,17 +131,22 @@ node tools/mode/rhythm-audio-listen.js --in <届いた音源> --out "$SCRATCH/li
 
 ---
 
-## 2. 音源（-14 LUFS へそろえる）
+## 2. 音源（元の音質のまま -14 LUFS へそろえる）
+
+> **2026-11-15 社長(r1115-143)「ゲーム内ダウンロードがあるから画質・音質を変に下げない」**: 受け取った音源は**元のサンプルレート・ビットレート相当のまま**入れる
+> (44.1kHz / 128kbps へ落とさない)。そろえるのは **-14 LUFS の音量とタグ・埋め込み絵の除去だけ**。
 
 **最初に、受け取った元の音源を `tools/art-sources/song-audio/<songId>/` へそのまま置く**(配信しない場所。2026-11-02 社長。あとで音質を上げ直すときに要る)。
 
 ```bash
-# ① 映像とタグを落として素のWAVへ（mp3ならこの手順は省いてよい）
-$FF -v error -i src.m4a -map_metadata -1 -vn -ac 2 -ar 44100 -c:a pcm_s16le full.wav
+RATE=<元のサンプルレート。ffmpeg -i で見る。48000 など>  KBPS=<元のビットレート相当。mp3 192 / 256 / 320 など>
 
-# ② mp3へ（ここはリポジトリのツールへ戻す。既存曲と作り方をそろえるため）
+# ① 映像とタグを落として素のWAVへ(元のサンプルレートのまま。mp3も同じ手順でよい)
+$FF -v error -i src.mp3 -map_metadata -1 -vn -ac 2 -ar $RATE -c:a pcm_s16le full.wav
+
+# ② mp3へ（リポジトリのツールで。元の音質のまま）
 node tools/mode/rhythm-audio-reencode.js --in full.wav \
-  --out monster-hero/audio/bgm-<slug>.mp3 --kbps 128 --rate 44100
+  --out monster-hero/audio/bgm-<slug>.mp3 --kbps $KBPS --rate $RATE
 
 # ③ いまの大きさを測る
 $FF -hide_banner -nostats -i monster-hero/audio/bgm-<slug>.mp3 \
@@ -150,8 +155,14 @@ $FF -hide_banner -nostats -i monster-hero/audio/bgm-<slug>.mp3 \
 # ④ 倍率を出して、もう一度エンコードし直す（②をやり直す。mp3を二重に通さない）
 #    dB = min(-14 - いまのLUFS, -1 - いまの真のピーク)   倍率 = 10^(dB/20)
 node tools/mode/rhythm-audio-reencode.js --in full.wav \
-  --out monster-hero/audio/bgm-<slug>.mp3 --kbps 128 --rate 44100 --gain <倍率>
+  --out monster-hero/audio/bgm-<slug>.mp3 --kbps $KBPS --rate $RATE --gain <倍率>
 ```
+
+**エンコーダの頭の遅れは、サンプルレートで変わる**(44.1kHz で約25.0ms・48kHz で約23.0ms)。譜面の時刻は新しい曲ならこの mp3 で解析するので
+そのままでよいが、**すでにある mp3 を作り直すときは、前の版と波形を突き合わせて 0.1ms 以内**にそろえる:
+前の版・新しい版を `ffmpeg -ac 1 -ar <同じ値> -f f32le` で生に落として相互相関(numpy)でずれを測り、
+WAV の頭へ `-af "adelay=<ずれのサンプル数>S|<同>S"` で無音を足して作り直す(Sparkling Pink Overture は 98 サンプルで 0.005ms まで合った)。
+そのあと `rhythm-released-audio-lock-check.js --update --reason` で控えを更新する。
 
 **圧縮はしない**（音の表情が変わる）。上限に当たったらそこで止める。
 
@@ -162,18 +173,18 @@ node tools/mode/rhythm-audio-reencode.js --in full.wav \
 
 ---
 
-## 3. ジャケット（512×512 JPEG）
+## 3. ジャケット（元の大きさのまま JPEG へ）
 
 ```bash
 node -e "require('./tools/node_modules/sharp')('<元絵>')
-  .resize(512,512,{fit:'cover'}).jpeg({quality:80,mozjpeg:true})
-  .toFile('monster-hero/images/song-art/<slug>.jpg').then(r=>console.log(r.size))"
+  .jpeg({quality:95,mozjpeg:true})
+  .toFile('monster-hero/images/song-art/<slug>.jpg').then(r=>console.log(r.width,r.height,r.size))"
 ```
 
-目安 60〜90KB。`?v=` は手で書かない（`tools/build.js` が中身のハッシュから付ける）。
+**縮めない**(2026-11-15 社長 r1115-143)。元が PNG なら JPEG(quality 95)へ変えるだけ。正方形でない元絵だけ、`fit:'cover'` で正方形に切る。
+`?v=` は手で書かない（`tools/build.js` が中身のハッシュから付ける）。`node tools/image-asset-check.js` を通す。
 
-> ⚠️ **元絵が正方形でないと、`fit:'cover'` で上下か左右が切れる。**
-> 人物の顔やタイトル文字が切れていないか、書き出した絵を目で見て確かめる
+> ⚠️ 正方形でない元絵を切るときは、人物の顔やタイトル文字が切れていないか、書き出した絵を目で見て確かめる
 > （実際に1曲めで切れて、あとから差し替えになった）。
 
 ---
