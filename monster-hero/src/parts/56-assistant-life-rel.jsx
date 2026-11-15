@@ -499,6 +499,30 @@ const assistantLifeRelCauseOf = (quarrelId) => {
   const t = assistantLifeRelSet().byId[quarrelId];
   return t && t.cause ? ASSISTANT_LIFE_REL_CAUSES[t.cause] || null : null;
 };
+// けんか・仲直りの場面を見返す(2026-11-15 社長 r1115-137「この案で作る」)。掛け合いは今の台本のまま、題だけ足す。見返しは何も増やさない(onReplay)
+const ASSISTANT_LIFE_REL_FIGHT_TITLES = Object.freeze({ snack: '💢 おやつのことで言い合い', tidy: '💢 片づけのことで言い合い', song: '💢 曲の好みで言い合い', win: '💢 勝ち負けで言い合い', late: '💢 寝坊・遅刻で言い合い', promise: '💢 約束のことで言い合い' });
+const ASSISTANT_LIFE_REL_FIGHT_TITLE_ANY = '💢 ちょっとした言い合い';
+const assistantLifeRelMendTitle = (how) => {
+  const m = String(how || '').match(/^mediator:([a-z]+)$/);
+  if (m) return `🤝 ${assistantLifeName(m[1])}が間に入って仲直り`;
+  return how === 'gift' ? `🤝 ${assistantLifeRelGiftName()}で仲直り` : how === 'apology' ? '🤝 ごめんねで仲直り' : how === 'player' ? '🤝 あなたが取り持って仲直り' : '🤝 自分たちで仲直り';
+};
+// tid … けんか(quarrel)か仲直り(makeup)の台本の id。{ talk, title, ids } か null(台本が無い・行が無いときは開かない)
+const assistantLifeRelViewOf = (tid, how = null) => {
+  if (typeof tid !== 'string' || !tid) return null;
+  const X = assistantLifeRelSet();
+  let t = X.byId[tid] || null;
+  if (!t && typeof assistantPeerExtraTalks === 'function') { try { t = (assistantPeerExtraTalks().quarrels || []).find(x => x.id === tid) || null; } catch { t = null; } }
+  if (!t || !Array.isArray(t.lines) || !t.lines.length) return null;
+  const ids = Array.isArray(t.pair) ? [...t.pair] : [];
+  if (t.kind === 'quarrel') {
+    const lines = [...t.lines, ...(Array.isArray(t.distance) ? t.distance : [])];
+    const title = (t.cause && ASSISTANT_LIFE_REL_FIGHT_TITLES[t.cause]) || ASSISTANT_LIFE_REL_FIGHT_TITLE_ANY;
+    return { talk: { ...t, lines }, title, ids };
+  }
+  const h = how || (t.mediator ? `mediator:${t.mediator}` : t.how) || 'self';
+  return { talk: { ...t, kind: 'makeup' }, title: assistantLifeRelMendTitle(h), ids: t.mediator ? [t.mediator, ...ids] : ids };
+};
 // 仲直りに使える道具の名前(道具の表から読む。改名「🧺おやつバスケット」が入れば自動でそろう・2026-11-08 社長)
 const assistantLifeRelGiftName = () => { try { const x = typeof assistantLifeItemInfo === 'function' ? assistantLifeItemInfo('gift') : null; return (x && x.name) || '差し入れ'; } catch (_) { return '差し入れ'; } };
 const assistantLifeRelPending = (peerSt = (typeof ASSISTANT_PEER_STORE !== 'undefined' ? ASSISTANT_PEER_STORE.state : null)) => {
@@ -552,7 +576,7 @@ const assistantLifeRelOnMakeup = (talk, { now = Date.now() } = {}) => {
     const [a, b] = talk.pair.map(assistantLifeName);
     // 掲示板は短く(狭い横の掲示板でも切れない)。間に入った助手だけ名前を足す
     const by = talk.mediator ? `(${assistantLifeName(talk.mediator)}が間に)` : how === 'gift' ? `(${assistantLifeRelGiftName()}で)` : '';
-    if (typeof assistantLifeDiaryAdd === 'function') void assistantLifeDiaryAdd(`🤝 ${a}・${b}が仲直り${by}`, [...talk.pair, ...(talk.mediator ? [talk.mediator] : [])], { kind: 'makeup', now });
+    if (typeof assistantLifeDiaryAdd === 'function') void assistantLifeDiaryAdd(`🤝 ${a}・${b}が仲直り${by}`, [...talk.pair, ...(talk.mediator ? [talk.mediator] : [])], { kind: 'makeup', now, tid: talk.id, how: talk.mediator ? `mediator:${talk.mediator}` : (how || 'self') });
     if (talk.mediator && typeof assistantPeerGain === 'function') for (const id of talk.pair) await assistantPeerGain(talk.mediator, id, 'mediate');
   })();
 };
@@ -748,7 +772,7 @@ const ASSISTANT_LIFE_REL_CSS = `
 `;
 function AssistantLifeRelStyle() { return <style>{ASSISTANT_LIFE_REL_CSS}</style>; }
 // 部屋のシートの1行(けんか中・仲直りしたて・やきもち)と「🤝 取り持つ」
-function AssistantLifeRelSheetRow({ id, state, peerSt, onMediate }) {
+function AssistantLifeRelSheetRow({ id, state, peerSt, onMediate, onView = null }) {
   const pending = assistantLifeRelPending(peerSt);
   const nm = assistantLifeName;
   if (pending && pending.ids.includes(id)) {
@@ -758,6 +782,7 @@ function AssistantLifeRelSheetRow({ id, state, peerSt, onMediate }) {
       <div className="mt-1 rounded-xl border border-sky-300/50 bg-sky-950/60 px-2.5 py-1.5" data-assistant-life-rel-row="quarrel">
         <p className="text-[11.5px] font-black text-sky-100">💢 いま {nm(other)}とけんか中{cause ? <span className="whitespace-nowrap">(原因: {cause})</span> : null}</p>
         <p className="text-[10px] font-bold leading-snug text-sky-200">{['朝4時までには、', '自分たちで', '仲直りします。', '取り持つか、', `2人に${assistantLifeRelGiftName()}を`, '渡すと、', 'すぐ仲直り'].map((x, i) => <React.Fragment key={i}>{i ? <wbr/> : null}<span className="whitespace-nowrap">{x}</span></React.Fragment>)}</p>
+        {onView && assistantLifeRelViewOf(pending.id) && <button type="button" className="mt-1.5 min-h-[44px] w-full rounded-xl border border-sky-300/60 bg-sky-500/20 text-[13px] font-black text-sky-50 active:scale-[.98]" data-assistant-life-rel-view={pending.id} onClick={() => onView(pending.id)}>💢 けんかの様子を見る</button>}
         {onMediate && <button type="button" className="mhl-btn mt-1.5 w-full" data-assistant-life-room-act="mediate" style={{ background: 'linear-gradient(90deg,#fb923c,#f472b6)' }} onClick={() => onMediate(id)}>🤝 取り持つ(無料)</button>}
       </div>);
   }

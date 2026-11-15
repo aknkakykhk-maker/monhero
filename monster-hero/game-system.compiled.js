@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a78c9081f641718c
+// source-sha256: a9ee58bff99105d4
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -108848,6 +108848,16 @@ const assistantPeerMarkShown = (talk, {
     try {
       storeSet(ASSISTANT_PEER_QUARREL_KEY, quarrel, false);
     } catch {}
+    if (typeof assistantLifeDiaryAdd === 'function') {
+      try {
+        const cause = typeof assistantLifeRelCauseOf === 'function' ? assistantLifeRelCauseOf(talk.id) : null;
+        void assistantLifeDiaryAdd(`💢 ${talk.pair.map(assistantLifeName).join('・')}がけんか${cause ? `(${cause})` : ''}`, [...talk.pair], {
+          kind: 'quarrel',
+          now,
+          tid: talk.id
+        });
+      } catch {}
+    }
   }
   ASSISTANT_PEER_STORE.set(patch);
   if (typeof assistantLifeAddPlay === 'function') void assistantLifeAddPlay('peer', now);
@@ -114505,7 +114515,13 @@ const normalizeAssistantLifeDiary = v => {
     t: typeof x.t === 'string' ? x.t : '',
     text: x.text.slice(0, 80),
     ids: Array.isArray(x.ids) ? x.ids.filter(i => typeof i === 'string') : [],
-    kind: typeof x.kind === 'string' ? x.kind : 'note'
+    kind: typeof x.kind === 'string' ? x.kind : 'note',
+    ...(typeof x.tid === 'string' && x.tid ? {
+      tid: x.tid.slice(0, 80)
+    } : {}),
+    ...(typeof x.how === 'string' && x.how ? {
+      how: x.how.slice(0, 20)
+    } : {})
   })) : [];
   return {
     day: typeof raw.day === 'string' ? raw.day : null,
@@ -114545,7 +114561,9 @@ const assistantLifeClock = (now = Date.now()) => {
 const assistantLifeDiaryAdd = async (text, ids = [], {
   kind = 'note',
   now = Date.now(),
-  slotAbs = null
+  slotAbs = null,
+  tid = null,
+  how = null
 } = {}) => {
   if (!assistantLifeEnabled() || !text) return;
   await ASSISTANT_LIFE_DIARY.load();
@@ -114560,7 +114578,13 @@ const assistantLifeDiaryAdd = async (text, ids = [], {
     t: assistantLifeClock(now),
     text: String(text).slice(0, 80),
     ids,
-    kind
+    kind,
+    ...(typeof tid === 'string' && tid ? {
+      tid
+    } : {}),
+    ...(typeof how === 'string' && how ? {
+      how
+    } : {})
   }].slice(-ASSISTANT_LIFE_DIARY_MAX);
   ASSISTANT_LIFE_DIARY.state = {
     day,
@@ -115454,6 +115478,7 @@ function AssistantLifeRoomSheet({
   slot,
   land = false,
   onMediate = null,
+  onRelView = null,
   roomState = null,
   furnItems = null,
   onGiveFurn = null,
@@ -115894,7 +115919,8 @@ function AssistantLifeRoomSheet({
     id: id,
     state: roomState,
     peerSt: peerSt,
-    onMediate: onMediate
+    onMediate: onMediate,
+    onView: onRelView
   }), doList, React.createElement("div", {
     className: uiV2 ? 'mt-1' : land ? 'mt-2' : 'mt-8'
   }, lv != null && !uiV2 && React.createElement("div", {
@@ -116675,7 +116701,10 @@ function AssistantLifeScene({
     style: {
       fontSize: 19
     }
-  }, placeName)))), ids.length >= 3 && React.createElement("p", {
+  }, placeName)))), scene.title && React.createElement("p", {
+    "data-assistant-life-scene-rel-title": true,
+    className: "mt-1 w-fit rounded-full bg-slate-900/85 px-2.5 py-0.5 text-[12px] font-black text-white"
+  }, scene.title), ids.length >= 3 && React.createElement("p", {
     "data-assistant-life-scene-group": true,
     className: "mt-1 w-fit rounded-full px-2 py-0.5 text-[10px] font-black",
     style: {
@@ -117104,6 +117133,25 @@ function AssistantLifeHouse({
       });
     } else if (followAfterRef.current) showFollow();
     setNote(sleeping ? `${nameOf(id)}は寝ています。次の時間に、起きてだれかのところへ行きます` : `${nameOf(id)}に声をかけました。次の時間に、だれかのところへ行きます`);
+  };
+  const relView = (tid, how = null) => {
+    const v = typeof assistantLifeRelViewOf === 'function' ? assistantLifeRelViewOf(tid, how) : null;
+    if (!v || !onReplay) {
+      setNote('この場面は、いまは見られません');
+      return;
+    }
+    const speakers = [...new Set((v.talk.lines || []).map(l => l && l.who).filter(Boolean))];
+    setRoomId(null);
+    setBoardOpen(false);
+    setNote('');
+    setScene({
+      ids: [...new Set([...v.ids, ...speakers])],
+      place: 'home',
+      key: `rel-${tid}-${Date.now()}`,
+      sleep: [],
+      title: v.title
+    });
+    onReplay(v.talk);
   };
   const mediate = async id => {
     const talk = typeof assistantLifeRelMediate === 'function' ? await assistantLifeRelMediate(id) : null;
@@ -117945,6 +117993,7 @@ function AssistantLifeHouse({
     onBeat: beat,
     onCard: card,
     onMediate: mediate,
+    onRelView: relView,
     roomState: rooms[roomId],
     onMasmon: setMasmonId,
     onChat: chatOn ? chat : null,
@@ -117987,7 +118036,21 @@ function AssistantLifeHouse({
   }, "📌 今日あったこと"), React.createElement("p", {
     className: "text-[10.5px] font-bold text-slate-400",
     "data-assistant-life-diary-count": true
-  }, "全部で", (diary.items || []).length, "件・新しい順"), (diary.items || []).length ? [...diary.items].reverse().map((x, i) => React.createElement("p", {
+  }, "全部で", (diary.items || []).length, "件・新しい順"), (diary.items || []).length ? [...diary.items].reverse().map((x, i) => x.tid && typeof assistantLifeRelViewOf === 'function' && assistantLifeRelViewOf(x.tid, x.how) ? React.createElement("button", {
+    key: i,
+    type: "button",
+    "data-assistant-life-diary-scene": x.tid,
+    onClick: () => relView(x.tid, x.how),
+    className: "mt-1.5 flex min-h-[44px] w-full items-center gap-2 rounded-xl border border-sky-300/40 bg-sky-500/10 px-2 py-1 text-left text-[12px] font-bold leading-snug text-slate-100 active:scale-[.98]"
+  }, React.createElement("span", {
+    className: "min-w-0 flex-1"
+  }, React.createElement("b", {
+    className: "mr-1.5 text-amber-200"
+  }, x.t), React.createElement(AssistantLifeChunks, {
+    text: x.text
+  })), React.createElement("span", {
+    className: "shrink-0 rounded-full bg-sky-400 px-2 py-0.5 text-[11px] font-black text-slate-950"
+  }, "▶ 見る")) : React.createElement("p", {
     key: i,
     className: "mt-1.5 text-[12px] font-bold leading-snug text-slate-100"
   }, React.createElement("b", {
@@ -135610,6 +135673,55 @@ const assistantLifeRelCauseOf = quarrelId => {
   const t = assistantLifeRelSet().byId[quarrelId];
   return t && t.cause ? ASSISTANT_LIFE_REL_CAUSES[t.cause] || null : null;
 };
+const ASSISTANT_LIFE_REL_FIGHT_TITLES = Object.freeze({
+  snack: '💢 おやつのことで言い合い',
+  tidy: '💢 片づけのことで言い合い',
+  song: '💢 曲の好みで言い合い',
+  win: '💢 勝ち負けで言い合い',
+  late: '💢 寝坊・遅刻で言い合い',
+  promise: '💢 約束のことで言い合い'
+});
+const ASSISTANT_LIFE_REL_FIGHT_TITLE_ANY = '💢 ちょっとした言い合い';
+const assistantLifeRelMendTitle = how => {
+  const m = String(how || '').match(/^mediator:([a-z]+)$/);
+  if (m) return `🤝 ${assistantLifeName(m[1])}が間に入って仲直り`;
+  return how === 'gift' ? `🤝 ${assistantLifeRelGiftName()}で仲直り` : how === 'apology' ? '🤝 ごめんねで仲直り' : how === 'player' ? '🤝 あなたが取り持って仲直り' : '🤝 自分たちで仲直り';
+};
+const assistantLifeRelViewOf = (tid, how = null) => {
+  if (typeof tid !== 'string' || !tid) return null;
+  const X = assistantLifeRelSet();
+  let t = X.byId[tid] || null;
+  if (!t && typeof assistantPeerExtraTalks === 'function') {
+    try {
+      t = (assistantPeerExtraTalks().quarrels || []).find(x => x.id === tid) || null;
+    } catch {
+      t = null;
+    }
+  }
+  if (!t || !Array.isArray(t.lines) || !t.lines.length) return null;
+  const ids = Array.isArray(t.pair) ? [...t.pair] : [];
+  if (t.kind === 'quarrel') {
+    const lines = [...t.lines, ...(Array.isArray(t.distance) ? t.distance : [])];
+    const title = t.cause && ASSISTANT_LIFE_REL_FIGHT_TITLES[t.cause] || ASSISTANT_LIFE_REL_FIGHT_TITLE_ANY;
+    return {
+      talk: {
+        ...t,
+        lines
+      },
+      title,
+      ids
+    };
+  }
+  const h = how || (t.mediator ? `mediator:${t.mediator}` : t.how) || 'self';
+  return {
+    talk: {
+      ...t,
+      kind: 'makeup'
+    },
+    title: assistantLifeRelMendTitle(h),
+    ids: t.mediator ? [t.mediator, ...ids] : ids
+  };
+};
 const assistantLifeRelGiftName = () => {
   try {
     const x = typeof assistantLifeItemInfo === 'function' ? assistantLifeItemInfo('gift') : null;
@@ -135689,7 +135801,9 @@ const assistantLifeRelOnMakeup = (talk, {
     const by = talk.mediator ? `(${assistantLifeName(talk.mediator)}が間に)` : how === 'gift' ? `(${assistantLifeRelGiftName()}で)` : '';
     if (typeof assistantLifeDiaryAdd === 'function') void assistantLifeDiaryAdd(`🤝 ${a}・${b}が仲直り${by}`, [...talk.pair, ...(talk.mediator ? [talk.mediator] : [])], {
       kind: 'makeup',
-      now
+      now,
+      tid: talk.id,
+      how: talk.mediator ? `mediator:${talk.mediator}` : how || 'self'
     });
     if (talk.mediator && typeof assistantPeerGain === 'function') for (const id of talk.pair) await assistantPeerGain(talk.mediator, id, 'mediate');
   })();
@@ -135986,7 +136100,8 @@ function AssistantLifeRelSheetRow({
   id,
   state,
   peerSt,
-  onMediate
+  onMediate,
+  onView = null
 }) {
   const pending = assistantLifeRelPending(peerSt);
   const nm = assistantLifeName;
@@ -136006,7 +136121,12 @@ function AssistantLifeRelSheetRow({
       key: i
     }, i ? React.createElement("wbr", null) : null, React.createElement("span", {
       className: "whitespace-nowrap"
-    }, x)))), onMediate && React.createElement("button", {
+    }, x)))), onView && assistantLifeRelViewOf(pending.id) && React.createElement("button", {
+      type: "button",
+      className: "mt-1.5 min-h-[44px] w-full rounded-xl border border-sky-300/60 bg-sky-500/20 text-[13px] font-black text-sky-50 active:scale-[.98]",
+      "data-assistant-life-rel-view": pending.id,
+      onClick: () => onView(pending.id)
+    }, "💢 けんかの様子を見る"), onMediate && React.createElement("button", {
       type: "button",
       className: "mhl-btn mt-1.5 w-full",
       "data-assistant-life-room-act": "mediate",
@@ -193329,23 +193449,23 @@ const CARD_TACTIC_GROUPS = Object.freeze([{
   id: 'guardN',
   cat: 'cond',
   sec: '手札の中身',
-  name: '手札に守り札◯枚以上',
+  name: '手札に守りカード◯枚以上',
   tiers: [1, 2, 3].map(v => [v, cardTacticFine([3])(v)]),
-  desc: '回避・防御の札がその数以上'
+  desc: '回避・防御のカードがその数以上'
 }, {
   id: 'guardKind',
   cat: 'cond',
   sec: '手札の中身',
   name: '手札に◯がある',
   tiers: [['回避', 'N'], ['防御', 'N']],
-  desc: 'その種類の守り札がある'
+  desc: 'その種類の守りカードがある'
 }, {
   id: 'bigInHand',
   cat: 'cond',
   sec: '手札の中身',
   name: '手札に大技がある',
   tiers: [['', 'N']],
-  desc: 'ガッツ4以上の攻撃の札がある'
+  desc: 'ガッツ4以上の攻撃のカードがある'
 }, {
   id: 'areaInHand',
   cat: 'cond',
@@ -193572,7 +193692,7 @@ const CARD_TACTIC_GROUPS = Object.freeze([{
   knob: {
     guardAll: true
   },
-  desc: '守り札を残して堅く守る(ドラの型)'
+  desc: '守りカードを残して堅く守る(ドラの型)'
 }, {
   id: 'tSave',
   cat: 'base',
@@ -193719,7 +193839,7 @@ const CARD_TACTIC_GROUPS = Object.freeze([{
   knob: {
     noDraw: true
   },
-  desc: '引く札・山札を減らす札を控え、山札を切らさない'
+  desc: '引くカード・山札を減らすカードを控え、山札を切らさない'
 }, {
   id: 'tFocus',
   cat: 'base',
@@ -193800,17 +193920,17 @@ const CARD_TACTIC_GROUPS = Object.freeze([{
   cat: 'monster',
   sec: '攻撃',
   phase: 'attack',
-  name: '付ける札を使う',
+  name: '付けるカードを使う',
   tiers: [['', 'R']],
-  desc: '技に付ける札をいっしょに出す'
+  desc: '技に付けるカードをいっしょに出す'
 }, {
   id: 'attachKind',
   cat: 'monster',
   sec: '攻撃',
   phase: 'attack',
-  name: '付ける札: ◯',
+  name: '付けるカード: ◯',
   tiers: [['ダメージを上げる', 'N'], ['回避させない', 'R'], ['ガッツを軽くする', 'N']],
-  desc: 'その効き目の付ける札を、技にいっしょに出す'
+  desc: 'その効き目の付けるカードを、技にいっしょに出す'
 }, {
   id: 'spe',
   cat: 'monster',
@@ -193858,7 +193978,7 @@ const CARD_TACTIC_GROUPS = Object.freeze([{
   phase: 'attack',
   name: '崩し: ◯',
   tiers: [['手札を捨てさせる', 'R'], ['山札を削る', 'R'], ['ガッツを減らす', 'R'], ['番を飛ばす', 'SR']],
-  desc: '相手の手を崩す札を出す'
+  desc: '相手の手を崩すカードを出す'
 }, {
   id: 'guard',
   cat: 'monster',
@@ -193867,7 +193987,7 @@ const CARD_TACTIC_GROUPS = Object.freeze([{
   name: '守る',
   tiers: [['', 'N']],
   start: [''],
-  desc: '攻撃を受けたら守り札で守る'
+  desc: '攻撃を受けたら守りカードで守る'
 }, {
   id: 'guardFirst',
   cat: 'monster',
@@ -193875,7 +193995,7 @@ const CARD_TACTIC_GROUPS = Object.freeze([{
   phase: 'guard',
   name: '◯を先に使う',
   tiers: [['回避', 'N'], ['防御', 'N'], ['はね返す守り', 'R'], ['半分にする守り', 'R']],
-  desc: '守るとき、その種類の札で守る'
+  desc: '守るとき、その種類のカードで守る'
 }, {
   id: 'guardOver',
   cat: 'monster',
@@ -193899,7 +194019,7 @@ const CARD_TACTIC_GROUPS = Object.freeze([{
   phase: 'guard',
   name: '味方をかばう',
   tiers: [['', 'R']],
-  desc: 'かばう札で、味方への攻撃を受ける'
+  desc: 'かばうカードで、味方への攻撃を受ける'
 }, {
   id: 'noGuard',
   cat: 'monster',
@@ -193907,7 +194027,7 @@ const CARD_TACTIC_GROUPS = Object.freeze([{
   phase: 'guard',
   name: '守らない',
   tiers: [['', 'R']],
-  desc: '守り札を使わず受ける(札を残す)'
+  desc: '守りカードを使わず受ける(カードを残す)'
 }, {
   id: 'save',
   cat: 'breeder',
@@ -193930,7 +194050,7 @@ const CARD_TACTIC_GROUPS = Object.freeze([{
   cat: 'breeder',
   sec: 'ガッツ',
   phase: 'guts',
-  name: '守り札を3枚まで残す',
+  name: '守りカードを3枚まで残す',
   tiers: [['', 'R']],
   desc: '回避・防御は3枚までガッツにしない'
 }, {
@@ -193940,7 +194060,7 @@ const CARD_TACTIC_GROUPS = Object.freeze([{
   phase: 'guts',
   name: '◯から置く',
   tiers: [['重い札', 'N'], ['使えない札', 'N']],
-  desc: 'ガッツにする札の順を決める'
+  desc: 'ガッツにするカードの順を決める'
 }, {
   id: 'stop',
   cat: 'breeder',
@@ -193957,7 +194077,7 @@ const CARD_TACTIC_GROUPS = Object.freeze([{
   phase: 'attack',
   name: '溜め技を使う',
   tiers: [['', 'R']],
-  desc: '次の技を何倍にする札を先に使う'
+  desc: '次の技を何倍にするカードを先に使う'
 }, {
   id: 'chargeKind',
   cat: 'monster',
@@ -193965,7 +194085,7 @@ const CARD_TACTIC_GROUPS = Object.freeze([{
   phase: 'attack',
   name: '溜め: ◯',
   tiers: [['怒り', 'R'], ['次の番の技を倍', 'R']],
-  desc: 'その溜めの札を先に使う'
+  desc: 'その溜めのカードを先に使う'
 }, {
   id: 'ace',
   cat: 'breeder',
@@ -219535,7 +219655,7 @@ const CardPvpWatchScreen = ({
     className: "min-w-0 flex-1 space-y-0.5"
   }, w.last && React.createElement("div", {
     className: "text-[11px] font-black text-violet-200"
-  }, nameOf(w.last.p), "が使った札"), st.pending && React.createElement(CardGuardPreview, {
+  }, nameOf(w.last.p), "が使ったカード"), st.pending && React.createElement(CardGuardPreview, {
     db: db,
     pv: cardGuardPreview(db, st),
     compact: true
