@@ -20,6 +20,7 @@ let chromium;
 try { ({ chromium } = require(path.join(ROOT, 'tools', 'node_modules', 'playwright'))); } catch (e) { console.log('SKIP: playwright が入っていないので確かめられません'); process.exit(0); }
 const { quietBootSeed, updateNoticeSeed } = require(path.resolve(__dirname, '..', 'boot', 'quiet-boot-seed'));
 const { scanTextWrap } = require(path.resolve(__dirname, '..', 'playbot', 'lib', 'text-wrap')); // 言葉・値の途中の折れ(r1114-077)
+const { measureBtnPixels } = require('./msx-btn-pixel'); // 実際に描いた画素で、ボタンの字・記号の真ん中を測る(r1115-066)
 const { msxUiRulesMeasure, msxScrollStripTexts, BLANK_MAX } = require('./msx-ui-rules'); // 画面の決まり(docs/spec/MONSUC_UI.md)の見張り
 const PORT = Number(process.env.SHOT_PORT) || 8971; // ほかの検査と同時に回すときは SHOT_PORT で替える
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.PNG': 'image/png', '.jpg': 'image/jpeg', '.webp': 'image/webp', '.json': 'application/json', '.mp3': 'audio/mpeg' };
@@ -377,6 +378,7 @@ const makeRun = async (kind) => {
         if (u && u.blank != null) check(`${name}${tag ? `(${tag})` : ''}: 下に大きな空きが無い(${BLANK_MAX}px まで)`, u.blank <= BLANK_MAX, `${u.blank}px`);
         if (u) check(`${name}${tag ? `(${tag})` : ''}: 見せ場の数字(.v-num)が真ん中`, u.offNum.length === 0, u.offNum.slice(0, 3).join(' / '));
         if (u) check(`${name}${tag ? `(${tag})` : ''}: ボタンの文字・記号が上下左右とも真ん中`, u.offBtn.length === 0, u.offBtn.slice(0, 4).join(' / '));
+        { const px = await measureBtnPixels(page); check(`${name}${tag ? `(${tag})` : ''}: 描いた画素でも字・記号がボタンの真ん中(±1.5px)`, px.length === 0, px.slice(0, 4).join(' / ')); }
         check(`${name}${tag ? `(${tag})` : ''}: 画面が出る`, m.ok && m.text > 20);
         check(`${name}${tag ? `(${tag})` : ''}: 枠からはみ出さない`, m.ok && m.over.length === 0, m.over && m.over.slice(0, 3).join(' / '));
         if (SHOT_DIR) { fs.mkdirSync(SHOT_DIR, { recursive: true }); await page.screenshot({ path: path.join(SHOT_DIR, `msx-${name}${tag ? `-${tag}` : ''}.png`) }); }

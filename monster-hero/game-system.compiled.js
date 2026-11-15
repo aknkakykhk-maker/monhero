@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 6b481d23212ae02b
+// source-sha256: 7b71c66d97c554c2
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -168078,6 +168078,7 @@ const MSX_CSS = `
 .msx .v-cupwin .sign .e{font-size:40px;line-height:1}.msx .v-cupwin .sign b{font-size:15px}.msx .v-cupwin .sign small{font-size:10.5px;color:#fde68a}
 .msx .v-cupwin .sign.g-four{background:linear-gradient(180deg,#2e1065,#6d28d9)}.msx .v-cupwin .sign.g-rainbow{background:linear-gradient(180deg,#7f1d1d,#a16207)}
 .msx .v-cupwin .sub{margin-top:8px;font-size:11px;font-weight:900;color:#92400e;text-align:left}
+.msx .v-cupwin .pz button{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
 .msx .v-cupwin .pz{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px;padding:4px 0}
 .v-cupwin .pzg{display:flex;align-items:center;gap:8px;margin-top:4px;background:#fff;border:2px solid #fcd34d;border-radius:10px;padding:4px 10px;font-weight:900;width:100%;text-align:left;color:#1e1b4b}
 .v-cupwin .pzg i{font-style:normal;font-size:11px;background:#78350f;color:#fde68a;border-radius:6px;padding:1px 8px}
@@ -168286,6 +168287,12 @@ const MSX_CSS = `
 .msx-md-tg .tc .tg-rk{position:absolute;left:2px;top:2px;z-index:2;min-width:14px;height:14px;border-radius:4px;font-size:10px;font-weight:900;line-height:14px;text-align:center;color:#2a1608;border:1px solid #2a1608}
 .tg-rk.rk1{background:linear-gradient(135deg,#e9a46a,#a95f27)}.tg-rk.rk2{background:linear-gradient(135deg,#f4f7fb,#aab4c2)}.tg-rk.rk3{background:linear-gradient(135deg,#fff1a6,#f2b705)}.tg-rk.rk4{background:linear-gradient(135deg,#d9a8ff,#8a3ffc);color:#fff}.tg-rk.rk5{background:linear-gradient(135deg,#ff5a5a,#ffd23f,#4ade80,#38bdf8,#c084fc)}
 .msx-md-tg .tc{position:relative}
+.msx .sym{position:relative!important;font-size:0!important;line-height:0!important;color:inherit}
+.msx .sym::before{content:'';position:absolute;left:50%;top:50%;width:14px;height:14px;transform:translate(-50%,-50%);background:linear-gradient(currentColor,currentColor) center/14px 2.5px no-repeat}
+.msx .sym.plus::before,.msx .sym.close::before{background:linear-gradient(currentColor,currentColor) center/14px 2.5px no-repeat,linear-gradient(currentColor,currentColor) center/2.5px 14px no-repeat}
+.msx .sym.close::before{transform:translate(-50%,-50%) rotate(45deg)}
+.msx .sym.info::before{width:20px;height:20px;border:2.5px solid currentColor;border-radius:50%;box-sizing:border-box;background:linear-gradient(currentColor,currentColor) 50% 3px/2.5px 2.5px no-repeat,linear-gradient(currentColor,currentColor) 50% 7.5px/2.5px 6px no-repeat}
+/* 注意: 全ボタンの ::after は「押せる範囲を広げる」用(838行)。記号の線は ::before だけで描く */
 .msx .msx-md-alt{margin-top:6px;width:100%;display:flex;align-items:center;justify-content:center;text-align:center;padding:6px 8px;border-radius:10px;font-size:12px;font-weight:900;color:#fff;background:linear-gradient(160deg,#6d4cd9,#4a2fa6);border:1.5px solid #a78bfa}
 .msx .msx-tp{display:flex;align-items:center;gap:8px;width:100%;margin:0 0 6px;padding:6px 8px;border-radius:12px;text-align:left;color:#fff;background:#1e1b3a;border:1.5px solid #3b3566}
 .msx .msx-tp.on{border-color:#facc15;background:#2a2547}
@@ -168495,6 +168502,8 @@ const MSX_CSS = `
 .msx .v-heat .hi{display:block;font-size:16px;line-height:1.15;margin-bottom:1px}
 /* r1114-065: 札の中の言葉は語の切れ目でだけ折る */
 .msx .v-hm-tile b{word-break:keep-all;overflow-wrap:normal}
+/* 下のボタンの列・タブの字は、上下左右ともボタンの真ん中(r1115-066) */
+.msx .v-ft button,.msx .v-ft span,.msx .v-tabs button,.msx .v-tabs span{display:flex!important;align-items:center;justify-content:center;text-align:center}
 `;
 const MSX_KEYS = Object.freeze({
   run: 'mh_monsuc_run_v1',
@@ -174039,7 +174048,10 @@ function MsxBag({
   }, "🎒 持ち物", React.createElement("small", null, "使えるのは 1ターンに1個まで・使ってもターンは進まない"), React.createElement("button", {
     type: "button",
     onClick: onClose
-  }, React.createElement("i", null, "✕"))), t ? React.createElement("div", {
+  }, React.createElement("i", {
+    className: "sym close",
+    "aria-hidden": "true"
+  }))), t ? React.createElement("div", {
     className: "v-bsel"
   }, React.createElement("span", {
     className: "e",
@@ -174245,7 +174257,8 @@ function MsxStats({
       }
     }, ws.stats[k]), " ", React.createElement("small", {
       style: {
-        color: '#fde047'
+        color: '#fde047',
+        fontSize: 11
       }
     }, "(+", n, ")")) : React.createElement("b", {
       style: {
@@ -174253,25 +174266,25 @@ function MsxStats({
       }
     }, s.stats[k])), React.createElement("button", {
       type: "button",
-      className: "chip",
+      className: "chip sym minus",
       style: {
-        minWidth: 40,
-        minHeight: 36
+        minWidth: 44,
+        minHeight: 44
       },
       disabled: !n,
       onClick: () => minus(k),
       "aria-label": `${MSX_STAT_NAME[k]}を戻す`
-    }, "−"), React.createElement("button", {
+    }), React.createElement("button", {
       type: "button",
-      className: "chip on",
+      className: "chip on sym plus",
       style: {
         minWidth: 44,
-        minHeight: 36
+        minHeight: 44
       },
       disabled: ws.pts < cost,
       onClick: () => plus(k),
       "aria-label": `${MSX_STAT_NAME[k]}を上げる`
-    }, "＋"));
+    }));
   }), React.createElement("div", {
     className: "msx-row",
     style: {
@@ -174608,11 +174621,11 @@ function MsxEvent({
     style: JA_LABEL_STYLE
   }, jaWrap(ch.t)), MSX_LOOK[ch.look] ? React.createElement("small", null, MSX_LOOK[ch.look]) : null), React.createElement("button", {
     type: "button",
-    className: `msx-info${info === ch.c ? ' on' : ''}`,
+    className: `msx-info sym info${info === ch.c ? ' on' : ''}`,
     "aria-label": "詳細",
     onClick: () => setInfo(info === ch.c ? null : ch.c),
     "data-msx-info": ch.c
-  }, "ℹ")), React.createElement(MsxChoiceInfo, {
+  })), React.createElement(MsxChoiceInfo, {
     evId: seenId,
     c: ch.c,
     open: info === ch.c
@@ -178696,14 +178709,18 @@ function MsxR3Retire({
         className: "st"
       }, React.createElement("button", {
         type: "button",
+        className: "sym minus",
+        "aria-label": `${MSX_STAT_NAME[k]}を戻す`,
         disabled: !add,
         onClick: () => undoK(k)
-      }, "−"), React.createElement("b", null, add), React.createElement("button", {
+      }), React.createElement("b", null, add), React.createElement("button", {
         type: "button",
         disabled: ws.pts < SUC.ptsCost(ws, k) || ws.stats[k] >= 999,
         onClick: () => spend(k),
-        "data-msx-r3-plus": k
-      }, "＋")));
+        "data-msx-r3-plus": k,
+        className: "sym plus",
+        "aria-label": `${MSX_STAT_NAME[k]}を上げる`
+      })));
     })), React.createElement("div", {
       className: "v-card"
     }, React.createElement("div", {
@@ -179162,8 +179179,10 @@ function MsxR3Retire({
         type: "button",
         disabled: !got,
         onClick: () => tap(id, got - 1),
-        "data-msx-r3-minus": id
-      }, "−"), React.createElement("div", {
+        "data-msx-r3-minus": id,
+        className: "sym minus",
+        "aria-label": "へらす"
+      }), React.createElement("div", {
         className: "gauge",
         onClick: e => {
           const r = e.currentTarget.getBoundingClientRect();
@@ -179185,8 +179204,10 @@ function MsxR3Retire({
         type: "button",
         disabled: !canUp,
         onClick: () => tap(id, got + 1),
-        "data-msx-r3-plus": id
-      }, "＋"), React.createElement("span", {
+        "data-msx-r3-plus": id,
+        className: "sym plus",
+        "aria-label": "ふやす"
+      }), React.createElement("span", {
         className: "c"
       }, got ? `${a.cost[got - 1]}pt` : `${a.pt}pt`)));
     }
