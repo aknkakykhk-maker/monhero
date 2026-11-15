@@ -4029,7 +4029,9 @@ function MonsterHeroGame() {
   useEffect(()=>{if(String(gameState).startsWith('RHYTHM'))ASSET_CACHE.noteSong(rhythmSelectedSongId);},[rhythmSelectedSongId,gameState]);
   const rhythmPreviewSongId=gameState==='RHYTHM_MULTI'&&rhythmMultiPreviewSongId?rhythmMultiPreviewSongId:rhythmSelectedSongId;
   const rhythmPreviewSong=rhythmDemoSongs(RHYTHM_SONGS).find(song=>song.songId===rhythmPreviewSongId)||null;
-  const rhythmPreviewTrackId=rhythmSettings.songPreviewEnabled&&RHYTHM_PREVIEW_SCREENS.includes(gameState)&&rhythmPreviewSong
+  // 観戦の画面が観戦している曲を流しているあいだは、試聴も待機の曲も止める(r1115-190。やめたら false に戻り、元の曲を流し直す)
+  const rhythmWatchAudioOn=useRhythmWatchAudioOn();
+  const rhythmPreviewTrackId=!rhythmWatchAudioOn&&rhythmSettings.songPreviewEnabled&&RHYTHM_PREVIEW_SCREENS.includes(gameState)&&rhythmPreviewSong
     ?rhythmPreviewSong.bgmTrackId:'';
   useEffect(()=>{
     if(!rhythmPreviewTrackId)return undefined;
@@ -6658,6 +6660,8 @@ function MonsterHeroGame() {
     // 専用sourceの開始・停止はRhythmTapTestが管理する。通常BGM effectから触ると二重再生や途中停止になる。
     if (gameState === 'RHYTHM_PLAY') return;
     if (successScreenOpen) return;
+    // 観戦の曲が鳴っているあいだは触らない(観戦の画面が鳴らし始めるときに待機の曲を止めている。終わったら下で流し直す・r1115-190)
+    if (rhythmWatchAudioOn) return;
     let key = bootPhase === 'GAME' ? bgmKeyForState(gameState, wave, enemy?.id, (waveHistory||[]).length > 0, hp <= 0 || gaveUp) : (bootPhase === 'TITLE' || bootPhase === 'ENTERING_GAME' ? bgmArrangement.title : null);
     // ★モンビーを開いているあいだ、バトルのBGMは止まっている(この画面はキーを持たない)。
     //   戻ってきた最初の1回で「直前のBGMを維持」を選ぶと、維持すべき曲が無いので
@@ -6688,7 +6692,7 @@ function MonsterHeroGame() {
     if (key && eventId && prev && prev.id === eventId && prev.key !== key) Audio_.fadeToBGM(key, EVENT_BGM_FADE_MS);
     else if (key) Audio_.playBGM(key);
     else Audio_.stopBGM();
-  }, [bootPhase, gameState, wave, enemy?.id, hp, gaveUp, audioOn, successScreenOpen, waveHistory.length, bgmArrangement, runMode, eventBgmScene, mainHero?.id, autoBattle, autoBgmOverride, rhythmScreenOpen, cardScreenOpen, eventLineBgm, cardBgm, assistantLifeOpenNow, battleBgmOverlay]);
+  }, [bootPhase, gameState, wave, enemy?.id, hp, gaveUp, audioOn, successScreenOpen, waveHistory.length, bgmArrangement, runMode, eventBgmScene, mainHero?.id, autoBattle, autoBgmOverride, rhythmScreenOpen, cardScreenOpen, eventLineBgm, cardBgm, assistantLifeOpenNow, battleBgmOverlay, rhythmWatchAudioOn]);
 
   // SE/BGMそれぞれの音量をAudioエンジンへ反映
   // 超省エネではBGMを選んで鳴らしてもSEだけは常に0。保存済みSE音量そのものは変更しない。

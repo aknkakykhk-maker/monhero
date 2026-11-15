@@ -13,7 +13,7 @@ const path = require('path');
 const http = require('http');
 const ROOT = path.resolve(__dirname, '..', '..');
 const SHOT_DIR = process.env.SHOT_DIR || '';
-const ONLY = process.env.R3_ONLY ? new RegExp(process.env.R3_ONLY) : null; // 一部だけ回す(例: R3_ONLY='^Q' で修行の画面だけ)
+// 一部だけ回す: ONLY=<画面の名前をコンマで>(例: ONLY=C1,C1w で大会の受付だけ)。名前は下の表 SHOTS の1つ目
 let failed = 0;
 const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${name}${detail ? ` — ${detail}` : ''}`); if (!ok) failed++; };
 let chromium;
@@ -54,6 +54,8 @@ const makeRun = async (kind) => {
   // 大会名は本番と同じく、芯が期・月で付けたいまの名前(cupNameAt)を渡す。渡さないと古い既定の名前に落ちる(r1115-193)
   const cupNm = (sys, star) => { if (typeof SUC.cupsOf !== 'function') return null; for (let tt = 1; tt <= (SUC.TOTAL_TURNS || 46); tt++) { const c = (SUC.cupsOf({ ...s, turn: tt }) || []).find((x) => x.sys === sys && x.star === star && x.name && x.name !== sys); if (c) return c.name; } return null; };
   if (kind === 'win' || kind === 'lose' || kind === 'winnew') { s = { ...s, stats: stats(kind === 'lose' ? 40 : 700), wonBefore: kind === 'winnew' ? [] : ['str:2'], wonNow: [], battle: { kind: 'cup', id: 'x', sys: 'str', star: 2, name: cupNm('str', 2), rival: null, round: 0 } }; phase = 'battle'; }
+  // R1・C3: 優勝で賞金ランクが1段上がるように、賞金の合計を次の段のすぐ手前にそろえる(段の境目は芯の FAME_RANK。r1115-168 で境目が変わり、上がらなくなって R1 がごはんの段になっていた・r1115-197)
+  if (kind === 'win' && Array.isArray(SUC.FAME_RANK)) { const nx = SUC.FAME_RANK.slice(2).find((r) => Number(r.min) > (Number(s.fameTotal) || 0)); if (nx) s = { ...s, fameTotal: nx.min - 1 }; }
   if (kind === 'debutlose') { s = { ...s, turn: 5, wonNow: [], wonBefore: ['debut'], stats: stats(30), debutLoss: 2, debutWon: false, rematchUsed: 3, battle: { kind: 'debut', round: 0, retry: 2 } }; phase = 'battle'; }
   if (kind === 'kimatsu' || kind === 'summit') { // 期末の大会・最後の大会の当日(芯が battle を立てた直後。まだ「はい」を押していない)
     const want = kind === 'kimatsu' ? 'junior' : 'final';

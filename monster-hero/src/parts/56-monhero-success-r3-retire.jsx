@@ -65,12 +65,13 @@ function MsxR3Retire({ run, setRun, onPause, debug, SUC }) {
   const [step, setStep] = useState(() => (run.s.pts > 0 ? 'e3' : 'e0')); // 能力ポイントが残っていれば先に使う → 最終の評価
   // 能力ポイント(E3)は、育成中の振り分けと同じく「押した能力の並び」を持ち、毎回 s から振り直す。
   // 「−」はその能力を最後に押した1つだけを抜くので、あとから振った別の能力は残る。まとめて振った分も並びに積むので、そのあと個別に戻せる(r1115-172)
-  const capOfPt = (w, k) => (typeof SUC.statCapOf === 'function' ? SUC.statCapOf(w, k) : 999);
+  const capOfPt = (w, k) => (String(k).startsWith('m:') ? Infinity : typeof SUC.statCapOf === 'function' ? SUC.statCapOf(w, k) : 999); // 'm:' は技の熟練(上限は芯が見る)
   const replayPts = (list) => { let w = s; for (const k of list) { if (w.stats[k] >= capOfPt(w, k)) continue; const r = SUC.spendPts(w, k, 1); if (r.out.ok) w = r.state; } return w; };
   const [ptList, setPtList] = useState([]);
   const ptListRef = useRef(ptList); ptListRef.current = ptList; // 長押しで続けて振るとき、描き直しを待たず最新を読む
   const setPtListNow = (list) => { ptListRef.current = list; setPtList(list); };
   const ws = useMemo(() => replayPts(ptList), [s, ptList]); // 能力ポイントを使っている途中の写し
+  const [ptTab, setPtTab] = useState('stat'); // 「能力」「技の熟練」(r1115-198)
   const [ptUnit, setPtUnit] = useMsxPtUnit();            // 1・5・10・100・MAX(r1115-092)
   const [pick, setPick] = useState({}); // アシスト能力 { id: 段 }
   const [atab, setAtab] = useState(null); // アシストの場面のタブ(第2版・7つ)
@@ -147,13 +148,17 @@ function MsxR3Retire({ run, setRun, onPause, debug, SUC }) {
       setPtListNow(list);
     };
     const used = s.pts - ws.pts;
+    const ownT = typeof SUC.techsOf === 'function' ? SUC.techsOf(s.species) : [];
+    const mTechs = (Array.isArray(s.techs) ? s.techs : []).map((id) => ownT.find((t) => t && t.id === id)).filter(Boolean);
     const body = (<>
       <div className="v-pt"><div className="n">能力ポイント<b>{ws.pts}<small style={{ fontSize: 11, color: '#cbd5e1' }}> / {s.pts}</small></b></div>
         <div className="r">使った <span className="yel">{used}</span>・残り {ws.pts}<br/>総合力 {msxFmt(ev0.power)} → <span className="yel">{msxFmt(ev.power)}</span> <i className={msxRankCls(ev.rank)}>{ev.rank}</i></div></div>
       <div className="v-scene r3-mscene" style={{ flex: '1 1 0' }}><img className="bg" src={msxSceneBg(Math.min(s.turn, msxSuc.core.TOTAL_TURNS)).bg} alt=""/><div className="sh"/>
         <div className="gr" style={{ bottom: 'calc(6% - 5px)', width: '40%' }}/><MsxMonArt run={run} className="mon" style={{ bottom: '6%', height: '88%' }} live/>
         <div className="r3-mtag">育成完了の前に</div></div>
+      <MsxPtTabs tab={ptTab} setTab={setPtTab}/>
       <MsxPtUnits unit={ptUnit} setUnit={setPtUnit}/>
+      {ptTab === 'mastery' ? <MsxMasteryRows SUC={SUC} s={s} ws={ws} techs={mTechs} addOf={(k) => ptList.filter((x) => x === k).length} plus={spend} minus={undoK}/> : <>
       <div className="r3-bar"><span style={{ fontSize: 10, color: '#cbd5e1', alignSelf: 'center' }}>まとめて</span>
         <button type="button" className="r3-chip" onClick={() => preset('top')}>全部 {MSX_STAT_NAME[(ev0.top || [])[0]] || 'ちから'}</button>
         <button type="button" className="r3-chip" onClick={() => preset('low')}>弱いところ</button>
@@ -164,6 +169,7 @@ function MsxR3Retire({ run, setRun, onPause, debug, SUC }) {
         return (<div key={k}><span className="nm">{MSX_STAT_ICON[k]} {MSX_STAT_NAME[k]}</span><span className="v0">{s.stats[k]}</span><span className="ad">{add ? `+${add}` : ''}</span>
           <span className="st"><MsxPtBtn className="sym minus" aria-label={`${MSX_STAT_NAME[k]}を戻す`} disabled={!add} onPress={() => undoK(k)} data-msx-r3-ptminus={k}/><b>{add}</b><MsxPtBtn disabled={ws.pts < SUC.ptsCost(ws, k) || ws.stats[k] >= capOf(ws, k)} onPress={() => spend(k)} data-msx-r3-plus={k} className="sym plus" aria-label={`${MSX_STAT_NAME[k]}を上げる`}/></span></div>);
       })}</div>
+      </>}
       <div className="v-card"><div className="v-kv"><b>伸びすぎ注意</b><span>能力の上限はふつう 999(編成のモンスターで上がる)。その期の目安を超えた能力は、2ポイントで +1</span></div></div>
       <MsxSay aid={s.aid} ex="excited" text={ws.pts > 0 ? '「能力ポイントが残ってるよ! 使い切ってから、最後の評価を見よう!」' : '「使い切ったね! それじゃあ、最後の評価を見よう!」'}/>
     </>);

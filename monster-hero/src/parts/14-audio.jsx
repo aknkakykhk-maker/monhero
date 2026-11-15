@@ -614,7 +614,9 @@ const Audio_ = (() => {
         smoothSong=Math.min(buffer.duration,Math.max(smoothSong,next));smoothPerf=p;
         return smoothSong;
       };
-      if(autoStart)startSource(0);
+      // atMs … 曲の途中から鳴らす(観戦で、見ている画面の位置から流す。2026-11-15 r1115-190)。既定は頭から
+      const atSeconds=Math.max(0,(Number(options?.atMs)||0)/1000);
+      if(autoStart)startSource(atSeconds<buffer.duration?atSeconds:0);
       return {
         // autoStart:false で用意したぶんを、頭から鳴らし始める。
         // すでに鳴っている・止めたあとなら何もしない(二重に鳴らさない)
@@ -630,6 +632,8 @@ const Audio_ = (() => {
         paused:()=>!playing&&!stopped&&!naturallyEnded,
         pause:()=>{if(!playing||stopped)return;offsetSeconds=songTimeSeconds();playing=false;const old=source;source=null;stopSource(old);},
         resume:async()=>{if(playing||stopped||naturallyEnded)return playing;await ensureAudioCtxRunning();return startSource(offsetSeconds);},
+        // 位置を ms へ移して鳴らし直す(観戦で画面とずれたときに合わせ直す。止めたあと・終わったあとは何もしない)
+        seek:async(ms)=>{if(stopped)return false;const at=Math.max(0,(Number(ms)||0)/1000);if(at>=buffer.duration)return false;playing=false;naturallyEnded=false;const old=source;source=null;stopSource(old);offsetSeconds=at;smoothPerf=0;await ensureAudioCtxRunning();if(stopped)return false;return startSource(at);},
         restart:async()=>{if(stopped)return false;playing=false;naturallyEnded=false;const old=source;source=null;stopSource(old);offsetSeconds=0;await ensureAudioCtxRunning();return startSource(0);},
         // 譜面より音源のほうが長い曲を途中で終わらせるとき、最後の少しだけ音量を落とす。
         // (2026-09-06) デュラハンの2曲は音源がバトルのBGMと同じファイルなので切れない。

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 2780b2e3483b2236
+// generated-sha256: 729d031b253d47d5
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -6740,7 +6740,9 @@ const Audio_ = (() => {
         smoothSong=Math.min(buffer.duration,Math.max(smoothSong,next));smoothPerf=p;
         return smoothSong;
       };
-      if(autoStart)startSource(0);
+      // atMs … 曲の途中から鳴らす(観戦で、見ている画面の位置から流す。2026-11-15 r1115-190)。既定は頭から
+      const atSeconds=Math.max(0,(Number(options?.atMs)||0)/1000);
+      if(autoStart)startSource(atSeconds<buffer.duration?atSeconds:0);
       return {
         // autoStart:false で用意したぶんを、頭から鳴らし始める。
         // すでに鳴っている・止めたあとなら何もしない(二重に鳴らさない)
@@ -6756,6 +6758,8 @@ const Audio_ = (() => {
         paused:()=>!playing&&!stopped&&!naturallyEnded,
         pause:()=>{if(!playing||stopped)return;offsetSeconds=songTimeSeconds();playing=false;const old=source;source=null;stopSource(old);},
         resume:async()=>{if(playing||stopped||naturallyEnded)return playing;await ensureAudioCtxRunning();return startSource(offsetSeconds);},
+        // 位置を ms へ移して鳴らし直す(観戦で画面とずれたときに合わせ直す。止めたあと・終わったあとは何もしない)
+        seek:async(ms)=>{if(stopped)return false;const at=Math.max(0,(Number(ms)||0)/1000);if(at>=buffer.duration)return false;playing=false;naturallyEnded=false;const old=source;source=null;stopSource(old);offsetSeconds=at;smoothPerf=0;await ensureAudioCtxRunning();if(stopped)return false;return startSource(at);},
         restart:async()=>{if(stopped)return false;playing=false;naturallyEnded=false;const old=source;source=null;stopSource(old);offsetSeconds=0;await ensureAudioCtxRunning();return startSource(0);},
         // 譜面より音源のほうが長い曲を途中で終わらせるとき、最後の少しだけ音量を落とす。
         // (2026-09-06) デュラハンの2曲は音源がバトルのBGMと同じファイルなので切れない。
@@ -58780,6 +58784,64 @@ const rhythmWatchPosition = (row, nowMs = Date.now()) => {
   const age = Math.max(0, nowMs - row.pAt);
   return { p: row.p + Math.min(age, RHYTHM_WATCH_RUN_ON_MS), waiting: age > RHYTHM_WATCH_RUN_ON_MS, known: true };
 };
+// ---- 観戦している曲を、画面と同じ位置で流す(2026-11-15 r1115-190 社長「観戦中の音楽が自分の待機画面の曲のまま」) ----
+// 観戦の画面が自分で曲を鳴らす。位置は道の絵と同じ「見ている人の位置 − 1.5秒」。0.25秒ごとに確かめ、0.3秒より大きくずれたら合わせ直す。
+// 通信が止まった(待っています)あいだは一時停止。鳴らしているあいだは RHYTHM_WATCH_AUDIO.on() が true になり、本体は待機の曲と試聴を止める
+// (観戦をやめる・演奏が終わると false に戻り、本体が元の曲を流し直す)。演奏する人の端末・通信は何も変えない(届いている pg を読むだけ)
+const RHYTHM_WATCH_AUDIO_TICK_MS = 250;
+const RHYTHM_WATCH_AUDIO_DRIFT_MS = 300;
+const RHYTHM_WATCH_AUDIO = (() => {
+  let on = false;
+  const listeners = new Set();
+  return {
+    on: () => on,
+    set(next) { const v = !!next; if (v === on) return; on = v; listeners.forEach((fn) => { try { fn(on); } catch (_) { /* 画面側の失敗で止めない */ } }); },
+    subscribe(fn) { listeners.add(fn); return () => listeners.delete(fn); },
+  };
+})();
+// 本体(App)が「観戦の曲が鳴っているか」だけを知るための窓。切り替わったときだけ描き直す(1秒ごとの点の更新では描き直さない)
+const useRhythmWatchAudioOn = () => {
+  const [on, setOn] = React.useState(() => RHYTHM_WATCH_AUDIO.on());
+  React.useEffect(() => { setOn(RHYTHM_WATCH_AUDIO.on()); return RHYTHM_WATCH_AUDIO.subscribe(setOn); }, []);
+  return on;
+};
+// 見ている人の、画面に出している曲の位置(ms)。まだ分からないときは null
+const rhythmWatchAudioTarget = () => {
+  const st = RHYTHM_WATCH.view();
+  if (!st || st.phase !== 'playing') return null;
+  const pos = rhythmWatchPosition(st.rows ? st.rows[st.focus] : null);
+  return pos.known ? { ms: pos.p - RHYTHM_WATCH_LANE_DELAY_MS, waiting: pos.waiting } : null;
+};
+const useRhythmWatchAudio = (trackId, round) => {
+  React.useEffect(() => {
+    if (!trackId || typeof Audio_ === 'undefined' || !Audio_ || typeof Audio_.startRhythmTrack !== 'function') return undefined;
+    RHYTHM_WATCH_AUDIO.set(true);
+    let alive = true; let handle = null; let busy = false; let failed = false;
+    const volume = () => { const v = Number(rhythmWatchSettings().bgmVolume); return Number.isFinite(v) ? v : 100; };
+    const step = async () => {
+      if (!alive || busy || failed) return;
+      const t = rhythmWatchAudioTarget();
+      if (!t || t.ms < 0) return;   // 曲がまだ始まっていない(画面は1.5秒おくれ)
+      busy = true;
+      try {
+        if (!handle) {
+          const a = await Audio_.startRhythmTrack(trackId, volume(), { atMs: t.ms });
+          if (!alive) { if (a) a.stop(); return; }
+          if (!a) { failed = true; return; }   // 読めなかった曲は、この回は鳴らさない(無音のまま。待機の曲にも戻さない)
+          handle = a;
+          return;   // 読み込みに時間がかかった分のずれは、次の確かめで合わせる
+        }
+        if (t.waiting) { if (handle.started()) handle.pause(); return; }
+        if (handle.paused()) { await handle.seek(t.ms); return; }
+        if (handle.ended() && t.ms >= handle.durationMs) return;
+        if (Math.abs(handle.songTimeMs() - t.ms) > RHYTHM_WATCH_AUDIO_DRIFT_MS) await handle.seek(t.ms);
+      } catch (_) { failed = true; } finally { busy = false; }
+    };
+    const timer = setInterval(step, RHYTHM_WATCH_AUDIO_TICK_MS);
+    step();
+    return () => { alive = false; clearInterval(timer); if (handle) handle.stop(); handle = null; RHYTHM_WATCH_AUDIO.set(false); };
+  }, [trackId, round]);
+};
 function RhythmWatchLane({ chart, song = null, wide = false, onWaiting = null, onMode = null }) {
   const [flat, setFlat] = React.useState(() => rhythmWatchUseFlat());
   React.useEffect(() => { if (onMode) onMode(!flat); return () => { if (onMode) onMode(false); }; }, [flat]);
@@ -58975,6 +59037,9 @@ function RhythmWatchScreen({ songs = [], resolveIconUrl = null }) {
   const [roadMode, setRoadMode] = React.useState(false);
   const wide = useRhythmWatchWide();
   const focusRow = v && v.rows ? v.rows[v.focus] : null;
+  // 観戦している曲を、画面と同じ位置で流す(r1115-190)。演奏中の回だけ。終わった・やめたら止めて、本体が元の曲へ戻す
+  const audioSong = v && v.phase === 'playing' && v.songId ? songs.find((x) => x.songId === v.songId) : null;
+  useRhythmWatchAudio(audioSong && audioSong.bgmTrackId ? audioSong.bgmTrackId : '', v ? v.round : '');
   if (!v) return null;
   // 待機中のメンバーは、演奏が見つかったときだけ出す(見つからないあいだは、ふつうの待合いのまま)
   if (v.quiet && v.phase !== 'playing' && v.phase !== 'ended') return null;
@@ -59104,7 +59169,6 @@ function RhythmMultiScreen(props) {
 }
 function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList, bestRecords, resolveIconUrl, quickRunInfo = null, onRestartQuickRun = null, onResumeQuickRun = null, onPreviewSong = null, onUserGesture = null, multiLook = 'LIGHT', onChangeMultiLook = null, multiLiveBoard = true, onChangeMultiLiveBoard = null, onBack, onStartPlay, modeSelect = null, onRoomEntered = null, rankingSupport = null, masuMons = [], masuPicker = null, buddyTickets = 0, onUseBuddyTicket = null, onRefundBuddyTicket = null, onOpenMasuBeat = null, onStepAway = null, sessionAssistants = [], guideAssistantId = '', onOpenOptions = null, onCloseOptions = null }) {
   const view = useRhythmMultiView();
-  const watchV = useRhythmWatchView();
   // 助手が選ぶ曲を「無料+持っている曲」にするため、持っている曲を先に読んでおく(2026-11-13。マルチで何かを止めるわけではない)
   useRhythmOwnedSongs();
   // 観戦(2026-11-11): 誘われて入ったら演奏中だった人は、待機のあいだ、その演奏を見られる。入った直後と演奏中の部屋で、静かに「見ています」を送る
@@ -59456,9 +59520,8 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
   // (2026-10-03・ユーザー報告「難易度設定で音が一回なくなって最初からになる」「一瞬モンスターヒーローが流れる」)
   const previewId = previewPhase === 'select' ? selectPreviewId
     : (previewPhase === 'ready' || previewPhase === 'playing') && room.songId ? room.songId : '';
-  // 観戦中は、見ている演奏の曲を鳴らす(曲の位置は合わせない。試聴と同じ鳴らし方)
-  const watchSongId = watchV && watchV.phase === 'playing' ? watchV.songId : '';
-  React.useEffect(() => { if (onPreviewSong) onPreviewSong(watchSongId || previewId); }, [previewId, watchSongId]);
+  // 観戦中の曲は、観戦の画面が画面と同じ位置で流す(useRhythmWatchAudio・r1115-190)。本体はそのあいだ試聴を止める
+  React.useEffect(() => { if (onPreviewSong) onPreviewSong(previewId); }, [previewId]);
 
   const myProfile = () => ({ name: profile.name, level: profile.level, icon: profile.icon, frame: profile.frame, diff: defaultDiff, bid: friendSelfId });
   const createPrivate = () => { setMessage(''); RHYTHM_MULTI.join(rhythmMultiMakeCode(), myProfile(), 'private'); };
@@ -88265,7 +88328,7 @@ const MSX_CSS = `
 .msx .v-a.dim{opacity:.55}
 .msx .v-a.wide{grid-column:1/-1}
 .msx .v-pick{background:#0f172a;border:1px solid #f472b6;border-radius:12px;padding:5px 9px;margin-top:6px;font-size:10.5px;font-weight:800;line-height:1.5}
-.msx .v-pick b{color:#fde047}
+.msx .v-pick b{color:#fde047;white-space:nowrap} /* 取るものの1項目(名前と効き目)は途中で折らない。折るのは項目のあいだの「・」(r1115-197) */
 .msx.land .v-body{display:grid;grid-template-columns:40% 1fr;grid-template-rows:repeat(7,min-content) 1fr;column-gap:8px;padding-bottom:6px}
 .msx.land .v-body>*{grid-column:2}
 .msx.land .v-body>.v-scene{grid-column:1;grid-row:1/-1;height:auto;margin-top:5px}
@@ -91288,6 +91351,29 @@ function MsxPtBtn({ onPress, ...rest }) {
   return <PressRepeatButton onPress={fire} {...rest}/>;
 }
 
+// ---- 能力ポイントの振り分けの「能力」「技の熟練」タブと、技の熟練の行(r1115-198。能力ポイント10点で熟練 +1・0〜100) ----
+//   技の熟練は、振り分けの並び(draft)に 'm:' + 技のID を積む。芯の spendPts が 'm:…' を熟練として扱う(保存は s.mastery に足すだけ)
+function MsxPtTabs({ tab, setTab }) {
+  return (
+    <div className="msx-ptunit" role="tablist" aria-label="振り分け先" data-msx-pt-tabs>
+      {[['stat', '能力'], ['mastery', '技の熟練']].map(([k, nm]) => <button type="button" role="tab" key={k} aria-selected={tab === k} className={`chip${tab === k ? ' on' : ''}`} onClick={() => setTab(k)} data-msx-pt-tab={k}>{nm}</button>)}
+    </div>
+  );
+}
+function MsxMasteryRows({ SUC, s, ws, techs, addOf, plus, minus }) {
+  const M = SUC.MASTERY || { max: 100, boost: { pow: 0.10, hit: 0.05 } }; const cost = (SUC.PTS && SUC.PTS.mastery) || 10;
+  const pc = (m, k) => `${(m / M.max * M.boost[k] * 100).toFixed(1)}%`;
+  return (<>
+    <div className="msx-note">{cost}点で熟練 +1(0〜{M.max})。熟練が {M.max} で、技の威力 +{M.boost.pow * 100}%・命中 +{M.boost.hit * 100}%。仮に振って「決定」で確定する</div>
+    {techs.length ? techs.map((t) => { const k = `m:${t.id}`; const n = addOf(k); const m0 = Math.round(Number((s.mastery || {})[t.id]) || 0); const m1 = Math.round(Number((ws.mastery || {})[t.id]) || 0); return (
+      <div key={t.id} className="msx-ab-row" data-msx-pts-mrow={t.id}><span className="n">{t.kind === 'wise' ? '🧠' : '💪'} {t.name}<small className="sub" style={{ display: 'block', fontSize: 10, color: '#94a3b8' }}>威力 +{pc(m1, 'pow')}・命中 +{pc(m1, 'hit')}{n ? `(いまは +${pc(m0, 'pow')}・+${pc(m0, 'hit')})` : ''}</small></span>
+        <span style={{ fontSize: 12, fontWeight: 900, whiteSpace: 'nowrap' }}>{n ? <>{m0} → <b style={{ width: 'auto', color: '#fde047' }}>{m1}</b> <small style={{ color: '#fde047', fontSize: 11 }}>(+{n})</small></> : <b style={{ width: 'auto' }}>{m0}</b>}</span>
+        <MsxPtBtn className="chip sym minus pt44" disabled={!n} onPress={() => minus(k)} aria-label={`${t.name}の熟練を戻す`}/>
+        <MsxPtBtn className="chip on sym plus pt44" disabled={ws.pts < cost || m1 >= M.max} onPress={() => plus(k)} aria-label={`${t.name}の熟練を上げる`}/>
+      </div>); }) : <div className="sub">まだ覚えている技がない</div>}
+  </>);
+}
+
 // ---- 能力(能力ポイントを振る・忠誠と方針・編成の親密度) ----
 function MsxStats({ run, setRun, v, ev, onClose }) {
   // 育成中の「能力」: いじる物・育成中だけの物(能力ポイント・技・型・忠誠度と方針・編成の親密度)。能力の棒や図鑑は「くわしく」へ(2026-11-14 社長「役割で分ける」)
@@ -91301,12 +91387,13 @@ function MsxStats({ run, setRun, v, ev, onClose }) {
   const addOf = (k) => draft.filter((x) => x === k).length;
   const capK = (k) => (typeof SUC.statCapOf === 'function' ? SUC.statCapOf(s, k) : 999); // 能力の上限アップ(r1115-103)
   const [unit, setUnit] = useMsxPtUnit();
+  const [ptTab, setPtTab] = useState('stat'); // 「能力」「技の熟練」(r1115-198)
   const draftRef = useRef(draft); draftRef.current = draft;
   const setDraftNow = (list) => { draftRef.current = list; setDraft(list); };
   // 刻みの分(1・5・10・100・MAX)だけ続けて振る。ポイントが足りない・上限に着いたところで止まる
   const plus = (k) => {
     const list = draftRef.current.slice(); let w = replay(list); const lim = msxPtLimit(unit); let n = 0;
-    while (n < lim) { if (w.stats[k] >= capK(k)) break; const r = SUC.spendPts(w, k, 1); if (!r.out.ok) break; w = r.state; list.push(k); n += 1; }
+    while (n < lim) { if (!String(k).startsWith('m:') && w.stats[k] >= capK(k)) break; const r = SUC.spendPts(w, k, 1); if (!r.out.ok) break; w = r.state; list.push(k); n += 1; }
     if (n) setDraftNow(list);
   };
   const minus = (k) => {
@@ -91332,7 +91419,9 @@ function MsxStats({ run, setRun, v, ev, onClose }) {
           <div className="v-num"><small>使う点</small><b style={{ color: used ? '#fde047' : undefined }}>{used}</b></div>
           <div className="v-num"><small>残りの点</small><b>{ws.pts}</b></div>
         </div>
+        <MsxPtTabs tab={ptTab} setTab={setPtTab}/>
         <MsxPtUnits unit={unit} setUnit={setUnit}/>
+        {ptTab === 'mastery' ? <MsxMasteryRows SUC={SUC} s={s} ws={ws} techs={techs} addOf={addOf} plus={plus} minus={minus}/> : <>
         <div className="msx-note">＋で仮に振り(押し続けると続けて振れる)、「決定」で確定する。1点で +1(期の目安{lineOf ? ` ${lineOf}` : ''}を超えると 2点で +1)</div>
         {MSX_STATS.map((k) => { const n = addOf(k); const cost = SUC.ptsCost(ws, k); const over = lineOf != null && ws.stats[k] >= lineOf; return (
           <div key={k} className="msx-ab-row" data-msx-pts-row={k}><span className="n">{MSX_STAT_ICON[k]} {MSX_STAT_NAME[k]}<small className="sub" style={{ display: 'block', fontSize: 10, color: over ? '#fbbf24' : '#94a3b8' }}>{over ? '目安超え・2点で +1' : '1点で +1'}{capK(k) > 999 ? <span data-msx-cap={k} style={{ color: '#f0abfc' }}>・上限 {capK(k).toLocaleString()}</span> : null}</small></span>
@@ -91340,6 +91429,7 @@ function MsxStats({ run, setRun, v, ev, onClose }) {
             <MsxPtBtn className="chip sym minus pt44" disabled={!n} onPress={() => minus(k)} aria-label={`${MSX_STAT_NAME[k]}を戻す`}/>
             <MsxPtBtn className="chip on sym plus pt44" disabled={ws.pts < cost} onPress={() => plus(k)} aria-label={`${MSX_STAT_NAME[k]}を上げる`}/>
           </div>); })}
+        </>}
         <div className="msx-row" style={{ marginTop: 8, gap: 6 }}>
           <button type="button" className="chip" style={{ flex: 1, minHeight: 44 }} disabled={!draft.length} onClick={() => setDraft([])}>元に戻す</button>
           <button type="button" className="chip on" style={{ flex: 2, minHeight: 44 }} disabled={!draft.length} onClick={commit}>決定</button>
@@ -92059,7 +92149,7 @@ const msxR3CupReward = (SUC, c, s) => {
   }
   const R = SUC.CUP_SYS ? (SUC.CUP_SYS[c.sys] || {}) : {};
   const out = [];
-  const pts = { 3: 10, 4: 20 }[c.star]; const pop = { 2: 2, 3: 4, 4: 8 }[c.star]; const up = ((SUC.CUP_REWARD || {}).statUp || { 1: 4, 2: 8, 3: 12 })[c.star];
+  const pts = (SUC.CUP_REWARD && SUC.CUP_REWARD.pts ? SUC.CUP_REWARD.pts : { 1: 30, 2: 60, 3: 90, 4: 120 })[c.star]; const pop = { 2: 2, 3: 4, 4: 8 }[c.star]; const up = ((SUC.CUP_REWARD || {}).statUp || { 1: 4, 2: 8, 3: 12 })[c.star];
   if (pts) out.push(`能力ポイント +${pts}${c.rival ? `(ライバルに勝つと +${Math.round(pts * 1.5)})` : ''}`);
   if (pop) out.push(`人気 +${pop}`);
   if (R.stat && up) out.push(`${MSX_STAT_NAME[R.stat]} +${up}`);
@@ -93048,12 +93138,13 @@ function MsxR3Retire({ run, setRun, onPause, debug, SUC }) {
   const [step, setStep] = useState(() => (run.s.pts > 0 ? 'e3' : 'e0')); // 能力ポイントが残っていれば先に使う → 最終の評価
   // 能力ポイント(E3)は、育成中の振り分けと同じく「押した能力の並び」を持ち、毎回 s から振り直す。
   // 「−」はその能力を最後に押した1つだけを抜くので、あとから振った別の能力は残る。まとめて振った分も並びに積むので、そのあと個別に戻せる(r1115-172)
-  const capOfPt = (w, k) => (typeof SUC.statCapOf === 'function' ? SUC.statCapOf(w, k) : 999);
+  const capOfPt = (w, k) => (String(k).startsWith('m:') ? Infinity : typeof SUC.statCapOf === 'function' ? SUC.statCapOf(w, k) : 999); // 'm:' は技の熟練(上限は芯が見る)
   const replayPts = (list) => { let w = s; for (const k of list) { if (w.stats[k] >= capOfPt(w, k)) continue; const r = SUC.spendPts(w, k, 1); if (r.out.ok) w = r.state; } return w; };
   const [ptList, setPtList] = useState([]);
   const ptListRef = useRef(ptList); ptListRef.current = ptList; // 長押しで続けて振るとき、描き直しを待たず最新を読む
   const setPtListNow = (list) => { ptListRef.current = list; setPtList(list); };
   const ws = useMemo(() => replayPts(ptList), [s, ptList]); // 能力ポイントを使っている途中の写し
+  const [ptTab, setPtTab] = useState('stat'); // 「能力」「技の熟練」(r1115-198)
   const [ptUnit, setPtUnit] = useMsxPtUnit();            // 1・5・10・100・MAX(r1115-092)
   const [pick, setPick] = useState({}); // アシスト能力 { id: 段 }
   const [atab, setAtab] = useState(null); // アシストの場面のタブ(第2版・7つ)
@@ -93130,13 +93221,17 @@ function MsxR3Retire({ run, setRun, onPause, debug, SUC }) {
       setPtListNow(list);
     };
     const used = s.pts - ws.pts;
+    const ownT = typeof SUC.techsOf === 'function' ? SUC.techsOf(s.species) : [];
+    const mTechs = (Array.isArray(s.techs) ? s.techs : []).map((id) => ownT.find((t) => t && t.id === id)).filter(Boolean);
     const body = (<>
       <div className="v-pt"><div className="n">能力ポイント<b>{ws.pts}<small style={{ fontSize: 11, color: '#cbd5e1' }}> / {s.pts}</small></b></div>
         <div className="r">使った <span className="yel">{used}</span>・残り {ws.pts}<br/>総合力 {msxFmt(ev0.power)} → <span className="yel">{msxFmt(ev.power)}</span> <i className={msxRankCls(ev.rank)}>{ev.rank}</i></div></div>
       <div className="v-scene r3-mscene" style={{ flex: '1 1 0' }}><img className="bg" src={msxSceneBg(Math.min(s.turn, msxSuc.core.TOTAL_TURNS)).bg} alt=""/><div className="sh"/>
         <div className="gr" style={{ bottom: 'calc(6% - 5px)', width: '40%' }}/><MsxMonArt run={run} className="mon" style={{ bottom: '6%', height: '88%' }} live/>
         <div className="r3-mtag">育成完了の前に</div></div>
+      <MsxPtTabs tab={ptTab} setTab={setPtTab}/>
       <MsxPtUnits unit={ptUnit} setUnit={setPtUnit}/>
+      {ptTab === 'mastery' ? <MsxMasteryRows SUC={SUC} s={s} ws={ws} techs={mTechs} addOf={(k) => ptList.filter((x) => x === k).length} plus={spend} minus={undoK}/> : <>
       <div className="r3-bar"><span style={{ fontSize: 10, color: '#cbd5e1', alignSelf: 'center' }}>まとめて</span>
         <button type="button" className="r3-chip" onClick={() => preset('top')}>全部 {MSX_STAT_NAME[(ev0.top || [])[0]] || 'ちから'}</button>
         <button type="button" className="r3-chip" onClick={() => preset('low')}>弱いところ</button>
@@ -93147,6 +93242,7 @@ function MsxR3Retire({ run, setRun, onPause, debug, SUC }) {
         return (<div key={k}><span className="nm">{MSX_STAT_ICON[k]} {MSX_STAT_NAME[k]}</span><span className="v0">{s.stats[k]}</span><span className="ad">{add ? `+${add}` : ''}</span>
           <span className="st"><MsxPtBtn className="sym minus" aria-label={`${MSX_STAT_NAME[k]}を戻す`} disabled={!add} onPress={() => undoK(k)} data-msx-r3-ptminus={k}/><b>{add}</b><MsxPtBtn disabled={ws.pts < SUC.ptsCost(ws, k) || ws.stats[k] >= capOf(ws, k)} onPress={() => spend(k)} data-msx-r3-plus={k} className="sym plus" aria-label={`${MSX_STAT_NAME[k]}を上げる`}/></span></div>);
       })}</div>
+      </>}
       <div className="v-card"><div className="v-kv"><b>伸びすぎ注意</b><span>能力の上限はふつう 999(編成のモンスターで上がる)。その期の目安を超えた能力は、2ポイントで +1</span></div></div>
       <MsxSay aid={s.aid} ex="excited" text={ws.pts > 0 ? '「能力ポイントが残ってるよ! 使い切ってから、最後の評価を見よう!」' : '「使い切ったね! それじゃあ、最後の評価を見よう!」'}/>
     </>);
@@ -122313,7 +122409,9 @@ function MonsterHeroGame() {
   useEffect(()=>{if(String(gameState).startsWith('RHYTHM'))ASSET_CACHE.noteSong(rhythmSelectedSongId);},[rhythmSelectedSongId,gameState]);
   const rhythmPreviewSongId=gameState==='RHYTHM_MULTI'&&rhythmMultiPreviewSongId?rhythmMultiPreviewSongId:rhythmSelectedSongId;
   const rhythmPreviewSong=rhythmDemoSongs(RHYTHM_SONGS).find(song=>song.songId===rhythmPreviewSongId)||null;
-  const rhythmPreviewTrackId=rhythmSettings.songPreviewEnabled&&RHYTHM_PREVIEW_SCREENS.includes(gameState)&&rhythmPreviewSong
+  // 観戦の画面が観戦している曲を流しているあいだは、試聴も待機の曲も止める(r1115-190。やめたら false に戻り、元の曲を流し直す)
+  const rhythmWatchAudioOn=useRhythmWatchAudioOn();
+  const rhythmPreviewTrackId=!rhythmWatchAudioOn&&rhythmSettings.songPreviewEnabled&&RHYTHM_PREVIEW_SCREENS.includes(gameState)&&rhythmPreviewSong
     ?rhythmPreviewSong.bgmTrackId:'';
   useEffect(()=>{
     if(!rhythmPreviewTrackId)return undefined;
@@ -124942,6 +125040,8 @@ function MonsterHeroGame() {
     // 専用sourceの開始・停止はRhythmTapTestが管理する。通常BGM effectから触ると二重再生や途中停止になる。
     if (gameState === 'RHYTHM_PLAY') return;
     if (successScreenOpen) return;
+    // 観戦の曲が鳴っているあいだは触らない(観戦の画面が鳴らし始めるときに待機の曲を止めている。終わったら下で流し直す・r1115-190)
+    if (rhythmWatchAudioOn) return;
     let key = bootPhase === 'GAME' ? bgmKeyForState(gameState, wave, enemy?.id, (waveHistory||[]).length > 0, hp <= 0 || gaveUp) : (bootPhase === 'TITLE' || bootPhase === 'ENTERING_GAME' ? bgmArrangement.title : null);
     // ★モンビーを開いているあいだ、バトルのBGMは止まっている(この画面はキーを持たない)。
     //   戻ってきた最初の1回で「直前のBGMを維持」を選ぶと、維持すべき曲が無いので
@@ -124972,7 +125072,7 @@ function MonsterHeroGame() {
     if (key && eventId && prev && prev.id === eventId && prev.key !== key) Audio_.fadeToBGM(key, EVENT_BGM_FADE_MS);
     else if (key) Audio_.playBGM(key);
     else Audio_.stopBGM();
-  }, [bootPhase, gameState, wave, enemy?.id, hp, gaveUp, audioOn, successScreenOpen, waveHistory.length, bgmArrangement, runMode, eventBgmScene, mainHero?.id, autoBattle, autoBgmOverride, rhythmScreenOpen, cardScreenOpen, eventLineBgm, cardBgm, assistantLifeOpenNow, battleBgmOverlay]);
+  }, [bootPhase, gameState, wave, enemy?.id, hp, gaveUp, audioOn, successScreenOpen, waveHistory.length, bgmArrangement, runMode, eventBgmScene, mainHero?.id, autoBattle, autoBgmOverride, rhythmScreenOpen, cardScreenOpen, eventLineBgm, cardBgm, assistantLifeOpenNow, battleBgmOverlay, rhythmWatchAudioOn]);
 
   // SE/BGMそれぞれの音量をAudioエンジンへ反映
   // 超省エネではBGMを選んで鳴らしてもSEだけは常に0。保存済みSE音量そのものは変更しない。

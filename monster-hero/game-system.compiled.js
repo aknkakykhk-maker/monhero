@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 62119d5e4e7bbc52
+// source-sha256: c30179f9c39c7d6b
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -8878,7 +8878,8 @@ const Audio_ = (() => {
         smoothPerf = p;
         return smoothSong;
       };
-      if (autoStart) startSource(0);
+      const atSeconds = Math.max(0, (Number(options?.atMs) || 0) / 1000);
+      if (autoStart) startSource(atSeconds < buffer.duration ? atSeconds : 0);
       return {
         start: () => {
           if (playing || stopped || naturallyEnded) return playing;
@@ -8910,6 +8911,21 @@ const Audio_ = (() => {
           if (playing || stopped || naturallyEnded) return playing;
           await ensureAudioCtxRunning();
           return startSource(offsetSeconds);
+        },
+        seek: async ms => {
+          if (stopped) return false;
+          const at = Math.max(0, (Number(ms) || 0) / 1000);
+          if (at >= buffer.duration) return false;
+          playing = false;
+          naturallyEnded = false;
+          const old = source;
+          source = null;
+          stopSource(old);
+          offsetSeconds = at;
+          smoothPerf = 0;
+          await ensureAudioCtxRunning();
+          if (stopped) return false;
+          return startSource(at);
         },
         restart: async () => {
           if (stopped) return false;
@@ -98685,6 +98701,106 @@ const rhythmWatchPosition = (row, nowMs = Date.now()) => {
     known: true
   };
 };
+const RHYTHM_WATCH_AUDIO_TICK_MS = 250;
+const RHYTHM_WATCH_AUDIO_DRIFT_MS = 300;
+const RHYTHM_WATCH_AUDIO = (() => {
+  let on = false;
+  const listeners = new Set();
+  return {
+    on: () => on,
+    set(next) {
+      const v = !!next;
+      if (v === on) return;
+      on = v;
+      listeners.forEach(fn => {
+        try {
+          fn(on);
+        } catch (_) {}
+      });
+    },
+    subscribe(fn) {
+      listeners.add(fn);
+      return () => listeners.delete(fn);
+    }
+  };
+})();
+const useRhythmWatchAudioOn = () => {
+  const [on, setOn] = React.useState(() => RHYTHM_WATCH_AUDIO.on());
+  React.useEffect(() => {
+    setOn(RHYTHM_WATCH_AUDIO.on());
+    return RHYTHM_WATCH_AUDIO.subscribe(setOn);
+  }, []);
+  return on;
+};
+const rhythmWatchAudioTarget = () => {
+  const st = RHYTHM_WATCH.view();
+  if (!st || st.phase !== 'playing') return null;
+  const pos = rhythmWatchPosition(st.rows ? st.rows[st.focus] : null);
+  return pos.known ? {
+    ms: pos.p - RHYTHM_WATCH_LANE_DELAY_MS,
+    waiting: pos.waiting
+  } : null;
+};
+const useRhythmWatchAudio = (trackId, round) => {
+  React.useEffect(() => {
+    if (!trackId || typeof Audio_ === 'undefined' || !Audio_ || typeof Audio_.startRhythmTrack !== 'function') return undefined;
+    RHYTHM_WATCH_AUDIO.set(true);
+    let alive = true;
+    let handle = null;
+    let busy = false;
+    let failed = false;
+    const volume = () => {
+      const v = Number(rhythmWatchSettings().bgmVolume);
+      return Number.isFinite(v) ? v : 100;
+    };
+    const step = async () => {
+      if (!alive || busy || failed) return;
+      const t = rhythmWatchAudioTarget();
+      if (!t || t.ms < 0) return;
+      busy = true;
+      try {
+        if (!handle) {
+          const a = await Audio_.startRhythmTrack(trackId, volume(), {
+            atMs: t.ms
+          });
+          if (!alive) {
+            if (a) a.stop();
+            return;
+          }
+          if (!a) {
+            failed = true;
+            return;
+          }
+          handle = a;
+          return;
+        }
+        if (t.waiting) {
+          if (handle.started()) handle.pause();
+          return;
+        }
+        if (handle.paused()) {
+          await handle.seek(t.ms);
+          return;
+        }
+        if (handle.ended() && t.ms >= handle.durationMs) return;
+        if (Math.abs(handle.songTimeMs() - t.ms) > RHYTHM_WATCH_AUDIO_DRIFT_MS) await handle.seek(t.ms);
+      } catch (_) {
+        failed = true;
+      } finally {
+        busy = false;
+      }
+    };
+    const timer = setInterval(step, RHYTHM_WATCH_AUDIO_TICK_MS);
+    step();
+    return () => {
+      alive = false;
+      clearInterval(timer);
+      if (handle) handle.stop();
+      handle = null;
+      RHYTHM_WATCH_AUDIO.set(false);
+    };
+  }, [trackId, round]);
+};
 function RhythmWatchLane({
   chart,
   song = null,
@@ -99155,6 +99271,8 @@ function RhythmWatchScreen({
   const [roadMode, setRoadMode] = React.useState(false);
   const wide = useRhythmWatchWide();
   const focusRow = v && v.rows ? v.rows[v.focus] : null;
+  const audioSong = v && v.phase === 'playing' && v.songId ? songs.find(x => x.songId === v.songId) : null;
+  useRhythmWatchAudio(audioSong && audioSong.bgmTrackId ? audioSong.bgmTrackId : '', v ? v.round : '');
   if (!v) return null;
   if (v.quiet && v.phase !== 'playing' && v.phase !== 'ended') return null;
   if (typeof document === 'undefined' || typeof ReactDOM === 'undefined' || !ReactDOM.createPortal) return null;
@@ -99411,7 +99529,6 @@ function RhythmMultiScreenBody({
   onCloseOptions = null
 }) {
   const view = useRhythmMultiView();
-  const watchV = useRhythmWatchView();
   useRhythmOwnedSongs();
   React.useEffect(() => {
     if (!view) {
@@ -99910,10 +100027,9 @@ function RhythmMultiScreenBody({
   const previewPhase = room ? room.phase : '';
   const selectPreviewId = selSongId || (songs[0] ? songs[0].songId : '');
   const previewId = previewPhase === 'select' ? selectPreviewId : (previewPhase === 'ready' || previewPhase === 'playing') && room.songId ? room.songId : '';
-  const watchSongId = watchV && watchV.phase === 'playing' ? watchV.songId : '';
   React.useEffect(() => {
-    if (onPreviewSong) onPreviewSong(watchSongId || previewId);
-  }, [previewId, watchSongId]);
+    if (onPreviewSong) onPreviewSong(previewId);
+  }, [previewId]);
   const myProfile = () => ({
     name: profile.name,
     level: profile.level,
@@ -170195,7 +170311,7 @@ const MSX_CSS = `
 .msx .v-a.dim{opacity:.55}
 .msx .v-a.wide{grid-column:1/-1}
 .msx .v-pick{background:#0f172a;border:1px solid #f472b6;border-radius:12px;padding:5px 9px;margin-top:6px;font-size:10.5px;font-weight:800;line-height:1.5}
-.msx .v-pick b{color:#fde047}
+.msx .v-pick b{color:#fde047;white-space:nowrap} /* 取るものの1項目(名前と効き目)は途中で折らない。折るのは項目のあいだの「・」(r1115-197) */
 .msx.land .v-body{display:grid;grid-template-columns:40% 1fr;grid-template-rows:repeat(7,min-content) 1fr;column-gap:8px;padding-bottom:6px}
 .msx.land .v-body>*{grid-column:2}
 .msx.land .v-body>.v-scene{grid-column:1;grid-row:1/-1;height:auto;margin-top:5px}
@@ -177500,6 +177616,98 @@ function MsxPtBtn({
     onPress: fire
   }, rest));
 }
+function MsxPtTabs({
+  tab,
+  setTab
+}) {
+  return React.createElement("div", {
+    className: "msx-ptunit",
+    role: "tablist",
+    "aria-label": "振り分け先",
+    "data-msx-pt-tabs": true
+  }, [['stat', '能力'], ['mastery', '技の熟練']].map(([k, nm]) => React.createElement("button", {
+    type: "button",
+    role: "tab",
+    key: k,
+    "aria-selected": tab === k,
+    className: `chip${tab === k ? ' on' : ''}`,
+    onClick: () => setTab(k),
+    "data-msx-pt-tab": k
+  }, nm)));
+}
+function MsxMasteryRows({
+  SUC,
+  s,
+  ws,
+  techs,
+  addOf,
+  plus,
+  minus
+}) {
+  const M = SUC.MASTERY || {
+    max: 100,
+    boost: {
+      pow: 0.10,
+      hit: 0.05
+    }
+  };
+  const cost = SUC.PTS && SUC.PTS.mastery || 10;
+  const pc = (m, k) => `${(m / M.max * M.boost[k] * 100).toFixed(1)}%`;
+  return React.createElement(React.Fragment, null, React.createElement("div", {
+    className: "msx-note"
+  }, cost, "点で熟練 +1(0〜", M.max, ")。熟練が ", M.max, " で、技の威力 +", M.boost.pow * 100, "%・命中 +", M.boost.hit * 100, "%。仮に振って「決定」で確定する"), techs.length ? techs.map(t => {
+    const k = `m:${t.id}`;
+    const n = addOf(k);
+    const m0 = Math.round(Number((s.mastery || {})[t.id]) || 0);
+    const m1 = Math.round(Number((ws.mastery || {})[t.id]) || 0);
+    return React.createElement("div", {
+      key: t.id,
+      className: "msx-ab-row",
+      "data-msx-pts-mrow": t.id
+    }, React.createElement("span", {
+      className: "n"
+    }, t.kind === 'wise' ? '🧠' : '💪', " ", t.name, React.createElement("small", {
+      className: "sub",
+      style: {
+        display: 'block',
+        fontSize: 10,
+        color: '#94a3b8'
+      }
+    }, "威力 +", pc(m1, 'pow'), "・命中 +", pc(m1, 'hit'), n ? `(いまは +${pc(m0, 'pow')}・+${pc(m0, 'hit')})` : '')), React.createElement("span", {
+      style: {
+        fontSize: 12,
+        fontWeight: 900,
+        whiteSpace: 'nowrap'
+      }
+    }, n ? React.createElement(React.Fragment, null, m0, " → ", React.createElement("b", {
+      style: {
+        width: 'auto',
+        color: '#fde047'
+      }
+    }, m1), " ", React.createElement("small", {
+      style: {
+        color: '#fde047',
+        fontSize: 11
+      }
+    }, "(+", n, ")")) : React.createElement("b", {
+      style: {
+        width: 'auto'
+      }
+    }, m0)), React.createElement(MsxPtBtn, {
+      className: "chip sym minus pt44",
+      disabled: !n,
+      onPress: () => minus(k),
+      "aria-label": `${t.name}の熟練を戻す`
+    }), React.createElement(MsxPtBtn, {
+      className: "chip on sym plus pt44",
+      disabled: ws.pts < cost || m1 >= M.max,
+      onPress: () => plus(k),
+      "aria-label": `${t.name}の熟練を上げる`
+    }));
+  }) : React.createElement("div", {
+    className: "sub"
+  }, "まだ覚えている技がない"));
+}
 function MsxStats({
   run,
   setRun,
@@ -177526,6 +177734,7 @@ function MsxStats({
   const addOf = k => draft.filter(x => x === k).length;
   const capK = k => typeof SUC.statCapOf === 'function' ? SUC.statCapOf(s, k) : 999;
   const [unit, setUnit] = useMsxPtUnit();
+  const [ptTab, setPtTab] = useState('stat');
   const draftRef = useRef(draft);
   draftRef.current = draft;
   const setDraftNow = list => {
@@ -177538,7 +177747,7 @@ function MsxStats({
     const lim = msxPtLimit(unit);
     let n = 0;
     while (n < lim) {
-      if (w.stats[k] >= capK(k)) break;
+      if (!String(k).startsWith('m:') && w.stats[k] >= capK(k)) break;
       const r = SUC.spendPts(w, k, 1);
       if (!r.out.ok) break;
       w = r.state;
@@ -177629,10 +177838,21 @@ function MsxStats({
     }
   }, used)), React.createElement("div", {
     className: "v-num"
-  }, React.createElement("small", null, "残りの点"), React.createElement("b", null, ws.pts))), React.createElement(MsxPtUnits, {
+  }, React.createElement("small", null, "残りの点"), React.createElement("b", null, ws.pts))), React.createElement(MsxPtTabs, {
+    tab: ptTab,
+    setTab: setPtTab
+  }), React.createElement(MsxPtUnits, {
     unit: unit,
     setUnit: setUnit
-  }), React.createElement("div", {
+  }), ptTab === 'mastery' ? React.createElement(MsxMasteryRows, {
+    SUC: SUC,
+    s: s,
+    ws: ws,
+    techs: techs,
+    addOf: addOf,
+    plus: plus,
+    minus: minus
+  }) : React.createElement(React.Fragment, null, React.createElement("div", {
     className: "msx-note"
   }, "＋で仮に振り(押し続けると続けて振れる)、「決定」で確定する。1点で +1(期の目安", lineOf ? ` ${lineOf}` : '', "を超えると 2点で +1)"), MSX_STATS.map(k => {
     const n = addOf(k);
@@ -177687,7 +177907,7 @@ function MsxStats({
       onPress: () => plus(k),
       "aria-label": `${MSX_STAT_NAME[k]}を上げる`
     }));
-  }), React.createElement("div", {
+  })), React.createElement("div", {
     className: "msx-row",
     style: {
       marginTop: 8,
@@ -179045,10 +179265,12 @@ const msxR3CupReward = (SUC, c, s) => {
   }
   const R = SUC.CUP_SYS ? SUC.CUP_SYS[c.sys] || {} : {};
   const out = [];
-  const pts = {
-    3: 10,
-    4: 20
-  }[c.star];
+  const pts = (SUC.CUP_REWARD && SUC.CUP_REWARD.pts ? SUC.CUP_REWARD.pts : {
+    1: 30,
+    2: 60,
+    3: 90,
+    4: 120
+  })[c.star];
   const pop = {
     2: 2,
     3: 4,
@@ -182027,7 +182249,7 @@ function MsxR3Retire({
 }) {
   const s = run.s;
   const [step, setStep] = useState(() => run.s.pts > 0 ? 'e3' : 'e0');
-  const capOfPt = (w, k) => typeof SUC.statCapOf === 'function' ? SUC.statCapOf(w, k) : 999;
+  const capOfPt = (w, k) => String(k).startsWith('m:') ? Infinity : typeof SUC.statCapOf === 'function' ? SUC.statCapOf(w, k) : 999;
   const replayPts = list => {
     let w = s;
     for (const k of list) {
@@ -182045,6 +182267,7 @@ function MsxR3Retire({
     setPtList(list);
   };
   const ws = useMemo(() => replayPts(ptList), [s, ptList]);
+  const [ptTab, setPtTab] = useState('stat');
   const [ptUnit, setPtUnit] = useMsxPtUnit();
   const [pick, setPick] = useState({});
   const [atab, setAtab] = useState(null);
@@ -182229,6 +182452,8 @@ function MsxR3Retire({
       setPtListNow(list);
     };
     const used = s.pts - ws.pts;
+    const ownT = typeof SUC.techsOf === 'function' ? SUC.techsOf(s.species) : [];
+    const mTechs = (Array.isArray(s.techs) ? s.techs : []).map(id => ownT.find(t => t && t.id === id)).filter(Boolean);
     const body = React.createElement(React.Fragment, null, React.createElement("div", {
       className: "v-pt"
     }, React.createElement("div", {
@@ -182273,10 +182498,21 @@ function MsxR3Retire({
       live: true
     }), React.createElement("div", {
       className: "r3-mtag"
-    }, "育成完了の前に")), React.createElement(MsxPtUnits, {
+    }, "育成完了の前に")), React.createElement(MsxPtTabs, {
+      tab: ptTab,
+      setTab: setPtTab
+    }), React.createElement(MsxPtUnits, {
       unit: ptUnit,
       setUnit: setPtUnit
-    }), React.createElement("div", {
+    }), ptTab === 'mastery' ? React.createElement(MsxMasteryRows, {
+      SUC: SUC,
+      s: s,
+      ws: ws,
+      techs: mTechs,
+      addOf: k => ptList.filter(x => x === k).length,
+      plus: spend,
+      minus: undoK
+    }) : React.createElement(React.Fragment, null, React.createElement("div", {
       className: "r3-bar"
     }, React.createElement("span", {
       style: {
@@ -182328,7 +182564,7 @@ function MsxR3Retire({
         className: "sym plus",
         "aria-label": `${MSX_STAT_NAME[k]}を上げる`
       })));
-    })), React.createElement("div", {
+    }))), React.createElement("div", {
       className: "v-card"
     }, React.createElement("div", {
       className: "v-kv"
@@ -232901,7 +233137,8 @@ function MonsterHeroGame() {
   }, [rhythmSelectedSongId, gameState]);
   const rhythmPreviewSongId = gameState === 'RHYTHM_MULTI' && rhythmMultiPreviewSongId ? rhythmMultiPreviewSongId : rhythmSelectedSongId;
   const rhythmPreviewSong = rhythmDemoSongs(RHYTHM_SONGS).find(song => song.songId === rhythmPreviewSongId) || null;
-  const rhythmPreviewTrackId = rhythmSettings.songPreviewEnabled && RHYTHM_PREVIEW_SCREENS.includes(gameState) && rhythmPreviewSong ? rhythmPreviewSong.bgmTrackId : '';
+  const rhythmWatchAudioOn = useRhythmWatchAudioOn();
+  const rhythmPreviewTrackId = !rhythmWatchAudioOn && rhythmSettings.songPreviewEnabled && RHYTHM_PREVIEW_SCREENS.includes(gameState) && rhythmPreviewSong ? rhythmPreviewSong.bgmTrackId : '';
   useEffect(() => {
     if (!rhythmPreviewTrackId) return undefined;
     let cancelled = false,
@@ -235419,6 +235656,7 @@ function MonsterHeroGame() {
   useEffect(() => {
     if (gameState === 'RHYTHM_PLAY') return;
     if (successScreenOpen) return;
+    if (rhythmWatchAudioOn) return;
     let key = bootPhase === 'GAME' ? bgmKeyForState(gameState, wave, enemy?.id, (waveHistory || []).length > 0, hp <= 0 || gaveUp) : bootPhase === 'TITLE' || bootPhase === 'ENTERING_GAME' ? bgmArrangement.title : null;
     if (key === '__keep_battle_bgm__' && bgmSuspendedByRhythmRef.current) {
       key = bgmKeyForState(gameState, wave, enemy?.id, (waveHistory || []).length > 0, hp <= 0 || gaveUp, false);
@@ -235445,7 +235683,7 @@ function MonsterHeroGame() {
       key
     } : null;
     if (key && eventId && prev && prev.id === eventId && prev.key !== key) Audio_.fadeToBGM(key, EVENT_BGM_FADE_MS);else if (key) Audio_.playBGM(key);else Audio_.stopBGM();
-  }, [bootPhase, gameState, wave, enemy?.id, hp, gaveUp, audioOn, successScreenOpen, waveHistory.length, bgmArrangement, runMode, eventBgmScene, mainHero?.id, autoBattle, autoBgmOverride, rhythmScreenOpen, cardScreenOpen, eventLineBgm, cardBgm, assistantLifeOpenNow, battleBgmOverlay]);
+  }, [bootPhase, gameState, wave, enemy?.id, hp, gaveUp, audioOn, successScreenOpen, waveHistory.length, bgmArrangement, runMode, eventBgmScene, mainHero?.id, autoBattle, autoBgmOverride, rhythmScreenOpen, cardScreenOpen, eventLineBgm, cardBgm, assistantLifeOpenNow, battleBgmOverlay, rhythmWatchAudioOn]);
   const assistantLifeRunMuted = assistantLifeScreenOpen && runStage !== null;
   useEffect(() => {
     Audio_.setSeVolume(ultraEcoSession && !cardScreenOpen || rhythmScreenOpen || assistantLifeRunMuted ? 0 : seVolume);

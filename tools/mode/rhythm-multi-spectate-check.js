@@ -179,12 +179,35 @@ const VIEW = PORTRAIT ? { width: 390, height: 844 } : { width: 844, height: 390 
     await W.locator('[data-rhythm-multi-free]').click();
     await W.waitForSelector(`[data-rhythm-watch-room="${code}"]`, { timeout: 30000 });
     check('フリーの部屋は、演奏中になると観戦の一覧に出る', true);
+    // r1115-190③: 観戦の画面が鳴らす曲を見張るため、曲を鳴らす入口に控えを差し込む(本物はそのまま呼ぶ)
+    await W.evaluate(() => { const orig = Audio_.startRhythmTrack; window.__wa = []; Audio_.startRhythmTrack = async (k, v, o) => { const h = await orig(k, v, o); window.__wa.push({ k, at: o && o.atMs, h }); return h; }; });
     await W.locator(`[data-rhythm-watch-open="${code}"]`).click();
     await W.waitForSelector('[data-rhythm-watch][data-rhythm-watch-phase="playing"]', { timeout: 20000 });
     await W.waitForFunction((n) => document.querySelectorAll('[data-rhythm-watch-row]').length === n, PLAYERS, { timeout: 10000 });
     check('外から見ると、観戦の画面に2人ぶんの行が出る', true);
     await W.evaluate((id) => RHYTHM_WATCH.focus(id), idA);
     await W.waitForTimeout(1500);
+    // ---- r1115-190③: 観戦している曲を、画面と同じ位置(見ている人の位置 − 1.5秒)で流す。待機の曲は止め、やめたら戻す ----
+    {
+      // 演奏の位置を時計どおりに進める(本物の演奏と同じく1秒ごとに進む)
+      await A.evaluate(() => { const t0 = Date.now(); Object.defineProperty(RHYTHM_PLAY_WATCH, 'timeMs', { get: () => 61000 + (Date.now() - t0), configurable: true }); });
+      const audioOk = await W.waitForFunction(() => RHYTHM_WATCH_AUDIO.on() && window.__wa.some((x) => x.h && x.h.started()), null, { timeout: 20000 }).then(() => true, () => false);
+      // 読み込みにかかった分のずれは、次の確かめ(0.25秒ごと)で合わせ直す。合うまで少し待つ
+      await W.waitForFunction(() => { const last = window.__wa[window.__wa.length - 1]; const t = rhythmWatchAudioTarget(); return last && last.h && t && Math.abs(last.h.songTimeMs() - t.ms) <= 600; }, null, { timeout: 4000 }).catch(() => {});
+      const au = await W.evaluate(() => {
+        const v = RHYTHM_WATCH.view(); const song = RHYTHM_SONGS.find((x) => x.songId === v.songId); const last = window.__wa[window.__wa.length - 1];
+        const t = rhythmWatchAudioTarget();
+        return { on: RHYTHM_WATCH_AUDIO.on(), key: last && last.k, want: song && song.bgmTrackId, at: last && last.at, t: t && Math.round(t.ms), now: last && last.h ? Math.round(last.h.songTimeMs()) : null };
+      });
+      check('観戦をモードえらびの画面から開いても、観戦している曲が鳴る(待機の画面の曲のままにならない)', audioOk && au.key === au.want, JSON.stringify(au));
+      check('観戦の曲は、曲の頭ではなく画面と同じ位置(見ている人の位置 − 1.5秒)から鳴る', au.at > 1000 && au.now != null && Math.abs(au.now - au.t) <= 600, JSON.stringify(au));
+      await W.waitForTimeout(2500);
+      const drift = await W.evaluate(() => { const last = window.__wa[window.__wa.length - 1]; const t = rhythmWatchAudioTarget(); return Math.round(last.h.songTimeMs() - t.ms); });
+      check('鳴らしているあいだも、画面の位置とのずれは0.6秒以内に保つ', Math.abs(drift) <= 600, `${drift}ms`);
+      check('観戦の曲が鳴っているあいだ、本体は試聴・待機の曲を止める', await W.evaluate(() => window.__wa.filter((x) => x.h && x.h.started()).length === 1));
+      check('演奏している人の端末は、曲を鳴らす仕組みを使わない(観戦の曲は観戦の人の端末だけ)', await A.evaluate(() => typeof RHYTHM_WATCH_AUDIO !== 'undefined' && !RHYTHM_WATCH_AUDIO.on()));
+      await A.evaluate(() => { const t = RHYTHM_PLAY_WATCH.timeMs; Object.defineProperty(RHYTHM_PLAY_WATCH, 'timeMs', { value: t, writable: true, configurable: true }); });
+    }
     // 見られている1人(最初は先頭)の判定の数・ライフ
     await W.waitForFunction(() => { const c = document.querySelector('[data-rhythm-watch-count="MARVELOUS"] b'); return c && c.textContent !== '-'; }, null, { timeout: 15000 });
     const detail = await W.evaluate(() => ({
@@ -388,6 +411,7 @@ const VIEW = PORTRAIT ? { width: 390, height: 844 } : { width: 844, height: 390 
     await W.locator('[data-rhythm-watch-close]').click();
     await W.waitForTimeout(500);
     check('観戦をやめると画面が閉じる', !(await W.evaluate(() => !!document.querySelector('[data-rhythm-watch]'))));
+    check('観戦をやめると、観戦の曲は止まり、元の曲へ戻す側になる(r1115-190③)', await W.evaluate(() => !RHYTHM_WATCH_AUDIO.on() && window.__wa.length > 0 && window.__wa.every((x) => !x.h || !x.h.started())));
     // ---- 観戦を許さない設定: 保存は新しいキーだけ ----
     const stored = await A.evaluate(async () => { RHYTHM_MULTI.setWatchAllow(false); await new Promise((r) => setTimeout(r, 300)); return { allowed: RHYTHM_MULTI.watcherCount(), keys: Object.keys(localStorage).filter((k) => /spectate/.test(k)), val: localStorage.getItem('mh_rhythm_multi_spectate_v1') }; });
     check('観戦を許さない設定にすると、外の人は外れ(部屋のメンバーの待機の人だけ残る)、新しいキー(mh_rhythm_multi_spectate_v1)だけに保存する', stored.allowed <= 1 && stored.keys.length === 1 && /false/.test(stored.val || ''), JSON.stringify(stored));
