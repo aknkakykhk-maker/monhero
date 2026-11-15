@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 689ac47ae408f6d4
+// source-sha256: ce260bc882dcbe68
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -169970,7 +169970,7 @@ const MSX_CSS = `
 /* 技の熟練(r1115-082): 升の下に小さなゲージ(覚えた技だけ)・右の欄に熟練の棒 */
 .msx-md-tg .tc .tg-ms{position:absolute;left:3px;right:26px;bottom:4px;height:5px;border-radius:3px;background:rgba(18,12,6,.85);border:1px solid rgba(255,255,255,.55);z-index:2;overflow:hidden}
 .msx-md-tg .tc .tg-ms i{display:block;height:100%;background:linear-gradient(90deg,#fde68a,#f59e0b)}
-.msx .msx-ms-v{white-space:nowrap}.msx .msx-ms-v small{opacity:.75;margin-left:1px}
+.msx .msx-ms-v{white-space:nowrap}.msx .msx-ms-v small{font-size:inherit;opacity:.75;margin-left:1px}
 .msx .msx-ms-ef{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:0 6px}.msx .msx-ms-ef i{font-style:normal;white-space:nowrap}
 .msx .msx-ms-bar{display:block;height:6px;margin:2px 0 4px;border-radius:4px;background:#0f172a;border:1px solid #475569;overflow:hidden}
 .msx .msx-ms-bar i{display:block;height:100%;background:linear-gradient(90deg,#fde68a,#f59e0b)}
@@ -170253,6 +170253,11 @@ const MSX_CSS = `
 .msx .msx-fp-r .st{flex:none;display:flex;flex-direction:column;gap:3px;max-width:42%}
 .msx .msx-tp-ft{position:static;flex:none}
 .msx .msx-tp-ft button{display:flex;align-items:center;justify-content:center}
+/* 能力ポイントの刻み(1・5・10・100・MAX)と長押し(r1115-092) */
+.msx .msx-ptunit{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin:6px 0}
+.msx .msx-ptunit .chip{min-height:40px;padding:0 2px;justify-content:center;text-align:center;font-size:12px;font-weight:900}
+.msx .pt44{min-width:44px;min-height:44px}
+.msx .sym{-webkit-user-select:none;user-select:none}
 `;
 const MSX_KEYS = Object.freeze({
   run: 'mh_monsuc_run_v1',
@@ -176752,6 +176757,45 @@ function MsxBag({
     stats: s.stats
   }));
 }
+const MSX_PT_UNITS = Object.freeze([1, 5, 10, 100, 'MAX']);
+let msxPtUnitMem = 1;
+const msxPtLimit = u => u === 'MAX' ? Infinity : Math.max(1, Number(u) || 1);
+function useMsxPtUnit() {
+  const [u, setU] = useState(() => MSX_PT_UNITS.includes(msxPtUnitMem) ? msxPtUnitMem : 1);
+  return [u, x => {
+    msxPtUnitMem = x;
+    setU(x);
+  }];
+}
+function MsxPtUnits({
+  unit,
+  setUnit
+}) {
+  return React.createElement("div", {
+    className: "msx-ptunit",
+    role: "group",
+    "aria-label": "振り分けの単位",
+    "data-msx-pt-units": true
+  }, MSX_PT_UNITS.map(x => React.createElement("button", {
+    type: "button",
+    key: x,
+    "aria-pressed": unit === x,
+    className: `chip${unit === x ? ' on' : ''}`,
+    onClick: () => setUnit(x),
+    "data-msx-pt-unit": x
+  }, x === 'MAX' ? 'MAX' : `${x}P`)));
+}
+function MsxPtBtn({
+  onPress,
+  ...rest
+}) {
+  const ref = useRef(onPress);
+  ref.current = onPress;
+  const fire = useCallback(() => ref.current(), []);
+  return React.createElement(PressRepeatButton, _extends({
+    onPress: fire
+  }, rest));
+}
 function MsxStats({
   run,
   setRun,
@@ -176776,13 +176820,40 @@ function MsxStats({
   };
   const ws = replay(draft);
   const addOf = k => draft.filter(x => x === k).length;
+  const capK = k => typeof SUC.statCapOf === 'function' ? SUC.statCapOf(s, k) : 999;
+  const [unit, setUnit] = useMsxPtUnit();
+  const draftRef = useRef(draft);
+  draftRef.current = draft;
+  const setDraftNow = list => {
+    draftRef.current = list;
+    setDraft(list);
+  };
   const plus = k => {
-    const r = SUC.spendPts(ws, k, 1);
-    if (r.out.ok) setDraft([...draft, k]);
+    const list = draftRef.current.slice();
+    let w = replay(list);
+    const lim = msxPtLimit(unit);
+    let n = 0;
+    while (n < lim) {
+      if (w.stats[k] >= capK(k)) break;
+      const r = SUC.spendPts(w, k, 1);
+      if (!r.out.ok) break;
+      w = r.state;
+      list.push(k);
+      n += 1;
+    }
+    if (n) setDraftNow(list);
   };
   const minus = k => {
-    const i = draft.lastIndexOf(k);
-    if (i >= 0) setDraft(draft.filter((_, j) => j !== i));
+    const list = draftRef.current.slice();
+    const lim = msxPtLimit(unit);
+    let n = 0;
+    while (n < lim) {
+      const i = list.lastIndexOf(k);
+      if (i < 0) break;
+      list.splice(i, 1);
+      n += 1;
+    }
+    if (n) setDraftNow(list);
   };
   const auto = () => {
     let w = replay(draft);
@@ -176805,7 +176876,6 @@ function MsxStats({
     setDraft([]);
   };
   const used = s.pts - ws.pts;
-  const capK = k => typeof SUC.statCapOf === 'function' ? SUC.statCapOf(s, k) : 999;
   const lineOf = SUC.PTS && SUC.PTS.line ? SUC.PTS.line[SUC.periodOf(s.turn).key] : null;
   const own = typeof SUC.techsOf === 'function' ? SUC.techsOf(s.species) : [];
   const techs = (Array.isArray(s.techs) ? s.techs : []).map(id => own.find(t => t && t.id === id)).filter(Boolean);
@@ -176855,9 +176925,12 @@ function MsxStats({
     }
   }, used)), React.createElement("div", {
     className: "v-num"
-  }, React.createElement("small", null, "残りの点"), React.createElement("b", null, ws.pts))), React.createElement("div", {
+  }, React.createElement("small", null, "残りの点"), React.createElement("b", null, ws.pts))), React.createElement(MsxPtUnits, {
+    unit: unit,
+    setUnit: setUnit
+  }), React.createElement("div", {
     className: "msx-note"
-  }, "＋で仮に振り、「決定」で確定する。1点で +1(期の目安", lineOf ? ` ${lineOf}` : '', "を超えると 2点で +1)"), MSX_STATS.map(k => {
+  }, "＋で仮に振り(押し続けると続けて振れる)、「決定」で確定する。1点で +1(期の目安", lineOf ? ` ${lineOf}` : '', "を超えると 2点で +1)"), MSX_STATS.map(k => {
     const n = addOf(k);
     const cost = SUC.ptsCost(ws, k);
     const over = lineOf != null && ws.stats[k] >= lineOf;
@@ -176899,25 +176972,15 @@ function MsxStats({
       style: {
         width: 'auto'
       }
-    }, s.stats[k])), React.createElement("button", {
-      type: "button",
-      className: "chip sym minus",
-      style: {
-        minWidth: 44,
-        minHeight: 44
-      },
+    }, s.stats[k])), React.createElement(MsxPtBtn, {
+      className: "chip sym minus pt44",
       disabled: !n,
-      onClick: () => minus(k),
+      onPress: () => minus(k),
       "aria-label": `${MSX_STAT_NAME[k]}を戻す`
-    }), React.createElement("button", {
-      type: "button",
-      className: "chip on sym plus",
-      style: {
-        minWidth: 44,
-        minHeight: 44
-      },
+    }), React.createElement(MsxPtBtn, {
+      className: "chip on sym plus pt44",
       disabled: ws.pts < cost,
-      onClick: () => plus(k),
+      onPress: () => plus(k),
       "aria-label": `${MSX_STAT_NAME[k]}を上げる`
     }));
   }), React.createElement("div", {
@@ -181186,6 +181249,11 @@ function MsxR3Retire({
   const [step, setStep] = useState(() => run.s.pts > 0 ? 'e3' : 'e0');
   const [ws, setWs] = useState(s);
   const [hist, setHist] = useState([]);
+  const wsRef = useRef(ws);
+  wsRef.current = ws;
+  const histRef = useRef(hist);
+  histRef.current = hist;
+  const [ptUnit, setPtUnit] = useMsxPtUnit();
   const [pick, setPick] = useState({});
   const [atab, setAtab] = useState(null);
   const [fxDone, setFxDone] = useState(false);
@@ -181310,20 +181378,48 @@ function MsxR3Retire({
     });
   }
   if (step === 'e3') {
+    const capOf = (w, k) => typeof SUC.statCapOf === 'function' ? SUC.statCapOf(w, k) : 999;
     const spend = k => {
-      const r = SUC.spendPts(ws, k, 1);
-      if (r.out.ok) {
-        setHist([...hist, ws]);
-        setWs(r.state);
+      let w = wsRef.current;
+      const h = histRef.current.slice();
+      const lim = msxPtLimit(ptUnit);
+      let n = 0;
+      while (n < lim) {
+        if (w.stats[k] >= capOf(w, k)) break;
+        const r = SUC.spendPts(w, k, 1);
+        if (!r.out.ok) break;
+        h.push(w);
+        w = r.state;
+        n += 1;
+      }
+      if (n) {
+        wsRef.current = w;
+        histRef.current = h;
+        setHist(h);
+        setWs(w);
       }
     };
     const undoK = k => {
-      for (let i = hist.length - 1; i >= 0; i--) {
-        if (hist[i].stats[k] < ws.stats[k]) {
-          setWs(hist[i]);
-          setHist(hist.slice(0, i));
-          return;
+      const lim = msxPtLimit(ptUnit);
+      let n = 0;
+      while (n < lim) {
+        const w = wsRef.current;
+        const h = histRef.current;
+        let hit = -1;
+        for (let i = h.length - 1; i >= 0; i--) {
+          if (h[i].stats[k] < w.stats[k]) {
+            hit = i;
+            break;
+          }
         }
+        if (hit < 0) break;
+        wsRef.current = h[hit];
+        histRef.current = h.slice(0, hit);
+        n += 1;
+      }
+      if (n) {
+        setWs(wsRef.current);
+        setHist(histRef.current);
       }
     };
     const preset = kind => {
@@ -181392,7 +181488,10 @@ function MsxR3Retire({
       live: true
     }), React.createElement("div", {
       className: "r3-mtag"
-    }, "育成完了の前に")), React.createElement("div", {
+    }, "育成完了の前に")), React.createElement(MsxPtUnits, {
+      unit: ptUnit,
+      setUnit: setPtUnit
+    }), React.createElement("div", {
       className: "r3-bar"
     }, React.createElement("span", {
       style: {
@@ -181434,16 +181533,14 @@ function MsxR3Retire({
         className: "ad"
       }, add ? `+${add}` : ''), React.createElement("span", {
         className: "st"
-      }, React.createElement("button", {
-        type: "button",
+      }, React.createElement(MsxPtBtn, {
         className: "sym minus",
         "aria-label": `${MSX_STAT_NAME[k]}を戻す`,
         disabled: !add,
-        onClick: () => undoK(k)
-      }), React.createElement("b", null, add), React.createElement("button", {
-        type: "button",
-        disabled: ws.pts < SUC.ptsCost(ws, k) || ws.stats[k] >= (typeof SUC.statCapOf === 'function' ? SUC.statCapOf(ws, k) : 999),
-        onClick: () => spend(k),
+        onPress: () => undoK(k)
+      }), React.createElement("b", null, add), React.createElement(MsxPtBtn, {
+        disabled: ws.pts < SUC.ptsCost(ws, k) || ws.stats[k] >= capOf(ws, k),
+        onPress: () => spend(k),
         "data-msx-r3-plus": k,
         className: "sym plus",
         "aria-label": `${MSX_STAT_NAME[k]}を上げる`
