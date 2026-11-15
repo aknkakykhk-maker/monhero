@@ -4,7 +4,8 @@
 //   node tools/assistant/assistant-life-scene-stand-browser-check.js --shots   止め絵も撮る(docs/progress/assistant-peer/gifts/stagec/stand/)
 //   大きさは、絵の寸法ではなく透けていない画素の範囲(見えている体)と、その中の目・顎の高さ(ASSISTANT_LIFE_STAND_FACE)で測る
 //   ① 2人の顔の大きさが同じ(差 5% まで。顔の大きさ m は「目の線から顎の先」と「頬の幅」の平均・手で測った表。2026-11-08 社長「顔のサイズで合わせて頭のてっぺんをあわせた縮尺と位置に」)
-//   ② 2人の見えている体が左右に分かれる(重なりは細いほうの幅の 2割まで)・画面からはみ出さない
+//   ② 2人の見えている体が左右に分かれる(重なりは細いほうの幅の 3割まで)・画面からはみ出さない
+//      2026-11-15 r1115-023「左右を切らない・手や羽がとなりと少し重なってよい」: 両手を広げた全身画(ももすけ)は画面の端から出ないよう内側へ寄せるので、2割から3割にした
 //   ③ 顔(見えている体の上から顎まで)が、上の見出し・下の台詞の箱に隠れない
 //   ⑤ 下の切れ目(顔の何個ぶんで切る所)がそろう(差 3px まで。社長「上下で切る位置決めれば」)
 //   ④ 頭のてっぺん(髪の上端・飾りは除く)の高さがそろい、目が場面の上から2割5分〜5割5分に来る(社長「画面の下に小さく固まり、上半分が空いている」)
@@ -87,7 +88,7 @@ const PAIRS = [['mua', 'momosuke'], ['kiki', 'dra'], ['atsu', 'sorashido'], ['ky
           const faces = m.stands.filter(x => x.face != null).map(x => x.face);
           if (faces.length === 2) check(`① ${label}: 顔の大きさ(目から顎・頬の幅)が同じ`, Math.abs(faces[0] - faces[1]) <= Math.max(faces[0], faces[1]) * 0.05, faces.map(Math.round).join(' / '));
           const ov = Math.max(0, Math.min(a.vr, b.vr) - Math.max(a.vl, b.vl)), narrow = Math.min(a.vr - a.vl, b.vr - b.vl);
-          check(`② ${label}: 左右に分かれる(重なり ${Math.round(ov / narrow * 100)}%)・はみ出さない`, ov <= narrow * 0.2 && m.stands.every(x => x.vl >= m.S.l - 2 && x.vr <= m.S.r + 2));
+          check(`② ${label}: 左右に分かれる(重なり ${Math.round(ov / narrow * 100)}%)・はみ出さない`, ov <= narrow * 0.3 && m.stands.every(x => x.vl >= m.S.l - 2 && x.vr <= m.S.r + 2), m.stands.filter(x => x.vl < m.S.l - 2 || x.vr > m.S.r + 2).map(x => `${x.id} はみ出し 左 ${Math.round(x.vl - m.S.l)}・右 ${Math.round(m.S.r - x.vr)}`).join(' / '));
           const eyeOf = (x) => x.eyeY;
           const hidden = m.stands.filter(x => eyeOf(x) < m.titleBottom + 2 || x.chinY > m.talkTop + 2);
           check(`③ ${label}: 顔が見出し・台詞の箱に隠れない`, hidden.length === 0, hidden.map(x => `${x.id} 目 ${Math.round(eyeOf(x))}・顎 ${Math.round(x.chinY)}・上 ${Math.round(x.vt)}〜${Math.round(x.chinY)} 見出し下 ${Math.round(m.titleBottom)} 台詞上 ${Math.round(m.talkTop)}`).join(' / '));

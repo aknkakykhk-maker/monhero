@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b5bf28809285cb22
+// source-sha256: 9dd4f1c92d66324e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -115573,9 +115573,9 @@ const assistantLifeStandLayout = (items, W, H) => {
   }
   const eyeOff = items.reduce((a, x) => a + ((x.face.eye || 0.4) - (x.face.top || 0)) * visH(x, F), 0) / n;
   const topY = H * (W > H ? 0.36 : 0.42) - eyeOff;
-  return items.map((x, i) => {
+  const lays = items.map((x, i) => {
     const cx = W * 0.04 + sw * (i + 0.5);
-    return {
+    const p = {
       ...assistantLifeStandRule({
         face: x.face,
         box: x.box,
@@ -115586,7 +115586,30 @@ const assistantLifeStandLayout = (items, W, H) => {
       cx,
       face: F
     };
+    const vl = p.left + x.box.l * p.width,
+      vr = p.left + x.box.r * p.width;
+    const dx = vr > W ? W - vr : vl < 0 ? -vl : 0;
+    return dx ? {
+      ...p,
+      left: p.left + dx,
+      cx: cx + dx
+    } : p;
   });
+  const cuts = lays.filter((p, i) => !items[i].face.head);
+  if (cuts.length >= 2) {
+    const cutY = Math.min(...cuts.map(p => Math.min(p.frameBottom, p.top + p.height)));
+    for (let i = 0; i < lays.length; i++) {
+      const p = lays[i];
+      if (items[i].face.head) continue;
+      lays[i] = {
+        ...p,
+        clip: [p.clip[0], Math.max(0, p.top + p.height - cutY)],
+        frameBottom: cutY,
+        fade: [Math.max(0, (cutY - ASSISTANT_LIFE_STAND_CUT.fade * p.U - p.top) / p.height), Math.min(1, (cutY - p.top) / p.height)]
+      };
+    }
+  }
+  return lays;
 };
 function AssistantLifeStands({
   ids,
