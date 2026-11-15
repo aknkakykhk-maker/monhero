@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d89acff6e40cb952
+// source-sha256: 3d2d471de8644240
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -8878,7 +8878,8 @@ const Audio_ = (() => {
         smoothPerf = p;
         return smoothSong;
       };
-      if (autoStart) startSource(0);
+      const atSeconds = Math.max(0, (Number(options?.atMs) || 0) / 1000);
+      if (autoStart) startSource(atSeconds < buffer.duration ? atSeconds : 0);
       return {
         start: () => {
           if (playing || stopped || naturallyEnded) return playing;
@@ -8910,6 +8911,21 @@ const Audio_ = (() => {
           if (playing || stopped || naturallyEnded) return playing;
           await ensureAudioCtxRunning();
           return startSource(offsetSeconds);
+        },
+        seek: async ms => {
+          if (stopped) return false;
+          const at = Math.max(0, (Number(ms) || 0) / 1000);
+          if (at >= buffer.duration) return false;
+          playing = false;
+          naturallyEnded = false;
+          const old = source;
+          source = null;
+          stopSource(old);
+          offsetSeconds = at;
+          smoothPerf = 0;
+          await ensureAudioCtxRunning();
+          if (stopped) return false;
+          return startSource(at);
         },
         restart: async () => {
           if (stopped) return false;
@@ -98685,6 +98701,106 @@ const rhythmWatchPosition = (row, nowMs = Date.now()) => {
     known: true
   };
 };
+const RHYTHM_WATCH_AUDIO_TICK_MS = 250;
+const RHYTHM_WATCH_AUDIO_DRIFT_MS = 300;
+const RHYTHM_WATCH_AUDIO = (() => {
+  let on = false;
+  const listeners = new Set();
+  return {
+    on: () => on,
+    set(next) {
+      const v = !!next;
+      if (v === on) return;
+      on = v;
+      listeners.forEach(fn => {
+        try {
+          fn(on);
+        } catch (_) {}
+      });
+    },
+    subscribe(fn) {
+      listeners.add(fn);
+      return () => listeners.delete(fn);
+    }
+  };
+})();
+const useRhythmWatchAudioOn = () => {
+  const [on, setOn] = React.useState(() => RHYTHM_WATCH_AUDIO.on());
+  React.useEffect(() => {
+    setOn(RHYTHM_WATCH_AUDIO.on());
+    return RHYTHM_WATCH_AUDIO.subscribe(setOn);
+  }, []);
+  return on;
+};
+const rhythmWatchAudioTarget = () => {
+  const st = RHYTHM_WATCH.view();
+  if (!st || st.phase !== 'playing') return null;
+  const pos = rhythmWatchPosition(st.rows ? st.rows[st.focus] : null);
+  return pos.known ? {
+    ms: pos.p - RHYTHM_WATCH_LANE_DELAY_MS,
+    waiting: pos.waiting
+  } : null;
+};
+const useRhythmWatchAudio = (trackId, round) => {
+  React.useEffect(() => {
+    if (!trackId || typeof Audio_ === 'undefined' || !Audio_ || typeof Audio_.startRhythmTrack !== 'function') return undefined;
+    RHYTHM_WATCH_AUDIO.set(true);
+    let alive = true;
+    let handle = null;
+    let busy = false;
+    let failed = false;
+    const volume = () => {
+      const v = Number(rhythmWatchSettings().bgmVolume);
+      return Number.isFinite(v) ? v : 100;
+    };
+    const step = async () => {
+      if (!alive || busy || failed) return;
+      const t = rhythmWatchAudioTarget();
+      if (!t || t.ms < 0) return;
+      busy = true;
+      try {
+        if (!handle) {
+          const a = await Audio_.startRhythmTrack(trackId, volume(), {
+            atMs: t.ms
+          });
+          if (!alive) {
+            if (a) a.stop();
+            return;
+          }
+          if (!a) {
+            failed = true;
+            return;
+          }
+          handle = a;
+          return;
+        }
+        if (t.waiting) {
+          if (handle.started()) handle.pause();
+          return;
+        }
+        if (handle.paused()) {
+          await handle.seek(t.ms);
+          return;
+        }
+        if (handle.ended() && t.ms >= handle.durationMs) return;
+        if (Math.abs(handle.songTimeMs() - t.ms) > RHYTHM_WATCH_AUDIO_DRIFT_MS) await handle.seek(t.ms);
+      } catch (_) {
+        failed = true;
+      } finally {
+        busy = false;
+      }
+    };
+    const timer = setInterval(step, RHYTHM_WATCH_AUDIO_TICK_MS);
+    step();
+    return () => {
+      alive = false;
+      clearInterval(timer);
+      if (handle) handle.stop();
+      handle = null;
+      RHYTHM_WATCH_AUDIO.set(false);
+    };
+  }, [trackId, round]);
+};
 function RhythmWatchLane({
   chart,
   song = null,
@@ -99155,6 +99271,8 @@ function RhythmWatchScreen({
   const [roadMode, setRoadMode] = React.useState(false);
   const wide = useRhythmWatchWide();
   const focusRow = v && v.rows ? v.rows[v.focus] : null;
+  const audioSong = v && v.phase === 'playing' && v.songId ? songs.find(x => x.songId === v.songId) : null;
+  useRhythmWatchAudio(audioSong && audioSong.bgmTrackId ? audioSong.bgmTrackId : '', v ? v.round : '');
   if (!v) return null;
   if (v.quiet && v.phase !== 'playing' && v.phase !== 'ended') return null;
   if (typeof document === 'undefined' || typeof ReactDOM === 'undefined' || !ReactDOM.createPortal) return null;
@@ -99411,7 +99529,6 @@ function RhythmMultiScreenBody({
   onCloseOptions = null
 }) {
   const view = useRhythmMultiView();
-  const watchV = useRhythmWatchView();
   useRhythmOwnedSongs();
   React.useEffect(() => {
     if (!view) {
@@ -99910,10 +100027,9 @@ function RhythmMultiScreenBody({
   const previewPhase = room ? room.phase : '';
   const selectPreviewId = selSongId || (songs[0] ? songs[0].songId : '');
   const previewId = previewPhase === 'select' ? selectPreviewId : (previewPhase === 'ready' || previewPhase === 'playing') && room.songId ? room.songId : '';
-  const watchSongId = watchV && watchV.phase === 'playing' ? watchV.songId : '';
   React.useEffect(() => {
-    if (onPreviewSong) onPreviewSong(watchSongId || previewId);
-  }, [previewId, watchSongId]);
+    if (onPreviewSong) onPreviewSong(previewId);
+  }, [previewId]);
   const myProfile = () => ({
     name: profile.name,
     level: profile.level,
@@ -232820,7 +232936,8 @@ function MonsterHeroGame() {
   }, [rhythmSelectedSongId, gameState]);
   const rhythmPreviewSongId = gameState === 'RHYTHM_MULTI' && rhythmMultiPreviewSongId ? rhythmMultiPreviewSongId : rhythmSelectedSongId;
   const rhythmPreviewSong = rhythmDemoSongs(RHYTHM_SONGS).find(song => song.songId === rhythmPreviewSongId) || null;
-  const rhythmPreviewTrackId = rhythmSettings.songPreviewEnabled && RHYTHM_PREVIEW_SCREENS.includes(gameState) && rhythmPreviewSong ? rhythmPreviewSong.bgmTrackId : '';
+  const rhythmWatchAudioOn = useRhythmWatchAudioOn();
+  const rhythmPreviewTrackId = !rhythmWatchAudioOn && rhythmSettings.songPreviewEnabled && RHYTHM_PREVIEW_SCREENS.includes(gameState) && rhythmPreviewSong ? rhythmPreviewSong.bgmTrackId : '';
   useEffect(() => {
     if (!rhythmPreviewTrackId) return undefined;
     let cancelled = false,
@@ -235338,6 +235455,7 @@ function MonsterHeroGame() {
   useEffect(() => {
     if (gameState === 'RHYTHM_PLAY') return;
     if (successScreenOpen) return;
+    if (rhythmWatchAudioOn) return;
     let key = bootPhase === 'GAME' ? bgmKeyForState(gameState, wave, enemy?.id, (waveHistory || []).length > 0, hp <= 0 || gaveUp) : bootPhase === 'TITLE' || bootPhase === 'ENTERING_GAME' ? bgmArrangement.title : null;
     if (key === '__keep_battle_bgm__' && bgmSuspendedByRhythmRef.current) {
       key = bgmKeyForState(gameState, wave, enemy?.id, (waveHistory || []).length > 0, hp <= 0 || gaveUp, false);
@@ -235364,7 +235482,7 @@ function MonsterHeroGame() {
       key
     } : null;
     if (key && eventId && prev && prev.id === eventId && prev.key !== key) Audio_.fadeToBGM(key, EVENT_BGM_FADE_MS);else if (key) Audio_.playBGM(key);else Audio_.stopBGM();
-  }, [bootPhase, gameState, wave, enemy?.id, hp, gaveUp, audioOn, successScreenOpen, waveHistory.length, bgmArrangement, runMode, eventBgmScene, mainHero?.id, autoBattle, autoBgmOverride, rhythmScreenOpen, cardScreenOpen, eventLineBgm, cardBgm, assistantLifeOpenNow, battleBgmOverlay]);
+  }, [bootPhase, gameState, wave, enemy?.id, hp, gaveUp, audioOn, successScreenOpen, waveHistory.length, bgmArrangement, runMode, eventBgmScene, mainHero?.id, autoBattle, autoBgmOverride, rhythmScreenOpen, cardScreenOpen, eventLineBgm, cardBgm, assistantLifeOpenNow, battleBgmOverlay, rhythmWatchAudioOn]);
   const assistantLifeRunMuted = assistantLifeScreenOpen && runStage !== null;
   useEffect(() => {
     Audio_.setSeVolume(ultraEcoSession && !cardScreenOpen || rhythmScreenOpen || assistantLifeRunMuted ? 0 : seVolume);
