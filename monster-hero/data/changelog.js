@@ -37,7 +37,7 @@ const CHANGELOG = [
   {
     // モンヒロサクセスの公開(r1115-206 クラフト51 で公開の日の形に書き直した)。印 monheroSuccess が真になるまで出ない。日時は公開の PR で実時刻に直す。
     // β公開の前の直し(2026-11-13〜15 の releaseFlag:'monheroSuccess' の項目)は、公開の日に初めて遊ぶ人には「変わったこと」ではないので、この1本へまとめて dev:true にした
-    date: "2026-11-16 04:20", type:'content', group:'success', status:'new', releaseFlag:'monheroSuccess',
+    date: "2026-11-16 05:51", type:'content', group:'success', status:'new', releaseFlag:'monheroSuccess',
     title:'モンヒロサクセス(β版)が始まりました',
     // 一覧の上に固定する帯(2026-11-14 ココロ・窓口経由 #6116 を取り込み直し)。固定は公開から2週間(date から数える。公開の PR で date を実時刻に直せば期限も動く)
     pinTop:{ days:14 }, pinEmoji:'🌱', pinTitle:'新しい遊び「モンヒロサクセス」β版がはじまりました!',
