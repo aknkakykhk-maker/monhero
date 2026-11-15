@@ -39,8 +39,17 @@ const STORY_BG_DARK_VOID = "images/story-bg/dark_void.jpg?v=6c4987dd8307";      
 // モンヒロサクセスの育成場の町の門(2026-11-14 社長の絵・看板「育成場」。原本 tools/art-sources/monhero-success-2026-11-14/town-gate-1024x1536.png)。
 //   縦2:3なので、縦長の画面では左右が少し切れる。お話「モンヒロサクセス」第1話の冒頭・第2話の町に着く場面
 const STORY_BG_MONSUC_GATE = "images/story-bg/monsuc_gate.jpg?v=73a1779eec12";
+// お話「モンヒロサクセス」第2話の町の中の場面(2026-11-15 ココロ4)。絵はモンサクの画面と同じファイルを指す(写しは作らない)
+const STORY_BG_MONSUC_HOME = "images/success/scenes/home-autumn-day.png?v=a1663d245c0c";         // 住む場所(秋・昼)
+const STORY_BG_MONSUC_WATERFALL = "images/success/scenes/training-waterfall.png?v=a5dd08d94443"; // 修行の大滝
+const STORY_BG_MONSUC_DEBUT = "images/success/scenes/venue-debut.png?v=d2380d73411c";            // デビュー戦の会場
+const STORY_BG_MONSUC_ARENA = "images/success/arena/arena-hero.png?v=cb3d50e8c8de";              // 闘技場(横長。縦長の画面では左右が切れる)
 const STORY_SCENE_IMAGES = Object.freeze({
   monsuc_gate: STORY_BG_MONSUC_GATE,
+  monsuc_home: STORY_BG_MONSUC_HOME,
+  monsuc_waterfall: STORY_BG_MONSUC_WATERFALL,
+  monsuc_debut: STORY_BG_MONSUC_DEBUT,
+  monsuc_arena: STORY_BG_MONSUC_ARENA,
   desert_palace: STORY_BG_DESERT_PALACE,
   desert_oilfield: STORY_BG_DESERT_OILFIELD,
   desert_hall: STORY_BG_DESERT_HALL,
