@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: a73a5aebdd6cd9ee
+// generated-sha256: 0b80b64d62cc397d
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -58799,7 +58799,8 @@ function RhythmWatchLaneRoad({ chart, song = null, wide = false, onWaiting, onFa
           const code = jm && jm.has(i) ? jm.get(i) : -1;
           if (code >= 0 && n.timeMs <= vis && vis - n.timeMs < 700) shown = { code, age: vis - n.timeMs };
           const hit = code >= 0 && code < 5;
-          const miss = code === 5;
+          // MISS の知らせは表示より早く届く(1.5秒おくれのため)。ノーツが判定ラインを過ぎるまでは、ふつうのノーツのまま流す
+          const miss = code === 5 && vis >= n.timeMs + 100;
           // 叩いた瞬間の光は、プレイ画面と同じ部品(rhythmSpawnHitEffect)で。そのノーツが判定ラインへ着いたとき1回だけ
           if (hit && vis >= n.timeMs && vis - n.timeMs < 300 && !fired.has(i)) {
             fired.add(i);
