@@ -80,6 +80,7 @@ const makeRun = async (kind) => {
     ['H0', null, []], ['H1', 'mid', []],
     ['RW1', 'mid', ['cont', 'wait:3300']], ['RW2', 'mid', ['cont', 'wait:7800']], ['RW3', 'mid', ['cont', 'wait:11500']], ['RW4', 'mid', ['cont', 'wait:15000']], ['RW5', 'mid', ['cont', 'wait:19600']], // 育成ホームの歩き回り(r1115-052)
     ['OV1', 'over', ['cont']], ['OV2', 'over', ['cont', 'train']], ['OV3', 'over', ['cont', 'stats']], ['OV4', 'over', ['cont', 'detail']], ['OV5', 'over', ['cont', 'train', 'go', 'next']], // 上限アップ(r1115-103)
+    ['DX4', null, ['seeall', 'dexopen', 'dexrow:0']], ['DX5', null, ['seeall', 'dexopen', 'dexrow:0', 'dexch:0']], ['DX6', null, ['seeall', 'dexopen', 'dexrow:0', 'dexch:0', 'dexback']], ['DX7', null, ['seeall', 'dexopen', 'dexrow:0', 'dexch:0', 'dexback', 'dexback']], // 図鑑の読む画面: 押す前・押した後・戻った後・一覧へ(r1115-144)
     ['DX1', null, ['seeall', 'dexopen', 'dextab:daily']], ['DX2', null, ['seeall', 'dexopen', 'dextab:daily', 'dexrow:0']], ['DX3', null, ['seeall', 'dexopen', 'dextab:team', 'dexrow:0']], // イベント図鑑(r1115-144・145)
     ['HB1', null, ['basemon']], ['HB4', null, ['basemon', 'scrollend']], ['HB2', null, ['basemon', 'bmpick:Snegurochka']], ['HB3', null, ['basemon', 'bmpick:Snegurochka', 'tab:apt']], // ホームのベースモン(r1115-043)
     ['S0', null, ['new']], // ストーリー選択(2026-11-14)。S1〜S6 はその「次へ」のあと
@@ -145,7 +146,7 @@ const makeRun = async (kind) => {
             if (st.startsWith('wait:')) { await new Promise((r) => setTimeout(r, Number(st.slice(5)))); return true; }
             if (st === 'seeall') { // 見た出来事を全部「見た」にして開き直す(図鑑の撮影用)
               const E = msxSuc.SUC.events; const ev = {}; const ch = {};
-              Object.keys(E.BY_ID).forEach((id) => { ev[id] = 1; ['a', 'b', 'c'].forEach((c) => { ch[`${id}.${c}`] = 1; }); });
+              [...Object.keys(E.BY_ID), ...Object.values(msxDexList()).flat().map((x) => x.id)].forEach((id) => { ev[id] = 1; ['a', 'b', 'c'].forEach((c) => { ch[`${id}.${c}`] = 1; }); });
               localStorage.setItem(MSX_SEEN_KEY, JSON.stringify({ v: 1, ev, ch }));
               window.__msxRoot.unmount(); const el = document.getElementById('msx-shot'); window.__msxRoot = ReactDOM.createRoot(el);
               window.__msxRoot.render(React.createElement(MonheroSuccessScreen, { onClose() {}, callNameOf: () => 'けんささん', bondLvOf: () => 4 }));
@@ -153,6 +154,8 @@ const makeRun = async (kind) => {
             }
             if (st === 'dexopen') { const d = document.querySelector('[data-msx-dex-home]'); if (d) d.click(); return !!d; }
             if (st.startsWith('dextab:')) { const d = document.querySelector(`[data-msx-dex-tab="${st.slice(7)}"]`); if (d) d.click(); return !!d; }
+            if (st.startsWith('dexch:')) { const d = document.querySelectorAll('[data-msx-dex-ch]')[Number(st.slice(6))]; if (d) d.click(); return !!d; }
+            if (st === 'dexback') { const d = document.querySelector('[data-msx-dex-back]'); if (d) d.click(); return !!d; }
             if (st.startsWith('dexrow:')) { const d = document.querySelectorAll('[data-msx-dex-row]')[Number(st.slice(7))]; if (d) d.click(); return !!d; }
             if (st === 'basemon') { const d = document.querySelector('[data-msx-home-basemon]'); if (d) d.click(); return !!d; }
             if (st.startsWith('bmpick:')) { const d = document.querySelector(`[data-msx-basemon="${st.slice(7)}"]`); if (d) d.click(); return !!d; }
