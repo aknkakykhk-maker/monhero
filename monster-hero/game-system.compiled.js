@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3a105f668eb7c2c0
+// source-sha256: b97c3f180443e024
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -169114,6 +169114,7 @@ const MSX_CSS = `
 /* 技の升目(参考 monster-detail-basic): 見出しと升を同じ4列にそろえる */
 .msx-md-tg{display:grid;grid-template-columns:repeat(4,minmax(0,56px));gap:4px;align-content:start;justify-content:center}
 .msx-md-tg .tgh{font-size:10.5px;font-weight:900;text-align:center;border-radius:99px;padding:1px 0;color:#fff}
+.msx-md-tg .tgh.apt{display:grid;justify-items:center;align-content:center;padding:1px 0 2px;border-radius:9px;line-height:1.15}.msx-md-tg .tgh .tgn{display:inline-flex;align-items:center;gap:3px;white-space:nowrap}.msx-md-tg .tgh .tga{display:inline-flex;align-items:center;justify-content:center;min-width:17px;height:15px;padding:0 2px;border-radius:5px;background:#fff;color:#0f172a;font-size:10.5px;font-weight:900;line-height:1}.msx-md-tg .tgh .tgp{font-style:normal;white-space:nowrap;font-size:10px;font-weight:900;color:#fff;opacity:.95}.msx-md-tg .tgh .tgp.tgp-up{color:#fef08a}.msx-md-tg .tgh .tgp.tgp-dn{color:#e2e8f0;opacity:.8}
 .msx-md-tg .tgh.d3{background:#2563eb}.msx-md-tg .tgh.d2{background:#16a34a}.msx-md-tg .tgh.d1{background:#d97706}.msx-md-tg .tgh.d0{background:#dc2626}
 .msx .msx-md-tg .tc,.msx-md-tg .no{position:relative;aspect-ratio:1/1;min-height:0;border-radius:8px;display:flex;align-items:center;justify-content:center}
 .msx .msx-md-tg .tc{padding:0;border:1.5px solid transparent}
@@ -170555,15 +170556,26 @@ const MSX_TG_COLS = Object.freeze([3, 2, 1, 0]);
 function MsxTechGrid({
   all,
   cell,
-  className
+  className,
+  head
 }) {
   const at = (r, d) => all.filter(t => (Number(t.rank) || 1) === r && Array.isArray(t.dist) && t.dist.includes(d));
   return React.createElement("div", {
     className: `msx-md-tg${className ? ` ${className}` : ''}`
-  }, MSX_TG_COLS.map(d => React.createElement("span", {
-    key: `h${d}`,
-    className: `tgh d${d}`
-  }, MSX_DIST_NAMES[d])), [1, 2, 3, 4, 5].map(r => MSX_TG_COLS.map(d => {
+  }, MSX_TG_COLS.map(d => {
+    const h = typeof head === 'function' ? head(d) : null;
+    return React.createElement("span", {
+      key: `h${d}`,
+      className: `tgh d${d}${h ? ' apt' : ''}`,
+      "data-msx-tg-head": d
+    }, h ? React.createElement("span", {
+      className: "tgn"
+    }, MSX_DIST_NAMES[d], h.g ? React.createElement("b", {
+      className: "tga"
+    }, h.g) : null) : MSX_DIST_NAMES[d], h && Number.isFinite(h.add) ? React.createElement("em", {
+      className: `tgp${h.add > 0 ? ' tgp-up' : h.add < 0 ? ' tgp-dn' : ''}`
+    }, h.add > 0 ? `+${h.add}` : h.add < 0 ? `${h.add}` : '±0', "%") : null);
+  }), [1, 2, 3, 4, 5].map(r => MSX_TG_COLS.map(d => {
     const alts = at(r, d);
     const k = `${r}-${d}`;
     return alts.length ? React.createElement(React.Fragment, {
@@ -170726,6 +170738,9 @@ function MsxMonDetail({
     className: "msx-md-tw"
   }, React.createElement(MsxTechGrid, {
     all: all,
+    head: grades ? d => ({
+      g: grades[d]
+    }) : null,
     cell: (alts, r, d, cellK) => {
       const t = alts.find(has) || alts.find(x => pick && pick.sel && pick.sel[cellK] === x.id) || alts[0];
       const got = has(t);
@@ -176149,6 +176164,13 @@ const MSX_R3_CSS = `
 .msx .r3 .q-dest .r3-chip{justify-content:center;text-align:center}
 .msx .r3 .q-sec .v-stg{margin-top:5px}
 .msx .r3 .q-note{font-size:10.5px;color:#cbd5e1;font-weight:700;line-height:1.45;margin-top:4px}
+.msx .r3 .q-res{flex:none;display:grid;gap:4px;margin:4px 0}
+.msx .r3 .q-ri{display:grid;grid-template-columns:38px minmax(0,1fr) auto;align-items:center;gap:8px;padding:5px 9px;border-radius:12px;border:2px solid #475569;background:#1e293b}
+.msx .r3 .q-ri .ti{width:38px;height:38px;border-radius:8px;overflow:hidden;display:flex;align-items:center;justify-content:center;background:#0f172a}.msx .r3 .q-ri .ti svg,.msx .r3 .q-ri .ti img{width:100%;height:100%}
+.msx .r3 .q-ri .nm{display:grid;min-width:0}.msx .r3 .q-ri .nm b{font-size:14px;font-weight:900;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.msx .r3 .q-ri .nm small{font-size:10.5px;font-weight:800;color:#cbd5e1}
+.msx .r3 .q-ri .rs{display:grid;justify-items:end;text-align:right}.msx .r3 .q-ri .rs b{font-size:15px;font-weight:900;white-space:nowrap}.msx .r3 .q-ri .rs small{font-size:11px;font-weight:900;color:#fde047;white-space:nowrap}
+.msx .r3 .q-ri.hit{border-color:#facc15;background:linear-gradient(90deg,#422006,#713f12);box-shadow:0 0 12px #facc1566}.msx .r3 .q-ri.hit .rs b{color:#fde047;font-size:18px;text-shadow:0 0 8px #f59e0b}
+.msx .r3 .q-ri.miss .rs b{color:#cbd5e1}.msx .r3 .q-ri.miss .ti{filter:grayscale(.7) brightness(.8)}
 .msx .q-hpng{flex:none;background:#3f1d2b;border-top:1px solid #9f1239;color:#fecdd3;font-size:11px;font-weight:800;line-height:1.4;padding:4px 10px;text-align:center}.msx .q-hpng b{color:#fda4af;font-size:13px}
 .msx .v-ft button.go.off,.msx .v-ft button.go:disabled{background:#334155;color:#94a3b8;box-shadow:0 3px 0 #1e293b}
 .msx .r3 .q-note.y{color:#fde047}
@@ -179457,6 +179479,10 @@ function MsxR3Shugyo({
     const learned = o.learned ? all.find(t => t.id === o.learned) : null;
     const learnedAll = (o.learnedAll || (o.learned ? [o.learned] : [])).map(id => all.find(t => t.id === id)).filter(Boolean);
     const missed = (o.tries || []).filter(t => !t.hit).map(t => (all.find(x => x.id === t.id) || {}).name).filter(Boolean);
+    const tries = (o.tries || []).map(x => ({
+      ...x,
+      t: all.find(y => y.id === x.id)
+    })).filter(x => x.t);
     const stg = (SH.courses[o.course] || {}).stages || [];
     const helpers = Array.from(new Set((o.stages || []).flat()));
     void stg;
@@ -179494,12 +179520,13 @@ function MsxR3Shugyo({
         })
       }
     }), React.createElement("div", {
-      className: `v-stamp msx-pop ${learned ? '' : 'ok'}`,
+      className: `v-stamp msx-pop ${learned ? '' : tries.length ? 'ng' : 'ok'}`,
       style: {
         top: '5%',
-        fontSize: learned ? 38 : 32
-      }
-    }, learned ? '技をおぼえた!' : '修行終わり!', React.createElement("small", null, learnedAll.length > 1 ? `✨ ${learnedAll.map(x => x.name).join('・')}` : learned ? `✨ ${learned.name}(${MSX_R3_DIST[Math.min(...(learned.dist || [1]))]}い間合い)` : '技は覚えられなかった')), React.createElement("div", {
+        fontSize: learned ? 38 : tries.length ? 'min(30px, 8.4vw)' : 32
+      },
+      "data-msx-r3-qstamp": learned ? 'hit' : tries.length ? 'miss' : 'none'
+    }, learned ? missed.length ? '1つ覚えた!' : '技を覚えた!' : tries.length ? '覚えられなかった…' : '修行終わり!', React.createElement("small", null, learnedAll.length > 1 ? `✨ ${learnedAll.map(x => x.name).join('・')}` : learned ? `✨ ${learned.name}(${MSX_R3_DIST[Math.min(...(learned.dist || [1]))]}の間合い)` : tries.length ? `次は覚える率が +${SH.miss || 15}%` : '能力が上がった')), React.createElement("div", {
       className: "v-chips",
       style: {
         top: 'auto',
@@ -179509,7 +179536,24 @@ function MsxR3Shugyo({
       className: "v-chip"
     }, MSX_STAT_KEYS_R3.filter(k => gains[k]).map(k => `${MSX_STAT_ICON[k]}+${gains[k]}`).join(' ') || '±0'), helpers.length ? React.createElement("span", {
       className: "v-chip ylw"
-    }, "👥 編成のおかげ ×", helpers.length, "体") : null)), React.createElement(MsxStRow, {
+    }, "👥 編成のおかげ ×", helpers.length, "体") : null)), tries.length ? React.createElement("div", {
+      className: "q-res",
+      "data-msx-r3-qres": true
+    }, tries.map(x => React.createElement("div", {
+      key: x.id,
+      className: `q-ri ${x.hit ? 'hit' : 'miss'}`,
+      "data-msx-r3-qri": x.hit ? 'hit' : 'miss'
+    }, React.createElement("span", {
+      className: "ti",
+      "aria-hidden": "true"
+    }, React.createElement(MsxSkillArt, {
+      t: x.t,
+      uid: `qr${x.id}`
+    })), React.createElement("span", {
+      className: "nm"
+    }, React.createElement("b", null, x.t.name), React.createElement("small", null, "覚える率 ", Math.round((x.rate || 0) * 100), "%")), React.createElement("span", {
+      className: "rs"
+    }, x.hit ? React.createElement("b", null, "覚えた!") : React.createElement(React.Fragment, null, React.createElement("b", null, "覚えられなかった"), React.createElement("small", null, "次は +", SH.miss || 15, "%")))))) : null, React.createElement(MsxStRow, {
       who: s,
       stats: s.stats,
       ups: gains
@@ -179531,21 +179575,7 @@ function MsxR3Shugyo({
       className: "ga"
     }, x.name), "」")), "を覚えた!") : null, missed.length ? React.createElement(React.Fragment, null, "/", missed.join('・'), "は覚えられなかった") : null, o.aptUp ? React.createElement(React.Fragment, null, React.createElement("br", null), "📏 「", MSX_R3_DIST[o.aptUp.dist], "」の間合い適性が ", React.createElement("b", {
       className: "ga"
-    }, o.aptUp.grade), " に上がった!") : null), !learned && want.length ? React.createElement("div", {
-      className: "v-card",
-      style: {
-        borderColor: '#94a3b8',
-        padding: '6px 9px'
-      }
-    }, React.createElement("div", {
-      className: "sub"
-    }, React.createElement("b", {
-      style: {
-        color: '#cbd5e1'
-      }
-    }, "おしい…"), " ", React.createElement("span", {
-      className: "yel"
-    }, "次の修行で、選んだ技の覚える率が上がる"), "(⬆)")) : null);
+    }, o.aptUp.grade), " に上がった!") : null));
     const fx = learned && !fxDone && typeof MsxFxMoment === 'function' ? React.createElement(MsxFxMoment, {
       kind: "tech",
       title: learned.name,
@@ -179579,6 +179609,17 @@ function MsxR3Shugyo({
   const cur = SH.courses[course] || {
     stages: []
   };
+  const aptG = typeof SUC.aptGradesOf === 'function' ? SUC.aptGradesOf(s0) : null;
+  const GR = SUC.DIST_UP && SUC.DIST_UP.grades || [];
+  const aptHead = aptG ? d => {
+    const g = aptG[d] || SH.aptBase || 'C';
+    const i = GR.indexOf(g);
+    const b = GR.indexOf(SH.aptBase || 'C');
+    return {
+      g,
+      add: i >= 0 && b >= 0 ? (i - b) * (SH.aptStep || 5) : 0
+    };
+  } : null;
   const tkMax = SUC.TECH_MAX || 99;
   const full = (s0.techs || []).length >= tkMax;
   const techName = id => (all.find(x => x.id === id) || {}).name || id;
@@ -179693,6 +179734,7 @@ function MsxR3Shugyo({
   }, "緑の札をタップ")), all.length ? React.createElement(MsxTechGrid, {
     className: "q",
     all: all,
+    head: aptHead,
     cell: (alts, r, d, cellK) => {
       const gotOf = x => (s0.techs || []).includes(x.id);
       const pk = s0.techPick && typeof s0.techPick === 'object' ? s0.techPick[cellK] : null;
