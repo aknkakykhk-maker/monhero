@@ -95,6 +95,9 @@ const makeRun = async (kind) => {
     ['Q4', 'mid', ['cont', /^⚔修行/, '$qok0']], ['Q5', 'mid', ['cont', /^⚔修行/, '$qok0', '$qok1']], ['Q2', 'mid', ['cont', /^⚔修行/, '@shugyo']], ['Q2b', 'mid', ['cont', /^⚔修行/, '@shugyo', '@qskip']], ['Q3', 'mid', ['cont', /^⚔修行/, '@shugyo', '@qskip', '@qnext']], // 修行の段の演出 → 「結果へ」(Fable ①-12)
     ['QL1', 'qhit', ['cont', /^⚔修行/, '$qok0', '@shugyo', '@qskip']], ['QL2', 'qmiss', ['cont', /^⚔修行/, '$qok0', '@shugyo', '@qskip']], ['QL3', 'qmix', ['cont', /^⚔修行/, '$qok0', '$qok1', '@shugyo', '@qskip']], // 技を覚えた/覚えられなかった/超修行で1つだけ(r1115-063)
     ['QH0', 'hplow', ['cont']], ['QH1', 'hpmid', ['cont', /^⚔修行/, '$qok0', '$qok1']], // 体力が足りない: ホームの修行が押せない/超修行だけ行けない(r1115-062)
+    // 修行の段の演出(r1115-060): 超修行で2つ選び1つ当たり(qmix)。段ごとに待って撮る(0 一言 1.0秒 → STAGE 1・2 各2.6秒 → 編成のおかげ 2.4秒 → 技のくじ 2.8秒)
+    ['QF0', 'qmix', ['cont', /^⚔修行/, '$qok0', '$qok1', '@shugyo', 'w900']], ['QF1', 'qmix', ['cont', /^⚔修行/, '$qok0', '$qok1', '@shugyo', 'w1700']], ['QF2', 'qmix', ['cont', /^⚔修行/, '$qok0', '$qok1', '@shugyo', 'w4300']],
+    ['QF3', 'qmix', ['cont', /^⚔修行/, '$qok0', '$qok1', '@shugyo', 'w6900']], ['QF4', 'qmix', ['cont', /^⚔修行/, '$qok0', '$qok1', '@shugyo', 'w9800']], ['QF5', 'qmiss', ['cont', /^⚔修行/, '$qok0', '@shugyo', 'w9800']],
     // 期末の大会の当日(参考 te-30〜34): 当日のメイン(能力と大会だけ)→ 受付に1つ → 参加の確認 → 紋章の入り → 表
     ['K0', 'kimatsu', ['cont']], ['K1', 'kimatsu', ['cont', '@precup']], ['K2', 'kimatsu', ['cont', '@precup', '@enter']], ['K2c', 'kimatsu', ['cont', '@precup', '@enter', '@pre-cancel']],
     ['K3', 'kimatsu', ['cont', '@precup', '@enter', '@yes']], ['K4', 'kimatsu', ['cont', '@precup', '@enter', '@yes', '@cupintro-go']],

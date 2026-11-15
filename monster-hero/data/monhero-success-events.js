@@ -368,8 +368,8 @@
           else if (a === 'cheer') { const m = s.team[ctx.cheer]; addSt(m && m.top ? m.top[0] : mainStat(s), size); }
           else if (a === 'type') { const m = s.team[ctx.cheer]; addSt(TYPE_STAT[tOf(m)] || mainStat(s), size); }
           else if (KEYS.includes(a)) addSt(a, size);
-        } else if (op === 'loy') { const n = num(a); addLoyalRaw(s, n >= 0 ? Math.ceil(n / 2) : -Math.ceil(-n / 2), n >= 0 ? Math.floor(n / 2) : -Math.floor(-n / 2)); delta.loyal = (delta.loyal || 0) + n; }
-        else if (op === 'fear') { addLoyalRaw(s, 0, num(a)); delta.loyal = (delta.loyal || 0) + num(a); }
+        } else if (op === 'loy') { const n = num(a); const l0 = loyalOf(s); addLoyalRaw(s, n >= 0 ? Math.ceil(n / 2) : -Math.ceil(-n / 2), n >= 0 ? Math.floor(n / 2) : -Math.floor(-n / 2)); delta.loyal = (delta.loyal || 0) + (loyalOf(s) - l0); } // 出す数は実際に動いた分(甘え度・恐れ度が上限50なら増えない・r1115-076)
+        else if (op === 'fear') { const l0 = loyalOf(s); addLoyalRaw(s, 0, num(a)); delta.loyal = (delta.loyal || 0) + (loyalOf(s) - l0); }
         else if (op === 'pop' || (op === 'popHi' && s.pop >= 60)) { const g = num(a) > 0 ? popGain(s, num(a)) : num(a); const b0 = s.pop; s.pop = clamp(s.pop + g, 0, 100); delta.pop = (delta.pop || 0) + (s.pop - b0); }
         else if (op === 'hp') { const b0 = s.hp; recover(s, num(a) / 100); delta.hp = (delta.hp || 0) + (s.hp - b0); }
         else if (op === 'str') { const b0 = s.stress; addStress(s, num(a) > 0 ? num(a) * mod(s, 'stress') : num(a)); delta.stress = (delta.stress || 0) + (s.stress - b0); }
