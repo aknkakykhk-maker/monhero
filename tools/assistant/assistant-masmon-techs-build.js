@@ -102,7 +102,7 @@ const out = `// 助手のマスモンの技表 第2版(2026-11-13・社長「技
 const ASSISTANT_MASMON_TECHS = (() => {
   const idmap = ${JSON.stringify(flatMap)};
   return Object.freeze({
-  version: 3, // 3 = r1115-099 でオリジナル5体の技の数値を直し・パンドラに8技(対戦の記録 tech_version で前後を見分ける)。形は第2版と同じ
+  version: 4, // 4 = r1115-146〜153 オリジナル5体の技をメイン血統の技の表と同じ並び・性能(主血統+2)に / 3 = r1115-099 でオリジナル5体の技の数値を直し・パンドラに8技(対戦の記録 tech_version で前後を見分ける)。形は第2版と同じ
   roles: { light: '小技', mid: '中技', skill: '得意技', heavy: '重い技', big: '大技' },
   rankRates: { 1: 70, 2: 55, 3: 40, 4: 25, 5: 15 },
   idmap: Object.freeze(idmap),

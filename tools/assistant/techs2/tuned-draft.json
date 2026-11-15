@@ -6511,54 +6511,115 @@
     "id": "pandora_o01",
     "name": "デュアルスラップ",
     "kind": "pow",
+    "alignOrig": {
+     "dist": [
+      0
+     ],
+     "power": 8,
+     "hit": 8,
+     "guts": 12,
+     "crit": 10,
+     "gd": 8,
+     "learn": {
+      "start": true
+     },
+     "rank": 1,
+     "rankBuilt": 1
+    },
+    "rankBuilt": 1,
     "dist": [
      0
     ],
-    "power": 8,
-    "hit": 8,
-    "guts": 12,
-    "crit": 10,
-    "gd": 8,
+    "power": 10,
+    "hit": 3,
+    "guts": 10,
+    "crit": 8,
+    "gd": 3,
     "learn": {
      "start": true
     },
-    "rank": 1
+    "rank": 1,
+    "fixRank": 1
    },
    {
     "id": "pandora_o02",
     "name": "ルミナスレイ",
     "kind": "wise",
+    "alignOrig": {
+     "dist": [
+      3
+     ],
+     "power": 12,
+     "hit": -2,
+     "guts": 15,
+     "crit": 12,
+     "gd": 8,
+     "learn": {
+      "start": true
+     },
+     "rank": 1,
+     "rankBuilt": 1
+    },
+    "rankBuilt": 1,
     "dist": [
      3
     ],
-    "power": 12,
-    "hit": -2,
-    "guts": 15,
-    "crit": 12,
-    "gd": 8,
-    "learn": {
-     "start": true
-    },
-    "rank": 1
+    "power": 13,
+    "hit": -17,
+    "guts": 17,
+    "crit": 20,
+    "gd": 3,
+    "rank": 1,
+    "fixRank": 1
    },
    {
     "id": "pandora_o03",
     "name": "ナイトサンダー",
     "kind": "wise",
+    "alignOrig": {
+     "dist": [
+      2
+     ],
+     "power": 17,
+     "hit": -2,
+     "guts": 17,
+     "crit": 12,
+     "gd": 11,
+     "rank": 1,
+     "rankBuilt": 1
+    },
+    "rankBuilt": 1,
     "dist": [
      2
     ],
-    "power": 17,
-    "hit": -2,
-    "guts": 17,
-    "crit": 12,
-    "gd": 11,
-    "rank": 1
+    "power": 10,
+    "hit": 3,
+    "guts": 13,
+    "crit": 8,
+    "gd": 12,
+    "rank": 1,
+    "fixRank": 1,
+    "learn": {
+     "start": true
+    }
    },
    {
     "id": "pandora_o04",
     "name": "セラフキック",
     "kind": "pow",
+    "alignOrig": {
+     "dist": [
+      1
+     ],
+     "power": 17,
+     "hit": -2,
+     "guts": 20,
+     "crit": 12,
+     "gd": 11,
+     "rank": 1,
+     "rankBuilt": 1
+    },
+    "rankBuilt": 1,
     "dist": [
      1
     ],
@@ -6567,14 +6628,29 @@
     "guts": 20,
     "crit": 12,
     "gd": 11,
-    "rank": 1
+    "rank": 1,
+    "fixRank": 1
    },
    {
     "id": "pandora_o05",
     "name": "アビスレイド",
     "kind": "pow",
+    "alignOrig": {
+     "dist": [
+      1
+     ],
+     "power": 19,
+     "hit": -15,
+     "guts": 23,
+     "crit": 20,
+     "gd": 8,
+     "moveTo": 0,
+     "rank": 2,
+     "rankBuilt": 1
+    },
+    "rankBuilt": 1,
     "dist": [
-     1
+     0
     ],
     "power": 19,
     "hit": -15,
@@ -6583,46 +6659,81 @@
     "gd": 8,
     "moveTo": 0,
     "rank": 2,
-    "orig": {
-     "power": 17,
-     "hit": -2,
-     "gd": 11,
-     "crit": 12
-    },
-    "spread": "sk-0258"
+    "fixRank": 2
    },
    {
     "id": "pandora_o06",
     "name": "ホーリーライトニング",
     "kind": "wise",
+    "alignOrig": {
+     "dist": [
+      3
+     ],
+     "power": 25,
+     "hit": -12,
+     "guts": 26,
+     "crit": 12,
+     "gd": 11,
+     "rank": 2,
+     "rankBuilt": 2
+    },
+    "rankBuilt": 2,
     "dist": [
      3
     ],
-    "power": 25,
-    "hit": -12,
-    "guts": 26,
-    "crit": 12,
-    "gd": 11,
-    "rank": 2
+    "power": 18,
+    "hit": -13,
+    "guts": 24,
+    "crit": 23,
+    "gd": 3,
+    "rank": 2,
+    "fixRank": 2
    },
    {
     "id": "pandora_o07",
     "name": "カオスメガレイ",
     "kind": "wise",
+    "alignOrig": {
+     "dist": [
+      2
+     ],
+     "power": 25,
+     "hit": -2,
+     "guts": 28,
+     "crit": 12,
+     "gd": 11,
+     "rank": 2,
+     "rankBuilt": 2
+    },
+    "rankBuilt": 2,
     "dist": [
-     2
+     3
     ],
     "power": 25,
     "hit": -2,
     "guts": 28,
     "crit": 12,
     "gd": 11,
-    "rank": 2
+    "rank": 3,
+    "fixRank": 3
    },
    {
     "id": "pandora_o08",
     "name": "エクリプスキッス",
     "kind": "wise",
+    "alignOrig": {
+     "dist": [
+      3
+     ],
+     "power": 32,
+     "hit": -12,
+     "guts": 31,
+     "crit": 18,
+     "gd": 11,
+     "rank": 3,
+     "rankBuilt": 3
+    },
+    "rankBuilt": 3,
     "dist": [
      3
     ],
@@ -6631,26 +6742,54 @@
     "guts": 31,
     "crit": 18,
     "gd": 11,
-    "rank": 3
+    "rank": 3,
+    "fixRank": 3
    },
    {
     "id": "pandora_o09",
     "name": "デュアルキッス",
     "kind": "wise",
+    "alignOrig": {
+     "dist": [
+      2
+     ],
+     "power": 32,
+     "hit": -12,
+     "guts": 34,
+     "crit": 18,
+     "gd": 11,
+     "rank": 4,
+     "rankBuilt": 4
+    },
+    "rankBuilt": 4,
     "dist": [
      2
     ],
     "power": 32,
-    "hit": -12,
-    "guts": 34,
-    "crit": 18,
-    "gd": 11,
-    "rank": 4
+    "hit": 9,
+    "guts": 38,
+    "crit": 12,
+    "gd": 17,
+    "rank": 4,
+    "fixRank": 4
    },
    {
     "id": "pandora_o10",
     "name": "デュアルバン",
     "kind": "wise",
+    "alignOrig": {
+     "dist": [
+      3
+     ],
+     "power": 27,
+     "hit": -25,
+     "guts": 25,
+     "crit": 20,
+     "gd": 8,
+     "rank": 2,
+     "rankBuilt": 1
+    },
+    "rankBuilt": 1,
     "dist": [
      3
     ],
@@ -6659,40 +6798,54 @@
     "guts": 25,
     "crit": 20,
     "gd": 8,
-    "rank": 2,
-    "orig": {
-     "power": 25,
-     "hit": -12,
-     "gd": 11,
-     "crit": 12
-    },
-    "spread": "sk-0258"
+    "rank": 1,
+    "fixRank": 1
    },
    {
     "id": "pandora_o11",
     "name": "セイクリッドレイ",
     "kind": "wise",
+    "alignOrig": {
+     "dist": [
+      2
+     ],
+     "power": 19,
+     "hit": 9,
+     "guts": 28,
+     "crit": 8,
+     "gd": 12,
+     "rank": 3,
+     "rankBuilt": 2
+    },
+    "rankBuilt": 2,
     "dist": [
      2
     ],
-    "power": 19,
+    "power": 13,
     "hit": 9,
-    "guts": 28,
-    "crit": 8,
-    "gd": 12,
-    "rank": 3,
-    "orig": {
-     "power": 25,
-     "hit": -2,
-     "gd": 11,
-     "crit": 12
-    },
-    "spread": "sk-0262"
+    "guts": 20,
+    "crit": 10,
+    "gd": 6,
+    "rank": 2,
+    "fixRank": 2
    },
    {
     "id": "pandora_o12",
     "name": "アビスサンダー",
     "kind": "wise",
+    "alignOrig": {
+     "dist": [
+      3
+     ],
+     "power": 32,
+     "hit": -12,
+     "guts": 31,
+     "crit": 12,
+     "gd": 11,
+     "rank": 3,
+     "rankBuilt": 3
+    },
+    "rankBuilt": 3,
     "dist": [
      3
     ],
@@ -6701,40 +6854,82 @@
     "guts": 31,
     "crit": 12,
     "gd": 11,
-    "rank": 3
+    "rank": 3,
+    "fixRank": 3
    },
    {
     "id": "pandora_o13",
     "name": "ツインビッグバン",
     "kind": "wise",
+    "alignOrig": {
+     "dist": [
+      2
+     ],
+     "power": 32,
+     "hit": -12,
+     "guts": 33,
+     "crit": 12,
+     "gd": 11,
+     "rank": 4,
+     "rankBuilt": 3
+    },
+    "rankBuilt": 3,
     "dist": [
      2
     ],
-    "power": 32,
-    "hit": -12,
-    "guts": 33,
-    "crit": 12,
-    "gd": 11,
-    "rank": 4
+    "power": 8,
+    "hit": 9,
+    "guts": 21,
+    "crit": 10,
+    "gd": 24,
+    "rank": 3,
+    "fixRank": 3
    },
    {
     "id": "pandora_o14",
     "name": "ダークライトニング",
     "kind": "wise",
+    "alignOrig": {
+     "dist": [
+      3
+     ],
+     "power": 40,
+     "hit": -12,
+     "guts": 36,
+     "crit": 12,
+     "gd": 11,
+     "rank": 4,
+     "rankBuilt": 4
+    },
+    "rankBuilt": 4,
     "dist": [
      3
     ],
-    "power": 40,
-    "hit": -12,
-    "guts": 36,
-    "crit": 12,
-    "gd": 11,
-    "rank": 4
+    "power": 26,
+    "hit": 3,
+    "guts": 28,
+    "crit": 27,
+    "gd": 9,
+    "rank": 4,
+    "fixRank": 4
    },
    {
     "id": "pandora_o15",
     "name": "カオスコズミック",
     "kind": "wise",
+    "alignOrig": {
+     "dist": [
+      2
+     ],
+     "power": 40,
+     "hit": -12,
+     "guts": 39,
+     "crit": 18,
+     "gd": 11,
+     "rank": 4,
+     "rankBuilt": 4
+    },
+    "rankBuilt": 4,
     "dist": [
      2
     ],
@@ -6743,40 +6938,82 @@
     "guts": 39,
     "crit": 18,
     "gd": 11,
-    "rank": 4
+    "rank": 4,
+    "fixRank": 4
    },
    {
     "id": "pandora_o16",
     "name": "アストラルクロスレイ",
     "kind": "wise",
+    "alignOrig": {
+     "dist": [
+      3
+     ],
+     "power": 52,
+     "hit": -15,
+     "guts": 42,
+     "crit": 25,
+     "gd": 11,
+     "rank": 5,
+     "rankBuilt": 5
+    },
+    "rankBuilt": 5,
     "dist": [
      3
     ],
-    "power": 52,
-    "hit": -15,
-    "guts": 42,
-    "crit": 25,
-    "gd": 11,
-    "rank": 5
+    "power": 53,
+    "hit": -7,
+    "guts": 52,
+    "crit": 27,
+    "gd": 0,
+    "rank": 5,
+    "fixRank": 5
    },
    {
     "id": "pandora_o17",
     "name": "エクリプスノヴァ",
     "kind": "wise",
+    "alignOrig": {
+     "dist": [
+      2
+     ],
+     "power": 52,
+     "hit": -12,
+     "guts": 44,
+     "crit": 18,
+     "gd": 14,
+     "rank": 5,
+     "rankBuilt": 5
+    },
+    "rankBuilt": 5,
     "dist": [
      2
     ],
-    "power": 52,
-    "hit": -12,
-    "guts": 44,
-    "crit": 18,
-    "gd": 14,
-    "rank": 5
+    "power": 35,
+    "hit": 16,
+    "guts": 35,
+    "crit": 14,
+    "gd": 24,
+    "rank": 5,
+    "fixRank": 5
    },
    {
     "id": "pandora_o18",
     "name": "ダイスキライライ",
     "kind": "wise",
+    "alignOrig": {
+     "dist": [
+      3
+     ],
+     "power": 52,
+     "hit": -15,
+     "guts": 47,
+     "crit": 18,
+     "gd": 14,
+     "rank": 5,
+     "rankBuilt": 5
+    },
+    "rankBuilt": 5,
     "dist": [
      3
     ],
@@ -6785,12 +7022,27 @@
     "guts": 47,
     "crit": 18,
     "gd": 14,
-    "rank": 5
+    "rank": 5,
+    "fixRank": 5
    },
    {
     "id": "pandora_o19",
     "name": "ダブルはり手",
     "kind": "pow",
+    "from": "sk-0260",
+    "alignOrig": {
+     "dist": [
+      0
+     ],
+     "power": 18,
+     "hit": 3,
+     "guts": 14,
+     "crit": 10,
+     "gd": 8,
+     "fixRank": 2,
+     "rankBuilt": 2
+    },
+    "rankBuilt": 2,
     "dist": [
      0
     ],
@@ -6800,12 +7052,29 @@
     "crit": 10,
     "gd": 8,
     "fixRank": 2,
-    "from": "sk-0260"
+    "rank": 2
    },
    {
     "id": "pandora_o20",
     "name": "アビスヒールレイド",
     "kind": "pow",
+    "from": "sk-0266",
+    "alignOrig": {
+     "dist": [
+      0
+     ],
+     "power": 32,
+     "hit": -7,
+     "guts": 21,
+     "crit": 10,
+     "gd": 19,
+     "fixRank": 3,
+     "needFix": {
+      "pandora_o19": 25
+     },
+     "rankBuilt": 3
+    },
+    "rankBuilt": 3,
     "dist": [
      0
     ],
@@ -6815,15 +7084,30 @@
     "crit": 10,
     "gd": 19,
     "fixRank": 3,
-    "needFix": {
-     "pandora_o19": 25
-    },
-    "from": "sk-0266"
+    "rank": 3
    },
    {
     "id": "pandora_o21",
     "name": "セラフ投げ飛ばし",
     "kind": "pow",
+    "from": "sk-0270",
+    "alignOrig": {
+     "dist": [
+      0
+     ],
+     "power": 32,
+     "hit": -7,
+     "guts": 30,
+     "crit": 10,
+     "gd": 24,
+     "moveTo": 3,
+     "fixRank": 4,
+     "needFix": {
+      "pandora_o20": 40
+     },
+     "rankBuilt": 4
+    },
+    "rankBuilt": 4,
     "dist": [
      0
     ],
@@ -6834,15 +7118,29 @@
     "gd": 24,
     "moveTo": 3,
     "fixRank": 4,
-    "needFix": {
-     "pandora_o20": 40
-    },
-    "from": "sk-0270"
+    "rank": 4
    },
    {
     "id": "pandora_o22",
     "name": "カオスファイトクラウド",
     "kind": "pow",
+    "from": "sk-0273",
+    "alignOrig": {
+     "dist": [
+      0
+     ],
+     "power": 40,
+     "hit": 3,
+     "guts": 40,
+     "crit": 20,
+     "gd": 19,
+     "fixRank": 5,
+     "needFix": {
+      "pandora_o21": 50
+     },
+     "rankBuilt": 5
+    },
+    "rankBuilt": 5,
     "dist": [
      0
     ],
@@ -6852,15 +7150,26 @@
     "crit": 20,
     "gd": 19,
     "fixRank": 5,
-    "needFix": {
-     "pandora_o21": 50
-    },
-    "from": "sk-0273"
+    "rank": 5
    },
    {
     "id": "pandora_o23",
     "name": "セラフハイキック",
     "kind": "pow",
+    "from": "sk-0263",
+    "alignOrig": {
+     "dist": [
+      1
+     ],
+     "power": 26,
+     "hit": -1,
+     "guts": 15,
+     "crit": 10,
+     "gd": 6,
+     "fixRank": 2,
+     "rankBuilt": 2
+    },
+    "rankBuilt": 2,
     "dist": [
      1
     ],
@@ -6870,12 +7179,29 @@
     "crit": 10,
     "gd": 6,
     "fixRank": 2,
-    "from": "sk-0263"
+    "rank": 2
    },
    {
     "id": "pandora_o24",
     "name": "ルミナスバン",
     "kind": "wise",
+    "from": "sk-0265",
+    "alignOrig": {
+     "dist": [
+      1
+     ],
+     "power": 32,
+     "hit": -17,
+     "guts": 30,
+     "crit": 14,
+     "gd": 15,
+     "fixRank": 3,
+     "needFix": {
+      "pandora_o23": 25
+     },
+     "rankBuilt": 3
+    },
+    "rankBuilt": 3,
     "dist": [
      1
     ],
@@ -6885,15 +7211,29 @@
     "crit": 14,
     "gd": 15,
     "fixRank": 3,
-    "needFix": {
-     "pandora_o23": 25
-    },
-    "from": "sk-0265"
+    "rank": 3
    },
    {
     "id": "pandora_o25",
     "name": "カオスビッグバン",
     "kind": "wise",
+    "from": "sk-0269",
+    "alignOrig": {
+     "dist": [
+      1
+     ],
+     "power": 40,
+     "hit": -17,
+     "guts": 38,
+     "crit": 20,
+     "gd": 19,
+     "fixRank": 4,
+     "needFix": {
+      "pandora_o24": 40
+     },
+     "rankBuilt": 4
+    },
+    "rankBuilt": 4,
     "dist": [
      1
     ],
@@ -6903,15 +7243,29 @@
     "crit": 20,
     "gd": 19,
     "fixRank": 4,
-    "needFix": {
-     "pandora_o24": 40
-    },
-    "from": "sk-0269"
+    "rank": 4
    },
    {
     "id": "pandora_o26",
     "name": "ノヴァコズミックバン",
     "kind": "wise",
+    "from": "sk-0272",
+    "alignOrig": {
+     "dist": [
+      1
+     ],
+     "power": 40,
+     "hit": -1,
+     "guts": 45,
+     "crit": 14,
+     "gd": 24,
+     "fixRank": 5,
+     "needFix": {
+      "pandora_o25": 50
+     },
+     "rankBuilt": 5
+    },
+    "rankBuilt": 5,
     "dist": [
      1
     ],
@@ -6921,10 +7275,7 @@
     "crit": 14,
     "gd": 24,
     "fixRank": 5,
-    "needFix": {
-     "pandora_o25": 50
-    },
-    "from": "sk-0272"
+    "rank": 5
    }
   ],
   "Eiki": [
@@ -6932,23 +7283,53 @@
     "id": "eiki_o01",
     "name": "桜牙",
     "kind": "pow",
+    "alignOrig": {
+     "dist": [
+      0
+     ],
+     "power": 9,
+     "hit": 5,
+     "guts": 11,
+     "crit": 16,
+     "gd": 8,
+     "learn": {
+      "start": true
+     },
+     "rank": 1,
+     "rankBuilt": 1
+    },
+    "rankBuilt": 1,
     "dist": [
      0
     ],
-    "power": 9,
-    "hit": 5,
-    "guts": 11,
-    "crit": 16,
-    "gd": 8,
-    "learn": {
-     "start": true
-    },
-    "rank": 1
+    "power": 13,
+    "hit": -14,
+    "guts": 22,
+    "crit": 12,
+    "gd": 17,
+    "rank": 1,
+    "fixRank": 1
    },
    {
     "id": "eiki_o02",
     "name": "花裂き",
     "kind": "pow",
+    "alignOrig": {
+     "dist": [
+      2
+     ],
+     "power": 9,
+     "hit": 5,
+     "guts": 14,
+     "crit": 10,
+     "gd": 8,
+     "learn": {
+      "start": true
+     },
+     "rank": 1,
+     "rankBuilt": 1
+    },
+    "rankBuilt": 1,
     "dist": [
      2
     ],
@@ -6957,137 +7338,262 @@
     "guts": 14,
     "crit": 10,
     "gd": 8,
-    "learn": {
-     "start": true
-    },
-    "rank": 1
+    "rank": 1,
+    "fixRank": 1
    },
    {
     "id": "eiki_o03",
     "name": "桜風刃",
     "kind": "wise",
+    "alignOrig": {
+     "dist": [
+      2
+     ],
+     "power": 12,
+     "hit": 5,
+     "guts": 16,
+     "crit": 16,
+     "gd": 8,
+     "rank": 1,
+     "rankBuilt": 1
+    },
+    "rankBuilt": 1,
     "dist": [
-     2
+     1
     ],
     "power": 12,
     "hit": 5,
     "guts": 16,
     "crit": 16,
     "gd": 8,
-    "rank": 1
+    "rank": 2,
+    "fixRank": 2
    },
    {
     "id": "eiki_o04",
     "name": "花霞斬",
     "kind": "pow",
+    "alignOrig": {
+     "dist": [
+      2
+     ],
+     "power": 12,
+     "hit": -1,
+     "guts": 19,
+     "crit": 16,
+     "gd": 8,
+     "moveTo": 0,
+     "rank": 1,
+     "rankBuilt": 1
+    },
+    "rankBuilt": 1,
     "dist": [
-     2
+     3
     ],
-    "power": 12,
-    "hit": -1,
-    "guts": 19,
-    "crit": 16,
-    "gd": 8,
-    "moveTo": 0,
-    "rank": 1
+    "power": 18,
+    "hit": 2,
+    "guts": 20,
+    "crit": 13,
+    "gd": 5,
+    "moveTo": 1,
+    "rank": 1,
+    "fixRank": 1,
+    "learn": {
+     "start": true
+    }
    },
    {
     "id": "eiki_o05",
     "name": "桜月輪",
     "kind": "pow",
+    "alignOrig": {
+     "dist": [
+      1
+     ],
+     "power": 17,
+     "hit": -1,
+     "guts": 22,
+     "crit": 10,
+     "gd": 8,
+     "rank": 2,
+     "rankBuilt": 1
+    },
+    "rankBuilt": 1,
     "dist": [
      1
     ],
-    "power": 17,
-    "hit": -1,
-    "guts": 22,
+    "power": 26,
+    "hit": 2,
+    "guts": 19,
     "crit": 10,
-    "gd": 8,
-    "rank": 2
+    "gd": 5,
+    "rank": 1,
+    "fixRank": 1,
+    "learn": {
+     "start": true
+    }
    },
    {
     "id": "eiki_o06",
     "name": "桜嵐刃",
     "kind": "wise",
+    "alignOrig": {
+     "dist": [
+      3
+     ],
+     "power": 17,
+     "hit": -1,
+     "guts": 25,
+     "crit": 16,
+     "gd": 11,
+     "rank": 2,
+     "rankBuilt": 2
+    },
+    "rankBuilt": 2,
     "dist": [
      3
     ],
-    "power": 17,
-    "hit": -1,
+    "power": 26,
+    "hit": 2,
     "guts": 25,
-    "crit": 16,
-    "gd": 11,
-    "rank": 2
+    "crit": 10,
+    "gd": 17,
+    "rank": 2,
+    "fixRank": 2
    },
    {
     "id": "eiki_o07",
     "name": "千花連刃",
     "kind": "pow",
+    "alignOrig": {
+     "dist": [
+      1
+     ],
+     "power": 26,
+     "hit": -1,
+     "guts": 27,
+     "crit": 16,
+     "gd": 11,
+     "rank": 2,
+     "rankBuilt": 2
+    },
+    "rankBuilt": 2,
     "dist": [
-     1
+     0
     ],
-    "power": 26,
-    "hit": -1,
+    "power": 29,
+    "hit": -8,
     "guts": 27,
-    "crit": 16,
-    "gd": 11,
-    "rank": 2
+    "crit": 14,
+    "gd": 5,
+    "rank": 2,
+    "moveTo": 1,
+    "fixRank": 2
    },
    {
     "id": "eiki_o08",
     "name": "桜閃爪",
     "kind": "pow",
+    "alignOrig": {
+     "dist": [
+      1
+     ],
+     "power": 23,
+     "hit": 4,
+     "guts": 30,
+     "crit": 10,
+     "gd": 20,
+     "rank": 3,
+     "rankBuilt": 3
+    },
+    "rankBuilt": 3,
     "dist": [
      1
     ],
-    "power": 23,
-    "hit": 4,
+    "power": 26,
+    "hit": 5,
     "guts": 30,
-    "crit": 10,
-    "gd": 20,
+    "crit": 12,
+    "gd": 23,
     "rank": 3,
-    "orig": {
-     "power": 26,
-     "hit": -1,
-     "gd": 11,
-     "crit": 16
-    },
-    "spread": "sk-0799"
+    "fixRank": 3
    },
    {
     "id": "eiki_o09",
     "name": "桜華絶閃爪",
     "kind": "pow",
+    "alignOrig": {
+     "dist": [
+      0
+     ],
+     "power": 32,
+     "hit": -1,
+     "guts": 32,
+     "crit": 16,
+     "gd": 11,
+     "rank": 4,
+     "rankBuilt": 4
+    },
+    "rankBuilt": 4,
     "dist": [
      0
     ],
-    "power": 32,
-    "hit": -1,
-    "guts": 32,
-    "crit": 16,
-    "gd": 11,
-    "rank": 4
+    "power": 40,
+    "hit": 2,
+    "guts": 40,
+    "crit": 27,
+    "gd": 26,
+    "rank": 4,
+    "fixRank": 4
    },
    {
     "id": "eiki_o10",
     "name": "華影緋閃",
     "kind": "pow",
+    "alignOrig": {
+     "dist": [
+      2
+     ],
+     "power": 17,
+     "hit": -1,
+     "guts": 24,
+     "crit": 16,
+     "gd": 11,
+     "rank": 2,
+     "rankBuilt": 1
+    },
+    "rankBuilt": 1,
     "dist": [
      2
     ],
-    "power": 17,
-    "hit": -1,
+    "power": 18,
+    "hit": -2,
     "guts": 24,
-    "crit": 16,
-    "gd": 11,
-    "rank": 2
+    "crit": 20,
+    "gd": 5,
+    "rank": 2,
+    "moveTo": 0,
+    "fixRank": 2
    },
    {
     "id": "eiki_o11",
     "name": "氷花一閃",
     "kind": "pow",
+    "alignOrig": {
+     "dist": [
+      1
+     ],
+     "power": 20,
+     "hit": 0,
+     "guts": 27,
+     "crit": 21,
+     "gd": 7,
+     "rank": 3,
+     "rankBuilt": 2
+    },
+    "rankBuilt": 2,
     "dist": [
-     1
+     0
     ],
     "power": 20,
     "hit": 0,
@@ -7095,53 +7601,81 @@
     "crit": 21,
     "gd": 7,
     "rank": 3,
-    "orig": {
-     "power": 26,
-     "hit": -1,
-     "gd": 11,
-     "crit": 16
-    },
-    "spread": "sk-0594"
+    "fixRank": 3
    },
    {
     "id": "eiki_o12",
     "name": "桜月斬華",
     "kind": "pow",
+    "alignOrig": {
+     "dist": [
+      2
+     ],
+     "power": 26,
+     "hit": -1,
+     "guts": 30,
+     "crit": 16,
+     "gd": 11,
+     "rank": 3,
+     "rankBuilt": 3
+    },
+    "rankBuilt": 3,
     "dist": [
-     2
+     3
     ],
     "power": 26,
-    "hit": -1,
-    "guts": 30,
-    "crit": 16,
+    "hit": -8,
+    "guts": 33,
+    "crit": 27,
     "gd": 11,
-    "rank": 3
+    "rank": 3,
+    "fixRank": 3
    },
    {
     "id": "eiki_o13",
     "name": "緋雪乱刃",
     "kind": "pow",
+    "alignOrig": {
+     "dist": [
+      1
+     ],
+     "power": 32,
+     "hit": -9,
+     "guts": 31,
+     "crit": 12,
+     "gd": 2,
+     "rank": 4,
+     "rankBuilt": 3
+    },
+    "rankBuilt": 3,
     "dist": [
-     1
+     2
     ],
     "power": 32,
     "hit": -9,
     "guts": 31,
     "crit": 12,
     "gd": 2,
-    "rank": 4,
-    "orig": {
-     "power": 32,
-     "hit": -1,
-     "gd": 11,
-     "crit": 16
-    },
-    "spread": "sk-0595"
+    "rank": 3,
+    "fixRank": 3
    },
    {
     "id": "eiki_o14",
     "name": "花氷双牙",
     "kind": "pow",
+    "alignOrig": {
+     "dist": [
+      1
+     ],
+     "power": 32,
+     "hit": -11,
+     "guts": 34,
+     "crit": 23,
+     "gd": 11,
+     "rank": 4,
+     "rankBuilt": 4
+    },
+    "rankBuilt": 4,
     "dist": [
      1
     ],
@@ -7150,55 +7684,111 @@
     "guts": 34,
     "crit": 23,
     "gd": 11,
-    "rank": 4
+    "rank": 4,
+    "fixRank": 4
    },
    {
     "id": "eiki_o15",
     "name": "千華氷嵐",
     "kind": "wise",
+    "alignOrig": {
+     "dist": [
+      2
+     ],
+     "power": 40,
+     "hit": -11,
+     "guts": 37,
+     "crit": 16,
+     "gd": 11,
+     "rank": 4,
+     "rankBuilt": 4
+    },
+    "rankBuilt": 4,
     "dist": [
      2
     ],
-    "power": 40,
-    "hit": -11,
-    "guts": 37,
-    "crit": 16,
+    "power": 35,
+    "hit": 8,
+    "guts": 42,
+    "crit": 14,
     "gd": 11,
-    "rank": 4
+    "rank": 4,
+    "fixRank": 4
    },
    {
     "id": "eiki_o16",
     "name": "緋桜六華閃",
     "kind": "pow",
+    "alignOrig": {
+     "dist": [
+      2
+     ],
+     "power": 40,
+     "hit": -11,
+     "guts": 40,
+     "crit": 23,
+     "gd": 11,
+     "rank": 5,
+     "rankBuilt": 5
+    },
+    "rankBuilt": 5,
     "dist": [
-     2
+     3
     ],
-    "power": 40,
-    "hit": -11,
-    "guts": 40,
-    "crit": 23,
-    "gd": 11,
-    "rank": 5
+    "power": 32,
+    "hit": -18,
+    "guts": 48,
+    "crit": 29,
+    "gd": 8,
+    "rank": 5,
+    "fixRank": 5
    },
    {
     "id": "eiki_o17",
     "name": "絶影桜華乱舞",
     "kind": "pow",
+    "alignOrig": {
+     "dist": [
+      1
+     ],
+     "power": 52,
+     "hit": -11,
+     "guts": 42,
+     "crit": 16,
+     "gd": 11,
+     "moveTo": 0,
+     "rank": 5,
+     "rankBuilt": 5
+    },
+    "rankBuilt": 5,
     "dist": [
      1
     ],
-    "power": 52,
-    "hit": -11,
-    "guts": 42,
-    "crit": 16,
-    "gd": 11,
-    "moveTo": 0,
-    "rank": 5
+    "power": 40,
+    "hit": 15,
+    "guts": 46,
+    "crit": 23,
+    "gd": 2,
+    "rank": 5,
+    "fixRank": 5
    },
    {
     "id": "eiki_o18",
     "name": "絶華緋閃・零桜",
     "kind": "pow",
+    "alignOrig": {
+     "dist": [
+      2
+     ],
+     "power": 52,
+     "hit": -11,
+     "guts": 45,
+     "crit": 23,
+     "gd": 11,
+     "rank": 5,
+     "rankBuilt": 5
+    },
+    "rankBuilt": 5,
     "dist": [
      2
     ],
@@ -7207,7 +7797,8 @@
     "guts": 45,
     "crit": 23,
     "gd": 11,
-    "rank": 5
+    "rank": 5,
+    "fixRank": 5
    }
   ],
   "KenshiMocchi": [
@@ -7215,269 +7806,523 @@
     "id": "kenshimocchi_o01",
     "name": "エッジもんた",
     "kind": "pow",
+    "alignOrig": {
+     "dist": [
+      0
+     ],
+     "power": 8,
+     "hit": 5,
+     "guts": 11,
+     "crit": 10,
+     "gd": 9,
+     "learn": {
+      "start": true
+     },
+     "rank": 1,
+     "rankBuilt": 1
+    },
+    "rankBuilt": 1,
     "dist": [
      0
     ],
-    "power": 8,
-    "hit": 5,
-    "guts": 11,
-    "crit": 10,
-    "gd": 9,
+    "power": 18,
+    "hit": -6,
+    "guts": 16,
+    "crit": 8,
+    "gd": 3,
     "learn": {
      "start": true
     },
-    "rank": 1
+    "rank": 1,
+    "fixRank": 1
    },
    {
     "id": "kenshimocchi_o02",
     "name": "もちき・リープ",
     "kind": "pow",
+    "alignOrig": {
+     "dist": [
+      2
+     ],
+     "power": 8,
+     "hit": 5,
+     "guts": 13,
+     "crit": 10,
+     "gd": 9,
+     "moveTo": 0,
+     "learn": {
+      "start": true
+     },
+     "rank": 1,
+     "rankBuilt": 1
+    },
+    "rankBuilt": 1,
     "dist": [
      2
     ],
-    "power": 8,
-    "hit": 5,
-    "guts": 13,
-    "crit": 10,
+    "power": 18,
+    "hit": -16,
+    "guts": 21,
+    "crit": 20,
     "gd": 9,
     "moveTo": 0,
-    "learn": {
-     "start": true
-    },
-    "rank": 1
+    "rank": 1,
+    "fixRank": 1
    },
    {
     "id": "kenshimocchi_o03",
     "name": "ガッチョスラント",
     "kind": "pow",
+    "alignOrig": {
+     "dist": [
+      1
+     ],
+     "power": 11,
+     "hit": 5,
+     "guts": 16,
+     "crit": 10,
+     "gd": 9,
+     "rank": 1,
+     "rankBuilt": 1
+    },
+    "rankBuilt": 1,
     "dist": [
-     1
+     0
     ],
-    "power": 11,
-    "hit": 5,
-    "guts": 16,
+    "power": 23,
+    "hit": 4,
+    "guts": 21,
     "crit": 10,
-    "gd": 9,
-    "rank": 1
+    "gd": 3,
+    "rank": 2,
+    "fixRank": 2
    },
    {
     "id": "kenshimocchi_o04",
     "name": "エアリアルもっちゃん",
     "kind": "pow",
+    "alignOrig": {
+     "dist": [
+      2
+     ],
+     "power": 11,
+     "hit": 5,
+     "guts": 18,
+     "crit": 10,
+     "gd": 9,
+     "rank": 1,
+     "rankBuilt": 1
+    },
+    "rankBuilt": 1,
     "dist": [
      2
     ],
-    "power": 11,
-    "hit": 5,
-    "guts": 18,
-    "crit": 10,
+    "power": 18,
+    "hit": -16,
+    "guts": 21,
+    "crit": 20,
     "gd": 9,
-    "rank": 1
+    "rank": 1,
+    "moveTo": 0,
+    "fixRank": 1,
+    "learn": {
+     "start": true
+    }
    },
    {
     "id": "kenshimocchi_o05",
     "name": "ガッチャー・クロス",
     "kind": "pow",
+    "alignOrig": {
+     "dist": [
+      1
+     ],
+     "power": 16,
+     "hit": -1,
+     "guts": 21,
+     "crit": 12,
+     "gd": 9,
+     "rank": 2,
+     "rankBuilt": 1
+    },
+    "rankBuilt": 1,
     "dist": [
      1
     ],
-    "power": 16,
-    "hit": -1,
-    "guts": 21,
-    "crit": 12,
-    "gd": 9,
-    "rank": 2
+    "power": 26,
+    "hit": -16,
+    "guts": 24,
+    "crit": 10,
+    "gd": 3,
+    "rank": 1,
+    "fixRank": 1
    },
    {
     "id": "kenshimocchi_o06",
     "name": "黒桜吹雪",
     "kind": "wise",
+    "alignOrig": {
+     "dist": [
+      3
+     ],
+     "power": 16,
+     "hit": -1,
+     "guts": 23,
+     "crit": 12,
+     "gd": 9,
+     "rank": 2,
+     "rankBuilt": 1
+    },
+    "rankBuilt": 1,
     "dist": [
      3
     ],
-    "power": 16,
-    "hit": -1,
-    "guts": 23,
-    "crit": 12,
-    "gd": 9,
-    "rank": 2
+    "power": 53,
+    "hit": -6,
+    "guts": 50,
+    "crit": 20,
+    "gd": 19,
+    "rank": 5,
+    "fixRank": 5
    },
    {
     "id": "kenshimocchi_o07",
     "name": "もっさんスピン",
     "kind": "pow",
+    "alignOrig": {
+     "dist": [
+      1
+     ],
+     "power": 24,
+     "hit": -1,
+     "guts": 26,
+     "crit": 12,
+     "gd": 9,
+     "rank": 3,
+     "rankBuilt": 2
+    },
+    "rankBuilt": 2,
     "dist": [
-     1
+     0
     ],
-    "power": 24,
-    "hit": -1,
-    "guts": 26,
-    "crit": 12,
-    "gd": 9,
-    "rank": 3
+    "power": 26,
+    "hit": 10,
+    "guts": 24,
+    "crit": 10,
+    "gd": 12,
+    "rank": 3,
+    "fixRank": 3
    },
    {
     "id": "kenshimocchi_o08",
     "name": "枝垂れクロス",
     "kind": "wise",
+    "alignOrig": {
+     "dist": [
+      3
+     ],
+     "power": 24,
+     "hit": -11,
+     "guts": 28,
+     "crit": 18,
+     "gd": 9,
+     "rank": 3,
+     "rankBuilt": 3
+    },
+    "rankBuilt": 3,
     "dist": [
      3
     ],
-    "power": 24,
-    "hit": -11,
-    "guts": 28,
-    "crit": 18,
-    "gd": 9,
-    "rank": 3
+    "power": 29,
+    "hit": 0,
+    "guts": 25,
+    "crit": 8,
+    "gd": 6,
+    "rank": 2,
+    "fixRank": 2
    },
    {
     "id": "kenshimocchi_o09",
     "name": "バーストもっさま",
     "kind": "pow",
+    "alignOrig": {
+     "dist": [
+      1
+     ],
+     "power": 30,
+     "hit": -1,
+     "guts": 30,
+     "crit": 12,
+     "gd": 19,
+     "rank": 4,
+     "rankBuilt": 3
+    },
+    "rankBuilt": 3,
     "dist": [
      1
     ],
-    "power": 30,
-    "hit": -1,
-    "guts": 30,
-    "crit": 12,
-    "gd": 19,
-    "rank": 4
+    "power": 26,
+    "hit": -21,
+    "guts": 26,
+    "crit": 8,
+    "gd": 9,
+    "rank": 3,
+    "fixRank": 3
    },
    {
     "id": "kenshimocchi_o10",
     "name": "ソニック・リープ",
     "kind": "pow",
+    "alignOrig": {
+     "dist": [
+      2
+     ],
+     "power": 16,
+     "hit": -1,
+     "guts": 23,
+     "crit": 12,
+     "gd": 9,
+     "moveTo": 0,
+     "rank": 2,
+     "rankBuilt": 2
+    },
+    "rankBuilt": 2,
     "dist": [
      2
     ],
-    "power": 16,
-    "hit": -1,
-    "guts": 23,
-    "crit": 12,
+    "power": 18,
+    "hit": -6,
+    "guts": 26,
+    "crit": 20,
     "gd": 9,
-    "moveTo": 0,
-    "rank": 2
+    "rank": 2,
+    "fixRank": 2
    },
    {
     "id": "kenshimocchi_o11",
     "name": "ホリゾンタル・スクエア",
     "kind": "pow",
+    "alignOrig": {
+     "dist": [
+      1
+     ],
+     "power": 13,
+     "hit": -5,
+     "guts": 25,
+     "crit": 12,
+     "gd": 23,
+     "rank": 2,
+     "rankBuilt": 2
+    },
+    "rankBuilt": 2,
     "dist": [
      1
     ],
-    "power": 13,
-    "hit": -5,
-    "guts": 25,
+    "power": 8,
+    "hit": -6,
+    "guts": 21,
     "crit": 12,
-    "gd": 23,
+    "gd": 24,
     "rank": 2,
-    "orig": {
-     "power": 24,
-     "hit": -1,
-     "gd": 9,
-     "crit": 12
-    },
-    "spread": "sk-0405"
+    "fixRank": 2
    },
    {
     "id": "kenshimocchi_o12",
     "name": "ヴォーパル・ストライク",
     "kind": "pow",
+    "alignOrig": {
+     "dist": [
+      2
+     ],
+     "power": 24,
+     "hit": -1,
+     "guts": 28,
+     "crit": 18,
+     "gd": 9,
+     "rank": 3,
+     "rankBuilt": 3
+    },
+    "rankBuilt": 3,
     "dist": [
      2
     ],
-    "power": 24,
-    "hit": -1,
-    "guts": 28,
-    "crit": 18,
-    "gd": 9,
-    "rank": 3
+    "power": 29,
+    "hit": -6,
+    "guts": 35,
+    "crit": 27,
+    "gd": 12,
+    "rank": 3,
+    "moveTo": 0,
+    "fixRank": 3
    },
    {
     "id": "kenshimocchi_o13",
     "name": "デュアル・サーキュラー",
     "kind": "pow",
+    "alignOrig": {
+     "dist": [
+      1
+     ],
+     "power": 30,
+     "hit": -1,
+     "guts": 30,
+     "crit": 12,
+     "gd": 9,
+     "rank": 4,
+     "rankBuilt": 4
+    },
+    "rankBuilt": 4,
     "dist": [
      1
     ],
-    "power": 30,
-    "hit": -1,
-    "guts": 30,
-    "crit": 12,
-    "gd": 9,
-    "rank": 4
+    "power": 51,
+    "hit": -6,
+    "guts": 43,
+    "crit": 14,
+    "gd": 15,
+    "rank": 4,
+    "fixRank": 4
    },
    {
     "id": "kenshimocchi_o14",
     "name": "ブラック・テンペスト",
     "kind": "wise",
+    "alignOrig": {
+     "dist": [
+      3
+     ],
+     "power": 30,
+     "hit": -11,
+     "guts": 33,
+     "crit": 12,
+     "gd": 9,
+     "rank": 4,
+     "rankBuilt": 4
+    },
+    "rankBuilt": 4,
     "dist": [
      3
     ],
-    "power": 30,
-    "hit": -11,
-    "guts": 33,
+    "power": 51,
+    "hit": 4,
+    "guts": 41,
     "crit": 12,
     "gd": 9,
-    "rank": 4
+    "rank": 4,
+    "fixRank": 4
    },
    {
     "id": "kenshimocchi_o15",
     "name": "ブラック・チェイン",
     "kind": "pow",
+    "alignOrig": {
+     "dist": [
+      1
+     ],
+     "power": 30,
+     "hit": -11,
+     "guts": 35,
+     "crit": 12,
+     "gd": 12,
+     "rank": 4,
+     "rankBuilt": 4
+    },
+    "rankBuilt": 4,
     "dist": [
-     1
+     0
     ],
-    "power": 30,
-    "hit": -11,
+    "power": 35,
+    "hit": 4,
     "guts": 35,
     "crit": 12,
-    "gd": 12,
-    "rank": 4
+    "gd": 19,
+    "rank": 4,
+    "fixRank": 4
    },
    {
     "id": "kenshimocchi_o16",
     "name": "ナイトメア・レイド",
     "kind": "pow",
+    "alignOrig": {
+     "dist": [
+      2
+     ],
+     "power": 38,
+     "hit": -11,
+     "guts": 37,
+     "crit": 12,
+     "gd": 12,
+     "moveTo": 0,
+     "rank": 5,
+     "rankBuilt": 5
+    },
+    "rankBuilt": 5,
     "dist": [
      2
     ],
-    "power": 38,
-    "hit": -11,
-    "guts": 37,
-    "crit": 12,
-    "gd": 12,
-    "moveTo": 0,
-    "rank": 5
+    "power": 45,
+    "hit": 10,
+    "guts": 43,
+    "crit": 14,
+    "gd": 0,
+    "rank": 4,
+    "fixRank": 4
    },
    {
     "id": "kenshimocchi_o17",
     "name": "ジ・エクリプス",
     "kind": "pow",
+    "alignOrig": {
+     "dist": [
+      1
+     ],
+     "power": 38,
+     "hit": -11,
+     "guts": 40,
+     "crit": 12,
+     "gd": 12,
+     "rank": 5,
+     "rankBuilt": 5
+    },
+    "rankBuilt": 5,
     "dist": [
      1
     ],
-    "power": 38,
-    "hit": -11,
-    "guts": 40,
-    "crit": 12,
-    "gd": 12,
-    "rank": 5
+    "power": 51,
+    "hit": 0,
+    "guts": 45,
+    "crit": 30,
+    "gd": 21,
+    "rank": 5,
+    "fixRank": 5
    },
    {
     "id": "kenshimocchi_o18",
     "name": "スターバースト・ストリーム",
     "kind": "pow",
+    "alignOrig": {
+     "dist": [
+      2
+     ],
+     "power": 49,
+     "hit": -11,
+     "guts": 42,
+     "crit": 18,
+     "gd": 19,
+     "rank": 5,
+     "rankBuilt": 5
+    },
+    "rankBuilt": 5,
     "dist": [
      2
     ],
-    "power": 49,
-    "hit": -11,
-    "guts": 42,
-    "crit": 18,
-    "gd": 19,
-    "rank": 5
+    "power": 51,
+    "hit": 10,
+    "guts": 48,
+    "crit": 14,
+    "gd": 6,
+    "rank": 5,
+    "fixRank": 5
    }
   ],
   "Melody": [
@@ -7485,276 +8330,555 @@
     "id": "melody_o01",
     "name": "ぞうさん頭突き",
     "kind": "pow",
+    "alignOrig": {
+     "dist": [
+      0
+     ],
+     "power": 10,
+     "hit": 9,
+     "guts": 10,
+     "crit": 10,
+     "gd": 10,
+     "learn": {
+      "start": true
+     },
+     "rank": 1,
+     "rankBuilt": 1
+    },
+    "rankBuilt": 1,
     "dist": [
      0
     ],
-    "power": 10,
-    "hit": 9,
-    "guts": 10,
-    "crit": 10,
-    "gd": 10,
+    "power": 18,
+    "hit": -17,
+    "guts": 13,
+    "crit": 12,
+    "gd": 6,
     "learn": {
      "start": true
     },
-    "rank": 1
+    "rank": 1,
+    "moveTo": 2,
+    "fixRank": 1
    },
    {
     "id": "melody_o02",
     "name": "ピアノパラソル脳天撃",
     "kind": "pow",
+    "alignOrig": {
+     "dist": [
+      1
+     ],
+     "power": 10,
+     "hit": 3,
+     "guts": 13,
+     "crit": 10,
+     "gd": 10,
+     "learn": {
+      "start": true
+     },
+     "rank": 1,
+     "rankBuilt": 1
+    },
+    "rankBuilt": 1,
     "dist": [
      1
     ],
-    "power": 10,
-    "hit": 3,
-    "guts": 13,
-    "crit": 10,
-    "gd": 10,
-    "learn": {
-     "start": true
-    },
-    "rank": 1
+    "power": 13,
+    "hit": -7,
+    "guts": 17,
+    "crit": 11,
+    "gd": 15,
+    "rank": 1,
+    "fixRank": 1
    },
    {
     "id": "melody_o03",
     "name": "メロディタクトライト",
     "kind": "wise",
+    "alignOrig": {
+     "dist": [
+      2
+     ],
+     "power": 14,
+     "hit": 3,
+     "guts": 15,
+     "crit": 10,
+     "gd": 10,
+     "rank": 1,
+     "rankBuilt": 1
+    },
+    "rankBuilt": 1,
     "dist": [
      2
     ],
-    "power": 14,
-    "hit": 3,
-    "guts": 15,
-    "crit": 10,
-    "gd": 10,
-    "rank": 1
+    "power": 10,
+    "hit": 9,
+    "guts": 19,
+    "crit": 8,
+    "gd": 9,
+    "rank": 1,
+    "fixRank": 1
    },
    {
     "id": "melody_o04",
     "name": "ぞうさんぴろぴろ鼻",
     "kind": "pow",
+    "alignOrig": {
+     "dist": [
+      1
+     ],
+     "power": 14,
+     "hit": 3,
+     "guts": 18,
+     "crit": 12,
+     "gd": 17,
+     "rank": 1,
+     "rankBuilt": 1
+    },
+    "rankBuilt": 1,
     "dist": [
      1
     ],
-    "power": 14,
-    "hit": 3,
-    "guts": 18,
+    "power": 18,
+    "hit": -17,
+    "guts": 21,
     "crit": 12,
-    "gd": 17,
-    "rank": 1
+    "gd": 6,
+    "rank": 2,
+    "fixRank": 2
    },
    {
     "id": "melody_o05",
     "name": "マリーランド大玉転がし",
     "kind": "pow",
+    "alignOrig": {
+     "dist": [
+      1
+     ],
+     "power": 20,
+     "hit": 3,
+     "guts": 21,
+     "crit": 12,
+     "gd": 10,
+     "moveTo": 0,
+     "rank": 2,
+     "rankBuilt": 1
+    },
+    "rankBuilt": 1,
     "dist": [
      1
     ],
-    "power": 20,
+    "power": 26,
     "hit": 3,
-    "guts": 21,
+    "guts": 32,
     "crit": 12,
-    "gd": 10,
-    "moveTo": 0,
-    "rank": 2
+    "gd": 12,
+    "rank": 3,
+    "fixRank": 3
    },
    {
     "id": "melody_o06",
     "name": "ムーンサルトメロディー",
     "kind": "pow",
+    "alignOrig": {
+     "dist": [
+      2
+     ],
+     "power": 20,
+     "hit": 3,
+     "guts": 23,
+     "crit": 12,
+     "gd": 10,
+     "moveTo": 3,
+     "rank": 2,
+     "rankBuilt": 2
+    },
+    "rankBuilt": 2,
     "dist": [
-     2
+     0
     ],
-    "power": 20,
-    "hit": 3,
-    "guts": 23,
-    "crit": 12,
-    "gd": 10,
-    "moveTo": 3,
-    "rank": 2
+    "power": 40,
+    "hit": 6,
+    "guts": 35,
+    "crit": 27,
+    "gd": 9,
+    "rank": 4,
+    "fixRank": 4
    },
    {
     "id": "melody_o07",
     "name": "メロディキャンディボム",
     "kind": "wise",
+    "alignOrig": {
+     "dist": [
+      2
+     ],
+     "power": 30,
+     "hit": -7,
+     "guts": 24,
+     "crit": 12,
+     "gd": 17,
+     "rank": 2,
+     "rankBuilt": 2
+    },
+    "rankBuilt": 2,
     "dist": [
-     2
+     1
     ],
-    "power": 30,
-    "hit": -7,
-    "guts": 24,
-    "crit": 12,
-    "gd": 17,
-    "rank": 2
+    "power": 26,
+    "hit": 14,
+    "guts": 32,
+    "crit": 10,
+    "gd": 32,
+    "rank": 4,
+    "fixRank": 4
    },
    {
     "id": "melody_o08",
     "name": "メロディ苺クッキー",
     "kind": "wise",
+    "alignOrig": {
+     "dist": [
+      3
+     ],
+     "power": 30,
+     "hit": -7,
+     "guts": 27,
+     "crit": 12,
+     "gd": 17,
+     "rank": 3,
+     "rankBuilt": 3
+    },
+    "rankBuilt": 3,
     "dist": [
      3
     ],
-    "power": 30,
-    "hit": -7,
-    "guts": 27,
-    "crit": 12,
-    "gd": 17,
-    "rank": 3
+    "power": 26,
+    "hit": -13,
+    "guts": 26,
+    "crit": 18,
+    "gd": 9,
+    "rank": 3,
+    "fixRank": 3
    },
    {
     "id": "melody_o09",
     "name": "ドリームパワー",
     "kind": "wise",
+    "alignOrig": {
+     "dist": [
+      2
+     ],
+     "power": 38,
+     "hit": -7,
+     "guts": 30,
+     "crit": 12,
+     "gd": 10,
+     "rank": 4,
+     "rankBuilt": 4
+    },
+    "rankBuilt": 4,
     "dist": [
      2
     ],
-    "power": 38,
-    "hit": -7,
-    "guts": 30,
-    "crit": 12,
-    "gd": 10,
-    "rank": 4
+    "power": 40,
+    "hit": 9,
+    "guts": 38,
+    "crit": 18,
+    "gd": 12,
+    "rank": 4,
+    "fixRank": 4
    },
    {
     "id": "melody_o10",
     "name": "メロメロハート",
     "kind": "wise",
+    "alignOrig": {
+     "dist": [
+      3
+     ],
+     "power": 20,
+     "hit": -7,
+     "guts": 22,
+     "crit": 12,
+     "gd": 17,
+     "rank": 2,
+     "rankBuilt": 1
+    },
+    "rankBuilt": 1,
     "dist": [
      3
     ],
-    "power": 20,
-    "hit": -7,
-    "guts": 22,
+    "power": 18,
+    "hit": -1,
+    "guts": 16,
     "crit": 12,
-    "gd": 17,
-    "rank": 2
+    "gd": 9,
+    "rank": 1,
+    "moveTo": 1,
+    "fixRank": 1,
+    "learn": {
+     "start": true
+    }
    },
    {
     "id": "melody_o11",
     "name": "ピアノワルツ",
     "kind": "wise",
+    "alignOrig": {
+     "dist": [
+      2
+     ],
+     "power": 28,
+     "hit": -14,
+     "guts": 24,
+     "crit": 14,
+     "gd": 17,
+     "rank": 3,
+     "rankBuilt": 2
+    },
+    "rankBuilt": 2,
     "dist": [
      2
     ],
-    "power": 28,
-    "hit": -14,
-    "guts": 24,
-    "crit": 14,
-    "gd": 17,
-    "rank": 3,
-    "orig": {
-     "power": 30,
-     "hit": -7,
-     "gd": 17,
-     "crit": 12
-    },
-    "spread": "sk-0577"
+    "power": 13,
+    "hit": -17,
+    "guts": 15,
+    "crit": 18,
+    "gd": 9,
+    "rank": 2,
+    "fixRank": 2
    },
    {
     "id": "melody_o12",
     "name": "リボンウィング",
     "kind": "wise",
+    "alignOrig": {
+     "dist": [
+      3
+     ],
+     "power": 30,
+     "hit": -7,
+     "guts": 27,
+     "crit": 12,
+     "gd": 10,
+     "moveTo": 3,
+     "rank": 3,
+     "rankBuilt": 3
+    },
+    "rankBuilt": 3,
     "dist": [
-     3
+     0
     ],
-    "power": 30,
-    "hit": -7,
-    "guts": 27,
-    "crit": 12,
-    "gd": 10,
-    "moveTo": 3,
-    "rank": 3
+    "power": 13,
+    "hit": 3,
+    "guts": 22,
+    "crit": 18,
+    "gd": 12,
+    "rank": 2,
+    "fixRank": 2
    },
    {
     "id": "melody_o13",
     "name": "パウンドメテオ",
     "kind": "wise",
+    "alignOrig": {
+     "dist": [
+      2
+     ],
+     "power": 38,
+     "hit": -7,
+     "guts": 29,
+     "crit": 12,
+     "gd": 22,
+     "rank": 4,
+     "rankBuilt": 3
+    },
+    "rankBuilt": 3,
     "dist": [
      2
     ],
-    "power": 38,
-    "hit": -7,
-    "guts": 29,
-    "crit": 12,
-    "gd": 22,
-    "rank": 4
+    "power": 26,
+    "hit": -20,
+    "guts": 26,
+    "crit": 25,
+    "gd": 15,
+    "rank": 3,
+    "moveTo": 0,
+    "fixRank": 3
    },
    {
     "id": "melody_o14",
     "name": "ピンクバースト",
     "kind": "wise",
+    "alignOrig": {
+     "dist": [
+      3
+     ],
+     "power": 38,
+     "hit": -7,
+     "guts": 32,
+     "crit": 12,
+     "gd": 22,
+     "rank": 4,
+     "rankBuilt": 4
+    },
+    "rankBuilt": 4,
     "dist": [
      3
     ],
-    "power": 38,
-    "hit": -7,
-    "guts": 32,
-    "crit": 12,
-    "gd": 22,
-    "rank": 4
+    "power": 40,
+    "hit": 3,
+    "guts": 40,
+    "crit": 27,
+    "gd": 6,
+    "rank": 4,
+    "fixRank": 4
    },
    {
     "id": "melody_o15",
     "name": "キャンディレイン",
     "kind": "wise",
-    "dist": [
-     2
-    ],
-    "power": 42,
-    "hit": -6,
-    "guts": 35,
-    "crit": 10,
-    "gd": 19,
-    "rank": 4,
-    "orig": {
-     "power": 38,
-     "hit": -7,
-     "gd": 22,
-     "crit": 12
+    "alignOrig": {
+     "dist": [
+      2
+     ],
+     "power": 42,
+     "hit": -6,
+     "guts": 35,
+     "crit": 10,
+     "gd": 19,
+     "rank": 4,
+     "rankBuilt": 4
     },
-    "spread": "sk-0584"
+    "rankBuilt": 4,
+    "dist": [
+     1
+    ],
+    "power": 53,
+    "hit": 3,
+    "guts": 41,
+    "crit": 15,
+    "gd": 9,
+    "rank": 5,
+    "fixRank": 5
    },
    {
     "id": "melody_o16",
     "name": "マリーランドアーチ",
     "kind": "wise",
+    "alignOrig": {
+     "dist": [
+      3
+     ],
+     "power": 48,
+     "hit": -17,
+     "guts": 37,
+     "crit": 14,
+     "gd": 13,
+     "rank": 5,
+     "rankBuilt": 5
+    },
+    "rankBuilt": 5,
     "dist": [
      3
     ],
-    "power": 48,
-    "hit": -17,
-    "guts": 37,
-    "crit": 14,
-    "gd": 13,
-    "rank": 5
+    "power": 40,
+    "hit": 14,
+    "guts": 42,
+    "crit": 18,
+    "gd": 15,
+    "rank": 5,
+    "fixRank": 5
    },
    {
     "id": "melody_o17",
     "name": "メロディタクト",
     "kind": "wise",
+    "alignOrig": {
+     "dist": [
+      2
+     ],
+     "power": 48,
+     "hit": -17,
+     "guts": 39,
+     "crit": 14,
+     "gd": 13,
+     "rank": 5,
+     "rankBuilt": 5
+    },
+    "rankBuilt": 5,
     "dist": [
      2
     ],
-    "power": 48,
-    "hit": -17,
+    "power": 35,
+    "hit": 3,
     "guts": 39,
-    "crit": 14,
-    "gd": 13,
-    "rank": 5
+    "crit": 12,
+    "gd": 36,
+    "rank": 5,
+    "fixRank": 5
    },
    {
     "id": "melody_o18",
     "name": "スウィートパレード",
     "kind": "wise",
+    "alignOrig": {
+     "dist": [
+      3
+     ],
+     "power": 61,
+     "hit": -17,
+     "guts": 41,
+     "crit": 14,
+     "gd": 22,
+     "rank": 5,
+     "rankBuilt": 5
+    },
+    "rankBuilt": 5,
+    "dist": [
+     0
+    ],
+    "power": 53,
+    "hit": -7,
+    "guts": 40,
+    "crit": 27,
+    "gd": 24,
+    "rank": 5,
+    "fixRank": 5
+   },
+   {
+    "alignNew": true,
+    "rank": 2,
+    "id": "melody_o19",
+    "name": "音符シャワー",
+    "kind": "wise",
     "dist": [
      3
     ],
-    "power": 61,
-    "hit": -17,
-    "guts": 41,
-    "crit": 14,
-    "gd": 22,
-    "rank": 5
+    "power": 22,
+    "hit": -5,
+    "guts": 21,
+    "crit": 12,
+    "gd": 6,
+    "fixRank": 2
+   },
+   {
+    "alignNew": true,
+    "rank": 3,
+    "id": "melody_o20",
+    "name": "ぞうさんスタンプ",
+    "kind": "pow",
+    "dist": [
+     0
+    ],
+    "power": 27,
+    "hit": -4,
+    "guts": 28,
+    "crit": 10,
+    "gd": 12,
+    "fixRank": 3
    }
   ],
   "Kuromy": [
@@ -7762,263 +8886,556 @@
     "id": "kuromy_o01",
     "name": "バク頭突き",
     "kind": "pow",
+    "alignOrig": {
+     "dist": [
+      0
+     ],
+     "power": 9,
+     "hit": 7,
+     "guts": 12,
+     "crit": 10,
+     "gd": 9,
+     "learn": {
+      "start": true
+     },
+     "rank": 1,
+     "rankBuilt": 1
+    },
+    "rankBuilt": 1,
     "dist": [
      0
     ],
-    "power": 9,
-    "hit": 7,
-    "guts": 12,
-    "crit": 10,
-    "gd": 9,
+    "power": 18,
+    "hit": -17,
+    "guts": 13,
+    "crit": 12,
+    "gd": 6,
     "learn": {
      "start": true
     },
-    "rank": 1
+    "rank": 1,
+    "moveTo": 2,
+    "fixRank": 1
    },
    {
     "id": "kuromy_o02",
     "name": "バク空中落下プレス",
     "kind": "pow",
+    "alignOrig": {
+     "dist": [
+      1
+     ],
+     "power": 12,
+     "hit": 7,
+     "guts": 15,
+     "crit": 10,
+     "gd": 9,
+     "moveTo": 0,
+     "learn": {
+      "start": true
+     },
+     "rank": 1,
+     "rankBuilt": 1
+    },
+    "rankBuilt": 1,
     "dist": [
      1
     ],
-    "power": 12,
-    "hit": 7,
-    "guts": 15,
-    "crit": 10,
-    "gd": 9,
-    "moveTo": 0,
-    "learn": {
-     "start": true
-    },
-    "rank": 1
+    "power": 13,
+    "hit": -7,
+    "guts": 17,
+    "crit": 11,
+    "gd": 15,
+    "rank": 1,
+    "fixRank": 1
    },
    {
     "id": "kuromy_o03",
     "name": "ブラックノートライト",
     "kind": "wise",
+    "alignOrig": {
+     "dist": [
+      2
+     ],
+     "power": 12,
+     "hit": -3,
+     "guts": 17,
+     "crit": 10,
+     "gd": 15,
+     "rank": 1,
+     "rankBuilt": 1
+    },
+    "rankBuilt": 1,
     "dist": [
      2
     ],
-    "power": 12,
-    "hit": -3,
-    "guts": 17,
-    "crit": 10,
-    "gd": 15,
-    "rank": 1
+    "power": 10,
+    "hit": 9,
+    "guts": 19,
+    "crit": 8,
+    "gd": 9,
+    "rank": 1,
+    "fixRank": 1
    },
    {
     "id": "kuromy_o04",
     "name": "バクパタパタ耳",
     "kind": "pow",
+    "alignOrig": {
+     "dist": [
+      1
+     ],
+     "power": 18,
+     "hit": -3,
+     "guts": 20,
+     "crit": 12,
+     "gd": 15,
+     "rank": 1,
+     "rankBuilt": 1
+    },
+    "rankBuilt": 1,
     "dist": [
      1
     ],
     "power": 18,
-    "hit": -3,
-    "guts": 20,
+    "hit": -17,
+    "guts": 21,
     "crit": 12,
-    "gd": 15,
-    "rank": 1
+    "gd": 6,
+    "rank": 2,
+    "fixRank": 2
    },
    {
     "id": "kuromy_o05",
     "name": "巨大雪だるま転がし",
     "kind": "pow",
+    "alignOrig": {
+     "dist": [
+      1
+     ],
+     "power": 18,
+     "hit": -3,
+     "guts": 23,
+     "crit": 12,
+     "gd": 9,
+     "moveTo": 0,
+     "rank": 2,
+     "rankBuilt": 1
+    },
+    "rankBuilt": 1,
     "dist": [
      1
     ],
-    "power": 18,
-    "hit": -3,
-    "guts": 23,
+    "power": 26,
+    "hit": 3,
+    "guts": 32,
     "crit": 12,
-    "gd": 9,
-    "moveTo": 0,
-    "rank": 2
+    "gd": 12,
+    "rank": 3,
+    "fixRank": 3
    },
    {
     "id": "kuromy_o06",
     "name": "KUROMI'S5アタック",
     "kind": "pow",
+    "alignOrig": {
+     "dist": [
+      2
+     ],
+     "power": 26,
+     "hit": -3,
+     "guts": 26,
+     "crit": 12,
+     "gd": 9,
+     "rank": 2,
+     "rankBuilt": 2
+    },
+    "rankBuilt": 2,
     "dist": [
-     2
+     1
     ],
     "power": 26,
-    "hit": -3,
-    "guts": 26,
-    "crit": 12,
-    "gd": 9,
-    "rank": 2
+    "hit": 14,
+    "guts": 32,
+    "crit": 10,
+    "gd": 32,
+    "rank": 4,
+    "fixRank": 4
    },
    {
     "id": "kuromy_o07",
     "name": "ナイトメアらっきょうボム",
     "kind": "wise",
+    "alignOrig": {
+     "dist": [
+      2
+     ],
+     "power": 26,
+     "hit": -3,
+     "guts": 28,
+     "crit": 12,
+     "gd": 19,
+     "rank": 2,
+     "rankBuilt": 2
+    },
+    "rankBuilt": 2,
     "dist": [
      2
     ],
-    "power": 26,
-    "hit": -3,
-    "guts": 28,
-    "crit": 12,
-    "gd": 19,
-    "rank": 2
+    "power": 13,
+    "hit": -17,
+    "guts": 15,
+    "crit": 18,
+    "gd": 9,
+    "rank": 2,
+    "fixRank": 2
    },
    {
     "id": "kuromy_o08",
     "name": "バコ・ベリースプラッシュ",
     "kind": "wise",
+    "alignOrig": {
+     "dist": [
+      3
+     ],
+     "power": 33,
+     "hit": -13,
+     "guts": 31,
+     "crit": 12,
+     "gd": 19,
+     "rank": 3,
+     "rankBuilt": 3
+    },
+    "rankBuilt": 3,
     "dist": [
      3
     ],
-    "power": 33,
+    "power": 26,
     "hit": -13,
-    "guts": 31,
-    "crit": 12,
-    "gd": 19,
-    "rank": 3
+    "guts": 26,
+    "crit": 18,
+    "gd": 9,
+    "rank": 3,
+    "fixRank": 3
    },
    {
     "id": "kuromy_o09",
     "name": "ダークパワー",
     "kind": "wise",
+    "alignOrig": {
+     "dist": [
+      2
+     ],
+     "power": 33,
+     "hit": -13,
+     "guts": 34,
+     "crit": 12,
+     "gd": 12,
+     "rank": 4,
+     "rankBuilt": 4
+    },
+    "rankBuilt": 4,
     "dist": [
-     2
+     1
     ],
-    "power": 33,
-    "hit": -13,
-    "guts": 34,
-    "crit": 12,
-    "gd": 12,
-    "rank": 4
+    "power": 53,
+    "hit": 3,
+    "guts": 41,
+    "crit": 15,
+    "gd": 9,
+    "rank": 5,
+    "fixRank": 5
    },
    {
     "id": "kuromy_o10",
     "name": "ドクロボム",
     "kind": "wise",
+    "alignOrig": {
+     "dist": [
+      3
+     ],
+     "power": 26,
+     "hit": -3,
+     "guts": 25,
+     "crit": 12,
+     "gd": 19,
+     "rank": 2,
+     "rankBuilt": 1
+    },
+    "rankBuilt": 1,
     "dist": [
      3
     ],
-    "power": 26,
-    "hit": -3,
-    "guts": 25,
+    "power": 18,
+    "hit": -1,
+    "guts": 16,
     "crit": 12,
-    "gd": 19,
-    "rank": 2
+    "gd": 9,
+    "rank": 1,
+    "moveTo": 1,
+    "fixRank": 1,
+    "learn": {
+     "start": true
+    }
    },
    {
     "id": "kuromy_o11",
     "name": "クロミーズ5突撃",
     "kind": "pow",
+    "alignOrig": {
+     "dist": [
+      0
+     ],
+     "power": 26,
+     "hit": -3,
+     "guts": 28,
+     "crit": 12,
+     "gd": 12,
+     "moveTo": 0,
+     "rank": 3,
+     "rankBuilt": 2
+    },
+    "rankBuilt": 2,
     "dist": [
      0
     ],
-    "power": 26,
-    "hit": -3,
-    "guts": 28,
-    "crit": 12,
+    "power": 13,
+    "hit": 3,
+    "guts": 22,
+    "crit": 18,
     "gd": 12,
-    "moveTo": 0,
-    "rank": 3
+    "rank": 2,
+    "fixRank": 2
    },
    {
     "id": "kuromy_o12",
     "name": "夢くいウィング",
     "kind": "wise",
+    "alignOrig": {
+     "dist": [
+      3
+     ],
+     "power": 33,
+     "hit": -13,
+     "guts": 31,
+     "crit": 12,
+     "gd": 12,
+     "moveTo": 3,
+     "rank": 3,
+     "rankBuilt": 3
+    },
+    "rankBuilt": 3,
     "dist": [
-     3
+     0
     ],
-    "power": 33,
-    "hit": -13,
-    "guts": 31,
-    "crit": 12,
-    "gd": 12,
-    "moveTo": 3,
-    "rank": 3
+    "power": 40,
+    "hit": 6,
+    "guts": 35,
+    "crit": 27,
+    "gd": 9,
+    "rank": 4,
+    "fixRank": 4
    },
    {
     "id": "kuromy_o13",
     "name": "恨み帳メテオ",
     "kind": "wise",
+    "alignOrig": {
+     "dist": [
+      2
+     ],
+     "power": 33,
+     "hit": -13,
+     "guts": 33,
+     "crit": 12,
+     "gd": 19,
+     "rank": 4,
+     "rankBuilt": 3
+    },
+    "rankBuilt": 3,
     "dist": [
      2
     ],
-    "power": 33,
-    "hit": -13,
-    "guts": 33,
-    "crit": 12,
-    "gd": 19,
-    "rank": 4
+    "power": 26,
+    "hit": -20,
+    "guts": 26,
+    "crit": 25,
+    "gd": 15,
+    "rank": 3,
+    "moveTo": 0,
+    "fixRank": 3
    },
    {
     "id": "kuromy_o14",
     "name": "黒音符バースト",
     "kind": "wise",
+    "alignOrig": {
+     "dist": [
+      3
+     ],
+     "power": 42,
+     "hit": -13,
+     "guts": 36,
+     "crit": 12,
+     "gd": 19,
+     "rank": 4,
+     "rankBuilt": 4
+    },
+    "rankBuilt": 4,
     "dist": [
      3
     ],
-    "power": 42,
-    "hit": -13,
-    "guts": 36,
-    "crit": 12,
-    "gd": 19,
-    "rank": 4
+    "power": 40,
+    "hit": 3,
+    "guts": 40,
+    "crit": 27,
+    "gd": 6,
+    "rank": 4,
+    "fixRank": 4
    },
    {
     "id": "kuromy_o15",
     "name": "らっきょう大雨",
     "kind": "wise",
+    "alignOrig": {
+     "dist": [
+      2
+     ],
+     "power": 42,
+     "hit": -13,
+     "guts": 39,
+     "crit": 12,
+     "gd": 12,
+     "rank": 4,
+     "rankBuilt": 4
+    },
+    "rankBuilt": 4,
     "dist": [
      2
     ],
-    "power": 42,
-    "hit": -13,
-    "guts": 39,
-    "crit": 12,
+    "power": 40,
+    "hit": 9,
+    "guts": 38,
+    "crit": 18,
     "gd": 12,
-    "rank": 4
+    "rank": 4,
+    "fixRank": 4
    },
    {
     "id": "kuromy_o16",
     "name": "ナイトメアアーク",
     "kind": "wise",
+    "alignOrig": {
+     "dist": [
+      3
+     ],
+     "power": 42,
+     "hit": -13,
+     "guts": 42,
+     "crit": 18,
+     "gd": 12,
+     "rank": 5,
+     "rankBuilt": 5
+    },
+    "rankBuilt": 5,
     "dist": [
      3
     ],
-    "power": 42,
-    "hit": -13,
+    "power": 40,
+    "hit": 14,
     "guts": 42,
     "crit": 18,
-    "gd": 12,
-    "rank": 5
+    "gd": 15,
+    "rank": 5,
+    "fixRank": 5
    },
    {
     "id": "kuromy_o17",
     "name": "ダークオーロラ",
     "kind": "wise",
+    "alignOrig": {
+     "dist": [
+      2
+     ],
+     "power": 54,
+     "hit": -13,
+     "guts": 44,
+     "crit": 18,
+     "gd": 12,
+     "rank": 5,
+     "rankBuilt": 5
+    },
+    "rankBuilt": 5,
     "dist": [
      2
     ],
-    "power": 54,
-    "hit": -13,
-    "guts": 44,
-    "crit": 18,
-    "gd": 12,
-    "rank": 5
+    "power": 35,
+    "hit": 3,
+    "guts": 39,
+    "crit": 12,
+    "gd": 36,
+    "rank": 5,
+    "fixRank": 5
    },
    {
     "id": "kuromy_o18",
     "name": "悪夢フィナーレ",
     "kind": "wise",
+    "alignOrig": {
+     "dist": [
+      3
+     ],
+     "power": 54,
+     "hit": -16,
+     "guts": 47,
+     "crit": 18,
+     "gd": 12,
+     "rank": 5,
+     "rankBuilt": 5
+    },
+    "rankBuilt": 5,
+    "dist": [
+     0
+    ],
+    "power": 53,
+    "hit": -7,
+    "guts": 40,
+    "crit": 27,
+    "gd": 24,
+    "rank": 5,
+    "fixRank": 5
+   },
+   {
+    "alignNew": true,
+    "rank": 2,
+    "id": "kuromy_o19",
+    "name": "ドクロ音符ショット",
+    "kind": "wise",
     "dist": [
      3
     ],
-    "power": 54,
-    "hit": -16,
-    "guts": 47,
-    "crit": 18,
+    "power": 22,
+    "hit": -5,
+    "guts": 21,
+    "crit": 12,
+    "gd": 6,
+    "fixRank": 2
+   },
+   {
+    "alignNew": true,
+    "rank": 3,
+    "id": "kuromy_o20",
+    "name": "バク突進ずつき",
+    "kind": "pow",
+    "dist": [
+     0
+    ],
+    "power": 27,
+    "hit": -4,
+    "guts": 28,
+    "crit": 10,
     "gd": 12,
-    "rank": 5
+    "fixRank": 3
    }
   ]
  }
