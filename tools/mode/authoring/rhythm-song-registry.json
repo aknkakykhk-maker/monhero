@@ -1810,6 +1810,24 @@
     "subdivisionsPerBeat": 4,
     "source": "command"
    }
+  },
+  "sparkling_pink_overture": {
+   "flowPlacement": true,
+   "audio": "monster-hero/audio/bgm-sparkling-pink-overture.mp3",
+   "chartRevision": 39,
+   "audioSha256": "f6afa5f1c481b6df392d0189194d0cf3d04e8d45b6d2060bb6f24acf752342b4",
+   "durationMs": 124447,
+   "analyzedTiming": {
+    "bpm": 212,
+    "beatZeroMs": 1148.9,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 6,
+    "source": "command"
+   },
+   "chartIntensity": "strong",
+   "chartIntensityByDifficulty": {
+    "EXPERT": "mild"
+   }
   }
  }
 }

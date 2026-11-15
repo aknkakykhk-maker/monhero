@@ -2738,6 +2738,41 @@
    "fastSameSide": 11,
    "heldHandSwitch": 0
   },
+  "sparkling_pink_overture/EASY": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "sparkling_pink_overture/NORMAL": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 0,
+   "heldHandSwitch": 0
+  },
+  "sparkling_pink_overture/HARD": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 18,
+   "heldHandSwitch": 0
+  },
+  "sparkling_pink_overture/EXPERT": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 9,
+   "heldHandSwitch": 0
+  },
+  "sparkling_pink_overture/MASTER": {
+   "sideHeightSwitch": 0,
+   "skyAfterGround": 0,
+   "besideHeldBand": 0,
+   "fastSameSide": 8,
+   "heldHandSwitch": 0
+  },
   "atsu_cup_theme_debug_short/EASY": {
    "sideHeightSwitch": 0,
    "skyAfterGround": 0,
@@ -2859,6 +2894,11 @@
    "at": "2026-11-14T15:47",
    "reason": "新曲 Hopes and Dreams(通常版と short ver.)を公開",
    "changed": 10
+  },
+  {
+   "at": "2026-11-15T00:54",
+   "reason": "新曲 Sparkling Pink Overture を公開",
+   "changed": 5
   }
  ]
 }

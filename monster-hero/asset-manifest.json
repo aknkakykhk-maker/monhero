@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "id": "938e6044dc68",
-  "packs": {"beat":{"bytes":171623116,"count":126},"battle":{"bytes":176809791,"count":1462},"card":{"bytes":37779758,"count":1048},"all":{"bytes":386212665,"count":2636},"core":{"bytes":22972599,"count":24}},
+  "id": "0a01155be84f",
+  "packs": {"beat":{"bytes":173688614,"count":128},"battle":{"bytes":176809791,"count":1462},"card":{"bytes":37779758,"count":1048},"all":{"bytes":388278163,"count":2638},"core":{"bytes":23035500,"count":24}},
   "files": {
     "audio/bgm-4u-hitasura.mp3": {"v":"f4fb42472438","size":1446380,"pack":"beat"},
     "audio/bgm-against-my-own-shadow.mp3": {"v":"a58782a4c46f","size":1889175,"pack":"beat"},
@@ -97,6 +97,7 @@
     "audio/bgm-six-eternel-remix-beat.mp3": {"v":"b1a024d5b16f","size":1804896,"pack":"beat"},
     "audio/bgm-six-eternel-remix.mp3": {"v":"5f56c89739f8","size":3583440,"pack":"battle"},
     "audio/bgm-six-eternel.mp3": {"v":"e26412179f3a","size":3709152,"pack":"battle"},
+    "audio/bgm-sparkling-pink-overture.mp3": {"v":"f6afa5f1c481","size":1991157,"pack":"beat"},
     "audio/bgm-stay-with-me-short.mp3": {"v":"d836a069998d","size":2825822,"pack":"beat"},
     "audio/bgm-the-city-beneath-the-comets.mp3": {"v":"900fda0dc05e","size":1920240,"pack":"beat"},
     "audio/bgm-title-theme.mp3": {"v":"8af0684e79e7","size":270378,"pack":"battle"},
@@ -2196,6 +2197,7 @@
     "images/song-art/sheriruth.jpg": {"v":"4302be7eca16","size":73641,"pack":"beat"},
     "images/song-art/six-eternel-ai-wa-hitotsu-janai.jpg": {"v":"e71044bbd526","size":51765,"pack":"beat"},
     "images/song-art/six-eternel.jpg": {"v":"25486603b6de","size":44196,"pack":"beat"},
+    "images/song-art/sparkling-pink-overture.jpg": {"v":"a9b0c3ede321","size":74341,"pack":"beat"},
     "images/song-art/stay-with-me.jpg": {"v":"0a8784f80cf1","size":80845,"pack":"beat"},
     "images/song-art/the-city-beneath-the-comets.jpg": {"v":"8fd08d30ea81","size":59752,"pack":"beat"},
     "images/song-art/toriko.jpg": {"v":"6958512f6e28","size":39282,"pack":"beat"},
@@ -2641,7 +2643,7 @@
     "images/ui/breakthrough-rainbow-star.PNG": {"v":"c0e9259703a7","size":199081,"pack":"battle"},
     "vendor/react.production.min.js": {"v":"18","size":10751,"pack":"core"},
     "vendor/react-dom.production.min.js": {"v":"18","size":131835,"pack":"core"},
-    "tailwind.css": {"v":"f2a0bb851016","size":307025,"pack":"core"},
+    "tailwind.css": {"v":"30da3d813a8c","size":307025,"pack":"core"},
     "data/images/images-ally.js": {"v":"7469815ddc0f","size":81722,"pack":"core"},
     "data/images/images-enemy.js": {"v":"f10f6ad82110","size":2926,"pack":"core"},
     "data/ally-monsters.js": {"v":"6737b7dced48","size":60894,"pack":"core"},
@@ -2649,12 +2651,12 @@
     "data/breeder.js": {"v":"eaef772b919c","size":142645,"pack":"core"},
     "data/enemy-monsters.js": {"v":"6811f59c3732","size":7879,"pack":"core"},
     "data/skills.js": {"v":"06be9af9b367","size":4375,"pack":"core"},
-    "data/rhythm-mode.js": {"v":"903dec7f2c05","size":5201584,"pack":"core"},
+    "data/rhythm-mode.js": {"v":"9dff2533ea9d","size":5262126,"pack":"core"},
     "data/rhythm-lane-svg.js": {"v":"2c49090a007d","size":13321,"pack":"core"},
     "data/rhythm-geometry-calibration.js": {"v":"02534cca12f6","size":15552,"pack":"core"},
     "data/rhythm-result-replay-remount.js": {"v":"381554180360","size":5743,"pack":"core"},
     "data/rhythm-event.js": {"v":"e297d2fa07bf","size":96997,"pack":"core"},
-    "data/changelog.js": {"v":"4878edd236b7","size":1791629,"pack":"core"},
+    "data/changelog.js": {"v":"e191f0cdc75b","size":1792694,"pack":"core"},
     "data/help.js": {"v":"6b7aac6fefd1","size":864355,"pack":"core"},
     "data/mhsave-backup.js": {"v":"7845a4fd261f","size":14703,"pack":"core"},
     "data/rhythm-step3-release.js": {"v":"ae1d7f73f23a","size":8517,"pack":"core"},
@@ -2662,6 +2664,6 @@
     "data/card-battle-cards.js": {"v":"a1453d49f17e","size":124624,"pack":"core"},
     "data/assistant-masmon-techs.js": {"v":"a3439247bb0f","size":110880,"pack":"core"},
     "data/success-sounds.js": {"v":"e07bb568b22f","size":9906,"pack":"core"},
-    "game-system.compiled.js": {"v":"cb1e1e17318b","size":11781185,"pack":"core"}
+    "game-system.compiled.js": {"v":"50270864ab1a","size":11782479,"pack":"core"}
   }
 }
