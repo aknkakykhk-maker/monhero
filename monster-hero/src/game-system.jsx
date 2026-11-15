@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: ba6a1b2f091468fc
+// generated-sha256: 49c56028e80bcc26
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -57420,10 +57420,30 @@ function RhythmMultiStampBar({ phase, onSend, className = '', limit = 0, wrap = 
 // スタンプ(2026-11-11)は text が { text, sf, sw }。絵で出さない設定のときは言葉だけ
 const rhythmMultiBubbleStamp = (text) => (text && typeof text === 'object' && text.sf && MULTI_STAMP.prefs().pic ? text : null);
 const rhythmMultiBubbleText = (text) => (text && typeof text === 'object' ? text.text : text);
-function RhythmMultiChatBubble({ text: raw }) {
+// 見えている向きが横か(🔄で回しているときも、回した見た目で決める)
+const useRhythmWatchWide = () => {
+  const [wide, setWide] = React.useState(() => (typeof orientationIsLandscape === 'function' ? orientationIsLandscape() : false));
+  React.useEffect(() => {
+    const on = () => setWide(typeof orientationIsLandscape === 'function' ? orientationIsLandscape() : false);
+    window.addEventListener('resize', on);
+    const off = typeof RHYTHM_VIEW_ROTATION !== 'undefined' && RHYTHM_VIEW_ROTATION.subscribe ? RHYTHM_VIEW_ROTATION.subscribe(on) : null;
+    on();
+    return () => { window.removeEventListener('resize', on); if (typeof off === 'function') off(); };
+  }, []);
+  return wide;
+};
+function RhythmMultiChatBubble({ text: raw, strip = false }) {
+  const wide = useRhythmWatchWide();
   if (!raw) return null;
   const stamp = rhythmMultiBubbleStamp(raw);
   const text = rhythmMultiBubbleText(raw);
+  // 縦の細い帯(札の高さ60px)では、絵を札の中の名前の上に大きく置き、言葉は札の下へ出す(名前を隠さない・2026-11-15 r1115-039)
+  if (stamp && strip && !wide) return (
+    <span data-rhythm-multi-chat-bubble data-rhythm-multi-stamp-bubble data-rhythm-multi-stamp-strip className="mh-seat-stamp-strip pointer-events-none absolute inset-x-0.5 bottom-0.5 top-[3px] z-40 flex flex-col items-center gap-0.5 [container-type:size]">
+      <img src={multiStampFaceSrc(stamp.sf) || undefined} alt="" draggable={false} decoding="async" className="mh-seat-stamp-strip-img block shrink-0 rounded-lg bg-white object-cover shadow-lg" />
+      <b className="mh-seat-stamp-strip-word block w-full min-w-0 rounded-lg bg-white px-0.5 py-px text-center text-[9px] font-black leading-[1.1] text-slate-900 shadow-lg">{text}</b>
+    </span>
+  );
   if (stamp) return (
     <span data-rhythm-multi-chat-bubble data-rhythm-multi-stamp-bubble className="pointer-events-none absolute inset-x-0.5 bottom-0.5 top-3 z-40 flex items-start justify-center overflow-hidden landscape:top-0.5 [[data-mh-view-rotation=true]_&]:top-0.5 [container-type:size]">
       {/* 席のカードの高さに合わせて、絵の大きさを決める(CSS は index.html の mh-seat-stamp)。絵が大きすぎると下の言葉が切れ、
@@ -58212,7 +58232,7 @@ function RhythmMultiMemberCards({ members, hostId, selfId, resolveIconUrl, badge
           <li key={m.id} data-rhythm-multi-member {...openProps} className={`relative flex min-h-0 min-w-0 rounded-xl ${openable ? 'cursor-pointer active:brightness-125 ' : ''}${self ? 'border border-cyan-300/70 bg-cyan-950/50' : 'border border-white/10 bg-slate-950/70'} ${tall
             ? 'flex-col items-center justify-center px-1 pb-1.5 pt-3'
             : 'h-[60px] flex-col items-center px-0.5 pt-1.5 landscape:h-[38px] landscape:flex-row landscape:gap-1 landscape:px-1 landscape:pt-0'}`}>
-            <RhythmMultiChatBubble text={bubbleOf ? bubbleOf(m.id) : ''} />
+            <RhythmMultiChatBubble text={bubbleOf ? bubbleOf(m.id) : ''} strip={!tall} />
             <small data-rhythm-multi-member-badge className={`absolute -top-1.5 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded-full px-1.5 py-px text-[9px] font-black leading-tight ${badge.cls}`}>{badge.text}</small>
             <span className="relative shrink-0">
               <RhythmMultiAvatar m={m} resolveIconUrl={resolveIconUrl} sizeClass={tall ? 'h-12 w-12 landscape:h-16 landscape:w-16 [@media(max-height:440px)]:h-11 [@media(max-height:440px)]:w-11 [[data-mh-view-rotation=true]_&]:h-11 [[data-mh-view-rotation=true]_&]:w-11' : 'h-7 w-7'} small={!tall} />
@@ -68696,10 +68716,13 @@ const assistantLifeMapReadHome = () => {
 
 // 町の地図の頭の高さの表(2026-11-15 r1115-031)。キーは絵の置き場所(助手の絵のフォルダの下)から表情の名前を取ったもの。値は [頭のてっぺん, 顎, (任意)大きさの倍率](絵の見えている範囲の上を0・下を1。倍率は、見た目で他の人より大きい絵だけ)
 const ASSISTANT_LIFE_MAP_HEAD = Object.freeze({
-  myua_sleep: [0.15, 0.51], kiki_sleep: [0.22, 0.60], momosuke_sleep: [0.07, 0.58], atsu_sleep: [0.08, 0.60], kyuko_sleep: [0.05, 0.52],
+  myua_sleep: [0.15, 0.51], kiki_sleep: [0.22, 0.60], momosuke_sleep: [0.07, 0.58, 1.08], atsu_sleep: [0.08, 0.60, 1.25], kyuko_sleep: [0.05, 0.52],
   'halloween/myua_sleep': [0.20, 0.51], 'halloween/kiki_sleep': [0.22, 0.585], 'halloween/momosuke_sleep': [0.12, 0.58], 'card-master/myua_sleep': [0.07, 0.39],
   momosuke: [0.065, 0.51, 0.85], 'halloween/momosuke': [0.065, 0.51, 0.8], erubin: [0.01, 0.45],
 });
+// 町の地図の大きさの倍率(上の表に行が無い絵だけ。2026-11-15 全身画3人の公開 #6357 で、地図の絵が stand-normal/ の新しい絵に替わり、
+//   みゅあ・ソラシド・えるびんの顔(目から顎)がほかの人の 1.2〜1.5倍に出ていた。ほかの人の 7〜8px にそろえる。assistant-art-scenes-check の map のばらつき)
+const ASSISTANT_LIFE_MAP_FIT = Object.freeze({ 'stand-normal/myua': 0.74, 'stand-normal/sorashido': 0.83, 'stand-normal/erubin': 0.7, sorashido_sleep: 0.82 });
 // 小さな全身(絵の描かれている範囲を測って、見た目の高さを h にそろえる。胸から上の絵は下をぼかす)
 function AssistantLifeMapFig({ who, h, sleep, spent = false }) {
   // 寝ている助手は、社長の寝顔の絵があればそれ(assistantLifeSleepSrc・2026-11-11 社長「絵をそのまま使う」)
@@ -68721,7 +68744,7 @@ function AssistantLifeMapFig({ who, h, sleep, spent = false }) {
   const head = ASSISTANT_LIFE_MAP_HEAD[headKey] || null;
   const topChin = head ? { top: head[0], chin: head[1] } : (face0 && Number.isFinite(face0.top) && (Number.isFinite(face0.chin) || face0.head) ? { top: face0.top, chin: face0.head ? 1 : face0.chin } : null);
   const face = face0 && topChin && typeof ASSISTANT_LIFE_STAND_EC === 'number'
-    ? { ...face0, top: topChin.top, m: (topChin.chin - topChin.top) / (ASSISTANT_LIFE_STAND_EC * ASSISTANT_LIFE_STAND_FACE_LEN), fit: (head && head[2]) || 1 } : face0;
+    ? { ...face0, top: topChin.top, m: (topChin.chin - topChin.top) / (ASSISTANT_LIFE_STAND_EC * ASSISTANT_LIFE_STAND_FACE_LEN), fit: (head && head[2]) || ASSISTANT_LIFE_MAP_FIT[headKey] || 1 } : face0;
   const rule = box && face && typeof assistantLifeStandRule === 'function' ? assistantLifeStandRule({ face, box, F: (h * 0.5) / ASSISTANT_LIFE_STAND_FACE_LEN, topY: h * Math.max(0.25, Math.min(0.38, (face.above || 0) * 0.4)), cx: 0 }) : null;
   const ih = rule ? rule.height : h / Math.max(0.2, b.b - b.t), iw = rule ? rule.width : ih * (b.ar || 0.6);
   const w = Math.round(Math.min((b.r - b.l) * iw, h * 0.78));
@@ -79675,7 +79698,7 @@ const monsucTeams = (catalog, suc, s, info) => {
 };
 
 // モンサクの試合の打ち切り(2026-11-15 r1115-058): 30ターンで判定(残ライフ%・与えたダメージ・消費ガッツの3つの比べ)。助手のマスモン対戦には渡さない
-const MONSUC_MATCH_RULE = Object.freeze({ roundLimit: 30, judge: 'three' });
+const MONSUC_MATCH_RULE = Object.freeze({ roundLimit: 30, judge: 'three', gutsPlan: Object.freeze({ regen: 0.5, move: 0.5, charge: 0.5 }) });
 // 試合を1戦だけ回す(画面なし)。結果だけ見る・スキップ・観戦のどれでも同じ記録になる
 const monsucCupMatch = (engine, catalog, suc, s, me, info0) => {
   const info = info0 || monsucCupInfo(suc, s, me);   // info0: 入れ物が opp・title を上書きした値(相手の忠誠度・人気をそろえる)
@@ -87204,7 +87227,8 @@ const MSX_CSS = `
 .msx .v-a3.got{border-color:#fbbf24;background:#33270f}.msx .v-a3.dim{opacity:.45}
 .msx .v-a3 .h{display:flex;align-items:center;gap:5px;text-align:left}.msx .v-a3 .nm{flex:1 1 auto;min-width:0;font-size:12.5px;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .msx .v-a3 .rf{flex:0 0 auto;display:inline-block;width:auto;font-size:9px;font-weight:800;padding:1px 6px;border-radius:8px;background:#1d4ed8;color:#fff}.msx .v-a3 .rf.o{background:#7e22ce}
-.msx .r3 .r3-bar.sc{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}.msx .r3 .r3-bar.sc::-webkit-scrollbar{display:none}.msx .r3 .r3-bar.sc .r3-chip{flex:0 0 auto}
+/* 横に流れる札の列は横にだけ動く(2026-11-15 社長 r1115-094「上のタブが上下にも動く」): 縦は隠す・指は横だけ・高さは中身に合わせる */
+.msx .r3 .r3-bar.sc{flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;touch-action:pan-x;overscroll-behavior-x:contain;align-items:center;flex:0 0 auto;scrollbar-width:none;padding:4px 0;margin-top:2px;margin-bottom:-4px}/* 上下 4px = 札の押せる広さ(button::after 44px)が列の中に収まる分。外の間隔は前と同じ */.msx .r3 .r3-bar.sc::-webkit-scrollbar{display:none}.msx .r3 .r3-bar.sc .r3-chip{flex:0 0 auto}
 .msx .v-a3 .val{flex:0 0 auto;min-width:54px;text-align:right;font-size:14px;color:#fde68a}
 .msx .v-a3 .ex{font-size:10px;color:#cbd5e1;font-weight:700;text-align:left;margin:2px 0 4px;line-height:1.35}
 .msx .v-a3 .ctl{display:flex;align-items:center;gap:6px}.msx .v-a3 .ctl button{flex:0 0 34px;height:28px;border-radius:8px;border:1px solid #6d5fa6;background:#2f2550;color:#fff;font-size:16px;font-weight:900;text-align:center;padding:0}
@@ -94127,7 +94151,7 @@ function MonsucRankScreen({ onBack }) {
         {[['all', '全モンスター'], ['lineage', '血統別']].map(([k, label]) => <button key={k} type="button" onClick={() => setTab(k)}
           className={`rounded-full py-2 text-[14px] font-black border ${tab === k ? 'bg-yellow-300 text-slate-900 border-yellow-300' : 'bg-slate-800/70 text-slate-200 border-slate-600'}`}>{label}</button>)}
       </div>
-      {tab === 'lineage' && <div className="flex gap-1.5 overflow-x-auto mt-2 pb-1">
+      {tab === 'lineage' && <div className="flex gap-1.5 overflow-x-auto overflow-y-hidden touch-pan-x mt-2 pb-1" data-msx-hscroll>
         {lineages.map(l => <button key={l} type="button" onClick={() => setLineage(l)}
           className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold border ${lineage === l ? 'bg-yellow-300 text-slate-900 border-yellow-300' : 'bg-slate-800/70 text-slate-200 border-slate-600'}`}>{monsucRankLineageName(l)}系</button>)}
       </div>}

@@ -482,7 +482,7 @@ const __mod = { exports: {} };
     for (const step of [-1, 1]) {
       const nd = dist + step;
       if (nd < 0 || nd > 3) continue;
-      const myGuts = Math.min(GUTS_MAX, u.guts + u.regen + GUTS_MOVE);
+      const myGuts = Math.min(GUTS_MAX, u.guts + u.regen + (ctx.gMove || GUTS_MOVE));
       const gain = bestThreat(u, f, nd, myGuts) - bestThreat(u, f, dist, myGuts);
       const risk = bestThreat(f, u, nd, foeNextGuts) - threatNow;
       // 読みが浅いうちは、相手の反撃(risk)を半分しか見ない
@@ -502,7 +502,7 @@ const __mod = { exports: {} };
     }
     // ためる(ガッツが満タンなら候補に入れない)
     if (u.guts < GUTS_MAX) {
-      const afterGuts = Math.min(GUTS_MAX, u.guts + u.regen + GUTS_CHARGE);
+      const afterGuts = Math.min(GUTS_MAX, u.guts + u.regen + (ctx.gCharge || GUTS_CHARGE));
       const nowBest = bestThreat(u, f, dist, u.guts);
       const laterBest = bestThreat(u, f, dist, afterGuts);
       let score = (laterBest - nowBest) / f.maxHp * 100 * 0.6 * (0.8 + 0.2 * sty.thrift);
@@ -671,7 +671,13 @@ const __mod = { exports: {} };
     }
     state.dist = 1 + Math.floor(rng() * 2);
     if (rules && rules.distStart !== undefined) state.dist = rules.distStart;   // 乱数は上で引いたまま(ほかの流れをずらさない)
-    const ctx = { state, rng, trace: !!inp.trace, lastCands: null, buffs, noSwap: !!(rules && rules.noSwap) };
+    // ガッツの回復の規則(モンサク・2026-11-15 r1115-090 社長「全部半分」): gutsPlan:{ regen, move, charge }(倍率 0.1〜1)。渡さなければ今までと同じ(指紋も変わらない)
+    const gp = inp.gutsPlan && typeof inp.gutsPlan === 'object' ? inp.gutsPlan : null;
+    const mulOf = (v) => (Number.isFinite(Number(v)) && Number(v) > 0 ? clamp(Number(v), 0.1, 1) : 1);
+    const gMove = gp ? Math.max(1, Math.round(GUTS_MOVE * mulOf(gp.move))) : GUTS_MOVE;
+    const gCharge = gp ? Math.max(1, Math.round(GUTS_CHARGE * mulOf(gp.charge))) : GUTS_CHARGE;
+    if (gp && gp.regen !== undefined) for (const side of ['A', 'B']) for (const x of state.teams[side].units) x.regen = Math.max(1, Math.round(x.regen * mulOf(gp.regen)));
+    const ctx = { state, rng, trace: !!inp.trace, lastCands: null, buffs, noSwap: !!(rules && rules.noSwap), gMove, gCharge };
     const log = [];
     const alive = (side) => state.teams[side].units.some(x => x.hp > 0);
     const unitOf = (side) => state.teams[side].units[state.teams[side].active];
@@ -706,7 +712,7 @@ const __mod = { exports: {} };
       u.guarding = false;
       // 忠誠度が100未満のときだけ乱数を引く(忠誠100・無い編成は乱数の列も今と同じ)
       if (u.loy < 100 && !(buffs[side] && buffs[side].noSulk) && rng() < (100 - u.loy) * LOYAL_NOACT) {
-        u.guts = Math.min(GUTS_MAX, u.guts + GUTS_CHARGE);
+        u.guts = Math.min(GUTS_MAX, u.guts + gCharge);
         push({ ev: 'charge', side, i: me.active, why: 'sulk', guts: u.guts });
         u.swapCooldown = Math.max(0, u.swapCooldown - 1); u.moveStreak = 0; // 「ためる」と同じあと始末
         return;
@@ -744,14 +750,14 @@ const __mod = { exports: {} };
         }
       } else if (c.type === 'move') {
         state.dist = clamp(state.dist + c.step, 0, 3);
-        u.guts = Math.min(GUTS_MAX, u.guts + GUTS_MOVE);
+        u.guts = Math.min(GUTS_MAX, u.guts + gMove);
         push({ ev: 'move', side, i: me.active, why: c.why, step: c.step, to: state.dist, guts: u.guts });
       } else if (c.type === 'guard') {
         u.guarding = true;
-        u.guts = Math.min(GUTS_MAX, u.guts + GUTS_MOVE);
+        u.guts = Math.min(GUTS_MAX, u.guts + gMove);
         push({ ev: 'guard', side, i: me.active, why: c.why, name: 'ガード', guts: u.guts });
       } else if (c.type === 'charge') {
-        u.guts = Math.min(GUTS_MAX, u.guts + GUTS_CHARGE);
+        u.guts = Math.min(GUTS_MAX, u.guts + gCharge);
         push({ ev: 'charge', side, i: me.active, why: c.why, guts: u.guts });
       } else if (c.type === 'swap') {
         const from = me.active;
@@ -902,7 +908,7 @@ const __mod = { exports: {} };
     // AI ならこの手番に何を選ぶか(おすすめの印。試合の乱数は引かない)
     const hintOf = (side) => {
       try {
-        const c = chooseAction({ state: st, rng: makeRng(`hint:${st.round}:${flow.log.length}`), trace: false, lastCands: null, noSwap: flow.ctx.noSwap }, side);
+        const c = chooseAction({ state: st, rng: makeRng(`hint:${st.round}:${flow.log.length}`), trace: false, lastCands: null, noSwap: flow.ctx.noSwap, gMove: flow.ctx.gMove, gCharge: flow.ctx.gCharge }, side);
         return c ? { type: c.type, key: c.key, step: c.step, to: c.to } : null;
       } catch (_) { return null; }
     };

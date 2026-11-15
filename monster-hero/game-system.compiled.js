@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c2137f9b5b8fbda9
+// source-sha256: 38305586b5f5f5e1
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -96384,12 +96384,42 @@ function RhythmMultiStampBar({
 }
 const rhythmMultiBubbleStamp = text => text && typeof text === 'object' && text.sf && MULTI_STAMP.prefs().pic ? text : null;
 const rhythmMultiBubbleText = text => text && typeof text === 'object' ? text.text : text;
+const useRhythmWatchWide = () => {
+  const [wide, setWide] = React.useState(() => typeof orientationIsLandscape === 'function' ? orientationIsLandscape() : false);
+  React.useEffect(() => {
+    const on = () => setWide(typeof orientationIsLandscape === 'function' ? orientationIsLandscape() : false);
+    window.addEventListener('resize', on);
+    const off = typeof RHYTHM_VIEW_ROTATION !== 'undefined' && RHYTHM_VIEW_ROTATION.subscribe ? RHYTHM_VIEW_ROTATION.subscribe(on) : null;
+    on();
+    return () => {
+      window.removeEventListener('resize', on);
+      if (typeof off === 'function') off();
+    };
+  }, []);
+  return wide;
+};
 function RhythmMultiChatBubble({
-  text: raw
+  text: raw,
+  strip = false
 }) {
+  const wide = useRhythmWatchWide();
   if (!raw) return null;
   const stamp = rhythmMultiBubbleStamp(raw);
   const text = rhythmMultiBubbleText(raw);
+  if (stamp && strip && !wide) return React.createElement("span", {
+    "data-rhythm-multi-chat-bubble": true,
+    "data-rhythm-multi-stamp-bubble": true,
+    "data-rhythm-multi-stamp-strip": true,
+    className: "mh-seat-stamp-strip pointer-events-none absolute inset-x-0.5 bottom-0.5 top-[3px] z-40 flex flex-col items-center gap-0.5 [container-type:size]"
+  }, React.createElement("img", {
+    src: multiStampFaceSrc(stamp.sf) || undefined,
+    alt: "",
+    draggable: false,
+    decoding: "async",
+    className: "mh-seat-stamp-strip-img block shrink-0 rounded-lg bg-white object-cover shadow-lg"
+  }), React.createElement("b", {
+    className: "mh-seat-stamp-strip-word block w-full min-w-0 rounded-lg bg-white px-0.5 py-px text-center text-[9px] font-black leading-[1.1] text-slate-900 shadow-lg"
+  }, text));
   if (stamp) return React.createElement("span", {
     "data-rhythm-multi-chat-bubble": true,
     "data-rhythm-multi-stamp-bubble": true,
@@ -97757,7 +97787,8 @@ function RhythmMultiMemberCards({
     }, openProps, {
       className: `relative flex min-h-0 min-w-0 rounded-xl ${openable ? 'cursor-pointer active:brightness-125 ' : ''}${self ? 'border border-cyan-300/70 bg-cyan-950/50' : 'border border-white/10 bg-slate-950/70'} ${tall ? 'flex-col items-center justify-center px-1 pb-1.5 pt-3' : 'h-[60px] flex-col items-center px-0.5 pt-1.5 landscape:h-[38px] landscape:flex-row landscape:gap-1 landscape:px-1 landscape:pt-0'}`
     }), React.createElement(RhythmMultiChatBubble, {
-      text: bubbleOf ? bubbleOf(m.id) : ''
+      text: bubbleOf ? bubbleOf(m.id) : '',
+      strip: !tall
     }), React.createElement("small", {
       "data-rhythm-multi-member-badge": true,
       className: `absolute -top-1.5 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded-full px-1.5 py-px text-[9px] font-black leading-tight ${badge.cls}`
@@ -117501,8 +117532,8 @@ const assistantLifeMapReadHome = () => {
 const ASSISTANT_LIFE_MAP_HEAD = Object.freeze({
   myua_sleep: [0.15, 0.51],
   kiki_sleep: [0.22, 0.60],
-  momosuke_sleep: [0.07, 0.58],
-  atsu_sleep: [0.08, 0.60],
+  momosuke_sleep: [0.07, 0.58, 1.08],
+  atsu_sleep: [0.08, 0.60, 1.25],
   kyuko_sleep: [0.05, 0.52],
   'halloween/myua_sleep': [0.20, 0.51],
   'halloween/kiki_sleep': [0.22, 0.585],
@@ -117511,6 +117542,12 @@ const ASSISTANT_LIFE_MAP_HEAD = Object.freeze({
   momosuke: [0.065, 0.51, 0.85],
   'halloween/momosuke': [0.065, 0.51, 0.8],
   erubin: [0.01, 0.45]
+});
+const ASSISTANT_LIFE_MAP_FIT = Object.freeze({
+  'stand-normal/myua': 0.74,
+  'stand-normal/sorashido': 0.83,
+  'stand-normal/erubin': 0.7,
+  sorashido_sleep: 0.82
 });
 function AssistantLifeMapFig({
   who,
@@ -117556,7 +117593,7 @@ function AssistantLifeMapFig({
     ...face0,
     top: topChin.top,
     m: (topChin.chin - topChin.top) / (ASSISTANT_LIFE_STAND_EC * ASSISTANT_LIFE_STAND_FACE_LEN),
-    fit: head && head[2] || 1
+    fit: head && head[2] || ASSISTANT_LIFE_MAP_FIT[headKey] || 1
   } : face0;
   const rule = box && face && typeof assistantLifeStandRule === 'function' ? assistantLifeStandRule({
     face,
@@ -152457,7 +152494,12 @@ const monsucTeams = (catalog, suc, s, info) => {
 };
 const MONSUC_MATCH_RULE = Object.freeze({
   roundLimit: 30,
-  judge: 'three'
+  judge: 'three',
+  gutsPlan: Object.freeze({
+    regen: 0.5,
+    move: 0.5,
+    charge: 0.5
+  })
 });
 const monsucCupMatch = (engine, catalog, suc, s, me, info0) => {
   const info = info0 || monsucCupInfo(suc, s, me);
@@ -168006,7 +168048,8 @@ const MSX_CSS = `
 .msx .v-a3.got{border-color:#fbbf24;background:#33270f}.msx .v-a3.dim{opacity:.45}
 .msx .v-a3 .h{display:flex;align-items:center;gap:5px;text-align:left}.msx .v-a3 .nm{flex:1 1 auto;min-width:0;font-size:12.5px;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .msx .v-a3 .rf{flex:0 0 auto;display:inline-block;width:auto;font-size:9px;font-weight:800;padding:1px 6px;border-radius:8px;background:#1d4ed8;color:#fff}.msx .v-a3 .rf.o{background:#7e22ce}
-.msx .r3 .r3-bar.sc{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}.msx .r3 .r3-bar.sc::-webkit-scrollbar{display:none}.msx .r3 .r3-bar.sc .r3-chip{flex:0 0 auto}
+/* 横に流れる札の列は横にだけ動く(2026-11-15 社長 r1115-094「上のタブが上下にも動く」): 縦は隠す・指は横だけ・高さは中身に合わせる */
+.msx .r3 .r3-bar.sc{flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;touch-action:pan-x;overscroll-behavior-x:contain;align-items:center;flex:0 0 auto;scrollbar-width:none;padding:4px 0;margin-top:2px;margin-bottom:-4px}/* 上下 4px = 札の押せる広さ(button::after 44px)が列の中に収まる分。外の間隔は前と同じ */.msx .r3 .r3-bar.sc::-webkit-scrollbar{display:none}.msx .r3 .r3-bar.sc .r3-chip{flex:0 0 auto}
 .msx .v-a3 .val{flex:0 0 auto;min-width:54px;text-align:right;font-size:14px;color:#fde68a}
 .msx .v-a3 .ex{font-size:10px;color:#cbd5e1;font-weight:700;text-align:left;margin:2px 0 4px;line-height:1.35}
 .msx .v-a3 .ctl{display:flex;align-items:center;gap:6px}.msx .v-a3 .ctl button{flex:0 0 34px;height:28px;border-radius:8px;border:1px solid #6d5fa6;background:#2f2550;color:#fff;font-size:16px;font-weight:900;text-align:center;padding:0}
@@ -184226,7 +184269,8 @@ function MonsucRankScreen({
     onClick: () => setTab(k),
     className: `rounded-full py-2 text-[14px] font-black border ${tab === k ? 'bg-yellow-300 text-slate-900 border-yellow-300' : 'bg-slate-800/70 text-slate-200 border-slate-600'}`
   }, label))), tab === 'lineage' && React.createElement("div", {
-    className: "flex gap-1.5 overflow-x-auto mt-2 pb-1"
+    className: "flex gap-1.5 overflow-x-auto overflow-y-hidden touch-pan-x mt-2 pb-1",
+    "data-msx-hscroll": true
   }, lineages.map(l => React.createElement("button", {
     key: l,
     type: "button",
