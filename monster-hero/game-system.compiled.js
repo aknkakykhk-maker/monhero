@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 7a34ef291d47aac2
+// source-sha256: 4a1fce90ac1bcff0
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -37635,7 +37635,8 @@ const RhythmSongSelect = ({
   playDisabled = false,
   hideRandom = false,
   unlockAll = false,
-  songLock = null
+  songLock = null,
+  scrollToSelected = false
 }) => {
   const spot = name => typeof spotClass === 'function' ? spotClass(name) : '';
   useEffect(() => {
@@ -37840,6 +37841,14 @@ const RhythmSongSelect = ({
       const saved = restoreTopRef.current;
       restoreTopRef.current = null;
       node.scrollTop = saved != null && saved > 0 && saved < node.scrollHeight ? saved : blockHeight(node);
+      if (scrollToSelected && (saved == null || saved <= 0)) {
+        const row = node.querySelector('[data-rhythm-song-row][aria-pressed="true"]');
+        if (row) {
+          const nb = node.getBoundingClientRect(),
+            rb = row.getBoundingClientRect();
+          node.scrollTop += Math.round(rb.top - nb.top - (node.clientHeight - rb.height) / 2);
+        }
+      }
       loopReadyRef.current = true;
     };
     put();
@@ -95887,6 +95896,21 @@ const RHYTHM_MULTI = (() => {
   };
   return api;
 })();
+const RHYTHM_MULTI_LAST_SONG_KEY = 'mh_rhythm_multi_last_song_v1';
+const rhythmMultiLastSongId = () => {
+  try {
+    const v = typeof localStorage !== 'undefined' ? localStorage.getItem(RHYTHM_MULTI_LAST_SONG_KEY) : null;
+    return typeof v === 'string' && /^[a-z0-9_]{1,80}$/i.test(v) ? v : '';
+  } catch (_) {
+    return '';
+  }
+};
+const rhythmMultiRememberSong = id => {
+  if (typeof id !== 'string' || !/^[a-z0-9_]{1,80}$/i.test(id) || id === RHYTHM_MULTI_OMAKASE) return;
+  try {
+    if (typeof localStorage !== 'undefined') localStorage.setItem(RHYTHM_MULTI_LAST_SONG_KEY, id);
+  } catch (_) {}
+};
 const rhythmWatchPhaseText = phase => ({
   connecting: '部屋につないでいます…',
   waiting: 'いまは演奏していません。次の曲が始まるのを待っています',
@@ -99730,7 +99754,11 @@ function RhythmMultiScreenBody({
     className: "block break-keep text-[9px] font-bold opacity-80"
   }, sessionAssistantsOn ? 'マスモンや助手がCPUとして一緒に遊びます' : 'マスモンがCPUとして一緒に遊びます')) : null;
   const mine = view ? view.members.find(m => m.id === view.selfId) : null;
-  const [selSongId, setSelSongId] = React.useState(mine && mine.pick && mine.pick !== RHYTHM_MULTI_OMAKASE ? mine.pick : '');
+  const [selSongId, setSelSongIdRaw] = React.useState(() => (mine && mine.pick && mine.pick !== RHYTHM_MULTI_OMAKASE ? mine.pick : '') || rhythmMultiLastSongId());
+  const setSelSongId = id => {
+    setSelSongIdRaw(id);
+    rhythmMultiRememberSong(id);
+  };
   const [selectView, setSelectView] = React.useState(null);
   const songById = songId => songs.find(song => song.songId === songId) || null;
   const defaultDiff = difficultyIds.includes('NORMAL') ? 'NORMAL' : difficultyIds[0] || '';
@@ -101979,9 +102007,11 @@ function RhythmMultiScreenBody({
     view: selectView,
     onView: setSelectView,
     onPlay: (song, difficulty) => {
+      rhythmMultiRememberSong(song.songId);
       RHYTHM_MULTI.setDiff(difficulty.id);
       RHYTHM_MULTI.pick(song.songId);
     },
+    scrollToSelected: true,
     playLabel: myPick ? 'この曲に変更' : 'この曲で決定',
     hideRandom: true,
     notice: React.createElement("div", {
