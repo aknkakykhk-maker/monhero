@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f838259d31feced7
+// source-sha256: 670131ba44c64821
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -8350,21 +8350,38 @@ const Audio_ = (() => {
     return advanced < elapsed / 1000 * 0.2;
   };
   let resumeOnGestureBound = false;
+  let healOnGesture = false;
   const bindResumeOnGesture = () => {
     if (resumeOnGestureBound || typeof document === 'undefined') return;
     resumeOnGestureBound = true;
     const onGesture = () => {
       const ctx = audioCtx;
-      if (!ctx || ctx.state === 'running') return;
+      if (!ctx) return;
+      if (healOnGesture && !activeRhythmGains.size && enabled && !pageHidden) {
+        healOnGesture = false;
+        rebuildAudioCtx();
+        return;
+      }
+      if (ctx.state === 'running') return;
       let done = null;
       try {
         done = ctx.resume();
       } catch (e) {}
+      let once = false;
       const after = () => {
+        if (once) return;
+        once = true;
         ctxTimeMark = null;
+        if (audioCtx === ctx && ctx.state !== 'running' && ctx.state !== 'closed' && !activeRhythmGains.size && enabled && !pageHidden) {
+          rebuildAudioCtx();
+          return;
+        }
         if (audioCtx && audioCtx.state === 'running' && enabled && !pageHidden && currentKey && !bgmSource && !jingleSource && !previewSource) playBGM(currentKey);
       };
-      if (done && done.then) done.then(after, () => {});else setTimeout(after, 0);
+      if (done && done.then) {
+        done.then(after, after);
+        setTimeout(after, 800);
+      } else setTimeout(after, 0);
     };
     ['pointerdown', 'touchstart', 'click', 'keydown'].forEach(type => {
       try {
@@ -9060,15 +9077,48 @@ const Audio_ = (() => {
       return null;
     }
   };
+  let returnHealTimer = null;
+  const healAfterReturn = () => {
+    if (returnHealTimer) clearTimeout(returnHealTimer);
+    const step = marked => {
+      returnHealTimer = setTimeout(() => {
+        returnHealTimer = null;
+        const ctx = audioCtx;
+        if (pageHidden || !enabled || !ctx) return;
+        if (ctx.state !== 'running') {
+          healOnGesture = true;
+          return;
+        }
+        if (!marked) {
+          ctxTimeMark = null;
+          ctxClockStalled();
+          step(true);
+          return;
+        }
+        if (!ctxClockStalled()) return;
+        if (activeRhythmGains.size) {
+          healOnGesture = true;
+          return;
+        }
+        rebuildAudioCtx();
+      }, marked ? 900 : 400);
+    };
+    step(false);
+  };
   const setPageHidden = hidden => {
     pageHidden = !!hidden;
     ctxTimeMark = null;
     if (pageHidden) {
+      if (returnHealTimer) clearTimeout(returnHealTimer);
+      returnHealTimer = null;
       ++bgmRequest;
       stopPreview(false);
       stopOthers();
       stopJingles();
-    } else if (currentKey) playBGM(currentKey);
+    } else {
+      if (currentKey) playBGM(currentKey);
+      healAfterReturn();
+    }
   };
   const setEnabled = async on => {
     enabled = !!on;
