@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: cf32a147f3d9a2b0
+// source-sha256: 60b9e203254770f1
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -61126,6 +61126,15 @@ const MULTI_STAMP_SLOT_STEP = 4;
 const MULTI_STAMP_SLOT_BUY_MAX = 2;
 const MULTI_STAMP_CUSTOM_ID = 'x';
 const MULTI_STAMP_CUSTOM_MAX = 8;
+const MULTI_STAMP_WORD_CLAMP = Object.freeze({
+  display: '-webkit-box',
+  WebkitBoxOrient: 'vertical',
+  WebkitLineClamp: 2,
+  overflow: 'hidden',
+  overflowWrap: 'anywhere',
+  wordBreak: 'break-all',
+  lineHeight: 1.15
+});
 const multiStampCleanText = v => String(v == null ? '' : v).replace(/[\u0000-\u001f\u007f-\u009f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, MULTI_STAMP_CUSTOM_MAX);
 const MULTI_STAMP_ASSISTANT_IDS = Object.freeze(['mua', 'kiki', 'momosuke', 'dra', 'atsu', 'kyuko', 'sorashido', 'erubin']);
 const MULTI_STAMP_EXPRESSIONS = Object.freeze(['happy', 'excited', 'wink', 'surprise', 'troubled', 'crying', 'angry', 'normal']);
@@ -61720,7 +61729,9 @@ function MultiStampView({
       height: size
     }
   }), React.createElement("b", {
-    className: "mt-0.5 block max-w-full truncate text-center text-[11px] font-black leading-tight"
+    "data-multi-stamp-word-text": true,
+    className: "mt-0.5 block max-w-full text-center text-[11px] font-black leading-tight",
+    style: MULTI_STAMP_WORD_CLAMP
   }, label));
 }
 const MULTI_STAMP_COLS = Object.freeze({
@@ -61796,7 +61807,9 @@ function MultiStampPalette({
       decoding: "async",
       className: "mx-auto block aspect-square w-full rounded-lg object-cover"
     }), React.createElement("b", {
-      className: "mt-0.5 block truncate text-[11px] font-black leading-tight text-white"
+      "data-multi-stamp-word-text": true,
+      className: "mt-0.5 block text-[11px] font-black leading-tight text-white",
+      style: MULTI_STAMP_WORD_CLAMP
     }, hit && flash.ok ? '✓ 送信' : label));
   }), onEdit && React.createElement("button", {
     type: "button",
@@ -61902,7 +61915,9 @@ function MultiStampEditor({
     decoding: "async",
     className: "mx-auto block aspect-square w-full rounded-lg object-cover"
   }), React.createElement("b", {
-    className: "mt-0.5 block truncate text-[10.5px] font-black leading-tight"
+    "data-multi-stamp-word-text": true,
+    className: "mt-0.5 block text-[10.5px] font-black leading-tight",
+    style: MULTI_STAMP_WORD_CLAMP
   }, multiStampSlotLabel(s))) : React.createElement("span", {
     className: "flex aspect-[4/5] items-center justify-center text-xl text-slate-500"
   }, "＋")))), React.createElement("div", {
