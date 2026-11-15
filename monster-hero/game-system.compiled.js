@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5ed9c6db1c45607d
+// source-sha256: 47ea83dcb056a8c4
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -175912,6 +175912,13 @@ const MSX_R3_CSS = `
 .msx .r3 .q-dest .r3-chip{justify-content:center;text-align:center}
 .msx .r3 .q-sec .v-stg{margin-top:5px}
 .msx .r3 .q-note{font-size:10.5px;color:#cbd5e1;font-weight:700;line-height:1.45;margin-top:4px}
+.msx .r3 .q-res{flex:none;display:grid;gap:4px;margin:4px 0}
+.msx .r3 .q-ri{display:grid;grid-template-columns:38px minmax(0,1fr) auto;align-items:center;gap:8px;padding:5px 9px;border-radius:12px;border:2px solid #475569;background:#1e293b}
+.msx .r3 .q-ri .ti{width:38px;height:38px;border-radius:8px;overflow:hidden;display:flex;align-items:center;justify-content:center;background:#0f172a}.msx .r3 .q-ri .ti svg,.msx .r3 .q-ri .ti img{width:100%;height:100%}
+.msx .r3 .q-ri .nm{display:grid;min-width:0}.msx .r3 .q-ri .nm b{font-size:14px;font-weight:900;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.msx .r3 .q-ri .nm small{font-size:10.5px;font-weight:800;color:#cbd5e1}
+.msx .r3 .q-ri .rs{display:grid;justify-items:end;text-align:right}.msx .r3 .q-ri .rs b{font-size:15px;font-weight:900;white-space:nowrap}.msx .r3 .q-ri .rs small{font-size:11px;font-weight:900;color:#fde047;white-space:nowrap}
+.msx .r3 .q-ri.hit{border-color:#facc15;background:linear-gradient(90deg,#422006,#713f12);box-shadow:0 0 12px #facc1566}.msx .r3 .q-ri.hit .rs b{color:#fde047;font-size:18px;text-shadow:0 0 8px #f59e0b}
+.msx .r3 .q-ri.miss .rs b{color:#cbd5e1}.msx .r3 .q-ri.miss .ti{filter:grayscale(.7) brightness(.8)}
 .msx .q-hpng{flex:none;background:#3f1d2b;border-top:1px solid #9f1239;color:#fecdd3;font-size:11px;font-weight:800;line-height:1.4;padding:4px 10px;text-align:center}.msx .q-hpng b{color:#fda4af;font-size:13px}
 .msx .v-ft button.go.off,.msx .v-ft button.go:disabled{background:#334155;color:#94a3b8;box-shadow:0 3px 0 #1e293b}
 .msx .r3 .q-note.y{color:#fde047}
@@ -179220,6 +179227,10 @@ function MsxR3Shugyo({
     const learned = o.learned ? all.find(t => t.id === o.learned) : null;
     const learnedAll = (o.learnedAll || (o.learned ? [o.learned] : [])).map(id => all.find(t => t.id === id)).filter(Boolean);
     const missed = (o.tries || []).filter(t => !t.hit).map(t => (all.find(x => x.id === t.id) || {}).name).filter(Boolean);
+    const tries = (o.tries || []).map(x => ({
+      ...x,
+      t: all.find(y => y.id === x.id)
+    })).filter(x => x.t);
     const stg = (SH.courses[o.course] || {}).stages || [];
     const helpers = Array.from(new Set((o.stages || []).flat()));
     void stg;
@@ -179257,12 +179268,13 @@ function MsxR3Shugyo({
         })
       }
     }), React.createElement("div", {
-      className: `v-stamp msx-pop ${learned ? '' : 'ok'}`,
+      className: `v-stamp msx-pop ${learned ? '' : tries.length ? 'ng' : 'ok'}`,
       style: {
         top: '5%',
-        fontSize: learned ? 38 : 32
-      }
-    }, learned ? '技をおぼえた!' : '修行終わり!', React.createElement("small", null, learnedAll.length > 1 ? `✨ ${learnedAll.map(x => x.name).join('・')}` : learned ? `✨ ${learned.name}(${MSX_R3_DIST[Math.min(...(learned.dist || [1]))]}い間合い)` : '技は覚えられなかった')), React.createElement("div", {
+        fontSize: learned ? 38 : tries.length ? 'min(30px, 8.4vw)' : 32
+      },
+      "data-msx-r3-qstamp": learned ? 'hit' : tries.length ? 'miss' : 'none'
+    }, learned ? missed.length ? '1つ覚えた!' : '技を覚えた!' : tries.length ? '覚えられなかった…' : '修行終わり!', React.createElement("small", null, learnedAll.length > 1 ? `✨ ${learnedAll.map(x => x.name).join('・')}` : learned ? `✨ ${learned.name}(${MSX_R3_DIST[Math.min(...(learned.dist || [1]))]}の間合い)` : tries.length ? `次は覚える率が +${SH.miss || 15}%` : '能力が上がった')), React.createElement("div", {
       className: "v-chips",
       style: {
         top: 'auto',
@@ -179272,7 +179284,24 @@ function MsxR3Shugyo({
       className: "v-chip"
     }, MSX_STAT_KEYS_R3.filter(k => gains[k]).map(k => `${MSX_STAT_ICON[k]}+${gains[k]}`).join(' ') || '±0'), helpers.length ? React.createElement("span", {
       className: "v-chip ylw"
-    }, "👥 編成のおかげ ×", helpers.length, "体") : null)), React.createElement(MsxStRow, {
+    }, "👥 編成のおかげ ×", helpers.length, "体") : null)), tries.length ? React.createElement("div", {
+      className: "q-res",
+      "data-msx-r3-qres": true
+    }, tries.map(x => React.createElement("div", {
+      key: x.id,
+      className: `q-ri ${x.hit ? 'hit' : 'miss'}`,
+      "data-msx-r3-qri": x.hit ? 'hit' : 'miss'
+    }, React.createElement("span", {
+      className: "ti",
+      "aria-hidden": "true"
+    }, React.createElement(MsxSkillArt, {
+      t: x.t,
+      uid: `qr${x.id}`
+    })), React.createElement("span", {
+      className: "nm"
+    }, React.createElement("b", null, x.t.name), React.createElement("small", null, "覚える率 ", Math.round((x.rate || 0) * 100), "%")), React.createElement("span", {
+      className: "rs"
+    }, x.hit ? React.createElement("b", null, "覚えた!") : React.createElement(React.Fragment, null, React.createElement("b", null, "覚えられなかった"), React.createElement("small", null, "次は +", SH.miss || 15, "%")))))) : null, React.createElement(MsxStRow, {
       who: s,
       stats: s.stats,
       ups: gains
@@ -179294,21 +179323,7 @@ function MsxR3Shugyo({
       className: "ga"
     }, x.name), "」")), "を覚えた!") : null, missed.length ? React.createElement(React.Fragment, null, "/", missed.join('・'), "は覚えられなかった") : null, o.aptUp ? React.createElement(React.Fragment, null, React.createElement("br", null), "📏 「", MSX_R3_DIST[o.aptUp.dist], "」の間合い適性が ", React.createElement("b", {
       className: "ga"
-    }, o.aptUp.grade), " に上がった!") : null), !learned && want.length ? React.createElement("div", {
-      className: "v-card",
-      style: {
-        borderColor: '#94a3b8',
-        padding: '6px 9px'
-      }
-    }, React.createElement("div", {
-      className: "sub"
-    }, React.createElement("b", {
-      style: {
-        color: '#cbd5e1'
-      }
-    }, "おしい…"), " ", React.createElement("span", {
-      className: "yel"
-    }, "次の修行で、選んだ技の覚える率が上がる"), "(⬆)")) : null);
+    }, o.aptUp.grade), " に上がった!") : null));
     const fx = learned && !fxDone && typeof MsxFxMoment === 'function' ? React.createElement(MsxFxMoment, {
       kind: "tech",
       title: learned.name,
