@@ -39,6 +39,11 @@
       text: 'オイリーオイル（大）2個と夏美草1個のセット。持ち込むと育成中にも使用できる' },
     { id: 'training-ticket', name: '修行チケット', kind: 'ticket', image: 'images/success/items/training-ticket.png?v=0fc3257c41b8',
       text: '修行に使うチケット。大会などでもらえる' },
+    // 距離の汁(大会の賞品・2026-11-15 r1115-055)。汁ごとに色を分けた小瓶。画面の持ち物の絵は 56-monhero-success-main.jsx の MSX_ITEM_ICON
+    { id: 'elixir-red', name: '赤汁', kind: 'use', image: 'images/success/items/elixir-red.png?v=678ac5878286', text: '赤色の秘薬。使ったターンの修行で、零の間合いの技を覚えやすくなる' },
+    { id: 'elixir-orange', name: '橙汁', kind: 'use', image: 'images/success/items/elixir-orange.png?v=92fa9c6905d0', text: '橙色の秘薬。使ったターンの修行で、近の間合いの技を覚えやすくなる' },
+    { id: 'elixir-green', name: '緑汁', kind: 'use', image: 'images/success/items/elixir-green.png?v=42df44a2f13d', text: '緑色の秘薬。使ったターンの修行で、中の間合いの技を覚えやすくなる' },
+    { id: 'elixir-blue', name: '藍汁', kind: 'use', image: 'images/success/items/elixir-blue.png?v=d9d22aeabd37', text: '藍色の秘薬。使ったターンの修行で、遠の間合いの技を覚えやすくなる' },
   ].map(Object.freeze));
   const api = { SUCCESS_ITEMS };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
