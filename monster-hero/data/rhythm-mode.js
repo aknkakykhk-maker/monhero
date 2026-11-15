@@ -1682,6 +1682,9 @@ const rhythmScrollEarlyTouches=(changes,notes,travelMs,groups)=>{
 //   back     len の間に、道の amount 割だけ奥へ戻って、また戻ってくる(行って戻る・Evans 84秒)
 //   backHold len の間に、道の amount 割だけ奥へ戻ったまま(このあとに stop・rush を続けて書く・Grievous Lady)
 //   rush     len の間に、道の奥の端(reach・既定.97)から一気に来る(止まりのすぐ後に置く)
+//            peak(0〜1)を書くと、速さを段差にせず 0 → 山(len の peak 割の所)→ resume へだんだん変える(すべる GLIDE と同じ形・2026-11-15 r1115-182 LAMIA 31秒)
+//   stop・back・backHold の groupSpeed … 書くと、その区間のノーツを組1(速さ1)ではなく、本体の表の演出だけを groupSpeed の一定の速さにした組2で流す(遅い所で止まる・戻るとき)
+//   stop・back・backHold の groupTo … 組1を付ける区間の終わり(書かなければ at+len)。止まりを短くしても、止まりの後の駆け込みの間に叩くノーツをふつうの速さで流したいときに使う
 //   ease     len の間に、速さを from(既定1)から to へだんだん変える(to は終わってからの速さ。曲の終わりで止めるときも 0 ではなく 0.1)
 //   speed    at から速さを to にする(段差)
 // 共通: resume … 演出の終わりの速さ(既定1。ease・speed は to のまま)/hold:true … 終わりの区切りを書かない(次の演出へそのままつなぐ)
@@ -1689,6 +1692,7 @@ const rhythmScrollEarlyTouches=(changes,notes,travelMs,groups)=>{
 // ★止まる・戻る間と、その後で「判定より前に一度判定線へ触れてしまう」ノーツ(Evans の 84.687秒がそう)は、組1(ふつうの速さ)へ自動で移す。
 //   それでも残るときは rhythm-scroll-fx-check.js が止める。書かない曲は今までとまったく同じ
 const RHYTHM_SCROLL_FX_GROUP=1;
+const RHYTHM_SCROLL_FX_GROUP_FOLLOW=2;
 const RHYTHM_SCROLL_FX_GROUPS=Object.freeze({[RHYTHM_SCROLL_FX_GROUP]:Object.freeze([Object.freeze([0,1])])});
 // 見張りに使うノーツ速度1〜12の道の時間(28-rhythm-shared.jsx の RHYTHM_NOTE_TRAVEL_MS_POINTS と同じ。rhythm-scroll-fx-check.js が見張る)。
 // 早触れは速度で出たり出なかったりする(行って戻るの行きは、ふつうの速さから折り返すので一瞬前へ進む)ので全部見る
@@ -1711,7 +1715,8 @@ const rhythmScrollFxBuild=fx=>{
     if(f.kind==='stop')rows=[[a,0]];
     else if(f.kind==='back')rows=[[a,'GLIDE',-amount,.5],[a+f.len/2,'GLIDE',amount,.5]];
     else if(f.kind==='backHold')rows=[[a,'GLIDE',-amount,.5]];
-    else if(f.kind==='rush')rows=[[a,'RUSH',Number(f.reach)>0?Number(f.reach):RHYTHM_SCROLL_RUSH_REACH]];
+    else if(f.kind==='rush'){const reach=Number(f.reach)>0?Number(f.reach):RHYTHM_SCROLL_RUSH_REACH,peak=Number(f.peak);
+      rows=[peak>0&&peak<1?[a,'GLIDE',reach,peak]:[a,'RUSH',reach]];}
     else if(f.kind==='ease'){const to=Number(f.to);if(!Number.isFinite(to)||to<0)continue;
       rows=[[a,'LERP',Number.isFinite(Number(f.from))?Number(f.from):1]];if(!f.hold)rows.push([b,to]);}
     else if(f.kind==='speed'){const to=Number(f.to);if(!Number.isFinite(to)||to<0)continue;rows=[[a,to]];}
@@ -1719,7 +1724,8 @@ const rhythmScrollFxBuild=fx=>{
     if(f.kind!=='ease'&&f.kind!=='speed'&&!f.hold&&f.len>0)rows.push([b,resume]);
     changes.push(...rows);
     if(f.quiet)quiet.push([a,b]);
-    else if(f.group!==false&&(f.kind==='stop'||f.kind==='back'||f.kind==='backHold'))windows.push([a,b]);
+    else if(f.group!==false&&(f.kind==='stop'||f.kind==='back'||f.kind==='backHold')){const to=rhythmScrollFxMs(f.groupTo),gs=Number(f.groupSpeed);
+      windows.push(Object.assign([a,Number.isFinite(to)&&to>b?to:b],gs>0?{speed:gs}:{}));}
   }
   return {changes:changes.sort((x,y)=>x[0]-y[0]),windows,quiet};
 };
@@ -1744,17 +1750,22 @@ const rhythmScrollFxChart=(chart,fx)=>{
   if(!changes.length)return chart;
   const span=note=>{const a=Number(note.timeMs);return [a,Math.max(a,Number(note.endTimeMs)||a)];};
   const hits=(list,note)=>{const [a,b]=span(note);return list.some(([s,e])=>a<=e&&b>=s);};
+  // groupSpeed を書いた区間のノーツは組2: 本体の表から、その区間の演出(止まる・戻る)だけを「groupSpeed の一定の速さ」に置き換えた表で流れる
+  //   (r1115-182 LAMIA 1:40: 遅い所(0.6倍)で戻る間のノーツが、組1(速さ1)で流れて後ろのノーツより奥に見えていた)
+  const follow=windows.filter(w=>w.speed>0);
+  const groups=follow.length?Object.freeze({...RHYTHM_SCROLL_FX_GROUPS,[RHYTHM_SCROLL_FX_GROUP_FOLLOW]:Object.freeze(
+    [...changes.filter(r=>!follow.some(w=>r[0]>=w[0]&&r[0]<w[1])),...follow.map(w=>[w[0],w.speed])].sort((x,y)=>x[0]-y[0]).map(r=>Object.freeze(r)))}):RHYTHM_SCROLL_FX_GROUPS;
   let notes=chart.notes.filter(note=>!hits(quiet,note))
-    .map(note=>hits(windows,note)?{...note,scrollGroup:RHYTHM_SCROLL_FX_GROUP}:note);
+    .map(note=>hits(follow,note)?{...note,scrollGroup:RHYTHM_SCROLL_FX_GROUP_FOLLOW}:hits(windows,note)?{...note,scrollGroup:RHYTHM_SCROLL_FX_GROUP}:note);
   // 判定より前に判定線へ触れてしまうノーツを組1へ移す(移すと周りが変わらないので、1回で足りる。念のため3回まで)
   for(let round=0;round<3;round++){
     const early=new Set();
-    for(const travel of RHYTHM_SCROLL_FX_PROBE_TRAVEL)for(const n of rhythmScrollEarlyTouches(changes,notes,travel,RHYTHM_SCROLL_FX_GROUPS))early.add(n);
+    for(const travel of RHYTHM_SCROLL_FX_PROBE_TRAVEL)for(const n of rhythmScrollEarlyTouches(changes,notes,travel,groups))early.add(n);
     if(!early.size)break;
     notes=notes.map(note=>early.has(note)?{...note,scrollGroup:RHYTHM_SCROLL_FX_GROUP}:note);
   }
   const {level,durationMs,laneCount,notes:_n,totalNotes:_t,scrollChanges:_c,scrollGroups:_g,...rest}=chart;
-  return mhChart(level,notes.map(note=>Object.freeze(note)),durationMs,laneCount,{...rest,scrollChanges:Object.freeze(changes.map(r=>Object.freeze(r))),scrollGroups:RHYTHM_SCROLL_FX_GROUPS,scrollFx:Object.freeze(fx.slice())});
+  return mhChart(level,notes.map(note=>Object.freeze(note)),durationMs,laneCount,{...rest,scrollChanges:Object.freeze(changes.map(r=>Object.freeze(r))),scrollGroups:groups,scrollFx:Object.freeze(fx.slice())});
 };
 // 空中のノーツの手ごたえ(試作・2026-10-10・社長「見た目にもっと力いれてほしい」)。色は "r,g,b" の文字列。
 // ピンセットくんの色の案で差し替えるのはここだけ(core=芯の白っぽい光・main=金・accent=差し色の水色)
@@ -41023,12 +41034,12 @@ const lamiaMasterNotes=((t,h,f,s)=>[
 // 流れの速さの演出(2026-11-11 社長「曲にあわせて止まったり戻ったりとか変動型」。置き方はヘンドウ・docs/progress/beat-lamia/STRUCTURE.md)
 const LAMIA_SCROLL_FX=Object.freeze([
   {at:'0:20.680',kind:'stop',len:630},                                  // 0.6秒の空きで小さく止まる
-  {at:'0:30.000',kind:'stop',len:1200,hold:true},{at:'0:31.200',kind:'rush',len:300}, // 抜けで止まる→サビ頭31.5秒へ奥から一気に来る
-  {at:'0:55.600',kind:'speed',to:1.5},                                  // いちばん盛り上がる4小節は1.5倍
+  {at:'0:30.000',kind:'stop',len:850,hold:true,groupTo:'0:31.200'},{at:'0:30.850',kind:'rush',len:650,peak:.3}, // 抜けで止まる→サビ頭31.5秒へ奥から来る(r1115-182: 再始動を31.2→30.85秒へ早め、だんだん速く→だんだん遅く)
+  {at:'0:55.450',kind:'ease',from:1,to:1.5,len:300},                    // いちばん盛り上がる4小節は1.5倍(r1115-182: 段差をやめて0.3秒でつなぐ)
   {at:'1:00.400',kind:'ease',from:1.5,to:0.6,len:1200},                 // 落ちでゆっくりへ
   {at:'1:11.300',kind:'ease',from:0.6,to:1,len:4800},                   // 76.1秒までに元の速さへ
   {at:'1:37.500',kind:'ease',from:1,to:0.6,len:1500},                   // 間奏の抜けで遅く
-  {at:'1:40.200',kind:'back',len:800,amount:.15,resume:0.6},            // 0.7秒の空きで少し戻って、遅いまま続ける
+  {at:'1:40.200',kind:'back',len:650,amount:.07,resume:0.6,groupSpeed:0.6},            // 0.7秒の空きで少し戻って、遅いまま続ける(r1115-182: 戻り15%→7%・1:40.85に前へ。100.995秒の長押しを後のタップと同じ流れに)
   {at:'1:44.600',kind:'ease',from:0.6,to:1,len:1700},                   // 106.3秒のサビ3で元へ
   {at:'2:08.000',kind:'ease',len:14400,to:0.1},                         // 終わりへだんだん遅く(0ではなく0.1)
 ]);
