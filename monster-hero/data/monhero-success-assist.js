@@ -228,10 +228,39 @@
     sokoji: { v: 100, group: 'train' }, hagemi: { v: 100, group: 'train' }, haru: { v: 100, group: 'train' }, natsu: { v: 100, group: 'train' }, aki: { v: 100, group: 'train' }, fuyu: { v: 100, group: 'train' },
     atooshi: { v: 120 }, kunpow: { v: 120 }, kunwise: { v: 120 }, kunhit: { v: 120 }, kuneva: { v: 120 }, kuntough: { v: 120 }, kunlife: { v: 120 },
     kizuna: { v: 100 }, kaifuku: { v: 20 }, ochitsuki: { v: 50 }, miharu: { v: 50 }, kibarashi: { v: 50 }, itawari: { v: 40 },
+    // sum: true … いるだけ型・試合型・追加トレボーナスで、編成のいちばん高い1体ではなく全員の分を足し合わせる(2026-11-15 社長 r1115-107)。v があればその上限
+    shuugou: { v: 40, sum: true }, tsuika: { v: 50, sum: true },
+    aidcome: { sum: true },
+    aidkeisho: { sum: true },
+    aidluck: { sum: true },
+    aidtrain: { sum: true },
+    aidtrust: { sum: true },
+    aptq: { sum: true },
+    chokyo: { sum: true },
+    event: { sum: true },
+    ikioi: { sum: true },
+    joshu: { sum: true },
+    kokoroe: { sum: true },
+    mejirushi: { sum: true },
+    ninki: { sum: true },
+    peak: { sum: true },
+    rivaldamashii: { sum: true },
+    shokin: { sum: true },
+    shugyo: { sum: true },
+    shugyohp: { sum: true },
+    shugyotoku: { sum: true },
+    waza: { sum: true },
+    wazakazu: { sum: true },
+    yobimizu: { sum: true },
+    gatsu: { sum: true },
+    kensho: { sum: true },
+    mimamori: { sum: true },
+    miseba: { sum: true },
+    mitate: { sum: true },
   });
   const CAP_GROUP_NAME = Object.freeze({ train: 'トレ効果アップ・励・春夏秋冬の5つを合わせて' });
   // 説明の文の後ろに付ける上限の一言(表に無ければ '')
-  const capNote = (id) => { const c = CAP[id]; if (!c) return ''; const a = BY_ID[id]; const u = a && a.u === '%' ? '%' : ''; return `(${c.group && CAP_GROUP_NAME[c.group] ? `${CAP_GROUP_NAME[c.group]}、` : ''}編成の合計 ${c.v}${u}まで)`; };
+  const capNote = (id) => { const c = CAP[id]; if (!c) return ''; if (!Number.isFinite(c.v)) return c.sum ? '(編成の何体ぶんでも足し合わせ)' : ''; const a = BY_ID[id]; const u = a && a.u === '%' ? '%' : ''; return `(${c.group && CAP_GROUP_NAME[c.group] ? `${CAP_GROUP_NAME[c.group]}、` : ''}編成の合計 ${c.v}${u}まで)`; };
   const describe = (id, n) => {
     const a = BY_ID[id]; if (!a) return '';
     const i = nOf(id, n) - 1;

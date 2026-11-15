@@ -566,6 +566,7 @@
     const CAPT = AT && AT.CAP && typeof AT.CAP === 'object' ? AT.CAP : {};
     const capOf = (id, d = Infinity) => (CAPT[id] && Number.isFinite(Number(CAPT[id].v)) ? Number(CAPT[id].v) : d);
     const capKey = (id) => (CAPT[id] && typeof CAPT[id].group === 'string' ? CAPT[id].group : id);
+    const capSum = (id) => !!(CAPT[id] && CAPT[id].sum); // いるだけ型・試合型・追加トレボーナスを全員の分で足し合わせる(r1115-107)
     const ASSISTS = (() => {
       const T = AT ? AT.BY_ID : null;
       if (!T) return ASSISTS_V1;
@@ -711,7 +712,9 @@
       return r2(v);
     };
     const stayLv = (team, id) => team.reduce((a, m) => Math.max(a, assistLv(m, id)), 0); // いるだけ型は編成でいちばん高い段の1つだけ
-    const stayNum = (s, id) => { const lv = stayLv(s.team, id); return lv ? num(aOf(id, 'v', lv)) : 0; }; // その効き目の数(無ければ 0)
+    // その効き目の数(無ければ 0)。表で足し合わせ(sum)の効果は編成の全員の分を足して上限まで、ほかはいちばん高い1体の分(r1115-107)
+    const stayNumT = (team, id) => { if (capSum(id)) { const v = team.reduce((t, m) => { const lv = assistLv(m, id); return t + (lv ? num(aOf(id, 'v', lv)) : 0); }, 0); return Math.min(capOf(id), v); } const lv = stayLv(team, id); return lv ? num(aOf(id, 'v', lv)) : 0; };
+    const stayNum = (s, id) => stayNumT(s.team, id);
     // ---- 第3版で足したアシスト効果(2026-11-14 社長「参考で使えそうなのは全部」・ASSIST-V3.md) ----
     const withSum = (s, card, id) => { let v = 0; if (card) card.members.forEach(i => { const lv = assistLv(s.team[i], id); if (lv) v += num(aOf(id, 'v', lv)); }); return capKey(id) === id ? Math.min(capOf(id), v) : v; }; // いっしょ型を足す(組の無い上限はここで・組の上限は cardMult)
     const withMax = (s, card, id) => { let v = 0; if (card) card.members.forEach(i => { const lv = assistLv(s.team[i], id); if (lv) v = Math.max(v, num(aOf(id, 'v', lv))); }); return v; };
@@ -750,7 +753,7 @@
       carry.forEach(k => { const it = ITEMS[k]; if (it.good) good[it.good] = true; if (it.hpMax) hpMax = Math.min(HP_MAX_CAP, hpMax + it.hpMax); if (it.issaForce) issaForce = true; });
       const ty = stayLv(team, 'tairyoku'); if (ty) hpMax = Math.min(HP_MAX_CAP, hpMax + num(aOf('tairyoku', 'v', ty))); // 💪体力自慢
       const hn = stayLv(team, 'hitonatsu');
-      const stayT = (id) => { const lv = stayLv(team, id); return lv ? num(aOf(id, 'v', lv)) : 0; };
+      const stayT = (id) => stayNumT(team, id);
       const sk = stayT('shoki'); if (sk) KEYS.forEach(k => { stats[k] = clamp(stats[k] + sk, 0, STAT_MAX); }); // 🌅初期ステータスアップ
       return {
         v: VERSION, id, species, aid, type: typeIdx, turn: 1, stats, hpMax, hp: hpMax, stress: 0, carry, bag, good, issaForce, issaSure: false, itemTurn: 0,
@@ -812,7 +815,7 @@
         if (card.aid) {
           add += stayNum(s, 'aidtrain') / 100; // 🏋助手・鍛錬
           // 🔗助手・継承: 来ていない子のうち、いっしょ型がいちばん大きい1体の分
-          let best = 0; s.team.forEach((m, i) => { if (!card.members.includes(i) && assistLv(m, 'aidkeisho')) best = Math.max(best, assistPart(m, card.stat, loy)); });
+          let best = 0; s.team.forEach((m, i) => { if (!card.members.includes(i) && assistLv(m, 'aidkeisho')) best = capSum('aidkeisho') ? best + assistPart(m, card.stat, loy) : Math.max(best, assistPart(m, card.stat, loy)); }); // 足し合わせ(r1115-107)
           add += best / 100;
         }
       }
@@ -1087,7 +1090,7 @@
         const hpCost = BASE.hp * R.hp * (1 - Math.min(capOf('itawari', 60) / 100, it)) * (s.aid === 'kiki' ? 0.85 : 1); // きき: トレーニングの疲れ −15%
         s.hp = clamp(Math.round(s.hp - hpCost), 0, s.hpMax);
         const kf = withSum(s, card, 'kaifuku'); if (kf && res !== 'sab') s.hp = clamp(Math.round(s.hp + kf), 0, s.hpMax); // 💧トレ後回復効果アップ
-        const ts = withMax(s, card, 'tsuika'); // ➕追加トレボーナス(別の乱数で並びを変えない)
+        const ts = capSum('tsuika') ? withSum(s, card, 'tsuika') : withMax(s, card, 'tsuika'); // 足し合わせ・上限は表(r1115-107) // ➕追加トレボーナス(別の乱数で並びを変えない)
         if (ts && res !== 'sab' && res !== 'fail') { const tr = rngOf(s.id, s.turn, 'tsuika'); if (tr() < ts / 100) { const k = KEYS[Math.floor(tr() * KEYS.length)]; const g = 5 + Math.floor(tr() * 16); const b0 = s.stats[k]; addStat(s, k, g); out.tsuika = { stat: k, v: s.stats[k] - b0 }; } }
         const stUp = BASE.stress * pol.stress + R.stress;
         addStress(s, stUp * (EV && stUp > 0 ? EV.mod(s, 'stress') : 1) * (stUp > 0 ? 1 - cutOf(s, card, 'kibarashi') : 1)); // 🎵ごきげん: 増えが半分/🎈気晴らし: 増えを減らす
@@ -1122,7 +1125,7 @@
         // 2026-11-14 社長: 修行には成功・大成功・失敗・サボりはない(確率は技を覚えるのと間合いの適性だけ)
         const res = 'ok'; const R = RESULTS.ok; const pol = C.policyOf(s.pol);
         // ⚔修行効果アップ: 修行の上がりの合計の最後にかける倍率 ×(1 + v%)(窓口 2026-11-14)
-        const sl = stayLv(s.team, 'shugyo'); const boost = 1 + (sl ? aOf('shugyo', 'v', sl) / 100 : 0);
+        const boost = 1 + stayNum(s, 'shugyo') / 100; // ⚔修行効果アップ(足し合わせ・r1115-107)
         // 📚技習得効果アップ(覚えた技1つにつき)・🔮修行チャンスの「修行の気合い」(1回で消える)
         const boost2 = (1 + stayNum(s, 'wazakazu') * s.techs.length / 100) * (s.shBoost ? 1.2 : 1); s.shBoost = false;
         const toku = stayNum(s, 'shugyotoku'); // 🗡修行特別効果アップ
@@ -1413,10 +1416,10 @@
     const battleBuffs = (s) => {
       if (!s.battle) return undefined;
       const m = {}; const put = (b) => Object.keys(b || {}).forEach(k => { if (k === 'noSulk') { if (b[k] === true) m.noSulk = true; return; } const r = BUFF_RANGE[k]; if (!r || !Number.isFinite(Number(b[k]))) return; const v = clamp(num(m[k]) + Number(b[k]), r[0], r[1]); m[k] = k === 'guts' ? Math.round(v) : Math.round(v * 1000) / 1000; });
-      Object.keys(ASSISTS).filter(id => ASSISTS[id].type === 'battle').forEach(id => { const lv = stayLv(s.team, id); if (lv) put(aOf(id, 'buff', lv)); });
+      Object.keys(ASSISTS).filter(id => ASSISTS[id].type === 'battle').forEach(id => { if (capSum(id)) s.team.forEach(m => { const lv = assistLv(m, id); if (lv) put(aOf(id, 'buff', lv)); }); else { const lv = stayLv(s.team, id); if (lv) put(aOf(id, 'buff', lv)); } }); // 試合型は足し合わせ(r1115-107・試合の上下の幅 BUFF_RANGE まで)
       put(battleMods(s));
       const a = {}; BUFF_KEYS.forEach(k => { if (m[k] !== undefined) a[k] = m[k]; }); return Object.keys(a).length ? { A: a } : undefined; };
-    const stayV = (s, id) => { const lv = stayLv(s.team, id); return lv ? aOf(id, 'v', lv) : 0; };
+    const stayV = (s, id) => (capSum(id) ? stayNum(s, id) : (() => { const lv = stayLv(s.team, id); return lv ? aOf(id, 'v', lv) : 0; })());
     const popGain = (s, v) => Math.round(v * (s.good && s.good.star ? GOOD.star.pop : 1) * (v > 0 ? 1 + stayNum(s, 'ninki') / 100 : 1) * (v > 0 && s.popTurn === s.turn ? POP_TURN_MULT : 1)); // 🌟人気者のお手本: 上がる分だけ
     // 育成中に使うアイテム(1ターンに1個まで・ターンを使わない)
     const useItem = (s0, key) => {

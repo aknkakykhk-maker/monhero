@@ -41,6 +41,12 @@ for (const id of ['sokoji', 'kunpow', 'kizuna']) {
   console.log(`失敗率ダウン: 6体 → −${cut}%(上限 ${cap}%)`);
 }
 // ③
-Object.keys(AT.BY_ID).forEach((id) => { const t = AT.describe(id, 1); const has = /編成の合計 [\d.]+%?まで/.test(t); if (AT.CAP[id] && !has) ng.push(`${AT.BY_ID[id].name}: 説明に上限が無い`); if (!AT.CAP[id] && has) ng.push(`${AT.BY_ID[id].name}: 上限の無い効果に上限の文`); });
+Object.keys(AT.BY_ID).forEach((id) => { const t = AT.describe(id, 1); const c = AT.CAP[id]; const has = /編成の合計 [\d.]+%?まで/.test(t); const sum = /足し合わせ/.test(t);
+  if (c && Number.isFinite(c.v) && !has) ng.push(`${AT.BY_ID[id].name}: 説明に上限が無い`); if ((!c || !Number.isFinite(c.v)) && has) ng.push(`${AT.BY_ID[id].name}: 上限の無い効果に上限の文`);
+  if (c && c.sum && !Number.isFinite(c.v) && !sum) ng.push(`${AT.BY_ID[id].name}: 足し合わせの文が無い`); });
+// ④ 足し合わせ(sum)のいるだけ型: 2体が持つと2体分(上限まで)
+{ const id = 'shokin'; const one = AT.BY_ID[id].v[0]; const team = Array.from({ length: 2 }, (_, i) => ({ kind: 'raised', species: ['Undine', 'Mocchi'][i], stats: Object.fromEntries(K.map(k => [k, 300])), lv: 30, loy: 80, pop: 50, techs: [], assists: [{ id, n: 1 }] }));
+  const s = SUC.newRun({ id: 'cap-sum', species: 'Golem', aid: 'mua', team, aidBondLv: 1 }); const v = SUC.stayV(s, id);
+  if (v !== one * 2) ng.push(`大会賞金効果アップ: 2体で ${v}(${one}×2 のはず)`); else console.log(`大会賞金効果アップ: 1体 ${one} × 2体 → ${v}(足し合わせ)`); }
 if (ng.length) { ng.forEach(x => console.log(`NG: ${x}`)); console.log(`NG ${ng.length}件`); process.exit(1); }
 console.log(`OK: アシスト効果の合計の上限(表の ${Object.keys(AT.CAP).length} 種)が効いている`);
