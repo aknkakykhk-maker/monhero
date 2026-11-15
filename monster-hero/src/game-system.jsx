@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: c4b9fe357a51f5c8
+// generated-sha256: 156bcd951f9a6d6b
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -67710,6 +67710,7 @@ const ASSISTANT_LIFE_HOUSE_CSS = `
 // 開いたトップの家(grid4)は、縦でも部屋の中を横の決まりで描く(横の決まりの行を写して、印だけ data-assistant-life-grid4 に替える)
 const ASSISTANT_LIFE_GRID4_CSS = ASSISTANT_LIFE_HOUSE_CSS.split('\n').filter(l => /^\[data-assistant-life-land="1"\] \.mhl-(room|board)/.test(l)).join('\n').split('[data-assistant-life-land="1"]').join('[data-assistant-life-grid4="1"]')
   + '\n[data-assistant-life-grid4="1"] .mhl-room .tag b,[data-assistant-life-grid4="1"] .mhl-room[data-assistant-life-room-v2="1"] .tag b{white-space:normal;word-break:auto-phrase;font-size:10.5px;line-height:12px;max-height:36px;text-overflow:clip}[data-assistant-life-grid4="1"] .mhl-room .tag{top:21px}'
+  + '\n.mhl-room .tag[data-assistant-life-room-say="1"] b{display:block!important}'
   + '\n.mhl-room .evm{position:absolute;right:2px;bottom:2px;z-index:8;font-size:15px;line-height:1;filter:drop-shadow(0 1px 2px #000a)}';
 // 助手ライフを開いている間は、上に出る育ちの札(💗+2 など)を右へ寄せる。左だと、上の副題「…間でみんなが動く」に重なって字を隠す(2026-11-14 社長)
 const ASSISTANT_LIFE_FX_CSS = '.mh-gfx-chips.left{left:auto;right:10px;align-items:flex-end}';
@@ -67750,6 +67751,62 @@ const assistantLifeTagChunks = (text) => {
 };
 // 部屋1つ
 // 出かけ札の上の行に入るだけの名前(字の数で数える)。入らない分は「ほか◯人」。text は assistantLifeGroupNames の形(「A・B・C」か「A・B ほか2人」)
+// 札の「何をしているか」の文(2026-11-15 社長 r1115-136「えるびんと過ごす」「モンヒロバトル中」「レオナの家におでかけ」)。
+//   [絵文字, 言葉の塊, …] の並び。狭い札は塊の間だけで折る(「モンヒロ/バトル中」「レオナの家に/おでかけ」)。「…」で切らない
+//   札の tag(行き先・人数・名前)は今までどおり残す(ほかの画面・検査が使う)。say は表示のためだけ
+const ASSISTANT_LIFE_SAY_WORDS = Object.freeze({ studio: ['モンヒロ', 'ビート'], cardroom: ['MFバトル', 'カード'], cafe: ['おやつ', '屋さん'], hill: ['ひなたの', '丘'], ranch: ['M/B', '管理'] });
+const ASSISTANT_LIFE_SAY_SPECIAL = Object.freeze({ battle: ['モンヒロ', 'バトル中'], 'cardroom:cards': ['MFバトル', 'カードを', '研究'], 'cafe:snack': ['おやつ', '屋さんで', 'ひと休み'] });
+// 横の狭い部屋(1行・字10.5px以上・床にかけない)で全部が入らないときの短い言い方
+const ASSISTANT_LIFE_SAY_SHORT = Object.freeze({ snack: 'おやつ中', practice: '練習中', training: '育成中', cards: 'カード研究', walk: '散歩中', idle: 'ぼーっと', read: '読書中', battle: 'バトル中', checkup: '診察中' });
+const assistantLifeSayOutShort = (place, doingKey) => {
+  const icon = ASSISTANT_LIFE_PLACE_ICON[place] || '🚶', d = ASSISTANT_LIFE_DOINGS[doingKey];
+  return d && d.places.includes(place) && ASSISTANT_LIFE_SAY_SHORT[doingKey] ? [icon, ASSISTANT_LIFE_SAY_SHORT[doingKey]] : [icon, `${assistantLifePlaceShow(place) || 'おでかけ先'}へ`];
+};
+const assistantLifeSayOut = (place, doingKey) => {
+  const icon = ASSISTANT_LIFE_PLACE_ICON[place] || '🚶';
+  const sp = ASSISTANT_LIFE_SAY_SPECIAL[`${place}:${doingKey}`] || ASSISTANT_LIFE_SAY_SPECIAL[place];
+  if (sp) return [icon, ...sp];
+  const words = ASSISTANT_LIFE_SAY_WORDS[place] || [assistantLifePlaceShow(place) || 'おでかけ先'];
+  const d = ASSISTANT_LIFE_DOINGS[doingKey], last = words[words.length - 1];
+  return d && d.places.includes(place) ? [icon, ...words.slice(0, -1), `${last}で`, d.label] : [icon, ...words.slice(0, -1), `${last}に`, 'おでかけ'];
+};
+// 飾りのあと(けんか・仲直り・フレンドの家・来客)に、札の文をそろえる。sayMark は印のある文(横と開いたトップの家は1行の札なので、こちらを出す)
+const assistantLifeSayFill = (rooms, life) => {
+  for (const id of Object.keys(rooms)) {
+    const r = rooms[id];
+    if (!r || !r.tag) continue;
+    const t0 = String(r.tag[0] || ''), t1 = String(r.tag[1] || '');
+    const away = typeof assistantLifeFriendAwayOf === 'function' ? (() => { try { return assistantLifeFriendAwayOf(id); } catch { return null; } })() : null;
+    const came = t0.match(/^🚪 (.+さんの)(.+が)来ている$/u);
+    let say = r.say, short = r.sayShort || null;
+    if (away) { say = ['🏘', `${away.name}の`, '家に', 'おでかけ']; short = ['🏘', `${away.name}の家`]; }
+    else if (came) { say = ['🚪', came[1], came[2], '来ている']; short = ['🚪', 'お客さん']; }
+    else if (r.rel === 'living') { say = ['🛋️', 'みんなの', '居間に']; short = ['🛋️', '居間に']; }
+    if (!Array.isArray(say)) { const m = t0.match(/^(\S+) (.+)$/u); say = m ? [m[1], m[2]] : ['', t0]; }
+    let mark = null, markShort = null, m;
+    if ((m = t1.match(/^💢 (.+)とけんか中$/u))) { mark = ['💢', `${m[1]}と`, 'けんか中']; markShort = ['💢', 'けんか中']; }
+    else if ((m = t1.match(/^💢 (.+)と言い合いのあと$/u))) { mark = ['💢', `${m[1]}と`, '言い合いの', 'あと']; markShort = ['💢', '言い合い']; }
+    else if ((m = t1.match(/^🤝 (.+)と仲直り$/u))) {
+      const w = r.mend && typeof assistantLifeWhereOf === 'function' ? assistantLifeWhereOf(life, id) : null;
+      const both = !!(w && w.group && w.group.ids.includes(r.mend));
+      mark = ['🤝', `${m[1]}と`, both ? '過ごす' : '仲直り']; markShort = ['🤝', '仲直り'];
+    }
+    rooms[id] = { ...r, say, sayShort: short || say, sayMark: mark, sayMarkShort: markShort || mark };
+  }
+  return rooms;
+};
+// 札の文を塊ごとに出す。字の大きさは、いちばん長い塊が1行に入る大きさ(10.5px まで)。それでも入らない長い塊(長いフレンドの名前など)だけは塊の中でも折る
+// 幅を測るときだけ、絵文字の後ろの見えない字(異体字セレクタ・ZWJ)を数えない(「⚔️」を2字に数えていた)。表示はそのまま
+const assistantLifeSayMeasure = (x) => String(x).replace(/[\uFE0F\u200D]/gu, '');
+const assistantLifeSayFont = (say, avail, max = 10.5) => {
+  const parts = assistantLifeSayParts(say);
+  return Math.max(8, Math.min(max, ...parts.map(x => assistantLifeTagFit(assistantLifeSayMeasure(x), avail, max, 8))));
+};
+const assistantLifeSayParts = (say) => { const a = (say || []).filter(x => x !== null && x !== undefined).map(String); return a.length > 1 && a[0] ? [`${a[0]} ${a[1]}`, ...a.slice(2)] : a.filter(Boolean); };
+function AssistantLifeSayText({ say, avail, font }) {
+  const parts = assistantLifeSayParts(say);
+  return <>{parts.map((x, i) => <React.Fragment key={i}>{i ? <wbr/> : null}<span data-assistant-life-say-chunk className={assistantLifeTagFit(assistantLifeSayMeasure(x), avail, font, 0) >= font - 0.05 ? 'whitespace-nowrap' : ''}>{x}</span></React.Fragment>)}</>;
+}
 const assistantLifeTagNames = (text, budget) => {
   const m = String(text || '').match(/^(.*?)(?: ほか(\d+)人)?$/);
   const list = String(m[1] || '').split('・').filter(Boolean);
@@ -67760,7 +67817,7 @@ const assistantLifeTagNames = (text, budget) => {
   return `${out.join('・')}${rest ? ` ほか${rest}人` : ''}`;
 };
 // other … よその家(フレンドの家)を描くとき { put }。自分のセッションの Lv は出さず、家具は控えの置き方で描く(56-assistant-life-friend.jsx)
-function AssistantLifeRoom({ id, met, look, x, y, w, h, state, onOpen, idx, other = null, v2 = false }) {
+function AssistantLifeRoom({ id, met, look, x, y, w, h, state, onOpen, idx, other = null, v2 = false, compact = false }) {
   const L = ASSISTANT_LIFE_ROOM_LOOK[id];
   const view = ASSISTANT_LIFE_VIEW[look][idx % 2];
   const night = look === 'night';
@@ -67798,6 +67855,19 @@ function AssistantLifeRoom({ id, met, look, x, y, w, h, state, onOpen, idx, othe
         const tagLand = typeof window !== 'undefined' && window.innerWidth > window.innerHeight; // 横画面は札の高さが床の帯(マスモンが歩く所)に響くので、これまでの折り方のまま
         const tagFit = assistantLifeTagFit(t[0], w - 26, 10.5, 0); // 1行に入る字の大きさ(10.5 に入らない狭い部屋は、意味の切れ目で2行にする)
         const short = [...String(t[0])].length <= 9; // 横は1行。行き先が長いときは人数を付けない(「…」で切らない)
+        // 何をしているかの文(r1115-136)。横と開いたトップの家(compact)は札が1つなので、印のある文(「🤝 えるびんと過ごす」)を出す。塊の間だけで折り、札に全部収める
+        const avail = w - 6 - 8 - 3 - 2;
+        // 横は札の高さが床の帯(マスモンが歩く所)に響くので1行・字10.5px。全部が入らない狭い部屋は短い言い方(「⚔️ バトル中」)
+        const oneFit = (x) => assistantLifeTagFit(assistantLifeSayMeasure(assistantLifeSayParts(x).join('')), avail, 10.5, 0);
+        const sayFull = Array.isArray(state.say) ? (compact && state.sayMark ? state.sayMark : state.say) : null;
+        const sayAlt = Array.isArray(state.say) ? ((compact && state.sayMark ? state.sayMarkShort : state.sayShort) || sayFull) : null;
+        const say = tagLand && sayFull && oneFit(sayFull) < 10.5 && sayAlt ? (oneFit(sayAlt) >= oneFit(sayFull) ? sayAlt : sayFull) : sayFull;
+        if (say) {
+          const f = tagLand ? Math.max(7, oneFit(say)) : assistantLifeSayFont(say, avail);
+          return <span className="tag" data-assistant-life-room-away={id} data-assistant-life-room-tag-mark={mark ? '1' : '0'} data-assistant-life-room-say={compact ? '1' : '0'}>
+            {!compact && (mark || !names ? <small data-assistant-life-room-what style={{ marginLeft: ml }}>{t[1]}</small> : <small data-assistant-life-room-with style={{ marginLeft: ml }}><AssistantLifeNames text={names}/></small>)}
+            <b data-assistant-life-room-say-text style={{ whiteSpace: 'normal', fontSize: f, lineHeight: tagLand ? '13px' : `${Math.round(f * 1.18)}px`, ...(tagLand ? { whiteSpace: 'nowrap' } : {}), maxHeight: 'none', overflow: 'visible', textOverflow: 'clip' }}>{v2 && w >= 150 ? <span data-assistant-life-room-out className="mr-1 rounded bg-slate-600 px-1 text-white">留守</span> : null}<AssistantLifeSayText say={say} avail={avail} font={f}/></b></span>;
+        }
         return <span className="tag" data-assistant-life-room-away={id} data-assistant-life-room-tag-mark={mark ? '1' : '0'}>
           {mark || !names ? <small data-assistant-life-room-what style={{ marginLeft: ml }}>{t[1]}</small> : <small data-assistant-life-room-with style={{ marginLeft: ml }}><AssistantLifeNames text={names}/></small>}
           <b style={w < 150 && !tagLand ? (tagFit >= 10.5 ? { whiteSpace: 'nowrap', fontSize: 10.5 } : { whiteSpace: 'normal', fontSize: Math.max(9, Math.min(10.5, Math.floor((w - 26) / 5.2 * 10) / 10)), lineHeight: '12px' }) : undefined}>{v2 && w >= 150 ? <span data-assistant-life-room-out className="mr-1 rounded bg-slate-600 px-1 text-white">留守</span> : null}{w < 150 && !tagLand && tagFit < 10.5 ? assistantLifeTagChunks(t[0]) : t[0]}<i data-assistant-life-room-tag-short>{n > 1 && short ? `・${n}人` : ''}{mark ? ` ${[...t[1]][0]}` : ''}</i></b></span>; })()}
@@ -67839,7 +67909,7 @@ function AssistantLifeHouseArt({ width, land: landIn, look, rooms, metSet, onOpe
       <div className="mhl-frame" style={{ top: roofH, height: bodyH }}>
         {ASSISTANT_LIFE_HOUSE_ORDER.map((id, i) => {
           const r = Math.floor(i / cols), c = i % cols;
-          return <AssistantLifeRoom key={id} id={id} idx={i + r} met={metSet.has(id)} look={look} x={wall + c * (rw + wall)} y={wall + r * (rh + wall)} w={rw} h={rh} state={rooms[id]} onOpen={onOpen} v2={v2 && !other} other={other ? (other[id] || {}) : null}/>;
+          return <AssistantLifeRoom key={id} id={id} idx={i + r} met={metSet.has(id)} look={look} x={wall + c * (rw + wall)} y={wall + r * (rh + wall)} w={rw} h={rh} state={rooms[id]} onOpen={onOpen} v2={v2 && !other} other={other ? (other[id] || {}) : null} compact={land}/>;
         })}
         <div className="mhl-liv" data-assistant-life-living style={{ left: wall, top: ly, width: width - 2 * wall, height: lh, filter: night ? 'brightness(.62)' : undefined }}>
           <button type="button" ref={boardRef} className="mhl-board text-left" data-assistant-life-board onClick={onBoard} style={{ width: Math.min(width * (land ? .42 : .52), 240) }} aria-label="今日あったことを全部見る">
@@ -67878,12 +67948,12 @@ const assistantLifeRoomsOf = (life, metIds) => {
           if (visit) rooms[id] = { ...rooms[id], bub: assistantLifeFurnVisitBub(visit) || rooms[id].bub, furnVisit: visit.id };
           else if (use) rooms[id] = { ...rooms[id], bub: use.bub, furnUse: use.key };
         }
-      } else rooms[id] = { tag: [`🚪 ${assistantLifeName(host)}の部屋へ`, `${ids.length}人で ${doing.label}`, assistantLifeGroupNames(ids, 4)] };
+      } else rooms[id] = { tag: [`🚪 ${assistantLifeName(host)}の部屋へ`, `${ids.length}人で ${doing.label}`, assistantLifeGroupNames(ids, 4)], say: ['🚪', `${assistantLifeName(host)}の`, '部屋で', doing.label || '過ごす'], sayShort: ['🚪', `${assistantLifeName(host)}の部屋`] };
       continue;
     }
     // 組で出かけているときは、どの部屋の札にも同じ全員の名前(「3人で ドラ・ソラシド・えるびん」)
     const sub = w.group ? `${w.group.ids.length}人で ${doing.label}` : `ひとりで ${doing.label}`;
-    rooms[id] = { tag: [`${ASSISTANT_LIFE_PLACE_ICON[w.place] || '🚶'} ${assistantLifePlaceShow(w.place)}へ`, sub, w.group ? assistantLifeGroupNames(w.group.ids, 4) : null] };
+    rooms[id] = { tag: [`${ASSISTANT_LIFE_PLACE_ICON[w.place] || '🚶'} ${assistantLifePlaceShow(w.place)}へ`, sub, w.group ? assistantLifeGroupNames(w.group.ids, 4) : null], say: assistantLifeSayOut(w.place, w.doing), sayShort: assistantLifeSayOutShort(w.place, w.doing) };
   }
   // 言い合いのあとの2人(水色の縁と「💢 ◯◯と言い合いのあと」。2026-11-07 社長「喧嘩とか仲直りとか人間じみたのもどんどん」)
   const q = peer && peer.quarrel && peer.quarrel.pending;
@@ -67900,6 +67970,7 @@ const assistantLifeRoomsOf = (life, metIds) => {
   if (typeof assistantLifeRelDecorateRooms === 'function') { try { assistantLifeRelDecorateRooms(rooms, life, peer); } catch {} }
   // フレンドの家へ遊びに行っている助手の札「🏘 〇〇さんの家へ」(56-assistant-life-friend.jsx。印が偽なら何もしない)
   if (typeof assistantLifeFriendDecorateRooms === 'function') { try { assistantLifeFriendDecorateRooms(rooms); } catch {} }
+  assistantLifeSayFill(rooms, life);
   return rooms;
 };
 
@@ -72139,10 +72210,17 @@ const ASSISTANT_LIFE_GIFT_CHEKI_KEY = 'mh_assistant_life_cheki_v1';
 const ASSISTANT_LIFE_GIFT_CHEKI_MAX = 60;
 const ASSISTANT_LIFE_SOLO_GIFT_KEY = 'mh_assistant_life_solo_gift_v1';
 // 狭い枠で名前を折り返すときの区切り(言葉の途中で折らない)。名前が変わって合わなくなったら、名前をそのまま1つで出す
-const ASSISTANT_LIFE_GIFT_WRAP = Object.freeze({ basket: ['おやつ', 'バスケット'], misanga: ['おそろいの', 'ミサンガ'], cake: ['はんぶんこ', 'ケーキ'], onigiri: ['ほかほか', 'おにぎり'],
-  tea: ['午後の', 'ティーセット'], earphone: ['かたみみ', 'イヤホン'], puzzle: ['ふたりで解く', 'パズル'], sleeve: ['おそろい', 'スリーブ'], cheki: ['思い出', 'チェキ'], flower: ['ちいさな', '花束'],
+const ASSISTANT_LIFE_GIFT_WRAP = Object.freeze({ basket: ['おやつ', 'バスケット'], misanga: ['おそろいの', 'ミサンガ'], cake: ['半分こ', 'ケーキ'], onigiri: ['ほかほか', 'おにぎり'],
+  tea: ['午後の', 'ティーセット'], earphone: ['片耳', 'イヤホン'], puzzle: ['二人で解く', 'パズル'], sleeve: ['おそろい', 'スリーブ'], cheki: ['思い出', 'チェキ'], flower: ['小さな', '花束'],
   letter: ['手書きの', '手紙'], candy: ['ひとつぶ', 'キャンディ'], omamori: ['小さな', 'おまもり'], monplush: ['モンスターの', 'ぬいぐるみ'] });
-const assistantLifeGiftWrapName = (g) => { const w = g && ASSISTANT_LIFE_GIFT_WRAP[g.key]; return w && w.join('') === g.name ? w : [g ? g.name : '']; };
+// 表に無い名前(改名のあと表が古いまま等)も、言葉の切れ目で折る: 末尾のカタカナの言葉の前・「の」の後(2026-11-15 窓口「切らず・言葉の切れ目で折る」)
+const assistantLifeGiftWrapName = (g) => {
+  const w = g && ASSISTANT_LIFE_GIFT_WRAP[g.key];
+  if (w && w.join('') === g.name) return w;
+  const name = g ? String(g.name || '') : '';
+  const m = name.match(/^(.+?)([ァ-ヴー]{2,})$/u) || name.match(/^(.+?の)(.+)$/u);
+  return m ? [m[1], m[2]] : [name];
+};
 const ASSISTANT_LIFE_GIFT_LABEL = Object.freeze({ like: '💗 好き', mid: 'ふつう', bad: '💧 苦手', unknown: '?' });
 
 const assistantLifeGiftDefs = () => (typeof ASSISTANT_LIFE_GIFTS !== 'undefined' && Array.isArray(ASSISTANT_LIFE_GIFTS) ? ASSISTANT_LIFE_GIFTS : []);

@@ -192,7 +192,7 @@ const problems = (page) => page.evaluate(() => {
       // 場面2: 居間で離れて座る・仲直りしたて
       const s2 = await stage(page, 'living'); await page.waitForTimeout(400);
       check(`${T}けんか中の2人が家にいる → 居間で離れて座る`, (await page.locator('[data-assistant-life-rel-sit]').count()) === 2);
-      check(`${T}仲直りしたて → 部屋に 🤝・出かけた札に「🤝 ◯◯と仲直り」`, (await page.locator(`[data-assistant-life-room="${s2.mend}"] [data-assistant-life-rel-mend]`).count()) === 1 && /🤝 ソラシドと仲直り/.test(await page.locator(`[data-assistant-life-room="${s2.mendAway}"] [data-assistant-life-room-away]`).innerText().catch(() => '')));
+      check(`${T}仲直りしたて → 部屋に 🤝・出かけた札に「🤝 ◯◯と仲直り」`, (await page.locator(`[data-assistant-life-room="${s2.mend}"] [data-assistant-life-rel-mend]`).count()) === 1 && /🤝 ソラシドと(仲直り|過ごす)/.test(await page.locator(`[data-assistant-life-room="${s2.mendAway}"] [data-assistant-life-room-away]`).innerText().catch(() => '')));
       { const ng = await problems(page); check(`${T}居間と仲直りの家: 文字の切れ・名前の折れ・重なり・読みにくさが無い`, !ng.length, ng.slice(0, 5).join(' / ')); }
       if (SHOTS) await page.screenshot({ path: path.join(shotDir, `rel-4-living-${v.id}-${tm.id}.jpg`), type: 'jpeg', quality: 80 });
       check(`${T}画面のエラーが無い`, !errors.length, errors.slice(0, 2).join(' / '));
