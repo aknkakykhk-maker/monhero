@@ -49,7 +49,7 @@ function MsxTrainAct({ run, o, onDone }) {
   const lv = msxTrainLvAt(o && Number.isFinite(o.trainLv) ? o.trainLv - (o.lvUp ? 1 : 0) : 1);
   const done = React.useRef(false);
   const finish = () => { if (done.current) return; done.current = true; onDone(); };
-  React.useEffect(() => { if (msxActCalm()) { finish(); return undefined; } const id = setTimeout(finish, MSX_ACT_MS); return () => clearTimeout(id); }, []);
+  React.useEffect(() => { if (msxActCalm()) { finish(); return undefined; } const id = setTimeout(finish, typeof msxTfxMs === 'function' ? msxTfxMs(o) : MSX_ACT_MS); return () => clearTimeout(id); }, []);
   msxUseTimedSe(msxActCalm() ? [] : (MSX_ACT_SE[k] || []).concat(lv === 5 ? [['actFlash', 600]] : []), []);
   if (msxActCalm()) return null;
   const n = (c) => Array.from({ length: c }, (_, i) => i);
@@ -74,8 +74,10 @@ function MsxTrainAct({ run, o, onDone }) {
   }
   const front = k === 'tough' || k === 'eva';
   const mv = !!MSX_ACT_MOVE[k];
+  // 友情タッグ・大成功・重なりの決めの演出(56-monsuc-trainfx.jsx・r1115-067〜069)。色替えと揺れの class
+  const tfx = typeof msxTfxActProps === 'function' ? msxTfxActProps(o) : { cls: '', style: undefined };
   return (
-    <div className={`msx-act t-${k} lv${lv}${mv ? ' mv-on' : ''}${o && o.card && Array.isArray(o.card.tags) && o.card.tags.length ? ' tagx' : ''}`} onClick={finish} data-msx-act={k} data-msx-act-lv={lv}>
+    <div className={`msx-act t-${k} lv${lv}${mv ? ' mv-on' : ''}${o && o.card && Array.isArray(o.card.tags) && o.card.tags.length ? ' tagx' : ''}${tfx.cls}`} style={tfx.style} onClick={finish} data-msx-act={k} data-msx-act-lv={lv}>
       <span className={k === 'life' ? 'lines h' : 'lines'} aria-hidden="true"/>
       {mv && k === 'life' ? <span className="road" aria-hidden="true"/> : null}
       {typeof MsxActCrew === 'function' ? <MsxActCrew run={run} o={o}/> : null}
@@ -84,6 +86,7 @@ function MsxTrainAct({ run, o, onDone }) {
       <div className="me">{mv ? <div className="mv"><MsxMonArt run={run} className="mon" live noPeak/>{k === 'life' ? <i className="sweat">💦</i> : null}</div> : <MsxMonArt run={run} className="mon" live noPeak/>}</div>
       {front ? prop : null}
       {lv === 5 ? <span className="flash5" aria-hidden="true"/> : null}
+      {typeof MsxTrainFinish === 'function' ? <MsxTrainFinish run={run} o={o}/> : null}
       <div className="ban"><small>{MSX_STAT_NAME[k]}のトレーニング <b>Lv.{lv}</b></small>{msxTrainIcon(k, lv)} {msxTrainName(k, lv)}!</div>
     </div>
   );
