@@ -231,7 +231,7 @@ const seed = () => {
     await clickSel('[data-ambb-set-reset]');
     await page.waitForTimeout(200);
     const back = await page.evaluate(() => JSON.parse(localStorage.getItem('mh_assistant_masmon_battle_v1')).set);
-    check('段2: 「いつもの決まりに戻す」(演出の量は残す)', back.team === 'team' && back.rounds === 150 && back.dist === 'auto' && back.guts === 50 && back.fx === 'lite', JSON.stringify(back));
+    check('段2: 「いつもの決まりに戻す」(演出の量は残す)', back.team === 'team' && back.rounds === 'auto' && back.dist === 'auto' && back.guts === 50 && back.fx === 'lite', JSON.stringify(back));
     // 段3(バトル部 2026-11-13): 手動(自分の手番で選ぶ)・技の札は届く技だけ+全部の技の一覧・「結果へ」は残りをオートで
     // 技の札の一覧に何技も並ぶように、この検査のブラウザの中だけ(保存はしない)全部の技を覚えた形にして開き直す
     await page.evaluate(async () => {
