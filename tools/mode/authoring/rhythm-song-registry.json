@@ -219,7 +219,7 @@
   "dullahan": {
    "chartRevision": 21,
    "audio": "monster-hero/audio/bgm-dullahan.mp3",
-   "audioSha256": "434fcea866a3cc465ef9da34f5eced94f34db1737765a95df5d116885f73f3dc",
+   "audioSha256": "c66388ff6c1422fe1f59f49344e85dc31641d165cc63628850e118e8797ad202",
    "durationMs": 214600,
    "playEndMs": 128603,
    "analyzedTiming": {
@@ -233,7 +233,7 @@
   "dullahan_clockwork": {
    "chartRevision": 21,
    "audio": "monster-hero/audio/bgm-dullahan-clockwork.mp3",
-   "audioSha256": "e87bd8466b2ccce70fe28b6275b4cb03818f3c5b710f757514884b407bff5de6",
+   "audioSha256": "b51e196625c44c2df3ebe449f37e12a10e356b5422d5688bcc4218af3700eb3f",
    "durationMs": 292214,
    "playEndMs": 121675,
    "analyzedTiming": {
@@ -958,7 +958,7 @@
    "audio": "monster-hero/audio/bgm-against-my-own-shadow.mp3",
    "chartIntensity": "strong",
    "chartRevision": 28,
-   "audioSha256": "ddce743e94fa705c2a38f6fbacb841baf487057046887f3facf219e34f94285c",
+   "audioSha256": "b43d691d477368685fbd608f5630ee214f38b79db756cf782efd6fac81aeb107",
    "durationMs": 118044,
    "analyzedTiming": {
     "bpm": 143.137,
@@ -1005,7 +1005,7 @@
   "toward_the_stars_short": {
    "audio": "monster-hero/audio/bgm-toward-the-stars-short.mp3",
    "chartRevision": 38,
-   "audioSha256": "25c386c484398d06ef9e8846b7eb38b3362bf0d985f663f76c06803a46e7363a",
+   "audioSha256": "88907da29e0914cbd5463c6a5c9ac1de967cdd95dc28973ce137dac8837a4a52",
    "durationMs": 136800,
    "analyzedTiming": {
     "bpm": 143.268,
@@ -1163,7 +1163,7 @@
    "flowPlacement": true,
    "audio": "monster-hero/audio/bgm-rebellion.mp3",
    "chartRevision": 38,
-   "audioSha256": "cc5dab0bab8b4604a3d5608eb3c2fcd52771b1134ef0686bb790724c63512327",
+   "audioSha256": "c16005aa72de7d5665555d5b8b07a5d309c6f142ab347e65dfabab4efb4465f7",
    "durationMs": 254052,
    "analyzedTiming": {
     "bpm": 193.5,
@@ -1536,7 +1536,7 @@
    "flowPlacement": true,
    "audio": "monster-hero/audio/bgm-altar-world-tree.mp3",
    "chartRevision": 38,
-   "audioSha256": "07d3aa751b645b402caa49e3f3ab0919530985e23a05100aee014d09459d6471",
+   "audioSha256": "eeeeada93d954fb1c79f2a0fd58a87788d97aafd149978f2ef64b4f9018bbcce",
    "durationMs": 385164,
    "analyzedTiming": {
     "bpm": 163.97,
@@ -1643,7 +1643,7 @@
    "flowPlacement": true,
    "audio": "monster-hero/audio/bgm-saudade.mp3",
    "chartRevision": 39,
-   "audioSha256": "463d9176b94f7f399866d61287193d73c46d1f252841ae57cb93dcdb7350eb30",
+   "audioSha256": "5364f7be63a541ca8df51dd46a9b1940262b5766ee60bf5f1a76b9599ec8d7b1",
    "durationMs": 263236,
    "analyzedTiming": {
     "bpm": 120.091,
@@ -1659,7 +1659,7 @@
    "flowPlacement": true,
    "audio": "monster-hero/audio/bgm-saudade-short.mp3",
    "chartRevision": 39,
-   "audioSha256": "3491f3c33de42d924470786bd8a508814c1353edd8fcc01526bb0639ce677f83",
+   "audioSha256": "e7a88d84c06a6cf086c37ca513215a1c3bd0cf8bcab6a11eb311be8e3c7839a2",
    "durationMs": 95556,
    "analyzedTiming": {
     "bpm": 120.091,
@@ -1675,7 +1675,7 @@
    "flowPlacement": true,
    "audio": "monster-hero/audio/bgm-megalovania-sans.mp3",
    "chartRevision": 39,
-   "audioSha256": "6fafc978fa05141ae333dfcabcd850d9bab3762bd8c4838ae95c069c0b9d712a",
+   "audioSha256": "8317d65943b60182636dd3b2b1c938962a7f1c6a91fc5a5b371799c86fc4d4bf",
    "durationMs": 158616,
    "analyzedTiming": {
     "bpm": 240,
@@ -1689,7 +1689,7 @@
    "flowPlacement": true,
    "audio": "monster-hero/audio/bgm-megalovania-smash.mp3",
    "chartRevision": 39,
-   "audioSha256": "1bbb6aea8bb2fd82c6ad8855bc263f2e49230bab2319946f3a8852fbbb65f5a4",
+   "audioSha256": "038da79dd59ecc0d846bd4390abc6c43a0a664801c80f7f3a90dd3658517943d",
    "durationMs": 147331,
    "analyzedTiming": {
     "bpm": 160,
@@ -1759,7 +1759,7 @@
    "flowPlacement": true,
    "audio": "monster-hero/audio/bgm-midnight-studio.mp3",
    "chartRevision": 39,
-   "audioSha256": "9ae7e65a5cf463a2d92854db537fd0967e505d46697eb1dc69c93fefc0bfa3b0",
+   "audioSha256": "51c39ff9dbbbbbf880452f1cb95f3ee3d1b77f4ee168cd694600e09b5a570169",
    "durationMs": 217051,
    "analyzedTiming": {
     "bpm": 147.969,
@@ -1787,7 +1787,7 @@
    "flowPlacement": true,
    "audio": "monster-hero/audio/bgm-hopes-and-dreams.mp3",
    "chartRevision": 39,
-   "audioSha256": "227e0de43aa1cbaa15d4aa6b5f1c8c6b685c927d5d586e9e94fcf0cbc56f5e78",
+   "audioSha256": "e6202f9f83560d1d3c46c83a2856de2cf0cb3be57105a6294e5918b9e1035b7f",
    "durationMs": 183380,
    "analyzedTiming": {
     "bpm": 170.68,
@@ -1801,7 +1801,7 @@
    "flowPlacement": true,
    "audio": "monster-hero/audio/bgm-hopes-and-dreams-short.mp3",
    "chartRevision": 39,
-   "audioSha256": "46bd73c5d8603a3aae3bd4a657ab8da4110f7377f961250b25431e6cb1f3480a",
+   "audioSha256": "a88b77ee4973647c15956614c2fcfd22b6820186e0a812b9d04b6e1b6aa6b8c7",
    "durationMs": 139598,
    "analyzedTiming": {
     "bpm": 171.8,

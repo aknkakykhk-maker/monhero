@@ -80,10 +80,11 @@ const makeRun = async (kind) => {
     ['H0', null, []], ['H1', 'mid', []],
     ['RW1', 'mid', ['cont', 'wait:3300']], ['RW2', 'mid', ['cont', 'wait:7800']], ['RW3', 'mid', ['cont', 'wait:11500']], ['RW4', 'mid', ['cont', 'wait:15000']], ['RW5', 'mid', ['cont', 'wait:19600']], // 育成ホームの歩き回り(r1115-052)
     ['OV1', 'over', ['cont']], ['OV2', 'over', ['cont', 'train']], ['OV3', 'over', ['cont', 'stats']], ['OV4', 'over', ['cont', 'detail']], ['OV5', 'over', ['cont', 'train', 'go', 'next']], // 上限アップ(r1115-103)
+    ['DX4', null, ['seeall', 'dexopen', 'dexrow:0']], ['DX5', null, ['seeall', 'dexopen', 'dexrow:0', 'dexch:0']], ['DX6', null, ['seeall', 'dexopen', 'dexrow:0', 'dexch:0', 'dexback']], ['DX7', null, ['seeall', 'dexopen', 'dexrow:0', 'dexch:0', 'dexback', 'dexback']], // 図鑑の読む画面: 押す前・押した後・戻った後・一覧へ(r1115-144)
     ['DX1', null, ['seeall', 'dexopen', 'dextab:daily']], ['DX2', null, ['seeall', 'dexopen', 'dextab:daily', 'dexrow:0']], ['DX3', null, ['seeall', 'dexopen', 'dextab:team', 'dexrow:0']], // イベント図鑑(r1115-144・145)
     ['HB1', null, ['basemon']], ['HB4', null, ['basemon', 'scrollend']], ['HB2', null, ['basemon', 'bmpick:Snegurochka']], ['HB3', null, ['basemon', 'bmpick:Snegurochka', 'tab:apt']], // ホームのベースモン(r1115-043)
     ['S0', null, ['new']], // ストーリー選択(2026-11-14)。S1〜S6 はその「次へ」のあと
-    ['TP1', null, ['new', 'next', 'pickmon:Snegurochka', 'detail']], ['TP2', null, ['new', 'next', 'pickmon:Snegurochka', 'detail', 'alt:2-1']], ['TP3', null, ['new', 'next', 'pickmon:Snegurochka', 'detail', 'alt:2-1', 'altopt:sk-0480']], // 技の升の選び(被った升の ⇄ → 窓 → 選ぶ)
+    ['TP1', null, ['new', 'next', 'pickmon:Snegurochka', 'detail']], ['TP2', null, ['new', 'next', 'pickmon:Snegurochka', 'detail', 'cell:2-1', 'altopen']], ['TP3', null, ['new', 'next', 'pickmon:Snegurochka', 'detail', 'cell:2-1', 'altopen', 'altopt:sk-0480']], // 技の升の選び(被った升の ⇄ → 窓 → 選ぶ)
     ['S1', null, ['new', 'next']], ['S1D', null, ['new', 'next', 'detail']], ['S1A', null, ['new', 'next', 'detail', 'tab:apt']], ['S1F', null, ['new', 'next', 'detail', 'tab:feat']], ['S1Z', null, ['seedfuse', 'new', 'next', 'tabfuse', 'pickfirst']], ['S1ZD', null, ['seedfuse', 'new', 'next', 'tabfuse', 'pickfirst', 'detail']],
     ['S2', null, ['new', 'next', 'next']], ['S2P', null, ['new', 'next', 'next', 'slot:1']], ['S2B', null, ['new', 'next', 'next', 'slot:1', 'base:Golem']], ['S2G', null, ['new', 'next', 'next', 'gather']], ['S2E', null, ['new', 'next', 'next', 'effects']], ['S2F', null, ['new', 'next', 'next', 'slot:5']], // 編成の選ぶ画面・効果一覧・フレンドの一覧(r1115-096)
     ['S3', null, ['new', 'next', 'next', 'next']], ['S4', null, ['new', 'next', 'next', 'next', 'next']], ['S4L', null, ['new', 'next', 'next', 'next', 'next', 'carry:oil']], ['S4E', null, ['new', 'next', 'next', 'next', 'next', 'scrollend']],
@@ -145,7 +146,7 @@ const makeRun = async (kind) => {
             if (st.startsWith('wait:')) { await new Promise((r) => setTimeout(r, Number(st.slice(5)))); return true; }
             if (st === 'seeall') { // 見た出来事を全部「見た」にして開き直す(図鑑の撮影用)
               const E = msxSuc.SUC.events; const ev = {}; const ch = {};
-              Object.keys(E.BY_ID).forEach((id) => { ev[id] = 1; ['a', 'b', 'c'].forEach((c) => { ch[`${id}.${c}`] = 1; }); });
+              [...Object.keys(E.BY_ID), ...Object.values(msxDexList()).flat().map((x) => x.id)].forEach((id) => { ev[id] = 1; ['a', 'b', 'c'].forEach((c) => { ch[`${id}.${c}`] = 1; }); });
               localStorage.setItem(MSX_SEEN_KEY, JSON.stringify({ v: 1, ev, ch }));
               window.__msxRoot.unmount(); const el = document.getElementById('msx-shot'); window.__msxRoot = ReactDOM.createRoot(el);
               window.__msxRoot.render(React.createElement(MonheroSuccessScreen, { onClose() {}, callNameOf: () => 'けんささん', bondLvOf: () => 4 }));
@@ -153,6 +154,8 @@ const makeRun = async (kind) => {
             }
             if (st === 'dexopen') { const d = document.querySelector('[data-msx-dex-home]'); if (d) d.click(); return !!d; }
             if (st.startsWith('dextab:')) { const d = document.querySelector(`[data-msx-dex-tab="${st.slice(7)}"]`); if (d) d.click(); return !!d; }
+            if (st.startsWith('dexch:')) { const d = document.querySelectorAll('[data-msx-dex-ch]')[Number(st.slice(6))]; if (d) d.click(); return !!d; }
+            if (st === 'dexback') { const d = document.querySelector('[data-msx-dex-back]'); if (d) d.click(); return !!d; }
             if (st.startsWith('dexrow:')) { const d = document.querySelectorAll('[data-msx-dex-row]')[Number(st.slice(7))]; if (d) d.click(); return !!d; }
             if (st === 'basemon') { const d = document.querySelector('[data-msx-home-basemon]'); if (d) d.click(); return !!d; }
             if (st.startsWith('bmpick:')) { const d = document.querySelector(`[data-msx-basemon="${st.slice(7)}"]`); if (d) d.click(); return !!d; }
@@ -164,13 +167,16 @@ const makeRun = async (kind) => {
             if (st === 'effects') { const d = document.querySelector('[data-msx-team-effects-open]'); if (d) d.click(); return !!d; }
             if (st === 'gather') { const d = document.querySelector('[data-msx-gather-open]'); if (d) d.click(); return !!d; }
             if (st.startsWith('pickmon:')) { const d = [...document.querySelectorAll('.v-grid6 button')].find((b) => { const i = b.querySelector('img'); return i && i.alt === (typeof msxMonName === 'function' ? msxMonName(st.slice(8)) : st.slice(8)); }); if (d) d.click(); return !!d; } // 育てるモンスターを種族で選ぶ
-            if (st.startsWith('alt:')) { const d = document.querySelector(`[data-msx-alt="${st.slice(4)}"]`); if (d) d.click(); return !!d; } // 被った升の ⇄ を押す(2026-11-14 技を選ぶ窓)
+            // 被った升を押す → 右の欄の「⇄ 覚える技を選ぶ」で窓を開く(r1115-152①。升の ⇄ は押せない印になった)
+            if (st.startsWith('cell:')) { const c = document.querySelector(`[data-msx-cell="${st.slice(5)}"]`); if (c) c.click(); return !!c; }
+            if (st === 'altopen') { const d = document.querySelector('[data-msx-alt-open]'); if (d) d.click(); return !!d; }
             if (st.startsWith('altopt:')) { const d = document.querySelector(`[data-msx-techpick-opt="${st.slice(7)}"]`); if (d) d.click(); return !!d; }
             if (st.startsWith('tab:')) { const d = document.querySelector(`[data-msx-detail-tab="${st.slice(4)}"]`); if (d) d.click(); return !!d; }
             if (st.startsWith('carry:')) { const d = document.querySelector(`[data-msx-carry-item="${st.slice(6)}"]`); if (d) d.click(); return !!d; } // 持ちこみの升目を押す(持っていない物も・2026-11-14)
             if (st === 'scrollend') { document.querySelectorAll('.msx *').forEach((e) => { const o = getComputedStyle(e).overflowY; if ((o === 'auto' || o === 'scroll') && e.scrollHeight > e.clientHeight) e.scrollTop = e.scrollHeight; }); return true; } // 下まで送る(最後の行が下の帯に隠れないかを見る)
             if (st === 'cont') return click(/続きから/);
             if (st === 'bag') return click(/持ち物/);
+            if (/^w\d+$/.test(st)) return true; // 待つだけ(下の待ち時間で止める。例: w350)
             if (st === 'stats') return click(/^📊/);
             if (st.startsWith('ptsup:')) { const [k, n] = st.slice(6).split('x'); const b = document.querySelector(`[data-msx-pts-row="${k}"] button[aria-label$="を上げる"]`); for (let i = 0; i < Number(n || 1); i++) if (b && !b.disabled) b.click(); return !!b; } // 能力ポイントの仮振り(r1115-044)
             if (st === 'ptsauto') return click(/おまかせで振る/);
@@ -289,7 +295,7 @@ const makeRun = async (kind) => {
           if (!done) check(`${name}${tag ? `(${tag})` : ''}: 「${st}」のボタンが押せる`, false, JSON.stringify(await page.evaluate(() => window.__scrubInfo || null)));
           await page.waitForTimeout(350);
         }
-        await page.waitForTimeout(steps.some((x) => String(x).startsWith("how:")) ? 1800 : 900); // 選んだあとのゲージの動きが終わるまで待つ
+        await page.waitForTimeout(steps.some((x) => String(x).startsWith("how:")) ? 1800 : (Number(process.env.SHOT_WAIT) || 900)); // 選んだあとのゲージの動きが終わるまで待つ
         const m = await page.evaluate((fscale) => {
           const root = document.querySelector('.msx'); if (!root) return { ok: false };
           if (fscale) { // 大きい文字設定の真似: 文字の大きさを倍にする(一度だけ)
