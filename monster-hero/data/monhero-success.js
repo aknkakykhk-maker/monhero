@@ -771,7 +771,7 @@
       const sk = stayT('shoki'); if (sk) KEYS.forEach(k => { stats[k] = clamp(stats[k] + sk, 0, cap[k]); }); // 🌅初期ステータスアップ
       return {
         v: VERSION, id, species, aid, type: typeIdx, turn: 1, stats, cap, hpMax, hp: hpMax, stress: 0, carry, bag, good, issaForce, issaSure: false, itemTurn: 0,
-        ama: LOYAL.start[0], fear: LOYAL.start[1], pol: clamp(Math.round(num(src.pol)), -3, 3), pp: 0, pop: 0, pts: 0, ptsLost: 0, lv: 1, xp: 0,
+        ama: LOYAL.start[0], fear: LOYAL.start[1], pol: polOfBond(LOYAL.start[0], LOYAL.start[1]), pp: 0, pop: 0, pts: 0, ptsLost: 0, lv: 1, xp: 0,
         team, bond: team.map(m => m.bond0), story: team.map(() => 0), aidBond: clamp(aidLv * BOND.aidPerLv + (hn ? aOf('hitonatsu', 'start', hn) : 0), 0, BOND.aidStartMax), // 途中の育成は restore が保存の aidBond で上書きするので変わらない
         ...(src.techPick && typeof src.techPick === 'object' ? { techPick: techPickNorm(src.techPick, species) } : {}),
         techs: startTechsRun(species), mastery: Object.fromEntries(startTechsRun(species).map(t => [t, 0])), masterySpent: {}, tickets: SHUGYO.ticket0 + stayT('ticket0'), shugyoUsed: {}, pity: 0, techMiss: {}, superLeft: SHUGYO.superMax + stayT('chokyo'), fame: 0, fameTotal: 0, fameV: FAME_V, beatEarned: 0, fourDone: false, elixir: null, fruit: null, popTurn: 0, mealReady: false, trainXp: {}, aidLv, astory: { ep: 0, path: null, done: false }, rivalMet: null, ending: null, aptUp: [0, 0, 0, 0], aptLog: { quest: 0, cup: 0, event: 0 }, aptBase: aptBaseNorm(src.aptBase), awake: 0, awakeTurn: 0, aptAwake: [0, 0, 0, 0], omen: null,
@@ -1024,20 +1024,35 @@
     };
 
     // ---- 伸び(ASSIST §4 の1本の式) ----
+    // ---- 成長のピークの区間(r1115-053 社長): どの型も最長4ターン(持続だけ6ターン)。普通はミドル期の中(20〜23) ----
+    //   型の順は C.GROW_TYPES と同じ: 超早熟・早熟・普通・晩成・超晩成・持続。数は「ターン」(両端を含む)
+    //   助手ライフのマスモンの peakOf(56-assistant-life-masmon-calc.jsx)は変えない。モンサクだけ、この表を使う
+    const PEAK_WIN = Object.freeze([[8, 11], [14, 17], [20, 23], [31, 34], [38, 41], [20, 25]]);
+    const peakOfSuc = (type) => { const i = clamp(Math.round(num(type, 2)), 0, PEAK_WIN.length - 1); const w = PEAK_WIN[i]; return { from: (w[0] - 1) / TOTAL_TURNS, to: w[1] / TOTAL_TURNS, mult: C.peakOf(type).mult }; };
+    // 伸びの山もピークに合わせて狭める(r1115-053): その型のいちばん高い段は、ピークのターンだけ。ピークの外は、その型の次に高い段まで下げる
+    const PEAK_LO_STEADY = 1.12; // 持続はピークが6ターンだけ。山を減らしすぎないよう、外の段を 1.1 でなく 1.12 にする(社長 OK 2026-11-15 r1115-053)
+    const PEAK_SHOULDER = (() => { const o = []; for (let ty = 0; ty < PEAK_WIN.length; ty++) { const c = C.typeOf(ty).c; const top = Math.max(...c); const lo = Math.max(...c.filter((v) => v < top)); o.push({ top, lo: ty === 5 ? PEAK_LO_STEADY : lo }); } return o; })();
     const ageOf = (s) => {
-      const a = C.ageMult(s.type, (s.turn - 1) / TOTAL_TURNS);
+      let a = C.ageMult(s.type, (s.turn - 1) / TOTAL_TURNS);
+      { const ty = clamp(Math.round(num(s.type, 2)), 0, PEAK_WIN.length - 1); const sh = PEAK_SHOULDER[ty]; const w = PEAK_WIN[ty]; if (a === sh.top && !(s.turn >= w[0] && s.turn <= w[1])) a = sh.lo; }
       const pk = s && Array.isArray(s.team) ? stayNum(s, 'peak') : 0; if (!pk) return a; // 📈ピークターンアップ: ピークのあとも pk ターン、ピークの終わりの伸び
       const T = peakTurnsOf(s); if (!T.length) return a; const to = T[T.length - 1];
       return s.turn > to && s.turn <= to + pk ? Math.max(a, C.ageMult(s.type, (to - 1) / TOTAL_TURNS)) : a;
     };
     const unitOf = (s, k) => BASE.light * aptMult(s.species, k) * ageOf(s); // 「軽いトレーニング1回ぶん」
     const addStat = (s, k, v) => { s.stats[k] = clamp(Math.round(s.stats[k] + v), 0, statCapOf(s, k)); };
+    // ---- 育成方針は甘え度と恐れ度の差で決まる(r1115-059 社長): 差 = 甘え度 − 恐れ度。差の大きさ 0〜4 = 普通 / 5〜10 = 甘い・厳しい / 11〜15 = 溺愛・スパルタ / 16〜 = 超溺愛・超スパルタ ----
+    //   甘え度が多いほど甘い側(pol がマイナス)・恐れ度が多いほどスパルタ側(pol がプラス)。ほめる・しかるの点(s.pp)では動かさない(保存の pp は読めるまま残す)
+    const POL_BANDS = Object.freeze([5, 11, 16]); // 差の大きさがこれ以上で 1段・2段・3段
+    const polOfBond = (ama, fear) => { const d = num(ama) - num(fear); const m = Math.abs(d); const k = m >= POL_BANDS[2] ? 3 : m >= POL_BANDS[1] ? 2 : m >= POL_BANDS[0] ? 1 : 0; return d > 0 ? -k : k; };
+    const syncPol = (s) => { s.pol = polOfBond(s.ama, s.fear); return s; };
     const addLoyal = (s, ama, fear) => {
       if (s.yosu.utsu) return; // うつ病のあいだ忠誠度(甘え度・恐れ度)は動かない(台帳 2026-11-12)
       const i = clamp(s.pol, -3, 3) + 3;
       // 甘え度・恐れ度は下げない(社長 2026-11-14): 負の値は0として数える
       s.ama = clamp(Math.round(num(s.ama) + (ama > 0 ? ama * POL_AMA[i] : 0)), 0, LOYAL.half);
       s.fear = clamp(Math.round(num(s.fear) + (fear > 0 ? fear * POL_FEAR[i] : 0)), 0, LOYAL.half);
+      syncPol(s);
     };
     const addXp = (s, x) => { s.xp += x; while (s.lv < LV_MAX && s.xp >= XP.need(s.lv)) { s.xp -= XP.need(s.lv); s.lv += 1; } };
     const recover = (s, frac) => { s.hp = clamp(Math.round(s.hp + s.hpMax * frac), 0, s.hpMax); };
@@ -1256,8 +1271,8 @@
       const b0 = { ama: s.ama, fear: s.fear, loy: loyalOf(s), pol: s.pol };
       s.reacted = true;
       const shk = 1 + stayNum(s, 'shitsuke') / 100; const up = (x) => (x > 0 ? x * shk : x); // 📏しつけ上手: 上がる分だけ増える
-      if (how === 'praise') { const d = good ? LOYAL.praiseGood : LOYAL.praiseBad; addLoyal(s, up(d[0] + (s.aid === 'mua' ? 1 : 0)), up(d[1])); const m = C.policyMove(s.pol, s.pp, -1); s.pol = m.pol; s.pp = m.pp; s.idle = 0; }
-      else if (how === 'scold') { const d = good ? LOYAL.scoldGood : LOYAL.scoldBad; addLoyal(s, up(d[0]), Math.max(0, up(d[1]) + evMod(s, 'scold'))); const m = C.policyMove(s.pol, s.pp, 1); s.pol = m.pol; s.pp = m.pp; s.idle = 0; }
+      if (how === 'praise') { const d = good ? LOYAL.praiseGood : LOYAL.praiseBad; addLoyal(s, up(d[0] + (s.aid === 'mua' ? 1 : 0)), up(d[1])); s.idle = 0; }
+      else if (how === 'scold') { const d = good ? LOYAL.scoldGood : LOYAL.scoldBad; addLoyal(s, up(d[0]), Math.max(0, up(d[1]) + evMod(s, 'scold'))); s.idle = 0; }
       else { s.idle += 1; if (s.idle >= LOYAL.idleTurns) { addLoyal(s, LOYAL.idle[0], LOYAL.idle[1]); s.idle = 0; } }
       // 変わった物(画面の結果の札): 甘え度・恐れ度・忠誠度・方針
       const d = { ama: num(s.ama) - num(b0.ama), fear: num(s.fear) - num(b0.fear), loy: loyalOf(s) - b0.loy, pol: num(s.pol) - num(b0.pol) };
@@ -1281,7 +1296,7 @@
       return { state: s, out: { ok: true, choice: key, win, p: r2(p) } };
     };
     // 博士の忠誠度は甘え度・恐れ度に半分ずつ(方針の倍率はかけない・うつ病なら動かない)
-    const addLoyalRaw = (s, ama, fear) => { if (s.yosu.utsu) return; s.ama = clamp(s.ama + Math.max(0, num(ama)), 0, LOYAL.half); s.fear = clamp(s.fear + Math.max(0, num(fear)), 0, LOYAL.half); }; // 下げない(社長 2026-11-14)
+    const addLoyalRaw = (s, ama, fear) => { if (s.yosu.utsu) return; s.ama = clamp(s.ama + Math.max(0, num(ama)), 0, LOYAL.half); s.fear = clamp(s.fear + Math.max(0, num(fear)), 0, LOYAL.half); syncPol(s); }; // 下げない(社長 2026-11-14)
 
     // 大会のあとに並ぶごはん(2026-11-14 社長「ご褒美はランダムで3個選ばれる」)。9種から3つ(同じ物は出さない)。
     //   くじは育成ごとの決まった乱数(育成の id + 勝った回数)で引くので、開き直し・中断のあとでも引き直しにならない。
@@ -1344,6 +1359,7 @@
       out.hpMax = Math.round(n(raw.hpMax, HP_MAX0, 1, HP_MAX_CAP)); out.hp = Math.round(n(raw.hp, out.hpMax, 0, out.hpMax));
       for (const [k, lo, hi] of [['stress', 0, 100], ['ama', 0, LOYAL.half], ['fear', 0, LOYAL.half], ['pol', -3, 3], ['pp', -9, 9], ['pop', 0, 100], ['pts', 0, PTS.hold], ['ptsLost', 0, 1e6], ['lv', 1, LV_MAX], ['xp', 0, 1e4],
         ['aidBond', 0, BOND.max], ['tickets', 0, 99], ['pity', 0, 100], ['fame', 0, 1e7], ['fameTotal', 0, 1e7], ['beatEarned', 0, 1e7], ['issaMet', 0, ISSA.maxMeet], ['issaWon', 0, ISSA.maxMeet], ['debutLoss', 0, DEBUT_LOSS_MAX], ['crowns', 0, 9], ['rematchUsed', 0, REMATCH.max], ['idle', 0, 99], ['itemTurn', 0, TOTAL_TURNS + 1]]) out[k] = Math.round(n(raw[k], out[k], lo, hi));
+      syncPol(out); // 育成方針は甘え度と恐れ度の差で決まる(r1115-059)。古い保存の pol・pp は読めるが、方針はここで決め直す
       // 賞金の桁を上げる前(印 fameV が無い)の途中の育成は、一度だけ ×FAME_SCALE。out.fameV は newRun の FAME_V なので二度は掛からない
       if (raw.fameV !== FAME_V) { out.fame = Math.round(clamp(out.fame * FAME_SCALE, 0, 1e7)); out.fameTotal = Math.round(clamp(out.fameTotal * FAME_SCALE, 0, 1e7)); }
       if (Array.isArray(raw.bond)) out.bond = out.bond.map((d, i) => Math.round(n(raw.bond[i], d, 0, BOND.max)));
@@ -1699,7 +1715,7 @@
     //   ピークのターン = 区間に入るターン(デビュー期・最後の期は除く。出来事 ev.self.peakin / peakout と同じ数え方)
     //   peakInfo(s) → { state: 'soon'(あと1〜3ターンで始まる)|'in'(ピーク中)|null, left(ピーク中の残りターン・このターンを含む), in(始まるまでのターン), from, to }
     const peakTurnsOf = (s) => {
-      const pk = C.peakOf(s.type); const out = [];
+      const pk = peakOfSuc(s.type); const out = [];
       for (let t = 2; t <= TOTAL_TURNS; t++) { const k = periodOf(t).key; if (k === 'debut' || k === 'final') continue; const f = (t - 1) / TOTAL_TURNS; if (f >= pk.from && f < pk.to) out.push(t); }
       return out;
     };
@@ -1714,7 +1730,7 @@
     // その月の大会の並び(札)。ライバルは月のはじめ(並びを見せる時)に決まる
     const monthOf = (turn) => { const p = periodOf(turn); return p.key === 'debut' ? 7 + p.at : p.at; }; // 1ターン = 1か月(デビューは8〜12月)
     // きゅうこのピークの大会: 成長のピーク(いちばん伸びる区間)に入った最初のターン(1回の育成に1度)
-    const peakTurn = (s) => { const pk = C.peakOf(s.type); const f = (s.turn - 1) / TOTAL_TURNS; const f0 = (s.turn - 2) / TOTAL_TURNS; return s.turn > 1 && f >= pk.from && f < pk.to && !(f0 >= pk.from) && periodOf(s.turn).key !== 'debut' && periodOf(s.turn).key !== 'final'; };
+    const peakTurn = (s) => { const pk = peakOfSuc(s.type); const f = (s.turn - 1) / TOTAL_TURNS; const f0 = (s.turn - 2) / TOTAL_TURNS; return s.turn > 1 && f >= pk.from && f < pk.to && !(f0 >= pk.from) && periodOf(s.turn).key !== 'debut' && periodOf(s.turn).key !== 'final'; };
     const cupsOf = (s) => {
       const p = periodOf(s.turn);
       if (!CUP_STAR[p.key] && !(s.aid === 'kyuko' && peakTurn(s))) return [];
@@ -2085,13 +2101,13 @@
     const EVX = (deps && deps.events) || (root && root.MONHERO_SUCCESS_EVENTS) || null;
     EV = EVX && typeof EVX.create === 'function' ? EVX.create({
       KEYS, TOTAL_TURNS, FORCED, BOND, rngOf, periodOf, monthOf, clamp, num, r2, unitOf, addStat: (s, k, v) => addStat(s, k, num(v) > 0 ? num(v) * (1 + stayNum(s, 'event') / 100) : v), addLoyalRaw, recover, addStress, addBond, loyalOf, aptMult, gainPts, popGain, addAptUp, aptUpRoom, aptGradesOf, DIST_UP_GRADES: DIST_UP.grades,
-      typeOf: TYPE_OF, peakOf: (type) => C.peakOf(type), arc: ARC, lineOf,
+      typeOf: TYPE_OF, peakOf: (type) => peakOfSuc(type), arc: ARC, lineOf,
     }) : null;
 
     return Object.freeze({
       events: EV,
       VERSION, STORY, KEYS, STAT_NAMES, STAT_MAX, PERIODS, TOTAL_TURNS, FORCED, SUMMIT, BASE, RESULTS, RATE, REST, PLAY, CLINIC, COND, LOYAL, GATHER, BOND, STORY, LOTTERY,
-      techRate, techBoostConds, CAP_UP, STAT_ABS, statCapOf, capOfTeam, capTopOf, capRateOf, powerOverOf, techAptAdd, techCellOf, techCells, techPickNorm, techPickLocked, setTechPick, GROW_BY_SPECIES, speciesType, gatherChanceOf, normStats, ASSISTS, ISSA, PTS, XP, SHUGYO, TECH_POWER, MASTERY, POP_TURN_MULT, techRowsOf, techPowerOfRows, powerOf, techBoostOf, techUseOf, ITEMS, ITEM_FX: Object.freeze({ fruit: FRUIT_MULT, pop: POP_TURN_MULT, elixir: ELIXIR_ADD }), GOOD, CARRY_MAX, useItem, FAME_V, FAME_SCALE, TICKET_BASE, TRAIN_LV, trainLvOf, REMATCH, canRematch, rematch, canSkip, battleKey, PRIZE, BEAT_PRIZE, beatOfPrize, BEAT_END, beatOfEnd, MEALS, meal, mealSkip, MEAL_SKIP_FEAR, mealOpts, MEAL_PICK, MEAL_WATCH_MULT, ticketsOfPrize, TECH_MAX, techsOf, canLearn, techRate, learnable, techRank, shugyoQ, superLeft, techMissOf, techCanon, canonTechList, shugyoLeft, shugyoHpOf, shugyoHpShort, shugyoPartsOf, shugyoPartsFit, teachFrom, BENCH: BENCH_USE, STAR_MULT, TAG_POWER, BOND_START, RANK_ADD, TRAIN_COMBO, AIDS, speciesList, shugyoGainOf, EX_CUPS, EX_BY_SYS, cupItemsOf, CUP_REWARD, FAME_RANK, FAME_RANK_MAX, rankStepOf, rankNameOf, rankNeedG, WIN_TICKET, FOUR_DONE, fourWinsOf, forecastOf, ELIXIR_ADD, FRUIT_MULT,
+      polOfBond, POL_BANDS, techRate, techBoostConds, CAP_UP, STAT_ABS, statCapOf, capOfTeam, capTopOf, capRateOf, powerOverOf, techAptAdd, techCellOf, techCells, techPickNorm, techPickLocked, setTechPick, GROW_BY_SPECIES, speciesType, gatherChanceOf, normStats, ASSISTS, ISSA, PTS, XP, SHUGYO, TECH_POWER, MASTERY, POP_TURN_MULT, techRowsOf, techPowerOfRows, powerOf, techBoostOf, techUseOf, ITEMS, ITEM_FX: Object.freeze({ fruit: FRUIT_MULT, pop: POP_TURN_MULT, elixir: ELIXIR_ADD }), GOOD, CARRY_MAX, useItem, FAME_V, FAME_SCALE, TICKET_BASE, TRAIN_LV, trainLvOf, REMATCH, canRematch, rematch, canSkip, battleKey, PRIZE, BEAT_PRIZE, beatOfPrize, BEAT_END, beatOfEnd, MEALS, meal, mealSkip, MEAL_SKIP_FEAR, mealOpts, MEAL_PICK, MEAL_WATCH_MULT, ticketsOfPrize, TECH_MAX, techsOf, canLearn, techRate, learnable, techRank, shugyoQ, superLeft, techMissOf, techCanon, canonTechList, shugyoLeft, shugyoHpOf, shugyoHpShort, shugyoPartsOf, shugyoPartsFit, teachFrom, BENCH: BENCH_USE, STAR_MULT, TAG_POWER, BOND_START, RANK_ADD, TRAIN_COMBO, AIDS, speciesList, shugyoGainOf, EX_CUPS, EX_BY_SYS, cupItemsOf, CUP_REWARD, FAME_RANK, FAME_RANK_MAX, rankStepOf, rankNameOf, rankNeedG, WIN_TICKET, FOUR_DONE, fourWinsOf, forecastOf, ELIXIR_ADD, FRUIT_MULT,
       rngOf, periodOf, aptMult, initStats, memberOf, memberEffect, newRun, gatherOf, cardMult, peek, failRateOf, sabRateOf, greatRateOf,
       act, react, reactOf, issa, issaComes, issaRate, endTurn, opponents: opponentsOf, settle, cupsOf, canEnter, bracketOf, gradeOf, GRADE_STEP, stayV, SC_CUPS, SC_NAME, ASST_STORY, storyEnd, markSpecial, battleMods, battleBuffs, peakTurn, ASTORY, storyDue, storyStep, preview, restore, ARC, PARTY, summitPick, endingOf, endingSeen, CUP_SYS, YEAR, RIVAL, CUP_PRIZE, spendPts, autoPts, ptsCost, evaluate, assistPointsOf, loyalOf, loyalMult, top3Of, sumOf,
       FUSE, fuseOk, fuseKinds, fusePlan, fuseId,

@@ -35,6 +35,27 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    date: "2026-11-15 13:18", type:'update', group:'success', releaseFlag:'monheroSuccess', title:'モンヒロサクセスの能力ポイントを、まとめて振れるようになりました', status:'new',
+    items:[
+      '能力ポイントの振り分けで、1・5・10・100・MAX の刻みを選べるようになりました。＋/−を押し続けると、続けて増減できます(育成中・育成完了の前)。',
+      '上の段の体力・ストレスのゲージの長さが、どの画面でも同じになりました。増減の数字はゲージの上に重ねて出ます。',
+    ],
+  },
+  {
+    // 新曲「Sparkling Pink Overture」(2026-11-15 社長 r1115-100。難易度は社長の答え「難しめ」・Lv.・ノーツ数は作ったあとの値)
+    date: "2026-11-15 12:17", type:'update', group:'rhythm', title:'新曲「Sparkling Pink Overture」を追加しました。ききが、はじめて作った曲です', status:'new',
+    image:'images/song-art/sparkling-pink-overture.jpg?v=cdc147b5571d',
+    items:[
+      'モンヒロビートに「Sparkling Pink Overture」（2分4秒）を追加しました。助手のききが、はじめて作った曲です。ピアノが主役の、BPM 212 のはやい曲です。',
+      'レベルは EASY Lv.13 ／ NORMAL Lv.17 ／ HARD Lv.24 ／ EXPERT Lv.31 ／ MASTER Lv.39 ／ HELL Lv.52 です。',
+      'ノーツ数は 281 ／ 330 ／ 459 ／ 577 ／ 621 ／ 593 です。',
+      '歯ごたえのある、難しめの譜面です。',
+      'この曲は1曲ビートP500で買って遊びます。曲えらびの「🔒 500P」か、ビートP交換所の「曲」から買えます。',
+      '更新のあとに初めてゲームを開くと、ききがはじめて曲を作ったお話が流れます。あとから、プロフィールの「イベント回想」でも読めます。',
+    ],
+    assistantNotice:{ id:'update_notice_sparkling_pink_overture_v1', type:'content' },
+  },
+  {
     // 2026-11-15 r1115-129(社長: 季節・励のように限定的な物は、ふつうのトレ効果アップよりコストを安く)
     date: "2026-11-15 11:44", type:'update', group:'success', releaseFlag:'monheroSuccess', title:'モンヒロサクセスのアシスト効果のトレ効果アップ・励と春夏秋冬が、少ないポイントで取れるようになりました', status:'new',
     items:[

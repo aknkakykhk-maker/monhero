@@ -24,11 +24,13 @@ function MsxBaseMons({ data, onClose }) {
       <MsxHd back="戻る" onBack={onClose} title="🌱 ベースモン"/>
       <div className="v-body">
         <div className="v-h">ベースモン<small>押すと、能力・素質・間合い適性・技の升目が見られます</small></div>
+        <div className="msx-scroll" data-msx-basemon-scroll>
         <div className="msx-bm-grid" data-msx-basemon-list>
           {unlocked.map((id) => (
             <button type="button" key={id} className="msx-bm" onClick={() => setSp(id)} data-msx-basemon={id}>
               <img src={msxMonThumb(id)} alt=""/><b>{msxMonName(id)}</b>{picked[id] ? <small>育成 {picked[id]}回</small> : <small>まだ育てていない</small>}
             </button>))}
+        </div>
         </div>
       </div>
       {detail}
