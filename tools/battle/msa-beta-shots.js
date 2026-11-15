@@ -18,6 +18,8 @@ const PORT = 8977;
 // MANUAL=1 … 手動で対戦する場面を撮る(段3)
 const TECHS = process.env.TECHS_JSON ? JSON.parse(fs.readFileSync(process.env.TECHS_JSON, 'utf8')).species : null;
 const MANUAL = process.env.MANUAL === '1';
+// BLOW=1(MANUAL と一緒に)… 零の間合いから始め、吹き飛ばしを押して相手が遠へ飛ぶまでを撮る(r1115-110)
+const BLOW = MANUAL && process.env.BLOW === '1';
 // LONGEST=1 … TECHS_JSON の中で名前の長い技24個を、どの種類にも全部の間合いで持たせる(技名が切れないかの確かめ)。WIDTH=<幅> … 画面の幅
 const LONGEST = process.env.LONGEST === '1';
 const WIDTH = Number(process.env.WIDTH) || 390;
@@ -91,7 +93,7 @@ const seed = () => {
     await still('2-compare');
     if (await clickSel('[data-ambb-cmp-pair="1"]')) { await page.waitForTimeout(OUT ? 1200 : 700); await still('2b-compare-pair2'); await clickSel('[data-ambb-cmp-pair="0"]'); }
     await scrollTo('[data-ambb-settings]'); await page.waitForTimeout(OUT ? 900 : 300);
-    for (const s of MANUAL ? ['[data-ambb-set="ctl:manual"]', '[data-ambb-size="2"]'] : ['[data-ambb-set="team:ko"]', '[data-ambb-set="dist:0"]', '[data-ambb-set="guts:70"]', '[data-ambb-set="rounds:50"]']) { await clickSel(s); await page.waitForTimeout(OUT ? 600 : 100); }
+    for (const s of MANUAL ? ['[data-ambb-set="ctl:manual"]', '[data-ambb-size="2"]', ...(BLOW ? ['[data-ambb-set="dist:0"]'] : [])] : ['[data-ambb-set="team:ko"]', '[data-ambb-set="dist:0"]', '[data-ambb-set="guts:70"]', '[data-ambb-set="rounds:50"]']) { await clickSel(s); await page.waitForTimeout(OUT ? 600 : 100); }
     await page.evaluate(() => { const d = document.querySelector('[data-ambb-tune]'); if (d) d.open = true; });
     await page.waitForTimeout(OUT ? 900 : 300);
     await still('3-settings');
@@ -116,6 +118,11 @@ const seed = () => {
       const waitBar = () => page.waitForFunction(() => !!document.querySelector('[data-ambb-manual] [data-msxm="act"]'), { timeout: 15000 });
       const closeSheet = () => page.evaluate(() => { document.querySelectorAll('[data-msa-sheet-close]').forEach((b) => b.click()); });
       await waitBar(); await page.waitForTimeout(400); await still('8-manual-cards');
+      if (BLOW && await clickSel('[data-msxm-blow]')) {
+        await page.waitForTimeout(1500); await still('13-blow');
+        await waitBar().catch(() => {}); await page.waitForTimeout(600); await still('14-blown');
+        console.log('吹き飛ばしのあとの間合い:', await page.evaluate(() => (document.querySelector('[data-msxm="act"] .msxm-top b') || {}).textContent || ''));
+      }
       const fit = await page.evaluate(() => { const st = document.querySelector('[data-msa-stage]').getBoundingClientRect(); const r = document.querySelector('[data-ambb-root]'); return { stageH: Math.round(st.height), scroll: r.scrollHeight - r.clientHeight, cards: document.querySelectorAll('[data-msa-dc-card]').length }; });
       console.log('手動の帯:', JSON.stringify(fit));
       await clickSel('[data-msa-dc="manual"] [data-msa-dc-card].now'); await page.waitForTimeout(OUT ? 1400 : 300); await still('9-manual-list');
