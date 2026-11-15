@@ -221,11 +221,16 @@
 
   const fmt = (x) => String(Math.round(x * 100) / 100);
   // 説明の1行(目盛りつき)。例: describe('sokoji', 12) → 'いっしょにトレーニングすると、伸びが12%上がる'
+  // 合計の上限(2026-11-15 社長 r1115-104「画面のアシストの説明に合計の上限を書く」)。数字は計算の芯 monhero-success.js の ASSIST_CAP と同じ
+  const TR5 = '(トレ効果アップ・励・春夏秋冬の5つを合わせて、編成の合計 100%まで)';
+  const CAP_NOTE = Object.freeze({ sokoji: TR5, hagemi: TR5, haru: TR5, natsu: TR5, aki: TR5, fuyu: TR5,
+    atooshi: '(編成の合計 120%まで)', kunpow: '(編成の合計 120%まで)', kunwise: '(編成の合計 120%まで)', kunhit: '(編成の合計 120%まで)', kuneva: '(編成の合計 120%まで)', kuntough: '(編成の合計 120%まで)', kunlife: '(編成の合計 120%まで)',
+    kizuna: '(編成の合計 100%まで)', kaifuku: '(編成の合計 20まで)', ochitsuki: '(編成の合計 50%まで)', miharu: '(編成の合計 50%まで)', kibarashi: '(編成の合計 50%まで)', itawari: '(編成の合計 40%まで)' });
   const describe = (id, n) => {
     const a = BY_ID[id]; if (!a) return '';
     const i = nOf(id, n) - 1;
     const vt = a.k === 'cnt' && a.cu === 'Lv' ? `+${fmt(a.v[i])}` : a.k === 'rate' || a.k === 'hard' ? `+${fmt(a.v[i])}%` : a.k === 'rateDown' ? `−${fmt(a.v[i])}%` : (a.k ? valueText(id, i + 1) : fmt(a.v[i])); // 文の中は「トレーニングLv +1」「◯◯の確率 +5%」
-    return ((i === a.max - 1 && a.text5) || a.text).replace('{v}', vt).replace('{start}', a.start ? String(a.start[i]) : '');
+    return ((i === a.max - 1 && a.text5) || a.text).replace('{v}', vt).replace('{start}', a.start ? String(a.start[i]) : '') + (CAP_NOTE[id] || '');
   };
   // 型ごとの数字の書き方(W の k)。掛け算も % で書く(社長 2026-11-14)
   const valueText = (id, n) => {
@@ -316,7 +321,7 @@
   const pointsOf = (power) => Math.min(POINTS_MAX, Math.max(POINTS_MIN, Math.floor(num(power) / POINTS_DIV)));
 
   const api = Object.freeze({ VERSION, LIST, BY_ID, TYPE_NAME, SCENES, LV_MAX, MAX_KINDS, POINTS_MIN, POINTS_MAX, AUTO_ORDER, AUTO_STEP,
-    describe, label, valueText, costOf, valueOf, candidates, normPicks, autoPick, pointsOf, battleBuffs, stayValue, fromSaved, toSaved });
+    CAP_NOTE, describe, label, valueText, costOf, valueOf, candidates, normPicks, autoPick, pointsOf, battleBuffs, stayValue, fromSaved, toSaved });
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   if (root) root.MONHERO_SUCCESS_ASSIST = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

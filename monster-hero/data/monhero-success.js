@@ -208,6 +208,10 @@
     shokin: { type: 'stay' }, kokoroe: { type: 'stay' }, ticket: { type: 'stay' }, rivaldamashii: { type: 'stay' },
     ninki: { type: 'stay' }, yobimizu: { type: 'stay' }, mejirushi: { type: 'stay' }, joshu: { type: 'stay' },
   });
+  // アシスト効果の合計の上限(2026-11-15 社長 r1115-104「上限とか重複不可とか作らないと大変なことになる」)。足し算のまま、編成の合計がこの値まで(%・回復は点)。
+  //   train = トレ効果アップ+励+春夏秋冬の5種の合計 / atooshi = 得意の後押し / kun = 能力別アップ(その能力ごと)/ kizuna = 忠誠度効果アップ /
+  //   kaifuku = トレ後回復効果アップ / cut = 失敗率ダウン・見張り役・気晴らし(それぞれ)/ itawari = 体力消費ダウン。ほかの効果(人数・大成功・人気度大成功・幸運)は上限なし
+  const ASSIST_CAP = Object.freeze({ train: 100, atooshi: 120, kun: 120, kizuna: 100, kaifuku: 20, cut: 50, itawari: 40 });
   const ASSIST_MAX = 4;
   const ASSIST_MAX_V3 = 8;   // 第3版の表のとき1体8種類まで(社長 2026-11-14)
   const ASSIST_LV_MAX = 5;   // 持ち物の段の上限(第2版)。表が第1版のときも段4・5の持ち物は削らない(効き目は表の段数で頭打ち)
@@ -811,6 +815,15 @@
           add += best / 100;
         }
       }
+      // 合計の上限(ASSIST_CAP・r1115-104): 上で足した分のうち、上限を超えた分を引く
+      { const vOf = (m, id) => { const lv = assistLv(m, id); return lv ? num(aOf(id, 'v', lv)) : 0; }; const ms = card.members.map(i => s.team[i]);
+        const over = (v, cap) => Math.max(0, v - cap) / 100;
+        let tr = ms.reduce((t, m) => t + vOf(m, 'sokoji'), 0);
+        if (card.kind === 'train') { tr += withSum(s, card, 'hagemi') * fameFrac(s); const mo = monthOf(s.turn); Object.keys(SEASON_OF).forEach(id => { if (SEASON_OF[id].includes(mo)) tr += withSum(s, card, id); }); }
+        add -= over(tr, ASSIST_CAP.train);
+        add -= over(ms.reduce((t, m) => t + (m.top[0] === card.stat ? vOf(m, 'atooshi') : 0), 0), ASSIST_CAP.atooshi);
+        add -= over(ms.reduce((t, m) => t + vOf(m, `kun${card.stat}`), 0), ASSIST_CAP.kun);
+        add -= over(ms.reduce((t, m) => t + vOf(m, 'kizuna') * clamp(num(loy), 0, 100) / 100, 0), ASSIST_CAP.kizuna); }
       if (card.aid && s.aidBond >= BOND.tag) { tag += TAG_POWER.aid / 100; tags.push('aid'); }
       const loyM = card.aid && card.kind === 'train' ? 1 + (loyalMult(loy) - 1) * (1 + stayNum(s, 'aidtrust') / 100) : loyalMult(loy); // 🤲助手・信頼
       return { add: r2(add), tag: r2(tag), tags, mult: r2((1 + add) * (1 + tag)), loyM: r2(loyM) };
@@ -822,14 +835,14 @@
       let f = RATE.fail + (s.yosu.sabori ? RATE.saboriGuse : 0);
       if (ratio < RATE.failHpFrom) { const d = (RATE.failHpFrom - ratio) / RATE.failHpFrom; f += d * d * RATE.failHpTop; }
       let cut = 0; if (card) card.members.forEach(i => { const lv = assistLv(s.team[i], 'ochitsuki'); if (lv) cut += aOf('ochitsuki', 'v', lv) / 100; });
-      f *= 1 - Math.min(0.8, cut);
+      f *= 1 - Math.min(ASSIST_CAP.cut / 100, cut); // 失敗率ダウンの合計の上限(r1115-104)
       if (s.aid === 'dra') f *= 0.7;
       if (num(s.fear) >= 40) f *= RATE.failFearHi;
       if (card) f += evMod(s, 'fail', card.stat); // 出来事「好きなトレーニング」: そのトレーニングの失敗 −10%
       return clamp(f, 0, RATE.failCap);
     };
     // card があれば、いっしょに来た子の「見張り役」でサボりの率が減る(合わせて −80% まで)
-    const cutOf = (s, card, id) => { let c = 0; if (card) card.members.forEach(i => { const lv = assistLv(s.team[i], id); if (lv) c += num(aOf(id, 'v', lv)) / 100; }); return Math.min(0.8, c); };
+    const cutOf = (s, card, id) => { let c = 0; if (card) card.members.forEach(i => { const lv = assistLv(s.team[i], id); if (lv) c += num(aOf(id, 'v', lv)) / 100; }); return Math.min(ASSIST_CAP.cut / 100, c); }; // 見張り役・気晴らしの合計の上限(r1115-104)
     const sabRateOf = (s, card) => { const ev = evMod(s, 'sab'); const base = s.pol >= 0 ? ev : RATE.sab[-s.pol - 1] * (num(s.ama) >= 40 ? RATE.sabAmaHi : 1) + ev; return base * (1 - cutOf(s, card, 'miharu')); }; // ev = 出来事の 💤ねぼけ
     const greatRateOf = (s, card) => {
       let g = RATE.great + (loyalOf(s) >= 80 ? RATE.greatLoyal80 : 0) + (s.hirameki ? 0.10 : 0) + evMod(s, 'great');
@@ -1072,9 +1085,9 @@
         const before = { ...s.stats };
         Object.entries(gains).forEach(([k, g]) => addStat(s, k, g));
         let it = 0; card.members.forEach(i => { const lv = assistLv(s.team[i], 'itawari'); if (lv) it += aOf('itawari', 'v', lv) / 100; });
-        const hpCost = BASE.hp * R.hp * (1 - Math.min(0.6, it)) * (s.aid === 'kiki' ? 0.85 : 1); // きき: トレーニングの疲れ −15%
+        const hpCost = BASE.hp * R.hp * (1 - Math.min(ASSIST_CAP.itawari / 100, it)) * (s.aid === 'kiki' ? 0.85 : 1); // きき: トレーニングの疲れ −15%
         s.hp = clamp(Math.round(s.hp - hpCost), 0, s.hpMax);
-        const kf = withSum(s, card, 'kaifuku'); if (kf && res !== 'sab') s.hp = clamp(Math.round(s.hp + kf), 0, s.hpMax); // 💧トレ後回復効果アップ
+        const kf = Math.min(ASSIST_CAP.kaifuku, withSum(s, card, 'kaifuku')); if (kf && res !== 'sab') s.hp = clamp(Math.round(s.hp + kf), 0, s.hpMax); // 💧トレ後回復効果アップ
         const ts = withMax(s, card, 'tsuika'); // ➕追加トレボーナス(別の乱数で並びを変えない)
         if (ts && res !== 'sab' && res !== 'fail') { const tr = rngOf(s.id, s.turn, 'tsuika'); if (tr() < ts / 100) { const k = KEYS[Math.floor(tr() * KEYS.length)]; const g = 5 + Math.floor(tr() * 16); const b0 = s.stats[k]; addStat(s, k, g); out.tsuika = { stat: k, v: s.stats[k] - b0 }; } }
         const stUp = BASE.stress * pol.stress + R.stress;
@@ -1270,7 +1283,7 @@
       const combo = (TRAIN_COMBO[s.aid] || TRAIN_COMBO.mua)[stat]; const shares = [1, BASE.sub[0], BASE.sub[1]]; const gain = {};
       [stat, combo[0], combo[1]].forEach((k, j) => { gain[k] = (gain[k] || 0) + Math.round(mult * shares[j] * aptMult(s.species, k) * fruitMul(s, k)); });
       let it = 0; card.members.forEach(i => { const lv = assistLv(s.team[i], 'itawari'); if (lv) it += aOf('itawari', 'v', lv) / 100; });
-      return { gain, hp: Math.round(BASE.hp * (1 - Math.min(0.6, it)) * (s.aid === 'kiki' ? 0.85 : 1)), stress: Math.round(BASE.stress * pol.stress * (BASE.stress * pol.stress > 0 ? 1 - cutOf(s, card, 'kibarashi') : 1)), fail: card.fail, great: card.great, sab: card.sab, lv: card.lv };
+      return { gain, hp: Math.round(BASE.hp * (1 - Math.min(ASSIST_CAP.itawari / 100, it)) * (s.aid === 'kiki' ? 0.85 : 1)), stress: Math.round(BASE.stress * pol.stress * (BASE.stress * pol.stress > 0 ? 1 - cutOf(s, card, 'kibarashi') : 1)), fail: card.fail, great: card.great, sab: card.sab, lv: card.lv };
     };
     // 保存から戻す: 形を確かめて直した s(だめなら null)。数は Number.isFinite・配列は Array.isArray・知らない値は既定
     const restore = (raw) => {
@@ -2023,7 +2036,7 @@
     return Object.freeze({
       events: EV,
       VERSION, STORY, KEYS, STAT_NAMES, PERIODS, TOTAL_TURNS, FORCED, SUMMIT, BASE, RESULTS, RATE, REST, PLAY, CLINIC, COND, LOYAL, GATHER, BOND, STORY, LOTTERY,
-      techRate, techBoostConds, techAptAdd, techCellOf, techCells, techPickNorm, techPickLocked, setTechPick, GROW_BY_SPECIES, speciesType, gatherChanceOf, normStats, ASSISTS, ISSA, PTS, XP, SHUGYO, TECH_POWER, MASTERY, POP_TURN_MULT, techRowsOf, techPowerOfRows, powerOf, techBoostOf, techUseOf, ITEMS, GOOD, CARRY_MAX, useItem, FAME_V, FAME_SCALE, TICKET_BASE, TRAIN_LV, trainLvOf, REMATCH, canRematch, rematch, canSkip, battleKey, PRIZE, BEAT_PRIZE, beatOfPrize, BEAT_END, beatOfEnd, MEALS, meal, mealSkip, MEAL_SKIP_FEAR, mealOpts, MEAL_PICK, MEAL_WATCH_MULT, ticketsOfPrize, TECH_MAX, techsOf, canLearn, techRate, learnable, techRank, shugyoQ, superLeft, techMissOf, techCanon, canonTechList, shugyoLeft, teachFrom, BENCH: BENCH_USE, STAR_MULT, TAG_POWER, BOND_START, RANK_ADD, TRAIN_COMBO, AIDS, speciesList, shugyoGainOf, EX_CUPS, EX_BY_SYS, cupItemsOf, CUP_REWARD, FAME_RANK, FAME_RANK_MAX, rankStepOf, rankNameOf, rankNeedG, WIN_TICKET, FOUR_DONE, fourWinsOf, forecastOf, ELIXIR_ADD, FRUIT_MULT,
+      ASSIST_CAP, techRate, techBoostConds, techAptAdd, techCellOf, techCells, techPickNorm, techPickLocked, setTechPick, GROW_BY_SPECIES, speciesType, gatherChanceOf, normStats, ASSISTS, ISSA, PTS, XP, SHUGYO, TECH_POWER, MASTERY, POP_TURN_MULT, techRowsOf, techPowerOfRows, powerOf, techBoostOf, techUseOf, ITEMS, GOOD, CARRY_MAX, useItem, FAME_V, FAME_SCALE, TICKET_BASE, TRAIN_LV, trainLvOf, REMATCH, canRematch, rematch, canSkip, battleKey, PRIZE, BEAT_PRIZE, beatOfPrize, BEAT_END, beatOfEnd, MEALS, meal, mealSkip, MEAL_SKIP_FEAR, mealOpts, MEAL_PICK, MEAL_WATCH_MULT, ticketsOfPrize, TECH_MAX, techsOf, canLearn, techRate, learnable, techRank, shugyoQ, superLeft, techMissOf, techCanon, canonTechList, shugyoLeft, teachFrom, BENCH: BENCH_USE, STAR_MULT, TAG_POWER, BOND_START, RANK_ADD, TRAIN_COMBO, AIDS, speciesList, shugyoGainOf, EX_CUPS, EX_BY_SYS, cupItemsOf, CUP_REWARD, FAME_RANK, FAME_RANK_MAX, rankStepOf, rankNameOf, rankNeedG, WIN_TICKET, FOUR_DONE, fourWinsOf, forecastOf, ELIXIR_ADD, FRUIT_MULT,
       rngOf, periodOf, aptMult, initStats, memberOf, memberEffect, newRun, gatherOf, cardMult, peek, failRateOf, sabRateOf, greatRateOf,
       act, react, reactOf, issa, issaComes, issaRate, endTurn, opponents: opponentsOf, settle, cupsOf, canEnter, bracketOf, gradeOf, GRADE_STEP, stayV, SC_CUPS, SC_NAME, ASST_STORY, storyEnd, markSpecial, battleMods, battleBuffs, peakTurn, ASTORY, storyDue, storyStep, preview, restore, ARC, PARTY, summitPick, endingOf, endingSeen, CUP_SYS, YEAR, RIVAL, CUP_PRIZE, spendPts, autoPts, ptsCost, evaluate, assistPointsOf, loyalOf, loyalMult, top3Of, sumOf,
       FUSE, fuseOk, fuseKinds, fusePlan, fuseId,
