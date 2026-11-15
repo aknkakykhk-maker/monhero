@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 4f964e983ad1006d
+// generated-sha256: 05cc021324ed4a69
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -95434,7 +95434,7 @@ function MsaStage({ log, frames, pos, teams, venueImg, ended = false, win = null
      </div>
       {/* ここから上の層(カメラ・揺れの外。字が読めるように動かさない) */}
       {!intro && !ended && ['A', 'B'].map(hud)}
-      {!intro && <div className="msa-rnd" data-msa-round={f.r || 0}><small>ラウンド</small><b>{f.r || 1}</b></div>}
+      {!intro && (() => { const rn = liveGuts && Number.isFinite(Number(liveGuts.r)) && Number(liveGuts.r) > 0 ? Number(liveGuts.r) : (f.r || 0); return <div className="msa-rnd" data-msa-round={rn}><small>ラウンド</small><b>{rn || 1}</b></div>; })()}
       {['A', 'B'].map((sd) => (bands[sd].length ? <div key={sd} className={`msa-bands ${sd}`}>{bands[sd].map((b, j) => <span key={`${b.k}-${b.j}`} className={`msa-band ${j ? 'old' : ''}`} data-msa-band={sd}>{b.t}</span>)}</div> : null))}
       {e.ev === 'charge' && e.why === 'sulk' && !intro && !ended && <div key={`sk-${pos}`} className={`msa-sulkstamp ${e.side === 'B' ? 'B' : 'A'}`} data-msa-sulk={e.side}><b>💢 意味不明!</b><small>{e.side === 'A' ? '' : '相手は'}言うことを聞かず、<wbr/>何もしなかった</small></div>}
       {e.ev !== 'tech' && <div className="msa-dist">{AMBW_DIST.map((n, d) => <span key={d} className={d === f.d ? 'cur' : ''}>{n}</span>)}</div>}
@@ -95540,7 +95540,7 @@ function MonsucArena({ s, info, engine, input, watch, onEnd }) {
   const liveGuts = (() => {
     const op = barOn ? mm.pending : null;
     if (!op || op.kind !== 'act' || !Number.isFinite(Number(op.guts)) || !f || !f.g) return null;
-    const out = { A: Number(op.guts) };
+    const out = { A: Number(op.guts), r: Number(op.round) || 0 }; // r … いまのラウンド(上の帯のラウンドの数字も、新しいラウンドに合わせる)
     if (Number.isFinite(Number(op.round)) && Number(op.round) > (Number(f.r) || 0) && typeof msaRegenOf === 'function') {
       const rg = Number(msaRegenOf(log, frames)[`B${f.act ? f.act.B : 0}`]) || 0;
       const gMax = typeof window !== 'undefined' && window.ASSISTANT_MASMON_BATTLE && window.ASSISTANT_MASMON_BATTLE.GUTS_MAX ? window.ASSISTANT_MASMON_BATTLE.GUTS_MAX : 99;

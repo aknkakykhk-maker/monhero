@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a1cc42d9e369a896
+// source-sha256: c52966be3ff77a42
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -187032,10 +187032,13 @@ function MsaStage({
     style: {
       animationDelay: `${hitMs}ms`
     }
-  })))), !intro && !ended && ['A', 'B'].map(hud), !intro && React.createElement("div", {
-    className: "msa-rnd",
-    "data-msa-round": f.r || 0
-  }, React.createElement("small", null, "ラウンド"), React.createElement("b", null, f.r || 1)), ['A', 'B'].map(sd => bands[sd].length ? React.createElement("div", {
+  })))), !intro && !ended && ['A', 'B'].map(hud), !intro && (() => {
+    const rn = liveGuts && Number.isFinite(Number(liveGuts.r)) && Number(liveGuts.r) > 0 ? Number(liveGuts.r) : f.r || 0;
+    return React.createElement("div", {
+      className: "msa-rnd",
+      "data-msa-round": rn
+    }, React.createElement("small", null, "ラウンド"), React.createElement("b", null, rn || 1));
+  })(), ['A', 'B'].map(sd => bands[sd].length ? React.createElement("div", {
     key: sd,
     className: `msa-bands ${sd}`
   }, bands[sd].map((b, j) => React.createElement("span", {
@@ -187261,7 +187264,8 @@ function MonsucArena({
     const op = barOn ? mm.pending : null;
     if (!op || op.kind !== 'act' || !Number.isFinite(Number(op.guts)) || !f || !f.g) return null;
     const out = {
-      A: Number(op.guts)
+      A: Number(op.guts),
+      r: Number(op.round) || 0
     };
     if (Number.isFinite(Number(op.round)) && Number(op.round) > (Number(f.r) || 0) && typeof msaRegenOf === 'function') {
       const rg = Number(msaRegenOf(log, frames)[`B${f.act ? f.act.B : 0}`]) || 0;

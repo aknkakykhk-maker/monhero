@@ -184,8 +184,9 @@ const makeRun = async (kind) => {
           await page.waitForTimeout(st === '%ready' ? 2500 : /^w\d+$/.test(st) ? Number(st.slice(1)) : 700);
           keysSeen.push(await page.evaluate(() => (window.Audio_ && Audio_.currentBgmKey ? Audio_.currentBgmKey() : null)));
         }
-        if (name === 'G2') { const g = await page.evaluate(() => { const top = document.querySelector('[data-msa-hud="A"] [data-msa-gauge="gt"]'); const bar = [...document.querySelectorAll('.msxm b')].find((b) => /^ガッツ \d+/.test(b.innerText || '')); return { top: top ? Number(top.getAttribute('data-msa-gauge-v')) : null, bar: bar ? Number((bar.innerText.match(/\d+/) || [])[0]) : null }; });
-          check(`${label}: 自分の番のとき、上の帯と操作欄のガッツが同じ`, g.top != null && g.bar != null && Math.round(g.top) === g.bar, JSON.stringify(g)); }
+        if (name === 'G2') { const g = await page.evaluate(() => { const top = document.querySelector('[data-msa-hud="A"] [data-msa-gauge="gt"]'); const bar = [...document.querySelectorAll('.msxm b')].find((b) => /^ガッツ \d+/.test(b.innerText || '')); const rd = document.querySelector('[data-msa-round]'); return { top: top ? Number(top.getAttribute('data-msa-gauge-v')) : null, bar: bar ? Number((bar.innerText.match(/\d+/) || [])[0]) : null, round: rd ? Number(rd.getAttribute('data-msa-round')) : null }; });
+          check(`${label}: 自分の番のとき、上の帯と操作欄のガッツが同じ`, g.top != null && g.bar != null && Math.round(g.top) === g.bar, JSON.stringify(g));
+          check(`${label}: 2ラウンド目の自分の番は、上の帯のラウンドも 2`, g.round === 2, JSON.stringify(g)); }
         if (name === 'W1') { const lg = await page.evaluate(() => window.__bgmLog.slice()); const iC = lg.lastIndexOf('cupPre'), iB = lg.lastIndexOf('cupMatch');
           check(`${label}: 試合に入ったら、場面の曲が cupPre から cupMatch(バトルの曲 ichika_battle)へ替わる`, iC >= 0 && iB > iC, lg.join('>'));
           // 場面→曲の表: 試合の前の画面(cupPre=能力を見るバトルカード)と試合(cupMatch)は別の曲で、音源のファイルも別
