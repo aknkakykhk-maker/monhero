@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 21f6ec63c2a2f2d4
+// generated-sha256: 7e1c123d27d74525
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -25486,7 +25486,7 @@ const rhythmNoteIsSky=note=>rhythmNoteSkyHeight(note)>0||rhythmSlideHasSky(note)
    判定・スコア・譜面には一切使わない。演奏画面が開いているあいだだけ hud(上の帯の中身)・曲・曲の中の時刻を置く */
 /* 読むだけの窓。マルチの観戦(2026-11-11)のために2つ足した: frames=フレームの数(送る側が1秒ごとに差を読んで、端末の重さを知る) /
    jd=見られているあいだだけ配列(判定のたびにノーツ番号と判定の番号を push するだけ。見られていなければ null で、何もしない)。送るのは演奏のループの外 */
-const RHYTHM_PLAY_WATCH={hud:null,songId:'',timeMs:0,frames:0,jd:null};
+const RHYTHM_PLAY_WATCH={hud:null,songId:'',timeMs:0,frames:0,jd:null,jx:null};
 const RHYTHM_PLAY_WATCH_CODES={MARVELOUS:0,EXCELLENT:1,GREAT:2,GOOD:3,BAD:4,MISS:5};
 const rhythmCreateHud=()=>{let state=rhythmHudInitial();const subs=new Set();
   return {get:()=>state,set(patch){state={...state,...patch};subs.forEach(fn=>fn());},subscribe(fn){subs.add(fn);return()=>{subs.delete(fn);};}};};
@@ -25886,7 +25886,7 @@ const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntr
   const fullComboBandRef=useRef(null),sideMonsterRefs=useRef([]),screenFlashRef=useRef(null),touchSweepRef=useRef(null),judgmentTextRef=useRef(null),skyJudgmentTextRef=useRef(null),skyJudgmentBurstRef=useRef(null),comboRef=useRef(null),judgmentBurstRef=useRef(null),comboRingRef=useRef(null);
   // 判定ごとに変わる表示の入れ物(rhythmCreateHud の説明を参照)
   const hudRef=useRef(null);if(!hudRef.current)hudRef.current=rhythmCreateHud();
-  useEffect(()=>{const hud=hudRef.current;RHYTHM_PLAY_WATCH.hud=hud;RHYTHM_PLAY_WATCH.songId=(song&&song.songId)||'';RHYTHM_PLAY_WATCH.timeMs=0;return()=>{if(RHYTHM_PLAY_WATCH.hud===hud){RHYTHM_PLAY_WATCH.jd=null;RHYTHM_PLAY_WATCH.hud=null;RHYTHM_PLAY_WATCH.songId='';RHYTHM_PLAY_WATCH.timeMs=0;}};},[]);
+  useEffect(()=>{const hud=hudRef.current;RHYTHM_PLAY_WATCH.hud=hud;RHYTHM_PLAY_WATCH.songId=(song&&song.songId)||'';RHYTHM_PLAY_WATCH.timeMs=0;return()=>{if(RHYTHM_PLAY_WATCH.hud===hud){RHYTHM_PLAY_WATCH.jd=null;RHYTHM_PLAY_WATCH.jx=null;RHYTHM_PLAY_WATCH.hud=null;RHYTHM_PLAY_WATCH.songId='';RHYTHM_PLAY_WATCH.timeMs=0;}};},[]);
   // 判定文字の光を焼いた絵にする(rhythmBakeJudgmentHalos の説明を参照)。演出量・軽量モードで影の枚数が変わるので、そのたびに焼き直す。
   // 焼けるまで・焼けなかったとき・影が1枚だけの判定は、今までどおり CSS のぼかしで出す(haloKeys に入っていない)。
   const [haloKeys,setHaloKeys]=useState(null);
@@ -26723,6 +26723,7 @@ const showAbilityFlash=!!abilityFlash&&!rhythmMonsterEffectAtMost(settings.monst
 const score=run.lifeDepleted?run.lockedScore:run.score,lastDeltaMs=judgment!=='MISS'&&typeof deltaMs==='number'&&Number.isFinite(deltaMs)?deltaMs:null;
 // 判定ごとの表示(スコアの札・コンボ数・判定の文字・ライフの数字)は hud を書き換えるだけ(その4つの部品だけが作り直される)。
 // 演奏画面全体(setView)は、コンボの段・100のくぎり・ライフの状態が変わったときと、能力が出たときだけ作り直す
+/* 観戦: 判定の文字を同じにするための印(1=ぴったり 2=SLOW 4=FAST)。印のある判定だけ、ノーツ番号と印を並べてためる。見られていなければ null で何もしない */{const jx=RHYTHM_PLAY_WATCH.jx;if(jx!==null&&jx.length<480){const mk=(preciseHit?1:0)+(side==='SLOW'?2:side==='FAST'?4:0);if(mk)jx.push(note.index,mk);}}
 hudRef.current.set(rhythmNoteIsSky(note)?{score,combo:run.combo,skyLast:judgment,skyLastPrecise:preciseHit,skyFastSlow:side||'',skyDeltaMs:lastDeltaMs,counts:{...run.counts},life:run.life}
   :{score,combo:run.combo,last:judgment,lastPrecise:preciseHit,fastSlow:side||'',lastDeltaMs,counts:{...run.counts},life:run.life});
 // ライフは「DOWN(0)かどうか」だけを見る。演奏画面全体がライフで変えるのは DOWN の赤いふちだけで、
@@ -56166,7 +56167,7 @@ const RHYTHM_MULTI = (() => {
   };
   // 譜面を送る(判定の束 j)は、見られている1人だけ。端末が重い(フレームが40枚/秒を切る状態が2秒続く)ときは、数字だけに落とす
   let watchLite = false; let watchLowCount = 0; let watchFrames = -1; let watchFramesAt = 0;
-  const watchJdOff = () => { if (typeof RHYTHM_PLAY_WATCH !== 'undefined') RHYTHM_PLAY_WATCH.jd = null; };
+  const watchJdOff = () => { if (typeof RHYTHM_PLAY_WATCH !== 'undefined') { RHYTHM_PLAY_WATCH.jd = null; RHYTHM_PLAY_WATCH.jx = null; } };
   const watchStop = () => { if (watchTimer) clearInterval(watchTimer); watchTimer = null; watchJdOff(); watchLite = false; watchLowCount = 0; watchFrames = -1; };
   const watchAdStop = () => {
     if (watchAdTimer) { clearTimeout(watchAdTimer); clearInterval(watchAdTimer); }
@@ -56205,6 +56206,9 @@ const RHYTHM_MULTI = (() => {
       const jd = watch.jd;
       if (jd.length > 240) jd.splice(0, jd.length - 240);
       if (jd.length) msg.j = jd.splice(0, jd.length);
+      // 判定の文字(ぴったりの虹色・FAST/SLOW)を観戦でも同じに出すための印。別の配列にして、古い版は読み飛ばすだけ(判定の番号の並びは変えない)
+      const jx = Array.isArray(watch.jx) ? watch.jx : null;
+      if (jx && jx.length) { if (jx.length > 240) jx.splice(0, jx.length - 240); msg.jx = jx.splice(0, jx.length); }
     }
     if (fin === true) msg.fin = 1;
     socket.send(msg);
@@ -56213,7 +56217,7 @@ const RHYTHM_MULTI = (() => {
     const focused = !!s && !!s.live && !s.live.done && watchersNow().some((id) => s.watchers[id].f === s.selfId);
     if (focused && !watchTimer) {
       watchLite = false; watchLowCount = 0; watchFrames = -1;
-      if (typeof RHYTHM_PLAY_WATCH !== 'undefined') RHYTHM_PLAY_WATCH.jd = [];   // ここから、判定を1件ずつためる(見られている間だけ)
+      if (typeof RHYTHM_PLAY_WATCH !== 'undefined') { RHYTHM_PLAY_WATCH.jd = []; RHYTHM_PLAY_WATCH.jx = []; }   // ここから、判定を1件ずつためる(見られている間だけ)
       watchTimer = setInterval(watchSend, RHYTHM_WATCH_LIVE_MS); watchSend();
     }
     else if (!focused && watchTimer) watchStop();
@@ -57125,7 +57129,7 @@ const RHYTHM_WATCH = (() => {
       if (!round) return;
       // 顔ぶれ(pt)が無い返事は、同じ回の点の更新だけ(顔ぶれは最初の返事で受けている)
       if (!people.length && !(st.round === round && st.people.length)) return;
-      if (st.round !== round) { st.round = round; st.rows = {}; st.judged = {}; }
+      if (st.round !== round) { st.round = round; st.rows = {}; st.judged = {}; st.marks = {}; }
       st.songId = rhythmMultiText(raw.sg, 60);
       if (people.length) st.people = people;
       if (!st.focus || !st.people.some((x) => x.id === st.focus)) { st.focus = st.people[0].id; ping(); }
@@ -57152,6 +57156,11 @@ const RHYTHM_WATCH = (() => {
       if (Array.isArray(raw.j)) {
         const jm = st.judged[id] || (st.judged[id] = new Map());
         for (let i = 0; i + 1 < raw.j.length && i < 240 && jm.size < 4000; i += 2) jm.set(intOf(raw.j[i], 100000), intOf(raw.j[i + 1], 5));   // 知らないノーツ番号は描かないだけ。表が大きくなりすぎないよう上限で切る
+      }
+      // 印(ぴったり・SLOW・FAST)。古い版の人からは来ない(そのときは金色のまま)
+      if (Array.isArray(raw.jx)) {
+        const mm = st.marks[id] || (st.marks[id] = new Map());
+        for (let i = 0; i + 1 < raw.jx.length && i < 240 && mm.size < 4000; i += 2) mm.set(intOf(raw.jx[i], 100000), intOf(raw.jx[i + 1], 7));
       }
       st.rows[id] = row; st.lastPg = now;
       if (st.people.every((x) => st.rows[x.id] && st.rows[x.id].fin)) { st.phase = 'ended'; st.endedAt = now; }
@@ -57185,7 +57194,7 @@ const RHYTHM_WATCH = (() => {
       if (!m) return;
       const people = m.participants.map((id) => st.members[id]).filter((x) => x && !x.cpu);
       if (!people.length) { ping(); return; }   // 顔ぶれが分からないときは、演奏している人に wi をもらう
-      st.round = m.round; st.songId = m.songId; st.people = people; st.rows = {}; st.judged = {}; st.phase = 'playing'; st.lastPg = now;
+      st.round = m.round; st.songId = m.songId; st.people = people; st.rows = {}; st.judged = {}; st.marks = {}; st.phase = 'playing'; st.lastPg = now;
       if (!people.some((x) => x.id === st.focus)) st.focus = people[0].id;
       ping(); emit();
     }
@@ -57214,7 +57223,7 @@ const RHYTHM_WATCH = (() => {
       const v = RHYTHM_MULTI.view();
       if (member && !(v && v.code === c)) return false;
       const now = Date.now();
-      st = { code: c, member, quiet, wid: member ? v.selfId : rhythmMultiMakeId('w'), phase: 'connecting', round: '', songId: '', people: [], rows: {}, focus: '', members: {}, judged: {}, openedAt: now, lastPing: 0, lastPg: 0, heard: false };
+      st = { code: c, member, quiet, wid: member ? v.selfId : rhythmMultiMakeId('w'), phase: 'connecting', round: '', songId: '', people: [], rows: {}, focus: '', members: {}, judged: {}, marks: {}, openedAt: now, lastPing: 0, lastPg: 0, heard: false };
       if (member) RHYTHM_MULTI.setWatchFeed(feed);
       else {
         sock = rhythmMultiOpenSocket({ topic: RHYTHM_MULTI_ROOM_TOPIC + rhythmMultiTopicTag() + c, onOpen: () => ping(), onMessage: feed, onClose: () => {} });
@@ -58828,7 +58837,7 @@ function RhythmWatchLaneRoad({ chart, song = null, wide = false, onWaiting, onFa
           const relMs = hasBody ? rhythmReleaseTargetMs(n) : n.timeMs;
           const endMs = hasBody ? Math.max(relMs, Number(n.endTimeMs) || 0, n.timeMs) : n.timeMs;
           const code = jm && jm.has(i) ? jm.get(i) : -1;
-          if (code >= 0 && n.timeMs <= vis && vis - n.timeMs < 700) shown = { code, age: vis - n.timeMs };
+          if (code >= 0 && n.timeMs <= vis && vis - n.timeMs < 700) shown = { code, age: vis - n.timeMs, idx: i };
           const hit = code >= 0 && code < 5;
           // MISS の知らせは表示より早く届く(1.5秒おくれのため)。ノーツが判定ラインを過ぎるまでは、ふつうのノーツのまま流す
           const miss = code === 5 && vis >= n.timeMs + 100;
@@ -58875,10 +58884,14 @@ function RhythmWatchLaneRoad({ chart, song = null, wide = false, onWaiting, onFa
       const k = row && row.k ? row.k : null;
       const counts = k ? { MARVELOUS: k[0], EXCELLENT: k[1], GREAT: k[2], GOOD: k[3], BAD: k[4], MISS: k[5] } : null;
       const last = shown ? RHYTHM_WATCH_JUDGMENT_VIEW[shown.code].id : '';
-      const key = `${row ? row.c : 0}|${row && row.l != null ? row.l : ''}|${last}|${k ? k.join(',') : ''}`;
+      // 判定の文字の虹色(ぴったり)と FAST/SLOW は、演奏する人が送った印から。印が来ない(古い版の人)ときは、ふつうの色のまま
+      const marks = v.marks && v.marks[v.focus] ? v.marks[v.focus] : null;
+      const mark = shown && marks ? marks.get(shown.idx) || 0 : 0;
+      const precise = (mark & 1) === 1; const fastSlow = (mark & 2) ? 'SLOW' : (mark & 4) ? 'FAST' : '';
+      const key = `${row ? row.c : 0}|${row && row.l != null ? row.l : ''}|${last}|${mark}|${k ? k.join(',') : ''}`;
       if (key !== lastHud) {
         lastHud = key;
-        hud.set({ combo: row ? row.c || 0 : 0, life: row && row.l != null ? row.l : RHYTHM_LIFE_MAX, last, lastPrecise: false, counts });
+        hud.set({ combo: row ? row.c || 0 : 0, life: row && row.l != null ? row.l : RHYTHM_LIFE_MAX, last, lastPrecise: precise, fastSlow, counts });
       }
     };
     raf = requestAnimationFrame(frame);

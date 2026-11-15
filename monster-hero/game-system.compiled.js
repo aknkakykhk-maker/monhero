@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e9ee4af71f60f00a
+// source-sha256: 99dd8fb5ca32b4f6
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -41022,7 +41022,8 @@ const RHYTHM_PLAY_WATCH = {
   songId: '',
   timeMs: 0,
   frames: 0,
-  jd: null
+  jd: null,
+  jx: null
 };
 const RHYTHM_PLAY_WATCH_CODES = {
   MARVELOUS: 0,
@@ -42043,6 +42044,7 @@ const RhythmTapTest = ({
     return () => {
       if (RHYTHM_PLAY_WATCH.hud === hud) {
         RHYTHM_PLAY_WATCH.jd = null;
+        RHYTHM_PLAY_WATCH.jx = null;
         RHYTHM_PLAY_WATCH.hud = null;
         RHYTHM_PLAY_WATCH.songId = '';
         RHYTHM_PLAY_WATCH.timeMs = 0;
@@ -43290,6 +43292,13 @@ const RhythmTapTest = ({
     const showAbilityFlash = !!abilityFlash && !rhythmMonsterEffectAtMost(settings.monsterNoteEffect, 'NONE') && !monAbOff('flash');
     const score = run.lifeDepleted ? run.lockedScore : run.score,
       lastDeltaMs = judgment !== 'MISS' && typeof deltaMs === 'number' && Number.isFinite(deltaMs) ? deltaMs : null;
+    {
+      const jx = RHYTHM_PLAY_WATCH.jx;
+      if (jx !== null && jx.length < 480) {
+        const mk = (preciseHit ? 1 : 0) + (side === 'SLOW' ? 2 : side === 'FAST' ? 4 : 0);
+        if (mk) jx.push(note.index, mk);
+      }
+    }
     hudRef.current.set(rhythmNoteIsSky(note) ? {
       score,
       combo: run.combo,
@@ -94256,7 +94265,10 @@ const RHYTHM_MULTI = (() => {
   let watchFrames = -1;
   let watchFramesAt = 0;
   const watchJdOff = () => {
-    if (typeof RHYTHM_PLAY_WATCH !== 'undefined') RHYTHM_PLAY_WATCH.jd = null;
+    if (typeof RHYTHM_PLAY_WATCH !== 'undefined') {
+      RHYTHM_PLAY_WATCH.jd = null;
+      RHYTHM_PLAY_WATCH.jx = null;
+    }
   };
   const watchStop = () => {
     if (watchTimer) clearInterval(watchTimer);
@@ -94320,6 +94332,11 @@ const RHYTHM_MULTI = (() => {
       const jd = watch.jd;
       if (jd.length > 240) jd.splice(0, jd.length - 240);
       if (jd.length) msg.j = jd.splice(0, jd.length);
+      const jx = Array.isArray(watch.jx) ? watch.jx : null;
+      if (jx && jx.length) {
+        if (jx.length > 240) jx.splice(0, jx.length - 240);
+        msg.jx = jx.splice(0, jx.length);
+      }
     }
     if (fin === true) msg.fin = 1;
     socket.send(msg);
@@ -94330,7 +94347,10 @@ const RHYTHM_MULTI = (() => {
       watchLite = false;
       watchLowCount = 0;
       watchFrames = -1;
-      if (typeof RHYTHM_PLAY_WATCH !== 'undefined') RHYTHM_PLAY_WATCH.jd = [];
+      if (typeof RHYTHM_PLAY_WATCH !== 'undefined') {
+        RHYTHM_PLAY_WATCH.jd = [];
+        RHYTHM_PLAY_WATCH.jx = [];
+      }
       watchTimer = setInterval(watchSend, RHYTHM_WATCH_LIVE_MS);
       watchSend();
     } else if (!focused && watchTimer) watchStop();
@@ -95895,6 +95915,7 @@ const RHYTHM_WATCH = (() => {
         st.round = round;
         st.rows = {};
         st.judged = {};
+        st.marks = {};
       }
       st.songId = rhythmMultiText(raw.sg, 60);
       if (people.length) st.people = people;
@@ -95942,6 +95963,10 @@ const RHYTHM_WATCH = (() => {
       if (Array.isArray(raw.j)) {
         const jm = st.judged[id] || (st.judged[id] = new Map());
         for (let i = 0; i + 1 < raw.j.length && i < 240 && jm.size < 4000; i += 2) jm.set(intOf(raw.j[i], 100000), intOf(raw.j[i + 1], 5));
+      }
+      if (Array.isArray(raw.jx)) {
+        const mm = st.marks[id] || (st.marks[id] = new Map());
+        for (let i = 0; i + 1 < raw.jx.length && i < 240 && mm.size < 4000; i += 2) mm.set(intOf(raw.jx[i], 100000), intOf(raw.jx[i + 1], 7));
       }
       st.rows[id] = row;
       st.lastPg = now;
@@ -96008,6 +96033,7 @@ const RHYTHM_WATCH = (() => {
       st.people = people;
       st.rows = {};
       st.judged = {};
+      st.marks = {};
       st.phase = 'playing';
       st.lastPg = now;
       if (!people.some(x => x.id === st.focus)) st.focus = people[0].id;
@@ -96061,6 +96087,7 @@ const RHYTHM_WATCH = (() => {
         focus: '',
         members: {},
         judged: {},
+        marks: {},
         openedAt: now,
         lastPing: 0,
         lastPg: 0,
@@ -98790,7 +98817,8 @@ function RhythmWatchLaneRoad({
           const code = jm && jm.has(i) ? jm.get(i) : -1;
           if (code >= 0 && n.timeMs <= vis && vis - n.timeMs < 700) shown = {
             code,
-            age: vis - n.timeMs
+            age: vis - n.timeMs,
+            idx: i
           };
           const hit = code >= 0 && code < 5;
           const miss = code === 5 && vis >= n.timeMs + 100;
@@ -98865,14 +98893,19 @@ function RhythmWatchLaneRoad({
         MISS: k[5]
       } : null;
       const last = shown ? RHYTHM_WATCH_JUDGMENT_VIEW[shown.code].id : '';
-      const key = `${row ? row.c : 0}|${row && row.l != null ? row.l : ''}|${last}|${k ? k.join(',') : ''}`;
+      const marks = v.marks && v.marks[v.focus] ? v.marks[v.focus] : null;
+      const mark = shown && marks ? marks.get(shown.idx) || 0 : 0;
+      const precise = (mark & 1) === 1;
+      const fastSlow = mark & 2 ? 'SLOW' : mark & 4 ? 'FAST' : '';
+      const key = `${row ? row.c : 0}|${row && row.l != null ? row.l : ''}|${last}|${mark}|${k ? k.join(',') : ''}`;
       if (key !== lastHud) {
         lastHud = key;
         hud.set({
           combo: row ? row.c || 0 : 0,
           life: row && row.l != null ? row.l : RHYTHM_LIFE_MAX,
           last,
-          lastPrecise: false,
+          lastPrecise: precise,
+          fastSlow,
           counts
         });
       }

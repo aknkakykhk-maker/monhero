@@ -269,6 +269,12 @@ const VIEW = PORTRAIT ? { width: 390, height: 844 } : { width: 844, height: 390 
       const mine = await W.evaluate((idx) => { const m = RHYTHM_WATCH.view().judged[RHYTHM_WATCH.view().focus]; return idx.map((i) => m.get(i)); }, chartInfo.idx);
       check('届いた判定の中身が合う(ノーツ番号ごとの判定)', mine.every((c, k) => c === k % 3), JSON.stringify(mine));
       check('判定を送ったあと、たまりは小さいまま(1秒ごとに空になる)', (await A.evaluate(() => RHYTHM_PLAY_WATCH.jd.length)) < 40);
+      // 判定の文字(ぴったりの虹色・FAST/SLOW)の印は、別の配列 jx で送る(判定の番号 j の並びは変えない。古い版は jx を読み飛ばすだけ)
+      await A.evaluate((idx) => { if (RHYTHM_PLAY_WATCH.jx) RHYTHM_PLAY_WATCH.jx.push(idx[0], 3, idx[1], 4); }, chartInfo.idx);
+      await W.waitForFunction((idx) => { const m = RHYTHM_WATCH.view().marks[RHYTHM_WATCH.view().focus]; return m && m.get(idx[0]) === 3 && m.get(idx[1]) === 4; }, chartInfo.idx, { timeout: 6000 })
+        .then(() => check('判定の文字の印(ぴったり・SLOW・FAST)が、観戦の人に届く', true), () => check('判定の文字の印(ぴったり・SLOW・FAST)が、観戦の人に届く', false));
+      check('印を送っても、判定の番号の並び(j)は今までどおり(印は別の配列)', await A.evaluate(() => Array.isArray(RHYTHM_PLAY_WATCH.jd) && Array.isArray(RHYTHM_PLAY_WATCH.jx)));
+      check('印が来ない人(古い版)は、ふつうの金色のまま(落ちない)', await W.evaluate(() => { const m = RHYTHM_WATCH.view().marks['no-such-id']; return m === undefined; }));
     }
     if (SHOT_DIR) { await W.waitForTimeout(700); await W.screenshot({ path: path.join(SHOT_DIR, 'watch-lane-landscape.png') }); }
     // 並べる止め絵: 演奏している人の画面(プレイ画面)と観戦の画面を、同じ曲・同じ時刻に撮る(縦・横)
