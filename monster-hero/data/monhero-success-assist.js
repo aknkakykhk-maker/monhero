@@ -58,7 +58,7 @@
     shitashi: ['val', 'このモンスターの初めの親密度 {v}'], tagpow: ['grow', 'このモンスターが友情タッグになったとき、タッグの強さ {v}'],
     hitonatsu: ['mul', ST + 'みんなの親密度の上がり {v}(このモンスターの初めの親密度も +{start})'], nakayoshi: ['val', T1 + 'このモンスターの親密度の上がり {v}'],
     shitsuke: ['mul', ST + '褒める・叱るで上がる忠誠度 {v}'],
-    shoki: ['val', ST + '育成の初めの6つの能力 {v}'], ticket0: ['cnt', ST + '育成の初めの修行チケット {v}', '枚'], tairyoku: ['val', ST + '育成の初めの体力の上限 {v}'],
+    shoki: ['val', ST + '育成の初めの6つの能力 {v}'], genkai: ['rate', ST + '編成のモンスターが上げる能力の上限 {v}(はじめは20%)'], ticket0: ['cnt', ST + '育成の初めの修行チケット {v}', '枚'], tairyoku: ['val', ST + '育成の初めの体力の上限 {v}'],
     kuishinbo: ['mul', ST + '大会のあとのごはんの効き目 {v}'],
     trchance: ['rate', ST + '遊んだとき「ひらめき」(次のトレーニングの大成功の確率 +10%)になる確率 {v}'],
     shchance: ['rate', ST + '遊んだとき「修行の気合い」(次の修行で上がる能力 +20%)になる確率 {v}'],
@@ -84,16 +84,17 @@
   // ★コスト(1目盛りの値段・ポイント)の表(2026-11-15 r1115-107 社長「遊びながらのバランス調整はこの先も出る」)。値段はこの表1か所だけ。
   //   効果id → 1目盛りの値段。満タンの値段 = 値段 × 目盛りの数。効果を足すときはここにも1つ(無いと読み込みで止まる)
   //   ★保存してある目盛り(n)は値段を見ずに読む(fromSaved)。値段を上げても下げても、取った目盛りは減らない
+  //   2026-11-15 r1115-129 社長: 限られた場面で効く トレ効果アップ・春夏秋冬・励 は、ふつうのトレ効果アップより安く(2 → 1)
   const PT = Object.freeze({
-    sokoji: 4, kizuna: 5, hirameki: 7, ochitsuki: 7, itawari: 3, ninzu: 5, trainlv: 35, gyakkyo: 40, hagemi: 2, haru: 2,
-    natsu: 2, aki: 2, fuyu: 2, ninkigreat: 3, challenge: 13, tsuika: 4, kaifuku: 4, atooshi: 5, miharu: 3, kibarashi: 4,
+    sokoji: 4, kizuna: 5, hirameki: 7, ochitsuki: 7, itawari: 3, ninzu: 5, trainlv: 35, gyakkyo: 40, hagemi: 1, haru: 1,
+    natsu: 1, aki: 1, fuyu: 1, ninkigreat: 3, challenge: 13, tsuika: 4, kaifuku: 4, atooshi: 5, miharu: 3, kibarashi: 4,
     kunpow: 3, kunwise: 3, kunhit: 3, kuneva: 3, kuntough: 3, kunlife: 3, kaketsuke: 4, shutsugen: 3, shuugou: 6, shitashi: 2,
     tagpow: 5, hitonatsu: 7, nakayoshi: 8, shitsuke: 3, shoki: 7, ticket0: 40, tairyoku: 4, kuishinbo: 2, trchance: 4, shchance: 4,
     gussuri: 2, asobi: 2, tsukisoi: 3, genki: 2, shugyo: 3, shugyotoku: 5, waza: 5, chokyo: 50, wazakazu: 10, shugyohp: 3,
     aptq: 4, shokin: 2, ikioi: 4, ninki: 2, kokoroe: 3, ticket: 4, rivaldamashii: 4, event: 5, peak: 25, yobimizu: 5,
     mejirushi: 8, joshu: 7, aidcome: 3, aidtrain: 3, aidluck: 6, aidtrust: 2, aidkeisho: 80, gatsu: 12, miseba: 12, mitate: 12,
     kensho: 12, mimamori: 12,
-    genkai: 6, // 🔓上限アップブースト(r1115-103/105・クラフト34 が足す効果。行が入る前からここに置く)
+    genkai: 6, // 🔓上限アップブースト(r1115-103/105)。r1115-129 社長: 6 のまま
   });
   const L = [];
   // unit・max と表 PT の値段から v と cost を作る(v を渡した物はそのまま。cost は 値段 × 目盛り)
@@ -143,6 +144,8 @@
 
   // ---- はじめ ----
   add({ id: 'shoki', icon: '🌅', name: '初期ステータスアップ', type: 'stay', scene: 'start', unit: 5, max: 10, u: '', text: '編成にいるだけで、育てる子の6つの能力が初めから +{v}' });
+  // 🔓上限アップブースト(2026-11-15 社長・r1115-103/105): 編成の子が上げる能力の上限の割合(はじめ 20%)に足す。いるだけ型(編成でいちばん高い1つ)
+  add({ id: 'genkai', icon: '🔓', name: '上限アップブースト', ref: false, type: 'stay', scene: 'start', unit: 1, max: 10, u: '%', text: '編成にいるだけで、編成のモンスターが上げる能力の上限の割合が +{v}%(はじめは20%)' });
   add({ id: 'ticket0', icon: '🎟', name: '修行チケットボーナス', type: 'stay', scene: 'start', unit: 1, max: 1, u: '枚', text: '編成にいるだけで、育成のはじめに修行チケットが +{v}枚' });
   add({ id: 'tairyoku', icon: '🔋', name: '体力自慢', ref: false, type: 'stay', scene: 'start', unit: 2, max: 10, u: '', v2: [4, 8, 12, 16, 20], text: '編成にいるだけで、育てる子の体力の上限が初めから +{v}' });
 
@@ -247,6 +250,7 @@
     shuugou: { v: 40, sum: true }, tsuika: { v: 50, sum: true },
     // one: true … 編成でいちばん高い1つだけ効く(2026-11-15 r1115-107「いまのまま」・クラフト33 の「アシスト重複」の印がこれを読む)
     asobi: { one: true },
+    genkai: { one: true }, // 🔓上限アップブースト(r1115-103)
     genki: { one: true },
     gussuri: { one: true },
     hitonatsu: { one: true },
