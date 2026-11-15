@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 254bd1cb736f25b0
+// source-sha256: 2ed6a9feb16493f1
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -163864,6 +163864,75 @@ function MsxItemUseFx({
     className: "ifx-tap"
   }, "タップで閉じる"));
 }
+const MSX_GFX_ROW_MS = 900;
+const MSX_GFX_STAGGER = 220;
+const msxGfxEase = p => 1 - Math.pow(1 - Math.max(0, Math.min(1, p)), 3);
+function MsxGaugeFx({
+  items,
+  title = null
+}) {
+  const calm = typeof msxFxCalm === 'function' && msxFxCalm();
+  const list = (Array.isArray(items) ? items : []).filter(it => it && Number.isFinite(it.from) && Number.isFinite(it.to) && Math.round(it.from) !== Math.round(it.to));
+  const total = MSX_GFX_ROW_MS + Math.max(0, list.length - 1) * MSX_GFX_STAGGER;
+  const [el, setEl] = React.useState(calm ? total : 0);
+  React.useEffect(() => {
+    if (calm || !list.length) {
+      setEl(total);
+      return undefined;
+    }
+    let raf = 0;
+    const t0 = performance.now();
+    const loop = now => {
+      const e = Math.min(total, now - t0);
+      setEl(e);
+      if (e < total) raf = requestAnimationFrame(loop);
+    };
+    raf = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(raf);
+  }, []);
+  const se = list.slice(0, 4).map((it, i) => [it.good === false ? 'itemUse' : 'itemHeal', i * MSX_GFX_STAGGER]);
+  if (typeof msxUseTimedSe === 'function') msxUseTimedSe(calm ? [] : se, []);
+  if (!list.length) return null;
+  return React.createElement("div", {
+    className: "v-gfx",
+    "data-msx-gfx": list.length
+  }, title ? React.createElement("div", {
+    className: "hd2"
+  }, title) : null, list.map((it, i) => {
+    const p = msxGfxEase((el - i * MSX_GFX_STAGGER) / MSX_GFX_ROW_MS);
+    const now = Math.round(it.from + (it.to - it.from) * p);
+    const max = Math.max(1, Number(it.max) || Math.max(it.from, it.to, 1));
+    const w = Math.max(0, Math.min(100, (it.from + (it.to - it.from) * p) / max * 100));
+    const d = Math.round(it.to) - Math.round(it.from);
+    const up = d > 0;
+    const good = it.good === undefined ? up : it.good;
+    const started = el - i * MSX_GFX_STAGGER > 0;
+    return React.createElement("div", {
+      key: it.k,
+      className: `r ${it.cls || ''}${good ? ' gd' : ' bd'}`,
+      "data-msx-gfx-row": it.k,
+      "data-msx-gfx-to": Math.round(it.to)
+    }, React.createElement("span", {
+      className: "n"
+    }, it.e ? React.createElement("span", {
+      className: "e"
+    }, it.e) : null, it.name), React.createElement("span", {
+      className: "tr"
+    }, React.createElement("i", {
+      style: {
+        width: `${w}%`
+      }
+    })), React.createElement("b", {
+      className: "v"
+    }, now.toLocaleString(), it.unit || ''), React.createElement("em", {
+      className: `dl ${up ? 'up' : 'dn'}`,
+      style: {
+        animationDelay: `${i * MSX_GFX_STAGGER}ms`,
+        visibility: started || calm ? 'visible' : 'hidden'
+      }
+    }, up ? `+${d.toLocaleString()}` : `−${Math.abs(d).toLocaleString()}`));
+  }));
+}
 const msxIntroScene = aid => `scn.${aid}.start`;
 function MsxRunIntro({
   run,
@@ -170548,6 +170617,21 @@ const MSX_CSS = `
 .msx .msx-ptunit .chip{min-height:40px;padding:0 2px;justify-content:center;text-align:center;font-size:12px;font-weight:900}
 .msx .pt44{min-width:44px;min-height:44px}
 .msx .sym{-webkit-user-select:none;user-select:none}
+/* 動いた数字の札 MsxGaugeFx(r1115-047・054): ゲージが伸び縮み・数字が数え上がり・増減の数字が浮かぶ */
+.msx .v-gfx{background:#1e1a36;border:1px solid #3b3566;border-radius:14px;padding:8px;margin-top:6px;display:flex;flex-direction:column;gap:6px}
+.msx .v-gfx .hd2{font-size:11px;font-weight:900;color:#fde047}
+.msx .v-gfx .r{position:relative;display:grid;grid-template-columns:minmax(64px,28%) 1fr auto;align-items:center;gap:8px;min-height:26px}
+.msx .v-gfx .n{font-size:12px;font-weight:900;white-space:nowrap}.msx .v-gfx .n .e{margin-right:3px}
+.msx .v-gfx .tr{position:relative;height:9px;border-radius:5px;background:#0f0d24;border:1px solid #2f2a55;overflow:hidden}
+.msx .v-gfx .tr i{display:block;height:100%;border-radius:5px;background:linear-gradient(90deg,#fde047,#f59e0b)}
+.msx .v-gfx .r.hp .tr i{background:linear-gradient(90deg,#86efac,#22c55e)}
+.msx .v-gfx .r.st .tr i{background:linear-gradient(90deg,#c4b5fd,#8b5cf6)}
+.msx .v-gfx .r.bd .tr i{background:linear-gradient(90deg,#fca5a5,#ef4444)}
+.msx .v-gfx .v{font-size:13px;font-weight:900;font-variant-numeric:tabular-nums;min-width:3.4em;text-align:right}
+.msx .v-gfx .dl{position:absolute;right:0;top:-8px;font-style:normal;font-size:13px;font-weight:900;pointer-events:none;animation:msxGfxFloat 1.6s ease-out both;text-shadow:0 1px 0 #000}
+.msx .v-gfx .dl.up{color:#fde047}.msx .v-gfx .dl.dn{color:#fca5a5}
+@keyframes msxGfxFloat{0%{opacity:0;transform:translateY(8px) scale(.8)}18%{opacity:1;transform:translateY(-4px) scale(1.15)}70%{opacity:1;transform:translateY(-10px) scale(1)}100%{opacity:0;transform:translateY(-16px) scale(1)}}
+@media (prefers-reduced-motion:reduce){.msx .v-gfx .dl{animation:none;opacity:1;transform:none}}
 `;
 const MSX_KEYS = Object.freeze({
   run: 'mh_monsuc_run_v1',
@@ -174293,6 +174377,43 @@ const msxLayout = () => {
 };
 const msxCardOf = (v, stat) => v && v.cards ? v.cards[`train:${stat}`] || v.cards[`light:${stat}`] || null : null;
 const msxMemberName = m => !m ? '' : m.kind === 'base' || !m.name || m.name === m.species ? msxMonName(m.species) : m.name;
+const msxLoyalOf = s => {
+  const S = msxSuc && msxSuc.SUC;
+  return S && typeof S.loyalOf === 'function' ? Math.round(Number(S.loyalOf(s)) || 0) : 0;
+};
+const gfxSnap = s => ({
+  pop0: Math.round(Number(s.pop) || 0),
+  loy0: msxLoyalOf(s),
+  ama0: Math.round(Number(s.ama) || 0),
+  fear0: Math.round(Number(s.fear) || 0)
+});
+const msxGfxItemsOf = (p, s) => {
+  if (!p) return [];
+  const o = [];
+  const add = (k, e, name, from, to, max, extra = {}) => {
+    if (Number.isFinite(from) && Number.isFinite(to)) o.push({
+      k,
+      e,
+      name,
+      from,
+      to,
+      max,
+      ...extra
+    });
+  };
+  add('hp', '❤️', '体力', p.hp0, s.hp, Math.max(1, s.hpMax), {
+    cls: 'hp'
+  });
+  add('stress', '💢', 'ストレス', p.st0, s.stress, 100, {
+    cls: 'st',
+    good: Number.isFinite(p.st0) ? s.stress < p.st0 : true
+  });
+  add('loyal', '🤝', '忠誠度', p.loy0, msxLoyalOf(s), 100);
+  add('ama', '🍬', '甘え度', p.ama0, Math.round(Number(s.ama) || 0), 50);
+  add('fear', '⚡', '恐れ度', p.fear0, Math.round(Number(s.fear) || 0), 50);
+  add('pop', '⭐', '人気', p.pop0, Math.round(Number(s.pop) || 0), 100);
+  return o;
+};
 const msxBandMem = {
   id: null,
   loy: 0,
@@ -177513,7 +177634,8 @@ function MsxEvent({
             delta: r.out.delta || null,
             branch: !!r.out.branch,
             hp0: s.hp,
-            st0: s.stress
+            st0: s.stress,
+            ...gfxSnap(s)
           }
         }
       });
@@ -177531,6 +177653,7 @@ function MsxEvent({
           before: s.stats,
           hp0: s.hp,
           st0: s.stress,
+          ...gfxSnap(s),
           res: r.out.res,
           delta: r.out.delta || null,
           apt: r.out.delta && r.out.delta.apt ? r.out.delta.apt : null
@@ -177627,6 +177750,9 @@ function MsxEvent({
     who: s,
     stats: s.stats,
     ups: ups
+  }) : null, typeof MsxGaugeFx === 'function' ? React.createElement(MsxGaugeFx, {
+    key: `gfx-${s.turn}-${picked.scenes.join('|')}`,
+    items: msxGfxItemsOf(picked, s)
   }) : null, typeof MsxEvResult === 'function' && (!isStory || picked.delta) ? React.createElement(MsxEvResult, {
     delta: picked.delta,
     hasStats: Object.keys(ups).length > 0
@@ -179486,6 +179612,28 @@ function MsxR3RankPyramid({
     }, up ? 'UP!' : 'KEEP') : null);
   }));
 }
+const msxR3GainItems = (d, s) => {
+  const o = [];
+  if (d.pop) o.push({
+    k: 'pop',
+    e: '⭐',
+    name: '人気',
+    from: s.pop - d.pop,
+    to: s.pop,
+    max: 100
+  });
+  Object.entries(d.stats || {}).forEach(([k, g]) => {
+    if (g) o.push({
+      k,
+      e: MSX_STAT_ICON[k],
+      name: MSX_STAT_NAME[k],
+      from: s.stats[k] - g,
+      to: s.stats[k],
+      max: 999
+    });
+  });
+  return o;
+};
 const msxR3PrizeRows = (d, s) => {
   const rows = [];
   if (d.rankTo > d.rankFrom) rows.push(['🏆', '賞金ランク', `${msxR3RankName(d.rankFrom || 0)} → ${msxR3RankName(d.rankTo)}`, 'new', 'UP']);else if (d.rankTo > 0) rows.push(['🏆', '賞金ランク', `${msxR3RankName(d.rankTo)}(KEEP)`, '', '']);
@@ -179495,9 +179643,7 @@ const msxR3PrizeRows = (d, s) => {
   if (d.tickets) rows.push(['🎫', '修行チケット', `+${d.tickets}(${s.tickets - d.tickets}枚 → ${s.tickets}枚)`, '', '']);
   if (d.fame) rows.push(['💰', '賞金', `+${msxFmt(d.fame)}G(所持 ${msxFmt(s.fame - d.fame)}G → ${msxFmt(s.fame)}G)`, '', '']);
   if (d.beat) rows.push(['🎵', 'ビートP', `+${msxFmt(d.beat)}(本編のビートPに足されます)`, 'new', 'GET']);
-  if (d.pop) rows.push(['⭐', '人気', `+${d.pop}(${s.pop - d.pop} → ${s.pop})`, '', '']);
   if (d.sand) rows.push(['⏳', '時渡りの砂時計', `+${d.sand}`, '', '']);
-  Object.entries(d.stats || {}).forEach(([k, g]) => rows.push([MSX_STAT_ICON[k], MSX_STAT_NAME[k], `+${g}`, '', '']));
   Object.entries(d.items || {}).forEach(([k, n]) => {
     const S = msxSuc && msxSuc.SUC ? msxSuc.SUC : null;
     const it = S && S.ITEMS ? S.ITEMS[k] : null;
@@ -180164,7 +180310,10 @@ function MsxR3Battle({
         className: "e"
       }, "🏆"), React.createElement("b", null, "優勝"), React.createElement("span", {
         className: "t"
-      }, "よくがんばった!"))), (() => {
+      }, "よくがんばった!"))), typeof MsxGaugeFx === 'function' ? React.createElement(MsxGaugeFx, {
+        key: `cupgfx-${s.turn}`,
+        items: msxR3GainItems(d, s)
+      }) : null, (() => {
         const l = msxR3Line('turn.cup.win', run, {
           cup: st3.name,
           rival: st3.rivalName || ''
