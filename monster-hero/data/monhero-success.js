@@ -1356,12 +1356,19 @@
       const best = KEYS.slice().sort((x, y) => aptMult(s.species, y) - aptMult(s.species, x))[0];
       if (ep === 1) { if (c === 'a') addStat(s, best, unitOf(s, best)); else addLoyal(s, 3, 0); }
       else if (ep === 2) { if (c === 'a') { recover(s, 0.3); addBond(s, 'aid', 10); } else { const top = top3Of(s.stats, s.species)[0]; addStat(s, top, unitOf(s, top)); addStress(s, 20); } }
-      else if (ep === 3) { s.astory.path = c === 'a' ? 'good' : 'bitter'; addBond(s, 'aid', 10); }
+      else if (ep === 3) { // 2026-11-15 社長 r1115-056: 3話にも1話と同じくらいの能力アップ(a = 素質のいちばん高い能力・b = いまいちばん高い能力)
+        s.astory.path = c === 'a' ? 'good' : 'bitter'; addBond(s, 'aid', 10);
+        const k3 = c === 'a' ? best : top3Of(s.stats, s.species)[0]; addStat(s, k3, unitOf(s, k3)); out.branch = true;
+      }
       else if (ep === 4) { const r = storyEnd(s, s.astory.path || 'bitter'); s = r.state; out.end = s.storyEnd; }
       else if (ep === 'special') { s = markSpecial(s).state; s.astory.done = true; }
       if (ep !== 'special') s.astory.ep = ep;
       if ((ep === 4 && num(s.aidLv, 1) < ASTORY.specialLv) || ep === 'special' || (ep === 4 && s.storyEnd !== 'good')) s.astory.done = true;
       s.log.astory = (s.log.astory || 0) + 1;
+      // 画面に出す動いた数(能力は画面が前後の差で出す)。出来事の out.delta と同じ形
+      const dl = {}; const df = (k, a, b) => { const x = Math.round(num(b) - num(a)); if (x) dl[k] = x; };
+      df('hp', s0.hp, s.hp); df('stress', s0.stress, s.stress); df('loyal', loyalOf(s0), loyalOf(s)); df('bond', s0.aidBond, s.aidBond); df('pop', s0.pop, s.pop);
+      out.delta = dl;
       return { state: s, out };
     };
 

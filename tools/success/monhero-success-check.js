@@ -554,7 +554,8 @@ ok(near(SUC.failRateOf({ ...base, yosu: { sabori: { visits: 0 } } }) - fFull, 0.
   ok(due(s, range(1, 5)) === null, '1話のあとデビュー期に2話が出る');
   const e2 = due(s, range(6, 17)); ok(e2 && e2.d === 2, 'ジュニア期に2話が出ない');
   s = SUC.storyStep({ ...s, turn: e2.t }, 'b').state;
-  const e3 = due(s, range(18, 29)); s = SUC.storyStep({ ...s, turn: e3.t }, 'a').state; ok(s.astory.path === 'good', '3話の a でいい結末への道にならない');
+  const e3 = due(s, range(18, 29)); const sum3 = Object.values(s.stats).reduce((a, b) => a + b, 0); const r3 = SUC.storyStep({ ...s, turn: e3.t }, 'a'); s = r3.state; ok(s.astory.path === 'good', '3話の a でいい結末への道にならない');
+  ok(Object.values(s.stats).reduce((a, b) => a + b, 0) > sum3, '3話で能力が上がらない(r1115-056: 1話と同じくらいの能力アップ)'); ok(r3.out.branch === true && r3.out.delta && (r3.out.delta.bond > 0 || s.aidBond >= ((SUC.BOND && SUC.BOND.max) || 100)), '3話の結果に「結末が変わる」印と親密度の増えが無い');
   const e4 = due(s, range(30, 41)); const before = s.stats.pow; s = SUC.storyStep({ ...s, turn: e4.t }, 'a').state;
   ok(s.storyEnd === 'good' && s.stats.pow > before && s.hints.length === 1, '4話がいい結末にならない');
   const sp = due(s, range(42, 43)); ok(sp && sp.d === 'special', '仲良し度 Lv5・いい結末で特別な1話が出ない');
