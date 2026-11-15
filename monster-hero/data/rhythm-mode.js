@@ -1544,6 +1544,30 @@ const rhythmScrollGlide=(raw,i,travel)=>{
   const pk=2*travel*f/span-r*m0-(1-r)*mEnd;
   return [[t0,m0,true],[t0+span*r,pk,true]];
 };
+// 段差をならす幅(ms)。社長の選択(r1115-159 案B)の0.15秒。
+// ms を 0 にすると、ならさない今までの計算になる(速さの表の仕組みそのものを確かめる検査 rhythm-scroll-back-check が使う)
+const RHYTHM_SCROLL_SMOOTH={ms:150};
+// list([時刻,倍率,true(だんだん)/'move'/無し] の並び)を、速さが折れ線(段差なし)になる list に作り直す。段差が無ければ null(今までどおり)。
+// 最初の区切りより前は倍率1。幅は前後の区切りまでの半分を超えない(短い区間の止まり・駆け込みでも、区間の中で進む量は変えない)
+const rhythmScrollSmoothSteps=list=>{
+  const n=list.length,H=(Number(RHYTHM_SCROLL_SMOOTH.ms)||0)/2,EPS=1e-6;
+  if(!(H>0))return null;
+  // 区切り i の始まりの速さと終わりの速さ(だんだんの区切りは次の区切りの倍率へ)
+  const startV=i=>list[i][1],endV=i=>list[i][2]===true&&i+1<n?list[i+1][1]:list[i][1];
+  const vAt=(i,t)=>{if(i<0)return 1;const a=startV(i),b=endV(i),span=i+1<n?list[i+1][0]-list[i][0]:0;return span>0&&a!==b?a+(b-a)*(t-list[i][0])/span:a;};
+  const knots=[];let any=false;
+  for(let i=0;i<n;i++){
+    const t=list[i][0],vin=i===0?1:endV(i-1),vout=startV(i);
+    if(Math.abs(vin-vout)<=EPS){knots.push([t,vout]);continue;}
+    const gapL=i===0?Infinity:t-list[i-1][0],gapR=i+1<n?list[i+1][0]-t:Infinity,h=Math.min(H,gapL/2,gapR/2);
+    if(!(h>0)){knots.push([t,vout]);continue;}
+    any=true;
+    knots.push([t-h,vAt(i-1,t-h)],[t+h,vAt(i,t+h)]);
+  }
+  if(!any)return null;
+  // 折れ線の点を、全部「だんだん」の区切りにする(最後の点から先は一定)。時刻の順は区切りの順のまま(h は前後の半分まで)
+  return knots.map(([t,v],k)=>k+1<knots.length?[t,v,true]:[t,v]);
+};
 const rhythmScrollBuild=(changes,travelMs)=>{
   const raw=(Array.isArray(changes)?changes:[]).filter(c=>Array.isArray(c)&&Number.isFinite(Number(c[0]))).slice().sort((a,b)=>Number(a[0])-Number(b[0]));
   const travel=Number(travelMs)>0?Number(travelMs):2150;
@@ -1558,6 +1582,12 @@ const rhythmScrollBuild=(changes,travelMs)=>{
     return [Number(c[0]),span>0?travel*reach/span:1];
   }).filter(([t,m,l])=>Number.isFinite(t)&&Number.isFinite(m)&&(m>=0||l===true||l==='move'));
   if(!list.length)return {points:null,back:false,sufMin:null,lerp:false};
+  // 段差をならす(2026-11-15 r1115-159 社長「速度の変化に滑らかさがなくて飛んだような描写に見える」→ 案B):
+  //   速さが一瞬で変わる所(止まる⇔動く・1→1.5倍など)を、その時刻をまん中にした RHYTHM_SCROLL_SMOOTH_MS のあいだ「だんだん」変える。
+  //   まん中を挟んで左右同じ幅でまっすぐ変えるので、その区間で進む量は段差のときと同じ(区間の後の位置は変わらない)。
+  //   判定の時刻・ノーツの時刻は変えない(位置の式 1-(S(t)-S(いま))/travelMs は判定の時刻で必ず 0 になる)
+  const smoothed=rhythmScrollSmoothSteps(list);
+  if(smoothed)list.splice(0,list.length,...smoothed);
   // m1 … 区切りの終わりの倍率(LERP なら次の区切りの倍率、それ以外は m と同じ)
   const m1Of=i=>list[i][2]===true&&i+1<list.length?list[i+1][1]:list[i][1];
   const points=[{t:list[0][0],s:list[0][0],m:list[0][1],m1:m1Of(0)}];

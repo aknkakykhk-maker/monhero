@@ -18,8 +18,31 @@ let failed=0;
 const ok=(name,cond,detail='')=>{if(!cond||process.env.VERBOSE)console.log(`${cond?'OK':'NG'}: ${name}${detail?` — ${detail}`:''}`);if(!cond)failed++;};
 const ctx={Object,Number,Math,JSON,Array,String,Date,Infinity,NaN,Set,console};
 vm.runInNewContext(`${fs.readFileSync(path.join(ROOT,'monster-hero/data/rhythm-mode.js'),'utf8')}
-this.out={probe:RHYTHM_SCROLL_FX_PROBE_TRAVEL,songs:RHYTHM_SONGS,hell:RHYTHM_HELL_CHARTS,rhythmScrollSet,rhythmScrollPos,rhythmScrollEarlyTouches,rhythmScrollFxChart,rhythmScrollFxBuild,rhythmScrollLocal,rhythmScrollFxMs,mhChart};`,ctx);
+this.out={smooth:RHYTHM_SCROLL_SMOOTH,build:rhythmScrollBuild,segAt:rhythmScrollSegAt,probe:RHYTHM_SCROLL_FX_PROBE_TRAVEL,songs:RHYTHM_SONGS,hell:RHYTHM_HELL_CHARTS,rhythmScrollSet,rhythmScrollPos,rhythmScrollEarlyTouches,rhythmScrollFxChart,rhythmScrollFxBuild,rhythmScrollLocal,rhythmScrollFxMs,mhChart};`,ctx);
 const R=ctx.out;
+// ⑦ 速さの段差をならす(2026-11-15 r1115-159 社長の選択 案B・0.15秒): 公開中の表を持つ全部の譜面(組も)で、
+//    1コマ(60fps)のあいだに速さが 1倍ぶん以上いきなり変わる所が無い(止まる⇔動くが一瞬で切り替わらない)。
+//    「すべる」区間の山(Grievous Lady 96秒など)は、だんだん変わる形のまま(段差ではない)なので数えない
+{
+  ok('速さの段差をならす幅は0.15秒', R.smooth.ms === 150, String(R.smooth.ms));
+  const F = 1000 / 60; let worst = { dv: 0 }, tables = 0;
+  const Sx = (pts, t) => { if (!pts || !(t > pts[0].t)) return t; let lo = 0; while (lo + 1 < pts.length && pts[lo + 1].t <= t) lo++; return R.segAt(pts, lo, t - pts[lo].t); };
+  for (const song of R.songs) for (const [d, chart] of [...Object.entries(song.difficulties || {}), ['HELL', R.hell[song.songId]]]) {
+    if (!chart || !Array.isArray(chart.scrollChanges) || !chart.scrollChanges.length) continue;
+    for (const [g, table] of [['本体', chart.scrollChanges], ...Object.entries(chart.scrollGroups || {})]) {
+      const pts = R.build(table, 2150).points; if (!pts) continue; tables++;
+      // 区切りの時刻のまわりだけ、1コマごとの速さを比べる(段差は区切りにしか起きない)
+      for (const p of pts) for (let t = p.t - 3 * F; t < p.t + 3 * F; t += F / 4) {
+        const v1 = (Sx(pts, t + F) - Sx(pts, t)) / F, v0 = (Sx(pts, t) - Sx(pts, t - F)) / F;
+        // すべる区間の山は傾きが急でも続いている。段差は「その前のコマも次のコマも一定」の所で1コマだけ大きく変わる
+        const v00 = (Sx(pts, t - F) - Sx(pts, t - 2 * F)) / F, v11 = (Sx(pts, t + 2 * F) - Sx(pts, t + F)) / F;
+        const step = Math.abs(v1 - v0) >= 1 && Math.abs(v0 - v00) < 0.05 && Math.abs(v11 - v1) < 0.05;
+        if (step && Math.abs(v1 - v0) > worst.dv) worst = { dv: Math.abs(v1 - v0), song: song.songId, d, g, t: Math.round(t) };
+      }
+    }
+  }
+  ok('速さの表を持つ譜面で、1コマで速さが1倍ぶん以上いきなり変わる段差が無い(止まる⇔動くは0.15秒かけて変わる)', worst.dv === 0, `${tables}表 ${worst.dv ? JSON.stringify(worst) : ''}`);
+}
 // ノーツ速度1〜12の、道を流れる時間(28-rhythm-shared.jsx の RHYTHM_NOTE_TRAVEL_MS_POINTS と同じ)
 const src=fs.readFileSync(path.join(ROOT,'monster-hero/src/parts/28-rhythm-shared.jsx'),'utf8');
 const base=Number((/const RHYTHM_NOTE_TRAVEL_BASE_MS=(\d+)/.exec(src)||[])[1]);

@@ -14,7 +14,10 @@ let failed=0;
 const ok=(name,cond,detail='')=>{console.log(`${cond?'OK':'NG'}: ${name}${detail?` — ${detail}`:''}`);if(!cond)failed++;};
 const source=fs.readFileSync(path.join(ROOT,'monster-hero/data/rhythm-mode.js'),'utf8');
 const ctx={Object,Number,Math,JSON,Array,String,Date,Infinity,NaN,console};
+// 2026-11-15 r1115-159: 速さの段差をならす層(RHYTHM_SCROLL_SMOOTH)は止めて、表の仕組みそのもの(段差のままの計算)を確かめる。
+//   ならしは rhythm-scroll-fx-check が公開中の表で確かめる
 vm.runInNewContext(`${source}
+RHYTHM_SCROLL_SMOOTH.ms=0;
 this.out={RHYTHM_SCROLL,rhythmScrollSet,rhythmScrollPos,rhythmScrollTimeAt,rhythmScrollMinAfter,rhythmScrollEarlyTouches,
   songs:[...RHYTHM_SONGS,...(typeof RHYTHM_PROTO_SONGS!=='undefined'?RHYTHM_PROTO_SONGS:[])]};`,ctx);
 const R=ctx.out;
