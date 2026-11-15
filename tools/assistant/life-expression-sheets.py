@@ -139,7 +139,7 @@ def smooth2x(im):
 
 def save_png(im, path):
     os.makedirs(os.path.dirname(path), exist_ok=True)
-    im.quantize(colors=256, method=Image.Quantize.FASTOCTREE, dither=Image.Dither.NONE).save(path, optimize=True)
+    im.save(path, optimize=True)  # 色を減らさない(2026-11-15 r1115-143 社長「画質を下げなくていい」)
     return os.path.getsize(path) // 1024
 
 
