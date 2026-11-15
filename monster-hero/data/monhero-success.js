@@ -583,7 +583,7 @@
         Object.values(T).forEach((a) => {
           if (!a || typeof a.id !== 'string' || !Array.isArray(a.v) || !Array.isArray(a.cost) || a.v.length !== a.cost.length || !a.v.every(Number.isFinite)) return;
           if (a.type === 'battle') { if (ASSISTS_V1[a.id]) out[a.id] = ASSISTS_V1[a.id]; return; }
-          out[a.id] = Object.freeze({ name: a.name, type: a.type, v: a.v.slice(), cost: a.cost.slice(), max: a.v.length, ...(a.stat ? { stat: a.stat } : {}), ...(Array.isArray(a.start) ? { start: a.start.slice() } : {}) });
+          out[a.id] = Object.freeze({ name: a.name, type: a.type, v: a.v.slice(), cost: a.cost.slice(), max: a.v.length, ...(a.stat ? { stat: a.stat } : {}), ...(Array.isArray(a.start) ? { start: a.start.slice() } : {}), ...(Array.isArray(a.mv) ? { mv: a.mv.slice() } : {}) });
         });
         return Object.freeze(out);
       }
@@ -721,8 +721,8 @@
     };
     const stayLv = (team, id) => team.reduce((a, m) => Math.max(a, assistLv(m, id)), 0); // いるだけ型は編成でいちばん高い段の1つだけ
     // その効き目の数(無ければ 0)。表で足し合わせ(sum)の効果は編成の全員の分を足して上限まで、ほかはいちばん高い1体の分(r1115-107)
-    const stayNumT = (team, id) => { if (capSum(id)) { const v = team.reduce((t, m) => { const lv = assistLv(m, id); return t + (lv ? num(aOf(id, 'v', lv)) : 0); }, 0); return Math.min(capOf(id), v); } const lv = stayLv(team, id); return lv ? num(aOf(id, 'v', lv)) : 0; };
-    const stayNum = (s, id) => stayNumT(s.team, id);
+    const stayNumT = (team, id, key = 'v') => { if (capSum(id)) { const v = team.reduce((t, m) => { const lv = assistLv(m, id); return t + (lv ? num(aOf(id, key, lv)) : 0); }, 0); return Math.min(capOf(id), v); } const lv = stayLv(team, id); return lv ? num(aOf(id, key, lv)) : 0; }; // key … 'v'(効き目)か 'mv'(⚔修行効果アップの熟練の分・r1115-176)
+    const stayNum = (s, id, key) => stayNumT(s.team, id, key);
     // 能力の上限アップ: 編成の子が上限に足す能力(500 を超える上位3つ)と、編成で決まる上限
     const capTopOf = (m) => (m && m.kind === 'raised' && m.stats ? top3Of(m.stats, m.species).slice(0, CAP_UP.top).filter(k => num(m.stats[k]) > CAP_UP.over) : []);
     const capRateOf = (team) => CAP_UP.rate + (ASSISTS.genkai ? stayNumT(team, 'genkai') / 100 : 0); // 🔓上限アップブースト(いるだけ型・表の CAP は one)
@@ -1206,7 +1206,8 @@
         out.stages = stages;
         const tired = sup ? 2 : 1; // 超修行は疲れも2回分
         s.hp = clamp(Math.round(s.hp - shugyoHpOf(s, sup)), 0, s.hpMax); addStress(s, (SHUGYO.stress * pol.stress + R.stress) * tired); // 🍃修行の体力消費ダウン
-        s.techs.forEach(t => { s.mastery[t] = clamp(num(s.mastery[t]) + Math.round(SHUGYO.mastery * boost), 0, 100); });
+        const boostM = 1 + (ASSISTS.shugyo && ASSISTS.shugyo.mv ? stayNum(s, 'shugyo', 'mv') : stayNum(s, 'shugyo')) / 100; // 熟練の上がりは今までの効き(r1115-176)
+        s.techs.forEach(t => { s.mastery[t] = clamp(num(s.mastery[t]) + Math.round(SHUGYO.mastery * boostM), 0, 100); });
         // 技のくじ: 選んだ技それぞれ(超修行なら2つとも覚えることがある)。外した技は、その技だけ次から +SHUGYO.miss(技ごと)
         const tries = []; const got = [];
         want.forEach((t, i) => { const hit = rng() < rates[i]; tries.push({ id: t.id, rate: r2(rates[i]), hit }); if (hit) got.push(t.id); });
