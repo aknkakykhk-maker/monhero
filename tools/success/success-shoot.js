@@ -159,6 +159,7 @@ const makeRun = async (kind) => {
             if (st === 'scrollend') { document.querySelectorAll('.msx *').forEach((e) => { const o = getComputedStyle(e).overflowY; if ((o === 'auto' || o === 'scroll') && e.scrollHeight > e.clientHeight) e.scrollTop = e.scrollHeight; }); return true; } // 下まで送る(最後の行が下の帯に隠れないかを見る)
             if (st === 'cont') return click(/続きから/);
             if (st === 'bag') return click(/持ち物/);
+            if (/^w\d+$/.test(st)) return true; // 待つだけ(下の待ち時間で止める。例: w350)
             if (st === 'stats') return click(/^📊/);
             if (st.startsWith('ptsup:')) { const [k, n] = st.slice(6).split('x'); const b = document.querySelector(`[data-msx-pts-row="${k}"] button[aria-label$="を上げる"]`); for (let i = 0; i < Number(n || 1); i++) if (b && !b.disabled) b.click(); return !!b; } // 能力ポイントの仮振り(r1115-044)
             if (st === 'ptsauto') return click(/おまかせで振る/);
@@ -277,7 +278,7 @@ const makeRun = async (kind) => {
           if (!done) check(`${name}${tag ? `(${tag})` : ''}: 「${st}」のボタンが押せる`, false, JSON.stringify(await page.evaluate(() => window.__scrubInfo || null)));
           await page.waitForTimeout(350);
         }
-        await page.waitForTimeout(steps.some((x) => String(x).startsWith("how:")) ? 1800 : 900); // 選んだあとのゲージの動きが終わるまで待つ
+        await page.waitForTimeout(steps.some((x) => String(x).startsWith("how:")) ? 1800 : (Number(process.env.SHOT_WAIT) || 900)); // 選んだあとのゲージの動きが終わるまで待つ
         const m = await page.evaluate((fscale) => {
           const root = document.querySelector('.msx'); if (!root) return { ok: false };
           if (fscale) { // 大きい文字設定の真似: 文字の大きさを倍にする(一度だけ)
