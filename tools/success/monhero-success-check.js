@@ -481,7 +481,8 @@ ok(near(SUC.failRateOf({ ...base, yosu: { sabori: { visits: 0 } } }) - fFull, 0.
     ok(op.sum > plain.sum * 1.0 && op.sum < plain.sum * 1.35, `ライバルの強さが期の基準に寄っていない: ${op.sum} / ${plain.sum}`);
     ok(op.stats.pow > op.stats.wise, 'ライバルの6能力の形がもとの子のままでない');
     const w1 = SUC.settle(b, [true]).state; const w0 = SUC.settle({ ...b, battle: { ...b.battle, rival: null } }, [true]).state;
-    ok(w1.fame > w0.fame && w1.tickets > w0.tickets && w1.pts === w0.pts && K.every(k => w1.stats[k] === Math.min(999, w0.stats[k] + 12)) && w1.titles.includes(SUC.RIVAL.title), 'ライバルに勝ったごほうび(賞金×1.5・チケット+1・全能力+12・称号)がずれている');
+    const ptsBase = (SUC.CUP_REWARD && SUC.CUP_REWARD.pts ? SUC.CUP_REWARD.pts[rv.c.star] : 0) || 0; // 2026-11-15 r1115-191: 賞金・チケットはふつうと同じ・その大会の能力ポイントだけ ×1.5
+    ok(w1.fame === w0.fame && w1.tickets === w0.tickets && w1.pts - w0.pts === Math.round(ptsBase * 1.5) - ptsBase && K.every(k => w1.stats[k] === Math.min(999, w0.stats[k] + 12)) && w1.titles.includes(SUC.RIVAL.title), 'ライバルに勝ったごほうび(賞金・チケットはふつうと同じ・能力ポイント×1.5・全能力+12・称号)がずれている');
   }
   // 王者・常連・組み合わせ表
   const d = { ...s0, turn: 5, battle: { kind: 'debut', round: 0 } };

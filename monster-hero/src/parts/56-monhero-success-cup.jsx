@@ -427,7 +427,7 @@ function MonsucBracket({ suc, s, info, result: resultProp, onFight, onResultOnly
   ];
   const champNo1 = no[E.indexOf(champ)] === 1;
   const finalLine = foe.rival
-    ? <>「{champNo1 && champ !== foe ? <>1番人気は{Z} 王者の {nm(champ)}!{Z} でも、{Z}</> : null}決勝の相手は{Z} <em>ライバルの {nm(foe)}</em> だよ。{Z}勝てば{Z} ごほうび大!」</>
+    ? <>「{champNo1 && champ !== foe ? <>1番人気は{Z} 王者の {nm(champ)}!{Z} でも、{Z}</> : null}決勝の相手は{Z} <em>ライバルの {nm(foe)}</em> だよ。{Z}勝てば{Z} 能力ポイントが1.5倍!」</>
     : foe.champ
       ? <>「決勝の相手は{Z} 1番人気の王者{Z} <em>{nm(foe)}</em>!{Z} {info.opp && info.opp.note ? `${info.opp.note}、だって。` : ''}{Z}ここで勝てば{Z} 大金星だよ!」</>
       : <>「決勝の相手は{Z} <em>{nm(foe)}</em>!{Z} あわてずに{Z} いこうね」</>;
@@ -614,7 +614,7 @@ function MonsucMatchSkip({ won, onEnd }) {
 function MonsucCupWin({ s, info, match, out, onNext }) {
   const o = info.opp || {};
   const rows = Array.isArray(out && out.rows) ? out.rows : [
-    ...(out && out.prize ? [{ i: '💰', k: '賞金', v: `+${out.prize}G${info.rival ? '(ライバルに勝って ×1.5)' : ''}`, big: info.rival }] : []),
+    ...(out && out.prize ? [{ i: '💰', k: '賞金', v: `+${out.prize}G` }] : []),
     ...(out && out.tickets ? [{ i: '🎫', k: '修行チケット', v: `+${out.tickets}` }] : []),
     ...(out && out.title ? [{ i: '🏅', k: '称号', v: `「${out.title}」` }] : []),
   ];
@@ -627,10 +627,10 @@ function MonsucCupWin({ s, info, match, out, onNext }) {
         <div className="who">{(() => { const im = <MscMyMon sp={s.species} colors={info.colors}/>; const k = s.awake && typeof msxKiraOf === 'function' ? msxKiraOf(s.awake) : null; return k && typeof cardKiraWrap === 'function' ? cardKiraWrap(k, im, { src: mscMonImg(s.species), calm: typeof msxAwCalm === 'function' && msxAwCalm() }) : im; })()}</div>
         {/* 言葉のまとまりごとに折れない塊にして、塊の間でだけ折り返す(2026-11-15 r1115-051「ラ/ウンド」と折れた・語の間の空白) */}
         <div className="sub" data-msc-win-sub><span className="nw">{info.title}{MSC_STARS(info.star)}</span> <span className="nw">1戦目</span> <span className="nw">{o.name || mscMonName(o.species)}に勝ち{match && match.r ? `(${match.r.rounds}ラウンド)` : ''}</span></div>
-        {info.rival && <div className="rival"><span>ライバルの {o.name || mscMonName(o.species)} にも 勝った!</span><em>ごほうび大</em></div>}
+        {info.rival && <div className="rival"><span>ライバルの {o.name || mscMonName(o.species)} にも 勝った!</span><em>能力ポイント1.5倍</em></div>}
       </div>
       {rows.map((r, k) => <div key={k} className={`msc-rw ${r.big ? 'big' : ''}`} style={{ animationDelay: `${0.3 + k * 0.12}s` }}><span className="i">{r.i}</span><span className="k">{r.k}</span><span className="v">{r.v}</span></div>)}
-      <div className="msc-talk"><img src={mscFace(s.aid, 'happy')} alt=""/><p>{coach ? <b style={{ display: 'block', fontSize: 11, color: '#b45309' }}>{coach.name}</b> : null}{info.rival ? '「ライバルに勝った! ごほうびも 大きいよ!」' : `「${info.meName}、やったね! 優勝だよ!」`}</p></div>
+      <div className="msc-talk"><img src={mscFace(s.aid, 'happy')} alt=""/><p>{coach ? <b style={{ display: 'block', fontSize: 11, color: '#b45309' }}>{coach.name}</b> : null}{info.rival ? '「ライバルに勝った! 能力ポイントが 1.5倍だよ!」' : `「${info.meName}、やったね! 優勝だよ!」`}</p></div>
       <div className="msc-foot"><button className="msc-btn" data-msc-next onClick={onNext}>次へ ▶</button></div>
     </div>
   );

@@ -552,7 +552,7 @@
   const STORY_BIG = 2;         // ほろ苦い結末の「大+」= トレーニング2回ぶん
   const RUNNER_UP = 0.4; // 負けたときは準優勝の扱い(★★ 以上・賞金の40%)
   // ライバル(TOURNAMENT §8b・社長 2026-11-12): 月のはじめに決まる・札にアイコン・ごほうびが大きい
-  const RIVAL = Object.freeze({ rate: 0.25, str: 1.1, prize: 1.5, all: 12, tickets: 1, title: 'ライバルに勝った' }); // ごほうびの主は全能力 +12(社長 2026-11-12)
+  const RIVAL = Object.freeze({ rate: 0.25, str: 1.1, pts: 1.5, all: 12, title: 'ライバルに勝った' }); // ごほうび: 全能力 +12・称号・その大会の結果でもらえる能力ポイント ×1.5(賞金・チケットはふつうの大会と同じ。2026-11-15 r1115-191 社長)
   const OPP_JITTER = 0.08;
   // 大会の相手の人気・忠誠度 [人気, 忠誠](期の基準)と上乗せ。忠誠は高め(言うことを聞かない番が多すぎると相手が弱くなりすぎる)・人気は期とともに上がる
   const OPP_POPLOY = Object.freeze({ debut: [10, 60], junior: [20, 65], middle: [35, 70], pro: [50, 75], final: [65, 80] });
@@ -1818,12 +1818,12 @@
       return o;
     };
     const giveItems = (s, items, out) => { const e = Object.entries(items || {}); if (!e.length) return; e.forEach(([k, n]) => { s.bag[k] = num(s.bag[k]) + n; }); out.gotItems = { ...(out.gotItems || {}), ...items }; };
-    const exReward = (s, ex, out) => {
+    const exReward = (s, ex, out, ptsMul = 1) => {
       const rw = ex.rw || {}; const got = {};
       if (rw.all) KEYS.forEach(k => addStat(s, k, rw.all));
       if (rw.stat) for (const [k, v] of Object.entries(rw.stat)) addStat(s, k, v);
       if (rw.loy) addLoyalRaw(s, Math.ceil(rw.loy / 2), Math.floor(rw.loy / 2));
-      if (rw.pts) gainWinPts(s, rw.pts);
+      if (rw.pts) gainWinPts(s, rw.pts * ptsMul);
       if (rw.pop) s.pop = clamp(s.pop + popGain(s, rw.pop), 0, 100);
       if (rw.hpMax) { s.hpMax = Math.min(HP_MAX_CAP, s.hpMax + rw.hpMax); s.hp = Math.min(s.hpMax, s.hp + rw.hpMax); }
       Object.assign(got, cupItemsOf(s, ex.sys, ex.star)); for (const [k, n] of Object.entries(got)) s.bag[k] = num(s.bag[k]) + n;
@@ -1950,7 +1950,6 @@
       const exB = b.kind === 'cup' ? EX_BY_SYS[b.sys] : null;
       let full = b.kind === 'summit' ? PRIZE.summit[b.round] : exB ? exB.prize : b.kind === 'cup' ? Math.round(CUP_PRIZE[b.star] * PERIOD_PRIZE[pk]) : num(PRIZE[b.kind]);
       let tkFull = b.kind === 'summit' ? TICKET_BASE.summit[b.round] : exB ? exB.tk : b.kind === 'cup' ? Math.round(TICKET_BASE.cup[b.star] * TICKET_BASE.period[pk]) : num(TICKET_BASE[b.kind]);
-      if (won && b.rival) { full = Math.round(full * RIVAL.prize); tkFull = Math.round(tkFull * RIVAL.prize); }
       let prize = won ? full : (star >= 2 && b.kind !== 'summit' ? Math.round(full * RUNNER_UP) : 0);
       if (b.sys === 'scatsu' && !won) prize = Math.round(full * 0.5); // 格上への挑戦: 負けても賞金の半分
       if (b.sys === 'scmua' && won) prize = Math.round(full * (1 + 0.3 * (1 - s.stress / 100))); // 笑顔の大会: 機嫌がよいほど賞金 ×1.0〜1.3
@@ -1960,7 +1959,7 @@
       void tkFull; // 2026-11-14 社長: 修行チケットは賞金ランクの段が上がるたびに(勝つたびの1〜4枚はやめた)
       if (won) { // 優勝の獲得物のチケット(期末の大会・ヒーローズファイナル・★★★以上・四大大会)とライバル
         const winTk = (WIN_TICKET.forced.includes(b.kind) || b.kind === 'summit' || (b.kind === 'cup' && (b.star >= WIN_TICKET.cupStar || (exB && exB.four)))) ? WIN_TICKET.add : 0;
-        const t = winTk + (b.rival ? RIVAL.tickets : 0); if (t) { s.tickets += t; out.tickets = t; out.winTickets = t; }
+        const t = winTk; if (t) { s.tickets += t; out.tickets = t; out.winTickets = t; }
       }
       { // 賞金ランク: 上がった段の数だけチケット。🎫チケット運は段が上がるたびに ◯% でもう1枚
         const from = num(s.fameRank); const to = rankStepOf(s);
@@ -1993,11 +1992,11 @@
         return { state: s, out };
       }
       if (b.kind === 'cup') {
-        if (won && EX_BY_SYS[b.sys]) { exReward(s, EX_BY_SYS[b.sys], out); if (b.rival) { KEYS.forEach(k => addStat(s, k, RIVAL.all * (1 + stayNum(s, 'rivaldamashii') / 100))); if (!s.titles.includes(RIVAL.title)) s.titles.push(RIVAL.title); out.rivalWin = true; } }
+        if (won && EX_BY_SYS[b.sys]) { exReward(s, EX_BY_SYS[b.sys], out, b.rival ? RIVAL.pts : 1); if (b.rival) { KEYS.forEach(k => addStat(s, k, RIVAL.all * (1 + stayNum(s, 'rivaldamashii') / 100))); if (!s.titles.includes(RIVAL.title)) s.titles.push(RIVAL.title); out.rivalWin = true; } }
         if (won && !EX_BY_SYS[b.sys]) {
           giveItems(s, cupItemsOf(s, b.sys, b.star), out); // 勝ったときのアイテム(直接のごほうびの上乗せ)
           const sy = CUP_SYS[b.sys] || {};
-          if (CUP_REWARD.pts[b.star]) gainWinPts(s, CUP_REWARD.pts[b.star]);
+          if (CUP_REWARD.pts[b.star]) gainWinPts(s, CUP_REWARD.pts[b.star] * (b.rival ? RIVAL.pts : 1)); // ライバル: この結果の能力ポイント ×1.5(心得の上乗せと同じ式で1回だけ丸める)
           if (CUP_REWARD.pop[b.star]) s.pop = clamp(s.pop + popGain(s, CUP_REWARD.pop[b.star]), 0, 100);
           if (sy.stat && CUP_REWARD.statUp[b.star]) addStat(s, sy.stat, CUP_REWARD.statUp[b.star]);
           if (sy.dist !== undefined && addAptUp(s, sy.dist, 'cup')) out.aptUp = { dist: sy.dist, grade: aptGradesOf(s)[sy.dist] }; // 間合いの自慢の大会: その間合いが1段上がる
