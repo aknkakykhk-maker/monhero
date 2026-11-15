@@ -67,7 +67,7 @@ function MsxR3Shugyo({ run, setRun, v, ev, onBack, onPause }) {
     const body = (<>
       <MsxBand s={s} v={SUC.peek(s)} ev={SUC.evaluate(s)}/>
       <div className="v-scene" style={{ flex: '1 1 0', minHeight: 200 }}><img className="bg" src={`images/story-bg/${MSX_R3_COURSE_BG[o.course] || 'forest_evening'}.jpg`} alt=""/><div className="sh"/>{learned ? <div className="v-burst"/> : null}
-        <div className="gr" style={{ bottom: 'calc(16% - 5px)' }}/><MsxMonArt run={run} className="mon" style={{ bottom: '16%', height: '44%', ...(learned ? {} : { filter: 'grayscale(.25)' }) }}/>
+        <div className="gr" style={{ bottom: 'calc(16% - 5px)' }}/><MsxMonArt run={run} className="mon" noPeak style={{ bottom: '16%', height: '44%', ...(learned ? {} : { filter: 'grayscale(.25)' }) }}/>
         {/* 覚えた/覚えなかったをはっきり(2026-11-15 社長 r1115-063): 覚えた=金・覚えられなかった=灰・技を選ばなかった=修行終わり */}
         <div className={`v-stamp msx-pop ${learned ? '' : tries.length ? 'ng' : 'ok'}`} style={{ top: '5%', fontSize: learned ? 38 : tries.length ? 'min(30px, 8.4vw)' : 32 }} data-msx-r3-qstamp={learned ? 'hit' : tries.length ? 'miss' : 'none'}>{learned ? (missed.length ? '1つ覚えた!' : '技を覚えた!') : tries.length ? '覚えられなかった…' : '修行終わり!'}
           <small>{learnedAll.length > 1 ? `✨ ${learnedAll.map((x) => x.name).join('・')}` : learned ? `✨ ${learned.name}(${MSX_R3_DIST[Math.min(...(learned.dist || [1]))]}の間合い)` : tries.length ? `次は覚える率が +${SH.miss || 15}%` : '能力が上がった'}</small></div>
@@ -157,6 +157,7 @@ function MsxR3Shugyo({ run, setRun, v, ev, onBack, onPause }) {
           <span className="ti" aria-hidden="true"><MsxSkillArt t={t} uid={`q${r}${d}`}/></span><span className={`tg-rk rk${rk}`} aria-hidden="true">{rk}</span>
           {got && typeof msxMasteryOf === 'function' ? <span className="tg-ms" aria-hidden="true" data-msx-tech-ms={msxMasteryOf(s0.mastery, t.id)}><i style={{ width: `${msxMasteryOf(s0.mastery, t.id)}%` }}/></span> : null}{/* 覚えた技の熟練のゲージ(r1115-082) */}
           {got ? <span className="g qb" aria-hidden="true">済</span> : ok ? <span className="g qb" aria-hidden="true">{Math.round(rateOf[t.id] * 100)}%</span> : <span className="g qb" aria-hidden="true">🔒</span>}
+          {alts.length > 1 ? <span className="tg-alt" aria-hidden="true" data-msx-alt={cellK} data-msx-alt-n={alts.length}>⇄{alts.length}</span> : null}{/* 同じマスに技が2つ以上ある印(r1115-146①)。押せない */}
         </button>);
       }}/> : <div className="q-note msx-kp">このモンスターの技の表がまだありません(能力だけ上がる)</div>}
       <div className="q-note msx-kp">ランクが高い技ほど覚えにくい。能力・忠誠度・人気がよく仕上がっているほど、行き先の旬の季節ほど覚えやすい。外した技は、その技だけ次から覚えやすくなる。助手がドラだと、さらに覚えやすい</div>
