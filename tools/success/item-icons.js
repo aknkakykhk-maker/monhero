@@ -514,6 +514,37 @@ ART['training-ticket'] = () => {
   );
 };
 
+// 距離の汁(2026-11-15 r1115-055): 丸い肩の小瓶・金のねじぶた・文字なしのラベル。汁ごとに中身の色だけ替える
+const elixir = (liq) => () => {
+  const jar = 'M196 150 L316 150 L316 176 C352 186 368 214 368 252 L368 404 Q368 440 332 440 L180 440 Q144 440 144 404 L144 252 C144 214 160 186 196 176 Z';
+  return wrap(
+    lg('glass', [[0, '#ffffff', 0.55], [1, '#e8eef5', 0.45]], 0, 0, 1, 0) + lg('liq', liq, 0, 0, 1, 1)
+    + lg('cap', GOLD) + lg('label', [[0, '#fffaf0'], [1, '#efe4cc']], 0, 0, 0, 1),
+    `<path d="${jar}" fill="url(#glass)" ${line}/>
+    <clipPath id="jc"><path d="${jar}"/></clipPath>
+    <g clip-path="url(#jc)">
+      <rect x="130" y="214" width="252" height="240" fill="url(#liq)"/>
+      <path d="M130 214 Q190 202 256 214 Q322 226 382 214 L382 230 L130 230 Z" fill="#ffffff" opacity="0.35"/>
+      <rect x="166" y="232" width="22" height="182" rx="11" fill="#ffffff" opacity="0.5"/>
+      <circle cx="320" cy="388" r="9" fill="#ffffff" opacity="0.45"/><circle cx="302" cy="408" r="6" fill="#ffffff" opacity="0.4"/>
+    </g>
+    <path d="${jar}" fill="none" ${line}/>
+    <!-- ラベル(文字なし・しずくの印) -->
+    <rect x="178" y="270" width="156" height="98" rx="12" fill="url(#label)" ${line}/>
+    <path d="M256 290 C270 310 280 322 280 336 C280 350 269 358 256 358 C243 358 232 350 232 336 C232 322 242 310 256 290 Z" fill="url(#liq)" ${thin}/>
+    <!-- ふた -->
+    <rect x="186" y="96" width="140" height="60" rx="14" fill="url(#cap)" ${line}/>
+    <path d="M206 104 L206 150 M230 104 L230 150 M254 104 L254 150 M278 104 L278 150 M302 104 L302 150" stroke="#a8680c" stroke-width="5" opacity="0.55"/>
+    <rect x="196" y="104" width="26" height="12" rx="6" fill="#ffffff" opacity="0.7"/>
+    ${sparkle(384, 168, 18)}`,
+    groundShadow(256, 452, 130, 16),
+  );
+};
+ART['elixir-red'] = elixir([[0, '#ff6b6b'], [0.5, '#e02424'], [1, '#9b1111']]);
+ART['elixir-orange'] = elixir([[0, '#ffc266'], [0.5, '#ff8a1f'], [1, '#d4600a']]);
+ART['elixir-green'] = elixir([[0, '#a7f3c8'], [0.5, '#3fbf7f'], [1, '#1e8a57']]);
+ART['elixir-blue'] = elixir([[0, '#7cb8ff'], [0.5, '#2563eb'], [1, '#1e3a8a']]);
+
 // ---- 書き出し -----------------------------------------------------------------
 async function main() {
   const checkOnly = process.argv.includes('--check');
