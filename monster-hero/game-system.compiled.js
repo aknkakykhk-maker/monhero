@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: cad3683f3ba8df60
+// source-sha256: 6c2ffef1613b3a6d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -95891,6 +95891,9 @@ const rhythmWatchPhaseText = phase => ({
   full: `この部屋は観戦がいっぱいです(最大${RHYTHM_WATCH_MAX}人)`,
   none: 'この部屋は見つかりませんでした。もう閉じたか、人がいないようです'
 })[phase] || '';
+const RHYTHM_WATCH_JOIN = {
+  fn: null
+};
 const RHYTHM_WATCH = (() => {
   let st = null;
   let sock = null;
@@ -96092,7 +96095,8 @@ const RHYTHM_WATCH = (() => {
   const api = {
     start(code, {
       member = false,
-      quiet = false
+      quiet = false,
+      joinable = false
     } = {}) {
       const c = rhythmMultiNormalizeCode(code);
       if (!c) return false;
@@ -96104,6 +96108,7 @@ const RHYTHM_WATCH = (() => {
         code: c,
         member,
         quiet,
+        joinable: !member && joinable === true,
         wid: member ? v.selfId : rhythmMultiMakeId('w'),
         phase: 'connecting',
         round: '',
@@ -97016,6 +97021,7 @@ function RhythmMultiLobbyCount() {
 }
 function RhythmMultiRoomList({
   onJoin,
+  onWatch = null,
   onCreate,
   onBack,
   resolveIconUrl
@@ -97066,11 +97072,16 @@ function RhythmMultiRoomList({
     className: "block truncate text-[10px] font-bold text-slate-400"
   }, [r.hr > 0 ? `ブリーダーLv.${r.hr}` : '', r.ph === 'select' ? '曲選び中' : '待っています'].filter(Boolean).join(' ・ '))), React.createElement("span", {
     className: "shrink-0 rounded-md bg-cyan-800/70 px-1.5 py-0.5 text-[10px] font-black text-cyan-100"
-  }, r.n, "/", RHYTHM_MULTI_ROOM_MAX, "人"), React.createElement("button", {
+  }, r.n, "/", RHYTHM_MULTI_ROOM_MAX, "人"), onWatch && React.createElement("button", {
+    type: "button",
+    "data-rhythm-multi-room-watch": r.code,
+    onClick: () => onWatch(r.code),
+    className: "min-h-[44px] shrink-0 whitespace-nowrap rounded-lg bg-amber-500 px-2.5 text-[13px] font-black text-slate-950 active:scale-[.97]"
+  }, "観戦"), React.createElement("button", {
     type: "button",
     "data-rhythm-multi-room-join": r.code,
     onClick: () => onJoin(r.code),
-    className: "min-h-[44px] shrink-0 rounded-lg bg-sky-600 px-3 text-[13px] font-black active:scale-[.97]"
+    className: "min-h-[44px] shrink-0 whitespace-nowrap rounded-lg bg-sky-600 px-3 text-[13px] font-black active:scale-[.97]"
   }, "入る")))), React.createElement("button", {
     type: "button",
     "data-rhythm-multi-room-list-create": true,
@@ -98633,7 +98644,7 @@ const rhythmWatchSettings = () => {
     return normalizeRhythmSettings(null);
   }
 };
-const rhythmWatchUseFlat = s => !!(s && (s.lightweightMode || s.effectAmount === 'MINIMAL' || s.frameRateMode !== 'DEVICE')) || typeof rhythmBuildCanvasRenderer !== 'function' || typeof rhythmNoteCanvasGeometry !== 'function';
+const rhythmWatchUseFlat = () => typeof rhythmBuildCanvasRenderer !== 'function' || typeof rhythmNoteCanvasGeometry !== 'function';
 const rhythmWatchPosition = (row, nowMs = Date.now()) => {
   if (!row || !row.pAt) return {
     p: 0,
@@ -98654,7 +98665,7 @@ function RhythmWatchLane({
   onWaiting = null,
   onMode = null
 }) {
-  const [flat, setFlat] = React.useState(() => rhythmWatchUseFlat(rhythmWatchSettings()));
+  const [flat, setFlat] = React.useState(() => rhythmWatchUseFlat());
   React.useEffect(() => {
     if (onMode) onMode(!flat);
     return () => {
@@ -99131,6 +99142,13 @@ function RhythmWatchScreen({
   const lifeMax = typeof RHYTHM_LIFE_MAX === 'number' ? RHYTHM_LIFE_MAX : 1000;
   const who = v.people.find(x => x.id === v.focus);
   const close = () => RHYTHM_WATCH.stop();
+  const canJoin = !!(v.joinable && !v.member && RHYTHM_WATCH_JOIN.fn);
+  const joinRoom = () => {
+    const fn = RHYTHM_WATCH_JOIN.fn,
+      code = v.code;
+    RHYTHM_WATCH.stop();
+    if (fn) fn(code);
+  };
   const icon = (x, size) => React.createElement("span", {
     className: "block shrink-0 overflow-hidden rounded-full border border-white/40 bg-slate-700",
     style: {
@@ -99166,7 +99184,12 @@ function RhythmWatchScreen({
     className: "block text-[13px] font-black text-amber-300"
   }, "👁 観戦中"), React.createElement("small", {
     className: "block truncate text-[11px] font-bold text-slate-300"
-  }, songName || (playing ? '' : `部屋 ${v.code}`)))), !playing && React.createElement("div", {
+  }, songName || (playing ? '' : `部屋 ${v.code}`))), canJoin && React.createElement("button", {
+    "data-rhythm-watch-join": true,
+    type: "button",
+    onClick: joinRoom,
+    className: "min-h-[40px] shrink-0 whitespace-nowrap rounded-xl bg-sky-600 px-3 text-[12px] font-black text-white"
+  }, "この部屋に入る")), !playing && React.createElement("div", {
     className: "flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center"
   }, React.createElement("p", {
     "data-rhythm-watch-message": true,
@@ -99273,7 +99296,7 @@ function RhythmWatchScreen({
   })), React.createElement("p", {
     className: "mt-1 text-[10px] font-bold text-slate-400",
     style: JA_WRAP_STYLE
-  }, jaWrap(`名前を押すと、その人の判定を見られます${v.member ? '。次の曲から、いっしょに遊べます' : ''}`)))));
+  }, jaWrap(`名前を押すと、その人の判定を見られます${v.member ? '。次の曲から、いっしょに遊べます' : canJoin ? '。観戦は見るだけです。遊ぶときは「この部屋に入る」' : ''}`)))));
   const target = typeof rotationAwarePortalTarget === 'function' ? rotationAwarePortalTarget() : document.body;
   return ReactDOM.createPortal(body, target);
 }
@@ -100083,6 +100106,12 @@ function RhythmMultiScreenBody({
     setFreeList(false);
     RHYTHM_MULTI.join(code, myProfile(), 'free');
   };
+  React.useEffect(() => {
+    RHYTHM_WATCH_JOIN.fn = joinFreeRoom;
+    return () => {
+      if (RHYTHM_WATCH_JOIN.fn === joinFreeRoom) RHYTHM_WATCH_JOIN.fn = null;
+    };
+  });
   const searchRoom = async kind => {
     setMessage('');
     const left = await rhythmMultiPenaltyLeftMs();
@@ -100995,10 +101024,18 @@ function RhythmMultiScreenBody({
         setMessage('');
         setFreeOpen(false);
         setFreeList(false);
-        RHYTHM_WATCH.start(code);
+        RHYTHM_WATCH.start(code, {
+          joinable: true
+        });
       }
     }), freeList ? React.createElement(RhythmMultiRoomList, {
       onJoin: joinFreeRoom,
+      onWatch: code => {
+        setMessage('');
+        RHYTHM_WATCH.start(code, {
+          joinable: true
+        });
+      },
       onCreate: createFree,
       onBack: () => setFreeList(false),
       resolveIconUrl: resolveIconUrl
