@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e9bdc975c4612b59
+// source-sha256: d93fcf7b395b2166
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -186630,7 +186630,8 @@ function MsaStage({
   speedF = 1,
   fill = false,
   lite = false,
-  wide = false
+  wide = false,
+  liveGuts = null
 }) {
   const reduce = useMemo(() => !!lite || msaReduce(), [lite]);
   const [stageW, setStageW] = useState(340);
@@ -186809,7 +186810,8 @@ function MsaStage({
   const shakeLv = reduce || !e.hit || e.ev !== 'tech' ? 0 : Math.max(rkFx.shake || 0, tier >= 4 ? 3 : tier >= 3 ? 2 : tier >= 2 ? 1 : 0);
   const shake = shakeLv > 0;
   const p = Number.isFinite(e.p) ? Math.round(e.p) : null;
-  const gutsOf = side => f.g && Number.isFinite(Number(f.g[side])) ? Number(f.g[side]) : null;
+  const liveOf = side => liveGuts && Number.isFinite(Number(liveGuts[side])) ? Number(liveGuts[side]) : null;
+  const gutsOf = side => liveOf(side) != null ? liveOf(side) : f.g && Number.isFinite(Number(f.g[side])) ? Number(f.g[side]) : null;
   const bands = {
     A: [],
     B: []
@@ -186827,7 +186829,14 @@ function MsaStage({
   const hud = sd => {
     const m = memberOf(sd);
     const foe = e.ev === 'tech' && e.side && e.side !== sd;
-    const tags = msaGutsTagsOf(log, frames, Math.min(pos, frames.length - 1), sd, regen, hitMs);
+    const tags0 = msaGutsTagsOf(log, frames, Math.min(pos, frames.length - 1), sd, regen, hitMs);
+    const lv = liveOf(sd);
+    const lvUp = lv != null && f.g && Number.isFinite(Number(f.g[sd])) ? Math.round(lv - Number(f.g[sd])) : 0;
+    const tags = lvUp > 0 ? [...tags0, {
+      t: `+${lvUp}`,
+      cls: 'up',
+      delay: 0
+    }] : tags0;
     return React.createElement("div", {
       key: sd,
       className: `msa-hud ${sd}`,
@@ -187234,6 +187243,19 @@ function MonsucArena({
   }, "試合の準備をしています…"));
   const f = frames[Math.min(pos, frames.length - 1)] || frames[0];
   const fShow = fShowH || f;
+  const liveGuts = (() => {
+    const op = barOn ? mm.pending : null;
+    if (!op || op.kind !== 'act' || !Number.isFinite(Number(op.guts)) || !f || !f.g) return null;
+    const out = {
+      A: Number(op.guts)
+    };
+    if (Number.isFinite(Number(op.round)) && Number(op.round) > (Number(f.r) || 0) && typeof msaRegenOf === 'function') {
+      const rg = Number(msaRegenOf(log, frames)[`B${f.act ? f.act.B : 0}`]) || 0;
+      const gMax = typeof window !== 'undefined' && window.ASSISTANT_MASMON_BATTLE && window.ASSISTANT_MASMON_BATTLE.GUTS_MAX ? window.ASSISTANT_MASMON_BATTLE.GUTS_MAX : 99;
+      if (rg > 0 && Number.isFinite(Number(f.g.B))) out.B = Math.min(gMax, Number(f.g.B) + rg);
+    }
+    return out;
+  })();
   const e = log[pos] || {};
   const st = log[0] || {};
   const maxHp = {
@@ -187313,7 +187335,8 @@ function MonsucArena({
     introTitle: info.title,
     speedF: (MSA_SPEEDS.find(x => x.id === speed) || MSA_SPEEDS[0]).f,
     fill: true,
-    wide: true
+    wide: true,
+    liveGuts: liveGuts
   })), React.createElement("div", {
     className: "msa-say",
     "data-msa-say": true
