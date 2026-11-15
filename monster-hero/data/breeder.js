@@ -378,14 +378,14 @@ const ERUBIN_MARKET_ICONS = MYUA_ICON_EXPRESSIONS.map(([key, label]) => ({
 // こちらは id を atsu_* に分けているので、既存の保存データには影響しない。
 // (使われていない画像の検査が見つけられるよう、パスは1枚ずつ文字で書いておく)
 const ATSU_EXPRESSION_ICONS = {
-  normal:   "images/breeder-icons/atsu_normal.png?v=a893dc4ac547",
-  happy:    "images/breeder-icons/atsu_happy.png?v=7b34ccaf6380",
-  wink:     "images/breeder-icons/atsu_wink.png?v=06c5782aa9ef",
-  excited:  "images/breeder-icons/atsu_excited.png?v=7dd512e67132",
-  surprise: "images/breeder-icons/atsu_surprise.png?v=b840aee29515",
-  troubled: "images/breeder-icons/atsu_troubled.png?v=7d2062f67427",
-  angry:    "images/breeder-icons/atsu_angry.png?v=40f6fd18ccc3",
-  crying:   "images/breeder-icons/atsu_crying.png?v=59ca70e74442",
+  normal:   "images/breeder-icons/atsu_normal.png?v=5c954ce53672",
+  happy:    "images/breeder-icons/atsu_happy.png?v=7563955d71c9",
+  wink:     "images/breeder-icons/atsu_wink.png?v=dd43b72b8c27",
+  excited:  "images/breeder-icons/atsu_excited.png?v=8f7008744645",
+  surprise: "images/breeder-icons/atsu_surprise.png?v=94b3956f05a7",
+  troubled: "images/breeder-icons/atsu_troubled.png?v=28d1c5015406",
+  angry:    "images/breeder-icons/atsu_angry.png?v=893d1086fb23",
+  crying:   "images/breeder-icons/atsu_crying.png?v=ffcb08fcd6c5",
 };
 const ATSU_MARKET_ICONS = MYUA_ICON_EXPRESSIONS.map(([key, label]) => ({
   id: `atsu_${key}`,
