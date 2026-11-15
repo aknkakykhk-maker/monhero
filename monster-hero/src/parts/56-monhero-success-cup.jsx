@@ -149,7 +149,7 @@ const monsucCupInfo = (suc, s, me) => {
   const { buffs, rows } = monsucBuffsOf(mods);
   const seed = ['monsuc', s.id, s.turn, b.kind, b.id || '', b.round || 0, b.retry || 0, b.again || 0, b.reroll || 0].join('|');
   const meName = (me && me.name) || mscMonName(s.species);
-  return { title: t.name, star: t.star, venue: t.venue, bracket, opp, mods, buffs, buffRows: rows, seed, meName, rival: Boolean(opp && opp.rival), champ: Boolean(opp && opp.champ) };
+  return { title: t.name, star: t.star, venue: t.venue, bracket, opp, mods, buffs, buffRows: rows, seed, meName, rival: Boolean(opp && opp.rival), champ: Boolean(opp && opp.champ), kind: b.kind || null, round: Number.isInteger(b.round) ? b.round : null };
 };
 
 // 対戦の芯の入力に直す(育てる子 = 手前 A・相手 = 奥 B)
@@ -611,7 +611,7 @@ function MonsucMatchSkip({ won, onEnd }) {
 }
 
 // ---- 優勝(B2) ----
-function MonsucCupWin({ s, info, match, out, onNext }) {
+function MonsucCupWin({ suc, s, info, match, out, onNext }) {
   const o = info.opp || {};
   const rows = Array.isArray(out && out.rows) ? out.rows : [
     ...(out && out.prize ? [{ i: '💰', k: '賞金', v: `+${out.prize}G` }] : []),
@@ -619,18 +619,23 @@ function MonsucCupWin({ s, info, match, out, onNext }) {
     ...(out && out.title ? [{ i: '🏅', k: '称号', v: `「${out.title}」` }] : []),
   ];
   const coach = mscAssistant(s.aid);
+  // ヒーローズファイナルの1回戦・準決勝は「勝ち抜け!」(優勝は決勝だけ・r1115-202 M9)
+  const SUM = Array.isArray(suc && suc.SUMMIT) ? suc.SUMMIT : [];
+  const mid = info.kind === 'summit' && Number.isInteger(info.round) && info.round < SUM.length - 1;
+  const winWord = mid ? '勝ち抜け!' : '優勝!';
+  const nextName = mid && SUM[info.round + 1] ? String(SUM[info.round + 1].name || '').replace(/^ヒーローズファイナル\s*/, '') : '';
   return (
     <div className="msc-wrap" data-msc-win>
       <div className="msc-hero win hi" data-msc-win-hero style={{ backgroundImage: `url(${MSC_VENUE_IMG[info.venue] || MSC_VENUE_IMG.cup})` }}>
         <div className="msc-rays"/>
-        <div className="big">優勝!</div>
+        <div className="big" data-msc-win-word>{winWord}</div>
         <div className="who">{(() => { const im = <MscMyMon sp={s.species} colors={info.colors}/>; const k = s.awake && typeof msxKiraOf === 'function' ? msxKiraOf(s.awake) : null; return k && typeof cardKiraWrap === 'function' ? cardKiraWrap(k, im, { src: mscMonImg(s.species), calm: typeof msxAwCalm === 'function' && msxAwCalm() }) : im; })()}</div>
         {/* 言葉のまとまりごとに折れない塊にして、塊の間でだけ折り返す(2026-11-15 r1115-051「ラ/ウンド」と折れた・語の間の空白) */}
         <div className="sub" data-msc-win-sub><span className="nw">{info.title}{MSC_STARS(info.star)}</span> <span className="nw">1戦目</span> <span className="nw">{o.name || mscMonName(o.species)}に勝ち{match && match.r ? `(${match.r.rounds}ラウンド)` : ''}</span></div>
         {info.rival && <div className="rival"><span>ライバルの {o.name || mscMonName(o.species)} にも 勝った!</span><em>能力ポイント1.5倍</em></div>}
       </div>
       {rows.map((r, k) => <div key={k} className={`msc-rw ${r.big ? 'big' : ''}`} style={{ animationDelay: `${0.3 + k * 0.12}s` }}><span className="i">{r.i}</span><span className="k">{r.k}</span><span className="v">{r.v}</span></div>)}
-      <div className="msc-talk"><img src={mscFace(s.aid, 'happy')} alt=""/><p>{coach ? <b style={{ display: 'block', fontSize: 11, color: '#b45309' }}>{coach.name}</b> : null}{info.rival ? '「ライバルに勝った! 能力ポイントが 1.5倍だよ!」' : `「${info.meName}、やったね! 優勝だよ!」`}</p></div>
+      <div className="msc-talk"><img src={mscFace(s.aid, 'happy')} alt=""/><p>{coach ? <b style={{ display: 'block', fontSize: 11, color: '#b45309' }}>{coach.name}</b> : null}{info.rival ? '「ライバルに勝った! 能力ポイントが 1.5倍だよ!」' : mid ? `「${info.meName}、勝ち抜けだよ! つぎは${nextName || '次の戦'}!」` : `「${info.meName}、やったね! 優勝だよ!」`}</p></div>
       <div className="msc-foot"><button className="msc-btn" data-msc-next onClick={onNext}>次へ ▶</button></div>
     </div>
   );
@@ -748,7 +753,7 @@ function MonsucCupShowInner({ suc, s, me, settle, onRematch, onNext, onClose, st
       : match ? <MonsucMatchSkip won={match.won} onEnd={finish}/>
       : <p className="msc-note">{failed ? '試合を読み込めませんでした。もう一度開いてください' : '試合の準備をしています…'}</p>;
   }
-  else if (phase === 'win') body = <MonsucCupWin s={s} info={info} match={shown} out={out} onNext={() => onNext && onNext(out)}/>;
+  else if (phase === 'win') body = <MonsucCupWin suc={suc} s={s} info={info} match={shown} out={out} onNext={() => onNext && onNext(out)}/>;
   else if (phase === 'lose') body = <MonsucCupLose suc={suc} s={s} info={info} match={shown} onRematch={(k) => onRematch && onRematch(k)} onGiveUp={() => { const o = typeof settle === 'function' ? settle(false) : null; if (onNext) onNext(o); }}/>;
   return (
     <div className="msc-root ambw-root" ref={rootRef} data-msc-root data-msc-phase={phase}>

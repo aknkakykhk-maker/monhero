@@ -153,6 +153,13 @@ const msxNormRun = (raw, SUC) => {
     startAt: msxNum(raw.startAt, 0),
     // ビートP(2026-11-14 足した項目): 本編へ渡した量・育成が終わったときの分を足したか。無い保存は 0 / false
     beatSent: msxNum(raw.beatSent, 0), beatEnd: raw.beatEnd === true,
+    // 大会の結果の画面で先に保存した決着(r1115-202 M1・足した項目)。同じ育成・同じターン・大会中のときだけ読む。無い・合わない保存は持たない
+    ...(() => {
+      const p = raw.showPend; if (!msxIsObj(p) || !msxIsObj(p.s) || p.turn !== s.turn || !s.battle) return {};
+      let ps = p.s; if (SUC && typeof SUC.restore === 'function') { try { ps = SUC.restore(ps); } catch (e) { ps = null; } }
+      if (!ps || ps.id !== s.id) return {};
+      return { showPend: { s: ps, won: p.won === true, turn: s.turn, opp: msxIsObj(p.opp) ? p.opp : null, gameover: p.gameover === true } };
+    })(),
     rev: msxNum(raw.rev, 0), // 保存の版番号(r1115-200 3b・足した項目)。保存のたびに +1。無い保存は 0
     // 期のはじめの控え(期の区切りの演出で増えた分を出す。2026-11-13 足した項目・無い保存は null のまま)
     ki: msxIsObj(raw.ki) && Number.isInteger(raw.ki.p) && Number.isFinite(raw.ki.fame) && Number.isFinite(raw.ki.power) ? { p: Math.max(0, Math.min(9, raw.ki.p)), fame: Math.round(Math.min(1e7, raw.ki.fame * kiFameMul)), power: raw.ki.power } : null,

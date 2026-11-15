@@ -27,7 +27,7 @@ const MSX_ARC_CSS = `
 .msx .r3 .arc-end small{display:block;font-size:12px;letter-spacing:0;-webkit-text-stroke:0;color:#fff;text-shadow:0 1px 0 #000;margin-top:4px}
 `;
 const MSX_ARC_END = Object.freeze({
-  bad: { name: 'バッドエンディング', sub: 'くやしさも、いっしょに', bg: 'images/story-bg/monhero_plaza_evening.jpg' },
+  bad: { name: 'くやしさも、いっしょに', sub: 'ヒーローズファイナル出場', /* 見出しを「バッドエンディング」にしない(r1115-202 L7) */ bg: 'images/story-bg/monhero_plaza_evening.jpg' },
   good: { name: 'グッドエンディング', sub: 'ヒーローズファイナル優勝', bg: 'images/success/scenes/venue-summit.png' },
   super: { name: '超グッドエンディング', sub: '最高のチーム', bg: 'images/success/scenes/venue-summit.png' },
 });

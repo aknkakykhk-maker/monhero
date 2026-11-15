@@ -125,7 +125,7 @@ function MsxBand({ s, v, ev, use = 0, stAdd = 0, hpFrom = null, stFrom = null })
         {/* 最後の期は参考(taikai-entry 175)どおり「HF進出」の札と、ヒーローズファイナルの日なら「当日」・その前は「あと◯ターン」(3ターン目から1戦ずつ) */}
         {v.period.key === 'final' ? (
           <div className="v-turn hf" data-msx-hfband={v.period.at >= 3 ? 'day' : 3 - v.period.at}><span className="ph hf">HF進出<small>{cal.year}年目 {cal.month}月</small></span>
-            <div className="n">{v.period.at >= 3 ? <b className="hfday">当日</b> : <>あと<b>{3 - v.period.at}</b>ターン</>}<small>最後まで あと <em>{v.toEnd}</em></small></div></div>
+            <div className="n">{v.period.at >= 3 && s.over ? <b className="hfday">終了</b> : v.period.at >= 3 ? <>このあと<b className="hfday" data-msx-hfround>{['1回戦', '準決勝', '決勝'][Math.min(2, v.period.at - 3)]}</b></> : <>あと<b>{3 - v.period.at}</b>ターン</>}<small>最後まで あと <em>{v.toEnd}</em></small></div></div>
         ) : (
           <div className="v-turn"><span className="ph">{v.period.name}<small>{cal.year}年目 {cal.month}月</small></span>
             <div className="n">残り<b>{v.period.left}</b>ターン<small>最後まで あと <em>{v.toEnd}</em></small></div></div>
@@ -487,7 +487,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
   const [preDesk, setPreDesk] = useState(false);
   const preB = run.phase === 'battle' && s.battle && s.battle.kind !== 'cup' ? s.battle : null;
   const preKey = preB ? `${s.turn}|${preB.kind}|${preB.round || 0}` : null;
-  const preOn = !!(preB && typeof MsxR3PreDesk === 'function' && !preB.retry && !preB.again && !(run.out && run.out.r3) && !run.r3skip && preAt !== preKey);
+  const preOn = !!(preB && typeof MsxR3PreDesk === 'function' && !preB.retry && !preB.again && !(run.out && run.out.r3) && !run.showPend && !run.r3skip && preAt !== preKey);
   const [, setScriptTick] = useState(0);
   // 台本(共通 + 助手の分)を読む。読み終わったら描き直して台詞を出す
   useEffect(() => { let alive = true; msxScriptLoad(s.aid).then(() => { if (alive) setScriptTick((n) => n + 1); }); return () => { alive = false; }; }, [s.aid]);
@@ -864,7 +864,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
           <button type="button" className="v-p" onClick={() => doAct({ kind: 'play' })}><div className="e">🎈</div>遊ぶ<small>体力+・甘え+</small></button>
           {/* 体力が足りないと行けない(r1115-062)。押せない見た目にして足りない数を出す*/}
           {(() => { const sh = (v.shugyo && v.shugyo.short) || 0; return <button type="button" className={`v-p${sh ? ' off' : ''}`} disabled={sh > 0} onClick={() => setSub('shugyo')} data-msx-shugyo-hp={sh || undefined}><div className="e">⚔</div>修行{sh ? <small className="hpng">体力があと<b>{sh}</b><br/>足りない</small> : <small>技を覚える</small>}</button>; })()}
-          <button type="button" className={`v-p${Array.isArray(v.cups) && !v.cups.length ? ' off' : ''}`} disabled={Array.isArray(v.cups) && !v.cups.length} onClick={() => setSub('cup')}><div className="e">🏆</div>大会<small>{Array.isArray(v.cups) && !v.cups.length ? '今月はなし' : '今月の大会'}</small></button>
+          <button type="button" className={`v-p${Array.isArray(v.cups) && !v.cups.length ? ' off' : ''}`} disabled={Array.isArray(v.cups) && !v.cups.length} onClick={() => setSub('cup')}><div className="e">🏆</div>大会<small>{Array.isArray(v.cups) && !v.cups.length ? (v.period.key === 'final' && v.period.at >= 3 ? 'HFは このあと' : '今月はなし') : '今月の大会'}</small></button>
         </div>
       </>)}
     </>);
