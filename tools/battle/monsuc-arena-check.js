@@ -22,7 +22,7 @@ const arena = fs.readFileSync(path.join(PARTS, '56-monhero-success-arena.jsx'), 
 const beta = fs.readFileSync(path.join(PARTS, '56-assistant-masmon-battle-beta.jsx'), 'utf8');
 const app = fs.readFileSync(path.join(PARTS, '60-app.jsx'), 'utf8');
 check('① MonsucArena と β の観戦が同じ場 MsaStage を使う', /<MsaStage /.test(arena.slice(arena.indexOf('function MonsucArena'))) && /<MsaStage /.test(beta));
-check('② 60-app が試合の画面の口を見て、バトルの曲を返す', /useMhBattleBgmOverlay\(\)/.test(app) && /if \(battleBgmOverlay\) return \(typeof battleBgmOverlay === 'string'/.test(app) && /assistantLifeOpenNow, battleBgmOverlay\]\);/.test(app));
+check('② 60-app が試合の画面の口を見て、バトルの曲を返す', /useMhBattleBgmOverlay\(\)/.test(app) && /if \(battleBgmOverlay\) return \(typeof battleBgmOverlay === 'string'/.test(app) && /assistantLifeOpenNow, battleBgmOverlay(?:, rhythmWatchAudioOn)?\]\);/.test(app));
 
 const PORT = 8984;
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json', '.css': 'text/css', '.png': 'image/png', '.jpg': 'image/jpeg', '.webp': 'image/webp', '.svg': 'image/svg+xml', '.woff2': 'font/woff2', '.mp3': 'audio/mpeg' };
