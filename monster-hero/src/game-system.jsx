@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 3414e04854522c05
+// generated-sha256: 120ab5bd84018eec
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -88491,7 +88491,8 @@ const MSX_CSS = `
 .msx .v-hm-tiles.t4{grid-auto-flow:row;grid-template-columns:1fr 1fr}
 .msx .msx-bm-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px}
 .msx .msx-bm{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-width:0;border-radius:14px;padding:8px 4px;background:#1e1a36;border:1.5px solid #64748b;border-bottom-width:3px;line-height:1.25;text-align:center}
-.msx .msx-bm img{width:100%;max-width:84px;aspect-ratio:1;border-radius:11px;object-fit:cover;background:#0f172a;border:2px solid #475569}
+.msx .msx-bm img{width:100%;max-width:84px;aspect-ratio:1;border-radius:11px;object-fit:cover;background:linear-gradient(180deg,#94a3b8,#64748b);border:2px solid #475569}
+.msx .msx-bm-grid{padding-bottom:12px}
 .msx .msx-bm b{font-size:12px;font-weight:900;max-width:100%;word-break:keep-all}
 .msx .msx-bm small{font-size:10px;font-weight:800;color:#fde68a}
 .msx .v-hm-tiles{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:7px;margin-top:8px}
@@ -89996,11 +89997,13 @@ function MsxBaseMons({ data, onClose }) {
       <MsxHd back="戻る" onBack={onClose} title="🌱 ベースモン"/>
       <div className="v-body">
         <div className="v-h">ベースモン<small>押すと、能力・素質・間合い適性・技の升目が見られます</small></div>
+        <div className="msx-scroll" data-msx-basemon-scroll>
         <div className="msx-bm-grid" data-msx-basemon-list>
           {unlocked.map((id) => (
             <button type="button" key={id} className="msx-bm" onClick={() => setSp(id)} data-msx-basemon={id}>
               <img src={msxMonThumb(id)} alt=""/><b>{msxMonName(id)}</b>{picked[id] ? <small>育成 {picked[id]}回</small> : <small>まだ育てていない</small>}
             </button>))}
+        </div>
         </div>
       </div>
       {detail}

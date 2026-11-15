@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 968e33ad26b9fb6d
+// source-sha256: cad3683f3ba8df60
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -170153,7 +170153,8 @@ const MSX_CSS = `
 .msx .v-hm-tiles.t4{grid-auto-flow:row;grid-template-columns:1fr 1fr}
 .msx .msx-bm-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px}
 .msx .msx-bm{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-width:0;border-radius:14px;padding:8px 4px;background:#1e1a36;border:1.5px solid #64748b;border-bottom-width:3px;line-height:1.25;text-align:center}
-.msx .msx-bm img{width:100%;max-width:84px;aspect-ratio:1;border-radius:11px;object-fit:cover;background:#0f172a;border:2px solid #475569}
+.msx .msx-bm img{width:100%;max-width:84px;aspect-ratio:1;border-radius:11px;object-fit:cover;background:linear-gradient(180deg,#94a3b8,#64748b);border:2px solid #475569}
+.msx .msx-bm-grid{padding-bottom:12px}
 .msx .msx-bm b{font-size:12px;font-weight:900;max-width:100%;word-break:keep-all}
 .msx .msx-bm small{font-size:10px;font-weight:800;color:#fde68a}
 .msx .v-hm-tiles{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:7px;margin-top:8px}
@@ -173771,6 +173772,9 @@ function MsxBaseMons({
   }, React.createElement("div", {
     className: "v-h"
   }, "ベースモン", React.createElement("small", null, "押すと、能力・素質・間合い適性・技の升目が見られます")), React.createElement("div", {
+    className: "msx-scroll",
+    "data-msx-basemon-scroll": true
+  }, React.createElement("div", {
     className: "msx-bm-grid",
     "data-msx-basemon-list": true
   }, unlocked.map(id => React.createElement("button", {
@@ -173782,7 +173786,7 @@ function MsxBaseMons({
   }, React.createElement("img", {
     src: msxMonThumb(id),
     alt: ""
-  }), React.createElement("b", null, msxMonName(id)), picked[id] ? React.createElement("small", null, "育成 ", picked[id], "回") : React.createElement("small", null, "まだ育てていない"))))), detail);
+  }), React.createElement("b", null, msxMonName(id)), picked[id] ? React.createElement("small", null, "育成 ", picked[id], "回") : React.createElement("small", null, "まだ育てていない")))))), detail);
 }
 const MSX_POL_SEEN = {};
 const MSX_POLICY_SCALE = Object.freeze(['超溺愛', '溺愛', '甘い', '普通', '厳しい', 'スパルタ', '超スパルタ']);
