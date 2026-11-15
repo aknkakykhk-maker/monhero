@@ -16,7 +16,7 @@ const SHOT_DIR = process.env.SHOT_DIR || '';
 const PARTS = path.join(ROOT, 'monster-hero', 'src', 'parts');
 
 let chromium0 = null;
-const { eventStorySeed, quietBootSeed, updateNoticeSeed } = require(path.resolve(__dirname, '..', 'boot', 'quiet-boot-seed'));
+const { eventStorySeed, loginBonusDoneSeed, quietBootSeed, updateNoticeSeed } = require(path.resolve(__dirname, '..', 'boot', 'quiet-boot-seed'));
 
 let failed = 0;
 const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${name}${detail ? ` — ${detail}` : ''}`); if (!ok) failed++; };
@@ -57,6 +57,8 @@ const prepare = async (page, errors, consoleErrors) => {
   page.on('console', (m) => { if (m.type() === 'error') { const t = m.text(); if (!/Failed to load resource|ERR_FAILED|net::|favicon|status of 404|status of 503/i.test(t)) consoleErrors.push(t.slice(0, 160)); } });
   await page.addInitScript(SEED);
   await page.addInitScript(quietBootSeed()); await page.addInitScript(updateNoticeSeed()); await page.addInitScript(eventStorySeed());
+  // ログインボーナスの窓が HOME に着いたあとで割りこんで「マスモン」を押せなくなることがある(2026-11-16 r1115-206)。受け取り済みにしておく
+  await page.addInitScript(loginBonusDoneSeed());
   await isolate(page);
 };
 const toHome = async (page, port) => {

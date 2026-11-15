@@ -403,7 +403,9 @@ const changelogEventLive = (entry, nowMs = Date.now()) => {
   // (2026-11-09 社長「(本オープン記念のお知らせを)上部に固定も」。周回5倍の期間が終わったら外れる)
   if (entry && entry.pinTop && typeof entry.pinTop === 'object' && entry.type !== 'event') {
     const pinFrom = Date.parse(entry.visibleFrom || '');
-    const pinEnd = Date.parse(entry.pinTop.until || '');
+    // until の代わりに days を書くと、項目の日時(date・JST)からその日数だけ固定する(2026-11-14 モンヒロサクセス β公開の帯「公開から2週間」。公開の日に date を直せば期限もついて動く)
+    const dayMs = Number(entry.pinTop.days) > 0 && /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/.test(String(entry.date || '')) ? Date.parse(`${String(entry.date).replace(' ', 'T')}:00+09:00`) + Number(entry.pinTop.days) * 86400e3 : NaN;
+    const pinEnd = entry.pinTop.until ? Date.parse(entry.pinTop.until) : dayMs;
     return Number.isFinite(pinEnd) && nowMs < pinEnd && (!Number.isFinite(pinFrom) || nowMs >= pinFrom);
   }
   const notice = entry && entry.type === 'event' ? entry.assistantNotice : null;
@@ -594,6 +596,10 @@ const CARD_CUP_STORY_ID = 'card_cup_2026_10_31';
 const RHYTHM_GRAND_OPEN_TEASER_STORY_ID = 'rhythm_grand_open_teaser';
 // モンヒロサクセス 第1話(β版の前の予告・2026-11-14)。印は RELEASE_FLAGS.monsucStoryEp1
 const MONSUC_BETA_EP1_STORY_ID = 'monsuc_beta_ep1';
+// モンヒロサクセス 第2話(β版の公開と同時・2026-11-15)。印は RELEASE_FLAGS.monheroSuccess(β版の公開の印と同じ)
+const MONSUC_BETA_EP2_STORY_ID = 'monsuc_beta_ep2';
+// 第2話を本編で飛ばした人に、みゅあが1回だけ「HOMEに新しい札が出てるよ」と知らせる印(新しいキー・2026-11-15)。{ v:1, skippedAt, shownAt }
+const MONSUC_STORY_SKIP_SEEN_KEY = 'mh_monsuc_story_skip_seen_v1';
 // ききの「はじめての曲 ～Sparkling Pink Overture～」のお話(2026-11-15 社長 r1115-102)。id は data/assistants.js の EVENT_REPLAYS と同じ。
 // 見たかは、ほかのイベントのお話と同じく mh_rhythm_event_story_v1 の id の並びに足す(新しいキーは作らない)。流し方は 60-app.jsx(曲えらびを開いたとき)
 const SPARKLING_PINK_STORY_ID = 'sparkling_pink_kiki_story';
