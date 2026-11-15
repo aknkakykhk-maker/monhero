@@ -507,6 +507,8 @@ const EVENT_REPLAY_RELEASE_FLAGS = Object.freeze({
   get rhythmGrandOpenTeaser() { return typeof RELEASE_FLAGS !== 'undefined' && (RELEASE_FLAGS.rhythmGrandOpenTeaser === true || RELEASE_FLAGS.rhythmGrandOpen === true); },
   // モンヒロサクセス 第1話(monsuc_beta_ep1・2026-11-14)。β版の前に先に出す予告のお話。β版の公開の印とは別
   get monsucStoryEp1() { return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.monsucStoryEp1 === true; },
+  // モンヒロサクセス 第2話(monsuc_beta_ep2・2026-11-15)。β版の公開の印 monheroSuccess と一緒に出る
+  get monsucStoryEp2() { return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.monheroSuccess === true; },
   // 個人杯のお話(2026-10-31)。公開の印は 99-card-cup.jsx の cardCupOpen(あとの部品なので見るたびに引く)
   get cardCup() { return typeof cardCupOpen === 'function' && cardCupOpen() === true; },
 });

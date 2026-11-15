@@ -61,6 +61,8 @@ const RHYTHM_WATCH_MAX = 10;            // 1部屋で観戦できる人数(社�
 const RHYTHM_WATCH_PING_MS = 10000;     // 観戦の人が「見ています」を送る間隔
 const RHYTHM_WATCH_TTL_MS = 25000;      // これだけ聞こえなければ、見ていない人として数える
 const RHYTHM_WATCH_LIVE_MS = 1000;      // 見られている1人だけ、このあいだ隔で細かく送る
+const RHYTHM_WATCH_RETRY_MS = 2000;     // 見ている人の細かい知らせが届かないあいだ、「見ています」を送り直す間隔(r1115-204)
+const RHYTHM_WATCH_SWITCH_MS = 8000;    // これだけ届かなければ、ほかの人へ切り替える(自分で選んだ人のときは案内だけ)
 const RHYTHM_WATCH_AD_MS = 10000;       // 演奏中の部屋を、観戦の一覧へ知らせる間隔
 const RHYTHM_WATCH_KEY = 'mh_rhythm_multi_spectate_v1';   // { allow: boolean } 観戦を許すか(既定は許す)
 // 観戦の人のひとこと(2026-11-15 r1115-189 社長「観戦中もチャットに参加できるようにしたい」)。部屋の通信路に新しい種類 wc で送る(古い版は知らない種類として読み飛ばす)
@@ -544,6 +546,9 @@ const RHYTHM_MULTI = (() => {
       }
       watchFrames = watch.frames; watchFramesAt = now;
     }
+    // 判定をためる箱が消えていたら、用意し直す(2026-11-15 r1115-204 本番「タップしたときの判定が出てない」)。
+    //   2曲目からは、曲の始まりで箱を用意した直後に、前の曲の演奏画面が閉じるときに箱を消していた(曲の位置・判定の数は届くのに、どのノーツをどう叩いたかが届かなかった)
+    if (!watchLite && watch && watch.jd === null) { watch.jd = []; watch.jx = []; }
     if (watchLite) { watchJdOff(); msg.lt = 1; }
     else if (watch && Array.isArray(watch.jd)) {
       // ためた判定をまとめて1通に(ノーツ番号と判定の番号が交互に並ぶ。多すぎるときは新しい側だけ)
@@ -1497,6 +1502,10 @@ const RHYTHM_WATCH = (() => {
   const emit = () => { listeners.forEach((fn) => { try { fn(); } catch (_) { /* 画面側の失敗で通信を止めない */ } }); };
   const send = (msg) => { if (!st) return; if (st.member) RHYTHM_MULTI.sendRaw(msg); else if (sock) sock.send(msg); };
   const ping = () => { if (!st) return; st.lastPing = Date.now(); send({ t: 'wt', id: st.wid, f: st.focus }); };
+  // 見る人を決める(2026-11-15 r1115-204)。manual=名前を押して選んだ。決めた時刻から、細かい知らせ(曲の位置・判定の数)が届くまでを数える
+  const setFocus = (id, manual = false) => { if (!st) return; st.focus = id; st.focusAt = Date.now(); st.focusManual = !!manual; st.noDetail = false; ping(); };
+  // 見ている人から、曲の位置つきの pg が4秒以内に届いているか(終わった人は届いた扱い)
+  const focusLive = (now) => { const r = st && st.rows[st.focus]; return !!r && (r.fin === true || (r.pAt > 0 && now - r.pAt <= 4000)); };
   const intOf = (v, max) => rhythmMultiInt(v, max);
   const feed = (raw) => {
     if (!st || !raw || typeof raw !== 'object') return;
@@ -1512,13 +1521,18 @@ const RHYTHM_WATCH = (() => {
       if (!round) return;
       // 顔ぶれ(pt)が無い返事は、同じ回の点の更新だけ(顔ぶれは最初の返事で受けている)
       if (!people.length && !(st.round === round && st.people.length)) return;
-      if (st.round !== round) { st.round = round; st.rows = {}; st.judged = {}; st.marks = {}; }
+      if (st.round !== round) { st.round = round; st.rows = {}; st.judged = {}; st.marks = {}; st.tried = []; st.wiFrom = []; }
       st.songId = rhythmMultiText(raw.sg, 60);
       if (people.length) st.people = people;
-      if (!st.focus || !st.people.some((x) => x.id === st.focus)) { st.focus = st.people[0].id; ping(); }
+      const from = rhythmMultiText(raw.id, 40);
+      // 返事(wi)をくれた人は、見られれば細かい知らせを送る人。返事をくれない人(古い版・観戦を許していない)を見続けないよう、返事をくれた人を先に見る(r1115-204)
+      const fromIn = !!from && st.people.some((x) => x.id === from);
+      const heard = st.wiFrom || (st.wiFrom = []);
+      if (fromIn && !heard.includes(from)) heard.push(from);
+      if (!st.focus || !st.people.some((x) => x.id === st.focus)) setFocus(fromIn ? from : st.people[0].id);
+      else if (fromIn && from !== st.focus && !st.focusManual && !heard.includes(st.focus) && !focusLive(now) && now - (st.focusAt || 0) >= 3000) setFocus(from);
       st.phase = 'playing'; st.lastPg = now;
       // 送ってきた人のいまの点(新しく見に来た人でも全員の行が出るように)
-      const from = rhythmMultiText(raw.id, 40);
       if (raw.sc != null && st.people.some((x) => x.id === from)) {
         const prev = st.rows[from] || {};
         st.rows[from] = { ...prev, s: intOf(raw.sc, RHYTHM_MULTI_LIVE_SCORE_MAX), c: intOf(raw.cb, RHYTHM_MULTI_LIVE_COMBO_MAX), p: prev.p || 0, l: prev.l == null ? null : prev.l, k: prev.k || null, at: prev.at || now };
@@ -1546,6 +1560,7 @@ const RHYTHM_WATCH = (() => {
         for (let i = 0; i + 1 < raw.jx.length && i < 240 && mm.size < 4000; i += 2) mm.set(intOf(raw.jx[i], 100000), intOf(raw.jx[i + 1], 7));
       }
       st.rows[id] = row; st.lastPg = now;
+      if (id === st.focus && raw.p != null) st.noDetail = false;
       if (st.people.every((x) => st.rows[x.id] && st.rows[x.id].fin)) { st.phase = 'ended'; st.endedAt = now; }
       emit();
       return;
@@ -1587,9 +1602,10 @@ const RHYTHM_WATCH = (() => {
       if (!m) return;
       const people = m.participants.map((id) => st.members[id]).filter((x) => x && !x.cpu);
       if (!people.length) { ping(); return; }   // 顔ぶれが分からないときは、演奏している人に wi をもらう
-      st.round = m.round; st.songId = m.songId; st.people = people; st.rows = {}; st.judged = {}; st.marks = {}; st.phase = 'playing'; st.lastPg = now;
-      if (!people.some((x) => x.id === st.focus)) st.focus = people[0].id;
-      ping(); emit();
+      st.round = m.round; st.songId = m.songId; st.people = people; st.rows = {}; st.judged = {}; st.marks = {}; st.tried = []; st.wiFrom = []; st.phase = 'playing'; st.lastPg = now;
+      // 曲が始まった合図。演奏する人の端末は、この合図を受けるまで「見ています」を聞かない(先に届くと捨てられる)ので、下の tick が届くまで送り直す
+      if (!people.some((x) => x.id === st.focus)) setFocus(people[0].id, false); else { st.focusAt = now; st.noDetail = false; ping(); }
+      emit();
     }
   };
   const tick = () => {
@@ -1597,6 +1613,19 @@ const RHYTHM_WATCH = (() => {
     const now = Date.now();
     const since = now - st.openedAt;
     if (st.phase === 'playing' && now - st.lastPg > 20000) { st.phase = 'ended'; st.endedAt = now; emit(); }
+    // 見ている人から細かい知らせ(曲の位置・判定の数)が届かない(2026-11-15 r1115-204 本番: ノーツが出ない・進みの棒が 0:00・曲が待機のまま)。
+    //   ・曲の始まりに送った「見ています」は、まだ演奏に入っていない端末で捨てられることがある → 届くまで2秒ごとに送り直す(見る側だけ。演奏する人の通信は今のまま)
+    //   ・8秒たっても届かない(古い版のアプリ・観戦を許していない人)→ 自分で選んでいなければ、ほかの人へ順に切り替える。だれからも届かなければ案内を出す
+    if (st.phase === 'playing' && st.focus && st.people.length && !focusLive(now)) {
+      if (now - st.lastPing >= (st.noDetail ? RHYTHM_WATCH_PING_MS : RHYTHM_WATCH_RETRY_MS)) ping();   // 案内を出したあとは、ふだんの10秒ごとへ戻す(ミハリ11)
+      if (now - (st.focusAt || 0) >= RHYTHM_WATCH_SWITCH_MS) {
+        const tried = st.tried || (st.tried = []);
+        if (!tried.includes(st.focus)) tried.push(st.focus);
+        const next = st.focusManual ? null : st.people.find((x) => !tried.includes(x.id) && x.id !== st.focus);
+        if (next) { setFocus(next.id, false); emit(); }
+        else if (!st.noDetail) { st.noDetail = true; emit(); }
+      }
+    }
     if (st.phase === 'connecting' && since > 12000) {
       if (st.quiet) { api.stop(); return; }   // 待機中の人が、見られる演奏が無いまま。静かにやめる
       st.phase = st.heard ? 'waiting' : 'none'; emit();
@@ -1617,7 +1646,7 @@ const RHYTHM_WATCH = (() => {
       const v = RHYTHM_MULTI.view();
       if (member && !(v && v.code === c)) return false;
       const now = Date.now();
-      st = { code: c, member, quiet, joinable: !member && joinable === true, wid: member ? v.selfId : rhythmMultiMakeId('w'), phase: 'connecting', round: '', songId: '', people: [], rows: {}, focus: '', members: {}, judged: {}, marks: {}, openedAt: now, lastPing: 0, lastPg: 0, heard: false,
+      st = { code: c, member, quiet, joinable: !member && joinable === true, wid: member ? v.selfId : rhythmMultiMakeId('w'), phase: 'connecting', round: '', songId: '', people: [], rows: {}, focus: '', focusAt: 0, focusManual: false, noDetail: false, tried: [], members: {}, judged: {}, marks: {}, openedAt: now, lastPing: 0, lastPg: 0, heard: false,
         chat: [], name: rhythmMultiText(name, 12) || '名無しのブリーダー', lastSayAt: 0, sayRound: '', sayCount: 0 };
       if (member) RHYTHM_MULTI.setWatchFeed(feed);
       else {
@@ -1637,7 +1666,7 @@ const RHYTHM_WATCH = (() => {
       st = null;
       if (had) emit();
     },
-    focus(id) { if (!st || !st.people.some((x) => x.id === id)) return; st.focus = id; ping(); emit(); },
+    focus(id) { if (!st || !st.people.some((x) => x.id === id)) return; setFocus(id, true); emit(); },
     // 観戦の人のひとこと(r1115-189)。返すのは 'ok' / 'wait'(3秒たっていない) / 'max'(この曲は20回送った) / 'no'(送れない)。
     // 部屋のメンバーではないので hb は送らない。自分の分はすぐ欄に出す(部屋からの返りは同じ番号なので2度出ない)
     say(text, stamp = null) {
@@ -3532,7 +3561,8 @@ function RhythmWatchScreen({ songs = [], resolveIconUrl = null }) {
                 <span data-rhythm-watch-delay className="shrink-0 rounded-full border border-amber-300/60 bg-slate-950/70 px-2 py-0.5 text-[10px] font-black text-amber-200">1.5秒おくれ</span>
               </div>
               {lite && <p data-rhythm-watch-lite className="absolute inset-x-2 top-9 text-center text-[11px] font-black text-amber-200" style={JA_WRAP_STYLE}>{jaWrap('この人の端末が重くなったので、譜面は出さず、数字だけにしています')}</p>}
-              {waiting && v.phase === 'playing' && <p data-rhythm-watch-waiting className="absolute inset-x-2 top-9 text-center text-[12px] font-black text-amber-200" style={{ ...JA_WRAP_STYLE, textShadow: '0 1px 3px #000' }}>{jaWrap('通信を待っています…')}</p>}
+              {v.noDetail && v.phase === 'playing' && !lite && <p data-rhythm-watch-nodetail className="absolute inset-x-4 top-1/2 -translate-y-1/2 rounded-xl border border-amber-300/50 bg-slate-950/85 px-3 py-2 text-center text-[12px] font-black text-amber-200" style={JA_WRAP_STYLE}>{jaWrap(v.focusManual ? 'この人の譜面はまだ届いていません。順位と点は見られます' : 'この部屋の譜面は届いていません(アプリの版が古いときなど)。順位と点は見られます')}</p>}
+              {waiting && !v.noDetail && v.phase === 'playing' && <p data-rhythm-watch-waiting className="absolute inset-x-2 top-9 text-center text-[12px] font-black text-amber-200" style={{ ...JA_WRAP_STYLE, textShadow: '0 1px 3px #000' }}>{jaWrap('通信を待っています…')}</p>}
             </div>
             <div className="grid grid-cols-6 gap-1">
               {RHYTHM_WATCH_JUDGMENT_VIEW.map((j, i) => (

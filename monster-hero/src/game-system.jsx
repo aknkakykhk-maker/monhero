@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 6c83cf2f604fc088
+// generated-sha256: 8fc01691afac583e
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -514,6 +514,8 @@ const EVENT_REPLAY_RELEASE_FLAGS = Object.freeze({
   get rhythmGrandOpenTeaser() { return typeof RELEASE_FLAGS !== 'undefined' && (RELEASE_FLAGS.rhythmGrandOpenTeaser === true || RELEASE_FLAGS.rhythmGrandOpen === true); },
   // モンヒロサクセス 第1話(monsuc_beta_ep1・2026-11-14)。β版の前に先に出す予告のお話。β版の公開の印とは別
   get monsucStoryEp1() { return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.monsucStoryEp1 === true; },
+  // モンヒロサクセス 第2話(monsuc_beta_ep2・2026-11-15)。β版の公開の印 monheroSuccess と一緒に出る
+  get monsucStoryEp2() { return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.monheroSuccess === true; },
   // 個人杯のお話(2026-10-31)。公開の印は 99-card-cup.jsx の cardCupOpen(あとの部品なので見るたびに引く)
   get cardCup() { return typeof cardCupOpen === 'function' && cardCupOpen() === true; },
 });
@@ -10440,6 +10442,10 @@ const CARD_CUP_STORY_ID = 'card_cup_2026_10_31';
 const RHYTHM_GRAND_OPEN_TEASER_STORY_ID = 'rhythm_grand_open_teaser';
 // モンヒロサクセス 第1話(β版の前の予告・2026-11-14)。印は RELEASE_FLAGS.monsucStoryEp1
 const MONSUC_BETA_EP1_STORY_ID = 'monsuc_beta_ep1';
+// モンヒロサクセス 第2話(β版の公開と同時・2026-11-15)。印は RELEASE_FLAGS.monheroSuccess(β版の公開の印と同じ)
+const MONSUC_BETA_EP2_STORY_ID = 'monsuc_beta_ep2';
+// 第2話を本編で飛ばした人に、みゅあが1回だけ「HOMEに新しい札が出てるよ」と知らせる印(新しいキー・2026-11-15)。{ v:1, skippedAt, shownAt }
+const MONSUC_STORY_SKIP_SEEN_KEY = 'mh_monsuc_story_skip_seen_v1';
 // ききの「はじめての曲 ～Sparkling Pink Overture～」のお話(2026-11-15 社長 r1115-102)。id は data/assistants.js の EVENT_REPLAYS と同じ。
 // 見たかは、ほかのイベントのお話と同じく mh_rhythm_event_story_v1 の id の並びに足す(新しいキーは作らない)。流し方は 60-app.jsx(曲えらびを開いたとき)
 const SPARKLING_PINK_STORY_ID = 'sparkling_pink_kiki_story';
@@ -55766,6 +55772,8 @@ const RHYTHM_WATCH_MAX = 10;            // 1部屋で観戦できる人数(社�
 const RHYTHM_WATCH_PING_MS = 10000;     // 観戦の人が「見ています」を送る間隔
 const RHYTHM_WATCH_TTL_MS = 25000;      // これだけ聞こえなければ、見ていない人として数える
 const RHYTHM_WATCH_LIVE_MS = 1000;      // 見られている1人だけ、このあいだ隔で細かく送る
+const RHYTHM_WATCH_RETRY_MS = 2000;     // 見ている人の細かい知らせが届かないあいだ、「見ています」を送り直す間隔(r1115-204)
+const RHYTHM_WATCH_SWITCH_MS = 8000;    // これだけ届かなければ、ほかの人へ切り替える(自分で選んだ人のときは案内だけ)
 const RHYTHM_WATCH_AD_MS = 10000;       // 演奏中の部屋を、観戦の一覧へ知らせる間隔
 const RHYTHM_WATCH_KEY = 'mh_rhythm_multi_spectate_v1';   // { allow: boolean } 観戦を許すか(既定は許す)
 // 観戦の人のひとこと(2026-11-15 r1115-189 社長「観戦中もチャットに参加できるようにしたい」)。部屋の通信路に新しい種類 wc で送る(古い版は知らない種類として読み飛ばす)
@@ -56249,6 +56257,9 @@ const RHYTHM_MULTI = (() => {
       }
       watchFrames = watch.frames; watchFramesAt = now;
     }
+    // 判定をためる箱が消えていたら、用意し直す(2026-11-15 r1115-204 本番「タップしたときの判定が出てない」)。
+    //   2曲目からは、曲の始まりで箱を用意した直後に、前の曲の演奏画面が閉じるときに箱を消していた(曲の位置・判定の数は届くのに、どのノーツをどう叩いたかが届かなかった)
+    if (!watchLite && watch && watch.jd === null) { watch.jd = []; watch.jx = []; }
     if (watchLite) { watchJdOff(); msg.lt = 1; }
     else if (watch && Array.isArray(watch.jd)) {
       // ためた判定をまとめて1通に(ノーツ番号と判定の番号が交互に並ぶ。多すぎるときは新しい側だけ)
@@ -57202,6 +57213,10 @@ const RHYTHM_WATCH = (() => {
   const emit = () => { listeners.forEach((fn) => { try { fn(); } catch (_) { /* 画面側の失敗で通信を止めない */ } }); };
   const send = (msg) => { if (!st) return; if (st.member) RHYTHM_MULTI.sendRaw(msg); else if (sock) sock.send(msg); };
   const ping = () => { if (!st) return; st.lastPing = Date.now(); send({ t: 'wt', id: st.wid, f: st.focus }); };
+  // 見る人を決める(2026-11-15 r1115-204)。manual=名前を押して選んだ。決めた時刻から、細かい知らせ(曲の位置・判定の数)が届くまでを数える
+  const setFocus = (id, manual = false) => { if (!st) return; st.focus = id; st.focusAt = Date.now(); st.focusManual = !!manual; st.noDetail = false; ping(); };
+  // 見ている人から、曲の位置つきの pg が4秒以内に届いているか(終わった人は届いた扱い)
+  const focusLive = (now) => { const r = st && st.rows[st.focus]; return !!r && (r.fin === true || (r.pAt > 0 && now - r.pAt <= 4000)); };
   const intOf = (v, max) => rhythmMultiInt(v, max);
   const feed = (raw) => {
     if (!st || !raw || typeof raw !== 'object') return;
@@ -57217,13 +57232,18 @@ const RHYTHM_WATCH = (() => {
       if (!round) return;
       // 顔ぶれ(pt)が無い返事は、同じ回の点の更新だけ(顔ぶれは最初の返事で受けている)
       if (!people.length && !(st.round === round && st.people.length)) return;
-      if (st.round !== round) { st.round = round; st.rows = {}; st.judged = {}; st.marks = {}; }
+      if (st.round !== round) { st.round = round; st.rows = {}; st.judged = {}; st.marks = {}; st.tried = []; st.wiFrom = []; }
       st.songId = rhythmMultiText(raw.sg, 60);
       if (people.length) st.people = people;
-      if (!st.focus || !st.people.some((x) => x.id === st.focus)) { st.focus = st.people[0].id; ping(); }
+      const from = rhythmMultiText(raw.id, 40);
+      // 返事(wi)をくれた人は、見られれば細かい知らせを送る人。返事をくれない人(古い版・観戦を許していない)を見続けないよう、返事をくれた人を先に見る(r1115-204)
+      const fromIn = !!from && st.people.some((x) => x.id === from);
+      const heard = st.wiFrom || (st.wiFrom = []);
+      if (fromIn && !heard.includes(from)) heard.push(from);
+      if (!st.focus || !st.people.some((x) => x.id === st.focus)) setFocus(fromIn ? from : st.people[0].id);
+      else if (fromIn && from !== st.focus && !st.focusManual && !heard.includes(st.focus) && !focusLive(now) && now - (st.focusAt || 0) >= 3000) setFocus(from);
       st.phase = 'playing'; st.lastPg = now;
       // 送ってきた人のいまの点(新しく見に来た人でも全員の行が出るように)
-      const from = rhythmMultiText(raw.id, 40);
       if (raw.sc != null && st.people.some((x) => x.id === from)) {
         const prev = st.rows[from] || {};
         st.rows[from] = { ...prev, s: intOf(raw.sc, RHYTHM_MULTI_LIVE_SCORE_MAX), c: intOf(raw.cb, RHYTHM_MULTI_LIVE_COMBO_MAX), p: prev.p || 0, l: prev.l == null ? null : prev.l, k: prev.k || null, at: prev.at || now };
@@ -57251,6 +57271,7 @@ const RHYTHM_WATCH = (() => {
         for (let i = 0; i + 1 < raw.jx.length && i < 240 && mm.size < 4000; i += 2) mm.set(intOf(raw.jx[i], 100000), intOf(raw.jx[i + 1], 7));
       }
       st.rows[id] = row; st.lastPg = now;
+      if (id === st.focus && raw.p != null) st.noDetail = false;
       if (st.people.every((x) => st.rows[x.id] && st.rows[x.id].fin)) { st.phase = 'ended'; st.endedAt = now; }
       emit();
       return;
@@ -57292,9 +57313,10 @@ const RHYTHM_WATCH = (() => {
       if (!m) return;
       const people = m.participants.map((id) => st.members[id]).filter((x) => x && !x.cpu);
       if (!people.length) { ping(); return; }   // 顔ぶれが分からないときは、演奏している人に wi をもらう
-      st.round = m.round; st.songId = m.songId; st.people = people; st.rows = {}; st.judged = {}; st.marks = {}; st.phase = 'playing'; st.lastPg = now;
-      if (!people.some((x) => x.id === st.focus)) st.focus = people[0].id;
-      ping(); emit();
+      st.round = m.round; st.songId = m.songId; st.people = people; st.rows = {}; st.judged = {}; st.marks = {}; st.tried = []; st.wiFrom = []; st.phase = 'playing'; st.lastPg = now;
+      // 曲が始まった合図。演奏する人の端末は、この合図を受けるまで「見ています」を聞かない(先に届くと捨てられる)ので、下の tick が届くまで送り直す
+      if (!people.some((x) => x.id === st.focus)) setFocus(people[0].id, false); else { st.focusAt = now; st.noDetail = false; ping(); }
+      emit();
     }
   };
   const tick = () => {
@@ -57302,6 +57324,19 @@ const RHYTHM_WATCH = (() => {
     const now = Date.now();
     const since = now - st.openedAt;
     if (st.phase === 'playing' && now - st.lastPg > 20000) { st.phase = 'ended'; st.endedAt = now; emit(); }
+    // 見ている人から細かい知らせ(曲の位置・判定の数)が届かない(2026-11-15 r1115-204 本番: ノーツが出ない・進みの棒が 0:00・曲が待機のまま)。
+    //   ・曲の始まりに送った「見ています」は、まだ演奏に入っていない端末で捨てられることがある → 届くまで2秒ごとに送り直す(見る側だけ。演奏する人の通信は今のまま)
+    //   ・8秒たっても届かない(古い版のアプリ・観戦を許していない人)→ 自分で選んでいなければ、ほかの人へ順に切り替える。だれからも届かなければ案内を出す
+    if (st.phase === 'playing' && st.focus && st.people.length && !focusLive(now)) {
+      if (now - st.lastPing >= (st.noDetail ? RHYTHM_WATCH_PING_MS : RHYTHM_WATCH_RETRY_MS)) ping();   // 案内を出したあとは、ふだんの10秒ごとへ戻す(ミハリ11)
+      if (now - (st.focusAt || 0) >= RHYTHM_WATCH_SWITCH_MS) {
+        const tried = st.tried || (st.tried = []);
+        if (!tried.includes(st.focus)) tried.push(st.focus);
+        const next = st.focusManual ? null : st.people.find((x) => !tried.includes(x.id) && x.id !== st.focus);
+        if (next) { setFocus(next.id, false); emit(); }
+        else if (!st.noDetail) { st.noDetail = true; emit(); }
+      }
+    }
     if (st.phase === 'connecting' && since > 12000) {
       if (st.quiet) { api.stop(); return; }   // 待機中の人が、見られる演奏が無いまま。静かにやめる
       st.phase = st.heard ? 'waiting' : 'none'; emit();
@@ -57322,7 +57357,7 @@ const RHYTHM_WATCH = (() => {
       const v = RHYTHM_MULTI.view();
       if (member && !(v && v.code === c)) return false;
       const now = Date.now();
-      st = { code: c, member, quiet, joinable: !member && joinable === true, wid: member ? v.selfId : rhythmMultiMakeId('w'), phase: 'connecting', round: '', songId: '', people: [], rows: {}, focus: '', members: {}, judged: {}, marks: {}, openedAt: now, lastPing: 0, lastPg: 0, heard: false,
+      st = { code: c, member, quiet, joinable: !member && joinable === true, wid: member ? v.selfId : rhythmMultiMakeId('w'), phase: 'connecting', round: '', songId: '', people: [], rows: {}, focus: '', focusAt: 0, focusManual: false, noDetail: false, tried: [], members: {}, judged: {}, marks: {}, openedAt: now, lastPing: 0, lastPg: 0, heard: false,
         chat: [], name: rhythmMultiText(name, 12) || '名無しのブリーダー', lastSayAt: 0, sayRound: '', sayCount: 0 };
       if (member) RHYTHM_MULTI.setWatchFeed(feed);
       else {
@@ -57342,7 +57377,7 @@ const RHYTHM_WATCH = (() => {
       st = null;
       if (had) emit();
     },
-    focus(id) { if (!st || !st.people.some((x) => x.id === id)) return; st.focus = id; ping(); emit(); },
+    focus(id) { if (!st || !st.people.some((x) => x.id === id)) return; setFocus(id, true); emit(); },
     // 観戦の人のひとこと(r1115-189)。返すのは 'ok' / 'wait'(3秒たっていない) / 'max'(この曲は20回送った) / 'no'(送れない)。
     // 部屋のメンバーではないので hb は送らない。自分の分はすぐ欄に出す(部屋からの返りは同じ番号なので2度出ない)
     say(text, stamp = null) {
@@ -59237,7 +59272,8 @@ function RhythmWatchScreen({ songs = [], resolveIconUrl = null }) {
                 <span data-rhythm-watch-delay className="shrink-0 rounded-full border border-amber-300/60 bg-slate-950/70 px-2 py-0.5 text-[10px] font-black text-amber-200">1.5秒おくれ</span>
               </div>
               {lite && <p data-rhythm-watch-lite className="absolute inset-x-2 top-9 text-center text-[11px] font-black text-amber-200" style={JA_WRAP_STYLE}>{jaWrap('この人の端末が重くなったので、譜面は出さず、数字だけにしています')}</p>}
-              {waiting && v.phase === 'playing' && <p data-rhythm-watch-waiting className="absolute inset-x-2 top-9 text-center text-[12px] font-black text-amber-200" style={{ ...JA_WRAP_STYLE, textShadow: '0 1px 3px #000' }}>{jaWrap('通信を待っています…')}</p>}
+              {v.noDetail && v.phase === 'playing' && !lite && <p data-rhythm-watch-nodetail className="absolute inset-x-4 top-1/2 -translate-y-1/2 rounded-xl border border-amber-300/50 bg-slate-950/85 px-3 py-2 text-center text-[12px] font-black text-amber-200" style={JA_WRAP_STYLE}>{jaWrap(v.focusManual ? 'この人の譜面はまだ届いていません。順位と点は見られます' : 'この部屋の譜面は届いていません(アプリの版が古いときなど)。順位と点は見られます')}</p>}
+              {waiting && !v.noDetail && v.phase === 'playing' && <p data-rhythm-watch-waiting className="absolute inset-x-2 top-9 text-center text-[12px] font-black text-amber-200" style={{ ...JA_WRAP_STYLE, textShadow: '0 1px 3px #000' }}>{jaWrap('通信を待っています…')}</p>}
             </div>
             <div className="grid grid-cols-6 gap-1">
               {RHYTHM_WATCH_JUDGMENT_VIEW.map((j, i) => (
@@ -83671,7 +83707,7 @@ const msxBirthEnsureCss = () => {
 //   「動きを減らす」設定(msxFxCalm)と prefers-reduced-motion では、溜めを飛ばして静かな形で結果を出す
 
 const MSX_IS_STEPS = Object.freeze([1800, 420]); // 0 溜め → 1 閃光/煙 → 2 結果(ミリ秒)
-const MSX_IS_YOSU = Object.freeze({ sabori: '😪 サボりグセ', utsu: '😞 うつ病', kega: '🤕 けが', himan: '🍖 肥満', kaze: '🤧 かぜ' });
+const MSX_IS_YOSU = Object.freeze({ sabori: '😪 サボりグセ', utsu: '😞 どんより', kega: '🤕 けが', himan: '🍖 肥満', kaze: '🤧 かぜ' });
 const msxIsCalm = () => (typeof msxFxCalm === 'function' ? Boolean(msxFxCalm()) : false);
 // 吹き出しは言葉の切れ目で折る(2026-11-14 社長の指摘「イッサ博／士」「どうなるか／な〜」。41-screen-ui の jaWrap)
 const msxIsJw = (t) => (typeof jaWrap === 'function' ? jaWrap(t) : t);
@@ -83694,7 +83730,7 @@ function msxIssaGainList(before, s, SUC) {
 // 選ぶ前の札: 当たったら実際に増える忠誠度(甘え度 +8・恐れ度 +7 のうち、上限50までの分。芯の issa と同じ分け方)
 function msxIssaLoyalAhead(s, SUC) {
   const half = (SUC && SUC.LOYAL && SUC.LOYAL.half) || 50;
-  if (s && s.yosu && s.yosu.utsu) return '忠誠度は動かない(うつ病のあいだ)';
+  if (s && s.yosu && s.yosu.utsu) return '忠誠度は動かない(どんよりのあいだ)';
   const n = Math.max(0, Math.min(8, half - (Number(s && s.ama) || 0))) + Math.max(0, Math.min(7, half - (Number(s && s.fear) || 0)));
   return n > 0 ? `忠誠度 +${n}` : '忠誠度はもう上限';
 }
@@ -88297,10 +88333,11 @@ const MSX_CSS = `
 @keyframes rx-pop{0%{transform:scale(.3);opacity:0}70%{transform:scale(1.12);opacity:1}100%{transform:scale(1);opacity:1}}
 .msx .v-body2.rx-hop{animation:rx-hop .9s ease-out 1}.msx .v-body2.rx-sag{animation:rx-sag .8s ease-out 1 forwards}
 .msx .rx-bub{position:absolute;left:6%;top:26%;background:#fff;color:#1e1b4b;border:2px solid #f9a8d4;border-radius:14px;padding:4px 10px;font-size:12px;font-weight:900;animation:rx-pop .4s ease-out .25s both;white-space:nowrap;z-index:3}
-.msx .v-ga b{font-size:12.5px;width:46px;flex:none;text-align:right}.msx .v-ga b small{font-size:10px;color:#cbd5e1;font-weight:700}
+.msx .v-ga b{font-size:12.5px;width:50px;flex:none;text-align:right}.msx .v-ga b small{font-size:10px;color:#cbd5e1;font-weight:700}
 .msx .v-ga b small.cap{color:#fde047}
-/* 増減の字(−16・+4)は棒の長さを変えない: 数の左に重ねて出す(r1115-083。どの画面でも棒の長さ・位置は同じ) */
-.msx .v-ga em{position:absolute;right:50px;top:50%;transform:translateY(-50%);z-index:2;pointer-events:none;font-style:normal;font-size:10.5px;color:#fca5a5;text-shadow:0 0 3px #0b0920,0 0 3px #0b0920,0 0 2px #0b0920}.msx .v-ga em.pl{color:#f0abfc}.msx .v-ga em.hl{color:#86efac}
+/* 増減の字(−16・+4)は棒の長さを変えない: 棒と数のあいだにいつも空けてある枠に出す(r1115-083 どの画面でも棒の長さ・位置は同じ・r1115-207 L1 棒の端と「100/100」に重ねない) */
+.msx .v-ga .tr{margin-right:26px}
+.msx .v-ga em{position:absolute;right:54px;top:50%;transform:translateY(-50%);z-index:2;pointer-events:none;font-style:normal;font-size:10.5px;color:#fca5a5;text-shadow:0 0 3px #0b0920,0 0 3px #0b0920,0 0 2px #0b0920}.msx .v-ga em.pl{color:#f0abfc}.msx .v-ga em.hl{color:#86efac}
 .msx .v-scene{flex:1 1 0;min-height:0;position:relative;border-radius:16px;border:1px solid #4a4380;overflow:hidden;margin-top:6px;background:#0f0d24}
 .msx .v-scene .bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 78%}
 .msx .v-scene .sh{position:absolute;inset:0;background:linear-gradient(180deg,#1d174055 0,#1d174000 26%,#0f0d2400 62%,#0f0d24cc 100%)}
@@ -88608,7 +88645,7 @@ const MSX_CSS = `
   .msx .v-band{padding:5px 6px}
   .msx .v-turn .n b{font-size:24px}.msx .v-turn .ph{font-size:10px;padding:2px 5px}
   .msx .v-pow b{font-size:14px}.msx .v-pow .rk.big{height:24px;min-width:24px;font-size:14px}
-  .msx .v-ga{font-size:10px;gap:3px}.msx .v-ga b{font-size:11px;width:41px}.msx .v-ga em{right:45px}.msx .v-ga .tr{height:11px}
+  .msx .v-ga{font-size:10px;gap:3px}.msx .v-ga b{font-size:11px;width:45px}.msx .v-ga em{right:48px}.msx .v-ga .tr{margin-right:24px}.msx .v-ga .tr{height:11px}
   .msx .v-st b{font-size:12px}.msx .v-st small{font-size:10px}.msx .v-st em{font-size:10px;height:12px;line-height:12px}.msx .v-st div.up.main em{font-size:11px}
   .msx .v-p{font-size:11px;padding:4px 1px 3px;border-radius:12px}.msx .v-p .e{font-size:16px}.msx .v-p small{font-size:10px}.msx .v-p.main{font-size:14px}
   .msx .v-ft{height:34px;padding:0 7px;gap:3px}.msx .v-ft span,.msx .v-ft button{font-size:10px;padding:4px 1px}.msx .v-ft span.go,.msx .v-ft span.go2,.msx .v-ft button.go,.msx .v-ft button.go2{font-size:11.5px}
@@ -88824,7 +88861,8 @@ const MSX_CSS = `
 .msx .v-ileg{display:flex;gap:10px;font-size:10px;font-weight:800;color:#cbd5e1;margin-top:5px;white-space:nowrap}
 .msx .v-ileg b{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:3px;vertical-align:-1px}.msx .v-ileg .sw1{background:#475569}.msx .v-ileg .sw2{background:#38bdf8}
 .msx .v-sum .v-ics{display:flex;align-items:center;gap:3px;font-size:10px}.msx .v-sum .v-ics .v-icw{width:20px;height:20px}
-.msx .v-cup .rvi{position:absolute;left:-6px;top:-9px;display:flex;align-items:center;gap:3px;background:linear-gradient(90deg,#ef4444,#fb923c);border-radius:99px;padding:1px 8px 1px 1px;font-size:10px;font-weight:900;line-height:1.6;white-space:nowrap}
+.msx .v-cups:has(>.v-cup:first-child .rvi){padding-top:9px} /* いちばん上の札がライバルでも印が枠で切れない(r1115-207 N3) */
+.msx .v-cup .rvi{position:absolute;left:4px;top:-9px;display:flex;align-items:center;gap:3px;background:linear-gradient(90deg,#ef4444,#fb923c);border-radius:99px;padding:1px 8px 1px 1px;font-size:10px;font-weight:900;line-height:1.6;white-space:nowrap}
 .msx .v-cup .rvi img{width:20px;height:20px;border-radius:50%;object-fit:cover;object-position:50% 20%;background:#1e1a36;border:1.5px solid #fff}
 .msx .v-cup .rvb{background:#3b2f0b;border:1px solid #fde047;color:#fde047}
 /* ---- 足したもの(ゲームの中で要った分) ---- */
@@ -89824,7 +89862,7 @@ const msxItemFx = (id) => {
   if (it.issaSure) return 'その回の博士の実験がかならず成功';
   if (it.hpMax) return `体力の上限 +${it.hpMax}`;
   if (it.hpFull) return '体力を上限まで回復';
-  if (it.cure) return `悪いようす(サボり癖・うつなど)を治し、体力を上限の${pc(it.hp || 0)}回復`;
+  if (it.cure) return `悪いようす(サボりグセ・どんよりなど)を治し、体力を上限の${pc(it.hp || 0)}回復`;
   if (it.loyal) return `忠誠度 +${it.loyal}`;
   if (it.ama || it.fear) return `甘え度 +${it.ama || 0}・恐れ度 +${it.fear || 0}(忠誠度 +${(it.ama || 0) + (it.fear || 0)})`;
   if (it.gives) { const g = it.gives; return Object.keys(g).map((k) => `${(S.ITEMS[k] && S.ITEMS[k].name) || k}${g[k]}個(${msxItemFx(k)})`).join('・'); }
@@ -90793,7 +90831,7 @@ const MSX_COND = Object.freeze({ injury: 'けが', ill: '病気', away: '家出'
 const MSX_ISSA_KEYS = Object.freeze([
   { key: 'stat', icon: '💪', name: 'ステータスアップ', ok: '全能力 +50', ng: '全能力 −10・サボりグセ', line: 'stat' },
   { key: 'hpmax', icon: '🔋', name: '体力上限アップ', ok: '体力の上限 +20', ng: '体力 −20', line: 'cap' },
-  { key: 'hp', icon: '❤️', name: '体力回復', ok: '体力を8割回復', ng: '体力 −30・うつ病', line: 'heal' },
+  { key: 'hp', icon: '❤️', name: '体力回復', ok: '体力を8割回復', ng: '体力 −30・どんより', line: 'heal' },
   { key: 'loyal', icon: '🤝', name: '忠誠度アップ', ok: '忠誠度 +15', ng: '変化なし', line: 'loy' },
   { key: 'pop', icon: '⭐', name: '人気アップ', ok: '人気 +15', ng: '人気 −5', line: 'pop' },
 ]);
@@ -90883,7 +90921,7 @@ function MsxBand({ s, v, ev, use = 0, stAdd = 0, hpFrom = null, stFrom = null })
 //   結果の画面では、上がる前の長さからゲージが伸び、伸びた分が光る(下がるときは縮み、減った分が赤く消える。2026-11-13 社長)。
 //   「動きを減らす」設定では、はじめから変わったあとの長さで出す
 // 通院の結果のひとこと: 治った物・治らなかった物を名前で書く(「ようすが治った」で済ませない。docs/spec/MONSUC_UI.md の 3)
-const MSX_YOSU_NAME = { sabori: 'サボりグセ', utsu: 'うつ病' };
+const MSX_YOSU_NAME = { sabori: 'サボりグセ', utsu: 'どんより' };
 function msxClinicText(cured, yosu) {
   const nm = (ks) => ks.map((k) => `「${MSX_YOSU_NAME[k] || k}」`).join('と');
   const c = (Array.isArray(cured) ? cured : []).filter((k) => MSX_YOSU_NAME[k]);
@@ -91369,7 +91407,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
         {isTrain && o.lvUp ? <div className="v-lvup">⬆ トレーニングLvアップ! {MSX_STAT_ICON[o.card.stat]} {MSX_STAT_NAME[o.card.stat]} <b>Lv.{o.trainLv - 1} → Lv.{o.trainLv}</b><small>次から、{MSX_STAT_NAME[o.card.stat]}のトレーニングの基本の伸びが上がる</small></div> : null}
         {isTrain ? <><span className="hd2">{msxTrainIcon(o.card.stat, tlv)} {msxTrainName(o.card.stat, tlv)}({MSX_STAT_NAME[o.card.stat]}のトレーニング)</span><br/>
           {Object.keys(gains).length ? <>{Object.entries(gains).map(([k, g], i) => <span key={k}>{i ? '・' : ''}{MSX_STAT_NAME[k]} <b className="gu">{g > 0 ? `+${g}` : g}</b></span>)}</> : '能力は上がらなかった'}{hpLost ? <><br/><span data-msx-hp-lost>体力が <b style={{ color: '#dc2626' }}>{hpLost}</b> 下がった</span></> : null}</>
-          : o.kind === 'rest' || o.kind === 'play' ? <><span className="hd2">{o.kind === 'rest' ? '🛌 休む' : '🎈 遊ぶ'}</span><br/>{typeof MsxGaugeFx === 'function' ? (hpUp > 0 || stDown > 0 ? '体力とストレスが動いた' : '体力が回復した') : <>{hpUp > 0 ? <>体力 <b className="gu" data-msx-rest-hp>+{hpUp}</b></> : '体力が回復した'}{stDown > 0 ? <>・ストレス <b className="gu">−{stDown}</b></> : null}</>}{(o.cured || []).includes('utsu') ? '。「うつ病」が治った' : ''}</>
+          : o.kind === 'rest' || o.kind === 'play' ? <><span className="hd2">{o.kind === 'rest' ? '🛌 休む' : '🎈 遊ぶ'}</span><br/>{typeof MsxGaugeFx === 'function' ? (hpUp > 0 || stDown > 0 ? '体力とストレスが動いた' : '体力が回復した') : <>{hpUp > 0 ? <>体力 <b className="gu" data-msx-rest-hp>+{hpUp}</b></> : '体力が回復した'}{stDown > 0 ? <>・ストレス <b className="gu">−{stDown}</b></> : null}</>}{(o.cured || []).includes('utsu') ? '。「どんより」が治った' : ''}</>
           : o.kind === 'clinic' ? <><span className="hd2">🏥 通院</span><br/>{msxClinicText(o.cured, s.yosu)}{typeof MsxGaugeFx === 'function' ? null : <><br/>{hpUp > 0 ? <>体力 <b className="gu">+{hpUp}</b></> : '体力も少し回復した'}{stDown > 0 ? <>・ストレス <b className="gu">−{stDown}</b></> : null}</>}</>
           : <><span className="hd2">🛌 休み</span><br/>{MSX_COND[o.cond] || '体調'}のため、このターンは休んだ</>}
         {o.event && typeof MsxTrainEvent !== 'function' ? <><br/><b className="ga">{msxMemberName(evMember)}</b>{o.event.story ? `との出来事 第${o.event.story}話` : 'との小さな出来事'}{evLine ? `: ${evLine.t}` : ''}</> : null}
@@ -91575,7 +91613,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
           {preOn ? <span className="v-chip hot" data-msx-pre-chip>🏆 {preName} 当日</span> : v.period.key !== 'final' ? <span className="v-chip hot">🏆 期末の大会まで {v.period.left}ターン</span> : <span className="v-chip hot">🏆 ヒーローズファイナル</span>}
           {pkI.state === 'in' ? <span className="v-chip hot" data-msx-peak-chip>🔥 ピーク中 あと{pkI.left}ターン</span> : pkI.state === 'soon' ? <span className="v-chip ylw" data-msx-peak-chip>🔥 もうすぐ伸びどき</span> : null}
           {s.yosu && s.yosu.sabori ? <span className="v-chip bad">😪 ようす: サボりグセ</span> : null}
-          {s.yosu && s.yosu.utsu ? <span className="v-chip bad">😢 ようす: うつ病</span> : null}
+          {s.yosu && s.yosu.utsu ? <span className="v-chip bad">😢 ようす: どんより</span> : null}
           {s.cond ? <span className="v-chip bad">🤕 {MSX_COND[s.cond.kind]}(あと{s.cond.left})</span> : null}
           {SUC.events && typeof SUC.events.buffs === 'function' ? SUC.events.buffs(s).slice(0, 2).map((b) => <span key={b.k} className="v-chip ylw">{cardIconNode(b.icon, 14)} {b.name}</span>) : null}</div>
         <span className="v-nm">{run.nick}<small>方針: {MSX_POLICY_SCALE[Math.max(-3, Math.min(3, s.pol || 0)) + 3]}</small></span>
@@ -124451,7 +124489,7 @@ function MonsterHeroGame() {
   // 「鍵の向こう側へ」のイベントidと、終章(閉幕のお話)のid
   const PANDORA_WINGS_EVENT_ID = 'pandora_wings_2026_11_02';
   const PANDORA_WINGS_THANKS_STORY_ID = 'pandora_wings_2026_ep8';
-  const RHYTHM_EVENT_STORY_IDS = [...HALLOWEEN_NIGHT_STORY_IDS, ...RAID_JACK_STORY_IDS, ...PANDORA_WINGS_STORY_IDS, PANDORA_WINGS_THANKS_STORY_ID, MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, RAID_JACK_RHYTHM_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RAID_JACK_HOWTO_STORY_ID, ATSU_JOIN_STORY_ID, KYUKO_JOIN_STORY_ID, SORASHIDO_JOIN_STORY_ID, ERUBIN_JOIN_STORY_ID, CARD_CUP_STORY_ID, RHYTHM_GRAND_OPEN_TEASER_STORY_ID, RHYTHM_GRAND_OPEN_STORY_ID, MONSUC_BETA_EP1_STORY_ID, SPARKLING_PINK_STORY_ID];
+  const RHYTHM_EVENT_STORY_IDS = [...HALLOWEEN_NIGHT_STORY_IDS, ...RAID_JACK_STORY_IDS, ...PANDORA_WINGS_STORY_IDS, PANDORA_WINGS_THANKS_STORY_ID, MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, RAID_JACK_RHYTHM_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RAID_JACK_HOWTO_STORY_ID, ATSU_JOIN_STORY_ID, KYUKO_JOIN_STORY_ID, SORASHIDO_JOIN_STORY_ID, ERUBIN_JOIN_STORY_ID, CARD_CUP_STORY_ID, RHYTHM_GRAND_OPEN_TEASER_STORY_ID, RHYTHM_GRAND_OPEN_STORY_ID, MONSUC_BETA_EP1_STORY_ID, MONSUC_BETA_EP2_STORY_ID, SPARKLING_PINK_STORY_ID];
   // ★イベントid → そのイベントの会話id。**イベントを足したらここへ1行足す。**
   //   以前はここが第1回のidの直書きで、第2回が始まっても第1回の会話が流れる形になっていた
   //   (2026-09-17に第2回を足したときに直した)。書かなかったイベントでは会話は流れない。
@@ -124891,6 +124929,33 @@ function MonsterHeroGame() {
     if (rhythmEventStoryStartedRef.current.includes(MONSUC_BETA_EP1_STORY_ID)) return;
     setRhythmEventStoryPending(prev => prev || MONSUC_BETA_EP1_STORY_ID);
   }, [rhythmEventStorySeen, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
+  // モンヒロサクセス 第2話(2026-11-15・β版の公開と同時)。公開の印 monheroSuccess が真になったあとの最初の HOME で、だれにでも1回だけ流す
+  //   (置き方は上の第1話と同じ。第1話をまだ見ていない人は第1話が先。見たかは mh_rhythm_event_story_v1 の id)。★ほかのお話が先に流れようとしていたら待つ
+  useEffect(() => {
+    if (!EVENT_REPLAY_RELEASE_FLAGS.monsucStoryEp2) return;
+    if (!Array.isArray(rhythmEventStorySeen) || rhythmEventStorySeen.includes(MONSUC_BETA_EP2_STORY_ID)) return;
+    if (!(bootPhase === 'GAME' && gameState === 'HOME') || eventReplay || rhythmEventStoryPending || rhythmHellGuide) return;
+    if (rhythmEventStoryStartedRef.current.includes(MONSUC_BETA_EP2_STORY_ID)) return;
+    setRhythmEventStoryPending(prev => prev || MONSUC_BETA_EP2_STORY_ID);
+  }, [rhythmEventStorySeen, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
+  // 第2話を本編で飛ばした人への、みゅあの1回だけの告知(2026-11-15・台本 script.md「第2話を入れるときにすること」)。
+  //   印は新しいキー mh_monsuc_story_skip_seen_v1 = { v:1, skippedAt, shownAt }(既存のキーは変えない)。飛ばしたら skippedAt、告知を閉じたら shownAt。
+  //   shownAt があれば二度と出さない。読み込みは型を確かめ、壊れていたら「飛ばしていない」として扱う(元の値は消さない)
+  const normalizeMonsucStorySkip = (v) => {
+    const o = v && typeof v === 'object' && !Array.isArray(v) ? v : {};
+    return { v: 1, skippedAt: Number.isFinite(o.skippedAt) ? o.skippedAt : 0, shownAt: Number.isFinite(o.shownAt) ? o.shownAt : 0 };
+  };
+  const [monsucStorySkip, setMonsucStorySkip] = useState(null);
+  useEffect(() => { let alive = true; Promise.resolve(storeGet(MONSUC_STORY_SKIP_SEEN_KEY, null, false)).then(v => { if (alive) setMonsucStorySkip(normalizeMonsucStorySkip(v)); }).catch(() => { if (alive) setMonsucStorySkip(normalizeMonsucStorySkip(null)); }); return () => { alive = false; }; }, []);
+  const markMonsucStorySkip = (field) => {
+    setMonsucStorySkip(prev => {
+      const cur = normalizeMonsucStorySkip(prev);
+      if (cur[field]) return cur;
+      const next = { ...cur, [field]: Date.now() };
+      try { storeSet(MONSUC_STORY_SKIP_SEEN_KEY, next, false); } catch {}
+      return next;
+    });
+  };
   // ききの「はじめての曲」のお話(2026-11-15 社長 r1115-102・r1115-139)。曲「Sparkling Pink Overture」と一緒に出る。
   //   ほかのお話・告知と同じ入口: 更新のあとに初めてゲームを開いて HOME に着いたとき、だれにでも1回だけ流す(置き方は上のモンヒロサクセス 第1話と同じ。
   //   ほかのお話が先に流れようとしていたら待つ・はじめて遊ぶ人は1本ずつ)。見たかは mh_rhythm_event_story_v1 の id(新しいキーは作らない)。見終えても飛ばしても「見た」になり、あとは回想から読める
@@ -128131,6 +128196,7 @@ function MonsterHeroGame() {
     rhythmGrandOpenTeaserSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(RHYTHM_GRAND_OPEN_TEASER_STORY_ID),
     rhythmGrandOpenSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(RHYTHM_GRAND_OPEN_STORY_ID),
     monsucBetaEp1Seen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(MONSUC_BETA_EP1_STORY_ID),
+    monsucBetaEp2Seen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(MONSUC_BETA_EP2_STORY_ID),
     sparklingPinkStorySeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SPARKLING_PINK_STORY_ID),
     symphonyEventSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SYMPHONY_STORY_ID) };
   // alwaysUnlocked のイベントは、本編でまだ見ていなくても回想から見られる
@@ -143775,7 +143841,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       {/* 助手(みゅあ)のデバッグ表示。デバッグ設定からだけ開ける。通常のプレイでは出ない */}
       {/* ★会話ストーリーが先。流している途中・流す予約があるあいだは、助手の告知を出さない
           (2026-09-11・ユーザー指示「みゅあの前にイベント発生で会話、そのあとに助手からの説明」) */}
-      {bootPhase==='GAME'&&gameState==='HOME'&&onboarded&&tutorialStep==null&&kikiIntroStep==null&&momosukeIntroStep==null&&!eventReplay&&!rhythmEventStoryPending&&updateGuideQueue.length>0&&(
+      {bootPhase==='GAME'&&gameState==='HOME'&&onboarded&&tutorialStep==null&&kikiIntroStep==null&&momosukeIntroStep==null&&!eventReplay&&!rhythmEventStoryPending&&!successScreenOpen&&updateGuideQueue.length>0&&(
         <HomeUpdateGuideOverlay
           activeAssistant={activeAssistant} assistantBondLevelNow={assistantBondLevelNow}
           assistantCallStyle={assistantCallStyle} breederName={breederName}
@@ -143807,6 +143873,18 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           きき加入の会話と見た目は同じだが、閉じても保存には一切触れない
           (初回閲覧フラグ・助手選択・仲良し度・アップデート通知のどれも変えない)。
           gameStateを問わず(プロフィールから開くため)eventReplayの有無だけで出す */}
+      {/* モンヒロサクセス 第2話を飛ばした人への、みゅあの告知(1回だけ・2026-11-15)。HOME で、ほかのお話・案内が出ていないときだけ */}
+      {EVENT_REPLAY_RELEASE_FLAGS.monsucStoryEp2&&monsucStorySkip&&monsucStorySkip.skippedAt>0&&!monsucStorySkip.shownAt&&bootPhase==='GAME'&&gameState==='HOME'&&!eventReplay&&!rhythmEventStoryPending&&!rhythmHellGuide&&!dailyMasuAdvice&&!successScreenOpen&&updateGuideQueue.length===0&&(()=>{
+        const who=assistantById('mua');if(!who)return null;
+        const lv=assistantBondLevelOf(normalizeAssistantBond(assistantBondsRef.current.mua).points);
+        const text=lv<=2?'{name}、HOMEに新しいボタンが出ています！ 一番乗りで、いっしょに行けたらうれしいです♪':'{name}、HOMEに新しいボタンが出てるよ！ 一番乗りで、いっしょに行こ♪';
+        return(
+        <div data-monsuc-story-skip-notice className="fixed inset-0 flex items-end justify-center" style={{position:'fixed',inset:0,zIndex:75000,backgroundColor:'rgba(2,6,23,.9)'}} role="dialog" aria-modal="true" aria-label="みゅあからのお知らせ">
+          <div className="w-full max-w-md rounded-t-3xl border-t-2 border-x-2 border-pink-400 bg-slate-950 p-4" style={{paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
+            <div className="flex items-end gap-2"><AssistantFace who={who} size={72} accent={who.accent} expression="excited"/><div className="flex-1 rounded-2xl border-2 border-pink-400 bg-slate-900 px-3 py-3 text-[13px] font-bold leading-relaxed text-white" style={bubbleWrapStyle()}>{bubbleWrap(assistantSpeakText(text,breederName,lv,assistantCallStyles.mua||null,'mua'))}</div></div>
+            <button type="button" onClick={()=>markMonsucStorySkip('shownAt')} className="mt-4 min-h-[50px] w-full rounded-2xl bg-pink-500 text-sm font-black text-slate-950 active:scale-[.98]">閉じる</button>
+          </div>
+        </div>);})()}
       {eventReplay!=null&&(()=>{
         const list=eventReplay.debug?eventReplayAllList():eventReplayList();
         const event=list.find(ev=>ev.id===eventReplay.id);
@@ -144005,6 +144083,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         const skip=()=>{
           if(eventReplay.live&&!eventReplay.debug&&event&&RHYTHM_EVENT_STORY_IDS.includes(event.id)) void markRhythmEventStorySeen(event.id);
           if(eventReplay.live&&!eventReplay.debug&&event&&event.id==='tactics_intro') markTacticsIntroSeen();
+          // モンヒロサクセス 第2話を本編で飛ばした人には、あとで HOME でみゅあが1回だけ知らせる(mh_monsuc_story_skip_seen_v1)
+          if(eventReplay.live&&!eventReplay.debug&&event&&event.id===MONSUC_BETA_EP2_STORY_ID) markMonsucStorySkip('skippedAt');
           if(eventReplay.live&&!eventReplay.debug&&event&&event.id===ASSISTANT_CHAT_STORY_ID) markAssistantChatStorySeen();
           if(eventReplay.live&&!eventReplay.debug&&event&&event.id===LEGEND_BREEDER_PASS_STORY_ID) markLegendPassSeen();
           if(eventReplay.live&&!eventReplay.debug&&event&&event.id===TACTICS_TYPES_STORY_ID) markTacticsTypesStorySeen();
@@ -144235,6 +144315,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   {event.endingTeaser.note&&<p className="mt-0.5 inline-block rounded-full bg-amber-400/20 px-3 text-[12px] font-black text-amber-100">{event.endingTeaser.note}</p>}
                 </div>}
                 {rich&&!nextEv&&allSeen&&<p data-story-ending-all className="mx-auto mt-4 inline-block rounded-full border border-amber-300/60 bg-amber-500/15 px-4 py-1 text-[13px] font-black text-amber-100" style={{animation:`storyEndCard 1s ease-out ${delay+1.5}s both`}}>🔑 全{allCount}{allUnit} 全部見た！</p>}
+                {/* 行き先のボタン(endingOpen・2026-11-15 モンヒロサクセス 第2話)。本編で流れたときだけ。押すとモンサクを開く(はじめてなら中の始まりの話) */}
+                {rich&&eventReplay.live&&!eventReplay.debug&&event?.endingOpen==='monsuc'&&typeof assistantLifeSuccessOpen==='function'&&<button type="button" data-story-ending-open="monsuc" onClick={go(()=>{assistantLifeSuccessOpen({assistantId:'mua',from:'story'});})} className="mt-5 min-h-[52px] w-full rounded-2xl bg-emerald-400 text-[15px] font-black text-slate-950 active:scale-[.98]" style={{animation:`storyEndCard 1s ease-out ${delay+1.5}s both`}}>🌱 モンヒロサクセスへ</button>}
                 {rich&&eventReplay.live&&!eventReplay.debug&&/^pandora_wings_/.test(event.id)&&<div data-story-ending-actions className="mt-4 grid grid-cols-2 gap-2" style={{animation:`storyEndCard 1s ease-out ${delay+1.8}s both`}}>
                   <button type="button" onClick={go(()=>setGameState('RHYTHM_DEMO_HOME'))} className="min-h-[48px] rounded-2xl bg-fuchsia-500 text-[13px] font-black text-slate-950 active:scale-[.98]">🎵 イベントの曲を遊ぶ</button>
                   <button type="button" onClick={go(()=>{setRhythmRankingTab('event');loadRhythmEventRanking('limited',rhythmEventDivision.limited);setGameState('RHYTHM_RANKING');})} className="min-h-[48px] rounded-2xl border border-fuchsia-300/60 bg-slate-900 text-[13px] font-black text-fuchsia-100 active:scale-[.98]">🏆 ランキングを見る</button>

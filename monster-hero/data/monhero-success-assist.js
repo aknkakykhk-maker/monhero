@@ -124,7 +124,7 @@
   add({ id: 'tsuika', icon: '➕', name: '追加トレボーナス', type: 'with', scene: 'train', unit: 2, max: 10, u: '%', text: T('{v}%で、あとからどれか1つの能力がさらに +5〜99') });
   add({ id: 'kaifuku', icon: '💧', name: 'トレ後回復効果アップ', type: 'with', scene: 'train', unit: 1, max: 10, u: '', text: T('トレーニングのあと体力が{v}回復する') });
   add({ id: 'atooshi', icon: '🎯', name: '得意の後押し', ref: false, type: 'with', scene: 'train', unit: 2, max: 15, u: '%', v2: [6, 12, 18, 24, 30], text: 'この子の一番高い能力のトレーニングに来ると、伸びが{v}%上がる' });
-  add({ id: 'miharu', icon: '👀', name: '見張り役', ref: false, type: 'with', scene: 'train', unit: 5, max: 15, u: '%', v2: [10, 20, 30, 40, 50], text: T('サボりにくくなる(サボりの率 −{v}%)') });
+  add({ id: 'miharu', icon: '👀', name: '見張り役', ref: false, type: 'with', scene: 'train', unit: 5, max: 10, /* 上限 CAP 50% に目盛りを合わせる(r1115-207 L11。保存の n>10 は nOf で 10 に読み替え・効き目は前から50%で同じ) */ u: '%', v2: [10, 20, 30, 40, 50], text: T('サボりにくくなる(サボりの率 −{v}%)') });
   add({ id: 'kibarashi', icon: '🎈', name: '気晴らし', ref: false, type: 'with', scene: 'train', unit: 5, max: 10, u: '%', v2: [10, 20, 30, 40, 50], text: T('たまるストレスが{v}%少なくなる') });
 
   // ---- 能力ごと(いっしょ型・その能力のトレーニングに来たときだけ) ----

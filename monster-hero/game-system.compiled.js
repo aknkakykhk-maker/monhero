@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1bc4aee25e29046b
+// source-sha256: a7cd31677887e779
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -685,6 +685,9 @@ const EVENT_REPLAY_RELEASE_FLAGS = Object.freeze({
   },
   get monsucStoryEp1() {
     return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.monsucStoryEp1 === true;
+  },
+  get monsucStoryEp2() {
+    return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.monheroSuccess === true;
   },
   get cardCup() {
     return typeof cardCupOpen === 'function' && cardCupOpen() === true;
@@ -14810,6 +14813,8 @@ const helpPlayerFlagOn = name => !!name && HELP_PLAYER_FLAGS[name] === true;
 const CARD_CUP_STORY_ID = 'card_cup_2026_10_31';
 const RHYTHM_GRAND_OPEN_TEASER_STORY_ID = 'rhythm_grand_open_teaser';
 const MONSUC_BETA_EP1_STORY_ID = 'monsuc_beta_ep1';
+const MONSUC_BETA_EP2_STORY_ID = 'monsuc_beta_ep2';
+const MONSUC_STORY_SKIP_SEEN_KEY = 'mh_monsuc_story_skip_seen_v1';
 const SPARKLING_PINK_STORY_ID = 'sparkling_pink_kiki_story';
 const RHYTHM_GRAND_OPEN_STORY_ID = 'rhythm_grand_open';
 const SORASHIDO_GIFT_KEY = 'mh_sorashido_gift_v1';
@@ -93786,6 +93791,8 @@ const RHYTHM_WATCH_MAX = 10;
 const RHYTHM_WATCH_PING_MS = 10000;
 const RHYTHM_WATCH_TTL_MS = 25000;
 const RHYTHM_WATCH_LIVE_MS = 1000;
+const RHYTHM_WATCH_RETRY_MS = 2000;
+const RHYTHM_WATCH_SWITCH_MS = 8000;
 const RHYTHM_WATCH_AD_MS = 10000;
 const RHYTHM_WATCH_KEY = 'mh_rhythm_multi_spectate_v1';
 const RHYTHM_WATCH_CHAT_INTERVAL_MS = 3000;
@@ -94400,6 +94407,10 @@ const RHYTHM_MULTI = (() => {
       }
       watchFrames = watch.frames;
       watchFramesAt = now;
+    }
+    if (!watchLite && watch && watch.jd === null) {
+      watch.jd = [];
+      watch.jx = [];
     }
     if (watchLite) {
       watchJdOff();
@@ -96022,6 +96033,18 @@ const RHYTHM_WATCH = (() => {
       f: st.focus
     });
   };
+  const setFocus = (id, manual = false) => {
+    if (!st) return;
+    st.focus = id;
+    st.focusAt = Date.now();
+    st.focusManual = !!manual;
+    st.noDetail = false;
+    ping();
+  };
+  const focusLive = now => {
+    const r = st && st.rows[st.focus];
+    return !!r && (r.fin === true || r.pAt > 0 && now - r.pAt <= 4000);
+  };
   const intOf = (v, max) => rhythmMultiInt(v, max);
   const feed = raw => {
     if (!st || !raw || typeof raw !== 'object') return;
@@ -96048,16 +96071,18 @@ const RHYTHM_WATCH = (() => {
         st.rows = {};
         st.judged = {};
         st.marks = {};
+        st.tried = [];
+        st.wiFrom = [];
       }
       st.songId = rhythmMultiText(raw.sg, 60);
       if (people.length) st.people = people;
-      if (!st.focus || !st.people.some(x => x.id === st.focus)) {
-        st.focus = st.people[0].id;
-        ping();
-      }
+      const from = rhythmMultiText(raw.id, 40);
+      const fromIn = !!from && st.people.some(x => x.id === from);
+      const heard = st.wiFrom || (st.wiFrom = []);
+      if (fromIn && !heard.includes(from)) heard.push(from);
+      if (!st.focus || !st.people.some(x => x.id === st.focus)) setFocus(fromIn ? from : st.people[0].id);else if (fromIn && from !== st.focus && !st.focusManual && !heard.includes(st.focus) && !focusLive(now) && now - (st.focusAt || 0) >= 3000) setFocus(from);
       st.phase = 'playing';
       st.lastPg = now;
-      const from = rhythmMultiText(raw.id, 40);
       if (raw.sc != null && st.people.some(x => x.id === from)) {
         const prev = st.rows[from] || {};
         st.rows[from] = {
@@ -96102,6 +96127,7 @@ const RHYTHM_WATCH = (() => {
       }
       st.rows[id] = row;
       st.lastPg = now;
+      if (id === st.focus && raw.p != null) st.noDetail = false;
       if (st.people.every(x => st.rows[x.id] && st.rows[x.id].fin)) {
         st.phase = 'ended';
         st.endedAt = now;
@@ -96186,10 +96212,15 @@ const RHYTHM_WATCH = (() => {
       st.rows = {};
       st.judged = {};
       st.marks = {};
+      st.tried = [];
+      st.wiFrom = [];
       st.phase = 'playing';
       st.lastPg = now;
-      if (!people.some(x => x.id === st.focus)) st.focus = people[0].id;
-      ping();
+      if (!people.some(x => x.id === st.focus)) setFocus(people[0].id, false);else {
+        st.focusAt = now;
+        st.noDetail = false;
+        ping();
+      }
       emit();
     }
   };
@@ -96201,6 +96232,21 @@ const RHYTHM_WATCH = (() => {
       st.phase = 'ended';
       st.endedAt = now;
       emit();
+    }
+    if (st.phase === 'playing' && st.focus && st.people.length && !focusLive(now)) {
+      if (now - st.lastPing >= (st.noDetail ? RHYTHM_WATCH_PING_MS : RHYTHM_WATCH_RETRY_MS)) ping();
+      if (now - (st.focusAt || 0) >= RHYTHM_WATCH_SWITCH_MS) {
+        const tried = st.tried || (st.tried = []);
+        if (!tried.includes(st.focus)) tried.push(st.focus);
+        const next = st.focusManual ? null : st.people.find(x => !tried.includes(x.id) && x.id !== st.focus);
+        if (next) {
+          setFocus(next.id, false);
+          emit();
+        } else if (!st.noDetail) {
+          st.noDetail = true;
+          emit();
+        }
+      }
     }
     if (st.phase === 'connecting' && since > 12000) {
       if (st.quiet) {
@@ -96240,6 +96286,10 @@ const RHYTHM_WATCH = (() => {
         people: [],
         rows: {},
         focus: '',
+        focusAt: 0,
+        focusManual: false,
+        noDetail: false,
+        tried: [],
         members: {},
         judged: {},
         marks: {},
@@ -96281,8 +96331,7 @@ const RHYTHM_WATCH = (() => {
     },
     focus(id) {
       if (!st || !st.people.some(x => x.id === id)) return;
-      st.focus = id;
-      ping();
+      setFocus(id, true);
       emit();
     },
     say(text, stamp = null) {
@@ -99621,7 +99670,11 @@ function RhythmWatchScreen({
     "data-rhythm-watch-lite": true,
     className: "absolute inset-x-2 top-9 text-center text-[11px] font-black text-amber-200",
     style: JA_WRAP_STYLE
-  }, jaWrap('この人の端末が重くなったので、譜面は出さず、数字だけにしています')), waiting && v.phase === 'playing' && React.createElement("p", {
+  }, jaWrap('この人の端末が重くなったので、譜面は出さず、数字だけにしています')), v.noDetail && v.phase === 'playing' && !lite && React.createElement("p", {
+    "data-rhythm-watch-nodetail": true,
+    className: "absolute inset-x-4 top-1/2 -translate-y-1/2 rounded-xl border border-amber-300/50 bg-slate-950/85 px-3 py-2 text-center text-[12px] font-black text-amber-200",
+    style: JA_WRAP_STYLE
+  }, jaWrap(v.focusManual ? 'この人の譜面はまだ届いていません。順位と点は見られます' : 'この部屋の譜面は届いていません(アプリの版が古いときなど)。順位と点は見られます')), waiting && !v.noDetail && v.phase === 'playing' && React.createElement("p", {
     "data-rhythm-watch-waiting": true,
     className: "absolute inset-x-2 top-9 text-center text-[12px] font-black text-amber-200",
     style: {
@@ -161095,7 +161148,7 @@ const msxBirthEnsureCss = () => {
 const MSX_IS_STEPS = Object.freeze([1800, 420]);
 const MSX_IS_YOSU = Object.freeze({
   sabori: '😪 サボりグセ',
-  utsu: '😞 うつ病',
+  utsu: '😞 どんより',
   kega: '🤕 けが',
   himan: '🍖 肥満',
   kaze: '🤧 かぜ'
@@ -161130,7 +161183,7 @@ function msxIssaGainList(before, s, SUC) {
 }
 function msxIssaLoyalAhead(s, SUC) {
   const half = SUC && SUC.LOYAL && SUC.LOYAL.half || 50;
-  if (s && s.yosu && s.yosu.utsu) return '忠誠度は動かない(うつ病のあいだ)';
+  if (s && s.yosu && s.yosu.utsu) return '忠誠度は動かない(どんよりのあいだ)';
   const n = Math.max(0, Math.min(8, half - (Number(s && s.ama) || 0))) + Math.max(0, Math.min(7, half - (Number(s && s.fear) || 0)));
   return n > 0 ? `忠誠度 +${n}` : '忠誠度はもう上限';
 }
@@ -170482,10 +170535,11 @@ const MSX_CSS = `
 @keyframes rx-pop{0%{transform:scale(.3);opacity:0}70%{transform:scale(1.12);opacity:1}100%{transform:scale(1);opacity:1}}
 .msx .v-body2.rx-hop{animation:rx-hop .9s ease-out 1}.msx .v-body2.rx-sag{animation:rx-sag .8s ease-out 1 forwards}
 .msx .rx-bub{position:absolute;left:6%;top:26%;background:#fff;color:#1e1b4b;border:2px solid #f9a8d4;border-radius:14px;padding:4px 10px;font-size:12px;font-weight:900;animation:rx-pop .4s ease-out .25s both;white-space:nowrap;z-index:3}
-.msx .v-ga b{font-size:12.5px;width:46px;flex:none;text-align:right}.msx .v-ga b small{font-size:10px;color:#cbd5e1;font-weight:700}
+.msx .v-ga b{font-size:12.5px;width:50px;flex:none;text-align:right}.msx .v-ga b small{font-size:10px;color:#cbd5e1;font-weight:700}
 .msx .v-ga b small.cap{color:#fde047}
-/* 増減の字(−16・+4)は棒の長さを変えない: 数の左に重ねて出す(r1115-083。どの画面でも棒の長さ・位置は同じ) */
-.msx .v-ga em{position:absolute;right:50px;top:50%;transform:translateY(-50%);z-index:2;pointer-events:none;font-style:normal;font-size:10.5px;color:#fca5a5;text-shadow:0 0 3px #0b0920,0 0 3px #0b0920,0 0 2px #0b0920}.msx .v-ga em.pl{color:#f0abfc}.msx .v-ga em.hl{color:#86efac}
+/* 増減の字(−16・+4)は棒の長さを変えない: 棒と数のあいだにいつも空けてある枠に出す(r1115-083 どの画面でも棒の長さ・位置は同じ・r1115-207 L1 棒の端と「100/100」に重ねない) */
+.msx .v-ga .tr{margin-right:26px}
+.msx .v-ga em{position:absolute;right:54px;top:50%;transform:translateY(-50%);z-index:2;pointer-events:none;font-style:normal;font-size:10.5px;color:#fca5a5;text-shadow:0 0 3px #0b0920,0 0 3px #0b0920,0 0 2px #0b0920}.msx .v-ga em.pl{color:#f0abfc}.msx .v-ga em.hl{color:#86efac}
 .msx .v-scene{flex:1 1 0;min-height:0;position:relative;border-radius:16px;border:1px solid #4a4380;overflow:hidden;margin-top:6px;background:#0f0d24}
 .msx .v-scene .bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 78%}
 .msx .v-scene .sh{position:absolute;inset:0;background:linear-gradient(180deg,#1d174055 0,#1d174000 26%,#0f0d2400 62%,#0f0d24cc 100%)}
@@ -170793,7 +170847,7 @@ const MSX_CSS = `
   .msx .v-band{padding:5px 6px}
   .msx .v-turn .n b{font-size:24px}.msx .v-turn .ph{font-size:10px;padding:2px 5px}
   .msx .v-pow b{font-size:14px}.msx .v-pow .rk.big{height:24px;min-width:24px;font-size:14px}
-  .msx .v-ga{font-size:10px;gap:3px}.msx .v-ga b{font-size:11px;width:41px}.msx .v-ga em{right:45px}.msx .v-ga .tr{height:11px}
+  .msx .v-ga{font-size:10px;gap:3px}.msx .v-ga b{font-size:11px;width:45px}.msx .v-ga em{right:48px}.msx .v-ga .tr{margin-right:24px}.msx .v-ga .tr{height:11px}
   .msx .v-st b{font-size:12px}.msx .v-st small{font-size:10px}.msx .v-st em{font-size:10px;height:12px;line-height:12px}.msx .v-st div.up.main em{font-size:11px}
   .msx .v-p{font-size:11px;padding:4px 1px 3px;border-radius:12px}.msx .v-p .e{font-size:16px}.msx .v-p small{font-size:10px}.msx .v-p.main{font-size:14px}
   .msx .v-ft{height:34px;padding:0 7px;gap:3px}.msx .v-ft span,.msx .v-ft button{font-size:10px;padding:4px 1px}.msx .v-ft span.go,.msx .v-ft span.go2,.msx .v-ft button.go,.msx .v-ft button.go2{font-size:11.5px}
@@ -171009,7 +171063,8 @@ const MSX_CSS = `
 .msx .v-ileg{display:flex;gap:10px;font-size:10px;font-weight:800;color:#cbd5e1;margin-top:5px;white-space:nowrap}
 .msx .v-ileg b{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:3px;vertical-align:-1px}.msx .v-ileg .sw1{background:#475569}.msx .v-ileg .sw2{background:#38bdf8}
 .msx .v-sum .v-ics{display:flex;align-items:center;gap:3px;font-size:10px}.msx .v-sum .v-ics .v-icw{width:20px;height:20px}
-.msx .v-cup .rvi{position:absolute;left:-6px;top:-9px;display:flex;align-items:center;gap:3px;background:linear-gradient(90deg,#ef4444,#fb923c);border-radius:99px;padding:1px 8px 1px 1px;font-size:10px;font-weight:900;line-height:1.6;white-space:nowrap}
+.msx .v-cups:has(>.v-cup:first-child .rvi){padding-top:9px} /* いちばん上の札がライバルでも印が枠で切れない(r1115-207 N3) */
+.msx .v-cup .rvi{position:absolute;left:4px;top:-9px;display:flex;align-items:center;gap:3px;background:linear-gradient(90deg,#ef4444,#fb923c);border-radius:99px;padding:1px 8px 1px 1px;font-size:10px;font-weight:900;line-height:1.6;white-space:nowrap}
 .msx .v-cup .rvi img{width:20px;height:20px;border-radius:50%;object-fit:cover;object-position:50% 20%;background:#1e1a36;border:1.5px solid #fff}
 .msx .v-cup .rvb{background:#3b2f0b;border:1px solid #fde047;color:#fde047}
 /* ---- 足したもの(ゲームの中で要った分) ---- */
@@ -172470,7 +172525,7 @@ const msxItemFx = id => {
   if (it.issaSure) return 'その回の博士の実験がかならず成功';
   if (it.hpMax) return `体力の上限 +${it.hpMax}`;
   if (it.hpFull) return '体力を上限まで回復';
-  if (it.cure) return `悪いようす(サボり癖・うつなど)を治し、体力を上限の${pc(it.hp || 0)}回復`;
+  if (it.cure) return `悪いようす(サボりグセ・どんよりなど)を治し、体力を上限の${pc(it.hp || 0)}回復`;
   if (it.loyal) return `忠誠度 +${it.loyal}`;
   if (it.ama || it.fear) return `甘え度 +${it.ama || 0}・恐れ度 +${it.fear || 0}(忠誠度 +${(it.ama || 0) + (it.fear || 0)})`;
   if (it.gives) {
@@ -175279,7 +175334,7 @@ const MSX_ISSA_KEYS = Object.freeze([{
   icon: '❤️',
   name: '体力回復',
   ok: '体力を8割回復',
-  ng: '体力 −30・うつ病',
+  ng: '体力 −30・どんより',
   line: 'heal'
 }, {
   key: 'loyal',
@@ -175521,7 +175576,7 @@ function MsxBand({
 }
 const MSX_YOSU_NAME = {
   sabori: 'サボりグセ',
-  utsu: 'うつ病'
+  utsu: 'どんより'
 };
 function msxClinicText(cured, yosu) {
   const nm = ks => ks.map(k => `「${MSX_YOSU_NAME[k] || k}」`).join('と');
@@ -176883,7 +176938,7 @@ function MsxPlay({
       "data-msx-rest-hp": true
     }, "+", hpUp)) : '体力が回復した', stDown > 0 ? React.createElement(React.Fragment, null, "・ストレス ", React.createElement("b", {
       className: "gu"
-    }, "−", stDown)) : null), (o.cured || []).includes('utsu') ? '。「うつ病」が治った' : '') : o.kind === 'clinic' ? React.createElement(React.Fragment, null, React.createElement("span", {
+    }, "−", stDown)) : null), (o.cured || []).includes('utsu') ? '。「どんより」が治った' : '') : o.kind === 'clinic' ? React.createElement(React.Fragment, null, React.createElement("span", {
       className: "hd2"
     }, "🏥 通院"), React.createElement("br", null), msxClinicText(o.cured, s.yosu), typeof MsxGaugeFx === 'function' ? null : React.createElement(React.Fragment, null, React.createElement("br", null), hpUp > 0 ? React.createElement(React.Fragment, null, "体力 ", React.createElement("b", {
       className: "gu"
@@ -177742,7 +177797,7 @@ function MsxPlay({
       className: "v-chip bad"
     }, "😪 ようす: サボりグセ") : null, s.yosu && s.yosu.utsu ? React.createElement("span", {
       className: "v-chip bad"
-    }, "😢 ようす: うつ病") : null, s.cond ? React.createElement("span", {
+    }, "😢 ようす: どんより") : null, s.cond ? React.createElement("span", {
       className: "v-chip bad"
     }, "🤕 ", MSX_COND[s.cond.kind], "(あと", s.cond.left, ")") : null, SUC.events && typeof SUC.events.buffs === 'function' ? SUC.events.buffs(s).slice(0, 2).map(b => React.createElement("span", {
       key: b.k,
@@ -235611,7 +235666,7 @@ function MonsterHeroGame() {
   const PANDORA_WINGS_STORY_IDS = PANDORA_WINGS_STORIES.map(story => story.id);
   const PANDORA_WINGS_EVENT_ID = 'pandora_wings_2026_11_02';
   const PANDORA_WINGS_THANKS_STORY_ID = 'pandora_wings_2026_ep8';
-  const RHYTHM_EVENT_STORY_IDS = [...HALLOWEEN_NIGHT_STORY_IDS, ...RAID_JACK_STORY_IDS, ...PANDORA_WINGS_STORY_IDS, PANDORA_WINGS_THANKS_STORY_ID, MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, RAID_JACK_RHYTHM_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RAID_JACK_HOWTO_STORY_ID, ATSU_JOIN_STORY_ID, KYUKO_JOIN_STORY_ID, SORASHIDO_JOIN_STORY_ID, ERUBIN_JOIN_STORY_ID, CARD_CUP_STORY_ID, RHYTHM_GRAND_OPEN_TEASER_STORY_ID, RHYTHM_GRAND_OPEN_STORY_ID, MONSUC_BETA_EP1_STORY_ID, SPARKLING_PINK_STORY_ID];
+  const RHYTHM_EVENT_STORY_IDS = [...HALLOWEEN_NIGHT_STORY_IDS, ...RAID_JACK_STORY_IDS, ...PANDORA_WINGS_STORY_IDS, PANDORA_WINGS_THANKS_STORY_ID, MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, RAID_JACK_RHYTHM_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RAID_JACK_HOWTO_STORY_ID, ATSU_JOIN_STORY_ID, KYUKO_JOIN_STORY_ID, SORASHIDO_JOIN_STORY_ID, ERUBIN_JOIN_STORY_ID, CARD_CUP_STORY_ID, RHYTHM_GRAND_OPEN_TEASER_STORY_ID, RHYTHM_GRAND_OPEN_STORY_ID, MONSUC_BETA_EP1_STORY_ID, MONSUC_BETA_EP2_STORY_ID, SPARKLING_PINK_STORY_ID];
   const RHYTHM_EVENT_STORY_BY_EVENT = {
     [MONBEAT_CUP_EVENT_ID]: MONBEAT_CUP_STORY_ID,
     [SYMPHONY_EVENT_ID]: SYMPHONY_STORY_ID,
@@ -236073,6 +236128,47 @@ function MonsterHeroGame() {
     if (rhythmEventStoryStartedRef.current.includes(MONSUC_BETA_EP1_STORY_ID)) return;
     setRhythmEventStoryPending(prev => prev || MONSUC_BETA_EP1_STORY_ID);
   }, [rhythmEventStorySeen, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
+  useEffect(() => {
+    if (!EVENT_REPLAY_RELEASE_FLAGS.monsucStoryEp2) return;
+    if (!Array.isArray(rhythmEventStorySeen) || rhythmEventStorySeen.includes(MONSUC_BETA_EP2_STORY_ID)) return;
+    if (!(bootPhase === 'GAME' && gameState === 'HOME') || eventReplay || rhythmEventStoryPending || rhythmHellGuide) return;
+    if (rhythmEventStoryStartedRef.current.includes(MONSUC_BETA_EP2_STORY_ID)) return;
+    setRhythmEventStoryPending(prev => prev || MONSUC_BETA_EP2_STORY_ID);
+  }, [rhythmEventStorySeen, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
+  const normalizeMonsucStorySkip = v => {
+    const o = v && typeof v === 'object' && !Array.isArray(v) ? v : {};
+    return {
+      v: 1,
+      skippedAt: Number.isFinite(o.skippedAt) ? o.skippedAt : 0,
+      shownAt: Number.isFinite(o.shownAt) ? o.shownAt : 0
+    };
+  };
+  const [monsucStorySkip, setMonsucStorySkip] = useState(null);
+  useEffect(() => {
+    let alive = true;
+    Promise.resolve(storeGet(MONSUC_STORY_SKIP_SEEN_KEY, null, false)).then(v => {
+      if (alive) setMonsucStorySkip(normalizeMonsucStorySkip(v));
+    }).catch(() => {
+      if (alive) setMonsucStorySkip(normalizeMonsucStorySkip(null));
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
+  const markMonsucStorySkip = field => {
+    setMonsucStorySkip(prev => {
+      const cur = normalizeMonsucStorySkip(prev);
+      if (cur[field]) return cur;
+      const next = {
+        ...cur,
+        [field]: Date.now()
+      };
+      try {
+        storeSet(MONSUC_STORY_SKIP_SEEN_KEY, next, false);
+      } catch {}
+      return next;
+    });
+  };
   useEffect(() => {
     if (!Array.isArray(rhythmEventStorySeen) || rhythmEventStorySeen.includes(SPARKLING_PINK_STORY_ID)) return;
     if (!(bootPhase === 'GAME' && gameState === 'HOME') || eventReplay || rhythmEventStoryPending || rhythmHellGuide) return;
@@ -239350,6 +239446,7 @@ function MonsterHeroGame() {
     rhythmGrandOpenTeaserSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(RHYTHM_GRAND_OPEN_TEASER_STORY_ID),
     rhythmGrandOpenSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(RHYTHM_GRAND_OPEN_STORY_ID),
     monsucBetaEp1Seen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(MONSUC_BETA_EP1_STORY_ID),
+    monsucBetaEp2Seen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(MONSUC_BETA_EP2_STORY_ID),
     sparklingPinkStorySeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SPARKLING_PINK_STORY_ID),
     symphonyEventSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SYMPHONY_STORY_ID)
   };
@@ -265419,7 +265516,7 @@ function MonsterHeroGame() {
       markMomosukeIntroSeen: markMomosukeIntroSeen,
       momosukeIntroStep: momosukeIntroStep,
       setMomosukeIntroStep: setMomosukeIntroStep
-    }), bootPhase === 'GAME' && gameState === 'HOME' && onboarded && tutorialStep == null && kikiIntroStep == null && momosukeIntroStep == null && !eventReplay && !rhythmEventStoryPending && updateGuideQueue.length > 0 && React.createElement(HomeUpdateGuideOverlay, {
+    }), bootPhase === 'GAME' && gameState === 'HOME' && onboarded && tutorialStep == null && kikiIntroStep == null && momosukeIntroStep == null && !eventReplay && !rhythmEventStoryPending && !successScreenOpen && updateGuideQueue.length > 0 && React.createElement(HomeUpdateGuideOverlay, {
       activeAssistant: activeAssistant,
       assistantBondLevelNow: assistantBondLevelNow,
       assistantCallStyle: assistantCallStyle,
@@ -265442,7 +265539,44 @@ function MonsterHeroGame() {
         openFriends(null);
       },
       onLater: () => setFriendNoticeDismissed((friendRequestInfo.ids || []).join(','))
-    }), assistantUnlockNoticeNode(gameState === 'PROFILE' ? 'profile' : gameState === 'HOME' ? 'home' : null), eventReplay != null && (() => {
+    }), assistantUnlockNoticeNode(gameState === 'PROFILE' ? 'profile' : gameState === 'HOME' ? 'home' : null), EVENT_REPLAY_RELEASE_FLAGS.monsucStoryEp2 && monsucStorySkip && monsucStorySkip.skippedAt > 0 && !monsucStorySkip.shownAt && bootPhase === 'GAME' && gameState === 'HOME' && !eventReplay && !rhythmEventStoryPending && !rhythmHellGuide && !dailyMasuAdvice && !successScreenOpen && updateGuideQueue.length === 0 && (() => {
+      const who = assistantById('mua');
+      if (!who) return null;
+      const lv = assistantBondLevelOf(normalizeAssistantBond(assistantBondsRef.current.mua).points);
+      const text = lv <= 2 ? '{name}、HOMEに新しいボタンが出ています！ 一番乗りで、いっしょに行けたらうれしいです♪' : '{name}、HOMEに新しいボタンが出てるよ！ 一番乗りで、いっしょに行こ♪';
+      return React.createElement("div", {
+        "data-monsuc-story-skip-notice": true,
+        className: "fixed inset-0 flex items-end justify-center",
+        style: {
+          position: 'fixed',
+          inset: 0,
+          zIndex: 75000,
+          backgroundColor: 'rgba(2,6,23,.9)'
+        },
+        role: "dialog",
+        "aria-modal": "true",
+        "aria-label": "みゅあからのお知らせ"
+      }, React.createElement("div", {
+        className: "w-full max-w-md rounded-t-3xl border-t-2 border-x-2 border-pink-400 bg-slate-950 p-4",
+        style: {
+          paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
+        }
+      }, React.createElement("div", {
+        className: "flex items-end gap-2"
+      }, React.createElement(AssistantFace, {
+        who: who,
+        size: 72,
+        accent: who.accent,
+        expression: "excited"
+      }), React.createElement("div", {
+        className: "flex-1 rounded-2xl border-2 border-pink-400 bg-slate-900 px-3 py-3 text-[13px] font-bold leading-relaxed text-white",
+        style: bubbleWrapStyle()
+      }, bubbleWrap(assistantSpeakText(text, breederName, lv, assistantCallStyles.mua || null, 'mua')))), React.createElement("button", {
+        type: "button",
+        onClick: () => markMonsucStorySkip('shownAt'),
+        className: "mt-4 min-h-[50px] w-full rounded-2xl bg-pink-500 text-sm font-black text-slate-950 active:scale-[.98]"
+      }, "閉じる")));
+    })(), eventReplay != null && (() => {
       const list = eventReplay.debug ? eventReplayAllList() : eventReplayList();
       const event = list.find(ev => ev.id === eventReplay.id);
       const script = event ? eventScriptForPlayer(event.script, rhythmEventStorySeen) : [];
@@ -265713,6 +265847,7 @@ function MonsterHeroGame() {
       const skip = () => {
         if (eventReplay.live && !eventReplay.debug && event && RHYTHM_EVENT_STORY_IDS.includes(event.id)) void markRhythmEventStorySeen(event.id);
         if (eventReplay.live && !eventReplay.debug && event && event.id === 'tactics_intro') markTacticsIntroSeen();
+        if (eventReplay.live && !eventReplay.debug && event && event.id === MONSUC_BETA_EP2_STORY_ID) markMonsucStorySkip('skippedAt');
         if (eventReplay.live && !eventReplay.debug && event && event.id === ASSISTANT_CHAT_STORY_ID) markAssistantChatStorySeen();
         if (eventReplay.live && !eventReplay.debug && event && event.id === LEGEND_BREEDER_PASS_STORY_ID) markLegendPassSeen();
         if (eventReplay.live && !eventReplay.debug && event && event.id === TACTICS_TYPES_STORY_ID) markTacticsTypesStorySeen();
@@ -266281,7 +266416,20 @@ function MonsterHeroGame() {
           style: {
             animation: `storyEndCard 1s ease-out ${delay + 1.5}s both`
           }
-        }, "🔑 全", allCount, allUnit, " 全部見た！"), rich && eventReplay.live && !eventReplay.debug && /^pandora_wings_/.test(event.id) && React.createElement("div", {
+        }, "🔑 全", allCount, allUnit, " 全部見た！"), rich && eventReplay.live && !eventReplay.debug && event?.endingOpen === 'monsuc' && typeof assistantLifeSuccessOpen === 'function' && React.createElement("button", {
+          type: "button",
+          "data-story-ending-open": "monsuc",
+          onClick: go(() => {
+            assistantLifeSuccessOpen({
+              assistantId: 'mua',
+              from: 'story'
+            });
+          }),
+          className: "mt-5 min-h-[52px] w-full rounded-2xl bg-emerald-400 text-[15px] font-black text-slate-950 active:scale-[.98]",
+          style: {
+            animation: `storyEndCard 1s ease-out ${delay + 1.5}s both`
+          }
+        }, "🌱 モンヒロサクセスへ"), rich && eventReplay.live && !eventReplay.debug && /^pandora_wings_/.test(event.id) && React.createElement("div", {
           "data-story-ending-actions": true,
           className: "mt-4 grid grid-cols-2 gap-2",
           style: {
