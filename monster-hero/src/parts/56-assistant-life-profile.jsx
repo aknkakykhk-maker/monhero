@@ -207,8 +207,8 @@ const assistantLifeProfileFace = (id, greeting, k) => {
 // 表情の全身画の、8表情でいちばん高い絵の高さ(画素。images/assistant/fullbody/<名前>__<表情>.png)。表情を変えても体の大きさをそろえるのに使う(r1115-203)。
 //   全身画を作り直したら合わせる(tools/assistant/life-profile-faces-check.js の ③ が絵と食い違うと止める)
 const ASSISTANT_LIFE_PROFILE_FULL_MAX_H = Object.freeze({
-  atsu: 780, kiki: 1548, kiki_halloween: 785, kyuko: 874, momosuke: 899, momosuke_halloween: 899, mua: 590, mua_halloween: 517, 'mua_card-master': 524,
-  sorashido: 899, sorashido_hosei: 896, erubin: 771, erubin_sekiyuou: 784,
+  atsu: 779, kiki: 1548, kiki_halloween: 785, kyuko: 872, momosuke: 899, momosuke_halloween: 899, mua: 590, mua_halloween: 517, 'mua_card-master': 524,
+  sorashido: 899, sorashido_hosei: 895, erubin: 769, erubin_sekiyuou: 783,
 });
 const ASSISTANT_LIFE_PROFILE_FULL_NH = new Map(); // 読み込んだ絵の高さ(画素)
 const assistantLifeProfileFullMaxH = (src) => {
