@@ -22,8 +22,10 @@ const partSrc = read('monster-hero/src/parts/14-success-sound.jsx');
 
 const REQUIRED = ['main', 'training', 'rest', 'play', 'hospital', 'menu', 'cupPre', 'trainGreat', 'trainOk', 'trainFail', 'trainSkip', 'scold', 'praise', 'trainLvUp', 'ascetic',
   'cupEntry', 'cupMatch', 'cupWin', 'cupLose', 'issa', 'gameOver', 'retire',
+  'ending', 'endingBad', // エンディングの曲(r1115-091・窓口の依頼)
   // 2026-11-14 演出の音(トレーニングの場面・修行の段・覚醒の入り・期の区切り)
   'trainAct', 'actStep', 'actLeap', 'actHit', 'actDodge', 'actThrow', 'actDrop', 'actGuard', 'actBlock', 'actIdea', 'actFlash', 'actTag', // actTag: 友情タッグのカットイン
+  'trainGreatTag', 'actTagJoin', 'actTagFin', 'actGreatCharge', 'actGreatBoom', 'actComboBoom', 'itemUse', 'itemHeal', 'itemBuff', 'itemBond', 'itemBox', // r1115-079 持ち物の演出 / 2026-11-15 社長 OK r1115-067〜069(docs/progress/r1115-067/plan.md)
   'qStage', 'qCharge', 'qStrike', 'qLeap', 'qSlam', 'qShine', 'qLearn', 'qMiss', 'awakeShow', 'awQi', 'awFlash', 'awKira', 'kiShow', 'kiNext',
   // 2026-11-14 博士の大きな賭けの演出(窓口経由の社長の依頼「大成功の専用の効果音と演出」)
   'issaIn', 'issaDrum', 'issaZap', 'issaPuff', 'issaWin', 'issaWin2', 'issaLose'];
@@ -59,7 +61,7 @@ if (data.successSoundSe('nothing') !== null) ng('知らない場面の効果音�
 
 // 3
 const used = new Set([...partSrc.matchAll(/\ba\.([A-Za-z]+)/g)].map((m) => m[1]));
-const ALLOWED = new Set(['currentBgmKey', 'isBackgroundSeQuiet', 'setBackgroundSeQuiet', 'playBGM', 'stopBGM', 'fgSe']);
+const ALLOWED = new Set(['currentBgmKey', 'isBackgroundSeQuiet', 'setBackgroundSeQuiet', 'playBGM', 'stopBGM', 'fgSe', 'ensurePlaying']); // ensurePlaying: いまの曲が止まっていたら鳴らし直すだけ(r1115-048 試合の曲の見張り)
 for (const u of used) if (!ALLOWED.has(u)) ng(`鳴らす口が決めていない口 Audio_.${u} を使っている`);
 if (/Audio_\.(setSeVolume|setBgmVolume|setEnabled|startRhythmTrack|setBgmOnce|setPageHidden|unlock|se\b)/.test(partSrc)) ng('鳴らす口が音量・消音・モンヒロビート・裏の音の口に触っている');
 if (/\bAudio_\.se\./.test(partSrc) || /\ba\.se\b/.test(partSrc)) ng('効果音は fgSe(表の音)から鳴らす。se.* は裏の周回の印で消える');

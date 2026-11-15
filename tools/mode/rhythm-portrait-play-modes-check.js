@@ -2,7 +2,7 @@
 // 社長「縦画面だと曲選択が見づらい。アシスト、ミラーとかを上部の空いてるとことかに移動して」。
 // 見ること(390x844・320x568 の縦、844x390 の横):
 //   ・縦: 題名の行にアシスト・ミラー、決定の右にランキングがあり、どれも44px前後で押せる。下の3つ並びの段は出ていない
-//   ・縦: 題名「曲えらび」が切れていない・横にはみ出してスクロールしない
+//   ・縦: 題名「曲選び」が切れていない・横にはみ出してスクロールしない
 //   ・縦: 上のボタンでアシストを入れると ON になり、今までと同じ mh_rhythm_settings_v1 に保存される
 //   ・横: 置き場所は今までどおり(上のボタンは出さず、ジャケットの右の3つ並び)
 // Playwright が無い環境では SKIP。
@@ -41,7 +41,7 @@ try{for(const [w,h] of [[390,844],[320,568],[844,390]]){const portrait=h>w;
   const headBtns=head?[...head.querySelectorAll('[data-rhythm-play-mode-toggle]')]:[];
   const row=document.querySelector('[data-rhythm-play-modes]');
   const act=document.querySelector('[data-rhythm-ranking-place="action"]');
-  const h2=[...document.querySelectorAll('h2')].find(e=>/曲えらび/.test(e.innerText));
+  const h2=[...document.querySelectorAll('h2')].find(e=>/曲(選|えら)び/.test(e.innerText));
   return {head:vis(head),headSizes:headBtns.filter(vis).map(size),headKeys:headBtns.map(b=>b.getAttribute('data-rhythm-play-mode-toggle')),
     row:vis(row),rowCount:row?[...row.querySelectorAll('button')].filter(vis).length:0,act:vis(act),actSize:act?size(act):null,
     title:h2?[h2.scrollWidth,h2.clientWidth]:null,hscroll:document.documentElement.scrollWidth>innerWidth+1};});
@@ -51,7 +51,7 @@ try{for(const [w,h] of [[390,844],[320,568],[844,390]]){const portrait=h>w;
   check(`${tag} 縦: 上のボタンは44px前後で押せる`,r.headSizes.every(([bw,bh])=>bw>=44&&bh>=44),JSON.stringify(r.headSizes));
   check(`${tag} 縦: ランキングは決定の右にあり、押せる大きさ`,r.act&&r.actSize[0]>=44&&r.actSize[1]>=44,JSON.stringify(r.actSize));
   check(`${tag} 縦: 下の3つ並びの段は出ていない`,!r.row);
-  check(`${tag} 縦: 題名「曲えらび」が切れていない`,r.title&&r.title[0]<=r.title[1],JSON.stringify(r.title));
+  check(`${tag} 縦: 題名「曲選び」が切れていない`,r.title&&r.title[0]<=r.title[1],JSON.stringify(r.title));
   check(`${tag} 縦: 横にはみ出していない`,!r.hscroll);
   const t=await page.evaluate(()=>{const b=document.querySelector('[data-rhythm-header-play-modes] [data-rhythm-play-mode-toggle="assistMode"]');const before=b.getAttribute('aria-pressed');b.click();return before;});
   await page.waitForTimeout(400);
