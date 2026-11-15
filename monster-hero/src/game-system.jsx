@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 06991a1d5c0fefd4
+// generated-sha256: 23f1e54692b6551e
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -25486,7 +25486,7 @@ const rhythmNoteIsSky=note=>rhythmNoteSkyHeight(note)>0||rhythmSlideHasSky(note)
    判定・スコア・譜面には一切使わない。演奏画面が開いているあいだだけ hud(上の帯の中身)・曲・曲の中の時刻を置く */
 /* 読むだけの窓。マルチの観戦(2026-11-11)のために2つ足した: frames=フレームの数(送る側が1秒ごとに差を読んで、端末の重さを知る) /
    jd=見られているあいだだけ配列(判定のたびにノーツ番号と判定の番号を push するだけ。見られていなければ null で、何もしない)。送るのは演奏のループの外 */
-const RHYTHM_PLAY_WATCH={hud:null,songId:'',timeMs:0,frames:0,jd:null};
+const RHYTHM_PLAY_WATCH={hud:null,songId:'',timeMs:0,frames:0,jd:null,jx:null};
 const RHYTHM_PLAY_WATCH_CODES={MARVELOUS:0,EXCELLENT:1,GREAT:2,GOOD:3,BAD:4,MISS:5};
 const rhythmCreateHud=()=>{let state=rhythmHudInitial();const subs=new Set();
   return {get:()=>state,set(patch){state={...state,...patch};subs.forEach(fn=>fn());},subscribe(fn){subs.add(fn);return()=>{subs.delete(fn);};}};};
@@ -25886,7 +25886,7 @@ const RhythmTapTest=({song,difficulty,settings:settingsIn,bestRecord,monsterEntr
   const fullComboBandRef=useRef(null),sideMonsterRefs=useRef([]),screenFlashRef=useRef(null),touchSweepRef=useRef(null),judgmentTextRef=useRef(null),skyJudgmentTextRef=useRef(null),skyJudgmentBurstRef=useRef(null),comboRef=useRef(null),judgmentBurstRef=useRef(null),comboRingRef=useRef(null);
   // 判定ごとに変わる表示の入れ物(rhythmCreateHud の説明を参照)
   const hudRef=useRef(null);if(!hudRef.current)hudRef.current=rhythmCreateHud();
-  useEffect(()=>{const hud=hudRef.current;RHYTHM_PLAY_WATCH.hud=hud;RHYTHM_PLAY_WATCH.songId=(song&&song.songId)||'';RHYTHM_PLAY_WATCH.timeMs=0;return()=>{if(RHYTHM_PLAY_WATCH.hud===hud){RHYTHM_PLAY_WATCH.jd=null;RHYTHM_PLAY_WATCH.hud=null;RHYTHM_PLAY_WATCH.songId='';RHYTHM_PLAY_WATCH.timeMs=0;}};},[]);
+  useEffect(()=>{const hud=hudRef.current;RHYTHM_PLAY_WATCH.hud=hud;RHYTHM_PLAY_WATCH.songId=(song&&song.songId)||'';RHYTHM_PLAY_WATCH.timeMs=0;return()=>{if(RHYTHM_PLAY_WATCH.hud===hud){RHYTHM_PLAY_WATCH.jd=null;RHYTHM_PLAY_WATCH.jx=null;RHYTHM_PLAY_WATCH.hud=null;RHYTHM_PLAY_WATCH.songId='';RHYTHM_PLAY_WATCH.timeMs=0;}};},[]);
   // 判定文字の光を焼いた絵にする(rhythmBakeJudgmentHalos の説明を参照)。演出量・軽量モードで影の枚数が変わるので、そのたびに焼き直す。
   // 焼けるまで・焼けなかったとき・影が1枚だけの判定は、今までどおり CSS のぼかしで出す(haloKeys に入っていない)。
   const [haloKeys,setHaloKeys]=useState(null);
@@ -26723,6 +26723,7 @@ const showAbilityFlash=!!abilityFlash&&!rhythmMonsterEffectAtMost(settings.monst
 const score=run.lifeDepleted?run.lockedScore:run.score,lastDeltaMs=judgment!=='MISS'&&typeof deltaMs==='number'&&Number.isFinite(deltaMs)?deltaMs:null;
 // 判定ごとの表示(スコアの札・コンボ数・判定の文字・ライフの数字)は hud を書き換えるだけ(その4つの部品だけが作り直される)。
 // 演奏画面全体(setView)は、コンボの段・100のくぎり・ライフの状態が変わったときと、能力が出たときだけ作り直す
+/* 観戦: 判定の文字を同じにするための印(1=ぴったり 2=SLOW 4=FAST)。印のある判定だけ、ノーツ番号と印を並べてためる。見られていなければ null で何もしない */{const jx=RHYTHM_PLAY_WATCH.jx;if(jx!==null&&jx.length<480){const mk=(preciseHit?1:0)+(side==='SLOW'?2:side==='FAST'?4:0);if(mk)jx.push(note.index,mk);}}
 hudRef.current.set(rhythmNoteIsSky(note)?{score,combo:run.combo,skyLast:judgment,skyLastPrecise:preciseHit,skyFastSlow:side||'',skyDeltaMs:lastDeltaMs,counts:{...run.counts},life:run.life}
   :{score,combo:run.combo,last:judgment,lastPrecise:preciseHit,fastSlow:side||'',lastDeltaMs,counts:{...run.counts},life:run.life});
 // ライフは「DOWN(0)かどうか」だけを見る。演奏画面全体がライフで変えるのは DOWN の赤いふちだけで、
@@ -56166,7 +56167,7 @@ const RHYTHM_MULTI = (() => {
   };
   // 譜面を送る(判定の束 j)は、見られている1人だけ。端末が重い(フレームが40枚/秒を切る状態が2秒続く)ときは、数字だけに落とす
   let watchLite = false; let watchLowCount = 0; let watchFrames = -1; let watchFramesAt = 0;
-  const watchJdOff = () => { if (typeof RHYTHM_PLAY_WATCH !== 'undefined') RHYTHM_PLAY_WATCH.jd = null; };
+  const watchJdOff = () => { if (typeof RHYTHM_PLAY_WATCH !== 'undefined') { RHYTHM_PLAY_WATCH.jd = null; RHYTHM_PLAY_WATCH.jx = null; } };
   const watchStop = () => { if (watchTimer) clearInterval(watchTimer); watchTimer = null; watchJdOff(); watchLite = false; watchLowCount = 0; watchFrames = -1; };
   const watchAdStop = () => {
     if (watchAdTimer) { clearTimeout(watchAdTimer); clearInterval(watchAdTimer); }
@@ -56205,6 +56206,9 @@ const RHYTHM_MULTI = (() => {
       const jd = watch.jd;
       if (jd.length > 240) jd.splice(0, jd.length - 240);
       if (jd.length) msg.j = jd.splice(0, jd.length);
+      // 判定の文字(ぴったりの虹色・FAST/SLOW)を観戦でも同じに出すための印。別の配列にして、古い版は読み飛ばすだけ(判定の番号の並びは変えない)
+      const jx = Array.isArray(watch.jx) ? watch.jx : null;
+      if (jx && jx.length) { if (jx.length > 240) jx.splice(0, jx.length - 240); msg.jx = jx.splice(0, jx.length); }
     }
     if (fin === true) msg.fin = 1;
     socket.send(msg);
@@ -56213,7 +56217,7 @@ const RHYTHM_MULTI = (() => {
     const focused = !!s && !!s.live && !s.live.done && watchersNow().some((id) => s.watchers[id].f === s.selfId);
     if (focused && !watchTimer) {
       watchLite = false; watchLowCount = 0; watchFrames = -1;
-      if (typeof RHYTHM_PLAY_WATCH !== 'undefined') RHYTHM_PLAY_WATCH.jd = [];   // ここから、判定を1件ずつためる(見られている間だけ)
+      if (typeof RHYTHM_PLAY_WATCH !== 'undefined') { RHYTHM_PLAY_WATCH.jd = []; RHYTHM_PLAY_WATCH.jx = []; }   // ここから、判定を1件ずつためる(見られている間だけ)
       watchTimer = setInterval(watchSend, RHYTHM_WATCH_LIVE_MS); watchSend();
     }
     else if (!focused && watchTimer) watchStop();
@@ -57125,7 +57129,7 @@ const RHYTHM_WATCH = (() => {
       if (!round) return;
       // 顔ぶれ(pt)が無い返事は、同じ回の点の更新だけ(顔ぶれは最初の返事で受けている)
       if (!people.length && !(st.round === round && st.people.length)) return;
-      if (st.round !== round) { st.round = round; st.rows = {}; st.judged = {}; }
+      if (st.round !== round) { st.round = round; st.rows = {}; st.judged = {}; st.marks = {}; }
       st.songId = rhythmMultiText(raw.sg, 60);
       if (people.length) st.people = people;
       if (!st.focus || !st.people.some((x) => x.id === st.focus)) { st.focus = st.people[0].id; ping(); }
@@ -57152,6 +57156,11 @@ const RHYTHM_WATCH = (() => {
       if (Array.isArray(raw.j)) {
         const jm = st.judged[id] || (st.judged[id] = new Map());
         for (let i = 0; i + 1 < raw.j.length && i < 240 && jm.size < 4000; i += 2) jm.set(intOf(raw.j[i], 100000), intOf(raw.j[i + 1], 5));   // 知らないノーツ番号は描かないだけ。表が大きくなりすぎないよう上限で切る
+      }
+      // 印(ぴったり・SLOW・FAST)。古い版の人からは来ない(そのときは金色のまま)
+      if (Array.isArray(raw.jx)) {
+        const mm = st.marks[id] || (st.marks[id] = new Map());
+        for (let i = 0; i + 1 < raw.jx.length && i < 240 && mm.size < 4000; i += 2) mm.set(intOf(raw.jx[i], 100000), intOf(raw.jx[i + 1], 7));
       }
       st.rows[id] = row; st.lastPg = now;
       if (st.people.every((x) => st.rows[x.id] && st.rows[x.id].fin)) { st.phase = 'ended'; st.endedAt = now; }
@@ -57185,7 +57194,7 @@ const RHYTHM_WATCH = (() => {
       if (!m) return;
       const people = m.participants.map((id) => st.members[id]).filter((x) => x && !x.cpu);
       if (!people.length) { ping(); return; }   // 顔ぶれが分からないときは、演奏している人に wi をもらう
-      st.round = m.round; st.songId = m.songId; st.people = people; st.rows = {}; st.judged = {}; st.phase = 'playing'; st.lastPg = now;
+      st.round = m.round; st.songId = m.songId; st.people = people; st.rows = {}; st.judged = {}; st.marks = {}; st.phase = 'playing'; st.lastPg = now;
       if (!people.some((x) => x.id === st.focus)) st.focus = people[0].id;
       ping(); emit();
     }
@@ -57214,7 +57223,7 @@ const RHYTHM_WATCH = (() => {
       const v = RHYTHM_MULTI.view();
       if (member && !(v && v.code === c)) return false;
       const now = Date.now();
-      st = { code: c, member, quiet, wid: member ? v.selfId : rhythmMultiMakeId('w'), phase: 'connecting', round: '', songId: '', people: [], rows: {}, focus: '', members: {}, judged: {}, openedAt: now, lastPing: 0, lastPg: 0, heard: false };
+      st = { code: c, member, quiet, wid: member ? v.selfId : rhythmMultiMakeId('w'), phase: 'connecting', round: '', songId: '', people: [], rows: {}, focus: '', members: {}, judged: {}, marks: {}, openedAt: now, lastPing: 0, lastPg: 0, heard: false };
       if (member) RHYTHM_MULTI.setWatchFeed(feed);
       else {
         sock = rhythmMultiOpenSocket({ topic: RHYTHM_MULTI_ROOM_TOPIC + rhythmMultiTopicTag() + c, onOpen: () => ping(), onMessage: feed, onClose: () => {} });
@@ -58637,7 +58646,7 @@ const rhythmWatchChartOf = (songs, songId, diffId) => {
   const chart = song && song.difficulties ? song.difficulties[diffId] : null;
   return chart && Array.isArray(chart.notes) && chart.notes.length ? chart : null;
 };
-function RhythmWatchLane({ chart }) {
+function RhythmWatchLaneFlat({ chart }) {
   const ref = React.useRef(null);
   React.useEffect(() => {
     const cv = ref.current;
@@ -58709,23 +58718,223 @@ function RhythmWatchLane({ chart }) {
   }, [chart]);
   return <canvas ref={ref} data-rhythm-watch-lane className="absolute inset-0 h-full w-full" />;
 }
+// ---- 観戦の道を、プレイ画面と同じ部品で描く(2026-11-15・r1115-021) ----
+//   奥行きのレーン(rhythmProjectBoundary)・ノーツ(rhythmNoteCanvasGeometry + 描き手 drawNote の2D版)・判定ライン・判定の文字・コンボを、
+//   プレイ画面と同じ式・同じ形で描く。見る側の端末だけで描き、演奏する人の端末・通信・保存は変えない。
+//   ・曲の位置は1秒ごとの pg の p。届かなくなっても最長 RHYTHM_WATCH_RUN_ON_MS は時計で進め、そのあとは止めて「通信を待っています」を出す
+//   ・判定は束 j(ノーツ番号 → 判定)。指の位置は再現しないので、ノーツは判定どおりに消える(HOLD/SLIDE は押さえたまま終わりまで判定ラインに乗る)
+//   ・軽くする設定・省エネ・描き手が作れないときは、これまでの2D描き(RhythmWatchLaneFlat)へ戻す
+const RHYTHM_WATCH_RUN_ON_MS = 3000;
+const RHYTHM_WATCH_NOTE_H = 20;
+const rhythmWatchSettings = () => {
+  try {
+    const raw = typeof localStorage !== 'undefined' ? localStorage.getItem(RHYTHM_SETTINGS_KEY) : null;
+    return normalizeRhythmSettings(raw ? JSON.parse(raw) : null);
+  } catch (_) { return normalizeRhythmSettings(null); }
+};
+const rhythmWatchUseFlat = (s) => !!(s && (s.lightweightMode || s.effectAmount === 'MINIMAL' || s.frameRateMode !== 'DEVICE'))
+  || typeof rhythmBuildCanvasRenderer !== 'function' || typeof rhythmNoteCanvasGeometry !== 'function';
+// 見られている人の「いまの曲の位置」。pg が止まったら最長3秒は時計で進める。waiting は、その3秒も過ぎて止めたとき
+const rhythmWatchPosition = (row, nowMs = Date.now()) => {
+  if (!row || !row.pAt) return { p: 0, waiting: false, known: false };
+  const age = Math.max(0, nowMs - row.pAt);
+  return { p: row.p + Math.min(age, RHYTHM_WATCH_RUN_ON_MS), waiting: age > RHYTHM_WATCH_RUN_ON_MS, known: true };
+};
+function RhythmWatchLane({ chart, song = null, wide = false, onWaiting = null, onMode = null }) {
+  const [flat, setFlat] = React.useState(() => rhythmWatchUseFlat(rhythmWatchSettings()));
+  React.useEffect(() => { if (onMode) onMode(!flat); return () => { if (onMode) onMode(false); }; }, [flat]);
+  if (flat) return <RhythmWatchLaneFlat chart={chart} />;
+  return <RhythmWatchLaneRoad chart={chart} song={song} wide={wide} onWaiting={onWaiting} onFail={() => setFlat(true)} />;
+}
+function RhythmWatchLaneRoad({ chart, song = null, wide = false, onWaiting, onFail }) {
+  const hostRef = React.useRef(null);
+  const noteRef = React.useRef(null);
+  const fxRef = React.useRef(null);
+  const lineRef = React.useRef(null);
+  const bandRef = React.useRef(null);
+  const judgeRef = React.useRef(null);
+  const artRef = React.useRef(null);
+  const waitingRef = React.useRef(false);
+  const settings = React.useMemo(() => rhythmWatchSettings(), []);
+  // 道・判定ライン・判定の帯・背景・コンボ・判定の文字・ライフは、プレイ画面と同じ部品・同じ CSS。見る側の値(hud)だけ観戦の知らせから入れる
+  const hud = React.useMemo(() => rhythmCreateHud(), []);
+  const stageLevel = typeof rhythmFxStageLevel === 'function' ? rhythmFxStageLevel(settings, rhythmStageLevel(settings)) : 'SIMPLE';
+  const artSrc = stageLevel !== 'SIMPLE' && song && typeof rhythmSongArtSrc === 'function' ? rhythmSongArtSrc(song) : '';
+  const artSize = typeof rhythmFxArtSize === 'function' ? rhythmFxArtSize(settings) : 256;
+  const lineBottom = `${rhythmFiniteStep(settings.judgmentLineHeight, RHYTHM_JUDGMENT_LINE_HEIGHT_MIN, RHYTHM_JUDGMENT_LINE_HEIGHT_MAX, RHYTHM_JUDGMENT_LINE_HEIGHT_STEP, DEFAULT_RHYTHM_SETTINGS.judgmentLineHeight)}%`;
+  React.useEffect(() => {
+    const canvas = artRef.current;
+    if (!canvas || !artSrc) return undefined;
+    let alive = true; const img = new Image();
+    img.onload = () => { if (!alive) return; try { const c = canvas.getContext('2d'); c.clearRect(0, 0, canvas.width, canvas.height); c.drawImage(img, 0, 0, canvas.width, canvas.height); canvas.dataset.ready = '1'; } catch (_) { /* 何もしない */ } };
+    img.src = artSrc;
+    return () => { alive = false; img.onload = null; };
+  }, [artSrc, artSize]);
+  React.useEffect(() => {
+    const host = hostRef.current; const noteCv = noteRef.current; const fxCv = fxRef.current; const line = lineRef.current;
+    if (!host || !noteCv || !fxCv || !line || !chart) return undefined;
+    let renderer = null;
+    try {
+      // ノーツの色の組・形も、プレイ画面を開くときと同じ順で当ててから、描き手を作る(作ってから当てると既定の色のまま)
+      if (typeof rhythmApplyNotePalette === 'function') rhythmApplyNotePalette(settings.notePalette);
+      if (typeof rhythmApplyNoteShape === 'function') rhythmApplyNoteShape(settings.noteShape);
+      renderer = rhythmBuildCanvasRenderer();
+      renderer.attach(noteCv, { webgl: false, gpuBand: false });
+      if (renderer.ready === false || !noteCv.getContext) throw new Error('no-renderer');
+    } catch (_) { try { if (renderer) renderer.release(); } catch (__) { /* 何もしない */ } onFail(); return undefined; }
+    const notes = chart.notes;
+    const travelMs = rhythmTravelMsForSpeed(settings.noteSpeed);
+    // 流れの速さの表・道の幅は、プレイ画面と同じ入れ方。見終わったら元へ戻す
+    const keepScroll = { points: RHYTHM_SCROLL.points, back: RHYTHM_SCROLL.back, sufMin: RHYTHM_SCROLL.sufMin, groups: RHYTHM_SCROLL.groups, lerp: RHYTHM_SCROLL.lerp };
+    rhythmScrollSet(Array.isArray(chart.scrollChanges) && chart.scrollChanges.length ? chart.scrollChanges : null, travelMs, chart.scrollGroups);
+    const roadFactor = wide ? (RHYTHM_ROAD_WIDTHS[settings.roadWidth] || 1) : 1;
+    RHYTHM_ROAD_WIDTH.set(roadFactor);
+    const hasTable = !!RHYTHM_SCROLL.points;
+    const firstFrom = (t) => { let lo = 0; let hi = notes.length; while (lo < hi) { const mid = (lo + hi) >> 1; if (notes[mid].timeMs < t) lo = mid + 1; else hi = mid; } return lo; };
+    let raf = 0; let alive = true; let sizeKey = ''; let travel = null; let lastHud = '';
+    const fired = new Set(); let prevVis = null;
+    const noteH = RHYTHM_WATCH_NOTE_H;
+    const frame = () => {
+      if (!alive) return;
+      raf = requestAnimationFrame(frame);
+      const v = RHYTHM_WATCH.view();
+      const w = host.clientWidth; const h = host.clientHeight;
+      if (!v || !(w > 0 && h > 0)) return;
+      if (`${w}x${h}/${roadFactor}` !== sizeKey) {
+        sizeKey = `${w}x${h}/${roadFactor}`;
+        RHYTHM_ROAD_WIDTH.set(roadFactor);
+        rhythmLayoutPlayArea(host);
+        const areaRect = RHYTHM_VIEW_ROTATION.rectOf(host); const lineRect = RHYTHM_VIEW_ROTATION.rectOf(line);
+        const spawnY = -noteH + ((Number(settings.noteStartPosition) || 0) / 100) * areaRect.height * 0.2;
+        const judgmentY = lineRect.top - areaRect.top + lineRect.height / 2 - noteH / 2;
+        travel = { spawnY, judgmentY, travelPx: judgmentY - spawnY, playAreaHeight: areaRect.height, rect: { left: 0, top: 0, width: w, height: h }, noteHeight: noteH, hitY: lineRect.top + lineRect.height - areaRect.top };
+        RHYTHM_JUDGMENT_LINE_Y.set((lineRect.top - areaRect.top + lineRect.height / 2) / areaRect.height);
+        fxCv.width = Math.round(w * 2); fxCv.height = Math.round(h * 2);
+        const layout = rhythmJudgmentBandLayout(travel, travelMs); const band = bandRef.current;
+        if (band && layout) {
+          band.style.top = `${Math.round(layout.top)}px`; band.style.height = `${Math.round(layout.height)}px`; band.style.opacity = '1';
+          const core = band.querySelector('[data-rhythm-judgment-core]');
+          if (core) { core.style.top = `${Math.max(0, layout.marvelousTop - layout.top)}px`; core.style.height = `${Math.max(1, layout.marvelousBottom - layout.marvelousTop)}px`; }
+        }
+      }
+      if (!travel) return;
+      const row = v.rows[v.focus];
+      const pos = rhythmWatchPosition(row);
+      if (pos.waiting !== waitingRef.current) { waitingRef.current = pos.waiting; if (onWaiting) onWaiting(pos.waiting); }
+      const vis = pos.p - RHYTHM_WATCH_LANE_DELAY_MS;
+      if (prevVis !== null && (vis < prevVis - 2000 || vis > prevVis + 4000)) fired.clear();
+      const jm = v.judged[v.focus] || null;
+      const rect = travel.rect;
+      const ready = renderer.begin(rect, { nowMs: performance.now(), effect: settings.effectAmount, lightweight: false, maxDpr: 2, sizeScale: (Number(settings.noteSize) || 100) / 100, ...rhythmFxRenderOptions(settings) });
+      let shown = null;
+      if (ready && pos.known) {
+        const horizon = vis + travelMs * (hasTable ? 4 : 1.2);
+        const sNow = (g) => rhythmScrollPos(vis, g);
+        for (let i = firstFrom(vis - 4000); i < notes.length; i += 1) {
+          const n = notes[i];
+          if (n.timeMs > horizon) break;
+          const hasBody = rhythmNoteHasBody(n);
+          const relMs = hasBody ? rhythmReleaseTargetMs(n) : n.timeMs;
+          const endMs = hasBody ? Math.max(relMs, Number(n.endTimeMs) || 0, n.timeMs) : n.timeMs;
+          const code = jm && jm.has(i) ? jm.get(i) : -1;
+          if (code >= 0 && n.timeMs <= vis && vis - n.timeMs < 700) shown = { code, age: vis - n.timeMs, idx: i };
+          const hit = code >= 0 && code < 5;
+          // MISS の知らせは表示より早く届く(1.5秒おくれのため)。ノーツが判定ラインを過ぎるまでは、ふつうのノーツのまま流す
+          const miss = code === 5 && vis >= n.timeMs + 100;
+          // 叩いた瞬間の光は、プレイ画面と同じ部品(rhythmSpawnHitEffect)で、同じ引数(フリックの向き・長押しの終わり・モンスター)を渡す。
+          // 頭に着いたとき1回(帯は終わりでもう1回)。届いた判定の色(MARVELOUS など)で出る
+          const spawnHit = (key, extra) => {
+            if (fired.has(key)) return;
+            fired.add(key);
+            try {
+              const at = rhythmProjectLane(Number(n.lane) || 0, travel.hitY / h);
+              rhythmSpawnHitEffect(host, { centerRatio: at.center, widthRatio: at.width * (rhythmNoteIsWide(n) ? 2 : 1), judgment: RHYTHM_WATCH_JUDGMENT_VIEW[code].id, monster: !!rhythmNoteMonsterSlot(n), ...extra });
+            } catch (_) { /* 光が出せなくても流れは止めない */ }
+          };
+          if (hit && vis >= n.timeMs && vis - n.timeMs < 300) spawnHit(`${i}s`, { flick: n.type === 'FLICK' ? (n.flickDir === 'left' || n.flickDir === 'right' ? n.flickDir : 'up') : '' });
+          if (hit && hasBody && vis >= endMs && vis - endMs < 300) spawnHit(`${i}e`, { finish: true });
+          const holding = hit && hasBody && vis >= n.timeMs && vis < endMs;
+          const clearAt = hit ? (hasBody ? endMs : n.timeMs) : 0;
+          const clearing = hit && vis >= clearAt && vis - clearAt < RHYTHM_CLEAR_FLASH_MS;
+          if (hit && vis >= clearAt && !clearing) continue;
+          const failedTrail = (miss || (code < 0 && vis > n.timeMs + 220)) && hasBody && vis < endMs;
+          const progress = 1 - (rhythmScrollPos(n.timeMs, n.scrollGroup) - sNow(n.scrollGroup)) / travelMs;
+          const visible = holding || clearing || failedTrail || (progress >= -0.1 && progress <= 1.18);
+          if (!visible) continue;
+          let yPx = travel.spawnY + rhythmProjectTravelProgress(progress) * travel.travelPx;
+          if (holding || clearing) yPx = travel.judgmentY;
+          yPx = Math.round(yPx);
+          const releaseProgress = 1 - (rhythmScrollPos(relMs, n.scrollGroup) - sNow(n.scrollGroup)) / travelMs;
+          const releaseYpx = Math.round(travel.spawnY + rhythmProjectTravelProgress(releaseProgress) * travel.travelPx);
+          const bodyPx = Math.max(0, yPx - releaseYpx);
+          const geo = rhythmNoteCanvasGeometry(n, yPx, n.lane, rect, noteH, hasBody ? releaseYpx : null, { chartNowMs: vis, visualTime: vis, travelMs, spawnY: travel.spawnY, travelPx: travel.travelPx, gpu: false }, hasBody ? bodyPx : 0);
+          const depthScale = Math.round((0.56 + geo.scale * 0.44) * 100) / 100;
+          const brightness = Math.round((0.72 + geo.scale * 0.28) * 100) / 100;
+          const passedUnknown = code < 0 && vis > n.timeMs + 80;
+          renderer.drawNote(n, geo, {
+            failed: miss || failedTrail, monster: !!rhythmNoteMonsterSlot(n), wide: rhythmNoteIsWide(n), pressed: holding, slideOff: false, heldMs: vis - n.timeMs,
+            alpha: miss || failedTrail ? 0.34 : passedUnknown ? 0.5 : 1,
+            pop: clearing ? Math.min(1, (vis - clearAt) / RHYTHM_CLEAR_FLASH_MS) : null, depthScale, brightness,
+          });
+        }
+      }
+      prevVis = vis;
+      renderer.end();
+      // 画面の上に重ねる値(コンボ・ライフ・判定の文字)を、プレイ画面と同じ部品へ入れる(変わったときだけ)
+      const k = row && row.k ? row.k : null;
+      const counts = k ? { MARVELOUS: k[0], EXCELLENT: k[1], GREAT: k[2], GOOD: k[3], BAD: k[4], MISS: k[5] } : null;
+      const last = shown ? RHYTHM_WATCH_JUDGMENT_VIEW[shown.code].id : '';
+      // 判定の文字の虹色(ぴったり)と FAST/SLOW は、演奏する人が送った印から。印が来ない(古い版の人)ときは、ふつうの色のまま
+      const marks = v.marks && v.marks[v.focus] ? v.marks[v.focus] : null;
+      const mark = shown && marks ? marks.get(shown.idx) || 0 : 0;
+      const precise = (mark & 1) === 1; const fastSlow = (mark & 2) ? 'SLOW' : (mark & 4) ? 'FAST' : '';
+      const key = `${row ? row.c : 0}|${row && row.l != null ? row.l : ''}|${last}|${mark}|${k ? k.join(',') : ''}`;
+      if (key !== lastHud) {
+        lastHud = key;
+        hud.set({ combo: row ? row.c || 0 : 0, life: row && row.l != null ? row.l : RHYTHM_LIFE_MAX, last, lastPrecise: precise, fastSlow, counts });
+      }
+    };
+    raf = requestAnimationFrame(frame);
+    return () => {
+      alive = false; cancelAnimationFrame(raf);
+      try { renderer.release(); } catch (_) { /* 何もしない */ }
+      RHYTHM_SCROLL.points = keepScroll.points; RHYTHM_SCROLL.back = keepScroll.back; RHYTHM_SCROLL.sufMin = keepScroll.sufMin; RHYTHM_SCROLL.groups = keepScroll.groups; RHYTHM_SCROLL.lerp = keepScroll.lerp;
+      RHYTHM_ROAD_WIDTH.reset(); RHYTHM_PROJECTION_CAMERA.reset();
+      if (waitingRef.current && onWaiting) onWaiting(false);
+    };
+  }, [chart, wide]);
+  const light = settings.lightweightMode || settings.effectAmount === 'MINIMAL';
+  return (
+    <div ref={hostRef} data-rhythm-watch-lane data-rhythm-watch-lane-road data-rhythm-play-area data-rhythm-lightweight="false" data-rhythm-effect={settings.effectAmount}
+      data-rhythm-judgment-fx={settings.judgmentFx === true && !light ? '1' : undefined} {...rhythmFxAttrs(settings)}
+      className="absolute inset-0" style={{ position: 'absolute', overflow: 'hidden', touchAction: 'none', '--rhythm-note-size-scale': settings.noteSize / 100, '--mh-judgment-line-bottom': lineBottom, filter: settings.effectAmount === 'MINIMAL' ? 'saturate(.78)' : settings.effectAmount === 'LOW' ? 'saturate(.92)' : 'none' }}>
+      <div className="pointer-events-none absolute inset-0 grid" style={{ gridTemplateColumns: `repeat(${RHYTHM_LANE_COUNT},minmax(0,1fr))` }}>
+        {Array.from({ length: RHYTHM_LANE_COUNT }, (_, lane) => <div key={lane} data-rhythm-lane={lane} data-pressed="false" aria-hidden="true" className="relative border-r border-white/20 bg-slate-900/40" style={{ borderBottom: '3px solid transparent', boxSizing: 'border-box' }} />)}
+      </div>
+      <div className="pointer-events-none absolute inset-0" aria-hidden="true">{Array.from({ length: RHYTHM_LANE_COUNT }, (_, index) => <i key={index} data-rhythm-sublane-boundary="" />)}</div>
+      {stageLevel !== 'SIMPLE' && <div data-rhythm-stage={stageLevel} data-stage-tier="0" aria-hidden="true" style={rhythmFxStageStyle(settings)}>{artSrc && <canvas ref={artRef} data-rhythm-stage-art width={artSize} height={artSize} />}</div>}
+      <RhythmHudCombo hud={hud} settings={settings} assistOn={false} comboPosition={RHYTHM_COMBO_POSITIONS.includes(settings.comboPosition) ? settings.comboPosition : 'CENTER'} isLandscape={wide} comboRef={null} comboRingRef={null} />
+      <div ref={bandRef} data-rhythm-judgment-band aria-hidden="true" style={{ position: 'absolute', left: 0, right: 0, top: 0, height: 0, opacity: 0, pointerEvents: 'none', zIndex: 2 }}>
+        <i data-rhythm-judgment-core aria-hidden="true" style={{ position: 'absolute', left: 0, right: 0, top: 0, height: 0, background: 'linear-gradient(180deg,rgba(250,232,255,0),rgba(250,232,255,.26),rgba(250,232,255,0))' }} />
+        <i data-rhythm-judgment-edge data-edge="top" aria-hidden="true" style={{ position: 'absolute', left: 0, right: 0, top: 0, height: '1px', background: 'linear-gradient(90deg,rgba(103,232,249,0),rgba(103,232,249,.55),rgba(103,232,249,0))' }} />
+        <i data-rhythm-judgment-edge data-edge="bottom" aria-hidden="true" style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: '1px', background: 'linear-gradient(90deg,rgba(103,232,249,0),rgba(103,232,249,.55),rgba(103,232,249,0))' }} />
+      </div>
+      <div ref={lineRef} data-rhythm-judgment-line style={{ position: 'absolute', left: 0, right: 0, bottom: 'var(--mh-judgment-line-bottom,12%)', height: '3px', background: 'linear-gradient(90deg,#f0abfc,#cffafe,#f0abfc)', boxShadow: light ? 'none' : settings.effectAmount === 'LOW' ? '0 0 8px #67e8f9' : '0 0 18px #67e8f9,0 0 30px #c084fc' }} />
+      <canvas ref={noteRef} data-rhythm-note-canvas aria-hidden="true" />
+      <div data-rhythm-judgment-display className="pointer-events-none absolute left-1/2 z-10 w-[88%] -translate-x-1/2 text-center" style={{ ...rhythmJudgeScaleStyle(settings), bottom: 'calc(var(--mh-judgment-line-bottom,12%) + 38px)' }}>
+        <RhythmHudJudgment hud={hud} settings={settings} status="" haloKeys={null} timingDisplay="STANDARD" judgmentTextRef={judgeRef} />
+      </div>
+      <div data-rhythm-hud className={`pointer-events-none absolute z-10 ${wide ? 'left-1.5 top-9' : 'right-1.5 top-9'}`}><RhythmHudLife hud={hud} settings={settings} isLandscape={wide} lifeBoxRef={null} lifeDamageRef={null} /></div>
+      <canvas ref={fxRef} className="pointer-events-none absolute inset-0 h-full w-full" />
+    </div>
+  );
+}
 function RhythmWatchScreen({ songs = [], resolveIconUrl = null }) {
   const v = useRhythmWatchView();
-  const [flow, setFlow] = React.useState([]);
-  const seenRef = React.useRef({ round: '', focus: '', k: null });
+  const [waiting, setWaiting] = React.useState(false);
+  const [roadMode, setRoadMode] = React.useState(false);
+  const wide = useRhythmWatchWide();
   const focusRow = v && v.rows ? v.rows[v.focus] : null;
-  // 選んだ人の判定の数が増えた分を、「+3 MARVELOUS」のように流す(見られている1人の1秒ごとの知らせから)
-  React.useEffect(() => {
-    if (!v || !focusRow || !focusRow.k) return;
-    const seen = seenRef.current;
-    const same = seen.round === v.round && seen.focus === v.focus && seen.k;
-    if (same) {
-      const items = [];
-      RHYTHM_WATCH_JUDGMENT_VIEW.forEach((j, i) => { const d = focusRow.k[i] - (seen.k[i] || 0); if (d > 0) items.push({ key: `${focusRow.at}-${j.id}`, text: `+${d} ${j.short}`, color: j.color }); });
-      if (items.length) setFlow((prev) => [...items, ...prev].slice(0, 6));
-    } else setFlow([]);
-    seenRef.current = { round: v.round, focus: v.focus, k: focusRow.k };
-  }, [focusRow && focusRow.at]);
   if (!v) return null;
   // 待機中のメンバーは、演奏が見つかったときだけ出す(見つからないあいだは、ふつうの待合いのまま)
   if (v.quiet && v.phase !== 'playing' && v.phase !== 'ended') return null;
@@ -58749,8 +58958,8 @@ function RhythmWatchScreen({ songs = [], resolveIconUrl = null }) {
   const body = (
     <div data-rhythm-watch data-rhythm-watch-phase={v.phase} className="fixed inset-0 z-[95000] flex flex-col bg-slate-950 text-white" style={{ paddingTop: 'max(var(--mh-sa-top), 6px)', paddingBottom: 'max(var(--mh-sa-bottom), 6px)' }}>
       <style>{'@keyframes mhWatchPop{0%{opacity:0;transform:translateY(8px)}15%{opacity:1;transform:none}85%{opacity:1}100%{opacity:0}}'}</style>
-      <header className="flex shrink-0 items-center gap-2 px-3">
-        <button data-rhythm-watch-close type="button" aria-label="観戦をやめる" onClick={close} className="min-h-[44px] min-w-[44px] rounded-xl text-lg font-black text-slate-300">←</button>
+      <header data-rhythm-watch-band className="flex shrink-0 items-center gap-2 px-3">
+        <button data-rhythm-watch-close type="button" aria-label="観戦をやめる" onClick={close} className="min-h-[40px] shrink-0 rounded-xl bg-slate-700 px-3 text-[12px] font-black text-slate-100">観戦をやめる</button>
         <div className="min-w-0 flex-1 leading-tight"><b className="block text-[13px] font-black text-amber-300">👁 観戦中</b>
           <small className="block truncate text-[11px] font-bold text-slate-300">{songName || (playing ? '' : `部屋 ${v.code}`)}</small></div>
       </header>
@@ -58761,56 +58970,56 @@ function RhythmWatchScreen({ songs = [], resolveIconUrl = null }) {
         </div>
       )}
       {playing && (
-        <div className="flex min-h-0 flex-1 flex-col gap-2 px-3 pb-2 landscape:flex-row">
-          <section className="shrink-0 landscape:w-[38%]">
+        <div className={`flex min-h-0 flex-1 gap-2 px-3 pb-1 ${wide ? 'flex-row' : 'flex-col'}`}>
+          <section data-rhythm-watch-detail className="flex min-h-0 min-w-0 flex-1 flex-col gap-1.5">
+            <div data-rhythm-watch-stage className="relative min-h-[120px] flex-1 overflow-hidden rounded-xl border border-slate-700 bg-slate-950">
+              {chartOf && !lite && <RhythmWatchLane chart={chartOf} song={song} wide={wide} onWaiting={setWaiting} onMode={setRoadMode} />}
+              <div className="pointer-events-none absolute inset-x-0 top-0 flex items-center gap-1.5 px-1.5 pt-1">
+                {icon(who, 22)}
+                <b className="min-w-0 flex-1 truncate text-[11px] font-black text-cyan-200" style={{ textShadow: '0 1px 3px #000' }}>{who ? `${who.name} さん` : ''}{who && who.diff ? ` ・ ${who.diff}` : ''}</b>
+                <span data-rhythm-watch-delay className="shrink-0 rounded-full border border-amber-300/60 bg-slate-950/70 px-2 py-0.5 text-[10px] font-black text-amber-200">1.5秒おくれ</span>
+              </div>
+              {lite && <p data-rhythm-watch-lite className="absolute inset-x-2 top-9 text-center text-[11px] font-black text-amber-200" style={JA_WRAP_STYLE}>{jaWrap('この人の端末が重くなったので、譜面は出さず、数字だけにしています')}</p>}
+              {waiting && v.phase === 'playing' && <p data-rhythm-watch-waiting className="absolute inset-x-2 top-9 text-center text-[12px] font-black text-amber-200" style={{ ...JA_WRAP_STYLE, textShadow: '0 1px 3px #000' }}>{jaWrap('通信を待っています…')}</p>}
+            </div>
+            <div className="grid grid-cols-6 gap-1">
+              {RHYTHM_WATCH_JUDGMENT_VIEW.map((j, i) => (
+                <div key={j.id} data-rhythm-watch-count={j.id} className="min-w-0 rounded-lg bg-slate-900/80 px-0.5 py-0.5 text-center">
+                  <small className="block whitespace-nowrap text-[7px] font-black tracking-tighter" style={{ color: j.color }}>{j.short}</small>
+                  <b className="block text-[13px] font-black tabular-nums">{focusRow && focusRow.k ? focusRow.k[i] : '-'}</b>
+                </div>
+              ))}
+            </div>
+            {!roadMode && <div className="flex items-center gap-2 text-[10px] font-black text-slate-300"><span>LIFE</span>
+              <div className="h-2 flex-1 overflow-hidden rounded-full bg-slate-800"><div data-rhythm-watch-life className="h-full rounded-full bg-emerald-400" style={{ width: `${focusRow && focusRow.l != null ? Math.max(0, Math.min(100, (focusRow.l / lifeMax) * 100)) : 100}%` }} /></div></div>}
+            {v.phase === 'ended' && <p className="text-center text-[12px] font-black text-amber-200">この曲の演奏が終わりました</p>}
+          </section>
+          <section className={`${wide ? 'w-[36%] overflow-y-auto' : ''} shrink-0`}>
             <div className="flex items-center gap-2 text-[11px] font-black tabular-nums text-slate-300">
               <span>{rhythmWatchClock(pos)}</span>
               <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-800"><div data-rhythm-watch-progress className="h-full rounded-full bg-cyan-400" style={{ width: `${total > 0 ? Math.min(100, (pos / total) * 100) : 0}%` }} /></div>
               <span>{total > 0 ? rhythmWatchClock(total) : ''}</span>
             </div>
-            <div className="mt-1.5 flex flex-col gap-1">
+            <div className={`mt-1.5 grid gap-1 ${wide ? 'grid-cols-1' : 'grid-cols-2'}`}>
               {rank.map((x, n) => {
                 const r = v.rows[x.id];
                 const on = x.id === v.focus;
                 return (
                   <button key={x.id} type="button" data-rhythm-watch-row={x.id} onClick={() => RHYTHM_WATCH.focus(x.id)}
-                    className={`flex min-h-[40px] items-center gap-2 rounded-xl border px-2 text-left ${on ? 'border-cyan-300 bg-cyan-950' : 'border-slate-700 bg-slate-900'}`}>
-                    <b className="w-4 text-center text-[13px] font-black">{n + 1}</b>
-                    {icon(x, 24)}
-                    <span className="min-w-0 flex-1 truncate text-[12px] font-black">{x.name}</span>
-                    <span className="text-[12px] font-black tabular-nums">{r ? r.s.toLocaleString() : '-'}</span>
-                    <span className="w-9 text-right text-[12px] font-black tabular-nums text-amber-300">{r ? r.c : ''}</span>
+                    className={`flex min-h-[40px] min-w-0 items-center gap-1.5 rounded-xl border px-1.5 text-left ${on ? 'border-cyan-300 bg-cyan-950' : 'border-slate-700 bg-slate-900'}`}>
+                    <b className="w-3 shrink-0 text-center text-[12px] font-black">{n + 1}</b>
+                    {icon(x, 22)}
+                    <span className="min-w-0 flex-1 leading-tight"><span className="block truncate text-[11px] font-black">{x.name}</span>
+                      <span className="block truncate text-[11px] font-black tabular-nums text-slate-200">{r ? r.s.toLocaleString() : '-'}</span></span>
+                    <span className="shrink-0 text-right text-[12px] font-black tabular-nums text-amber-300">{r ? r.c : ''}</span>
                   </button>
                 );
               })}
             </div>
-            <p className="mt-1 text-[10px] font-bold text-slate-400">名前を押すと、その人の判定を見られます{v.member ? '。次の曲から、いっしょに遊べます' : ''}</p>
-          </section>
-          <section data-rhythm-watch-detail className="flex min-h-0 flex-1 flex-col gap-2 rounded-2xl border border-slate-700 bg-slate-900/80 p-3">
-            <div className="flex items-center gap-2">{icon(who, 28)}<b className="min-w-0 flex-1 truncate text-[13px] font-black text-cyan-200">{who ? `${who.name} さん` : ''}{who && who.diff ? ` ・ ${who.diff}` : ''}</b>
-              <span className="text-[22px] font-black italic tabular-nums text-amber-300">{focusRow ? focusRow.c : 0}<small className="ml-1 text-[10px] not-italic">COMBO</small></span></div>
-            <div className="relative min-h-[84px] flex-1 overflow-hidden rounded-xl bg-slate-950/80">
-              {chartOf && !lite && <RhythmWatchLane chart={chartOf} />}
-              {lite && <p data-rhythm-watch-lite className="absolute inset-x-2 top-2 text-center text-[11px] font-black text-amber-200" style={JA_WRAP_STYLE}>{jaWrap('この人の端末が重くなったので、譜面は出さず、数字だけにしています')}</p>}
-              <div className="absolute inset-x-0 bottom-1 flex flex-col-reverse items-center gap-0.5">
-                {flow.map((f) => <b key={f.key} className="text-[15px] font-black italic" style={{ color: f.color, animation: 'mhWatchPop 2.4s ease-out forwards' }}>{f.text}</b>)}
-              </div>
-            </div>
-            <div className="grid grid-cols-3 gap-1 landscape:grid-cols-6">
-              {RHYTHM_WATCH_JUDGMENT_VIEW.map((j, i) => (
-                <div key={j.id} data-rhythm-watch-count={j.id} className="rounded-lg bg-slate-950/80 px-1 py-1 text-center">
-                  <small className="block text-[9px] font-black" style={{ color: j.color }}>{j.short}</small>
-                  <b className="block text-[14px] font-black tabular-nums">{focusRow && focusRow.k ? focusRow.k[i] : '-'}</b>
-                </div>
-              ))}
-            </div>
-            <div className="flex items-center gap-2 text-[10px] font-black text-slate-300"><span>LIFE</span>
-              <div className="h-2 flex-1 overflow-hidden rounded-full bg-slate-800"><div data-rhythm-watch-life className="h-full rounded-full bg-emerald-400" style={{ width: `${focusRow && focusRow.l != null ? Math.max(0, Math.min(100, (focusRow.l / lifeMax) * 100)) : 100}%` }} /></div></div>
-            {v.phase === 'ended' && <p className="text-center text-[12px] font-black text-amber-200">この曲の演奏が終わりました</p>}
+            <p className="mt-1 text-[10px] font-bold text-slate-400" style={JA_WRAP_STYLE}>{jaWrap(`名前を押すと、その人の判定を見られます${v.member ? '。次の曲から、いっしょに遊べます' : ''}`)}</p>
           </section>
         </div>
       )}
-      {playing && <div className="shrink-0 px-3"><button type="button" onClick={close} className="min-h-[44px] w-full rounded-xl bg-slate-700 text-[13px] font-black">観戦をやめる</button></div>}
     </div>
   );
   // 画面を回して遊んでいるときは、回した器の中へ出す(保存できない知らせ・新しい版の知らせと同じ出し先)
@@ -69495,8 +69704,11 @@ function AssistantLifeSleepEyes({ pid, src, w, h, style }) {
     if (art) {
       // 顔アイコン: 社長の寝顔の絵(上半身まるごと)を上から重ねる。立ち絵の影(drop-shadow)は付けない(まわりに暗い輪が出る)
       const filter = style && style.filter ? String(style.filter).replace(/drop-shadow\((?:[^()]|\([^()]*\))*\)/g, '').trim() || undefined : undefined;
+      // 顔アイコンの枠の中(半透明の黒)では、下の起きている顔が寝顔のすき間から透けないよう、後ろを暗く塗る
+      //   (2026-11-15 r1115-108 あつの顔を新しい全身画から作り直したら、古い絵の寝顔と王冠の位置がずれて透けた)
+      const isFaceIcon = /\/face\//.test(String(src || ''));
       return <img data-assistant-life-roomview-sleep-eyes={pid} src={art} alt="" aria-hidden="true" draggable={false}
-        style={{ position: 'absolute', width: w, height: h, maxWidth: 'none', pointerEvents: 'none', ...style, filter }}/>;
+        style={{ position: 'absolute', width: w, height: h, maxWidth: 'none', pointerEvents: 'none', ...(isFaceIcon ? { background: '#16122a', borderRadius: 14 } : {}), ...style, filter }}/>;
     }
   }
   const isFace = /\/face\//.test(String(src || ''));
@@ -88062,6 +88274,16 @@ const MSX_CSS = `
 .msx-md-kv{display:flex;gap:6px;align-items:baseline;font-size:11px;padding:2px 0;border-bottom:1px solid #1e293b}
 .msx-md-kv>b{flex:none;width:6em;color:#f9a8d4;font-size:10.5px}.msx-md-kv>span{flex:1;min-width:0;overflow-wrap:anywhere}.msx-md-kv .gd{font-size:14px;font-weight:900;color:#fde047}
 .msx-md-dex{font-size:11px;font-weight:500;line-height:1.6;margin-top:4px}
+.msx-md-btabs{margin-top:6px}
+.msx-md-as .cap span{margin-left:auto}
+.msx-md-ac{display:flex;gap:8px;align-items:flex-start;background:linear-gradient(180deg,#2a2150,#1e1a36);border:1px solid #4a4380;border-radius:12px;padding:7px 8px;margin-top:6px}
+.msx-md-ac .ic{flex:none;width:30px;height:30px;display:flex;align-items:center;justify-content:center;font-size:22px;border-radius:9px;background:#0f172a}
+.msx-md-ac .bd{flex:1;min-width:0}.msx-md-ac .hd{display:flex;gap:6px;align-items:flex-start;justify-content:space-between}
+.msx-md-ac .hd b{font-size:13px;font-weight:900;line-height:1.3;min-width:0;word-break:keep-all;overflow-wrap:anywhere}.msx-md-ac .hd b em{font-style:normal;color:#fde047}
+.msx-md-ac .pips{flex:none;font-size:10px;font-weight:800;color:#cbd5e1;background:#0f172a;border-radius:99px;padding:1px 7px;white-space:nowrap}.msx-md-ac .pips i{font-style:normal;color:#fde047;font-weight:900}
+.msx-md-ac .tx{font-size:11px;font-weight:700;color:#e2e8f0;line-height:1.45;margin-top:2px;word-break:keep-all;overflow-wrap:anywhere}
+.msx-md-ac .sc{font-size:10px;font-weight:800;color:#f9a8d4;margin-top:2px}
+.msx-md-art .pw{flex-wrap:wrap;row-gap:1px}.msx-md-art .pw b{flex:1 1 auto}
 .msx-md-bot{margin-top:6px}
 .msx-md-cap{font-size:12px;font-weight:900;color:#f9a8d4}.msx-md-cap small{font-size:10px;color:#cbd5e1;margin-left:6px;font-weight:700}
 .msx-md-dists{display:grid;grid-template-columns:repeat(5,1fr);gap:2px;margin-top:3px}
@@ -88097,7 +88319,7 @@ const MSX_CSS = `
 /* 技の熟練(r1115-082): 升の下に小さなゲージ(覚えた技だけ)・右の欄に熟練の棒 */
 .msx-md-tg .tc .tg-ms{position:absolute;left:3px;right:26px;bottom:4px;height:5px;border-radius:3px;background:rgba(18,12,6,.85);border:1px solid rgba(255,255,255,.55);z-index:2;overflow:hidden}
 .msx-md-tg .tc .tg-ms i{display:block;height:100%;background:linear-gradient(90deg,#fde68a,#f59e0b)}
-.msx .msx-ms-v{white-space:nowrap}.msx .msx-ms-v small{opacity:.75;margin-left:1px}
+.msx .msx-ms-v{white-space:nowrap}.msx .msx-ms-v small{font-size:inherit;opacity:.75;margin-left:1px}
 .msx .msx-ms-ef{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:0 6px}.msx .msx-ms-ef i{font-style:normal;white-space:nowrap}
 .msx .msx-ms-bar{display:block;height:6px;margin:2px 0 4px;border-radius:4px;background:#0f172a;border:1px solid #475569;overflow:hidden}
 .msx .msx-ms-bar i{display:block;height:100%;background:linear-gradient(90deg,#fde68a,#f59e0b)}
@@ -88380,6 +88602,11 @@ const MSX_CSS = `
 .msx .msx-fp-r .st{flex:none;display:flex;flex-direction:column;gap:3px;max-width:42%}
 .msx .msx-tp-ft{position:static;flex:none}
 .msx .msx-tp-ft button{display:flex;align-items:center;justify-content:center}
+/* 能力ポイントの刻み(1・5・10・100・MAX)と長押し(r1115-092) */
+.msx .msx-ptunit{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin:6px 0}
+.msx .msx-ptunit .chip{min-height:40px;padding:0 2px;justify-content:center;text-align:center;font-size:12px;font-weight:900}
+.msx .pt44{min-width:44px;min-height:44px}
+.msx .sym{-webkit-user-select:none;user-select:none}
 `;
 
 // ---- part: 56-monhero-success-store.jsx ----
@@ -89023,8 +89250,9 @@ const MSX_STAT_COLOR = Object.freeze({ life: '#facc15', pow: '#f87171', wise: '#
 // pick … 被った升で覚える技を選べるとき { sel: { 升: 技id }, locked: (升) => 覚えたあとで変えられないか, onPick: (升, 技id) => void }(無ければ見るだけ)
 // head … 名前の横に置く物(マスモンボックスのハート・✏)/ more … 特徴のタブの下に足す行 [[見出し, 中身], …] / foot … 「とじる」の上に置くボタン(貸し出し・お別れ)/ grade … 総合力の横の評価(A2 など)
 // mastery … 覚えた技の熟練 { 技id: 0〜100 }(2026-11-15 社長 r1115-082「技の熟練度ってそもそもどこにあるの？」)。渡したときだけ、升に小さなゲージ・右の欄に熟練と効き目を出す
-function MsxMonDetail({ species, name, art, st, apt, type, peak, grades, known, power, rank, sub, onClose, SUC, head = null, more = null, foot = null, grade: gradeLabel = null, pick = null, mastery = null }) {
+function MsxMonDetail({ species, name, art, st, apt, type, peak, grades, known, power, rank, sub, onClose, SUC, head = null, more = null, foot = null, grade: gradeLabel = null, pick = null, mastery = null, assists = null, info = null }) {
   const [tab, setTab] = useState('base');
+  const [btab, setBtab] = useState('tech'); // 下の段のタブ: 技 / アシスト / 育成情報(出せる情報があるときだけタブを出す・r1115-095)
   const [pickCell, setPickCell] = useState(null); // 技を選ぶ窓を開いている升(pick があるときだけ)
   const line = typeof MONSTER_LINEAGE_MAP === 'object' && MONSTER_LINEAGE_MAP ? MONSTER_LINEAGE_MAP[species] : null;
   const main = line ? msxLineName(line.main) : ''; const subL = line ? msxLineName(line.sub || line.main) : '';
@@ -89068,7 +89296,7 @@ function MsxMonDetail({ species, name, art, st, apt, type, peak, grades, known, 
                 <div className="msx-md-kv"><b>成長の型</b><span className="yel">{typeName}</span></div>
                 <div className="msx-md-kv"><b>伸びどき</b><span>{peak || '—'}</span></div>
                 <div className="msx-md-kv"><b>血統</b><span>{main ? `${main}${subL && subL !== main ? ` × ${subL}` : '(純血)'}` : '—'}</span></div>
-                {Array.isArray(more) ? more.filter(Boolean).map(([k, v], i) => <div key={`m${i}`} className="msx-md-kv"><b>{k}</b><span>{v}</span></div>) : null}
+                {false && Array.isArray(more) ? more.filter(Boolean).map(([k, v], i) => <div key={`m${i}`} className="msx-md-kv"><b>{k}</b><span>{v}</span></div>) : null}
                 <div className="msx-md-dex">{dex || 'このモンスターの図鑑は調査中'}</div></div>) : null}
               {tab === 'apt' ? (<div className="msx-md-box"><div className="cap">間合い適性</div>
                 <div className="msx-dt-dist">{MSX_DIST_NAMES.map((d, i) => <div key={d}><span>{d}</span><b>{grades ? grades[i] : '—'}</b></div>)}</div>
@@ -89077,7 +89305,27 @@ function MsxMonDetail({ species, name, art, st, apt, type, peak, grades, known, 
           </div>
           {/* 技の欄(2026-11-14 社長「今なんの技を覚えてるかわかんない」→ 参考 monster-detail-basic の形): 左から 遠・中・近・零 の4列の升目+右に技の詳細。
               升の中は技の絵と右下に消費ガッツ。覚えていない技は暗い升に錠、出ない枠は×。升を押すと右に詳細。参考の「移動間合い・技能力・連動能力」はこのゲームに無いので出さない */}
-          <div className="msx-md-bot" data-msx-detail-techs>
+          {(() => {
+            const AT = typeof window !== 'undefined' && window.MONHERO_SUCCESS_ASSIST && window.MONHERO_SUCCESS_ASSIST.VERSION === 3 ? window.MONHERO_SUCCESS_ASSIST : null;
+            const infoRows = Array.isArray(info) ? info.filter(Boolean) : [];
+            const hasA = Array.isArray(assists) && !!AT; const hasI = infoRows.length > 0;
+            if (!hasA && !hasI) return null;
+            const BT = [['tech', '技'], hasA ? ['assist', 'アシスト'] : null, hasI ? ['info', '育成情報'] : null].filter(Boolean);
+            const sceneName = (sc) => { const f = AT && AT.SCENES ? AT.SCENES.find((x) => x.key === sc) : null; return f ? f.name : ''; };
+            const got = hasA ? assists.filter((a) => a && AT.BY_ID[a.id]).map((a) => ({ a: AT.BY_ID[a.id], n: AT.fromSaved(a) })).filter((x) => x.n > 0) : [];
+            return (<div className="msx-md-btabs" data-msx-detail-btabs>
+              <div className="msx-md-tabs" style={{ gridTemplateColumns: `repeat(${BT.length},1fr)` }}>{BT.map(([k, n]) => <button type="button" key={k} className={btab === k ? 'on' : ''} data-msx-detail-btab={k} onClick={() => setBtab(k)}>{n}</button>)}</div>
+              {btab === 'assist' ? (<div className="msx-md-box msx-md-as" data-msx-detail-assist>
+                <div className="cap">取ったアシスト効果<span data-msx-assist-count>{got.length} / {AT.MAX_KINDS}種類</span></div>
+                {got.length ? got.map(({ a, n }) => (<div key={a.id} className="msx-md-ac" data-msx-assist-card={a.id}>
+                  <span className="ic" aria-hidden="true">{typeof cardIconNode === 'function' ? cardIconNode(a.icon, 28) : a.icon}</span>
+                  <div className="bd"><div className="hd"><b>{a.name} <em>{AT.valueText(a.id, n)}</em></b><span className="pips" aria-label={`目盛り ${n}/${a.max}`}><i>{n}</i>/{a.max}</span></div>
+                    <div className="tx">{AT.describe(a.id, n)}</div>{sceneName(a.scene) ? <div className="sc">効く場面: {sceneName(a.scene)}</div> : null}</div></div>))
+                  : <div className="msx-note" data-msx-assist-none style={{ padding: 8 }}>アシスト効果はまだありません</div>}</div>) : null}
+              {btab === 'info' ? (<div className="msx-md-box" data-msx-detail-info>{infoRows.map(([k, v], i) => <div key={`i${i}`} className="msx-md-kv"><b>{k}</b><span>{v}</span></div>)}</div>) : null}
+            </div>);
+          })()}
+          <div className="msx-md-bot" data-msx-detail-techs style={btab !== 'tech' && (Array.isArray(assists) || (Array.isArray(info) && info.some(Boolean))) ? { display: 'none' } : undefined}>
             <div className="msx-md-cap">技<small>{Array.isArray(known) ? '覚えた技' : '初めから使える技'} {all.filter(has).length}/{all.length}</small></div>
             <div className="msx-md-tw">
               <MsxTechGrid all={all} head={grades ? (d) => ({ g: grades[d] }) : null} cell={(alts, r, d, cellK) => {
@@ -89694,7 +89942,7 @@ function MsxTeamEffects({ members, onClose }) {
         <div className="msx-dt-body">
           {list.length ? list.map(({ d, rows }) => { const one = msxTpOneOnly(AT, d.id); const best = one ? Math.max(...rows.map((r) => r.v)) : null; let used = false; return (
             <div key={d.id} className="msx-gt-row" data-msx-effect={d.id}>
-              <div className="hd"><span className="ic">{d.icon}</span><b>{d.name}</b><span className="st">{AT.TYPE_NAME[d.type] || ''}型</span><span className="n">{rows.length}体</span></div>
+              <div className="hd"><span className="ic">{cardIconNode(d.icon, 16)}</span><b>{d.name}</b><span className="st">{AT.TYPE_NAME[d.type] || ''}型</span><span className="n">{rows.length}体</span></div>
               {rows.map((r, i) => { const live = !one || (!used && r.v === best && (used = true)); return (
                 <div key={i} className="msx-gt-mon"><img src={msxMonThumb(members[r.mi].species)} alt=""/><span className="nm">{r.name}</span><span className="v">{r.text}{live ? '' : '・重複(効かない)'}</span></div>); })}
             </div>); })
@@ -89750,6 +89998,7 @@ function MsxBaseMons({ data, onClose }) {
 // 見本: docs/progress/player-raise/mock/png/v3-M・T・K・I.png。大会・修行・引退・合体の中身は回3(MsxR3)
 // 1ターンの流れ(芯の決まった順): act → (トレーニングなら)react → (来ていれば)issa → endTurn → (大会なら)settle
 // ★1つ進むたびに mh_monsuc_run_v1 へ保存する(phase も持つので、どこで閉じても同じ所から続く)
+const MSX_POL_SEEN = {}; // 育成の id → 最後に見た育成方針と、変わったときの知らせ(画面の中だけ・保存しない)
 const MSX_POLICY_SCALE = Object.freeze(['超溺愛', '溺愛', '甘い', '普通', '厳しい', 'スパルタ', '超スパルタ']);
 const MSX_RES = Object.freeze({
   great: { word: '大成功', cls: '', bg: 'forest_morning', icon: '🌟' },
@@ -90210,6 +90459,11 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
   if (typeof msxCurBondLv !== 'undefined') msxCurBondLv = bondLv; // 受付・試合・結果の台詞も同じ親密度の段で引く(56-monhero-success-r3-store.jsx)
   const ctx = { id: s.id, turn: s.turn, aid: s.aid, mon: run.nick, species: s.species, callName: callNameOf ? callNameOf(s.aid) : '', bond: bondLv };
   const line = (scene, fallback, extra = {}) => { const l = msxPickLine({ ...ctx, ...extra }, scene, { bondLv }); return l || { t: fallback, e: 'normal' }; };
+  // 育成方針が変わったら、そのターンのあいだ助手が一言知らせる(甘え度と恐れ度の差で決まる・r1115-059)。育成ごとに前に見た方針を覚えておく
+  const polNow = Math.max(-3, Math.min(3, Number(s.pol) || 0));
+  const polRec = (MSX_POL_SEEN[run.id] = MSX_POL_SEEN[run.id] || { pol: polNow, note: null });
+  if (polRec.pol !== polNow) { polRec.note = { turn: s.turn, from: polRec.pol, to: polNow }; polRec.pol = polNow; }
+  const polSay = polRec.note && polRec.note.turn === s.turn ? polRec.note : null;
   const pushLog = (r, text) => ({ ...r, log: [...(r.log || []), { turn: s.turn, t: text }].slice(-20) });
 
   // 次の段へ
@@ -90509,7 +90763,8 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
     const omenK = s.omen && (s.omen.k === 1 || s.omen.k === 2) ? s.omen.k : 0; // 覚醒の前触れ(助手が気づく)
     const pkI = typeof SUC.peakInfo === 'function' ? SUC.peakInfo(s) : { state: null }; // 成長のピーク(予告は2〜3ターン前)
     const preName = preOn && typeof msxR3BattleName === 'function' ? msxR3BattleName(SUC, preB) : '';
-    const sayL = preOn ? line('turn.cup.before', `ついに今日は ${preName}だね! 準備ができたら「大会」へ行こう`, { cup: preName }) : omenK ? line(omenK === 2 ? 'turn.awake.omen2' : 'turn.awake.omen', omenK === 2 ? 'あれ…また体が光ってる？ 虹色だ…' : 'あれ？ 体がうっすら光ってない…？')
+    const polTxt = polSay ? `育成方針が「${MSX_POLICY_SCALE[polSay.to + 3]}」に変わったよ` + (polSay.to === 0 ? '' : polSay.to < 0 ? '(甘え度が恐れ度より多いと甘くなる)' : '(恐れ度が甘え度より多いと厳しくなる)') : '';
+    const sayL = polTxt ? { t: polTxt, e: 'normal' } : preOn ? line('turn.cup.before', `ついに今日は ${preName}だね! 準備ができたら「大会」へ行こう`, { cup: preName }) : omenK ? line(omenK === 2 ? 'turn.awake.omen2' : 'turn.awake.omen', omenK === 2 ? 'あれ…また体が光ってる？ 虹色だ…' : 'あれ？ 体がうっすら光ってない…？')
       : pkI.state === 'soon' && pkI.in >= 2 && !yosu && !s.cond ? line('turn.peak.soon', 'もうすぐ伸びどきが来そうだよ！') : yosu ? line(s.yosu.sabori ? 'turn.mood.sabori' : 'turn.mood.utsu', 'ようすが気になるね…') : s.cond ? line(`turn.cond.${s.cond.kind === 'away' ? 'runaway' : s.cond.kind === 'ill' ? 'sick' : 'injury'}.in`, '今日は休ませてあげよ') : line(msxStartScene(s), '今月はどうする?');
     const cal = msxCalendar(s.turn); const scn = msxSceneBg(s.turn);
     const low = s.hp < s.hpMax * 0.3;
@@ -90580,7 +90835,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
           <div className="msx-sheet" onClick={(e) => e.stopPropagation()}>
             {sheet === 'log' ? <><h3>📖 記録</h3>{(run.log || []).length ? run.log.slice().reverse().map((l, i) => <div key={i} className="msx-note">{l.turn}ターン目: {l.t}</div>) : <div className="msx-note">まだありません</div>}</>
               : sheet === 'menu' ? <><h3>☰ メニュー</h3>
-                <div className="msx-note">育成方針: {MSX_POLICY_SCALE[Math.max(-3, Math.min(3, s.pol || 0)) + 3]}(褒めると甘く・叱ると厳しくなる)</div>
+                <div className="msx-note">育成方針: {MSX_POLICY_SCALE[Math.max(-3, Math.min(3, s.pol || 0)) + 3]}(甘え度と恐れ度の差で決まる。甘え度が多いと甘く・恐れ度が多いと厳しくなる)</div>
                 <div className="msx-note">成長の型: {typeof MASMON_CALC !== 'undefined' ? MASMON_CALC.typeOf(s.type).name : '—'}</div>
                 {typeof MsxDex === 'function' ? <button type="button" className="msx-btn sub" onClick={() => setSheet('dex')} data-msx-dex-open>📖 イベント図鑑</button> : null}
                 <button type="button" className="msx-btn sub" onClick={() => { setSheet(null); onPause(); }}>中断する(続きから遊べる)</button>
@@ -90664,6 +90919,29 @@ function MsxBag({ run, setRun, v, ev, onClose }) {
   </>);
 }
 
+// ---- 能力ポイントの刻み(1・5・10・100・MAX)と、＋/−の長押し(r1115-092。マスモン強化の bulkEnhanceUnit と同じ刻み) ----
+//   育成中の振り分け(MsxStats)と、育成完了の前の振り分け(56-monhero-success-r3-retire.jsx の E3)で同じ物を使う。刻みは保存しない(開いている間だけ覚える)
+const MSX_PT_UNITS = Object.freeze([1, 5, 10, 100, 'MAX']);
+let msxPtUnitMem = 1;
+const msxPtLimit = (u) => (u === 'MAX' ? Infinity : Math.max(1, Number(u) || 1));
+function useMsxPtUnit() {
+  const [u, setU] = useState(() => (MSX_PT_UNITS.includes(msxPtUnitMem) ? msxPtUnitMem : 1));
+  return [u, (x) => { msxPtUnitMem = x; setU(x); }];
+}
+function MsxPtUnits({ unit, setUnit }) {
+  return (
+    <div className="msx-ptunit" role="group" aria-label="振り分けの単位" data-msx-pt-units>
+      {MSX_PT_UNITS.map((x) => <button type="button" key={x} aria-pressed={unit === x} className={`chip${unit === x ? ' on' : ''}`} onClick={() => setUnit(x)} data-msx-pt-unit={x}>{x === 'MAX' ? 'MAX' : `${x}P`}</button>)}
+    </div>
+  );
+}
+// 押し続けると続けて動く(PressRepeatButton)。押したときの手は最新の物を呼ぶ(長押しの間に画面が描き直されても古い値を使わない)
+function MsxPtBtn({ onPress, ...rest }) {
+  const ref = useRef(onPress); ref.current = onPress;
+  const fire = useCallback(() => ref.current(), []);
+  return <PressRepeatButton onPress={fire} {...rest}/>;
+}
+
 // ---- 能力(能力ポイントを振る・忠誠と方針・編成の親密度) ----
 function MsxStats({ run, setRun, v, ev, onClose }) {
   // 育成中の「能力」: いじる物・育成中だけの物(能力ポイント・技・型・忠誠度と方針・編成の親密度)。能力の棒や図鑑は「くわしく」へ(2026-11-14 社長「役割で分ける」)
@@ -90675,12 +90953,24 @@ function MsxStats({ run, setRun, v, ev, onClose }) {
   const replay = (list) => { let w = s; for (const k of list) { const r = SUC.spendPts(w, k, 1); if (!r.out.ok) break; w = r.state; } return w; };
   const ws = replay(draft);
   const addOf = (k) => draft.filter((x) => x === k).length;
-  const plus = (k) => { const r = SUC.spendPts(ws, k, 1); if (r.out.ok) setDraft([...draft, k]); };
-  const minus = (k) => { const i = draft.lastIndexOf(k); if (i >= 0) setDraft(draft.filter((_, j) => j !== i)); };
+  const capK = (k) => (typeof SUC.statCapOf === 'function' ? SUC.statCapOf(s, k) : 999); // 能力の上限アップ(r1115-103)
+  const [unit, setUnit] = useMsxPtUnit();
+  const draftRef = useRef(draft); draftRef.current = draft;
+  const setDraftNow = (list) => { draftRef.current = list; setDraft(list); };
+  // 刻みの分(1・5・10・100・MAX)だけ続けて振る。ポイントが足りない・上限に着いたところで止まる
+  const plus = (k) => {
+    const list = draftRef.current.slice(); let w = replay(list); const lim = msxPtLimit(unit); let n = 0;
+    while (n < lim) { if (w.stats[k] >= capK(k)) break; const r = SUC.spendPts(w, k, 1); if (!r.out.ok) break; w = r.state; list.push(k); n += 1; }
+    if (n) setDraftNow(list);
+  };
+  const minus = (k) => {
+    const list = draftRef.current.slice(); const lim = msxPtLimit(unit); let n = 0;
+    while (n < lim) { const i = list.lastIndexOf(k); if (i < 0) break; list.splice(i, 1); n += 1; }
+    if (n) setDraftNow(list);
+  };
   const auto = () => { let w = replay(draft); const list = draft.slice(); while (w.pts > 0) { const k = MSX_STATS.slice().sort((x, y) => w.stats[x] - w.stats[y])[0]; const r = SUC.spendPts(w, k, 1); if (!r.out.ok) break; w = r.state; list.push(k); } setDraft(list); };
   const commit = () => { if (!draft.length) return; setRun({ ...run, s: ws }); setDraft([]); };
   const used = s.pts - ws.pts;
-  const capK = (k) => (typeof SUC.statCapOf === 'function' ? SUC.statCapOf(s, k) : 999); // 能力の上限アップ(r1115-103)
   const lineOf = SUC.PTS && SUC.PTS.line ? SUC.PTS.line[SUC.periodOf(s.turn).key] : null;
   const own = typeof SUC.techsOf === 'function' ? SUC.techsOf(s.species) : [];
   const techs = (Array.isArray(s.techs) ? s.techs : []).map((id) => own.find((t) => t && t.id === id)).filter(Boolean);
@@ -90696,12 +90986,13 @@ function MsxStats({ run, setRun, v, ev, onClose }) {
           <div className="v-num"><small>使う点</small><b style={{ color: used ? '#fde047' : undefined }}>{used}</b></div>
           <div className="v-num"><small>残りの点</small><b>{ws.pts}</b></div>
         </div>
-        <div className="msx-note">＋で仮に振り、「決定」で確定する。1点で +1(期の目安{lineOf ? ` ${lineOf}` : ''}を超えると 2点で +1)</div>
+        <MsxPtUnits unit={unit} setUnit={setUnit}/>
+        <div className="msx-note">＋で仮に振り(押し続けると続けて振れる)、「決定」で確定する。1点で +1(期の目安{lineOf ? ` ${lineOf}` : ''}を超えると 2点で +1)</div>
         {MSX_STATS.map((k) => { const n = addOf(k); const cost = SUC.ptsCost(ws, k); const over = lineOf != null && ws.stats[k] >= lineOf; return (
           <div key={k} className="msx-ab-row" data-msx-pts-row={k}><span className="n">{MSX_STAT_ICON[k]} {MSX_STAT_NAME[k]}<small className="sub" style={{ display: 'block', fontSize: 10, color: over ? '#fbbf24' : '#94a3b8' }}>{over ? '目安超え・2点で +1' : '1点で +1'}{capK(k) > 999 ? <span data-msx-cap={k} style={{ color: '#f0abfc' }}>・上限 {capK(k).toLocaleString()}</span> : null}</small></span>
             <span style={{ fontSize: 12, fontWeight: 900, whiteSpace: 'nowrap' }}>{n ? <>{s.stats[k]} → <b style={{ width: 'auto', color: '#fde047' }}>{ws.stats[k]}</b> <small style={{ color: '#fde047', fontSize: 11 }}>(+{n})</small></> : <b style={{ width: 'auto' }}>{s.stats[k]}</b>}</span>
-            <button type="button" className="chip sym minus" style={{ minWidth: 44, minHeight: 44 }} disabled={!n} onClick={() => minus(k)} aria-label={`${MSX_STAT_NAME[k]}を戻す`}/>
-            <button type="button" className="chip on sym plus" style={{ minWidth: 44, minHeight: 44 }} disabled={ws.pts < cost} onClick={() => plus(k)} aria-label={`${MSX_STAT_NAME[k]}を上げる`}/>
+            <MsxPtBtn className="chip sym minus pt44" disabled={!n} onPress={() => minus(k)} aria-label={`${MSX_STAT_NAME[k]}を戻す`}/>
+            <MsxPtBtn className="chip on sym plus pt44" disabled={ws.pts < cost} onPress={() => plus(k)} aria-label={`${MSX_STAT_NAME[k]}を上げる`}/>
           </div>); })}
         <div className="msx-row" style={{ marginTop: 8, gap: 6 }}>
           <button type="button" className="chip" style={{ flex: 1, minHeight: 44 }} disabled={!draft.length} onClick={() => setDraft([])}>元に戻す</button>
@@ -92352,6 +92643,9 @@ function MsxR3Retire({ run, setRun, onPause, debug, SUC }) {
   const [step, setStep] = useState(() => (run.s.pts > 0 ? 'e3' : 'e0')); // 能力ポイントが残っていれば先に使う → 最終の評価
   const [ws, setWs] = useState(s);      // 能力ポイントを使っている途中の写し
   const [hist, setHist] = useState([]); // 「−」で戻す用
+  const wsRef = useRef(ws); wsRef.current = ws;          // 長押しで続けて振るとき、描き直しを待たず最新を読む
+  const histRef = useRef(hist); histRef.current = hist;
+  const [ptUnit, setPtUnit] = useMsxPtUnit();            // 1・5・10・100・MAX(r1115-092)
   const [pick, setPick] = useState({}); // アシスト能力 { id: 段 }
   const [atab, setAtab] = useState(null); // アシストの場面のタブ(第2版・7つ)
   const [fxDone, setFxDone] = useState(false);
@@ -92405,8 +92699,23 @@ function MsxR3Retire({ run, setRun, onPause, debug, SUC }) {
 
   // ---- E3 能力ポイントをまとめて使う ----
   if (step === 'e3') {
-    const spend = (k) => { const r = SUC.spendPts(ws, k, 1); if (r.out.ok) { setHist([...hist, ws]); setWs(r.state); } };
-    const undoK = (k) => { for (let i = hist.length - 1; i >= 0; i--) { if (hist[i].stats[k] < ws.stats[k]) { setWs(hist[i]); setHist(hist.slice(0, i)); return; } } };
+    const capOf = (w, k) => (typeof SUC.statCapOf === 'function' ? SUC.statCapOf(w, k) : 999);
+    // 刻みの分だけ続けて振る(1回ごとに履歴へ積むので、「−」も同じ刻みで戻せる)。ポイントが足りない・上限に着いたところで止まる
+    const spend = (k) => {
+      let w = wsRef.current; const h = histRef.current.slice(); const lim = msxPtLimit(ptUnit); let n = 0;
+      while (n < lim) { if (w.stats[k] >= capOf(w, k)) break; const r = SUC.spendPts(w, k, 1); if (!r.out.ok) break; h.push(w); w = r.state; n += 1; }
+      if (n) { wsRef.current = w; histRef.current = h; setHist(h); setWs(w); }
+    };
+    const undoK = (k) => {
+      const lim = msxPtLimit(ptUnit); let n = 0;
+      while (n < lim) {
+        const w = wsRef.current; const h = histRef.current; let hit = -1;
+        for (let i = h.length - 1; i >= 0; i--) { if (h[i].stats[k] < w.stats[k]) { hit = i; break; } }
+        if (hit < 0) break;
+        wsRef.current = h[hit]; histRef.current = h.slice(0, hit); n += 1;
+      }
+      if (n) { setWs(wsRef.current); setHist(histRef.current); }
+    };
     const preset = (kind) => {
       let w = s; setHist([]);
       if (kind === 'top') { const k = ev0.top && ev0.top[0] ? ev0.top[0] : 'pow'; w = SUC.spendPts(w, k, 9999).state; }
@@ -92421,6 +92730,7 @@ function MsxR3Retire({ run, setRun, onPause, debug, SUC }) {
       <div className="v-scene r3-mscene" style={{ flex: '1 1 0' }}><img className="bg" src={msxSceneBg(Math.min(s.turn, msxSuc.core.TOTAL_TURNS)).bg} alt=""/><div className="sh"/>
         <div className="gr" style={{ bottom: 'calc(6% - 5px)', width: '40%' }}/><MsxMonArt run={run} className="mon" style={{ bottom: '6%', height: '88%' }} live/>
         <div className="r3-mtag">育成完了の前に</div></div>
+      <MsxPtUnits unit={ptUnit} setUnit={setPtUnit}/>
       <div className="r3-bar"><span style={{ fontSize: 10, color: '#cbd5e1', alignSelf: 'center' }}>まとめて</span>
         <button type="button" className="r3-chip" onClick={() => preset('top')}>全部 {MSX_STAT_NAME[(ev0.top || [])[0]] || 'ちから'}</button>
         <button type="button" className="r3-chip" onClick={() => preset('low')}>弱いところ</button>
@@ -92429,7 +92739,7 @@ function MsxR3Retire({ run, setRun, onPause, debug, SUC }) {
       <div className="v-pa">{MSX_STATS.map((k) => {
         const add = ws.stats[k] - s.stats[k];
         return (<div key={k}><span className="nm">{MSX_STAT_ICON[k]} {MSX_STAT_NAME[k]}</span><span className="v0">{s.stats[k]}</span><span className="ad">{add ? `+${add}` : ''}</span>
-          <span className="st"><button type="button" className="sym minus" aria-label={`${MSX_STAT_NAME[k]}を戻す`} disabled={!add} onClick={() => undoK(k)}/><b>{add}</b><button type="button" disabled={ws.pts < SUC.ptsCost(ws, k) || ws.stats[k] >= (typeof SUC.statCapOf === 'function' ? SUC.statCapOf(ws, k) : 999)} onClick={() => spend(k)} data-msx-r3-plus={k} className="sym plus" aria-label={`${MSX_STAT_NAME[k]}を上げる`}/></span></div>);
+          <span className="st"><MsxPtBtn className="sym minus" aria-label={`${MSX_STAT_NAME[k]}を戻す`} disabled={!add} onPress={() => undoK(k)}/><b>{add}</b><MsxPtBtn disabled={ws.pts < SUC.ptsCost(ws, k) || ws.stats[k] >= capOf(ws, k)} onPress={() => spend(k)} data-msx-r3-plus={k} className="sym plus" aria-label={`${MSX_STAT_NAME[k]}を上げる`}/></span></div>);
       })}</div>
       <div className="v-card"><div className="v-kv"><b>伸びすぎ注意</b><span>能力の上限はふつう 999(編成のモンスターで上がる)。その期の目安を超えた能力は、2ポイントで +1</span></div></div>
       <MsxSay aid={s.aid} ex="excited" text={ws.pts > 0 ? '「能力ポイントが残ってるよ! 使い切ってから、最後の評価を見よう!」' : '「使い切ったね! それじゃあ、最後の評価を見よう!」'}/>
@@ -92841,7 +93151,6 @@ function MsxR3Box({ onClose }) {
           ['忠誠 / 人気', `${Math.round(cur.loy || 0)} / ${Math.round(cur.pop || 0)}`],
           Array.isArray(cur.fav) && cur.fav.length ? ['得意な能力', cur.fav.map((k) => MSX_STAT_NAME[k] || k).join('・')] : null,
           cur.awake ? ['覚醒', cur.awake >= 2 ? '🌈 超覚醒' : '✨ 覚醒'] : null,
-          assistText ? ['アシスト', assistText] : null,
           Array.isArray(cur.titles) && cur.titles.length ? ['称号', cur.titles.slice(0, 4).map((t) => `「${msxR3TitleName(t)}」`).join('')] : null,
           cur.coach ? ['育てた助手', msxAidName(cur.coach)] : null,
           ['世代', `第${Math.max(1, Math.round(Number(cur.gen) || 1))}世代`],
@@ -92855,7 +93164,8 @@ function MsxR3Box({ onClose }) {
           pick={cur.raised === false && SUC && typeof SUC.techPickNorm === 'function' ? (() => { const sel = SUC.techPickNorm(tpAll && tpAll.mon ? tpAll.mon[cur.id] : null, cur.species); return { sel, locked: () => false, onPick: async (c, id) => { const next = { ...sel, [c]: id }; setTpAll((t0) => { const t = t0 || msxNormTechPick(null); return { ...t, mon: { ...t.mon, [cur.id]: next } }; }); try { setTpAll(await msxWriteTechPick('mon', cur.id, next)); } catch (e) {} } }; })() : null} known={Array.isArray(cur.techs) ? cur.techs : []} mastery={cur.raised !== false && Array.isArray(cur.techs) ? Object.fromEntries(cur.techs.map((t, i) => [t, Array.isArray(cur.mast) ? Number(cur.mast[i]) || 0 : 0])) : null} power={cur.raised === false ? null : msxMmPow(cur)} rank={cur.grade ? null : cur.rank} grade={cur.grade} SUC={SUC}
           head={<><button type="button" className={`mm-fav${fav.includes(cur.id) ? ' on' : ''}`} onClick={() => toggleFav(cur.id)} aria-label="お気に入り" data-msx-mm-fav>{fav.includes(cur.id) ? '❤' : '♡'}</button>
             <button type="button" className="mm-ed" aria-label="名前と染色を変える" onClick={() => { setEdit({ nick: cur.nick || msxMonName(cur.species), colors: Array.isArray(cur.colors) ? cur.colors.slice(0, 6) : [], err: '' }); setPage('edit'); }} data-msx-r3-edit>✏</button></>}
-          more={more}
+          info={more} assists={Array.isArray(cur.assists) ? cur.assists : []}
+          peak={(() => { try { return msxStartPreview(SUC, cur.species, Number.isInteger(cur.gt) ? cur.gt : null, cur.aptBase, cur.st).peak; } catch (e) { return ''; } })()}
           foot={<>{msg ? <div className="mm-hint ok">{msg}</div> : null}<div className="mm-acts">
             {lendOn && cur.raised !== false ? (lendId === cur.id ? <button type="button" onClick={unlend}>🤝 貸し出しをやめる</button> : <button type="button" onClick={lend}>🤝 貸し出す</button>) : null}
             <button type="button" disabled={!!lock} onClick={() => setByeAsk({ ids: [cur.id] })} data-msx-r3-bye>{lock ? `お別れ(${lock})` : 'お別れ'}</button></div></>}

@@ -105,6 +105,7 @@ const makeRun = async (kind) => {
     ['G1', 'gameover', ['cont']],
     // マスモン一覧(モンサク)の画面(2026-11-14 作り直し): X0 入口・X3 一覧・X4 詳細(基礎・技)・X5 特徴と育成情報・X6 適性とアシスト・X7 お別れのタブ・X8 表示の切り替えの小窓
     ['X0', 'box', ['@openbox']], ['X3', 'box', ['@openbox', '@mmlist']], ['X4', 'box', ['@openbox', '@mmlist', '@boxmon=b1']],
+    ['X13', 'box', ['@openbox', '@mmlist', '@boxmon=b1', '#detail-btab=assist']], ['X14', 'box', ['@openbox', '@mmlist', '@boxmon=b1', '#detail-btab=info']], ['X15', 'box', ['@openbox', '@mmlist', '@boxmon=b2', '#detail-btab=assist']], // 詳細の下の段のタブ(技・アシスト・育成情報・r1115-095)
     ['X5', 'box', ['@openbox', '@mmlist', '@boxmon=b1', '#detail-tab=feat']], ['X6', 'box', ['@openbox', '@mmlist', '@boxmon=b1', '#detail-tab=apt']],
     ['X9', 'box', ['@openbox', '@mmlist', '@boxmon=b1', '#tech=sk-0405']],
     ['X11', 'box', ['@openbox', '@mmlist', '@boxmon=bx3']], ['X12', 'box', ['@openbox', '@mmlist', '@boxmon=bx5']], // 資料に無い技(オリジナルの子)の影絵の絵
@@ -146,7 +147,7 @@ const makeRun = async (kind) => {
           if (kind === 'box') { // 保存枠に2体(名前と染色を変える画面を見る)
             const st = { life: 600, pow: 700, wise: 400, hit: 500, eva: 450, tough: 650 };
             localStorage.setItem('mh_monsuc_box_v1', JSON.stringify({ v: 1, cap: 30, memory: [], mons: [
-              { id: 'b1', species: 'Mocchi', nick: 'もちまる', colors: [], gen: 1, st, techs: ['sk-0402', 'sk-0400', 'sk-0401'], mast: [40, 12, 0], fav: ['pow', 'tough'], coach: 'mua', endAt: Date.parse('2026-11-14T12:00:00+09:00'), ending: 'good', loy: 80, pop: 60, lv: 8, rank: 'A', grade: 'A2', score: 11800, raised: true, assists: [], titles: [], keepMe: 'x' },
+              { id: 'b1', species: 'Mocchi', nick: 'もちまる', colors: [], gen: 1, st, techs: ['sk-0402', 'sk-0400', 'sk-0401'], mast: [40, 12, 0], fav: ['pow', 'tough'], coach: 'mua', endAt: Date.parse('2026-11-14T12:00:00+09:00'), ending: 'good', loy: 80, pop: 60, lv: 8, rank: 'A', grade: 'A2', score: 11800, raised: true, assists: [{ id: 'sokoji', lv: 5, n: 25 }, { id: 'kizuna', lv: 3, n: 12 }, { id: 'hirameki', lv: 2, n: 4 }], titles: [], keepMe: 'x' },
               { id: 'b2', species: 'Golem', nick: 'いわお', colors: [], gen: 1, st, techs: [], mast: [], loy: 70, pop: 40, lv: 6, rank: 'B', grade: 'B3', score: 9200, raised: true, assists: [], titles: [] },
               ...['Snegurochka', 'Golem', 'Mocchi', 'Eiki', 'Mocchi', 'KenshiMocchi'].map((sp, i) => ({ id: `bx${i}`, species: sp, nick: '', colors: [], gen: 1 + (i % 3), st, techs: [], mast: [], loy: 50, pop: 30, lv: 3 + i, rank: 'C', grade: `C${i + 1}`, score: 6000 + i * 350, raised: true, assists: [], titles: [] }))] }));
             // アシスト用に残した子(合体の親・お別れした子)。育成には使えず、編成にだけ入る(2026-11-14 社長)
