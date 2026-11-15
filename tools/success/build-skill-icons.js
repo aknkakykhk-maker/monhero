@@ -3,6 +3,8 @@
 //   使う技: data/assistant-masmon-techs.js の技のうち、id が資料の skillId と同じもの(名前も同じことを確かめる)
 //   出力: monster-hero/images/success/skill/sk-####.png(96×96・減色PNG) と、56-monhero-success-start.jsx の「技の絵のある id」の一覧(印の間だけ書き換える)
 //   82×82 の元は右下に消費ガッツの数字が焼き込まれている(うちの数字と食い違う)ので、画面側で数字の札をかぶせる。ここでは加工しない
+//   資料に無い技(オリジナルモンスター)の絵は tools/success/skill-icons-original/make.py が <技id>.png で作る(2026-11-15 r1115-046)。
+//     ここでは消さずに一覧へ足すだけ(作り方の表 recipe.json に載っている技で、絵が置いてある物)
 //   使い方: node tools/success/build-skill-icons.js   (--check で、一覧と置いてある絵が合っているかだけ見る)
 'use strict';
 const fs = require('fs');
@@ -26,7 +28,9 @@ for (const list of Object.values(T.species)) for (const t of list) {
   if (r.name !== t.name) { mismatch++; continue; }
   if (fs.existsSync(path.join(SRC, 'skill-icons', `${t.id}.png`))) ids.add(t.id);
 }
-const list = [...ids].sort();
+const ORIG = Object.keys(JSON.parse(fs.readFileSync(path.join(__dirname, 'skill-icons-original', 'recipe.json'), 'utf8'))).filter((k) => !k.startsWith('_'));
+const orig = ORIG.filter((id) => fs.existsSync(path.join(OUT, `${id}.png`)));
+const list = [...ids].sort().concat(orig.slice().sort());
 // 画像の検査(image-asset-check ④)が「使われている」と数えられるよう、完全なパスで書く
 const pathsOf = () => list.map((i) => `images/success/skill/${i}.png`);
 const block = () => `/* skill-icons:begin(tools/success/build-skill-icons.js が書く) */\nconst MSX_SKILL_ICONS = new Set([\n${pathsOf().map((x) => `'${x}'`).join(',')}]);\n/* skill-icons:end */`;
@@ -36,7 +40,7 @@ const block = () => `/* skill-icons:begin(tools/success/build-skill-icons.js が
     fs.mkdirSync(OUT, { recursive: true });
     const keep = new Set(list.map((i) => `${i}.png`));
     for (const f of fs.readdirSync(OUT)) if (!keep.has(f)) fs.unlinkSync(path.join(OUT, f));
-    for (const id of list) {
+    for (const id of ids) {
       await sharp(path.join(SRC, 'skill-icons', `${id}.png`)).resize(SIZE, SIZE, { fit: 'fill' }).png({ palette: true, quality: 85, effort: 10, colours: 96 }).toFile(path.join(OUT, `${id}.png`));
     }
     let s = fs.readFileSync(JSX, 'utf8');
@@ -48,6 +52,6 @@ const block = () => `/* skill-icons:begin(tools/success/build-skill-icons.js が
   const have = fs.existsSync(OUT) ? fs.readdirSync(OUT).filter((f) => f.endsWith('.png')).length : 0;
   const jsx = fs.readFileSync(JSX, 'utf8'); const inJsx = jsx.includes(block());
   const bytes = fs.existsSync(OUT) ? fs.readdirSync(OUT).reduce((n, f) => n + fs.statSync(path.join(OUT, f)).size, 0) : 0;
-  console.log(`技の絵: 資料の絵あり ${list.length}種 / 資料に無い技 ${none}技 / 名前が食い違う ${mismatch}技 / 置いてある絵 ${have}枚(${Math.round(bytes / 1024)}KB) / 一覧が合っている ${inJsx}`);
-  if (have !== list.length || !inJsx || mismatch) { console.log('NG: 絵か一覧がずれています。node tools/success/build-skill-icons.js で作り直してください'); process.exit(1); }
+  console.log(`技の絵: 資料の絵あり ${ids.size}種 / オリジナルの技 ${orig.length}/${ORIG.length}種 / 資料に無い技 ${none}技 / 名前が食い違う ${mismatch}技 / 置いてある絵 ${have}枚(${Math.round(bytes / 1024)}KB) / 一覧が合っている ${inJsx}`);
+  if (have !== list.length || !inJsx || mismatch || orig.length !== ORIG.length) { console.log('NG: 絵か一覧がずれています。node tools/success/build-skill-icons.js で作り直してください'); process.exit(1); }
 })();
