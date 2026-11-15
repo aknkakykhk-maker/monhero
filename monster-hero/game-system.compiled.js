@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e4d0f560d9b3f2f5
+// source-sha256: afe3ed23e6fa32b5
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -163052,7 +163052,7 @@ function MsxItemUseFx({
     }, K.pt[i % K.pt.length]);
   }), React.createElement("span", {
     className: "it"
-  }, fx.e)), React.createElement("div", {
+  }, typeof msxItemIco === 'function' ? msxItemIco(fx) : fx.e)), React.createElement("div", {
     className: "ifx-hd"
   }, React.createElement("b", null, React.createElement("span", {
     style: {
@@ -175963,6 +175963,25 @@ const MSX_EXTRA_ITEM = Object.freeze({
     desc: '使ったターンだけ、人気の上がり ×1.5'
   }
 });
+const MSX_ITEM_IMG = Object.freeze({
+  elixir0: 'images/success/items/elixir-red.png',
+  elixir1: 'images/success/items/elixir-orange.png',
+  elixir2: 'images/success/items/elixir-green.png',
+  elixir3: 'images/success/items/elixir-blue.png'
+});
+const msxItemIco = (x, size = '1.45em') => x && x.img ? React.createElement("img", {
+  src: x.img,
+  alt: "",
+  draggable: false,
+  "data-msx-item-img": true,
+  style: {
+    width: size,
+    height: size,
+    objectFit: 'contain',
+    verticalAlign: 'middle',
+    display: 'inline-block'
+  }
+}) : x && x.e || '🎁';
 const msxItemView = k => {
   const base = MSX_ITEM_BY_ID[k];
   const core = msxSuc && msxSuc.SUC.ITEMS ? msxSuc.SUC.ITEMS[k] : null;
@@ -175972,6 +175991,7 @@ const msxItemView = k => {
     name: base && base.name || core && core.name || k,
     desc: typeof msxItemFx === 'function' && msxItemFx(k) ? base && typeof msxItemDesc === 'function' ? msxItemDesc(k) : msxItemFx(k) : base && base.desc || ex && ex.desc || '',
     e: base && base.e || ex && ex.e || '🎁',
+    img: MSX_ITEM_IMG[k] || null,
     during: core ? core.use === 'during' : !!(base && base.when === 'both')
   };
 };
@@ -176027,6 +176047,7 @@ function MsxBag({
     if (typeof MsxItemUseFx === 'function') setIfx({
       key: t.id,
       e: t.e,
+      img: t.img,
       name: t.name,
       s0: s,
       s1: r.state,
@@ -176084,7 +176105,7 @@ function MsxBag({
     style: {
       fontSize: 26
     }
-  }, t.e), React.createElement("div", null, React.createElement("b", null, t.name, t.n ? React.createElement("span", {
+  }, msxItemIco(t)), React.createElement("div", null, React.createElement("b", null, t.name, t.n ? React.createElement("span", {
     className: "yel"
   }, " ×", t.n) : null), React.createElement("small", null, t.desc), React.createElement("small", {
     className: "lim"
@@ -176100,7 +176121,7 @@ function MsxBag({
     style: {
       fontSize: 22
     }
-  }, x.e), React.createElement("i", null, "×", x.n), React.createElement("small", {
+  }, msxItemIco(x)), React.createElement("i", null, "×", x.n), React.createElement("small", {
     style: JA_LABEL_STYLE
   }, msxItemNameNode(x.name.replace('ガロエ印の', ''))))), carryList.map(x => React.createElement("button", {
     type: "button",
@@ -176112,7 +176133,7 @@ function MsxBag({
     style: {
       fontSize: 22
     }
-  }, x.e), React.createElement("small", {
+  }, msxItemIco(x)), React.createElement("small", {
     style: JA_LABEL_STYLE
   }, msxItemNameNode(x.name.replace('ガロエ印の', ''))))), React.createElement("div", {
     className: "no"
@@ -176144,7 +176165,7 @@ function MsxBag({
     },
     disabled: !t || t.carry || usedNow || blocked,
     onClick: use
-  }, usedNow ? 'このターンはもう使った' : blocked ? 'いまは使えない' : t && !t.carry ? `${t.e} ${t.name}を使う` : '使う'))), React.createElement(MsxStRow, {
+  }, usedNow ? 'このターンはもう使った' : blocked ? 'いまは使えない' : t && !t.carry ? React.createElement(React.Fragment, null, msxItemIco(t), " ", t.name, "を使う") : '使う'))), React.createElement(MsxStRow, {
     who: s,
     stats: s.stats
   }));
@@ -176639,7 +176660,7 @@ function MsxEvent({
   }, "最後のお話(第4話)の結末"), "が変わる") : null, gotGift ? React.createElement("div", {
     className: "v-log",
     "data-msx-ev-gift": true
-  }, giftItem.e, " ", React.createElement("b", {
+  }, msxItemIco(giftItem), " ", React.createElement("b", {
     className: "gu"
   }, giftItem.name), " を手に入れた!(🎒持ち物に入った)", React.createElement("br", null), React.createElement("small", null, giftItem.desc)) : null, picked.apt ? React.createElement("div", {
     className: "v-log",
@@ -177684,6 +177705,7 @@ const msxR3Prizes = (SUC, c) => {
     out.push({
       id: k,
       e: it.e,
+      img: it.img || null,
       name: `${it.name} ×${n}`,
       desc: it.desc,
       rare: true
@@ -177742,7 +177764,7 @@ const MsxR3PrizeBox = ({
     className: `${x.rare ? 'rare' : ''}${x.pt ? ' pt' : ''}`,
     onClick: () => onPick(x),
     "data-msx-r3-prize": x.id
-  }, React.createElement("span", null, x.e), React.createElement("small", {
+  }, React.createElement("span", null, typeof msxItemIco === 'function' ? msxItemIco(x) : x.e), React.createElement("small", {
     className: "msx-kp"
   }, msxPh(x.name)))))) : null);
 };
@@ -178042,7 +178064,7 @@ function MsxR3Cup({
     onClick: e => e.stopPropagation()
   }, React.createElement("div", {
     className: "e"
-  }, prz.e), React.createElement("b", null, prz.name), React.createElement("p", {
+  }, typeof msxItemIco === 'function' ? msxItemIco(prz) : prz.e), React.createElement("b", null, prz.name), React.createElement("p", {
     className: "msx-kp"
   }, msxPh(prz.desc)), React.createElement("button", {
     type: "button",
@@ -178487,7 +178509,7 @@ const msxR3PrizeRows = (d, s) => {
   Object.entries(d.items || {}).forEach(([k, n]) => {
     const S = msxSuc && msxSuc.SUC ? msxSuc.SUC : null;
     const it = S && S.ITEMS ? S.ITEMS[k] : null;
-    rows.push([typeof MSX_EXTRA_ITEM !== 'undefined' && MSX_EXTRA_ITEM[k] && MSX_EXTRA_ITEM[k].e || '🎁', it ? it.name : k, `×${n}(この育成の中で使える)`, 'new', 'GET']);
+    rows.push([typeof msxItemView === 'function' && typeof msxItemIco === 'function' ? msxItemIco(msxItemView(k)) : typeof MSX_EXTRA_ITEM !== 'undefined' && MSX_EXTRA_ITEM[k] && MSX_EXTRA_ITEM[k].e || '🎁', it ? it.name : k, `×${n}(この育成の中で使える)`, 'new', 'GET']);
   });
   return rows;
 };
@@ -178774,7 +178796,7 @@ function MsxR3PreDesk({
     onClick: e => e.stopPropagation()
   }, React.createElement("div", {
     className: "e"
-  }, prz.e), React.createElement("b", null, prz.name), React.createElement("p", {
+  }, typeof msxItemIco === 'function' ? msxItemIco(prz) : prz.e), React.createElement("b", null, prz.name), React.createElement("p", {
     className: "msx-kp"
   }, msxPh(prz.desc)), React.createElement("button", {
     type: "button",
