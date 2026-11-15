@@ -35,6 +35,12 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    date: "2026-11-15 15:26", type:'update', group:'assistant', title:'助手の紹介で、ひとことを押すと表情が切り替わるようになりました', status:'new',
+    items:[
+      '助手の紹介で、ひとことを押すたびに、ひとことと全身の表情が切り替わるようになりました。8回押すと8つの表情を全部見られます。',
+    ],
+  },
+  {
     date: "2026-11-15 15:06", type:'update', group:'cardBattle', title:'ウンディーネとスネグーラチカのレアキラの絵が新しくなりました', status:'new',
     image:'images/card-battle/l/C-U01V.jpg?v=4db1b433c23e',
     items:[
