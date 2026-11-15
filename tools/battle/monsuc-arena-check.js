@@ -69,7 +69,7 @@ const open = async (browser, reducedMotion, width = 390, species = 'Mocchi', loy
     // 段C(2026-11-14 社長): 技の札の技名が札からはみ出さない(幅390・320)。「前進」は右向き・「後退」は左向きで、ボタンも左に後退・右に前進
     for (const [w, sp] of [[390, 'Mocchi'], [320, 'Mocchi'], [390, 'Pandora'], [320, 'Pandora']]) {
       const { page } = await open(browser, 'no-preference', w, sp);
-      await page.waitForFunction(() => document.querySelector('[data-msxm="act"]'), null, { timeout: 30000 });
+      await page.waitForFunction(() => document.querySelector('[data-msxm="act"] .msxm-btn:not([disabled])'), null, { timeout: 30000 });
       await page.waitForTimeout(500);
       const ov = await page.evaluate(() => {
         const bad = [];
@@ -158,12 +158,12 @@ const open = async (browser, reducedMotion, width = 390, species = 'Mocchi', loy
     // ②〜④ ふつうの動き
     {
       const { page, errs } = await open(browser, 'no-preference');
-      await page.waitForFunction(() => document.querySelector('[data-msxm="act"]'), null, { timeout: 30000 });
+      await page.waitForFunction(() => document.querySelector('[data-msxm="act"] .msxm-btn:not([disabled])'), null, { timeout: 30000 });
       check('② 試合の画面を開くと、バトルの曲の口が立つ', await page.evaluate(() => MH_BATTLE_BGM.on === true));
       // 技の札は間合いごとの4枚(2026-11-13 社長)。札に命中%・ガッツ、押すと一覧(撃つ前の命中%・ガッツ・届く距離)
       const pShown = await page.evaluate(async () => {
         const cards = [...document.querySelectorAll('[data-msa-dc="manual"] [data-msa-dc-card]')];
-        const cardOk = cards.length === 4 && cards.filter((c) => !c.disabled).every((c) => /命中 \d+%/.test(c.textContent) && /ガッツ \d+/.test(c.textContent));
+        const cardOk = cards.length === 4 && cards.filter((c) => !c.disabled).every((c) => /命中率\d+%/.test(c.textContent) && /消ガ\d+/.test(c.textContent)); // 札は案A「命中率○%・消ガ○」(r1115-074・185)
         const now = cards.find((c) => c.classList.contains('now') && !c.disabled);
         if (!now) return cardOk;
         now.click(); await new Promise((r) => setTimeout(r, 150));
@@ -176,15 +176,16 @@ const open = async (browser, reducedMotion, width = 390, species = 'Mocchi', loy
       // 自分で3手(届く技があれば技・無ければ前へ)
       let cutP = false;
       for (let k = 0; k < 3; k++) {
-        await page.waitForFunction(() => document.querySelector('[data-msxm="act"]'), null, { timeout: 30000 });
+        await page.waitForFunction(() => document.querySelector('[data-msxm="act"] .msxm-btn:not([disabled])'), null, { timeout: 30000 });
         await page.evaluate(() => { const c = document.querySelector('[data-msa-dc="manual"] [data-msa-dc-card].now:not([disabled])'); if (c) c.click(); });
         await page.waitForTimeout(150);
         await page.evaluate(() => { const t = document.querySelector('[data-msxm-tech]:not([disabled])'); if (!t) { const x = document.querySelector('[data-msa-sheet-close]'); if (x) x.click(); } const f = [...document.querySelectorAll('.msxm-btn:not([disabled])')].find((x) => /前進/.test(x.textContent)); (t || f || document.querySelector('.msxm-btn:not([disabled])')).click(); });
         for (let w = 0; w < 30 && !cutP; w++) { await page.waitForTimeout(100); cutP = await page.evaluate(() => { const c = document.querySelector('[data-msa-cut]'); return !!c && /命中 \d+%/.test(c.textContent); }); }
       }
       check('④ 技の名前の帯に命中%', cutP);
-      await page.waitForFunction(() => document.querySelector('.msxm-auto'), null, { timeout: 30000 });
-      await page.evaluate(() => { const a = document.querySelector('.msxm-auto'); if (a) a.click(); });
+      // 操作欄は演出中も押せない形で出たまま(r1115-050② 案L1)なので、押せるようになってから「オートにする」を押す
+      await page.waitForFunction(() => document.querySelector('.msxm-auto:not([disabled])') && document.querySelector('[data-msxm="act"] .msxm-btn:not([disabled])'), null, { timeout: 30000 });
+      await page.evaluate(() => { const a = document.querySelector('.msxm-auto:not([disabled])'); if (a) a.click(); });
       // 段C(2026-11-14): オートでも、自分の側の技の札4枚・⏸・見せ場だけ・実況が付く(助手マスモン対戦と同じ操作)
       await page.waitForTimeout(700);
       const SHOT_DIR = path.join(ROOT, 'docs', 'progress', 'masmon-battle', 'stage-c');
@@ -218,7 +219,7 @@ const open = async (browser, reducedMotion, width = 390, species = 'Mocchi', loy
     // ⑤ 動きを減らす
     {
       const { page, errs } = await open(browser, 'reduce');
-      await page.waitForFunction(() => document.querySelector('[data-msxm="act"]'), null, { timeout: 30000 });
+      await page.waitForFunction(() => document.querySelector('[data-msxm="act"] .msxm-btn:not([disabled])'), null, { timeout: 30000 });
       await page.evaluate(() => { const a = document.querySelector('.msxm-auto'); if (a) a.click(); });
       await page.waitForFunction(() => document.querySelector('[data-msc-end]'), null, { timeout: 180000 }).catch(() => {});
       check('⑤ 動きを減らす設定では、技の動き(SkillFxMotion)を出さない', await page.evaluate(() => window.__fx === 0 && !!document.querySelector('[data-msc-end]')));
