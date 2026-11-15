@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 7dc4a6c0682662ea
+// source-sha256: 3000de648f1cead5
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -61125,7 +61125,10 @@ function RhythmSongShopList({
       className: "block"
     }, [meta.length, meta.levels].filter(Boolean).join(' ／ ')), bundle && React.createElement("span", {
       className: "block text-lime-300"
-    }, "short ver. つき")), React.createElement("button", {
+    }, "short ver. つき")), React.createElement("div", {
+      "data-rhythm-song-offer-foot": true,
+      className: "mt-auto flex w-full flex-col items-center gap-1"
+    }, React.createElement("button", {
       type: "button",
       "data-rhythm-song-listen": song.songId,
       onClick: () => toggleListen(song),
@@ -61133,7 +61136,7 @@ function RhythmSongShopList({
       "aria-label": `${item.name}を試し聴き${listening ? '(止める)' : ''}`,
       className: `mh-hit-expand relative min-h-[32px] w-full rounded-lg border px-1 text-[11px] font-black active:scale-95 ${listening ? 'border-lime-300/70 bg-lime-500/25 text-lime-100' : 'border-white/20 bg-white/10 text-white'}`
     }, listening ? '■ とめる' : '▶ 試し聴き'), React.createElement("div", {
-      className: "mt-auto flex w-full items-center justify-center pt-1"
+      className: "flex min-h-[44px] w-full items-center justify-center pt-1"
     }, has ? React.createElement("div", {
       className: "whitespace-nowrap rounded-full bg-emerald-950/50 px-2 py-1 text-[10px] font-black text-emerald-400"
     }, "所持済み") : React.createElement("button", {
@@ -61148,7 +61151,7 @@ function RhythmSongShopList({
       className: `mh-button mh-button-primary flex min-h-[44px] w-full max-w-full items-center justify-center gap-1 whitespace-nowrap rounded-xl px-2 text-[11px] font-black ${canBuy ? 'bg-violet-500 text-white active:scale-95' : 'bg-slate-800 text-slate-500'}`
     }, React.createElement("span", {
       "aria-hidden": "true"
-    }, "🎟️"), React.createElement("span", null, price.toLocaleString()))));
+    }, "🎟️"), React.createElement("span", null, price.toLocaleString())))));
   }));
 }
 const MULTI_STAMP_KEY = 'mh_multi_stamps_v1';
