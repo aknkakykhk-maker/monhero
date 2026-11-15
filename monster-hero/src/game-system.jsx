@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 9e199aff13d4ab63
+// generated-sha256: 63d2670544342caa
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -71212,8 +71212,27 @@ function assistantLifePreloadFullBodies(metIds) {
 
 // 紹介の立ち絵。助手ごとに絵の余白・全身か顔だけかが違うので、町の人形と同じ決まり(顔の表 assistantLifeStandFace と assistantLifeStandRule)で
 //   「頭(てっぺんから顎)の長さ」と「頭のてっぺんの高さ」をそろえる(2026-11-11 社長「助手ごとのサイズ感がばらばら」)。測れるまでは出さない
-function AssistantLifeProfileStand({ who, head = 0.32, top = 0.16 }) {
-  const src = typeof assistantFullImage === 'function' ? assistantFullImage(who, 'happy') : '';
+// 紹介のひとことを押すと変わる8つの表情(2026-11-15 社長 r1115-142)。ふつうは今のひとこと(who.greeting)。ほかは今の掛け合いの台詞から選んだ(なみだの台詞が無い助手だけ書き足した)
+const ASSISTANT_LIFE_PROFILE_FACE_ORDER = Object.freeze([['normal', 'ふつう'], ['happy', 'うれしい'], ['excited', 'わくわく'], ['wink', 'ウインク'], ['surprise', 'おどろき'], ['troubled', 'こまり'], ['angry', 'おこる'], ['crying', 'なみだ']]);
+// 助手ごとに happy・excited・wink・surprise・troubled・angry・crying の順
+const ASSISTANT_LIFE_PROFILE_FACE_LINES = Object.freeze({
+  mua:       ['いいの！ 楽しいのがいちばんぢゃんｗ', 'ちょ、待って！ あたしも行きたいんだけど！', 'あたしたち、天才ぢゃん♪', 'えっ、どしたの急に', '起きたら髪ぼさぼさだったら、どうしよｗ', 'あたしが楽しみにとっといたやつぢゃん！ もー！', 'なにそれ、うれしすぎるんだけど…！'],
+  kiki:      ['私はチョコがいいでつ♪ 半分こしましょうか', '「火力の上げ方」という本を見つけました', 'これからも、たくさん話しかけてくださいね♪', 'あれま…。そんなふうに思ってくれてたんでつね', '私、守りは苦手でつ…がんばります', '…もう一回お願いします。今のは、火力が足りませんでした', 'うれしくて、ちょっと泣いてしまいまつ…'],
+  momosuke:  ['もちろんだよ♡ ももにまかせて', 'でも、ぜんぶ覚えた！！ もも、天才かも♡', 'えへ、知ってる〜w', 'え、ききちゃん普通にうまくない？', 'ももだって、ほんとはもっとおしゃべりしたいのにさ〜', 'ももだって食べたかったもん！！', 'くやしい〜！！ 次は負けないから！！'],
+  dra:       ['半分かよ！ でも、うれしいわ', '100点！？ やったぁ、えへへ', 'えへへ、ばれたか', 'お、おう？ 急にどうしたんだよ', '長靴じゃ勝てないか…次は本物を釣るぞ', 'おでの昼寝は大事なんだぞ', '…やめろよ、おで泣くだろ'],
+  atsu:      ['次も期待してるわ！', 'あと1曲、いや3曲いこ笑', 'できるって。俺ら組んだら強いから！', 'まじ？ じゃあもう1回！', '今日はちょっとうまくいかないなー笑', '今のはたまたま！ もう一回！', '…やば、ちょっと泣きそう。ありがと！'],
+  kyuko:     ['ありがとん笑 心強いよぉ', '新しい組み方、3つ思いついた！', 'ほい！ じゃあこれからも一緒に上目指そ笑', 'えっ、ばれてた？ 笑', 'え〜、ちょっとこわいよぉ', 'ぐぬぬぬ…そこはゆずれないよぉ', 'うぅ…うれしすぎて泣けるよぉ🥺'],
+  sorashido: ['でーじうれしいです笑', 'やる気出ました・・・！ ちばりよー、自分！', 'グラフもつけておきました・・・！', '100回！？ ・・・やってみせます・・・！', 'は、はい。かっこ悪いですよね笑', '今の判定、自分の勝ちですよね！', 'うぉぉぉ！ 負けました！ くやしい！'],
+  erubin:    ['ふふ、いつも元気をもらってるよ', 'ちょうどいいところに来たね。今の組み方、試してみたい', 'ふふ、そう言ってくれると思ったよ', 'わ、すごく明るい部屋になったね', 'ばれちゃったかな…笑 好きなんだよね', 'みんな、ずっと待ってたんだよ', '…ありがとう。ちょっと、うるっときちゃった'],
+});
+// k 番目(0〜7)の { e, label, t }。ふつうは今のひとこと。台詞の無い助手はひとことのまま表情だけ変える
+const assistantLifeProfileFace = (id, greeting, k) => {
+  const i = ((Number(k) || 0) % 8 + 8) % 8, [e, label] = ASSISTANT_LIFE_PROFILE_FACE_ORDER[i];
+  const lines = ASSISTANT_LIFE_PROFILE_FACE_LINES[id];
+  return { e, label, n: i + 1, t: i === 0 || !lines || !lines[i - 1] ? greeting : lines[i - 1] };
+};
+function AssistantLifeProfileStand({ who, head = 0.32, top = 0.16, expr = 'happy' }) {
+  const src = typeof assistantFullImage === 'function' ? assistantFullImage(who, expr) : '';
   const boxRef = React.useRef(null);
   const [size, setSize] = React.useState(null);
   const [art, setArt] = React.useState(() => (typeof ASSISTANT_LIFE_STAND_BOX !== 'undefined' && ASSISTANT_LIFE_STAND_BOX.get(src)) || null);
@@ -71226,7 +71245,7 @@ function AssistantLifeProfileStand({ who, head = 0.32, top = 0.16 }) {
     window.addEventListener('resize', f);
     return () => { window.removeEventListener('resize', f); if (ro) ro.disconnect(); };
   }, []);
-  const fullSrc = typeof assistantFullBodyImage === 'function' ? assistantFullBodyImage(who, 'happy') : null;
+  const fullSrc = typeof assistantFullBodyImage === 'function' ? assistantFullBodyImage(who, expr) : null;
   if (fullSrc) { // 全身画: 枠の高さにおさめて足元をそろえる(頭の大きさは絵ごとの全身の比のまま)
     return (
       <div ref={boxRef} className="pointer-events-none absolute inset-0 overflow-hidden" data-assistant-life-profile-stand={who.id} data-assistant-life-profile-fullbody={fullSrc}>
@@ -71329,6 +71348,7 @@ function AssistantLifeProfileSheet({ id, bondLevelOf = null, land = false, giftS
   const who = typeof assistantById === 'function' ? assistantById(id) : null;
   const [vKey, setVKey] = React.useState('home');
   const [vIdx, setVIdx] = React.useState(0);
+  const [faceN, setFaceN] = React.useState(0); // ひとことを押すたびに表情が変わる(r1115-142)
   const scrollRef = React.useRef(null);
   const refs = { who: React.useRef(null), likes: React.useRef(null), bond: React.useRef(null), voice: React.useRef(null) };
   if (!who) return null;
@@ -71344,6 +71364,8 @@ function AssistantLifeProfileSheet({ id, bondLevelOf = null, land = false, giftS
   const oshiMon = oshi && typeof assistantMasmonMon === 'function' ? assistantMasmonMon(oshi.monId) : null;
   const call = assistantLifeProfileCall(id);
   const greeting = String(who.greeting || '').replace(/\{name\}/g, call);
+  const face = assistantLifeProfileFace(id, greeting, faceN);
+  const faceText = String(face.t || '').replace(/\{name\}/g, call);
   const jump = (k) => { try { const box = scrollRef.current, el = refs[k].current; if (box && el) box.scrollTo({ top: el.offsetTop - 8, behavior: 'smooth' }); } catch (_) {} };
   const card = 'rounded-2xl border border-white/10 bg-slate-800/90 px-3 py-2.5';
   const h3 = 'mb-1.5 flex items-center justify-between gap-2 text-[13.5px] font-black text-white';
@@ -71359,14 +71381,14 @@ function AssistantLifeProfileSheet({ id, bondLevelOf = null, land = false, giftS
   const hero = (
     <div className="relative overflow-hidden" data-assistant-life-profile-hero style={{ height: land ? '100%' : 300, backgroundImage: `linear-gradient(160deg, ${who.accent}55, #0f172a 72%)` }}>
       {/* 立ち絵は右側の枠の中で、顔の大きさと頭の高さをそろえる(縦は右6割・横は名前の下から) */}
-      <div className="absolute bottom-0 right-0" style={land ? { left: '40%', top: 0 } : { top: 0, width: '62%' }}><AssistantLifeProfileStand who={who} head={land ? 0.22 : 0.34} top={land ? 0.3 : 0.12}/></div>
+      <div className="absolute bottom-0 right-0" style={land ? { left: '40%', top: 0 } : { top: 0, width: '62%' }}><AssistantLifeProfileStand who={who} head={land ? 0.22 : 0.34} top={land ? 0.3 : 0.12} expr={face.e}/></div>
       <div className="absolute left-3.5 z-[2]" style={{ top: land ? 56 : 14, width: land ? 150 : 210 }}>
         <p className="text-[28px] font-black leading-tight text-white" style={{ textShadow: '0 2px 6px #000' }}>{who.name}</p>
         <p className="text-[12.5px] font-black leading-snug" style={{ color: who.accent, textShadow: '0 1px 3px #000', ...(typeof JA_LABEL_STYLE !== 'undefined' ? JA_LABEL_STYLE : {}) }}>{typeof jaWrap === 'function' ? jaWrap(who.tagline || '') : who.tagline}</p>
         {!viewOnly && <span className="mt-1.5 inline-block rounded-full border border-white/15 bg-slate-950/80 px-2 py-0.5 text-[11px] font-black text-white">💗 Lv{b.lv} {b.title}</span>}
       </div>
-      {greeting && <div data-assistant-life-profile-greeting className="absolute bottom-3 left-3 z-[2] rounded-2xl border-2 bg-white px-3 py-2 text-[12px] font-bold leading-relaxed text-slate-800 shadow-lg" style={{ borderColor: who.accent, width: land ? 170 : 205 }}>
-        <span className="block text-[10px] font-black" style={{ color: who.accent }}>ひとこと</span><span style={typeof JA_LABEL_STYLE !== 'undefined' ? JA_LABEL_STYLE : undefined}>{jw(greeting)}</span></div>}
+      {greeting && <button type="button" data-assistant-life-profile-greeting data-assistant-life-profile-face={face.e} onClick={() => setFaceN(n => (n + 1) % 8)} aria-label={`ひとこと。押すと表情が変わります(${face.n}/8 ${face.label})`} className="absolute bottom-3 left-3 z-[2] rounded-2xl border-2 bg-white px-3 py-2 text-left text-[12px] font-bold leading-relaxed text-slate-800 shadow-lg active:scale-[.98]" style={{ borderColor: who.accent, width: land ? 170 : 205 }}>
+        <span className="flex items-center justify-between gap-1"><span className="text-[10px] font-black" style={{ color: who.accent }}>ひとこと</span><span data-assistant-life-profile-face-chip className="whitespace-nowrap rounded-full bg-slate-100 px-1.5 text-[9.5px] font-black leading-[16px] text-slate-500">👆 タップで表情 {face.n}/8</span></span><span className="block" style={typeof JA_LABEL_STYLE !== 'undefined' ? JA_LABEL_STYLE : undefined}>{jw(faceText)}</span></button>}
     </div>);
   const jumps = (
     <div className="flex gap-1.5 border-b border-white/10 bg-slate-950/90 px-2.5 py-2" data-assistant-life-profile-jump>
