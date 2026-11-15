@@ -66,5 +66,23 @@ for (const id of NO_EFFECT) ok(none.includes(id), `NO_EFFECT の ${id} は、い
 ok(n >= 99, `通した選択肢が少ない: ${n}`);
 ok(noLine.size === 0, `選んだあとの結果の文が台本に無い: ${[...noLine].slice(0, 8).join(' ')}${noLine.size > 8 ? ` …ほか ${noLine.size - 8}` : ''}`);
 
+// 忠誠度の札は実際に動いた分(r1115-076): 甘え度・恐れ度が上限(50)のときは出さない・途中なら上限までの分だけ
+let loyChecked = 0;
+for (const e of EV.LIST) {
+  if (e.slot === 'none') continue;
+  for (const c of (e.ch && (e.ch.a || e.ch.b) ? Object.keys(e.ch) : [null])) {
+    const ch = c ? e.ch[c] : e.ch;
+    if (!ch || !Array.isArray(ch.fx) || !ch.fx.some((f) => f[0] === 'loy' || f[0] === 'fear')) continue;
+    for (const [ama, fear] of [[50, 50], [49, 50], [20, 20]]) {
+      const s = JSON.parse(JSON.stringify(base)); s.turn = 6; s.fame = 99999; s.pop = 70; s.hp = Math.round(s.hpMax * 0.6); s.stress = 50; s.ama = ama; s.fear = fear; s.yosu = {};
+      s.bond = (s.team || []).map(() => 70); s.ev.pend = { id: e.id, slot: e.slot === 'fixed' ? 'start' : e.slot, turn: s.turn, cheer: 0, cheer2: 1 };
+      const l0 = SUC.loyalOf(s); const r = EV.pick(s, c); if (!r.out || !r.out.ok) continue;
+      const real = SUC.loyalOf(r.state) - l0; const shown = Math.round(Number((r.out.delta || {}).loyal) || 0);
+      ok(shown === real, `${e.id}${c ? `.${c}` : ''}(甘え度${ama}・恐れ度${fear}): 忠誠の札 ${shown} と実際の増え ${real} が違う`);
+      loyChecked += 1;
+    }
+  }
+}
+ok(loyChecked >= 3, `忠誠度の札を確かめた選択肢が少ない: ${loyChecked}`);
 if (errors.length) { console.error('NG monsuc-event-result-check'); errors.slice(0, 30).forEach((x) => console.error('  - ' + x)); process.exit(1); }
 console.log(`OK monsuc-event-result-check: 出来事 ${EV.LIST.length} 種・選択肢を ${n} 回通して、何も動かないのは一覧の ${NO_EFFECT.size} つだけ・どの選択肢にも結果の文がある・選んだあとに結果の札を出す`);

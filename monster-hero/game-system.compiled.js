@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 501ac5bf286335a7
+// source-sha256: e99510651e2fa85b
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -159616,6 +159616,17 @@ function msxIssaGainList(before, s, SUC) {
   }));
   return out;
 }
+function msxIssaLoyalAhead(s, SUC) {
+  const half = SUC && SUC.LOYAL && SUC.LOYAL.half || 50;
+  if (s && s.yosu && s.yosu.utsu) return '忠誠度は動かない(うつ病のあいだ)';
+  const n = Math.max(0, Math.min(8, half - (Number(s && s.ama) || 0))) + Math.max(0, Math.min(7, half - (Number(s && s.fear) || 0)));
+  return n > 0 ? `忠誠度 +${n}` : '忠誠度はもう上限';
+}
+function msxIssaOkText(k, gains) {
+  if (!k || k.key !== 'loyal') return k ? k.ok : '';
+  const g = (Array.isArray(gains) ? gains : []).find(x => x && x.label === '🤝 忠誠度');
+  return g && g.v ? `忠誠度 ${g.v > 0 ? '+' : '−'}${Math.abs(g.v)}` : '忠誠度はもう上限(甘え度・恐れ度が50)';
+}
 function MsxIssaGains({
   items
 }) {
@@ -159788,7 +159799,7 @@ function MsxIssaMeet({
       className: j < dots ? 'on' : ''
     }))), React.createElement("span", {
       className: "ok"
-    }, "⭕ ", x.ok), React.createElement("span", {
+    }, "⭕ ", x.key === 'loyal' ? msxIssaLoyalAhead(s, SUC) : x.ok), React.createElement("span", {
       className: "ng"
     }, "❌ ", x.ng));
   }), React.createElement("button", {
@@ -159979,7 +159990,7 @@ function MsxIssaResult({
     className: "v-log"
   }, React.createElement("span", {
     className: "hd2"
-  }, k ? `${k.icon} ${k.name}` : '🙅 何もしない'), React.createElement("br", null), k ? win ? `⭕ ${k.ok}` : `❌ ${k.ng}` : 'ことわった。何も変わらない', !none && !hasUps && !gains.length ? '(変化なし)' : ''), React.createElement("div", {
+  }, k ? `${k.icon} ${k.name}` : '🙅 何もしない'), React.createElement("br", null), k ? win ? `⭕ ${msxIssaOkText(k, gains)}` : `❌ ${k.ng}` : 'ことわった。何も変わらない', !none && !hasUps && !gains.length ? '(変化なし)' : ''), React.createElement("div", {
     className: "v-ft",
     style: {
       marginTop: 6
