@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f6b6e45b5d38e18a
+// source-sha256: 689ac47ae408f6d4
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -169925,6 +169925,16 @@ const MSX_CSS = `
 .msx-md-kv{display:flex;gap:6px;align-items:baseline;font-size:11px;padding:2px 0;border-bottom:1px solid #1e293b}
 .msx-md-kv>b{flex:none;width:6em;color:#f9a8d4;font-size:10.5px}.msx-md-kv>span{flex:1;min-width:0;overflow-wrap:anywhere}.msx-md-kv .gd{font-size:14px;font-weight:900;color:#fde047}
 .msx-md-dex{font-size:11px;font-weight:500;line-height:1.6;margin-top:4px}
+.msx-md-btabs{margin-top:6px}
+.msx-md-as .cap span{margin-left:auto}
+.msx-md-ac{display:flex;gap:8px;align-items:flex-start;background:linear-gradient(180deg,#2a2150,#1e1a36);border:1px solid #4a4380;border-radius:12px;padding:7px 8px;margin-top:6px}
+.msx-md-ac .ic{flex:none;width:30px;height:30px;display:flex;align-items:center;justify-content:center;font-size:22px;border-radius:9px;background:#0f172a}
+.msx-md-ac .bd{flex:1;min-width:0}.msx-md-ac .hd{display:flex;gap:6px;align-items:flex-start;justify-content:space-between}
+.msx-md-ac .hd b{font-size:13px;font-weight:900;line-height:1.3;min-width:0;word-break:keep-all;overflow-wrap:anywhere}.msx-md-ac .hd b em{font-style:normal;color:#fde047}
+.msx-md-ac .pips{flex:none;font-size:10px;font-weight:800;color:#cbd5e1;background:#0f172a;border-radius:99px;padding:1px 7px;white-space:nowrap}.msx-md-ac .pips i{font-style:normal;color:#fde047;font-weight:900}
+.msx-md-ac .tx{font-size:11px;font-weight:700;color:#e2e8f0;line-height:1.45;margin-top:2px;word-break:keep-all;overflow-wrap:anywhere}
+.msx-md-ac .sc{font-size:10px;font-weight:800;color:#f9a8d4;margin-top:2px}
+.msx-md-art .pw{flex-wrap:wrap;row-gap:1px}.msx-md-art .pw b{flex:1 1 auto}
 .msx-md-bot{margin-top:6px}
 .msx-md-cap{font-size:12px;font-weight:900;color:#f9a8d4}.msx-md-cap small{font-size:10px;color:#cbd5e1;margin-left:6px;font-weight:700}
 .msx-md-dists{display:grid;grid-template-columns:repeat(5,1fr);gap:2px;margin-top:3px}
@@ -171540,9 +171550,12 @@ function MsxMonDetail({
   foot = null,
   grade: gradeLabel = null,
   pick = null,
-  mastery = null
+  mastery = null,
+  assists = null,
+  info = null
 }) {
   const [tab, setTab] = useState('base');
+  const [btab, setBtab] = useState('tech');
   const [pickCell, setPickCell] = useState(null);
   const line = typeof MONSTER_LINEAGE_MAP === 'object' && MONSTER_LINEAGE_MAP ? MONSTER_LINEAGE_MAP[species] : null;
   const main = line ? msxLineName(line.main) : '';
@@ -171634,7 +171647,7 @@ function MsxMonDetail({
     className: "msx-md-kv"
   }, React.createElement("b", null, "伸びどき"), React.createElement("span", null, peak || '—')), React.createElement("div", {
     className: "msx-md-kv"
-  }, React.createElement("b", null, "血統"), React.createElement("span", null, main ? `${main}${subL && subL !== main ? ` × ${subL}` : '(純血)'}` : '—')), Array.isArray(more) ? more.filter(Boolean).map(([k, v], i) => React.createElement("div", {
+  }, React.createElement("b", null, "血統"), React.createElement("span", null, main ? `${main}${subL && subL !== main ? ` × ${subL}` : '(純血)'}` : '—')), false && Array.isArray(more) ? more.filter(Boolean).map(([k, v], i) => React.createElement("div", {
     key: `m${i}`,
     className: "msx-md-kv"
   }, React.createElement("b", null, k), React.createElement("span", null, v))) : null, React.createElement("div", {
@@ -171652,9 +171665,82 @@ function MsxMonDetail({
     style: {
       marginTop: 4
     }
-  }, "適性が高い間合いほど、その間合いの技がよく当たる")) : null)), React.createElement("div", {
+  }, "適性が高い間合いほど、その間合いの技がよく当たる")) : null)), (() => {
+    const AT = typeof window !== 'undefined' && window.MONHERO_SUCCESS_ASSIST && window.MONHERO_SUCCESS_ASSIST.VERSION === 3 ? window.MONHERO_SUCCESS_ASSIST : null;
+    const infoRows = Array.isArray(info) ? info.filter(Boolean) : [];
+    const hasA = Array.isArray(assists) && !!AT;
+    const hasI = infoRows.length > 0;
+    if (!hasA && !hasI) return null;
+    const BT = [['tech', '技'], hasA ? ['assist', 'アシスト'] : null, hasI ? ['info', '育成情報'] : null].filter(Boolean);
+    const sceneName = sc => {
+      const f = AT && AT.SCENES ? AT.SCENES.find(x => x.key === sc) : null;
+      return f ? f.name : '';
+    };
+    const got = hasA ? assists.filter(a => a && AT.BY_ID[a.id]).map(a => ({
+      a: AT.BY_ID[a.id],
+      n: AT.fromSaved(a)
+    })).filter(x => x.n > 0) : [];
+    return React.createElement("div", {
+      className: "msx-md-btabs",
+      "data-msx-detail-btabs": true
+    }, React.createElement("div", {
+      className: "msx-md-tabs",
+      style: {
+        gridTemplateColumns: `repeat(${BT.length},1fr)`
+      }
+    }, BT.map(([k, n]) => React.createElement("button", {
+      type: "button",
+      key: k,
+      className: btab === k ? 'on' : '',
+      "data-msx-detail-btab": k,
+      onClick: () => setBtab(k)
+    }, n))), btab === 'assist' ? React.createElement("div", {
+      className: "msx-md-box msx-md-as",
+      "data-msx-detail-assist": true
+    }, React.createElement("div", {
+      className: "cap"
+    }, "取ったアシスト効果", React.createElement("span", {
+      "data-msx-assist-count": true
+    }, got.length, " / ", AT.MAX_KINDS, "種類")), got.length ? got.map(({
+      a,
+      n
+    }) => React.createElement("div", {
+      key: a.id,
+      className: "msx-md-ac",
+      "data-msx-assist-card": a.id
+    }, React.createElement("span", {
+      className: "ic",
+      "aria-hidden": "true"
+    }, typeof cardIconNode === 'function' ? cardIconNode(a.icon, 28) : a.icon), React.createElement("div", {
+      className: "bd"
+    }, React.createElement("div", {
+      className: "hd"
+    }, React.createElement("b", null, a.name, " ", React.createElement("em", null, AT.valueText(a.id, n))), React.createElement("span", {
+      className: "pips",
+      "aria-label": `目盛り ${n}/${a.max}`
+    }, React.createElement("i", null, n), "/", a.max)), React.createElement("div", {
+      className: "tx"
+    }, AT.describe(a.id, n)), sceneName(a.scene) ? React.createElement("div", {
+      className: "sc"
+    }, "効く場面: ", sceneName(a.scene)) : null))) : React.createElement("div", {
+      className: "msx-note",
+      "data-msx-assist-none": true,
+      style: {
+        padding: 8
+      }
+    }, "アシスト効果はまだありません")) : null, btab === 'info' ? React.createElement("div", {
+      className: "msx-md-box",
+      "data-msx-detail-info": true
+    }, infoRows.map(([k, v], i) => React.createElement("div", {
+      key: `i${i}`,
+      className: "msx-md-kv"
+    }, React.createElement("b", null, k), React.createElement("span", null, v)))) : null);
+  })(), React.createElement("div", {
     className: "msx-md-bot",
-    "data-msx-detail-techs": true
+    "data-msx-detail-techs": true,
+    style: btab !== 'tech' && (Array.isArray(assists) || Array.isArray(info) && info.some(Boolean)) ? {
+      display: 'none'
+    } : undefined
   }, React.createElement("div", {
     className: "msx-md-cap"
   }, "技", React.createElement("small", null, Array.isArray(known) ? '覚えた技' : '初めから使える技', " ", all.filter(has).length, "/", all.length)), React.createElement("div", {
@@ -182607,7 +182693,7 @@ function MsxR3Box({
         return T3 && T3.VERSION === 3 && T3.BY_ID[a.id] ? `${T3.BY_ID[a.id].name} ${T3.valueText(a.id, T3.fromSaved(a))}` : a.name || a.id;
       }).join('・') : '';
       const endAt = Number.isFinite(cur.endAt) ? new Date(cur.endAt) : null;
-      const more = [['忠誠 / 人気', `${Math.round(cur.loy || 0)} / ${Math.round(cur.pop || 0)}`], Array.isArray(cur.fav) && cur.fav.length ? ['得意な能力', cur.fav.map(k => MSX_STAT_NAME[k] || k).join('・')] : null, cur.awake ? ['覚醒', cur.awake >= 2 ? '🌈 超覚醒' : '✨ 覚醒'] : null, assistText ? ['アシスト', assistText] : null, Array.isArray(cur.titles) && cur.titles.length ? ['称号', cur.titles.slice(0, 4).map(t => `「${msxR3TitleName(t)}」`).join('')] : null, cur.coach ? ['育てた助手', msxAidName(cur.coach)] : null, ['世代', `第${Math.max(1, Math.round(Number(cur.gen) || 1))}世代`], endAt ? ['育成完了日', `${endAt.getFullYear()}/${endAt.getMonth() + 1}/${endAt.getDate()}`] : null, cur.ending ? ['エンディング', {
+      const more = [['忠誠 / 人気', `${Math.round(cur.loy || 0)} / ${Math.round(cur.pop || 0)}`], Array.isArray(cur.fav) && cur.fav.length ? ['得意な能力', cur.fav.map(k => MSX_STAT_NAME[k] || k).join('・')] : null, cur.awake ? ['覚醒', cur.awake >= 2 ? '🌈 超覚醒' : '✨ 覚醒'] : null, Array.isArray(cur.titles) && cur.titles.length ? ['称号', cur.titles.slice(0, 4).map(t => `「${msxR3TitleName(t)}」`).join('')] : null, cur.coach ? ['育てた助手', msxAidName(cur.coach)] : null, ['世代', `第${Math.max(1, Math.round(Number(cur.gen) || 1))}世代`], endAt ? ['育成完了日', `${endAt.getFullYear()}/${endAt.getMonth() + 1}/${endAt.getDate()}`] : null, cur.ending ? ['エンディング', {
         super: 'スーパー',
         good: 'グッド',
         bad: 'ふつう'
@@ -182685,7 +182771,15 @@ function MsxR3Box({
           },
           "data-msx-r3-edit": true
         }, "✏")),
-        more: more,
+        info: more,
+        assists: Array.isArray(cur.assists) ? cur.assists : [],
+        peak: (() => {
+          try {
+            return msxStartPreview(SUC, cur.species, Number.isInteger(cur.gt) ? cur.gt : null, cur.aptBase, cur.st).peak;
+          } catch (e) {
+            return '';
+          }
+        })(),
         foot: React.createElement(React.Fragment, null, msg ? React.createElement("div", {
           className: "mm-hint ok"
         }, msg) : null, React.createElement("div", {
