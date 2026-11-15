@@ -91,6 +91,18 @@ const MONSUC_SCRIPT_ARC_MUA = Object.freeze([
   { id:'scn.mua.summit.r2.win.mua2b', who:'mua', e:'happy', bond:[1,2], t:'{rival}、最後に{mon}へあいさつしてくれましたね。いいライバルでした' },
   { id:'scn.mua.summit.r2.lose.mua1', who:'mua', e:'crying', t:'…やっぱ強かったね、{rival}。でも{mon}、いちばん{mon}らしく戦ってたよ' },
   { id:'scn.mua.summit.r2.lose.mua1b', who:'mua', e:'crying', bond:[1,2], t:'…やっぱり強かったですね、{rival}。でも{mon}は、最後まで{mon}らしかったです' },
+  // 準決勝: ライバルに会っていない育成(ライバルが1度も出なかった・r1115-202)。強い常連が相手。会っていない子を前提に話さない
+  { id:'scn.mua.summit.r2x.pick.narr1', who:'narr', t:'準決勝の組み合わせが貼り出された。勝ち上がってきた名前を見て、みゅあが小さくうなずいた。' },
+  { id:'scn.mua.summit.r2x.pick.mua1', who:'mua', e:'normal', t:'準決勝の相手、{rival}だって。ここまで負けなしの、いちばん強い常連ぢゃん' },
+  { id:'scn.mua.summit.r2x.pick.mua1b', who:'mua', e:'normal', bond:[1,2], t:'準決勝の相手は、{rival}です。ここまで負けなしの、とても強い常連さんです' },
+  { id:'scn.mua.summit.r2x.pick.mua2', who:'mua', e:'excited', t:'あと2つで、いちばん上。{mon}なら勝てるって、あたし信じてるからね！' },
+  { id:'scn.mua.summit.r2x.pick.mua2b', who:'mua', e:'excited', bond:[1,2], t:'あと2つで、いちばん上です。{mon}なら勝てると信じています！' },
+  { id:'scn.mua.summit.r2x.win.mua1', who:'mua', e:'crying', t:'勝った…！ {rival}に勝ったよ{mon}😭 あたし、声かれるまで叫んぢゃった' },
+  { id:'scn.mua.summit.r2x.win.mua1b', who:'mua', e:'crying', bond:[1,2], t:'勝ちました…！ {mon}、すごいです。あたし、声が出なくなるまで応援しちゃいました' },
+  { id:'scn.mua.summit.r2x.win.mua2', who:'mua', e:'happy', t:'次は決勝。いちばん奥で、王者が待ってるよ' },
+  { id:'scn.mua.summit.r2x.win.mua2b', who:'mua', e:'happy', bond:[1,2], t:'次は決勝です。いちばん奥で、王者が待っています' },
+  { id:'scn.mua.summit.r2x.lose.mua1', who:'mua', e:'crying', t:'…強かったね、{rival}。でも{mon}、いちばん{mon}らしく戦ってたよ' },
+  { id:'scn.mua.summit.r2x.lose.mua1b', who:'mua', e:'crying', bond:[1,2], t:'…強かったですね、{rival}。でも{mon}は、最後まで{mon}らしかったです' },
   // 決勝: 王者
   { id:'scn.mua.summit.r3.pick.narr1', who:'narr', t:'決勝の舞台。いちばん奥で、王者の{rival}が静かに待っている。' },
   { id:'scn.mua.summit.r3.pick.mua1', who:'mua', e:'troubled', t:'さいごは、いちばん上。…足ふるえてんの、あたしのほうなんだけどｗ' },

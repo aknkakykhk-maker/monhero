@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 95f1366c7631744b
+// source-sha256: 6ca4c06c0038d96d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -171868,6 +171868,49 @@ const msxAidName = aid => {
   const w = msxWho(aid);
   return w ? w.name : aid;
 };
+const MSX_RIVAL_WAIT_MS = 4000;
+const msxRivalsBuild = async (SUC, aid) => {
+  const ok = sp => !!(SUC && Array.isArray(SUC.speciesList) && SUC.speciesList.includes(sp));
+  const out = [];
+  try {
+    const ids = typeof ALF_IDS !== 'undefined' && Array.isArray(ALF_IDS) ? ALF_IDS : [];
+    for (const id of ids) {
+      if (id === aid || out.length >= 5 || typeof assistantLifeMasmonShareOf !== 'function') continue;
+      const r = assistantLifeMasmonShareOf(id);
+      const t = r && Array.isArray(r.list) ? r.list.find(x => x && x.lead && ok(x.monster)) || r.list.find(x => x && ok(x.monster)) : null;
+      if (!t) continue;
+      const nick = typeof t.nick === 'string' && t.nick.trim() ? [...t.nick.trim()].slice(0, 12).join('') : msxMonName(t.monster);
+      out.push({
+        name: nick,
+        breeder: msxAidName(id),
+        kind: 'aid',
+        species: t.monster,
+        ...(t.stats && typeof t.stats === 'object' ? {
+          stats: t.stats
+        } : {})
+      });
+    }
+  } catch (_) {}
+  try {
+    if (typeof monsucLendFriends === 'function' && typeof monsucLendMember === 'function') {
+      const r = await Promise.race([monsucLendFriends(), new Promise(res => setTimeout(() => res(null), MSX_RIVAL_WAIT_MS))]);
+      const rows = r && r.ok && Array.isArray(r.rows) ? r.rows : [];
+      for (const row of rows) {
+        if (out.length >= 8) break;
+        const m = monsucLendMember(row, SUC);
+        if (!m || !ok(m.species)) continue;
+        out.push({
+          name: m.name || msxMonName(m.species),
+          breeder: m.friend && m.friend.name ? String(m.friend.name).slice(0, 24) : null,
+          kind: 'friend',
+          species: m.species,
+          stats: m.stats
+        });
+      }
+    }
+  } catch (_) {}
+  return out.slice(0, 8);
+};
 const msxFmt = n => Math.round(msxNum(n, 0)).toLocaleString('ja-JP');
 const msxCalendar = turn => {
   const k = 7 + Math.max(0, turn - 1);
@@ -175601,8 +175644,15 @@ function MonheroSuccessScreen({
       bag[k] = 1;
     });
     const fromMon = cfg.from && typeof cfg.from.box === 'string' ? data.box.mons.find(m => m.id === cfg.from.box && !m.raised) || null : null;
+    let rivals = [];
+    try {
+      rivals = typeof msxRivalsBuild === 'function' ? await msxRivalsBuild(SUC, cfg.aid) : [];
+    } catch (_) {
+      rivals = [];
+    }
     const s = SUC.newRun({
       id,
+      rivals,
       species: cfg.species,
       ...(cfg.techPick && typeof cfg.techPick === 'object' ? {
         techPick: cfg.techPick
@@ -184504,8 +184554,21 @@ const msxArcAfterOf = (SUC, s, b, won, foe) => b && b.kind === 'summit' && msxAr
   won: !!won,
   foe: foe ? foe.name || msxMonName(foe.species) : '',
   species: foe ? foe.species : null,
-  turn: s.turn
+  turn: s.turn,
+  ...(foe && foe.pick ? {
+    pick: foe.pick
+  } : {})
 } : null;
+const msxArcScene = (SUC, aid, round, pick, part, ctx, bondLv, extra) => {
+  const base = `scn.${aid}.summit.r${round + 1}`;
+  const arc = SUC && SUC.ARC && SUC.ARC[aid];
+  const wasRival = !!(arc && Array.isArray(arc.summit) && arc.summit[round] === 'rival');
+  if (wasRival && pick === 'strong') {
+    const l = msxArcLines(`${base}x.${part}`, ctx, bondLv, extra);
+    if (l.length) return l;
+  }
+  return msxArcLines(`${base}.${part}`, ctx, bondLv, extra);
+};
 function MsxArcTalk({
   run,
   v,
@@ -184616,7 +184679,7 @@ function MsxArcPick({
 }) {
   const s = run.s;
   const foe = opp ? opp.name || msxMonName(opp.species) : '';
-  const lines = msxArcLines(`scn.${s.aid}.summit.r${round + 1}.pick`, ctx, bondLv, {
+  const lines = msxArcScene(msxSuc.SUC, s.aid, round, opp && opp.pick, 'pick', ctx, bondLv, {
     rival: foe,
     owner: opp && opp.breeder ? opp.breeder : ''
   });
@@ -184656,7 +184719,7 @@ function MsxArcAfter({
   onDone
 }) {
   const s = run.s;
-  const lines = msxArcLines(`scn.${s.aid}.summit.r${after.round + 1}.${after.won ? 'win' : 'lose'}`, ctx, bondLv, {
+  const lines = msxArcScene(msxSuc.SUC, s.aid, after.round, after.pick, after.won ? 'win' : 'lose', ctx, bondLv, {
     rival: after.foe
   });
   useSuccessSceneAfterOnce(msxArcEndingScene(s), {
