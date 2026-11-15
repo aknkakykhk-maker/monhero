@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 8fc01691afac583e
+// generated-sha256: 5cae00c25287c509
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -10003,8 +10003,6 @@ const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, tact
   assistantMasmonSleep: true, // 2026-11-12 公開(社長「この文で」・ミハリ fable 確認済み・真にしたら偽へ戻さない)。2026-11-12 助手のマスモンの冬眠(育てた中身を保ったまま眠らせ、あとで起こす・56-assistant-life-masmon-sleep.jsx・キズナ)。保存 mh_assistant_masmon_sleep_v1。育成ノートの印も真のときだけ動く。ミハリ → 窓口の確認のあと真にする
   assistantLifeTaste: true, // 2026-11-15 社長 OK(案・止め絵・文)のあと公開。助手の好き嫌いが遊んでいくうちに変わる(56-assistant-life-masmon-taste.jsx・キズナ8)。ミハリ10の確認済みなら真にしたら偽へ戻さない。保存 mh_assistant_life_taste_v1
   assistantMasmonBond: true, // 2026-11-12 助手のマスモンの総合力とランク・忠誠度・人気・育成方針と叱る/褒める・年齢と寿命・成長の型・育ちの速さ×3(56-assistant-life-masmon-bond.jsx・キズナ・案 masmon-plan/POWER.md 第3版)。保存 mh_assistant_masmon_bond_v1。真にするのは masmon-pvp の配り直し(DAILY_GROWTH_CAP 200)・止め絵と更新履歴の「この文で」・ミハリ・Fable の確認のあと
-  // モンヒロサクセス(プレイヤー側のターン制の育成・PLAN.md)。回2(育成の画面)を作っている途中なので偽。入口はデバッグ設定の「🌱 モンヒロサクセス(試す)」だけ(56-monhero-success-*.jsx)
-  monheroSuccess: false,
   assistantMasmonFuse: true, // 2026-11-12 公開(社長「この文で」・ミハリ fable 確認済み・真にしたら偽へ戻さない)。2026-11-12 冬眠中の助手のマスモンどうしの合体(56-assistant-life-masmon-sleep.jsx・キズナ・案 masmon-plan/FUSE.md 第2版)。保存 mh_assistant_masmon_fuse_v1。冬眠の印も真のときだけ動く。ミハリ → 窓口の確認のあと真にする
   assistantMasmonSuggest: true, // 2026-11-09 助手のマスモン・デッキに「提案する」(キズナ4)。assistant-chat v24 と SQL 202611080003 を窓口が配り、本番で kind:'masmon_suggest' を1回呼んで返事が来るのを確かめた。カード部の受け手 #5126 と一緒に公開
   assistantMasmonGrow: true, // 2026-11-11 助手のマスモンの育成基盤(社長の仕様書の第①段階・キズナ4)。6能力・1日3回の自主育成・関わるほど強くなる。社長「この文で公開」。相談(鍛えて・休ませて)の読み取りは assistant-chat の配り直しのあとから
@@ -10031,7 +10029,7 @@ const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, tact
   // モンヒロサクセス(2026-11-12〜作っている途中。下書き docs/progress/player-raise/RELEASE-DRAFT.md)。
   //   偽のあいだは、更新履歴の項目・助手の告知・ヘルプのグループが出ない。予告の項目(update_notice_monsaku_soon_v1)は偽のあいだだけ出て、
   //   真になると「紹介」に直した同じ項目へ入れ替わる(unreleasedFlag と releaseFlag の組)。ミハリ → 窓口の最終確認のあとに真にする
-  monheroSuccess: false,
+  monheroSuccess: true, // β公開(r1115-206。ミハリ12 の2周目 重大・高0件・社長の最後の確認 OK のあと窓口の合図でマージ。前に同じ名前の行が2つあり後ろが効いていたので1つにまとめた)
   // モンヒロサクセス 第1話のお話(monsuc_beta_ep1・2026-11-14 社長「β版公開の前に1話」)。monheroSuccess とは切り離した予告のお話。
   //   真のあいだ、公開のあとの最初の HOME で1回だけ流し、回想にも出す(β版の公開のあとも回想に残す)
   monsucStoryEp1: true, // 2026-11-14 社長 OK(窓口経由)
