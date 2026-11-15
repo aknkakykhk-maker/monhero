@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: c5d51e58aa15a976
+// generated-sha256: b541fc1a7aad4385
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -7054,6 +7054,9 @@ const SuccessSound = (() => {
   let beforeKey = null;    // 入る前に鳴っていた曲(離れるときに戻す)
   let beforeQuiet = false; // 入る前の「裏の音を止める印」
   let curBgm = null;       // いまサクセスが流している曲
+  let onceKey = null;      // 1回だけ流す曲(勝ち負けのジングル)を流し始めた曲と時刻。ジングルのあとへ曲をつなぐのに使う(r1115-091)
+  let onceAt = 0;
+  let laterTimer = null;   // ジングルが終わるのを待っている場面
 
   const audio = () => (typeof Audio_ !== 'undefined' ? Audio_ : null);
   const knownTrack = (id) => !!(id && typeof BGM_TRACK_BY_ID !== 'undefined' && BGM_TRACK_BY_ID[id]);
@@ -7072,7 +7075,7 @@ const SuccessSound = (() => {
   const leave = () => {
     const a = audio();
     if (!active) return;
-    active = false; epoch += 1;
+    active = false; epoch += 1; clearLater(); onceKey = null;
     if (!a) { curBgm = null; return; }
     try { if (a.setBackgroundSeQuiet) a.setBackgroundSeQuiet(beforeQuiet); } catch (e) {}
     const wasMine = curBgm !== null;
@@ -7095,9 +7098,13 @@ const SuccessSound = (() => {
     let now = key; try { now = a.currentBgmKey ? a.currentBgmKey() : key; } catch (e) {}
     if (key === curBgm && now === key) return key;
     curBgm = key;
+    clearLater();
+    const t = typeof BGM_TRACK_BY_ID !== 'undefined' ? BGM_TRACK_BY_ID[key] : null;
+    if (t && t.loop === false) { onceKey = key; onceAt = Date.now(); } else { onceKey = null; }
     try { a.playBGM(key); } catch (e) {}
     return key;
   };
+  const clearLater = () => { if (laterTimer) { clearTimeout(laterTimer); laterTimer = null; } };
 
   // 場面の曲が確かに鳴っているようにする(試合の曲の見張り。r1115-048)。違う曲なら鳴らし直し、同じ曲で止まっていれば(読み込みの失敗など)鳴らし直す。
   //   ジングルが鳴っているあいだは触らない(ジングルが終わると Audio_ がいまの曲=この曲へ戻す)
@@ -7124,6 +7131,19 @@ const SuccessSound = (() => {
     return name;
   };
 
+  // 勝ち負けのジングルが鳴っている途中なら、鳴り終わってから場面に入る(エンディングの曲。r1115-091)。鳴っていなければすぐ入る
+  const ONCE_MS = 7200; // ジングルの長さ(勝ち 6.9秒・負け 6.9秒)より少し長く
+  const sceneAfterOnce = (sceneId, opts = null) => {
+    if (!active) enter();
+    clearLater();
+    const a = audio();
+    let now = null; try { now = a && a.currentBgmKey ? a.currentBgmKey() : null; } catch (e) {}
+    const rest = onceKey && now === onceKey ? onceAt + ONCE_MS - Date.now() : 0;
+    if (!(rest > 0)) { scene(sceneId, opts); return; }
+    const my = epoch;
+    laterTimer = setTimeout(() => { laterTimer = null; if (active && my === epoch) scene(sceneId, opts); }, Math.min(rest, ONCE_MS));
+  };
+
   // 場面に入った合図(曲 + 効果音)。画面は場面が替わるたびにこれを1回呼ぶ
   const scene = (sceneId, opts = null) => {
     if (!active) enter();
@@ -7132,7 +7152,7 @@ const SuccessSound = (() => {
     se(sceneId, opts && opts.delayMs);
   };
 
-  return { enter, leave, scene, bgm, keep, se, isActive: () => active };
+  return { enter, leave, scene, sceneAfterOnce, bgm, keep, se, isActive: () => active };
 })();
 
 // モンサクの画面の内側(育成中・修行・大会・引退など)で使う入り口。sceneId が替わるたびに場面の曲と効果音を鳴らすだけで、
@@ -7145,6 +7165,15 @@ const useSuccessScene = (sceneId, opts = null) => {
   useEffect(() => {
     if (!sceneId) return undefined;
     SuccessSound.scene(sceneId, { season, delayMs });
+    return undefined;
+  }, [sceneId, season]);
+};
+// useSuccessScene と同じだが、勝ち負けのジングルが鳴っている途中なら鳴り終わってから曲を替える(エンディング。r1115-091)
+const useSuccessSceneAfterOnce = (sceneId, opts = null) => {
+  const season = opts && opts.season;
+  useEffect(() => {
+    if (!sceneId) return undefined;
+    SuccessSound.sceneAfterOnce(sceneId, { season });
     return undefined;
   }, [sceneId, season]);
 };
@@ -92795,6 +92824,8 @@ const msxArcLines = (scene, ctx, bondLv, extra) => {
 };
 const msxArcHas = (SUC, aid) => Boolean(SUC && SUC.ARC && SUC.ARC[aid]);
 const msxArcFullBody = (aid, ex) => { const w = msxWho(aid); const f = w && typeof assistantFullBodyImage === 'function' ? assistantFullBodyImage(w, ex) : null; return f || msxBody(aid, ex); };
+// エンディングの曲の場面(data/success-sounds.js)。エンディングが付いていなければ null(曲を替えない)
+const msxArcEndingScene = (s) => (s && s.ending && !s.ending.seen ? (s.ending.kind === 'bad' ? 'endingBad' : 'ending') : null);
 // 試合のあとの掛け合い(ヒーローズファイナルのときだけ)。MsxR3Battle が settle のときに run.arcAfter へ入れる
 const msxArcAfterOf = (SUC, s, b, won, foe) => (b && b.kind === 'summit' && msxArcHas(SUC, s.aid)
   ? { round: b.round, won: !!won, foe: foe ? (foe.name || msxMonName(foe.species)) : '', species: foe ? foe.species : null, turn: s.turn } : null);
@@ -92843,6 +92874,7 @@ function MsxArcPick({ run, v, ev, onPause, ctx, bondLv, opp, round, onDone }) {
 function MsxArcAfter({ run, v, ev, onPause, ctx, bondLv, after, onDone }) {
   const s = run.s;
   const lines = msxArcLines(`scn.${s.aid}.summit.r${after.round + 1}.${after.won ? 'win' : 'lose'}`, ctx, bondLv, { rival: after.foe });
+  useSuccessSceneAfterOnce(msxArcEndingScene(s), { season: msxCalendar(s.turn).season }); // 最後の試合のあとならエンディングの曲へ(r1115-091)
   return <MsxArcTalk run={run} v={v} ev={ev} onPause={onPause} aid={s.aid} lines={lines} head={after.won ? '試合のあとで' : 'くやしい夜'} dark={!after.won}
     bg={after.won ? 'images/success/scenes/venue-summit.png' : 'images/story-bg/monhero_plaza_evening.jpg'} fallback={after.won ? '勝ったね！' : 'おつかれさま…'} onDone={onDone}/>;
 }
@@ -92885,7 +92917,7 @@ function MsxArcEnding({ run, setRun, v, ev, onPause, ctx, bondLv }) {
   const { SUC } = msxSuc;
   const s = run.s; const end = s.ending; const kind = end.kind;
   const [step, setStep] = useState(0); // 0 = エンディング / 1〜n = お祝い / n+1 = 特別演出
-  useSuccessScene(kind === 'bad' ? 'cupLose' : 'cupWin', { season: msxCalendar(s.turn).season });
+  useSuccessSceneAfterOnce(msxArcEndingScene(s), { season: msxCalendar(s.turn).season }); // ジングルのあと、お祝いの曲を引退まで流す(r1115-091)
   const parties = Array.isArray(end.parties) ? end.parties : [];
   const finish = () => { const r = typeof SUC.endingSeen === 'function' ? SUC.endingSeen(s) : { state: { ...s, ending: { ...end, seen: true } } }; setRun({ ...run, s: r.state, arcAfter: undefined }); };
   const goNext = () => { if (step < parties.length) setStep(step + 1); else if (kind === 'super' && step === parties.length) setStep(step + 1); else finish(); };
@@ -94505,7 +94537,7 @@ function MsaNext({ side, name, hp, names, face, line }) {
 // 判定の画面(2026-11-15 r1115-058 社長): 30ターンで決着がつかなかったときの「判定!」。試合の配置とは別の独立した部品(画面いっぱいに重ねる)
 //   row … 芯の判定の行 { rows:[{key,a,b,win}], winsA, winsB, by, hpA, hpB, limit }。names … { A, B }。onGo … タップか9秒で次へ
 const MSA_JUDGE_LABEL = { pct: ['❤️', '残ライフ'], dmg: ['⚔️', '与えたダメージ'], guts: ['🔥', '消費ガッツ'] };
-const MSA_JUDGE_BY = { hp: '勝ち数が同じなので、残ライフの量(実数)で決着', pct: '残ライフの量も同じなので、残ライフ%で決着', dmg: 'ここまで同じなので、与えたダメージで決着', tie: 'すべて同じなので、引き分けにせず負け扱い' };
+const MSA_JUDGE_BY = { hp: '勝ち数が同じなので、残ライフの量(実数)で決着', pct: '残ライフの量も同じなので、残ライフ%で決着', dmg: 'ここまで同じなので、与えたダメージで決着', tie: '全て同じなので、引き分けにせず負け扱い' };
 const MSA_JUDGE_CSS = `
 .msa-judge{position:fixed;inset:0;z-index:9650;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:max(12px,env(safe-area-inset-top)) 12px max(12px,env(safe-area-inset-bottom));background:#0b0820f2;color:#fff;overflow-y:auto;font-family:inherit}
 .msa-judge>*{flex:none;width:100%;max-width:420px}
