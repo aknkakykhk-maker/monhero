@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 0ad10a14a8e4dce9
+// source-sha256: e9bdc975c4612b59
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -61172,7 +61172,7 @@ const MULTI_STAMP_SLOT_BASE = 8;
 const MULTI_STAMP_SLOT_STEP = 4;
 const MULTI_STAMP_SLOT_BUY_MAX = 2;
 const MULTI_STAMP_CUSTOM_ID = 'x';
-const MULTI_STAMP_CUSTOM_MAX = 8;
+const MULTI_STAMP_CUSTOM_MAX = 10;
 const MULTI_STAMP_WORD_CLAMP = Object.freeze({
   display: '-webkit-box',
   WebkitBoxOrient: 'vertical',
