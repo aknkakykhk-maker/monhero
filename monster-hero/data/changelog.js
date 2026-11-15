@@ -39,11 +39,12 @@ const CHANGELOG = [
     date: "2026-11-15 10:01", type:'update', group:'rhythm', title:'新曲「Sparkling Pink Overture」を追加しました', status:'new',
     image:'images/song-art/sparkling-pink-overture.jpg?v=a9b0c3ede321',
     items:[
-      'モンヒロビートに「Sparkling Pink Overture」（2分4秒）を追加しました。ピアノが主役の、BPM 212 のはやい曲です。',
+      'モンヒロビートに「Sparkling Pink Overture」（2分4秒）を追加しました。助手のききが、はじめて作った曲です。ピアノが主役の、BPM 212 のはやい曲です。',
       'レベルは EASY Lv.13 ／ NORMAL Lv.17 ／ HARD Lv.24 ／ EXPERT Lv.31 ／ MASTER Lv.39 ／ HELL Lv.52 です。',
       'ノーツ数は 281 ／ 330 ／ 459 ／ 577 ／ 621 ／ 593 です。',
       '歯ごたえのある、難しめの譜面です。',
       'この曲は1曲ビートP500で買って遊びます。曲えらびの「🔒 500P」か、ビートP交換所の「曲」から買えます。',
+      '曲えらびを開くと、ききがはじめて曲を作ったお話が流れます。あとから、プロフィールの「イベント回想」でも読めます。',
     ],
     assistantNotice:{ id:'update_notice_sparkling_pink_overture_v1', type:'content' },
   },

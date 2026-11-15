@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c702d7a319b2c653
+// source-sha256: ca03a64dba1bbea2
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -720,6 +720,12 @@ const EVENT_REPLAY_GROUPS = Object.freeze([{
   label: 'モンヒロサクセス',
   note: '新しい育成場のお話',
   color: '#4ade80'
+}, {
+  id: 'kiki_song',
+  emoji: '🎹',
+  label: 'ききのはじめての曲',
+  note: 'ききが初めて作った曲のお話',
+  color: '#f9a8d4'
 }, {
   id: 'halloween',
   emoji: '🎃',
@@ -7702,6 +7708,7 @@ const rhythmAchievementPending = (ledger, rules, eligible) => {
 const pandoraBossBgmForBattle = (heroId, currentWave, enemyId) => heroId === 'Pandora' && (enemyId === 'Moo' || currentWave === 10) ? 'pandora_boss' : null;
 const eikiBossBgmForBattle = (heroId, currentWave, enemyId) => heroId === 'Eiki' && (enemyId === 'Moo' || currentWave === 10) ? 'eiki_boss' : null;
 const DEFAULT_BGM_ARRANGEMENT = Object.freeze({
+  sparklingPinkStoryEvent: 'melo_sparkling_pink_overture',
   erubinJoinStoryEvent: 'original_event_01',
   rhythmGrandOpenEvent: 'kaze_ga_soyogu',
   cardBattleIntroEvent: 'atsu_cup_theme',
@@ -7802,6 +7809,7 @@ const eventScriptBgmAt = (script, step) => {
 };
 const EVENT_BGM_FADE_MS = 800;
 const EVENT_BGM_SCENES = Object.freeze({
+  sparkling_pink_kiki_story: 'sparklingPinkStoryEvent',
   erubin_join_2026_11: 'erubinJoinStoryEvent',
   rhythm_grand_open_teaser: 'rhythmGrandOpenEvent',
   rhythm_grand_open: 'rhythmGrandOpenEvent',
@@ -14733,6 +14741,7 @@ const helpPlayerFlagOn = name => !!name && HELP_PLAYER_FLAGS[name] === true;
 const CARD_CUP_STORY_ID = 'card_cup_2026_10_31';
 const RHYTHM_GRAND_OPEN_TEASER_STORY_ID = 'rhythm_grand_open_teaser';
 const MONSUC_BETA_EP1_STORY_ID = 'monsuc_beta_ep1';
+const SPARKLING_PINK_STORY_ID = 'sparkling_pink_kiki_story';
 const RHYTHM_GRAND_OPEN_STORY_ID = 'rhythm_grand_open';
 const SORASHIDO_GIFT_KEY = 'mh_sorashido_gift_v1';
 const SORASHIDO_GIFT_BEAT_POINTS = 10000;
@@ -230909,7 +230918,7 @@ function MonsterHeroGame() {
   const PANDORA_WINGS_STORY_IDS = PANDORA_WINGS_STORIES.map(story => story.id);
   const PANDORA_WINGS_EVENT_ID = 'pandora_wings_2026_11_02';
   const PANDORA_WINGS_THANKS_STORY_ID = 'pandora_wings_2026_ep8';
-  const RHYTHM_EVENT_STORY_IDS = [...HALLOWEEN_NIGHT_STORY_IDS, ...RAID_JACK_STORY_IDS, ...PANDORA_WINGS_STORY_IDS, PANDORA_WINGS_THANKS_STORY_ID, MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, RAID_JACK_RHYTHM_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RAID_JACK_HOWTO_STORY_ID, ATSU_JOIN_STORY_ID, KYUKO_JOIN_STORY_ID, SORASHIDO_JOIN_STORY_ID, ERUBIN_JOIN_STORY_ID, CARD_CUP_STORY_ID, RHYTHM_GRAND_OPEN_TEASER_STORY_ID, RHYTHM_GRAND_OPEN_STORY_ID, MONSUC_BETA_EP1_STORY_ID];
+  const RHYTHM_EVENT_STORY_IDS = [...HALLOWEEN_NIGHT_STORY_IDS, ...RAID_JACK_STORY_IDS, ...PANDORA_WINGS_STORY_IDS, PANDORA_WINGS_THANKS_STORY_ID, MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, RAID_JACK_RHYTHM_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RAID_JACK_HOWTO_STORY_ID, ATSU_JOIN_STORY_ID, KYUKO_JOIN_STORY_ID, SORASHIDO_JOIN_STORY_ID, ERUBIN_JOIN_STORY_ID, CARD_CUP_STORY_ID, RHYTHM_GRAND_OPEN_TEASER_STORY_ID, RHYTHM_GRAND_OPEN_STORY_ID, MONSUC_BETA_EP1_STORY_ID, SPARKLING_PINK_STORY_ID];
   const RHYTHM_EVENT_STORY_BY_EVENT = {
     [MONBEAT_CUP_EVENT_ID]: MONBEAT_CUP_STORY_ID,
     [SYMPHONY_EVENT_ID]: SYMPHONY_STORY_ID,
@@ -231371,6 +231380,17 @@ function MonsterHeroGame() {
     if (rhythmEventStoryStartedRef.current.includes(MONSUC_BETA_EP1_STORY_ID)) return;
     setRhythmEventStoryPending(prev => prev || MONSUC_BETA_EP1_STORY_ID);
   }, [rhythmEventStorySeen, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
+  useEffect(() => {
+    if (!Array.isArray(rhythmEventStorySeen) || rhythmEventStorySeen.includes(SPARKLING_PINK_STORY_ID)) return;
+    if (!(bootPhase === 'GAME' && gameState === 'RHYTHM_DEMO_HOME' && onboarded && !onboardingPreview && tutorialStep == null && kikiIntroStep == null && momosukeIntroStep == null && !eventReplay && !rhythmHellGuide && !loginBonusPopup)) return;
+    if (rhythmEventStoryStartedRef.current.includes(SPARKLING_PINK_STORY_ID)) return;
+    rhythmEventStoryStartedRef.current = [...rhythmEventStoryStartedRef.current, SPARKLING_PINK_STORY_ID];
+    setEventReplay({
+      id: SPARKLING_PINK_STORY_ID,
+      step: 0,
+      live: true
+    });
+  }, [rhythmEventStorySeen, bootPhase, gameState, onboarded, onboardingPreview, tutorialStep, kikiIntroStep, momosukeIntroStep, eventReplay, rhythmHellGuide, loginBonusPopup]);
   useEffect(() => {
     if (typeof setSorashidoJoinSeenForShop === 'function') setSorashidoJoinSeenForShop(Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SORASHIDO_JOIN_STORY_ID));
   }, [rhythmEventStorySeen]);
@@ -234641,6 +234661,7 @@ function MonsterHeroGame() {
     rhythmGrandOpenTeaserSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(RHYTHM_GRAND_OPEN_TEASER_STORY_ID),
     rhythmGrandOpenSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(RHYTHM_GRAND_OPEN_STORY_ID),
     monsucBetaEp1Seen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(MONSUC_BETA_EP1_STORY_ID),
+    sparklingPinkStorySeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SPARKLING_PINK_STORY_ID),
     symphonyEventSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SYMPHONY_STORY_ID)
   };
   const isEventReplayUnlocked = event => !!(event && event.alwaysUnlocked) || !!EVENT_REPLAY_UNLOCK_FLAGS[event && event.unlockedKey];
@@ -249164,7 +249185,7 @@ function MonsterHeroGame() {
     }, {
       id: 'event',
       label: 'イベント',
-      items: [['kikiIntro', 'きき加入イベント BGM'], ['momosukeIntro', 'ももすけ登場イベント BGM'], ['monbeatCupEvent', 'モンヒロビート大会イベント BGM'], ['rhythmMultiEvent', 'みんなで対戦のお話 BGM'], ['masuCallEvent', 'マスモンとセッションのお話 BGM'], ['halloweenNightEvent', 'ハロウィン・ナイトのお話 BGM'], ['assistantChatStoryEvent', '助手とおしゃべりのお話 BGM'], ['atsuJoinStoryEvent', 'あつ加入のお話 BGM'], ['kyukoJoinStoryEvent', 'きゅうこ加入のお話 BGM'], ['cardBattleIntroEvent', 'MFバトルカードのお話 BGM'], ['cardCupStoryEvent', '個人杯のお話 BGM'], ['pandoraWingsStoryEvent', '鍵の向こう側へのお話 BGM']]
+      items: [['kikiIntro', 'きき加入イベント BGM'], ['momosukeIntro', 'ももすけ登場イベント BGM'], ['monbeatCupEvent', 'モンヒロビート大会イベント BGM'], ['rhythmMultiEvent', 'みんなで対戦のお話 BGM'], ['masuCallEvent', 'マスモンとセッションのお話 BGM'], ['halloweenNightEvent', 'ハロウィン・ナイトのお話 BGM'], ['assistantChatStoryEvent', '助手とおしゃべりのお話 BGM'], ['atsuJoinStoryEvent', 'あつ加入のお話 BGM'], ['kyukoJoinStoryEvent', 'きゅうこ加入のお話 BGM'], ['cardBattleIntroEvent', 'MFバトルカードのお話 BGM'], ['cardCupStoryEvent', '個人杯のお話 BGM'], ['pandoraWingsStoryEvent', '鍵の向こう側へのお話 BGM'], ['sparklingPinkStoryEvent', 'ききの「はじめての曲」のお話 BGM']]
     }, {
       id: 'other',
       label: 'その他',

@@ -12517,7 +12517,17 @@ const PANDORA_WINGS_EP8 = [
   { who:'erubin',   e:'happy',    t:'{name}、おつかれさま。来てすぐに、こんなあったかいお話に立ち会えて嬉しかったな☺️' },
 ];
 const PANDORA_WINGS_EP8_CALLS = { mua: 'パンドラ／きゅきゅ', kiki: 'パンドラさん', momosuke: 'パンドラちゃん', dra: 'パンドラ', atsu: 'パンドラ', kyuko: 'パンドラ', sorashido: 'パンドラ', pandora: 'きゅうこ', erubin: 'パンドラちゃん' };
+// TEMP-STUB-SPARKLING(台本が届くまでの仮。コミットしない)
+const SPARKLING_PINK_STORY = [
+  { bg:'monhero_plaza', who:'kiki', e:'happy', t:'{name}、はじめての曲が、できましたでつ。' },
+  { who:'mua', e:'excited', t:'ききちゃん、すごーい！' },
+  { who:'kiki', e:'happy', t:'「Sparkling Pink Overture」、聴いてくだしゃいね。' },
+];
+const SPARKLING_PINK_STORY_CALLS = { mua: 'ききちゃん' };
+// /TEMP-STUB-SPARKLING
 const EVENT_REPLAYS = [
+  // ききが初めて作った曲「Sparkling Pink Overture」のお話(2026-11-15 社長 r1115-102)。曲えらびを開いたときに1回流れ、あとは回想から読める。台本は SPARKLING_PINK_STORY(助手部ココロ2)
+  { id: 'sparkling_pink_kiki_story', date: '2026-11-15 12:00', title: 'はじめての曲 ～Sparkling Pink Overture～', script: SPARKLING_PINK_STORY, calls: SPARKLING_PINK_STORY_CALLS, unlockedKey: 'sparklingPinkStorySeen', group: 'kiki_song' },
   // ぱんぷきん×ジャックのストーリー(2026-10-04・台本は docs/spec/RAID_JACK_STORY.md)。**公開するまでは回想にも出さない**(releaseFlag)。
   // 第1部(halloween_night_2026_part1)は時刻で流れる既存のもの。ここは第1.5部から終章まで。
   //   第1.5部=レイド開始(公開後に初めてHOMEを開いたとき) / 第2〜6部=段階を倒したあと / 終章=期間終了後
