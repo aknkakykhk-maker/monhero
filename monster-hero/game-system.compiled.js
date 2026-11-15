@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b1917b6f8610019a
+// source-sha256: d31ba30b5b09b85b
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -8128,6 +8128,8 @@ const Audio_ = (() => {
       }
       const s = document.createElement('script');
       s.src = 'https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js';
+      s.integrity = 'sha384-c6Uo4N9c3SOEigMVzP6IshUG1wQ5uMp3xeoQFiHWAQ86joWdgyajkvopySyKy/Z6';
+      s.crossOrigin = 'anonymous';
       s.onload = () => {
         Tone = window.Tone;
         res();
@@ -93783,6 +93785,8 @@ const RHYTHM_WATCH_MAX = 10;
 const RHYTHM_WATCH_PING_MS = 10000;
 const RHYTHM_WATCH_TTL_MS = 25000;
 const RHYTHM_WATCH_LIVE_MS = 1000;
+const RHYTHM_WATCH_RETRY_MS = 2000;
+const RHYTHM_WATCH_SWITCH_MS = 8000;
 const RHYTHM_WATCH_AD_MS = 10000;
 const RHYTHM_WATCH_KEY = 'mh_rhythm_multi_spectate_v1';
 const RHYTHM_WATCH_CHAT_INTERVAL_MS = 3000;
@@ -96019,6 +96023,18 @@ const RHYTHM_WATCH = (() => {
       f: st.focus
     });
   };
+  const setFocus = (id, manual = false) => {
+    if (!st) return;
+    st.focus = id;
+    st.focusAt = Date.now();
+    st.focusManual = !!manual;
+    st.noDetail = false;
+    ping();
+  };
+  const focusLive = now => {
+    const r = st && st.rows[st.focus];
+    return !!r && (r.fin === true || r.pAt > 0 && now - r.pAt <= 4000);
+  };
   const intOf = (v, max) => rhythmMultiInt(v, max);
   const feed = raw => {
     if (!st || !raw || typeof raw !== 'object') return;
@@ -96045,13 +96061,11 @@ const RHYTHM_WATCH = (() => {
         st.rows = {};
         st.judged = {};
         st.marks = {};
+        st.tried = [];
       }
       st.songId = rhythmMultiText(raw.sg, 60);
       if (people.length) st.people = people;
-      if (!st.focus || !st.people.some(x => x.id === st.focus)) {
-        st.focus = st.people[0].id;
-        ping();
-      }
+      if (!st.focus || !st.people.some(x => x.id === st.focus)) setFocus(st.people[0].id);
       st.phase = 'playing';
       st.lastPg = now;
       const from = rhythmMultiText(raw.id, 40);
@@ -96099,6 +96113,7 @@ const RHYTHM_WATCH = (() => {
       }
       st.rows[id] = row;
       st.lastPg = now;
+      if (id === st.focus && raw.p != null) st.noDetail = false;
       if (st.people.every(x => st.rows[x.id] && st.rows[x.id].fin)) {
         st.phase = 'ended';
         st.endedAt = now;
@@ -96183,10 +96198,14 @@ const RHYTHM_WATCH = (() => {
       st.rows = {};
       st.judged = {};
       st.marks = {};
+      st.tried = [];
       st.phase = 'playing';
       st.lastPg = now;
-      if (!people.some(x => x.id === st.focus)) st.focus = people[0].id;
-      ping();
+      if (!people.some(x => x.id === st.focus)) setFocus(people[0].id, false);else {
+        st.focusAt = now;
+        st.noDetail = false;
+        ping();
+      }
       emit();
     }
   };
@@ -96198,6 +96217,21 @@ const RHYTHM_WATCH = (() => {
       st.phase = 'ended';
       st.endedAt = now;
       emit();
+    }
+    if (st.phase === 'playing' && st.focus && st.people.length && !focusLive(now)) {
+      if (now - st.lastPing >= RHYTHM_WATCH_RETRY_MS) ping();
+      if (now - (st.focusAt || 0) >= RHYTHM_WATCH_SWITCH_MS) {
+        const tried = st.tried || (st.tried = []);
+        if (!tried.includes(st.focus)) tried.push(st.focus);
+        const next = st.focusManual ? null : st.people.find(x => !tried.includes(x.id) && x.id !== st.focus);
+        if (next) {
+          setFocus(next.id, false);
+          emit();
+        } else if (!st.noDetail) {
+          st.noDetail = true;
+          emit();
+        }
+      }
     }
     if (st.phase === 'connecting' && since > 12000) {
       if (st.quiet) {
@@ -96237,6 +96271,10 @@ const RHYTHM_WATCH = (() => {
         people: [],
         rows: {},
         focus: '',
+        focusAt: 0,
+        focusManual: false,
+        noDetail: false,
+        tried: [],
         members: {},
         judged: {},
         marks: {},
@@ -96278,8 +96316,7 @@ const RHYTHM_WATCH = (() => {
     },
     focus(id) {
       if (!st || !st.people.some(x => x.id === id)) return;
-      st.focus = id;
-      ping();
+      setFocus(id, true);
       emit();
     },
     say(text, stamp = null) {
@@ -99618,7 +99655,11 @@ function RhythmWatchScreen({
     "data-rhythm-watch-lite": true,
     className: "absolute inset-x-2 top-9 text-center text-[11px] font-black text-amber-200",
     style: JA_WRAP_STYLE
-  }, jaWrap('この人の端末が重くなったので、譜面は出さず、数字だけにしています')), waiting && v.phase === 'playing' && React.createElement("p", {
+  }, jaWrap('この人の端末が重くなったので、譜面は出さず、数字だけにしています')), v.noDetail && v.phase === 'playing' && !lite && React.createElement("p", {
+    "data-rhythm-watch-nodetail": true,
+    className: "absolute inset-x-4 top-1/2 -translate-y-1/2 rounded-xl border border-amber-300/50 bg-slate-950/85 px-3 py-2 text-center text-[12px] font-black text-amber-200",
+    style: JA_WRAP_STYLE
+  }, jaWrap(v.focusManual ? 'この人の譜面はまだ届いていません。順位と点は見られます' : 'この部屋の譜面は届いていません(アプリの版が古いときなど)。順位と点は見られます')), waiting && !v.noDetail && v.phase === 'playing' && React.createElement("p", {
     "data-rhythm-watch-waiting": true,
     className: "absolute inset-x-2 top-9 text-center text-[12px] font-black text-amber-200",
     style: {
