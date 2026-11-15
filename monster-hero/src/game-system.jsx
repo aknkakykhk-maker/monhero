@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 49c56028e80bcc26
+// generated-sha256: a40dda2cf43e5529
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -87693,6 +87693,12 @@ const MSX_CSS = `
 .msx .v-hm-lead small{display:block;font-size:10.5px;font-weight:700;color:#cbd5e1}
 .msx .v-hm-new{display:block;width:100%;min-height:44px;margin-top:7px;border-radius:99px;padding:8px 10px;font-size:14px;font-weight:900;text-align:center;background:#1e1a36;border:1.5px solid #f9a8d4;color:#fff;white-space:normal}
 .msx .v-big.v-hm-new{font-size:18px;padding:14px 10px;border:0;background:linear-gradient(90deg,#f472b6,#fb923c)}
+.msx .v-hm-tiles.t4{grid-auto-flow:row;grid-template-columns:1fr 1fr}
+.msx .msx-bm-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px}
+.msx .msx-bm{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-width:0;border-radius:14px;padding:8px 4px;background:#1e1a36;border:1.5px solid #64748b;border-bottom-width:3px;line-height:1.25;text-align:center}
+.msx .msx-bm img{width:100%;max-width:84px;aspect-ratio:1;border-radius:11px;object-fit:cover;background:#0f172a;border:2px solid #475569}
+.msx .msx-bm b{font-size:12px;font-weight:900;max-width:100%;word-break:keep-all}
+.msx .msx-bm small{font-size:10px;font-weight:800;color:#fde68a}
 .msx .v-hm-tiles{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:7px;margin-top:8px}
 .msx .v-hm-tile{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:62px;min-width:0;border-radius:14px;padding:5px 3px;background:#1e1a36;border:1.5px solid #64748b;border-bottom-width:3px;line-height:1.2}
 .msx .v-hm-tile .e{font-size:22px;line-height:1.1}
@@ -88840,6 +88846,45 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf }) {
   );
 }
 
+// ---- part: 56-monsuc-basemon.jsx ----
+// ===== モンヒロサクセスの「ベースモン」(2026-11-15 r1115-043 社長「ホームからベースモンの詳細を見られるように」) =====
+//   ホームの札から開く。使えるベースモンの一覧 → 押すと、はじめる画面・育成中の「くわしく」と同じ部品 MsxMonDetail
+//   (能力・素質・間合い適性・技の升目)。技の升の選びは、はじめる画面と同じ保存(mh_monsuc_techpick_v1)を読み書きする。
+//   マスモン(育てた子)の詳細はマスモンボックスから開く(同じ部品)
+function MsxBaseMons({ data, onClose }) {
+  const SUC = msxSuc.SUC;
+  const unlocked = Array.isArray(data.unlocked) ? data.unlocked : [];
+  const [sp, setSp] = useState(null);
+  const [tpAll, setTpAll] = useState(null);
+  useEffect(() => { let on = true; msxReadTechPick().then((t) => { if (on) setTpAll(t); }).catch(() => { if (on) setTpAll(msxNormTechPick(null)); }); return () => { on = false; }; }, []);
+  const picked = (data.meta && data.meta.picked) || {};
+  let detail = null;
+  if (sp) {
+    const growType = typeof SUC.speciesType === 'function' ? SUC.speciesType(sp) : null;
+    const startSt = typeof SUC.initStats === 'function' ? SUC.initStats(sp) : {};
+    const preview = msxStartPreview(SUC, sp, growType, null, startSt);
+    const apt = typeof msxAptOf === 'function' ? msxAptOf(sp) : ['C', 'C', 'C', 'C', 'C', 'C'];
+    const tpSel = typeof SUC.techPickNorm === 'function' ? SUC.techPickNorm(tpAll && tpAll.base ? tpAll.base[sp] : null, sp) : {};
+    const onTechPick = async (cell, id) => { const next = { ...tpSel, [cell]: id }; try { setTpAll(await msxWriteTechPick('base', sp, next)); } catch (e) { /* 書けなくても画面は動く */ } };
+    detail = <MsxMonDetail pick={{ sel: tpSel, locked: () => false, onPick: onTechPick }} species={sp} name={msxMonName(sp)} sub="ベースモン" st={startSt} apt={apt} type={growType} grades={preview.grades} peak={preview.peak} power={preview.power} rank={preview.rank} onClose={() => setSp(null)} SUC={SUC}/>;
+  }
+  return (
+    <>
+      <MsxHd back="戻る" onBack={onClose} title="🌱 ベースモン"/>
+      <div className="v-body">
+        <div className="v-h">ベースモン<small>押すと、能力・素質・間合い適性・技の升目が見られます</small></div>
+        <div className="msx-bm-grid" data-msx-basemon-list>
+          {unlocked.map((id) => (
+            <button type="button" key={id} className="msx-bm" onClick={() => setSp(id)} data-msx-basemon={id}>
+              <img src={msxMonThumb(id)} alt=""/><b>{msxMonName(id)}</b>{picked[id] ? <small>育成 {picked[id]}回</small> : <small>まだ育てていない</small>}
+            </button>))}
+        </div>
+      </div>
+      {detail}
+    </>
+  );
+}
+
 // ---- part: 56-monhero-success-main.jsx ----
 // ===== モンヒロサクセス: 育成の画面の本体(メイン・トレーニングを選ぶ・結果・叱る/褒める・イッサ博士・ターンが進む・中断と再開) =====
 // 見本: docs/progress/player-raise/mock/png/v3-M・T・K・I.png。大会・修行・引退・合体の中身は回3(MsxR3)
@@ -89158,8 +89203,9 @@ function MonheroSuccessScreen({ onClose, callNameOf, bondLvOf, debug = false, st
   let content = null;
   if (view === 'loading') content = <div className="v-body" style={{ justifyContent: 'center', alignItems: 'center', display: 'flex' }}><div className="msx-note">読み込んでいます…</div></div>;
   else if (view === 'fail') content = (<><MsxHd back="閉じる" onBack={onClose}/><div className="v-body"><div className="v-card">読み込めませんでした。通信のよいところで、もう一度開いてください</div></div></>);
-  else if (view === 'home') content = <MsxHome data={data} run={run} debug={debug} onClose={onClose} onBox={typeof MsxR3Box === 'function' ? () => setView('box') : null} onContinue={() => setView('play')} onNew={() => (run && !run.s.over ? setAsk({ text: '途中の育成があります。新しく始めると、いまの育成はなくなります', yes: '新しく始める', onYes: () => setView('start') }) : setView('start'))} setMeta={setMeta} onWipe={quit} onRank={() => setView('rank')}/>;
+  else if (view === 'home') content = <MsxHome data={data} run={run} debug={debug} onClose={onClose} onBase={typeof MsxBaseMons === 'function' ? () => setView('basemon') : null} onBox={typeof MsxR3Box === 'function' ? () => setView('box') : null} onContinue={() => setView('play')} onNew={() => (run && !run.s.over ? setAsk({ text: '途中の育成があります。新しく始めると、いまの育成はなくなります', yes: '新しく始める', onYes: () => setView('start') }) : setView('start'))} setMeta={setMeta} onWipe={quit} onRank={() => setView('rank')}/>;
   else if (view === 'start') content = <MsxStart data={data} SUC={msxSuc.SUC} onCancel={() => setView('home')} onStart={startRun} bondLvOf={bondLvOf} callNameOf={callNameOf}/>;
+  else if (view === 'basemon' && typeof MsxBaseMons === 'function') content = <MsxBaseMons data={data} onClose={() => setView('home')}/>;
   else if (view === 'box' && typeof MsxR3Box === 'function') content = <MsxR3Box onClose={startView === 'box' ? onClose : toHome}/>;
   else if (view === 'play' && run) content = <MsxPlay run={run} setRun={setRun} onPause={toHome} onQuit={quit} callNameOf={callNameOf} bondLvOf={bondLvOf} debug={debug} onSub={setPlaySub}/>;
   // β版(56-monsuc-beta.jsx): はじめて開いたときの話・はじめての育成を終えたときの話・育成中の最初の1回だけのみゅあの説明
@@ -89199,12 +89245,13 @@ function MonheroSuccessScreen({ onClose, callNameOf, bondLvOf, debug = false, st
 
 // ---- はじめの画面(題字ロゴ・続きから・新しく始める・保存枠/ランキング/図鑑の札・デバッグの道具) ----
 // 途中の育成があるときは「▶ 続きから」をいちばん大きく、無いときは「新しく育成をはじめる」をいちばん大きく(2026-11-14 社長の選んだ案)
-function MsxHome({ data, run, debug, onClose, onContinue, onNew, setMeta, onWipe, onRank, onBox }) {
+function MsxHome({ data, run, debug, onClose, onContinue, onNew, setMeta, onWipe, onRank, onBox, onBase }) {
   const SUC = msxSuc.SUC;
   const s = run && run.s;
   const v = s && !s.over ? SUC.peek(s) : null;
   const [dex, setDex] = useState(false);
   const tiles = [
+    onBase ? { key: 'bm', e: '🌱', name: 'ベースモン', sub: `${(data.unlocked || []).length}体`, on: onBase, attr: { 'data-msx-home-basemon': true } } : null,
     onBox ? { key: 'box', e: '📦', name: 'マスモンボックス', sub: `${data.box.mons.length}/${data.box.cap}`, on: onBox, attr: { 'data-msx-r3-openbox': true } } : null,
     typeof MonsucRankScreen === 'function' ? { key: 'rank', e: '🏆', name: 'ランキング', on: onRank, attr: {} } : null,
     typeof MsxDex === 'function' ? { key: 'dex', e: '📖', name: 'イベント図鑑', on: () => setDex(true), attr: { 'data-msx-dex-home': true } } : null,
@@ -89228,7 +89275,7 @@ function MsxHome({ data, run, debug, onClose, onContinue, onNew, setMeta, onWipe
         ) : <div className="v-hm-lead">育てるモンスターを選んで、46ターンの育成を始めよう<small>編成の6体が集まったトレーニングほど、よく伸びる</small></div>}
         <button type="button" className={s ? 'v-hm-new' : 'v-big v-hm-new'} onClick={onNew} data-msx-home-new>🌱 新しく育成を始める</button>
         {tiles.length ? (
-          <div className="v-hm-tiles">
+          <div className={`v-hm-tiles${tiles.length > 3 ? ' t4' : ''}`}>
             {tiles.map((t) => <button key={t.key} type="button" className="v-hm-tile" onClick={t.on} {...t.attr}><span className="e">{t.e}</span><b>{t.name === 'マスモンボックス' ? <>マスモン<wbr/>ボックス</> : t.name}</b>{t.sub ? <small>{t.sub}</small> : null}</button>)}
           </div>
         ) : null}

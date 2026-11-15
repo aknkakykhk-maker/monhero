@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 38305586b5f5f5e1
+// source-sha256: bf60564813fdf5b3
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -168514,6 +168514,12 @@ const MSX_CSS = `
 .msx .v-hm-lead small{display:block;font-size:10.5px;font-weight:700;color:#cbd5e1}
 .msx .v-hm-new{display:block;width:100%;min-height:44px;margin-top:7px;border-radius:99px;padding:8px 10px;font-size:14px;font-weight:900;text-align:center;background:#1e1a36;border:1.5px solid #f9a8d4;color:#fff;white-space:normal}
 .msx .v-big.v-hm-new{font-size:18px;padding:14px 10px;border:0;background:linear-gradient(90deg,#f472b6,#fb923c)}
+.msx .v-hm-tiles.t4{grid-auto-flow:row;grid-template-columns:1fr 1fr}
+.msx .msx-bm-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px}
+.msx .msx-bm{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-width:0;border-radius:14px;padding:8px 4px;background:#1e1a36;border:1.5px solid #64748b;border-bottom-width:3px;line-height:1.25;text-align:center}
+.msx .msx-bm img{width:100%;max-width:84px;aspect-ratio:1;border-radius:11px;object-fit:cover;background:#0f172a;border:2px solid #475569}
+.msx .msx-bm b{font-size:12px;font-weight:900;max-width:100%;word-break:keep-all}
+.msx .msx-bm small{font-size:10px;font-weight:800;color:#fde68a}
 .msx .v-hm-tiles{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:7px;margin-top:8px}
 .msx .v-hm-tile{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:62px;min-width:0;border-radius:14px;padding:5px 3px;background:#1e1a36;border:1.5px solid #64748b;border-bottom-width:3px;line-height:1.2}
 .msx .v-hm-tile .e{font-size:22px;line-height:1.1}
@@ -171304,6 +171310,84 @@ function MsxStart({
     ctx: betaCtx
   }) : null);
 }
+function MsxBaseMons({
+  data,
+  onClose
+}) {
+  const SUC = msxSuc.SUC;
+  const unlocked = Array.isArray(data.unlocked) ? data.unlocked : [];
+  const [sp, setSp] = useState(null);
+  const [tpAll, setTpAll] = useState(null);
+  useEffect(() => {
+    let on = true;
+    msxReadTechPick().then(t => {
+      if (on) setTpAll(t);
+    }).catch(() => {
+      if (on) setTpAll(msxNormTechPick(null));
+    });
+    return () => {
+      on = false;
+    };
+  }, []);
+  const picked = data.meta && data.meta.picked || {};
+  let detail = null;
+  if (sp) {
+    const growType = typeof SUC.speciesType === 'function' ? SUC.speciesType(sp) : null;
+    const startSt = typeof SUC.initStats === 'function' ? SUC.initStats(sp) : {};
+    const preview = msxStartPreview(SUC, sp, growType, null, startSt);
+    const apt = typeof msxAptOf === 'function' ? msxAptOf(sp) : ['C', 'C', 'C', 'C', 'C', 'C'];
+    const tpSel = typeof SUC.techPickNorm === 'function' ? SUC.techPickNorm(tpAll && tpAll.base ? tpAll.base[sp] : null, sp) : {};
+    const onTechPick = async (cell, id) => {
+      const next = {
+        ...tpSel,
+        [cell]: id
+      };
+      try {
+        setTpAll(await msxWriteTechPick('base', sp, next));
+      } catch (e) {}
+    };
+    detail = React.createElement(MsxMonDetail, {
+      pick: {
+        sel: tpSel,
+        locked: () => false,
+        onPick: onTechPick
+      },
+      species: sp,
+      name: msxMonName(sp),
+      sub: "ベースモン",
+      st: startSt,
+      apt: apt,
+      type: growType,
+      grades: preview.grades,
+      peak: preview.peak,
+      power: preview.power,
+      rank: preview.rank,
+      onClose: () => setSp(null),
+      SUC: SUC
+    });
+  }
+  return React.createElement(React.Fragment, null, React.createElement(MsxHd, {
+    back: "戻る",
+    onBack: onClose,
+    title: "🌱 ベースモン"
+  }), React.createElement("div", {
+    className: "v-body"
+  }, React.createElement("div", {
+    className: "v-h"
+  }, "ベースモン", React.createElement("small", null, "押すと、能力・素質・間合い適性・技の升目が見られます")), React.createElement("div", {
+    className: "msx-bm-grid",
+    "data-msx-basemon-list": true
+  }, unlocked.map(id => React.createElement("button", {
+    type: "button",
+    key: id,
+    className: "msx-bm",
+    onClick: () => setSp(id),
+    "data-msx-basemon": id
+  }, React.createElement("img", {
+    src: msxMonThumb(id),
+    alt: ""
+  }), React.createElement("b", null, msxMonName(id)), picked[id] ? React.createElement("small", null, "育成 ", picked[id], "回") : React.createElement("small", null, "まだ育てていない"))))), detail);
+}
 const MSX_POLICY_SCALE = Object.freeze(['超溺愛', '溺愛', '甘い', '普通', '厳しい', 'スパルタ', '超スパルタ']);
 const MSX_RES = Object.freeze({
   great: {
@@ -172204,6 +172288,7 @@ function MonheroSuccessScreen({
     run: run,
     debug: debug,
     onClose: onClose,
+    onBase: typeof MsxBaseMons === 'function' ? () => setView('basemon') : null,
     onBox: typeof MsxR3Box === 'function' ? () => setView('box') : null,
     onContinue: () => setView('play'),
     onNew: () => run && !run.s.over ? setAsk({
@@ -172221,6 +172306,9 @@ function MonheroSuccessScreen({
     onStart: startRun,
     bondLvOf: bondLvOf,
     callNameOf: callNameOf
+  });else if (view === 'basemon' && typeof MsxBaseMons === 'function') content = React.createElement(MsxBaseMons, {
+    data: data,
+    onClose: () => setView('home')
   });else if (view === 'box' && typeof MsxR3Box === 'function') content = React.createElement(MsxR3Box, {
     onClose: startView === 'box' ? onClose : toHome
   });else if (view === 'play' && run) content = React.createElement(MsxPlay, {
@@ -172311,13 +172399,23 @@ function MsxHome({
   setMeta,
   onWipe,
   onRank,
-  onBox
+  onBox,
+  onBase
 }) {
   const SUC = msxSuc.SUC;
   const s = run && run.s;
   const v = s && !s.over ? SUC.peek(s) : null;
   const [dex, setDex] = useState(false);
-  const tiles = [onBox ? {
+  const tiles = [onBase ? {
+    key: 'bm',
+    e: '🌱',
+    name: 'ベースモン',
+    sub: `${(data.unlocked || []).length}体`,
+    on: onBase,
+    attr: {
+      'data-msx-home-basemon': true
+    }
+  } : null, onBox ? {
     key: 'box',
     e: '📦',
     name: 'マスモンボックス',
@@ -172389,7 +172487,7 @@ function MsxHome({
     onClick: onNew,
     "data-msx-home-new": true
   }, "🌱 新しく育成を始める"), tiles.length ? React.createElement("div", {
-    className: "v-hm-tiles"
+    className: `v-hm-tiles${tiles.length > 3 ? ' t4' : ''}`
   }, tiles.map(t => React.createElement("button", _extends({
     key: t.key,
     type: "button",
