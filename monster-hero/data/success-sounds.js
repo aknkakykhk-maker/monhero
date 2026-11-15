@@ -52,6 +52,12 @@
     { id: 'actGreatCharge', name: 'トレーニングの場面: 大成功の溜め', se: 'enemyCharge' },
     { id: 'actGreatBoom', name: 'トレーニングの場面: 大成功の爆発', se: 'crit' },
     { id: 'actComboBoom', name: 'トレーニングの場面: 絆の大爆発', se: 'fusion' },
+    // 持ち物を使ったときの演出(56-monsuc-itemfx.jsx・2026-11-15 社長 r1115-079)。使った音と、種類ごとの効いた音
+    { id: 'itemUse', name: '持ち物: 使った', se: 'trainingTool' },
+    { id: 'itemHeal', name: '持ち物: 回復した', se: 'heal' },
+    { id: 'itemBuff', name: '持ち物: 効き目がついた', se: 'levelUp' },
+    { id: 'itemBond', name: '持ち物: 気持ちが通じた', se: 'trainingReward' },
+    { id: 'itemBox', name: '持ち物: 中身が出てきた', se: 'join' },
     // 修行の段(MsxShugyoStages)。曲は修行(ascetic)のまま。段の切り替え・溜め・斬る・跳ぶ・叩きつけ
     { id: 'qStage', name: '修行の段: 切り替え', se: 'trainingDecide' },
     { id: 'qCharge', name: '修行の段: 溜め', se: 'enemyCharge' },
@@ -80,6 +86,10 @@
     // 勝ち・負けは短いジングルを1回だけ流して無音(2026-11-14 社長)。ジングルが効果音のかわりなので se は付けない
     { id: 'cupWin', name: '大会: 勝ち', bgm: 'monsuc_win', se: null },
     { id: 'cupLose', name: '大会: 負け', bgm: 'monsuc_lose', se: null },
+    // エンディング(ヒーローズファイナルのあとの掛け合い・エンディング・お祝い)。勝ち負けのジングルが鳴り終わってから流し、引退の画面まで切らさない(r1115-091)
+    //   グッド・超グッド = クリアテーマ / バッド = リザルトテーマ(引退の画面と同じ曲なので、そのまま続く)
+    { id: 'ending', name: 'エンディング(優勝)', bgm: 'ichika_clear', se: null },
+    { id: 'endingBad', name: 'エンディング(バッド)', bgm: 'original_result', se: null },
     // イッサ博士・ゲームオーバー・引退
     { id: 'issa', name: 'イッサ博士', bgm: 'original_event_01', se: 'trainingTool' },
     // 博士の大きな賭けの演出(2026-11-14 社長「イッサ博士の演出が弱い」。56-monsuc-issa.jsx)。大成功は閃光+大ファンファーレ+きらめきの重ねで専用の音にする

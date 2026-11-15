@@ -269,6 +269,13 @@ ok(near(SUC.failRateOf({ ...base, yosu: { sabori: { visits: 0 } } }) - fFull, 0.
     ok(!SUC.act({ ...base, tickets: 1 }, { kind: 'shugyo', course: 'fire', techs: two }).out.ok && SUC.act({ ...base, tickets: 1 }, { kind: 'shugyo', course: 'fire', techs: [two[0]] }).out.ok, 'チケット1枚で超修行が選べる/ふつうの修行ができない');
     ok(sup.state.hp < one.state.hp, '超修行の疲れが2回分になっていない');
     ok(!SUC.act({ ...base, superLeft: 0 }, { kind: 'shugyo', course: 'fire', techs: two }).out.ok, '超修行の残りが0なのに2つ選べる');
+    // 体力が足りないと行けない(r1115-062): 修行 30・超修行 60。修行は行けても超修行は行けないことがある
+    const h1 = SUC.shugyoHpOf(base, false); const h2 = SUC.shugyoHpOf(base, true);
+    ok(h1 === SUC.SHUGYO.hp && h2 === h1 * 2, '修行・超修行で使う体力がずれている');
+    const low = { ...base, hp: h1 - 1 }; const mid = { ...base, hp: h1 };
+    const lowR = SUC.act(low, { kind: 'shugyo', course: 'fire', techs: [two[0]] });
+    ok(!lowR.out.ok && lowR.out.why === 'no-hp' && lowR.out.short === 1 && !SUC.peek(low).can.includes('shugyo') && SUC.peek(low).shugyo.short === 1, '体力が足りないのに修行に行ける/足りない数がずれている');
+    ok(SUC.act(mid, { kind: 'shugyo', course: 'fire', techs: [two[0]] }).out.ok && SUC.act(mid, { kind: 'shugyo', course: 'fire', techs: two }).out.why === 'no-hp2' && SUC.peek(mid).shugyo.superShort === h2 - h1, '修行は行けて超修行は行けない、が分かれていない');
     // 演出の内訳(r1115-060): 能力ごとに 行き先の分 + 編成の子の分 = 実際に上がった数。行き先の4能力には行き先の分がある
     [one, sup].forEach((r) => { const P = r.out.parts || {};
       ok(Object.keys(r.out.gain).every((k) => (P[k] || []).reduce((a, x) => a + x.v, 0) === r.out.gain[k]), '修行の内訳の合計が上がった数と合わない');
