@@ -29,6 +29,8 @@ const MSC_STAT_ICON = Object.freeze({ life: '❤️', pow: '💪', wise: '🧠',
 const MSC_STARS = (n) => (n >= 4 ? '👑' : '★'.repeat(Math.max(1, Math.min(3, n || 1))));
 // ---- 試合の読み取り(Fable の点検①-7・2026-11-14 窓口の案) ----
 //   予想は、実際の試合の式(芯 simulate)を種だけ変えて数十回まわした勝ち数から出す(能力の合計の比では、比べと試合がつながらなかった)
+//   予想の数は「オート(助手のおすすめの手)で戦ったら」の勝ち数。本番の試合と同じ入力・同じ芯(r1115-202 H2 で突き合わせ: tools/battle/monsuc-odds-check.js)。
+//   自分で操作したときは選んだ手しだいで勝ち負けが動くので、札には「オートで」と書く
 //   負けたら「なぜ負けたか」を1行(意味不明な行動・技の届かない間合い・当たらなかった・相手の技)
 const MSC_FORECAST = Object.freeze([[0.85, 'easy', '楽勝'], [0.65, 'good', '有利'], [0.4, 'even', '互角'], [0.15, 'hard', '苦戦'], [0, 'none', '勝ち目なし…']]);
 const MSC_ODDS_N = 40; // 1試合 0.2ms ほど。40回で 10ms 前後
@@ -277,6 +279,8 @@ const MSC_CSS = `
 .msc-tl div{display:flex;flex-direction:column;gap:4px}
 .msc-tl span{display:block;border-radius:8px;padding:5px 7px;background:#1e1b3a;font-size:12px;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .msc-tl small{color:#94a3b8;font-size:10.5px;margin-left:4px}
+/* 技・能力の一覧は枠の上から並べる(space-evenly で下に寄っていた r1115-202 L10) */
+.msc-sheet.grow>.msc-tl{flex:none;margin-bottom:auto;align-items:start}
 .msc-hint{display:flex;gap:8px;align-items:center;font-size:12.5px;font-weight:800;color:#fff}
 .msc-fc{display:flex;gap:6px}
 .msc-fc>span{flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;padding:5px 4px;border-radius:12px;background:#1e1a36;border:1.5px solid #475569;color:#e2e8f0}
@@ -403,7 +407,7 @@ function MonsucBracket({ suc, s, info, result: resultProp, onFight, onResultOnly
   const r1 = bk.rounds[0] || []; const r2 = bk.rounds[1] || [];
   const fi = (bk.final && bk.final[1]) || 4; // 決勝の相手の行(4〜7)
   const out = (i) => (st >= 1 && !r1.includes(i)) || (st >= 2 && r1.includes(i) && !r2.includes(i)) || (result === 'win' && i === fi) || (result === 'lose' && i === 0);
-  const H = Math.max(36, Math.min(68, Math.floor((vh - 345) / 8))); // 行の高さ(下に大きな空きを残さない。上の余白 52px と、結果だけ見るのボタンの副題の分も引く r1115-172)
+  const H = Math.max(36, Math.min(68, Math.floor((vh - 395) / 8))); // 行の高さ(下に大きな空きを残さない。上の余白 52px と、結果だけ見るのボタンの副題の分も引く r1115-172)。解説が3行になる・足元の安全域の分も引く(下のボタンが切れた r1115-202 M12)
   const yOf = (i) => i * H + H / 2;
   const X = [0, 22, 44, 66, 84]; const W = 90;
   const pair = (a, c, lv) => `M${X[lv]} ${a}H${X[lv + 1]}M${X[lv]} ${c}H${X[lv + 1]}M${X[lv + 1]} ${a}V${c}`;
@@ -417,7 +421,16 @@ function MonsucBracket({ suc, s, info, result: resultProp, onFight, onResultOnly
   if (st >= 3) [0, 1].forEach(j => win.push({ d: `M${X[2]} ${m2[j]}H${X[3]}`, key: `c${j}` }));
   if (result === 'win' || result === 'lose') win.push({ d: `M${X[3]} ${m2[result === 'win' ? 0 : 1]}V${m3}H${X[4]}`, key: 'f' });
   const foe = E[fi]; const champ = E.find(e => e.champ) || foe;
-  const nm = (e) => (e.you ? info.meName : e.name || mscMonName(e.species));
+  // 表の中で同じ名前が2つ出ないように(名前の無い出場者は種の名前なので、同じ種が2体いると重なっていた r1115-202 M16)。
+  //   自分・決勝の相手・王者・ライバルの名前はそのまま、ほかの重なった子だけ「Ⅱ・Ⅲ」を付ける(見せる名前だけ。芯の値は変えない)
+  const shownName = (() => {
+    const base = E.map((e) => (e.you ? info.meName : e.name || mscMonName(e.species)));
+    const keep = E.map((e, i) => Boolean(e.you || i === fi || e.champ || e.rival));
+    const used = new Set(base.filter((n, i) => keep[i])); const out = base.slice();
+    E.forEach((e, i) => { if (keep[i]) return; let n = base[i]; for (let k = 2; used.has(n) && k < 10; k++) n = `${base[i]}${['', '', 'Ⅱ', 'Ⅲ', 'Ⅳ', 'Ⅴ', 'Ⅵ', 'Ⅶ', 'Ⅷ', 'Ⅸ'][k]}`; used.add(n); out[i] = n; });
+    return out;
+  })();
+  const nm = (e) => { const i = E.indexOf(e); return i >= 0 ? shownName[i] : (e.you ? info.meName : e.name || mscMonName(e.species)); };
   const coach = mscAssistant(s.aid);
   const top = E[no.indexOf(1)] || E[0]; const upsets = r1.filter(w => w !== 0 && w !== fi && no[w] >= 5); const foeNo = no[fi];
   const lines = [
@@ -547,7 +560,7 @@ function MonsucBattleCard({ suc, s, info, catalog, odds, onReady, onResultOnly, 
         </div>}
       </div>
       <div className="msc-fc" data-msc-forecast>
-        <span className={`p ${odds ? odds.key : ''}`} data-msc-odds={odds ? odds.win : ''}><small>予想</small><b>{odds ? odds.label : '…'}</b>{odds ? <small>{odds.n}回中 {odds.win}勝</small> : null}</span>
+        <span className={`p ${odds ? odds.key : ''}`} data-msc-odds={odds ? odds.win : ''}><small>予想</small><b>{odds ? odds.label : '…'}</b>{odds ? <small>オートで {odds.n}回中 {odds.win}勝</small> : null}</span>
         <span><small>相手の得意</small><b>{AMBW_DIST[foeBest.d]}</b></span>
         <span data-msc-reach={reach.map(x => (x ? 1 : 0)).join('')}><small>技が届く</small><b className="r">{AMBW_DIST.map((dn, d) => <i key={dn} className={reach[d] ? 'y' : ''}>{dn}</i>)}</b></span>
       </div>

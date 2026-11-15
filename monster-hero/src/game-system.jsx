@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 79c5c7cbae4cd844
+// generated-sha256: f403e3b845705e4e
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -80218,6 +80218,8 @@ const MSC_STAT_ICON = Object.freeze({ life: '❤️', pow: '💪', wise: '🧠',
 const MSC_STARS = (n) => (n >= 4 ? '👑' : '★'.repeat(Math.max(1, Math.min(3, n || 1))));
 // ---- 試合の読み取り(Fable の点検①-7・2026-11-14 窓口の案) ----
 //   予想は、実際の試合の式(芯 simulate)を種だけ変えて数十回まわした勝ち数から出す(能力の合計の比では、比べと試合がつながらなかった)
+//   予想の数は「オート(助手のおすすめの手)で戦ったら」の勝ち数。本番の試合と同じ入力・同じ芯(r1115-202 H2 で突き合わせ: tools/battle/monsuc-odds-check.js)。
+//   自分で操作したときは選んだ手しだいで勝ち負けが動くので、札には「オートで」と書く
 //   負けたら「なぜ負けたか」を1行(意味不明な行動・技の届かない間合い・当たらなかった・相手の技)
 const MSC_FORECAST = Object.freeze([[0.85, 'easy', '楽勝'], [0.65, 'good', '有利'], [0.4, 'even', '互角'], [0.15, 'hard', '苦戦'], [0, 'none', '勝ち目なし…']]);
 const MSC_ODDS_N = 40; // 1試合 0.2ms ほど。40回で 10ms 前後
@@ -80466,6 +80468,8 @@ const MSC_CSS = `
 .msc-tl div{display:flex;flex-direction:column;gap:4px}
 .msc-tl span{display:block;border-radius:8px;padding:5px 7px;background:#1e1b3a;font-size:12px;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .msc-tl small{color:#94a3b8;font-size:10.5px;margin-left:4px}
+/* 技・能力の一覧は枠の上から並べる(space-evenly で下に寄っていた r1115-202 L10) */
+.msc-sheet.grow>.msc-tl{flex:none;margin-bottom:auto;align-items:start}
 .msc-hint{display:flex;gap:8px;align-items:center;font-size:12.5px;font-weight:800;color:#fff}
 .msc-fc{display:flex;gap:6px}
 .msc-fc>span{flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;padding:5px 4px;border-radius:12px;background:#1e1a36;border:1.5px solid #475569;color:#e2e8f0}
@@ -80592,7 +80596,7 @@ function MonsucBracket({ suc, s, info, result: resultProp, onFight, onResultOnly
   const r1 = bk.rounds[0] || []; const r2 = bk.rounds[1] || [];
   const fi = (bk.final && bk.final[1]) || 4; // 決勝の相手の行(4〜7)
   const out = (i) => (st >= 1 && !r1.includes(i)) || (st >= 2 && r1.includes(i) && !r2.includes(i)) || (result === 'win' && i === fi) || (result === 'lose' && i === 0);
-  const H = Math.max(36, Math.min(68, Math.floor((vh - 345) / 8))); // 行の高さ(下に大きな空きを残さない。上の余白 52px と、結果だけ見るのボタンの副題の分も引く r1115-172)
+  const H = Math.max(36, Math.min(68, Math.floor((vh - 395) / 8))); // 行の高さ(下に大きな空きを残さない。上の余白 52px と、結果だけ見るのボタンの副題の分も引く r1115-172)。解説が3行になる・足元の安全域の分も引く(下のボタンが切れた r1115-202 M12)
   const yOf = (i) => i * H + H / 2;
   const X = [0, 22, 44, 66, 84]; const W = 90;
   const pair = (a, c, lv) => `M${X[lv]} ${a}H${X[lv + 1]}M${X[lv]} ${c}H${X[lv + 1]}M${X[lv + 1]} ${a}V${c}`;
@@ -80606,7 +80610,16 @@ function MonsucBracket({ suc, s, info, result: resultProp, onFight, onResultOnly
   if (st >= 3) [0, 1].forEach(j => win.push({ d: `M${X[2]} ${m2[j]}H${X[3]}`, key: `c${j}` }));
   if (result === 'win' || result === 'lose') win.push({ d: `M${X[3]} ${m2[result === 'win' ? 0 : 1]}V${m3}H${X[4]}`, key: 'f' });
   const foe = E[fi]; const champ = E.find(e => e.champ) || foe;
-  const nm = (e) => (e.you ? info.meName : e.name || mscMonName(e.species));
+  // 表の中で同じ名前が2つ出ないように(名前の無い出場者は種の名前なので、同じ種が2体いると重なっていた r1115-202 M16)。
+  //   自分・決勝の相手・王者・ライバルの名前はそのまま、ほかの重なった子だけ「Ⅱ・Ⅲ」を付ける(見せる名前だけ。芯の値は変えない)
+  const shownName = (() => {
+    const base = E.map((e) => (e.you ? info.meName : e.name || mscMonName(e.species)));
+    const keep = E.map((e, i) => Boolean(e.you || i === fi || e.champ || e.rival));
+    const used = new Set(base.filter((n, i) => keep[i])); const out = base.slice();
+    E.forEach((e, i) => { if (keep[i]) return; let n = base[i]; for (let k = 2; used.has(n) && k < 10; k++) n = `${base[i]}${['', '', 'Ⅱ', 'Ⅲ', 'Ⅳ', 'Ⅴ', 'Ⅵ', 'Ⅶ', 'Ⅷ', 'Ⅸ'][k]}`; used.add(n); out[i] = n; });
+    return out;
+  })();
+  const nm = (e) => { const i = E.indexOf(e); return i >= 0 ? shownName[i] : (e.you ? info.meName : e.name || mscMonName(e.species)); };
   const coach = mscAssistant(s.aid);
   const top = E[no.indexOf(1)] || E[0]; const upsets = r1.filter(w => w !== 0 && w !== fi && no[w] >= 5); const foeNo = no[fi];
   const lines = [
@@ -80736,7 +80749,7 @@ function MonsucBattleCard({ suc, s, info, catalog, odds, onReady, onResultOnly, 
         </div>}
       </div>
       <div className="msc-fc" data-msc-forecast>
-        <span className={`p ${odds ? odds.key : ''}`} data-msc-odds={odds ? odds.win : ''}><small>予想</small><b>{odds ? odds.label : '…'}</b>{odds ? <small>{odds.n}回中 {odds.win}勝</small> : null}</span>
+        <span className={`p ${odds ? odds.key : ''}`} data-msc-odds={odds ? odds.win : ''}><small>予想</small><b>{odds ? odds.label : '…'}</b>{odds ? <small>オートで {odds.n}回中 {odds.win}勝</small> : null}</span>
         <span><small>相手の得意</small><b>{AMBW_DIST[foeBest.d]}</b></span>
         <span data-msc-reach={reach.map(x => (x ? 1 : 0)).join('')}><small>技が届く</small><b className="r">{AMBW_DIST.map((dn, d) => <i key={dn} className={reach[d] ? 'y' : ''}>{dn}</i>)}</b></span>
       </div>
@@ -92193,7 +92206,9 @@ const msxR3Fight = (engine, SUC, run) => {
   const teamA = { assistantId: s.aid, tactics: MSX_R3_GEAR[SUC.periodOf(s.turn).key] || 10, members: [a] };
   const teamB = { assistantId: 'kiki', tactics: opp.tactics || 10, members: [o] };
   // 試合の上乗せ: 芯の battleBuffs(編成の試合型アシスト + 特別な1話)。古い芯なら battleMods だけ
-  const mods = typeof SUC.battleBuffs === 'function' ? (SUC.battleBuffs(s) || {}) : typeof SUC.battleMods === 'function' ? SUC.battleMods(s) : {};
+  //   芯の battleBuffs は { A: {...} } の形で返す。前はそれをさらに buffs:{ A: … } で包んでいて、試合型アシストの上乗せが試合に入っていなかった(r1115-202 H2)。中身だけを取り出す
+  const bb = typeof SUC.battleBuffs === 'function' ? SUC.battleBuffs(s) : null;
+  const mods = bb && typeof bb === 'object' ? (bb.A && typeof bb.A === 'object' ? bb.A : bb) : typeof SUC.battleMods === 'function' ? (SUC.battleMods(s) || {}) : {};
   const seed = `${s.id}:${s.turn}:${b.kind}:${b.retry || 0}:${b.round || 0}:0:${b.again || 0}`;
   // input: simulate に渡したものそのもの(trace なし)。バトル部の自分で操作する試合(MonsucArena の createMatch)がこれで同じ試合を始める
   const input = { ...MONSUC_MATCH_RULE, seed, catalog: cat, teamA, teamB, ...(mods && Object.keys(mods).length ? { buffs: { A: mods } } : {}) };
@@ -95109,6 +95124,11 @@ const MSA_CSS = `
 .msa-gt{font-size:9.5px;font-weight:900;line-height:14px;padding:0 5px;border-radius:99px;white-space:nowrap;animation:msaTagIn .35s ease-out both}
 @keyframes msaTagIn{0%{opacity:0;transform:scale(.6)}60%{opacity:1;transform:scale(1.12)}100%{opacity:1;transform:none}}
 .msa-gt.up{background:#facc15;color:#422006}.msa-gt.down{background:#475569;color:#f1f5f9}
+/* モンサクの画面の大きな浮き文字 .msx .up(56-monhero-success-css)が、ガッツの増減の小札 .up にも当たって大きく浮き、体力の数字を隠していた(r1115-202 M13)。小札の形に戻す */
+.msa-hud .msa-gt.up,.msa-hud .msa-gt.down{position:static;font-size:9.5px;line-height:14px;text-shadow:none;color:#422006}
+.msa-hud .msa-gt.down{color:#f1f5f9}
+.msa-stage .msa-gtag.up,.msa-stage .msa-gtag.down{position:absolute;font-size:10.5px;line-height:16px;text-shadow:none;color:#422006}
+.msa-stage .msa-gtag.down{color:#e2e8f0}
 .msa-bands{top:70px}
 @keyframes msaLow{50%{opacity:.45}}
 @keyframes msaBarShake{0%,100%{transform:none;box-shadow:0 0 10px #ef4444}20%{transform:translate(-4px,1px)}40%{transform:translate(4px,-1px)}60%{transform:translate(-2px,0)}80%{transform:translate(1px,0)}}
@@ -95151,7 +95171,23 @@ const MSA_CSS = `
 .msa-topline{flex-wrap:wrap;row-gap:2px}
 .msa-topline .msc-buff{font-style:normal;font-size:10.5px}
 .msa-topline .msa-breeder{font-size:11px;color:#cbd5e1;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:55%}
-@media (max-height:500px) and (orientation:landscape){.msc-wrap.msa{height:auto}.msa-stagebox,.msa[data-msa-mode=manual] .msa-stagebox{flex:none;height:calc(var(--mh-vh) - 70px);min-height:240px}}
+/* 場の側(帯・場・実況)と操作の側(札・手番の帯・ボタン)。縦では入れ物を作らず(display:contents)今までの並びのまま */
+.msa-main,.msa-side{display:contents}
+/* 横向き(r1115-202 H3): 場面(左)+ 札(右)の2列。場面は左に留めたまま、右の札だけを縦に送る(体力の帯と札が同時に見える) */
+@media (max-height:500px) and (orientation:landscape){
+  .msc-wrap.msa{height:auto;max-width:none;flex-direction:row;align-items:flex-start;gap:10px}
+  .msa-main{display:flex;flex-direction:column;gap:6px;flex:1.1 1 0;min-width:0;position:sticky;top:0;height:calc(var(--mh-vh) - 66px);min-height:240px}
+  .msa-side{display:flex;flex-direction:column;gap:8px;flex:1 1 0;min-width:0}
+  .msa-stagebox,.msa[data-msa-mode=manual] .msa-stagebox{flex:1 1 0;height:auto;min-height:0}
+  .msa-main .msa-say{flex:none}
+}
+/* 低い縦の画面(320×568 など・r1115-202 M14): 場面を低くして上に留め、札の所まで送っても体力の帯と場面が見えるように。画面は縦に少し流す決まりのまま */
+@media (max-height:700px) and (orientation:portrait){
+  .msa[data-msa-mode=manual] .msa-main{display:block;position:sticky;top:0;z-index:6;background:#191331;padding-bottom:4px}
+  .msa[data-msa-mode=manual] .msa-main .msa-topline{margin-bottom:4px}
+  .msa[data-msa-mode=manual] .msa-stagebox{height:200px;min-height:0}
+  .msa[data-msa-mode=manual] .msa-main .msa-say{margin-top:4px}
+}
 .msa-stage.fill .msa-f,.msa-stage.fill .msa-dmgwrap{width:140px;margin-left:-70px;height:176px}
 .msa-stage.fill .msa-f img.msa-img{max-width:140px;max-height:166px}
 .msa-stage.fill .msa-f .msa-shadow{width:80px;margin-left:-40px}
@@ -95975,8 +96011,11 @@ function MonsucArena({ s, info, engine, input, watch, onEnd }) {
     const el = barRef.current; if (!barOn || !el) return;
     const box = el.closest ? el.closest('[data-msc-root]') : null; if (!box) return;
     const r = el.getBoundingClientRect(); const b = box.getBoundingClientRect();
+    // 場面を上に留める画面(低い縦・r1115-202 M14)では、留めた場面の下端までしか送らない(帯の頭が場面の下に隠れないように)
+    const mainEl = box.querySelector('[data-msa-main]'); const pinned = mainEl && typeof getComputedStyle === 'function' && getComputedStyle(mainEl).position === 'sticky' && getComputedStyle(mainEl).display === 'block';
+    const topLine = pinned ? mainEl.getBoundingClientRect().bottom : b.top;
     const over = r.bottom - b.bottom + 8;
-    if (over > 0) box.scrollTop += Math.min(over, Math.max(0, r.top - b.top - 8));
+    if (over > 0) box.scrollTop += Math.min(over, Math.max(0, r.top - topLine - 8));
   }, [barOn, pos]);
   // オートの手番: 芯のおすすめの手を少し置いて選ぶ(いつでも手動へ戻せるよう、1手ずつ進める)
   const autoWait = Boolean(manual && ctl === 'auto' && pos >= last && !ended && mm.pending);
@@ -96034,6 +96073,7 @@ function MonsucArena({ s, info, engine, input, watch, onEnd }) {
     <div className="msc-wrap msa" data-msc-match data-msa-pos={pos} data-msa-mode={manual ? (auto ? 'auto' : 'manual') : 'watch'}>
       <style>{MSA_CSS}{typeof MSA_SHOW_CSS === 'string' ? MSA_SHOW_CSS : ''}</style>
       {/* 2026-11-14 社長「肝心のバトルの画面が小さい」: 上下の大きな札をやめ、試合の場を主役に。名前・体力・ガッツ・ラウンドは場の上の帯(MsaStage)にある */}
+      <div className="msa-main" data-msa-main>
       <div className="msc-top msa-topline"><b>{info.title} {MSC_STARS(info.star)}</b>
         {info.buffs ? <i className="msc-buff">✨ 特別な1話</i> : null}
         {(info.opp || {}).breeder ? <small className="msa-breeder">相手 {nm('B')}・{info.opp.breeder}</small> : null}</div>
@@ -96041,6 +96081,8 @@ function MonsucArena({ s, info, engine, input, watch, onEnd }) {
         <MsaStage log={log} frames={frames} pos={pos} teams={stageTeams} venueImg={msaVenueBg(info.venue, bg)} ended={ended} win={result ? result.winner : null} introTitle={info.title} speedF={(MSA_SPEEDS.find(x => x.id === speed) || MSA_SPEEDS[0]).f} fill wide liveGuts={liveGuts}/>
       </div>
       <div className="msa-say" data-msa-say>{call ? <div key={`call-${call.at}`} className={`msa-call ${call.k}`} data-msa-call={call.k}>🎙 {call.t}</div> : msaSay(e, nm, log)}</div>
+      </div>
+      <div className="msa-side" data-msa-side>
       {cardsOn ? <div className="msa-cardsrow" data-msa-cards><MsaDistCards look="a" list={itemsA} rep={msaRepIds(itemsA, null)} dist={f.d} guts={f.g.A} lastMove={e.side === 'A' && e.ev === 'tech' ? e.move : null} dataSide="A" hitAt={hitAtA} onOpen={(d) => setTechSheet(d)}/></div> : null}
       <div ref={barRef}>{showBar ? <MsxManualBar opt={mm.pending} onPick={pick} onAuto={goAuto} busy={busy} look="a"/> : null}</div>
       {manual && !auto && busy && !ended && !showBar ? <div className="msa-wait">{e.side === 'B' ? '相手の番…' : ' '}</div> : null}
@@ -96060,6 +96102,7 @@ function MonsucArena({ s, info, engine, input, watch, onEnd }) {
         </div>
       ) : null}
       {manual && !ended ? <div className="msa-tools" data-msa-tools2><MsaCtlToggle ctl={ctl} save={false} onChange={(v) => { msaCtlRunWrite(s && s.id, v); setCtl(v); }}/><MsaBgToggle bg={bg} onChange={setBg}/></div> : null}
+      </div>
       {judgeIdx >= 0 && pos >= judgeIdx && !judgeOk ? <MsaJudge row={log[judgeIdx]} names={{ A: nm('A'), B: nm('B') }} onGo={() => setJudgeOk(true)}/> : null}
       {techSheet != null && itemsA && typeof MsaTechSheet === 'function' ? <MsaTechSheet title={`${nm('A')} の${AMBW_DIST[techSheet]}の技`} list={itemsA} d={techSheet} dist={f.d} rep={msaRepIds(itemsA, null)} hitAt={hitAtA} onClose={() => setTechSheet(null)}/> : null}
     </div>
