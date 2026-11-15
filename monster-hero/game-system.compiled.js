@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 02be6dcf595f729a
+// source-sha256: 599585b2f9ab0d2f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -153542,9 +153542,12 @@ const monsucPopOrder = (suc, s, entrants) => {
 };
 const MSC_CSS = `
 .msc-root{position:fixed;inset:0;z-index:9000;overflow-y:auto;color:#fff;background:linear-gradient(180deg,#221a44,#141026 45%);
-  padding:calc(8px + env(safe-area-inset-top)) calc(10px + env(safe-area-inset-right)) calc(10px + env(safe-area-inset-bottom)) calc(10px + env(safe-area-inset-left));font-family:inherit}
+  padding:max(calc(8px + env(safe-area-inset-top)),52px) calc(10px + env(safe-area-inset-right)) calc(10px + env(safe-area-inset-bottom)) calc(10px + env(safe-area-inset-left));font-family:inherit}
 .msc-wrap{max-width:520px;margin:0 auto;display:flex;flex-direction:column;gap:8px;min-height:100%}
 .msc-top{display:flex;align-items:center;gap:8px}
+.msc-btn:disabled{opacity:.45;cursor:default;box-shadow:none}
+.msc-btn .msc-qsub{display:block;font-size:10px;font-weight:800;line-height:1.2;margin-top:1px}
+.msc-btn.s:disabled{padding-top:5px;padding-bottom:5px}
 .msc-top b{flex:1;min-width:0;font-size:14px;color:#fde68a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .msc-btn{border:0;border-radius:999px;padding:12px 14px;font-weight:900;font-size:15px;color:#fff;background:linear-gradient(90deg,#f472b6,#fb923c);box-shadow:0 3px 0 #9d174d;cursor:pointer;min-height:44px}
 .msc-btn.y{background:#fde047;color:#3b2a05;box-shadow:0 3px 0 #a16207}
@@ -153760,7 +153763,7 @@ function MonsucBracket({
   const r2 = bk.rounds[1] || [];
   const fi = bk.final && bk.final[1] || 4;
   const out = i => st >= 1 && !r1.includes(i) || st >= 2 && r1.includes(i) && !r2.includes(i) || result === 'win' && i === fi || result === 'lose' && i === 0;
-  const H = Math.max(36, Math.min(68, Math.floor((vh - 318) / 8)));
+  const H = Math.max(36, Math.min(68, Math.floor((vh - 345) / 8)));
   const yOf = i => i * H + H / 2;
   const X = [0, 22, 44, 66, 84];
   const W = 90;
@@ -153900,8 +153903,12 @@ function MonsucBracket({
   }, React.createElement("button", {
     className: "msc-btn y s",
     "data-msc-quick": true,
-    onClick: onResultOnly
-  }, canSkip ? '⏩ 結果だけ見る(優勝ずみ)' : '⏩ 結果だけ見る'), React.createElement("button", {
+    disabled: !canSkip,
+    onClick: () => canSkip && onResultOnly()
+  }, canSkip ? '⏩ 結果だけ見る(優勝ずみ)' : React.createElement(React.Fragment, null, "⏩ 結果だけ見る", React.createElement("small", {
+    className: "msc-qsub",
+    "data-msc-quick-why": true
+  }, "一度優勝すると使えます"))), React.createElement("button", {
     className: "msc-btn",
     "data-msc-go": true,
     onClick: onFight
@@ -153915,7 +153922,8 @@ function MonsucBattleCard({
   odds,
   onReady,
   onResultOnly,
-  onBack
+  onBack,
+  canSkip
 }) {
   const [tab, setTab] = useState('st');
   const o = info.opp || {};
@@ -154128,8 +154136,12 @@ function MonsucBattleCard({
   }, React.createElement("button", {
     className: "msc-btn y s",
     "data-msc-quick": true,
-    onClick: onResultOnly
-  }, "⏩ 結果だけ見る"), React.createElement("button", {
+    disabled: !canSkip,
+    onClick: () => canSkip && onResultOnly()
+  }, "⏩ 結果だけ見る", canSkip ? null : React.createElement("small", {
+    className: "msc-qsub",
+    "data-msc-quick-why": true
+  }, "一度優勝すると使えます")), React.createElement("button", {
     className: "msc-btn",
     "data-msc-ready": true,
     onClick: onReady
@@ -154581,16 +154593,17 @@ function MonsucCupShowInner({
     canSkip: canSkip,
     onClose: onClose,
     onFight: () => setPhase('card'),
-    onResultOnly: () => match && finish(match.won)
+    onResultOnly: () => canSkip && match && finish(match.won)
   });else if (phase === 'card') body = React.createElement(MonsucBattleCard, {
     suc: suc,
     s: s,
     info: info,
     catalog: catalog,
     odds: odds,
+    canSkip: canSkip,
     onBack: () => setPhase('bracket'),
     onReady: () => setPhase(info.buffs || info.buffRows.length ? 'cutin' : 'match'),
-    onResultOnly: () => match && finish(match.won)
+    onResultOnly: () => canSkip && match && finish(match.won)
   });else if (phase === 'cutin') body = React.createElement(MonsucCutin, {
     s: s,
     info: info,
@@ -182016,12 +182029,24 @@ function MsxR3Retire({
 }) {
   const s = run.s;
   const [step, setStep] = useState(() => run.s.pts > 0 ? 'e3' : 'e0');
-  const [ws, setWs] = useState(s);
-  const [hist, setHist] = useState([]);
-  const wsRef = useRef(ws);
-  wsRef.current = ws;
-  const histRef = useRef(hist);
-  histRef.current = hist;
+  const capOfPt = (w, k) => typeof SUC.statCapOf === 'function' ? SUC.statCapOf(w, k) : 999;
+  const replayPts = list => {
+    let w = s;
+    for (const k of list) {
+      if (w.stats[k] >= capOfPt(w, k)) continue;
+      const r = SUC.spendPts(w, k, 1);
+      if (r.out.ok) w = r.state;
+    }
+    return w;
+  };
+  const [ptList, setPtList] = useState([]);
+  const ptListRef = useRef(ptList);
+  ptListRef.current = ptList;
+  const setPtListNow = list => {
+    ptListRef.current = list;
+    setPtList(list);
+  };
+  const ws = useMemo(() => replayPts(ptList), [s, ptList]);
   const [ptUnit, setPtUnit] = useMsxPtUnit();
   const [pick, setPick] = useState({});
   const [atab, setAtab] = useState(null);
@@ -182147,70 +182172,63 @@ function MsxR3Retire({
     });
   }
   if (step === 'e3') {
-    const capOf = (w, k) => typeof SUC.statCapOf === 'function' ? SUC.statCapOf(w, k) : 999;
+    const capOf = capOfPt;
     const spend = k => {
-      let w = wsRef.current;
-      const h = histRef.current.slice();
+      const list = ptListRef.current.slice();
+      let w = replayPts(list);
       const lim = msxPtLimit(ptUnit);
       let n = 0;
       while (n < lim) {
         if (w.stats[k] >= capOf(w, k)) break;
         const r = SUC.spendPts(w, k, 1);
         if (!r.out.ok) break;
-        h.push(w);
         w = r.state;
+        list.push(k);
         n += 1;
       }
-      if (n) {
-        wsRef.current = w;
-        histRef.current = h;
-        setHist(h);
-        setWs(w);
-      }
+      if (n) setPtListNow(list);
     };
     const undoK = k => {
+      const list = ptListRef.current.slice();
       const lim = msxPtLimit(ptUnit);
       let n = 0;
       while (n < lim) {
-        const w = wsRef.current;
-        const h = histRef.current;
-        let hit = -1;
-        for (let i = h.length - 1; i >= 0; i--) {
-          if (h[i].stats[k] < w.stats[k]) {
-            hit = i;
-            break;
-          }
-        }
-        if (hit < 0) break;
-        wsRef.current = h[hit];
-        histRef.current = h.slice(0, hit);
+        const i = list.lastIndexOf(k);
+        if (i < 0) break;
+        list.splice(i, 1);
         n += 1;
       }
-      if (n) {
-        setWs(wsRef.current);
-        setHist(histRef.current);
-      }
+      if (n) setPtListNow(list);
     };
     const preset = kind => {
       let w = s;
-      setHist([]);
+      const list = [];
+      const one = k => {
+        if (w.stats[k] >= capOf(w, k)) return false;
+        const r = SUC.spendPts(w, k, 1);
+        if (!r.out.ok) return false;
+        w = r.state;
+        list.push(k);
+        return true;
+      };
       if (kind === 'top') {
         const k = ev0.top && ev0.top[0] ? ev0.top[0] : 'pow';
-        w = SUC.spendPts(w, k, 9999).state;
-      } else if (kind === 'low') w = SUC.autoPts(w).state;else if (kind === 'bal') {
+        while (w.pts > 0 && one(k)) {}
+      } else if (kind === 'low') {
+        while (w.pts > 0) {
+          const k = MSX_STATS.slice().sort((x, y) => w.stats[x] - w.stats[y])[0];
+          if (!one(k)) break;
+        }
+      } else if (kind === 'bal') {
         let moved = true;
         while (moved && w.pts > 0) {
           moved = false;
           for (const k of MSX_STATS) {
-            const r = SUC.spendPts(w, k, 1);
-            if (r.out.ok) {
-              w = r.state;
-              moved = true;
-            }
+            if (one(k)) moved = true;
           }
         }
       }
-      setWs(w);
+      setPtListNow(list);
     };
     const used = s.pts - ws.pts;
     const body = React.createElement(React.Fragment, null, React.createElement("div", {
@@ -182284,10 +182302,7 @@ function MsxR3Retire({
     }, "バランス"), React.createElement("button", {
       type: "button",
       className: "r3-chip",
-      onClick: () => {
-        setWs(s);
-        setHist([]);
-      }
+      onClick: () => setPtListNow([])
     }, "戻す")), React.createElement("div", {
       className: "v-pa"
     }, MSX_STATS.map(k => {
@@ -182306,7 +182321,8 @@ function MsxR3Retire({
         className: "sym minus",
         "aria-label": `${MSX_STAT_NAME[k]}を戻す`,
         disabled: !add,
-        onPress: () => undoK(k)
+        onPress: () => undoK(k),
+        "data-msx-r3-ptminus": k
       }), React.createElement("b", null, add), React.createElement(MsxPtBtn, {
         disabled: ws.pts < SUC.ptsCost(ws, k) || ws.stats[k] >= capOf(ws, k),
         onPress: () => spend(k),
@@ -182327,10 +182343,7 @@ function MsxR3Retire({
       className: "v-ft"
     }, React.createElement("button", {
       type: "button",
-      onClick: () => {
-        setWs(s);
-        setHist([]);
-      }
+      onClick: () => setPtListNow([])
     }, "やり直す"), React.createElement("button", {
       type: "button",
       className: "go",
@@ -182339,6 +182352,7 @@ function MsxR3Retire({
           ...run,
           s: ws
         });
+        setPtListNow([]);
         setStep('e0');
       },
       "data-msx-r3-e3": true
