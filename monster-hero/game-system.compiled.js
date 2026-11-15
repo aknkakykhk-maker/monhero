@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b43dd03240928b97
+// source-sha256: 599585b2f9ab0d2f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -108851,7 +108851,7 @@ const assistantPeerMarkShown = (talk, {
     if (typeof assistantLifeDiaryAdd === 'function') {
       try {
         const cause = typeof assistantLifeRelCauseOf === 'function' ? assistantLifeRelCauseOf(talk.id) : null;
-        void assistantLifeDiaryAdd(`💢 ${talk.pair.map(assistantLifeName).join('・')}がけんか${cause ? `(${cause})` : ''}`, [...talk.pair], {
+        void assistantLifeDiaryAdd(`💢 ${talk.pair.map(assistantLifeName).join('・')}が喧嘩${cause ? `(${cause})` : ''}`, [...talk.pair], {
           kind: 'quarrel',
           now,
           tid: talk.id
@@ -114900,9 +114900,9 @@ const assistantLifeSayFill = (rooms, life) => {
     let mark = null,
       markShort = null,
       m;
-    if (m = t1.match(/^💢 (.+)とけんか中$/u)) {
-      mark = ['💢', `${m[1]}と`, 'けんか中'];
-      markShort = ['💢', 'けんか中'];
+    if (m = t1.match(/^💢 (.+)と喧嘩中$/u)) {
+      mark = ['💢', `${m[1]}と`, '喧嘩中'];
+      markShort = ['💢', '喧嘩中'];
     } else if (m = t1.match(/^💢 (.+)と言い合いのあと$/u)) {
       mark = ['💢', `${m[1]}と`, '言い合いの', 'あと'];
       markShort = ['💢', '言い合い'];
@@ -132380,7 +132380,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   lines: [{
     who: 'kiki',
     e: 'troubled',
-    t: '{name}に、「二人とも静かにけんかしてる」と言われました'
+    t: '{name}に、「二人とも静かに喧嘩してる」と言われました'
   }, {
     who: 'erubin',
     e: 'troubled',
@@ -132916,7 +132916,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   lines: [{
     who: 'atsu',
     e: 'normal',
-    t: '{c:kiki}、{c:erubin}、2人がけんかとか、めずらしいね！'
+    t: '{c:kiki}、{c:erubin}、2人が喧嘩とか、めずらしいね！'
   }, {
     who: 'kiki',
     e: 'troubled',
@@ -133006,7 +133006,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   lines: [{
     who: 'kyuko',
     e: 'normal',
-    t: '{c:atsu}、{c:sorashido}、二人のけんか、理由を整理してみたんだぁ'
+    t: '{c:atsu}、{c:sorashido}、二人の喧嘩、理由を整理してみたんだぁ'
   }, {
     who: 'atsu',
     e: 'surprise',
@@ -133288,7 +133288,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([{
   }, {
     who: 'mua',
     e: 'wink',
-    t: 'おそろいにしたら、もうけんかできないぢゃん♪'
+    t: 'おそろいにしたら、もう喧嘩できないぢゃん♪'
   }, {
     who: 'momosuke',
     e: 'happy',
@@ -135935,7 +135935,7 @@ const assistantLifeRelDecorateRooms = (rooms, life, peerSt) => {
       const w = assistantLifeWhereOf(life, id);
       if (living) {
         rooms[id] = {
-          tag: ['🛋️ みんなの居間に', `💢 ${nm(other)}とけんか中`, null],
+          tag: ['🛋️ みんなの居間に', `💢 ${nm(other)}と喧嘩中`, null],
           rel: 'living'
         };
         continue;
@@ -135949,11 +135949,11 @@ const assistantLifeRelDecorateRooms = (rooms, life, peerSt) => {
       };else if (r.in && !r.sleep) rooms[id] = {
         ...r,
         after: true,
-        bub: [`💢 ${nm(other)}と`, 'けんか中'],
+        bub: [`💢 ${nm(other)}と`, '喧嘩中'],
         rel: 'quarrel'
       };else if (r.tag) rooms[id] = {
         ...r,
-        tag: [r.tag[0], `💢 ${nm(other)}とけんか中`, r.tag[2] || null],
+        tag: [r.tag[0], `💢 ${nm(other)}と喧嘩中`, r.tag[2] || null],
         rel: 'quarrel'
       };
     }
@@ -136113,7 +136113,7 @@ function AssistantLifeRelSheetRow({
       "data-assistant-life-rel-row": "quarrel"
     }, React.createElement("p", {
       className: "text-[11.5px] font-black text-sky-100"
-    }, "💢 いま ", nm(other), "とけんか中", cause ? React.createElement("span", {
+    }, "💢 いま ", nm(other), "と喧嘩中", cause ? React.createElement("span", {
       className: "whitespace-nowrap"
     }, "(原因: ", cause, ")") : null), React.createElement("p", {
       className: "text-[10px] font-bold leading-snug text-sky-200"
@@ -136126,7 +136126,7 @@ function AssistantLifeRelSheetRow({
       className: "mt-1.5 min-h-[44px] w-full rounded-xl border border-sky-300/60 bg-sky-500/20 text-[13px] font-black text-sky-50 active:scale-[.98]",
       "data-assistant-life-rel-view": pending.id,
       onClick: () => onView(pending.id)
-    }, "💢 けんかの様子を見る"), onMediate && React.createElement("button", {
+    }, "💢 喧嘩の様子を見る"), onMediate && React.createElement("button", {
       type: "button",
       className: "mhl-btn mt-1.5 w-full",
       "data-assistant-life-room-act": "mediate",

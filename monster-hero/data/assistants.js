@@ -11046,7 +11046,7 @@ const ASSISTANT_MONSUC_BETA_EP1 = [
   { who:'mua', e:'excited', t:'ちょ、待って！ あたしも行きたいんだけど！' },
   // ---- ひとりだけ？ ----
   { who:'kiki', e:'troubled', t:'でも……下のほうに小さく『はじめはβ版。助手は、まずおひとりから』って書いてありまつ' },
-  { who:'momosuke', e:'troubled', t:'ひとりだけ！？ そんなの、ぜったいけんかになるやつじゃん……' },
+  { who:'momosuke', e:'troubled', t:'ひとりだけ！？ そんなの、ぜったい喧嘩になるやつじゃん……' },
   { who:'sorashido', e:'normal', t:'では、公平に決めましょう。自分、くじを作ります・・・！' },
   { who:'kyuko', e:'wink', t:'それもいいけどさ、オープンの日にすぐ行ける人から行けばいいんじゃない？ 準備ができてる人ね笑' },
   { who:'dra', e:'happy', t:'いいな、それ。じゃあ順番に、自分の準備を言ってくか' },
@@ -12300,7 +12300,7 @@ const PANDORA_WINGS_EP3 = [
   { who:'pandora',  e:'normal',   monsters:[{ id:'Pandora', pose:'idle' }], t:'ほめてくれてるのは、わかってる。……でも、そのたびに、もう片方が、いらないって言われてるみたいで' },
   { who:'kyuko',    e:'normal',   t:'……そっか' },
   { who:'pandora',  e:'normal',   monsters:[{ id:'PandoraDevil', pose:'splitL' }, { id:'PandoraAngel', pose:'splitR' }], fx:'split', t:'わたしの中には、ふたりいるの。天使のわたしと、悪魔のわたし' },
-  { who:'pandora',  e:'normal',   t:'ずっと、けんかしてる。あっちがいなければ楽なのに、って、お互いに思ってる' },
+  { who:'pandora',  e:'normal',   t:'ずっと、喧嘩してる。あっちがいなければ楽なのに、って、お互いに思ってる' },
   { who:'pandora',  e:'normal',   t:'……大嫌いなの。相手のこと' },
   { who:'kyuko',    e:'normal',   t:'でも、離れられない？' },
   { who:'pandora',  e:'normal',   t:'……どうしてわかるの' },
@@ -12483,7 +12483,7 @@ const PANDORA_WINGS_EP8 = [
   { who:'momosuke', e:'crying',   t:'パンドラちゃん……！ よかった……ほんとに、よかったぁ……' },
   { who:'pandora',  e:'normal',   t:'……泣かないで。……わたしまで、泣きそうになる' },
   { who:'dra',      e:'normal',   t:'お腹の鍵穴、もうきしんでないか' },
-  { who:'pandora',  e:'normal',   t:'……うん。天使も悪魔も、ちゃんといる。……けんかは、たぶんまだするけど' },
+  { who:'pandora',  e:'normal',   t:'……うん。天使も悪魔も、ちゃんといる。……喧嘩は、たぶんまだするけど' },
   { who:'kiki',     e:'happy',    t:'それでいいんでつ。ふたりとも、パンドラさんでつから。' },
   { who:'erubin',   e:'happy',    t:'はじめまして、パンドラちゃん。俺はえるびん。外の空気、おいしいでしょ☺️' },
   { who:'pandora',  e:'normal',   t:'……あのね。みんなに、言いたいことがあるの' },
@@ -13684,9 +13684,9 @@ const ASSISTANT_PEER_BOND_ACTIONS = Object.freeze({
   session: { amount:3, dailyMax:12, label:'2人でセッションをした' },
   // ③ ミニイベント(1日5まで)・仲直り(1回の仲直りにつき1回・1日20の上限の外)(2026-11-07 社長)
   event:  { amount:5, dailyMax:5, label:'2人のミニイベントを見た' },
-  makeup: { amount:5, dailyMax:5, label:'けんかのあと仲直りした', uncapped:true },
+  makeup: { amount:5, dailyMax:5, label:'喧嘩のあと仲直りした', uncapped:true },
   // 助手ライフ: けんかの間に入った助手と、けんかした2人それぞれ(2026-11-08 社長の決まり「間に入る+3」・助手部キズナ)
-  mediate: { amount:3, dailyMax:6, label:'けんかの間に入った' },
+  mediate: { amount:3, dailyMax:6, label:'喧嘩の間に入った' },
   // 助手ライフ: 2人でフレンドの家へ遊びに行った(2026-11-08 社長「友情Lv +4」・1日3回まで)
   friend: { amount:4, dailyMax:12, label:'2人でフレンドの家へ遊びに行った' },
 });

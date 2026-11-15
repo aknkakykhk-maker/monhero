@@ -454,7 +454,7 @@ const assistantLifeSayFill = (rooms, life) => {
     else if (r.rel === 'living') { say = ['🛋️', 'みんなの', '居間に']; short = ['🛋️', '居間に']; }
     if (!Array.isArray(say)) { const m = t0.match(/^(\S+) (.+)$/u); say = m ? [m[1], m[2]] : ['', t0]; }
     let mark = null, markShort = null, m;
-    if ((m = t1.match(/^💢 (.+)とけんか中$/u))) { mark = ['💢', `${m[1]}と`, 'けんか中']; markShort = ['💢', 'けんか中']; }
+    if ((m = t1.match(/^💢 (.+)と喧嘩中$/u))) { mark = ['💢', `${m[1]}と`, '喧嘩中']; markShort = ['💢', '喧嘩中']; }
     else if ((m = t1.match(/^💢 (.+)と言い合いのあと$/u))) { mark = ['💢', `${m[1]}と`, '言い合いの', 'あと']; markShort = ['💢', '言い合い']; }
     else if ((m = t1.match(/^🤝 (.+)と仲直り$/u))) {
       const w = r.mend && typeof assistantLifeWhereOf === 'function' ? assistantLifeWhereOf(life, id) : null;
