@@ -204,7 +204,7 @@ const assistantLifeProfileFace = (id, greeting, k) => {
   const lines = ASSISTANT_LIFE_PROFILE_FACE_LINES[id];
   return { e, label, n: i + 1, t: i === 0 || !lines || !lines[i - 1] ? greeting : lines[i - 1] };
 };
-// 表情の全身画の、8表情でいちばん高い絵の高さ(画素。images/assistant/fullbody/<名前>__<表情>.png)。表情を変えても体の大きさをそろえるのに使う(r1115-203)。表に無い子は今までどおり
+// 表情の全身画の、8表情でいちばん高い絵の高さ(画素。全身画のフォルダの <名前>__<表情>.png)。表情を変えても体の大きさをそろえるのに使う(r1115-203)。表に無い子は今までどおり
 //   全身画を作り直したら合わせる(tools/assistant/life-profile-faces-check.js の ③ が絵と食い違うと止める)
 const ASSISTANT_LIFE_PROFILE_FULL_MAX_H = Object.freeze({
   atsu: 779, // まずあつだけ(2026-11-15 社長「ほかの助手はいい」)。ほかの子は表に無い = 今までどおり絵ごとに枠へ収める
