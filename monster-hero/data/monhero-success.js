@@ -437,7 +437,7 @@
   //   条件: 1 デビュー戦に出る/2 大会で1勝/3〜9 これまでの賞金の合計(参考どおり 3,000〜130,000G)。
   //   ★5段目の 15,000G は参考の字がつぶれて読めない所の仮の値(docs/progress/player-raise/report-1115/r1115-081-085/README.md)
   //   段が上がるたびに修行チケット1枚、6段目から上は1段で2枚(tk)。チケット運で もう1枚
-  //   step は 1〜9(0 はまだデビュー戦の前)。四大大会の出る条件(need.rank)もこの段。前の10段で保存した途中の育成は restore が いまの段に丸める
+  //   step は 1〜9(0 はまだデビュー戦の前)。四大大会の出る条件(need.rank)もこの段(参考どおり4つとも「はながた」= 6段 エース 26,000G。r1115-134)。前の10段で保存した途中の育成は restore が いまの段に丸める
   const FAME_RANK = Object.freeze([
     { name: 'ルーキー', cond: 'debut', tk: 1 }, { name: '初めの一勝', cond: 'win', tk: 1 }, { name: '一人前', min: 3000, tk: 1 }, { name: '腕利き', min: 7000, tk: 1 }, { name: '期待の星', min: 15000, tk: 1 },
     { name: 'エース', min: 26000, tk: 2 }, { name: 'スター', min: 40000, tk: 2 }, { name: 'チャンピオン', min: 70000, tk: 2 }, { name: 'ヒーロー', min: 130000, tk: 2 },
@@ -471,7 +471,7 @@
     // ジュニア期の大一番(超高難度・1つ): 予想「勝ち目なし…」
     L.push({ sys: 'derby', name: 'モンスターダービー', p: 'junior', m: 9, star: 3, str: 1.5, prize: 8000, tk: 1500, grade: 'rainbow', hard: true, rw: { all: 3, pts: 15, pop: 6, title: '若き挑戦者', bag: { stamina: 1 } } });
     // 四大大会(ミドル3月・ミドル9月・プロ3月・プロ9月。参考の位置・名前のまま)。4つ全部勝つと「四大大会制覇」
-    [['four1', 'グレイテスト4', 'middle', 3, 5], ['four2', 'M-1グランプリ', 'middle', 9, 5], ['four3', 'ウィナーズ杯', 'pro', 3, 6], ['four4', 'ワールドモンスターズ杯', 'pro', 9, 6]].forEach(([sys, name, p, m, rank], k) => {
+    [['four1', 'グレイテスト4', 'middle', 3, 6], ['four2', 'M-1グランプリ', 'middle', 9, 6], ['four3', 'ウィナーズ杯', 'pro', 3, 6], ['four4', 'ワールドモンスターズ杯', 'pro', 9, 6]].forEach(([sys, name, p, m, rank], k) => {
       L.push({ sys, name, p, m, star: 4, str: 1.35, prize: 12500, tk: 1500, grade: 'four', four: true, hard: k === 3, need: { rank }, rw: { all: 5, pts: 20, pop: 8, fruitTop: 1, bag: { oilyoil: 1 } } });
     });
     // 間合いの2段: ミドル1月の◯◯・トーナメント → プロ1月の◯◯・チャンピオンズ。賞品はその間合いの秘薬

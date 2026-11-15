@@ -291,7 +291,7 @@ ok(near(SUC.failRateOf({ ...base, yosu: { sabori: { visits: 0 } } }) - fFull, 0.
   // 賞金ランク9段(2026-11-15 r1115-085・126 社長 案A・参考の金額): 段が上がるたびに1枚(6段目から上は2枚)・上がらなければ KEEP・古い途中の育成はいまの段で埋めて配り直さない
   { ok(SUC.FAME_RANK.length === 9 && SUC.FAME_RANK[8].name === 'ヒーロー' && SUC.FAME_RANK[8].min === 130000 && SUC.rankStepOf(s0) === 0, '賞金ランクが9段・いちばん上がヒーロー(130,000G)でない');
     ok(SUC.rankTicketsOf(0, 9) === 13 && SUC.rankTicketsOf(4, 5) === 1 && SUC.rankTicketsOf(5, 6) === 2 && SUC.rankTicketsOf(5, 7) === 4, '段のチケットが 1〜5段目は1枚・6段目から上は2枚 になっていない');
-    ok(SUC.EX_CUPS.filter((c) => c.four).map((c) => c.need.rank).join() === '5,5,6,6', '四大大会の出る条件が ミドル5段・プロ6段 でない');
+    ok(SUC.EX_CUPS.filter((c) => c.four).map((c) => c.need.rank).join() === '6,6,6,6', '四大大会の出る条件が ミドル・プロとも6段(参考の「はながた」= 26,000G)でない');
     const lg = (w, l) => ({ ...s0.log, wins: w, losses: l });
     ok(SUC.rankStepOf({ ...s0, log: lg(0, 1), fameTotal: 99999 }) === 1 && SUC.rankStepOf({ ...s0, log: lg(1, 0), fameTotal: 2999 }) === 2 && SUC.rankStepOf({ ...s0, log: lg(1, 0), fameTotal: 8000 }) === 4 && SUC.rankStepOf({ ...s0, log: lg(3, 0), fameTotal: 50000 }) === 7 && SUC.rankStepOf({ ...s0, log: lg(3, 0), fameTotal: 130000 }) === 9, '賞金ランクの段の数え方がずれている');
     const rs = SUC.restore(JSON.parse(JSON.stringify({ ...s0, log: lg(2, 0), fameTotal: 9000, fameRank: undefined }))); ok(rs.fameRank === 4, `古い途中の育成の賞金ランクが いまの段で埋まらない: ${rs.fameRank}`);
@@ -440,7 +440,7 @@ ok(near(SUC.failRateOf({ ...base, yosu: { sabori: { visits: 0 } } }) - fFull, 0.
   const mid3 = { ...mid, turn: 20 }; const cm3 = SUC.cupsOf(mid3);
   const four = cm3.find(c => c.sys === 'four1');
   ok(four && four.ex && four.prize === 12500 && !four.entry.ok && four.entry.why === 'rank', `四大大会の賞金の段の条件が効かない: ${JSON.stringify(four && four.entry)}`);
-  ok(SUC.cupsOf({ ...mid3, fameTotal: 15000, log: { ...mid.log, wins: 1 } }).find(c => c.sys === 'four1').entry.ok && !SUC.cupsOf({ ...mid3, fameTotal: 14999, log: { ...mid.log, wins: 1 } }).find(c => c.sys === 'four1').entry.ok, '賞金ランクが 期待の星(15,000G)でミドルの四大大会に出られる、にならない');
+  ok(SUC.cupsOf({ ...mid3, fameTotal: 26000, log: { ...mid.log, wins: 1 } }).find(c => c.sys === 'four1').entry.ok && !SUC.cupsOf({ ...mid3, fameTotal: 25999, log: { ...mid.log, wins: 1 } }).find(c => c.sys === 'four1').entry.ok, '賞金ランクが エース(26,000G・参考の はながた)で四大大会に出られる、にならない');
   ok(cm.filter(c => c.sys.startsWith('distT')).length === 4, '間合いトーナメント4つが並ばない');
   const pc = SUC.cupsOf({ ...s0, turn: 30 }).find(c => c.sys === 'distC0'); // プロ期1月(ターン30)
   ok(pc && !pc.entry.ok && pc.entry.why === 'won' && pc.entry.wonSys === 'distT0', `間合いチャンピオンズの「◯◯ 優勝で」が効かない: ${JSON.stringify(pc && pc.entry)}`);
