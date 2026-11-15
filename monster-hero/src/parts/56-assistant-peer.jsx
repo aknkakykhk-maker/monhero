@@ -662,6 +662,8 @@ const assistantPeerMarkShown = (talk, { scene, special, now = Date.now() }) => {
     const quarrel = { pending: { id: talk.id, pair: assistantPeerPairKey(talk.pair[0], talk.pair[1]), at: now }, done: [...new Set([...q.done, talk.id])] };
     patch.quarrel = quarrel;
     try { storeSet(ASSISTANT_PEER_QUARREL_KEY, quarrel, false); } catch {}
+    // 今日あったことに「💢 ◯◯・◯◯がけんか(原因)」。押すとけんかの場面(2026-11-15 r1115-137)
+    if (typeof assistantLifeDiaryAdd === 'function') { try { const cause = typeof assistantLifeRelCauseOf === 'function' ? assistantLifeRelCauseOf(talk.id) : null; void assistantLifeDiaryAdd(`💢 ${talk.pair.map(assistantLifeName).join('・')}がけんか${cause ? `(${cause})` : ''}`, [...talk.pair], { kind: 'quarrel', now, tid: talk.id }); } catch {} }
   }
   ASSISTANT_PEER_STORE.set(patch);
   // 助手たちの今: 見守った分のにぎわい・言い合いのあとは2人が距離をおく・見た台本は14日出さない(公開の印 assistantLife の後ろ)
