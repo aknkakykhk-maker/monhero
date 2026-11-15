@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 0f8f3abe322fdb92
+// generated-sha256: 3b7ef6eac3617508
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -95258,7 +95258,7 @@ const msaCamFrames = (pts, total) => {
 //   sound … 効果音を鳴らすか(止めて見返しているときなどは false)
 //   introTitle … 試合の入りの題字(無ければ「試合開始」) / speedF … 見せる速さ(1行の長さに掛ける。×2 は 0.55)
 // fill … 親の高さいっぱいに広げる(助手マスモン対戦 β の観戦・2026-11-13 段2「場を画面いっぱいに」)/ lite … 演出を少なめ(端末の動きを減らす設定と同じ扱い)
-function MsaStage({ log, frames, pos, teams, venueImg, ended = false, win = null, endSub = '', sound = true, introTitle = '', speedF = 1, fill = false, lite = false, wide = false }) {
+function MsaStage({ log, frames, pos, teams, venueImg, ended = false, win = null, endSub = '', sound = true, introTitle = '', speedF = 1, fill = false, lite = false, wide = false, liveGuts = null }) {
   const reduce = useMemo(() => !!lite || msaReduce(), [lite]);
   const [stageW, setStageW] = useState(340);
   const [stageH, setStageH] = useState(300);
@@ -95384,7 +95384,9 @@ function MsaStage({ log, frames, pos, teams, venueImg, ended = false, win = null
   const shakeLv = reduce || !e.hit || e.ev !== 'tech' ? 0 : Math.max(rkFx.shake || 0, tier >= 4 ? 3 : tier >= 3 ? 2 : tier >= 2 ? 1 : 0);
   const shake = shakeLv > 0;
   const p = Number.isFinite(e.p) ? Math.round(e.p) : null;
-  const gutsOf = (side) => (f.g && Number.isFinite(Number(f.g[side])) ? Number(f.g[side]) : null);
+  // liveGuts … 手番待ちのあいだの「いまの」ガッツ { A, B }。新しいラウンドの自動回復は記録の行に残らないので、上の帯を下の操作欄にそろえる(r1115-187)
+  const liveOf = (side) => (liveGuts && Number.isFinite(Number(liveGuts[side])) ? Number(liveGuts[side]) : null);
+  const gutsOf = (side) => (liveOf(side) != null ? liveOf(side) : f.g && Number.isFinite(Number(f.g[side])) ? Number(f.g[side]) : null);
   // 効果の帯: 直近の数行から、左右それぞれ新しい2本まで
   const bands = { A: [], B: [] };
   if (pos > 0 && !ended) {
@@ -95395,7 +95397,9 @@ function MsaStage({ log, frames, pos, teams, venueImg, ended = false, win = null
   const sf = Number(speedF) || 1;
   const hud = (sd) => {
     const m = memberOf(sd); const foe = e.ev === 'tech' && e.side && e.side !== sd;
-    const tags = msaGutsTagsOf(log, frames, Math.min(pos, frames.length - 1), sd, regen, hitMs);
+    const tags0 = msaGutsTagsOf(log, frames, Math.min(pos, frames.length - 1), sd, regen, hitMs);
+    const lv = liveOf(sd); const lvUp = lv != null && f.g && Number.isFinite(Number(f.g[sd])) ? Math.round(lv - Number(f.g[sd])) : 0;
+    const tags = lvUp > 0 ? [...tags0, { t: `+${lvUp}`, cls: 'up', delay: 0 }] : tags0; // 自動回復の分
     return (
       <div key={sd} className={`msa-hud ${sd}`} data-msa-hud={sd}>
         <div className="nm">{m ? m.name : ''}</div>
@@ -95430,7 +95434,7 @@ function MsaStage({ log, frames, pos, teams, venueImg, ended = false, win = null
      </div>
       {/* ここから上の層(カメラ・揺れの外。字が読めるように動かさない) */}
       {!intro && !ended && ['A', 'B'].map(hud)}
-      {!intro && <div className="msa-rnd" data-msa-round={f.r || 0}><small>ラウンド</small><b>{f.r || 1}</b></div>}
+      {!intro && (() => { const rn = liveGuts && Number.isFinite(Number(liveGuts.r)) && Number(liveGuts.r) > 0 ? Number(liveGuts.r) : (f.r || 0); return <div className="msa-rnd" data-msa-round={rn}><small>ラウンド</small><b>{rn || 1}</b></div>; })()}
       {['A', 'B'].map((sd) => (bands[sd].length ? <div key={sd} className={`msa-bands ${sd}`}>{bands[sd].map((b, j) => <span key={`${b.k}-${b.j}`} className={`msa-band ${j ? 'old' : ''}`} data-msa-band={sd}>{b.t}</span>)}</div> : null))}
       {e.ev === 'charge' && e.why === 'sulk' && !intro && !ended && <div key={`sk-${pos}`} className={`msa-sulkstamp ${e.side === 'B' ? 'B' : 'A'}`} data-msa-sulk={e.side}><b>💢 意味不明!</b><small>{e.side === 'A' ? '' : '相手は'}言うことを聞かず、<wbr/>何もしなかった</small></div>}
       {e.ev !== 'tech' && <div className="msa-dist">{AMBW_DIST.map((n, d) => <span key={d} className={d === f.d ? 'cur' : ''}>{n}</span>)}</div>}
@@ -95532,6 +95536,18 @@ function MonsucArena({ s, info, engine, input, watch, onEnd }) {
   if (!log.length) return <div className="msc-wrap"><p className="msc-note" style={{ textAlign: 'center', marginTop: 40 }}>試合の準備をしています…</p></div>;
   const f = frames[Math.min(pos, frames.length - 1)] || frames[0];
   const fShow = fShowH || f;
+  // 手番待ち: 上の帯のガッツを、新しいラウンドの自動回復のあとの値(下の操作欄と同じ)に合わせる。相手は記録から見積もった回復の分を足す(r1115-187)
+  const liveGuts = (() => {
+    const op = barOn ? mm.pending : null;
+    if (!op || op.kind !== 'act' || !Number.isFinite(Number(op.guts)) || !f || !f.g) return null;
+    const out = { A: Number(op.guts), r: Number(op.round) || 0 }; // r … いまのラウンド(上の帯のラウンドの数字も、新しいラウンドに合わせる)
+    if (Number.isFinite(Number(op.round)) && Number(op.round) > (Number(f.r) || 0) && typeof msaRegenOf === 'function') {
+      const rg = Number(msaRegenOf(log, frames)[`B${f.act ? f.act.B : 0}`]) || 0;
+      const gMax = typeof window !== 'undefined' && window.ASSISTANT_MASMON_BATTLE && window.ASSISTANT_MASMON_BATTLE.GUTS_MAX ? window.ASSISTANT_MASMON_BATTLE.GUTS_MAX : 99;
+      if (rg > 0 && Number.isFinite(Number(f.g.B))) out.B = Math.min(gMax, Number(f.g.B) + rg);
+    }
+    return out;
+  })();
   const e = log[pos] || {};
   const st = log[0] || {};
   const maxHp = { A: st.aHp || [], B: st.bHp || [] };
@@ -95558,7 +95574,7 @@ function MonsucArena({ s, info, engine, input, watch, onEnd }) {
         {info.buffs ? <i className="msc-buff">✨ 特別な1話</i> : null}
         {(info.opp || {}).breeder ? <small className="msa-breeder">相手 {nm('B')}・{info.opp.breeder}</small> : null}</div>
       <div className="msa-stagebox" data-msa-stagebox>
-        <MsaStage log={log} frames={frames} pos={pos} teams={stageTeams} venueImg={msaVenueBg(info.venue, bg)} ended={ended} win={result ? result.winner : null} introTitle={info.title} speedF={(MSA_SPEEDS.find(x => x.id === speed) || MSA_SPEEDS[0]).f} fill wide/>
+        <MsaStage log={log} frames={frames} pos={pos} teams={stageTeams} venueImg={msaVenueBg(info.venue, bg)} ended={ended} win={result ? result.winner : null} introTitle={info.title} speedF={(MSA_SPEEDS.find(x => x.id === speed) || MSA_SPEEDS[0]).f} fill wide liveGuts={liveGuts}/>
       </div>
       <div className="msa-say" data-msa-say>{call ? <div key={`call-${call.at}`} className={`msa-call ${call.k}`} data-msa-call={call.k}>🎙 {call.t}</div> : msaSay(e, nm, log)}</div>
       {cardsOn ? <div className="msa-cardsrow" data-msa-cards><MsaDistCards list={itemsA} rep={msaRepIds(itemsA, null)} dist={f.d} guts={f.g.A} lastMove={e.side === 'A' && e.ev === 'tech' ? e.move : null} dataSide="A" hitAt={hitAtA} onOpen={(d) => setTechSheet(d)}/></div> : null}
