@@ -887,10 +887,25 @@ const assistantLifeStandLayout = (items, W, H) => {
   // 頭のてっぺんの高さ: 目の高さの平均が、縦は場面の上から4割・横は3割5分に来るところ
   const eyeOff = items.reduce((a, x) => a + ((x.face.eye || 0.4) - (x.face.top || 0)) * visH(x, F), 0) / n;
   const topY = H * (W > H ? 0.36 : 0.42) - eyeOff;
-  return items.map((x, i) => {
+  const lays = items.map((x, i) => {
     const cx = W * 0.04 + sw * (i + 0.5);
-    return { ...assistantLifeStandRule({ face: x.face, box: x.box, F, topY, cx }), cx, face: F };
+    const p = { ...assistantLifeStandRule({ face: x.face, box: x.box, F, topY, cx }), cx, face: F };
+    // 左右を切らない絵(r1115-023)は、広げた手などが場面の端から出ると切れて見える。出た分だけ内側へずらす(となりと少し重なってよい)
+    const vl = p.left + x.box.l * p.width, vr = p.left + x.box.r * p.width;
+    const dx = vr > W ? W - vr : (vl < 0 ? -vl : 0);
+    return dx ? { ...p, left: p.left + dx, cx: cx + dx } : p;
   });
+  // 下の切れ目をそろえる: 絵そのものが切れ目より上で終わる人(腰までの絵など)がいたら、全員その高さで切ってぼかす(2026-11-15 えるびんの全身画)
+  const cuts = lays.filter((p, i) => !items[i].face.head);
+  if (cuts.length >= 2) {
+    const cutY = Math.min(...cuts.map(p => Math.min(p.frameBottom, p.top + p.height)));
+    for (let i = 0; i < lays.length; i++) {
+      const p = lays[i]; if (items[i].face.head) continue;
+      lays[i] = { ...p, clip: [p.clip[0], Math.max(0, p.top + p.height - cutY)], frameBottom: cutY,
+        fade: [Math.max(0, (cutY - ASSISTANT_LIFE_STAND_CUT.fade * p.U - p.top) / p.height), Math.min(1, (cutY - p.top) / p.height)] };
+    }
+  }
+  return lays;
 };
 function AssistantLifeStands({ ids, sleepIds = [] }) {
   const ref = React.useRef(null);
