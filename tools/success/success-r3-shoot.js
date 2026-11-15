@@ -51,7 +51,9 @@ const makeRun = async (kind) => {
   let phase = 'main';
   const stats = (n) => ({ life: n, pow: n, wise: n, hit: n, eva: n, tough: n });
   // 結果だけ見る(r1115-057): その大会で1回でも勝った記録(wonBefore)があるときだけ押せる。win・lose は「勝ったことがある」大会・winnew は初めての大会
-  if (kind === 'win' || kind === 'lose' || kind === 'winnew') { s = { ...s, stats: stats(kind === 'lose' ? 40 : 700), wonBefore: kind === 'winnew' ? [] : ['str:2'], wonNow: [], battle: { kind: 'cup', id: 'x', sys: 'str', star: 2, rival: null, round: 0 } }; phase = 'battle'; }
+  // 大会名は本番と同じく、芯が期・月で付けたいまの名前(cupNameAt)を渡す。渡さないと古い既定の名前に落ちる(r1115-193)
+  const cupNm = (sys, star) => { if (typeof SUC.cupsOf !== 'function') return null; for (let tt = 1; tt <= (SUC.TOTAL_TURNS || 46); tt++) { const c = (SUC.cupsOf({ ...s, turn: tt }) || []).find((x) => x.sys === sys && x.star === star && x.name && x.name !== sys); if (c) return c.name; } return null; };
+  if (kind === 'win' || kind === 'lose' || kind === 'winnew') { s = { ...s, stats: stats(kind === 'lose' ? 40 : 700), wonBefore: kind === 'winnew' ? [] : ['str:2'], wonNow: [], battle: { kind: 'cup', id: 'x', sys: 'str', star: 2, name: cupNm('str', 2), rival: null, round: 0 } }; phase = 'battle'; }
   // R1・C3: 優勝で賞金ランクが1段上がるように、賞金の合計を次の段のすぐ手前にそろえる(段の境目は芯の FAME_RANK。r1115-168 で境目が変わり、上がらなくなって R1 がごはんの段になっていた・r1115-197)
   if (kind === 'win' && Array.isArray(SUC.FAME_RANK)) { const nx = SUC.FAME_RANK.slice(2).find((r) => Number(r.min) > (Number(s.fameTotal) || 0)); if (nx) s = { ...s, fameTotal: nx.min - 1 }; }
   if (kind === 'debutlose') { s = { ...s, turn: 5, wonNow: [], wonBefore: ['debut'], stats: stats(30), debutLoss: 2, debutWon: false, rematchUsed: 3, battle: { kind: 'debut', round: 0, retry: 2 } }; phase = 'battle'; }
@@ -90,7 +92,8 @@ const makeRun = async (kind) => {
     ['C1', 'mid', ['cont', /^🏆大会/]],
     ['C1w', 'mid', ['cont', /^🏆大会/, '@cup']], ['C1p', 'mid', ['cont', /^🏆大会/, '@cup', '@prize=g']], ['C1m', 'mid', ['cont', /^🏆大会/, '@next-month']], // 受付の作り直し(確認の窓・賞品の詳細・次の月)
     // 大会の1戦はバトル部の見せる部品 MonsucCupShow('%x' は [data-msc-x])。賞品のあとのごはんは回3
-    ['B1', 'win', ['cont', '@cupintro-go']], ['C2', 'win', ['cont', '@cupintro-go', '%go']], ['W1', 'win', ['cont', '@cupintro-go', '%go', '%ready']], ['G2', 'win', ['cont', '@cupintro-go', '%go', '%ready', 'w4000', /^◀後ろへ/, 'w6000']], // 手動の試合の2ラウンド目の自分の番: 上の帯と操作欄のガッツが同じ(r1115-187)
+    ['B1', 'win', ['cont', '@cupintro-go']], ['C2', 'win', ['cont', '@cupintro-go', '%go']], ['W1', 'win', ['cont', '@cupintro-go', '%go', '%ready']], ['MA1', 'win', ['cont', '@cupintro-go', '%go', '%ready', 'w4000', '@@h', '*[data-msxm-move="1"]', 'w600', '@@h', 'w5400', '@@h']], ['MA2', 'win', ['cont', '@cupintro-go', '%go', '%ready', 'w4000', '*[data-msxm-move="-1"]', 'w6000']], // 手動の試合: 札の案A・場の高さが番で変わらない・零で吹き飛ばし(r1115-050②・074・185・193)
+    ['G2', 'win', ['cont', '@cupintro-go', '%go', '%ready', 'w4000', '*[data-msxm-move="1"]', 'w6000']], // 手動の試合の2ラウンド目の自分の番: 上の帯と操作欄のガッツが同じ(r1115-187)
     ['B2', 'win', ['cont', '@cupintro-go', '%quick']], ['R1', 'win', ['cont', '@cupintro-go', '%quick', '%next']], ['C3', 'win', ['cont', '@cupintro-go', '%quick', '%next', '@next']], ['C3b', 'win', ['cont', '@cupintro-go', '%quick', '%next', '@next', '@meal=f_tough']], // R1: 賞金ランク UP!(段が上がったときだけ)
     ['C4', 'lose', ['cont', '@cupintro-go', '%quick']], ['C4r', 'lose', ['cont', '@cupintro-go', '%quick', '%rematch=sand']], ['C4g', 'lose', ['cont', '@cupintro-go', '%quick', '%giveup']],
     ['C4d', 'debutlose', ['cont', '@cupintro-go', '%quick']],
@@ -168,6 +171,7 @@ const makeRun = async (kind) => {
         const pend0 = name === 'E9' ? await page.evaluate(async () => { const r = await storeGet(MSX_KEYS.run, null); return r && r.s ? (r.s.beatEarned || 0) - (r.beatSent || 0) : 0; }) : 0; // まだ本編へ渡していない大会の分
         // 曲の呼び出しを記録する(段C 2026-11-14 社長「バトルに入ったらバトル用の音楽に」: 試合に入ったら大会の曲から original_battle へ)
         await page.evaluate(() => { window.__bgmLog = []; if (!window.__bgmHooked && typeof SuccessSound !== 'undefined') { window.__bgmHooked = true; const o = SuccessSound.scene; SuccessSound.scene = function (id) { window.__bgmLog.push(id); return o.apply(this, arguments); }; } });
+        await page.evaluate(() => { window.__stageH = []; });
         const keysSeen = [];
         for (const st of steps) {
           const done = await page.evaluate(async (st) => {
@@ -176,6 +180,8 @@ const makeRun = async (kind) => {
             if (/^w\d+$/.test(st)) return true; // 'w1000' は待つだけ
             if (st[0] === '=') { const [k, v] = st.slice(1).split(':'); const e = document.querySelector(`[data-monsuc-${k}]`); if (!e) return false; const set = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set; set.call(e, v); e.dispatchEvent(new Event('input', { bubbles: true })); return true; } // '=k:文字' は [data-monsuc-k] の入力に文字を入れる
             if (st.startsWith('$qok')) { const n = Number(st.slice(4)) || 0; const c = [...document.querySelectorAll('.q-card.ok, .q-cell.ok')][n]; if (!c) return false; c.click(); return true; } // '$qokN' は修行の「覚えられる技」の緑の札を上からN番目(0始まり)で選ぶ(r1113-034)
+            if (st[0] === '*') { const e = document.querySelector(st.slice(1)); if (e && !e.disabled) e.click(); return !!(e && !e.disabled); } // '*sel' は CSS の印で押す
+            if (st === '@@h') { const b = document.querySelector('.msa-stagebox'); (window.__stageH = window.__stageH || []).push(b ? Math.round(b.getBoundingClientRect().height) : -1); return true; } // '@@h' は場の高さを覚える(番で変わらないかを見る)
             if (st[0] === '^') { const e = document.querySelector(`[data-msx-${st.slice(1)}]`); if (e) e.scrollIntoView({ block: 'start' }); return !!e; } // '^x' は [data-msx-x] が見出しの頭に来るところまでスクロール
             const [k, val] = st.slice(1).split('=');
             const pre = st[0] === '%' ? 'data-msc-' : st[0] === '#' ? 'data-msx-' : st[0] === '~' ? 'data-monsuc-' : st[0] === '!' ? 'data-mhl-' : 'data-msx-r3-'; // '#x' は [data-msx-x](詳細の窓 MsxMonDetail のタブなど)
@@ -186,9 +192,25 @@ const makeRun = async (kind) => {
           await page.waitForTimeout(st === '%ready' ? 2500 : /^w\d+$/.test(st) ? Number(st.slice(1)) : 700);
           keysSeen.push(await page.evaluate(() => (window.Audio_ && Audio_.currentBgmKey ? Audio_.currentBgmKey() : null)));
         }
+        if (name === 'MA1' || name === 'MA2') { const q = await page.evaluate(() => { const tools = [...document.querySelectorAll('.msa-tools')]; const bottom = tools.length ? Math.round(Math.max(...tools.map((e) => e.getBoundingClientRect().bottom))) : -1;
+            const cards = [...document.querySelectorAll('[data-msa-dc-look="a"] [data-msa-dc-card]')]; const withT = cards.filter((c) => c.getAttribute('data-msa-dc-rep'));
+            const full = withT.every((c) => c.querySelector('.msa-dc-ic') && c.querySelector('[data-msa-dc-l1]') && c.querySelector('[data-msa-dc-l2]'));
+            const cut = withT.some((c) => [...c.querySelectorAll('.msa-tn, [data-msa-dc-l1], [data-msa-dc-l2]')].some((n) => n.scrollWidth > n.clientWidth + 1 || n.getBoundingClientRect().right > c.getBoundingClientRect().right + 1));
+            const blow = document.querySelector('[data-msxm-blow]'); const r3 = document.querySelector('.msxm-row.r3'); const hs = window.__stageH || [];
+            return { bottom, n: cards.length, withT: withT.length, full, cut, blow: blow ? { far: blow.getAttribute('data-msxm-blow') === 'far', off: blow.disabled } : null, r3: r3 ? r3.children.length : 0, hs, h: innerHeight };
+          });
+          check(`${label}: 攻撃の札は案A(4枚・技のある札に絵と性能の2行・技名と数字が切れない)`, q.n === 4 && q.withT > 0 && q.full && !q.cut, JSON.stringify(q));
+          check(`${label}: 移動の段は「◀後退・💨吹き飛ばし・前進▶」の横3つ`, q.r3 === 3 && !!q.blow, JSON.stringify(q.blow));
+          if (name === 'MA2') check(`${label}: 零距離では吹き飛ばしが押せる`, q.blow && !q.blow.far && !q.blow.off, JSON.stringify(q.blow));
+          if (!tag) check(`${label}: 下のボタン列まで1画面に収まる(縦390×844)`, q.bottom > 0 && q.bottom <= q.h, `${q.bottom}px / ${q.h}px`);
+          if (name === 'MA1' && tag !== 'land') check(`${label}: 自分の番・演出中・次の番で場の高さが変わらない`, q.hs.length === 3 && Math.max(...q.hs) - Math.min(...q.hs) <= 2, JSON.stringify(q.hs)); }
         if (name === 'G2') { const g = await page.evaluate(() => { const top = document.querySelector('[data-msa-hud="A"] [data-msa-gauge="gt"]'); const bar = [...document.querySelectorAll('.msxm b')].find((b) => /^ガッツ \d+/.test(b.innerText || '')); const rd = document.querySelector('[data-msa-round]'); return { top: top ? Number(top.getAttribute('data-msa-gauge-v')) : null, bar: bar ? Number((bar.innerText.match(/\d+/) || [])[0]) : null, round: rd ? Number(rd.getAttribute('data-msa-round')) : null }; });
           check(`${label}: 自分の番のとき、上の帯と操作欄のガッツが同じ`, g.top != null && g.bar != null && Math.round(g.top) === g.bar, JSON.stringify(g));
           check(`${label}: 2ラウンド目の自分の番は、上の帯のラウンドも 2`, g.round === 2, JSON.stringify(g)); }
+        if (name === 'G2' || name === 'MA1' || name === 'MA2') { const ov = await page.evaluate(() => { const box = document.querySelector('.msa-stagebox'); const bar = document.querySelector('[data-msxm] .msxm-top'); const say = document.querySelector('[data-msa-say]'); if (!box || !bar) return null;
+            const low = Math.max(...[...box.querySelectorAll('*')].filter((e) => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0 && getComputedStyle(e).visibility !== 'hidden'; }).map((e) => e.getBoundingClientRect().bottom), box.getBoundingClientRect().bottom);
+            const lowEl = [...box.querySelectorAll('*')].filter((e) => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0; }).sort((a, b) => b.getBoundingClientRect().bottom - a.getBoundingClientRect().bottom)[0]; return { boxBottom: Math.round(box.getBoundingClientRect().bottom), lowEl: lowEl ? String(lowEl.className && lowEl.className.baseVal != null ? lowEl.className.baseVal : lowEl.className).slice(0, 40) : '', sayTxt: say ? say.innerText.slice(0, 20) : '', stageLow: Math.round(low), sayTop: say ? Math.round(say.getBoundingClientRect().top) : null, barTop: Math.round(bar.getBoundingClientRect().top), boxH: Math.round(box.getBoundingClientRect().height) }; });
+          check(`${label}: 場(間合いの札まで)が実況・操作欄の見出しに重ならない`, ov && ov.stageLow <= (ov.sayTop != null ? ov.sayTop : ov.barTop) + 1 && ov.stageLow <= ov.barTop + 1, JSON.stringify(ov)); }
         if (name === 'W1') { const lg = await page.evaluate(() => window.__bgmLog.slice()); const iC = lg.lastIndexOf('cupPre'), iB = lg.lastIndexOf('cupMatch');
           check(`${label}: 試合に入ったら、場面の曲が cupPre から cupMatch(バトルの曲 ichika_battle)へ替わる`, iC >= 0 && iB > iC, lg.join('>'));
           // 場面→曲の表: 試合の前の画面(cupPre=能力を見るバトルカード)と試合(cupMatch)は別の曲で、音源のファイルも別
