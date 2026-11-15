@@ -15,6 +15,8 @@ const DEFAULT_MAX = 300; // 表に無い絵(新しく足した絵)は、これ�
 const ALLOWED = {
   'kiki': 500, 'sorashido': 500, 'kiki_halloween': 1000, 'kyuko': 2500, 'momosuke': 1500,
   'mua_halloween': 1000, 'mua_card-master': 1400,
+  // 2026-11-15 r1115-143: 減色をやめたら、服の白(ももすけハロウィンの耳の白い毛・ソラシド補正の白い着物)がまだらに分かれず1つの塊になった。目で見て背景の残りではないことを確かめた
+  'momosuke_halloween': 400, 'sorashido_hosei': 600,
   // 2026-11-12 ふちをなめらかにして、みゅあのストッキング(服の白)が透明に触れなくなった(いまの最大 3030)
   'mua': 3500,
 };
@@ -56,15 +58,16 @@ const worstEnclosedWhite = (file) => {
     }
     if (!touch && n > worst) { worst = n; at = [Math.round(sx / n), Math.round(sy / n)]; }
   }
-  return { worst, at };
+  return { worst, at, h };
 };
 
 let failed = 0;
 for (const f of fs.readdirSync(DIR).filter((n) => /\.png$/.test(n)).sort()) {
   const name = f.replace(/\.png$/, '');
   if (name.includes('__')) continue; // 表情の絵は、元の絵(表情なし)と同じ作り方
-  const { worst, at } = worstEnclosedWhite(path.join(DIR, f));
-  const max = ALLOWED[name] ?? DEFAULT_MAX;
+  const { worst, at, h } = worstEnclosedWhite(path.join(DIR, f));
+  // 許す大きさは、高さ 768 の絵で測った画素。元の大きさで作り直した絵(高さ約1530・2026-11-15 r1115-143)は、面積の比で読みかえる(同じ服の白が4倍の画素になる)
+  const max = Math.round((ALLOWED[name] ?? DEFAULT_MAX) * Math.max(1, (h / 768) ** 2));
   if (worst > max) {
     failed++;
     console.log(`NG ${f}: 囲まれた白い塊 ${worst}画素(許す ${max})。中心 ${at[0]},${at[1]} — 背景の残りなら life-fullbody-art.py の POCKETS に座標を足して回す`);
