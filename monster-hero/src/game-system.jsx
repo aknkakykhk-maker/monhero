@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: d489d1aa86d23f7e
+// generated-sha256: 193a598a6d5afea9
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -89697,7 +89697,7 @@ function MsxTeamEffects({ members, onClose }) {
         <div className="msx-dt-body">
           {list.length ? list.map(({ d, rows }) => { const one = msxTpOneOnly(AT, d.id); const best = one ? Math.max(...rows.map((r) => r.v)) : null; let used = false; return (
             <div key={d.id} className="msx-gt-row" data-msx-effect={d.id}>
-              <div className="hd"><span className="ic">{d.icon}</span><b>{d.name}</b><span className="st">{AT.TYPE_NAME[d.type] || ''}型</span><span className="n">{rows.length}体</span></div>
+              <div className="hd"><span className="ic">{cardIconNode(d.icon, 16)}</span><b>{d.name}</b><span className="st">{AT.TYPE_NAME[d.type] || ''}型</span><span className="n">{rows.length}体</span></div>
               {rows.map((r, i) => { const live = !one || (!used && r.v === best && (used = true)); return (
                 <div key={i} className="msx-gt-mon"><img src={msxMonThumb(members[r.mi].species)} alt=""/><span className="nm">{r.name}</span><span className="v">{r.text}{live ? '' : '・重複(効かない)'}</span></div>); })}
             </div>); })
