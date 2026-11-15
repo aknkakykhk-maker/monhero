@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c30179f9c39c7d6b
+// source-sha256: 7c955259b31ed2e5
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -185888,8 +185888,9 @@ const MSA_CSS = `
 /* 縦は 帯 → 場 → 札 → ボタン列。場が残りの高さを全部もらう(画面の決まり docs/spec/MONSUC_UI.md ①)。手番の帯が高くて入らないときだけ画面ごと送る */
 .msc-wrap.msa{height:100%;min-height:0}
 .msa-stagebox{flex:1 1 auto;min-height:300px}
-/* 手動の試合(2026-11-15 社長 r1115-050② 案L1): 操作欄はいつも出したまま(演出中は押せない形)にして、場の高さを番ごとに変えない。場は残りの高さに合わせて縮み、160px を下回る低い画面は縦に流す(r1115-193 案③) */
-.msa[data-msa-mode=manual] .msa-stagebox{flex:1 1 0;min-height:160px}
+/* 手動の試合(2026-11-15 社長 r1115-050② 案L1): 操作欄はいつも出したまま(演出中は押せない形)にして、場の高さを番ごとに変えない。場は残りの高さに合わせて縮み、220px(幅320 で場の中身が収まる高さ)を下回る低い画面は縦に流す(r1115-193 案③) */
+.msc-wrap.msa[data-msa-mode=manual]{height:auto;min-height:100%}
+.msa[data-msa-mode=manual] .msa-stagebox{flex:1 1 0;min-height:220px}
 .msa-stage.fill.big .msa-f,.msa-stage.fill.big .msa-dmgwrap{width:var(--msa-fw);margin-left:calc(var(--msa-fw) / -2);height:var(--msa-fh);bottom:36%}
 .msa-stage.fill.big .msa-f img.msa-img{max-width:var(--msa-fw);max-height:calc(var(--msa-fh) - 10px)}
 .msa-stage.fill.big .msa-f .msa-shadow{width:calc(var(--msa-fw) * .56);margin-left:calc(var(--msa-fw) * -.28)}
