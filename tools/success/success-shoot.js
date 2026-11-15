@@ -150,7 +150,7 @@ const makeRun = async (kind) => {
             if (st === 'effects') { const d = document.querySelector('[data-msx-team-effects-open]'); if (d) d.click(); return !!d; }
             if (st === 'gather') { const d = document.querySelector('[data-msx-gather-open]'); if (d) d.click(); return !!d; }
             if (st.startsWith('pickmon:')) { const d = [...document.querySelectorAll('.v-grid6 button')].find((b) => { const i = b.querySelector('img'); return i && i.alt === (typeof msxMonName === 'function' ? msxMonName(st.slice(8)) : st.slice(8)); }); if (d) d.click(); return !!d; } // 育てるモンスターを種族で選ぶ
-            if (st.startsWith('alt:')) { const d = document.querySelector(`[data-msx-alt="${st.slice(4)}"]`); if (d) d.click(); return !!d; } // 被った升の ⇄ を押す(2026-11-14 技を選ぶ窓)
+            if (st.startsWith('alt:')) { const c = document.querySelector(`[data-msx-cell="${st.slice(4)}"]`); if (c) c.click(); const d = document.querySelector('[data-msx-alt-open]'); if (d) d.click(); return !!(c && d); } // 被った升を押して、右の欄の「⇄ 覚える技を選ぶ」で窓を開く(r1115-152①)
             if (st.startsWith('altopt:')) { const d = document.querySelector(`[data-msx-techpick-opt="${st.slice(7)}"]`); if (d) d.click(); return !!d; }
             if (st.startsWith('tab:')) { const d = document.querySelector(`[data-msx-detail-tab="${st.slice(4)}"]`); if (d) d.click(); return !!d; }
             if (st.startsWith('carry:')) { const d = document.querySelector(`[data-msx-carry-item="${st.slice(6)}"]`); if (d) d.click(); return !!d; } // 持ちこみの升目を押す(持っていない物も・2026-11-14)

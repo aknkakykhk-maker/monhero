@@ -40,7 +40,10 @@ const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/cs
     const cellOf = () => page.evaluate(() => { const c = document.querySelector('[data-msx-cell="2-1"]'); return c ? c.getAttribute('data-msx-tech') : null; });
     check('被った升の既定は並びの1つ目(プレゼントキッス)', (await cellOf()) === 'sk-0742', String(await cellOf()));
     check('被った升に ⇄ が付く', await page.evaluate(() => !!document.querySelector('[data-msx-alt="2-1"]')));
-    await page.evaluate(() => document.querySelector('[data-msx-alt="2-1"]').click()); await page.waitForTimeout(300);
+    // r1115-152①: 升を押すと右の欄に技が出る(いきなり選ぶ窓へは行かない)→ 欄の「⇄ 覚える技を選ぶ」で窓
+    await page.evaluate(() => document.querySelector('[data-msx-cell="2-1"]').click()); await page.waitForTimeout(300);
+    check('⇄ の升を押しても選ぶ窓は開かず、右の欄に技が出る(⇄2 の印)', await page.evaluate(() => !document.querySelector('[data-msx-techpick]') && !!document.querySelector('.msx-md-td') && document.querySelector('[data-msx-alt="2-1"]').textContent === '⇄2'));
+    await page.evaluate(() => document.querySelector('[data-msx-alt-open]').click()); await page.waitForTimeout(300);
     check('選ぶ窓が開き、候補が2つ並ぶ', await page.evaluate(() => document.querySelectorAll('[data-msx-techpick-opt]').length === 2));
     // r1115-149: 窓の技アイコンは升目と同じ正方形(縦長に引き伸ばさない)・ランクの数字が付く
     const icons = await page.evaluate(() => [...document.querySelectorAll('[data-msx-techpick-icon]')].map((el) => { const r = el.getBoundingClientRect(); return { w: Math.round(r.width), h: Math.round(r.height), rk: !!el.querySelector('.tg-rk') }; }));
