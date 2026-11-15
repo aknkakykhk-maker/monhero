@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 7fbf1c4edcbf60cf
+// generated-sha256: 187fdfc83900635e
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -99390,9 +99390,9 @@ const CARD_TACTIC_GROUPS = Object.freeze([
   { id: 'foeHandLe', cat: 'cond', sec: '手札・山札', name: '相手の手札◯枚以下', tiers: [0, 1, 2].map((v) => [v, cardTacticFine([1])(v)]), desc: '相手の手札がその数以下' },
   { id: 'myDeck', cat: 'cond', sec: '手札・山札', name: '自分の山札◯枚以下', tiers: [30, 20, 10, 5].map((v) => [v, cardTacticFine([20, 5])(v)]), desc: '自分の山札がその数以下' },
   { id: 'foeDeck', cat: 'cond', sec: '手札・山札', name: '相手の山札◯枚以下', tiers: [30, 20, 10, 5].map((v) => [v, cardTacticFine([20, 5])(v)]), desc: '相手の山札がその数以下' },
-  { id: 'guardN', cat: 'cond', sec: '手札の中身', name: '手札に守り札◯枚以上', tiers: [1, 2, 3].map((v) => [v, cardTacticFine([3])(v)]), desc: '回避・防御の札がその数以上' },
-  { id: 'guardKind', cat: 'cond', sec: '手札の中身', name: '手札に◯がある', tiers: [['回避', 'N'], ['防御', 'N']], desc: 'その種類の守り札がある' },
-  { id: 'bigInHand', cat: 'cond', sec: '手札の中身', name: '手札に大技がある', tiers: [['', 'N']], desc: 'ガッツ4以上の攻撃の札がある' },
+  { id: 'guardN', cat: 'cond', sec: '手札の中身', name: '手札に守りカード◯枚以上', tiers: [1, 2, 3].map((v) => [v, cardTacticFine([3])(v)]), desc: '回避・防御のカードがその数以上' },
+  { id: 'guardKind', cat: 'cond', sec: '手札の中身', name: '手札に◯がある', tiers: [['回避', 'N'], ['防御', 'N']], desc: 'その種類の守りカードがある' },
+  { id: 'bigInHand', cat: 'cond', sec: '手札の中身', name: '手札に大技がある', tiers: [['', 'N']], desc: 'ガッツ4以上の攻撃のカードがある' },
   { id: 'areaInHand', cat: 'cond', sec: '手札の中身', name: '手札に全体攻撃がある', tiers: [['', 'R']], desc: '全員に当たる技がある' },
   { id: 'breederInHand', cat: 'cond', sec: '手札の中身', name: '手札にブリーダーのカードがある', tiers: [['', 'N']], desc: 'ブリーダーのカードがある' },
   { id: 'turnLe', cat: 'cond', sec: '番', name: '◯番目まで', tiers: [1, 2, 3, 5].map((v) => [v, cardTacticFine([2])(v)]), desc: '自分の番がその回数まで' },
@@ -99424,7 +99424,7 @@ const CARD_TACTIC_GROUPS = Object.freeze([
   // ---------- 基本カード(大まかな型。基本の枠: メイン1・サブ2) ----------
   { id: 'tBalance', cat: 'base', sec: '基本', name: 'バランス型', tiers: [['', 'N']], start: [''], habit: 'kyuko', desc: 'くせの少ない打ち方(きゅこの型)' },
   { id: 'tAttack', cat: 'base', sec: '基本', name: '攻め型', tiers: [['', 'N']], habit: 'mua', knob: { guardDieOnly: true }, desc: 'ためずに攻める(みゅあの型)' },
-  { id: 'tGuard', cat: 'base', sec: '基本', name: '守り型', tiers: [['', 'N']], habit: 'dra', knob: { guardAll: true }, desc: '守り札を残して堅く守る(ドラの型)' },
+  { id: 'tGuard', cat: 'base', sec: '基本', name: '守り型', tiers: [['', 'N']], habit: 'dra', knob: { guardAll: true }, desc: '守りカードを残して堅く守る(ドラの型)' },
   { id: 'tSave', cat: 'base', sec: '基本', name: '溜め型', tiers: [['', 'N']], habit: 'kiki', desc: 'ガッツをためて大技(ききの型)' },
   { id: 'tDisrupt', cat: 'base', sec: '基本', name: '崩し型', tiers: [['', 'N']], habit: 'momosuke', desc: '相手の手を崩す(ももすけの型)' },
   { id: 'tBig', cat: 'base', sec: '基本', name: '大技型', tiers: [['', 'R']], mul: { big: 1.6 }, desc: 'ダメージの大きい技を選ぶ' },
@@ -99438,7 +99438,7 @@ const CARD_TACTIC_GROUPS = Object.freeze([
   { id: 'tMill', cat: 'base', sec: '基本', name: '持久型', tiers: [['', 'SR']], habit: 'sorashido', desc: '長引かせて、相手の山札切れで勝つ(ソラシドの型)' },
   { id: 'tReckless', cat: 'base', sec: '基本', name: '捨て身型', tiers: [['', 'SR']], mul: { keepGuard: 0.5, finish: 1.3 }, knob: { noGuardUnlessFinish: true }, desc: '守らずに受けて、そのぶん倒しに行く' },
   { id: 'tHand', cat: 'base', sec: '基本', name: '手札温存型', tiers: [['', 'R']], knob: { keepHand: 2 }, desc: '手札を2枚以上残して、次の番に備える' },
-  { id: 'tDeck', cat: 'base', sec: '基本', name: '山札節約型', tiers: [['', 'R']], knob: { noDraw: true }, desc: '引く札・山札を減らす札を控え、山札を切らさない' },
+  { id: 'tDeck', cat: 'base', sec: '基本', name: '山札節約型', tiers: [['', 'R']], knob: { noDraw: true }, desc: '引くカード・山札を減らすカードを控え、山札を切らさない' },
   { id: 'tFocus', cat: 'base', sec: '基本', name: '一点集中型', tiers: [['', 'R']], knob: { focus: true }, desc: '同じ相手を倒れるまで狙い続ける' },
   { id: 'tSpread', cat: 'base', sec: '基本', name: '分散型', tiers: [['', 'SR']], mul: { area: 1.4 }, knob: { spread: true }, desc: '全員を少しずつ削り、最後にまとめて倒す' },
   { id: 'tComeback', cat: 'base', sec: '基本', name: '逆転型', tiers: [['', 'SR']], knob: { comeback: true }, desc: '勝っているあいだは堅く、負けたら捨て身で攻める' },
@@ -99448,8 +99448,8 @@ const CARD_TACTIC_GROUPS = Object.freeze([
   { id: 'cost', cat: 'monster', sec: '攻撃', phase: 'attack', name: '◯を出す', tiers: [['軽い技(ガッツ0〜1)', 'N'], ['中くらいの技(2〜3)', 'N'], ['大技(4以上)', 'N']], start: ['大技(4以上)'], desc: '払うガッツで選ぶ' },
   { id: 'reach', cat: 'monster', sec: '攻撃', phase: 'attack', name: '◯を出す', tiers: [['全体攻撃', 'R'], ['単体攻撃', 'N']], desc: '全員に当たる技か、1体に当てる技か' },
   { id: 'eff', cat: 'monster', sec: '攻撃', phase: 'attack', name: '「◯」の技を出す', tiers: [['回避されない', 'N'], ['攻撃できなくする', 'R'], ['ガッツを減らす', 'N'], ['吸い取る', 'N'], ['2回攻撃', 'R'], ['防御で減らない', 'N'], ['回避されても半分', 'N'], ['種族に強い', 'N'], ['ダメージを割り振る', 'R'], ['2枚同時', 'N'], ['手札に戻る', 'N'], ['カード投げ', 'SR']], desc: 'その効き目のついた技を出す' },
-  { id: 'attach', cat: 'monster', sec: '攻撃', phase: 'attack', name: '付ける札を使う', tiers: [['', 'R']], desc: '技に付ける札をいっしょに出す' },
-  { id: 'attachKind', cat: 'monster', sec: '攻撃', phase: 'attack', name: '付ける札: ◯', tiers: [['ダメージを上げる', 'N'], ['回避させない', 'R'], ['ガッツを軽くする', 'N']], desc: 'その効き目の付ける札を、技にいっしょに出す' },
+  { id: 'attach', cat: 'monster', sec: '攻撃', phase: 'attack', name: '付けるカードを使う', tiers: [['', 'R']], desc: '技に付けるカードをいっしょに出す' },
+  { id: 'attachKind', cat: 'monster', sec: '攻撃', phase: 'attack', name: '付けるカード: ◯', tiers: [['ダメージを上げる', 'N'], ['回避させない', 'R'], ['ガッツを軽くする', 'N']], desc: 'その効き目の付けるカードを、技にいっしょに出す' },
   { id: 'spe', cat: 'monster', sec: '特殊技', phase: 'attack', name: '特殊技: ◯', tiers: [['味方を回復', 'N'], ['引く', 'N'], ['空中になる', 'N'], ['安全になる', 'R'], ['まゆと羽化', 'R'], ['のりうつる', 'SR']], desc: 'その効き目の特殊技を出す' },
   { id: 'stance', cat: 'monster', sec: '立ち回り', phase: 'attack', name: '立ち回り: ◯', tiers: [['この子から攻める', 'N'], ['この子は攻撃しない', 'N'], ['ライフの多い子が先に', 'R'], ['ライフの少ない子は温存', 'R'], ['攻撃は1回だけ', 'N'], ['何回でも攻める', 'SR']], desc: 'その子の前に出る・下がるを決める' },
   { id: 'bEff', cat: 'breeder', sec: 'ブリーダーのカード', phase: 'attack', name: 'ブリーダー: ◯', tiers: [['回復する', 'N'], ['倒れた子を戻す', 'R'], ['攻撃できないを消す', 'N'], ['相手を攻撃できなくする', 'R'], ['相手のガッツを減らす', 'N'], ['両方のガッツを0にする', 'SR'],
@@ -99457,20 +99457,20 @@ const CARD_TACTIC_GROUPS = Object.freeze([
   { id: 'fieldCard', cat: 'breeder', sec: 'ブリーダー', phase: 'attack', name: '全体カードを出す', tiers: [['', 'R']], desc: '場に残る全体カードを出す' },
   { id: 'fieldKind', cat: 'breeder', sec: '全体カード', phase: 'attack', name: '全体カード: ◯', tiers: [['ダメージを足す', 'N'], ['払うガッツを変える', 'N'], ['大きいダメージを封じる', 'R'], ['山札を削る', 'N'], ['純血のプライド', 'N'], ['技の種類を封じる', 'SR'],
     ['持ちょうを変える', 'R'], ['じわじわ減らす', 'N'], ['ガッツの上限', 'N'], ['出すと引く', 'N']], desc: 'その種類の全体カードを場に出す' },
-  { id: 'disrupt', cat: 'monster', sec: '崩す', phase: 'attack', name: '崩し: ◯', tiers: [['手札を捨てさせる', 'R'], ['山札を削る', 'R'], ['ガッツを減らす', 'R'], ['番を飛ばす', 'SR']], desc: '相手の手を崩す札を出す' },
-  { id: 'guard', cat: 'monster', sec: '守り', phase: 'guard', name: '守る', tiers: [['', 'N']], start: [''], desc: '攻撃を受けたら守り札で守る' },
-  { id: 'guardFirst', cat: 'monster', sec: '守り', phase: 'guard', name: '◯を先に使う', tiers: [['回避', 'N'], ['防御', 'N'], ['はね返す守り', 'R'], ['半分にする守り', 'R']], desc: '守るとき、その種類の札で守る' },
+  { id: 'disrupt', cat: 'monster', sec: '崩す', phase: 'attack', name: '崩し: ◯', tiers: [['手札を捨てさせる', 'R'], ['山札を削る', 'R'], ['ガッツを減らす', 'R'], ['番を飛ばす', 'SR']], desc: '相手の手を崩すカードを出す' },
+  { id: 'guard', cat: 'monster', sec: '守り', phase: 'guard', name: '守る', tiers: [['', 'N']], start: [''], desc: '攻撃を受けたら守りカードで守る' },
+  { id: 'guardFirst', cat: 'monster', sec: '守り', phase: 'guard', name: '◯を先に使う', tiers: [['回避', 'N'], ['防御', 'N'], ['はね返す守り', 'R'], ['半分にする守り', 'R']], desc: '守るとき、その種類のカードで守る' },
   { id: 'guardOver', cat: 'monster', sec: '守り', phase: 'guard', name: 'ダメージ◯以上だけ守る', tiers: [[3, 'N'], [5, 'N'], [7, 'R'], [10, 'R']], desc: 'その数より小さい攻撃は守らない' },
   { id: 'guardDie', cat: 'monster', sec: '守り', phase: 'guard', name: '倒されるときだけ守る', tiers: [['', 'R']], desc: '受けたら倒れるときだけ守る' },
-  { id: 'cover', cat: 'monster', sec: '守り', phase: 'guard', name: '味方をかばう', tiers: [['', 'R']], desc: 'かばう札で、味方への攻撃を受ける' },
-  { id: 'noGuard', cat: 'monster', sec: '守り', phase: 'guard', name: '守らない', tiers: [['', 'R']], desc: '守り札を使わず受ける(札を残す)' },
+  { id: 'cover', cat: 'monster', sec: '守り', phase: 'guard', name: '味方をかばう', tiers: [['', 'R']], desc: 'かばうカードで、味方への攻撃を受ける' },
+  { id: 'noGuard', cat: 'monster', sec: '守り', phase: 'guard', name: '守らない', tiers: [['', 'R']], desc: '守りカードを使わず受ける(カードを残す)' },
   { id: 'save', cat: 'breeder', sec: 'ガッツ', phase: 'guts', name: 'ガッツをためる', tiers: [['', 'N']], start: [''], desc: '手札を多めにガッツへ回す' },
   { id: 'gutsN', cat: 'breeder', sec: 'ガッツ', phase: 'guts', name: 'ガッツを◯枚だけ置く', tiers: [[0, 'N'], [1, 'N'], [2, 'N'], [3, 'N']], desc: 'ガッツの番に置く数を決める' },
-  { id: 'keepGuard', cat: 'breeder', sec: 'ガッツ', phase: 'guts', name: '守り札を3枚まで残す', tiers: [['', 'R']], desc: '回避・防御は3枚までガッツにしない' },   // 2026-11-02 社長「案B 上限つきに」(前は守りの札を全部残して、手札が固まった)
-  { id: 'gutsOrder', cat: 'breeder', sec: 'ガッツ', phase: 'guts', name: '◯から置く', tiers: [['重い札', 'N'], ['使えない札', 'N']], desc: 'ガッツにする札の順を決める' },
+  { id: 'keepGuard', cat: 'breeder', sec: 'ガッツ', phase: 'guts', name: '守りカードを3枚まで残す', tiers: [['', 'R']], desc: '回避・防御は3枚までガッツにしない' },   // 2026-11-02 社長「案B 上限つきに」(前は守りの札を全部残して、手札が固まった)
+  { id: 'gutsOrder', cat: 'breeder', sec: 'ガッツ', phase: 'guts', name: '◯から置く', tiers: [['重い札', 'N'], ['使えない札', 'N']], desc: 'ガッツにするカードの順を決める' },
   { id: 'stop', cat: 'breeder', sec: '流れ', phase: 'attack', name: '攻撃を止める', tiers: [['', 'N']], start: [''], desc: 'この番の攻撃をここで終える' },
-  { id: 'charge', cat: 'monster', sec: '流れ', phase: 'attack', name: '溜め技を使う', tiers: [['', 'R']], desc: '次の技を何倍にする札を先に使う' },
-  { id: 'chargeKind', cat: 'monster', sec: '流れ', phase: 'attack', name: '溜め: ◯', tiers: [['怒り', 'R'], ['次の番の技を倍', 'R']], desc: 'その溜めの札を先に使う' },
+  { id: 'charge', cat: 'monster', sec: '流れ', phase: 'attack', name: '溜め技を使う', tiers: [['', 'R']], desc: '次の技を何倍にするカードを先に使う' },
+  { id: 'chargeKind', cat: 'monster', sec: '流れ', phase: 'attack', name: '溜め: ◯', tiers: [['怒り', 'R'], ['次の番の技を倍', 'R']], desc: 'その溜めのカードを先に使う' },
   { id: 'ace', cat: 'breeder', sec: '特別', phase: 'attack', name: '切り札を出す', tiers: [['', 'SR']], desc: '登録した切り札を、手にあれば先に出す' },
   { id: 'holdBreeder', cat: 'breeder', sec: '流れ', phase: 'attack', name: 'ブリーダーのカードを温存する', tiers: [['', 'N']], desc: 'この番はブリーダーのカードを出さない(当たればそれ以外で打つ)' },
 ]);
@@ -113827,7 +113827,7 @@ const CardPvpWatchScreen = ({ onBack }) => {
               </div>
               : <div className={`${low ? 'h-[50px] w-[36px]' : 'h-[88px] w-[63px]'} shrink-0 rounded-md border border-dashed border-white/15`}/>}
             <div className="min-w-0 flex-1 space-y-0.5">
-              {w.last && <div className="text-[11px] font-black text-violet-200">{nameOf(w.last.p)}が使った札</div>}
+              {w.last && <div className="text-[11px] font-black text-violet-200">{nameOf(w.last.p)}が使ったカード</div>}
               {st.pending && <CardGuardPreview db={db} pv={cardGuardPreview(db, st)} compact/>}
               {lines.map((t, i) => <div key={i} className="text-[12px] font-bold leading-snug text-white" style={JA_WRAP_STYLE}>{jaWrap(t)}</div>)}
             </div>
