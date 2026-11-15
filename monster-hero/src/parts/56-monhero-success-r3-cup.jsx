@@ -491,10 +491,19 @@ function MsxR3Battle({ run, setRun, v, ev, ctx, bondLv, onPause, debug }) {
   const [showPh, setShowPh] = useState('bracket');
   // 知らせの段を見終えた大会(この画面のあいだだけ。やり直し・もう一度では出さない)
   const [introSeen, setIntroSeen] = useState(null);
+  // デバッグの「勝ったことにする」→「決勝へ」の流れでも、札(card)からあとは見せる部品が出る。その段も見る(2026-11-15 r1115-048 デバッグの流れで試合の曲に替わらなかった)
+  const showView = showOn || (!!debug && typeof MonsucCupShow === 'function' && (step === 'card' || step === 'watch'));
   const cupSound = st3 ? (st3.won ? 'cupWin' : 'cupLose')
-    : showOn ? (showPh === 'win' ? 'cupWin' : showPh === 'lose' ? 'cupLose' : showPh === 'cutin' || showPh === 'match' ? 'cupMatch' : 'cupPre')
+    : showView ? (showPh === 'win' ? 'cupWin' : showPh === 'lose' ? 'cupLose' : showPh === 'cutin' || showPh === 'match' ? 'cupMatch' : 'cupPre')
       : step === 'lost' ? 'cupLose' : step === 'bracket' || step === 'card' ? 'cupPre' : 'cupMatch';
   useSuccessScene(cupSound, { season: msxCalendar(s.turn).season });
+  // 試合のあいだは、試合の曲が確かに鳴っているかを見張り、違えば鳴らし直す(読み込みの失敗・ジングルのあと・中断からの再開でも試合の曲へ。r1115-048)
+  useEffect(() => {
+    if (cupSound !== 'cupMatch' || typeof SuccessSound === 'undefined' || typeof SuccessSound.keep !== 'function') return undefined;
+    const season = msxCalendar(s.turn).season;
+    const t = setInterval(() => SuccessSound.keep('cupMatch', season), 1500);
+    return () => clearInterval(t);
+  }, [cupSound]);
   useEffect(() => {
     let alive = true;
     // 試合型のアシストの表を読み終えてから試合を作る(読む前と後で同じ試合の結果が変わらないように)
