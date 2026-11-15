@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: b229b2d095fc387e
+// generated-sha256: a274e3e7b3de3f71
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -69440,7 +69440,7 @@ function AssistantLifeTownMap({ life, ids, onPick, onView = null, onBeat = null,
           <div className="mhl-sheet" style={land ? { left: 'auto', width: '42%', top: 0, maxHeight: '100%', borderRadius: '22px 0 0 22px', borderTop: 0, borderLeft: '2px solid #f9a8d4', paddingTop: 10 } : undefined}>
             <p className="mhl-en">WHERE · {String(sheetPlace).toUpperCase()}</p>
             <p className="text-[18px] font-black" data-assistant-life-map-sheet-title>{assistantLifeMapSpotWord(sheetPlace)}</p>
-            <p className="text-[10.5px] font-bold text-slate-300" style={JA_WRAP_STYLE} data-assistant-life-map-sheet-home>{jaWrap(assistantLifeMapTownOnlyNow().includes(sheetPlace) ? `町の場所。HOME では「🏡 助手ライフ」の札の下に顔が出ます` : `HOME の「${ASSISTANT_LIFE_MAP_FAC_NAME[fac]}」の札${sheetPlace === 'home' ? '(家と町にいる助手の顔もここ)' : ''}`)}</p>
+            <p className="text-[10.5px] font-bold text-slate-300" style={JA_WRAP_STYLE} data-assistant-life-map-sheet-home>{jaWrap(assistantLifeMapTownOnlyNow().includes(sheetPlace) ? `町の場所。HOME では「🏡 助手ライフ」のボタンの下に顔が出ます` : `HOME の「${ASSISTANT_LIFE_MAP_FAC_NAME[fac]}」のボタン${sheetPlace === 'home' ? '(家と町にいる助手の顔もここ)' : ''}`)}</p>
             <p className="mt-1 text-[11.5px] font-bold leading-snug text-slate-100" style={JA_WRAP_STYLE}>{sheetPlace === 'cardroom' && typeof CARD_LIFE_UP_LABEL !== 'undefined' ? <>{jaWrap('MFバトルカードの研究をしている助手。いる助手と対戦すると、')}<span className="whitespace-nowrap">ごほうび {CARD_LIFE_UP_LABEL}</span></> : jaWrap(ASSISTANT_LIFE_MAP_ABOUT[sheetPlace])}</p>
             {!ro && typeof AssistantLifePlacePerk === 'function' && sheetWho.length > 0 && <AssistantLifePlacePerk life={life} ids={sheetWho} place={sheetPlace} land={land} onGo={onGo ? (fn) => { setSheet(null); onGo(fn); } : null}/>}
             {sheetWho.length ? sheetWho.map(id => row(id, sheetPlace, false)) : <p className="mt-2 rounded-xl bg-slate-900/85 px-2 py-2 text-[12px] font-bold text-slate-300" data-assistant-life-map-sheet-none style={JA_WRAP_STYLE}>いまはだれもいません</p>}
@@ -69453,7 +69453,7 @@ function AssistantLifeTownMap({ life, ids, onPick, onView = null, onBeat = null,
               </button>)}
             {/* 家の札には、町の場所にいる助手も並べる(HOME の「助手ライフ」の札の下の顔と同じ顔ぶれになる) */}
             {sheetTown.length > 0 && (<>
-              <p className="mt-3 text-[11px] font-black text-amber-200" data-assistant-life-map-sheet-town style={JA_WRAP_STYLE}>{jaWrap('📍 町にいる助手(HOME ではこの札の下に顔が出ます)')}</p>
+              <p className="mt-3 text-[11px] font-black text-amber-200" data-assistant-life-map-sheet-town style={JA_WRAP_STYLE}>{jaWrap('📍 町にいる助手(HOME ではこのボタンの下に顔が出ます)')}</p>
               {sheetTown.map(([id, p]) => row(id, p, true))}
             </>)}
             <button type="button" data-assistant-life-map-sheet-close data-mhl-sheet-close onClick={() => setSheet(null)} className="mt-3 min-h-[44px] w-full rounded-xl border border-slate-600 text-[12px] font-black text-slate-300 active:scale-[.98]">閉じる</button>
@@ -79428,8 +79428,8 @@ function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, presetFriend, 
         {chosen.length > 0 && typeof MsaDistCards === 'function' && (
           <div className="ambw-card" data-ambb-rep-card>
             <div className="ambw-small" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
-              <span>技の札(間合いごとの代表の技)</span>
-              <button type="button" className="ambw-btn2" data-ambb-rep-open style={{ minHeight: 32, padding: '2px 12px', fontSize: 12, flex: 'none' }} onClick={() => setRepEdit(ambbRowKey(chosen[0].row))}>🃏 技の札を決める</button>
+              <span>技のカード(間合いごとの代表の技)</span>
+              <button type="button" className="ambw-btn2" data-ambb-rep-open style={{ minHeight: 32, padding: '2px 12px', fontSize: 12, flex: 'none' }} onClick={() => setRepEdit(ambbRowKey(chosen[0].row))}>🃏 技のカードを決める</button>
             </div>
           </div>
         )}
@@ -79693,8 +79693,8 @@ function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, presetFriend, 
           <>
             <div className="msa-sh" data-ambb-rep-edit onClick={close}><style>{MSA_DC_CSS}</style>
               <div className="msa-sh-in" onClick={(ev) => ev.stopPropagation()}>
-                <div className="msa-sh-top"><b>🃏 技の札を決める</b><button type="button" className="msa-sh-x" onClick={close}>閉じる</button></div>
-                <p className="msa-sh-note">試合で間合いごとに出す技(代表の技)です。札を押して、一覧の「☆ 代表にする」で決めます。決めていない間合いは「命中×威力」がいちばん大きい技になります。</p>
+                <div className="msa-sh-top"><b>🃏 技のカードを決める</b><button type="button" className="msa-sh-x" onClick={close}>閉じる</button></div>
+                <p className="msa-sh-note">試合で間合いごとに出す技(代表の技)です。カードを押して、一覧の「☆ 代表にする」で決めます。決めていない間合いは「命中×威力」がいちばん大きい技になります。</p>
                 <div className="ambb-tabs" style={{ flexWrap: 'wrap', marginTop: 6 }}>{units.map(x => (
                   <button key={ambbRowKey(x.row)} type="button" data-ambb-rep-unit={ambbRowKey(x.row)} className={ambbRowKey(x.row) === k ? 'on' : ''} onClick={() => { setRepEdit(ambbRowKey(x.row)); setRepSheet(null); }}>{chosen.includes(x) ? '⚔ ' : ''}{nm(x)}</button>
                 ))}</div>
@@ -89004,7 +89004,7 @@ const msxNormRun = (raw, SUC) => {
     from: msxIsObj(raw.from) && typeof raw.from.box === 'string' ? { box: raw.from.box.slice(0, 64) } : { base: msxStr(raw.from && raw.from.base, 24, s.species) },
     items: Array.isArray(raw.items) ? raw.items.filter((x) => typeof x === 'string').slice(0, 2) : [],
     used: msxNum(raw.used, 0), // 持ち物を使ったターン(1ターン1個まで)
-    phase: ['main', 'result', 'react', 'issa', 'battle', 'turn', 'over', 'event', 'story', 'awake', 'tevent', 'birth'].includes(raw.phase) ? raw.phase : 'main',
+    phase: ['main', 'result', 'react', 'issa', 'battle', 'turn', 'over', 'event', 'story', 'awake', 'tevent', 'birth', 'begin', 'intro'].includes(raw.phase) ? raw.phase : 'main', // begin・intro(育成の始まりの場面)も戻す(r1115-171 c: 再読み込みで導入と初回の処理が飛ばない)
     out: msxIsObj(raw.out) ? raw.out : null, // 直前の結果(中断して戻ったときに結果の画面から続ける)
     log: Array.isArray(raw.log) ? raw.log.filter(msxIsObj).slice(-20) : [],
     startAt: msxNum(raw.startAt, 0),
@@ -89176,16 +89176,32 @@ const msxBeatMark = (run) => {
   return Math.floor(e) > (Number.isFinite(sent) ? Math.floor(sent) : 0) ? { ...run, beatSent: Math.floor(e) } : run;
 };
 let msxSaveChain = Promise.resolve();
+// 終わった育成(やめた・引退・ゲームオーバー)の id(r1115-171 b・新しいキー・足すだけ)。消したあとの古い画面からの保存で育成を書き戻さないために、新しい50件だけ持つ
+const MSX_RUN_GONE_KEY = 'mh_monsuc_run_gone_v1';
+const msxRunGoneList = async () => { try { const v = await storeGet(MSX_RUN_GONE_KEY, null); return Array.isArray(v) ? v.filter((x) => typeof x === 'string').slice(-50) : []; } catch (_) { return []; } };
+const msxRunTurn = (r) => { const t = Number(r && r.s && r.s.turn); return Number.isFinite(t) ? t : 0; };
+const msxRunSent = (r) => (Number.isFinite(Number(r && r.beatSent)) ? Math.max(0, Math.floor(Number(r.beatSent))) : 0);
+// 保存してある途中の育成より古い保存か(r1115-171 b)。古い画面・別のタブ・保存の順の逆転から来た保存は書かない(払いもしない)
+//   別の育成: 保存の方があとに始めた育成なら古い / 保存が無い: 終わった育成の id なら古い / 同じ育成: ターンが前・渡した量が少ない・終わりの分を足す前なら古い
+const msxRunIsStale = async (run, stored) => {
+  if (!run || typeof run.id !== 'string') return true;
+  if (!stored || typeof stored !== 'object') return (await msxRunGoneList()).includes(run.id);
+  if (stored.id !== run.id) return Number(run.startAt || 0) <= Number(stored.startAt || 0) || (await msxRunGoneList()).includes(run.id);
+  if (msxRunTurn(run) < msxRunTurn(stored)) return true;
+  if (msxRunSent(run) < msxRunSent(stored)) return true;
+  if (stored.beatEnd === true && run.beatEnd !== true) return true;
+  return false;
+};
 const msxSaveRunNow = async (run, noPay) => {
-  const ov = msxRunOverOf(run); if (ov) { try { await storeSet(MSX_RUN_OVER_KEY, ov); } catch (_) {} } // 上限アップの控え(上限のある育成だけ)
-  const sent = Number.isFinite(Number(run && run.beatSent)) ? Math.max(0, Math.floor(Number(run.beatSent))) : 0;
-  if (noPay || !sent || typeof saveStoredValuesOrRollback !== 'function' || typeof loadRhythmEventPoints !== 'function' || typeof RHYTHM_EVENT_POINTS_KEY === 'undefined') return storeSet(MSX_KEYS.run, run);
   const stored = await storeGet(MSX_KEYS.run, null);
+  if (await msxRunIsStale(run, stored)) return false;
+  const ov = msxRunOverOf(run); if (ov) { try { await storeSet(MSX_RUN_OVER_KEY, ov); } catch (_) {} } // 上限アップの控え(上限のある育成だけ)
+  const sent = msxRunSent(run);
+  if (noPay || !sent || typeof saveStoredValuesOrRollback !== 'function' || typeof loadRhythmEventPoints !== 'function' || typeof RHYTHM_EVENT_POINTS_KEY === 'undefined') return storeSet(MSX_KEYS.run, run);
   // 渡した量があるのに、保存済みの途中の育成が無い/別の育成(2026-11-14 ミハリ8): ほかのタブで引退・やめたあとの古い画面からの保存。
   //   払わず、書きもしない(全額をもう一度足したり、消した育成を書き戻したりしない)。正しい流れでは育成を始めたときに beatSent 0 で保存済み
-  if (!stored || !run || stored.id !== run.id) return false;
-  const storedSent = Number.isFinite(Number(stored.beatSent)) ? Math.max(0, Math.floor(Number(stored.beatSent))) : 0;
-  const add = sent - storedSent;
+  if (!stored || stored.id !== run.id) return false;
+  const add = sent - msxRunSent(stored); // 上の確かめで 0 以上(保存より少ない量で書き戻さない → 次の保存で払い直さない)
   if (add <= 0) return storeSet(MSX_KEYS.run, run);
   const before = await loadRhythmEventPoints();
   return saveStoredValuesOrRollback([
@@ -89197,7 +89213,16 @@ const msxSaveRunNow = async (run, noPay) => {
 // noPay … デバッグの入口からの育成(2026-11-14 窓口: 社長の本当の財布がテストで増えないように)。渡した量の印だけ進め、財布には足さない
 const msxSaveRun = (run, noPay) => { msxSaveChain = msxSaveChain.then(() => msxSaveRunNow(run, noPay)).catch(() => false); return msxSaveChain; };
 // 途中の育成を消す(やめる・引退)も同じ順に並べる(先に頼んだ保存が、消したあとに書き戻さないように)
-const msxClearRun = () => { msxSaveChain = msxSaveChain.then(() => storeSet(MSX_KEYS.run, null)).catch(() => false); return msxSaveChain; };
+//   消す前に、その育成の id を「終わった育成」へ足す(r1115-171 b)。書けなくても消すのは止めない(今までどおり)
+const msxClearRun = () => {
+  msxSaveChain = msxSaveChain.then(async () => {
+    try { const cur = await storeGet(MSX_KEYS.run, null); if (cur && typeof cur.id === 'string') { const g = await msxRunGoneList(); if (!g.includes(cur.id)) await storeSet(MSX_RUN_GONE_KEY, [...g, cur.id].slice(-50)); } } catch (_) {}
+    return storeSet(MSX_KEYS.run, null);
+  }).catch(() => false);
+  return msxSaveChain;
+};
+// 並べた保存がぜんぶ終わるのを待つ(中断してホームで読み直す前に。r1115-171 c: 保存中の5ターン目より先に4ターン目を読まない)
+const msxSaveWait = () => msxSaveChain.then(() => true, () => true);
 const msxSaveMeta = (meta) => storeSet(MSX_KEYS.meta, meta);
 
 // ---- 表示に使う小物 ----
@@ -90558,7 +90583,8 @@ function MonheroSuccessScreen({ onClose, callNameOf, bondLvOf, debug = false, st
   const setRun = (r0) => { const r = r0 && typeof msxBeatMark === 'function' ? msxBeatMark(r0) : r0; setRunState(r); if (r) msxSaveRun(r, !!debug); }; // ビートPを渡した量も持つ(56-monhero-success-store)。デバッグの育成は財布に足さない
   const setMeta = (meta) => { setData((d) => ({ ...d, meta })); msxSaveMeta(meta); };
   // ホームへ戻るときは保存を読み直す(回3の引退で保存枠・meta が書き足されたあと、古い中身で上書きしないように)
-  const toHome = () => { msxReadAll(msxSuc.SUC).then((d) => { setData(d); setRunState(d.run); }).catch(() => {}); setView('home'); };
+  //   ★先に並べた保存が終わってから読む(r1115-171 c)
+  const toHome = () => { (typeof msxSaveWait === 'function' ? msxSaveWait() : Promise.resolve()).then(() => msxReadAll(msxSuc.SUC)).then((d) => { setData(d); setRunState(d.run); }).catch(() => {}); setView('home'); };
 
   const startRun = async (cfg) => {
     const { SUC } = msxSuc;
@@ -91791,27 +91817,41 @@ const msxBest3Add = (list, e) => msxBest3Norm([...msxBest3Norm(list).filter((x) 
 // 引退した子を保存枠へ。{ ok, full, box, meta }。同じ id がもうあれば足さない(二度押し・中断のあとでも1回)
 const msxR3Retire = async (run, s, ev, assists, debug) => {
   const box = await msxR3ReadBox(); let meta = await msxR3ReadMeta();
-  if (box.mons.some((m) => m.id === run.id)) return { ok: true, already: true, box, meta };
+  // ★r1115-171 a: 成績(meta)→ 子(box)→ 記録帳 の順に書き、どれも書けたときだけ ok(ok のときだけ途中の育成を消す)。
+  //   成績を反映した育成の id を meta.retiredIds に持ち(足すだけ)、再試行では まだ書けていない分だけを補う(引退回数・ベスト・子が二重にならない)。
+  //   retiredIds が無い古い meta: 保存枠に居れば昔の版で反映済みと読む。はじめて書くときは保存枠の育てた子の id で埋める(昔の引退を数え直さない)
+  const inBox = box.mons.some((m) => m.id === run.id);
+  const ids0 = Array.isArray(meta.retiredIds) ? meta.retiredIds.filter((x) => typeof x === 'string') : null;
+  const metaDone = ids0 ? ids0.includes(run.id) : inBox;
   const fromId = run.from && typeof run.from.box === 'string' ? run.from.box : null; // 保存枠の「未育成の子」から始めた育成なら、その子が育った
-  const parent = fromId ? box.mons.find((m) => m.id === fromId && m.raised === false) : null;
+  const parent = !inBox && fromId ? box.mons.find((m) => m.id === fromId && m.raised === false) : null;
   const rest = parent ? box.mons.filter((m) => m !== parent) : box.mons;
-  if (rest.length >= box.cap) return { ok: false, full: true, box, meta };
-  const mon = msxR3BoxMonOf(run, s, ev, assists, parent);
-  meta = msxR3AddWon(meta, s);
-  meta.retired += 1;
-  const best = msxR3Obj(meta.best[s.species]) ? meta.best[s.species] : null;
-  if (!best || !(best.power >= ev.power)) meta.best = { ...meta.best, [s.species]: { power: ev.power, rank: ev.rank, id: run.id } };
-  // 自分だけのベスト3(2026-11-13 社長 r1113-057②)。種に関係なく総合力の上位3つ。meta に best3 を足すだけ(既存の best は種ごとのまま)
-  const best3Prev = msxBest3Norm(meta.best3);
-  meta.best3 = msxBest3Add(best3Prev, { id: run.id, power: ev.power, rank: ev.rank, species: s.species, nick: run.nick || '', at: Date.now() });
-  const best3 = { prev: best3Prev, next: meta.best3, place: meta.best3.findIndex((e) => e.id === run.id), power: ev.power };
-  meta.titles = Array.from(new Set([...(meta.titles || []), ...(Array.isArray(s.titles) ? s.titles : [])])).slice(0, 200);
-  const next = { ...box, cap: Math.max(box.cap, msxR3BoxCap(meta.retired)), mons: [...rest, mon] };
-  await storeSet(MSX_KEYS.box, next); // 先に子を書き、そのあと途中の育成を消す(消えたのに入っていない、を作らない)
-  await storeSet(MSX_KEYS.meta, meta);
-  await msxR3AddRecord(run, s, ev, mon.titles, mon.gen);
-  msxR3RankSend(run, s, ev, debug);
-  return { ok: true, box: next, meta, mon, best3 };
+  if (!inBox && rest.length >= box.cap) return { ok: false, full: true, box, meta };
+  let best3 = null;
+  if (!metaDone) {
+    meta = msxR3AddWon(meta, s);
+    meta.retired += 1;
+    const best = msxR3Obj(meta.best[s.species]) ? meta.best[s.species] : null;
+    if (!best || !(best.power >= ev.power)) meta.best = { ...meta.best, [s.species]: { power: ev.power, rank: ev.rank, id: run.id } };
+    // 自分だけのベスト3(2026-11-13 社長 r1113-057②)。種に関係なく総合力の上位3つ。meta に best3 を足すだけ(既存の best は種ごとのまま)
+    const best3Prev = msxBest3Norm(meta.best3);
+    meta.best3 = msxBest3Add(best3Prev, { id: run.id, power: ev.power, rank: ev.rank, species: s.species, nick: run.nick || '', at: Date.now() });
+    best3 = { prev: best3Prev, next: meta.best3, place: meta.best3.findIndex((e) => e.id === run.id), power: ev.power };
+    meta.titles = Array.from(new Set([...(meta.titles || []), ...(Array.isArray(s.titles) ? s.titles : [])])).slice(0, 200);
+    const seed = ids0 || box.mons.filter((m) => m.raised !== false && typeof m.id === 'string').map((m) => m.id);
+    meta.retiredIds = Array.from(new Set([...seed, run.id])).slice(-300);
+    if ((await storeSet(MSX_KEYS.meta, meta)) === false) return { ok: false, why: 'save', box, meta };
+  }
+  let next = box; let mon = inBox ? box.mons.find((m) => m.id === run.id) : null;
+  if (!inBox) {
+    mon = msxR3BoxMonOf(run, s, ev, assists, parent);
+    next = { ...box, cap: Math.max(box.cap, msxR3BoxCap(meta.retired)), mons: [...rest, mon] };
+    if ((await storeSet(MSX_KEYS.box, next)) === false) return { ok: false, why: 'save', box, meta };
+  }
+  const rec = await msxR3AddRecord(run, s, ev, mon.titles, mon.gen);
+  if (rec === 'fail') return { ok: false, why: 'save', box: next, meta };
+  if (!inBox || !metaDone || rec === true) msxR3RankSend(run, s, ev, debug); // 送るのは この呼び出しで新しく書けたときだけ(記録帳だけ残っていた再試行も、ここで1回)
+  return { ok: true, ...(inBox && metaDone ? { already: true } : {}), box: next, meta, mon, best3 };
 };
 // ゲームオーバー: 保存枠には入れない(PLAN §1・TOURNAMENT §12 E は「思い出」の扱いを窓口へ)。優勝ずみの大会だけ足す
 const msxR3GameOver = async (s) => {
@@ -91884,7 +91924,7 @@ const msxR3AddRecord = async (run, s, ev, titles, gen) => {
   try {
     const raw = await storeGet(R.KEY, null);
     const r = R.add(R.parse(raw), { id: run.id, species: s.species, nick: run.nick || '', rank: ev.rank, power: ev.power, sum: ev.sum, titles, aid: s.aid, endAt: Date.now(), gen });
-    if (r.added) await storeSet(R.KEY, r.book);
+    if (r.added && (await storeSet(R.KEY, r.book)) === false) return 'fail'; // 書けなかった(r1115-171 a: 引退を ok にしない)
     return r.added;
   } catch (e) { return false; }
 };
@@ -138537,7 +138577,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               {/* モンヒロビートから∞周回を始めるための事前設定(docs/spec/QUICK_RHYTHM_LINK.md PR5)。
                   3つとも決めたときだけ使う。決めていないあいだは、これまでどおり
                   「1周目に自分で組んだ編成」をそのまま繰り返す */}
-              <section data-auto-settings-section="quickRun" className="space-y-3"><div><h3 className="text-[13px] font-black text-indigo-200">3. モンヒロビート中に回すクイック周回</h3><p className="text-[11px] leading-relaxed text-slate-400 mt-1">モンヒロビートから∞周回を始めるときの編成です。勇者モン・配置距離・難易度の3つを決めると使えます。決めていないあいだは、いつもどおりバトル画面で1周目を組んでから∞にしてください。難易度は「クイックでクリア済み」のものだけ選べます（演奏したぶんが周回クリアとして入るのも同じ条件のため）。</p></div><div className={`${SCREEN_PANEL_CLASS} space-y-2`}><label className="block text-[12px] font-black text-white" htmlFor="auto-quick-hero">勇者モン</label><select id="auto-quick-hero" value={draftAutoSettings.quickRun?.heroRosterEntry||''} onChange={event=>updateDraftAutoQuickRun({heroRosterEntry:event.target.value||null})} className="w-full min-h-[48px] min-w-0 rounded-xl border border-white/10 bg-slate-950 px-3 text-sm font-bold text-white"><option value="">使わない（まだ決めていない）</option>{monsterRosterIds.filter(entry=>!!resolveRosterEntryToMon(entry)).map(entry=><option key={entry} value={entry}>{autoRosterLabel(entry)}</option>)}</select>{renderAutoAllySummary(draftAutoSettings.quickRun?.heroRosterEntry)}<div><div className="text-[11px] font-black text-slate-300 mb-1.5">配置距離</div><div className="grid grid-cols-4 gap-1">{ranges.filter(([slot])=>slot!==null).map(([slot,label])=><button key={label} onClick={()=>updateDraftAutoQuickRun({distance:slot})} aria-pressed={draftAutoSettings.quickRun?.distance===slot} className={`min-h-[44px] min-w-0 rounded-xl border text-[10px] font-black active:scale-95 ${RANGE_STYLES[slot].labelBg} ${RANGE_STYLES[slot].border} ${draftAutoSettings.quickRun?.distance===slot?'ring-2 ring-white border-white':'opacity-50'}`}>{draftAutoSettings.quickRun?.distance===slot&&'✓'}{label}</button>)}</div></div><div><label className="block text-[11px] font-black text-slate-300 mb-1.5" htmlFor="auto-quick-difficulty">難易度</label><select id="auto-quick-difficulty" value={draftAutoSettings.quickRun?.difficulty||''} onChange={event=>updateDraftAutoQuickRun({difficulty:event.target.value||null})} className="w-full min-h-[48px] min-w-0 rounded-xl border border-white/10 bg-slate-950 px-3 text-sm font-bold text-white"><option value="">未設定</option>{Object.entries(QUICK_DIFFICULTY_SETTINGS).map(([key,setting])=>{const unlocked=isAutoQuickRunDifficultyAllowed(key,quickClearCounts);return <option key={key} value={key} disabled={!unlocked}>{setting.label}{unlocked?'':'（クイック未クリア）'}</option>;})}</select></div><div><div className="text-[11px] font-black text-slate-300 mb-1.5">{QUICK_RUN_ANYWHERE_RELEASE?'ゲーム・モンヒロビート・助手ライフを開いたら自動で始める':'モンヒロビート・助手ライフを開いたら自動で始める'}</div><button type="button" data-auto-quick-run-autostart aria-pressed={draftAutoSettings.quickRun?.autoStart===true} disabled={!autoQuickRunConfigured(draftAutoSettings)} onClick={()=>updateDraftAutoQuickRun({autoStart:!(draftAutoSettings.quickRun?.autoStart===true)})} className={`flex min-h-[48px] w-full items-center justify-between gap-2 rounded-xl border px-3 text-left active:scale-[.99] disabled:opacity-40 ${draftAutoSettings.quickRun?.autoStart===true?'border-fuchsia-300 bg-fuchsia-900/50':'border-white/10 bg-slate-950'}`}><span className="min-w-0 flex-1 text-[11px] font-black text-white">{draftAutoSettings.quickRun?.autoStart===true?'ON（開いたらすぐ回しはじめる）':'OFF（自分で「始める」を押す）'}</span><span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-black ${draftAutoSettings.quickRun?.autoStart===true?'bg-fuchsia-500 text-white':'bg-slate-700 text-slate-300'}`}>{draftAutoSettings.quickRun?.autoStart===true?'ON':'OFF'}</span></button><p className="mt-1 text-[10px] leading-relaxed text-slate-400">ONにすると、HOMEなどからモンヒロビートや助手ライフを開いたときに、この編成でクイックの∞周回が裏で始まります。すでに周回しているとき・ほかのモードのバトルが続いているときは何もしません。曲選びの上の帯や、助手ライフの周回の札から、いつでも止められます。</p></div><div className="pt-1"><AssistantBubble scene="autoQuickRunSettings" compact/></div><p className="text-[11px] leading-relaxed text-slate-400">{autoQuickRunConfigured(draftAutoSettings)?'✅ 3つとも決まっています。モンヒロビートから周回を始められます。':'まだ使えません（3つとも決めると使えます）。'}</p></div></section>
+              <section data-auto-settings-section="quickRun" className="space-y-3"><div><h3 className="text-[13px] font-black text-indigo-200">3. モンヒロビート中に回すクイック周回</h3><p className="text-[11px] leading-relaxed text-slate-400 mt-1">モンヒロビートから∞周回を始めるときの編成です。勇者モン・配置距離・難易度の3つを決めると使えます。決めていないあいだは、いつもどおりバトル画面で1周目を組んでから∞にしてください。難易度は「クイックでクリア済み」のものだけ選べます（演奏したぶんが周回クリアとして入るのも同じ条件のため）。</p></div><div className={`${SCREEN_PANEL_CLASS} space-y-2`}><label className="block text-[12px] font-black text-white" htmlFor="auto-quick-hero">勇者モン</label><select id="auto-quick-hero" value={draftAutoSettings.quickRun?.heroRosterEntry||''} onChange={event=>updateDraftAutoQuickRun({heroRosterEntry:event.target.value||null})} className="w-full min-h-[48px] min-w-0 rounded-xl border border-white/10 bg-slate-950 px-3 text-sm font-bold text-white"><option value="">使わない（まだ決めていない）</option>{monsterRosterIds.filter(entry=>!!resolveRosterEntryToMon(entry)).map(entry=><option key={entry} value={entry}>{autoRosterLabel(entry)}</option>)}</select>{renderAutoAllySummary(draftAutoSettings.quickRun?.heroRosterEntry)}<div><div className="text-[11px] font-black text-slate-300 mb-1.5">配置距離</div><div className="grid grid-cols-4 gap-1">{ranges.filter(([slot])=>slot!==null).map(([slot,label])=><button key={label} onClick={()=>updateDraftAutoQuickRun({distance:slot})} aria-pressed={draftAutoSettings.quickRun?.distance===slot} className={`min-h-[44px] min-w-0 rounded-xl border text-[10px] font-black active:scale-95 ${RANGE_STYLES[slot].labelBg} ${RANGE_STYLES[slot].border} ${draftAutoSettings.quickRun?.distance===slot?'ring-2 ring-white border-white':'opacity-50'}`}>{draftAutoSettings.quickRun?.distance===slot&&'✓'}{label}</button>)}</div></div><div><label className="block text-[11px] font-black text-slate-300 mb-1.5" htmlFor="auto-quick-difficulty">難易度</label><select id="auto-quick-difficulty" value={draftAutoSettings.quickRun?.difficulty||''} onChange={event=>updateDraftAutoQuickRun({difficulty:event.target.value||null})} className="w-full min-h-[48px] min-w-0 rounded-xl border border-white/10 bg-slate-950 px-3 text-sm font-bold text-white"><option value="">未設定</option>{Object.entries(QUICK_DIFFICULTY_SETTINGS).map(([key,setting])=>{const unlocked=isAutoQuickRunDifficultyAllowed(key,quickClearCounts);return <option key={key} value={key} disabled={!unlocked}>{setting.label}{unlocked?'':'（クイック未クリア）'}</option>;})}</select></div><div><div className="text-[11px] font-black text-slate-300 mb-1.5">{QUICK_RUN_ANYWHERE_RELEASE?'ゲーム・モンヒロビート・助手ライフを開いたら自動で始める':'モンヒロビート・助手ライフを開いたら自動で始める'}</div><button type="button" data-auto-quick-run-autostart aria-pressed={draftAutoSettings.quickRun?.autoStart===true} disabled={!autoQuickRunConfigured(draftAutoSettings)} onClick={()=>updateDraftAutoQuickRun({autoStart:!(draftAutoSettings.quickRun?.autoStart===true)})} className={`flex min-h-[48px] w-full items-center justify-between gap-2 rounded-xl border px-3 text-left active:scale-[.99] disabled:opacity-40 ${draftAutoSettings.quickRun?.autoStart===true?'border-fuchsia-300 bg-fuchsia-900/50':'border-white/10 bg-slate-950'}`}><span className="min-w-0 flex-1 text-[11px] font-black text-white">{draftAutoSettings.quickRun?.autoStart===true?'ON（開いたらすぐ回しはじめる）':'OFF（自分で「始める」を押す）'}</span><span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-black ${draftAutoSettings.quickRun?.autoStart===true?'bg-fuchsia-500 text-white':'bg-slate-700 text-slate-300'}`}>{draftAutoSettings.quickRun?.autoStart===true?'ON':'OFF'}</span></button><p className="mt-1 text-[10px] leading-relaxed text-slate-400">ONにすると、HOMEなどからモンヒロビートや助手ライフを開いたときに、この編成でクイックの∞周回が裏で始まります。すでに周回しているとき・ほかのモードのバトルが続いているときは何もしません。曲選びの上の帯や、助手ライフの周回のボタンから、いつでも止められます。</p></div><div className="pt-1"><AssistantBubble scene="autoQuickRunSettings" compact/></div><p className="text-[11px] leading-relaxed text-slate-400">{autoQuickRunConfigured(draftAutoSettings)?'✅ 3つとも決まっています。モンヒロビートから周回を始められます。':'まだ使えません（3つとも決めると使えます）。'}</p></div></section>
               <section data-auto-breakthrough-bulk-settings data-auto-settings-section="breakthrough" className={`${SCREEN_PANEL_CLASS} space-y-3`}>
                 <div><h3 className="text-[13px] font-black text-cyan-200">4. AUTO∞ 自動限界突破</h3><p className="mt-1 text-[11px] font-bold leading-relaxed text-slate-400">現在所有しているマスモンをまとめて設定し、限界突破で使い切らないようダイヤと虹のプシュケーを残せます。</p></div>
                 <div className="rounded-xl border border-white/10 bg-slate-950/60 p-3 space-y-2">
