@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 02edac5ddd4ee6e2
+// source-sha256: 0ee4c9f58bc97da7
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -173588,7 +173588,7 @@ function MsxTeamEffects({
       className: "hd"
     }, React.createElement("span", {
       className: "ic"
-    }, d.icon), React.createElement("b", null, d.name), React.createElement("span", {
+    }, cardIconNode(d.icon, 16)), React.createElement("b", null, d.name), React.createElement("span", {
       className: "st"
     }, AT.TYPE_NAME[d.type] || '', "型"), React.createElement("span", {
       className: "n"
