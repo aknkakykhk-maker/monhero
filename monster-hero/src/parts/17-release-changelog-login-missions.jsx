@@ -594,6 +594,10 @@ const CARD_CUP_STORY_ID = 'card_cup_2026_10_31';
 const RHYTHM_GRAND_OPEN_TEASER_STORY_ID = 'rhythm_grand_open_teaser';
 // モンヒロサクセス 第1話(β版の前の予告・2026-11-14)。印は RELEASE_FLAGS.monsucStoryEp1
 const MONSUC_BETA_EP1_STORY_ID = 'monsuc_beta_ep1';
+// モンヒロサクセス 第2話(β版の公開と同時・2026-11-15)。印は RELEASE_FLAGS.monheroSuccess(β版の公開の印と同じ)
+const MONSUC_BETA_EP2_STORY_ID = 'monsuc_beta_ep2';
+// 第2話を本編で飛ばした人に、みゅあが1回だけ「HOMEに新しい札が出てるよ」と知らせる印(新しいキー・2026-11-15)。{ v:1, skippedAt, shownAt }
+const MONSUC_STORY_SKIP_SEEN_KEY = 'mh_monsuc_story_skip_seen_v1';
 // ききの「はじめての曲 ～Sparkling Pink Overture～」のお話(2026-11-15 社長 r1115-102)。id は data/assistants.js の EVENT_REPLAYS と同じ。
 // 見たかは、ほかのイベントのお話と同じく mh_rhythm_event_story_v1 の id の並びに足す(新しいキーは作らない)。流し方は 60-app.jsx(曲えらびを開いたとき)
 const SPARKLING_PINK_STORY_ID = 'sparkling_pink_kiki_story';
