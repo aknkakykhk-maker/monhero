@@ -200,10 +200,14 @@ if (require.main === module) (async () => {
           for (let s = 0; s < 5; s++) {
             const opened = await page.evaluate((s) => { const sl = [...document.querySelectorAll('[data-msx-slot]')]; const t = sl[s]; if (t) t.click(); return sl.length; }, s);
             await page.waitForTimeout(250);
-            const picked = await page.evaluate((s) => { const p = document.querySelector('[data-msx-slot-picker]'); if (!p) return 'nopicker'; const bs = [...p.querySelectorAll('button')].filter((x) => !x.disabled && /入れる/.test(x.innerText)); const b = bs[s] || bs[0]; if (b) { b.click(); return 'ok'; } return 'nobtn'; }, s);
-            if (picked !== 'ok' && s === 0) note('編成', `箱から選べない(${picked}・slots=${opened})`);
-            await page.waitForTimeout(200);
-            await page.evaluate(() => { const c = document.querySelector('[data-msx-slot-close]'); if (c) c.click(); });
+            // 選ぶ画面(全画面 MsxTeamPick・r1115-096): マスモンボックスのタブで s 番目の子を押して「決定」
+            const picked = await page.evaluate((s) => { const p = document.querySelector('[data-msx-team-pick]'); if (!p) return 'nopicker'; const tb = p.querySelector('[data-msx-tp-tab="box"]'); if (tb) tb.click(); return 'ok'; }, s);
+            await page.waitForTimeout(150);
+            const picked2 = picked !== 'ok' ? picked : await page.evaluate((s) => { const p = document.querySelector('[data-msx-team-pick]'); const bs = [...p.querySelectorAll('[data-msx-tp-item]')].filter((x) => !x.classList.contains('lk') && !/編成中/.test(x.innerText)); const b = bs[0]; if (!b) return 'nobtn'; b.click(); return 'ok'; }, s);
+            if (picked2 !== 'ok' && s === 0) note('編成', `箱から選べない(${picked2}・slots=${opened})`);
+            await page.waitForTimeout(150);
+            await page.evaluate(() => { const c = document.querySelector('[data-msx-tp-ok]'); if (c) c.click(); });
+            await page.waitForTimeout(150);
           }
         }
         if (i === 1 && cfg.team.startsWith('box')) { const n = await page.evaluate(() => (document.querySelector('.msx').innerText.match(/箱\d/g) || []).length); if (n < 5) note('編成', `箱の子が編成に5体入っていない(${n}体)`); await page.screenshot({ path: path.join(OUT, 'shots', `lap${lap}-team.png`) }); }

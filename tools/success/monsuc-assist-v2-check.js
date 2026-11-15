@@ -189,7 +189,7 @@ check('⑧ 出来事の呼び水: 出来事が起きやすくなる(段5 で +15
   const line = store.split('\n').find((l) => l.includes('assists: Array.isArray(m.assists)')) || '';
   check('⑨ 保存枠の読み込みで masteries がコメントに飲まれていない', /masteries: tm\.mast,/.test(line.split('//')[0]));
   const core = fs.readFileSync(path.join(__dirname, '..', '..', 'monster-hero', 'data', 'monhero-success.js'), 'utf8');
-  const sh = core.split('\n').find((l) => l.includes("stayNum(s, 'shugyohp')")) || '';
+  const sh = core.split('\n').find((l) => l.includes('s.hp - shugyoHpOf(s, sup)')) || ''; // 修行で体力を引く行(r1115-062 で使う体力は shugyoHpOf へ)
   check('⑨ 修行のストレス(addStress)がコメントに飲まれていない', /addStress\(s, \(SHUGYO\.stress/.test(sh.split('//')[0]));
 }
 console.log(ng ? `\n${ng} 件 NG` : '\nすべて OK');
