@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 4cb3d9a6a53d88f8
+// generated-sha256: 34b4b01de52b4dd4
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -89143,10 +89143,20 @@ const msxTpSame = (a, b) => !!(a && b && !a.auto && !b.auto && ((a.box && a.box 
 // アシスト効果の1つ分の効き目(比べる数)と文字
 const msxTpAssistVal = (AT, a) => { try { return Number(AT.valueOf(a.id, a.lv)) || 0; } catch (e) { return 0; } };
 const msxTpAssistText = (AT, a) => { try { return AT.valueText(a.id, a.lv); } catch (e) { return ''; } };
-// 「いるだけ型・試合型」は編成で一番大きい1つだけ効く(芯 stayLv・battleBuffs)。ほかの子がそれ以上を持っていれば、その子の分は重複
+// 編成で「一番大きい1つだけ」効く効果か(重なると重複になる物)。重なり方の決まりは表(data/monhero-success-assist.js)から読む(r1115-104・107)
+//   表に ONE_ONLY(id の並び・Set・{id:true})があればそれ / CAP[id] に one:true があれば1つだけ・one の無い CAP[id] は足し合わせ(上限つき)
+//   どちらも無ければ今までの決まり: いるだけ型・試合型は1つだけ(芯 stayLv・battleBuffs)
+const msxTpOneOnly = (AT, id) => {
+  const d = AT && AT.BY_ID ? AT.BY_ID[id] : null; if (!d) return false;
+  const oo = AT.ONE_ONLY;
+  if (oo) return Array.isArray(oo) ? oo.includes(id) : typeof oo.has === 'function' ? oo.has(id) : !!oo[id];
+  const c = AT.CAP && AT.CAP[id]; if (c) return c.one === true;
+  return d.type === 'stay' || d.type === 'battle';
+};
+// 1つだけ効く効果を、ほかのモンスターが同じかそれ以上持っていれば、その分は重複
 const msxTpDupOf = (m, others) => {
   const AT = msxTpAT(); if (!AT || !m || !Array.isArray(m.assists)) return [];
-  return m.assists.filter((a) => { const d = AT.BY_ID[a.id]; if (!d || (d.type !== 'stay' && d.type !== 'battle')) return false;
+  return m.assists.filter((a) => { if (!msxTpOneOnly(AT, a.id)) return false;
     const v = msxTpAssistVal(AT, a); return others.some((o) => o && Array.isArray(o.assists) && o.assists.some((b) => b.id === a.id && msxTpAssistVal(AT, b) >= v)); });
 };
 // 長押しで詳細・ふつうに押したら選ぶ(長押しのあとの「押した」は捨てる)
@@ -89299,7 +89309,7 @@ function MsxFriendPick({ lendList, onLoad, friend, members, SUC, onPick, onOwn, 
                 </span>
               </button>); })}
         </div>
-        <div className="msx-tp-note">「アシスト重複」… いるだけ型・試合型のアシスト効果を、編成のほかのモンスターが同じかそれより大きく持っている(一番大きい1つだけ効く)。「編成不可」… 借りられない形のモンスター</div>
+        <div className="msx-tp-note">「アシスト重複」… 編成で一番大きい1つだけ効くアシスト効果を、編成のほかのモンスターが同じかそれより大きく持っている。「編成不可」… 借りられない形のモンスター</div>
         <div className="v-ft msx-tp-ft">
           <button type="button" onClick={onClose} data-msx-fp-back>戻る</button>
           <button type="button" onClick={onOwn} data-msx-fp-own>自分のモンスターを入れる</button>
@@ -89322,9 +89332,9 @@ function MsxTeamEffects({ members, onClose }) {
     <div className="msx-ov msx-fade" data-msx-team-effects onClick={onClose}>
       <div className="msx-sheet msx-dt" onClick={(e) => e.stopPropagation()}>
         <h3>効果一覧(アシスト効果 {list.length}種類)</h3>
-        <div className="msx-note">いっしょ型はそのモンスターが来たトレーニングで重なって効く。いるだけ型・試合型は編成で一番大きい1つだけ効く</div>
+        <div className="msx-note">重なって効く効果と、編成で一番大きい1つだけ効く効果があります。1つだけ効く効果で小さい方は「重複(効かない)」と出ます</div>
         <div className="msx-dt-body">
-          {list.length ? list.map(({ d, rows }) => { const one = d.type === 'stay' || d.type === 'battle'; const best = one ? Math.max(...rows.map((r) => r.v)) : null; let used = false; return (
+          {list.length ? list.map(({ d, rows }) => { const one = msxTpOneOnly(AT, d.id); const best = one ? Math.max(...rows.map((r) => r.v)) : null; let used = false; return (
             <div key={d.id} className="msx-gt-row" data-msx-effect={d.id}>
               <div className="hd"><span className="ic">{d.icon}</span><b>{d.name}</b><span className="st">{AT.TYPE_NAME[d.type] || ''}型</span><span className="n">{rows.length}体</span></div>
               {rows.map((r, i) => { const live = !one || (!used && r.v === best && (used = true)); return (

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 2e6183012b7a0b51
+// source-sha256: f05696b694ff0ba0
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -171746,12 +171746,20 @@ const msxTpAssistText = (AT, a) => {
     return '';
   }
 };
+const msxTpOneOnly = (AT, id) => {
+  const d = AT && AT.BY_ID ? AT.BY_ID[id] : null;
+  if (!d) return false;
+  const oo = AT.ONE_ONLY;
+  if (oo) return Array.isArray(oo) ? oo.includes(id) : typeof oo.has === 'function' ? oo.has(id) : !!oo[id];
+  const c = AT.CAP && AT.CAP[id];
+  if (c) return c.one === true;
+  return d.type === 'stay' || d.type === 'battle';
+};
 const msxTpDupOf = (m, others) => {
   const AT = msxTpAT();
   if (!AT || !m || !Array.isArray(m.assists)) return [];
   return m.assists.filter(a => {
-    const d = AT.BY_ID[a.id];
-    if (!d || d.type !== 'stay' && d.type !== 'battle') return false;
+    if (!msxTpOneOnly(AT, a.id)) return false;
     const v = msxTpAssistVal(AT, a);
     return others.some(o => o && Array.isArray(o.assists) && o.assists.some(b => b.id === a.id && msxTpAssistVal(AT, b) >= v));
   });
@@ -172206,7 +172214,7 @@ function MsxFriendPick({
     }, "アシスト重複") : null));
   })), React.createElement("div", {
     className: "msx-tp-note"
-  }, "「アシスト重複」… いるだけ型・試合型のアシスト効果を、編成のほかのモンスターが同じかそれより大きく持っている(一番大きい1つだけ効く)。「編成不可」… 借りられない形のモンスター"), React.createElement("div", {
+  }, "「アシスト重複」… 編成で一番大きい1つだけ効くアシスト効果を、編成のほかのモンスターが同じかそれより大きく持っている。「編成不可」… 借りられない形のモンスター"), React.createElement("div", {
     className: "v-ft msx-tp-ft"
   }, React.createElement("button", {
     type: "button",
@@ -172247,13 +172255,13 @@ function MsxTeamEffects({
     onClick: e => e.stopPropagation()
   }, React.createElement("h3", null, "効果一覧(アシスト効果 ", list.length, "種類)"), React.createElement("div", {
     className: "msx-note"
-  }, "いっしょ型はそのモンスターが来たトレーニングで重なって効く。いるだけ型・試合型は編成で一番大きい1つだけ効く"), React.createElement("div", {
+  }, "重なって効く効果と、編成で一番大きい1つだけ効く効果があります。1つだけ効く効果で小さい方は「重複(効かない)」と出ます"), React.createElement("div", {
     className: "msx-dt-body"
   }, list.length ? list.map(({
     d,
     rows
   }) => {
-    const one = d.type === 'stay' || d.type === 'battle';
+    const one = msxTpOneOnly(AT, d.id);
     const best = one ? Math.max(...rows.map(r => r.v)) : null;
     let used = false;
     return React.createElement("div", {
