@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 004b9746b8c5996f
+// source-sha256: 8ae461483a179419
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -153899,9 +153899,12 @@ const monsucPopOrder = (suc, s, entrants) => {
 };
 const MSC_CSS = `
 .msc-root{position:fixed;inset:0;z-index:9000;overflow-y:auto;color:#fff;background:linear-gradient(180deg,#221a44,#141026 45%);
-  padding:calc(8px + env(safe-area-inset-top)) calc(10px + env(safe-area-inset-right)) calc(10px + env(safe-area-inset-bottom)) calc(10px + env(safe-area-inset-left));font-family:inherit}
+  padding:max(calc(8px + env(safe-area-inset-top)),52px) calc(10px + env(safe-area-inset-right)) calc(10px + env(safe-area-inset-bottom)) calc(10px + env(safe-area-inset-left));font-family:inherit}
 .msc-wrap{max-width:520px;margin:0 auto;display:flex;flex-direction:column;gap:8px;min-height:100%}
 .msc-top{display:flex;align-items:center;gap:8px}
+.msc-btn:disabled{opacity:.45;cursor:default;box-shadow:none}
+.msc-btn .msc-qsub{display:block;font-size:10px;font-weight:800;line-height:1.2;margin-top:1px}
+.msc-btn.s:disabled{padding-top:5px;padding-bottom:5px}
 .msc-top b{flex:1;min-width:0;font-size:14px;color:#fde68a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .msc-btn{border:0;border-radius:999px;padding:12px 14px;font-weight:900;font-size:15px;color:#fff;background:linear-gradient(90deg,#f472b6,#fb923c);box-shadow:0 3px 0 #9d174d;cursor:pointer;min-height:44px}
 .msc-btn.y{background:#fde047;color:#3b2a05;box-shadow:0 3px 0 #a16207}
@@ -154117,7 +154120,7 @@ function MonsucBracket({
   const r2 = bk.rounds[1] || [];
   const fi = bk.final && bk.final[1] || 4;
   const out = i => st >= 1 && !r1.includes(i) || st >= 2 && r1.includes(i) && !r2.includes(i) || result === 'win' && i === fi || result === 'lose' && i === 0;
-  const H = Math.max(36, Math.min(68, Math.floor((vh - 318) / 8)));
+  const H = Math.max(36, Math.min(68, Math.floor((vh - 345) / 8)));
   const yOf = i => i * H + H / 2;
   const X = [0, 22, 44, 66, 84];
   const W = 90;
@@ -154152,7 +154155,7 @@ function MonsucBracket({
   const foeNo = no[fi];
   const lines = [top.you ? React.createElement(React.Fragment, null, "「", React.createElement("em", null, "1番人気は", Z, " ", info.meName, "!"), Z, " まずは", Z, " 1回戦から", Z, " 見ていこう」") : React.createElement(React.Fragment, null, "「", React.createElement("em", null, "1番人気は", Z, " ", top.champ ? '王者の ' : '', nm(top), "!"), Z, " ", info.meName, "の", Z, "1回戦は", Z, " これからだよ」"), upsets.length ? React.createElement(React.Fragment, null, "「", React.createElement("em", null, "大穴!", Z, " ", nm(E[upsets[0]])), " が", Z, " 勝ち上がったぞ!", Z, " ", info.meName, "も", Z, " 1回戦を", Z, " 勝ち上がり!」") : React.createElement(React.Fragment, null, "「1回戦が", Z, " おわったよ。", Z, React.createElement("em", null, info.meName), "は", Z, " 順当に", Z, " 勝ち上がり!」"), foeNo >= 4 ? React.createElement(React.Fragment, null, "「", React.createElement("em", null, "大穴!", Z, " ", nm(foe)), Z, " 決勝まで", Z, " きたぞ!", Z, " ", info.meName, "は", Z, " 準決勝も", Z, " 勝って", Z, " 決勝へ!」") : React.createElement(React.Fragment, null, "「準決勝も", Z, " おわったよ。", Z, React.createElement("em", null, info.meName), "は", Z, " 決勝へ!", Z, " 反対の山からは", Z, " ", React.createElement("em", null, nm(foe)), "」")];
   const champNo1 = no[E.indexOf(champ)] === 1;
-  const finalLine = foe.rival ? React.createElement(React.Fragment, null, "「", champNo1 && champ !== foe ? React.createElement(React.Fragment, null, "1番人気は", Z, " 王者の ", nm(champ), "!", Z, " でも、", Z) : null, "決勝の相手は", Z, " ", React.createElement("em", null, "ライバルの ", nm(foe)), " だよ。", Z, "勝てば", Z, " ごほうび大!」") : foe.champ ? React.createElement(React.Fragment, null, "「決勝の相手は", Z, " 1番人気の王者", Z, " ", React.createElement("em", null, nm(foe)), "!", Z, " ", info.opp && info.opp.note ? `${info.opp.note}、だって。` : '', Z, "ここで勝てば", Z, " 大金星だよ!」") : React.createElement(React.Fragment, null, "「決勝の相手は", Z, " ", React.createElement("em", null, nm(foe)), "!", Z, " あわてずに", Z, " いこうね」");
+  const finalLine = foe.rival ? React.createElement(React.Fragment, null, "「", champNo1 && champ !== foe ? React.createElement(React.Fragment, null, "1番人気は", Z, " 王者の ", nm(champ), "!", Z, " でも、", Z) : null, "決勝の相手は", Z, " ", React.createElement("em", null, "ライバルの ", nm(foe)), " だよ。", Z, "勝てば", Z, " 能力ポイントが1.5倍!」") : foe.champ ? React.createElement(React.Fragment, null, "「決勝の相手は", Z, " 1番人気の王者", Z, " ", React.createElement("em", null, nm(foe)), "!", Z, " ", info.opp && info.opp.note ? `${info.opp.note}、だって。` : '', Z, "ここで勝てば", Z, " 大金星だよ!」") : React.createElement(React.Fragment, null, "「決勝の相手は", Z, " ", React.createElement("em", null, nm(foe)), "!", Z, " あわてずに", Z, " いこうね」");
   return React.createElement("div", {
     className: "msc-wrap",
     "data-msc-bracket": true,
@@ -154257,8 +154260,12 @@ function MonsucBracket({
   }, React.createElement("button", {
     className: "msc-btn y s",
     "data-msc-quick": true,
-    onClick: onResultOnly
-  }, canSkip ? '⏩ 結果だけ見る(優勝ずみ)' : '⏩ 結果だけ見る'), React.createElement("button", {
+    disabled: !canSkip,
+    onClick: () => canSkip && onResultOnly()
+  }, canSkip ? '⏩ 結果だけ見る(優勝ずみ)' : React.createElement(React.Fragment, null, "⏩ 結果だけ見る", React.createElement("small", {
+    className: "msc-qsub",
+    "data-msc-quick-why": true
+  }, "一度優勝すると使えます"))), React.createElement("button", {
     className: "msc-btn",
     "data-msc-go": true,
     onClick: onFight
@@ -154272,7 +154279,8 @@ function MonsucBattleCard({
   odds,
   onReady,
   onResultOnly,
-  onBack
+  onBack,
+  canSkip
 }) {
   const [tab, setTab] = useState('st');
   const o = info.opp || {};
@@ -154485,8 +154493,12 @@ function MonsucBattleCard({
   }, React.createElement("button", {
     className: "msc-btn y s",
     "data-msc-quick": true,
-    onClick: onResultOnly
-  }, "⏩ 結果だけ見る"), React.createElement("button", {
+    disabled: !canSkip,
+    onClick: () => canSkip && onResultOnly()
+  }, "⏩ 結果だけ見る", canSkip ? null : React.createElement("small", {
+    className: "msc-qsub",
+    "data-msc-quick-why": true
+  }, "一度優勝すると使えます")), React.createElement("button", {
     className: "msc-btn",
     "data-msc-ready": true,
     onClick: onReady
@@ -154619,8 +154631,7 @@ function MonsucCupWin({
   const rows = Array.isArray(out && out.rows) ? out.rows : [...(out && out.prize ? [{
     i: '💰',
     k: '賞金',
-    v: `+${out.prize}G${info.rival ? '(ライバルに勝って ×1.5)' : ''}`,
-    big: info.rival
+    v: `+${out.prize}G`
   }] : []), ...(out && out.tickets ? [{
     i: '🎫',
     k: '修行チケット',
@@ -154667,7 +154678,7 @@ function MonsucCupWin({
     className: "nw"
   }, o.name || mscMonName(o.species), "に勝ち", match && match.r ? `(${match.r.rounds}ラウンド)` : '')), info.rival && React.createElement("div", {
     className: "rival"
-  }, React.createElement("span", null, "ライバルの ", o.name || mscMonName(o.species), " にも 勝った!"), React.createElement("em", null, "ごほうび大"))), rows.map((r, k) => React.createElement("div", {
+  }, React.createElement("span", null, "ライバルの ", o.name || mscMonName(o.species), " にも 勝った!"), React.createElement("em", null, "能力ポイント1.5倍"))), rows.map((r, k) => React.createElement("div", {
     key: k,
     className: `msc-rw ${r.big ? 'big' : ''}`,
     style: {
@@ -154690,7 +154701,7 @@ function MonsucCupWin({
       fontSize: 11,
       color: '#b45309'
     }
-  }, coach.name) : null, info.rival ? '「ライバルに勝った! ごほうびも 大きいよ!」' : `「${info.meName}、やったね! 優勝だよ!」`)), React.createElement("div", {
+  }, coach.name) : null, info.rival ? '「ライバルに勝った! 能力ポイントが 1.5倍だよ!」' : `「${info.meName}、やったね! 優勝だよ!」`)), React.createElement("div", {
     className: "msc-foot"
   }, React.createElement("button", {
     className: "msc-btn",
@@ -154938,16 +154949,17 @@ function MonsucCupShowInner({
     canSkip: canSkip,
     onClose: onClose,
     onFight: () => setPhase('card'),
-    onResultOnly: () => match && finish(match.won)
+    onResultOnly: () => canSkip && match && finish(match.won)
   });else if (phase === 'card') body = React.createElement(MonsucBattleCard, {
     suc: suc,
     s: s,
     info: info,
     catalog: catalog,
     odds: odds,
+    canSkip: canSkip,
     onBack: () => setPhase('bracket'),
     onReady: () => setPhase(info.buffs || info.buffRows.length ? 'cutin' : 'match'),
-    onResultOnly: () => match && finish(match.won)
+    onResultOnly: () => canSkip && match && finish(match.won)
   });else if (phase === 'cutin') body = React.createElement(MonsucCutin, {
     s: s,
     info: info,
@@ -179381,7 +179393,7 @@ const msxR3CupReward = (SUC, c, s) => {
     if (rw.stat) Object.entries(rw.stat).forEach(([k, v]) => o.push(`${MSX_STAT_NAME[k]} +${v}`));
     if (rw.hpMax) o.push(`体力の最大値 +${rw.hpMax}`);
     if (rw.loy) o.push(`忠誠度 +${rw.loy}`);
-    if (rw.pts) o.push(`能力ポイント +${rw.pts}`);
+    if (rw.pts) o.push(`能力ポイント +${rw.pts}${c.rival ? `(ライバルに勝つと +${Math.round(rw.pts * 1.5)})` : ''}`);
     if (rw.pop) o.push(`人気 +${rw.pop}`);
     o.push(...msxR3CupItems(SUC, c, s));
     if (Number.isInteger(rw.apt)) o.push('その間合いの適性が1段上がる');
@@ -179404,7 +179416,7 @@ const msxR3CupReward = (SUC, c, s) => {
     2: 8,
     3: 12
   })[c.star];
-  if (pts) out.push(`能力ポイント +${pts}`);
+  if (pts) out.push(`能力ポイント +${pts}${c.rival ? `(ライバルに勝つと +${Math.round(pts * 1.5)})` : ''}`);
   if (pop) out.push(`人気 +${pop}`);
   if (R.stat && up) out.push(`${MSX_STAT_NAME[R.stat]} +${up}`);
   if (c.star >= 4) out.push('全能力 +4');
@@ -179436,12 +179448,11 @@ const msxR3Prizes = (SUC, c) => {
     });
   });
   const wtk = ex && ex.four || c.star >= 3 ? 1 : 0;
-  const rtk = c.rival ? 1 : 0;
   out.push({
     id: 'tk',
     e: '🎫',
     name: '修行チケット',
-    desc: `${wtk + rtk ? `勝つと修行チケット +${wtk + rtk}${rtk ? '(ライバルの分 +1)' : ''}。` : ''}賞金ランクが上がると1段ごとに +1(6段目から上は +2)(負けても獲得賞金の合計で上がる)`
+    desc: `${wtk ? `勝つと修行チケット +${wtk}。` : ''}賞金ランクが上がると1段ごとに +1(6段目から上は +2)(負けても獲得賞金の合計で上がる)`
   });
   const bpz = msxR3BeatPrize(SUC, c.prize);
   if (bpz) out.push(bpz);
@@ -179704,7 +179715,7 @@ function MsxR3Cup({
       alt: ""
     }), React.createElement("b", null, "ライバル")), React.createElement("span", {
       className: "rvb"
-    }, "ごほうび大")) : null);
+    }, "能力ポイント1.5倍")) : null);
   }) : React.createElement("div", {
     className: "msx-note"
   }, P.key === 'final' ? '最後の期は、ヒーローズファイナルだけです' : now ? '今月の大会はありません' : 'この月の大会はありません')), React.createElement("div", {
@@ -179984,7 +179995,7 @@ function MsxR3Bracket({
       rival: opp.rival ? foeName : ''
     }, '');
     return l.t ? l.t : null;
-  })() || (opp.rival ? React.createElement(React.Fragment, null, "「決勝の相手は ", React.createElement("b", null, "ライバルの ", foeName), "! 勝てば ごほうび大!」") : opp.champ ? React.createElement(React.Fragment, null, "「決勝の相手は ", React.createElement("b", null, "王者の ", foeName), "! ", opp.note || '強敵だよ', "。胸を借りるつもりでいこう!」") : React.createElement(React.Fragment, null, "「決勝の相手は ", React.createElement("b", null, foeName), "。", opp.note || 'しっかり見ていこう', "!」"));
+  })() || (opp.rival ? React.createElement(React.Fragment, null, "「決勝の相手は ", React.createElement("b", null, "ライバルの ", foeName), "! 勝てば 能力ポイントが1.5倍!」") : opp.champ ? React.createElement(React.Fragment, null, "「決勝の相手は ", React.createElement("b", null, "王者の ", foeName), "! ", opp.note || '強敵だよ', "。胸を借りるつもりでいこう!」") : React.createElement(React.Fragment, null, "「決勝の相手は ", React.createElement("b", null, foeName), "。", opp.note || 'しっかり見ていこう', "!」"));
   const body = React.createElement(React.Fragment, null, React.createElement(MsxBand, {
     s: s,
     v: v,
@@ -180254,12 +180265,12 @@ const msxR3GainItems = (d, s) => {
   });
   return o;
 };
-const msxR3PrizeRows = (d, s) => {
+const msxR3PrizeRows = (d, s, rival) => {
   const rows = [];
   if (d.rankTo > d.rankFrom) rows.push(['🏆', '賞金ランク', `${msxR3RankName(d.rankFrom || 0)} → ${msxR3RankName(d.rankTo)}`, 'new', 'UP']);else if (d.rankTo > 0) rows.push(['🏆', '賞金ランク', `${msxR3RankName(d.rankTo)}(KEEP)`, '', '']);
   (d.titles || []).forEach(t => rows.push(['🏅', '称号', `「${typeof msxR3TitleName === 'function' ? msxR3TitleName(t) : t}」を手に入れた!`, 'new', 'NEW']));
   (d.apt || []).forEach(i => rows.push(['📏', '間合い適性', `「${['零', '近', '中', '遠'][i]}」の間合い適性が1段上がった!`, 'new', 'UP']));
-  if (d.pts) rows.push(['🔷', '能力ポイント', `+${d.pts}(いま ${s.pts})`, '', '']);
+  if (d.pts) rows.push(['🔷', '能力ポイント', `+${d.pts}(いま ${s.pts})${rival ? '・ライバルに勝って ×1.5' : ''}`, '', '']);
   if (d.tickets) rows.push(['🎫', '修行チケット', `+${d.tickets}(${s.tickets - d.tickets}枚 → ${s.tickets}枚)`, '', '']);
   if (d.fame) rows.push(['💰', '賞金', `+${msxFmt(d.fame)}G(所持 ${msxFmt(s.fame - d.fame)}G → ${msxFmt(s.fame)}G)`, '', '']);
   if (d.beat) rows.push(['🎵', 'ビートP', `+${msxFmt(d.beat)}(本編のビートPに足されます)`, 'new', 'GET']);
@@ -180868,7 +180879,7 @@ function MsxR3Battle({
       });
     }
     if (st3.stage === 'prize') {
-      const rows = msxR3PrizeRows(d, s);
+      const rows = msxR3PrizeRows(d, s, st3.rival);
       const body = React.createElement(React.Fragment, null, React.createElement(MsxBand, {
         s: s,
         v: v,
@@ -180910,7 +180921,7 @@ function MsxR3Battle({
       }, React.createElement("img", {
         src: st3.foe ? msxMonThumb(st3.foe.species) : '',
         alt: ""
-      }), "ライバルの ", st3.rivalName, " に 勝った!", React.createElement("b", null, "ごほうび大")) : null, React.createElement("div", {
+      }), "ライバルの ", st3.rivalName, " に 勝った!", React.createElement("b", null, "能力ポイント1.5倍")) : null, React.createElement("div", {
         className: "v-trophy"
       }, "🏆")), React.createElement(MsxR3RankPyramid, {
         step: d.rankTo || 0,
@@ -180937,7 +180948,7 @@ function MsxR3Battle({
         const l = msxR3Line('turn.cup.win', run, {
           cup: st3.name,
           rival: st3.rivalName || ''
-        }, st3.rival ? '「ライバルに勝ったから、ごほうびがいつもの倍! つぎは ごはんだよ!」' : '「やったね! つぎは ごはんだよ!」');
+        }, st3.rival ? '「ライバルに勝ったから、能力ポイントが いつもの1.5倍! つぎは ごはんだよ!」' : '「やったね! つぎは ごはんだよ!」');
         return React.createElement(MsxSay, {
           aid: s.aid,
           ex: l.e || 'excited',
@@ -182373,12 +182384,24 @@ function MsxR3Retire({
 }) {
   const s = run.s;
   const [step, setStep] = useState(() => run.s.pts > 0 ? 'e3' : 'e0');
-  const [ws, setWs] = useState(s);
-  const [hist, setHist] = useState([]);
-  const wsRef = useRef(ws);
-  wsRef.current = ws;
-  const histRef = useRef(hist);
-  histRef.current = hist;
+  const capOfPt = (w, k) => typeof SUC.statCapOf === 'function' ? SUC.statCapOf(w, k) : 999;
+  const replayPts = list => {
+    let w = s;
+    for (const k of list) {
+      if (w.stats[k] >= capOfPt(w, k)) continue;
+      const r = SUC.spendPts(w, k, 1);
+      if (r.out.ok) w = r.state;
+    }
+    return w;
+  };
+  const [ptList, setPtList] = useState([]);
+  const ptListRef = useRef(ptList);
+  ptListRef.current = ptList;
+  const setPtListNow = list => {
+    ptListRef.current = list;
+    setPtList(list);
+  };
+  const ws = useMemo(() => replayPts(ptList), [s, ptList]);
   const [ptUnit, setPtUnit] = useMsxPtUnit();
   const [pick, setPick] = useState({});
   const [atab, setAtab] = useState(null);
@@ -182504,70 +182527,63 @@ function MsxR3Retire({
     });
   }
   if (step === 'e3') {
-    const capOf = (w, k) => typeof SUC.statCapOf === 'function' ? SUC.statCapOf(w, k) : 999;
+    const capOf = capOfPt;
     const spend = k => {
-      let w = wsRef.current;
-      const h = histRef.current.slice();
+      const list = ptListRef.current.slice();
+      let w = replayPts(list);
       const lim = msxPtLimit(ptUnit);
       let n = 0;
       while (n < lim) {
         if (w.stats[k] >= capOf(w, k)) break;
         const r = SUC.spendPts(w, k, 1);
         if (!r.out.ok) break;
-        h.push(w);
         w = r.state;
+        list.push(k);
         n += 1;
       }
-      if (n) {
-        wsRef.current = w;
-        histRef.current = h;
-        setHist(h);
-        setWs(w);
-      }
+      if (n) setPtListNow(list);
     };
     const undoK = k => {
+      const list = ptListRef.current.slice();
       const lim = msxPtLimit(ptUnit);
       let n = 0;
       while (n < lim) {
-        const w = wsRef.current;
-        const h = histRef.current;
-        let hit = -1;
-        for (let i = h.length - 1; i >= 0; i--) {
-          if (h[i].stats[k] < w.stats[k]) {
-            hit = i;
-            break;
-          }
-        }
-        if (hit < 0) break;
-        wsRef.current = h[hit];
-        histRef.current = h.slice(0, hit);
+        const i = list.lastIndexOf(k);
+        if (i < 0) break;
+        list.splice(i, 1);
         n += 1;
       }
-      if (n) {
-        setWs(wsRef.current);
-        setHist(histRef.current);
-      }
+      if (n) setPtListNow(list);
     };
     const preset = kind => {
       let w = s;
-      setHist([]);
+      const list = [];
+      const one = k => {
+        if (w.stats[k] >= capOf(w, k)) return false;
+        const r = SUC.spendPts(w, k, 1);
+        if (!r.out.ok) return false;
+        w = r.state;
+        list.push(k);
+        return true;
+      };
       if (kind === 'top') {
         const k = ev0.top && ev0.top[0] ? ev0.top[0] : 'pow';
-        w = SUC.spendPts(w, k, 9999).state;
-      } else if (kind === 'low') w = SUC.autoPts(w).state;else if (kind === 'bal') {
+        while (w.pts > 0 && one(k)) {}
+      } else if (kind === 'low') {
+        while (w.pts > 0) {
+          const k = MSX_STATS.slice().sort((x, y) => w.stats[x] - w.stats[y])[0];
+          if (!one(k)) break;
+        }
+      } else if (kind === 'bal') {
         let moved = true;
         while (moved && w.pts > 0) {
           moved = false;
           for (const k of MSX_STATS) {
-            const r = SUC.spendPts(w, k, 1);
-            if (r.out.ok) {
-              w = r.state;
-              moved = true;
-            }
+            if (one(k)) moved = true;
           }
         }
       }
-      setWs(w);
+      setPtListNow(list);
     };
     const used = s.pts - ws.pts;
     const body = React.createElement(React.Fragment, null, React.createElement("div", {
@@ -182641,10 +182657,7 @@ function MsxR3Retire({
     }, "バランス"), React.createElement("button", {
       type: "button",
       className: "r3-chip",
-      onClick: () => {
-        setWs(s);
-        setHist([]);
-      }
+      onClick: () => setPtListNow([])
     }, "戻す")), React.createElement("div", {
       className: "v-pa"
     }, MSX_STATS.map(k => {
@@ -182663,7 +182676,8 @@ function MsxR3Retire({
         className: "sym minus",
         "aria-label": `${MSX_STAT_NAME[k]}を戻す`,
         disabled: !add,
-        onPress: () => undoK(k)
+        onPress: () => undoK(k),
+        "data-msx-r3-ptminus": k
       }), React.createElement("b", null, add), React.createElement(MsxPtBtn, {
         disabled: ws.pts < SUC.ptsCost(ws, k) || ws.stats[k] >= capOf(ws, k),
         onPress: () => spend(k),
@@ -182684,10 +182698,7 @@ function MsxR3Retire({
       className: "v-ft"
     }, React.createElement("button", {
       type: "button",
-      onClick: () => {
-        setWs(s);
-        setHist([]);
-      }
+      onClick: () => setPtListNow([])
     }, "やり直す"), React.createElement("button", {
       type: "button",
       className: "go",
@@ -182696,6 +182707,7 @@ function MsxR3Retire({
           ...run,
           s: ws
         });
+        setPtListNow([]);
         setStep('e0');
       },
       "data-msx-r3-e3": true
@@ -186987,7 +186999,8 @@ function MsaStage({
   speedF = 1,
   fill = false,
   lite = false,
-  wide = false
+  wide = false,
+  liveGuts = null
 }) {
   const reduce = useMemo(() => !!lite || msaReduce(), [lite]);
   const [stageW, setStageW] = useState(340);
@@ -187166,7 +187179,8 @@ function MsaStage({
   const shakeLv = reduce || !e.hit || e.ev !== 'tech' ? 0 : Math.max(rkFx.shake || 0, tier >= 4 ? 3 : tier >= 3 ? 2 : tier >= 2 ? 1 : 0);
   const shake = shakeLv > 0;
   const p = Number.isFinite(e.p) ? Math.round(e.p) : null;
-  const gutsOf = side => f.g && Number.isFinite(Number(f.g[side])) ? Number(f.g[side]) : null;
+  const liveOf = side => liveGuts && Number.isFinite(Number(liveGuts[side])) ? Number(liveGuts[side]) : null;
+  const gutsOf = side => liveOf(side) != null ? liveOf(side) : f.g && Number.isFinite(Number(f.g[side])) ? Number(f.g[side]) : null;
   const bands = {
     A: [],
     B: []
@@ -187184,7 +187198,14 @@ function MsaStage({
   const hud = sd => {
     const m = memberOf(sd);
     const foe = e.ev === 'tech' && e.side && e.side !== sd;
-    const tags = msaGutsTagsOf(log, frames, Math.min(pos, frames.length - 1), sd, regen, hitMs);
+    const tags0 = msaGutsTagsOf(log, frames, Math.min(pos, frames.length - 1), sd, regen, hitMs);
+    const lv = liveOf(sd);
+    const lvUp = lv != null && f.g && Number.isFinite(Number(f.g[sd])) ? Math.round(lv - Number(f.g[sd])) : 0;
+    const tags = lvUp > 0 ? [...tags0, {
+      t: `+${lvUp}`,
+      cls: 'up',
+      delay: 0
+    }] : tags0;
     return React.createElement("div", {
       key: sd,
       className: `msa-hud ${sd}`,
@@ -187366,10 +187387,13 @@ function MsaStage({
     style: {
       animationDelay: `${hitMs}ms`
     }
-  })))), !intro && !ended && ['A', 'B'].map(hud), !intro && React.createElement("div", {
-    className: "msa-rnd",
-    "data-msa-round": f.r || 0
-  }, React.createElement("small", null, "ラウンド"), React.createElement("b", null, f.r || 1)), ['A', 'B'].map(sd => bands[sd].length ? React.createElement("div", {
+  })))), !intro && !ended && ['A', 'B'].map(hud), !intro && (() => {
+    const rn = liveGuts && Number.isFinite(Number(liveGuts.r)) && Number(liveGuts.r) > 0 ? Number(liveGuts.r) : f.r || 0;
+    return React.createElement("div", {
+      className: "msa-rnd",
+      "data-msa-round": rn
+    }, React.createElement("small", null, "ラウンド"), React.createElement("b", null, rn || 1));
+  })(), ['A', 'B'].map(sd => bands[sd].length ? React.createElement("div", {
     key: sd,
     className: `msa-bands ${sd}`
   }, bands[sd].map((b, j) => React.createElement("span", {
@@ -187591,6 +187615,20 @@ function MonsucArena({
   }, "試合の準備をしています…"));
   const f = frames[Math.min(pos, frames.length - 1)] || frames[0];
   const fShow = fShowH || f;
+  const liveGuts = (() => {
+    const op = barOn ? mm.pending : null;
+    if (!op || op.kind !== 'act' || !Number.isFinite(Number(op.guts)) || !f || !f.g) return null;
+    const out = {
+      A: Number(op.guts),
+      r: Number(op.round) || 0
+    };
+    if (Number.isFinite(Number(op.round)) && Number(op.round) > (Number(f.r) || 0) && typeof msaRegenOf === 'function') {
+      const rg = Number(msaRegenOf(log, frames)[`B${f.act ? f.act.B : 0}`]) || 0;
+      const gMax = typeof window !== 'undefined' && window.ASSISTANT_MASMON_BATTLE && window.ASSISTANT_MASMON_BATTLE.GUTS_MAX ? window.ASSISTANT_MASMON_BATTLE.GUTS_MAX : 99;
+      if (rg > 0 && Number.isFinite(Number(f.g.B))) out.B = Math.min(gMax, Number(f.g.B) + rg);
+    }
+    return out;
+  })();
   const e = log[pos] || {};
   const st = log[0] || {};
   const maxHp = {
@@ -187670,7 +187708,8 @@ function MonsucArena({
     introTitle: info.title,
     speedF: (MSA_SPEEDS.find(x => x.id === speed) || MSA_SPEEDS[0]).f,
     fill: true,
-    wide: true
+    wide: true,
+    liveGuts: liveGuts
   })), React.createElement("div", {
     className: "msa-say",
     "data-msa-say": true

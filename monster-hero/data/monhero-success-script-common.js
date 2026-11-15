@@ -472,7 +472,7 @@
     {"id":"ev.rival.notice.self.narr1","who":"narr","t":"次の{cup}の出場者の中に、見覚えのある名前があった。{rival}──助手の育てているモンスターだ。"},
     {"id":"ev.rival.meet.asst.narr1","who":"narr","t":"控え室の前で、{rival}とすれちがった。目が合った瞬間、空気がぴんと張りつめる。"},
     {"id":"ev.rival.meet.friend.narr1","who":"narr","t":"会場の入口で、{owner}さんの{rival}が待っていた。礼儀正しくおじぎをしてくる。"},
-    {"id":"ev.rival.reward.narr1","who":"narr","t":"ライバルに勝った！ いつもよりごほうびが多くもらえた。"},
+    {"id":"ev.rival.reward.narr1","who":"narr","t":"ライバルに勝った！ いつもより能力ポイントが多くもらえた。"},
   ];
   const heads = [{"prefix":"scn.","head":"main","label":"メインのお話"},{"prefix":"cheer.","head":"cheer","label":"編成の子のイベント"},{"prefix":"ev.team.","head":"cheer","label":"編成の子のイベント"},{"prefix":"ev.","head":"train","label":"育成イベント"},{"prefix":"issa.","head":"train","label":"育成イベント"},{"prefix":"turn.","head":"none","label":""},{"prefix":"mon.","head":"none","label":""},{"prefix":"item.","head":"none","label":""},{"prefix":"tut.","head":"none","label":""}];
   const part = Object.freeze({ rows: Object.freeze(rows), heads });

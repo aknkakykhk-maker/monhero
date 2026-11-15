@@ -192,6 +192,8 @@ const VIEW = PORTRAIT ? { width: 390, height: 844 } : { width: 844, height: 390 
       // 演奏の位置を時計どおりに進める(本物の演奏と同じく1秒ごとに進む)
       await A.evaluate(() => { const t0 = Date.now(); Object.defineProperty(RHYTHM_PLAY_WATCH, 'timeMs', { get: () => 61000 + (Date.now() - t0), configurable: true }); });
       const audioOk = await W.waitForFunction(() => RHYTHM_WATCH_AUDIO.on() && window.__wa.some((x) => x.h && x.h.started()), null, { timeout: 20000 }).then(() => true, () => false);
+      // 読み込みにかかった分のずれは、次の確かめ(0.25秒ごと)で合わせ直す。合うまで少し待つ
+      await W.waitForFunction(() => { const last = window.__wa[window.__wa.length - 1]; const t = rhythmWatchAudioTarget(); return last && last.h && t && Math.abs(last.h.songTimeMs() - t.ms) <= 600; }, null, { timeout: 4000 }).catch(() => {});
       const au = await W.evaluate(() => {
         const v = RHYTHM_WATCH.view(); const song = RHYTHM_SONGS.find((x) => x.songId === v.songId); const last = window.__wa[window.__wa.length - 1];
         const t = rhythmWatchAudioTarget();
