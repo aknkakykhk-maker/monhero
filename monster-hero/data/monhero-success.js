@@ -440,13 +440,12 @@
   //   need … { rank: 賞金の段 } { stat: 能力の値 } { won: 'sys:星' }(この育成で優勝)/rw … 勝ったときのごほうび
   //   grade … 札の格の色(bronze・silver・gold・green・four・rainbow)
   // 賞金ランク(2026-11-14 社長「このまま作る」→ 2026-11-15 r1115-085・126 社長「案A」で参考の9段・参考の金額へ)。下から ルーキー〜ヒーロー。
-  //   条件: 1 デビュー戦に出る/2 大会で1勝/3〜9 これまでの賞金の合計(参考どおり 3,000〜130,000G)。
-  //   ★5段目の 15,000G は参考の字がつぶれて読めない所の仮の値(docs/progress/player-raise/report-1115/r1115-081-085/README.md)
+  //   条件: 1 デビュー戦に出る/2 大会で1勝/3〜9 これまでの賞金の合計(3,000〜120,000G)。いちばん上の 120,000G は社長の決め(2026-11-15 r1115-168・参考の 130,000G から変更)・5段目の 15,000G は正式
   //   段が上がるたびに修行チケット1枚、6段目から上は1段で2枚(tk)。チケット運で もう1枚
   //   step は 1〜9(0 はまだデビュー戦の前)。四大大会の出る条件(need.rank)もこの段(参考どおり4つとも「はながた」= 6段 エース 26,000G。r1115-134)。前の10段で保存した途中の育成は restore が いまの段に丸める
   const FAME_RANK = Object.freeze([
     { name: 'ルーキー', cond: 'debut', tk: 1 }, { name: '初めの一勝', cond: 'win', tk: 1 }, { name: '一人前', min: 3000, tk: 1 }, { name: '腕利き', min: 7000, tk: 1 }, { name: '期待の星', min: 15000, tk: 1 },
-    { name: 'エース', min: 26000, tk: 2 }, { name: 'スター', min: 40000, tk: 2 }, { name: 'チャンピオン', min: 70000, tk: 2 }, { name: 'ヒーロー', min: 130000, tk: 2 },
+    { name: 'エース', min: 26000, tk: 2 }, { name: 'スター', min: 40000, tk: 2 }, { name: 'チャンピオン', min: 70000, tk: 2 }, { name: 'ヒーロー', min: 120000, tk: 2 },
   ].map(Object.freeze));
   const FAME_RANK_MAX = FAME_RANK.length; // 9
   const rankTicketsOf = (from, to) => { let n = 0; for (let st = Math.max(1, from + 1); st <= Math.min(FAME_RANK_MAX, to); st++) n += num(FAME_RANK[st - 1].tk, 1); return n; }; // from の次の段〜to の段で もらえる修行チケット
