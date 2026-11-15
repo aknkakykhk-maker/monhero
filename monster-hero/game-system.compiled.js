@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5e723881bca1b0fb
+// source-sha256: 52d6aad29fb0ed5f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -219529,7 +219529,7 @@ const CardPvpWatchScreen = ({
     className: "min-w-0 flex-1 space-y-0.5"
   }, w.last && React.createElement("div", {
     className: "text-[11px] font-black text-violet-200"
-  }, nameOf(w.last.p), "が使った札"), st.pending && React.createElement(CardGuardPreview, {
+  }, nameOf(w.last.p), "が使ったカード"), st.pending && React.createElement(CardGuardPreview, {
     db: db,
     pv: cardGuardPreview(db, st),
     compact: true
