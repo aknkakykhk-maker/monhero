@@ -159,6 +159,7 @@ const VIEW = { width: 390, height: 844 };
       await W.locator(`[data-rhythm-watch-open="${code}"]`).click();
     }
     await W.waitForSelector('[data-rhythm-watch][data-rhythm-watch-phase="playing"]', { timeout: 40000 });
+    await W.bringToFront();   // 裏のタブはタイマー・描画が間引かれる(社長は観戦の画面を見ている)
     const openedAt = Date.now();
     let got = null;
     for (let i = 0; i < 24; i += 1) { const s = await state(); if (s && s.pAt > 0 && s.k) { got = { ...s, after: Date.now() - Math.max(hudAt, openedAt) }; break; } await W.waitForTimeout(500); }
@@ -186,7 +187,8 @@ const VIEW = { width: 390, height: 844 };
         return ch ? ch.notes.map((n, i) => [i, n.timeMs]).filter(([, t]) => t > now + 300 && t < now + 4000).map(([i]) => i) : []; });
       await P.evaluate((ids) => { const jd = RHYTHM_PLAY_WATCH.jd; if (jd !== null) ids.forEach((i) => jd.push(i, 0)); }, hits);
       let text = '';
-      for (let i = 0; i < 20 && !text; i += 1) { await W.waitForTimeout(300); text = await W.evaluate(() => { const b = document.querySelector('[data-rhythm-watch-stage] [data-rhythm-judgment-text]'); return b ? (b.getAttribute('data-judgment') || '') : ''; }); }
+      await W.bringToFront();
+      for (let i = 0; i < 30 && !text; i += 1) { await W.waitForTimeout(300); text = await W.evaluate(() => { const b = document.querySelector('[data-rhythm-watch-stage] [data-rhythm-judgment-text]'); return b ? (b.getAttribute('data-judgment') || '') : ''; }); }
       check(`${cs}: 見ている人がたたいた判定が、1.5秒おくれで観戦の画面に文字で出る`, hits.length > 0 && text === 'MARVELOUS', JSON.stringify({ hits: hits.length, text }));
       if (SHOT_DIR && cs === 'pre2' && text) await W.screenshot({ path: path.join(SHOT_DIR, 'watch-judge-tate.png') });
     }
@@ -206,6 +208,7 @@ const VIEW = { width: 390, height: 844 };
       check(`${cs}: 見ている人(古い版・観戦を許していない)から届かないと、届く人へ切り替わって譜面が流れ続ける`, !!sw, JSON.stringify(sw || await state()));
     }
     // ---- だれからも届かない: 止まった画面のままにせず、案内を出す ----
+    await W.bringToFront();
     await W.evaluate(() => { window.__mute = (q) => (q.t === 'pg' && q.p != null) || q.t === 'wi'; });
     let nd = false;
     for (let i = 0; i < 50 && !nd; i += 1) { await W.waitForTimeout(500); const s = await state(); nd = !!(s && s.noDetail); }
