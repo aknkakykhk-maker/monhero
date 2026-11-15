@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 5cae00c25287c509
+// generated-sha256: 367b1841f50329d1
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -6420,16 +6420,28 @@ const Audio_ = (() => {
     return advanced < (elapsed / 1000) * 0.2;
   };
   let resumeOnGestureBound = false;
+  let healOnGesture = false;   // 表へ戻ったあとの確かめで、出口が直らなかった印。次のタップで作り直す(r1115-205)
   const bindResumeOnGesture = () => {
     if (resumeOnGestureBound || typeof document === 'undefined') return;
     resumeOnGestureBound = true;
     const onGesture = () => {
       const ctx = audioCtx;
-      if (!ctx || ctx.state === 'running') return;
+      if (!ctx) return;
+      // 表へ戻ったあと、時計が止まっていた/起こせなかった出口は、このタップで作り直す(2026-11-15 r1115-205 社長「ゲームからタスク変えて戻ったら音が消えた」)。
+      //   iOS は裏から戻ると出口が interrupted のまま、または running なのに時計が止まって無音になり、resume() では戻らないことがある
+      if (healOnGesture && !activeRhythmGains.size && enabled && !pageHidden) { healOnGesture = false; rebuildAudioCtx(); return; }
+      if (ctx.state === 'running') return;
       let done = null;
       try { done = ctx.resume(); } catch (e) {}
-      const after = () => { ctxTimeMark = null; if (audioCtx && audioCtx.state === 'running' && enabled && !pageHidden && currentKey && !bgmSource && !jingleSource && !previewSource) playBGM(currentKey); };
-      if (done && done.then) done.then(after, () => {}); else setTimeout(after, 0);
+      let once = false;
+      const after = () => {
+        if (once) return; once = true;
+        ctxTimeMark = null;
+        // タップで起こしても動かない(iOS の interrupted のまま・resume が返ってこない)ときは、作り直す。演奏中の曲があるときは作り直さない(譜面とずれる)
+        if (audioCtx === ctx && ctx.state !== 'running' && ctx.state !== 'closed' && !activeRhythmGains.size && enabled && !pageHidden) { rebuildAudioCtx(); return; }
+        if (audioCtx && audioCtx.state === 'running' && enabled && !pageHidden && currentKey && !bgmSource && !jingleSource && !previewSource) playBGM(currentKey);
+      };
+      if (done && done.then) { done.then(after, after); setTimeout(after, 800); } else setTimeout(after, 0);
     };
     ['pointerdown', 'touchstart', 'click', 'keydown'].forEach(type => {
       try { document.addEventListener(type, onGesture, { capture: true, passive: true }); } catch (e) { document.addEventListener(type, onGesture, true); }
@@ -6839,7 +6851,26 @@ const Audio_ = (() => {
       return { stop };
     } catch (e) { return null; }
   };
-  const setPageHidden = (hidden) => { pageHidden = !!hidden; ctxTimeMark = null; if (pageHidden) { ++bgmRequest; stopPreview(false); stopOthers(); stopJingles(); } else if (currentKey) playBGM(currentKey); };
+  // 表へ戻ったら、出口の時計が実時間どおり進んでいるかを確かめる(2026-11-15 r1115-205)。0.4秒後に印を付け、さらに0.9秒後に比べる。
+  //   止まっていたら作り直して鳴らし直す(演奏中の曲があるときは作り直さず、次のタップまで待つ)。起こせていなければ、次のタップで作り直す
+  let returnHealTimer = null;
+  const healAfterReturn = () => {
+    if (returnHealTimer) clearTimeout(returnHealTimer);
+    const step = (marked) => {
+      returnHealTimer = setTimeout(() => {
+        returnHealTimer = null;
+        const ctx = audioCtx;
+        if (pageHidden || !enabled || !ctx) return;
+        if (ctx.state !== 'running') { healOnGesture = true; return; }
+        if (!marked) { ctxTimeMark = null; ctxClockStalled(); step(true); return; }
+        if (!ctxClockStalled()) return;
+        if (activeRhythmGains.size) { healOnGesture = true; return; }
+        rebuildAudioCtx();
+      }, marked ? 900 : 400);
+    };
+    step(false);
+  };
+  const setPageHidden = (hidden) => { pageHidden = !!hidden; ctxTimeMark = null; if (pageHidden) { if (returnHealTimer) clearTimeout(returnHealTimer); returnHealTimer = null; ++bgmRequest; stopPreview(false); stopOthers(); stopJingles(); } else { if (currentKey) playBGM(currentKey); healAfterReturn(); } };
   const setEnabled = async (on) => { enabled = !!on; if (typeof window !== 'undefined') window.__mhAudioEnabled = enabled; applyRhythmMute(); if (!enabled) { ++bgmRequest; stopPreview(false); stopOthers(); stopJingles(); } else if (currentKey) playBGM(currentKey); await ensure(); };
   const isEnabled = () => enabled;
   // いま実際に鳴っている曲を、外(検査)から見るための口。
