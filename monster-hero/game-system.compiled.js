@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: cd161e6caba19ffb
+// source-sha256: db9ae59cc4b90191
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -170945,7 +170945,7 @@ const msxNormRun = (raw, SUC) => {
     },
     items: Array.isArray(raw.items) ? raw.items.filter(x => typeof x === 'string').slice(0, 2) : [],
     used: msxNum(raw.used, 0),
-    phase: ['main', 'result', 'react', 'issa', 'battle', 'turn', 'over', 'event', 'story', 'awake', 'tevent', 'birth'].includes(raw.phase) ? raw.phase : 'main',
+    phase: ['main', 'result', 'react', 'issa', 'battle', 'turn', 'over', 'event', 'story', 'awake', 'tevent', 'birth', 'begin', 'intro'].includes(raw.phase) ? raw.phase : 'main',
     out: msxIsObj(raw.out) ? raw.out : null,
     log: Array.isArray(raw.log) ? raw.log.filter(msxIsObj).slice(-20) : [],
     startAt: msxNum(raw.startAt, 0),
@@ -171271,19 +171271,42 @@ const msxBeatMark = run => {
   } : run;
 };
 let msxSaveChain = Promise.resolve();
+const MSX_RUN_GONE_KEY = 'mh_monsuc_run_gone_v1';
+const msxRunGoneList = async () => {
+  try {
+    const v = await storeGet(MSX_RUN_GONE_KEY, null);
+    return Array.isArray(v) ? v.filter(x => typeof x === 'string').slice(-50) : [];
+  } catch (_) {
+    return [];
+  }
+};
+const msxRunTurn = r => {
+  const t = Number(r && r.s && r.s.turn);
+  return Number.isFinite(t) ? t : 0;
+};
+const msxRunSent = r => Number.isFinite(Number(r && r.beatSent)) ? Math.max(0, Math.floor(Number(r.beatSent))) : 0;
+const msxRunIsStale = async (run, stored) => {
+  if (!run || typeof run.id !== 'string') return true;
+  if (!stored || typeof stored !== 'object') return (await msxRunGoneList()).includes(run.id);
+  if (stored.id !== run.id) return Number(run.startAt || 0) <= Number(stored.startAt || 0) || (await msxRunGoneList()).includes(run.id);
+  if (msxRunTurn(run) < msxRunTurn(stored)) return true;
+  if (msxRunSent(run) < msxRunSent(stored)) return true;
+  if (stored.beatEnd === true && run.beatEnd !== true) return true;
+  return false;
+};
 const msxSaveRunNow = async (run, noPay) => {
+  const stored = await storeGet(MSX_KEYS.run, null);
+  if (await msxRunIsStale(run, stored)) return false;
   const ov = msxRunOverOf(run);
   if (ov) {
     try {
       await storeSet(MSX_RUN_OVER_KEY, ov);
     } catch (_) {}
   }
-  const sent = Number.isFinite(Number(run && run.beatSent)) ? Math.max(0, Math.floor(Number(run.beatSent))) : 0;
+  const sent = msxRunSent(run);
   if (noPay || !sent || typeof saveStoredValuesOrRollback !== 'function' || typeof loadRhythmEventPoints !== 'function' || typeof RHYTHM_EVENT_POINTS_KEY === 'undefined') return storeSet(MSX_KEYS.run, run);
-  const stored = await storeGet(MSX_KEYS.run, null);
-  if (!stored || !run || stored.id !== run.id) return false;
-  const storedSent = Number.isFinite(Number(stored.beatSent)) ? Math.max(0, Math.floor(Number(stored.beatSent))) : 0;
-  const add = sent - storedSent;
+  if (!stored || stored.id !== run.id) return false;
+  const add = sent - msxRunSent(stored);
   if (add <= 0) return storeSet(MSX_KEYS.run, run);
   const before = await loadRhythmEventPoints();
   return saveStoredValuesOrRollback([{
@@ -171301,9 +171324,19 @@ const msxSaveRun = (run, noPay) => {
   return msxSaveChain;
 };
 const msxClearRun = () => {
-  msxSaveChain = msxSaveChain.then(() => storeSet(MSX_KEYS.run, null)).catch(() => false);
+  msxSaveChain = msxSaveChain.then(async () => {
+    try {
+      const cur = await storeGet(MSX_KEYS.run, null);
+      if (cur && typeof cur.id === 'string') {
+        const g = await msxRunGoneList();
+        if (!g.includes(cur.id)) await storeSet(MSX_RUN_GONE_KEY, [...g, cur.id].slice(-50));
+      }
+    } catch (_) {}
+    return storeSet(MSX_KEYS.run, null);
+  }).catch(() => false);
   return msxSaveChain;
 };
+const msxSaveWait = () => msxSaveChain.then(() => true, () => true);
 const msxSaveMeta = meta => storeSet(MSX_KEYS.meta, meta);
 const msxMon = id => typeof ALL_PLAYER_MONSTERS === 'object' && ALL_PLAYER_MONSTERS && ALL_PLAYER_MONSTERS[id] || null;
 const msxMonName = id => {
@@ -175028,7 +175061,7 @@ function MonheroSuccessScreen({
     msxSaveMeta(meta);
   };
   const toHome = () => {
-    msxReadAll(msxSuc.SUC).then(d => {
+    (typeof msxSaveWait === 'function' ? msxSaveWait() : Promise.resolve()).then(() => msxReadAll(msxSuc.SUC)).then(d => {
       setData(d);
       setRunState(d.run);
     }).catch(() => {});
@@ -178529,60 +178562,85 @@ const msxBest3Add = (list, e) => msxBest3Norm([...msxBest3Norm(list).filter(x =>
 const msxR3Retire = async (run, s, ev, assists, debug) => {
   const box = await msxR3ReadBox();
   let meta = await msxR3ReadMeta();
-  if (box.mons.some(m => m.id === run.id)) return {
-    ok: true,
-    already: true,
-    box,
-    meta
-  };
+  const inBox = box.mons.some(m => m.id === run.id);
+  const ids0 = Array.isArray(meta.retiredIds) ? meta.retiredIds.filter(x => typeof x === 'string') : null;
+  const metaDone = ids0 ? ids0.includes(run.id) : inBox;
   const fromId = run.from && typeof run.from.box === 'string' ? run.from.box : null;
-  const parent = fromId ? box.mons.find(m => m.id === fromId && m.raised === false) : null;
+  const parent = !inBox && fromId ? box.mons.find(m => m.id === fromId && m.raised === false) : null;
   const rest = parent ? box.mons.filter(m => m !== parent) : box.mons;
-  if (rest.length >= box.cap) return {
+  if (!inBox && rest.length >= box.cap) return {
     ok: false,
     full: true,
     box,
     meta
   };
-  const mon = msxR3BoxMonOf(run, s, ev, assists, parent);
-  meta = msxR3AddWon(meta, s);
-  meta.retired += 1;
-  const best = msxR3Obj(meta.best[s.species]) ? meta.best[s.species] : null;
-  if (!best || !(best.power >= ev.power)) meta.best = {
-    ...meta.best,
-    [s.species]: {
+  let best3 = null;
+  if (!metaDone) {
+    meta = msxR3AddWon(meta, s);
+    meta.retired += 1;
+    const best = msxR3Obj(meta.best[s.species]) ? meta.best[s.species] : null;
+    if (!best || !(best.power >= ev.power)) meta.best = {
+      ...meta.best,
+      [s.species]: {
+        power: ev.power,
+        rank: ev.rank,
+        id: run.id
+      }
+    };
+    const best3Prev = msxBest3Norm(meta.best3);
+    meta.best3 = msxBest3Add(best3Prev, {
+      id: run.id,
       power: ev.power,
       rank: ev.rank,
-      id: run.id
-    }
+      species: s.species,
+      nick: run.nick || '',
+      at: Date.now()
+    });
+    best3 = {
+      prev: best3Prev,
+      next: meta.best3,
+      place: meta.best3.findIndex(e => e.id === run.id),
+      power: ev.power
+    };
+    meta.titles = Array.from(new Set([...(meta.titles || []), ...(Array.isArray(s.titles) ? s.titles : [])])).slice(0, 200);
+    const seed = ids0 || box.mons.filter(m => m.raised !== false && typeof m.id === 'string').map(m => m.id);
+    meta.retiredIds = Array.from(new Set([...seed, run.id])).slice(-300);
+    if ((await storeSet(MSX_KEYS.meta, meta)) === false) return {
+      ok: false,
+      why: 'save',
+      box,
+      meta
+    };
+  }
+  let next = box;
+  let mon = inBox ? box.mons.find(m => m.id === run.id) : null;
+  if (!inBox) {
+    mon = msxR3BoxMonOf(run, s, ev, assists, parent);
+    next = {
+      ...box,
+      cap: Math.max(box.cap, msxR3BoxCap(meta.retired)),
+      mons: [...rest, mon]
+    };
+    if ((await storeSet(MSX_KEYS.box, next)) === false) return {
+      ok: false,
+      why: 'save',
+      box,
+      meta
+    };
+  }
+  const rec = await msxR3AddRecord(run, s, ev, mon.titles, mon.gen);
+  if (rec === 'fail') return {
+    ok: false,
+    why: 'save',
+    box: next,
+    meta
   };
-  const best3Prev = msxBest3Norm(meta.best3);
-  meta.best3 = msxBest3Add(best3Prev, {
-    id: run.id,
-    power: ev.power,
-    rank: ev.rank,
-    species: s.species,
-    nick: run.nick || '',
-    at: Date.now()
-  });
-  const best3 = {
-    prev: best3Prev,
-    next: meta.best3,
-    place: meta.best3.findIndex(e => e.id === run.id),
-    power: ev.power
-  };
-  meta.titles = Array.from(new Set([...(meta.titles || []), ...(Array.isArray(s.titles) ? s.titles : [])])).slice(0, 200);
-  const next = {
-    ...box,
-    cap: Math.max(box.cap, msxR3BoxCap(meta.retired)),
-    mons: [...rest, mon]
-  };
-  await storeSet(MSX_KEYS.box, next);
-  await storeSet(MSX_KEYS.meta, meta);
-  await msxR3AddRecord(run, s, ev, mon.titles, mon.gen);
-  msxR3RankSend(run, s, ev, debug);
+  if (!inBox || !metaDone || rec === true) msxR3RankSend(run, s, ev, debug);
   return {
     ok: true,
+    ...(inBox && metaDone ? {
+      already: true
+    } : {}),
     box: next,
     meta,
     mon,
@@ -178730,7 +178788,7 @@ const msxR3AddRecord = async (run, s, ev, titles, gen) => {
       endAt: Date.now(),
       gen
     });
-    if (r.added) await storeSet(R.KEY, r.book);
+    if (r.added && (await storeSet(R.KEY, r.book)) === false) return 'fail';
     return r.added;
   } catch (e) {
     return false;
