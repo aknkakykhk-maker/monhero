@@ -84,7 +84,7 @@ const makeRun = async (kind) => {
     ['DX1', null, ['seeall', 'dexopen', 'dextab:daily']], ['DX2', null, ['seeall', 'dexopen', 'dextab:daily', 'dexrow:0']], ['DX3', null, ['seeall', 'dexopen', 'dextab:team', 'dexrow:0']], // イベント図鑑(r1115-144・145)
     ['HB1', null, ['basemon']], ['HB4', null, ['basemon', 'scrollend']], ['HB2', null, ['basemon', 'bmpick:Snegurochka']], ['HB3', null, ['basemon', 'bmpick:Snegurochka', 'tab:apt']], // ホームのベースモン(r1115-043)
     ['S0', null, ['new']], // ストーリー選択(2026-11-14)。S1〜S6 はその「次へ」のあと
-    ['TP1', null, ['new', 'next', 'pickmon:Snegurochka', 'detail']], ['TP2', null, ['new', 'next', 'pickmon:Snegurochka', 'detail', 'alt:2-1']], ['TP3', null, ['new', 'next', 'pickmon:Snegurochka', 'detail', 'alt:2-1', 'altopt:sk-0480']], // 技の升の選び(被った升の ⇄ → 窓 → 選ぶ)
+    ['TP1', null, ['new', 'next', 'pickmon:Snegurochka', 'detail']], ['TP2', null, ['new', 'next', 'pickmon:Snegurochka', 'detail', 'cell:2-1', 'altopen']], ['TP3', null, ['new', 'next', 'pickmon:Snegurochka', 'detail', 'cell:2-1', 'altopen', 'altopt:sk-0480']], // 技の升の選び(被った升の ⇄ → 窓 → 選ぶ)
     ['S1', null, ['new', 'next']], ['S1D', null, ['new', 'next', 'detail']], ['S1A', null, ['new', 'next', 'detail', 'tab:apt']], ['S1F', null, ['new', 'next', 'detail', 'tab:feat']], ['S1Z', null, ['seedfuse', 'new', 'next', 'tabfuse', 'pickfirst']], ['S1ZD', null, ['seedfuse', 'new', 'next', 'tabfuse', 'pickfirst', 'detail']],
     ['S2', null, ['new', 'next', 'next']], ['S2P', null, ['new', 'next', 'next', 'slot:1']], ['S2B', null, ['new', 'next', 'next', 'slot:1', 'base:Golem']], ['S2G', null, ['new', 'next', 'next', 'gather']], ['S2E', null, ['new', 'next', 'next', 'effects']], ['S2F', null, ['new', 'next', 'next', 'slot:5']], // 編成の選ぶ画面・効果一覧・フレンドの一覧(r1115-096)
     ['S3', null, ['new', 'next', 'next', 'next']], ['S4', null, ['new', 'next', 'next', 'next', 'next']], ['S4L', null, ['new', 'next', 'next', 'next', 'next', 'carry:oil']], ['S4E', null, ['new', 'next', 'next', 'next', 'next', 'scrollend']],
@@ -167,7 +167,9 @@ const makeRun = async (kind) => {
             if (st === 'effects') { const d = document.querySelector('[data-msx-team-effects-open]'); if (d) d.click(); return !!d; }
             if (st === 'gather') { const d = document.querySelector('[data-msx-gather-open]'); if (d) d.click(); return !!d; }
             if (st.startsWith('pickmon:')) { const d = [...document.querySelectorAll('.v-grid6 button')].find((b) => { const i = b.querySelector('img'); return i && i.alt === (typeof msxMonName === 'function' ? msxMonName(st.slice(8)) : st.slice(8)); }); if (d) d.click(); return !!d; } // 育てるモンスターを種族で選ぶ
-            if (st.startsWith('alt:')) { const d = document.querySelector(`[data-msx-alt="${st.slice(4)}"]`); if (d) d.click(); return !!d; } // 被った升の ⇄ を押す(2026-11-14 技を選ぶ窓)
+            // 被った升を押す → 右の欄の「⇄ 覚える技を選ぶ」で窓を開く(r1115-152①。升の ⇄ は押せない印になった)
+            if (st.startsWith('cell:')) { const c = document.querySelector(`[data-msx-cell="${st.slice(5)}"]`); if (c) c.click(); return !!c; }
+            if (st === 'altopen') { const d = document.querySelector('[data-msx-alt-open]'); if (d) d.click(); return !!d; }
             if (st.startsWith('altopt:')) { const d = document.querySelector(`[data-msx-techpick-opt="${st.slice(7)}"]`); if (d) d.click(); return !!d; }
             if (st.startsWith('tab:')) { const d = document.querySelector(`[data-msx-detail-tab="${st.slice(4)}"]`); if (d) d.click(); return !!d; }
             if (st.startsWith('carry:')) { const d = document.querySelector(`[data-msx-carry-item="${st.slice(6)}"]`); if (d) d.click(); return !!d; } // 持ちこみの升目を押す(持っていない物も・2026-11-14)
