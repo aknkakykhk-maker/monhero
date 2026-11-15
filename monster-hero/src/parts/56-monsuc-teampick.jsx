@@ -11,8 +11,8 @@ const msxTpAT = () => (typeof window !== 'undefined' && window.MONHERO_SUCCESS_A
 // 枠の値が同じ子を指しているか(auto のベースモンは空き扱い)
 const msxTpSame = (a, b) => !!(a && b && !a.auto && !b.auto && ((a.box && a.box === b.box) || (a.assist && a.assist === b.assist) || (!a.box && !a.assist && !b.box && !b.assist && a.base && a.base === b.base)));
 // アシスト効果の1つ分の効き目(比べる数)と文字
-const msxTpAssistVal = (AT, a) => { try { return Number(AT.valueOf(a.id, a.lv)) || 0; } catch (e) { return 0; } };
-const msxTpAssistText = (AT, a) => { try { return AT.valueText(a.id, a.lv); } catch (e) { return ''; } };
+const msxTpAssistVal = (AT, a) => { try { return Number(AT.valueOf(a.id, AT.fromSaved(a) || a.lv)) || 0; } catch (e) { return 0; } };
+const msxTpAssistText = (AT, a) => { try { return AT.valueText(a.id, AT.fromSaved(a) || a.lv); } catch (e) { return ''; } };
 // 編成で「一番大きい1つだけ」効く効果か(重なると重複になる物)。重なり方の決まりは表(data/monhero-success-assist.js)から読む(r1115-104・107)
 //   表に ONE_ONLY(id の並び・Set・{id:true})があればそれ / CAP[id] に one:true があれば1つだけ・one の無い CAP[id] は足し合わせ(上限つき)
 //   どちらも無ければ今までの決まり: いるだけ型・試合型は1つだけ(芯 stayLv・battleBuffs)
@@ -122,7 +122,7 @@ function MsxTeamPick({ idx, slots, members, own, unlocked, raised, stock, SUC, b
           <label className="msx-tp-sel"><span>得意</span><select value={only} onChange={(e) => setOnly(e.target.value)} data-msx-tp-only><option value="all">全て</option>{MSX_STATS.map((k) => <option key={k} value={k}>{MSX_STAT_NAME[k]}</option>)}</select></label>
           <span className="msx-tp-cnt">{tab === 'base' ? '' : `自分 ${raisedN}/6体`}</span>
         </div>
-        {tab === 'memo' ? <div className="msx-tp-note">メモリアルモンスターは育成には使えません。アシスト効果と得意な能力だけ効きます</div> : null}
+        {tab === 'memo' ? <div className="msx-tp-note" data-msx-assist-head>メモリアルモンスターは育成には使えません。アシスト効果と得意な能力だけ効きます</div> : null}
         <div className="msx-tp-list" data-msx-tp-list>
           {items.length ? items.map((x) => { const mk = markOf(x); const on = msxTpSame(cand, x.slot); const m = x.mem; return (
             <button type="button" key={x.key} className={`msx-tp-c${on ? ' on' : ''}${mk && mk.lock ? ' lk' : ''}`} data-msx-tp-item={x.key} {...(x.kind === 'base' ? { 'data-msx-pick-base': x.species } : {})}

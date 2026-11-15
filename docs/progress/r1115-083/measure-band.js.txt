@@ -1,0 +1,37 @@
+const path=require('path'),fs=require('fs'),http=require('http');
+const ROOT='/home/user/monhero';
+const { chromium } = require(path.join(ROOT,'tools','node_modules','playwright'));
+const { quietBootSeed, updateNoticeSeed } = require(path.join(ROOT,'tools','boot','quiet-boot-seed'));
+const OUT=process.argv[2]; fs.mkdirSync(OUT,{recursive:true});
+const TYPES={'.html':'text/html','.js':'text/javascript','.css':'text/css','.png':'image/png','.jpg':'image/jpeg','.webp':'image/webp','.json':'application/json','.mp3':'audio/mpeg'};
+(async()=>{
+const server=await new Promise(r=>{const s=http.createServer((q,res)=>{const f=path.join(ROOT,decodeURIComponent(q.url.split('?')[0]));if(!f.startsWith(ROOT)||!fs.existsSync(f)||fs.statSync(f).isDirectory()){res.writeHead(404);res.end();return;}res.writeHead(200,{'Content-Type':TYPES[path.extname(f)]||'application/octet-stream'});fs.createReadStream(f).pipe(res);});s.listen(8981,()=>r(s));});
+const b=await chromium.launch({executablePath:'/opt/pw-browsers/chromium'});
+const page=await b.newPage({viewport:{width:390,height:844},deviceScaleFactor:2});
+await page.addInitScript(quietBootSeed());await page.addInitScript(updateNoticeSeed());
+await page.goto('http://localhost:8981/monster-hero/index.html',{waitUntil:'load',timeout:90000});
+await page.waitForFunction(()=>typeof MsxBand==='function'&&typeof msxLoad==='function'&&typeof MSX_CSS==='string',undefined,{timeout:90000});
+const VARS=[['home',{}],['train-preview',{use:16,stAdd:4}],['result-gain',{hpFrom:50,stFrom:40}],['result-loss',{hpFrom:95,stFrom:10}]];
+const rows=[];
+for(const w of [390,375,320,844]){
+ await page.setViewportSize({width:w,height:w===844?390:844});
+ for(const [name,props] of VARS){
+  const m=await page.evaluate(async({props})=>{
+   await msxLoad();const SUC=msxSuc.SUC;
+   const s=SUC.newRun({id:'band-x',species:'Mocchi',aid:'mua',team:[],aidBondLv:1});s.hp=Math.min(74,s.hpMax);s.stress=23;
+   const el=document.getElementById('bt')||Object.assign(document.createElement('div'),{id:'bt'});
+   el.style.cssText='position:fixed;inset:0;z-index:99999;background:#0b0920';document.body.appendChild(el);
+   if(window.__r){window.__r.unmount();}
+   window.__r=ReactDOM.createRoot(el);
+   const {ReactDOM:_}={};
+   ReactDOM.flushSync(()=>window.__r.render(React.createElement('div',{className:'msx',style:{height:'100%',padding:8}},React.createElement('style',null,MSX_CSS),React.createElement(MsxBand,{s,v:SUC.peek(s),ev:SUC.evaluate(s),...props}))));
+   await new Promise(r=>setTimeout(r,1300));
+   const q=[...document.querySelectorAll('#bt .v-ga .tr')].map(t=>{const r=t.getBoundingClientRect();return [Math.round(r.left*10)/10,Math.round(r.width*10)/10];});
+   return q;
+  },{props}).catch(e=>String(e));
+  rows.push(`${w}\t${name}\t${JSON.stringify(m)}`);
+  await page.screenshot({path:path.join(OUT,`band-${w}-${name}.png`),clip:{x:0,y:0,width:w,height:Math.min(260,w===844?200:260)}});
+ }
+}
+console.log(rows.join('\n'));
+await b.close();server.close();})();
