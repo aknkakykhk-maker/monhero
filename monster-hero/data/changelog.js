@@ -35,6 +35,15 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    // 2026-11-15 社長 r1115-143「ゲーム内ダウンロードがあるから音質を変に下げない」。元の音源が高音質の13曲を、元の音質で入れ直した
+    date: "2026-11-15 14:30", type:'update', group:'rhythm', title:'一部の曲の音が、元の音源に近い音質になりました', status:'new',
+    items:[
+      '音が少しこもっていた曲のうち、13曲を元の音質で入れ直しました。高い音の伸びや細かい音が、前よりはっきり聞こえます。',
+      '対象は、デュラハンテーマ・呪われた騎士の時計仕掛け・Against My Own Shadow・Toward the Stars, Paradise or Truth（short ver.）・Rebellion・Altar of the World Tree, Beneath the White Night・サウダージ（通常版・short ver.）・メガロバニア（サンズ戦）・MEGALOVANIA（大乱闘スマッシュブラザーズver）・Midnight Studio・Hopes and Dreams（通常版・short ver.）です。',
+      'ノーツのタイミングは変わりません。曲を初めて遊ぶときは、その分だけ読み込みに少し時間がかかります。',
+    ],
+  },
+  {
     date: "2026-11-15 14:22", type:'update', group:'success', releaseFlag:'monheroSuccess', title:'育てた結果で、ゲージと数字が動くようになりました', status:'new',
     items:[
       'モンヒロサクセスの「出来事」と「大会の結果」で、体力・ストレス・忠誠度・人気・能力などの変わった分が、ゲージの伸び縮みと数字の動き(+24・−18 など)で見えるようになりました。',
