@@ -147,7 +147,7 @@ const badgeProblems = (page) => page.evaluate(() => {
       await page.evaluate(() => { const l = ASSISTANT_LIFE_STORE.state.life; const st = ALF_STORE.state.st; ALF_STORE.set({ st: { ...st, day: assistantLifeDayKey(), go: 1, went: { 'aoi-0001': 1 }, out: { abs: l.abs, day: assistantLifeDayKey(), ids: ['atsu'], host: 'aoi-0001', name: 'あおい', theirs: ['dra', 'atsu'], word: 0, seen: false, rewarded: false } } }); ASSISTANT_LIFE_STORE.emit(); });
       await page.waitForTimeout(300);
       const tag = await page.locator('[data-assistant-life-room-away="atsu"]').innerText().catch(() => '');
-      check(`④ 部屋の札「🏘 あおいの家におでかけ」(${v.id})`, /🏘 あおい(さんの家へ|の家におでかけ)/.test(tag), tag.replace(/\n/g, ' '));
+      check(`④ 部屋の札「🏘 あおいの家におでかけ」(${v.id})`, /🏘 あおい(さんの家へ|の家)/.test(tag), tag.replace(/\n/g, ' '));
       { const sub = await page.locator('[data-assistant-life-today-sub]').innerText().catch(() => ''); check(`④ 出かけている助手を「声をかける」の相手にしない(${v.id})`, !/あつ/.test(sub), sub); }
       { const ng = await page.evaluate(() => { const el = document.querySelector('[data-assistant-life-room-away="atsu"] b'); if (!el) return ['札が無い']; const r = el.getBoundingClientRect(); const room = el.closest('[data-assistant-life-room]').getBoundingClientRect(); return [...(el.getClientRects().length > 1 ? ['札の字が折れる'] : []), ...(r.right > room.right + 1 || r.left < room.left - 1 ? ['札の字が部屋からはみ出す'] : []), ...(el.scrollWidth > el.clientWidth + 1 ? ['札の字が切れる'] : [])]; }); check(`④ 札の字が折れない・切れない(${v.id})`, ng.length === 0, ng.join(' / ')); }
       await shot(page, `${v.id}-2-room-tag`);

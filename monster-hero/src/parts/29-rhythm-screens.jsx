@@ -847,7 +847,7 @@ const rhythmSelectNoticeOpen=(state,playedSongCount,isShortScreen)=>isShortScree
   :(!state.noticeTouched&&playedSongCount>=RHYTHM_NOTICE_FOLD_PLAYED_SONGS?false:state.noticeOpen);
 const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,noticeHidden=0,footer=null,actionExtra=null,emptyText='遊べる譜面がまだありません。',spotClass=null,
   songId='',difficultyId='',onSongId=null,onDifficultyId=null,view=null,onView=null,
-  listScrollTop=null,onListScrollTop=null,toolbarExtra=null,playLabel='決定',playDisabled=false,hideRandom=false,unlockAll=false,songLock=null})=>{
+  listScrollTop=null,onListScrollTop=null,toolbarExtra=null,playLabel='決定',playDisabled=false,hideRandom=false,unlockAll=false,songLock=null,scrollToSelected=false})=>{
   const spot=name=>(typeof spotClass==='function'?spotClass(name):'');
   // 演奏へ入る前に、タップ音を作り置きしておく
   useEffect(()=>{RHYTHM_NOTE_SE_RUNTIME.prepare?.();},[]);
@@ -1057,6 +1057,12 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
       const saved=restoreTopRef.current;
       restoreTopRef.current=null;
       node.scrollTop=(saved!=null&&saved>0&&saved<node.scrollHeight)?saved:blockHeight(node);
+      // scrollToSelected … 開いたとき、選んでいる曲の行(まん中のぶん)が一覧のまん中に来るよう縦だけ寄せる。
+      // マルチの曲選びで、次の曲を選ぶたびに先頭へ戻っていた(2026-11-15 r1115-165)。並べ替え・ジャンルで一覧に無ければ先頭のまま
+      if(scrollToSelected&&(saved==null||saved<=0)){
+        const row=node.querySelector('[data-rhythm-song-row][aria-pressed="true"]');
+        if(row){const nb=node.getBoundingClientRect(),rb=row.getBoundingClientRect();node.scrollTop+=Math.round(rb.top-nb.top-(node.clientHeight-rb.height)/2);}
+      }
       loopReadyRef.current=true;
     };
     put();

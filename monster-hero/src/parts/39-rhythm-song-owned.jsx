@@ -165,12 +165,14 @@ function RhythmSongShopList({ points = 0, busy = false, disabled = false, openSh
           <span className="block">{[meta.length, meta.levels].filter(Boolean).join(' ／ ')}</span>
           {bundle && <span className="block text-lime-300">short ver. つき</span>}
         </small>
+        {/* 試し聴きと値段(所持済み)は、札の下にひとまとめにそろえる。作者の行が折れる・「short ver. つき」の有無で札ごとにずれない(r1115-162) */}
+        <div data-rhythm-song-offer-foot className="mt-auto flex w-full flex-col items-center gap-1">
         <button type="button" data-rhythm-song-listen={song.songId} onClick={() => toggleListen(song)} aria-pressed={listening}
           aria-label={`${item.name}を試し聴き${listening ? '(止める)' : ''}`}
           className={`mh-hit-expand relative min-h-[32px] w-full rounded-lg border px-1 text-[11px] font-black active:scale-95 ${listening ? 'border-lime-300/70 bg-lime-500/25 text-lime-100' : 'border-white/20 bg-white/10 text-white'}`}>
           {listening ? '■ とめる' : '▶ 試し聴き'}
         </button>
-        <div className="mt-auto flex w-full items-center justify-center pt-1">
+        <div className="flex min-h-[44px] w-full items-center justify-center pt-1">
           {has
             ? <div className="whitespace-nowrap rounded-full bg-emerald-950/50 px-2 py-1 text-[10px] font-black text-emerald-400">所持済み</div>
             : <button type="button" data-rhythm-song-buy={song.songId} onClick={() => openSheet({ item, confirm: () => (onExchange ? onExchange(offer, 1) : false) })} disabled={!canBuy}
@@ -178,6 +180,7 @@ function RhythmSongShopList({ points = 0, busy = false, disabled = false, openSh
               className={`mh-button mh-button-primary flex min-h-[44px] w-full max-w-full items-center justify-center gap-1 whitespace-nowrap rounded-xl px-2 text-[11px] font-black ${canBuy ? 'bg-violet-500 text-white active:scale-95' : 'bg-slate-800 text-slate-500'}`}>
               <span aria-hidden="true">🎟️</span><span>{price.toLocaleString()}</span>
             </button>}
+        </div>
         </div>
       </div>;
     })}

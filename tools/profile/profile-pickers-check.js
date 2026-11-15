@@ -132,7 +132,7 @@ const serve = () => new Promise(resolve => {
     ok('アイコン選択: いまの選択・検索・絞り込みチップ・「閉じる」がある', ic.preview && ic.search && ic.chips.length === 3 && ic.closeText, JSON.stringify(ic.chips));
     // 購入したのは10個。同じキャラのまとめは「どれか1つでも持っていれば全部持っている」ので、中身(円盤石アイコン・覚醒など)6個ぶん増えて16個になる(2026-10-03)
     ok('アイコン選択: 全部のアイコンが名前つきで並ぶ(はじめから8+購入16=まとめの中身を含む)', ic.options === 24 && ic.labeled, `${ic.options}個`);
-    ok('アイコン選択: チップに件数が出る', /すべて\s*24/.test(ic.chips[0]) && /はじめから\s*8/.test(ic.chips[1]) && /購入ずみ\s*16/.test(ic.chips[2]), ic.chips.join(' / '));
+    ok('アイコン選択: チップに件数が出る', /全て\s*24/.test(ic.chips[0]) && /初めから\s*8/.test(ic.chips[1]) && /購入ずみ\s*16/.test(ic.chips[2]), ic.chips.join(' / '));
     ok('アイコン選択: 一覧だけがスクロールする', ic.scrolls && ic.headFixed);
     await page.fill('[data-picker-sheet=icon] [data-picker-search]', 'ミーア');
     await page.waitForTimeout(300);

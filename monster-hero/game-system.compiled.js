@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 17a3a035ca5665f4
+// source-sha256: a598c1c3a6a44700
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -5590,7 +5590,7 @@ const TRAINING_TOOLS = Object.freeze({
     desc: '次の出目に＋2'
   },
   gale: {
-    name: '疾風の札',
+    name: '疾風のお守り',
     emoji: '🌪️',
     timing: 'サイコロを振る前',
     mode: '消費型',
@@ -37635,7 +37635,8 @@ const RhythmSongSelect = ({
   playDisabled = false,
   hideRandom = false,
   unlockAll = false,
-  songLock = null
+  songLock = null,
+  scrollToSelected = false
 }) => {
   const spot = name => typeof spotClass === 'function' ? spotClass(name) : '';
   useEffect(() => {
@@ -37840,6 +37841,14 @@ const RhythmSongSelect = ({
       const saved = restoreTopRef.current;
       restoreTopRef.current = null;
       node.scrollTop = saved != null && saved > 0 && saved < node.scrollHeight ? saved : blockHeight(node);
+      if (scrollToSelected && (saved == null || saved <= 0)) {
+        const row = node.querySelector('[data-rhythm-song-row][aria-pressed="true"]');
+        if (row) {
+          const nb = node.getBoundingClientRect(),
+            rb = row.getBoundingClientRect();
+          node.scrollTop += Math.round(rb.top - nb.top - (node.clientHeight - rb.height) / 2);
+        }
+      }
       loopReadyRef.current = true;
     };
     put();
@@ -61125,7 +61134,10 @@ function RhythmSongShopList({
       className: "block"
     }, [meta.length, meta.levels].filter(Boolean).join(' ／ ')), bundle && React.createElement("span", {
       className: "block text-lime-300"
-    }, "short ver. つき")), React.createElement("button", {
+    }, "short ver. つき")), React.createElement("div", {
+      "data-rhythm-song-offer-foot": true,
+      className: "mt-auto flex w-full flex-col items-center gap-1"
+    }, React.createElement("button", {
       type: "button",
       "data-rhythm-song-listen": song.songId,
       onClick: () => toggleListen(song),
@@ -61133,7 +61145,7 @@ function RhythmSongShopList({
       "aria-label": `${item.name}を試し聴き${listening ? '(止める)' : ''}`,
       className: `mh-hit-expand relative min-h-[32px] w-full rounded-lg border px-1 text-[11px] font-black active:scale-95 ${listening ? 'border-lime-300/70 bg-lime-500/25 text-lime-100' : 'border-white/20 bg-white/10 text-white'}`
     }, listening ? '■ とめる' : '▶ 試し聴き'), React.createElement("div", {
-      className: "mt-auto flex w-full items-center justify-center pt-1"
+      className: "flex min-h-[44px] w-full items-center justify-center pt-1"
     }, has ? React.createElement("div", {
       className: "whitespace-nowrap rounded-full bg-emerald-950/50 px-2 py-1 text-[10px] font-black text-emerald-400"
     }, "所持済み") : React.createElement("button", {
@@ -61148,7 +61160,7 @@ function RhythmSongShopList({
       className: `mh-button mh-button-primary flex min-h-[44px] w-full max-w-full items-center justify-center gap-1 whitespace-nowrap rounded-xl px-2 text-[11px] font-black ${canBuy ? 'bg-violet-500 text-white active:scale-95' : 'bg-slate-800 text-slate-500'}`
     }, React.createElement("span", {
       "aria-hidden": "true"
-    }, "🎟️"), React.createElement("span", null, price.toLocaleString()))));
+    }, "🎟️"), React.createElement("span", null, price.toLocaleString())))));
   }));
 }
 const MULTI_STAMP_KEY = 'mh_multi_stamps_v1';
@@ -66115,7 +66127,7 @@ const growthFxPeerItem = ({
 const GROWTH_FX_SESSION_ROWS_MAX = 4;
 const growthFxSessionUnlocks = () => {
   const L = (v, d) => typeof v !== 'undefined' && Number.isFinite(Number(v)) ? Number(v) : d;
-  const rows = [[L(typeof RHYTHM_ASSIST_SESSION_TASTE_LEVEL !== 'undefined' ? RHYTHM_ASSIST_SESSION_TASTE_LEVEL : undefined, 10), '好きな曲が見える'], [L(typeof RHYTHM_ASSIST_SESSION_GLOW_LEVEL !== 'undefined' ? RHYTHM_ASSIST_SESSION_GLOW_LEVEL : undefined, 15), 'サビで顔が光る'], [L(typeof RHYTHM_ASSIST_SESSION_CHEER_LEVEL !== 'undefined' ? RHYTHM_ASSIST_SESSION_CHEER_LEVEL : undefined, 25), '得意の応援'], [L(typeof RHYTHM_ASSIST_SESSION_FRAME_LEVEL !== 'undefined' ? RHYTHM_ASSIST_SESSION_FRAME_LEVEL : undefined, 45), '結果の枠が助手の色に'], [L(typeof RHYTHM_ASSIST_SESSION_BADGE_LEVEL !== 'undefined' ? RHYTHM_ASSIST_SESSION_BADGE_LEVEL : undefined, 50), 'プロフィールに札'], [L(typeof RHYTHM_ASSIST_SESSION_LISTEN_LEVEL !== 'undefined' ? RHYTHM_ASSIST_SESSION_LISTEN_LEVEL : undefined, 75), '曲の聞きどころ'], [L(typeof RHYTHM_ASSIST_SESSION_BACK_LEVEL !== 'undefined' ? RHYTHM_ASSIST_SESSION_BACK_LEVEL : undefined, 90), '名前入りの背景'], [L(typeof RHYTHM_ASSIST_SESSION_MASTER_LEVEL !== 'undefined' ? RHYTHM_ASSIST_SESSION_MASTER_LEVEL : undefined, 100), '称号「セッションマスター」']];
+  const rows = [[L(typeof RHYTHM_ASSIST_SESSION_TASTE_LEVEL !== 'undefined' ? RHYTHM_ASSIST_SESSION_TASTE_LEVEL : undefined, 10), '好きな曲が見える'], [L(typeof RHYTHM_ASSIST_SESSION_GLOW_LEVEL !== 'undefined' ? RHYTHM_ASSIST_SESSION_GLOW_LEVEL : undefined, 15), 'サビで顔が光る'], [L(typeof RHYTHM_ASSIST_SESSION_CHEER_LEVEL !== 'undefined' ? RHYTHM_ASSIST_SESSION_CHEER_LEVEL : undefined, 25), '得意の応援'], [L(typeof RHYTHM_ASSIST_SESSION_FRAME_LEVEL !== 'undefined' ? RHYTHM_ASSIST_SESSION_FRAME_LEVEL : undefined, 45), '結果の枠が助手の色に'], [L(typeof RHYTHM_ASSIST_SESSION_BADGE_LEVEL !== 'undefined' ? RHYTHM_ASSIST_SESSION_BADGE_LEVEL : undefined, 50), 'プロフィールにバッジ'], [L(typeof RHYTHM_ASSIST_SESSION_LISTEN_LEVEL !== 'undefined' ? RHYTHM_ASSIST_SESSION_LISTEN_LEVEL : undefined, 75), '曲の聞きどころ'], [L(typeof RHYTHM_ASSIST_SESSION_BACK_LEVEL !== 'undefined' ? RHYTHM_ASSIST_SESSION_BACK_LEVEL : undefined, 90), '名前入りの背景'], [L(typeof RHYTHM_ASSIST_SESSION_MASTER_LEVEL !== 'undefined' ? RHYTHM_ASSIST_SESSION_MASTER_LEVEL : undefined, 100), '称号「セッションマスター」']];
   const bonus = typeof RHYTHM_ASSIST_SESSION_P_BONUS !== 'undefined' && Array.isArray(RHYTHM_ASSIST_SESSION_P_BONUS) ? RHYTHM_ASSIST_SESSION_P_BONUS : [];
   bonus.forEach(([lv, rate]) => rows.push([Number(lv), `ビートP +${Math.round(Number(rate) * 100)}%`]));
   return rows.filter(r => Number.isFinite(r[0])).sort((a, b) => a[0] - b[0]);
@@ -70358,7 +70370,7 @@ function ProfileScreen({
       className: "shrink-0 text-slate-400"
     })), React.createElement("div", {
       className: "mb-1"
-    }, React.createElement(ScreenSectionLabel, null, "見せる札（フレンドにもこう見えます）")), React.createElement("div", {
+    }, React.createElement(ScreenSectionLabel, null, "見せる欄（フレンドにもこう見えます）")), React.createElement("div", {
       className: "grid grid-cols-2 gap-2"
     }, React.createElement("button", {
       type: "button",
@@ -93172,7 +93184,7 @@ function FriendsScreen({
         className: "max-w-full truncate rounded-full border border-amber-400/40 bg-amber-950/30 px-3 py-1 text-[11px] font-black text-amber-200 active:scale-95"
       }, "📝 ", notes[selected.otherId] || 'メモを書く（自分だけに見えます）')), React.createElement("div", {
         className: "mt-3 mb-1"
-      }, React.createElement(ScreenSectionLabel, null, "見せる札")), React.createElement("div", {
+      }, React.createElement(ScreenSectionLabel, null, "見せる欄")), React.createElement("div", {
         className: "grid grid-cols-2 gap-2 items-start"
       }, React.createElement("div", {
         "data-friend-favorite": true,
@@ -95884,6 +95896,21 @@ const RHYTHM_MULTI = (() => {
   };
   return api;
 })();
+const RHYTHM_MULTI_LAST_SONG_KEY = 'mh_rhythm_multi_last_song_v1';
+const rhythmMultiLastSongId = () => {
+  try {
+    const v = typeof localStorage !== 'undefined' ? localStorage.getItem(RHYTHM_MULTI_LAST_SONG_KEY) : null;
+    return typeof v === 'string' && /^[a-z0-9_]{1,80}$/i.test(v) ? v : '';
+  } catch (_) {
+    return '';
+  }
+};
+const rhythmMultiRememberSong = id => {
+  if (typeof id !== 'string' || !/^[a-z0-9_]{1,80}$/i.test(id) || id === RHYTHM_MULTI_OMAKASE) return;
+  try {
+    if (typeof localStorage !== 'undefined') localStorage.setItem(RHYTHM_MULTI_LAST_SONG_KEY, id);
+  } catch (_) {}
+};
 const rhythmWatchPhaseText = phase => ({
   connecting: '部屋につないでいます…',
   waiting: 'いまは演奏していません。次の曲が始まるのを待っています',
@@ -99727,7 +99754,11 @@ function RhythmMultiScreenBody({
     className: "block break-keep text-[9px] font-bold opacity-80"
   }, sessionAssistantsOn ? 'マスモンや助手がCPUとして一緒に遊びます' : 'マスモンがCPUとして一緒に遊びます')) : null;
   const mine = view ? view.members.find(m => m.id === view.selfId) : null;
-  const [selSongId, setSelSongId] = React.useState(mine && mine.pick && mine.pick !== RHYTHM_MULTI_OMAKASE ? mine.pick : '');
+  const [selSongId, setSelSongIdRaw] = React.useState(() => (mine && mine.pick && mine.pick !== RHYTHM_MULTI_OMAKASE ? mine.pick : '') || rhythmMultiLastSongId());
+  const setSelSongId = id => {
+    setSelSongIdRaw(id);
+    rhythmMultiRememberSong(id);
+  };
   const [selectView, setSelectView] = React.useState(null);
   const songById = songId => songs.find(song => song.songId === songId) || null;
   const defaultDiff = difficultyIds.includes('NORMAL') ? 'NORMAL' : difficultyIds[0] || '';
@@ -101976,9 +102007,11 @@ function RhythmMultiScreenBody({
     view: selectView,
     onView: setSelectView,
     onPlay: (song, difficulty) => {
+      rhythmMultiRememberSong(song.songId);
       RHYTHM_MULTI.setDiff(difficulty.id);
       RHYTHM_MULTI.pick(song.songId);
     },
+    scrollToSelected: true,
     playLabel: myPick ? 'この曲に変更' : 'この曲で決定',
     hideRandom: true,
     notice: React.createElement("div", {
@@ -114800,22 +114833,7 @@ const ASSISTANT_LIFE_SAY_SPECIAL = Object.freeze({
   'cardroom:cards': ['MFバトル', 'カードを', '研究'],
   'cafe:snack': ['おやつ', '屋さんで', 'ひと休み']
 });
-const ASSISTANT_LIFE_SAY_SHORT = Object.freeze({
-  snack: 'おやつ中',
-  practice: '練習中',
-  training: '育成中',
-  cards: 'カード研究',
-  walk: '散歩中',
-  idle: 'ぼーっと',
-  read: '読書中',
-  battle: 'バトル中',
-  checkup: '診察中'
-});
-const assistantLifeSayOutShort = (place, doingKey) => {
-  const icon = ASSISTANT_LIFE_PLACE_ICON[place] || '🚶',
-    d = ASSISTANT_LIFE_DOINGS[doingKey];
-  return d && d.places.includes(place) && ASSISTANT_LIFE_SAY_SHORT[doingKey] ? [icon, ASSISTANT_LIFE_SAY_SHORT[doingKey]] : [icon, `${assistantLifePlaceShow(place) || 'おでかけ先'}へ`];
-};
+const assistantLifeSayOutShort = place => [ASSISTANT_LIFE_PLACE_ICON[place] || '🚶', assistantLifePlaceShow(place) || 'おでかけ先'];
 const assistantLifeSayOut = (place, doingKey) => {
   const icon = ASSISTANT_LIFE_PLACE_ICON[place] || '🚶';
   const sp = ASSISTANT_LIFE_SAY_SPECIAL[`${place}:${doingKey}`] || ASSISTANT_LIFE_SAY_SPECIAL[place];
@@ -115084,11 +115102,12 @@ function AssistantLifeRoom({
     const tagLand = typeof window !== 'undefined' && window.innerWidth > window.innerHeight;
     const tagFit = assistantLifeTagFit(t[0], w - 26, 10.5, 0);
     const short = [...String(t[0])].length <= 9;
-    const avail = w - 6 - 8 - 3 - 2;
+    const avail = tagLand ? w - 6 - 8 - 3 : w - 6 - 8 - 3 - 2;
     const oneFit = x => assistantLifeTagFit(assistantLifeSayMeasure(assistantLifeSayParts(x).join('')), avail, 10.5, 0);
     const sayFull = Array.isArray(state.say) ? compact && state.sayMark ? state.sayMark : state.say : null;
     const sayAlt = Array.isArray(state.say) ? (compact && state.sayMark ? state.sayMarkShort : state.sayShort) || sayFull : null;
-    const say = tagLand && sayFull && oneFit(sayFull) < 10.5 && sayAlt ? oneFit(sayAlt) >= oneFit(sayFull) ? sayAlt : sayFull : sayFull;
+    const sayBare = sayAlt && sayAlt.length >= 2 ? ['', ...sayAlt.slice(1)] : sayAlt;
+    const say = !tagLand || !sayFull || oneFit(sayFull) >= 10.5 ? sayFull : [sayAlt, sayBare].find(x => x && oneFit(x) >= 10.5) || [sayFull, sayAlt, sayBare].filter(Boolean).sort((a, b) => oneFit(b) - oneFit(a))[0];
     if (say) {
       const f = tagLand ? Math.max(7, oneFit(say)) : assistantLifeSayFont(say, avail);
       return React.createElement("span", {
@@ -115385,7 +115404,7 @@ const assistantLifeRoomsOf = (life, metIds) => {
     rooms[id] = {
       tag: [`${ASSISTANT_LIFE_PLACE_ICON[w.place] || '🚶'} ${assistantLifePlaceShow(w.place)}へ`, sub, w.group ? assistantLifeGroupNames(w.group.ids, 4) : null],
       say: assistantLifeSayOut(w.place, w.doing),
-      sayShort: assistantLifeSayOutShort(w.place, w.doing)
+      sayShort: assistantLifeSayOutShort(w.place)
     };
   }
   const q = peer && peer.quarrel && peer.quarrel.pending;
@@ -123284,12 +123303,35 @@ function assistantLifePreloadFullBodies(metIds) {
     assistantFullBodyPreloadTimer = later(next);
   } catch (_) {}
 }
+const ASSISTANT_LIFE_PROFILE_FACE_ORDER = Object.freeze([['normal', 'ふつう'], ['happy', 'うれしい'], ['excited', 'わくわく'], ['wink', 'ウインク'], ['surprise', 'おどろき'], ['troubled', 'こまり'], ['angry', 'おこる'], ['crying', 'なみだ']]);
+const ASSISTANT_LIFE_PROFILE_FACE_LINES = Object.freeze({
+  mua: ['いいの！ 楽しいのがいちばんぢゃんｗ', 'ちょ、待って！ あたしも行きたいんだけど！', 'あたしたち、天才ぢゃん♪', 'えっ、どしたの急に', '起きたら髪ぼさぼさだったら、どうしよｗ', 'あたしが楽しみにとっといたやつぢゃん！ もー！', 'なにそれ、うれしすぎるんだけど…！'],
+  kiki: ['私はチョコがいいでつ♪ 半分こしましょうか', '「火力の上げ方」という本を見つけました', 'これからも、たくさん話しかけてくださいね♪', 'あれま…。そんなふうに思ってくれてたんでつね', '私、守りは苦手でつ…がんばります', '…もう一回お願いします。今のは、火力が足りませんでした', 'うれしくて、ちょっと泣いてしまいまつ…'],
+  momosuke: ['もちろんだよ♡ ももにまかせて', 'でも、ぜんぶ覚えた！！ もも、天才かも♡', 'えへ、知ってる〜w', 'え、ききちゃん普通にうまくない？', 'ももだって、ほんとはもっとおしゃべりしたいのにさ〜', 'ももだって食べたかったもん！！', 'くやしい〜！！ 次は負けないから！！'],
+  dra: ['半分かよ！ でも、うれしいわ', '100点！？ やったぁ、えへへ', 'えへへ、ばれたか', 'お、おう？ 急にどうしたんだよ', '長靴じゃ勝てないか…次は本物を釣るぞ', 'おでの昼寝は大事なんだぞ', '…やめろよ、おで泣くだろ'],
+  atsu: ['次も期待してるわ！', 'あと1曲、いや3曲いこ笑', 'できるって。俺ら組んだら強いから！', 'まじ？ じゃあもう1回！', '今日はちょっとうまくいかないなー笑', '今のはたまたま！ もう一回！', '…やば、ちょっと泣きそう。ありがと！'],
+  kyuko: ['ありがとん笑 心強いよぉ', '新しい組み方、3つ思いついた！', 'ほい！ じゃあこれからも一緒に上目指そ笑', 'えっ、ばれてた？ 笑', 'え〜、ちょっとこわいよぉ', 'ぐぬぬぬ…そこはゆずれないよぉ', 'うぅ…うれしすぎて泣けるよぉ🥺'],
+  sorashido: ['でーじうれしいです笑', 'やる気出ました・・・！ ちばりよー、自分！', 'グラフもつけておきました・・・！', '100回！？ ・・・やってみせます・・・！', 'は、はい。かっこ悪いですよね笑', '今の判定、自分の勝ちですよね！', 'うぉぉぉ！ 負けました！ くやしい！'],
+  erubin: ['ふふ、いつも元気をもらってるよ', 'ちょうどいいところに来たね。今の組み方、試してみたい', 'ふふ、そう言ってくれると思ったよ', 'わ、すごく明るい部屋になったね', 'ばれちゃったかな…笑 好きなんだよね', 'みんな、ずっと待ってたんだよ', '…ありがとう。ちょっと、うるっときちゃった']
+});
+const assistantLifeProfileFace = (id, greeting, k) => {
+  const i = ((Number(k) || 0) % 8 + 8) % 8,
+    [e, label] = ASSISTANT_LIFE_PROFILE_FACE_ORDER[i];
+  const lines = ASSISTANT_LIFE_PROFILE_FACE_LINES[id];
+  return {
+    e,
+    label,
+    n: i + 1,
+    t: i === 0 || !lines || !lines[i - 1] ? greeting : lines[i - 1]
+  };
+};
 function AssistantLifeProfileStand({
   who,
   head = 0.32,
-  top = 0.16
+  top = 0.16,
+  expr = 'happy'
 }) {
-  const src = typeof assistantFullImage === 'function' ? assistantFullImage(who, 'happy') : '';
+  const src = typeof assistantFullImage === 'function' ? assistantFullImage(who, expr) : '';
   const boxRef = React.useRef(null);
   const [size, setSize] = React.useState(null);
   const [art, setArt] = React.useState(() => typeof ASSISTANT_LIFE_STAND_BOX !== 'undefined' && ASSISTANT_LIFE_STAND_BOX.get(src) || null);
@@ -123326,7 +123368,7 @@ function AssistantLifeProfileStand({
       if (ro) ro.disconnect();
     };
   }, []);
-  const fullSrc = typeof assistantFullBodyImage === 'function' ? assistantFullBodyImage(who, 'happy') : null;
+  const fullSrc = typeof assistantFullBodyImage === 'function' ? assistantFullBodyImage(who, expr) : null;
   if (fullSrc) {
     return React.createElement("div", {
       ref: boxRef,
@@ -123546,6 +123588,7 @@ function AssistantLifeProfileSheet({
   const who = typeof assistantById === 'function' ? assistantById(id) : null;
   const [vKey, setVKey] = React.useState('home');
   const [vIdx, setVIdx] = React.useState(0);
+  const [faceN, setFaceN] = React.useState(0);
   const scrollRef = React.useRef(null);
   const refs = {
     who: React.useRef(null),
@@ -123572,6 +123615,8 @@ function AssistantLifeProfileSheet({
   const oshiMon = oshi && typeof assistantMasmonMon === 'function' ? assistantMasmonMon(oshi.monId) : null;
   const call = assistantLifeProfileCall(id);
   const greeting = String(who.greeting || '').replace(/\{name\}/g, call);
+  const face = assistantLifeProfileFace(id, greeting, faceN);
+  const faceText = String(face.t || '').replace(/\{name\}/g, call);
   const jump = k => {
     try {
       const box = scrollRef.current,
@@ -123631,7 +123676,8 @@ function AssistantLifeProfileSheet({
   }, React.createElement(AssistantLifeProfileStand, {
     who: who,
     head: land ? 0.22 : 0.34,
-    top: land ? 0.3 : 0.12
+    top: land ? 0.3 : 0.12,
+    expr: face.e
   })), React.createElement("div", {
     className: "absolute left-3.5 z-[2]",
     style: {
@@ -123652,21 +123698,31 @@ function AssistantLifeProfileSheet({
     }
   }, typeof jaWrap === 'function' ? jaWrap(who.tagline || '') : who.tagline), !viewOnly && React.createElement("span", {
     className: "mt-1.5 inline-block rounded-full border border-white/15 bg-slate-950/80 px-2 py-0.5 text-[11px] font-black text-white"
-  }, "💗 Lv", b.lv, " ", b.title)), greeting && React.createElement("div", {
+  }, "💗 Lv", b.lv, " ", b.title)), greeting && React.createElement("button", {
+    type: "button",
     "data-assistant-life-profile-greeting": true,
-    className: "absolute bottom-3 left-3 z-[2] rounded-2xl border-2 bg-white px-3 py-2 text-[12px] font-bold leading-relaxed text-slate-800 shadow-lg",
+    "data-assistant-life-profile-face": face.e,
+    onClick: () => setFaceN(n => (n + 1) % 8),
+    "aria-label": `ひとこと。押すと表情が変わります(${face.n}/8 ${face.label})`,
+    className: "absolute bottom-3 left-3 z-[2] rounded-2xl border-2 bg-white px-3 py-2 text-left text-[12px] font-bold leading-relaxed text-slate-800 shadow-lg active:scale-[.98]",
     style: {
       borderColor: who.accent,
       width: land ? 170 : 205
     }
   }, React.createElement("span", {
-    className: "block text-[10px] font-black",
+    className: "flex items-center justify-between gap-1"
+  }, React.createElement("span", {
+    className: "text-[10px] font-black",
     style: {
       color: who.accent
     }
   }, "ひとこと"), React.createElement("span", {
+    "data-assistant-life-profile-face-chip": true,
+    className: "whitespace-nowrap rounded-full bg-slate-100 px-1.5 text-[9.5px] font-black leading-[16px] text-slate-500"
+  }, "👆 タップで表情 ", face.n, "/8")), React.createElement("span", {
+    className: "block",
     style: typeof JA_LABEL_STYLE !== 'undefined' ? JA_LABEL_STYLE : undefined
-  }, jw(greeting))));
+  }, jw(faceText))));
   const jumps = React.createElement("div", {
     className: "flex gap-1.5 border-b border-white/10 bg-slate-950/90 px-2.5 py-2",
     "data-assistant-life-profile-jump": true
@@ -170901,7 +170957,7 @@ const msxNormRun = (raw, SUC) => {
     },
     items: Array.isArray(raw.items) ? raw.items.filter(x => typeof x === 'string').slice(0, 2) : [],
     used: msxNum(raw.used, 0),
-    phase: ['main', 'result', 'react', 'issa', 'battle', 'turn', 'over', 'event', 'story', 'awake', 'tevent', 'birth'].includes(raw.phase) ? raw.phase : 'main',
+    phase: ['main', 'result', 'react', 'issa', 'battle', 'turn', 'over', 'event', 'story', 'awake', 'tevent', 'birth', 'begin', 'intro'].includes(raw.phase) ? raw.phase : 'main',
     out: msxIsObj(raw.out) ? raw.out : null,
     log: Array.isArray(raw.log) ? raw.log.filter(msxIsObj).slice(-20) : [],
     startAt: msxNum(raw.startAt, 0),
@@ -171227,19 +171283,42 @@ const msxBeatMark = run => {
   } : run;
 };
 let msxSaveChain = Promise.resolve();
+const MSX_RUN_GONE_KEY = 'mh_monsuc_run_gone_v1';
+const msxRunGoneList = async () => {
+  try {
+    const v = await storeGet(MSX_RUN_GONE_KEY, null);
+    return Array.isArray(v) ? v.filter(x => typeof x === 'string').slice(-50) : [];
+  } catch (_) {
+    return [];
+  }
+};
+const msxRunTurn = r => {
+  const t = Number(r && r.s && r.s.turn);
+  return Number.isFinite(t) ? t : 0;
+};
+const msxRunSent = r => Number.isFinite(Number(r && r.beatSent)) ? Math.max(0, Math.floor(Number(r.beatSent))) : 0;
+const msxRunIsStale = async (run, stored) => {
+  if (!run || typeof run.id !== 'string') return true;
+  if (!stored || typeof stored !== 'object') return (await msxRunGoneList()).includes(run.id);
+  if (stored.id !== run.id) return Number(run.startAt || 0) <= Number(stored.startAt || 0) || (await msxRunGoneList()).includes(run.id);
+  if (msxRunTurn(run) < msxRunTurn(stored)) return true;
+  if (msxRunSent(run) < msxRunSent(stored)) return true;
+  if (stored.beatEnd === true && run.beatEnd !== true) return true;
+  return false;
+};
 const msxSaveRunNow = async (run, noPay) => {
+  const stored = await storeGet(MSX_KEYS.run, null);
+  if (await msxRunIsStale(run, stored)) return false;
   const ov = msxRunOverOf(run);
   if (ov) {
     try {
       await storeSet(MSX_RUN_OVER_KEY, ov);
     } catch (_) {}
   }
-  const sent = Number.isFinite(Number(run && run.beatSent)) ? Math.max(0, Math.floor(Number(run.beatSent))) : 0;
+  const sent = msxRunSent(run);
   if (noPay || !sent || typeof saveStoredValuesOrRollback !== 'function' || typeof loadRhythmEventPoints !== 'function' || typeof RHYTHM_EVENT_POINTS_KEY === 'undefined') return storeSet(MSX_KEYS.run, run);
-  const stored = await storeGet(MSX_KEYS.run, null);
-  if (!stored || !run || stored.id !== run.id) return false;
-  const storedSent = Number.isFinite(Number(stored.beatSent)) ? Math.max(0, Math.floor(Number(stored.beatSent))) : 0;
-  const add = sent - storedSent;
+  if (!stored || stored.id !== run.id) return false;
+  const add = sent - msxRunSent(stored);
   if (add <= 0) return storeSet(MSX_KEYS.run, run);
   const before = await loadRhythmEventPoints();
   return saveStoredValuesOrRollback([{
@@ -171257,9 +171336,19 @@ const msxSaveRun = (run, noPay) => {
   return msxSaveChain;
 };
 const msxClearRun = () => {
-  msxSaveChain = msxSaveChain.then(() => storeSet(MSX_KEYS.run, null)).catch(() => false);
+  msxSaveChain = msxSaveChain.then(async () => {
+    try {
+      const cur = await storeGet(MSX_KEYS.run, null);
+      if (cur && typeof cur.id === 'string') {
+        const g = await msxRunGoneList();
+        if (!g.includes(cur.id)) await storeSet(MSX_RUN_GONE_KEY, [...g, cur.id].slice(-50));
+      }
+    } catch (_) {}
+    return storeSet(MSX_KEYS.run, null);
+  }).catch(() => false);
   return msxSaveChain;
 };
+const msxSaveWait = () => msxSaveChain.then(() => true, () => true);
 const msxSaveMeta = meta => storeSet(MSX_KEYS.meta, meta);
 const msxMon = id => typeof ALL_PLAYER_MONSTERS === 'object' && ALL_PLAYER_MONSTERS && ALL_PLAYER_MONSTERS[id] || null;
 const msxMonName = id => {
@@ -171714,7 +171803,7 @@ const msxStartPreview = (SUC, species, type, aptBase, startSt) => {
   } catch (e) {}
   return out;
 };
-const MSX_SKILL_ICONS = new Set(['images/success/skill/sk-0001.png', 'images/success/skill/sk-0002.png', 'images/success/skill/sk-0003.png', 'images/success/skill/sk-0004.png', 'images/success/skill/sk-0005.png', 'images/success/skill/sk-0008.png', 'images/success/skill/sk-0009.png', 'images/success/skill/sk-0010.png', 'images/success/skill/sk-0015.png', 'images/success/skill/sk-0016.png', 'images/success/skill/sk-0017.png', 'images/success/skill/sk-0018.png', 'images/success/skill/sk-0023.png', 'images/success/skill/sk-0025.png', 'images/success/skill/sk-0026.png', 'images/success/skill/sk-0027.png', 'images/success/skill/sk-0028.png', 'images/success/skill/sk-0035.png', 'images/success/skill/sk-0036.png', 'images/success/skill/sk-0037.png', 'images/success/skill/sk-0039.png', 'images/success/skill/sk-0040.png', 'images/success/skill/sk-0041.png', 'images/success/skill/sk-0042.png', 'images/success/skill/sk-0043.png', 'images/success/skill/sk-0044.png', 'images/success/skill/sk-0045.png', 'images/success/skill/sk-0046.png', 'images/success/skill/sk-0047.png', 'images/success/skill/sk-0048.png', 'images/success/skill/sk-0049.png', 'images/success/skill/sk-0050.png', 'images/success/skill/sk-0051.png', 'images/success/skill/sk-0052.png', 'images/success/skill/sk-0053.png', 'images/success/skill/sk-0054.png', 'images/success/skill/sk-0055.png', 'images/success/skill/sk-0064.png', 'images/success/skill/sk-0065.png', 'images/success/skill/sk-0066.png', 'images/success/skill/sk-0067.png', 'images/success/skill/sk-0068.png', 'images/success/skill/sk-0069.png', 'images/success/skill/sk-0070.png', 'images/success/skill/sk-0071.png', 'images/success/skill/sk-0072.png', 'images/success/skill/sk-0073.png', 'images/success/skill/sk-0074.png', 'images/success/skill/sk-0075.png', 'images/success/skill/sk-0076.png', 'images/success/skill/sk-0077.png', 'images/success/skill/sk-0078.png', 'images/success/skill/sk-0079.png', 'images/success/skill/sk-0080.png', 'images/success/skill/sk-0082.png', 'images/success/skill/sk-0083.png', 'images/success/skill/sk-0084.png', 'images/success/skill/sk-0110.png', 'images/success/skill/sk-0111.png', 'images/success/skill/sk-0112.png', 'images/success/skill/sk-0113.png', 'images/success/skill/sk-0114.png', 'images/success/skill/sk-0115.png', 'images/success/skill/sk-0116.png', 'images/success/skill/sk-0117.png', 'images/success/skill/sk-0118.png', 'images/success/skill/sk-0119.png', 'images/success/skill/sk-0120.png', 'images/success/skill/sk-0121.png', 'images/success/skill/sk-0122.png', 'images/success/skill/sk-0123.png', 'images/success/skill/sk-0124.png', 'images/success/skill/sk-0125.png', 'images/success/skill/sk-0129.png', 'images/success/skill/sk-0258.png', 'images/success/skill/sk-0259.png', 'images/success/skill/sk-0260.png', 'images/success/skill/sk-0261.png', 'images/success/skill/sk-0262.png', 'images/success/skill/sk-0263.png', 'images/success/skill/sk-0264.png', 'images/success/skill/sk-0265.png', 'images/success/skill/sk-0266.png', 'images/success/skill/sk-0267.png', 'images/success/skill/sk-0268.png', 'images/success/skill/sk-0269.png', 'images/success/skill/sk-0270.png', 'images/success/skill/sk-0271.png', 'images/success/skill/sk-0272.png', 'images/success/skill/sk-0273.png', 'images/success/skill/sk-0274.png', 'images/success/skill/sk-0292.png', 'images/success/skill/sk-0293.png', 'images/success/skill/sk-0294.png', 'images/success/skill/sk-0295.png', 'images/success/skill/sk-0296.png', 'images/success/skill/sk-0297.png', 'images/success/skill/sk-0298.png', 'images/success/skill/sk-0299.png', 'images/success/skill/sk-0300.png', 'images/success/skill/sk-0301.png', 'images/success/skill/sk-0302.png', 'images/success/skill/sk-0303.png', 'images/success/skill/sk-0304.png', 'images/success/skill/sk-0305.png', 'images/success/skill/sk-0306.png', 'images/success/skill/sk-0307.png', 'images/success/skill/sk-0338.png', 'images/success/skill/sk-0339.png', 'images/success/skill/sk-0340.png', 'images/success/skill/sk-0341.png', 'images/success/skill/sk-0342.png', 'images/success/skill/sk-0343.png', 'images/success/skill/sk-0344.png', 'images/success/skill/sk-0345.png', 'images/success/skill/sk-0346.png', 'images/success/skill/sk-0347.png', 'images/success/skill/sk-0348.png', 'images/success/skill/sk-0349.png', 'images/success/skill/sk-0350.png', 'images/success/skill/sk-0351.png', 'images/success/skill/sk-0384.png', 'images/success/skill/sk-0385.png', 'images/success/skill/sk-0386.png', 'images/success/skill/sk-0387.png', 'images/success/skill/sk-0388.png', 'images/success/skill/sk-0389.png', 'images/success/skill/sk-0390.png', 'images/success/skill/sk-0391.png', 'images/success/skill/sk-0392.png', 'images/success/skill/sk-0393.png', 'images/success/skill/sk-0394.png', 'images/success/skill/sk-0395.png', 'images/success/skill/sk-0396.png', 'images/success/skill/sk-0397.png', 'images/success/skill/sk-0398.png', 'images/success/skill/sk-0399.png', 'images/success/skill/sk-0400.png', 'images/success/skill/sk-0401.png', 'images/success/skill/sk-0402.png', 'images/success/skill/sk-0403.png', 'images/success/skill/sk-0404.png', 'images/success/skill/sk-0405.png', 'images/success/skill/sk-0406.png', 'images/success/skill/sk-0407.png', 'images/success/skill/sk-0408.png', 'images/success/skill/sk-0409.png', 'images/success/skill/sk-0410.png', 'images/success/skill/sk-0411.png', 'images/success/skill/sk-0412.png', 'images/success/skill/sk-0413.png', 'images/success/skill/sk-0414.png', 'images/success/skill/sk-0415.png', 'images/success/skill/sk-0416.png', 'images/success/skill/sk-0446.png', 'images/success/skill/sk-0447.png', 'images/success/skill/sk-0448.png', 'images/success/skill/sk-0449.png', 'images/success/skill/sk-0450.png', 'images/success/skill/sk-0451.png', 'images/success/skill/sk-0452.png', 'images/success/skill/sk-0453.png', 'images/success/skill/sk-0454.png', 'images/success/skill/sk-0455.png', 'images/success/skill/sk-0456.png', 'images/success/skill/sk-0457.png', 'images/success/skill/sk-0458.png', 'images/success/skill/sk-0459.png', 'images/success/skill/sk-0460.png', 'images/success/skill/sk-0461.png', 'images/success/skill/sk-0462.png', 'images/success/skill/sk-0463.png', 'images/success/skill/sk-0464.png', 'images/success/skill/sk-0465.png', 'images/success/skill/sk-0466.png', 'images/success/skill/sk-0467.png', 'images/success/skill/sk-0468.png', 'images/success/skill/sk-0469.png', 'images/success/skill/sk-0470.png', 'images/success/skill/sk-0471.png', 'images/success/skill/sk-0472.png', 'images/success/skill/sk-0473.png', 'images/success/skill/sk-0474.png', 'images/success/skill/sk-0475.png', 'images/success/skill/sk-0476.png', 'images/success/skill/sk-0477.png', 'images/success/skill/sk-0478.png', 'images/success/skill/sk-0479.png', 'images/success/skill/sk-0480.png', 'images/success/skill/sk-0481.png', 'images/success/skill/sk-0482.png', 'images/success/skill/sk-0483.png', 'images/success/skill/sk-0484.png', 'images/success/skill/sk-0485.png', 'images/success/skill/sk-0486.png', 'images/success/skill/sk-0487.png', 'images/success/skill/sk-0488.png', 'images/success/skill/sk-0489.png', 'images/success/skill/sk-0490.png', 'images/success/skill/sk-0491.png', 'images/success/skill/sk-0496.png', 'images/success/skill/sk-0511.png', 'images/success/skill/sk-0512.png', 'images/success/skill/sk-0513.png', 'images/success/skill/sk-0514.png', 'images/success/skill/sk-0515.png', 'images/success/skill/sk-0516.png', 'images/success/skill/sk-0517.png', 'images/success/skill/sk-0518.png', 'images/success/skill/sk-0519.png', 'images/success/skill/sk-0520.png', 'images/success/skill/sk-0521.png', 'images/success/skill/sk-0522.png', 'images/success/skill/sk-0523.png', 'images/success/skill/sk-0524.png', 'images/success/skill/sk-0525.png', 'images/success/skill/sk-0526.png', 'images/success/skill/sk-0573.png', 'images/success/skill/sk-0574.png', 'images/success/skill/sk-0575.png', 'images/success/skill/sk-0576.png', 'images/success/skill/sk-0577.png', 'images/success/skill/sk-0578.png', 'images/success/skill/sk-0579.png', 'images/success/skill/sk-0580.png', 'images/success/skill/sk-0581.png', 'images/success/skill/sk-0582.png', 'images/success/skill/sk-0583.png', 'images/success/skill/sk-0584.png', 'images/success/skill/sk-0585.png', 'images/success/skill/sk-0586.png', 'images/success/skill/sk-0587.png', 'images/success/skill/sk-0588.png', 'images/success/skill/sk-0589.png', 'images/success/skill/sk-0590.png', 'images/success/skill/sk-0591.png', 'images/success/skill/sk-0592.png', 'images/success/skill/sk-0593.png', 'images/success/skill/sk-0594.png', 'images/success/skill/sk-0595.png', 'images/success/skill/sk-0596.png', 'images/success/skill/sk-0597.png', 'images/success/skill/sk-0598.png', 'images/success/skill/sk-0599.png', 'images/success/skill/sk-0742.png', 'images/success/skill/sk-0743.png', 'images/success/skill/sk-0744.png', 'images/success/skill/sk-0785.png', 'images/success/skill/sk-0787.png', 'images/success/skill/sk-0788.png', 'images/success/skill/sk-0797.png', 'images/success/skill/sk-0798.png', 'images/success/skill/sk-0799.png', 'images/success/skill/sk-0824.png', 'images/success/skill/eiki_o01.png', 'images/success/skill/eiki_o02.png', 'images/success/skill/eiki_o03.png', 'images/success/skill/eiki_o04.png', 'images/success/skill/eiki_o05.png', 'images/success/skill/eiki_o06.png', 'images/success/skill/eiki_o07.png', 'images/success/skill/eiki_o08.png', 'images/success/skill/eiki_o09.png', 'images/success/skill/eiki_o10.png', 'images/success/skill/eiki_o11.png', 'images/success/skill/eiki_o12.png', 'images/success/skill/eiki_o13.png', 'images/success/skill/eiki_o14.png', 'images/success/skill/eiki_o15.png', 'images/success/skill/eiki_o16.png', 'images/success/skill/eiki_o17.png', 'images/success/skill/eiki_o18.png', 'images/success/skill/kenshimocchi_o01.png', 'images/success/skill/kenshimocchi_o02.png', 'images/success/skill/kenshimocchi_o03.png', 'images/success/skill/kenshimocchi_o04.png', 'images/success/skill/kenshimocchi_o05.png', 'images/success/skill/kenshimocchi_o06.png', 'images/success/skill/kenshimocchi_o07.png', 'images/success/skill/kenshimocchi_o08.png', 'images/success/skill/kenshimocchi_o09.png', 'images/success/skill/kenshimocchi_o10.png', 'images/success/skill/kenshimocchi_o11.png', 'images/success/skill/kenshimocchi_o12.png', 'images/success/skill/kenshimocchi_o13.png', 'images/success/skill/kenshimocchi_o14.png', 'images/success/skill/kenshimocchi_o15.png', 'images/success/skill/kenshimocchi_o16.png', 'images/success/skill/kenshimocchi_o17.png', 'images/success/skill/kenshimocchi_o18.png', 'images/success/skill/kuromy_o01.png', 'images/success/skill/kuromy_o02.png', 'images/success/skill/kuromy_o03.png', 'images/success/skill/kuromy_o04.png', 'images/success/skill/kuromy_o05.png', 'images/success/skill/kuromy_o06.png', 'images/success/skill/kuromy_o07.png', 'images/success/skill/kuromy_o08.png', 'images/success/skill/kuromy_o09.png', 'images/success/skill/kuromy_o10.png', 'images/success/skill/kuromy_o11.png', 'images/success/skill/kuromy_o12.png', 'images/success/skill/kuromy_o13.png', 'images/success/skill/kuromy_o14.png', 'images/success/skill/kuromy_o15.png', 'images/success/skill/kuromy_o16.png', 'images/success/skill/kuromy_o17.png', 'images/success/skill/kuromy_o18.png', 'images/success/skill/melody_o01.png', 'images/success/skill/melody_o02.png', 'images/success/skill/melody_o03.png', 'images/success/skill/melody_o04.png', 'images/success/skill/melody_o05.png', 'images/success/skill/melody_o06.png', 'images/success/skill/melody_o07.png', 'images/success/skill/melody_o08.png', 'images/success/skill/melody_o09.png', 'images/success/skill/melody_o10.png', 'images/success/skill/melody_o11.png', 'images/success/skill/melody_o12.png', 'images/success/skill/melody_o13.png', 'images/success/skill/melody_o14.png', 'images/success/skill/melody_o15.png', 'images/success/skill/melody_o16.png', 'images/success/skill/melody_o17.png', 'images/success/skill/melody_o18.png', 'images/success/skill/pandora_o01.png', 'images/success/skill/pandora_o02.png', 'images/success/skill/pandora_o03.png', 'images/success/skill/pandora_o04.png', 'images/success/skill/pandora_o05.png', 'images/success/skill/pandora_o06.png', 'images/success/skill/pandora_o07.png', 'images/success/skill/pandora_o08.png', 'images/success/skill/pandora_o09.png', 'images/success/skill/pandora_o10.png', 'images/success/skill/pandora_o11.png', 'images/success/skill/pandora_o12.png', 'images/success/skill/pandora_o13.png', 'images/success/skill/pandora_o14.png', 'images/success/skill/pandora_o15.png', 'images/success/skill/pandora_o16.png', 'images/success/skill/pandora_o17.png', 'images/success/skill/pandora_o18.png', 'images/success/skill/pandora_o19.png', 'images/success/skill/pandora_o20.png', 'images/success/skill/pandora_o21.png', 'images/success/skill/pandora_o22.png', 'images/success/skill/pandora_o23.png', 'images/success/skill/pandora_o24.png', 'images/success/skill/pandora_o25.png', 'images/success/skill/pandora_o26.png']);
+const MSX_SKILL_ICONS = new Set(['images/success/skill/sk-0001.png', 'images/success/skill/sk-0002.png', 'images/success/skill/sk-0003.png', 'images/success/skill/sk-0004.png', 'images/success/skill/sk-0005.png', 'images/success/skill/sk-0008.png', 'images/success/skill/sk-0009.png', 'images/success/skill/sk-0010.png', 'images/success/skill/sk-0015.png', 'images/success/skill/sk-0016.png', 'images/success/skill/sk-0017.png', 'images/success/skill/sk-0018.png', 'images/success/skill/sk-0023.png', 'images/success/skill/sk-0025.png', 'images/success/skill/sk-0026.png', 'images/success/skill/sk-0027.png', 'images/success/skill/sk-0028.png', 'images/success/skill/sk-0035.png', 'images/success/skill/sk-0036.png', 'images/success/skill/sk-0037.png', 'images/success/skill/sk-0039.png', 'images/success/skill/sk-0040.png', 'images/success/skill/sk-0041.png', 'images/success/skill/sk-0042.png', 'images/success/skill/sk-0043.png', 'images/success/skill/sk-0044.png', 'images/success/skill/sk-0045.png', 'images/success/skill/sk-0046.png', 'images/success/skill/sk-0047.png', 'images/success/skill/sk-0048.png', 'images/success/skill/sk-0049.png', 'images/success/skill/sk-0050.png', 'images/success/skill/sk-0051.png', 'images/success/skill/sk-0052.png', 'images/success/skill/sk-0053.png', 'images/success/skill/sk-0054.png', 'images/success/skill/sk-0055.png', 'images/success/skill/sk-0064.png', 'images/success/skill/sk-0065.png', 'images/success/skill/sk-0066.png', 'images/success/skill/sk-0067.png', 'images/success/skill/sk-0068.png', 'images/success/skill/sk-0069.png', 'images/success/skill/sk-0070.png', 'images/success/skill/sk-0071.png', 'images/success/skill/sk-0072.png', 'images/success/skill/sk-0073.png', 'images/success/skill/sk-0074.png', 'images/success/skill/sk-0075.png', 'images/success/skill/sk-0076.png', 'images/success/skill/sk-0077.png', 'images/success/skill/sk-0078.png', 'images/success/skill/sk-0079.png', 'images/success/skill/sk-0080.png', 'images/success/skill/sk-0082.png', 'images/success/skill/sk-0083.png', 'images/success/skill/sk-0084.png', 'images/success/skill/sk-0110.png', 'images/success/skill/sk-0111.png', 'images/success/skill/sk-0112.png', 'images/success/skill/sk-0113.png', 'images/success/skill/sk-0114.png', 'images/success/skill/sk-0115.png', 'images/success/skill/sk-0116.png', 'images/success/skill/sk-0117.png', 'images/success/skill/sk-0118.png', 'images/success/skill/sk-0119.png', 'images/success/skill/sk-0120.png', 'images/success/skill/sk-0121.png', 'images/success/skill/sk-0122.png', 'images/success/skill/sk-0123.png', 'images/success/skill/sk-0124.png', 'images/success/skill/sk-0125.png', 'images/success/skill/sk-0129.png', 'images/success/skill/sk-0258.png', 'images/success/skill/sk-0259.png', 'images/success/skill/sk-0260.png', 'images/success/skill/sk-0261.png', 'images/success/skill/sk-0262.png', 'images/success/skill/sk-0263.png', 'images/success/skill/sk-0264.png', 'images/success/skill/sk-0265.png', 'images/success/skill/sk-0266.png', 'images/success/skill/sk-0267.png', 'images/success/skill/sk-0268.png', 'images/success/skill/sk-0269.png', 'images/success/skill/sk-0270.png', 'images/success/skill/sk-0271.png', 'images/success/skill/sk-0272.png', 'images/success/skill/sk-0273.png', 'images/success/skill/sk-0274.png', 'images/success/skill/sk-0292.png', 'images/success/skill/sk-0293.png', 'images/success/skill/sk-0294.png', 'images/success/skill/sk-0295.png', 'images/success/skill/sk-0296.png', 'images/success/skill/sk-0297.png', 'images/success/skill/sk-0298.png', 'images/success/skill/sk-0299.png', 'images/success/skill/sk-0300.png', 'images/success/skill/sk-0301.png', 'images/success/skill/sk-0302.png', 'images/success/skill/sk-0303.png', 'images/success/skill/sk-0304.png', 'images/success/skill/sk-0305.png', 'images/success/skill/sk-0306.png', 'images/success/skill/sk-0307.png', 'images/success/skill/sk-0338.png', 'images/success/skill/sk-0339.png', 'images/success/skill/sk-0340.png', 'images/success/skill/sk-0341.png', 'images/success/skill/sk-0342.png', 'images/success/skill/sk-0343.png', 'images/success/skill/sk-0344.png', 'images/success/skill/sk-0345.png', 'images/success/skill/sk-0346.png', 'images/success/skill/sk-0347.png', 'images/success/skill/sk-0348.png', 'images/success/skill/sk-0349.png', 'images/success/skill/sk-0350.png', 'images/success/skill/sk-0351.png', 'images/success/skill/sk-0384.png', 'images/success/skill/sk-0385.png', 'images/success/skill/sk-0386.png', 'images/success/skill/sk-0387.png', 'images/success/skill/sk-0388.png', 'images/success/skill/sk-0389.png', 'images/success/skill/sk-0390.png', 'images/success/skill/sk-0391.png', 'images/success/skill/sk-0392.png', 'images/success/skill/sk-0393.png', 'images/success/skill/sk-0394.png', 'images/success/skill/sk-0395.png', 'images/success/skill/sk-0396.png', 'images/success/skill/sk-0397.png', 'images/success/skill/sk-0398.png', 'images/success/skill/sk-0399.png', 'images/success/skill/sk-0400.png', 'images/success/skill/sk-0401.png', 'images/success/skill/sk-0402.png', 'images/success/skill/sk-0403.png', 'images/success/skill/sk-0404.png', 'images/success/skill/sk-0405.png', 'images/success/skill/sk-0406.png', 'images/success/skill/sk-0407.png', 'images/success/skill/sk-0408.png', 'images/success/skill/sk-0409.png', 'images/success/skill/sk-0410.png', 'images/success/skill/sk-0411.png', 'images/success/skill/sk-0412.png', 'images/success/skill/sk-0413.png', 'images/success/skill/sk-0414.png', 'images/success/skill/sk-0415.png', 'images/success/skill/sk-0416.png', 'images/success/skill/sk-0446.png', 'images/success/skill/sk-0447.png', 'images/success/skill/sk-0448.png', 'images/success/skill/sk-0449.png', 'images/success/skill/sk-0450.png', 'images/success/skill/sk-0451.png', 'images/success/skill/sk-0452.png', 'images/success/skill/sk-0453.png', 'images/success/skill/sk-0454.png', 'images/success/skill/sk-0455.png', 'images/success/skill/sk-0456.png', 'images/success/skill/sk-0457.png', 'images/success/skill/sk-0458.png', 'images/success/skill/sk-0459.png', 'images/success/skill/sk-0460.png', 'images/success/skill/sk-0461.png', 'images/success/skill/sk-0462.png', 'images/success/skill/sk-0463.png', 'images/success/skill/sk-0464.png', 'images/success/skill/sk-0465.png', 'images/success/skill/sk-0466.png', 'images/success/skill/sk-0467.png', 'images/success/skill/sk-0468.png', 'images/success/skill/sk-0469.png', 'images/success/skill/sk-0470.png', 'images/success/skill/sk-0471.png', 'images/success/skill/sk-0472.png', 'images/success/skill/sk-0473.png', 'images/success/skill/sk-0474.png', 'images/success/skill/sk-0475.png', 'images/success/skill/sk-0476.png', 'images/success/skill/sk-0477.png', 'images/success/skill/sk-0478.png', 'images/success/skill/sk-0479.png', 'images/success/skill/sk-0480.png', 'images/success/skill/sk-0481.png', 'images/success/skill/sk-0482.png', 'images/success/skill/sk-0483.png', 'images/success/skill/sk-0484.png', 'images/success/skill/sk-0485.png', 'images/success/skill/sk-0486.png', 'images/success/skill/sk-0487.png', 'images/success/skill/sk-0488.png', 'images/success/skill/sk-0489.png', 'images/success/skill/sk-0490.png', 'images/success/skill/sk-0491.png', 'images/success/skill/sk-0496.png', 'images/success/skill/sk-0511.png', 'images/success/skill/sk-0512.png', 'images/success/skill/sk-0513.png', 'images/success/skill/sk-0514.png', 'images/success/skill/sk-0515.png', 'images/success/skill/sk-0516.png', 'images/success/skill/sk-0517.png', 'images/success/skill/sk-0518.png', 'images/success/skill/sk-0519.png', 'images/success/skill/sk-0520.png', 'images/success/skill/sk-0521.png', 'images/success/skill/sk-0522.png', 'images/success/skill/sk-0523.png', 'images/success/skill/sk-0524.png', 'images/success/skill/sk-0525.png', 'images/success/skill/sk-0526.png', 'images/success/skill/sk-0573.png', 'images/success/skill/sk-0574.png', 'images/success/skill/sk-0575.png', 'images/success/skill/sk-0576.png', 'images/success/skill/sk-0577.png', 'images/success/skill/sk-0578.png', 'images/success/skill/sk-0579.png', 'images/success/skill/sk-0580.png', 'images/success/skill/sk-0581.png', 'images/success/skill/sk-0582.png', 'images/success/skill/sk-0583.png', 'images/success/skill/sk-0584.png', 'images/success/skill/sk-0585.png', 'images/success/skill/sk-0586.png', 'images/success/skill/sk-0587.png', 'images/success/skill/sk-0588.png', 'images/success/skill/sk-0589.png', 'images/success/skill/sk-0590.png', 'images/success/skill/sk-0591.png', 'images/success/skill/sk-0592.png', 'images/success/skill/sk-0593.png', 'images/success/skill/sk-0594.png', 'images/success/skill/sk-0595.png', 'images/success/skill/sk-0596.png', 'images/success/skill/sk-0597.png', 'images/success/skill/sk-0598.png', 'images/success/skill/sk-0599.png', 'images/success/skill/sk-0742.png', 'images/success/skill/sk-0743.png', 'images/success/skill/sk-0744.png', 'images/success/skill/sk-0785.png', 'images/success/skill/sk-0787.png', 'images/success/skill/sk-0788.png', 'images/success/skill/sk-0797.png', 'images/success/skill/sk-0798.png', 'images/success/skill/sk-0799.png', 'images/success/skill/sk-0824.png', 'images/success/skill/eiki_o01.png', 'images/success/skill/eiki_o02.png', 'images/success/skill/eiki_o03.png', 'images/success/skill/eiki_o04.png', 'images/success/skill/eiki_o05.png', 'images/success/skill/eiki_o06.png', 'images/success/skill/eiki_o07.png', 'images/success/skill/eiki_o08.png', 'images/success/skill/eiki_o09.png', 'images/success/skill/eiki_o10.png', 'images/success/skill/eiki_o11.png', 'images/success/skill/eiki_o12.png', 'images/success/skill/eiki_o13.png', 'images/success/skill/eiki_o14.png', 'images/success/skill/eiki_o15.png', 'images/success/skill/eiki_o16.png', 'images/success/skill/eiki_o17.png', 'images/success/skill/eiki_o18.png', 'images/success/skill/kenshimocchi_o01.png', 'images/success/skill/kenshimocchi_o02.png', 'images/success/skill/kenshimocchi_o03.png', 'images/success/skill/kenshimocchi_o04.png', 'images/success/skill/kenshimocchi_o05.png', 'images/success/skill/kenshimocchi_o06.png', 'images/success/skill/kenshimocchi_o07.png', 'images/success/skill/kenshimocchi_o08.png', 'images/success/skill/kenshimocchi_o09.png', 'images/success/skill/kenshimocchi_o10.png', 'images/success/skill/kenshimocchi_o11.png', 'images/success/skill/kenshimocchi_o12.png', 'images/success/skill/kenshimocchi_o13.png', 'images/success/skill/kenshimocchi_o14.png', 'images/success/skill/kenshimocchi_o15.png', 'images/success/skill/kenshimocchi_o16.png', 'images/success/skill/kenshimocchi_o17.png', 'images/success/skill/kenshimocchi_o18.png', 'images/success/skill/kuromy_o01.png', 'images/success/skill/kuromy_o02.png', 'images/success/skill/kuromy_o03.png', 'images/success/skill/kuromy_o04.png', 'images/success/skill/kuromy_o05.png', 'images/success/skill/kuromy_o06.png', 'images/success/skill/kuromy_o07.png', 'images/success/skill/kuromy_o08.png', 'images/success/skill/kuromy_o09.png', 'images/success/skill/kuromy_o10.png', 'images/success/skill/kuromy_o11.png', 'images/success/skill/kuromy_o12.png', 'images/success/skill/kuromy_o13.png', 'images/success/skill/kuromy_o14.png', 'images/success/skill/kuromy_o15.png', 'images/success/skill/kuromy_o16.png', 'images/success/skill/kuromy_o17.png', 'images/success/skill/kuromy_o18.png', 'images/success/skill/kuromy_o19.png', 'images/success/skill/kuromy_o20.png', 'images/success/skill/melody_o01.png', 'images/success/skill/melody_o02.png', 'images/success/skill/melody_o03.png', 'images/success/skill/melody_o04.png', 'images/success/skill/melody_o05.png', 'images/success/skill/melody_o06.png', 'images/success/skill/melody_o07.png', 'images/success/skill/melody_o08.png', 'images/success/skill/melody_o09.png', 'images/success/skill/melody_o10.png', 'images/success/skill/melody_o11.png', 'images/success/skill/melody_o12.png', 'images/success/skill/melody_o13.png', 'images/success/skill/melody_o14.png', 'images/success/skill/melody_o15.png', 'images/success/skill/melody_o16.png', 'images/success/skill/melody_o17.png', 'images/success/skill/melody_o18.png', 'images/success/skill/melody_o19.png', 'images/success/skill/melody_o20.png', 'images/success/skill/pandora_o01.png', 'images/success/skill/pandora_o02.png', 'images/success/skill/pandora_o03.png', 'images/success/skill/pandora_o04.png', 'images/success/skill/pandora_o05.png', 'images/success/skill/pandora_o06.png', 'images/success/skill/pandora_o07.png', 'images/success/skill/pandora_o08.png', 'images/success/skill/pandora_o09.png', 'images/success/skill/pandora_o10.png', 'images/success/skill/pandora_o11.png', 'images/success/skill/pandora_o12.png', 'images/success/skill/pandora_o13.png', 'images/success/skill/pandora_o14.png', 'images/success/skill/pandora_o15.png', 'images/success/skill/pandora_o16.png', 'images/success/skill/pandora_o17.png', 'images/success/skill/pandora_o18.png', 'images/success/skill/pandora_o19.png', 'images/success/skill/pandora_o20.png', 'images/success/skill/pandora_o21.png', 'images/success/skill/pandora_o22.png', 'images/success/skill/pandora_o23.png', 'images/success/skill/pandora_o24.png', 'images/success/skill/pandora_o25.png', 'images/success/skill/pandora_o26.png']);
 const MSX_TG_RANK_COL = Object.freeze({
   1: ['#e9a46a', '#a95f27'],
   2: ['#f4f7fb', '#aab4c2'],
@@ -172975,7 +173064,7 @@ function MsxStart({
     }, m.friend ? `借: ${m.friend.name || 'フレンド'}` : m.kind === 'base' ? m.auto ? 'ベースモン ✎⁠選ぶ' : 'ベースモン ✎⁠変える' : '✎変える')))), React.createElement("div", {
       className: "msx-note msx-sl-legend",
       "data-msx-slot-legend": true
-    }, "札の見方: 「+4%」はその能力のトレーニングの伸びが上がる分・親密度は初めの値・タッグは友情タッグのときの伸び"), React.createElement("button", {
+    }, "枠の見方: 「+4%」はその能力のトレーニングの伸びが上がる分・親密度は初めの値・タッグは友情タッグのときの伸び"), React.createElement("button", {
       type: "button",
       className: "v-card msx-heat-btn",
       "data-msx-gather-open": true,
@@ -174984,7 +175073,7 @@ function MonheroSuccessScreen({
     msxSaveMeta(meta);
   };
   const toHome = () => {
-    msxReadAll(msxSuc.SUC).then(d => {
+    (typeof msxSaveWait === 'function' ? msxSaveWait() : Promise.resolve()).then(() => msxReadAll(msxSuc.SUC)).then(d => {
       setData(d);
       setRunState(d.run);
     }).catch(() => {});
@@ -178485,60 +178574,85 @@ const msxBest3Add = (list, e) => msxBest3Norm([...msxBest3Norm(list).filter(x =>
 const msxR3Retire = async (run, s, ev, assists, debug) => {
   const box = await msxR3ReadBox();
   let meta = await msxR3ReadMeta();
-  if (box.mons.some(m => m.id === run.id)) return {
-    ok: true,
-    already: true,
-    box,
-    meta
-  };
+  const inBox = box.mons.some(m => m.id === run.id);
+  const ids0 = Array.isArray(meta.retiredIds) ? meta.retiredIds.filter(x => typeof x === 'string') : null;
+  const metaDone = ids0 ? ids0.includes(run.id) : inBox;
   const fromId = run.from && typeof run.from.box === 'string' ? run.from.box : null;
-  const parent = fromId ? box.mons.find(m => m.id === fromId && m.raised === false) : null;
+  const parent = !inBox && fromId ? box.mons.find(m => m.id === fromId && m.raised === false) : null;
   const rest = parent ? box.mons.filter(m => m !== parent) : box.mons;
-  if (rest.length >= box.cap) return {
+  if (!inBox && rest.length >= box.cap) return {
     ok: false,
     full: true,
     box,
     meta
   };
-  const mon = msxR3BoxMonOf(run, s, ev, assists, parent);
-  meta = msxR3AddWon(meta, s);
-  meta.retired += 1;
-  const best = msxR3Obj(meta.best[s.species]) ? meta.best[s.species] : null;
-  if (!best || !(best.power >= ev.power)) meta.best = {
-    ...meta.best,
-    [s.species]: {
+  let best3 = null;
+  if (!metaDone) {
+    meta = msxR3AddWon(meta, s);
+    meta.retired += 1;
+    const best = msxR3Obj(meta.best[s.species]) ? meta.best[s.species] : null;
+    if (!best || !(best.power >= ev.power)) meta.best = {
+      ...meta.best,
+      [s.species]: {
+        power: ev.power,
+        rank: ev.rank,
+        id: run.id
+      }
+    };
+    const best3Prev = msxBest3Norm(meta.best3);
+    meta.best3 = msxBest3Add(best3Prev, {
+      id: run.id,
       power: ev.power,
       rank: ev.rank,
-      id: run.id
-    }
+      species: s.species,
+      nick: run.nick || '',
+      at: Date.now()
+    });
+    best3 = {
+      prev: best3Prev,
+      next: meta.best3,
+      place: meta.best3.findIndex(e => e.id === run.id),
+      power: ev.power
+    };
+    meta.titles = Array.from(new Set([...(meta.titles || []), ...(Array.isArray(s.titles) ? s.titles : [])])).slice(0, 200);
+    const seed = ids0 || box.mons.filter(m => m.raised !== false && typeof m.id === 'string').map(m => m.id);
+    meta.retiredIds = Array.from(new Set([...seed, run.id])).slice(-300);
+    if ((await storeSet(MSX_KEYS.meta, meta)) === false) return {
+      ok: false,
+      why: 'save',
+      box,
+      meta
+    };
+  }
+  let next = box;
+  let mon = inBox ? box.mons.find(m => m.id === run.id) : null;
+  if (!inBox) {
+    mon = msxR3BoxMonOf(run, s, ev, assists, parent);
+    next = {
+      ...box,
+      cap: Math.max(box.cap, msxR3BoxCap(meta.retired)),
+      mons: [...rest, mon]
+    };
+    if ((await storeSet(MSX_KEYS.box, next)) === false) return {
+      ok: false,
+      why: 'save',
+      box,
+      meta
+    };
+  }
+  const rec = await msxR3AddRecord(run, s, ev, mon.titles, mon.gen);
+  if (rec === 'fail') return {
+    ok: false,
+    why: 'save',
+    box: next,
+    meta
   };
-  const best3Prev = msxBest3Norm(meta.best3);
-  meta.best3 = msxBest3Add(best3Prev, {
-    id: run.id,
-    power: ev.power,
-    rank: ev.rank,
-    species: s.species,
-    nick: run.nick || '',
-    at: Date.now()
-  });
-  const best3 = {
-    prev: best3Prev,
-    next: meta.best3,
-    place: meta.best3.findIndex(e => e.id === run.id),
-    power: ev.power
-  };
-  meta.titles = Array.from(new Set([...(meta.titles || []), ...(Array.isArray(s.titles) ? s.titles : [])])).slice(0, 200);
-  const next = {
-    ...box,
-    cap: Math.max(box.cap, msxR3BoxCap(meta.retired)),
-    mons: [...rest, mon]
-  };
-  await storeSet(MSX_KEYS.box, next);
-  await storeSet(MSX_KEYS.meta, meta);
-  await msxR3AddRecord(run, s, ev, mon.titles, mon.gen);
-  msxR3RankSend(run, s, ev, debug);
+  if (!inBox || !metaDone || rec === true) msxR3RankSend(run, s, ev, debug);
   return {
     ok: true,
+    ...(inBox && metaDone ? {
+      already: true
+    } : {}),
     box: next,
     meta,
     mon,
@@ -178686,7 +178800,7 @@ const msxR3AddRecord = async (run, s, ev, titles, gen) => {
       endAt: Date.now(),
       gen
     });
-    if (r.added) await storeSet(R.KEY, r.book);
+    if (r.added && (await storeSet(R.KEY, r.book)) === false) return 'fail';
     return r.added;
   } catch (e) {
     return false;
@@ -180551,7 +180665,7 @@ function MsxR3Battle({
       }
     }, mealPick && M[mealPick] ? `${M[mealPick].name}: ${fxLong(mealPick)}`.split(/(?<=[・:])/).map((x, i) => React.createElement(React.Fragment, {
       key: i
-    }, i > 0 ? React.createElement("wbr", null) : null, typeof jaWrap === 'function' ? jaWrap(x) : x)) : '札を押すと、詳しい効き目が出ます'), React.createElement("div", {
+    }, i > 0 ? React.createElement("wbr", null) : null, typeof jaWrap === 'function' ? jaWrap(x) : x)) : 'ごはんを押すと、詳しい効き目が出ます'), React.createElement("div", {
       className: "msx-note",
       "data-msx-r3-loynote": true,
       style: {
@@ -181261,6 +181375,7 @@ function MsxR3Shugyo({
     }), React.createElement(MsxMonArt, {
       run: run,
       className: "mon",
+      noPeak: true,
       style: {
         bottom: '16%',
         height: '44%',
@@ -181395,7 +181510,7 @@ function MsxR3Shugyo({
     if (!id) return React.createElement("div", {
       className: "q-slot msx-kp",
       "data-msx-r3-qslot": "0"
-    }, want.length ? superWhy ? `超修行は できない(${superWhy})` : '+ もう1つ選ぶと 🔥超修行' : '+ 下の緑の札から 技を選ぶ');
+    }, want.length ? superWhy ? `超修行は できない(${superWhy})` : '+ もう1つ選ぶと 🔥超修行' : '+ 下の緑の技のカードから 技を選ぶ');
     const t = all.find(x => x.id === id) || {};
     const bc = typeof SUC.techBoostConds === 'function' ? SUC.techBoostConds(s0, t, want) : [];
     const rate = typeof SUC.techRate === 'function' ? SUC.techRate(s0, t, {
@@ -181480,7 +181595,7 @@ function MsxR3Shugyo({
     "data-msx-r3-techlist": true
   }, React.createElement("h3", null, React.createElement("i", null, "3"), "覚えられる技", React.createElement("span", {
     className: "tk"
-  }, "緑の札をタップ")), all.length ? React.createElement(MsxTechGrid, {
+  }, "緑の技のカードをタップ")), all.length ? React.createElement(MsxTechGrid, {
     className: "q",
     all: all,
     head: aptHead,
@@ -181528,7 +181643,12 @@ function MsxR3Shugyo({
       }, Math.round(rateOf[t.id] * 100), "%") : React.createElement("span", {
         className: "g qb",
         "aria-hidden": "true"
-      }, "🔒"));
+      }, "🔒"), alts.length > 1 ? React.createElement("span", {
+        className: "tg-alt",
+        "aria-hidden": "true",
+        "data-msx-alt": cellK,
+        "data-msx-alt-n": alts.length
+      }, "⇄", alts.length) : null);
     }
   }) : React.createElement("div", {
     className: "q-note msx-kp"
@@ -181550,7 +181670,7 @@ function MsxR3Shugyo({
     className: c.ok ? 'ok' : ''
   }, React.createElement("i", null, "条件", i + 1), React.createElement("span", {
     className: "msx-kp"
-  }, c.long), React.createElement("b", null, c.ok ? '済' : 'まだ'))), !full && condsOf(lockT).length ? React.createElement("p", null, "条件を全て満たすと、緑の「覚えられる」札になります") : null), React.createElement("div", {
+  }, c.long), React.createElement("b", null, c.ok ? '済' : 'まだ'))), !full && condsOf(lockT).length ? React.createElement("p", null, "条件を全て満たすと、緑の「覚えられる」カードになります") : null), React.createElement("div", {
     className: "bt"
   }, React.createElement("button", {
     type: "button",
@@ -184891,7 +185011,7 @@ function MsxManualBar({
       alignItems: 'center',
       gap: 6
     }
-  }, React.createElement("span", null, "⚔ 攻撃", reachN ? '(札を押して技を選ぶ)' : '(この間合いの技なし)'), items.length ? React.createElement("button", {
+  }, React.createElement("span", null, "⚔ 攻撃", reachN ? '(技のカードを押して選ぶ)' : '(この間合いの技なし)'), items.length ? React.createElement("button", {
     type: "button",
     className: "msxm-all",
     "data-msxm-all": true,
@@ -185329,6 +185449,8 @@ const MSA_CSS = `
 .msa-stage.big .msa-floor{bottom:36%}
 .msa-stage.big .msa-spot{bottom:calc(36% - 7px)}
 .msa-stage.big .msa-aim{bottom:calc(36% + 28px)}
+/* 大きな場では、ダメージの数字を場の上端(体力の棒)にかからない高さへ下げる(r1115-157 ミハリの気づき) */
+.msa-stage.big .msa-dmg{top:24%}
 .msa-stage.big .msa-hx{bottom:calc(36% + var(--msa-fh,170px) * .5);transform:scale(1.15)}
 .msa-stage.big .msa-tr{bottom:calc(36% + var(--msa-fh,170px) * .5)}
 .msa-topline{flex-wrap:wrap;row-gap:2px}
@@ -185361,6 +185483,9 @@ const MSA_CSS = `
 .msa-cut .ct b{display:block;font-weight:900;white-space:nowrap;color:#fff;text-shadow:2px 0 0 #1e1b4b,-2px 0 0 #1e1b4b,0 2px 0 #1e1b4b,0 -2px 0 #1e1b4b,0 4px 0 #0008,0 0 12px var(--k1);animation:msaCutName var(--cut,1000ms) cubic-bezier(.2,1.4,.4,1) both}
 .msa-cut .ct small,.msa-cut .ct em{text-shadow:0 1px 2px #1e1b4b,0 0 3px #1e1b4b}
 .msa-cut.wise .ct small{color:#fff}
+/* 技の種類と★は、帯の色に沈まないよう暗い札に載せる(r1115-157 ミハリの気づき) */
+.msa-cut .ct small{display:inline-block;color:#fff;background:#0f172ad9;border-radius:99px;padding:1px 9px 2px;text-shadow:none}
+.msa-cut .ct small .st{text-shadow:0 0 3px #f59e0b}
 .msa-cut .ct em{display:block;font-style:normal;font-size:11px;font-weight:800;color:#ffffffd9;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .msa-cut .cf{inset:0;background:#fff;opacity:0;animation:msaCutFlash var(--cut,1000ms) linear both}
 @keyframes msaCutOut{0%,92%{opacity:1}100%{opacity:0}}
