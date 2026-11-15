@@ -3,6 +3,8 @@
 //   (a) 引退: 成績・子・記録帳のどれかが書けないと ok にしない/再試行で足りない分だけ補う(引退回数・ベスト・子が二重にならない)/古い meta も読める
 //   (b) 途中の育成の保存: 渡したビートPを 100→50→100 で保存しても財布は +100 だけ/消した育成を古い画面が書き戻さない/前のターンで巻き戻さない
 //   (c) 中断: 並べた保存が終わってから読む(msxSaveWait)/begin・intro を保存から戻す
+//   r1115-200: 育成開始の消費と育成を一緒に書く/引退の順(満杯でビートPを付けない・報酬や記録帳の失敗を完了にしない・再試行で補う)/
+//             古い画面の「やめる」は id が同じときだけ・同じターンでも版番号で巻き戻さない・終わった育成の記録が書けなければ消さない
 // 使い方: node tools/success/monsuc-save-safety-check.js
 'use strict';
 const fs = require('fs');
@@ -12,6 +14,8 @@ const read = (f) => fs.readFileSync(path.join(ROOT, 'monster-hero/src/parts', f)
 const STORE = read('56-monhero-success-store.jsx');
 const R3 = read('56-monhero-success-r3-store.jsx');
 const MAIN = read('56-monhero-success-main.jsx');
+const RETIRE = read('56-monhero-success-r3-retire.jsx');
+const CORE = read('11-masu-progression.jsx');
 const cut = (src, a, b) => { const i = src.indexOf(a); const j = src.indexOf(b, i + 1); if (i < 0 || j < 0) throw new Error(`切り出せません: ${a}`); return src.slice(i, j); };
 
 let fail = 0; let pass = 0;
@@ -34,10 +38,12 @@ const makeSave = (env) => {
   const MSX_RUN_OVER_KEY = 'mh_monsuc_run_over_v1';
   const msxRunOverOf = () => null;
   const loadRhythmEventPoints = async () => Number(env.store.wallet) || 0;
-  const saveStoredValuesOrRollback = async (list, get, set) => { for (const x of list) if ((await set(x.key, x.next)) === false) return false; return true; };
   const { storeGet, storeSet } = env;
+  // 本物(11-masu-progression.jsx): 全部書く → 読み戻して比べる → 食い違えば全部を before へ戻す
   // eslint-disable-next-line no-eval
-  return eval(`${saveSrc}; ({ msxSaveRun, msxClearRun, msxSaveWait, MSX_RUN_GONE_KEY })`);
+  const saveStoredValuesOrRollback = eval(`(${cut(CORE, 'async (entries, getValue, setValue) => {', 'const saveTranscendFruitPair').trim().replace(/;$/, '')})`);
+  // eslint-disable-next-line no-eval
+  return eval(`${saveSrc}; ({ msxSaveRun, msxClearRun, msxSaveWait, msxStartRunSave, MSX_RUN_GONE_KEY })`);
 };
 const RUN = 'mh_monsuc_run_v1';
 const runOf = (id, turn, sent, extra = {}) => ({ id, startAt: 1000, s: { turn }, beatSent: sent, ...extra });
@@ -83,12 +89,120 @@ const checkSave = async () => {
     ok(early === 4 && env.store[RUN].s.turn === 5, 'c: msxSaveWait のあとに読むと5ターン目'); }
 };
 
+// ---- r1115-200 1・3 ----
+const META = 'mh_monsuc_meta_v1';
+const checkR200Save = async () => {
+  // 1 育成開始: 片方だけ書けない → 両方元のまま(アイテムも前の育成も残る)→ 直って再試行すると両方入る
+  for (const k of [RUN, META]) {
+    const env = makeEnv(); const S = makeSave(env);
+    env.store[META] = { v: 1, items: { x: 1 } }; env.store[RUN] = runOf('old', 9, 0);
+    env.failKeys.add(k);
+    const r = await S.msxStartRunSave({ ...runOf('new', 1, 0), startAt: 9000 }, { v: 1, items: {} });
+    ok(r === false, `1: ${k} が書けないとき始められない(${r})`);
+    ok(env.store[META].items.x === 1 && env.store[RUN].id === 'old', `1: ${k} が書けないとき、アイテムと前の育成が残る`);
+    env.failKeys.clear();
+    const r2 = await S.msxStartRunSave({ ...runOf('new', 1, 0), startAt: 9000 }, { v: 1, items: {} });
+    ok(r2 === true && !env.store[META].items.x && env.store[RUN].id === 'new', `1: ${k} の失敗のあとの再試行で、消費と育成が両方入る`);
+  }
+  // 3a 古い画面の「やめる」: id が違えば消さない・同じなら消す・id なしは今までどおり
+  { const env = makeEnv(); const S = makeSave(env); env.store[RUN] = { ...runOf('rNEW', 1, 0), startAt: 9000 };
+    const r = await S.msxClearRun('rOLD');
+    ok(r === 'other' && env.store[RUN] && env.store[RUN].id === 'rNEW', '3a: 古い画面の「やめる」で新しい育成を消さない');
+    const r2 = await S.msxClearRun('rNEW');
+    ok(r2 === true && env.store[RUN] == null, '3a: 同じ id なら消す');
+    ok((await S.msxClearRun('rNEW')) === true, '3a: もう無い育成を消すのは true(引退の再試行が止まらない)'); }
+  // 3b 同じターン・同じビートPでも、版番号が進んだ保存を古い画面が巻き戻さない(2つのタブ)
+  { const env = makeEnv(); const S = makeSave(env); env.store[RUN] = runOf('r1', 5, 30, { rev: 10, phase: 'battle' });
+    const a = await S.msxSaveRun(runOf('r1', 5, 30, { rev: 11, phase: 'result' })); // タブA(最新)
+    const b = await S.msxSaveRun(runOf('r1', 5, 30, { rev: 11, phase: 'main' })); // タブB(版10を読んだ古い画面)
+    ok(a === true && b === 'stale' && env.store[RUN].phase === 'result', `3b: 同じ版の2つ目の保存は書かない(${a}/${b})`);
+    const c = await S.msxSaveRun(runOf('r1', 5, 30, { rev: 9, phase: 'main' }));
+    ok(c === 'stale' && env.store[RUN].phase === 'result', '3b: 古い大会画面(前の版)の保存で巻き戻さない');
+    ok((await S.msxSaveRun(runOf('r1', 5, 30, { rev: 12, phase: 'main' }))) === true, '3b: 次の版は書ける'); }
+  // 3b 版番号の無い古い保存は比べない(古い版のアプリの保存も、続きを保存できる)
+  { const env = makeEnv(); const S = makeSave(env); env.store[RUN] = runOf('r1', 5, 0);
+    ok((await S.msxSaveRun(runOf('r1', 5, 0, { rev: 1 }))) === true, '3b: 版の無い保存の続きを版つきで保存できる');
+    env.store[RUN] = runOf('r1', 6, 0); // 古い版のアプリが版なしで書いた
+    ok((await S.msxSaveRun(runOf('r1', 6, 0, { rev: 2 }))) === true, '3b: 古い版のアプリが版なしで書いたあとも保存できる'); }
+  // 3c 終わった育成の記録が書けない → 消さない → 古い画面からの保存でも戻らない(残ったまま)/ 直れば消える
+  { const env = makeEnv(); const S = makeSave(env); env.store[RUN] = runOf('r1', 4, 0); env.failKeys.add(S.MSX_RUN_GONE_KEY);
+    const r = await S.msxClearRun('r1');
+    ok(r === false && env.store[RUN] && env.store[RUN].id === 'r1', '3c: 終わった育成の記録が書けないときは消さない');
+    env.failKeys.clear();
+    ok((await S.msxClearRun('r1')) === true && env.store[RUN] == null, '3c: 再試行で記録と削除が両方済む');
+    await S.msxSaveRun(runOf('r1', 4, 0));
+    ok(env.store[RUN] == null, '3c: 消したあと古い画面の保存で戻らない'); }
+  // 3c 終わった育成の記録が読めない(例外)ときは、記録を作り直さず消さない(ほかの id を落とさない)
+  { const env = makeEnv(); const S0 = env.storeGet; env.store[RUN] = runOf('r2', 4, 0); env.store['mh_monsuc_run_gone_v1'] = ['a', 'b'];
+    env.storeGet = async (k, d) => { if (k === 'mh_monsuc_run_gone_v1') throw new Error('x'); return S0(k, d); };
+    const S = makeSave(env); const r = await S.msxClearRun('r2');
+    ok(r === false && env.store[RUN] && env.store['mh_monsuc_run_gone_v1'].length === 2, '3c: 記録が読めないときは記録を消さず、育成も消さない'); }
+};
+
+// 2 引退の順(画面 decide): 満杯なら何もしない(ビートPも)→ 引退の保存 → ビートP → 削除。途中で失敗したら完了にしない
+const decideSrc = cut(RETIRE, '  const decide = async () => {', '  // ---- 自分だけのベスト3');
+const makeDecide = (env, S, R, runRef, st) => {
+  const SUC = { beatOfEnd: () => 80, evaluate: () => ({ rank: 'D' }) };
+  const msxR3Retire = R.msxR3Retire; const msxR3ClearRun = (id) => S.msxClearRun(id);
+  // eslint-disable-next-line no-eval
+  const msxBeatMark = eval(`(${cut(STORE, 'const msxBeatMark = ', 'let msxSaveChain').replace('const msxBeatMark = ', '').trim().replace(/;$/, '')})`);
+  const setRun = (r) => { const n = { ...msxBeatMark(r), rev: (runRef.rev || 0) + 1 }; runRef.rev = n.rev; st.run = n; return S.msxSaveRun(n); };
+  const setRes = (x) => { st.res = x; }; const setStep = (x) => { st.step = x; }; const setBusy = () => {}; const setSure = () => {};
+  const sure = true; const busy = false; const pick = {}; const V3 = false; const AT = null; const points = 0; const debug = false;
+  return (run, ws, ev) => {
+    // eslint-disable-next-line no-eval
+    const decide = eval(`(() => { ${decideSrc.replace('  const decide = async () => {', 'return async () => {')} })()`);
+    return decide();
+  };
+};
+const checkR200Retire = async () => {
+  const BOX = 'mh_monsuc_box_v1'; const REC = 'mh_monsuc_record_v1';
+  const s = { species: 'Mocchi', stats: { life: 1 }, techs: [], titles: [], wonNow: [], aid: 'kiki', pop: 1, lv: 1, type: 0, beatEarned: 100, turn: 30 };
+  const run = { id: 'r1', nick: 'もち', colors: [], from: { base: 'Mocchi' }, startAt: 1000, s, beatSent: 100, rev: 3 };
+  const ev = { power: 5000, rank: 'D', loyal: 50, top: [] };
+  const setup = () => {
+    const env = makeEnv(); const S = makeSave(env); const R = makeRetire(env, { n: 0 }); env.store.wallet = 100; env.store[RUN] = clone(run);
+    const st = {}; const ref = { rev: 3 }; const D = makeDecide(env, S, R, ref, st);
+    return { env, S, R, st, go: async () => { await D(st.run || run, s, ev); await S.msxSaveWait(); } };
+  };
+  // 満杯: ビートPを付けない・何も書かない
+  { const t = setup(); t.env.store[BOX] = { v: 1, cap: 100, mons: Array.from({ length: 100 }, (_, i) => ({ id: `m${i}` })), memory: [] };
+    await t.go();
+    ok(t.st.res && t.st.res.full && t.env.store.wallet === 100 && t.env.store[RUN].beatEnd !== true, `2: 満杯ならビートPを付けない(財布 ${t.env.store.wallet})`); }
+  // ふつう: 完了・ビートP +80・育成が消える
+  { const t = setup(); await t.go();
+    ok(t.st.step === 'done' && t.env.store.wallet === 180 && t.env.store[RUN] == null, `2: ふつうの引退で完了・ビートP +80・育成が消える(財布 ${t.env.store.wallet})`); }
+  // ビートPが書けない → 完了にしない・育成は残る → 再試行で子・成績は二重にならずビートPだけ補う
+  { const t = setup(); t.env.failKeys.add('wallet'); await t.go();
+    ok(t.st.step !== 'done' && t.st.res && t.st.res.why === 'beat' && t.env.store[RUN] && t.env.store.wallet === 100, '2: ビートPが書けないと完了にしない(育成は残る)');
+    t.env.failKeys.clear(); await t.go();
+    ok(t.st.step === 'done' && t.env.store.wallet === 180 && t.env.store[RUN] == null, `2: ビートPの失敗のあとの再試行で補う(財布 ${t.env.store.wallet})`);
+    ok(t.env.store[BOX].mons.filter((m) => m.id === 'r1').length === 1 && t.env.store[META].retired === 1 && t.env.store[REC].length === 1, '2: 報酬の再試行で子・成績・記録帳が二重にならない'); }
+  // 記録帳の読み込みで例外 → 完了にしない・ビートPも付けない → 直って再試行で記録帳とビートPが入る
+  { const t = setup(); const g = t.env.storeGet; let bad = true; t.env.storeGet = async (k, d) => { if (bad && k === REC) throw new Error('x'); return g(k, d); };
+    const t2R = makeRetire(t.env, { n: 0 }); const t2D = makeDecide(t.env, makeSave(t.env), t2R, { rev: 3 }, t.st);
+    const go = async () => { await t2D(t.st.run || run, s, ev); };
+    await go();
+    ok(t.st.step !== 'done' && t.env.store.wallet === 100 && t.env.store[RUN], '2: 記録帳の例外で完了にしない(ビートPも付けない)');
+    bad = false; await go();
+    ok(t.st.step === 'done' && t.env.store[REC].length === 1 && t.env.store.wallet === 180 && t.env.store[META].retired === 1, '2: 記録帳の例外のあとの再試行で、記録帳とビートPが1回ずつ入る'); }
+  // 育成の削除が書けない → 完了にしない → 再試行で消える(ビートPは二重にならない)
+  { const t = setup(); t.env.failKeys.add('mh_monsuc_run_gone_v1'); await t.go();
+    ok(t.st.step !== 'done' && t.st.res.why === 'clear' && t.env.store[RUN], '2: 育成の削除が書けないと完了にしない');
+    t.env.failKeys.clear(); await t.go();
+    ok(t.st.step === 'done' && t.env.store[RUN] == null && t.env.store.wallet === 180, `2: 削除の失敗のあとの再試行で消える・ビートPは1回(財布 ${t.env.store.wallet})`); }
+};
+
 // (c) 画面側: toHome は待ってから読む・begin/intro を戻す
 const checkResumeText = () => {
   const home = MAIN.split('\n').find((l) => l.includes('const toHome'));
   ok(home && /msxSaveWait\(\)[\s\S]*msxReadAll/.test(home), 'c: toHome が msxSaveWait のあとに msxReadAll を呼ぶ');
   const ph = STORE.split('\n').find((l) => /phase: \[.*\]\.includes\(raw\.phase\)/.test(l)) || '';
   ok(ph.includes("'begin'") && ph.includes("'intro'"), 'c: 途中の育成の正規化が begin・intro を戻す');
+  // r1115-200: 画面側が結果を見る
+  ok(/msxStartRunSave\(r1, meta\)/.test(MAIN) && /if \(saved !== true\)[^\n]*return false/.test(MAIN), '1: 育成開始は消費と育成を一緒に書き、失敗なら進まない');
+  ok(/msxClearRun\(run && run\.id\)/.test(MAIN), '3a: 「やめる」は画面の育成の id を渡す');
+  ok(/rev: msxNum\(raw\.rev, 0\)/.test(STORE), '3b: 途中の育成の正規化が版番号を残す');
 };
 
 // ---- (a) 引退 ----
@@ -143,7 +257,7 @@ const checkRetire = async () => {
 };
 
 (async () => {
-  await checkSave(); checkResumeText(); await checkRetire();
+  await checkSave(); checkResumeText(); await checkRetire(); await checkR200Save(); await checkR200Retire();
   if (fail) { console.log(`モンサクの保存の安全: ${fail} 件の失敗(${pass} 件は通過)`); process.exit(1); }
-  console.log(`✓ モンサクの保存の安全: ${pass} 件すべて通過(引退の失敗と再試行・ビートPの二重付与・古い画面・中断直後の再開)`);
+  console.log(`✓ モンサクの保存の安全: ${pass} 件すべて通過(引退の失敗と再試行・ビートPの二重付与・古い画面・中断直後の再開・育成開始の取引・引退の順・別タブ)`);
 })().catch((e) => { console.error(e); process.exit(1); });

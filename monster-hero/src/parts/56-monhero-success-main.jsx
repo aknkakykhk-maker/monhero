@@ -282,6 +282,7 @@ function MonheroSuccessScreen({ onClose, callNameOf, bondLvOf, debug = false, st
   const [run, setRunState] = useState(null);
   const [layout, setLayout] = useState(msxLayout);
   const [ask, setAsk] = useState(null); // 確かめの小窓 { text, yes, onYes }
+  const lendRef = useRef({}); // フレンドから借りた結果(保存に失敗して押し直したとき用・r1115-200)
   const [playSub, setPlaySub] = useState('main'); // 育成中の小画面(MsxPlay の sub。β版の説明を出す場面を決める)
   // 育成の外(ホーム・ボックス・ランキング・図鑑・始めるまでの準備)の曲(ビート部の表 data/success-sounds.js の menu)。
   // 育成中は MsxPlay が場面の曲を鳴らすので、ここは何もしない(画面を閉じると入る前の曲へ戻る)
@@ -300,21 +301,41 @@ function MonheroSuccessScreen({ onClose, callNameOf, bondLvOf, debug = false, st
       if (!L) { setView('fail'); return; }
       const d = await msxReadAll(L.SUC);
       if (!alive) return;
-      setData(d); setRunState(d.run); setView(startView === 'box' ? 'box' : 'home');
+      setData(d); setRunLoaded(d.run); setView(startView === 'box' ? 'box' : 'home');
     });
     return () => { alive = false; };
   }, []);
-  const setRun = (r0) => { const r = r0 && typeof msxBeatMark === 'function' ? msxBeatMark(r0) : r0; setRunState(r); if (r) msxSaveRun(r, !!debug); }; // ビートPを渡した量も持つ(56-monhero-success-store)。デバッグの育成は財布に足さない
+  // 保存の版番号(r1115-200 3b): この画面が最後に読んだ/書いた版。保存のたびに +1 して、ほかの画面が先に進めていたら書かずに読み直す
+  const revRef = useRef(0);
+  const setRunLoaded = (r) => { revRef.current = r && Number.isFinite(Number(r.rev)) ? Number(r.rev) : 0; setRunState(r); };
+  // 保存の結果を返す(true 書けた・false 書けなかった・'stale' ほかの画面が先に進めていたので書かなかった)
+  const setRun = (r0) => {
+    let r = r0 && typeof msxBeatMark === 'function' ? msxBeatMark(r0) : r0; // ビートPを渡した量も持つ(56-monhero-success-store)。デバッグの育成は財布に足さない
+    if (r) { revRef.current += 1; r = { ...r, rev: revRef.current }; }
+    setRunState(r);
+    if (!r) return Promise.resolve(true);
+    const p = msxSaveRun(r, !!debug);
+    Promise.resolve(p).then((res) => { if (res === 'stale') setAsk({ text: 'ほかの画面で、この育成が先に進んでいます。保存されている続きを読み直します', yes: '読み直す', onYes: toHome }); }).catch(() => {});
+    return p;
+  };
   const setMeta = (meta) => { setData((d) => ({ ...d, meta })); msxSaveMeta(meta); };
   // ホームへ戻るときは保存を読み直す(回3の引退で保存枠・meta が書き足されたあと、古い中身で上書きしないように)
   //   ★先に並べた保存が終わってから読む(r1115-171 c)
-  const toHome = () => { (typeof msxSaveWait === 'function' ? msxSaveWait() : Promise.resolve()).then(() => msxReadAll(msxSuc.SUC)).then((d) => { setData(d); setRunState(d.run); }).catch(() => {}); setView('home'); };
+  const toHome = () => { (typeof msxSaveWait === 'function' ? msxSaveWait() : Promise.resolve()).then(() => msxReadAll(msxSuc.SUC)).then((d) => { setData(d); setRunLoaded(d.run); }).catch(() => {}); setView('home'); };
 
+  const startingRef = useRef(false); // 保存を待つ間の二度押しで、アイテムを2回減らさない(r1115-200)
   const startRun = async (cfg) => {
+    if (startingRef.current) return false;
+    startingRef.current = true;
+    try { return await startRunNow(cfg); } finally { startingRef.current = false; }
+  };
+  const startRunNow = async (cfg) => {
     const { SUC } = msxSuc;
     // フレンドから借りた子は、はじめるときに1回だけ知らせる。断られた(続けて借りすぎ streak・通信の失敗など)ら、借りずにその枠をベースモンで始める
     if (cfg.friendId && typeof monsucLendUse === 'function') {
-      let r = null; try { r = await monsucLendUse(cfg.friendId); } catch (e) { r = { ok: false, reason: 'network' }; }
+      // 保存に失敗してもう一度押したときは、前の結果を使う(r1115-200: 借りたことを二重に知らせない)
+      let r = lendRef.current[cfg.friendId] || null;
+      if (!r) { try { r = await monsucLendUse(cfg.friendId); } catch (e) { r = { ok: false, reason: 'network' }; } if (r && r.ok) lendRef.current[cfg.friendId] = r; }
       if (!r || !r.ok) cfg = { ...cfg, team: cfg.team.map((m) => (m && m.friend ? { kind: 'base', species: cfg.baseFill || cfg.species } : m)) };
     }
     const id = `r${Date.now().toString(36)}${Math.floor(Math.random() * 1e6).toString(36)}`;
@@ -328,9 +349,22 @@ function MonheroSuccessScreen({ onClose, callNameOf, bondLvOf, debug = false, st
     const meta = { ...data.meta, team: cfg.teamSlots.map((t) => (t.box ? { box: t.box } : t.assist ? { assist: t.assist } : { base: t.base })), runs: (data.meta.runs || 0) + 1, picked: { ...(data.meta.picked || {}), [cfg.species]: ((data.meta.picked || {})[cfg.species] || 0) + 1 } };
     // 持ちこんだ物は1つずつ減らす。芯がまだ知らない物(効き目が無い物)は減らさない
     if (cfg.items.some(known)) { const it = { ...meta.items }; cfg.items.filter(known).forEach((k) => { it[k] = Math.max(0, (it[k] || 0) - 1); if (!it[k]) delete it[k]; }); meta.items = it; }
-    setMeta(meta); setRun(r); setView('play');
+    // r1115-200 1: 消費(meta)と途中の育成を一緒に書き、両方書けたときだけ育成へ進む。書けなければ両方元のまま(アイテムも前の育成も残る)→ もう一度押せる
+    const r1 = typeof msxBeatMark === 'function' ? { ...msxBeatMark(r), rev: 1 } : { ...r, rev: 1 };
+    let saved = false;
+    try { saved = await (typeof msxStartRunSave === 'function' ? msxStartRunSave(r1, meta) : Promise.all([msxSaveMeta(meta), msxSaveRun(r1, !!debug)]).then((a) => a.every((x) => x === true))); } catch (e) { saved = false; }
+    if (saved !== true) { setAsk({ text: '保存できませんでした。アイテムと前の育成はそのままです。もう一度「育成を始める」を押してください', yes: 'OK', onYes: () => {} }); return false; }
+    lendRef.current = {};
+    setData((d) => ({ ...d, meta })); revRef.current = 1; setRunState(r1); setView('play');
+    return true;
   };
-  const quit = () => setAsk({ text: 'この育成をやめますか? 育てた中身はなくなります(マスモンボックスには入りません)', yes: 'やめる', onYes: async () => { await (typeof msxClearRun === 'function' ? msxClearRun() : storeSet(MSX_KEYS.run, null)); setRunState(null); setView('home'); } });
+  // やめる(r1115-200 3a・3c): 画面の育成の id が保存と同じときだけ消す。別の育成なら消さずに読み直す・書けなければもう一度
+  const quit = () => setAsk({ text: 'この育成をやめますか? 育てた中身はなくなります(マスモンボックスには入りません)', yes: 'やめる', onYes: async () => {
+    let res = false; try { res = await (typeof msxClearRun === 'function' ? msxClearRun(run && run.id) : storeSet(MSX_KEYS.run, null)); } catch (e) { res = false; }
+    if (res === false) { setAsk({ text: '保存できませんでした。育成は消えていません。もう一度「やめる」を押してください', yes: 'OK', onYes: () => {} }); return; }
+    if (res === 'other') { toHome(); return; } // ほかの画面で新しい育成が始まっていた → 消さずに読み直す
+    setRunLoaded(null); setView('home');
+  } });
 
   let content = null;
   if (view === 'loading') content = <div className="v-body" style={{ justifyContent: 'center', alignItems: 'center', display: 'flex' }}><div className="msx-note">読み込んでいます…</div></div>;
