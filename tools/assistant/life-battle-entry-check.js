@@ -27,7 +27,7 @@ const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${n
   const bt = ux.slice(ux.indexOf("rows.push({ k: 'battle'"), ux.indexOf("rows.push({ k: 'battle'") + 400);
   check('① 得の行のモンヒロバトルは地図の窓へ(ふつうのモンヒロバトルへ飛ぶのは口が無いときだけ)', /go: typeof assistantLifeOpenMapAt === 'function' \? \(\) => assistantLifeOpenMapAt\('battle', bt\[0\]\)/.test(bt));
   check('① 画面は mapFocus を受けて地図のタブ・窓へ(受けたら消す)', /const f = st\.mapFocus;[^\n]*setTab\('where'\);[^\n]*ASSISTANT_LIFE_STORE\.set\(\{ mapFocus: null \}\)/.test(house) && /initialKey=\{mapFocusKey\}/.test(house));
-  check('① 開いたままの地図も、initialKey が変われば窓を出し直す', /initialKey = 0 \}\) \{/.test(map) && /setSheet\(initialPlace\); \}, \[initialKey\]\)/.test(map));
+  check('① 開いたままの地図も、initialKey が変われば窓を出し直す', /initialKey = 0(?:, [a-zA-Z]+ = [^,}]+)* \}\) \{/.test(map) && /setSheet\(initialPlace\); \}, \[initialKey\]\)/.test(map));
   const room = house.slice(house.indexOf('data-assistant-life-room-train'), house.indexOf('data-assistant-life-room-cheer-msg'));
   check('② 部屋に 👀 修行を見る・📣 応援する(battle のときだけ・口は typeof で)', /if \(!w \|\| w\.place !== 'battle'\) return null;/.test(house) && /k="train-watch"/.test(room) && /k="cheer"/.test(room) && /disabled=\{!ti\.canCheer\}/.test(room) && /typeof assistantMasmonTrainRowInfo === 'function'/.test(house));
   check('② 見る画面の入れ物は、地図が出ていないときだけ家の画面にも(2つ重ねない)', /\{roomId && tab !== 'where' && typeof AssistantMasmonTrainWatchHost === 'function' && <AssistantMasmonTrainWatchHost\/>\}/.test(house) && (map.match(/<AssistantMasmonTrainWatchHost\/>/g) || []).length === 2); // 地図の根元に1つ+モンヒロバトルの選択画面の枠(AssistantLifeBattleHall)に1つ。選択画面では家も地図も出ない
