@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f89e08d1761bb2c2
+// source-sha256: b4779bef01317501
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -183534,7 +183534,7 @@ function MsaNext({
 const MSA_JUDGE_LABEL = {
   pct: ['❤️', '残ライフ'],
   dmg: ['⚔️', '与えたダメージ'],
-  guts: ['🔥', '使ったガッツ']
+  guts: ['🔥', '消費ガッツ']
 };
 const MSA_JUDGE_BY = {
   hp: '勝ち数が同じなので、残ライフの量(実数)で決着',
@@ -183555,6 +183555,8 @@ const MSA_JUDGE_CSS = `
 .msa-judge-row .nm{font-weight:900;font-size:11.5px;line-height:1.25;word-break:auto-phrase}
 .msa-judge-row .v{text-align:center;font-weight:900;font-size:15px;color:#cbd5e1}
 .msa-judge-row .v.w{color:#fde047}
+.msa-judge-row .v small{display:block;font-size:10px;font-weight:700;color:#94a3b8;line-height:1.2}
+.msa-judge-row .v.w small{color:#fde68a}
 .msa-judge-row .r{text-align:center;font-size:10.5px;font-weight:900;border-radius:99px;padding:2px 0;background:#334155;color:#e2e8f0}
 .msa-judge-row .r.A{background:#db2777;color:#fff}.msa-judge-row .r.B{background:#0369a1;color:#fff}
 .msa-judge-res{text-align:center;background:#1e1a36;border:1px solid #fde047;border-radius:14px;padding:8px}
@@ -183607,9 +183609,9 @@ function MsaJudge({
       className: "nm"
     }, lb[0], lb[1]), React.createElement("span", {
       className: `v ${r.win === 'A' ? 'w' : ''}`
-    }, fmt(r.key, r.a)), React.createElement("span", {
+    }, fmt(r.key, r.a), r.key === 'pct' && row.mxA ? React.createElement("small", null, row.hpA, "/", row.mxA) : null), React.createElement("span", {
       className: `v ${r.win === 'B' ? 'w' : ''}`
-    }, fmt(r.key, r.b)), React.createElement("span", {
+    }, fmt(r.key, r.b), r.key === 'pct' && row.mxB ? React.createElement("small", null, row.hpB, "/", row.mxB) : null), React.createElement("span", {
       className: `r ${r.win || ''}`
     }, r.win === 'A' ? '自分' : r.win === 'B' ? '相手' : '同じ'));
   }), React.createElement("div", {

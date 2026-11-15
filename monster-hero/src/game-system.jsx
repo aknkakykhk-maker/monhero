@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 7cb6fb2270e318c1
+// generated-sha256: caeb3f769f186401
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -79659,7 +79659,7 @@ const monsucTeams = (catalog, suc, s, info) => {
   return { teamA: { assistantId: s.aid, tactics: tac, members: [mine] }, teamB: { assistantId: 'atsu', tactics: tac, members: [foe] } };
 };
 
-// モンサクの試合の打ち切り(2026-11-15 r1115-058): 30ターンで判定(残ライフ%・与えたダメージ・使ったガッツの3つの比べ)。助手のマスモン対戦には渡さない
+// モンサクの試合の打ち切り(2026-11-15 r1115-058): 30ターンで判定(残ライフ%・与えたダメージ・消費ガッツの3つの比べ)。助手のマスモン対戦には渡さない
 const MONSUC_MATCH_RULE = Object.freeze({ roundLimit: 30, judge: 'three' });
 // 試合を1戦だけ回す(画面なし)。結果だけ見る・スキップ・観戦のどれでも同じ記録になる
 const monsucCupMatch = (engine, catalog, suc, s, me, info0) => {
@@ -93722,7 +93722,7 @@ function MsaNext({ side, name, hp, names, face, line }) {
 }
 // 判定の画面(2026-11-15 r1115-058 社長): 30ターンで決着がつかなかったときの「判定!」。試合の配置とは別の独立した部品(画面いっぱいに重ねる)
 //   row … 芯の判定の行 { rows:[{key,a,b,win}], winsA, winsB, by, hpA, hpB, limit }。names … { A, B }。onGo … タップか9秒で次へ
-const MSA_JUDGE_LABEL = { pct: ['❤️', '残ライフ'], dmg: ['⚔️', '与えたダメージ'], guts: ['🔥', '使ったガッツ'] };
+const MSA_JUDGE_LABEL = { pct: ['❤️', '残ライフ'], dmg: ['⚔️', '与えたダメージ'], guts: ['🔥', '消費ガッツ'] };
 const MSA_JUDGE_BY = { hp: '勝ち数が同じなので、残ライフの量(実数)で決着', pct: '残ライフの量も同じなので、残ライフ%で決着', dmg: 'ここまで同じなので、与えたダメージで決着', tie: 'すべて同じなので、引き分けにせず負け扱い' };
 const MSA_JUDGE_CSS = `
 .msa-judge{position:fixed;inset:0;z-index:9650;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:max(12px,env(safe-area-inset-top)) 12px max(12px,env(safe-area-inset-bottom));background:#0b0820f2;color:#fff;overflow-y:auto;font-family:inherit}
@@ -93737,6 +93737,8 @@ const MSA_JUDGE_CSS = `
 .msa-judge-row .nm{font-weight:900;font-size:11.5px;line-height:1.25;word-break:auto-phrase}
 .msa-judge-row .v{text-align:center;font-weight:900;font-size:15px;color:#cbd5e1}
 .msa-judge-row .v.w{color:#fde047}
+.msa-judge-row .v small{display:block;font-size:10px;font-weight:700;color:#94a3b8;line-height:1.2}
+.msa-judge-row .v.w small{color:#fde68a}
 .msa-judge-row .r{text-align:center;font-size:10.5px;font-weight:900;border-radius:99px;padding:2px 0;background:#334155;color:#e2e8f0}
 .msa-judge-row .r.A{background:#db2777;color:#fff}.msa-judge-row .r.B{background:#0369a1;color:#fff}
 .msa-judge-res{text-align:center;background:#1e1a36;border:1px solid #fde047;border-radius:14px;padding:8px}
@@ -93766,8 +93768,8 @@ function MsaJudge({ row, names, onGo }) {
         return (
           <div key={r.key} className="msa-judge-row" data-msa-judge-row={r.key}>
             <span className="nm">{lb[0]}{lb[1]}</span>
-            <span className={`v ${r.win === 'A' ? 'w' : ''}`}>{fmt(r.key, r.a)}</span>
-            <span className={`v ${r.win === 'B' ? 'w' : ''}`}>{fmt(r.key, r.b)}</span>
+            <span className={`v ${r.win === 'A' ? 'w' : ''}`}>{fmt(r.key, r.a)}{r.key === 'pct' && row.mxA ? <small>{row.hpA}/{row.mxA}</small> : null}</span>
+            <span className={`v ${r.win === 'B' ? 'w' : ''}`}>{fmt(r.key, r.b)}{r.key === 'pct' && row.mxB ? <small>{row.hpB}/{row.mxB}</small> : null}</span>
             <span className={`r ${r.win || ''}`}>{r.win === 'A' ? '自分' : r.win === 'B' ? '相手' : '同じ'}</span>
           </div>
         );

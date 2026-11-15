@@ -692,7 +692,7 @@
     push({ ev: 'enter', side: 'B', i: 0, name: unitOf('B').name });
 
     let winner = null, reason = null;
-    // 与えたダメージ・使ったガッツの合計(判定 judge:'three' が使う。ログにも乱数にも触れない)
+    // 与えたダメージ・消費ガッツの合計(判定 judge:'three' が使う。ログにも乱数にも触れない)
     const tally = { A: { dmg: 0, guts: 0 }, B: { dmg: 0, guts: 0 } };
     function* act(side) {
       const foeSide = side === 'A' ? 'B' : 'A';
@@ -791,8 +791,8 @@
       }
     }
     if (!winner && inp.judge === 'three') {
-      // 判定(モンサク・2026-11-15 社長 r1115-058): 残ライフ%・与えたダメージ・使ったガッツを別々に比べ、勝ちの数が多い方の勝ち。
-      //   同数のときは残ライフの量(実数)→残ライフ%→与えたダメージの順。それでも同じなら A(自分)の負け。使ったガッツは多い方が勝ち
+      // 判定(モンサク・2026-11-15 社長 r1115-058): 残ライフ%・与えたダメージ・消費ガッツを別々に比べ、勝ちの数が多い方の勝ち。
+      //   同数のときは残ライフの量(実数)→残ライフ%→与えたダメージの順。それでも同じなら A(自分)の負け。消費ガッツは多い方が勝ち
       const sum = (side, k) => state.teams[side].units.reduce((q, x) => q + x[k], 0);
       const hpA = sum('A', 'hp'), hpB = sum('B', 'hp'), mxA = sum('A', 'maxHp') || 1, mxB = sum('B', 'maxHp') || 1;
       const rows = [
@@ -808,7 +808,7 @@
       else if (rows[1].a !== rows[1].b) { winner = rows[1].a > rows[1].b ? 'A' : 'B'; by = 'dmg'; }
       else { winner = 'B'; by = 'tie'; }
       reason = 'judge';
-      push({ ev: 'judge', mode: 'three', aScore: Math.round(hpA / mxA * 10000), bScore: Math.round(hpB / mxB * 10000), rows, winner, winsA: wa, winsB: wb, hpA, hpB, by, limit: roundLimit });
+      push({ ev: 'judge', mode: 'three', mxA, mxB, aScore: Math.round(hpA / mxA * 10000), bScore: Math.round(hpB / mxB * 10000), rows, winner, winsA: wa, winsB: wb, hpA, hpB, by, limit: roundLimit });
     }
     if (!winner) {
       // 判定(既定): 残りライフの割合の合計(倒れた体は0)。同じなら引き分け
