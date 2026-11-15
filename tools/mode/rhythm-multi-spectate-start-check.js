@@ -103,9 +103,21 @@ const VIEW = { width: 390, height: 844 };
   // 演奏画面の読むだけの窓へ、時計どおりに進む曲の位置と、決まった点・判定の数を返す入れ物を差し込む(だれも押さないので)
   const runHud = (p, score, combo, k, life, fromMs) => p.evaluate(([sc, cb, kk, lf, t]) => {
     const counts = {}; ['MARVELOUS', 'EXCELLENT', 'GREAT', 'GOOD', 'BAD', 'MISS'].forEach((id, i) => { counts[id] = kk[i]; });
-    const fixed = { score: sc, combo: cb, counts, life: lf }; RHYTHM_PLAY_WATCH.hud = { get: () => fixed };
-    const t0 = Date.now(); Object.defineProperty(RHYTHM_PLAY_WATCH, 'timeMs', { get: () => t + (Date.now() - t0), set: () => {}, configurable: true });
+    const t0 = Date.now();
+    // 点は時計どおりに少しずつ増やす(本物の演奏と同じく、点の知らせが3秒ごとに出る。止めると観戦は20秒で「終わった」扱いになる)
+    RHYTHM_PLAY_WATCH.hud = { get: () => ({ score: sc + Math.floor((Date.now() - t0) / 1000) * 100, combo: cb, counts, life: lf }) };
+    Object.defineProperty(RHYTHM_PLAY_WATCH, 'timeMs', { get: () => t + (Date.now() - t0), set: () => {}, configurable: true });
+    // 描いたコマの数も60枚/秒で進める。この検査では演奏する人の画面が裏のタブになり描画が間引かれるので、
+    // 本物のままだと「端末が重い」(40枚/秒を切る)と判断されて、判定を送らない形へ切り替わってしまう(本物の演奏者の画面は表に出ている)
+    const f0 = RHYTHM_PLAY_WATCH.frames || 0;
+    Object.defineProperty(RHYTHM_PLAY_WATCH, 'frames', { get: () => f0 + Math.floor((Date.now() - t0) * 0.06), set: () => {}, configurable: true });
   }, [score, combo, k, life, fromMs]);
+  // 落ちたときに、観戦の画面の様子(見えているか・時計・判定の表)を書き出す
+  const why = () => W.evaluate(() => { const v = RHYTHM_WATCH.view() || {}; const r = (v.rows || {})[v.focus] || {}; const jm = (v.judged || {})[v.focus];
+    return { vis: document.visibilityState, focus: document.hasFocus(), phase: v.phase, focusId: v.focus, manual: v.focusManual, tried: v.tried, wiFrom: v.wiFrom, noDetail: v.noDetail, pAge: r.pAt ? Date.now() - r.pAt : null, lite: r.lt === true, p: r.p, judged: jm ? jm.size : 0, lastPing: Date.now() - (v.lastPing || 0), focusAge: Date.now() - (v.focusAt || 0) }; }).catch((e) => String(e));
+  let PL = [];   // いまの組み合わせの演奏する人のページ(落ちたときの様子を書き出す)
+  const whyPlayers = () => Promise.all(PL.map((p) => p.evaluate(() => { const v = RHYTHM_MULTI.view(); const me = v && v.members.find((m) => m.id === v.selfId);
+    return { vis: document.visibilityState, playing: !!(me && me.playing), phase: v && v.room && v.room.phase, watchers: RHYTHM_MULTI.watcherCount(), hud: !!RHYTHM_PLAY_WATCH.hud, area: !!document.querySelector('[data-rhythm-play-area]'), jd: Array.isArray(RHYTHM_PLAY_WATCH.jd), text: (document.body.innerText || '').slice(0, 80).replace(/\s+/g, ' ') }; }).catch((e) => String(e))));
   const state = () => W.evaluate(() => {
     const v = RHYTHM_WATCH.view(); if (!v) return null; const r = v.rows[v.focus] || {};
     const counts = [...document.querySelectorAll('[data-rhythm-watch-count] b')].map((x) => x.innerText.trim());
@@ -122,6 +134,7 @@ const VIEW = { width: 390, height: 844 };
     const A = await open('きゅこ', 'Mocchi'); const B = two ? await open('ソラシド', 'Suezo') : null;
     W = await open('うみ', 'Pixie');
     const players = [A, B].filter(Boolean);
+    PL = players;
     for (const p of players) await p.locator('[data-rhythm-multi-free]').click();
     await A.locator('[data-rhythm-multi-free-create]').click();
     await A.waitForSelector('[data-rhythm-multi-room-code]', { timeout: 15000 });
@@ -153,6 +166,8 @@ const VIEW = { width: 390, height: 844 };
     await runHud(A, 26884, 11, [8, 1, 0, 0, 0, 0], 1000, 20000);
     if (B) await runHud(B, 45389, 51, [40, 8, 3, 0, 0, 0], 1000, 20000);
     const hudAt = Date.now();
+    const songInfo = await A.evaluate(() => { const v = RHYTHM_MULTI.view(); const song = RHYTHM_SONGS.find((x) => x.songId === v.room.songId); const me = v.members.find((m) => m.id === v.selfId) || {}; const ch = song && song.difficulties[me.diff]; return { id: v.room.songId, diff: me.diff, ms: ch ? Math.round(ch.durationMs) : (song ? song.playDurationMs : 0), now: window.__mhTestHooks && window.__mhTestHooks.rhythmSongMs ? Math.round(window.__mhTestHooks.rhythmSongMs() || 0) : null }; });
+    console.log(`  (${cs} の曲: ${JSON.stringify(songInfo)})`);
     if (!pre) {
       // 演奏の途中から観戦する(観戦の一覧に出るのを待って入る)
       await W.waitForSelector(`[data-rhythm-watch-room="${code}"]`, { timeout: 40000 });
@@ -189,7 +204,7 @@ const VIEW = { width: 390, height: 844 };
       let text = '';
       await W.bringToFront();
       for (let i = 0; i < 30 && !text; i += 1) { await W.waitForTimeout(300); text = await W.evaluate(() => { const b = document.querySelector('[data-rhythm-watch-stage] [data-rhythm-judgment-text]'); return b ? (b.getAttribute('data-judgment') || '') : ''; }); }
-      check(`${cs}: 見ている人がたたいた判定が、1.5秒おくれで観戦の画面に文字で出る`, hits.length > 0 && text === 'MARVELOUS', JSON.stringify({ hits: hits.length, text }));
+      check(`${cs}: 見ている人がたたいた判定が、1.5秒おくれで観戦の画面に文字で出る`, hits.length > 0 && text === 'MARVELOUS', JSON.stringify({ hits: hits.length, text, ...(text ? {} : { why: await why(), players: await whyPlayers() }) }));
       if (SHOT_DIR && cs === 'pre2' && text) await W.screenshot({ path: path.join(SHOT_DIR, 'watch-judge-tate.png') });
     }
     if (SHOT_DIR && cs === 'pre2') {
@@ -212,7 +227,7 @@ const VIEW = { width: 390, height: 844 };
     await W.evaluate(() => { window.__mute = (q) => (q.t === 'pg' && q.p != null) || q.t === 'wi'; });
     let nd = false;
     for (let i = 0; i < 50 && !nd; i += 1) { await W.waitForTimeout(500); const s = await state(); nd = !!(s && s.noDetail); }
-    check(`${cs}: だれからも細かい知らせが届かないときは、「譜面は届いていません」の案内が出る`, nd);
+    check(`${cs}: だれからも細かい知らせが届かないときは、「譜面は届いていません」の案内が出る`, nd, nd ? '' : JSON.stringify({ w: await why(), players: await whyPlayers() }));
     if (SHOT_DIR && nd && cs === 'pre2') await W.screenshot({ path: path.join(SHOT_DIR, 'watch-nodetail-tate.png') });
     await W.evaluate(() => { window.__mute = null; });
     let back = false;

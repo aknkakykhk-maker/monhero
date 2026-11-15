@@ -1617,7 +1617,7 @@ const RHYTHM_WATCH = (() => {
     //   ・曲の始まりに送った「見ています」は、まだ演奏に入っていない端末で捨てられることがある → 届くまで2秒ごとに送り直す(見る側だけ。演奏する人の通信は今のまま)
     //   ・8秒たっても届かない(古い版のアプリ・観戦を許していない人)→ 自分で選んでいなければ、ほかの人へ順に切り替える。だれからも届かなければ案内を出す
     if (st.phase === 'playing' && st.focus && st.people.length && !focusLive(now)) {
-      if (now - st.lastPing >= RHYTHM_WATCH_RETRY_MS) ping();
+      if (now - st.lastPing >= (st.noDetail ? RHYTHM_WATCH_PING_MS : RHYTHM_WATCH_RETRY_MS)) ping();   // 案内を出したあとは、ふだんの10秒ごとへ戻す(ミハリ11)
       if (now - (st.focusAt || 0) >= RHYTHM_WATCH_SWITCH_MS) {
         const tried = st.tried || (st.tried = []);
         if (!tried.includes(st.focus)) tried.push(st.focus);

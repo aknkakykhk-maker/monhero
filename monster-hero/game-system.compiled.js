@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b5ce46195b34b2d0
+// source-sha256: c1a52cba1922c711
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -96228,7 +96228,7 @@ const RHYTHM_WATCH = (() => {
       emit();
     }
     if (st.phase === 'playing' && st.focus && st.people.length && !focusLive(now)) {
-      if (now - st.lastPing >= RHYTHM_WATCH_RETRY_MS) ping();
+      if (now - st.lastPing >= (st.noDetail ? RHYTHM_WATCH_PING_MS : RHYTHM_WATCH_RETRY_MS)) ping();
       if (now - (st.focusAt || 0) >= RHYTHM_WATCH_SWITCH_MS) {
         const tried = st.tried || (st.tried = []);
         if (!tried.includes(st.focus)) tried.push(st.focus);
