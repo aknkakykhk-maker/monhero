@@ -269,6 +269,10 @@ ok(near(SUC.failRateOf({ ...base, yosu: { sabori: { visits: 0 } } }) - fFull, 0.
     ok(!SUC.act({ ...base, tickets: 1 }, { kind: 'shugyo', course: 'fire', techs: two }).out.ok && SUC.act({ ...base, tickets: 1 }, { kind: 'shugyo', course: 'fire', techs: [two[0]] }).out.ok, 'チケット1枚で超修行が選べる/ふつうの修行ができない');
     ok(sup.state.hp < one.state.hp, '超修行の疲れが2回分になっていない');
     ok(!SUC.act({ ...base, superLeft: 0 }, { kind: 'shugyo', course: 'fire', techs: two }).out.ok, '超修行の残りが0なのに2つ選べる');
+    // 演出の内訳(r1115-060): 能力ごとに 行き先の分 + 編成の子の分 = 実際に上がった数。行き先の4能力には行き先の分がある
+    [one, sup].forEach((r) => { const P = r.out.parts || {};
+      ok(Object.keys(r.out.gain).every((k) => (P[k] || []).reduce((a, x) => a + x.v, 0) === r.out.gain[k]), '修行の内訳の合計が上がった数と合わない');
+      ok(SUC.SHUGYO.courses.fire.stages.flat().filter((k) => r.out.gain[k]).every((k) => (P[k] || []).some((x) => x.src === 'course' && x.v > 0)), '行き先の能力に行き先の分が無い'); });
     const old = SUC.restore(JSON.parse(JSON.stringify({ ...base, techMiss: undefined, superLeft: undefined })));
     ok(old && JSON.stringify(old.techMiss) === '{}' && old.superLeft === SUC.SHUGYO.superMax, '古い保存(外した回数・超修行の残りなし)が 0回・2回残りで読めない');
   }
