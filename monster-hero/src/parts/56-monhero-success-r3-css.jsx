@@ -31,6 +31,13 @@ const MSX_R3_CSS = `
 .msx .r3 .q-col{display:flex;flex-direction:column;gap:5px;min-width:0}
 .msx .r3 .q-col h4{text-align:center;font-size:12px;font-weight:900;padding:2px 0;margin:0;border-radius:8px;background:#ffffff1a}
 .msx .r3 .q-card{border-radius:10px;padding:5px 3px;text-align:center;font-size:10.5px;font-weight:800;line-height:1.25;background:#ffffff10;border:1px solid #ffffff22;color:#fff;min-height:52px;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:1px;min-width:0}
+/* 修行の「覚えられる技」は詳細の技の升目と同じ部品(MsxTechGrid)。状態は升の枠で出す: 覚えられる=緑・選んだ=金・覚えた=済・🔒=暗い */
+.msx .msx-md-tg.q{grid-template-columns:repeat(4,minmax(0,64px));gap:5px;margin:2px auto 0}
+.msx .msx-md-tg.q .tc.ok{box-shadow:0 0 0 2px #22c55e,0 0 8px #22c55e88}
+.msx .msx-md-tg.q .tc.sel{box-shadow:0 0 0 3px #fde047,0 0 12px #fde047aa;transform:translateY(-1px)}
+.msx .msx-md-tg.q .tc.lock .ti{filter:brightness(.5) saturate(.55)}
+.msx .msx-md-tg.q .tc .qb{position:absolute;right:2px;bottom:2px;min-width:22px;padding:0 3px;border-radius:5px;background:rgba(18,12,6,.86);color:#fff;font-size:10px;font-weight:900;line-height:13px;height:13px;text-align:center;z-index:2}
+.msx .msx-md-tg.q .tc.ok .qb{background:#16a34a}.msx .msx-md-tg.q .tc.sel .qb{background:#ca8a04;color:#fff}.msx .msx-md-tg.q .tc.got:not(.ok):not(.sel) .qb{background:#334155;color:#cbd5e1}
 .msx .r3 .q-card .nm{font-size:10px;letter-spacing:-.02em;text-wrap:balance}
 .msx .r3 .q-card .rk{font-size:9px;color:#cbd5e1}
 .msx .r3 .q-card .p{font-size:15px;font-weight:900;color:#86efac}
