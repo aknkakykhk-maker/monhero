@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 57401069a8654c27
+// source-sha256: 677bac8fe830d732
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -149665,6 +149665,8 @@ function AssistantMasmonBattleWatch({
       if (!x || !x.side) return '';
       const n = who(x.side, x.i);
       if (x.ev === 'tech') return x.hit ? `${n}の ${x.name}${x.crit ? ' 会心!' : ''} → ${x.dmg}${x.guarded ? '(ガード)' : ''}` : `${n}の ${x.name} … はずれ`;
+      if (x.ev === 'move' && x.why === 'blown') return `${n}は 吹き飛ばされて 遠距離へ`;
+      if (x.ev === 'blow') return `${n}の 吹き飛ばし(相手の次の手のあと 遠へ)`;
       if (x.ev === 'move') return `${n}が ${AMBW_DIST[x.to]}距離へ ${x.step > 0 ? 'さがる' : 'つめる'}`;
       if (x.ev === 'charge') return x.why === 'sulk' ? `${n}は 意味不明な行動をした…(ガッツだけたまった)` : `${n}は ガッツをためた`;
       if (x.ev === 'guard') return `${n}は 身を守った`;
@@ -149705,7 +149707,7 @@ function AssistantMasmonBattleWatch({
         className: "ambw-dmg miss"
       }, "はずれ")));
     };
-    const cutText = e.ev === 'tech' ? e.name : e.ev === 'move' ? e.step > 0 ? 'さがる' : 'つめる' : e.ev === 'charge' ? 'ガッツをためる' : e.ev === 'guard' ? 'ガード' : e.ev === 'swap' ? `交代 → ${who(e.side, e.i)}` : e.ev === 'ko' ? `${e.name} たおれた` : '';
+    const cutText = e.ev === 'tech' ? e.name : e.ev === 'move' ? e.why === 'blown' ? '吹き飛ばされた' : e.step > 0 ? 'さがる' : 'つめる' : e.ev === 'blow' ? '吹き飛ばし' : e.ev === 'charge' ? 'ガッツをためる' : e.ev === 'guard' ? 'ガード' : e.ev === 'swap' ? `交代 → ${who(e.side, e.i)}` : e.ev === 'ko' ? `${e.name} たおれた` : '';
     const cutSmall = e.ev === 'tech' ? `${e.kind === 'pow' ? '💪 ちから技' : '🧠 かしこさ技'}${Number.isFinite(e.p) ? `・命中 ${Math.round(e.p)}%` : ''}` : e.side ? who(e.side, e.ev === 'swap' ? e.from : e.i) : '';
     const kos = log.map((x, k) => x.ev === 'ko' ? {
       k,
@@ -149938,7 +149940,7 @@ const AMBB_SWAPS = Object.freeze([{
 }]);
 const AMBB_SET_DEF = Object.freeze({
   team: 'team',
-  rounds: 150,
+  rounds: 'auto',
   dist: 'auto',
   guts: 50,
   fx: 'full',
@@ -149956,7 +149958,7 @@ const AMBB_SET_OPTS = Object.freeze({
     label: '勝ち抜き',
     note: '交代なし・倒れたら次'
   }],
-  rounds: [30, 50, 100, 150],
+  rounds: ['auto', 30, 60, 90, 120],
   dist: ['auto', 0, 1, 2, 3],
   guts: [30, 50, 70, 99],
   fx: [{
@@ -149989,7 +149991,7 @@ const normalizeAmbbSet = raw => {
   const x = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
   return {
     team: x.team === 'ko' ? 'ko' : 'team',
-    rounds: ambbInt(x.rounds, 10, 300, AMBB_SET_DEF.rounds),
+    rounds: x.rounds === 'auto' || x.rounds == null || Number(x.rounds) === 150 ? 'auto' : ambbInt(x.rounds, 10, 300, 'auto'),
     dist: Number.isInteger(x.dist) && x.dist >= 0 && x.dist <= 3 ? x.dist : 'auto',
     guts: ambbInt(x.guts, 0, 99, AMBB_SET_DEF.guts),
     fx: x.fx === 'lite' ? 'lite' : 'full',
@@ -150007,7 +150009,7 @@ const ambbMatchOpts = set => {
     ...(Object.keys(rules).length ? {
       rules
     } : {}),
-    ...(set.rounds !== AMBB_SET_DEF.rounds ? {
+    ...(set.rounds !== 'auto' && Number.isFinite(set.rounds) ? {
       roundLimit: set.rounds
     } : {}),
     balance: set.balance
@@ -150421,7 +150423,7 @@ const AMBB_CSS = `
 .ambw.ambb-full .ambb-bar-wrap .msxm{margin-top:6px;padding:7px;max-height:42vh;overflow-y:auto}
 .ambw.ambb-full .ambb-bar-wrap .msxm-btn{min-height:36px;font-size:11.5px;padding:3px 6px;flex:1 1 22%}
 .ambw.ambb-full .ambb-bar-wrap .msxm-btn small{font-size:9.5px}
-.ambw.ambb-full .ambb-bar-wrap .msxm-btn:not(.atk):not([data-msxm-move]) small{display:none}
+.ambw.ambb-full .ambb-bar-wrap .msxm-btn:not(.atk):not([data-msxm-move]):not([data-msxm-blow]) small{display:none}
 .ambw.ambb-full .ambb-bar-wrap .msxm-btn small{white-space:nowrap}
 .ambw.ambb-full .ambb-bar-wrap .msxm-sec{margin-top:5px}
 .ambw.ambb-full .ambb-bar-wrap .msxm-foot{margin-top:5px}
@@ -151555,6 +151557,8 @@ function AssistantMasmonBattleBeta({
       if (!x || !x.side) return '';
       const n = who(x.side, x.i);
       if (x.ev === 'tech') return x.hit ? `${n}の ${x.name}${x.crit ? ' 会心!' : ''} → ${x.dmg}${x.guarded ? '(ガード)' : ''}` : `${n}の ${x.name} … はずれ`;
+      if (x.ev === 'move' && x.why === 'blown') return `${n}は 吹き飛ばされて 遠距離へ`;
+      if (x.ev === 'blow') return `${n}の 吹き飛ばし(相手の次の手のあと 遠へ)`;
       if (x.ev === 'move') return `${n}が ${AMBW_DIST[x.to]}距離へ ${x.step > 0 ? 'さがる' : 'つめる'}`;
       if (x.ev === 'charge') return `${n}は ガッツをためた`;
       if (x.ev === 'guard') return `${n}は 身を守った`;
@@ -151595,7 +151599,7 @@ function AssistantMasmonBattleBeta({
         className: "ambw-dmg miss"
       }, "はずれ")));
     };
-    const cutText = e.ev === 'tech' ? e.name : e.ev === 'move' ? e.step > 0 ? 'さがる' : 'つめる' : e.ev === 'charge' ? 'ガッツをためる' : e.ev === 'guard' ? 'ガード' : e.ev === 'swap' ? `交代 → ${who(e.side, e.i)}` : e.ev === 'ko' ? `${e.name} たおれた` : '';
+    const cutText = e.ev === 'tech' ? e.name : e.ev === 'move' ? e.why === 'blown' ? '吹き飛ばされた' : e.step > 0 ? 'さがる' : 'つめる' : e.ev === 'blow' ? '吹き飛ばし' : e.ev === 'charge' ? 'ガッツをためる' : e.ev === 'guard' ? 'ガード' : e.ev === 'swap' ? `交代 → ${who(e.side, e.i)}` : e.ev === 'ko' ? `${e.name} たおれた` : '';
     const cutSmall = e.ev === 'tech' ? `${e.kind === 'pow' ? '💪 ちから技' : '🧠 かしこさ技'}${Number.isFinite(e.p) ? `・命中 ${Math.round(e.p)}%` : ''}` : e.side ? who(e.side, e.ev === 'swap' ? e.from : e.i) : '';
     const kos = log.map((x, k) => x.ev === 'ko' ? {
       k,
@@ -152248,7 +152252,7 @@ function AmbbCompare({
     className: "ambb-cmp-sec"
   }, "能力"), keys.map(k => row(AMBW_STAT_JP[k] || k, sv(ua, k), sv(ub, k), sv(ua, k) / top, sv(ub, k) / top, sv(ua, k), sv(ub, k), k)), ta && tb && React.createElement(React.Fragment, null, React.createElement("div", {
     className: "ambb-cmp-sec"
-  }, "種類の等級"), row('ガッツ回復力', ta.regen, tb.regen, (ta.regen || 0) / 15, (tb.regen || 0) / 15, regenG(ta) || ta.regen, regenG(tb) || tb.regen, 'regen'), row('移動速度', gIdx(grades, ta.move), gIdx(grades, tb.move), (gIdx(grades, ta.move) + 1) / 7, (gIdx(grades, tb.move) + 1) / 7, ta.move, tb.move, 'move'), row('サイズ', 0, 0, (sizeV[ta.size] || 2) / 3, (sizeV[tb.size] || 2) / 3, AMBB_SIZE_JP[ta.size] || 'ふつう', AMBB_SIZE_JP[tb.size] || 'ふつう', 'size'), React.createElement("div", {
+  }, "種類の等級"), row('ガッツ回復力', ta.regen, tb.regen, (ta.regen || 0) / 8, (tb.regen || 0) / 8, regenG(ta) || ta.regen, regenG(tb) || tb.regen, 'regen'), row('移動速度', gIdx(grades, ta.move), gIdx(grades, tb.move), (gIdx(grades, ta.move) + 1) / 7, (gIdx(grades, tb.move) + 1) / 7, ta.move, tb.move, 'move'), row('サイズ', 0, 0, (sizeV[ta.size] || 2) / 3, (sizeV[tb.size] || 2) / 3, AMBB_SIZE_JP[ta.size] || 'ふつう', AMBB_SIZE_JP[tb.size] || 'ふつう', 'size'), React.createElement("div", {
     className: "ambb-cmp-sec"
   }, "間合い適性"), [0, 1, 2, 3].map(d => row(`${AMBW_DIST[d]}距離`, gIdx(aptGrades, ta.apt[d]), gIdx(aptGrades, tb.apt[d]), (gIdx(aptGrades, ta.apt[d]) + 1) / 12, (gIdx(aptGrades, tb.apt[d]) + 1) / 12, ta.apt[d], tb.apt[d], `apt${d}`)), React.createElement("div", {
     className: "ambb-cmp-note"
@@ -152279,7 +152283,6 @@ function AmbbSettings({
     }, labelOf(o), noteOf && noteOf(o) ? React.createElement("small", null, noteOf(o)) : null);
   }));
   const diff = ambbSetDiff(set);
-  const limit = engine && engine.ROUND_LIMIT || 150;
   return React.createElement("div", {
     className: "ambw-card",
     "data-ambb-settings": true
@@ -152319,7 +152322,7 @@ function AmbbSettings({
     className: "ambb-set-row"
   }, React.createElement("span", null, "形式"), chips('team', AMBB_SET_OPTS.team, o => o.label, o => o.note)), React.createElement("div", {
     className: "ambb-set-row"
-  }, React.createElement("span", null, "ラウンド上限"), chips('rounds', AMBB_SET_OPTS.rounds, o => `${o}`)), React.createElement("div", {
+  }, React.createElement("span", null, "ラウンド上限"), chips('rounds', AMBB_SET_OPTS.rounds, o => o === 'auto' ? `いつも(${30 * size})` : `${o}`)), React.createElement("div", {
     className: "ambb-set-row"
   }, React.createElement("span", null, "最初の間合い"), chips('dist', AMBB_SET_OPTS.dist, o => o === 'auto' ? 'おまかせ' : AMBW_DIST[o])), React.createElement("div", {
     className: "ambb-set-row"
@@ -152344,14 +152347,14 @@ function AmbbSettings({
     min: "10",
     max: "300",
     step: "5",
-    value: set.rounds,
+    value: set.rounds === 'auto' ? 30 * size : set.rounds,
     "data-ambb-tune-rounds": true,
     onChange: ev => onSet({
       rounds: Number(ev.target.value)
     })
   }), React.createElement("div", {
     className: "ambw-small"
-  }, set.rounds, " ラウンド(いつもは ", limit, ")"))), React.createElement("div", {
+  }, set.rounds === 'auto' ? 30 * size : set.rounds, " ラウンド(いつもは1体あたり30)"))), React.createElement("div", {
     className: "ambb-set-row"
   }, React.createElement("span", null, "ガッツの初期値"), React.createElement("div", null, React.createElement("input", {
     type: "range",
@@ -152845,9 +152848,9 @@ const monsucLossWhy = (log, meName) => {
   for (const e of log) {
     if (!e || !e.ev) continue;
     if (e.side === 'A') {
-      if (e.ev === 'tech' || e.ev === 'guard' || e.ev === 'charge' || e.ev === 'move' && e.why !== 'techMove') acts++;
+      if (e.ev === 'tech' || e.ev === 'guard' || e.ev === 'charge' || e.ev === 'blow' || e.ev === 'move' && e.why !== 'techMove' && e.why !== 'blown') acts++;
       if (e.ev === 'charge' && e.why === 'sulk') sulk++;
-      if (e.ev === 'move' && e.why !== 'techMove' && Number.isInteger(e.to) && Number.isInteger(e.step) && !reach(e.i || 0, e.to - e.step)) stuck++;
+      if (e.ev === 'move' && e.why !== 'techMove' && e.why !== 'blown' && Number.isInteger(e.to) && Number.isInteger(e.step) && !reach(e.i || 0, e.to - e.step)) stuck++;
       if (e.ev === 'tech') {
         tries++;
         if (e.hit) hits++;
@@ -153108,13 +153111,7 @@ const monsucTeams = (catalog, suc, s, info) => {
 };
 const MONSUC_MATCH_RULE = Object.freeze({
   statMax: 99999,
-  roundLimit: 30,
-  judge: 'three',
-  gutsPlan: Object.freeze({
-    regen: 0.5,
-    move: 0.5,
-    charge: 0.5
-  })
+  judgeTie: 'B'
 });
 const monsucCupMatch = (engine, catalog, suc, s, me, info0) => {
   const info = info0 || monsucCupInfo(suc, s, me);
@@ -160691,6 +160688,22 @@ const useMsxSeen = () => {
   }, []);
   return msxSeenCache || msxSeenNorm(null);
 };
+const msxFxStatRange = size => {
+  try {
+    const SUC = msxSuc.SUC;
+    const C = typeof MASMON_CALC !== 'undefined' ? MASMON_CALC : null;
+    if (!SUC || !SUC.BASE || !C) return '';
+    const type = 2;
+    const v = [];
+    for (let i = 0; i < 10; i++) v.push(SUC.BASE.light * (Number(size) || 0) * C.ageMult(type, i / 10 + 0.01));
+    const lo = Math.max(1, Math.round(Math.min(...v)));
+    const hi = Math.max(lo, Math.round(Math.max(...v)));
+    return lo === hi ? `+${lo}` : `+${lo}〜${hi}`;
+  } catch (e) {
+    return '';
+  }
+};
+const MSX_FX_NOTE = '能力の上がり幅は、型「普通」・素質Cのモンスターの目安(育成の時期で変わります)';
 const MSX_FX_SIZE = n => n >= 2 ? '大' : n >= 1 ? '中' : '小';
 const MSX_FX_TARGET = Object.freeze({
   main: '得意の能力',
@@ -160717,18 +160730,21 @@ const msxFxText = f => {
   if (!Array.isArray(f)) return '';
   const [k, a, b] = f;
   const BUFFS = msxSuc && msxSuc.SUC && msxSuc.SUC.events ? msxSuc.SUC.events.BUFFS || {} : {};
-  if (k === 'st') return `${typeof MSX_STAT_NAME !== 'undefined' && MSX_STAT_NAME[a] || MSX_FX_TARGET[a] || '能力'} ${MSX_FX_SIZE(Number(b) || 0)}アップ`;
-  if (k === 'loy') return `忠誠 ${a > 0 ? '+' : '−'}`;
-  if (k === 'fear') return '恐れ度 +';
+  if (k === 'st') {
+    const r = msxFxStatRange(b);
+    return `${typeof MSX_STAT_NAME !== 'undefined' && MSX_STAT_NAME[a] || MSX_FX_TARGET[a] || '能力'} ${r || `${MSX_FX_SIZE(Number(b) || 0)}アップ`}`;
+  }
+  if (k === 'loy') return `忠誠度 ${msxSigned(Number(a) || 0)}`;
+  if (k === 'fear') return `恐れ度 ${msxSigned(Number(a) || 0)}`;
   if (k === 'pop') return `人気 ${msxSigned(a)}`;
   if (k === 'popHi') return `人気 ${msxSigned(a)}(人気60〜のとき)`;
-  if (k === 'hp') return `体力 ${msxSigned(a)}`;
+  if (k === 'hp') return `体力 ${msxSigned(a)}%(最大の)`;
   if (k === 'str') return `ストレス ${msxSigned(a)}`;
   if (k === 'bond') return `${a === 'aid' ? '助手' : a === 'team' ? '編成みんな' : '編成のモンスター'}の親密度 ${msxSigned(b)}`;
   if (k === 'buff') return BUFFS[a] ? `${BUFFS[a].icon} ${BUFFS[a].name}` : 'いい調子になる';
   if (k === 'fame') return `賞金 ${msxSigned(a)}G`;
   if (k === 'pts') return `能力ポイント ${msxSigned(a)}`;
-  if (k === 'mas') return '技の熟練 +';
+  if (k === 'mas') return `技の熟練 ${msxSigned(Number(a) || 0)}`;
   if (k === 'flag') return MSX_FX_FLAG[a] || 'いいことがある';
   if (k === 'goal') return MSX_FX_GOAL[a] || '期の目標を決める';
   if (k === 'apt') return a === 'low' ? '一番低い間合い適性 +1段' : '一番高い間合い適性 +1段';
@@ -160755,6 +160771,7 @@ const msxEvChoice = (evId, c) => {
   const e = E && E.BY_ID ? E.BY_ID[evId] : null;
   return e && e.ch ? e.ch[c] || (c === 'a' && e.ch.fx ? e.ch : null) : null;
 };
+const msxChoiceNoteSrc = (open, ev0, chOf) => chOf(open).map(c => open.ep != null || String(open.id).startsWith('story.') || open.id === 'issa' ? '' : msxChoiceLines(msxEvChoice(open.id, c)).join(' ')).join(' ');
 function MsxChoiceInfo({
   evId,
   c,
@@ -160770,7 +160787,7 @@ function MsxChoiceInfo({
     "data-msx-chinfo": known ? 'known' : 'unknown'
   }, lines.map((l, i) => React.createElement("div", {
     key: i
-  }, l)), known ? null : React.createElement("small", null, "一度選ぶと、効果が分かるようになる"));
+  }, l)), known ? null : React.createElement("small", null, "一度選ぶと、効果が分かるようになる"), known && lines.some(l => /\+\d+〜?\d*/.test(l) && /(ライフ|ちから|かしこさ|命中|回避|丈夫さ|能力)/.test(l)) ? React.createElement("small", null, MSX_FX_NOTE) : null);
 }
 const MSX_EV_TITLE = Object.freeze({
   'ev.daily.nut': '道ばたの木の実',
@@ -161035,8 +161052,9 @@ function MsxDex({
   }, React.createElement("b", null, open.title), React.createElement("button", {
     type: "button",
     className: "chip",
-    onClick: () => setOpen(null)
-  }, "← 一覧へ")), open.awake ? React.createElement("div", {
+    onClick: () => setOpen(null),
+    "data-msx-dex-back": true
+  }, "← 戻る")), open.awake ? React.createElement("div", {
     className: "ln"
   }, open.awake === 2 ? '覚醒したあと、さらに虹色の光に包まれて、全能力 +40・間合い適性が2つ上がった。' : 'まぶしい光に包まれて、全能力 +30・一番高い間合い適性が上がった。') : null, aw && aw.t ? React.createElement("div", {
     className: "ln"
@@ -161061,7 +161079,12 @@ function MsxDex({
       const k = MSX_ISSA_KEYS.find(x => x.key === c) || {};
       return `⭕ ${k.ok} / ❌ ${k.ng}`;
     })() : open.ep != null ? 'お話の続きが変わる' : msxChoiceLines(msxEvChoice(open.id, c)).join(' / ') : 'まだ選んだことがない'));
-  })) : null) : React.createElement("div", {
+  })) : null, chOf(open).length && /\+\d+〜\d+/.test(String(msxChoiceNoteSrc(open, ev0, chOf))) ? React.createElement("div", {
+    className: "msx-note",
+    style: {
+      fontSize: 10
+    }
+  }, MSX_FX_NOTE) : null) : React.createElement("div", {
     className: "msx-dex-list"
   }, rows.length ? rows.map(x => {
     const known = Boolean(seen.ev[x.id]);
@@ -184592,7 +184615,7 @@ function MsxManualBar({
     className: "msxm-sec"
   }, React.createElement("div", {
     className: "msxm-h"
-  }, "🛡 防御・↔ 移動・💪 ガッツ回復"), React.createElement("div", {
+  }, "🛡 防御・↔ 移動・💪 ガッツ回復", opt.moveCost ? `(移動 ガッツ${opt.moveCost})` : ''), React.createElement("div", {
     className: "msxm-row"
   }, React.createElement("button", {
     type: "button",
@@ -184608,7 +184631,7 @@ function MsxManualBar({
     onClick: () => go({
       type: 'charge'
     })
-  }, "💪 ためる", React.createElement("small", null, opt.charge.ok ? 'ガッツを大きく回復' : 'ガッツは満タン')), opt.move.slice().sort((x, y) => y.step - x.step).map(mv => React.createElement("button", {
+  }, "💪 ためる", React.createElement("small", null, opt.charge.ok ? 'この番は合わせて16回復' : 'ガッツは満タン')), opt.move.slice().sort((x, y) => y.step - x.step).map(mv => React.createElement("button", {
     key: mv.step,
     type: "button",
     "data-msxm-move": mv.step,
@@ -184618,7 +184641,15 @@ function MsxManualBar({
       type: 'move',
       step: mv.step
     })
-  }, mv.step < 0 ? '前へ ▶' : '◀ 後ろへ', React.createElement("small", null, mv.ok ? `→ ${MSX_MANUAL_DIST[mv.to]}` : 'これ以上は行けない'))))), opt.swap.length ? React.createElement("div", {
+  }, mv.step < 0 ? '前へ ▶' : '◀ 後ろへ', React.createElement("small", null, mv.to < 0 || mv.to > 3 ? 'これ以上は行けない' : Number.isFinite(mv.guts) ? `→ ${MSX_MANUAL_DIST[mv.to]}・ガッツ ${mv.guts}${mv.ok ? '' : '(足りない)'}` : `→ ${MSX_MANUAL_DIST[mv.to]}`))), opt.blow && opt.blow.near ? React.createElement("button", {
+    type: "button",
+    "data-msxm-blow": true,
+    className: `msxm-btn ${isHint(opt.blow) ? 'hint' : ''}`,
+    disabled: !opt.blow.ok || busy,
+    onClick: () => go({
+      type: 'blow'
+    })
+  }, "💨 吹き飛ばし", React.createElement("small", null, opt.blow.wait ? '相手の次の手のあとに飛ぶ' : `相手の次の手のあと遠へ・ガッツ ${opt.blow.guts}${opt.blow.ok ? '' : '(足りない)'}`)) : null)), opt.swap.length ? React.createElement("div", {
     className: "msxm-sec"
   }, React.createElement("div", {
     className: "msxm-h"
@@ -185199,7 +185230,9 @@ function MsaDmgLayer({
 const msaSay = (e, nm) => {
   if (!e) return '';
   if (e.ev === 'tech') return e.hit ? `${nm(e.side, e.i)}の ${e.name}!${e.crit ? ' 会心の一撃!' : e.guarded ? ' …ガードされた' : ''}` : `${nm(e.side, e.i)}の ${e.name} … よけられた`;
+  if (e.ev === 'move' && e.why === 'blown') return `${nm(e.side, e.i)}は 吹き飛ばされて 遠の間合いへ!`;
   if (e.ev === 'move') return `${nm(e.side, e.i)}が ${AMBW_DIST[e.to] || ''}の間合いへ`;
+  if (e.ev === 'blow') return `${nm(e.side, e.i)}の 吹き飛ばし! 相手の次の手のあと 遠へ飛ばす`;
   if (e.ev === 'charge') return e.why === 'sulk' ? `${nm(e.side, e.i)}は 意味不明な行動をした…` : `${nm(e.side, e.i)}は ガッツをためた`;
   if (e.ev === 'guard') return `${nm(e.side, e.i)}は 身を守った`;
   if (e.ev === 'swap') return `${nm(e.side, e.i)}に 交代!`;
@@ -185548,7 +185581,7 @@ const msaGutsTagsOf = (log, frames, pos, side, regen, hitMs) => {
   const out = [];
   const R = f.r > pf.r ? regen[`${side}${f.act[side]}`] || 0 : 0;
   if (R > 0) out.push({
-    t: `自動 +${R}`,
+    t: `自動ガッツ回復 +${R}`,
     cls: 'up',
     delay: 0
   });
@@ -185562,7 +185595,11 @@ const msaGutsTagsOf = (log, frames, pos, side, regen, hitMs) => {
         cls: 'down',
         delay: 0
       });
-    } else if (x > 0) out.push({
+    } else if ((r.ev === 'move' || r.ev === 'blow') && r.why !== 'blown' && (Number(r.cost) || 0) > 0) out.push({
+      t: `${r.ev === 'blow' ? '吹き飛ばし' : '移動'} −${Math.round(Number(r.cost))}`,
+      cls: 'down',
+      delay: 0
+    });else if (x > 0) out.push({
       t: `${r.ev === 'move' ? '移動' : r.ev === 'guard' ? 'ガード' : 'ためる'} +${x}`,
       cls: 'up',
       delay: 0
@@ -185600,9 +185637,15 @@ const msaBandsOf = (log, frames, k) => {
   });else if (r.ev === 'charge') out.push({
     side: r.side,
     t: r.why === 'sulk' ? '💢 意味不明' : '⚡ ガッツをためた'
+  });else if (r.ev === 'move' && r.why === 'blown') out.push({
+    side: r.side,
+    t: '💨 遠へ飛ばされた'
   });else if (r.ev === 'move') out.push({
     side: r.side,
     t: `👣 間合い ${AMBW_DIST[pf.d] || ''}→${AMBW_DIST[f.d] || ''}`
+  });else if (r.ev === 'blow') out.push({
+    side: r.side,
+    t: '💨 吹き飛ばし'
   });else if (r.ev === 'swap') out.push({
     side: r.side,
     t: `🔁 ${r.name || ''} に交代`
@@ -185800,7 +185843,7 @@ function MsaStage({
       kf = msaCamFrames([...(fx.pre > 0 ? [[Math.max(110, fx.pre * 0.5), msaCamAt(ax, sw, w)], [fx.pre, msaCamAt(ax, sw, w)]] : []), [fx.pre > 0 ? fx.pre + 90 : Math.min(280, Math.max(120, hitMs * 0.45)), msaCamAt(ax, s1, w)], [hitMs - 60, msaCamAt(ax * 0.55 + dx * 0.45, s1, w)], [hitMs + 110, msaCamAt(dx, e1.hit ? s1 + 0.08 : s1, w)], [total - 280, msaCamAt(dx, s1 - 0.04, w)]], total);
     } else if (e1.ev === 'ko' && e1.side) {
       kf = msaCamFrames([[260, msaCamAt(sx(e1.side), 1.28, w)], [total - 320, msaCamAt(sx(e1.side), 1.3, w)]], total);
-    } else if ((e1.ev === 'guard' || e1.ev === 'charge' || e1.ev === 'swap') && e1.side) {
+    } else if ((e1.ev === 'guard' || e1.ev === 'charge' || e1.ev === 'swap' || e1.ev === 'blow') && e1.side) {
       kf = msaCamFrames([[220, msaCamAt(sx(e1.side), 1.1, w)], [total - 260, msaCamAt(sx(e1.side), 1.1, w)]], total);
     }
     if (!kf) return undefined;
@@ -186501,6 +186544,10 @@ const msaCallOf = (log, frames, k, maxHp, who) => {
   if (e.ev === 'swap') return {
     k: 'swap',
     t: `ここで交代! ${who(e.side, e.i)}が前へ!`
+  };
+  if (e.ev === 'move' && e.why === 'blown') return {
+    k: 'blown',
+    t: `${who(e.side, e.i)}、遠くへ 吹き飛ばされた!`
   };
   if (e.ev !== 'tech' || !e.hit) return null;
   const foe = e.side === 'A' ? 'B' : 'A';
