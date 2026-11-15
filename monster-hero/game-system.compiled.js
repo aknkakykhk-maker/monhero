@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 618e6fa372269ae0
+// source-sha256: 7c955259b31ed2e5
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -184950,6 +184950,7 @@ const MSX_MANUAL_CSS = `
 .msxm-sec{margin-top:8px}
 .msxm-h{font-size:11.5px;color:#cbd5e1;margin-bottom:4px}
 .msxm-row{display:flex;flex-wrap:wrap;gap:6px}
+.msxm-row.r3{flex-wrap:nowrap;margin-top:6px;gap:5px}.msxm-row.r3 .msxm-btn{flex:1 1 0;min-width:0;text-align:center;padding:5px 3px;font-size:12.5px}.msxm-row.r3 .msxm-btn small .nw{display:inline-block}.msxm-row.r3 .msxm-btn small{font-size:9.5px;white-space:normal;word-break:keep-all;overflow-wrap:anywhere;letter-spacing:-.02em;line-height:1.2}
 .msxm-btn{flex:1 1 46%;min-height:44px;border-radius:11px;border:1px solid #4c4680;background:#2b2650;color:#fff;font-weight:900;font-size:13px;padding:6px 8px;text-align:left;line-height:1.25}
 .msxm-btn small{display:block;font-size:10.5px;color:#cbd5e1;font-weight:700}
 .msxm-nm{margin-bottom:1px}
@@ -185061,6 +185062,24 @@ const MSA_DC_CSS = `
 .msa-dc-c.now{border-color:#fde047;box-shadow:0 0 0 1px #fde04788 inset;background:#2d2650;color:#fff}
 .msa-dc-c.far{opacity:.55}
 .msa-dc-c.ng small.p{color:#fca5a5}
+/* 案A(2026-11-15 社長 r1115-074・184・185): 2列×2段の横長の札。左に技の絵、右に技名と性能の2行。モンサクの試合で使う(look="a") */
+.msa-dc.a{grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}
+.msa-dc.a .msa-dc-c{display:grid;grid-template-columns:44px minmax(0,1fr);column-gap:6px;row-gap:1px;align-items:center;min-height:62px;padding:4px 6px}
+.msa-dc.a .msa-dc-c.none{display:block}
+.msa-dc.a .msa-dc-ic{grid-row:1/span 4;position:relative;width:44px;height:44px;border-radius:9px;overflow:hidden;align-self:center;box-shadow:0 0 0 2px #f59e0b}
+.msa-dc.a .msa-dc-ic.wise{box-shadow:0 0 0 2px #22c55e}
+.msa-dc.a .msa-dc-ic .tg-img{width:100%;height:100%;display:block}
+.msa-dc.a .msa-dc-ic .k{position:absolute;right:0;bottom:0;font-style:normal;font-size:11px;line-height:1;padding:2px 2px 1px 3px;border-radius:6px 0 0 0;background:#1b1733}
+.msa-dc.a .msa-dc-ic .mv{position:absolute;left:0;top:0;font-style:normal;font-size:8.5px;font-weight:900;line-height:1.3;color:#fff;background:#0ea5e9;border-radius:0 0 6px 0;padding:0 3px;white-space:nowrap}
+.msa-dc.a .msa-dc-ic .mv.kb{background:#f97316}
+.msa-dc.a .msa-dc-h,.msa-dc.a .msa-tn,.msa-dc.a .msa-dc-l{grid-column:2;min-width:0}
+.msa-dc.a .msa-tn{font-size:12px;line-height:1.15}
+@supports (width:1cqw){.msa-dc.a .msa-dc-c .msa-tn{font-size:max(8px,min(12px,calc((100cqw - 50px) / var(--tnw,1))))}}
+.msa-dc.a .msa-dc-l{display:block;white-space:normal;word-break:keep-all;overflow-wrap:anywhere;line-height:1.25;letter-spacing:-.01em;font-size:10px;color:#fde68a;font-weight:900}
+.msa-dc.a .msa-dc-l.g{font-size:9.5px;color:#cbd5e1;font-weight:800}
+.msa-dc.a .msa-dc-l.g b{color:#fff}
+.msa-dc.a .msa-dc-c.ng .msa-dc-l{color:#fca5a5}
+.msa-dc.a .msa-dc-c.far{opacity:.7}
 .msa-dc-c.use{background:#fde047;color:#422006;border-color:#fde047;opacity:1}
 .msa-dc-c.use small,.msa-dc-c.use small.p,.msa-dc-c.use .msa-dc-h{color:#422006}
 .msa-dc-c.hint{outline:2px solid #fde047;outline-offset:1px}
@@ -185134,15 +185153,17 @@ function MsaDistCards({
   hintId = null,
   onOpen = null,
   busy = false,
-  dataSide = ''
+  dataSide = '',
+  look = ''
 }) {
   useEffect(() => {
     msaFitTechNames();
   });
   const ids = Array.isArray(rep) && rep.length === 4 ? rep : msaRepIds(list, null);
   return React.createElement("div", {
-    className: "msa-dc",
-    "data-msa-dc": dataSide || ''
+    className: `msa-dc ${look === 'a' ? 'a' : ''}`,
+    "data-msa-dc": dataSide || '',
+    "data-msa-dc-look": look || ''
   }, React.createElement("style", null, MSA_DC_CSS), [0, 1, 2, 3].map(d => {
     const at = msaTechsAt(list, d);
     const used = lastMove && d === dist ? at.find(t => t.id === lastMove) : null;
@@ -185150,7 +185171,46 @@ function MsaDistCards({
     const now = dist === d,
       hp = t ? hitAt ? hitAt(t, d) : t.hit : null;
     const ng = t && Number.isFinite(guts) && guts < t.guts;
-    const cls = `msa-dc-c ${now ? 'now' : dist == null ? '' : 'far'} ${used ? 'use' : ''} ${ng ? 'ng' : ''} ${t && now && hintId && at.some(x => x.id === hintId) ? 'hint' : ''}`;
+    const cls = `msa-dc-c ${now ? 'now' : dist == null ? '' : 'far'} ${used ? 'use' : ''} ${ng ? 'ng' : ''} ${t && now && hintId && at.some(x => x.id === hintId) ? 'hint' : ''} ${t ? '' : 'none'}`;
+    if (look === 'a') {
+      const b = t && t.base ? t.base : null;
+      const mvTo = t && Number.isInteger(t.moveTo) ? t.moveTo : null;
+      const kb = mvTo != null && Array.isArray(t.dist) && t.dist.length && mvTo > Math.min(...t.dist);
+      return React.createElement("button", {
+        key: d,
+        type: "button",
+        className: cls,
+        "data-msa-dc-card": d,
+        "data-msa-dc-rep": t ? t.id : '',
+        disabled: !t || busy || !onOpen,
+        onClick: () => {
+          if (onOpen && t && !busy) onOpen(d);
+        }
+      }, t ? React.createElement("span", {
+        className: `msa-dc-ic ${t.kind === 'wise' ? 'wise' : 'pow'}`,
+        "aria-hidden": "true"
+      }, typeof MsxSkillArt === 'function' ? React.createElement(MsxSkillArt, {
+        t: t,
+        uid: `dc${dataSide}${d}`
+      }) : null, React.createElement("i", {
+        className: "k"
+      }, t.kind === 'wise' ? '🧠' : '💪'), mvTo != null ? React.createElement("i", {
+        className: `mv ${kb ? 'kb' : ''}`,
+        "data-msa-dc-move": mvTo
+      }, kb ? '💨' : '↪', MSA_DC_DIST[mvTo]) : null) : null, React.createElement("span", {
+        className: "msa-dc-h"
+      }, MSA_DC_DIST[d], now ? React.createElement("em", null, "いま") : null, React.createElement("i", null, at.length ? `${at.length}技` : '')), t ? React.createElement(MsaTechName, {
+        name: t.name
+      }) : React.createElement("span", {
+        className: "msa-dc-none"
+      }, "届く技なし"), t ? React.createElement("span", {
+        className: "msa-dc-l",
+        "data-msa-dc-l1": true
+      }, `命中率${Number.isFinite(hp) ? Math.round(hp) : '—'}%・\u200b消ガ${t.guts}`) : null, b ? React.createElement("span", {
+        className: "msa-dc-l g",
+        "data-msa-dc-l2": true
+      }, "ダメ", React.createElement("b", null, msaTechGrade('power', b.power)), "・命", React.createElement("b", null, msaTechGrade('hit', b.hit)), "・", '\u200b', "ガ", React.createElement("b", null, msaTechGrade('gd', b.gd)), "・クリ", React.createElement("b", null, msaTechGrade('crit', b.crit))) : null);
+    }
     return React.createElement("button", {
       key: d,
       type: "button",
@@ -185320,7 +185380,8 @@ function MsxManualBar({
   rep = null,
   onRep = null,
   title = '',
-  sheetInit = null
+  sheetInit = null,
+  look = ''
 }) {
   const [sheet, setSheet] = useState(sheetInit);
   useEffect(() => {
@@ -185363,7 +185424,7 @@ function MsxManualBar({
     "data-msxm": "act"
   }, React.createElement("style", null, MSX_MANUAL_CSS), React.createElement("div", {
     className: "msxm-top"
-  }, React.createElement("span", null, "あなたの番"), React.createElement("b", null, "間合い ", MSX_MANUAL_DIST[opt.dist]), React.createElement("div", {
+  }, React.createElement("span", null, busy ? '相手の番…' : 'あなたの番'), React.createElement("b", null, "間合い ", MSX_MANUAL_DIST[opt.dist]), React.createElement("div", {
     className: "msxm-g"
   }, React.createElement("i", {
     style: {
@@ -185393,7 +185454,8 @@ function MsxManualBar({
     hintId: hintId,
     busy: busy,
     onOpen: d => setSheet(d),
-    dataSide: "manual"
+    dataSide: "manual",
+    look: look
   })), sheetOn ? React.createElement(MsaTechSheet, {
     title: `${title ? `${title} の` : ''}${sd == null ? `技(${items.length})` : `${MSX_MANUAL_DIST[sd]}の技`}`,
     list: items,
@@ -185433,25 +185495,41 @@ function MsxManualBar({
     onClick: () => go({
       type: 'charge'
     })
-  }, "💪 ためる", React.createElement("small", null, opt.charge.ok ? 'この番は合わせて16回復' : 'ガッツは満タン')), opt.move.slice().sort((x, y) => y.step - x.step).map(mv => React.createElement("button", {
-    key: mv.step,
-    type: "button",
-    "data-msxm-move": mv.step,
-    className: `msxm-btn ${isHint(mv) ? 'hint' : ''}`,
-    disabled: !mv.ok || busy,
-    onClick: () => go({
-      type: 'move',
-      step: mv.step
-    })
-  }, mv.step < 0 ? '前へ ▶' : '◀ 後ろへ', React.createElement("small", null, mv.to < 0 || mv.to > 3 ? 'これ以上は行けない' : Number.isFinite(mv.guts) ? `→ ${MSX_MANUAL_DIST[mv.to]}・ガッツ ${mv.guts}${mv.ok ? '' : '(足りない)'}` : `→ ${MSX_MANUAL_DIST[mv.to]}`))), opt.blow && opt.blow.near ? React.createElement("button", {
-    type: "button",
-    "data-msxm-blow": true,
-    className: `msxm-btn ${isHint(opt.blow) ? 'hint' : ''}`,
-    disabled: !opt.blow.ok || busy,
-    onClick: () => go({
-      type: 'blow'
-    })
-  }, "💨 吹き飛ばし", React.createElement("small", null, opt.blow.wait ? '相手の次の手のあとに飛ぶ' : `相手の次の手のあと遠へ・ガッツ ${opt.blow.guts}${opt.blow.ok ? '' : '(足りない)'}`)) : null)), opt.swap.length ? React.createElement("div", {
+  }, "💪 ためる", React.createElement("small", null, opt.charge.ok ? 'この番は合わせて16回復' : 'ガッツは満タン'))), React.createElement("div", {
+    className: "msxm-row r3"
+  }, (() => {
+    const mvBtn = mv => React.createElement("button", {
+      key: mv.step,
+      type: "button",
+      "data-msxm-move": mv.step,
+      className: `msxm-btn ${isHint(mv) ? 'hint' : ''}`,
+      disabled: !mv.ok || busy,
+      onClick: () => go({
+        type: 'move',
+        step: mv.step
+      })
+    }, mv.step < 0 ? '前進 ▶' : '◀ 後退', React.createElement("small", null, mv.to < 0 || mv.to > 3 ? 'これ以上行けない' : Number.isFinite(mv.guts) ? `${MSX_MANUAL_DIST[mv.to]}へ・\u200bガッツ${mv.guts}${mv.ok ? '' : '(足りない)'}` : `${MSX_MANUAL_DIST[mv.to]}へ`));
+    const back = opt.move.find(mv => mv.step > 0);
+    const fwd = opt.move.find(mv => mv.step < 0);
+    const near = !!(opt.blow && opt.blow.near);
+    const blow = React.createElement("button", {
+      key: "blow",
+      type: "button",
+      "data-msxm-blow": near ? '' : 'far',
+      className: `msxm-btn ${near && isHint(opt.blow) ? 'hint' : ''}`,
+      disabled: !near || !opt.blow.ok || busy,
+      onClick: () => {
+        if (near) go({
+          type: 'blow'
+        });
+      }
+    }, "💨 吹き飛ばし", React.createElement("small", null, !near ? '零で使える' : opt.blow.wait ? '相手の次の手のあと' : React.createElement(React.Fragment, null, React.createElement("span", {
+      className: "nw"
+    }, "相手の手のあと遠へ・"), React.createElement("span", {
+      className: "nw"
+    }, `ガッツ${opt.blow.guts}${opt.blow.ok ? '' : '(足りない)'}`))));
+    return [back ? mvBtn(back) : null, blow, fwd ? mvBtn(fwd) : null];
+  })())), opt.swap.length ? React.createElement("div", {
     className: "msxm-sec"
   }, React.createElement("div", {
     className: "msxm-h"
@@ -185810,7 +185888,9 @@ const MSA_CSS = `
 /* 縦は 帯 → 場 → 札 → ボタン列。場が残りの高さを全部もらう(画面の決まり docs/spec/MONSUC_UI.md ①)。手番の帯が高くて入らないときだけ画面ごと送る */
 .msc-wrap.msa{height:100%;min-height:0}
 .msa-stagebox{flex:1 1 auto;min-height:300px}
-.msa[data-msa-mode=manual] .msa-stagebox{min-height:280px}
+/* 手動の試合(2026-11-15 社長 r1115-050② 案L1): 操作欄はいつも出したまま(演出中は押せない形)にして、場の高さを番ごとに変えない。場は残りの高さに合わせて縮み、220px(幅320 で場の中身が収まる高さ)を下回る低い画面は縦に流す(r1115-193 案③) */
+.msc-wrap.msa[data-msa-mode=manual]{height:auto;min-height:100%}
+.msa[data-msa-mode=manual] .msa-stagebox{flex:1 1 0;min-height:220px}
 .msa-stage.fill.big .msa-f,.msa-stage.fill.big .msa-dmgwrap{width:var(--msa-fw);margin-left:calc(var(--msa-fw) / -2);height:var(--msa-fh);bottom:36%}
 .msa-stage.fill.big .msa-f img.msa-img{max-width:var(--msa-fw);max-height:calc(var(--msa-fh) - 10px)}
 .msa-stage.fill.big .msa-f .msa-shadow{width:calc(var(--msa-fw) * .56);margin-left:calc(var(--msa-fw) * -.28)}
@@ -187541,7 +187621,7 @@ function MonsucArena({
     }
     setPos(last);
   };
-  const showBar = Boolean(manual && !auto && !busy && !ended && mm.pending);
+  const showBar = Boolean(manual && !auto && !ended && mm.pending);
   let call = null;
   if (typeof msaCallOf === 'function') for (let k = pos; k >= Math.max(1, pos - 2) && !call; k--) {
     const c = msaCallOf(log, frames, k, maxHp, nm);
@@ -187600,6 +187680,7 @@ function MonsucArena({
     className: "msa-cardsrow",
     "data-msa-cards": true
   }, React.createElement(MsaDistCards, {
+    look: "a",
     list: itemsA,
     rep: msaRepIds(itemsA, null),
     dist: f.d,
@@ -187614,8 +187695,9 @@ function MonsucArena({
     opt: mm.pending,
     onPick: pick,
     onAuto: goAuto,
-    busy: busy
-  }) : null), manual && !auto && busy && !ended ? React.createElement("div", {
+    busy: busy,
+    look: "a"
+  }) : null), manual && !auto && busy && !ended && !showBar ? React.createElement("div", {
     className: "msa-wait"
   }, e.side === 'B' ? '相手の番…' : ' ') : null, (!manual || auto) && !ended ? React.createElement("div", {
     className: "msa-tools"
