@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: bac66b5735c7b645
+// generated-sha256: 76d59b3ddb83526f
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -80086,9 +80086,11 @@ const monsucPopOrder = (suc, s, entrants) => {
 
 const MSC_CSS = `
 .msc-root{position:fixed;inset:0;z-index:9000;overflow-y:auto;color:#fff;background:linear-gradient(180deg,#221a44,#141026 45%);
-  padding:calc(8px + env(safe-area-inset-top)) calc(10px + env(safe-area-inset-right)) calc(10px + env(safe-area-inset-bottom)) calc(10px + env(safe-area-inset-left));font-family:inherit}
+  padding:max(calc(8px + env(safe-area-inset-top)),52px) calc(10px + env(safe-area-inset-right)) calc(10px + env(safe-area-inset-bottom)) calc(10px + env(safe-area-inset-left));font-family:inherit}
 .msc-wrap{max-width:520px;margin:0 auto;display:flex;flex-direction:column;gap:8px;min-height:100%}
 .msc-top{display:flex;align-items:center;gap:8px}
+.msc-btn:disabled{opacity:.45;cursor:default;box-shadow:none}
+.msc-why{margin-top:6px;text-align:center;font-size:11px;font-weight:800;color:#fde68a;line-height:1.4}
 .msc-top b{flex:1;min-width:0;font-size:14px;color:#fde68a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .msc-btn{border:0;border-radius:999px;padding:12px 14px;font-weight:900;font-size:15px;color:#fff;background:linear-gradient(90deg,#f472b6,#fb923c);box-shadow:0 3px 0 #9d174d;cursor:pointer;min-height:44px}
 .msc-btn.y{background:#fde047;color:#3b2a05;box-shadow:0 3px 0 #a16207}
@@ -80349,8 +80351,9 @@ function MonsucBracket({ suc, s, info, result: resultProp, onFight, onResultOnly
       </div>
       <div className="msc-note"><b>決勝は <span className="nw">{info.meName} VS {nm(foe)}</span></b>。<span className="nw">左の数字は人気の順</span><span className="nw">(1が 一番人気)。</span><small><span className="nw">ほかの試合の結果は、</span><span className="nw">見せるだけの演出です</span><span className="nw">(戦うのは決勝の1戦だけ)</span></small></div>
       <div className="msc-talk"><img src={mscFace(s.aid)} alt=""/><p className="msx-kp">{coach ? <b style={{ display: 'block', fontSize: 11, color: '#b45309' }}>解説 {coach.name}</b> : null}{st >= 3 ? finalLine : lines[st]}</p>{st < 3 ? <button type="button" className="msc-sk" data-msc-skip onClick={() => setStage(3)}>SKIP ▸▸</button> : null}</div>
+      {canSkip ? null : <div className="msc-why" data-msc-quick-why>この大会で1回勝つと「結果だけ見る」が使えます</div>}
       <div className="msc-foot">
-        <button className="msc-btn y s" data-msc-quick onClick={onResultOnly}>{canSkip ? '⏩ 結果だけ見る(優勝ずみ)' : '⏩ 結果だけ見る'}</button>
+        <button className="msc-btn y s" data-msc-quick disabled={!canSkip} onClick={() => canSkip && onResultOnly()}>{canSkip ? '⏩ 結果だけ見る(優勝ずみ)' : '⏩ 結果だけ見る'}</button>
         <button className="msc-btn" data-msc-go onClick={onFight}>⚔ 決勝へ</button>
       </div>
     </div>
@@ -80358,7 +80361,7 @@ function MonsucBracket({ suc, s, info, result: resultProp, onFight, onResultOnly
 }
 
 // ---- バトルカード(C2)。2体と VS・タブ・6能力の棒が伸びる ----
-function MonsucBattleCard({ suc, s, info, catalog, odds, onReady, onResultOnly, onBack }) {
+function MonsucBattleCard({ suc, s, info, catalog, odds, onReady, onResultOnly, onBack, canSkip }) {
   const [tab, setTab] = useState('st');
   const o = info.opp || {};
   const me = s.stats || {}; const op = o.stats || {};
@@ -80444,8 +80447,9 @@ function MonsucBattleCard({ suc, s, info, catalog, odds, onReady, onResultOnly, 
         <span data-msc-reach={reach.map(x => (x ? 1 : 0)).join('')}><small>技が届く</small><b className="r">{AMBW_DIST.map((dn, d) => <i key={dn} className={reach[d] ? 'y' : ''}>{dn}</i>)}</b></span>
       </div>
       <div className="msc-hint"><img src={mscFace(s.aid)} alt=""/><span style={typeof JA_LABEL_STYLE !== 'undefined' ? JA_LABEL_STYLE : undefined}>{hint}</span></div>
+      {canSkip ? null : <div className="msc-why" data-msc-quick-why>この大会で1回勝つと「結果だけ見る」が使えます</div>}
       <div className="msc-foot">
-        <button className="msc-btn y s" data-msc-quick onClick={onResultOnly}>⏩ 結果だけ見る</button>
+        <button className="msc-btn y s" data-msc-quick disabled={!canSkip} onClick={() => canSkip && onResultOnly()}>⏩ 結果だけ見る</button>
         <button className="msc-btn" data-msc-ready onClick={onReady}>準備完了</button>
       </div>
     </div>
@@ -80630,8 +80634,8 @@ function MonsucCupShowInner({ suc, s, me, settle, onRematch, onNext, onClose, st
   const canSkip = typeof suc.canSkip === 'function' && suc.canSkip(s);
   let body = null;
   if (!info) body = <p className="msc-note">大会が見つかりませんでした</p>;
-  else if (phase === 'bracket') body = <MonsucBracket suc={suc} s={s} info={info} canSkip={canSkip} onClose={onClose} onFight={() => setPhase('card')} onResultOnly={() => match && finish(match.won)}/>;
-  else if (phase === 'card') body = <MonsucBattleCard suc={suc} s={s} info={info} catalog={catalog} odds={odds} onBack={() => setPhase('bracket')} onReady={() => setPhase(info.buffs || info.buffRows.length ? 'cutin' : 'match')} onResultOnly={() => match && finish(match.won)}/>;
+  else if (phase === 'bracket') body = <MonsucBracket suc={suc} s={s} info={info} canSkip={canSkip} onClose={onClose} onFight={() => setPhase('card')} onResultOnly={() => canSkip && match && finish(match.won)}/>;
+  else if (phase === 'card') body = <MonsucBattleCard suc={suc} s={s} info={info} catalog={catalog} odds={odds} canSkip={canSkip} onBack={() => setPhase('bracket')} onReady={() => setPhase(info.buffs || info.buffRows.length ? 'cutin' : 'match')} onResultOnly={() => canSkip && match && finish(match.won)}/>;
   else if (phase === 'cutin') body = <MonsucCutin s={s} info={info} onGo={() => setPhase('match')}/>;
   else if (phase === 'match') {
     const canPlay = match && match.input && engine && typeof engine.createMatch === 'function';
@@ -92915,10 +92919,14 @@ function MsxR3GameOver({ run, setRun, onPause }) {
 function MsxR3Retire({ run, setRun, onPause, debug, SUC }) {
   const s = run.s;
   const [step, setStep] = useState(() => (run.s.pts > 0 ? 'e3' : 'e0')); // 能力ポイントが残っていれば先に使う → 最終の評価
-  const [ws, setWs] = useState(s);      // 能力ポイントを使っている途中の写し
-  const [hist, setHist] = useState([]); // 「−」で戻す用
-  const wsRef = useRef(ws); wsRef.current = ws;          // 長押しで続けて振るとき、描き直しを待たず最新を読む
-  const histRef = useRef(hist); histRef.current = hist;
+  // 能力ポイント(E3)は、育成中の振り分けと同じく「押した能力の並び」を持ち、毎回 s から振り直す。
+  // 「−」はその能力を最後に押した1つだけを抜くので、あとから振った別の能力は残る。まとめて振った分も並びに積むので、そのあと個別に戻せる(r1115-172)
+  const capOfPt = (w, k) => (typeof SUC.statCapOf === 'function' ? SUC.statCapOf(w, k) : 999);
+  const replayPts = (list) => { let w = s; for (const k of list) { if (w.stats[k] >= capOfPt(w, k)) continue; const r = SUC.spendPts(w, k, 1); if (r.out.ok) w = r.state; } return w; };
+  const [ptList, setPtList] = useState([]);
+  const ptListRef = useRef(ptList); ptListRef.current = ptList; // 長押しで続けて振るとき、描き直しを待たず最新を読む
+  const setPtListNow = (list) => { ptListRef.current = list; setPtList(list); };
+  const ws = useMemo(() => replayPts(ptList), [s, ptList]); // 能力ポイントを使っている途中の写し
   const [ptUnit, setPtUnit] = useMsxPtUnit();            // 1・5・10・100・MAX(r1115-092)
   const [pick, setPick] = useState({}); // アシスト能力 { id: 段 }
   const [atab, setAtab] = useState(null); // アシストの場面のタブ(第2版・7つ)
@@ -92973,29 +92981,26 @@ function MsxR3Retire({ run, setRun, onPause, debug, SUC }) {
 
   // ---- E3 能力ポイントをまとめて使う ----
   if (step === 'e3') {
-    const capOf = (w, k) => (typeof SUC.statCapOf === 'function' ? SUC.statCapOf(w, k) : 999);
-    // 刻みの分だけ続けて振る(1回ごとに履歴へ積むので、「−」も同じ刻みで戻せる)。ポイントが足りない・上限に着いたところで止まる
+    const capOf = capOfPt;
+    // 刻みの分だけ続けて振る(1つずつ並びに積むので、「−」も同じ刻みで戻せる)。ポイントが足りない・上限に着いたところで止まる
     const spend = (k) => {
-      let w = wsRef.current; const h = histRef.current.slice(); const lim = msxPtLimit(ptUnit); let n = 0;
-      while (n < lim) { if (w.stats[k] >= capOf(w, k)) break; const r = SUC.spendPts(w, k, 1); if (!r.out.ok) break; h.push(w); w = r.state; n += 1; }
-      if (n) { wsRef.current = w; histRef.current = h; setHist(h); setWs(w); }
+      const list = ptListRef.current.slice(); let w = replayPts(list); const lim = msxPtLimit(ptUnit); let n = 0;
+      while (n < lim) { if (w.stats[k] >= capOf(w, k)) break; const r = SUC.spendPts(w, k, 1); if (!r.out.ok) break; w = r.state; list.push(k); n += 1; }
+      if (n) setPtListNow(list);
     };
     const undoK = (k) => {
-      const lim = msxPtLimit(ptUnit); let n = 0;
-      while (n < lim) {
-        const w = wsRef.current; const h = histRef.current; let hit = -1;
-        for (let i = h.length - 1; i >= 0; i--) { if (h[i].stats[k] < w.stats[k]) { hit = i; break; } }
-        if (hit < 0) break;
-        wsRef.current = h[hit]; histRef.current = h.slice(0, hit); n += 1;
-      }
-      if (n) { setWs(wsRef.current); setHist(histRef.current); }
+      const list = ptListRef.current.slice(); const lim = msxPtLimit(ptUnit); let n = 0;
+      while (n < lim) { const i = list.lastIndexOf(k); if (i < 0) break; list.splice(i, 1); n += 1; }
+      if (n) setPtListNow(list);
     };
+    // まとめて振る: いままでの振り分けを消して、1ポイントずつ並びに積み直す(結果は前と同じ。並びに残るので、あとから「−」で個別に戻せる)
     const preset = (kind) => {
-      let w = s; setHist([]);
-      if (kind === 'top') { const k = ev0.top && ev0.top[0] ? ev0.top[0] : 'pow'; w = SUC.spendPts(w, k, 9999).state; }
-      else if (kind === 'low') w = SUC.autoPts(w).state;
-      else if (kind === 'bal') { let moved = true; while (moved && w.pts > 0) { moved = false; for (const k of MSX_STATS) { const r = SUC.spendPts(w, k, 1); if (r.out.ok) { w = r.state; moved = true; } } } }
-      setWs(w);
+      let w = s; const list = [];
+      const one = (k) => { if (w.stats[k] >= capOf(w, k)) return false; const r = SUC.spendPts(w, k, 1); if (!r.out.ok) return false; w = r.state; list.push(k); return true; };
+      if (kind === 'top') { const k = ev0.top && ev0.top[0] ? ev0.top[0] : 'pow'; while (w.pts > 0 && one(k)) { /* 1つの能力に全部 */ } }
+      else if (kind === 'low') { while (w.pts > 0) { const k = MSX_STATS.slice().sort((x, y) => w.stats[x] - w.stats[y])[0]; if (!one(k)) break; } }
+      else if (kind === 'bal') { let moved = true; while (moved && w.pts > 0) { moved = false; for (const k of MSX_STATS) { if (one(k)) moved = true; } } }
+      setPtListNow(list);
     };
     const used = s.pts - ws.pts;
     const body = (<>
@@ -93009,16 +93014,16 @@ function MsxR3Retire({ run, setRun, onPause, debug, SUC }) {
         <button type="button" className="r3-chip" onClick={() => preset('top')}>全部 {MSX_STAT_NAME[(ev0.top || [])[0]] || 'ちから'}</button>
         <button type="button" className="r3-chip" onClick={() => preset('low')}>弱いところ</button>
         <button type="button" className="r3-chip" onClick={() => preset('bal')} data-msx-r3-bal>バランス</button>
-        <button type="button" className="r3-chip" onClick={() => { setWs(s); setHist([]); }}>戻す</button></div>
+        <button type="button" className="r3-chip" onClick={() => setPtListNow([])}>戻す</button></div>
       <div className="v-pa">{MSX_STATS.map((k) => {
         const add = ws.stats[k] - s.stats[k];
         return (<div key={k}><span className="nm">{MSX_STAT_ICON[k]} {MSX_STAT_NAME[k]}</span><span className="v0">{s.stats[k]}</span><span className="ad">{add ? `+${add}` : ''}</span>
-          <span className="st"><MsxPtBtn className="sym minus" aria-label={`${MSX_STAT_NAME[k]}を戻す`} disabled={!add} onPress={() => undoK(k)}/><b>{add}</b><MsxPtBtn disabled={ws.pts < SUC.ptsCost(ws, k) || ws.stats[k] >= capOf(ws, k)} onPress={() => spend(k)} data-msx-r3-plus={k} className="sym plus" aria-label={`${MSX_STAT_NAME[k]}を上げる`}/></span></div>);
+          <span className="st"><MsxPtBtn className="sym minus" aria-label={`${MSX_STAT_NAME[k]}を戻す`} disabled={!add} onPress={() => undoK(k)} data-msx-r3-ptminus={k}/><b>{add}</b><MsxPtBtn disabled={ws.pts < SUC.ptsCost(ws, k) || ws.stats[k] >= capOf(ws, k)} onPress={() => spend(k)} data-msx-r3-plus={k} className="sym plus" aria-label={`${MSX_STAT_NAME[k]}を上げる`}/></span></div>);
       })}</div>
       <div className="v-card"><div className="v-kv"><b>伸びすぎ注意</b><span>能力の上限はふつう 999(編成のモンスターで上がる)。その期の目安を超えた能力は、2ポイントで +1</span></div></div>
       <MsxSay aid={s.aid} ex="excited" text={ws.pts > 0 ? '「能力ポイントが残ってるよ! 使い切ってから、最後の評価を見よう!」' : '「使い切ったね! それじゃあ、最後の評価を見よう!」'}/>
     </>);
-    const foot = <div className="v-ft"><button type="button" onClick={() => { setWs(s); setHist([]); }}>やり直す</button><button type="button" className="go" onClick={() => { setRun({ ...run, s: ws }); setStep('e0'); }} data-msx-r3-e3>これで決める ▶</button></div>;
+    const foot = <div className="v-ft"><button type="button" onClick={() => setPtListNow([])}>やり直す</button><button type="button" className="go" onClick={() => { setRun({ ...run, s: ws }); setPtListNow([]); setStep('e0'); }} data-msx-r3-e3>これで決める ▶</button></div>;
     return <MsxR3Frame run={run} back="閉じる" onBack={onPause} right={right} body={body} foot={foot}/>;
   }
 
