@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a3a1329a9359594f
+// source-sha256: 6109e168f1144c29
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -176510,7 +176510,11 @@ function MsxEvent({
           ...o,
           picked: {
             scenes: [tail],
-            before: s.stats
+            before: s.stats,
+            delta: r.out.delta || null,
+            branch: !!r.out.branch,
+            hp0: s.hp,
+            st0: s.stress
           }
         }
       });
@@ -176526,6 +176530,8 @@ function MsxEvent({
         picked: {
           scenes: [r.out.next || (view && view.id ? `${view.id}.res` : null), r.out.scene].filter(Boolean),
           before: s.stats,
+          hp0: s.hp,
+          st0: s.stress,
           res: r.out.res,
           delta: r.out.delta || null,
           apt: r.out.delta && r.out.delta.apt ? r.out.delta.apt : null
@@ -176547,7 +176553,13 @@ function MsxEvent({
   const head = isStory ? `${msxAidName(s.aid)}のお話 ${o.ep === 'special' ? '特別な1話' : `第${o.ep}話`}` : isUniq ? `${msxAidName(s.aid)}の${view.title ? `「${view.title}」` : 'お話'}` : view && view.id === 'ev.self.anniv' ? '初めての育成記念日' : view && view.head || main.label || '育成イベント';
   const cheerIdx = view && Number.isInteger(view.cheer) ? view.cheer : null;
   const who = l => l.who === 'narr' ? null : l.who === 'issa' ? 'イッサ博士' : l.who === 'mon' ? run.nick : msxAidName(l.who);
-  return React.createElement(React.Fragment, null, React.createElement(MsxBand, {
+  return React.createElement(React.Fragment, null, picked && Number.isFinite(picked.hp0) ? React.createElement(MsxBand, {
+    s: s,
+    v: v,
+    ev: ev,
+    hpFrom: picked.hp0,
+    stFrom: picked.st0
+  }) : React.createElement(MsxBand, {
     s: s,
     v: v,
     ev: ev
@@ -176616,10 +176628,15 @@ function MsxEvent({
     who: s,
     stats: s.stats,
     ups: ups
-  }) : null, !isStory && typeof MsxEvResult === 'function' ? React.createElement(MsxEvResult, {
+  }) : null, typeof MsxEvResult === 'function' && (!isStory || picked.delta) ? React.createElement(MsxEvResult, {
     delta: picked.delta,
     hasStats: Object.keys(ups).length > 0
-  }) : null, gotGift ? React.createElement("div", {
+  }) : null, isStory && picked.branch ? React.createElement("div", {
+    className: "v-log",
+    "data-msx-story-branch": true
+  }, "🔀 この選び方で、", React.createElement("b", {
+    className: "ga"
+  }, "最後のお話(第4話)の結末"), "が変わる") : null, gotGift ? React.createElement("div", {
     className: "v-log",
     "data-msx-ev-gift": true
   }, giftItem.e, " ", React.createElement("b", {
