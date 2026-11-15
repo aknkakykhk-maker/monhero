@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 239062d30fd3fa64
+// source-sha256: bbf0fa87812f3bf9
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -162290,7 +162290,7 @@ function MsxTrainFinish({
         '--d': '1.2s',
         '--wd': '.35s'
       }
-    }, "みんなの力が ひとつに…!"), React.createElement("span", {
+    }, "みんなの力が 一つに…!"), React.createElement("span", {
       className: "flash mix",
       style: {
         '--d': '1.55s'
