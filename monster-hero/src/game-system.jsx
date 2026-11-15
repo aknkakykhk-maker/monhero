@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 963b09e3d7870011
+// generated-sha256: 2d0a2f32b3865123
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -80668,7 +80668,7 @@ function MonsucBracket({ suc, s, info, result: resultProp, onFight, onResultOnly
 }
 
 // ---- バトルカード(C2)。2体と VS・タブ・6能力の棒が伸びる ----
-function MonsucBattleCard({ suc, s, info, catalog, odds, onReady, onResultOnly, onBack, canSkip }) {
+function MonsucBattleCard({ suc, s, info, catalog, odds, noSulk, onReady, onResultOnly, onBack, canSkip }) {
   const [tab, setTab] = useState('st');
   const o = info.opp || {};
   const me = s.stats || {}; const op = o.stats || {};
@@ -80699,7 +80699,8 @@ function MonsucBattleCard({ suc, s, info, catalog, odds, onReady, onResultOnly, 
     : myKind && mscNum(me[myKind]) < mscNum(me[other(myKind)]) * 0.7
       ? <>こちらの技は <em>{MSC_STAT_JP[myKind]}技</em>が中心。{MSC_STAT_JP[myKind]}が低めで、痛手を与えにくいよ…</>
       : null;
-  const hint = loy < 40
+  // 意味不明な行動をしない上乗せ(見守りのアシスト・特別な1話)があるときは、忠誠の注意は出さない(r1115-202 ミハリの気づき)
+  const hint = loy < 40 && !noSulk
     ? <>忠誠が {loy} だと、<em>意味不明な行動</em>で 技を出さない番が あるよ…</>
     : kindWhy ? kindWhy
     : noReach.includes(foeBest.d)
@@ -80946,7 +80947,7 @@ function MonsucCupShowInner({ suc, s, me, settle, onRematch, onNext, onClose, st
   let body = null;
   if (!info) body = <p className="msc-note">大会が見つかりませんでした</p>;
   else if (phase === 'bracket') body = <MonsucBracket suc={suc} s={s} info={info} canSkip={canSkip} onClose={onClose} onFight={() => setPhase('card')} onResultOnly={() => canSkip && match && finish(match.won)}/>;
-  else if (phase === 'card') body = <MonsucBattleCard suc={suc} s={s} info={info} catalog={catalog} odds={odds} canSkip={canSkip} onBack={() => setPhase('bracket')} onReady={() => setPhase(info.buffs || info.buffRows.length ? 'cutin' : 'match')} onResultOnly={() => canSkip && match && finish(match.won)}/>;
+  else if (phase === 'card') body = <MonsucBattleCard suc={suc} s={s} info={info} catalog={catalog} odds={odds} noSulk={Boolean((oddsInput && oddsInput.buffs && oddsInput.buffs.A && oddsInput.buffs.A.noSulk) || (info.buffs && info.buffs.noSulk))} canSkip={canSkip} onBack={() => setPhase('bracket')} onReady={() => setPhase(info.buffs || info.buffRows.length ? 'cutin' : 'match')} onResultOnly={() => canSkip && match && finish(match.won)}/>;
   else if (phase === 'cutin') body = <MonsucCutin s={s} info={info} onGo={() => setPhase('match')}/>;
   else if (phase === 'match') {
     const canPlay = match && match.input && engine && typeof engine.createMatch === 'function';

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: feb29bb6bc154bce
+// source-sha256: 3e00f55a4692b118
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -154311,6 +154311,7 @@ function MonsucBattleCard({
   info,
   catalog,
   odds,
+  noSulk,
   onReady,
   onResultOnly,
   onBack,
@@ -154363,7 +154364,7 @@ function MonsucBattleCard({
   const foeKind = kindOf(foeTechs);
   const myKind = kindOf(myTechs);
   const kindWhy = foeKind && mscNum(op[foeKind]) < mscNum(op[other(foeKind)]) * 0.7 ? React.createElement(React.Fragment, null, "相手の技は ", React.createElement("em", null, MSC_STAT_JP[foeKind], "技"), "が中心。相手の", MSC_STAT_JP[foeKind], "は低めで、こちらへの痛手は小さいよ!") : myKind && mscNum(me[myKind]) < mscNum(me[other(myKind)]) * 0.7 ? React.createElement(React.Fragment, null, "こちらの技は ", React.createElement("em", null, MSC_STAT_JP[myKind], "技"), "が中心。", MSC_STAT_JP[myKind], "が低めで、痛手を与えにくいよ…") : null;
-  const hint = loy < 40 ? React.createElement(React.Fragment, null, "忠誠が ", loy, " だと、", React.createElement("em", null, "意味不明な行動"), "で 技を出さない番が あるよ…") : kindWhy ? kindWhy : noReach.includes(foeBest.d) ? React.createElement(React.Fragment, null, "相手の得意な", AMBW_DIST[foeBest.d], "の間合いに、", React.createElement("em", null, "届く技が無い"), "よ。入られたら 動いて離れよう!") : allAhead ? React.createElement(React.Fragment, null, "6つの能力は ", React.createElement("em", null, "どれも"), " 勝ってる! ", distWord, "で 押していこう!") : ahead.length ? React.createElement(React.Fragment, null, ahead.map(x => MSC_STAT_JP[x.k]).join('と'), "は 勝ってる! ", React.createElement("em", null, distWord), " で押していこう!") : React.createElement(React.Fragment, null, "能力は 相手が上…。", React.createElement("em", null, distWord), " で 技を当てていこう!");
+  const hint = loy < 40 && !noSulk ? React.createElement(React.Fragment, null, "忠誠が ", loy, " だと、", React.createElement("em", null, "意味不明な行動"), "で 技を出さない番が あるよ…") : kindWhy ? kindWhy : noReach.includes(foeBest.d) ? React.createElement(React.Fragment, null, "相手の得意な", AMBW_DIST[foeBest.d], "の間合いに、", React.createElement("em", null, "届く技が無い"), "よ。入られたら 動いて離れよう!") : allAhead ? React.createElement(React.Fragment, null, "6つの能力は ", React.createElement("em", null, "どれも"), " 勝ってる! ", distWord, "で 押していこう!") : ahead.length ? React.createElement(React.Fragment, null, ahead.map(x => MSC_STAT_JP[x.k]).join('と'), "は 勝ってる! ", React.createElement("em", null, distWord), " で押していこう!") : React.createElement(React.Fragment, null, "能力は 相手が上…。", React.createElement("em", null, distWord), " で 技を当てていこう!");
   const aptRow = (sp, me) => React.createElement("div", {
     className: "msc-apt"
   }, aptOf(sp, me).map((g, d) => React.createElement("span", {
@@ -154996,6 +154997,7 @@ function MonsucCupShowInner({
     info: info,
     catalog: catalog,
     odds: odds,
+    noSulk: Boolean(oddsInput && oddsInput.buffs && oddsInput.buffs.A && oddsInput.buffs.A.noSulk || info.buffs && info.buffs.noSulk),
     canSkip: canSkip,
     onBack: () => setPhase('bracket'),
     onReady: () => setPhase(info.buffs || info.buffRows.length ? 'cutin' : 'match'),
