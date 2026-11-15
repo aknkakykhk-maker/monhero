@@ -271,7 +271,7 @@ function ProfileScreen({
               <span className="min-w-0 flex-1"><small className="block text-[10px] font-black text-pink-300">ひとこと</small><b className="block break-words text-[12px] font-black leading-snug text-white" style={JA_LABEL_STYLE}>{profileMessage?`「${profileMessage}」`:<>まだ<wbr/>書いていません</>}</b></span>
               <Edit3 size={13} className="shrink-0 text-slate-400"/>
             </button>
-            <div className="mb-1"><ScreenSectionLabel>見せる札（フレンドにもこう見えます）</ScreenSectionLabel></div>
+            <div className="mb-1"><ScreenSectionLabel>見せる欄（フレンドにもこう見えます）</ScreenSectionLabel></div>
             <div className="grid grid-cols-2 gap-2">
               <button type="button" data-profile-favorite-masu onClick={onOpenFavoritePicker} className="flex min-h-[132px] flex-col items-start gap-1 rounded-2xl border-2 border-amber-600/60 bg-indigo-950/50 p-2 text-left active:scale-[.98]">
                 <small className="text-[10px] font-black text-amber-300" style={JA_LABEL_STYLE}>{jaWrap('好きなモンスター')}</small>

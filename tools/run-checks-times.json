@@ -685,6 +685,7 @@
   "supabase-apply-check.js": 0,
   "teaching-roster-size-check.js": 0.1,
   "text/japanese-linebreak-check.js": 106.1,
+  "ui/fuda-word-check.js": 0.1,
   "ui/screen-effects-browser-check.js": 4.1,
   "ui/screen-effects-check.js": 12.7,
   "ui/screen-parts-check.js": 0.3,

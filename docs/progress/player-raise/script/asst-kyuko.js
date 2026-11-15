@@ -162,7 +162,7 @@ const MONSUC_SCRIPT_KYUKO = Object.freeze([
   { id:'turn.retry.glass.kyuko1', who:'kyuko', e:'excited', t:'同じ相手にもう1回ね。負けた理由は見えてる、次は取れる笑' },
   { id:'turn.retry.rainbow.kyuko1', who:'kyuko', e:'normal', t:'相手変わったね。仕切り直し、作戦も組み直そぉ' },
   { id:'turn.cup.rivalcard.kyuko1', who:'kyuko', e:'excited', t:'{rival}が出る大会ね。勝てばごほうびおいしいよぉ笑' },
-  { id:'turn.cup.rivalcard.kyuko2', who:'kyuko', e:'normal', t:'ライバルの札かぁ。今の{mon}なら、勝ち筋はあると思うw' },
+  { id:'turn.cup.rivalcard.kyuko2', who:'kyuko', e:'normal', t:'ライバルの情報かぁ。今の{mon}なら、勝ち筋はあると思うw' },
 
   // ═══════════ ふだんのランダムイベント(random.js と同じ場面) ═══════════
   { id:'ev.daily.nut.kyuko1', who:'kyuko', e:'normal', t:'落とし物かぁ。届けるのが筋だけど、どうする？笑' },
@@ -205,7 +205,7 @@ const MONSUC_SCRIPT_KYUKO = Object.freeze([
   { id:'ev.goal.done.kyuko1', who:'kyuko', e:'happy', t:'目標クリア。計算どおりだねw' },
   { id:'ev.goal.miss.kyuko1', who:'kyuko', e:'normal', t:'届かなかったかぁ。次の期で取り返そ笑' },
   { id:'ev.season.jan1.kyuko1', who:'kyuko', e:'happy', t:'おみくじかぁ。確率的には吉が多いはずw' },
-  { id:'ev.season.jan2.kyuko1', who:'kyuko', e:'normal', t:'願い札ね。俺は「無課金でランカー」って書いとく笑' },
+  { id:'ev.season.jan2.kyuko1', who:'kyuko', e:'normal', t:'絵馬ね。俺は「無課金でランカー」って書いとく笑' },
   { id:'ev.season.jan3.kyuko1', who:'kyuko', e:'normal', t:'俺の願い？ ……{mon}が、俺の見立てをいい意味で裏切ってくれること。かな笑' },
   { id:'ev.season.apr1.kyuko1', who:'kyuko', e:'happy', t:'お花見いいねぇ。好きな曲流してもいい？w' },
   { id:'ev.season.apr2.kyuko1', who:'kyuko', e:'happy', t:'人気出てきたね。悪くない笑' },

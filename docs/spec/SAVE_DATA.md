@@ -347,6 +347,7 @@
 | `mh_rhythm_buddy_rank_seen_v1` | boolean | マスモンランキングの見かたの一度きりの案内を見たか(2026-10-08 追加) |
 | `mh_rhythm_buddy_talk_seen_v1` | boolean | マスモンのおしゃべりの使い方の一度きりの案内を見たか(2026-10-08 追加) |
 | `mh_rhythm_multi_select_sec_v1` | number / `null` | マルチでホストが決めた選曲の制限時間(秒。2026-10-07 追加)。`30` / `60` / `90` / `0`(なし)のどれか。次に部屋をつくるときのはじめの値。読むときは `rhythmMultiNormalizeSelectSec` を通す(無い・壊れているときは30) |
+| `mh_rhythm_multi_last_song_v1` | string(曲の id) / 未設定 | マルチの曲選びで前に選んだ曲(2026-11-15 r1115-165)。次の曲を選ぶときにその曲を選んだ状態・その位置で開く。読めない・形が違うときは使わない(いちばん上から) |
 | `mh_masu_beat_list_v1` | object / `null` | マスモン一覧(モンヒロビート)の並べ替え・しぼりこみ(2026-10-07 追加)。`{ sort, dir, lineage, played, traits[], moods[], view }`(`view` は `'list'` か `'card'`。2026-10-07 追加)。読むときは `rhythmBuddyNormalizeListSettings` を通す(知らない値は既定値) |
 | `mh_rhythm_perf_v1` | boolean / `false` | 性能計測(デバッグ限定)の ON/OFF |
 | `mh_rhythm_chart_notes_v1` | object / `{}` | 譜面メモ(デバッグ限定・2026-09-26)。`曲id|難易度` → 区間ごとの 👍/👎 とひとことメモ。譜面の作り直しを見分ける `fingerprint` 付き(`normalizeRhythmChartNotes`) |

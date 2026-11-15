@@ -122,6 +122,18 @@ const WRAP_PROBE = (sel) => {
         const n = await page.evaluate(() => document.querySelectorAll('[data-rhythm-song-offer]').length);
         // 有料の曲(買える全編)の数だけ並ぶ。曲を足すたびに数が増える(2026-11-15 Hopes and Dreams で4つ)
         check(`${tag}: 曲の札が有料の曲の数(${PAID_COUNT}つ)並ぶ`, n === PAID_COUNT, `${n}個`);
+        // 同じ段の札は、試し聴きの位置と値段(所持済み)の位置が札ごとにずれない(2026-11-15 r1115-162。作者の行が折れる・short ver. つきの有無でずれていた)
+        const align = await page.evaluate(() => {
+          const rows = new Map();
+          for (const c of document.querySelectorAll('[data-rhythm-song-offer]')) {
+            const cr = c.getBoundingClientRect(); const key = Math.round(cr.top);
+            const l = c.querySelector('[data-rhythm-song-listen]').getBoundingClientRect();
+            const f = c.querySelector('[data-rhythm-song-offer-foot]').getBoundingClientRect();
+            const row = rows.get(key) || { listenTops: [], footBottoms: [] }; row.listenTops.push(Math.round(l.top)); row.footBottoms.push(Math.round(f.bottom)); rows.set(key, row);
+          }
+          return [...rows.values()].filter((r) => r.listenTops.length > 1);
+        });
+        check(`${tag}: 同じ段の札で、試し聴きの高さと札の下の位置がそろう`, align.length > 0 && align.every((r) => new Set(r.listenTops).size === 1 && new Set(r.footBottoms).size === 1), JSON.stringify(align));
         if (SHOT) await page.screenshot({ path: path.join(SHOT, `shop-${owned ? 'own' : 'none'}-${label}.png`) });
         const info = await page.evaluate(() => [...document.querySelectorAll('[data-rhythm-song-offer]')].map((c) => { const r = c.getBoundingClientRect(); const img = c.querySelector('img'); const ir = img && img.getBoundingClientRect(); return { h: Math.round(r.height), w: Math.round(r.width), img: ir ? `${Math.round(ir.width)}x${Math.round(ir.height)}` : '-', text: c.innerText.replace(/\n/g, ' / ') }; }));
         console.log(`INFO: ${tag}: ${JSON.stringify(info)}`);
