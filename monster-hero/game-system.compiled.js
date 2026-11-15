@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e420db35b79b57e7
+// source-sha256: 126f9ccfd074a5c6
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -115628,9 +115628,9 @@ const assistantLifeStandLayout = (items, W, H) => {
   }
   const eyeOff = items.reduce((a, x) => a + ((x.face.eye || 0.4) - (x.face.top || 0)) * visH(x, F), 0) / n;
   const topY = H * (W > H ? 0.36 : 0.42) - eyeOff;
-  return items.map((x, i) => {
+  const lays = items.map((x, i) => {
     const cx = W * 0.04 + sw * (i + 0.5);
-    return {
+    const p = {
       ...assistantLifeStandRule({
         face: x.face,
         box: x.box,
@@ -115641,7 +115641,30 @@ const assistantLifeStandLayout = (items, W, H) => {
       cx,
       face: F
     };
+    const vl = p.left + x.box.l * p.width,
+      vr = p.left + x.box.r * p.width;
+    const dx = vr > W ? W - vr : vl < 0 ? -vl : 0;
+    return dx ? {
+      ...p,
+      left: p.left + dx,
+      cx: cx + dx
+    } : p;
   });
+  const cuts = lays.filter((p, i) => !items[i].face.head);
+  if (cuts.length >= 2) {
+    const cutY = Math.min(...cuts.map(p => Math.min(p.frameBottom, p.top + p.height)));
+    for (let i = 0; i < lays.length; i++) {
+      const p = lays[i];
+      if (items[i].face.head) continue;
+      lays[i] = {
+        ...p,
+        clip: [p.clip[0], Math.max(0, p.top + p.height - cutY)],
+        frameBottom: cutY,
+        fade: [Math.max(0, (cutY - ASSISTANT_LIFE_STAND_CUT.fade * p.U - p.top) / p.height), Math.min(1, (cutY - p.top) / p.height)]
+      };
+    }
+  }
+  return lays;
 };
 function AssistantLifeStands({
   ids,
@@ -169280,6 +169303,13 @@ const MSX_CSS = `
 .msx .v-tr.tag .o{animation:msx-glow 1.6s ease-in-out infinite}
 .msx-fade{animation:msx-fadein .18s ease-out}
 /* 社長「育成中のメイン・トレーニングの画面は、モンスターもっと小さくしてぴょこぴょこ動く」(2026-11-12)。いまの約7割 */
+.msx .v-scene.home .msx-roam{position:absolute;inset:0;pointer-events:none;transform-origin:50% 72%;animation:msx-roam-mv 28s linear infinite;will-change:transform}
+.msx .v-scene.home .msx-roam-f{position:absolute;inset:0;transform-origin:50% 72%;animation:msx-roam-fl 28s steps(1,end) infinite}
+.msx .v-scene.home .msx-roam-h{position:absolute;inset:0;animation:msx-roam-hp 28s linear infinite}
+@keyframes msx-roam-mv{0%{transform:translate(0%,0%) scale(1)}10%{transform:translate(24%,0%) scale(1)}14%{transform:translate(24%,0%) scale(1)}15%{transform:translate(24%,0%) scale(1)}26%{transform:translate(-4%,11%) scale(1.2)}30%{transform:translate(-4%,11%) scale(1.2)}31%{transform:translate(-4%,11%) scale(1.2)}40%{transform:translate(-22%,9%) scale(1.15)}41%{transform:translate(-22%,9%) scale(1.15)}52%{transform:translate(-18%,-4%) scale(0.92)}56%{transform:translate(-18%,-4%) scale(0.92)}57%{transform:translate(-18%,-4%) scale(0.92)}68%{transform:translate(20%,-4%) scale(0.92)}72%{transform:translate(20%,-4%) scale(0.92)}73%{transform:translate(20%,-4%) scale(0.92)}88%{transform:translate(0%,0%) scale(1)}92%{transform:translate(0%,0%) scale(1)}93%{transform:translate(0%,0%) scale(1)}100%{transform:translate(0%,0%) scale(1)}}
+@keyframes msx-roam-fl{0%{transform:scaleX(1)}10%{transform:scaleX(1)}14%{transform:scaleX(1)}15%{transform:scaleX(-1)}26%{transform:scaleX(-1)}30%{transform:scaleX(-1)}31%{transform:scaleX(1)}40%{transform:scaleX(1)}41%{transform:scaleX(-1)}52%{transform:scaleX(-1)}56%{transform:scaleX(-1)}57%{transform:scaleX(1)}68%{transform:scaleX(1)}72%{transform:scaleX(1)}73%{transform:scaleX(-1)}88%{transform:scaleX(-1)}92%{transform:scaleX(-1)}93%{transform:scaleX(1)}100%{transform:scaleX(1)}}
+@keyframes msx-roam-hp{0%{transform:translateY(0)}0.5%{transform:translateY(-3.5%)}1.6%{transform:translateY(0)}2.7%{transform:translateY(-3.5%)}3.8%{transform:translateY(0)}4.9%{transform:translateY(-3.5%)}6.0%{transform:translateY(0)}7.1%{transform:translateY(-3.5%)}8.2%{transform:translateY(0)}9.3%{transform:translateY(-3.5%)}10%{transform:translateY(0)}11.1%{transform:translateY(0)}11.5%{transform:translateY(-9%)}12.0%{transform:translateY(0)}12.2%{transform:translateY(0)}12.6%{transform:translateY(-9%)}13.1%{transform:translateY(0)}15.5%{transform:translateY(-3.5%)}16.6%{transform:translateY(0)}17.7%{transform:translateY(-3.5%)}18.8%{transform:translateY(0)}19.9%{transform:translateY(-3.5%)}21.0%{transform:translateY(0)}22.1%{transform:translateY(-3.5%)}23.2%{transform:translateY(0)}24.3%{transform:translateY(-3.5%)}25.4%{transform:translateY(0)}26%{transform:translateY(0)}31.5%{transform:translateY(-3.5%)}32.6%{transform:translateY(0)}33.7%{transform:translateY(-3.5%)}34.8%{transform:translateY(0)}35.9%{transform:translateY(-3.5%)}37.0%{transform:translateY(0)}38.1%{transform:translateY(-3.5%)}39.2%{transform:translateY(0)}40%{transform:translateY(0)}57.5%{transform:translateY(-3.5%)}58.1%{transform:translateY(0)}58.5%{transform:translateY(-9%)}58.6%{transform:translateY(0)}59.0%{transform:translateY(0)}59.2%{transform:translateY(0)}59.6%{transform:translateY(-9%)}59.7%{transform:translateY(-3.5%)}60.1%{transform:translateY(0)}60.8%{transform:translateY(0)}61.9%{transform:translateY(-3.5%)}63.0%{transform:translateY(0)}64.1%{transform:translateY(-3.5%)}65.2%{transform:translateY(0)}66.3%{transform:translateY(-3.5%)}67.4%{transform:translateY(0)}68%{transform:translateY(0)}73.5%{transform:translateY(-3.5%)}74.6%{transform:translateY(0)}75.7%{transform:translateY(-3.5%)}76.8%{transform:translateY(0)}77.9%{transform:translateY(-3.5%)}79.0%{transform:translateY(0)}80.1%{transform:translateY(-3.5%)}81.2%{transform:translateY(0)}82.3%{transform:translateY(-3.5%)}83.4%{transform:translateY(0)}84.5%{transform:translateY(-3.5%)}85.6%{transform:translateY(0)}86.7%{transform:translateY(-3.5%)}87.8%{transform:translateY(0)}88%{transform:translateY(0)}}
+@media (prefers-reduced-motion:reduce){.msx .v-scene.home .msx-roam,.msx .v-scene.home .msx-roam-f,.msx .v-scene.home .msx-roam-h{animation:none}}
 .msx .v-scene.home .mon{height:24%}.msx.land .v-scene.home .mon{height:28%}.msx.s320 .v-scene.home .mon{height:26%}
 .msx span.mon{display:block}
 .msx .mon.msx-live{animation:none;filter:none}
@@ -169426,10 +169456,10 @@ const MSX_CSS = `
 .msx .msx-tp-tm .fc{position:relative}.msx .msx-tp-tm .fc .fr{position:absolute;right:1px;bottom:0;font-size:12px;line-height:1}
 .msx .msx-tp-chips{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;padding:6px 8px 2px}
 .msx .msx-tp .msx-tp-chips button{min-width:0;padding:0 2px;font-size:11.5px;overflow:hidden}
-.msx .msx-tp-tabs{display:flex;gap:5px;padding:6px 8px 2px}
-.msx .msx-tp .msx-tp-tabs button{flex:1 1 0;min-width:0;overflow-wrap:anywhere;font-size:11.5px;padding:2px 4px;white-space:normal;line-height:1.15;flex-direction:column;gap:0;border-radius:12px}
+.msx .msx-tp-tabs{display:flex;flex-wrap:wrap;gap:5px;padding:6px 8px 2px}
+.msx .msx-tp .msx-tp-tabs button{flex:1 1 auto;min-width:0;font-size:11.5px;padding:2px 8px;white-space:nowrap;line-height:1.15;flex-direction:column;gap:0;border-radius:12px}
 .msx .msx-tp-tabs button,.msx .msx-tp-chips button{flex:none;display:flex;align-items:center;justify-content:center;gap:4px;min-height:44px;padding:0 12px;border-radius:99px;font-size:12px;font-weight:900;color:#fff;background:#2b3348;white-space:nowrap}
-.msx .msx-tp-tabs button small{font-size:10px;color:#cbd5e1}
+.msx .msx-tp-tabs button small{font-size:10px;color:#cbd5e1}.msx .msx-tp-tabs button.fr{background:#0c4a6e;color:#e0f2fe}
 .msx .msx-tp-tabs button.on,.msx .msx-tp-chips button.on{background:#fde047;color:#422006}.msx .msx-tp-tabs button.on small{color:#713f12}
 .msx .msx-tp-bar{display:flex;align-items:center;gap:6px;padding:4px 8px}
 .msx .msx-tp-sel{display:flex;align-items:center;gap:4px;font-size:10.5px;color:#cbd5e1}
@@ -170969,7 +170999,7 @@ function MsxSlotPicker({
       return '';
     }
   };
-  const boxFull = (Number.isFinite(teamRaisedN) ? teamRaisedN : teamBox.length) >= 5 && !(cur && (cur.box || cur.assist));
+  const boxFull = false;
   return React.createElement("div", {
     className: "msx-ov msx-fade",
     "data-msx-slot-picker": true,
@@ -171007,7 +171037,7 @@ function MsxSlotPicker({
     style: {
       marginTop: 8
     }
-  }, "マスモンボックスのモンスター(5体まで)"), raised.length ? raised.map(m => {
+  }, "マスモンボックスのモンスター"), raised.length ? raised.map(m => {
     const on = cur && cur.box === m.id;
     const used = !on && teamBox.includes(m.id);
     return React.createElement("button", {
@@ -171167,16 +171197,16 @@ function MsxStart({
   const species = pick.box ? (box.mons.find(m => m.id === pick.box) || {}).species || 'Mocchi' : pick.base;
   const [teamSlotsSt, setTeamSlotsSt] = useState(() => {
     const own0 = unlocked[0] || 'Mocchi';
-    let nb = 0;
+    const seen = new Set();
     const o = (meta.team || []).slice(0, 6).map(t => {
-      if (t && t.box && raised.some(m => m.id === t.box) && nb < 5) {
-        nb += 1;
+      if (t && t.box && raised.some(m => m.id === t.box) && !seen.has(`b${t.box}`)) {
+        seen.add(`b${t.box}`);
         return {
           box: t.box
         };
       }
-      if (t && t.assist && stock.some(m => m.id === t.assist) && nb < 5) {
-        nb += 1;
+      if (t && t.assist && stock.some(m => m.id === t.assist) && !seen.has(`a${t.assist}`)) {
+        seen.add(`a${t.assist}`);
         return {
           assist: t.assist
         };
@@ -171196,23 +171226,21 @@ function MsxStart({
   const teamAssist = teamSlotsSt.filter(t => t && t.assist).map(t => t.assist);
   const teamRaisedN = teamBox.length + teamAssist.length;
   const [friend, setFriend] = useState(null);
+  const [friendAt, setFriendAt] = useState(5);
   const [lendList, setLendList] = useState(null);
   const autoBases = useMemo(() => {
     const o = unlocked.filter(id => id !== species);
     return o.length ? o : [species];
   }, [unlocked, species]);
   const team = useMemo(() => {
-    const room = friend ? 5 : 6;
     let ai = 0;
-    const list = teamSlotsSt.slice(0, room).map(t => t || {
+    return teamSlotsSt.slice(0, 6).map((t, i) => friend && i === friendAt ? {
+      friend
+    } : t || {
       base: autoBases[ai++ % autoBases.length],
       auto: true
     });
-    if (friend) list.push({
-      friend
-    });
-    return list;
-  }, [teamSlotsSt, autoBases, friend]);
+  }, [teamSlotsSt, autoBases, friend, friendAt]);
   const members = useMemo(() => team.map(t => {
     const src = t.friend ? t.friend : msxTeamSrc(t, box, species, data.assist);
     const m = SUC.memberOf(src);
@@ -171507,27 +171535,44 @@ function MsxStart({
     }));
     go = 'このモンスターにする ▶';
   } else if (step === 1) {
-    const putSlot = (i, v) => setTeamSlotsSt(cur => {
-      const n = cur.slice();
-      if (v && v.box) {
-        const at = n.findIndex(t => t && t.box === v.box);
-        if (at >= 0) n[at] = null;
-        if (n.filter(t => t && (t.box || t.assist)).length >= 5 && !(n[i] && (n[i].box || n[i].assist))) return cur;
+    const putSlot = (i, v) => {
+      if (friend && i === friendAt) {
+        setFriend(null);
       }
-      if (v && v.assist) {
-        const at = n.findIndex(t => t && t.assist === v.assist);
-        if (at >= 0) n[at] = null;
-        if (n.filter(t => t && (t.box || t.assist)).length >= 5 && !(n[i] && (n[i].box || n[i].assist))) return cur;
+      setTeamSlotsSt(cur => {
+        const n = cur.slice();
+        if (v && v.box) {
+          const at = n.findIndex(t => t && t.box === v.box);
+          if (at >= 0) n[at] = null;
+        }
+        if (v && v.assist) {
+          const at = n.findIndex(t => t && t.assist === v.assist);
+          if (at >= 0) n[at] = null;
+        }
+        n[i] = v;
+        return n;
+      });
+    };
+    const putFriend = (i, m) => {
+      if (!m) {
+        setFriend(null);
+        return;
       }
-      n[i] = v;
-      return n;
-    });
-    const openSlot = i => i === 5 && typeof MsxFriendPick === 'function' && typeof monsucLendFriends === 'function' ? setFriendOpen(true) : setSlotPick(i);
+      setFriend(m);
+      setFriendAt(i);
+      setTeamSlotsSt(cur => {
+        const n = cur.slice();
+        n[i] = null;
+        return n;
+      });
+    };
+    const lendOn = typeof MsxFriendPick === 'function' && typeof monsucLendFriends === 'function';
+    const openSlot = i => friend && i === friendAt && lendOn ? setFriendOpen(i) : setSlotPick(i);
     body = React.createElement(React.Fragment, null, React.createElement("div", {
       className: "v-h"
     }, "編成の6体", React.createElement("small", {
       style: typeof JA_LABEL_STYLE !== 'undefined' ? JA_LABEL_STYLE : undefined
-    }, (typeof jaWrap === 'function' ? jaWrap : t => t)('枠を押して選ぶ。マスモンボックスから5体まで・右下はフレンドの枠。強いモンスターほどよく伸びる'))), React.createElement("div", {
+    }, (typeof jaWrap === 'function' ? jaWrap : t => t)('枠を押して選ぶ。6枠のどこにも自分のモンスターを入れられ、フレンドは1体まで。強いモンスターほどよく伸びる'))), React.createElement("div", {
       className: "v-slots msx-team6",
       "data-msx-team6": true
     }, members.map((m, i) => React.createElement("div", {
@@ -171540,9 +171585,9 @@ function MsxStart({
       onKeyDown: e => {
         if (e.key === 'Enter' || e.key === ' ') openSlot(i);
       }
-    }, i === 5 ? React.createElement("i", {
+    }, m.friend ? React.createElement("i", {
       className: "msx-sl-fr"
-    }, "🤝 フレンド枠") : null, React.createElement("span", {
+    }, "🤝 フレンド") : null, React.createElement("span", {
       className: `v-pf lg r${m.rank === 'base' ? 'G' : m.rank}${m.kind === 'base' ? ' base' : ''}`
     }, (() => {
       const img = React.createElement("img", {
@@ -171594,7 +171639,7 @@ function MsxStart({
     }, React.createElement("button", {
       type: "button",
       disabled: !(raised.length || stock.length) || typeof msxTeamAuto !== 'function',
-      onClick: () => setTeamSlotsSt(cur => msxTeamAuto(cur, raised, stock, SUC, box, species, data.assist)),
+      onClick: () => setTeamSlotsSt(cur => msxTeamAuto(cur, raised, stock, SUC, box, species, data.assist, friend ? friendAt : null)),
       "data-msx-team-auto": true
     }, "おまかせ"), React.createElement("button", {
       type: "button",
@@ -171614,8 +171659,13 @@ function MsxStart({
       SUC: SUC,
       box: box,
       assistData: data.assist,
+      friendAt: friend ? friendAt : null,
+      onFriend: lendOn ? () => {
+        const i = slotPick;
+        setSlotPick(null);
+        setFriendOpen(i);
+      } : null,
       onDone: v => {
-        if (slotPick === 5 && friend) setFriend(null);
         putSlot(slotPick, v);
         setSlotPick(null);
       },
@@ -171636,24 +171686,22 @@ function MsxStart({
       },
       onClose: () => setSlotPick(null)
     }));
-    if (friendOpen) full = React.createElement(MsxFriendPick, {
+    if (friendOpen !== false && friendOpen != null) full = React.createElement(MsxFriendPick, {
+      idx: friendOpen,
+      friendAt: friend ? friendAt : null,
       lendList: lendList,
       onLoad: openLend,
       friend: friend,
       members: members,
       SUC: SUC,
       onPick: m => {
-        if (m) setTeamSlotsSt(cur => {
-          const n = cur.slice();
-          n[5] = null;
-          return n;
-        });
-        setFriend(m);
+        putFriend(friendOpen, m);
         setFriendOpen(false);
       },
       onOwn: () => {
+        const i = friendOpen;
         setFriendOpen(false);
-        setSlotPick(5);
+        setSlotPick(i);
       },
       onClose: () => setFriendOpen(false)
     });
@@ -172152,10 +172200,9 @@ function msxTpPress(onTap, onLong) {
     }
   };
 }
-function msxTeamAuto(slots, raised, stock, SUC, box, own, assistData) {
+function msxTeamAuto(slots, raised, stock, SUC, box, own, assistData, skip = null) {
   const n = slots.slice();
   while (n.length < 6) n.push(null);
-  const keep5 = n[5] && (n[5].box || n[5].assist) ? n[5] : null;
   const pow = slot => {
     try {
       return SUC.memberOf(msxTeamSrc(slot, box, own, assistData)).power || 0;
@@ -172167,12 +172214,19 @@ function msxTeamAuto(slots, raised, stock, SUC, box, own, assistData) {
     box: m.id
   })), ...stock.map(m => ({
     assist: m.id
-  }))].filter(s => !msxTpSame(s, keep5)).map(s => ({
+  }))].map(s => ({
     s,
     p: pow(s)
   })).sort((a, b) => b.p - a.p);
-  const room = 5 - (keep5 ? 1 : 0);
-  for (let i = 0; i < 5; i += 1) n[i] = i < room && cand[i] ? cand[i].s : null;
+  let k = 0;
+  for (let i = 0; i < 6; i += 1) {
+    if (i === skip) {
+      n[i] = null;
+      continue;
+    }
+    n[i] = cand[k] ? cand[k].s : null;
+    k += 1;
+  }
   return n;
 }
 function MsxTpDetail({
@@ -172248,6 +172302,8 @@ function MsxTeamPick({
   SUC,
   box,
   assistData,
+  friendAt = null,
+  onFriend = null,
   onDone,
   onClose
 }) {
@@ -172319,11 +172375,6 @@ function MsxTeamPick({
       t: `編成中(${at + 1}枠目)`,
       c: 'in'
     };
-    if (x.kind !== 'base' && raisedN >= 5 && !(cand && (cand.box || cand.assist))) return {
-      t: '5体まで',
-      c: 'lk',
-      lock: true
-    };
     if (x.species === own) return {
       t: '育てる種と同じ',
       c: 'own'
@@ -172335,8 +172386,9 @@ function MsxTeamPick({
     return null;
   };
   const tabs = [['box', 'マスモンボックス', raised.length], ['memo', 'メモリアル', stock.length], ['base', 'ベースモン', unlocked.length]].filter(([k,, n]) => k !== 'memo' || n);
+  const frOf = i => i === friendAt && i !== idx && members[i] && members[i].friend;
   const curName = (s, i) => {
-    if (i === 5 && !s && members[5] && members[5].friend) return members[5].name;
+    if (frOf(i)) return members[i].name;
     const m = s ? memOf(s) : null;
     return m ? m.name : 'おまかせ';
   };
@@ -172351,8 +172403,8 @@ function MsxTeamPick({
     className: "msx-tp-team",
     "data-msx-tp-team": true
   }, view.map((s, i) => {
-    const fr = i === 5 && members[5] && members[5].friend && i !== idx;
-    const sp = fr ? members[5].species : s ? (memOf(s) || {}).species : null;
+    const fr = frOf(i);
+    const sp = fr ? members[i].species : s ? (memOf(s) || {}).species : null;
     return React.createElement("div", {
       key: i,
       className: `msx-tp-tm${i === idx ? ' on' : ''}${s ? '' : ' em'}`
@@ -172374,7 +172426,12 @@ function MsxTeamPick({
     className: tab === k ? 'on' : '',
     onClick: () => setTab(k),
     "data-msx-tp-tab": k
-  }, name, React.createElement("small", null, n)))), React.createElement("div", {
+  }, name, React.createElement("small", null, n))), onFriend ? React.createElement("button", {
+    type: "button",
+    className: "fr",
+    onClick: onFriend,
+    "data-msx-tp-tab": "friend"
+  }, "🤝 フレンド", React.createElement("small", null, friendAt != null && friendAt !== idx ? `${friendAt + 1}枠目にいる` : '1体まで')) : null), React.createElement("div", {
     className: "msx-tp-bar"
   }, React.createElement("label", {
     className: "msx-tp-sel"
@@ -172398,7 +172455,7 @@ function MsxTeamPick({
     value: k
   }, MSX_STAT_NAME[k])))), React.createElement("span", {
     className: "msx-tp-cnt"
-  }, tab === 'base' ? '' : `${raisedN}/5体`)), tab === 'memo' ? React.createElement("div", {
+  }, tab === 'base' ? '' : `自分 ${raisedN}/6体`)), tab === 'memo' ? React.createElement("div", {
     className: "msx-tp-note"
   }, "メモリアルモンスターは育成には使えません。アシスト効果と得意な能力だけ効きます") : null, React.createElement("div", {
     className: "msx-tp-list",
@@ -172467,6 +172524,8 @@ function MsxTeamPick({
   }) : null);
 }
 function MsxFriendPick({
+  idx = 5,
+  friendAt = null,
   lendList,
   onLoad,
   friend,
@@ -172480,7 +172539,7 @@ function MsxFriendPick({
   useEffect(() => {
     if (lendList === null && typeof onLoad === 'function') onLoad();
   }, []);
-  const others = members.filter((m, i) => i < 5);
+  const others = members.filter(m => m && !m.friend);
   const rows = lendList && lendList !== 'loading' && lendList.ok ? lendList.rows : [];
   const list = rows.map(row => {
     let m = null;
@@ -172510,7 +172569,10 @@ function MsxFriendPick({
     className: "msx-tp"
   }, React.createElement("div", {
     className: "msx-tp-hd"
-  }, React.createElement("b", null, "🤝 フレンドから借りる(1体)"), React.createElement("small", null, "6枠目に入ります")), React.createElement("div", {
+  }, React.createElement("b", null, "🤝 フレンドから借りる(1体まで)"), React.createElement("small", null, idx + 1, "枠目に入ります")), friendAt != null && friendAt !== idx ? React.createElement("div", {
+    className: "msx-tp-note",
+    "data-msx-fp-move": true
+  }, "フレンドは1体まで。選ぶと、", friendAt + 1, "枠目のフレンドがこの枠へ移ります") : null, React.createElement("div", {
     className: "msx-tp-chips",
     "data-msx-fp-only": true
   }, [['all', '全て'], ...MSX_STATS.map(k => [k, `${MSX_STAT_ICON[k]}${MSX_STAT_NAME[k]}`])].map(([k, n]) => React.createElement("button", {
@@ -172580,7 +172642,7 @@ function MsxFriendPick({
     type: "button",
     onClick: onOwn,
     "data-msx-fp-own": true
-  }, "自分のモンスターを入れる"))));
+  }, "自分のモンスターにする"))));
 }
 function MsxTeamEffects({
   members,
@@ -173579,6 +173641,8 @@ function MonheroSuccessScreen({
       ...data.meta,
       team: cfg.teamSlots.map(t => t.box ? {
         box: t.box
+      } : t.assist ? {
+        assist: t.assist
       } : {
         base: t.base
       }),
@@ -175154,12 +175218,19 @@ function MsxPlay({
     }), React.createElement("div", {
       className: "sh"
     }), React.createElement("div", {
+      className: "msx-roam",
+      "data-msx-roam": true
+    }, React.createElement("div", {
+      className: "msx-roam-h"
+    }, React.createElement("div", {
+      className: "msx-roam-f"
+    }, React.createElement("div", {
       className: "gr"
     }), React.createElement(MsxMonArt, {
       run: run,
       className: `mon${low ? ' low' : ''}`,
       live: true
-    }), React.createElement("div", {
+    })))), React.createElement("div", {
       className: "v-party"
     }, React.createElement("small", null, "編成"), s.team.map((m, i) => React.createElement(MsxPf, {
       key: i,
@@ -177484,7 +177555,7 @@ function MsxR3Cup({
     style: {
       margin: 0
     }
-  }, React.createElement("b", null, "出ると"), React.createElement("span", null, "1戦だけ・1ターン使う・勝つと賞金と賞品。", toForced ? React.createElement("span", {
+  }, React.createElement("b", null, "出ると"), React.createElement("span", null, "1戦だけ・1ターン使う・体力は減りません・勝つと賞金と賞品。", toForced ? React.createElement("span", {
     className: "yel"
   }, ' 期末の大会まで ', React.createElement("span", {
     style: {
