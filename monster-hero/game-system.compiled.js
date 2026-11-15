@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a10c6549b38caab7
+// source-sha256: 5ec406d1b0cc4530
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -170552,7 +170552,7 @@ const MSX_CSS = `
 .msx .v-a.dim{opacity:.55}
 .msx .v-a.wide{grid-column:1/-1}
 .msx .v-pick{background:#0f172a;border:1px solid #f472b6;border-radius:12px;padding:5px 9px;margin-top:6px;font-size:10.5px;font-weight:800;line-height:1.5}
-.msx .v-pick b{color:#fde047}
+.msx .v-pick b{color:#fde047;white-space:nowrap} /* 取るものの1項目(名前と効き目)は途中で折らない。折るのは項目のあいだの「・」(r1115-197) */
 .msx.land .v-body{display:grid;grid-template-columns:40% 1fr;grid-template-rows:repeat(7,min-content) 1fr;column-gap:8px;padding-bottom:6px}
 .msx.land .v-body>*{grid-column:2}
 .msx.land .v-body>.v-scene{grid-column:1;grid-row:1/-1;height:auto;margin-top:5px}
@@ -177857,6 +177857,98 @@ function MsxPtBtn({
     onPress: fire
   }, rest));
 }
+function MsxPtTabs({
+  tab,
+  setTab
+}) {
+  return React.createElement("div", {
+    className: "msx-ptunit",
+    role: "tablist",
+    "aria-label": "振り分け先",
+    "data-msx-pt-tabs": true
+  }, [['stat', '能力'], ['mastery', '技の熟練']].map(([k, nm]) => React.createElement("button", {
+    type: "button",
+    role: "tab",
+    key: k,
+    "aria-selected": tab === k,
+    className: `chip${tab === k ? ' on' : ''}`,
+    onClick: () => setTab(k),
+    "data-msx-pt-tab": k
+  }, nm)));
+}
+function MsxMasteryRows({
+  SUC,
+  s,
+  ws,
+  techs,
+  addOf,
+  plus,
+  minus
+}) {
+  const M = SUC.MASTERY || {
+    max: 100,
+    boost: {
+      pow: 0.10,
+      hit: 0.05
+    }
+  };
+  const cost = SUC.PTS && SUC.PTS.mastery || 10;
+  const pc = (m, k) => `${(m / M.max * M.boost[k] * 100).toFixed(1)}%`;
+  return React.createElement(React.Fragment, null, React.createElement("div", {
+    className: "msx-note"
+  }, cost, "点で熟練 +1(0〜", M.max, ")。熟練が ", M.max, " で、技の威力 +", M.boost.pow * 100, "%・命中 +", M.boost.hit * 100, "%。仮に振って「決定」で確定する"), techs.length ? techs.map(t => {
+    const k = `m:${t.id}`;
+    const n = addOf(k);
+    const m0 = Math.round(Number((s.mastery || {})[t.id]) || 0);
+    const m1 = Math.round(Number((ws.mastery || {})[t.id]) || 0);
+    return React.createElement("div", {
+      key: t.id,
+      className: "msx-ab-row",
+      "data-msx-pts-mrow": t.id
+    }, React.createElement("span", {
+      className: "n"
+    }, t.kind === 'wise' ? '🧠' : '💪', " ", t.name, React.createElement("small", {
+      className: "sub",
+      style: {
+        display: 'block',
+        fontSize: 10,
+        color: '#94a3b8'
+      }
+    }, "威力 +", pc(m1, 'pow'), "・命中 +", pc(m1, 'hit'), n ? `(いまは +${pc(m0, 'pow')}・+${pc(m0, 'hit')})` : '')), React.createElement("span", {
+      style: {
+        fontSize: 12,
+        fontWeight: 900,
+        whiteSpace: 'nowrap'
+      }
+    }, n ? React.createElement(React.Fragment, null, m0, " → ", React.createElement("b", {
+      style: {
+        width: 'auto',
+        color: '#fde047'
+      }
+    }, m1), " ", React.createElement("small", {
+      style: {
+        color: '#fde047',
+        fontSize: 11
+      }
+    }, "(+", n, ")")) : React.createElement("b", {
+      style: {
+        width: 'auto'
+      }
+    }, m0)), React.createElement(MsxPtBtn, {
+      className: "chip sym minus pt44",
+      disabled: !n,
+      onPress: () => minus(k),
+      "aria-label": `${t.name}の熟練を戻す`
+    }), React.createElement(MsxPtBtn, {
+      className: "chip on sym plus pt44",
+      disabled: ws.pts < cost || m1 >= M.max,
+      onPress: () => plus(k),
+      "aria-label": `${t.name}の熟練を上げる`
+    }));
+  }) : React.createElement("div", {
+    className: "sub"
+  }, "まだ覚えている技がない"));
+}
 function MsxStats({
   run,
   setRun,
@@ -177883,6 +177975,7 @@ function MsxStats({
   const addOf = k => draft.filter(x => x === k).length;
   const capK = k => typeof SUC.statCapOf === 'function' ? SUC.statCapOf(s, k) : 999;
   const [unit, setUnit] = useMsxPtUnit();
+  const [ptTab, setPtTab] = useState('stat');
   const draftRef = useRef(draft);
   draftRef.current = draft;
   const setDraftNow = list => {
@@ -177895,7 +177988,7 @@ function MsxStats({
     const lim = msxPtLimit(unit);
     let n = 0;
     while (n < lim) {
-      if (w.stats[k] >= capK(k)) break;
+      if (!String(k).startsWith('m:') && w.stats[k] >= capK(k)) break;
       const r = SUC.spendPts(w, k, 1);
       if (!r.out.ok) break;
       w = r.state;
@@ -177986,10 +178079,21 @@ function MsxStats({
     }
   }, used)), React.createElement("div", {
     className: "v-num"
-  }, React.createElement("small", null, "残りの点"), React.createElement("b", null, ws.pts))), React.createElement(MsxPtUnits, {
+  }, React.createElement("small", null, "残りの点"), React.createElement("b", null, ws.pts))), React.createElement(MsxPtTabs, {
+    tab: ptTab,
+    setTab: setPtTab
+  }), React.createElement(MsxPtUnits, {
     unit: unit,
     setUnit: setUnit
-  }), React.createElement("div", {
+  }), ptTab === 'mastery' ? React.createElement(MsxMasteryRows, {
+    SUC: SUC,
+    s: s,
+    ws: ws,
+    techs: techs,
+    addOf: addOf,
+    plus: plus,
+    minus: minus
+  }) : React.createElement(React.Fragment, null, React.createElement("div", {
     className: "msx-note"
   }, "＋で仮に振り(押し続けると続けて振れる)、「決定」で確定する。1点で +1(期の目安", lineOf ? ` ${lineOf}` : '', "を超えると 2点で +1)"), MSX_STATS.map(k => {
     const n = addOf(k);
@@ -178044,7 +178148,7 @@ function MsxStats({
       onPress: () => plus(k),
       "aria-label": `${MSX_STAT_NAME[k]}を上げる`
     }));
-  }), React.createElement("div", {
+  })), React.createElement("div", {
     className: "msx-row",
     style: {
       marginTop: 8,
@@ -179402,10 +179506,12 @@ const msxR3CupReward = (SUC, c, s) => {
   }
   const R = SUC.CUP_SYS ? SUC.CUP_SYS[c.sys] || {} : {};
   const out = [];
-  const pts = {
-    3: 10,
-    4: 20
-  }[c.star];
+  const pts = (SUC.CUP_REWARD && SUC.CUP_REWARD.pts ? SUC.CUP_REWARD.pts : {
+    1: 30,
+    2: 60,
+    3: 90,
+    4: 120
+  })[c.star];
   const pop = {
     2: 2,
     3: 4,
@@ -182384,7 +182490,7 @@ function MsxR3Retire({
 }) {
   const s = run.s;
   const [step, setStep] = useState(() => run.s.pts > 0 ? 'e3' : 'e0');
-  const capOfPt = (w, k) => typeof SUC.statCapOf === 'function' ? SUC.statCapOf(w, k) : 999;
+  const capOfPt = (w, k) => String(k).startsWith('m:') ? Infinity : typeof SUC.statCapOf === 'function' ? SUC.statCapOf(w, k) : 999;
   const replayPts = list => {
     let w = s;
     for (const k of list) {
@@ -182402,6 +182508,7 @@ function MsxR3Retire({
     setPtList(list);
   };
   const ws = useMemo(() => replayPts(ptList), [s, ptList]);
+  const [ptTab, setPtTab] = useState('stat');
   const [ptUnit, setPtUnit] = useMsxPtUnit();
   const [pick, setPick] = useState({});
   const [atab, setAtab] = useState(null);
@@ -182586,6 +182693,8 @@ function MsxR3Retire({
       setPtListNow(list);
     };
     const used = s.pts - ws.pts;
+    const ownT = typeof SUC.techsOf === 'function' ? SUC.techsOf(s.species) : [];
+    const mTechs = (Array.isArray(s.techs) ? s.techs : []).map(id => ownT.find(t => t && t.id === id)).filter(Boolean);
     const body = React.createElement(React.Fragment, null, React.createElement("div", {
       className: "v-pt"
     }, React.createElement("div", {
@@ -182630,10 +182739,21 @@ function MsxR3Retire({
       live: true
     }), React.createElement("div", {
       className: "r3-mtag"
-    }, "育成完了の前に")), React.createElement(MsxPtUnits, {
+    }, "育成完了の前に")), React.createElement(MsxPtTabs, {
+      tab: ptTab,
+      setTab: setPtTab
+    }), React.createElement(MsxPtUnits, {
       unit: ptUnit,
       setUnit: setPtUnit
-    }), React.createElement("div", {
+    }), ptTab === 'mastery' ? React.createElement(MsxMasteryRows, {
+      SUC: SUC,
+      s: s,
+      ws: ws,
+      techs: mTechs,
+      addOf: k => ptList.filter(x => x === k).length,
+      plus: spend,
+      minus: undoK
+    }) : React.createElement(React.Fragment, null, React.createElement("div", {
       className: "r3-bar"
     }, React.createElement("span", {
       style: {
@@ -182685,7 +182805,7 @@ function MsxR3Retire({
         className: "sym plus",
         "aria-label": `${MSX_STAT_NAME[k]}を上げる`
       })));
-    })), React.createElement("div", {
+    }))), React.createElement("div", {
       className: "v-card"
     }, React.createElement("div", {
       className: "v-kv"

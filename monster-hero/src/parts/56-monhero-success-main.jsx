@@ -964,6 +964,29 @@ function MsxPtBtn({ onPress, ...rest }) {
   return <PressRepeatButton onPress={fire} {...rest}/>;
 }
 
+// ---- 能力ポイントの振り分けの「能力」「技の熟練」タブと、技の熟練の行(r1115-198。能力ポイント10点で熟練 +1・0〜100) ----
+//   技の熟練は、振り分けの並び(draft)に 'm:' + 技のID を積む。芯の spendPts が 'm:…' を熟練として扱う(保存は s.mastery に足すだけ)
+function MsxPtTabs({ tab, setTab }) {
+  return (
+    <div className="msx-ptunit" role="tablist" aria-label="振り分け先" data-msx-pt-tabs>
+      {[['stat', '能力'], ['mastery', '技の熟練']].map(([k, nm]) => <button type="button" role="tab" key={k} aria-selected={tab === k} className={`chip${tab === k ? ' on' : ''}`} onClick={() => setTab(k)} data-msx-pt-tab={k}>{nm}</button>)}
+    </div>
+  );
+}
+function MsxMasteryRows({ SUC, s, ws, techs, addOf, plus, minus }) {
+  const M = SUC.MASTERY || { max: 100, boost: { pow: 0.10, hit: 0.05 } }; const cost = (SUC.PTS && SUC.PTS.mastery) || 10;
+  const pc = (m, k) => `${(m / M.max * M.boost[k] * 100).toFixed(1)}%`;
+  return (<>
+    <div className="msx-note">{cost}点で熟練 +1(0〜{M.max})。熟練が {M.max} で、技の威力 +{M.boost.pow * 100}%・命中 +{M.boost.hit * 100}%。仮に振って「決定」で確定する</div>
+    {techs.length ? techs.map((t) => { const k = `m:${t.id}`; const n = addOf(k); const m0 = Math.round(Number((s.mastery || {})[t.id]) || 0); const m1 = Math.round(Number((ws.mastery || {})[t.id]) || 0); return (
+      <div key={t.id} className="msx-ab-row" data-msx-pts-mrow={t.id}><span className="n">{t.kind === 'wise' ? '🧠' : '💪'} {t.name}<small className="sub" style={{ display: 'block', fontSize: 10, color: '#94a3b8' }}>威力 +{pc(m1, 'pow')}・命中 +{pc(m1, 'hit')}{n ? `(いまは +${pc(m0, 'pow')}・+${pc(m0, 'hit')})` : ''}</small></span>
+        <span style={{ fontSize: 12, fontWeight: 900, whiteSpace: 'nowrap' }}>{n ? <>{m0} → <b style={{ width: 'auto', color: '#fde047' }}>{m1}</b> <small style={{ color: '#fde047', fontSize: 11 }}>(+{n})</small></> : <b style={{ width: 'auto' }}>{m0}</b>}</span>
+        <MsxPtBtn className="chip sym minus pt44" disabled={!n} onPress={() => minus(k)} aria-label={`${t.name}の熟練を戻す`}/>
+        <MsxPtBtn className="chip on sym plus pt44" disabled={ws.pts < cost || m1 >= M.max} onPress={() => plus(k)} aria-label={`${t.name}の熟練を上げる`}/>
+      </div>); }) : <div className="sub">まだ覚えている技がない</div>}
+  </>);
+}
+
 // ---- 能力(能力ポイントを振る・忠誠と方針・編成の親密度) ----
 function MsxStats({ run, setRun, v, ev, onClose }) {
   // 育成中の「能力」: いじる物・育成中だけの物(能力ポイント・技・型・忠誠度と方針・編成の親密度)。能力の棒や図鑑は「くわしく」へ(2026-11-14 社長「役割で分ける」)
@@ -977,12 +1000,13 @@ function MsxStats({ run, setRun, v, ev, onClose }) {
   const addOf = (k) => draft.filter((x) => x === k).length;
   const capK = (k) => (typeof SUC.statCapOf === 'function' ? SUC.statCapOf(s, k) : 999); // 能力の上限アップ(r1115-103)
   const [unit, setUnit] = useMsxPtUnit();
+  const [ptTab, setPtTab] = useState('stat'); // 「能力」「技の熟練」(r1115-198)
   const draftRef = useRef(draft); draftRef.current = draft;
   const setDraftNow = (list) => { draftRef.current = list; setDraft(list); };
   // 刻みの分(1・5・10・100・MAX)だけ続けて振る。ポイントが足りない・上限に着いたところで止まる
   const plus = (k) => {
     const list = draftRef.current.slice(); let w = replay(list); const lim = msxPtLimit(unit); let n = 0;
-    while (n < lim) { if (w.stats[k] >= capK(k)) break; const r = SUC.spendPts(w, k, 1); if (!r.out.ok) break; w = r.state; list.push(k); n += 1; }
+    while (n < lim) { if (!String(k).startsWith('m:') && w.stats[k] >= capK(k)) break; const r = SUC.spendPts(w, k, 1); if (!r.out.ok) break; w = r.state; list.push(k); n += 1; }
     if (n) setDraftNow(list);
   };
   const minus = (k) => {
@@ -1008,7 +1032,9 @@ function MsxStats({ run, setRun, v, ev, onClose }) {
           <div className="v-num"><small>使う点</small><b style={{ color: used ? '#fde047' : undefined }}>{used}</b></div>
           <div className="v-num"><small>残りの点</small><b>{ws.pts}</b></div>
         </div>
+        <MsxPtTabs tab={ptTab} setTab={setPtTab}/>
         <MsxPtUnits unit={unit} setUnit={setUnit}/>
+        {ptTab === 'mastery' ? <MsxMasteryRows SUC={SUC} s={s} ws={ws} techs={techs} addOf={addOf} plus={plus} minus={minus}/> : <>
         <div className="msx-note">＋で仮に振り(押し続けると続けて振れる)、「決定」で確定する。1点で +1(期の目安{lineOf ? ` ${lineOf}` : ''}を超えると 2点で +1)</div>
         {MSX_STATS.map((k) => { const n = addOf(k); const cost = SUC.ptsCost(ws, k); const over = lineOf != null && ws.stats[k] >= lineOf; return (
           <div key={k} className="msx-ab-row" data-msx-pts-row={k}><span className="n">{MSX_STAT_ICON[k]} {MSX_STAT_NAME[k]}<small className="sub" style={{ display: 'block', fontSize: 10, color: over ? '#fbbf24' : '#94a3b8' }}>{over ? '目安超え・2点で +1' : '1点で +1'}{capK(k) > 999 ? <span data-msx-cap={k} style={{ color: '#f0abfc' }}>・上限 {capK(k).toLocaleString()}</span> : null}</small></span>
@@ -1016,6 +1042,7 @@ function MsxStats({ run, setRun, v, ev, onClose }) {
             <MsxPtBtn className="chip sym minus pt44" disabled={!n} onPress={() => minus(k)} aria-label={`${MSX_STAT_NAME[k]}を戻す`}/>
             <MsxPtBtn className="chip on sym plus pt44" disabled={ws.pts < cost} onPress={() => plus(k)} aria-label={`${MSX_STAT_NAME[k]}を上げる`}/>
           </div>); })}
+        </>}
         <div className="msx-row" style={{ marginTop: 8, gap: 6 }}>
           <button type="button" className="chip" style={{ flex: 1, minHeight: 44 }} disabled={!draft.length} onClick={() => setDraft([])}>元に戻す</button>
           <button type="button" className="chip on" style={{ flex: 2, minHeight: 44 }} disabled={!draft.length} onClick={commit}>決定</button>

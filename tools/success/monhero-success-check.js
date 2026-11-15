@@ -212,7 +212,7 @@ ok(near(SUC.failRateOf({ ...base, yosu: { sabori: { visits: 0 } } }) - fFull, 0.
   ok(w.battle && w.battle.kind === 'junior' && w.turn === 17 && SUC.opponents(w).length === 1, `ジュニアしめくくり杯(2試合)が17ターン目の終わりに来ない: ${w.turn}`);
   const before = { ...w.stats }; const pts = w.pts;
   w = SUC.settle(w, [true, true]).state;
-  ok(w.stats.pow === Math.min(999, before.pow + 2) && w.pts === pts + 5 && w.turn === 18, '強制大会に勝ったごほうび(全能力+2・能力ポイント+5)がずれている');
+  ok(w.stats.pow === Math.min(999, before.pow + 2) && w.pts === pts + 60 && w.turn === 18, '強制大会に勝ったごほうび(全能力+2・能力ポイント+60=★2)がずれている');
   w = toBattle(w); ok(w.battle.kind === 'middle' && w.turn === 29, 'ミドルしめくくり杯が29ターン目の終わりに来ない');
   w = SUC.settle(w, [false]).state; ok(!w.over && w.turn === 30, '強制大会で負けても育成は続く はずが止まった');
   w = toBattle(w); ok(w.battle.kind === 'pro' && w.turn === 41, '冬のヒーロー記念が41ターン目の終わりに来ない');
@@ -547,7 +547,7 @@ ok(near(SUC.failRateOf({ ...base, yosu: { sabori: { visits: 0 } } }) - fFull, 0.
   const ab = { ...at('atsu', 33), battle: { kind: 'cup', sys: 'scatsu', star: 3, round: 0 } }; const nb = { ...ab, battle: { kind: 'cup', sys: 'normal', star: 3, round: 0 } };
   ok(SUC.opponents(ab)[0].sum > SUC.opponents(nb)[0].sum * 1.05, '格上への挑戦の相手が強くない');
   const al = SUC.settle(ab, false).state; ok(al.fame === Math.round(SUC.CUP_PRIZE[3] * 1.5 * 0.5), '格上への挑戦で負けても賞金の半分にならない');
-  const aw = SUC.settle(ab, true).state; ok(aw.pts === 10 + 15, `格上への挑戦に勝っても能力ポイント +15 が付かない: ${aw.pts}`);
+  const aw = SUC.settle(ab, true).state; ok(aw.pts === 10 + 90 + 5, `格上への挑戦に勝っても能力ポイント(★3=90+お話の5)が付かない: ${aw.pts}`);
   const ew = SUC.settle({ ...at('erubin', 10, { ama: 40, fear: 35 }), battle: { kind: 'cup', sys: 'scerubin', star: 1, round: 0 } }, true).state;
   { const st = { ...ew.stats, pow: 100 }; const ewm = SUC.meal({ ...ew, stats: st, mealOpts: OPT3('f_pow') }, 'f_pow'); const ewn = SUC.meal({ ...ew, stats: st, freeMeal: false, mealOpts: OPT3('f_pow') }, 'f_pow');
     ok(ew.freeMeal && ewm.out.ok && ewm.out.boost === 1.5 && ewm.state.stats.pow - 100 === Math.round(15 * 1.5) && ewn.state.stats.pow === 115 && ewm.state.freeMeal === false, `見守りの大会のあと、次のごはんの効き目が1.5倍(1回)にならない: ${ewm.state.stats.pow}/${ewn.state.stats.pow}`);
