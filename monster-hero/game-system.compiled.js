@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8fca2c216b7bacab
+// source-sha256: d75417b649f6c9bb
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -96460,16 +96460,21 @@ function RhythmMultiChatBubble({
     "data-rhythm-multi-chat-bubble": true,
     "data-rhythm-multi-stamp-bubble": true,
     "data-rhythm-multi-stamp-strip": true,
-    className: "mh-seat-stamp-strip pointer-events-none absolute inset-x-0.5 bottom-0.5 top-[3px] z-40 flex flex-col items-center gap-0.5 [container-type:size]"
+    className: "mh-seat-stamp-strip pointer-events-none absolute inset-x-0.5 bottom-[17px] top-[3px] z-40 flex items-start justify-center [container-type:size]"
+  }, React.createElement("span", {
+    className: "relative flex h-full w-full justify-center"
   }, React.createElement("img", {
     src: multiStampFaceSrc(stamp.sf) || undefined,
     alt: "",
     draggable: false,
     decoding: "async",
-    className: "mh-seat-stamp-strip-img block shrink-0 rounded-lg bg-white object-cover shadow-lg"
+    className: "mh-seat-stamp-strip-img block rounded-lg bg-white object-cover shadow-lg"
   }), React.createElement("b", {
-    className: "mh-seat-stamp-strip-word block w-full min-w-0 rounded-lg bg-white px-0.5 py-px text-center text-[9px] font-black leading-[1.1] text-slate-900 shadow-lg"
-  }, text));
+    className: "mh-seat-stamp-strip-word absolute inset-x-0 bottom-[3px] block whitespace-nowrap rounded-b-lg bg-white/90 px-0.5 text-center font-black leading-tight text-slate-900",
+    style: {
+      fontSize: `${Math.max(6.5, Math.min(9, 62 / Math.max(1, Array.from(String(text || '')).length)))}px`
+    }
+  }, text)));
   if (stamp) return React.createElement("span", {
     "data-rhythm-multi-chat-bubble": true,
     "data-rhythm-multi-stamp-bubble": true,
@@ -161308,7 +161313,7 @@ function MsxTrainAct({
       finish();
       return undefined;
     }
-    const id = setTimeout(finish, MSX_ACT_MS);
+    const id = setTimeout(finish, typeof msxTfxMs === 'function' ? msxTfxMs(o) : MSX_ACT_MS);
     return () => clearTimeout(id);
   }, []);
   msxUseTimedSe(msxActCalm() ? [] : (MSX_ACT_SE[k] || []).concat(lv === 5 ? [['actFlash', 600]] : []), []);
@@ -161448,8 +161453,13 @@ function MsxTrainAct({
   }
   const front = k === 'tough' || k === 'eva';
   const mv = !!MSX_ACT_MOVE[k];
+  const tfx = typeof msxTfxActProps === 'function' ? msxTfxActProps(o) : {
+    cls: '',
+    style: undefined
+  };
   return React.createElement("div", {
-    className: `msx-act t-${k} lv${lv}${mv ? ' mv-on' : ''}${o && o.card && Array.isArray(o.card.tags) && o.card.tags.length ? ' tagx' : ''}`,
+    className: `msx-act t-${k} lv${lv}${mv ? ' mv-on' : ''}${o && o.card && Array.isArray(o.card.tags) && o.card.tags.length ? ' tagx' : ''}${tfx.cls}`,
+    style: tfx.style,
     onClick: finish,
     "data-msx-act": k,
     "data-msx-act-lv": lv
@@ -161491,6 +161501,9 @@ function MsxTrainAct({
   })), front ? prop : null, lv === 5 ? React.createElement("span", {
     className: "flash5",
     "aria-hidden": "true"
+  }) : null, typeof MsxTrainFinish === 'function' ? React.createElement(MsxTrainFinish, {
+    run: run,
+    o: o
   }) : null, React.createElement("div", {
     className: "ban"
   }, React.createElement("small", null, MSX_STAT_NAME[k], "のトレーニング ", React.createElement("b", null, "Lv.", lv)), msxTrainIcon(k, lv), " ", msxTrainName(k, lv), "!"));
@@ -162056,6 +162069,474 @@ function MsxBondChips({
   }, typeof msxAidName === 'function' ? msxAidName(s.aid) : ''), React.createElement("span", {
     className: "bc-up"
   }, "親密度 +", add)) : null);
+}
+const MSX_TFX_MS = Object.freeze({
+  base: 2000,
+  tag: 2100,
+  great: 2300,
+  both: 2500
+});
+const MSX_TFX_SE = Object.freeze({
+  tag: [['actTagJoin', 1300], ['actTagFin', 1560]],
+  great: [['actGreatCharge', 1200], ['actGreatBoom', 1500], ['actHit', 1780]],
+  both: [['actTagJoin', 1200], ['actGreatCharge', 1300], ['actComboBoom', 1550], ['actGreatBoom', 1580], ['actHit', 1920]]
+});
+const msxTfxKind = o => {
+  if (!o || !o.result) return 'base';
+  const tag = !!(o.card && Array.isArray(o.card.tags) && o.card.tags.length > 0);
+  const great = o.result === 'great';
+  return great && tag ? 'both' : great ? 'great' : tag && o.result !== 'sab' ? 'tag' : 'base';
+};
+const msxTfxMs = o => MSX_TFX_MS[msxTfxKind(o)] || MSX_TFX_MS.base;
+const msxTfxResSound = o => msxTfxKind(o) === 'both' ? 'trainGreatTag' : null;
+const msxTfxOpt = () => {
+  let load = 'RICH';
+  let shake = true;
+  try {
+    const raw = typeof localStorage !== 'undefined' ? localStorage.getItem('mh_battle_fx_v1') : null;
+    const v = raw ? JSON.parse(raw) : null;
+    if (v && typeof v === 'object') {
+      if (typeof v.load === 'string') load = v.load;
+      if (v.shake === 'OFF') shake = false;
+    }
+  } catch (e) {}
+  const calm = typeof msxFxCalm === 'function' && msxFxCalm();
+  return {
+    lite: calm || load === 'LIGHT' || load === 'MINIMAL',
+    shake: shake && !calm,
+    calm
+  };
+};
+const msxTfxFrom = (s, card) => {
+  const tags = Array.isArray(card && card.tags) ? card.tags : [];
+  const team = s && Array.isArray(s.team) ? s.team : [];
+  const ms = (Array.isArray(card && card.members) ? card.members : []).filter(i => Number.isInteger(i) && team[i] && tags.includes(i));
+  const aid = Boolean(card && (card.aid || tags.includes('aid')));
+  const SP = typeof MSX_CREW_SPOT_TAG !== 'undefined' ? aid ? MSX_CREW_SPOT_TAG_AID : MSX_CREW_SPOT_TAG : [{
+    left: '22%',
+    bottom: '12%'
+  }, {
+    left: '78%',
+    bottom: '12%'
+  }];
+  const pts = ms.slice(0, SP.length).map((_, n) => ({
+    x: parseFloat(SP[n].left),
+    y: 100 - parseFloat(SP[n].bottom) - 10
+  }));
+  if (tags.includes('aid')) pts.push({
+    x: 86,
+    y: 66
+  });
+  if (!pts.length) pts.push({
+    x: 18,
+    y: 78
+  });
+  return pts.slice(0, 5);
+};
+const MSX_TFX_COLS = ['#f472b6', '#67e8f9', '#f9a8d4', '#a5f3fc', '#fbcfe8'];
+const MSX_TFX_CX = 50;
+const MSX_TFX_CY = 58;
+const MSX_TFX_CSS = `
+.msx .msx-act.tfx-tag .tagcut,.msx .msx-act.tfx-both .tagcut{background:linear-gradient(90deg,#9d174dee,#f472b6f2 28%,#fdf2f8f5 50%,#67e8f9f2 72%,#0e7490ee);border-top-color:#fff;border-bottom-color:#fff;box-shadow:0 0 24px #f9a8d4,0 0 30px #67e8f9aa}
+.msx .msx-act.tfx-both .tagcut{border-top-color:#fde047;border-bottom-color:#fde047;box-shadow:0 0 26px #fde047,0 0 34px #f9a8d4;animation-duration:1.05s}
+.msx .msx-act.tfx-tag .tagcut .fc,.msx .msx-act.tfx-both .tagcut .fc{border-color:#fff;box-shadow:0 0 0 2px #db2777,0 0 12px #fff}
+.msx .msx-act.tfx-tag .tagcut .x,.msx .msx-act.tfx-both .tagcut .x{color:#fff;text-shadow:0 0 6px #db2777}
+.msx .msx-act.tfx-tag .tagcut b,.msx .msx-act.tfx-both .tagcut b{-webkit-text-stroke-color:#831843;text-shadow:0 3px 0 #831843,0 0 12px #fff}
+.msx .msx-act.tfx-tag .tagcut b small,.msx .msx-act.tfx-both .tagcut b small{color:#831843}
+.msx .msx-act.tfx-tag .tagglow,.msx .msx-act.tfx-both .tagglow{background:radial-gradient(circle at 50% 60%,#f9a8d455,#67e8f922 45%,transparent 70%)}
+.msx .msx-act.tfx-tag .crew .cm.tag img,.msx .msx-act.tfx-both .crew .cm.tag img{filter:drop-shadow(0 0 6px #f9a8d4) drop-shadow(0 0 12px #67e8f9) drop-shadow(0 3px 0 #0007)}
+.msx .msx-act.tfx-tag .crew .cm .tg,.msx .msx-act.tfx-both .crew .cm .tg{color:#831843;background:linear-gradient(#fdf2f8,#f9a8d4)}
+.msx .msx-act.tfx-tag .tagstar,.msx .msx-act.tfx-both .tagstar{filter:drop-shadow(0 0 6px #f472b6) drop-shadow(0 0 4px #67e8f9)}
+.msx .msx-act.tfx-shake{animation:msxTfxShake .36s linear var(--sk,1.5s) both}
+.msx .msx-act.tfx-shake.sk2{animation:msxTfxShake .36s linear var(--sk,1.5s) both,msxTfxShake2 .24s linear var(--sk2,1.75s) both}
+.msx .tfx{position:absolute;inset:0;z-index:7;pointer-events:none;overflow:hidden}
+.msx .tfx .dim{position:absolute;inset:0;opacity:0;animation:msxTfxDim var(--dd,.8s) ease-out var(--d,1.3s) both}
+.msx .tfx .thread{position:absolute;inset:0;width:100%;height:100%;opacity:0;animation:msxTfxThread .8s ease-out .5s both}
+.msx .tfx .thread path{fill:none;stroke-linecap:round;vector-effect:non-scaling-stroke;stroke-dasharray:6 1000;stroke-dashoffset:0}
+.msx .tfx .thread .glow{stroke-width:9;opacity:.75}
+.msx .tfx .thread .core{stroke:#fff;stroke-width:3}
+.msx .tfx .hrt{position:absolute;font-style:normal;font-size:var(--fs,18px);opacity:0;filter:drop-shadow(0 0 5px #fff);animation:msxTfxHeart 1.1s ease-out var(--d,.5s) both}
+.msx .tfx .orb{position:absolute;width:30px;height:30px;margin:-15px 0 0 -15px;border-radius:50%;opacity:0;background:radial-gradient(#fff 20%,var(--c) 70%);box-shadow:0 0 18px var(--c),0 0 6px #fff;animation:msxTfxOrb .32s ease-in var(--d,1.3s) both}
+.msx .tfx .orb.gold{animation-name:msxTfxOrbGold}
+.msx .tfx .ring{position:absolute;left:${MSX_TFX_CX}%;top:${MSX_TFX_CY}%;border-radius:50%;opacity:0;transform:translate(-50%,-50%) scale(.2)}
+.msx .tfx .ring.kz{width:70vmin;height:70vmin;max-width:330px;max-height:330px;border:6px solid #fff;box-shadow:0 0 22px #f472b6,inset 0 0 22px #67e8f9;animation:msxTfxRing .75s cubic-bezier(.2,.8,.3,1) var(--d,1.6s) both}
+.msx .tfx .ring.kz.b{border-color:#fbcfe8;box-shadow:0 0 22px #67e8f9,inset 0 0 18px #f472b6}
+.msx .tfx .ring.halo{width:80vmin;height:80vmin;max-width:380px;max-height:380px;background:conic-gradient(#f472b6,#67e8f9,#fff,#f472b6,#67e8f9,#fff,#f472b6);filter:blur(8px);animation:msxTfxHalo .8s ease-out var(--d,1.6s) both}
+.msx .tfx .ring.shock{width:86vmin;height:86vmin;max-width:400px;max-height:400px;border:14px solid #fde047;box-shadow:0 0 30px #f59e0b,inset 0 0 30px #fff;animation:msxTfxShock .55s cubic-bezier(.1,.8,.3,1) var(--d,1.5s) both}
+.msx .tfx .ring.shock.w{border-width:4px;border-color:#fff9;box-shadow:none;animation-duration:.75s}
+.msx .tfx .ring.rainbow{width:90vmin;height:90vmin;max-width:420px;max-height:420px;background:conic-gradient(#fde047,#f472b6,#67e8f9,#fde047,#f472b6,#67e8f9,#fde047);-webkit-mask:radial-gradient(circle,transparent 60%,#000 61%,#000 71%,transparent 72%);mask:radial-gradient(circle,transparent 60%,#000 61%,#000 71%,transparent 72%);animation:msxTfxShock .6s cubic-bezier(.1,.8,.3,1) var(--d,1.55s) both}
+.msx .tfx .aura{position:absolute;left:${MSX_TFX_CX}%;top:${MSX_TFX_CY}%;width:64%;height:62%;transform:translate(-50%,-50%);border-radius:50%;opacity:0;background:radial-gradient(#fde047cc,#f59e0b66 45%,transparent 70%);mix-blend-mode:screen;animation:msxTfxAura .3s ease-in var(--d,1.2s) both}
+.msx .tfx .aura.mix{background:radial-gradient(#fde047bb,#f472b655 45%,transparent 70%)}
+.msx .tfx .speed{position:absolute;inset:-30%;opacity:0;background:repeating-conic-gradient(from 0deg at 50% ${MSX_TFX_CY}%,#000a 0 3deg,#0000 3deg 9deg);-webkit-mask:radial-gradient(circle at 50% ${MSX_TFX_CY}%,transparent 30%,#000 62%);mask:radial-gradient(circle at 50% ${MSX_TFX_CY}%,transparent 30%,#000 62%);animation:msxTfxSpeed .32s linear var(--d,1.2s) both}
+.msx .tfx .flash{position:absolute;inset:0;opacity:0;background:radial-gradient(circle at 50% ${MSX_TFX_CY}%,#fff,#fef9c3dd 30%,#fde04766 55%,transparent 80%);animation:msxTfxFlash .45s ease-out var(--d,1.5s) both}
+.msx .tfx .flash.mix{background:radial-gradient(circle at 50% ${MSX_TFX_CY}%,#fff,#fde047dd 25%,#f9a8d499 45%,#67e8f966 60%,transparent 82%)}
+.msx .tfx .bit{position:absolute;left:${MSX_TFX_CX}%;top:${MSX_TFX_CY}%;font-style:normal;font-size:20px;opacity:0;animation:msxTfxBit .6s cubic-bezier(.1,.7,.3,1) var(--d,1.5s) both}
+.msx .tfx .word{position:absolute;left:0;right:0;text-align:center;font-weight:900;white-space:nowrap;opacity:0;line-height:1.1}
+.msx .tfx .word.kz{top:7%;font-size:min(34px,8.6vw);font-style:italic;color:#fff;-webkit-text-stroke:2px #831843;paint-order:stroke fill;text-shadow:0 0 14px #f472b6,0 0 22px #67e8f9;animation:msxTfxWord .55s cubic-bezier(.2,1.4,.4,1) var(--d,1.6s) both}
+.msx .tfx .word.gg{top:7%;font-size:min(30px,7.6vw);color:#fde047;text-shadow:0 0 10px #f59e0b,0 3px 0 #7c2d12;animation:msxTfxGogo var(--wd,.3s) linear var(--d,1.2s) both}
+.msx .tfx .word.don{top:5%;font-size:min(46px,11.6vw);color:#fff;-webkit-text-stroke:3px #9a3412;paint-order:stroke fill;text-shadow:0 0 20px #fde047;animation:msxTfxDon var(--wd,.28s) ease-out var(--d,1.5s) both}
+.msx .tfx .word.don.mix{font-size:min(40px,10vw);text-shadow:0 0 18px #fde047,0 0 26px #f472b6}
+.msx .tfx .word.mn{top:7%;font-size:min(24px,6.2vw);color:#fff;text-shadow:0 0 10px #f472b6,0 0 14px #fde047,0 2px 0 #0008;animation:msxTfxGogo var(--wd,.35s) linear var(--d,1.2s) both}
+.msx .tfx .slam{position:absolute;left:0;right:0;top:9%;text-align:center;font-size:min(80px,20vw);font-weight:900;letter-spacing:.06em;line-height:1;white-space:nowrap;color:#fde047;-webkit-text-stroke:3px #9a3412;paint-order:stroke fill;text-shadow:0 6px 0 #9a3412,0 0 40px #fde047;opacity:0;animation:msxTfxSlam .6s cubic-bezier(.3,0,.3,1) var(--d,1.7s) both}
+.msx .tfx .slam.mix{text-shadow:0 6px 0 #9a3412,0 0 26px #f472b6,0 0 40px #67e8f9,0 0 50px #fde047}
+.msx .tfx .rays{position:absolute;inset:-40%;opacity:0;background:repeating-conic-gradient(from 6deg at 50% 50%,#fde047a0 0 7deg,#0000 7deg 15deg);animation:msxTfxRays .6s ease-out var(--d,1.7s) both}
+.msx .tfx.lite .ring.halo,.msx .tfx.lite .thread .glow{filter:none;display:none}
+@keyframes msxTfxDim{to{opacity:1}}
+@keyframes msxTfxThread{0%{opacity:0}25%{opacity:1}85%{opacity:1}100%{opacity:0}}
+@keyframes msxTfxHeart{0%{opacity:0;transform:scale(.3)}30%{opacity:1;transform:scale(1.15)}100%{opacity:0;transform:translateY(-34px) scale(.8)}}
+@keyframes msxTfxOrb{0%{opacity:0;transform:scale(.4)}25%{opacity:1;transform:scale(1.1)}100%{opacity:1;left:${MSX_TFX_CX}%;top:${MSX_TFX_CY}%;transform:scale(.6)}}
+@keyframes msxTfxOrbGold{0%{opacity:0;transform:scale(.4)}25%{opacity:1;transform:scale(1.1)}100%{opacity:1;left:${MSX_TFX_CX}%;top:${MSX_TFX_CY}%;transform:scale(.7);background:radial-gradient(#fff 20%,#fde047 70%);box-shadow:0 0 22px #fde047}}
+@keyframes msxTfxRing{0%{opacity:0;transform:translate(-50%,-50%) scale(.15)}25%{opacity:1}100%{opacity:0;transform:translate(-50%,-50%) scale(1.1)}}
+@keyframes msxTfxHalo{0%{opacity:0;transform:translate(-50%,-50%) scale(.3) rotate(0)}35%{opacity:.6}100%{opacity:0;transform:translate(-50%,-50%) scale(1.15) rotate(120deg)}}
+@keyframes msxTfxShock{0%{opacity:1;transform:translate(-50%,-50%) scale(.1)}70%{opacity:.9}100%{opacity:0;transform:translate(-50%,-50%) scale(1.3)}}
+@keyframes msxTfxAura{0%{opacity:0;transform:translate(-50%,-50%) scale(.6)}100%{opacity:1;transform:translate(-50%,-50%) scale(1.05)}}
+@keyframes msxTfxSpeed{0%{opacity:0;transform:scale(1.25)}100%{opacity:1;transform:scale(1)}}
+@keyframes msxTfxFlash{0%{opacity:0}15%{opacity:1}100%{opacity:0}}
+@keyframes msxTfxBit{0%{opacity:1;transform:translate(-50%,-50%) scale(.6)}100%{opacity:0;transform:translate(calc(-50% + var(--x)),calc(-50% + var(--y))) rotate(var(--r)) scale(1)}}
+@keyframes msxTfxWord{0%{opacity:0;transform:scale(.4)}60%{opacity:1;transform:scale(1.08)}85%{opacity:1;transform:scale(1)}100%{opacity:1}}
+@keyframes msxTfxGogo{0%{opacity:0;transform:translateX(-3px)}15%{opacity:1;transform:translateX(3px)}30%{transform:translateX(-3px)}45%{transform:translateX(3px)}60%{transform:translateX(-2px)}85%{opacity:1;transform:none}100%{opacity:0}}
+@keyframes msxTfxDon{0%{opacity:0;transform:scale(2.2)}30%{opacity:1;transform:scale(.95)}45%{transform:scale(1)}85%{opacity:1}100%{opacity:0;transform:scale(1.15)}}
+@keyframes msxTfxSlam{0%{opacity:0;transform:rotate(-4deg) scale(2.6)}35%{opacity:1;transform:rotate(-4deg) scale(.92)}50%{transform:rotate(-4deg) scale(1.04)}100%{opacity:1;transform:rotate(-4deg) scale(1)}}
+@keyframes msxTfxRays{0%{opacity:0;transform:rotate(0)}100%{opacity:1;transform:rotate(14deg)}}
+@keyframes msxTfxShake{0%,100%{translate:0 0}10%{translate:9px -6px}25%{translate:-8px 5px}40%{translate:7px 4px}55%{translate:-6px -5px}70%{translate:4px 3px}85%{translate:-2px -2px}}
+@keyframes msxTfxShake2{0%,100%{translate:0 0}25%{translate:-5px 4px}50%{translate:4px -3px}75%{translate:-2px 2px}}
+/* 結果の画面の飾り */
+.msx .v-tfx{position:absolute;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+.msx .v-tfx .grays{position:absolute;inset:-40%;background:repeating-conic-gradient(from 6deg at 50% 46%,#fde04770 0 7deg,#0000 7deg 15deg);animation:msxTfxSpin 18s linear infinite}
+.msx .v-tfx .pastel{position:absolute;inset:0;background:radial-gradient(circle at 50% 46%,#f9a8d455,#67e8f933 50%,transparent 76%)}
+.msx .v-tfx .gstar{position:absolute;font-style:normal;color:#fef9c3;font-size:18px;text-shadow:0 0 8px #fde047,0 0 16px #f59e0b;animation:msxTfxTwinkle 1.4s ease-in-out infinite alternate;animation-delay:calc(var(--i) * .17s)}
+.msx .v-tfx .rhrt{position:absolute;font-style:normal;font-size:var(--fs,18px);filter:drop-shadow(0 0 5px #fff);animation:msxTfxFloat 2.4s ease-in-out infinite alternate;animation-delay:calc(var(--i) * .23s)}
+.msx .v-tfxtop{position:absolute;inset:0;z-index:4;pointer-events:none}
+.msx .v-tfx-rib{position:absolute;left:0;right:0;margin:0 auto;width:max-content;top:calc(9% + 66px);transform:rotate(-3deg);display:flex;align-items:center;gap:5px;max-width:calc(100% - 20px);padding:3px 12px 3px 4px;border-radius:99px;background:linear-gradient(90deg,#db2777,#f9a8d4 45%,#67e8f9 55%,#0891b2);border:2.5px solid #fff;box-shadow:0 0 16px #f9a8d4,0 3px 0 #0006;color:#fff;font-weight:900;font-size:13px;white-space:nowrap;text-shadow:0 1px 0 #831843,0 0 4px #831843;animation:msxTfxRib .45s cubic-bezier(.2,1.4,.4,1) .15s both}
+.msx .v-tfx-rib.both{border-color:#fde047;box-shadow:0 0 16px #fde047,0 0 22px #f9a8d4,0 3px 0 #0006}
+.msx .v-tfx-rib .fcs{display:flex;flex:none}
+.msx .v-tfx-rib .fcs img{width:28px;height:28px;border-radius:50%;object-fit:cover;background:#fff;border:2px solid #fff;margin-right:-7px;box-shadow:0 0 0 1.5px #db2777}
+.msx .v-tfx-rib .fcs img:last-child{margin-right:0}
+.msx .v-tfx-rib .t{overflow:hidden;text-overflow:ellipsis;min-width:0}
+.msx .v-tfx-badge{position:absolute;right:12px;top:calc(9% - 6px);font-weight:900;color:#7c2d12;background:linear-gradient(#fef9c3,#facc15 60%,#f59e0b);border:2.5px solid #fff;border-radius:10px;padding:1px 9px;font-size:15px;line-height:1.35;white-space:nowrap;box-shadow:0 0 14px #fde047,0 3px 0 #0007;transform:rotate(8deg);animation:msxTfxBadge .4s cubic-bezier(.2,1.6,.4,1) .3s both}
+.msx .v-stamp.tfx-gold{font-size:60px;animation:msx-popin .35s cubic-bezier(.2,1.4,.4,1),msxTfxStampGlow 1.6s ease-in-out .4s infinite alternate}
+.msx .v-stamp.tfx-both{-webkit-text-stroke:2px #9a3412;text-shadow:0 4px 0 #9a3412,0 0 18px #f472b6,0 0 30px #67e8f9,0 0 46px #fde047}
+@keyframes msxTfxSpin{to{transform:rotate(360deg)}}
+@keyframes msxTfxTwinkle{from{opacity:.25;transform:scale(.7)}to{opacity:1;transform:scale(1.15)}}
+@keyframes msxTfxFloat{from{transform:translateY(0)}to{transform:translateY(-10px)}}
+@keyframes msxTfxRib{from{opacity:0;transform:rotate(-3deg) scale(.5)}to{opacity:1;transform:rotate(-3deg)}}
+@keyframes msxTfxBadge{from{opacity:0;transform:rotate(8deg) scale(2)}to{opacity:1;transform:rotate(8deg)}}
+@keyframes msxTfxStampGlow{from{filter:brightness(1)}to{filter:brightness(1.18) drop-shadow(0 0 10px #fde047)}}
+.msx .v-tfx.calm *,.msx .v-tfxtop.calm *,.msx .v-stamp.tfx-gold.calm{animation:none!important}
+`;
+let msxTfxCssDone = false;
+const msxTfxEnsureCss = () => {
+  if (msxTfxCssDone || typeof document === 'undefined') return;
+  msxTfxCssDone = true;
+  const el = document.createElement('style');
+  el.setAttribute('data-msx-tfx-css', '1');
+  el.textContent = MSX_TFX_CSS;
+  document.head.appendChild(el);
+};
+const msxTfxActProps = o => {
+  const k = msxTfxKind(o);
+  if (k === 'base') return {
+    cls: '',
+    style: undefined
+  };
+  const op = msxTfxOpt();
+  const shake = op.shake && (k === 'great' || k === 'both');
+  return {
+    cls: ` tfx-${k}${shake ? ' tfx-shake sk2' : ''}`,
+    style: shake ? k === 'both' ? {
+      '--sk': '1.55s',
+      '--sk2': '1.92s'
+    } : {
+      '--sk': '1.5s',
+      '--sk2': '1.78s'
+    } : undefined
+  };
+};
+const msxTfxHearts = (n, d0, y0) => Array.from({
+  length: n
+}, (_, i) => React.createElement("i", {
+  key: `h${i}`,
+  className: "hrt",
+  style: {
+    left: `${8 + i * 37 % 84}%`,
+    top: `${y0 + i * 23 % 40}%`,
+    '--fs': `${15 + i % 3 * 5}px`,
+    '--d': `${(d0 + i * 0.07).toFixed(2)}s`
+  }
+}, i % 2 ? '💞' : '💗'));
+const msxTfxBits = (n, d, em) => Array.from({
+  length: n
+}, (_, i) => {
+  const a = i / n * Math.PI * 2;
+  const r = 120 + i % 3 * 30;
+  return React.createElement("i", {
+    key: `b${i}`,
+    className: "bit",
+    style: {
+      '--x': `${Math.round(Math.cos(a) * r)}px`,
+      '--y': `${Math.round(Math.sin(a) * r)}px`,
+      '--r': `${i * 67 % 180}deg`,
+      '--d': `${d}s`
+    }
+  }, em[i % em.length]);
+});
+function MsxTrainFinish({
+  run,
+  o
+}) {
+  msxTfxEnsureCss();
+  const k = msxTfxKind(o);
+  const op = msxTfxOpt();
+  if (typeof msxUseTimedSe === 'function') msxUseTimedSe(op.calm ? [] : MSX_TFX_SE[k] || [], []);
+  if (k === 'base' || op.calm) return null;
+  const pts = k === 'great' ? [] : msxTfxFrom(run && run.s, o.card);
+  const lite = op.lite;
+  const threads = pts.length ? React.createElement("svg", {
+    className: "thread",
+    viewBox: "0 0 100 100",
+    preserveAspectRatio: "none",
+    "aria-hidden": "true"
+  }, pts.map((p, i) => {
+    const c = MSX_TFX_COLS[i % MSX_TFX_COLS.length];
+    const d = `M${p.x} ${p.y} Q${(p.x + MSX_TFX_CX) / 2} ${Math.min(p.y, MSX_TFX_CY) - 18} ${MSX_TFX_CX} ${MSX_TFX_CY}`;
+    return React.createElement("g", {
+      key: i
+    }, React.createElement("path", {
+      className: "glow",
+      d: d,
+      stroke: c
+    }), React.createElement("path", {
+      className: "core",
+      d: d
+    }));
+  })) : null;
+  const orbs = (d, gold) => pts.map((p, i) => React.createElement("i", {
+    key: `o${i}`,
+    className: `orb${gold ? ' gold' : ''}`,
+    style: {
+      left: `${p.x}%`,
+      top: `${p.y}%`,
+      '--c': MSX_TFX_COLS[i % MSX_TFX_COLS.length],
+      '--d': `${(d + i * 0.04).toFixed(2)}s`
+    }
+  }));
+  let body = null;
+  if (k === 'tag') {
+    body = React.createElement(React.Fragment, null, threads, msxTfxHearts(lite ? 3 : 6, 0.55, 30), React.createElement("span", {
+      className: "dim",
+      style: {
+        background: '#1e0b2e8c',
+        '--d': '1.3s',
+        '--dd': '.3s'
+      }
+    }), orbs(1.3, false), lite ? null : React.createElement("span", {
+      className: "ring halo",
+      style: {
+        '--d': '1.56s'
+      }
+    }), React.createElement("span", {
+      className: "ring kz",
+      style: {
+        '--d': '1.56s'
+      }
+    }), React.createElement("span", {
+      className: "ring kz b",
+      style: {
+        '--d': '1.72s'
+      }
+    }), React.createElement("b", {
+      className: "word kz",
+      style: {
+        '--d': '1.56s'
+      }
+    }, "タッグフィニッシュ!"), msxTfxHearts(lite ? 2 : 5, 1.62, 52));
+  } else if (k === 'great') {
+    body = React.createElement(React.Fragment, null, React.createElement("span", {
+      className: "dim",
+      style: {
+        background: '#000b',
+        '--d': '1.2s',
+        '--dd': '.25s'
+      }
+    }), React.createElement("span", {
+      className: "speed",
+      style: {
+        '--d': '1.2s'
+      }
+    }), React.createElement("span", {
+      className: "aura",
+      style: {
+        '--d': '1.2s'
+      }
+    }), React.createElement("b", {
+      className: "word gg",
+      style: {
+        '--d': '1.2s'
+      }
+    }, "ゴゴゴゴ…!"), React.createElement("span", {
+      className: "flash",
+      style: {
+        '--d': '1.5s'
+      }
+    }), React.createElement("span", {
+      className: "ring shock",
+      style: {
+        '--d': '1.5s'
+      }
+    }), lite ? null : React.createElement("span", {
+      className: "ring shock w",
+      style: {
+        '--d': '1.55s'
+      }
+    }), msxTfxBits(lite ? 5 : 10, 1.5, ['🪨', '✨', '💥']), React.createElement("b", {
+      className: "word don",
+      style: {
+        '--d': '1.5s'
+      }
+    }, "ドォン!!"), React.createElement("span", {
+      className: "rays",
+      style: {
+        '--d': '1.78s'
+      }
+    }), React.createElement("b", {
+      className: "slam",
+      style: {
+        '--d': '1.78s'
+      }
+    }, "大成功"));
+  } else {
+    body = React.createElement(React.Fragment, null, threads, React.createElement("span", {
+      className: "dim",
+      style: {
+        background: '#000a',
+        '--d': '1.2s',
+        '--dd': '.3s'
+      }
+    }), React.createElement("span", {
+      className: "speed",
+      style: {
+        '--d': '1.2s'
+      }
+    }), React.createElement("span", {
+      className: "aura mix",
+      style: {
+        '--d': '1.25s'
+      }
+    }), orbs(1.2, true), React.createElement("b", {
+      className: "word mn",
+      style: {
+        '--d': '1.2s',
+        '--wd': '.35s'
+      }
+    }, "みんなの力が 一つに…!"), React.createElement("span", {
+      className: "flash mix",
+      style: {
+        '--d': '1.55s'
+      }
+    }), React.createElement("span", {
+      className: "ring rainbow",
+      style: {
+        '--d': '1.55s'
+      }
+    }), lite ? null : React.createElement("span", {
+      className: "ring shock",
+      style: {
+        '--d': '1.6s'
+      }
+    }), msxTfxBits(lite ? 5 : 10, 1.55, ['💗', '✨', '💥', '💞']), React.createElement("b", {
+      className: "word don mix",
+      style: {
+        '--d': '1.55s',
+        '--wd': '.37s'
+      }
+    }, "絆の大爆発!!"), React.createElement("span", {
+      className: "rays",
+      style: {
+        '--d': '1.92s'
+      }
+    }), React.createElement("b", {
+      className: "slam mix",
+      style: {
+        '--d': '1.92s'
+      }
+    }, "大成功"));
+  }
+  return React.createElement("div", {
+    className: `tfx${lite ? ' lite' : ''}`,
+    "aria-hidden": "true",
+    "data-msx-tfx": k
+  }, body);
+}
+function MsxTrainResFx({
+  run,
+  o,
+  layer
+}) {
+  msxTfxEnsureCss();
+  const k = msxTfxKind(o);
+  if (k === 'base') return null;
+  const op = msxTfxOpt();
+  const s = run && run.s;
+  const card = o && o.card || {};
+  const tags = Array.isArray(card.tags) ? card.tags : [];
+  const calm = op.calm ? ' calm' : '';
+  if (layer === 'back') {
+    return React.createElement("div", {
+      className: `v-tfx${calm}`,
+      "aria-hidden": "true",
+      "data-msx-tfx-res": k
+    }, k !== 'tag' ? React.createElement("span", {
+      className: "grays"
+    }) : null, k !== 'great' ? React.createElement("span", {
+      className: "pastel"
+    }) : null, k !== 'tag' ? Array.from({
+      length: op.lite ? 4 : 9
+    }, (_, i) => React.createElement("i", {
+      key: `s${i}`,
+      className: "gstar",
+      style: {
+        '--i': i,
+        left: `${6 + i * 41 % 86}%`,
+        top: `${26 + i * 29 % 44}%`
+      }
+    }, "✦")) : null, k !== 'great' ? Array.from({
+      length: op.lite ? 3 : 6
+    }, (_, i) => React.createElement("i", {
+      key: `h${i}`,
+      className: "rhrt",
+      style: {
+        '--i': i,
+        '--fs': `${14 + i % 3 * 5}px`,
+        left: `${5 + i * 53 % 88}%`,
+        top: `${30 + i * 31 % 42}%`
+      }
+    }, i % 2 ? '💞' : '💗')) : null);
+  }
+  const team = s && Array.isArray(s.team) ? s.team : [];
+  const thumb = sp => typeof msxMonThumb === 'function' ? msxMonThumb(sp) : typeof msxMonImg === 'function' ? msxMonImg(sp) : '';
+  const faces = [thumb(s && s.species)].concat(tags.filter(i => Number.isInteger(i) && team[i]).slice(0, 3).map(i => thumb(team[i].species)));
+  if (tags.includes('aid') && typeof msxFace === 'function' && s) faces.push(msxFace(s.aid, 'happy'));
+  const tagPct = Number.isFinite(card.tag) ? Math.round(card.tag * 100) : 0;
+  const R = typeof msxSuc !== 'undefined' && msxSuc && msxSuc.SUC && msxSuc.SUC.RESULTS ? msxSuc.SUC.RESULTS : null;
+  const gm = R && R.great && Number.isFinite(R.great.mult) ? R.great.mult : 1.5;
+  return React.createElement("div", {
+    className: `v-tfxtop${calm}`,
+    "data-msx-tfx-top": k
+  }, k !== 'great' ? React.createElement("div", {
+    className: `v-tfx-rib${k === 'both' ? ' both' : ''}`,
+    "data-msx-tfx-rib": tags.length
+  }, React.createElement("span", {
+    className: "fcs"
+  }, faces.filter(Boolean).slice(0, 5).map((f, i) => React.createElement("img", {
+    key: i,
+    src: f,
+    alt: ""
+  }))), React.createElement("span", {
+    className: "t"
+  }, "🤝 友情タッグ ×", tags.length, tagPct > 0 ? `・伸び +${tagPct}%` : '')) : null, k !== 'tag' ? React.createElement("div", {
+    className: "v-tfx-badge",
+    "data-msx-tfx-badge": gm
+  }, "伸び ×", gm) : null);
 }
 const msxIntroScene = aid => `scn.${aid}.start`;
 function MsxRunIntro({
@@ -169644,7 +170125,7 @@ const msxStartPreview = (SUC, species, type, aptBase, startSt) => {
   } catch (e) {}
   return out;
 };
-const MSX_SKILL_ICONS = new Set(['images/success/skill/sk-0001.png', 'images/success/skill/sk-0002.png', 'images/success/skill/sk-0003.png', 'images/success/skill/sk-0004.png', 'images/success/skill/sk-0005.png', 'images/success/skill/sk-0008.png', 'images/success/skill/sk-0009.png', 'images/success/skill/sk-0010.png', 'images/success/skill/sk-0015.png', 'images/success/skill/sk-0016.png', 'images/success/skill/sk-0017.png', 'images/success/skill/sk-0018.png', 'images/success/skill/sk-0023.png', 'images/success/skill/sk-0025.png', 'images/success/skill/sk-0026.png', 'images/success/skill/sk-0027.png', 'images/success/skill/sk-0028.png', 'images/success/skill/sk-0035.png', 'images/success/skill/sk-0036.png', 'images/success/skill/sk-0037.png', 'images/success/skill/sk-0039.png', 'images/success/skill/sk-0040.png', 'images/success/skill/sk-0041.png', 'images/success/skill/sk-0042.png', 'images/success/skill/sk-0043.png', 'images/success/skill/sk-0044.png', 'images/success/skill/sk-0045.png', 'images/success/skill/sk-0046.png', 'images/success/skill/sk-0047.png', 'images/success/skill/sk-0048.png', 'images/success/skill/sk-0049.png', 'images/success/skill/sk-0050.png', 'images/success/skill/sk-0051.png', 'images/success/skill/sk-0052.png', 'images/success/skill/sk-0053.png', 'images/success/skill/sk-0054.png', 'images/success/skill/sk-0055.png', 'images/success/skill/sk-0064.png', 'images/success/skill/sk-0065.png', 'images/success/skill/sk-0066.png', 'images/success/skill/sk-0067.png', 'images/success/skill/sk-0068.png', 'images/success/skill/sk-0069.png', 'images/success/skill/sk-0070.png', 'images/success/skill/sk-0071.png', 'images/success/skill/sk-0072.png', 'images/success/skill/sk-0073.png', 'images/success/skill/sk-0074.png', 'images/success/skill/sk-0075.png', 'images/success/skill/sk-0076.png', 'images/success/skill/sk-0077.png', 'images/success/skill/sk-0078.png', 'images/success/skill/sk-0079.png', 'images/success/skill/sk-0080.png', 'images/success/skill/sk-0082.png', 'images/success/skill/sk-0083.png', 'images/success/skill/sk-0084.png', 'images/success/skill/sk-0110.png', 'images/success/skill/sk-0111.png', 'images/success/skill/sk-0112.png', 'images/success/skill/sk-0113.png', 'images/success/skill/sk-0114.png', 'images/success/skill/sk-0115.png', 'images/success/skill/sk-0116.png', 'images/success/skill/sk-0117.png', 'images/success/skill/sk-0118.png', 'images/success/skill/sk-0119.png', 'images/success/skill/sk-0120.png', 'images/success/skill/sk-0121.png', 'images/success/skill/sk-0122.png', 'images/success/skill/sk-0123.png', 'images/success/skill/sk-0124.png', 'images/success/skill/sk-0125.png', 'images/success/skill/sk-0129.png', 'images/success/skill/sk-0258.png', 'images/success/skill/sk-0259.png', 'images/success/skill/sk-0260.png', 'images/success/skill/sk-0261.png', 'images/success/skill/sk-0262.png', 'images/success/skill/sk-0263.png', 'images/success/skill/sk-0264.png', 'images/success/skill/sk-0265.png', 'images/success/skill/sk-0266.png', 'images/success/skill/sk-0267.png', 'images/success/skill/sk-0268.png', 'images/success/skill/sk-0269.png', 'images/success/skill/sk-0270.png', 'images/success/skill/sk-0271.png', 'images/success/skill/sk-0272.png', 'images/success/skill/sk-0273.png', 'images/success/skill/sk-0274.png', 'images/success/skill/sk-0292.png', 'images/success/skill/sk-0293.png', 'images/success/skill/sk-0294.png', 'images/success/skill/sk-0295.png', 'images/success/skill/sk-0296.png', 'images/success/skill/sk-0297.png', 'images/success/skill/sk-0298.png', 'images/success/skill/sk-0299.png', 'images/success/skill/sk-0300.png', 'images/success/skill/sk-0301.png', 'images/success/skill/sk-0302.png', 'images/success/skill/sk-0303.png', 'images/success/skill/sk-0304.png', 'images/success/skill/sk-0305.png', 'images/success/skill/sk-0306.png', 'images/success/skill/sk-0307.png', 'images/success/skill/sk-0338.png', 'images/success/skill/sk-0339.png', 'images/success/skill/sk-0340.png', 'images/success/skill/sk-0341.png', 'images/success/skill/sk-0342.png', 'images/success/skill/sk-0343.png', 'images/success/skill/sk-0344.png', 'images/success/skill/sk-0345.png', 'images/success/skill/sk-0346.png', 'images/success/skill/sk-0347.png', 'images/success/skill/sk-0348.png', 'images/success/skill/sk-0349.png', 'images/success/skill/sk-0350.png', 'images/success/skill/sk-0351.png', 'images/success/skill/sk-0384.png', 'images/success/skill/sk-0385.png', 'images/success/skill/sk-0386.png', 'images/success/skill/sk-0387.png', 'images/success/skill/sk-0388.png', 'images/success/skill/sk-0389.png', 'images/success/skill/sk-0390.png', 'images/success/skill/sk-0391.png', 'images/success/skill/sk-0392.png', 'images/success/skill/sk-0393.png', 'images/success/skill/sk-0394.png', 'images/success/skill/sk-0395.png', 'images/success/skill/sk-0396.png', 'images/success/skill/sk-0397.png', 'images/success/skill/sk-0398.png', 'images/success/skill/sk-0399.png', 'images/success/skill/sk-0400.png', 'images/success/skill/sk-0401.png', 'images/success/skill/sk-0402.png', 'images/success/skill/sk-0403.png', 'images/success/skill/sk-0404.png', 'images/success/skill/sk-0405.png', 'images/success/skill/sk-0406.png', 'images/success/skill/sk-0407.png', 'images/success/skill/sk-0408.png', 'images/success/skill/sk-0409.png', 'images/success/skill/sk-0410.png', 'images/success/skill/sk-0411.png', 'images/success/skill/sk-0412.png', 'images/success/skill/sk-0413.png', 'images/success/skill/sk-0414.png', 'images/success/skill/sk-0415.png', 'images/success/skill/sk-0416.png', 'images/success/skill/sk-0446.png', 'images/success/skill/sk-0447.png', 'images/success/skill/sk-0448.png', 'images/success/skill/sk-0449.png', 'images/success/skill/sk-0450.png', 'images/success/skill/sk-0451.png', 'images/success/skill/sk-0452.png', 'images/success/skill/sk-0453.png', 'images/success/skill/sk-0454.png', 'images/success/skill/sk-0455.png', 'images/success/skill/sk-0456.png', 'images/success/skill/sk-0457.png', 'images/success/skill/sk-0458.png', 'images/success/skill/sk-0459.png', 'images/success/skill/sk-0460.png', 'images/success/skill/sk-0461.png', 'images/success/skill/sk-0462.png', 'images/success/skill/sk-0463.png', 'images/success/skill/sk-0464.png', 'images/success/skill/sk-0465.png', 'images/success/skill/sk-0466.png', 'images/success/skill/sk-0467.png', 'images/success/skill/sk-0468.png', 'images/success/skill/sk-0469.png', 'images/success/skill/sk-0470.png', 'images/success/skill/sk-0471.png', 'images/success/skill/sk-0472.png', 'images/success/skill/sk-0473.png', 'images/success/skill/sk-0474.png', 'images/success/skill/sk-0475.png', 'images/success/skill/sk-0476.png', 'images/success/skill/sk-0477.png', 'images/success/skill/sk-0478.png', 'images/success/skill/sk-0479.png', 'images/success/skill/sk-0480.png', 'images/success/skill/sk-0481.png', 'images/success/skill/sk-0482.png', 'images/success/skill/sk-0483.png', 'images/success/skill/sk-0484.png', 'images/success/skill/sk-0485.png', 'images/success/skill/sk-0486.png', 'images/success/skill/sk-0487.png', 'images/success/skill/sk-0488.png', 'images/success/skill/sk-0489.png', 'images/success/skill/sk-0490.png', 'images/success/skill/sk-0491.png', 'images/success/skill/sk-0496.png', 'images/success/skill/sk-0511.png', 'images/success/skill/sk-0512.png', 'images/success/skill/sk-0513.png', 'images/success/skill/sk-0514.png', 'images/success/skill/sk-0515.png', 'images/success/skill/sk-0516.png', 'images/success/skill/sk-0517.png', 'images/success/skill/sk-0518.png', 'images/success/skill/sk-0519.png', 'images/success/skill/sk-0520.png', 'images/success/skill/sk-0521.png', 'images/success/skill/sk-0522.png', 'images/success/skill/sk-0523.png', 'images/success/skill/sk-0524.png', 'images/success/skill/sk-0525.png', 'images/success/skill/sk-0526.png', 'images/success/skill/sk-0573.png', 'images/success/skill/sk-0574.png', 'images/success/skill/sk-0575.png', 'images/success/skill/sk-0576.png', 'images/success/skill/sk-0577.png', 'images/success/skill/sk-0578.png', 'images/success/skill/sk-0579.png', 'images/success/skill/sk-0580.png', 'images/success/skill/sk-0581.png', 'images/success/skill/sk-0582.png', 'images/success/skill/sk-0583.png', 'images/success/skill/sk-0584.png', 'images/success/skill/sk-0585.png', 'images/success/skill/sk-0586.png', 'images/success/skill/sk-0587.png', 'images/success/skill/sk-0588.png', 'images/success/skill/sk-0589.png', 'images/success/skill/sk-0590.png', 'images/success/skill/sk-0591.png', 'images/success/skill/sk-0592.png', 'images/success/skill/sk-0593.png', 'images/success/skill/sk-0594.png', 'images/success/skill/sk-0595.png', 'images/success/skill/sk-0596.png', 'images/success/skill/sk-0597.png', 'images/success/skill/sk-0598.png', 'images/success/skill/sk-0599.png', 'images/success/skill/sk-0742.png', 'images/success/skill/sk-0743.png', 'images/success/skill/sk-0744.png', 'images/success/skill/sk-0785.png', 'images/success/skill/sk-0787.png', 'images/success/skill/sk-0788.png', 'images/success/skill/sk-0797.png', 'images/success/skill/sk-0798.png', 'images/success/skill/sk-0799.png', 'images/success/skill/sk-0824.png', 'images/success/skill/eiki_o01.png', 'images/success/skill/eiki_o02.png', 'images/success/skill/eiki_o03.png', 'images/success/skill/eiki_o04.png', 'images/success/skill/eiki_o05.png', 'images/success/skill/eiki_o06.png', 'images/success/skill/eiki_o07.png', 'images/success/skill/eiki_o08.png', 'images/success/skill/eiki_o09.png', 'images/success/skill/eiki_o10.png', 'images/success/skill/eiki_o11.png', 'images/success/skill/eiki_o12.png', 'images/success/skill/eiki_o13.png', 'images/success/skill/eiki_o14.png', 'images/success/skill/eiki_o15.png', 'images/success/skill/eiki_o16.png', 'images/success/skill/eiki_o17.png', 'images/success/skill/eiki_o18.png', 'images/success/skill/kenshimocchi_o01.png', 'images/success/skill/kenshimocchi_o02.png', 'images/success/skill/kenshimocchi_o03.png', 'images/success/skill/kenshimocchi_o04.png', 'images/success/skill/kenshimocchi_o05.png', 'images/success/skill/kenshimocchi_o06.png', 'images/success/skill/kenshimocchi_o07.png', 'images/success/skill/kenshimocchi_o08.png', 'images/success/skill/kenshimocchi_o09.png', 'images/success/skill/kenshimocchi_o10.png', 'images/success/skill/kenshimocchi_o11.png', 'images/success/skill/kenshimocchi_o12.png', 'images/success/skill/kenshimocchi_o13.png', 'images/success/skill/kenshimocchi_o14.png', 'images/success/skill/kenshimocchi_o15.png', 'images/success/skill/kenshimocchi_o16.png', 'images/success/skill/kenshimocchi_o17.png', 'images/success/skill/kenshimocchi_o18.png', 'images/success/skill/kuromy_o01.png', 'images/success/skill/kuromy_o02.png', 'images/success/skill/kuromy_o03.png', 'images/success/skill/kuromy_o04.png', 'images/success/skill/kuromy_o05.png', 'images/success/skill/kuromy_o06.png', 'images/success/skill/kuromy_o07.png', 'images/success/skill/kuromy_o08.png', 'images/success/skill/kuromy_o09.png', 'images/success/skill/kuromy_o10.png', 'images/success/skill/kuromy_o11.png', 'images/success/skill/kuromy_o12.png', 'images/success/skill/kuromy_o13.png', 'images/success/skill/kuromy_o14.png', 'images/success/skill/kuromy_o15.png', 'images/success/skill/kuromy_o16.png', 'images/success/skill/kuromy_o17.png', 'images/success/skill/kuromy_o18.png', 'images/success/skill/melody_o01.png', 'images/success/skill/melody_o02.png', 'images/success/skill/melody_o03.png', 'images/success/skill/melody_o04.png', 'images/success/skill/melody_o05.png', 'images/success/skill/melody_o06.png', 'images/success/skill/melody_o07.png', 'images/success/skill/melody_o08.png', 'images/success/skill/melody_o09.png', 'images/success/skill/melody_o10.png', 'images/success/skill/melody_o11.png', 'images/success/skill/melody_o12.png', 'images/success/skill/melody_o13.png', 'images/success/skill/melody_o14.png', 'images/success/skill/melody_o15.png', 'images/success/skill/melody_o16.png', 'images/success/skill/melody_o17.png', 'images/success/skill/melody_o18.png', 'images/success/skill/pandora_o01.png', 'images/success/skill/pandora_o02.png', 'images/success/skill/pandora_o03.png', 'images/success/skill/pandora_o04.png', 'images/success/skill/pandora_o05.png', 'images/success/skill/pandora_o06.png', 'images/success/skill/pandora_o07.png', 'images/success/skill/pandora_o08.png', 'images/success/skill/pandora_o09.png', 'images/success/skill/pandora_o10.png', 'images/success/skill/pandora_o11.png', 'images/success/skill/pandora_o12.png', 'images/success/skill/pandora_o13.png', 'images/success/skill/pandora_o14.png', 'images/success/skill/pandora_o15.png', 'images/success/skill/pandora_o16.png', 'images/success/skill/pandora_o17.png', 'images/success/skill/pandora_o18.png']);
+const MSX_SKILL_ICONS = new Set(['images/success/skill/sk-0001.png', 'images/success/skill/sk-0002.png', 'images/success/skill/sk-0003.png', 'images/success/skill/sk-0004.png', 'images/success/skill/sk-0005.png', 'images/success/skill/sk-0008.png', 'images/success/skill/sk-0009.png', 'images/success/skill/sk-0010.png', 'images/success/skill/sk-0015.png', 'images/success/skill/sk-0016.png', 'images/success/skill/sk-0017.png', 'images/success/skill/sk-0018.png', 'images/success/skill/sk-0023.png', 'images/success/skill/sk-0025.png', 'images/success/skill/sk-0026.png', 'images/success/skill/sk-0027.png', 'images/success/skill/sk-0028.png', 'images/success/skill/sk-0035.png', 'images/success/skill/sk-0036.png', 'images/success/skill/sk-0037.png', 'images/success/skill/sk-0039.png', 'images/success/skill/sk-0040.png', 'images/success/skill/sk-0041.png', 'images/success/skill/sk-0042.png', 'images/success/skill/sk-0043.png', 'images/success/skill/sk-0044.png', 'images/success/skill/sk-0045.png', 'images/success/skill/sk-0046.png', 'images/success/skill/sk-0047.png', 'images/success/skill/sk-0048.png', 'images/success/skill/sk-0049.png', 'images/success/skill/sk-0050.png', 'images/success/skill/sk-0051.png', 'images/success/skill/sk-0052.png', 'images/success/skill/sk-0053.png', 'images/success/skill/sk-0054.png', 'images/success/skill/sk-0055.png', 'images/success/skill/sk-0064.png', 'images/success/skill/sk-0065.png', 'images/success/skill/sk-0066.png', 'images/success/skill/sk-0067.png', 'images/success/skill/sk-0068.png', 'images/success/skill/sk-0069.png', 'images/success/skill/sk-0070.png', 'images/success/skill/sk-0071.png', 'images/success/skill/sk-0072.png', 'images/success/skill/sk-0073.png', 'images/success/skill/sk-0074.png', 'images/success/skill/sk-0075.png', 'images/success/skill/sk-0076.png', 'images/success/skill/sk-0077.png', 'images/success/skill/sk-0078.png', 'images/success/skill/sk-0079.png', 'images/success/skill/sk-0080.png', 'images/success/skill/sk-0082.png', 'images/success/skill/sk-0083.png', 'images/success/skill/sk-0084.png', 'images/success/skill/sk-0110.png', 'images/success/skill/sk-0111.png', 'images/success/skill/sk-0112.png', 'images/success/skill/sk-0113.png', 'images/success/skill/sk-0114.png', 'images/success/skill/sk-0115.png', 'images/success/skill/sk-0116.png', 'images/success/skill/sk-0117.png', 'images/success/skill/sk-0118.png', 'images/success/skill/sk-0119.png', 'images/success/skill/sk-0120.png', 'images/success/skill/sk-0121.png', 'images/success/skill/sk-0122.png', 'images/success/skill/sk-0123.png', 'images/success/skill/sk-0124.png', 'images/success/skill/sk-0125.png', 'images/success/skill/sk-0129.png', 'images/success/skill/sk-0258.png', 'images/success/skill/sk-0259.png', 'images/success/skill/sk-0260.png', 'images/success/skill/sk-0261.png', 'images/success/skill/sk-0262.png', 'images/success/skill/sk-0263.png', 'images/success/skill/sk-0264.png', 'images/success/skill/sk-0265.png', 'images/success/skill/sk-0266.png', 'images/success/skill/sk-0267.png', 'images/success/skill/sk-0268.png', 'images/success/skill/sk-0269.png', 'images/success/skill/sk-0270.png', 'images/success/skill/sk-0271.png', 'images/success/skill/sk-0272.png', 'images/success/skill/sk-0273.png', 'images/success/skill/sk-0274.png', 'images/success/skill/sk-0292.png', 'images/success/skill/sk-0293.png', 'images/success/skill/sk-0294.png', 'images/success/skill/sk-0295.png', 'images/success/skill/sk-0296.png', 'images/success/skill/sk-0297.png', 'images/success/skill/sk-0298.png', 'images/success/skill/sk-0299.png', 'images/success/skill/sk-0300.png', 'images/success/skill/sk-0301.png', 'images/success/skill/sk-0302.png', 'images/success/skill/sk-0303.png', 'images/success/skill/sk-0304.png', 'images/success/skill/sk-0305.png', 'images/success/skill/sk-0306.png', 'images/success/skill/sk-0307.png', 'images/success/skill/sk-0338.png', 'images/success/skill/sk-0339.png', 'images/success/skill/sk-0340.png', 'images/success/skill/sk-0341.png', 'images/success/skill/sk-0342.png', 'images/success/skill/sk-0343.png', 'images/success/skill/sk-0344.png', 'images/success/skill/sk-0345.png', 'images/success/skill/sk-0346.png', 'images/success/skill/sk-0347.png', 'images/success/skill/sk-0348.png', 'images/success/skill/sk-0349.png', 'images/success/skill/sk-0350.png', 'images/success/skill/sk-0351.png', 'images/success/skill/sk-0384.png', 'images/success/skill/sk-0385.png', 'images/success/skill/sk-0386.png', 'images/success/skill/sk-0387.png', 'images/success/skill/sk-0388.png', 'images/success/skill/sk-0389.png', 'images/success/skill/sk-0390.png', 'images/success/skill/sk-0391.png', 'images/success/skill/sk-0392.png', 'images/success/skill/sk-0393.png', 'images/success/skill/sk-0394.png', 'images/success/skill/sk-0395.png', 'images/success/skill/sk-0396.png', 'images/success/skill/sk-0397.png', 'images/success/skill/sk-0398.png', 'images/success/skill/sk-0399.png', 'images/success/skill/sk-0400.png', 'images/success/skill/sk-0401.png', 'images/success/skill/sk-0402.png', 'images/success/skill/sk-0403.png', 'images/success/skill/sk-0404.png', 'images/success/skill/sk-0405.png', 'images/success/skill/sk-0406.png', 'images/success/skill/sk-0407.png', 'images/success/skill/sk-0408.png', 'images/success/skill/sk-0409.png', 'images/success/skill/sk-0410.png', 'images/success/skill/sk-0411.png', 'images/success/skill/sk-0412.png', 'images/success/skill/sk-0413.png', 'images/success/skill/sk-0414.png', 'images/success/skill/sk-0415.png', 'images/success/skill/sk-0416.png', 'images/success/skill/sk-0446.png', 'images/success/skill/sk-0447.png', 'images/success/skill/sk-0448.png', 'images/success/skill/sk-0449.png', 'images/success/skill/sk-0450.png', 'images/success/skill/sk-0451.png', 'images/success/skill/sk-0452.png', 'images/success/skill/sk-0453.png', 'images/success/skill/sk-0454.png', 'images/success/skill/sk-0455.png', 'images/success/skill/sk-0456.png', 'images/success/skill/sk-0457.png', 'images/success/skill/sk-0458.png', 'images/success/skill/sk-0459.png', 'images/success/skill/sk-0460.png', 'images/success/skill/sk-0461.png', 'images/success/skill/sk-0462.png', 'images/success/skill/sk-0463.png', 'images/success/skill/sk-0464.png', 'images/success/skill/sk-0465.png', 'images/success/skill/sk-0466.png', 'images/success/skill/sk-0467.png', 'images/success/skill/sk-0468.png', 'images/success/skill/sk-0469.png', 'images/success/skill/sk-0470.png', 'images/success/skill/sk-0471.png', 'images/success/skill/sk-0472.png', 'images/success/skill/sk-0473.png', 'images/success/skill/sk-0474.png', 'images/success/skill/sk-0475.png', 'images/success/skill/sk-0476.png', 'images/success/skill/sk-0477.png', 'images/success/skill/sk-0478.png', 'images/success/skill/sk-0479.png', 'images/success/skill/sk-0480.png', 'images/success/skill/sk-0481.png', 'images/success/skill/sk-0482.png', 'images/success/skill/sk-0483.png', 'images/success/skill/sk-0484.png', 'images/success/skill/sk-0485.png', 'images/success/skill/sk-0486.png', 'images/success/skill/sk-0487.png', 'images/success/skill/sk-0488.png', 'images/success/skill/sk-0489.png', 'images/success/skill/sk-0490.png', 'images/success/skill/sk-0491.png', 'images/success/skill/sk-0496.png', 'images/success/skill/sk-0511.png', 'images/success/skill/sk-0512.png', 'images/success/skill/sk-0513.png', 'images/success/skill/sk-0514.png', 'images/success/skill/sk-0515.png', 'images/success/skill/sk-0516.png', 'images/success/skill/sk-0517.png', 'images/success/skill/sk-0518.png', 'images/success/skill/sk-0519.png', 'images/success/skill/sk-0520.png', 'images/success/skill/sk-0521.png', 'images/success/skill/sk-0522.png', 'images/success/skill/sk-0523.png', 'images/success/skill/sk-0524.png', 'images/success/skill/sk-0525.png', 'images/success/skill/sk-0526.png', 'images/success/skill/sk-0573.png', 'images/success/skill/sk-0574.png', 'images/success/skill/sk-0575.png', 'images/success/skill/sk-0576.png', 'images/success/skill/sk-0577.png', 'images/success/skill/sk-0578.png', 'images/success/skill/sk-0579.png', 'images/success/skill/sk-0580.png', 'images/success/skill/sk-0581.png', 'images/success/skill/sk-0582.png', 'images/success/skill/sk-0583.png', 'images/success/skill/sk-0584.png', 'images/success/skill/sk-0585.png', 'images/success/skill/sk-0586.png', 'images/success/skill/sk-0587.png', 'images/success/skill/sk-0588.png', 'images/success/skill/sk-0589.png', 'images/success/skill/sk-0590.png', 'images/success/skill/sk-0591.png', 'images/success/skill/sk-0592.png', 'images/success/skill/sk-0593.png', 'images/success/skill/sk-0594.png', 'images/success/skill/sk-0595.png', 'images/success/skill/sk-0596.png', 'images/success/skill/sk-0597.png', 'images/success/skill/sk-0598.png', 'images/success/skill/sk-0599.png', 'images/success/skill/sk-0742.png', 'images/success/skill/sk-0743.png', 'images/success/skill/sk-0744.png', 'images/success/skill/sk-0785.png', 'images/success/skill/sk-0787.png', 'images/success/skill/sk-0788.png', 'images/success/skill/sk-0797.png', 'images/success/skill/sk-0798.png', 'images/success/skill/sk-0799.png', 'images/success/skill/sk-0824.png', 'images/success/skill/eiki_o01.png', 'images/success/skill/eiki_o02.png', 'images/success/skill/eiki_o03.png', 'images/success/skill/eiki_o04.png', 'images/success/skill/eiki_o05.png', 'images/success/skill/eiki_o06.png', 'images/success/skill/eiki_o07.png', 'images/success/skill/eiki_o08.png', 'images/success/skill/eiki_o09.png', 'images/success/skill/eiki_o10.png', 'images/success/skill/eiki_o11.png', 'images/success/skill/eiki_o12.png', 'images/success/skill/eiki_o13.png', 'images/success/skill/eiki_o14.png', 'images/success/skill/eiki_o15.png', 'images/success/skill/eiki_o16.png', 'images/success/skill/eiki_o17.png', 'images/success/skill/eiki_o18.png', 'images/success/skill/kenshimocchi_o01.png', 'images/success/skill/kenshimocchi_o02.png', 'images/success/skill/kenshimocchi_o03.png', 'images/success/skill/kenshimocchi_o04.png', 'images/success/skill/kenshimocchi_o05.png', 'images/success/skill/kenshimocchi_o06.png', 'images/success/skill/kenshimocchi_o07.png', 'images/success/skill/kenshimocchi_o08.png', 'images/success/skill/kenshimocchi_o09.png', 'images/success/skill/kenshimocchi_o10.png', 'images/success/skill/kenshimocchi_o11.png', 'images/success/skill/kenshimocchi_o12.png', 'images/success/skill/kenshimocchi_o13.png', 'images/success/skill/kenshimocchi_o14.png', 'images/success/skill/kenshimocchi_o15.png', 'images/success/skill/kenshimocchi_o16.png', 'images/success/skill/kenshimocchi_o17.png', 'images/success/skill/kenshimocchi_o18.png', 'images/success/skill/kuromy_o01.png', 'images/success/skill/kuromy_o02.png', 'images/success/skill/kuromy_o03.png', 'images/success/skill/kuromy_o04.png', 'images/success/skill/kuromy_o05.png', 'images/success/skill/kuromy_o06.png', 'images/success/skill/kuromy_o07.png', 'images/success/skill/kuromy_o08.png', 'images/success/skill/kuromy_o09.png', 'images/success/skill/kuromy_o10.png', 'images/success/skill/kuromy_o11.png', 'images/success/skill/kuromy_o12.png', 'images/success/skill/kuromy_o13.png', 'images/success/skill/kuromy_o14.png', 'images/success/skill/kuromy_o15.png', 'images/success/skill/kuromy_o16.png', 'images/success/skill/kuromy_o17.png', 'images/success/skill/kuromy_o18.png', 'images/success/skill/melody_o01.png', 'images/success/skill/melody_o02.png', 'images/success/skill/melody_o03.png', 'images/success/skill/melody_o04.png', 'images/success/skill/melody_o05.png', 'images/success/skill/melody_o06.png', 'images/success/skill/melody_o07.png', 'images/success/skill/melody_o08.png', 'images/success/skill/melody_o09.png', 'images/success/skill/melody_o10.png', 'images/success/skill/melody_o11.png', 'images/success/skill/melody_o12.png', 'images/success/skill/melody_o13.png', 'images/success/skill/melody_o14.png', 'images/success/skill/melody_o15.png', 'images/success/skill/melody_o16.png', 'images/success/skill/melody_o17.png', 'images/success/skill/melody_o18.png', 'images/success/skill/pandora_o01.png', 'images/success/skill/pandora_o02.png', 'images/success/skill/pandora_o03.png', 'images/success/skill/pandora_o04.png', 'images/success/skill/pandora_o05.png', 'images/success/skill/pandora_o06.png', 'images/success/skill/pandora_o07.png', 'images/success/skill/pandora_o08.png', 'images/success/skill/pandora_o09.png', 'images/success/skill/pandora_o10.png', 'images/success/skill/pandora_o11.png', 'images/success/skill/pandora_o12.png', 'images/success/skill/pandora_o13.png', 'images/success/skill/pandora_o14.png', 'images/success/skill/pandora_o15.png', 'images/success/skill/pandora_o16.png', 'images/success/skill/pandora_o17.png', 'images/success/skill/pandora_o18.png', 'images/success/skill/pandora_o19.png', 'images/success/skill/pandora_o20.png', 'images/success/skill/pandora_o21.png', 'images/success/skill/pandora_o22.png', 'images/success/skill/pandora_o23.png', 'images/success/skill/pandora_o24.png', 'images/success/skill/pandora_o25.png', 'images/success/skill/pandora_o26.png']);
 const MSX_TG_RANK_COL = Object.freeze({
   1: ['#e9a46a', '#a95f27'],
   2: ['#f4f7fb', '#aab4c2'],
@@ -172624,7 +173105,7 @@ function MsxPlay({
   const actOn = run.phase === 'result' && actAt === s.turn && typeof MsxTrainAct === 'function';
   const kiOn = run.phase === 'turn' && typeof MsxKiShow === 'function' && v.period && v.period.at === 1 && v.period.index > 0 && kiAt !== s.turn;
   const childSound = typeof MsxR3 === 'function' && (run.phase === 'battle' && !preOn || run.phase === 'over' || !!s.over || sub === 'cup' || sub === 'shugyo');
-  const soundId = childSound ? null : actOn ? 'training' : kiOn ? 'kiShow' : run.phase === 'awake' && run.out && run.out.fire && typeof MsxAwakeShow === 'function' ? 'awakeShow' : run.phase === 'awake' && run.out && run.out.fire ? run.out.fire.kind === 2 ? 'trainGreat' : 'trainLvUp' : run.phase === 'result' && run.out && MSX_REST_SOUND[run.out.kind] ? MSX_REST_SOUND[run.out.kind] : run.phase === 'result' && run.out && run.out.result ? MSX_RES_SOUND[run.out.result] : run.phase === 'issa' ? 'issa' : s.over === 'gameover' ? 'gameOver' : 'main';
+  const soundId = childSound ? null : actOn ? 'training' : kiOn ? 'kiShow' : run.phase === 'awake' && run.out && run.out.fire && typeof MsxAwakeShow === 'function' ? 'awakeShow' : run.phase === 'awake' && run.out && run.out.fire ? run.out.fire.kind === 2 ? 'trainGreat' : 'trainLvUp' : run.phase === 'result' && run.out && MSX_REST_SOUND[run.out.kind] ? MSX_REST_SOUND[run.out.kind] : run.phase === 'result' && run.out && run.out.result ? typeof msxTfxResSound === 'function' && msxTfxResSound(run.out) || MSX_RES_SOUND[run.out.result] : run.phase === 'issa' ? 'issa' : s.over === 'gameover' ? 'gameOver' : 'main';
   msxUseScene(soundId, {
     season: msxCalendar(s.turn).season
   });
@@ -172996,6 +173477,10 @@ function MsxPlay({
       className: "v-burst"
     }) : isTrain && o.result === 'ok' ? React.createElement("div", {
       className: "v-burst b2"
+    }) : null, !acting && isTrain && typeof MsxTrainResFx === 'function' ? React.createElement(MsxTrainResFx, {
+      run: run,
+      o: o,
+      layer: "back"
     }) : null, React.createElement("div", {
       className: "gr",
       style: {
@@ -173018,8 +173503,12 @@ function MsxPlay({
         filter: o.result === 'fail' ? 'grayscale(.5) drop-shadow(0 8px 5px #0009)' : undefined
       }
     }), acting ? null : React.createElement("div", {
-      className: `v-stamp msx-pop ${isTrain ? R.cls : 'ok'}`
-    }, isTrain ? R.word : o.kind === 'rest' ? restName || '休んだ' : o.kind === 'play' ? '遊んだ!' : o.kind === 'clinic' ? '通院' : '休み', isTrain && o.card && o.card.tags && o.card.tags.length ? React.createElement("small", null, "🤝 友情タッグ ×", o.card.tags.length, o.result === 'great' ? '・伸び ×1.5' : '') : null), !acting && typeof MsxBondChips === 'function' ? React.createElement(MsxBondChips, {
+      className: `v-stamp msx-pop ${isTrain ? R.cls : 'ok'}${isTrain && typeof msxTfxKind === 'function' && (msxTfxKind(o) === 'great' || msxTfxKind(o) === 'both') ? ` tfx-gold${msxTfxKind(o) === 'both' ? ' tfx-both' : ''}${typeof msxTfxOpt === 'function' && msxTfxOpt().calm ? ' calm' : ''}` : ''}`
+    }, isTrain ? R.word : o.kind === 'rest' ? restName || '休んだ' : o.kind === 'play' ? '遊んだ!' : o.kind === 'clinic' ? '通院' : '休み', isTrain && o.card && o.card.tags && o.card.tags.length && typeof MsxTrainResFx !== 'function' ? React.createElement("small", null, "🤝 友情タッグ ×", o.card.tags.length, o.result === 'great' ? '・伸び ×1.5' : '') : null), !acting && isTrain && typeof MsxTrainResFx === 'function' ? React.createElement(MsxTrainResFx, {
+      run: run,
+      o: o,
+      layer: "top"
+    }) : null, !acting && typeof MsxBondChips === 'function' ? React.createElement(MsxBondChips, {
       s: s,
       card: o.card,
       add: SUC.BOND && SUC.BOND.train || 8

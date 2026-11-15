@@ -24,6 +24,7 @@
     { id: 'menu', name: 'メニュー(育成の外)', bgm: 'monsuc_menu', se: null },
     // トレーニングの結果4種(曲は替えない)。演出のあと結果の字が出たときに鳴らす。2026-11-14 社長「大成功は派手に・失敗は残念そうに」で 大成功=ファンファーレ・成功=和音・サボり=低いブザーに替えた
     { id: 'trainGreat', name: 'トレーニング: 大成功', se: 'rankFanfare' },
+    { id: 'trainGreatTag', name: 'トレーニング: 大成功と友情タッグが重なった', se: 'rankFanfareGrand' }, // 2026-11-15 社長 r1115-069
     { id: 'trainOk', name: 'トレーニング: 成功', se: 'trainingGoal' },
     { id: 'trainFail', name: 'トレーニング: 失敗', se: 'trainingFail' },
     { id: 'trainSkip', name: 'トレーニング: サボり', se: 'trainingBad' },
@@ -45,6 +46,12 @@
     { id: 'actIdea', name: 'トレーニングの場面: ひらめく', se: 'trainingTool' },
     { id: 'actTag', name: 'トレーニングの場面: 友情タッグのカットイン', se: 'friendTag' }, // 2026-11-14 社長「友情タッグのときは、特別な演出や効果音を入れて」
     { id: 'actFlash', name: 'トレーニングの場面: Lv5の閃光', se: 'crit' },
+    // 友情タッグ・大成功・重なりの決めの演出(56-monsuc-trainfx.jsx・2026-11-15 社長 r1115-067〜069)。新しい音源は入れず、いまある効果音を当てる
+    { id: 'actTagJoin', name: 'トレーニングの場面: 仲間の光が集まる', se: 'join' },
+    { id: 'actTagFin', name: 'トレーニングの場面: タッグフィニッシュ', se: 'fusion' },
+    { id: 'actGreatCharge', name: 'トレーニングの場面: 大成功の溜め', se: 'enemyCharge' },
+    { id: 'actGreatBoom', name: 'トレーニングの場面: 大成功の爆発', se: 'crit' },
+    { id: 'actComboBoom', name: 'トレーニングの場面: 絆の大爆発', se: 'fusion' },
     // 修行の段(MsxShugyoStages)。曲は修行(ascetic)のまま。段の切り替え・溜め・斬る・跳ぶ・叩きつけ
     { id: 'qStage', name: '修行の段: 切り替え', se: 'trainingDecide' },
     { id: 'qCharge', name: '修行の段: 溜め', se: 'enemyCharge' },
