@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: db8a7ec1408cd44c
+// generated-sha256: d302832f4f50ba01
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -56249,6 +56249,9 @@ const RHYTHM_MULTI = (() => {
       }
       watchFrames = watch.frames; watchFramesAt = now;
     }
+    // 判定をためる箱が消えていたら、用意し直す(2026-11-15 r1115-204 本番「タップしたときの判定が出てない」)。
+    //   2曲目からは、曲の始まりで箱を用意した直後に、前の曲の演奏画面が閉じるときに箱を消していた(曲の位置・判定の数は届くのに、どのノーツをどう叩いたかが届かなかった)
+    if (!watchLite && watch && watch.jd === null) { watch.jd = []; watch.jx = []; }
     if (watchLite) { watchJdOff(); msg.lt = 1; }
     else if (watch && Array.isArray(watch.jd)) {
       // ためた判定をまとめて1通に(ノーツ番号と判定の番号が交互に並ぶ。多すぎるときは新しい側だけ)
@@ -57221,13 +57224,18 @@ const RHYTHM_WATCH = (() => {
       if (!round) return;
       // 顔ぶれ(pt)が無い返事は、同じ回の点の更新だけ(顔ぶれは最初の返事で受けている)
       if (!people.length && !(st.round === round && st.people.length)) return;
-      if (st.round !== round) { st.round = round; st.rows = {}; st.judged = {}; st.marks = {}; st.tried = []; }
+      if (st.round !== round) { st.round = round; st.rows = {}; st.judged = {}; st.marks = {}; st.tried = []; st.wiFrom = []; }
       st.songId = rhythmMultiText(raw.sg, 60);
       if (people.length) st.people = people;
-      if (!st.focus || !st.people.some((x) => x.id === st.focus)) setFocus(st.people[0].id);
+      const from = rhythmMultiText(raw.id, 40);
+      // 返事(wi)をくれた人は、見られれば細かい知らせを送る人。返事をくれない人(古い版・観戦を許していない)を見続けないよう、返事をくれた人を先に見る(r1115-204)
+      const fromIn = !!from && st.people.some((x) => x.id === from);
+      const heard = st.wiFrom || (st.wiFrom = []);
+      if (fromIn && !heard.includes(from)) heard.push(from);
+      if (!st.focus || !st.people.some((x) => x.id === st.focus)) setFocus(fromIn ? from : st.people[0].id);
+      else if (fromIn && from !== st.focus && !st.focusManual && !heard.includes(st.focus) && !focusLive(now) && now - (st.focusAt || 0) >= 3000) setFocus(from);
       st.phase = 'playing'; st.lastPg = now;
       // 送ってきた人のいまの点(新しく見に来た人でも全員の行が出るように)
-      const from = rhythmMultiText(raw.id, 40);
       if (raw.sc != null && st.people.some((x) => x.id === from)) {
         const prev = st.rows[from] || {};
         st.rows[from] = { ...prev, s: intOf(raw.sc, RHYTHM_MULTI_LIVE_SCORE_MAX), c: intOf(raw.cb, RHYTHM_MULTI_LIVE_COMBO_MAX), p: prev.p || 0, l: prev.l == null ? null : prev.l, k: prev.k || null, at: prev.at || now };
@@ -57297,7 +57305,7 @@ const RHYTHM_WATCH = (() => {
       if (!m) return;
       const people = m.participants.map((id) => st.members[id]).filter((x) => x && !x.cpu);
       if (!people.length) { ping(); return; }   // 顔ぶれが分からないときは、演奏している人に wi をもらう
-      st.round = m.round; st.songId = m.songId; st.people = people; st.rows = {}; st.judged = {}; st.marks = {}; st.tried = []; st.phase = 'playing'; st.lastPg = now;
+      st.round = m.round; st.songId = m.songId; st.people = people; st.rows = {}; st.judged = {}; st.marks = {}; st.tried = []; st.wiFrom = []; st.phase = 'playing'; st.lastPg = now;
       // 曲が始まった合図。演奏する人の端末は、この合図を受けるまで「見ています」を聞かない(先に届くと捨てられる)ので、下の tick が届くまで送り直す
       if (!people.some((x) => x.id === st.focus)) setFocus(people[0].id, false); else { st.focusAt = now; st.noDetail = false; ping(); }
       emit();

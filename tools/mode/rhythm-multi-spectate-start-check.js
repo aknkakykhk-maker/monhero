@@ -114,80 +114,114 @@ const VIEW = { width: 390, height: 844 };
       noDetail: !!document.querySelector('[data-rhythm-watch-nodetail]'), audio: RHYTHM_WATCH_AUDIO.on() };
   });
   let W = null;
-  try {
-    const A = await open('あかね', 'Mocchi'); const B = await open('いぶき', 'Suezo');
+  // 組み合わせ(社長「できるときとできないときがある」): pre2=曲えらび中から2人の部屋を観戦(本番のできなかったとき) / mid2=演奏の途中から2人の部屋 / mid1=演奏の途中から1人の部屋(本番のできたとき)
+  const CASES = (process.env.MH_CASES || 'pre2,mid2,mid1').split(',').filter(Boolean);
+  const runCase = async (cs) => {
+    console.log(`---- ${cs} ----`);
+    const two = cs.endsWith('2'); const pre = cs.startsWith('pre');
+    const A = await open('きゅこ', 'Mocchi'); const B = two ? await open('ソラシド', 'Suezo') : null;
     W = await open('うみ', 'Pixie');
-    for (const p of [A, B]) await p.locator('[data-rhythm-multi-free]').click();
+    const players = [A, B].filter(Boolean);
+    for (const p of players) await p.locator('[data-rhythm-multi-free]').click();
     await A.locator('[data-rhythm-multi-free-create]').click();
     await A.waitForSelector('[data-rhythm-multi-room-code]', { timeout: 15000 });
     const code = (await A.locator('[data-rhythm-multi-room-code]').innerText()).trim();
-    await B.locator('[data-rhythm-multi-free-list-open]').click();
-    await B.getByRole('button', { name: '入る', exact: true }).first().click({ timeout: 20000 });
-    // 助手を呼んだ部屋(本番はソラシド・きゅこの名前の部屋だった)。助手は観戦の行に入らない(演奏中の点を持たない)
-    const summoned = await A.evaluate(() => RHYTHM_MULTI.summon({ masuId: 'as:sorashido', callId: 'chk204', name: 'ソラシド', level: 1, baseId: '', colors: [], assistantId: 'sorashido' }));
-    check('助手(ソラシド)を部屋に呼べる(助手の部屋で確かめる)', summoned === true);
-    // 曲えらび中から観戦する(本番の社長と同じ。部屋の一覧の「観戦」→ 観戦の画面に「この部屋に入る」)
+    if (B) { await B.locator('[data-rhythm-multi-free-list-open]').click(); await B.getByRole('button', { name: '入る', exact: true }).first().click({ timeout: 20000 }); }
+    // 人が1人の部屋は、助手を呼んで始める(演奏中の点を持たない助手は、観戦の行に入らない)
+    if (!B) check(`${cs}: 助手(ソラシド)を呼べる`, await A.evaluate(() => RHYTHM_MULTI.summon({ masuId: 'as:sorashido', callId: 'chk204', name: 'ソラシド', level: 1, baseId: '', colors: [], assistantId: 'sorashido' })) === true);
     await W.locator('[data-rhythm-multi-free]').click();
-    await W.locator('[data-rhythm-multi-free-list-open]').click();
-    await W.waitForSelector(`[data-rhythm-multi-room-watch="${code}"]`, { timeout: 30000 });
     await W.evaluate(() => { const orig = Audio_.startRhythmTrack; window.__wa = []; Audio_.startRhythmTrack = async (k, v, o) => { const h = await orig(k, v, o); window.__wa.push({ k, h }); return h; }; });
-    await W.locator(`[data-rhythm-multi-room-watch="${code}"]`).click();
-    await W.waitForSelector('[data-rhythm-watch][data-rhythm-watch-phase="waiting"]', { timeout: 20000 });
-    check('曲えらび中の部屋を観戦すると、始まるのを待つ画面になり、「この部屋に入る」がある', (await W.locator('[data-rhythm-watch-join]').count()) === 1);
-    // 始める(人は2人とも準備。助手は呼んだ人の端末が代わりに動く)
+    if (pre) {
+      // 曲えらび中から観戦する(本番の社長と同じ。部屋の一覧の「観戦」→ 観戦の画面に「この部屋に入る」)
+      await W.locator('[data-rhythm-multi-free-list-open]').click();
+      await W.waitForSelector(`[data-rhythm-multi-room-watch="${code}"]`, { timeout: 30000 });
+      await W.locator(`[data-rhythm-multi-room-watch="${code}"]`).click();
+      await W.waitForSelector('[data-rhythm-watch][data-rhythm-watch-phase="waiting"]', { timeout: 20000 });
+      check(`${cs}: 曲えらび中の部屋を観戦すると、始まるのを待つ画面になり、「この部屋に入る」がある`, (await W.locator('[data-rhythm-watch-join]').count()) === 1);
+    }
     for (let i = 0; i < 40; i += 1) {
-      if ((await A.locator('[data-rhythm-multi-ready]').count()) && (await B.locator('[data-rhythm-multi-ready]').count())) break;
-      for (const p of [A, B]) { if (await p.locator('[data-rhythm-multi-omakase]').count()) await p.locator('[data-rhythm-multi-omakase]').click().catch(() => {}); }
+      if ((await A.locator('[data-rhythm-multi-ready]').count()) && (!B || (await B.locator('[data-rhythm-multi-ready]').count()))) break;
+      for (const p of players) { if (await p.locator('[data-rhythm-multi-omakase]').count()) await p.locator('[data-rhythm-multi-omakase]').click().catch(() => {}); }
       if (await A.locator('[data-rhythm-demo-start]').count()) await A.locator('[data-rhythm-demo-start]').click().catch(() => {});
       await A.waitForTimeout(1500);
     }
-    for (const p of [A, B]) { await p.bringToFront(); await p.waitForTimeout(600); await p.locator('[data-rhythm-multi-ready]').click({ timeout: 4000 }).catch(() => {}); }
+    for (const p of players) { await p.bringToFront(); await p.waitForTimeout(600); await p.locator('[data-rhythm-multi-ready]').click({ timeout: 4000 }).catch(() => {}); }
+    for (const p of players) await p.waitForFunction(() => typeof RHYTHM_PLAY_WATCH !== 'undefined' && !!RHYTHM_PLAY_WATCH.hud, null, { timeout: 40000 });
+    const idA = await A.evaluate(() => RHYTHM_MULTI.view().selfId);
+    const idB = B ? await B.evaluate(() => RHYTHM_MULTI.view().selfId) : '';
+    // 演奏の位置は時計どおりに進める(本物の演奏と同じく、届く知らせの p が1秒ごとに進む)
+    await runHud(A, 26884, 11, [8, 1, 0, 0, 0, 0], 1000, 20000);
+    if (B) await runHud(B, 45389, 51, [40, 8, 3, 0, 0, 0], 1000, 20000);
+    const hudAt = Date.now();
+    if (!pre) {
+      // 演奏の途中から観戦する(観戦の一覧に出るのを待って入る)
+      await W.waitForSelector(`[data-rhythm-watch-room="${code}"]`, { timeout: 40000 });
+      await W.locator(`[data-rhythm-watch-open="${code}"]`).click();
+    }
     await W.waitForSelector('[data-rhythm-watch][data-rhythm-watch-phase="playing"]', { timeout: 40000 });
-    const startedAt = Date.now();
-    // 演奏の位置は、演奏画面が開いたら時計どおりに進める(本物の演奏と同じく、届く知らせの p が1秒ごとに進む)
-    for (const p of [A, B]) await p.waitForFunction(() => typeof RHYTHM_PLAY_WATCH !== 'undefined' && !!RHYTHM_PLAY_WATCH.hud, null, { timeout: 30000 });
-    const idA = await A.evaluate(() => RHYTHM_MULTI.view().selfId); const idB = await B.evaluate(() => RHYTHM_MULTI.view().selfId);
-    await runHud(A, 45389, 51, [40, 8, 3, 0, 0, 0], 1000, 20000); await runHud(B, 45801, 51, [42, 7, 2, 0, 0, 0], 1000, 20000);
-    const hudAt = Date.now();   // ここから演奏する人は細かい知らせを送れる
-    // ---- ① 始まる前から観戦・だれも選ばない: 始まってから5秒以内に、曲の位置と判定の数が届く ----
+    const openedAt = Date.now();
     let got = null;
-    for (let i = 0; i < 24; i += 1) { const s = await state(); if (s && s.pAt > 0 && s.k) { got = { ...s, after: Date.now() - hudAt, sinceStart: Date.now() - startedAt }; break; } await W.waitForTimeout(500); }
+    for (let i = 0; i < 24; i += 1) { const s = await state(); if (s && s.pAt > 0 && s.k) { got = { ...s, after: Date.now() - Math.max(hudAt, openedAt) }; break; } await W.waitForTimeout(500); }
     const s1 = got || await state();
-    check('観戦の行は人の2人だけ(呼んだ助手は入らない)', s1 && s1.people.length === 2 && !s1.people.includes('ソラシド'), JSON.stringify(s1 && s1.people));
-    check('始まる前から観戦していても、演奏が始まってから4秒以内に曲の位置と判定の数が届く(前は次の「見ています」まで最大10秒・本番は止まったまま)', !!got && got.after <= 4000, JSON.stringify(got ? { after: got.after, sinceStart: got.sinceStart, p: got.p } : s1));
+    check(`${cs}: 観戦の行は部屋の人の数だけ`, s1 && s1.people.length === players.length, JSON.stringify(s1 && s1.people));
+    check(`${cs}: だれも選ばないままでも、4秒以内に曲の位置と判定の数が届く`, !!got && got.after <= 4000, JSON.stringify(got ? { after: got.after, p: got.p } : s1));
     await W.waitForTimeout(2500);
     const s2 = await state();
-    check('判定の数が「-」のままにならない', s2 && s2.counts.length === 6 && s2.counts.every((x) => x !== '-'), JSON.stringify(s2 && s2.counts));
-    check('進みの棒が 0:00 のままにならない(曲の位置まで進む)', s2 && s2.bar > 0 && s2.p > 20000, JSON.stringify({ bar: s2 && s2.bar, p: s2 && s2.p }));
+    check(`${cs}: 判定の数が「-」のままにならない`, s2 && s2.counts.length === 6 && s2.counts.every((x) => x !== '-'), JSON.stringify(s2 && s2.counts));
+    check(`${cs}: 進みの棒が 0:00 のままにならない`, s2 && s2.bar > 0 && s2.p > 20000, JSON.stringify({ bar: s2 && s2.bar, p: s2 && s2.p }));
     const au = await W.evaluate(() => { const v = RHYTHM_WATCH.view(); const song = RHYTHM_SONGS.find((x) => x.songId === v.songId); const last = window.__wa[window.__wa.length - 1]; return { want: song && song.bgmTrackId, key: last && last.k, started: !!(last && last.h && last.h.started()), on: RHYTHM_WATCH_AUDIO.on() }; });
-    check('観戦している曲が鳴る(待機の曲のままにならない)', au.on && au.started && au.key === au.want, JSON.stringify(au));
+    check(`${cs}: 観戦している曲が鳴る(待機の曲のままにならない)`, au.on && au.started && au.key === au.want, JSON.stringify(au));
     const drawn = await W.evaluate(() => { const c = document.querySelector('[data-rhythm-watch-stage] canvas'); if (!c) return -1; try { const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let n = 0; for (let i = 3; i < d.length; i += 16) if (d[i] > 0) n += 1; return n; } catch (_) { return -2; } });
-    check('観戦の道に、ノーツが描かれている', drawn > 0 || drawn === -2, String(drawn));
-    if (SHOT_DIR) {
+    check(`${cs}: 観戦の道に、ノーツが描かれている`, drawn > 0 || drawn === -2, String(drawn));
+    // ---- たたいた判定(どのノーツをどう叩いたか)が届いて、判定の文字が出る。2曲目からは、前の曲の演奏画面が閉じるときに判定をためる箱を消していた ----
+    {
+      const focusId = (await state()).focus;
+      const P = focusId === idB ? B : A;
+      await P.evaluate(() => { RHYTHM_PLAY_WATCH.jd = null; RHYTHM_PLAY_WATCH.jx = null; });   // 前の曲の演奏画面が閉じたときと同じ
+      await W.waitForTimeout(2200);
+      const boxBack = await P.evaluate(() => Array.isArray(RHYTHM_PLAY_WATCH.jd));
+      check(`${cs}: 判定をためる箱が消えても、見られているあいだは用意し直す(2曲目でも判定が届く)`, boxBack);
+      // 演奏のループと同じく、これから来るノーツを叩いたことにして箱へ入れる(MARVELOUS)
+      const hits = await W.evaluate(() => { const v = RHYTHM_WATCH.view(); const who = v.people.find((x) => x.id === v.focus); const song = RHYTHM_SONGS.find((x) => x.songId === v.songId); const ch = song && song.difficulties[who.diff]; const r = v.rows[v.focus]; const now = r.p + (Date.now() - r.pAt);
+        return ch ? ch.notes.map((n, i) => [i, n.timeMs]).filter(([, t]) => t > now + 300 && t < now + 4000).map(([i]) => i) : []; });
+      await P.evaluate((ids) => { const jd = RHYTHM_PLAY_WATCH.jd; if (jd !== null) ids.forEach((i) => jd.push(i, 0)); }, hits);
+      let text = '';
+      for (let i = 0; i < 20 && !text; i += 1) { await W.waitForTimeout(300); text = await W.evaluate(() => { const b = document.querySelector('[data-rhythm-watch-stage] [data-rhythm-judgment-text]'); return b ? (b.getAttribute('data-judgment') || '') : ''; }); }
+      check(`${cs}: 見ている人がたたいた判定が、1.5秒おくれで観戦の画面に文字で出る`, hits.length > 0 && text === 'MARVELOUS', JSON.stringify({ hits: hits.length, text }));
+      if (SHOT_DIR && cs === 'pre2' && text) await W.screenshot({ path: path.join(SHOT_DIR, 'watch-judge-tate.png') });
+    }
+    if (SHOT_DIR && cs === 'pre2') {
       await W.bringToFront();
       await W.screenshot({ path: path.join(SHOT_DIR, 'watch-notes-tate.png') });
       await W.setViewportSize({ width: 844, height: 390 }); await W.waitForTimeout(1500);
       await W.screenshot({ path: path.join(SHOT_DIR, 'watch-notes-yoko.png') });
       await W.setViewportSize(VIEW); await W.waitForTimeout(800);
     }
-    // ---- ② 見ている人が古い版(細かい知らせも返事も来ない): 自分で選んでいなければ、届く人へ切り替わる ----
-    await W.evaluate((a) => { window.__mute = (q) => (q.t === 'pg' && q.id === a && q.p != null) || (q.t === 'wi' && q.id === a); const v = RHYTHM_WATCH.view(); v.focus = a; v.focusAt = Date.now(); v.focusManual = false; v.tried = []; v.noDetail = false; delete v.rows[a].pAt; v.rows[a].pAt = 0; }, idA);
-    let sw = null;
-    for (let i = 0; i < 30; i += 1) { await W.waitForTimeout(500); const s = await state(); if (s && s.focus === idB && s.pAt > 0 && Date.now() - s.pAt < 3000) { sw = s; break; } }
-    check('見ている人(古い版)から届かないと、ほかの人へ切り替わって、譜面が流れ続ける', !!sw, JSON.stringify(sw || await state()));
-    // ---- ③ だれからも届かない: 止まった画面のままにせず、案内を出す ----
+    if (two) {
+      // ---- 見ている人が古い版(細かい知らせも返事も来ない): 自分で選んでいなければ、届く人へ切り替わる ----
+      const cur = (await state()).focus; const other = cur === idA ? idB : idA;
+      await W.evaluate((a) => { window.__mute = (q) => (q.t === 'pg' && q.id === a && q.p != null) || (q.t === 'wi' && q.id === a); const v = RHYTHM_WATCH.view(); v.focus = a; v.focusAt = Date.now(); v.focusManual = false; v.tried = []; v.wiFrom = []; v.noDetail = false; if (v.rows[a]) v.rows[a].pAt = 0; }, cur);
+      let sw = null;
+      for (let i = 0; i < 30; i += 1) { await W.waitForTimeout(500); const s = await state(); if (s && s.focus === other && s.pAt > 0 && Date.now() - s.pAt < 3000) { sw = s; break; } }
+      check(`${cs}: 見ている人(古い版・観戦を許していない)から届かないと、届く人へ切り替わって譜面が流れ続ける`, !!sw, JSON.stringify(sw || await state()));
+    }
+    // ---- だれからも届かない: 止まった画面のままにせず、案内を出す ----
     await W.evaluate(() => { window.__mute = (q) => (q.t === 'pg' && q.p != null) || q.t === 'wi'; });
     let nd = false;
     for (let i = 0; i < 50 && !nd; i += 1) { await W.waitForTimeout(500); const s = await state(); nd = !!(s && s.noDetail); }
-    check('だれからも細かい知らせが届かないときは、「譜面は届いていません」の案内が出る', nd);
-    if (SHOT_DIR && nd) await W.screenshot({ path: path.join(SHOT_DIR, 'watch-nodetail-tate.png') });
+    check(`${cs}: だれからも細かい知らせが届かないときは、「譜面は届いていません」の案内が出る`, nd);
+    if (SHOT_DIR && nd && cs === 'pre2') await W.screenshot({ path: path.join(SHOT_DIR, 'watch-nodetail-tate.png') });
     await W.evaluate(() => { window.__mute = null; });
     let back = false;
     for (let i = 0; i < 20 && !back; i += 1) { await W.waitForTimeout(500); const s = await state(); back = !!(s && !s.noDetail && s.pAt > 0); }
-    check('また届くようになると、案内は消えて流れ直す', back);
+    check(`${cs}: また届くようになると、案内は消えて流れ直す`, back);
     await W.locator('[data-rhythm-watch-close]').click();
     await W.waitForTimeout(500);
-    check('観戦をやめると、観戦の曲を止めて元の曲へ戻す側になる', await W.evaluate(() => !RHYTHM_WATCH_AUDIO.on()));
+    check(`${cs}: 観戦をやめると、観戦の曲を止めて元の曲へ戻す側になる`, await W.evaluate(() => !RHYTHM_WATCH_AUDIO.on()));
+    for (const p of [...players, W]) await p.close();
+  };
+  try {
+    for (const cs of CASES) await runCase(cs);
     check('画面のエラーが出ていない', errors.length === 0, errors.slice(0, 3).join(' / '));
   } catch (e) {
     console.log('NG: 途中で止まった — ' + (e && e.message ? e.message.split('\n')[0] : e));

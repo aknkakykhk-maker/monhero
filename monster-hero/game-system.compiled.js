@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 73f8dbfc3d63e4c5
+// source-sha256: 9df866ae3d940996
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -94402,6 +94402,10 @@ const RHYTHM_MULTI = (() => {
       watchFrames = watch.frames;
       watchFramesAt = now;
     }
+    if (!watchLite && watch && watch.jd === null) {
+      watch.jd = [];
+      watch.jx = [];
+    }
     if (watchLite) {
       watchJdOff();
       msg.lt = 1;
@@ -96062,13 +96066,17 @@ const RHYTHM_WATCH = (() => {
         st.judged = {};
         st.marks = {};
         st.tried = [];
+        st.wiFrom = [];
       }
       st.songId = rhythmMultiText(raw.sg, 60);
       if (people.length) st.people = people;
-      if (!st.focus || !st.people.some(x => x.id === st.focus)) setFocus(st.people[0].id);
+      const from = rhythmMultiText(raw.id, 40);
+      const fromIn = !!from && st.people.some(x => x.id === from);
+      const heard = st.wiFrom || (st.wiFrom = []);
+      if (fromIn && !heard.includes(from)) heard.push(from);
+      if (!st.focus || !st.people.some(x => x.id === st.focus)) setFocus(fromIn ? from : st.people[0].id);else if (fromIn && from !== st.focus && !st.focusManual && !heard.includes(st.focus) && !focusLive(now) && now - (st.focusAt || 0) >= 3000) setFocus(from);
       st.phase = 'playing';
       st.lastPg = now;
-      const from = rhythmMultiText(raw.id, 40);
       if (raw.sc != null && st.people.some(x => x.id === from)) {
         const prev = st.rows[from] || {};
         st.rows[from] = {
@@ -96199,6 +96207,7 @@ const RHYTHM_WATCH = (() => {
       st.judged = {};
       st.marks = {};
       st.tried = [];
+      st.wiFrom = [];
       st.phase = 'playing';
       st.lastPg = now;
       if (!people.some(x => x.id === st.focus)) setFocus(people[0].id, false);else {
