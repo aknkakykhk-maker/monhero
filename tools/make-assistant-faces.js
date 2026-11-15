@@ -14,7 +14,7 @@ const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
 const { createCanvas, loadImage } = require('canvas');
-// (2026-11-15 r1115-203 まで: 書き出しを減色(パレット)PNGにしていた。いまは減色しない。下は当時の理由)
+// 書き出しは減色(パレット)PNGにする。
 // canvas の toBuffer は RGBA のままなので、同じ絵でも 3倍近く重くなる
 // (実測: みゅあ normal で 43KB → 121KB)。吹き出しは 48〜72px でしか出さないので、
 // 256色まで落としても見た目は変わらない。ここを通さないと、このツールを流すたびに
@@ -25,12 +25,7 @@ try { sharp = require('sharp'); } catch { /* 無ければ減色せずに書き�
 const root = path.resolve(__dirname, '..');
 // 引数に服の絵のフォルダ(例: monster-hero/images/assistant/halloween)を渡すと、そこの絵から
 // <そのフォルダ>/face/ へ顔アイコンを作る(助手の着替え用。切り出し方は COSTUME_TUNE を使う)
-// --only myua,kiki … その接頭辞だけ作る(2026-11-15 r1115-203: あつ・ソラシド馬骨の顔は全身画から原画の画素のまま切るので、ここでは作らない)
-const argv = process.argv.slice(2);
-const onlyIdx = argv.indexOf('--only');
-const ONLY = onlyIdx >= 0 && argv[onlyIdx + 1] ? argv[onlyIdx + 1].split(',') : null;
-const posArgs = argv.filter((a, i) => !a.startsWith('--') && !(onlyIdx >= 0 && i === onlyIdx + 1));
-const costumeArg = posArgs[0] ? path.resolve(root, posArgs[0]) : null;
+const costumeArg = process.argv[2] ? path.resolve(root, process.argv[2]) : null;
 const srcDir = costumeArg || path.join(root, 'monster-hero/images/assistant');
 const outDir = path.join(srcDir, 'face');
 const OUT_SIZE = 256;      // 書き出す顔アイコンの一辺(px)。表示は最大72pxなので余裕がある
@@ -111,8 +106,6 @@ const COSTUME_DIR_TUNE = {
   // えるびんの衣装『石油王』(2026-11-05)。通常の絵と同じ 384x512 の胸から上の絵。通常の 0.594 だと頭の布(クーフィーヤ)の上が切れるので、
   //   布のぶんだけ引いた 0.66(顔の大きさは通常の顔とほぼ同じ。0.594・0.66・0.72 を並べて選んだ)
   sekiyuou: { erubin: { headRatio: 0.66, headTopSkip: 0.0 } },
-  // ソラシドの服『補正』(2026-11-15 までのふだんの服)。ふだんの服のときの切り方のまま
-  hosei: { sorashido: PER_ASSISTANT_BASE.sorashido },
 };
 const PER_ASSISTANT = costumeArg ? { ...COSTUME_TUNE, ...(COSTUME_DIR_TUNE[path.basename(costumeArg)] || {}) } : PER_ASSISTANT_BASE;
 
@@ -167,9 +160,7 @@ const run = async () => {
   fs.mkdirSync(outDir, { recursive: true });
   const prefixes = assistantPrefixes();
   const pattern = new RegExp(`^(${prefixes.join('|')})_.+\\.png$`, 'i');
-  // 寝顔(_sleep)の顔は別の道具(life-sleep-faces-make.js など)が作るので、ここでは作らない
-  const files = fs.readdirSync(srcDir).filter(f => pattern.test(f) && !/_sleep\.png$/i.test(f))
-    .filter(f => !ONLY || ONLY.some(p => f.toLowerCase().startsWith(`${p.toLowerCase()}_`))).sort();
+  const files = fs.readdirSync(srcDir).filter(f => pattern.test(f)).sort();
   if (files.length === 0) { console.log('切り出す画像がありません'); return; }
   console.log(`対象の助手: ${prefixes.join(', ')}`);
   for (const file of files) {
@@ -202,6 +193,7 @@ const run = async () => {
       const offsetY = Number.isFinite(tune.faceOffsetY) ? tune.faceOffsetY : 0;
       octx.drawImage(img, 0, 0, img.width, img.height, OUT_SIZE / 2 - fx * scale, OUT_SIZE * (0.5 + offsetY) - fy * scale, img.width * scale, img.height * scale);
       let buf = out.toBuffer('image/png', { compressionLevel: 9 });
+      if (sharp) buf = await sharp(buf).png({ palette: true, colours: 256, effort: 7, compressionLevel: 9 }).toBuffer();
       const outPath = path.join(outDir, file.replace(/\.png$/i, '.PNG'));
       fs.writeFileSync(outPath, buf);
       console.log(`${file} → face/${path.basename(outPath)}  顔のまんなか (${center.join(',')}) を真ん中に・一辺 ${side}px  ${Math.round(buf.length / 1024)}KB`);
@@ -218,7 +210,11 @@ const run = async () => {
     octx.imageSmoothingQuality = 'high';
     octx.drawImage(img, sx, sy, side, side, 0, 0, OUT_SIZE, OUT_SIZE);
     let buf = out.toBuffer('image/png', { compressionLevel: 9 });
-    // 色は減らさない(2026-11-15 r1115-143 社長「画質を下げなくていい」・r1115-203 で 256色への減色をやめた)
+    if (sharp) {
+      // 透明のふちを残したまま256色へ落とす(palette:true)。
+      // effort を上げるほど小さくなるが時間がかかる。8枚×助手数なので 7 で十分速い
+      buf = await sharp(buf).png({ palette: true, colours: 256, effort: 7, compressionLevel: 9 }).toBuffer();
+    }
     const outPath = path.join(outDir, file.replace(/\.png$/i, '.PNG'));
     fs.writeFileSync(outPath, buf);
     const before = fs.statSync(path.join(srcDir, file)).size;

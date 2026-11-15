@@ -37,9 +37,9 @@ const MARKS = [[/おで/, ['dra']], [/あたし/, ['mua']], [/もも/, ['momosuk
   const dir = path.join(root, 'monster-hero/images/assistant/fullbody');
   const pngH = (f) => { const b = fs.readFileSync(f); return b.readUInt32BE(20); };
   const ng = [];
-  if (!tbl) ng.push('表が読めない');
+  if (!tbl || !Object.keys(tbl).length) ng.push('表が読めない');
   const names = new Set(fs.readdirSync(dir).map(f => (/^(.+?)__[a-z]+\.png$/.exec(f) || [])[1]).filter(Boolean));
-  for (const n of names) {
+  for (const n of [...names].filter(x => tbl && x in tbl)) { // 表にある子だけ(表に無い子は今までどおり絵ごとに枠へ収める)
     const hs = fs.readdirSync(dir).filter(f => f.startsWith(n + '__') && /^[a-z]+\.png$/.test(f.slice(n.length + 2))).map(f => pngH(path.join(dir, f)));
     const want = Math.max(...hs);
     if (!tbl || tbl[n] !== want) ng.push(`${n}: 表 ${tbl && tbl[n]} / 絵 ${want}`);

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a80e0b1afc312c94
+// source-sha256: ed922bb911f13fab
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -116618,16 +116618,16 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
       m: 0.829
     },
     momosuke: {
-      top: 0.0619,
+      top: 0.0636,
       eye: 0.3248,
-      chin: 0.4304,
-      m: 0.786,
+      chin: 0.4298,
+      m: 0.781,
       above: 0.7
     },
     kiki: {
       top: 0.0835,
-      eye: 0.3342,
-      chin: 0.4297,
+      eye: 0.3343,
+      chin: 0.4298,
       m: 0.711
     },
     atsu: {
@@ -116637,30 +116637,30 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
       m: 0.758
     },
     kyuko: {
-      top: 0.0369,
-      eye: 0.3102,
-      chin: 0.4297,
-      m: 0.89
+      top: 0.0341,
+      eye: 0.3098,
+      chin: 0.4304,
+      m: 0.897
     },
     sorashido: {
-      top: 0.0118,
-      eye: 0.2822,
-      chin: 0.4296,
-      m: 1.097
+      top: 0.0119,
+      eye: 0.2825,
+      chin: 0.4302,
+      m: 1.098
     },
     erubin: {
-      top: 0.0082,
-      eye: 0.2527,
-      chin: 0.4309,
-      m: 1.326
+      top: 0.0042,
+      eye: 0.25,
+      chin: 0.4292,
+      m: 1.333
     }
   },
   'stand-sekiyuou': {
     erubin: {
       top: 0.0042,
-      eye: 0.2495,
-      chin: 0.4304,
-      m: 1.346
+      eye: 0.2489,
+      chin: 0.4293,
+      m: 1.343
     }
   },
   'stand-hosei': {
@@ -123759,19 +123759,7 @@ const assistantLifeProfileFace = (id, greeting, k) => {
   };
 };
 const ASSISTANT_LIFE_PROFILE_FULL_MAX_H = Object.freeze({
-  atsu: 779,
-  kiki: 1548,
-  kiki_halloween: 785,
-  kyuko: 872,
-  momosuke: 899,
-  momosuke_halloween: 899,
-  mua: 590,
-  mua_halloween: 517,
-  'mua_card-master': 524,
-  sorashido: 899,
-  sorashido_hosei: 895,
-  erubin: 769,
-  erubin_sekiyuou: 783
+  atsu: 779
 });
 const ASSISTANT_LIFE_PROFILE_FULL_NH = new Map();
 const assistantLifeProfileFullMaxH = src => {
@@ -205813,38 +205801,38 @@ const CARD_ART_KNOWN_BOX = Object.freeze({
   'stand-normal/atsu_surprise': [312, 278, 60, 4, 215, 274],
   'stand-normal/atsu_troubled': [278, 278, 24, 4, 228, 274],
   'stand-normal/atsu_wink': [312, 278, 41, 5, 267, 273],
-  'stand-normal/erubin_angry': [227, 245, 17, 4, 193, 241],
-  'stand-normal/erubin_crying': [274, 245, 4, 4, 263, 241],
-  'stand-normal/erubin_excited': [287, 245, 4, 4, 265, 241],
-  'stand-normal/erubin_happy': [274, 245, 10, 4, 260, 241],
-  'stand-normal/erubin_normal': [240, 245, 10, 5, 225, 240],
-  'stand-normal/erubin_surprise': [349, 245, 21, 4, 308, 241],
-  'stand-normal/erubin_troubled': [275, 245, 4, 3, 265, 242],
-  'stand-normal/erubin_wink': [258, 245, 4, 4, 248, 241],
-  'stand-normal/kiki_angry': [614, 839, 8, 7, 598, 832],
-  'stand-normal/kiki_crying': [435, 839, 8, 8, 419, 831],
-  'stand-normal/kiki_excited': [945, 838, 8, 7, 929, 831],
-  'stand-normal/kiki_happy': [390, 839, 8, 8, 374, 831],
-  'stand-normal/kiki_normal': [412, 839, 8, 8, 397, 831],
-  'stand-normal/kiki_surprise': [551, 839, 8, 8, 535, 831],
-  'stand-normal/kiki_troubled': [454, 839, 7, 8, 439, 831],
-  'stand-normal/kiki_wink': [564, 839, 8, 8, 548, 831],
-  'stand-normal/kyuko_angry': [266, 322, 8, 4, 254, 318],
-  'stand-normal/kyuko_crying': [225, 322, 12, 4, 198, 318],
-  'stand-normal/kyuko_excited': [245, 322, 6, 4, 235, 318],
-  'stand-normal/kyuko_happy': [242, 322, 46, 4, 192, 318],
-  'stand-normal/kyuko_normal': [222, 322, 10, 4, 207, 318],
-  'stand-normal/kyuko_surprise': [223, 322, 24, 4, 185, 318],
-  'stand-normal/kyuko_troubled': [198, 322, 11, 4, 183, 318],
-  'stand-normal/kyuko_wink': [230, 322, 17, 4, 209, 318],
-  'stand-normal/momosuke_angry': [412, 500, 5, 5, 399, 495],
-  'stand-normal/momosuke_crying': [453, 500, 5, 5, 443, 495],
-  'stand-normal/momosuke_excited': [463, 500, 5, 5, 453, 495],
-  'stand-normal/momosuke_happy': [461, 500, 5, 4, 451, 496],
-  'stand-normal/momosuke_normal': [410, 500, 5, 4, 400, 496],
-  'stand-normal/momosuke_surprise': [432, 500, 5, 5, 422, 495],
-  'stand-normal/momosuke_troubled': [415, 500, 5, 5, 406, 495],
-  'stand-normal/momosuke_wink': [445, 500, 16, 5, 424, 495],
+  'stand-normal/erubin_angry': [227, 244, 16, 4, 195, 240],
+  'stand-normal/erubin_crying': [274, 244, 3, 3, 265, 241],
+  'stand-normal/erubin_excited': [288, 244, 3, 4, 265, 240],
+  'stand-normal/erubin_happy': [275, 244, 9, 4, 262, 240],
+  'stand-normal/erubin_normal': [242, 244, 10, 3, 226, 241],
+  'stand-normal/erubin_surprise': [349, 244, 20, 4, 309, 240],
+  'stand-normal/erubin_troubled': [276, 244, 4, 3, 266, 241],
+  'stand-normal/erubin_wink': [258, 244, 4, 4, 249, 240],
+  'stand-normal/kiki_angry': [616, 840, 8, 8, 600, 832],
+  'stand-normal/kiki_crying': [436, 840, 7, 7, 421, 833],
+  'stand-normal/kiki_excited': [946, 838, 8, 6, 931, 832],
+  'stand-normal/kiki_happy': [390, 840, 7, 8, 376, 832],
+  'stand-normal/kiki_normal': [414, 840, 8, 8, 399, 832],
+  'stand-normal/kiki_surprise': [553, 840, 8, 7, 537, 833],
+  'stand-normal/kiki_troubled': [456, 840, 7, 7, 441, 833],
+  'stand-normal/kiki_wink': [566, 839, 8, 7, 550, 832],
+  'stand-normal/kyuko_angry': [267, 320, 8, 4, 255, 316],
+  'stand-normal/kyuko_crying': [227, 320, 13, 4, 198, 316],
+  'stand-normal/kyuko_excited': [246, 320, 6, 4, 236, 316],
+  'stand-normal/kyuko_happy': [243, 320, 46, 3, 193, 317],
+  'stand-normal/kyuko_normal': [223, 320, 10, 3, 208, 317],
+  'stand-normal/kyuko_surprise': [224, 320, 23, 3, 187, 317],
+  'stand-normal/kyuko_troubled': [200, 320, 11, 4, 185, 316],
+  'stand-normal/kyuko_wink': [230, 320, 16, 3, 211, 317],
+  'stand-normal/momosuke_angry': [412, 503, 4, 5, 401, 498],
+  'stand-normal/momosuke_crying': [454, 503, 5, 4, 444, 499],
+  'stand-normal/momosuke_excited': [464, 503, 5, 5, 455, 498],
+  'stand-normal/momosuke_happy': [461, 503, 4, 5, 452, 498],
+  'stand-normal/momosuke_normal': [410, 503, 5, 5, 401, 498],
+  'stand-normal/momosuke_surprise': [432, 503, 5, 5, 422, 498],
+  'stand-normal/momosuke_troubled': [416, 503, 5, 4, 406, 499],
+  'stand-normal/momosuke_wink': [447, 503, 15, 5, 427, 498],
   'stand-normal/myua_angry': [296, 336, 6, 0, 260, 336],
   'stand-normal/myua_crying': [296, 336, 0, 0, 295, 336],
   'stand-normal/myua_excited': [296, 336, 0, 0, 292, 336],
@@ -205853,14 +205841,14 @@ const CARD_ART_KNOWN_BOX = Object.freeze({
   'stand-normal/myua_surprise': [296, 336, 0, 5, 255, 331],
   'stand-normal/myua_troubled': [296, 336, 15, 0, 255, 336],
   'stand-normal/myua_wink': [296, 336, 6, 5, 289, 331],
-  'stand-normal/sorashido_angry': [312, 335, 16, 4, 250, 331],
-  'stand-normal/sorashido_crying': [310, 335, 5, 5, 300, 330],
-  'stand-normal/sorashido_excited': [377, 335, 11, 5, 362, 330],
-  'stand-normal/sorashido_happy': [310, 335, 18, 5, 254, 330],
-  'stand-normal/sorashido_normal': [332, 335, 19, 5, 308, 330],
-  'stand-normal/sorashido_surprise': [367, 335, 39, 5, 314, 330],
-  'stand-normal/sorashido_troubled': [385, 335, 5, 5, 375, 330],
-  'stand-normal/sorashido_wink': [341, 335, 5, 5, 327, 330]
+  'stand-normal/sorashido_angry': [313, 335, 16, 5, 252, 330],
+  'stand-normal/sorashido_crying': [311, 335, 5, 5, 302, 330],
+  'stand-normal/sorashido_excited': [378, 335, 10, 5, 363, 330],
+  'stand-normal/sorashido_happy': [311, 335, 17, 5, 255, 330],
+  'stand-normal/sorashido_normal': [332, 335, 18, 5, 310, 330],
+  'stand-normal/sorashido_surprise': [368, 335, 40, 5, 314, 330],
+  'stand-normal/sorashido_troubled': [386, 335, 5, 5, 377, 330],
+  'stand-normal/sorashido_wink': [341, 335, 4, 5, 328, 330]
 });
 const cardArtBoxOf = v => Array.isArray(v) && v.length === 6 ? {
   nw: v[0],

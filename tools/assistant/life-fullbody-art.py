@@ -121,6 +121,9 @@ def seam_path(al, x0, x1, bias=0.02):
     return np.array(path[::-1]) + x0
 
 
+# 表情の絵を、元の絵のふちと色のまま作る子(clean の raw)。2026-11-15 r1115-203 社長「あつだけおかしい」でまずあつだけ。
+#   ほかの子は今までの作り方のまま(社長「ほかの助手はいい」)
+RAW_SHEETS = {'atsu'}
 SELF_BASE = {'sorashido'}  # 表情なしの元絵が無く、ふつうの体を大きさの基準にするシート
 
 
@@ -573,10 +576,9 @@ def clean(path, min_frac=0.03, arr=None, seeds=None, soft=None, flood=False, sta
     """背景のもや・ごみを落とし、ふちの白いにじみを消す。ふちのアルファは2値に切らず、なめらかなまま残す
     (2026-11-12 社長「全身画の透過の荒さ直ってないね」: 前の作りはふちを 0/255 近くへ寄せていた)。
     soft … ふちのアルファをぼかす量(元の絵の画素)。None なら元の絵のふちが2値のときだけ、書き出しで約 0.6 画素になる量でぼかす。
-    raw … 表情の絵(2026-11-15 r1115-203 社長「渡した画像をちゃんと処理すればあんなに荒れない」)。元の絵のふちの透け具合と色をそのまま使う。
+    raw … 元の絵のふちの透け具合と色をそのまま使う(RAW_SHEETS の子だけ。2026-11-15 r1115-203)。
       消すのは、体から離れた小さな塊(となりの絵のかけら・ごみ)と、はっきりした線(不透明度 64 以上)から2画素より外の薄いもや(64 未満)だけ。
-      下の 3)〜5)(体の芯から3画素より外を消す・ふちのぼかし・ふちの色の塗り直し)はしない。
-      これらが髪の毛先や輪郭の細かい線を消し、ふちをにじませていた(体の芯から外の毛先の透けを落とし、毛先の色を内側の平均の色にしていた)"""
+      下の 3)〜5)(体の芯から3画素より外を消す・ふちのぼかし・ふちの色の塗り直し)はしない。これらが髪の毛先や輪郭の細い線を消し、ふちをにじませていた"""
     im = (np.array(Image.open(path).convert('RGBA')) if arr is None else arr)
     pk = auto_pockets(im, boxes, max(1.0, im.shape[0] / REF_H)) if boxes else None
     if seeds or pk is not None:
@@ -602,10 +604,8 @@ def clean(path, min_frac=0.03, arr=None, seeds=None, soft=None, flood=False, sta
     body = core & keep
     if raw:
         a2 = np.where(keep, a, 0)
-        line = (a2 >= 64)
-        a2 = np.where((a2 < 64) & ~dil(line, 2), 0, a2)
-        out = np.dstack([np.where((a2 > 0)[..., None], rgb, 0), a2])
-        out = np.clip(out, 0, 255).astype(np.uint8)
+        a2 = np.where((a2 < 64) & ~dil(a2 >= 64, 2), 0, a2)
+        out = np.clip(np.dstack([np.where((a2 > 0)[..., None], rgb, 0), a2]), 0, 255).astype(np.uint8)
         return Image.fromarray(out[:h0, :w0], 'RGBA')
     # 3) 背景のぼかし(光・もや)を落とす: 体から離れるほど、なだらかに消す(体のふち2画素まではそのまま・そこから約3画素で0へ)。
     #    前は「縁の2画素より外は0」と切っていたので、ふちが段になっていた
@@ -730,7 +730,7 @@ def main():
             #   表情の絵の元絵はふちが硬め(半透明が少ない)なので、書き出しで約 0.6 画素になる量でぼかす
             made[key] = clean(os.path.join(SRC, ART[key]), min_frac=0.004 if '@' in key else 0.03, seeds=POCKETS.get(key),
                               soft=1.2 if '@' in key else None,
-                              flood=key in FLOOD, boxes=AUTO_POCKETS.get(key), halo=key in HALO, raw='@' in key)
+                              flood=key in FLOOD, boxes=AUTO_POCKETS.get(key), halo=key in HALO)
         return made[key]
 
     for key in ART:
@@ -755,7 +755,7 @@ def main():
                 if key in HAIR_DEHAZE:
                     arr[...] = dehaze_hair(arr)
                 jobs.append(('%s__%s' % (key.replace(':', '_'), e),
-                             lambda arr=arr: clean(None, min_frac=0.004, arr=arr, raw=True),
+                             lambda arr=arr, key=key: clean(None, min_frac=0.004, arr=arr, raw=True) if key in RAW_SHEETS else clean(None, min_frac=0.004, arr=arr, glow_cut=True, soft=1.0),
                              ((lambda arr0=cells[0][1]: fit_scale(arr_to_im(arr0))) if key in SELF_BASE else (lambda key=key, ratio=ratio: fit_scale(make_art(key)) * ratio))))
     for key, sheets in GRID_SHEETS.items():
         if only and key.replace(':', '_') != only:
@@ -769,7 +769,7 @@ def main():
             main = dil(label_keep(arr[..., 3] > 40, 0.3), 4)
             arr[..., 3] = np.where(main, arr[..., 3], 0)
             jobs.append(('%s__%s' % (base_name, e),
-                         lambda arr=arr, key=key: clean(None, min_frac=0.004, arr=arr, halo=(key == 'erubin:sekiyuou'), raw=True),
+                         lambda arr=arr, key=key: clean(None, min_frac=0.004, arr=arr, glow_cut=True, soft=1.0, halo=(key == 'erubin:sekiyuou')),
                          (lambda base_arr=base_arr: fit_scale(Image.fromarray(base_arr)))))
     for key, sheets in SPLIT_SHEETS.items():
         base_name = key.replace(':', '_')
@@ -777,7 +777,7 @@ def main():
             for e, arr in zip(exprs, split_cells(file, cy, cx)):
                 # 元のシートは1体が小さい(縦 約 740)ので、縮めずにそのまま(表情なしの絵 768 とほぼ同じ高さ)。体のまわりの薄い光は消す
                 jobs.append(('%s__%s' % (base_name, e),
-                             lambda arr=arr: clean(None, min_frac=0.004, arr=arr, raw=True),
+                             lambda arr=arr: clean(None, min_frac=0.004, arr=arr, glow_cut=True, soft=0.0),
                              (lambda key=key: fit_scale(make_art(key)) * 2.0)))
     if not only or '__' in only:
         cells, _ = sheet_cells()
