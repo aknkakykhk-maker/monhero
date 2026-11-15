@@ -13,11 +13,14 @@ const { load } = require('../success/load.js');
 
 const OUT = path.resolve(process.argv[2] || path.join(process.env.SCRATCH || '/tmp', 'monsuc-match-shoot'));
 fs.mkdirSync(OUT, { recursive: true });
-const VIEWS = [['390', 390, 844], ['320', 320, 568], ['land', 844, 390]];
+const VIEWS = [['390', 390, 844], ['320', 320, 568], ['land', 844, 390]].filter(([t]) => !process.env.VIEWS || process.env.VIEWS.split(',').includes(t));
 
 const runSeed = () => {
   const { SUC } = load();
-  let s = SUC.newRun({ id: 'shoot1', species: 'Mocchi', aid: 'mua', team: [], aidBondLv: 1 });
+  // MSX_NOSULK=1 … 見守り(意味不明な行動をしない)を最大で持つ子を編成する(試合の前の助言の確認用)
+  const AT = require('../../monster-hero/data/monhero-success-assist.js');
+  const team = process.env.MSX_NOSULK ? [{ kind: 'raised', species: 'Golem', name: '見守り役', stats: { life: 300, pow: 300, wise: 300, hit: 300, eva: 300, tough: 300 }, lv: 30, loy: 80, pop: 50, techs: [], assists: [{ id: 'mimamori', n: AT.BY_ID.mimamori.max }] }] : [];
+  let s = SUC.newRun({ id: 'shoot1', species: 'Mocchi', aid: 'mua', team, aidBondLv: 1 });
   for (let i = 0; i < 80 && !s.battle; i++) { s = SUC.act(s, { kind: 'train', stat: i % 2 ? 'pow' : 'hit' }).state; s = SUC.endTurn(s).state; }
   return { v: 1, id: 'shoot1', s, scn: 'hero', nick: 'モチ太', colors: null, from: null, items: [], used: 0, phase: 'battle', out: null, log: [], startAt: Date.now() };
 };
