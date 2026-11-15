@@ -20,6 +20,7 @@ let chromium;
 try { ({ chromium } = require(path.join(ROOT, 'tools', 'node_modules', 'playwright'))); } catch (e) { console.log('SKIP: playwright が入っていないので確かめられません'); process.exit(0); }
 const { quietBootSeed, updateNoticeSeed } = require(path.resolve(__dirname, '..', 'boot', 'quiet-boot-seed'));
 const { scanTextWrap } = require(path.resolve(__dirname, '..', 'playbot', 'lib', 'text-wrap')); // 言葉・値の途中の折れ(r1114-077)
+const { measureBtnPixels } = require('./msx-btn-pixel'); // 実際に描いた画素で、ボタンの字・記号の真ん中を測る(r1115-066)
 const { msxUiRulesMeasure, msxScrollStripTexts, BLANK_MAX } = require('./msx-ui-rules'); // 画面の決まり(docs/spec/MONSUC_UI.md)の見張り
 const PORT = 8973;
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.PNG': 'image/png', '.jpg': 'image/jpeg', '.webp': 'image/webp', '.json': 'application/json', '.mp3': 'audio/mpeg' };
@@ -56,6 +57,18 @@ const makeRun = async (kind) => {
     let t = 1; while (t < (SUC.TOTAL_TURNS || 46) && !(SUC.periodOf(t).key === want && (kind === 'summit' ? SUC.periodOf(t).at >= 3 : SUC.periodOf(t + 1).key !== want))) t++;
     s = { ...s, turn: t, battle: kind === 'kimatsu' ? { kind: 'junior', round: 0 } : { kind: 'summit', round: 0 } }; phase = 'battle';
   }
+  if (kind === 'qhit' || kind === 'qmiss' || kind === 'qmix') { // 技のくじの当たり外れを撮る(r1115-063): 乱数の種(id)を替えて、どの技を選んでも決まった結果になる種を探す
+    s = { ...s, hp: s.hpMax, superLeft: 2 };
+    const ids = SUC.learnable(s, 'fire').map((t) => t.id);
+    const want = kind === 'qhit' ? [true] : kind === 'qmiss' ? [false] : [true, false];
+    const pats = kind === 'qmix' ? ids.flatMap((a) => ids.filter((b) => b !== a).map((b) => [a, b])) : ids.map((a) => [a]);
+    for (let k = 0; k < 3000; k++) {
+      const t = { ...s, id: `r3-shot-q${k}` };
+      if (pats.every((p) => { const o = SUC.act(t, { kind: 'shugyo', course: 'fire', techs: p }).out; return o.ok && (o.tries || []).map((x) => x.hit).join() === want.join(); })) { s = t; break; }
+    }
+  }
+  if (kind === 'hpmid') s = { ...s, hp: 40 }; // 体力40: 修行(30)は行けて超修行(60)は行けない(r1115-062)
+  if (kind === 'hplow') s = { ...s, hp: 6 }; // 体力6: 修行にも行けない
   if (kind === 'gameover') { s = { ...s, turn: 7, debutLoss: 3, over: 'gameover' }; phase = 'over'; }
   if (kind === 'retire') { s = { ...s, turn: 46, pts: 34, over: 'done' }; phase = 'over'; }
   return { v: 1, id: s.id, s, nick: 'もちまる', colors: [], from: { base: 'Mocchi' }, items: [], used: 0, phase, out: null, log: [{ turn: 3, t: '休んだ' }], startAt: 1 };
@@ -80,6 +93,11 @@ const makeRun = async (kind) => {
     ['C4d', 'debutlose', ['cont', '@cupintro-go', '%quick']],
     ['Q1', 'mid', ['cont', /^⚔修行/]], ['Q6', 'mid', ['cont', /^⚔修行/]], ['Q7', 'mid', ['cont', /^⚔修行/, '$qok0']], // SHOT_SPECIES=Golem で撮ると、間合い適性(零 A・近 E・中 G・遠 G)で同じランクの技の率が分かれる(r1115-041)
     ['Q4', 'mid', ['cont', /^⚔修行/, '$qok0']], ['Q5', 'mid', ['cont', /^⚔修行/, '$qok0', '$qok1']], ['Q2', 'mid', ['cont', /^⚔修行/, '@shugyo']], ['Q2b', 'mid', ['cont', /^⚔修行/, '@shugyo', '@qskip']], ['Q3', 'mid', ['cont', /^⚔修行/, '@shugyo', '@qskip', '@qnext']], // 修行の段の演出 → 「結果へ」(Fable ①-12)
+    ['QL1', 'qhit', ['cont', /^⚔修行/, '$qok0', '@shugyo', '@qskip']], ['QL2', 'qmiss', ['cont', /^⚔修行/, '$qok0', '@shugyo', '@qskip']], ['QL3', 'qmix', ['cont', /^⚔修行/, '$qok0', '$qok1', '@shugyo', '@qskip']], // 技を覚えた/覚えられなかった/超修行で1つだけ(r1115-063)
+    ['QH0', 'hplow', ['cont']], ['QH1', 'hpmid', ['cont', /^⚔修行/, '$qok0', '$qok1']], // 体力が足りない: ホームの修行が押せない/超修行だけ行けない(r1115-062)
+    // 修行の段の演出(r1115-060): 超修行で2つ選び1つ当たり(qmix)。段ごとに待って撮る(0 一言 1.0秒 → STAGE 1・2 各2.6秒 → 編成のおかげ 2.4秒 → 技のくじ 2.8秒)
+    ['QF0', 'qmix', ['cont', /^⚔修行/, '$qok0', '$qok1', '@shugyo', 'w900']], ['QF1', 'qmix', ['cont', /^⚔修行/, '$qok0', '$qok1', '@shugyo', 'w1700']], ['QF2', 'qmix', ['cont', /^⚔修行/, '$qok0', '$qok1', '@shugyo', 'w4300']],
+    ['QF3', 'qmix', ['cont', /^⚔修行/, '$qok0', '$qok1', '@shugyo', 'w6900']], ['QF4', 'qmix', ['cont', /^⚔修行/, '$qok0', '$qok1', '@shugyo', 'w9800']], ['QF5', 'qmiss', ['cont', /^⚔修行/, '$qok0', '@shugyo', 'w9800']],
     // 期末の大会の当日(参考 te-30〜34): 当日のメイン(能力と大会だけ)→ 受付に1つ → 参加の確認 → 紋章の入り → 表
     ['K0', 'kimatsu', ['cont']], ['K1', 'kimatsu', ['cont', '@precup']], ['K2', 'kimatsu', ['cont', '@precup', '@enter']], ['K2c', 'kimatsu', ['cont', '@precup', '@enter', '@pre-cancel']],
     ['K3', 'kimatsu', ['cont', '@precup', '@enter', '@yes']], ['K4', 'kimatsu', ['cont', '@precup', '@enter', '@yes', '@cupintro-go']],
@@ -93,7 +111,9 @@ const makeRun = async (kind) => {
     ['X10', 'box', ['@openbox', '@mmlist', '@boxmon=bx0']], // 同じ間合い・同じランクに技が2つある種族(スネグーラチカ): そのランクの段が2行になる // 詳細の技の升目で、覚えていない技を押した所(右の詳細に覚え方の条件)
     ['A1', 'box', ['@openbox', '#mm-open-assist']], ['A2', 'box', ['@openbox', '#mm-open-assist', '#assist-mon=as1', '#assist-mon=as3']], ['A3', 'box', ['@openbox', '#mm-open-assist', '#assist-mon=as1', '#assist-remove']],
     ['F1', 'box', ['@openbox', '@mmlist', '@mmbye', '@boxmon=b2', '#mm-bye']], ['F2', 'box', ['@openbox', '@fuse', '~fuse-pick=b1', '~fuse-pick=b2']],
-    ['T1', 'box', [/新しく育成/, /次へ/, /このモンスターにする/, '^assist-head']], ['T2', 'box', [/新しく育成/, /次へ/, /このモンスターにする/, '#team-assist=as1', '#team-assist=as3', '^assist-head']],
+    // 編成(r1115-096・115 で6枠+全画面の選ぶ画面に作り直し): T1 = 枠を押して選ぶ画面のメモリアルのタブ(見出し assist-head)/ T2 = メモリアルの as1・as3 を1・2枠目に入れて決定 → 編成の札に2体が入ったか
+    ['T1', 'box', [/新しく育成/, /次へ/, /このモンスターにする/, '#slot=0', '#tp-tab=memo', '^assist-head']],
+    ['T2', 'box', [/新しく育成/, /次へ/, /このモンスターにする/, '#slot=0', '#tp-tab=memo', '#tp-item=as1', '#tp-ok', '#slot=1', '#tp-tab=memo', '#tp-item=as3', '#tp-ok', '^team-slot-assist=as1', '^team-slot-assist=as3']],
     ['F3', 'box', ['@openbox', '@mmlist', '@mmbye', '@boxmon=b2', '#mm-bye', '#mm-bye-yes']], ['K9', 'box', ['@openbox']],
     ['F4', 'box', ['@openbox', '@fuse', '~fuse-pick=b1', '~fuse-pick=b2', '~fuse-go', 'w1100', '~fuse-go']], ['F5', 'box', ['@openbox', '@fuse', '~fuse-pick=b1', '~fuse-pick=b2', '~fuse-go', 'w1100', '~fuse-go', '=fuse-nameinput:ぷにお', '~fuse-namego']],
     ['F6', 'box', ['@openbox', '@fuse', '~fuse-pick=b1', '~fuse-pick=b2', '~fuse-go', 'w1100', '~fuse-go', '=fuse-nameinput:ぷにお', '~fuse-namego', '!sheet-close', '#mm-open-assist']],
@@ -188,6 +208,8 @@ const makeRun = async (kind) => {
         if (u && u.blank != null && blankLater && u.blank > BLANK_MAX) console.log(`  見張り ${label}: 下の空き ${u.blank}px(作り直し待ち)`);
         else if (u && u.blank != null) check(`${label}: 下に大きな空きが無い(${BLANK_MAX}px まで)`, u.blank <= BLANK_MAX, `${u.blank}px`);
         if (u) check(`${label}: 見せ場の数字(.v-num)が真ん中`, u.offNum.length === 0, u.offNum.slice(0, 3).join(' / '));
+        if (u) check(`${label}: ボタンの文字・記号が上下左右とも真ん中`, u.offBtn.length === 0, u.offBtn.slice(0, 4).join(' / '));
+        { const px = await measureBtnPixels(page); check(`${label}: 描いた画素でも字・記号がボタンの真ん中(±1.5px)`, px.length === 0, px.slice(0, 4).join(' / ')); }
         check(`${label}: 画面が出る`, m.ok && m.text > 20, m.head);
         check(`${label}: 枠からはみ出さない`, m.ok && m.over.length === 0, m.over && m.over.slice(0, 3).join(' / '));
         if (name === 'X2') { const b = await page.evaluate(() => JSON.parse(localStorage.getItem('mh_monsuc_box_v1') || 'null')); const m = b && b.mons.find((x) => x.id === 'b1');

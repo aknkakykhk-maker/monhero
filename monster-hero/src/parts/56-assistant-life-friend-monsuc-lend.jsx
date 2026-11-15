@@ -53,7 +53,7 @@ const monsucLendPayloadOf = (child) => {
   for (const k of MONSUC_LEND_STAT_KEYS) {
     const v = Number(st[k]);
     if (!Number.isFinite(v)) return null;
-    stats[k] = Math.max(0, Math.min(999, Math.round(v)));
+    stats[k] = Math.max(0, Math.min(99999, Math.round(v))); // 能力の上限アップ(r1115-103): 999 を超えた子も送る・読む(サーバの見張り LEND_STAT_MAX と同じ)
   }
   const picks = c.asp && c.asp.picks && typeof c.asp.picks === 'object' && !Array.isArray(c.asp.picks) ? c.asp.picks : {};
   let assists = Object.entries(picks).filter(([, lv]) => Number.isInteger(lv) && lv >= 1 && lv <= 3).slice(0, 4).map(([id, lv]) => ({ id, lv }));
@@ -82,7 +82,7 @@ const monsucLendMember = (row, SUC) => {
   for (const k of MONSUC_LEND_STAT_KEYS) {
     const v = Number(st[k]);
     if (!Number.isFinite(v)) return null;
-    stats[k] = Math.max(0, Math.min(999, Math.round(v)));
+    stats[k] = Math.max(0, Math.min(99999, Math.round(v))); // 能力の上限アップ(r1115-103): 999 を超えた子も送る・読む(サーバの見張り LEND_STAT_MAX と同じ)
   }
   let assists = [];
   const list = Array.isArray(m.assists) ? m.assists : [];

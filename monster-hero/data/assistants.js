@@ -12517,6 +12517,72 @@ const PANDORA_WINGS_EP8 = [
   { who:'erubin',   e:'happy',    t:'{name}、おつかれさま。来てすぐに、こんなあったかいお話に立ち会えて嬉しかったな☺️' },
 ];
 const PANDORA_WINGS_EP8_CALLS = { mua: 'パンドラ／きゅきゅ', kiki: 'パンドラさん', momosuke: 'パンドラちゃん', dra: 'パンドラ', atsu: 'パンドラ', kyuko: 'パンドラ', sorashido: 'パンドラ', pandora: 'きゅうこ', erubin: 'パンドラちゃん' };
+// ききのお話「はじめての曲 ～Sparkling Pink Overture～」(2026-11-15 ココロ2・r1115-102・流れは docs/progress/sparkling-pink-story/script.md)。
+//   新曲「Sparkling Pink Overture」は、ききが初めて作った曲という設定。曲と同時に公開(組み込み・読める時の仕掛け・回想はテンポくん3)。
+//   締めは 2026-11-03 の案3(札と曲えらびのボタンは画面の側が出す)。難易度は「難しめ」。数字は書かない
+const SPARKLING_PINK_STORY = [
+  // ---- 夜の広場: ピアノの音 ----
+  { bg:'monhero_night', who:'dra', e:'surprise', fxText:'夜の町に、ぽろん、と小さな音がひびく', holdMs:2500, t:'ん……？ こんな夜中に、なんの音だ' },
+  { who:'momosuke', e:'surprise', t:'ピアノじゃない？ だれか弾いてるのかな' },
+  { who:'kiki',     e:'surprise', fxText:'音のするほうへ行くと、ききがひとりで鍵盤に向かっていた', t:'あれま……。見つかってしまいまちた' },
+  { who:'dra',      e:'surprise', t:'靴下さん、ピアノ弾けたのか' },
+  { who:'kiki',     e:'normal',   t:'少しだけでつ。……実は私、曲を作ってみたくて' },
+  { who:'momosuke', e:'excited',  t:'えっ、ききちゃんが作曲！？ すご！！' },
+  { who:'kiki',     e:'troubled', t:'まだ、ひとつもできていないんでつ。頭の中では鳴っているのに、指にすると、ちがう音になってしまって' },
+  { who:'dra',      e:'normal',   t:'なんで急に、曲なんだ？' },
+  { who:'kiki',     e:'normal',   t:'{name}がモンヒロビートで遊んでいるのを、いつも横で見ていて……。いつか、私の作った曲でも遊んでもらえたらなって' },
+  { who:'kiki',     e:'troubled', t:'みんなには、できてから聞かせたかったんでつけど……' },
+  { who:'momosuke', e:'wink',     t:'もうバレちゃったし、手伝うしかないじゃん w ももたちにも聞かせてよ！' },
+  { who:'dra',      e:'happy',    t:'おでも乗るぞ。……楽器はできないけど、夜食なら作れるからな' },
+  { who:'kiki',     e:'happy',    t:'……ふふ。ありがとうございまつ' },
+  // ---- 次の日の広場: 1曲目の試し弾き ----
+  { bg:'monhero_plaza', who:'mua', e:'excited', t:'ひめちんが曲作ってるってまぢ！？ 聞きたすぎる！' },
+  { who:'kiki',     e:'troubled', t:'みゅあちん、声が大きいでつ……(´ー`*)' },
+  { who:'kiki',     e:'normal',   t:'では、試しに弾いてみまつ。迷ったら、ちからに振りまつ。……強い音を、全部入れてみまちた' },
+  { who:'kiki',     e:'normal',   fxText:'低くて強い音が、どーん、どーんと鳴りつづける', t:'……' },
+  { who:'atsu',     e:'wink',     atsu:'with', t:'てか、叩きごたえはすごいな笑 腕のほうが先に参りそうだけど笑' },
+  { who:'kyuko',    e:'normal',   t:'ほい！ 強いのはいいんだけどねぇ……ずっと全力だと、どこが聞かせどころか分かんなくなるかもw' },
+  { who:'kiki',     e:'troubled', t:'そなのか……。押し切るだけでは、だめなんでつね' },
+  { who:'sorashido', e:'excited', t:'自分、ちょっと計算してみてもいいですか？ 速さを少し上げて、強い音は決めどころに集めると……こんな感じです・・・！' },
+  { who:'kiki',     e:'surprise', t:'あれま、それだけで、ずいぶん聞きやすくなりまつね' },
+  { who:'erubin',   e:'normal',   t:'ききさん、ひとつ聞いてもいいかな。この曲を聞いた人に、どんな気持ちになってほしい？' },
+  { who:'kiki',     e:'normal',   t:'……どんな気持ち、でつか' },
+  { who:'kiki',     e:'normal',   t:'……明るい気持ち、です。春になったら、みんなで桜を見に行けたらいいなって思っていて。その日みたいな曲に、したいでつ' },
+  { who:'momosuke', e:'excited',  t:'それならピンク！ キラキラのピンク！！' },
+  { who:'mua',      e:'happy',    t:'わかる〜！ ひめちんの曲、ぜったいピンクが似合うやつぢゃん！' },
+  { who:'kiki',     e:'happy',    t:'キラキラのピンク……。いいでつね♪♪' },
+  // ---- 何日かあとの夕方: ききの音 ----
+  { bg:'monhero_plaza_evening', who:'kyuko', e:'happy', fxText:'それから何日も、ききは鍵盤に向かった', holdMs:2500, t:'ききさん、ちょっと休憩しよぉ。お茶持ってきたよ笑' },
+  { who:'kiki',     e:'normal',   t:'ありがとうございまつ。……もう少しで、つかめそうなんでつ' },
+  { who:'kiki',     e:'troubled', t:'やさしい音だけだと眠くなって、強い音だけだと疲れてしまう。……その間に、きっと私の音がありまつ' },
+  { who:'dra',      e:'happy',    t:'ほら、夜食のおにぎりだ。ちからが出るように、具は2倍にしといたぞ' },
+  { who:'kiki',     e:'happy',    t:'ふふ、ドラさんらしいでつ♪' },
+  { who:'kiki',     e:'surprise', fxText:'ぽろん、と軽い音が跳ねた。強い音のあいだを、明るい音がかけ上がっていく', t:'……今の。今のでつ！' },
+  { who:'kiki',     e:'excited',  t:'やさしい音でかけ上がって、いちばん大事なところだけ、思いきり押し切る……。これが、私の曲でつ！' },
+  // ---- 曲の名前 ----
+  { who:'mua',      e:'excited',  t:'できたの！？ じゃあ名前！ 名前決めよ！' },
+  { who:'kiki',     e:'happy',    t:'もう決めてありまつ。ももさんの言ってくれた「キラキラのピンク」から、「Sparkling Pink」' },
+  { who:'momosuke', e:'excited',  t:'ももの言ったやつ！？ やった！！' },
+  { who:'kiki',     e:'normal',   t:'それと「Overture」。始まりの曲、という意味でつ。私の、はじめての曲なので' },
+  { who:'erubin',   e:'happy',    t:'「Sparkling Pink Overture」。……ききさんらしい、すてきな名前だね☺️' },
+  // ---- お披露目 ----
+  { bg:'monhero_plaza', who:'mua', e:'excited', fxText:'そして、お披露目の日', holdMs:2500, t:'みんな集まったー？ ひめちんのはじめての曲のお披露目、いくよ〜！' },
+  { who:'kiki',     e:'troubled', t:'……ちょっと、緊張しまつね' },
+  { who:'atsu',     e:'happy',    atsu:'with', t:'大丈夫。練習のとき何回も聞いたけど、いい曲だったよ笑' },
+  { who:'sorashido', e:'happy',   t:'速さもばっちりです。いちばん盛り上がるところで、ちょうど気持ちよくなる計算です笑' },
+  { who:'kiki',     e:'normal',   t:'……では、聞いてください。「Sparkling Pink Overture」' },
+  { who:'kiki',     e:'happy',    fxText:'明るいピアノが、桜色の舞台に広がっていく', holdMs:3000, t:'……♪' },
+  { who:'momosuke', e:'crying',   t:'すご……ほんとに、ききちゃんの曲だ……！！' },
+  { who:'dra',      e:'crying',   t:'おで、こういうの弱いんだよ……えへへ' },
+  { who:'kyuko',    e:'wink',     t:'ちゃんと聞かせどころで押し切ってたねぇ。ききさんの曲だ笑' },
+  { who:'mua',      e:'excited',  t:'ひめちん最高すぎる！ これモンビーで叩きたすぎる！' },
+  { who:'kiki',     e:'happy',    t:'ありがとうございまつ……。みんなのおかげで、できまちた' },
+  // ---- {name}へ(このあと締めの札・曲えらび) ----
+  { who:'kiki',     e:'normal',   t:'{name}。この曲、モンヒロビートに入れてもらいまちた' },
+  { who:'kiki',     e:'wink',     t:'やさしいところも、押し切るところもありまつ。……難しめなので、気をつけてくださいね( ˘ω˘)9グッ!' },
+  { who:'kiki',     e:'happy',    t:'遊んでもらえたら、私、とってもうれしいでつ♪♪' },
+];
+const SPARKLING_PINK_STORY_CALLS = { mua: 'ひめちん', kiki: 'みゅあちん／ももさん／ドラさん', momosuke: 'ききちゃん', dra: '靴下さん', atsu: 'きき', kyuko: 'ききさん', sorashido: 'ききさん', erubin: 'ききさん' };
 const EVENT_REPLAYS = [
   // ききが初めて作った曲「Sparkling Pink Overture」のお話(2026-11-15 社長 r1115-102)。曲えらびを開いたときに1回流れ、あとは回想から読める。台本は SPARKLING_PINK_STORY(助手部ココロ2)
   { id: 'sparkling_pink_kiki_story', date: '2026-11-15 12:00', title: 'はじめての曲 ～Sparkling Pink Overture～', script: SPARKLING_PINK_STORY, calls: SPARKLING_PINK_STORY_CALLS, unlockedKey: 'sparklingPinkStorySeen', group: 'kiki_song' },

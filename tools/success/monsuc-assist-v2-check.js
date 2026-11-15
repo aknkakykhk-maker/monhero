@@ -95,7 +95,7 @@ const tg = L5.map((lv) => { const r = runWith([{ id: 'tagpow', lv }], (s) => { s
 check('⑥ タッグの息: タッグの強さ +表の値', same(tg, AT.BY_ID.tagpow.v2), tg.join('/'));
 // 見張り役: サボりの率 −v%(方針を甘やかしにしてサボりが出る形で)
 const sb = L5.map((lv) => { const r = runWith([{ id: 'miharu', lv }], (s) => { s.pol = -3; }); const r0 = runWith([], (s) => { s.pol = -3; }); const p = S2.sabRateOf(r.s, r.card); const p0 = S2.sabRateOf(r0.s, r0.card); return p0 > 0 ? Math.round((1 - p / p0) * 100) : null; });
-check('⑥ 見張り役: その札のサボりの率 −表の値%', sb.every((x, i) => x !== null && x === AT.BY_ID.miharu.v2[i]), sb.join('/'));
+check('⑥ 見張り役: その札のサボりの率 −表の値%(合計の上限 CAP まで・r1115-104)', sb.every((x, i) => x !== null && x === Math.min(AT.BY_ID.miharu.v2[i], AT.CAP && AT.CAP.miharu ? AT.CAP.miharu.v : Infinity)), sb.join('/'));
 // 気晴らし: 見通しのストレスが減る
 const kb = L5.map((lv) => { const r = runWith([{ id: 'kibarashi', lv }]); return r ? S2.preview(r.s, { kind: 'train', stat: r.c.stat }).stress : null; });
 const kb0 = (() => { const r = runWith([]); return r ? S2.preview(r.s, { kind: 'train', stat: r.c.stat }).stress : null; })();
@@ -189,7 +189,7 @@ check('⑧ 出来事の呼び水: 出来事が起きやすくなる(段5 で +15
   const line = store.split('\n').find((l) => l.includes('assists: Array.isArray(m.assists)')) || '';
   check('⑨ 保存枠の読み込みで masteries がコメントに飲まれていない', /masteries: tm\.mast,/.test(line.split('//')[0]));
   const core = fs.readFileSync(path.join(__dirname, '..', '..', 'monster-hero', 'data', 'monhero-success.js'), 'utf8');
-  const sh = core.split('\n').find((l) => l.includes("stayNum(s, 'shugyohp')")) || '';
+  const sh = core.split('\n').find((l) => l.includes('s.hp - shugyoHpOf(s, sup)')) || ''; // 修行で体力を引く行(r1115-062 で使う体力は shugyoHpOf へ)
   check('⑨ 修行のストレス(addStress)がコメントに飲まれていない', /addStress\(s, \(SHUGYO\.stress/.test(sh.split('//')[0]));
 }
 console.log(ng ? `\n${ng} 件 NG` : '\nすべて OK');
