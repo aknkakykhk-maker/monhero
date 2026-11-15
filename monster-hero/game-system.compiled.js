@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 52a589583e031ffe
+// source-sha256: 3632466b63884c7f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -685,6 +685,9 @@ const EVENT_REPLAY_RELEASE_FLAGS = Object.freeze({
   },
   get monsucStoryEp1() {
     return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.monsucStoryEp1 === true;
+  },
+  get monsucStoryEp2() {
+    return typeof RELEASE_FLAGS !== 'undefined' && RELEASE_FLAGS.monheroSuccess === true;
   },
   get cardCup() {
     return typeof cardCupOpen === 'function' && cardCupOpen() === true;
@@ -14809,6 +14812,8 @@ const helpPlayerFlagOn = name => !!name && HELP_PLAYER_FLAGS[name] === true;
 const CARD_CUP_STORY_ID = 'card_cup_2026_10_31';
 const RHYTHM_GRAND_OPEN_TEASER_STORY_ID = 'rhythm_grand_open_teaser';
 const MONSUC_BETA_EP1_STORY_ID = 'monsuc_beta_ep1';
+const MONSUC_BETA_EP2_STORY_ID = 'monsuc_beta_ep2';
+const MONSUC_STORY_SKIP_SEEN_KEY = 'mh_monsuc_story_skip_seen_v1';
 const SPARKLING_PINK_STORY_ID = 'sparkling_pink_kiki_story';
 const RHYTHM_GRAND_OPEN_STORY_ID = 'rhythm_grand_open';
 const SORASHIDO_GIFT_KEY = 'mh_sorashido_gift_v1';
@@ -235599,7 +235604,7 @@ function MonsterHeroGame() {
   const PANDORA_WINGS_STORY_IDS = PANDORA_WINGS_STORIES.map(story => story.id);
   const PANDORA_WINGS_EVENT_ID = 'pandora_wings_2026_11_02';
   const PANDORA_WINGS_THANKS_STORY_ID = 'pandora_wings_2026_ep8';
-  const RHYTHM_EVENT_STORY_IDS = [...HALLOWEEN_NIGHT_STORY_IDS, ...RAID_JACK_STORY_IDS, ...PANDORA_WINGS_STORY_IDS, PANDORA_WINGS_THANKS_STORY_ID, MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, RAID_JACK_RHYTHM_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RAID_JACK_HOWTO_STORY_ID, ATSU_JOIN_STORY_ID, KYUKO_JOIN_STORY_ID, SORASHIDO_JOIN_STORY_ID, ERUBIN_JOIN_STORY_ID, CARD_CUP_STORY_ID, RHYTHM_GRAND_OPEN_TEASER_STORY_ID, RHYTHM_GRAND_OPEN_STORY_ID, MONSUC_BETA_EP1_STORY_ID, SPARKLING_PINK_STORY_ID];
+  const RHYTHM_EVENT_STORY_IDS = [...HALLOWEEN_NIGHT_STORY_IDS, ...RAID_JACK_STORY_IDS, ...PANDORA_WINGS_STORY_IDS, PANDORA_WINGS_THANKS_STORY_ID, MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, RAID_JACK_RHYTHM_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RAID_JACK_HOWTO_STORY_ID, ATSU_JOIN_STORY_ID, KYUKO_JOIN_STORY_ID, SORASHIDO_JOIN_STORY_ID, ERUBIN_JOIN_STORY_ID, CARD_CUP_STORY_ID, RHYTHM_GRAND_OPEN_TEASER_STORY_ID, RHYTHM_GRAND_OPEN_STORY_ID, MONSUC_BETA_EP1_STORY_ID, MONSUC_BETA_EP2_STORY_ID, SPARKLING_PINK_STORY_ID];
   const RHYTHM_EVENT_STORY_BY_EVENT = {
     [MONBEAT_CUP_EVENT_ID]: MONBEAT_CUP_STORY_ID,
     [SYMPHONY_EVENT_ID]: SYMPHONY_STORY_ID,
@@ -236061,6 +236066,47 @@ function MonsterHeroGame() {
     if (rhythmEventStoryStartedRef.current.includes(MONSUC_BETA_EP1_STORY_ID)) return;
     setRhythmEventStoryPending(prev => prev || MONSUC_BETA_EP1_STORY_ID);
   }, [rhythmEventStorySeen, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
+  useEffect(() => {
+    if (!EVENT_REPLAY_RELEASE_FLAGS.monsucStoryEp2) return;
+    if (!Array.isArray(rhythmEventStorySeen) || rhythmEventStorySeen.includes(MONSUC_BETA_EP2_STORY_ID)) return;
+    if (!(bootPhase === 'GAME' && gameState === 'HOME') || eventReplay || rhythmEventStoryPending || rhythmHellGuide) return;
+    if (rhythmEventStoryStartedRef.current.includes(MONSUC_BETA_EP2_STORY_ID)) return;
+    setRhythmEventStoryPending(prev => prev || MONSUC_BETA_EP2_STORY_ID);
+  }, [rhythmEventStorySeen, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
+  const normalizeMonsucStorySkip = v => {
+    const o = v && typeof v === 'object' && !Array.isArray(v) ? v : {};
+    return {
+      v: 1,
+      skippedAt: Number.isFinite(o.skippedAt) ? o.skippedAt : 0,
+      shownAt: Number.isFinite(o.shownAt) ? o.shownAt : 0
+    };
+  };
+  const [monsucStorySkip, setMonsucStorySkip] = useState(null);
+  useEffect(() => {
+    let alive = true;
+    Promise.resolve(storeGet(MONSUC_STORY_SKIP_SEEN_KEY, null, false)).then(v => {
+      if (alive) setMonsucStorySkip(normalizeMonsucStorySkip(v));
+    }).catch(() => {
+      if (alive) setMonsucStorySkip(normalizeMonsucStorySkip(null));
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
+  const markMonsucStorySkip = field => {
+    setMonsucStorySkip(prev => {
+      const cur = normalizeMonsucStorySkip(prev);
+      if (cur[field]) return cur;
+      const next = {
+        ...cur,
+        [field]: Date.now()
+      };
+      try {
+        storeSet(MONSUC_STORY_SKIP_SEEN_KEY, next, false);
+      } catch {}
+      return next;
+    });
+  };
   useEffect(() => {
     if (!Array.isArray(rhythmEventStorySeen) || rhythmEventStorySeen.includes(SPARKLING_PINK_STORY_ID)) return;
     if (!(bootPhase === 'GAME' && gameState === 'HOME') || eventReplay || rhythmEventStoryPending || rhythmHellGuide) return;
@@ -239338,6 +239384,7 @@ function MonsterHeroGame() {
     rhythmGrandOpenTeaserSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(RHYTHM_GRAND_OPEN_TEASER_STORY_ID),
     rhythmGrandOpenSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(RHYTHM_GRAND_OPEN_STORY_ID),
     monsucBetaEp1Seen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(MONSUC_BETA_EP1_STORY_ID),
+    monsucBetaEp2Seen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(MONSUC_BETA_EP2_STORY_ID),
     sparklingPinkStorySeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SPARKLING_PINK_STORY_ID),
     symphonyEventSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SYMPHONY_STORY_ID)
   };
@@ -265407,7 +265454,7 @@ function MonsterHeroGame() {
       markMomosukeIntroSeen: markMomosukeIntroSeen,
       momosukeIntroStep: momosukeIntroStep,
       setMomosukeIntroStep: setMomosukeIntroStep
-    }), bootPhase === 'GAME' && gameState === 'HOME' && onboarded && tutorialStep == null && kikiIntroStep == null && momosukeIntroStep == null && !eventReplay && !rhythmEventStoryPending && updateGuideQueue.length > 0 && React.createElement(HomeUpdateGuideOverlay, {
+    }), bootPhase === 'GAME' && gameState === 'HOME' && onboarded && tutorialStep == null && kikiIntroStep == null && momosukeIntroStep == null && !eventReplay && !rhythmEventStoryPending && !successScreenOpen && updateGuideQueue.length > 0 && React.createElement(HomeUpdateGuideOverlay, {
       activeAssistant: activeAssistant,
       assistantBondLevelNow: assistantBondLevelNow,
       assistantCallStyle: assistantCallStyle,
@@ -265430,7 +265477,44 @@ function MonsterHeroGame() {
         openFriends(null);
       },
       onLater: () => setFriendNoticeDismissed((friendRequestInfo.ids || []).join(','))
-    }), assistantUnlockNoticeNode(gameState === 'PROFILE' ? 'profile' : gameState === 'HOME' ? 'home' : null), eventReplay != null && (() => {
+    }), assistantUnlockNoticeNode(gameState === 'PROFILE' ? 'profile' : gameState === 'HOME' ? 'home' : null), EVENT_REPLAY_RELEASE_FLAGS.monsucStoryEp2 && monsucStorySkip && monsucStorySkip.skippedAt > 0 && !monsucStorySkip.shownAt && bootPhase === 'GAME' && gameState === 'HOME' && !eventReplay && !rhythmEventStoryPending && !rhythmHellGuide && !dailyMasuAdvice && !successScreenOpen && updateGuideQueue.length === 0 && (() => {
+      const who = assistantById('mua');
+      if (!who) return null;
+      const lv = assistantBondLevelOf(normalizeAssistantBond(assistantBondsRef.current.mua).points);
+      const text = lv <= 2 ? '{name}、HOMEに新しいボタンが出ています！ 一番乗りで、いっしょに行けたらうれしいです♪' : '{name}、HOMEに新しいボタンが出てるよ！ 一番乗りで、いっしょに行こ♪';
+      return React.createElement("div", {
+        "data-monsuc-story-skip-notice": true,
+        className: "fixed inset-0 flex items-end justify-center",
+        style: {
+          position: 'fixed',
+          inset: 0,
+          zIndex: 75000,
+          backgroundColor: 'rgba(2,6,23,.9)'
+        },
+        role: "dialog",
+        "aria-modal": "true",
+        "aria-label": "みゅあからのお知らせ"
+      }, React.createElement("div", {
+        className: "w-full max-w-md rounded-t-3xl border-t-2 border-x-2 border-pink-400 bg-slate-950 p-4",
+        style: {
+          paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
+        }
+      }, React.createElement("div", {
+        className: "flex items-end gap-2"
+      }, React.createElement(AssistantFace, {
+        who: who,
+        size: 72,
+        accent: who.accent,
+        expression: "excited"
+      }), React.createElement("div", {
+        className: "flex-1 rounded-2xl border-2 border-pink-400 bg-slate-900 px-3 py-3 text-[13px] font-bold leading-relaxed text-white",
+        style: bubbleWrapStyle()
+      }, bubbleWrap(assistantSpeakText(text, breederName, lv, assistantCallStyles.mua || null, 'mua')))), React.createElement("button", {
+        type: "button",
+        onClick: () => markMonsucStorySkip('shownAt'),
+        className: "mt-4 min-h-[50px] w-full rounded-2xl bg-pink-500 text-sm font-black text-slate-950 active:scale-[.98]"
+      }, "閉じる")));
+    })(), eventReplay != null && (() => {
       const list = eventReplay.debug ? eventReplayAllList() : eventReplayList();
       const event = list.find(ev => ev.id === eventReplay.id);
       const script = event ? eventScriptForPlayer(event.script, rhythmEventStorySeen) : [];
@@ -265701,6 +265785,7 @@ function MonsterHeroGame() {
       const skip = () => {
         if (eventReplay.live && !eventReplay.debug && event && RHYTHM_EVENT_STORY_IDS.includes(event.id)) void markRhythmEventStorySeen(event.id);
         if (eventReplay.live && !eventReplay.debug && event && event.id === 'tactics_intro') markTacticsIntroSeen();
+        if (eventReplay.live && !eventReplay.debug && event && event.id === MONSUC_BETA_EP2_STORY_ID) markMonsucStorySkip('skippedAt');
         if (eventReplay.live && !eventReplay.debug && event && event.id === ASSISTANT_CHAT_STORY_ID) markAssistantChatStorySeen();
         if (eventReplay.live && !eventReplay.debug && event && event.id === LEGEND_BREEDER_PASS_STORY_ID) markLegendPassSeen();
         if (eventReplay.live && !eventReplay.debug && event && event.id === TACTICS_TYPES_STORY_ID) markTacticsTypesStorySeen();
@@ -266269,7 +266354,20 @@ function MonsterHeroGame() {
           style: {
             animation: `storyEndCard 1s ease-out ${delay + 1.5}s both`
           }
-        }, "🔑 全", allCount, allUnit, " 全部見た！"), rich && eventReplay.live && !eventReplay.debug && /^pandora_wings_/.test(event.id) && React.createElement("div", {
+        }, "🔑 全", allCount, allUnit, " 全部見た！"), rich && eventReplay.live && !eventReplay.debug && event?.endingOpen === 'monsuc' && typeof assistantLifeSuccessOpen === 'function' && React.createElement("button", {
+          type: "button",
+          "data-story-ending-open": "monsuc",
+          onClick: go(() => {
+            assistantLifeSuccessOpen({
+              assistantId: 'mua',
+              from: 'story'
+            });
+          }),
+          className: "mt-5 min-h-[52px] w-full rounded-2xl bg-emerald-400 text-[15px] font-black text-slate-950 active:scale-[.98]",
+          style: {
+            animation: `storyEndCard 1s ease-out ${delay + 1.5}s both`
+          }
+        }, "🌱 モンヒロサクセスへ"), rich && eventReplay.live && !eventReplay.debug && /^pandora_wings_/.test(event.id) && React.createElement("div", {
           "data-story-ending-actions": true,
           className: "mt-4 grid grid-cols-2 gap-2",
           style: {
