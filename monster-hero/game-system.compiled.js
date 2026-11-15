@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d3784777c876aeaf
+// source-sha256: c9f53814fcce98c5
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -161575,7 +161575,7 @@ const MSX_STORIES = Object.freeze([Object.freeze({
   badge: 'ヒーローズファイナル',
   lead: ['町の育成場で、きみと1体のモンスターの物語が始まる', '大会で勝ち、修行で技を覚え、仲間と強くなろう。', 'めざすはヒーローズファイナル——ヒーローと呼ばれる日まで。'],
   about: 'デビュー戦から始まり、ジュニア・ミドル・プロの3つの期を経て、最後は「ヒーローズファイナル」に挑む、モンヒロサクセスのいちばん最初のお話。',
-  rows: Object.freeze([['📅', '流れ', 'デビュー期 → ジュニア期 → ミドル期 → プロ期 → ヒーローズファイナル(3戦)'], ['🏆', '大会', 'モンスターダービー/四大大会/季節の賞 ほか。賞金ランクは ルーキー〜ヒーローの10段'], ['👥', '登場人物', '助手(いまはみゅあ)・イッサ博士・ライバルたち'], ['🎯', '目指すもの', 'ヒーローズファイナルの決勝に勝って「ヒーロー」に。']]),
+  rows: Object.freeze([['📅', '流れ', 'デビュー期 → ジュニア期 → ミドル期 → プロ期 → ヒーローズファイナル(3戦)'], ['🏆', '大会', 'モンスターダービー/四大大会/季節の賞 ほか。賞金ランクは ルーキー〜ヒーローの9段'], ['👥', '登場人物', '助手(いまはみゅあ)・イッサ博士・ライバルたち'], ['🎯', '目指すもの', 'ヒーローズファイナルの決勝に勝って「ヒーロー」に。']]),
   cast: Object.freeze({
     left: 'issa',
     center: 'mua',
@@ -178626,7 +178626,7 @@ const msxR3Prizes = (SUC, c) => {
     id: 'tk',
     e: '🎫',
     name: '修行チケット',
-    desc: `${wtk + rtk ? `勝つと修行チケット +${wtk + rtk}${rtk ? '(ライバルの分 +1)' : ''}。` : ''}賞金ランクが上がると1段ごとに +1(負けても獲得賞金の合計で上がる)`
+    desc: `${wtk + rtk ? `勝つと修行チケット +${wtk + rtk}${rtk ? '(ライバルの分 +1)' : ''}。` : ''}賞金ランクが上がると1段ごとに +1(6段目から上は +2)(負けても獲得賞金の合計で上がる)`
   });
   const bpz = msxR3BeatPrize(SUC, c.prize);
   if (bpz) out.push(bpz);
@@ -179318,6 +179318,7 @@ const msxR3Diff = (a, b) => {
   d.beat = Math.max(0, (Number(b.beatEarned) || 0) - (Number(a.beatEarned) || 0));
   d.rankFrom = Number(a.fameRank) || 0;
   d.rankTo = Number(b.fameRank) || 0;
+  d.fameGain = Math.max(0, (Number(b.fameTotal) || 0) - (Number(a.fameTotal) || 0));
   d.items = {};
   Object.keys(b.bag || {}).forEach(k => {
     const g = (Number((b.bag || {})[k]) || 0) - (Number((a.bag || {})[k]) || 0);
@@ -179329,78 +179330,91 @@ const msxR3RankName = step => {
   const S = msxSuc && msxSuc.SUC ? msxSuc.SUC : null;
   return S && typeof S.rankNameOf === 'function' ? S.rankNameOf(step) : String(step);
 };
+const MSX_R3_RANK_COL = [['#c9f1fb', '#6fb8c9'], ['#86e3a0', '#2f9e5a'], ['#ff8a4c', '#c2410c'], ['#9cc8f2', '#4b7aa8'], ['#ffe066', '#c99a06'], ['#d9a6ff', '#7c4dbd'], ['#ff6b7f', '#b4233c'], ['#3fc1c9', '#1d6f75'], ['#a77be0', '#4a2577']];
+const MSX_R3_RANK_CSS = `
+.msx-rk{margin:4px 10px 0;padding:7px 8px 8px;border-radius:12px;background:#0f172acc;container-type:inline-size}
+.msx-rk .rk-tot{display:flex;align-items:baseline;justify-content:center;gap:6px;flex-wrap:wrap;line-height:1.1}
+.msx-rk .rk-tot b{font-size:clamp(20px,7.5cqw,30px);font-weight:900;color:#fff7d6;letter-spacing:.02em;font-variant-numeric:tabular-nums}
+.msx-rk .rk-tot i{font-style:normal;font-size:clamp(11px,3.6cqw,14px);font-weight:900;color:#fb923c;white-space:nowrap}
+.msx-rk .rk-hd{display:flex;align-items:center;gap:8px;margin:2px 0 4px;font-size:11px;font-weight:800;color:#fde68a}
+.msx-rk .rk-hd:before,.msx-rk .rk-hd:after{content:'';flex:1 1 0;height:1px;background:#fde68a66}
+.msx-rk .rk-row{position:relative;height:20px;margin-top:1px}
+.msx-rk .rk-bar{position:absolute;top:0;bottom:0;right:0}
+.msx-rk .rk-tri{position:absolute;top:0;bottom:0}
+.msx-rk .rk-nm{position:absolute;top:0;bottom:0;display:flex;align-items:center;justify-content:center;transform:translateX(-50%);white-space:nowrap;font-size:10.5px;font-weight:900;color:#fff;text-shadow:0 0 2px #000,0 0 2px #000,0 1px 2px #000}
+.msx-rk .rk-amt{position:absolute;top:0;bottom:0;right:6px;display:flex;align-items:center;font-size:10.5px;font-weight:900;color:#fff;text-shadow:0 1px 2px #0009;white-space:nowrap;font-variant-numeric:tabular-nums}
+.msx-rk .rk-row.off .rk-bar,.msx-rk .rk-row.off .rk-tri{filter:saturate(.45) brightness(.72)}
+.msx-rk .rk-row.off .rk-amt{color:#cbd5e1}
+.msx-rk .rk-row.me .rk-bar{box-shadow:inset 0 0 0 2px #fff}
+.msx-rk .rk-tag{position:absolute;top:2px;bottom:2px;left:0;display:flex;align-items:center;justify-content:center;padding:0 9px 0 6px;border-radius:5px 0 0 5px;clip-path:polygon(0 0,calc(100% - 7px) 0,100% 50%,calc(100% - 7px) 100%,0 100%);font-size:9.5px;font-weight:900;letter-spacing:.04em;color:#fff;background:#4caf50}
+.msx-rk .rk-tag.up{background:#ef4444;color:#fff7d6}
+`;
 function MsxR3RankPyramid({
   step,
-  up
+  up,
+  total,
+  gain
 }) {
   const S = msxSuc && msxSuc.SUC ? msxSuc.SUC : null;
   const R = S && S.FAME_RANK ? S.FAME_RANK : [];
   if (!R.length) return null;
-  const COL = ['#bae6fd', '#86efac', '#fb923c', '#7dd3fc', '#facc15', '#c084fc', '#f43f5e', '#14b8a6', '#e879f9', '#6d28d9'];
-  const cond = x => x.cond === 'debut' ? 'デビュー戦に出る' : x.cond === 'win' ? '大会で1勝' : `${msxFmt(x.min)}G`;
+  const N = R.length;
+  const cond = x => x.cond === 'debut' ? 'デビュー戦出場' : x.cond === 'win' ? '1勝' : `${msxFmt(x.min)}G`;
+  const CX = 39;
+  const HALF = 33;
+  const t = Number(total);
+  const g = Number(gain);
   return React.createElement("div", {
+    className: "msx-rk",
     "data-msx-r3-rank": true,
-    style: {
-      margin: '4px 10px 0',
-      padding: '5px 6px 6px',
-      borderRadius: 10,
-      background: '#0f172acc'
-    }
-  }, React.createElement("div", {
-    style: {
-      fontSize: 11,
-      fontWeight: 800,
-      color: '#fde68a',
-      textAlign: 'center',
-      marginBottom: 3
-    }
+    "data-msx-r3-rank-step": step
+  }, React.createElement("style", null, MSX_R3_RANK_CSS), Number.isFinite(t) ? React.createElement("div", {
+    className: "rk-tot",
+    "data-msx-r3-rank-total": true
+  }, React.createElement("b", null, msxFmt(Math.max(0, t)), "G"), Number.isFinite(g) && g > 0 ? React.createElement("i", null, "(+", msxFmt(g), "G)") : null) : null, React.createElement("div", {
+    className: "rk-hd"
   }, "賞金ランク"), R.map((x, i) => i).reverse().map(i => {
     const x = R[i];
     const me = i + 1 === step;
-    const w = 46 + (R.length - 1 - i) * 5.5;
+    const k = N - i;
+    const hwB = HALF * k / N;
+    const hwT = HALF * (k - 1) / N;
+    const col = MSX_R3_RANK_COL[i] || MSX_R3_RANK_COL[MSX_R3_RANK_COL.length - 1];
+    const triL = CX - hwB;
+    const triW = hwB * 2;
+    const cut = triW > 0 ? (hwB - hwT) / triW * 100 : 50;
     return React.createElement("div", {
       key: i,
-      style: {
-        display: 'flex',
-        alignItems: 'center',
-        height: 15,
-        gap: 4
-      }
+      className: `rk-row${i + 1 <= step ? '' : ' off'}${me ? ' me' : ''}`,
+      "data-msx-r3-rank-row": i + 1
     }, React.createElement("span", {
+      className: "rk-bar",
       style: {
-        width: 40,
-        fontSize: 9,
-        fontWeight: 900,
-        textAlign: 'right',
-        color: up ? '#fef08a' : '#a7f3d0'
+        left: `${CX + hwT}%`,
+        background: `linear-gradient(90deg, ${col[1]}, ${col[1]}dd)`
       }
-    }, me ? up ? 'UP!▶' : 'KEEP▶' : ''), React.createElement("span", {
+    }), React.createElement("span", {
+      className: "rk-tri",
       style: {
-        flex: '1 1 0',
-        display: 'flex',
-        justifyContent: 'center'
+        left: `${triL}%`,
+        width: `${triW}%`,
+        background: `linear-gradient(180deg, #ffffff66, ${col[0]} 45%, ${col[0]})`,
+        clipPath: `polygon(${cut}% 0, ${100 - cut}% 0, 100% 100%, 0 100%)`
       }
-    }, React.createElement("span", {
+    }), React.createElement("span", {
+      className: "rk-nm",
       style: {
-        width: `${w}%`,
-        background: COL[i],
-        opacity: i + 1 <= step ? 1 : 0.35,
-        borderRadius: 3,
-        fontSize: 10,
-        fontWeight: 800,
-        color: '#111827',
-        textAlign: 'center',
-        lineHeight: '14px',
-        outline: me ? '2px solid #fff' : 'none'
+        left: `${CX}%`
       }
-    }, x.name)), React.createElement("span", {
+    }, x.name), React.createElement("span", {
+      className: "rk-amt"
+    }, cond(x)), me ? React.createElement("span", {
+      className: `rk-tag${up ? ' up' : ''}`,
       style: {
-        width: 74,
-        fontSize: 9.5,
-        textAlign: 'right',
-        color: '#e5e7eb'
-      }
-    }, cond(x)));
+        left: `${Math.max(0, triL - 15)}%`
+      },
+      "data-msx-r3-rank-tag": up ? 'up' : 'keep'
+    }, up ? 'UP!' : 'KEEP') : null);
   }));
 }
 const msxR3PrizeRows = (d, s) => {
@@ -179526,7 +179540,7 @@ const msxR3ForcedPrizes = (SUC, b) => {
     id: 'tk',
     e: '🎫',
     name: '修行チケット',
-    desc: '賞金ランクが上がると1段ごとに +1(負けても獲得賞金の合計で上がる)'
+    desc: '賞金ランクが上がると1段ごとに +1(6段目から上は +2)(負けても獲得賞金の合計で上がる)'
   });
   const bpz = msxR3BeatPrize(SUC, g);
   if (bpz) out.push(bpz);
@@ -179988,9 +180002,11 @@ function MsxR3Battle({
           top: '8%',
           fontSize: 34
         }
-      }, "ランク UP!", React.createElement("small", null, msxR3RankName(d.rankFrom || 0), " → ", msxR3RankName(d.rankTo), "・🎫 修行チケット +", (d.rankTo || 0) - (d.rankFrom || 0)))), React.createElement(MsxR3RankPyramid, {
+      }, "ランク UP!", React.createElement("small", null, msxR3RankName(d.rankFrom || 0), " → ", msxR3RankName(d.rankTo), "・🎫 修行チケット +", SUC && typeof SUC.rankTicketsOf === 'function' ? SUC.rankTicketsOf(d.rankFrom || 0, d.rankTo || 0) : (d.rankTo || 0) - (d.rankFrom || 0)))), React.createElement(MsxR3RankPyramid, {
         step: d.rankTo || 0,
-        up: true
+        up: true,
+        total: s.fameTotal,
+        gain: d.fameGain
       }));
       const next = () => st3.meal ? setRun({
         ...run,
@@ -180063,7 +180079,9 @@ function MsxR3Battle({
         className: "v-trophy"
       }, "🏆")), React.createElement(MsxR3RankPyramid, {
         step: d.rankTo || 0,
-        up: d.rankTo > d.rankFrom
+        up: d.rankTo > d.rankFrom,
+        total: s.fameTotal,
+        gain: d.fameGain
       }), React.createElement("div", {
         className: "v-prz"
       }, rows.length ? rows.map(([e, n, t, c, nw], i) => React.createElement("div", {
