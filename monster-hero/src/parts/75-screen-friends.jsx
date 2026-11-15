@@ -371,7 +371,7 @@ function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack
               </div>
               {/* 見せる札(2026-10-29 社長が案Bを選んだ)。自分のプロフィールと同じ形で、好きなモンスターとバトルカードのデッキを横に2枚。
                   デッキの札(95 の CardShareDeckTile)は、札の下に「このデッキと戦う」「借りる」を持つ。登録していない人は出さない */}
-              <div className="mt-3 mb-1"><ScreenSectionLabel>見せる札</ScreenSectionLabel></div>
+              <div className="mt-3 mb-1"><ScreenSectionLabel>見せる欄</ScreenSectionLabel></div>
               <div className="grid grid-cols-2 gap-2 items-start">
                 <div data-friend-favorite className="flex min-h-[132px] flex-col items-start gap-1 rounded-2xl border-2 border-amber-600/60 bg-indigo-950/50 p-2">
                   <small className="text-[10px] font-black text-amber-300">好きなモンスター</small>

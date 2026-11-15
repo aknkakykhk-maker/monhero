@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5426fde7ff89934c
+// source-sha256: 9d4d8d6fde68456e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -5590,7 +5590,7 @@ const TRAINING_TOOLS = Object.freeze({
     desc: '次の出目に＋2'
   },
   gale: {
-    name: '疾風の札',
+    name: '疾風のお守り',
     emoji: '🌪️',
     timing: 'サイコロを振る前',
     mode: '消費型',
@@ -37635,7 +37635,8 @@ const RhythmSongSelect = ({
   playDisabled = false,
   hideRandom = false,
   unlockAll = false,
-  songLock = null
+  songLock = null,
+  scrollToSelected = false
 }) => {
   const spot = name => typeof spotClass === 'function' ? spotClass(name) : '';
   useEffect(() => {
@@ -37840,6 +37841,14 @@ const RhythmSongSelect = ({
       const saved = restoreTopRef.current;
       restoreTopRef.current = null;
       node.scrollTop = saved != null && saved > 0 && saved < node.scrollHeight ? saved : blockHeight(node);
+      if (scrollToSelected && (saved == null || saved <= 0)) {
+        const row = node.querySelector('[data-rhythm-song-row][aria-pressed="true"]');
+        if (row) {
+          const nb = node.getBoundingClientRect(),
+            rb = row.getBoundingClientRect();
+          node.scrollTop += Math.round(rb.top - nb.top - (node.clientHeight - rb.height) / 2);
+        }
+      }
       loopReadyRef.current = true;
     };
     put();
@@ -66118,7 +66127,7 @@ const growthFxPeerItem = ({
 const GROWTH_FX_SESSION_ROWS_MAX = 4;
 const growthFxSessionUnlocks = () => {
   const L = (v, d) => typeof v !== 'undefined' && Number.isFinite(Number(v)) ? Number(v) : d;
-  const rows = [[L(typeof RHYTHM_ASSIST_SESSION_TASTE_LEVEL !== 'undefined' ? RHYTHM_ASSIST_SESSION_TASTE_LEVEL : undefined, 10), '好きな曲が見える'], [L(typeof RHYTHM_ASSIST_SESSION_GLOW_LEVEL !== 'undefined' ? RHYTHM_ASSIST_SESSION_GLOW_LEVEL : undefined, 15), 'サビで顔が光る'], [L(typeof RHYTHM_ASSIST_SESSION_CHEER_LEVEL !== 'undefined' ? RHYTHM_ASSIST_SESSION_CHEER_LEVEL : undefined, 25), '得意の応援'], [L(typeof RHYTHM_ASSIST_SESSION_FRAME_LEVEL !== 'undefined' ? RHYTHM_ASSIST_SESSION_FRAME_LEVEL : undefined, 45), '結果の枠が助手の色に'], [L(typeof RHYTHM_ASSIST_SESSION_BADGE_LEVEL !== 'undefined' ? RHYTHM_ASSIST_SESSION_BADGE_LEVEL : undefined, 50), 'プロフィールに札'], [L(typeof RHYTHM_ASSIST_SESSION_LISTEN_LEVEL !== 'undefined' ? RHYTHM_ASSIST_SESSION_LISTEN_LEVEL : undefined, 75), '曲の聞きどころ'], [L(typeof RHYTHM_ASSIST_SESSION_BACK_LEVEL !== 'undefined' ? RHYTHM_ASSIST_SESSION_BACK_LEVEL : undefined, 90), '名前入りの背景'], [L(typeof RHYTHM_ASSIST_SESSION_MASTER_LEVEL !== 'undefined' ? RHYTHM_ASSIST_SESSION_MASTER_LEVEL : undefined, 100), '称号「セッションマスター」']];
+  const rows = [[L(typeof RHYTHM_ASSIST_SESSION_TASTE_LEVEL !== 'undefined' ? RHYTHM_ASSIST_SESSION_TASTE_LEVEL : undefined, 10), '好きな曲が見える'], [L(typeof RHYTHM_ASSIST_SESSION_GLOW_LEVEL !== 'undefined' ? RHYTHM_ASSIST_SESSION_GLOW_LEVEL : undefined, 15), 'サビで顔が光る'], [L(typeof RHYTHM_ASSIST_SESSION_CHEER_LEVEL !== 'undefined' ? RHYTHM_ASSIST_SESSION_CHEER_LEVEL : undefined, 25), '得意の応援'], [L(typeof RHYTHM_ASSIST_SESSION_FRAME_LEVEL !== 'undefined' ? RHYTHM_ASSIST_SESSION_FRAME_LEVEL : undefined, 45), '結果の枠が助手の色に'], [L(typeof RHYTHM_ASSIST_SESSION_BADGE_LEVEL !== 'undefined' ? RHYTHM_ASSIST_SESSION_BADGE_LEVEL : undefined, 50), 'プロフィールにバッジ'], [L(typeof RHYTHM_ASSIST_SESSION_LISTEN_LEVEL !== 'undefined' ? RHYTHM_ASSIST_SESSION_LISTEN_LEVEL : undefined, 75), '曲の聞きどころ'], [L(typeof RHYTHM_ASSIST_SESSION_BACK_LEVEL !== 'undefined' ? RHYTHM_ASSIST_SESSION_BACK_LEVEL : undefined, 90), '名前入りの背景'], [L(typeof RHYTHM_ASSIST_SESSION_MASTER_LEVEL !== 'undefined' ? RHYTHM_ASSIST_SESSION_MASTER_LEVEL : undefined, 100), '称号「セッションマスター」']];
   const bonus = typeof RHYTHM_ASSIST_SESSION_P_BONUS !== 'undefined' && Array.isArray(RHYTHM_ASSIST_SESSION_P_BONUS) ? RHYTHM_ASSIST_SESSION_P_BONUS : [];
   bonus.forEach(([lv, rate]) => rows.push([Number(lv), `ビートP +${Math.round(Number(rate) * 100)}%`]));
   return rows.filter(r => Number.isFinite(r[0])).sort((a, b) => a[0] - b[0]);
@@ -70361,7 +70370,7 @@ function ProfileScreen({
       className: "shrink-0 text-slate-400"
     })), React.createElement("div", {
       className: "mb-1"
-    }, React.createElement(ScreenSectionLabel, null, "見せる札（フレンドにもこう見えます）")), React.createElement("div", {
+    }, React.createElement(ScreenSectionLabel, null, "見せる欄（フレンドにもこう見えます）")), React.createElement("div", {
       className: "grid grid-cols-2 gap-2"
     }, React.createElement("button", {
       type: "button",
@@ -93175,7 +93184,7 @@ function FriendsScreen({
         className: "max-w-full truncate rounded-full border border-amber-400/40 bg-amber-950/30 px-3 py-1 text-[11px] font-black text-amber-200 active:scale-95"
       }, "📝 ", notes[selected.otherId] || 'メモを書く（自分だけに見えます）')), React.createElement("div", {
         className: "mt-3 mb-1"
-      }, React.createElement(ScreenSectionLabel, null, "見せる札")), React.createElement("div", {
+      }, React.createElement(ScreenSectionLabel, null, "見せる欄")), React.createElement("div", {
         className: "grid grid-cols-2 gap-2 items-start"
       }, React.createElement("div", {
         "data-friend-favorite": true,
@@ -95887,6 +95896,21 @@ const RHYTHM_MULTI = (() => {
   };
   return api;
 })();
+const RHYTHM_MULTI_LAST_SONG_KEY = 'mh_rhythm_multi_last_song_v1';
+const rhythmMultiLastSongId = () => {
+  try {
+    const v = typeof localStorage !== 'undefined' ? localStorage.getItem(RHYTHM_MULTI_LAST_SONG_KEY) : null;
+    return typeof v === 'string' && /^[a-z0-9_]{1,80}$/i.test(v) ? v : '';
+  } catch (_) {
+    return '';
+  }
+};
+const rhythmMultiRememberSong = id => {
+  if (typeof id !== 'string' || !/^[a-z0-9_]{1,80}$/i.test(id) || id === RHYTHM_MULTI_OMAKASE) return;
+  try {
+    if (typeof localStorage !== 'undefined') localStorage.setItem(RHYTHM_MULTI_LAST_SONG_KEY, id);
+  } catch (_) {}
+};
 const rhythmWatchPhaseText = phase => ({
   connecting: '部屋につないでいます…',
   waiting: 'いまは演奏していません。次の曲が始まるのを待っています',
@@ -99730,7 +99754,11 @@ function RhythmMultiScreenBody({
     className: "block break-keep text-[9px] font-bold opacity-80"
   }, sessionAssistantsOn ? 'マスモンや助手がCPUとして一緒に遊びます' : 'マスモンがCPUとして一緒に遊びます')) : null;
   const mine = view ? view.members.find(m => m.id === view.selfId) : null;
-  const [selSongId, setSelSongId] = React.useState(mine && mine.pick && mine.pick !== RHYTHM_MULTI_OMAKASE ? mine.pick : '');
+  const [selSongId, setSelSongIdRaw] = React.useState(() => (mine && mine.pick && mine.pick !== RHYTHM_MULTI_OMAKASE ? mine.pick : '') || rhythmMultiLastSongId());
+  const setSelSongId = id => {
+    setSelSongIdRaw(id);
+    rhythmMultiRememberSong(id);
+  };
   const [selectView, setSelectView] = React.useState(null);
   const songById = songId => songs.find(song => song.songId === songId) || null;
   const defaultDiff = difficultyIds.includes('NORMAL') ? 'NORMAL' : difficultyIds[0] || '';
@@ -101979,9 +102007,11 @@ function RhythmMultiScreenBody({
     view: selectView,
     onView: setSelectView,
     onPlay: (song, difficulty) => {
+      rhythmMultiRememberSong(song.songId);
       RHYTHM_MULTI.setDiff(difficulty.id);
       RHYTHM_MULTI.pick(song.songId);
     },
+    scrollToSelected: true,
     playLabel: myPick ? 'この曲に変更' : 'この曲で決定',
     hideRandom: true,
     notice: React.createElement("div", {
@@ -114803,22 +114833,7 @@ const ASSISTANT_LIFE_SAY_SPECIAL = Object.freeze({
   'cardroom:cards': ['MFバトル', 'カードを', '研究'],
   'cafe:snack': ['おやつ', '屋さんで', 'ひと休み']
 });
-const ASSISTANT_LIFE_SAY_SHORT = Object.freeze({
-  snack: 'おやつ中',
-  practice: '練習中',
-  training: '育成中',
-  cards: 'カード研究',
-  walk: '散歩中',
-  idle: 'ぼーっと',
-  read: '読書中',
-  battle: 'バトル中',
-  checkup: '診察中'
-});
-const assistantLifeSayOutShort = (place, doingKey) => {
-  const icon = ASSISTANT_LIFE_PLACE_ICON[place] || '🚶',
-    d = ASSISTANT_LIFE_DOINGS[doingKey];
-  return d && d.places.includes(place) && ASSISTANT_LIFE_SAY_SHORT[doingKey] ? [icon, ASSISTANT_LIFE_SAY_SHORT[doingKey]] : [icon, `${assistantLifePlaceShow(place) || 'おでかけ先'}へ`];
-};
+const assistantLifeSayOutShort = place => [ASSISTANT_LIFE_PLACE_ICON[place] || '🚶', assistantLifePlaceShow(place) || 'おでかけ先'];
 const assistantLifeSayOut = (place, doingKey) => {
   const icon = ASSISTANT_LIFE_PLACE_ICON[place] || '🚶';
   const sp = ASSISTANT_LIFE_SAY_SPECIAL[`${place}:${doingKey}`] || ASSISTANT_LIFE_SAY_SPECIAL[place];
@@ -115087,11 +115102,12 @@ function AssistantLifeRoom({
     const tagLand = typeof window !== 'undefined' && window.innerWidth > window.innerHeight;
     const tagFit = assistantLifeTagFit(t[0], w - 26, 10.5, 0);
     const short = [...String(t[0])].length <= 9;
-    const avail = w - 6 - 8 - 3 - 2;
+    const avail = tagLand ? w - 6 - 8 - 3 : w - 6 - 8 - 3 - 2;
     const oneFit = x => assistantLifeTagFit(assistantLifeSayMeasure(assistantLifeSayParts(x).join('')), avail, 10.5, 0);
     const sayFull = Array.isArray(state.say) ? compact && state.sayMark ? state.sayMark : state.say : null;
     const sayAlt = Array.isArray(state.say) ? (compact && state.sayMark ? state.sayMarkShort : state.sayShort) || sayFull : null;
-    const say = tagLand && sayFull && oneFit(sayFull) < 10.5 && sayAlt ? oneFit(sayAlt) >= oneFit(sayFull) ? sayAlt : sayFull : sayFull;
+    const sayBare = sayAlt && sayAlt.length >= 2 ? ['', ...sayAlt.slice(1)] : sayAlt;
+    const say = !tagLand || !sayFull || oneFit(sayFull) >= 10.5 ? sayFull : [sayAlt, sayBare].find(x => x && oneFit(x) >= 10.5) || [sayFull, sayAlt, sayBare].filter(Boolean).sort((a, b) => oneFit(b) - oneFit(a))[0];
     if (say) {
       const f = tagLand ? Math.max(7, oneFit(say)) : assistantLifeSayFont(say, avail);
       return React.createElement("span", {
@@ -115388,7 +115404,7 @@ const assistantLifeRoomsOf = (life, metIds) => {
     rooms[id] = {
       tag: [`${ASSISTANT_LIFE_PLACE_ICON[w.place] || '🚶'} ${assistantLifePlaceShow(w.place)}へ`, sub, w.group ? assistantLifeGroupNames(w.group.ids, 4) : null],
       say: assistantLifeSayOut(w.place, w.doing),
-      sayShort: assistantLifeSayOutShort(w.place, w.doing)
+      sayShort: assistantLifeSayOutShort(w.place)
     };
   }
   const q = peer && peer.quarrel && peer.quarrel.pending;
@@ -123287,12 +123303,35 @@ function assistantLifePreloadFullBodies(metIds) {
     assistantFullBodyPreloadTimer = later(next);
   } catch (_) {}
 }
+const ASSISTANT_LIFE_PROFILE_FACE_ORDER = Object.freeze([['normal', 'ふつう'], ['happy', 'うれしい'], ['excited', 'わくわく'], ['wink', 'ウインク'], ['surprise', 'おどろき'], ['troubled', 'こまり'], ['angry', 'おこる'], ['crying', 'なみだ']]);
+const ASSISTANT_LIFE_PROFILE_FACE_LINES = Object.freeze({
+  mua: ['いいの！ 楽しいのがいちばんぢゃんｗ', 'ちょ、待って！ あたしも行きたいんだけど！', 'あたしたち、天才ぢゃん♪', 'えっ、どしたの急に', '起きたら髪ぼさぼさだったら、どうしよｗ', 'あたしが楽しみにとっといたやつぢゃん！ もー！', 'なにそれ、うれしすぎるんだけど…！'],
+  kiki: ['私はチョコがいいでつ♪ 半分こしましょうか', '「火力の上げ方」という本を見つけました', 'これからも、たくさん話しかけてくださいね♪', 'あれま…。そんなふうに思ってくれてたんでつね', '私、守りは苦手でつ…がんばります', '…もう一回お願いします。今のは、火力が足りませんでした', 'うれしくて、ちょっと泣いてしまいまつ…'],
+  momosuke: ['もちろんだよ♡ ももにまかせて', 'でも、ぜんぶ覚えた！！ もも、天才かも♡', 'えへ、知ってる〜w', 'え、ききちゃん普通にうまくない？', 'ももだって、ほんとはもっとおしゃべりしたいのにさ〜', 'ももだって食べたかったもん！！', 'くやしい〜！！ 次は負けないから！！'],
+  dra: ['半分かよ！ でも、うれしいわ', '100点！？ やったぁ、えへへ', 'えへへ、ばれたか', 'お、おう？ 急にどうしたんだよ', '長靴じゃ勝てないか…次は本物を釣るぞ', 'おでの昼寝は大事なんだぞ', '…やめろよ、おで泣くだろ'],
+  atsu: ['次も期待してるわ！', 'あと1曲、いや3曲いこ笑', 'できるって。俺ら組んだら強いから！', 'まじ？ じゃあもう1回！', '今日はちょっとうまくいかないなー笑', '今のはたまたま！ もう一回！', '…やば、ちょっと泣きそう。ありがと！'],
+  kyuko: ['ありがとん笑 心強いよぉ', '新しい組み方、3つ思いついた！', 'ほい！ じゃあこれからも一緒に上目指そ笑', 'えっ、ばれてた？ 笑', 'え〜、ちょっとこわいよぉ', 'ぐぬぬぬ…そこはゆずれないよぉ', 'うぅ…うれしすぎて泣けるよぉ🥺'],
+  sorashido: ['でーじうれしいです笑', 'やる気出ました・・・！ ちばりよー、自分！', 'グラフもつけておきました・・・！', '100回！？ ・・・やってみせます・・・！', 'は、はい。かっこ悪いですよね笑', '今の判定、自分の勝ちですよね！', 'うぉぉぉ！ 負けました！ くやしい！'],
+  erubin: ['ふふ、いつも元気をもらってるよ', 'ちょうどいいところに来たね。今の組み方、試してみたい', 'ふふ、そう言ってくれると思ったよ', 'わ、すごく明るい部屋になったね', 'ばれちゃったかな…笑 好きなんだよね', 'みんな、ずっと待ってたんだよ', '…ありがとう。ちょっと、うるっときちゃった']
+});
+const assistantLifeProfileFace = (id, greeting, k) => {
+  const i = ((Number(k) || 0) % 8 + 8) % 8,
+    [e, label] = ASSISTANT_LIFE_PROFILE_FACE_ORDER[i];
+  const lines = ASSISTANT_LIFE_PROFILE_FACE_LINES[id];
+  return {
+    e,
+    label,
+    n: i + 1,
+    t: i === 0 || !lines || !lines[i - 1] ? greeting : lines[i - 1]
+  };
+};
 function AssistantLifeProfileStand({
   who,
   head = 0.32,
-  top = 0.16
+  top = 0.16,
+  expr = 'happy'
 }) {
-  const src = typeof assistantFullImage === 'function' ? assistantFullImage(who, 'happy') : '';
+  const src = typeof assistantFullImage === 'function' ? assistantFullImage(who, expr) : '';
   const boxRef = React.useRef(null);
   const [size, setSize] = React.useState(null);
   const [art, setArt] = React.useState(() => typeof ASSISTANT_LIFE_STAND_BOX !== 'undefined' && ASSISTANT_LIFE_STAND_BOX.get(src) || null);
@@ -123329,7 +123368,7 @@ function AssistantLifeProfileStand({
       if (ro) ro.disconnect();
     };
   }, []);
-  const fullSrc = typeof assistantFullBodyImage === 'function' ? assistantFullBodyImage(who, 'happy') : null;
+  const fullSrc = typeof assistantFullBodyImage === 'function' ? assistantFullBodyImage(who, expr) : null;
   if (fullSrc) {
     return React.createElement("div", {
       ref: boxRef,
@@ -123549,6 +123588,7 @@ function AssistantLifeProfileSheet({
   const who = typeof assistantById === 'function' ? assistantById(id) : null;
   const [vKey, setVKey] = React.useState('home');
   const [vIdx, setVIdx] = React.useState(0);
+  const [faceN, setFaceN] = React.useState(0);
   const scrollRef = React.useRef(null);
   const refs = {
     who: React.useRef(null),
@@ -123575,6 +123615,8 @@ function AssistantLifeProfileSheet({
   const oshiMon = oshi && typeof assistantMasmonMon === 'function' ? assistantMasmonMon(oshi.monId) : null;
   const call = assistantLifeProfileCall(id);
   const greeting = String(who.greeting || '').replace(/\{name\}/g, call);
+  const face = assistantLifeProfileFace(id, greeting, faceN);
+  const faceText = String(face.t || '').replace(/\{name\}/g, call);
   const jump = k => {
     try {
       const box = scrollRef.current,
@@ -123634,7 +123676,8 @@ function AssistantLifeProfileSheet({
   }, React.createElement(AssistantLifeProfileStand, {
     who: who,
     head: land ? 0.22 : 0.34,
-    top: land ? 0.3 : 0.12
+    top: land ? 0.3 : 0.12,
+    expr: face.e
   })), React.createElement("div", {
     className: "absolute left-3.5 z-[2]",
     style: {
@@ -123655,21 +123698,31 @@ function AssistantLifeProfileSheet({
     }
   }, typeof jaWrap === 'function' ? jaWrap(who.tagline || '') : who.tagline), !viewOnly && React.createElement("span", {
     className: "mt-1.5 inline-block rounded-full border border-white/15 bg-slate-950/80 px-2 py-0.5 text-[11px] font-black text-white"
-  }, "💗 Lv", b.lv, " ", b.title)), greeting && React.createElement("div", {
+  }, "💗 Lv", b.lv, " ", b.title)), greeting && React.createElement("button", {
+    type: "button",
     "data-assistant-life-profile-greeting": true,
-    className: "absolute bottom-3 left-3 z-[2] rounded-2xl border-2 bg-white px-3 py-2 text-[12px] font-bold leading-relaxed text-slate-800 shadow-lg",
+    "data-assistant-life-profile-face": face.e,
+    onClick: () => setFaceN(n => (n + 1) % 8),
+    "aria-label": `ひとこと。押すと表情が変わります(${face.n}/8 ${face.label})`,
+    className: "absolute bottom-3 left-3 z-[2] rounded-2xl border-2 bg-white px-3 py-2 text-left text-[12px] font-bold leading-relaxed text-slate-800 shadow-lg active:scale-[.98]",
     style: {
       borderColor: who.accent,
       width: land ? 170 : 205
     }
   }, React.createElement("span", {
-    className: "block text-[10px] font-black",
+    className: "flex items-center justify-between gap-1"
+  }, React.createElement("span", {
+    className: "text-[10px] font-black",
     style: {
       color: who.accent
     }
   }, "ひとこと"), React.createElement("span", {
+    "data-assistant-life-profile-face-chip": true,
+    className: "whitespace-nowrap rounded-full bg-slate-100 px-1.5 text-[9.5px] font-black leading-[16px] text-slate-500"
+  }, "👆 タップで表情 ", face.n, "/8")), React.createElement("span", {
+    className: "block",
     style: typeof JA_LABEL_STYLE !== 'undefined' ? JA_LABEL_STYLE : undefined
-  }, jw(greeting))));
+  }, jw(faceText))));
   const jumps = React.createElement("div", {
     className: "flex gap-1.5 border-b border-white/10 bg-slate-950/90 px-2.5 py-2",
     "data-assistant-life-profile-jump": true
@@ -172966,7 +173019,7 @@ function MsxStart({
     }, m.friend ? `借: ${m.friend.name || 'フレンド'}` : m.kind === 'base' ? m.auto ? 'ベースモン ✎⁠選ぶ' : 'ベースモン ✎⁠変える' : '✎変える')))), React.createElement("div", {
       className: "msx-note msx-sl-legend",
       "data-msx-slot-legend": true
-    }, "札の見方: 「+4%」はその能力のトレーニングの伸びが上がる分・親密度は初めの値・タッグは友情タッグのときの伸び"), React.createElement("button", {
+    }, "枠の見方: 「+4%」はその能力のトレーニングの伸びが上がる分・親密度は初めの値・タッグは友情タッグのときの伸び"), React.createElement("button", {
       type: "button",
       className: "v-card msx-heat-btn",
       "data-msx-gather-open": true,
@@ -180542,7 +180595,7 @@ function MsxR3Battle({
       }
     }, mealPick && M[mealPick] ? `${M[mealPick].name}: ${fxLong(mealPick)}`.split(/(?<=[・:])/).map((x, i) => React.createElement(React.Fragment, {
       key: i
-    }, i > 0 ? React.createElement("wbr", null) : null, typeof jaWrap === 'function' ? jaWrap(x) : x)) : '札を押すと、詳しい効き目が出ます'), React.createElement("div", {
+    }, i > 0 ? React.createElement("wbr", null) : null, typeof jaWrap === 'function' ? jaWrap(x) : x)) : 'ごはんを押すと、詳しい効き目が出ます'), React.createElement("div", {
       className: "msx-note",
       "data-msx-r3-loynote": true,
       style: {
@@ -181386,7 +181439,7 @@ function MsxR3Shugyo({
     if (!id) return React.createElement("div", {
       className: "q-slot msx-kp",
       "data-msx-r3-qslot": "0"
-    }, want.length ? superWhy ? `超修行は できない(${superWhy})` : '+ もう1つ選ぶと 🔥超修行' : '+ 下の緑の札から 技を選ぶ');
+    }, want.length ? superWhy ? `超修行は できない(${superWhy})` : '+ もう1つ選ぶと 🔥超修行' : '+ 下の緑の技のカードから 技を選ぶ');
     const t = all.find(x => x.id === id) || {};
     const bc = typeof SUC.techBoostConds === 'function' ? SUC.techBoostConds(s0, t, want) : [];
     const rate = typeof SUC.techRate === 'function' ? SUC.techRate(s0, t, {
@@ -181471,7 +181524,7 @@ function MsxR3Shugyo({
     "data-msx-r3-techlist": true
   }, React.createElement("h3", null, React.createElement("i", null, "3"), "覚えられる技", React.createElement("span", {
     className: "tk"
-  }, "緑の札をタップ")), all.length ? React.createElement(MsxTechGrid, {
+  }, "緑の技のカードをタップ")), all.length ? React.createElement(MsxTechGrid, {
     className: "q",
     all: all,
     head: aptHead,
@@ -181541,7 +181594,7 @@ function MsxR3Shugyo({
     className: c.ok ? 'ok' : ''
   }, React.createElement("i", null, "条件", i + 1), React.createElement("span", {
     className: "msx-kp"
-  }, c.long), React.createElement("b", null, c.ok ? '済' : 'まだ'))), !full && condsOf(lockT).length ? React.createElement("p", null, "条件を全て満たすと、緑の「覚えられる」札になります") : null), React.createElement("div", {
+  }, c.long), React.createElement("b", null, c.ok ? '済' : 'まだ'))), !full && condsOf(lockT).length ? React.createElement("p", null, "条件を全て満たすと、緑の「覚えられる」カードになります") : null), React.createElement("div", {
     className: "bt"
   }, React.createElement("button", {
     type: "button",
@@ -184881,7 +184934,7 @@ function MsxManualBar({
       alignItems: 'center',
       gap: 6
     }
-  }, React.createElement("span", null, "⚔ 攻撃", reachN ? '(札を押して技を選ぶ)' : '(この間合いの技なし)'), items.length ? React.createElement("button", {
+  }, React.createElement("span", null, "⚔ 攻撃", reachN ? '(技のカードを押して選ぶ)' : '(この間合いの技なし)'), items.length ? React.createElement("button", {
     type: "button",
     className: "msxm-all",
     "data-msxm-all": true,
