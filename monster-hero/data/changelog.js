@@ -35,6 +35,20 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    // 新曲「Sparkling Pink Overture」(2026-11-15 社長 r1115-100。難易度は社長の答え「難しめ」・Lv.・ノーツ数は作ったあとの値)
+    date: "2026-11-15 12:17", type:'update', group:'rhythm', title:'新曲「Sparkling Pink Overture」を追加しました', status:'new',
+    image:'images/song-art/sparkling-pink-overture.jpg?v=a9b0c3ede321',
+    items:[
+      'モンヒロビートに「Sparkling Pink Overture」（2分4秒）を追加しました。助手のききが、はじめて作った曲です。ピアノが主役の、BPM 212 のはやい曲です。',
+      'レベルは EASY Lv.13 ／ NORMAL Lv.17 ／ HARD Lv.24 ／ EXPERT Lv.31 ／ MASTER Lv.39 ／ HELL Lv.52 です。',
+      'ノーツ数は 281 ／ 330 ／ 459 ／ 577 ／ 621 ／ 593 です。',
+      '歯ごたえのある、難しめの譜面です。',
+      'この曲は1曲ビートP500で買って遊びます。曲えらびの「🔒 500P」か、ビートP交換所の「曲」から買えます。',
+      '曲えらびを開くと、ききがはじめて曲を作ったお話が流れます。あとから、プロフィールの「イベント回想」でも読めます。',
+    ],
+    assistantNotice:{ id:'update_notice_sparkling_pink_overture_v1', type:'content' },
+  },
+  {
     // 2026-11-15 r1115-087(社長: 最後の期はふだんの大会を出さない)
     date: "2026-11-15 11:06", type:'update', group:'success', releaseFlag:'monheroSuccess', title:'モンヒロサクセスの最後の期は、ヒーローズファイナルに集中できるようになりました', status:'new',
     items:[
@@ -111,20 +125,6 @@ const CHANGELOG = [
       '選ぶ画面の「🤝 フレンド」から、フレンドが貸しているモンスターの一覧が開きます。「アシスト重複」「編成不可」の印で選びやすくなりました。',
       '「おまかせ」で総合力の高い順に入れられ、「効果一覧」で編成全体のアシスト効果を見られます。',
     ],
-  },
-  {
-    // 新曲「Sparkling Pink Overture」(2026-11-15 社長 r1115-100。難易度は社長の答え「難しめ」・Lv.・ノーツ数は作ったあとの値)
-    date: "2026-11-15 10:01", type:'update', group:'rhythm', title:'新曲「Sparkling Pink Overture」を追加しました', status:'new',
-    image:'images/song-art/sparkling-pink-overture.jpg?v=a9b0c3ede321',
-    items:[
-      'モンヒロビートに「Sparkling Pink Overture」（2分4秒）を追加しました。助手のききが、はじめて作った曲です。ピアノが主役の、BPM 212 のはやい曲です。',
-      'レベルは EASY Lv.13 ／ NORMAL Lv.17 ／ HARD Lv.24 ／ EXPERT Lv.31 ／ MASTER Lv.39 ／ HELL Lv.52 です。',
-      'ノーツ数は 281 ／ 330 ／ 459 ／ 577 ／ 621 ／ 593 です。',
-      '歯ごたえのある、難しめの譜面です。',
-      'この曲は1曲ビートP500で買って遊びます。曲えらびの「🔒 500P」か、ビートP交換所の「曲」から買えます。',
-      '曲えらびを開くと、ききがはじめて曲を作ったお話が流れます。あとから、プロフィールの「イベント回想」でも読めます。',
-    ],
-    assistantNotice:{ id:'update_notice_sparkling_pink_overture_v1', type:'content' },
   },
   {
     date: "2026-11-15 09:57", type:'update', title:'修行の技の升目で、間合いごとの適性と覚えやすさが一目で分かるようになりました', group:'success', releaseFlag:'monheroSuccess', status:'new',
