@@ -52,7 +52,7 @@ const MONSUC_SCRIPT_RIVAL = Object.freeze([
   { id:'ev.rival.lose.self.atsu1', who:'atsu', e:'normal', t:'{rival}の勝ちか。…次は{mon}で、こいつを越えよ笑' },
 
   // ── 勝ったときのごほうび ──
-  { id:'ev.rival.reward.narr1', who:'narr', t:'ライバルに勝った！ いつもよりごほうびが多くもらえた。' },
+  { id:'ev.rival.reward.narr1', who:'narr', t:'ライバルに勝った！ いつもより能力ポイントが多くもらえた。' },
 ]);
 
 if (typeof module !== 'undefined') module.exports = { MONSUC_SCRIPT_RIVAL };

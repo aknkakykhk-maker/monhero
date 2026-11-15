@@ -191,9 +191,12 @@ const monsucPopOrder = (suc, s, entrants) => {
 
 const MSC_CSS = `
 .msc-root{position:fixed;inset:0;z-index:9000;overflow-y:auto;color:#fff;background:linear-gradient(180deg,#221a44,#141026 45%);
-  padding:calc(8px + env(safe-area-inset-top)) calc(10px + env(safe-area-inset-right)) calc(10px + env(safe-area-inset-bottom)) calc(10px + env(safe-area-inset-left));font-family:inherit}
+  padding:max(calc(8px + env(safe-area-inset-top)),52px) calc(10px + env(safe-area-inset-right)) calc(10px + env(safe-area-inset-bottom)) calc(10px + env(safe-area-inset-left));font-family:inherit}
 .msc-wrap{max-width:520px;margin:0 auto;display:flex;flex-direction:column;gap:8px;min-height:100%}
 .msc-top{display:flex;align-items:center;gap:8px}
+.msc-btn:disabled{opacity:.45;cursor:default;box-shadow:none}
+.msc-btn .msc-qsub{display:block;font-size:10px;font-weight:800;line-height:1.2;margin-top:1px}
+.msc-btn.s:disabled{padding-top:5px;padding-bottom:5px}
 .msc-top b{flex:1;min-width:0;font-size:14px;color:#fde68a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .msc-btn{border:0;border-radius:999px;padding:12px 14px;font-weight:900;font-size:15px;color:#fff;background:linear-gradient(90deg,#f472b6,#fb923c);box-shadow:0 3px 0 #9d174d;cursor:pointer;min-height:44px}
 .msc-btn.y{background:#fde047;color:#3b2a05;box-shadow:0 3px 0 #a16207}
@@ -400,7 +403,7 @@ function MonsucBracket({ suc, s, info, result: resultProp, onFight, onResultOnly
   const r1 = bk.rounds[0] || []; const r2 = bk.rounds[1] || [];
   const fi = (bk.final && bk.final[1]) || 4; // 決勝の相手の行(4〜7)
   const out = (i) => (st >= 1 && !r1.includes(i)) || (st >= 2 && r1.includes(i) && !r2.includes(i)) || (result === 'win' && i === fi) || (result === 'lose' && i === 0);
-  const H = Math.max(36, Math.min(68, Math.floor((vh - 318) / 8))); // 行の高さ(下に大きな空きを残さない)
+  const H = Math.max(36, Math.min(68, Math.floor((vh - 345) / 8))); // 行の高さ(下に大きな空きを残さない。上の余白 52px と、結果だけ見るのボタンの副題の分も引く r1115-172)
   const yOf = (i) => i * H + H / 2;
   const X = [0, 22, 44, 66, 84]; const W = 90;
   const pair = (a, c, lv) => `M${X[lv]} ${a}H${X[lv + 1]}M${X[lv]} ${c}H${X[lv + 1]}M${X[lv + 1]} ${a}V${c}`;
@@ -424,7 +427,7 @@ function MonsucBracket({ suc, s, info, result: resultProp, onFight, onResultOnly
   ];
   const champNo1 = no[E.indexOf(champ)] === 1;
   const finalLine = foe.rival
-    ? <>「{champNo1 && champ !== foe ? <>1番人気は{Z} 王者の {nm(champ)}!{Z} でも、{Z}</> : null}決勝の相手は{Z} <em>ライバルの {nm(foe)}</em> だよ。{Z}勝てば{Z} ごほうび大!」</>
+    ? <>「{champNo1 && champ !== foe ? <>1番人気は{Z} 王者の {nm(champ)}!{Z} でも、{Z}</> : null}決勝の相手は{Z} <em>ライバルの {nm(foe)}</em> だよ。{Z}勝てば{Z} 能力ポイントが1.5倍!」</>
     : foe.champ
       ? <>「決勝の相手は{Z} 1番人気の王者{Z} <em>{nm(foe)}</em>!{Z} {info.opp && info.opp.note ? `${info.opp.note}、だって。` : ''}{Z}ここで勝てば{Z} 大金星だよ!」</>
       : <>「決勝の相手は{Z} <em>{nm(foe)}</em>!{Z} あわてずに{Z} いこうね」</>;
@@ -455,7 +458,7 @@ function MonsucBracket({ suc, s, info, result: resultProp, onFight, onResultOnly
       <div className="msc-note"><b>決勝は <span className="nw">{info.meName} VS {nm(foe)}</span></b>。<span className="nw">左の数字は人気の順</span><span className="nw">(1が 一番人気)。</span><small><span className="nw">ほかの試合の結果は、</span><span className="nw">見せるだけの演出です</span><span className="nw">(戦うのは決勝の1戦だけ)</span></small></div>
       <div className="msc-talk"><img src={mscFace(s.aid)} alt=""/><p className="msx-kp">{coach ? <b style={{ display: 'block', fontSize: 11, color: '#b45309' }}>解説 {coach.name}</b> : null}{st >= 3 ? finalLine : lines[st]}</p>{st < 3 ? <button type="button" className="msc-sk" data-msc-skip onClick={() => setStage(3)}>SKIP ▸▸</button> : null}</div>
       <div className="msc-foot">
-        <button className="msc-btn y s" data-msc-quick onClick={onResultOnly}>{canSkip ? '⏩ 結果だけ見る(優勝ずみ)' : '⏩ 結果だけ見る'}</button>
+        <button className="msc-btn y s" data-msc-quick disabled={!canSkip} onClick={() => canSkip && onResultOnly()}>{canSkip ? '⏩ 結果だけ見る(優勝ずみ)' : <>⏩ 結果だけ見る<small className="msc-qsub" data-msc-quick-why>一度優勝すると使えます</small></>}</button>
         <button className="msc-btn" data-msc-go onClick={onFight}>⚔ 決勝へ</button>
       </div>
     </div>
@@ -463,7 +466,7 @@ function MonsucBracket({ suc, s, info, result: resultProp, onFight, onResultOnly
 }
 
 // ---- バトルカード(C2)。2体と VS・タブ・6能力の棒が伸びる ----
-function MonsucBattleCard({ suc, s, info, catalog, odds, onReady, onResultOnly, onBack }) {
+function MonsucBattleCard({ suc, s, info, catalog, odds, onReady, onResultOnly, onBack, canSkip }) {
   const [tab, setTab] = useState('st');
   const o = info.opp || {};
   const me = s.stats || {}; const op = o.stats || {};
@@ -550,7 +553,7 @@ function MonsucBattleCard({ suc, s, info, catalog, odds, onReady, onResultOnly, 
       </div>
       <div className="msc-hint"><img src={mscFace(s.aid)} alt=""/><span style={typeof JA_LABEL_STYLE !== 'undefined' ? JA_LABEL_STYLE : undefined}>{hint}</span></div>
       <div className="msc-foot">
-        <button className="msc-btn y s" data-msc-quick onClick={onResultOnly}>⏩ 結果だけ見る</button>
+        <button className="msc-btn y s" data-msc-quick disabled={!canSkip} onClick={() => canSkip && onResultOnly()}>⏩ 結果だけ見る{canSkip ? null : <small className="msc-qsub" data-msc-quick-why>一度優勝すると使えます</small>}</button>
         <button className="msc-btn" data-msc-ready onClick={onReady}>準備完了</button>
       </div>
     </div>
@@ -611,7 +614,7 @@ function MonsucMatchSkip({ won, onEnd }) {
 function MonsucCupWin({ s, info, match, out, onNext }) {
   const o = info.opp || {};
   const rows = Array.isArray(out && out.rows) ? out.rows : [
-    ...(out && out.prize ? [{ i: '💰', k: '賞金', v: `+${out.prize}G${info.rival ? '(ライバルに勝って ×1.5)' : ''}`, big: info.rival }] : []),
+    ...(out && out.prize ? [{ i: '💰', k: '賞金', v: `+${out.prize}G` }] : []),
     ...(out && out.tickets ? [{ i: '🎫', k: '修行チケット', v: `+${out.tickets}` }] : []),
     ...(out && out.title ? [{ i: '🏅', k: '称号', v: `「${out.title}」` }] : []),
   ];
@@ -624,10 +627,10 @@ function MonsucCupWin({ s, info, match, out, onNext }) {
         <div className="who">{(() => { const im = <MscMyMon sp={s.species} colors={info.colors}/>; const k = s.awake && typeof msxKiraOf === 'function' ? msxKiraOf(s.awake) : null; return k && typeof cardKiraWrap === 'function' ? cardKiraWrap(k, im, { src: mscMonImg(s.species), calm: typeof msxAwCalm === 'function' && msxAwCalm() }) : im; })()}</div>
         {/* 言葉のまとまりごとに折れない塊にして、塊の間でだけ折り返す(2026-11-15 r1115-051「ラ/ウンド」と折れた・語の間の空白) */}
         <div className="sub" data-msc-win-sub><span className="nw">{info.title}{MSC_STARS(info.star)}</span> <span className="nw">1戦目</span> <span className="nw">{o.name || mscMonName(o.species)}に勝ち{match && match.r ? `(${match.r.rounds}ラウンド)` : ''}</span></div>
-        {info.rival && <div className="rival"><span>ライバルの {o.name || mscMonName(o.species)} にも 勝った!</span><em>ごほうび大</em></div>}
+        {info.rival && <div className="rival"><span>ライバルの {o.name || mscMonName(o.species)} にも 勝った!</span><em>能力ポイント1.5倍</em></div>}
       </div>
       {rows.map((r, k) => <div key={k} className={`msc-rw ${r.big ? 'big' : ''}`} style={{ animationDelay: `${0.3 + k * 0.12}s` }}><span className="i">{r.i}</span><span className="k">{r.k}</span><span className="v">{r.v}</span></div>)}
-      <div className="msc-talk"><img src={mscFace(s.aid, 'happy')} alt=""/><p>{coach ? <b style={{ display: 'block', fontSize: 11, color: '#b45309' }}>{coach.name}</b> : null}{info.rival ? '「ライバルに勝った! ごほうびも 大きいよ!」' : `「${info.meName}、やったね! 優勝だよ!」`}</p></div>
+      <div className="msc-talk"><img src={mscFace(s.aid, 'happy')} alt=""/><p>{coach ? <b style={{ display: 'block', fontSize: 11, color: '#b45309' }}>{coach.name}</b> : null}{info.rival ? '「ライバルに勝った! 能力ポイントが 1.5倍だよ!」' : `「${info.meName}、やったね! 優勝だよ!」`}</p></div>
       <div className="msc-foot"><button className="msc-btn" data-msc-next onClick={onNext}>次へ ▶</button></div>
     </div>
   );
@@ -735,8 +738,8 @@ function MonsucCupShowInner({ suc, s, me, settle, onRematch, onNext, onClose, st
   const canSkip = typeof suc.canSkip === 'function' && suc.canSkip(s);
   let body = null;
   if (!info) body = <p className="msc-note">大会が見つかりませんでした</p>;
-  else if (phase === 'bracket') body = <MonsucBracket suc={suc} s={s} info={info} canSkip={canSkip} onClose={onClose} onFight={() => setPhase('card')} onResultOnly={() => match && finish(match.won)}/>;
-  else if (phase === 'card') body = <MonsucBattleCard suc={suc} s={s} info={info} catalog={catalog} odds={odds} onBack={() => setPhase('bracket')} onReady={() => setPhase(info.buffs || info.buffRows.length ? 'cutin' : 'match')} onResultOnly={() => match && finish(match.won)}/>;
+  else if (phase === 'bracket') body = <MonsucBracket suc={suc} s={s} info={info} canSkip={canSkip} onClose={onClose} onFight={() => setPhase('card')} onResultOnly={() => canSkip && match && finish(match.won)}/>;
+  else if (phase === 'card') body = <MonsucBattleCard suc={suc} s={s} info={info} catalog={catalog} odds={odds} canSkip={canSkip} onBack={() => setPhase('bracket')} onReady={() => setPhase(info.buffs || info.buffRows.length ? 'cutin' : 'match')} onResultOnly={() => canSkip && match && finish(match.won)}/>;
   else if (phase === 'cutin') body = <MonsucCutin s={s} info={info} onGo={() => setPhase('match')}/>;
   else if (phase === 'match') {
     const canPlay = match && match.input && engine && typeof engine.createMatch === 'function';

@@ -79,7 +79,7 @@
   // 大会の第2版(2026-11-13)
   add({ id: 'derby', group: 'cup', name: '若き挑戦者', how: 'ジュニア期の大一番「モンスターダービー」で優勝する', reward: '体力の最大値 +15・能力ポイント +15・人気 +6', match: '若き挑戦者', rare: 3 });
   add({ id: 'four-done', group: 'conquer', name: '四大の覇者', how: '四大大会(グレイテスト4・M-1グランプリ・ウィナーズ杯・ワールドモンスターズ杯)を4つとも優勝する', reward: '全能力 +15・能力ポイント +40・人気 +15', match: '四大の覇者', rare: 3 });
-  add({ id: 'rival', group: 'rival', name: 'ライバルに勝った', how: 'ライバルが出ている大会で優勝する', reward: '全能力 +12・賞金 1.5倍・修行チケット +1', match: 'ライバルに勝った', rare: 2 });
+  add({ id: 'rival', group: 'rival', name: 'ライバルに勝った', how: 'ライバルが出ている大会で優勝する', reward: '全能力 +12・その大会の能力ポイント 1.5倍', match: 'ライバルに勝った', rare: 2 });
 
   // ---- 助手のお話(芯: '<aid>:お話の結末(いい結末)' / '(ほろ苦い結末)') ----
   Object.keys(STORY_TITLE).forEach(aid => {

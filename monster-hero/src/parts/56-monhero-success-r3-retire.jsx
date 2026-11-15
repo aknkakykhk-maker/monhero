@@ -63,10 +63,14 @@ function MsxR3GameOver({ run, setRun, onPause }) {
 function MsxR3Retire({ run, setRun, onPause, debug, SUC }) {
   const s = run.s;
   const [step, setStep] = useState(() => (run.s.pts > 0 ? 'e3' : 'e0')); // 能力ポイントが残っていれば先に使う → 最終の評価
-  const [ws, setWs] = useState(s);      // 能力ポイントを使っている途中の写し
-  const [hist, setHist] = useState([]); // 「−」で戻す用
-  const wsRef = useRef(ws); wsRef.current = ws;          // 長押しで続けて振るとき、描き直しを待たず最新を読む
-  const histRef = useRef(hist); histRef.current = hist;
+  // 能力ポイント(E3)は、育成中の振り分けと同じく「押した能力の並び」を持ち、毎回 s から振り直す。
+  // 「−」はその能力を最後に押した1つだけを抜くので、あとから振った別の能力は残る。まとめて振った分も並びに積むので、そのあと個別に戻せる(r1115-172)
+  const capOfPt = (w, k) => (typeof SUC.statCapOf === 'function' ? SUC.statCapOf(w, k) : 999);
+  const replayPts = (list) => { let w = s; for (const k of list) { if (w.stats[k] >= capOfPt(w, k)) continue; const r = SUC.spendPts(w, k, 1); if (r.out.ok) w = r.state; } return w; };
+  const [ptList, setPtList] = useState([]);
+  const ptListRef = useRef(ptList); ptListRef.current = ptList; // 長押しで続けて振るとき、描き直しを待たず最新を読む
+  const setPtListNow = (list) => { ptListRef.current = list; setPtList(list); };
+  const ws = useMemo(() => replayPts(ptList), [s, ptList]); // 能力ポイントを使っている途中の写し
   const [ptUnit, setPtUnit] = useMsxPtUnit();            // 1・5・10・100・MAX(r1115-092)
   const [pick, setPick] = useState({}); // アシスト能力 { id: 段 }
   const [atab, setAtab] = useState(null); // アシストの場面のタブ(第2版・7つ)
@@ -121,29 +125,26 @@ function MsxR3Retire({ run, setRun, onPause, debug, SUC }) {
 
   // ---- E3 能力ポイントをまとめて使う ----
   if (step === 'e3') {
-    const capOf = (w, k) => (typeof SUC.statCapOf === 'function' ? SUC.statCapOf(w, k) : 999);
-    // 刻みの分だけ続けて振る(1回ごとに履歴へ積むので、「−」も同じ刻みで戻せる)。ポイントが足りない・上限に着いたところで止まる
+    const capOf = capOfPt;
+    // 刻みの分だけ続けて振る(1つずつ並びに積むので、「−」も同じ刻みで戻せる)。ポイントが足りない・上限に着いたところで止まる
     const spend = (k) => {
-      let w = wsRef.current; const h = histRef.current.slice(); const lim = msxPtLimit(ptUnit); let n = 0;
-      while (n < lim) { if (w.stats[k] >= capOf(w, k)) break; const r = SUC.spendPts(w, k, 1); if (!r.out.ok) break; h.push(w); w = r.state; n += 1; }
-      if (n) { wsRef.current = w; histRef.current = h; setHist(h); setWs(w); }
+      const list = ptListRef.current.slice(); let w = replayPts(list); const lim = msxPtLimit(ptUnit); let n = 0;
+      while (n < lim) { if (w.stats[k] >= capOf(w, k)) break; const r = SUC.spendPts(w, k, 1); if (!r.out.ok) break; w = r.state; list.push(k); n += 1; }
+      if (n) setPtListNow(list);
     };
     const undoK = (k) => {
-      const lim = msxPtLimit(ptUnit); let n = 0;
-      while (n < lim) {
-        const w = wsRef.current; const h = histRef.current; let hit = -1;
-        for (let i = h.length - 1; i >= 0; i--) { if (h[i].stats[k] < w.stats[k]) { hit = i; break; } }
-        if (hit < 0) break;
-        wsRef.current = h[hit]; histRef.current = h.slice(0, hit); n += 1;
-      }
-      if (n) { setWs(wsRef.current); setHist(histRef.current); }
+      const list = ptListRef.current.slice(); const lim = msxPtLimit(ptUnit); let n = 0;
+      while (n < lim) { const i = list.lastIndexOf(k); if (i < 0) break; list.splice(i, 1); n += 1; }
+      if (n) setPtListNow(list);
     };
+    // まとめて振る: いままでの振り分けを消して、1ポイントずつ並びに積み直す(結果は前と同じ。並びに残るので、あとから「−」で個別に戻せる)
     const preset = (kind) => {
-      let w = s; setHist([]);
-      if (kind === 'top') { const k = ev0.top && ev0.top[0] ? ev0.top[0] : 'pow'; w = SUC.spendPts(w, k, 9999).state; }
-      else if (kind === 'low') w = SUC.autoPts(w).state;
-      else if (kind === 'bal') { let moved = true; while (moved && w.pts > 0) { moved = false; for (const k of MSX_STATS) { const r = SUC.spendPts(w, k, 1); if (r.out.ok) { w = r.state; moved = true; } } } }
-      setWs(w);
+      let w = s; const list = [];
+      const one = (k) => { if (w.stats[k] >= capOf(w, k)) return false; const r = SUC.spendPts(w, k, 1); if (!r.out.ok) return false; w = r.state; list.push(k); return true; };
+      if (kind === 'top') { const k = ev0.top && ev0.top[0] ? ev0.top[0] : 'pow'; while (w.pts > 0 && one(k)) { /* 1つの能力に全部 */ } }
+      else if (kind === 'low') { while (w.pts > 0) { const k = MSX_STATS.slice().sort((x, y) => w.stats[x] - w.stats[y])[0]; if (!one(k)) break; } }
+      else if (kind === 'bal') { let moved = true; while (moved && w.pts > 0) { moved = false; for (const k of MSX_STATS) { if (one(k)) moved = true; } } }
+      setPtListNow(list);
     };
     const used = s.pts - ws.pts;
     const body = (<>
@@ -157,16 +158,16 @@ function MsxR3Retire({ run, setRun, onPause, debug, SUC }) {
         <button type="button" className="r3-chip" onClick={() => preset('top')}>全部 {MSX_STAT_NAME[(ev0.top || [])[0]] || 'ちから'}</button>
         <button type="button" className="r3-chip" onClick={() => preset('low')}>弱いところ</button>
         <button type="button" className="r3-chip" onClick={() => preset('bal')} data-msx-r3-bal>バランス</button>
-        <button type="button" className="r3-chip" onClick={() => { setWs(s); setHist([]); }}>戻す</button></div>
+        <button type="button" className="r3-chip" onClick={() => setPtListNow([])}>戻す</button></div>
       <div className="v-pa">{MSX_STATS.map((k) => {
         const add = ws.stats[k] - s.stats[k];
         return (<div key={k}><span className="nm">{MSX_STAT_ICON[k]} {MSX_STAT_NAME[k]}</span><span className="v0">{s.stats[k]}</span><span className="ad">{add ? `+${add}` : ''}</span>
-          <span className="st"><MsxPtBtn className="sym minus" aria-label={`${MSX_STAT_NAME[k]}を戻す`} disabled={!add} onPress={() => undoK(k)}/><b>{add}</b><MsxPtBtn disabled={ws.pts < SUC.ptsCost(ws, k) || ws.stats[k] >= capOf(ws, k)} onPress={() => spend(k)} data-msx-r3-plus={k} className="sym plus" aria-label={`${MSX_STAT_NAME[k]}を上げる`}/></span></div>);
+          <span className="st"><MsxPtBtn className="sym minus" aria-label={`${MSX_STAT_NAME[k]}を戻す`} disabled={!add} onPress={() => undoK(k)} data-msx-r3-ptminus={k}/><b>{add}</b><MsxPtBtn disabled={ws.pts < SUC.ptsCost(ws, k) || ws.stats[k] >= capOf(ws, k)} onPress={() => spend(k)} data-msx-r3-plus={k} className="sym plus" aria-label={`${MSX_STAT_NAME[k]}を上げる`}/></span></div>);
       })}</div>
       <div className="v-card"><div className="v-kv"><b>伸びすぎ注意</b><span>能力の上限はふつう 999(編成のモンスターで上がる)。その期の目安を超えた能力は、2ポイントで +1</span></div></div>
       <MsxSay aid={s.aid} ex="excited" text={ws.pts > 0 ? '「能力ポイントが残ってるよ! 使い切ってから、最後の評価を見よう!」' : '「使い切ったね! それじゃあ、最後の評価を見よう!」'}/>
     </>);
-    const foot = <div className="v-ft"><button type="button" onClick={() => { setWs(s); setHist([]); }}>やり直す</button><button type="button" className="go" onClick={() => { setRun({ ...run, s: ws }); setStep('e0'); }} data-msx-r3-e3>これで決める ▶</button></div>;
+    const foot = <div className="v-ft"><button type="button" onClick={() => setPtListNow([])}>やり直す</button><button type="button" className="go" onClick={() => { setRun({ ...run, s: ws }); setPtListNow([]); setStep('e0'); }} data-msx-r3-e3>これで決める ▶</button></div>;
     return <MsxR3Frame run={run} back="閉じる" onBack={onPause} right={right} body={body} foot={foot}/>;
   }
 
