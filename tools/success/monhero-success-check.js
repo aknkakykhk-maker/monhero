@@ -276,6 +276,10 @@ ok(near(SUC.failRateOf({ ...base, yosu: { sabori: { visits: 0 } } }) - fFull, 0.
     const lowR = SUC.act(low, { kind: 'shugyo', course: 'fire', techs: [two[0]] });
     ok(!lowR.out.ok && lowR.out.why === 'no-hp' && lowR.out.short === 1 && !SUC.peek(low).can.includes('shugyo') && SUC.peek(low).shugyo.short === 1, '体力が足りないのに修行に行ける/足りない数がずれている');
     ok(SUC.act(mid, { kind: 'shugyo', course: 'fire', techs: [two[0]] }).out.ok && SUC.act(mid, { kind: 'shugyo', course: 'fire', techs: two }).out.why === 'no-hp2' && SUC.peek(mid).shugyo.superShort === h2 - h1, '修行は行けて超修行は行けない、が分かれていない');
+    // 演出の内訳(r1115-060): 能力ごとに 行き先の分 + 編成の子の分 = 実際に上がった数。行き先の4能力には行き先の分がある
+    [one, sup].forEach((r) => { const P = r.out.parts || {};
+      ok(Object.keys(r.out.gain).every((k) => (P[k] || []).reduce((a, x) => a + x.v, 0) === r.out.gain[k]), '修行の内訳の合計が上がった数と合わない');
+      ok(SUC.SHUGYO.courses.fire.stages.flat().filter((k) => r.out.gain[k]).every((k) => (P[k] || []).some((x) => x.src === 'course' && x.v > 0)), '行き先の能力に行き先の分が無い'); });
     const old = SUC.restore(JSON.parse(JSON.stringify({ ...base, techMiss: undefined, superLeft: undefined })));
     ok(old && JSON.stringify(old.techMiss) === '{}' && old.superLeft === SUC.SHUGYO.superMax, '古い保存(外した回数・超修行の残りなし)が 0回・2回残りで読めない');
   }
@@ -612,7 +616,7 @@ ok(near(SUC.failRateOf({ ...base, yosu: { sabori: { visits: 0 } } }) - fFull, 0.
   const mk = (as) => SUC.newRun({ id: 'hint', species: 'Mocchi', aid: 'mua', team: [{ kind: 'raised', species: 'Golem', stats: st, lv: 30, loy: 70, assists: as }, { kind: 'raised', species: 'Golem', stats: st, lv: 30, loy: 70, assists: [{ id: 'gatsu', lv: 1 }] }] });
   const plain = mk([]); const all = mk([{ id: 'gatsu', lv: 3 }, { id: 'miseba', lv: 3 }, { id: 'mitate', lv: 3 }, { id: 'mimamori', lv: 3 }]);
   const cup = { kind: 'cup', sys: 'str', star: 1, round: 0 };
-  ok(JSON.stringify(SUC.battleBuffs({ ...all, battle: cup })) === JSON.stringify({ A: { guts: 8, hit1: 0.1, crit: 0.08, eva: 0.08, noSulk: true } }), `ひらめきのアシストの上乗せ(一番高い段の1つだけ)がずれている: ${JSON.stringify(SUC.battleBuffs({ ...all, battle: cup }))}`);
+  ok(JSON.stringify(SUC.battleBuffs({ ...all, battle: cup })) === JSON.stringify({ A: { guts: 11, hit1: 0.1, crit: 0.08, eva: 0.08, noSulk: true } }), `ひらめきのアシストの上乗せ(試合型は編成の全員の分を足し合わせ・r1115-107: ガッツ 8+3)がずれている: ${JSON.stringify(SUC.battleBuffs({ ...all, battle: cup }))}`);
   ok(JSON.stringify(SUC.battleBuffs({ ...plain, battle: cup })) === '{"A":{"guts":3}}' && SUC.battleBuffs(all) === undefined, '大会の試合のときだけ上乗せが付く になっていない');
   // トレーニングには効かない
   const tp = SUC.act(plain, { kind: 'train', stat: 'pow' }); const ta = SUC.act(all, { kind: 'train', stat: 'pow' });
