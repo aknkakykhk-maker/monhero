@@ -6,6 +6,7 @@
   ・書き出し: monster-hero/images/assistant/<stand>/<接頭辞>_<表情>.png(減色して軽くする)
   ・顔の表(ASSISTANT_LIFE_STAND_FACE_OUTFIT)に貼る1行を出す
 使い方: python3 tools/assistant/life-stand-from-fullbody.py [--only キー]
+★きき(ふだん)は元の絵が大きいので、ここで作ったあとに tools/assistant/life-stand-hd.py で元の絵の細かさのまま作り直す(2026-11-15 r1115-141)。ここだけ回すと荒い絵に戻る
 足すときは下の HEADS に1つ足す。数字は全身画 normal の画素(top=頭のてっぺん/eye=目/chin=顎)。
 """
 import os, sys

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 7575e4d4ed6aa072
+// source-sha256: 969aea6bfdd16b78
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -203233,14 +203233,14 @@ const CARD_ART_KNOWN_BOX = Object.freeze({
   'stand-normal/erubin_surprise': [698, 492, 39, 6, 620, 486],
   'stand-normal/erubin_troubled': [552, 492, 8, 7, 533, 485],
   'stand-normal/erubin_wink': [516, 492, 7, 7, 498, 485],
-  'stand-normal/kiki_angry': [616, 832, 8, 8, 601, 824],
-  'stand-normal/kiki_crying': [436, 832, 8, 6, 420, 826],
-  'stand-normal/kiki_excited': [946, 832, 8, 8, 929, 824],
-  'stand-normal/kiki_happy': [392, 832, 7, 8, 377, 824],
-  'stand-normal/kiki_normal': [414, 832, 12, 8, 394, 824],
-  'stand-normal/kiki_surprise': [554, 832, 8, 8, 537, 824],
-  'stand-normal/kiki_troubled': [456, 832, 8, 8, 439, 824],
-  'stand-normal/kiki_wink': [566, 832, 8, 6, 550, 826],
+  'stand-normal/kiki_angry': [616, 832, 8, 8, 600, 824],
+  'stand-normal/kiki_crying': [436, 832, 8, 8, 420, 824],
+  'stand-normal/kiki_excited': [946, 832, 9, 6, 929, 826],
+  'stand-normal/kiki_happy': [392, 832, 8, 8, 376, 824],
+  'stand-normal/kiki_normal': [414, 832, 13, 8, 394, 824],
+  'stand-normal/kiki_surprise': [554, 832, 8, 8, 538, 824],
+  'stand-normal/kiki_troubled': [456, 832, 8, 8, 437, 824],
+  'stand-normal/kiki_wink': [566, 832, 8, 8, 550, 824],
   'stand-normal/kyuko_angry': [492, 590, 15, 7, 470, 583],
   'stand-normal/kyuko_crying': [416, 590, 23, 8, 364, 582],
   'stand-normal/kyuko_excited': [452, 590, 12, 8, 433, 582],
