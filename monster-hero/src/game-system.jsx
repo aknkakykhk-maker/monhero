@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 187fdfc83900635e
+// generated-sha256: 2703953840e957d4
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -37723,10 +37723,10 @@ const MULTI_STAMP_RECV_GAP_MS = 2000;
 const MULTI_STAMP_SLOT_BASE = 8;
 const MULTI_STAMP_SLOT_STEP = 4;
 const MULTI_STAMP_SLOT_BUY_MAX = 2; // 8 → 12 → 16
-// 自由入力の文字(2026-11-15 r1115-026・社長「A 無料」)。言葉の番号は 'x'(買い物の言葉ではない)。全角8文字・1行・制御文字なし(ひとことと同じ見張り)
+// 自由入力の文字(2026-11-15 r1115-026・社長「A 無料」)。言葉の番号は 'x'(買い物の言葉ではない)。全角10文字・札は2行まで・制御文字なし(r1115-183で8→10)(ひとことと同じ見張り)
 const MULTI_STAMP_CUSTOM_ID = 'x';
-const MULTI_STAMP_CUSTOM_MAX = 8;
-// スタンプの言葉は、設定できる最大(全角8文字)まで切れずに見える。1行に入らなければ2行にする(r1115-116。「…」で切らない)
+const MULTI_STAMP_CUSTOM_MAX = 10; // 2026-11-15 r1115-183: 8→10(札は2行まで。前の短い言葉はそのまま読める)
+// スタンプの言葉は、設定できる最大(全角10文字)まで切れずに見える。1行に入らなければ2行にする(r1115-116。「…」で切らない)
 const MULTI_STAMP_WORD_CLAMP = Object.freeze({ display: '-webkit-box', WebkitBoxOrient: 'vertical', WebkitLineClamp: 2, overflow: 'hidden', overflowWrap: 'anywhere', wordBreak: 'break-all', lineHeight: 1.15 });
 const multiStampCleanText = (v) => String(v == null ? '' : v).replace(/[\u0000-\u001f\u007f-\u009f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, MULTI_STAMP_CUSTOM_MAX);
 // 助手(この並び)と表情。はじめに使えるのは各助手の happy
@@ -55984,7 +55984,7 @@ const rhythmMultiCleanMessage = (raw) => {
     const sf = typeof multiStampCleanFace === 'function' ? multiStampCleanFace(raw.sf) : null;
     const sw = typeof multiStampCleanWord === 'function' ? multiStampCleanWord(raw.sw) : null;
     if (sf && sw) { out.sf = sf; out.sw = sw; }
-    // 自由入力のスタンプ(sw が 'x')の文字は、受け取る側でも全角8文字・1行へそろえる(2026-11-15 r1115-026。改造した相手が長い文字を送っても札に出さない)
+    // 自由入力のスタンプ(sw が 'x')の文字は、受け取る側でも全角10文字へそろえる(2026-11-15 r1115-026。改造した相手が長い文字を送っても札に出さない)
     if (out.sw === 'x' && typeof multiStampCleanText === 'function') out.text = multiStampCleanText(out.text);
     return out.text && out.cid ? out : null;
   }
@@ -57113,7 +57113,7 @@ const RHYTHM_MULTI = (() => {
       if (!clean || !me || Date.now() - s.lastChatAt < RHYTHM_MULTI_CHAT_INTERVAL_MS) return false;
       s.lastChatAt = Date.now();
       const st = stamp && multiStampCleanFace(stamp.f) && multiStampCleanWord(stamp.w) ? { sf: stamp.f, sw: stamp.w } : {};
-      // 自由入力のスタンプ(sw が 'x')は、文字を全角8文字・1行へそろえる(2026-11-15 r1115-026)
+      // 自由入力のスタンプ(sw が 'x')は、文字を全角10文字へそろえる(2026-11-15 r1115-026)
       const sendText = st.sw === 'x' ? multiStampCleanText(clean) : clean;
       if (!sendText) return false;
       return socket.send({ t: 'chat', id: s.selfId, name: me.name, text: sendText, cid: `c${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`, ...st });
