@@ -71,6 +71,8 @@ const REQUIRED = [
   'boot/saved-value-lock-check.js',
   // 画面の文は漢字で書ける所は漢字にする(2026-11-14 社長。錠 ui-kanji)。台詞・お話・人名・種族名・出した更新履歴は見ない
   'ui/ui-kanji-check.js',
+  // 画面の文に「札」を使わない(2026-11-15 社長「よくこの札って単語出るけどちゃんと適した用語になってる?」)。指す物ごとの言葉にする(TERMS.md)
+  'ui/fuda-word-check.js',
   'image-asset-check.js',
 ];
 

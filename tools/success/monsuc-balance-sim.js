@@ -72,6 +72,14 @@ const CAPLINE = "const CAPT = AT && AT.CAP && typeof AT.CAP === 'object' ? AT.CA
 const capRep = (extra) => [[CAPLINE, `const CAPT = Object.assign({}, AT && AT.CAP && typeof AT.CAP === 'object' ? AT.CAP : {}, ${JSON.stringify(extra)});`]];
 VARIANTS.x50 = { name: '上限案 修行効果アップ50%・修行特別効果アップ20', rep: capRep({ shugyo: { v: 50, sum: true }, shugyotoku: { v: 20, sum: true } }), cost: COST_P1 };
 VARIANTS.x30 = { name: '上限案 修行効果アップ30%・修行特別効果アップ10', rep: capRep({ shugyo: { v: 30, sum: true }, shugyotoku: { v: 10, sum: true } }), cost: COST_P1 };
+// ---- 修行の上振れを抑える案(r1115-173・クラフト43。数値は決まっていない。試すだけ) ----
+//   ② 編成の得意(子の能力 × 3%/1%/0.5%)が、強い編成ほどそのまま修行の上がりに乗るのを抑える
+const SG_LOOP = 'let w = 1; c.forEach(v => { o[k] += v * w; w *= F.overlap; });';
+const sgCap = (n) => [[SG_LOOP, `let w = 1, __t = 0; c.forEach(v => { __t += v * w; w *= F.overlap; }); o[k] += Math.min(${n}, __t);`]];
+VARIANTS.Sc10 = { name: '修行案1 編成の得意の分を1能力 +10 まで', rep: sgCap(10) };
+VARIANTS.Sc15 = { name: '修行案1b 編成の得意の分を1能力 +15 まで', rep: sgCap(15) };
+VARIANTS.Scourse = { name: '修行案2 編成の得意は行き先の4能力だけ', rep: [[SG_LOOP, 'const __cs = [].concat(...((SHUGYO.courses[course] || SHUGYO.courses.fire).stages || [])); let w = 1; c.forEach(v => { if (__cs.includes(k)) o[k] += v * w; w *= F.overlap; });']] };
+VARIANTS.Spct = { name: '修行案3 得意の割合 3%/1%/0.5% → 2%/0.7%/0.3%', rep: [['pct: Object.freeze([0.03, 0.01, 0.005])', 'pct: Object.freeze([0.02, 0.007, 0.003])']] };
 const pickV = String(opt('--variant', 'now,A,P,AP')).split(',');
 const vlist = (pickV.includes('all') ? Object.keys(VARIANTS) : pickV).filter(k => VARIANTS[k]);
 

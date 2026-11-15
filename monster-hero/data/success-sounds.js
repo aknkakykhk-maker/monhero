@@ -71,7 +71,7 @@
     // 覚醒の入り(56-monsuc-awake.jsx の MsxAwakeShow)。曲は社長の曲が来るまで「合体テーマ」を当てる
     { id: 'awakeShow', name: '覚醒の入り', bgm: 'original_fusion', se: 'enemyCharge' },
     { id: 'awQi', name: '覚醒: 気が噴き出す', se: 'special' },
-    { id: 'awFlash', name: '覚醒: 閃光と札', se: 'fusion' },
+    { id: 'awFlash', name: '覚醒: 閃光と文字', se: 'fusion' },
     { id: 'awKira', name: '覚醒: キラをまとう', se: 'levelUp' },
     // 期の区切り(56-monsuc-kifx.jsx の MsxKiShow)。曲は社長の曲が来るまで「Monster Hero」を当てる
     { id: 'kiShow', name: '期の区切り: 第◯章 終了', bgm: 'monster_hero_theme', se: 'rankFanfare' },

@@ -159,7 +159,7 @@ const MONSUC_SCRIPT_KIKI = Object.freeze([
   { id:'turn.retry.glass.kiki1', who:'kiki', e:'excited', t:'同じ相手にもう一度でつね。今度は、やられる前に押し切りまつ' },
   { id:'turn.retry.rainbow.kiki1', who:'kiki', e:'normal', t:'あれま、相手が変わりました。仕切り直しでつ' },
   { id:'turn.cup.rivalcard.kiki1', who:'kiki', e:'excited', t:'{rival}が出る大会でつね。勝てば、ごほうびも大きいでつよ' },
-  { id:'turn.cup.rivalcard.kiki2', who:'kiki', e:'normal', t:'ライバルの札でつか。今の{mon}なら、火力で負けないと思いまつ' },
+  { id:'turn.cup.rivalcard.kiki2', who:'kiki', e:'normal', t:'ライバルの情報でつか。今の{mon}なら、火力で負けないと思いまつ' },
 
   // ═══════════ ふだんのランダムイベント(random.js と同じ場面) ═══════════
   { id:'ev.daily.nut.kiki1', who:'kiki', e:'normal', t:'落とし物みたいでつね。届けてあげるのがいいと思いまつけど……' },
@@ -202,7 +202,7 @@ const MONSUC_SCRIPT_KIKI = Object.freeze([
   { id:'ev.goal.done.kiki1', who:'kiki', e:'happy', t:'目標達成でつ♪♪ お見事でした' },
   { id:'ev.goal.miss.kiki1', who:'kiki', e:'normal', t:'届きませんでしたね。次の期で取り返しまつ' },
   { id:'ev.season.jan1.kiki1', who:'kiki', e:'happy', t:'おみくじでつね。どんな結果でも、押し切りまつよ' },
-  { id:'ev.season.jan2.kiki1', who:'kiki', e:'normal', t:'願い札でつか。私なら「ちから」と書きまつ……ふふ' },
+  { id:'ev.season.jan2.kiki1', who:'kiki', e:'normal', t:'絵馬でつか。私なら「ちから」と書きまつ……ふふ' },
   { id:'ev.season.jan3.kiki1', who:'kiki', e:'normal', t:'私の願いでつか？ ……{mon}の一撃を、いちばん近くで見ることでつ' },
   { id:'ev.season.apr1.kiki1', who:'kiki', e:'happy', t:'お花見でつね。あったかいスープも持ってきました♪♪' },
   { id:'ev.season.apr2.kiki1', who:'kiki', e:'happy', t:'人気者でつね、{mon}。私まで少し照れまつ' },
