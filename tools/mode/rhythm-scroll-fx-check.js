@@ -88,6 +88,18 @@ ok('③ 1コマで動く量が道の25%以下',worstFrame<=LIMIT_PER_FRAME,`最�
   const early=new Set();for(const t of TRAVEL)for(const n of R.rhythmScrollEarlyTouches(c.scrollChanges,c.notes,t,c.scrollGroups))early.add(n.timeMs);
   ok('④ 口で作った譜面は全速度で早触れ0(行って戻るの直後も)',!early.size,[...early].join(','));
   ok('④ 行って戻るの直後のノーツが組1へ移る',g(8620)===1&&g(8750)==null,`${g(8620)},${g(8750)}`);
+  // r1115-182: 駆け込みの peak(だんだん速く→だんだん遅く)・組の区間 groupTo・遅い所の組2 groupSpeed
+  {
+    const b2=R.rhythmScrollFxBuild([{at:5000,kind:'stop',len:300,hold:true,groupTo:5600},{at:5300,kind:'rush',len:600,peak:.3},{at:9000,kind:'back',len:600,amount:.07,resume:.6,groupSpeed:.6}]);
+    ok('④ peak を書いた駆け込みは段差のない GLIDE',JSON.stringify(b2.changes)===JSON.stringify([[5000,0],[5300,'GLIDE',0.97,0.3],[5900,1],[9000,'GLIDE',-0.07,0.5],[9300,'GLIDE',0.07,0.5],[9600,0.6]]),JSON.stringify(b2.changes));
+    ok('④ groupTo で組の区間だけ伸びる・groupSpeed は区間に速さが付く',JSON.stringify(b2.windows)===JSON.stringify([[5000,5600],[9000,9600]])&&b2.windows[1].speed===.6&&b2.windows[0].speed==null);
+    const c2=R.rhythmScrollFxChart(chart,[{at:5000,kind:'stop',len:300,hold:true,groupTo:5600},{at:5300,kind:'rush',len:600,peak:.3},{at:9000,kind:'back',len:600,amount:.07,resume:.6,groupSpeed:.6}]);
+    const g2=t=>c2.notes.find(n=>n.timeMs===t)?.scrollGroup;
+    ok('④ groupTo の区間のノーツに組1・groupSpeed の区間のノーツに組2',g2(5500)===1&&g2(9250)===2&&g2(10000)==null,`${g2(5500)},${g2(9250)},${g2(10000)}`);
+    ok('④ 組2の表は演出だけ一定の速さ',JSON.stringify(c2.scrollGroups[2])===JSON.stringify([[5000,0],[5300,'GLIDE',0.97,0.3],[5900,1],[9000,0.6],[9600,0.6]]),JSON.stringify(c2.scrollGroups[2]));
+    const e2=new Set();for(const t of TRAVEL)for(const n of R.rhythmScrollEarlyTouches(c2.scrollChanges,c2.notes,t,c2.scrollGroups))e2.add(n.timeMs);
+    ok('④ peak・groupTo・groupSpeed の譜面も全速度で早触れ0',!e2.size,[...e2].join(','));
+  }
   ok('④ 譜面の他の項目(Lv.・長さ)は保つ',c.level===30&&c.durationMs===22000&&c.totalNotes===c.notes.length);
 }
 // ⑥ 観戦

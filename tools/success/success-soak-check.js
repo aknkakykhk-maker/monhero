@@ -156,7 +156,13 @@ const checkState = (s, where) => {
   (s.bond || []).forEach((b, i) => { if (!inRange(b, 0, SUC.BOND.max)) fail(`${where}: 親密度[${i}] が 0〜${SUC.BOND.max} でない: ${b}`); });
   if (!inRange(s.aidBond, 0, SUC.BOND.max)) fail(`${where}: 助手の親密度が範囲外: ${s.aidBond}`);
   if (!inRange(s.lv, 1, 99)) fail(`${where}: Lv が 1〜99 でない: ${s.lv}`);
-  if (s.carry.length + Object.values(s.bag || {}).reduce((a, n) => a + n, 0) > SUC.CARRY_MAX + 10) fail(`${where}: 持ちこみが多すぎ`);
+  // 持ちこみの上限は育成を始めた時だけ見る(checkCarry)。始めたあとの袋には大会の賞品・オイリーパックの中身・出来事の品も入るので、ここでは数えない(r1115-172)
+};
+
+// 持ちこみ(始める前の物 carry と、袋に入れて持ちこむ育成中の物)は合わせて CARRY_MAX まで。育成を始めた直後に1回だけ見る(r1115-172)
+const checkCarry = (s, where) => {
+  const n = s.carry.length + Object.values(s.bag || {}).reduce((a, v) => a + v, 0);
+  if (n > SUC.CARRY_MAX) fail(`${where}: 持ちこみが ${SUC.CARRY_MAX} を超えた: ${n}(${JSON.stringify({ carry: s.carry, bag: s.bag })})`);
 };
 
 // ---- 1回の育成を回す(stopAt の手数で止めて途中の状態を返せる) ----
@@ -249,7 +255,7 @@ const step = (s, c, st) => {
 
 const MAX_STEPS = 400;
 const play = (c, opts = {}) => {
-  let s = newRunOf(c); checkState(s, `${c.id} newRun`);
+  let s = newRunOf(c); checkState(s, `${c.id} newRun`); checkCarry(s, `${c.id} newRun`);
   const st = { battles: 0, wins: 0, rematch: 0, debutRematch: 0, debutLossSeen: 0, meal: 0, items: 0, story: 0, issa: 0, acts: {} };
   const snaps = [];
   let n = 0;

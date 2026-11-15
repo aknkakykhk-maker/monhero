@@ -143,7 +143,7 @@ const problems = (page) => page.evaluate(() => {
       // 場面1: けんか(扉・出かけた札・やきもち・寝ている)
       const s1 = await stage(page, 'quarrel'); await page.waitForTimeout(400);
       check(`${T}けんか中で部屋にひとり → 🚪 扉(顔は扉の向こう)`, (await page.locator(`[data-assistant-life-room="${s1.door}"] [data-assistant-life-rel-door]`).count()) === 1);
-      check(`${T}出かけている → 札に「💢 ◯◯とけんか中」`, /💢 みゅあとけんか中/.test(await page.locator(`[data-assistant-life-room="${s1.away}"] [data-assistant-life-room-away]`).innerText().catch(() => '')));
+      check(`${T}出かけている → 札に「💢 ◯◯とけんか中」`, /💢 みゅあと喧嘩中/.test(await page.locator(`[data-assistant-life-room="${s1.away}"] [data-assistant-life-room-away]`).innerText().catch(() => '')));
       check(`${T}やきもち → 💭 …いいなぁ`, /いいなぁ/.test(await page.locator(`[data-assistant-life-room="${s1.jealous}"] [data-assistant-life-room-bub]`).innerText().catch(() => '')));
       if (s1.sleep) check(`${T}寝ている助手は扉にしない`, (await page.locator(`[data-assistant-life-room="${s1.sleep}"] [data-assistant-life-rel-door]`).count()) === 0);
       { const ng = await problems(page); check(`${T}けんかの家: 文字の切れ・名前の折れ・重なり・読みにくさが無い`, !ng.length, ng.slice(0, 5).join(' / ')); }
@@ -169,7 +169,7 @@ const problems = (page) => page.evaluate(() => {
       await page.locator(`[data-assistant-life-room="${s1.door}"]`).click();
       await page.locator('[data-assistant-life-rel-row="quarrel"]').waitFor({ timeout: 3000 }).catch(() => {});
       const row = await page.locator('[data-assistant-life-rel-row="quarrel"]').innerText().catch(() => '');
-      check(`${T}部屋のシート: 「💢 いま あつとけんか中(原因: …)」と取り持つ`, /いま あつとけんか中/.test(row) && /原因: /.test(row) && (await page.locator('[data-assistant-life-room-act="mediate"]').count()) === 1, row.split('\n')[0]);
+      check(`${T}部屋のシート: 「💢 いま あつと喧嘩中(原因: …)」と取り持つ`, /いま あつと喧嘩中/.test(row) && /原因: /.test(row) && (await page.locator('[data-assistant-life-room-act="mediate"]').count()) === 1, row.split('\n')[0]);
       { const ng = await problems(page); check(`${T}部屋のシート: 文字の切れ・読みにくさが無い`, !ng.length, ng.slice(0, 4).join(' / ')); }
       if (SHOTS && tm.id === 'night') await page.screenshot({ path: path.join(shotDir, `rel-2-sheet-${v.id}.jpg`), type: 'jpeg', quality: 80 });
       // 取り持つ → 場面(話し手がその場にいる)

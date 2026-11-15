@@ -59,7 +59,7 @@ const VIEWS = [{ id: 'v390', w: 390, h: 844 }, { id: 'v320', w: 320, h: 700 }, {
       ASSISTANT_LIFE_DIARY.state = { day, slots: [], items: [
         { t: '09:12', text: '👀 きき・あつの様子を見守った', ids: ['kiki', 'atsu'], kind: 'watch' },
         { t: '10:05', text: '🤝 きき・ソラシドが仲直り', ids: ['kiki', 'sorashido'], kind: 'makeup', tid: 'rel-fight-kiki-sorashido-1m', how: 'self' },
-        { t: '11:30', text: '💢 みゅあ・ドラがけんか(おやつ)', ids: ['dra', 'mua'], kind: 'quarrel', tid: 'rel-fight-dra-mua-1' },
+        { t: '11:30', text: '💢 みゅあ・ドラが喧嘩(おやつ)', ids: ['dra', 'mua'], kind: 'quarrel', tid: 'rel-fight-dra-mua-1' },
       ] };
       ASSISTANT_LIFE_DIARY.loaded = true; ASSISTANT_LIFE_DIARY.emit();
     });

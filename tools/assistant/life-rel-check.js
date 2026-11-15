@@ -165,7 +165,7 @@ const main = async () => {
   const rooms = (life) => { ctx.__life = life; return G('assistantLifeRoomsOf(__life, ' + JSON.stringify(IDS) + ')'); };
   let r = rooms(mk([], { mua: { place: 'home', doing: 'idle', reason: 'distance' }, atsu: { place: 'cafe', doing: 'snack', reason: 'distance' } }));
   check('⑥ けんか中で部屋にひとり → 🚪 扉', r.mua && r.mua.door === true && r.mua.bub.join('').includes('そっとして'));
-  check('⑥ けんか中で出かけている → 札に「💢 ◯◯とけんか中」', r.atsu && r.atsu.tag && /💢 みゅあとけんか中/.test(r.atsu.tag[1]), r.atsu && r.atsu.tag ? r.atsu.tag[1] : '');
+  check('⑥ けんか中で出かけている → 札に「💢 ◯◯とけんか中」', r.atsu && r.atsu.tag && /💢 みゅあと喧嘩中/.test(r.atsu.tag[1]), r.atsu && r.atsu.tag ? r.atsu.tag[1] : '');
   r = rooms(mk([], { mua: { place: 'home', doing: 'sleep', reason: 'distance' } }));
   check('⑥ 寝ている助手は扉にしない(💤 のまま)', r.mua && !r.mua.door && r.mua.sleep);
   const livingLife = mk([{ ids: ['atsu', 'mua'], place: 'home', doing: 'snack' }], {});

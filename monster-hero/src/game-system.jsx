@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: ad279cc7b52a00fe
+// generated-sha256: 4f964e983ad1006d
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -64911,7 +64911,7 @@ const assistantPeerMarkShown = (talk, { scene, special, now = Date.now() }) => {
     patch.quarrel = quarrel;
     try { storeSet(ASSISTANT_PEER_QUARREL_KEY, quarrel, false); } catch {}
     // 今日あったことに「💢 ◯◯・◯◯がけんか(原因)」。押すとけんかの場面(2026-11-15 r1115-137)
-    if (typeof assistantLifeDiaryAdd === 'function') { try { const cause = typeof assistantLifeRelCauseOf === 'function' ? assistantLifeRelCauseOf(talk.id) : null; void assistantLifeDiaryAdd(`💢 ${talk.pair.map(assistantLifeName).join('・')}がけんか${cause ? `(${cause})` : ''}`, [...talk.pair], { kind: 'quarrel', now, tid: talk.id }); } catch {} }
+    if (typeof assistantLifeDiaryAdd === 'function') { try { const cause = typeof assistantLifeRelCauseOf === 'function' ? assistantLifeRelCauseOf(talk.id) : null; void assistantLifeDiaryAdd(`💢 ${talk.pair.map(assistantLifeName).join('・')}が喧嘩${cause ? `(${cause})` : ''}`, [...talk.pair], { kind: 'quarrel', now, tid: talk.id }); } catch {} }
   }
   ASSISTANT_PEER_STORE.set(patch);
   // 助手たちの今: 見守った分のにぎわい・言い合いのあとは2人が距離をおく・見た台本は14日出さない(公開の印 assistantLife の後ろ)
@@ -67817,7 +67817,7 @@ const assistantLifeSayFill = (rooms, life) => {
     else if (r.rel === 'living') { say = ['🛋️', 'みんなの', '居間に']; short = ['🛋️', '居間に']; }
     if (!Array.isArray(say)) { const m = t0.match(/^(\S+) (.+)$/u); say = m ? [m[1], m[2]] : ['', t0]; }
     let mark = null, markShort = null, m;
-    if ((m = t1.match(/^💢 (.+)とけんか中$/u))) { mark = ['💢', `${m[1]}と`, 'けんか中']; markShort = ['💢', 'けんか中']; }
+    if ((m = t1.match(/^💢 (.+)と喧嘩中$/u))) { mark = ['💢', `${m[1]}と`, '喧嘩中']; markShort = ['💢', '喧嘩中']; }
     else if ((m = t1.match(/^💢 (.+)と言い合いのあと$/u))) { mark = ['💢', `${m[1]}と`, '言い合いの', 'あと']; markShort = ['💢', '言い合い']; }
     else if ((m = t1.match(/^🤝 (.+)と仲直り$/u))) {
       const w = r.mend && typeof assistantLifeWhereOf === 'function' ? assistantLifeWhereOf(life, id) : null;
@@ -71781,7 +71781,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([
   { id:'rel-mend-atsu-dra-3', kind:'mend', ppl:['atsu', 'dra'], keys:{ how:'player' }, lines:[{ who:'dra', e:'troubled', t:'{name}に「勝負より仲直りが先」って言われたぞ' }, { who:'atsu', e:'troubled', t:'俺も言われた笑' }, { who:'atsu', e:'happy', t:'{name}に言われたら、しょうがないね！' }, { who:'dra', e:'happy', t:'おう。仲直りしてから、勝負だな' }] },
   { id:'rel-mend-erubin-kiki-1', kind:'mend', ppl:['erubin', 'kiki'], keys:{ how:'apology' }, lines:[{ who:'kiki', e:'normal', t:'{c}、さっきはすみませんでした' }, { who:'erubin', e:'happy', t:'ううん、俺こそごめんね' }, { who:'kiki', e:'happy', t:'では、いつものベンチで、お茶にしましょう♪' }, { who:'erubin', e:'happy', t:'うん、行こうか' }] },
   { id:'rel-mend-erubin-kiki-2', kind:'mend', ppl:['erubin', 'kiki'], keys:{ how:'gift' }, lines:[{ who:'erubin', e:'normal', t:'{c}、{name}から差し入れのお茶葉をもらったよ' }, { who:'kiki', e:'surprise', t:'あれま。いい香りでつね' }, { who:'erubin', e:'happy', t:'一緒に飲もうか。さっきはごめんね' }, { who:'kiki', e:'happy', t:'はい。私も、ごめんなさいでつ' }] },
-  { id:'rel-mend-erubin-kiki-3', kind:'mend', ppl:['erubin', 'kiki'], keys:{ how:'player' }, lines:[{ who:'kiki', e:'troubled', t:'{name}に、「二人とも静かにけんかしてる」と言われました' }, { who:'erubin', e:'troubled', t:'ばれてたんだね笑' }, { who:'erubin', e:'happy', t:'{name}に言われたら、しょうがないかな' }, { who:'kiki', e:'happy', t:'では、静かに仲直りしましょう♪' }] },
+  { id:'rel-mend-erubin-kiki-3', kind:'mend', ppl:['erubin', 'kiki'], keys:{ how:'player' }, lines:[{ who:'kiki', e:'troubled', t:'{name}に、「二人とも静かに喧嘩してる」と言われました' }, { who:'erubin', e:'troubled', t:'ばれてたんだね笑' }, { who:'erubin', e:'happy', t:'{name}に言われたら、しょうがないかな' }, { who:'kiki', e:'happy', t:'では、静かに仲直りしましょう♪' }] },
   { id:'rel-mend-atsu-erubin-1', kind:'mend', ppl:['atsu', 'erubin'], keys:{ how:'apology' }, lines:[{ who:'atsu', e:'normal', t:'{c}、さっきはごめん！' }, { who:'erubin', e:'happy', t:'うん。分かってるよ' }, { who:'atsu', e:'surprise', t:'え、怒ってないの！？' }, { who:'erubin', e:'happy', t:'{c}が謝りに来てくれたから、もう大丈夫だよ' }] },
   { id:'rel-mend-atsu-erubin-2', kind:'mend', ppl:['atsu', 'erubin'], keys:{ how:'gift' }, lines:[{ who:'erubin', e:'normal', t:'{c}、{name}から差し入れのおにぎりだよ' }, { who:'atsu', e:'excited', t:'まじ！？ 腹へってた！' }, { who:'erubin', e:'happy', t:'一緒に食べよう。さっきはごめんね' }, { who:'atsu', e:'happy', t:'俺こそ！ ありがと笑' }] },
   { id:'rel-mend-atsu-erubin-3', kind:'mend', ppl:['atsu', 'erubin'], keys:{ how:'player' }, lines:[{ who:'atsu', e:'troubled', t:'{name}に「{c}に早く謝りな」って言われた笑' }, { who:'erubin', e:'happy', t:'俺も「{c}を許してあげて」って言われたよ' }, { who:'atsu', e:'happy', t:'{name}に言われたら、しょうがない！ ごめん！' }, { who:'erubin', e:'happy', t:'うん、仲直りだね' }] },
@@ -71802,10 +71802,10 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([
   { id:'rel-mend3-mua-kyuko-momosuke-1', kind:'mend3', ppl:['mua', 'kyuko', 'momosuke'], keys:{  }, lines:[{ who:'mua', e:'normal', t:'{c:kyuko}、{c:momosuke}、ずっと離れて座ってるぢゃん' }, { who:'kyuko', e:'troubled', t:'……ちょっと、ねぇ' }, { who:'momosuke', e:'troubled', t:'……うん' }, { who:'mua', e:'happy', t:'ほら、真ん中にあたしが座るから、2人とも寄って！' }, { who:'kyuko', e:'happy', t:'……{c:mua}には、かなわないなぁ笑 {c:momosuke}、ごめんねぇ' }] },
   { id:'rel-mend3-atsu-dra-sorashido-1', kind:'mend3', ppl:['atsu', 'dra', 'sorashido'], keys:{  }, lines:[{ who:'atsu', e:'happy', t:'{c:dra}、{c:sorashido}、3人で対戦しよ笑' }, { who:'dra', e:'troubled', t:'……{c:sorashido}とは、いま、ちょっとな' }, { who:'sorashido', e:'troubled', t:'・・・はい' }, { who:'atsu', e:'wink', t:'じゃあ、2人で組んで俺と勝負して！ 組めば話すでしょ笑' }, { who:'sorashido', e:'happy', t:'・・・{c:dra}、作戦、聞いてもいいですか' }, { who:'dra', e:'happy', t:'おう。……さっきは悪かったな' }] },
   { id:'rel-mend3-atsu-mua-kyuko-1', kind:'mend3', ppl:['atsu', 'mua', 'kyuko'], keys:{  }, lines:[{ who:'atsu', e:'normal', t:'{c:mua}、{c:kyuko}、なんか空気重くない？笑' }, { who:'mua', e:'troubled', t:'……ちょっとね' }, { who:'kyuko', e:'troubled', t:'……うん' }, { who:'atsu', e:'happy', t:'とりあえず、3人で一曲いこ！ 終わったら、きっと話せる！' }, { who:'mua', e:'happy', t:'……一曲だけね。{c:kyuko}、さっきはごめん' }] },
-  { id:'rel-mend3-atsu-kiki-erubin-1', kind:'mend3', ppl:['atsu', 'kiki', 'erubin'], keys:{  }, lines:[{ who:'atsu', e:'normal', t:'{c:kiki}、{c:erubin}、2人がけんかとか、めずらしいね！' }, { who:'kiki', e:'troubled', t:'……譲り合っていたら、こじれてしまって' }, { who:'erubin', e:'troubled', t:'……そうなんだ' }, { who:'atsu', e:'happy', t:'じゃあ、俺が決める！ 2人とも同時に謝って笑' }, { who:'kiki', e:'happy', t:'……ごめんなさい' }, { who:'erubin', e:'happy', t:'……ごめんね。{c:atsu}、ありがとう' }] },
+  { id:'rel-mend3-atsu-kiki-erubin-1', kind:'mend3', ppl:['atsu', 'kiki', 'erubin'], keys:{  }, lines:[{ who:'atsu', e:'normal', t:'{c:kiki}、{c:erubin}、2人が喧嘩とか、めずらしいね！' }, { who:'kiki', e:'troubled', t:'……譲り合っていたら、こじれてしまって' }, { who:'erubin', e:'troubled', t:'……そうなんだ' }, { who:'atsu', e:'happy', t:'じゃあ、俺が決める！ 2人とも同時に謝って笑' }, { who:'kiki', e:'happy', t:'……ごめんなさい' }, { who:'erubin', e:'happy', t:'……ごめんね。{c:atsu}、ありがとう' }] },
   { id:'rel-mend3-dra-momosuke-mua-1', kind:'mend3', ppl:['dra', 'momosuke', 'mua'], keys:{  }, lines:[{ who:'dra', e:'normal', t:'{c:momosuke}、{c:mua}、おでのギャグを聞け' }, { who:'momosuke', e:'troubled', t:'……いまそれ？' }, { who:'mua', e:'troubled', t:'……ほんとに、いま？' }, { who:'dra', e:'wink', t:'「仲直りは、なかなかおりあえない」' }, { who:'mua', e:'surprise', t:'……さむっｗ' }, { who:'momosuke', e:'happy', t:'……でも笑っちゃった。{c:mua}、ごめんね！！' }] },
   { id:'rel-mend3-dra-kyuko-atsu-1', kind:'mend3', ppl:['dra', 'kyuko', 'atsu'], keys:{  }, lines:[{ who:'dra', e:'normal', t:'{c:kyuko}、{c:atsu}、二人とも、おでの部屋で昼寝していけ' }, { who:'kyuko', e:'surprise', t:'昼寝？' }, { who:'atsu', e:'surprise', t:'え、いま！？笑' }, { who:'dra', e:'happy', t:'寝て起きたら、たいていのことは忘れてるからな' }, { who:'kyuko', e:'happy', t:'……{c:dra}らしいなぁ笑 {c:atsu}、ごめんねぇ' }, { who:'atsu', e:'happy', t:'俺も笑' }] },
-  { id:'rel-mend3-kyuko-atsu-sorashido-1', kind:'mend3', ppl:['kyuko', 'atsu', 'sorashido'], keys:{  }, lines:[{ who:'kyuko', e:'normal', t:'{c:atsu}、{c:sorashido}、二人のけんか、理由を整理してみたんだぁ' }, { who:'atsu', e:'surprise', t:'え、整理したの！？' }, { who:'sorashido', e:'surprise', t:'・・・表まであるんですか' }, { who:'kyuko', e:'wink', t:'結論。「どっちも勝ちたかっただけ」笑' }, { who:'atsu', e:'happy', t:'……それな笑 {c:sorashido}、ごめん！' }, { who:'sorashido', e:'happy', t:'自分もです。すみません' }] },
+  { id:'rel-mend3-kyuko-atsu-sorashido-1', kind:'mend3', ppl:['kyuko', 'atsu', 'sorashido'], keys:{  }, lines:[{ who:'kyuko', e:'normal', t:'{c:atsu}、{c:sorashido}、二人の喧嘩、理由を整理してみたんだぁ' }, { who:'atsu', e:'surprise', t:'え、整理したの！？' }, { who:'sorashido', e:'surprise', t:'・・・表まであるんですか' }, { who:'kyuko', e:'wink', t:'結論。「どっちも勝ちたかっただけ」笑' }, { who:'atsu', e:'happy', t:'……それな笑 {c:sorashido}、ごめん！' }, { who:'sorashido', e:'happy', t:'自分もです。すみません' }] },
   { id:'rel-mend3-kyuko-mua-erubin-1', kind:'mend3', ppl:['kyuko', 'mua', 'erubin'], keys:{  }, lines:[{ who:'kyuko', e:'normal', t:'{c:mua}、{c:erubin}、ちょっと聞いてほしい曲があるんだぁ' }, { who:'mua', e:'troubled', t:'……いま？' }, { who:'erubin', e:'troubled', t:'……うん' }, { who:'kyuko', e:'happy', t:'静かな曲だから、二人並んで聞いてねぇ' }, { who:'mua', e:'happy', t:'……いい曲。{c:erubin}、さっきはごめんね' }, { who:'erubin', e:'happy', t:'ううん。俺もごめんね' }] },
   { id:'rel-mend3-sorashido-atsu-kiki-1', kind:'mend3', ppl:['sorashido', 'atsu', 'kiki'], keys:{  }, lines:[{ who:'sorashido', e:'normal', t:'{c:atsu}、{c:kiki}。計算したら、二人が仲直りする確率は100%でした' }, { who:'atsu', e:'surprise', t:'計算したの！？笑' }, { who:'kiki', e:'surprise', t:'あれま' }, { who:'sorashido', e:'happy', t:'なので、早めに済ませたほうが得ですよ笑' }, { who:'kiki', e:'happy', t:'……では。{c:atsu}、ごめんなさい' }, { who:'atsu', e:'happy', t:'俺も！ {c:sorashido}、ありがと笑' }] },
   { id:'rel-mend3-sorashido-momosuke-dra-1', kind:'mend3', ppl:['sorashido', 'momosuke', 'dra'], keys:{  }, lines:[{ who:'sorashido', e:'excited', t:'{c:momosuke}、{c:dra}、3人でスコア勝負しませんか' }, { who:'momosuke', e:'troubled', t:'……{c:dra}と一緒に？' }, { who:'dra', e:'troubled', t:'……おでもか' }, { who:'sorashido', e:'happy', t:'2人の点を足して、自分と勝負です。チームなら話すしかないですよね！' }, { who:'momosuke', e:'happy', t:'……{c:dra}、やろ！！ さっきはごめん！！' }, { who:'dra', e:'happy', t:'おう。{c:momosuke}、おでも悪かった' }] },
@@ -71814,7 +71814,7 @@ const ASSISTANT_LIFE_REL_TALKS = Object.freeze([
   { id:'rel-mend3-momosuke-atsu-erubin-1', kind:'mend3', ppl:['momosuke', 'atsu', 'erubin'], keys:{  }, lines:[{ who:'momosuke', e:'excited', t:'{c:atsu}、{c:erubin}、ももの新曲の振り付け、2人で見て！！' }, { who:'atsu', e:'troubled', t:'……2人で？' }, { who:'erubin', e:'troubled', t:'……そうだね' }, { who:'momosuke', e:'wink', t:'ラストのポーズ、2人で手を合わせてやってほしいの♡' }, { who:'atsu', e:'happy', t:'……{c:erubin}、手、出して笑 さっきはごめん！' }, { who:'erubin', e:'happy', t:'うん。ごめんね、{c:atsu}' }] },
   { id:'rel-mend3-dra-kiki-mua-1', kind:'mend3', ppl:['dra', 'kiki', 'mua'], keys:{  }, lines:[{ who:'dra', e:'normal', t:'{c:kiki}、{c:mua}、おで、今日はギャグを封印する' }, { who:'kiki', e:'surprise', t:'……どうしたんですか' }, { who:'mua', e:'surprise', t:'え、{c:dra}が！？' }, { who:'dra', e:'troubled', t:'二人が仲直りするまでな。……おで、つらいんだぞ' }, { who:'mua', e:'happy', t:'……もう、ずるいｗ {c:kiki}、ごめんね' }, { who:'kiki', e:'happy', t:'はい。私も、ごめんなさいでつ' }] },
   { id:'rel-mend3-atsu-dra-mua-1', kind:'mend3', ppl:['atsu', 'dra', 'mua'], keys:{  }, lines:[{ who:'atsu', e:'happy', t:'{c:dra}、{c:mua}、HARDで一曲いこ笑 膝にやさしいやつ！' }, { who:'mua', e:'troubled', t:'……{c:dra}と一緒に？' }, { who:'dra', e:'troubled', t:'……おでもか' }, { who:'atsu', e:'wink', t:'一緒に叩いたら、すぐ戻るって笑' }, { who:'mua', e:'happy', t:'……しょうがないなぁ。{c:dra}、さっきはごめんね' }, { who:'dra', e:'happy', t:'おう。おでも悪かった。えへへ' }] },
-  { id:'rel-mend3-mua-kiki-momosuke-1', kind:'mend3', ppl:['mua', 'kiki', 'momosuke'], keys:{  }, lines:[{ who:'mua', e:'excited', t:'{c:kiki}、{c:momosuke}、3人でおそろいのリボンつけよ♪' }, { who:'kiki', e:'troubled', t:'……いまでつか' }, { who:'momosuke', e:'troubled', t:'……うん、いま？' }, { who:'mua', e:'wink', t:'おそろいにしたら、もうけんかできないぢゃん♪' }, { who:'momosuke', e:'happy', t:'……{c:kiki}、ごめんね！！' }, { who:'kiki', e:'happy', t:'はい。私も、ごめんなさい♪' }] },
+  { id:'rel-mend3-mua-kiki-momosuke-1', kind:'mend3', ppl:['mua', 'kiki', 'momosuke'], keys:{  }, lines:[{ who:'mua', e:'excited', t:'{c:kiki}、{c:momosuke}、3人でおそろいのリボンつけよ♪' }, { who:'kiki', e:'troubled', t:'……いまでつか' }, { who:'momosuke', e:'troubled', t:'……うん、いま？' }, { who:'mua', e:'wink', t:'おそろいにしたら、もう喧嘩できないぢゃん♪' }, { who:'momosuke', e:'happy', t:'……{c:kiki}、ごめんね！！' }, { who:'kiki', e:'happy', t:'はい。私も、ごめんなさい♪' }] },
   { id:'rel-mend3-kyuko-kiki-sorashido-1', kind:'mend3', ppl:['kyuko', 'kiki', 'sorashido'], keys:{  }, lines:[{ who:'kyuko', e:'normal', t:'{c:kiki}、{c:sorashido}、二人とも同じ表を見てるのに、黙ってるねぇ' }, { who:'sorashido', e:'troubled', t:'・・・話すきっかけがなくて' }, { who:'kiki', e:'troubled', t:'……私もでつ' }, { who:'kyuko', e:'wink', t:'じゃあ俺が質問ねぇ。この表、どこがいちばんいい？' }, { who:'sorashido', e:'happy', t:'・・・{c:kiki}の攻めの列ですね' }, { who:'kiki', e:'happy', t:'……では、私も。{c:sorashido}、さっきはすみませんでした' }] },
   { id:'rel-mend3-mua-momosuke-sorashido-1', kind:'mend3', ppl:['mua', 'momosuke', 'sorashido'], keys:{  }, lines:[{ who:'mua', e:'happy', t:'{c:momosuke}、{c:sorashido}、今日はあたしが記録係やる♪' }, { who:'momosuke', e:'surprise', t:'{c:mua}が？' }, { who:'sorashido', e:'surprise', t:'・・・数え方、分かるんですか？' }, { who:'mua', e:'wink', t:'分かんないから、二人で教えて！ｗ' }, { who:'momosuke', e:'happy', t:'……しょうがないなぁ。{c:sorashido}、一緒に教えよ！！' }, { who:'sorashido', e:'happy', t:'はい。{c:momosuke}、さっきはすみませんでした' }] },
   { id:'rel-mend3-dra-erubin-momosuke-1', kind:'mend3', ppl:['dra', 'erubin', 'momosuke'], keys:{  }, lines:[{ who:'dra', e:'normal', t:'{c:erubin}、{c:momosuke}、二人がしゃべらないと、おでの膝が痛むらしい' }, { who:'momosuke', e:'surprise', t:'なにそれw' }, { who:'erubin', e:'troubled', t:'……それは大変だね笑' }, { who:'dra', e:'wink', t:'だから、早く仲直りしてくれ' }, { who:'momosuke', e:'happy', t:'……{c:erubin}、ごめんね！！ {c:dra}の膝のために！！' }, { who:'erubin', e:'happy', t:'うん、俺もごめんね。膝のためにね笑' }] },
@@ -72179,10 +72179,10 @@ const assistantLifeRelDecorateRooms = (rooms, life, peerSt) => {
       const r = rooms[id];
       if (!r) continue;
       const w = assistantLifeWhereOf(life, id);
-      if (living) { rooms[id] = { tag: ['🛋️ みんなの居間に', `💢 ${nm(other)}とけんか中`, null], rel: 'living' }; continue; }
+      if (living) { rooms[id] = { tag: ['🛋️ みんなの居間に', `💢 ${nm(other)}と喧嘩中`, null], rel: 'living' }; continue; }
       if (r.in && w && w.place === 'home' && !w.group && w.doing !== 'sleep') rooms[id] = { ...r, after: true, door: true, bub: ['🚪 そっとして', 'おいて'], rel: 'door' };
-      else if (r.in && !r.sleep) rooms[id] = { ...r, after: true, bub: [`💢 ${nm(other)}と`, 'けんか中'], rel: 'quarrel' };
-      else if (r.tag) rooms[id] = { ...r, tag: [r.tag[0], `💢 ${nm(other)}とけんか中`, r.tag[2] || null], rel: 'quarrel' };
+      else if (r.in && !r.sleep) rooms[id] = { ...r, after: true, bub: [`💢 ${nm(other)}と`, '喧嘩中'], rel: 'quarrel' };
+      else if (r.tag) rooms[id] = { ...r, tag: [r.tag[0], `💢 ${nm(other)}と喧嘩中`, r.tag[2] || null], rel: 'quarrel' };
     }
   }
   // 仲直りしたて
@@ -72273,9 +72273,9 @@ function AssistantLifeRelSheetRow({ id, state, peerSt, onMediate, onView = null 
     const cause = assistantLifeRelCauseOf(pending.id);
     return (
       <div className="mt-1 rounded-xl border border-sky-300/50 bg-sky-950/60 px-2.5 py-1.5" data-assistant-life-rel-row="quarrel">
-        <p className="text-[11.5px] font-black text-sky-100">💢 いま {nm(other)}とけんか中{cause ? <span className="whitespace-nowrap">(原因: {cause})</span> : null}</p>
+        <p className="text-[11.5px] font-black text-sky-100">💢 いま {nm(other)}と喧嘩中{cause ? <span className="whitespace-nowrap">(原因: {cause})</span> : null}</p>
         <p className="text-[10px] font-bold leading-snug text-sky-200">{['朝4時までには、', '自分たちで', '仲直りします。', '取り持つか、', `2人に${assistantLifeRelGiftName()}を`, '渡すと、', 'すぐ仲直り'].map((x, i) => <React.Fragment key={i}>{i ? <wbr/> : null}<span className="whitespace-nowrap">{x}</span></React.Fragment>)}</p>
-        {onView && assistantLifeRelViewOf(pending.id) && <button type="button" className="mt-1.5 min-h-[44px] w-full rounded-xl border border-sky-300/60 bg-sky-500/20 text-[13px] font-black text-sky-50 active:scale-[.98]" data-assistant-life-rel-view={pending.id} onClick={() => onView(pending.id)}>💢 けんかの様子を見る</button>}
+        {onView && assistantLifeRelViewOf(pending.id) && <button type="button" className="mt-1.5 min-h-[44px] w-full rounded-xl border border-sky-300/60 bg-sky-500/20 text-[13px] font-black text-sky-50 active:scale-[.98]" data-assistant-life-rel-view={pending.id} onClick={() => onView(pending.id)}>💢 喧嘩の様子を見る</button>}
         {onMediate && <button type="button" className="mhl-btn mt-1.5 w-full" data-assistant-life-room-act="mediate" style={{ background: 'linear-gradient(90deg,#fb923c,#f472b6)' }} onClick={() => onMediate(id)}>🤝 取り持つ(無料)</button>}
       </div>);
   }
@@ -80171,9 +80171,12 @@ const monsucPopOrder = (suc, s, entrants) => {
 
 const MSC_CSS = `
 .msc-root{position:fixed;inset:0;z-index:9000;overflow-y:auto;color:#fff;background:linear-gradient(180deg,#221a44,#141026 45%);
-  padding:calc(8px + env(safe-area-inset-top)) calc(10px + env(safe-area-inset-right)) calc(10px + env(safe-area-inset-bottom)) calc(10px + env(safe-area-inset-left));font-family:inherit}
+  padding:max(calc(8px + env(safe-area-inset-top)),52px) calc(10px + env(safe-area-inset-right)) calc(10px + env(safe-area-inset-bottom)) calc(10px + env(safe-area-inset-left));font-family:inherit}
 .msc-wrap{max-width:520px;margin:0 auto;display:flex;flex-direction:column;gap:8px;min-height:100%}
 .msc-top{display:flex;align-items:center;gap:8px}
+.msc-btn:disabled{opacity:.45;cursor:default;box-shadow:none}
+.msc-btn .msc-qsub{display:block;font-size:10px;font-weight:800;line-height:1.2;margin-top:1px}
+.msc-btn.s:disabled{padding-top:5px;padding-bottom:5px}
 .msc-top b{flex:1;min-width:0;font-size:14px;color:#fde68a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .msc-btn{border:0;border-radius:999px;padding:12px 14px;font-weight:900;font-size:15px;color:#fff;background:linear-gradient(90deg,#f472b6,#fb923c);box-shadow:0 3px 0 #9d174d;cursor:pointer;min-height:44px}
 .msc-btn.y{background:#fde047;color:#3b2a05;box-shadow:0 3px 0 #a16207}
@@ -80380,7 +80383,7 @@ function MonsucBracket({ suc, s, info, result: resultProp, onFight, onResultOnly
   const r1 = bk.rounds[0] || []; const r2 = bk.rounds[1] || [];
   const fi = (bk.final && bk.final[1]) || 4; // 決勝の相手の行(4〜7)
   const out = (i) => (st >= 1 && !r1.includes(i)) || (st >= 2 && r1.includes(i) && !r2.includes(i)) || (result === 'win' && i === fi) || (result === 'lose' && i === 0);
-  const H = Math.max(36, Math.min(68, Math.floor((vh - 318) / 8))); // 行の高さ(下に大きな空きを残さない)
+  const H = Math.max(36, Math.min(68, Math.floor((vh - 345) / 8))); // 行の高さ(下に大きな空きを残さない。上の余白 52px と、結果だけ見るのボタンの副題の分も引く r1115-172)
   const yOf = (i) => i * H + H / 2;
   const X = [0, 22, 44, 66, 84]; const W = 90;
   const pair = (a, c, lv) => `M${X[lv]} ${a}H${X[lv + 1]}M${X[lv]} ${c}H${X[lv + 1]}M${X[lv + 1]} ${a}V${c}`;
@@ -80435,7 +80438,7 @@ function MonsucBracket({ suc, s, info, result: resultProp, onFight, onResultOnly
       <div className="msc-note"><b>決勝は <span className="nw">{info.meName} VS {nm(foe)}</span></b>。<span className="nw">左の数字は人気の順</span><span className="nw">(1が 一番人気)。</span><small><span className="nw">ほかの試合の結果は、</span><span className="nw">見せるだけの演出です</span><span className="nw">(戦うのは決勝の1戦だけ)</span></small></div>
       <div className="msc-talk"><img src={mscFace(s.aid)} alt=""/><p className="msx-kp">{coach ? <b style={{ display: 'block', fontSize: 11, color: '#b45309' }}>解説 {coach.name}</b> : null}{st >= 3 ? finalLine : lines[st]}</p>{st < 3 ? <button type="button" className="msc-sk" data-msc-skip onClick={() => setStage(3)}>SKIP ▸▸</button> : null}</div>
       <div className="msc-foot">
-        <button className="msc-btn y s" data-msc-quick onClick={onResultOnly}>{canSkip ? '⏩ 結果だけ見る(優勝ずみ)' : '⏩ 結果だけ見る'}</button>
+        <button className="msc-btn y s" data-msc-quick disabled={!canSkip} onClick={() => canSkip && onResultOnly()}>{canSkip ? '⏩ 結果だけ見る(優勝ずみ)' : <>⏩ 結果だけ見る<small className="msc-qsub" data-msc-quick-why>一度優勝すると使えます</small></>}</button>
         <button className="msc-btn" data-msc-go onClick={onFight}>⚔ 決勝へ</button>
       </div>
     </div>
@@ -80443,7 +80446,7 @@ function MonsucBracket({ suc, s, info, result: resultProp, onFight, onResultOnly
 }
 
 // ---- バトルカード(C2)。2体と VS・タブ・6能力の棒が伸びる ----
-function MonsucBattleCard({ suc, s, info, catalog, odds, onReady, onResultOnly, onBack }) {
+function MonsucBattleCard({ suc, s, info, catalog, odds, onReady, onResultOnly, onBack, canSkip }) {
   const [tab, setTab] = useState('st');
   const o = info.opp || {};
   const me = s.stats || {}; const op = o.stats || {};
@@ -80530,7 +80533,7 @@ function MonsucBattleCard({ suc, s, info, catalog, odds, onReady, onResultOnly, 
       </div>
       <div className="msc-hint"><img src={mscFace(s.aid)} alt=""/><span style={typeof JA_LABEL_STYLE !== 'undefined' ? JA_LABEL_STYLE : undefined}>{hint}</span></div>
       <div className="msc-foot">
-        <button className="msc-btn y s" data-msc-quick onClick={onResultOnly}>⏩ 結果だけ見る</button>
+        <button className="msc-btn y s" data-msc-quick disabled={!canSkip} onClick={() => canSkip && onResultOnly()}>⏩ 結果だけ見る{canSkip ? null : <small className="msc-qsub" data-msc-quick-why>一度優勝すると使えます</small>}</button>
         <button className="msc-btn" data-msc-ready onClick={onReady}>準備完了</button>
       </div>
     </div>
@@ -80715,8 +80718,8 @@ function MonsucCupShowInner({ suc, s, me, settle, onRematch, onNext, onClose, st
   const canSkip = typeof suc.canSkip === 'function' && suc.canSkip(s);
   let body = null;
   if (!info) body = <p className="msc-note">大会が見つかりませんでした</p>;
-  else if (phase === 'bracket') body = <MonsucBracket suc={suc} s={s} info={info} canSkip={canSkip} onClose={onClose} onFight={() => setPhase('card')} onResultOnly={() => match && finish(match.won)}/>;
-  else if (phase === 'card') body = <MonsucBattleCard suc={suc} s={s} info={info} catalog={catalog} odds={odds} onBack={() => setPhase('bracket')} onReady={() => setPhase(info.buffs || info.buffRows.length ? 'cutin' : 'match')} onResultOnly={() => match && finish(match.won)}/>;
+  else if (phase === 'bracket') body = <MonsucBracket suc={suc} s={s} info={info} canSkip={canSkip} onClose={onClose} onFight={() => setPhase('card')} onResultOnly={() => canSkip && match && finish(match.won)}/>;
+  else if (phase === 'card') body = <MonsucBattleCard suc={suc} s={s} info={info} catalog={catalog} odds={odds} canSkip={canSkip} onBack={() => setPhase('bracket')} onReady={() => setPhase(info.buffs || info.buffRows.length ? 'cutin' : 'match')} onResultOnly={() => canSkip && match && finish(match.won)}/>;
   else if (phase === 'cutin') body = <MonsucCutin s={s} info={info} onGo={() => setPhase('match')}/>;
   else if (phase === 'match') {
     const canPlay = match && match.input && engine && typeof engine.createMatch === 'function';
@@ -93043,10 +93046,14 @@ function MsxR3GameOver({ run, setRun, onPause }) {
 function MsxR3Retire({ run, setRun, onPause, debug, SUC }) {
   const s = run.s;
   const [step, setStep] = useState(() => (run.s.pts > 0 ? 'e3' : 'e0')); // 能力ポイントが残っていれば先に使う → 最終の評価
-  const [ws, setWs] = useState(s);      // 能力ポイントを使っている途中の写し
-  const [hist, setHist] = useState([]); // 「−」で戻す用
-  const wsRef = useRef(ws); wsRef.current = ws;          // 長押しで続けて振るとき、描き直しを待たず最新を読む
-  const histRef = useRef(hist); histRef.current = hist;
+  // 能力ポイント(E3)は、育成中の振り分けと同じく「押した能力の並び」を持ち、毎回 s から振り直す。
+  // 「−」はその能力を最後に押した1つだけを抜くので、あとから振った別の能力は残る。まとめて振った分も並びに積むので、そのあと個別に戻せる(r1115-172)
+  const capOfPt = (w, k) => (typeof SUC.statCapOf === 'function' ? SUC.statCapOf(w, k) : 999);
+  const replayPts = (list) => { let w = s; for (const k of list) { if (w.stats[k] >= capOfPt(w, k)) continue; const r = SUC.spendPts(w, k, 1); if (r.out.ok) w = r.state; } return w; };
+  const [ptList, setPtList] = useState([]);
+  const ptListRef = useRef(ptList); ptListRef.current = ptList; // 長押しで続けて振るとき、描き直しを待たず最新を読む
+  const setPtListNow = (list) => { ptListRef.current = list; setPtList(list); };
+  const ws = useMemo(() => replayPts(ptList), [s, ptList]); // 能力ポイントを使っている途中の写し
   const [ptUnit, setPtUnit] = useMsxPtUnit();            // 1・5・10・100・MAX(r1115-092)
   const [pick, setPick] = useState({}); // アシスト能力 { id: 段 }
   const [atab, setAtab] = useState(null); // アシストの場面のタブ(第2版・7つ)
@@ -93101,29 +93108,26 @@ function MsxR3Retire({ run, setRun, onPause, debug, SUC }) {
 
   // ---- E3 能力ポイントをまとめて使う ----
   if (step === 'e3') {
-    const capOf = (w, k) => (typeof SUC.statCapOf === 'function' ? SUC.statCapOf(w, k) : 999);
-    // 刻みの分だけ続けて振る(1回ごとに履歴へ積むので、「−」も同じ刻みで戻せる)。ポイントが足りない・上限に着いたところで止まる
+    const capOf = capOfPt;
+    // 刻みの分だけ続けて振る(1つずつ並びに積むので、「−」も同じ刻みで戻せる)。ポイントが足りない・上限に着いたところで止まる
     const spend = (k) => {
-      let w = wsRef.current; const h = histRef.current.slice(); const lim = msxPtLimit(ptUnit); let n = 0;
-      while (n < lim) { if (w.stats[k] >= capOf(w, k)) break; const r = SUC.spendPts(w, k, 1); if (!r.out.ok) break; h.push(w); w = r.state; n += 1; }
-      if (n) { wsRef.current = w; histRef.current = h; setHist(h); setWs(w); }
+      const list = ptListRef.current.slice(); let w = replayPts(list); const lim = msxPtLimit(ptUnit); let n = 0;
+      while (n < lim) { if (w.stats[k] >= capOf(w, k)) break; const r = SUC.spendPts(w, k, 1); if (!r.out.ok) break; w = r.state; list.push(k); n += 1; }
+      if (n) setPtListNow(list);
     };
     const undoK = (k) => {
-      const lim = msxPtLimit(ptUnit); let n = 0;
-      while (n < lim) {
-        const w = wsRef.current; const h = histRef.current; let hit = -1;
-        for (let i = h.length - 1; i >= 0; i--) { if (h[i].stats[k] < w.stats[k]) { hit = i; break; } }
-        if (hit < 0) break;
-        wsRef.current = h[hit]; histRef.current = h.slice(0, hit); n += 1;
-      }
-      if (n) { setWs(wsRef.current); setHist(histRef.current); }
+      const list = ptListRef.current.slice(); const lim = msxPtLimit(ptUnit); let n = 0;
+      while (n < lim) { const i = list.lastIndexOf(k); if (i < 0) break; list.splice(i, 1); n += 1; }
+      if (n) setPtListNow(list);
     };
+    // まとめて振る: いままでの振り分けを消して、1ポイントずつ並びに積み直す(結果は前と同じ。並びに残るので、あとから「−」で個別に戻せる)
     const preset = (kind) => {
-      let w = s; setHist([]);
-      if (kind === 'top') { const k = ev0.top && ev0.top[0] ? ev0.top[0] : 'pow'; w = SUC.spendPts(w, k, 9999).state; }
-      else if (kind === 'low') w = SUC.autoPts(w).state;
-      else if (kind === 'bal') { let moved = true; while (moved && w.pts > 0) { moved = false; for (const k of MSX_STATS) { const r = SUC.spendPts(w, k, 1); if (r.out.ok) { w = r.state; moved = true; } } } }
-      setWs(w);
+      let w = s; const list = [];
+      const one = (k) => { if (w.stats[k] >= capOf(w, k)) return false; const r = SUC.spendPts(w, k, 1); if (!r.out.ok) return false; w = r.state; list.push(k); return true; };
+      if (kind === 'top') { const k = ev0.top && ev0.top[0] ? ev0.top[0] : 'pow'; while (w.pts > 0 && one(k)) { /* 1つの能力に全部 */ } }
+      else if (kind === 'low') { while (w.pts > 0) { const k = MSX_STATS.slice().sort((x, y) => w.stats[x] - w.stats[y])[0]; if (!one(k)) break; } }
+      else if (kind === 'bal') { let moved = true; while (moved && w.pts > 0) { moved = false; for (const k of MSX_STATS) { if (one(k)) moved = true; } } }
+      setPtListNow(list);
     };
     const used = s.pts - ws.pts;
     const body = (<>
@@ -93137,16 +93141,16 @@ function MsxR3Retire({ run, setRun, onPause, debug, SUC }) {
         <button type="button" className="r3-chip" onClick={() => preset('top')}>全部 {MSX_STAT_NAME[(ev0.top || [])[0]] || 'ちから'}</button>
         <button type="button" className="r3-chip" onClick={() => preset('low')}>弱いところ</button>
         <button type="button" className="r3-chip" onClick={() => preset('bal')} data-msx-r3-bal>バランス</button>
-        <button type="button" className="r3-chip" onClick={() => { setWs(s); setHist([]); }}>戻す</button></div>
+        <button type="button" className="r3-chip" onClick={() => setPtListNow([])}>戻す</button></div>
       <div className="v-pa">{MSX_STATS.map((k) => {
         const add = ws.stats[k] - s.stats[k];
         return (<div key={k}><span className="nm">{MSX_STAT_ICON[k]} {MSX_STAT_NAME[k]}</span><span className="v0">{s.stats[k]}</span><span className="ad">{add ? `+${add}` : ''}</span>
-          <span className="st"><MsxPtBtn className="sym minus" aria-label={`${MSX_STAT_NAME[k]}を戻す`} disabled={!add} onPress={() => undoK(k)}/><b>{add}</b><MsxPtBtn disabled={ws.pts < SUC.ptsCost(ws, k) || ws.stats[k] >= capOf(ws, k)} onPress={() => spend(k)} data-msx-r3-plus={k} className="sym plus" aria-label={`${MSX_STAT_NAME[k]}を上げる`}/></span></div>);
+          <span className="st"><MsxPtBtn className="sym minus" aria-label={`${MSX_STAT_NAME[k]}を戻す`} disabled={!add} onPress={() => undoK(k)} data-msx-r3-ptminus={k}/><b>{add}</b><MsxPtBtn disabled={ws.pts < SUC.ptsCost(ws, k) || ws.stats[k] >= capOf(ws, k)} onPress={() => spend(k)} data-msx-r3-plus={k} className="sym plus" aria-label={`${MSX_STAT_NAME[k]}を上げる`}/></span></div>);
       })}</div>
       <div className="v-card"><div className="v-kv"><b>伸びすぎ注意</b><span>能力の上限はふつう 999(編成のモンスターで上がる)。その期の目安を超えた能力は、2ポイントで +1</span></div></div>
       <MsxSay aid={s.aid} ex="excited" text={ws.pts > 0 ? '「能力ポイントが残ってるよ! 使い切ってから、最後の評価を見よう!」' : '「使い切ったね! それじゃあ、最後の評価を見よう!」'}/>
     </>);
-    const foot = <div className="v-ft"><button type="button" onClick={() => { setWs(s); setHist([]); }}>やり直す</button><button type="button" className="go" onClick={() => { setRun({ ...run, s: ws }); setStep('e0'); }} data-msx-r3-e3>これで決める ▶</button></div>;
+    const foot = <div className="v-ft"><button type="button" onClick={() => setPtListNow([])}>やり直す</button><button type="button" className="go" onClick={() => { setRun({ ...run, s: ws }); setPtListNow([]); setStep('e0'); }} data-msx-r3-e3>これで決める ▶</button></div>;
     return <MsxR3Frame run={run} back="閉じる" onBack={onPause} right={right} body={body} foot={foot}/>;
   }
 
