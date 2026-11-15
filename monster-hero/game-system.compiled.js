@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 286f49cd6d062d25
+// source-sha256: 5aea29e728143c73
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -152498,6 +152498,7 @@ const monsucTeams = (catalog, suc, s, info) => {
   };
 };
 const MONSUC_MATCH_RULE = Object.freeze({
+  statMax: 99999,
   roundLimit: 30,
   judge: 'three',
   gutsPlan: Object.freeze({
@@ -168304,6 +168305,9 @@ const MSX_CSS = `
 .msx .v-st b{display:block;font-size:14px}
 .msx .v-st u{display:block;height:3px;border-radius:3px;background:#334155;margin:1px 5px 0;overflow:hidden;text-decoration:none}
 .msx .v-st u i{display:block;height:100%;background:linear-gradient(90deg,#f59e0b,#fb923c)}
+/* 能力の上限アップ(r1115-103): 999 を超えた分は2周目の帯を紫で重ねる */
+.msx .v-st u.ov{position:relative}
+.msx .v-st u b.ov{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,#c084fc,#f0abfc)}
 .msx .v-st em{display:block;font-style:normal;font-size:11px;font-weight:900;color:#86efac;height:14px;line-height:14px}
 .msx .v-st div.up{border-color:#fde047;background:#3b2f0b;box-shadow:0 0 8px #fde04766}.msx .v-st div.up b{color:#fde047}
 .msx .v-st div.up.main em{font-size:13px;color:#fde047}
@@ -169244,6 +169248,48 @@ const msxIsObj = v => !!v && typeof v === 'object' && !Array.isArray(v);
 const msxNum = (v, d = 0) => Number.isFinite(Number(v)) && v !== null && v !== '' ? Number(v) : d;
 const msxStr = (v, max = 40, d = '') => typeof v === 'string' ? v.slice(0, max) : d;
 const msxColors = v => Array.isArray(v) ? v.slice(0, 6).map(c => typeof c === 'string' && c.length <= 40 ? c : null) : [];
+const MSX_RUN_OVER_KEY = 'mh_monsuc_run_over_v1';
+const MSX_STAT_ABS = 99999;
+const msxRunOverOf = run => {
+  const s = msxIsObj(run) && msxIsObj(run.s) ? run.s : null;
+  if (!s || !msxIsObj(s.cap) || !msxIsObj(s.stats) || typeof s.id !== 'string') return null;
+  const over = {};
+  MSX_STATS.forEach(k => {
+    const v = Math.round(msxNum(s.stats[k], 0));
+    if (v > 999) over[k] = Math.min(MSX_STAT_ABS - 999, v - 999);
+  });
+  const cap = {};
+  MSX_STATS.forEach(k => {
+    cap[k] = Math.max(999, Math.min(MSX_STAT_ABS, Math.floor(msxNum(s.cap[k], 999))));
+  });
+  return {
+    id: s.id,
+    cap,
+    over
+  };
+};
+const msxRunOverMerge = (raw, ov) => {
+  if (!msxIsObj(raw) || !msxIsObj(raw.s) || !msxIsObj(ov) || ov.id !== raw.s.id || !msxIsObj(ov.cap)) return raw;
+  const s = {
+    ...raw.s
+  };
+  if (!msxIsObj(s.cap)) s.cap = ov.cap;
+  if (msxIsObj(s.stats) && msxIsObj(ov.over)) {
+    const st = {
+      ...s.stats
+    };
+    MSX_STATS.forEach(k => {
+      const o = Math.round(msxNum(ov.over[k], 0));
+      const v = msxNum(st[k], 0);
+      if (o > 0 && v >= 999 && v < 999 + o) st[k] = 999 + o;
+    });
+    s.stats = st;
+  }
+  return {
+    ...raw,
+    s
+  };
+};
 const msxNormRun = (raw, SUC) => {
   if (!msxIsObj(raw) || raw.v !== 1 || !msxIsObj(raw.s)) return null;
   let s = raw.s;
@@ -169316,8 +169362,13 @@ const msxCanonTechs = (techs, mast) => {
 const msxNormBoxMon = m => {
   if (!msxIsObj(m) || typeof m.id !== 'string' || typeof m.species !== 'string') return null;
   const st = {};
+  const stOver = {};
   MSX_STATS.forEach(k => {
-    st[k] = Math.max(0, Math.min(999, Math.round(msxNum(m.st && m.st[k], 0))));
+    let v = Math.max(0, Math.min(MSX_STAT_ABS, Math.round(msxNum(m.st && m.st[k], 0))));
+    const o = Math.round(msxNum(m.stOver && m.stOver[k], 0));
+    if (o > 0 && v >= 999 && v < 999 + o) v = Math.min(MSX_STAT_ABS, 999 + o);
+    st[k] = v;
+    if (v > 999) stOver[k] = v - 999;
   });
   const tm = msxCanonTechs(m.techs, m.mast);
   return {
@@ -169332,6 +169383,7 @@ const msxNormBoxMon = m => {
     nick: msxStr(m.nick, 8),
     colors: msxColors(m.colors),
     st,
+    stOver: Object.keys(stOver).length ? stOver : undefined,
     loy: Math.max(0, Math.min(100, msxNum(m.loy, 0))),
     pop: Math.max(0, Math.min(100, msxNum(m.pop, 0))),
     lv: Math.max(1, Math.min(99, msxNum(m.lv, 1))),
@@ -169571,7 +169623,8 @@ const msxTech2Backup = async (run, box) => {
   }
 };
 const msxReadAll = async SUC => {
-  const [run, box, meta, unlocked, assistRaw] = await Promise.all([storeGet(MSX_KEYS.run, null), storeGet(MSX_KEYS.box, null), storeGet(MSX_KEYS.meta, null), storeGet('mh_unlocked_monsters', null), storeGet(MSX_ASSIST_KEY, null).catch(() => null)]);
+  const [run0, box, meta, unlocked, assistRaw, runOver] = await Promise.all([storeGet(MSX_KEYS.run, null), storeGet(MSX_KEYS.box, null), storeGet(MSX_KEYS.meta, null), storeGet('mh_unlocked_monsters', null), storeGet(MSX_ASSIST_KEY, null).catch(() => null), storeGet(MSX_RUN_OVER_KEY, null).catch(() => null)]);
+  const run = msxRunOverMerge(run0, runOver);
   await msxTech2Backup(run, box);
   const all = typeof ALL_PLAYER_MONSTERS === 'object' && ALL_PLAYER_MONSTERS ? ALL_PLAYER_MONSTERS : {};
   const list = SUC && Array.isArray(SUC.speciesList) ? SUC.speciesList : Object.keys(all);
@@ -169595,6 +169648,12 @@ const msxBeatMark = run => {
 };
 let msxSaveChain = Promise.resolve();
 const msxSaveRunNow = async (run, noPay) => {
+  const ov = msxRunOverOf(run);
+  if (ov) {
+    try {
+      await storeSet(MSX_RUN_OVER_KEY, ov);
+    } catch (_) {}
+  }
   const sent = Number.isFinite(Number(run && run.beatSent)) ? Math.max(0, Math.floor(Number(run.beatSent))) : 0;
   if (noPay || !sent || typeof saveStoredValuesOrRollback !== 'function' || typeof loadRhythmEventPoints !== 'function' || typeof RHYTHM_EVENT_POINTS_KEY === 'undefined') return storeSet(MSX_KEYS.run, run);
   const stored = await storeGet(MSX_KEYS.run, null);
@@ -171649,6 +171708,7 @@ function MsxStart({
       if (m.startAdd && m.startAdd.v > 0) startAdd[m.startAdd.stat] = (startAdd[m.startAdd.stat] || 0) + m.startAdd.v;
     });
     const name = nick || msxMonName(species).slice(0, MSX_NAME_MAX);
+    const capUp = typeof SUC.capOfTeam === 'function' ? Object.entries(SUC.capOfTeam(members)).filter(([, v]) => v > 999) : [];
     body = React.createElement(React.Fragment, null, React.createElement("div", {
       className: "v-h"
     }, "これで 始める?", React.createElement("small", null, "全46ターン・1回 約8〜15分。いつでも中断して続きから")), React.createElement("div", {
@@ -171757,7 +171817,12 @@ function MsxStart({
       className: "v-sum"
     }, React.createElement("span", {
       className: "k"
-    }, "初めの上乗せ"), React.createElement("span", null, Object.keys(startAdd).length ? `編成から ${Object.entries(startAdd).map(([k, v]) => `${MSX_STAT_NAME[k]} +${v}`).join('・')}` : '編成からの上乗せなし')), React.createElement("button", {
+    }, "初めの上乗せ"), React.createElement("span", null, Object.keys(startAdd).length ? `編成から ${Object.entries(startAdd).map(([k, v]) => `${MSX_STAT_NAME[k]} +${v}`).join('・')}` : '編成からの上乗せなし')), capUp.length ? React.createElement("div", {
+      className: "v-sum",
+      "data-msx-start-cap": true
+    }, React.createElement("span", {
+      className: "k"
+    }, "能力の上限"), React.createElement("span", null, capUp.map(([k, v]) => `${MSX_STAT_NAME[k]} ${v.toLocaleString()}`).join('・'))) : null, React.createElement("button", {
       type: "button",
       className: "v-big",
       onClick: start
@@ -172380,7 +172445,8 @@ function MsxStRow({
     const after = stats[k];
     const before = Math.max(0, after - (grow ? u : 0));
     const span = Math.max(60, Math.ceil(Math.abs(u) * 2.6 / 10) * 10);
-    const lo = Math.max(0, Math.min(999 - span, Math.floor((Math.max(after, before) - span * 0.82) / 10) * 10));
+    const top = Math.max(999, Math.ceil(Math.max(after, before) / 10) * 10 + 10);
+    const lo = Math.max(0, Math.min(top - span, Math.floor((Math.max(after, before) - span * 0.82) / 10) * 10));
     const zp = n => zoomS && u ? `${Math.max(0, Math.min(100, (n - lo) / span * 100))}%` : pct(n);
     const tick = zoomS && u ? {
       backgroundSize: `${1000 / span}% 100%`
@@ -172412,11 +172478,19 @@ function MsxStRow({
       }
     }), zoomS ? React.createElement("q", {
       className: "zl"
-    }, React.createElement("span", null, lo), React.createElement("span", null, lo + span)) : null) : React.createElement("u", null, React.createElement("i", {
+    }, React.createElement("span", null, lo), React.createElement("span", null, lo + span)) : null) : React.createElement("u", {
+      className: after > 999 ? 'ov' : undefined
+    }, React.createElement("i", {
       style: {
         width: pct(after)
       }
-    })), ups ? React.createElement("em", null, u > 0 ? `+${u}` : u < 0 ? `−${-u}` : '') : null);
+    }), after > 999 ? React.createElement("b", {
+      className: "ov",
+      "data-msx-stat-over": after - 999,
+      style: {
+        width: pct(after - 999)
+      }
+    }) : null), ups ? React.createElement("em", null, u > 0 ? `+${u}` : u < 0 ? `−${-u}` : '') : null);
   }));
 }
 function MsxPf({
@@ -174849,6 +174923,7 @@ function MsxStats({
     setDraft([]);
   };
   const used = s.pts - ws.pts;
+  const capK = k => typeof SUC.capOf === 'function' ? SUC.capOf(s, k) : 999;
   const lineOf = SUC.PTS && SUC.PTS.line ? SUC.PTS.line[SUC.periodOf(s.turn).key] : null;
   const own = typeof SUC.techsOf === 'function' ? SUC.techsOf(s.species) : [];
   const techs = (Array.isArray(s.techs) ? s.techs : []).map(id => own.find(t => t && t.id === id)).filter(Boolean);
@@ -174917,7 +174992,12 @@ function MsxStats({
         fontSize: 10,
         color: over ? '#fbbf24' : '#94a3b8'
       }
-    }, over ? '目安超え・2点で +1' : '1点で +1')), React.createElement("span", {
+    }, over ? '目安超え・2点で +1' : '1点で +1', capK(k) > 999 ? React.createElement("span", {
+      "data-msx-cap": k,
+      style: {
+        color: '#f0abfc'
+      }
+    }, "・上限 ", capK(k).toLocaleString()) : null)), React.createElement("span", {
       style: {
         fontSize: 12,
         fontWeight: 900,
@@ -179412,7 +179492,7 @@ function MsxR3Retire({
         onClick: () => undoK(k)
       }, "−"), React.createElement("b", null, add), React.createElement("button", {
         type: "button",
-        disabled: ws.pts < SUC.ptsCost(ws, k) || ws.stats[k] >= 999,
+        disabled: ws.pts < SUC.ptsCost(ws, k) || ws.stats[k] >= (typeof SUC.capOf === 'function' ? SUC.capOf(ws, k) : 999),
         onClick: () => spend(k),
         "data-msx-r3-plus": k
       }, "＋")));
@@ -179420,7 +179500,7 @@ function MsxR3Retire({
       className: "v-card"
     }, React.createElement("div", {
       className: "v-kv"
-    }, React.createElement("b", null, "伸びすぎ注意"), React.createElement("span", null, "能力は 999 まで。その期の目安を超えた能力は、2ポイントで +1"))), React.createElement(MsxSay, {
+    }, React.createElement("b", null, "伸びすぎ注意"), React.createElement("span", null, "能力の上限はふつう 999(編成のモンスターで上がる)。その期の目安を超えた能力は、2ポイントで +1"))), React.createElement(MsxSay, {
       aid: s.aid,
       ex: "excited",
       text: ws.pts > 0 ? '「能力ポイントが残ってるよ! 使い切ってから、最後の評価を見よう!」' : '「使い切ったね! それじゃあ、最後の評価を見よう!」'
@@ -181516,7 +181596,7 @@ const monsucLendPayloadOf = child => {
   for (const k of MONSUC_LEND_STAT_KEYS) {
     const v = Number(st[k]);
     if (!Number.isFinite(v)) return null;
-    stats[k] = Math.max(0, Math.min(999, Math.round(v)));
+    stats[k] = Math.max(0, Math.min(99999, Math.round(v)));
   }
   const picks = c.asp && c.asp.picks && typeof c.asp.picks === 'object' && !Array.isArray(c.asp.picks) ? c.asp.picks : {};
   let assists = Object.entries(picks).filter(([, lv]) => Number.isInteger(lv) && lv >= 1 && lv <= 3).slice(0, 4).map(([id, lv]) => ({
@@ -181548,7 +181628,7 @@ const monsucLendMember = (row, SUC) => {
   for (const k of MONSUC_LEND_STAT_KEYS) {
     const v = Number(st[k]);
     if (!Number.isFinite(v)) return null;
-    stats[k] = Math.max(0, Math.min(999, Math.round(v)));
+    stats[k] = Math.max(0, Math.min(99999, Math.round(v)));
   }
   let assists = [];
   const list = Array.isArray(m.assists) ? m.assists : [];
@@ -184471,7 +184551,7 @@ const monsucRankRowOf = ({
   const st = run.stats && typeof run.stats === 'object' ? run.stats : {};
   const stats = {};
   MONSUC_RANK_STAT_KEYS.forEach(k => {
-    stats[k] = monsucRankClamp(Math.round(monsucRankNum(st[k])), 0, 999);
+    stats[k] = monsucRankClamp(Math.round(monsucRankNum(st[k])), 0, 99999);
   });
   const rows = ev && Array.isArray(ev.techRows) ? ev.techRows : null;
   const techs = rows ? rows.slice(0, 99).map(x => ({

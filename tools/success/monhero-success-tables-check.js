@@ -30,7 +30,7 @@ for (const id of Object.keys(core)) {
 }
 ok(AS.VERSION === 3, '表の版が3でない');
 ok(AS.LIST.length >= 60 && AS.LIST.length <= 80, `アシスト効果の数が60〜80でない(社長 2026-11-14「使えそうなのは全部」): ${AS.LIST.length}`);
-ok(AS.LIST.filter(a => a.ref).length >= 40 && AS.LIST.filter(a => !a.ref).length === 22, `参考から/オリジナルの数がおかしい: ${AS.LIST.filter(a => a.ref).length} / ${AS.LIST.filter(a => !a.ref).length}`);
+ok(AS.LIST.filter(a => a.ref).length >= 40 && AS.LIST.filter(a => !a.ref).length === 23,`参考から/オリジナルの数がおかしい: ${AS.LIST.filter(a => a.ref).length} / ${AS.LIST.filter(a => !a.ref).length}`); // 23 = 22 + 🔓上限アップブースト(r1115-103)
 const V2_IDS = ['sokoji', 'kizuna', 'atooshi', 'hirameki', 'ochitsuki', 'itawari', 'miharu', 'kibarashi', 'kunpow', 'kunwise', 'kunhit', 'kuneva', 'kuntough', 'kunlife',
   'kaketsuke', 'hitonatsu', 'shitashi', 'nakayoshi', 'tagpow', 'shitsuke', 'gussuri', 'asobi', 'kuishinbo', 'tsukisoi', 'genki', 'tairyoku', 'shugyo',
   'shokin', 'kokoroe', 'ticket', 'rivaldamashii', 'ninki', 'yobimizu', 'mejirushi', 'joshu', 'gatsu', 'miseba', 'mitate', 'kensho', 'mimamori'];

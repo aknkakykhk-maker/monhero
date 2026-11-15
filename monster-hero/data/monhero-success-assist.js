@@ -58,7 +58,7 @@
     shitashi: ['val', 'このモンスターの初めの親密度 {v}'], tagpow: ['grow', 'このモンスターが友情タッグになったとき、タッグの強さ {v}'],
     hitonatsu: ['mul', ST + 'みんなの親密度の上がり {v}(このモンスターの初めの親密度も +{start})'], nakayoshi: ['val', T1 + 'このモンスターの親密度の上がり {v}'],
     shitsuke: ['mul', ST + '褒める・叱るで上がる忠誠度 {v}'],
-    shoki: ['val', ST + '育成の初めの6つの能力 {v}'], ticket0: ['cnt', ST + '育成の初めの修行チケット {v}', '枚'], tairyoku: ['val', ST + '育成の初めの体力の上限 {v}'],
+    shoki: ['val', ST + '育成の初めの6つの能力 {v}'], genkai: ['rate', ST + '編成のモンスターが上げる能力の上限 {v}(はじめは20%)'], ticket0: ['cnt', ST + '育成の初めの修行チケット {v}', '枚'], tairyoku: ['val', ST + '育成の初めの体力の上限 {v}'],
     kuishinbo: ['mul', ST + '大会のあとのごはんの効き目 {v}'],
     trchance: ['rate', ST + '遊んだとき「ひらめき」(次のトレーニングの大成功の確率 +10%)になる確率 {v}'],
     shchance: ['rate', ST + '遊んだとき「修行の気合い」(次の修行で上がる能力 +20%)になる確率 {v}'],
@@ -128,6 +128,8 @@
 
   // ---- はじめ ----
   add({ id: 'shoki', icon: '🌅', name: '初期ステータスアップ', type: 'stay', scene: 'start', unit: 5, max: 10, pt: 7, u: '', text: '編成にいるだけで、育てる子の6つの能力が初めから +{v}' });
+  // 🔓上限アップブースト(2026-11-15 社長・r1115-103/105): 編成の子が上げる能力の上限の割合(はじめ 20%)に足す。いるだけ型(編成でいちばん高い1つ)
+  add({ id: 'genkai', icon: '🔓', name: '上限アップブースト', ref: false, type: 'stay', scene: 'start', unit: 1, max: 10, pt: 6, u: '%', text: '編成にいるだけで、編成のモンスターが上げる能力の上限の割合が +{v}%(はじめは20%)' });
   add({ id: 'ticket0', icon: '🎟', name: '修行チケットボーナス', type: 'stay', scene: 'start', unit: 1, max: 1, pt: 40, u: '枚', text: '編成にいるだけで、育成のはじめに修行チケットが +{v}枚' });
   add({ id: 'tairyoku', icon: '🔋', name: '体力自慢', ref: false, type: 'stay', scene: 'start', unit: 2, max: 10, pt: 4, u: '', v2: [4, 8, 12, 16, 20], text: '編成にいるだけで、育てる子の体力の上限が初めから +{v}' });
 

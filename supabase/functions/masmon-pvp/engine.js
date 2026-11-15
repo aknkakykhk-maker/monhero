@@ -58,6 +58,10 @@ const __mod = { exports: {} };
   const DEF_SAME_KIND = 0.45;  // 受ける技と同じ種類の能力の、防ぎの効き目(丈夫さ 0.9 の半分。版5)
   const STAT_KEYS = ['life', 'pow', 'wise', 'hit', 'eva', 'tough'];
   const STAT_MAX = 999;
+  // モンサクの能力の上限アップ(2026-11-15 r1115-103): モンサクの試合だけ statMax(入力のいちばん上)で 999 を超えて読む。渡さなければ今までと同じ 999。
+  //   サーバ(masmon-pvp)は statMax を渡さない=今までと同じ。ガードの効き(丈夫さ ÷999)は能力が 999 を超えても今の式のまま
+  const STAT_MAX_RULE = 99999;
+  const GUARD_TOUGH_REF = 999;
   const DIST_NAMES = ['零', '近', '中', '遠'];
   const DIST_START = 2; // 種が無いときの始まりの距離(中)。ふつうは種で 近・中 のどちらか(得意な距離の有利を片寄らせない)
   const GRADES = ['G', 'F', 'E', 'D', 'C', 'B', 'A', 'S', 'S+', 'SS', 'SS+', 'M'];
@@ -335,7 +339,7 @@ const __mod = { exports: {} };
     for (let i = 3; i >= 0 && ms > APT_UP_LIMITS.mMax; i--) if (res[i] === 'M' && (up[i] || 0) > 0) { res[i] = 'SS+'; ms--; }
     return res;
   };
-  const normalizeUnit = (u, catalog) => {
+  const normalizeUnit = (u, catalog, statMax = STAT_MAX) => {
     const src = u && typeof u === 'object' ? u : {};
     const ids = Object.keys(catalog.species);
     const species = catalog.species[src.species] ? src.species : ids[0];
@@ -343,7 +347,7 @@ const __mod = { exports: {} };
     // 能力は stats でも st(育成の入れ物 mh_assistant_masmon_grow_v1 の形)でもよい
     const raw = src.stats && typeof src.stats === 'object' ? src.stats : src.st;
     const ss = raw && typeof raw === 'object' ? raw : {};
-    for (const k of STAT_KEYS) stats[k] = toInt(ss[k], 0, STAT_MAX, 100);
+    for (const k of STAT_KEYS) stats[k] = toInt(ss[k], 0, statMax, 100);
     const lv = toInt(src.lv, 1, LV_MAX, 1);
     // 覚えている技(無ければその種の全部)・熟練(技 id ごと+guard・dist・swap。無ければ 0)
     const techs = Array.isArray(src.techs) ? src.techs.filter(x => typeof x === 'string') : null;
@@ -358,9 +362,9 @@ const __mod = { exports: {} };
     const techBoost = normTechBoost(src.techBoost, catalog.species[species].techs.map(t => t.id).filter(id => known.includes(id)));
     return { species, name: typeof src.name === 'string' && src.name ? src.name.slice(0, 24) : catalog.species[species].name, lv, stats, techs, mastery, loy, pop, aptUp, techBoost };
   };
-  const normalizeTeam = (t, catalog) => {
+  const normalizeTeam = (t, catalog, statMax = STAT_MAX) => {
     const src = t && typeof t === 'object' ? t : {};
-    const list = (Array.isArray(src.members) ? src.members : []).slice(0, TEAM_MAX).map(u => normalizeUnit(u, catalog));
+    const list = (Array.isArray(src.members) ? src.members : []).slice(0, TEAM_MAX).map(u => normalizeUnit(u, catalog, statMax));
     if (!list.length) throw new Error('assistant-masmon-battle: members が空');
     return {
       assistantId: typeof src.assistantId === 'string' ? src.assistantId : 'atsu',
@@ -411,7 +415,7 @@ const __mod = { exports: {} };
       * (defU.taken || 1); // 受ける側の移動速度(速いほど多く受ける)
     return atk * def * mv.power;
   };
-  const guardCut = (u) => clamp(0.35 + u.stats.tough / STAT_MAX * 0.25, 0.35, 0.6) + (u.mastery ? u.mastery.guard : 0) / 100 * MASTERY_GUARD_ADD;
+  const guardCut = (u) => clamp(0.35 + u.stats.tough / GUARD_TOUGH_REF * 0.25, 0.35, 0.6) + (u.mastery ? u.mastery.guard : 0) / 100 * MASTERY_GUARD_ADD;
   const canUse = (u, mv, dist) => mv.dist.includes(dist) && u.guts >= mv.guts;
   const inRange = (mv, dist) => mv.dist.includes(dist);
   const expected = (atkU, defU, mv, dist, guarded, g) => {
@@ -571,8 +575,9 @@ const __mod = { exports: {} };
 
   // 対戦の初めの状態(検査からも使う)
   const setupState = (inp, catalog) => {
+    const statMax = inp && inp.statMax != null ? toInt(inp.statMax, STAT_MAX, STAT_MAX_RULE, STAT_MAX) : STAT_MAX;
     const mkTeam = (t) => {
-      const nt = normalizeTeam(t, catalog);
+      const nt = normalizeTeam(t, catalog, statMax);
       return {
         assistantId: nt.assistantId, tactics: nt.tactics, plan: nt.plan, swapPace: nt.swapPace, style: nt.style, active: 0,
         units: nt.members.map(m => {
@@ -1022,7 +1027,7 @@ const __mod = { exports: {} };
   const api = Object.freeze({
     // 芯が持っている口の印(呼ぶ側が古い芯を見分ける。モンサクは techBoost があるときだけ渡す)
     FEATURES: Object.freeze({ techBoost: true }),
-    VERSION, VERSION_PLAIN, STAT_KEYS, STAT_MAX, DIST_NAMES, TEAM_MAX, GUTS_MAX, GUTS_REGEN_MIN, GUTS_REGEN_MAX, GUTS_REGEN_GRADES, GUTS_REGEN_GRADES_UP, SPECIES_TRAITS, MOVE_SPEED_FIRST, MOVE_SPEED_TAKEN, APT_UP_LIMITS, SIZE_SMALL_EVADE, APT_DMG, APT_DEF, APT_HIT, APT_EVA, APT_ABOVE_A, SIZE_LARGE_CUT, GUTS_CHARGE, GUTS_MOVE, REGEN_DMG_SWING, ROUND_LIMIT, STYLES, TECH_LIMITS,
+    VERSION, VERSION_PLAIN, STAT_KEYS, STAT_MAX, STAT_MAX_RULE, DIST_NAMES, TEAM_MAX, GUTS_MAX, GUTS_REGEN_MIN, GUTS_REGEN_MAX, GUTS_REGEN_GRADES, GUTS_REGEN_GRADES_UP, SPECIES_TRAITS, MOVE_SPEED_FIRST, MOVE_SPEED_TAKEN, APT_UP_LIMITS, SIZE_SMALL_EVADE, APT_DMG, APT_DEF, APT_HIT, APT_EVA, APT_ABOVE_A, SIZE_LARGE_CUT, GUTS_CHARGE, GUTS_MOVE, REGEN_DMG_SWING, ROUND_LIMIT, STYLES, TECH_LIMITS,
     HIT_STAT_A, HIT_STAT_C, HIT_GUTS, HIT_TECH_STEP, HIT_MIN, HIT_MAX, DMG_ALL, techHitPreview,
     MASTERY_HIT_MAX, MASTERY_GUTS_CUT, MASTERY_GUARD_ADD, TECH_BOOST_LIMITS, BALANCE, PLANS, SWAP_PACES, STYLE_RANGE,
     LV_MAX, BUFF_LIMITS, RULE_LIMITS, unitTraits, normTechBoost, buildCatalog, simulate, hitPreviewer, createMatch, replay, firstAction, unitFromGrow, makeRng, hashSeed,

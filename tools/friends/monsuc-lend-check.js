@@ -43,7 +43,7 @@ const check = (label, ok, detail) => {
   const p = (m) => lend.parseLend(m, catalog, core.nameProblem);
   check('A ふつうの子は通る', !p(good).error && p(good).mon.assists.length === 1);
   check('A 中身は 6能力・種・名前・色・型・アシストだけ', Object.keys(p({ ...good, rank: 'M', bonus: { pow: 99 }, power: 99999 }).mon).sort().join() === 'assists,colors,name,species,stats,type');
-  check('A 能力 1000 は断る', p({ ...good, stats: { ...good.stats, pow: 1000 } }).error === 'stats');
+  check('A 能力 1000〜99999 は受ける・100000 は断る(上限アップ r1115-103)', p({ ...good, stats: { ...good.stats, pow: 1000 } }).mon && p({ ...good, stats: { ...good.stats, pow: 99999 } }).mon && p({ ...good, stats: { ...good.stats, pow: 100000 } }).error === 'stats');
   check('A 能力が小数・文字は断る', p({ ...good, stats: { ...good.stats, pow: 1.5 } }).error === 'stats' && p({ ...good, stats: { ...good.stats, pow: '9' } }).error === 'stats');
   check('A 知らない種は断る', p({ ...good, species: 'NoSuchMon' }).error === 'species');
   check('A アシスト9種類・同じ id 2つ・目盛り26・0・n が小数・知らない id は断る(第3版 2026-11-14: 8種類・目盛り25まで)', [
@@ -83,7 +83,7 @@ const check = (label, ok, detail) => {
   check('B 貸し出しの子を置ける', r.status === 200 && db.lends.B && db.lends.B.active && db.lends.B.mon.name === 'テスト', JSON.stringify(r.json));
   r = await h({ action: 'lend_set', owner: 'B', key: KEY_A, mon: good });
   check('B 鍵がちがうと置き直せない(locked)', r.status === 403 && r.json.error === 'locked');
-  r = await h({ action: 'lend_set', owner: 'B', key: KEY_B, mon: { ...good, stats: { ...good.stats, pow: 5000 } } });
+  r = await h({ action: 'lend_set', owner: 'B', key: KEY_B, mon: { ...good, stats: { ...good.stats, pow: 100000 } } });
   check('B 形が悪い子は置けない', r.status === 400 && r.json.error === 'mon');
   await h({ action: 'lend_set', owner: 'C', key: KEY_C, mon: good });
   await h({ action: 'lend_set', owner: 'D', key: KEY_D, mon: good });
