@@ -40,6 +40,18 @@ const useMsxSeen = () => {
 };
 
 // ---- 効果の文(芯の出来事の表 fx から作る。数は表のまま・能力は小/中/大) ----
+// 能力の上がり幅(r1115-145 社長「数値でわかるように」): 核の物差し(BASE.light × 素質の倍率 × 年齢の倍率 × 大きさ 0.5/1/2)から読む。手で書き写さない。
+//   年齢の倍率は成長の型で変わる。型「普通」・素質C の子が、育成の全期間で受ける幅を「+4〜8」の形で出す(目安)
+const msxFxStatRange = (size) => {
+  try {
+    const SUC = msxSuc.SUC; const C = typeof MASMON_CALC !== 'undefined' ? MASMON_CALC : null; if (!SUC || !SUC.BASE || !C) return '';
+    const type = 2; const v = [];
+    for (let i = 0; i < 10; i++) v.push(SUC.BASE.light * (Number(size) || 0) * C.ageMult(type, i / 10 + 0.01));
+    const lo = Math.max(1, Math.round(Math.min(...v))); const hi = Math.max(lo, Math.round(Math.max(...v)));
+    return lo === hi ? `+${lo}` : `+${lo}〜${hi}`;
+  } catch (e) { return ''; }
+};
+const MSX_FX_NOTE = '能力の上がり幅は、型「普通」・素質Cのモンスターの目安(育成の時期で変わります)';
 const MSX_FX_SIZE = (n) => (n >= 2 ? '大' : n >= 1 ? '中' : '小');
 const MSX_FX_TARGET = Object.freeze({ main: '得意の能力', all: '全能力', rand: 'どれかの能力', cheer: '編成のモンスターの得意な能力', type: 'タイプの得意な能力' });
 const MSX_FX_FLAG = Object.freeze({ guts: '次の大会でガッツ +', goalPlus: '期の目標のごほうびアップ', baseBoost: 'ベースモンの効きアップ', injRisk: 'けがをしやすくなる', fav: '好きなトレーニングができる', tagSeen: '友情タッグに目ざめる' });
@@ -48,18 +60,18 @@ const msxSigned = (n) => (n > 0 ? `+${n}` : `−${Math.abs(n)}`);
 const msxFxText = (f) => {
   if (!Array.isArray(f)) return '';
   const [k, a, b] = f; const BUFFS = msxSuc && msxSuc.SUC && msxSuc.SUC.events ? msxSuc.SUC.events.BUFFS || {} : {};
-  if (k === 'st') return `${(typeof MSX_STAT_NAME !== 'undefined' && MSX_STAT_NAME[a]) || MSX_FX_TARGET[a] || '能力'} ${MSX_FX_SIZE(Number(b) || 0)}アップ`;
-  if (k === 'loy') return `忠誠 ${a > 0 ? '+' : '−'}`;
-  if (k === 'fear') return '恐れ度 +';
+  if (k === 'st') { const r = msxFxStatRange(b); return `${(typeof MSX_STAT_NAME !== 'undefined' && MSX_STAT_NAME[a]) || MSX_FX_TARGET[a] || '能力'} ${r || `${MSX_FX_SIZE(Number(b) || 0)}アップ`}`; }
+  if (k === 'loy') return `忠誠度 ${msxSigned(Number(a) || 0)}`;
+  if (k === 'fear') return `恐れ度 ${msxSigned(Number(a) || 0)}`;
   if (k === 'pop') return `人気 ${msxSigned(a)}`;
   if (k === 'popHi') return `人気 ${msxSigned(a)}(人気60〜のとき)`;
-  if (k === 'hp') return `体力 ${msxSigned(a)}`;
+  if (k === 'hp') return `体力 ${msxSigned(a)}%(最大の)`;
   if (k === 'str') return `ストレス ${msxSigned(a)}`;
   if (k === 'bond') return `${a === 'aid' ? '助手' : a === 'team' ? '編成みんな' : '編成のモンスター'}の親密度 ${msxSigned(b)}`;
   if (k === 'buff') return BUFFS[a] ? `${BUFFS[a].icon} ${BUFFS[a].name}` : 'いい調子になる';
   if (k === 'fame') return `賞金 ${msxSigned(a)}G`;
   if (k === 'pts') return `能力ポイント ${msxSigned(a)}`;
-  if (k === 'mas') return '技の熟練 +';
+  if (k === 'mas') return `技の熟練 ${msxSigned(Number(a) || 0)}`;
   if (k === 'flag') return MSX_FX_FLAG[a] || 'いいことがある';
   if (k === 'goal') return MSX_FX_GOAL[a] || '期の目標を決める';
   if (k === 'apt') return a === 'low' ? '一番低い間合い適性 +1段' : '一番高い間合い適性 +1段';
@@ -80,13 +92,14 @@ const msxChoiceLines = (ch) => {
 // 表の出来事の選択肢(無ければ null)
 const msxEvChoice = (evId, c) => { const E = msxSuc && msxSuc.SUC && msxSuc.SUC.events; const e = E && E.BY_ID ? E.BY_ID[evId] : null; return e && e.ch ? (e.ch[c] || (c === 'a' && e.ch.fx ? e.ch : null)) : null; };
 
+const msxChoiceNoteSrc = (open, ev0, chOf) => chOf(open).map((c) => (open.ep != null || String(open.id).startsWith('story.') || open.id === 'issa' ? '' : msxChoiceLines(msxEvChoice(open.id, c)).join(' '))).join(' ');
 function MsxChoiceInfo({ evId, c, open }) {
   msxDexEnsureCss();
   const seen = useMsxSeen();
   if (!open) return null;
   const known = Boolean(seen.ch[`${evId}.${c}`]);
   const lines = known ? (String(evId).startsWith('story.') ? ['お話の続きが変わる'] : msxChoiceLines(msxEvChoice(evId, c))) : ['？？？'];
-  return <div className="msx-chinfo" data-msx-chinfo={known ? 'known' : 'unknown'}>{lines.map((l, i) => <div key={i}>{l}</div>)}{known ? null : <small>一度選ぶと、効果が分かるようになる</small>}</div>;
+  return <div className="msx-chinfo" data-msx-chinfo={known ? 'known' : 'unknown'}>{lines.map((l, i) => <div key={i}>{l}</div>)}{known ? null : <small>一度選ぶと、効果が分かるようになる</small>}{known && lines.some((l) => /\+\d+〜?\d*/.test(l) && /(ライフ|ちから|かしこさ|命中|回避|丈夫さ|能力)/.test(l)) ? <small>{MSX_FX_NOTE}</small> : null}</div>;
 }
 
 // ---- 図鑑の中身(タブと出来事の並び) ----
@@ -158,13 +171,14 @@ function MsxDex({ aid = 'mua', nick = '', onClose }) {
           <button type="button" key={a} className={a === pickAid ? 'on' : ''} onClick={() => { setPickAid(a); setOpen(null); }}>{typeof msxFace === 'function' ? <img src={msxFace(a, 'normal')} alt=""/> : null}{typeof msxAidName === 'function' ? msxAidName(a) : a}<small>{L.filter((x) => seen.ev[x.id]).length}/{L.length}</small></button>); })}</div> : null}
         {open ? (
           <div className="msx-dex-read" data-msx-dex-read={open.id}>
-            <div className="h"><b>{open.title}</b><button type="button" className="chip" onClick={() => setOpen(null)}>← 一覧へ</button></div>
+            <div className="h"><b>{open.title}</b><button type="button" className="chip" onClick={() => setOpen(null)} data-msx-dex-back>← 戻る</button></div>
             {open.awake ? <div className="ln">{open.awake === 2 ? '覚醒したあと、さらに虹色の光に包まれて、全能力 +40・間合い適性が2つ上がった。' : 'まぶしい光に包まれて、全能力 +30・一番高い間合い適性が上がった。'}</div> : null}
             {aw && aw.t ? <div className="ln"><span className="who">{typeof msxAidName === 'function' ? msxAidName(readAid) : ''}</span>「{aw.t}」</div> : null}
             {open.id === 'issa' ? <div className="ln">夜の町に、のびのび装置を持ったイッサ博士があらわれた。成功すれば大きく強くなれるが、失敗すると…。</div> : null}
             {ev0 ? ev0.lines.slice(0, 8).map((l, i) => <div key={i} className="ln">{who(l) ? <span className="who">{who(l)}</span> : null}{who(l) ? `「${l.t}」` : l.t}</div>) : null}
             {chOf(open).length ? <div className="chs">{chOf(open).map((c) => { const t = ev0 && ev0.choices ? (ev0.choices.find((x) => x.c === c) || {}).t : open.id === 'issa' ? ((MSX_ISSA_KEYS.find((k) => k.key === c) || {}).name || c) : c; const known = Boolean(seen.ch[`${open.id}.${c}`]); return (
               <div key={c} className="ch"><b>{known ? t : '？？？'}</b><span>{known ? (open.id === 'issa' ? (() => { const k = MSX_ISSA_KEYS.find((x) => x.key === c) || {}; return `⭕ ${k.ok} / ❌ ${k.ng}`; })() : open.ep != null ? 'お話の続きが変わる' : msxChoiceLines(msxEvChoice(open.id, c)).join(' / ')) : 'まだ選んだことがない'}</span></div>); })}</div> : null}
+            {chOf(open).length && /\+\d+〜\d+/.test(String(msxChoiceNoteSrc(open, ev0, chOf))) ? <div className="msx-note" style={{ fontSize: 10 }}>{MSX_FX_NOTE}</div> : null}
           </div>
         ) : (
           <div className="msx-dex-list">{rows.length ? rows.map((x) => { const known = Boolean(seen.ev[x.id]); return (

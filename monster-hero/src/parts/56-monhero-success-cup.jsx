@@ -57,9 +57,9 @@ const monsucLossWhy = (log, meName) => {
   for (const e of log) {
     if (!e || !e.ev) continue;
     if (e.side === 'A') {
-      if (e.ev === 'tech' || e.ev === 'guard' || e.ev === 'charge' || (e.ev === 'move' && e.why !== 'techMove')) acts++;
+      if (e.ev === 'tech' || e.ev === 'guard' || e.ev === 'charge' || e.ev === 'blow' || (e.ev === 'move' && e.why !== 'techMove' && e.why !== 'blown')) acts++;
       if (e.ev === 'charge' && e.why === 'sulk') sulk++;
-      if (e.ev === 'move' && e.why !== 'techMove' && Number.isInteger(e.to) && Number.isInteger(e.step) && !reach(e.i || 0, e.to - e.step)) stuck++;
+      if (e.ev === 'move' && e.why !== 'techMove' && e.why !== 'blown' && Number.isInteger(e.to) && Number.isInteger(e.step) && !reach(e.i || 0, e.to - e.step)) stuck++;
       if (e.ev === 'tech') { tries++; if (e.hit) hits++; }
     } else if (e.side === 'B' && e.ev === 'tech' && e.hit && e.name) foe[e.name] = (foe[e.name] || 0) + 1;
   }
@@ -169,8 +169,9 @@ const monsucTeams = (catalog, suc, s, info) => {
   return { teamA: { assistantId: s.aid, tactics: tac, members: [mine] }, teamB: { assistantId: 'atsu', tactics: tac, members: [foe] } };
 };
 
-// モンサクの試合の打ち切り(2026-11-15 r1115-058): 30ターンで判定(残ライフ%・与えたダメージ・消費ガッツの3つの比べ)。助手のマスモン対戦には渡さない
-const MONSUC_MATCH_RULE = Object.freeze({ statMax: 99999, roundLimit: 30, judge: 'three', gutsPlan: Object.freeze({ regen: 0.5, move: 0.5, charge: 0.5 }) });
+// モンサクの試合の決まり: 版10から全部の試合と同じ(1体30ターン・3つの比べの判定・自動ガッツ回復0.75倍・ためた番16。r1115-111・133)。
+//   モンサクの大会だけ、完全な同点は自分の負け(judgeTie:'B'・r1115-113)。能力の上限アップ(statMax・r1115-103)はモンサクだけ
+const MONSUC_MATCH_RULE = Object.freeze({ statMax: 99999, judgeTie: 'B' });
 // 試合を1戦だけ回す(画面なし)。結果だけ見る・スキップ・観戦のどれでも同じ記録になる
 const monsucCupMatch = (engine, catalog, suc, s, me, info0) => {
   const info = info0 || monsucCupInfo(suc, s, me);   // info0: 入れ物が opp・title を上書きした値(相手の忠誠度・人気をそろえる)

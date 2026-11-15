@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: fbc4eac89aa1c591
+// generated-sha256: b9fb928bf2c84e90
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -67710,6 +67710,7 @@ const ASSISTANT_LIFE_HOUSE_CSS = `
 // 開いたトップの家(grid4)は、縦でも部屋の中を横の決まりで描く(横の決まりの行を写して、印だけ data-assistant-life-grid4 に替える)
 const ASSISTANT_LIFE_GRID4_CSS = ASSISTANT_LIFE_HOUSE_CSS.split('\n').filter(l => /^\[data-assistant-life-land="1"\] \.mhl-(room|board)/.test(l)).join('\n').split('[data-assistant-life-land="1"]').join('[data-assistant-life-grid4="1"]')
   + '\n[data-assistant-life-grid4="1"] .mhl-room .tag b,[data-assistant-life-grid4="1"] .mhl-room[data-assistant-life-room-v2="1"] .tag b{white-space:normal;word-break:auto-phrase;font-size:10.5px;line-height:12px;max-height:36px;text-overflow:clip}[data-assistant-life-grid4="1"] .mhl-room .tag{top:21px}'
+  + '\n.mhl-room .tag[data-assistant-life-room-say="1"] b{display:block!important}'
   + '\n.mhl-room .evm{position:absolute;right:2px;bottom:2px;z-index:8;font-size:15px;line-height:1;filter:drop-shadow(0 1px 2px #000a)}';
 // 助手ライフを開いている間は、上に出る育ちの札(💗+2 など)を右へ寄せる。左だと、上の副題「…間でみんなが動く」に重なって字を隠す(2026-11-14 社長)
 const ASSISTANT_LIFE_FX_CSS = '.mh-gfx-chips.left{left:auto;right:10px;align-items:flex-end}';
@@ -67750,6 +67751,62 @@ const assistantLifeTagChunks = (text) => {
 };
 // 部屋1つ
 // 出かけ札の上の行に入るだけの名前(字の数で数える)。入らない分は「ほか◯人」。text は assistantLifeGroupNames の形(「A・B・C」か「A・B ほか2人」)
+// 札の「何をしているか」の文(2026-11-15 社長 r1115-136「えるびんと過ごす」「モンヒロバトル中」「レオナの家におでかけ」)。
+//   [絵文字, 言葉の塊, …] の並び。狭い札は塊の間だけで折る(「モンヒロ/バトル中」「レオナの家に/おでかけ」)。「…」で切らない
+//   札の tag(行き先・人数・名前)は今までどおり残す(ほかの画面・検査が使う)。say は表示のためだけ
+const ASSISTANT_LIFE_SAY_WORDS = Object.freeze({ studio: ['モンヒロ', 'ビート'], cardroom: ['MFバトル', 'カード'], cafe: ['おやつ', '屋さん'], hill: ['ひなたの', '丘'], ranch: ['M/B', '管理'] });
+const ASSISTANT_LIFE_SAY_SPECIAL = Object.freeze({ battle: ['モンヒロ', 'バトル中'], 'cardroom:cards': ['MFバトル', 'カードを', '研究'], 'cafe:snack': ['おやつ', '屋さんで', 'ひと休み'] });
+// 横の狭い部屋(1行・字10.5px以上・床にかけない)で全部が入らないときの短い言い方
+const ASSISTANT_LIFE_SAY_SHORT = Object.freeze({ snack: 'おやつ中', practice: '練習中', training: '育成中', cards: 'カード研究', walk: '散歩中', idle: 'ぼーっと', read: '読書中', battle: 'バトル中', checkup: '診察中' });
+const assistantLifeSayOutShort = (place, doingKey) => {
+  const icon = ASSISTANT_LIFE_PLACE_ICON[place] || '🚶', d = ASSISTANT_LIFE_DOINGS[doingKey];
+  return d && d.places.includes(place) && ASSISTANT_LIFE_SAY_SHORT[doingKey] ? [icon, ASSISTANT_LIFE_SAY_SHORT[doingKey]] : [icon, `${assistantLifePlaceShow(place) || 'おでかけ先'}へ`];
+};
+const assistantLifeSayOut = (place, doingKey) => {
+  const icon = ASSISTANT_LIFE_PLACE_ICON[place] || '🚶';
+  const sp = ASSISTANT_LIFE_SAY_SPECIAL[`${place}:${doingKey}`] || ASSISTANT_LIFE_SAY_SPECIAL[place];
+  if (sp) return [icon, ...sp];
+  const words = ASSISTANT_LIFE_SAY_WORDS[place] || [assistantLifePlaceShow(place) || 'おでかけ先'];
+  const d = ASSISTANT_LIFE_DOINGS[doingKey], last = words[words.length - 1];
+  return d && d.places.includes(place) ? [icon, ...words.slice(0, -1), `${last}で`, d.label] : [icon, ...words.slice(0, -1), `${last}に`, 'おでかけ'];
+};
+// 飾りのあと(けんか・仲直り・フレンドの家・来客)に、札の文をそろえる。sayMark は印のある文(横と開いたトップの家は1行の札なので、こちらを出す)
+const assistantLifeSayFill = (rooms, life) => {
+  for (const id of Object.keys(rooms)) {
+    const r = rooms[id];
+    if (!r || !r.tag) continue;
+    const t0 = String(r.tag[0] || ''), t1 = String(r.tag[1] || '');
+    const away = typeof assistantLifeFriendAwayOf === 'function' ? (() => { try { return assistantLifeFriendAwayOf(id); } catch { return null; } })() : null;
+    const came = t0.match(/^🚪 (.+さんの)(.+が)来ている$/u);
+    let say = r.say, short = r.sayShort || null;
+    if (away) { say = ['🏘', `${away.name}の`, '家に', 'おでかけ']; short = ['🏘', `${away.name}の家`]; }
+    else if (came) { say = ['🚪', came[1], came[2], '来ている']; short = ['🚪', 'お客さん']; }
+    else if (r.rel === 'living') { say = ['🛋️', 'みんなの', '居間に']; short = ['🛋️', '居間に']; }
+    if (!Array.isArray(say)) { const m = t0.match(/^(\S+) (.+)$/u); say = m ? [m[1], m[2]] : ['', t0]; }
+    let mark = null, markShort = null, m;
+    if ((m = t1.match(/^💢 (.+)とけんか中$/u))) { mark = ['💢', `${m[1]}と`, 'けんか中']; markShort = ['💢', 'けんか中']; }
+    else if ((m = t1.match(/^💢 (.+)と言い合いのあと$/u))) { mark = ['💢', `${m[1]}と`, '言い合いの', 'あと']; markShort = ['💢', '言い合い']; }
+    else if ((m = t1.match(/^🤝 (.+)と仲直り$/u))) {
+      const w = r.mend && typeof assistantLifeWhereOf === 'function' ? assistantLifeWhereOf(life, id) : null;
+      const both = !!(w && w.group && w.group.ids.includes(r.mend));
+      mark = ['🤝', `${m[1]}と`, both ? '過ごす' : '仲直り']; markShort = ['🤝', '仲直り'];
+    }
+    rooms[id] = { ...r, say, sayShort: short || say, sayMark: mark, sayMarkShort: markShort || mark };
+  }
+  return rooms;
+};
+// 札の文を塊ごとに出す。字の大きさは、いちばん長い塊が1行に入る大きさ(10.5px まで)。それでも入らない長い塊(長いフレンドの名前など)だけは塊の中でも折る
+// 幅を測るときだけ、絵文字の後ろの見えない字(異体字セレクタ・ZWJ)を数えない(「⚔️」を2字に数えていた)。表示はそのまま
+const assistantLifeSayMeasure = (x) => String(x).replace(/[\uFE0F\u200D]/gu, '');
+const assistantLifeSayFont = (say, avail, max = 10.5) => {
+  const parts = assistantLifeSayParts(say);
+  return Math.max(8, Math.min(max, ...parts.map(x => assistantLifeTagFit(assistantLifeSayMeasure(x), avail, max, 8))));
+};
+const assistantLifeSayParts = (say) => { const a = (say || []).filter(x => x !== null && x !== undefined).map(String); return a.length > 1 && a[0] ? [`${a[0]} ${a[1]}`, ...a.slice(2)] : a.filter(Boolean); };
+function AssistantLifeSayText({ say, avail, font }) {
+  const parts = assistantLifeSayParts(say);
+  return <>{parts.map((x, i) => <React.Fragment key={i}>{i ? <wbr/> : null}<span data-assistant-life-say-chunk className={assistantLifeTagFit(assistantLifeSayMeasure(x), avail, font, 0) >= font - 0.05 ? 'whitespace-nowrap' : ''}>{x}</span></React.Fragment>)}</>;
+}
 const assistantLifeTagNames = (text, budget) => {
   const m = String(text || '').match(/^(.*?)(?: ほか(\d+)人)?$/);
   const list = String(m[1] || '').split('・').filter(Boolean);
@@ -67760,7 +67817,7 @@ const assistantLifeTagNames = (text, budget) => {
   return `${out.join('・')}${rest ? ` ほか${rest}人` : ''}`;
 };
 // other … よその家(フレンドの家)を描くとき { put }。自分のセッションの Lv は出さず、家具は控えの置き方で描く(56-assistant-life-friend.jsx)
-function AssistantLifeRoom({ id, met, look, x, y, w, h, state, onOpen, idx, other = null, v2 = false }) {
+function AssistantLifeRoom({ id, met, look, x, y, w, h, state, onOpen, idx, other = null, v2 = false, compact = false }) {
   const L = ASSISTANT_LIFE_ROOM_LOOK[id];
   const view = ASSISTANT_LIFE_VIEW[look][idx % 2];
   const night = look === 'night';
@@ -67798,6 +67855,19 @@ function AssistantLifeRoom({ id, met, look, x, y, w, h, state, onOpen, idx, othe
         const tagLand = typeof window !== 'undefined' && window.innerWidth > window.innerHeight; // 横画面は札の高さが床の帯(マスモンが歩く所)に響くので、これまでの折り方のまま
         const tagFit = assistantLifeTagFit(t[0], w - 26, 10.5, 0); // 1行に入る字の大きさ(10.5 に入らない狭い部屋は、意味の切れ目で2行にする)
         const short = [...String(t[0])].length <= 9; // 横は1行。行き先が長いときは人数を付けない(「…」で切らない)
+        // 何をしているかの文(r1115-136)。横と開いたトップの家(compact)は札が1つなので、印のある文(「🤝 えるびんと過ごす」)を出す。塊の間だけで折り、札に全部収める
+        const avail = w - 6 - 8 - 3 - 2;
+        // 横は札の高さが床の帯(マスモンが歩く所)に響くので1行・字10.5px。全部が入らない狭い部屋は短い言い方(「⚔️ バトル中」)
+        const oneFit = (x) => assistantLifeTagFit(assistantLifeSayMeasure(assistantLifeSayParts(x).join('')), avail, 10.5, 0);
+        const sayFull = Array.isArray(state.say) ? (compact && state.sayMark ? state.sayMark : state.say) : null;
+        const sayAlt = Array.isArray(state.say) ? ((compact && state.sayMark ? state.sayMarkShort : state.sayShort) || sayFull) : null;
+        const say = tagLand && sayFull && oneFit(sayFull) < 10.5 && sayAlt ? (oneFit(sayAlt) >= oneFit(sayFull) ? sayAlt : sayFull) : sayFull;
+        if (say) {
+          const f = tagLand ? Math.max(7, oneFit(say)) : assistantLifeSayFont(say, avail);
+          return <span className="tag" data-assistant-life-room-away={id} data-assistant-life-room-tag-mark={mark ? '1' : '0'} data-assistant-life-room-say={compact ? '1' : '0'}>
+            {!compact && (mark || !names ? <small data-assistant-life-room-what style={{ marginLeft: ml }}>{t[1]}</small> : <small data-assistant-life-room-with style={{ marginLeft: ml }}><AssistantLifeNames text={names}/></small>)}
+            <b data-assistant-life-room-say-text style={{ whiteSpace: 'normal', fontSize: f, lineHeight: tagLand ? '13px' : `${Math.round(f * 1.18)}px`, ...(tagLand ? { whiteSpace: 'nowrap' } : {}), maxHeight: 'none', overflow: 'visible', textOverflow: 'clip' }}>{v2 && w >= 150 ? <span data-assistant-life-room-out className="mr-1 rounded bg-slate-600 px-1 text-white">留守</span> : null}<AssistantLifeSayText say={say} avail={avail} font={f}/></b></span>;
+        }
         return <span className="tag" data-assistant-life-room-away={id} data-assistant-life-room-tag-mark={mark ? '1' : '0'}>
           {mark || !names ? <small data-assistant-life-room-what style={{ marginLeft: ml }}>{t[1]}</small> : <small data-assistant-life-room-with style={{ marginLeft: ml }}><AssistantLifeNames text={names}/></small>}
           <b style={w < 150 && !tagLand ? (tagFit >= 10.5 ? { whiteSpace: 'nowrap', fontSize: 10.5 } : { whiteSpace: 'normal', fontSize: Math.max(9, Math.min(10.5, Math.floor((w - 26) / 5.2 * 10) / 10)), lineHeight: '12px' }) : undefined}>{v2 && w >= 150 ? <span data-assistant-life-room-out className="mr-1 rounded bg-slate-600 px-1 text-white">留守</span> : null}{w < 150 && !tagLand && tagFit < 10.5 ? assistantLifeTagChunks(t[0]) : t[0]}<i data-assistant-life-room-tag-short>{n > 1 && short ? `・${n}人` : ''}{mark ? ` ${[...t[1]][0]}` : ''}</i></b></span>; })()}
@@ -67839,7 +67909,7 @@ function AssistantLifeHouseArt({ width, land: landIn, look, rooms, metSet, onOpe
       <div className="mhl-frame" style={{ top: roofH, height: bodyH }}>
         {ASSISTANT_LIFE_HOUSE_ORDER.map((id, i) => {
           const r = Math.floor(i / cols), c = i % cols;
-          return <AssistantLifeRoom key={id} id={id} idx={i + r} met={metSet.has(id)} look={look} x={wall + c * (rw + wall)} y={wall + r * (rh + wall)} w={rw} h={rh} state={rooms[id]} onOpen={onOpen} v2={v2 && !other} other={other ? (other[id] || {}) : null}/>;
+          return <AssistantLifeRoom key={id} id={id} idx={i + r} met={metSet.has(id)} look={look} x={wall + c * (rw + wall)} y={wall + r * (rh + wall)} w={rw} h={rh} state={rooms[id]} onOpen={onOpen} v2={v2 && !other} other={other ? (other[id] || {}) : null} compact={land}/>;
         })}
         <div className="mhl-liv" data-assistant-life-living style={{ left: wall, top: ly, width: width - 2 * wall, height: lh, filter: night ? 'brightness(.62)' : undefined }}>
           <button type="button" ref={boardRef} className="mhl-board text-left" data-assistant-life-board onClick={onBoard} style={{ width: Math.min(width * (land ? .42 : .52), 240) }} aria-label="今日あったことを全部見る">
@@ -67878,12 +67948,12 @@ const assistantLifeRoomsOf = (life, metIds) => {
           if (visit) rooms[id] = { ...rooms[id], bub: assistantLifeFurnVisitBub(visit) || rooms[id].bub, furnVisit: visit.id };
           else if (use) rooms[id] = { ...rooms[id], bub: use.bub, furnUse: use.key };
         }
-      } else rooms[id] = { tag: [`🚪 ${assistantLifeName(host)}の部屋へ`, `${ids.length}人で ${doing.label}`, assistantLifeGroupNames(ids, 4)] };
+      } else rooms[id] = { tag: [`🚪 ${assistantLifeName(host)}の部屋へ`, `${ids.length}人で ${doing.label}`, assistantLifeGroupNames(ids, 4)], say: ['🚪', `${assistantLifeName(host)}の`, '部屋で', doing.label || '過ごす'], sayShort: ['🚪', `${assistantLifeName(host)}の部屋`] };
       continue;
     }
     // 組で出かけているときは、どの部屋の札にも同じ全員の名前(「3人で ドラ・ソラシド・えるびん」)
     const sub = w.group ? `${w.group.ids.length}人で ${doing.label}` : `ひとりで ${doing.label}`;
-    rooms[id] = { tag: [`${ASSISTANT_LIFE_PLACE_ICON[w.place] || '🚶'} ${assistantLifePlaceShow(w.place)}へ`, sub, w.group ? assistantLifeGroupNames(w.group.ids, 4) : null] };
+    rooms[id] = { tag: [`${ASSISTANT_LIFE_PLACE_ICON[w.place] || '🚶'} ${assistantLifePlaceShow(w.place)}へ`, sub, w.group ? assistantLifeGroupNames(w.group.ids, 4) : null], say: assistantLifeSayOut(w.place, w.doing), sayShort: assistantLifeSayOutShort(w.place, w.doing) };
   }
   // 言い合いのあとの2人(水色の縁と「💢 ◯◯と言い合いのあと」。2026-11-07 社長「喧嘩とか仲直りとか人間じみたのもどんどん」)
   const q = peer && peer.quarrel && peer.quarrel.pending;
@@ -67900,6 +67970,7 @@ const assistantLifeRoomsOf = (life, metIds) => {
   if (typeof assistantLifeRelDecorateRooms === 'function') { try { assistantLifeRelDecorateRooms(rooms, life, peer); } catch {} }
   // フレンドの家へ遊びに行っている助手の札「🏘 〇〇さんの家へ」(56-assistant-life-friend.jsx。印が偽なら何もしない)
   if (typeof assistantLifeFriendDecorateRooms === 'function') { try { assistantLifeFriendDecorateRooms(rooms); } catch {} }
+  assistantLifeSayFill(rooms, life);
   return rooms;
 };
 
@@ -72139,10 +72210,17 @@ const ASSISTANT_LIFE_GIFT_CHEKI_KEY = 'mh_assistant_life_cheki_v1';
 const ASSISTANT_LIFE_GIFT_CHEKI_MAX = 60;
 const ASSISTANT_LIFE_SOLO_GIFT_KEY = 'mh_assistant_life_solo_gift_v1';
 // 狭い枠で名前を折り返すときの区切り(言葉の途中で折らない)。名前が変わって合わなくなったら、名前をそのまま1つで出す
-const ASSISTANT_LIFE_GIFT_WRAP = Object.freeze({ basket: ['おやつ', 'バスケット'], misanga: ['おそろいの', 'ミサンガ'], cake: ['はんぶんこ', 'ケーキ'], onigiri: ['ほかほか', 'おにぎり'],
-  tea: ['午後の', 'ティーセット'], earphone: ['かたみみ', 'イヤホン'], puzzle: ['ふたりで解く', 'パズル'], sleeve: ['おそろい', 'スリーブ'], cheki: ['思い出', 'チェキ'], flower: ['ちいさな', '花束'],
+const ASSISTANT_LIFE_GIFT_WRAP = Object.freeze({ basket: ['おやつ', 'バスケット'], misanga: ['おそろいの', 'ミサンガ'], cake: ['半分こ', 'ケーキ'], onigiri: ['ほかほか', 'おにぎり'],
+  tea: ['午後の', 'ティーセット'], earphone: ['片耳', 'イヤホン'], puzzle: ['二人で解く', 'パズル'], sleeve: ['おそろい', 'スリーブ'], cheki: ['思い出', 'チェキ'], flower: ['小さな', '花束'],
   letter: ['手書きの', '手紙'], candy: ['ひとつぶ', 'キャンディ'], omamori: ['小さな', 'おまもり'], monplush: ['モンスターの', 'ぬいぐるみ'] });
-const assistantLifeGiftWrapName = (g) => { const w = g && ASSISTANT_LIFE_GIFT_WRAP[g.key]; return w && w.join('') === g.name ? w : [g ? g.name : '']; };
+// 表に無い名前(改名のあと表が古いまま等)も、言葉の切れ目で折る: 末尾のカタカナの言葉の前・「の」の後(2026-11-15 窓口「切らず・言葉の切れ目で折る」)
+const assistantLifeGiftWrapName = (g) => {
+  const w = g && ASSISTANT_LIFE_GIFT_WRAP[g.key];
+  if (w && w.join('') === g.name) return w;
+  const name = g ? String(g.name || '') : '';
+  const m = name.match(/^(.+?)([ァ-ヴー]{2,})$/u) || name.match(/^(.+?の)(.+)$/u);
+  return m ? [m[1], m[2]] : [name];
+};
 const ASSISTANT_LIFE_GIFT_LABEL = Object.freeze({ like: '💗 好き', mid: 'ふつう', bad: '💧 苦手', unknown: '?' });
 
 const assistantLifeGiftDefs = () => (typeof ASSISTANT_LIFE_GIFTS !== 'undefined' && Array.isArray(ASSISTANT_LIFE_GIFTS) ? ASSISTANT_LIFE_GIFTS : []);
@@ -78408,6 +78486,8 @@ function AssistantMasmonBattleWatch({ onClose }) {
       if (!x || !x.side) return '';
       const n = who(x.side, x.i);
       if (x.ev === 'tech') return x.hit ? `${n}の ${x.name}${x.crit ? ' 会心!' : ''} → ${x.dmg}${x.guarded ? '(ガード)' : ''}` : `${n}の ${x.name} … はずれ`;
+      if (x.ev === 'move' && x.why === 'blown') return `${n}は 吹き飛ばされて 遠距離へ`;
+      if (x.ev === 'blow') return `${n}の 吹き飛ばし(相手の次の手のあと 遠へ)`;
       if (x.ev === 'move') return `${n}が ${AMBW_DIST[x.to]}距離へ ${x.step > 0 ? 'さがる' : 'つめる'}`;
       if (x.ev === 'charge') return x.why === 'sulk' ? `${n}は 意味不明な行動をした…(ガッツだけたまった)` : `${n}は ガッツをためた`;
       if (x.ev === 'guard') return `${n}は 身を守った`;
@@ -78435,7 +78515,7 @@ function AssistantMasmonBattleWatch({ onClose }) {
         </div>
       );
     };
-    const cutText = e.ev === 'tech' ? e.name : e.ev === 'move' ? (e.step > 0 ? 'さがる' : 'つめる') : e.ev === 'charge' ? 'ガッツをためる' : e.ev === 'guard' ? 'ガード' : e.ev === 'swap' ? `交代 → ${who(e.side, e.i)}` : e.ev === 'ko' ? `${e.name} たおれた` : '';
+    const cutText = e.ev === 'tech' ? e.name : e.ev === 'move' ? (e.why === 'blown' ? '吹き飛ばされた' : e.step > 0 ? 'さがる' : 'つめる') : e.ev === 'blow' ? '吹き飛ばし' : e.ev === 'charge' ? 'ガッツをためる' : e.ev === 'guard' ? 'ガード' : e.ev === 'swap' ? `交代 → ${who(e.side, e.i)}` : e.ev === 'ko' ? `${e.name} たおれた` : '';
     const cutSmall = e.ev === 'tech' ? `${e.kind === 'pow' ? '💪 ちから技' : '🧠 かしこさ技'}${Number.isFinite(e.p) ? `・命中 ${Math.round(e.p)}%` : ''}` : (e.side ? who(e.side, e.ev === 'swap' ? e.from : e.i) : '');
     const kos = log.map((x, k) => x.ev === 'ko' ? { k, side: x.side } : null).filter(Boolean);
     const winName = battle.r.winner === 'draw' ? null : nameOf((battle.r.winner === 'A' ? battle.teamA : battle.teamB).assistantId);
@@ -78548,10 +78628,11 @@ const AMBB_SWAPS = Object.freeze([
 // 試合の設定(2026-11-13 段2・社長「バトルも試合前に設定とか選べて色々調整させてほしい」)。
 //   この端末の練習の対戦だけに効く(芯の rules・roundLimit・balance へ渡す)。フレンド対戦・ランキングはサーバの決まりのまま(渡さない)
 //   既定のままなら芯へ何も渡さない = 今までと同じ試合
-const AMBB_SET_DEF = Object.freeze({ team: 'team', rounds: 150, dist: 'auto', guts: 50, fx: 'full', balance: 'A', seedLock: false, ctl: 'auto' });
+const AMBB_SET_DEF = Object.freeze({ team: 'team', rounds: 'auto', dist: 'auto', guts: 50, fx: 'full', balance: 'A', seedLock: false, ctl: 'auto' });
 const AMBB_SET_OPTS = Object.freeze({
   team: [{ id: 'team', label: 'チーム', note: '交代あり' }, { id: 'ko', label: '勝ち抜き', note: '交代なし・倒れたら次' }],
-  rounds: [30, 50, 100, 150],
+  // ラウンド上限: 'auto' = 全部の試合と同じ「1体あたり30」(2026-11-15 r1115-118・121)。前の既定 150 で保存された設定は 'auto' として読む
+  rounds: ['auto', 30, 60, 90, 120],
   dist: ['auto', 0, 1, 2, 3],
   guts: [30, 50, 70, 99],
   fx: [{ id: 'full', label: 'たっぷり' }, { id: 'lite', label: '少なめ' }],
@@ -78562,7 +78643,7 @@ const normalizeAmbbSet = (raw) => {
   const x = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
   return {
     team: x.team === 'ko' ? 'ko' : 'team',
-    rounds: ambbInt(x.rounds, 10, 300, AMBB_SET_DEF.rounds),
+    rounds: x.rounds === 'auto' || x.rounds == null || Number(x.rounds) === 150 ? 'auto' : ambbInt(x.rounds, 10, 300, 'auto'),
     dist: Number.isInteger(x.dist) && x.dist >= 0 && x.dist <= 3 ? x.dist : 'auto',
     guts: ambbInt(x.guts, 0, 99, AMBB_SET_DEF.guts), // 版9でガッツの最大は 99(前に保存した 100 は 99 として読む)
     fx: x.fx === 'lite' ? 'lite' : 'full',
@@ -78577,7 +78658,7 @@ const ambbMatchOpts = (set) => {
   if (set.dist !== 'auto') rules.distStart = set.dist;
   if (set.guts !== AMBB_SET_DEF.guts) rules.gutsStart = set.guts;
   if (set.team === 'ko') rules.noSwap = true;
-  return { ...(Object.keys(rules).length ? { rules } : {}), ...(set.rounds !== AMBB_SET_DEF.rounds ? { roundLimit: set.rounds } : {}), balance: set.balance };
+  return { ...(Object.keys(rules).length ? { rules } : {}), ...(set.rounds !== 'auto' && Number.isFinite(set.rounds) ? { roundLimit: set.rounds } : {}), balance: set.balance };
 };
 const ambbSetDiff = (set) => Object.keys(AMBB_SET_DEF).filter(k => k !== 'fx' && k !== 'ctl' && set[k] !== AMBB_SET_DEF[k]).length;
 // ランキングの段(台帳 2026-11-11・はじめ 1500)。その2で rating から出す
@@ -78812,7 +78893,7 @@ const AMBB_CSS = `
 .ambw.ambb-full .ambb-bar-wrap .msxm{margin-top:6px;padding:7px;max-height:42vh;overflow-y:auto}
 .ambw.ambb-full .ambb-bar-wrap .msxm-btn{min-height:36px;font-size:11.5px;padding:3px 6px;flex:1 1 22%}
 .ambw.ambb-full .ambb-bar-wrap .msxm-btn small{font-size:9.5px}
-.ambw.ambb-full .ambb-bar-wrap .msxm-btn:not(.atk):not([data-msxm-move]) small{display:none}
+.ambw.ambb-full .ambb-bar-wrap .msxm-btn:not(.atk):not([data-msxm-move]):not([data-msxm-blow]) small{display:none}
 .ambw.ambb-full .ambb-bar-wrap .msxm-btn small{white-space:nowrap}
 .ambw.ambb-full .ambb-bar-wrap .msxm-sec{margin-top:5px}
 .ambw.ambb-full .ambb-bar-wrap .msxm-foot{margin-top:5px}
@@ -79340,6 +79421,8 @@ function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, presetFriend, 
       if (!x || !x.side) return '';
       const n = who(x.side, x.i);
       if (x.ev === 'tech') return x.hit ? `${n}の ${x.name}${x.crit ? ' 会心!' : ''} → ${x.dmg}${x.guarded ? '(ガード)' : ''}` : `${n}の ${x.name} … はずれ`;
+      if (x.ev === 'move' && x.why === 'blown') return `${n}は 吹き飛ばされて 遠距離へ`;
+      if (x.ev === 'blow') return `${n}の 吹き飛ばし(相手の次の手のあと 遠へ)`;
       if (x.ev === 'move') return `${n}が ${AMBW_DIST[x.to]}距離へ ${x.step > 0 ? 'さがる' : 'つめる'}`;
       if (x.ev === 'charge') return `${n}は ガッツをためた`;
       if (x.ev === 'guard') return `${n}は 身を守った`;
@@ -79367,7 +79450,7 @@ function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, presetFriend, 
         </div>
       );
     };
-    const cutText = e.ev === 'tech' ? e.name : e.ev === 'move' ? (e.step > 0 ? 'さがる' : 'つめる') : e.ev === 'charge' ? 'ガッツをためる' : e.ev === 'guard' ? 'ガード' : e.ev === 'swap' ? `交代 → ${who(e.side, e.i)}` : e.ev === 'ko' ? `${e.name} たおれた` : '';
+    const cutText = e.ev === 'tech' ? e.name : e.ev === 'move' ? (e.why === 'blown' ? '吹き飛ばされた' : e.step > 0 ? 'さがる' : 'つめる') : e.ev === 'blow' ? '吹き飛ばし' : e.ev === 'charge' ? 'ガッツをためる' : e.ev === 'guard' ? 'ガード' : e.ev === 'swap' ? `交代 → ${who(e.side, e.i)}` : e.ev === 'ko' ? `${e.name} たおれた` : '';
     const cutSmall = e.ev === 'tech' ? `${e.kind === 'pow' ? '💪 ちから技' : '🧠 かしこさ技'}${Number.isFinite(e.p) ? `・命中 ${Math.round(e.p)}%` : ''}` : (e.side ? who(e.side, e.ev === 'swap' ? e.from : e.i) : '');
     const kos = log.map((x, k) => (x.ev === 'ko' ? { k, side: x.side } : null)).filter(Boolean);
     const won = battle.r.winner === 'A', draw = battle.r.winner === 'draw';
@@ -79621,7 +79704,7 @@ function AmbbCompare({ engine, catalog, mine, foes, meName, foeName }) {
       {keys.map(k => row(AMBW_STAT_JP[k] || k, sv(ua, k), sv(ub, k), sv(ua, k) / top, sv(ub, k) / top, sv(ua, k), sv(ub, k), k))}
       {ta && tb && <>
         <div className="ambb-cmp-sec">種類の等級</div>
-        {row('ガッツ回復力', ta.regen, tb.regen, (ta.regen || 0) / 15, (tb.regen || 0) / 15, regenG(ta) || ta.regen, regenG(tb) || tb.regen, 'regen')}
+        {row('ガッツ回復力', ta.regen, tb.regen, (ta.regen || 0) / 8, (tb.regen || 0) / 8, regenG(ta) || ta.regen, regenG(tb) || tb.regen, 'regen')}
         {row('移動速度', gIdx(grades, ta.move), gIdx(grades, tb.move), (gIdx(grades, ta.move) + 1) / 7, (gIdx(grades, tb.move) + 1) / 7, ta.move, tb.move, 'move')}
         {row('サイズ', 0, 0, (sizeV[ta.size] || 2) / 3, (sizeV[tb.size] || 2) / 3, AMBB_SIZE_JP[ta.size] || 'ふつう', AMBB_SIZE_JP[tb.size] || 'ふつう', 'size')}
         <div className="ambb-cmp-sec">間合い適性</div>
@@ -79642,7 +79725,6 @@ function AmbbSettings({ set, onSet, local, size, sizeMax, onSize, speed, onSpeed
     })}</div>
   );
   const diff = ambbSetDiff(set);
-  const limit = (engine && engine.ROUND_LIMIT) || 150;
   return (
     <div className="ambw-card" data-ambb-settings>
       <div className="ambw-small" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -79655,7 +79737,7 @@ function AmbbSettings({ set, onSet, local, size, sizeMax, onSize, speed, onSpeed
       {local && <>
         <div className="ambb-set-row"><span>操作</span>{chips('ctl', AMBB_SET_OPTS.ctl, o => o.label, o => o.note)}</div>
         <div className="ambb-set-row"><span>形式</span>{chips('team', AMBB_SET_OPTS.team, o => o.label, o => o.note)}</div>
-        <div className="ambb-set-row"><span>ラウンド上限</span>{chips('rounds', AMBB_SET_OPTS.rounds, o => `${o}`)}</div>
+        <div className="ambb-set-row"><span>ラウンド上限</span>{chips('rounds', AMBB_SET_OPTS.rounds, o => (o === 'auto' ? `いつも(${30 * size})` : `${o}`))}</div>
         <div className="ambb-set-row"><span>最初の間合い</span>{chips('dist', AMBB_SET_OPTS.dist, o => (o === 'auto' ? 'おまかせ' : AMBW_DIST[o]))}</div>
         <div className="ambb-set-row"><span>ガッツの初期値</span>{chips('guts', AMBB_SET_OPTS.guts, o => `${o}`)}</div>
       </>}
@@ -79666,7 +79748,7 @@ function AmbbSettings({ set, onSet, local, size, sizeMax, onSize, speed, onSpeed
       {local && (
         <details className="ambb-fold" data-ambb-tune>
           <summary>🔧 調整(試す人向け)</summary>
-          <div className="ambb-set-row"><span>ラウンド上限</span><div><input type="range" min="10" max="300" step="5" value={set.rounds} data-ambb-tune-rounds onChange={(ev) => onSet({ rounds: Number(ev.target.value) })}/><div className="ambw-small">{set.rounds} ラウンド(いつもは {limit})</div></div></div>
+          <div className="ambb-set-row"><span>ラウンド上限</span><div><input type="range" min="10" max="300" step="5" value={set.rounds === 'auto' ? 30 * size : set.rounds} data-ambb-tune-rounds onChange={(ev) => onSet({ rounds: Number(ev.target.value) })}/><div className="ambw-small">{set.rounds === 'auto' ? 30 * size : set.rounds} ラウンド(いつもは1体あたり30)</div></div></div>
           <div className="ambb-set-row"><span>ガッツの初期値</span><div><input type="range" min="0" max="99" step="1" value={set.guts} data-ambb-tune-guts onChange={(ev) => onSet({ guts: Number(ev.target.value) })}/><div className="ambw-small">{set.guts}(いつもは {AMBB_SET_DEF.guts})</div></div></div>
           <div className="ambb-set-row"><span>能力の差</span>{chips('balance', AMBB_SET_OPTS.balance, o => o.label)}</div>
           <div className="ambb-set-row"><span>試合の流れ</span>
@@ -79860,9 +79942,9 @@ const monsucLossWhy = (log, meName) => {
   for (const e of log) {
     if (!e || !e.ev) continue;
     if (e.side === 'A') {
-      if (e.ev === 'tech' || e.ev === 'guard' || e.ev === 'charge' || (e.ev === 'move' && e.why !== 'techMove')) acts++;
+      if (e.ev === 'tech' || e.ev === 'guard' || e.ev === 'charge' || e.ev === 'blow' || (e.ev === 'move' && e.why !== 'techMove' && e.why !== 'blown')) acts++;
       if (e.ev === 'charge' && e.why === 'sulk') sulk++;
-      if (e.ev === 'move' && e.why !== 'techMove' && Number.isInteger(e.to) && Number.isInteger(e.step) && !reach(e.i || 0, e.to - e.step)) stuck++;
+      if (e.ev === 'move' && e.why !== 'techMove' && e.why !== 'blown' && Number.isInteger(e.to) && Number.isInteger(e.step) && !reach(e.i || 0, e.to - e.step)) stuck++;
       if (e.ev === 'tech') { tries++; if (e.hit) hits++; }
     } else if (e.side === 'B' && e.ev === 'tech' && e.hit && e.name) foe[e.name] = (foe[e.name] || 0) + 1;
   }
@@ -79972,8 +80054,9 @@ const monsucTeams = (catalog, suc, s, info) => {
   return { teamA: { assistantId: s.aid, tactics: tac, members: [mine] }, teamB: { assistantId: 'atsu', tactics: tac, members: [foe] } };
 };
 
-// モンサクの試合の打ち切り(2026-11-15 r1115-058): 30ターンで判定(残ライフ%・与えたダメージ・消費ガッツの3つの比べ)。助手のマスモン対戦には渡さない
-const MONSUC_MATCH_RULE = Object.freeze({ statMax: 99999, roundLimit: 30, judge: 'three', gutsPlan: Object.freeze({ regen: 0.5, move: 0.5, charge: 0.5 }) });
+// モンサクの試合の決まり: 版10から全部の試合と同じ(1体30ターン・3つの比べの判定・自動ガッツ回復0.75倍・ためた番16。r1115-111・133)。
+//   モンサクの大会だけ、完全な同点は自分の負け(judgeTie:'B'・r1115-113)。能力の上限アップ(statMax・r1115-103)はモンサクだけ
+const MONSUC_MATCH_RULE = Object.freeze({ statMax: 99999, judgeTie: 'B' });
 // 試合を1戦だけ回す(画面なし)。結果だけ見る・スキップ・観戦のどれでも同じ記録になる
 const monsucCupMatch = (engine, catalog, suc, s, me, info0) => {
   const info = info0 || monsucCupInfo(suc, s, me);   // info0: 入れ物が opp・title を上書きした値(相手の忠誠度・人気をそろえる)
@@ -83417,6 +83500,18 @@ const useMsxSeen = () => {
 };
 
 // ---- 効果の文(芯の出来事の表 fx から作る。数は表のまま・能力は小/中/大) ----
+// 能力の上がり幅(r1115-145 社長「数値でわかるように」): 核の物差し(BASE.light × 素質の倍率 × 年齢の倍率 × 大きさ 0.5/1/2)から読む。手で書き写さない。
+//   年齢の倍率は成長の型で変わる。型「普通」・素質C の子が、育成の全期間で受ける幅を「+4〜8」の形で出す(目安)
+const msxFxStatRange = (size) => {
+  try {
+    const SUC = msxSuc.SUC; const C = typeof MASMON_CALC !== 'undefined' ? MASMON_CALC : null; if (!SUC || !SUC.BASE || !C) return '';
+    const type = 2; const v = [];
+    for (let i = 0; i < 10; i++) v.push(SUC.BASE.light * (Number(size) || 0) * C.ageMult(type, i / 10 + 0.01));
+    const lo = Math.max(1, Math.round(Math.min(...v))); const hi = Math.max(lo, Math.round(Math.max(...v)));
+    return lo === hi ? `+${lo}` : `+${lo}〜${hi}`;
+  } catch (e) { return ''; }
+};
+const MSX_FX_NOTE = '能力の上がり幅は、型「普通」・素質Cのモンスターの目安(育成の時期で変わります)';
 const MSX_FX_SIZE = (n) => (n >= 2 ? '大' : n >= 1 ? '中' : '小');
 const MSX_FX_TARGET = Object.freeze({ main: '得意の能力', all: '全能力', rand: 'どれかの能力', cheer: '編成のモンスターの得意な能力', type: 'タイプの得意な能力' });
 const MSX_FX_FLAG = Object.freeze({ guts: '次の大会でガッツ +', goalPlus: '期の目標のごほうびアップ', baseBoost: 'ベースモンの効きアップ', injRisk: 'けがをしやすくなる', fav: '好きなトレーニングができる', tagSeen: '友情タッグに目ざめる' });
@@ -83425,18 +83520,18 @@ const msxSigned = (n) => (n > 0 ? `+${n}` : `−${Math.abs(n)}`);
 const msxFxText = (f) => {
   if (!Array.isArray(f)) return '';
   const [k, a, b] = f; const BUFFS = msxSuc && msxSuc.SUC && msxSuc.SUC.events ? msxSuc.SUC.events.BUFFS || {} : {};
-  if (k === 'st') return `${(typeof MSX_STAT_NAME !== 'undefined' && MSX_STAT_NAME[a]) || MSX_FX_TARGET[a] || '能力'} ${MSX_FX_SIZE(Number(b) || 0)}アップ`;
-  if (k === 'loy') return `忠誠 ${a > 0 ? '+' : '−'}`;
-  if (k === 'fear') return '恐れ度 +';
+  if (k === 'st') { const r = msxFxStatRange(b); return `${(typeof MSX_STAT_NAME !== 'undefined' && MSX_STAT_NAME[a]) || MSX_FX_TARGET[a] || '能力'} ${r || `${MSX_FX_SIZE(Number(b) || 0)}アップ`}`; }
+  if (k === 'loy') return `忠誠度 ${msxSigned(Number(a) || 0)}`;
+  if (k === 'fear') return `恐れ度 ${msxSigned(Number(a) || 0)}`;
   if (k === 'pop') return `人気 ${msxSigned(a)}`;
   if (k === 'popHi') return `人気 ${msxSigned(a)}(人気60〜のとき)`;
-  if (k === 'hp') return `体力 ${msxSigned(a)}`;
+  if (k === 'hp') return `体力 ${msxSigned(a)}%(最大の)`;
   if (k === 'str') return `ストレス ${msxSigned(a)}`;
   if (k === 'bond') return `${a === 'aid' ? '助手' : a === 'team' ? '編成みんな' : '編成のモンスター'}の親密度 ${msxSigned(b)}`;
   if (k === 'buff') return BUFFS[a] ? `${BUFFS[a].icon} ${BUFFS[a].name}` : 'いい調子になる';
   if (k === 'fame') return `賞金 ${msxSigned(a)}G`;
   if (k === 'pts') return `能力ポイント ${msxSigned(a)}`;
-  if (k === 'mas') return '技の熟練 +';
+  if (k === 'mas') return `技の熟練 ${msxSigned(Number(a) || 0)}`;
   if (k === 'flag') return MSX_FX_FLAG[a] || 'いいことがある';
   if (k === 'goal') return MSX_FX_GOAL[a] || '期の目標を決める';
   if (k === 'apt') return a === 'low' ? '一番低い間合い適性 +1段' : '一番高い間合い適性 +1段';
@@ -83457,13 +83552,14 @@ const msxChoiceLines = (ch) => {
 // 表の出来事の選択肢(無ければ null)
 const msxEvChoice = (evId, c) => { const E = msxSuc && msxSuc.SUC && msxSuc.SUC.events; const e = E && E.BY_ID ? E.BY_ID[evId] : null; return e && e.ch ? (e.ch[c] || (c === 'a' && e.ch.fx ? e.ch : null)) : null; };
 
+const msxChoiceNoteSrc = (open, ev0, chOf) => chOf(open).map((c) => (open.ep != null || String(open.id).startsWith('story.') || open.id === 'issa' ? '' : msxChoiceLines(msxEvChoice(open.id, c)).join(' '))).join(' ');
 function MsxChoiceInfo({ evId, c, open }) {
   msxDexEnsureCss();
   const seen = useMsxSeen();
   if (!open) return null;
   const known = Boolean(seen.ch[`${evId}.${c}`]);
   const lines = known ? (String(evId).startsWith('story.') ? ['お話の続きが変わる'] : msxChoiceLines(msxEvChoice(evId, c))) : ['？？？'];
-  return <div className="msx-chinfo" data-msx-chinfo={known ? 'known' : 'unknown'}>{lines.map((l, i) => <div key={i}>{l}</div>)}{known ? null : <small>一度選ぶと、効果が分かるようになる</small>}</div>;
+  return <div className="msx-chinfo" data-msx-chinfo={known ? 'known' : 'unknown'}>{lines.map((l, i) => <div key={i}>{l}</div>)}{known ? null : <small>一度選ぶと、効果が分かるようになる</small>}{known && lines.some((l) => /\+\d+〜?\d*/.test(l) && /(ライフ|ちから|かしこさ|命中|回避|丈夫さ|能力)/.test(l)) ? <small>{MSX_FX_NOTE}</small> : null}</div>;
 }
 
 // ---- 図鑑の中身(タブと出来事の並び) ----
@@ -83535,13 +83631,14 @@ function MsxDex({ aid = 'mua', nick = '', onClose }) {
           <button type="button" key={a} className={a === pickAid ? 'on' : ''} onClick={() => { setPickAid(a); setOpen(null); }}>{typeof msxFace === 'function' ? <img src={msxFace(a, 'normal')} alt=""/> : null}{typeof msxAidName === 'function' ? msxAidName(a) : a}<small>{L.filter((x) => seen.ev[x.id]).length}/{L.length}</small></button>); })}</div> : null}
         {open ? (
           <div className="msx-dex-read" data-msx-dex-read={open.id}>
-            <div className="h"><b>{open.title}</b><button type="button" className="chip" onClick={() => setOpen(null)}>← 一覧へ</button></div>
+            <div className="h"><b>{open.title}</b><button type="button" className="chip" onClick={() => setOpen(null)} data-msx-dex-back>← 戻る</button></div>
             {open.awake ? <div className="ln">{open.awake === 2 ? '覚醒したあと、さらに虹色の光に包まれて、全能力 +40・間合い適性が2つ上がった。' : 'まぶしい光に包まれて、全能力 +30・一番高い間合い適性が上がった。'}</div> : null}
             {aw && aw.t ? <div className="ln"><span className="who">{typeof msxAidName === 'function' ? msxAidName(readAid) : ''}</span>「{aw.t}」</div> : null}
             {open.id === 'issa' ? <div className="ln">夜の町に、のびのび装置を持ったイッサ博士があらわれた。成功すれば大きく強くなれるが、失敗すると…。</div> : null}
             {ev0 ? ev0.lines.slice(0, 8).map((l, i) => <div key={i} className="ln">{who(l) ? <span className="who">{who(l)}</span> : null}{who(l) ? `「${l.t}」` : l.t}</div>) : null}
             {chOf(open).length ? <div className="chs">{chOf(open).map((c) => { const t = ev0 && ev0.choices ? (ev0.choices.find((x) => x.c === c) || {}).t : open.id === 'issa' ? ((MSX_ISSA_KEYS.find((k) => k.key === c) || {}).name || c) : c; const known = Boolean(seen.ch[`${open.id}.${c}`]); return (
               <div key={c} className="ch"><b>{known ? t : '？？？'}</b><span>{known ? (open.id === 'issa' ? (() => { const k = MSX_ISSA_KEYS.find((x) => x.key === c) || {}; return `⭕ ${k.ok} / ❌ ${k.ng}`; })() : open.ep != null ? 'お話の続きが変わる' : msxChoiceLines(msxEvChoice(open.id, c)).join(' / ')) : 'まだ選んだことがない'}</span></div>); })}</div> : null}
+            {chOf(open).length && /\+\d+〜\d+/.test(String(msxChoiceNoteSrc(open, ev0, chOf))) ? <div className="msx-note" style={{ fontSize: 10 }}>{MSX_FX_NOTE}</div> : null}
           </div>
         ) : (
           <div className="msx-dex-list">{rows.length ? rows.map((x) => { const known = Boolean(seen.ev[x.id]); return (
@@ -93970,16 +94067,22 @@ function MsxManualBar({ opt, onPick, onAuto, busy, rep = null, onRep = null, tit
           onRep={onRep && sd != null ? (d, id) => onRep(d, id) : null} onClose={() => setSheet(null)}/>
       ) : null}
       <div className="msxm-sec">
-        <div className="msxm-h">🛡 防御・↔ 移動・💪 ガッツ回復</div>
+        <div className="msxm-h">🛡 防御・↔ 移動・💪 ガッツ回復{opt.moveCost ? `(移動 ガッツ${opt.moveCost})` : ''}</div>
         <div className="msxm-row">
           <button type="button" className={`msxm-btn ${isHint(opt.guard) ? 'hint' : ''}`} disabled={busy} onClick={() => go({ type: 'guard' })}>🛡 ガード<small>受けるダメージを減らす</small></button>
-          <button type="button" className={`msxm-btn ${isHint(opt.charge) ? 'hint' : ''}`} disabled={!opt.charge.ok || busy} onClick={() => go({ type: 'charge' })}>💪 ためる<small>{opt.charge.ok ? 'ガッツを大きく回復' : 'ガッツは満タン'}</small></button>
+          <button type="button" className={`msxm-btn ${isHint(opt.charge) ? 'hint' : ''}`} disabled={!opt.charge.ok || busy} onClick={() => go({ type: 'charge' })}>💪 ためる<small>{opt.charge.ok ? 'この番は合わせて16回復' : 'ガッツは満タン'}</small></button>
           {/* 自分は画面の左・相手は右。後ろへ(離れる・step +1)は左向き、前へ(近づく・step −1)は右向き。ボタンも左に後ろへ・右に前へ(2026-11-14 社長) */}
           {opt.move.slice().sort((x, y) => y.step - x.step).map((mv) => (
             <button key={mv.step} type="button" data-msxm-move={mv.step} className={`msxm-btn ${isHint(mv) ? 'hint' : ''}`} disabled={!mv.ok || busy} onClick={() => go({ type: 'move', step: mv.step })}>
-              {mv.step < 0 ? '前へ ▶' : '◀ 後ろへ'}<small>{mv.ok ? `→ ${MSX_MANUAL_DIST[mv.to]}` : 'これ以上は行けない'}</small>
+              {mv.step < 0 ? '前へ ▶' : '◀ 後ろへ'}<small>{mv.to < 0 || mv.to > 3 ? 'これ以上は行けない' : Number.isFinite(mv.guts) ? `→ ${MSX_MANUAL_DIST[mv.to]}・ガッツ ${mv.guts}${mv.ok ? '' : '(足りない)'}` : `→ ${MSX_MANUAL_DIST[mv.to]}`}</small>
             </button>
           ))}
+          {/* ふきとばし(2026-11-15 r1115-110): 零距離だけ。相手が次の手を打ったあとに遠へ飛ばす。払うガッツは移動と同じ(続けて動くほど上がる) */}
+          {opt.blow && opt.blow.near ? (
+            <button type="button" data-msxm-blow className={`msxm-btn ${isHint(opt.blow) ? 'hint' : ''}`} disabled={!opt.blow.ok || busy} onClick={() => go({ type: 'blow' })}>
+              💨 吹き飛ばし<small>{opt.blow.wait ? '相手の次の手のあとに飛ぶ' : `相手の次の手のあと遠へ・ガッツ ${opt.blow.guts}${opt.blow.ok ? '' : '(足りない)'}`}</small>
+            </button>
+          ) : null}
         </div>
       </div>
       {opt.swap.length ? (
@@ -94609,7 +94712,9 @@ function MsaDmgLayer({ e, x, delay, tier }) {
 const msaSay = (e, nm) => {
   if (!e) return '';
   if (e.ev === 'tech') return e.hit ? `${nm(e.side, e.i)}の ${e.name}!${e.crit ? ' 会心の一撃!' : e.guarded ? ' …ガードされた' : ''}` : `${nm(e.side, e.i)}の ${e.name} … よけられた`;
+  if (e.ev === 'move' && e.why === 'blown') return `${nm(e.side, e.i)}は 吹き飛ばされて 遠の間合いへ!`;
   if (e.ev === 'move') return `${nm(e.side, e.i)}が ${AMBW_DIST[e.to] || ''}の間合いへ`;
+  if (e.ev === 'blow') return `${nm(e.side, e.i)}の 吹き飛ばし! 相手の次の手のあと 遠へ飛ばす`;
   if (e.ev === 'charge') return e.why === 'sulk' ? `${nm(e.side, e.i)}は 意味不明な行動をした…` : `${nm(e.side, e.i)}は ガッツをためた`;
   if (e.ev === 'guard') return `${nm(e.side, e.i)}は 身を守った`;
   if (e.ev === 'swap') return `${nm(e.side, e.i)}に 交代!`;
@@ -94779,11 +94884,12 @@ const msaGutsTagsOf = (log, frames, pos, side, regen, hitMs) => {
   if (!f || !pf || pos < 1 || f.act[side] !== pf.act[side] || !((f.hp[side] || [])[f.act[side]] > 0)) return [];
   const out = [];
   const R = f.r > pf.r ? (regen[`${side}${f.act[side]}`] || 0) : 0;
-  if (R > 0) out.push({ t: `自動 +${R}`, cls: 'up', delay: 0 });
+  if (R > 0) out.push({ t: `自動ガッツ回復 +${R}`, cls: 'up', delay: 0 });
   const d = f.g[side] - pf.g[side];
   if (r.side === side) {
     const x = d - R;
     if (r.ev === 'tech') { const t = msaTechOf(log, r); if (t && t.guts) out.push({ t: `技 −${t.guts}`, cls: 'down', delay: 0 }); }
+    else if ((r.ev === 'move' || r.ev === 'blow') && r.why !== 'blown' && (Number(r.cost) || 0) > 0) out.push({ t: `${r.ev === 'blow' ? '吹き飛ばし' : '移動'} −${Math.round(Number(r.cost))}`, cls: 'down', delay: 0 });
     else if (x > 0) out.push({ t: `${r.ev === 'move' ? '移動' : r.ev === 'guard' ? 'ガード' : 'ためる'} +${x}`, cls: 'up', delay: 0 });
   } else if (r.ev === 'tech' && r.hit && (Number(r.gd) || 0) > 0) out.push({ t: `削られた −${Math.round(Number(r.gd))}`, cls: 'down', delay: hitMs });
   return out;
@@ -94808,7 +94914,9 @@ const msaBandsOf = (log, frames, k) => {
   const out = [];
   if (r.ev === 'guard') out.push({ side: r.side, t: '🛡 守りの構え' });
   else if (r.ev === 'charge') out.push({ side: r.side, t: r.why === 'sulk' ? '💢 意味不明' : '⚡ ガッツをためた' });
+  else if (r.ev === 'move' && r.why === 'blown') out.push({ side: r.side, t: '💨 遠へ飛ばされた' });
   else if (r.ev === 'move') out.push({ side: r.side, t: `👣 間合い ${AMBW_DIST[pf.d] || ''}→${AMBW_DIST[f.d] || ''}` });
+  else if (r.ev === 'blow') out.push({ side: r.side, t: '💨 吹き飛ばし' });
   else if (r.ev === 'swap') out.push({ side: r.side, t: `🔁 ${r.name || ''} に交代` });
   else if (r.ev === 'tech' && r.hit && r.guarded) out.push({ side: r.side === 'A' ? 'B' : 'A', t: '🛡 ガードで軽減' });
   ['A', 'B'].forEach((sd) => {
@@ -94939,7 +95047,7 @@ function MsaStage({ log, frames, pos, teams, venueImg, ended = false, win = null
       ], total);
     } else if (e1.ev === 'ko' && e1.side) {
       kf = msaCamFrames([[260, msaCamAt(sx(e1.side), 1.28, w)], [total - 320, msaCamAt(sx(e1.side), 1.3, w)]], total);
-    } else if ((e1.ev === 'guard' || e1.ev === 'charge' || e1.ev === 'swap') && e1.side) { // 歩く行は寄せない(場の横送りが位置について行く)
+    } else if ((e1.ev === 'guard' || e1.ev === 'charge' || e1.ev === 'swap' || e1.ev === 'blow') && e1.side) { // 歩く行は寄せない(場の横送りが位置について行く)
       kf = msaCamFrames([[220, msaCamAt(sx(e1.side), 1.1, w)], [total - 260, msaCamAt(sx(e1.side), 1.1, w)]], total);
     }
     if (!kf) return undefined;
@@ -95235,6 +95343,7 @@ const msaCallOf = (log, frames, k, maxHp, who) => {
   if (e.ev === 'enter' && msaIsNext(log, k) && many(e.side) && left(e.side) === 1) return { k: 'last', t: `最後の1体、${who(e.side, e.i)}が出てきた!` };
   if (e.ev === 'charge' && e.why === 'sulk') return { k: 'sulk', t: `${who(e.side, e.i)}は 意味不明! 言うことを聞かない…` };
   if (e.ev === 'swap') return { k: 'swap', t: `ここで交代! ${who(e.side, e.i)}が前へ!` };
+  if (e.ev === 'move' && e.why === 'blown') return { k: 'blown', t: `${who(e.side, e.i)}、遠くへ 吹き飛ばされた!` };
   if (e.ev !== 'tech' || !e.hit) return null;
   const foe = e.side === 'A' ? 'B' : 'A';
   if (pf && k > 3) {
