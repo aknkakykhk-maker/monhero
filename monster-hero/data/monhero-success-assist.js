@@ -221,16 +221,22 @@
 
   const fmt = (x) => String(Math.round(x * 100) / 100);
   // 説明の1行(目盛りつき)。例: describe('sokoji', 12) → 'いっしょにトレーニングすると、伸びが12%上がる'
-  // 合計の上限(2026-11-15 社長 r1115-104「画面のアシストの説明に合計の上限を書く」)。数字は計算の芯 monhero-success.js の ASSIST_CAP と同じ
-  const TR5 = '(トレ効果アップ・励・春夏秋冬の5つを合わせて、編成の合計 100%まで)';
-  const CAP_NOTE = Object.freeze({ sokoji: TR5, hagemi: TR5, haru: TR5, natsu: TR5, aki: TR5, fuyu: TR5,
-    atooshi: '(編成の合計 120%まで)', kunpow: '(編成の合計 120%まで)', kunwise: '(編成の合計 120%まで)', kunhit: '(編成の合計 120%まで)', kuneva: '(編成の合計 120%まで)', kuntough: '(編成の合計 120%まで)', kunlife: '(編成の合計 120%まで)',
-    kizuna: '(編成の合計 100%まで)', kaifuku: '(編成の合計 20まで)', ochitsuki: '(編成の合計 50%まで)', miharu: '(編成の合計 50%まで)', kibarashi: '(編成の合計 50%まで)', itawari: '(編成の合計 40%まで)' });
+  // ★アシスト効果の合計の上限(2026-11-15 社長 r1115-104「上限とか重複不可とか作らないと大変なことになる」)。上限の数字はこの表1か所だけ。
+  //   効果id → { v: 編成の合計の上限(その効果の単位。% か 点), group?: 同じ上限を分け合う組の名前 }。表に無い効果は上限なし(今までどおり)。
+  //   計算の芯(monhero-success.js)はこの表を読んで上限をかけ、説明の文(describe)とヘルプの表もこの表から上限を書く。効果を足すときはここに1行
+  const CAP = Object.freeze({
+    sokoji: { v: 100, group: 'train' }, hagemi: { v: 100, group: 'train' }, haru: { v: 100, group: 'train' }, natsu: { v: 100, group: 'train' }, aki: { v: 100, group: 'train' }, fuyu: { v: 100, group: 'train' },
+    atooshi: { v: 120 }, kunpow: { v: 120 }, kunwise: { v: 120 }, kunhit: { v: 120 }, kuneva: { v: 120 }, kuntough: { v: 120 }, kunlife: { v: 120 },
+    kizuna: { v: 100 }, kaifuku: { v: 20 }, ochitsuki: { v: 50 }, miharu: { v: 50 }, kibarashi: { v: 50 }, itawari: { v: 40 },
+  });
+  const CAP_GROUP_NAME = Object.freeze({ train: 'トレ効果アップ・励・春夏秋冬の5つを合わせて' });
+  // 説明の文の後ろに付ける上限の一言(表に無ければ '')
+  const capNote = (id) => { const c = CAP[id]; if (!c) return ''; const a = BY_ID[id]; const u = a && a.u === '%' ? '%' : ''; return `(${c.group && CAP_GROUP_NAME[c.group] ? `${CAP_GROUP_NAME[c.group]}、` : ''}編成の合計 ${c.v}${u}まで)`; };
   const describe = (id, n) => {
     const a = BY_ID[id]; if (!a) return '';
     const i = nOf(id, n) - 1;
     const vt = a.k === 'cnt' && a.cu === 'Lv' ? `+${fmt(a.v[i])}` : a.k === 'rate' || a.k === 'hard' ? `+${fmt(a.v[i])}%` : a.k === 'rateDown' ? `−${fmt(a.v[i])}%` : (a.k ? valueText(id, i + 1) : fmt(a.v[i])); // 文の中は「トレーニングLv +1」「◯◯の確率 +5%」
-    return ((i === a.max - 1 && a.text5) || a.text).replace('{v}', vt).replace('{start}', a.start ? String(a.start[i]) : '') + (CAP_NOTE[id] || '');
+    return ((i === a.max - 1 && a.text5) || a.text).replace('{v}', vt).replace('{start}', a.start ? String(a.start[i]) : '') + capNote(id);
   };
   // 型ごとの数字の書き方(W の k)。掛け算も % で書く(社長 2026-11-14)
   const valueText = (id, n) => {
@@ -321,7 +327,7 @@
   const pointsOf = (power) => Math.min(POINTS_MAX, Math.max(POINTS_MIN, Math.floor(num(power) / POINTS_DIV)));
 
   const api = Object.freeze({ VERSION, LIST, BY_ID, TYPE_NAME, SCENES, LV_MAX, MAX_KINDS, POINTS_MIN, POINTS_MAX, AUTO_ORDER, AUTO_STEP,
-    CAP_NOTE, describe, label, valueText, costOf, valueOf, candidates, normPicks, autoPick, pointsOf, battleBuffs, stayValue, fromSaved, toSaved });
+    CAP, capNote, describe, label, valueText, costOf, valueOf, candidates, normPicks, autoPick, pointsOf, battleBuffs, stayValue, fromSaved, toSaved });
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   if (root) root.MONHERO_SUCCESS_ASSIST = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

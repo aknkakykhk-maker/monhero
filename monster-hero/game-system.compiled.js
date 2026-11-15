@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 2beda04db9bf2df7
+// source-sha256: e4cf1facfcd0cfb0
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -20463,7 +20463,7 @@ const helpDataRows = id => {
     case 'monsakuAssists':
       {
         const T3 = globalThis.MONHERO_SUCCESS_ASSIST;
-        if (T3 && T3.VERSION === 3 && Array.isArray(T3.LIST)) return T3.LIST.filter(a => a.from === 'core').map(a => [`${a.icon} ${a.name}`, (a.max > 1 ? `1目盛り ${T3.valueText(a.id, 1)}・${a.pt}ポイント ／ 最大 ${T3.valueText(a.id, a.max)}(${a.cost[a.max - 1]}ポイント)` : `${T3.valueText(a.id, 1)} ／ ${a.pt}ポイント`) + (T3.CAP_NOTE && T3.CAP_NOTE[a.id] ? ` ／ ${T3.CAP_NOTE[a.id].replace(/^(|\)$/g, '')}` : '')]);
+        if (T3 && T3.VERSION === 3 && Array.isArray(T3.LIST)) return T3.LIST.filter(a => a.from === 'core').map(a => [`${a.icon} ${a.name}`, (a.max > 1 ? `1目盛り ${T3.valueText(a.id, 1)}・${a.pt}ポイント ／ 最大 ${T3.valueText(a.id, a.max)}(${a.cost[a.max - 1]}ポイント)` : `${T3.valueText(a.id, 1)} ／ ${a.pt}ポイント`) + (typeof T3.capNote === 'function' && T3.capNote(a.id) ? ` ／ ${T3.capNote(a.id).replace(/^(|\)$/g, '')}` : '')]);
         const list = globalThis.MONHERO_SUCCESS && globalThis.MONHERO_SUCCESS.ASSISTS || null;
         if (!list || typeof list !== 'object') return [['アシスト能力', '育て終えたとき、画面で選べます']];
         return Object.values(list).filter(a => a && a.name && Array.isArray(a.v) && Array.isArray(a.cost)).map(a => [a.name, `段1〜${a.v.length} ／ ポイント ${a.cost.join('・')}`]);
