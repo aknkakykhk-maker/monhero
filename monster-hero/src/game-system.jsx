@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 651b5c58cfaed684
+// generated-sha256: caeb3f769f186401
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -79531,7 +79531,7 @@ const monsucOdds = (engine, input, n) => {
   if (key && mscOddsCache.has(key)) return mscOddsCache.get(key);
   let win = 0;
   for (let i = 0; i < N; i++) {
-    try { const r = engine.simulate({ ...input, trace: false, seed: `${input.seed}:odds${i}` }); if (r && r.winner === 'A') win++; } catch (_) { return null; }
+    try { const r = engine.simulate({ ...MONSUC_MATCH_RULE, ...input, trace: false, seed: `${input.seed}:odds${i}` }); if (r && r.winner === 'A') win++; } catch (_) { return null; }
   }
   const rate = win / N; const f = MSC_FORECAST.find(([m]) => rate >= m) || MSC_FORECAST[MSC_FORECAST.length - 1];
   const out = Object.freeze({ win, n: N, rate, key: f[1], label: f[2] });
@@ -79659,11 +79659,13 @@ const monsucTeams = (catalog, suc, s, info) => {
   return { teamA: { assistantId: s.aid, tactics: tac, members: [mine] }, teamB: { assistantId: 'atsu', tactics: tac, members: [foe] } };
 };
 
+// モンサクの試合の打ち切り(2026-11-15 r1115-058): 30ターンで判定(残ライフ%・与えたダメージ・消費ガッツの3つの比べ)。助手のマスモン対戦には渡さない
+const MONSUC_MATCH_RULE = Object.freeze({ roundLimit: 30, judge: 'three' });
 // 試合を1戦だけ回す(画面なし)。結果だけ見る・スキップ・観戦のどれでも同じ記録になる
 const monsucCupMatch = (engine, catalog, suc, s, me, info0) => {
   const info = info0 || monsucCupInfo(suc, s, me);   // info0: 入れ物が opp・title を上書きした値(相手の忠誠度・人気をそろえる)
   const { teamA, teamB } = monsucTeams(catalog, suc, s, info);
-  const r = engine.simulate({ seed: info.seed, catalog, teamA, teamB, balance: 'A', trace: true, ...(info.buffs ? { buffs: { A: info.buffs } } : {}) });
+  const r = engine.simulate({ ...MONSUC_MATCH_RULE, seed: info.seed, catalog, teamA, teamB, balance: 'A', trace: true, ...(info.buffs ? { buffs: { A: info.buffs } } : {}) });
   return { r, teamA, teamB, buffs: info.buffs, seed: info.seed, info };
 };
 
@@ -80203,7 +80205,7 @@ function MonsucCupShowInner({ suc, s, me, settle, onRematch, onNext, onClose, st
     if (!engine || !catalog) return null;
     try {
       const m = monsucCupMatch(engine, catalog, suc, s, me, info);
-      const input = autoOnly ? null : { seed: m.seed, catalog, teamA: m.teamA, teamB: m.teamB, balance: 'A', ...(m.buffs ? { buffs: { A: m.buffs } } : {}) };
+      const input = autoOnly ? null : { ...MONSUC_MATCH_RULE, seed: m.seed, catalog, teamA: m.teamA, teamB: m.teamB, balance: 'A', ...(m.buffs ? { buffs: { A: m.buffs } } : {}) };
       return { ...m, won: m.r.winner === 'A', input };
     } catch (_) { return null; }
   }, [engine, catalog, info, fightRes]);
@@ -90186,7 +90188,7 @@ const msxR3Fight = (engine, SUC, run) => {
   const mods = typeof SUC.battleBuffs === 'function' ? (SUC.battleBuffs(s) || {}) : typeof SUC.battleMods === 'function' ? SUC.battleMods(s) : {};
   const seed = `${s.id}:${s.turn}:${b.kind}:${b.retry || 0}:${b.round || 0}:0:${b.again || 0}`;
   // input: simulate に渡したものそのもの(trace なし)。バトル部の自分で操作する試合(MonsucArena の createMatch)がこれで同じ試合を始める
-  const input = { seed, catalog: cat, teamA, teamB, ...(mods && Object.keys(mods).length ? { buffs: { A: mods } } : {}) };
+  const input = { ...MONSUC_MATCH_RULE, seed, catalog: cat, teamA, teamB, ...(mods && Object.keys(mods).length ? { buffs: { A: mods } } : {}) };
   let r = null;
   try { r = engine.simulate({ ...input, trace: true }); } catch (e) { return null; }
   const st = (r.log && r.log[0]) || {};
@@ -93516,6 +93518,8 @@ function MonsucArena({ s, info, engine, input, watch, onEnd }) {
   const [ctl, setCtl] = useState(() => msaCtlRunRead(s && s.id));   // 手動が基本。オートを選んだら保存して次の試合でも使う
   const auto = !manual || ctl === 'auto';
   const [ended, setEnded] = useState(false);
+  const [judgeOk, setJudgeOk] = useState(false);   // 判定の画面(MsaJudge)を見終えた
+  const judgeIdx = useMemo(() => log.findIndex(x => x && x.ev === 'judge' && x.mode === 'three'), [log.length]);
   const [paused, setPaused] = useState(false);   // ⏸ 試合を止める(段C 2026-11-14: 助手マスモン対戦と同じ操作)
   const [techSheet, setTechSheet] = useState(null); // 技の札を押して開く、いまの間合いの一覧(見るだけ)
   const endRef = useRef(false);
@@ -93536,9 +93540,9 @@ function MonsucArena({ s, info, engine, input, watch, onEnd }) {
       const t = setTimeout(() => setPos(nextPos), Math.round(msaStepMs(cur, teams[cur.side], reduce, log, sp.f) * sp.f));
       return () => clearTimeout(t);
     }
-    if (done) { const t = setTimeout(() => setEnded(true), reduce ? 300 : 900); return () => clearTimeout(t); }
+    if (done && (judgeIdx < 0 || judgeOk)) { const t = setTimeout(() => setEnded(true), reduce ? 300 : 900); return () => clearTimeout(t); }
     return undefined;
-  }, [pos, last, speed, done, ended, paused]);
+  }, [pos, last, speed, done, ended, paused, judgeOk, judgeIdx]);
   const won = Boolean(result && result.winner === 'A');
   // 手を選ぶ帯が出たら、帯が見える所まで入れ物(縦にだけ動く)を送る(横向きでは場の下に隠れるため)。横へは動かさない
   const barRef = useRef(null);
@@ -93620,6 +93624,7 @@ function MonsucArena({ s, info, engine, input, watch, onEnd }) {
         </div>
       ) : null}
       {manual && !ended ? <div className="msa-tools" data-msa-tools2><MsaCtlToggle ctl={ctl} save={false} onChange={(v) => { msaCtlRunWrite(s && s.id, v); setCtl(v); }}/><MsaBgToggle bg={bg} onChange={setBg}/></div> : null}
+      {judgeIdx >= 0 && pos >= judgeIdx && !judgeOk ? <MsaJudge row={log[judgeIdx]} names={{ A: nm('A'), B: nm('B') }} onGo={() => setJudgeOk(true)}/> : null}
       {techSheet != null && itemsA && typeof MsaTechSheet === 'function' ? <MsaTechSheet title={`${nm('A')} の${AMBW_DIST[techSheet]}の技`} list={itemsA} d={techSheet} dist={f.d} rep={msaRepIds(itemsA, null)} hitAt={hitAtA} onClose={() => setTechSheet(null)}/> : null}
     </div>
   );
@@ -93712,6 +93717,68 @@ function MsaNext({ side, name, hp, names, face, line }) {
       <div className="msa-next-band"><small>NEXT</small><b>{name}</b></div>
       <div className="msa-next-left">{['A', 'B'].map(x => <span key={x} className={x}>{(names || {})[x] || ''} {((hp || {})[x] || []).map((h, k) => <u key={k} className={h > 0 ? 'on' : ''}/>)}</span>)}</div>
       {line ? <div className="msa-next-talk">{face ? <img src={face} alt=""/> : null}<span>{line}</span></div> : null}
+    </div>
+  );
+}
+// 判定の画面(2026-11-15 r1115-058 社長): 30ターンで決着がつかなかったときの「判定!」。試合の配置とは別の独立した部品(画面いっぱいに重ねる)
+//   row … 芯の判定の行 { rows:[{key,a,b,win}], winsA, winsB, by, hpA, hpB, limit }。names … { A, B }。onGo … タップか9秒で次へ
+const MSA_JUDGE_LABEL = { pct: ['❤️', '残ライフ'], dmg: ['⚔️', '与えたダメージ'], guts: ['🔥', '消費ガッツ'] };
+const MSA_JUDGE_BY = { hp: '勝ち数が同じなので、残ライフの量(実数)で決着', pct: '残ライフの量も同じなので、残ライフ%で決着', dmg: 'ここまで同じなので、与えたダメージで決着', tie: 'すべて同じなので、引き分けにせず負け扱い' };
+const MSA_JUDGE_CSS = `
+.msa-judge{position:fixed;inset:0;z-index:9650;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:max(12px,env(safe-area-inset-top)) 12px max(12px,env(safe-area-inset-bottom));background:#0b0820f2;color:#fff;overflow-y:auto;font-family:inherit}
+.msa-judge>*{flex:none;width:100%;max-width:420px}
+.msa-judge-big{text-align:center;font-size:40px;font-weight:900;font-style:italic;color:#fde047;text-shadow:0 3px 0 #92400e,0 0 18px #fde047aa;line-height:1.1}
+.msa-judge-sub{text-align:center;font-size:11.5px;color:#cbd5e1;word-break:auto-phrase}
+.msa-judge-head,.msa-judge-row{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr) minmax(0,1fr) 50px;gap:4px;align-items:center}
+.msa-judge-head{font-size:10.5px;font-weight:900;color:#94a3b8;text-align:center}
+.msa-judge-head span:first-child{text-align:left}
+.msa-judge-head b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.msa-judge-row{background:#1e1a36;border:1px solid #3b3566;border-radius:12px;padding:6px 8px;min-height:44px;font-size:12px}
+.msa-judge-row .nm{font-weight:900;font-size:11.5px;line-height:1.25;word-break:auto-phrase}
+.msa-judge-row .v{text-align:center;font-weight:900;font-size:15px;color:#cbd5e1}
+.msa-judge-row .v.w{color:#fde047}
+.msa-judge-row .v small{display:block;font-size:10px;font-weight:700;color:#94a3b8;line-height:1.2}
+.msa-judge-row .v.w small{color:#fde68a}
+.msa-judge-row .r{text-align:center;font-size:10.5px;font-weight:900;border-radius:99px;padding:2px 0;background:#334155;color:#e2e8f0}
+.msa-judge-row .r.A{background:#db2777;color:#fff}.msa-judge-row .r.B{background:#0369a1;color:#fff}
+.msa-judge-res{text-align:center;background:#1e1a36;border:1px solid #fde047;border-radius:14px;padding:8px}
+.msa-judge-res b{display:block;font-size:20px;font-weight:900;color:#fde047}
+.msa-judge-res.l b{color:#cbd5e1}
+.msa-judge-res small{display:block;margin-top:2px;font-size:11px;line-height:1.5;color:#e2e8f0;word-break:auto-phrase}
+.msa-judge-go{min-height:44px;border:0;border-radius:99px;font-weight:900;font-size:13px;color:#fff;background:linear-gradient(90deg,#ec4899,#f97316);cursor:pointer}
+@media (max-height:440px){.msa-judge{gap:4px;padding-top:6px;padding-bottom:6px}.msa-judge-big{font-size:26px}.msa-judge-sub{font-size:10.5px}.msa-judge-row{min-height:36px;padding:3px 8px}.msa-judge-res{padding:4px}.msa-judge-res b{font-size:16px}.msa-judge-res small{font-size:10.5px;line-height:1.35}.msa-judge-go{min-height:40px}}
+@media (min-width:700px) and (max-height:440px){.msa-judge{padding-left:64px;padding-right:64px}}
+`;
+function MsaJudge({ row, names, onGo }) {
+  const done = useRef(false);
+  const go = () => { if (done.current) return; done.current = true; onGo(); };
+  useEffect(() => { msaSe('tap'); const t = setTimeout(go, 9000); return () => clearTimeout(t); }, []);
+  const fmt = (k, v) => (k === 'pct' ? `${v}%` : String(v));
+  const rows = Array.isArray(row.rows) ? row.rows : [];
+  const win = row.winner === 'A';
+  const by = MSA_JUDGE_BY[row.by];
+  return (
+    <div className="msa-judge" data-msa-judge={win ? 'win' : 'lose'} onClick={go} role="button" aria-label="結果へ">
+      <style>{MSA_JUDGE_CSS}</style>
+      <div className="msa-judge-big">判定!</div>
+      <div className="msa-judge-sub">{row.limit || 30}ターンで決着がつかなかったので、3つの比べで決めます</div>
+      <div className="msa-judge-head"><span>比べる物</span><span><b>{(names && names.A) || '自分'}</b></span><span><b>{(names && names.B) || '相手'}</b></span><span>勝ち</span></div>
+      {rows.map((r) => {
+        const lb = MSA_JUDGE_LABEL[r.key] || ['', r.key];
+        return (
+          <div key={r.key} className="msa-judge-row" data-msa-judge-row={r.key}>
+            <span className="nm">{lb[0]}{lb[1]}</span>
+            <span className={`v ${r.win === 'A' ? 'w' : ''}`}>{fmt(r.key, r.a)}{r.key === 'pct' && row.mxA ? <small>{row.hpA}/{row.mxA}</small> : null}</span>
+            <span className={`v ${r.win === 'B' ? 'w' : ''}`}>{fmt(r.key, r.b)}{r.key === 'pct' && row.mxB ? <small>{row.hpB}/{row.mxB}</small> : null}</span>
+            <span className={`r ${r.win || ''}`}>{r.win === 'A' ? '自分' : r.win === 'B' ? '相手' : '同じ'}</span>
+          </div>
+        );
+      })}
+      <div className={`msa-judge-res ${win ? 'w' : 'l'}`}>
+        <b>{win ? '判定勝ち!' : '判定負け…'}</b>
+        <small>自分 {row.winsA}勝 ・ 相手 {row.winsB}勝{by ? <><br/>{by}{row.by === 'hp' ? `(自分 ${row.hpA} ・ 相手 ${row.hpB})` : ''}</> : null}</small>
+      </div>
+      <button type="button" className="msa-judge-go" onClick={(ev) => { ev.stopPropagation(); go(); }}>結果へ ▶</button>
     </div>
   );
 }
