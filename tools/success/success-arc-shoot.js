@@ -30,7 +30,7 @@ const makeRun = async (kind) => {
   const stats = (n) => ({ life: n, pow: n, wise: n, hit: n, eva: n, tough: n });
   let phase = 'main'; let out = null;
   if (kind === 'uniq') { s = { ...s, turn: 12 }; const o = SUC.events.open(s, 'start'); s = o.state; phase = 'event'; out = { ev: o.out.ev, slot: 'start' }; }
-  if (kind === 'pick1' || kind === 'pick2' || kind === 'pick3') { const r = Number(kind.slice(-1)) - 1; s = { ...s, turn: 44 + r, stats: stats(999), aidBond: 100, astory: { ep: 4, path: 'good', done: true }, battle: { kind: 'summit', round: r } }; phase = 'battle'; }
+  if (kind === 'pick1' || kind === 'pick2' || kind === 'pick3') { const r = Number(kind.slice(-1)) - 1; s = { ...s, turn: 44 + r, stats: stats(999), aidBond: 100, astory: { ep: 4, path: 'good', done: true }, wonBefore: [`summit${r + 1}`], battle: { kind: 'summit', round: r } }; phase = 'battle'; } // 結果だけ見るは、勝った記録があるときだけ押せる(r1115-057)
   const end = (k, over) => { s = { ...s, turn: 46, stats: stats(600), over, aidBond: k === 'super' ? 100 : 70, ending: { kind: k, parties: SUC.PARTY[k].slice(), seen: false } }; phase = 'over'; };
   if (kind === 'bad') end('bad', 'lost');
   if (kind === 'good') end('good', 'done');

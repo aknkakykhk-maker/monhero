@@ -50,8 +50,9 @@ const makeRun = async (kind) => {
   s = { ...s, acted: false, battle: null, over: null, tickets: 3, items: { sand: 2, rainbow: 1 } };
   let phase = 'main';
   const stats = (n) => ({ life: n, pow: n, wise: n, hit: n, eva: n, tough: n });
-  if (kind === 'win' || kind === 'lose') { s = { ...s, stats: stats(kind === 'win' ? 700 : 40), battle: { kind: 'cup', id: 'x', sys: 'str', star: 2, rival: null, round: 0 } }; phase = 'battle'; }
-  if (kind === 'debutlose') { s = { ...s, turn: 5, wonNow: [], wonBefore: [], stats: stats(30), debutLoss: 2, debutWon: false, rematchUsed: 3, battle: { kind: 'debut', round: 0, retry: 2 } }; phase = 'battle'; }
+  // 結果だけ見る(r1115-057): その大会で1回でも勝った記録(wonBefore)があるときだけ押せる。win・lose は「勝ったことがある」大会・winnew は初めての大会
+  if (kind === 'win' || kind === 'lose' || kind === 'winnew') { s = { ...s, stats: stats(kind === 'lose' ? 40 : 700), wonBefore: kind === 'winnew' ? [] : ['str:2'], wonNow: [], battle: { kind: 'cup', id: 'x', sys: 'str', star: 2, rival: null, round: 0 } }; phase = 'battle'; }
+  if (kind === 'debutlose') { s = { ...s, turn: 5, wonNow: [], wonBefore: ['debut'], stats: stats(30), debutLoss: 2, debutWon: false, rematchUsed: 3, battle: { kind: 'debut', round: 0, retry: 2 } }; phase = 'battle'; }
   if (kind === 'kimatsu' || kind === 'summit') { // 期末の大会・最後の大会の当日(芯が battle を立てた直後。まだ「はい」を押していない)
     const want = kind === 'kimatsu' ? 'junior' : 'final';
     let t = 1; while (t < (SUC.TOTAL_TURNS || 46) && !(SUC.periodOf(t).key === want && (kind === 'summit' ? SUC.periodOf(t).at >= 3 : SUC.periodOf(t + 1).key !== want))) t++;
@@ -91,6 +92,7 @@ const makeRun = async (kind) => {
     ['B2', 'win', ['cont', '@cupintro-go', '%quick']], ['R1', 'win', ['cont', '@cupintro-go', '%quick', '%next']], ['C3', 'win', ['cont', '@cupintro-go', '%quick', '%next', '@next']], ['C3b', 'win', ['cont', '@cupintro-go', '%quick', '%next', '@next', '@meal=f_tough']], // R1: 賞金ランク UP!(段が上がったときだけ)
     ['C4', 'lose', ['cont', '@cupintro-go', '%quick']], ['C4r', 'lose', ['cont', '@cupintro-go', '%quick', '%rematch=sand']], ['C4g', 'lose', ['cont', '@cupintro-go', '%quick', '%giveup']],
     ['C4d', 'debutlose', ['cont', '@cupintro-go', '%quick']],
+    ['N1', 'winnew', ['cont', '@cupintro-go']], ['N2', 'winnew', ['cont', '@cupintro-go', '%go']], // 初めての大会: 結果だけ見るは押せず、理由が出る(r1115-057)
     ['Q1', 'mid', ['cont', /^⚔修行/]], ['Q6', 'mid', ['cont', /^⚔修行/]], ['Q7', 'mid', ['cont', /^⚔修行/, '$qok0']], // SHOT_SPECIES=Golem で撮ると、間合い適性(零 A・近 E・中 G・遠 G)で同じランクの技の率が分かれる(r1115-041)
     ['Q4', 'mid', ['cont', /^⚔修行/, '$qok0']], ['Q5', 'mid', ['cont', /^⚔修行/, '$qok0', '$qok1']], ['Q2', 'mid', ['cont', /^⚔修行/, '@shugyo']], ['Q2b', 'mid', ['cont', /^⚔修行/, '@shugyo', '@qskip']], ['Q3', 'mid', ['cont', /^⚔修行/, '@shugyo', '@qskip', '@qnext']], // 修行の段の演出 → 「結果へ」(Fable ①-12)
     ['QL1', 'qhit', ['cont', /^⚔修行/, '$qok0', '@shugyo', '@qskip']], ['QL2', 'qmiss', ['cont', /^⚔修行/, '$qok0', '@shugyo', '@qskip']], ['QL3', 'qmix', ['cont', /^⚔修行/, '$qok0', '$qok1', '@shugyo', '@qskip']], // 技を覚えた/覚えられなかった/超修行で1つだけ(r1115-063)
@@ -220,6 +222,8 @@ const makeRun = async (kind) => {
         if (/^(K[0-3]|S[02]|Q1)$/.test(name) && !tag) { // 画面の決まり(MONSUC_UI): 中身のいちばん下とボタンの列のあいだは 48px まで(縦)
           const gap = await page.evaluate(() => { const ft = document.querySelector('.msx .v-ft'); const kids = [...document.querySelectorAll('.msx .v-body > *')].filter((e) => getComputedStyle(e).position !== 'absolute' && e.getBoundingClientRect().height > 0); if (!ft || !kids.length) return -1; const rs = kids.map((e) => e.getBoundingClientRect()).sort((x, y) => x.top - y.top); let mid = 0; for (let i = 1; i < rs.length; i++) mid = Math.max(mid, rs[i].top - Math.max(...rs.slice(0, i).map((r) => r.bottom))); return Math.round(Math.max(mid, ft.getBoundingClientRect().top - Math.max(...rs.map((r) => r.bottom)))); });
           check(`${label}: 下の空き・札のあいだの空きが 48px まで`, gap >= 0 && gap <= 48, `${gap}px`); }
+        if (name === 'N1' || name === 'N2') { const q = await page.evaluate(() => { const b = document.querySelector('[data-msc-quick]'); const w = document.querySelector('[data-msc-quick-why]'); return { has: !!b, off: !!(b && b.disabled), why: !!w }; });
+          check(`${label}: 勝ったことのない大会は「結果だけ見る」が押せず、理由が出る`, q.has && q.off && q.why, JSON.stringify(q)); }
         if (name === 'K2') { const pz = await page.evaluate(() => { const box = document.querySelector('[data-msx-r3-cupwin] .in'); if (!box) return { ok: false }; const R = box.getBoundingClientRect(); const bs = [...box.querySelectorAll('[data-msx-r3-prize]')]; return { ok: bs.length > 0 && bs.every((b) => { const r = b.getBoundingClientRect(); return r.left >= R.left - 1 && r.right <= R.right + 1; }), n: bs.length }; });
           check(`${label}: 獲得物の札が全部 枠の中に見える`, pz.ok, `${pz.n}枚`); }
         if (name === 'R1') { // ビートP: 優勝の分が本編のビートPに1回だけ足される(同じ育成をもう一度保存しても増えない)

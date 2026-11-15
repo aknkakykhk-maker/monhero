@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: a6f2d0c88f7067b9
+// generated-sha256: 91199d47961e84e2
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -80076,9 +80076,11 @@ const monsucPopOrder = (suc, s, entrants) => {
 
 const MSC_CSS = `
 .msc-root{position:fixed;inset:0;z-index:9000;overflow-y:auto;color:#fff;background:linear-gradient(180deg,#221a44,#141026 45%);
-  padding:calc(8px + env(safe-area-inset-top)) calc(10px + env(safe-area-inset-right)) calc(10px + env(safe-area-inset-bottom)) calc(10px + env(safe-area-inset-left));font-family:inherit}
+  padding:max(calc(8px + env(safe-area-inset-top)),52px) calc(10px + env(safe-area-inset-right)) calc(10px + env(safe-area-inset-bottom)) calc(10px + env(safe-area-inset-left));font-family:inherit}
 .msc-wrap{max-width:520px;margin:0 auto;display:flex;flex-direction:column;gap:8px;min-height:100%}
 .msc-top{display:flex;align-items:center;gap:8px}
+.msc-btn:disabled{opacity:.45;cursor:default;box-shadow:none}
+.msc-why{margin-top:6px;text-align:center;font-size:11px;font-weight:800;color:#fde68a;line-height:1.4}
 .msc-top b{flex:1;min-width:0;font-size:14px;color:#fde68a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .msc-btn{border:0;border-radius:999px;padding:12px 14px;font-weight:900;font-size:15px;color:#fff;background:linear-gradient(90deg,#f472b6,#fb923c);box-shadow:0 3px 0 #9d174d;cursor:pointer;min-height:44px}
 .msc-btn.y{background:#fde047;color:#3b2a05;box-shadow:0 3px 0 #a16207}
@@ -80339,8 +80341,9 @@ function MonsucBracket({ suc, s, info, result: resultProp, onFight, onResultOnly
       </div>
       <div className="msc-note"><b>決勝は <span className="nw">{info.meName} VS {nm(foe)}</span></b>。<span className="nw">左の数字は人気の順</span><span className="nw">(1が 一番人気)。</span><small><span className="nw">ほかの試合の結果は、</span><span className="nw">見せるだけの演出です</span><span className="nw">(戦うのは決勝の1戦だけ)</span></small></div>
       <div className="msc-talk"><img src={mscFace(s.aid)} alt=""/><p className="msx-kp">{coach ? <b style={{ display: 'block', fontSize: 11, color: '#b45309' }}>解説 {coach.name}</b> : null}{st >= 3 ? finalLine : lines[st]}</p>{st < 3 ? <button type="button" className="msc-sk" data-msc-skip onClick={() => setStage(3)}>SKIP ▸▸</button> : null}</div>
+      {canSkip ? null : <div className="msc-why" data-msc-quick-why>この大会で1回勝つと「結果だけ見る」が使えます</div>}
       <div className="msc-foot">
-        <button className="msc-btn y s" data-msc-quick onClick={onResultOnly}>{canSkip ? '⏩ 結果だけ見る(優勝ずみ)' : '⏩ 結果だけ見る'}</button>
+        <button className="msc-btn y s" data-msc-quick disabled={!canSkip} onClick={() => canSkip && onResultOnly()}>{canSkip ? '⏩ 結果だけ見る(優勝ずみ)' : '⏩ 結果だけ見る'}</button>
         <button className="msc-btn" data-msc-go onClick={onFight}>⚔ 決勝へ</button>
       </div>
     </div>
@@ -80348,7 +80351,7 @@ function MonsucBracket({ suc, s, info, result: resultProp, onFight, onResultOnly
 }
 
 // ---- バトルカード(C2)。2体と VS・タブ・6能力の棒が伸びる ----
-function MonsucBattleCard({ suc, s, info, catalog, odds, onReady, onResultOnly, onBack }) {
+function MonsucBattleCard({ suc, s, info, catalog, odds, onReady, onResultOnly, onBack, canSkip }) {
   const [tab, setTab] = useState('st');
   const o = info.opp || {};
   const me = s.stats || {}; const op = o.stats || {};
@@ -80434,8 +80437,9 @@ function MonsucBattleCard({ suc, s, info, catalog, odds, onReady, onResultOnly, 
         <span data-msc-reach={reach.map(x => (x ? 1 : 0)).join('')}><small>技が届く</small><b className="r">{AMBW_DIST.map((dn, d) => <i key={dn} className={reach[d] ? 'y' : ''}>{dn}</i>)}</b></span>
       </div>
       <div className="msc-hint"><img src={mscFace(s.aid)} alt=""/><span style={typeof JA_LABEL_STYLE !== 'undefined' ? JA_LABEL_STYLE : undefined}>{hint}</span></div>
+      {canSkip ? null : <div className="msc-why" data-msc-quick-why>この大会で1回勝つと「結果だけ見る」が使えます</div>}
       <div className="msc-foot">
-        <button className="msc-btn y s" data-msc-quick onClick={onResultOnly}>⏩ 結果だけ見る</button>
+        <button className="msc-btn y s" data-msc-quick disabled={!canSkip} onClick={() => canSkip && onResultOnly()}>⏩ 結果だけ見る</button>
         <button className="msc-btn" data-msc-ready onClick={onReady}>準備完了</button>
       </div>
     </div>
@@ -80620,8 +80624,8 @@ function MonsucCupShowInner({ suc, s, me, settle, onRematch, onNext, onClose, st
   const canSkip = typeof suc.canSkip === 'function' && suc.canSkip(s);
   let body = null;
   if (!info) body = <p className="msc-note">大会が見つかりませんでした</p>;
-  else if (phase === 'bracket') body = <MonsucBracket suc={suc} s={s} info={info} canSkip={canSkip} onClose={onClose} onFight={() => setPhase('card')} onResultOnly={() => match && finish(match.won)}/>;
-  else if (phase === 'card') body = <MonsucBattleCard suc={suc} s={s} info={info} catalog={catalog} odds={odds} onBack={() => setPhase('bracket')} onReady={() => setPhase(info.buffs || info.buffRows.length ? 'cutin' : 'match')} onResultOnly={() => match && finish(match.won)}/>;
+  else if (phase === 'bracket') body = <MonsucBracket suc={suc} s={s} info={info} canSkip={canSkip} onClose={onClose} onFight={() => setPhase('card')} onResultOnly={() => canSkip && match && finish(match.won)}/>;
+  else if (phase === 'card') body = <MonsucBattleCard suc={suc} s={s} info={info} catalog={catalog} odds={odds} canSkip={canSkip} onBack={() => setPhase('bracket')} onReady={() => setPhase(info.buffs || info.buffRows.length ? 'cutin' : 'match')} onResultOnly={() => canSkip && match && finish(match.won)}/>;
   else if (phase === 'cutin') body = <MonsucCutin s={s} info={info} onGo={() => setPhase('match')}/>;
   else if (phase === 'match') {
     const canPlay = match && match.input && engine && typeof engine.createMatch === 'function';

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 6c137e40aa82d7ef
+// source-sha256: e79bc26308df1b3c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -153327,9 +153327,11 @@ const monsucPopOrder = (suc, s, entrants) => {
 };
 const MSC_CSS = `
 .msc-root{position:fixed;inset:0;z-index:9000;overflow-y:auto;color:#fff;background:linear-gradient(180deg,#221a44,#141026 45%);
-  padding:calc(8px + env(safe-area-inset-top)) calc(10px + env(safe-area-inset-right)) calc(10px + env(safe-area-inset-bottom)) calc(10px + env(safe-area-inset-left));font-family:inherit}
+  padding:max(calc(8px + env(safe-area-inset-top)),52px) calc(10px + env(safe-area-inset-right)) calc(10px + env(safe-area-inset-bottom)) calc(10px + env(safe-area-inset-left));font-family:inherit}
 .msc-wrap{max-width:520px;margin:0 auto;display:flex;flex-direction:column;gap:8px;min-height:100%}
 .msc-top{display:flex;align-items:center;gap:8px}
+.msc-btn:disabled{opacity:.45;cursor:default;box-shadow:none}
+.msc-why{margin-top:6px;text-align:center;font-size:11px;font-weight:800;color:#fde68a;line-height:1.4}
 .msc-top b{flex:1;min-width:0;font-size:14px;color:#fde68a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .msc-btn{border:0;border-radius:999px;padding:12px 14px;font-weight:900;font-size:15px;color:#fff;background:linear-gradient(90deg,#f472b6,#fb923c);box-shadow:0 3px 0 #9d174d;cursor:pointer;min-height:44px}
 .msc-btn.y{background:#fde047;color:#3b2a05;box-shadow:0 3px 0 #a16207}
@@ -153680,12 +153682,16 @@ function MonsucBracket({
     className: "msc-sk",
     "data-msc-skip": true,
     onClick: () => setStage(3)
-  }, "SKIP ▸▸") : null), React.createElement("div", {
+  }, "SKIP ▸▸") : null), canSkip ? null : React.createElement("div", {
+    className: "msc-why",
+    "data-msc-quick-why": true
+  }, "この大会で1回勝つと「結果だけ見る」が使えます"), React.createElement("div", {
     className: "msc-foot"
   }, React.createElement("button", {
     className: "msc-btn y s",
     "data-msc-quick": true,
-    onClick: onResultOnly
+    disabled: !canSkip,
+    onClick: () => canSkip && onResultOnly()
   }, canSkip ? '⏩ 結果だけ見る(優勝ずみ)' : '⏩ 結果だけ見る'), React.createElement("button", {
     className: "msc-btn",
     "data-msc-go": true,
@@ -153700,7 +153706,8 @@ function MonsucBattleCard({
   odds,
   onReady,
   onResultOnly,
-  onBack
+  onBack,
+  canSkip
 }) {
   const [tab, setTab] = useState('st');
   const o = info.opp || {};
@@ -153908,12 +153915,16 @@ function MonsucBattleCard({
     alt: ""
   }), React.createElement("span", {
     style: typeof JA_LABEL_STYLE !== 'undefined' ? JA_LABEL_STYLE : undefined
-  }, hint)), React.createElement("div", {
+  }, hint)), canSkip ? null : React.createElement("div", {
+    className: "msc-why",
+    "data-msc-quick-why": true
+  }, "この大会で1回勝つと「結果だけ見る」が使えます"), React.createElement("div", {
     className: "msc-foot"
   }, React.createElement("button", {
     className: "msc-btn y s",
     "data-msc-quick": true,
-    onClick: onResultOnly
+    disabled: !canSkip,
+    onClick: () => canSkip && onResultOnly()
   }, "⏩ 結果だけ見る"), React.createElement("button", {
     className: "msc-btn",
     "data-msc-ready": true,
@@ -154366,16 +154377,17 @@ function MonsucCupShowInner({
     canSkip: canSkip,
     onClose: onClose,
     onFight: () => setPhase('card'),
-    onResultOnly: () => match && finish(match.won)
+    onResultOnly: () => canSkip && match && finish(match.won)
   });else if (phase === 'card') body = React.createElement(MonsucBattleCard, {
     suc: suc,
     s: s,
     info: info,
     catalog: catalog,
     odds: odds,
+    canSkip: canSkip,
     onBack: () => setPhase('bracket'),
     onReady: () => setPhase(info.buffs || info.buffRows.length ? 'cutin' : 'match'),
-    onResultOnly: () => match && finish(match.won)
+    onResultOnly: () => canSkip && match && finish(match.won)
   });else if (phase === 'cutin') body = React.createElement(MonsucCutin, {
     s: s,
     info: info,
