@@ -121,6 +121,9 @@ def seam_path(al, x0, x1, bias=0.02):
     return np.array(path[::-1]) + x0
 
 
+# 表情の絵を、元の絵のふちと色のまま作る子(clean の raw)。2026-11-15 r1115-203 社長「あつだけおかしい」でまずあつだけ。
+#   ほかの子は今までの作り方のまま(社長「ほかの助手はいい」)
+RAW_SHEETS = {'atsu'}
 SELF_BASE = {'sorashido'}  # 表情なしの元絵が無く、ふつうの体を大きさの基準にするシート
 
 
@@ -569,10 +572,13 @@ def fill_colors(col, known, steps):
     return col
 
 
-def clean(path, min_frac=0.03, arr=None, seeds=None, soft=None, flood=False, stats=None, boxes=None, halo=False, glow_cut=False):
+def clean(path, min_frac=0.03, arr=None, seeds=None, soft=None, flood=False, stats=None, boxes=None, halo=False, glow_cut=False, raw=False):
     """背景のもや・ごみを落とし、ふちの白いにじみを消す。ふちのアルファは2値に切らず、なめらかなまま残す
     (2026-11-12 社長「全身画の透過の荒さ直ってないね」: 前の作りはふちを 0/255 近くへ寄せていた)。
-    soft … ふちのアルファをぼかす量(元の絵の画素)。None なら元の絵のふちが2値のときだけ、書き出しで約 0.6 画素になる量でぼかす。"""
+    soft … ふちのアルファをぼかす量(元の絵の画素)。None なら元の絵のふちが2値のときだけ、書き出しで約 0.6 画素になる量でぼかす。
+    raw … 元の絵のふちの透け具合と色をそのまま使う(RAW_SHEETS の子だけ。2026-11-15 r1115-203)。
+      消すのは、体から離れた小さな塊(となりの絵のかけら・ごみ)と、はっきりした線(不透明度 64 以上)から2画素より外の薄いもや(64 未満)だけ。
+      下の 3)〜5)(体の芯から3画素より外を消す・ふちのぼかし・ふちの色の塗り直し)はしない。これらが髪の毛先や輪郭の細い線を消し、ふちをにじませていた"""
     im = (np.array(Image.open(path).convert('RGBA')) if arr is None else arr)
     pk = auto_pockets(im, boxes, max(1.0, im.shape[0] / REF_H)) if boxes else None
     if seeds or pk is not None:
@@ -596,6 +602,11 @@ def clean(path, min_frac=0.03, arr=None, seeds=None, soft=None, flood=False, sta
     keep = np.kron(keep_s, np.ones((4, 4), bool))[:core.shape[0], :core.shape[1]]
     keep = dil(keep, 6)  # 縁の細かい所を落とさない
     body = core & keep
+    if raw:
+        a2 = np.where(keep, a, 0)
+        a2 = np.where((a2 < 64) & ~dil(a2 >= 64, 2), 0, a2)
+        out = np.clip(np.dstack([np.where((a2 > 0)[..., None], rgb, 0), a2]), 0, 255).astype(np.uint8)
+        return Image.fromarray(out[:h0, :w0], 'RGBA')
     # 3) 背景のぼかし(光・もや)を落とす: 体から離れるほど、なだらかに消す(体のふち2画素まではそのまま・そこから約3画素で0へ)。
     #    前は「縁の2画素より外は0」と切っていたので、ふちが段になっていた
     near = blur(dil(body, 2), 1.5)
@@ -744,7 +755,7 @@ def main():
                 if key in HAIR_DEHAZE:
                     arr[...] = dehaze_hair(arr)
                 jobs.append(('%s__%s' % (key.replace(':', '_'), e),
-                             lambda arr=arr: clean(None, min_frac=0.004, arr=arr, glow_cut=True, soft=1.0),
+                             lambda arr=arr, key=key: clean(None, min_frac=0.004, arr=arr, raw=True) if key in RAW_SHEETS else clean(None, min_frac=0.004, arr=arr, glow_cut=True, soft=1.0),
                              ((lambda arr0=cells[0][1]: fit_scale(arr_to_im(arr0))) if key in SELF_BASE else (lambda key=key, ratio=ratio: fit_scale(make_art(key)) * ratio))))
     for key, sheets in GRID_SHEETS.items():
         if only and key.replace(':', '_') != only:
