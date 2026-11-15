@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f167ba71ec623c73
+// source-sha256: 429149521a3e1602
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -169579,6 +169579,7 @@ const MSX_CSS = `
 .msx .v-opt{background:#1e1a36;border:1.5px solid #f472b6;border-bottom-width:3px;border-radius:13px;padding:6px 10px;font-size:12.5px;font-weight:900;line-height:1.3}
 .msx .v-opt small{display:block;font-size:10px;color:#86efac;font-weight:800}
 .msx .v-clock{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:radial-gradient(circle at 50% 45%,#3b2f6b 0,#151130 70%)}
+.msx .v-scene .v-clock{justify-content:flex-start;padding-top:7%;background:linear-gradient(180deg,#151130e6 0,#15113099 70%,#1511304d 100%)}
 .msx .v-cal{width:190px;background:#fff;color:#1e1b4b;border-radius:16px;overflow:hidden;text-align:center;box-shadow:0 8px 0 #0006,0 0 30px #f472b666;transform:rotate(-3deg)}
 .msx .v-cal .y{background:linear-gradient(90deg,#f472b6,#fb923c);color:#fff;font-size:12px;font-weight:900;padding:3px}
 .msx .v-cal .mth{font-size:84px;font-weight:900;line-height:1.1}.msx .v-cal .mth small{font-size:20px}
@@ -175843,8 +175844,29 @@ function MsxPlay({
       className: "v-scene msx-fade",
       style: {
         flex: '1 1 0'
+      },
+      "data-msx-turn-scene": true
+    }, React.createElement("img", {
+      className: "bg",
+      src: msxSceneBg(s.turn).bg,
+      alt: ""
+    }), React.createElement("div", {
+      className: "sh"
+    }), React.createElement("div", {
+      className: "gr",
+      style: {
+        bottom: 'calc(8% - 5px)'
       }
-    }, React.createElement("div", {
+    }), React.createElement(MsxMonArt, {
+      run: run,
+      className: "mon",
+      style: {
+        bottom: '8%',
+        height: '34%',
+        opacity: .9
+      },
+      noPeak: true
+    }), React.createElement("div", {
       className: "v-clock"
     }, React.createElement("div", {
       className: "v-cal msx-pop"
@@ -179076,7 +179098,7 @@ function MsxR3Bracket({
     className: "go",
     onClick: toCard,
     "data-msx-r3-tocard": true
-  }, "⚔ 決勝へ")) : React.createElement("div", {
+  }, "⚔ 決勝へ ▶")) : React.createElement("div", {
     className: "v-ft"
   }, skip ? React.createElement("button", {
     type: "button",
@@ -179099,7 +179121,7 @@ function MsxR3Bracket({
     className: "go",
     onClick: toCard,
     "data-msx-r3-tocard": true
-  }, "⚔ 決勝へ"));
+  }, "⚔ 決勝へ ▶"));
   return React.createElement(MsxR3Frame, {
     run: run,
     back: "中断",
@@ -180608,7 +180630,7 @@ function MsxR3Battle({
       },
       onClick: () => setStep('watch'),
       "data-msx-r3-ready": true
-    }, "準備完了"));
+    }, "準備完了 ▶"));
     return React.createElement(MsxR3Frame, {
       run: run,
       back: "中断",
@@ -180757,7 +180779,7 @@ function MsxR3Shugyo({
         className: "go",
         onClick: () => setStOn(false),
         "data-msx-r3-qskip": true
-      }, "⏩ 結果へ"))
+      }, "⏩ 結果へ ▶"))
     });
   }
   if (res) {
@@ -181762,7 +181784,7 @@ function MsxR3Retire({
         className: "go",
         onClick: () => setStep('e2'),
         "data-msx-r3-e1": true
-      }, "✨ アシスト効果を取る(", msxR3T().assist ? msxR3T().assist.pointsOf(ev.power) : ev.points, "ポイント)"))
+      }, "✨ アシスト効果を取る(", msxR3T().assist ? msxR3T().assist.pointsOf(ev.power) : ev.points, "ポイント) ▶"))
     });
   }
   const AT = msxR3T().assist;
@@ -183137,7 +183159,8 @@ const MSX_MM_CSS = `
 .msx .mm-tabs.sm{margin-top:0}.msx .mm-tabs.sm button{font-size:12px;border-radius:10px}
 .msx .mm-hint{font-size:11px;font-weight:800;color:#f9a8d4;margin-top:6px;line-height:1.4}.msx .mm-hint.ok{color:#86efac}
 .msx .mm-art{display:block;position:relative}
-.msx .mm-gridw{flex:1 1 0;min-height:0;overflow-y:auto}
+.msx .mm-gridw{flex:1 1 0;min-height:0;overflow-y:auto;background:#0f0c24;border:1px solid #3b3566;border-radius:14px;padding:8px 6px;margin-top:6px}
+.msx .mm-gridw>.msx-note{text-align:center;margin:auto}
 .msx .mm-bar{display:flex;align-items:center;gap:6px;margin-top:4px;flex-wrap:wrap}
 .msx .mm-bar .cnt{flex:1;font-size:11px;font-weight:900;color:#e2e8f0;white-space:nowrap}.msx .mm-bar .cnt b{font-size:14px;color:#fde047}
 .msx .mm-sel{min-height:44px;border-radius:12px;background:#1e1a36;border:1.5px solid #fde047;padding:4px 10px;font-size:11.5px;font-weight:900;white-space:nowrap}
