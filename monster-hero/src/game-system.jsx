@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: db640eea4ddc42b7
+// generated-sha256: 8fc01691afac583e
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -10249,7 +10249,9 @@ const changelogEventLive = (entry, nowMs = Date.now()) => {
   // (2026-11-09 社長「(本オープン記念のお知らせを)上部に固定も」。周回5倍の期間が終わったら外れる)
   if (entry && entry.pinTop && typeof entry.pinTop === 'object' && entry.type !== 'event') {
     const pinFrom = Date.parse(entry.visibleFrom || '');
-    const pinEnd = Date.parse(entry.pinTop.until || '');
+    // until の代わりに days を書くと、項目の日時(date・JST)からその日数だけ固定する(2026-11-14 モンヒロサクセス β公開の帯「公開から2週間」。公開の日に date を直せば期限もついて動く)
+    const dayMs = Number(entry.pinTop.days) > 0 && /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/.test(String(entry.date || '')) ? Date.parse(`${String(entry.date).replace(' ', 'T')}:00+09:00`) + Number(entry.pinTop.days) * 86400e3 : NaN;
+    const pinEnd = entry.pinTop.until ? Date.parse(entry.pinTop.until) : dayMs;
     return Number.isFinite(pinEnd) && nowMs < pinEnd && (!Number.isFinite(pinFrom) || nowMs >= pinFrom);
   }
   const notice = entry && entry.type === 'event' ? entry.assistantNotice : null;
@@ -89766,8 +89768,16 @@ const MSX_HOME_CSS = `
 .mh-home-success>span{display:flex;align-items:center;gap:4px;padding:8px 12px;border:1.5px solid #f9a8d4dd;border-radius:13px;background:linear-gradient(135deg,#831843ee,#4c1d95ee);color:#fff;font-size:12px;font-weight:900;line-height:1.2;box-shadow:0 3px 10px #0007;white-space:nowrap}
 .mh-home-success b.beta{margin-left:2px;padding:1px 6px;border-radius:6px;background:#f472b6;color:#fff;font-size:11px;line-height:1.4}
 .mh-home-success:active>span{transform:scale(.96)}
-@media (orientation:landscape){.mh-home-success,.mh-home-scene:has(.mh-home-card-battle.raised) .mh-home-success,.mh-home-scene:has(.mh-home-card-battle.below-tour) .mh-home-success{left:146px;bottom:12px}
-.mh-home-scene:has(.mh-home-facility.life) .mh-home-success{bottom:32px}}
+.mh-home-success>span{flex-wrap:wrap;max-width:178px}
+/* 一言は言葉の切れ目(<wbr>)でだけ折る(「ヒーローズファ/イナル」と折れていた・r1115-206)。札の一言は、縦に余裕のある縦長の HOME(場面の高さ700以上。664 ではモンヒロバトルの上の助手の顔が詰まった・r1115-206)だけ出し、伸びたぶん札を下へずらす(上の MFバトルカードの顔の列にかからない)。小さい画面・横画面は名前とリボンだけ */
+.mh-home-success .ln{display:none;flex-basis:100%;font-size:10px;font-weight:800;color:#fbcfe8;line-height:1.3;white-space:normal;word-break:keep-all;overflow-wrap:anywhere;text-align:left}
+@container (min-height:700px) and (max-aspect-ratio:1/1){.mh-home-success .ln{display:block}.mh-home-success{margin-bottom:-34px}}
+.mh-home-success .rb{position:absolute;right:-6px;top:-9px;z-index:1;font-style:normal;font-size:10px;font-weight:900;color:#422006;background:linear-gradient(90deg,#fde047,#fbbf24);border-radius:6px;padding:1px 7px;box-shadow:0 2px 4px #0008;transform:rotate(4deg);white-space:nowrap}
+/* 横持ちは、下の真ん中の「モンヒロバトル」のすぐ上(村の絵の真ん中の空き)に置く。前は MFバトルカードの右に置いていて、横 568×320 ではモンヒロバトルのボタンにかかっていた(2026-11-14) */
+@media (orientation:landscape){.mh-home-success,.mh-home-scene:has(.mh-home-card-battle.raised) .mh-home-success,.mh-home-scene:has(.mh-home-card-battle.below-tour) .mh-home-success,.mh-home-scene:has(.mh-home-facility.life) .mh-home-success{left:50%;bottom:66px;translate:-50% 0}}
+/* 背の低い横画面(高さ400以下: 568×320・640×360・667×375・844×390 など)は、右の「助手ライフ」とその顔の列(札の右端から左へ最大140px)の下にかからないよう少し左へ寄せる。
+   高さ340以下だけ寄せていたら、640×360・667×375 で助手ライフの顔が札の上へ逃げた(2026-11-16 r1115-206 印を立てて home-layout-check) */
+@media (orientation:landscape) and (max-height:400px){.mh-home-scene.mh-home-scene.mh-home-scene .mh-home-success{left:calc(50% - 40px)}}
 `;
 function MonheroSuccessHomeEntry({ callNameOf, bondLvOf, onOpenChange }) {
   const [open, setOpen] = useState(false);
@@ -89777,7 +89787,9 @@ function MonheroSuccessHomeEntry({ callNameOf, bondLvOf, onOpenChange }) {
     <>
       <style>{MSX_HOME_CSS}</style>
       <button type="button" className="mh-home-success" data-home-monhero-success onClick={() => setOpen(true)} aria-label="モンヒロサクセス β">
-        <span><span aria-hidden="true">🌱</span>モンヒロサクセス<b className="beta">β</b></span>
+        {/* 公開の日の入口の文(2026-11-14 ココロ・窓口経由 #6116 を r1115-206 で取り込み直し): 上のリボン「β版 開幕！」と札の一言 */}
+        <i className="rb" aria-hidden="true">β版 開幕！</i>
+        <span><span aria-hidden="true">🌱</span>モンヒロサクセス<b className="beta">β</b><small className="ln">デビュー戦から<wbr/>ヒーローズファイナルまで、<wbr/>1体をじっくり育てよう</small></span>
       </button>
       {open && <MonheroSuccessScreen onClose={() => setOpen(false)} callNameOf={callNameOf} bondLvOf={bondLvOf}/>}
     </>

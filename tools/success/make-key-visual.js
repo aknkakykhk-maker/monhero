@@ -36,7 +36,7 @@ const pickScene = () => {
     const sub = last ? 'ヒーローズファイナル' : p[1] + 'ターン';
     return `<rect x="${x}" y="${by}" width="${bw}" height="78" rx="14" fill="#0f1b3d" fill-opacity=".92" stroke="${last ? '#ffd54a' : '#fb7185'}" stroke-width="3"/>
     <text x="${x + bw / 2}" y="${by + 34}" font-size="23" font-weight="700" fill="#fff" text-anchor="middle">${p[0]}</text>
-    <text x="${x + bw / 2}" y="${by + 64}" font-size="20" fill="${last ? '#ffd54a' : '#ffb4cf'}" text-anchor="middle">${sub}</text>` + (last ? '' : `<text x="${x + bw + bgap / 2}" y="${by + 48}" font-size="18" fill="#ffd54a" text-anchor="middle">▶</text>`);
+    <text x="${x + bw / 2}" y="${by + 64}" font-size="${last ? 14 : 20}" fill="${last ? '#ffd54a' : '#ffb4cf'}" text-anchor="middle">${sub}</text>` + (last ? '' : `<text x="${x + bw + bgap / 2}" y="${by + 48}" font-size="18" fill="#ffd54a" text-anchor="middle">▶</text>`);
   }).join('\n');
   const text = Buffer.from(`<svg width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg" font-family="WenQuanYi Zen Hei, Noto Sans CJK JP, sans-serif">
     <text x="48" y="150" font-size="84" font-weight="700" fill="#ffffff" stroke="#0f1b3d" stroke-width="10" paint-order="stroke">モンヒロ</text>

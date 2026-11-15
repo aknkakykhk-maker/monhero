@@ -48,7 +48,8 @@ const VIEWS = [{ id: 'tate', name: '縦 390×844', w: 390, h: 844 }, { id: 'yoko
     await page.locator('[data-home-assistant-life]').click({ timeout: 20000 });
     await page.locator('[data-assistant-life-intro]').waitFor({ state: 'detached', timeout: 8000 }).catch(() => {});
     await page.waitForTimeout(900);
-    // ① 印が偽
+    // ① 印が偽(公開の印を真にしたあとも確かめられるよう、ページの中でだけ偽にする・2026-11-16 r1115-206)
+    await page.evaluate(() => { RELEASE_FLAGS.monheroSuccess = false; });
     await openRoom(page, 'mua');
     check(`${T}① 印が偽のあいだは部屋に入口が出ない`, (await rowText(page)) === null);
     // ② 印を真に(ページの中でだけ)
