@@ -35,6 +35,13 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    date: "2026-11-15 09:47", type:'update', title:'修行は体力が足りないと行けなくなりました', group:'success', releaseFlag:'monheroSuccess', status:'new',
+    items:[
+      '修行に出るには体力が30、超修行には60いります。足りないときは修行のボタンが押せない見た目になり、「体力があと◯足りない」と出ます。',
+      '修行は行けても超修行は行けないときは、技を1つだけ選べます。休む・遊ぶで体力を回復してから出かけましょう。',
+    ],
+  },
+  {
     // 2026-11-15 r1115-035(社長「オクリモノに付ける」→ 案A・300P): 好き・苦手の gift・color。公開の印 assistantLifeTaste
     date: "2026-11-15 07:32", type:'update', title:'助手に、好きなモンスターのぬいぐるみを贈れるようになりました', status:'new', group:'assistant', releaseFlag:'assistantLifeTaste',
     items:[
