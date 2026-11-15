@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 5dcef44dfee3e320
+// generated-sha256: 6c83cf2f604fc088
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -89737,8 +89737,9 @@ const MSX_HOME_CSS = `
 .mh-home-success .rb{position:absolute;right:-6px;top:-9px;z-index:1;font-style:normal;font-size:10px;font-weight:900;color:#422006;background:linear-gradient(90deg,#fde047,#fbbf24);border-radius:6px;padding:1px 7px;box-shadow:0 2px 4px #0008;transform:rotate(4deg);white-space:nowrap}
 /* 横持ちは、下の真ん中の「モンヒロバトル」のすぐ上(村の絵の真ん中の空き)に置く。前は MFバトルカードの右に置いていて、横 568×320 ではモンヒロバトルのボタンにかかっていた(2026-11-14) */
 @media (orientation:landscape){.mh-home-success,.mh-home-scene:has(.mh-home-card-battle.raised) .mh-home-success,.mh-home-scene:has(.mh-home-card-battle.below-tour) .mh-home-success,.mh-home-scene:has(.mh-home-facility.life) .mh-home-success{left:50%;bottom:66px;translate:-50% 0}}
-/* 背の低い横画面(568×320 など)は、右の「助手ライフ」にかからないよう少し左へ寄せる */
-@media (orientation:landscape) and (max-height:340px){.mh-home-scene.mh-home-scene.mh-home-scene .mh-home-success{left:calc(50% - 34px)}}
+/* 背の低い横画面(高さ400以下: 568×320・640×360・667×375・844×390 など)は、右の「助手ライフ」とその顔の列(札の右端から左へ最大140px)の下にかからないよう少し左へ寄せる。
+   高さ340以下だけ寄せていたら、640×360・667×375 で助手ライフの顔が札の上へ逃げた(2026-11-16 r1115-206 印を立てて home-layout-check) */
+@media (orientation:landscape) and (max-height:400px){.mh-home-scene.mh-home-scene.mh-home-scene .mh-home-success{left:calc(50% - 40px)}}
 `;
 function MonheroSuccessHomeEntry({ callNameOf, bondLvOf, onOpenChange }) {
   const [open, setOpen] = useState(false);
