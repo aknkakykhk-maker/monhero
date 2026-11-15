@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: c2c3f24bbe2796a3
+// generated-sha256: ee0c55dbd0ed7d2c
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -68481,7 +68481,7 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
   hosei: { sorashido: { top: 0.015, eye: 0.345, chin: 0.55, m: 1.248 } },
   // 社長の全身画の8表情から切り出した、みゅあの胸から上の立ち絵(2026-11-11)。測り方は上と同じ。m は、いまの立ち絵と目から顎の見た目の長さが同じになるように決めた
   //   数字は tools/assistant/life-expression-sheets.py が出す(絵を作り直したら、出た数字へ直す)。stand-normal=ふだんの服
-  'stand-normal': { mua: { top: 0.1386, eye: 0.3072, chin: 0.4187, m: 0.829 }, momosuke: { top: 0.0636, eye: 0.3248, chin: 0.4298, m: 0.781, above: 0.7 }, kiki: { top: 0.0835, eye: 0.3343, chin: 0.4298, m: 0.711 }, atsu: { top: 0.0699, eye: 0.3272, chin: 0.4301, m: 0.766 }, kyuko: { top: 0.0341, eye: 0.3098, chin: 0.4304, m: 0.897 }, sorashido: { top: 0.0119, eye: 0.2825, chin: 0.4302, m: 1.098 } , erubin: { top: 0.0042, eye: 0.25, chin: 0.4292, m: 1.333 } },
+  'stand-normal': { mua: { top: 0.1386, eye: 0.3072, chin: 0.4187, m: 0.829 }, momosuke: { top: 0.0636, eye: 0.3248, chin: 0.4298, m: 0.781, above: 0.7 }, kiki: { top: 0.0835, eye: 0.3343, chin: 0.4298, m: 0.711 }, atsu: { top: 0.0727, eye: 0.3275, chin: 0.4295, m: 0.758 }, kyuko: { top: 0.0341, eye: 0.3098, chin: 0.4304, m: 0.897 }, sorashido: { top: 0.0119, eye: 0.2825, chin: 0.4302, m: 1.098 } , erubin: { top: 0.0042, eye: 0.25, chin: 0.4292, m: 1.333 } },
   'stand-sekiyuou': { erubin: { top: 0.0042, eye: 0.2489, chin: 0.4293, m: 1.343 } },
   'stand-hosei': { sorashido: { top: 0.0562, eye: 0.2921, chin: 0.4307, m: 1.031 } },
   'stand-halloween': { mua: { top: 0.1502, eye: 0.3379, chin: 0.4334, m: 0.711, above: 0.85 }, momosuke: { top: 0.0614, eye: 0.3116, chin: 0.4296, m: 0.878, above: 0.95 }, kiki: { top: 0.1499, eye: 0.3353, chin: 0.4304, m: 0.708, above: 0.95 } },
@@ -71460,6 +71460,16 @@ const assistantLifeProfileFace = (id, greeting, k) => {
   const lines = ASSISTANT_LIFE_PROFILE_FACE_LINES[id];
   return { e, label, n: i + 1, t: i === 0 || !lines || !lines[i - 1] ? greeting : lines[i - 1] };
 };
+// 表情の全身画の、8表情でいちばん高い絵の高さ(画素。全身画のフォルダの <名前>__<表情>.png)。表情を変えても体の大きさをそろえるのに使う(r1115-203)。表に無い子は今までどおり
+//   全身画を作り直したら合わせる(tools/assistant/life-profile-faces-check.js の ③ が絵と食い違うと止める)
+const ASSISTANT_LIFE_PROFILE_FULL_MAX_H = Object.freeze({
+  atsu: 779, // まずあつだけ(2026-11-15 社長「ほかの助手はいい」)。ほかの子は表に無い = 今までどおり絵ごとに枠へ収める
+});
+const ASSISTANT_LIFE_PROFILE_FULL_NH = new Map(); // 読み込んだ絵の高さ(画素)
+const assistantLifeProfileFullMaxH = (src) => {
+  const m = /\/fullbody\/(.+?)__[a-z]+\.png/.exec(String(src || ''));
+  return (m && ASSISTANT_LIFE_PROFILE_FULL_MAX_H[m[1]]) || 0;
+};
 function AssistantLifeProfileStand({ who, head = 0.32, top = 0.16, expr = 'happy' }) {
   const src = typeof assistantFullImage === 'function' ? assistantFullImage(who, expr) : '';
   const boxRef = React.useRef(null);
@@ -71475,10 +71485,18 @@ function AssistantLifeProfileStand({ who, head = 0.32, top = 0.16, expr = 'happy
     return () => { window.removeEventListener('resize', f); if (ro) ro.disconnect(); };
   }, []);
   const fullSrc = typeof assistantFullBodyImage === 'function' ? assistantFullBodyImage(who, expr) : null;
-  if (fullSrc) { // 全身画: 枠の高さにおさめて足元をそろえる(頭の大きさは絵ごとの全身の比のまま)
+  const [fullH, setFullH] = React.useState(() => ASSISTANT_LIFE_PROFILE_FULL_NH.get(fullSrc) || 0);
+  React.useEffect(() => { setFullH(ASSISTANT_LIFE_PROFILE_FULL_NH.get(fullSrc) || 0); }, [fullSrc]);
+  if (fullSrc) { // 全身画: 足元をそろえる。表情を変えても体の大きさが変わらないように、8表情でいちばん背の高い絵が枠の 96% になる倍率を全部の表情に使う
+    //   (2026-11-15 r1115-203: 表情の絵は1枚ずつ体の範囲で切ってあり、腕を上げた絵などは縦が長い。絵ごとに枠へ収めると、えるびん・ききハロウィンで体が 7〜8% 縮んだ)
+    const maxH = assistantLifeProfileFullMaxH(fullSrc);
+    const sized = maxH && fullH;
+    const onLoad = (e) => { const h = e.currentTarget.naturalHeight; if (h > 0) { ASSISTANT_LIFE_PROFILE_FULL_NH.set(fullSrc, h); setFullH(h); } };
     return (
       <div ref={boxRef} className="pointer-events-none absolute inset-0 overflow-hidden" data-assistant-life-profile-stand={who.id} data-assistant-life-profile-fullbody={fullSrc}>
-        <img src={fullSrc} alt={who.name} draggable={false} className="absolute" style={{ left: 0, right: 0, bottom: '2%', width: '100%', height: '96%', objectFit: 'contain', objectPosition: 'center bottom' }}/>
+        {sized
+          ? <img src={fullSrc} alt={who.name} draggable={false} onLoad={onLoad} className="absolute max-w-none" style={{ left: '50%', bottom: '2%', width: 'auto', height: `${(96 * Math.min(1, fullH / maxH)).toFixed(2)}%`, transform: 'translateX(-50%)' }}/>
+          : <img src={fullSrc} alt={who.name} draggable={false} onLoad={onLoad} className="absolute" style={{ left: 0, right: 0, bottom: '2%', width: '100%', height: '96%', objectFit: 'contain', objectPosition: 'center bottom' }}/>}
       </div>);
   }
   const face = typeof assistantLifeStandFace === 'function' ? assistantLifeStandFace(who.id, src) : null;
@@ -92538,7 +92556,8 @@ const msxR3CupReward = (SUC, c, s, skipPts) => {
 };
 // 大会の賞品を絵つきの升目にする(確認の窓)。賞金は先頭
 const msxR3Prizes = (SUC, c) => {
-  const out = [{ id: 'g', e: '💰', name: `賞金 ${msxFmt(c.prize)}G`, desc: '勝つともらえる賞金。ごはんや買い物に使える(負けても ★★ 以上は一部もらえる)' }];
+  const smile = Number(c.prizeMax) > Number(c.prize); // 笑顔の大会: 機嫌がよいほど多い(r1115-207 N1。芯の settle と同じ ×1.0〜1.3)
+  const out = [{ id: 'g', e: '💰', name: smile ? `賞金 ${msxFmt(c.prize)}〜${msxFmt(c.prizeMax)}G` : `賞金 ${msxFmt(c.prize)}G`, desc: smile ? `勝つともらえる賞金。機嫌がよいほど多くなる(最大 ${msxFmt(c.prizeMax)}G)。ごはんや買い物に使える` : '勝つともらえる賞金。ごはんや買い物に使える(負けても ★★ 以上は一部もらえる)' }];
   const ex = SUC.EX_BY_SYS ? SUC.EX_BY_SYS[c.sys] : null;
   if (ex && ex.rw && ex.rw.bag) Object.entries(ex.rw.bag).forEach(([k, n]) => { const it = typeof msxItemView === 'function' ? msxItemView(k) : { name: k, e: '🎁', desc: '' }; out.push({ id: k, e: it.e, img: it.img || null, name: `${it.name} ×${n}`, desc: it.desc, rare: true }); });
   const wtk = (ex && ex.four) || c.star >= 3 ? 1 : 0; // 芯の settle と同じ(★★★以上・四大大会 +1。ライバルの分はなくなった=r1115-191)
@@ -92546,7 +92565,13 @@ const msxR3Prizes = (SUC, c) => {
   const bpz = msxR3BeatPrize(SUC, c.prize); if (bpz) out.push(bpz);
   // 能力ポイントはいつも専用の札(デビュー戦・ヒーローズ戦と見え方をそろえる。r1115-202 L6)
   const ptsN = ex ? Number((ex.rw || {}).pts) : Number(((SUC.CUP_REWARD && SUC.CUP_REWARD.pts) || { 1: 30, 2: 60, 3: 90, 4: 120 })[c.star]);
+  const rvPts = SUC.RIVAL && Number(SUC.RIVAL.pts) > 0 ? Number(SUC.RIVAL.pts) : 1.5;
   if (Number.isFinite(ptsN) && ptsN > 0) out.push({ id: 'pts', e: '🔷', name: `能力ポイント +${ptsN}`, desc: `勝つと能力ポイントがもらえる。「能力」の画面で、好きな能力に振り分けられる${c.rival ? `(ライバルに勝つと +${Math.round(ptsN * 1.5)})` : ''}`, pt: true });
+  if (c.rival) { // ライバルの大会: 勝ったときの上乗せも札で見せる(r1115-207 N4。芯の settle と同じ RIVAL の値)
+    const rvAll = SUC.RIVAL && Number(SUC.RIVAL.all) > 0 ? Number(SUC.RIVAL.all) : 12; const rvDesc = `ライバルに勝つと、この大会の能力ポイントが ×${rvPts}・全能力 +${rvAll}・称号「${(SUC.RIVAL && SUC.RIVAL.title) || 'ライバルに勝った'}」`;
+    if (Number.isFinite(ptsN) && ptsN > 0) out.push({ id: 'rvpts', e: '⚔️', name: `ライバルに｜勝つと｜能力ポイント +${Math.round(ptsN * rvPts)}`, desc: rvDesc, rare: true, pt: true });
+    out.push({ id: 'rv', e: '⚔️', name: `ライバルに｜勝つと｜全能力 +${rvAll}`, desc: rvDesc, rare: true, pt: true });
+  }
   const rw = msxR3CupReward(SUC, c, undefined, true); if (rw && rw !== '賞金と修行チケット') out.push({ id: 'rw', e: ex && ex.four ? '🏆' : '✨', name: 'ごほうび', desc: rw, rare: !!(ex && (ex.four || ex.hard)), pt: true });
   return out;
 };
@@ -92656,7 +92681,7 @@ function MsxR3Cup({ run, setRun, v, ev, onBack, onActed }) {
               <div className="hd"><span className="gr2">{kindOf(c)}</span><span className="cs">{msxR3Stars(c.star)}</span>{c.done ? <span className="dn">優勝済</span> : null}</div>
               <b>{c.scenario ? c.name : msxR3CupName(c.sys, c.name)}</b>
               {!(c.entry && c.entry.ok) ? <span className="why">✖ {msxR3WhyText(c.entry, s)}</span> : null}
-              <span className="g">{msxFmt(c.prize)}<small>G</small></span>
+              <span className="g">{Number(c.prizeMax) > Number(c.prize) ? <><small>最大</small>{msxFmt(c.prizeMax)}</> : msxFmt(c.prize)}<small>G</small></span>
             </div>
             {c.rival ? <><span className="rvi"><img src={msxMonThumb(c.rival.species)} alt=""/><b>ライバル</b></span><span className="rvb">能力ポイント1.5倍</span></> : null}
           </button>);
@@ -106553,14 +106578,14 @@ const CARD_ART_KNOWN_BOX = Object.freeze({
   sorashido_surprise: [384, 512, 0, 38, 384, 474],
   sorashido_troubled: [384, 512, 0, 39, 384, 473],
   sorashido_wink: [384, 512, 27, 38, 357, 474],
-  'stand-normal/atsu_angry': [270, 276, 41, 4, 204, 272],
-  'stand-normal/atsu_crying': [303, 276, 54, 4, 195, 272],
-  'stand-normal/atsu_excited': [309, 276, 45, 3, 251, 273],
-  'stand-normal/atsu_happy': [247, 276, 23, 4, 211, 272],
-  'stand-normal/atsu_normal': [293, 276, 21, 3, 219, 273],
-  'stand-normal/atsu_surprise': [313, 276, 59, 4, 217, 272],
-  'stand-normal/atsu_troubled': [278, 276, 23, 4, 229, 272],
-  'stand-normal/atsu_wink': [313, 276, 41, 4, 268, 272],
+  'stand-normal/atsu_angry': [269, 278, 41, 4, 202, 274],
+  'stand-normal/atsu_crying': [302, 278, 55, 4, 193, 274],
+  'stand-normal/atsu_excited': [309, 278, 45, 4, 250, 274],
+  'stand-normal/atsu_happy': [246, 278, 23, 4, 209, 274],
+  'stand-normal/atsu_normal': [293, 278, 22, 4, 219, 274],
+  'stand-normal/atsu_surprise': [312, 278, 60, 4, 215, 274],
+  'stand-normal/atsu_troubled': [278, 278, 24, 4, 228, 274],
+  'stand-normal/atsu_wink': [312, 278, 41, 5, 267, 273],
   'stand-normal/erubin_angry': [227, 244, 16, 4, 195, 240],
   'stand-normal/erubin_crying': [274, 244, 3, 3, 265, 241],
   'stand-normal/erubin_excited': [288, 244, 3, 4, 265, 240],
