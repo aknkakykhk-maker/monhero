@@ -181,7 +181,7 @@ const MONSUC_SCRIPT_MOMOSUKE = Object.freeze([
   { id:'ev.daily.alone.momosuke1', who:'momosuke', e:'happy', t:'言われなくてもやるの、えらすぎ♡ ももは見てたよ' },
   { id:'ev.team.selfdrill.momosuke1', who:'momosuke', e:'normal', t:'{cheer}からのお誘い w 体力と相談ね' },
   { id:'ev.team.senpai.momosuke1', who:'momosuke', e:'excited', t:'動ききれい！！ 見て盗むか、挑むか、どっち？' },
-  { id:'ev.team.fight.momosuke1', who:'momosuke', e:'normal', t:'まって、けんかしてる w どうする？' },
+  { id:'ev.team.fight.momosuke1', who:'momosuke', e:'normal', t:'まって、喧嘩してる w どうする？' },
   { id:'ev.team.base.momosuke1', who:'momosuke', e:'happy', t:'{cheer}、がんばってるじゃん。ももは見てるからね♡' },
   { id:'ev.team.friend.momosuke1', who:'momosuke', e:'happy', t:'よろしくね♡ かわいいあいさつできるじゃん' },
   { id:'ev.team.typeskill.momosuke1', who:'momosuke', e:'normal', t:'タイプ違うと動きも違うね。盗めるとこは盗も w' },
