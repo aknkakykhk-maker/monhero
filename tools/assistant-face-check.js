@@ -132,7 +132,7 @@ const run = async () => {
   check('ききの定義がある', ASSISTANTS.some(a => a.id === 'kiki'));
 
   const pct = (v) => `${(v * 100).toFixed(0)}%`;
-  const sizes = new Set();
+  const notSquare = []; // 正方形でない顔アイコン
   // 助手ごとに見る。1人でも顔が中心から外れていれば、その助手の名前つきで落とす
   for (const who of ASSISTANTS) {
     console.log(`\n[${who.name}]`);
@@ -145,7 +145,7 @@ const run = async () => {
       if (!fs.existsSync(file)) { check(`${who.name}: ${e} の顔アイコンがある`, false, rel); continue; }
       const m = await measure(file, skinRule.isSkin || isSkin);
       measured++;
-      sizes.add(`${m.W}x${m.H}`);
+      if (m.W !== m.H) notSquare.push(`${rel}: ${m.W}x${m.H}`);
       if (m.center < skinRule.centerMin) bad.center.push(`${e}=${pct(m.center)}`);
       if (m.cx < skinRule.x[0] || m.cx > skinRule.x[1]) bad.x.push(`${e}=${pct(m.cx)}`);
       if (m.cy < skinRule.y[0] || m.cy > skinRule.y[1]) bad.y.push(`${e}=${pct(m.cy)}`);
@@ -169,7 +169,8 @@ const run = async () => {
   const missingRules = ASSISTANTS.filter(a => !SKIN_RULES[a.id]).map(a => a.id);
   check('助手ごとの肌色の基準がそろっている', missingRules.length === 0, missingRules.join(', '));
   console.log('');
-  check('顔アイコンは正方形でそろっている', sizes.size === 1, [...sizes].join(', '));
+  // 一辺はそろえなくてよい(表示は丸の中に object-cover で入る)。2026-11-15 r1115-203: あつの顔は全身画から原画の画素のまま切るので一辺 134〜144(256 へ引き伸ばさない)
+  check('顔アイコンは正方形', notSquare.length === 0, notSquare.slice(0, 5).join(', '));
   // 助手を増やしたとき、ツール側を書き換えなくても顔が作られること
   const facesTool = fs.readFileSync(path.join(root, 'tools/make-assistant-faces.js'), 'utf8');
   check('顔アイコンの作成は助手一覧から対象を決めている',
