@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 37471bcfb48b8a2a
+// source-sha256: 4907a950de996860
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -159856,6 +159856,7 @@ function MonsucFuseSheet({
   const [nm, setNm] = React.useState('');
   const [nmErr, setNmErr] = React.useState('');
   const [named, setNamed] = React.useState(null);
+  const [show, setShow] = React.useState(null);
   const [err, setErr] = React.useState('');
   const [done, setDone] = React.useState(null);
   const [ready, setReady] = React.useState(true);
@@ -159903,6 +159904,12 @@ function MonsucFuseSheet({
     });
     setBusy(false);
     if (r === true) {
+      setShow({
+        a: main.species,
+        b: mat.species,
+        child: plan.child.species,
+        name: monsucFuseSpName(plan.child.species)
+      });
       setDone({
         child: plan.child,
         lost: [monsucFuseNick(main), monsucFuseNick(mat)]
@@ -159928,7 +159935,13 @@ function MonsucFuseSheet({
     }
   }, React.createElement("p", {
     className: "text-[16px] font-black"
-  }, "🧬 合体する"), !SUC ? React.createElement("p", {
+  }, "🧬 合体する"), show ? React.createElement(MonsucFuseShow, {
+    a: show.a,
+    b: show.b,
+    child: show.child,
+    childName: show.name,
+    onDone: () => setShow(null)
+  }) : null, !SUC ? React.createElement("p", {
     className: "mt-2 text-[11px] font-bold text-slate-400"
   }, "まだ使えません") : done ? React.createElement(React.Fragment, null, React.createElement("div", {
     className: "mt-2 rounded-xl bg-fuchsia-950 p-3",
@@ -160091,6 +160104,134 @@ function MonsucFuseSheet({
     "data-mhl-sheet-close": true,
     className: "mt-2 min-h-[44px] w-full text-center rounded-xl bg-slate-700 text-[13px] font-black"
   }, "やめる")));
+}
+const MONSUC_FUSE_STEPS = Object.freeze([1500, 1500, 700]);
+const monsucFuseImg = sp => {
+  try {
+    if (typeof msxMonImg === 'function') {
+      const u = msxMonImg(sp);
+      if (u) return u;
+    }
+    const m = typeof ALL_PLAYER_MONSTERS !== 'undefined' ? ALL_PLAYER_MONSTERS[sp] : null;
+    return m && (m.imgUrl || m.iconUrl) || '';
+  } catch (e) {
+    return '';
+  }
+};
+const monsucFuseCalm = () => {
+  try {
+    if (typeof msxFxCalm === 'function' && msxFxCalm()) return true;
+  } catch (e) {}
+  try {
+    return typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  } catch (e) {
+    return false;
+  }
+};
+const MONSUC_FUSE_CSS = `
+.mf-show{position:fixed;inset:0;z-index:95;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;overflow:hidden;background:radial-gradient(ellipse at 50% 45%,#4c1d95 0,#1e1b4b 55%,#0b0920 100%);color:#fff}
+.mf-show .bgimg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.35}
+.mf-head{position:absolute;left:50%;top:9%;transform:translateX(-50%);padding:6px 16px;border-radius:12px;background:rgba(15,23,42,.72);font-weight:900;font-size:16px;text-align:center;max-width:92vw;box-shadow:0 0 0 2px rgba(240,171,252,.8)}
+.mf-head small{display:block;font-size:11px;color:#f5d0fe;font-weight:800}
+.mf-stage{position:absolute;left:0;right:0;top:20%;bottom:22%}
+.mf-mon{position:absolute;bottom:18%;height:44%;max-width:40%;object-fit:contain;filter:drop-shadow(0 6px 10px rgba(0,0,0,.5));transition:left 1.2s ease-in,right 1.2s ease-in,transform 1.2s ease-in,opacity .5s}
+.mf-mon.a{left:6%}.mf-mon.b{right:6%}
+.mf-show.st0 .mf-mon.a{left:6%;animation:mfBobA 1.1s ease-in-out infinite}.mf-show.st0 .mf-mon.b{right:6%;animation:mfBobB 1.1s ease-in-out infinite}
+.mf-show.st1 .mf-mon.a{left:calc(50% - 20%);transform:scale(.35);opacity:.25}.mf-show.st1 .mf-mon.b{right:calc(50% - 20%);transform:scale(.35);opacity:.25}
+.mf-show.st2 .mf-mon,.mf-show.st3 .mf-mon{display:none}
+.mf-stone{position:absolute;left:50%;bottom:26%;width:44%;max-width:210px;aspect-ratio:1/1;transform:translateX(-50%);animation:mfShake .18s linear infinite}
+.mf-stone img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 8px 14px rgba(0,0,0,.45))}
+.mf-stone i{position:absolute;inset:-20%;border-radius:50%;background:radial-gradient(circle,rgba(250,232,255,.95),rgba(232,121,249,.5) 40%,rgba(232,121,249,0) 70%);animation:mfGlow .8s ease-in-out infinite alternate}
+.mf-flash{position:absolute;inset:0;background:#fff;animation:mfFlash .7s ease-out forwards;pointer-events:none}
+.mf-child{position:absolute;left:50%;bottom:20%;height:48%;max-width:70%;object-fit:contain;transform:translateX(-50%);animation:mfPop .7s cubic-bezier(.2,1.4,.4,1) both;filter:drop-shadow(0 6px 12px rgba(0,0,0,.5))}
+.mf-ctl{position:absolute;right:10px;top:10px;display:flex;gap:6px;z-index:2}
+.mf-ctl button{min-height:36px;padding:0 10px;border-radius:10px;background:rgba(15,23,42,.8);color:#fff;font-size:12px;font-weight:900}
+.mf-next{position:relative;z-index:2;margin:0 16px 22px;min-height:48px;width:calc(100% - 32px);max-width:380px;border-radius:14px;background:#d946ef;color:#fff;font-size:15px;font-weight:900}
+.mf-next:disabled{opacity:.4}
+.mf-show.calm .mf-stone,.mf-show.calm .mf-stone i,.mf-show.calm .mf-child,.mf-show.calm .mf-mon{animation:none}
+@keyframes mfBobA{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+@keyframes mfBobB{0%,100%{transform:translateY(-8px)}50%{transform:translateY(0)}}
+@keyframes mfShake{0%{transform:translateX(-50%) rotate(0)}25%{transform:translateX(calc(-50% - 3px)) rotate(-2deg)}75%{transform:translateX(calc(-50% + 3px)) rotate(2deg)}100%{transform:translateX(-50%) rotate(0)}}
+@keyframes mfGlow{from{opacity:.55;transform:scale(.92)}to{opacity:1;transform:scale(1.1)}}
+@keyframes mfFlash{from{opacity:1}to{opacity:0}}
+@keyframes mfPop{from{opacity:0;transform:translateX(-50%) scale(.3)}to{opacity:1;transform:translateX(-50%) scale(1)}}
+@media (prefers-reduced-motion: reduce){.mf-stone,.mf-stone i,.mf-child,.mf-mon{animation:none}}
+`;
+let monsucFuseCssDone = false;
+const monsucFuseEnsureCss = () => {
+  if (monsucFuseCssDone || typeof document === 'undefined') return;
+  monsucFuseCssDone = true;
+  const el = document.createElement('style');
+  el.setAttribute('data-monsuc-fuse-css', '1');
+  el.textContent = MONSUC_FUSE_CSS;
+  document.head.appendChild(el);
+};
+function MonsucFuseShow({
+  a,
+  b,
+  child,
+  childName,
+  onDone
+}) {
+  monsucFuseEnsureCss();
+  const calm = monsucFuseCalm();
+  const [st, setSt] = React.useState(0);
+  React.useEffect(() => {
+    if (st >= 3) return undefined;
+    const id = setTimeout(() => setSt(n => Math.min(3, n + 1)), calm ? 400 : MONSUC_FUSE_STEPS[st]);
+    return () => clearTimeout(id);
+  }, [st]);
+  if (typeof msxUseTimedSe === 'function') msxUseTimedSe(st === 1 ? [['awQi', 0]] : st === 2 ? [['awFlash', 0]] : st === 3 && !calm ? [['awKira', 0]] : [], [st]);
+  const stone = typeof DISC_STONE_BASE === 'string' ? DISC_STONE_BASE : 'images/disc-icons/disc-stone-base.PNG';
+  return React.createElement("div", {
+    className: `mf-show st${st}${calm ? ' calm' : ''}`,
+    "data-monsuc-fuse-show": st
+  }, React.createElement("img", {
+    className: "bgimg",
+    src: "images/story-bg/monhero_plaza.jpg",
+    alt: ""
+  }), React.createElement("div", {
+    className: "mf-head"
+  }, React.createElement("small", null, "合体"), st >= 3 ? `${childName}が生まれた!` : st >= 1 ? '2体の力が円盤石に集まっていく…' : '2体が1つになろうとしている…'), st < 3 ? React.createElement("div", {
+    className: "mf-ctl"
+  }, React.createElement("button", {
+    type: "button",
+    onClick: () => setSt(n => Math.min(3, n + 1)),
+    "data-monsuc-fuse-ff": true
+  }, "早送り ⏩"), React.createElement("button", {
+    type: "button",
+    onClick: () => setSt(3),
+    "data-monsuc-fuse-skip": true
+  }, "短縮 ⏭")) : null, React.createElement("div", {
+    className: "mf-stage"
+  }, React.createElement("img", {
+    className: "mf-mon a",
+    src: monsucFuseImg(a),
+    alt: ""
+  }), React.createElement("img", {
+    className: "mf-mon b",
+    src: monsucFuseImg(b),
+    alt: ""
+  }), st === 1 || st === 2 ? React.createElement("span", {
+    className: "mf-stone",
+    "aria-hidden": "true"
+  }, React.createElement("img", {
+    src: stone,
+    alt: ""
+  }), React.createElement("i", null)) : null, st === 2 ? React.createElement("span", {
+    className: "mf-flash",
+    "aria-hidden": "true"
+  }) : null, st >= 3 ? React.createElement("img", {
+    className: "mf-child",
+    src: monsucFuseImg(child),
+    alt: ""
+  }) : null), React.createElement("button", {
+    type: "button",
+    className: "mf-next",
+    disabled: st < 3,
+    onClick: onDone,
+    "data-monsuc-fuse-show-next": true
+  }, st >= 3 ? '次へ ▶' : '合体中…'));
 }
 const MONSUC_SHOP_OFFERS = Object.freeze([{
   itemId: 'oil',
@@ -162141,6 +162282,11 @@ function MsxBetaTalk({
   const tail = picked ? evOf(`${msxBetaScene(k)}.${picked}`) : null;
   const lines = main.lines.concat(tail ? tail.lines : [], main.after || []);
   const choices = Array.isArray(main.choices) ? main.choices : [];
+  const maxTail = choices.reduce((m, ch) => {
+    const e = evOf(`${msxBetaScene(k)}.${ch.c}`);
+    return Math.max(m, e && e.lines ? e.lines.length : 0);
+  }, 0);
+  const total = picked ? Math.max(lines.length, main.lines.length + maxTail + (main.after || []).length) : main.lines.length + maxTail + (main.after || []).length;
   const atChoice = !picked && choices.length > 0 && i >= main.lines.length - 1;
   const l = lines[Math.min(i, lines.length - 1)];
   const close = () => {
@@ -162191,7 +162337,7 @@ function MsxBetaTalk({
     }
   }, ch.t))) : React.createElement("div", {
     className: "msx-beta-nx"
-  }, i + 1 >= lines.length ? '閉じる ▶' : '次へ ▶', React.createElement("small", null, Math.min(i, lines.length - 1) + 1, "/", lines.length))));
+  }, i + 1 >= lines.length ? '閉じる ▶' : '次へ ▶', React.createElement("small", null, Math.min(i, lines.length - 1) + 1, "/", Math.max(total, lines.length)))));
 }
 function MsxBetaMark() {
   return React.createElement("span", {
@@ -171474,6 +171620,7 @@ const msxNormRun = (raw, SUC) => {
     startAt: msxNum(raw.startAt, 0),
     beatSent: msxNum(raw.beatSent, 0),
     beatEnd: raw.beatEnd === true,
+    rev: msxNum(raw.rev, 0),
     ki: msxIsObj(raw.ki) && Number.isInteger(raw.ki.p) && Number.isFinite(raw.ki.fame) && Number.isFinite(raw.ki.power) ? {
       p: Math.max(0, Math.min(9, raw.ki.p)),
       fame: Math.round(Math.min(1e7, raw.ki.fame * kiFameMul)),
@@ -171815,11 +171962,14 @@ const msxRunIsStale = async (run, stored) => {
   if (msxRunTurn(run) < msxRunTurn(stored)) return true;
   if (msxRunSent(run) < msxRunSent(stored)) return true;
   if (stored.beatEnd === true && run.beatEnd !== true) return true;
+  const rv = Number(run.rev);
+  const sv = Number(stored.rev);
+  if (Number.isFinite(rv) && Number.isFinite(sv) && sv > 0 && rv <= sv) return true;
   return false;
 };
 const msxSaveRunNow = async (run, noPay) => {
   const stored = await storeGet(MSX_KEYS.run, null);
-  if (await msxRunIsStale(run, stored)) return false;
+  if (await msxRunIsStale(run, stored)) return 'stale';
   const ov = msxRunOverOf(run);
   if (ov) {
     try {
@@ -171846,16 +171996,40 @@ const msxSaveRun = (run, noPay) => {
   msxSaveChain = msxSaveChain.then(() => msxSaveRunNow(run, noPay)).catch(() => false);
   return msxSaveChain;
 };
-const msxClearRun = () => {
+const msxClearRun = id => {
   msxSaveChain = msxSaveChain.then(async () => {
-    try {
-      const cur = await storeGet(MSX_KEYS.run, null);
-      if (cur && typeof cur.id === 'string') {
-        const g = await msxRunGoneList();
-        if (!g.includes(cur.id)) await storeSet(MSX_RUN_GONE_KEY, [...g, cur.id].slice(-50));
-      }
-    } catch (_) {}
+    const cur = await storeGet(MSX_KEYS.run, null);
+    if (!cur) return true;
+    if (typeof id === 'string' && cur.id !== id) return 'other';
+    if (typeof cur.id === 'string') {
+      const raw = await storeGet(MSX_RUN_GONE_KEY, null);
+      const g = Array.isArray(raw) ? raw.filter(x => typeof x === 'string').slice(-50) : [];
+      if (!g.includes(cur.id) && (await storeSet(MSX_RUN_GONE_KEY, [...g, cur.id].slice(-50))) === false) return false;
+    }
     return storeSet(MSX_KEYS.run, null);
+  }).catch(() => false);
+  return msxSaveChain;
+};
+const msxStartRunSave = (run, meta) => {
+  msxSaveChain = msxSaveChain.then(async () => {
+    const [runBefore, metaBefore] = await Promise.all([storeGet(MSX_KEYS.run, null), storeGet(MSX_KEYS.meta, null)]);
+    if (typeof saveStoredValuesOrRollback !== 'function') {
+      if ((await storeSet(MSX_KEYS.run, run)) === false) return false;
+      if ((await storeSet(MSX_KEYS.meta, meta)) === false) {
+        await storeSet(MSX_KEYS.run, runBefore);
+        return false;
+      }
+      return true;
+    }
+    return saveStoredValuesOrRollback([{
+      key: MSX_KEYS.meta,
+      before: metaBefore,
+      next: meta
+    }, {
+      key: MSX_KEYS.run,
+      before: runBefore,
+      next: run
+    }], storeGet, storeSet);
   }).catch(() => false);
   return msxSaveChain;
 };
@@ -173292,6 +173466,7 @@ function MsxStart({
       on = false;
     };
   }, []);
+  const lastBase = useRef(null);
   const fromMon = pick.box ? box.mons.find(m => m.id === pick.box) || null : null;
   useEffect(() => {
     setNick(fromMon && typeof fromMon.nick === 'string' ? fromMon.nick.slice(0, MSX_NAME_MAX) : '');
@@ -173403,11 +173578,24 @@ function MsxStart({
     }, React.createElement("button", {
       type: "button",
       className: tab === 'base' ? 'on' : '',
-      onClick: () => setTab('base')
+      onClick: () => {
+        setTab('base');
+        if (pick.box && unlocked.length) setPick({
+          base: unlocked.includes(lastBase.current) ? lastBase.current : unlocked[0]
+        });
+      }
     }, "🌱 ベースモン ", unlocked.length), React.createElement("button", {
       type: "button",
       className: tab === 'fuse' ? 'on' : '',
-      onClick: () => setTab('fuse')
+      onClick: () => {
+        setTab('fuse');
+        if (!pick.box && unraised.length) {
+          lastBase.current = pick.base || lastBase.current;
+          setPick({
+            box: unraised[0].id
+          });
+        }
+      }
     }, "🧬 合体で生まれたモンスター ", unraised.length)), React.createElement("div", {
       className: "v-grid6",
       style: {
@@ -173434,7 +173622,7 @@ function MsxStart({
       className: "v-chips"
     }, React.createElement("span", {
       className: "v-chip ylw"
-    }, msxMonName(species)), picked ? React.createElement("span", {
+    }, fromMon && fromMon.nick ? fromMon.nick : msxMonName(species)), picked ? React.createElement("span", {
       className: "v-chip"
     }, "選んだ回数 ", picked, "回") : null)), React.createElement("div", {
       className: "v-card sel"
@@ -173442,7 +173630,7 @@ function MsxStart({
       className: "msx-dt-hd"
     }, React.createElement("div", {
       className: "h1"
-    }, msxMonName(species)), React.createElement("button", {
+    }, fromMon && fromMon.nick ? fromMon.nick : msxMonName(species)), React.createElement("button", {
       type: "button",
       className: "msx-dt-more",
       "data-msx-detail-open": true,
@@ -175230,6 +175418,7 @@ const msxStAptFlip = id => {
     } catch (e) {}
   });
 };
+const msxChNeedText = need => Object.entries(need || {}).map(([k, n]) => k === 'fame' ? `賞金 ${msxFmt(n)}G が要る` : `${k} ${n} が要る`).join('・');
 function MsxStRow({
   stats,
   ups,
@@ -175541,6 +175730,7 @@ function MonheroSuccessScreen({
   const [run, setRunState] = useState(null);
   const [layout, setLayout] = useState(msxLayout);
   const [ask, setAsk] = useState(null);
+  const lendRef = useRef({});
   const [playSub, setPlaySub] = useState('main');
   msxUseSound(view === 'play' || view === 'loading' || view === 'fail' ? null : 'menu');
   const [tutTurn, setTutTurn] = useState(null);
@@ -175564,17 +175754,38 @@ function MonheroSuccessScreen({
       const d = await msxReadAll(L.SUC);
       if (!alive) return;
       setData(d);
-      setRunState(d.run);
+      setRunLoaded(d.run);
       setView(startView === 'box' ? 'box' : 'home');
     });
     return () => {
       alive = false;
     };
   }, []);
-  const setRun = r0 => {
-    const r = r0 && typeof msxBeatMark === 'function' ? msxBeatMark(r0) : r0;
+  const revRef = useRef(0);
+  const setRunLoaded = r => {
+    revRef.current = r && Number.isFinite(Number(r.rev)) ? Number(r.rev) : 0;
     setRunState(r);
-    if (r) msxSaveRun(r, !!debug);
+  };
+  const setRun = r0 => {
+    let r = r0 && typeof msxBeatMark === 'function' ? msxBeatMark(r0) : r0;
+    if (r) {
+      revRef.current += 1;
+      r = {
+        ...r,
+        rev: revRef.current
+      };
+    }
+    setRunState(r);
+    if (!r) return Promise.resolve(true);
+    const p = msxSaveRun(r, !!debug);
+    Promise.resolve(p).then(res => {
+      if (res === 'stale') setAsk({
+        text: 'ほかの画面で、この育成が先に進んでいます。保存されている続きを読み直します',
+        yes: '読み直す',
+        onYes: toHome
+      });
+    }).catch(() => {});
+    return p;
   };
   const setMeta = meta => {
     setData(d => ({
@@ -175586,23 +175797,36 @@ function MonheroSuccessScreen({
   const toHome = () => {
     (typeof msxSaveWait === 'function' ? msxSaveWait() : Promise.resolve()).then(() => msxReadAll(msxSuc.SUC)).then(d => {
       setData(d);
-      setRunState(d.run);
+      setRunLoaded(d.run);
     }).catch(() => {});
     setView('home');
   };
+  const startingRef = useRef(false);
   const startRun = async cfg => {
+    if (startingRef.current) return false;
+    startingRef.current = true;
+    try {
+      return await startRunNow(cfg);
+    } finally {
+      startingRef.current = false;
+    }
+  };
+  const startRunNow = async cfg => {
     const {
       SUC
     } = msxSuc;
     if (cfg.friendId && typeof monsucLendUse === 'function') {
-      let r = null;
-      try {
-        r = await monsucLendUse(cfg.friendId);
-      } catch (e) {
-        r = {
-          ok: false,
-          reason: 'network'
-        };
+      let r = lendRef.current[cfg.friendId] || null;
+      if (!r) {
+        try {
+          r = await monsucLendUse(cfg.friendId);
+        } catch (e) {
+          r = {
+            ok: false,
+            reason: 'network'
+          };
+        }
+        if (r && r.ok) lendRef.current[cfg.friendId] = r;
       }
       if (!r || !r.ok) cfg = {
         ...cfg,
@@ -175682,16 +175906,60 @@ function MonheroSuccessScreen({
       });
       meta.items = it;
     }
-    setMeta(meta);
-    setRun(r);
+    const r1 = typeof msxBeatMark === 'function' ? {
+      ...msxBeatMark(r),
+      rev: 1
+    } : {
+      ...r,
+      rev: 1
+    };
+    let saved = false;
+    try {
+      saved = await (typeof msxStartRunSave === 'function' ? msxStartRunSave(r1, meta) : Promise.all([msxSaveMeta(meta), msxSaveRun(r1, !!debug)]).then(a => a.every(x => x === true)));
+    } catch (e) {
+      saved = false;
+    }
+    if (saved !== true) {
+      setAsk({
+        text: '保存できませんでした。アイテムと前の育成はそのままです。もう一度「育成を始める」を押してください',
+        yes: 'OK',
+        onYes: () => {}
+      });
+      return false;
+    }
+    lendRef.current = {};
+    setData(d => ({
+      ...d,
+      meta
+    }));
+    revRef.current = 1;
+    setRunState(r1);
     setView('play');
+    return true;
   };
   const quit = () => setAsk({
     text: 'この育成をやめますか? 育てた中身はなくなります(マスモンボックスには入りません)',
     yes: 'やめる',
     onYes: async () => {
-      await (typeof msxClearRun === 'function' ? msxClearRun() : storeSet(MSX_KEYS.run, null));
-      setRunState(null);
+      let res = false;
+      try {
+        res = await (typeof msxClearRun === 'function' ? msxClearRun(run && run.id) : storeSet(MSX_KEYS.run, null));
+      } catch (e) {
+        res = false;
+      }
+      if (res === false) {
+        setAsk({
+          text: '保存できませんでした。育成は消えていません。もう一度「やめる」を押してください',
+          yes: 'OK',
+          onYes: () => {}
+        });
+        return;
+      }
+      if (res === 'other') {
+        toHome();
+        return;
+      }
+      setRunLoaded(null);
       setView('home');
     }
   });
@@ -175969,6 +176237,7 @@ function MsxPlay({
   const v = useMemo(() => SUC.peek(s), [s]);
   const ev = useMemo(() => SUC.evaluate(s), [s]);
   const [sub, setSub] = useState('main');
+  const [askLeave, setAskLeave] = useState(false);
   const [sel, setSel] = useState(null);
   const swipeRef = useRef(null);
   const [swipe, setSwipe] = useState({
@@ -176415,7 +176684,13 @@ function MsxPlay({
         filter: o.result === 'fail' ? 'grayscale(.5) drop-shadow(0 8px 5px #0009)' : undefined
       }
     }), acting ? null : React.createElement("div", {
-      className: `v-stamp msx-pop ${isTrain ? R.cls : 'ok'}${isTrain && typeof msxTfxKind === 'function' && (msxTfxKind(o) === 'great' || msxTfxKind(o) === 'both') ? ` tfx-gold${msxTfxKind(o) === 'both' ? ' tfx-both' : ''}${typeof msxTfxOpt === 'function' && msxTfxOpt().calm ? ' calm' : ''}` : ''}`
+      className: `v-stamp msx-pop ${isTrain ? R.cls : 'ok'}${isTrain && typeof msxTfxKind === 'function' && (msxTfxKind(o) === 'great' || msxTfxKind(o) === 'both') ? ` tfx-gold${msxTfxKind(o) === 'both' ? ' tfx-both' : ''}${typeof msxTfxOpt === 'function' && msxTfxOpt().calm ? ' calm' : ''}` : ''}`,
+      style: (() => {
+        const w = isTrain ? R.word : o.kind === 'rest' ? restName || '休んだ' : '';
+        return w && w.length > 6 ? {
+          fontSize: Math.max(24, Math.floor(330 / (w.length * 1.08)))
+        } : undefined;
+      })()
     }, isTrain ? R.word : o.kind === 'rest' ? restName || '休んだ' : o.kind === 'play' ? '遊んだ!' : o.kind === 'clinic' ? '通院' : '休み', isTrain && o.card && o.card.tags && o.card.tags.length && typeof MsxTrainResFx !== 'function' ? React.createElement("small", null, "🤝 友情タッグ ×", o.card.tags.length, o.result === 'great' ? '・伸び ×1.5' : '') : null), !acting && isTrain && typeof MsxTrainResFx === 'function' ? React.createElement(MsxTrainResFx, {
       run: run,
       o: o,
@@ -176435,7 +176710,10 @@ function MsxPlay({
       className: "v-chip"
     }, msxMemberName(m), " 親密度 +", SUC.BOND && SUC.BOND.train || 8))) : null), isTrain ? React.createElement(MsxStRow, {
       who: s,
-      stats: s.stats,
+      stats: !acting && typeof MsxTrainEvent === 'function' && o.event && o.event.d && o.event.d.stat && Number.isFinite(o.event.d.up) && o.event.d.up > 0 ? {
+        ...s.stats,
+        [o.event.d.stat]: s.stats[o.event.d.stat] - o.event.d.up
+      } : s.stats,
       ups: acting ? null : gains,
       main: o.card && o.card.stat
     }) : null, acting ? React.createElement("div", {
@@ -177489,7 +177767,7 @@ function MsxPlay({
       className: "v-ft"
     }, React.createElement("button", {
       type: "button",
-      onClick: () => setSub('main')
+      onClick: () => sub === 'stats' && msxPtDraftN > 0 ? setAskLeave(true) : setSub('main')
     }, "← 戻る"));
   }
   return React.createElement(React.Fragment, null, React.createElement(MsxHd, {
@@ -177499,7 +177777,31 @@ function MsxPlay({
     right: `${s.turn} / ${msxSuc.core.TOTAL_TURNS}ターン`
   }), React.createElement("div", {
     className: "v-body"
-  }, body), foot, detail && typeof MsxMonDetail === 'function' ? (() => {
+  }, body), foot, askLeave ? React.createElement("div", {
+    className: "msx-ov msx-fade",
+    "data-msx-leave-ask": true
+  }, React.createElement("div", {
+    className: "msx-sheet"
+  }, React.createElement("div", {
+    style: {
+      fontSize: 13,
+      fontWeight: 900,
+      lineHeight: 1.6
+    }
+  }, "決定していない振り分けがあります。戻ると、その分は消えます(能力ポイントは減りません)"), React.createElement("button", {
+    type: "button",
+    className: "msx-btn go",
+    onClick: () => {
+      setAskLeave(false);
+      msxPtDraftN = 0;
+      setSub('main');
+    },
+    "data-msx-leave-yes": true
+  }, "戻る(振り分けを消す)"), React.createElement("button", {
+    type: "button",
+    className: "msx-btn sub",
+    onClick: () => setAskLeave(false)
+  }, "続けて振る"))) : null, detail && typeof MsxMonDetail === 'function' ? (() => {
     const pk = typeof SUC.peakInfo === 'function' ? SUC.peakInfo(s) : null;
     const peak = pk && Number.isInteger(pk.from) ? (() => {
       const a = SUC.periodOf(pk.from).name;
@@ -177845,31 +178147,39 @@ function MsxBag({
     },
     disabled: !t || t.carry || usedNow || blocked,
     onClick: use
-  }, usedNow ? 'このターンはもう使った' : blocked ? 'いまは使えない' : t && !t.carry ? React.createElement(React.Fragment, null, msxItemIco(t), " ", t.name, "を使う") : '使う'))), React.createElement(MsxStRow, {
+  }, usedNow ? 'このターンはもう使った' : blocked ? SUC.ITEMS && SUC.ITEMS[t.id] && SUC.ITEMS[t.id].fruit ? 'この日はトレーニングできないので使えない' : 'いまは使えない' : t && !t.carry ? React.createElement(React.Fragment, null, msxItemIco(t), " ", t.name, "を使う") : '使う'))), React.createElement(MsxStRow, {
     who: s,
     stats: s.stats
   }));
 }
 const MSX_PT_UNITS = Object.freeze([1, 5, 10, 100, 'MAX']);
+const MSX_PT_UNITS_M = Object.freeze([10, 50, 100, 500, 'MAX']);
 let msxPtUnitMem = 1;
+let msxPtUnitMemM = 10;
 const msxPtLimit = u => u === 'MAX' ? Infinity : Math.max(1, Number(u) || 1);
-function useMsxPtUnit() {
-  const [u, setU] = useState(() => MSX_PT_UNITS.includes(msxPtUnitMem) ? msxPtUnitMem : 1);
+const msxPtLimitM = (u, cost) => u === 'MAX' ? Infinity : Math.max(1, Math.floor((Number(u) || 0) / (cost || 10)));
+function useMsxPtUnit(mastery = false) {
+  const list = mastery ? MSX_PT_UNITS_M : MSX_PT_UNITS;
+  const [u, setU] = useState(() => {
+    const m = mastery ? msxPtUnitMemM : msxPtUnitMem;
+    return list.includes(m) ? m : list[0];
+  });
   return [u, x => {
-    msxPtUnitMem = x;
+    if (mastery) msxPtUnitMemM = x;else msxPtUnitMem = x;
     setU(x);
   }];
 }
 function MsxPtUnits({
   unit,
-  setUnit
+  setUnit,
+  mastery = false
 }) {
   return React.createElement("div", {
     className: "msx-ptunit",
     role: "group",
     "aria-label": "振り分けの単位",
     "data-msx-pt-units": true
-  }, MSX_PT_UNITS.map(x => React.createElement("button", {
+  }, (mastery ? MSX_PT_UNITS_M : MSX_PT_UNITS).map(x => React.createElement("button", {
     type: "button",
     key: x,
     "aria-pressed": unit === x,
@@ -177981,6 +178291,7 @@ function MsxMasteryRows({
     className: "sub"
   }, "まだ覚えている技がない"));
 }
+let msxPtDraftN = 0;
 function MsxStats({
   run,
   setRun,
@@ -178007,9 +178318,15 @@ function MsxStats({
   const addOf = k => draft.filter(x => x === k).length;
   const capK = k => typeof SUC.statCapOf === 'function' ? SUC.statCapOf(s, k) : 999;
   const [unit, setUnit] = useMsxPtUnit();
+  const [unitM, setUnitM] = useMsxPtUnit(true);
+  const mCost = SUC.PTS && SUC.PTS.mastery || 10;
   const [ptTab, setPtTab] = useState('stat');
   const draftRef = useRef(draft);
   draftRef.current = draft;
+  msxPtDraftN = draft.length;
+  useEffect(() => () => {
+    msxPtDraftN = 0;
+  }, []);
   const setDraftNow = list => {
     draftRef.current = list;
     setDraft(list);
@@ -178017,7 +178334,7 @@ function MsxStats({
   const plus = k => {
     const list = draftRef.current.slice();
     let w = replay(list);
-    const lim = msxPtLimit(unit);
+    const lim = String(k).startsWith('m:') ? msxPtLimitM(unitM, mCost) : msxPtLimit(unit);
     let n = 0;
     while (n < lim) {
       if (!String(k).startsWith('m:') && w.stats[k] >= capK(k)) break;
@@ -178031,7 +178348,7 @@ function MsxStats({
   };
   const minus = k => {
     const list = draftRef.current.slice();
-    const lim = msxPtLimit(unit);
+    const lim = String(k).startsWith('m:') ? msxPtLimitM(unitM, mCost) : msxPtLimit(unit);
     let n = 0;
     while (n < lim) {
       const i = list.lastIndexOf(k);
@@ -178115,8 +178432,9 @@ function MsxStats({
     tab: ptTab,
     setTab: setPtTab
   }), React.createElement(MsxPtUnits, {
-    unit: unit,
-    setUnit: setUnit
+    unit: ptTab === 'mastery' ? unitM : unit,
+    setUnit: ptTab === 'mastery' ? setUnitM : setUnit,
+    mastery: ptTab === 'mastery'
   }), ptTab === 'mastery' ? React.createElement(MsxMasteryRows, {
     SUC: SUC,
     s: s,
@@ -178536,7 +178854,9 @@ function MsxEvent({
     onClick: () => choose(ch.c)
   }, React.createElement("span", {
     style: JA_LABEL_STYLE
-  }, jaWrap(ch.t)), MSX_LOOK[ch.look] ? React.createElement("small", null, MSX_LOOK[ch.look]) : null), React.createElement("button", {
+  }, jaWrap(ch.t)), ch.ok === false && ch.need ? React.createElement("small", {
+    "data-msx-ch-need": true
+  }, msxChNeedText(ch.need)) : MSX_LOOK[ch.look] ? React.createElement("small", null, MSX_LOOK[ch.look]) : null), React.createElement("button", {
     type: "button",
     className: `msx-info sym info${info === ch.c ? ' on' : ''}`,
     "aria-label": "詳細",
@@ -178554,7 +178874,9 @@ function MsxEvent({
     onClick: () => choose(ch.c)
   }, React.createElement("span", {
     style: JA_LABEL_STYLE
-  }, jaWrap(ch.t)), MSX_LOOK[ch.look] ? React.createElement("small", null, MSX_LOOK[ch.look]) : null))) : React.createElement("div", {
+  }, jaWrap(ch.t)), ch.ok === false && ch.need ? React.createElement("small", {
+    "data-msx-ch-need": true
+  }, msxChNeedText(ch.need)) : MSX_LOOK[ch.look] ? React.createElement("small", null, MSX_LOOK[ch.look]) : null))) : React.createElement("div", {
     className: "v-ft",
     style: {
       marginTop: 6
@@ -179286,7 +179608,7 @@ const msxR3GameOver = async s => {
   await storeSet(MSX_KEYS.meta, meta);
   return meta;
 };
-const msxR3ClearRun = () => typeof msxClearRun === 'function' ? msxClearRun() : storeSet(MSX_KEYS.run, null);
+const msxR3ClearRun = id => typeof msxClearRun === 'function' ? msxClearRun(id) : storeSet(MSX_KEYS.run, null);
 const msxR3Farewell = async id => {
   const box = await msxR3ReadBox();
   const m = box.mons.find(x => x.id === id);
@@ -179408,9 +179730,15 @@ const msxR3TitleName = t => {
 const msxR3AddRecord = async (run, s, ev, titles, gen) => {
   const R = msxR3T().record;
   if (!R) return false;
+  let raw = null;
   try {
-    const raw = await storeGet(R.KEY, null);
-    const r = R.add(R.parse(raw), {
+    raw = await storeGet(R.KEY, null);
+  } catch (e) {
+    return 'fail';
+  }
+  let r = null;
+  try {
+    r = R.add(R.parse(raw), {
       id: run.id,
       species: s.species,
       nick: run.nick || '',
@@ -179422,11 +179750,17 @@ const msxR3AddRecord = async (run, s, ev, titles, gen) => {
       endAt: Date.now(),
       gen
     });
-    if (r.added && (await storeSet(R.KEY, r.book)) === false) return 'fail';
-    return r.added;
   } catch (e) {
     return false;
   }
+  if (!r || !r.added) return false;
+  let w = false;
+  try {
+    w = await storeSet(R.KEY, r.book);
+  } catch (e) {
+    w = false;
+  }
+  return w === false ? 'fail' : true;
 };
 const msxR3SE = () => typeof window !== 'undefined' && window.MONHERO_SUCCESS_SCRIPT_ENGINE || null;
 const msxR3SeLoading = {};
@@ -179501,7 +179835,10 @@ function MsxR3Frame({
 }
 const msxR3WhyText = (e, s) => {
   if (!e || e.ok) return '';
-  if (e.why === 'stat') return `能力が ${msxFmt(e.need)} 以上 要る`;
+  if (e.why === 'stat') {
+    const nm = e.stat2 ? `${MSX_STAT_NAME[e.stat]}か${MSX_STAT_NAME[e.stat2]}` : MSX_STAT_NAME[e.stat] || '能力';
+    return `${nm}が ${msxFmt(e.need)} 以上 要る`;
+  }
   if (e.why === 'chain') return '1つ下の星で優勝すると出られる';
   if (e.why === 'dist') return 'その間合いの適性が C 以上 要る';
   if (e.why === 'type') return 'タイプが合わない';
@@ -179521,7 +179858,7 @@ const msxR3CupItems = (SUC, c, s) => {
     return [];
   }
 };
-const msxR3CupReward = (SUC, c, s) => {
+const msxR3CupReward = (SUC, c, s, skipPts) => {
   const ex = SUC.EX_BY_SYS ? SUC.EX_BY_SYS[c.sys] : null;
   if (ex) {
     const rw = ex.rw || {};
@@ -179530,7 +179867,7 @@ const msxR3CupReward = (SUC, c, s) => {
     if (rw.stat) Object.entries(rw.stat).forEach(([k, v]) => o.push(`${MSX_STAT_NAME[k]} +${v}`));
     if (rw.hpMax) o.push(`体力の最大値 +${rw.hpMax}`);
     if (rw.loy) o.push(`忠誠度 +${rw.loy}`);
-    if (rw.pts) o.push(`能力ポイント +${rw.pts}${c.rival ? `(ライバルに勝つと +${Math.round(rw.pts * 1.5)})` : ''}`);
+    if (rw.pts && !skipPts) o.push(`能力ポイント +${rw.pts}${c.rival ? `(ライバルに勝つと +${Math.round(rw.pts * 1.5)})` : ''}`);
     if (rw.pop) o.push(`人気 +${rw.pop}`);
     o.push(...msxR3CupItems(SUC, c, s));
     if (Number.isInteger(rw.apt)) o.push('その間合いの適性が1段上がる');
@@ -179555,7 +179892,7 @@ const msxR3CupReward = (SUC, c, s) => {
     2: 8,
     3: 12
   })[c.star];
-  if (pts) out.push(`能力ポイント +${pts}${c.rival ? `(ライバルに勝つと +${Math.round(pts * 1.5)})` : ''}`);
+  if (pts && !skipPts) out.push(`能力ポイント +${pts}${c.rival ? `(ライバルに勝つと +${Math.round(pts * 1.5)})` : ''}`);
   if (pop) out.push(`人気 +${pop}`);
   if (R.stat && up) out.push(`${MSX_STAT_NAME[R.stat]} +${up}`);
   if (c.star >= 4) out.push('全能力 +4');
@@ -179595,7 +179932,20 @@ const msxR3Prizes = (SUC, c) => {
   });
   const bpz = msxR3BeatPrize(SUC, c.prize);
   if (bpz) out.push(bpz);
-  const rw = msxR3CupReward(SUC, c);
+  const ptsN = ex ? Number((ex.rw || {}).pts) : Number((SUC.CUP_REWARD && SUC.CUP_REWARD.pts || {
+    1: 30,
+    2: 60,
+    3: 90,
+    4: 120
+  })[c.star]);
+  if (Number.isFinite(ptsN) && ptsN > 0) out.push({
+    id: 'pts',
+    e: '🔷',
+    name: `能力ポイント +${ptsN}`,
+    desc: `勝つと能力ポイントがもらえる。「能力」の画面で、好きな能力に振り分けられる${c.rival ? `(ライバルに勝つと +${Math.round(ptsN * 1.5)})` : ''}`,
+    pt: true
+  });
+  const rw = msxR3CupReward(SUC, c, undefined, true);
   if (rw && rw !== '賞金と修行チケット') out.push({
     id: 'rw',
     e: ex && ex.four ? '🏆' : '✨',
@@ -182163,7 +182513,7 @@ function MsxR3Shugyo({
     }, bc.slice(0, 4).map((c, i) => React.createElement("li", {
       key: `${c.type}${i}`,
       className: c.ok ? 'ok' : ''
-    }, React.createElement("i", null, "条件", i + 1), React.createElement("span", null, (BC[c.type] || (() => ''))(c)), React.createElement("em", {
+    }, React.createElement("i", null, "上乗せ"), React.createElement("span", null, (BC[c.type] || (() => ''))(c)), React.createElement("em", {
       className: c.ok ? '' : 'no'
     }, c.ok ? '済 +5%' : 'まだ')))) : React.createElement("ul", null, React.createElement("li", null, React.createElement("i", null, "条件"), "なし")));
   };
@@ -182277,7 +182627,7 @@ function MsxR3Shugyo({
     className: "q-note msx-kp"
   }, "このモンスターの技の表がまだありません(能力だけ上がる)"), React.createElement("div", {
     className: "q-note msx-kp"
-  }, "ランクが高い技ほど覚えにくい。能力・忠誠度・人気がよく仕上がっているほど、行き先の旬の季節ほど覚えやすい。外した技は、その技だけ次から覚えやすくなる。助手がドラだと、さらに覚えやすい")), lockT ? React.createElement("div", {
+  }, "ランクが高い技ほど覚えにくい。能力・忠誠度・人気がよく仕上がっているほど、行き先の旬の季節ほど覚えやすい。外した技は、その技だけ次から覚えやすくなる。", typeof msxBetaAidOk !== 'function' || msxBetaAidOk('dra') ? '助手がドラだと、さらに覚えやすい' : '')), lockT ? React.createElement("div", {
     className: "v-cupwin",
     onClick: () => setLockT(null),
     "data-msx-r3-qlock": true
@@ -182423,7 +182773,7 @@ function MsxR3GameOver({
     setBusy(true);
     try {
       await msxR3GameOver(s);
-      await msxR3ClearRun();
+      await msxR3ClearRun(run.id);
     } catch (e) {}
     setRun(null);
     onPause();
@@ -182542,6 +182892,7 @@ function MsxR3Retire({
   };
   const ws = useMemo(() => replayPts(ptList), [s, ptList]);
   const [ptTab, setPtTab] = useState('stat');
+  const [ptUnitM, setPtUnitM] = useMsxPtUnit(true);
   const [ptUnit, setPtUnit] = useMsxPtUnit();
   const [pick, setPick] = useState({});
   const [atab, setAtab] = useState(null);
@@ -182671,7 +183022,7 @@ function MsxR3Retire({
     const spend = k => {
       const list = ptListRef.current.slice();
       let w = replayPts(list);
-      const lim = msxPtLimit(ptUnit);
+      const lim = String(k).startsWith('m:') ? msxPtLimitM(ptUnitM, SUC.PTS && SUC.PTS.mastery || 10) : msxPtLimit(ptUnit);
       let n = 0;
       while (n < lim) {
         if (w.stats[k] >= capOf(w, k)) break;
@@ -182685,7 +183036,7 @@ function MsxR3Retire({
     };
     const undoK = k => {
       const list = ptListRef.current.slice();
-      const lim = msxPtLimit(ptUnit);
+      const lim = String(k).startsWith('m:') ? msxPtLimitM(ptUnitM, SUC.PTS && SUC.PTS.mastery || 10) : msxPtLimit(ptUnit);
       let n = 0;
       while (n < lim) {
         const i = list.lastIndexOf(k);
@@ -182776,8 +183127,9 @@ function MsxR3Retire({
       tab: ptTab,
       setTab: setPtTab
     }), React.createElement(MsxPtUnits, {
-      unit: ptUnit,
-      setUnit: setPtUnit
+      unit: ptTab === 'mastery' ? ptUnitM : ptUnit,
+      setUnit: ptTab === 'mastery' ? setPtUnitM : setPtUnit,
+      mastery: ptTab === 'mastery'
     }), ptTab === 'mastery' ? React.createElement(MsxMasteryRows, {
       SUC: SUC,
       s: s,
@@ -183097,17 +183449,6 @@ function MsxR3Retire({
       lv
     });
     if (AT) assists = AT.normPicks(assists, points).picks;
-    if (!run.beatEnd && SUC && typeof SUC.beatOfEnd === 'function') {
-      const bonus = SUC.beatOfEnd((SUC.evaluate(ws) || {}).rank);
-      setRun({
-        ...run,
-        s: {
-          ...run.s,
-          beatEarned: (Number(run.s.beatEarned) || 0) + bonus
-        },
-        beatEnd: true
-      });
-    }
     let r = null;
     try {
       r = await msxR3Retire({
@@ -183119,19 +183460,63 @@ function MsxR3Retire({
         ok: false
       };
     }
-    if (r && r.ok) {
-      try {
-        await msxR3ClearRun();
-      } catch (e) {}
-      setRes({
-        ok: true,
-        mon: r.mon,
-        best3: r.best3 || null
+    if (!r || !r.ok) {
+      setRes(r || {
+        ok: false
       });
-      setStep(r.best3 && typeof MsxBest3 === 'function' ? 'best3' : 'done');
-    } else setRes(r || {
-      ok: false
+      setBusy(false);
+      setSure(false);
+      return;
+    }
+    const end = !run.beatEnd && SUC && typeof SUC.beatOfEnd === 'function' ? {
+      ...run,
+      s: {
+        ...run.s,
+        beatEarned: (Number(run.s.beatEarned) || 0) + SUC.beatOfEnd((SUC.evaluate(ws) || {}).rank)
+      },
+      beatEnd: true
+    } : run;
+    let paid = false;
+    try {
+      paid = await setRun(end);
+    } catch (e) {
+      paid = false;
+    }
+    if (paid === 'stale') {
+      setBusy(false);
+      setSure(false);
+      return;
+    }
+    if (paid !== true) {
+      setRes({
+        ok: false,
+        why: 'beat'
+      });
+      setBusy(false);
+      setSure(false);
+      return;
+    }
+    let cl = false;
+    try {
+      cl = await msxR3ClearRun(run.id);
+    } catch (e) {
+      cl = false;
+    }
+    if (cl === false) {
+      setRes({
+        ok: false,
+        why: 'clear'
+      });
+      setBusy(false);
+      setSure(false);
+      return;
+    }
+    setRes({
+      ok: true,
+      mon: r.mon,
+      best3: r.best3 || null
     });
+    setStep(r.best3 && typeof MsxBest3 === 'function' ? 'best3' : 'done');
     setBusy(false);
     setSure(false);
   };
@@ -183373,7 +183758,7 @@ function MsxR3Retire({
     onClick: () => setShowBox(true)
   }, "🐾 マスモンボックスを見る")) : null, res && !res.ok && !res.full ? React.createElement("div", {
     className: "msx-note"
-  }, "保存できませんでした。もう一度押してください") : null);
+  }, "保存できませんでした。もう一度押してください", res.why === 'beat' || res.why === 'clear' ? '(マスモンボックスへの保存は済んでいます。二重には入りません)' : '') : null);
   const foot = React.createElement("div", {
     className: "v-ft"
   }, React.createElement("button", {
@@ -183757,9 +184142,10 @@ function MsxR3Box({
   };
   const SUC = msxSuc && msxSuc.SUC;
   const aid = box && box.mons.length && typeof box.mons[box.mons.length - 1].coach === 'string' && box.mons[box.mons.length - 1].coach || 'mua';
+  let fuseEl = null;
   if (page === 'fuse' && box && typeof MonsucFuseSheet === 'function') {
     const locked = [...teamIds, ...(lendId ? [lendId] : []), ...(runFrom ? [runFrom] : [])];
-    return React.createElement(React.Fragment, null, React.createElement("style", null, MSX_R3_CSS), React.createElement("style", null, MSX_MM_CSS), React.createElement(MonsucFuseSheet, {
+    fuseEl = React.createElement(React.Fragment, null, React.createElement(MonsucFuseSheet, {
       box: box,
       locked: locked,
       readBox: msxR3ReadBox,
@@ -183811,7 +184197,7 @@ function MsxR3Box({
     style: {
       margin: 'auto'
     }
-  }, "読み込んでいます…");else if (page === 'gate') {
+  }, "読み込んでいます…");else if (page === 'gate' || page === 'fuse' && fuseEl) {
     title = 'マスモンボックス(モンサク)';
     body = React.createElement("div", {
       className: "mm-gate"
@@ -184331,7 +184717,7 @@ function MsxR3Box({
   }), React.createElement("div", {
     className: "v-body r3 mm",
     "data-msx-mm": page
-  }, body), foot);
+  }, body), foot, fuseEl);
 }
 const MSX_MM_CSS = `
 .msx .mm{gap:0}

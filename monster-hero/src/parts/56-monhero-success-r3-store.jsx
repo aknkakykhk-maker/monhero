@@ -193,7 +193,8 @@ const msxR3GameOver = async (s) => {
   await storeSet(MSX_KEYS.meta, meta);
   return meta;
 };
-const msxR3ClearRun = () => (typeof msxClearRun === 'function' ? msxClearRun() : storeSet(MSX_KEYS.run, null));
+// id を渡すと、保存されている育成がその id のときだけ消す(r1115-200 3a)。true 消した/もう無い・'other' 別の育成・false 書けなかった
+const msxR3ClearRun = (id) => (typeof msxClearRun === 'function' ? msxClearRun(id) : storeSet(MSX_KEYS.run, null));
 // 保存枠から外す(お別れ)。「思い出」に名前・種・ランクだけ残す(新しい100件)
 const msxR3Farewell = async (id) => {
   const box = await msxR3ReadBox(); const m = box.mons.find((x) => x.id === id); if (!m) return box;
@@ -255,12 +256,16 @@ const msxR3TitleName = (t) => { const T = msxR3T().titles; try { return T ? T.na
 // 育成の記録帳に1件(同じ id は2度入らない)
 const msxR3AddRecord = async (run, s, ev, titles, gen) => {
   const R = msxR3T().record; if (!R) return false;
-  try {
-    const raw = await storeGet(R.KEY, null);
-    const r = R.add(R.parse(raw), { id: run.id, species: s.species, nick: run.nick || '', rank: ev.rank, power: ev.power, sum: ev.sum, titles, aid: s.aid, endAt: Date.now(), gen });
-    if (r.added && (await storeSet(R.KEY, r.book)) === false) return 'fail'; // 書けなかった(r1115-171 a: 引退を ok にしない)
-    return r.added;
-  } catch (e) { return false; }
+  // 読み書きの例外は 'fail'(r1115-200 2c: 引退を ok にしない → 同じ育成IDで再試行して補う)。
+  //   中身が壊れていて形にできない(parse・add の例外)は今までどおり飛ばす(記録帳が壊れていても引退はできる)
+  let raw = null;
+  try { raw = await storeGet(R.KEY, null); } catch (e) { return 'fail'; }
+  let r = null;
+  try { r = R.add(R.parse(raw), { id: run.id, species: s.species, nick: run.nick || '', rank: ev.rank, power: ev.power, sum: ev.sum, titles, aid: s.aid, endAt: Date.now(), gen }); } catch (e) { return false; }
+  if (!r || !r.added) return false;
+  let w = false;
+  try { w = await storeSet(R.KEY, r.book); } catch (e) { w = false; }
+  return w === false ? 'fail' : true; // 書けなかった(r1115-171 a: 引退を ok にしない)
 };
 
 // ---- 台詞(台本エンジン data/monhero-success-script-engine.js・キズナ #5747)。読めなければ画面の文(fallback)を出す ----

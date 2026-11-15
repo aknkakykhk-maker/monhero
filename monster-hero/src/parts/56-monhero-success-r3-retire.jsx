@@ -37,7 +37,7 @@ function MsxR3GameOver({ run, setRun, onPause }) {
   useSuccessScene('gameOver');
   const again = async () => {
     if (busy) return; setBusy(true);
-    try { await msxR3GameOver(s); await msxR3ClearRun(); } catch (e) {}
+    try { await msxR3GameOver(s); await msxR3ClearRun(run.id); } catch (e) {}
     setRun(null); onPause();
   };
   const left = (SUC.REMATCH ? SUC.REMATCH.max : 3) - (s.rematchUsed || 0);
@@ -72,6 +72,7 @@ function MsxR3Retire({ run, setRun, onPause, debug, SUC }) {
   const setPtListNow = (list) => { ptListRef.current = list; setPtList(list); };
   const ws = useMemo(() => replayPts(ptList), [s, ptList]); // 能力ポイントを使っている途中の写し
   const [ptTab, setPtTab] = useState('stat'); // 「能力」「技の熟練」(r1115-198)
+  const [ptUnitM, setPtUnitM] = useMsxPtUnit(true);
   const [ptUnit, setPtUnit] = useMsxPtUnit();            // 1・5・10・100・MAX(r1115-092)
   const [pick, setPick] = useState({}); // アシスト能力 { id: 段 }
   const [atab, setAtab] = useState(null); // アシストの場面のタブ(第2版・7つ)
@@ -129,12 +130,12 @@ function MsxR3Retire({ run, setRun, onPause, debug, SUC }) {
     const capOf = capOfPt;
     // 刻みの分だけ続けて振る(1つずつ並びに積むので、「−」も同じ刻みで戻せる)。ポイントが足りない・上限に着いたところで止まる
     const spend = (k) => {
-      const list = ptListRef.current.slice(); let w = replayPts(list); const lim = msxPtLimit(ptUnit); let n = 0;
+      const list = ptListRef.current.slice(); let w = replayPts(list); const lim = String(k).startsWith('m:') ? msxPtLimitM(ptUnitM, (SUC.PTS && SUC.PTS.mastery) || 10) : msxPtLimit(ptUnit); let n = 0;
       while (n < lim) { if (w.stats[k] >= capOf(w, k)) break; const r = SUC.spendPts(w, k, 1); if (!r.out.ok) break; w = r.state; list.push(k); n += 1; }
       if (n) setPtListNow(list);
     };
     const undoK = (k) => {
-      const list = ptListRef.current.slice(); const lim = msxPtLimit(ptUnit); let n = 0;
+      const list = ptListRef.current.slice(); const lim = String(k).startsWith('m:') ? msxPtLimitM(ptUnitM, (SUC.PTS && SUC.PTS.mastery) || 10) : msxPtLimit(ptUnit); let n = 0;
       while (n < lim) { const i = list.lastIndexOf(k); if (i < 0) break; list.splice(i, 1); n += 1; }
       if (n) setPtListNow(list);
     };
@@ -157,7 +158,7 @@ function MsxR3Retire({ run, setRun, onPause, debug, SUC }) {
         <div className="gr" style={{ bottom: 'calc(6% - 5px)', width: '40%' }}/><MsxMonArt run={run} className="mon" style={{ bottom: '6%', height: '88%' }} live/>
         <div className="r3-mtag">育成完了の前に</div></div>
       <MsxPtTabs tab={ptTab} setTab={setPtTab}/>
-      <MsxPtUnits unit={ptUnit} setUnit={setPtUnit}/>
+      <MsxPtUnits unit={ptTab === 'mastery' ? ptUnitM : ptUnit} setUnit={ptTab === 'mastery' ? setPtUnitM : setPtUnit} mastery={ptTab === 'mastery'}/>
       {ptTab === 'mastery' ? <MsxMasteryRows SUC={SUC} s={s} ws={ws} techs={mTechs} addOf={(k) => ptList.filter((x) => x === k).length} plus={spend} minus={undoK}/> : <>
       <div className="r3-bar"><span style={{ fontSize: 10, color: '#cbd5e1', alignSelf: 'center' }}>まとめて</span>
         <button type="button" className="r3-chip" onClick={() => preset('top')}>全部 {MSX_STAT_NAME[(ev0.top || [])[0]] || 'ちから'}</button>
@@ -241,15 +242,22 @@ function MsxR3Retire({ run, setRun, onPause, debug, SUC }) {
     if (busy) return; setBusy(true);
     let assists = Object.entries(pick).map(([id, lv]) => (V3 ? { id, n: lv } : { id, lv }));
     if (AT) assists = AT.normPicks(assists, points).picks;
-    // 育成が終わったときのビートP(総合力のランク・1回だけ)。途中の育成に足して保存 → 本編の財布へ(デバッグの育成は足さない・msxSaveRun)
-    if (!run.beatEnd && SUC && typeof SUC.beatOfEnd === 'function') {
-      const bonus = SUC.beatOfEnd((SUC.evaluate(ws) || {}).rank);
-      setRun({ ...run, s: { ...run.s, beatEarned: (Number(run.s.beatEarned) || 0) + bonus }, beatEnd: true });
-    }
+    // ★r1115-200 2: 空き確認 → 保存枠・成績・記録帳(msxR3Retire)→ 育成が終わったときのビートP → 途中の育成を消す の順。
+    //   どこかで書けなければ完了にしない(育成は残す)。もう一度押すと、同じ育成IDで まだの分だけ補う(子・成績・記録帳は already で二重にならない・
+    //   ビートPは途中の育成の beatSent と比べて差だけ足す)。満杯なら何も書かない(ビートPも付けない)
     let r = null;
     try { r = await msxR3Retire({ ...run, s: ws }, ws, ev, assists, debug); } catch (e) { r = { ok: false }; }
-    if (r && r.ok) { try { await msxR3ClearRun(); } catch (e) {} setRes({ ok: true, mon: r.mon, best3: r.best3 || null }); setStep(r.best3 && typeof MsxBest3 === 'function' ? 'best3' : 'done'); }
-    else setRes(r || { ok: false });
+    if (!r || !r.ok) { setRes(r || { ok: false }); setBusy(false); setSure(false); return; }
+    // 育成が終わったときのビートP(総合力のランク・1回だけ)。途中の育成に足して保存 → 本編の財布へ(デバッグの育成は足さない・msxSaveRun)
+    //   前の押しで画面にだけ beatEnd が付いていても、保存を確かめるためにもう一度保存する(足すのは差だけ)
+    const end = !run.beatEnd && SUC && typeof SUC.beatOfEnd === 'function'
+      ? { ...run, s: { ...run.s, beatEarned: (Number(run.s.beatEarned) || 0) + SUC.beatOfEnd((SUC.evaluate(ws) || {}).rank) }, beatEnd: true } : run;
+    let paid = false; try { paid = await setRun(end); } catch (e) { paid = false; }
+    if (paid === 'stale') { setBusy(false); setSure(false); return; } // ほかの画面が先に進めていた(読み直しの窓が出る)
+    if (paid !== true) { setRes({ ok: false, why: 'beat' }); setBusy(false); setSure(false); return; }
+    let cl = false; try { cl = await msxR3ClearRun(run.id); } catch (e) { cl = false; }
+    if (cl === false) { setRes({ ok: false, why: 'clear' }); setBusy(false); setSure(false); return; }
+    setRes({ ok: true, mon: r.mon, best3: r.best3 || null }); setStep(r.best3 && typeof MsxBest3 === 'function' ? 'best3' : 'done');
     setBusy(false); setSure(false);
   };
   // ---- 自分だけのベスト3(56-monsuc-best3.jsx・r1113-057②)。入ったらせり上がる演出 → いつもの完了の段へ ----
@@ -294,7 +302,7 @@ function MsxR3Retire({ run, setRun, onPause, debug, SUC }) {
     <div className="v-pick">取るもの({kinds} / {maxKinds}種類): {kinds ? Object.entries(pick).map(([id, lv], i) => <React.Fragment key={id}>{i ? '・' : ''}<b>{A[id] ? `${A[id].icon} ${A[id].name}` : id} {V3 ? AT.valueText(id, lv) : `段${lv}`}</b></React.Fragment>) : 'まだ選んでいない'}<br/>⚠ 決めたあとは変えられない</div>
     {res && res.full ? <div className="v-card" style={{ borderColor: '#f87171' }}><div className="sub"><b style={{ color: '#fca5a5' }}>マスモンボックスがいっぱい</b>({res.box ? `${res.box.mons.length} / ${res.box.cap}体` : ''})。お別れで1体あけてから、もう一度「これで決める」を押してください。育成はこのまま残しておきます</div>
       <button type="button" className="msx-btn sub" onClick={() => setShowBox(true)}>🐾 マスモンボックスを見る</button></div> : null}
-    {res && !res.ok && !res.full ? <div className="msx-note">保存できませんでした。もう一度押してください</div> : null}
+    {res && !res.ok && !res.full ? <div className="msx-note">保存できませんでした。もう一度押してください{res.why === 'beat' || res.why === 'clear' ? '(マスモンボックスへの保存は済んでいます。二重には入りません)' : ''}</div> : null}
   </>);
   const foot = <div className="v-ft"><button type="button" onClick={auto} data-msx-r3-auto>🎲 おまかせ</button><button type="button" onClick={() => { setPick({}); setSure(false); }}>やり直す</button>
     <button type="button" className="go" disabled={busy} onClick={decide} data-msx-r3-decide>{sure ? '本当に決める(変えられない)▶' : 'これで決める ▶'}</button></div>;
