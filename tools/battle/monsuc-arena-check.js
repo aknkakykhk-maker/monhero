@@ -66,7 +66,7 @@ const open = async (browser, reducedMotion, width = 390, species = 'Mocchi', loy
   const exe = '/opt/pw-browsers/chromium';
   const browser = await chromium.launch(fs.existsSync(exe) ? { executablePath: exe } : {});
   try {
-    // 段C(2026-11-14 社長): 技の札の技名が札からはみ出さない(幅390・320)。「前へ」は右向き・「後ろへ」は左向きで、ボタンも左に後ろへ・右に前へ
+    // 段C(2026-11-14 社長): 技の札の技名が札からはみ出さない(幅390・320)。「前進」は右向き・「後退」は左向きで、ボタンも左に後退・右に前進
     for (const [w, sp] of [[390, 'Mocchi'], [320, 'Mocchi'], [390, 'Pandora'], [320, 'Pandora']]) {
       const { page } = await open(browser, 'no-preference', w, sp);
       await page.waitForFunction(() => document.querySelector('[data-msxm="act"]'), null, { timeout: 30000 });
@@ -82,7 +82,7 @@ const open = async (browser, reducedMotion, width = 390, species = 'Mocchi', loy
       if (w === 390) {
         const mv = await page.evaluate(() => { const b = [...document.querySelectorAll('[data-msxm-move]')]; return b.map((x) => ({ step: Number(x.dataset.msxmMove), left: x.getBoundingClientRect().left, text: x.textContent.slice(0, 5) })); });
         const back = mv.find((x) => x.step > 0), fwd = mv.find((x) => x.step < 0);
-        check('段C: 左に「◀ 後ろへ」・右に「前へ ▶」(矢印は画面の向き)', !!back && !!fwd && back.left < fwd.left && /^◀ 後ろへ/.test(back.text) && /^前へ ▶/.test(fwd.text), JSON.stringify(mv));
+        check('段C: 左に「◀ 後退」・右に「前進 ▶」(矢印は画面の向き。r1115-193 で「後ろへ・前へ」から改名)', !!back && !!fwd && back.left < fwd.left && /^◀ 後退/.test(back.text) && /^前進 ▶/.test(fwd.text), JSON.stringify(mv));
       }
       await page.close();
     }
@@ -98,7 +98,7 @@ const open = async (browser, reducedMotion, width = 390, species = 'Mocchi', loy
           const did = await page.evaluate(() => {
             const c = document.querySelector('[data-msa-dc="manual"] [data-msa-dc-card].now:not([disabled])');
             if (c) { c.click(); const t = document.querySelector('[data-msa-sheet] [data-msxm-tech]:not([disabled])'); if (t) { t.click(); return 'tech'; } const x = document.querySelector('[data-msa-sheet-close]'); if (x) x.click(); }
-            const b = [...document.querySelectorAll('.msxm-btn:not([disabled])')].find((y) => /ためる|ガード|前へ|後ろへ/.test(y.textContent)); if (b) { b.click(); return 'other'; }
+            const b = [...document.querySelectorAll('.msxm-btn:not([disabled])')].find((y) => /ためる|ガード|前進|後退/.test(y.textContent)); if (b) { b.click(); return 'other'; }
             return null;
           });
           if (did) mine++;
@@ -179,7 +179,7 @@ const open = async (browser, reducedMotion, width = 390, species = 'Mocchi', loy
         await page.waitForFunction(() => document.querySelector('[data-msxm="act"]'), null, { timeout: 30000 });
         await page.evaluate(() => { const c = document.querySelector('[data-msa-dc="manual"] [data-msa-dc-card].now:not([disabled])'); if (c) c.click(); });
         await page.waitForTimeout(150);
-        await page.evaluate(() => { const t = document.querySelector('[data-msxm-tech]:not([disabled])'); if (!t) { const x = document.querySelector('[data-msa-sheet-close]'); if (x) x.click(); } const f = [...document.querySelectorAll('.msxm-btn:not([disabled])')].find((x) => /前へ/.test(x.textContent)); (t || f || document.querySelector('.msxm-btn:not([disabled])')).click(); });
+        await page.evaluate(() => { const t = document.querySelector('[data-msxm-tech]:not([disabled])'); if (!t) { const x = document.querySelector('[data-msa-sheet-close]'); if (x) x.click(); } const f = [...document.querySelectorAll('.msxm-btn:not([disabled])')].find((x) => /前進/.test(x.textContent)); (t || f || document.querySelector('.msxm-btn:not([disabled])')).click(); });
         for (let w = 0; w < 30 && !cutP; w++) { await page.waitForTimeout(100); cutP = await page.evaluate(() => { const c = document.querySelector('[data-msa-cut]'); return !!c && /命中 \d+%/.test(c.textContent); }); }
       }
       check('④ 技の名前の帯に命中%', cutP);
