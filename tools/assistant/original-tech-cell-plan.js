@@ -50,4 +50,33 @@ for (const [sp, mainSp] of Object.entries(MAIN)) {
   for (const x of rows) out.push(`| ${x.t.name} | ${x.t.rank}・${D[x.t.dist[0]]} | ${x.moved ? '**' : ''}${x.r}・${D[x.d]}${x.moved ? '**' : ''} | ${x.b} | ${x.why} | ${x.t.power}・${x.t.hit}・${x.t.guts}・${x.t.crit}・${x.t.gd} |`);
   out.push('');
 }
+// --table3(r1115-147): 主血統の技 | いまのオリジナルの技 | 直した後(間合い・ランクは主血統の技と同じ。性能は主血統の技の 威力・命中・会心 +2、ガッツ・GD は同じ。r1115-099 と同じ寄せ方)
+if (process.argv.includes('--table3')) {
+  const t3 = ['# r1115-146・147 オリジナルモンスターの技を、メイン血統の技の表と同じ並びにする案(下書き)', '',
+    '直した後: 間合い・ランクは対応する主血統の技と同じ。性能は 威力・命中・会心 = 主血統の技 +2、消費ガッツ・ガッツダウン = 主血統の技と同じ。技の id・名前・技の種類(ちから/かしこさ)は変えない。',
+    '主血統より技が多い子は、対応の無い技が残る(表の下。①の印と入れ替えで扱う)', ''];
+  const perf = (x) => `威力${x.power}・命中${x.hit}・ガッツ${x.guts}・会心${x.crit}・GD${x.gd}`;
+  for (const [sp, mainSp] of Object.entries(MAIN)) {
+    const own = B.species[sp]; const base = B.species[mainSp];
+    const pairs = [];
+    for (const m of base) for (const t of own) {
+      const nameHit = t.name.includes(m.name) ? 100 + m.name.length : 0;
+      pairs.push({ m, t, score: nameHit + (t.kind === m.kind ? 10 : 0) - Math.abs(t.power - m.power) / 5 - Math.abs(t.rank - m.rank) * 2 - (t.dist[0] === m.dist[0] ? 0 : 3) });
+    }
+    pairs.sort((a, b) => b.score - a.score);
+    const usedM = new Map(); const usedT = new Set();
+    for (const p of pairs) { if (usedM.has(p.m.id) || usedT.has(p.t.id)) continue; usedM.set(p.m.id, p.t); usedT.add(p.t.id); }
+    t3.push(`## ${sp}(${own.length}技)← メイン血統 ${mainSp}(${base.length}技)`, '', '| 主血統の技(ランク・間合い・性能) | いまのオリジナルの技 | 直した後 |', '| --- | --- | --- |');
+    for (const m of base.slice().sort((a, b) => a.rank - b.rank || a.dist[0] - b.dist[0])) {
+      const t = usedM.get(m.id);
+      const after = t ? `${t.name}: ${m.rank}・${m.dist.map(d => D[d]).join('')}・威力${m.power + 2}・命中${m.hit + 2}・ガッツ${m.guts}・会心${m.crit + 2}・GD${m.gd}${m.moveTo != null ? `・当たると${D[m.moveTo]}へ` : ''}` : '(対応する技なし)';
+      t3.push(`| ${m.name}(${m.rank}・${m.dist.map(d => D[d]).join('')}・${perf(m)}) | ${t ? `${t.name}(${t.rank}・${t.dist.map(d => D[d]).join('')}・${perf(t)})` : '—'} | ${after} |`);
+    }
+    const rest = own.filter(t => !usedT.has(t.id));
+    if (rest.length) { t3.push('', `対応の無い技(${rest.length}): ` + rest.map(t => `${t.name}(${t.rank}・${D[t.dist[0]]})`).join('・') + ' … いまのランク・間合い・性能のまま(重なるマスは①の印と入れ替え)'); }
+    t3.push('');
+  }
+  console.log(t3.join('\n'));
+  process.exit(0);
+}
 console.log(MD ? out.join('\n') : out.filter(l => l.startsWith('###') || l.startsWith('動かす')).join('\n'));
