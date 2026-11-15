@@ -52,6 +52,17 @@ ok(JSON.stringify(a1) === JSON.stringify(a2), '同じ育成 id・同じ手なの
 ok(JSON.stringify(a1.stats) !== JSON.stringify(b1.stats), '育成 id を変えても結果が同じ(乱数が id を見ていない)');
 ok(JSON.stringify(SUC.gatherOf(a1)) === JSON.stringify(SUC.gatherOf(JSON.parse(JSON.stringify(a1)))), '集まりが同じターンで変わる');
 
+// ---- 育成方針は甘え度と恐れ度の差で決まる(r1115-059 社長の表) ----
+{
+  const P = (a, f) => SUC.polOfBond(a, f);
+  ok([P(10, 10), P(14, 10), P(10, 14), P(0, 0)].every((x) => x === 0), '差 0〜4 が普通でない');
+  ok(P(15, 10) === -1 && P(20, 10) === -1 && P(10, 15) === 1 && P(10, 20) === 1, '差 5〜10 が 甘い(−1)・厳しい(+1)でない');
+  ok(P(21, 10) === -2 && P(25, 10) === -2 && P(10, 21) === 2 && P(10, 25) === 2, '差 11〜15 が 溺愛(−2)・スパルタ(+2)でない');
+  ok(P(26, 10) === -3 && P(50, 0) === -3 && P(10, 26) === 3 && P(0, 50) === 3, '差 16以上 が 超溺愛(−3)・超スパルタ(+3)でない');
+  // 古い保存(pp あり・pol が違う)を読んでも、方針は差で決め直され、pp は残る
+  const old = SUC.restore ? SUC.restore({ ...SUC.newRun({ id: 'o', species: 'Mocchi', aid: 'mua' }), ama: 40, fear: 5, pol: 3, pp: 7 }) : null;
+  if (old) ok(old.pol === -3 && old.pp === 7, `古い保存の読み直しで方針が差にならない/pp が消えた: ${old && old.pol}/${old && old.pp}`);
+}
 // ---- 結果の倍率・サボり・失敗 ----
 ok(SUC.RESULTS.great.mult === 1.5 && SUC.RESULTS.ok.mult === 1 && SUC.RESULTS.fail.mult === 0 && SUC.RESULTS.sab.mult === 0.3, '結果の倍率が 1.5/1/0/0.3 でない');
 const base = SUC.newRun({ id: 'r', species: 'Mocchi', aid: 'mua' });
@@ -64,7 +75,9 @@ ok(near(SUC.failRateOf({ ...base, yosu: { sabori: { visits: 0 } } }) - fFull, 0.
 // 失敗は上がらない・サボりは3割(同じ札・同じ時期で比べる)
 {
   // 編成は前と同じ全員モッチーで比べる(2026-11-14 から空き枠は育てる子と別の種で埋まり、編成の出来事が混ざるため)
-  let s = SUC.newRun({ id: 'mult', species: 'Mocchi', aid: 'mua', pol: -3, team: Array.from({ length: 6 }, () => ({ kind: 'base', species: 'Mocchi' })) });
+  let s = SUC.newRun({ id: 'mult', species: 'Mocchi', aid: 'mua', team: Array.from({ length: 6 }, () => ({ kind: 'base', species: 'Mocchi' })) });
+  s = { ...s, ama: 50, fear: 0, pol: SUC.polOfBond(50, 0) }; // サボりが起きる甘い側の方針は、甘え度と恐れ度の差で決める(r1115-059)
+  ok(s.pol === -3, `甘え度50・恐れ度0 が超溺愛にならない: ${s.pol}`);
   const seen = {};
   for (let i = 0; i < 400 && Object.keys(seen).length < 4; i++) {
     const t = { ...s, id: `mult-${i}`, hp: i % 2 ? 100 : 5 };
@@ -292,14 +305,16 @@ ok(near(SUC.failRateOf({ ...base, yosu: { sabori: { visits: 0 } } }) - fFull, 0.
   // 大会に勝つとチケット(賞金が大きいほど多い)と名声。負けると準優勝などの一部の賞金だけ
   const b = SUC.settle({ ...s0, turn: 5, acted: false, battle: { kind: 'debut', round: 0 } }, [true]).state;
   ok(b.tickets === s0.tickets + 2 && b.fame === SUC.PRIZE.debut && b.fameRank === 2, `デビュー戦に勝っても賞金ランク2段ぶんのチケット・名声が入らない: ${b.tickets - s0.tickets}`);
-  // 賞金ランク10段(2026-11-14 社長): 段が上がるたびに1枚・上がらなければ KEEP・古い途中の育成はいまの段で埋めて配り直さない
-  { ok(SUC.FAME_RANK.length === 10 && SUC.FAME_RANK[9].name === 'ヒーロー' && SUC.rankStepOf(s0) === 0, '賞金ランクが10段・いちばん上がヒーローでない');
+  // 賞金ランク9段(2026-11-15 r1115-085・126 社長 案A・参考の金額): 段が上がるたびに1枚(6段目から上は2枚)・上がらなければ KEEP・古い途中の育成はいまの段で埋めて配り直さない
+  { ok(SUC.FAME_RANK.length === 9 && SUC.FAME_RANK[8].name === 'ヒーロー' && SUC.FAME_RANK[8].min === 130000 && SUC.rankStepOf(s0) === 0, '賞金ランクが9段・いちばん上がヒーロー(130,000G)でない');
+    ok(SUC.rankTicketsOf(0, 9) === 13 && SUC.rankTicketsOf(4, 5) === 1 && SUC.rankTicketsOf(5, 6) === 2 && SUC.rankTicketsOf(5, 7) === 4, '段のチケットが 1〜5段目は1枚・6段目から上は2枚 になっていない');
+    ok(SUC.EX_CUPS.filter((c) => c.four).map((c) => c.need.rank).join() === '6,6,6,6', '四大大会の出る条件が ミドル・プロとも6段(参考の「はながた」= 26,000G)でない');
     const lg = (w, l) => ({ ...s0.log, wins: w, losses: l });
-    ok(SUC.rankStepOf({ ...s0, log: lg(0, 1), fameTotal: 99999 }) === 1 && SUC.rankStepOf({ ...s0, log: lg(1, 0), fameTotal: 1499 }) === 2 && SUC.rankStepOf({ ...s0, log: lg(1, 0), fameTotal: 8000 }) === 6 && SUC.rankStepOf({ ...s0, log: lg(3, 0), fameTotal: 50000 }) === 10, '賞金ランクの段の数え方がずれている');
-    const rs = SUC.restore(JSON.parse(JSON.stringify({ ...s0, log: lg(2, 0), fameTotal: 9000, fameRank: undefined }))); ok(rs.fameRank === 6, `古い途中の育成の賞金ランクが いまの段で埋まらない: ${rs.fameRank}`);
+    ok(SUC.rankStepOf({ ...s0, log: lg(0, 1), fameTotal: 99999 }) === 1 && SUC.rankStepOf({ ...s0, log: lg(1, 0), fameTotal: 2999 }) === 2 && SUC.rankStepOf({ ...s0, log: lg(1, 0), fameTotal: 8000 }) === 4 && SUC.rankStepOf({ ...s0, log: lg(3, 0), fameTotal: 50000 }) === 7 && SUC.rankStepOf({ ...s0, log: lg(3, 0), fameTotal: 130000 }) === 9, '賞金ランクの段の数え方がずれている');
+    const rs = SUC.restore(JSON.parse(JSON.stringify({ ...s0, log: lg(2, 0), fameTotal: 9000, fameRank: undefined }))); ok(rs.fameRank === 4, `古い途中の育成の賞金ランクが いまの段で埋まらない: ${rs.fameRank}`);
     const k2 = SUC.settle({ ...b, turn: 6, acted: false, battle: { kind: 'cup', sys: 'str', star: 1, round: 0 } }, [false]); ok(k2.out.rankKeep && k2.state.tickets === b.tickets, '段が上がらないのにチケットが入る・KEEP が出ない');
-    // 負けても獲得賞金の合計で段が上がる(2026-11-14 社長): 準優勝の賞金で 一人前(1500G) を越えたら1段・チケット1枚
-    const k3 = SUC.settle({ ...b, fameTotal: 1490, turn: 6, acted: false, battle: { kind: 'cup', sys: 'str', star: 3, round: 0 } }, [false]); ok(k3.out.rankUp && k3.state.fameRank === 3 && k3.state.tickets === b.tickets + 1 && !k3.state.mealReady, `負けたとき獲得賞金の合計で賞金ランクが上がらない: ${k3.state.fameRank}`); }
+    // 負けても獲得賞金の合計で段が上がる(2026-11-14 社長): 準優勝の賞金で 一人前(3,000G) を越えたら1段・チケット1枚
+    const k3 = SUC.settle({ ...b, fameTotal: 2990, turn: 6, acted: false, battle: { kind: 'cup', sys: 'str', star: 3, round: 0 } }, [false]); ok(k3.out.rankUp && k3.state.fameRank === 3 && k3.state.tickets === b.tickets + 1 && !k3.state.mealReady, `負けたとき獲得賞金の合計で賞金ランクが上がらない: ${k3.state.fameRank}`); }
   const pro = SUC.settle({ ...s0, turn: 41, acted: false, battle: { kind: 'pro', round: 0 } }, [true, true, true]).state;
   ok(pro.tickets - s0.tickets > b.tickets - s0.tickets, '賞金の大きい大会ほどチケットが多くない');
   const runner = SUC.settle({ ...s0, turn: 41, acted: false, battle: { kind: 'pro', round: 0 } }, [false]).state;
@@ -442,7 +457,7 @@ ok(near(SUC.failRateOf({ ...base, yosu: { sabori: { visits: 0 } } }) - fFull, 0.
   const mid3 = { ...mid, turn: 20 }; const cm3 = SUC.cupsOf(mid3);
   const four = cm3.find(c => c.sys === 'four1');
   ok(four && four.ex && four.prize === 12500 && !four.entry.ok && four.entry.why === 'rank', `四大大会の賞金の段の条件が効かない: ${JSON.stringify(four && four.entry)}`);
-  ok(SUC.cupsOf({ ...mid3, fameTotal: 8000, log: { ...mid.log, wins: 1 } }).find(c => c.sys === 'four1').entry.ok && !SUC.cupsOf({ ...mid3, fameTotal: 7999, log: { ...mid.log, wins: 1 } }).find(c => c.sys === 'four1').entry.ok, '賞金ランクが はなまる(8,000G)で四大大会に出られる、にならない');
+  ok(SUC.cupsOf({ ...mid3, fameTotal: 26000, log: { ...mid.log, wins: 1 } }).find(c => c.sys === 'four1').entry.ok && !SUC.cupsOf({ ...mid3, fameTotal: 25999, log: { ...mid.log, wins: 1 } }).find(c => c.sys === 'four1').entry.ok, '賞金ランクが エース(26,000G・参考の はながた)で四大大会に出られる、にならない');
   ok(cm.filter(c => c.sys.startsWith('distT')).length === 4, '間合いトーナメント4つが並ばない');
   const pc = SUC.cupsOf({ ...s0, turn: 30 }).find(c => c.sys === 'distC0'); // プロ期1月(ターン30)
   ok(pc && !pc.entry.ok && pc.entry.why === 'won' && pc.entry.wonSys === 'distT0', `間合いチャンピオンズの「◯◯ 優勝で」が効かない: ${JSON.stringify(pc && pc.entry)}`);

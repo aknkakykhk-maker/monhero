@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 56ae1a006bdc2109
+// source-sha256: af41a1e86810ca3f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -720,6 +720,12 @@ const EVENT_REPLAY_GROUPS = Object.freeze([{
   label: 'モンヒロサクセス',
   note: '新しい育成場のお話',
   color: '#4ade80'
+}, {
+  id: 'kiki_song',
+  emoji: '🎹',
+  label: 'ききの初めての曲',
+  note: 'ききが初めて作った曲のお話',
+  color: '#f9a8d4'
 }, {
   id: 'halloween',
   emoji: '🎃',
@@ -6411,6 +6417,13 @@ const BGM_TRACKS = [{
   gain: 1,
   loop: true
 }, {
+  id: 'melo_sparkling_pink_overture',
+  name: 'Sparkling Pink Overture',
+  creator: 'オリジナル',
+  src: 'audio/bgm-sparkling-pink-overture.mp3',
+  gain: 1,
+  loop: true
+}, {
   id: 'melo_tsuki_ga_michiru_mae_ni_short',
   name: '月が満ちる前に short ver.',
   creator: 'Fuki Commune',
@@ -7695,6 +7708,7 @@ const rhythmAchievementPending = (ledger, rules, eligible) => {
 const pandoraBossBgmForBattle = (heroId, currentWave, enemyId) => heroId === 'Pandora' && (enemyId === 'Moo' || currentWave === 10) ? 'pandora_boss' : null;
 const eikiBossBgmForBattle = (heroId, currentWave, enemyId) => heroId === 'Eiki' && (enemyId === 'Moo' || currentWave === 10) ? 'eiki_boss' : null;
 const DEFAULT_BGM_ARRANGEMENT = Object.freeze({
+  sparklingPinkStoryEvent: 'melo_sparkling_pink_overture',
   erubinJoinStoryEvent: 'original_event_01',
   rhythmGrandOpenEvent: 'kaze_ga_soyogu',
   cardBattleIntroEvent: 'atsu_cup_theme',
@@ -7795,6 +7809,7 @@ const eventScriptBgmAt = (script, step) => {
 };
 const EVENT_BGM_FADE_MS = 800;
 const EVENT_BGM_SCENES = Object.freeze({
+  sparkling_pink_kiki_story: 'sparklingPinkStoryEvent',
   erubin_join_2026_11: 'erubinJoinStoryEvent',
   rhythm_grand_open_teaser: 'rhythmGrandOpenEvent',
   rhythm_grand_open: 'rhythmGrandOpenEvent',
@@ -8252,6 +8267,7 @@ const Audio_ = (() => {
     "audio/bgm-six-eternel-remix-beat.mp3": "b1a024d5b16f",
     "audio/bgm-six-eternel-remix.mp3": "5f56c89739f8",
     "audio/bgm-six-eternel.mp3": "e26412179f3a",
+    "audio/bgm-sparkling-pink-overture.mp3": "6e474b21b5d9",
     "audio/bgm-stay-with-me-short.mp3": "d836a069998d",
     "audio/bgm-the-city-beneath-the-comets.mp3": "900fda0dc05e",
     "audio/bgm-title-theme.mp3": "8af0684e79e7",
@@ -14775,6 +14791,7 @@ const helpPlayerFlagOn = name => !!name && HELP_PLAYER_FLAGS[name] === true;
 const CARD_CUP_STORY_ID = 'card_cup_2026_10_31';
 const RHYTHM_GRAND_OPEN_TEASER_STORY_ID = 'rhythm_grand_open_teaser';
 const MONSUC_BETA_EP1_STORY_ID = 'monsuc_beta_ep1';
+const SPARKLING_PINK_STORY_ID = 'sparkling_pink_kiki_story';
 const RHYTHM_GRAND_OPEN_STORY_ID = 'rhythm_grand_open';
 const SORASHIDO_GIFT_KEY = 'mh_sorashido_gift_v1';
 const SORASHIDO_GIFT_BEAT_POINTS = 10000;
@@ -53262,6 +53279,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:midnight_studio': [['excited', '2:00でいちばん強くなるの！ ここまぢでアガる♪']],
     'listen:rpg': [['excited', '0:53でいきなりいちばん強いの！ ドキドキが止まらないよ♪']],
     'listen:saudade': [['excited', '2:44からいちばん強いところが続くの！ ずっとアガるよ♪']],
+    'listen:sparkling_pink_overture': [['excited', '0:07からいちばん盛り上がるの！ ずっとキラキラなのー♪']],
     'listen:only_my_railgun': [['excited', '0:52からずっとサビで盛り上がるの、テンション上がるぢゃん♪']],
     'listen:big_bridge_no_shitou': [['excited', '0:08でいきなりサビ！？ 始まってすぐ上がるの、まぢ好き♪']],
     'listen:rising_hope': [['excited', '0:31でいきなり上がるの！ 一気にテンションMAXぢゃんｗ']],
@@ -53343,6 +53361,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:midnight_studio': [['normal', '最初の静かなところ、夜みたいにやさしくてきれいでつ']],
     'listen:rpg': [['normal', '0:24の静かなところ、すーっと入ってきてすてきでつ']],
     'listen:saudade': [['normal', '0:46の静かなところ、すーっと入ってきてすてきでつ']],
+    'listen:sparkling_pink_overture': [['normal', '1:12の静かなところ、ひと息ついてまた走り出す感じでつ']],
     'listen:only_my_railgun': [['normal', '0:25のところで一度静かになるのが、きれいでつね']],
     'listen:big_bridge_no_shitou': [['normal', '最後の2:15で静かに終わるところ、余韻がありますね']],
     'listen:rising_hope': [['normal', '0:13の静かな一瞬が、次の盛り上がりを引き立ててますね']],
@@ -53424,6 +53443,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:midnight_studio': [['excited', '2:58からいちばん強いのが続くよ♡ 最高潮だよ♡']],
     'listen:rpg': [['excited', '3:06と3:11、いちばん強いのが続くよ♡ すごいね♡']],
     'listen:saudade': [['excited', '1:00で強めに入って、2:44でいちばん強くなるよ♡']],
+    'listen:sparkling_pink_overture': [['excited', '0:11と0:33がいちばん強いよ♡ ずっと最高潮だよ♡']],
     'listen:only_my_railgun': [['excited', 'サビは0:52から最後まで！！ ももが一番かわいく踊れるとこw']],
     'listen:big_bridge_no_shitou': [['excited', '0:08からもう盛り上がりMAX！！ 最初から全力だよw']],
     'listen:rising_hope': [['wink', 'サビは0:31から！！ 短いけど、そこがいちばんアガるの♡']],
@@ -53505,6 +53525,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:midnight_studio': [['happy', 'BPM148でちょうどいいぞ。夜の冒険にぴったりだな']],
     'listen:rpg': [['happy', 'BPM175で速いぞ。強い音が多くて冒険が走り出すみたいだな']],
     'listen:saudade': [['happy', 'BPM120でちょうどいいぞ。強く打つ音が多くて元気が出るな']],
+    'listen:sparkling_pink_overture': [['happy', 'BPM212の全力ダッシュだな。2分ちょっとで駆け抜けるぞ']],
     'listen:only_my_railgun': [['happy', '出だしからいきなり強めでくるからな。最初から冒険が始まってる感じだ']],
     'listen:big_bridge_no_shitou': [['excited', 'おでの好きな曲だ。0:08からずっと戦ってる感じで、冒険そのものだな']],
     'listen:rising_hope': [['normal', 'テンポが190もあるからな。最初から最後まで走りっぱなしの冒険だ']],
@@ -53586,6 +53607,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:midnight_studio': [['happy', '3:32で静かに締めるところ、余韻あっていいよね笑']],
     'listen:rpg': [['happy', '3:58でスッと静かになって終わるの、余韻があっていいよね笑']],
     'listen:saudade': [['happy', '4:10で静かに終わるの、余韻があっていいよね笑']],
+    'listen:sparkling_pink_overture': [['happy', '2分ちょっとなのに強い音が多いね笑 あっという間だよ']],
     'listen:only_my_railgun': [['happy', '1:22からもう一回いちばん強くなって、そのまま締めるのが最高笑']],
     'listen:big_bridge_no_shitou': [['happy', '1:24でもう一回いちばん強くなるとこ、ここが勝負所だよね笑']],
     'listen:rising_hope': [['excited', '0:56からの2回目の山、ここで決めにいきたい笑']],
@@ -53667,6 +53689,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:midnight_studio': [['happy', '1:14でいったん落として、1:27からまた上げるのがいいんだよね〜']],
     'listen:rpg': [['happy', '1:23でひと息ついて、2:00でまたいちばん強くするのがいいんだよね〜']],
     'listen:saudade': [['happy', '1:40で一回落として、2:04からまた上げるのがいいんだよね〜']],
+    'listen:sparkling_pink_overture': [['happy', '0:07〜1:02の長いサビが続くのがいいんだよね〜']],
     'listen:only_my_railgun': [['normal', '強め→静か→サビ、の3段なんだよねぇ。短いのに組み立てがきれい']],
     'listen:big_bridge_no_shitou': [['normal', 'サビが最初に来て、1:24でもう一回山がある構成なんだよねぇ']],
     'listen:rising_hope': [['normal', '強め→静か→ふつう→最強、って細かく波があるんだよねぇ']],
@@ -53748,6 +53771,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:midnight_studio': [['normal', 'BPM148です。強く打つ音が31%・・・！ まざる音がいいです']],
     'listen:rpg': [['normal', 'BPM175です。強く打つ音が59%・・・！ 速くて力強いです']],
     'listen:saudade': [['normal', 'BPM120です。強く打つ音が48%・・・！ 力強いです']],
+    'listen:sparkling_pink_overture': [['normal', 'BPM212です。強く打つ音が51%・・・！ ぎっしり詰まった音です']],
     'listen:only_my_railgun': [['excited', 'BPM143で325ノーツ。1:30しかないのに、Lv.29は手ごわいですね・・・！']],
     'listen:big_bridge_no_shitou': [['surprise', '768ノーツでLv.34です。2分25秒でこの数は、でーじ多いです笑']],
     'listen:rising_hope': [['happy', 'BPM190で393ノーツ。強い音が53%もありますね笑']],
@@ -53829,6 +53853,7 @@ const RHYTHM_ASSIST_SESSION_SOLO_LINES = Object.freeze({
     'listen:midnight_studio': [['normal', '1:14の静かなところ、ひと息つけるね']],
     'listen:rpg': [['normal', '1:23の静かなところ、ひと息つけるね']],
     'listen:saudade': [['normal', '1:40で少し静かになるから、ひと息つけるね']],
+    'listen:sparkling_pink_overture': [['normal', '1:12のところは静かだから、ちょっと息が整うね']],
     'listen:only_my_railgun': [['happy', '0:25からの静かな所で、ひと息つけるのがいいね']],
     'listen:big_bridge_no_shitou': [['normal', '1:08のふつうになる所で、少し落ち着けるかな']],
     'listen:rising_hope': [['happy', '1:20でふつうに戻る所で、最後に少しほっとできるね']],
@@ -60868,7 +60893,8 @@ const RHYTHM_SONG_PRICES = Object.freeze({
   departure: 500,
   rpg: 500,
   midnight_studio: 500,
-  hopes_and_dreams: 500
+  hopes_and_dreams: 500,
+  sparkling_pink_overture: 500
 });
 const RHYTHM_SONG_BUNDLE_OWNER = Object.freeze({
   departure_short: 'departure',
@@ -114668,7 +114694,7 @@ const ASSISTANT_LIFE_HOUSE_CSS = `
 .mhl-pop .pp>span{animation:mhlPop .35s ease-out both}
 @media (prefers-reduced-motion:reduce){.mhl-intro{display:none}.mhl-pop .pp>span{animation:none}}
 `;
-const ASSISTANT_LIFE_GRID4_CSS = ASSISTANT_LIFE_HOUSE_CSS.split('\n').filter(l => /^\[data-assistant-life-land="1"\] \.mhl-(room|board)/.test(l)).join('\n').split('[data-assistant-life-land="1"]').join('[data-assistant-life-grid4="1"]') + '\n[data-assistant-life-grid4="1"] .mhl-room .tag b,[data-assistant-life-grid4="1"] .mhl-room[data-assistant-life-room-v2="1"] .tag b{white-space:normal;word-break:auto-phrase;font-size:10.5px;line-height:12px;max-height:36px;text-overflow:clip}[data-assistant-life-grid4="1"] .mhl-room .tag{top:21px}' + '\n.mhl-room .evm{position:absolute;right:2px;bottom:2px;z-index:8;font-size:15px;line-height:1;filter:drop-shadow(0 1px 2px #000a)}';
+const ASSISTANT_LIFE_GRID4_CSS = ASSISTANT_LIFE_HOUSE_CSS.split('\n').filter(l => /^\[data-assistant-life-land="1"\] \.mhl-(room|board)/.test(l)).join('\n').split('[data-assistant-life-land="1"]').join('[data-assistant-life-grid4="1"]') + '\n[data-assistant-life-grid4="1"] .mhl-room .tag b,[data-assistant-life-grid4="1"] .mhl-room[data-assistant-life-room-v2="1"] .tag b{white-space:normal;word-break:auto-phrase;font-size:10.5px;line-height:12px;max-height:36px;text-overflow:clip}[data-assistant-life-grid4="1"] .mhl-room .tag{top:21px}' + '\n.mhl-room .tag[data-assistant-life-room-say="1"] b{display:block!important}' + '\n.mhl-room .evm{position:absolute;right:2px;bottom:2px;z-index:8;font-size:15px;line-height:1;filter:drop-shadow(0 1px 2px #000a)}';
 const ASSISTANT_LIFE_FX_CSS = '.mh-gfx-chips.left{left:auto;right:10px;align-items:flex-end}';
 function AssistantLifeHouseStyle() {
   return React.createElement("style", null, ASSISTANT_LIFE_HOUSE_CSS + '\n' + ASSISTANT_LIFE_GRID4_CSS + '\n' + ASSISTANT_LIFE_FX_CSS);
@@ -114725,6 +114751,120 @@ const assistantLifeTagChunks = text => {
     }, x);
   return React.createElement(React.Fragment, null, t.slice(0, i), nb(hit[1], 'a'), React.createElement("wbr", null), nb(hit[2] + t.slice(i + hit[0].length), 'b'));
 };
+const ASSISTANT_LIFE_SAY_WORDS = Object.freeze({
+  studio: ['モンヒロ', 'ビート'],
+  cardroom: ['MFバトル', 'カード'],
+  cafe: ['おやつ', '屋さん'],
+  hill: ['ひなたの', '丘'],
+  ranch: ['M/B', '管理']
+});
+const ASSISTANT_LIFE_SAY_SPECIAL = Object.freeze({
+  battle: ['モンヒロ', 'バトル中'],
+  'cardroom:cards': ['MFバトル', 'カードを', '研究'],
+  'cafe:snack': ['おやつ', '屋さんで', 'ひと休み']
+});
+const ASSISTANT_LIFE_SAY_SHORT = Object.freeze({
+  snack: 'おやつ中',
+  practice: '練習中',
+  training: '育成中',
+  cards: 'カード研究',
+  walk: '散歩中',
+  idle: 'ぼーっと',
+  read: '読書中',
+  battle: 'バトル中',
+  checkup: '診察中'
+});
+const assistantLifeSayOutShort = (place, doingKey) => {
+  const icon = ASSISTANT_LIFE_PLACE_ICON[place] || '🚶',
+    d = ASSISTANT_LIFE_DOINGS[doingKey];
+  return d && d.places.includes(place) && ASSISTANT_LIFE_SAY_SHORT[doingKey] ? [icon, ASSISTANT_LIFE_SAY_SHORT[doingKey]] : [icon, `${assistantLifePlaceShow(place) || 'おでかけ先'}へ`];
+};
+const assistantLifeSayOut = (place, doingKey) => {
+  const icon = ASSISTANT_LIFE_PLACE_ICON[place] || '🚶';
+  const sp = ASSISTANT_LIFE_SAY_SPECIAL[`${place}:${doingKey}`] || ASSISTANT_LIFE_SAY_SPECIAL[place];
+  if (sp) return [icon, ...sp];
+  const words = ASSISTANT_LIFE_SAY_WORDS[place] || [assistantLifePlaceShow(place) || 'おでかけ先'];
+  const d = ASSISTANT_LIFE_DOINGS[doingKey],
+    last = words[words.length - 1];
+  return d && d.places.includes(place) ? [icon, ...words.slice(0, -1), `${last}で`, d.label] : [icon, ...words.slice(0, -1), `${last}に`, 'おでかけ'];
+};
+const assistantLifeSayFill = (rooms, life) => {
+  for (const id of Object.keys(rooms)) {
+    const r = rooms[id];
+    if (!r || !r.tag) continue;
+    const t0 = String(r.tag[0] || ''),
+      t1 = String(r.tag[1] || '');
+    const away = typeof assistantLifeFriendAwayOf === 'function' ? (() => {
+      try {
+        return assistantLifeFriendAwayOf(id);
+      } catch {
+        return null;
+      }
+    })() : null;
+    const came = t0.match(/^🚪 (.+さんの)(.+が)来ている$/u);
+    let say = r.say,
+      short = r.sayShort || null;
+    if (away) {
+      say = ['🏘', `${away.name}の`, '家に', 'おでかけ'];
+      short = ['🏘', `${away.name}の家`];
+    } else if (came) {
+      say = ['🚪', came[1], came[2], '来ている'];
+      short = ['🚪', 'お客さん'];
+    } else if (r.rel === 'living') {
+      say = ['🛋️', 'みんなの', '居間に'];
+      short = ['🛋️', '居間に'];
+    }
+    if (!Array.isArray(say)) {
+      const m = t0.match(/^(\S+) (.+)$/u);
+      say = m ? [m[1], m[2]] : ['', t0];
+    }
+    let mark = null,
+      markShort = null,
+      m;
+    if (m = t1.match(/^💢 (.+)とけんか中$/u)) {
+      mark = ['💢', `${m[1]}と`, 'けんか中'];
+      markShort = ['💢', 'けんか中'];
+    } else if (m = t1.match(/^💢 (.+)と言い合いのあと$/u)) {
+      mark = ['💢', `${m[1]}と`, '言い合いの', 'あと'];
+      markShort = ['💢', '言い合い'];
+    } else if (m = t1.match(/^🤝 (.+)と仲直り$/u)) {
+      const w = r.mend && typeof assistantLifeWhereOf === 'function' ? assistantLifeWhereOf(life, id) : null;
+      const both = !!(w && w.group && w.group.ids.includes(r.mend));
+      mark = ['🤝', `${m[1]}と`, both ? '過ごす' : '仲直り'];
+      markShort = ['🤝', '仲直り'];
+    }
+    rooms[id] = {
+      ...r,
+      say,
+      sayShort: short || say,
+      sayMark: mark,
+      sayMarkShort: markShort || mark
+    };
+  }
+  return rooms;
+};
+const assistantLifeSayMeasure = x => String(x).replace(/[\uFE0F\u200D]/gu, '');
+const assistantLifeSayFont = (say, avail, max = 10.5) => {
+  const parts = assistantLifeSayParts(say);
+  return Math.max(8, Math.min(max, ...parts.map(x => assistantLifeTagFit(assistantLifeSayMeasure(x), avail, max, 8))));
+};
+const assistantLifeSayParts = say => {
+  const a = (say || []).filter(x => x !== null && x !== undefined).map(String);
+  return a.length > 1 && a[0] ? [`${a[0]} ${a[1]}`, ...a.slice(2)] : a.filter(Boolean);
+};
+function AssistantLifeSayText({
+  say,
+  avail,
+  font
+}) {
+  const parts = assistantLifeSayParts(say);
+  return React.createElement(React.Fragment, null, parts.map((x, i) => React.createElement(React.Fragment, {
+    key: i
+  }, i ? React.createElement("wbr", null) : null, React.createElement("span", {
+    "data-assistant-life-say-chunk": true,
+    className: assistantLifeTagFit(assistantLifeSayMeasure(x), avail, font, 0) >= font - 0.05 ? 'whitespace-nowrap' : ''
+  }, x))));
+}
 const assistantLifeTagNames = (text, budget) => {
   const m = String(text || '').match(/^(.*?)(?: ほか(\d+)人)?$/);
   const list = String(m[1] || '').split('・').filter(Boolean);
@@ -114749,7 +114889,8 @@ function AssistantLifeRoom({
   onOpen,
   idx,
   other = null,
-  v2 = false
+  v2 = false,
+  compact = false
 }) {
   const L = ASSISTANT_LIFE_ROOM_LOOK[id];
   const view = ASSISTANT_LIFE_VIEW[look][idx % 2];
@@ -114906,6 +115047,52 @@ function AssistantLifeRoom({
     const tagLand = typeof window !== 'undefined' && window.innerWidth > window.innerHeight;
     const tagFit = assistantLifeTagFit(t[0], w - 26, 10.5, 0);
     const short = [...String(t[0])].length <= 9;
+    const avail = w - 6 - 8 - 3 - 2;
+    const oneFit = x => assistantLifeTagFit(assistantLifeSayMeasure(assistantLifeSayParts(x).join('')), avail, 10.5, 0);
+    const sayFull = Array.isArray(state.say) ? compact && state.sayMark ? state.sayMark : state.say : null;
+    const sayAlt = Array.isArray(state.say) ? (compact && state.sayMark ? state.sayMarkShort : state.sayShort) || sayFull : null;
+    const say = tagLand && sayFull && oneFit(sayFull) < 10.5 && sayAlt ? oneFit(sayAlt) >= oneFit(sayFull) ? sayAlt : sayFull : sayFull;
+    if (say) {
+      const f = tagLand ? Math.max(7, oneFit(say)) : assistantLifeSayFont(say, avail);
+      return React.createElement("span", {
+        className: "tag",
+        "data-assistant-life-room-away": id,
+        "data-assistant-life-room-tag-mark": mark ? '1' : '0',
+        "data-assistant-life-room-say": compact ? '1' : '0'
+      }, !compact && (mark || !names ? React.createElement("small", {
+        "data-assistant-life-room-what": true,
+        style: {
+          marginLeft: ml
+        }
+      }, t[1]) : React.createElement("small", {
+        "data-assistant-life-room-with": true,
+        style: {
+          marginLeft: ml
+        }
+      }, React.createElement(AssistantLifeNames, {
+        text: names
+      }))), React.createElement("b", {
+        "data-assistant-life-room-say-text": true,
+        style: {
+          whiteSpace: 'normal',
+          fontSize: f,
+          lineHeight: tagLand ? '13px' : `${Math.round(f * 1.18)}px`,
+          ...(tagLand ? {
+            whiteSpace: 'nowrap'
+          } : {}),
+          maxHeight: 'none',
+          overflow: 'visible',
+          textOverflow: 'clip'
+        }
+      }, v2 && w >= 150 ? React.createElement("span", {
+        "data-assistant-life-room-out": true,
+        className: "mr-1 rounded bg-slate-600 px-1 text-white"
+      }, "留守") : null, React.createElement(AssistantLifeSayText, {
+        say: say,
+        avail: avail,
+        font: f
+      })));
+    }
     return React.createElement("span", {
       className: "tag",
       "data-assistant-life-room-away": id,
@@ -115042,7 +115229,8 @@ function AssistantLifeHouseArt({
       state: rooms[id],
       onOpen: onOpen,
       v2: v2 && !other,
-      other: other ? other[id] || {} : null
+      other: other ? other[id] || {} : null,
+      compact: land
     });
   }), React.createElement("div", {
     className: "mhl-liv",
@@ -115150,13 +115338,17 @@ const assistantLifeRoomsOf = (life, metIds) => {
           };
         }
       } else rooms[id] = {
-        tag: [`🚪 ${assistantLifeName(host)}の部屋へ`, `${ids.length}人で ${doing.label}`, assistantLifeGroupNames(ids, 4)]
+        tag: [`🚪 ${assistantLifeName(host)}の部屋へ`, `${ids.length}人で ${doing.label}`, assistantLifeGroupNames(ids, 4)],
+        say: ['🚪', `${assistantLifeName(host)}の`, '部屋で', doing.label || '過ごす'],
+        sayShort: ['🚪', `${assistantLifeName(host)}の部屋`]
       };
       continue;
     }
     const sub = w.group ? `${w.group.ids.length}人で ${doing.label}` : `ひとりで ${doing.label}`;
     rooms[id] = {
-      tag: [`${ASSISTANT_LIFE_PLACE_ICON[w.place] || '🚶'} ${assistantLifePlaceShow(w.place)}へ`, sub, w.group ? assistantLifeGroupNames(w.group.ids, 4) : null]
+      tag: [`${ASSISTANT_LIFE_PLACE_ICON[w.place] || '🚶'} ${assistantLifePlaceShow(w.place)}へ`, sub, w.group ? assistantLifeGroupNames(w.group.ids, 4) : null],
+      say: assistantLifeSayOut(w.place, w.doing),
+      sayShort: assistantLifeSayOutShort(w.place, w.doing)
     };
   }
   const q = peer && peer.quarrel && peer.quarrel.pending;
@@ -115186,6 +115378,7 @@ const assistantLifeRoomsOf = (life, metIds) => {
       assistantLifeFriendDecorateRooms(rooms);
     } catch {}
   }
+  assistantLifeSayFill(rooms, life);
   return rooms;
 };
 function AssistantLifeRoomSheet({
@@ -115973,17 +116166,17 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
       m: 0.829
     },
     momosuke: {
-      top: 0.061,
-      eye: 0.3239,
-      chin: 0.4296,
-      m: 0.786,
+      top: 0.0636,
+      eye: 0.3248,
+      chin: 0.4298,
+      m: 0.781,
       above: 0.7
     },
     kiki: {
-      top: 0.0777,
-      eye: 0.3325,
-      chin: 0.4296,
-      m: 0.722
+      top: 0.0835,
+      eye: 0.3343,
+      chin: 0.4298,
+      m: 0.711
     },
     atsu: {
       top: 0.0699,
@@ -115992,30 +116185,30 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
       m: 0.766
     },
     kyuko: {
-      top: 0.0344,
-      eye: 0.3093,
-      chin: 0.4296,
-      m: 0.895
+      top: 0.0341,
+      eye: 0.3098,
+      chin: 0.4304,
+      m: 0.897
     },
     sorashido: {
-      top: 0.0106,
-      eye: 0.2817,
-      chin: 0.4296,
-      m: 1.1
+      top: 0.0119,
+      eye: 0.2825,
+      chin: 0.4302,
+      m: 1.098
     },
     erubin: {
-      top: 0.0083,
-      eye: 0.2521,
-      chin: 0.4298,
-      m: 1.322
+      top: 0.0042,
+      eye: 0.25,
+      chin: 0.4292,
+      m: 1.333
     }
   },
   'stand-sekiyuou': {
     erubin: {
-      top: 0.004,
-      eye: 0.249,
-      chin: 0.4297,
-      m: 1.345
+      top: 0.0042,
+      eye: 0.2489,
+      chin: 0.4293,
+      m: 1.343
     }
   },
   'stand-hosei': {
@@ -116035,17 +116228,17 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
       above: 0.85
     },
     momosuke: {
-      top: 0.0594,
-      eye: 0.3112,
-      chin: 0.4299,
-      m: 0.884,
+      top: 0.0614,
+      eye: 0.3116,
+      chin: 0.4296,
+      m: 0.878,
       above: 0.95
     },
     kiki: {
-      top: 0.1496,
-      eye: 0.3349,
-      chin: 0.4299,
-      m: 0.707,
+      top: 0.1499,
+      eye: 0.3353,
+      chin: 0.4304,
+      m: 0.708,
       above: 0.95
     }
   },
@@ -135748,14 +135941,14 @@ const ASSISTANT_LIFE_SOLO_GIFT_KEY = 'mh_assistant_life_solo_gift_v1';
 const ASSISTANT_LIFE_GIFT_WRAP = Object.freeze({
   basket: ['おやつ', 'バスケット'],
   misanga: ['おそろいの', 'ミサンガ'],
-  cake: ['はんぶんこ', 'ケーキ'],
+  cake: ['半分こ', 'ケーキ'],
   onigiri: ['ほかほか', 'おにぎり'],
   tea: ['午後の', 'ティーセット'],
-  earphone: ['かたみみ', 'イヤホン'],
-  puzzle: ['ふたりで解く', 'パズル'],
+  earphone: ['片耳', 'イヤホン'],
+  puzzle: ['二人で解く', 'パズル'],
   sleeve: ['おそろい', 'スリーブ'],
   cheki: ['思い出', 'チェキ'],
-  flower: ['ちいさな', '花束'],
+  flower: ['小さな', '花束'],
   letter: ['手書きの', '手紙'],
   candy: ['ひとつぶ', 'キャンディ'],
   omamori: ['小さな', 'おまもり'],
@@ -135763,7 +135956,10 @@ const ASSISTANT_LIFE_GIFT_WRAP = Object.freeze({
 });
 const assistantLifeGiftWrapName = g => {
   const w = g && ASSISTANT_LIFE_GIFT_WRAP[g.key];
-  return w && w.join('') === g.name ? w : [g ? g.name : ''];
+  if (w && w.join('') === g.name) return w;
+  const name = g ? String(g.name || '') : '';
+  const m = name.match(/^(.+?)([ァ-ヴー]{2,})$/u) || name.match(/^(.+?の)(.+)$/u);
+  return m ? [m[1], m[2]] : [name];
 };
 const ASSISTANT_LIFE_GIFT_LABEL = Object.freeze({
   like: '💗 好き',
@@ -149639,6 +149835,8 @@ function AssistantMasmonBattleWatch({
       if (!x || !x.side) return '';
       const n = who(x.side, x.i);
       if (x.ev === 'tech') return x.hit ? `${n}の ${x.name}${x.crit ? ' 会心!' : ''} → ${x.dmg}${x.guarded ? '(ガード)' : ''}` : `${n}の ${x.name} … はずれ`;
+      if (x.ev === 'move' && x.why === 'blown') return `${n}は 吹き飛ばされて 遠距離へ`;
+      if (x.ev === 'blow') return `${n}の 吹き飛ばし(相手の次の手のあと 遠へ)`;
       if (x.ev === 'move') return `${n}が ${AMBW_DIST[x.to]}距離へ ${x.step > 0 ? 'さがる' : 'つめる'}`;
       if (x.ev === 'charge') return x.why === 'sulk' ? `${n}は 意味不明な行動をした…(ガッツだけたまった)` : `${n}は ガッツをためた`;
       if (x.ev === 'guard') return `${n}は 身を守った`;
@@ -149679,7 +149877,7 @@ function AssistantMasmonBattleWatch({
         className: "ambw-dmg miss"
       }, "はずれ")));
     };
-    const cutText = e.ev === 'tech' ? e.name : e.ev === 'move' ? e.step > 0 ? 'さがる' : 'つめる' : e.ev === 'charge' ? 'ガッツをためる' : e.ev === 'guard' ? 'ガード' : e.ev === 'swap' ? `交代 → ${who(e.side, e.i)}` : e.ev === 'ko' ? `${e.name} たおれた` : '';
+    const cutText = e.ev === 'tech' ? e.name : e.ev === 'move' ? e.why === 'blown' ? '吹き飛ばされた' : e.step > 0 ? 'さがる' : 'つめる' : e.ev === 'blow' ? '吹き飛ばし' : e.ev === 'charge' ? 'ガッツをためる' : e.ev === 'guard' ? 'ガード' : e.ev === 'swap' ? `交代 → ${who(e.side, e.i)}` : e.ev === 'ko' ? `${e.name} たおれた` : '';
     const cutSmall = e.ev === 'tech' ? `${e.kind === 'pow' ? '💪 ちから技' : '🧠 かしこさ技'}${Number.isFinite(e.p) ? `・命中 ${Math.round(e.p)}%` : ''}` : e.side ? who(e.side, e.ev === 'swap' ? e.from : e.i) : '';
     const kos = log.map((x, k) => x.ev === 'ko' ? {
       k,
@@ -149912,7 +150110,7 @@ const AMBB_SWAPS = Object.freeze([{
 }]);
 const AMBB_SET_DEF = Object.freeze({
   team: 'team',
-  rounds: 150,
+  rounds: 'auto',
   dist: 'auto',
   guts: 50,
   fx: 'full',
@@ -149930,7 +150128,7 @@ const AMBB_SET_OPTS = Object.freeze({
     label: '勝ち抜き',
     note: '交代なし・倒れたら次'
   }],
-  rounds: [30, 50, 100, 150],
+  rounds: ['auto', 30, 60, 90, 120],
   dist: ['auto', 0, 1, 2, 3],
   guts: [30, 50, 70, 99],
   fx: [{
@@ -149963,7 +150161,7 @@ const normalizeAmbbSet = raw => {
   const x = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
   return {
     team: x.team === 'ko' ? 'ko' : 'team',
-    rounds: ambbInt(x.rounds, 10, 300, AMBB_SET_DEF.rounds),
+    rounds: x.rounds === 'auto' || x.rounds == null || Number(x.rounds) === 150 ? 'auto' : ambbInt(x.rounds, 10, 300, 'auto'),
     dist: Number.isInteger(x.dist) && x.dist >= 0 && x.dist <= 3 ? x.dist : 'auto',
     guts: ambbInt(x.guts, 0, 99, AMBB_SET_DEF.guts),
     fx: x.fx === 'lite' ? 'lite' : 'full',
@@ -149981,7 +150179,7 @@ const ambbMatchOpts = set => {
     ...(Object.keys(rules).length ? {
       rules
     } : {}),
-    ...(set.rounds !== AMBB_SET_DEF.rounds ? {
+    ...(set.rounds !== 'auto' && Number.isFinite(set.rounds) ? {
       roundLimit: set.rounds
     } : {}),
     balance: set.balance
@@ -150395,7 +150593,7 @@ const AMBB_CSS = `
 .ambw.ambb-full .ambb-bar-wrap .msxm{margin-top:6px;padding:7px;max-height:42vh;overflow-y:auto}
 .ambw.ambb-full .ambb-bar-wrap .msxm-btn{min-height:36px;font-size:11.5px;padding:3px 6px;flex:1 1 22%}
 .ambw.ambb-full .ambb-bar-wrap .msxm-btn small{font-size:9.5px}
-.ambw.ambb-full .ambb-bar-wrap .msxm-btn:not(.atk):not([data-msxm-move]) small{display:none}
+.ambw.ambb-full .ambb-bar-wrap .msxm-btn:not(.atk):not([data-msxm-move]):not([data-msxm-blow]) small{display:none}
 .ambw.ambb-full .ambb-bar-wrap .msxm-btn small{white-space:nowrap}
 .ambw.ambb-full .ambb-bar-wrap .msxm-sec{margin-top:5px}
 .ambw.ambb-full .ambb-bar-wrap .msxm-foot{margin-top:5px}
@@ -151529,6 +151727,8 @@ function AssistantMasmonBattleBeta({
       if (!x || !x.side) return '';
       const n = who(x.side, x.i);
       if (x.ev === 'tech') return x.hit ? `${n}の ${x.name}${x.crit ? ' 会心!' : ''} → ${x.dmg}${x.guarded ? '(ガード)' : ''}` : `${n}の ${x.name} … はずれ`;
+      if (x.ev === 'move' && x.why === 'blown') return `${n}は 吹き飛ばされて 遠距離へ`;
+      if (x.ev === 'blow') return `${n}の 吹き飛ばし(相手の次の手のあと 遠へ)`;
       if (x.ev === 'move') return `${n}が ${AMBW_DIST[x.to]}距離へ ${x.step > 0 ? 'さがる' : 'つめる'}`;
       if (x.ev === 'charge') return `${n}は ガッツをためた`;
       if (x.ev === 'guard') return `${n}は 身を守った`;
@@ -151569,7 +151769,7 @@ function AssistantMasmonBattleBeta({
         className: "ambw-dmg miss"
       }, "はずれ")));
     };
-    const cutText = e.ev === 'tech' ? e.name : e.ev === 'move' ? e.step > 0 ? 'さがる' : 'つめる' : e.ev === 'charge' ? 'ガッツをためる' : e.ev === 'guard' ? 'ガード' : e.ev === 'swap' ? `交代 → ${who(e.side, e.i)}` : e.ev === 'ko' ? `${e.name} たおれた` : '';
+    const cutText = e.ev === 'tech' ? e.name : e.ev === 'move' ? e.why === 'blown' ? '吹き飛ばされた' : e.step > 0 ? 'さがる' : 'つめる' : e.ev === 'blow' ? '吹き飛ばし' : e.ev === 'charge' ? 'ガッツをためる' : e.ev === 'guard' ? 'ガード' : e.ev === 'swap' ? `交代 → ${who(e.side, e.i)}` : e.ev === 'ko' ? `${e.name} たおれた` : '';
     const cutSmall = e.ev === 'tech' ? `${e.kind === 'pow' ? '💪 ちから技' : '🧠 かしこさ技'}${Number.isFinite(e.p) ? `・命中 ${Math.round(e.p)}%` : ''}` : e.side ? who(e.side, e.ev === 'swap' ? e.from : e.i) : '';
     const kos = log.map((x, k) => x.ev === 'ko' ? {
       k,
@@ -152222,7 +152422,7 @@ function AmbbCompare({
     className: "ambb-cmp-sec"
   }, "能力"), keys.map(k => row(AMBW_STAT_JP[k] || k, sv(ua, k), sv(ub, k), sv(ua, k) / top, sv(ub, k) / top, sv(ua, k), sv(ub, k), k)), ta && tb && React.createElement(React.Fragment, null, React.createElement("div", {
     className: "ambb-cmp-sec"
-  }, "種類の等級"), row('ガッツ回復力', ta.regen, tb.regen, (ta.regen || 0) / 15, (tb.regen || 0) / 15, regenG(ta) || ta.regen, regenG(tb) || tb.regen, 'regen'), row('移動速度', gIdx(grades, ta.move), gIdx(grades, tb.move), (gIdx(grades, ta.move) + 1) / 7, (gIdx(grades, tb.move) + 1) / 7, ta.move, tb.move, 'move'), row('サイズ', 0, 0, (sizeV[ta.size] || 2) / 3, (sizeV[tb.size] || 2) / 3, AMBB_SIZE_JP[ta.size] || 'ふつう', AMBB_SIZE_JP[tb.size] || 'ふつう', 'size'), React.createElement("div", {
+  }, "種類の等級"), row('ガッツ回復力', ta.regen, tb.regen, (ta.regen || 0) / 8, (tb.regen || 0) / 8, regenG(ta) || ta.regen, regenG(tb) || tb.regen, 'regen'), row('移動速度', gIdx(grades, ta.move), gIdx(grades, tb.move), (gIdx(grades, ta.move) + 1) / 7, (gIdx(grades, tb.move) + 1) / 7, ta.move, tb.move, 'move'), row('サイズ', 0, 0, (sizeV[ta.size] || 2) / 3, (sizeV[tb.size] || 2) / 3, AMBB_SIZE_JP[ta.size] || 'ふつう', AMBB_SIZE_JP[tb.size] || 'ふつう', 'size'), React.createElement("div", {
     className: "ambb-cmp-sec"
   }, "間合い適性"), [0, 1, 2, 3].map(d => row(`${AMBW_DIST[d]}距離`, gIdx(aptGrades, ta.apt[d]), gIdx(aptGrades, tb.apt[d]), (gIdx(aptGrades, ta.apt[d]) + 1) / 12, (gIdx(aptGrades, tb.apt[d]) + 1) / 12, ta.apt[d], tb.apt[d], `apt${d}`)), React.createElement("div", {
     className: "ambb-cmp-note"
@@ -152253,7 +152453,6 @@ function AmbbSettings({
     }, labelOf(o), noteOf && noteOf(o) ? React.createElement("small", null, noteOf(o)) : null);
   }));
   const diff = ambbSetDiff(set);
-  const limit = engine && engine.ROUND_LIMIT || 150;
   return React.createElement("div", {
     className: "ambw-card",
     "data-ambb-settings": true
@@ -152293,7 +152492,7 @@ function AmbbSettings({
     className: "ambb-set-row"
   }, React.createElement("span", null, "形式"), chips('team', AMBB_SET_OPTS.team, o => o.label, o => o.note)), React.createElement("div", {
     className: "ambb-set-row"
-  }, React.createElement("span", null, "ラウンド上限"), chips('rounds', AMBB_SET_OPTS.rounds, o => `${o}`)), React.createElement("div", {
+  }, React.createElement("span", null, "ラウンド上限"), chips('rounds', AMBB_SET_OPTS.rounds, o => o === 'auto' ? `いつも(${30 * size})` : `${o}`)), React.createElement("div", {
     className: "ambb-set-row"
   }, React.createElement("span", null, "最初の間合い"), chips('dist', AMBB_SET_OPTS.dist, o => o === 'auto' ? 'おまかせ' : AMBW_DIST[o])), React.createElement("div", {
     className: "ambb-set-row"
@@ -152318,14 +152517,14 @@ function AmbbSettings({
     min: "10",
     max: "300",
     step: "5",
-    value: set.rounds,
+    value: set.rounds === 'auto' ? 30 * size : set.rounds,
     "data-ambb-tune-rounds": true,
     onChange: ev => onSet({
       rounds: Number(ev.target.value)
     })
   }), React.createElement("div", {
     className: "ambw-small"
-  }, set.rounds, " ラウンド(いつもは ", limit, ")"))), React.createElement("div", {
+  }, set.rounds === 'auto' ? 30 * size : set.rounds, " ラウンド(いつもは1体あたり30)"))), React.createElement("div", {
     className: "ambb-set-row"
   }, React.createElement("span", null, "ガッツの初期値"), React.createElement("div", null, React.createElement("input", {
     type: "range",
@@ -152819,9 +153018,9 @@ const monsucLossWhy = (log, meName) => {
   for (const e of log) {
     if (!e || !e.ev) continue;
     if (e.side === 'A') {
-      if (e.ev === 'tech' || e.ev === 'guard' || e.ev === 'charge' || e.ev === 'move' && e.why !== 'techMove') acts++;
+      if (e.ev === 'tech' || e.ev === 'guard' || e.ev === 'charge' || e.ev === 'blow' || e.ev === 'move' && e.why !== 'techMove' && e.why !== 'blown') acts++;
       if (e.ev === 'charge' && e.why === 'sulk') sulk++;
-      if (e.ev === 'move' && e.why !== 'techMove' && Number.isInteger(e.to) && Number.isInteger(e.step) && !reach(e.i || 0, e.to - e.step)) stuck++;
+      if (e.ev === 'move' && e.why !== 'techMove' && e.why !== 'blown' && Number.isInteger(e.to) && Number.isInteger(e.step) && !reach(e.i || 0, e.to - e.step)) stuck++;
       if (e.ev === 'tech') {
         tries++;
         if (e.hit) hits++;
@@ -153082,13 +153281,7 @@ const monsucTeams = (catalog, suc, s, info) => {
 };
 const MONSUC_MATCH_RULE = Object.freeze({
   statMax: 99999,
-  roundLimit: 30,
-  judge: 'three',
-  gutsPlan: Object.freeze({
-    regen: 0.5,
-    move: 0.5,
-    charge: 0.5
-  })
+  judgeTie: 'B'
 });
 const monsucCupMatch = (engine, catalog, suc, s, me, info0) => {
   const info = info0 || monsucCupInfo(suc, s, me);
@@ -160665,6 +160858,22 @@ const useMsxSeen = () => {
   }, []);
   return msxSeenCache || msxSeenNorm(null);
 };
+const msxFxStatRange = size => {
+  try {
+    const SUC = msxSuc.SUC;
+    const C = typeof MASMON_CALC !== 'undefined' ? MASMON_CALC : null;
+    if (!SUC || !SUC.BASE || !C) return '';
+    const type = 2;
+    const v = [];
+    for (let i = 0; i < 10; i++) v.push(SUC.BASE.light * (Number(size) || 0) * C.ageMult(type, i / 10 + 0.01));
+    const lo = Math.max(1, Math.round(Math.min(...v)));
+    const hi = Math.max(lo, Math.round(Math.max(...v)));
+    return lo === hi ? `+${lo}` : `+${lo}〜${hi}`;
+  } catch (e) {
+    return '';
+  }
+};
+const MSX_FX_NOTE = '能力の上がり幅は、型「普通」・素質Cのモンスターの目安(育成の時期で変わります)';
 const MSX_FX_SIZE = n => n >= 2 ? '大' : n >= 1 ? '中' : '小';
 const MSX_FX_TARGET = Object.freeze({
   main: '得意の能力',
@@ -160691,18 +160900,21 @@ const msxFxText = f => {
   if (!Array.isArray(f)) return '';
   const [k, a, b] = f;
   const BUFFS = msxSuc && msxSuc.SUC && msxSuc.SUC.events ? msxSuc.SUC.events.BUFFS || {} : {};
-  if (k === 'st') return `${typeof MSX_STAT_NAME !== 'undefined' && MSX_STAT_NAME[a] || MSX_FX_TARGET[a] || '能力'} ${MSX_FX_SIZE(Number(b) || 0)}アップ`;
-  if (k === 'loy') return `忠誠 ${a > 0 ? '+' : '−'}`;
-  if (k === 'fear') return '恐れ度 +';
+  if (k === 'st') {
+    const r = msxFxStatRange(b);
+    return `${typeof MSX_STAT_NAME !== 'undefined' && MSX_STAT_NAME[a] || MSX_FX_TARGET[a] || '能力'} ${r || `${MSX_FX_SIZE(Number(b) || 0)}アップ`}`;
+  }
+  if (k === 'loy') return `忠誠度 ${msxSigned(Number(a) || 0)}`;
+  if (k === 'fear') return `恐れ度 ${msxSigned(Number(a) || 0)}`;
   if (k === 'pop') return `人気 ${msxSigned(a)}`;
   if (k === 'popHi') return `人気 ${msxSigned(a)}(人気60〜のとき)`;
-  if (k === 'hp') return `体力 ${msxSigned(a)}`;
+  if (k === 'hp') return `体力 ${msxSigned(a)}%(最大の)`;
   if (k === 'str') return `ストレス ${msxSigned(a)}`;
   if (k === 'bond') return `${a === 'aid' ? '助手' : a === 'team' ? '編成みんな' : '編成のモンスター'}の親密度 ${msxSigned(b)}`;
   if (k === 'buff') return BUFFS[a] ? `${BUFFS[a].icon} ${BUFFS[a].name}` : 'いい調子になる';
   if (k === 'fame') return `賞金 ${msxSigned(a)}G`;
   if (k === 'pts') return `能力ポイント ${msxSigned(a)}`;
-  if (k === 'mas') return '技の熟練 +';
+  if (k === 'mas') return `技の熟練 ${msxSigned(Number(a) || 0)}`;
   if (k === 'flag') return MSX_FX_FLAG[a] || 'いいことがある';
   if (k === 'goal') return MSX_FX_GOAL[a] || '期の目標を決める';
   if (k === 'apt') return a === 'low' ? '一番低い間合い適性 +1段' : '一番高い間合い適性 +1段';
@@ -160729,6 +160941,7 @@ const msxEvChoice = (evId, c) => {
   const e = E && E.BY_ID ? E.BY_ID[evId] : null;
   return e && e.ch ? e.ch[c] || (c === 'a' && e.ch.fx ? e.ch : null) : null;
 };
+const msxChoiceNoteSrc = (open, ev0, chOf) => chOf(open).map(c => open.ep != null || String(open.id).startsWith('story.') || open.id === 'issa' ? '' : msxChoiceLines(msxEvChoice(open.id, c)).join(' ')).join(' ');
 function MsxChoiceInfo({
   evId,
   c,
@@ -160744,7 +160957,7 @@ function MsxChoiceInfo({
     "data-msx-chinfo": known ? 'known' : 'unknown'
   }, lines.map((l, i) => React.createElement("div", {
     key: i
-  }, l)), known ? null : React.createElement("small", null, "一度選ぶと、効果が分かるようになる"));
+  }, l)), known ? null : React.createElement("small", null, "一度選ぶと、効果が分かるようになる"), known && lines.some(l => /\+\d+〜?\d*/.test(l) && /(ライフ|ちから|かしこさ|命中|回避|丈夫さ|能力)/.test(l)) ? React.createElement("small", null, MSX_FX_NOTE) : null);
 }
 const MSX_EV_TITLE = Object.freeze({
   'ev.daily.nut': '道ばたの木の実',
@@ -161009,8 +161222,9 @@ function MsxDex({
   }, React.createElement("b", null, open.title), React.createElement("button", {
     type: "button",
     className: "chip",
-    onClick: () => setOpen(null)
-  }, "← 一覧へ")), open.awake ? React.createElement("div", {
+    onClick: () => setOpen(null),
+    "data-msx-dex-back": true
+  }, "← 戻る")), open.awake ? React.createElement("div", {
     className: "ln"
   }, open.awake === 2 ? '覚醒したあと、さらに虹色の光に包まれて、全能力 +40・間合い適性が2つ上がった。' : 'まぶしい光に包まれて、全能力 +30・一番高い間合い適性が上がった。') : null, aw && aw.t ? React.createElement("div", {
     className: "ln"
@@ -161035,7 +161249,12 @@ function MsxDex({
       const k = MSX_ISSA_KEYS.find(x => x.key === c) || {};
       return `⭕ ${k.ok} / ❌ ${k.ng}`;
     })() : open.ep != null ? 'お話の続きが変わる' : msxChoiceLines(msxEvChoice(open.id, c)).join(' / ') : 'まだ選んだことがない'));
-  })) : null) : React.createElement("div", {
+  })) : null, chOf(open).length && /\+\d+〜\d+/.test(String(msxChoiceNoteSrc(open, ev0, chOf))) ? React.createElement("div", {
+    className: "msx-note",
+    style: {
+      fontSize: 10
+    }
+  }, MSX_FX_NOTE) : null) : React.createElement("div", {
     className: "msx-dex-list"
   }, rows.length ? rows.map(x => {
     const known = Boolean(seen.ev[x.id]);
@@ -161356,7 +161575,7 @@ const MSX_STORIES = Object.freeze([Object.freeze({
   badge: 'ヒーローズファイナル',
   lead: ['町の育成場で、きみと1体のモンスターの物語が始まる', '大会で勝ち、修行で技を覚え、仲間と強くなろう。', 'めざすはヒーローズファイナル——ヒーローと呼ばれる日まで。'],
   about: 'デビュー戦から始まり、ジュニア・ミドル・プロの3つの期を経て、最後は「ヒーローズファイナル」に挑む、モンヒロサクセスのいちばん最初のお話。',
-  rows: Object.freeze([['📅', '流れ', 'デビュー期 → ジュニア期 → ミドル期 → プロ期 → ヒーローズファイナル(3戦)'], ['🏆', '大会', 'モンスターダービー/四大大会/季節の賞 ほか。賞金ランクは ルーキー〜ヒーローの10段'], ['👥', '登場人物', '助手(いまはみゅあ)・イッサ博士・ライバルたち'], ['🎯', '目指すもの', 'ヒーローズファイナルの決勝に勝って「ヒーロー」に。']]),
+  rows: Object.freeze([['📅', '流れ', 'デビュー期 → ジュニア期 → ミドル期 → プロ期 → ヒーローズファイナル(3戦)'], ['🏆', '大会', 'モンスターダービー/四大大会/季節の賞 ほか。賞金ランクは ルーキー〜ヒーローの9段'], ['👥', '登場人物', '助手(いまはみゅあ)・イッサ博士・ライバルたち'], ['🎯', '目指すもの', 'ヒーローズファイナルの決勝に勝って「ヒーロー」に。']]),
   cast: Object.freeze({
     left: 'issa',
     center: 'mua',
@@ -169530,6 +169749,7 @@ const MSX_CSS = `
 .msx .v-opt{background:#1e1a36;border:1.5px solid #f472b6;border-bottom-width:3px;border-radius:13px;padding:6px 10px;font-size:12.5px;font-weight:900;line-height:1.3}
 .msx .v-opt small{display:block;font-size:10px;color:#86efac;font-weight:800}
 .msx .v-clock{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:radial-gradient(circle at 50% 45%,#3b2f6b 0,#151130 70%)}
+.msx .v-scene .v-clock{justify-content:flex-start;padding-top:7%;background:linear-gradient(180deg,#151130e6 0,#15113099 70%,#1511304d 100%)}
 .msx .v-cal{width:190px;background:#fff;color:#1e1b4b;border-radius:16px;overflow:hidden;text-align:center;box-shadow:0 8px 0 #0006,0 0 30px #f472b666;transform:rotate(-3deg)}
 .msx .v-cal .y{background:linear-gradient(90deg,#f472b6,#fb923c);color:#fff;font-size:12px;font-weight:900;padding:3px}
 .msx .v-cal .mth{font-size:84px;font-weight:900;line-height:1.1}.msx .v-cal .mth small{font-size:20px}
@@ -169970,7 +170190,7 @@ const MSX_CSS = `
 /* 技の熟練(r1115-082): 升の下に小さなゲージ(覚えた技だけ)・右の欄に熟練の棒 */
 .msx-md-tg .tc .tg-ms{position:absolute;left:3px;right:26px;bottom:4px;height:5px;border-radius:3px;background:rgba(18,12,6,.85);border:1px solid rgba(255,255,255,.55);z-index:2;overflow:hidden}
 .msx-md-tg .tc .tg-ms i{display:block;height:100%;background:linear-gradient(90deg,#fde68a,#f59e0b)}
-.msx .msx-ms-v{white-space:nowrap}.msx .msx-ms-v small{opacity:.75;margin-left:1px}
+.msx .msx-ms-v{white-space:nowrap}.msx .msx-ms-v small{font-size:inherit;opacity:.75;margin-left:1px}
 .msx .msx-ms-ef{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:0 6px}.msx .msx-ms-ef i{font-style:normal;white-space:nowrap}
 .msx .msx-ms-bar{display:block;height:6px;margin:2px 0 4px;border-radius:4px;background:#0f172a;border:1px solid #475569;overflow:hidden}
 .msx .msx-ms-bar i{display:block;height:100%;background:linear-gradient(90deg,#fde68a,#f59e0b)}
@@ -170127,7 +170347,8 @@ const MSX_CSS = `
 .msx .v-hm-tiles.t4{grid-auto-flow:row;grid-template-columns:1fr 1fr}
 .msx .msx-bm-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px}
 .msx .msx-bm{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-width:0;border-radius:14px;padding:8px 4px;background:#1e1a36;border:1.5px solid #64748b;border-bottom-width:3px;line-height:1.25;text-align:center}
-.msx .msx-bm img{width:100%;max-width:84px;aspect-ratio:1;border-radius:11px;object-fit:cover;background:#0f172a;border:2px solid #475569}
+.msx .msx-bm img{width:100%;max-width:84px;aspect-ratio:1;border-radius:11px;object-fit:cover;background:linear-gradient(180deg,#94a3b8,#64748b);border:2px solid #475569}
+.msx .msx-bm-grid{padding-bottom:12px}
 .msx .msx-bm b{font-size:12px;font-weight:900;max-width:100%;word-break:keep-all}
 .msx .msx-bm small{font-size:10px;font-weight:800;color:#fde68a}
 .msx .v-hm-tiles{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:7px;margin-top:8px}
@@ -170253,6 +170474,11 @@ const MSX_CSS = `
 .msx .msx-fp-r .st{flex:none;display:flex;flex-direction:column;gap:3px;max-width:42%}
 .msx .msx-tp-ft{position:static;flex:none}
 .msx .msx-tp-ft button{display:flex;align-items:center;justify-content:center}
+/* 能力ポイントの刻み(1・5・10・100・MAX)と長押し(r1115-092) */
+.msx .msx-ptunit{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin:6px 0}
+.msx .msx-ptunit .chip{min-height:40px;padding:0 2px;justify-content:center;text-align:center;font-size:12px;font-weight:900}
+.msx .pt44{min-width:44px;min-height:44px}
+.msx .sym{-webkit-user-select:none;user-select:none}
 `;
 const MSX_KEYS = Object.freeze({
   run: 'mh_monsuc_run_v1',
@@ -173740,6 +173966,9 @@ function MsxBaseMons({
   }, React.createElement("div", {
     className: "v-h"
   }, "ベースモン", React.createElement("small", null, "押すと、能力・素質・間合い適性・技の升目が見られます")), React.createElement("div", {
+    className: "msx-scroll",
+    "data-msx-basemon-scroll": true
+  }, React.createElement("div", {
     className: "msx-bm-grid",
     "data-msx-basemon-list": true
   }, unlocked.map(id => React.createElement("button", {
@@ -173751,8 +173980,9 @@ function MsxBaseMons({
   }, React.createElement("img", {
     src: msxMonThumb(id),
     alt: ""
-  }), React.createElement("b", null, msxMonName(id)), picked[id] ? React.createElement("small", null, "育成 ", picked[id], "回") : React.createElement("small", null, "まだ育てていない"))))), detail);
+  }), React.createElement("b", null, msxMonName(id)), picked[id] ? React.createElement("small", null, "育成 ", picked[id], "回") : React.createElement("small", null, "まだ育てていない")))))), detail);
 }
+const MSX_POL_SEEN = {};
 const MSX_POLICY_SCALE = Object.freeze(['超溺愛', '溺愛', '甘い', '普通', '厳しい', 'スパルタ', '超スパルタ']);
 const MSX_RES = Object.freeze({
   great: {
@@ -174991,6 +175221,20 @@ function MsxPlay({
       e: 'normal'
     };
   };
+  const polNow = Math.max(-3, Math.min(3, Number(s.pol) || 0));
+  const polRec = MSX_POL_SEEN[run.id] = MSX_POL_SEEN[run.id] || {
+    pol: polNow,
+    note: null
+  };
+  if (polRec.pol !== polNow) {
+    polRec.note = {
+      turn: s.turn,
+      from: polRec.pol,
+      to: polNow
+    };
+    polRec.pol = polNow;
+  }
+  const polSay = polRec.note && polRec.note.turn === s.turn ? polRec.note : null;
   const pushLog = (r, text) => ({
     ...r,
     log: [...(r.log || []), {
@@ -175770,8 +176014,29 @@ function MsxPlay({
       className: "v-scene msx-fade",
       style: {
         flex: '1 1 0'
+      },
+      "data-msx-turn-scene": true
+    }, React.createElement("img", {
+      className: "bg",
+      src: msxSceneBg(s.turn).bg,
+      alt: ""
+    }), React.createElement("div", {
+      className: "sh"
+    }), React.createElement("div", {
+      className: "gr",
+      style: {
+        bottom: 'calc(8% - 5px)'
       }
-    }, React.createElement("div", {
+    }), React.createElement(MsxMonArt, {
+      run: run,
+      className: "mon",
+      style: {
+        bottom: '8%',
+        height: '34%',
+        opacity: .9
+      },
+      noPeak: true
+    }), React.createElement("div", {
       className: "v-clock"
     }, React.createElement("div", {
       className: "v-cal msx-pop"
@@ -176161,7 +176426,11 @@ function MsxPlay({
       state: null
     };
     const preName = preOn && typeof msxR3BattleName === 'function' ? msxR3BattleName(SUC, preB) : '';
-    const sayL = preOn ? line('turn.cup.before', `ついに今日は ${preName}だね! 準備ができたら「大会」へ行こう`, {
+    const polTxt = polSay ? `育成方針が「${MSX_POLICY_SCALE[polSay.to + 3]}」に変わったよ` + (polSay.to === 0 ? '' : polSay.to < 0 ? '(甘え度が恐れ度より多いと甘くなる)' : '(恐れ度が甘え度より多いと厳しくなる)') : '';
+    const sayL = polTxt ? {
+      t: polTxt,
+      e: 'normal'
+    } : preOn ? line('turn.cup.before', `ついに今日は ${preName}だね! 準備ができたら「大会」へ行こう`, {
       cup: preName
     }) : omenK ? line(omenK === 2 ? 'turn.awake.omen2' : 'turn.awake.omen', omenK === 2 ? 'あれ…また体が光ってる？ 虹色だ…' : 'あれ？ 体がうっすら光ってない…？') : pkI.state === 'soon' && pkI.in >= 2 && !yosu && !s.cond ? line('turn.peak.soon', 'もうすぐ伸びどきが来そうだよ！') : yosu ? line(s.yosu.sabori ? 'turn.mood.sabori' : 'turn.mood.utsu', 'ようすが気になるね…') : s.cond ? line(`turn.cond.${s.cond.kind === 'away' ? 'runaway' : s.cond.kind === 'ill' ? 'sick' : 'injury'}.in`, '今日は休ませてあげよ') : line(msxStartScene(s), '今月はどうする?');
     const cal = msxCalendar(s.turn);
@@ -176456,7 +176725,7 @@ function MsxPlay({
     className: "msx-note"
   }, "まだありません")) : sheet === 'menu' ? React.createElement(React.Fragment, null, React.createElement("h3", null, "☰ メニュー"), React.createElement("div", {
     className: "msx-note"
-  }, "育成方針: ", MSX_POLICY_SCALE[Math.max(-3, Math.min(3, s.pol || 0)) + 3], "(褒めると甘く・叱ると厳しくなる)"), React.createElement("div", {
+  }, "育成方針: ", MSX_POLICY_SCALE[Math.max(-3, Math.min(3, s.pol || 0)) + 3], "(甘え度と恐れ度の差で決まる。甘え度が多いと甘く・恐れ度が多いと厳しくなる)"), React.createElement("div", {
     className: "msx-note"
   }, "成長の型: ", typeof MASMON_CALC !== 'undefined' ? MASMON_CALC.typeOf(s.type).name : '—'), typeof MsxDex === 'function' ? React.createElement("button", {
     type: "button",
@@ -176752,6 +177021,45 @@ function MsxBag({
     stats: s.stats
   }));
 }
+const MSX_PT_UNITS = Object.freeze([1, 5, 10, 100, 'MAX']);
+let msxPtUnitMem = 1;
+const msxPtLimit = u => u === 'MAX' ? Infinity : Math.max(1, Number(u) || 1);
+function useMsxPtUnit() {
+  const [u, setU] = useState(() => MSX_PT_UNITS.includes(msxPtUnitMem) ? msxPtUnitMem : 1);
+  return [u, x => {
+    msxPtUnitMem = x;
+    setU(x);
+  }];
+}
+function MsxPtUnits({
+  unit,
+  setUnit
+}) {
+  return React.createElement("div", {
+    className: "msx-ptunit",
+    role: "group",
+    "aria-label": "振り分けの単位",
+    "data-msx-pt-units": true
+  }, MSX_PT_UNITS.map(x => React.createElement("button", {
+    type: "button",
+    key: x,
+    "aria-pressed": unit === x,
+    className: `chip${unit === x ? ' on' : ''}`,
+    onClick: () => setUnit(x),
+    "data-msx-pt-unit": x
+  }, x === 'MAX' ? 'MAX' : `${x}P`)));
+}
+function MsxPtBtn({
+  onPress,
+  ...rest
+}) {
+  const ref = useRef(onPress);
+  ref.current = onPress;
+  const fire = useCallback(() => ref.current(), []);
+  return React.createElement(PressRepeatButton, _extends({
+    onPress: fire
+  }, rest));
+}
 function MsxStats({
   run,
   setRun,
@@ -176776,13 +177084,40 @@ function MsxStats({
   };
   const ws = replay(draft);
   const addOf = k => draft.filter(x => x === k).length;
+  const capK = k => typeof SUC.statCapOf === 'function' ? SUC.statCapOf(s, k) : 999;
+  const [unit, setUnit] = useMsxPtUnit();
+  const draftRef = useRef(draft);
+  draftRef.current = draft;
+  const setDraftNow = list => {
+    draftRef.current = list;
+    setDraft(list);
+  };
   const plus = k => {
-    const r = SUC.spendPts(ws, k, 1);
-    if (r.out.ok) setDraft([...draft, k]);
+    const list = draftRef.current.slice();
+    let w = replay(list);
+    const lim = msxPtLimit(unit);
+    let n = 0;
+    while (n < lim) {
+      if (w.stats[k] >= capK(k)) break;
+      const r = SUC.spendPts(w, k, 1);
+      if (!r.out.ok) break;
+      w = r.state;
+      list.push(k);
+      n += 1;
+    }
+    if (n) setDraftNow(list);
   };
   const minus = k => {
-    const i = draft.lastIndexOf(k);
-    if (i >= 0) setDraft(draft.filter((_, j) => j !== i));
+    const list = draftRef.current.slice();
+    const lim = msxPtLimit(unit);
+    let n = 0;
+    while (n < lim) {
+      const i = list.lastIndexOf(k);
+      if (i < 0) break;
+      list.splice(i, 1);
+      n += 1;
+    }
+    if (n) setDraftNow(list);
   };
   const auto = () => {
     let w = replay(draft);
@@ -176805,7 +177140,6 @@ function MsxStats({
     setDraft([]);
   };
   const used = s.pts - ws.pts;
-  const capK = k => typeof SUC.statCapOf === 'function' ? SUC.statCapOf(s, k) : 999;
   const lineOf = SUC.PTS && SUC.PTS.line ? SUC.PTS.line[SUC.periodOf(s.turn).key] : null;
   const own = typeof SUC.techsOf === 'function' ? SUC.techsOf(s.species) : [];
   const techs = (Array.isArray(s.techs) ? s.techs : []).map(id => own.find(t => t && t.id === id)).filter(Boolean);
@@ -176855,9 +177189,12 @@ function MsxStats({
     }
   }, used)), React.createElement("div", {
     className: "v-num"
-  }, React.createElement("small", null, "残りの点"), React.createElement("b", null, ws.pts))), React.createElement("div", {
+  }, React.createElement("small", null, "残りの点"), React.createElement("b", null, ws.pts))), React.createElement(MsxPtUnits, {
+    unit: unit,
+    setUnit: setUnit
+  }), React.createElement("div", {
     className: "msx-note"
-  }, "＋で仮に振り、「決定」で確定する。1点で +1(期の目安", lineOf ? ` ${lineOf}` : '', "を超えると 2点で +1)"), MSX_STATS.map(k => {
+  }, "＋で仮に振り(押し続けると続けて振れる)、「決定」で確定する。1点で +1(期の目安", lineOf ? ` ${lineOf}` : '', "を超えると 2点で +1)"), MSX_STATS.map(k => {
     const n = addOf(k);
     const cost = SUC.ptsCost(ws, k);
     const over = lineOf != null && ws.stats[k] >= lineOf;
@@ -176899,25 +177236,15 @@ function MsxStats({
       style: {
         width: 'auto'
       }
-    }, s.stats[k])), React.createElement("button", {
-      type: "button",
-      className: "chip sym minus",
-      style: {
-        minWidth: 44,
-        minHeight: 44
-      },
+    }, s.stats[k])), React.createElement(MsxPtBtn, {
+      className: "chip sym minus pt44",
       disabled: !n,
-      onClick: () => minus(k),
+      onPress: () => minus(k),
       "aria-label": `${MSX_STAT_NAME[k]}を戻す`
-    }), React.createElement("button", {
-      type: "button",
-      className: "chip on sym plus",
-      style: {
-        minWidth: 44,
-        minHeight: 44
-      },
+    }), React.createElement(MsxPtBtn, {
+      className: "chip on sym plus pt44",
       disabled: ws.pts < cost,
-      onClick: () => plus(k),
+      onPress: () => plus(k),
       "aria-label": `${MSX_STAT_NAME[k]}を上げる`
     }));
   }), React.createElement("div", {
@@ -178299,7 +178626,7 @@ const msxR3Prizes = (SUC, c) => {
     id: 'tk',
     e: '🎫',
     name: '修行チケット',
-    desc: `${wtk + rtk ? `勝つと修行チケット +${wtk + rtk}${rtk ? '(ライバルの分 +1)' : ''}。` : ''}賞金ランクが上がると1段ごとに +1(負けても獲得賞金の合計で上がる)`
+    desc: `${wtk + rtk ? `勝つと修行チケット +${wtk + rtk}${rtk ? '(ライバルの分 +1)' : ''}。` : ''}賞金ランクが上がると1段ごとに +1(6段目から上は +2)(負けても獲得賞金の合計で上がる)`
   });
   const bpz = msxR3BeatPrize(SUC, c.prize);
   if (bpz) out.push(bpz);
@@ -178941,7 +179268,7 @@ function MsxR3Bracket({
     className: "go",
     onClick: toCard,
     "data-msx-r3-tocard": true
-  }, "⚔ 決勝へ")) : React.createElement("div", {
+  }, "⚔ 決勝へ ▶")) : React.createElement("div", {
     className: "v-ft"
   }, skip ? React.createElement("button", {
     type: "button",
@@ -178964,7 +179291,7 @@ function MsxR3Bracket({
     className: "go",
     onClick: toCard,
     "data-msx-r3-tocard": true
-  }, "⚔ 決勝へ"));
+  }, "⚔ 決勝へ ▶"));
   return React.createElement(MsxR3Frame, {
     run: run,
     back: "中断",
@@ -178991,6 +179318,7 @@ const msxR3Diff = (a, b) => {
   d.beat = Math.max(0, (Number(b.beatEarned) || 0) - (Number(a.beatEarned) || 0));
   d.rankFrom = Number(a.fameRank) || 0;
   d.rankTo = Number(b.fameRank) || 0;
+  d.fameGain = Math.max(0, (Number(b.fameTotal) || 0) - (Number(a.fameTotal) || 0));
   d.items = {};
   Object.keys(b.bag || {}).forEach(k => {
     const g = (Number((b.bag || {})[k]) || 0) - (Number((a.bag || {})[k]) || 0);
@@ -179002,78 +179330,91 @@ const msxR3RankName = step => {
   const S = msxSuc && msxSuc.SUC ? msxSuc.SUC : null;
   return S && typeof S.rankNameOf === 'function' ? S.rankNameOf(step) : String(step);
 };
+const MSX_R3_RANK_COL = [['#c9f1fb', '#6fb8c9'], ['#86e3a0', '#2f9e5a'], ['#ff8a4c', '#c2410c'], ['#9cc8f2', '#4b7aa8'], ['#ffe066', '#c99a06'], ['#d9a6ff', '#7c4dbd'], ['#ff6b7f', '#b4233c'], ['#3fc1c9', '#1d6f75'], ['#a77be0', '#4a2577']];
+const MSX_R3_RANK_CSS = `
+.msx-rk{margin:4px 10px 0;padding:7px 8px 8px;border-radius:12px;background:#0f172acc;container-type:inline-size}
+.msx-rk .rk-tot{display:flex;align-items:baseline;justify-content:center;gap:6px;flex-wrap:wrap;line-height:1.1}
+.msx-rk .rk-tot b{font-size:clamp(20px,7.5cqw,30px);font-weight:900;color:#fff7d6;letter-spacing:.02em;font-variant-numeric:tabular-nums}
+.msx-rk .rk-tot i{font-style:normal;font-size:clamp(11px,3.6cqw,14px);font-weight:900;color:#fb923c;white-space:nowrap}
+.msx-rk .rk-hd{display:flex;align-items:center;gap:8px;margin:2px 0 4px;font-size:11px;font-weight:800;color:#fde68a}
+.msx-rk .rk-hd:before,.msx-rk .rk-hd:after{content:'';flex:1 1 0;height:1px;background:#fde68a66}
+.msx-rk .rk-row{position:relative;height:20px;margin-top:1px}
+.msx-rk .rk-bar{position:absolute;top:0;bottom:0;right:0}
+.msx-rk .rk-tri{position:absolute;top:0;bottom:0}
+.msx-rk .rk-nm{position:absolute;top:0;bottom:0;display:flex;align-items:center;justify-content:center;transform:translateX(-50%);white-space:nowrap;font-size:10.5px;font-weight:900;color:#fff;text-shadow:0 0 2px #000,0 0 2px #000,0 1px 2px #000}
+.msx-rk .rk-amt{position:absolute;top:0;bottom:0;right:6px;display:flex;align-items:center;font-size:10.5px;font-weight:900;color:#fff;text-shadow:0 1px 2px #0009;white-space:nowrap;font-variant-numeric:tabular-nums}
+.msx-rk .rk-row.off .rk-bar,.msx-rk .rk-row.off .rk-tri{filter:saturate(.45) brightness(.72)}
+.msx-rk .rk-row.off .rk-amt{color:#cbd5e1}
+.msx-rk .rk-row.me .rk-bar{box-shadow:inset 0 0 0 2px #fff}
+.msx-rk .rk-tag{position:absolute;top:2px;bottom:2px;left:0;display:flex;align-items:center;justify-content:center;padding:0 9px 0 6px;border-radius:5px 0 0 5px;clip-path:polygon(0 0,calc(100% - 7px) 0,100% 50%,calc(100% - 7px) 100%,0 100%);font-size:9.5px;font-weight:900;letter-spacing:.04em;color:#fff;background:#4caf50}
+.msx-rk .rk-tag.up{background:#ef4444;color:#fff7d6}
+`;
 function MsxR3RankPyramid({
   step,
-  up
+  up,
+  total,
+  gain
 }) {
   const S = msxSuc && msxSuc.SUC ? msxSuc.SUC : null;
   const R = S && S.FAME_RANK ? S.FAME_RANK : [];
   if (!R.length) return null;
-  const COL = ['#bae6fd', '#86efac', '#fb923c', '#7dd3fc', '#facc15', '#c084fc', '#f43f5e', '#14b8a6', '#e879f9', '#6d28d9'];
-  const cond = x => x.cond === 'debut' ? 'デビュー戦に出る' : x.cond === 'win' ? '大会で1勝' : `${msxFmt(x.min)}G`;
+  const N = R.length;
+  const cond = x => x.cond === 'debut' ? 'デビュー戦出場' : x.cond === 'win' ? '1勝' : `${msxFmt(x.min)}G`;
+  const CX = 39;
+  const HALF = 33;
+  const t = Number(total);
+  const g = Number(gain);
   return React.createElement("div", {
+    className: "msx-rk",
     "data-msx-r3-rank": true,
-    style: {
-      margin: '4px 10px 0',
-      padding: '5px 6px 6px',
-      borderRadius: 10,
-      background: '#0f172acc'
-    }
-  }, React.createElement("div", {
-    style: {
-      fontSize: 11,
-      fontWeight: 800,
-      color: '#fde68a',
-      textAlign: 'center',
-      marginBottom: 3
-    }
+    "data-msx-r3-rank-step": step
+  }, React.createElement("style", null, MSX_R3_RANK_CSS), Number.isFinite(t) ? React.createElement("div", {
+    className: "rk-tot",
+    "data-msx-r3-rank-total": true
+  }, React.createElement("b", null, msxFmt(Math.max(0, t)), "G"), Number.isFinite(g) && g > 0 ? React.createElement("i", null, "(+", msxFmt(g), "G)") : null) : null, React.createElement("div", {
+    className: "rk-hd"
   }, "賞金ランク"), R.map((x, i) => i).reverse().map(i => {
     const x = R[i];
     const me = i + 1 === step;
-    const w = 46 + (R.length - 1 - i) * 5.5;
+    const k = N - i;
+    const hwB = HALF * k / N;
+    const hwT = HALF * (k - 1) / N;
+    const col = MSX_R3_RANK_COL[i] || MSX_R3_RANK_COL[MSX_R3_RANK_COL.length - 1];
+    const triL = CX - hwB;
+    const triW = hwB * 2;
+    const cut = triW > 0 ? (hwB - hwT) / triW * 100 : 50;
     return React.createElement("div", {
       key: i,
-      style: {
-        display: 'flex',
-        alignItems: 'center',
-        height: 15,
-        gap: 4
-      }
+      className: `rk-row${i + 1 <= step ? '' : ' off'}${me ? ' me' : ''}`,
+      "data-msx-r3-rank-row": i + 1
     }, React.createElement("span", {
+      className: "rk-bar",
       style: {
-        width: 40,
-        fontSize: 9,
-        fontWeight: 900,
-        textAlign: 'right',
-        color: up ? '#fef08a' : '#a7f3d0'
+        left: `${CX + hwT}%`,
+        background: `linear-gradient(90deg, ${col[1]}, ${col[1]}dd)`
       }
-    }, me ? up ? 'UP!▶' : 'KEEP▶' : ''), React.createElement("span", {
+    }), React.createElement("span", {
+      className: "rk-tri",
       style: {
-        flex: '1 1 0',
-        display: 'flex',
-        justifyContent: 'center'
+        left: `${triL}%`,
+        width: `${triW}%`,
+        background: `linear-gradient(180deg, #ffffff66, ${col[0]} 45%, ${col[0]})`,
+        clipPath: `polygon(${cut}% 0, ${100 - cut}% 0, 100% 100%, 0 100%)`
       }
-    }, React.createElement("span", {
+    }), React.createElement("span", {
+      className: "rk-nm",
       style: {
-        width: `${w}%`,
-        background: COL[i],
-        opacity: i + 1 <= step ? 1 : 0.35,
-        borderRadius: 3,
-        fontSize: 10,
-        fontWeight: 800,
-        color: '#111827',
-        textAlign: 'center',
-        lineHeight: '14px',
-        outline: me ? '2px solid #fff' : 'none'
+        left: `${CX}%`
       }
-    }, x.name)), React.createElement("span", {
+    }, x.name), React.createElement("span", {
+      className: "rk-amt"
+    }, cond(x)), me ? React.createElement("span", {
+      className: `rk-tag${up ? ' up' : ''}`,
       style: {
-        width: 74,
-        fontSize: 9.5,
-        textAlign: 'right',
-        color: '#e5e7eb'
-      }
-    }, cond(x)));
+        left: `${Math.max(0, triL - 15)}%`
+      },
+      "data-msx-r3-rank-tag": up ? 'up' : 'keep'
+    }, up ? 'UP!' : 'KEEP') : null);
   }));
 }
 const msxR3PrizeRows = (d, s) => {
@@ -179199,7 +179540,7 @@ const msxR3ForcedPrizes = (SUC, b) => {
     id: 'tk',
     e: '🎫',
     name: '修行チケット',
-    desc: '賞金ランクが上がると1段ごとに +1(負けても獲得賞金の合計で上がる)'
+    desc: '賞金ランクが上がると1段ごとに +1(6段目から上は +2)(負けても獲得賞金の合計で上がる)'
   });
   const bpz = msxR3BeatPrize(SUC, g);
   if (bpz) out.push(bpz);
@@ -179661,9 +180002,11 @@ function MsxR3Battle({
           top: '8%',
           fontSize: 34
         }
-      }, "ランク UP!", React.createElement("small", null, msxR3RankName(d.rankFrom || 0), " → ", msxR3RankName(d.rankTo), "・🎫 修行チケット +", (d.rankTo || 0) - (d.rankFrom || 0)))), React.createElement(MsxR3RankPyramid, {
+      }, "ランク UP!", React.createElement("small", null, msxR3RankName(d.rankFrom || 0), " → ", msxR3RankName(d.rankTo), "・🎫 修行チケット +", SUC && typeof SUC.rankTicketsOf === 'function' ? SUC.rankTicketsOf(d.rankFrom || 0, d.rankTo || 0) : (d.rankTo || 0) - (d.rankFrom || 0)))), React.createElement(MsxR3RankPyramid, {
         step: d.rankTo || 0,
-        up: true
+        up: true,
+        total: s.fameTotal,
+        gain: d.fameGain
       }));
       const next = () => st3.meal ? setRun({
         ...run,
@@ -179736,7 +180079,9 @@ function MsxR3Battle({
         className: "v-trophy"
       }, "🏆")), React.createElement(MsxR3RankPyramid, {
         step: d.rankTo || 0,
-        up: d.rankTo > d.rankFrom
+        up: d.rankTo > d.rankFrom,
+        total: s.fameTotal,
+        gain: d.fameGain
       }), React.createElement("div", {
         className: "v-prz"
       }, rows.length ? rows.map(([e, n, t, c, nw], i) => React.createElement("div", {
@@ -180473,7 +180818,7 @@ function MsxR3Battle({
       },
       onClick: () => setStep('watch'),
       "data-msx-r3-ready": true
-    }, "準備完了"));
+    }, "準備完了 ▶"));
     return React.createElement(MsxR3Frame, {
       run: run,
       back: "中断",
@@ -180622,7 +180967,7 @@ function MsxR3Shugyo({
         className: "go",
         onClick: () => setStOn(false),
         "data-msx-r3-qskip": true
-      }, "⏩ 結果へ"))
+      }, "⏩ 結果へ ▶"))
     });
   }
   if (res) {
@@ -181191,6 +181536,11 @@ function MsxR3Retire({
   const [step, setStep] = useState(() => run.s.pts > 0 ? 'e3' : 'e0');
   const [ws, setWs] = useState(s);
   const [hist, setHist] = useState([]);
+  const wsRef = useRef(ws);
+  wsRef.current = ws;
+  const histRef = useRef(hist);
+  histRef.current = hist;
+  const [ptUnit, setPtUnit] = useMsxPtUnit();
   const [pick, setPick] = useState({});
   const [atab, setAtab] = useState(null);
   const [fxDone, setFxDone] = useState(false);
@@ -181315,20 +181665,48 @@ function MsxR3Retire({
     });
   }
   if (step === 'e3') {
+    const capOf = (w, k) => typeof SUC.statCapOf === 'function' ? SUC.statCapOf(w, k) : 999;
     const spend = k => {
-      const r = SUC.spendPts(ws, k, 1);
-      if (r.out.ok) {
-        setHist([...hist, ws]);
-        setWs(r.state);
+      let w = wsRef.current;
+      const h = histRef.current.slice();
+      const lim = msxPtLimit(ptUnit);
+      let n = 0;
+      while (n < lim) {
+        if (w.stats[k] >= capOf(w, k)) break;
+        const r = SUC.spendPts(w, k, 1);
+        if (!r.out.ok) break;
+        h.push(w);
+        w = r.state;
+        n += 1;
+      }
+      if (n) {
+        wsRef.current = w;
+        histRef.current = h;
+        setHist(h);
+        setWs(w);
       }
     };
     const undoK = k => {
-      for (let i = hist.length - 1; i >= 0; i--) {
-        if (hist[i].stats[k] < ws.stats[k]) {
-          setWs(hist[i]);
-          setHist(hist.slice(0, i));
-          return;
+      const lim = msxPtLimit(ptUnit);
+      let n = 0;
+      while (n < lim) {
+        const w = wsRef.current;
+        const h = histRef.current;
+        let hit = -1;
+        for (let i = h.length - 1; i >= 0; i--) {
+          if (h[i].stats[k] < w.stats[k]) {
+            hit = i;
+            break;
+          }
         }
+        if (hit < 0) break;
+        wsRef.current = h[hit];
+        histRef.current = h.slice(0, hit);
+        n += 1;
+      }
+      if (n) {
+        setWs(wsRef.current);
+        setHist(histRef.current);
       }
     };
     const preset = kind => {
@@ -181397,7 +181775,10 @@ function MsxR3Retire({
       live: true
     }), React.createElement("div", {
       className: "r3-mtag"
-    }, "育成完了の前に")), React.createElement("div", {
+    }, "育成完了の前に")), React.createElement(MsxPtUnits, {
+      unit: ptUnit,
+      setUnit: setPtUnit
+    }), React.createElement("div", {
       className: "r3-bar"
     }, React.createElement("span", {
       style: {
@@ -181439,16 +181820,14 @@ function MsxR3Retire({
         className: "ad"
       }, add ? `+${add}` : ''), React.createElement("span", {
         className: "st"
-      }, React.createElement("button", {
-        type: "button",
+      }, React.createElement(MsxPtBtn, {
         className: "sym minus",
         "aria-label": `${MSX_STAT_NAME[k]}を戻す`,
         disabled: !add,
-        onClick: () => undoK(k)
-      }), React.createElement("b", null, add), React.createElement("button", {
-        type: "button",
-        disabled: ws.pts < SUC.ptsCost(ws, k) || ws.stats[k] >= (typeof SUC.statCapOf === 'function' ? SUC.statCapOf(ws, k) : 999),
-        onClick: () => spend(k),
+        onPress: () => undoK(k)
+      }), React.createElement("b", null, add), React.createElement(MsxPtBtn, {
+        disabled: ws.pts < SUC.ptsCost(ws, k) || ws.stats[k] >= capOf(ws, k),
+        onPress: () => spend(k),
         "data-msx-r3-plus": k,
         className: "sym plus",
         "aria-label": `${MSX_STAT_NAME[k]}を上げる`
@@ -181598,7 +181977,7 @@ function MsxR3Retire({
         className: "go",
         onClick: () => setStep('e2'),
         "data-msx-r3-e1": true
-      }, "✨ アシスト効果を取る(", msxR3T().assist ? msxR3T().assist.pointsOf(ev.power) : ev.points, "ポイント)"))
+      }, "✨ アシスト効果を取る(", msxR3T().assist ? msxR3T().assist.pointsOf(ev.power) : ev.points, "ポイント) ▶"))
     });
   }
   const AT = msxR3T().assist;
@@ -182973,7 +183352,8 @@ const MSX_MM_CSS = `
 .msx .mm-tabs.sm{margin-top:0}.msx .mm-tabs.sm button{font-size:12px;border-radius:10px}
 .msx .mm-hint{font-size:11px;font-weight:800;color:#f9a8d4;margin-top:6px;line-height:1.4}.msx .mm-hint.ok{color:#86efac}
 .msx .mm-art{display:block;position:relative}
-.msx .mm-gridw{flex:1 1 0;min-height:0;overflow-y:auto}
+.msx .mm-gridw{flex:1 1 0;min-height:0;overflow-y:auto;background:#0f0c24;border:1px solid #3b3566;border-radius:14px;padding:8px 6px;margin-top:6px}
+.msx .mm-gridw>.msx-note{text-align:center;margin:auto}
 .msx .mm-bar{display:flex;align-items:center;gap:6px;margin-top:4px;flex-wrap:wrap}
 .msx .mm-bar .cnt{flex:1;font-size:11px;font-weight:900;color:#e2e8f0;white-space:nowrap}.msx .mm-bar .cnt b{font-size:14px;color:#fde047}
 .msx .mm-sel{min-height:44px;border-radius:12px;background:#1e1a36;border:1.5px solid #fde047;padding:4px 10px;font-size:11.5px;font-weight:900;white-space:nowrap}
@@ -184302,7 +184682,7 @@ function MsxManualBar({
     className: "msxm-sec"
   }, React.createElement("div", {
     className: "msxm-h"
-  }, "🛡 防御・↔ 移動・💪 ガッツ回復"), React.createElement("div", {
+  }, "🛡 防御・↔ 移動・💪 ガッツ回復", opt.moveCost ? `(移動 ガッツ${opt.moveCost})` : ''), React.createElement("div", {
     className: "msxm-row"
   }, React.createElement("button", {
     type: "button",
@@ -184318,7 +184698,7 @@ function MsxManualBar({
     onClick: () => go({
       type: 'charge'
     })
-  }, "💪 ためる", React.createElement("small", null, opt.charge.ok ? 'ガッツを大きく回復' : 'ガッツは満タン')), opt.move.slice().sort((x, y) => y.step - x.step).map(mv => React.createElement("button", {
+  }, "💪 ためる", React.createElement("small", null, opt.charge.ok ? 'この番は合わせて16回復' : 'ガッツは満タン')), opt.move.slice().sort((x, y) => y.step - x.step).map(mv => React.createElement("button", {
     key: mv.step,
     type: "button",
     "data-msxm-move": mv.step,
@@ -184328,7 +184708,15 @@ function MsxManualBar({
       type: 'move',
       step: mv.step
     })
-  }, mv.step < 0 ? '前へ ▶' : '◀ 後ろへ', React.createElement("small", null, mv.ok ? `→ ${MSX_MANUAL_DIST[mv.to]}` : 'これ以上は行けない'))))), opt.swap.length ? React.createElement("div", {
+  }, mv.step < 0 ? '前へ ▶' : '◀ 後ろへ', React.createElement("small", null, mv.to < 0 || mv.to > 3 ? 'これ以上は行けない' : Number.isFinite(mv.guts) ? `→ ${MSX_MANUAL_DIST[mv.to]}・ガッツ ${mv.guts}${mv.ok ? '' : '(足りない)'}` : `→ ${MSX_MANUAL_DIST[mv.to]}`))), opt.blow && opt.blow.near ? React.createElement("button", {
+    type: "button",
+    "data-msxm-blow": true,
+    className: `msxm-btn ${isHint(opt.blow) ? 'hint' : ''}`,
+    disabled: !opt.blow.ok || busy,
+    onClick: () => go({
+      type: 'blow'
+    })
+  }, "💨 吹き飛ばし", React.createElement("small", null, opt.blow.wait ? '相手の次の手のあとに飛ぶ' : `相手の次の手のあと遠へ・ガッツ ${opt.blow.guts}${opt.blow.ok ? '' : '(足りない)'}`)) : null)), opt.swap.length ? React.createElement("div", {
     className: "msxm-sec"
   }, React.createElement("div", {
     className: "msxm-h"
@@ -184909,7 +185297,9 @@ function MsaDmgLayer({
 const msaSay = (e, nm) => {
   if (!e) return '';
   if (e.ev === 'tech') return e.hit ? `${nm(e.side, e.i)}の ${e.name}!${e.crit ? ' 会心の一撃!' : e.guarded ? ' …ガードされた' : ''}` : `${nm(e.side, e.i)}の ${e.name} … よけられた`;
+  if (e.ev === 'move' && e.why === 'blown') return `${nm(e.side, e.i)}は 吹き飛ばされて 遠の間合いへ!`;
   if (e.ev === 'move') return `${nm(e.side, e.i)}が ${AMBW_DIST[e.to] || ''}の間合いへ`;
+  if (e.ev === 'blow') return `${nm(e.side, e.i)}の 吹き飛ばし! 相手の次の手のあと 遠へ飛ばす`;
   if (e.ev === 'charge') return e.why === 'sulk' ? `${nm(e.side, e.i)}は 意味不明な行動をした…` : `${nm(e.side, e.i)}は ガッツをためた`;
   if (e.ev === 'guard') return `${nm(e.side, e.i)}は 身を守った`;
   if (e.ev === 'swap') return `${nm(e.side, e.i)}に 交代!`;
@@ -185258,7 +185648,7 @@ const msaGutsTagsOf = (log, frames, pos, side, regen, hitMs) => {
   const out = [];
   const R = f.r > pf.r ? regen[`${side}${f.act[side]}`] || 0 : 0;
   if (R > 0) out.push({
-    t: `自動 +${R}`,
+    t: `自動ガッツ回復 +${R}`,
     cls: 'up',
     delay: 0
   });
@@ -185272,7 +185662,11 @@ const msaGutsTagsOf = (log, frames, pos, side, regen, hitMs) => {
         cls: 'down',
         delay: 0
       });
-    } else if (x > 0) out.push({
+    } else if ((r.ev === 'move' || r.ev === 'blow') && r.why !== 'blown' && (Number(r.cost) || 0) > 0) out.push({
+      t: `${r.ev === 'blow' ? '吹き飛ばし' : '移動'} −${Math.round(Number(r.cost))}`,
+      cls: 'down',
+      delay: 0
+    });else if (x > 0) out.push({
       t: `${r.ev === 'move' ? '移動' : r.ev === 'guard' ? 'ガード' : 'ためる'} +${x}`,
       cls: 'up',
       delay: 0
@@ -185310,9 +185704,15 @@ const msaBandsOf = (log, frames, k) => {
   });else if (r.ev === 'charge') out.push({
     side: r.side,
     t: r.why === 'sulk' ? '💢 意味不明' : '⚡ ガッツをためた'
+  });else if (r.ev === 'move' && r.why === 'blown') out.push({
+    side: r.side,
+    t: '💨 遠へ飛ばされた'
   });else if (r.ev === 'move') out.push({
     side: r.side,
     t: `👣 間合い ${AMBW_DIST[pf.d] || ''}→${AMBW_DIST[f.d] || ''}`
+  });else if (r.ev === 'blow') out.push({
+    side: r.side,
+    t: '💨 吹き飛ばし'
   });else if (r.ev === 'swap') out.push({
     side: r.side,
     t: `🔁 ${r.name || ''} に交代`
@@ -185510,7 +185910,7 @@ function MsaStage({
       kf = msaCamFrames([...(fx.pre > 0 ? [[Math.max(110, fx.pre * 0.5), msaCamAt(ax, sw, w)], [fx.pre, msaCamAt(ax, sw, w)]] : []), [fx.pre > 0 ? fx.pre + 90 : Math.min(280, Math.max(120, hitMs * 0.45)), msaCamAt(ax, s1, w)], [hitMs - 60, msaCamAt(ax * 0.55 + dx * 0.45, s1, w)], [hitMs + 110, msaCamAt(dx, e1.hit ? s1 + 0.08 : s1, w)], [total - 280, msaCamAt(dx, s1 - 0.04, w)]], total);
     } else if (e1.ev === 'ko' && e1.side) {
       kf = msaCamFrames([[260, msaCamAt(sx(e1.side), 1.28, w)], [total - 320, msaCamAt(sx(e1.side), 1.3, w)]], total);
-    } else if ((e1.ev === 'guard' || e1.ev === 'charge' || e1.ev === 'swap') && e1.side) {
+    } else if ((e1.ev === 'guard' || e1.ev === 'charge' || e1.ev === 'swap' || e1.ev === 'blow') && e1.side) {
       kf = msaCamFrames([[220, msaCamAt(sx(e1.side), 1.1, w)], [total - 260, msaCamAt(sx(e1.side), 1.1, w)]], total);
     }
     if (!kf) return undefined;
@@ -186211,6 +186611,10 @@ const msaCallOf = (log, frames, k, maxHp, who) => {
   if (e.ev === 'swap') return {
     k: 'swap',
     t: `ここで交代! ${who(e.side, e.i)}が前へ!`
+  };
+  if (e.ev === 'move' && e.why === 'blown') return {
+    k: 'blown',
+    t: `${who(e.side, e.i)}、遠くへ 吹き飛ばされた!`
   };
   if (e.ev !== 'tech' || !e.hit) return null;
   const foe = e.side === 'A' ? 'B' : 'A';
@@ -203316,62 +203720,62 @@ const CARD_ART_KNOWN_BOX = Object.freeze({
   sorashido_surprise: [384, 512, 0, 38, 384, 474],
   sorashido_troubled: [384, 512, 0, 39, 384, 473],
   sorashido_wink: [384, 512, 27, 38, 357, 474],
-  'stand-normal/atsu_angry': [540, 552, 83, 7, 407, 545],
-  'stand-normal/atsu_crying': [606, 552, 108, 6, 390, 546],
-  'stand-normal/atsu_excited': [618, 552, 89, 7, 503, 545],
-  'stand-normal/atsu_happy': [494, 552, 47, 7, 420, 545],
-  'stand-normal/atsu_normal': [586, 552, 43, 7, 439, 545],
-  'stand-normal/atsu_surprise': [624, 552, 118, 7, 434, 545],
-  'stand-normal/atsu_troubled': [556, 552, 47, 7, 458, 545],
-  'stand-normal/atsu_wink': [626, 552, 81, 7, 537, 545],
-  'stand-normal/erubin_angry': [454, 492, 33, 7, 389, 485],
-  'stand-normal/erubin_crying': [548, 492, 7, 7, 528, 485],
-  'stand-normal/erubin_excited': [576, 492, 7, 7, 535, 485],
-  'stand-normal/erubin_happy': [550, 492, 18, 8, 524, 484],
-  'stand-normal/erubin_normal': [484, 492, 19, 9, 454, 483],
-  'stand-normal/erubin_surprise': [698, 492, 39, 6, 620, 486],
-  'stand-normal/erubin_troubled': [552, 492, 8, 7, 533, 485],
-  'stand-normal/erubin_wink': [516, 492, 7, 7, 498, 485],
-  'stand-normal/kiki_angry': [616, 832, 8, 8, 601, 824],
-  'stand-normal/kiki_crying': [436, 832, 8, 6, 420, 826],
-  'stand-normal/kiki_excited': [946, 832, 8, 8, 929, 824],
-  'stand-normal/kiki_happy': [392, 832, 7, 8, 377, 824],
-  'stand-normal/kiki_normal': [414, 832, 12, 8, 394, 824],
-  'stand-normal/kiki_surprise': [554, 832, 8, 8, 537, 824],
-  'stand-normal/kiki_troubled': [456, 832, 8, 8, 439, 824],
-  'stand-normal/kiki_wink': [566, 832, 8, 6, 550, 826],
-  'stand-normal/kyuko_angry': [492, 590, 15, 7, 470, 583],
-  'stand-normal/kyuko_crying': [416, 590, 23, 8, 364, 582],
-  'stand-normal/kyuko_excited': [452, 590, 12, 8, 433, 582],
-  'stand-normal/kyuko_happy': [448, 590, 85, 8, 356, 582],
-  'stand-normal/kyuko_normal': [410, 590, 19, 8, 381, 582],
-  'stand-normal/kyuko_surprise': [410, 590, 43, 8, 342, 582],
-  'stand-normal/kyuko_troubled': [366, 590, 21, 7, 337, 583],
-  'stand-normal/kyuko_wink': [424, 590, 30, 8, 386, 582],
-  'stand-normal/momosuke_angry': [708, 860, 7, 7, 689, 853],
-  'stand-normal/momosuke_crying': [776, 860, 7, 7, 762, 853],
-  'stand-normal/momosuke_excited': [796, 860, 6, 6, 783, 854],
-  'stand-normal/momosuke_happy': [792, 860, 8, 7, 776, 853],
-  'stand-normal/momosuke_normal': [704, 860, 8, 7, 689, 853],
-  'stand-normal/momosuke_surprise': [742, 860, 8, 8, 727, 852],
-  'stand-normal/momosuke_troubled': [714, 860, 8, 6, 699, 854],
-  'stand-normal/momosuke_wink': [764, 860, 24, 6, 734, 854],
-  'stand-normal/myua_angry': [592, 672, 12, 0, 520, 672],
-  'stand-normal/myua_crying': [592, 672, 0, 0, 591, 672],
-  'stand-normal/myua_excited': [592, 672, 0, 0, 583, 672],
-  'stand-normal/myua_happy': [592, 672, 22, 9, 505, 663],
-  'stand-normal/myua_normal': [592, 672, 31, 7, 500, 665],
-  'stand-normal/myua_surprise': [592, 672, 0, 10, 509, 662],
-  'stand-normal/myua_troubled': [592, 672, 27, 0, 516, 672],
-  'stand-normal/myua_wink': [592, 672, 12, 10, 579, 662],
-  'stand-normal/sorashido_angry': [536, 576, 26, 7, 432, 569],
-  'stand-normal/sorashido_crying': [534, 576, 7, 7, 520, 569],
-  'stand-normal/sorashido_excited': [648, 576, 16, 6, 626, 570],
-  'stand-normal/sorashido_happy': [534, 576, 30, 6, 440, 570],
-  'stand-normal/sorashido_normal': [572, 576, 31, 8, 534, 568],
-  'stand-normal/sorashido_surprise': [632, 576, 67, 7, 542, 569],
-  'stand-normal/sorashido_troubled': [662, 576, 6, 7, 648, 569],
-  'stand-normal/sorashido_wink': [586, 576, 7, 9, 565, 567]
+  'stand-normal/atsu_angry': [270, 276, 41, 4, 204, 272],
+  'stand-normal/atsu_crying': [303, 276, 54, 4, 195, 272],
+  'stand-normal/atsu_excited': [309, 276, 45, 3, 251, 273],
+  'stand-normal/atsu_happy': [247, 276, 23, 4, 211, 272],
+  'stand-normal/atsu_normal': [293, 276, 21, 3, 219, 273],
+  'stand-normal/atsu_surprise': [313, 276, 59, 4, 217, 272],
+  'stand-normal/atsu_troubled': [278, 276, 23, 4, 229, 272],
+  'stand-normal/atsu_wink': [313, 276, 41, 4, 268, 272],
+  'stand-normal/erubin_angry': [227, 244, 16, 4, 195, 240],
+  'stand-normal/erubin_crying': [274, 244, 3, 3, 265, 241],
+  'stand-normal/erubin_excited': [288, 244, 3, 4, 265, 240],
+  'stand-normal/erubin_happy': [275, 244, 9, 4, 262, 240],
+  'stand-normal/erubin_normal': [242, 244, 10, 3, 226, 241],
+  'stand-normal/erubin_surprise': [349, 244, 20, 4, 309, 240],
+  'stand-normal/erubin_troubled': [276, 244, 4, 3, 266, 241],
+  'stand-normal/erubin_wink': [258, 244, 4, 4, 249, 240],
+  'stand-normal/kiki_angry': [616, 840, 8, 8, 600, 832],
+  'stand-normal/kiki_crying': [436, 840, 7, 7, 421, 833],
+  'stand-normal/kiki_excited': [946, 838, 8, 6, 931, 832],
+  'stand-normal/kiki_happy': [390, 840, 7, 8, 376, 832],
+  'stand-normal/kiki_normal': [414, 840, 8, 8, 399, 832],
+  'stand-normal/kiki_surprise': [553, 840, 8, 7, 537, 833],
+  'stand-normal/kiki_troubled': [456, 840, 7, 7, 441, 833],
+  'stand-normal/kiki_wink': [566, 839, 8, 7, 550, 832],
+  'stand-normal/kyuko_angry': [267, 320, 8, 4, 255, 316],
+  'stand-normal/kyuko_crying': [227, 320, 13, 4, 198, 316],
+  'stand-normal/kyuko_excited': [246, 320, 6, 4, 236, 316],
+  'stand-normal/kyuko_happy': [243, 320, 46, 3, 193, 317],
+  'stand-normal/kyuko_normal': [223, 320, 10, 3, 208, 317],
+  'stand-normal/kyuko_surprise': [224, 320, 23, 3, 187, 317],
+  'stand-normal/kyuko_troubled': [200, 320, 11, 4, 185, 316],
+  'stand-normal/kyuko_wink': [230, 320, 16, 3, 211, 317],
+  'stand-normal/momosuke_angry': [412, 503, 4, 5, 401, 498],
+  'stand-normal/momosuke_crying': [454, 503, 5, 4, 444, 499],
+  'stand-normal/momosuke_excited': [464, 503, 5, 5, 455, 498],
+  'stand-normal/momosuke_happy': [461, 503, 4, 5, 452, 498],
+  'stand-normal/momosuke_normal': [410, 503, 5, 5, 401, 498],
+  'stand-normal/momosuke_surprise': [432, 503, 5, 5, 422, 498],
+  'stand-normal/momosuke_troubled': [416, 503, 5, 4, 406, 499],
+  'stand-normal/momosuke_wink': [447, 503, 15, 5, 427, 498],
+  'stand-normal/myua_angry': [296, 336, 6, 0, 260, 336],
+  'stand-normal/myua_crying': [296, 336, 0, 0, 295, 336],
+  'stand-normal/myua_excited': [296, 336, 0, 0, 292, 336],
+  'stand-normal/myua_happy': [296, 336, 11, 4, 253, 332],
+  'stand-normal/myua_normal': [296, 336, 15, 3, 251, 333],
+  'stand-normal/myua_surprise': [296, 336, 0, 5, 255, 331],
+  'stand-normal/myua_troubled': [296, 336, 15, 0, 255, 336],
+  'stand-normal/myua_wink': [296, 336, 6, 5, 289, 331],
+  'stand-normal/sorashido_angry': [313, 335, 16, 5, 252, 330],
+  'stand-normal/sorashido_crying': [311, 335, 5, 5, 302, 330],
+  'stand-normal/sorashido_excited': [378, 335, 10, 5, 363, 330],
+  'stand-normal/sorashido_happy': [311, 335, 17, 5, 255, 330],
+  'stand-normal/sorashido_normal': [332, 335, 18, 5, 310, 330],
+  'stand-normal/sorashido_surprise': [368, 335, 40, 5, 314, 330],
+  'stand-normal/sorashido_troubled': [386, 335, 5, 5, 377, 330],
+  'stand-normal/sorashido_wink': [341, 335, 4, 5, 328, 330]
 });
 const cardArtBoxOf = v => Array.isArray(v) && v.length === 6 ? {
   nw: v[0],
@@ -232946,7 +233350,7 @@ function MonsterHeroGame() {
   const PANDORA_WINGS_STORY_IDS = PANDORA_WINGS_STORIES.map(story => story.id);
   const PANDORA_WINGS_EVENT_ID = 'pandora_wings_2026_11_02';
   const PANDORA_WINGS_THANKS_STORY_ID = 'pandora_wings_2026_ep8';
-  const RHYTHM_EVENT_STORY_IDS = [...HALLOWEEN_NIGHT_STORY_IDS, ...RAID_JACK_STORY_IDS, ...PANDORA_WINGS_STORY_IDS, PANDORA_WINGS_THANKS_STORY_ID, MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, RAID_JACK_RHYTHM_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RAID_JACK_HOWTO_STORY_ID, ATSU_JOIN_STORY_ID, KYUKO_JOIN_STORY_ID, SORASHIDO_JOIN_STORY_ID, ERUBIN_JOIN_STORY_ID, CARD_CUP_STORY_ID, RHYTHM_GRAND_OPEN_TEASER_STORY_ID, RHYTHM_GRAND_OPEN_STORY_ID, MONSUC_BETA_EP1_STORY_ID];
+  const RHYTHM_EVENT_STORY_IDS = [...HALLOWEEN_NIGHT_STORY_IDS, ...RAID_JACK_STORY_IDS, ...PANDORA_WINGS_STORY_IDS, PANDORA_WINGS_THANKS_STORY_ID, MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, RAID_JACK_RHYTHM_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RAID_JACK_HOWTO_STORY_ID, ATSU_JOIN_STORY_ID, KYUKO_JOIN_STORY_ID, SORASHIDO_JOIN_STORY_ID, ERUBIN_JOIN_STORY_ID, CARD_CUP_STORY_ID, RHYTHM_GRAND_OPEN_TEASER_STORY_ID, RHYTHM_GRAND_OPEN_STORY_ID, MONSUC_BETA_EP1_STORY_ID, SPARKLING_PINK_STORY_ID];
   const RHYTHM_EVENT_STORY_BY_EVENT = {
     [MONBEAT_CUP_EVENT_ID]: MONBEAT_CUP_STORY_ID,
     [SYMPHONY_EVENT_ID]: SYMPHONY_STORY_ID,
@@ -233407,6 +233811,12 @@ function MonsterHeroGame() {
     if (!(bootPhase === 'GAME' && gameState === 'HOME') || eventReplay || rhythmEventStoryPending || rhythmHellGuide) return;
     if (rhythmEventStoryStartedRef.current.includes(MONSUC_BETA_EP1_STORY_ID)) return;
     setRhythmEventStoryPending(prev => prev || MONSUC_BETA_EP1_STORY_ID);
+  }, [rhythmEventStorySeen, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
+  useEffect(() => {
+    if (!Array.isArray(rhythmEventStorySeen) || rhythmEventStorySeen.includes(SPARKLING_PINK_STORY_ID)) return;
+    if (!(bootPhase === 'GAME' && gameState === 'HOME') || eventReplay || rhythmEventStoryPending || rhythmHellGuide) return;
+    if (rhythmEventStoryStartedRef.current.includes(SPARKLING_PINK_STORY_ID)) return;
+    setRhythmEventStoryPending(prev => prev || SPARKLING_PINK_STORY_ID);
   }, [rhythmEventStorySeen, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
   useEffect(() => {
     if (typeof setSorashidoJoinSeenForShop === 'function') setSorashidoJoinSeenForShop(Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SORASHIDO_JOIN_STORY_ID));
@@ -236678,6 +237088,7 @@ function MonsterHeroGame() {
     rhythmGrandOpenTeaserSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(RHYTHM_GRAND_OPEN_TEASER_STORY_ID),
     rhythmGrandOpenSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(RHYTHM_GRAND_OPEN_STORY_ID),
     monsucBetaEp1Seen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(MONSUC_BETA_EP1_STORY_ID),
+    sparklingPinkStorySeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SPARKLING_PINK_STORY_ID),
     symphonyEventSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SYMPHONY_STORY_ID)
   };
   const isEventReplayUnlocked = event => !!(event && event.alwaysUnlocked) || !!EVENT_REPLAY_UNLOCK_FLAGS[event && event.unlockedKey];
@@ -251201,7 +251612,7 @@ function MonsterHeroGame() {
     }, {
       id: 'event',
       label: 'イベント',
-      items: [['kikiIntro', 'きき加入イベント BGM'], ['momosukeIntro', 'ももすけ登場イベント BGM'], ['monbeatCupEvent', 'モンヒロビート大会イベント BGM'], ['rhythmMultiEvent', 'みんなで対戦のお話 BGM'], ['masuCallEvent', 'マスモンとセッションのお話 BGM'], ['halloweenNightEvent', 'ハロウィン・ナイトのお話 BGM'], ['assistantChatStoryEvent', '助手とおしゃべりのお話 BGM'], ['atsuJoinStoryEvent', 'あつ加入のお話 BGM'], ['kyukoJoinStoryEvent', 'きゅうこ加入のお話 BGM'], ['cardBattleIntroEvent', 'MFバトルカードのお話 BGM'], ['cardCupStoryEvent', '個人杯のお話 BGM'], ['pandoraWingsStoryEvent', '鍵の向こう側へのお話 BGM']]
+      items: [['kikiIntro', 'きき加入イベント BGM'], ['momosukeIntro', 'ももすけ登場イベント BGM'], ['monbeatCupEvent', 'モンヒロビート大会イベント BGM'], ['rhythmMultiEvent', 'みんなで対戦のお話 BGM'], ['masuCallEvent', 'マスモンとセッションのお話 BGM'], ['halloweenNightEvent', 'ハロウィン・ナイトのお話 BGM'], ['assistantChatStoryEvent', '助手とおしゃべりのお話 BGM'], ['atsuJoinStoryEvent', 'あつ加入のお話 BGM'], ['kyukoJoinStoryEvent', 'きゅうこ加入のお話 BGM'], ['cardBattleIntroEvent', 'MFバトルカードのお話 BGM'], ['cardCupStoryEvent', '個人杯のお話 BGM'], ['pandoraWingsStoryEvent', '鍵の向こう側へのお話 BGM'], ['sparklingPinkStoryEvent', 'ききの「初めての曲」のお話 BGM']]
     }, {
       id: 'other',
       label: 'その他',

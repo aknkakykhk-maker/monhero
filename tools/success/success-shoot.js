@@ -55,6 +55,7 @@ const makeRun = async (kind) => {
   // 能力の上限アップ(r1115-103): 999 を超えた能力の子(4桁の数がはみ出さないか・ゲージの紫の帯)
   if (kind === 'over') s = { ...s, cap: { life: 1500, pow: 999, wise: 1800, hit: 3200, eva: 1200, tough: 999 }, stats: { ...s.stats, hit: 3123, wise: 1789, life: 1234, eva: 1001 } };
   if (kind === 'yosu') s = { ...s, yosu: { sabori: { visits: 0 } } };
+  if (kind === 'ama14') s = { ...s, ama: 14, fear: 10 }; // 甘え度が少し多い所からほめる: 差が5になって育成方針が「甘い」に変わる(r1115-059)
   if (kind === 'bagall') s = { ...s, bag: Object.fromEntries(Object.keys(SUC.ITEMS).filter((k) => SUC.ITEMS[k].use === 'during').map((k) => [k, 1])) }; // 持ち物の升目に育成中に使う物を全部並べる(名前の折れを見る)
   if (kind === 'ki') { const pv = SUC.peek(s).period.index - 1; const pw = SUC.evaluate(s).power; s = { ...s, fameTotal: Math.max(s.fameTotal || 0, 1000) }; return { v: 1, id: s.id, s, nick: 'もちまる', colors: [], from: { base: 'Mocchi' }, items: [], used: 0, phase: 'turn', out: null, log: [], startAt: 1, ki: { p: pv, fame: 0, power: Math.max(0, pw - 616) } }; }
   const run = { v: 1, id: s.id, s, nick: 'もちまる', colors: [], from: { base: 'Mocchi' }, items: ['juice', 'dango'], used: 0, phase: 'main', out: null, log: [], startAt: 1 };
@@ -79,7 +80,8 @@ const makeRun = async (kind) => {
     ['H0', null, []], ['H1', 'mid', []],
     ['RW1', 'mid', ['cont', 'wait:3300']], ['RW2', 'mid', ['cont', 'wait:7800']], ['RW3', 'mid', ['cont', 'wait:11500']], ['RW4', 'mid', ['cont', 'wait:15000']], ['RW5', 'mid', ['cont', 'wait:19600']], // 育成ホームの歩き回り(r1115-052)
     ['OV1', 'over', ['cont']], ['OV2', 'over', ['cont', 'train']], ['OV3', 'over', ['cont', 'stats']], ['OV4', 'over', ['cont', 'detail']], ['OV5', 'over', ['cont', 'train', 'go', 'next']], // 上限アップ(r1115-103)
-    ['HB1', null, ['basemon']], ['HB2', null, ['basemon', 'bmpick:Snegurochka']], ['HB3', null, ['basemon', 'bmpick:Snegurochka', 'tab:apt']], // ホームのベースモン(r1115-043)
+    ['DX1', null, ['seeall', 'dexopen', 'dextab:daily']], ['DX2', null, ['seeall', 'dexopen', 'dextab:daily', 'dexrow:0']], ['DX3', null, ['seeall', 'dexopen', 'dextab:team', 'dexrow:0']], // イベント図鑑(r1115-144・145)
+    ['HB1', null, ['basemon']], ['HB4', null, ['basemon', 'scrollend']], ['HB2', null, ['basemon', 'bmpick:Snegurochka']], ['HB3', null, ['basemon', 'bmpick:Snegurochka', 'tab:apt']], // ホームのベースモン(r1115-043)
     ['S0', null, ['new']], // ストーリー選択(2026-11-14)。S1〜S6 はその「次へ」のあと
     ['TP1', null, ['new', 'next', 'pickmon:Snegurochka', 'detail']], ['TP2', null, ['new', 'next', 'pickmon:Snegurochka', 'detail', 'alt:2-1']], ['TP3', null, ['new', 'next', 'pickmon:Snegurochka', 'detail', 'alt:2-1', 'altopt:sk-0480']], // 技の升の選び(被った升の ⇄ → 窓 → 選ぶ)
     ['S1', null, ['new', 'next']], ['S1D', null, ['new', 'next', 'detail']], ['S1A', null, ['new', 'next', 'detail', 'tab:apt']], ['S1F', null, ['new', 'next', 'detail', 'tab:feat']], ['S1Z', null, ['seedfuse', 'new', 'next', 'tabfuse', 'pickfirst']], ['S1ZD', null, ['seedfuse', 'new', 'next', 'tabfuse', 'pickfirst', 'detail']],
@@ -95,6 +97,7 @@ const makeRun = async (kind) => {
     // 叱る・褒める(2026-11-14 場面ごとの選択肢と、選んだあとの札)
     ['R1', 'mid', ['react:great']], ['R1b', 'mid', ['react:great', 'how:praise']], ['R2', 'mid', ['react:fail']], ['R2b', 'mid', ['react:fail', 'how:scold']],
     ['R3', 'mid', ['react:sab']], ['R3b', 'mid', ['react:sab', 'how:scold']], ['R4', 'mid', ['react:shugyo']], ['R4b', 'mid', ['react:shugyo', 'how:praise']],
+    ['PL1', 'ama14', ['cont', 'train', 'go', 'next', 'praise', 'next', 'pick', 'next']], // 方針が変わったあとのメイン画面(助手が知らせる)
     ['KI', 'ki', ['cont']], ['CL', 'yosu', ['cont', 'clinic']], // 章の終わり(数字は真ん中)・通院の結果(何が治ったかを名前で)
     ['TV1', 'mid', ['tev']], ['TV2', 'mid', ['tevLot']], ['E2', 'mid', ['cont', 'event', 'pick']], ['E5', 'mid', ['cont', 'eventDaily', 'pick']], // E2・E5: 選んだあとの結果の段(札が出る。E5 はふだんの出来事)
   ];
@@ -140,6 +143,17 @@ const makeRun = async (kind) => {
               await new Promise((r) => setTimeout(r, 800)); return true;
             }
             if (st.startsWith('wait:')) { await new Promise((r) => setTimeout(r, Number(st.slice(5)))); return true; }
+            if (st === 'seeall') { // 見た出来事を全部「見た」にして開き直す(図鑑の撮影用)
+              const E = msxSuc.SUC.events; const ev = {}; const ch = {};
+              Object.keys(E.BY_ID).forEach((id) => { ev[id] = 1; ['a', 'b', 'c'].forEach((c) => { ch[`${id}.${c}`] = 1; }); });
+              localStorage.setItem(MSX_SEEN_KEY, JSON.stringify({ v: 1, ev, ch }));
+              window.__msxRoot.unmount(); const el = document.getElementById('msx-shot'); window.__msxRoot = ReactDOM.createRoot(el);
+              window.__msxRoot.render(React.createElement(MonheroSuccessScreen, { onClose() {}, callNameOf: () => 'けんささん', bondLvOf: () => 4 }));
+              await new Promise((r) => setTimeout(r, 800)); return true;
+            }
+            if (st === 'dexopen') { const d = document.querySelector('[data-msx-dex-home]'); if (d) d.click(); return !!d; }
+            if (st.startsWith('dextab:')) { const d = document.querySelector(`[data-msx-dex-tab="${st.slice(7)}"]`); if (d) d.click(); return !!d; }
+            if (st.startsWith('dexrow:')) { const d = document.querySelectorAll('[data-msx-dex-row]')[Number(st.slice(7))]; if (d) d.click(); return !!d; }
             if (st === 'basemon') { const d = document.querySelector('[data-msx-home-basemon]'); if (d) d.click(); return !!d; }
             if (st.startsWith('bmpick:')) { const d = document.querySelector(`[data-msx-basemon="${st.slice(7)}"]`); if (d) d.click(); return !!d; }
             if (st === 'tabfuse') return click(/合体で生まれたモンスター/);

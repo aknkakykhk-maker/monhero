@@ -58,7 +58,7 @@ const manualInput = (i, size, loy = 100) => {
   return { seed: `man-${i}`, catalog, teamA: team(0), teamB: team(3) };
 };
 const legal = (o) => (o.kind === 'enter' ? o.enter.filter(x => x.ok)
-  : [...o.tech.filter(x => x.ok), o.guard, ...o.move.filter(x => x.ok), ...(o.charge.ok ? [o.charge] : []), ...o.swap.filter(x => x.ok)]);
+  : [...o.tech.filter(x => x.ok), o.guard, ...o.move.filter(x => x.ok), ...(o.blow && o.blow.ok ? [o.blow] : []), ...(o.charge.ok ? [o.charge] : []), ...o.swap.filter(x => x.ok)]);
 const playRandom = (m, seed, stopAt = -1) => {
   const pr = engine.makeRng(seed); let n = 0, rejected = 0, bad = 0;
   while (m.pending()) {
@@ -100,7 +100,8 @@ const playRandom = (m, seed, stopAt = -1) => {
     const r = m.result(); if (!r) continue;
     if (r.log[0].ctl && r.log[0].ctl.A === 'human' && !r.log[0].ctl.B) ctlRow++;
     // 技の勢いで移った行(ev:'move'・why:'techMove'・byTech)は、芯が技のあとに足す移動で「自分の手」ではない
-    const aActs = r.log.filter(e => e.side === 'A' && ['tech', 'move', 'guard', 'charge', 'swap'].includes(e.ev) && !e.byTech);
+    //   ふきとばされた行(why:'blown'・版10)も相手の手のあとに芯が足す移動で「自分の手」ではない
+    const aActs = r.log.filter(e => e.side === 'A' && ['tech', 'move', 'guard', 'charge', 'swap', 'blow'].includes(e.ev) && !e.byTech && e.why !== 'blown');
     if (aActs.filter(e => e.why !== 'sulk').every(e => e.why === 'player')) player++;
     if (loy < 100) { sulkN++; const sulks = aActs.filter(e => e.why === 'sulk').length; sulkAll += sulks; if (sulks + asksA === aActs.length) sulkOk++; }
     if (size === 3 && sawEnter) enterAsked++;
@@ -152,7 +153,10 @@ const playRandom = (m, seed, stopAt = -1) => {
           if (t.reach !== t.dist.includes(o.dist)) techOk = false;
           if (!(t.p >= 5 && t.p <= 99)) techOk = false;
         }
-        for (const mv of o.move) if (mv.ok !== (mv.to >= 0 && mv.to <= 3)) moveOk = false;
+        // 版10: 移動・ふきとばしは 5×(段+1) のガッツを払う。足りなければ選べない。ふきとばしは零だけ
+        for (const mv of o.move) if (mv.ok !== (mv.to >= 0 && mv.to <= 3 && o.guts >= o.moveCost) || mv.guts !== o.moveCost) moveOk = false;
+        if (o.moveCost !== engine.MOVE_COST_STEP * (o.moveLv + 1)) moveOk = false;
+        if (o.blow.ok !== (o.dist === 0 && o.guts >= o.moveCost && !o.blow.wait)) moveOk = false;
         if (o.charge.ok !== (o.guts < engine.GUTS_MAX)) chargeOk = false;
         for (const s of o.swap) if (s.ok && (o.swapWait > 0 || s.hp <= 0)) swapOk = false;
         if (o.hint && legal(o).some(x => x.type === o.hint.type)) hintOk++;
@@ -161,7 +165,7 @@ const playRandom = (m, seed, stopAt = -1) => {
     }
   }
   check('⑦ 技: 届く距離でガッツが足りるときだけ選べる・命中%付き', techOk);
-  check('⑦ 移動: 零・遠の端では片方だけ/ためる: 満タンでは選べない', moveOk && chargeOk);
+  check('⑦ 移動: 零・遠の端では片方だけ・ガッツが足りなければ選べない/ふきとばし: 零だけ/ためる: 満タンでは選べない', moveOk && chargeOk);
   check('⑦ 交代: 待ちの間と倒れた子は選べない', swapOk);
   check('⑦ AI のおすすめ(hint)が選べる手の中にある', hintOk >= n * 0.95, `${hintOk}/${n}`);
 }

@@ -4,12 +4,13 @@
   ・背景のぼかし(薄い半透明の光・灰色のもや)と、ふちの小さな点(ごみ)を取る
   ・ふちの画素の色を、体の内側の色で塗り直す(白・黒の色のにじみを消す)
   ・ふちのアルファは2値に切らない(半透明を残す。元の絵のふちが2値なら高い解像度のうちに少しぼかす)
-  ・体の見える範囲で切り詰め(まわりに少しだけ余白)、512x768 の枠へ lanczos で縮めて、libimagequant で 256 色に減らす
+  ・体の見える範囲で切り詰め(まわりに少しだけ余白)。縮めない・色も減らさない(元の大きさ・元の色数の PNG)
+    2026-11-15 r1115-143 社長「ゲーム内ダウンロード機能があるから変に画質を下げなくていい」で、512x768 の枠への縮小と 256 色への減色をやめた
   ・みゅあの8表情のシート(life-expression-sheets.py の SHEETS)の全身画も、ここで同じ作り方で作る(全36枚)
   ・書き出し先: monster-hero/images/assistant/fullbody/<キー>.png
   ・ふちが2値に戻っていないかは tools/assistant/life-fullbody-edge-check.js が見張る
 
-使い方: pip install imagequant && python3 tools/assistant/life-fullbody-art.py [--only <名前>] [--sheet 確認用の画像]
+使い方: python3 tools/assistant/life-fullbody-art.py [--only <名前>] [--sheet 確認用の画像]
 絵を足すときは下の ART に1行足して回す(キーは data の ASSISTANT_FULLBODY_ART と同じ)。
 """
 import os, sys
@@ -335,7 +336,10 @@ POCKETS = {
 }
 # 書き出しの大きさ: 画面で出る大きさ(紹介の1人ずつの画面。縦 約 290・横 約 370 CSS px の高さ)× 端末の2倍 ≒ 768。
 #   864 も試したが、見た目は変わらず合計が 1 割ほど重くなるので 768。元がこれより小さい絵(みゅあの8表情)は元の大きさのまま
-OUT_W, OUT_H = 512, 768
+# 2026-11-15 r1115-143: 枠で縮めない(元の大きさのまま)。OUT_W・OUT_H は大きくして、縮める処理が働かないようにした
+OUT_W, OUT_H = 100000, 100000
+# ふちの処理(白マット取り・すき間・ぼかし)の強さの基準。前の書き出しの高さ 768 のまま(縮めるのをやめても、元の絵の上での処理は前と同じにする)
+REF_H = 768
 MARGIN = 6  # 切り詰めのあとの余白(出力の画素)
 
 
@@ -570,10 +574,10 @@ def clean(path, min_frac=0.03, arr=None, seeds=None, soft=None, flood=False, sta
     (2026-11-12 社長「全身画の透過の荒さ直ってないね」: 前の作りはふちを 0/255 近くへ寄せていた)。
     soft … ふちのアルファをぼかす量(元の絵の画素)。None なら元の絵のふちが2値のときだけ、書き出しで約 0.6 画素になる量でぼかす。"""
     im = (np.array(Image.open(path).convert('RGBA')) if arr is None else arr)
-    pk = auto_pockets(im, boxes, max(1.0, im.shape[0] / OUT_H)) if boxes else None
+    pk = auto_pockets(im, boxes, max(1.0, im.shape[0] / REF_H)) if boxes else None
     if seeds or pk is not None:
         im = drop_pockets(im, seeds, pk)  # 抜いた所のふちは2値なので、あとで少しぼかす
-    im, nfix = dematte(im, max(1.0, im.shape[0] / OUT_H), flood, halo)  # 白マット取り(元の絵の大きさのうちに)
+    im, nfix = dematte(im, max(1.0, im.shape[0] / REF_H), flood, halo)  # 白マット取り(元の絵の大きさのうちに)
     if stats is not None:
         stats.append(nfix)
     im = im.astype(np.float32)
@@ -606,7 +610,7 @@ def clean(path, min_frac=0.03, arr=None, seeds=None, soft=None, flood=False, sta
     ring = dil(body, 1) & ~ero(body, 1)
     if soft is None:
         # 量は書き出しで約 0.6 画素になるように(縮める絵ほど元の絵の上では大きく)
-        k = max(1.0, h0 / OUT_H)
+        k = max(1.0, h0 / REF_H)
         soft = 0.6 * k if ring.sum() and edge.sum() < 0.3 * ring.sum() else (0.4 * k if (seeds or pk is not None) else 0.0)
     if soft > 0:
         a2 = np.minimum(blur(a2, soft) * 1.0, np.where(dil(a2 > 0, 3), 255, 0))
@@ -658,7 +662,8 @@ def quant(im):
 
 def save(im, path):
     os.makedirs(os.path.dirname(path), exist_ok=True)
-    quant(im).save(path, optimize=True)
+    # 色を減らさない(2026-11-15 r1115-143)。quant は使わない
+    im.save(path, optimize=True)
     return os.path.getsize(path)
 
 
