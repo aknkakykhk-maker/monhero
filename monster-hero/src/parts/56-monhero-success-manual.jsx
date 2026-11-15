@@ -45,10 +45,14 @@ const msaTechNameParts = (name) => {
   if (cur) out.push(cur);
   return out;
 };
+// 言葉の幅の目安(字の大きさ1つ分=1)。全角は1・半角の英数は0.62。絵文字のアイコンは1.3(iPhone の絵文字は広い)
+const msaTnEm = (str) => [...String(str || '')].reduce((n, ch) => n + (/[\x20-\x7E]/.test(ch) ? 0.62 : 1), 0);
+// いちばん長い言葉の幅(先頭の言葉はアイコンと同じ行に並ぶので、アイコンの幅も足す)
+const msaTnWidest = (parts, icon) => Math.max(1, ...parts.map((p, i) => msaTnEm(p) + (i === 0 && icon ? 1.3 : 0))) + 0.2;
 function MsaTechName({ name, icon = '', className = '' }) {
   const parts = msaTechNameParts(name);
   return (
-    <span className={`msa-tn ${className}`} data-msa-tn>
+    <span className={`msa-tn ${className}`} data-msa-tn style={{ '--tnw': msaTnWidest(parts, icon).toFixed(2) }}>
       {icon ? <span className="msa-tn-s">{icon}</span> : null}
       {parts.map((p, i) => <React.Fragment key={i}>{i ? <wbr/> : null}<span className="msa-tn-s">{p}</span></React.Fragment>)}
     </span>
@@ -95,12 +99,14 @@ const MSA_DC_CSS = `
 .msa-dc{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px}
 /* 幅360未満は2列×2段(1語の長い技名が4列の札に入りきらない。技名は言葉の途中で折らない) */
 @media (max-width:359.98px){.msa-dc{grid-template-columns:repeat(2,minmax(0,1fr))}.msa-dc-c{min-height:52px}}
-.msa-dc-c{position:relative;overflow:hidden;min-width:0;min-height:58px;border-radius:10px;border:1px solid #4c4680;background:#1b1733;color:#94a3b8;font-weight:800;font-size:10.5px;padding:3px 4px 4px;text-align:left;line-height:1.2;font-family:inherit;display:flex;flex-direction:column;gap:1px}
+.msa-dc-c{container-type:inline-size;position:relative;overflow:hidden;min-width:0;min-height:58px;border-radius:10px;border:1px solid #4c4680;background:#1b1733;color:#94a3b8;font-weight:800;font-size:10.5px;padding:3px 4px 4px;text-align:left;line-height:1.2;font-family:inherit;display:flex;flex-direction:column;gap:1px}
 .msa-dc-c .msa-dc-h{display:flex;align-items:center;gap:3px;font-size:10px;color:#a5b4fc}
 .msa-dc-c .msa-dc-h em{font-style:normal;font-size:9px;background:#fde047;color:#422006;border-radius:6px;padding:0 4px;font-weight:900}
 .msa-dc-c .msa-dc-h i{font-style:normal;margin-left:auto;font-size:9px;color:#94a3b8}
 .msa-dc-c small{display:block;font-size:9.5px;color:#cbd5e1;white-space:nowrap;overflow:hidden}
 .msa-dc-c small.p{color:#fde68a;font-weight:900}
+/* 技の札の技名は、一番長い言葉(--tnw 字ぶん)が札の幅に入る大きさまで CSS で縮める(2026-11-15 r1115-049 iPhone で「デュアルスラッ」と切れた。JS の縮め直しより先に効く) */
+@supports (width:1cqw){.msa-dc-c .msa-tn{font-size:max(7px,min(10.5px,calc(100cqw / var(--tnw,1))))}}
 .msa-dc-c.now{border-color:#fde047;box-shadow:0 0 0 1px #fde04788 inset;background:#2d2650;color:#fff}
 .msa-dc-c.far{opacity:.55}
 .msa-dc-c.ng small.p{color:#fca5a5}

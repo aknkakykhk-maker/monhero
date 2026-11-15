@@ -313,6 +313,7 @@ const MSC_CSS = `
 .msc-hero.win .big{color:#fde047;-webkit-text-stroke:2px #9a3412;text-shadow:0 5px 0 #7c2d12,0 0 22px rgba(251,191,36,.85)}
 .msc-hero.lose .big{color:#e2e8f0;-webkit-text-stroke:1.5px #334155;text-shadow:0 4px 0 #0f172a;transform:rotate(-6deg);font-size:46px}
 .msc-hero .sub{position:absolute;z-index:3;left:8px;right:8px;top:84px;text-align:center;font-size:13px;font-weight:900;color:#fff;text-shadow:0 2px 3px rgba(0,0,0,.8)}
+.msc-hero .sub .nw{display:inline-block;white-space:nowrap}
 .msc-hero .who{position:absolute;z-index:2;left:50%;bottom:58px;transform:translateX(-50%);width:62%;height:56%;display:flex;align-items:flex-end;justify-content:center}
 .msc-hero .who img{max-width:100%;max-height:100%;object-fit:contain;filter:drop-shadow(0 8px 8px rgba(0,0,0,.5))}
 .msc-hero.win .who{height:46%}
@@ -334,7 +335,7 @@ const MSC_CSS = `
 .msc-hero .rival em{font-style:normal;background:#fde047;color:#3b2a05;border-radius:999px;padding:1px 8px;font-size:11px}
 .msc-rw{display:flex;align-items:center;gap:8px;border-radius:12px;background:rgba(15,12,34,.88);border:1.5px solid #3f3a6b;padding:9px 10px;font-size:13px;font-weight:800;animation:msc-fade .35s ease-out both}
 .msc-rw .i{font-size:20px;width:26px;text-align:center}
-.msc-rw .k{flex:0 0 auto;min-width:72px}
+.msc-rw .k{flex:0 0 6.6em;white-space:nowrap} /* 見出しの列の幅をそろえて、値の書き出しをそろえる(r1115-051。一番長い「修行チケット」「能力ポイント」が入る幅) */
 .msc-rw .v{flex:1;min-width:0;color:#e2e8f0;font-size:12.5px}
 .msc-rw.big{background:linear-gradient(90deg,rgba(161,98,7,.55),rgba(15,12,34,.88));border-color:#fde047}
 .msc-again{border-radius:16px;background:rgba(15,12,34,.92);border:1.5px solid #3f3a6b;padding:10px;display:flex;flex-direction:column;gap:7px}
@@ -620,7 +621,8 @@ function MonsucCupWin({ s, info, match, out, onNext }) {
         <div className="msc-rays"/>
         <div className="big">優勝!</div>
         <div className="who">{(() => { const im = <MscMyMon sp={s.species} colors={info.colors}/>; const k = s.awake && typeof msxKiraOf === 'function' ? msxKiraOf(s.awake) : null; return k && typeof cardKiraWrap === 'function' ? cardKiraWrap(k, im, { src: mscMonImg(s.species), calm: typeof msxAwCalm === 'function' && msxAwCalm() }) : im; })()}</div>
-        <div className="sub">{info.title} {MSC_STARS(info.star)}・1戦: {o.name || mscMonName(o.species)} に 勝ち{match && match.r ? `(${match.r.rounds} ラウンド)` : ''}</div>
+        {/* 言葉のまとまりごとに折れない塊にして、塊の間でだけ折り返す(2026-11-15 r1115-051「ラ/ウンド」と折れた・語の間の空白) */}
+        <div className="sub" data-msc-win-sub><span className="nw">{info.title}{MSC_STARS(info.star)}</span> <span className="nw">1戦目</span> <span className="nw">{o.name || mscMonName(o.species)}に勝ち{match && match.r ? `(${match.r.rounds}ラウンド)` : ''}</span></div>
         {info.rival && <div className="rival"><span>ライバルの {o.name || mscMonName(o.species)} にも 勝った!</span><em>ごほうび大</em></div>}
       </div>
       {rows.map((r, k) => <div key={k} className={`msc-rw ${r.big ? 'big' : ''}`} style={{ animationDelay: `${0.3 + k * 0.12}s` }}><span className="i">{r.i}</span><span className="k">{r.k}</span><span className="v">{r.v}</span></div>)}

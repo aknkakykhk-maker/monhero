@@ -45,6 +45,20 @@ VARIANTS.A3P2 = { name: '案A3+P2', rep: VARIANTS.A3.rep, pts: 1.5, trainPts: 1,
 // 別案(勝手に入れない): 修行の「編成の得意」の割合を下げる(1位 3% → 2%・2位 1% → 0.7%・3位 0.5% → 0.3%)
 VARIANTS.A3P2S = { name: '案A3+P2+修行の編成の割合を下げる(別案)', rep: [...VARIANTS.A3.rep, ['pct: Object.freeze([0.03, 0.01, 0.005])', 'pct: Object.freeze([0.02, 0.007, 0.003])']], pts: 1.5, trainPts: 1, greatPts: 2, mastery: 1 };
 VARIANTS.A3P2h = { name: '案A3+P2(熟練は2点で+1)', rep: VARIANTS.A3.rep, pts: 1.5, trainPts: 1, greatPts: 2, mastery: 0.5 };
+// 案D(r1115-093): いっしょ型を「大きい順に 1・1/2・1/4…」で重ねる(その子のいっしょ型の合計ごとに)・失敗率/サボり/ストレスの下げは合計 50% まで・体力消費ダウンは 40% まで
+const DIM = [
+  ["const withSum = (s, card, id) => { let v = 0; if (card) card.members.forEach(i => { const lv = assistLv(s.team[i], id); if (lv) v += num(aOf(id, 'v', lv)); }); return v; };",
+   "const __dim = (a) => a.slice().sort((x, y) => y - x).reduce((t, x, i) => t + x * Math.pow(0.5, i), 0); const withSum = (s, card, id) => { const a = []; if (card) card.members.forEach(i => { const lv = assistLv(s.team[i], id); if (lv) a.push(num(aOf(id, 'v', lv))); }); return __dim(a); };"],
+  ["const loy = loyalOf(s); let add = 0; let tag = 0; const tags = [];", "const loy = loyalOf(s); let add = 0; let tag = 0; const tags = []; const __ap = [];"],
+  ["add += (memberEffect(m, card.stat, loy) + evMod(s, 'boost', i)) / 100;", "add += ((m.bonus[card.stat] || 0) + evMod(s, 'boost', i)) / 100; __ap.push(assistPart(m, card.stat, loy));"],
+  ["if (card.members.length >= GATHER.groupMin) add +=", "add += __dim(__ap) / 100; if (card.members.length >= GATHER.groupMin) add +="],
+  ["card.members.forEach(i => { const lv = assistLv(s.team[i], 'hirameki'); if (lv) g += aOf('hirameki', 'v', lv) / 100; });", "g += withSum(s, card, 'hirameki') / 100;"],
+  ["return Math.min(0.8, c); };", "return Math.min(0.5, c); };"],
+  ["f *= 1 - Math.min(0.8, cut);", "f *= 1 - Math.min(0.5, cut);"],
+  ["(1 - Math.min(0.6, it))", "(1 - Math.min(0.4, it))"],
+];
+VARIANTS.D = { name: '案D 重なり方の決め(093)', rep: DIM };
+VARIANTS.A3D = { name: '案A3+D', rep: [...VARIANTS.A3.rep, ...DIM] };
 VARIANTS.AP = { name: '案A+P', rep: VARIANTS.A.rep, pts: 2, greatPts: 2, mastery: 1 };
 // 別案(勝手に入れない): 修行の能力の上がり(行き先の基礎 8 → 6)を少し下げる
 VARIANTS.APs = { name: '案A+P+修行の基礎 8→6(別案)', rep: [...VARIANTS.A.rep, ['fixed: Object.freeze({ base: 8,', 'fixed: Object.freeze({ base: 6,']], pts: 2, greatPts: 2, mastery: 1 };
@@ -75,6 +89,10 @@ const REAL = { B: { sum: 2600, techs: 4, loy: 70, pop: 40, power: 10000 }, A: { 
 const teamOf = (SUC, kind) => {
   if (kind === 'base') return [];
   if (kind.startsWith('box-')) return boxSeed(kind).mons.slice(0, 6).map(m => ({ kind: 'raised', species: m.species, name: m.nick, stats: m.st, techs: m.techs }));
+  if (kind === 'max') { // 6体とも 能力の合計 4,300・いっしょ型8つを最大で(いちばん強く積んだ形)
+    const ids = ['sokoji', 'atooshi', 'hirameki', 'ochitsuki', 'itawari', 'kizuna', 'ninzu', 'hagemi']; const sp = ['Undine', 'Mocchi', 'Golem', 'Pixie', 'Tiger', 'Kyubi'];
+    return sp.map((x, i) => { const st = {}; K.forEach((k, j) => { st[k] = Math.round(4300 / 6 * (0.7 + ((i + j) % 4) * 0.2)); }); return { kind: 'raised', species: x, name: `箱${i + 1}`, stats: st, lv: 50, loy: 85, pop: 70, techs: SUC.techsOf(x).slice(0, 8).map(t => t.id), assists: ids.map(id => ({ id, n: AT.BY_ID[id].v.length })) }; });
+  }
   const p = REAL[kind.replace('real-', '')]; const sp = ['Undine', 'Mocchi', 'Golem', 'Pixie', 'Tiger', 'Kyubi'];
   return sp.map((x, i) => { const st = {}; K.forEach((k, j) => { st[k] = Math.round(p.sum / 6 * (0.7 + ((i + j) % 4) * 0.2)); }); return { kind: 'raised', species: x, name: `箱${i + 1}`, stats: st, lv: 30, loy: p.loy, pop: p.pop, techs: SUC.techsOf(x).slice(0, p.techs).map(t => t.id), assists: AT.autoPick(AT.pointsOf(p.power), []).picks }; });
 };
@@ -159,7 +177,8 @@ for (const vk of vlist) {
     const rs = []; for (let i = 0; i < RUNS; i++) rs.push(runLap(SUC, v, cfg, i + 1));
     const sum = (k) => rs.reduce((a, x) => a + x[k][0], 0) / rs.reduce((a, x) => a + x[k][1], 0);
     const pw = med(rs.map(x => x.power));
-    const row = { lap: li + 1, species: cfg.species, style: cfg.name, team: cfg.team, power: pw, grade: SUC.gradeOf(pw).label, losses: +(rs.reduce((a, x) => a + x.losses, 0) / RUNS).toFixed(1),
+    const gd = {}; rs.forEach(x => { const L = String(x.grade).replace(/\d+$/, ''); gd[L] = (gd[L] || 0) + 1; });
+    const row = { dist: ['M', 'SSS', 'SS', 'S', 'A', 'B', 'C', 'D', 'E'].filter(k => gd[k]).map(k => `${k}${Math.round(gd[k] / RUNS * 100)}%`).join(' '), lap: li + 1, species: cfg.species, style: cfg.name, team: cfg.team, power: pw, grade: SUC.gradeOf(pw).label, losses: +(rs.reduce((a, x) => a + x.losses, 0) / RUNS).toFixed(1),
       leagueWin: Math.round(sum('league') * 100), summitWin: Math.round(sum('summit') * 100), endLose: Math.round(rs.filter(x => x.league[0] < x.league[1] || x.summit[0] < x.summit[1]).length / RUNS * 100),
       ptsGot: med(rs.map(x => x.ptsGot)), shugyo: med(rs.map(x => x.shugyo)), cond: +(rs.reduce((a, x) => a + x.condLearned, 0) / RUNS).toFixed(2), condTotal: rs[0].condTotal };
     results[vk].laps.push(row);
@@ -168,7 +187,7 @@ for (const vk of vlist) {
 for (const [vk, r] of Object.entries(results)) {
   console.log(`■ ${r.name}(${RUNS}回ずつ・中央値)`);
   console.log('周|子|育て方|編成|総合力|評価|負け|リーグ勝率|ファイナル勝率|期末で負けた周|能力P|修行|熟練の条件つき技');
-  r.laps.forEach(x => console.log([x.lap, x.species, x.style, x.team, x.power, x.grade, x.losses, `${x.leagueWin}%`, `${x.summitWin}%`, `${x.endLose}%`, x.ptsGot, x.shugyo, `${x.cond}/${x.condTotal}`].join('|')));
+  r.laps.forEach(x => console.log([x.lap, x.species, x.style, x.team, x.power, x.grade, x.losses, `${x.leagueWin}%`, `${x.summitWin}%`, `${x.endLose}%`, x.ptsGot, x.shugyo, `${x.cond}/${x.condTotal}`, x.dist].join('|')));
 }
 if (JSON_OUT) fs.writeFileSync(JSON_OUT, JSON.stringify({ runs: RUNS, results }, null, 1));
 fs.rmSync(TMP, { recursive: true, force: true });
