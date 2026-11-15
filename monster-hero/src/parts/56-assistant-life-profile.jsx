@@ -204,6 +204,17 @@ const assistantLifeProfileFace = (id, greeting, k) => {
   const lines = ASSISTANT_LIFE_PROFILE_FACE_LINES[id];
   return { e, label, n: i + 1, t: i === 0 || !lines || !lines[i - 1] ? greeting : lines[i - 1] };
 };
+// 表情の全身画の、8表情でいちばん高い絵の高さ(画素。images/assistant/fullbody/<名前>__<表情>.png)。表情を変えても体の大きさをそろえるのに使う(r1115-203)。
+//   全身画を作り直したら合わせる(tools/assistant/life-profile-faces-check.js の ③ が絵と食い違うと止める)
+const ASSISTANT_LIFE_PROFILE_FULL_MAX_H = Object.freeze({
+  atsu: 780, kiki: 1548, kiki_halloween: 785, kyuko: 874, momosuke: 899, momosuke_halloween: 899, mua: 590, mua_halloween: 517, 'mua_card-master': 524,
+  sorashido: 899, sorashido_hosei: 896, erubin: 771, erubin_sekiyuou: 784,
+});
+const ASSISTANT_LIFE_PROFILE_FULL_NH = new Map(); // 読み込んだ絵の高さ(画素)
+const assistantLifeProfileFullMaxH = (src) => {
+  const m = /\/fullbody\/(.+?)__[a-z]+\.png/.exec(String(src || ''));
+  return (m && ASSISTANT_LIFE_PROFILE_FULL_MAX_H[m[1]]) || 0;
+};
 function AssistantLifeProfileStand({ who, head = 0.32, top = 0.16, expr = 'happy' }) {
   const src = typeof assistantFullImage === 'function' ? assistantFullImage(who, expr) : '';
   const boxRef = React.useRef(null);
@@ -219,10 +230,18 @@ function AssistantLifeProfileStand({ who, head = 0.32, top = 0.16, expr = 'happy
     return () => { window.removeEventListener('resize', f); if (ro) ro.disconnect(); };
   }, []);
   const fullSrc = typeof assistantFullBodyImage === 'function' ? assistantFullBodyImage(who, expr) : null;
-  if (fullSrc) { // 全身画: 枠の高さにおさめて足元をそろえる(頭の大きさは絵ごとの全身の比のまま)
+  const [fullH, setFullH] = React.useState(() => ASSISTANT_LIFE_PROFILE_FULL_NH.get(fullSrc) || 0);
+  React.useEffect(() => { setFullH(ASSISTANT_LIFE_PROFILE_FULL_NH.get(fullSrc) || 0); }, [fullSrc]);
+  if (fullSrc) { // 全身画: 足元をそろえる。表情を変えても体の大きさが変わらないように、8表情でいちばん背の高い絵が枠の 96% になる倍率を全部の表情に使う
+    //   (2026-11-15 r1115-203: 表情の絵は1枚ずつ体の範囲で切ってあり、腕を上げた絵などは縦が長い。絵ごとに枠へ収めると、えるびん・ききハロウィンで体が 7〜8% 縮んだ)
+    const maxH = assistantLifeProfileFullMaxH(fullSrc);
+    const sized = maxH && fullH;
+    const onLoad = (e) => { const h = e.currentTarget.naturalHeight; if (h > 0) { ASSISTANT_LIFE_PROFILE_FULL_NH.set(fullSrc, h); setFullH(h); } };
     return (
       <div ref={boxRef} className="pointer-events-none absolute inset-0 overflow-hidden" data-assistant-life-profile-stand={who.id} data-assistant-life-profile-fullbody={fullSrc}>
-        <img src={fullSrc} alt={who.name} draggable={false} className="absolute" style={{ left: 0, right: 0, bottom: '2%', width: '100%', height: '96%', objectFit: 'contain', objectPosition: 'center bottom' }}/>
+        {sized
+          ? <img src={fullSrc} alt={who.name} draggable={false} onLoad={onLoad} className="absolute max-w-none" style={{ left: '50%', bottom: '2%', width: 'auto', height: `${(96 * Math.min(1, fullH / maxH)).toFixed(2)}%`, transform: 'translateX(-50%)' }}/>
+          : <img src={fullSrc} alt={who.name} draggable={false} onLoad={onLoad} className="absolute" style={{ left: 0, right: 0, bottom: '2%', width: '100%', height: '96%', objectFit: 'contain', objectPosition: 'center bottom' }}/>}
       </div>);
   }
   const face = typeof assistantLifeStandFace === 'function' ? assistantLifeStandFace(who.id, src) : null;

@@ -97,7 +97,8 @@ def cut_cells(cfg):
         arr = np.array(c.convert('RGBA'))
         if cfg['bg'] == 'checker':
             arr = key_checker(arr[..., :3])
-        out.append(fb.clean(None, min_frac=0.002, arr=arr, glow_cut=cfg.get('glow_cut', False), soft=0.6 if cfg['bg'] == 'checker' else None))
+        # 透過で届いたシート(みゅあ・みゅあハロウィン)は、元の絵のふちのまま(raw・2026-11-15 r1115-203)。市松を抜いたシートはふちが2値なので今までどおり
+        out.append(fb.clean(None, min_frac=0.002, arr=arr, glow_cut=cfg.get('glow_cut', False), soft=0.6 if cfg['bg'] == 'checker' else None, raw=cfg['bg'] == 'alpha'))
         # カードマスターの市松(bg='checker')の抜き方は #5772 のまま(2026-11-12 #5793 で抜き直したら髪まで消えた・#5795 で絵を戻した)。
         #   作り直すときは、市松を格子の模様として見分けて抜き、髪を1本も消さないこと(窓口)
     return out
