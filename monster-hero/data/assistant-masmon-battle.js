@@ -478,7 +478,7 @@
     for (const step of [-1, 1]) {
       const nd = dist + step;
       if (nd < 0 || nd > 3) continue;
-      const myGuts = Math.min(GUTS_MAX, u.guts + u.regen + GUTS_MOVE);
+      const myGuts = Math.min(GUTS_MAX, u.guts + u.regen + (ctx.gMove || GUTS_MOVE));
       const gain = bestThreat(u, f, nd, myGuts) - bestThreat(u, f, dist, myGuts);
       const risk = bestThreat(f, u, nd, foeNextGuts) - threatNow;
       // 読みが浅いうちは、相手の反撃(risk)を半分しか見ない
@@ -498,7 +498,7 @@
     }
     // ためる(ガッツが満タンなら候補に入れない)
     if (u.guts < GUTS_MAX) {
-      const afterGuts = Math.min(GUTS_MAX, u.guts + u.regen + GUTS_CHARGE);
+      const afterGuts = Math.min(GUTS_MAX, u.guts + u.regen + (ctx.gCharge || GUTS_CHARGE));
       const nowBest = bestThreat(u, f, dist, u.guts);
       const laterBest = bestThreat(u, f, dist, afterGuts);
       let score = (laterBest - nowBest) / f.maxHp * 100 * 0.6 * (0.8 + 0.2 * sty.thrift);
@@ -667,7 +667,13 @@
     }
     state.dist = 1 + Math.floor(rng() * 2);
     if (rules && rules.distStart !== undefined) state.dist = rules.distStart;   // 乱数は上で引いたまま(ほかの流れをずらさない)
-    const ctx = { state, rng, trace: !!inp.trace, lastCands: null, buffs, noSwap: !!(rules && rules.noSwap) };
+    // ガッツの回復の規則(モンサク・2026-11-15 r1115-090 社長「全部半分」): gutsPlan:{ regen, move, charge }(倍率 0.1〜1)。渡さなければ今までと同じ(指紋も変わらない)
+    const gp = inp.gutsPlan && typeof inp.gutsPlan === 'object' ? inp.gutsPlan : null;
+    const mulOf = (v) => (Number.isFinite(Number(v)) && Number(v) > 0 ? clamp(Number(v), 0.1, 1) : 1);
+    const gMove = gp ? Math.max(1, Math.round(GUTS_MOVE * mulOf(gp.move))) : GUTS_MOVE;
+    const gCharge = gp ? Math.max(1, Math.round(GUTS_CHARGE * mulOf(gp.charge))) : GUTS_CHARGE;
+    if (gp && gp.regen !== undefined) for (const side of ['A', 'B']) for (const x of state.teams[side].units) x.regen = Math.max(1, Math.round(x.regen * mulOf(gp.regen)));
+    const ctx = { state, rng, trace: !!inp.trace, lastCands: null, buffs, noSwap: !!(rules && rules.noSwap), gMove, gCharge };
     const log = [];
     const alive = (side) => state.teams[side].units.some(x => x.hp > 0);
     const unitOf = (side) => state.teams[side].units[state.teams[side].active];
@@ -692,6 +698,8 @@
     push({ ev: 'enter', side: 'B', i: 0, name: unitOf('B').name });
 
     let winner = null, reason = null;
+    // 与えたダメージ・消費ガッツの合計(判定 judge:'three' が使う。ログにも乱数にも触れない)
+    const tally = { A: { dmg: 0, guts: 0 }, B: { dmg: 0, guts: 0 } };
     function* act(side) {
       const foeSide = side === 'A' ? 'B' : 'A';
       const me = state.teams[side];
@@ -700,7 +708,7 @@
       u.guarding = false;
       // 忠誠度が100未満のときだけ乱数を引く(忠誠100・無い編成は乱数の列も今と同じ)
       if (u.loy < 100 && !(buffs[side] && buffs[side].noSulk) && rng() < (100 - u.loy) * LOYAL_NOACT) {
-        u.guts = Math.min(GUTS_MAX, u.guts + GUTS_CHARGE);
+        u.guts = Math.min(GUTS_MAX, u.guts + gCharge);
         push({ ev: 'charge', side, i: me.active, why: 'sulk', guts: u.guts });
         u.swapCooldown = Math.max(0, u.swapCooldown - 1); u.moveStreak = 0; // 「ためる」と同じあと始末
         return;
@@ -712,6 +720,7 @@
         const mv = u.moves.find(m => m.key === c.key);
         const g0 = u.guts;                       // 撃つ前のガッツで当たり・重さを決める
         u.guts -= mv.guts;
+        tally[side].guts += mv.guts;
         const p = buffedHit(hitChance(u, f, mv, g0, state.dist), buffs[side], buffs[foeSide], !usedFirst[side]);
         usedFirst[side] = true;
         const hit = rng() < p;
@@ -722,6 +731,7 @@
           const swing = 0.9 + rng() * 0.2;
           dmg = rawDamage(u, f, mv, state.dist, g0) * swing * (crit ? CRIT_MULT : 1) * (f.guarding ? 1 - guardCut(f) : 1);
           dmg = Math.max(1, Math.round(dmg));
+          tally[side].dmg += Math.min(dmg, f.hp);
           f.hp = Math.max(0, f.hp - dmg);
         }
         const gd = hit && mv.gd > 0 ? Math.min(mv.gd, f.guts) : 0;   // ガッツダウン
@@ -736,14 +746,14 @@
         }
       } else if (c.type === 'move') {
         state.dist = clamp(state.dist + c.step, 0, 3);
-        u.guts = Math.min(GUTS_MAX, u.guts + GUTS_MOVE);
+        u.guts = Math.min(GUTS_MAX, u.guts + gMove);
         push({ ev: 'move', side, i: me.active, why: c.why, step: c.step, to: state.dist, guts: u.guts });
       } else if (c.type === 'guard') {
         u.guarding = true;
-        u.guts = Math.min(GUTS_MAX, u.guts + GUTS_MOVE);
+        u.guts = Math.min(GUTS_MAX, u.guts + gMove);
         push({ ev: 'guard', side, i: me.active, why: c.why, name: 'ガード', guts: u.guts });
       } else if (c.type === 'charge') {
-        u.guts = Math.min(GUTS_MAX, u.guts + GUTS_CHARGE);
+        u.guts = Math.min(GUTS_MAX, u.guts + gCharge);
         push({ ev: 'charge', side, i: me.active, why: c.why, guts: u.guts });
       } else if (c.type === 'swap') {
         const from = me.active;
@@ -786,8 +796,28 @@
         yield* act(side);
       }
     }
+    if (!winner && inp.judge === 'three') {
+      // 判定(モンサク・2026-11-15 社長 r1115-058): 残ライフ%・与えたダメージ・消費ガッツを別々に比べ、勝ちの数が多い方の勝ち。
+      //   同数のときは残ライフの量(実数)→残ライフ%→与えたダメージの順。それでも同じなら A(自分)の負け。消費ガッツは多い方が勝ち
+      const sum = (side, k) => state.teams[side].units.reduce((q, x) => q + x[k], 0);
+      const hpA = sum('A', 'hp'), hpB = sum('B', 'hp'), mxA = sum('A', 'maxHp') || 1, mxB = sum('B', 'maxHp') || 1;
+      const rows = [
+        { key: 'pct', a: Math.round(hpA / mxA * 1000) / 10, b: Math.round(hpB / mxB * 1000) / 10 },
+        { key: 'dmg', a: tally.A.dmg, b: tally.B.dmg },
+        { key: 'guts', a: tally.A.guts, b: tally.B.guts },
+      ].map(r => Object.assign(r, { win: r.a > r.b ? 'A' : r.b > r.a ? 'B' : null }));
+      const wa = rows.filter(r => r.win === 'A').length, wb = rows.filter(r => r.win === 'B').length;
+      let by = 'wins';
+      if (wa > wb) winner = 'A'; else if (wb > wa) winner = 'B';
+      else if (hpA !== hpB) { winner = hpA > hpB ? 'A' : 'B'; by = 'hp'; }
+      else if (rows[0].a !== rows[0].b) { winner = rows[0].a > rows[0].b ? 'A' : 'B'; by = 'pct'; }
+      else if (rows[1].a !== rows[1].b) { winner = rows[1].a > rows[1].b ? 'A' : 'B'; by = 'dmg'; }
+      else { winner = 'B'; by = 'tie'; }
+      reason = 'judge';
+      push({ ev: 'judge', mode: 'three', mxA, mxB, aScore: Math.round(hpA / mxA * 10000), bScore: Math.round(hpB / mxB * 10000), rows, winner, winsA: wa, winsB: wb, hpA, hpB, by, limit: roundLimit });
+    }
     if (!winner) {
-      // 判定: 残りライフの割合の合計(倒れた体は0)。同じなら引き分け
+      // 判定(既定): 残りライフの割合の合計(倒れた体は0)。同じなら引き分け
       const score = (side) => {
         const t = state.teams[side];
         return Math.round(t.units.reduce((s, x) => s + x.hp / x.maxHp, 0) / t.units.length * 10000);
@@ -874,7 +904,7 @@
     // AI ならこの手番に何を選ぶか(おすすめの印。試合の乱数は引かない)
     const hintOf = (side) => {
       try {
-        const c = chooseAction({ state: st, rng: makeRng(`hint:${st.round}:${flow.log.length}`), trace: false, lastCands: null, noSwap: flow.ctx.noSwap }, side);
+        const c = chooseAction({ state: st, rng: makeRng(`hint:${st.round}:${flow.log.length}`), trace: false, lastCands: null, noSwap: flow.ctx.noSwap, gMove: flow.ctx.gMove, gCharge: flow.ctx.gCharge }, side);
         return c ? { type: c.type, key: c.key, step: c.step, to: c.to } : null;
       } catch (_) { return null; }
     };
