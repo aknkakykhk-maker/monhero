@@ -11,8 +11,8 @@
 const fs = require('fs');
 const path = require('path');
 const root = path.resolve(__dirname, '..', '..');
-const SKIP_FILES = new Set(['changelog.js', 'assistant-chat-digest.json']);
-const PENDING = new Set(['help.js', '82-card-tactics-core.jsx', '94-card-spectate.jsx', 'assistants.js']);
+const SKIP_FILES = new Set(['82-card-tactics-core.jsx']);
+const PENDING = new Set(['82-card-tactics-core.jsx']);
 const COMPOUND = /(手|山|捨て|切り?|名|改|荷|表|千|入|礼|値)札/g;
 
 const files = [];
