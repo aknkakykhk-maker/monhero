@@ -64,7 +64,7 @@
     shchance: ['rate', ST + '遊んだとき「修行の気合い」(次の修行で上がる能力 +20%)になる確率 {v}'],
     gussuri: ['mul', ST + '休んだときの体力の回復 {v}'], asobi: ['mul', ST + '遊んだときの体力の回復と甘え度の上がり {v}'],
     tsukisoi: ['rate', ST + '通院で治る確率 {v}'], genki: ['hard', ST + 'けが・悪いようすになりにくさ {v}'],
-    shugyo: ['mul', ST + '修行で上がる能力の合計と熟練 {v}(一番最後にかける)'], shugyotoku: ['val', ST + '修行で上がる能力 それぞれ {v}(修行効果アップの前に足す)'],
+    shugyo: ['mul', ST + '修行で上がる能力の合計 {v}(一番最後にかける)・熟練の上がり +{mv}%'], shugyotoku: ['val', ST + '修行で上がる能力 それぞれ {v}(修行効果アップの前に足す)'],
     waza: ['rate', ST + '修行で技を覚える確率 {v}'], chokyo: ['cnt', ST + '超修行できる回数 {v}', '回'],
     wazakazu: ['grow', ST + '覚えた技1つにつき修行の伸び {v}'], shugyohp: ['cut', ST + '修行で減る体力 {v}'],
     aptq: ['rate', ST + '修行で間合いの適性が上がる確率 {v}(はじめは10%)'],
@@ -159,12 +159,15 @@
   add({ id: 'genki', icon: '🍀', name: '元気のお守り', ref: false, type: 'stay', scene: 'care', unit: 2, max: 25, u: '%', v2: [10, 20, 30, 40, 50], text: '編成にいるだけで、けがや悪いようすになりにくくなる(なる率 −{v}%)' });
 
   // ---- 修行 ----
-  add({ id: 'shugyo', icon: '⚔', name: '修行効果アップ', type: 'stay', scene: 'shugyo', unit: 1, max: 25, u: '%', v2: [5, 10, 15, 20, 25], text: '編成にいるだけで、修行で上がる能力が合計のあと{v}%増える(熟練の上がりも同じだけ増える)' });
+  // 2026-11-15 r1115-176 社長: 能力の上がりは最大 +25% → +10%(目盛りの数・値段はそのまま。1目盛り 1% → 0.4%)。熟練の上がりは今までどおり(mv・1目盛り 1%)
+  add({ id: 'shugyo', icon: '⚔', name: '修行効果アップ', type: 'stay', scene: 'shugyo', unit: 0.4, max: 25, u: '%', v2: [2, 4, 6, 8, 10], mv: Array.from({ length: 25 }, (_, i) => i + 1), text: '編成にいるだけで、修行で上がる能力が合計のあと{v}%増える(熟練の上がりは +{mv}%)' });
   // ↑ 修行の上がり =(行き先の基礎の数値 + 編成の子の得意な能力の分)×(1 + 修行効果アップ%)。最後にかける倍率(窓口 2026-11-14)
-  add({ id: 'shugyotoku', icon: '🗡', name: '修行特別効果アップ', type: 'stay', scene: 'shugyo', unit: 1, max: 10, u: '', text: '編成にいるだけで、修行で上がる能力がそれぞれ +{v}(修行効果アップの前に足す)' });
+  // r1115-176 社長: 最大 +10 → +4(1目盛り 1 → 0.4)
+  add({ id: 'shugyotoku', icon: '🗡', name: '修行特別効果アップ', type: 'stay', scene: 'shugyo', unit: 0.4, max: 10, u: '', text: '編成にいるだけで、修行で上がる能力がそれぞれ +{v}(修行効果アップの前に足す)' });
   add({ id: 'waza', icon: '📖', name: '技習得率アップ', type: 'stay', scene: 'shugyo', unit: 1, max: 10, u: '%', text: '編成にいるだけで、修行で技を覚える率が +{v}%' });
   add({ id: 'chokyo', icon: '🌋', name: '超修行アップ', type: 'stay', scene: 'shugyo', unit: 1, max: 1, u: '回', text: '編成にいるだけで、超修行できる回数が +{v}回' });
-  add({ id: 'wazakazu', icon: '📚', name: '技習得効果アップ', type: 'stay', scene: 'shugyo', unit: 0.5, max: 4, u: '%', text: '編成にいるだけで、覚えた技1つにつき修行の伸びが +{v}%' });
+  // r1115-176 社長: 最大 +2% → +1%(1目盛り 0.5% → 0.25%)
+  add({ id: 'wazakazu', icon: '📚', name: '技習得効果アップ', type: 'stay', scene: 'shugyo', unit: 0.25, max: 4, u: '%', text: '編成にいるだけで、覚えた技1つにつき修行の伸びが +{v}%' });
   add({ id: 'shugyohp', icon: '🍃', name: '修行の体力消費ダウン', type: 'stay', scene: 'shugyo', unit: 1, max: 15, u: '%', text: '編成にいるだけで、修行で減る体力が{v}%少なくなる' });
   add({ id: 'aptq', icon: '🧭', name: '適性アップ', type: 'stay', scene: 'shugyo', unit: 1, max: 10, u: '%', text: '編成にいるだけで、修行で間合いの適性が上がる率が +{v}%(はじめは10%)' });
 
@@ -300,7 +303,7 @@
     const a = BY_ID[id]; if (!a) return '';
     const i = nOf(id, n) - 1;
     const vt = a.k === 'cnt' && a.cu === 'Lv' ? `+${fmt(a.v[i])}` : a.k === 'rate' || a.k === 'hard' ? `+${fmt(a.v[i])}%` : a.k === 'rateDown' ? `−${fmt(a.v[i])}%` : (a.k ? valueText(id, i + 1) : fmt(a.v[i])); // 文の中は「トレーニングLv +1」「◯◯の確率 +5%」
-    return ((i === a.max - 1 && a.text5) || a.text).replace('{v}', vt).replace('{start}', a.start ? String(a.start[i]) : '') + capNote(id);
+    return ((i === a.max - 1 && a.text5) || a.text).replace('{v}', vt).replace('{start}', a.start ? String(a.start[i]) : '').replace('{mv}', a.mv ? fmt(a.mv[i]) : '') + capNote(id);
   };
   // 型ごとの数字の書き方(W の k)。掛け算も % で書く(社長 2026-11-14)
   const valueText = (id, n) => {
