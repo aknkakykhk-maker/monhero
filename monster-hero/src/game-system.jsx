@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 7d74d904839f71e6
+// generated-sha256: 5dcef44dfee3e320
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -89731,9 +89731,9 @@ const MSX_HOME_CSS = `
 .mh-home-success b.beta{margin-left:2px;padding:1px 6px;border-radius:6px;background:#f472b6;color:#fff;font-size:11px;line-height:1.4}
 .mh-home-success:active>span{transform:scale(.96)}
 .mh-home-success>span{flex-wrap:wrap;max-width:178px}
-/* 一言は言葉の切れ目(<wbr>)でだけ折る(「ヒーローズファ/イナル」と折れていた・r1115-206)。札の一言は、縦に余裕のある縦長の HOME(場面の高さ640以上)だけ出し、伸びたぶん札を下へずらす(上の MFバトルカードの顔の列にかからない)。小さい画面・横画面は名前とリボンだけ */
+/* 一言は言葉の切れ目(<wbr>)でだけ折る(「ヒーローズファ/イナル」と折れていた・r1115-206)。札の一言は、縦に余裕のある縦長の HOME(場面の高さ700以上。664 ではモンヒロバトルの上の助手の顔が詰まった・r1115-206)だけ出し、伸びたぶん札を下へずらす(上の MFバトルカードの顔の列にかからない)。小さい画面・横画面は名前とリボンだけ */
 .mh-home-success .ln{display:none;flex-basis:100%;font-size:10px;font-weight:800;color:#fbcfe8;line-height:1.3;white-space:normal;word-break:keep-all;overflow-wrap:anywhere;text-align:left}
-@container (min-height:640px) and (max-aspect-ratio:1/1){.mh-home-success .ln{display:block}.mh-home-success{margin-bottom:-28px}}
+@container (min-height:700px) and (max-aspect-ratio:1/1){.mh-home-success .ln{display:block}.mh-home-success{margin-bottom:-34px}}
 .mh-home-success .rb{position:absolute;right:-6px;top:-9px;z-index:1;font-style:normal;font-size:10px;font-weight:900;color:#422006;background:linear-gradient(90deg,#fde047,#fbbf24);border-radius:6px;padding:1px 7px;box-shadow:0 2px 4px #0008;transform:rotate(4deg);white-space:nowrap}
 /* 横持ちは、下の真ん中の「モンヒロバトル」のすぐ上(村の絵の真ん中の空き)に置く。前は MFバトルカードの右に置いていて、横 568×320 ではモンヒロバトルのボタンにかかっていた(2026-11-14) */
 @media (orientation:landscape){.mh-home-success,.mh-home-scene:has(.mh-home-card-battle.raised) .mh-home-success,.mh-home-scene:has(.mh-home-card-battle.below-tour) .mh-home-success,.mh-home-scene:has(.mh-home-facility.life) .mh-home-success{left:50%;bottom:66px;translate:-50% 0}}
