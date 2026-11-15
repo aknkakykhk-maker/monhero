@@ -18,7 +18,9 @@ function collectBtns() {
     if (r.width < 14 || r.height < 14 || cs.visibility === 'hidden' || cs.display === 'none') return;
     if (r.left < 0 || r.top < 0 || r.right > innerWidth || r.bottom > innerHeight) return; // 画面の外・切れている物は撮れない
     if (b.hasAttribute('data-msx-left')) return;
-    const top = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); if (!top || !(top === b || b.contains(top))) return; // 吹き出し・幕に隠れた物は測らない
+    // 吹き出し・幕・下のボタンの列に一部でも隠れた物は測らない(中心と四隅の内側が、そのボタン自身に見えていること)
+    const seen = [[0.5, 0.5], [0.2, 0.2], [0.8, 0.2], [0.2, 0.8], [0.8, 0.8]].every(([fx, fy]) => { const top = document.elementFromPoint(r.left + r.width * fx, r.top + r.height * fy); return top && (top === b || b.contains(top)); });
+    if (!seen) return;
     if (b.querySelector('img, svg, canvas, [style*="background"]')) return;
     const txt = (b.innerText || '').replace(/\s+/g, '');
     const ok = b.classList.contains('sym') || txt.length <= 4 || b.matches('.chip, .go, .msx-md-alt, .v-ft button, .v-ft span, .btn, .btn2, .btn3');

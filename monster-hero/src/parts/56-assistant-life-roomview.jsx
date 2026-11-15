@@ -229,8 +229,11 @@ function AssistantLifeSleepEyes({ pid, src, w, h, style }) {
     if (art) {
       // 顔アイコン: 社長の寝顔の絵(上半身まるごと)を上から重ねる。立ち絵の影(drop-shadow)は付けない(まわりに暗い輪が出る)
       const filter = style && style.filter ? String(style.filter).replace(/drop-shadow\((?:[^()]|\([^()]*\))*\)/g, '').trim() || undefined : undefined;
+      // 顔アイコンの枠の中(半透明の黒)では、下の起きている顔が寝顔のすき間から透けないよう、後ろを暗く塗る
+      //   (2026-11-15 r1115-108 あつの顔を新しい全身画から作り直したら、古い絵の寝顔と王冠の位置がずれて透けた)
+      const isFaceIcon = /\/face\//.test(String(src || ''));
       return <img data-assistant-life-roomview-sleep-eyes={pid} src={art} alt="" aria-hidden="true" draggable={false}
-        style={{ position: 'absolute', width: w, height: h, maxWidth: 'none', pointerEvents: 'none', ...style, filter }}/>;
+        style={{ position: 'absolute', width: w, height: h, maxWidth: 'none', pointerEvents: 'none', ...(isFaceIcon ? { background: '#16122a', borderRadius: 14 } : {}), ...style, filter }}/>;
     }
   }
   const isFace = /\/face\//.test(String(src || ''));

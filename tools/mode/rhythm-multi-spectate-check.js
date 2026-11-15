@@ -170,7 +170,7 @@ const VIEW = PORTRAIT ? { width: 390, height: 844 } : { width: 844, height: 390 
     const detail = await W.evaluate(() => ({
       rows: [...document.querySelectorAll('[data-rhythm-watch-row]')].map((r) => r.innerText.replace(/\s+/g, ' ').trim()),
       counts: [...document.querySelectorAll('[data-rhythm-watch-count]')].map((c) => c.querySelector('b').textContent),
-      life: document.querySelector('[data-rhythm-watch-life]').style.width,
+      life: (document.querySelector('[data-rhythm-watch-life]') || document.querySelector('[data-rhythm-life-bar]')).style.width,
       progress: document.querySelector('[data-rhythm-watch-progress]').style.width,
       focus: RHYTHM_WATCH.view().focus,
     }));
@@ -192,9 +192,11 @@ const VIEW = PORTRAIT ? { width: 390, height: 844 } : { width: 844, height: 390 
     const df = (await sent(focusPage, 'pg')) - f0; const dd = (await sent(otherPage, 'pg')) - o0;
     check('見られている人は1秒ごとに送る(6秒で5通以上)', df >= 5, `${df}通`);
     check('ほかの人は今までの3秒ごとのまま(6秒で3通以下)', dd <= 3, `${dd}通`);
-    // 判定が増えたら「+n」が流れる
+    // 判定が増えたら、下の判定の数が増える(プレイ画面に無い「+n」の流れる文字は出さない)
     await setHud(focusPage, 420000, 130, wantK.map((n, i) => n + (i === 0 ? 4 : 0)), 900, 63000);
-    await W.waitForFunction(() => /\+4 MARVELOUS/.test(document.querySelector('[data-rhythm-watch-detail]').innerText), null, { timeout: 5000 }).then(() => check('判定が増えると「+4 MARVELOUS」が流れる', true), () => check('判定が増えると「+4 MARVELOUS」が流れる', false));
+    await W.waitForFunction((n) => Number(document.querySelector('[data-rhythm-watch-count="MARVELOUS"] b').textContent) === n, wantK[0] + 4, { timeout: 5000 })
+      .then(() => check('判定が増えると、判定の数が増える', true), () => check('判定が増えると、判定の数が増える', false));
+    check('プレイ画面に無い「+n 判定」の流れる文字は出さない', !(await W.evaluate(() => /\+\d+\s*(MARVELOUS|EXCELLENT|GREAT|GOOD|BAD|MISS)/.test(document.querySelector('[data-rhythm-watch-detail]').innerText))));
     // 別の人を選ぶと、その人の判定に切り替わる
     const otherId = focusIsA ? idB : idA;
     await W.locator(`[data-rhythm-watch-row="${otherId}"]`).click();
@@ -211,6 +213,53 @@ const VIEW = PORTRAIT ? { width: 390, height: 844 } : { width: 844, height: 390 
     console.log(`  (譜面 ${chartInfo && chartInfo.n}音・${chartInfo && chartInfo.dur}ms)`);
     check('観戦の画面が、その曲・その難易度の譜面を持っている', !!chartInfo && chartInfo.n > 0 && chartInfo.idx.length >= 2, JSON.stringify(chartInfo && { n: chartInfo.n, near: chartInfo.idx.length }));
     check('譜面の絵(canvas)が出る', (await W.locator('[data-rhythm-watch-lane]').count()) === 1);
+    // ---- 観戦の道を、プレイ画面と同じ部品で描く(2026-11-15 r1115-021) ----
+    check('観戦の道は、プレイ画面と同じ枠(data-rhythm-play-area)・同じ判定ライン・同じノーツの canvas で描く', (await W.locator('[data-rhythm-watch-lane-road][data-rhythm-play-area] [data-rhythm-judgment-line]').count()) === 1 && (await W.locator('[data-rhythm-watch-lane-road] [data-rhythm-note-canvas]').count()) === 1);
+    check('ノーツの色の組・形は、プレイ画面を開くときと同じく、設定どおりに当てている', await W.evaluate(() => { const st = rhythmWatchSettings(); return RHYTHM_NOTE_PALETTE_ID === (RHYTHM_NOTE_PALETTES[st.notePalette] ? st.notePalette : 'STANDARD') && RHYTHM_NOTE_SHAPE_ID === (RHYTHM_NOTE_SHAPE_IDS.includes(st.noteShape) ? st.noteShape : 'STANDARD'); }));
+    check('道・判定の帯・コンボ・判定の文字・ライフは、プレイ画面と同じ部品(同じ CSS の属性)で出る', await W.evaluate(() => { const h = document.querySelector('[data-rhythm-watch-lane-road]'); return !!h && !!h.querySelector('[data-rhythm-lane]') && !!h.querySelector('[data-rhythm-judgment-band]') && !!h.querySelector('[data-rhythm-judgment-text]') && !!h.querySelector('[data-rhythm-life]') && !!h.querySelector('[data-rhythm-combo-box]'); }));
+    await W.waitForTimeout(600);
+    const roadPix = await W.evaluate(() => {
+      const host = document.querySelector('[data-rhythm-watch-lane-road]'); if (!host) return null;
+      const cv = host.querySelector('[data-rhythm-note-canvas]'); const c2 = cv.getContext('2d'); if (!c2) return { webgl: true };
+      const d = c2.getImageData(0, 0, cv.width, cv.height).data; let n = 0; for (let i = 3; i < d.length; i += 16) if (d[i] > 0) n++;
+      return { n, w: cv.width, h: cv.height };
+    });
+    check('ノーツの canvas に、ノーツが描かれている', !!roadPix && (roadPix.webgl || roadPix.n > 20), JSON.stringify(roadPix));
+    // 同じ時刻・同じ譜面で、プレイ画面と同じ式で出したノーツの位置に、観戦の画面もノーツを描いている
+    const sameAtOnce = () => W.evaluate(() => {
+      const v = RHYTHM_WATCH.view(); const row = v.rows[v.focus]; const song = RHYTHM_SONGS.find((x) => x.songId === v.songId);
+      const who = v.people.find((x) => x.id === v.focus); const chart = song.difficulties[who.diff];
+      const host = document.querySelector('[data-rhythm-watch-lane-road]'); const cv = host.querySelector('[data-rhythm-note-canvas]'); const c2 = cv.getContext('2d'); if (!c2) return { skip: 'webgl' };
+      const st = rhythmWatchSettings(); const travelMs = rhythmTravelMsForSpeed(st.noteSpeed); const w = host.clientWidth; const h = host.clientHeight;
+      const vis = row.p + Math.min(Date.now() - row.pAt, 3000) - RHYTHM_WATCH_LANE_DELAY_MS;
+      const keep = { points: RHYTHM_SCROLL.points, back: RHYTHM_SCROLL.back, sufMin: RHYTHM_SCROLL.sufMin, groups: RHYTHM_SCROLL.groups, lerp: RHYTHM_SCROLL.lerp };
+      const hits = []; let tried = 0;
+      for (const n of chart.notes) {
+        if (n.type !== 'TAP' || n.timeMs < vis + travelMs * 0.25 || n.timeMs > vis + travelMs * 0.7) continue;
+        const judged = v.judged[v.focus]; if (judged && judged.has(chart.notes.indexOf(n)) && judged.get(chart.notes.indexOf(n)) < 5 && n.timeMs <= vis) continue;
+        const progress = 1 - (rhythmScrollPos(n.timeMs, n.scrollGroup) - rhythmScrollPos(vis, n.scrollGroup)) / travelMs;
+        const jy = RHYTHM_JUDGMENT_LINE_Y.ratio * h - 10; const sy = -20 + ((Number(st.noteStartPosition) || 0) / 100) * h * 0.2;
+        const y = Math.round(sy + rhythmProjectTravelProgress(progress) * (jy - sy));
+        const g = rhythmNoteCanvasGeometry(n, y, n.lane, { left: 0, top: 0, width: w, height: h }, 20, null, null, 0);
+        const dpr = cv.width / w; const px = c2.getImageData(Math.round(g.head.cx * dpr), Math.round(g.head.cy * dpr), 1, 1).data[3];
+        tried++; hits.push(px > 0); if (tried >= 4) break;
+      }
+      return { tried, hits };
+    });
+    let sameAt = null;
+    for (let k = 0; k < 10; k++) { sameAt = await sameAtOnce(); if (sameAt && (sameAt.skip || sameAt.tried >= 1)) break; await W.waitForTimeout(400); }
+    check('同じ時刻・同じ譜面で、プレイ画面と同じ式のノーツの位置に、観戦もノーツを描いている', !!sameAt && (sameAt.skip || (sameAt.tried >= 1 && sameAt.hits.filter(Boolean).length >= Math.ceil(sameAt.tried / 2))), JSON.stringify(sameAt));
+    // 位置の知らせ(pg)が途切れたとき: 3秒までは時計で進み、そのあとは止めて「通信を待っています」を出す
+    const holdA = await W.evaluate(() => { const v = RHYTHM_WATCH.view(); const r = v.rows[v.focus]; const base = { p: r.p, pAt: r.pAt }; return { a: rhythmWatchPosition({ p: 1000, pAt: Date.now() - 2000 }), b: rhythmWatchPosition({ p: 1000, pAt: Date.now() - 5000 }), base }; });
+    check('pg が2秒途切れても時計で進む(待ちの表示は出ない)', holdA.a.waiting === false && holdA.a.p >= 2900 && holdA.a.p <= 3300, JSON.stringify(holdA.a));
+    check('pg が3秒を過ぎたら止めて、「通信を待っています」を出す側になる', holdA.b.waiting === true && holdA.b.p <= 4100, JSON.stringify(holdA.b));
+    await W.evaluate(() => { const v = RHYTHM_WATCH.view(); v.rows[v.focus].pAt -= 4000; });
+    await W.waitForSelector('[data-rhythm-watch-waiting]', { timeout: 3000 })
+      .then(() => check('途切れたままだと「通信を待っています」が出る', true), () => check('途切れたままだと「通信を待っています」が出る', false));
+    await W.waitForFunction(() => !document.querySelector('[data-rhythm-watch-waiting]'), null, { timeout: 4000 })
+      .then(() => check('次の知らせが届くと、「通信を待っています」が消える', true), () => check('次の知らせが届くと、「通信を待っています」が消える', false));
+    const flatPick = await W.evaluate(() => ({ off: rhythmWatchUseFlat(normalizeRhythmSettings({})), light: rhythmWatchUseFlat(normalizeRhythmSettings({ lightweightMode: true })), save: rhythmWatchUseFlat(normalizeRhythmSettings({ frameRateMode: 'POWER_SAVE' })) }));
+    check('軽くする設定・省エネのときは、今までの2D描きへ戻る(ふだんは新しい描き方)', flatPick.off === false && flatPick.light === true && flatPick.save === true, JSON.stringify(flatPick));
     if (chartInfo && chartInfo.idx.length) {
       // 演奏のループが判定のたびにやること(配列へ2つ push)を、ここで同じようにやる
       await A.evaluate((idx) => { idx.forEach((i, k) => { if (RHYTHM_PLAY_WATCH.jd !== null) RHYTHM_PLAY_WATCH.jd.push(i, k % 3); }); }, chartInfo.idx);
@@ -220,8 +269,22 @@ const VIEW = PORTRAIT ? { width: 390, height: 844 } : { width: 844, height: 390 
       const mine = await W.evaluate((idx) => { const m = RHYTHM_WATCH.view().judged[RHYTHM_WATCH.view().focus]; return idx.map((i) => m.get(i)); }, chartInfo.idx);
       check('届いた判定の中身が合う(ノーツ番号ごとの判定)', mine.every((c, k) => c === k % 3), JSON.stringify(mine));
       check('判定を送ったあと、たまりは小さいまま(1秒ごとに空になる)', (await A.evaluate(() => RHYTHM_PLAY_WATCH.jd.length)) < 40);
+      // 判定の文字(ぴったりの虹色・FAST/SLOW)の印は、別の配列 jx で送る(判定の番号 j の並びは変えない。古い版は jx を読み飛ばすだけ)
+      await A.evaluate((idx) => { if (RHYTHM_PLAY_WATCH.jx) RHYTHM_PLAY_WATCH.jx.push(idx[0], 3, idx[1], 4); }, chartInfo.idx);
+      await W.waitForFunction((idx) => { const m = RHYTHM_WATCH.view().marks[RHYTHM_WATCH.view().focus]; return m && m.get(idx[0]) === 3 && m.get(idx[1]) === 4; }, chartInfo.idx, { timeout: 6000 })
+        .then(() => check('判定の文字の印(ぴったり・SLOW・FAST)が、観戦の人に届く', true), () => check('判定の文字の印(ぴったり・SLOW・FAST)が、観戦の人に届く', false));
+      check('印を送っても、判定の番号の並び(j)は今までどおり(印は別の配列)', await A.evaluate(() => Array.isArray(RHYTHM_PLAY_WATCH.jd) && Array.isArray(RHYTHM_PLAY_WATCH.jx)));
+      check('印が来ない人(古い版)は、ふつうの金色のまま(落ちない)', await W.evaluate(() => { const m = RHYTHM_WATCH.view().marks['no-such-id']; return m === undefined; }));
     }
     if (SHOT_DIR) { await W.waitForTimeout(700); await W.screenshot({ path: path.join(SHOT_DIR, 'watch-lane-landscape.png') }); }
+    // 並べる止め絵: 演奏している人の画面(プレイ画面)と観戦の画面を、同じ曲・同じ時刻に撮る(縦・横)
+    if (SHOT_DIR) {
+      for (const [nm, w, h] of [['yoko', 844, 390], ['tate', 390, 844], ['tate320', 320, 568]]) {
+        await A.setViewportSize({ width: w, height: h }); await W.setViewportSize({ width: w, height: h }); await W.waitForTimeout(1200);
+        await Promise.all([A.screenshot({ path: path.join(SHOT_DIR, `side-play-${nm}.png`) }), W.screenshot({ path: path.join(SHOT_DIR, `side-watch-${nm}.png`) })]);
+      }
+      await A.setViewportSize({ width: 844, height: 390 }); await W.setViewportSize({ width: 844, height: 390 });
+    }
     // ---- 重い端末: フレームが40枚/秒を切る状態が2秒続くと、譜面は送らず数字だけにする ----
     await B.evaluate(() => { Object.defineProperty(RHYTHM_PLAY_WATCH, 'frames', { get: () => Math.floor(Date.now() / 100), set: () => {}, configurable: true }); /* 10枚/秒で進む(重い端末) */ });
     await W.evaluate((id) => RHYTHM_WATCH.focus(id), idB);
@@ -236,6 +299,14 @@ const VIEW = PORTRAIT ? { width: 390, height: 844 } : { width: 844, height: 390 
       await W.screenshot({ path: path.join(SHOT_DIR, 'watch-landscape.png') });
       await W.setViewportSize({ width: 390, height: 844 }); await W.waitForTimeout(700);
       await W.screenshot({ path: path.join(SHOT_DIR, 'watch-portrait.png') });
+      await W.setViewportSize({ width: 320, height: 568 }); await W.waitForTimeout(700);
+      await W.screenshot({ path: path.join(SHOT_DIR, 'watch-portrait-320.png') });
+      // 🔄 横(端末は縦のまま、絵を90度回して横に見せる)
+      await W.setViewportSize({ width: 390, height: 844 }); await W.waitForTimeout(300);
+      const rot = await W.evaluate(() => { try { return RHYTHM_VIEW_ROTATION.set(RHYTHM_VIEW_ROTATION.preferredAngle()); } catch (e) { return String(e); } });
+      await W.waitForTimeout(900);
+      await W.screenshot({ path: path.join(SHOT_DIR, 'watch-rotated.png') });
+      await W.evaluate(() => RHYTHM_VIEW_ROTATION.set(0)); await W.waitForTimeout(400);
       await W.setViewportSize({ width: 844, height: 390 }); await W.waitForTimeout(500);
     }
     // 縦・横・小さい端末で、観戦の画面の中身が画面からはみ出さない
