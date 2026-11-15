@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 3d7dd80ddce6b5f4
+// generated-sha256: ebfea6a52f88f6cf
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -89497,8 +89497,8 @@ const msxTpAT = () => (typeof window !== 'undefined' && window.MONHERO_SUCCESS_A
 // 枠の値が同じ子を指しているか(auto のベースモンは空き扱い)
 const msxTpSame = (a, b) => !!(a && b && !a.auto && !b.auto && ((a.box && a.box === b.box) || (a.assist && a.assist === b.assist) || (!a.box && !a.assist && !b.box && !b.assist && a.base && a.base === b.base)));
 // アシスト効果の1つ分の効き目(比べる数)と文字
-const msxTpAssistVal = (AT, a) => { try { return Number(AT.valueOf(a.id, a.lv)) || 0; } catch (e) { return 0; } };
-const msxTpAssistText = (AT, a) => { try { return AT.valueText(a.id, a.lv); } catch (e) { return ''; } };
+const msxTpAssistVal = (AT, a) => { try { return Number(AT.valueOf(a.id, AT.fromSaved(a) || a.lv)) || 0; } catch (e) { return 0; } };
+const msxTpAssistText = (AT, a) => { try { return AT.valueText(a.id, AT.fromSaved(a) || a.lv); } catch (e) { return ''; } };
 // 編成で「一番大きい1つだけ」効く効果か(重なると重複になる物)。重なり方の決まりは表(data/monhero-success-assist.js)から読む(r1115-104・107)
 //   表に ONE_ONLY(id の並び・Set・{id:true})があればそれ / CAP[id] に one:true があれば1つだけ・one の無い CAP[id] は足し合わせ(上限つき)
 //   どちらも無ければ今までの決まり: いるだけ型・試合型は1つだけ(芯 stayLv・battleBuffs)
@@ -92828,7 +92828,7 @@ function MsxR3Box({ onClose }) {
       {page === 'detail' && cur && typeof MsxMonDetail === 'function' ? (() => {
         // 詳細は、はじめる画面・育成中の「くわしく」と同じ部品 MsxMonDetail(社長の手本 monster-detail-basic・r1114-039/046)。マスモンボックスの分だけ差し込む
         const lock = byeLock(cur);
-        const assistText = Array.isArray(cur.assists) && cur.assists.length ? cur.assists.map((a) => { const T3 = msxR3T().assist; return T3 && T3.VERSION === 3 && T3.BY_ID[a.id] ? `${T3.BY_ID[a.id].name} ${T3.valueText(a.id, T3.valueOf ? T3.valueOf(a) : a.v)}` : (a.name || a.id); }).join('・') : '';
+        const assistText = Array.isArray(cur.assists) && cur.assists.length ? cur.assists.map((a) => { const T3 = msxR3T().assist; return T3 && T3.VERSION === 3 && T3.BY_ID[a.id] ? `${T3.BY_ID[a.id].name} ${T3.valueText(a.id, T3.fromSaved(a))}` : (a.name || a.id); }).join('・') : '';
         const endAt = Number.isFinite(cur.endAt) ? new Date(cur.endAt) : null;
         const more = [
           ['忠誠 / 人気', `${Math.round(cur.loy || 0)} / ${Math.round(cur.pop || 0)}`],
