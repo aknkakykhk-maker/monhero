@@ -96,10 +96,8 @@ const coreOf = (v) => {
 };
 
 const { engine, catalog } = battleLoad.load();
+const GAME = require('./game-fight.js').makeGameFight(catalog);
 const K = ['life', 'pow', 'wise', 'hit', 'eva', 'tough'];
-const battleSp = (sp) => (catalog.species[sp] ? sp : 'Mocchi');
-const GEAR = { debut: [2, 10, 5], junior: [2, 20, 10], middle: [3, 40, 20], pro: [4, 60, 30], final: [5, 80, 40] };
-const unitOf = (sp0, stats, techs) => { const sp = battleSp(sp0); const ts = catalog.species[sp].techs.slice(0, techs).map(t => t.id); return { species: sp, name: sp, lv: 1, stats, techs: ts, mastery: Object.fromEntries(ts.map(t => [t, 0])) }; };
 
 // 編成: base = ベースモン / box-* = 10周点検と同じ箱の子(アシスト効果なし) / real-* = 育て終えた子らしい子(能力・技・引退で付くおまかせのアシスト効果)
 const AT = require('../../monster-hero/data/monhero-success-assist.js');
@@ -154,12 +152,10 @@ const runLap = (SUC, v, cfg, seed) => {
   let r = (seed * 2654435761 + 7) >>> 0; const rnd = () => { r = (r * 1103515245 + 12345) & 0x7fffffff; return r / 0x7fffffff; };
   const wpick = (w) => { const ks = Object.keys(w).filter(k => w[k] > 0); let t = ks.reduce((a, k) => a + w[k], 0) * rnd(); for (const k of ks) { t -= w[k]; if (t <= 0) return k; } return ks[0]; };
   let lastUse = null; const out = { league: [0, 0], summit: [0, 0], losses: 0, wins: 0, ptsGot: 0, condLearned: 0, condTotal: 0, shugyo: 0, great: 0 };
-  const fight = (opp, idx) => {
-    const g = GEAR[SUC.periodOf(s.turn).key]; const sp = battleSp(s.species); const own = catalog.species[sp].techs.map(t => t.id); const ts = s.techs.filter(t => own.includes(t));
-    const a = { species: sp, name: sp, lv: 1, stats: s.stats, techs: ts.length ? ts : undefined, mastery: {}, techBoost: SUC.techBoostOf(s), loy: SUC.loyalOf(s), pop: s.pop };
-    const b = { ...unitOf(opp.species, opp.stats, opp.techs), ...(Number.isFinite(opp.loy) ? { loy: opp.loy } : {}), ...(Number.isFinite(opp.pop) ? { pop: opp.pop } : {}) };
-    const res = engine.simulate({ seed: `${id}:${s.turn}:${s.battle.kind}:${s.battle.round}:${idx}`, catalog, teamA: { assistantId: s.aid, tactics: g[2], members: [a] }, teamB: { assistantId: 'kiki', tactics: opp.tactics, members: [b] }, buffs: SUC.battleBuffs(s) });
-    lastUse = SUC.techUseOf(res.log, 'A'); return res.winner === 'A';
+  // 試合は本番の msxR3Fight をそのまま使う(r1115-202 H2: 前は入力を書き写していて、アシストの上乗せの渡し方・覚醒・aptUp・MONSUC_MATCH_RULE・相手の技の数がずれていた)
+  const fight = () => {
+    const f = GAME.msxR3Fight(engine, SUC, { s, nick: '' });
+    lastUse = f ? f.use : null; return Boolean(f && f.won);
   };
   const pts0 = () => s.pts + s.ptsLost;
   let guard = 0;

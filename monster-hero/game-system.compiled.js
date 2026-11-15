@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 95f1366c7631744b
+// source-sha256: 6f4d1801170a954e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -153998,6 +153998,8 @@ const MSC_CSS = `
 .msc-tl div{display:flex;flex-direction:column;gap:4px}
 .msc-tl span{display:block;border-radius:8px;padding:5px 7px;background:#1e1b3a;font-size:12px;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .msc-tl small{color:#94a3b8;font-size:10.5px;margin-left:4px}
+/* 技・能力の一覧は枠の上から並べる(space-evenly で下に寄っていた r1115-202 L10) */
+.msc-sheet.grow>.msc-tl{flex:none;margin-bottom:auto;align-items:start}
 .msc-hint{display:flex;gap:8px;align-items:center;font-size:12.5px;font-weight:800;color:#fff}
 .msc-fc{display:flex;gap:6px}
 .msc-fc>span{flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;padding:5px 4px;border-radius:12px;background:#1e1a36;border:1.5px solid #475569;color:#e2e8f0}
@@ -154133,7 +154135,7 @@ function MonsucBracket({
   const r2 = bk.rounds[1] || [];
   const fi = bk.final && bk.final[1] || 4;
   const out = i => st >= 1 && !r1.includes(i) || st >= 2 && r1.includes(i) && !r2.includes(i) || result === 'win' && i === fi || result === 'lose' && i === 0;
-  const H = Math.max(36, Math.min(68, Math.floor((vh - 345) / 8)));
+  const H = Math.max(36, Math.min(68, Math.floor((vh - 395) / 8)));
   const yOf = i => i * H + H / 2;
   const X = [0, 22, 44, 66, 84];
   const W = 90;
@@ -154161,7 +154163,24 @@ function MonsucBracket({
   });
   const foe = E[fi];
   const champ = E.find(e => e.champ) || foe;
-  const nm = e => e.you ? info.meName : e.name || mscMonName(e.species);
+  const shownName = (() => {
+    const base = E.map(e => e.you ? info.meName : e.name || mscMonName(e.species));
+    const keep = E.map((e, i) => Boolean(e.you || i === fi || e.champ || e.rival));
+    const used = new Set(base.filter((n, i) => keep[i]));
+    const out = base.slice();
+    E.forEach((e, i) => {
+      if (keep[i]) return;
+      let n = base[i];
+      for (let k = 2; used.has(n) && k < 10; k++) n = `${base[i]}${['', '', 'Ⅱ', 'Ⅲ', 'Ⅳ', 'Ⅴ', 'Ⅵ', 'Ⅶ', 'Ⅷ', 'Ⅸ'][k]}`;
+      used.add(n);
+      out[i] = n;
+    });
+    return out;
+  })();
+  const nm = e => {
+    const i = E.indexOf(e);
+    return i >= 0 ? shownName[i] : e.you ? info.meName : e.name || mscMonName(e.species);
+  };
   const coach = mscAssistant(s.aid);
   const top = E[no.indexOf(1)] || E[0];
   const upsets = r1.filter(w => w !== 0 && w !== fi && no[w] >= 5);
@@ -154487,7 +154506,7 @@ function MonsucBattleCard({
   }, React.createElement("span", {
     className: `p ${odds ? odds.key : ''}`,
     "data-msc-odds": odds ? odds.win : ''
-  }, React.createElement("small", null, "予想"), React.createElement("b", null, odds ? odds.label : '…'), odds ? React.createElement("small", null, odds.n, "回中 ", odds.win, "勝") : null), React.createElement("span", null, React.createElement("small", null, "相手の得意"), React.createElement("b", null, AMBW_DIST[foeBest.d])), React.createElement("span", {
+  }, React.createElement("small", null, "予想"), React.createElement("b", null, odds ? odds.label : '…'), odds ? React.createElement("small", null, "オートで ", odds.n, "回中 ", odds.win, "勝") : null), React.createElement("span", null, React.createElement("small", null, "相手の得意"), React.createElement("b", null, AMBW_DIST[foeBest.d])), React.createElement("span", {
     "data-msc-reach": reach.map(x => x ? 1 : 0).join('')
   }, React.createElement("small", null, "技が届く"), React.createElement("b", {
     className: "r"
@@ -179005,7 +179024,8 @@ const msxR3Fight = (engine, SUC, run) => {
     tactics: opp.tactics || 10,
     members: [o]
   };
-  const mods = typeof SUC.battleBuffs === 'function' ? SUC.battleBuffs(s) || {} : typeof SUC.battleMods === 'function' ? SUC.battleMods(s) : {};
+  const bb = typeof SUC.battleBuffs === 'function' ? SUC.battleBuffs(s) : null;
+  const mods = bb && typeof bb === 'object' ? bb.A && typeof bb.A === 'object' ? bb.A : bb : typeof SUC.battleMods === 'function' ? SUC.battleMods(s) || {} : {};
   const seed = `${s.id}:${s.turn}:${b.kind}:${b.retry || 0}:${b.round || 0}:0:${b.again || 0}`;
   const input = {
     ...MONSUC_MATCH_RULE,
@@ -186116,6 +186136,11 @@ const MSA_CSS = `
 .msa-gt{font-size:9.5px;font-weight:900;line-height:14px;padding:0 5px;border-radius:99px;white-space:nowrap;animation:msaTagIn .35s ease-out both}
 @keyframes msaTagIn{0%{opacity:0;transform:scale(.6)}60%{opacity:1;transform:scale(1.12)}100%{opacity:1;transform:none}}
 .msa-gt.up{background:#facc15;color:#422006}.msa-gt.down{background:#475569;color:#f1f5f9}
+/* モンサクの画面の大きな浮き文字 .msx .up(56-monhero-success-css)が、ガッツの増減の小札 .up にも当たって大きく浮き、体力の数字を隠していた(r1115-202 M13)。小札の形に戻す */
+.msa-hud .msa-gt.up,.msa-hud .msa-gt.down{position:static;font-size:9.5px;line-height:14px;text-shadow:none;color:#422006}
+.msa-hud .msa-gt.down{color:#f1f5f9}
+.msa-stage .msa-gtag.up,.msa-stage .msa-gtag.down{position:absolute;font-size:10.5px;line-height:16px;text-shadow:none;color:#422006}
+.msa-stage .msa-gtag.down{color:#e2e8f0}
 .msa-bands{top:70px}
 @keyframes msaLow{50%{opacity:.45}}
 @keyframes msaBarShake{0%,100%{transform:none;box-shadow:0 0 10px #ef4444}20%{transform:translate(-4px,1px)}40%{transform:translate(4px,-1px)}60%{transform:translate(-2px,0)}80%{transform:translate(1px,0)}}
@@ -186158,7 +186183,23 @@ const MSA_CSS = `
 .msa-topline{flex-wrap:wrap;row-gap:2px}
 .msa-topline .msc-buff{font-style:normal;font-size:10.5px}
 .msa-topline .msa-breeder{font-size:11px;color:#cbd5e1;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:55%}
-@media (max-height:500px) and (orientation:landscape){.msc-wrap.msa{height:auto}.msa-stagebox,.msa[data-msa-mode=manual] .msa-stagebox{flex:none;height:calc(var(--mh-vh) - 70px);min-height:240px}}
+/* 場の側(帯・場・実況)と操作の側(札・手番の帯・ボタン)。縦では入れ物を作らず(display:contents)今までの並びのまま */
+.msa-main,.msa-side{display:contents}
+/* 横向き(r1115-202 H3): 場面(左)+ 札(右)の2列。場面は左に留めたまま、右の札だけを縦に送る(体力の帯と札が同時に見える) */
+@media (max-height:500px) and (orientation:landscape){
+  .msc-wrap.msa{height:auto;max-width:none;flex-direction:row;align-items:flex-start;gap:10px}
+  .msa-main{display:flex;flex-direction:column;gap:6px;flex:1.1 1 0;min-width:0;position:sticky;top:0;height:calc(var(--mh-vh, 100vh) - 66px);min-height:240px}
+  .msa-side{display:flex;flex-direction:column;gap:8px;flex:1 1 0;min-width:0}
+  .msa-stagebox,.msa[data-msa-mode=manual] .msa-stagebox{flex:1 1 0;height:auto;min-height:0}
+  .msa-main .msa-say{flex:none}
+}
+/* 低い縦の画面(320×568 など・r1115-202 M14): 場面を低くして上に留め、札の所まで送っても体力の帯と場面が見えるように。画面は縦に少し流す決まりのまま */
+@media (max-height:700px) and (orientation:portrait){
+  .msa[data-msa-mode=manual] .msa-main{display:block;position:sticky;top:0;z-index:6;background:#191331;padding-bottom:4px}
+  .msa[data-msa-mode=manual] .msa-main .msa-topline{margin-bottom:4px}
+  .msa[data-msa-mode=manual] .msa-stagebox{height:200px;min-height:0}
+  .msa[data-msa-mode=manual] .msa-main .msa-say{margin-top:4px}
+}
 .msa-stage.fill .msa-f,.msa-stage.fill .msa-dmgwrap{width:140px;margin-left:-70px;height:176px}
 .msa-stage.fill .msa-f img.msa-img{max-width:140px;max-height:166px}
 .msa-stage.fill .msa-f .msa-shadow{width:80px;margin-left:-40px}
@@ -187775,8 +187816,11 @@ function MonsucArena({
     if (!box) return;
     const r = el.getBoundingClientRect();
     const b = box.getBoundingClientRect();
+    const mainEl = box.querySelector('[data-msa-main]');
+    const pinned = mainEl && typeof getComputedStyle === 'function' && getComputedStyle(mainEl).position === 'sticky' && getComputedStyle(mainEl).display === 'block';
+    const topLine = pinned ? mainEl.getBoundingClientRect().bottom : b.top;
     const over = r.bottom - b.bottom + 8;
-    if (over > 0) box.scrollTop += Math.min(over, Math.max(0, r.top - b.top - 8));
+    if (over > 0) box.scrollTop += Math.min(over, Math.max(0, r.top - topLine - 8));
   }, [barOn, pos]);
   const autoWait = Boolean(manual && ctl === 'auto' && pos >= last && !ended && mm.pending);
   useEffect(() => {
@@ -187902,6 +187946,9 @@ function MonsucArena({
     "data-msa-pos": pos,
     "data-msa-mode": manual ? auto ? 'auto' : 'manual' : 'watch'
   }, React.createElement("style", null, MSA_CSS, typeof MSA_SHOW_CSS === 'string' ? MSA_SHOW_CSS : ''), React.createElement("div", {
+    className: "msa-main",
+    "data-msa-main": true
+  }, React.createElement("div", {
     className: "msc-top msa-topline"
   }, React.createElement("b", null, info.title, " ", MSC_STARS(info.star)), info.buffs ? React.createElement("i", {
     className: "msc-buff"
@@ -187930,7 +187977,10 @@ function MonsucArena({
     key: `call-${call.at}`,
     className: `msa-call ${call.k}`,
     "data-msa-call": call.k
-  }, "🎙 ", call.t) : msaSay(e, nm, log)), cardsOn ? React.createElement("div", {
+  }, "🎙 ", call.t) : msaSay(e, nm, log))), React.createElement("div", {
+    className: "msa-side",
+    "data-msa-side": true
+  }, cardsOn ? React.createElement("div", {
     className: "msa-cardsrow",
     "data-msa-cards": true
   }, React.createElement(MsaDistCards, {
@@ -188019,7 +188069,7 @@ function MonsucArena({
   }), React.createElement(MsaBgToggle, {
     bg: bg,
     onChange: setBg
-  })) : null, judgeIdx >= 0 && pos >= judgeIdx && !judgeOk ? React.createElement(MsaJudge, {
+  })) : null), judgeIdx >= 0 && pos >= judgeIdx && !judgeOk ? React.createElement(MsaJudge, {
     row: log[judgeIdx],
     names: {
       A: nm('A'),
