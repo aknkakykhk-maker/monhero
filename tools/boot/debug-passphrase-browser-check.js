@@ -9,6 +9,7 @@
 //   ⑤ 自動操作のブラウザ(検査・手順書)は、これまでどおり「💊」でそのまま開く
 //   合言葉そのものはここにも書かない(社長が決めて差し替えるため)
 const http = require('http'), path = require('path'), fs = require('fs');
+const { quietBootSeed } = require('./quiet-boot-seed');
 const ROOT = path.resolve(__dirname, '..', '..'), PORT = 8959;
 let failed = 0;
 const ok = (name, cond, detail = '') => { console.log(`${cond ? 'OK' : 'NG'}: ${name}${detail ? ` — ${detail}` : ''}`); if (!cond) failed++; };
@@ -31,6 +32,8 @@ const serve = () => new Promise(r => { const s = http.createServer((req, res) =>
     //   ゲームの「自動操作のブラウザは本物へ書かない」止め(26-supabase.jsx)が効かなくなる。差し替えなしだと、
     //   名前「テスト」・アイコン🐣の端末が本番の breeder_profiles / breeder_levels へ行を足し続ける(実際に起きた)。読み込みも空で返す
     await page.route(/\.supabase\.co\//, route => route.fulfill({ status: route.request().method() === 'GET' ? 200 : 201, contentType: 'application/json', body: '[]' }));
+    // イベントのお話・一度きりの案内を黙らせる(公開の印 monheroSuccess を真にすると第2話が HOME で流れ、合言葉の窓にかぶさった・2026-11-16 r1115-206)
+    await page.addInitScript(quietBootSeed());
     await page.addInitScript(({ human, unlocked }) => {
       if (human) Object.defineProperty(Navigator.prototype, 'webdriver', { get: () => false, configurable: true });
       if (sessionStorage.getItem('seeded')) return; sessionStorage.setItem('seeded', '1');
