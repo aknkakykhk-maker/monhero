@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: b8f58e4f1c4a76de
+// generated-sha256: a5253a532c8384cc
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -6339,7 +6339,7 @@ const Audio_ = (() => {
     "audio/bgm-six-eternel-remix-beat.mp3": "b1a024d5b16f",
     "audio/bgm-six-eternel-remix.mp3": "5f56c89739f8",
     "audio/bgm-six-eternel.mp3": "e26412179f3a",
-    "audio/bgm-sparkling-pink-overture.mp3": "f6afa5f1c481",
+    "audio/bgm-sparkling-pink-overture.mp3": "6e474b21b5d9",
     "audio/bgm-stay-with-me-short.mp3": "d836a069998d",
     "audio/bgm-the-city-beneath-the-comets.mp3": "900fda0dc05e",
     "audio/bgm-title-theme.mp3": "8af0684e79e7",

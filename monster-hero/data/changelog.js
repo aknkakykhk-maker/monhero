@@ -37,7 +37,7 @@ const CHANGELOG = [
   {
     // 新曲「Sparkling Pink Overture」(2026-11-15 社長 r1115-100。難易度は社長の答え「難しめ」・Lv.・ノーツ数は作ったあとの値)
     date: "2026-11-15 12:17", type:'update', group:'rhythm', title:'新曲「Sparkling Pink Overture」を追加しました。ききが、はじめて作った曲です', status:'new',
-    image:'images/song-art/sparkling-pink-overture.jpg?v=a9b0c3ede321',
+    image:'images/song-art/sparkling-pink-overture.jpg?v=cdc147b5571d',
     items:[
       'モンヒロビートに「Sparkling Pink Overture」（2分4秒）を追加しました。助手のききが、はじめて作った曲です。ピアノが主役の、BPM 212 のはやい曲です。',
       'レベルは EASY Lv.13 ／ NORMAL Lv.17 ／ HARD Lv.24 ／ EXPERT Lv.31 ／ MASTER Lv.39 ／ HELL Lv.52 です。',

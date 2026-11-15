@@ -213,7 +213,7 @@ const Audio_ = (() => {
     "audio/bgm-six-eternel-remix-beat.mp3": "b1a024d5b16f",
     "audio/bgm-six-eternel-remix.mp3": "5f56c89739f8",
     "audio/bgm-six-eternel.mp3": "e26412179f3a",
-    "audio/bgm-sparkling-pink-overture.mp3": "f6afa5f1c481",
+    "audio/bgm-sparkling-pink-overture.mp3": "6e474b21b5d9",
     "audio/bgm-stay-with-me-short.mp3": "d836a069998d",
     "audio/bgm-the-city-beneath-the-comets.mp3": "900fda0dc05e",
     "audio/bgm-title-theme.mp3": "8af0684e79e7",

@@ -53558,7 +53558,7 @@ const RHYTHM_SONG_ENTRIES = [
     subtitle:'',
     bgmTrackId:'melo_sparkling_pink_overture',
     // 2026-11-15 追加。「Sparkling Pink Overture」(約2分4秒・BPM 212)。ジャケットは桜の舞台でピンクの髪の子がピアノを弾く絵
-    artwork:'images/song-art/sparkling-pink-overture.jpg?v=a9b0c3ede321',
+    artwork:'images/song-art/sparkling-pink-overture.jpg?v=cdc147b5571d',
     difficulties:Object.freeze(Object.fromEntries(RHYTHM_DIFFICULTIES.map(({id})=>[
       id,sparklingPinkOvertureCharts[id]||emptyRhythmChart()
     ])))

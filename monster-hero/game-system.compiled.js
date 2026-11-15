@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 0ee4c9f58bc97da7
+// source-sha256: 16aad12eee1c28ae
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -8267,7 +8267,7 @@ const Audio_ = (() => {
     "audio/bgm-six-eternel-remix-beat.mp3": "b1a024d5b16f",
     "audio/bgm-six-eternel-remix.mp3": "5f56c89739f8",
     "audio/bgm-six-eternel.mp3": "e26412179f3a",
-    "audio/bgm-sparkling-pink-overture.mp3": "f6afa5f1c481",
+    "audio/bgm-sparkling-pink-overture.mp3": "6e474b21b5d9",
     "audio/bgm-stay-with-me-short.mp3": "d836a069998d",
     "audio/bgm-the-city-beneath-the-comets.mp3": "900fda0dc05e",
     "audio/bgm-title-theme.mp3": "8af0684e79e7",
