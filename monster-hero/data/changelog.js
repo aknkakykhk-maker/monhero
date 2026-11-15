@@ -35,6 +35,13 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    date: "2026-11-15 13:18", type:'update', group:'success', releaseFlag:'monheroSuccess', title:'モンヒロサクセスの能力ポイントを、まとめて振れるようになりました', status:'new',
+    items:[
+      '能力ポイントの振り分けで、1・5・10・100・MAX の刻みを選べるようになりました。＋/−を押し続けると、続けて増減できます(育成中・育成完了の前)。',
+      '上の段の体力・ストレスのゲージの長さが、どの画面でも同じになりました。増減の数字はゲージの上に重ねて出ます。',
+    ],
+  },
+  {
     // 新曲「Sparkling Pink Overture」(2026-11-15 社長 r1115-100。難易度は社長の答え「難しめ」・Lv.・ノーツ数は作ったあとの値)
     date: "2026-11-15 12:17", type:'update', group:'rhythm', title:'新曲「Sparkling Pink Overture」を追加しました。ききが、はじめて作った曲です', status:'new',
     image:'images/song-art/sparkling-pink-overture.jpg?v=cdc147b5571d',

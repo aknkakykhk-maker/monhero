@@ -52,6 +52,17 @@ ok(JSON.stringify(a1) === JSON.stringify(a2), '同じ育成 id・同じ手なの
 ok(JSON.stringify(a1.stats) !== JSON.stringify(b1.stats), '育成 id を変えても結果が同じ(乱数が id を見ていない)');
 ok(JSON.stringify(SUC.gatherOf(a1)) === JSON.stringify(SUC.gatherOf(JSON.parse(JSON.stringify(a1)))), '集まりが同じターンで変わる');
 
+// ---- 育成方針は甘え度と恐れ度の差で決まる(r1115-059 社長の表) ----
+{
+  const P = (a, f) => SUC.polOfBond(a, f);
+  ok([P(10, 10), P(14, 10), P(10, 14), P(0, 0)].every((x) => x === 0), '差 0〜4 が普通でない');
+  ok(P(15, 10) === -1 && P(20, 10) === -1 && P(10, 15) === 1 && P(10, 20) === 1, '差 5〜10 が 甘い(−1)・厳しい(+1)でない');
+  ok(P(21, 10) === -2 && P(25, 10) === -2 && P(10, 21) === 2 && P(10, 25) === 2, '差 11〜15 が 溺愛(−2)・スパルタ(+2)でない');
+  ok(P(26, 10) === -3 && P(50, 0) === -3 && P(10, 26) === 3 && P(0, 50) === 3, '差 16以上 が 超溺愛(−3)・超スパルタ(+3)でない');
+  // 古い保存(pp あり・pol が違う)を読んでも、方針は差で決め直され、pp は残る
+  const old = SUC.restore ? SUC.restore({ ...SUC.newRun({ id: 'o', species: 'Mocchi', aid: 'mua' }), ama: 40, fear: 5, pol: 3, pp: 7 }) : null;
+  if (old) ok(old.pol === -3 && old.pp === 7, `古い保存の読み直しで方針が差にならない/pp が消えた: ${old && old.pol}/${old && old.pp}`);
+}
 // ---- 結果の倍率・サボり・失敗 ----
 ok(SUC.RESULTS.great.mult === 1.5 && SUC.RESULTS.ok.mult === 1 && SUC.RESULTS.fail.mult === 0 && SUC.RESULTS.sab.mult === 0.3, '結果の倍率が 1.5/1/0/0.3 でない');
 const base = SUC.newRun({ id: 'r', species: 'Mocchi', aid: 'mua' });
@@ -64,7 +75,9 @@ ok(near(SUC.failRateOf({ ...base, yosu: { sabori: { visits: 0 } } }) - fFull, 0.
 // 失敗は上がらない・サボりは3割(同じ札・同じ時期で比べる)
 {
   // 編成は前と同じ全員モッチーで比べる(2026-11-14 から空き枠は育てる子と別の種で埋まり、編成の出来事が混ざるため)
-  let s = SUC.newRun({ id: 'mult', species: 'Mocchi', aid: 'mua', pol: -3, team: Array.from({ length: 6 }, () => ({ kind: 'base', species: 'Mocchi' })) });
+  let s = SUC.newRun({ id: 'mult', species: 'Mocchi', aid: 'mua', team: Array.from({ length: 6 }, () => ({ kind: 'base', species: 'Mocchi' })) });
+  s = { ...s, ama: 50, fear: 0, pol: SUC.polOfBond(50, 0) }; // サボりが起きる甘い側の方針は、甘え度と恐れ度の差で決める(r1115-059)
+  ok(s.pol === -3, `甘え度50・恐れ度0 が超溺愛にならない: ${s.pol}`);
   const seen = {};
   for (let i = 0; i < 400 && Object.keys(seen).length < 4; i++) {
     const t = { ...s, id: `mult-${i}`, hp: i % 2 ? 100 : 5 };
