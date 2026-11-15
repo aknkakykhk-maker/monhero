@@ -107,7 +107,7 @@ function MsxItemUseFx({ run, fx, onDone }) {
         <span className="glow"/><span className="ring"/>
         {typeof MsxMonArt === 'function' ? <MsxMonArt run={run} className="ifx-mon" noPeak/> : null}
         {calm ? null : Array.from({ length: 10 }, (_, i) => { const a = (i / 10) * Math.PI * 2; return <i key={i} className="pt" style={{ '--i': i, '--x': `${Math.round(Math.cos(a) * 95)}px`, '--y': `${Math.round(Math.sin(a) * 80 - 20)}px` }}>{K.pt[i % K.pt.length]}</i>; })}
-        <span className="it">{fx.e}</span>
+        <span className="it">{typeof msxItemIco === 'function' ? msxItemIco(fx) : fx.e}</span>
       </div>
       <div className="ifx-hd"><b><span style={{ display: 'inline-block' }}>{fx.name}</span><span style={{ display: 'inline-block' }}>を使った!</span></b><small>{K.word}</small></div>
       <div className="ifx-ch" data-msx-item-chips={info.chips.length}>
