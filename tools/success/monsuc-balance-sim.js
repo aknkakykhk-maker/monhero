@@ -62,6 +62,16 @@ VARIANTS.A3D = { name: '案A3+D', rep: [...VARIANTS.A3.rep, ...DIM] };
 VARIANTS.AP = { name: '案A+P', rep: VARIANTS.A.rep, pts: 2, greatPts: 2, mastery: 1 };
 // 別案(勝手に入れない): 修行の能力の上がり(行き先の基礎 8 → 6)を少し下げる
 VARIANTS.APs = { name: '案A+P+修行の基礎 8→6(別案)', rep: [...VARIANTS.A.rep, ['fixed: Object.freeze({ base: 8,', 'fixed: Object.freeze({ base: 6,']], pts: 2, greatPts: 2, mastery: 1 };
+// ---- コスト案(r1115-107 の後半・クラフト37): 芯は同じで、編成の子がポイントで買えるアシスト効果だけが変わる ----
+//   cost … 効果id → 1目盛りの値段(表に無い物は いまの値段)。編成 real-* と buy:* がこの値段で買う
+const COST_P1 = { haru: 1, natsu: 1, aki: 1, fuyu: 1, hagemi: 1 };
+VARIANTS.c_now = { name: 'コスト いま', rep: [] };
+VARIANTS.c_P1 = { name: 'コスト案1 季節・励を半額', rep: [], cost: COST_P1 };
+// 上限の表(CAP)に足して試す(芯の写しの CAPT だけを変える)
+const CAPLINE = "const CAPT = AT && AT.CAP && typeof AT.CAP === 'object' ? AT.CAP : {};";
+const capRep = (extra) => [[CAPLINE, `const CAPT = Object.assign({}, AT && AT.CAP && typeof AT.CAP === 'object' ? AT.CAP : {}, ${JSON.stringify(extra)});`]];
+VARIANTS.x50 = { name: '上限案 修行効果アップ50%・修行特別効果アップ20', rep: capRep({ shugyo: { v: 50, sum: true }, shugyotoku: { v: 20, sum: true } }), cost: COST_P1 };
+VARIANTS.x30 = { name: '上限案 修行効果アップ30%・修行特別効果アップ10', rep: capRep({ shugyo: { v: 30, sum: true }, shugyotoku: { v: 10, sum: true } }), cost: COST_P1 };
 const pickV = String(opt('--variant', 'now,A,P,AP')).split(',');
 const vlist = (pickV.includes('all') ? Object.keys(VARIANTS) : pickV).filter(k => VARIANTS[k]);
 
@@ -86,8 +96,37 @@ const unitOf = (sp0, stats, techs) => { const sp = battleSp(sp0); const ts = cat
 // 編成: base = ベースモン / box-* = 10周点検と同じ箱の子(アシスト効果なし) / real-* = 育て終えた子らしい子(能力・技・引退で付くおまかせのアシスト効果)
 const AT = require('../../monster-hero/data/monhero-success-assist.js');
 const REAL = { B: { sum: 2600, techs: 4, loy: 70, pop: 40, power: 10000 }, A: { sum: 3400, techs: 6, loy: 80, pop: 55, power: 12500 }, S: { sum: 4300, techs: 8, loy: 85, pop: 70, power: 14500 } };
-const teamOf = (SUC, kind) => {
+const ptOf = (v, id) => (v && v.cost && Number.isFinite(v.cost[id]) ? v.cost[id] : AT.BY_ID[id].pt);
+// おまかせ(AT.autoPick と同じ配り方)を案の値段で
+const autoPickPt = (v, pts) => {
+  const order = [...AT.AUTO_ORDER]; AT.LIST.forEach(a => { if (a.from === 'core' && !order.includes(a.id)) order.push(a.id); });
+  const n = {}; let left = pts;
+  for (const step of [AT.AUTO_STEP, 1]) for (let changed = true; changed;) {
+    changed = false;
+    for (const id of order) {
+      const a = AT.BY_ID[id]; const now = n[id] || 0; if (now >= a.max) continue;
+      if (!now && Object.keys(n).length >= AT.MAX_KINDS) continue;
+      const k = Math.min(step, a.max - now); const c = k * ptOf(v, id); if (c > left) continue;
+      n[id] = now + k; left -= c; changed = true;
+    }
+  }
+  return order.filter(id => n[id]).map(id => ({ id, n: n[id] }));
+};
+// 買う編成: 並べた順に、買えるだけ目盛りを取る(8種類まで)
+const BUY = {
+  tre: ['sokoji', 'atooshi', 'hirameki', 'ninzu', 'kizuna', 'ochitsuki', 'itawari', 'tsuika'],
+  sea: ['haru', 'natsu', 'aki', 'fuyu', 'hagemi', 'atooshi', 'hirameki', 'ninzu'],
+  none: [], s1: ['shugyo'], s2: ['shugyotoku'], s3: ['chokyo'], s4: ['wazakazu', 'waza', 'shugyohp', 'aptq'], s5: ['kokoroe'],
+  shu: ['shugyo', 'shugyotoku', 'chokyo', 'wazakazu', 'waza', 'shugyohp', 'aptq', 'kokoroe'],
+};
+const buyPt = (v, pts, ids) => { let left = pts; const out = []; for (const id of ids) { if (out.length >= AT.MAX_KINDS) break; const a = AT.BY_ID[id]; if (!a) continue; const p = ptOf(v, id); const k = Math.min(a.max, Math.floor(left / p)); if (k > 0) { out.push({ id, n: k }); left -= k * p; } } return out; };
+const teamOf = (SUC, kind, v) => {
   if (kind === 'base') return [];
+  if (kind.startsWith('buy:')) { // buy:<買い方>:<B|A|S>
+    const [, plan, rk] = kind.split(':'); const p = REAL[rk]; const sp = ['Undine', 'Mocchi', 'Golem', 'Pixie', 'Tiger', 'Kyubi'];
+    const picks = buyPt(v, AT.pointsOf(p.power), BUY[plan]);
+    return sp.map((x, i) => { const st = {}; K.forEach((k, j) => { st[k] = Math.round(p.sum / 6 * (0.7 + ((i + j) % 4) * 0.2)); }); return { kind: 'raised', species: x, name: `箱${i + 1}`, stats: st, lv: 30, loy: p.loy, pop: p.pop, techs: SUC.techsOf(x).slice(0, p.techs).map(t => t.id), assists: picks }; });
+  }
   if (kind.startsWith('box-')) return boxSeed(kind).mons.slice(0, 6).map(m => ({ kind: 'raised', species: m.species, name: m.nick, stats: m.st, techs: m.techs }));
   if (kind === 'tsuika') { // 6体とも 能力 3,400・追加トレボーナスを最大で(r1115-122 の試算用)
     const sp = ['Undine', 'Mocchi', 'Golem', 'Pixie', 'Tiger', 'Kyubi'];
@@ -98,11 +137,11 @@ const teamOf = (SUC, kind) => {
     return sp.map((x, i) => { const st = {}; K.forEach((k, j) => { st[k] = Math.round(4300 / 6 * (0.7 + ((i + j) % 4) * 0.2)); }); return { kind: 'raised', species: x, name: `箱${i + 1}`, stats: st, lv: 50, loy: 85, pop: 70, techs: SUC.techsOf(x).slice(0, 8).map(t => t.id), assists: ids.map(id => ({ id, n: AT.BY_ID[id].v.length })) }; });
   }
   const p = REAL[kind.replace('real-', '')]; const sp = ['Undine', 'Mocchi', 'Golem', 'Pixie', 'Tiger', 'Kyubi'];
-  return sp.map((x, i) => { const st = {}; K.forEach((k, j) => { st[k] = Math.round(p.sum / 6 * (0.7 + ((i + j) % 4) * 0.2)); }); return { kind: 'raised', species: x, name: `箱${i + 1}`, stats: st, lv: 30, loy: p.loy, pop: p.pop, techs: SUC.techsOf(x).slice(0, p.techs).map(t => t.id), assists: AT.autoPick(AT.pointsOf(p.power), []).picks }; });
+  return sp.map((x, i) => { const st = {}; K.forEach((k, j) => { st[k] = Math.round(p.sum / 6 * (0.7 + ((i + j) % 4) * 0.2)); }); return { kind: 'raised', species: x, name: `箱${i + 1}`, stats: st, lv: 30, loy: p.loy, pop: p.pop, techs: SUC.techsOf(x).slice(0, p.techs).map(t => t.id), assists: autoPickPt(v, AT.pointsOf(p.power)) }; });
 };
 const runLap = (SUC, v, cfg, seed) => {
   const id = `lap-${cfg.species}-${cfg.name}-${seed}`;
-  const team = teamOf(SUC, cfg.team);
+  const team = teamOf(SUC, cfg.team, v);
   let s = SUC.newRun({ id, species: cfg.species, aid: 'mua', team, aidBondLv: 1 });
   let r = (seed * 2654435761 + 7) >>> 0; const rnd = () => { r = (r * 1103515245 + 12345) & 0x7fffffff; return r / 0x7fffffff; };
   const wpick = (w) => { const ks = Object.keys(w).filter(k => w[k] > 0); let t = ks.reduce((a, k) => a + w[k], 0) * rnd(); for (const k of ks) { t -= w[k]; if (t <= 0) return k; } return ks[0]; };
