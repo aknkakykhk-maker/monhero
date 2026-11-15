@@ -770,7 +770,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
       <MsxSay aid={s.aid} ex={omenK ? (sayL.e || 'surprise') : yosu || low ? 'troubled' : (sayL.e || 'happy')} text={sayL.t}/>
       <div className="v-scene home">
         <img className="bg" src={scn.bg} alt=""/><div className="sh"/>
-        <div className="gr"/><MsxMonArt run={run} className={`mon${low ? ' low' : ''}`} live/>
+        <div className="msx-roam" data-msx-roam><div className="msx-roam-h"><div className="msx-roam-f"><div className="gr"/><MsxMonArt run={run} className={`mon${low ? ' low' : ''}`} live/></div></div></div>
         <div className="v-party"><small>編成</small>{s.team.map((m, i) => <MsxPf key={i} m={m} bond={s.bond[i]} tagAt={tagAt}/>)}<MsxPf aid={s.aid} bond={s.aidBond} tagAt={tagAt}/></div>
         <div className="v-chips"><span className="v-chip">{MSX_SEASON[cal.season]}・{scn.time}</span>
           {preOn ? <span className="v-chip hot" data-msx-pre-chip>🏆 {preName} 当日</span> : v.period.key !== 'final' ? <span className="v-chip hot">🏆 期末の大会まで {v.period.left}ターン</span> : <span className="v-chip hot">🏆 ヒーローズファイナル</span>}
