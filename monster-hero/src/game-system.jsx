@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 2c3b53b49fec0c7b
+// generated-sha256: 2e87b20182bfcb5e
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -59105,7 +59105,13 @@ function RhythmWatchLaneRoad({ chart, song = null, wide = false, onWaiting, onFa
 }
 // 観戦の画面のチャットの欄(2026-11-15 r1115-189)。外から見ている人は RHYTHM_WATCH.say(wc)で送り、部屋の人と観戦の人のやりとりを見る。
 // 待機中のメンバー(部屋の人)が見ているときは、部屋のチャット(RHYTHM_MULTI.sendChat)をそのまま使う。観戦の人の言葉は琥珀色・👁 つき
-function RhythmWatchChat({ member = false, wide = false }) {
+// 背の低い縦の画面(高さ700未満)か。譜面の場の高さを残すため、チャットの欄を詰める(2026-11-15 r1115-189 ミハリ: 320×568 でライフとコンボが重なった)
+const useRhythmWatchShort = (wide) => {
+  const [h, setH] = React.useState(() => (typeof window !== 'undefined' ? window.innerHeight : 800));
+  React.useEffect(() => { const on = () => setH(window.innerHeight); window.addEventListener('resize', on); on(); return () => window.removeEventListener('resize', on); }, []);
+  return !wide && h < 700;
+};
+function RhythmWatchChat({ member = false, wide = false, short = false }) {
   const mv = useRhythmMultiView();
   const wv = RHYTHM_WATCH.view();
   const list = member ? (mv && Array.isArray(mv.chat) ? mv.chat : []) : (wv && Array.isArray(wv.chat) ? wv.chat : []);
@@ -59125,7 +59131,7 @@ function RhythmWatchChat({ member = false, wide = false }) {
   const submit = () => { if (send(text)) setText(''); };
   return (
     <div data-rhythm-watch-chat className={`mt-1.5 flex shrink-0 flex-col gap-1 rounded-xl border border-slate-700 bg-slate-900/80 p-1.5 ${wide ? 'min-h-0' : ''}`}>
-      <ul ref={listRef} data-rhythm-watch-chat-list className={`${wide ? 'max-h-[4.4rem]' : 'max-h-[4.2rem]'} min-h-[1.4rem] overflow-y-auto text-[11px] font-bold leading-snug`}>
+      <ul ref={listRef} data-rhythm-watch-chat-list className={`${wide ? 'max-h-[4.4rem]' : short ? 'max-h-[2.3rem]' : 'max-h-[4.2rem]'} min-h-[1.4rem] overflow-y-auto text-[11px] font-bold leading-snug`}>
         {!list.length && <li className="text-slate-400" style={JA_WRAP_STYLE}>{jaWrap('観戦している人も、ひとことやスタンプを送れます')}</li>}
         {list.map((c) => {
           const mine = c.id === selfId;
@@ -59142,20 +59148,20 @@ function RhythmWatchChat({ member = false, wide = false }) {
           );
         })}
       </ul>
-      {stampOpen
-        ? <div data-rhythm-watch-chat-stamps className="max-h-[7.5rem] overflow-y-auto"><MultiStampPalette onSend={(x) => send(x.text, { f: x.f, w: x.w })} cols={wide ? 4 : 5} /></div>
-        : (
+      {stampOpen && <div data-rhythm-watch-chat-stamps className={`${short ? 'max-h-[6rem]' : 'max-h-[7.5rem]'} overflow-y-auto`}><MultiStampPalette onSend={(x) => send(x.text, { f: x.f, w: x.w })} cols={wide ? 4 : 5} /></div>}
+      {/* 背の低い縦の画面では、定型の言葉はスタンプの一覧と一緒に開く(ふだんは、やりとりと入力の欄だけ) */}
+      {(short ? stampOpen : !stampOpen) && (
           <div data-rhythm-watch-chat-phrases className="grid shrink-0 grid-cols-4 gap-1">
             {rhythmMultiStampsFor('watch').slice(0, 4).map((t) => (
               <button key={t} type="button" data-rhythm-watch-chat-phrase onClick={() => send(t)}
                 className="min-h-[34px] min-w-0 truncate rounded-full border border-white/20 bg-slate-800 px-1 text-[11px] font-black text-white active:scale-95">{t}</button>
             ))}
           </div>
-        )}
+      )}
       {note && <small data-rhythm-watch-chat-wait className="block text-[11px] font-black text-amber-300">{note}</small>}
       <form className="flex shrink-0 gap-1.5" onSubmit={(e) => { e.preventDefault(); submit(); }}>
-        <button type="button" data-rhythm-watch-chat-stamp-toggle aria-pressed={stampOpen} aria-label={stampOpen ? '定型の言葉へ' : 'スタンプを選ぶ'} onClick={() => setStampOpen((x) => !x)}
-          className={`min-h-[40px] shrink-0 whitespace-nowrap rounded-xl border px-2 text-[12px] font-black ${stampOpen ? 'border-cyan-300 bg-cyan-600 text-white' : 'border-cyan-300/50 bg-slate-950 text-cyan-100'}`}>{wide ? (stampOpen ? '💬' : '😊') : (stampOpen ? '💬 定型' : '😊 スタンプ')}</button>
+        <button type="button" data-rhythm-watch-chat-stamp-toggle aria-pressed={stampOpen} aria-label={short ? (stampOpen ? '定型とスタンプを閉じる' : '定型とスタンプを選ぶ') : stampOpen ? '定型の言葉へ' : 'スタンプを選ぶ'} onClick={() => setStampOpen((x) => !x)}
+          className={`min-h-[40px] shrink-0 whitespace-nowrap rounded-xl border px-2 text-[12px] font-black ${stampOpen ? 'border-cyan-300 bg-cyan-600 text-white' : 'border-cyan-300/50 bg-slate-950 text-cyan-100'}`}>{wide ? (stampOpen ? '💬' : '😊') : short ? (stampOpen ? '✕ 閉じる' : '😊 定型・スタンプ') : (stampOpen ? '💬 定型' : '😊 スタンプ')}</button>
         <input data-rhythm-watch-chat-input value={text} maxLength={RHYTHM_MULTI_CHAT_MAX_LENGTH} autoComplete="off" enterKeyHint="send"
           onChange={(e) => setText(e.target.value)} placeholder="ひとこと"
           className="min-h-[40px] min-w-0 flex-1 rounded-xl border border-white/20 bg-slate-950 px-2 text-base font-bold text-white" />
@@ -59169,6 +59175,7 @@ function RhythmWatchScreen({ songs = [], resolveIconUrl = null }) {
   const [waiting, setWaiting] = React.useState(false);
   const [roadMode, setRoadMode] = React.useState(false);
   const wide = useRhythmWatchWide();
+  const short = useRhythmWatchShort(wide);
   const focusRow = v && v.rows ? v.rows[v.focus] : null;
   // 観戦している曲を、画面と同じ位置で流す(r1115-190)。演奏中の回だけ。終わった・やめたら止めて、本体が元の曲へ戻す
   const audioSong = v && v.phase === 'playing' && v.songId ? songs.find((x) => x.songId === v.songId) : null;
@@ -59197,7 +59204,8 @@ function RhythmWatchScreen({ songs = [], resolveIconUrl = null }) {
   );
   const body = (
     <div data-rhythm-watch data-rhythm-watch-phase={v.phase} className="fixed inset-0 z-[95000] flex flex-col bg-slate-950 text-white" style={{ paddingTop: 'max(var(--mh-sa-top), 6px)', paddingBottom: 'max(var(--mh-sa-bottom), 6px)' }}>
-      <style>{'@keyframes mhWatchPop{0%{opacity:0;transform:translateY(8px)}15%{opacity:1;transform:none}85%{opacity:1}100%{opacity:0}}'}</style>
+      {/* コンボの上端は場の高さの割合(14%)で決まるので、場が低い(背の低い縦の画面)とライフ(上から決まった位置)に重なる。観戦の画面だけ、ライフの下より上へ来ないようにする(r1115-189 ミハリ・320×568) */}
+      <style>{'@keyframes mhWatchPop{0%{opacity:0;transform:translateY(8px)}15%{opacity:1;transform:none}85%{opacity:1}100%{opacity:0}}[data-rhythm-watch] [data-combo-pos="AUTO"],[data-rhythm-watch] [data-combo-pos="HUD"]{top:max(14%,64px)}'}</style>
       <header data-rhythm-watch-band className="flex shrink-0 items-center gap-2 px-3">
         <button data-rhythm-watch-close type="button" aria-label="観戦をやめる" onClick={close} className="min-h-[40px] shrink-0 rounded-xl bg-slate-700 px-3 text-[12px] font-black text-slate-100 max-[359px]:px-2 max-[359px]:text-[11px]">観戦をやめる</button>
         {/* 縦横の切り替え(プレイ画面・部屋の見出しと同じ部品。2026-11-15 r1115-190②) */}
@@ -59260,9 +59268,9 @@ function RhythmWatchScreen({ songs = [], resolveIconUrl = null }) {
                 );
               })}
             </div>
-            <p className="mt-1 text-[10px] font-bold text-slate-400" style={JA_WRAP_STYLE}>{jaWrap(`名前を押すと、その人の判定を見られます${v.member ? '。次の曲から、いっしょに遊べます' : canJoin ? '。観戦は見るだけです。遊ぶときは「この部屋に入る」' : ''}`)}</p>
+            {!short && <p className="mt-1 text-[10px] font-bold text-slate-400" style={JA_WRAP_STYLE}>{jaWrap(`名前を押すと、その人の判定を見られます${v.member ? '。次の曲から、いっしょに遊べます' : canJoin ? '。観戦は見るだけです。遊ぶときは「この部屋に入る」' : ''}`)}</p>}
             </div>
-            <RhythmWatchChat member={!!v.member} wide={wide} />
+            <RhythmWatchChat member={!!v.member} wide={wide} short={short} />
           </section>
         </div>
       )}

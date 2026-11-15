@@ -397,8 +397,11 @@ const VIEW = PORTRAIT ? { width: 390, height: 844 } : { width: 844, height: 390 
       await W.setViewportSize({ width: 844, height: 390 }); await W.waitForTimeout(500);
     }
     // 縦・横・小さい端末で、観戦の画面の中身が画面からはみ出さない
-    for (const [w, h, label] of [[844, 390, '横'], [390, 844, '縦'], [375, 667, '小さい縦'], [667, 375, '小さい横']]) {
+    for (const [w, h, label] of [[844, 390, '横'], [390, 844, '縦'], [375, 667, '小さい縦'], [667, 375, '小さい横'], [320, 568, 'いちばん小さい縦']]) {
       await W.setViewportSize({ width: w, height: h }); await W.waitForTimeout(500);
+      // r1115-189 ミハリ: チャットの欄で場が低くなっても、ライフとコンボが重ならない
+      const hudHit = await W.evaluate(() => { const a = document.querySelector('[data-rhythm-watch] [data-rhythm-hud]'); const b = document.querySelector('[data-rhythm-watch] [data-rhythm-combo]'); if (!a || !b) return null; const p = a.getBoundingClientRect(); const q = b.getBoundingClientRect(); if (!q.height) return null; return { hit: !(p.bottom <= q.top || q.bottom <= p.top || p.right <= q.left || q.right <= p.left), life: [Math.round(p.top), Math.round(p.bottom)], combo: [Math.round(q.top), Math.round(q.bottom)] }; });
+      if (hudHit) check(`${label}(${w}×${h}): ライフとコンボが重ならない`, !hudHit.hit, JSON.stringify(hudHit));
       const fit = await W.evaluate(() => { const r = document.querySelector('[data-rhythm-watch]'); const q = r.getBoundingClientRect(); const badList = [...r.querySelectorAll('button')].filter((b) => { const e = b.getBoundingClientRect(); return e.right > innerWidth + 1 || e.left < -1 || e.bottom > innerHeight + 1; }); const bad = badList.length; const wideOnes = [...r.querySelectorAll('*')].filter((x) => x.getBoundingClientRect().right > q.right + 1).slice(0, 3).map((x) => `${x.tagName}.${String(x.className).slice(0, 40)}`); return { bad, sw: r.scrollWidth <= q.width + 1, ...(bad || wideOnes.length ? { who: badList.slice(0, 3).map((x) => x.innerText.slice(0, 12)), wide: wideOnes } : {}) }; });
       check(`${label}(${w}×${h}): ボタンが画面からはみ出さない・横に伸びない`, fit.bad === 0 && fit.sw, JSON.stringify(fit));
     }

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5ec406d1b0cc4530
+// source-sha256: dc861742acc63ba6
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -99381,9 +99381,20 @@ function RhythmWatchLaneRoad({
     className: "pointer-events-none absolute inset-0 h-full w-full"
   }));
 }
+const useRhythmWatchShort = wide => {
+  const [h, setH] = React.useState(() => typeof window !== 'undefined' ? window.innerHeight : 800);
+  React.useEffect(() => {
+    const on = () => setH(window.innerHeight);
+    window.addEventListener('resize', on);
+    on();
+    return () => window.removeEventListener('resize', on);
+  }, []);
+  return !wide && h < 700;
+};
 function RhythmWatchChat({
   member = false,
-  wide = false
+  wide = false,
+  short = false
 }) {
   const mv = useRhythmMultiView();
   const wv = RHYTHM_WATCH.view();
@@ -99417,7 +99428,7 @@ function RhythmWatchChat({
   }, React.createElement("ul", {
     ref: listRef,
     "data-rhythm-watch-chat-list": true,
-    className: `${wide ? 'max-h-[4.4rem]' : 'max-h-[4.2rem]'} min-h-[1.4rem] overflow-y-auto text-[11px] font-bold leading-snug`
+    className: `${wide ? 'max-h-[4.4rem]' : short ? 'max-h-[2.3rem]' : 'max-h-[4.2rem]'} min-h-[1.4rem] overflow-y-auto text-[11px] font-bold leading-snug`
   }, !list.length && React.createElement("li", {
     className: "text-slate-400",
     style: JA_WRAP_STYLE
@@ -99443,16 +99454,16 @@ function RhythmWatchChat({
     }, (multiStampWord(c.sw) || {}).text || c.text)) : React.createElement("span", {
       className: `min-w-0 break-words rounded-lg px-1.5 py-0.5 ${c.w ? 'bg-amber-200 text-amber-950' : 'bg-slate-100 text-slate-900'}`
     }, c.text));
-  })), stampOpen ? React.createElement("div", {
+  })), stampOpen && React.createElement("div", {
     "data-rhythm-watch-chat-stamps": true,
-    className: "max-h-[7.5rem] overflow-y-auto"
+    className: `${short ? 'max-h-[6rem]' : 'max-h-[7.5rem]'} overflow-y-auto`
   }, React.createElement(MultiStampPalette, {
     onSend: x => send(x.text, {
       f: x.f,
       w: x.w
     }),
     cols: wide ? 4 : 5
-  })) : React.createElement("div", {
+  })), (short ? stampOpen : !stampOpen) && React.createElement("div", {
     "data-rhythm-watch-chat-phrases": true,
     className: "grid shrink-0 grid-cols-4 gap-1"
   }, rhythmMultiStampsFor('watch').slice(0, 4).map(t => React.createElement("button", {
@@ -99474,10 +99485,10 @@ function RhythmWatchChat({
     type: "button",
     "data-rhythm-watch-chat-stamp-toggle": true,
     "aria-pressed": stampOpen,
-    "aria-label": stampOpen ? '定型の言葉へ' : 'スタンプを選ぶ',
+    "aria-label": short ? stampOpen ? '定型とスタンプを閉じる' : '定型とスタンプを選ぶ' : stampOpen ? '定型の言葉へ' : 'スタンプを選ぶ',
     onClick: () => setStampOpen(x => !x),
     className: `min-h-[40px] shrink-0 whitespace-nowrap rounded-xl border px-2 text-[12px] font-black ${stampOpen ? 'border-cyan-300 bg-cyan-600 text-white' : 'border-cyan-300/50 bg-slate-950 text-cyan-100'}`
-  }, wide ? stampOpen ? '💬' : '😊' : stampOpen ? '💬 定型' : '😊 スタンプ'), React.createElement("input", {
+  }, wide ? stampOpen ? '💬' : '😊' : short ? stampOpen ? '✕ 閉じる' : '😊 定型・スタンプ' : stampOpen ? '💬 定型' : '😊 スタンプ'), React.createElement("input", {
     "data-rhythm-watch-chat-input": true,
     value: text,
     maxLength: RHYTHM_MULTI_CHAT_MAX_LENGTH,
@@ -99501,6 +99512,7 @@ function RhythmWatchScreen({
   const [waiting, setWaiting] = React.useState(false);
   const [roadMode, setRoadMode] = React.useState(false);
   const wide = useRhythmWatchWide();
+  const short = useRhythmWatchShort(wide);
   const focusRow = v && v.rows ? v.rows[v.focus] : null;
   const audioSong = v && v.phase === 'playing' && v.songId ? songs.find(x => x.songId === v.songId) : null;
   useRhythmWatchAudio(audioSong && audioSong.bgmTrackId ? audioSong.bgmTrackId : '', v ? v.round : '');
@@ -99545,7 +99557,7 @@ function RhythmWatchScreen({
       paddingTop: 'max(var(--mh-sa-top), 6px)',
       paddingBottom: 'max(var(--mh-sa-bottom), 6px)'
     }
-  }, React.createElement("style", null, '@keyframes mhWatchPop{0%{opacity:0;transform:translateY(8px)}15%{opacity:1;transform:none}85%{opacity:1}100%{opacity:0}}'), React.createElement("header", {
+  }, React.createElement("style", null, '@keyframes mhWatchPop{0%{opacity:0;transform:translateY(8px)}15%{opacity:1;transform:none}85%{opacity:1}100%{opacity:0}}[data-rhythm-watch] [data-combo-pos="AUTO"],[data-rhythm-watch] [data-combo-pos="HUD"]{top:max(14%,64px)}'), React.createElement("header", {
     "data-rhythm-watch-band": true,
     className: "flex shrink-0 items-center gap-2 px-3"
   }, React.createElement("button", {
@@ -99674,12 +99686,13 @@ function RhythmWatchScreen({
     }, r ? r.s.toLocaleString() : '-')), React.createElement("span", {
       className: "shrink-0 text-right text-[12px] font-black tabular-nums text-amber-300"
     }, r ? r.c : ''));
-  })), React.createElement("p", {
+  })), !short && React.createElement("p", {
     className: "mt-1 text-[10px] font-bold text-slate-400",
     style: JA_WRAP_STYLE
   }, jaWrap(`名前を押すと、その人の判定を見られます${v.member ? '。次の曲から、いっしょに遊べます' : canJoin ? '。観戦は見るだけです。遊ぶときは「この部屋に入る」' : ''}`))), React.createElement(RhythmWatchChat, {
     member: !!v.member,
-    wide: wide
+    wide: wide,
+    short: short
   }))));
   const target = typeof rotationAwarePortalTarget === 'function' ? rotationAwarePortalTarget() : document.body;
   return ReactDOM.createPortal(body, target);
