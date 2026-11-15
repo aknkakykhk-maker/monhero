@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c52966be3ff77a42
+// source-sha256: 532c4530e14ff838
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -153798,7 +153798,7 @@ function MonsucBracket({
   const foeNo = no[fi];
   const lines = [top.you ? React.createElement(React.Fragment, null, "「", React.createElement("em", null, "1番人気は", Z, " ", info.meName, "!"), Z, " まずは", Z, " 1回戦から", Z, " 見ていこう」") : React.createElement(React.Fragment, null, "「", React.createElement("em", null, "1番人気は", Z, " ", top.champ ? '王者の ' : '', nm(top), "!"), Z, " ", info.meName, "の", Z, "1回戦は", Z, " これからだよ」"), upsets.length ? React.createElement(React.Fragment, null, "「", React.createElement("em", null, "大穴!", Z, " ", nm(E[upsets[0]])), " が", Z, " 勝ち上がったぞ!", Z, " ", info.meName, "も", Z, " 1回戦を", Z, " 勝ち上がり!」") : React.createElement(React.Fragment, null, "「1回戦が", Z, " おわったよ。", Z, React.createElement("em", null, info.meName), "は", Z, " 順当に", Z, " 勝ち上がり!」"), foeNo >= 4 ? React.createElement(React.Fragment, null, "「", React.createElement("em", null, "大穴!", Z, " ", nm(foe)), Z, " 決勝まで", Z, " きたぞ!", Z, " ", info.meName, "は", Z, " 準決勝も", Z, " 勝って", Z, " 決勝へ!」") : React.createElement(React.Fragment, null, "「準決勝も", Z, " おわったよ。", Z, React.createElement("em", null, info.meName), "は", Z, " 決勝へ!", Z, " 反対の山からは", Z, " ", React.createElement("em", null, nm(foe)), "」")];
   const champNo1 = no[E.indexOf(champ)] === 1;
-  const finalLine = foe.rival ? React.createElement(React.Fragment, null, "「", champNo1 && champ !== foe ? React.createElement(React.Fragment, null, "1番人気は", Z, " 王者の ", nm(champ), "!", Z, " でも、", Z) : null, "決勝の相手は", Z, " ", React.createElement("em", null, "ライバルの ", nm(foe)), " だよ。", Z, "勝てば", Z, " ごほうび大!」") : foe.champ ? React.createElement(React.Fragment, null, "「決勝の相手は", Z, " 1番人気の王者", Z, " ", React.createElement("em", null, nm(foe)), "!", Z, " ", info.opp && info.opp.note ? `${info.opp.note}、だって。` : '', Z, "ここで勝てば", Z, " 大金星だよ!」") : React.createElement(React.Fragment, null, "「決勝の相手は", Z, " ", React.createElement("em", null, nm(foe)), "!", Z, " あわてずに", Z, " いこうね」");
+  const finalLine = foe.rival ? React.createElement(React.Fragment, null, "「", champNo1 && champ !== foe ? React.createElement(React.Fragment, null, "1番人気は", Z, " 王者の ", nm(champ), "!", Z, " でも、", Z) : null, "決勝の相手は", Z, " ", React.createElement("em", null, "ライバルの ", nm(foe)), " だよ。", Z, "勝てば", Z, " 能力ポイントが1.5倍!」") : foe.champ ? React.createElement(React.Fragment, null, "「決勝の相手は", Z, " 1番人気の王者", Z, " ", React.createElement("em", null, nm(foe)), "!", Z, " ", info.opp && info.opp.note ? `${info.opp.note}、だって。` : '', Z, "ここで勝てば", Z, " 大金星だよ!」") : React.createElement(React.Fragment, null, "「決勝の相手は", Z, " ", React.createElement("em", null, nm(foe)), "!", Z, " あわてずに", Z, " いこうね」");
   return React.createElement("div", {
     className: "msc-wrap",
     "data-msc-bracket": true,
@@ -154274,8 +154274,7 @@ function MonsucCupWin({
   const rows = Array.isArray(out && out.rows) ? out.rows : [...(out && out.prize ? [{
     i: '💰',
     k: '賞金',
-    v: `+${out.prize}G${info.rival ? '(ライバルに勝って ×1.5)' : ''}`,
-    big: info.rival
+    v: `+${out.prize}G`
   }] : []), ...(out && out.tickets ? [{
     i: '🎫',
     k: '修行チケット',
@@ -154322,7 +154321,7 @@ function MonsucCupWin({
     className: "nw"
   }, o.name || mscMonName(o.species), "に勝ち", match && match.r ? `(${match.r.rounds}ラウンド)` : '')), info.rival && React.createElement("div", {
     className: "rival"
-  }, React.createElement("span", null, "ライバルの ", o.name || mscMonName(o.species), " にも 勝った!"), React.createElement("em", null, "ごほうび大"))), rows.map((r, k) => React.createElement("div", {
+  }, React.createElement("span", null, "ライバルの ", o.name || mscMonName(o.species), " にも 勝った!"), React.createElement("em", null, "能力ポイント1.5倍"))), rows.map((r, k) => React.createElement("div", {
     key: k,
     className: `msc-rw ${r.big ? 'big' : ''}`,
     style: {
@@ -154345,7 +154344,7 @@ function MonsucCupWin({
       fontSize: 11,
       color: '#b45309'
     }
-  }, coach.name) : null, info.rival ? '「ライバルに勝った! ごほうびも 大きいよ!」' : `「${info.meName}、やったね! 優勝だよ!」`)), React.createElement("div", {
+  }, coach.name) : null, info.rival ? '「ライバルに勝った! 能力ポイントが 1.5倍だよ!」' : `「${info.meName}、やったね! 優勝だよ!」`)), React.createElement("div", {
     className: "msc-foot"
   }, React.createElement("button", {
     className: "msc-btn",
@@ -179037,7 +179036,7 @@ const msxR3CupReward = (SUC, c, s) => {
     if (rw.stat) Object.entries(rw.stat).forEach(([k, v]) => o.push(`${MSX_STAT_NAME[k]} +${v}`));
     if (rw.hpMax) o.push(`体力の最大値 +${rw.hpMax}`);
     if (rw.loy) o.push(`忠誠度 +${rw.loy}`);
-    if (rw.pts) o.push(`能力ポイント +${rw.pts}`);
+    if (rw.pts) o.push(`能力ポイント +${rw.pts}${c.rival ? `(ライバルに勝つと +${Math.round(rw.pts * 1.5)})` : ''}`);
     if (rw.pop) o.push(`人気 +${rw.pop}`);
     o.push(...msxR3CupItems(SUC, c, s));
     if (Number.isInteger(rw.apt)) o.push('その間合いの適性が1段上がる');
@@ -179060,7 +179059,7 @@ const msxR3CupReward = (SUC, c, s) => {
     2: 8,
     3: 12
   })[c.star];
-  if (pts) out.push(`能力ポイント +${pts}`);
+  if (pts) out.push(`能力ポイント +${pts}${c.rival ? `(ライバルに勝つと +${Math.round(pts * 1.5)})` : ''}`);
   if (pop) out.push(`人気 +${pop}`);
   if (R.stat && up) out.push(`${MSX_STAT_NAME[R.stat]} +${up}`);
   if (c.star >= 4) out.push('全能力 +4');
@@ -179092,12 +179091,11 @@ const msxR3Prizes = (SUC, c) => {
     });
   });
   const wtk = ex && ex.four || c.star >= 3 ? 1 : 0;
-  const rtk = c.rival ? 1 : 0;
   out.push({
     id: 'tk',
     e: '🎫',
     name: '修行チケット',
-    desc: `${wtk + rtk ? `勝つと修行チケット +${wtk + rtk}${rtk ? '(ライバルの分 +1)' : ''}。` : ''}賞金ランクが上がると1段ごとに +1(6段目から上は +2)(負けても獲得賞金の合計で上がる)`
+    desc: `${wtk ? `勝つと修行チケット +${wtk}。` : ''}賞金ランクが上がると1段ごとに +1(6段目から上は +2)(負けても獲得賞金の合計で上がる)`
   });
   const bpz = msxR3BeatPrize(SUC, c.prize);
   if (bpz) out.push(bpz);
@@ -179360,7 +179358,7 @@ function MsxR3Cup({
       alt: ""
     }), React.createElement("b", null, "ライバル")), React.createElement("span", {
       className: "rvb"
-    }, "ごほうび大")) : null);
+    }, "能力ポイント1.5倍")) : null);
   }) : React.createElement("div", {
     className: "msx-note"
   }, P.key === 'final' ? '最後の期は、ヒーローズファイナルだけです' : now ? '今月の大会はありません' : 'この月の大会はありません')), React.createElement("div", {
@@ -179640,7 +179638,7 @@ function MsxR3Bracket({
       rival: opp.rival ? foeName : ''
     }, '');
     return l.t ? l.t : null;
-  })() || (opp.rival ? React.createElement(React.Fragment, null, "「決勝の相手は ", React.createElement("b", null, "ライバルの ", foeName), "! 勝てば ごほうび大!」") : opp.champ ? React.createElement(React.Fragment, null, "「決勝の相手は ", React.createElement("b", null, "王者の ", foeName), "! ", opp.note || '強敵だよ', "。胸を借りるつもりでいこう!」") : React.createElement(React.Fragment, null, "「決勝の相手は ", React.createElement("b", null, foeName), "。", opp.note || 'しっかり見ていこう', "!」"));
+  })() || (opp.rival ? React.createElement(React.Fragment, null, "「決勝の相手は ", React.createElement("b", null, "ライバルの ", foeName), "! 勝てば 能力ポイントが1.5倍!」") : opp.champ ? React.createElement(React.Fragment, null, "「決勝の相手は ", React.createElement("b", null, "王者の ", foeName), "! ", opp.note || '強敵だよ', "。胸を借りるつもりでいこう!」") : React.createElement(React.Fragment, null, "「決勝の相手は ", React.createElement("b", null, foeName), "。", opp.note || 'しっかり見ていこう', "!」"));
   const body = React.createElement(React.Fragment, null, React.createElement(MsxBand, {
     s: s,
     v: v,
@@ -179910,12 +179908,12 @@ const msxR3GainItems = (d, s) => {
   });
   return o;
 };
-const msxR3PrizeRows = (d, s) => {
+const msxR3PrizeRows = (d, s, rival) => {
   const rows = [];
   if (d.rankTo > d.rankFrom) rows.push(['🏆', '賞金ランク', `${msxR3RankName(d.rankFrom || 0)} → ${msxR3RankName(d.rankTo)}`, 'new', 'UP']);else if (d.rankTo > 0) rows.push(['🏆', '賞金ランク', `${msxR3RankName(d.rankTo)}(KEEP)`, '', '']);
   (d.titles || []).forEach(t => rows.push(['🏅', '称号', `「${typeof msxR3TitleName === 'function' ? msxR3TitleName(t) : t}」を手に入れた!`, 'new', 'NEW']));
   (d.apt || []).forEach(i => rows.push(['📏', '間合い適性', `「${['零', '近', '中', '遠'][i]}」の間合い適性が1段上がった!`, 'new', 'UP']));
-  if (d.pts) rows.push(['🔷', '能力ポイント', `+${d.pts}(いま ${s.pts})`, '', '']);
+  if (d.pts) rows.push(['🔷', '能力ポイント', `+${d.pts}(いま ${s.pts})${rival ? '・ライバルに勝って ×1.5' : ''}`, '', '']);
   if (d.tickets) rows.push(['🎫', '修行チケット', `+${d.tickets}(${s.tickets - d.tickets}枚 → ${s.tickets}枚)`, '', '']);
   if (d.fame) rows.push(['💰', '賞金', `+${msxFmt(d.fame)}G(所持 ${msxFmt(s.fame - d.fame)}G → ${msxFmt(s.fame)}G)`, '', '']);
   if (d.beat) rows.push(['🎵', 'ビートP', `+${msxFmt(d.beat)}(本編のビートPに足されます)`, 'new', 'GET']);
@@ -180524,7 +180522,7 @@ function MsxR3Battle({
       });
     }
     if (st3.stage === 'prize') {
-      const rows = msxR3PrizeRows(d, s);
+      const rows = msxR3PrizeRows(d, s, st3.rival);
       const body = React.createElement(React.Fragment, null, React.createElement(MsxBand, {
         s: s,
         v: v,
@@ -180566,7 +180564,7 @@ function MsxR3Battle({
       }, React.createElement("img", {
         src: st3.foe ? msxMonThumb(st3.foe.species) : '',
         alt: ""
-      }), "ライバルの ", st3.rivalName, " に 勝った!", React.createElement("b", null, "ごほうび大")) : null, React.createElement("div", {
+      }), "ライバルの ", st3.rivalName, " に 勝った!", React.createElement("b", null, "能力ポイント1.5倍")) : null, React.createElement("div", {
         className: "v-trophy"
       }, "🏆")), React.createElement(MsxR3RankPyramid, {
         step: d.rankTo || 0,
@@ -180593,7 +180591,7 @@ function MsxR3Battle({
         const l = msxR3Line('turn.cup.win', run, {
           cup: st3.name,
           rival: st3.rivalName || ''
-        }, st3.rival ? '「ライバルに勝ったから、ごほうびがいつもの倍! つぎは ごはんだよ!」' : '「やったね! つぎは ごはんだよ!」');
+        }, st3.rival ? '「ライバルに勝ったから、能力ポイントが いつもの1.5倍! つぎは ごはんだよ!」' : '「やったね! つぎは ごはんだよ!」');
         return React.createElement(MsxSay, {
           aid: s.aid,
           ex: l.e || 'excited',
