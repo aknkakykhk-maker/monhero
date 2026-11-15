@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: c603f9ab0a9e804a
+// generated-sha256: 12a40f0b9d9375fc
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -23637,7 +23637,7 @@ const rhythmSelectNoticeOpen=(state,playedSongCount,isShortScreen)=>isShortScree
   :(!state.noticeTouched&&playedSongCount>=RHYTHM_NOTICE_FOLD_PLAYED_SONGS?false:state.noticeOpen);
 const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,noticeHidden=0,footer=null,actionExtra=null,emptyText='遊べる譜面がまだありません。',spotClass=null,
   songId='',difficultyId='',onSongId=null,onDifficultyId=null,view=null,onView=null,
-  listScrollTop=null,onListScrollTop=null,toolbarExtra=null,playLabel='決定',playDisabled=false,hideRandom=false,unlockAll=false,songLock=null})=>{
+  listScrollTop=null,onListScrollTop=null,toolbarExtra=null,playLabel='決定',playDisabled=false,hideRandom=false,unlockAll=false,songLock=null,scrollToSelected=false})=>{
   const spot=name=>(typeof spotClass==='function'?spotClass(name):'');
   // 演奏へ入る前に、タップ音を作り置きしておく
   useEffect(()=>{RHYTHM_NOTE_SE_RUNTIME.prepare?.();},[]);
@@ -23847,6 +23847,12 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
       const saved=restoreTopRef.current;
       restoreTopRef.current=null;
       node.scrollTop=(saved!=null&&saved>0&&saved<node.scrollHeight)?saved:blockHeight(node);
+      // scrollToSelected … 開いたとき、選んでいる曲の行(まん中のぶん)が一覧のまん中に来るよう縦だけ寄せる。
+      // マルチの曲選びで、次の曲を選ぶたびに先頭へ戻っていた(2026-11-15 r1115-165)。並べ替え・ジャンルで一覧に無ければ先頭のまま
+      if(scrollToSelected&&(saved==null||saved<=0)){
+        const row=node.querySelector('[data-rhythm-song-row][aria-pressed="true"]');
+        if(row){const nb=node.getBoundingClientRect(),rb=row.getBoundingClientRect();node.scrollTop+=Math.round(rb.top-nb.top-(node.clientHeight-rb.height)/2);}
+      }
       loopReadyRef.current=true;
     };
     put();
@@ -57116,6 +57122,17 @@ const RHYTHM_MULTI = (() => {
   return api;
 })();
 
+// ---- マルチの曲選びで、前に選んだ曲(2026-11-15 r1115-165 社長「開くたびに一番上に戻される」) ----
+// 新しいキー mh_rhythm_multi_last_song_v1 に曲の id だけを覚える(既存のキーは触らない)。読めない・壊れているときは '' (いちばん上)
+const RHYTHM_MULTI_LAST_SONG_KEY = 'mh_rhythm_multi_last_song_v1';
+const rhythmMultiLastSongId = () => {
+  try { const v = typeof localStorage !== 'undefined' ? localStorage.getItem(RHYTHM_MULTI_LAST_SONG_KEY) : null; return typeof v === 'string' && /^[a-z0-9_]{1,80}$/i.test(v) ? v : ''; } catch (_) { return ''; }
+};
+const rhythmMultiRememberSong = (id) => {
+  if (typeof id !== 'string' || !/^[a-z0-9_]{1,80}$/i.test(id) || id === RHYTHM_MULTI_OMAKASE) return;
+  try { if (typeof localStorage !== 'undefined') localStorage.setItem(RHYTHM_MULTI_LAST_SONG_KEY, id); } catch (_) { /* 覚えられなくても遊べる */ }
+};
+
 // ---- 観戦(見る側・2026-11-11) ----
 // 部屋のメンバーではない。hb を送らない(5人の枠・結果・報酬・ランキング・周回に一切入らない)。送るのは「見ています」(wt)だけ。
 //   (1) 外から: 部屋の通信路へ自分でつなぐ(member=false)。フレンドの部屋・公開の一覧から
@@ -59292,7 +59309,9 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
     </button>
   ) : null);
   const mine = view ? view.members.find((m) => m.id === view.selfId) : null;
-  const [selSongId, setSelSongId] = React.useState(mine && mine.pick && mine.pick !== RHYTHM_MULTI_OMAKASE ? mine.pick : '');
+  const [selSongId, setSelSongIdRaw] = React.useState(() => (mine && mine.pick && mine.pick !== RHYTHM_MULTI_OMAKASE ? mine.pick : '') || rhythmMultiLastSongId());
+  // 選んだ曲は覚えておき、次の曲を選ぶとき(画面を開き直したときも)その曲を選んだ状態・その位置で開く(2026-11-15 r1115-165)
+  const setSelSongId = (id) => { setSelSongIdRaw(id); rhythmMultiRememberSong(id); };
   const [selectView, setSelectView] = React.useState(null);
   const songById = (songId) => songs.find((song) => song.songId === songId) || null;
   const defaultDiff = difficultyIds.includes('NORMAL') ? 'NORMAL' : difficultyIds[0] || '';
@@ -60561,7 +60580,8 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
         onDifficultyId={(id) => RHYTHM_MULTI.setDiff(id)}
         view={selectView}
         onView={setSelectView}
-        onPlay={(song, difficulty) => { RHYTHM_MULTI.setDiff(difficulty.id); RHYTHM_MULTI.pick(song.songId); }}
+        onPlay={(song, difficulty) => { rhythmMultiRememberSong(song.songId); RHYTHM_MULTI.setDiff(difficulty.id); RHYTHM_MULTI.pick(song.songId); }}
+        scrollToSelected
         playLabel={myPick ? 'この曲に変更' : 'この曲で決定'}
         hideRandom
         notice={(

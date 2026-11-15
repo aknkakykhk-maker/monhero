@@ -1430,6 +1430,17 @@ const RHYTHM_MULTI = (() => {
   return api;
 })();
 
+// ---- マルチの曲選びで、前に選んだ曲(2026-11-15 r1115-165 社長「開くたびに一番上に戻される」) ----
+// 新しいキー mh_rhythm_multi_last_song_v1 に曲の id だけを覚える(既存のキーは触らない)。読めない・壊れているときは '' (いちばん上)
+const RHYTHM_MULTI_LAST_SONG_KEY = 'mh_rhythm_multi_last_song_v1';
+const rhythmMultiLastSongId = () => {
+  try { const v = typeof localStorage !== 'undefined' ? localStorage.getItem(RHYTHM_MULTI_LAST_SONG_KEY) : null; return typeof v === 'string' && /^[a-z0-9_]{1,80}$/i.test(v) ? v : ''; } catch (_) { return ''; }
+};
+const rhythmMultiRememberSong = (id) => {
+  if (typeof id !== 'string' || !/^[a-z0-9_]{1,80}$/i.test(id) || id === RHYTHM_MULTI_OMAKASE) return;
+  try { if (typeof localStorage !== 'undefined') localStorage.setItem(RHYTHM_MULTI_LAST_SONG_KEY, id); } catch (_) { /* 覚えられなくても遊べる */ }
+};
+
 // ---- 観戦(見る側・2026-11-11) ----
 // 部屋のメンバーではない。hb を送らない(5人の枠・結果・報酬・ランキング・周回に一切入らない)。送るのは「見ています」(wt)だけ。
 //   (1) 外から: 部屋の通信路へ自分でつなぐ(member=false)。フレンドの部屋・公開の一覧から
@@ -3606,7 +3617,9 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
     </button>
   ) : null);
   const mine = view ? view.members.find((m) => m.id === view.selfId) : null;
-  const [selSongId, setSelSongId] = React.useState(mine && mine.pick && mine.pick !== RHYTHM_MULTI_OMAKASE ? mine.pick : '');
+  const [selSongId, setSelSongIdRaw] = React.useState(() => (mine && mine.pick && mine.pick !== RHYTHM_MULTI_OMAKASE ? mine.pick : '') || rhythmMultiLastSongId());
+  // 選んだ曲は覚えておき、次の曲を選ぶとき(画面を開き直したときも)その曲を選んだ状態・その位置で開く(2026-11-15 r1115-165)
+  const setSelSongId = (id) => { setSelSongIdRaw(id); rhythmMultiRememberSong(id); };
   const [selectView, setSelectView] = React.useState(null);
   const songById = (songId) => songs.find((song) => song.songId === songId) || null;
   const defaultDiff = difficultyIds.includes('NORMAL') ? 'NORMAL' : difficultyIds[0] || '';
@@ -4875,7 +4888,8 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
         onDifficultyId={(id) => RHYTHM_MULTI.setDiff(id)}
         view={selectView}
         onView={setSelectView}
-        onPlay={(song, difficulty) => { RHYTHM_MULTI.setDiff(difficulty.id); RHYTHM_MULTI.pick(song.songId); }}
+        onPlay={(song, difficulty) => { rhythmMultiRememberSong(song.songId); RHYTHM_MULTI.setDiff(difficulty.id); RHYTHM_MULTI.pick(song.songId); }}
+        scrollToSelected
         playLabel={myPick ? 'この曲に変更' : 'この曲で決定'}
         hideRandom
         notice={(
