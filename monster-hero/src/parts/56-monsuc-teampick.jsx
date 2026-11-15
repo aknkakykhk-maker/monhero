@@ -4,8 +4,8 @@
 //   MsxTeamPick   … 上に編成中の6体、下に持っている子(マスモンボックス・メモリアルモンスター・ベースモン)の大きな一覧。並べ替え・絞り込み・印。長押しで詳細(MsxMonDetail)。決定で戻る
 //   MsxFriendPick … フレンドの貸し出しの一覧。「アシスト重複」「編成不可」の印(いまの決まりで出せる所だけ)
 //   MsxTeamEffects… 編成全体のアシスト効果の一覧
-//   msxTeamAuto   … おまかせ(総合力の高い順に、マスモンボックス → メモリアルモンスターから5体まで)
-// 編成の決まり(マスモンボックス・メモリアルから5体まで・フレンド1体・育てる子1体)と保存の形は変えない(枠の値 { box } / { assist } / { base } / null のまま)
+//   msxTeamAuto   … おまかせ(総合力の高い順に、マスモンボックス・メモリアルモンスターから6枠を埋める。フレンドのいる枠はそのまま)
+// 編成の決まり(r1115-115 社長): 6枠のどこにも自分のモンスター・フレンドは最大1体(どの枠にも。入れなくてもよい)。保存の形は変えない(枠の値 { box } / { assist } / { base } / null のまま)
 const MSX_TP_SORTS = Object.freeze([['power', '総合力'], ['lv', 'Lv'], ['species', '種族'], ['new', '入手']]);
 const msxTpAT = () => (typeof window !== 'undefined' && window.MONHERO_SUCCESS_ASSIST && window.MONHERO_SUCCESS_ASSIST.VERSION === 3 ? window.MONHERO_SUCCESS_ASSIST : null);
 // 枠の値が同じ子を指しているか(auto のベースモンは空き扱い)
@@ -40,15 +40,14 @@ function msxTpPress(onTap, onLong) {
     onClick: () => { if (long) { long = false; return; } onTap(); },
   };
 }
-// おまかせ: 総合力の高い順に5体まで(フレンドの枠・6枠目は今のまま)。返り値は新しい枠の並び
-function msxTeamAuto(slots, raised, stock, SUC, box, own, assistData) {
+// おまかせ: 総合力の高い順に、空いている枠(フレンドのいる枠 skip を除く6枠)を埋める。足りない枠は空き(ベースモン)。返り値は新しい枠の並び
+function msxTeamAuto(slots, raised, stock, SUC, box, own, assistData, skip = null) {
   const n = slots.slice(); while (n.length < 6) n.push(null);
-  const keep5 = n[5] && (n[5].box || n[5].assist) ? n[5] : null;
   const pow = (slot) => { try { return SUC.memberOf(msxTeamSrc(slot, box, own, assistData)).power || 0; } catch (e) { return 0; } };
   const cand = [...raised.map((m) => ({ box: m.id })), ...stock.map((m) => ({ assist: m.id }))]
-    .filter((s) => !msxTpSame(s, keep5)).map((s) => ({ s, p: pow(s) })).sort((a, b) => b.p - a.p);
-  const room = 5 - (keep5 ? 1 : 0);
-  for (let i = 0; i < 5; i += 1) n[i] = i < room && cand[i] ? cand[i].s : null;
+    .map((s) => ({ s, p: pow(s) })).sort((a, b) => b.p - a.p);
+  let k = 0;
+  for (let i = 0; i < 6; i += 1) { if (i === skip) { n[i] = null; continue; } n[i] = cand[k] ? cand[k].s : null; k += 1; }
   return n;
 }
 
@@ -71,7 +70,7 @@ function MsxTpDetail({ it, SUC, onClose }) {
 }
 
 // 選ぶ画面(全画面)。idx … 押した枠 / slots … いまの6枠(null は空き) / members … 編成の6体(芯の memberOf の結果)
-function MsxTeamPick({ idx, slots, members, own, unlocked, raised, stock, SUC, box, assistData, onDone, onClose }) {
+function MsxTeamPick({ idx, slots, members, own, unlocked, raised, stock, SUC, box, assistData, friendAt = null, onFriend = null, onDone, onClose }) {
   const [tab, setTab] = useState(raised.length ? 'box' : stock.length ? 'memo' : 'base');
   const [sort, setSort] = useState('power');
   const [only, setOnly] = useState('all'); // 得意な能力で絞る
@@ -102,25 +101,26 @@ function MsxTeamPick({ idx, slots, members, own, unlocked, raised, stock, SUC, b
     if (msxTpSame(cand, x.slot)) return null;
     const at = otherIdx(x.slot);
     if (at >= 0) return { t: `編成中(${at + 1}枠目)`, c: 'in' };
-    if (x.kind !== 'base' && raisedN >= 5 && !(cand && (cand.box || cand.assist))) return { t: '5体まで', c: 'lk', lock: true };
     if (x.species === own) return { t: '育てる種と同じ', c: 'own' };
     if (members.some((m, i) => i !== idx && m && m.species === x.species)) return { t: '同じ種類', c: 'sp' };
     return null;
   };
   const tabs = [['box', 'マスモンボックス', raised.length], ['memo', 'メモリアル', stock.length], ['base', 'ベースモン', unlocked.length]].filter(([k, , n]) => k !== 'memo' || n);
-  const curName = (s, i) => { if (i === 5 && !s && members[5] && members[5].friend) return members[5].name; const m = s ? memOf(s) : null; return m ? m.name : 'おまかせ'; };
+  const frOf = (i) => i === friendAt && i !== idx && members[i] && members[i].friend; // その枠にフレンドがいる(押した枠は選び直すので数えない)
+  const curName = (s, i) => { if (frOf(i)) return members[i].name; const m = s ? memOf(s) : null; return m ? m.name : 'おまかせ'; };
   return (
     <div className="msx-ov msx-fade msx-tp-ov" data-msx-team-pick={idx}>
       <div className="msx-tp">
         <div className="msx-tp-hd"><b>{idx + 1}枠目を選ぶ</b><small>長押しで詳しく</small></div>
-        <div className="msx-tp-team" data-msx-tp-team>{view.map((s, i) => { const fr = i === 5 && members[5] && members[5].friend && i !== idx; const sp = fr ? members[5].species : s ? (memOf(s) || {}).species : null; return (
+        <div className="msx-tp-team" data-msx-tp-team>{view.map((s, i) => { const fr = frOf(i); const sp = fr ? members[i].species : s ? (memOf(s) || {}).species : null; return (
           <div key={i} className={`msx-tp-tm${i === idx ? ' on' : ''}${s ? '' : ' em'}`}>
             <span className="fc" aria-label={fr ? 'フレンド' : curName(s, i)}>{sp ? <img src={msxMonThumb(sp)} alt=""/> : <i>{i + 1}</i>}{fr ? <b className="fr">🤝</b> : null}</span></div>); })}</div>
-        <div className="msx-tp-tabs" data-msx-tp-tabs>{tabs.map(([k, name, n]) => <button type="button" key={k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)} data-msx-tp-tab={k}>{name}<small>{n}</small></button>)}</div>
+        <div className="msx-tp-tabs" data-msx-tp-tabs>{tabs.map(([k, name, n]) => <button type="button" key={k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)} data-msx-tp-tab={k}>{name}<small>{n}</small></button>)}
+          {onFriend ? <button type="button" className="fr" onClick={onFriend} data-msx-tp-tab="friend">🤝 フレンド<small>{friendAt != null && friendAt !== idx ? `${friendAt + 1}枠目にいる` : '1体まで'}</small></button> : null}</div>
         <div className="msx-tp-bar">
           <label className="msx-tp-sel"><span>並べ替え</span><select value={sort} onChange={(e) => setSort(e.target.value)} data-msx-tp-sort>{MSX_TP_SORTS.map(([k, n]) => <option key={k} value={k}>{n}</option>)}</select></label>
           <label className="msx-tp-sel"><span>得意</span><select value={only} onChange={(e) => setOnly(e.target.value)} data-msx-tp-only><option value="all">全て</option>{MSX_STATS.map((k) => <option key={k} value={k}>{MSX_STAT_NAME[k]}</option>)}</select></label>
-          <span className="msx-tp-cnt">{tab === 'base' ? '' : `${raisedN}/5体`}</span>
+          <span className="msx-tp-cnt">{tab === 'base' ? '' : `自分 ${raisedN}/6体`}</span>
         </div>
         {tab === 'memo' ? <div className="msx-tp-note">メモリアルモンスターは育成には使えません。アシスト効果と得意な能力だけ効きます</div> : null}
         <div className="msx-tp-list" data-msx-tp-list>
@@ -149,10 +149,10 @@ function MsxTeamPick({ idx, slots, members, own, unlocked, raised, stock, SUC, b
 }
 
 // フレンドの貸し出しの一覧(全画面)。参考04
-function MsxFriendPick({ lendList, onLoad, friend, members, SUC, onPick, onOwn, onClose }) {
+function MsxFriendPick({ idx = 5, friendAt = null, lendList, onLoad, friend, members, SUC, onPick, onOwn, onClose }) {
   const [only, setOnly] = useState('all');
   useEffect(() => { if (lendList === null && typeof onLoad === 'function') onLoad(); }, []);
-  const others = members.filter((m, i) => i < 5);
+  const others = members.filter((m) => m && !m.friend);
   const rows = lendList && lendList !== 'loading' && lendList.ok ? lendList.rows : [];
   const list = rows.map((row) => { let m = null; try { m = typeof monsucLendMember === 'function' ? monsucLendMember(row, SUC) : null; } catch (e) { m = null; }
     const mem = m ? (() => { try { return SUC.memberOf(m); } catch (e) { return null; } })() : null;
@@ -161,7 +161,8 @@ function MsxFriendPick({ lendList, onLoad, friend, members, SUC, onPick, onOwn, 
   return (
     <div className="msx-ov msx-fade msx-tp-ov" data-msx-friend-pick>
       <div className="msx-tp">
-        <div className="msx-tp-hd"><b>🤝 フレンドから借りる(1体)</b><small>6枠目に入ります</small></div>
+        <div className="msx-tp-hd"><b>🤝 フレンドから借りる(1体まで)</b><small>{idx + 1}枠目に入ります</small></div>
+        {friendAt != null && friendAt !== idx ? <div className="msx-tp-note" data-msx-fp-move>フレンドは1体まで。選ぶと、{friendAt + 1}枠目のフレンドがこの枠へ移ります</div> : null}
         <div className="msx-tp-chips" data-msx-fp-only>{[['all', '全て'], ...MSX_STATS.map((k) => [k, `${MSX_STAT_ICON[k]}${MSX_STAT_NAME[k]}`])].map(([k, n]) => <button type="button" key={k} className={only === k ? 'on' : ''} onClick={() => setOnly(k)}>{n}</button>)}</div>
         <div className="msx-tp-list one" data-msx-fp-list>
           {lendList === null || lendList === 'loading' ? <div className="msx-tp-none">探しています…</div>
@@ -182,7 +183,7 @@ function MsxFriendPick({ lendList, onLoad, friend, members, SUC, onPick, onOwn, 
         <div className="msx-tp-note">「アシスト重複」… 編成で一番大きい1つだけ効くアシスト効果を、編成のほかのモンスターが同じかそれより大きく持っている。「編成不可」… 借りられない形のモンスター</div>
         <div className="v-ft msx-tp-ft">
           <button type="button" onClick={onClose} data-msx-fp-back>戻る</button>
-          <button type="button" onClick={onOwn} data-msx-fp-own>自分のモンスターを入れる</button>
+          <button type="button" onClick={onOwn} data-msx-fp-own>自分のモンスターにする</button>
         </div>
       </div>
     </div>
