@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b5bf28809285cb22
+// source-sha256: ee8848b1d7c5f4e5
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -168353,6 +168353,7 @@ const MSX_CSS = `
 /* 技の升目(参考 monster-detail-basic): 見出しと升を同じ4列にそろえる */
 .msx-md-tg{display:grid;grid-template-columns:repeat(4,minmax(0,56px));gap:4px;align-content:start;justify-content:center}
 .msx-md-tg .tgh{font-size:10.5px;font-weight:900;text-align:center;border-radius:99px;padding:1px 0;color:#fff}
+.msx-md-tg .tgh.apt{display:grid;justify-items:center;align-content:center;padding:1px 0 2px;border-radius:9px;line-height:1.15}.msx-md-tg .tgh .tgn{display:inline-flex;align-items:center;gap:3px;white-space:nowrap}.msx-md-tg .tgh .tga{display:inline-flex;align-items:center;justify-content:center;min-width:17px;height:15px;padding:0 2px;border-radius:5px;background:#fff;color:#0f172a;font-size:10.5px;font-weight:900;line-height:1}.msx-md-tg .tgh .tgp{font-style:normal;white-space:nowrap;font-size:10px;font-weight:900;color:#fff;opacity:.95}.msx-md-tg .tgh .tgp.tgp-up{color:#fef08a}.msx-md-tg .tgh .tgp.tgp-dn{color:#e2e8f0;opacity:.8}
 .msx-md-tg .tgh.d3{background:#2563eb}.msx-md-tg .tgh.d2{background:#16a34a}.msx-md-tg .tgh.d1{background:#d97706}.msx-md-tg .tgh.d0{background:#dc2626}
 .msx .msx-md-tg .tc,.msx-md-tg .no{position:relative;aspect-ratio:1/1;min-height:0;border-radius:8px;display:flex;align-items:center;justify-content:center}
 .msx .msx-md-tg .tc{padding:0;border:1.5px solid transparent}
@@ -169738,15 +169739,26 @@ const MSX_TG_COLS = Object.freeze([3, 2, 1, 0]);
 function MsxTechGrid({
   all,
   cell,
-  className
+  className,
+  head
 }) {
   const at = (r, d) => all.filter(t => (Number(t.rank) || 1) === r && Array.isArray(t.dist) && t.dist.includes(d));
   return React.createElement("div", {
     className: `msx-md-tg${className ? ` ${className}` : ''}`
-  }, MSX_TG_COLS.map(d => React.createElement("span", {
-    key: `h${d}`,
-    className: `tgh d${d}`
-  }, MSX_DIST_NAMES[d])), [1, 2, 3, 4, 5].map(r => MSX_TG_COLS.map(d => {
+  }, MSX_TG_COLS.map(d => {
+    const h = typeof head === 'function' ? head(d) : null;
+    return React.createElement("span", {
+      key: `h${d}`,
+      className: `tgh d${d}${h ? ' apt' : ''}`,
+      "data-msx-tg-head": d
+    }, h ? React.createElement("span", {
+      className: "tgn"
+    }, MSX_DIST_NAMES[d], h.g ? React.createElement("b", {
+      className: "tga"
+    }, h.g) : null) : MSX_DIST_NAMES[d], h && Number.isFinite(h.add) ? React.createElement("em", {
+      className: `tgp${h.add > 0 ? ' tgp-up' : h.add < 0 ? ' tgp-dn' : ''}`
+    }, h.add > 0 ? `+${h.add}` : h.add < 0 ? `${h.add}` : '±0', "%") : null);
+  }), [1, 2, 3, 4, 5].map(r => MSX_TG_COLS.map(d => {
     const alts = at(r, d);
     const k = `${r}-${d}`;
     return alts.length ? React.createElement(React.Fragment, {
@@ -169909,6 +169921,9 @@ function MsxMonDetail({
     className: "msx-md-tw"
   }, React.createElement(MsxTechGrid, {
     all: all,
+    head: grades ? d => ({
+      g: grades[d]
+    }) : null,
     cell: (alts, r, d, cellK) => {
       const t = alts.find(has) || alts.find(x => pick && pick.sel && pick.sel[cellK] === x.id) || alts[0];
       const got = has(t);
@@ -178269,6 +178284,17 @@ function MsxR3Shugyo({
   const cur = SH.courses[course] || {
     stages: []
   };
+  const aptG = typeof SUC.aptGradesOf === 'function' ? SUC.aptGradesOf(s0) : null;
+  const GR = SUC.DIST_UP && SUC.DIST_UP.grades || [];
+  const aptHead = aptG ? d => {
+    const g = aptG[d] || SH.aptBase || 'C';
+    const i = GR.indexOf(g);
+    const b = GR.indexOf(SH.aptBase || 'C');
+    return {
+      g,
+      add: i >= 0 && b >= 0 ? (i - b) * (SH.aptStep || 5) : 0
+    };
+  } : null;
   const tkMax = SUC.TECH_MAX || 99;
   const full = (s0.techs || []).length >= tkMax;
   const techName = id => (all.find(x => x.id === id) || {}).name || id;
@@ -178383,6 +178409,7 @@ function MsxR3Shugyo({
   }, "緑の札をタップ")), all.length ? React.createElement(MsxTechGrid, {
     className: "q",
     all: all,
+    head: aptHead,
     cell: (alts, r, d, cellK) => {
       const gotOf = x => (s0.techs || []).includes(x.id);
       const pk = s0.techPick && typeof s0.techPick === 'object' ? s0.techPick[cellK] : null;
