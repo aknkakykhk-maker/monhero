@@ -92,7 +92,7 @@ const makeRun = async (kind) => {
     ['B2', 'win', ['cont', '@cupintro-go', '%quick']], ['R1', 'win', ['cont', '@cupintro-go', '%quick', '%next']], ['C3', 'win', ['cont', '@cupintro-go', '%quick', '%next', '@next']], ['C3b', 'win', ['cont', '@cupintro-go', '%quick', '%next', '@next', '@meal=f_tough']], // R1: 賞金ランク UP!(段が上がったときだけ)
     ['C4', 'lose', ['cont', '@cupintro-go', '%quick']], ['C4r', 'lose', ['cont', '@cupintro-go', '%quick', '%rematch=sand']], ['C4g', 'lose', ['cont', '@cupintro-go', '%quick', '%giveup']],
     ['C4d', 'debutlose', ['cont', '@cupintro-go', '%quick']],
-    ['N1', 'winnew', ['cont', '@cupintro-go']], ['N2', 'winnew', ['cont', '@cupintro-go', '%go']], // 初めての大会: 結果だけ見るは押せず、理由が出る(r1115-057)
+    ['Y1', 'win', ['cont', '@cupintro-go']], ['N1', 'winnew', ['cont', '@cupintro-go']], ['N2', 'winnew', ['cont', '@cupintro-go', '%go']], // 初めての大会: 結果だけ見るは押せず、理由が出る(r1115-057)
     ['Q1', 'mid', ['cont', /^⚔修行/]], ['Q6', 'mid', ['cont', /^⚔修行/]], ['Q7', 'mid', ['cont', /^⚔修行/, '$qok0']], // SHOT_SPECIES=Golem で撮ると、間合い適性(零 A・近 E・中 G・遠 G)で同じランクの技の率が分かれる(r1115-041)
     ['Q4', 'mid', ['cont', /^⚔修行/, '$qok0']], ['Q5', 'mid', ['cont', /^⚔修行/, '$qok0', '$qok1']], ['Q2', 'mid', ['cont', /^⚔修行/, '@shugyo']], ['Q2b', 'mid', ['cont', /^⚔修行/, '@shugyo', '@qskip']], ['Q3', 'mid', ['cont', /^⚔修行/, '@shugyo', '@qskip', '@qnext']], // 修行の段の演出 → 「結果へ」(Fable ①-12)
     ['QL1', 'qhit', ['cont', /^⚔修行/, '$qok0', '@shugyo', '@qskip']], ['QL2', 'qmiss', ['cont', /^⚔修行/, '$qok0', '@shugyo', '@qskip']], ['QL3', 'qmix', ['cont', /^⚔修行/, '$qok0', '$qok1', '@shugyo', '@qskip']], // 技を覚えた/覚えられなかった/超修行で1つだけ(r1115-063)
@@ -225,6 +225,8 @@ const makeRun = async (kind) => {
         if (name === 'E3u' || name === 'E3v') { const q = await page.evaluate(() => { const ad = {}; document.querySelectorAll('.v-pa > div').forEach((r) => { const m = r.querySelector('[data-msx-r3-plus]'); if (m) ad[m.getAttribute('data-msx-r3-plus')] = Number((r.querySelector('.st b') || {}).innerText || 0); }); return ad; });
           if (name === 'E3u') check(`${label}: ちから+1→命中+1→ちから−1 で、ちからだけ戻り命中は +1 のまま`, q.pow === 0 && q.hit === 1, JSON.stringify(q));
           else check(`${label}: バランスで振ったあとの「−」で、ちからだけ1つ戻る`, q.hit >= 1 && q.pow === q.hit - 1, JSON.stringify(q)); }
+        if (name === 'Y1') { const q = await page.evaluate(() => { const b = document.querySelector('[data-msc-quick]'); return { has: !!b, on: !!(b && !b.disabled), why: !!document.querySelector('[data-msc-quick-why]') }; });
+          check(`${label}: 勝ったことのある大会は「結果だけ見る」が押せる`, q.has && q.on && !q.why, JSON.stringify(q)); }
         if (name === 'N1' || name === 'N2') { const q = await page.evaluate(() => { const b = document.querySelector('[data-msc-quick]'); const w = document.querySelector('[data-msc-quick-why]'); return { has: !!b, off: !!(b && b.disabled), why: !!w }; });
           check(`${label}: 勝ったことのない大会は「結果だけ見る」が押せず、理由が出る`, q.has && q.off && q.why, JSON.stringify(q)); }
         if (name === 'K2') { const pz = await page.evaluate(() => { const box = document.querySelector('[data-msx-r3-cupwin] .in'); if (!box) return { ok: false }; const R = box.getBoundingClientRect(); const bs = [...box.querySelectorAll('[data-msx-r3-prize]')]; return { ok: bs.length > 0 && bs.every((b) => { const r = b.getBoundingClientRect(); return r.left >= R.left - 1 && r.right <= R.right + 1; }), n: bs.length }; });
