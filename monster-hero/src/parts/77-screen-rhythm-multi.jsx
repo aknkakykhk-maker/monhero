@@ -1800,9 +1800,11 @@ function RhythmMultiChatBubble({ text: raw, strip = false }) {
   const text = rhythmMultiBubbleText(raw);
   // 縦の細い帯(札の高さ60px)では、絵を札の中の名前の上に大きく置き、言葉は札の下へ出す(名前を隠さない・2026-11-15 r1115-039)
   if (stamp && strip && !wide) return (
-    <span data-rhythm-multi-chat-bubble data-rhythm-multi-stamp-bubble data-rhythm-multi-stamp-strip className="mh-seat-stamp-strip pointer-events-none absolute inset-x-0.5 bottom-0.5 top-[3px] z-40 flex flex-col items-center gap-0.5 [container-type:size]">
-      <img src={multiStampFaceSrc(stamp.sf) || undefined} alt="" draggable={false} decoding="async" className="mh-seat-stamp-strip-img block shrink-0 rounded-lg bg-white object-cover shadow-lg" />
-      <b className="mh-seat-stamp-strip-word block w-full min-w-0 rounded-lg bg-white px-0.5 py-px text-center text-[9px] font-black leading-[1.1] text-slate-900 shadow-lg">{text}</b>
+    <span data-rhythm-multi-chat-bubble data-rhythm-multi-stamp-bubble data-rhythm-multi-stamp-strip className="mh-seat-stamp-strip pointer-events-none absolute inset-x-0.5 bottom-[17px] top-[3px] z-40 flex items-start justify-center [container-type:size]">
+      <span className="relative flex h-full w-full justify-center">
+        <img src={multiStampFaceSrc(stamp.sf) || undefined} alt="" draggable={false} decoding="async" className="mh-seat-stamp-strip-img block rounded-lg bg-white object-cover shadow-lg" />
+        <b className="mh-seat-stamp-strip-word absolute inset-x-0 bottom-[3px] block whitespace-nowrap rounded-b-lg bg-white/90 px-0.5 text-center font-black leading-tight text-slate-900" style={{ fontSize: `${Math.max(6.5, Math.min(9, 62 / Math.max(1, Array.from(String(text || '')).length)))}px` }}>{text}</b>
+      </span>
     </span>
   );
   if (stamp) return (
