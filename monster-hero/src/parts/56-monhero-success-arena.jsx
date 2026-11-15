@@ -247,6 +247,11 @@ const MSA_CSS = `
 .msa-gt{font-size:9.5px;font-weight:900;line-height:14px;padding:0 5px;border-radius:99px;white-space:nowrap;animation:msaTagIn .35s ease-out both}
 @keyframes msaTagIn{0%{opacity:0;transform:scale(.6)}60%{opacity:1;transform:scale(1.12)}100%{opacity:1;transform:none}}
 .msa-gt.up{background:#facc15;color:#422006}.msa-gt.down{background:#475569;color:#f1f5f9}
+/* モンサクの画面の大きな浮き文字 .msx .up(56-monhero-success-css)が、ガッツの増減の小札 .up にも当たって大きく浮き、体力の数字を隠していた(r1115-202 M13)。小札の形に戻す */
+.msa-hud .msa-gt.up,.msa-hud .msa-gt.down{position:static;font-size:9.5px;line-height:14px;text-shadow:none;color:#422006}
+.msa-hud .msa-gt.down{color:#f1f5f9}
+.msa-stage .msa-gtag.up,.msa-stage .msa-gtag.down{position:absolute;font-size:10.5px;line-height:16px;text-shadow:none;color:#422006}
+.msa-stage .msa-gtag.down{color:#e2e8f0}
 .msa-bands{top:70px}
 @keyframes msaLow{50%{opacity:.45}}
 @keyframes msaBarShake{0%,100%{transform:none;box-shadow:0 0 10px #ef4444}20%{transform:translate(-4px,1px)}40%{transform:translate(4px,-1px)}60%{transform:translate(-2px,0)}80%{transform:translate(1px,0)}}
@@ -289,7 +294,23 @@ const MSA_CSS = `
 .msa-topline{flex-wrap:wrap;row-gap:2px}
 .msa-topline .msc-buff{font-style:normal;font-size:10.5px}
 .msa-topline .msa-breeder{font-size:11px;color:#cbd5e1;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:55%}
-@media (max-height:500px) and (orientation:landscape){.msc-wrap.msa{height:auto}.msa-stagebox,.msa[data-msa-mode=manual] .msa-stagebox{flex:none;height:calc(var(--mh-vh) - 70px);min-height:240px}}
+/* 場の側(帯・場・実況)と操作の側(札・手番の帯・ボタン)。縦では入れ物を作らず(display:contents)今までの並びのまま */
+.msa-main,.msa-side{display:contents}
+/* 横向き(r1115-202 H3): 場面(左)+ 札(右)の2列。場面は左に留めたまま、右の札だけを縦に送る(体力の帯と札が同時に見える) */
+@media (max-height:500px) and (orientation:landscape){
+  .msc-wrap.msa{height:auto;max-width:none;flex-direction:row;align-items:flex-start;gap:10px}
+  .msa-main{display:flex;flex-direction:column;gap:6px;flex:1.1 1 0;min-width:0;position:sticky;top:0;height:calc(var(--mh-vh) - 66px);min-height:240px}
+  .msa-side{display:flex;flex-direction:column;gap:8px;flex:1 1 0;min-width:0}
+  .msa-stagebox,.msa[data-msa-mode=manual] .msa-stagebox{flex:1 1 0;height:auto;min-height:0}
+  .msa-main .msa-say{flex:none}
+}
+/* 低い縦の画面(320×568 など・r1115-202 M14): 場面を低くして上に留め、札の所まで送っても体力の帯と場面が見えるように。画面は縦に少し流す決まりのまま */
+@media (max-height:700px) and (orientation:portrait){
+  .msa[data-msa-mode=manual] .msa-main{display:block;position:sticky;top:0;z-index:6;background:#191331;padding-bottom:4px}
+  .msa[data-msa-mode=manual] .msa-main .msa-topline{margin-bottom:4px}
+  .msa[data-msa-mode=manual] .msa-stagebox{height:200px;min-height:0}
+  .msa[data-msa-mode=manual] .msa-main .msa-say{margin-top:4px}
+}
 .msa-stage.fill .msa-f,.msa-stage.fill .msa-dmgwrap{width:140px;margin-left:-70px;height:176px}
 .msa-stage.fill .msa-f img.msa-img{max-width:140px;max-height:166px}
 .msa-stage.fill .msa-f .msa-shadow{width:80px;margin-left:-40px}
@@ -1113,8 +1134,11 @@ function MonsucArena({ s, info, engine, input, watch, onEnd }) {
     const el = barRef.current; if (!barOn || !el) return;
     const box = el.closest ? el.closest('[data-msc-root]') : null; if (!box) return;
     const r = el.getBoundingClientRect(); const b = box.getBoundingClientRect();
+    // 場面を上に留める画面(低い縦・r1115-202 M14)では、留めた場面の下端までしか送らない(帯の頭が場面の下に隠れないように)
+    const mainEl = box.querySelector('[data-msa-main]'); const pinned = mainEl && typeof getComputedStyle === 'function' && getComputedStyle(mainEl).position === 'sticky' && getComputedStyle(mainEl).display === 'block';
+    const topLine = pinned ? mainEl.getBoundingClientRect().bottom : b.top;
     const over = r.bottom - b.bottom + 8;
-    if (over > 0) box.scrollTop += Math.min(over, Math.max(0, r.top - b.top - 8));
+    if (over > 0) box.scrollTop += Math.min(over, Math.max(0, r.top - topLine - 8));
   }, [barOn, pos]);
   // オートの手番: 芯のおすすめの手を少し置いて選ぶ(いつでも手動へ戻せるよう、1手ずつ進める)
   const autoWait = Boolean(manual && ctl === 'auto' && pos >= last && !ended && mm.pending);
@@ -1172,6 +1196,7 @@ function MonsucArena({ s, info, engine, input, watch, onEnd }) {
     <div className="msc-wrap msa" data-msc-match data-msa-pos={pos} data-msa-mode={manual ? (auto ? 'auto' : 'manual') : 'watch'}>
       <style>{MSA_CSS}{typeof MSA_SHOW_CSS === 'string' ? MSA_SHOW_CSS : ''}</style>
       {/* 2026-11-14 社長「肝心のバトルの画面が小さい」: 上下の大きな札をやめ、試合の場を主役に。名前・体力・ガッツ・ラウンドは場の上の帯(MsaStage)にある */}
+      <div className="msa-main" data-msa-main>
       <div className="msc-top msa-topline"><b>{info.title} {MSC_STARS(info.star)}</b>
         {info.buffs ? <i className="msc-buff">✨ 特別な1話</i> : null}
         {(info.opp || {}).breeder ? <small className="msa-breeder">相手 {nm('B')}・{info.opp.breeder}</small> : null}</div>
@@ -1179,6 +1204,8 @@ function MonsucArena({ s, info, engine, input, watch, onEnd }) {
         <MsaStage log={log} frames={frames} pos={pos} teams={stageTeams} venueImg={msaVenueBg(info.venue, bg)} ended={ended} win={result ? result.winner : null} introTitle={info.title} speedF={(MSA_SPEEDS.find(x => x.id === speed) || MSA_SPEEDS[0]).f} fill wide liveGuts={liveGuts}/>
       </div>
       <div className="msa-say" data-msa-say>{call ? <div key={`call-${call.at}`} className={`msa-call ${call.k}`} data-msa-call={call.k}>🎙 {call.t}</div> : msaSay(e, nm, log)}</div>
+      </div>
+      <div className="msa-side" data-msa-side>
       {cardsOn ? <div className="msa-cardsrow" data-msa-cards><MsaDistCards look="a" list={itemsA} rep={msaRepIds(itemsA, null)} dist={f.d} guts={f.g.A} lastMove={e.side === 'A' && e.ev === 'tech' ? e.move : null} dataSide="A" hitAt={hitAtA} onOpen={(d) => setTechSheet(d)}/></div> : null}
       <div ref={barRef}>{showBar ? <MsxManualBar opt={mm.pending} onPick={pick} onAuto={goAuto} busy={busy} look="a"/> : null}</div>
       {manual && !auto && busy && !ended && !showBar ? <div className="msa-wait">{e.side === 'B' ? '相手の番…' : ' '}</div> : null}
@@ -1198,6 +1225,7 @@ function MonsucArena({ s, info, engine, input, watch, onEnd }) {
         </div>
       ) : null}
       {manual && !ended ? <div className="msa-tools" data-msa-tools2><MsaCtlToggle ctl={ctl} save={false} onChange={(v) => { msaCtlRunWrite(s && s.id, v); setCtl(v); }}/><MsaBgToggle bg={bg} onChange={setBg}/></div> : null}
+      </div>
       {judgeIdx >= 0 && pos >= judgeIdx && !judgeOk ? <MsaJudge row={log[judgeIdx]} names={{ A: nm('A'), B: nm('B') }} onGo={() => setJudgeOk(true)}/> : null}
       {techSheet != null && itemsA && typeof MsaTechSheet === 'function' ? <MsaTechSheet title={`${nm('A')} の${AMBW_DIST[techSheet]}の技`} list={itemsA} d={techSheet} dist={f.d} rep={msaRepIds(itemsA, null)} hitAt={hitAtA} onClose={() => setTechSheet(null)}/> : null}
     </div>
