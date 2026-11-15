@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 0d1f0f75009b5127
+// source-sha256: 004b9746b8c5996f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -93785,6 +93785,10 @@ const RHYTHM_WATCH_TTL_MS = 25000;
 const RHYTHM_WATCH_LIVE_MS = 1000;
 const RHYTHM_WATCH_AD_MS = 10000;
 const RHYTHM_WATCH_KEY = 'mh_rhythm_multi_spectate_v1';
+const RHYTHM_WATCH_CHAT_INTERVAL_MS = 3000;
+const RHYTHM_WATCH_CHAT_ROUND_MAX = 20;
+const RHYTHM_WATCH_CHAT_HOLD_MAX = 20;
+const RHYTHM_WATCH_CHAT_KEEP = 30;
 const RHYTHM_MULTI_LIVE_SCORE_MAX = 1e12;
 const RHYTHM_MULTI_LIVE_COMBO_MAX = 100000;
 const RHYTHM_MULTI_PUBLIC_MATCH_WAIT_MS = 15000;
@@ -93797,6 +93801,7 @@ const RHYTHM_MULTI_CHAT_STAMPS_BY_PHASE = Object.freeze({
   select: ['この曲やりたい!', 'おまかせで!', 'なんでもOK!', 'マスモン入れるね!', 'マスモン入れて!'],
   ready: ['準備OK!', 'ちょっと待って!', 'がんばろう!', 'マスモン入れたよ!'],
   playing: ['おつかれ!', 'ナイス!', '待ってるね!'],
+  watch: ['がんばれ!', 'ナイス!', 'すごい!', 'おしい!', '見てるよ!', 'おつかれ!'],
   result: ['もう一回!', 'ありがとう!', 'おつかれ!', 'ナイス!', 'GG!', '次いこう!', 'ドンマイ!', 'またね!']
 });
 const RHYTHM_BUDDY_ASK_CHIPS = Object.freeze([{
@@ -94027,6 +94032,20 @@ const rhythmMultiCleanMessage = raw => {
   }
   if (raw.t === 'bye') return out;
   return null;
+};
+const rhythmMultiCleanWatchChat = raw => {
+  if (!raw || typeof raw !== 'object' || raw.t !== 'wc') return null;
+  const m = rhythmMultiCleanMessage({
+    ...raw,
+    t: 'chat'
+  });
+  if (!m) return null;
+  const id = m.id.replace(/[^A-Za-z0-9_-]/g, '');
+  return id ? {
+    ...m,
+    t: 'wc',
+    id
+  } : null;
 };
 const rhythmMultiCleanResult = raw => {
   if (!raw || typeof raw !== 'object') return null;
@@ -94470,6 +94489,37 @@ const RHYTHM_MULTI = (() => {
       });
     }
     watchSync();
+  };
+  const watchChatAdd = msg => {
+    if (!s || s.chat.some(c => c.cid === msg.cid)) return false;
+    s.chat.push({
+      cid: msg.cid,
+      id: msg.id,
+      name: msg.name,
+      text: msg.text,
+      at: Date.now(),
+      w: 1,
+      ...(msg.sf ? {
+        sf: msg.sf,
+        sw: msg.sw
+      } : {})
+    });
+    if (s.chat.length > RHYTHM_MULTI_CHAT_KEEP) s.chat.splice(0, s.chat.length - RHYTHM_MULTI_CHAT_KEEP);
+    return true;
+  };
+  const watchChatHear = raw => {
+    if (!s) return;
+    const msg = rhythmMultiCleanWatchChat(raw);
+    if (!msg || s.members[msg.id] || msg.id === s.selfId) return;
+    if (msg.sf && !MULTI_STAMP.accept(msg.id)) return;
+    const me = selfMember();
+    if (me && me.playing) {
+      const hold = s.watchChatHold || (s.watchChatHold = []);
+      if (!hold.some(c => c.cid === msg.cid)) hold.push(msg);
+      if (hold.length > RHYTHM_WATCH_CHAT_HOLD_MAX) hold.shift();
+      return;
+    }
+    if (watchChatAdd(msg)) emit();
   };
   const watchAdStart = () => {
     watchAdStop();
@@ -95188,6 +95238,10 @@ const RHYTHM_MULTI = (() => {
       if (watchFeed) watchFeed(raw);
       return;
     }
+    if (raw && raw.t === 'wc') {
+      watchChatHear(raw);
+      return;
+    }
     if (raw && raw.t === 'res' && watchFeed) watchFeed(raw);
     const playingNow = selfMember();
     if (playingNow && playingNow.playing) {
@@ -95843,6 +95897,9 @@ const RHYTHM_MULTI = (() => {
       s.queue = [];
       queued.forEach(raw => onMessage(raw));
       if (!s) return;
+      const heldWatchChat = s.watchChatHold || [];
+      s.watchChatHold = [];
+      heldWatchChat.forEach(m => watchChatAdd(m));
       if (quit === true && !(opts && opts.noPenalty) && s.mode !== 'private') void rhythmMultiPenaltyMark();
       if (socket) socket.send({
         t: 'res',
@@ -96073,6 +96130,26 @@ const RHYTHM_WATCH = (() => {
       return;
     }
     if (st.member) return;
+    if (raw.t === 'chat' || raw.t === 'wc') {
+      const m = raw.t === 'wc' ? rhythmMultiCleanWatchChat(raw) : rhythmMultiCleanMessage(raw);
+      if (!m || st.chat.some(c => c.cid === m.cid)) return;
+      if (raw.t === 'wc' && (st.members[m.id] || st.people.some(x => x.id === m.id))) return;
+      if (m.sf && m.id !== st.wid && typeof MULTI_STAMP !== 'undefined' && !MULTI_STAMP.accept(m.id)) return;
+      st.chat = [...st.chat, {
+        cid: m.cid,
+        id: m.id,
+        name: m.name,
+        text: m.text,
+        at: now,
+        w: raw.t === 'wc' ? 1 : 0,
+        ...(m.sf ? {
+          sf: m.sf,
+          sw: m.sw
+        } : {})
+      }].slice(-RHYTHM_WATCH_CHAT_KEEP);
+      emit();
+      return;
+    }
     if (raw.t === 'hb') {
       const m = rhythmMultiCleanMessage(raw);
       if (!m) return;
@@ -96139,7 +96216,8 @@ const RHYTHM_WATCH = (() => {
     start(code, {
       member = false,
       quiet = false,
-      joinable = false
+      joinable = false,
+      name = ''
     } = {}) {
       const c = rhythmMultiNormalizeCode(code);
       if (!c) return false;
@@ -96165,7 +96243,12 @@ const RHYTHM_WATCH = (() => {
         openedAt: now,
         lastPing: 0,
         lastPg: 0,
-        heard: false
+        heard: false,
+        chat: [],
+        name: rhythmMultiText(name, 12) || '名無しのブリーダー',
+        lastSayAt: 0,
+        sayRound: '',
+        sayCount: 0
       };
       if (member) RHYTHM_MULTI.setWatchFeed(feed);else {
         sock = rhythmMultiOpenSocket({
@@ -96198,6 +96281,38 @@ const RHYTHM_WATCH = (() => {
       st.focus = id;
       ping();
       emit();
+    },
+    say(text, stamp = null) {
+      if (!st || st.member || !sock) return 'no';
+      const clean = rhythmMultiText(text, RHYTHM_MULTI_CHAT_MAX_LENGTH).trim();
+      if (!clean) return 'no';
+      const now = Date.now();
+      const round = st.round || '';
+      if (st.sayRound !== round) {
+        st.sayRound = round;
+        st.sayCount = 0;
+      }
+      if (st.sayCount >= RHYTHM_WATCH_CHAT_ROUND_MAX) return 'max';
+      if (now - st.lastSayAt < RHYTHM_WATCH_CHAT_INTERVAL_MS) return 'wait';
+      const sp = stamp && multiStampCleanFace(stamp.f) && multiStampCleanWord(stamp.w) ? {
+        sf: stamp.f,
+        sw: stamp.w
+      } : {};
+      const body = sp.sw === 'x' ? multiStampCleanText(clean) : clean;
+      if (!body) return 'no';
+      st.lastSayAt = now;
+      st.sayCount += 1;
+      const msg = {
+        t: 'wc',
+        id: st.wid,
+        name: st.name,
+        text: body,
+        cid: `w${now.toString(36)}${Math.random().toString(36).slice(2, 7)}`,
+        ...sp
+      };
+      sock.send(msg);
+      feed(msg);
+      return 'ok';
     },
     view() {
       return st;
@@ -96411,19 +96526,23 @@ function RhythmMultiChatPanel({
       small: true
     }) : React.createElement("span", {
       "aria-hidden": "true",
-      className: "flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-800 text-xs"
-    }, "🎵")), React.createElement("span", {
+      className: `flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs ${c.w ? 'bg-amber-900' : 'bg-slate-800'}`
+    }, c.w ? '👁' : '🎵')), React.createElement("span", {
       className: `flex min-w-0 max-w-[80%] flex-col ${mine ? 'items-end' : 'items-start'}`
     }, !mine && React.createElement("b", {
-      className: "max-w-full truncate text-[10px] text-amber-200"
-    }, c.name), c.sf ? React.createElement(MultiStampView, {
+      className: `max-w-full truncate text-[10px] ${c.w ? 'text-amber-300' : 'text-amber-200'}`
+    }, c.w && React.createElement("span", {
+      "data-rhythm-multi-chat-watch-tag": true,
+      className: "mr-1 rounded bg-amber-400 px-1 text-[9px] text-amber-950"
+    }, "👁 観戦"), c.name), c.sf ? React.createElement(MultiStampView, {
       f: c.sf,
       w: c.sw,
       text: c.text,
       size: 72,
-      className: MULTI_STAMP.prefs().pic ? '' : `break-words rounded-2xl px-3 py-1.5 leading-snug ${mine ? 'rounded-br-sm bg-cyan-600 text-white' : 'rounded-bl-sm bg-slate-100 text-slate-900'}`
+      className: MULTI_STAMP.prefs().pic ? '' : `break-words rounded-2xl px-3 py-1.5 leading-snug ${mine ? 'rounded-br-sm bg-cyan-600 text-white' : c.w ? 'rounded-bl-sm bg-amber-200 text-amber-950' : 'rounded-bl-sm bg-slate-100 text-slate-900'}`
     }) : React.createElement("span", {
-      className: `break-words rounded-2xl px-3 py-1.5 leading-snug ${mine ? 'rounded-br-sm bg-cyan-600 text-white' : 'rounded-bl-sm bg-slate-100 text-slate-900'}`
+      "data-rhythm-multi-chat-text": c.w ? 'watch' : undefined,
+      className: `break-words rounded-2xl px-3 py-1.5 leading-snug ${mine ? 'rounded-br-sm bg-cyan-600 text-white' : c.w ? 'rounded-bl-sm bg-amber-200 text-amber-950' : 'rounded-bl-sm bg-slate-100 text-slate-900'}`
     }, c.text)));
   })), React.createElement("div", {
     "data-rhythm-multi-chat-mode": true,
@@ -99262,6 +99381,118 @@ function RhythmWatchLaneRoad({
     className: "pointer-events-none absolute inset-0 h-full w-full"
   }));
 }
+function RhythmWatchChat({
+  member = false,
+  wide = false
+}) {
+  const mv = useRhythmMultiView();
+  const wv = RHYTHM_WATCH.view();
+  const list = member ? mv && Array.isArray(mv.chat) ? mv.chat : [] : wv && Array.isArray(wv.chat) ? wv.chat : [];
+  const selfId = member ? mv ? mv.selfId : '' : wv ? wv.wid : '';
+  const [text, setText] = React.useState('');
+  const [note, setNote] = React.useState('');
+  const [stampOpen, setStampOpen] = React.useState(false);
+  const listRef = React.useRef(null);
+  const lastCid = list.length ? list[list.length - 1].cid : '';
+  React.useEffect(() => {
+    const el = listRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [lastCid]);
+  React.useEffect(() => {
+    if (!note) return undefined;
+    const t = setTimeout(() => setNote(''), 2500);
+    return () => clearTimeout(t);
+  }, [note]);
+  const send = (t, stamp = null) => {
+    const r = member ? RHYTHM_MULTI.sendChat(t, stamp) ? 'ok' : 'wait' : RHYTHM_WATCH.say(t, stamp);
+    setNote(r === 'wait' ? '続けて送るときは、少し待ってね' : r === 'max' ? `この曲で送れるのは${RHYTHM_WATCH_CHAT_ROUND_MAX}回までです` : '');
+    return r === 'ok';
+  };
+  const submit = () => {
+    if (send(text)) setText('');
+  };
+  return React.createElement("div", {
+    "data-rhythm-watch-chat": true,
+    className: `mt-1.5 flex shrink-0 flex-col gap-1 rounded-xl border border-slate-700 bg-slate-900/80 p-1.5 ${wide ? 'min-h-0' : ''}`
+  }, React.createElement("ul", {
+    ref: listRef,
+    "data-rhythm-watch-chat-list": true,
+    className: `${wide ? 'max-h-[4.4rem]' : 'max-h-[4.2rem]'} min-h-[1.4rem] overflow-y-auto text-[11px] font-bold leading-snug`
+  }, !list.length && React.createElement("li", {
+    className: "text-slate-400",
+    style: JA_WRAP_STYLE
+  }, jaWrap('観戦している人も、ひとことやスタンプを送れます')), list.map(c => {
+    const mine = c.id === selfId;
+    return React.createElement("li", {
+      key: c.cid,
+      "data-rhythm-watch-chat-line": c.w ? 'watch' : 'room',
+      className: "flex items-center gap-1 py-0.5"
+    }, React.createElement("b", {
+      className: `max-w-[45%] shrink-0 truncate ${c.w ? 'text-amber-300' : 'text-cyan-200'}`
+    }, c.w ? '👁 ' : '', c.name, mine ? '(自分)' : ''), c.sf && MULTI_STAMP.prefs().pic && multiStampFaceSrc(c.sf) ? React.createElement("span", {
+      "data-rhythm-watch-chat-stamp": true,
+      className: `inline-flex min-w-0 items-center gap-1 rounded-lg py-0.5 pl-0.5 pr-1.5 ${c.w ? 'bg-amber-200 text-amber-950' : 'bg-slate-100 text-slate-900'}`
+    }, React.createElement("img", {
+      src: multiStampFaceSrc(c.sf),
+      alt: "",
+      draggable: false,
+      decoding: "async",
+      className: "block h-7 w-7 shrink-0 rounded-md bg-white object-cover"
+    }), React.createElement("span", {
+      className: "min-w-0 break-words"
+    }, (multiStampWord(c.sw) || {}).text || c.text)) : React.createElement("span", {
+      className: `min-w-0 break-words rounded-lg px-1.5 py-0.5 ${c.w ? 'bg-amber-200 text-amber-950' : 'bg-slate-100 text-slate-900'}`
+    }, c.text));
+  })), stampOpen ? React.createElement("div", {
+    "data-rhythm-watch-chat-stamps": true,
+    className: "max-h-[7.5rem] overflow-y-auto"
+  }, React.createElement(MultiStampPalette, {
+    onSend: x => send(x.text, {
+      f: x.f,
+      w: x.w
+    }),
+    cols: wide ? 4 : 6
+  })) : React.createElement("div", {
+    "data-rhythm-watch-chat-phrases": true,
+    className: "grid shrink-0 grid-cols-4 gap-1"
+  }, rhythmMultiStampsFor('watch').slice(0, 4).map(t => React.createElement("button", {
+    key: t,
+    type: "button",
+    "data-rhythm-watch-chat-phrase": true,
+    onClick: () => send(t),
+    className: "min-h-[34px] min-w-0 truncate rounded-full border border-white/20 bg-slate-800 px-1 text-[11px] font-black text-white active:scale-95"
+  }, t))), note && React.createElement("small", {
+    "data-rhythm-watch-chat-wait": true,
+    className: "block text-[11px] font-black text-amber-300"
+  }, note), React.createElement("form", {
+    className: "flex shrink-0 gap-1.5",
+    onSubmit: e => {
+      e.preventDefault();
+      submit();
+    }
+  }, React.createElement("button", {
+    type: "button",
+    "data-rhythm-watch-chat-stamp-toggle": true,
+    "aria-pressed": stampOpen,
+    "aria-label": stampOpen ? '定型の言葉へ' : 'スタンプを選ぶ',
+    onClick: () => setStampOpen(x => !x),
+    className: `min-h-[40px] shrink-0 whitespace-nowrap rounded-xl border px-2 text-[12px] font-black ${stampOpen ? 'border-cyan-300 bg-cyan-600 text-white' : 'border-cyan-300/50 bg-slate-950 text-cyan-100'}`
+  }, wide ? stampOpen ? '💬' : '😊' : stampOpen ? '💬 定型' : '😊 スタンプ'), React.createElement("input", {
+    "data-rhythm-watch-chat-input": true,
+    value: text,
+    maxLength: RHYTHM_MULTI_CHAT_MAX_LENGTH,
+    autoComplete: "off",
+    enterKeyHint: "send",
+    onChange: e => setText(e.target.value),
+    placeholder: "ひとこと",
+    className: "min-h-[40px] min-w-0 flex-1 rounded-xl border border-white/20 bg-slate-950 px-2 text-base font-bold text-white"
+  }), React.createElement("button", {
+    "data-rhythm-watch-chat-send": true,
+    type: "submit",
+    disabled: !text.trim(),
+    className: "min-h-[40px] shrink-0 rounded-xl bg-gradient-to-b from-cyan-500 to-cyan-700 px-3 text-[13px] font-black disabled:opacity-40"
+  }, "送信")));
+}
 function RhythmWatchScreen({
   songs = [],
   resolveIconUrl = null
@@ -99322,18 +99553,21 @@ function RhythmWatchScreen({
     type: "button",
     "aria-label": "観戦をやめる",
     onClick: close,
-    className: "min-h-[40px] shrink-0 rounded-xl bg-slate-700 px-3 text-[12px] font-black text-slate-100"
+    className: "min-h-[40px] shrink-0 rounded-xl bg-slate-700 px-3 text-[12px] font-black text-slate-100 max-[359px]:px-2 max-[359px]:text-[11px]"
   }, "観戦をやめる"), React.createElement("div", {
+    "data-rhythm-watch-orientation": true,
+    className: "shrink-0"
+  }, React.createElement(RhythmOrientationButton, null)), React.createElement("div", {
     className: "min-w-0 flex-1 leading-tight"
   }, React.createElement("b", {
-    className: "block text-[13px] font-black text-amber-300"
+    className: "block whitespace-nowrap text-[13px] font-black text-amber-300 max-[359px]:text-[11px]"
   }, "👁 観戦中"), React.createElement("small", {
     className: "block truncate text-[11px] font-bold text-slate-300"
   }, songName || (playing ? '' : `部屋 ${v.code}`))), canJoin && React.createElement("button", {
     "data-rhythm-watch-join": true,
     type: "button",
     onClick: joinRoom,
-    className: "min-h-[40px] shrink-0 whitespace-nowrap rounded-xl bg-sky-600 px-3 text-[12px] font-black text-white"
+    className: "min-h-[40px] shrink-0 whitespace-nowrap rounded-xl bg-sky-600 px-3 text-[12px] font-black text-white max-[359px]:px-2 max-[359px]:text-[11px]"
   }, "この部屋に入る")), !playing && React.createElement("div", {
     className: "flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center"
   }, React.createElement("p", {
@@ -99405,7 +99639,9 @@ function RhythmWatchScreen({
   }))), v.phase === 'ended' && React.createElement("p", {
     className: "text-center text-[12px] font-black text-amber-200"
   }, "この曲の演奏が終わりました")), React.createElement("section", {
-    className: `${wide ? 'w-[36%] overflow-y-auto' : ''} shrink-0`
+    className: `flex min-w-0 shrink-0 flex-col ${wide ? 'min-h-0 w-[36%]' : ''}`
+  }, React.createElement("div", {
+    className: wide ? 'min-h-0 flex-1 overflow-y-auto' : ''
   }, React.createElement("div", {
     className: "flex items-center gap-2 text-[11px] font-black tabular-nums text-slate-300"
   }, React.createElement("span", null, rhythmWatchClock(pos)), React.createElement("div", {
@@ -99441,7 +99677,10 @@ function RhythmWatchScreen({
   })), React.createElement("p", {
     className: "mt-1 text-[10px] font-bold text-slate-400",
     style: JA_WRAP_STYLE
-  }, jaWrap(`名前を押すと、その人の判定を見られます${v.member ? '。次の曲から、いっしょに遊べます' : canJoin ? '。観戦は見るだけです。遊ぶときは「この部屋に入る」' : ''}`)))));
+  }, jaWrap(`名前を押すと、その人の判定を見られます${v.member ? '。次の曲から、いっしょに遊べます' : canJoin ? '。観戦は見るだけです。遊ぶときは「この部屋に入る」' : ''}`))), React.createElement(RhythmWatchChat, {
+    member: !!v.member,
+    wide: wide
+  }))));
   const target = typeof rotationAwarePortalTarget === 'function' ? rotationAwarePortalTarget() : document.body;
   return ReactDOM.createPortal(body, target);
 }
@@ -101172,7 +101411,8 @@ function RhythmMultiScreenBody({
         setFreeOpen(false);
         setFreeList(false);
         RHYTHM_WATCH.start(code, {
-          joinable: true
+          joinable: true,
+          name: profile.name
         });
       }
     }), freeList ? React.createElement(RhythmMultiRoomList, {
@@ -101180,7 +101420,8 @@ function RhythmMultiScreenBody({
       onWatch: code => {
         setMessage('');
         RHYTHM_WATCH.start(code, {
-          joinable: true
+          joinable: true,
+          name: profile.name
         });
       },
       onCreate: createFree,
