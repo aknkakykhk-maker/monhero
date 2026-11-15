@@ -7,7 +7,7 @@
 //   「動きを減らす」設定(msxFxCalm)と prefers-reduced-motion では、溜めを飛ばして静かな形で結果を出す
 
 const MSX_IS_STEPS = Object.freeze([1800, 420]); // 0 溜め → 1 閃光/煙 → 2 結果(ミリ秒)
-const MSX_IS_YOSU = Object.freeze({ sabori: '😪 サボりグセ', utsu: '😞 うつ病', kega: '🤕 けが', himan: '🍖 肥満', kaze: '🤧 かぜ' });
+const MSX_IS_YOSU = Object.freeze({ sabori: '😪 サボりグセ', utsu: '😞 どんより', kega: '🤕 けが', himan: '🍖 肥満', kaze: '🤧 かぜ' });
 const msxIsCalm = () => (typeof msxFxCalm === 'function' ? Boolean(msxFxCalm()) : false);
 // 吹き出しは言葉の切れ目で折る(2026-11-14 社長の指摘「イッサ博／士」「どうなるか／な〜」。41-screen-ui の jaWrap)
 const msxIsJw = (t) => (typeof jaWrap === 'function' ? jaWrap(t) : t);
@@ -30,7 +30,7 @@ function msxIssaGainList(before, s, SUC) {
 // 選ぶ前の札: 当たったら実際に増える忠誠度(甘え度 +8・恐れ度 +7 のうち、上限50までの分。芯の issa と同じ分け方)
 function msxIssaLoyalAhead(s, SUC) {
   const half = (SUC && SUC.LOYAL && SUC.LOYAL.half) || 50;
-  if (s && s.yosu && s.yosu.utsu) return '忠誠度は動かない(うつ病のあいだ)';
+  if (s && s.yosu && s.yosu.utsu) return '忠誠度は動かない(どんよりのあいだ)';
   const n = Math.max(0, Math.min(8, half - (Number(s && s.ama) || 0))) + Math.max(0, Math.min(7, half - (Number(s && s.fear) || 0)));
   return n > 0 ? `忠誠度 +${n}` : '忠誠度はもう上限';
 }
