@@ -71,7 +71,7 @@ function MsxArcTalk({ run, v, ev, onPause, aid, lines, fallback, head, bg, ex = 
   );
 }
 
-// ヒーローズファイナル: 試合の前に助手が相手を選ぶ
+// ヒーローズファイナル: 試合の前に、貼り出された組み合わせを助手と見る(相手は決まっていて、優勝候補などが勝ち上がってくる。2026-11-15 社長「トーナメントなんだからこっちが決めるのおかしくない？」)
 function MsxArcPick({ run, v, ev, onPause, ctx, bondLv, opp, round, onDone }) {
   const s = run.s; const foe = opp ? (opp.name || msxMonName(opp.species)) : '';
   const lines = msxArcLines(`scn.${s.aid}.summit.r${round + 1}.pick`, ctx, bondLv, { rival: foe, owner: opp && opp.breeder ? opp.breeder : '' });
@@ -79,9 +79,9 @@ function MsxArcPick({ run, v, ev, onPause, ctx, bondLv, opp, round, onDone }) {
   const top = opp ? (
     <div className="arc-foe" data-msx-arc-foe>
       <img src={msxMonThumb(opp.species)} alt=""/><b>{foe}</b><small>{opp.breeder ? `育て手 ${opp.breeder}` : msxMonName(opp.species)}</small>
-      <div className="why">{msxAidName(s.aid)}の選び: {MSX_ARC_PICK_WHY[opp.pick] || '相手'}</div>
+      <div className="why">組み合わせ: {MSX_ARC_PICK_WHY[opp.pick] || '相手'}</div>
     </div>) : null;
-  return <MsxArcTalk run={run} v={v} ev={ev} onPause={onPause} aid={s.aid} lines={lines} head={`${(SUM[round] || {}).name || 'ヒーローズファイナル'}の相手選び`}
+  return <MsxArcTalk run={run} v={v} ev={ev} onPause={onPause} aid={s.aid} lines={lines} head={`${(SUM[round] || {}).name || 'ヒーローズファイナル'}の組み合わせ`}
     bg="images/success/scenes/venue-summit.png" top={top} fallback={`${foe}と戦うよ。いってらっしゃい！`} doneText="⚔ 試合へ" onDone={onDone}/>;
 }
 
