@@ -146,7 +146,7 @@
     {"id":"ev.daily.alone.erubin1","who":"erubin","e":"happy","t":"言われなくてもがんばってるね。……でも、むりはしないでね"},
     {"id":"ev.team.selfdrill.erubin1","who":"erubin","e":"normal","t":"{cheer}からのお誘いだね。体力と相談しよっか"},
     {"id":"ev.team.senpai.erubin1","who":"erubin","e":"excited","t":"きれいな動きだね。見て学ぶのも、挑むのも、どっちもいいと思う"},
-    {"id":"ev.team.fight.erubin1","who":"erubin","e":"troubled","t":"けんかしちゃってるね。仲直りできるといいんだけど……どうしよっか"},
+    {"id":"ev.team.fight.erubin1","who":"erubin","e":"troubled","t":"喧嘩しちゃってるね。仲直りできるといいんだけど……どうしよっか"},
     {"id":"ev.team.base.erubin1","who":"erubin","e":"happy","t":"がんばってるね、{cheer}。ちゃんと見てるよ"},
     {"id":"ev.team.friend.erubin1","who":"erubin","e":"happy","t":"よろしくね。仲良くしてね☺️"},
     {"id":"ev.team.typeskill.erubin1","who":"erubin","e":"normal","t":"タイプがちがうと、動きもちがうんだね。勉強になるね"},
