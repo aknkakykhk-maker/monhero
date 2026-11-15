@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3629c12fdc3bc480
+// source-sha256: 8fca2c216b7bacab
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -183787,7 +183787,7 @@ const MSA_JUDGE_BY = {
   hp: '勝ち数が同じなので、残ライフの量(実数)で決着',
   pct: '残ライフの量も同じなので、残ライフ%で決着',
   dmg: 'ここまで同じなので、与えたダメージで決着',
-  tie: 'すべて同じなので、引き分けにせず負け扱い'
+  tie: '全て同じなので、引き分けにせず負け扱い'
 };
 const MSA_JUDGE_CSS = `
 .msa-judge{position:fixed;inset:0;z-index:9650;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:max(12px,env(safe-area-inset-top)) 12px max(12px,env(safe-area-inset-bottom));background:#0b0820f2;color:#fff;overflow-y:auto;font-family:inherit}

@@ -22,6 +22,7 @@ const partSrc = read('monster-hero/src/parts/14-success-sound.jsx');
 
 const REQUIRED = ['main', 'training', 'rest', 'play', 'hospital', 'menu', 'cupPre', 'trainGreat', 'trainOk', 'trainFail', 'trainSkip', 'scold', 'praise', 'trainLvUp', 'ascetic',
   'cupEntry', 'cupMatch', 'cupWin', 'cupLose', 'issa', 'gameOver', 'retire',
+  'ending', 'endingBad', // エンディングの曲(r1115-091・窓口の依頼)
   // 2026-11-14 演出の音(トレーニングの場面・修行の段・覚醒の入り・期の区切り)
   'trainAct', 'actStep', 'actLeap', 'actHit', 'actDodge', 'actThrow', 'actDrop', 'actGuard', 'actBlock', 'actIdea', 'actFlash', 'actTag', // actTag: 友情タッグのカットイン
   'qStage', 'qCharge', 'qStrike', 'qLeap', 'qSlam', 'qShine', 'qLearn', 'qMiss', 'awakeShow', 'awQi', 'awFlash', 'awKira', 'kiShow', 'kiNext',
