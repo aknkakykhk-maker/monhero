@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 289e096e68756bbf
+// source-sha256: 4b25e6badb27b790
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -184853,7 +184853,9 @@ const MSA_CSS = `
 .msa-cut .cr{left:50%;top:50%;width:200%;padding-top:200%;margin:-100% 0 0 -100%;border-radius:50%;background:repeating-conic-gradient(from 0deg,#fff0 0 5deg,var(--k1) 5deg 6.5deg,#fff0 6.5deg 11deg);-webkit-mask:radial-gradient(circle,#0000 14%,#000 22%,#000 60%,#0000 70%);mask:radial-gradient(circle,#0000 14%,#000 22%,#000 60%,#0000 70%);opacity:.55;animation:msaCutRays var(--cut,1000ms) linear both}
 .msa-cut .cb{left:-12%;right:-12%;top:30%;height:40%;display:flex;align-items:center;gap:6px;padding:0 14%;transform:skewY(-8deg);background:linear-gradient(90deg,var(--k2),var(--k1) 45%,var(--k2));box-shadow:0 0 0 3px #fff,0 0 24px var(--k1);overflow:hidden;animation:msaCutBandA var(--cut,1000ms) cubic-bezier(.2,.9,.3,1) both}
 .msa-cut.B .cb{flex-direction:row-reverse;text-align:right;animation-name:msaCutBandB}
-.msa-cut.band .cb{top:36%;height:28%;transform:skewY(-5deg)}
+.msa-cut.band .cb{top:33%;height:34%;transform:skewY(-6deg)}
+.msa-cut.band .cr{opacity:.4}
+.msa-cut.full .cb{top:27%;height:46%}
 .msa-cut .cl{inset:0;background:repeating-linear-gradient(90deg,#fff0 0 18px,#ffffff2e 18px 20px);animation:msaCutLines .35s linear infinite}
 .msa-cut .ca{position:relative;flex:0 0 40%;height:118%;align-self:flex-end;display:flex;align-items:flex-end;justify-content:center;transform:skewY(8deg);animation:msaCutArt var(--cut,1000ms) cubic-bezier(.2,.9,.3,1) both}
 .msa-cut.band .ca{flex-basis:30%;height:100%;align-self:center}
@@ -184888,24 +184890,28 @@ const MSA_CSS = `
 .msa-hx{position:absolute;z-index:8;bottom:90px;width:0;height:0;pointer-events:none;--k1:#fb923c;--k2:#dc2626;--k3:#fde047}
 .msa-hx.wise{--k1:#67e8f9;--k2:#7c3aed;--k3:#e0e7ff}
 .msa-hx>i{position:absolute;left:0;top:0;pointer-events:none;opacity:0}
-.msa-hx .core{width:44px;height:44px;margin:-22px 0 0 -22px;border-radius:50%;background:radial-gradient(circle,#fff 0,var(--k3) 25%,var(--k1) 50%,#fff0 72%);animation:msaHxCore .45s ease-out}
-.msa-hx.l2 .core{width:70px;height:70px;margin:-35px 0 0 -35px}.msa-hx.l2 .ring{width:80px;height:80px;margin:-40px 0 0 -40px}
-.msa-hx.l3 .core{width:120px;height:120px;margin:-60px 0 0 -60px}
-.msa-hx.l4 .core{width:150px;height:150px;margin:-75px 0 0 -75px;animation-duration:.6s}
-.msa-hx.l5 .core{width:200px;height:200px;margin:-100px 0 0 -100px;animation:msaHxCore5 .95s ease-out;background:radial-gradient(circle,#fff 0,#fff 14%,var(--k3) 26%,var(--k1) 44%,var(--k2) 58%,#fff0 72%)}
+.msa-hx .core{width:56px;height:56px;margin:-28px 0 0 -28px;border-radius:50%;background:radial-gradient(circle,#fff 0,var(--k3) 25%,var(--k1) 50%,#fff0 72%);animation:msaHxCore .45s ease-out}
+.msa-hx.l2 .core{width:96px;height:96px;margin:-48px 0 0 -48px}.msa-hx.l2 .ring{width:100px;height:100px;margin:-50px 0 0 -50px;border-width:4px}
+.msa-hx.l3 .core{width:150px;height:150px;margin:-75px 0 0 -75px}
+.msa-hx.l4 .core{width:200px;height:200px;margin:-100px 0 0 -100px;animation-duration:.6s}
+.msa-hx.l5 .core{width:250px;height:250px;margin:-125px 0 0 -125px;animation:msaHxCore5 .95s ease-out;background:radial-gradient(circle,#fff 0,#fff 14%,var(--k3) 26%,var(--k1) 44%,var(--k2) 58%,#fff0 72%)}
 .msa-hx .ring{width:56px;height:56px;margin:-28px 0 0 -28px;border-radius:50%;border:3px solid var(--k3);box-shadow:0 0 10px var(--k1),inset 0 0 8px var(--k1);animation:msaHxRing .5s ease-out}
-.msa-hx.l3 .ring{width:110px;height:110px;margin:-55px 0 0 -55px}
-.msa-hx.l4 .ring,.msa-hx.l5 .ring{width:150px;height:150px;margin:-75px 0 0 -75px;border-width:6px}
+.msa-hx.l3 .ring{width:130px;height:130px;margin:-65px 0 0 -65px;border-width:5px}
+.msa-hx.l4 .ring,.msa-hx.l5 .ring{width:170px;height:170px;margin:-85px 0 0 -85px;border-width:7px}
+.msa-hx .ring.r3{width:240px;height:240px;margin:-120px 0 0 -120px;border-width:9px;animation:msaHxRing .8s ease-out;border-color:#fff}
+.msa-hx .core.c2{width:180px;height:180px;margin:-90px 0 0 -90px;animation:msaHxCore .6s ease-out}
 .msa-hx .ring.r2{animation:msaHxRing .7s ease-out;border-color:var(--k1)}
-.msa-hx .rays{width:240px;height:240px;margin:-120px 0 0 -120px;border-radius:50%;background:repeating-conic-gradient(#fff0 0 8deg,var(--k3) 8deg 11deg,#fff0 11deg 22deg);-webkit-mask:radial-gradient(circle,#0000 16%,#000 26%,#0000 68%);mask:radial-gradient(circle,#0000 16%,#000 26%,#0000 68%);animation:msaHxRays .6s ease-out}
-.msa-hx.l5 .rays{width:340px;height:340px;margin:-170px 0 0 -170px;animation-duration:.9s}
+.msa-hx .rays{width:280px;height:280px;margin:-140px 0 0 -140px;border-radius:50%;background:repeating-conic-gradient(#fff0 0 8deg,var(--k3) 8deg 11deg,#fff0 11deg 22deg);-webkit-mask:radial-gradient(circle,#0000 16%,#000 26%,#0000 68%);mask:radial-gradient(circle,#0000 16%,#000 26%,#0000 68%);animation:msaHxRays .6s ease-out}
+.msa-hx.l4 .rays{width:340px;height:340px;margin:-170px 0 0 -170px}
+.msa-hx.l5 .rays{width:440px;height:440px;margin:-220px 0 0 -220px;animation-duration:.9s}
 .msa-hx .wave{width:220px;height:30px;margin:52px 0 0 -110px;border-radius:50%;border:3px solid var(--k3);box-shadow:0 0 12px var(--k1);animation:msaHxWave .65s ease-out}
 .msa-hx.l5 .wave{width:380px;margin-left:-190px}
-.msa-hx .pillar{width:90px;height:420px;margin:-340px 0 0 -45px;background:linear-gradient(0deg,#fff0,var(--k1) 20%,#fff 50%,var(--k1) 80%,#fff0);filter:blur(1px);animation:msaHxPillar .9s ease-out}
+.msa-hx .pillar{width:120px;height:520px;margin:-420px 0 0 -60px;background:linear-gradient(0deg,#fff0,var(--k1) 20%,#fff 50%,var(--k1) 80%,#fff0);filter:blur(1px);animation:msaHxPillar .9s ease-out}
 .msa-hx .circle{width:200px;height:200px;margin:-100px 0 0 -100px;border-radius:50%;border:3px dashed var(--k3);box-shadow:0 0 0 8px #fff0,0 0 0 10px var(--k1),0 0 16px var(--k2);animation:msaHxCircle 1s ease-out}
 .msa-hx .bit{width:12px;height:12px;margin:-6px 0 0 -6px;background:var(--k3);box-shadow:0 0 6px var(--k1);border-radius:2px;animation:msaHxBit .62s cubic-bezier(.15,.8,.3,1)}
 .msa-hx.wise .bit{border-radius:0;clip-path:polygon(50% 0,62% 38%,100% 50%,62% 62%,50% 100%,38% 62%,0 50%,38% 38%);width:16px;height:16px;margin:-8px 0 0 -8px;background:#fff}
-.msa-hx.l5 .bit{width:16px;height:16px;animation-duration:.85s}
+.msa-hx.l4 .bit{width:14px;height:14px}
+.msa-hx.l5 .bit{width:18px;height:18px;animation-duration:.9s}
 @keyframes msaHxCore{0%{opacity:0;transform:scale(.2)}12%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(1.5)}}
 @keyframes msaHxCore5{0%{opacity:0;transform:scale(.15)}10%{opacity:1;transform:scale(.9)}35%{opacity:1;transform:scale(1.15)}100%{opacity:0;transform:scale(1.6)}}
 @keyframes msaHxRing{0%{opacity:0;transform:scale(.2)}15%{opacity:1}100%{opacity:0;transform:scale(2.2)}}
@@ -184917,6 +184923,12 @@ const MSA_CSS = `
 .msa-rbg{position:absolute;inset:0;z-index:0;pointer-events:none;opacity:0;animation:msaRbg 2.6s ease-out both}
 .msa-rbg.pow{background:radial-gradient(ellipse at 50% 110%,#fde047cc 0,#f97316bb 22%,#b91c1ccc 48%,#3b0a0aee 80%),repeating-linear-gradient(100deg,#0000 0 30px,#fb923c22 30px 34px)}
 .msa-rbg.wise{background:radial-gradient(1.5px 1.5px at 12% 20%,#fff,#fff0),radial-gradient(2px 2px at 30% 12%,#e0e7ff,#fff0),radial-gradient(1.5px 1.5px at 52% 26%,#fff,#fff0),radial-gradient(2px 2px at 72% 10%,#c4b5fd,#fff0),radial-gradient(1.5px 1.5px at 88% 30%,#fff,#fff0),radial-gradient(1.5px 1.5px at 40% 40%,#a5f3fc,#fff0),radial-gradient(ellipse at 50% 100%,#22d3ee88 0,#4c1d95dd 40%,#0b0626f2 80%)}
+/* 当たった瞬間の場全体の光と、ランク5の大揺れ */
+.msa-rf{position:absolute;inset:0;z-index:11;pointer-events:none;opacity:0;background:radial-gradient(circle,#fff 0,#fde68a 35%,#fb923c 100%);mix-blend-mode:screen;animation:msaRf .5s ease-out both}
+.msa-rf.wise{background:radial-gradient(circle,#fff 0,#a5f3fc 35%,#8b5cf6 100%)}
+@keyframes msaRf{0%{opacity:0}6%{opacity:var(--rf,.5)}100%{opacity:0}}
+.msa-shk.shake.s4{animation:msaShake4 .95s ease-out both}
+@keyframes msaShake4{0%,100%{transform:none}6%{transform:translate(-18px,8px) scale(1.06)}14%{transform:translate(16px,-8px) scale(1.06)}24%{transform:translate(-14px,6px) scale(1.04)}36%{transform:translate(12px,-5px) scale(1.03)}50%{transform:translate(-8px,3px)}64%{transform:translate(6px,-2px)}80%{transform:translate(-3px,1px)}}
 @keyframes msaRbg{0%{opacity:0}18%,80%{opacity:1}100%{opacity:.85}}
 @media (prefers-reduced-motion: reduce){
   .msa *,.msa *::before,.msa *::after{animation:none!important;transition:none!important}
@@ -185032,7 +185044,8 @@ const MSA_RANK_FX = Object.freeze({
     cut: 0,
     cutMs: 0,
     hit: 1,
-    shake: 0,
+    shake: 1,
+    flash: 0,
     bg: false
   },
   2: {
@@ -185040,6 +185053,7 @@ const MSA_RANK_FX = Object.freeze({
     cutMs: 0,
     hit: 2,
     shake: 1,
+    flash: 0.22,
     bg: false
   },
   3: {
@@ -185047,20 +185061,23 @@ const MSA_RANK_FX = Object.freeze({
     cutMs: 0,
     hit: 3,
     shake: 2,
+    flash: 0.4,
     bg: false
   },
   4: {
     cut: 'band',
-    cutMs: 760,
+    cutMs: 900,
     hit: 4,
     shake: 3,
+    flash: 0.6,
     bg: false
   },
   5: {
     cut: 'full',
-    cutMs: 1250,
+    cutMs: 1400,
     hit: 5,
-    shake: 3,
+    shake: 4,
+    flash: 0.9,
     bg: true
   }
 });
@@ -185100,7 +185117,7 @@ const msaFxOf = (log, e, reduce, sf = 1) => {
   };
   if (!e || e.ev !== 'tech') return z;
   const rank = msaRankOf(log, e);
-  const big = (Number(msaTechInfo(log, e).guts) || 0) >= 40 || rank >= 5;
+  const big = (Number(msaTechInfo(log, e).guts) || 0) >= 40 || rank >= 4;
   const idx = Array.isArray(log) ? log.indexOf(e) : -1;
   const nx = idx >= 0 ? log[idx + 1] : null;
   const fin = Boolean(e.hit && nx && nx.ev === 'ko' && nx.side && nx.side !== e.side);
@@ -185110,7 +185127,7 @@ const msaFxOf = (log, e, reduce, sf = 1) => {
     big,
     rank
   };
-  const stop = !e.hit || (Number(sf) || 1) <= MSA_FAST_F ? 0 : fin ? 230 : e.crit || big || rank >= 4 ? 130 : rank >= 3 ? 100 : e.guarded ? 40 : 70;
+  const stop = !e.hit || (Number(sf) || 1) <= MSA_FAST_F ? 0 : fin ? 230 : rank >= 5 ? 200 : e.crit || big || rank >= 4 ? 150 : rank >= 3 ? 110 : e.guarded ? 40 : 70;
   const f = Number(sf) || 1;
   const cut = msaCutMs(rank, f, reduce);
   const pre = cut + (big ? Math.round(MSA_WIND_BIG_MS * f) : f <= 0.35 ? 0 : Math.round(MSA_WIND_MS * f));
@@ -185196,7 +185213,7 @@ function MsaCutin({
     "aria-hidden": "true"
   }, React.createElement("i", {
     className: "cs"
-  }), R.cut === 'full' && React.createElement("i", {
+  }), React.createElement("i", {
     className: "cr"
   }), React.createElement("div", {
     className: "cb"
@@ -185263,7 +185280,7 @@ function MsaHitFx({
 }) {
   if (!hit) return null;
   const kd = kind === 'wise' ? 'wise' : 'pow';
-  const n = lv >= 5 ? 12 : lv >= 3 ? 8 : lv >= 2 ? 4 : 0;
+  const n = lv >= 5 ? 16 : lv >= 4 ? 12 : lv >= 3 ? 10 : lv >= 2 ? 6 : 3;
   const d = {
     animationDelay: `${delay}ms`
   };
@@ -185294,6 +185311,16 @@ function MsaHitFx({
   }), lv >= 5 && React.createElement("i", {
     className: "pillar",
     style: d
+  }), lv >= 5 && React.createElement("i", {
+    className: "core c2",
+    style: {
+      animationDelay: `${delay + 240}ms`
+    }
+  }), lv >= 5 && React.createElement("i", {
+    className: "ring r3",
+    style: {
+      animationDelay: `${delay + 260}ms`
+    }
   }), lv >= 5 && kd === 'wise' && React.createElement("i", {
     className: "circle",
     style: d
@@ -185305,9 +185332,23 @@ function MsaHitFx({
     style: {
       ...d,
       '--a': `${Math.round(j * 360 / n + j % 2 * 13)}deg`,
-      '--r': `${(lv >= 5 ? 120 : lv >= 3 ? 82 : 52) + j % 3 * 14}px`
+      '--r': `${(lv >= 5 ? 150 : lv >= 4 ? 120 : lv >= 3 ? 92 : lv >= 2 ? 64 : 40) + j % 3 * 16}px`
     }
   })));
+}
+function MsaRankFlash({
+  kind,
+  a,
+  delay
+}) {
+  return React.createElement("i", {
+    className: `msa-rf ${kind === 'wise' ? 'wise' : 'pow'}`,
+    "aria-hidden": "true",
+    style: {
+      '--rf': a,
+      animationDelay: `${delay}ms`
+    }
+  });
 }
 function MsaRankBg({
   kind,
@@ -186238,7 +186279,12 @@ function MsaStage({
     className: "msa-bigtag"
   }, "大技") : null, e.name, big && e.side !== 'B' ? React.createElement("span", {
     className: "msa-bigtag"
-  }, "大技") : null))), e.ev === 'tech' && e.hit && (e.crit || fx.fin) && !reduce && React.createElement("i", {
+  }, "大技") : null))), e.ev === 'tech' && e.hit && !reduce && rkFx.flash > 0 && React.createElement(MsaRankFlash, {
+    key: `rf-${pos}`,
+    kind: e.kind,
+    a: rkFx.flash,
+    delay: hitMs
+  }), e.ev === 'tech' && e.hit && (e.crit || fx.fin) && !reduce && React.createElement("i", {
     key: `fl-${pos}`,
     className: `msa-flash ${e.crit ? 'big' : 'fin'}`,
     "aria-hidden": "true",
