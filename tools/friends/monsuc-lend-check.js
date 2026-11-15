@@ -125,7 +125,7 @@ const check = (label, ok, detail) => {
   const m3 = monsucLendMember(row({ ...strong, assists: [{ id: 'boost', lv: 1 }] }), SUC);
   check('C 知らないアシストがあれば効かせない', m3 && m3.assists.length === 0);
   const m4 = monsucLendMember(row({ ...strong, stats: { ...strong.stats, pow: 5000 } }), SUC);
-  check('C 能力は 999 に丸める', m4 && m4.stats.pow === 999);
+  check('C 999 を超えた能力もそのまま読む(上限アップ r1115-103)', m4 && m4.stats.pow === 5000);
   check('C 知らない種・中身なしは借りない', monsucLendMember(row({ ...strong, species: 'NoSuchMon' }), SUC) === null && monsucLendMember({ friendId: 'B' }, SUC) === null);
   const mem = SUC.memberOf(m1);
   check('C 芯の memberOf にそのまま渡せる(ランクと効きは6能力から出す)', mem && mem.kind === 'raised' && typeof mem.rank === 'string' && mem.assists.length === 2 && mem.top.length === 3);
