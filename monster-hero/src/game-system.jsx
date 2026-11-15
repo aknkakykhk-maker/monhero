@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: cb6427e97a140a11
+// generated-sha256: f05bff03d42d10d6
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -4728,7 +4728,7 @@ const TRAINING_DIFFICULTIES = Object.freeze({
   NORMAL:{id:'NORMAL',label:'NORMAL',available:false,turns:10,dice:[1,3],spaces:32,summary:'道具の判断が重要になる予定です。説明のみ確認できます。'},
 });
 const TRAINING_TOOLS = Object.freeze({
- feather:{name:'加速の羽',emoji:'🪽',timing:'サイコロを振る前',mode:'消費型',desc:'次の出目に＋2'}, gale:{name:'疾風の札',emoji:'🌪️',timing:'サイコロを振る前',mode:'消費型',desc:'2回振り、高い出目を採用'}, reroll:{name:'振り直しの石',emoji:'🪨',timing:'出目の確定後・移動前',mode:'消費型',desc:'確定した出目を1回だけ振り直す'}, noReturn:{name:'戻らずのお守り',emoji:'🧿',timing:'持っているだけで効く',mode:'自動発動型',desc:'次に戻されるのを1回だけ防いで、なくなる'}, sand:{name:'時の砂',emoji:'⏳',timing:'移動していない時',mode:'消費型',desc:'残りターン＋1'}, fixed:{name:'確定サイコロ',emoji:'🎲',timing:'サイコロを振る前',mode:'消費型',desc:'次の出目を1・2・3から選択'}, returnCharm:{name:'帰還のお守り',emoji:'🏮',timing:'持っているだけで効く',mode:'自動発動型',desc:'ゴール失敗時、仮獲得した通常アイテムから1個選んで保護'},
+ feather:{name:'加速の羽',emoji:'🪽',timing:'サイコロを振る前',mode:'消費型',desc:'次の出目に＋2'}, gale:{name:'疾風のお守り',emoji:'🌪️',timing:'サイコロを振る前',mode:'消費型',desc:'2回振り、高い出目を採用'}, reroll:{name:'振り直しの石',emoji:'🪨',timing:'出目の確定後・移動前',mode:'消費型',desc:'確定した出目を1回だけ振り直す'}, noReturn:{name:'戻らずのお守り',emoji:'🧿',timing:'持っているだけで効く',mode:'自動発動型',desc:'次に戻されるのを1回だけ防いで、なくなる'}, sand:{name:'時の砂',emoji:'⏳',timing:'移動していない時',mode:'消費型',desc:'残りターン＋1'}, fixed:{name:'確定サイコロ',emoji:'🎲',timing:'サイコロを振る前',mode:'消費型',desc:'次の出目を1・2・3から選択'}, returnCharm:{name:'帰還のお守り',emoji:'🏮',timing:'持っているだけで効く',mode:'自動発動型',desc:'ゴール失敗時、仮獲得した通常アイテムから1個選んで保護'},
 });
 const TRAINING_SPACE_TYPES = Object.freeze({
  start:{kind:'start',label:'スタート',emoji:'🚩',color:'#475569',desc:'修行の開始地点'}, xp30:{kind:'xp',value:30,label:'絆EXP',emoji:'💗',color:'#16a34a',desc:'仮獲得絆経験値＋30'}, xp60:{kind:'xp',value:60,label:'大EXP',emoji:'💖',color:'#15803d',desc:'仮獲得絆経験値＋60'}, gem50:{kind:'diamond',value:50,label:'ダイヤ',emoji:'💎',color:'#0891b2',desc:'仮獲得ダイヤ＋50'}, gem100:{kind:'diamond',value:100,label:'大ダイヤ',emoji:'💠',color:'#2563eb',desc:'仮獲得ダイヤ＋100'}, item:{kind:'item',value:'training_ticket',label:'アイテム',emoji:'🎁',color:'#ec4899',desc:'仮獲得通常アイテムを1個追加'}, tool:{kind:'tool',label:'修行道具',emoji:'🎒',color:'#d946ef',desc:'修行で使う道具を1つもらう'}, forward:{kind:'move',value:1,label:'前進',emoji:'⏩',color:'#16a34a',desc:'1～3マス追加移動（停止マスだけ発動）'}, back:{kind:'move',value:-1,label:'後退',emoji:'⏪',color:'#dc2626',desc:'1～3マス戻る（停止マスだけ発動）'}, turnPlus:{kind:'turn',value:1,label:'ターン＋',emoji:'⏱️',color:'#059669',desc:'残りターン＋1'}, turnMinus:{kind:'turn',value:-1,label:'ターン－',emoji:'⚡',color:'#b91c1c',desc:'残りターン－1'}, boost:{kind:'effect',value:'boost',label:'強化',emoji:'✨',color:'#ca8a04',desc:'次回のサイコロ出目＋1'}, again:{kind:'effect',value:'again',label:'もう一度',emoji:'🔁',color:'#0d9488',desc:'ターンを消費せず再度サイコロ'}, happening:{kind:'happening',label:'ハプニング',emoji:'⁉️',color:'#9333ea',desc:'良い効果または悪い効果が発動'}, goal:{kind:'goal',label:'ゴール',emoji:'🏁',color:'#eab308',desc:'到達または通過で修行成功'},
@@ -6246,9 +6246,9 @@ const Audio_ = (() => {
   const AUDIO_CACHE_KEYS = {
 // <audio-cache-keys>
     "audio/bgm-4u-hitasura.mp3": "f4fb42472438",
-    "audio/bgm-against-my-own-shadow.mp3": "a58782a4c46f",
+    "audio/bgm-against-my-own-shadow.mp3": "b43d691d4773",
     "audio/bgm-altar-world-tree-short.mp3": "45860ac8bd1d",
-    "audio/bgm-altar-world-tree.mp3": "2dda9c70f027",
+    "audio/bgm-altar-world-tree.mp3": "eeeeada93d95",
     "audio/bgm-anima.mp3": "c81adf3d2fff",
     "audio/bgm-atsu-cup-theme.mp3": "e93502c4df76",
     "audio/bgm-battle-ichika.mp3": "ca746d1d2ba6",
@@ -6266,10 +6266,10 @@ const Audio_ = (() => {
     "audio/bgm-departure-short.mp3": "d2dcbe5c72a8",
     "audio/bgm-departure.mp3": "ad4d5a6838c8",
     "audio/bgm-dullahan-clockwork-alt.mp3": "9e934451770b",
-    "audio/bgm-dullahan-clockwork.mp3": "f94c4b3c8cb8",
+    "audio/bgm-dullahan-clockwork.mp3": "b51e196625c4",
     "audio/bgm-dullahan-steel-ghost-alt.mp3": "1e9c04ccc1db",
     "audio/bgm-dullahan-steel-ghost.mp3": "dbb0da050ab4",
-    "audio/bgm-dullahan.mp3": "d5d987e2ccd3",
+    "audio/bgm-dullahan.mp3": "c66388ff6c14",
     "audio/bgm-eiki-boss-beat.mp3": "1c3e0cb8b29f",
     "audio/bgm-eiki-boss-remix.mp3": "83093750c9ec",
     "audio/bgm-emerald-rush.mp3": "7782e3520275",
@@ -6284,8 +6284,8 @@ const Audio_ = (() => {
     "audio/bgm-haruka.mp3": "7a7164dbf152",
     "audio/bgm-home-2.mp3": "71bf51ba1f71",
     "audio/bgm-home-ichika.mp3": "29295336d1af",
-    "audio/bgm-hopes-and-dreams-short.mp3": "46bd73c5d860",
-    "audio/bgm-hopes-and-dreams.mp3": "227e0de43aa1",
+    "audio/bgm-hopes-and-dreams-short.mp3": "a88b77ee4973",
+    "audio/bgm-hopes-and-dreams.mp3": "e6202f9f8356",
     "audio/bgm-humanoid.mp3": "763466fbbf97",
     "audio/bgm-journey.mp3": "816f0cdab93e",
     "audio/bgm-kaze-ga-soyogu-basho.mp3": "e986277401a6",
@@ -6296,11 +6296,11 @@ const Audio_ = (() => {
     "audio/bgm-light-player.mp3": "c07830c2e774",
     "audio/bgm-makutsu-no-senritsu.mp3": "8db199451f0b",
     "audio/bgm-market.mp3": "a85ba65f90e7",
-    "audio/bgm-megalovania-sans.mp3": "6fafc978fa05",
-    "audio/bgm-megalovania-smash.mp3": "1bbb6aea8bb2",
+    "audio/bgm-megalovania-sans.mp3": "8317d65943b6",
+    "audio/bgm-megalovania-smash.mp3": "038da79dd59e",
     "audio/bgm-menu.mp3": "a6aef603fd6a",
     "audio/bgm-midnight-studio-short.mp3": "936b28949b4a",
-    "audio/bgm-midnight-studio.mp3": "9ae7e65a5cf4",
+    "audio/bgm-midnight-studio.mp3": "51c39ff9dbbb",
     "audio/bgm-monster-hero-theme-alt.mp3": "6b4eb065c2e2",
     "audio/bgm-monster-hero-theme.mp3": "083a1d9db281",
     "audio/bgm-monster-short.mp3": "415b771e9bbf",
@@ -6321,7 +6321,7 @@ const Audio_ = (() => {
     "audio/bgm-pro-battle-02.mp3": "f572c81a9ef6",
     "audio/bgm-profile.mp3": "523789845ff1",
     "audio/bgm-rebellion-short.mp3": "92a340e95441",
-    "audio/bgm-rebellion.mp3": "4c8807e74e0e",
+    "audio/bgm-rebellion.mp3": "c16005aa72de",
     "audio/bgm-result.mp3": "c4dc9d2fb8a5",
     "audio/bgm-rising-hope.mp3": "5b56b8f9d099",
     "audio/bgm-rose-short.mp3": "fd5f8290037c",
@@ -6330,8 +6330,8 @@ const Audio_ = (() => {
     "audio/bgm-rpg.mp3": "36abe34289f9",
     "audio/bgm-sad-song-short.mp3": "2ff39f50eddd",
     "audio/bgm-sad-song.mp3": "47d16979bb90",
-    "audio/bgm-saudade-short.mp3": "3491f3c33de4",
-    "audio/bgm-saudade.mp3": "463d9176b94f",
+    "audio/bgm-saudade-short.mp3": "e7a88d84c06a",
+    "audio/bgm-saudade.mp3": "5364f7be63a5",
     "audio/bgm-senjou-no-shippuu.mp3": "dfcd5d833fec",
     "audio/bgm-sheriruth-proto.mp3": "a6f3c4e66746",
     "audio/bgm-sheriruth.mp3": "5044be9b5c0d",
@@ -6345,7 +6345,7 @@ const Audio_ = (() => {
     "audio/bgm-title-theme.mp3": "8af0684e79e7",
     "audio/bgm-title.mp3": "b7bdc68bb0c0",
     "audio/bgm-toriko.mp3": "3870d26f6322",
-    "audio/bgm-toward-the-stars-short.mp3": "f3160c5d2a44",
+    "audio/bgm-toward-the-stars-short.mp3": "88907da29e09",
     "audio/bgm-tsuki-ga-michiru-mae-ni-short.mp3": "fe27c9332589",
     "audio/bgm-tsuki-ga-michiru-mae-ni.mp3": "74eb2d433abd",
     "audio/bgm-wrath-of-the-thorn-king.mp3": "d1ea326a4ee2",
@@ -23637,7 +23637,7 @@ const rhythmSelectNoticeOpen=(state,playedSongCount,isShortScreen)=>isShortScree
   :(!state.noticeTouched&&playedSongCount>=RHYTHM_NOTICE_FOLD_PLAYED_SONGS?false:state.noticeOpen);
 const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,noticeHidden=0,footer=null,actionExtra=null,emptyText='遊べる譜面がまだありません。',spotClass=null,
   songId='',difficultyId='',onSongId=null,onDifficultyId=null,view=null,onView=null,
-  listScrollTop=null,onListScrollTop=null,toolbarExtra=null,playLabel='決定',playDisabled=false,hideRandom=false,unlockAll=false,songLock=null})=>{
+  listScrollTop=null,onListScrollTop=null,toolbarExtra=null,playLabel='決定',playDisabled=false,hideRandom=false,unlockAll=false,songLock=null,scrollToSelected=false})=>{
   const spot=name=>(typeof spotClass==='function'?spotClass(name):'');
   // 演奏へ入る前に、タップ音を作り置きしておく
   useEffect(()=>{RHYTHM_NOTE_SE_RUNTIME.prepare?.();},[]);
@@ -23847,6 +23847,12 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,notic
       const saved=restoreTopRef.current;
       restoreTopRef.current=null;
       node.scrollTop=(saved!=null&&saved>0&&saved<node.scrollHeight)?saved:blockHeight(node);
+      // scrollToSelected … 開いたとき、選んでいる曲の行(まん中のぶん)が一覧のまん中に来るよう縦だけ寄せる。
+      // マルチの曲選びで、次の曲を選ぶたびに先頭へ戻っていた(2026-11-15 r1115-165)。並べ替え・ジャンルで一覧に無ければ先頭のまま
+      if(scrollToSelected&&(saved==null||saved<=0)){
+        const row=node.querySelector('[data-rhythm-song-row][aria-pressed="true"]');
+        if(row){const nb=node.getBoundingClientRect(),rb=row.getBoundingClientRect();node.scrollTop+=Math.round(rb.top-nb.top-(node.clientHeight-rb.height)/2);}
+      }
       loopReadyRef.current=true;
     };
     put();
@@ -37673,12 +37679,14 @@ function RhythmSongShopList({ points = 0, busy = false, disabled = false, openSh
           <span className="block">{[meta.length, meta.levels].filter(Boolean).join(' ／ ')}</span>
           {bundle && <span className="block text-lime-300">short ver. つき</span>}
         </small>
+        {/* 試し聴きと値段(所持済み)は、札の下にひとまとめにそろえる。作者の行が折れる・「short ver. つき」の有無で札ごとにずれない(r1115-162) */}
+        <div data-rhythm-song-offer-foot className="mt-auto flex w-full flex-col items-center gap-1">
         <button type="button" data-rhythm-song-listen={song.songId} onClick={() => toggleListen(song)} aria-pressed={listening}
           aria-label={`${item.name}を試し聴き${listening ? '(止める)' : ''}`}
           className={`mh-hit-expand relative min-h-[32px] w-full rounded-lg border px-1 text-[11px] font-black active:scale-95 ${listening ? 'border-lime-300/70 bg-lime-500/25 text-lime-100' : 'border-white/20 bg-white/10 text-white'}`}>
           {listening ? '■ とめる' : '▶ 試し聴き'}
         </button>
-        <div className="mt-auto flex w-full items-center justify-center pt-1">
+        <div className="flex min-h-[44px] w-full items-center justify-center pt-1">
           {has
             ? <div className="whitespace-nowrap rounded-full bg-emerald-950/50 px-2 py-1 text-[10px] font-black text-emerald-400">所持済み</div>
             : <button type="button" data-rhythm-song-buy={song.songId} onClick={() => openSheet({ item, confirm: () => (onExchange ? onExchange(offer, 1) : false) })} disabled={!canBuy}
@@ -37686,6 +37694,7 @@ function RhythmSongShopList({ points = 0, busy = false, disabled = false, openSh
               className={`mh-button mh-button-primary flex min-h-[44px] w-full max-w-full items-center justify-center gap-1 whitespace-nowrap rounded-xl px-2 text-[11px] font-black ${canBuy ? 'bg-violet-500 text-white active:scale-95' : 'bg-slate-800 text-slate-500'}`}>
               <span aria-hidden="true">🎟️</span><span>{price.toLocaleString()}</span>
             </button>}
+        </div>
         </div>
       </div>;
     })}
@@ -40687,7 +40696,7 @@ const growthFxSessionUnlocks = () => {
     [L(typeof RHYTHM_ASSIST_SESSION_GLOW_LEVEL !== 'undefined' ? RHYTHM_ASSIST_SESSION_GLOW_LEVEL : undefined, 15), 'サビで顔が光る'],
     [L(typeof RHYTHM_ASSIST_SESSION_CHEER_LEVEL !== 'undefined' ? RHYTHM_ASSIST_SESSION_CHEER_LEVEL : undefined, 25), '得意の応援'],
     [L(typeof RHYTHM_ASSIST_SESSION_FRAME_LEVEL !== 'undefined' ? RHYTHM_ASSIST_SESSION_FRAME_LEVEL : undefined, 45), '結果の枠が助手の色に'],
-    [L(typeof RHYTHM_ASSIST_SESSION_BADGE_LEVEL !== 'undefined' ? RHYTHM_ASSIST_SESSION_BADGE_LEVEL : undefined, 50), 'プロフィールに札'],
+    [L(typeof RHYTHM_ASSIST_SESSION_BADGE_LEVEL !== 'undefined' ? RHYTHM_ASSIST_SESSION_BADGE_LEVEL : undefined, 50), 'プロフィールにバッジ'],
     [L(typeof RHYTHM_ASSIST_SESSION_LISTEN_LEVEL !== 'undefined' ? RHYTHM_ASSIST_SESSION_LISTEN_LEVEL : undefined, 75), '曲の聞きどころ'],
     [L(typeof RHYTHM_ASSIST_SESSION_BACK_LEVEL !== 'undefined' ? RHYTHM_ASSIST_SESSION_BACK_LEVEL : undefined, 90), '名前入りの背景'],
     [L(typeof RHYTHM_ASSIST_SESSION_MASTER_LEVEL !== 'undefined' ? RHYTHM_ASSIST_SESSION_MASTER_LEVEL : undefined, 100), '称号「セッションマスター」'],
@@ -43230,7 +43239,7 @@ function ProfileScreen({
               <span className="min-w-0 flex-1"><small className="block text-[10px] font-black text-pink-300">ひとこと</small><b className="block break-words text-[12px] font-black leading-snug text-white" style={JA_LABEL_STYLE}>{profileMessage?`「${profileMessage}」`:<>まだ<wbr/>書いていません</>}</b></span>
               <Edit3 size={13} className="shrink-0 text-slate-400"/>
             </button>
-            <div className="mb-1"><ScreenSectionLabel>見せる札（フレンドにもこう見えます）</ScreenSectionLabel></div>
+            <div className="mb-1"><ScreenSectionLabel>見せる欄（フレンドにもこう見えます）</ScreenSectionLabel></div>
             <div className="grid grid-cols-2 gap-2">
               <button type="button" data-profile-favorite-masu onClick={onOpenFavoritePicker} className="flex min-h-[132px] flex-col items-start gap-1 rounded-2xl border-2 border-amber-600/60 bg-indigo-950/50 p-2 text-left active:scale-[.98]">
                 <small className="text-[10px] font-black text-amber-300" style={JA_LABEL_STYLE}>{jaWrap('好きなモンスター')}</small>
@@ -55283,7 +55292,7 @@ function FriendsScreen({ resolveIconUrl, target = null, requestCount = 0, onBack
               </div>
               {/* 見せる札(2026-10-29 社長が案Bを選んだ)。自分のプロフィールと同じ形で、好きなモンスターとバトルカードのデッキを横に2枚。
                   デッキの札(95 の CardShareDeckTile)は、札の下に「このデッキと戦う」「借りる」を持つ。登録していない人は出さない */}
-              <div className="mt-3 mb-1"><ScreenSectionLabel>見せる札</ScreenSectionLabel></div>
+              <div className="mt-3 mb-1"><ScreenSectionLabel>見せる欄</ScreenSectionLabel></div>
               <div className="grid grid-cols-2 gap-2 items-start">
                 <div data-friend-favorite className="flex min-h-[132px] flex-col items-start gap-1 rounded-2xl border-2 border-amber-600/60 bg-indigo-950/50 p-2">
                   <small className="text-[10px] font-black text-amber-300">好きなモンスター</small>
@@ -57115,6 +57124,17 @@ const RHYTHM_MULTI = (() => {
   };
   return api;
 })();
+
+// ---- マルチの曲選びで、前に選んだ曲(2026-11-15 r1115-165 社長「開くたびに一番上に戻される」) ----
+// 新しいキー mh_rhythm_multi_last_song_v1 に曲の id だけを覚える(既存のキーは触らない)。読めない・壊れているときは '' (いちばん上)
+const RHYTHM_MULTI_LAST_SONG_KEY = 'mh_rhythm_multi_last_song_v1';
+const rhythmMultiLastSongId = () => {
+  try { const v = typeof localStorage !== 'undefined' ? localStorage.getItem(RHYTHM_MULTI_LAST_SONG_KEY) : null; return typeof v === 'string' && /^[a-z0-9_]{1,80}$/i.test(v) ? v : ''; } catch (_) { return ''; }
+};
+const rhythmMultiRememberSong = (id) => {
+  if (typeof id !== 'string' || !/^[a-z0-9_]{1,80}$/i.test(id) || id === RHYTHM_MULTI_OMAKASE) return;
+  try { if (typeof localStorage !== 'undefined') localStorage.setItem(RHYTHM_MULTI_LAST_SONG_KEY, id); } catch (_) { /* 覚えられなくても遊べる */ }
+};
 
 // ---- 観戦(見る側・2026-11-11) ----
 // 部屋のメンバーではない。hb を送らない(5人の枠・結果・報酬・ランキング・周回に一切入らない)。送るのは「見ています」(wt)だけ。
@@ -59300,7 +59320,9 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
     </button>
   ) : null);
   const mine = view ? view.members.find((m) => m.id === view.selfId) : null;
-  const [selSongId, setSelSongId] = React.useState(mine && mine.pick && mine.pick !== RHYTHM_MULTI_OMAKASE ? mine.pick : '');
+  const [selSongId, setSelSongIdRaw] = React.useState(() => (mine && mine.pick && mine.pick !== RHYTHM_MULTI_OMAKASE ? mine.pick : '') || rhythmMultiLastSongId());
+  // 選んだ曲は覚えておき、次の曲を選ぶとき(画面を開き直したときも)その曲を選んだ状態・その位置で開く(2026-11-15 r1115-165)
+  const setSelSongId = (id) => { setSelSongIdRaw(id); rhythmMultiRememberSong(id); };
   const [selectView, setSelectView] = React.useState(null);
   const songById = (songId) => songs.find((song) => song.songId === songId) || null;
   const defaultDiff = difficultyIds.includes('NORMAL') ? 'NORMAL' : difficultyIds[0] || '';
@@ -60571,7 +60593,8 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
         onDifficultyId={(id) => RHYTHM_MULTI.setDiff(id)}
         view={selectView}
         onView={setSelectView}
-        onPlay={(song, difficulty) => { RHYTHM_MULTI.setDiff(difficulty.id); RHYTHM_MULTI.pick(song.songId); }}
+        onPlay={(song, difficulty) => { rhythmMultiRememberSong(song.songId); RHYTHM_MULTI.setDiff(difficulty.id); RHYTHM_MULTI.pick(song.songId); }}
+        scrollToSelected
         playLabel={myPick ? 'この曲に変更' : 'この曲で決定'}
         hideRandom
         notice={(
@@ -67766,12 +67789,8 @@ const assistantLifeTagChunks = (text) => {
 //   札の tag(行き先・人数・名前)は今までどおり残す(ほかの画面・検査が使う)。say は表示のためだけ
 const ASSISTANT_LIFE_SAY_WORDS = Object.freeze({ studio: ['モンヒロ', 'ビート'], cardroom: ['MFバトル', 'カード'], cafe: ['おやつ', '屋さん'], hill: ['ひなたの', '丘'], ranch: ['M/B', '管理'] });
 const ASSISTANT_LIFE_SAY_SPECIAL = Object.freeze({ battle: ['モンヒロ', 'バトル中'], 'cardroom:cards': ['MFバトル', 'カードを', '研究'], 'cafe:snack': ['おやつ', '屋さんで', 'ひと休み'] });
-// 横の狭い部屋(1行・字10.5px以上・床にかけない)で全部が入らないときの短い言い方
-const ASSISTANT_LIFE_SAY_SHORT = Object.freeze({ snack: 'おやつ中', practice: '練習中', training: '育成中', cards: 'カード研究', walk: '散歩中', idle: 'ぼーっと', read: '読書中', battle: 'バトル中', checkup: '診察中' });
-const assistantLifeSayOutShort = (place, doingKey) => {
-  const icon = ASSISTANT_LIFE_PLACE_ICON[place] || '🚶', d = ASSISTANT_LIFE_DOINGS[doingKey];
-  return d && d.places.includes(place) && ASSISTANT_LIFE_SAY_SHORT[doingKey] ? [icon, ASSISTANT_LIFE_SAY_SHORT[doingKey]] : [icon, `${assistantLifePlaceShow(place) || 'おでかけ先'}へ`];
-};
+// 横の狭い部屋(1行・字10.5px以上・床にかけない)で全部が入らないときの短い言い方は、場所の名前だけ(地図・今日あったことと同じ言い方・2026-11-08 社長「矛盾のない作り」)
+const assistantLifeSayOutShort = (place) => [ASSISTANT_LIFE_PLACE_ICON[place] || '🚶', assistantLifePlaceShow(place) || 'おでかけ先'];
 const assistantLifeSayOut = (place, doingKey) => {
   const icon = ASSISTANT_LIFE_PLACE_ICON[place] || '🚶';
   const sp = ASSISTANT_LIFE_SAY_SPECIAL[`${place}:${doingKey}`] || ASSISTANT_LIFE_SAY_SPECIAL[place];
@@ -67866,12 +67885,13 @@ function AssistantLifeRoom({ id, met, look, x, y, w, h, state, onOpen, idx, othe
         const tagFit = assistantLifeTagFit(t[0], w - 26, 10.5, 0); // 1行に入る字の大きさ(10.5 に入らない狭い部屋は、意味の切れ目で2行にする)
         const short = [...String(t[0])].length <= 9; // 横は1行。行き先が長いときは人数を付けない(「…」で切らない)
         // 何をしているかの文(r1115-136)。横と開いたトップの家(compact)は札が1つなので、印のある文(「🤝 えるびんと過ごす」)を出す。塊の間だけで折り、札に全部収める
-        const avail = w - 6 - 8 - 3 - 2;
-        // 横は札の高さが床の帯(マスモンが歩く所)に響くので1行・字10.5px。全部が入らない狭い部屋は短い言い方(「⚔️ バトル中」)
+        const avail = tagLand ? w - 6 - 8 - 3 : w - 6 - 8 - 3 - 2; // 札の中の幅(左右3px・余白4px×2・縁1.5px×2)
+        // 横は札の高さが床の帯(マスモンが歩く所)に響くので1行・字10.5px。全部が入らない狭い部屋は場所の名前だけ(「⚔️ モンヒロバトル」)、それでも入らなければ絵文字を外す
         const oneFit = (x) => assistantLifeTagFit(assistantLifeSayMeasure(assistantLifeSayParts(x).join('')), avail, 10.5, 0);
         const sayFull = Array.isArray(state.say) ? (compact && state.sayMark ? state.sayMark : state.say) : null;
         const sayAlt = Array.isArray(state.say) ? ((compact && state.sayMark ? state.sayMarkShort : state.sayShort) || sayFull) : null;
-        const say = tagLand && sayFull && oneFit(sayFull) < 10.5 && sayAlt ? (oneFit(sayAlt) >= oneFit(sayFull) ? sayAlt : sayFull) : sayFull;
+        const sayBare = sayAlt && sayAlt.length >= 2 ? ['', ...sayAlt.slice(1)] : sayAlt;
+        const say = !tagLand || !sayFull || oneFit(sayFull) >= 10.5 ? sayFull : [sayAlt, sayBare].find(x => x && oneFit(x) >= 10.5) || [sayFull, sayAlt, sayBare].filter(Boolean).sort((a, b) => oneFit(b) - oneFit(a))[0];
         if (say) {
           const f = tagLand ? Math.max(7, oneFit(say)) : assistantLifeSayFont(say, avail);
           return <span className="tag" data-assistant-life-room-away={id} data-assistant-life-room-tag-mark={mark ? '1' : '0'} data-assistant-life-room-say={compact ? '1' : '0'}>
@@ -67963,7 +67983,7 @@ const assistantLifeRoomsOf = (life, metIds) => {
     }
     // 組で出かけているときは、どの部屋の札にも同じ全員の名前(「3人で ドラ・ソラシド・えるびん」)
     const sub = w.group ? `${w.group.ids.length}人で ${doing.label}` : `ひとりで ${doing.label}`;
-    rooms[id] = { tag: [`${ASSISTANT_LIFE_PLACE_ICON[w.place] || '🚶'} ${assistantLifePlaceShow(w.place)}へ`, sub, w.group ? assistantLifeGroupNames(w.group.ids, 4) : null], say: assistantLifeSayOut(w.place, w.doing), sayShort: assistantLifeSayOutShort(w.place, w.doing) };
+    rooms[id] = { tag: [`${ASSISTANT_LIFE_PLACE_ICON[w.place] || '🚶'} ${assistantLifePlaceShow(w.place)}へ`, sub, w.group ? assistantLifeGroupNames(w.group.ids, 4) : null], say: assistantLifeSayOut(w.place, w.doing), sayShort: assistantLifeSayOutShort(w.place) };
   }
   // 言い合いのあとの2人(水色の縁と「💢 ◯◯と言い合いのあと」。2026-11-07 社長「喧嘩とか仲直りとか人間じみたのもどんどん」)
   const q = peer && peer.quarrel && peer.quarrel.pending;
@@ -71192,8 +71212,27 @@ function assistantLifePreloadFullBodies(metIds) {
 
 // 紹介の立ち絵。助手ごとに絵の余白・全身か顔だけかが違うので、町の人形と同じ決まり(顔の表 assistantLifeStandFace と assistantLifeStandRule)で
 //   「頭(てっぺんから顎)の長さ」と「頭のてっぺんの高さ」をそろえる(2026-11-11 社長「助手ごとのサイズ感がばらばら」)。測れるまでは出さない
-function AssistantLifeProfileStand({ who, head = 0.32, top = 0.16 }) {
-  const src = typeof assistantFullImage === 'function' ? assistantFullImage(who, 'happy') : '';
+// 紹介のひとことを押すと変わる8つの表情(2026-11-15 社長 r1115-142)。ふつうは今のひとこと(who.greeting)。ほかは今の掛け合いの台詞から選んだ(なみだの台詞が無い助手だけ書き足した)
+const ASSISTANT_LIFE_PROFILE_FACE_ORDER = Object.freeze([['normal', 'ふつう'], ['happy', 'うれしい'], ['excited', 'わくわく'], ['wink', 'ウインク'], ['surprise', 'おどろき'], ['troubled', 'こまり'], ['angry', 'おこる'], ['crying', 'なみだ']]);
+// 助手ごとに happy・excited・wink・surprise・troubled・angry・crying の順
+const ASSISTANT_LIFE_PROFILE_FACE_LINES = Object.freeze({
+  mua:       ['いいの！ 楽しいのがいちばんぢゃんｗ', 'ちょ、待って！ あたしも行きたいんだけど！', 'あたしたち、天才ぢゃん♪', 'えっ、どしたの急に', '起きたら髪ぼさぼさだったら、どうしよｗ', 'あたしが楽しみにとっといたやつぢゃん！ もー！', 'なにそれ、うれしすぎるんだけど…！'],
+  kiki:      ['私はチョコがいいでつ♪ 半分こしましょうか', '「火力の上げ方」という本を見つけました', 'これからも、たくさん話しかけてくださいね♪', 'あれま…。そんなふうに思ってくれてたんでつね', '私、守りは苦手でつ…がんばります', '…もう一回お願いします。今のは、火力が足りませんでした', 'うれしくて、ちょっと泣いてしまいまつ…'],
+  momosuke:  ['もちろんだよ♡ ももにまかせて', 'でも、ぜんぶ覚えた！！ もも、天才かも♡', 'えへ、知ってる〜w', 'え、ききちゃん普通にうまくない？', 'ももだって、ほんとはもっとおしゃべりしたいのにさ〜', 'ももだって食べたかったもん！！', 'くやしい〜！！ 次は負けないから！！'],
+  dra:       ['半分かよ！ でも、うれしいわ', '100点！？ やったぁ、えへへ', 'えへへ、ばれたか', 'お、おう？ 急にどうしたんだよ', '長靴じゃ勝てないか…次は本物を釣るぞ', 'おでの昼寝は大事なんだぞ', '…やめろよ、おで泣くだろ'],
+  atsu:      ['次も期待してるわ！', 'あと1曲、いや3曲いこ笑', 'できるって。俺ら組んだら強いから！', 'まじ？ じゃあもう1回！', '今日はちょっとうまくいかないなー笑', '今のはたまたま！ もう一回！', '…やば、ちょっと泣きそう。ありがと！'],
+  kyuko:     ['ありがとん笑 心強いよぉ', '新しい組み方、3つ思いついた！', 'ほい！ じゃあこれからも一緒に上目指そ笑', 'えっ、ばれてた？ 笑', 'え〜、ちょっとこわいよぉ', 'ぐぬぬぬ…そこはゆずれないよぉ', 'うぅ…うれしすぎて泣けるよぉ🥺'],
+  sorashido: ['でーじうれしいです笑', 'やる気出ました・・・！ ちばりよー、自分！', 'グラフもつけておきました・・・！', '100回！？ ・・・やってみせます・・・！', 'は、はい。かっこ悪いですよね笑', '今の判定、自分の勝ちですよね！', 'うぉぉぉ！ 負けました！ くやしい！'],
+  erubin:    ['ふふ、いつも元気をもらってるよ', 'ちょうどいいところに来たね。今の組み方、試してみたい', 'ふふ、そう言ってくれると思ったよ', 'わ、すごく明るい部屋になったね', 'ばれちゃったかな…笑 好きなんだよね', 'みんな、ずっと待ってたんだよ', '…ありがとう。ちょっと、うるっときちゃった'],
+});
+// k 番目(0〜7)の { e, label, t }。ふつうは今のひとこと。台詞の無い助手はひとことのまま表情だけ変える
+const assistantLifeProfileFace = (id, greeting, k) => {
+  const i = ((Number(k) || 0) % 8 + 8) % 8, [e, label] = ASSISTANT_LIFE_PROFILE_FACE_ORDER[i];
+  const lines = ASSISTANT_LIFE_PROFILE_FACE_LINES[id];
+  return { e, label, n: i + 1, t: i === 0 || !lines || !lines[i - 1] ? greeting : lines[i - 1] };
+};
+function AssistantLifeProfileStand({ who, head = 0.32, top = 0.16, expr = 'happy' }) {
+  const src = typeof assistantFullImage === 'function' ? assistantFullImage(who, expr) : '';
   const boxRef = React.useRef(null);
   const [size, setSize] = React.useState(null);
   const [art, setArt] = React.useState(() => (typeof ASSISTANT_LIFE_STAND_BOX !== 'undefined' && ASSISTANT_LIFE_STAND_BOX.get(src)) || null);
@@ -71206,7 +71245,7 @@ function AssistantLifeProfileStand({ who, head = 0.32, top = 0.16 }) {
     window.addEventListener('resize', f);
     return () => { window.removeEventListener('resize', f); if (ro) ro.disconnect(); };
   }, []);
-  const fullSrc = typeof assistantFullBodyImage === 'function' ? assistantFullBodyImage(who, 'happy') : null;
+  const fullSrc = typeof assistantFullBodyImage === 'function' ? assistantFullBodyImage(who, expr) : null;
   if (fullSrc) { // 全身画: 枠の高さにおさめて足元をそろえる(頭の大きさは絵ごとの全身の比のまま)
     return (
       <div ref={boxRef} className="pointer-events-none absolute inset-0 overflow-hidden" data-assistant-life-profile-stand={who.id} data-assistant-life-profile-fullbody={fullSrc}>
@@ -71309,6 +71348,7 @@ function AssistantLifeProfileSheet({ id, bondLevelOf = null, land = false, giftS
   const who = typeof assistantById === 'function' ? assistantById(id) : null;
   const [vKey, setVKey] = React.useState('home');
   const [vIdx, setVIdx] = React.useState(0);
+  const [faceN, setFaceN] = React.useState(0); // ひとことを押すたびに表情が変わる(r1115-142)
   const scrollRef = React.useRef(null);
   const refs = { who: React.useRef(null), likes: React.useRef(null), bond: React.useRef(null), voice: React.useRef(null) };
   if (!who) return null;
@@ -71324,6 +71364,8 @@ function AssistantLifeProfileSheet({ id, bondLevelOf = null, land = false, giftS
   const oshiMon = oshi && typeof assistantMasmonMon === 'function' ? assistantMasmonMon(oshi.monId) : null;
   const call = assistantLifeProfileCall(id);
   const greeting = String(who.greeting || '').replace(/\{name\}/g, call);
+  const face = assistantLifeProfileFace(id, greeting, faceN);
+  const faceText = String(face.t || '').replace(/\{name\}/g, call);
   const jump = (k) => { try { const box = scrollRef.current, el = refs[k].current; if (box && el) box.scrollTo({ top: el.offsetTop - 8, behavior: 'smooth' }); } catch (_) {} };
   const card = 'rounded-2xl border border-white/10 bg-slate-800/90 px-3 py-2.5';
   const h3 = 'mb-1.5 flex items-center justify-between gap-2 text-[13.5px] font-black text-white';
@@ -71339,14 +71381,14 @@ function AssistantLifeProfileSheet({ id, bondLevelOf = null, land = false, giftS
   const hero = (
     <div className="relative overflow-hidden" data-assistant-life-profile-hero style={{ height: land ? '100%' : 300, backgroundImage: `linear-gradient(160deg, ${who.accent}55, #0f172a 72%)` }}>
       {/* 立ち絵は右側の枠の中で、顔の大きさと頭の高さをそろえる(縦は右6割・横は名前の下から) */}
-      <div className="absolute bottom-0 right-0" style={land ? { left: '40%', top: 0 } : { top: 0, width: '62%' }}><AssistantLifeProfileStand who={who} head={land ? 0.22 : 0.34} top={land ? 0.3 : 0.12}/></div>
+      <div className="absolute bottom-0 right-0" style={land ? { left: '40%', top: 0 } : { top: 0, width: '62%' }}><AssistantLifeProfileStand who={who} head={land ? 0.22 : 0.34} top={land ? 0.3 : 0.12} expr={face.e}/></div>
       <div className="absolute left-3.5 z-[2]" style={{ top: land ? 56 : 14, width: land ? 150 : 210 }}>
         <p className="text-[28px] font-black leading-tight text-white" style={{ textShadow: '0 2px 6px #000' }}>{who.name}</p>
         <p className="text-[12.5px] font-black leading-snug" style={{ color: who.accent, textShadow: '0 1px 3px #000', ...(typeof JA_LABEL_STYLE !== 'undefined' ? JA_LABEL_STYLE : {}) }}>{typeof jaWrap === 'function' ? jaWrap(who.tagline || '') : who.tagline}</p>
         {!viewOnly && <span className="mt-1.5 inline-block rounded-full border border-white/15 bg-slate-950/80 px-2 py-0.5 text-[11px] font-black text-white">💗 Lv{b.lv} {b.title}</span>}
       </div>
-      {greeting && <div data-assistant-life-profile-greeting className="absolute bottom-3 left-3 z-[2] rounded-2xl border-2 bg-white px-3 py-2 text-[12px] font-bold leading-relaxed text-slate-800 shadow-lg" style={{ borderColor: who.accent, width: land ? 170 : 205 }}>
-        <span className="block text-[10px] font-black" style={{ color: who.accent }}>ひとこと</span><span style={typeof JA_LABEL_STYLE !== 'undefined' ? JA_LABEL_STYLE : undefined}>{jw(greeting)}</span></div>}
+      {greeting && <button type="button" data-assistant-life-profile-greeting data-assistant-life-profile-face={face.e} onClick={() => setFaceN(n => (n + 1) % 8)} aria-label={`ひとこと。押すと表情が変わります(${face.n}/8 ${face.label})`} className="absolute bottom-3 left-3 z-[2] rounded-2xl border-2 bg-white px-3 py-2 text-left text-[12px] font-bold leading-relaxed text-slate-800 shadow-lg active:scale-[.98]" style={{ borderColor: who.accent, width: land ? 170 : 205 }}>
+        <span className="flex items-center justify-between gap-1"><span className="text-[10px] font-black" style={{ color: who.accent }}>ひとこと</span><span data-assistant-life-profile-face-chip className="whitespace-nowrap rounded-full bg-slate-100 px-1.5 text-[9.5px] font-black leading-[16px] text-slate-500">👆 タップで表情 {face.n}/8</span></span><span className="block" style={typeof JA_LABEL_STYLE !== 'undefined' ? JA_LABEL_STYLE : undefined}>{jw(faceText)}</span></button>}
     </div>);
   const jumps = (
     <div className="flex gap-1.5 border-b border-white/10 bg-slate-950/90 px-2.5 py-2" data-assistant-life-profile-jump>
@@ -89820,7 +89862,7 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf }) {
           </div>
         ))}
       </div>
-      <div className="msx-note msx-sl-legend" data-msx-slot-legend>札の見方: 「+4%」はその能力のトレーニングの伸びが上がる分・親密度は初めの値・タッグは友情タッグのときの伸び</div>
+      <div className="msx-note msx-sl-legend" data-msx-slot-legend>枠の見方: 「+4%」はその能力のトレーニングの伸びが上がる分・親密度は初めの値・タッグは友情タッグのときの伸び</div>
       <button type="button" className="v-card msx-heat-btn" data-msx-gather-open onClick={() => setGatherOpen(true)}><div className="sub" style={{ color: '#f9a8d4', fontWeight: 900 }}>この編成が集まりやすいトレーニング<span className="msx-dt-sm"> 押すと表 ▶</span></div>
         <div className="v-heat">{MSX_STATS.map((k, i) => <div key={k} className={heat[i] >= 3 ? 'x3' : heat[i] === 2 ? 'x2' : ''}><span className="hi" aria-hidden="true">{msxTrainIcon(k, 1)}</span>{MSX_STAT_NAME[k]}<b>{heat[i]}体</b></div>)}</div></button>
       <div className="msx-team-acts" data-msx-team-acts>
@@ -92547,7 +92589,7 @@ function MsxR3Battle({ run, setRun, v, ev, ctx, bondLv, onPause, debug }) {
             <div className="ms">{keys.map((k) => (
               <button type="button" key={k} className={`v-ml ${mealPick === k ? 'sel' : ''}`} disabled={!can(k)} onClick={() => setMealPick(k)} style={{ opacity: can(k) ? 1 : 0.45 }} data-msx-r3-meal={k}>
                 <div className="e">{MEAL_ICON[k] || '🍙'}</div><b style={{ wordBreak: 'keep-all', overflowWrap: 'normal' }}>{String(M[k].name).split(/(?=（)/).map((x, i) => <React.Fragment key={i}>{i > 0 ? <wbr/> : null}<span style={{ whiteSpace: 'nowrap' }}>{x}</span></React.Fragment>)}</b><small data-msx-r3-mealfx={k}>{fx(k).split('・').map((x, i) => <React.Fragment key={i}>{i > 0 ? <>・<wbr/></> : null}<span style={{ whiteSpace: 'nowrap' }}>{x}</span></React.Fragment>)}</small></button>))}</div>
-            <div className="msx-note" data-msx-r3-mealdetail style={{ marginTop: 5, fontSize: 11, lineHeight: 1.5, textAlign: 'left', color: '#fde68a', ...(typeof JA_WRAP_STYLE !== 'undefined' ? JA_WRAP_STYLE : {}) }}>{mealPick && M[mealPick] ? `${M[mealPick].name}: ${fxLong(mealPick)}`.split(/(?<=[・:])/).map((x, i) => <React.Fragment key={i}>{i > 0 ? <wbr/> : null}{typeof jaWrap === 'function' ? jaWrap(x) : x}</React.Fragment>) : '札を押すと、詳しい効き目が出ます'}</div>
+            <div className="msx-note" data-msx-r3-mealdetail style={{ marginTop: 5, fontSize: 11, lineHeight: 1.5, textAlign: 'left', color: '#fde68a', ...(typeof JA_WRAP_STYLE !== 'undefined' ? JA_WRAP_STYLE : {}) }}>{mealPick && M[mealPick] ? `${M[mealPick].name}: ${fxLong(mealPick)}`.split(/(?<=[・:])/).map((x, i) => <React.Fragment key={i}>{i > 0 ? <wbr/> : null}{typeof jaWrap === 'function' ? jaWrap(x) : x}</React.Fragment>) : 'ごはんを押すと、詳しい効き目が出ます'}</div>
             <div className="msx-note" data-msx-r3-loynote style={{ marginTop: 4, fontSize: 10.5, lineHeight: 1.5, textAlign: 'left' }}>💡 {loyNote}</div>
             <div className="row" style={{ marginTop: 6 }}><img className="fc" src={msxFace(s.aid, st3.won ? 'excited' : 'troubled')} alt=""/><div className="bub f1" style={{ wordBreak: 'keep-all', overflowWrap: 'normal' }}>{(st3.won ? ['「優勝だもん、', '今日は', 'ごちそうに', 'しちゃお!」'] : ['「おつかれさま。', 'おいしいもの', '食べて、', 'また', 'がんばろ!」']).map((x, i) => <React.Fragment key={i}>{i > 0 ? <wbr/> : null}<span style={{ whiteSpace: 'nowrap' }}>{x}</span></React.Fragment>)}</div></div></div>
         ) : !st3.won && !s.over ? (
@@ -92787,7 +92829,7 @@ function MsxR3Shugyo({ run, setRun, v, ev, onBack, onPause }) {
   };
   const say = msxPh(want.length >= 2 ? '「2つで｜超修行!｜2つとも｜覚えることも｜あるよ。｜能力の上がりも｜疲れも｜2回分だからね」' : want.length === 1 ? (superWhy ? `「この技で｜いこう!｜(${superWhy}から、｜技は｜1つだけ)」` : '「いいね!｜もう1つ選ぶと｜超修行に｜なるよ」') : '「覚えたい技を｜1つ選んでね。｜2つ選ぶと｜超修行!｜選ばなくても｜能力は｜上がるよ」');
   const slot = (id) => {
-    if (!id) return <div className="q-slot msx-kp" data-msx-r3-qslot="0">{want.length ? (superWhy ? `超修行は できない(${superWhy})` : '+ もう1つ選ぶと 🔥超修行') : '+ 下の緑の札から 技を選ぶ'}</div>;
+    if (!id) return <div className="q-slot msx-kp" data-msx-r3-qslot="0">{want.length ? (superWhy ? `超修行は できない(${superWhy})` : '+ もう1つ選ぶと 🔥超修行') : '+ 下の緑の技のカードから 技を選ぶ'}</div>;
     const t = all.find((x) => x.id === id) || {};
     // 覚える率が上がる条件(加点・満たした1つにつき +5%): いま選んでいる技の組み合わせで数える(選んだ技の段の合計)
     const bc = typeof SUC.techBoostConds === 'function' ? SUC.techBoostConds(s0, t, want) : [];
@@ -92811,7 +92853,7 @@ function MsxR3Shugyo({ run, setRun, v, ev, onBack, onPause }) {
       {isSuper ? <div className="q-note y msx-kp" data-msx-r3-super>🔥 超修行: チケット{superTk}枚・2つとも覚えることがある・覚える率 +{SH.superAdd || 15}%・能力の上がりと疲れは2回分</div> : null}
       {superWhy && want.length ? <div className="q-note msx-kp" data-msx-r3-superwhy>🔥 {superWhy}ので、技は1つだけ選べる(別の技を押すと入れ替わる)</div> : null}
     </div>
-    <div className="q-sec q-list" data-msx-r3-techlist><h3><i>3</i>覚えられる技<span className="tk">緑の札をタップ</span></h3>
+    <div className="q-sec q-list" data-msx-r3-techlist><h3><i>3</i>覚えられる技<span className="tk">緑の技のカードをタップ</span></h3>
       {all.length ? <MsxTechGrid className="q" all={all} head={aptHead} cell={(alts, r, d, cellK) => {
         // 詳細の技の升目と同じ部品(2026-11-15 社長 r1115-040)。升の技: 覚えた技 → 選んだ技(その升の選び) → 並びの1つ目
         const gotOf = (x) => (s0.techs || []).includes(x.id);
@@ -92838,7 +92880,7 @@ function MsxR3Shugyo({ run, setRun, v, ev, onBack, onPause }) {
           <div className="h">🔒 {lockT.name}</div>
           <div className="q-lock">{full ? <p>覚えられる技は {tkMax}つまで。いまは いっぱいです</p> : null}
             {condsOf(lockT).map((c, i) => <div key={c.k} className={c.ok ? 'ok' : ''}><i>条件{i + 1}</i><span className="msx-kp">{c.long}</span><b>{c.ok ? '済' : 'まだ'}</b></div>)}
-            {!full && condsOf(lockT).length ? <p>条件を全て満たすと、緑の「覚えられる」札になります</p> : null}</div>
+            {!full && condsOf(lockT).length ? <p>条件を全て満たすと、緑の「覚えられる」カードになります</p> : null}</div>
           <div className="bt"><button type="button" onClick={() => setLockT(null)}>閉じる</button></div>
         </div>
       </div>) : null}
@@ -94216,7 +94258,7 @@ function MsxManualBar({ opt, onPick, onAuto, busy, rep = null, onRep = null, tit
       </div>
       <div className="msxm-sec">
         <div className="msxm-h" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 6 }}>
-          <span>⚔ 攻撃{reachN ? '(札を押して技を選ぶ)' : '(この間合いの技なし)'}</span>
+          <span>⚔ 攻撃{reachN ? '(技のカードを押して選ぶ)' : '(この間合いの技なし)'}</span>
           {items.length ? <button type="button" className="msxm-all" data-msxm-all onClick={() => setSheet('all')}>📜 全部の技({items.length})</button> : null}
         </div>
         <MsaDistCards list={items} rep={ids} dist={opt.dist} guts={opt.guts} hitAt={hitAt} hintId={hintId} busy={busy} onOpen={(d) => setSheet(d)} dataSide="manual"/>
@@ -94547,6 +94589,8 @@ const MSA_CSS = `
 .msa-stage.big .msa-floor{bottom:36%}
 .msa-stage.big .msa-spot{bottom:calc(36% - 7px)}
 .msa-stage.big .msa-aim{bottom:calc(36% + 28px)}
+/* 大きな場では、ダメージの数字を場の上端(体力の棒)にかからない高さへ下げる(r1115-157 ミハリの気づき) */
+.msa-stage.big .msa-dmg{top:24%}
 .msa-stage.big .msa-hx{bottom:calc(36% + var(--msa-fh,170px) * .5);transform:scale(1.15)}
 .msa-stage.big .msa-tr{bottom:calc(36% + var(--msa-fh,170px) * .5)}
 .msa-topline{flex-wrap:wrap;row-gap:2px}
@@ -94579,6 +94623,9 @@ const MSA_CSS = `
 .msa-cut .ct b{display:block;font-weight:900;white-space:nowrap;color:#fff;text-shadow:2px 0 0 #1e1b4b,-2px 0 0 #1e1b4b,0 2px 0 #1e1b4b,0 -2px 0 #1e1b4b,0 4px 0 #0008,0 0 12px var(--k1);animation:msaCutName var(--cut,1000ms) cubic-bezier(.2,1.4,.4,1) both}
 .msa-cut .ct small,.msa-cut .ct em{text-shadow:0 1px 2px #1e1b4b,0 0 3px #1e1b4b}
 .msa-cut.wise .ct small{color:#fff}
+/* 技の種類と★は、帯の色に沈まないよう暗い札に載せる(r1115-157 ミハリの気づき) */
+.msa-cut .ct small{display:inline-block;color:#fff;background:#0f172ad9;border-radius:99px;padding:1px 9px 2px;text-shadow:none}
+.msa-cut .ct small .st{text-shadow:0 0 3px #f59e0b}
 .msa-cut .ct em{display:block;font-style:normal;font-size:11px;font-weight:800;color:#ffffffd9;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .msa-cut .cf{inset:0;background:#fff;opacity:0;animation:msaCutFlash var(--cut,1000ms) linear both}
 @keyframes msaCutOut{0%,92%{opacity:1}100%{opacity:0}}
