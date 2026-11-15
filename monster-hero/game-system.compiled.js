@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f6b6e45b5d38e18a
+// source-sha256: 4b3e0593d9037d3c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -169964,21 +169964,23 @@ const MSX_CSS = `
 .msx .msx-ms-ef{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:0 6px}.msx .msx-ms-ef i{font-style:normal;white-space:nowrap}
 .msx .msx-ms-bar{display:block;height:6px;margin:2px 0 4px;border-radius:4px;background:#0f172a;border:1px solid #475569;overflow:hidden}
 .msx .msx-ms-bar i{display:block;height:100%;background:linear-gradient(90deg,#fde68a,#f59e0b)}
-.msx .msx-tp{display:flex;align-items:center;gap:8px;width:100%;margin:0 0 6px;padding:6px 8px;border-radius:12px;text-align:left;color:#fff;background:#1e1b3a;border:1.5px solid #3b3566}
-.msx .msx-tp.on{border-color:#facc15;background:#2a2547}
-.msx .msx-tp:disabled{opacity:.55}
-.msx .msx-tp .tc{position:relative;overflow:hidden;flex:0 0 44px;width:44px;height:44px;border-radius:8px;display:flex;align-items:center;justify-content:center;border:1.5px solid transparent}
-.msx .msx-tp .tc.pow{background:linear-gradient(160deg,#fde68a,#d97706);border-color:#f59e0b}
-.msx .msx-tp .tc.wise{background:linear-gradient(160deg,#bbf7d0,#16a34a);border-color:#4ade80}
-.msx .msx-tp .tc.pow.tg-not{background:linear-gradient(160deg,#9a7420,#5e420c);border-color:#a8801f}
-.msx .msx-tp .tc.wise.tg-not{background:linear-gradient(160deg,#2f8050,#145230);border-color:#3f9a62}
-.msx .msx-tp .tc{overflow:hidden}.msx .msx-tp .tc .ti{position:absolute;inset:0;display:block}.msx .msx-tp .tc .tg-img{width:100%;height:100%;object-fit:cover;display:block}
-.msx .msx-tp .tc.tg-not .ti{filter:brightness(.55) saturate(.65)}
-.msx .msx-tp .tpb{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
-.msx .msx-tp .tpb b{font-size:13px}
-.msx .msx-tp .tpb small{font-size:10.5px;opacity:.85;line-height:1.35}
-.msx .msx-tp .tpb small.tp-nb i{font-style:normal;display:inline-block;white-space:nowrap;margin-right:.6em}
-.msx .msx-tp .tpm{flex:0 0 auto;font-size:11px;font-weight:900;color:#facc15}
+/* 覚える技を選ぶ窓の1行(2026-11-15 r1115-149): チーム選びの .msx-tp(縦並び・高さいっぱい)とぶつからないよう名前を msx-tpk に分けた */
+.msx .msx-tpk{display:flex;align-items:center;gap:8px;width:100%;margin:0 0 6px;padding:6px 8px;border-radius:12px;text-align:left;color:#fff;background:#1e1b3a;border:1.5px solid #3b3566}
+.msx .msx-tpk.on{border-color:#facc15;background:#2a2547}
+.msx .msx-tpk:disabled{opacity:.55}
+.msx .msx-tpk .tc{position:relative;overflow:hidden;flex:0 0 56px;width:56px;height:56px;min-height:0;padding:0;aspect-ratio:1/1;align-self:center;border-radius:8px;display:flex;align-items:center;justify-content:center;border:1.5px solid transparent}
+.msx .msx-tpk .tc.pow{background:linear-gradient(160deg,#fde68a,#d97706);border-color:#f59e0b}
+.msx .msx-tpk .tc.wise{background:linear-gradient(160deg,#bbf7d0,#16a34a);border-color:#4ade80}
+.msx .msx-tpk .tc.pow.tg-not{background:linear-gradient(160deg,#9a7420,#5e420c);border-color:#a8801f}
+.msx .msx-tpk .tc.wise.tg-not{background:linear-gradient(160deg,#2f8050,#145230);border-color:#3f9a62}
+.msx .msx-tpk .tc{overflow:hidden}.msx .msx-tpk .tc .ti{position:absolute;inset:0;display:block}.msx .msx-tpk .tc .tg-img{width:100%;height:100%;object-fit:cover;display:block}
+.msx .msx-tpk .tc.tg-not .ti{filter:brightness(.55) saturate(.65)}
+.msx .msx-tpk .tpb{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.msx .msx-tpk .tpb b{font-size:13px}
+.msx .msx-tpk .tpb small{font-size:10.5px;opacity:.85;line-height:1.35}
+.msx .msx-tpk .tpb small.tp-nb i{font-style:normal;display:inline-block;white-space:nowrap;margin-right:.6em}
+.msx .msx-tpk .tpm{flex:0 0 auto;font-size:11px;font-weight:900;color:#facc15}
+.msx .msx-tpk .tc .tg-rk{position:absolute;left:2px;top:2px;z-index:2;min-width:14px;height:14px;border-radius:4px;font-size:10px;font-weight:900;line-height:14px;text-align:center;color:#2a1608;border:1px solid #2a1608}
 .msx-md-tg .tc .tg-alt{position:absolute;top:0;right:0;min-width:22px;height:22px;display:flex;align-items:flex-start;justify-content:flex-end;padding:1px 3px 0 0;font-size:12px;font-weight:900;line-height:1;color:#fff;text-shadow:0 1px 2px #000;cursor:pointer}
 
 .msx-md-not{display:block;font-size:10px;color:#94a3b8;font-weight:800}
@@ -171789,7 +171791,7 @@ function MsxMonDetail({
       return React.createElement("button", {
         type: "button",
         key: t.id,
-        className: `msx-tp${on ? ' on' : ''}`,
+        className: `msx-tpk${on ? ' on' : ''}`,
         disabled: lock && !on,
         "data-msx-techpick-opt": t.id,
         onClick: () => {
@@ -171800,14 +171802,18 @@ function MsxMonDetail({
           }
         }
       }, React.createElement("span", {
-        className: `tc ${t.kind === 'wise' ? 'wise' : 'pow'}${has(t) ? ' got' : ' tg-not'}`
+        className: `tc ${t.kind === 'wise' ? 'wise' : 'pow'}${has(t) ? ' got' : ' tg-not'}`,
+        "data-msx-techpick-icon": true
       }, React.createElement("span", {
         className: "ti",
         "aria-hidden": "true"
       }, React.createElement(MsxSkillArt, {
         t: t,
         uid: "p"
-      }))), React.createElement("span", {
+      })), React.createElement("span", {
+        className: `tg-rk rk${Math.max(1, Math.min(5, Number(t.rank) || 1))}`,
+        "aria-hidden": "true"
+      }, Math.max(1, Math.min(5, Number(t.rank) || 1)))), React.createElement("span", {
         className: "tpb"
       }, React.createElement("b", null, t.name), React.createElement("small", null, t.kind === 'wise' ? 'かしこさ' : 'ちから', "・消費ガッツ ", t.guts), React.createElement("small", {
         className: "tp-nb"

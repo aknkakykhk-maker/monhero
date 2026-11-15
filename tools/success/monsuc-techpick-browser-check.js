@@ -42,6 +42,10 @@ const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/cs
     check('被った升に ⇄ が付く', await page.evaluate(() => !!document.querySelector('[data-msx-alt="2-1"]')));
     await page.evaluate(() => document.querySelector('[data-msx-alt="2-1"]').click()); await page.waitForTimeout(300);
     check('選ぶ窓が開き、候補が2つ並ぶ', await page.evaluate(() => document.querySelectorAll('[data-msx-techpick-opt]').length === 2));
+    // r1115-149: 窓の技アイコンは升目と同じ正方形(縦長に引き伸ばさない)・ランクの数字が付く
+    const icons = await page.evaluate(() => [...document.querySelectorAll('[data-msx-techpick-icon]')].map((el) => { const r = el.getBoundingClientRect(); return { w: Math.round(r.width), h: Math.round(r.height), rk: !!el.querySelector('.tg-rk') }; }));
+    check('選ぶ窓の技アイコンは正方形・ランクの数字つき', icons.length === 2 && icons.every((x) => x.w >= 40 && Math.abs(x.w - x.h) <= 1 && x.rk), JSON.stringify(icons));
+    if (process.env.SHOT) await page.screenshot({ path: process.env.SHOT });
     const runBefore = await page.evaluate(() => localStorage.getItem('mh_monsuc_run_v1')); const boxBefore = await page.evaluate(() => localStorage.getItem('mh_monsuc_box_v1'));
     await page.evaluate(() => document.querySelector('[data-msx-techpick-opt="sk-0480"]').click()); await page.waitForTimeout(500);
     check('選ぶと窓が閉じて升の技が替わる', (await cellOf()) === 'sk-0480', String(await cellOf()));
