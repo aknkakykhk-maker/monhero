@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 72a294e2de30d6c9
+// generated-sha256: c329a8b9742cd409
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -92536,7 +92536,8 @@ const msxR3CupReward = (SUC, c, s, skipPts) => {
 };
 // 大会の賞品を絵つきの升目にする(確認の窓)。賞金は先頭
 const msxR3Prizes = (SUC, c) => {
-  const out = [{ id: 'g', e: '💰', name: `賞金 ${msxFmt(c.prize)}G`, desc: '勝つともらえる賞金。ごはんや買い物に使える(負けても ★★ 以上は一部もらえる)' }];
+  const smile = Number(c.prizeMax) > Number(c.prize); // 笑顔の大会: 機嫌がよいほど多い(r1115-207 N1。芯の settle と同じ ×1.0〜1.3)
+  const out = [{ id: 'g', e: '💰', name: smile ? `賞金 ${msxFmt(c.prize)}〜${msxFmt(c.prizeMax)}G` : `賞金 ${msxFmt(c.prize)}G`, desc: smile ? `勝つともらえる賞金。機嫌がよいほど多くなる(最大 ${msxFmt(c.prizeMax)}G)。ごはんや買い物に使える` : '勝つともらえる賞金。ごはんや買い物に使える(負けても ★★ 以上は一部もらえる)' }];
   const ex = SUC.EX_BY_SYS ? SUC.EX_BY_SYS[c.sys] : null;
   if (ex && ex.rw && ex.rw.bag) Object.entries(ex.rw.bag).forEach(([k, n]) => { const it = typeof msxItemView === 'function' ? msxItemView(k) : { name: k, e: '🎁', desc: '' }; out.push({ id: k, e: it.e, img: it.img || null, name: `${it.name} ×${n}`, desc: it.desc, rare: true }); });
   const wtk = (ex && ex.four) || c.star >= 3 ? 1 : 0; // 芯の settle と同じ(★★★以上・四大大会 +1。ライバルの分はなくなった=r1115-191)
@@ -92544,7 +92545,13 @@ const msxR3Prizes = (SUC, c) => {
   const bpz = msxR3BeatPrize(SUC, c.prize); if (bpz) out.push(bpz);
   // 能力ポイントはいつも専用の札(デビュー戦・ヒーローズ戦と見え方をそろえる。r1115-202 L6)
   const ptsN = ex ? Number((ex.rw || {}).pts) : Number(((SUC.CUP_REWARD && SUC.CUP_REWARD.pts) || { 1: 30, 2: 60, 3: 90, 4: 120 })[c.star]);
+  const rvPts = SUC.RIVAL && Number(SUC.RIVAL.pts) > 0 ? Number(SUC.RIVAL.pts) : 1.5;
   if (Number.isFinite(ptsN) && ptsN > 0) out.push({ id: 'pts', e: '🔷', name: `能力ポイント +${ptsN}`, desc: `勝つと能力ポイントがもらえる。「能力」の画面で、好きな能力に振り分けられる${c.rival ? `(ライバルに勝つと +${Math.round(ptsN * 1.5)})` : ''}`, pt: true });
+  if (c.rival) { // ライバルの大会: 勝ったときの上乗せも札で見せる(r1115-207 N4。芯の settle と同じ RIVAL の値)
+    const rvAll = SUC.RIVAL && Number(SUC.RIVAL.all) > 0 ? Number(SUC.RIVAL.all) : 12; const rvDesc = `ライバルに勝つと、この大会の能力ポイントが ×${rvPts}・全能力 +${rvAll}・称号「${(SUC.RIVAL && SUC.RIVAL.title) || 'ライバルに勝った'}」`;
+    if (Number.isFinite(ptsN) && ptsN > 0) out.push({ id: 'rvpts', e: '⚔️', name: `ライバルに｜勝つと｜能力ポイント +${Math.round(ptsN * rvPts)}`, desc: rvDesc, rare: true, pt: true });
+    out.push({ id: 'rv', e: '⚔️', name: `ライバルに｜勝つと｜全能力 +${rvAll}`, desc: rvDesc, rare: true, pt: true });
+  }
   const rw = msxR3CupReward(SUC, c, undefined, true); if (rw && rw !== '賞金と修行チケット') out.push({ id: 'rw', e: ex && ex.four ? '🏆' : '✨', name: 'ごほうび', desc: rw, rare: !!(ex && (ex.four || ex.hard)), pt: true });
   return out;
 };
@@ -92654,7 +92661,7 @@ function MsxR3Cup({ run, setRun, v, ev, onBack, onActed }) {
               <div className="hd"><span className="gr2">{kindOf(c)}</span><span className="cs">{msxR3Stars(c.star)}</span>{c.done ? <span className="dn">優勝済</span> : null}</div>
               <b>{c.scenario ? c.name : msxR3CupName(c.sys, c.name)}</b>
               {!(c.entry && c.entry.ok) ? <span className="why">✖ {msxR3WhyText(c.entry, s)}</span> : null}
-              <span className="g">{msxFmt(c.prize)}<small>G</small></span>
+              <span className="g">{Number(c.prizeMax) > Number(c.prize) ? <><small>最大</small>{msxFmt(c.prizeMax)}</> : msxFmt(c.prize)}<small>G</small></span>
             </div>
             {c.rival ? <><span className="rvi"><img src={msxMonThumb(c.rival.species)} alt=""/><b>ライバル</b></span><span className="rvb">能力ポイント1.5倍</span></> : null}
           </button>);

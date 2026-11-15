@@ -754,5 +754,33 @@ if (SUC.ITEMS.awakeFruit && SUC.ITEMS.superAwakeFruit) {
   ok(rs.bag.awakeFruit === 1 && rs.bag.superAwakeFruit === 2, '覚醒の実が読み直しで消える');
 }
 
+// 一覧(受付・参加確認)の賞金と、勝ったとき・負けたときに入る賞金・ビートPが同じ(r1115-207 N1: 月の2つ目=銅は銀の半分)
+{
+  let n = 0; let half = 0;
+  SUC.AIDS.forEach((aid) => ['Mocchi', 'Golem'].forEach((species) => {
+    for (let turn = 1; turn <= SUC.TOTAL_TURNS; turn++) {
+      const s0 = { ...SUC.newRun({ id: `pz-${aid}`, species, aid }), turn, acted: false, stress: 0 };
+      SUC.cupsOf(s0).forEach((c) => {
+        const b = { kind: 'cup', id: c.id, sys: c.sys, name: c.name, star: c.star, rival: null, round: 0 };
+        [0, 100].forEach((stress) => {
+          const w = SUC.settle({ ...s0, stress, battle: b }, [true]).out;
+          const want = c.prizeMax ? (stress === 0 ? c.prizeMax : c.prize) : c.prize;
+          ok(w.prize === want, `${aid} ${turn}ターン ${c.name}: 表示 ${c.prize}${c.prizeMax ? `〜${c.prizeMax}` : ''}G なのに勝つと ${w.prize}G(機嫌の重さ ${stress})`);
+          ok(num0(w.beat) === SUC.beatOfPrize(c.prize), `${aid} ${turn}ターン ${c.name}: 表示のビートP ${SUC.beatOfPrize(c.prize)} なのに勝つと ${w.beat}`);
+        });
+        const l = SUC.settle({ ...s0, battle: b }, [false]).out;
+        const lw = c.sys === 'scatsu' ? Math.round(c.prize * 0.5) : c.star >= 2 ? Math.round(c.prize * 0.4) : 0;
+        ok(l.prize === lw, `${aid} ${turn}ターン ${c.name}: 準優勝の賞金 ${l.prize}G(表示から ${lw}G のはず)`);
+        if (c.index === 1 && !c.ex && !c.scenario) { half += 1; ok(c.prize === Math.round(Math.round(SUC.CUP_PRIZE[c.star] * ({ junior: 1, middle: 1.2, pro: 1.5 })[c.id.split(':')[0]]) / 2 / 50) * 50, `${c.name}: 月の2つ目が銀の半分でない(${c.prize}G)`); }
+        n += 1;
+      });
+    }
+  }));
+  ok(n > 300 && half > 50, `賞金の突き合わせの数が少ない(${n}件・2つ目 ${half}件)`);
+  const asa = SUC.cupsOf({ ...SUC.newRun({ id: 'asa', species: 'Mocchi', aid: 'mua' }), turn: 9 }).find((c) => c.name === 'あさがお杯');
+  if (asa) { const w = SUC.settle({ ...SUC.newRun({ id: 'asa', species: 'Mocchi', aid: 'mua' }), turn: 9, battle: { kind: 'cup', id: asa.id, sys: asa.sys, star: asa.star, round: 0 } }, [true]).out; ok(w.prize === 650 && w.beat === 10, `あさがお杯: 勝つと ${w.prize}G・ビートP ${w.beat}(650G・10 のはず)`); }
+}
+function num0(v) { return Number.isFinite(Number(v)) ? Number(v) : 0; }
+
 if (errors.length) { console.error(`NG monhero-success-check: ${errors.length}件`); errors.forEach(e => console.error('  - ' + e)); process.exit(1); }
 console.log('OK monhero-success-check: 46ターン・決まった乱数・結果4種・休む/遊ぶ/通院・忠誠・編成とタッグ・イッサ博士・大会の流れ・修行と技・トレーニングLv・再戦とスキップ・持ちこみ・月の大会とライバル・見通しと保存から戻す・シナリオの大会とお話・助手の連続イベント・評価の番号とひらめきのアシスト・合体');

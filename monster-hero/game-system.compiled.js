@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 4577269b8f906dc1
+// source-sha256: 974eeaee7b44dfdd
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -179989,11 +179989,12 @@ const msxR3CupReward = (SUC, c, s, skipPts) => {
   return out.length ? out.join('・') : '賞金と修行チケット';
 };
 const msxR3Prizes = (SUC, c) => {
+  const smile = Number(c.prizeMax) > Number(c.prize);
   const out = [{
     id: 'g',
     e: '💰',
-    name: `賞金 ${msxFmt(c.prize)}G`,
-    desc: '勝つともらえる賞金。ごはんや買い物に使える(負けても ★★ 以上は一部もらえる)'
+    name: smile ? `賞金 ${msxFmt(c.prize)}〜${msxFmt(c.prizeMax)}G` : `賞金 ${msxFmt(c.prize)}G`,
+    desc: smile ? `勝つともらえる賞金。機嫌がよいほど多くなる(最大 ${msxFmt(c.prizeMax)}G)。ごはんや買い物に使える` : '勝つともらえる賞金。ごはんや買い物に使える(負けても ★★ 以上は一部もらえる)'
   }];
   const ex = SUC.EX_BY_SYS ? SUC.EX_BY_SYS[c.sys] : null;
   if (ex && ex.rw && ex.rw.bag) Object.entries(ex.rw.bag).forEach(([k, n]) => {
@@ -180026,6 +180027,7 @@ const msxR3Prizes = (SUC, c) => {
     3: 90,
     4: 120
   })[c.star]);
+  const rvPts = SUC.RIVAL && Number(SUC.RIVAL.pts) > 0 ? Number(SUC.RIVAL.pts) : 1.5;
   if (Number.isFinite(ptsN) && ptsN > 0) out.push({
     id: 'pts',
     e: '🔷',
@@ -180033,6 +180035,26 @@ const msxR3Prizes = (SUC, c) => {
     desc: `勝つと能力ポイントがもらえる。「能力」の画面で、好きな能力に振り分けられる${c.rival ? `(ライバルに勝つと +${Math.round(ptsN * 1.5)})` : ''}`,
     pt: true
   });
+  if (c.rival) {
+    const rvAll = SUC.RIVAL && Number(SUC.RIVAL.all) > 0 ? Number(SUC.RIVAL.all) : 12;
+    const rvDesc = `ライバルに勝つと、この大会の能力ポイントが ×${rvPts}・全能力 +${rvAll}・称号「${SUC.RIVAL && SUC.RIVAL.title || 'ライバルに勝った'}」`;
+    if (Number.isFinite(ptsN) && ptsN > 0) out.push({
+      id: 'rvpts',
+      e: '⚔️',
+      name: `ライバルに｜勝つと｜能力ポイント +${Math.round(ptsN * rvPts)}`,
+      desc: rvDesc,
+      rare: true,
+      pt: true
+    });
+    out.push({
+      id: 'rv',
+      e: '⚔️',
+      name: `ライバルに｜勝つと｜全能力 +${rvAll}`,
+      desc: rvDesc,
+      rare: true,
+      pt: true
+    });
+  }
   const rw = msxR3CupReward(SUC, c, undefined, true);
   if (rw && rw !== '賞金と修行チケット') out.push({
     id: 'rw',
@@ -180302,7 +180324,7 @@ function MsxR3Cup({
       className: "why"
     }, "✖ ", msxR3WhyText(c.entry, s)) : null, React.createElement("span", {
       className: "g"
-    }, msxFmt(c.prize), React.createElement("small", null, "G"))), c.rival ? React.createElement(React.Fragment, null, React.createElement("span", {
+    }, Number(c.prizeMax) > Number(c.prize) ? React.createElement(React.Fragment, null, React.createElement("small", null, "最大"), msxFmt(c.prizeMax)) : msxFmt(c.prize), React.createElement("small", null, "G"))), c.rival ? React.createElement(React.Fragment, null, React.createElement("span", {
       className: "rvi"
     }, React.createElement("img", {
       src: msxMonThumb(c.rival.species),
