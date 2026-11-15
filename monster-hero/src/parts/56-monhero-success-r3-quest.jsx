@@ -155,6 +155,7 @@ function MsxR3Shugyo({ run, setRun, v, ev, onBack, onPause }) {
           aria-label={`${t.name}${got ? '(覚えた)' : sel ? '(選んだ)' : ok ? `(覚えられる ${Math.round(rateOf[t.id] * 100)}%)` : full ? '(技がいっぱい)' : ng ? `(${ng.short})` : '(条件あり)'}`}
           onClick={() => (ok && !got ? toggle(t.id) : !got ? setLockT(t) : null)}>
           <span className="ti" aria-hidden="true"><MsxSkillArt t={t} uid={`q${r}${d}`}/></span><span className={`tg-rk rk${rk}`} aria-hidden="true">{rk}</span>
+          {got && typeof msxMasteryOf === 'function' ? <span className="tg-ms" aria-hidden="true" data-msx-tech-ms={msxMasteryOf(s0.mastery, t.id)}><i style={{ width: `${msxMasteryOf(s0.mastery, t.id)}%` }}/></span> : null}{/* 覚えた技の熟練のゲージ(r1115-082) */}
           {got ? <span className="g qb" aria-hidden="true">済</span> : ok ? <span className="g qb" aria-hidden="true">{Math.round(rateOf[t.id] * 100)}%</span> : <span className="g qb" aria-hidden="true">🔒</span>}
         </button>);
       }}/> : <div className="q-note msx-kp">このモンスターの技の表がまだありません(能力だけ上がる)</div>}

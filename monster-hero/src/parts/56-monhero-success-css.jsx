@@ -735,6 +735,13 @@ const MSX_CSS = `
 .msx-md-tg .tc .tg-rk{position:absolute;left:2px;top:2px;z-index:2;min-width:14px;height:14px;border-radius:4px;font-size:10px;font-weight:900;line-height:14px;text-align:center;color:#2a1608;border:1px solid #2a1608}
 .tg-rk.rk1{background:linear-gradient(135deg,#e9a46a,#a95f27)}.tg-rk.rk2{background:linear-gradient(135deg,#f4f7fb,#aab4c2)}.tg-rk.rk3{background:linear-gradient(135deg,#fff1a6,#f2b705)}.tg-rk.rk4{background:linear-gradient(135deg,#d9a8ff,#8a3ffc);color:#fff}.tg-rk.rk5{background:linear-gradient(135deg,#ff5a5a,#ffd23f,#4ade80,#38bdf8,#c084fc)}
 .msx-md-tg .tc{position:relative}
+/* 技の熟練(r1115-082): 升の下に小さなゲージ(覚えた技だけ)・右の欄に熟練の棒 */
+.msx-md-tg .tc .tg-ms{position:absolute;left:3px;right:26px;bottom:4px;height:5px;border-radius:3px;background:rgba(18,12,6,.85);border:1px solid rgba(255,255,255,.55);z-index:2;overflow:hidden}
+.msx-md-tg .tc .tg-ms i{display:block;height:100%;background:linear-gradient(90deg,#fde68a,#f59e0b)}
+.msx .msx-ms-v{white-space:nowrap}.msx .msx-ms-v small{opacity:.75;margin-left:1px}
+.msx .msx-ms-ef{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:0 6px}.msx .msx-ms-ef i{font-style:normal;white-space:nowrap}
+.msx .msx-ms-bar{display:block;height:6px;margin:2px 0 4px;border-radius:4px;background:#0f172a;border:1px solid #475569;overflow:hidden}
+.msx .msx-ms-bar i{display:block;height:100%;background:linear-gradient(90deg,#fde68a,#f59e0b)}
 .msx .msx-md-alt{margin-top:6px;width:100%;padding:6px 8px;border-radius:10px;font-size:12px;font-weight:900;color:#fff;background:linear-gradient(160deg,#6d4cd9,#4a2fa6);border:1.5px solid #a78bfa}
 .msx .msx-tp{display:flex;align-items:center;gap:8px;width:100%;margin:0 0 6px;padding:6px 8px;border-radius:12px;text-align:left;color:#fff;background:#1e1b3a;border:1.5px solid #3b3566}
 .msx .msx-tp.on{border-color:#facc15;background:#2a2547}

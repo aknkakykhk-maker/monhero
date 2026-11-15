@@ -289,6 +289,10 @@ const FAKE_WS = () => {
     check('自由入力: 打った文字のスタンプが相手に届く', gotFree);
     const freeBubble = await B.evaluate((t) => { const b = document.querySelector('[data-rhythm-multi-stamp-bubble] b'); return b ? b.textContent === t : false; }, typed);
     check('自由入力: 相手の席の上に、打った文字のスタンプが出る', freeBubble);
+    // 設定できる最大の文字数(全角8文字)の言葉が、選ぶ一覧・チャットの吹き出しの札で切れずに全部見える(2026-11-15 r1115-116)
+    const clipOf = (pg) => pg.evaluate(() => { const bad = []; let n = 0; document.querySelectorAll('[data-multi-stamp-word-text]').forEach((el) => { n++; const cs = getComputedStyle(el); const lh = parseFloat(cs.lineHeight) || 12; if (el.scrollHeight > el.clientHeight + 1 || el.scrollWidth > el.clientWidth + 1 || el.clientHeight > lh * 2.2) bad.push(el.textContent); }); return { n, bad }; });
+    const clipA = await clipOf(A);
+    check('言葉が切れずに全部見える: 選ぶ一覧・チャットの札(最大文字数を含む)', clipA.n > 0 && clipA.bad.length === 0, JSON.stringify(clipA));
     if (SHOT) {
       await B.screenshot({ path: path.join(SHOT, 'free-seat-390.png') }); await A.screenshot({ path: path.join(SHOT, 'free-chat-390.png') });
       for (const [nm, w, h] of [['320', 320, 568], ['yoko844', 844, 390]]) {

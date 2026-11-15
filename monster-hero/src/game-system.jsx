@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 8f47c0aa7d4213a3
+// generated-sha256: c758aaceb2e63a3e
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -37701,6 +37701,8 @@ const MULTI_STAMP_SLOT_BUY_MAX = 2; // 8 → 12 → 16
 // 自由入力の文字(2026-11-15 r1115-026・社長「A 無料」)。言葉の番号は 'x'(買い物の言葉ではない)。全角8文字・1行・制御文字なし(ひとことと同じ見張り)
 const MULTI_STAMP_CUSTOM_ID = 'x';
 const MULTI_STAMP_CUSTOM_MAX = 8;
+// スタンプの言葉は、設定できる最大(全角8文字)まで切れずに見える。1行に入らなければ2行にする(r1115-116。「…」で切らない)
+const MULTI_STAMP_WORD_CLAMP = Object.freeze({ display: '-webkit-box', WebkitBoxOrient: 'vertical', WebkitLineClamp: 2, overflow: 'hidden', overflowWrap: 'anywhere', wordBreak: 'break-all', lineHeight: 1.15 });
 const multiStampCleanText = (v) => String(v == null ? '' : v).replace(/[\u0000-\u001f\u007f-\u009f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, MULTI_STAMP_CUSTOM_MAX);
 // 助手(この並び)と表情。はじめに使えるのは各助手の happy
 const MULTI_STAMP_ASSISTANT_IDS = Object.freeze(['mua', 'kiki', 'momosuke', 'dra', 'atsu', 'kyuko', 'sorashido', 'erubin']);
@@ -37934,7 +37936,7 @@ function MultiStampView({ f, w, text = '', size = 64, className = '', forcePic =
   return (
     <span data-multi-stamp={`${f}|${w}`} className={`inline-flex flex-col items-center rounded-2xl bg-white p-1 text-slate-900 shadow ${className}`} style={{ width: size + 8 }}>
       <img src={src} alt="" draggable={false} loading="lazy" decoding="async" className="block rounded-xl object-cover" style={{ width: size, height: size }} />
-      <b className="mt-0.5 block max-w-full truncate text-center text-[11px] font-black leading-tight">{label}</b>
+      <b data-multi-stamp-word-text className="mt-0.5 block max-w-full text-center text-[11px] font-black leading-tight" style={MULTI_STAMP_WORD_CLAMP}>{label}</b>
     </span>
   );
 }
@@ -37966,7 +37968,7 @@ function MultiStampPalette({ onSend, onEdit = null, cols = 4, wide = false, clas
             <button key={i} type="button" data-multi-stamp-send={i} onClick={() => press(s, i)}
               className={`relative min-w-0 rounded-xl border p-1 text-center active:scale-95 ${hit ? (flash.ok ? 'border-emerald-300 bg-emerald-500/20' : 'border-amber-300 bg-amber-500/15') : 'border-white/15 bg-white/10'}`}>
               {src && <img src={src} alt="" draggable={false} loading="lazy" decoding="async" className="mx-auto block aspect-square w-full rounded-lg object-cover" />}
-              <b className="mt-0.5 block truncate text-[11px] font-black leading-tight text-white">{hit && flash.ok ? '✓ 送信' : label}</b>
+              <b data-multi-stamp-word-text className="mt-0.5 block text-[11px] font-black leading-tight text-white" style={MULTI_STAMP_WORD_CLAMP}>{hit && flash.ok ? '✓ 送信' : label}</b>
             </button>
           );
         })}
@@ -38024,7 +38026,7 @@ function MultiStampEditor({ onClose, onShop = null }) {
                     <span className="absolute left-1 top-0.5 text-[10px] font-black text-cyan-200">{i + 1}</span>
                     {s ? <>
                       <img src={multiStampFaceSrc(s.f) || undefined} alt="" draggable={false} loading="lazy" decoding="async" className="mx-auto block aspect-square w-full rounded-lg object-cover" />
-                      <b className="mt-0.5 block truncate text-[10.5px] font-black leading-tight">{multiStampSlotLabel(s)}</b>
+                      <b data-multi-stamp-word-text className="mt-0.5 block text-[10.5px] font-black leading-tight" style={MULTI_STAMP_WORD_CLAMP}>{multiStampSlotLabel(s)}</b>
                     </> : <span className="flex aspect-[4/5] items-center justify-center text-xl text-slate-500">＋</span>}
                   </button>
                 ))}
@@ -88078,6 +88080,13 @@ const MSX_CSS = `
 .msx-md-tg .tc .tg-rk{position:absolute;left:2px;top:2px;z-index:2;min-width:14px;height:14px;border-radius:4px;font-size:10px;font-weight:900;line-height:14px;text-align:center;color:#2a1608;border:1px solid #2a1608}
 .tg-rk.rk1{background:linear-gradient(135deg,#e9a46a,#a95f27)}.tg-rk.rk2{background:linear-gradient(135deg,#f4f7fb,#aab4c2)}.tg-rk.rk3{background:linear-gradient(135deg,#fff1a6,#f2b705)}.tg-rk.rk4{background:linear-gradient(135deg,#d9a8ff,#8a3ffc);color:#fff}.tg-rk.rk5{background:linear-gradient(135deg,#ff5a5a,#ffd23f,#4ade80,#38bdf8,#c084fc)}
 .msx-md-tg .tc{position:relative}
+/* 技の熟練(r1115-082): 升の下に小さなゲージ(覚えた技だけ)・右の欄に熟練の棒 */
+.msx-md-tg .tc .tg-ms{position:absolute;left:3px;right:26px;bottom:4px;height:5px;border-radius:3px;background:rgba(18,12,6,.85);border:1px solid rgba(255,255,255,.55);z-index:2;overflow:hidden}
+.msx-md-tg .tc .tg-ms i{display:block;height:100%;background:linear-gradient(90deg,#fde68a,#f59e0b)}
+.msx .msx-ms-v{white-space:nowrap}.msx .msx-ms-v small{opacity:.75;margin-left:1px}
+.msx .msx-ms-ef{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:0 6px}.msx .msx-ms-ef i{font-style:normal;white-space:nowrap}
+.msx .msx-ms-bar{display:block;height:6px;margin:2px 0 4px;border-radius:4px;background:#0f172a;border:1px solid #475569;overflow:hidden}
+.msx .msx-ms-bar i{display:block;height:100%;background:linear-gradient(90deg,#fde68a,#f59e0b)}
 .msx .msx-md-alt{margin-top:6px;width:100%;padding:6px 8px;border-radius:10px;font-size:12px;font-weight:900;color:#fff;background:linear-gradient(160deg,#6d4cd9,#4a2fa6);border:1.5px solid #a78bfa}
 .msx .msx-tp{display:flex;align-items:center;gap:8px;width:100%;margin:0 0 6px;padding:6px 8px;border-radius:12px;text-align:left;color:#fff;background:#1e1b3a;border:1.5px solid #3b3566}
 .msx .msx-tp.on{border-color:#facc15;background:#2a2547}
@@ -88975,6 +88984,12 @@ function MsxTechGrid({ all, cell, className, head }) {
     </div>
   );
 }
+// 技の熟練(0〜100 の整数)と、その熟練の効き目(芯の techBoostOf と同じ数を %で。0 のときは null)。r1115-082
+const msxMasteryOf = (mastery, id) => Math.max(0, Math.min(100, Math.round(Number(mastery && mastery[id]) || 0)));
+const msxMasteryBoost = (SUC, id, m) => {
+  if (!(m > 0) || !SUC || typeof SUC.techBoostOf !== 'function') return null;
+  try { const o = SUC.techBoostOf({ techs: [id], mastery: { [id]: m } })[id]; if (!o) return null; const pc = (v) => Math.round((Number(v) || 0) * 1000) / 10; return { pow: pc(o.pow), hit: pc(o.hit) }; } catch (e) { return null; }
+};
 // まだ覚えていない技の覚え方(技表の learn: { start } / { by:修行の系統, st:{ 能力: 数 } })
 // 例: 修行で覚える(かしこさ150以上・ガッチョの熟練25)。前の技の名前は同じ種の技表から引く(無ければ「前の技」)
 const msxTechHow = (t, all = []) => {
@@ -88992,7 +89007,8 @@ const msxLineName = (id) => (id && typeof MONSTER_LINEAGES === 'object' && MONST
 const MSX_STAT_COLOR = Object.freeze({ life: '#facc15', pow: '#f87171', wise: '#4ade80', hit: '#f472b6', eva: '#60a5fa', tough: '#818cf8' });
 // pick … 被った升で覚える技を選べるとき { sel: { 升: 技id }, locked: (升) => 覚えたあとで変えられないか, onPick: (升, 技id) => void }(無ければ見るだけ)
 // head … 名前の横に置く物(マスモンボックスのハート・✏)/ more … 特徴のタブの下に足す行 [[見出し, 中身], …] / foot … 「とじる」の上に置くボタン(貸し出し・お別れ)/ grade … 総合力の横の評価(A2 など)
-function MsxMonDetail({ species, name, art, st, apt, type, peak, grades, known, power, rank, sub, onClose, SUC, head = null, more = null, foot = null, grade: gradeLabel = null, pick = null }) {
+// mastery … 覚えた技の熟練 { 技id: 0〜100 }(2026-11-15 社長 r1115-082「技の熟練度ってそもそもどこにあるの？」)。渡したときだけ、升に小さなゲージ・右の欄に熟練と効き目を出す
+function MsxMonDetail({ species, name, art, st, apt, type, peak, grades, known, power, rank, sub, onClose, SUC, head = null, more = null, foot = null, grade: gradeLabel = null, pick = null, mastery = null }) {
   const [tab, setTab] = useState('base');
   const [pickCell, setPickCell] = useState(null); // 技を選ぶ窓を開いている升(pick があるときだけ)
   const line = typeof MONSTER_LINEAGE_MAP === 'object' && MONSTER_LINEAGE_MAP ? MONSTER_LINEAGE_MAP[species] : null;
@@ -89010,6 +89026,7 @@ function MsxMonDetail({ species, name, art, st, apt, type, peak, grades, known, 
   const [pickT, setPickT] = useState(() => (all.find(has) || all[0] || {}).id || null);
   const tech = all.find((t) => t.id === pickT) || list[0] || null;
   const grade = (k, v) => (typeof msaTechGrade === 'function' ? msaTechGrade(k, v) : '') || '−';
+  const msOf = (id) => (mastery && typeof mastery === 'object' ? msxMasteryOf(mastery, id) : null); // 熟練(渡されていなければ null = 出さない)
   const maxSt = Math.max(300, ...MSX_STATS.map((k) => Number(st[k]) || 0));
   const TOP = [['base', '基礎'], ['feat', '特徴'], ['apt', '適性']];
   return (
@@ -89054,7 +89071,7 @@ function MsxMonDetail({ species, name, art, st, apt, type, peak, grades, known, 
                   // 技の種類で升の色を分ける(参考どおり ちから=金・かしこさ=緑)。覚えていない技も絵を出し、升の地を暗くして見分ける(2026-11-14 社長「鍵じゃなくて覚えてないやつも表示して色分けして」)。
                   // 覚える条件の数は升に出さず、押したときの右の「覚え方」に出す(社長「150とかその数字何?」→ 升目から消す)
                   return <button type="button" key={`${r}-${d}`} className={`tc ${t.kind === 'wise' ? 'wise' : 'pow'}${got ? ' got' : ' tg-not'}${tech && tech.id === t.id ? ' on' : ''}`} data-msx-tech={t.id} data-msx-cell={cellK} aria-label={`${t.name}${got ? '' : '(まだ覚えていない)'}${canAlt ? '(選べる技が' + alts.length + 'つ)' : ''}`} onClick={() => setPickT(t.id)}>
-                    <span className="ti" aria-hidden="true"><MsxSkillArt t={t} uid={`${r}${d}`}/></span><span className={`tg-rk rk${Math.max(1, Math.min(5, Number(t.rank) || 1))}`} aria-hidden="true">{Math.max(1, Math.min(5, Number(t.rank) || 1))}</span><span className="g">{t.guts}</span>{canAlt ? <span className="tg-alt" role="button" aria-label="覚える技を選ぶ" data-msx-alt={cellK} onClick={(e) => { e.stopPropagation(); setPickCell(cellK); }}>⇄</span> : null}</button>;
+                    <span className="ti" aria-hidden="true"><MsxSkillArt t={t} uid={`${r}${d}`}/></span><span className={`tg-rk rk${Math.max(1, Math.min(5, Number(t.rank) || 1))}`} aria-hidden="true">{Math.max(1, Math.min(5, Number(t.rank) || 1))}</span><span className="g">{t.guts}</span>{got && msOf(t.id) != null ? <span className="tg-ms" aria-hidden="true" data-msx-tech-ms={msOf(t.id)}><i style={{ width: `${msOf(t.id)}%` }}/></span> : null}{canAlt ? <span className="tg-alt" role="button" aria-label="覚える技を選ぶ" data-msx-alt={cellK} onClick={(e) => { e.stopPropagation(); setPickCell(cellK); }}>⇄</span> : null}</button>;
                 }}/>
               {tech ? (<div className="msx-md-td">
                 <div className="tn">{tech.name}{has(tech) ? null : <small className="msx-md-not">まだ覚えていない</small>}</div>
@@ -89064,6 +89081,10 @@ function MsxMonDetail({ species, name, art, st, apt, type, peak, grades, known, 
                 <div className="msx-md-kv"><b>命中率</b><span className="gd">{grade('hit', tech.hit)}</span></div>
                 <div className="msx-md-kv"><b>ガッツダウン</b><span className="gd">{grade('gd', tech.gd)}</span></div>
                 <div className="msx-md-kv"><b>クリティカル率</b><span className="gd">{grade('crit', tech.crit)}</span></div>
+                {has(tech) && msOf(tech.id) != null ? (() => { const m = msOf(tech.id); const b = msxMasteryBoost(SUC, tech.id, m); return (<>
+                  <div className="msx-md-kv msx-md-ms" data-msx-detail-ms={m}><b>熟練</b><span className="msx-ms-v"><b>{m}</b><small>/100</small></span></div>
+                  <div className="msx-ms-bar" aria-hidden="true"><i style={{ width: `${m}%` }}/></div>
+                  <div className="msx-md-kv"><b>熟練の効き目</b><span className="msx-ms-ef">{b ? <><i>威力+{b.pow}%</i><i>命中+{b.hit}%</i></> : 'まだ無し'}</span></div></>); })() : null}
                 <div className="msx-md-kv msx-md-howrow"><b>覚え方</b><span>{has(tech) ? (Array.isArray(known) ? '覚えている' : '初めから') : (() => { const how = msxTechHow(tech, all); return how.startsWith('修行で覚える(') ? <>修行で覚える<small className="msx-md-how">{how.slice('修行で覚える'.length)}</small></> : how; })()}</span></div>
                 {pick && tgAt(tech.rank, Math.min(...(tech.dist || [1]))).length > 1 ? <button type="button" className="msx-md-alt" data-msx-alt-open onClick={() => setPickCell(`${tech.rank}-${Math.min(...(tech.dist || [1]))}`)}>⇄ 覚える技を選ぶ</button> : null}
               </div>) : null}
@@ -90535,7 +90556,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
         const pk = typeof SUC.peakInfo === 'function' ? SUC.peakInfo(s) : null;
         const peak = pk && Number.isInteger(pk.from) ? (() => { const a = SUC.periodOf(pk.from).name; const b = SUC.periodOf(pk.to).name; return a === b ? a : `${a}〜${b}`; })() : '';
         return <MsxMonDetail species={s.species} name={run.nick} sub={msxMonName(s.species)} art={<MsxMonArt run={run} noPeak/>} st={s.stats} apt={msxAptOf(s.species)} type={s.type} peak={peak}
-          grades={typeof SUC.aptGradesOf === 'function' ? SUC.aptGradesOf(s) : null} known={Array.isArray(s.techs) ? s.techs : []} power={ev.power} rank={ev.rank} SUC={SUC} pick={typeof SUC.setTechPick === 'function' && s.techPick ? { sel: s.techPick, locked: (c) => SUC.techPickLocked(s, c), onPick: (c, id) => { const n = JSON.parse(JSON.stringify(s)); if (SUC.setTechPick(n, c, id)) setRun({ ...run, s: n }); } } : null} onClose={() => setDetail(false)}/>;
+          grades={typeof SUC.aptGradesOf === 'function' ? SUC.aptGradesOf(s) : null} known={Array.isArray(s.techs) ? s.techs : []} mastery={s.mastery && typeof s.mastery === 'object' ? s.mastery : {}} power={ev.power} rank={ev.rank} SUC={SUC} pick={typeof SUC.setTechPick === 'function' && s.techPick ? { sel: s.techPick, locked: (c) => SUC.techPickLocked(s, c), onPick: (c, id) => { const n = JSON.parse(JSON.stringify(s)); if (SUC.setTechPick(n, c, id)) setRun({ ...run, s: n }); } } : null} onClose={() => setDetail(false)}/>;
       })() : null}
       {sheet === 'dex' && typeof MsxDex === 'function' ? <MsxDex aid={s.aid} nick={run.nick} onClose={() => setSheet(null)}/> : null}
       {sheet && sheet !== 'dex' && (
@@ -92216,6 +92237,7 @@ function MsxR3Shugyo({ run, setRun, v, ev, onBack, onPause }) {
           aria-label={`${t.name}${got ? '(覚えた)' : sel ? '(選んだ)' : ok ? `(覚えられる ${Math.round(rateOf[t.id] * 100)}%)` : full ? '(技がいっぱい)' : ng ? `(${ng.short})` : '(条件あり)'}`}
           onClick={() => (ok && !got ? toggle(t.id) : !got ? setLockT(t) : null)}>
           <span className="ti" aria-hidden="true"><MsxSkillArt t={t} uid={`q${r}${d}`}/></span><span className={`tg-rk rk${rk}`} aria-hidden="true">{rk}</span>
+          {got && typeof msxMasteryOf === 'function' ? <span className="tg-ms" aria-hidden="true" data-msx-tech-ms={msxMasteryOf(s0.mastery, t.id)}><i style={{ width: `${msxMasteryOf(s0.mastery, t.id)}%` }}/></span> : null}{/* 覚えた技の熟練のゲージ(r1115-082) */}
           {got ? <span className="g qb" aria-hidden="true">済</span> : ok ? <span className="g qb" aria-hidden="true">{Math.round(rateOf[t.id] * 100)}%</span> : <span className="g qb" aria-hidden="true">🔒</span>}
         </button>);
       }}/> : <div className="q-note msx-kp">このモンスターの技の表がまだありません(能力だけ上がる)</div>}
@@ -92807,7 +92829,7 @@ function MsxR3Box({ onClose }) {
         return (<MsxMonDetail species={cur.species} name={msxMmName(cur)} sub={`Lv.${Math.round(Number(cur.lv) || 1)}・${msxMonName(cur.species)}`}
           art={<MsxMmArt m={cur} size="100%"/>} st={MSX_STATS.reduce((o, k) => ({ ...o, [k]: Math.round((cur.st && cur.st[k]) || 0) }), {})}
           apt={typeof msxAptOf === 'function' ? msxAptOf(cur.species) : ['C', 'C', 'C', 'C', 'C', 'C']} type={cur.gt} grades={SUC && typeof SUC.aptGradesOf === 'function' ? (() => { try { return SUC.aptGradesOf(cur); } catch (e) { return null; } })() : null}
-          pick={cur.raised === false && SUC && typeof SUC.techPickNorm === 'function' ? (() => { const sel = SUC.techPickNorm(tpAll && tpAll.mon ? tpAll.mon[cur.id] : null, cur.species); return { sel, locked: () => false, onPick: async (c, id) => { const next = { ...sel, [c]: id }; setTpAll((t0) => { const t = t0 || msxNormTechPick(null); return { ...t, mon: { ...t.mon, [cur.id]: next } }; }); try { setTpAll(await msxWriteTechPick('mon', cur.id, next)); } catch (e) {} } }; })() : null} known={Array.isArray(cur.techs) ? cur.techs : []} power={cur.raised === false ? null : msxMmPow(cur)} rank={cur.grade ? null : cur.rank} grade={cur.grade} SUC={SUC}
+          pick={cur.raised === false && SUC && typeof SUC.techPickNorm === 'function' ? (() => { const sel = SUC.techPickNorm(tpAll && tpAll.mon ? tpAll.mon[cur.id] : null, cur.species); return { sel, locked: () => false, onPick: async (c, id) => { const next = { ...sel, [c]: id }; setTpAll((t0) => { const t = t0 || msxNormTechPick(null); return { ...t, mon: { ...t.mon, [cur.id]: next } }; }); try { setTpAll(await msxWriteTechPick('mon', cur.id, next)); } catch (e) {} } }; })() : null} known={Array.isArray(cur.techs) ? cur.techs : []} mastery={cur.raised !== false && Array.isArray(cur.techs) ? Object.fromEntries(cur.techs.map((t, i) => [t, Array.isArray(cur.mast) ? Number(cur.mast[i]) || 0 : 0])) : null} power={cur.raised === false ? null : msxMmPow(cur)} rank={cur.grade ? null : cur.rank} grade={cur.grade} SUC={SUC}
           head={<><button type="button" className={`mm-fav${fav.includes(cur.id) ? ' on' : ''}`} onClick={() => toggleFav(cur.id)} aria-label="お気に入り" data-msx-mm-fav>{fav.includes(cur.id) ? '❤' : '♡'}</button>
             <button type="button" className="mm-ed" aria-label="名前と染色を変える" onClick={() => { setEdit({ nick: cur.nick || msxMonName(cur.species), colors: Array.isArray(cur.colors) ? cur.colors.slice(0, 6) : [], err: '' }); setPage('edit'); }} data-msx-r3-edit>✏</button></>}
           more={more}

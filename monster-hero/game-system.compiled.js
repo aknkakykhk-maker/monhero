@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c747cbd83587624a
+// source-sha256: c7de6ebfea37f11d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -61126,6 +61126,15 @@ const MULTI_STAMP_SLOT_STEP = 4;
 const MULTI_STAMP_SLOT_BUY_MAX = 2;
 const MULTI_STAMP_CUSTOM_ID = 'x';
 const MULTI_STAMP_CUSTOM_MAX = 8;
+const MULTI_STAMP_WORD_CLAMP = Object.freeze({
+  display: '-webkit-box',
+  WebkitBoxOrient: 'vertical',
+  WebkitLineClamp: 2,
+  overflow: 'hidden',
+  overflowWrap: 'anywhere',
+  wordBreak: 'break-all',
+  lineHeight: 1.15
+});
 const multiStampCleanText = v => String(v == null ? '' : v).replace(/[\u0000-\u001f\u007f-\u009f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, MULTI_STAMP_CUSTOM_MAX);
 const MULTI_STAMP_ASSISTANT_IDS = Object.freeze(['mua', 'kiki', 'momosuke', 'dra', 'atsu', 'kyuko', 'sorashido', 'erubin']);
 const MULTI_STAMP_EXPRESSIONS = Object.freeze(['happy', 'excited', 'wink', 'surprise', 'troubled', 'crying', 'angry', 'normal']);
@@ -61720,7 +61729,9 @@ function MultiStampView({
       height: size
     }
   }), React.createElement("b", {
-    className: "mt-0.5 block max-w-full truncate text-center text-[11px] font-black leading-tight"
+    "data-multi-stamp-word-text": true,
+    className: "mt-0.5 block max-w-full text-center text-[11px] font-black leading-tight",
+    style: MULTI_STAMP_WORD_CLAMP
   }, label));
 }
 const MULTI_STAMP_COLS = Object.freeze({
@@ -61796,7 +61807,9 @@ function MultiStampPalette({
       decoding: "async",
       className: "mx-auto block aspect-square w-full rounded-lg object-cover"
     }), React.createElement("b", {
-      className: "mt-0.5 block truncate text-[11px] font-black leading-tight text-white"
+      "data-multi-stamp-word-text": true,
+      className: "mt-0.5 block text-[11px] font-black leading-tight text-white",
+      style: MULTI_STAMP_WORD_CLAMP
     }, hit && flash.ok ? '✓ 送信' : label));
   }), onEdit && React.createElement("button", {
     type: "button",
@@ -61902,7 +61915,9 @@ function MultiStampEditor({
     decoding: "async",
     className: "mx-auto block aspect-square w-full rounded-lg object-cover"
   }), React.createElement("b", {
-    className: "mt-0.5 block truncate text-[10.5px] font-black leading-tight"
+    "data-multi-stamp-word-text": true,
+    className: "mt-0.5 block text-[10.5px] font-black leading-tight",
+    style: MULTI_STAMP_WORD_CLAMP
   }, multiStampSlotLabel(s))) : React.createElement("span", {
     className: "flex aspect-[4/5] items-center justify-center text-xl text-slate-500"
   }, "＋")))), React.createElement("div", {
@@ -169431,6 +169446,13 @@ const MSX_CSS = `
 .msx-md-tg .tc .tg-rk{position:absolute;left:2px;top:2px;z-index:2;min-width:14px;height:14px;border-radius:4px;font-size:10px;font-weight:900;line-height:14px;text-align:center;color:#2a1608;border:1px solid #2a1608}
 .tg-rk.rk1{background:linear-gradient(135deg,#e9a46a,#a95f27)}.tg-rk.rk2{background:linear-gradient(135deg,#f4f7fb,#aab4c2)}.tg-rk.rk3{background:linear-gradient(135deg,#fff1a6,#f2b705)}.tg-rk.rk4{background:linear-gradient(135deg,#d9a8ff,#8a3ffc);color:#fff}.tg-rk.rk5{background:linear-gradient(135deg,#ff5a5a,#ffd23f,#4ade80,#38bdf8,#c084fc)}
 .msx-md-tg .tc{position:relative}
+/* 技の熟練(r1115-082): 升の下に小さなゲージ(覚えた技だけ)・右の欄に熟練の棒 */
+.msx-md-tg .tc .tg-ms{position:absolute;left:3px;right:26px;bottom:4px;height:5px;border-radius:3px;background:rgba(18,12,6,.85);border:1px solid rgba(255,255,255,.55);z-index:2;overflow:hidden}
+.msx-md-tg .tc .tg-ms i{display:block;height:100%;background:linear-gradient(90deg,#fde68a,#f59e0b)}
+.msx .msx-ms-v{white-space:nowrap}.msx .msx-ms-v small{opacity:.75;margin-left:1px}
+.msx .msx-ms-ef{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:0 6px}.msx .msx-ms-ef i{font-style:normal;white-space:nowrap}
+.msx .msx-ms-bar{display:block;height:6px;margin:2px 0 4px;border-radius:4px;background:#0f172a;border:1px solid #475569;overflow:hidden}
+.msx .msx-ms-bar i{display:block;height:100%;background:linear-gradient(90deg,#fde68a,#f59e0b)}
 .msx .msx-md-alt{margin-top:6px;width:100%;padding:6px 8px;border-radius:10px;font-size:12px;font-weight:900;color:#fff;background:linear-gradient(160deg,#6d4cd9,#4a2fa6);border:1.5px solid #a78bfa}
 .msx .msx-tp{display:flex;align-items:center;gap:8px;width:100%;margin:0 0 6px;padding:6px 8px;border-radius:12px;text-align:left;color:#fff;background:#1e1b3a;border:1.5px solid #3b3566}
 .msx .msx-tp.on{border-color:#facc15;background:#2a2547}
@@ -170948,6 +170970,26 @@ function MsxTechGrid({
     }, "×");
   })));
 }
+const msxMasteryOf = (mastery, id) => Math.max(0, Math.min(100, Math.round(Number(mastery && mastery[id]) || 0)));
+const msxMasteryBoost = (SUC, id, m) => {
+  if (!(m > 0) || !SUC || typeof SUC.techBoostOf !== 'function') return null;
+  try {
+    const o = SUC.techBoostOf({
+      techs: [id],
+      mastery: {
+        [id]: m
+      }
+    })[id];
+    if (!o) return null;
+    const pc = v => Math.round((Number(v) || 0) * 1000) / 10;
+    return {
+      pow: pc(o.pow),
+      hit: pc(o.hit)
+    };
+  } catch (e) {
+    return null;
+  }
+};
 const msxTechHow = (t, all = []) => {
   const L = t && t.learn;
   if (!L) return '修行で覚える';
@@ -170985,7 +171027,8 @@ function MsxMonDetail({
   more = null,
   foot = null,
   grade: gradeLabel = null,
-  pick = null
+  pick = null,
+  mastery = null
 }) {
   const [tab, setTab] = useState('base');
   const [pickCell, setPickCell] = useState(null);
@@ -171002,6 +171045,7 @@ function MsxMonDetail({
   const [pickT, setPickT] = useState(() => (all.find(has) || all[0] || {}).id || null);
   const tech = all.find(t => t.id === pickT) || list[0] || null;
   const grade = (k, v) => (typeof msaTechGrade === 'function' ? msaTechGrade(k, v) : '') || '−';
+  const msOf = id => mastery && typeof mastery === 'object' ? msxMasteryOf(mastery, id) : null;
   const maxSt = Math.max(300, ...MSX_STATS.map(k => Number(st[k]) || 0));
   const TOP = [['base', '基礎'], ['feat', '特徴'], ['apt', '適性']];
   return React.createElement("div", {
@@ -171125,7 +171169,15 @@ function MsxMonDetail({
         "aria-hidden": "true"
       }, Math.max(1, Math.min(5, Number(t.rank) || 1))), React.createElement("span", {
         className: "g"
-      }, t.guts), canAlt ? React.createElement("span", {
+      }, t.guts), got && msOf(t.id) != null ? React.createElement("span", {
+        className: "tg-ms",
+        "aria-hidden": "true",
+        "data-msx-tech-ms": msOf(t.id)
+      }, React.createElement("i", {
+        style: {
+          width: `${msOf(t.id)}%`
+        }
+      })) : null, canAlt ? React.createElement("span", {
         className: "tg-alt",
         role: "button",
         "aria-label": "覚える技を選ぶ",
@@ -171162,7 +171214,27 @@ function MsxMonDetail({
     className: "msx-md-kv"
   }, React.createElement("b", null, "クリティカル率"), React.createElement("span", {
     className: "gd"
-  }, grade('crit', tech.crit))), React.createElement("div", {
+  }, grade('crit', tech.crit))), has(tech) && msOf(tech.id) != null ? (() => {
+    const m = msOf(tech.id);
+    const b = msxMasteryBoost(SUC, tech.id, m);
+    return React.createElement(React.Fragment, null, React.createElement("div", {
+      className: "msx-md-kv msx-md-ms",
+      "data-msx-detail-ms": m
+    }, React.createElement("b", null, "熟練"), React.createElement("span", {
+      className: "msx-ms-v"
+    }, React.createElement("b", null, m), React.createElement("small", null, "/100"))), React.createElement("div", {
+      className: "msx-ms-bar",
+      "aria-hidden": "true"
+    }, React.createElement("i", {
+      style: {
+        width: `${m}%`
+      }
+    })), React.createElement("div", {
+      className: "msx-md-kv"
+    }, React.createElement("b", null, "熟練の効き目"), React.createElement("span", {
+      className: "msx-ms-ef"
+    }, b ? React.createElement(React.Fragment, null, React.createElement("i", null, "威力+", b.pow, "%"), React.createElement("i", null, "命中+", b.hit, "%")) : 'まだ無し')));
+  })() : null, React.createElement("div", {
     className: "msx-md-kv msx-md-howrow"
   }, React.createElement("b", null, "覚え方"), React.createElement("span", null, has(tech) ? Array.isArray(known) ? '覚えている' : '初めから' : (() => {
     const how = msxTechHow(tech, all);
@@ -175740,6 +175812,7 @@ function MsxPlay({
       peak: peak,
       grades: typeof SUC.aptGradesOf === 'function' ? SUC.aptGradesOf(s) : null,
       known: Array.isArray(s.techs) ? s.techs : [],
+      mastery: s.mastery && typeof s.mastery === 'object' ? s.mastery : {},
       power: ev.power,
       rank: ev.rank,
       SUC: SUC,
@@ -180186,7 +180259,15 @@ function MsxR3Shugyo({
       })), React.createElement("span", {
         className: `tg-rk rk${rk}`,
         "aria-hidden": "true"
-      }, rk), got ? React.createElement("span", {
+      }, rk), got && typeof msxMasteryOf === 'function' ? React.createElement("span", {
+        className: "tg-ms",
+        "aria-hidden": "true",
+        "data-msx-tech-ms": msxMasteryOf(s0.mastery, t.id)
+      }, React.createElement("i", {
+        style: {
+          width: `${msxMasteryOf(s0.mastery, t.id)}%`
+        }
+      })) : null, got ? React.createElement("span", {
         className: "g qb",
         "aria-hidden": "true"
       }, "済") : ok ? React.createElement("span", {
@@ -182001,6 +182082,7 @@ function MsxR3Box({
           };
         })() : null,
         known: Array.isArray(cur.techs) ? cur.techs : [],
+        mastery: cur.raised !== false && Array.isArray(cur.techs) ? Object.fromEntries(cur.techs.map((t, i) => [t, Array.isArray(cur.mast) ? Number(cur.mast[i]) || 0 : 0])) : null,
         power: cur.raised === false ? null : msxMmPow(cur),
         rank: cur.grade ? null : cur.rank,
         grade: cur.grade,
