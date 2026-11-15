@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 823296e8c15dcb73
+// generated-sha256: 6067a9d164347e20
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -89265,6 +89265,7 @@ const msxNormRun = (raw, SUC) => {
     startAt: msxNum(raw.startAt, 0),
     // ビートP(2026-11-14 足した項目): 本編へ渡した量・育成が終わったときの分を足したか。無い保存は 0 / false
     beatSent: msxNum(raw.beatSent, 0), beatEnd: raw.beatEnd === true,
+    rev: msxNum(raw.rev, 0), // 保存の版番号(r1115-200 3b・足した項目)。保存のたびに +1。無い保存は 0
     // 期のはじめの控え(期の区切りの演出で増えた分を出す。2026-11-13 足した項目・無い保存は null のまま)
     ki: msxIsObj(raw.ki) && Number.isInteger(raw.ki.p) && Number.isFinite(raw.ki.fame) && Number.isFinite(raw.ki.power) ? { p: Math.max(0, Math.min(9, raw.ki.p)), fame: Math.round(Math.min(1e7, raw.ki.fame * kiFameMul)), power: raw.ki.power } : null,
   };
@@ -89445,11 +89446,15 @@ const msxRunIsStale = async (run, stored) => {
   if (msxRunTurn(run) < msxRunTurn(stored)) return true;
   if (msxRunSent(run) < msxRunSent(stored)) return true;
   if (stored.beatEnd === true && run.beatEnd !== true) return true;
+  // 保存の版番号(r1115-200 3b): 保存されている版が自分の版以上なら、ほかの画面(別のタブ・古い大会画面)が先に進めている。同じターン・同じビートPでも巻き戻さない
+  //   版の無い保存(古い版のアプリ)は比べない
+  const rv = Number(run.rev); const sv = Number(stored.rev);
+  if (Number.isFinite(rv) && Number.isFinite(sv) && sv > 0 && rv <= sv) return true;
   return false;
 };
 const msxSaveRunNow = async (run, noPay) => {
   const stored = await storeGet(MSX_KEYS.run, null);
-  if (await msxRunIsStale(run, stored)) return false;
+  if (await msxRunIsStale(run, stored)) return 'stale'; // 書かない(r1115-200 3b: 画面は読み直す。文字なので true とは別に扱う)
   const ov = msxRunOverOf(run); if (ov) { try { await storeSet(MSX_RUN_OVER_KEY, ov); } catch (_) {} } // 上限アップの控え(上限のある育成だけ)
   const sent = msxRunSent(run);
   if (noPay || !sent || typeof saveStoredValuesOrRollback !== 'function' || typeof loadRhythmEventPoints !== 'function' || typeof RHYTHM_EVENT_POINTS_KEY === 'undefined') return storeSet(MSX_KEYS.run, run);
@@ -89468,11 +89473,38 @@ const msxSaveRunNow = async (run, noPay) => {
 // noPay … デバッグの入口からの育成(2026-11-14 窓口: 社長の本当の財布がテストで増えないように)。渡した量の印だけ進め、財布には足さない
 const msxSaveRun = (run, noPay) => { msxSaveChain = msxSaveChain.then(() => msxSaveRunNow(run, noPay)).catch(() => false); return msxSaveChain; };
 // 途中の育成を消す(やめる・引退)も同じ順に並べる(先に頼んだ保存が、消したあとに書き戻さないように)
-//   消す前に、その育成の id を「終わった育成」へ足す(r1115-171 b)。書けなくても消すのは止めない(今までどおり)
-const msxClearRun = () => {
+//   消す前に、その育成の id を「終わった育成」へ足す(r1115-171 b)。
+//   r1115-200: ①id を渡したら、保存されている育成がその id のときだけ消す(古い画面から新しい育成を消さない。違えば 'other')
+//   ②「終わった育成」の記録が書けなければ消さずに false(消したのに記録が無いと、古い画面の保存で育成が戻る)。画面は再試行する
+//   true … 消した/もう無い・'other' … 別の育成なので消さない・false … 書けなかった
+const msxClearRun = (id) => {
   msxSaveChain = msxSaveChain.then(async () => {
-    try { const cur = await storeGet(MSX_KEYS.run, null); if (cur && typeof cur.id === 'string') { const g = await msxRunGoneList(); if (!g.includes(cur.id)) await storeSet(MSX_RUN_GONE_KEY, [...g, cur.id].slice(-50)); } } catch (_) {}
+    const cur = await storeGet(MSX_KEYS.run, null);
+    if (!cur) return true;
+    if (typeof id === 'string' && cur.id !== id) return 'other';
+    if (typeof cur.id === 'string') {
+      const raw = await storeGet(MSX_RUN_GONE_KEY, null); // 読めない(例外)ときは記録を作り直さない(ほかの id を落とさない)→ 下の catch で false
+      const g = Array.isArray(raw) ? raw.filter((x) => typeof x === 'string').slice(-50) : [];
+      if (!g.includes(cur.id) && (await storeSet(MSX_RUN_GONE_KEY, [...g, cur.id].slice(-50))) === false) return false;
+    }
     return storeSet(MSX_KEYS.run, null);
+  }).catch(() => false);
+  return msxSaveChain;
+};
+// 育成を始める(r1115-200 1): 持ちこみの消費(meta)と途中の育成(run)を1つの取引で書く。どちらかが書けなければ両方を元へ戻して false
+//   (育成だけ書けずにアイテムが消える・消費だけ書けずにタダで持ちこむ を起こさない)。保存の順の列に並べる
+const msxStartRunSave = (run, meta) => {
+  msxSaveChain = msxSaveChain.then(async () => {
+    const [runBefore, metaBefore] = await Promise.all([storeGet(MSX_KEYS.run, null), storeGet(MSX_KEYS.meta, null)]);
+    if (typeof saveStoredValuesOrRollback !== 'function') {
+      if ((await storeSet(MSX_KEYS.run, run)) === false) return false;
+      if ((await storeSet(MSX_KEYS.meta, meta)) === false) { await storeSet(MSX_KEYS.run, runBefore); return false; }
+      return true;
+    }
+    return saveStoredValuesOrRollback([
+      { key: MSX_KEYS.meta, before: metaBefore, next: meta },
+      { key: MSX_KEYS.run, before: runBefore, next: run },
+    ], storeGet, storeSet);
   }).catch(() => false);
   return msxSaveChain;
 };
@@ -90813,6 +90845,7 @@ function MonheroSuccessScreen({ onClose, callNameOf, bondLvOf, debug = false, st
   const [run, setRunState] = useState(null);
   const [layout, setLayout] = useState(msxLayout);
   const [ask, setAsk] = useState(null); // 確かめの小窓 { text, yes, onYes }
+  const lendRef = useRef({}); // フレンドから借りた結果(保存に失敗して押し直したとき用・r1115-200)
   const [playSub, setPlaySub] = useState('main'); // 育成中の小画面(MsxPlay の sub。β版の説明を出す場面を決める)
   // 育成の外(ホーム・ボックス・ランキング・図鑑・始めるまでの準備)の曲(ビート部の表 data/success-sounds.js の menu)。
   // 育成中は MsxPlay が場面の曲を鳴らすので、ここは何もしない(画面を閉じると入る前の曲へ戻る)
@@ -90831,21 +90864,41 @@ function MonheroSuccessScreen({ onClose, callNameOf, bondLvOf, debug = false, st
       if (!L) { setView('fail'); return; }
       const d = await msxReadAll(L.SUC);
       if (!alive) return;
-      setData(d); setRunState(d.run); setView(startView === 'box' ? 'box' : 'home');
+      setData(d); setRunLoaded(d.run); setView(startView === 'box' ? 'box' : 'home');
     });
     return () => { alive = false; };
   }, []);
-  const setRun = (r0) => { const r = r0 && typeof msxBeatMark === 'function' ? msxBeatMark(r0) : r0; setRunState(r); if (r) msxSaveRun(r, !!debug); }; // ビートPを渡した量も持つ(56-monhero-success-store)。デバッグの育成は財布に足さない
+  // 保存の版番号(r1115-200 3b): この画面が最後に読んだ/書いた版。保存のたびに +1 して、ほかの画面が先に進めていたら書かずに読み直す
+  const revRef = useRef(0);
+  const setRunLoaded = (r) => { revRef.current = r && Number.isFinite(Number(r.rev)) ? Number(r.rev) : 0; setRunState(r); };
+  // 保存の結果を返す(true 書けた・false 書けなかった・'stale' ほかの画面が先に進めていたので書かなかった)
+  const setRun = (r0) => {
+    let r = r0 && typeof msxBeatMark === 'function' ? msxBeatMark(r0) : r0; // ビートPを渡した量も持つ(56-monhero-success-store)。デバッグの育成は財布に足さない
+    if (r) { revRef.current += 1; r = { ...r, rev: revRef.current }; }
+    setRunState(r);
+    if (!r) return Promise.resolve(true);
+    const p = msxSaveRun(r, !!debug);
+    Promise.resolve(p).then((res) => { if (res === 'stale') setAsk({ text: 'ほかの画面で、この育成が先に進んでいます。保存されている続きを読み直します', yes: '読み直す', onYes: toHome }); }).catch(() => {});
+    return p;
+  };
   const setMeta = (meta) => { setData((d) => ({ ...d, meta })); msxSaveMeta(meta); };
   // ホームへ戻るときは保存を読み直す(回3の引退で保存枠・meta が書き足されたあと、古い中身で上書きしないように)
   //   ★先に並べた保存が終わってから読む(r1115-171 c)
-  const toHome = () => { (typeof msxSaveWait === 'function' ? msxSaveWait() : Promise.resolve()).then(() => msxReadAll(msxSuc.SUC)).then((d) => { setData(d); setRunState(d.run); }).catch(() => {}); setView('home'); };
+  const toHome = () => { (typeof msxSaveWait === 'function' ? msxSaveWait() : Promise.resolve()).then(() => msxReadAll(msxSuc.SUC)).then((d) => { setData(d); setRunLoaded(d.run); }).catch(() => {}); setView('home'); };
 
+  const startingRef = useRef(false); // 保存を待つ間の二度押しで、アイテムを2回減らさない(r1115-200)
   const startRun = async (cfg) => {
+    if (startingRef.current) return false;
+    startingRef.current = true;
+    try { return await startRunNow(cfg); } finally { startingRef.current = false; }
+  };
+  const startRunNow = async (cfg) => {
     const { SUC } = msxSuc;
     // フレンドから借りた子は、はじめるときに1回だけ知らせる。断られた(続けて借りすぎ streak・通信の失敗など)ら、借りずにその枠をベースモンで始める
     if (cfg.friendId && typeof monsucLendUse === 'function') {
-      let r = null; try { r = await monsucLendUse(cfg.friendId); } catch (e) { r = { ok: false, reason: 'network' }; }
+      // 保存に失敗してもう一度押したときは、前の結果を使う(r1115-200: 借りたことを二重に知らせない)
+      let r = lendRef.current[cfg.friendId] || null;
+      if (!r) { try { r = await monsucLendUse(cfg.friendId); } catch (e) { r = { ok: false, reason: 'network' }; } if (r && r.ok) lendRef.current[cfg.friendId] = r; }
       if (!r || !r.ok) cfg = { ...cfg, team: cfg.team.map((m) => (m && m.friend ? { kind: 'base', species: cfg.baseFill || cfg.species } : m)) };
     }
     const id = `r${Date.now().toString(36)}${Math.floor(Math.random() * 1e6).toString(36)}`;
@@ -90859,9 +90912,22 @@ function MonheroSuccessScreen({ onClose, callNameOf, bondLvOf, debug = false, st
     const meta = { ...data.meta, team: cfg.teamSlots.map((t) => (t.box ? { box: t.box } : t.assist ? { assist: t.assist } : { base: t.base })), runs: (data.meta.runs || 0) + 1, picked: { ...(data.meta.picked || {}), [cfg.species]: ((data.meta.picked || {})[cfg.species] || 0) + 1 } };
     // 持ちこんだ物は1つずつ減らす。芯がまだ知らない物(効き目が無い物)は減らさない
     if (cfg.items.some(known)) { const it = { ...meta.items }; cfg.items.filter(known).forEach((k) => { it[k] = Math.max(0, (it[k] || 0) - 1); if (!it[k]) delete it[k]; }); meta.items = it; }
-    setMeta(meta); setRun(r); setView('play');
+    // r1115-200 1: 消費(meta)と途中の育成を一緒に書き、両方書けたときだけ育成へ進む。書けなければ両方元のまま(アイテムも前の育成も残る)→ もう一度押せる
+    const r1 = typeof msxBeatMark === 'function' ? { ...msxBeatMark(r), rev: 1 } : { ...r, rev: 1 };
+    let saved = false;
+    try { saved = await (typeof msxStartRunSave === 'function' ? msxStartRunSave(r1, meta) : Promise.all([msxSaveMeta(meta), msxSaveRun(r1, !!debug)]).then((a) => a.every((x) => x === true))); } catch (e) { saved = false; }
+    if (saved !== true) { setAsk({ text: '保存できませんでした。アイテムと前の育成はそのままです。もう一度「育成を始める」を押してください', yes: 'OK', onYes: () => {} }); return false; }
+    lendRef.current = {};
+    setData((d) => ({ ...d, meta })); revRef.current = 1; setRunState(r1); setView('play');
+    return true;
   };
-  const quit = () => setAsk({ text: 'この育成をやめますか? 育てた中身はなくなります(マスモンボックスには入りません)', yes: 'やめる', onYes: async () => { await (typeof msxClearRun === 'function' ? msxClearRun() : storeSet(MSX_KEYS.run, null)); setRunState(null); setView('home'); } });
+  // やめる(r1115-200 3a・3c): 画面の育成の id が保存と同じときだけ消す。別の育成なら消さずに読み直す・書けなければもう一度
+  const quit = () => setAsk({ text: 'この育成をやめますか? 育てた中身はなくなります(マスモンボックスには入りません)', yes: 'やめる', onYes: async () => {
+    let res = false; try { res = await (typeof msxClearRun === 'function' ? msxClearRun(run && run.id) : storeSet(MSX_KEYS.run, null)); } catch (e) { res = false; }
+    if (res === false) { setAsk({ text: '保存できませんでした。育成は消えていません。もう一度「やめる」を押してください', yes: 'OK', onYes: () => {} }); return; }
+    if (res === 'other') { toHome(); return; } // ほかの画面で新しい育成が始まっていた → 消さずに読み直す
+    setRunLoaded(null); setView('home');
+  } });
 
   let content = null;
   if (view === 'loading') content = <div className="v-body" style={{ justifyContent: 'center', alignItems: 'center', display: 'flex' }}><div className="msx-note">読み込んでいます…</div></div>;
@@ -92141,7 +92207,8 @@ const msxR3GameOver = async (s) => {
   await storeSet(MSX_KEYS.meta, meta);
   return meta;
 };
-const msxR3ClearRun = () => (typeof msxClearRun === 'function' ? msxClearRun() : storeSet(MSX_KEYS.run, null));
+// id を渡すと、保存されている育成がその id のときだけ消す(r1115-200 3a)。true 消した/もう無い・'other' 別の育成・false 書けなかった
+const msxR3ClearRun = (id) => (typeof msxClearRun === 'function' ? msxClearRun(id) : storeSet(MSX_KEYS.run, null));
 // 保存枠から外す(お別れ)。「思い出」に名前・種・ランクだけ残す(新しい100件)
 const msxR3Farewell = async (id) => {
   const box = await msxR3ReadBox(); const m = box.mons.find((x) => x.id === id); if (!m) return box;
@@ -92203,12 +92270,16 @@ const msxR3TitleName = (t) => { const T = msxR3T().titles; try { return T ? T.na
 // 育成の記録帳に1件(同じ id は2度入らない)
 const msxR3AddRecord = async (run, s, ev, titles, gen) => {
   const R = msxR3T().record; if (!R) return false;
-  try {
-    const raw = await storeGet(R.KEY, null);
-    const r = R.add(R.parse(raw), { id: run.id, species: s.species, nick: run.nick || '', rank: ev.rank, power: ev.power, sum: ev.sum, titles, aid: s.aid, endAt: Date.now(), gen });
-    if (r.added && (await storeSet(R.KEY, r.book)) === false) return 'fail'; // 書けなかった(r1115-171 a: 引退を ok にしない)
-    return r.added;
-  } catch (e) { return false; }
+  // 読み書きの例外は 'fail'(r1115-200 2c: 引退を ok にしない → 同じ育成IDで再試行して補う)。
+  //   中身が壊れていて形にできない(parse・add の例外)は今までどおり飛ばす(記録帳が壊れていても引退はできる)
+  let raw = null;
+  try { raw = await storeGet(R.KEY, null); } catch (e) { return 'fail'; }
+  let r = null;
+  try { r = R.add(R.parse(raw), { id: run.id, species: s.species, nick: run.nick || '', rank: ev.rank, power: ev.power, sum: ev.sum, titles, aid: s.aid, endAt: Date.now(), gen }); } catch (e) { return false; }
+  if (!r || !r.added) return false;
+  let w = false;
+  try { w = await storeSet(R.KEY, r.book); } catch (e) { w = false; }
+  return w === false ? 'fail' : true; // 書けなかった(r1115-171 a: 引退を ok にしない)
 };
 
 // ---- 台詞(台本エンジン data/monhero-success-script-engine.js・キズナ #5747)。読めなければ画面の文(fallback)を出す ----
@@ -93257,7 +93328,7 @@ function MsxR3GameOver({ run, setRun, onPause }) {
   useSuccessScene('gameOver');
   const again = async () => {
     if (busy) return; setBusy(true);
-    try { await msxR3GameOver(s); await msxR3ClearRun(); } catch (e) {}
+    try { await msxR3GameOver(s); await msxR3ClearRun(run.id); } catch (e) {}
     setRun(null); onPause();
   };
   const left = (SUC.REMATCH ? SUC.REMATCH.max : 3) - (s.rematchUsed || 0);
@@ -93461,15 +93532,22 @@ function MsxR3Retire({ run, setRun, onPause, debug, SUC }) {
     if (busy) return; setBusy(true);
     let assists = Object.entries(pick).map(([id, lv]) => (V3 ? { id, n: lv } : { id, lv }));
     if (AT) assists = AT.normPicks(assists, points).picks;
-    // 育成が終わったときのビートP(総合力のランク・1回だけ)。途中の育成に足して保存 → 本編の財布へ(デバッグの育成は足さない・msxSaveRun)
-    if (!run.beatEnd && SUC && typeof SUC.beatOfEnd === 'function') {
-      const bonus = SUC.beatOfEnd((SUC.evaluate(ws) || {}).rank);
-      setRun({ ...run, s: { ...run.s, beatEarned: (Number(run.s.beatEarned) || 0) + bonus }, beatEnd: true });
-    }
+    // ★r1115-200 2: 空き確認 → 保存枠・成績・記録帳(msxR3Retire)→ 育成が終わったときのビートP → 途中の育成を消す の順。
+    //   どこかで書けなければ完了にしない(育成は残す)。もう一度押すと、同じ育成IDで まだの分だけ補う(子・成績・記録帳は already で二重にならない・
+    //   ビートPは途中の育成の beatSent と比べて差だけ足す)。満杯なら何も書かない(ビートPも付けない)
     let r = null;
     try { r = await msxR3Retire({ ...run, s: ws }, ws, ev, assists, debug); } catch (e) { r = { ok: false }; }
-    if (r && r.ok) { try { await msxR3ClearRun(); } catch (e) {} setRes({ ok: true, mon: r.mon, best3: r.best3 || null }); setStep(r.best3 && typeof MsxBest3 === 'function' ? 'best3' : 'done'); }
-    else setRes(r || { ok: false });
+    if (!r || !r.ok) { setRes(r || { ok: false }); setBusy(false); setSure(false); return; }
+    // 育成が終わったときのビートP(総合力のランク・1回だけ)。途中の育成に足して保存 → 本編の財布へ(デバッグの育成は足さない・msxSaveRun)
+    //   前の押しで画面にだけ beatEnd が付いていても、保存を確かめるためにもう一度保存する(足すのは差だけ)
+    const end = !run.beatEnd && SUC && typeof SUC.beatOfEnd === 'function'
+      ? { ...run, s: { ...run.s, beatEarned: (Number(run.s.beatEarned) || 0) + SUC.beatOfEnd((SUC.evaluate(ws) || {}).rank) }, beatEnd: true } : run;
+    let paid = false; try { paid = await setRun(end); } catch (e) { paid = false; }
+    if (paid === 'stale') { setBusy(false); setSure(false); return; } // ほかの画面が先に進めていた(読み直しの窓が出る)
+    if (paid !== true) { setRes({ ok: false, why: 'beat' }); setBusy(false); setSure(false); return; }
+    let cl = false; try { cl = await msxR3ClearRun(run.id); } catch (e) { cl = false; }
+    if (cl === false) { setRes({ ok: false, why: 'clear' }); setBusy(false); setSure(false); return; }
+    setRes({ ok: true, mon: r.mon, best3: r.best3 || null }); setStep(r.best3 && typeof MsxBest3 === 'function' ? 'best3' : 'done');
     setBusy(false); setSure(false);
   };
   // ---- 自分だけのベスト3(56-monsuc-best3.jsx・r1113-057②)。入ったらせり上がる演出 → いつもの完了の段へ ----
@@ -93514,7 +93592,7 @@ function MsxR3Retire({ run, setRun, onPause, debug, SUC }) {
     <div className="v-pick">取るもの({kinds} / {maxKinds}種類): {kinds ? Object.entries(pick).map(([id, lv], i) => <React.Fragment key={id}>{i ? '・' : ''}<b>{A[id] ? `${A[id].icon} ${A[id].name}` : id} {V3 ? AT.valueText(id, lv) : `段${lv}`}</b></React.Fragment>) : 'まだ選んでいない'}<br/>⚠ 決めたあとは変えられない</div>
     {res && res.full ? <div className="v-card" style={{ borderColor: '#f87171' }}><div className="sub"><b style={{ color: '#fca5a5' }}>マスモンボックスがいっぱい</b>({res.box ? `${res.box.mons.length} / ${res.box.cap}体` : ''})。お別れで1体あけてから、もう一度「これで決める」を押してください。育成はこのまま残しておきます</div>
       <button type="button" className="msx-btn sub" onClick={() => setShowBox(true)}>🐾 マスモンボックスを見る</button></div> : null}
-    {res && !res.ok && !res.full ? <div className="msx-note">保存できませんでした。もう一度押してください</div> : null}
+    {res && !res.ok && !res.full ? <div className="msx-note">保存できませんでした。もう一度押してください{res.why === 'beat' || res.why === 'clear' ? '(マスモンボックスへの保存は済んでいます。二重には入りません)' : ''}</div> : null}
   </>);
   const foot = <div className="v-ft"><button type="button" onClick={auto} data-msx-r3-auto>🎲 おまかせ</button><button type="button" onClick={() => { setPick({}); setSure(false); }}>やり直す</button>
     <button type="button" className="go" disabled={busy} onClick={decide} data-msx-r3-decide>{sure ? '本当に決める(変えられない)▶' : 'これで決める ▶'}</button></div>;

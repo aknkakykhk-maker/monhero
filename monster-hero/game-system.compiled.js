@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3c01443617062f3a
+// source-sha256: a0a9210c641aca55
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -171455,6 +171455,7 @@ const msxNormRun = (raw, SUC) => {
     startAt: msxNum(raw.startAt, 0),
     beatSent: msxNum(raw.beatSent, 0),
     beatEnd: raw.beatEnd === true,
+    rev: msxNum(raw.rev, 0),
     ki: msxIsObj(raw.ki) && Number.isInteger(raw.ki.p) && Number.isFinite(raw.ki.fame) && Number.isFinite(raw.ki.power) ? {
       p: Math.max(0, Math.min(9, raw.ki.p)),
       fame: Math.round(Math.min(1e7, raw.ki.fame * kiFameMul)),
@@ -171796,11 +171797,14 @@ const msxRunIsStale = async (run, stored) => {
   if (msxRunTurn(run) < msxRunTurn(stored)) return true;
   if (msxRunSent(run) < msxRunSent(stored)) return true;
   if (stored.beatEnd === true && run.beatEnd !== true) return true;
+  const rv = Number(run.rev);
+  const sv = Number(stored.rev);
+  if (Number.isFinite(rv) && Number.isFinite(sv) && sv > 0 && rv <= sv) return true;
   return false;
 };
 const msxSaveRunNow = async (run, noPay) => {
   const stored = await storeGet(MSX_KEYS.run, null);
-  if (await msxRunIsStale(run, stored)) return false;
+  if (await msxRunIsStale(run, stored)) return 'stale';
   const ov = msxRunOverOf(run);
   if (ov) {
     try {
@@ -171827,16 +171831,40 @@ const msxSaveRun = (run, noPay) => {
   msxSaveChain = msxSaveChain.then(() => msxSaveRunNow(run, noPay)).catch(() => false);
   return msxSaveChain;
 };
-const msxClearRun = () => {
+const msxClearRun = id => {
   msxSaveChain = msxSaveChain.then(async () => {
-    try {
-      const cur = await storeGet(MSX_KEYS.run, null);
-      if (cur && typeof cur.id === 'string') {
-        const g = await msxRunGoneList();
-        if (!g.includes(cur.id)) await storeSet(MSX_RUN_GONE_KEY, [...g, cur.id].slice(-50));
-      }
-    } catch (_) {}
+    const cur = await storeGet(MSX_KEYS.run, null);
+    if (!cur) return true;
+    if (typeof id === 'string' && cur.id !== id) return 'other';
+    if (typeof cur.id === 'string') {
+      const raw = await storeGet(MSX_RUN_GONE_KEY, null);
+      const g = Array.isArray(raw) ? raw.filter(x => typeof x === 'string').slice(-50) : [];
+      if (!g.includes(cur.id) && (await storeSet(MSX_RUN_GONE_KEY, [...g, cur.id].slice(-50))) === false) return false;
+    }
     return storeSet(MSX_KEYS.run, null);
+  }).catch(() => false);
+  return msxSaveChain;
+};
+const msxStartRunSave = (run, meta) => {
+  msxSaveChain = msxSaveChain.then(async () => {
+    const [runBefore, metaBefore] = await Promise.all([storeGet(MSX_KEYS.run, null), storeGet(MSX_KEYS.meta, null)]);
+    if (typeof saveStoredValuesOrRollback !== 'function') {
+      if ((await storeSet(MSX_KEYS.run, run)) === false) return false;
+      if ((await storeSet(MSX_KEYS.meta, meta)) === false) {
+        await storeSet(MSX_KEYS.run, runBefore);
+        return false;
+      }
+      return true;
+    }
+    return saveStoredValuesOrRollback([{
+      key: MSX_KEYS.meta,
+      before: metaBefore,
+      next: meta
+    }, {
+      key: MSX_KEYS.run,
+      before: runBefore,
+      next: run
+    }], storeGet, storeSet);
   }).catch(() => false);
   return msxSaveChain;
 };
@@ -175522,6 +175550,7 @@ function MonheroSuccessScreen({
   const [run, setRunState] = useState(null);
   const [layout, setLayout] = useState(msxLayout);
   const [ask, setAsk] = useState(null);
+  const lendRef = useRef({});
   const [playSub, setPlaySub] = useState('main');
   msxUseSound(view === 'play' || view === 'loading' || view === 'fail' ? null : 'menu');
   const [tutTurn, setTutTurn] = useState(null);
@@ -175545,17 +175574,38 @@ function MonheroSuccessScreen({
       const d = await msxReadAll(L.SUC);
       if (!alive) return;
       setData(d);
-      setRunState(d.run);
+      setRunLoaded(d.run);
       setView(startView === 'box' ? 'box' : 'home');
     });
     return () => {
       alive = false;
     };
   }, []);
-  const setRun = r0 => {
-    const r = r0 && typeof msxBeatMark === 'function' ? msxBeatMark(r0) : r0;
+  const revRef = useRef(0);
+  const setRunLoaded = r => {
+    revRef.current = r && Number.isFinite(Number(r.rev)) ? Number(r.rev) : 0;
     setRunState(r);
-    if (r) msxSaveRun(r, !!debug);
+  };
+  const setRun = r0 => {
+    let r = r0 && typeof msxBeatMark === 'function' ? msxBeatMark(r0) : r0;
+    if (r) {
+      revRef.current += 1;
+      r = {
+        ...r,
+        rev: revRef.current
+      };
+    }
+    setRunState(r);
+    if (!r) return Promise.resolve(true);
+    const p = msxSaveRun(r, !!debug);
+    Promise.resolve(p).then(res => {
+      if (res === 'stale') setAsk({
+        text: 'ほかの画面で、この育成が先に進んでいます。保存されている続きを読み直します',
+        yes: '読み直す',
+        onYes: toHome
+      });
+    }).catch(() => {});
+    return p;
   };
   const setMeta = meta => {
     setData(d => ({
@@ -175567,23 +175617,36 @@ function MonheroSuccessScreen({
   const toHome = () => {
     (typeof msxSaveWait === 'function' ? msxSaveWait() : Promise.resolve()).then(() => msxReadAll(msxSuc.SUC)).then(d => {
       setData(d);
-      setRunState(d.run);
+      setRunLoaded(d.run);
     }).catch(() => {});
     setView('home');
   };
+  const startingRef = useRef(false);
   const startRun = async cfg => {
+    if (startingRef.current) return false;
+    startingRef.current = true;
+    try {
+      return await startRunNow(cfg);
+    } finally {
+      startingRef.current = false;
+    }
+  };
+  const startRunNow = async cfg => {
     const {
       SUC
     } = msxSuc;
     if (cfg.friendId && typeof monsucLendUse === 'function') {
-      let r = null;
-      try {
-        r = await monsucLendUse(cfg.friendId);
-      } catch (e) {
-        r = {
-          ok: false,
-          reason: 'network'
-        };
+      let r = lendRef.current[cfg.friendId] || null;
+      if (!r) {
+        try {
+          r = await monsucLendUse(cfg.friendId);
+        } catch (e) {
+          r = {
+            ok: false,
+            reason: 'network'
+          };
+        }
+        if (r && r.ok) lendRef.current[cfg.friendId] = r;
       }
       if (!r || !r.ok) cfg = {
         ...cfg,
@@ -175663,16 +175726,60 @@ function MonheroSuccessScreen({
       });
       meta.items = it;
     }
-    setMeta(meta);
-    setRun(r);
+    const r1 = typeof msxBeatMark === 'function' ? {
+      ...msxBeatMark(r),
+      rev: 1
+    } : {
+      ...r,
+      rev: 1
+    };
+    let saved = false;
+    try {
+      saved = await (typeof msxStartRunSave === 'function' ? msxStartRunSave(r1, meta) : Promise.all([msxSaveMeta(meta), msxSaveRun(r1, !!debug)]).then(a => a.every(x => x === true)));
+    } catch (e) {
+      saved = false;
+    }
+    if (saved !== true) {
+      setAsk({
+        text: '保存できませんでした。アイテムと前の育成はそのままです。もう一度「育成を始める」を押してください',
+        yes: 'OK',
+        onYes: () => {}
+      });
+      return false;
+    }
+    lendRef.current = {};
+    setData(d => ({
+      ...d,
+      meta
+    }));
+    revRef.current = 1;
+    setRunState(r1);
     setView('play');
+    return true;
   };
   const quit = () => setAsk({
     text: 'この育成をやめますか? 育てた中身はなくなります(マスモンボックスには入りません)',
     yes: 'やめる',
     onYes: async () => {
-      await (typeof msxClearRun === 'function' ? msxClearRun() : storeSet(MSX_KEYS.run, null));
-      setRunState(null);
+      let res = false;
+      try {
+        res = await (typeof msxClearRun === 'function' ? msxClearRun(run && run.id) : storeSet(MSX_KEYS.run, null));
+      } catch (e) {
+        res = false;
+      }
+      if (res === false) {
+        setAsk({
+          text: '保存できませんでした。育成は消えていません。もう一度「やめる」を押してください',
+          yes: 'OK',
+          onYes: () => {}
+        });
+        return;
+      }
+      if (res === 'other') {
+        toHome();
+        return;
+      }
+      setRunLoaded(null);
       setView('home');
     }
   });
@@ -179266,7 +179373,7 @@ const msxR3GameOver = async s => {
   await storeSet(MSX_KEYS.meta, meta);
   return meta;
 };
-const msxR3ClearRun = () => typeof msxClearRun === 'function' ? msxClearRun() : storeSet(MSX_KEYS.run, null);
+const msxR3ClearRun = id => typeof msxClearRun === 'function' ? msxClearRun(id) : storeSet(MSX_KEYS.run, null);
 const msxR3Farewell = async id => {
   const box = await msxR3ReadBox();
   const m = box.mons.find(x => x.id === id);
@@ -179388,9 +179495,15 @@ const msxR3TitleName = t => {
 const msxR3AddRecord = async (run, s, ev, titles, gen) => {
   const R = msxR3T().record;
   if (!R) return false;
+  let raw = null;
   try {
-    const raw = await storeGet(R.KEY, null);
-    const r = R.add(R.parse(raw), {
+    raw = await storeGet(R.KEY, null);
+  } catch (e) {
+    return 'fail';
+  }
+  let r = null;
+  try {
+    r = R.add(R.parse(raw), {
       id: run.id,
       species: s.species,
       nick: run.nick || '',
@@ -179402,11 +179515,17 @@ const msxR3AddRecord = async (run, s, ev, titles, gen) => {
       endAt: Date.now(),
       gen
     });
-    if (r.added && (await storeSet(R.KEY, r.book)) === false) return 'fail';
-    return r.added;
   } catch (e) {
     return false;
   }
+  if (!r || !r.added) return false;
+  let w = false;
+  try {
+    w = await storeSet(R.KEY, r.book);
+  } catch (e) {
+    w = false;
+  }
+  return w === false ? 'fail' : true;
 };
 const msxR3SE = () => typeof window !== 'undefined' && window.MONHERO_SUCCESS_SCRIPT_ENGINE || null;
 const msxR3SeLoading = {};
@@ -182410,7 +182529,7 @@ function MsxR3GameOver({
     setBusy(true);
     try {
       await msxR3GameOver(s);
-      await msxR3ClearRun();
+      await msxR3ClearRun(run.id);
     } catch (e) {}
     setRun(null);
     onPause();
@@ -183084,17 +183203,6 @@ function MsxR3Retire({
       lv
     });
     if (AT) assists = AT.normPicks(assists, points).picks;
-    if (!run.beatEnd && SUC && typeof SUC.beatOfEnd === 'function') {
-      const bonus = SUC.beatOfEnd((SUC.evaluate(ws) || {}).rank);
-      setRun({
-        ...run,
-        s: {
-          ...run.s,
-          beatEarned: (Number(run.s.beatEarned) || 0) + bonus
-        },
-        beatEnd: true
-      });
-    }
     let r = null;
     try {
       r = await msxR3Retire({
@@ -183106,19 +183214,63 @@ function MsxR3Retire({
         ok: false
       };
     }
-    if (r && r.ok) {
-      try {
-        await msxR3ClearRun();
-      } catch (e) {}
-      setRes({
-        ok: true,
-        mon: r.mon,
-        best3: r.best3 || null
+    if (!r || !r.ok) {
+      setRes(r || {
+        ok: false
       });
-      setStep(r.best3 && typeof MsxBest3 === 'function' ? 'best3' : 'done');
-    } else setRes(r || {
-      ok: false
+      setBusy(false);
+      setSure(false);
+      return;
+    }
+    const end = !run.beatEnd && SUC && typeof SUC.beatOfEnd === 'function' ? {
+      ...run,
+      s: {
+        ...run.s,
+        beatEarned: (Number(run.s.beatEarned) || 0) + SUC.beatOfEnd((SUC.evaluate(ws) || {}).rank)
+      },
+      beatEnd: true
+    } : run;
+    let paid = false;
+    try {
+      paid = await setRun(end);
+    } catch (e) {
+      paid = false;
+    }
+    if (paid === 'stale') {
+      setBusy(false);
+      setSure(false);
+      return;
+    }
+    if (paid !== true) {
+      setRes({
+        ok: false,
+        why: 'beat'
+      });
+      setBusy(false);
+      setSure(false);
+      return;
+    }
+    let cl = false;
+    try {
+      cl = await msxR3ClearRun(run.id);
+    } catch (e) {
+      cl = false;
+    }
+    if (cl === false) {
+      setRes({
+        ok: false,
+        why: 'clear'
+      });
+      setBusy(false);
+      setSure(false);
+      return;
+    }
+    setRes({
+      ok: true,
+      mon: r.mon,
+      best3: r.best3 || null
     });
+    setStep(r.best3 && typeof MsxBest3 === 'function' ? 'best3' : 'done');
     setBusy(false);
     setSure(false);
   };
@@ -183360,7 +183512,7 @@ function MsxR3Retire({
     onClick: () => setShowBox(true)
   }, "🐾 マスモンボックスを見る")) : null, res && !res.ok && !res.full ? React.createElement("div", {
     className: "msx-note"
-  }, "保存できませんでした。もう一度押してください") : null);
+  }, "保存できませんでした。もう一度押してください", res.why === 'beat' || res.why === 'clear' ? '(マスモンボックスへの保存は済んでいます。二重には入りません)' : '') : null);
   const foot = React.createElement("div", {
     className: "v-ft"
   }, React.createElement("button", {
