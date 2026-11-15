@@ -411,7 +411,7 @@ const eventScriptForPlayer = (script, seenStoryIds) => {
     ? { ...l, who: [l.who, typeof l.outfit === 'string' ? l.outfit : '', l.secret ? 'secret' : ''].filter(Boolean).join('@') } : l);
 };
 // 台本の行で衣装を指定するときの、衣装の名前 → 絵のフォルダ(立ち絵 <接頭辞>_<表情>.PNG と face/)
-const STORY_OUTFIT_DIRS = Object.freeze({ sekiyuou: 'images/assistant/sekiyuou' });
+const STORY_OUTFIT_DIRS = Object.freeze({ sekiyuou: 'images/assistant/sekiyuou', winter: 'images/assistant/winter' });
 // 選べる助手だけを残す。読み込みが間に合っていない・壊れた値でも、
 // 条件のない助手は必ず残る(画面から助手が消えない)
 const assistantsUnlockedFrom = (seenStoryIds) =>
@@ -784,7 +784,7 @@ const assistantFaceImage = (who, expression) => (who && who.imagePrefix)
 const ASSISTANT_STAND_ART = Object.freeze({
   mua: 'stand-normal', 'mua:halloween': 'stand-halloween', 'mua:card-master': 'stand-card-master',
   // 8表情の全身画がある助手(2026-11-14)。作り方は tools/assistant/life-stand-from-fullbody.py
-  kiki: 'stand-normal', 'kiki:halloween': 'stand-halloween', momosuke: 'stand-normal', 'momosuke:halloween': 'stand-halloween', atsu: 'stand-normal', kyuko: 'stand-normal', sorashido: 'stand-normal', 'sorashido:hosei': 'stand-hosei', erubin: 'stand-normal', 'erubin:sekiyuou': 'stand-sekiyuou',
+  kiki: 'stand-normal', 'kiki:halloween': 'stand-halloween', momosuke: 'stand-normal', 'momosuke:halloween': 'stand-halloween', atsu: 'stand-normal', kyuko: 'stand-normal', 'kyuko:winter': 'stand-winter', sorashido: 'stand-normal', 'sorashido:hosei': 'stand-hosei', erubin: 'stand-normal', 'erubin:sekiyuou': 'stand-sekiyuou',
 });
 const ASSISTANT_STAND_EXPRESSIONS = Object.freeze(['normal', 'happy', 'wink', 'surprise', 'troubled', 'angry', 'crying', 'excited']);
 // outfit … 服の名前(ふだんの服は '')。表情が8つのどれでもない・絵が無い助手・服は null(今までの立ち絵へ)
@@ -809,7 +809,7 @@ const assistantFullImage = (who, expression) => (who && who.imagePrefix)
 //   絵の仕上げ: tools/assistant/life-fullbody-art.py(元の絵 tools/art-sources/assistant-fullbody/received-v1/)。まだ絵の無い助手・服はここに無い=今の立ち絵のまま。
 //   絵が届いたら、ここに1行足して(元の絵を同じ道具へ足して回す)だけでよい。全身が入るので、胸から下をぼかす処理も顔の表も使わない
 const ASSISTANT_FULLBODY_ART = Object.freeze({
-  atsu: 'atsu', kiki: 'kiki', 'kiki:halloween': 'kiki_halloween', kyuko: 'kyuko', momosuke: 'momosuke', 'momosuke:halloween': 'momosuke_halloween',
+  atsu: 'atsu', kiki: 'kiki', 'kiki:halloween': 'kiki_halloween', kyuko: 'kyuko', 'kyuko:winter': 'kyuko_winter', momosuke: 'momosuke', 'momosuke:halloween': 'momosuke_halloween',
   mua: 'mua', 'mua:halloween': 'mua_halloween', 'mua:card-master': 'mua_card-master', sorashido: 'sorashido', 'sorashido:hosei': 'sorashido_hosei',
   erubin: 'erubin', 'erubin:sekiyuou': 'erubin_sekiyuou',
 });
@@ -818,7 +818,7 @@ const ASSISTANT_FULLBODY_ART = Object.freeze({
 const ASSISTANT_FULLBODY_EXPRESSIONS = Object.freeze({
   mua: ASSISTANT_STAND_EXPRESSIONS, mua_halloween: ASSISTANT_STAND_EXPRESSIONS, 'mua_card-master': ASSISTANT_STAND_EXPRESSIONS,
   kiki: ASSISTANT_STAND_EXPRESSIONS, kiki_halloween: ASSISTANT_STAND_EXPRESSIONS, // 2026-11-12 社長から届いたききの8表情(ふだん・ハロウィン)
-  kyuko: ASSISTANT_STAND_EXPRESSIONS, // 2026-11-12 社長から届いたキュウコの8表情
+  kyuko: ASSISTANT_STAND_EXPRESSIONS, kyuko_winter: ASSISTANT_STAND_EXPRESSIONS, // 2026-11-12 社長から届いたキュウコの8表情 / 2026-11-16 冬服の8表情
   momosuke: ASSISTANT_STAND_EXPRESSIONS, momosuke_halloween: ASSISTANT_STAND_EXPRESSIONS, // 2026-11-15 社長から届いたももすけの8表情(ふだん・ハロウィン)
   atsu: ASSISTANT_STAND_EXPRESSIONS, sorashido: ASSISTANT_STAND_EXPRESSIONS, sorashido_hosei: ASSISTANT_STAND_EXPRESSIONS, erubin: ASSISTANT_STAND_EXPRESSIONS, erubin_sekiyuou: ASSISTANT_STAND_EXPRESSIONS, // 2026-11-12 社長から届いたあつ・ソラシドの8表情(あつはすその切れを描き足し、ソラシドは髪のふちのもやを直した)
 });
@@ -12629,7 +12629,28 @@ const SPARKLING_PINK_STORY = [
   { who:'kiki',     e:'happy',    t:'遊んでもらえたら、私、とってもうれしいでつ♪♪' },
 ];
 const SPARKLING_PINK_STORY_CALLS = { mua: 'ひめちん', kiki: 'みゅあちん／ももさん／ドラさん', momosuke: 'ききちゃん', dra: '靴下さん', atsu: 'きき', kyuko: 'ききさん', sorashido: 'ききさん', erubin: 'ききさん' };
+// きゅうこの冬服のお話「冬支度 ～きゅうこの模様替え～」(2026-11-16 社長「きゅうこのストーリーを流してほしい。冬服に模様替えしたストーリーを軽く」)。
+//   きゅうこが冬服(outfit:'winter' = STORY_OUTFIT_DIRS の winter)で登場して、同じ服がマーケットのダイヤショップに並んだことを知らせる。
+//   流し方はほかのお知らせのお話と同じ(更新のあとに初めて HOME に着いたときに1回流れ、あとは回想から読める)。見たかは mh_rhythm_event_story_v1 の id(新しいキーは作らない)
+const KYUKO_WINTER_STORY = [
+  { bg:'monhero_plaza', who:'mua', e:'surprise', t:'あれ、きゅきゅ、なんか今日ちがくない？ もこもこしてる〜！' },
+  { who:'momosuke', e:'excited',  t:'ほんとだ！ きゅうちゃん、あったかそうでかわいい〜♡♡' },
+  { who:'kyuko',    e:'happy',    outfit:'winter', t:'ほい、冬支度だよぉ。寒くなってきたから、模様替えしてみた笑' },
+  { who:'kiki',     e:'happy',    t:'あれま、淡いピンクのカーディガンでつね。マフラーとおそろいの編み目が、とても似合ってまつ♪' },
+  { who:'kyuko',    e:'normal',   outfit:'winter', t:'そなの。カーディガンとマフラー、おそろいのケーブル編みにしてみたんだぁ' },
+  { who:'dra',      e:'normal',   t:'ブーツもファー付きの冬用か。足元まで、ぬかりないな' },
+  { who:'atsu',     e:'wink',     atsu:'with', t:'いいじゃん、きゅうこちゃん。あったかそうで何よりだよ笑' },
+  { who:'mua',      e:'happy',    atsu:'without', t:'わかる〜！ 見てるこっちまで、あったかくなってくるやつぢゃん！' },
+  { who:'kyuko',    e:'wink',     outfit:'winter', t:'でね、同じものをマーケットに置いといたよぉ。ダイヤショップで売ってるから、よかったら買ってみてね笑' },
+  { who:'momosuke', e:'excited',  t:'きゅうちゃんの冬服、ももが買って着せてあげる〜♡' },
+  { who:'kyuko',    e:'troubled', outfit:'winter', t:'着せ替え人形じゃないんだけど……まあ、ありがとん笑' },
+  { who:'erubin',   e:'happy',    t:'あったかそうでいいねぇ。寒い日は、無理しないのが一番だしね☺️' },
+  { who:'kyuko',    e:'happy',    outfit:'winter', t:'買ってくれたら、プロフィールの「着替え」から着替えられるからね。{name}、よかったらおそろいにしてみてねぇ' },
+];
+const KYUKO_WINTER_STORY_CALLS = { mua: 'きゅきゅ', kiki: 'きゅうこさん', momosuke: 'きゅうちゃん', dra: 'きゅうこちゃん', atsu: 'きゅうこちゃん', kyuko: 'みゅあねぇ／ききさん／ももすけ／ドラちゃん／あつニキ／えるニキ', erubin: 'きゅうこちゃん' };
 const EVENT_REPLAYS = [
+  // きゅうこの冬服のお話(2026-11-16 社長)。更新のあとに初めて HOME に着いたときに1回流れ、あとは回想から読める。台本は KYUKO_WINTER_STORY
+  { id: 'kyuko_winter_2026_11', date: '2026-11-16 12:00', title: '冬支度 ～きゅうこの模様替え～', script: KYUKO_WINTER_STORY, calls: KYUKO_WINTER_STORY_CALLS, unlockedKey: 'kyukoWinterStorySeen', group: 'update' },
   // ききが初めて作った曲「Sparkling Pink Overture」のお話(2026-11-15 社長 r1115-102)。更新のあとに初めて HOME に着いたときに1回流れ(ほかのお話と同じ入口)、あとは回想から読める。台本は SPARKLING_PINK_STORY(助手部ココロ2)
   { id: 'sparkling_pink_kiki_story', date: '2026-11-15 12:00', title: 'はじめての曲 ～Sparkling Pink Overture～', script: SPARKLING_PINK_STORY, calls: SPARKLING_PINK_STORY_CALLS, unlockedKey: 'sparklingPinkStorySeen', group: 'kiki_song' },
   // ぱんぷきん×ジャックのストーリー(2026-10-04・台本は docs/spec/RAID_JACK_STORY.md)。**公開するまでは回想にも出さない**(releaseFlag)。
