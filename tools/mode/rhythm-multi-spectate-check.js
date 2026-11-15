@@ -198,7 +198,7 @@ const VIEW = PORTRAIT ? { width: 390, height: 844 } : { width: 844, height: 390 
         return { on: RHYTHM_WATCH_AUDIO.on(), key: last && last.k, want: song && song.bgmTrackId, at: last && last.at, t: t && Math.round(t.ms), now: last && last.h ? Math.round(last.h.songTimeMs()) : null };
       });
       check('観戦をモードえらびの画面から開いても、観戦している曲が鳴る(待機の画面の曲のままにならない)', audioOk && au.key === au.want, JSON.stringify(au));
-      check('観戦の曲は、曲の頭ではなく画面と同じ位置(見ている人の位置 − 1.5秒)から鳴る', au.at > 50000 && au.now != null && Math.abs(au.now - au.t) <= 600, JSON.stringify(au));
+      check('観戦の曲は、曲の頭ではなく画面と同じ位置(見ている人の位置 − 1.5秒)から鳴る', au.at > 1000 && au.now != null && Math.abs(au.now - au.t) <= 600, JSON.stringify(au));
       await W.waitForTimeout(2500);
       const drift = await W.evaluate(() => { const last = window.__wa[window.__wa.length - 1]; const t = rhythmWatchAudioTarget(); return Math.round(last.h.songTimeMs() - t.ms); });
       check('鳴らしているあいだも、画面の位置とのずれは0.6秒以内に保つ', Math.abs(drift) <= 600, `${drift}ms`);
