@@ -30,7 +30,7 @@ for (const id of Object.keys(core)) {
 }
 ok(AS.VERSION === 3, '表の版が3でない');
 ok(AS.LIST.length >= 60 && AS.LIST.length <= 80, `アシスト効果の数が60〜80でない(社長 2026-11-14「使えそうなのは全部」): ${AS.LIST.length}`);
-ok(AS.LIST.filter(a => a.ref).length >= 40 && AS.LIST.filter(a => !a.ref).length === 22, `参考から/オリジナルの数がおかしい: ${AS.LIST.filter(a => a.ref).length} / ${AS.LIST.filter(a => !a.ref).length}`);
+ok(AS.LIST.filter(a => a.ref).length >= 40 && AS.LIST.filter(a => !a.ref).length === 23,`参考から/オリジナルの数がおかしい: ${AS.LIST.filter(a => a.ref).length} / ${AS.LIST.filter(a => !a.ref).length}`); // 23 = 22 + 🔓上限アップブースト(r1115-103)
 const V2_IDS = ['sokoji', 'kizuna', 'atooshi', 'hirameki', 'ochitsuki', 'itawari', 'miharu', 'kibarashi', 'kunpow', 'kunwise', 'kunhit', 'kuneva', 'kuntough', 'kunlife',
   'kaketsuke', 'hitonatsu', 'shitashi', 'nakayoshi', 'tagpow', 'shitsuke', 'gussuri', 'asobi', 'kuishinbo', 'tsukisoi', 'genki', 'tairyoku', 'shugyo',
   'shokin', 'kokoroe', 'ticket', 'rivaldamashii', 'ninki', 'yobimizu', 'mejirushi', 'joshu', 'gatsu', 'miseba', 'mitate', 'kensho', 'mimamori'];
@@ -58,7 +58,7 @@ const hintNames = Object.values(SUC.ASST_STORY).filter(s => s.good.hint === 'ass
 for (const n of hintNames) ok(AS.LIST.some(a => a.name === n && a.from === 'hint'), `お話のひらめき「${n}」が表にない`);
 ok(AS.MAX_KINDS === 8, '1体に持てる数が8でない(社長 2026-11-14)');
 for (const p of [0, 999, 2000, 8000, 14000, 19500, 20070, 99999]) ok(AS.pointsOf(p) === SUC.assistPointsOf(p), `ポイントの式が芯と違う(総合力 ${p})`);
-ok(AS.describe('sokoji', 10) === 'いっしょにトレーニングしたとき、伸び +10%', `説明の差しこみがおかしい: ${AS.describe('sokoji', 10)}`);
+ok(AS.describe('sokoji', 10) === `いっしょにトレーニングしたとき、伸び +10%${AS.capNote ? AS.capNote('sokoji') : ''}`, `説明の差しこみがおかしい: ${AS.describe('sokoji', 10)}`);
 // 書き方の型(社長 2026-11-14): どの効果も型(k)を持ち、「点」「段」を使わない・文頭は効く場面
 const SCENE_HEAD = /^(いっしょにトレーニングしたとき、|成長のピークの外でいっしょに|\d+〜\d+月にいっしょに|「.+」のトレーニングにいっしょに来たとき、|このモンスター|編成にいるだけで、|助手が来たトレーニングでは、)/;
 for (const a of AS.LIST) {
