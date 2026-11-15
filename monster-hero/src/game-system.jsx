@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: ec70e67b6e10b50d
+// generated-sha256: 1898abc67e7bef3a
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -67625,10 +67625,13 @@ function AssistantLifeRoom({ id, met, look, x, y, w, h, state, onOpen, idx, othe
         // 何をしているかの文(r1115-136)。横と開いたトップの家(compact)は札が1つなので、印のある文(「🤝 えるびんと過ごす」)を出す。塊の間だけで折り、札に全部収める
         const say = Array.isArray(state.say) ? (compact && state.sayMark ? state.sayMark : state.say) : null;
         if (say) {
-          const avail = w - 6 - 8 - 3 - 2, f = assistantLifeSayFont(say, avail);
+          const avail = w - 6 - 8 - 3 - 2;
+          // 横は札の高さが床の帯(マスモンが歩く所)に響くので1行。文の全部が1行に入る大きさにする(入らない時だけ塊の間で折る)
+          const one = tagLand ? assistantLifeTagFit(assistantLifeSayParts(say).join(''), avail, 9.5, 7) : 0;
+          const f = tagLand && one >= 7 && assistantLifeTagFit(assistantLifeSayParts(say).join(''), avail, 9.5, 0) >= 7 ? one : assistantLifeSayFont(say, avail);
           return <span className="tag" data-assistant-life-room-away={id} data-assistant-life-room-tag-mark={mark ? '1' : '0'} data-assistant-life-room-say={compact ? '1' : '0'}>
             {!compact && (mark || !names ? <small data-assistant-life-room-what style={{ marginLeft: ml }}>{t[1]}</small> : <small data-assistant-life-room-with style={{ marginLeft: ml }}><AssistantLifeNames text={names}/></small>)}
-            <b data-assistant-life-room-say-text style={{ whiteSpace: 'normal', fontSize: f, lineHeight: `${Math.round(f * 1.18)}px`, maxHeight: 'none', overflow: 'visible', textOverflow: 'clip' }}>{v2 && w >= 150 ? <span data-assistant-life-room-out className="mr-1 rounded bg-slate-600 px-1 text-white">留守</span> : null}<AssistantLifeSayText say={say} avail={avail} font={f}/></b></span>;
+            <b data-assistant-life-room-say-text style={{ whiteSpace: 'normal', fontSize: f, lineHeight: tagLand ? '11px' : `${Math.round(f * 1.18)}px`, maxHeight: 'none', overflow: 'visible', textOverflow: 'clip' }}>{v2 && w >= 150 ? <span data-assistant-life-room-out className="mr-1 rounded bg-slate-600 px-1 text-white">留守</span> : null}<AssistantLifeSayText say={say} avail={avail} font={f}/></b></span>;
         }
         return <span className="tag" data-assistant-life-room-away={id} data-assistant-life-room-tag-mark={mark ? '1' : '0'}>
           {mark || !names ? <small data-assistant-life-room-what style={{ marginLeft: ml }}>{t[1]}</small> : <small data-assistant-life-room-with style={{ marginLeft: ml }}><AssistantLifeNames text={names}/></small>}
