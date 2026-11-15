@@ -94,6 +94,7 @@ const setRhythmHellGuide=()=>{}; const setShowDebugStoryList=()=>{}; const setSh
 // ★MFバトルカードのはじまり(2026-10-24 #3452)。スキップ・最後まで見たときに event.id と比べて「見た」にするので、
 //   定義していないと ReferenceError でスキップが効かなくなる(会話が閉じない)。ここでは比べられれば足りる
 const CARD_BATTLE_INTRO_STORY_ID='card_battle_intro'; const markCardBattleIntroSeen=()=>{};
+const MONSUC_BETA_EP2_STORY_ID='monsuc_beta_ep2'; const markMonsucStorySkip=()=>{}; const assistantLifeSuccessOpen=()=>false;
 // ハロウィン・ナイトの終章の流し直し(2026-11-01・35-raid-jack.jsx)。本体では定義済み。この切り出しの中だけ仮に置く
 const RAID_JACK_ENDING_CLEARED_ID='raid_jack_ending_cleared'; const RAID_JACK_ENDING_NOTCLEARED_ID='raid_jack_ending_notcleared'; const markRaidJackEndingReplayed=()=>{};
 // ★レジェンドブリーダー優待パスのお話(2026-11-05 #4597・17-release-changelog-login-missions.jsx)。スキップ・最後まで見たときに event.id と比べて
