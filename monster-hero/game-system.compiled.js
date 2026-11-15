@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 7af03e62d333f0d0
+// source-sha256: a9ee16804cbe976c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -265418,7 +265418,44 @@ function MonsterHeroGame() {
         openFriends(null);
       },
       onLater: () => setFriendNoticeDismissed((friendRequestInfo.ids || []).join(','))
-    }), assistantUnlockNoticeNode(gameState === 'PROFILE' ? 'profile' : gameState === 'HOME' ? 'home' : null), eventReplay != null && (() => {
+    }), assistantUnlockNoticeNode(gameState === 'PROFILE' ? 'profile' : gameState === 'HOME' ? 'home' : null), EVENT_REPLAY_RELEASE_FLAGS.monsucStoryEp2 && monsucStorySkip && monsucStorySkip.skippedAt > 0 && !monsucStorySkip.shownAt && bootPhase === 'GAME' && gameState === 'HOME' && !eventReplay && !rhythmEventStoryPending && !rhythmHellGuide && !dailyMasuAdvice && !successScreenOpen && updateGuideQueue.length === 0 && (() => {
+      const who = assistantById('mua');
+      if (!who) return null;
+      const lv = assistantBondLevelOf(normalizeAssistantBond(assistantBondsRef.current.mua).points);
+      const text = lv <= 2 ? '{name}、HOMEに新しいボタンが出ています！ 一番乗りで、いっしょに行けたらうれしいです♪' : '{name}、HOMEに新しいボタンが出てるよ！ 一番乗りで、いっしょに行こ♪';
+      return React.createElement("div", {
+        "data-monsuc-story-skip-notice": true,
+        className: "fixed inset-0 flex items-end justify-center",
+        style: {
+          position: 'fixed',
+          inset: 0,
+          zIndex: 75000,
+          backgroundColor: 'rgba(2,6,23,.9)'
+        },
+        role: "dialog",
+        "aria-modal": "true",
+        "aria-label": "みゅあからのお知らせ"
+      }, React.createElement("div", {
+        className: "w-full max-w-md rounded-t-3xl border-t-2 border-x-2 border-pink-400 bg-slate-950 p-4",
+        style: {
+          paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
+        }
+      }, React.createElement("div", {
+        className: "flex items-end gap-2"
+      }, React.createElement(AssistantFace, {
+        who: who,
+        size: 72,
+        accent: who.accent,
+        expression: "excited"
+      }), React.createElement("div", {
+        className: "flex-1 rounded-2xl border-2 border-pink-400 bg-slate-900 px-3 py-3 text-[13px] font-bold leading-relaxed text-white",
+        style: bubbleWrapStyle()
+      }, bubbleWrap(assistantSpeakText(text, breederName, lv, assistantCallStyles.mua || null, 'mua')))), React.createElement("button", {
+        type: "button",
+        onClick: () => markMonsucStorySkip('shownAt'),
+        className: "mt-4 min-h-[50px] w-full rounded-2xl bg-pink-500 text-sm font-black text-slate-950 active:scale-[.98]"
+      }, "閉じる")));
+    })(), eventReplay != null && (() => {
       const list = eventReplay.debug ? eventReplayAllList() : eventReplayList();
       const event = list.find(ev => ev.id === eventReplay.id);
       const script = event ? eventScriptForPlayer(event.script, rhythmEventStorySeen) : [];
@@ -266302,43 +266339,6 @@ function MonsterHeroGame() {
           }
         }, "閉じる")));
       })());
-    })(), EVENT_REPLAY_RELEASE_FLAGS.monsucStoryEp2 && monsucStorySkip && monsucStorySkip.skippedAt > 0 && !monsucStorySkip.shownAt && bootPhase === 'GAME' && gameState === 'HOME' && !eventReplay && !rhythmEventStoryPending && !rhythmHellGuide && !dailyMasuAdvice && !successScreenOpen && updateGuideQueue.length === 0 && (() => {
-      const who = assistantById('mua');
-      if (!who) return null;
-      const lv = assistantBondLevelOf(normalizeAssistantBond(assistantBondsRef.current.mua).points);
-      const text = lv <= 2 ? '{name}、HOMEに新しいボタンが出ています！ 一番乗りで、いっしょに行けたらうれしいです♪' : '{name}、HOMEに新しいボタンが出てるよ！ 一番乗りで、いっしょに行こ♪';
-      return React.createElement("div", {
-        "data-monsuc-story-skip-notice": true,
-        className: "fixed inset-0 flex items-end justify-center",
-        style: {
-          position: 'fixed',
-          inset: 0,
-          zIndex: 75000,
-          backgroundColor: 'rgba(2,6,23,.9)'
-        },
-        role: "dialog",
-        "aria-modal": "true",
-        "aria-label": "みゅあからのお知らせ"
-      }, React.createElement("div", {
-        className: "w-full max-w-md rounded-t-3xl border-t-2 border-x-2 border-pink-400 bg-slate-950 p-4",
-        style: {
-          paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
-        }
-      }, React.createElement("div", {
-        className: "flex items-end gap-2"
-      }, React.createElement(AssistantFace, {
-        who: who,
-        size: 72,
-        accent: who.accent,
-        expression: "excited"
-      }), React.createElement("div", {
-        className: "flex-1 rounded-2xl border-2 border-pink-400 bg-slate-900 px-3 py-3 text-[13px] font-bold leading-relaxed text-white",
-        style: bubbleWrapStyle()
-      }, bubbleWrap(assistantSpeakText(text, breederName, lv, assistantCallStyles.mua || null, 'mua')))), React.createElement("button", {
-        type: "button",
-        onClick: () => markMonsucStorySkip('shownAt'),
-        className: "mt-4 min-h-[50px] w-full rounded-2xl bg-pink-500 text-sm font-black text-slate-950 active:scale-[.98]"
-      }, "閉じる")));
     })(), dailyMasuAdvice && (() => {
       const who = activeAssistant;
       const lines = assistantSceneLinesFor(dailyMasuAdvice.shortcut === false ? 'dailyMasuAdviceBasic' : 'dailyMasuAdvice');

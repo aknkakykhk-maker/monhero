@@ -24951,6 +24951,18 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           きき加入の会話と見た目は同じだが、閉じても保存には一切触れない
           (初回閲覧フラグ・助手選択・仲良し度・アップデート通知のどれも変えない)。
           gameStateを問わず(プロフィールから開くため)eventReplayの有無だけで出す */}
+      {/* モンヒロサクセス 第2話を飛ばした人への、みゅあの告知(1回だけ・2026-11-15)。HOME で、ほかのお話・案内が出ていないときだけ */}
+      {EVENT_REPLAY_RELEASE_FLAGS.monsucStoryEp2&&monsucStorySkip&&monsucStorySkip.skippedAt>0&&!monsucStorySkip.shownAt&&bootPhase==='GAME'&&gameState==='HOME'&&!eventReplay&&!rhythmEventStoryPending&&!rhythmHellGuide&&!dailyMasuAdvice&&!successScreenOpen&&updateGuideQueue.length===0&&(()=>{
+        const who=assistantById('mua');if(!who)return null;
+        const lv=assistantBondLevelOf(normalizeAssistantBond(assistantBondsRef.current.mua).points);
+        const text=lv<=2?'{name}、HOMEに新しいボタンが出ています！ 一番乗りで、いっしょに行けたらうれしいです♪':'{name}、HOMEに新しいボタンが出てるよ！ 一番乗りで、いっしょに行こ♪';
+        return(
+        <div data-monsuc-story-skip-notice className="fixed inset-0 flex items-end justify-center" style={{position:'fixed',inset:0,zIndex:75000,backgroundColor:'rgba(2,6,23,.9)'}} role="dialog" aria-modal="true" aria-label="みゅあからのお知らせ">
+          <div className="w-full max-w-md rounded-t-3xl border-t-2 border-x-2 border-pink-400 bg-slate-950 p-4" style={{paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
+            <div className="flex items-end gap-2"><AssistantFace who={who} size={72} accent={who.accent} expression="excited"/><div className="flex-1 rounded-2xl border-2 border-pink-400 bg-slate-900 px-3 py-3 text-[13px] font-bold leading-relaxed text-white" style={bubbleWrapStyle()}>{bubbleWrap(assistantSpeakText(text,breederName,lv,assistantCallStyles.mua||null,'mua'))}</div></div>
+            <button type="button" onClick={()=>markMonsucStorySkip('shownAt')} className="mt-4 min-h-[50px] w-full rounded-2xl bg-pink-500 text-sm font-black text-slate-950 active:scale-[.98]">閉じる</button>
+          </div>
+        </div>);})()}
       {eventReplay!=null&&(()=>{
         const list=eventReplay.debug?eventReplayAllList():eventReplayList();
         const event=list.find(ev=>ev.id===eventReplay.id);
@@ -25394,18 +25406,6 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         </div>);
       })()}
 
-      {/* モンヒロサクセス 第2話を飛ばした人への、みゅあの告知(1回だけ・2026-11-15)。HOME で、ほかのお話・案内が出ていないときだけ */}
-      {EVENT_REPLAY_RELEASE_FLAGS.monsucStoryEp2&&monsucStorySkip&&monsucStorySkip.skippedAt>0&&!monsucStorySkip.shownAt&&bootPhase==='GAME'&&gameState==='HOME'&&!eventReplay&&!rhythmEventStoryPending&&!rhythmHellGuide&&!dailyMasuAdvice&&!successScreenOpen&&updateGuideQueue.length===0&&(()=>{
-        const who=assistantById('mua');if(!who)return null;
-        const lv=assistantBondLevelOf(normalizeAssistantBond(assistantBondsRef.current.mua).points);
-        const text=lv<=2?'{name}、HOMEに新しいボタンが出ています！ 一番乗りで、いっしょに行けたらうれしいです♪':'{name}、HOMEに新しいボタンが出てるよ！ 一番乗りで、いっしょに行こ♪';
-        return(
-        <div data-monsuc-story-skip-notice className="fixed inset-0 flex items-end justify-center" style={{position:'fixed',inset:0,zIndex:75000,backgroundColor:'rgba(2,6,23,.9)'}} role="dialog" aria-modal="true" aria-label="みゅあからのお知らせ">
-          <div className="w-full max-w-md rounded-t-3xl border-t-2 border-x-2 border-pink-400 bg-slate-950 p-4" style={{paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
-            <div className="flex items-end gap-2"><AssistantFace who={who} size={72} accent={who.accent} expression="excited"/><div className="flex-1 rounded-2xl border-2 border-pink-400 bg-slate-900 px-3 py-3 text-[13px] font-bold leading-relaxed text-white" style={bubbleWrapStyle()}>{bubbleWrap(assistantSpeakText(text,breederName,lv,assistantCallStyles.mua||null,'mua'))}</div></div>
-            <button type="button" onClick={()=>markMonsucStorySkip('shownAt')} className="mt-4 min-h-[50px] w-full rounded-2xl bg-pink-500 text-sm font-black text-slate-950 active:scale-[.98]">閉じる</button>
-          </div>
-        </div>);})()}
       {dailyMasuAdvice&&(()=>{const who=activeAssistant;const lines=assistantSceneLinesFor(dailyMasuAdvice.shortcut===false?'dailyMasuAdviceBasic':'dailyMasuAdvice');const eligible=dailyMasuAdvice.eligible!==false;return(
         <div className="fixed inset-0 flex items-end justify-center" style={{position:'fixed',inset:0,zIndex:75000,backgroundColor:'rgba(2,6,23,.94)'}} role="dialog" aria-modal="true" aria-label="みゅあのワンポイントアドバイス">
           <div className="w-full max-w-md rounded-t-3xl border-t-2 border-x-2 border-pink-400 bg-slate-950 p-4" style={{paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
