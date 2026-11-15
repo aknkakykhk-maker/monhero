@@ -30,8 +30,8 @@
 (function (root) {
   'use strict';
 
-  const VERSION = 9;           // 計算を変えたら上げる(9 = 命中を「当たる:外れるの比」で作り直し(能力差・ガッツ・体 → 間合い → 技の係数 → 1〜99%)・ガッツ最大99・ガッツのダメージ補正 ×0.7〜1.3・全体のダメージ ×1.3/8 = 技表 第2版(資料の血統別の技・ガッツダウンを強く)・技ごとの強化 techBoost/7 = 距離適性が G〜M の12段で与ダメ・被ダメ・命中・回避に効く・オリジナル5種の等級と与ダメの補正 ×0.80〜×1.20 を社長の値に・移動速度が速いほど受けるダメージが増える・6 = ガッツの回復を種ごとに広げ(5〜15・等級 G〜A)・移動速度で先手・サイズ(小さい=当たりにくい/大きい=受けるダメージ減)・移動とガードの回復を増やし・回復の速さで与ダメを補正・サーバの試合の行に残る。2 = 技を MF のように一新・3 = 作戦と交代の早さ・4 = 忠誠度の「そっぽを向く番」と人気の会心・5 = ちから/かしこさが同じ種類の技の受けるダメージも減らす)
-  const VERSION_PLAIN = 9;     // 忠誠度・人気が効かない編成(忠誠100・人気0)の版。版4までは 3 のままにしていたが、版5でダメージの式がすべての試合で変わったのでそろえた
+  const VERSION = 10;          // 10 = 移動にガッツ(5×段)・ふきとばし・ためるは自然回復の分・移動/ガードの上乗せなし(r1115-110・112)/ 9まで: 計算を変えたら上げる(9 = 命中を「当たる:外れるの比」で作り直し(能力差・ガッツ・体 → 間合い → 技の係数 → 1〜99%)・ガッツ最大99・ガッツのダメージ補正 ×0.7〜1.3・全体のダメージ ×1.3/8 = 技表 第2版(資料の血統別の技・ガッツダウンを強く)・技ごとの強化 techBoost/7 = 距離適性が G〜M の12段で与ダメ・被ダメ・命中・回避に効く・オリジナル5種の等級と与ダメの補正 ×0.80〜×1.20 を社長の値に・移動速度が速いほど受けるダメージが増える・6 = ガッツの回復を種ごとに広げ(5〜15・等級 G〜A)・移動速度で先手・サイズ(小さい=当たりにくい/大きい=受けるダメージ減)・移動とガードの回復を増やし・回復の速さで与ダメを補正・サーバの試合の行に残る。2 = 技を MF のように一新・3 = 作戦と交代の早さ・4 = 忠誠度の「そっぽを向く番」と人気の会心・5 = ちから/かしこさが同じ種類の技の受けるダメージも減らす)
+  const VERSION_PLAIN = 10;    // 忠誠度・人気が効かない編成(忠誠100・人気0)の版。版4までは 3 のままにしていたが、版5でダメージの式がすべての試合で変わったのでそろえた
   // 命中(版9・2026-11-14 社長の決め。案と試算: docs/spec/ASSISTANT_MASMON_BATTLE.md「命中とダメージ(版9)」)
   const HIT_STAT_A = 0.11;    // 能力差の効き: 当たりやすさの比 = exp(a·x + c·x|x|)、x = (命中−回避)/100
   const HIT_STAT_C = 0.028;
@@ -87,8 +87,14 @@
     Eiki: { g: 'A', m: 'A', z: 'M' }, KenshiMocchi: { g: 'A', m: 'A', z: 'S' }, Pandora: { g: 'A', m: 'A', z: 'S' }, Melody: { g: 'B', m: 'D', z: 'L' }, Kuromy: { g: 'B', m: 'C', z: 'L' },
   });
   const gradeIdx = (g) => { const t = typeof g === 'string' ? g.trim().toUpperCase() : ''; const i = GUTS_REGEN_GRADES.indexOf(t); if (i >= 0) return i; const u = GUTS_REGEN_GRADES_UP.indexOf(t); return u >= 0 ? GUTS_REGEN_GRADES.length + u : -1; };
-  const GUTS_CHARGE = 22;     // 「ためる」で足す分(移動・ガードより多いまま)
-  const GUTS_MOVE = 10;       // 移動・ガードで足す分
+  // ガッツの増え方(2026-11-15 r1115-110・r1115-112 社長): 技・移動・ガードは自然回復(種ごとの regen)の分だけ。
+  //   「ためる」はその子の自然回復の分だけさらに増える(ためたターンは自然回復の2倍)。移動・ガードの上乗せはなし
+  const GUTS_CHARGE = 0;      // (版9まで「ためる」で足した固定の分 22。版10からは使わない。古い道具のために名前だけ残す)
+  const GUTS_MOVE = 0;        // (版9まで移動・ガードで足した分 10。版10からはなし)
+  // 移動にガッツを使う(r1115-110): 払う量 = MOVE_COST_STEP ×(段+1)。移動・ふきとばしのたびに段+1、それ以外の手のたびに段−1(0未満なし)。
+  //   段は子ごと。交代で出てきた子は0から。ふきとばし(零距離だけ)も同じ払い方・同じ段
+  const MOVE_COST_STEP = 5;
+  const moveCostOf = (u) => MOVE_COST_STEP * ((u && u.moveLv > 0 ? u.moveLv : 0) + 1);
   const REGEN_DMG_SWING = 0.2;  // 回復がいちばん速い種(A)は与ダメ ×(1−これ)、いちばん遅い種(G)は ×(1+これ)。真ん中は ×1(2026-11-13 社長「×0.80〜×1.20」)
   const GUTS_SWAP_IN = 40;    // 交代で出てきたときの最低ガッツ
   const ROUND_LIMIT = 150;    // これを超えたら判定(無限に続かない)
@@ -474,20 +480,35 @@
       cands.push({ type: 'tech', key: mv.key, score, why: e >= f.hp ? 'finish' : (mv.gd > 0 && mv.gd >= 20 ? 'gutsDown' : (mv.big ? 'big' : 'attack')) });
     }
     // 移動(1歩)。手番を1つ使う=いま撃てる技を捨てる。相手も動けるので、得は半分しか当てにしない
+    //   移動はガッツを払う(払う量は続けて動くほど上がる)。払えなければ候補に入れない。払った分は撃てる技が減る損として見る
     const reachHere = u.moves.some(mv => inRange(mv, dist));
+    const mCost = moveCostOf(u);
+    const canMove = u.guts >= mCost;
+    const gutsAfterMove = Math.max(0, Math.min(GUTS_MAX, u.guts - mCost + u.regen));
+    const costPain = mCost * 0.12 * sty.thrift * (1 - Math.min(1, danger) * 0.5) + (mCost > MOVE_COST_STEP ? (mCost - MOVE_COST_STEP) * 0.25 : 0);
     for (const step of [-1, 1]) {
       const nd = dist + step;
-      if (nd < 0 || nd > 3) continue;
-      const myGuts = Math.min(GUTS_MAX, u.guts + u.regen + (ctx.gMove || GUTS_MOVE));
-      const gain = bestThreat(u, f, nd, myGuts) - bestThreat(u, f, dist, myGuts);
+      if (nd < 0 || nd > 3 || !canMove) continue;
+      const gain = bestThreat(u, f, nd, gutsAfterMove) - bestThreat(u, f, dist, gutsAfterMove);
       const risk = bestThreat(f, u, nd, foeNextGuts) - threatNow;
       // 読みが浅いうちは、相手の反撃(risk)を半分しか見ない
       let score = (gain / f.maxHp * 100 * sty.aggr - risk / u.maxHp * 100 * sty.caution * (0.5 + 0.5 * skill)) * 0.9 * sty.mobility;
-      score -= bestTech * 0.7 + 2 + u.moveStreak * 5;   // 続けて動くほど損(行ったり来たりを防ぐ)
+      score -= bestTech * 0.7 + 2 + costPain;   // 続けて動くほど払う量が上がって損(行ったり来たりを防ぐ)
       // どの技も届かない距離にいるなら、届く方へ
       const toReach = !reachHere && u.moves.some(mv => inRange(mv, nd));
       if (toReach) score += 20;
       cands.push({ type: 'move', step, score, why: toReach ? 'reach' : (gain > 0 ? 'better' : 'safer') });
+    }
+    // ふきとばし(零距離だけ): 相手が1手打ったあとに遠へ。遠の方が自分に得(自分の遠の技が強い・相手の零の技が怖い)なら選ぶ
+    if (dist === 0 && canMove && !(st.blow && st.blow.by === side)) {
+      const gain = bestThreat(u, f, 3, gutsAfterMove) - bestThreat(u, f, 0, gutsAfterMove);
+      const risk = bestThreat(f, u, 3, foeNextGuts) - threatNow;
+      let score = (gain / f.maxHp * 100 * sty.aggr - risk / u.maxHp * 100 * sty.caution * (0.5 + 0.5 * skill)) * 0.9 * sty.mobility;
+      score -= bestTech * 0.7 + 2 + costPain;
+      const toReach = !reachHere && u.moves.some(mv => inRange(mv, 3));
+      if (toReach) score += 20;
+      if (st.blow) score -= 30;                                  // 相手のふきとばしが待っている(どのみち遠になる)
+      cands.push({ type: 'blow', score, why: toReach ? 'reach' : (gain > 0 ? 'better' : 'safer') });
     }
     // ガード(相手が撃ってこなければ無駄になるので、見込みは 6 割)
     if (threatNow > 0) {
@@ -498,10 +519,11 @@
     }
     // ためる(ガッツが満タンなら候補に入れない)
     if (u.guts < GUTS_MAX) {
-      const afterGuts = Math.min(GUTS_MAX, u.guts + u.regen + (ctx.gCharge || GUTS_CHARGE));
+      const afterGuts = Math.min(GUTS_MAX, u.guts + u.regen * 2);   // ためた番は自然回復の2倍(r1115-112)
       const nowBest = bestThreat(u, f, dist, u.guts);
       const laterBest = bestThreat(u, f, dist, afterGuts);
-      let score = (laterBest - nowBest) / f.maxHp * 100 * 0.6 * (0.8 + 0.2 * sty.thrift);
+      // 版10: ガッツが命中・重さに効く分を見落としていたので、ためるの重みを 0.6 → 7.2 に(版9の AI と戦わせて約7割勝つ。r1115-110 の AI の見直し)
+      let score = (laterBest - nowBest) / f.maxHp * 100 * 7.2 * (0.8 + 0.2 * sty.thrift);
       score -= danger * 20 * (0.8 + 0.2 * sty.caution);              // 危ないときにためるのは損
       if (nowBest === 0 && laterBest > 0) score += 8;
       cands.push({ type: 'charge', score, why: nowBest === 0 ? 'noGuts' : 'saveUp' });
@@ -575,7 +597,7 @@
           const maxHp = maxHpOf(m.stats);
           return { species: m.species, name: m.name, lv: m.lv, stats: m.stats, apt: applyAptUp(catalog.species[m.species].apt, m.aptUp || [0, 0, 0, 0]),
             moves: buildMoves(catalog, m.species, m.techs, m.mastery, m.techBoost), mastery: m.mastery, maxHp, hp: maxHp, guts: GUTS_START, regen: catalog.species[m.species].regen, dmgMul: catalog.species[m.species].dmgMul || 1, first: catalog.species[m.species].first || 0, taken: catalog.species[m.species].taken || 1, size: catalog.species[m.species].size || 'M',
-            guarding: false, swapCooldown: SWAP_COOLDOWN, moveStreak: 0, loy: m.loy, pop: m.pop };
+            guarding: false, swapCooldown: SWAP_COOLDOWN, moveStreak: 0, moveLv: 0, loy: m.loy, pop: m.pop };
         }),
       };
     };
@@ -599,7 +621,7 @@
     }
   };
 
-  const ACTION_EVS = ['tech', 'move', 'guard', 'charge', 'swap'];
+  const ACTION_EVS = ['tech', 'move', 'guard', 'charge', 'swap', 'blow'];
 
   // ── その試合だけの上乗せ(buffs) ──
   //   壊れた値・範囲外は切る。効くものが1つも無ければ null(= 今までと同じ計算の道)
@@ -670,10 +692,9 @@
     // ガッツの回復の規則(モンサク・2026-11-15 r1115-090 社長「全部半分」): gutsPlan:{ regen, move, charge }(倍率 0.1〜1)。渡さなければ今までと同じ(指紋も変わらない)
     const gp = inp.gutsPlan && typeof inp.gutsPlan === 'object' ? inp.gutsPlan : null;
     const mulOf = (v) => (Number.isFinite(Number(v)) && Number(v) > 0 ? clamp(Number(v), 0.1, 1) : 1);
-    const gMove = gp ? Math.max(1, Math.round(GUTS_MOVE * mulOf(gp.move))) : GUTS_MOVE;
-    const gCharge = gp ? Math.max(1, Math.round(GUTS_CHARGE * mulOf(gp.charge))) : GUTS_CHARGE;
+    //   版10から gutsPlan で効くのは regen だけ(move・charge は無視。移動・ガードの上乗せは無く、ためるは自然回復の分=r1115-110・112)
     if (gp && gp.regen !== undefined) for (const side of ['A', 'B']) for (const x of state.teams[side].units) x.regen = Math.max(1, Math.round(x.regen * mulOf(gp.regen)));
-    const ctx = { state, rng, trace: !!inp.trace, lastCands: null, buffs, noSwap: !!(rules && rules.noSwap), gMove, gCharge };
+    const ctx = { state, rng, trace: !!inp.trace, lastCands: null, buffs, noSwap: !!(rules && rules.noSwap) };
     const log = [];
     const alive = (side) => state.teams[side].units.some(x => x.hp > 0);
     const unitOf = (side) => state.teams[side].units[state.teams[side].active];
@@ -708,9 +729,9 @@
       u.guarding = false;
       // 忠誠度が100未満のときだけ乱数を引く(忠誠100・無い編成は乱数の列も今と同じ)
       if (u.loy < 100 && !(buffs[side] && buffs[side].noSulk) && rng() < (100 - u.loy) * LOYAL_NOACT) {
-        u.guts = Math.min(GUTS_MAX, u.guts + gCharge);
+        u.guts = Math.min(GUTS_MAX, u.guts + u.regen);
         push({ ev: 'charge', side, i: me.active, why: 'sulk', guts: u.guts });
-        u.swapCooldown = Math.max(0, u.swapCooldown - 1); u.moveStreak = 0; // 「ためる」と同じあと始末
+        u.swapCooldown = Math.max(0, u.swapCooldown - 1); u.moveStreak = 0; u.moveLv = Math.max(0, u.moveLv - 1); // 「ためる」と同じあと始末
         return;
       }
       let c;
@@ -745,15 +766,21 @@
           push({ ev: 'move', side, i: me.active, why: 'techMove', step: mv.moveTo > from ? 1 : -1, to: state.dist, guts: u.guts, byTech: mv.key });
         }
       } else if (c.type === 'move') {
+        const cost = moveCostOf(u);
+        u.guts = Math.max(0, u.guts - cost);
         state.dist = clamp(state.dist + c.step, 0, 3);
-        u.guts = Math.min(GUTS_MAX, u.guts + gMove);
-        push({ ev: 'move', side, i: me.active, why: c.why, step: c.step, to: state.dist, guts: u.guts });
+        push({ ev: 'move', side, i: me.active, why: c.why, step: c.step, to: state.dist, guts: u.guts, cost });
+      } else if (c.type === 'blow') {
+        // ふきとばし(r1115-110): 撃った手番では動かない。相手が1手打ったあとに遠へ(下の act の外で起こす)
+        const cost = moveCostOf(u);
+        u.guts = Math.max(0, u.guts - cost);
+        state.blow = { by: side, i: me.active };
+        push({ ev: 'blow', side, i: me.active, ti: state.teams[foeSide].active, why: c.why, name: '吹き飛ばし', guts: u.guts, cost });
       } else if (c.type === 'guard') {
         u.guarding = true;
-        u.guts = Math.min(GUTS_MAX, u.guts + gMove);
         push({ ev: 'guard', side, i: me.active, why: c.why, name: 'ガード', guts: u.guts });
       } else if (c.type === 'charge') {
-        u.guts = Math.min(GUTS_MAX, u.guts + gCharge);
+        u.guts = Math.min(GUTS_MAX, u.guts + u.regen);   // 自然回復の分だけさらに(r1115-112)
         push({ ev: 'charge', side, i: me.active, why: c.why, guts: u.guts });
       } else if (c.type === 'swap') {
         const from = me.active;
@@ -762,10 +789,14 @@
         const n = unitOf(side);
         n.guts = Math.max(n.guts, GUTS_SWAP_IN);
         n.swapCooldown = SWAP_COOLDOWN;
+        n.moveLv = 0;
         push({ ev: 'swap', side, from, why: c.why, i: c.to, name: n.name, guts: n.guts });
       }
       u.swapCooldown = Math.max(0, u.swapCooldown - 1);
-      u.moveStreak = c.type === 'move' ? u.moveStreak + 1 : 0;
+      u.moveStreak = c.type === 'move' || c.type === 'blow' ? u.moveStreak + 1 : 0;
+      if (c.type === 'move' || c.type === 'blow') u.moveLv++;
+      else if (c.type !== 'swap') u.moveLv = Math.max(0, u.moveLv - 1);
+      else u.moveLv = 0;                               // 引っ込んだ子は戻ると0から
       // 倒れた → 次を出す / 全滅なら決着
       if (f.hp <= 0) {
         push({ ev: 'ko', side: foeSide, i: state.teams[foeSide].active, name: f.name });
@@ -776,6 +807,7 @@
         n.guts = Math.max(n.guts, GUTS_SWAP_IN);
         n.guarding = false;
         n.swapCooldown = SWAP_COOLDOWN;
+        n.moveLv = 0;
         push({ ev: 'enter', side: foeSide, i: next, name: n.name, guts: n.guts });
       }
     }
@@ -794,6 +826,16 @@
       for (const side of order) {
         if (winner) break;
         yield* act(side);
+        // ふきとばし: 撃たれた側(いま動いた側)の1手のあとに遠へ。撃った子がその1手で倒れていたら消える
+        const bl = state.blow;
+        if (bl && bl.by !== side && !winner) {
+          state.blow = null;
+          const bt = state.teams[bl.by];
+          if (bt.active === bl.i && bt.units[bl.i].hp > 0 && state.dist !== 3) {
+            const from = state.dist; state.dist = 3;
+            push({ ev: 'move', side, i: state.teams[side].active, why: 'blown', step: 3 > from ? 1 : -1, to: 3, guts: unitOf(side).guts, by: bl.by });
+          }
+        }
       }
     }
     if (!winner && inp.judge === 'three') {
@@ -883,7 +925,7 @@
   //   m.log(伸びていく記録)・m.view()(場の様子)・m.choices()(選んだ手の列)・m.result()(決着したら simulate と同じ形)
   //   m.auto(side) … その側をここからオートにする(列に { type:'auto' } が残る)
   //   見返し・中断の続き: replay(同じ入力, 手の列) で全く同じ所まで進む
-  const PLAYER_ACTS = ['tech', 'move', 'guard', 'charge', 'swap'];
+  const PLAYER_ACTS = ['tech', 'move', 'guard', 'charge', 'swap', 'blow'];
   const createMatch = (input) => {
     const inp = input && typeof input === 'object' ? input : {};
     const catalog = catalogOf(inp);
@@ -904,7 +946,7 @@
     // AI ならこの手番に何を選ぶか(おすすめの印。試合の乱数は引かない)
     const hintOf = (side) => {
       try {
-        const c = chooseAction({ state: st, rng: makeRng(`hint:${st.round}:${flow.log.length}`), trace: false, lastCands: null, noSwap: flow.ctx.noSwap, gMove: flow.ctx.gMove, gCharge: flow.ctx.gCharge }, side);
+        const c = chooseAction({ state: st, rng: makeRng(`hint:${st.round}:${flow.log.length}`), trace: false, lastCands: null, noSwap: flow.ctx.noSwap }, side);
         return c ? { type: c.type, key: c.key, step: c.step, to: c.to } : null;
       } catch (_) { return null; }
     };
@@ -926,11 +968,16 @@
           ok: reach && u.guts >= mv.guts, need: Math.max(0, mv.guts - u.guts), p: Math.round(p * 1000) / 10, gd: mv.gd, crit: mv.crit,
           power: Math.round(mv.power * 20 * 10) / 10, pd, base: mv.base };
       });
-      const move = [-1, 1].map(step => ({ type: 'move', step, to: d + step, ok: d + step >= 0 && d + step <= 3 }));
+      // 移動・ふきとばしに払うガッツ(続けて動くほど上がる。r1115-110)。足りなければ選べない
+      const mCost = moveCostOf(u);
+      const move = [-1, 1].map(step => ({ type: 'move', step, to: d + step, guts: mCost, ok: d + step >= 0 && d + step <= 3 && u.guts >= mCost }));
+      const blowWait = !!(st.blow && st.blow.by === side);
+      const blow = { type: 'blow', guts: mCost, near: d === 0, wait: blowWait, ok: d === 0 && u.guts >= mCost && !blowWait };
       const swap = me.units.map((x, i) => ({ type: 'swap', to: i, name: x.name, hp: x.hp, maxHp: x.maxHp,
         ok: i !== me.active && x.hp > 0 && u.swapCooldown <= 0 && !flow.ctx.noSwap })).filter(x => x.to !== me.active);
       return { kind: 'act', side, round: st.round, dist: d, guts: u.guts, hp: u.hp, maxHp: u.maxHp,
-        tech, guard: { type: 'guard', ok: true }, move, charge: { type: 'charge', ok: u.guts < GUTS_MAX }, swap,
+        tech, guard: { type: 'guard', ok: true }, move, blow, moveCost: mCost, moveLv: u.moveLv,
+        blowed: st.blow ? { by: st.blow.by } : null, charge: { type: 'charge', ok: u.guts < GUTS_MAX }, swap,
         swapWait: Math.max(0, u.swapCooldown), hint: hintOf(side) };
     };
     // 渡された手が、いまの手番で選べるか(選べない手は進めない)
@@ -940,6 +987,7 @@
       if (!PLAYER_ACTS.includes(c.type)) return false;
       if (c.type === 'tech') return o.tech.some(x => x.ok && x.key === c.key);
       if (c.type === 'move') return o.move.some(x => x.ok && x.step === c.step);
+      if (c.type === 'blow') return o.blow.ok;
       if (c.type === 'guard') return true;
       if (c.type === 'charge') return o.charge.ok;
       return o.swap.some(x => x.ok && x.to === c.to);
@@ -988,12 +1036,12 @@
       choices: () => picks.map(x => Object.assign({}, x)),
       done: () => flow.done,
       result: () => flow.result,
-      view: () => ({ round: st.round, dist: st.dist,
+      view: () => ({ round: st.round, dist: st.dist, blow: st.blow ? { by: st.blow.by } : null,
         teams: { A: viewTeam(st.teams.A), B: viewTeam(st.teams.B) } }),
     };
     return m;
   };
-  const viewTeam = (t) => ({ active: t.active, units: t.units.map(x => ({ name: x.name, species: x.species, hp: x.hp, maxHp: x.maxHp, guts: x.guts, guarding: x.guarding, swapCooldown: x.swapCooldown })) });
+  const viewTeam = (t) => ({ active: t.active, units: t.units.map(x => ({ name: x.name, species: x.species, hp: x.hp, maxHp: x.maxHp, guts: x.guts, guarding: x.guarding, swapCooldown: x.swapCooldown, moveLv: x.moveLv, moveCost: moveCostOf(x) })) });
   // 同じ入力と手の列から、同じ所まで進めた試合を返す(列のどこかで選べない手があれば ok:false とその位置)
   const replay = (input, choices) => {
     const m = createMatch(input);
@@ -1017,14 +1065,14 @@
 
   const api = Object.freeze({
     // 芯が持っている口の印(呼ぶ側が古い芯を見分ける。モンサクは techBoost があるときだけ渡す)
-    FEATURES: Object.freeze({ techBoost: true }),
-    VERSION, VERSION_PLAIN, STAT_KEYS, STAT_MAX, DIST_NAMES, TEAM_MAX, GUTS_MAX, GUTS_REGEN_MIN, GUTS_REGEN_MAX, GUTS_REGEN_GRADES, GUTS_REGEN_GRADES_UP, SPECIES_TRAITS, MOVE_SPEED_FIRST, MOVE_SPEED_TAKEN, APT_UP_LIMITS, SIZE_SMALL_EVADE, APT_DMG, APT_DEF, APT_HIT, APT_EVA, APT_ABOVE_A, SIZE_LARGE_CUT, GUTS_CHARGE, GUTS_MOVE, REGEN_DMG_SWING, ROUND_LIMIT, STYLES, TECH_LIMITS,
+    FEATURES: Object.freeze({ techBoost: true, moveGuts: true, blow: true }),
+    VERSION, VERSION_PLAIN, STAT_KEYS, STAT_MAX, DIST_NAMES, TEAM_MAX, GUTS_MAX, GUTS_REGEN_MIN, GUTS_REGEN_MAX, GUTS_REGEN_GRADES, GUTS_REGEN_GRADES_UP, SPECIES_TRAITS, MOVE_SPEED_FIRST, MOVE_SPEED_TAKEN, APT_UP_LIMITS, SIZE_SMALL_EVADE, APT_DMG, APT_DEF, APT_HIT, APT_EVA, APT_ABOVE_A, SIZE_LARGE_CUT, GUTS_CHARGE, GUTS_MOVE, MOVE_COST_STEP, moveCostOf, REGEN_DMG_SWING, ROUND_LIMIT, STYLES, TECH_LIMITS,
     HIT_STAT_A, HIT_STAT_C, HIT_GUTS, HIT_TECH_STEP, HIT_MIN, HIT_MAX, DMG_ALL, techHitPreview,
     MASTERY_HIT_MAX, MASTERY_GUTS_CUT, MASTERY_GUARD_ADD, TECH_BOOST_LIMITS, BALANCE, PLANS, SWAP_PACES, STYLE_RANGE,
     LV_MAX, BUFF_LIMITS, RULE_LIMITS, unitTraits, normTechBoost, buildCatalog, simulate, hitPreviewer, createMatch, replay, firstAction, unitFromGrow, makeRng, hashSeed,
     WHY: Object.freeze({ sulk: 'そっぽを向いて、言うことを聞かない…', finish: '倒しきれる', gutsDown: 'ガッツを削る', big: '大技', attack: '攻める', reach: '技が届く所へ', better: '有利な間合いへ',
       safer: '危ない間合いから離れる', lowHp: 'ライフが少ないので守る', block: '相手の大きい一撃にそなえる', noGuts: 'ガッツが足りない', saveUp: '大技のためにためる',
-      rescue: '倒されそうなので下げる', matchup: '相性のよい仲間へ', player: 'あなたの指示', techMove: '技の勢いで間合いが変わった' }),
+      rescue: '倒されそうなので下げる', matchup: '相性のよい仲間へ', player: 'あなたの指示', techMove: '技の勢いで間合いが変わった', blown: '吹き飛ばされて遠へ' }),
     // 検査用(計算の部品)
     _internal: Object.freeze({ setupState, aptMult, aptSteps, normAptUp, applyAptUp, normTech, normTechBoost, buildMoves, normalizeUnit, normalizeTeam, normalizeBuffs, buffedHit, styleOf, expDet, baseHit, hitChance, rawDamage, chooseAction, maxHpOf }),
   });

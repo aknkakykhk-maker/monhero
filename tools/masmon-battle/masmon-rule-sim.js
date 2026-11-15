@@ -65,9 +65,52 @@ const NEW_SETS = [
   ['フレンド対戦(3体・新しい決まり)', { size: 3, rule: {} }],
 ];
 
+// 人が詰める試合(モンサクの自分で操作する試合の形): A は「いちばん強い技の間合い」へ詰め、着いたら撃てる中で一番強い技、撃てなければためる。
+//   零で行きたい間合いが遠なら、ふきとばしがあれば使う。B は AI(離れたがる子もいる)
+const runChase = (label, engine, rule) => {
+  const catalog = engine.buildCatalog(data);
+  const ids = Object.keys(catalog.species);
+  const rng = engine.makeRng('rule-sim-chase');
+  let rounds = 0, techs = 0, runMax = 0, runSum = 0, run10 = 0, aw = 0, stuck = 0, judge = 0;
+  for (let i = 0; i < N; i++) {
+    const a = makeUnit(engine, catalog, rng, { species: ids[Math.floor(rng() * ids.length)] }), b = makeUnit(engine, catalog, rng, { species: ids[Math.floor(rng() * ids.length)] });
+    b.stats = { ...a.stats };
+    const m = engine.createMatch({ seed: `ch${i}`, catalog, balance: 'A', ...rule, control: { A: 'human' },
+      teamA: { assistantId: 'atsu', tactics: 50, members: [a] }, teamB: { assistantId: 'atsu', tactics: 50, members: [b] } });
+    let o, guard = 0, aTech = 0;
+    while ((o = m.pending()) && guard++ < 400) {
+      if (o.kind !== 'act') { m.choose(o.enter.find(x => x.ok)); continue; }
+      // 行きたい間合い: 威力が一番大きい技の届く間合い
+      const big = o.tech.slice().sort((x, y) => y.power - x.power)[0];
+      const want = big ? big.dist.reduce((best, dd) => (Math.abs(dd - o.dist) < Math.abs(best - o.dist) ? dd : best), big.dist[0]) : o.dist;
+      let c = null;
+      const ready = o.tech.filter(t => t.ok).sort((x, y) => y.power - x.power)[0];
+      if (want !== o.dist) {
+        if (want === 3 && o.blow && o.blow.ok) c = { type: 'blow' };
+        else { const mv = o.move.find(x => x.ok && x.step === (want > o.dist ? 1 : -1)); if (mv) c = mv; }
+      }
+      if (!c && ready) c = ready;
+      if (!c) c = o.charge.ok ? o.charge : o.guard;
+      m.choose(c);
+    }
+    const r = m.result();
+    if (!r) { stuck++; continue; }
+    rounds += r.rounds; if (r.winner === 'A') aw++; if (r.reason === 'judge') judge++;
+    const mr = moveRun(r.log); runSum += mr; if (mr > runMax) runMax = mr; if (mr >= 10) run10++;
+    for (const e of r.log) if (e.ev === 'tech' && e.side === 'A') aTech++;
+    techs += aTech;
+  }
+  const n = N - stuck || 1;
+  console.log(`■${label}`);
+  console.log(`  1試合: 平均 ${(rounds / n).toFixed(1)} ラウンド・人の側が技を撃てた ${(techs / n).toFixed(1)} 回・打ち切り判定 ${pc(judge / n)}・人の側の勝ち ${pc(aw / n)}`);
+  console.log(`  移動し合いの最長: 全試合で ${runMax} 回・1試合の平均 ${(runSum / n).toFixed(1)} 回・10回以上続いた試合 ${pc(run10 / n)}`);
+};
+
 console.log(`戦数 ${N}・同じ能力の編成どうし(種はばらばら)・戦術経験50`);
 if (oldFile) {
   const old = require(oldFile);
   for (const [l, s] of OLD_SETS) runSet(l, old, s);
 }
 for (const [l, s] of (oldFile ? NEW_SETS : OLD_SETS.concat(NEW_SETS))) runSet(l, cur, s);
+if (oldFile) runChase('人が詰める・モンサク(1体・いま)', require(oldFile), OLD_SETS[0][1].rule);
+runChase('人が詰める・モンサク(1体・新しい決まり)', cur, NEW_SETS[0][1].rule);
