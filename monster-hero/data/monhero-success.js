@@ -1024,8 +1024,17 @@
     };
 
     // ---- 伸び(ASSIST §4 の1本の式) ----
+    // ---- 成長のピークの区間(r1115-053 社長): どの型も最長4ターン(持続だけ6ターン)。普通はミドル期の中(20〜23) ----
+    //   型の順は C.GROW_TYPES と同じ: 超早熟・早熟・普通・晩成・超晩成・持続。数は「ターン」(両端を含む)
+    //   助手ライフのマスモンの peakOf(56-assistant-life-masmon-calc.jsx)は変えない。モンサクだけ、この表を使う
+    const PEAK_WIN = Object.freeze([[8, 11], [14, 17], [20, 23], [31, 34], [38, 41], [20, 25]]);
+    const peakOfSuc = (type) => { const i = clamp(Math.round(num(type, 2)), 0, PEAK_WIN.length - 1); const w = PEAK_WIN[i]; return { from: (w[0] - 1) / TOTAL_TURNS, to: w[1] / TOTAL_TURNS, mult: C.peakOf(type).mult }; };
+    // 伸びの山もピークに合わせて狭める(r1115-053): その型のいちばん高い段は、ピークのターンだけ。ピークの外は、その型の次に高い段まで下げる
+    const PEAK_LO_STEADY = 1.12; // 持続はピークが6ターンだけ。山を減らしすぎないよう、外の段を 1.1 でなく 1.12 にする(社長 OK 2026-11-15 r1115-053)
+    const PEAK_SHOULDER = (() => { const o = []; for (let ty = 0; ty < PEAK_WIN.length; ty++) { const c = C.typeOf(ty).c; const top = Math.max(...c); const lo = Math.max(...c.filter((v) => v < top)); o.push({ top, lo: ty === 5 ? PEAK_LO_STEADY : lo }); } return o; })();
     const ageOf = (s) => {
-      const a = C.ageMult(s.type, (s.turn - 1) / TOTAL_TURNS);
+      let a = C.ageMult(s.type, (s.turn - 1) / TOTAL_TURNS);
+      { const ty = clamp(Math.round(num(s.type, 2)), 0, PEAK_WIN.length - 1); const sh = PEAK_SHOULDER[ty]; const w = PEAK_WIN[ty]; if (a === sh.top && !(s.turn >= w[0] && s.turn <= w[1])) a = sh.lo; }
       const pk = s && Array.isArray(s.team) ? stayNum(s, 'peak') : 0; if (!pk) return a; // 📈ピークターンアップ: ピークのあとも pk ターン、ピークの終わりの伸び
       const T = peakTurnsOf(s); if (!T.length) return a; const to = T[T.length - 1];
       return s.turn > to && s.turn <= to + pk ? Math.max(a, C.ageMult(s.type, (to - 1) / TOTAL_TURNS)) : a;
@@ -1706,7 +1715,7 @@
     //   ピークのターン = 区間に入るターン(デビュー期・最後の期は除く。出来事 ev.self.peakin / peakout と同じ数え方)
     //   peakInfo(s) → { state: 'soon'(あと1〜3ターンで始まる)|'in'(ピーク中)|null, left(ピーク中の残りターン・このターンを含む), in(始まるまでのターン), from, to }
     const peakTurnsOf = (s) => {
-      const pk = C.peakOf(s.type); const out = [];
+      const pk = peakOfSuc(s.type); const out = [];
       for (let t = 2; t <= TOTAL_TURNS; t++) { const k = periodOf(t).key; if (k === 'debut' || k === 'final') continue; const f = (t - 1) / TOTAL_TURNS; if (f >= pk.from && f < pk.to) out.push(t); }
       return out;
     };
@@ -1721,7 +1730,7 @@
     // その月の大会の並び(札)。ライバルは月のはじめ(並びを見せる時)に決まる
     const monthOf = (turn) => { const p = periodOf(turn); return p.key === 'debut' ? 7 + p.at : p.at; }; // 1ターン = 1か月(デビューは8〜12月)
     // きゅうこのピークの大会: 成長のピーク(いちばん伸びる区間)に入った最初のターン(1回の育成に1度)
-    const peakTurn = (s) => { const pk = C.peakOf(s.type); const f = (s.turn - 1) / TOTAL_TURNS; const f0 = (s.turn - 2) / TOTAL_TURNS; return s.turn > 1 && f >= pk.from && f < pk.to && !(f0 >= pk.from) && periodOf(s.turn).key !== 'debut' && periodOf(s.turn).key !== 'final'; };
+    const peakTurn = (s) => { const pk = peakOfSuc(s.type); const f = (s.turn - 1) / TOTAL_TURNS; const f0 = (s.turn - 2) / TOTAL_TURNS; return s.turn > 1 && f >= pk.from && f < pk.to && !(f0 >= pk.from) && periodOf(s.turn).key !== 'debut' && periodOf(s.turn).key !== 'final'; };
     const cupsOf = (s) => {
       const p = periodOf(s.turn);
       if (!CUP_STAR[p.key] && !(s.aid === 'kyuko' && peakTurn(s))) return [];
@@ -2092,7 +2101,7 @@
     const EVX = (deps && deps.events) || (root && root.MONHERO_SUCCESS_EVENTS) || null;
     EV = EVX && typeof EVX.create === 'function' ? EVX.create({
       KEYS, TOTAL_TURNS, FORCED, BOND, rngOf, periodOf, monthOf, clamp, num, r2, unitOf, addStat: (s, k, v) => addStat(s, k, num(v) > 0 ? num(v) * (1 + stayNum(s, 'event') / 100) : v), addLoyalRaw, recover, addStress, addBond, loyalOf, aptMult, gainPts, popGain, addAptUp, aptUpRoom, aptGradesOf, DIST_UP_GRADES: DIST_UP.grades,
-      typeOf: TYPE_OF, peakOf: (type) => C.peakOf(type), arc: ARC, lineOf,
+      typeOf: TYPE_OF, peakOf: (type) => peakOfSuc(type), arc: ARC, lineOf,
     }) : null;
 
     return Object.freeze({
