@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 350c9ca7c7fcc879
+// source-sha256: 637fb79766088392
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -169923,7 +169923,7 @@ const MSX_CSS = `
 .msx-md-st .g.ov{position:relative}.msx-md-st .g b.ov{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,#c084fc,#f0abfc)} /* 999 を超えた分(r1115-103) */
 .msx-md-st .a{flex:none;width:1.4em;text-align:center;font-weight:900;color:#fde047}.msx-md-st .a.lo{color:#94a3b8}
 .msx-md-kv{display:flex;gap:6px;align-items:baseline;font-size:11px;padding:2px 0;border-bottom:1px solid #1e293b}
-.msx-md-kv>b{flex:none;width:6em;color:#f9a8d4;font-size:10.5px}.msx-md-kv>span{flex:1;min-width:0;overflow-wrap:anywhere}.msx-md-kv .gd{font-size:14px;font-weight:900;color:#fde047}
+.msx-md-kv>b{flex:none;min-width:6em;white-space:nowrap;color:#f9a8d4;font-size:10.5px}.msx-md-kv>span{flex:1;min-width:0;overflow-wrap:anywhere}.msx-md-kv .gd{font-size:14px;font-weight:900;color:#fde047}
 .msx-md-dex{font-size:11px;font-weight:500;line-height:1.6;margin-top:4px}
 .msx-md-bot{margin-top:6px}
 .msx-md-cap{font-size:12px;font-weight:900;color:#f9a8d4}.msx-md-cap small{font-size:10px;color:#cbd5e1;margin-left:6px;font-weight:700}
@@ -169976,7 +169976,7 @@ const MSX_CSS = `
 .msx .msx-tpk .tc{overflow:hidden}.msx .msx-tpk .tc .ti{position:absolute;inset:0;display:block}.msx .msx-tpk .tc .tg-img{width:100%;height:100%;object-fit:cover;display:block}
 .msx .msx-tpk .tc.tg-not .ti{filter:brightness(.55) saturate(.65)}
 .msx .msx-tpk .tpb{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
-.msx .msx-tpk .tpb b{font-size:13px}
+.msx .msx-tpk .tpb b{font-size:13px;word-break:keep-all;overflow-wrap:normal;line-break:strict}
 .msx .msx-tpk .tpb small{font-size:10.5px;opacity:.85;line-height:1.35}
 .msx .msx-tpk .tpb small.tp-nb i{font-style:normal;display:inline-block;white-space:nowrap;margin-right:.6em}
 .msx .msx-tpk .tpm{flex:0 0 auto;font-size:11px;font-weight:900;color:#facc15}
@@ -169995,7 +169995,7 @@ const MSX_CSS = `
 .msx .msx-md-tl button{display:block;text-align:left;border-radius:8px;padding:3px 6px;background:#1e1a36;border:1px solid #334155;color:#cbd5e1}
 .msx .msx-md-tl button.got{color:#fff;border-color:#a78bfa}.msx .msx-md-tl button.on{border-color:#fde047;background:#3b2f0b}
 .msx-md-tl b{display:block;font-size:11px;overflow-wrap:anywhere}.msx-md-tl small{display:block;font-size:10px;color:#cbd5e1}
-.msx-md-td .tn{font-size:12px;font-weight:900;color:#fde047;margin-bottom:2px;overflow-wrap:anywhere}
+.msx-md-td .tn{font-size:12px;font-weight:900;color:#fde047;margin-bottom:2px;word-break:keep-all;overflow-wrap:normal;line-break:strict}
 /* r1115-150: 覚えた技(熟練の行あり)と覚えていない技(覚え方の行)を押し分けても、右の欄の高さで窓がずれないように。
    2列のときは右の欄の高さを左の技の表に合わせ(contain:size で中身の高さを列の高さへ出さない)、はみ出す分は欄の中だけスクロール */
 .msx-md-tw>.msx-md-td{contain:size;min-height:0;overflow-y:auto;overscroll-behavior:contain}
@@ -171454,6 +171454,13 @@ function MsxSkillArt({
 }
 const MSX_DIST_NAMES = ['零', '近', '中', '遠'];
 const MSX_TG_COLS = Object.freeze([3, 2, 1, 0]);
+const msxTechNm = name => String(name == null ? '' : name).replace(/([・ 　])/g, '$1\u200b');
+const msxTechMoveTxt = t => {
+  if (!t || t.moveTo == null || !Number.isInteger(t.moveTo)) return '';
+  const to = MSX_DIST_NAMES[t.moveTo] || '';
+  const from = Array.isArray(t.dist) && t.dist.length ? Math.min(...t.dist) : t.moveTo;
+  return t.moveTo > from ? `相手を\u200b${to}へ\u200b飛ばす` : `${to}へ\u200b移る`;
+};
 function MsxTechGrid({
   all,
   cell,
@@ -171712,7 +171719,7 @@ function MsxMonDetail({
     className: "msx-md-td"
   }, React.createElement("div", {
     className: "tn"
-  }, tech.name, has(tech) ? null : React.createElement("small", {
+  }, msxTechNm(tech.name), has(tech) ? null : React.createElement("small", {
     className: "msx-md-not"
   }, "まだ覚えていない")), React.createElement("div", {
     className: "msx-md-kv"
@@ -171734,7 +171741,12 @@ function MsxMonDetail({
     className: "msx-md-kv"
   }, React.createElement("b", null, "クリティカル率"), React.createElement("span", {
     className: "gd"
-  }, grade('crit', tech.crit))), has(tech) && msOf(tech.id) != null ? (() => {
+  }, grade('crit', tech.crit))), msxTechMoveTxt(tech) ? React.createElement("div", {
+    className: "msx-md-kv",
+    "data-msx-tech-move": true
+  }, React.createElement("b", null, "使ったあと"), React.createElement("span", {
+    className: "msx-kp"
+  }, msxTechMoveTxt(tech))) : null, has(tech) && msOf(tech.id) != null ? (() => {
     const m = msOf(tech.id);
     const b = msxMasteryBoost(SUC, tech.id, m);
     return React.createElement(React.Fragment, null, React.createElement("div", {
@@ -171815,9 +171827,12 @@ function MsxMonDetail({
         "aria-hidden": "true"
       }, Math.max(1, Math.min(5, Number(t.rank) || 1)))), React.createElement("span", {
         className: "tpb"
-      }, React.createElement("b", null, t.name), React.createElement("small", null, t.kind === 'wise' ? 'かしこさ' : 'ちから', "・消費ガッツ ", t.guts), React.createElement("small", {
+      }, React.createElement("b", null, msxTechNm(t.name)), React.createElement("small", null, t.kind === 'wise' ? 'かしこさ' : 'ちから', "・消費ガッツ ", t.guts), React.createElement("small", {
+        className: "tp-nb",
+        "data-msx-techpick-grades": true
+      }, React.createElement("i", null, "ダメージ ", grade('power', t.power)), React.createElement("i", null, "命中率 ", grade('hit', t.hit)), React.createElement("i", null, "ガッツダウン ", grade('gd', t.gd)), React.createElement("i", null, "クリティカル率 ", grade('crit', t.crit))), msxTechMoveTxt(t) ? React.createElement("small", {
         className: "tp-nb"
-      }, React.createElement("i", null, "ダメージ ", grade('power', t.power)), React.createElement("i", null, "命中率 ", grade('hit', t.hit)), React.createElement("i", null, "クリティカル率 ", grade('crit', t.crit))), React.createElement("small", {
+      }, React.createElement("i", null, "使ったあと ", msxTechMoveTxt(t))) : null, React.createElement("small", {
         className: "tp-nb"
       }, how.startsWith('修行で覚える(') ? React.createElement(React.Fragment, null, React.createElement("i", null, "修行で覚える"), React.createElement("i", null, how.slice('修行で覚える'.length))) : React.createElement("i", null, how))), React.createElement("span", {
         className: "tpm"

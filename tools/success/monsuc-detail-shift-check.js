@@ -49,6 +49,16 @@ const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/cs
     check(`${W}: 覚えた技・覚えていない技の両方を押せた`, okL && okN);
     const same = (k) => a[k] && b[k] && a[k][0] === b[k][0] && a[k][1] === b[k][1];
     check(`${W}: 押し分けても窓・技の表・右の欄・閉じるボタンの位置と高さが変わらない`, ['sheet', 'grid', 'td', 'close'].every(same), JSON.stringify({ a, b }));
+    // r1115-156①: 技の欄の項目名は1行に収まる(「クリティカル/率」と折れない)・技の名前は言葉の途中で折らない設定
+    const words = await page.evaluate(() => { const bs = [...document.querySelectorAll('.msx-md-td .msx-md-kv>b')]; const tn = document.querySelector('.msx-md-td .tn');
+      return { bad: bs.filter((b) => b.getClientRects().length > 1 || b.scrollWidth > b.clientWidth + 1 || b.getBoundingClientRect().height > 18).map((b) => b.textContent), n: bs.length, tn: tn ? getComputedStyle(tn).wordBreak : '' }; });
+    check(`${W}: 技の欄の項目名が1行に収まり、技の名前は言葉の途中で折らない`, words.n >= 5 && !words.bad.length && words.tn === 'keep-all', JSON.stringify(words));
+    // r1115-156②: 使ったあとに間合いが動く技に「使ったあと …」の行(ドルフィンブロー 近→零 = 零へ移る・ホワイトストーム 近→遠 = 相手を遠へ飛ばす)
+    const mv = {};
+    for (const id of ['sk-0484', 'sk-0488']) { await page.evaluate((x) => { const c = document.querySelector(`.msx-md-tg [data-msx-tech="${x}"]`); if (c) c.click(); }, id); await page.waitForTimeout(250);
+      mv[id] = await page.evaluate(() => { const el = document.querySelector('[data-msx-tech-move]'); return el ? el.textContent : ''; });
+      if (SHOT_DIR && id === 'sk-0488') await page.screenshot({ path: path.join(SHOT_DIR, `${W}-move.png`) }); }
+    check(`${W}: 間合いが動く技に「使ったあと」の行が出る`, /使ったあと零へ\u200b?移る/.test(mv['sk-0484'] || '') && /相手を\u200b?遠へ\u200b?飛ばす/.test(mv['sk-0488'] || ''), JSON.stringify(mv));
     await page.close();
   }
     check('ページのエラーが出ない', errors.length === 0, errors.slice(0, 2).join(' / '));

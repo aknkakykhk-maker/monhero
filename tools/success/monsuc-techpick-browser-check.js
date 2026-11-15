@@ -44,6 +44,7 @@ const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/cs
     await page.evaluate(() => document.querySelector('[data-msx-cell="2-1"]').click()); await page.waitForTimeout(300);
     check('⇄ の升を押しても選ぶ窓は開かず、右の欄に技が出る(⇄2 の印)', await page.evaluate(() => !document.querySelector('[data-msx-techpick]') && !!document.querySelector('.msx-md-td') && document.querySelector('[data-msx-alt="2-1"]').textContent === '⇄2'));
     await page.evaluate(() => document.querySelector('[data-msx-alt-open]').click()); await page.waitForTimeout(300);
+    check('選ぶ窓の札に ダメージ・命中率・ガッツダウン・クリティカル率 が全部出る(r1115-155)', await page.evaluate(() => [...document.querySelectorAll('[data-msx-techpick-grades]')].every((el) => /ダメージ/.test(el.textContent) && /命中率/.test(el.textContent) && /ガッツダウン/.test(el.textContent) && /クリティカル率/.test(el.textContent)) && document.querySelectorAll('[data-msx-techpick-grades]').length === 2));
     check('選ぶ窓が開き、候補が2つ並ぶ', await page.evaluate(() => document.querySelectorAll('[data-msx-techpick-opt]').length === 2));
     // r1115-149: 窓の技アイコンは升目と同じ正方形(縦長に引き伸ばさない)・ランクの数字が付く
     const icons = await page.evaluate(() => [...document.querySelectorAll('[data-msx-techpick-icon]')].map((el) => { const r = el.getBoundingClientRect(); return { w: Math.round(r.width), h: Math.round(r.height), rk: !!el.querySelector('.tg-rk') }; }));
