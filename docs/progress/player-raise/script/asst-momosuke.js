@@ -58,9 +58,9 @@ const MONSUC_SCRIPT_MOMOSUKE = Object.freeze([
   { id:'scn.momosuke.cup1.lose.momosuke1', who:'momosuke', e:'troubled', t:'え〜おしい！！ でも、さっきの手ふりで泣いてる人いたよ w ちゃんと届いてる' },
 
   // ── 4話「声援の海」(プロ期・親密度70〜。3話で見てくれた人=いい結末 / 1位=ほろ苦い結末) ──
-  { id:'scn.momosuke.ep4.narr1', who:'narr', t:'プロ期の{cup}。満員の客席に、手作りの札がいくつもゆれている。' },
-  { id:'scn.momosuke.ep4.good.momosuke1', who:'momosuke', e:'surprise', end:'good', t:'まって、あそこ……あの手紙のファンじゃん！！ 札に、ももの名前も書いてある……' },
-  { id:'scn.momosuke.ep4.good.narr1', who:'narr', end:'good', t:'札には、{mon}とももすけの絵が、ならんで描いてあった。' },
+  { id:'scn.momosuke.ep4.narr1', who:'narr', t:'プロ期の{cup}。満員の客席に、手作りの応援ボードがいくつもゆれている。' },
+  { id:'scn.momosuke.ep4.good.momosuke1', who:'momosuke', e:'surprise', end:'good', t:'まって、あそこ……あの手紙のファンじゃん！！ ボードに、ももの名前も書いてある……' },
+  { id:'scn.momosuke.ep4.good.narr1', who:'narr', end:'good', t:'ボードには、{mon}とももすけの絵が、ならんで描いてあった。' },
   { id:'scn.momosuke.ep4.good.momosuke2', who:'momosuke', e:'excited', end:'good', t:'{mon}、いってらっしゃい！！ 今日はももの分まで、いちばんかわいく暴れてきて♡' },
   { id:'scn.momosuke.ep4.good.momosuke3', who:'momosuke', e:'happy', end:'good', t:'……{name}、ありがと。ももね、今ちょっとだけ泣きそう w' },
   { id:'scn.momosuke.ep4.bitter.momosuke1', who:'momosuke', e:'normal', end:'bitter', t:'1位、取りにいくよ。……ね、{mon}' },
@@ -159,7 +159,7 @@ const MONSUC_SCRIPT_MOMOSUKE = Object.freeze([
   { id:'turn.retry.glass.momosuke1', who:'momosuke', e:'excited', t:'同じ相手にもう1回！！ 今度は見せつけてやろ♡' },
   { id:'turn.retry.rainbow.momosuke1', who:'momosuke', e:'normal', t:'相手変わったじゃん w 仕切り直し、いけるいける' },
   { id:'turn.cup.rivalcard.momosuke1', who:'momosuke', e:'excited', t:'{rival}が出る大会！！ 勝ったら目立つよ〜♡' },
-  { id:'turn.cup.rivalcard.momosuke2', who:'momosuke', e:'normal', t:'ライバルの札ね。今の{mon}なら、いい勝負すると思うよ w' },
+  { id:'turn.cup.rivalcard.momosuke2', who:'momosuke', e:'normal', t:'ライバルの情報ね。今の{mon}なら、いい勝負すると思うよ w' },
 
   // ═══════════ ふだんのランダムイベント(random.js と同じ場面) ═══════════
   { id:'ev.daily.nut.momosuke1', who:'momosuke', e:'normal', t:'落とし物？ 届けたら、ファン増えるかもよ w' },
@@ -202,7 +202,7 @@ const MONSUC_SCRIPT_MOMOSUKE = Object.freeze([
   { id:'ev.goal.done.momosuke1', who:'momosuke', e:'happy', t:'目標クリア！！ えらいえらい♡' },
   { id:'ev.goal.miss.momosuke1', who:'momosuke', e:'normal', t:'届かなかったね。次の期で取り返そ w' },
   { id:'ev.season.jan1.momosuke1', who:'momosuke', e:'happy', t:'おみくじ！！ 凶でもネタになるからいいじゃん w' },
-  { id:'ev.season.jan2.momosuke1', who:'momosuke', e:'normal', t:'願い札ね。ももは「人気者」って書く w' },
+  { id:'ev.season.jan2.momosuke1', who:'momosuke', e:'normal', t:'絵馬ね。ももは「人気者」って書く w' },
   { id:'ev.season.jan3.momosuke1', who:'momosuke', e:'normal', t:'ももの願い？ ……{mon}が、いちばんの人気者になること。言わせないでよ w' },
   { id:'ev.season.apr1.momosuke1', who:'momosuke', e:'happy', t:'お花見！！ 映える写真いっぱい撮ろ♡' },
   { id:'ev.season.apr2.momosuke1', who:'momosuke', e:'excited', t:'人だかりすご！！ {mon}、もう人気者じゃん♡' },
