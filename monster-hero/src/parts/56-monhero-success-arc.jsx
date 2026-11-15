@@ -45,7 +45,15 @@ const msxArcFullBody = (aid, ex) => { const w = msxWho(aid); const f = w && type
 const msxArcEndingScene = (s) => (s && s.ending && !s.ending.seen ? (s.ending.kind === 'bad' ? 'endingBad' : 'ending') : null);
 // 試合のあとの掛け合い(ヒーローズファイナルのときだけ)。MsxR3Battle が settle のときに run.arcAfter へ入れる
 const msxArcAfterOf = (SUC, s, b, won, foe) => (b && b.kind === 'summit' && msxArcHas(SUC, s.aid)
-  ? { round: b.round, won: !!won, foe: foe ? (foe.name || msxMonName(foe.species)) : '', species: foe ? foe.species : null, turn: s.turn } : null);
+  ? { round: b.round, won: !!won, foe: foe ? (foe.name || msxMonName(foe.species)) : '', species: foe ? foe.species : null, turn: s.turn, ...(foe && foe.pick ? { pick: foe.pick } : {}) } : null);
+// ライバルの回(準決勝)なのに、この育成でライバルに会っていない(芯が強い常連へ替えた pick 'strong')ときは、ライバル前提でない台詞(r2x)を使う。無ければ元の場面(r1115-202)
+const msxArcScene = (SUC, aid, round, pick, part, ctx, bondLv, extra) => {
+  const base = `scn.${aid}.summit.r${round + 1}`;
+  const arc = SUC && SUC.ARC && SUC.ARC[aid];
+  const wasRival = !!(arc && Array.isArray(arc.summit) && arc.summit[round] === 'rival');
+  if (wasRival && pick === 'strong') { const l = msxArcLines(`${base}x.${part}`, ctx, bondLv, extra); if (l.length) return l; }
+  return msxArcLines(`${base}.${part}`, ctx, bondLv, extra);
+};
 
 // 会話の1画面(行を3つずつめくる)。lines が空なら fallback を1行だけ出す
 function MsxArcTalk({ run, v, ev, onPause, aid, lines, fallback, head, bg, ex = 'happy', dark = false, top = null, onDone, doneText = '次へ ▶', mon = true }) {
@@ -76,7 +84,7 @@ function MsxArcTalk({ run, v, ev, onPause, aid, lines, fallback, head, bg, ex = 
 // ヒーローズファイナル: 試合の前に、貼り出された組み合わせを助手と見る(相手は決まっていて、優勝候補などが勝ち上がってくる。2026-11-15 社長「トーナメントなんだからこっちが決めるのおかしくない？」)
 function MsxArcPick({ run, v, ev, onPause, ctx, bondLv, opp, round, onDone }) {
   const s = run.s; const foe = opp ? (opp.name || msxMonName(opp.species)) : '';
-  const lines = msxArcLines(`scn.${s.aid}.summit.r${round + 1}.pick`, ctx, bondLv, { rival: foe, owner: opp && opp.breeder ? opp.breeder : '' });
+  const lines = msxArcScene(msxSuc.SUC, s.aid, round, opp && opp.pick, 'pick', ctx, bondLv, { rival: foe, owner: opp && opp.breeder ? opp.breeder : '' });
   const SUM = msxSuc.SUC.SUMMIT || [];
   const top = opp ? (
     <div className="arc-foe" data-msx-arc-foe>
@@ -90,7 +98,7 @@ function MsxArcPick({ run, v, ev, onPause, ctx, bondLv, opp, round, onDone }) {
 // ヒーローズファイナル: 試合のあとの掛け合い
 function MsxArcAfter({ run, v, ev, onPause, ctx, bondLv, after, onDone }) {
   const s = run.s;
-  const lines = msxArcLines(`scn.${s.aid}.summit.r${after.round + 1}.${after.won ? 'win' : 'lose'}`, ctx, bondLv, { rival: after.foe });
+  const lines = msxArcScene(msxSuc.SUC, s.aid, after.round, after.pick, after.won ? 'win' : 'lose', ctx, bondLv, { rival: after.foe });
   useSuccessSceneAfterOnce(msxArcEndingScene(s), { season: msxCalendar(s.turn).season }); // 最後の試合のあとならエンディングの曲へ(r1115-091)
   return <MsxArcTalk run={run} v={v} ev={ev} onPause={onPause} aid={s.aid} lines={lines} head={after.won ? '試合のあとで' : 'くやしい夜'} dark={!after.won}
     bg={after.won ? 'images/success/scenes/venue-summit.png' : 'images/story-bg/monhero_plaza_evening.jpg'} fallback={after.won ? '勝ったね！' : 'おつかれさま…'} onDone={onDone}/>;

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 7e07508476686dad
+// generated-sha256: e05efeddf63adb39
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -89612,6 +89612,38 @@ const msxWho = (aid) => (typeof assistantById === 'function' ? assistantById(aid
 const msxFace = (aid, ex = 'normal') => { const w = msxWho(aid); return w && typeof assistantFaceImage === 'function' ? assistantFaceImage(w, ex) : ''; };
 const msxBody = (aid, ex = 'happy') => { const w = msxWho(aid); return w && typeof assistantFullImage === 'function' ? (assistantFullImage(w, ex) || msxFace(aid, ex)) : msxFace(aid, ex); };
 const msxAidName = (aid) => { const w = msxWho(aid); return w ? w.name : aid; };
+// この育成のライバル(芯 SUC.newRun の rivals。r1115-202 社長「出るように直す」・TOURNAMENT.md §8b)
+//   自分の助手(いっしょに育てる助手のほか)の助手ライフのマスモン(先頭の子)と、フレンドが貸し出している子から最大8体。
+//   読めない・無い分は飛ばす(1体も無ければ [] のまま。芯はライバル抜きで進む)。フレンドの読み込みは待ちすぎない
+const MSX_RIVAL_WAIT_MS = 4000;
+const msxRivalsBuild = async (SUC, aid) => {
+  const ok = (sp) => !!(SUC && Array.isArray(SUC.speciesList) && SUC.speciesList.includes(sp));
+  const out = [];
+  try {
+    const ids = typeof ALF_IDS !== 'undefined' && Array.isArray(ALF_IDS) ? ALF_IDS : [];
+    for (const id of ids) {
+      if (id === aid || out.length >= 5 || typeof assistantLifeMasmonShareOf !== 'function') continue;
+      const r = assistantLifeMasmonShareOf(id);
+      const t = r && Array.isArray(r.list) ? (r.list.find((x) => x && x.lead && ok(x.monster)) || r.list.find((x) => x && ok(x.monster))) : null;
+      if (!t) continue;
+      const nick = typeof t.nick === 'string' && t.nick.trim() ? [...t.nick.trim()].slice(0, 12).join('') : msxMonName(t.monster);
+      out.push({ name: nick, breeder: msxAidName(id), kind: 'aid', species: t.monster, ...(t.stats && typeof t.stats === 'object' ? { stats: t.stats } : {}) });
+    }
+  } catch (_) { /* 助手の分が読めなくても続ける */ }
+  try {
+    if (typeof monsucLendFriends === 'function' && typeof monsucLendMember === 'function') {
+      const r = await Promise.race([monsucLendFriends(), new Promise((res) => setTimeout(() => res(null), MSX_RIVAL_WAIT_MS))]);
+      const rows = r && r.ok && Array.isArray(r.rows) ? r.rows : [];
+      for (const row of rows) {
+        if (out.length >= 8) break;
+        const m = monsucLendMember(row, SUC);
+        if (!m || !ok(m.species)) continue;
+        out.push({ name: m.name || msxMonName(m.species), breeder: m.friend && m.friend.name ? String(m.friend.name).slice(0, 24) : null, kind: 'friend', species: m.species, stats: m.stats });
+      }
+    }
+  } catch (_) { /* フレンドの分が読めなくても続ける */ }
+  return out.slice(0, 8);
+};
 const msxFmt = (n) => Math.round(msxNum(n, 0)).toLocaleString('ja-JP');
 // ターン → 年と月(デビュー期は1年目の8月から・1ターン=1か月)・季節
 const msxCalendar = (turn) => {
@@ -91001,7 +91033,8 @@ function MonheroSuccessScreen({ onClose, callNameOf, bondLvOf, debug = false, st
     const carry = cfg.items.filter((k) => MSX_ITEM_BY_ID[k] && MSX_ITEM_BY_ID[k].when === 'before');
     const bag = {}; cfg.items.filter((k) => MSX_ITEM_BY_ID[k] && MSX_ITEM_BY_ID[k].when === 'both').forEach((k) => { bag[k] = 1; });
     const fromMon = cfg.from && typeof cfg.from.box === 'string' ? data.box.mons.find((m) => m.id === cfg.from.box && !m.raised) || null : null; // 未育成の子だけ(育て終えた能力から始まる道を本体でも塞ぐ) // 合体円盤石(未育成)から始めるなら、継いだ間合い適性の段数を写す
-    const s = SUC.newRun({ id, species: cfg.species, ...(cfg.techPick && typeof cfg.techPick === 'object' ? { techPick: cfg.techPick } : {}), aid: cfg.aid, team: cfg.team, aidBondLv: cfg.aidBondLv, carry, bag, ...(fromMon && Array.isArray(fromMon.aptBase) ? { aptBase: fromMon.aptBase } : {}), ...(fromMon && Number.isInteger(fromMon.gt) ? { type: fromMon.gt } : {}), ...(fromMon && fromMon.st && typeof fromMon.st === 'object' ? { startSt: fromMon.st } : {}), wonBefore: Array.isArray(data.meta.wonCups) ? data.meta.wonCups : [] });
+    let rivals = []; try { rivals = typeof msxRivalsBuild === 'function' ? await msxRivalsBuild(SUC, cfg.aid) : []; } catch (_) { rivals = []; } // この育成のライバル(r1115-202)
+    const s = SUC.newRun({ id, rivals, species: cfg.species, ...(cfg.techPick && typeof cfg.techPick === 'object' ? { techPick: cfg.techPick } : {}), aid: cfg.aid, team: cfg.team, aidBondLv: cfg.aidBondLv, carry, bag, ...(fromMon && Array.isArray(fromMon.aptBase) ? { aptBase: fromMon.aptBase } : {}), ...(fromMon && Number.isInteger(fromMon.gt) ? { type: fromMon.gt } : {}), ...(fromMon && fromMon.st && typeof fromMon.st === 'object' ? { startSt: fromMon.st } : {}), wonBefore: Array.isArray(data.meta.wonCups) ? data.meta.wonCups : [] });
     const r = { v: 1, id, s, scn: typeof msxScenarioId === 'function' ? msxScenarioId(cfg.scn) : 'hero', nick: cfg.nick, colors: cfg.colors, from: cfg.from, items: cfg.items, used: 0, phase: typeof MsxBirth === 'function' ? 'birth' : 'begin', out: null, log: [], startAt: Date.now() };
     const meta = { ...data.meta, team: cfg.teamSlots.map((t) => (t.box ? { box: t.box } : t.assist ? { assist: t.assist } : { base: t.base })), runs: (data.meta.runs || 0) + 1, picked: { ...(data.meta.picked || {}), [cfg.species]: ((data.meta.picked || {})[cfg.species] || 0) + 1 } };
     // 持ちこんだ物は1つずつ減らす。芯がまだ知らない物(効き目が無い物)は減らさない
@@ -92505,13 +92538,19 @@ const msxR3BeatPrize = (SUC, g) => { const n = typeof SUC.beatOfPrize === 'funct
 //   字の札には className="msx-kp"(word-break:keep-all)を付け、｜と句読点のところでだけ折れるようにする
 const msxPh = (str) => String(str == null ? '' : str).replace(/｜/g, '\u200b');
 // 参加確認の獲得物(2026-11-14 社長): 賞金は上の1行。その下に、アイテム(左)→ 能力・ポイント系(右)の順で全部が一度に見える升目。押すと詳細の小窓
+// 賞品の札の名前。「能力ポイント +120」のように数で終わる物は、見出しと数を別の行にし、数は折らない(r1115-201: 幅320 で「+12 ⏎ 0」と割れた)
+const MsxR3PrizeName = ({ name }) => {
+  const m = /^(.*?)[\s\u00a0]*([+＋][0-9,]+)$/.exec(String(name || ''));
+  if (!m || !m[1]) return <small className="msx-kp">{msxPh(name)}</small>;
+  return <small className="msx-kp">{msxPh(m[1])}<b style={{ display: 'block', whiteSpace: 'nowrap', font: 'inherit' }}>{m[2]}</b></small>;
+};
 const MsxR3PrizeBox = ({ prizes, onPick }) => {
   const gold = prizes.find((x) => x.id === 'g');
   const rest = prizes.filter((x) => x.id !== 'g').sort((a, b) => (a.pt ? 1 : 0) - (b.pt ? 1 : 0));
   return (<>
     {gold ? <button type="button" className="pzg" onClick={() => onPick(gold)} data-msx-r3-prize="g"><i>賞金</i><b>{gold.name.replace(/^賞金 /, '')}</b></button> : null}
     {rest.length ? <><div className="sub">賞品</div>
-      <div className="pz">{rest.map((x) => <button type="button" key={x.id} className={`${x.rare ? 'rare' : ''}${x.pt ? ' pt' : ''}`} onClick={() => onPick(x)} data-msx-r3-prize={x.id}><span>{typeof msxItemIco === 'function' ? msxItemIco(x) : x.e}</span><small className="msx-kp">{msxPh(x.name)}</small></button>)}</div></> : null}
+      <div className="pz">{rest.map((x) => <button type="button" key={x.id} className={`${x.rare ? 'rare' : ''}${x.pt ? ' pt' : ''}`} onClick={() => onPick(x)} data-msx-r3-prize={x.id}><span>{typeof msxItemIco === 'function' ? msxItemIco(x) : x.e}</span><MsxR3PrizeName name={x.name}/></button>)}</div></> : null}
   </>);
 };
 const MSX_R3_FC_CLASS = Object.freeze({ easy: 'fc-e', good: 'fc-g', even: 'fc-v', hard: 'fc-h', none: 'fc-n' });
@@ -92615,7 +92654,7 @@ function MsxR3Cup({ run, setRun, v, ev, onBack, onActed }) {
           <MsxR3PrizeBox prizes={msxR3Prizes(SUC, wc)} onPick={setPrz}/>
           {wcOk ? <div className="q">この大会に参加しますか?</div> : <div className="q ng">{now ? `この大会には出られません(${msxR3WhyText(wc.entry, s)})` : 'この大会は、その月になると出られます'}</div>}
           <div className="bt">{wcOk ? <><button type="button" onClick={() => setWin(null)}>キャンセル</button><button type="button" className="go" onClick={() => { setPick(wc.id); setWin(null); if (cur && cur.id === wc.id) go(false); else { const r = SUC.act(s, { kind: 'cup', id: wc.id }); if (r.out.ok) onActed({ ...run, s: r.state, out: null, log: [...(run.log || []), { turn: s.turn, t: `${msxR3CupName(wc.sys, wc.name)}に出た` }].slice(-20) }); } }} data-msx-r3-yes>はい</button></> : <button type="button" onClick={() => setWin(null)} data-msx-r3-close>閉じる</button>}</div>
-          {prz ? <div className="det" onClick={() => setPrz(null)}><div className="dbox" onClick={(e) => e.stopPropagation()}><div className="e">{typeof msxItemIco === 'function' ? msxItemIco(prz) : prz.e}</div><b>{prz.name}</b><p className="msx-kp">{msxPh(prz.desc)}</p><button type="button" onClick={() => setPrz(null)}>閉じる</button></div></div> : null}
+          {prz ? <div className="det" onClick={() => setPrz(null)}><div className="dbox" onClick={(e) => e.stopPropagation()}><div className="e">{typeof msxItemIco === 'function' ? msxItemIco(prz) : prz.e}</div><b>{msxPh(prz.name)}</b><p className="msx-kp">{msxPh(prz.desc)}</p><button type="button" onClick={() => setPrz(null)}>閉じる</button></div></div> : null}
         </div>
       </div>) : null}
   </>);
@@ -92876,9 +92915,10 @@ const msxR3ForcedPrizes = (SUC, b) => {
   const g = b.kind === 'summit' ? (Array.isArray(P.summit) ? P.summit[b.round] : 0) : P[b.kind];
   const out = [];
   if (Number.isFinite(g) && g > 0) out.push({ id: 'g', e: '💰', name: `賞金 ${msxFmt(g)}G`, desc: '勝つともらえる賞金' });
+  if (b.kind === 'summit' && Number.isFinite(SUC.SUMMIT_PTS) && SUC.SUMMIT_PTS > 0) out.push({ id: 'pts', e: '🔷', name: `能力｜ポイント\u00a0+${SUC.SUMMIT_PTS}`, desc: '勝つと能力ポイントがもらえる(1回戦・準決勝・決勝のそれぞれ)。「能力」の画面で、好きな能力に振り分けられる', pt: true }); // r1115-201
   if (F) {
     if (F.all) out.push({ id: 'all', e: '✨', name: `全能力 +${F.all}`, desc: '勝つと6つの能力(ライフ・ちから・かしこさ・命中・回避・丈夫さ)が全て上がる', pt: true });
-    if (F.pts) out.push({ id: 'pts', e: '🔷', name: `能力ポイント +${F.pts}`, desc: '勝つと能力ポイントがもらえる。「能力」の画面で、好きな能力に振り分けられる', pt: true });
+    if (F.pts) out.push({ id: 'pts', e: '🔷', name: `能力｜ポイント\u00a0+${F.pts}`, desc: '勝つと能力ポイントがもらえる。「能力」の画面で、好きな能力に振り分けられる', pt: true });
     if (F.pop) out.push({ id: 'pop', e: '⭐', name: `人気 +${F.pop}`, desc: '勝つと人気が上がる', pt: true });
     if (F.title) out.push({ id: 'ttl', e: '🏅', name: '称号', desc: `勝つと称号「${typeof msxR3TitleName === 'function' ? msxR3TitleName(F.title) : F.title}」`, rare: true });
   }
@@ -92932,7 +92972,7 @@ function MsxR3PreDesk({ run, v, ev, onBack, onGo, onPause }) {
           <MsxR3PrizeBox prizes={prizes} onPick={setPrz}/>
           <div className="q">この大会に参加しますか?</div>
           <div className="bt"><button type="button" onClick={() => setWin(false)} data-msx-r3-pre-cancel>キャンセル</button><button type="button" className="go" onClick={onGo} data-msx-r3-yes>はい</button></div>
-          {prz ? <div className="det" onClick={() => setPrz(null)}><div className="dbox" onClick={(e) => e.stopPropagation()}><div className="e">{typeof msxItemIco === 'function' ? msxItemIco(prz) : prz.e}</div><b>{prz.name}</b><p className="msx-kp">{msxPh(prz.desc)}</p><button type="button" onClick={() => setPrz(null)}>閉じる</button></div></div> : null}
+          {prz ? <div className="det" onClick={() => setPrz(null)}><div className="dbox" onClick={(e) => e.stopPropagation()}><div className="e">{typeof msxItemIco === 'function' ? msxItemIco(prz) : prz.e}</div><b>{msxPh(prz.name)}</b><p className="msx-kp">{msxPh(prz.desc)}</p><button type="button" onClick={() => setPrz(null)}>閉じる</button></div></div> : null}
         </div>
       </div>) : null}
   </>);
@@ -94180,7 +94220,15 @@ const msxArcFullBody = (aid, ex) => { const w = msxWho(aid); const f = w && type
 const msxArcEndingScene = (s) => (s && s.ending && !s.ending.seen ? (s.ending.kind === 'bad' ? 'endingBad' : 'ending') : null);
 // 試合のあとの掛け合い(ヒーローズファイナルのときだけ)。MsxR3Battle が settle のときに run.arcAfter へ入れる
 const msxArcAfterOf = (SUC, s, b, won, foe) => (b && b.kind === 'summit' && msxArcHas(SUC, s.aid)
-  ? { round: b.round, won: !!won, foe: foe ? (foe.name || msxMonName(foe.species)) : '', species: foe ? foe.species : null, turn: s.turn } : null);
+  ? { round: b.round, won: !!won, foe: foe ? (foe.name || msxMonName(foe.species)) : '', species: foe ? foe.species : null, turn: s.turn, ...(foe && foe.pick ? { pick: foe.pick } : {}) } : null);
+// ライバルの回(準決勝)なのに、この育成でライバルに会っていない(芯が強い常連へ替えた pick 'strong')ときは、ライバル前提でない台詞(r2x)を使う。無ければ元の場面(r1115-202)
+const msxArcScene = (SUC, aid, round, pick, part, ctx, bondLv, extra) => {
+  const base = `scn.${aid}.summit.r${round + 1}`;
+  const arc = SUC && SUC.ARC && SUC.ARC[aid];
+  const wasRival = !!(arc && Array.isArray(arc.summit) && arc.summit[round] === 'rival');
+  if (wasRival && pick === 'strong') { const l = msxArcLines(`${base}x.${part}`, ctx, bondLv, extra); if (l.length) return l; }
+  return msxArcLines(`${base}.${part}`, ctx, bondLv, extra);
+};
 
 // 会話の1画面(行を3つずつめくる)。lines が空なら fallback を1行だけ出す
 function MsxArcTalk({ run, v, ev, onPause, aid, lines, fallback, head, bg, ex = 'happy', dark = false, top = null, onDone, doneText = '次へ ▶', mon = true }) {
@@ -94211,7 +94259,7 @@ function MsxArcTalk({ run, v, ev, onPause, aid, lines, fallback, head, bg, ex = 
 // ヒーローズファイナル: 試合の前に、貼り出された組み合わせを助手と見る(相手は決まっていて、優勝候補などが勝ち上がってくる。2026-11-15 社長「トーナメントなんだからこっちが決めるのおかしくない？」)
 function MsxArcPick({ run, v, ev, onPause, ctx, bondLv, opp, round, onDone }) {
   const s = run.s; const foe = opp ? (opp.name || msxMonName(opp.species)) : '';
-  const lines = msxArcLines(`scn.${s.aid}.summit.r${round + 1}.pick`, ctx, bondLv, { rival: foe, owner: opp && opp.breeder ? opp.breeder : '' });
+  const lines = msxArcScene(msxSuc.SUC, s.aid, round, opp && opp.pick, 'pick', ctx, bondLv, { rival: foe, owner: opp && opp.breeder ? opp.breeder : '' });
   const SUM = msxSuc.SUC.SUMMIT || [];
   const top = opp ? (
     <div className="arc-foe" data-msx-arc-foe>
@@ -94225,7 +94273,7 @@ function MsxArcPick({ run, v, ev, onPause, ctx, bondLv, opp, round, onDone }) {
 // ヒーローズファイナル: 試合のあとの掛け合い
 function MsxArcAfter({ run, v, ev, onPause, ctx, bondLv, after, onDone }) {
   const s = run.s;
-  const lines = msxArcLines(`scn.${s.aid}.summit.r${after.round + 1}.${after.won ? 'win' : 'lose'}`, ctx, bondLv, { rival: after.foe });
+  const lines = msxArcScene(msxSuc.SUC, s.aid, after.round, after.pick, after.won ? 'win' : 'lose', ctx, bondLv, { rival: after.foe });
   useSuccessSceneAfterOnce(msxArcEndingScene(s), { season: msxCalendar(s.turn).season }); // 最後の試合のあとならエンディングの曲へ(r1115-091)
   return <MsxArcTalk run={run} v={v} ev={ev} onPause={onPause} aid={s.aid} lines={lines} head={after.won ? '試合のあとで' : 'くやしい夜'} dark={!after.won}
     bg={after.won ? 'images/success/scenes/venue-summit.png' : 'images/story-bg/monhero_plaza_evening.jpg'} fallback={after.won ? '勝ったね！' : 'おつかれさま…'} onDone={onDone}/>;

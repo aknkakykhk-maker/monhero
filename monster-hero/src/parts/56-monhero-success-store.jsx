@@ -409,6 +409,38 @@ const msxWho = (aid) => (typeof assistantById === 'function' ? assistantById(aid
 const msxFace = (aid, ex = 'normal') => { const w = msxWho(aid); return w && typeof assistantFaceImage === 'function' ? assistantFaceImage(w, ex) : ''; };
 const msxBody = (aid, ex = 'happy') => { const w = msxWho(aid); return w && typeof assistantFullImage === 'function' ? (assistantFullImage(w, ex) || msxFace(aid, ex)) : msxFace(aid, ex); };
 const msxAidName = (aid) => { const w = msxWho(aid); return w ? w.name : aid; };
+// この育成のライバル(芯 SUC.newRun の rivals。r1115-202 社長「出るように直す」・TOURNAMENT.md §8b)
+//   自分の助手(いっしょに育てる助手のほか)の助手ライフのマスモン(先頭の子)と、フレンドが貸し出している子から最大8体。
+//   読めない・無い分は飛ばす(1体も無ければ [] のまま。芯はライバル抜きで進む)。フレンドの読み込みは待ちすぎない
+const MSX_RIVAL_WAIT_MS = 4000;
+const msxRivalsBuild = async (SUC, aid) => {
+  const ok = (sp) => !!(SUC && Array.isArray(SUC.speciesList) && SUC.speciesList.includes(sp));
+  const out = [];
+  try {
+    const ids = typeof ALF_IDS !== 'undefined' && Array.isArray(ALF_IDS) ? ALF_IDS : [];
+    for (const id of ids) {
+      if (id === aid || out.length >= 5 || typeof assistantLifeMasmonShareOf !== 'function') continue;
+      const r = assistantLifeMasmonShareOf(id);
+      const t = r && Array.isArray(r.list) ? (r.list.find((x) => x && x.lead && ok(x.monster)) || r.list.find((x) => x && ok(x.monster))) : null;
+      if (!t) continue;
+      const nick = typeof t.nick === 'string' && t.nick.trim() ? [...t.nick.trim()].slice(0, 12).join('') : msxMonName(t.monster);
+      out.push({ name: nick, breeder: msxAidName(id), kind: 'aid', species: t.monster, ...(t.stats && typeof t.stats === 'object' ? { stats: t.stats } : {}) });
+    }
+  } catch (_) { /* 助手の分が読めなくても続ける */ }
+  try {
+    if (typeof monsucLendFriends === 'function' && typeof monsucLendMember === 'function') {
+      const r = await Promise.race([monsucLendFriends(), new Promise((res) => setTimeout(() => res(null), MSX_RIVAL_WAIT_MS))]);
+      const rows = r && r.ok && Array.isArray(r.rows) ? r.rows : [];
+      for (const row of rows) {
+        if (out.length >= 8) break;
+        const m = monsucLendMember(row, SUC);
+        if (!m || !ok(m.species)) continue;
+        out.push({ name: m.name || msxMonName(m.species), breeder: m.friend && m.friend.name ? String(m.friend.name).slice(0, 24) : null, kind: 'friend', species: m.species, stats: m.stats });
+      }
+    }
+  } catch (_) { /* フレンドの分が読めなくても続ける */ }
+  return out.slice(0, 8);
+};
 const msxFmt = (n) => Math.round(msxNum(n, 0)).toLocaleString('ja-JP');
 // ターン → 年と月(デビュー期は1年目の8月から・1ターン=1か月)・季節
 const msxCalendar = (turn) => {
