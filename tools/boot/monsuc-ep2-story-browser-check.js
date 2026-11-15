@@ -72,7 +72,7 @@ const CLIMAX = 'ヒーローズファイナルで、ヒーローになる';
   const waitFor = async (page, want, tries = 80) => {
     for (let i = 0; i < tries; i++) {
       if (await want.count() > 0) return true;
-      const bs = page.locator('button').filter({ hasText: /受け取る|閉じる|(?:始|はじ)める|OK/ });
+      const bs = page.locator('button').filter({ hasText: /受け取る|閉じる|(?:始|はじ)める|OK|あとで読む/ });
       for (let k = 0, n = await bs.count(); k < n; k++) {
         const b = bs.nth(k);
         const inside = await b.evaluate((el) => !!el.closest('[data-event-story],[data-monsuc-story-skip-notice]')).catch(() => true);
@@ -166,11 +166,12 @@ const CLIMAX = 'ヒーローズファイナルで、ヒーローになる';
         const notice = page.locator('[data-monsuc-story-skip-notice]');
         const shown = await waitFor(page, notice, 30);
         const text = await notice.innerText().catch(() => '');
-        check('④ みゅあが「HOMEに新しい札」と知らせる', shown && /HOMEに新しい札が出て/.test(text.replace(/\s+/g, '')), text.replace(/\s+/g, ' '));
+        check('④ みゅあが「HOMEに新しいボタン」と知らせる', shown && /HOMEに新しいボタンが出て/.test(text.replace(/\s+/g, '')), text.replace(/\s+/g, ' '));
         await page.waitForTimeout(600);
         await shot(page, '6-skip-kokuchi');
         await notice.getByRole('button', { name: '閉じる' }).dispatchEvent('click').catch(() => {});
         await page.waitForTimeout(800);
+        await shot(page, '7-home-after');
         const skip2 = await page.evaluate((k) => { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } }, SKIP_KEY);
         check('④ 閉じると告知を出した印が付く', !!skip2 && skip2.shownAt > 0, JSON.stringify(skip2));
         await boot();

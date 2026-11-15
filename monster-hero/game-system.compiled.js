@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 0497a38ad0798fad
+// source-sha256: 7af03e62d333f0d0
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -265395,7 +265395,7 @@ function MonsterHeroGame() {
       markMomosukeIntroSeen: markMomosukeIntroSeen,
       momosukeIntroStep: momosukeIntroStep,
       setMomosukeIntroStep: setMomosukeIntroStep
-    }), bootPhase === 'GAME' && gameState === 'HOME' && onboarded && tutorialStep == null && kikiIntroStep == null && momosukeIntroStep == null && !eventReplay && !rhythmEventStoryPending && updateGuideQueue.length > 0 && React.createElement(HomeUpdateGuideOverlay, {
+    }), bootPhase === 'GAME' && gameState === 'HOME' && onboarded && tutorialStep == null && kikiIntroStep == null && momosukeIntroStep == null && !eventReplay && !rhythmEventStoryPending && !successScreenOpen && updateGuideQueue.length > 0 && React.createElement(HomeUpdateGuideOverlay, {
       activeAssistant: activeAssistant,
       assistantBondLevelNow: assistantBondLevelNow,
       assistantCallStyle: assistantCallStyle,
@@ -266302,11 +266302,11 @@ function MonsterHeroGame() {
           }
         }, "閉じる")));
       })());
-    })(), EVENT_REPLAY_RELEASE_FLAGS.monsucStoryEp2 && monsucStorySkip && monsucStorySkip.skippedAt > 0 && !monsucStorySkip.shownAt && bootPhase === 'GAME' && gameState === 'HOME' && !eventReplay && !rhythmEventStoryPending && !rhythmHellGuide && !dailyMasuAdvice && updateGuideQueue.length === 0 && (() => {
+    })(), EVENT_REPLAY_RELEASE_FLAGS.monsucStoryEp2 && monsucStorySkip && monsucStorySkip.skippedAt > 0 && !monsucStorySkip.shownAt && bootPhase === 'GAME' && gameState === 'HOME' && !eventReplay && !rhythmEventStoryPending && !rhythmHellGuide && !dailyMasuAdvice && !successScreenOpen && updateGuideQueue.length === 0 && (() => {
       const who = assistantById('mua');
       if (!who) return null;
       const lv = assistantBondLevelOf(normalizeAssistantBond(assistantBondsRef.current.mua).points);
-      const text = lv <= 2 ? '{name}、HOMEに新しい札が出ています！ 一番乗りで、いっしょに行けたらうれしいです♪' : '{name}、HOMEに新しい札が出てるよ！ 一番乗りで、いっしょに行こ♪';
+      const text = lv <= 2 ? '{name}、HOMEに新しいボタンが出ています！ 一番乗りで、いっしょに行けたらうれしいです♪' : '{name}、HOMEに新しいボタンが出てるよ！ 一番乗りで、いっしょに行こ♪';
       return React.createElement("div", {
         "data-monsuc-story-skip-notice": true,
         className: "fixed inset-0 flex items-end justify-center",

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 70cf0ec932e85198
+// generated-sha256: 6040fd70e0c0b892
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -143772,7 +143772,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       {/* 助手(みゅあ)のデバッグ表示。デバッグ設定からだけ開ける。通常のプレイでは出ない */}
       {/* ★会話ストーリーが先。流している途中・流す予約があるあいだは、助手の告知を出さない
           (2026-09-11・ユーザー指示「みゅあの前にイベント発生で会話、そのあとに助手からの説明」) */}
-      {bootPhase==='GAME'&&gameState==='HOME'&&onboarded&&tutorialStep==null&&kikiIntroStep==null&&momosukeIntroStep==null&&!eventReplay&&!rhythmEventStoryPending&&updateGuideQueue.length>0&&(
+      {bootPhase==='GAME'&&gameState==='HOME'&&onboarded&&tutorialStep==null&&kikiIntroStep==null&&momosukeIntroStep==null&&!eventReplay&&!rhythmEventStoryPending&&!successScreenOpen&&updateGuideQueue.length>0&&(
         <HomeUpdateGuideOverlay
           activeAssistant={activeAssistant} assistantBondLevelNow={assistantBondLevelNow}
           assistantCallStyle={assistantCallStyle} breederName={breederName}
@@ -144248,10 +144248,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       })()}
 
       {/* モンヒロサクセス 第2話を飛ばした人への、みゅあの告知(1回だけ・2026-11-15)。HOME で、ほかのお話・案内が出ていないときだけ */}
-      {EVENT_REPLAY_RELEASE_FLAGS.monsucStoryEp2&&monsucStorySkip&&monsucStorySkip.skippedAt>0&&!monsucStorySkip.shownAt&&bootPhase==='GAME'&&gameState==='HOME'&&!eventReplay&&!rhythmEventStoryPending&&!rhythmHellGuide&&!dailyMasuAdvice&&updateGuideQueue.length===0&&(()=>{
+      {EVENT_REPLAY_RELEASE_FLAGS.monsucStoryEp2&&monsucStorySkip&&monsucStorySkip.skippedAt>0&&!monsucStorySkip.shownAt&&bootPhase==='GAME'&&gameState==='HOME'&&!eventReplay&&!rhythmEventStoryPending&&!rhythmHellGuide&&!dailyMasuAdvice&&!successScreenOpen&&updateGuideQueue.length===0&&(()=>{
         const who=assistantById('mua');if(!who)return null;
         const lv=assistantBondLevelOf(normalizeAssistantBond(assistantBondsRef.current.mua).points);
-        const text=lv<=2?'{name}、HOMEに新しい札が出ています！ 一番乗りで、いっしょに行けたらうれしいです♪':'{name}、HOMEに新しい札が出てるよ！ 一番乗りで、いっしょに行こ♪';
+        const text=lv<=2?'{name}、HOMEに新しいボタンが出ています！ 一番乗りで、いっしょに行けたらうれしいです♪':'{name}、HOMEに新しいボタンが出てるよ！ 一番乗りで、いっしょに行こ♪';
         return(
         <div data-monsuc-story-skip-notice className="fixed inset-0 flex items-end justify-center" style={{position:'fixed',inset:0,zIndex:75000,backgroundColor:'rgba(2,6,23,.9)'}} role="dialog" aria-modal="true" aria-label="みゅあからのお知らせ">
           <div className="w-full max-w-md rounded-t-3xl border-t-2 border-x-2 border-pink-400 bg-slate-950 p-4" style={{paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
