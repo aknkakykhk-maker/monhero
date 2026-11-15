@@ -621,6 +621,10 @@
       "role": "モンヒロサクセス: 始めるまでの6段(育てる子・編成・助手(シナリオ)・持ちこみ・名前と染色・確認)。計算は芯の memberOf を呼ぶだけ"
     },
     {
+      "file": "56-monsuc-teampick.jsx",
+      "role": "モンヒロサクセス: 始めるときの編成の選ぶ画面(全画面)MsxTeamPick・フレンドの貸し出しの一覧 MsxFriendPick・編成の効果一覧 MsxTeamEffects・おまかせ msxTeamAuto(r1115-096・参考 team-select-2026-11-15)。保存は増やさない"
+    },
+    {
       "file": "56-monsuc-basemon.jsx",
       "role": "モンヒロサクセス: ホームの「ベースモン」の一覧と詳細(はじめる画面と同じ部品 MsxMonDetail を使い回す・r1115-043)"
     },
