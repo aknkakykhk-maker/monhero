@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 684c3070b6c9828a
+// generated-sha256: f6bc3ff252d84472
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -84878,7 +84878,7 @@ function MsxItemUseFx({ run, fx, onDone }) {
         <span className="glow"/><span className="ring"/>
         {typeof MsxMonArt === 'function' ? <MsxMonArt run={run} className="ifx-mon" noPeak/> : null}
         {calm ? null : Array.from({ length: 10 }, (_, i) => { const a = (i / 10) * Math.PI * 2; return <i key={i} className="pt" style={{ '--i': i, '--x': `${Math.round(Math.cos(a) * 95)}px`, '--y': `${Math.round(Math.sin(a) * 80 - 20)}px` }}>{K.pt[i % K.pt.length]}</i>; })}
-        <span className="it">{fx.e}</span>
+        <span className="it">{typeof msxItemIco === 'function' ? msxItemIco(fx) : fx.e}</span>
       </div>
       <div className="ifx-hd"><b><span style={{ display: 'inline-block' }}>{fx.name}</span><span style={{ display: 'inline-block' }}>を使った!</span></b><small>{K.word}</small></div>
       <div className="ifx-ch" data-msx-item-chips={info.chips.length}>
@@ -87682,7 +87682,7 @@ const MSX_CSS = `
 .msx .v-pow b{font-size:17px;color:#fde047;white-space:nowrap}
 .msx .v-pow .rk.big{height:28px;min-width:28px;font-size:17px;box-shadow:0 2px 0 #0008}
 .msx .v-b2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px}
-.msx .v-ga{display:flex;align-items:center;gap:4px;font-size:10px;font-weight:900;white-space:nowrap}
+.msx .v-ga{position:relative;display:flex;align-items:center;gap:4px;font-size:10px;font-weight:900;white-space:nowrap}
 .msx .v-ga .tr{flex:1;min-width:0;height:13px;border-radius:99px;background:#0b0920;border:1px solid #475569;position:relative;overflow:hidden}
 .msx .v-ga .tr i{position:absolute;left:0;top:0;bottom:0;border-radius:99px}
 .msx .v-ga.hp .tr i{background:linear-gradient(180deg,#bef264,#22c55e)}
@@ -87697,9 +87697,10 @@ const MSX_CSS = `
 @keyframes rx-pop{0%{transform:scale(.3);opacity:0}70%{transform:scale(1.12);opacity:1}100%{transform:scale(1);opacity:1}}
 .msx .v-body2.rx-hop{animation:rx-hop .9s ease-out 1}.msx .v-body2.rx-sag{animation:rx-sag .8s ease-out 1 forwards}
 .msx .rx-bub{position:absolute;left:6%;top:26%;background:#fff;color:#1e1b4b;border:2px solid #f9a8d4;border-radius:14px;padding:4px 10px;font-size:12px;font-weight:900;animation:rx-pop .4s ease-out .25s both;white-space:nowrap;z-index:3}
-.msx .v-ga b{font-size:12.5px;min-width:22px;text-align:right}.msx .v-ga b small{font-size:10px;color:#cbd5e1;font-weight:700}
+.msx .v-ga b{font-size:12.5px;width:46px;flex:none;text-align:right}.msx .v-ga b small{font-size:10px;color:#cbd5e1;font-weight:700}
 .msx .v-ga b small.cap{color:#fde047}
-.msx .v-ga em{font-style:normal;font-size:10.5px;color:#fca5a5}.msx .v-ga em.pl{color:#f0abfc}.msx .v-ga em.hl{color:#86efac}
+/* 増減の字(−16・+4)は棒の長さを変えない: 数の左に重ねて出す(r1115-083。どの画面でも棒の長さ・位置は同じ) */
+.msx .v-ga em{position:absolute;right:50px;top:50%;transform:translateY(-50%);z-index:2;pointer-events:none;font-style:normal;font-size:10.5px;color:#fca5a5;text-shadow:0 0 3px #0b0920,0 0 3px #0b0920,0 0 2px #0b0920}.msx .v-ga em.pl{color:#f0abfc}.msx .v-ga em.hl{color:#86efac}
 .msx .v-scene{flex:1 1 0;min-height:0;position:relative;border-radius:16px;border:1px solid #4a4380;overflow:hidden;margin-top:6px;background:#0f0d24}
 .msx .v-scene .bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 78%}
 .msx .v-scene .sh{position:absolute;inset:0;background:linear-gradient(180deg,#1d174055 0,#1d174000 26%,#0f0d2400 62%,#0f0d24cc 100%)}
@@ -88006,7 +88007,7 @@ const MSX_CSS = `
   .msx .v-band{padding:5px 6px}
   .msx .v-turn .n b{font-size:24px}.msx .v-turn .ph{font-size:10px;padding:2px 5px}
   .msx .v-pow b{font-size:14px}.msx .v-pow .rk.big{height:24px;min-width:24px;font-size:14px}
-  .msx .v-ga{font-size:10px;gap:3px}.msx .v-ga b{font-size:11px;min-width:0}.msx .v-ga .tr{height:11px}
+  .msx .v-ga{font-size:10px;gap:3px}.msx .v-ga b{font-size:11px;width:41px}.msx .v-ga em{right:45px}.msx .v-ga .tr{height:11px}
   .msx .v-st b{font-size:12px}.msx .v-st small{font-size:10px}.msx .v-st em{font-size:10px;height:12px;line-height:12px}.msx .v-st div.up.main em{font-size:11px}
   .msx .v-p{font-size:11px;padding:4px 1px 3px;border-radius:12px}.msx .v-p .e{font-size:16px}.msx .v-p small{font-size:10px}.msx .v-p.main{font-size:14px}
   .msx .v-ft{height:34px;padding:0 7px;gap:3px}.msx .v-ft span,.msx .v-ft button{font-size:10px;padding:4px 1px}.msx .v-ft span.go,.msx .v-ft span.go2,.msx .v-ft button.go,.msx .v-ft button.go2{font-size:11.5px}
@@ -89706,8 +89707,8 @@ const msxTpAT = () => (typeof window !== 'undefined' && window.MONHERO_SUCCESS_A
 // 枠の値が同じ子を指しているか(auto のベースモンは空き扱い)
 const msxTpSame = (a, b) => !!(a && b && !a.auto && !b.auto && ((a.box && a.box === b.box) || (a.assist && a.assist === b.assist) || (!a.box && !a.assist && !b.box && !b.assist && a.base && a.base === b.base)));
 // アシスト効果の1つ分の効き目(比べる数)と文字
-const msxTpAssistVal = (AT, a) => { try { return Number(AT.valueOf(a.id, a.lv)) || 0; } catch (e) { return 0; } };
-const msxTpAssistText = (AT, a) => { try { return AT.valueText(a.id, a.lv); } catch (e) { return ''; } };
+const msxTpAssistVal = (AT, a) => { try { return Number(AT.valueOf(a.id, AT.fromSaved(a) || a.lv)) || 0; } catch (e) { return 0; } };
+const msxTpAssistText = (AT, a) => { try { return AT.valueText(a.id, AT.fromSaved(a) || a.lv); } catch (e) { return ''; } };
 // 編成で「一番大きい1つだけ」効く効果か(重なると重複になる物)。重なり方の決まりは表(data/monhero-success-assist.js)から読む(r1115-104・107)
 //   表に ONE_ONLY(id の並び・Set・{id:true})があればそれ / CAP[id] に one:true があれば1つだけ・one の無い CAP[id] は足し合わせ(上限つき)
 //   どちらも無ければ今までの決まり: いるだけ型・試合型は1つだけ(芯 stayLv・battleBuffs)
@@ -90817,9 +90818,15 @@ const MSX_EXTRA_ITEM = Object.freeze({ oil: { e: '🫙', desc: '体力を上限�
   fruit_tough: { e: '🥥', desc: '使ったターンのトレーニングで、丈夫さの伸び ×1.5' },
   stamina: { e: '🍑', desc: '体力の最大値 +15(体力も15回復)' },
   prune: { e: '⭐', desc: '使ったターンだけ、人気の上がり ×1.5' } });
+// 持ち物の絵(2026-11-15 r1115-055)。絵がある物は絵、無い物は絵文字。距離の汁は汁ごとに色を分けた小瓶(tools/success/item-icons.js)
+const MSX_ITEM_IMG = Object.freeze({ elixir0: 'images/success/items/elixir-red.png', elixir1: 'images/success/items/elixir-orange.png', elixir2: 'images/success/items/elixir-green.png', elixir3: 'images/success/items/elixir-blue.png' });
+// x … { e, img }。size … 絵の大きさ(px)。既定は字の1.45倍(絵の周りの余白の分だけ絵文字より大きく)
+const msxItemIco = (x, size = '1.45em') => (x && x.img
+  ? <img src={x.img} alt="" draggable={false} data-msx-item-img style={{ width: size, height: size, objectFit: 'contain', verticalAlign: 'middle', display: 'inline-block' }}/>
+  : ((x && x.e) || '🎁'));
 const msxItemView = (k) => {
   const base = MSX_ITEM_BY_ID[k]; const core = msxSuc && msxSuc.SUC.ITEMS ? msxSuc.SUC.ITEMS[k] : null; const ex = MSX_EXTRA_ITEM[k];
-  return { id: k, name: (base && base.name) || (core && core.name) || k, desc: typeof msxItemFx === 'function' && msxItemFx(k) ? (base && typeof msxItemDesc === 'function' ? msxItemDesc(k) : msxItemFx(k)) : (base && base.desc) || (ex && ex.desc) || '', /* 効き目だけ(2026-11-14 社長) */ e: (base && base.e) || (ex && ex.e) || '🎁', during: core ? core.use === 'during' : !!(base && base.when === 'both') };
+  return { id: k, name: (base && base.name) || (core && core.name) || k, desc: typeof msxItemFx === 'function' && msxItemFx(k) ? (base && typeof msxItemDesc === 'function' ? msxItemDesc(k) : msxItemFx(k)) : (base && base.desc) || (ex && ex.desc) || '', /* 効き目だけ(2026-11-14 社長) */ e: (base && base.e) || (ex && ex.e) || '🎁', img: MSX_ITEM_IMG[k] || null, during: core ? core.use === 'during' : !!(base && base.when === 'both') };
 };
 function MsxBag({ run, setRun, v, ev, onClose }) {
   const { SUC } = msxSuc;
@@ -90839,7 +90846,7 @@ function MsxBag({ run, setRun, v, ev, onClose }) {
     const log = [...(run.log || []), { turn: s.turn, t: `${t.name}を使った` }].slice(-20);
     // 覚醒の実・超覚醒の実: その場で覚醒の演出(超覚醒の実で覚醒前なら 覚醒 → 超覚醒 の2つを続けて)。終わったらメインへ
     if (Array.isArray(r.out.fires) && r.out.fires.length && typeof MsxAwakeShow === 'function') { setRun({ ...run, s: r.state, log, phase: 'awake', out: { fire: r.out.fires[0], rest: r.out.fires.slice(1), then: 'item' } }); onClose(); return; }
-    if (typeof MsxItemUseFx === 'function') setIfx({ key: t.id, e: t.e, name: t.name, s0: s, s1: r.state, id: `${s.turn}-${t.id}` });
+    if (typeof MsxItemUseFx === 'function') setIfx({ key: t.id, e: t.e, img: t.img, name: t.name, s0: s, s1: r.state, id: `${s.turn}-${t.id}` });
     setRun({ ...run, s: r.state, log });
   };
   const blocked = t && !t.carry && typeof SUC.itemUsable === 'function' && !SUC.itemUsable(s, t.id); // 覚醒の実の期の条件・覚醒ずみ
@@ -90850,16 +90857,16 @@ function MsxBag({ run, setRun, v, ev, onClose }) {
       {ifxOn ? <MsxItemUseFx key={ifx.id} run={run} fx={ifx} onDone={() => setIfx(null)}/> : null}
       <div className="v-bagw">
         <div className="t">🎒 持ち物<small>使えるのは 1ターンに1個まで・使ってもターンは進まない</small><button type="button" onClick={onClose}><i className="sym close" aria-hidden="true"/></button></div>
-        {t ? <div className="v-bsel"><span className="e" style={{ fontSize: 26 }}>{t.e}</span><div><b>{t.name}{t.n ? <span className="yel"> ×{t.n}</span> : null}</b><small>{t.desc}</small><small className="lim">{t.carry ? '始める前から効いている' : 'いつ使える: 自分のターン'}</small></div></div> : null}
+        {t ? <div className="v-bsel"><span className="e" style={{ fontSize: 26 }}>{msxItemIco(t)}</span><div><b>{t.name}{t.n ? <span className="yel"> ×{t.n}</span> : null}</b><small>{t.desc}</small><small className="lim">{t.carry ? '始める前から効いている' : 'いつ使える: 自分のターン'}</small></div></div> : null}
         <div className="v-bgrid">
-          {bagList.map((x) => <button type="button" key={x.id} className={pick === x.id ? 'sel' : ''} onClick={() => setPick(x.id)}><span className="e" style={{ fontSize: 22 }}>{x.e}</span><i>×{x.n}</i><small style={JA_LABEL_STYLE}>{msxItemNameNode(x.name.replace('ガロエ印の', ''))}</small></button>)}
-          {carryList.map((x) => <button type="button" key={`c-${x.id}`} className={`no${pick === x.id ? ' sel' : ''}`} onClick={() => setPick(x.id)}><span className="e" style={{ fontSize: 22 }}>{x.e}</span><small style={JA_LABEL_STYLE}>{msxItemNameNode(x.name.replace('ガロエ印の', ''))}</small></button>)}
+          {bagList.map((x) => <button type="button" key={x.id} className={pick === x.id ? 'sel' : ''} onClick={() => setPick(x.id)}><span className="e" style={{ fontSize: 22 }}>{msxItemIco(x)}</span><i>×{x.n}</i><small style={JA_LABEL_STYLE}>{msxItemNameNode(x.name.replace('ガロエ印の', ''))}</small></button>)}
+          {carryList.map((x) => <button type="button" key={`c-${x.id}`} className={`no${pick === x.id ? ' sel' : ''}`} onClick={() => setPick(x.id)}><span className="e" style={{ fontSize: 22 }}>{msxItemIco(x)}</span><small style={JA_LABEL_STYLE}>{msxItemNameNode(x.name.replace('ガロエ印の', ''))}</small></button>)}
           <div className="no"><span className="e">⏳</span><i>×{sand}</i><small style={JA_LABEL_STYLE}>{msxItemNameNode('時渡りの砂時計')}</small></div><div className="no"><span className="e">🌈</span><i>×{rainbow}</i><small style={JA_LABEL_STYLE}>{msxItemNameNode('虹の時渡りの砂時計')}</small></div>
         </div>
         {!bagList.length && !carryList.length ? <div className="msx-note">持ちこんだ物はありません</div> : null}
         <div className="v-bnote">⏳ 時渡りの砂時計: バトルに敗北したときにやり直せる<br/>🌈 虹の時渡りの砂時計: 敗北したとき相手を変えてやり直せる<br/><span className="dim2" style={JA_WRAP_STYLE}>{jaWrap('色のうすい物は、ここでは使えません(始める前から効く物・大会で負けたときの砂時計)')}</span></div>
         <button type="button" className="v-big" style={{ fontSize: 14, padding: 9, marginTop: 0, color: '#fff' }} disabled={!t || t.carry || usedNow || blocked} onClick={use}>
-          {usedNow ? 'このターンはもう使った' : blocked ? 'いまは使えない' : t && !t.carry ? `${t.e} ${t.name}を使う` : '使う'}</button>
+          {usedNow ? 'このターンはもう使った' : blocked ? 'いまは使えない' : t && !t.carry ? <>{msxItemIco(t)} {t.name}を使う</> : '使う'}</button>
       </div>
     </div>
     <MsxStRow who={s} stats={s.stats}/>
@@ -90991,7 +90998,7 @@ function MsxEvent({ run, setRun, v, ev, ctx, bondLv, onDone }) {
       {Object.keys(ups).length ? <MsxStRow who={s} stats={s.stats} ups={ups}/> : null}
       {typeof MsxEvResult === 'function' && (!isStory || picked.delta) ? <MsxEvResult delta={picked.delta} hasStats={Object.keys(ups).length > 0}/> : null}
       {isStory && picked.branch ? <div className="v-log" data-msx-story-branch>🔀 この選び方で、<b className="ga">最後のお話(第4話)の結末</b>が変わる</div> : null}
-      {gotGift ? <div className="v-log" data-msx-ev-gift>{giftItem.e} <b className="gu">{giftItem.name}</b> を手に入れた!(🎒持ち物に入った)<br/><small>{giftItem.desc}</small></div> : null}
+      {gotGift ? <div className="v-log" data-msx-ev-gift>{msxItemIco(giftItem)} <b className="gu">{giftItem.name}</b> を手に入れた!(🎒持ち物に入った)<br/><small>{giftItem.desc}</small></div> : null}
       {picked.apt ? <div className="v-log" data-msx-ev-apt>📏 「{['零', '近', '中', '遠'][picked.apt.dist]}」の間合い適性が <b className="ga">{picked.apt.from} → {picked.apt.grade}</b> に上がった!</div> : null}
       <div className="v-ft" style={{ marginTop: 6 }}><button type="button" className="go" onClick={() => onDone(run)}>次へ ▶</button></div>
     </>) : choices.length ? (
@@ -91622,7 +91629,7 @@ const msxR3CupReward = (SUC, c, s) => {
 const msxR3Prizes = (SUC, c) => {
   const out = [{ id: 'g', e: '💰', name: `賞金 ${msxFmt(c.prize)}G`, desc: '勝つともらえる賞金。ごはんや買い物に使える(負けても ★★ 以上は一部もらえる)' }];
   const ex = SUC.EX_BY_SYS ? SUC.EX_BY_SYS[c.sys] : null;
-  if (ex && ex.rw && ex.rw.bag) Object.entries(ex.rw.bag).forEach(([k, n]) => { const it = typeof msxItemView === 'function' ? msxItemView(k) : { name: k, e: '🎁', desc: '' }; out.push({ id: k, e: it.e, name: `${it.name} ×${n}`, desc: it.desc, rare: true }); });
+  if (ex && ex.rw && ex.rw.bag) Object.entries(ex.rw.bag).forEach(([k, n]) => { const it = typeof msxItemView === 'function' ? msxItemView(k) : { name: k, e: '🎁', desc: '' }; out.push({ id: k, e: it.e, img: it.img || null, name: `${it.name} ×${n}`, desc: it.desc, rare: true }); });
   const wtk = (ex && ex.four) || c.star >= 3 ? 1 : 0; const rtk = c.rival ? 1 : 0; // 芯の settle と同じ(★★★以上・四大大会 +1/ライバル +1)
   out.push({ id: 'tk', e: '🎫', name: '修行チケット', desc: `${wtk + rtk ? `勝つと修行チケット +${wtk + rtk}${rtk ? '(ライバルの分 +1)' : ''}。` : ''}賞金ランクが上がると1段ごとに +1(負けても獲得賞金の合計で上がる)` });
   const bpz = msxR3BeatPrize(SUC, c.prize); if (bpz) out.push(bpz);
@@ -91641,7 +91648,7 @@ const MsxR3PrizeBox = ({ prizes, onPick }) => {
   return (<>
     {gold ? <button type="button" className="pzg" onClick={() => onPick(gold)} data-msx-r3-prize="g"><i>賞金</i><b>{gold.name.replace(/^賞金 /, '')}</b></button> : null}
     {rest.length ? <><div className="sub">賞品</div>
-      <div className="pz">{rest.map((x) => <button type="button" key={x.id} className={`${x.rare ? 'rare' : ''}${x.pt ? ' pt' : ''}`} onClick={() => onPick(x)} data-msx-r3-prize={x.id}><span>{x.e}</span><small className="msx-kp">{msxPh(x.name)}</small></button>)}</div></> : null}
+      <div className="pz">{rest.map((x) => <button type="button" key={x.id} className={`${x.rare ? 'rare' : ''}${x.pt ? ' pt' : ''}`} onClick={() => onPick(x)} data-msx-r3-prize={x.id}><span>{typeof msxItemIco === 'function' ? msxItemIco(x) : x.e}</span><small className="msx-kp">{msxPh(x.name)}</small></button>)}</div></> : null}
   </>);
 };
 const MSX_R3_FC_CLASS = Object.freeze({ easy: 'fc-e', good: 'fc-g', even: 'fc-v', hard: 'fc-h', none: 'fc-n' });
@@ -91698,7 +91705,7 @@ function MsxR3Cup({ run, setRun, v, ev, onBack, onActed }) {
     `「出られる大会が ${nOk}つ あるよ。賞品もチェックしてみて!」`,
     `「${cur ? msxR3CupName(cur.sys, cur.name) : '大会'}、気になるね。体力は大丈夫?」`,
     `「大会は1ターン使うよ。調子がいいなら行ってみよ!」`,
-  ] : ['「今月は出られる大会がないみたい。トレーニングでじっくり力をつけよ!」', '「出られる大会が今月は無いよ。次の月の予定も見てみてね」'];
+  ] : P.key === 'final' ? ['「最後の期は、ヒーローズファイナルだけだよ。それまではトレーニングや修行で仕上げよう!」'] : ['「今月は出られる大会がないみたい。トレーニングでじっくり力をつけよ!」', '「出られる大会が今月は無いよ。次の月の予定も見てみてね」'];
   const openLine = { t: msxR3Q(openTexts[Math.abs(Number(s.turn) || 0) % openTexts.length]), e: null };
   const rankStep = typeof SUC.rankStepOf === 'function' ? SUC.rankStepOf(s) : 0; const rank = rankStep ? { name: SUC.rankNameOf(rankStep) } : null; // 賞金ランク10段(2026-11-14)
   const kindOf = (c) => (c.scenario ? 'シナリオ' : c.ex ? (MSX_R3_CUP_GRADE[c.grade] || '') : (SUC.CUP_SYS[c.sys] || {}).stat ? '自慢' : (SUC.CUP_SYS[c.sys] || {}).dist !== undefined ? '間合い' : (SUC.CUP_SYS[c.sys] || {}).type ? 'タイプ' : ['spring', 'summer', 'autumn', 'winter'].includes(c.sys) ? '四季' : 'ふつう');
@@ -91733,7 +91740,7 @@ function MsxR3Cup({ run, setRun, v, ev, onBack, onActed }) {
             </div>
             {c.rival ? <><span className="rvi"><img src={msxMonThumb(c.rival.species)} alt=""/><b>ライバル</b></span><span className="rvb">ごほうび大</span></> : null}
           </button>);
-      }) : <div className="msx-note">{now ? '今月の大会はありません' : 'この月の大会はありません'}</div>}
+      }) : <div className="msx-note">{P.key === 'final' ? '最後の期は、ヒーローズファイナルだけです' : now ? '今月の大会はありません' : 'この月の大会はありません'}</div>}
     </div>
     <div className="v-card" style={{ padding: '5px 9px' }}><div className="v-kv" style={{ margin: 0 }}><b>出ると</b><span>1戦だけ・1ターン使う・体力は減りません・勝つと賞金と賞品。{toForced ? <span className="yel">{' 期末の大会まで '}<span style={{ whiteSpace: 'nowrap' }}>{`あと${toForced}ターン`}</span></span> : null}</span></div></div>
     {wc ? (
@@ -91745,7 +91752,7 @@ function MsxR3Cup({ run, setRun, v, ev, onBack, onActed }) {
           <MsxR3PrizeBox prizes={msxR3Prizes(SUC, wc)} onPick={setPrz}/>
           {wcOk ? <div className="q">この大会に参加しますか?</div> : <div className="q ng">{now ? `この大会には出られません(${msxR3WhyText(wc.entry, s)})` : 'この大会は、その月になると出られます'}</div>}
           <div className="bt">{wcOk ? <><button type="button" onClick={() => setWin(null)}>キャンセル</button><button type="button" className="go" onClick={() => { setPick(wc.id); setWin(null); if (cur && cur.id === wc.id) go(false); else { const r = SUC.act(s, { kind: 'cup', id: wc.id }); if (r.out.ok) onActed({ ...run, s: r.state, out: null, log: [...(run.log || []), { turn: s.turn, t: `${msxR3CupName(wc.sys, wc.name)}に出た` }].slice(-20) }); } }} data-msx-r3-yes>はい</button></> : <button type="button" onClick={() => setWin(null)} data-msx-r3-close>閉じる</button>}</div>
-          {prz ? <div className="det" onClick={() => setPrz(null)}><div className="dbox" onClick={(e) => e.stopPropagation()}><div className="e">{prz.e}</div><b>{prz.name}</b><p className="msx-kp">{msxPh(prz.desc)}</p><button type="button" onClick={() => setPrz(null)}>閉じる</button></div></div> : null}
+          {prz ? <div className="det" onClick={() => setPrz(null)}><div className="dbox" onClick={(e) => e.stopPropagation()}><div className="e">{typeof msxItemIco === 'function' ? msxItemIco(prz) : prz.e}</div><b>{prz.name}</b><p className="msx-kp">{msxPh(prz.desc)}</p><button type="button" onClick={() => setPrz(null)}>閉じる</button></div></div> : null}
         </div>
       </div>) : null}
   </>);
@@ -91908,7 +91915,7 @@ const msxR3PrizeRows = (d, s) => {
   if (d.pop) rows.push(['⭐', '人気', `+${d.pop}(${s.pop - d.pop} → ${s.pop})`, '', '']);
   if (d.sand) rows.push(['⏳', '時渡りの砂時計', `+${d.sand}`, '', '']);
   Object.entries(d.stats || {}).forEach(([k, g]) => rows.push([MSX_STAT_ICON[k], MSX_STAT_NAME[k], `+${g}`, '', '']));
-  Object.entries(d.items || {}).forEach(([k, n]) => { const S = msxSuc && msxSuc.SUC ? msxSuc.SUC : null; const it = S && S.ITEMS ? S.ITEMS[k] : null; rows.push([(typeof MSX_EXTRA_ITEM !== 'undefined' && MSX_EXTRA_ITEM[k] && MSX_EXTRA_ITEM[k].e) || '🎁', it ? it.name : k, `×${n}(この育成の中で使える)`, 'new', 'GET']); });
+  Object.entries(d.items || {}).forEach(([k, n]) => { const S = msxSuc && msxSuc.SUC ? msxSuc.SUC : null; const it = S && S.ITEMS ? S.ITEMS[k] : null; rows.push([typeof msxItemView === 'function' && typeof msxItemIco === 'function' ? msxItemIco(msxItemView(k)) : ((typeof MSX_EXTRA_ITEM !== 'undefined' && MSX_EXTRA_ITEM[k] && MSX_EXTRA_ITEM[k].e) || '🎁'), it ? it.name : k, `×${n}(この育成の中で使える)`, 'new', 'GET']); });
   return rows;
 };
 // 大会の入り(2026-11-14 社長「参考資料どおりに」・参考 te-33): 組み合わせ表の前に、会場の景色に大会の紋章と名前を大きく出す。
@@ -92020,7 +92027,7 @@ function MsxR3PreDesk({ run, v, ev, onBack, onGo, onPause }) {
           <MsxR3PrizeBox prizes={prizes} onPick={setPrz}/>
           <div className="q">この大会に参加しますか?</div>
           <div className="bt"><button type="button" onClick={() => setWin(false)} data-msx-r3-pre-cancel>キャンセル</button><button type="button" className="go" onClick={onGo} data-msx-r3-yes>はい</button></div>
-          {prz ? <div className="det" onClick={() => setPrz(null)}><div className="dbox" onClick={(e) => e.stopPropagation()}><div className="e">{prz.e}</div><b>{prz.name}</b><p className="msx-kp">{msxPh(prz.desc)}</p><button type="button" onClick={() => setPrz(null)}>閉じる</button></div></div> : null}
+          {prz ? <div className="det" onClick={() => setPrz(null)}><div className="dbox" onClick={(e) => e.stopPropagation()}><div className="e">{typeof msxItemIco === 'function' ? msxItemIco(prz) : prz.e}</div><b>{prz.name}</b><p className="msx-kp">{msxPh(prz.desc)}</p><button type="button" onClick={() => setPrz(null)}>閉じる</button></div></div> : null}
         </div>
       </div>) : null}
   </>);
@@ -93037,7 +93044,7 @@ function MsxR3Box({ onClose }) {
       {page === 'detail' && cur && typeof MsxMonDetail === 'function' ? (() => {
         // 詳細は、はじめる画面・育成中の「くわしく」と同じ部品 MsxMonDetail(社長の手本 monster-detail-basic・r1114-039/046)。マスモンボックスの分だけ差し込む
         const lock = byeLock(cur);
-        const assistText = Array.isArray(cur.assists) && cur.assists.length ? cur.assists.map((a) => { const T3 = msxR3T().assist; return T3 && T3.VERSION === 3 && T3.BY_ID[a.id] ? `${T3.BY_ID[a.id].name} ${T3.valueText(a.id, T3.valueOf ? T3.valueOf(a) : a.v)}` : (a.name || a.id); }).join('・') : '';
+        const assistText = Array.isArray(cur.assists) && cur.assists.length ? cur.assists.map((a) => { const T3 = msxR3T().assist; return T3 && T3.VERSION === 3 && T3.BY_ID[a.id] ? `${T3.BY_ID[a.id].name} ${T3.valueText(a.id, T3.fromSaved(a))}` : (a.name || a.id); }).join('・') : '';
         const endAt = Number.isFinite(cur.endAt) ? new Date(cur.endAt) : null;
         const more = [
           ['忠誠 / 人気', `${Math.round(cur.loy || 0)} / ${Math.round(cur.pop || 0)}`],
