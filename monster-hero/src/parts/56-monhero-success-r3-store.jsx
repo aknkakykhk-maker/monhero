@@ -83,7 +83,9 @@ const msxR3Fight = (engine, SUC, run) => {
   const teamA = { assistantId: s.aid, tactics: MSX_R3_GEAR[SUC.periodOf(s.turn).key] || 10, members: [a] };
   const teamB = { assistantId: 'kiki', tactics: opp.tactics || 10, members: [o] };
   // 試合の上乗せ: 芯の battleBuffs(編成の試合型アシスト + 特別な1話)。古い芯なら battleMods だけ
-  const mods = typeof SUC.battleBuffs === 'function' ? (SUC.battleBuffs(s) || {}) : typeof SUC.battleMods === 'function' ? SUC.battleMods(s) : {};
+  //   芯の battleBuffs は { A: {...} } の形で返す。前はそれをさらに buffs:{ A: … } で包んでいて、試合型アシストの上乗せが試合に入っていなかった(r1115-202 H2)。中身だけを取り出す
+  const bb = typeof SUC.battleBuffs === 'function' ? SUC.battleBuffs(s) : null;
+  const mods = bb && typeof bb === 'object' ? (bb.A && typeof bb.A === 'object' ? bb.A : bb) : typeof SUC.battleMods === 'function' ? (SUC.battleMods(s) || {}) : {};
   const seed = `${s.id}:${s.turn}:${b.kind}:${b.retry || 0}:${b.round || 0}:0:${b.again || 0}`;
   // input: simulate に渡したものそのもの(trace なし)。バトル部の自分で操作する試合(MonsucArena の createMatch)がこれで同じ試合を始める
   const input = { ...MONSUC_MATCH_RULE, seed, catalog: cat, teamA, teamB, ...(mods && Object.keys(mods).length ? { buffs: { A: mods } } : {}) };

@@ -65,6 +65,9 @@ function MsxBetaTalk({ keys, ctx = {}, always = false, onDone }) {
   const tail = picked ? evOf(`${msxBetaScene(k)}.${picked}`) : null;
   const lines = main.lines.concat(tail ? tail.lines : [], main.after || []);
   const choices = Array.isArray(main.choices) ? main.choices : [];
+  // 頁の数は分かれ道の前後で変えない(選ぶ前から、いちばん長い枝で数える。r1115-202 L2)
+  const maxTail = choices.reduce((m, ch) => { const e = evOf(`${msxBetaScene(k)}.${ch.c}`); return Math.max(m, e && e.lines ? e.lines.length : 0); }, 0);
+  const total = picked ? Math.max(lines.length, main.lines.length + maxTail + (main.after || []).length) : main.lines.length + maxTail + (main.after || []).length;
   const atChoice = !picked && choices.length > 0 && i >= main.lines.length - 1;
   const l = lines[Math.min(i, lines.length - 1)];
   const close = () => { if (!always) msxBetaMark(k); if (onDone) onDone(k); };
@@ -80,7 +83,7 @@ function MsxBetaTalk({ keys, ctx = {}, always = false, onDone }) {
         )}
         {atChoice ? (
           <div className="msx-beta-opts">{choices.map((ch) => <button type="button" key={ch.c} className="msx-btn go" onClick={(e) => { e.stopPropagation(); choose(ch.c); }}>{ch.t}</button>)}</div>
-        ) : <div className="msx-beta-nx">{i + 1 >= lines.length ? '閉じる ▶' : '次へ ▶'}<small>{Math.min(i, lines.length - 1) + 1}/{lines.length}</small></div>}
+        ) : <div className="msx-beta-nx">{i + 1 >= lines.length ? '閉じる ▶' : '次へ ▶'}<small>{Math.min(i, lines.length - 1) + 1}/{Math.max(total, lines.length)}</small></div>}
       </div>
     </div>
   );

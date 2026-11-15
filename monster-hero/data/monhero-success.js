@@ -69,7 +69,9 @@
   // ヒーローズファイナル(最後の期の 3・4・5ターン目の終わりに1戦ずつ・負けたら終わり)
   const SUMMIT = Object.freeze([{ round: 1, name: 'ヒーローズファイナル 1回戦', mult: 1.2 }, { round: 2, name: 'ヒーローズファイナル 準決勝', mult: 1.3 }, { round: 3, name: 'ヒーローズファイナル 決勝', mult: 1.4 }]);
   // 決勝に勝ったときの全能力の上乗せ(前は +8 / 👑ありで +15)は、エンディングのお祝い(data/monhero-success-arc.js の PARTY)へ置きかえた(2026-11-13・二重にしない)
-  const SUMMIT_FINAL = Object.freeze({ plain: { all: 0, pts: 30, pop: 10, title: 'ヒーローズファイナル王者' }, big: { all: 0, pts: 60, pop: 20, title: '真のヒーロー' } });
+  // 能力ポイントは1回戦・準決勝・決勝のそれぞれで勝つたびに ★4 と同じ 120(SUMMIT_PTS・2026-11-15 r1115-201 社長)。決勝の上乗せ(前は 30 / 60)はやめた
+  const SUMMIT_FINAL = Object.freeze({ plain: { all: 0, pts: 0, pop: 10, title: 'ヒーローズファイナル王者' }, big: { all: 0, pts: 0, pop: 20, title: '真のヒーロー' } });
+  const SUMMIT_PTS = 120;
   // エンディング(STORY-ARC.md §4・社長 2026-11-13): bad = ヒーローズファイナルで負けて終わる / good = 決勝に勝つ /
   //   super = 決勝に勝つ・育成中の助手の親密度が最大・連続イベントを4話まで見た(特別演出つき)。どれも育成完了
   const PARTY0 = Object.freeze({ bad: [5], good: [10, 10, 10], super: [15, 17, 20] }); // 表が無いときの既定(arc.js と同じ)
@@ -1498,6 +1500,7 @@
       const s = clone(s0); const it = ITEMS[key];
       if (!it || it.use !== 'during' || num(s.bag[key]) <= 0 || s.itemTurn === s.turn || s.over) return { state: s0, out: { ok: false } };
       if (it.awake && !awakeItemOk(s, it.awake)) return { state: s0, out: { ok: false, why: 'awake' } };
+      if (it.fruit && !fruitDayOk(s)) return { state: s0, out: { ok: false, why: 'fruit-day' } };
       s.bag[key] -= 1; s.itemTurn = s.turn;
       const fires = [];
       if (it.awake) { if (num(s.awake) < 1) fires.push(awakeApply(s, 1)); if (it.awake >= 2) fires.push(awakeApply(s, 2)); }
@@ -1518,7 +1521,9 @@
     };
     // 覚醒の実を使えるか(k = 1 覚醒の実・2 超覚醒の実)。超覚醒ずみには、どちらも使えない
     const awakeItemOk = (s, k) => (k >= 2 ? num(s.awake) < 2 : num(s.awake) < 1);
-    const itemUsable = (s, key) => { const it = ITEMS[key]; if (!it || it.use !== 'during' || !s || s.over) return false; return it.awake ? awakeItemOk(s, it.awake) : true; };
+    // トレーニング用の実(このターンのトレーニングの伸び ×1.5)は、このターンにトレーニングできるときだけ(大会の日・もう動いた・体調不良・デビュー戦の再挑戦では無駄になるため。r1115-202 M7)
+    const fruitDayOk = (s) => Boolean(s) && !s.battle && !s.acted && !s.cond && !(s.debutLoss > 0 && !s.debutWon);
+    const itemUsable = (s, key) => { const it = ITEMS[key]; if (!it || it.use !== 'during' || !s || s.over) return false; if (it.fruit && !fruitDayOk(s)) return false; return it.awake ? awakeItemOk(s, it.awake) : true; };
 
     // ---- ターンを閉じる(期末の強制大会・ヒーローズファイナル・デビュー戦の再挑戦をここで立てる) ----
     const endTurn = (s0) => {
@@ -1785,12 +1790,12 @@
         return { ok: true };
       }
       const sy = CUP_SYS[c.sys] || {};
-      if (sy.stat && s.stats[sy.stat] < (CUP_NEED.stat[c.star] || 0)) return { ok: false, why: 'stat', need: CUP_NEED.stat[c.star] };
+      if (sy.stat && s.stats[sy.stat] < (CUP_NEED.stat[c.star] || 0)) return { ok: false, why: 'stat', need: CUP_NEED.stat[c.star], stat: sy.stat };
       if ((sy.stat || sy.dist !== undefined) && c.star >= 2 && !s.wonNow.includes(`${c.sys}:${c.star - 1}`)) return { ok: false, why: 'chain' };
       if (sy.dist !== undefined && c.star >= 2) { const d = aptGradesOf(s); if ((APT_RANK[d[sy.dist]] || 0) < APT_RANK.C) return { ok: false, why: 'dist' }; }
       if (sy.type) { const t = TYPE_OF[s.species]; if (t && t.main !== sy.type && t.sub !== sy.type) return { ok: false, why: 'type' }; if (c.star >= 3 && !s.wonNow.includes(`${c.sys}:2`)) return { ok: false, why: 'chain' }; }
       if (c.scenario) {
-        if (s.aid === 'kiki' && s.stats.pow < 400 && s.stats.wise < 400) return { ok: false, why: 'stat', need: 400 };
+        if (s.aid === 'kiki' && s.stats.pow < 400 && s.stats.wise < 400) return { ok: false, why: 'stat', need: 400, stat: 'pow', stat2: 'wise' };
         if (s.aid === 'dra' && s.techs.length < 3) return { ok: false, why: 'techs', need: 3 };
         if (s.aid === 'sorashido' && num(s.log.cond) > 0) return { ok: false, why: 'cond' };
         if (s.aid === 'erubin' && loyalOf(s) < 70) return { ok: false, why: 'loyal', need: 70 };
@@ -1984,6 +1989,7 @@
       }
       if (b.kind === 'summit') {
         if (!won) { s.over = 'lost'; out.end = true; applyEnding(s, 'bad', out); return { state: s, out }; }
+        gainWinPts(s, SUMMIT_PTS); // 各戦の勝ち(r1115-201)。ファイナルにライバルは出ないので ×1.5 は無い
         if (b.round === SUMMIT.length - 1) {
           const g = s.crowns >= 1 || fourWinsOf(s) >= 2 ? SUMMIT_FINAL.big : SUMMIT_FINAL.plain; // 👑 1つ以上か四大大会 2つ以上
           KEYS.forEach(k => addStat(s, k, g.all)); gainWinPts(s, g.pts); s.pop = clamp(s.pop + popGain(s, g.pop), 0, 100); s.titles.push(g.title);
@@ -2115,7 +2121,7 @@
 
     return Object.freeze({
       events: EV,
-      VERSION, STORY, KEYS, STAT_NAMES, STAT_MAX, PERIODS, TOTAL_TURNS, FORCED, SUMMIT, BASE, RESULTS, RATE, REST, PLAY, CLINIC, COND, LOYAL, GATHER, BOND, STORY, LOTTERY,
+      VERSION, STORY, KEYS, STAT_NAMES, STAT_MAX, PERIODS, TOTAL_TURNS, FORCED, SUMMIT, SUMMIT_PTS, BASE, RESULTS, RATE, REST, PLAY, CLINIC, COND, LOYAL, GATHER, BOND, STORY, LOTTERY,
       polOfBond, POL_BANDS, CUP_PTS, techRate, techBoostConds, CAP_UP, STAT_ABS, statCapOf, capOfTeam, capTopOf, capRateOf, powerOverOf, techAptAdd, techCellOf, techCells, techPickNorm, techPickLocked, setTechPick, GROW_BY_SPECIES, speciesType, gatherChanceOf, normStats, ASSISTS, ISSA, PTS, XP, SHUGYO, TECH_POWER, MASTERY, POP_TURN_MULT, techRowsOf, techPowerOfRows, powerOf, techBoostOf, techUseOf, ITEMS, ITEM_FX: Object.freeze({ fruit: FRUIT_MULT, pop: POP_TURN_MULT, elixir: ELIXIR_ADD }), GOOD, CARRY_MAX, useItem, FAME_V, FAME_SCALE, TICKET_BASE, TRAIN_LV, trainLvOf, REMATCH, canRematch, rematch, canSkip, battleKey, PRIZE, BEAT_PRIZE, beatOfPrize, BEAT_END, beatOfEnd, MEALS, meal, mealSkip, MEAL_SKIP_FEAR, mealOpts, MEAL_PICK, MEAL_WATCH_MULT, ticketsOfPrize, TECH_MAX, techsOf, canLearn, techRate, learnable, techRank, shugyoQ, superLeft, techMissOf, techCanon, canonTechList, shugyoLeft, shugyoHpOf, shugyoHpShort, shugyoPartsOf, shugyoPartsFit, teachFrom, BENCH: BENCH_USE, STAR_MULT, TAG_POWER, BOND_START, RANK_ADD, TRAIN_COMBO, AIDS, speciesList, shugyoGainOf, EX_CUPS, EX_BY_SYS, cupItemsOf, CUP_REWARD, FAME_RANK, FAME_RANK_MAX, rankStepOf, rankNameOf, rankNeedG, rankTicketsOf, WIN_TICKET, FOUR_DONE, fourWinsOf, forecastOf, ELIXIR_ADD, FRUIT_MULT,
       rngOf, periodOf, aptMult, initStats, memberOf, memberEffect, newRun, gatherOf, cardMult, peek, failRateOf, sabRateOf, greatRateOf,
       act, react, reactOf, issa, issaComes, issaRate, endTurn, opponents: opponentsOf, settle, cupsOf, canEnter, bracketOf, gradeOf, GRADE_STEP, stayV, SC_CUPS, SC_NAME, ASST_STORY, storyEnd, markSpecial, battleMods, battleBuffs, peakTurn, ASTORY, storyDue, storyStep, preview, restore, ARC, PARTY, summitPick, endingOf, endingSeen, CUP_SYS, YEAR, RIVAL, CUP_PRIZE, spendPts, autoPts, ptsCost, evaluate, assistPointsOf, loyalOf, loyalMult, top3Of, sumOf,

@@ -98,10 +98,12 @@ const monsucFuse = async ({ box, saveBox: saveBox0, onSave, readBox, mainId, mat
   } finally { monsucFuseBusy = false; }
 };
 
+
 function MonsucFuseSheet({ box, saveBox, onSave, readBox, locked = [], onDone, onClose, suc = null, keepNote = '', keptOf = null, onName = null }) {
   const SUC = suc || monsucFuseCore();
   const [mainId, setMain] = React.useState(null); const [matId, setMat] = React.useState(null); const [sure, setSure] = React.useState(0);
   const [nm, setNm] = React.useState(''); const [nmErr, setNmErr] = React.useState(''); const [named, setNamed] = React.useState(null); // 生まれた子の名前(合体したその場で決める・2026-11-14 社長 r1114-126)
+  const [show, setShow] = React.useState(null); // 合体の演出(確定のあと・終わると結果の札)
   const [err, setErr] = React.useState(''); const [done, setDone] = React.useState(null); const [ready, setReady] = React.useState(true); const [busy, setBusy] = React.useState(false);
   const lock = new Set(Array.isArray(locked) ? locked : []);
   const mons = monsucBoxMons(box);
@@ -123,13 +125,14 @@ function MonsucFuseSheet({ box, saveBox, onSave, readBox, locked = [], onDone, o
     setBusy(true);
     const r = await monsucFuse({ box, saveBox, onSave, readBox, mainId: main.id, matId: mat.id, locked, suc: SUC });
     setBusy(false);
-    if (r === true) { setDone({ child: plan.child, lost: [monsucFuseNick(main), monsucFuseNick(mat)] }); setNm(typeof plan.child.nick === 'string' ? plan.child.nick : ''); setNmErr(''); setNamed(null); setErr(''); if (typeof onDone === 'function') onDone(plan.child); }
+    if (r === true) { setShow({ a: main.species, b: mat.species, child: plan.child.species, name: monsucFuseSpName(plan.child.species) }); setDone({ child: plan.child, lost: [monsucFuseNick(main), monsucFuseNick(mat)] }); setNm(typeof plan.child.nick === 'string' ? plan.child.nick : ''); setNmErr(''); setNamed(null); setErr(''); if (typeof onDone === 'function') onDone(plan.child); }
     else { setErr(r); setSure(0); }
   };
   return (
     <div className="fixed inset-0 z-[90] flex items-end justify-center bg-black/60" data-monsuc-fuse>
       <div className="w-full max-w-md rounded-t-3xl border-t-2 border-fuchsia-300/70 bg-slate-900 p-3 pb-6 text-white" style={{ maxHeight: '92dvh', overflowY: 'auto' }}>
         <p className="text-[16px] font-black">🧬 合体する</p>
+        {show ? <MonsucFuseShow a={show.a} b={show.b} child={show.child} childName={show.name} onDone={() => setShow(null)}/> : null}
         {!SUC ? <p className="mt-2 text-[11px] font-bold text-slate-400">まだ使えません</p>
         : done ? (<>
           <div className="mt-2 rounded-xl bg-fuchsia-950 p-3" data-monsuc-fuse-done>
@@ -187,3 +190,75 @@ function MonsucFuseSheet({ box, saveBox, onSave, readBox, locked = [], onDone, o
       </div>
     </div>);
 }
+
+// ---- 合体の演出(2体 → 円盤石 → 生まれる。r1115-202 M10) ----
+//   0 2体が中央へ寄る → 1 光になって円盤石へ吸い込まれる(震える) → 2 閃光 → 3 生まれた子が現れる(「次へ」で閉じる)。保存はしない・合体の確定のあとに出すだけ。
+//   「動きを減らす」設定(msxFxCalm)と prefers-reduced-motion では出さない(すぐ結果の札)。早送り・短縮つき
+const MONSUC_FUSE_STEPS = Object.freeze([1500, 1500, 700]); // 0→1・1→2・2→3 に替わるまでのミリ秒
+const monsucFuseImg = (sp) => { try { if (typeof msxMonImg === 'function') { const u = msxMonImg(sp); if (u) return u; } const m = typeof ALL_PLAYER_MONSTERS !== 'undefined' ? ALL_PLAYER_MONSTERS[sp] : null; return (m && (m.imgUrl || m.iconUrl)) || ''; } catch (e) { return ''; } };
+const monsucFuseCalm = () => {
+  try { if (typeof msxFxCalm === 'function' && msxFxCalm()) return true; } catch (e) { /* 続ける */ }
+  try { return typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; }
+};
+const MONSUC_FUSE_CSS = `
+.mf-show{position:fixed;inset:0;z-index:95;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;overflow:hidden;background:radial-gradient(ellipse at 50% 45%,#4c1d95 0,#1e1b4b 55%,#0b0920 100%);color:#fff}
+.mf-show .bgimg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.35}
+.mf-head{position:absolute;left:50%;top:9%;transform:translateX(-50%);padding:6px 16px;border-radius:12px;background:rgba(15,23,42,.72);font-weight:900;font-size:16px;text-align:center;max-width:92vw;box-shadow:0 0 0 2px rgba(240,171,252,.8)}
+.mf-head small{display:block;font-size:11px;color:#f5d0fe;font-weight:800}
+.mf-stage{position:absolute;left:0;right:0;top:20%;bottom:22%}
+.mf-mon{position:absolute;bottom:18%;height:44%;max-width:40%;object-fit:contain;filter:drop-shadow(0 6px 10px rgba(0,0,0,.5));transition:left 1.2s ease-in,right 1.2s ease-in,transform 1.2s ease-in,opacity .5s}
+.mf-mon.a{left:6%}.mf-mon.b{right:6%}
+.mf-show.st0 .mf-mon.a{left:6%;animation:mfBobA 1.1s ease-in-out infinite}.mf-show.st0 .mf-mon.b{right:6%;animation:mfBobB 1.1s ease-in-out infinite}
+.mf-show.st1 .mf-mon.a{left:calc(50% - 20%);transform:scale(.35);opacity:.25}.mf-show.st1 .mf-mon.b{right:calc(50% - 20%);transform:scale(.35);opacity:.25}
+.mf-show.st2 .mf-mon,.mf-show.st3 .mf-mon{display:none}
+.mf-stone{position:absolute;left:50%;bottom:26%;width:44%;max-width:210px;aspect-ratio:1/1;transform:translateX(-50%);animation:mfShake .18s linear infinite}
+.mf-stone img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 8px 14px rgba(0,0,0,.45))}
+.mf-stone i{position:absolute;inset:-20%;border-radius:50%;background:radial-gradient(circle,rgba(250,232,255,.95),rgba(232,121,249,.5) 40%,rgba(232,121,249,0) 70%);animation:mfGlow .8s ease-in-out infinite alternate}
+.mf-flash{position:absolute;inset:0;background:#fff;animation:mfFlash .7s ease-out forwards;pointer-events:none}
+.mf-child{position:absolute;left:50%;bottom:20%;height:48%;max-width:70%;object-fit:contain;transform:translateX(-50%);animation:mfPop .7s cubic-bezier(.2,1.4,.4,1) both;filter:drop-shadow(0 6px 12px rgba(0,0,0,.5))}
+.mf-ctl{position:absolute;right:10px;top:10px;display:flex;gap:6px;z-index:2}
+.mf-ctl button{min-height:36px;padding:0 10px;border-radius:10px;background:rgba(15,23,42,.8);color:#fff;font-size:12px;font-weight:900}
+.mf-next{position:relative;z-index:2;margin:0 16px 22px;min-height:48px;width:calc(100% - 32px);max-width:380px;border-radius:14px;background:#d946ef;color:#fff;font-size:15px;font-weight:900}
+.mf-next:disabled{opacity:.4}
+.mf-show.calm .mf-stone,.mf-show.calm .mf-stone i,.mf-show.calm .mf-child,.mf-show.calm .mf-mon{animation:none}
+@keyframes mfBobA{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+@keyframes mfBobB{0%,100%{transform:translateY(-8px)}50%{transform:translateY(0)}}
+@keyframes mfShake{0%{transform:translateX(-50%) rotate(0)}25%{transform:translateX(calc(-50% - 3px)) rotate(-2deg)}75%{transform:translateX(calc(-50% + 3px)) rotate(2deg)}100%{transform:translateX(-50%) rotate(0)}}
+@keyframes mfGlow{from{opacity:.55;transform:scale(.92)}to{opacity:1;transform:scale(1.1)}}
+@keyframes mfFlash{from{opacity:1}to{opacity:0}}
+@keyframes mfPop{from{opacity:0;transform:translateX(-50%) scale(.3)}to{opacity:1;transform:translateX(-50%) scale(1)}}
+@media (prefers-reduced-motion: reduce){.mf-stone,.mf-stone i,.mf-child,.mf-mon{animation:none}}
+`;
+let monsucFuseCssDone = false;
+const monsucFuseEnsureCss = () => {
+  if (monsucFuseCssDone || typeof document === 'undefined') return;
+  monsucFuseCssDone = true;
+  const el = document.createElement('style'); el.setAttribute('data-monsuc-fuse-css', '1'); el.textContent = MONSUC_FUSE_CSS; document.head.appendChild(el);
+};
+function MonsucFuseShow({ a, b, child, childName, onDone }) {
+  monsucFuseEnsureCss();
+  const calm = monsucFuseCalm();
+  const [st, setSt] = React.useState(0);
+  React.useEffect(() => {
+    if (st >= 3) return undefined;
+    const id = setTimeout(() => setSt((n) => Math.min(3, n + 1)), calm ? 400 : MONSUC_FUSE_STEPS[st]);
+    return () => clearTimeout(id);
+  }, [st]);
+  if (typeof msxUseTimedSe === 'function') msxUseTimedSe(st === 1 ? [['awQi', 0]] : st === 2 ? [['awFlash', 0]] : st === 3 && !calm ? [['awKira', 0]] : [], [st]);
+  const stone = typeof DISC_STONE_BASE === 'string' ? DISC_STONE_BASE : 'images/disc-icons/disc-stone-base.PNG';
+  return (
+    <div className={`mf-show st${st}${calm ? ' calm' : ''}`} data-monsuc-fuse-show={st}>
+      <img className="bgimg" src="images/story-bg/monhero_plaza.jpg" alt=""/>
+      <div className="mf-head"><small>合体</small>{st >= 3 ? `${childName}が生まれた!` : st >= 1 ? '2体の力が円盤石に集まっていく…' : '2体が1つになろうとしている…'}</div>
+      {st < 3 ? <div className="mf-ctl"><button type="button" onClick={() => setSt((n) => Math.min(3, n + 1))} data-monsuc-fuse-ff>早送り ⏩</button><button type="button" onClick={() => setSt(3)} data-monsuc-fuse-skip>短縮 ⏭</button></div> : null}
+      <div className="mf-stage">
+        <img className="mf-mon a" src={monsucFuseImg(a)} alt=""/><img className="mf-mon b" src={monsucFuseImg(b)} alt=""/>
+        {st === 1 || st === 2 ? <span className="mf-stone" aria-hidden="true"><img src={stone} alt=""/><i/></span> : null}
+        {st === 2 ? <span className="mf-flash" aria-hidden="true"/> : null}
+        {st >= 3 ? <img className="mf-child" src={monsucFuseImg(child)} alt=""/> : null}
+      </div>
+      <button type="button" className="mf-next" disabled={st < 3} onClick={onDone} data-monsuc-fuse-show-next>{st >= 3 ? '次へ ▶' : '合体中…'}</button>
+    </div>
+  );
+}
+
