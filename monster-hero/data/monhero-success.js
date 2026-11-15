@@ -1094,7 +1094,7 @@
         s.hp = clamp(Math.round(s.hp - hpCost), 0, s.hpMax);
         const kf = withSum(s, card, 'kaifuku'); if (kf && res !== 'sab') s.hp = clamp(Math.round(s.hp + kf), 0, s.hpMax); // 💧トレ後回復効果アップ
         const ts = capSum('tsuika') ? withSum(s, card, 'tsuika') : withMax(s, card, 'tsuika'); // 足し合わせ・上限は表(r1115-107) // ➕追加トレボーナス(別の乱数で並びを変えない)
-        if (ts && res !== 'sab' && res !== 'fail') { const tr = rngOf(s.id, s.turn, 'tsuika'); if (tr() < ts / 100) { const k = KEYS[Math.floor(tr() * KEYS.length)]; const g = 5 + Math.floor(tr() * 16); const b0 = s.stats[k]; addStat(s, k, g); out.tsuika = { stat: k, v: s.stats[k] - b0 }; } }
+        if (ts && res !== 'sab' && res !== 'fail') { const tr = rngOf(s.id, s.turn, 'tsuika'); if (tr() < ts / 100) { const k = KEYS[Math.floor(tr() * KEYS.length)]; const g = 5 + Math.floor(tr() * 95); /* 1回で +5〜99(2026-11-15 社長 r1115-122・起きる率は合計50%まで) */ const b0 = s.stats[k]; addStat(s, k, g); out.tsuika = { stat: k, v: s.stats[k] - b0 }; } }
         const stUp = BASE.stress * pol.stress + R.stress;
         addStress(s, stUp * (EV && stUp > 0 ? EV.mod(s, 'stress') : 1) * (stUp > 0 ? 1 - cutOf(s, card, 'kibarashi') : 1)); // 🎵ごきげん: 増えが半分/🎈気晴らし: 増えを減らす
         card.members.forEach(i => { const nk = assistLv(s.team[i], 'nakayoshi'); addBond(s, i, BOND.train + (nk ? num(aOf('nakayoshi', 'v', nk)) : 0)); }); if (card.aid) addBond(s, 'aid', BOND.train);

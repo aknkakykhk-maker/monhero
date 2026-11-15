@@ -47,7 +47,7 @@
     haru: ['grow', '3〜5月に' + T1 + '伸び {v}'], natsu: ['grow', '6〜8月に' + T1 + '伸び {v}'],
     aki: ['grow', '9〜11月に' + T1 + '伸び {v}'], fuyu: ['grow', '12〜2月に' + T1 + '伸び {v}'],
     ninkigreat: ['rate', T1 + '人気が高いほど大成功の確率 {v}(人気100のとき)'], challenge: ['rate', T1 + '取った称号1つにつき大成功の確率 {v}'],
-    tsuika: ['rate', T1 + 'あとからどれか1つの能力がさらに +5〜20 になる確率 {v}'], kaifuku: ['val', T1 + 'トレーニングのあと体力 {v}'],
+    tsuika: ['rate', T1 + 'あとからどれか1つの能力がさらに +5〜99 になる確率 {v}'], kaifuku: ['val', T1 + 'トレーニングのあと体力 {v}'],
     atooshi: ['grow', 'このモンスターの一番高い能力のトレーニングにいっしょに来たとき、伸び {v}'],
     miharu: ['hard', T1 + 'サボりにくさ {v}'], kibarashi: ['cut', T1 + 'たまるストレス {v}'],
     kunpow: ['grow', '「ちから」のトレーニングにいっしょに来たとき、伸び {v}'], kunwise: ['grow', '「かしこさ」のトレーニングにいっしょに来たとき、伸び {v}'],
@@ -105,7 +105,7 @@
     add({ id, icon, name: `トレ効果アップ・${n}`, type: 'with', scene: 'train', unit: 2, max: 10, pt: 2, u: '%', text: T(`${m}のあいだ伸びが{v}%上がる`) }));
   add({ id: 'ninkigreat', icon: '📣', name: '人気度効果大成功アップ', type: 'with', scene: 'train', unit: 1, max: 14, pt: 3, u: '点', text: T('人気が高いほど大成功しやすくなる(人気100で +{v}点)') });
   add({ id: 'challenge', icon: '🎖', name: 'チャレンジ・幸運', type: 'with', scene: 'train', unit: 0.5, max: 3, pt: 13, u: '点', text: T('取った称号1つにつき大成功しやすくなる(+{v}点ずつ)') });
-  add({ id: 'tsuika', icon: '➕', name: '追加トレボーナス', type: 'with', scene: 'train', unit: 2, max: 10, pt: 4, u: '%', text: T('{v}%で、あとからどれか1つの能力がさらに +5〜20') });
+  add({ id: 'tsuika', icon: '➕', name: '追加トレボーナス', type: 'with', scene: 'train', unit: 2, max: 10, pt: 4, u: '%', text: T('{v}%で、あとからどれか1つの能力がさらに +5〜99') });
   add({ id: 'kaifuku', icon: '💧', name: 'トレ後回復効果アップ', type: 'with', scene: 'train', unit: 1, max: 10, pt: 4, u: '', text: T('トレーニングのあと体力が{v}回復する') });
   add({ id: 'atooshi', icon: '🎯', name: '得意の後押し', ref: false, type: 'with', scene: 'train', unit: 2, max: 15, pt: 5, u: '%', v2: [6, 12, 18, 24, 30], text: 'この子の一番高い能力のトレーニングに来ると、伸びが{v}%上がる' });
   add({ id: 'miharu', icon: '👀', name: '見張り役', ref: false, type: 'with', scene: 'train', unit: 5, max: 15, pt: 3, u: '%', v2: [15, 30, 45, 60, 75], text: T('サボりにくくなる(サボりの率 −{v}%)') });
