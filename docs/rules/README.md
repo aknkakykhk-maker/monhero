@@ -56,7 +56,7 @@ node tools/ctx.js rules 音量       その語に触れている節だけ
 | --- | --- | --- | --- |
 | ⑤ 更新履歴・ヘルプ・助手の告知 | [`changelog-help-update` スキル](../../.claude/skills/changelog-help-update/SKILL.md)「守ること」 | スキルを開いたとき | ヘルプも必ず更新・実時刻(JST)・プレイヤー向けの文・ネタバレ禁止・正式名称・デバッグ専用は載せない |
 | ⑥ のうち絵を差し替えたとき | [`monster-hero/images/CLAUDE.md`](../../monster-hero/images/CLAUDE.md)・[`monster-hero/audio/CLAUDE.md`](../../monster-hero/audio/CLAUDE.md) | そのフォルダのファイルを読んだとき | `image-asset-check.js` を通す |
-| ⑥-2 画像・音源は軽くしてから | [`monster-hero/images/CLAUDE.md`](../../monster-hero/images/CLAUDE.md)・[`monster-hero/audio/CLAUDE.md`](../../monster-hero/audio/CLAUDE.md)(同じ本文) | 同上 | そのまま入れない |
+| ⑥-2 画像・音源は画質・音質を下げず形だけそろえる | [`monster-hero/images/CLAUDE.md`](../../monster-hero/images/CLAUDE.md)・[`monster-hero/audio/CLAUDE.md`](../../monster-hero/audio/CLAUDE.md)(同じ本文) | 同上 | 下げない・形だけそろえる |
 | ⑥-3 モンヒロビートの新曲 | [`rhythm-song-add` スキル](../../.claude/skills/rhythm-song-add/SKILL.md)「守ること」 | スキルを開いたとき | スキルで最後まで通す・聞き返すのは難易度だけ |
 | ⑥-4 モンヒロビートのイベント | [`monster-hero/data/CLAUDE.md`](../../monster-hero/data/CLAUDE.md) | `monster-hero/data/` のファイルを読んだとき | 手順書を開いてから・対象曲の譜面は開催中に触らない |
 | ⑩-2 譜面生成ツール | [`tools/mode/CLAUDE.md`](../../tools/mode/CLAUDE.md) | `tools/mode/` のファイルを読んだとき | 既存曲の譜面・解析を作り直さない |

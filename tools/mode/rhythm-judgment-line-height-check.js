@@ -48,7 +48,9 @@ const lineSet=game.match(/if\(ready\)\{const lineRatio=\(lineRect\.top-areaRect\
 ok('追従(HOLD/SLIDE)は、決めうちの.88ではなく実測した位置を見る',
   data.includes('rect.top+rect.height*RHYTHM_JUDGMENT_LINE_Y.ratio')
   &&!!lineSet
-  &&(game.match(/RHYTHM_JUDGMENT_LINE_Y\.set\(/g)||[]).length===1
+  // set を呼ぶのは演奏画面の1か所と、マルチの観戦の道(同じ枠の線を実測して入れる・2026-11-15)の1か所だけ。観戦のほうも実測の比を渡す形であること
+  &&(game.match(/RHYTHM_JUDGMENT_LINE_Y\.set\(/g)||[]).length===2
+  &&/RHYTHM_JUDGMENT_LINE_Y\.set\(\(lineRect\.top - areaRect\.top \+ lineRect\.height \/ 2\) \/ areaRect\.height\)/.test(game)
   &&!/RHYTHM_JUDGMENT_LINE_Y\.set\(\s*\.88|RHYTHM_JUDGMENT_LINE_Y\.set\(\s*0\.88/.test(game));
 ok('設定を変えたら測り直す(古い位置のまま流れない)',
   /\},\[settings\.noteStartPosition,settings\.judgmentLineHeight\]\);/.test(game)
