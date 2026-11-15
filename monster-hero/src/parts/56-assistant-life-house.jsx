@@ -428,12 +428,8 @@ const assistantLifeTagChunks = (text) => {
 //   札の tag(行き先・人数・名前)は今までどおり残す(ほかの画面・検査が使う)。say は表示のためだけ
 const ASSISTANT_LIFE_SAY_WORDS = Object.freeze({ studio: ['モンヒロ', 'ビート'], cardroom: ['MFバトル', 'カード'], cafe: ['おやつ', '屋さん'], hill: ['ひなたの', '丘'], ranch: ['M/B', '管理'] });
 const ASSISTANT_LIFE_SAY_SPECIAL = Object.freeze({ battle: ['モンヒロ', 'バトル中'], 'cardroom:cards': ['MFバトル', 'カードを', '研究'], 'cafe:snack': ['おやつ', '屋さんで', 'ひと休み'] });
-// 横の狭い部屋(1行・字10.5px以上・床にかけない)で全部が入らないときの短い言い方
-const ASSISTANT_LIFE_SAY_SHORT = Object.freeze({ snack: 'おやつ中', practice: '練習中', training: '育成中', cards: 'カード研究', walk: '散歩中', idle: 'ぼーっと', read: '読書中', battle: 'バトル中', checkup: '診察中' });
-const assistantLifeSayOutShort = (place, doingKey) => {
-  const icon = ASSISTANT_LIFE_PLACE_ICON[place] || '🚶', d = ASSISTANT_LIFE_DOINGS[doingKey];
-  return d && d.places.includes(place) && ASSISTANT_LIFE_SAY_SHORT[doingKey] ? [icon, ASSISTANT_LIFE_SAY_SHORT[doingKey]] : [icon, `${assistantLifePlaceShow(place) || 'おでかけ先'}へ`];
-};
+// 横の狭い部屋(1行・字10.5px以上・床にかけない)で全部が入らないときの短い言い方は、場所の名前だけ(地図・今日あったことと同じ言い方・2026-11-08 社長「矛盾のない作り」)
+const assistantLifeSayOutShort = (place) => [ASSISTANT_LIFE_PLACE_ICON[place] || '🚶', assistantLifePlaceShow(place) || 'おでかけ先'];
 const assistantLifeSayOut = (place, doingKey) => {
   const icon = ASSISTANT_LIFE_PLACE_ICON[place] || '🚶';
   const sp = ASSISTANT_LIFE_SAY_SPECIAL[`${place}:${doingKey}`] || ASSISTANT_LIFE_SAY_SPECIAL[place];
@@ -528,12 +524,13 @@ function AssistantLifeRoom({ id, met, look, x, y, w, h, state, onOpen, idx, othe
         const tagFit = assistantLifeTagFit(t[0], w - 26, 10.5, 0); // 1行に入る字の大きさ(10.5 に入らない狭い部屋は、意味の切れ目で2行にする)
         const short = [...String(t[0])].length <= 9; // 横は1行。行き先が長いときは人数を付けない(「…」で切らない)
         // 何をしているかの文(r1115-136)。横と開いたトップの家(compact)は札が1つなので、印のある文(「🤝 えるびんと過ごす」)を出す。塊の間だけで折り、札に全部収める
-        const avail = w - 6 - 8 - 3 - 2;
-        // 横は札の高さが床の帯(マスモンが歩く所)に響くので1行・字10.5px。全部が入らない狭い部屋は短い言い方(「⚔️ バトル中」)
+        const avail = tagLand ? w - 6 - 8 - 3 : w - 6 - 8 - 3 - 2; // 札の中の幅(左右3px・余白4px×2・縁1.5px×2)
+        // 横は札の高さが床の帯(マスモンが歩く所)に響くので1行・字10.5px。全部が入らない狭い部屋は場所の名前だけ(「⚔️ モンヒロバトル」)、それでも入らなければ絵文字を外す
         const oneFit = (x) => assistantLifeTagFit(assistantLifeSayMeasure(assistantLifeSayParts(x).join('')), avail, 10.5, 0);
         const sayFull = Array.isArray(state.say) ? (compact && state.sayMark ? state.sayMark : state.say) : null;
         const sayAlt = Array.isArray(state.say) ? ((compact && state.sayMark ? state.sayMarkShort : state.sayShort) || sayFull) : null;
-        const say = tagLand && sayFull && oneFit(sayFull) < 10.5 && sayAlt ? (oneFit(sayAlt) >= oneFit(sayFull) ? sayAlt : sayFull) : sayFull;
+        const sayBare = sayAlt && sayAlt.length >= 2 ? ['', ...sayAlt.slice(1)] : sayAlt;
+        const say = !tagLand || !sayFull || oneFit(sayFull) >= 10.5 ? sayFull : [sayAlt, sayBare].find(x => x && oneFit(x) >= 10.5) || [sayFull, sayAlt, sayBare].filter(Boolean).sort((a, b) => oneFit(b) - oneFit(a))[0];
         if (say) {
           const f = tagLand ? Math.max(7, oneFit(say)) : assistantLifeSayFont(say, avail);
           return <span className="tag" data-assistant-life-room-away={id} data-assistant-life-room-tag-mark={mark ? '1' : '0'} data-assistant-life-room-say={compact ? '1' : '0'}>
@@ -625,7 +622,7 @@ const assistantLifeRoomsOf = (life, metIds) => {
     }
     // 組で出かけているときは、どの部屋の札にも同じ全員の名前(「3人で ドラ・ソラシド・えるびん」)
     const sub = w.group ? `${w.group.ids.length}人で ${doing.label}` : `ひとりで ${doing.label}`;
-    rooms[id] = { tag: [`${ASSISTANT_LIFE_PLACE_ICON[w.place] || '🚶'} ${assistantLifePlaceShow(w.place)}へ`, sub, w.group ? assistantLifeGroupNames(w.group.ids, 4) : null], say: assistantLifeSayOut(w.place, w.doing), sayShort: assistantLifeSayOutShort(w.place, w.doing) };
+    rooms[id] = { tag: [`${ASSISTANT_LIFE_PLACE_ICON[w.place] || '🚶'} ${assistantLifePlaceShow(w.place)}へ`, sub, w.group ? assistantLifeGroupNames(w.group.ids, 4) : null], say: assistantLifeSayOut(w.place, w.doing), sayShort: assistantLifeSayOutShort(w.place) };
   }
   // 言い合いのあとの2人(水色の縁と「💢 ◯◯と言い合いのあと」。2026-11-07 社長「喧嘩とか仲直りとか人間じみたのもどんどん」)
   const q = peer && peer.quarrel && peer.quarrel.pending;
@@ -906,10 +903,10 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
   hosei: { sorashido: { top: 0.015, eye: 0.345, chin: 0.55, m: 1.248 } },
   // 社長の全身画の8表情から切り出した、みゅあの胸から上の立ち絵(2026-11-11)。測り方は上と同じ。m は、いまの立ち絵と目から顎の見た目の長さが同じになるように決めた
   //   数字は tools/assistant/life-expression-sheets.py が出す(絵を作り直したら、出た数字へ直す)。stand-normal=ふだんの服
-  'stand-normal': { mua: { top: 0.1386, eye: 0.3072, chin: 0.4187, m: 0.829 }, momosuke: { top: 0.061, eye: 0.3239, chin: 0.4296, m: 0.786, above: 0.7 }, kiki: { top: 0.0777, eye: 0.3325, chin: 0.4296, m: 0.722 }, atsu: { top: 0.0699, eye: 0.3272, chin: 0.4301, m: 0.766 }, kyuko: { top: 0.0344, eye: 0.3093, chin: 0.4296, m: 0.895 }, sorashido: { top: 0.0106, eye: 0.2817, chin: 0.4296, m: 1.1 } , erubin: { top: 0.0083, eye: 0.2521, chin: 0.4298, m: 1.322 } },
-  'stand-sekiyuou': { erubin: { top: 0.004, eye: 0.249, chin: 0.4297, m: 1.345 } },
+  'stand-normal': { mua: { top: 0.1386, eye: 0.3072, chin: 0.4187, m: 0.829 }, momosuke: { top: 0.0636, eye: 0.3248, chin: 0.4298, m: 0.781, above: 0.7 }, kiki: { top: 0.0835, eye: 0.3343, chin: 0.4298, m: 0.711 }, atsu: { top: 0.0699, eye: 0.3272, chin: 0.4301, m: 0.766 }, kyuko: { top: 0.0341, eye: 0.3098, chin: 0.4304, m: 0.897 }, sorashido: { top: 0.0119, eye: 0.2825, chin: 0.4302, m: 1.098 } , erubin: { top: 0.0042, eye: 0.25, chin: 0.4292, m: 1.333 } },
+  'stand-sekiyuou': { erubin: { top: 0.0042, eye: 0.2489, chin: 0.4293, m: 1.343 } },
   'stand-hosei': { sorashido: { top: 0.0562, eye: 0.2921, chin: 0.4307, m: 1.031 } },
-  'stand-halloween': { mua: { top: 0.1502, eye: 0.3379, chin: 0.4334, m: 0.711, above: 0.85 }, momosuke: { top: 0.0594, eye: 0.3112, chin: 0.4299, m: 0.884, above: 0.95 }, kiki: { top: 0.1496, eye: 0.3349, chin: 0.4299, m: 0.707, above: 0.95 } },
+  'stand-halloween': { mua: { top: 0.1502, eye: 0.3379, chin: 0.4334, m: 0.711, above: 0.85 }, momosuke: { top: 0.0614, eye: 0.3116, chin: 0.4296, m: 0.878, above: 0.95 }, kiki: { top: 0.1499, eye: 0.3353, chin: 0.4304, m: 0.708, above: 0.95 } },
   'stand-card-master': { mua: { top: 0.1166, eye: 0.2283, chin: 0.2953, m: 0.499, above: 0.75 } },
 });
 // 絵の置き場所から、着替えの名前を引く(ふだんの服は null)

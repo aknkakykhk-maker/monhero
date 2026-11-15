@@ -1430,6 +1430,17 @@ const RHYTHM_MULTI = (() => {
   return api;
 })();
 
+// ---- マルチの曲選びで、前に選んだ曲(2026-11-15 r1115-165 社長「開くたびに一番上に戻される」) ----
+// 新しいキー mh_rhythm_multi_last_song_v1 に曲の id だけを覚える(既存のキーは触らない)。読めない・壊れているときは '' (いちばん上)
+const RHYTHM_MULTI_LAST_SONG_KEY = 'mh_rhythm_multi_last_song_v1';
+const rhythmMultiLastSongId = () => {
+  try { const v = typeof localStorage !== 'undefined' ? localStorage.getItem(RHYTHM_MULTI_LAST_SONG_KEY) : null; return typeof v === 'string' && /^[a-z0-9_]{1,80}$/i.test(v) ? v : ''; } catch (_) { return ''; }
+};
+const rhythmMultiRememberSong = (id) => {
+  if (typeof id !== 'string' || !/^[a-z0-9_]{1,80}$/i.test(id) || id === RHYTHM_MULTI_OMAKASE) return;
+  try { if (typeof localStorage !== 'undefined') localStorage.setItem(RHYTHM_MULTI_LAST_SONG_KEY, id); } catch (_) { /* 覚えられなくても遊べる */ }
+};
+
 // ---- 観戦(見る側・2026-11-11) ----
 // 部屋のメンバーではない。hb を送らない(5人の枠・結果・報酬・ランキング・周回に一切入らない)。送るのは「見ています」(wt)だけ。
 //   (1) 外から: 部屋の通信路へ自分でつなぐ(member=false)。フレンドの部屋・公開の一覧から
@@ -1437,6 +1448,8 @@ const RHYTHM_MULTI = (() => {
 // 見える物: 曲・全員の順位とスコアとコンボ・選んだ1人の判定の数とライフ(1秒ごと)。演奏している人の端末には、見られている間だけ
 // 1人が1秒ごとに小さな pg を足して送る仕事が増える(ループの外・hud を読むだけ)
 const rhythmWatchPhaseText = (phase) => ({ connecting: '部屋につないでいます…', waiting: 'いまは演奏していません。次の曲が始まるのを待っています', ended: 'この曲の演奏が終わりました', full: `この部屋は観戦がいっぱいです(最大${RHYTHM_WATCH_MAX}人)`, none: 'この部屋は見つかりませんでした。もう閉じたか、人がいないようです' }[phase] || '');
+// 観戦の画面(部屋の画面とは別の層)から「この部屋に入る」を押したときに呼ぶ、部屋の画面の入る処理(部屋の画面が開いている間だけ入っている)
+const RHYTHM_WATCH_JOIN = { fn: null };
 const RHYTHM_WATCH = (() => {
   let st = null; let sock = null; let tickTimer = null;
   const listeners = new Set();
@@ -1545,14 +1558,15 @@ const RHYTHM_WATCH = (() => {
   };
   const api = {
     // code の部屋を見る。member=true は部屋のメンバーが待機中に見るとき(quiet=演奏が見つからなければ何も出さずにやめる)
-    start(code, { member = false, quiet = false } = {}) {
+    // joinable=true … 公開の部屋の一覧から見たとき。観戦の画面に、別に「この部屋に入る」を出す(観戦そのものは見るだけで、次の曲にも入らない・2026-11-15 r1115-161)
+    start(code, { member = false, quiet = false, joinable = false } = {}) {
       const c = rhythmMultiNormalizeCode(code);
       if (!c) return false;
       api.stop();
       const v = RHYTHM_MULTI.view();
       if (member && !(v && v.code === c)) return false;
       const now = Date.now();
-      st = { code: c, member, quiet, wid: member ? v.selfId : rhythmMultiMakeId('w'), phase: 'connecting', round: '', songId: '', people: [], rows: {}, focus: '', members: {}, judged: {}, marks: {}, openedAt: now, lastPing: 0, lastPg: 0, heard: false };
+      st = { code: c, member, quiet, joinable: !member && joinable === true, wid: member ? v.selfId : rhythmMultiMakeId('w'), phase: 'connecting', round: '', songId: '', people: [], rows: {}, focus: '', members: {}, judged: {}, marks: {}, openedAt: now, lastPing: 0, lastPg: 0, heard: false };
       if (member) RHYTHM_MULTI.setWatchFeed(feed);
       else {
         sock = rhythmMultiOpenSocket({ topic: RHYTHM_MULTI_ROOM_TOPIC + rhythmMultiTopicTag() + c, onOpen: () => ping(), onMessage: feed, onClose: () => {} });
@@ -2069,7 +2083,7 @@ function RhythmMultiLobbyCount() {
 
 // フリーマッチの「部屋に入る」の一覧(2026-11-07 社長「部屋を作ると入るで一覧が見れるような感じ」)。
 //   受付の知らせ(RHYTHM_MULTI.watchRooms)から作る。サーバーの表は使わない。古い版の部屋は名前が無いので「部屋 ◯◯◯◯」と出す
-function RhythmMultiRoomList({ onJoin, onCreate, onBack, resolveIconUrl }) {
+function RhythmMultiRoomList({ onJoin, onWatch = null, onCreate, onBack, resolveIconUrl }) {
   const [list, setList] = React.useState(null);
   React.useEffect(() => RHYTHM_MULTI.watchRooms('free', setList), []);
   return (
@@ -2091,7 +2105,8 @@ function RhythmMultiRoomList({ onJoin, onCreate, onBack, resolveIconUrl }) {
                 <small className="block truncate text-[10px] font-bold text-slate-400">{[r.hr > 0 ? `ブリーダーLv.${r.hr}` : '', r.ph === 'select' ? '曲選び中' : '待っています'].filter(Boolean).join(' ・ ')}</small>
               </span>
               <span className="shrink-0 rounded-md bg-cyan-800/70 px-1.5 py-0.5 text-[10px] font-black text-cyan-100">{r.n}/{RHYTHM_MULTI_ROOM_MAX}人</span>
-              <button type="button" data-rhythm-multi-room-join={r.code} onClick={() => onJoin(r.code)} className="min-h-[44px] shrink-0 rounded-lg bg-sky-600 px-3 text-[13px] font-black active:scale-[.97]">入る</button>
+              {onWatch && <button type="button" data-rhythm-multi-room-watch={r.code} onClick={() => onWatch(r.code)} className="min-h-[44px] shrink-0 whitespace-nowrap rounded-lg bg-amber-500 px-2.5 text-[13px] font-black text-slate-950 active:scale-[.97]">観戦</button>}
+              <button type="button" data-rhythm-multi-room-join={r.code} onClick={() => onJoin(r.code)} className="min-h-[44px] shrink-0 whitespace-nowrap rounded-lg bg-sky-600 px-3 text-[13px] font-black active:scale-[.97]">入る</button>
             </li>))}</ul>}
       <button type="button" data-rhythm-multi-room-list-create onClick={onCreate} className="min-h-[48px] w-full rounded-xl bg-gradient-to-b from-fuchsia-500 to-violet-700 text-sm font-black active:scale-[.98]">🏠 部屋を作る</button>
     </div>
@@ -3052,7 +3067,9 @@ function RhythmWatchLaneFlat({ chart }) {
 //   プレイ画面と同じ式・同じ形で描く。見る側の端末だけで描き、演奏する人の端末・通信・保存は変えない。
 //   ・曲の位置は1秒ごとの pg の p。届かなくなっても最長 RHYTHM_WATCH_RUN_ON_MS は時計で進め、そのあとは止めて「通信を待っています」を出す
 //   ・判定は束 j(ノーツ番号 → 判定)。指の位置は再現しないので、ノーツは判定どおりに消える(HOLD/SLIDE は押さえたまま終わりまで判定ラインに乗る)
-//   ・軽くする設定・省エネ・描き手が作れないときは、これまでの2D描き(RhythmWatchLaneFlat)へ戻す
+//   ・描き手が作れないときだけ、これまでの2D描き(RhythmWatchLaneFlat)へ戻す。
+//     軽くする・演出量「最小」・省電力でも道は奥行きのまま(プレイ画面と同じ。光や背景が控えめになるだけ)。
+//     以前はこの3つでも2Dへ落としていて、本番の iPhone で観戦だけ平らなレーンになった(2026-11-15 r1115-161)
 const RHYTHM_WATCH_RUN_ON_MS = 3000;
 const RHYTHM_WATCH_NOTE_H = 20;
 const rhythmWatchSettings = () => {
@@ -3061,8 +3078,7 @@ const rhythmWatchSettings = () => {
     return normalizeRhythmSettings(raw ? JSON.parse(raw) : null);
   } catch (_) { return normalizeRhythmSettings(null); }
 };
-const rhythmWatchUseFlat = (s) => !!(s && (s.lightweightMode || s.effectAmount === 'MINIMAL' || s.frameRateMode !== 'DEVICE'))
-  || typeof rhythmBuildCanvasRenderer !== 'function' || typeof rhythmNoteCanvasGeometry !== 'function';
+const rhythmWatchUseFlat = () => typeof rhythmBuildCanvasRenderer !== 'function' || typeof rhythmNoteCanvasGeometry !== 'function';
 // 見られている人の「いまの曲の位置」。pg が止まったら最長3秒は時計で進める。waiting は、その3秒も過ぎて止めたとき
 const rhythmWatchPosition = (row, nowMs = Date.now()) => {
   if (!row || !row.pAt) return { p: 0, waiting: false, known: false };
@@ -3070,7 +3086,7 @@ const rhythmWatchPosition = (row, nowMs = Date.now()) => {
   return { p: row.p + Math.min(age, RHYTHM_WATCH_RUN_ON_MS), waiting: age > RHYTHM_WATCH_RUN_ON_MS, known: true };
 };
 function RhythmWatchLane({ chart, song = null, wide = false, onWaiting = null, onMode = null }) {
-  const [flat, setFlat] = React.useState(() => rhythmWatchUseFlat(rhythmWatchSettings()));
+  const [flat, setFlat] = React.useState(() => rhythmWatchUseFlat());
   React.useEffect(() => { if (onMode) onMode(!flat); return () => { if (onMode) onMode(false); }; }, [flat]);
   if (flat) return <RhythmWatchLaneFlat chart={chart} />;
   return <RhythmWatchLaneRoad chart={chart} song={song} wide={wide} onWaiting={onWaiting} onFail={() => setFlat(true)} />;
@@ -3279,6 +3295,8 @@ function RhythmWatchScreen({ songs = [], resolveIconUrl = null }) {
   const lifeMax = typeof RHYTHM_LIFE_MAX === 'number' ? RHYTHM_LIFE_MAX : 1000;
   const who = v.people.find((x) => x.id === v.focus);
   const close = () => RHYTHM_WATCH.stop();
+  const canJoin = !!(v.joinable && !v.member && RHYTHM_WATCH_JOIN.fn);
+  const joinRoom = () => { const fn = RHYTHM_WATCH_JOIN.fn, code = v.code; RHYTHM_WATCH.stop(); if (fn) fn(code); };
   const icon = (x, size) => (
     <span className="block shrink-0 overflow-hidden rounded-full border border-white/40 bg-slate-700" style={{ width: size, height: size }}>
       {x && x.icon && typeof resolveIconUrl === 'function' ? <img src={resolveIconUrl(x.icon)} alt="" draggable={false} className="h-full w-full object-cover" /> : null}
@@ -3291,6 +3309,7 @@ function RhythmWatchScreen({ songs = [], resolveIconUrl = null }) {
         <button data-rhythm-watch-close type="button" aria-label="観戦をやめる" onClick={close} className="min-h-[40px] shrink-0 rounded-xl bg-slate-700 px-3 text-[12px] font-black text-slate-100">観戦をやめる</button>
         <div className="min-w-0 flex-1 leading-tight"><b className="block text-[13px] font-black text-amber-300">👁 観戦中</b>
           <small className="block truncate text-[11px] font-bold text-slate-300">{songName || (playing ? '' : `部屋 ${v.code}`)}</small></div>
+        {canJoin && <button data-rhythm-watch-join type="button" onClick={joinRoom} className="min-h-[40px] shrink-0 whitespace-nowrap rounded-xl bg-sky-600 px-3 text-[12px] font-black text-white">この部屋に入る</button>}
       </header>
       {!playing && (
         <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
@@ -3345,7 +3364,7 @@ function RhythmWatchScreen({ songs = [], resolveIconUrl = null }) {
                 );
               })}
             </div>
-            <p className="mt-1 text-[10px] font-bold text-slate-400" style={JA_WRAP_STYLE}>{jaWrap(`名前を押すと、その人の判定を見られます${v.member ? '。次の曲から、いっしょに遊べます' : ''}`)}</p>
+            <p className="mt-1 text-[10px] font-bold text-slate-400" style={JA_WRAP_STYLE}>{jaWrap(`名前を押すと、その人の判定を見られます${v.member ? '。次の曲から、いっしょに遊べます' : canJoin ? '。観戦は見るだけです。遊ぶときは「この部屋に入る」' : ''}`)}</p>
           </section>
         </div>
       )}
@@ -3606,7 +3625,9 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
     </button>
   ) : null);
   const mine = view ? view.members.find((m) => m.id === view.selfId) : null;
-  const [selSongId, setSelSongId] = React.useState(mine && mine.pick && mine.pick !== RHYTHM_MULTI_OMAKASE ? mine.pick : '');
+  const [selSongId, setSelSongIdRaw] = React.useState(() => (mine && mine.pick && mine.pick !== RHYTHM_MULTI_OMAKASE ? mine.pick : '') || rhythmMultiLastSongId());
+  // 選んだ曲は覚えておき、次の曲を選ぶとき(画面を開き直したときも)その曲を選んだ状態・その位置で開く(2026-11-15 r1115-165)
+  const setSelSongId = (id) => { setSelSongIdRaw(id); rhythmMultiRememberSong(id); };
   const [selectView, setSelectView] = React.useState(null);
   const songById = (songId) => songs.find((song) => song.songId === songId) || null;
   const defaultDiff = difficultyIds.includes('NORMAL') ? 'NORMAL' : difficultyIds[0] || '';
@@ -3886,6 +3907,8 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
     setFreeOpen(false); setFreeList(false);
     RHYTHM_MULTI.join(code, myProfile(), 'free');
   };
+  // 観戦の画面の「この部屋に入る」は、ここの入る処理を通す(入れない時間などの確かめも同じ)
+  React.useEffect(() => { RHYTHM_WATCH_JOIN.fn = joinFreeRoom; return () => { if (RHYTHM_WATCH_JOIN.fn === joinFreeRoom) RHYTHM_WATCH_JOIN.fn = null; }; });
   const searchRoom = async (kind) => {
     setMessage('');
     const left = await rhythmMultiPenaltyLeftMs();
@@ -4369,9 +4392,9 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
                 );
               })()}
               {!freeList && <RhythmWatchRoomList songs={songs} resolveIconUrl={resolveIconUrl} friendIds={new Set((roster || []).map((f) => f.otherId))}
-                onWatch={(code) => { setMessage(''); setFreeOpen(false); setFreeList(false); RHYTHM_WATCH.start(code); }} />}
+                onWatch={(code) => { setMessage(''); setFreeOpen(false); setFreeList(false); RHYTHM_WATCH.start(code, { joinable: true }); }} />}
               {freeList
-                ? <RhythmMultiRoomList onJoin={joinFreeRoom} onCreate={createFree} onBack={() => setFreeList(false)} resolveIconUrl={resolveIconUrl} />
+                ? <RhythmMultiRoomList onJoin={joinFreeRoom} onWatch={(code) => { setMessage(''); RHYTHM_WATCH.start(code, { joinable: true }); }} onCreate={createFree} onBack={() => setFreeList(false)} resolveIconUrl={resolveIconUrl} />
                 : <div className="flex flex-col gap-2">
                   <button type="button" data-rhythm-multi-free-create data-rhythm-multi-free-create-hot={freeRoomCount === 0 ? '1' : undefined} onClick={createFree} className={`flex min-h-[60px] w-full items-center gap-3 rounded-2xl bg-gradient-to-b from-fuchsia-500 to-violet-700 px-4 text-left active:scale-[.98] ${freeRoomCount === 0 ? 'ring-4 ring-amber-300 shadow-[0_0_18px_rgba(252,211,77,.6)]' : ''}`}>
                     <span aria-hidden="true" className="text-2xl">🏠</span><span className="min-w-0 flex-1 leading-tight"><b className="block text-base font-black">部屋を作る</b><small className="block text-[11px] font-bold opacity-90" style={JA_WRAP_STYLE}>{jaWrap('自分の部屋を作って、人が来るのを待つ')}</small></span></button>
@@ -4875,7 +4898,8 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
         onDifficultyId={(id) => RHYTHM_MULTI.setDiff(id)}
         view={selectView}
         onView={setSelectView}
-        onPlay={(song, difficulty) => { RHYTHM_MULTI.setDiff(difficulty.id); RHYTHM_MULTI.pick(song.songId); }}
+        onPlay={(song, difficulty) => { rhythmMultiRememberSong(song.songId); RHYTHM_MULTI.setDiff(difficulty.id); RHYTHM_MULTI.pick(song.songId); }}
+        scrollToSelected
         playLabel={myPick ? 'この曲に変更' : 'この曲で決定'}
         hideRandom
         notice={(
