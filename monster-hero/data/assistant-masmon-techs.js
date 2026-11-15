@@ -578,6 +578,8 @@ const ASSISTANT_MASMON_TECHS = (() => {
       {"id":"melody_o16","name":"マリーランドアーチ","kind":"wise","dist":[3],"power":40,"hit":14,"guts":42,"crit":18,"gd":15,"rank":5,"role":"big","learn":{"by":"wise","st":{"wise":450},"need":{"melody_o07":50}}},
       {"id":"melody_o17","name":"メロディタクト","kind":"wise","dist":[2],"power":35,"hit":3,"guts":39,"crit":12,"gd":36,"rank":5,"role":"big","learn":{"by":"wise","st":{"wise":450},"need":{"melody_o07":50}}},
       {"id":"melody_o18","name":"スウィートパレード","kind":"wise","dist":[0],"power":53,"hit":-7,"guts":40,"crit":27,"gd":24,"rank":5,"role":"big","learn":{"by":"wise","st":{"wise":450},"need":{"melody_o07":50}}},
+      {"id":"melody_o19","name":"音符シャワー","kind":"wise","dist":[3],"power":22,"hit":-5,"guts":21,"crit":12,"gd":6,"rank":2,"role":"mid","learn":{"by":"wise","st":{"wise":150}}},
+      {"id":"melody_o20","name":"ぞうさんスタンプ","kind":"pow","dist":[0],"power":27,"hit":-4,"guts":28,"crit":10,"gd":12,"rank":3,"role":"skill","learn":{"by":"pow","st":{"pow":250},"need":{"melody_o04":25}}},
     ],
     Kuromy: [
       {"id":"kuromy_o01","name":"バク頭突き","kind":"pow","dist":[0],"power":18,"hit":-17,"guts":13,"crit":12,"gd":6,"moveTo":2,"rank":1,"role":"light","learn":{"start":true}},
@@ -598,6 +600,8 @@ const ASSISTANT_MASMON_TECHS = (() => {
       {"id":"kuromy_o16","name":"ナイトメアアーク","kind":"wise","dist":[3],"power":40,"hit":14,"guts":42,"crit":18,"gd":15,"rank":5,"role":"big","learn":{"by":"wise","st":{"wise":450},"need":{"kuromy_o12":50}}},
       {"id":"kuromy_o17","name":"ダークオーロラ","kind":"wise","dist":[2],"power":35,"hit":3,"guts":39,"crit":12,"gd":36,"rank":5,"role":"big","learn":{"by":"wise","st":{"wise":450},"need":{"kuromy_o12":50}}},
       {"id":"kuromy_o18","name":"悪夢フィナーレ","kind":"wise","dist":[0],"power":53,"hit":-7,"guts":40,"crit":27,"gd":24,"rank":5,"role":"big","learn":{"by":"wise","st":{"wise":450},"need":{"kuromy_o12":50}}},
+      {"id":"kuromy_o19","name":"ドクロ音符ショット","kind":"wise","dist":[3],"power":22,"hit":-5,"guts":21,"crit":12,"gd":6,"rank":2,"role":"mid","learn":{"by":"wise","st":{"wise":150}}},
+      {"id":"kuromy_o20","name":"バク突進ずつき","kind":"pow","dist":[0],"power":27,"hit":-4,"guts":28,"crit":10,"gd":12,"rank":3,"role":"skill","learn":{"by":"pow","st":{"pow":250},"need":{"kuromy_o04":25}}},
     ],
   },
   });

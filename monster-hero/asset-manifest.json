@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "id": "63b84d351389",
-  "packs": {"beat":{"bytes":171623116,"count":126},"battle":{"bytes":176732256,"count":1474},"card":{"bytes":37779758,"count":1048},"all":{"bytes":386135130,"count":2648},"core":{"bytes":23133315,"count":24}},
+  "id": "1f17761d25fc",
+  "packs": {"beat":{"bytes":171623116,"count":126},"battle":{"bytes":176748811,"count":1478},"card":{"bytes":37779758,"count":1048},"all":{"bytes":386151685,"count":2652},"core":{"bytes":23134295,"count":24}},
   "files": {
     "audio/bgm-4u-hitasura.mp3": {"v":"f4fb42472438","size":1446380,"pack":"beat"},
     "audio/bgm-against-my-own-shadow.mp3": {"v":"a58782a4c46f","size":1889175,"pack":"beat"},
@@ -2315,6 +2315,8 @@
     "images/success/skill/kuromy_o16.png": {"v":"b0d6a5bca061","size":3829,"pack":"battle"},
     "images/success/skill/kuromy_o17.png": {"v":"06a6fe075019","size":4473,"pack":"battle"},
     "images/success/skill/kuromy_o18.png": {"v":"34992d0f19f3","size":5117,"pack":"battle"},
+    "images/success/skill/kuromy_o19.png": {"v":"f49dfd89ee3f","size":4287,"pack":"battle"},
+    "images/success/skill/kuromy_o20.png": {"v":"cb4da33bc808","size":3955,"pack":"battle"},
     "images/success/skill/melody_o01.png": {"v":"0b977d46fd68","size":3749,"pack":"battle"},
     "images/success/skill/melody_o02.png": {"v":"c3cbe82c3944","size":3353,"pack":"battle"},
     "images/success/skill/melody_o03.png": {"v":"1e8b9eca0cf1","size":4699,"pack":"battle"},
@@ -2333,6 +2335,8 @@
     "images/success/skill/melody_o16.png": {"v":"ed754ea69c01","size":5057,"pack":"battle"},
     "images/success/skill/melody_o17.png": {"v":"c82b51d2beed","size":3887,"pack":"battle"},
     "images/success/skill/melody_o18.png": {"v":"d4f060a2ee29","size":4919,"pack":"battle"},
+    "images/success/skill/melody_o19.png": {"v":"cf4ed9166a10","size":4077,"pack":"battle"},
+    "images/success/skill/melody_o20.png": {"v":"9e58b03614aa","size":4236,"pack":"battle"},
     "images/success/skill/pandora_o01.png": {"v":"9ac819f3b065","size":5104,"pack":"battle"},
     "images/success/skill/pandora_o02.png": {"v":"77bb773b2d13","size":3808,"pack":"battle"},
     "images/success/skill/pandora_o03.png": {"v":"b302f25af25c","size":4115,"pack":"battle"},
@@ -2653,7 +2657,7 @@
     "images/ui/breakthrough-rainbow-star.PNG": {"v":"c0e9259703a7","size":199081,"pack":"battle"},
     "vendor/react.production.min.js": {"v":"18","size":10751,"pack":"core"},
     "vendor/react-dom.production.min.js": {"v":"18","size":131835,"pack":"core"},
-    "tailwind.css": {"v":"d69720c03968","size":307246,"pack":"core"},
+    "tailwind.css": {"v":"93d532fb1a7c","size":307246,"pack":"core"},
     "data/images/images-ally.js": {"v":"7469815ddc0f","size":81722,"pack":"core"},
     "data/images/images-enemy.js": {"v":"f10f6ad82110","size":2926,"pack":"core"},
     "data/ally-monsters.js": {"v":"6737b7dced48","size":60894,"pack":"core"},
@@ -2672,8 +2676,8 @@
     "data/rhythm-step3-release.js": {"v":"ae1d7f73f23a","size":8517,"pack":"core"},
     "data/assistants.js": {"v":"d27c2028cbea","size":2165421,"pack":"core"},
     "data/card-battle-cards.js": {"v":"a1453d49f17e","size":124624,"pack":"core"},
-    "data/assistant-masmon-techs.js": {"v":"f914ec973860","size":113017,"pack":"core"},
+    "data/assistant-masmon-techs.js": {"v":"cce7b04615dc","size":113841,"pack":"core"},
     "data/success-sounds.js": {"v":"b1f4a7428a00","size":11854,"pack":"core"},
-    "game-system.compiled.js": {"v":"923979bc2a87","size":11913432,"pack":"core"}
+    "game-system.compiled.js": {"v":"dcb817431ee8","size":11913588,"pack":"core"}
   }
 }

@@ -20,15 +20,27 @@ const MAIN = { Pandora: 'Pixie', KenshiMocchi: 'Mocchi', Eiki: 'Zan', Melody: 'Y
 const D = ['零', '近', '中', '遠'];
 // 組の無い専用技を、決めた主血統の技の「2つ目」として同じマス・同じ寄せ方にする(r1115-155 窓口: 社長「もちき・リープはローリンモッチ+2」)
 const SECOND = { KenshiMocchi: { 'もちき・リープ': 'ローリンモッチ' } };
+// 足す専用技(r1115-153②・社長 OK)。メロディ・クロミーの空きマス(遠・ランク2/零・ランク3)。性能は前後のランクの主血統の技の間 +2
+const NEW = {
+  Melody: [
+    { id: 'melody_o19', name: '音符シャワー', kind: 'wise', dist: [3], power: 22, hit: -5, guts: 21, crit: 12, gd: 6, fixRank: 2 },
+    { id: 'melody_o20', name: 'ぞうさんスタンプ', kind: 'pow', dist: [0], power: 27, hit: -4, guts: 28, crit: 10, gd: 12, fixRank: 3 },
+  ],
+  Kuromy: [
+    { id: 'kuromy_o19', name: 'ドクロ音符ショット', kind: 'wise', dist: [3], power: 22, hit: -5, guts: 21, crit: 12, gd: 6, fixRank: 2 },
+    { id: 'kuromy_o20', name: 'バク突進ずつき', kind: 'pow', dist: [0], power: 27, hit: -4, guts: 28, crit: 10, gd: 12, fixRank: 3 },
+  ],
+};
 const KEYS = ['dist', 'power', 'hit', 'guts', 'crit', 'gd', 'moveTo', 'learn', 'fixRank', 'needFix', 'rank'];
 const lines = [];
 for (const [sp, mainSp] of Object.entries(MAIN)) {
   const list = draft.species[sp];
+  for (const n of NEW[sp] || []) { const i = list.findIndex((x) => x.id === n.id); const v = Object.assign({ alignNew: true, rank: n.fixRank }, JSON.parse(JSON.stringify(n))); if (i >= 0) list[i] = v; else list.push(v); }
   // やり直せるように、最初に書いたときの元の数字へ戻してから計算する
   list.forEach((t) => { if (t.alignOrig) { for (const k of KEYS) delete t[k]; Object.assign(t, JSON.parse(JSON.stringify(t.alignOrig))); } });
   const built = B.species[sp]; const base = B.species[mainSp];
   const rankNow = (t) => (t.alignOrig && Number.isInteger(t.alignOrig.rankBuilt) ? t.alignOrig.rankBuilt : (built.find((x) => x.id === t.id) || {}).rank);
-  const own = list.map((t) => ({ t, rank: rankNow(t), d: t.dist[0] }));
+  const own = list.filter((t) => !t.alignNew).map((t) => ({ t, rank: rankNow(t), d: t.dist[0] }));
   const pairs = [];
   for (const m of base) for (const o of own) {
     const sameCell = o.rank === m.rank && o.d === m.dist[0] ? 10000 : 0;
@@ -41,6 +53,7 @@ for (const [sp, mainSp] of Object.entries(MAIN)) {
   for (const p of pairs) { if (usedM.has(p.m.id) || pairOf.has(p.o.t.id)) continue; usedM.add(p.m.id); pairOf.set(p.o.t.id, p.m); }
   const cellTaken = new Map(); // "rank-dist" → 技の数
   const put = (r, d) => cellTaken.set(`${r}-${d}`, (cellTaken.get(`${r}-${d}`) || 0) + 1);
+  for (const n of list.filter((t) => t.alignNew)) { put(n.fixRank, n.dist[0]); lines.push(`${sp}: ${n.name}(新しい専用技)${n.fixRank}${D[n.dist[0]]}`); }
   for (const o of own) {
     const t = o.t;
     if (!t.alignOrig) { const keep = {}; for (const k of KEYS) if (t[k] !== undefined) keep[k] = JSON.parse(JSON.stringify(t[k])); keep.rankBuilt = o.rank; t.alignOrig = keep; }
