@@ -16,10 +16,17 @@ const ASSISTANT_LIFE_GIFT_CHEKI_KEY = 'mh_assistant_life_cheki_v1';
 const ASSISTANT_LIFE_GIFT_CHEKI_MAX = 60;
 const ASSISTANT_LIFE_SOLO_GIFT_KEY = 'mh_assistant_life_solo_gift_v1';
 // 狭い枠で名前を折り返すときの区切り(言葉の途中で折らない)。名前が変わって合わなくなったら、名前をそのまま1つで出す
-const ASSISTANT_LIFE_GIFT_WRAP = Object.freeze({ basket: ['おやつ', 'バスケット'], misanga: ['おそろいの', 'ミサンガ'], cake: ['はんぶんこ', 'ケーキ'], onigiri: ['ほかほか', 'おにぎり'],
-  tea: ['午後の', 'ティーセット'], earphone: ['かたみみ', 'イヤホン'], puzzle: ['ふたりで解く', 'パズル'], sleeve: ['おそろい', 'スリーブ'], cheki: ['思い出', 'チェキ'], flower: ['ちいさな', '花束'],
+const ASSISTANT_LIFE_GIFT_WRAP = Object.freeze({ basket: ['おやつ', 'バスケット'], misanga: ['おそろいの', 'ミサンガ'], cake: ['半分こ', 'ケーキ'], onigiri: ['ほかほか', 'おにぎり'],
+  tea: ['午後の', 'ティーセット'], earphone: ['片耳', 'イヤホン'], puzzle: ['二人で解く', 'パズル'], sleeve: ['おそろい', 'スリーブ'], cheki: ['思い出', 'チェキ'], flower: ['小さな', '花束'],
   letter: ['手書きの', '手紙'], candy: ['ひとつぶ', 'キャンディ'], omamori: ['小さな', 'おまもり'], monplush: ['モンスターの', 'ぬいぐるみ'] });
-const assistantLifeGiftWrapName = (g) => { const w = g && ASSISTANT_LIFE_GIFT_WRAP[g.key]; return w && w.join('') === g.name ? w : [g ? g.name : '']; };
+// 表に無い名前(改名のあと表が古いまま等)も、言葉の切れ目で折る: 末尾のカタカナの言葉の前・「の」の後(2026-11-15 窓口「切らず・言葉の切れ目で折る」)
+const assistantLifeGiftWrapName = (g) => {
+  const w = g && ASSISTANT_LIFE_GIFT_WRAP[g.key];
+  if (w && w.join('') === g.name) return w;
+  const name = g ? String(g.name || '') : '';
+  const m = name.match(/^(.+?)([ァ-ヴー]{2,})$/u) || name.match(/^(.+?の)(.+)$/u);
+  return m ? [m[1], m[2]] : [name];
+};
 const ASSISTANT_LIFE_GIFT_LABEL = Object.freeze({ like: '💗 好き', mid: 'ふつう', bad: '💧 苦手', unknown: '?' });
 
 const assistantLifeGiftDefs = () => (typeof ASSISTANT_LIFE_GIFTS !== 'undefined' && Array.isArray(ASSISTANT_LIFE_GIFTS) ? ASSISTANT_LIFE_GIFTS : []);

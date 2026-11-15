@@ -322,6 +322,7 @@ const MSX_CSS = `
 .msx .v-opt{background:#1e1a36;border:1.5px solid #f472b6;border-bottom-width:3px;border-radius:13px;padding:6px 10px;font-size:12.5px;font-weight:900;line-height:1.3}
 .msx .v-opt small{display:block;font-size:10px;color:#86efac;font-weight:800}
 .msx .v-clock{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:radial-gradient(circle at 50% 45%,#3b2f6b 0,#151130 70%)}
+.msx .v-scene .v-clock{justify-content:flex-start;padding-top:7%;background:linear-gradient(180deg,#151130e6 0,#15113099 70%,#1511304d 100%)}
 .msx .v-cal{width:190px;background:#fff;color:#1e1b4b;border-radius:16px;overflow:hidden;text-align:center;box-shadow:0 8px 0 #0006,0 0 30px #f472b666;transform:rotate(-3deg)}
 .msx .v-cal .y{background:linear-gradient(90deg,#f472b6,#fb923c);color:#fff;font-size:12px;font-weight:900;padding:3px}
 .msx .v-cal .mth{font-size:84px;font-weight:900;line-height:1.1}.msx .v-cal .mth small{font-size:20px}
@@ -919,7 +920,8 @@ const MSX_CSS = `
 .msx .v-hm-tiles.t4{grid-auto-flow:row;grid-template-columns:1fr 1fr}
 .msx .msx-bm-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px}
 .msx .msx-bm{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-width:0;border-radius:14px;padding:8px 4px;background:#1e1a36;border:1.5px solid #64748b;border-bottom-width:3px;line-height:1.25;text-align:center}
-.msx .msx-bm img{width:100%;max-width:84px;aspect-ratio:1;border-radius:11px;object-fit:cover;background:#0f172a;border:2px solid #475569}
+.msx .msx-bm img{width:100%;max-width:84px;aspect-ratio:1;border-radius:11px;object-fit:cover;background:linear-gradient(180deg,#94a3b8,#64748b);border:2px solid #475569}
+.msx .msx-bm-grid{padding-bottom:12px}
 .msx .msx-bm b{font-size:12px;font-weight:900;max-width:100%;word-break:keep-all}
 .msx .msx-bm small{font-size:10px;font-weight:800;color:#fde68a}
 .msx .v-hm-tiles{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:7px;margin-top:8px}

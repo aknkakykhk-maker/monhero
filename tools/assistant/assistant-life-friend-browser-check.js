@@ -147,7 +147,7 @@ const badgeProblems = (page) => page.evaluate(() => {
       await page.evaluate(() => { const l = ASSISTANT_LIFE_STORE.state.life; const st = ALF_STORE.state.st; ALF_STORE.set({ st: { ...st, day: assistantLifeDayKey(), go: 1, went: { 'aoi-0001': 1 }, out: { abs: l.abs, day: assistantLifeDayKey(), ids: ['atsu'], host: 'aoi-0001', name: 'あおい', theirs: ['dra', 'atsu'], word: 0, seen: false, rewarded: false } } }); ASSISTANT_LIFE_STORE.emit(); });
       await page.waitForTimeout(300);
       const tag = await page.locator('[data-assistant-life-room-away="atsu"]').innerText().catch(() => '');
-      check(`④ 部屋の札「🏘 あおいさんの家へ」(${v.id})`, /🏘 あおいさんの家へ/.test(tag), tag.replace(/\n/g, ' '));
+      check(`④ 部屋の札「🏘 あおいの家におでかけ」(${v.id})`, /🏘 あおい(さんの家へ|の家におでかけ)/.test(tag), tag.replace(/\n/g, ' '));
       { const sub = await page.locator('[data-assistant-life-today-sub]').innerText().catch(() => ''); check(`④ 出かけている助手を「声をかける」の相手にしない(${v.id})`, !/あつ/.test(sub), sub); }
       { const ng = await page.evaluate(() => { const el = document.querySelector('[data-assistant-life-room-away="atsu"] b'); if (!el) return ['札が無い']; const r = el.getBoundingClientRect(); const room = el.closest('[data-assistant-life-room]').getBoundingClientRect(); return [...(el.getClientRects().length > 1 ? ['札の字が折れる'] : []), ...(r.right > room.right + 1 || r.left < room.left - 1 ? ['札の字が部屋からはみ出す'] : []), ...(el.scrollWidth > el.clientWidth + 1 ? ['札の字が切れる'] : [])]; }); check(`④ 札の字が折れない・切れない(${v.id})`, ng.length === 0, ng.join(' / ')); }
       await shot(page, `${v.id}-2-room-tag`);
@@ -225,7 +225,7 @@ const badgeProblems = (page) => page.evaluate(() => {
       await page.locator('[data-alf-visit] [data-assistant-life-room="kiki"]').click();
       await page.locator('[data-alf-visit-sheet="kiki"]').waitFor({ timeout: 3000 });
       check(`⑥ おでかけ中の部屋も押せて、「おでかけ中」と分かる(${v.id})`, (await page.locator('[data-alf-visit-room-state="out"]').count()) === 1);
-      check(`⑯ 出かけている助手は行き先が分かる(部屋の札「🃏 カード部屋へ」・シート)(${v.id})`, /(カード部屋|MFバトルカード)へ/.test(await page.locator('[data-alf-visit] [data-assistant-life-room="kiki"]').innerText()) && /(カード部屋|MFバトルカード)へおでかけ中/.test(await page.locator('[data-alf-visit-room-state]').innerText()));
+      check(`⑯ 出かけている助手は行き先が分かる(部屋の札「🃏 カード部屋へ」・シート)(${v.id})`, /(カード部屋|MFバトルカード)/.test(await page.locator('[data-alf-visit] [data-assistant-life-room="kiki"]').innerText()) && /(カード部屋|MFバトルカード)へおでかけ中/.test(await page.locator('[data-alf-visit-room-state]').innerText()));
       check(`⑱ 部屋のシートに、その人の助手のマスモン(写し)が絵つきで出る・勇者モンに⭐・「ほか3体」と列の最後に「+3」(${v.id})`, (await page.locator('[data-alf-visit-masmon-one]').count()) === 2 && /⭐ごろちゃん/.test(await page.locator('[data-alf-visit-masmon]').innerText()) && (await page.locator('[data-alf-visit-masmon-one] img').count()) >= 2 && /ほか3体/.test(await page.locator('[data-alf-visit-masmon-more]').innerText().catch(() => '')) && /\+3/.test(await page.locator('[data-alf-visit-masmon-plus]').innerText().catch(() => '')));
       { const ng = await textProblems(page, '[data-alf-visit-masmon]'); check(`⑱ マスモンの名前がはみ出さない(${v.id})`, ng.length === 0, [...new Set(ng)].join(' / ')); }
       // ⑲ フレンドの家も大きな部屋で見る(2026-11-08 社長・ナカヨシ9 の AssistantLifeRoomScene)

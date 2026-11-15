@@ -194,7 +194,7 @@ function MsxR3Retire({ run, setRun, onPause, debug, SUC }) {
         <div className="v-kv"><b>称号</b><span>{(ws.titles || []).length ? ws.titles.slice(0, 6).map((t) => `「${msxR3TitleName(t)}」`).join('') : 'なし'}</span></div>
         <div className="v-kv"><b style={{ width: 'auto', whiteSpace: 'nowrap' }}>マスモンボックス</b><span>{box ? `${box.mons.length + 1} / ${box.cap}体 に入る。次の育成の編成・対戦・合体に使える` : '…'}</span></div></div>
     </>);
-    return <MsxR3Frame run={run} back="戻る" onBack={() => setStep('e0')} right={right} body={body} foot={<div className="v-ft"><button type="button" className="go" onClick={() => setStep('e2')} data-msx-r3-e1>✨ アシスト効果を取る({msxR3T().assist ? msxR3T().assist.pointsOf(ev.power) : ev.points}ポイント)</button></div>}/>;
+    return <MsxR3Frame run={run} back="戻る" onBack={() => setStep('e0')} right={right} body={body} foot={<div className="v-ft"><button type="button" className="go" onClick={() => setStep('e2')} data-msx-r3-e1>✨ アシスト効果を取る({msxR3T().assist ? msxR3T().assist.pointsOf(ev.power) : ev.points}ポイント) ▶</button></div>}/>;
   }
 
   // ---- E2 アシスト能力 ----

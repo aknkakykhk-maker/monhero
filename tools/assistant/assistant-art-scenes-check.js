@@ -109,7 +109,7 @@ const probe = () => (async () => {
     }
     const mask = [img, img.parentElement, img.parentElement && img.parentElement.parentElement].some(e => { if (!e) return false; const s = getComputedStyle(e); return (s.maskImage && s.maskImage !== 'none') || (s.webkitMaskImage && s.webkitMaskImage !== 'none'); });
     const tag = (() => { for (let e = img; e && e.nodeType === 1; e = e.parentElement) { const d = [...e.attributes].find(x => /^data-(assistant|card|home|mh|rhythm)/.test(x.name)); if (d) return d.name.replace(/^data-/, ''); } return ''; })();
-    out.push({ who: who ? who.id : m[3], expr: m[4], kind: face ? 'face' : 'full', costume, tag, w: Math.round(bw * 10) / 10, h: Math.round(bh * 10) / 10,
+    out.push({ who: who ? who.id : m[3], expr: m[4], kind: face ? 'face' : 'full', costume, tag, src: String(raw || ''), w: Math.round(bw * 10) / 10, h: Math.round(bh * 10) / 10,
       stretch: Math.max(sx / sy, sy / sx) - 1, scale: tilt ? Math.max(lw / nw, lh / nh) : Math.max(kx, ky), seen, tilt: tilt || scrolled,
       cutTop: Math.max(0, vis.t - a.t) / ah, cutBottom: Math.max(0, a.b - vis.b) / ah, cutLeft: Math.max(0, vis.l - a.l) / aw, cutRight: Math.max(0, a.r - vis.r) / aw,
       bottomEdge: ab.b > 0.985, mask, facePx, faceCut, x: Math.round((a.l + a.r) / 2), y: Math.round(a.t), box: [Math.round(drawn.l * 10) / 10, Math.round(drawn.t * 10) / 10, Math.round(dw * 10) / 10, Math.round(dh * 10) / 10] });
@@ -317,7 +317,9 @@ const notes = [];
   for (const r of rows) {
     if (r.seen <= 0.02) continue; // 画面の外で待っている絵(スクロールの先など)は見ない
     if (r.stretch > LIMIT.stretch) add(r, '伸び', r.stretch);
-    if (r.scale > LIMIT.blur) add(r, 'ぼやけ', r.scale);
+    // 立ち絵(stand-*)は、2026-11-15 r1115-143 社長の案A で「元の画素のまま切る・2倍の補間をやめる」にした(補間しても細かさは増えず、重さだけ増えるため)。
+    //   拡大はブラウザに任せるので、前の2倍の補間と同じ所まで(2.0倍)を許す。ほかの絵は今までどおり 1.0倍まで
+    if (r.scale > (/\/stand-[a-z-]+\//.test(String(r.src || '')) ? LIMIT.blur * 2 : LIMIT.blur)) add(r, 'ぼやけ', r.scale);
     if (r.tilt) continue;
     if (r.cutTop > (r.faceCut != null ? LIMIT.cutTopDeco : LIMIT.cutTop)) add(r, '上が切れる', r.cutTop);
     if (r.faceCut != null) { if (r.faceCut > LIMIT.faceCut) add(r, '顔が切れる', r.faceCut); }
