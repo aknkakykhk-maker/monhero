@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 785cb6b164e4573b
+// source-sha256: 73eaa371b6e805f9
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -41022,7 +41022,8 @@ const RHYTHM_PLAY_WATCH = {
   songId: '',
   timeMs: 0,
   frames: 0,
-  jd: null
+  jd: null,
+  jx: null
 };
 const RHYTHM_PLAY_WATCH_CODES = {
   MARVELOUS: 0,
@@ -42043,6 +42044,7 @@ const RhythmTapTest = ({
     return () => {
       if (RHYTHM_PLAY_WATCH.hud === hud) {
         RHYTHM_PLAY_WATCH.jd = null;
+        RHYTHM_PLAY_WATCH.jx = null;
         RHYTHM_PLAY_WATCH.hud = null;
         RHYTHM_PLAY_WATCH.songId = '';
         RHYTHM_PLAY_WATCH.timeMs = 0;
@@ -43290,6 +43292,13 @@ const RhythmTapTest = ({
     const showAbilityFlash = !!abilityFlash && !rhythmMonsterEffectAtMost(settings.monsterNoteEffect, 'NONE') && !monAbOff('flash');
     const score = run.lifeDepleted ? run.lockedScore : run.score,
       lastDeltaMs = judgment !== 'MISS' && typeof deltaMs === 'number' && Number.isFinite(deltaMs) ? deltaMs : null;
+    {
+      const jx = RHYTHM_PLAY_WATCH.jx;
+      if (jx !== null && jx.length < 480) {
+        const mk = (preciseHit ? 1 : 0) + (side === 'SLOW' ? 2 : side === 'FAST' ? 4 : 0);
+        if (mk) jx.push(note.index, mk);
+      }
+    }
     hudRef.current.set(rhythmNoteIsSky(note) ? {
       score,
       combo: run.combo,
@@ -94256,7 +94265,10 @@ const RHYTHM_MULTI = (() => {
   let watchFrames = -1;
   let watchFramesAt = 0;
   const watchJdOff = () => {
-    if (typeof RHYTHM_PLAY_WATCH !== 'undefined') RHYTHM_PLAY_WATCH.jd = null;
+    if (typeof RHYTHM_PLAY_WATCH !== 'undefined') {
+      RHYTHM_PLAY_WATCH.jd = null;
+      RHYTHM_PLAY_WATCH.jx = null;
+    }
   };
   const watchStop = () => {
     if (watchTimer) clearInterval(watchTimer);
@@ -94320,6 +94332,11 @@ const RHYTHM_MULTI = (() => {
       const jd = watch.jd;
       if (jd.length > 240) jd.splice(0, jd.length - 240);
       if (jd.length) msg.j = jd.splice(0, jd.length);
+      const jx = Array.isArray(watch.jx) ? watch.jx : null;
+      if (jx && jx.length) {
+        if (jx.length > 240) jx.splice(0, jx.length - 240);
+        msg.jx = jx.splice(0, jx.length);
+      }
     }
     if (fin === true) msg.fin = 1;
     socket.send(msg);
@@ -94330,7 +94347,10 @@ const RHYTHM_MULTI = (() => {
       watchLite = false;
       watchLowCount = 0;
       watchFrames = -1;
-      if (typeof RHYTHM_PLAY_WATCH !== 'undefined') RHYTHM_PLAY_WATCH.jd = [];
+      if (typeof RHYTHM_PLAY_WATCH !== 'undefined') {
+        RHYTHM_PLAY_WATCH.jd = [];
+        RHYTHM_PLAY_WATCH.jx = [];
+      }
       watchTimer = setInterval(watchSend, RHYTHM_WATCH_LIVE_MS);
       watchSend();
     } else if (!focused && watchTimer) watchStop();
@@ -95895,6 +95915,7 @@ const RHYTHM_WATCH = (() => {
         st.round = round;
         st.rows = {};
         st.judged = {};
+        st.marks = {};
       }
       st.songId = rhythmMultiText(raw.sg, 60);
       if (people.length) st.people = people;
@@ -95942,6 +95963,10 @@ const RHYTHM_WATCH = (() => {
       if (Array.isArray(raw.j)) {
         const jm = st.judged[id] || (st.judged[id] = new Map());
         for (let i = 0; i + 1 < raw.j.length && i < 240 && jm.size < 4000; i += 2) jm.set(intOf(raw.j[i], 100000), intOf(raw.j[i + 1], 5));
+      }
+      if (Array.isArray(raw.jx)) {
+        const mm = st.marks[id] || (st.marks[id] = new Map());
+        for (let i = 0; i + 1 < raw.jx.length && i < 240 && mm.size < 4000; i += 2) mm.set(intOf(raw.jx[i], 100000), intOf(raw.jx[i + 1], 7));
       }
       st.rows[id] = row;
       st.lastPg = now;
@@ -96008,6 +96033,7 @@ const RHYTHM_WATCH = (() => {
       st.people = people;
       st.rows = {};
       st.judged = {};
+      st.marks = {};
       st.phase = 'playing';
       st.lastPg = now;
       if (!people.some(x => x.id === st.focus)) st.focus = people[0].id;
@@ -96061,6 +96087,7 @@ const RHYTHM_WATCH = (() => {
         focus: '',
         members: {},
         judged: {},
+        marks: {},
         openedAt: now,
         lastPing: 0,
         lastPg: 0,
@@ -98454,7 +98481,7 @@ const rhythmWatchChartOf = (songs, songId, diffId) => {
   const chart = song && song.difficulties ? song.difficulties[diffId] : null;
   return chart && Array.isArray(chart.notes) && chart.notes.length ? chart : null;
 };
-function RhythmWatchLane({
+function RhythmWatchLaneFlat({
   chart
 }) {
   const ref = React.useRef(null);
@@ -98570,40 +98597,500 @@ function RhythmWatchLane({
     className: "absolute inset-0 h-full w-full"
   });
 }
+const RHYTHM_WATCH_RUN_ON_MS = 3000;
+const RHYTHM_WATCH_NOTE_H = 20;
+const rhythmWatchSettings = () => {
+  try {
+    const raw = typeof localStorage !== 'undefined' ? localStorage.getItem(RHYTHM_SETTINGS_KEY) : null;
+    return normalizeRhythmSettings(raw ? JSON.parse(raw) : null);
+  } catch (_) {
+    return normalizeRhythmSettings(null);
+  }
+};
+const rhythmWatchUseFlat = s => !!(s && (s.lightweightMode || s.effectAmount === 'MINIMAL' || s.frameRateMode !== 'DEVICE')) || typeof rhythmBuildCanvasRenderer !== 'function' || typeof rhythmNoteCanvasGeometry !== 'function';
+const rhythmWatchPosition = (row, nowMs = Date.now()) => {
+  if (!row || !row.pAt) return {
+    p: 0,
+    waiting: false,
+    known: false
+  };
+  const age = Math.max(0, nowMs - row.pAt);
+  return {
+    p: row.p + Math.min(age, RHYTHM_WATCH_RUN_ON_MS),
+    waiting: age > RHYTHM_WATCH_RUN_ON_MS,
+    known: true
+  };
+};
+function RhythmWatchLane({
+  chart,
+  song = null,
+  wide = false,
+  onWaiting = null,
+  onMode = null
+}) {
+  const [flat, setFlat] = React.useState(() => rhythmWatchUseFlat(rhythmWatchSettings()));
+  React.useEffect(() => {
+    if (onMode) onMode(!flat);
+    return () => {
+      if (onMode) onMode(false);
+    };
+  }, [flat]);
+  if (flat) return React.createElement(RhythmWatchLaneFlat, {
+    chart: chart
+  });
+  return React.createElement(RhythmWatchLaneRoad, {
+    chart: chart,
+    song: song,
+    wide: wide,
+    onWaiting: onWaiting,
+    onFail: () => setFlat(true)
+  });
+}
+function RhythmWatchLaneRoad({
+  chart,
+  song = null,
+  wide = false,
+  onWaiting,
+  onFail
+}) {
+  const hostRef = React.useRef(null);
+  const noteRef = React.useRef(null);
+  const fxRef = React.useRef(null);
+  const lineRef = React.useRef(null);
+  const bandRef = React.useRef(null);
+  const judgeRef = React.useRef(null);
+  const artRef = React.useRef(null);
+  const waitingRef = React.useRef(false);
+  const settings = React.useMemo(() => rhythmWatchSettings(), []);
+  const hud = React.useMemo(() => rhythmCreateHud(), []);
+  const stageLevel = typeof rhythmFxStageLevel === 'function' ? rhythmFxStageLevel(settings, rhythmStageLevel(settings)) : 'SIMPLE';
+  const artSrc = stageLevel !== 'SIMPLE' && song && typeof rhythmSongArtSrc === 'function' ? rhythmSongArtSrc(song) : '';
+  const artSize = typeof rhythmFxArtSize === 'function' ? rhythmFxArtSize(settings) : 256;
+  const lineBottom = `${rhythmFiniteStep(settings.judgmentLineHeight, RHYTHM_JUDGMENT_LINE_HEIGHT_MIN, RHYTHM_JUDGMENT_LINE_HEIGHT_MAX, RHYTHM_JUDGMENT_LINE_HEIGHT_STEP, DEFAULT_RHYTHM_SETTINGS.judgmentLineHeight)}%`;
+  React.useEffect(() => {
+    const canvas = artRef.current;
+    if (!canvas || !artSrc) return undefined;
+    let alive = true;
+    const img = new Image();
+    img.onload = () => {
+      if (!alive) return;
+      try {
+        const c = canvas.getContext('2d');
+        c.clearRect(0, 0, canvas.width, canvas.height);
+        c.drawImage(img, 0, 0, canvas.width, canvas.height);
+        canvas.dataset.ready = '1';
+      } catch (_) {}
+    };
+    img.src = artSrc;
+    return () => {
+      alive = false;
+      img.onload = null;
+    };
+  }, [artSrc, artSize]);
+  React.useEffect(() => {
+    const host = hostRef.current;
+    const noteCv = noteRef.current;
+    const fxCv = fxRef.current;
+    const line = lineRef.current;
+    if (!host || !noteCv || !fxCv || !line || !chart) return undefined;
+    let renderer = null;
+    try {
+      if (typeof rhythmApplyNotePalette === 'function') rhythmApplyNotePalette(settings.notePalette);
+      if (typeof rhythmApplyNoteShape === 'function') rhythmApplyNoteShape(settings.noteShape);
+      renderer = rhythmBuildCanvasRenderer();
+      renderer.attach(noteCv, {
+        webgl: false,
+        gpuBand: false
+      });
+      if (renderer.ready === false || !noteCv.getContext) throw new Error('no-renderer');
+    } catch (_) {
+      try {
+        if (renderer) renderer.release();
+      } catch (__) {}
+      onFail();
+      return undefined;
+    }
+    const notes = chart.notes;
+    const travelMs = rhythmTravelMsForSpeed(settings.noteSpeed);
+    const keepScroll = {
+      points: RHYTHM_SCROLL.points,
+      back: RHYTHM_SCROLL.back,
+      sufMin: RHYTHM_SCROLL.sufMin,
+      groups: RHYTHM_SCROLL.groups,
+      lerp: RHYTHM_SCROLL.lerp
+    };
+    rhythmScrollSet(Array.isArray(chart.scrollChanges) && chart.scrollChanges.length ? chart.scrollChanges : null, travelMs, chart.scrollGroups);
+    const roadFactor = wide ? RHYTHM_ROAD_WIDTHS[settings.roadWidth] || 1 : 1;
+    RHYTHM_ROAD_WIDTH.set(roadFactor);
+    const hasTable = !!RHYTHM_SCROLL.points;
+    const firstFrom = t => {
+      let lo = 0;
+      let hi = notes.length;
+      while (lo < hi) {
+        const mid = lo + hi >> 1;
+        if (notes[mid].timeMs < t) lo = mid + 1;else hi = mid;
+      }
+      return lo;
+    };
+    let raf = 0;
+    let alive = true;
+    let sizeKey = '';
+    let travel = null;
+    let lastHud = '';
+    const fired = new Set();
+    let prevVis = null;
+    const noteH = RHYTHM_WATCH_NOTE_H;
+    const frame = () => {
+      if (!alive) return;
+      raf = requestAnimationFrame(frame);
+      const v = RHYTHM_WATCH.view();
+      const w = host.clientWidth;
+      const h = host.clientHeight;
+      if (!v || !(w > 0 && h > 0)) return;
+      if (`${w}x${h}/${roadFactor}` !== sizeKey) {
+        sizeKey = `${w}x${h}/${roadFactor}`;
+        RHYTHM_ROAD_WIDTH.set(roadFactor);
+        rhythmLayoutPlayArea(host);
+        const areaRect = RHYTHM_VIEW_ROTATION.rectOf(host);
+        const lineRect = RHYTHM_VIEW_ROTATION.rectOf(line);
+        const spawnY = -noteH + (Number(settings.noteStartPosition) || 0) / 100 * areaRect.height * 0.2;
+        const judgmentY = lineRect.top - areaRect.top + lineRect.height / 2 - noteH / 2;
+        travel = {
+          spawnY,
+          judgmentY,
+          travelPx: judgmentY - spawnY,
+          playAreaHeight: areaRect.height,
+          rect: {
+            left: 0,
+            top: 0,
+            width: w,
+            height: h
+          },
+          noteHeight: noteH,
+          hitY: lineRect.top + lineRect.height - areaRect.top
+        };
+        RHYTHM_JUDGMENT_LINE_Y.set((lineRect.top - areaRect.top + lineRect.height / 2) / areaRect.height);
+        fxCv.width = Math.round(w * 2);
+        fxCv.height = Math.round(h * 2);
+        const layout = rhythmJudgmentBandLayout(travel, travelMs);
+        const band = bandRef.current;
+        if (band && layout) {
+          band.style.top = `${Math.round(layout.top)}px`;
+          band.style.height = `${Math.round(layout.height)}px`;
+          band.style.opacity = '1';
+          const core = band.querySelector('[data-rhythm-judgment-core]');
+          if (core) {
+            core.style.top = `${Math.max(0, layout.marvelousTop - layout.top)}px`;
+            core.style.height = `${Math.max(1, layout.marvelousBottom - layout.marvelousTop)}px`;
+          }
+        }
+      }
+      if (!travel) return;
+      const row = v.rows[v.focus];
+      const pos = rhythmWatchPosition(row);
+      if (pos.waiting !== waitingRef.current) {
+        waitingRef.current = pos.waiting;
+        if (onWaiting) onWaiting(pos.waiting);
+      }
+      const vis = pos.p - RHYTHM_WATCH_LANE_DELAY_MS;
+      if (prevVis !== null && (vis < prevVis - 2000 || vis > prevVis + 4000)) fired.clear();
+      const jm = v.judged[v.focus] || null;
+      const rect = travel.rect;
+      const ready = renderer.begin(rect, {
+        nowMs: performance.now(),
+        effect: settings.effectAmount,
+        lightweight: false,
+        maxDpr: 2,
+        sizeScale: (Number(settings.noteSize) || 100) / 100,
+        ...rhythmFxRenderOptions(settings)
+      });
+      let shown = null;
+      if (ready && pos.known) {
+        const horizon = vis + travelMs * (hasTable ? 4 : 1.2);
+        const sNow = g => rhythmScrollPos(vis, g);
+        for (let i = firstFrom(vis - 4000); i < notes.length; i += 1) {
+          const n = notes[i];
+          if (n.timeMs > horizon) break;
+          const hasBody = rhythmNoteHasBody(n);
+          const relMs = hasBody ? rhythmReleaseTargetMs(n) : n.timeMs;
+          const endMs = hasBody ? Math.max(relMs, Number(n.endTimeMs) || 0, n.timeMs) : n.timeMs;
+          const code = jm && jm.has(i) ? jm.get(i) : -1;
+          if (code >= 0 && n.timeMs <= vis && vis - n.timeMs < 700) shown = {
+            code,
+            age: vis - n.timeMs,
+            idx: i
+          };
+          const hit = code >= 0 && code < 5;
+          const miss = code === 5 && vis >= n.timeMs + 100;
+          const spawnHit = (key, extra) => {
+            if (fired.has(key)) return;
+            fired.add(key);
+            try {
+              const at = rhythmProjectLane(Number(n.lane) || 0, travel.hitY / h);
+              rhythmSpawnHitEffect(host, {
+                centerRatio: at.center,
+                widthRatio: at.width * (rhythmNoteIsWide(n) ? 2 : 1),
+                judgment: RHYTHM_WATCH_JUDGMENT_VIEW[code].id,
+                monster: !!rhythmNoteMonsterSlot(n),
+                ...extra
+              });
+            } catch (_) {}
+          };
+          if (hit && vis >= n.timeMs && vis - n.timeMs < 300) spawnHit(`${i}s`, {
+            flick: n.type === 'FLICK' ? n.flickDir === 'left' || n.flickDir === 'right' ? n.flickDir : 'up' : ''
+          });
+          if (hit && hasBody && vis >= endMs && vis - endMs < 300) spawnHit(`${i}e`, {
+            finish: true
+          });
+          const holding = hit && hasBody && vis >= n.timeMs && vis < endMs;
+          const clearAt = hit ? hasBody ? endMs : n.timeMs : 0;
+          const clearing = hit && vis >= clearAt && vis - clearAt < RHYTHM_CLEAR_FLASH_MS;
+          if (hit && vis >= clearAt && !clearing) continue;
+          const failedTrail = (miss || code < 0 && vis > n.timeMs + 220) && hasBody && vis < endMs;
+          const progress = 1 - (rhythmScrollPos(n.timeMs, n.scrollGroup) - sNow(n.scrollGroup)) / travelMs;
+          const visible = holding || clearing || failedTrail || progress >= -0.1 && progress <= 1.18;
+          if (!visible) continue;
+          let yPx = travel.spawnY + rhythmProjectTravelProgress(progress) * travel.travelPx;
+          if (holding || clearing) yPx = travel.judgmentY;
+          yPx = Math.round(yPx);
+          const releaseProgress = 1 - (rhythmScrollPos(relMs, n.scrollGroup) - sNow(n.scrollGroup)) / travelMs;
+          const releaseYpx = Math.round(travel.spawnY + rhythmProjectTravelProgress(releaseProgress) * travel.travelPx);
+          const bodyPx = Math.max(0, yPx - releaseYpx);
+          const geo = rhythmNoteCanvasGeometry(n, yPx, n.lane, rect, noteH, hasBody ? releaseYpx : null, {
+            chartNowMs: vis,
+            visualTime: vis,
+            travelMs,
+            spawnY: travel.spawnY,
+            travelPx: travel.travelPx,
+            gpu: false
+          }, hasBody ? bodyPx : 0);
+          const depthScale = Math.round((0.56 + geo.scale * 0.44) * 100) / 100;
+          const brightness = Math.round((0.72 + geo.scale * 0.28) * 100) / 100;
+          const passedUnknown = code < 0 && vis > n.timeMs + 80;
+          renderer.drawNote(n, geo, {
+            failed: miss || failedTrail,
+            monster: !!rhythmNoteMonsterSlot(n),
+            wide: rhythmNoteIsWide(n),
+            pressed: holding,
+            slideOff: false,
+            heldMs: vis - n.timeMs,
+            alpha: miss || failedTrail ? 0.34 : passedUnknown ? 0.5 : 1,
+            pop: clearing ? Math.min(1, (vis - clearAt) / RHYTHM_CLEAR_FLASH_MS) : null,
+            depthScale,
+            brightness
+          });
+        }
+      }
+      prevVis = vis;
+      renderer.end();
+      const k = row && row.k ? row.k : null;
+      const counts = k ? {
+        MARVELOUS: k[0],
+        EXCELLENT: k[1],
+        GREAT: k[2],
+        GOOD: k[3],
+        BAD: k[4],
+        MISS: k[5]
+      } : null;
+      const last = shown ? RHYTHM_WATCH_JUDGMENT_VIEW[shown.code].id : '';
+      const marks = v.marks && v.marks[v.focus] ? v.marks[v.focus] : null;
+      const mark = shown && marks ? marks.get(shown.idx) || 0 : 0;
+      const precise = (mark & 1) === 1;
+      const fastSlow = mark & 2 ? 'SLOW' : mark & 4 ? 'FAST' : '';
+      const key = `${row ? row.c : 0}|${row && row.l != null ? row.l : ''}|${last}|${mark}|${k ? k.join(',') : ''}`;
+      if (key !== lastHud) {
+        lastHud = key;
+        hud.set({
+          combo: row ? row.c || 0 : 0,
+          life: row && row.l != null ? row.l : RHYTHM_LIFE_MAX,
+          last,
+          lastPrecise: precise,
+          fastSlow,
+          counts
+        });
+      }
+    };
+    raf = requestAnimationFrame(frame);
+    return () => {
+      alive = false;
+      cancelAnimationFrame(raf);
+      try {
+        renderer.release();
+      } catch (_) {}
+      RHYTHM_SCROLL.points = keepScroll.points;
+      RHYTHM_SCROLL.back = keepScroll.back;
+      RHYTHM_SCROLL.sufMin = keepScroll.sufMin;
+      RHYTHM_SCROLL.groups = keepScroll.groups;
+      RHYTHM_SCROLL.lerp = keepScroll.lerp;
+      RHYTHM_ROAD_WIDTH.reset();
+      RHYTHM_PROJECTION_CAMERA.reset();
+      if (waitingRef.current && onWaiting) onWaiting(false);
+    };
+  }, [chart, wide]);
+  const light = settings.lightweightMode || settings.effectAmount === 'MINIMAL';
+  return React.createElement("div", _extends({
+    ref: hostRef,
+    "data-rhythm-watch-lane": true,
+    "data-rhythm-watch-lane-road": true,
+    "data-rhythm-play-area": true,
+    "data-rhythm-lightweight": "false",
+    "data-rhythm-effect": settings.effectAmount,
+    "data-rhythm-judgment-fx": settings.judgmentFx === true && !light ? '1' : undefined
+  }, rhythmFxAttrs(settings), {
+    className: "absolute inset-0",
+    style: {
+      position: 'absolute',
+      overflow: 'hidden',
+      touchAction: 'none',
+      '--rhythm-note-size-scale': settings.noteSize / 100,
+      '--mh-judgment-line-bottom': lineBottom,
+      filter: settings.effectAmount === 'MINIMAL' ? 'saturate(.78)' : settings.effectAmount === 'LOW' ? 'saturate(.92)' : 'none'
+    }
+  }), React.createElement("div", {
+    className: "pointer-events-none absolute inset-0 grid",
+    style: {
+      gridTemplateColumns: `repeat(${RHYTHM_LANE_COUNT},minmax(0,1fr))`
+    }
+  }, Array.from({
+    length: RHYTHM_LANE_COUNT
+  }, (_, lane) => React.createElement("div", {
+    key: lane,
+    "data-rhythm-lane": lane,
+    "data-pressed": "false",
+    "aria-hidden": "true",
+    className: "relative border-r border-white/20 bg-slate-900/40",
+    style: {
+      borderBottom: '3px solid transparent',
+      boxSizing: 'border-box'
+    }
+  }))), React.createElement("div", {
+    className: "pointer-events-none absolute inset-0",
+    "aria-hidden": "true"
+  }, Array.from({
+    length: RHYTHM_LANE_COUNT
+  }, (_, index) => React.createElement("i", {
+    key: index,
+    "data-rhythm-sublane-boundary": ""
+  }))), stageLevel !== 'SIMPLE' && React.createElement("div", {
+    "data-rhythm-stage": stageLevel,
+    "data-stage-tier": "0",
+    "aria-hidden": "true",
+    style: rhythmFxStageStyle(settings)
+  }, artSrc && React.createElement("canvas", {
+    ref: artRef,
+    "data-rhythm-stage-art": true,
+    width: artSize,
+    height: artSize
+  })), React.createElement(RhythmHudCombo, {
+    hud: hud,
+    settings: settings,
+    assistOn: false,
+    comboPosition: RHYTHM_COMBO_POSITIONS.includes(settings.comboPosition) ? settings.comboPosition : 'CENTER',
+    isLandscape: wide,
+    comboRef: null,
+    comboRingRef: null
+  }), React.createElement("div", {
+    ref: bandRef,
+    "data-rhythm-judgment-band": true,
+    "aria-hidden": "true",
+    style: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      top: 0,
+      height: 0,
+      opacity: 0,
+      pointerEvents: 'none',
+      zIndex: 2
+    }
+  }, React.createElement("i", {
+    "data-rhythm-judgment-core": true,
+    "aria-hidden": "true",
+    style: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      top: 0,
+      height: 0,
+      background: 'linear-gradient(180deg,rgba(250,232,255,0),rgba(250,232,255,.26),rgba(250,232,255,0))'
+    }
+  }), React.createElement("i", {
+    "data-rhythm-judgment-edge": true,
+    "data-edge": "top",
+    "aria-hidden": "true",
+    style: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      top: 0,
+      height: '1px',
+      background: 'linear-gradient(90deg,rgba(103,232,249,0),rgba(103,232,249,.55),rgba(103,232,249,0))'
+    }
+  }), React.createElement("i", {
+    "data-rhythm-judgment-edge": true,
+    "data-edge": "bottom",
+    "aria-hidden": "true",
+    style: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      bottom: 0,
+      height: '1px',
+      background: 'linear-gradient(90deg,rgba(103,232,249,0),rgba(103,232,249,.55),rgba(103,232,249,0))'
+    }
+  })), React.createElement("div", {
+    ref: lineRef,
+    "data-rhythm-judgment-line": true,
+    style: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      bottom: 'var(--mh-judgment-line-bottom,12%)',
+      height: '3px',
+      background: 'linear-gradient(90deg,#f0abfc,#cffafe,#f0abfc)',
+      boxShadow: light ? 'none' : settings.effectAmount === 'LOW' ? '0 0 8px #67e8f9' : '0 0 18px #67e8f9,0 0 30px #c084fc'
+    }
+  }), React.createElement("canvas", {
+    ref: noteRef,
+    "data-rhythm-note-canvas": true,
+    "aria-hidden": "true"
+  }), React.createElement("div", {
+    "data-rhythm-judgment-display": true,
+    className: "pointer-events-none absolute left-1/2 z-10 w-[88%] -translate-x-1/2 text-center",
+    style: {
+      ...rhythmJudgeScaleStyle(settings),
+      bottom: 'calc(var(--mh-judgment-line-bottom,12%) + 38px)'
+    }
+  }, React.createElement(RhythmHudJudgment, {
+    hud: hud,
+    settings: settings,
+    status: "",
+    haloKeys: null,
+    timingDisplay: "STANDARD",
+    judgmentTextRef: judgeRef
+  })), React.createElement("div", {
+    "data-rhythm-hud": true,
+    className: `pointer-events-none absolute z-10 ${wide ? 'left-1.5 top-9' : 'right-1.5 top-9'}`
+  }, React.createElement(RhythmHudLife, {
+    hud: hud,
+    settings: settings,
+    isLandscape: wide,
+    lifeBoxRef: null,
+    lifeDamageRef: null
+  })), React.createElement("canvas", {
+    ref: fxRef,
+    className: "pointer-events-none absolute inset-0 h-full w-full"
+  }));
+}
 function RhythmWatchScreen({
   songs = [],
   resolveIconUrl = null
 }) {
   const v = useRhythmWatchView();
-  const [flow, setFlow] = React.useState([]);
-  const seenRef = React.useRef({
-    round: '',
-    focus: '',
-    k: null
-  });
+  const [waiting, setWaiting] = React.useState(false);
+  const [roadMode, setRoadMode] = React.useState(false);
+  const wide = useRhythmWatchWide();
   const focusRow = v && v.rows ? v.rows[v.focus] : null;
-  React.useEffect(() => {
-    if (!v || !focusRow || !focusRow.k) return;
-    const seen = seenRef.current;
-    const same = seen.round === v.round && seen.focus === v.focus && seen.k;
-    if (same) {
-      const items = [];
-      RHYTHM_WATCH_JUDGMENT_VIEW.forEach((j, i) => {
-        const d = focusRow.k[i] - (seen.k[i] || 0);
-        if (d > 0) items.push({
-          key: `${focusRow.at}-${j.id}`,
-          text: `+${d} ${j.short}`,
-          color: j.color
-        });
-      });
-      if (items.length) setFlow(prev => [...items, ...prev].slice(0, 6));
-    } else setFlow([]);
-    seenRef.current = {
-      round: v.round,
-      focus: v.focus,
-      k: focusRow.k
-    };
-  }, [focusRow && focusRow.at]);
   if (!v) return null;
   if (v.quiet && v.phase !== 'playing' && v.phase !== 'ended') return null;
   if (typeof document === 'undefined' || typeof ReactDOM === 'undefined' || !ReactDOM.createPortal) return null;
@@ -98639,14 +99126,15 @@ function RhythmWatchScreen({
       paddingBottom: 'max(var(--mh-sa-bottom), 6px)'
     }
   }, React.createElement("style", null, '@keyframes mhWatchPop{0%{opacity:0;transform:translateY(8px)}15%{opacity:1;transform:none}85%{opacity:1}100%{opacity:0}}'), React.createElement("header", {
+    "data-rhythm-watch-band": true,
     className: "flex shrink-0 items-center gap-2 px-3"
   }, React.createElement("button", {
     "data-rhythm-watch-close": true,
     type: "button",
     "aria-label": "観戦をやめる",
     onClick: close,
-    className: "min-h-[44px] min-w-[44px] rounded-xl text-lg font-black text-slate-300"
-  }, "←"), React.createElement("div", {
+    className: "min-h-[40px] shrink-0 rounded-xl bg-slate-700 px-3 text-[12px] font-black text-slate-100"
+  }, "観戦をやめる"), React.createElement("div", {
     className: "min-w-0 flex-1 leading-tight"
   }, React.createElement("b", {
     className: "block text-[13px] font-black text-amber-300"
@@ -98663,83 +99151,54 @@ function RhythmWatchScreen({
     onClick: close,
     className: "min-h-[48px] w-full max-w-xs rounded-xl bg-slate-700 text-[14px] font-black"
   }, "観戦をやめる")), playing && React.createElement("div", {
-    className: "flex min-h-0 flex-1 flex-col gap-2 px-3 pb-2 landscape:flex-row"
+    className: `flex min-h-0 flex-1 gap-2 px-3 pb-1 ${wide ? 'flex-row' : 'flex-col'}`
   }, React.createElement("section", {
-    className: "shrink-0 landscape:w-[38%]"
-  }, React.createElement("div", {
-    className: "flex items-center gap-2 text-[11px] font-black tabular-nums text-slate-300"
-  }, React.createElement("span", null, rhythmWatchClock(pos)), React.createElement("div", {
-    className: "h-1.5 flex-1 overflow-hidden rounded-full bg-slate-800"
-  }, React.createElement("div", {
-    "data-rhythm-watch-progress": true,
-    className: "h-full rounded-full bg-cyan-400",
-    style: {
-      width: `${total > 0 ? Math.min(100, pos / total * 100) : 0}%`
-    }
-  })), React.createElement("span", null, total > 0 ? rhythmWatchClock(total) : '')), React.createElement("div", {
-    className: "mt-1.5 flex flex-col gap-1"
-  }, rank.map((x, n) => {
-    const r = v.rows[x.id];
-    const on = x.id === v.focus;
-    return React.createElement("button", {
-      key: x.id,
-      type: "button",
-      "data-rhythm-watch-row": x.id,
-      onClick: () => RHYTHM_WATCH.focus(x.id),
-      className: `flex min-h-[40px] items-center gap-2 rounded-xl border px-2 text-left ${on ? 'border-cyan-300 bg-cyan-950' : 'border-slate-700 bg-slate-900'}`
-    }, React.createElement("b", {
-      className: "w-4 text-center text-[13px] font-black"
-    }, n + 1), icon(x, 24), React.createElement("span", {
-      className: "min-w-0 flex-1 truncate text-[12px] font-black"
-    }, x.name), React.createElement("span", {
-      className: "text-[12px] font-black tabular-nums"
-    }, r ? r.s.toLocaleString() : '-'), React.createElement("span", {
-      className: "w-9 text-right text-[12px] font-black tabular-nums text-amber-300"
-    }, r ? r.c : ''));
-  })), React.createElement("p", {
-    className: "mt-1 text-[10px] font-bold text-slate-400"
-  }, "名前を押すと、その人の判定を見られます", v.member ? '。次の曲から、いっしょに遊べます' : '')), React.createElement("section", {
     "data-rhythm-watch-detail": true,
-    className: "flex min-h-0 flex-1 flex-col gap-2 rounded-2xl border border-slate-700 bg-slate-900/80 p-3"
+    className: "flex min-h-0 min-w-0 flex-1 flex-col gap-1.5"
   }, React.createElement("div", {
-    className: "flex items-center gap-2"
-  }, icon(who, 28), React.createElement("b", {
-    className: "min-w-0 flex-1 truncate text-[13px] font-black text-cyan-200"
-  }, who ? `${who.name} さん` : '', who && who.diff ? ` ・ ${who.diff}` : ''), React.createElement("span", {
-    className: "text-[22px] font-black italic tabular-nums text-amber-300"
-  }, focusRow ? focusRow.c : 0, React.createElement("small", {
-    className: "ml-1 text-[10px] not-italic"
-  }, "COMBO"))), React.createElement("div", {
-    className: "relative min-h-[84px] flex-1 overflow-hidden rounded-xl bg-slate-950/80"
+    "data-rhythm-watch-stage": true,
+    className: "relative min-h-[120px] flex-1 overflow-hidden rounded-xl border border-slate-700 bg-slate-950"
   }, chartOf && !lite && React.createElement(RhythmWatchLane, {
-    chart: chartOf
-  }), lite && React.createElement("p", {
-    "data-rhythm-watch-lite": true,
-    className: "absolute inset-x-2 top-2 text-center text-[11px] font-black text-amber-200",
-    style: JA_WRAP_STYLE
-  }, jaWrap('この人の端末が重くなったので、譜面は出さず、数字だけにしています')), React.createElement("div", {
-    className: "absolute inset-x-0 bottom-1 flex flex-col-reverse items-center gap-0.5"
-  }, flow.map(f => React.createElement("b", {
-    key: f.key,
-    className: "text-[15px] font-black italic",
+    chart: chartOf,
+    song: song,
+    wide: wide,
+    onWaiting: setWaiting,
+    onMode: setRoadMode
+  }), React.createElement("div", {
+    className: "pointer-events-none absolute inset-x-0 top-0 flex items-center gap-1.5 px-1.5 pt-1"
+  }, icon(who, 22), React.createElement("b", {
+    className: "min-w-0 flex-1 truncate text-[11px] font-black text-cyan-200",
     style: {
-      color: f.color,
-      animation: 'mhWatchPop 2.4s ease-out forwards'
+      textShadow: '0 1px 3px #000'
     }
-  }, f.text)))), React.createElement("div", {
-    className: "grid grid-cols-3 gap-1 landscape:grid-cols-6"
+  }, who ? `${who.name} さん` : '', who && who.diff ? ` ・ ${who.diff}` : ''), React.createElement("span", {
+    "data-rhythm-watch-delay": true,
+    className: "shrink-0 rounded-full border border-amber-300/60 bg-slate-950/70 px-2 py-0.5 text-[10px] font-black text-amber-200"
+  }, "1.5秒おくれ")), lite && React.createElement("p", {
+    "data-rhythm-watch-lite": true,
+    className: "absolute inset-x-2 top-9 text-center text-[11px] font-black text-amber-200",
+    style: JA_WRAP_STYLE
+  }, jaWrap('この人の端末が重くなったので、譜面は出さず、数字だけにしています')), waiting && v.phase === 'playing' && React.createElement("p", {
+    "data-rhythm-watch-waiting": true,
+    className: "absolute inset-x-2 top-9 text-center text-[12px] font-black text-amber-200",
+    style: {
+      ...JA_WRAP_STYLE,
+      textShadow: '0 1px 3px #000'
+    }
+  }, jaWrap('通信を待っています…'))), React.createElement("div", {
+    className: "grid grid-cols-6 gap-1"
   }, RHYTHM_WATCH_JUDGMENT_VIEW.map((j, i) => React.createElement("div", {
     key: j.id,
     "data-rhythm-watch-count": j.id,
-    className: "rounded-lg bg-slate-950/80 px-1 py-1 text-center"
+    className: "min-w-0 rounded-lg bg-slate-900/80 px-0.5 py-0.5 text-center"
   }, React.createElement("small", {
-    className: "block text-[9px] font-black",
+    className: "block whitespace-nowrap text-[7px] font-black tracking-tighter",
     style: {
       color: j.color
     }
   }, j.short), React.createElement("b", {
-    className: "block text-[14px] font-black tabular-nums"
-  }, focusRow && focusRow.k ? focusRow.k[i] : '-')))), React.createElement("div", {
+    className: "block text-[13px] font-black tabular-nums"
+  }, focusRow && focusRow.k ? focusRow.k[i] : '-')))), !roadMode && React.createElement("div", {
     className: "flex items-center gap-2 text-[10px] font-black text-slate-300"
   }, React.createElement("span", null, "LIFE"), React.createElement("div", {
     className: "h-2 flex-1 overflow-hidden rounded-full bg-slate-800"
@@ -98751,13 +99210,44 @@ function RhythmWatchScreen({
     }
   }))), v.phase === 'ended' && React.createElement("p", {
     className: "text-center text-[12px] font-black text-amber-200"
-  }, "この曲の演奏が終わりました"))), playing && React.createElement("div", {
-    className: "shrink-0 px-3"
-  }, React.createElement("button", {
-    type: "button",
-    onClick: close,
-    className: "min-h-[44px] w-full rounded-xl bg-slate-700 text-[13px] font-black"
-  }, "観戦をやめる")));
+  }, "この曲の演奏が終わりました")), React.createElement("section", {
+    className: `${wide ? 'w-[36%] overflow-y-auto' : ''} shrink-0`
+  }, React.createElement("div", {
+    className: "flex items-center gap-2 text-[11px] font-black tabular-nums text-slate-300"
+  }, React.createElement("span", null, rhythmWatchClock(pos)), React.createElement("div", {
+    className: "h-1.5 flex-1 overflow-hidden rounded-full bg-slate-800"
+  }, React.createElement("div", {
+    "data-rhythm-watch-progress": true,
+    className: "h-full rounded-full bg-cyan-400",
+    style: {
+      width: `${total > 0 ? Math.min(100, pos / total * 100) : 0}%`
+    }
+  })), React.createElement("span", null, total > 0 ? rhythmWatchClock(total) : '')), React.createElement("div", {
+    className: `mt-1.5 grid gap-1 ${wide ? 'grid-cols-1' : 'grid-cols-2'}`
+  }, rank.map((x, n) => {
+    const r = v.rows[x.id];
+    const on = x.id === v.focus;
+    return React.createElement("button", {
+      key: x.id,
+      type: "button",
+      "data-rhythm-watch-row": x.id,
+      onClick: () => RHYTHM_WATCH.focus(x.id),
+      className: `flex min-h-[40px] min-w-0 items-center gap-1.5 rounded-xl border px-1.5 text-left ${on ? 'border-cyan-300 bg-cyan-950' : 'border-slate-700 bg-slate-900'}`
+    }, React.createElement("b", {
+      className: "w-3 shrink-0 text-center text-[12px] font-black"
+    }, n + 1), icon(x, 22), React.createElement("span", {
+      className: "min-w-0 flex-1 leading-tight"
+    }, React.createElement("span", {
+      className: "block truncate text-[11px] font-black"
+    }, x.name), React.createElement("span", {
+      className: "block truncate text-[11px] font-black tabular-nums text-slate-200"
+    }, r ? r.s.toLocaleString() : '-')), React.createElement("span", {
+      className: "shrink-0 text-right text-[12px] font-black tabular-nums text-amber-300"
+    }, r ? r.c : ''));
+  })), React.createElement("p", {
+    className: "mt-1 text-[10px] font-bold text-slate-400",
+    style: JA_WRAP_STYLE
+  }, jaWrap(`名前を押すと、その人の判定を見られます${v.member ? '。次の曲から、いっしょに遊べます' : ''}`)))));
   const target = typeof rotationAwarePortalTarget === 'function' ? rotationAwarePortalTarget() : document.body;
   return ReactDOM.createPortal(body, target);
 }
@@ -119565,6 +120055,7 @@ function AssistantLifeSleepEyes({
     const art = assistantLifeSleepArt(pid, src);
     if (art) {
       const filter = style && style.filter ? String(style.filter).replace(/drop-shadow\((?:[^()]|\([^()]*\))*\)/g, '').trim() || undefined : undefined;
+      const isFaceIcon = /\/face\//.test(String(src || ''));
       return React.createElement("img", {
         "data-assistant-life-roomview-sleep-eyes": pid,
         src: art,
@@ -119577,6 +120068,10 @@ function AssistantLifeSleepEyes({
           height: h,
           maxWidth: 'none',
           pointerEvents: 'none',
+          ...(isFaceIcon ? {
+            background: '#16122a',
+            borderRadius: 14
+          } : {}),
           ...style,
           filter
         }
@@ -163049,7 +163544,7 @@ function MsxItemUseFx({
     }, K.pt[i % K.pt.length]);
   }), React.createElement("span", {
     className: "it"
-  }, fx.e)), React.createElement("div", {
+  }, typeof msxItemIco === 'function' ? msxItemIco(fx) : fx.e)), React.createElement("div", {
     className: "ifx-hd"
   }, React.createElement("b", null, React.createElement("span", {
     style: {
@@ -168838,7 +169333,7 @@ const MSX_CSS = `
 .msx .v-pow b{font-size:17px;color:#fde047;white-space:nowrap}
 .msx .v-pow .rk.big{height:28px;min-width:28px;font-size:17px;box-shadow:0 2px 0 #0008}
 .msx .v-b2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px}
-.msx .v-ga{display:flex;align-items:center;gap:4px;font-size:10px;font-weight:900;white-space:nowrap}
+.msx .v-ga{position:relative;display:flex;align-items:center;gap:4px;font-size:10px;font-weight:900;white-space:nowrap}
 .msx .v-ga .tr{flex:1;min-width:0;height:13px;border-radius:99px;background:#0b0920;border:1px solid #475569;position:relative;overflow:hidden}
 .msx .v-ga .tr i{position:absolute;left:0;top:0;bottom:0;border-radius:99px}
 .msx .v-ga.hp .tr i{background:linear-gradient(180deg,#bef264,#22c55e)}
@@ -168853,9 +169348,10 @@ const MSX_CSS = `
 @keyframes rx-pop{0%{transform:scale(.3);opacity:0}70%{transform:scale(1.12);opacity:1}100%{transform:scale(1);opacity:1}}
 .msx .v-body2.rx-hop{animation:rx-hop .9s ease-out 1}.msx .v-body2.rx-sag{animation:rx-sag .8s ease-out 1 forwards}
 .msx .rx-bub{position:absolute;left:6%;top:26%;background:#fff;color:#1e1b4b;border:2px solid #f9a8d4;border-radius:14px;padding:4px 10px;font-size:12px;font-weight:900;animation:rx-pop .4s ease-out .25s both;white-space:nowrap;z-index:3}
-.msx .v-ga b{font-size:12.5px;min-width:22px;text-align:right}.msx .v-ga b small{font-size:10px;color:#cbd5e1;font-weight:700}
+.msx .v-ga b{font-size:12.5px;width:46px;flex:none;text-align:right}.msx .v-ga b small{font-size:10px;color:#cbd5e1;font-weight:700}
 .msx .v-ga b small.cap{color:#fde047}
-.msx .v-ga em{font-style:normal;font-size:10.5px;color:#fca5a5}.msx .v-ga em.pl{color:#f0abfc}.msx .v-ga em.hl{color:#86efac}
+/* 増減の字(−16・+4)は棒の長さを変えない: 数の左に重ねて出す(r1115-083。どの画面でも棒の長さ・位置は同じ) */
+.msx .v-ga em{position:absolute;right:50px;top:50%;transform:translateY(-50%);z-index:2;pointer-events:none;font-style:normal;font-size:10.5px;color:#fca5a5;text-shadow:0 0 3px #0b0920,0 0 3px #0b0920,0 0 2px #0b0920}.msx .v-ga em.pl{color:#f0abfc}.msx .v-ga em.hl{color:#86efac}
 .msx .v-scene{flex:1 1 0;min-height:0;position:relative;border-radius:16px;border:1px solid #4a4380;overflow:hidden;margin-top:6px;background:#0f0d24}
 .msx .v-scene .bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 78%}
 .msx .v-scene .sh{position:absolute;inset:0;background:linear-gradient(180deg,#1d174055 0,#1d174000 26%,#0f0d2400 62%,#0f0d24cc 100%)}
@@ -169162,7 +169658,7 @@ const MSX_CSS = `
   .msx .v-band{padding:5px 6px}
   .msx .v-turn .n b{font-size:24px}.msx .v-turn .ph{font-size:10px;padding:2px 5px}
   .msx .v-pow b{font-size:14px}.msx .v-pow .rk.big{height:24px;min-width:24px;font-size:14px}
-  .msx .v-ga{font-size:10px;gap:3px}.msx .v-ga b{font-size:11px;min-width:0}.msx .v-ga .tr{height:11px}
+  .msx .v-ga{font-size:10px;gap:3px}.msx .v-ga b{font-size:11px;width:41px}.msx .v-ga em{right:45px}.msx .v-ga .tr{height:11px}
   .msx .v-st b{font-size:12px}.msx .v-st small{font-size:10px}.msx .v-st em{font-size:10px;height:12px;line-height:12px}.msx .v-st div.up.main em{font-size:11px}
   .msx .v-p{font-size:11px;padding:4px 1px 3px;border-radius:12px}.msx .v-p .e{font-size:16px}.msx .v-p small{font-size:10px}.msx .v-p.main{font-size:14px}
   .msx .v-ft{height:34px;padding:0 7px;gap:3px}.msx .v-ft span,.msx .v-ft button{font-size:10px;padding:4px 1px}.msx .v-ft span.go,.msx .v-ft span.go2,.msx .v-ft button.go,.msx .v-ft button.go2{font-size:11.5px}
@@ -172510,14 +173006,14 @@ const msxTpAT = () => typeof window !== 'undefined' && window.MONHERO_SUCCESS_AS
 const msxTpSame = (a, b) => !!(a && b && !a.auto && !b.auto && (a.box && a.box === b.box || a.assist && a.assist === b.assist || !a.box && !a.assist && !b.box && !b.assist && a.base && a.base === b.base));
 const msxTpAssistVal = (AT, a) => {
   try {
-    return Number(AT.valueOf(a.id, a.lv)) || 0;
+    return Number(AT.valueOf(a.id, AT.fromSaved(a) || a.lv)) || 0;
   } catch (e) {
     return 0;
   }
 };
 const msxTpAssistText = (AT, a) => {
   try {
-    return AT.valueText(a.id, a.lv);
+    return AT.valueText(a.id, AT.fromSaved(a) || a.lv);
   } catch (e) {
     return '';
   }
@@ -173063,7 +173559,7 @@ function MsxTeamEffects({
       className: "hd"
     }, React.createElement("span", {
       className: "ic"
-    }, d.icon), React.createElement("b", null, d.name), React.createElement("span", {
+    }, cardIconNode(d.icon, 16)), React.createElement("b", null, d.name), React.createElement("span", {
       className: "st"
     }, AT.TYPE_NAME[d.type] || '', "型"), React.createElement("span", {
       className: "n"
@@ -175960,6 +176456,25 @@ const MSX_EXTRA_ITEM = Object.freeze({
     desc: '使ったターンだけ、人気の上がり ×1.5'
   }
 });
+const MSX_ITEM_IMG = Object.freeze({
+  elixir0: 'images/success/items/elixir-red.png',
+  elixir1: 'images/success/items/elixir-orange.png',
+  elixir2: 'images/success/items/elixir-green.png',
+  elixir3: 'images/success/items/elixir-blue.png'
+});
+const msxItemIco = (x, size = '1.45em') => x && x.img ? React.createElement("img", {
+  src: x.img,
+  alt: "",
+  draggable: false,
+  "data-msx-item-img": true,
+  style: {
+    width: size,
+    height: size,
+    objectFit: 'contain',
+    verticalAlign: 'middle',
+    display: 'inline-block'
+  }
+}) : x && x.e || '🎁';
 const msxItemView = k => {
   const base = MSX_ITEM_BY_ID[k];
   const core = msxSuc && msxSuc.SUC.ITEMS ? msxSuc.SUC.ITEMS[k] : null;
@@ -175969,6 +176484,7 @@ const msxItemView = k => {
     name: base && base.name || core && core.name || k,
     desc: typeof msxItemFx === 'function' && msxItemFx(k) ? base && typeof msxItemDesc === 'function' ? msxItemDesc(k) : msxItemFx(k) : base && base.desc || ex && ex.desc || '',
     e: base && base.e || ex && ex.e || '🎁',
+    img: MSX_ITEM_IMG[k] || null,
     during: core ? core.use === 'during' : !!(base && base.when === 'both')
   };
 };
@@ -176024,6 +176540,7 @@ function MsxBag({
     if (typeof MsxItemUseFx === 'function') setIfx({
       key: t.id,
       e: t.e,
+      img: t.img,
       name: t.name,
       s0: s,
       s1: r.state,
@@ -176081,7 +176598,7 @@ function MsxBag({
     style: {
       fontSize: 26
     }
-  }, t.e), React.createElement("div", null, React.createElement("b", null, t.name, t.n ? React.createElement("span", {
+  }, msxItemIco(t)), React.createElement("div", null, React.createElement("b", null, t.name, t.n ? React.createElement("span", {
     className: "yel"
   }, " ×", t.n) : null), React.createElement("small", null, t.desc), React.createElement("small", {
     className: "lim"
@@ -176097,7 +176614,7 @@ function MsxBag({
     style: {
       fontSize: 22
     }
-  }, x.e), React.createElement("i", null, "×", x.n), React.createElement("small", {
+  }, msxItemIco(x)), React.createElement("i", null, "×", x.n), React.createElement("small", {
     style: JA_LABEL_STYLE
   }, msxItemNameNode(x.name.replace('ガロエ印の', ''))))), carryList.map(x => React.createElement("button", {
     type: "button",
@@ -176109,7 +176626,7 @@ function MsxBag({
     style: {
       fontSize: 22
     }
-  }, x.e), React.createElement("small", {
+  }, msxItemIco(x)), React.createElement("small", {
     style: JA_LABEL_STYLE
   }, msxItemNameNode(x.name.replace('ガロエ印の', ''))))), React.createElement("div", {
     className: "no"
@@ -176141,7 +176658,7 @@ function MsxBag({
     },
     disabled: !t || t.carry || usedNow || blocked,
     onClick: use
-  }, usedNow ? 'このターンはもう使った' : blocked ? 'いまは使えない' : t && !t.carry ? `${t.e} ${t.name}を使う` : '使う'))), React.createElement(MsxStRow, {
+  }, usedNow ? 'このターンはもう使った' : blocked ? 'いまは使えない' : t && !t.carry ? React.createElement(React.Fragment, null, msxItemIco(t), " ", t.name, "を使う") : '使う'))), React.createElement(MsxStRow, {
     who: s,
     stats: s.stats
   }));
@@ -176636,7 +177153,7 @@ function MsxEvent({
   }, "最後のお話(第4話)の結末"), "が変わる") : null, gotGift ? React.createElement("div", {
     className: "v-log",
     "data-msx-ev-gift": true
-  }, giftItem.e, " ", React.createElement("b", {
+  }, msxItemIco(giftItem), " ", React.createElement("b", {
     className: "gu"
   }, giftItem.name), " を手に入れた!(🎒持ち物に入った)", React.createElement("br", null), React.createElement("small", null, giftItem.desc)) : null, picked.apt ? React.createElement("div", {
     className: "v-log",
@@ -177681,6 +178198,7 @@ const msxR3Prizes = (SUC, c) => {
     out.push({
       id: k,
       e: it.e,
+      img: it.img || null,
       name: `${it.name} ×${n}`,
       desc: it.desc,
       rare: true
@@ -177739,7 +178257,7 @@ const MsxR3PrizeBox = ({
     className: `${x.rare ? 'rare' : ''}${x.pt ? ' pt' : ''}`,
     onClick: () => onPick(x),
     "data-msx-r3-prize": x.id
-  }, React.createElement("span", null, x.e), React.createElement("small", {
+  }, React.createElement("span", null, typeof msxItemIco === 'function' ? msxItemIco(x) : x.e), React.createElement("small", {
     className: "msx-kp"
   }, msxPh(x.name)))))) : null);
 };
@@ -178039,7 +178557,7 @@ function MsxR3Cup({
     onClick: e => e.stopPropagation()
   }, React.createElement("div", {
     className: "e"
-  }, prz.e), React.createElement("b", null, prz.name), React.createElement("p", {
+  }, typeof msxItemIco === 'function' ? msxItemIco(prz) : prz.e), React.createElement("b", null, prz.name), React.createElement("p", {
     className: "msx-kp"
   }, msxPh(prz.desc)), React.createElement("button", {
     type: "button",
@@ -178484,7 +179002,7 @@ const msxR3PrizeRows = (d, s) => {
   Object.entries(d.items || {}).forEach(([k, n]) => {
     const S = msxSuc && msxSuc.SUC ? msxSuc.SUC : null;
     const it = S && S.ITEMS ? S.ITEMS[k] : null;
-    rows.push([typeof MSX_EXTRA_ITEM !== 'undefined' && MSX_EXTRA_ITEM[k] && MSX_EXTRA_ITEM[k].e || '🎁', it ? it.name : k, `×${n}(この育成の中で使える)`, 'new', 'GET']);
+    rows.push([typeof msxItemView === 'function' && typeof msxItemIco === 'function' ? msxItemIco(msxItemView(k)) : typeof MSX_EXTRA_ITEM !== 'undefined' && MSX_EXTRA_ITEM[k] && MSX_EXTRA_ITEM[k].e || '🎁', it ? it.name : k, `×${n}(この育成の中で使える)`, 'new', 'GET']);
   });
   return rows;
 };
@@ -178771,7 +179289,7 @@ function MsxR3PreDesk({
     onClick: e => e.stopPropagation()
   }, React.createElement("div", {
     className: "e"
-  }, prz.e), React.createElement("b", null, prz.name), React.createElement("p", {
+  }, typeof msxItemIco === 'function' ? msxItemIco(prz) : prz.e), React.createElement("b", null, prz.name), React.createElement("p", {
     className: "msx-kp"
   }, msxPh(prz.desc)), React.createElement("button", {
     type: "button",
@@ -182083,7 +182601,7 @@ function MsxR3Box({
       const lock = byeLock(cur);
       const assistText = Array.isArray(cur.assists) && cur.assists.length ? cur.assists.map(a => {
         const T3 = msxR3T().assist;
-        return T3 && T3.VERSION === 3 && T3.BY_ID[a.id] ? `${T3.BY_ID[a.id].name} ${T3.valueText(a.id, T3.valueOf ? T3.valueOf(a) : a.v)}` : a.name || a.id;
+        return T3 && T3.VERSION === 3 && T3.BY_ID[a.id] ? `${T3.BY_ID[a.id].name} ${T3.valueText(a.id, T3.fromSaved(a))}` : a.name || a.id;
       }).join('・') : '';
       const endAt = Number.isFinite(cur.endAt) ? new Date(cur.endAt) : null;
       const more = [['忠誠 / 人気', `${Math.round(cur.loy || 0)} / ${Math.round(cur.pop || 0)}`], Array.isArray(cur.fav) && cur.fav.length ? ['得意な能力', cur.fav.map(k => MSX_STAT_NAME[k] || k).join('・')] : null, cur.awake ? ['覚醒', cur.awake >= 2 ? '🌈 超覚醒' : '✨ 覚醒'] : null, assistText ? ['アシスト', assistText] : null, Array.isArray(cur.titles) && cur.titles.length ? ['称号', cur.titles.slice(0, 4).map(t => `「${msxR3TitleName(t)}」`).join('')] : null, cur.coach ? ['育てた助手', msxAidName(cur.coach)] : null, ['世代', `第${Math.max(1, Math.round(Number(cur.gen) || 1))}世代`], endAt ? ['育成完了日', `${endAt.getFullYear()}/${endAt.getMonth() + 1}/${endAt.getDate()}`] : null, cur.ending ? ['エンディング', {

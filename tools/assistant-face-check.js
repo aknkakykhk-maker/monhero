@@ -62,7 +62,10 @@ const SKIN_RULES = {
   dra: { centerMin: 0.55, x: [0.44, 0.56], y: [0.52, 0.66] },
   // あつ(2026-10-22)。大きい絵(768x1024・頭に王冠)から作った顔。社長が3案から選んだ A(前の引きと、寄せすぎた形の中間)。
   // 実測: 肌中心28〜41%(前髪が額にかかる)/ 重心x47〜62% / y55〜73%、頭シルエットの占有63〜75%
-  atsu: { centerMin: 0.25, x: [0.44, 0.64], y: [0.52, 0.76] },
+  // 2026-11-15 r1115-108・114: 11/14 の全身画(fullbody/atsu__<表情>.png)から作り直した。社長が選んだ案C「王冠まで入れて顔を大きめ」を、
+  //   表情ごとに頭の位置と大きさを測って1枚ずつ合わせた。王冠と髪まで入れて少し引いたぶん、肌色は少なく・下寄り、頭の占有は低く出る(背景は透明)。
+  //   実測: 頭の重心 x51〜55% y54〜59%・占有 49〜56% / 肌中心 8〜24%(泣き顔は手で顔が隠れる)/ 重心 x57〜64% / y70〜78%
+  atsu: { centerMin: 0.06, x: [0.52, 0.68], y: [0.64, 0.82], fillMin: 0.45 },
   // きゅうこ(2026-10-22)。384x512 の胸から上の絵から、社長が選んだ案B「頭ぜんぶ」で切った顔。前髪が顔に大きくかかる。
   // 実測: 肌中心22〜40% / 重心x47〜49% / y65〜67%、頭シルエットの占有74〜78%
   kyuko: { centerMin: 0.18, x: [0.42, 0.56], y: [0.58, 0.72] },
@@ -148,7 +151,7 @@ const run = async () => {
       if (m.cy < skinRule.y[0] || m.cy > skinRule.y[1]) bad.y.push(`${e}=${pct(m.cy)}`);
       if (m.headCx < HEAD_X_RANGE[0] || m.headCx > HEAD_X_RANGE[1]) bad.headX.push(`${e}=${pct(m.headCx)}`);
       if (m.headCy < HEAD_Y_RANGE[0] || m.headCy > HEAD_Y_RANGE[1]) bad.headY.push(`${e}=${pct(m.headCy)}`);
-      if (m.headFill < HEAD_FILL_MIN) bad.fill.push(`${e}=${pct(m.headFill)}`);
+      if (m.headFill < (skinRule.fillMin || HEAD_FILL_MIN)) bad.fill.push(`${e}=${pct(m.headFill)}`);
       console.log(`   ${e.padEnd(9)} 頭の重心 x ${pct(m.headCx)} y ${pct(m.headCy)} 占有 ${pct(m.headFill)}`
         + ` ／ 肌 中心 ${pct(m.center)} 重心 x ${pct(m.cx)} y ${pct(m.cy)}`);
     }

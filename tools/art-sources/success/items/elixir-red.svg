@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+<defs>
+<filter id="soft" x="-30%" y="-100%" width="160%" height="300%"><feGaussianBlur stdDeviation="7"/></filter>
+<filter id="glow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="14"/></filter>
+<linearGradient id="glass" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#ffffff" stop-opacity="0.55"/><stop offset="1" stop-color="#e8eef5" stop-opacity="0.45"/></linearGradient><linearGradient id="liq" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff6b6b"/><stop offset="0.5" stop-color="#e02424"/><stop offset="1" stop-color="#9b1111"/></linearGradient><linearGradient id="cap" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff3b0"/><stop offset="0.35" stop-color="#f7c948"/><stop offset="0.75" stop-color="#d99a1e"/><stop offset="1" stop-color="#a8680c"/></linearGradient><linearGradient id="label" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fffaf0"/><stop offset="1" stop-color="#efe4cc"/></linearGradient>
+</defs>
+<ellipse cx="256" cy="452" rx="130" ry="16" fill="#2a1a10" opacity="0.22" filter="url(#soft)"/>
+<path d="M196 150 L316 150 L316 176 C352 186 368 214 368 252 L368 404 Q368 440 332 440 L180 440 Q144 440 144 404 L144 252 C144 214 160 186 196 176 Z" fill="url(#glass)" stroke="#3d2618" stroke-width="9" stroke-linejoin="round" stroke-linecap="round"/>
+    <clipPath id="jc"><path d="M196 150 L316 150 L316 176 C352 186 368 214 368 252 L368 404 Q368 440 332 440 L180 440 Q144 440 144 404 L144 252 C144 214 160 186 196 176 Z"/></clipPath>
+    <g clip-path="url(#jc)">
+      <rect x="130" y="214" width="252" height="240" fill="url(#liq)"/>
+      <path d="M130 214 Q190 202 256 214 Q322 226 382 214 L382 230 L130 230 Z" fill="#ffffff" opacity="0.35"/>
+      <rect x="166" y="232" width="22" height="182" rx="11" fill="#ffffff" opacity="0.5"/>
+      <circle cx="320" cy="388" r="9" fill="#ffffff" opacity="0.45"/><circle cx="302" cy="408" r="6" fill="#ffffff" opacity="0.4"/>
+    </g>
+    <path d="M196 150 L316 150 L316 176 C352 186 368 214 368 252 L368 404 Q368 440 332 440 L180 440 Q144 440 144 404 L144 252 C144 214 160 186 196 176 Z" fill="none" stroke="#3d2618" stroke-width="9" stroke-linejoin="round" stroke-linecap="round"/>
+    <!-- ラベル(文字なし・しずくの印) -->
+    <rect x="178" y="270" width="156" height="98" rx="12" fill="url(#label)" stroke="#3d2618" stroke-width="9" stroke-linejoin="round" stroke-linecap="round"/>
+    <path d="M256 290 C270 310 280 322 280 336 C280 350 269 358 256 358 C243 358 232 350 232 336 C232 322 242 310 256 290 Z" fill="url(#liq)" stroke="#3d2618" stroke-width="6" stroke-linejoin="round" stroke-linecap="round"/>
+    <!-- ふた -->
+    <rect x="186" y="96" width="140" height="60" rx="14" fill="url(#cap)" stroke="#3d2618" stroke-width="9" stroke-linejoin="round" stroke-linecap="round"/>
+    <path d="M206 104 L206 150 M230 104 L230 150 M254 104 L254 150 M278 104 L278 150 M302 104 L302 150" stroke="#a8680c" stroke-width="5" opacity="0.55"/>
+    <rect x="196" y="104" width="26" height="12" rx="6" fill="#ffffff" opacity="0.7"/>
+    <path d="M384 150 Q387.24 164.76 402 168 Q387.24 171.24 384 186 Q380.76 171.24 366 168 Q380.76 164.76 384 150Z" fill="#ffffff" opacity="1"/>
+</svg>
