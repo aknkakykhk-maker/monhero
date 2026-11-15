@@ -301,12 +301,12 @@ function MsxR3Bracket({ run, s, v, ev, b, name, opp, foeName, skip, debug, settl
     <div className="v-ft">
       <button type="button" onClick={() => settle(false)}>負けたことにする</button>
       <button type="button" className="on" onClick={() => settle(true)} data-msx-r3-dbgwin>勝ったことにする(デバッグ)</button>
-      <button type="button" className="go" onClick={toCard} data-msx-r3-tocard>⚔ 決勝へ</button>
+      <button type="button" className="go" onClick={toCard} data-msx-r3-tocard>⚔ 決勝へ ▶</button>
     </div>
   ) : (
     <div className="v-ft">
       {skip ? <button type="button" className="on" style={{ flex: 1.6 }} onClick={result} data-msx-r3-bskip>⏩ スキップ(結果だけ)</button> : <button type="button" className="on" style={{ flex: 1.6 }} onClick={result} data-msx-r3-bresult>⏩ 結果だけ見る</button>}
-      <button type="button" className="go" onClick={toCard} data-msx-r3-tocard>⚔ 決勝へ</button>
+      <button type="button" className="go" onClick={toCard} data-msx-r3-tocard>⚔ 決勝へ ▶</button>
     </div>
   );
   return <MsxR3Frame run={run} back="中断" onBack={onPause} body={body} foot={foot}/>;
@@ -775,7 +775,7 @@ function MsxR3Battle({ run, setRun, v, ev, ctx, bondLv, onPause, debug }) {
       </div>
       <div className="v-hint"><img src={msxFace(s.aid, 'excited')} alt=""/>{better.length ? <span>{better.length >= MSX_STATS.length ? '能力は全部' : better.slice(0, 2).join('と')}は勝ってる! <em>落ち着いて</em>いこう!</span> : <span>相手は強いよ… <em>ねばって</em>いこう!</span>}</div>
     </>);
-    const foot = <div className="v-ft"><button type="button" className="on" style={{ flex: 1.2 }} onClick={result} data-msx-r3-result>結果だけ見る</button><button type="button" className="go" style={{ flex: 1.2 }} onClick={() => setStep('watch')} data-msx-r3-ready>準備完了</button></div>;
+    const foot = <div className="v-ft"><button type="button" className="on" style={{ flex: 1.2 }} onClick={result} data-msx-r3-result>結果だけ見る</button><button type="button" className="go" style={{ flex: 1.2 }} onClick={() => setStep('watch')} data-msx-r3-ready>準備完了 ▶</button></div>;
     return <MsxR3Frame run={run} back="中断" onBack={onPause} body={body} foot={foot}/>;
   }
 

@@ -1,0 +1,56 @@
+const path=require('path'),fs=require('fs'),http=require('http');
+const ROOT='/home/user/monhero';
+const { chromium } = require(path.join(ROOT,'tools','node_modules','playwright'));
+const { quietBootSeed, updateNoticeSeed } = require(path.join(ROOT,'tools','boot','quiet-boot-seed'));
+const OUT=process.argv[2]; fs.mkdirSync(OUT,{recursive:true});
+const TYPES={'.html':'text/html','.js':'text/javascript','.css':'text/css','.png':'image/png','.jpg':'image/jpeg','.webp':'image/webp','.json':'application/json','.mp3':'audio/mpeg'};
+(async()=>{
+const server=await new Promise(r=>{const s=http.createServer((q,res)=>{const f=path.join(ROOT,decodeURIComponent(q.url.split('?')[0]));if(!f.startsWith(ROOT)||!fs.existsSync(f)||fs.statSync(f).isDirectory()){res.writeHead(404);res.end();return;}res.writeHead(200,{'Content-Type':TYPES[path.extname(f)]||'application/octet-stream'});fs.createReadStream(f).pipe(res);});s.listen(8982,()=>r(s));});
+const b=await chromium.launch({executablePath:'/opt/pw-browsers/chromium'});
+const page=await b.newPage({viewport:{width:390,height:844},deviceScaleFactor:2});
+const errs=[];page.on('pageerror',e=>errs.push(String(e.message||e)));
+await page.addInitScript(quietBootSeed());await page.addInitScript(updateNoticeSeed());
+await page.goto('http://localhost:8982/monster-hero/index.html',{waitUntil:'load',timeout:90000});
+await page.waitForFunction(()=>typeof MsxStats==='function'&&typeof MsxR3Retire==='function'&&typeof MSX_CSS==='string',undefined,{timeout:90000});
+for(const which of ['stats','e3']){
+ await page.evaluate(async({which})=>{
+  await msxLoad();const SUC=msxSuc.SUC;
+  const s=SUC.newRun({id:'pts-x',species:'Mocchi',aid:'mua',team:[],aidBondLv:1});s.pts=400;
+  if(which==='e3'){s.turn=Math.min(46,SUC.core?SUC.core.TOTAL_TURNS:46);}
+  const el=document.getElementById('pt')||Object.assign(document.createElement('div'),{id:'pt'});
+  el.style.cssText='position:fixed;inset:0;z-index:99999;background:#0b0920';document.body.appendChild(el);
+  if(window.__r)window.__r.unmount();window.__r=ReactDOM.createRoot(el);
+  function W(){const [run,setRun]=React.useState({v:1,id:s.id,s,nick:'もちまる',colors:[],from:{base:'Mocchi'},items:[],used:0,phase:'main',out:null,log:[],startAt:1});
+   window.__run=run;
+   const v=SUC.peek(run.s),ev=SUC.evaluate(run.s);
+   return React.createElement('div',{className:'msx',style:{height:'100%',display:'flex',flexDirection:'column'}},React.createElement('style',null,MSX_CSS),
+    which==='stats'?React.createElement(MsxStats,{run,setRun,v,ev,onClose(){}}):React.createElement(MsxR3Retire,{run,setRun,onPause(){},debug:false,SUC}));}
+  ReactDOM.flushSync(()=>window.__r.render(React.createElement(W)));
+ },{which});
+ await page.waitForTimeout(600);
+ const sel=which==='stats'?'[data-msx-pts-row="pow"] .sym.plus':'[data-msx-r3-plus="pow"]';
+ const minusSel=which==='stats'?'[data-msx-pts-row="pow"] .sym.minus':'.v-pa > div:nth-child(2) .sym.minus';
+ const val=()=>page.evaluate(({which})=>{ if(which==='stats'){const r=document.querySelector('[data-msx-pts-row="pow"]');return r.innerText.replace(/\s+/g,' ');} return document.querySelector('.v-pa > div:nth-child(2)').innerText.replace(/\s+/g,' ');},{which});
+ const out=[`== ${which}`,'初め: '+await val()];
+ for(const u of ['5P','10P','100P','MAX']){
+  await page.click('[data-msx-pt-units] button:has-text("'+u+'")');
+  await page.click('[data-msx-pt-units] button:has-text("1P")').catch(()=>{});
+  await page.click('[data-msx-pt-units] button:has-text("'+u+'")');
+  // 戻してから測る: 一度全部戻す
+  for(let i=0;i<5;i++) await page.click(minusSel,{timeout:500}).catch(()=>{});
+  const before=await val();
+  await page.click(sel);
+  out.push(`${u}: 押す前 ${before} → 1回押す ${await val()}`);
+ }
+ // 長押し(1P): 1.2秒
+ await page.click('[data-msx-pt-units] button:has-text("1P")');
+ for(let i=0;i<30;i++) await page.click(minusSel,{timeout:300}).catch(()=>{});
+ const bb=await page.locator(sel).boundingBox();
+ const b0=await val();
+ await page.mouse.move(bb.x+bb.width/2,bb.y+bb.height/2);await page.mouse.down();await page.waitForTimeout(1500);await page.mouse.up();
+ out.push(`長押し(1P)1.5秒: ${b0} → ${await val()}`);
+ await page.screenshot({path:path.join(OUT,`pts-${which}-390.png`)});
+ console.log(out.join('\n'));
+}
+console.log('errors:',JSON.stringify(errs.slice(0,3)));
+await b.close();server.close();})();
