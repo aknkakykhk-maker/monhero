@@ -30,6 +30,9 @@ ART = {
     # ききの8表情(2026-11-12 社長から。枝 hq/incoming-kiki-fullbody8 の incoming/kiki-fullbody/ をそのまま置いた)
     **{'kiki@%s' % e: 'kiki__%s.png' % e for e in ('angry', 'crying', 'excited', 'happy', 'normal', 'surprise', 'troubled', 'wink')},
     'kyuko': 'kyuuko_transparent_fixed.png',
+    # きゅうこの冬服(2026-11-16)。受け取り絵は1枚ずつ(単色ベタ背景から色抜きした透過PNG)
+    'kyuko:winter': 'kyuko_winter__normal.png',
+    **{'kyuko:winter@%s' % e: 'kyuko_winter__%s.png' % e for e in ('angry', 'crying', 'excited', 'happy', 'normal', 'surprise', 'troubled', 'wink')},
     'momosuke': 'msg1-pink-bunny.png',
     'momosuke:halloween': 'msg5-pink-bunny-devil-halloween.png',
     'mua': 'msg2-blonde-angel.png',
