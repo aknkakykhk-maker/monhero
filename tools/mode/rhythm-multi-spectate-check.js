@@ -83,13 +83,15 @@ const VIEW = PORTRAIT ? { width: 390, height: 844 } : { width: 844, height: 390 
   const open = async (name, icon) => {
     const page = await context.newPage();
     page.on('pageerror', (e) => errors.push(`${name}: ${e.message}`));
-    await page.addInitScript(([nm, ic]) => {
+    await page.addInitScript(([nm, ic, ws]) => {
       const put = (k, v) => localStorage.setItem(k, JSON.stringify(v));
       put('mh_breeder_name', nm); put('mh_breeder_icon', ic); put('mh_intro_done', true); put('mh_onboarded', true);
       put('mh_tutorial_seen_v1', true); put('mh_battle_tutorial_seen_v1', true); put('mh_battle_tutorial_guide_shown_v1', true);
       put('mh_assistant_selected_v1', 'momosuke'); put('mh_assistant_unlock_seen_v1', true); put('mh_update_notice_seen_v1', true);
+      // MH_WATCH_SETTINGS … 撮るときだけ音ゲー設定に重ねる JSON(例 '{"lightweightMode":true}'。r1115-161 の確かめ)
+      if (ws) localStorage.setItem('mh_rhythm_settings_v1', ws);
       put('mh_rhythm_tutorial_seen_v1', true); put('mh_rhythm_hell_story_seen_v1', true); put('mh_inherited_unique_level_compensation_v1', true); put('mh_masu_level_cap_compensation_notice_seen_v1', true);
-    }, [name, icon]);
+    }, [name, icon, process.env.MH_WATCH_SETTINGS || '']);
     await page.addInitScript(require('../boot/quiet-boot-seed').eventStorySeed());
     await page.goto(`http://localhost:${PORT}/monster-hero/index.html`, { waitUntil: 'load', timeout: 60000 });
     await page.waitForFunction(() => document.body && document.body.innerText.includes('TAP TO START'), null, { timeout: 60000 });
@@ -131,6 +133,24 @@ const VIEW = PORTRAIT ? { width: 390, height: 844 } : { width: 844, height: 390 
     await B.locator('[data-rhythm-multi-free-list-open]').click();
     await B.getByRole('button', { name: '入る', exact: true }).first().click({ timeout: 20000 });
     for (const p of extra) { await p.locator('[data-rhythm-multi-free-list-open]').click(); await p.getByRole('button', { name: '入る', exact: true }).first().click({ timeout: 20000 }); }
+    // ---- 2026-11-15 r1115-161①: 曲えらび中の部屋も、入らずに観戦だけできる(観戦は見るだけ。遊ぶときは別に「この部屋に入る」) ----
+    {
+      const X = await open('くう', 'Hare');
+      await X.locator('[data-rhythm-multi-free]').click();
+      await X.locator('[data-rhythm-multi-free-list-open]').click();
+      const listed = await X.waitForSelector(`[data-rhythm-multi-room-watch="${code}"]`, { timeout: 30000 }).then(() => true, () => false);
+      check('「部屋に入る」の一覧(曲えらび中・待っている部屋)に、「入る」と別に「観戦」がある', listed);
+      if (listed) {
+        await X.locator(`[data-rhythm-multi-room-watch="${code}"]`).click();
+        const waitingShown = await X.waitForSelector('[data-rhythm-watch][data-rhythm-watch-phase="waiting"]', { timeout: 20000 }).then(() => true, () => false);
+        check('演奏していない部屋を観戦すると、「次の曲が始まるのを待っています」の画面になる', waitingShown, await X.evaluate(() => (RHYTHM_WATCH.view() || {}).phase));
+        check('観戦の画面に、別に「この部屋に入る」がある', (await X.locator('[data-rhythm-watch-join]').count()) === 1);
+        check('観戦の人は部屋のメンバーに入らない(hb を送らない・次の曲にも入らない)', (await sent(X, 'hb')) === 0 && (await A.evaluate(() => RHYTHM_MULTI.view().members.length)) === PLAYERS && (await X.evaluate(() => !RHYTHM_MULTI.view())));
+        if (SHOT_DIR) await X.screenshot({ path: path.join(SHOT_DIR, 'watch-select-waiting.png') });
+        await X.locator('[data-rhythm-watch-close]').click();
+      }
+      await X.close();
+    }
     for (let i = 0; i < 40; i += 1) {
       if ((await A.locator('[data-rhythm-multi-ready]').count()) && (await B.locator('[data-rhythm-multi-ready]').count())) break;
       for (const p of pages) { if (await p.locator('[data-rhythm-multi-omakase]').count()) await p.locator('[data-rhythm-multi-omakase]').click().catch(() => {}); }
@@ -258,8 +278,9 @@ const VIEW = PORTRAIT ? { width: 390, height: 844 } : { width: 844, height: 390 
       .then(() => check('途切れたままだと「通信を待っています」が出る', true), () => check('途切れたままだと「通信を待っています」が出る', false));
     await W.waitForFunction(() => !document.querySelector('[data-rhythm-watch-waiting]'), null, { timeout: 4000 })
       .then(() => check('次の知らせが届くと、「通信を待っています」が消える', true), () => check('次の知らせが届くと、「通信を待っています」が消える', false));
-    const flatPick = await W.evaluate(() => ({ off: rhythmWatchUseFlat(normalizeRhythmSettings({})), light: rhythmWatchUseFlat(normalizeRhythmSettings({ lightweightMode: true })), save: rhythmWatchUseFlat(normalizeRhythmSettings({ frameRateMode: 'POWER_SAVE' })) }));
-    check('軽くする設定・省エネのときは、今までの2D描きへ戻る(ふだんは新しい描き方)', flatPick.off === false && flatPick.light === true && flatPick.save === true, JSON.stringify(flatPick));
+    // 2026-11-15 r1115-161: 軽くする・演出量「最小」・省電力でも、プレイ画面と同じく奥行きの道で描く(本番の iPhone で観戦だけ2Dになった)。2Dへ戻るのは描き手が作れないときだけ
+    const flatPick = await W.evaluate(() => ({ off: rhythmWatchUseFlat(), src: String(rhythmWatchUseFlat) }));
+    check('観戦の道は、設定(軽くする・最小・省電力)で2Dへ落ちない(描き手が作れないときだけ2D)', flatPick.off === false && !/lightweightMode|MINIMAL|frameRateMode/.test(flatPick.src), JSON.stringify(flatPick));
     if (chartInfo && chartInfo.idx.length) {
       // 演奏のループが判定のたびにやること(配列へ2つ push)を、ここで同じようにやる
       await A.evaluate((idx) => { idx.forEach((i, k) => { if (RHYTHM_PLAY_WATCH.jd !== null) RHYTHM_PLAY_WATCH.jd.push(i, k % 3); }); }, chartInfo.idx);
