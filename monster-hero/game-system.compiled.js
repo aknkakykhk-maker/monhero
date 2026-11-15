@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9adbcbffa6fbc28b
+// source-sha256: e7ff40c99f4eb023
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -98794,17 +98794,26 @@ function RhythmWatchLaneRoad({
           };
           const hit = code >= 0 && code < 5;
           const miss = code === 5 && vis >= n.timeMs + 100;
-          if (hit && vis >= n.timeMs && vis - n.timeMs < 300 && !fired.has(i)) {
-            fired.add(i);
+          const spawnHit = (key, extra) => {
+            if (fired.has(key)) return;
+            fired.add(key);
             try {
               const at = rhythmProjectLane(Number(n.lane) || 0, travel.hitY / h);
               rhythmSpawnHitEffect(host, {
                 centerRatio: at.center,
                 widthRatio: at.width * (rhythmNoteIsWide(n) ? 2 : 1),
-                judgment: RHYTHM_WATCH_JUDGMENT_VIEW[code].id
+                judgment: RHYTHM_WATCH_JUDGMENT_VIEW[code].id,
+                monster: !!rhythmNoteMonsterSlot(n),
+                ...extra
               });
             } catch (_) {}
-          }
+          };
+          if (hit && vis >= n.timeMs && vis - n.timeMs < 300) spawnHit(`${i}s`, {
+            flick: n.type === 'FLICK' ? n.flickDir === 'left' || n.flickDir === 'right' ? n.flickDir : 'up' : ''
+          });
+          if (hit && hasBody && vis >= endMs && vis - endMs < 300) spawnHit(`${i}e`, {
+            finish: true
+          });
           const holding = hit && hasBody && vis >= n.timeMs && vis < endMs;
           const clearAt = hit ? hasBody ? endMs : n.timeMs : 0;
           const clearing = hit && vis >= clearAt && vis - clearAt < RHYTHM_CLEAR_FLASH_MS;
@@ -99045,38 +99054,10 @@ function RhythmWatchScreen({
   resolveIconUrl = null
 }) {
   const v = useRhythmWatchView();
-  const [flow, setFlow] = React.useState([]);
-  const seenRef = React.useRef({
-    round: '',
-    focus: '',
-    k: null
-  });
   const [waiting, setWaiting] = React.useState(false);
   const [roadMode, setRoadMode] = React.useState(false);
   const wide = useRhythmWatchWide();
   const focusRow = v && v.rows ? v.rows[v.focus] : null;
-  React.useEffect(() => {
-    if (!v || !focusRow || !focusRow.k) return;
-    const seen = seenRef.current;
-    const same = seen.round === v.round && seen.focus === v.focus && seen.k;
-    if (same) {
-      const items = [];
-      RHYTHM_WATCH_JUDGMENT_VIEW.forEach((j, i) => {
-        const d = focusRow.k[i] - (seen.k[i] || 0);
-        if (d > 0) items.push({
-          key: `${focusRow.at}-${j.id}`,
-          text: `+${d} ${j.short}`,
-          color: j.color
-        });
-      });
-      if (items.length) setFlow(prev => [...items, ...prev].slice(0, 6));
-    } else setFlow([]);
-    seenRef.current = {
-      round: v.round,
-      focus: v.focus,
-      k: focusRow.k
-    };
-  }, [focusRow && focusRow.at]);
   if (!v) return null;
   if (v.quiet && v.phase !== 'playing' && v.phase !== 'ended') return null;
   if (typeof document === 'undefined' || typeof ReactDOM === 'undefined' || !ReactDOM.createPortal) return null;
@@ -99171,17 +99152,7 @@ function RhythmWatchScreen({
       ...JA_WRAP_STYLE,
       textShadow: '0 1px 3px #000'
     }
-  }, jaWrap('通信を待っています…')), React.createElement("div", {
-    className: "pointer-events-none absolute inset-x-0 bottom-[22%] flex flex-col-reverse items-center gap-0.5"
-  }, flow.map(f => React.createElement("b", {
-    key: f.key,
-    className: "text-[14px] font-black italic",
-    style: {
-      color: f.color,
-      textShadow: '0 1px 3px #000',
-      animation: 'mhWatchPop 2.4s ease-out forwards'
-    }
-  }, f.text)))), React.createElement("div", {
+  }, jaWrap('通信を待っています…'))), React.createElement("div", {
     className: "grid grid-cols-6 gap-1"
   }, RHYTHM_WATCH_JUDGMENT_VIEW.map((j, i) => React.createElement("div", {
     key: j.id,

@@ -192,9 +192,11 @@ const VIEW = PORTRAIT ? { width: 390, height: 844 } : { width: 844, height: 390 
     const df = (await sent(focusPage, 'pg')) - f0; const dd = (await sent(otherPage, 'pg')) - o0;
     check('見られている人は1秒ごとに送る(6秒で5通以上)', df >= 5, `${df}通`);
     check('ほかの人は今までの3秒ごとのまま(6秒で3通以下)', dd <= 3, `${dd}通`);
-    // 判定が増えたら「+n」が流れる
+    // 判定が増えたら、下の判定の数が増える(プレイ画面に無い「+n」の流れる文字は出さない)
     await setHud(focusPage, 420000, 130, wantK.map((n, i) => n + (i === 0 ? 4 : 0)), 900, 63000);
-    await W.waitForFunction(() => /\+4 MARVELOUS/.test(document.querySelector('[data-rhythm-watch-detail]').innerText), null, { timeout: 5000 }).then(() => check('判定が増えると「+4 MARVELOUS」が流れる', true), () => check('判定が増えると「+4 MARVELOUS」が流れる', false));
+    await W.waitForFunction((n) => Number(document.querySelector('[data-rhythm-watch-count="MARVELOUS"] b').textContent) === n, wantK[0] + 4, { timeout: 5000 })
+      .then(() => check('判定が増えると、判定の数が増える', true), () => check('判定が増えると、判定の数が増える', false));
+    check('プレイ画面に無い「+n 判定」の流れる文字は出さない', !(await W.evaluate(() => /\+\d+\s*(MARVELOUS|EXCELLENT|GREAT|GOOD|BAD|MISS)/.test(document.querySelector('[data-rhythm-watch-detail]').innerText))));
     // 別の人を選ぶと、その人の判定に切り替わる
     const otherId = focusIsA ? idB : idA;
     await W.locator(`[data-rhythm-watch-row="${otherId}"]`).click();

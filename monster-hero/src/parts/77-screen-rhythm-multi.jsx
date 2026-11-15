@@ -3162,14 +3162,18 @@ function RhythmWatchLaneRoad({ chart, song = null, wide = false, onWaiting, onFa
           const hit = code >= 0 && code < 5;
           // MISS の知らせは表示より早く届く(1.5秒おくれのため)。ノーツが判定ラインを過ぎるまでは、ふつうのノーツのまま流す
           const miss = code === 5 && vis >= n.timeMs + 100;
-          // 叩いた瞬間の光は、プレイ画面と同じ部品(rhythmSpawnHitEffect)で。そのノーツが判定ラインへ着いたとき1回だけ
-          if (hit && vis >= n.timeMs && vis - n.timeMs < 300 && !fired.has(i)) {
-            fired.add(i);
+          // 叩いた瞬間の光は、プレイ画面と同じ部品(rhythmSpawnHitEffect)で、同じ引数(フリックの向き・長押しの終わり・モンスター)を渡す。
+          // 頭に着いたとき1回(帯は終わりでもう1回)。届いた判定の色(MARVELOUS など)で出る
+          const spawnHit = (key, extra) => {
+            if (fired.has(key)) return;
+            fired.add(key);
             try {
               const at = rhythmProjectLane(Number(n.lane) || 0, travel.hitY / h);
-              rhythmSpawnHitEffect(host, { centerRatio: at.center, widthRatio: at.width * (rhythmNoteIsWide(n) ? 2 : 1), judgment: RHYTHM_WATCH_JUDGMENT_VIEW[code].id });
+              rhythmSpawnHitEffect(host, { centerRatio: at.center, widthRatio: at.width * (rhythmNoteIsWide(n) ? 2 : 1), judgment: RHYTHM_WATCH_JUDGMENT_VIEW[code].id, monster: !!rhythmNoteMonsterSlot(n), ...extra });
             } catch (_) { /* 光が出せなくても流れは止めない */ }
-          }
+          };
+          if (hit && vis >= n.timeMs && vis - n.timeMs < 300) spawnHit(`${i}s`, { flick: n.type === 'FLICK' ? (n.flickDir === 'left' || n.flickDir === 'right' ? n.flickDir : 'up') : '' });
+          if (hit && hasBody && vis >= endMs && vis - endMs < 300) spawnHit(`${i}e`, { finish: true });
           const holding = hit && hasBody && vis >= n.timeMs && vis < endMs;
           const clearAt = hit ? (hasBody ? endMs : n.timeMs) : 0;
           const clearing = hit && vis >= clearAt && vis - clearAt < RHYTHM_CLEAR_FLASH_MS;
@@ -3244,24 +3248,10 @@ function RhythmWatchLaneRoad({ chart, song = null, wide = false, onWaiting, onFa
 }
 function RhythmWatchScreen({ songs = [], resolveIconUrl = null }) {
   const v = useRhythmWatchView();
-  const [flow, setFlow] = React.useState([]);
-  const seenRef = React.useRef({ round: '', focus: '', k: null });
   const [waiting, setWaiting] = React.useState(false);
   const [roadMode, setRoadMode] = React.useState(false);
   const wide = useRhythmWatchWide();
   const focusRow = v && v.rows ? v.rows[v.focus] : null;
-  // 選んだ人の判定の数が増えた分を、「+3 MARVELOUS」のように流す(見られている1人の1秒ごとの知らせから)
-  React.useEffect(() => {
-    if (!v || !focusRow || !focusRow.k) return;
-    const seen = seenRef.current;
-    const same = seen.round === v.round && seen.focus === v.focus && seen.k;
-    if (same) {
-      const items = [];
-      RHYTHM_WATCH_JUDGMENT_VIEW.forEach((j, i) => { const d = focusRow.k[i] - (seen.k[i] || 0); if (d > 0) items.push({ key: `${focusRow.at}-${j.id}`, text: `+${d} ${j.short}`, color: j.color }); });
-      if (items.length) setFlow((prev) => [...items, ...prev].slice(0, 6));
-    } else setFlow([]);
-    seenRef.current = { round: v.round, focus: v.focus, k: focusRow.k };
-  }, [focusRow && focusRow.at]);
   if (!v) return null;
   // 待機中のメンバーは、演奏が見つかったときだけ出す(見つからないあいだは、ふつうの待合いのまま)
   if (v.quiet && v.phase !== 'playing' && v.phase !== 'ended') return null;
@@ -3308,9 +3298,6 @@ function RhythmWatchScreen({ songs = [], resolveIconUrl = null }) {
               </div>
               {lite && <p data-rhythm-watch-lite className="absolute inset-x-2 top-9 text-center text-[11px] font-black text-amber-200" style={JA_WRAP_STYLE}>{jaWrap('この人の端末が重くなったので、譜面は出さず、数字だけにしています')}</p>}
               {waiting && v.phase === 'playing' && <p data-rhythm-watch-waiting className="absolute inset-x-2 top-9 text-center text-[12px] font-black text-amber-200" style={{ ...JA_WRAP_STYLE, textShadow: '0 1px 3px #000' }}>{jaWrap('通信を待っています…')}</p>}
-              <div className="pointer-events-none absolute inset-x-0 bottom-[22%] flex flex-col-reverse items-center gap-0.5">
-                {flow.map((f) => <b key={f.key} className="text-[14px] font-black italic" style={{ color: f.color, textShadow: '0 1px 3px #000', animation: 'mhWatchPop 2.4s ease-out forwards' }}>{f.text}</b>)}
-              </div>
             </div>
             <div className="grid grid-cols-6 gap-1">
               {RHYTHM_WATCH_JUDGMENT_VIEW.map((j, i) => (
