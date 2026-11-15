@@ -261,10 +261,11 @@ const makeRun = async (kind) => {
         if (name === 'K2') { const pz = await page.evaluate(() => { const box = document.querySelector('[data-msx-r3-cupwin] .in'); if (!box) return { ok: false }; const R = box.getBoundingClientRect(); const bs = [...box.querySelectorAll('[data-msx-r3-prize]')]; return { ok: bs.length > 0 && bs.every((b) => { const r = b.getBoundingClientRect(); return r.left >= R.left - 1 && r.right <= R.right + 1; }), n: bs.length }; });
           check(`${label}: 獲得物の札が全部 枠の中に見える`, pz.ok, `${pz.n}枚`); }
         if (name === 'R1') { // ビートP: 優勝の分が本編のビートPに1回だけ足される(同じ育成をもう一度保存しても増えない)
-          const bp = await page.evaluate(async (w0) => { const run = await storeGet(MSX_KEYS.run, null); const w1 = await loadRhythmEventPoints(); if (run) await msxSaveRun(run); if (run) await msxSaveRun({ ...run }); const w2 = await loadRhythmEventPoints();
+          const bp = await page.evaluate(async (w0) => { const run = await storeGet(MSX_KEYS.run, null); let rv = Number(run && run.rev) || 0; const R = (o) => ({ ...o, rev: ++rv }); // 保存の版番号(r1115-200 3b): 画面と同じく保存のたびに進める
+            const w1 = await loadRhythmEventPoints(); if (run) await msxSaveRun(R(run)); if (run) await msxSaveRun(R(run)); const w2 = await loadRhythmEventPoints();
             // デバッグの入口からの育成: 渡した量の印は進むが、財布は増えない
-            const more = { ...run, s: { ...run.s, beatEarned: (run.s.beatEarned || 0) + 100 } }; more.beatSent = more.s.beatEarned; await msxSaveRun(more, true);
-            const w3 = await loadRhythmEventPoints(); const st = await storeGet(MSX_KEYS.run, null); if (run) await msxSaveRun(run, true);
+            const more = { ...run, s: { ...run.s, beatEarned: (run.s.beatEarned || 0) + 100 } }; more.beatSent = more.s.beatEarned; await msxSaveRun(R(more), true);
+            const w3 = await loadRhythmEventPoints(); const st = await storeGet(MSX_KEYS.run, null); if (run) await msxSaveRun(R(run), true);
             // ほかのタブで引退・やめたあとの古い画面: 途中の育成を消してから古い run で保存 → 財布は増えず、育成も戻らない
             await msxClearRun(); const stale = { ...run, s: { ...run.s, beatEarned: (run.s.beatEarned || 0) + 50 } }; stale.beatSent = stale.s.beatEarned; await msxSaveRun(stale); const w4 = await loadRhythmEventPoints(); const back = await storeGet(MSX_KEYS.run, null); if (run) await storeSet(MSX_KEYS.run, run);
             return { sent: run && run.beatSent, earned: run && run.s && run.s.beatEarned, d1: w1 - w0, d2: w2 - w1, dbg: w3 - w2, dbgSent: st && st.beatSent === more.beatSent, stale: w4 - w3, staleBack: !!back }; }, beat0);

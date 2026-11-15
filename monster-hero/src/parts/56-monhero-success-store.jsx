@@ -153,6 +153,7 @@ const msxNormRun = (raw, SUC) => {
     startAt: msxNum(raw.startAt, 0),
     // ビートP(2026-11-14 足した項目): 本編へ渡した量・育成が終わったときの分を足したか。無い保存は 0 / false
     beatSent: msxNum(raw.beatSent, 0), beatEnd: raw.beatEnd === true,
+    rev: msxNum(raw.rev, 0), // 保存の版番号(r1115-200 3b・足した項目)。保存のたびに +1。無い保存は 0
     // 期のはじめの控え(期の区切りの演出で増えた分を出す。2026-11-13 足した項目・無い保存は null のまま)
     ki: msxIsObj(raw.ki) && Number.isInteger(raw.ki.p) && Number.isFinite(raw.ki.fame) && Number.isFinite(raw.ki.power) ? { p: Math.max(0, Math.min(9, raw.ki.p)), fame: Math.round(Math.min(1e7, raw.ki.fame * kiFameMul)), power: raw.ki.power } : null,
   };
@@ -333,11 +334,15 @@ const msxRunIsStale = async (run, stored) => {
   if (msxRunTurn(run) < msxRunTurn(stored)) return true;
   if (msxRunSent(run) < msxRunSent(stored)) return true;
   if (stored.beatEnd === true && run.beatEnd !== true) return true;
+  // 保存の版番号(r1115-200 3b): 保存されている版が自分の版以上なら、ほかの画面(別のタブ・古い大会画面)が先に進めている。同じターン・同じビートPでも巻き戻さない
+  //   版の無い保存(古い版のアプリ)は比べない
+  const rv = Number(run.rev); const sv = Number(stored.rev);
+  if (Number.isFinite(rv) && Number.isFinite(sv) && sv > 0 && rv <= sv) return true;
   return false;
 };
 const msxSaveRunNow = async (run, noPay) => {
   const stored = await storeGet(MSX_KEYS.run, null);
-  if (await msxRunIsStale(run, stored)) return false;
+  if (await msxRunIsStale(run, stored)) return 'stale'; // 書かない(r1115-200 3b: 画面は読み直す。文字なので true とは別に扱う)
   const ov = msxRunOverOf(run); if (ov) { try { await storeSet(MSX_RUN_OVER_KEY, ov); } catch (_) {} } // 上限アップの控え(上限のある育成だけ)
   const sent = msxRunSent(run);
   if (noPay || !sent || typeof saveStoredValuesOrRollback !== 'function' || typeof loadRhythmEventPoints !== 'function' || typeof RHYTHM_EVENT_POINTS_KEY === 'undefined') return storeSet(MSX_KEYS.run, run);
@@ -356,11 +361,38 @@ const msxSaveRunNow = async (run, noPay) => {
 // noPay … デバッグの入口からの育成(2026-11-14 窓口: 社長の本当の財布がテストで増えないように)。渡した量の印だけ進め、財布には足さない
 const msxSaveRun = (run, noPay) => { msxSaveChain = msxSaveChain.then(() => msxSaveRunNow(run, noPay)).catch(() => false); return msxSaveChain; };
 // 途中の育成を消す(やめる・引退)も同じ順に並べる(先に頼んだ保存が、消したあとに書き戻さないように)
-//   消す前に、その育成の id を「終わった育成」へ足す(r1115-171 b)。書けなくても消すのは止めない(今までどおり)
-const msxClearRun = () => {
+//   消す前に、その育成の id を「終わった育成」へ足す(r1115-171 b)。
+//   r1115-200: ①id を渡したら、保存されている育成がその id のときだけ消す(古い画面から新しい育成を消さない。違えば 'other')
+//   ②「終わった育成」の記録が書けなければ消さずに false(消したのに記録が無いと、古い画面の保存で育成が戻る)。画面は再試行する
+//   true … 消した/もう無い・'other' … 別の育成なので消さない・false … 書けなかった
+const msxClearRun = (id) => {
   msxSaveChain = msxSaveChain.then(async () => {
-    try { const cur = await storeGet(MSX_KEYS.run, null); if (cur && typeof cur.id === 'string') { const g = await msxRunGoneList(); if (!g.includes(cur.id)) await storeSet(MSX_RUN_GONE_KEY, [...g, cur.id].slice(-50)); } } catch (_) {}
+    const cur = await storeGet(MSX_KEYS.run, null);
+    if (!cur) return true;
+    if (typeof id === 'string' && cur.id !== id) return 'other';
+    if (typeof cur.id === 'string') {
+      const raw = await storeGet(MSX_RUN_GONE_KEY, null); // 読めない(例外)ときは記録を作り直さない(ほかの id を落とさない)→ 下の catch で false
+      const g = Array.isArray(raw) ? raw.filter((x) => typeof x === 'string').slice(-50) : [];
+      if (!g.includes(cur.id) && (await storeSet(MSX_RUN_GONE_KEY, [...g, cur.id].slice(-50))) === false) return false;
+    }
     return storeSet(MSX_KEYS.run, null);
+  }).catch(() => false);
+  return msxSaveChain;
+};
+// 育成を始める(r1115-200 1): 持ちこみの消費(meta)と途中の育成(run)を1つの取引で書く。どちらかが書けなければ両方を元へ戻して false
+//   (育成だけ書けずにアイテムが消える・消費だけ書けずにタダで持ちこむ を起こさない)。保存の順の列に並べる
+const msxStartRunSave = (run, meta) => {
+  msxSaveChain = msxSaveChain.then(async () => {
+    const [runBefore, metaBefore] = await Promise.all([storeGet(MSX_KEYS.run, null), storeGet(MSX_KEYS.meta, null)]);
+    if (typeof saveStoredValuesOrRollback !== 'function') {
+      if ((await storeSet(MSX_KEYS.run, run)) === false) return false;
+      if ((await storeSet(MSX_KEYS.meta, meta)) === false) { await storeSet(MSX_KEYS.run, runBefore); return false; }
+      return true;
+    }
+    return saveStoredValuesOrRollback([
+      { key: MSX_KEYS.meta, before: metaBefore, next: meta },
+      { key: MSX_KEYS.run, before: runBefore, next: run },
+    ], storeGet, storeSet);
   }).catch(() => false);
   return msxSaveChain;
 };
