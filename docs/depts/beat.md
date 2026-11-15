@@ -24,7 +24,7 @@ node tools/ctx.js brief               いまの状態
 - `monster-hero/src/parts/45-quick-anywhere-float.jsx`
 - `monster-hero/src/parts/58-screen-rhythm.jsx`
 - `monster-hero/src/parts/73-screen-rhythm-history.jsx`
-- `monster-hero/src/parts/77-screen-rhythm-multi.jsx`
+- `monster-hero/src/parts/77-screen-rhythm-multi.jsx`(0.4MB・開かない)
 - `monster-hero/src/parts/80-screen-rhythm-*`
 - `monster-hero/data/rhythm-*`
 - `monster-hero/audio/*`
