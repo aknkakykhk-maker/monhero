@@ -60,7 +60,7 @@ if (data.successSoundSe('nothing') !== null) ng('知らない場面の効果音�
 
 // 3
 const used = new Set([...partSrc.matchAll(/\ba\.([A-Za-z]+)/g)].map((m) => m[1]));
-const ALLOWED = new Set(['currentBgmKey', 'isBackgroundSeQuiet', 'setBackgroundSeQuiet', 'playBGM', 'stopBGM', 'fgSe']);
+const ALLOWED = new Set(['currentBgmKey', 'isBackgroundSeQuiet', 'setBackgroundSeQuiet', 'playBGM', 'stopBGM', 'fgSe', 'ensurePlaying']); // ensurePlaying: いまの曲が止まっていたら鳴らし直すだけ(r1115-048 試合の曲の見張り)
 for (const u of used) if (!ALLOWED.has(u)) ng(`鳴らす口が決めていない口 Audio_.${u} を使っている`);
 if (/Audio_\.(setSeVolume|setBgmVolume|setEnabled|startRhythmTrack|setBgmOnce|setPageHidden|unlock|se\b)/.test(partSrc)) ng('鳴らす口が音量・消音・モンヒロビート・裏の音の口に触っている');
 if (/\bAudio_\.se\./.test(partSrc) || /\ba\.se\b/.test(partSrc)) ng('効果音は fgSe(表の音)から鳴らす。se.* は裏の周回の印で消える');

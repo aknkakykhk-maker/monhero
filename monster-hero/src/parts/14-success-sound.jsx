@@ -4,7 +4,7 @@
 // 画面(回2・回3)は SuccessSound.* か useSuccessSound を呼ぶ。Audio_ を直接触らない。
 //
 // ★守っていること(tools/success/success-sound-check.js が見張る)
-//   ・使う Audio_ は playBGM / stopBGM / fgSe / isEnabled / currentBgmKey / setBackgroundSeQuiet だけ。
+//   ・使う Audio_ は playBGM / stopBGM / fgSe / isEnabled / currentBgmKey / setBackgroundSeQuiet / ensurePlaying(いまの曲が止まっていたら鳴らし直すだけ)だけ。
 //     音量(setSeVolume・setBgmVolume)・消音(setEnabled)・モンヒロビートの再生(startRhythmTrack)・1回だけ流す曲(setBgmOnce)には触らない
 //   ・効果音は fgSe(表の画面の音)から鳴らす。音量・消音は Audio_ 側がそのまま効く
 //   ・画面を離れる(leave / useSuccessSound の後片付け)と、待たせていた効果音を捨て、入る前に鳴っていた曲へ戻す
@@ -54,9 +54,24 @@ const SuccessSound = (() => {
     const a = audio(); if (!a || !active || !tableOk()) return null;
     const key = successSoundBgm(sceneId, season);
     if (!key || !knownTrack(key)) return null;
-    if (key === curBgm) return key;
+    // 覚えている曲と、実際に流れている曲(Audio_ の currentBgmKey)が食い違っていたら、同じ場面でも鳴らし直す(r1115-048)
+    let now = key; try { now = a.currentBgmKey ? a.currentBgmKey() : key; } catch (e) {}
+    if (key === curBgm && now === key) return key;
     curBgm = key;
     try { a.playBGM(key); } catch (e) {}
+    return key;
+  };
+
+  // 場面の曲が確かに鳴っているようにする(試合の曲の見張り。r1115-048)。違う曲なら鳴らし直し、同じ曲で止まっていれば(読み込みの失敗など)鳴らし直す。
+  //   ジングルが鳴っているあいだは触らない(ジングルが終わると Audio_ がいまの曲=この曲へ戻す)
+  const keep = (sceneId, season) => {
+    const a = audio(); if (!a || !active || !tableOk()) return null;
+    const key = successSoundBgm(sceneId, season);
+    if (!key || !knownTrack(key)) return null;
+    let now = null; try { now = a.currentBgmKey ? a.currentBgmKey() : null; } catch (e) {}
+    curBgm = key;
+    if (now !== key) { try { a.playBGM(key); } catch (e) {} return key; }
+    try { if (a.ensurePlaying) a.ensurePlaying(key); } catch (e) {}
     return key;
   };
 
@@ -80,7 +95,7 @@ const SuccessSound = (() => {
     se(sceneId, opts && opts.delayMs);
   };
 
-  return { enter, leave, scene, bgm, se, isActive: () => active };
+  return { enter, leave, scene, bgm, keep, se, isActive: () => active };
 })();
 
 // モンサクの画面の内側(育成中・修行・大会・引退など)で使う入り口。sceneId が替わるたびに場面の曲と効果音を鳴らすだけで、
