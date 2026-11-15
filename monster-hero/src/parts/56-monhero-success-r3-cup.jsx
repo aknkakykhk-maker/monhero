@@ -77,13 +77,19 @@ const msxR3BeatPrize = (SUC, g) => { const n = typeof SUC.beatOfPrize === 'funct
 //   字の札には className="msx-kp"(word-break:keep-all)を付け、｜と句読点のところでだけ折れるようにする
 const msxPh = (str) => String(str == null ? '' : str).replace(/｜/g, '\u200b');
 // 参加確認の獲得物(2026-11-14 社長): 賞金は上の1行。その下に、アイテム(左)→ 能力・ポイント系(右)の順で全部が一度に見える升目。押すと詳細の小窓
+// 賞品の札の名前。「能力ポイント +120」のように数で終わる物は、見出しと数を別の行にし、数は折らない(r1115-201: 幅320 で「+12 ⏎ 0」と割れた)
+const MsxR3PrizeName = ({ name }) => {
+  const m = /^(.*?)[\s\u00a0]*([+＋][0-9,]+)$/.exec(String(name || ''));
+  if (!m || !m[1]) return <small className="msx-kp">{msxPh(name)}</small>;
+  return <small className="msx-kp">{msxPh(m[1])}<b style={{ display: 'block', whiteSpace: 'nowrap', font: 'inherit' }}>{m[2]}</b></small>;
+};
 const MsxR3PrizeBox = ({ prizes, onPick }) => {
   const gold = prizes.find((x) => x.id === 'g');
   const rest = prizes.filter((x) => x.id !== 'g').sort((a, b) => (a.pt ? 1 : 0) - (b.pt ? 1 : 0));
   return (<>
     {gold ? <button type="button" className="pzg" onClick={() => onPick(gold)} data-msx-r3-prize="g"><i>賞金</i><b>{gold.name.replace(/^賞金 /, '')}</b></button> : null}
     {rest.length ? <><div className="sub">賞品</div>
-      <div className="pz">{rest.map((x) => <button type="button" key={x.id} className={`${x.rare ? 'rare' : ''}${x.pt ? ' pt' : ''}`} onClick={() => onPick(x)} data-msx-r3-prize={x.id}><span>{typeof msxItemIco === 'function' ? msxItemIco(x) : x.e}</span><small className="msx-kp">{msxPh(x.name)}</small></button>)}</div></> : null}
+      <div className="pz">{rest.map((x) => <button type="button" key={x.id} className={`${x.rare ? 'rare' : ''}${x.pt ? ' pt' : ''}`} onClick={() => onPick(x)} data-msx-r3-prize={x.id}><span>{typeof msxItemIco === 'function' ? msxItemIco(x) : x.e}</span><MsxR3PrizeName name={x.name}/></button>)}</div></> : null}
   </>);
 };
 const MSX_R3_FC_CLASS = Object.freeze({ easy: 'fc-e', good: 'fc-g', even: 'fc-v', hard: 'fc-h', none: 'fc-n' });

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a0a9210c641aca55
+// source-sha256: 455120e0b81fdc16
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -179716,6 +179716,23 @@ const msxR3BeatPrize = (SUC, g) => {
   } : null;
 };
 const msxPh = str => String(str == null ? '' : str).replace(/｜/g, '\u200b');
+const MsxR3PrizeName = ({
+  name
+}) => {
+  const m = /^(.*?)[\s\u00a0]*([+＋][0-9,]+)$/.exec(String(name || ''));
+  if (!m || !m[1]) return React.createElement("small", {
+    className: "msx-kp"
+  }, msxPh(name));
+  return React.createElement("small", {
+    className: "msx-kp"
+  }, msxPh(m[1]), React.createElement("b", {
+    style: {
+      display: 'block',
+      whiteSpace: 'nowrap',
+      font: 'inherit'
+    }
+  }, m[2]));
+};
 const MsxR3PrizeBox = ({
   prizes,
   onPick
@@ -179737,9 +179754,9 @@ const MsxR3PrizeBox = ({
     className: `${x.rare ? 'rare' : ''}${x.pt ? ' pt' : ''}`,
     onClick: () => onPick(x),
     "data-msx-r3-prize": x.id
-  }, React.createElement("span", null, typeof msxItemIco === 'function' ? msxItemIco(x) : x.e), React.createElement("small", {
-    className: "msx-kp"
-  }, msxPh(x.name)))))) : null);
+  }, React.createElement("span", null, typeof msxItemIco === 'function' ? msxItemIco(x) : x.e), React.createElement(MsxR3PrizeName, {
+    name: x.name
+  }))))) : null);
 };
 const MSX_R3_FC_CLASS = Object.freeze({
   easy: 'fc-e',
