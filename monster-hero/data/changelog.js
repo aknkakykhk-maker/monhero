@@ -48,6 +48,14 @@ const CHANGELOG = [
     assistantNotice:{ id:'update_notice_sparkling_pink_overture_v1', type:'content' },
   },
   {
+    // 2026-11-15 r1115-039(社長: 縦の画面で参加者の札のスタンプがほとんど見えない)
+    date: "2026-11-15 09:30", type:'fix', group:'rhythm', title:'マルチの曲えらびで、縦の画面でもスタンプの絵と言葉が見えるようになりました', status:'new',
+    items:[
+      '縦の画面では参加者の札のスタンプの絵が小さく、言葉が札をふさいで参加者の札が見えにくくなっていました。',
+      '絵を大きくして、言葉は絵の下に重ねました。名前も見えます。',
+    ],
+  },
+  {
     // 2026-11-15 r1115-035(社長「オクリモノに付ける」→ 案A・300P): 好き・苦手の gift・color。公開の印 assistantLifeTaste
     date: "2026-11-15 07:32", type:'update', title:'助手に、好きなモンスターのぬいぐるみを贈れるようになりました', status:'new', group:'assistant', releaseFlag:'assistantLifeTaste',
     items:[

@@ -573,6 +573,10 @@
       "role": "部品: モンヒロサクセスのトレーニングの演出(MsxTrainAct)に重ねる、いっしょにいた編成の子と助手の絵 MsxActCrew(友情タッグの子は大きく金色に・助手はひとこと)。何も保存しない・公開の印 monheroSuccess の後ろ"
     },
     {
+      "file": "56-monsuc-trainfx.jsx",
+      "role": "部品: モンヒロサクセスのトレーニングの決めの演出(r1115-067〜069)。友情タッグ=桃と水色の光の糸と光の輪・大成功=金色の溜め→衝撃→揺れ→叩きつけ・重なり=絆の大爆発。MsxTrainAct に重ねる MsxTrainFinish と、結果の画面の飾り MsxTrainResFx。数は芯の結果だけ・何も保存しない・公開の印 monheroSuccess の後ろ"
+    },
+    {
       "file": "56-monsuc-intro.jsx",
       "role": "部品: モンヒロサクセスの育成の始まりの場面 MsxRunIntro(シナリオごとの台本 scn.<助手>.start.* を1行ずつ・毎回の育成の最初に1回・2回目から「とばす」)。保存は mh_monsuc_beta_v1 の seen.start だけ。公開の印 monheroSuccess の後ろ"
     },
@@ -615,6 +619,10 @@
     {
       "file": "56-monhero-success-start.jsx",
       "role": "モンヒロサクセス: 始めるまでの6段(育てる子・編成・助手(シナリオ)・持ちこみ・名前と染色・確認)。計算は芯の memberOf を呼ぶだけ"
+    },
+    {
+      "file": "56-monsuc-basemon.jsx",
+      "role": "モンヒロサクセス: ホームの「ベースモン」の一覧と詳細(はじめる画面と同じ部品 MsxMonDetail を使い回す・r1115-043)"
     },
     {
       "file": "56-monhero-success-main.jsx",

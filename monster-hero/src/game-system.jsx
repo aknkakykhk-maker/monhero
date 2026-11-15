@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 28d6d140fbdb08b4
+// generated-sha256: fcae02be7773141d
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -7043,7 +7043,7 @@ const Audio_ = (() => {
 // 画面(回2・回3)は SuccessSound.* か useSuccessSound を呼ぶ。Audio_ を直接触らない。
 //
 // ★守っていること(tools/success/success-sound-check.js が見張る)
-//   ・使う Audio_ は playBGM / stopBGM / fgSe / isEnabled / currentBgmKey / setBackgroundSeQuiet だけ。
+//   ・使う Audio_ は playBGM / stopBGM / fgSe / isEnabled / currentBgmKey / setBackgroundSeQuiet / ensurePlaying(いまの曲が止まっていたら鳴らし直すだけ)だけ。
 //     音量(setSeVolume・setBgmVolume)・消音(setEnabled)・モンヒロビートの再生(startRhythmTrack)・1回だけ流す曲(setBgmOnce)には触らない
 //   ・効果音は fgSe(表の画面の音)から鳴らす。音量・消音は Audio_ 側がそのまま効く
 //   ・画面を離れる(leave / useSuccessSound の後片付け)と、待たせていた効果音を捨て、入る前に鳴っていた曲へ戻す
@@ -7093,9 +7093,24 @@ const SuccessSound = (() => {
     const a = audio(); if (!a || !active || !tableOk()) return null;
     const key = successSoundBgm(sceneId, season);
     if (!key || !knownTrack(key)) return null;
-    if (key === curBgm) return key;
+    // 覚えている曲と、実際に流れている曲(Audio_ の currentBgmKey)が食い違っていたら、同じ場面でも鳴らし直す(r1115-048)
+    let now = key; try { now = a.currentBgmKey ? a.currentBgmKey() : key; } catch (e) {}
+    if (key === curBgm && now === key) return key;
     curBgm = key;
     try { a.playBGM(key); } catch (e) {}
+    return key;
+  };
+
+  // 場面の曲が確かに鳴っているようにする(試合の曲の見張り。r1115-048)。違う曲なら鳴らし直し、同じ曲で止まっていれば(読み込みの失敗など)鳴らし直す。
+  //   ジングルが鳴っているあいだは触らない(ジングルが終わると Audio_ がいまの曲=この曲へ戻す)
+  const keep = (sceneId, season) => {
+    const a = audio(); if (!a || !active || !tableOk()) return null;
+    const key = successSoundBgm(sceneId, season);
+    if (!key || !knownTrack(key)) return null;
+    let now = null; try { now = a.currentBgmKey ? a.currentBgmKey() : null; } catch (e) {}
+    curBgm = key;
+    if (now !== key) { try { a.playBGM(key); } catch (e) {} return key; }
+    try { if (a.ensurePlaying) a.ensurePlaying(key); } catch (e) {}
     return key;
   };
 
@@ -7119,7 +7134,7 @@ const SuccessSound = (() => {
     se(sceneId, opts && opts.delayMs);
   };
 
-  return { enter, leave, scene, bgm, se, isActive: () => active };
+  return { enter, leave, scene, bgm, keep, se, isActive: () => active };
 })();
 
 // モンサクの画面の内側(育成中・修行・大会・引退など)で使う入り口。sceneId が替わるたびに場面の曲と効果音を鳴らすだけで、
@@ -57415,10 +57430,32 @@ function RhythmMultiStampBar({ phase, onSend, className = '', limit = 0, wrap = 
 // スタンプ(2026-11-11)は text が { text, sf, sw }。絵で出さない設定のときは言葉だけ
 const rhythmMultiBubbleStamp = (text) => (text && typeof text === 'object' && text.sf && MULTI_STAMP.prefs().pic ? text : null);
 const rhythmMultiBubbleText = (text) => (text && typeof text === 'object' ? text.text : text);
-function RhythmMultiChatBubble({ text: raw }) {
+// 見えている向きが横か(🔄で回しているときも、回した見た目で決める)
+const useRhythmWatchWide = () => {
+  const [wide, setWide] = React.useState(() => (typeof orientationIsLandscape === 'function' ? orientationIsLandscape() : false));
+  React.useEffect(() => {
+    const on = () => setWide(typeof orientationIsLandscape === 'function' ? orientationIsLandscape() : false);
+    window.addEventListener('resize', on);
+    const off = typeof RHYTHM_VIEW_ROTATION !== 'undefined' && RHYTHM_VIEW_ROTATION.subscribe ? RHYTHM_VIEW_ROTATION.subscribe(on) : null;
+    on();
+    return () => { window.removeEventListener('resize', on); if (typeof off === 'function') off(); };
+  }, []);
+  return wide;
+};
+function RhythmMultiChatBubble({ text: raw, strip = false }) {
+  const wide = useRhythmWatchWide();
   if (!raw) return null;
   const stamp = rhythmMultiBubbleStamp(raw);
   const text = rhythmMultiBubbleText(raw);
+  // 縦の細い帯(札の高さ60px)では、絵を札の中の名前の上に大きく置き、言葉は札の下へ出す(名前を隠さない・2026-11-15 r1115-039)
+  if (stamp && strip && !wide) return (
+    <span data-rhythm-multi-chat-bubble data-rhythm-multi-stamp-bubble data-rhythm-multi-stamp-strip className="mh-seat-stamp-strip pointer-events-none absolute inset-x-0.5 bottom-[17px] top-[3px] z-40 flex items-start justify-center [container-type:size]">
+      <span className="relative flex h-full w-full justify-center">
+        <img src={multiStampFaceSrc(stamp.sf) || undefined} alt="" draggable={false} decoding="async" className="mh-seat-stamp-strip-img block rounded-lg bg-white object-cover shadow-lg" />
+        <b className="mh-seat-stamp-strip-word absolute inset-x-0 bottom-[3px] block whitespace-nowrap rounded-b-lg bg-white/90 px-0.5 text-center font-black leading-tight text-slate-900" style={{ fontSize: `${Math.max(6.5, Math.min(9, 62 / Math.max(1, Array.from(String(text || '')).length)))}px` }}>{text}</b>
+      </span>
+    </span>
+  );
   if (stamp) return (
     <span data-rhythm-multi-chat-bubble data-rhythm-multi-stamp-bubble className="pointer-events-none absolute inset-x-0.5 bottom-0.5 top-3 z-40 flex items-start justify-center overflow-hidden landscape:top-0.5 [[data-mh-view-rotation=true]_&]:top-0.5 [container-type:size]">
       {/* 席のカードの高さに合わせて、絵の大きさを決める(CSS は index.html の mh-seat-stamp)。絵が大きすぎると下の言葉が切れ、
@@ -58207,7 +58244,7 @@ function RhythmMultiMemberCards({ members, hostId, selfId, resolveIconUrl, badge
           <li key={m.id} data-rhythm-multi-member {...openProps} className={`relative flex min-h-0 min-w-0 rounded-xl ${openable ? 'cursor-pointer active:brightness-125 ' : ''}${self ? 'border border-cyan-300/70 bg-cyan-950/50' : 'border border-white/10 bg-slate-950/70'} ${tall
             ? 'flex-col items-center justify-center px-1 pb-1.5 pt-3'
             : 'h-[60px] flex-col items-center px-0.5 pt-1.5 landscape:h-[38px] landscape:flex-row landscape:gap-1 landscape:px-1 landscape:pt-0'}`}>
-            <RhythmMultiChatBubble text={bubbleOf ? bubbleOf(m.id) : ''} />
+            <RhythmMultiChatBubble text={bubbleOf ? bubbleOf(m.id) : ''} strip={!tall} />
             <small data-rhythm-multi-member-badge className={`absolute -top-1.5 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded-full px-1.5 py-px text-[9px] font-black leading-tight ${badge.cls}`}>{badge.text}</small>
             <span className="relative shrink-0">
               <RhythmMultiAvatar m={m} resolveIconUrl={resolveIconUrl} sizeClass={tall ? 'h-12 w-12 landscape:h-16 landscape:w-16 [@media(max-height:440px)]:h-11 [@media(max-height:440px)]:w-11 [[data-mh-view-rotation=true]_&]:h-11 [[data-mh-view-rotation=true]_&]:w-11' : 'h-7 w-7'} small={!tall} />
@@ -68691,10 +68728,13 @@ const assistantLifeMapReadHome = () => {
 
 // 町の地図の頭の高さの表(2026-11-15 r1115-031)。キーは絵の置き場所(助手の絵のフォルダの下)から表情の名前を取ったもの。値は [頭のてっぺん, 顎, (任意)大きさの倍率](絵の見えている範囲の上を0・下を1。倍率は、見た目で他の人より大きい絵だけ)
 const ASSISTANT_LIFE_MAP_HEAD = Object.freeze({
-  myua_sleep: [0.15, 0.51], kiki_sleep: [0.22, 0.60], momosuke_sleep: [0.07, 0.58], atsu_sleep: [0.08, 0.60], kyuko_sleep: [0.05, 0.52],
+  myua_sleep: [0.15, 0.51], kiki_sleep: [0.22, 0.60], momosuke_sleep: [0.07, 0.58, 1.08], atsu_sleep: [0.08, 0.60, 1.25], kyuko_sleep: [0.05, 0.52],
   'halloween/myua_sleep': [0.20, 0.51], 'halloween/kiki_sleep': [0.22, 0.585], 'halloween/momosuke_sleep': [0.12, 0.58], 'card-master/myua_sleep': [0.07, 0.39],
   momosuke: [0.065, 0.51, 0.85], 'halloween/momosuke': [0.065, 0.51, 0.8], erubin: [0.01, 0.45],
 });
+// 町の地図の大きさの倍率(上の表に行が無い絵だけ。2026-11-15 全身画3人の公開 #6357 で、地図の絵が stand-normal/ の新しい絵に替わり、
+//   みゅあ・ソラシド・えるびんの顔(目から顎)がほかの人の 1.2〜1.5倍に出ていた。ほかの人の 7〜8px にそろえる。assistant-art-scenes-check の map のばらつき)
+const ASSISTANT_LIFE_MAP_FIT = Object.freeze({ 'stand-normal/myua': 0.74, 'stand-normal/sorashido': 0.83, 'stand-normal/erubin': 0.7, sorashido_sleep: 0.82 });
 // 小さな全身(絵の描かれている範囲を測って、見た目の高さを h にそろえる。胸から上の絵は下をぼかす)
 function AssistantLifeMapFig({ who, h, sleep, spent = false }) {
   // 寝ている助手は、社長の寝顔の絵があればそれ(assistantLifeSleepSrc・2026-11-11 社長「絵をそのまま使う」)
@@ -68716,7 +68756,7 @@ function AssistantLifeMapFig({ who, h, sleep, spent = false }) {
   const head = ASSISTANT_LIFE_MAP_HEAD[headKey] || null;
   const topChin = head ? { top: head[0], chin: head[1] } : (face0 && Number.isFinite(face0.top) && (Number.isFinite(face0.chin) || face0.head) ? { top: face0.top, chin: face0.head ? 1 : face0.chin } : null);
   const face = face0 && topChin && typeof ASSISTANT_LIFE_STAND_EC === 'number'
-    ? { ...face0, top: topChin.top, m: (topChin.chin - topChin.top) / (ASSISTANT_LIFE_STAND_EC * ASSISTANT_LIFE_STAND_FACE_LEN), fit: (head && head[2]) || 1 } : face0;
+    ? { ...face0, top: topChin.top, m: (topChin.chin - topChin.top) / (ASSISTANT_LIFE_STAND_EC * ASSISTANT_LIFE_STAND_FACE_LEN), fit: (head && head[2]) || ASSISTANT_LIFE_MAP_FIT[headKey] || 1 } : face0;
   const rule = box && face && typeof assistantLifeStandRule === 'function' ? assistantLifeStandRule({ face, box, F: (h * 0.5) / ASSISTANT_LIFE_STAND_FACE_LEN, topY: h * Math.max(0.25, Math.min(0.38, (face.above || 0) * 0.4)), cx: 0 }) : null;
   const ih = rule ? rule.height : h / Math.max(0.2, b.b - b.t), iw = rule ? rule.width : ih * (b.ar || 0.6);
   const w = Math.round(Math.min((b.r - b.l) * iw, h * 0.78));
@@ -79813,6 +79853,7 @@ const MSC_CSS = `
 .msc-hero.win .big{color:#fde047;-webkit-text-stroke:2px #9a3412;text-shadow:0 5px 0 #7c2d12,0 0 22px rgba(251,191,36,.85)}
 .msc-hero.lose .big{color:#e2e8f0;-webkit-text-stroke:1.5px #334155;text-shadow:0 4px 0 #0f172a;transform:rotate(-6deg);font-size:46px}
 .msc-hero .sub{position:absolute;z-index:3;left:8px;right:8px;top:84px;text-align:center;font-size:13px;font-weight:900;color:#fff;text-shadow:0 2px 3px rgba(0,0,0,.8)}
+.msc-hero .sub .nw{display:inline-block;white-space:nowrap}
 .msc-hero .who{position:absolute;z-index:2;left:50%;bottom:58px;transform:translateX(-50%);width:62%;height:56%;display:flex;align-items:flex-end;justify-content:center}
 .msc-hero .who img{max-width:100%;max-height:100%;object-fit:contain;filter:drop-shadow(0 8px 8px rgba(0,0,0,.5))}
 .msc-hero.win .who{height:46%}
@@ -79834,7 +79875,7 @@ const MSC_CSS = `
 .msc-hero .rival em{font-style:normal;background:#fde047;color:#3b2a05;border-radius:999px;padding:1px 8px;font-size:11px}
 .msc-rw{display:flex;align-items:center;gap:8px;border-radius:12px;background:rgba(15,12,34,.88);border:1.5px solid #3f3a6b;padding:9px 10px;font-size:13px;font-weight:800;animation:msc-fade .35s ease-out both}
 .msc-rw .i{font-size:20px;width:26px;text-align:center}
-.msc-rw .k{flex:0 0 auto;min-width:72px}
+.msc-rw .k{flex:0 0 6.6em;white-space:nowrap} /* 見出しの列の幅をそろえて、値の書き出しをそろえる(r1115-051。一番長い「修行チケット」「能力ポイント」が入る幅) */
 .msc-rw .v{flex:1;min-width:0;color:#e2e8f0;font-size:12.5px}
 .msc-rw.big{background:linear-gradient(90deg,rgba(161,98,7,.55),rgba(15,12,34,.88));border-color:#fde047}
 .msc-again{border-radius:16px;background:rgba(15,12,34,.92);border:1.5px solid #3f3a6b;padding:10px;display:flex;flex-direction:column;gap:7px}
@@ -80120,7 +80161,8 @@ function MonsucCupWin({ s, info, match, out, onNext }) {
         <div className="msc-rays"/>
         <div className="big">優勝!</div>
         <div className="who">{(() => { const im = <MscMyMon sp={s.species} colors={info.colors}/>; const k = s.awake && typeof msxKiraOf === 'function' ? msxKiraOf(s.awake) : null; return k && typeof cardKiraWrap === 'function' ? cardKiraWrap(k, im, { src: mscMonImg(s.species), calm: typeof msxAwCalm === 'function' && msxAwCalm() }) : im; })()}</div>
-        <div className="sub">{info.title} {MSC_STARS(info.star)}・1戦: {o.name || mscMonName(o.species)} に 勝ち{match && match.r ? `(${match.r.rounds} ラウンド)` : ''}</div>
+        {/* 言葉のまとまりごとに折れない塊にして、塊の間でだけ折り返す(2026-11-15 r1115-051「ラ/ウンド」と折れた・語の間の空白) */}
+        <div className="sub" data-msc-win-sub><span className="nw">{info.title}{MSC_STARS(info.star)}</span> <span className="nw">1戦目</span> <span className="nw">{o.name || mscMonName(o.species)}に勝ち{match && match.r ? `(${match.r.rounds}ラウンド)` : ''}</span></div>
         {info.rival && <div className="rival"><span>ライバルの {o.name || mscMonName(o.species)} にも 勝った!</span><em>ごほうび大</em></div>}
       </div>
       {rows.map((r, k) => <div key={k} className={`msc-rw ${r.big ? 'big' : ''}`} style={{ animationDelay: `${0.3 + k * 0.12}s` }}><span className="i">{r.i}</span><span className="k">{r.k}</span><span className="v">{r.v}</span></div>)}
@@ -83721,7 +83763,7 @@ function MsxTrainAct({ run, o, onDone }) {
   const lv = msxTrainLvAt(o && Number.isFinite(o.trainLv) ? o.trainLv - (o.lvUp ? 1 : 0) : 1);
   const done = React.useRef(false);
   const finish = () => { if (done.current) return; done.current = true; onDone(); };
-  React.useEffect(() => { if (msxActCalm()) { finish(); return undefined; } const id = setTimeout(finish, MSX_ACT_MS); return () => clearTimeout(id); }, []);
+  React.useEffect(() => { if (msxActCalm()) { finish(); return undefined; } const id = setTimeout(finish, typeof msxTfxMs === 'function' ? msxTfxMs(o) : MSX_ACT_MS); return () => clearTimeout(id); }, []);
   msxUseTimedSe(msxActCalm() ? [] : (MSX_ACT_SE[k] || []).concat(lv === 5 ? [['actFlash', 600]] : []), []);
   if (msxActCalm()) return null;
   const n = (c) => Array.from({ length: c }, (_, i) => i);
@@ -83746,8 +83788,10 @@ function MsxTrainAct({ run, o, onDone }) {
   }
   const front = k === 'tough' || k === 'eva';
   const mv = !!MSX_ACT_MOVE[k];
+  // 友情タッグ・大成功・重なりの決めの演出(56-monsuc-trainfx.jsx・r1115-067〜069)。色替えと揺れの class
+  const tfx = typeof msxTfxActProps === 'function' ? msxTfxActProps(o) : { cls: '', style: undefined };
   return (
-    <div className={`msx-act t-${k} lv${lv}${mv ? ' mv-on' : ''}${o && o.card && Array.isArray(o.card.tags) && o.card.tags.length ? ' tagx' : ''}`} onClick={finish} data-msx-act={k} data-msx-act-lv={lv}>
+    <div className={`msx-act t-${k} lv${lv}${mv ? ' mv-on' : ''}${o && o.card && Array.isArray(o.card.tags) && o.card.tags.length ? ' tagx' : ''}${tfx.cls}`} style={tfx.style} onClick={finish} data-msx-act={k} data-msx-act-lv={lv}>
       <span className={k === 'life' ? 'lines h' : 'lines'} aria-hidden="true"/>
       {mv && k === 'life' ? <span className="road" aria-hidden="true"/> : null}
       {typeof MsxActCrew === 'function' ? <MsxActCrew run={run} o={o}/> : null}
@@ -83756,6 +83800,7 @@ function MsxTrainAct({ run, o, onDone }) {
       <div className="me">{mv ? <div className="mv"><MsxMonArt run={run} className="mon" live noPeak/>{k === 'life' ? <i className="sweat">💦</i> : null}</div> : <MsxMonArt run={run} className="mon" live noPeak/>}</div>
       {front ? prop : null}
       {lv === 5 ? <span className="flash5" aria-hidden="true"/> : null}
+      {typeof MsxTrainFinish === 'function' ? <MsxTrainFinish run={run} o={o}/> : null}
       <div className="ban"><small>{MSX_STAT_NAME[k]}のトレーニング <b>Lv.{lv}</b></small>{msxTrainIcon(k, lv)} {msxTrainName(k, lv)}!</div>
     </div>
   );
@@ -84122,6 +84167,257 @@ function MsxBondChips({ s, card, add }) {
       {aid ? <span className={`v-bchip${tags.includes('aid') ? ' tag' : ''}`} data-msx-bond-chip="aid"><img src={typeof msxFace === 'function' ? msxFace(s.aid, 'happy') : ''} alt=""/>{tags.includes('aid') ? <i className="bc-tg">🤝</i> : null}<span className="bc-nm">{typeof msxAidName === 'function' ? msxAidName(s.aid) : ''}</span><span className="bc-up">親密度 +{add}</span></span> : null}
     </div>
   );
+}
+
+// ---- part: 56-monsuc-trainfx.jsx ----
+// ===== モンヒロサクセスのトレーニングの決めの演出: 友情タッグ・大成功・重なり(2026-11-15 社長 r1115-067〜069・案 docs/progress/r1115-067/plan.md を社長 OK) =====
+// 何も保存しない・公開の印は持たない(MsxTrainAct と結果の画面の中からだけ呼ぶ)。数は芯の act の結果(out.result・out.card.tags・out.card.tag・out.gain)だけを使う。
+//   友情タッグ(tag)   … 桃と水色。光の糸 → 仲間の光の玉が入って光の輪が重なる「タッグフィニッシュ!」。揺らさない。2.1秒
+//   大成功(great)     … 金色。暗くなって溜める「ゴゴゴ…!」→ 閃光と衝撃の輪・画面が揺れる「ドォン!!」→「大成功」の叩きつけ。2.3秒
+//   重なり(both)      … 仲間の光が集まって金色に変わる → 虹色の輪の「絆の大爆発!!」・揺れ →「大成功」の叩きつけ(ふちが虹色)。2.5秒
+//   msxTfxKind(o) / msxTfxMs(o) … どの演出か・場面の長さ(ふつう 2.0秒)
+//   MsxTrainFinish({ run, o })   … MsxTrainAct の場面に重ねる決めの部分(音も時間を合わせて鳴らす)
+//   MsxTrainResFx({ run, o })    … 結果の画面の場面に重ねる飾り(放射線・ハート・顔つきのリボン・「伸び ×1.5」の札)
+//   msxTfxResSound(o)            … 結果の画面の音(重なりだけ大きい方のファンファーレ。ほかは今までどおり)
+// 軽さ: 端末の「動きを減らす」は場面を出さない(MsxTrainAct が見る)・結果の飾りは止め絵で出す。
+//   設定の画面の軽さが「軽め」「最軽量」なら粒を減らしてぼかしを使わない。「画面の揺れ」がオフなら揺らさない(どちらも読むだけ・mh_battle_fx_v1)
+const MSX_TFX_MS = Object.freeze({ base: 2000, tag: 2100, great: 2300, both: 2500 });
+// 決めの部分で鳴らす音(場面の id と、場面に入ってからのミリ秒)。はじめのカットインの friendTag は MsxActCrew が鳴らす
+const MSX_TFX_SE = Object.freeze({
+  tag: [['actTagJoin', 1300], ['actTagFin', 1560]],
+  great: [['actGreatCharge', 1200], ['actGreatBoom', 1500], ['actHit', 1780]],
+  both: [['actTagJoin', 1200], ['actGreatCharge', 1300], ['actComboBoom', 1550], ['actGreatBoom', 1580], ['actHit', 1920]],
+});
+const msxTfxKind = (o) => {
+  if (!o || !o.result) return 'base';
+  const tag = !!(o.card && Array.isArray(o.card.tags) && o.card.tags.length > 0);
+  const great = o.result === 'great';
+  return great && tag ? 'both' : great ? 'great' : tag && o.result !== 'sab' ? 'tag' : 'base';
+};
+const msxTfxMs = (o) => MSX_TFX_MS[msxTfxKind(o)] || MSX_TFX_MS.base;
+const msxTfxResSound = (o) => (msxTfxKind(o) === 'both' ? 'trainGreatTag' : null);
+// 設定の軽さ(読むだけ。無い・壊れているときは豪華・揺れあり)
+const msxTfxOpt = () => {
+  let load = 'RICH'; let shake = true;
+  try {
+    const raw = typeof localStorage !== 'undefined' ? localStorage.getItem('mh_battle_fx_v1') : null;
+    const v = raw ? JSON.parse(raw) : null;
+    if (v && typeof v === 'object') { if (typeof v.load === 'string') load = v.load; if (v.shake === 'OFF') shake = false; }
+  } catch (e) { /* 読めなければ既定 */ }
+  const calm = typeof msxFxCalm === 'function' && msxFxCalm();
+  return { lite: calm || load === 'LIGHT' || load === 'MINIMAL', shake: shake && !calm, calm };
+};
+// タッグの子の置き場所(MsxActCrew と同じ表)から、光の糸・玉の出どころ(場面の % )を作る
+const msxTfxFrom = (s, card) => {
+  const tags = Array.isArray(card && card.tags) ? card.tags : [];
+  const team = s && Array.isArray(s.team) ? s.team : [];
+  const ms = (Array.isArray(card && card.members) ? card.members : []).filter((i) => Number.isInteger(i) && team[i] && tags.includes(i));
+  const aid = Boolean(card && (card.aid || tags.includes('aid')));
+  const SP = typeof MSX_CREW_SPOT_TAG !== 'undefined' ? (aid ? MSX_CREW_SPOT_TAG_AID : MSX_CREW_SPOT_TAG) : [{ left: '22%', bottom: '12%' }, { left: '78%', bottom: '12%' }];
+  const pts = ms.slice(0, SP.length).map((_, n) => ({ x: parseFloat(SP[n].left), y: 100 - parseFloat(SP[n].bottom) - 10 }));
+  if (tags.includes('aid')) pts.push({ x: 86, y: 66 }); // 助手(右下の全身の絵の胸のあたり)
+  if (!pts.length) pts.push({ x: 18, y: 78 });
+  return pts.slice(0, 5);
+};
+const MSX_TFX_COLS = ['#f472b6', '#67e8f9', '#f9a8d4', '#a5f3fc', '#fbcfe8'];
+const MSX_TFX_CX = 50; const MSX_TFX_CY = 58; // 育てる子の胸のあたり(場面の %)
+
+const MSX_TFX_CSS = `
+.msx .msx-act.tfx-tag .tagcut,.msx .msx-act.tfx-both .tagcut{background:linear-gradient(90deg,#9d174dee,#f472b6f2 28%,#fdf2f8f5 50%,#67e8f9f2 72%,#0e7490ee);border-top-color:#fff;border-bottom-color:#fff;box-shadow:0 0 24px #f9a8d4,0 0 30px #67e8f9aa}
+.msx .msx-act.tfx-both .tagcut{border-top-color:#fde047;border-bottom-color:#fde047;box-shadow:0 0 26px #fde047,0 0 34px #f9a8d4;animation-duration:1.05s}
+.msx .msx-act.tfx-tag .tagcut .fc,.msx .msx-act.tfx-both .tagcut .fc{border-color:#fff;box-shadow:0 0 0 2px #db2777,0 0 12px #fff}
+.msx .msx-act.tfx-tag .tagcut .x,.msx .msx-act.tfx-both .tagcut .x{color:#fff;text-shadow:0 0 6px #db2777}
+.msx .msx-act.tfx-tag .tagcut b,.msx .msx-act.tfx-both .tagcut b{-webkit-text-stroke-color:#831843;text-shadow:0 3px 0 #831843,0 0 12px #fff}
+.msx .msx-act.tfx-tag .tagcut b small,.msx .msx-act.tfx-both .tagcut b small{color:#831843}
+.msx .msx-act.tfx-tag .tagglow,.msx .msx-act.tfx-both .tagglow{background:radial-gradient(circle at 50% 60%,#f9a8d455,#67e8f922 45%,transparent 70%)}
+.msx .msx-act.tfx-tag .crew .cm.tag img,.msx .msx-act.tfx-both .crew .cm.tag img{filter:drop-shadow(0 0 6px #f9a8d4) drop-shadow(0 0 12px #67e8f9) drop-shadow(0 3px 0 #0007)}
+.msx .msx-act.tfx-tag .crew .cm .tg,.msx .msx-act.tfx-both .crew .cm .tg{color:#831843;background:linear-gradient(#fdf2f8,#f9a8d4)}
+.msx .msx-act.tfx-tag .tagstar,.msx .msx-act.tfx-both .tagstar{filter:drop-shadow(0 0 6px #f472b6) drop-shadow(0 0 4px #67e8f9)}
+.msx .msx-act.tfx-shake{animation:msxTfxShake .36s linear var(--sk,1.5s) both}
+.msx .msx-act.tfx-shake.sk2{animation:msxTfxShake .36s linear var(--sk,1.5s) both,msxTfxShake2 .24s linear var(--sk2,1.75s) both}
+.msx .tfx{position:absolute;inset:0;z-index:7;pointer-events:none;overflow:hidden}
+.msx .tfx .dim{position:absolute;inset:0;opacity:0;animation:msxTfxDim var(--dd,.8s) ease-out var(--d,1.3s) both}
+.msx .tfx .thread{position:absolute;inset:0;width:100%;height:100%;opacity:0;animation:msxTfxThread .8s ease-out .5s both}
+.msx .tfx .thread path{fill:none;stroke-linecap:round;vector-effect:non-scaling-stroke;stroke-dasharray:6 1000;stroke-dashoffset:0}
+.msx .tfx .thread .glow{stroke-width:9;opacity:.75}
+.msx .tfx .thread .core{stroke:#fff;stroke-width:3}
+.msx .tfx .hrt{position:absolute;font-style:normal;font-size:var(--fs,18px);opacity:0;filter:drop-shadow(0 0 5px #fff);animation:msxTfxHeart 1.1s ease-out var(--d,.5s) both}
+.msx .tfx .orb{position:absolute;width:30px;height:30px;margin:-15px 0 0 -15px;border-radius:50%;opacity:0;background:radial-gradient(#fff 20%,var(--c) 70%);box-shadow:0 0 18px var(--c),0 0 6px #fff;animation:msxTfxOrb .32s ease-in var(--d,1.3s) both}
+.msx .tfx .orb.gold{animation-name:msxTfxOrbGold}
+.msx .tfx .ring{position:absolute;left:${MSX_TFX_CX}%;top:${MSX_TFX_CY}%;border-radius:50%;opacity:0;transform:translate(-50%,-50%) scale(.2)}
+.msx .tfx .ring.kz{width:70vmin;height:70vmin;max-width:330px;max-height:330px;border:6px solid #fff;box-shadow:0 0 22px #f472b6,inset 0 0 22px #67e8f9;animation:msxTfxRing .75s cubic-bezier(.2,.8,.3,1) var(--d,1.6s) both}
+.msx .tfx .ring.kz.b{border-color:#fbcfe8;box-shadow:0 0 22px #67e8f9,inset 0 0 18px #f472b6}
+.msx .tfx .ring.halo{width:80vmin;height:80vmin;max-width:380px;max-height:380px;background:conic-gradient(#f472b6,#67e8f9,#fff,#f472b6,#67e8f9,#fff,#f472b6);filter:blur(8px);animation:msxTfxHalo .8s ease-out var(--d,1.6s) both}
+.msx .tfx .ring.shock{width:86vmin;height:86vmin;max-width:400px;max-height:400px;border:14px solid #fde047;box-shadow:0 0 30px #f59e0b,inset 0 0 30px #fff;animation:msxTfxShock .55s cubic-bezier(.1,.8,.3,1) var(--d,1.5s) both}
+.msx .tfx .ring.shock.w{border-width:4px;border-color:#fff9;box-shadow:none;animation-duration:.75s}
+.msx .tfx .ring.rainbow{width:90vmin;height:90vmin;max-width:420px;max-height:420px;background:conic-gradient(#fde047,#f472b6,#67e8f9,#fde047,#f472b6,#67e8f9,#fde047);-webkit-mask:radial-gradient(circle,transparent 60%,#000 61%,#000 71%,transparent 72%);mask:radial-gradient(circle,transparent 60%,#000 61%,#000 71%,transparent 72%);animation:msxTfxShock .6s cubic-bezier(.1,.8,.3,1) var(--d,1.55s) both}
+.msx .tfx .aura{position:absolute;left:${MSX_TFX_CX}%;top:${MSX_TFX_CY}%;width:64%;height:62%;transform:translate(-50%,-50%);border-radius:50%;opacity:0;background:radial-gradient(#fde047cc,#f59e0b66 45%,transparent 70%);mix-blend-mode:screen;animation:msxTfxAura .3s ease-in var(--d,1.2s) both}
+.msx .tfx .aura.mix{background:radial-gradient(#fde047bb,#f472b655 45%,transparent 70%)}
+.msx .tfx .speed{position:absolute;inset:-30%;opacity:0;background:repeating-conic-gradient(from 0deg at 50% ${MSX_TFX_CY}%,#000a 0 3deg,#0000 3deg 9deg);-webkit-mask:radial-gradient(circle at 50% ${MSX_TFX_CY}%,transparent 30%,#000 62%);mask:radial-gradient(circle at 50% ${MSX_TFX_CY}%,transparent 30%,#000 62%);animation:msxTfxSpeed .32s linear var(--d,1.2s) both}
+.msx .tfx .flash{position:absolute;inset:0;opacity:0;background:radial-gradient(circle at 50% ${MSX_TFX_CY}%,#fff,#fef9c3dd 30%,#fde04766 55%,transparent 80%);animation:msxTfxFlash .45s ease-out var(--d,1.5s) both}
+.msx .tfx .flash.mix{background:radial-gradient(circle at 50% ${MSX_TFX_CY}%,#fff,#fde047dd 25%,#f9a8d499 45%,#67e8f966 60%,transparent 82%)}
+.msx .tfx .bit{position:absolute;left:${MSX_TFX_CX}%;top:${MSX_TFX_CY}%;font-style:normal;font-size:20px;opacity:0;animation:msxTfxBit .6s cubic-bezier(.1,.7,.3,1) var(--d,1.5s) both}
+.msx .tfx .word{position:absolute;left:0;right:0;text-align:center;font-weight:900;white-space:nowrap;opacity:0;line-height:1.1}
+.msx .tfx .word.kz{top:7%;font-size:min(34px,8.6vw);font-style:italic;color:#fff;-webkit-text-stroke:2px #831843;paint-order:stroke fill;text-shadow:0 0 14px #f472b6,0 0 22px #67e8f9;animation:msxTfxWord .55s cubic-bezier(.2,1.4,.4,1) var(--d,1.6s) both}
+.msx .tfx .word.gg{top:7%;font-size:min(30px,7.6vw);color:#fde047;text-shadow:0 0 10px #f59e0b,0 3px 0 #7c2d12;animation:msxTfxGogo var(--wd,.3s) linear var(--d,1.2s) both}
+.msx .tfx .word.don{top:5%;font-size:min(46px,11.6vw);color:#fff;-webkit-text-stroke:3px #9a3412;paint-order:stroke fill;text-shadow:0 0 20px #fde047;animation:msxTfxDon var(--wd,.28s) ease-out var(--d,1.5s) both}
+.msx .tfx .word.don.mix{font-size:min(40px,10vw);text-shadow:0 0 18px #fde047,0 0 26px #f472b6}
+.msx .tfx .word.mn{top:7%;font-size:min(24px,6.2vw);color:#fff;text-shadow:0 0 10px #f472b6,0 0 14px #fde047,0 2px 0 #0008;animation:msxTfxGogo var(--wd,.35s) linear var(--d,1.2s) both}
+.msx .tfx .slam{position:absolute;left:0;right:0;top:9%;text-align:center;font-size:min(80px,20vw);font-weight:900;letter-spacing:.06em;line-height:1;white-space:nowrap;color:#fde047;-webkit-text-stroke:3px #9a3412;paint-order:stroke fill;text-shadow:0 6px 0 #9a3412,0 0 40px #fde047;opacity:0;animation:msxTfxSlam .6s cubic-bezier(.3,0,.3,1) var(--d,1.7s) both}
+.msx .tfx .slam.mix{text-shadow:0 6px 0 #9a3412,0 0 26px #f472b6,0 0 40px #67e8f9,0 0 50px #fde047}
+.msx .tfx .rays{position:absolute;inset:-40%;opacity:0;background:repeating-conic-gradient(from 6deg at 50% 50%,#fde047a0 0 7deg,#0000 7deg 15deg);animation:msxTfxRays .6s ease-out var(--d,1.7s) both}
+.msx .tfx.lite .ring.halo,.msx .tfx.lite .thread .glow{filter:none;display:none}
+@keyframes msxTfxDim{to{opacity:1}}
+@keyframes msxTfxThread{0%{opacity:0}25%{opacity:1}85%{opacity:1}100%{opacity:0}}
+@keyframes msxTfxHeart{0%{opacity:0;transform:scale(.3)}30%{opacity:1;transform:scale(1.15)}100%{opacity:0;transform:translateY(-34px) scale(.8)}}
+@keyframes msxTfxOrb{0%{opacity:0;transform:scale(.4)}25%{opacity:1;transform:scale(1.1)}100%{opacity:1;left:${MSX_TFX_CX}%;top:${MSX_TFX_CY}%;transform:scale(.6)}}
+@keyframes msxTfxOrbGold{0%{opacity:0;transform:scale(.4)}25%{opacity:1;transform:scale(1.1)}100%{opacity:1;left:${MSX_TFX_CX}%;top:${MSX_TFX_CY}%;transform:scale(.7);background:radial-gradient(#fff 20%,#fde047 70%);box-shadow:0 0 22px #fde047}}
+@keyframes msxTfxRing{0%{opacity:0;transform:translate(-50%,-50%) scale(.15)}25%{opacity:1}100%{opacity:0;transform:translate(-50%,-50%) scale(1.1)}}
+@keyframes msxTfxHalo{0%{opacity:0;transform:translate(-50%,-50%) scale(.3) rotate(0)}35%{opacity:.6}100%{opacity:0;transform:translate(-50%,-50%) scale(1.15) rotate(120deg)}}
+@keyframes msxTfxShock{0%{opacity:1;transform:translate(-50%,-50%) scale(.1)}70%{opacity:.9}100%{opacity:0;transform:translate(-50%,-50%) scale(1.3)}}
+@keyframes msxTfxAura{0%{opacity:0;transform:translate(-50%,-50%) scale(.6)}100%{opacity:1;transform:translate(-50%,-50%) scale(1.05)}}
+@keyframes msxTfxSpeed{0%{opacity:0;transform:scale(1.25)}100%{opacity:1;transform:scale(1)}}
+@keyframes msxTfxFlash{0%{opacity:0}15%{opacity:1}100%{opacity:0}}
+@keyframes msxTfxBit{0%{opacity:1;transform:translate(-50%,-50%) scale(.6)}100%{opacity:0;transform:translate(calc(-50% + var(--x)),calc(-50% + var(--y))) rotate(var(--r)) scale(1)}}
+@keyframes msxTfxWord{0%{opacity:0;transform:scale(.4)}60%{opacity:1;transform:scale(1.08)}85%{opacity:1;transform:scale(1)}100%{opacity:1}}
+@keyframes msxTfxGogo{0%{opacity:0;transform:translateX(-3px)}15%{opacity:1;transform:translateX(3px)}30%{transform:translateX(-3px)}45%{transform:translateX(3px)}60%{transform:translateX(-2px)}85%{opacity:1;transform:none}100%{opacity:0}}
+@keyframes msxTfxDon{0%{opacity:0;transform:scale(2.2)}30%{opacity:1;transform:scale(.95)}45%{transform:scale(1)}85%{opacity:1}100%{opacity:0;transform:scale(1.15)}}
+@keyframes msxTfxSlam{0%{opacity:0;transform:rotate(-4deg) scale(2.6)}35%{opacity:1;transform:rotate(-4deg) scale(.92)}50%{transform:rotate(-4deg) scale(1.04)}100%{opacity:1;transform:rotate(-4deg) scale(1)}}
+@keyframes msxTfxRays{0%{opacity:0;transform:rotate(0)}100%{opacity:1;transform:rotate(14deg)}}
+@keyframes msxTfxShake{0%,100%{translate:0 0}10%{translate:9px -6px}25%{translate:-8px 5px}40%{translate:7px 4px}55%{translate:-6px -5px}70%{translate:4px 3px}85%{translate:-2px -2px}}
+@keyframes msxTfxShake2{0%,100%{translate:0 0}25%{translate:-5px 4px}50%{translate:4px -3px}75%{translate:-2px 2px}}
+/* 結果の画面の飾り */
+.msx .v-tfx{position:absolute;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+.msx .v-tfx .grays{position:absolute;inset:-40%;background:repeating-conic-gradient(from 6deg at 50% 46%,#fde04770 0 7deg,#0000 7deg 15deg);animation:msxTfxSpin 18s linear infinite}
+.msx .v-tfx .pastel{position:absolute;inset:0;background:radial-gradient(circle at 50% 46%,#f9a8d455,#67e8f933 50%,transparent 76%)}
+.msx .v-tfx .gstar{position:absolute;font-style:normal;color:#fef9c3;font-size:18px;text-shadow:0 0 8px #fde047,0 0 16px #f59e0b;animation:msxTfxTwinkle 1.4s ease-in-out infinite alternate;animation-delay:calc(var(--i) * .17s)}
+.msx .v-tfx .rhrt{position:absolute;font-style:normal;font-size:var(--fs,18px);filter:drop-shadow(0 0 5px #fff);animation:msxTfxFloat 2.4s ease-in-out infinite alternate;animation-delay:calc(var(--i) * .23s)}
+.msx .v-tfxtop{position:absolute;inset:0;z-index:4;pointer-events:none}
+.msx .v-tfx-rib{position:absolute;left:0;right:0;margin:0 auto;width:max-content;top:calc(9% + 66px);transform:rotate(-3deg);display:flex;align-items:center;gap:5px;max-width:calc(100% - 20px);padding:3px 12px 3px 4px;border-radius:99px;background:linear-gradient(90deg,#db2777,#f9a8d4 45%,#67e8f9 55%,#0891b2);border:2.5px solid #fff;box-shadow:0 0 16px #f9a8d4,0 3px 0 #0006;color:#fff;font-weight:900;font-size:13px;white-space:nowrap;text-shadow:0 1px 0 #831843,0 0 4px #831843;animation:msxTfxRib .45s cubic-bezier(.2,1.4,.4,1) .15s both}
+.msx .v-tfx-rib.both{border-color:#fde047;box-shadow:0 0 16px #fde047,0 0 22px #f9a8d4,0 3px 0 #0006}
+.msx .v-tfx-rib .fcs{display:flex;flex:none}
+.msx .v-tfx-rib .fcs img{width:28px;height:28px;border-radius:50%;object-fit:cover;background:#fff;border:2px solid #fff;margin-right:-7px;box-shadow:0 0 0 1.5px #db2777}
+.msx .v-tfx-rib .fcs img:last-child{margin-right:0}
+.msx .v-tfx-rib .t{overflow:hidden;text-overflow:ellipsis;min-width:0}
+.msx .v-tfx-badge{position:absolute;right:12px;top:calc(9% - 6px);font-weight:900;color:#7c2d12;background:linear-gradient(#fef9c3,#facc15 60%,#f59e0b);border:2.5px solid #fff;border-radius:10px;padding:1px 9px;font-size:15px;line-height:1.35;white-space:nowrap;box-shadow:0 0 14px #fde047,0 3px 0 #0007;transform:rotate(8deg);animation:msxTfxBadge .4s cubic-bezier(.2,1.6,.4,1) .3s both}
+.msx .v-stamp.tfx-gold{font-size:60px;animation:msx-popin .35s cubic-bezier(.2,1.4,.4,1),msxTfxStampGlow 1.6s ease-in-out .4s infinite alternate}
+.msx .v-stamp.tfx-both{-webkit-text-stroke:2px #9a3412;text-shadow:0 4px 0 #9a3412,0 0 18px #f472b6,0 0 30px #67e8f9,0 0 46px #fde047}
+@keyframes msxTfxSpin{to{transform:rotate(360deg)}}
+@keyframes msxTfxTwinkle{from{opacity:.25;transform:scale(.7)}to{opacity:1;transform:scale(1.15)}}
+@keyframes msxTfxFloat{from{transform:translateY(0)}to{transform:translateY(-10px)}}
+@keyframes msxTfxRib{from{opacity:0;transform:rotate(-3deg) scale(.5)}to{opacity:1;transform:rotate(-3deg)}}
+@keyframes msxTfxBadge{from{opacity:0;transform:rotate(8deg) scale(2)}to{opacity:1;transform:rotate(8deg)}}
+@keyframes msxTfxStampGlow{from{filter:brightness(1)}to{filter:brightness(1.18) drop-shadow(0 0 10px #fde047)}}
+.msx .v-tfx.calm *,.msx .v-tfxtop.calm *,.msx .v-stamp.tfx-gold.calm{animation:none!important}
+`;
+let msxTfxCssDone = false;
+const msxTfxEnsureCss = () => {
+  if (msxTfxCssDone || typeof document === 'undefined') return;
+  msxTfxCssDone = true;
+  const el = document.createElement('style'); el.setAttribute('data-msx-tfx-css', '1'); el.textContent = MSX_TFX_CSS; document.head.appendChild(el);
+};
+// MsxTrainAct の外側の箱に足す class と style(色替え・揺れ)
+const msxTfxActProps = (o) => {
+  const k = msxTfxKind(o); if (k === 'base') return { cls: '', style: undefined };
+  const op = msxTfxOpt();
+  const shake = op.shake && (k === 'great' || k === 'both');
+  return { cls: ` tfx-${k}${shake ? ' tfx-shake sk2' : ''}`, style: shake ? (k === 'both' ? { '--sk': '1.55s', '--sk2': '1.92s' } : { '--sk': '1.5s', '--sk2': '1.78s' }) : undefined };
+};
+const msxTfxHearts = (n, d0, y0) => Array.from({ length: n }, (_, i) => (
+  <i key={`h${i}`} className="hrt" style={{ left: `${8 + ((i * 37) % 84)}%`, top: `${y0 + ((i * 23) % 40)}%`, '--fs': `${15 + (i % 3) * 5}px`, '--d': `${(d0 + i * 0.07).toFixed(2)}s` }}>{i % 2 ? '💞' : '💗'}</i>));
+const msxTfxBits = (n, d, em) => Array.from({ length: n }, (_, i) => {
+  const a = (i / n) * Math.PI * 2; const r = 120 + (i % 3) * 30;
+  return <i key={`b${i}`} className="bit" style={{ '--x': `${Math.round(Math.cos(a) * r)}px`, '--y': `${Math.round(Math.sin(a) * r)}px`, '--r': `${(i * 67) % 180}deg`, '--d': `${d}s` }}>{em[i % em.length]}</i>;
+});
+
+function MsxTrainFinish({ run, o }) {
+  msxTfxEnsureCss();
+  const k = msxTfxKind(o);
+  const op = msxTfxOpt();
+  if (typeof msxUseTimedSe === 'function') msxUseTimedSe(op.calm ? [] : (MSX_TFX_SE[k] || []), []);
+  if (k === 'base' || op.calm) return null;
+  const pts = k === 'great' ? [] : msxTfxFrom(run && run.s, o.card);
+  const lite = op.lite;
+  const threads = pts.length ? (
+    <svg className="thread" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+      {pts.map((p, i) => { const c = MSX_TFX_COLS[i % MSX_TFX_COLS.length]; const d = `M${p.x} ${p.y} Q${(p.x + MSX_TFX_CX) / 2} ${Math.min(p.y, MSX_TFX_CY) - 18} ${MSX_TFX_CX} ${MSX_TFX_CY}`; return (
+        <g key={i}><path className="glow" d={d} stroke={c}/><path className="core" d={d}/></g>); })}
+    </svg>) : null;
+  const orbs = (d, gold) => pts.map((p, i) => <i key={`o${i}`} className={`orb${gold ? ' gold' : ''}`} style={{ left: `${p.x}%`, top: `${p.y}%`, '--c': MSX_TFX_COLS[i % MSX_TFX_COLS.length], '--d': `${(d + i * 0.04).toFixed(2)}s` }}/>);
+  let body = null;
+  if (k === 'tag') {
+    body = (<>
+      {threads}{msxTfxHearts(lite ? 3 : 6, 0.55, 30)}
+      <span className="dim" style={{ background: '#1e0b2e8c', '--d': '1.3s', '--dd': '.3s' }}/>
+      {orbs(1.3, false)}
+      {lite ? null : <span className="ring halo" style={{ '--d': '1.56s' }}/>}
+      <span className="ring kz" style={{ '--d': '1.56s' }}/><span className="ring kz b" style={{ '--d': '1.72s' }}/>
+      <b className="word kz" style={{ '--d': '1.56s' }}>タッグフィニッシュ!</b>
+      {msxTfxHearts(lite ? 2 : 5, 1.62, 52)}
+    </>);
+  } else if (k === 'great') {
+    body = (<>
+      <span className="dim" style={{ background: '#000b', '--d': '1.2s', '--dd': '.25s' }}/>
+      <span className="speed" style={{ '--d': '1.2s' }}/>
+      <span className="aura" style={{ '--d': '1.2s' }}/>
+      <b className="word gg" style={{ '--d': '1.2s' }}>ゴゴゴゴ…!</b>
+      <span className="flash" style={{ '--d': '1.5s' }}/>
+      <span className="ring shock" style={{ '--d': '1.5s' }}/>{lite ? null : <span className="ring shock w" style={{ '--d': '1.55s' }}/>}
+      {msxTfxBits(lite ? 5 : 10, 1.5, ['🪨', '✨', '💥'])}
+      <b className="word don" style={{ '--d': '1.5s' }}>ドォン!!</b>
+      <span className="rays" style={{ '--d': '1.78s' }}/>
+      <b className="slam" style={{ '--d': '1.78s' }}>大成功</b>
+    </>);
+  } else {
+    body = (<>
+      {threads}
+      <span className="dim" style={{ background: '#000a', '--d': '1.2s', '--dd': '.3s' }}/>
+      <span className="speed" style={{ '--d': '1.2s' }}/>
+      <span className="aura mix" style={{ '--d': '1.25s' }}/>
+      {orbs(1.2, true)}
+      <b className="word mn" style={{ '--d': '1.2s', '--wd': '.35s' }}>みんなの力が 一つに…!</b>
+      <span className="flash mix" style={{ '--d': '1.55s' }}/>
+      <span className="ring rainbow" style={{ '--d': '1.55s' }}/>{lite ? null : <span className="ring shock" style={{ '--d': '1.6s' }}/>}
+      {msxTfxBits(lite ? 5 : 10, 1.55, ['💗', '✨', '💥', '💞'])}
+      <b className="word don mix" style={{ '--d': '1.55s', '--wd': '.37s' }}>絆の大爆発!!</b>
+      <span className="rays" style={{ '--d': '1.92s' }}/>
+      <b className="slam mix" style={{ '--d': '1.92s' }}>大成功</b>
+    </>);
+  }
+  return <div className={`tfx${lite ? ' lite' : ''}`} aria-hidden="true" data-msx-tfx={k}>{body}</div>;
+}
+
+// 結果の画面: 場面の奥(放射線・ハート・星)と手前(リボン・札)。判子の字は呼ぶ側
+function MsxTrainResFx({ run, o, layer }) {
+  msxTfxEnsureCss();
+  const k = msxTfxKind(o);
+  if (k === 'base') return null;
+  const op = msxTfxOpt();
+  const s = run && run.s; const card = (o && o.card) || {};
+  const tags = Array.isArray(card.tags) ? card.tags : [];
+  const calm = op.calm ? ' calm' : '';
+  if (layer === 'back') {
+    return (
+      <div className={`v-tfx${calm}`} aria-hidden="true" data-msx-tfx-res={k}>
+        {k !== 'tag' ? <span className="grays"/> : null}
+        {k !== 'great' ? <span className="pastel"/> : null}
+        {k !== 'tag' ? Array.from({ length: op.lite ? 4 : 9 }, (_, i) => <i key={`s${i}`} className="gstar" style={{ '--i': i, left: `${6 + ((i * 41) % 86)}%`, top: `${26 + ((i * 29) % 44)}%` }}>✦</i>) : null}
+        {k !== 'great' ? Array.from({ length: op.lite ? 3 : 6 }, (_, i) => <i key={`h${i}`} className="rhrt" style={{ '--i': i, '--fs': `${14 + (i % 3) * 5}px`, left: `${5 + ((i * 53) % 88)}%`, top: `${30 + ((i * 31) % 42)}%` }}>{i % 2 ? '💞' : '💗'}</i>) : null}
+      </div>);
+  }
+  // 手前: 顔つきのリボン(タッグ)・「伸び ×1.5」の札(大成功)。数は芯の結果から
+  const team = s && Array.isArray(s.team) ? s.team : [];
+  const thumb = (sp) => (typeof msxMonThumb === 'function' ? msxMonThumb(sp) : typeof msxMonImg === 'function' ? msxMonImg(sp) : '');
+  const faces = [thumb(s && s.species)].concat(tags.filter((i) => Number.isInteger(i) && team[i]).slice(0, 3).map((i) => thumb(team[i].species)));
+  if (tags.includes('aid') && typeof msxFace === 'function' && s) faces.push(msxFace(s.aid, 'happy'));
+  const tagPct = Number.isFinite(card.tag) ? Math.round(card.tag * 100) : 0;
+  const R = typeof msxSuc !== 'undefined' && msxSuc && msxSuc.SUC && msxSuc.SUC.RESULTS ? msxSuc.SUC.RESULTS : null;
+  const gm = R && R.great && Number.isFinite(R.great.mult) ? R.great.mult : 1.5;
+  return (
+    <div className={`v-tfxtop${calm}`} data-msx-tfx-top={k}>
+      {k !== 'great' ? <div className={`v-tfx-rib${k === 'both' ? ' both' : ''}`} data-msx-tfx-rib={tags.length}><span className="fcs">{faces.filter(Boolean).slice(0, 5).map((f, i) => <img key={i} src={f} alt=""/>)}</span><span className="t">🤝 友情タッグ ×{tags.length}{tagPct > 0 ? `・伸び +${tagPct}%` : ''}</span></div> : null}
+      {k !== 'tag' ? <div className="v-tfx-badge" data-msx-tfx-badge={gm}>伸び ×{gm}</div> : null}
+    </div>);
 }
 
 // ---- part: 56-monsuc-intro.jsx ----
@@ -87197,7 +87493,8 @@ const MSX_CSS = `
 .msx .v-a3.got{border-color:#fbbf24;background:#33270f}.msx .v-a3.dim{opacity:.45}
 .msx .v-a3 .h{display:flex;align-items:center;gap:5px;text-align:left}.msx .v-a3 .nm{flex:1 1 auto;min-width:0;font-size:12.5px;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .msx .v-a3 .rf{flex:0 0 auto;display:inline-block;width:auto;font-size:9px;font-weight:800;padding:1px 6px;border-radius:8px;background:#1d4ed8;color:#fff}.msx .v-a3 .rf.o{background:#7e22ce}
-.msx .r3 .r3-bar.sc{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}.msx .r3 .r3-bar.sc::-webkit-scrollbar{display:none}.msx .r3 .r3-bar.sc .r3-chip{flex:0 0 auto}
+/* 横に流れる札の列は横にだけ動く(2026-11-15 社長 r1115-094「上のタブが上下にも動く」): 縦は隠す・指は横だけ・高さは中身に合わせる */
+.msx .r3 .r3-bar.sc{flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;touch-action:pan-x;overscroll-behavior-x:contain;align-items:center;flex:0 0 auto;scrollbar-width:none;padding:4px 0;margin-top:2px;margin-bottom:-4px}/* 上下 4px = 札の押せる広さ(button::after 44px)が列の中に収まる分。外の間隔は前と同じ */.msx .r3 .r3-bar.sc::-webkit-scrollbar{display:none}.msx .r3 .r3-bar.sc .r3-chip{flex:0 0 auto}
 .msx .v-a3 .val{flex:0 0 auto;min-width:54px;text-align:right;font-size:14px;color:#fde68a}
 .msx .v-a3 .ex{font-size:10px;color:#cbd5e1;font-weight:700;text-align:left;margin:2px 0 4px;line-height:1.35}
 .msx .v-a3 .ctl{display:flex;align-items:center;gap:6px}.msx .v-a3 .ctl button{flex:0 0 34px;height:28px;border-radius:8px;border:1px solid #6d5fa6;background:#2f2550;color:#fff;font-size:16px;font-weight:900;text-align:center;padding:0}
@@ -87662,6 +87959,12 @@ const MSX_CSS = `
 .msx .v-hm-lead small{display:block;font-size:10.5px;font-weight:700;color:#cbd5e1}
 .msx .v-hm-new{display:block;width:100%;min-height:44px;margin-top:7px;border-radius:99px;padding:8px 10px;font-size:14px;font-weight:900;text-align:center;background:#1e1a36;border:1.5px solid #f9a8d4;color:#fff;white-space:normal}
 .msx .v-big.v-hm-new{font-size:18px;padding:14px 10px;border:0;background:linear-gradient(90deg,#f472b6,#fb923c)}
+.msx .v-hm-tiles.t4{grid-auto-flow:row;grid-template-columns:1fr 1fr}
+.msx .msx-bm-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px}
+.msx .msx-bm{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-width:0;border-radius:14px;padding:8px 4px;background:#1e1a36;border:1.5px solid #64748b;border-bottom-width:3px;line-height:1.25;text-align:center}
+.msx .msx-bm img{width:100%;max-width:84px;aspect-ratio:1;border-radius:11px;object-fit:cover;background:#0f172a;border:2px solid #475569}
+.msx .msx-bm b{font-size:12px;font-weight:900;max-width:100%;word-break:keep-all}
+.msx .msx-bm small{font-size:10px;font-weight:800;color:#fde68a}
 .msx .v-hm-tiles{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:7px;margin-top:8px}
 .msx .v-hm-tile{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:62px;min-width:0;border-radius:14px;padding:5px 3px;background:#1e1a36;border:1.5px solid #64748b;border-bottom-width:3px;line-height:1.2}
 .msx .v-hm-tile .e{font-size:22px;line-height:1.1}
@@ -88267,7 +88570,7 @@ const msxStartPreview = (SUC, species, type, aptBase, startSt) => {
 };
 /* skill-icons:begin(tools/success/build-skill-icons.js が書く) */
 const MSX_SKILL_ICONS = new Set([
-'images/success/skill/sk-0001.png','images/success/skill/sk-0002.png','images/success/skill/sk-0003.png','images/success/skill/sk-0004.png','images/success/skill/sk-0005.png','images/success/skill/sk-0008.png','images/success/skill/sk-0009.png','images/success/skill/sk-0010.png','images/success/skill/sk-0015.png','images/success/skill/sk-0016.png','images/success/skill/sk-0017.png','images/success/skill/sk-0018.png','images/success/skill/sk-0023.png','images/success/skill/sk-0025.png','images/success/skill/sk-0026.png','images/success/skill/sk-0027.png','images/success/skill/sk-0028.png','images/success/skill/sk-0035.png','images/success/skill/sk-0036.png','images/success/skill/sk-0037.png','images/success/skill/sk-0039.png','images/success/skill/sk-0040.png','images/success/skill/sk-0041.png','images/success/skill/sk-0042.png','images/success/skill/sk-0043.png','images/success/skill/sk-0044.png','images/success/skill/sk-0045.png','images/success/skill/sk-0046.png','images/success/skill/sk-0047.png','images/success/skill/sk-0048.png','images/success/skill/sk-0049.png','images/success/skill/sk-0050.png','images/success/skill/sk-0051.png','images/success/skill/sk-0052.png','images/success/skill/sk-0053.png','images/success/skill/sk-0054.png','images/success/skill/sk-0055.png','images/success/skill/sk-0064.png','images/success/skill/sk-0065.png','images/success/skill/sk-0066.png','images/success/skill/sk-0067.png','images/success/skill/sk-0068.png','images/success/skill/sk-0069.png','images/success/skill/sk-0070.png','images/success/skill/sk-0071.png','images/success/skill/sk-0072.png','images/success/skill/sk-0073.png','images/success/skill/sk-0074.png','images/success/skill/sk-0075.png','images/success/skill/sk-0076.png','images/success/skill/sk-0077.png','images/success/skill/sk-0078.png','images/success/skill/sk-0079.png','images/success/skill/sk-0080.png','images/success/skill/sk-0082.png','images/success/skill/sk-0083.png','images/success/skill/sk-0084.png','images/success/skill/sk-0110.png','images/success/skill/sk-0111.png','images/success/skill/sk-0112.png','images/success/skill/sk-0113.png','images/success/skill/sk-0114.png','images/success/skill/sk-0115.png','images/success/skill/sk-0116.png','images/success/skill/sk-0117.png','images/success/skill/sk-0118.png','images/success/skill/sk-0119.png','images/success/skill/sk-0120.png','images/success/skill/sk-0121.png','images/success/skill/sk-0122.png','images/success/skill/sk-0123.png','images/success/skill/sk-0124.png','images/success/skill/sk-0125.png','images/success/skill/sk-0129.png','images/success/skill/sk-0258.png','images/success/skill/sk-0259.png','images/success/skill/sk-0260.png','images/success/skill/sk-0261.png','images/success/skill/sk-0262.png','images/success/skill/sk-0263.png','images/success/skill/sk-0264.png','images/success/skill/sk-0265.png','images/success/skill/sk-0266.png','images/success/skill/sk-0267.png','images/success/skill/sk-0268.png','images/success/skill/sk-0269.png','images/success/skill/sk-0270.png','images/success/skill/sk-0271.png','images/success/skill/sk-0272.png','images/success/skill/sk-0273.png','images/success/skill/sk-0274.png','images/success/skill/sk-0292.png','images/success/skill/sk-0293.png','images/success/skill/sk-0294.png','images/success/skill/sk-0295.png','images/success/skill/sk-0296.png','images/success/skill/sk-0297.png','images/success/skill/sk-0298.png','images/success/skill/sk-0299.png','images/success/skill/sk-0300.png','images/success/skill/sk-0301.png','images/success/skill/sk-0302.png','images/success/skill/sk-0303.png','images/success/skill/sk-0304.png','images/success/skill/sk-0305.png','images/success/skill/sk-0306.png','images/success/skill/sk-0307.png','images/success/skill/sk-0338.png','images/success/skill/sk-0339.png','images/success/skill/sk-0340.png','images/success/skill/sk-0341.png','images/success/skill/sk-0342.png','images/success/skill/sk-0343.png','images/success/skill/sk-0344.png','images/success/skill/sk-0345.png','images/success/skill/sk-0346.png','images/success/skill/sk-0347.png','images/success/skill/sk-0348.png','images/success/skill/sk-0349.png','images/success/skill/sk-0350.png','images/success/skill/sk-0351.png','images/success/skill/sk-0384.png','images/success/skill/sk-0385.png','images/success/skill/sk-0386.png','images/success/skill/sk-0387.png','images/success/skill/sk-0388.png','images/success/skill/sk-0389.png','images/success/skill/sk-0390.png','images/success/skill/sk-0391.png','images/success/skill/sk-0392.png','images/success/skill/sk-0393.png','images/success/skill/sk-0394.png','images/success/skill/sk-0395.png','images/success/skill/sk-0396.png','images/success/skill/sk-0397.png','images/success/skill/sk-0398.png','images/success/skill/sk-0399.png','images/success/skill/sk-0400.png','images/success/skill/sk-0401.png','images/success/skill/sk-0402.png','images/success/skill/sk-0403.png','images/success/skill/sk-0404.png','images/success/skill/sk-0405.png','images/success/skill/sk-0406.png','images/success/skill/sk-0407.png','images/success/skill/sk-0408.png','images/success/skill/sk-0409.png','images/success/skill/sk-0410.png','images/success/skill/sk-0411.png','images/success/skill/sk-0412.png','images/success/skill/sk-0413.png','images/success/skill/sk-0414.png','images/success/skill/sk-0415.png','images/success/skill/sk-0416.png','images/success/skill/sk-0446.png','images/success/skill/sk-0447.png','images/success/skill/sk-0448.png','images/success/skill/sk-0449.png','images/success/skill/sk-0450.png','images/success/skill/sk-0451.png','images/success/skill/sk-0452.png','images/success/skill/sk-0453.png','images/success/skill/sk-0454.png','images/success/skill/sk-0455.png','images/success/skill/sk-0456.png','images/success/skill/sk-0457.png','images/success/skill/sk-0458.png','images/success/skill/sk-0459.png','images/success/skill/sk-0460.png','images/success/skill/sk-0461.png','images/success/skill/sk-0462.png','images/success/skill/sk-0463.png','images/success/skill/sk-0464.png','images/success/skill/sk-0465.png','images/success/skill/sk-0466.png','images/success/skill/sk-0467.png','images/success/skill/sk-0468.png','images/success/skill/sk-0469.png','images/success/skill/sk-0470.png','images/success/skill/sk-0471.png','images/success/skill/sk-0472.png','images/success/skill/sk-0473.png','images/success/skill/sk-0474.png','images/success/skill/sk-0475.png','images/success/skill/sk-0476.png','images/success/skill/sk-0477.png','images/success/skill/sk-0478.png','images/success/skill/sk-0479.png','images/success/skill/sk-0480.png','images/success/skill/sk-0481.png','images/success/skill/sk-0482.png','images/success/skill/sk-0483.png','images/success/skill/sk-0484.png','images/success/skill/sk-0485.png','images/success/skill/sk-0486.png','images/success/skill/sk-0487.png','images/success/skill/sk-0488.png','images/success/skill/sk-0489.png','images/success/skill/sk-0490.png','images/success/skill/sk-0491.png','images/success/skill/sk-0496.png','images/success/skill/sk-0511.png','images/success/skill/sk-0512.png','images/success/skill/sk-0513.png','images/success/skill/sk-0514.png','images/success/skill/sk-0515.png','images/success/skill/sk-0516.png','images/success/skill/sk-0517.png','images/success/skill/sk-0518.png','images/success/skill/sk-0519.png','images/success/skill/sk-0520.png','images/success/skill/sk-0521.png','images/success/skill/sk-0522.png','images/success/skill/sk-0523.png','images/success/skill/sk-0524.png','images/success/skill/sk-0525.png','images/success/skill/sk-0526.png','images/success/skill/sk-0573.png','images/success/skill/sk-0574.png','images/success/skill/sk-0575.png','images/success/skill/sk-0576.png','images/success/skill/sk-0577.png','images/success/skill/sk-0578.png','images/success/skill/sk-0579.png','images/success/skill/sk-0580.png','images/success/skill/sk-0581.png','images/success/skill/sk-0582.png','images/success/skill/sk-0583.png','images/success/skill/sk-0584.png','images/success/skill/sk-0585.png','images/success/skill/sk-0586.png','images/success/skill/sk-0587.png','images/success/skill/sk-0588.png','images/success/skill/sk-0589.png','images/success/skill/sk-0590.png','images/success/skill/sk-0591.png','images/success/skill/sk-0592.png','images/success/skill/sk-0593.png','images/success/skill/sk-0594.png','images/success/skill/sk-0595.png','images/success/skill/sk-0596.png','images/success/skill/sk-0597.png','images/success/skill/sk-0598.png','images/success/skill/sk-0599.png','images/success/skill/sk-0742.png','images/success/skill/sk-0743.png','images/success/skill/sk-0744.png','images/success/skill/sk-0785.png','images/success/skill/sk-0787.png','images/success/skill/sk-0788.png','images/success/skill/sk-0797.png','images/success/skill/sk-0798.png','images/success/skill/sk-0799.png','images/success/skill/sk-0824.png','images/success/skill/eiki_o01.png','images/success/skill/eiki_o02.png','images/success/skill/eiki_o03.png','images/success/skill/eiki_o04.png','images/success/skill/eiki_o05.png','images/success/skill/eiki_o06.png','images/success/skill/eiki_o07.png','images/success/skill/eiki_o08.png','images/success/skill/eiki_o09.png','images/success/skill/eiki_o10.png','images/success/skill/eiki_o11.png','images/success/skill/eiki_o12.png','images/success/skill/eiki_o13.png','images/success/skill/eiki_o14.png','images/success/skill/eiki_o15.png','images/success/skill/eiki_o16.png','images/success/skill/eiki_o17.png','images/success/skill/eiki_o18.png','images/success/skill/kenshimocchi_o01.png','images/success/skill/kenshimocchi_o02.png','images/success/skill/kenshimocchi_o03.png','images/success/skill/kenshimocchi_o04.png','images/success/skill/kenshimocchi_o05.png','images/success/skill/kenshimocchi_o06.png','images/success/skill/kenshimocchi_o07.png','images/success/skill/kenshimocchi_o08.png','images/success/skill/kenshimocchi_o09.png','images/success/skill/kenshimocchi_o10.png','images/success/skill/kenshimocchi_o11.png','images/success/skill/kenshimocchi_o12.png','images/success/skill/kenshimocchi_o13.png','images/success/skill/kenshimocchi_o14.png','images/success/skill/kenshimocchi_o15.png','images/success/skill/kenshimocchi_o16.png','images/success/skill/kenshimocchi_o17.png','images/success/skill/kenshimocchi_o18.png','images/success/skill/kuromy_o01.png','images/success/skill/kuromy_o02.png','images/success/skill/kuromy_o03.png','images/success/skill/kuromy_o04.png','images/success/skill/kuromy_o05.png','images/success/skill/kuromy_o06.png','images/success/skill/kuromy_o07.png','images/success/skill/kuromy_o08.png','images/success/skill/kuromy_o09.png','images/success/skill/kuromy_o10.png','images/success/skill/kuromy_o11.png','images/success/skill/kuromy_o12.png','images/success/skill/kuromy_o13.png','images/success/skill/kuromy_o14.png','images/success/skill/kuromy_o15.png','images/success/skill/kuromy_o16.png','images/success/skill/kuromy_o17.png','images/success/skill/kuromy_o18.png','images/success/skill/melody_o01.png','images/success/skill/melody_o02.png','images/success/skill/melody_o03.png','images/success/skill/melody_o04.png','images/success/skill/melody_o05.png','images/success/skill/melody_o06.png','images/success/skill/melody_o07.png','images/success/skill/melody_o08.png','images/success/skill/melody_o09.png','images/success/skill/melody_o10.png','images/success/skill/melody_o11.png','images/success/skill/melody_o12.png','images/success/skill/melody_o13.png','images/success/skill/melody_o14.png','images/success/skill/melody_o15.png','images/success/skill/melody_o16.png','images/success/skill/melody_o17.png','images/success/skill/melody_o18.png','images/success/skill/pandora_o01.png','images/success/skill/pandora_o02.png','images/success/skill/pandora_o03.png','images/success/skill/pandora_o04.png','images/success/skill/pandora_o05.png','images/success/skill/pandora_o06.png','images/success/skill/pandora_o07.png','images/success/skill/pandora_o08.png','images/success/skill/pandora_o09.png','images/success/skill/pandora_o10.png','images/success/skill/pandora_o11.png','images/success/skill/pandora_o12.png','images/success/skill/pandora_o13.png','images/success/skill/pandora_o14.png','images/success/skill/pandora_o15.png','images/success/skill/pandora_o16.png','images/success/skill/pandora_o17.png','images/success/skill/pandora_o18.png']);
+'images/success/skill/sk-0001.png','images/success/skill/sk-0002.png','images/success/skill/sk-0003.png','images/success/skill/sk-0004.png','images/success/skill/sk-0005.png','images/success/skill/sk-0008.png','images/success/skill/sk-0009.png','images/success/skill/sk-0010.png','images/success/skill/sk-0015.png','images/success/skill/sk-0016.png','images/success/skill/sk-0017.png','images/success/skill/sk-0018.png','images/success/skill/sk-0023.png','images/success/skill/sk-0025.png','images/success/skill/sk-0026.png','images/success/skill/sk-0027.png','images/success/skill/sk-0028.png','images/success/skill/sk-0035.png','images/success/skill/sk-0036.png','images/success/skill/sk-0037.png','images/success/skill/sk-0039.png','images/success/skill/sk-0040.png','images/success/skill/sk-0041.png','images/success/skill/sk-0042.png','images/success/skill/sk-0043.png','images/success/skill/sk-0044.png','images/success/skill/sk-0045.png','images/success/skill/sk-0046.png','images/success/skill/sk-0047.png','images/success/skill/sk-0048.png','images/success/skill/sk-0049.png','images/success/skill/sk-0050.png','images/success/skill/sk-0051.png','images/success/skill/sk-0052.png','images/success/skill/sk-0053.png','images/success/skill/sk-0054.png','images/success/skill/sk-0055.png','images/success/skill/sk-0064.png','images/success/skill/sk-0065.png','images/success/skill/sk-0066.png','images/success/skill/sk-0067.png','images/success/skill/sk-0068.png','images/success/skill/sk-0069.png','images/success/skill/sk-0070.png','images/success/skill/sk-0071.png','images/success/skill/sk-0072.png','images/success/skill/sk-0073.png','images/success/skill/sk-0074.png','images/success/skill/sk-0075.png','images/success/skill/sk-0076.png','images/success/skill/sk-0077.png','images/success/skill/sk-0078.png','images/success/skill/sk-0079.png','images/success/skill/sk-0080.png','images/success/skill/sk-0082.png','images/success/skill/sk-0083.png','images/success/skill/sk-0084.png','images/success/skill/sk-0110.png','images/success/skill/sk-0111.png','images/success/skill/sk-0112.png','images/success/skill/sk-0113.png','images/success/skill/sk-0114.png','images/success/skill/sk-0115.png','images/success/skill/sk-0116.png','images/success/skill/sk-0117.png','images/success/skill/sk-0118.png','images/success/skill/sk-0119.png','images/success/skill/sk-0120.png','images/success/skill/sk-0121.png','images/success/skill/sk-0122.png','images/success/skill/sk-0123.png','images/success/skill/sk-0124.png','images/success/skill/sk-0125.png','images/success/skill/sk-0129.png','images/success/skill/sk-0258.png','images/success/skill/sk-0259.png','images/success/skill/sk-0260.png','images/success/skill/sk-0261.png','images/success/skill/sk-0262.png','images/success/skill/sk-0263.png','images/success/skill/sk-0264.png','images/success/skill/sk-0265.png','images/success/skill/sk-0266.png','images/success/skill/sk-0267.png','images/success/skill/sk-0268.png','images/success/skill/sk-0269.png','images/success/skill/sk-0270.png','images/success/skill/sk-0271.png','images/success/skill/sk-0272.png','images/success/skill/sk-0273.png','images/success/skill/sk-0274.png','images/success/skill/sk-0292.png','images/success/skill/sk-0293.png','images/success/skill/sk-0294.png','images/success/skill/sk-0295.png','images/success/skill/sk-0296.png','images/success/skill/sk-0297.png','images/success/skill/sk-0298.png','images/success/skill/sk-0299.png','images/success/skill/sk-0300.png','images/success/skill/sk-0301.png','images/success/skill/sk-0302.png','images/success/skill/sk-0303.png','images/success/skill/sk-0304.png','images/success/skill/sk-0305.png','images/success/skill/sk-0306.png','images/success/skill/sk-0307.png','images/success/skill/sk-0338.png','images/success/skill/sk-0339.png','images/success/skill/sk-0340.png','images/success/skill/sk-0341.png','images/success/skill/sk-0342.png','images/success/skill/sk-0343.png','images/success/skill/sk-0344.png','images/success/skill/sk-0345.png','images/success/skill/sk-0346.png','images/success/skill/sk-0347.png','images/success/skill/sk-0348.png','images/success/skill/sk-0349.png','images/success/skill/sk-0350.png','images/success/skill/sk-0351.png','images/success/skill/sk-0384.png','images/success/skill/sk-0385.png','images/success/skill/sk-0386.png','images/success/skill/sk-0387.png','images/success/skill/sk-0388.png','images/success/skill/sk-0389.png','images/success/skill/sk-0390.png','images/success/skill/sk-0391.png','images/success/skill/sk-0392.png','images/success/skill/sk-0393.png','images/success/skill/sk-0394.png','images/success/skill/sk-0395.png','images/success/skill/sk-0396.png','images/success/skill/sk-0397.png','images/success/skill/sk-0398.png','images/success/skill/sk-0399.png','images/success/skill/sk-0400.png','images/success/skill/sk-0401.png','images/success/skill/sk-0402.png','images/success/skill/sk-0403.png','images/success/skill/sk-0404.png','images/success/skill/sk-0405.png','images/success/skill/sk-0406.png','images/success/skill/sk-0407.png','images/success/skill/sk-0408.png','images/success/skill/sk-0409.png','images/success/skill/sk-0410.png','images/success/skill/sk-0411.png','images/success/skill/sk-0412.png','images/success/skill/sk-0413.png','images/success/skill/sk-0414.png','images/success/skill/sk-0415.png','images/success/skill/sk-0416.png','images/success/skill/sk-0446.png','images/success/skill/sk-0447.png','images/success/skill/sk-0448.png','images/success/skill/sk-0449.png','images/success/skill/sk-0450.png','images/success/skill/sk-0451.png','images/success/skill/sk-0452.png','images/success/skill/sk-0453.png','images/success/skill/sk-0454.png','images/success/skill/sk-0455.png','images/success/skill/sk-0456.png','images/success/skill/sk-0457.png','images/success/skill/sk-0458.png','images/success/skill/sk-0459.png','images/success/skill/sk-0460.png','images/success/skill/sk-0461.png','images/success/skill/sk-0462.png','images/success/skill/sk-0463.png','images/success/skill/sk-0464.png','images/success/skill/sk-0465.png','images/success/skill/sk-0466.png','images/success/skill/sk-0467.png','images/success/skill/sk-0468.png','images/success/skill/sk-0469.png','images/success/skill/sk-0470.png','images/success/skill/sk-0471.png','images/success/skill/sk-0472.png','images/success/skill/sk-0473.png','images/success/skill/sk-0474.png','images/success/skill/sk-0475.png','images/success/skill/sk-0476.png','images/success/skill/sk-0477.png','images/success/skill/sk-0478.png','images/success/skill/sk-0479.png','images/success/skill/sk-0480.png','images/success/skill/sk-0481.png','images/success/skill/sk-0482.png','images/success/skill/sk-0483.png','images/success/skill/sk-0484.png','images/success/skill/sk-0485.png','images/success/skill/sk-0486.png','images/success/skill/sk-0487.png','images/success/skill/sk-0488.png','images/success/skill/sk-0489.png','images/success/skill/sk-0490.png','images/success/skill/sk-0491.png','images/success/skill/sk-0496.png','images/success/skill/sk-0511.png','images/success/skill/sk-0512.png','images/success/skill/sk-0513.png','images/success/skill/sk-0514.png','images/success/skill/sk-0515.png','images/success/skill/sk-0516.png','images/success/skill/sk-0517.png','images/success/skill/sk-0518.png','images/success/skill/sk-0519.png','images/success/skill/sk-0520.png','images/success/skill/sk-0521.png','images/success/skill/sk-0522.png','images/success/skill/sk-0523.png','images/success/skill/sk-0524.png','images/success/skill/sk-0525.png','images/success/skill/sk-0526.png','images/success/skill/sk-0573.png','images/success/skill/sk-0574.png','images/success/skill/sk-0575.png','images/success/skill/sk-0576.png','images/success/skill/sk-0577.png','images/success/skill/sk-0578.png','images/success/skill/sk-0579.png','images/success/skill/sk-0580.png','images/success/skill/sk-0581.png','images/success/skill/sk-0582.png','images/success/skill/sk-0583.png','images/success/skill/sk-0584.png','images/success/skill/sk-0585.png','images/success/skill/sk-0586.png','images/success/skill/sk-0587.png','images/success/skill/sk-0588.png','images/success/skill/sk-0589.png','images/success/skill/sk-0590.png','images/success/skill/sk-0591.png','images/success/skill/sk-0592.png','images/success/skill/sk-0593.png','images/success/skill/sk-0594.png','images/success/skill/sk-0595.png','images/success/skill/sk-0596.png','images/success/skill/sk-0597.png','images/success/skill/sk-0598.png','images/success/skill/sk-0599.png','images/success/skill/sk-0742.png','images/success/skill/sk-0743.png','images/success/skill/sk-0744.png','images/success/skill/sk-0785.png','images/success/skill/sk-0787.png','images/success/skill/sk-0788.png','images/success/skill/sk-0797.png','images/success/skill/sk-0798.png','images/success/skill/sk-0799.png','images/success/skill/sk-0824.png','images/success/skill/eiki_o01.png','images/success/skill/eiki_o02.png','images/success/skill/eiki_o03.png','images/success/skill/eiki_o04.png','images/success/skill/eiki_o05.png','images/success/skill/eiki_o06.png','images/success/skill/eiki_o07.png','images/success/skill/eiki_o08.png','images/success/skill/eiki_o09.png','images/success/skill/eiki_o10.png','images/success/skill/eiki_o11.png','images/success/skill/eiki_o12.png','images/success/skill/eiki_o13.png','images/success/skill/eiki_o14.png','images/success/skill/eiki_o15.png','images/success/skill/eiki_o16.png','images/success/skill/eiki_o17.png','images/success/skill/eiki_o18.png','images/success/skill/kenshimocchi_o01.png','images/success/skill/kenshimocchi_o02.png','images/success/skill/kenshimocchi_o03.png','images/success/skill/kenshimocchi_o04.png','images/success/skill/kenshimocchi_o05.png','images/success/skill/kenshimocchi_o06.png','images/success/skill/kenshimocchi_o07.png','images/success/skill/kenshimocchi_o08.png','images/success/skill/kenshimocchi_o09.png','images/success/skill/kenshimocchi_o10.png','images/success/skill/kenshimocchi_o11.png','images/success/skill/kenshimocchi_o12.png','images/success/skill/kenshimocchi_o13.png','images/success/skill/kenshimocchi_o14.png','images/success/skill/kenshimocchi_o15.png','images/success/skill/kenshimocchi_o16.png','images/success/skill/kenshimocchi_o17.png','images/success/skill/kenshimocchi_o18.png','images/success/skill/kuromy_o01.png','images/success/skill/kuromy_o02.png','images/success/skill/kuromy_o03.png','images/success/skill/kuromy_o04.png','images/success/skill/kuromy_o05.png','images/success/skill/kuromy_o06.png','images/success/skill/kuromy_o07.png','images/success/skill/kuromy_o08.png','images/success/skill/kuromy_o09.png','images/success/skill/kuromy_o10.png','images/success/skill/kuromy_o11.png','images/success/skill/kuromy_o12.png','images/success/skill/kuromy_o13.png','images/success/skill/kuromy_o14.png','images/success/skill/kuromy_o15.png','images/success/skill/kuromy_o16.png','images/success/skill/kuromy_o17.png','images/success/skill/kuromy_o18.png','images/success/skill/melody_o01.png','images/success/skill/melody_o02.png','images/success/skill/melody_o03.png','images/success/skill/melody_o04.png','images/success/skill/melody_o05.png','images/success/skill/melody_o06.png','images/success/skill/melody_o07.png','images/success/skill/melody_o08.png','images/success/skill/melody_o09.png','images/success/skill/melody_o10.png','images/success/skill/melody_o11.png','images/success/skill/melody_o12.png','images/success/skill/melody_o13.png','images/success/skill/melody_o14.png','images/success/skill/melody_o15.png','images/success/skill/melody_o16.png','images/success/skill/melody_o17.png','images/success/skill/melody_o18.png','images/success/skill/pandora_o01.png','images/success/skill/pandora_o02.png','images/success/skill/pandora_o03.png','images/success/skill/pandora_o04.png','images/success/skill/pandora_o05.png','images/success/skill/pandora_o06.png','images/success/skill/pandora_o07.png','images/success/skill/pandora_o08.png','images/success/skill/pandora_o09.png','images/success/skill/pandora_o10.png','images/success/skill/pandora_o11.png','images/success/skill/pandora_o12.png','images/success/skill/pandora_o13.png','images/success/skill/pandora_o14.png','images/success/skill/pandora_o15.png','images/success/skill/pandora_o16.png','images/success/skill/pandora_o17.png','images/success/skill/pandora_o18.png','images/success/skill/pandora_o19.png','images/success/skill/pandora_o20.png','images/success/skill/pandora_o21.png','images/success/skill/pandora_o22.png','images/success/skill/pandora_o23.png','images/success/skill/pandora_o24.png','images/success/skill/pandora_o25.png','images/success/skill/pandora_o26.png']);
 /* skill-icons:end */
 // 技の升の絵(2026-11-14 社長「力で剣はいいね」「ランク帯で色を変えて」): ちから技=剣・かしこさ技=本の単色の形を、技のランク1〜5の色(銅・銀・金・紫・虹)で塗る。升の地の色(ちから=金・かしこさ=緑)は変えない。
 //   升の地と同じ色にならないよう、形のまわりを暗い線で縁取る
@@ -88809,6 +89112,45 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf }) {
   );
 }
 
+// ---- part: 56-monsuc-basemon.jsx ----
+// ===== モンヒロサクセスの「ベースモン」(2026-11-15 r1115-043 社長「ホームからベースモンの詳細を見られるように」) =====
+//   ホームの札から開く。使えるベースモンの一覧 → 押すと、はじめる画面・育成中の「くわしく」と同じ部品 MsxMonDetail
+//   (能力・素質・間合い適性・技の升目)。技の升の選びは、はじめる画面と同じ保存(mh_monsuc_techpick_v1)を読み書きする。
+//   マスモン(育てた子)の詳細はマスモンボックスから開く(同じ部品)
+function MsxBaseMons({ data, onClose }) {
+  const SUC = msxSuc.SUC;
+  const unlocked = Array.isArray(data.unlocked) ? data.unlocked : [];
+  const [sp, setSp] = useState(null);
+  const [tpAll, setTpAll] = useState(null);
+  useEffect(() => { let on = true; msxReadTechPick().then((t) => { if (on) setTpAll(t); }).catch(() => { if (on) setTpAll(msxNormTechPick(null)); }); return () => { on = false; }; }, []);
+  const picked = (data.meta && data.meta.picked) || {};
+  let detail = null;
+  if (sp) {
+    const growType = typeof SUC.speciesType === 'function' ? SUC.speciesType(sp) : null;
+    const startSt = typeof SUC.initStats === 'function' ? SUC.initStats(sp) : {};
+    const preview = msxStartPreview(SUC, sp, growType, null, startSt);
+    const apt = typeof msxAptOf === 'function' ? msxAptOf(sp) : ['C', 'C', 'C', 'C', 'C', 'C'];
+    const tpSel = typeof SUC.techPickNorm === 'function' ? SUC.techPickNorm(tpAll && tpAll.base ? tpAll.base[sp] : null, sp) : {};
+    const onTechPick = async (cell, id) => { const next = { ...tpSel, [cell]: id }; try { setTpAll(await msxWriteTechPick('base', sp, next)); } catch (e) { /* 書けなくても画面は動く */ } };
+    detail = <MsxMonDetail pick={{ sel: tpSel, locked: () => false, onPick: onTechPick }} species={sp} name={msxMonName(sp)} sub="ベースモン" st={startSt} apt={apt} type={growType} grades={preview.grades} peak={preview.peak} power={preview.power} rank={preview.rank} onClose={() => setSp(null)} SUC={SUC}/>;
+  }
+  return (
+    <>
+      <MsxHd back="戻る" onBack={onClose} title="🌱 ベースモン"/>
+      <div className="v-body">
+        <div className="v-h">ベースモン<small>押すと、能力・素質・間合い適性・技の升目が見られます</small></div>
+        <div className="msx-bm-grid" data-msx-basemon-list>
+          {unlocked.map((id) => (
+            <button type="button" key={id} className="msx-bm" onClick={() => setSp(id)} data-msx-basemon={id}>
+              <img src={msxMonThumb(id)} alt=""/><b>{msxMonName(id)}</b>{picked[id] ? <small>育成 {picked[id]}回</small> : <small>まだ育てていない</small>}
+            </button>))}
+        </div>
+      </div>
+      {detail}
+    </>
+  );
+}
+
 // ---- part: 56-monhero-success-main.jsx ----
 // ===== モンヒロサクセス: 育成の画面の本体(メイン・トレーニングを選ぶ・結果・叱る/褒める・イッサ博士・ターンが進む・中断と再開) =====
 // 見本: docs/progress/player-raise/mock/png/v3-M・T・K・I.png。大会・修行・引退・合体の中身は回3(MsxR3)
@@ -89127,8 +89469,9 @@ function MonheroSuccessScreen({ onClose, callNameOf, bondLvOf, debug = false, st
   let content = null;
   if (view === 'loading') content = <div className="v-body" style={{ justifyContent: 'center', alignItems: 'center', display: 'flex' }}><div className="msx-note">読み込んでいます…</div></div>;
   else if (view === 'fail') content = (<><MsxHd back="閉じる" onBack={onClose}/><div className="v-body"><div className="v-card">読み込めませんでした。通信のよいところで、もう一度開いてください</div></div></>);
-  else if (view === 'home') content = <MsxHome data={data} run={run} debug={debug} onClose={onClose} onBox={typeof MsxR3Box === 'function' ? () => setView('box') : null} onContinue={() => setView('play')} onNew={() => (run && !run.s.over ? setAsk({ text: '途中の育成があります。新しく始めると、いまの育成はなくなります', yes: '新しく始める', onYes: () => setView('start') }) : setView('start'))} setMeta={setMeta} onWipe={quit} onRank={() => setView('rank')}/>;
+  else if (view === 'home') content = <MsxHome data={data} run={run} debug={debug} onClose={onClose} onBase={typeof MsxBaseMons === 'function' ? () => setView('basemon') : null} onBox={typeof MsxR3Box === 'function' ? () => setView('box') : null} onContinue={() => setView('play')} onNew={() => (run && !run.s.over ? setAsk({ text: '途中の育成があります。新しく始めると、いまの育成はなくなります', yes: '新しく始める', onYes: () => setView('start') }) : setView('start'))} setMeta={setMeta} onWipe={quit} onRank={() => setView('rank')}/>;
   else if (view === 'start') content = <MsxStart data={data} SUC={msxSuc.SUC} onCancel={() => setView('home')} onStart={startRun} bondLvOf={bondLvOf} callNameOf={callNameOf}/>;
+  else if (view === 'basemon' && typeof MsxBaseMons === 'function') content = <MsxBaseMons data={data} onClose={() => setView('home')}/>;
   else if (view === 'box' && typeof MsxR3Box === 'function') content = <MsxR3Box onClose={startView === 'box' ? onClose : toHome}/>;
   else if (view === 'play' && run) content = <MsxPlay run={run} setRun={setRun} onPause={toHome} onQuit={quit} callNameOf={callNameOf} bondLvOf={bondLvOf} debug={debug} onSub={setPlaySub}/>;
   // β版(56-monsuc-beta.jsx): はじめて開いたときの話・はじめての育成を終えたときの話・育成中の最初の1回だけのみゅあの説明
@@ -89168,12 +89511,13 @@ function MonheroSuccessScreen({ onClose, callNameOf, bondLvOf, debug = false, st
 
 // ---- はじめの画面(題字ロゴ・続きから・新しく始める・保存枠/ランキング/図鑑の札・デバッグの道具) ----
 // 途中の育成があるときは「▶ 続きから」をいちばん大きく、無いときは「新しく育成をはじめる」をいちばん大きく(2026-11-14 社長の選んだ案)
-function MsxHome({ data, run, debug, onClose, onContinue, onNew, setMeta, onWipe, onRank, onBox }) {
+function MsxHome({ data, run, debug, onClose, onContinue, onNew, setMeta, onWipe, onRank, onBox, onBase }) {
   const SUC = msxSuc.SUC;
   const s = run && run.s;
   const v = s && !s.over ? SUC.peek(s) : null;
   const [dex, setDex] = useState(false);
   const tiles = [
+    onBase ? { key: 'bm', e: '🌱', name: 'ベースモン', sub: `${(data.unlocked || []).length}体`, on: onBase, attr: { 'data-msx-home-basemon': true } } : null,
     onBox ? { key: 'box', e: '📦', name: 'マスモンボックス', sub: `${data.box.mons.length}/${data.box.cap}`, on: onBox, attr: { 'data-msx-r3-openbox': true } } : null,
     typeof MonsucRankScreen === 'function' ? { key: 'rank', e: '🏆', name: 'ランキング', on: onRank, attr: {} } : null,
     typeof MsxDex === 'function' ? { key: 'dex', e: '📖', name: 'イベント図鑑', on: () => setDex(true), attr: { 'data-msx-dex-home': true } } : null,
@@ -89197,7 +89541,7 @@ function MsxHome({ data, run, debug, onClose, onContinue, onNew, setMeta, onWipe
         ) : <div className="v-hm-lead">育てるモンスターを選んで、46ターンの育成を始めよう<small>編成の6体が集まったトレーニングほど、よく伸びる</small></div>}
         <button type="button" className={s ? 'v-hm-new' : 'v-big v-hm-new'} onClick={onNew} data-msx-home-new>🌱 新しく育成を始める</button>
         {tiles.length ? (
-          <div className="v-hm-tiles">
+          <div className={`v-hm-tiles${tiles.length > 3 ? ' t4' : ''}`}>
             {tiles.map((t) => <button key={t.key} type="button" className="v-hm-tile" onClick={t.on} {...t.attr}><span className="e">{t.e}</span><b>{t.name === 'マスモンボックス' ? <>マスモン<wbr/>ボックス</> : t.name}</b>{t.sub ? <small>{t.sub}</small> : null}</button>)}
           </div>
         ) : null}
@@ -89255,7 +89599,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
   // 大会(試合)・修行・決着・引退は、その画面(56-monhero-success-r3-*.jsx)が自分で場面の音を鳴らす。ここで main を鳴らすと後から上書きするので何もしない
   const childSound = typeof MsxR3 === 'function' && ((run.phase === 'battle' && !preOn) || run.phase === 'over' || !!s.over || sub === 'cup' || sub === 'shugyo');
   // トレーニングを選ぶ画面は育成中の曲のまま。「◯◯をする」を押して動きが始まってからトレーニングの曲(2026-11-14 社長)。結果の場面は曲を替えないので、メインへ戻るまで続く
-  const soundId = childSound ? null : actOn ? 'training' : kiOn ? 'kiShow' : run.phase === 'awake' && run.out && run.out.fire && typeof MsxAwakeShow === 'function' ? 'awakeShow' : run.phase === 'awake' && run.out && run.out.fire ? (run.out.fire.kind === 2 ? 'trainGreat' : 'trainLvUp') : run.phase === 'result' && run.out && MSX_REST_SOUND[run.out.kind] ? MSX_REST_SOUND[run.out.kind] : run.phase === 'result' && run.out && run.out.result ? MSX_RES_SOUND[run.out.result] : run.phase === 'issa' ? 'issa' : s.over === 'gameover' ? 'gameOver' : 'main';
+  const soundId = childSound ? null : actOn ? 'training' : kiOn ? 'kiShow' : run.phase === 'awake' && run.out && run.out.fire && typeof MsxAwakeShow === 'function' ? 'awakeShow' : run.phase === 'awake' && run.out && run.out.fire ? (run.out.fire.kind === 2 ? 'trainGreat' : 'trainLvUp') : run.phase === 'result' && run.out && MSX_REST_SOUND[run.out.kind] ? MSX_REST_SOUND[run.out.kind] : run.phase === 'result' && run.out && run.out.result ? ((typeof msxTfxResSound === 'function' && msxTfxResSound(run.out)) || MSX_RES_SOUND[run.out.result]) : run.phase === 'issa' ? 'issa' : s.over === 'gameover' ? 'gameOver' : 'main';
   msxUseScene(soundId, { season: msxCalendar(s.turn).season });
   // 演出のあいだは「fx」と知らせて、説明の窓を出さない(結果が出てから出す)
   useEffect(() => { if (onSub) onSub(actOn || kiOn ? 'fx' : sub); }, [sub, actOn, kiOn]);
@@ -89370,10 +89714,12 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
         <img className="bg" src={`images/story-bg/${isTrain ? R.bg : 'monhero_plaza'}.jpg`} alt=""/><div className="sh"/>
         {acting ? <MsxTrainAct key={`act-${s.turn}`} run={run} o={o} onDone={() => { setActAt(null); setActFrom(null); }}/> : null}
         {acting ? null : isTrain && o.result === 'great' ? <div className="v-burst"/> : isTrain && o.result === 'ok' ? <div className="v-burst b2"/> : null}
+        {!acting && isTrain && typeof MsxTrainResFx === 'function' ? <MsxTrainResFx run={run} o={o} layer="back"/> : null}
         <div className="gr" style={{ left: '62%', bottom: 'calc(14% - 5px)' }}/>
         {acting ? null : <MsxMonArt run={run} className="mon" live={typeof MsxLiveMon === 'function'} react={isTrain ? { kind: o.result, id: s.turn } : null} style={{ left: '62%', bottom: '14%', height: '46%', transform: o.result === 'sab' ? 'translateX(-50%) rotate(84deg)' : o.result === 'fail' ? 'translateX(-50%) rotate(-12deg)' : 'translateX(-50%) rotate(6deg)', filter: o.result === 'fail' ? 'grayscale(.5) drop-shadow(0 8px 5px #0009)' : undefined }}/>}
-        {acting ? null : <div className={`v-stamp msx-pop ${isTrain ? R.cls : 'ok'}`}>{isTrain ? R.word : o.kind === 'rest' ? (restName || '休んだ') : o.kind === 'play' ? '遊んだ!' : o.kind === 'clinic' ? '通院' : '休み'}
-          {isTrain && o.card && o.card.tags && o.card.tags.length ? <small>🤝 友情タッグ ×{o.card.tags.length}{o.result === 'great' ? '・伸び ×1.5' : ''}</small> : null}</div>}
+        {acting ? null : <div className={`v-stamp msx-pop ${isTrain ? R.cls : 'ok'}${isTrain && typeof msxTfxKind === 'function' && (msxTfxKind(o) === 'great' || msxTfxKind(o) === 'both') ? ` tfx-gold${msxTfxKind(o) === 'both' ? ' tfx-both' : ''}${typeof msxTfxOpt === 'function' && msxTfxOpt().calm ? ' calm' : ''}` : ''}`}>{isTrain ? R.word : o.kind === 'rest' ? (restName || '休んだ') : o.kind === 'play' ? '遊んだ!' : o.kind === 'clinic' ? '通院' : '休み'}
+          {isTrain && o.card && o.card.tags && o.card.tags.length && typeof MsxTrainResFx !== 'function' ? <small>🤝 友情タッグ ×{o.card.tags.length}{o.result === 'great' ? '・伸び ×1.5' : ''}</small> : null}</div>}
+        {!acting && isTrain && typeof MsxTrainResFx === 'function' ? <MsxTrainResFx run={run} o={o} layer="top"/> : null}
         {!acting && typeof MsxBondChips === 'function' ? <MsxBondChips s={s} card={o.card} add={(SUC.BOND && SUC.BOND.train) || 8}/> : !acting && members.length ? <div className="v-chips" style={{ top: 'auto', bottom: 8 }}>{members.map((m, i) => <span key={i} className="v-chip">{msxMemberName(m)} 親密度 +{(SUC.BOND && SUC.BOND.train) || 8}</span>)}</div> : null}
       </div>
       {isTrain ? <MsxStRow who={s} stats={s.stats} ups={acting ? null : gains} main={o.card && o.card.stat}/> : null}
@@ -90883,10 +91229,19 @@ function MsxR3Battle({ run, setRun, v, ev, ctx, bondLv, onPause, debug }) {
   const [showPh, setShowPh] = useState('bracket');
   // 知らせの段を見終えた大会(この画面のあいだだけ。やり直し・もう一度では出さない)
   const [introSeen, setIntroSeen] = useState(null);
+  // デバッグの「勝ったことにする」→「決勝へ」の流れでも、札(card)からあとは見せる部品が出る。その段も見る(2026-11-15 r1115-048 デバッグの流れで試合の曲に替わらなかった)
+  const showView = showOn || (!!debug && typeof MonsucCupShow === 'function' && (step === 'card' || step === 'watch'));
   const cupSound = st3 ? (st3.won ? 'cupWin' : 'cupLose')
-    : showOn ? (showPh === 'win' ? 'cupWin' : showPh === 'lose' ? 'cupLose' : showPh === 'cutin' || showPh === 'match' ? 'cupMatch' : 'cupPre')
+    : showView ? (showPh === 'win' ? 'cupWin' : showPh === 'lose' ? 'cupLose' : showPh === 'cutin' || showPh === 'match' ? 'cupMatch' : 'cupPre')
       : step === 'lost' ? 'cupLose' : step === 'bracket' || step === 'card' ? 'cupPre' : 'cupMatch';
   useSuccessScene(cupSound, { season: msxCalendar(s.turn).season });
+  // 試合のあいだは、試合の曲が確かに鳴っているかを見張り、違えば鳴らし直す(読み込みの失敗・ジングルのあと・中断からの再開でも試合の曲へ。r1115-048)
+  useEffect(() => {
+    if (cupSound !== 'cupMatch' || typeof SuccessSound === 'undefined' || typeof SuccessSound.keep !== 'function') return undefined;
+    const season = msxCalendar(s.turn).season;
+    const t = setInterval(() => SuccessSound.keep('cupMatch', season), 1500);
+    return () => clearInterval(t);
+  }, [cupSound]);
   useEffect(() => {
     let alive = true;
     // 試合型のアシストの表を読み終えてから試合を作る(読む前と後で同じ試合の結果が変わらないように)
@@ -92063,7 +92418,7 @@ function MsxArcTalk({ run, v, ev, onPause, aid, lines, fallback, head, bg, ex = 
   );
 }
 
-// ヒーローズファイナル: 試合の前に助手が相手を選ぶ
+// ヒーローズファイナル: 試合の前に、貼り出された組み合わせを助手と見る(相手は決まっていて、優勝候補などが勝ち上がってくる。2026-11-15 社長「トーナメントなんだからこっちが決めるのおかしくない？」)
 function MsxArcPick({ run, v, ev, onPause, ctx, bondLv, opp, round, onDone }) {
   const s = run.s; const foe = opp ? (opp.name || msxMonName(opp.species)) : '';
   const lines = msxArcLines(`scn.${s.aid}.summit.r${round + 1}.pick`, ctx, bondLv, { rival: foe, owner: opp && opp.breeder ? opp.breeder : '' });
@@ -92071,9 +92426,9 @@ function MsxArcPick({ run, v, ev, onPause, ctx, bondLv, opp, round, onDone }) {
   const top = opp ? (
     <div className="arc-foe" data-msx-arc-foe>
       <img src={msxMonThumb(opp.species)} alt=""/><b>{foe}</b><small>{opp.breeder ? `育て手 ${opp.breeder}` : msxMonName(opp.species)}</small>
-      <div className="why">{msxAidName(s.aid)}の選び: {MSX_ARC_PICK_WHY[opp.pick] || '相手'}</div>
+      <div className="why">組み合わせ: {MSX_ARC_PICK_WHY[opp.pick] || '相手'}</div>
     </div>) : null;
-  return <MsxArcTalk run={run} v={v} ev={ev} onPause={onPause} aid={s.aid} lines={lines} head={`${(SUM[round] || {}).name || 'ヒーローズファイナル'}の相手選び`}
+  return <MsxArcTalk run={run} v={v} ev={ev} onPause={onPause} aid={s.aid} lines={lines} head={`${(SUM[round] || {}).name || 'ヒーローズファイナル'}の組み合わせ`}
     bg="images/success/scenes/venue-summit.png" top={top} fallback={`${foe}と戦うよ。いってらっしゃい！`} doneText="⚔ 試合へ" onDone={onDone}/>;
 }
 
@@ -92376,10 +92731,14 @@ const msaTechNameParts = (name) => {
   if (cur) out.push(cur);
   return out;
 };
+// 言葉の幅の目安(字の大きさ1つ分=1)。全角は1・半角の英数は0.62。絵文字のアイコンは1.3(iPhone の絵文字は広い)
+const msaTnEm = (str) => [...String(str || '')].reduce((n, ch) => n + (/[\x20-\x7E]/.test(ch) ? 0.62 : 1), 0);
+// いちばん長い言葉の幅(先頭の言葉はアイコンと同じ行に並ぶので、アイコンの幅も足す)
+const msaTnWidest = (parts, icon) => Math.max(1, ...parts.map((p, i) => msaTnEm(p) + (i === 0 && icon ? 1.3 : 0))) + 0.2;
 function MsaTechName({ name, icon = '', className = '' }) {
   const parts = msaTechNameParts(name);
   return (
-    <span className={`msa-tn ${className}`} data-msa-tn>
+    <span className={`msa-tn ${className}`} data-msa-tn style={{ '--tnw': msaTnWidest(parts, icon).toFixed(2) }}>
       {icon ? <span className="msa-tn-s">{icon}</span> : null}
       {parts.map((p, i) => <React.Fragment key={i}>{i ? <wbr/> : null}<span className="msa-tn-s">{p}</span></React.Fragment>)}
     </span>
@@ -92426,12 +92785,14 @@ const MSA_DC_CSS = `
 .msa-dc{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px}
 /* 幅360未満は2列×2段(1語の長い技名が4列の札に入りきらない。技名は言葉の途中で折らない) */
 @media (max-width:359.98px){.msa-dc{grid-template-columns:repeat(2,minmax(0,1fr))}.msa-dc-c{min-height:52px}}
-.msa-dc-c{position:relative;overflow:hidden;min-width:0;min-height:58px;border-radius:10px;border:1px solid #4c4680;background:#1b1733;color:#94a3b8;font-weight:800;font-size:10.5px;padding:3px 4px 4px;text-align:left;line-height:1.2;font-family:inherit;display:flex;flex-direction:column;gap:1px}
+.msa-dc-c{container-type:inline-size;position:relative;overflow:hidden;min-width:0;min-height:58px;border-radius:10px;border:1px solid #4c4680;background:#1b1733;color:#94a3b8;font-weight:800;font-size:10.5px;padding:3px 4px 4px;text-align:left;line-height:1.2;font-family:inherit;display:flex;flex-direction:column;gap:1px}
 .msa-dc-c .msa-dc-h{display:flex;align-items:center;gap:3px;font-size:10px;color:#a5b4fc}
 .msa-dc-c .msa-dc-h em{font-style:normal;font-size:9px;background:#fde047;color:#422006;border-radius:6px;padding:0 4px;font-weight:900}
 .msa-dc-c .msa-dc-h i{font-style:normal;margin-left:auto;font-size:9px;color:#94a3b8}
 .msa-dc-c small{display:block;font-size:9.5px;color:#cbd5e1;white-space:nowrap;overflow:hidden}
 .msa-dc-c small.p{color:#fde68a;font-weight:900}
+/* 技の札の技名は、一番長い言葉(--tnw 字ぶん)が札の幅に入る大きさまで CSS で縮める(2026-11-15 r1115-049 iPhone で「デュアルスラッ」と切れた。JS の縮め直しより先に効く) */
+@supports (width:1cqw){.msa-dc-c .msa-tn{font-size:max(7px,min(10.5px,calc(100cqw / var(--tnw,1))))}}
 .msa-dc-c.now{border-color:#fde047;box-shadow:0 0 0 1px #fde04788 inset;background:#2d2650;color:#fff}
 .msa-dc-c.far{opacity:.55}
 .msa-dc-c.ng small.p{color:#fca5a5}
@@ -92755,7 +93116,7 @@ const MSA_CSS = `
 .msa-dmg{position:absolute;z-index:8;top:4%;left:50%;width:130px;margin-left:-65px;text-align:center;font-size:30px;font-weight:900;color:#fde047;line-height:.95;text-shadow:0 2px 0 #b91c1c,0 0 8px #f97316;animation:msaPop .55s ease-out both;pointer-events:none}
 .msa-dmg small{display:block;font-size:12px;color:#fff;margin-bottom:2px}
 .msa-dmg.miss{color:#e2e8f0;font-size:20px;text-shadow:0 2px 0 #0f172a}
-.msa-tag{position:absolute;z-index:8;top:-4px;left:50%;transform:translateX(-50%);white-space:nowrap;border-radius:99px;padding:2px 9px;font-size:11.5px;font-weight:900;background:#0f172acc;border:1px solid #fde04788;color:#fde68a;animation:msaPop .4s ease-out both}
+.msa-tag{--msa-tx:-50%;position:absolute;z-index:8;top:-4px;left:50%;transform:translateX(-50%);white-space:nowrap;border-radius:99px;padding:2px 9px;font-size:11.5px;font-weight:900;background:#0f172acc;border:1px solid #fde04788;color:#fde68a;animation:msaPop .4s ease-out both}
 .msa-charge{animation:msaCharge .7s ease-out both}
 .msa-aura{position:absolute;left:50%;bottom:0;width:90px;height:90px;margin-left:-45px;border-radius:50%;background:radial-gradient(circle,#fde04788 0,#f9731644 45%,#f9731600 70%);animation:msaAura .7s ease-out both;z-index:-1;pointer-events:none}
 .msa-sulk{animation:msaSulk .7s ease-in-out both}
@@ -92780,7 +93141,7 @@ const MSA_CSS = `
 .msa-tools button.msa-pause{flex:.55;min-width:44px}
 .msa-tools button{min-width:0;padding-left:2px;padding-right:2px}
 .msa-cardsrow{flex:none}
-.msa-gtag{position:absolute;z-index:8;bottom:-16px;left:50%;transform:translateX(-50%);white-space:nowrap;border-radius:99px;padding:0 7px;font-size:10.5px;font-weight:900;line-height:16px;animation:msaPop .45s ease-out both}
+.msa-gtag{--msa-tx:-50%;position:absolute;z-index:8;bottom:-16px;left:50%;transform:translateX(-50%);white-space:nowrap;border-radius:99px;padding:0 7px;font-size:10.5px;font-weight:900;line-height:16px;animation:msaPop .45s ease-out both}
 .msa-gtag.up{background:#facc15;color:#422006}.msa-gtag.down{background:#334155;color:#e2e8f0}
 .msa-ko{--msa-tx:-50%;--msa-r:-8deg;position:absolute;z-index:8;top:28%;left:50%;transform:translateX(-50%) rotate(-8deg);font-size:30px;font-weight:900;color:#fff;letter-spacing:.06em;-webkit-text-stroke:2px #b91c1c;text-shadow:0 3px 0 #7f1d1d;animation:msaStamp .5s cubic-bezier(.2,1.6,.4,1) both;pointer-events:none}
 .msa-shk{position:absolute;inset:0;z-index:1}
@@ -92835,7 +93196,7 @@ const MSA_CSS = `
 @keyframes msaStamp{0%{opacity:0;transform:translateX(var(--msa-tx,0)) scale(2.2) rotate(var(--msa-r,0deg))}100%{opacity:1;transform:translateX(var(--msa-tx,0)) scale(1) rotate(var(--msa-r,0deg))}}
 @keyframes msaFlash{0%{opacity:0}1%{opacity:.85}100%{opacity:0}}
 @keyframes msaShake{0%,100%{transform:none}20%{transform:translate(-6px,2px)}40%{transform:translate(5px,-2px)}60%{transform:translate(-3px,1px)}80%{transform:translate(2px,0)}}
-@keyframes msaPop{0%{opacity:0;transform:translateY(10px) scale(.7)}35%{opacity:1;transform:translateY(-4px) scale(1.12)}100%{opacity:1;transform:translateY(-12px) scale(1)}}
+@keyframes msaPop{0%{opacity:0;transform:translateX(var(--msa-tx,0)) translateY(10px) scale(.7)}35%{opacity:1;transform:translateX(var(--msa-tx,0)) translateY(-4px) scale(1.12)}100%{opacity:1;transform:translateX(var(--msa-tx,0)) translateY(-12px) scale(1)}}
 @keyframes msaCharge{0%,100%{transform:none}30%{transform:translateY(4px) scale(1.05,.92)}60%{transform:translateY(-6px) scale(.97,1.06)}}
 @keyframes msaAura{0%{opacity:0;transform:scale(.4)}40%{opacity:1}100%{opacity:0;transform:scale(1.5)}}
 @keyframes msaSulk{0%,100%{transform:none}30%,70%{transform:rotate(-8deg) translateX(-4px)}}
@@ -93141,7 +93502,8 @@ function MsaFighter({ side, member, x, e, foeX, hpNow, reduce, idleOk, gd, fx, m
   }
   if (me && e.ev === 'guard') { cls = 'mh-card-guard'; extra.push(<span key="s" className="mh-card-shield" aria-hidden="true"/>); }
   if (me && e.ev === 'charge') {
-    if (e.why === 'sulk') { cls = 'msa-sulk'; extra.push(<span key="t" className="msa-tag">意味不明…</span>); }
+    // 意味不明のときは場の真ん中のスタンプ(msa-sulkstamp)が言うので、頭の上の札は出さない(2026-11-15 r1115-050 札とスタンプ・ガッツの数が重なった)
+    if (e.why === 'sulk') { cls = 'msa-sulk'; }
     else { cls = 'msa-charge'; extra.push(<span key="a" className="msa-aura" aria-hidden="true"/>); }
   }
   let bodyStyle;
@@ -93490,7 +93852,7 @@ function MsaStage({ log, frames, pos, teams, venueImg, ended = false, win = null
       {!intro && !ended && ['A', 'B'].map(hud)}
       {!intro && <div className="msa-rnd" data-msa-round={f.r || 0}><small>ラウンド</small><b>{f.r || 1}</b></div>}
       {['A', 'B'].map((sd) => (bands[sd].length ? <div key={sd} className={`msa-bands ${sd}`}>{bands[sd].map((b, j) => <span key={`${b.k}-${b.j}`} className={`msa-band ${j ? 'old' : ''}`} data-msa-band={sd}>{b.t}</span>)}</div> : null))}
-      {e.ev === 'charge' && e.why === 'sulk' && !intro && !ended && <div key={`sk-${pos}`} className={`msa-sulkstamp ${e.side === 'B' ? 'B' : 'A'}`} data-msa-sulk={e.side}><b>💢 意味不明!</b><small>{e.side === 'A' ? '言うことを聞かず、何もしなかった' : '相手は言うことを聞かず、何もしなかった'}</small></div>}
+      {e.ev === 'charge' && e.why === 'sulk' && !intro && !ended && <div key={`sk-${pos}`} className={`msa-sulkstamp ${e.side === 'B' ? 'B' : 'A'}`} data-msa-sulk={e.side}><b>💢 意味不明!</b><small>{e.side === 'A' ? '' : '相手は'}言うことを聞かず、<wbr/>何もしなかった</small></div>}
       {e.ev !== 'tech' && <div className="msa-dist">{AMBW_DIST.map((n, d) => <span key={d} className={d === f.d ? 'cur' : ''}>{n}</span>)}</div>}
       {e.ev === 'tech' && <div key={`c-${pos}`} className={`msa-plate ${e.side === 'B' ? 'B' : 'A'} ${e.kind} ${big ? 'big' : ''}`} data-msa-cut={p == null ? '' : p}>
         <div><small>{e.kind === 'pow' ? '💪 ちから技' : '🧠 かしこさ技'}{p != null ? `・命中 ${p}%` : ''}{e.tech.guts ? `・ガッツ −${e.tech.guts}` : ''}</small>
@@ -93660,9 +94022,9 @@ const MSA_SHOW_CSS = `
 .msa-call.crit,.msa-call.big{color:#fde047;background:linear-gradient(90deg,#b4530999,#0000)}
 .msa-call.ko,.msa-call.pinch{color:#fecaca;background:linear-gradient(90deg,#b91c1c99,#0000)}
 .msa-call.sulk{color:#fecaca;background:linear-gradient(90deg,#be123c99,#0000)}
-.msa-sulkstamp{position:absolute;z-index:9;left:50%;top:30%;transform:translateX(-50%) rotate(-4deg);text-align:center;pointer-events:none;animation:msaSStamp .45s ease-out both}
+.msa-sulkstamp{--msa-tx:-50%;--msa-r:-4deg;position:absolute;z-index:9;left:50%;top:30%;width:max-content;max-width:calc(100% - 20px);transform:translateX(-50%) rotate(-4deg);text-align:center;pointer-events:none;animation:msaSStamp .45s ease-out both}
 .msa-sulkstamp b{display:block;font-size:26px;font-weight:900;color:#fff;white-space:nowrap;-webkit-text-stroke:2px #9f1239;paint-order:stroke fill;text-shadow:0 3px 0 #4c0519,0 0 18px #fb7185}
-.msa-sulkstamp small{display:inline-block;margin-top:4px;padding:2px 10px;border-radius:10px;background:#4c0519dd;color:#fecdd3;font-size:11.5px;font-weight:900;white-space:nowrap}
+.msa-sulkstamp small{display:inline-block;max-width:100%;margin-top:4px;padding:2px 10px;border-radius:10px;background:#4c0519dd;color:#fecdd3;font-size:11.5px;font-weight:900;white-space:normal;word-break:keep-all;overflow-wrap:normal;line-height:1.3}
 .msa-call.rev,.msa-call.last{color:#a5f3fc;background:linear-gradient(90deg,#0e749099,#0000)}
 .msa-final{position:fixed;inset:0;z-index:9700;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:16px;background:#160f2e center/cover no-repeat;color:#fff;cursor:pointer;overflow:hidden;animation:msaSFade .35s ease-out both}
 .msa-final:before{content:"";position:absolute;inset:0;background:radial-gradient(circle at 50% 45%,#0000 0,#0009 70%)}
@@ -93684,7 +94046,8 @@ const MSA_SHOW_CSS = `
 @keyframes msaSFade{from{opacity:0}to{opacity:1}}
 @keyframes msaSDrop{0%{opacity:0;transform:translateY(-30px) scale(1.3)}100%{opacity:1;transform:none}}
 @keyframes msaSInL{from{opacity:0;transform:translateX(-60px)}to{opacity:1;transform:none}}
-@keyframes msaSStamp{0%{opacity:0;transform:scale(2.6)}60%{opacity:1;transform:scale(.9)}100%{opacity:1;transform:scale(1)}}
+/* 真ん中に置く札(left:50%+translateX(-50%))の出る動きは transform を上書きするので、横のずらしは --msa-tx・傾きは --msa-r で動きの中にも入れる(2026-11-15 r1115-050 文が右へずれて切れた) */
+@keyframes msaSStamp{0%{opacity:0;transform:translateX(var(--msa-tx,0)) rotate(var(--msa-r,0deg)) scale(2.6)}60%{opacity:1;transform:translateX(var(--msa-tx,0)) rotate(var(--msa-r,0deg)) scale(.9)}100%{opacity:1;transform:translateX(var(--msa-tx,0)) rotate(var(--msa-r,0deg)) scale(1)}}
 @keyframes msaSBlink{0%,100%{opacity:.35}50%{opacity:1}}
 @keyframes msaSNext{0%{opacity:0}12%{opacity:1}82%{opacity:1}100%{opacity:0}}
 @keyframes msaSCall{from{opacity:0;transform:translateX(-14px)}to{opacity:1;transform:none}}
@@ -94103,7 +94466,7 @@ function MonsucRankScreen({ onBack }) {
         {[['all', '全モンスター'], ['lineage', '血統別']].map(([k, label]) => <button key={k} type="button" onClick={() => setTab(k)}
           className={`rounded-full py-2 text-[14px] font-black border ${tab === k ? 'bg-yellow-300 text-slate-900 border-yellow-300' : 'bg-slate-800/70 text-slate-200 border-slate-600'}`}>{label}</button>)}
       </div>
-      {tab === 'lineage' && <div className="flex gap-1.5 overflow-x-auto mt-2 pb-1">
+      {tab === 'lineage' && <div className="flex gap-1.5 overflow-x-auto overflow-y-hidden touch-pan-x mt-2 pb-1" data-msx-hscroll>
         {lineages.map(l => <button key={l} type="button" onClick={() => setLineage(l)}
           className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold border ${lineage === l ? 'bg-yellow-300 text-slate-900 border-yellow-300' : 'bg-slate-800/70 text-slate-200 border-slate-600'}`}>{monsucRankLineageName(l)}系</button>)}
       </div>}
