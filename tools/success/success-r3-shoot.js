@@ -226,9 +226,11 @@ const makeRun = async (kind) => {
           if (name === 'E3u') check(`${label}: ちから+1→命中+1→ちから−1 で、ちからだけ戻り命中は +1 のまま`, q.pow === 0 && q.hit === 1, JSON.stringify(q));
           else check(`${label}: バランスで振ったあとの「−」で、ちからだけ1つ戻る`, q.hit >= 1 && q.pow === q.hit - 1, JSON.stringify(q)); }
         if (name === 'Y1') { const q = await page.evaluate(() => { const b = document.querySelector('[data-msc-quick]'); return { has: !!b, on: !!(b && !b.disabled), why: !!document.querySelector('[data-msc-quick-why]') }; });
-          check(`${label}: 勝ったことのある大会は「結果だけ見る」が押せる`, q.has && q.on && !q.why, JSON.stringify(q)); }
+          check(`${label}: 優勝したことのある大会は「結果だけ見る」が押せる`, q.has && q.on && !q.why, JSON.stringify(q)); }
         if (name === 'N1' || name === 'N2') { const q = await page.evaluate(() => { const b = document.querySelector('[data-msc-quick]'); const w = document.querySelector('[data-msc-quick-why]'); return { has: !!b, off: !!(b && b.disabled), why: !!w }; });
-          check(`${label}: 勝ったことのない大会は「結果だけ見る」が押せず、理由が出る`, q.has && q.off && q.why, JSON.stringify(q)); }
+          check(`${label}: 優勝したことのない大会は「結果だけ見る」が押せず、理由が出る`, q.has && q.off && q.why, JSON.stringify(q)); }
+        if ((name === 'N1' || name === 'N2' || name === 'Y1') && !tag) { const fb = await page.evaluate(() => { const b = document.querySelector('[data-msc-quick]'); return b ? Math.round(b.getBoundingClientRect().bottom) : -1; });
+          check(`${label}: 「結果だけ見る」のボタンがスクロールせずに画面に収まる`, fb > 0 && fb <= h, `${fb}px / ${h}px`); }
         if (name === 'K2') { const pz = await page.evaluate(() => { const box = document.querySelector('[data-msx-r3-cupwin] .in'); if (!box) return { ok: false }; const R = box.getBoundingClientRect(); const bs = [...box.querySelectorAll('[data-msx-r3-prize]')]; return { ok: bs.length > 0 && bs.every((b) => { const r = b.getBoundingClientRect(); return r.left >= R.left - 1 && r.right <= R.right + 1; }), n: bs.length }; });
           check(`${label}: 獲得物の札が全部 枠の中に見える`, pz.ok, `${pz.n}枚`); }
         if (name === 'R1') { // ビートP: 優勝の分が本編のビートPに1回だけ足される(同じ育成をもう一度保存しても増えない)
