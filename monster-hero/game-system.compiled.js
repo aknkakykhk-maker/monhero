@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e57b385bc9cbda5a
+// source-sha256: aa4fc2cd3f6a659b
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -232819,15 +232819,10 @@ function MonsterHeroGame() {
   }, [rhythmEventStorySeen, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
   useEffect(() => {
     if (!Array.isArray(rhythmEventStorySeen) || rhythmEventStorySeen.includes(SPARKLING_PINK_STORY_ID)) return;
-    if (!(bootPhase === 'GAME' && gameState === 'RHYTHM_DEMO_HOME' && onboarded && !onboardingPreview && tutorialStep == null && kikiIntroStep == null && momosukeIntroStep == null && !eventReplay && !rhythmHellGuide && !loginBonusPopup)) return;
+    if (!(bootPhase === 'GAME' && gameState === 'HOME') || eventReplay || rhythmEventStoryPending || rhythmHellGuide) return;
     if (rhythmEventStoryStartedRef.current.includes(SPARKLING_PINK_STORY_ID)) return;
-    rhythmEventStoryStartedRef.current = [...rhythmEventStoryStartedRef.current, SPARKLING_PINK_STORY_ID];
-    setEventReplay({
-      id: SPARKLING_PINK_STORY_ID,
-      step: 0,
-      live: true
-    });
-  }, [rhythmEventStorySeen, bootPhase, gameState, onboarded, onboardingPreview, tutorialStep, kikiIntroStep, momosukeIntroStep, eventReplay, rhythmHellGuide, loginBonusPopup]);
+    setRhythmEventStoryPending(prev => prev || SPARKLING_PINK_STORY_ID);
+  }, [rhythmEventStorySeen, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
   useEffect(() => {
     if (typeof setSorashidoJoinSeenForShop === 'function') setSorashidoJoinSeenForShop(Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SORASHIDO_JOIN_STORY_ID));
   }, [rhythmEventStorySeen]);

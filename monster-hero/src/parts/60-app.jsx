@@ -6005,18 +6005,15 @@ function MonsterHeroGame() {
     if (rhythmEventStoryStartedRef.current.includes(MONSUC_BETA_EP1_STORY_ID)) return;
     setRhythmEventStoryPending(prev => prev || MONSUC_BETA_EP1_STORY_ID);
   }, [rhythmEventStorySeen, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
-  // ききの「はじめての曲」のお話(2026-11-15 社長 r1115-102)。曲「Sparkling Pink Overture」と一緒に出る。
-  //   曲えらびを開いたときに1回だけ流す(買う前でも流れる。曲を買ったあとにそのまま曲えらびにいる人は、開いたときにもう流れている)。
-  //   見たかは mh_rhythm_event_story_v1 の id(新しいキーは作らない)。見終えても飛ばしても「見た」になり、あとはプロフィールの「イベント回想」から読める。
-  //   ★HOME ではなく曲えらびで流すので、「HOME に着いたら流す」の置き方(rhythmEventStoryPending)は通さず、ここで直接流す。お話・案内が出ているあいだは待つ(HOME で並んで待っているお話があっても、先にこちらを流してよい。そちらは HOME へ戻ったときに流れる)
+  // ききの「はじめての曲」のお話(2026-11-15 社長 r1115-102・r1115-139)。曲「Sparkling Pink Overture」と一緒に出る。
+  //   ほかのお話・告知と同じ入口: 更新のあとに初めてゲームを開いて HOME に着いたとき、だれにでも1回だけ流す(置き方は上のモンヒロサクセス 第1話と同じ。
+  //   ほかのお話が先に流れようとしていたら待つ・はじめて遊ぶ人は1本ずつ)。見たかは mh_rhythm_event_story_v1 の id(新しいキーは作らない)。見終えても飛ばしても「見た」になり、あとは回想から読める
   useEffect(() => {
     if (!Array.isArray(rhythmEventStorySeen) || rhythmEventStorySeen.includes(SPARKLING_PINK_STORY_ID)) return;
-    if (!(bootPhase === 'GAME' && gameState === 'RHYTHM_DEMO_HOME' && onboarded && !onboardingPreview
-      && tutorialStep == null && kikiIntroStep == null && momosukeIntroStep == null && !eventReplay && !rhythmHellGuide && !loginBonusPopup)) return;
+    if (!(bootPhase === 'GAME' && gameState === 'HOME') || eventReplay || rhythmEventStoryPending || rhythmHellGuide) return;
     if (rhythmEventStoryStartedRef.current.includes(SPARKLING_PINK_STORY_ID)) return;
-    rhythmEventStoryStartedRef.current = [...rhythmEventStoryStartedRef.current, SPARKLING_PINK_STORY_ID];
-    setEventReplay({ id: SPARKLING_PINK_STORY_ID, step: 0, live: true });
-  }, [rhythmEventStorySeen, bootPhase, gameState, onboarded, onboardingPreview, tutorialStep, kikiIntroStep, momosukeIntroStep, eventReplay, rhythmHellGuide, loginBonusPopup]);
+    setRhythmEventStoryPending(prev => prev || SPARKLING_PINK_STORY_ID);
+  }, [rhythmEventStorySeen, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
   // ソラシドの加入のお話を見たら、マーケットにカード「ソラシド」が並ぶ(data/breeder.js の sorashidoCardOnSale。公開の印 assistantSorashido も要る)。
   // お話を流すのは上の加入のお話の所
   useEffect(() => {
