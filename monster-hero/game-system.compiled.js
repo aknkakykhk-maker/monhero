@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 84ab8f4ece807676
+// source-sha256: e721225c5c5ad803
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -119443,7 +119443,7 @@ function AssistantLifeTownMap({
     className: "text-[10.5px] font-bold text-slate-300",
     style: JA_WRAP_STYLE,
     "data-assistant-life-map-sheet-home": true
-  }, jaWrap(assistantLifeMapTownOnlyNow().includes(sheetPlace) ? `町の場所。HOME では「🏡 助手ライフ」の札の下に顔が出ます` : `HOME の「${ASSISTANT_LIFE_MAP_FAC_NAME[fac]}」の札${sheetPlace === 'home' ? '(家と町にいる助手の顔もここ)' : ''}`)), React.createElement("p", {
+  }, jaWrap(assistantLifeMapTownOnlyNow().includes(sheetPlace) ? `町の場所。HOME では「🏡 助手ライフ」のボタンの下に顔が出ます` : `HOME の「${ASSISTANT_LIFE_MAP_FAC_NAME[fac]}」のボタン${sheetPlace === 'home' ? '(家と町にいる助手の顔もここ)' : ''}`)), React.createElement("p", {
     className: "mt-1 text-[11.5px] font-bold leading-snug text-slate-100",
     style: JA_WRAP_STYLE
   }, sheetPlace === 'cardroom' && typeof CARD_LIFE_UP_LABEL !== 'undefined' ? React.createElement(React.Fragment, null, jaWrap('MFバトルカードの研究をしている助手。いる助手と対戦すると、'), React.createElement("span", {
@@ -119479,7 +119479,7 @@ function AssistantLifeTownMap({
     className: "mt-3 text-[11px] font-black text-amber-200",
     "data-assistant-life-map-sheet-town": true,
     style: JA_WRAP_STYLE
-  }, jaWrap('📍 町にいる助手(HOME ではこの札の下に顔が出ます)')), sheetTown.map(([id, p]) => row(id, p, true))), React.createElement("button", {
+  }, jaWrap('📍 町にいる助手(HOME ではこのボタンの下に顔が出ます)')), sheetTown.map(([id, p]) => row(id, p, true))), React.createElement("button", {
     type: "button",
     "data-assistant-life-map-sheet-close": true,
     "data-mhl-sheet-close": true,
@@ -151821,7 +151821,7 @@ function AssistantMasmonBattleBeta({
         alignItems: 'center',
         gap: 8
       }
-    }, React.createElement("span", null, "技の札(間合いごとの代表の技)"), React.createElement("button", {
+    }, React.createElement("span", null, "技のカード(間合いごとの代表の技)"), React.createElement("button", {
       type: "button",
       className: "ambw-btn2",
       "data-ambb-rep-open": true,
@@ -151832,7 +151832,7 @@ function AssistantMasmonBattleBeta({
         flex: 'none'
       },
       onClick: () => setRepEdit(ambbRowKey(chosen[0].row))
-    }, "🃏 技の札を決める"))), React.createElement(AmbbSettings, {
+    }, "🃏 技のカードを決める"))), React.createElement(AmbbSettings, {
       set: set,
       onSet: setSet,
       local: srcNow === 'local',
@@ -152464,13 +152464,13 @@ function AssistantMasmonBattleBeta({
       onClick: ev => ev.stopPropagation()
     }, React.createElement("div", {
       className: "msa-sh-top"
-    }, React.createElement("b", null, "🃏 技の札を決める"), React.createElement("button", {
+    }, React.createElement("b", null, "🃏 技のカードを決める"), React.createElement("button", {
       type: "button",
       className: "msa-sh-x",
       onClick: close
     }, "閉じる")), React.createElement("p", {
       className: "msa-sh-note"
-    }, "試合で間合いごとに出す技(代表の技)です。札を押して、一覧の「☆ 代表にする」で決めます。決めていない間合いは「命中×威力」がいちばん大きい技になります。"), React.createElement("div", {
+    }, "試合で間合いごとに出す技(代表の技)です。カードを押して、一覧の「☆ 代表にする」で決めます。決めていない間合いは「命中×威力」がいちばん大きい技になります。"), React.createElement("div", {
       className: "ambb-tabs",
       style: {
         flexWrap: 'wrap',
@@ -171065,7 +171065,7 @@ const msxNormRun = (raw, SUC) => {
     },
     items: Array.isArray(raw.items) ? raw.items.filter(x => typeof x === 'string').slice(0, 2) : [],
     used: msxNum(raw.used, 0),
-    phase: ['main', 'result', 'react', 'issa', 'battle', 'turn', 'over', 'event', 'story', 'awake', 'tevent', 'birth'].includes(raw.phase) ? raw.phase : 'main',
+    phase: ['main', 'result', 'react', 'issa', 'battle', 'turn', 'over', 'event', 'story', 'awake', 'tevent', 'birth', 'begin', 'intro'].includes(raw.phase) ? raw.phase : 'main',
     out: msxIsObj(raw.out) ? raw.out : null,
     log: Array.isArray(raw.log) ? raw.log.filter(msxIsObj).slice(-20) : [],
     startAt: msxNum(raw.startAt, 0),
@@ -171391,19 +171391,42 @@ const msxBeatMark = run => {
   } : run;
 };
 let msxSaveChain = Promise.resolve();
+const MSX_RUN_GONE_KEY = 'mh_monsuc_run_gone_v1';
+const msxRunGoneList = async () => {
+  try {
+    const v = await storeGet(MSX_RUN_GONE_KEY, null);
+    return Array.isArray(v) ? v.filter(x => typeof x === 'string').slice(-50) : [];
+  } catch (_) {
+    return [];
+  }
+};
+const msxRunTurn = r => {
+  const t = Number(r && r.s && r.s.turn);
+  return Number.isFinite(t) ? t : 0;
+};
+const msxRunSent = r => Number.isFinite(Number(r && r.beatSent)) ? Math.max(0, Math.floor(Number(r.beatSent))) : 0;
+const msxRunIsStale = async (run, stored) => {
+  if (!run || typeof run.id !== 'string') return true;
+  if (!stored || typeof stored !== 'object') return (await msxRunGoneList()).includes(run.id);
+  if (stored.id !== run.id) return Number(run.startAt || 0) <= Number(stored.startAt || 0) || (await msxRunGoneList()).includes(run.id);
+  if (msxRunTurn(run) < msxRunTurn(stored)) return true;
+  if (msxRunSent(run) < msxRunSent(stored)) return true;
+  if (stored.beatEnd === true && run.beatEnd !== true) return true;
+  return false;
+};
 const msxSaveRunNow = async (run, noPay) => {
+  const stored = await storeGet(MSX_KEYS.run, null);
+  if (await msxRunIsStale(run, stored)) return false;
   const ov = msxRunOverOf(run);
   if (ov) {
     try {
       await storeSet(MSX_RUN_OVER_KEY, ov);
     } catch (_) {}
   }
-  const sent = Number.isFinite(Number(run && run.beatSent)) ? Math.max(0, Math.floor(Number(run.beatSent))) : 0;
+  const sent = msxRunSent(run);
   if (noPay || !sent || typeof saveStoredValuesOrRollback !== 'function' || typeof loadRhythmEventPoints !== 'function' || typeof RHYTHM_EVENT_POINTS_KEY === 'undefined') return storeSet(MSX_KEYS.run, run);
-  const stored = await storeGet(MSX_KEYS.run, null);
-  if (!stored || !run || stored.id !== run.id) return false;
-  const storedSent = Number.isFinite(Number(stored.beatSent)) ? Math.max(0, Math.floor(Number(stored.beatSent))) : 0;
-  const add = sent - storedSent;
+  if (!stored || stored.id !== run.id) return false;
+  const add = sent - msxRunSent(stored);
   if (add <= 0) return storeSet(MSX_KEYS.run, run);
   const before = await loadRhythmEventPoints();
   return saveStoredValuesOrRollback([{
@@ -171421,9 +171444,19 @@ const msxSaveRun = (run, noPay) => {
   return msxSaveChain;
 };
 const msxClearRun = () => {
-  msxSaveChain = msxSaveChain.then(() => storeSet(MSX_KEYS.run, null)).catch(() => false);
+  msxSaveChain = msxSaveChain.then(async () => {
+    try {
+      const cur = await storeGet(MSX_KEYS.run, null);
+      if (cur && typeof cur.id === 'string') {
+        const g = await msxRunGoneList();
+        if (!g.includes(cur.id)) await storeSet(MSX_RUN_GONE_KEY, [...g, cur.id].slice(-50));
+      }
+    } catch (_) {}
+    return storeSet(MSX_KEYS.run, null);
+  }).catch(() => false);
   return msxSaveChain;
 };
+const msxSaveWait = () => msxSaveChain.then(() => true, () => true);
 const msxSaveMeta = meta => storeSet(MSX_KEYS.meta, meta);
 const msxMon = id => typeof ALL_PLAYER_MONSTERS === 'object' && ALL_PLAYER_MONSTERS && ALL_PLAYER_MONSTERS[id] || null;
 const msxMonName = id => {
@@ -171878,7 +171911,7 @@ const msxStartPreview = (SUC, species, type, aptBase, startSt) => {
   } catch (e) {}
   return out;
 };
-const MSX_SKILL_ICONS = new Set(['images/success/skill/sk-0001.png', 'images/success/skill/sk-0002.png', 'images/success/skill/sk-0003.png', 'images/success/skill/sk-0004.png', 'images/success/skill/sk-0005.png', 'images/success/skill/sk-0008.png', 'images/success/skill/sk-0009.png', 'images/success/skill/sk-0010.png', 'images/success/skill/sk-0015.png', 'images/success/skill/sk-0016.png', 'images/success/skill/sk-0017.png', 'images/success/skill/sk-0018.png', 'images/success/skill/sk-0023.png', 'images/success/skill/sk-0025.png', 'images/success/skill/sk-0026.png', 'images/success/skill/sk-0027.png', 'images/success/skill/sk-0028.png', 'images/success/skill/sk-0035.png', 'images/success/skill/sk-0036.png', 'images/success/skill/sk-0037.png', 'images/success/skill/sk-0039.png', 'images/success/skill/sk-0040.png', 'images/success/skill/sk-0041.png', 'images/success/skill/sk-0042.png', 'images/success/skill/sk-0043.png', 'images/success/skill/sk-0044.png', 'images/success/skill/sk-0045.png', 'images/success/skill/sk-0046.png', 'images/success/skill/sk-0047.png', 'images/success/skill/sk-0048.png', 'images/success/skill/sk-0049.png', 'images/success/skill/sk-0050.png', 'images/success/skill/sk-0051.png', 'images/success/skill/sk-0052.png', 'images/success/skill/sk-0053.png', 'images/success/skill/sk-0054.png', 'images/success/skill/sk-0055.png', 'images/success/skill/sk-0064.png', 'images/success/skill/sk-0065.png', 'images/success/skill/sk-0066.png', 'images/success/skill/sk-0067.png', 'images/success/skill/sk-0068.png', 'images/success/skill/sk-0069.png', 'images/success/skill/sk-0070.png', 'images/success/skill/sk-0071.png', 'images/success/skill/sk-0072.png', 'images/success/skill/sk-0073.png', 'images/success/skill/sk-0074.png', 'images/success/skill/sk-0075.png', 'images/success/skill/sk-0076.png', 'images/success/skill/sk-0077.png', 'images/success/skill/sk-0078.png', 'images/success/skill/sk-0079.png', 'images/success/skill/sk-0080.png', 'images/success/skill/sk-0082.png', 'images/success/skill/sk-0083.png', 'images/success/skill/sk-0084.png', 'images/success/skill/sk-0110.png', 'images/success/skill/sk-0111.png', 'images/success/skill/sk-0112.png', 'images/success/skill/sk-0113.png', 'images/success/skill/sk-0114.png', 'images/success/skill/sk-0115.png', 'images/success/skill/sk-0116.png', 'images/success/skill/sk-0117.png', 'images/success/skill/sk-0118.png', 'images/success/skill/sk-0119.png', 'images/success/skill/sk-0120.png', 'images/success/skill/sk-0121.png', 'images/success/skill/sk-0122.png', 'images/success/skill/sk-0123.png', 'images/success/skill/sk-0124.png', 'images/success/skill/sk-0125.png', 'images/success/skill/sk-0129.png', 'images/success/skill/sk-0258.png', 'images/success/skill/sk-0259.png', 'images/success/skill/sk-0260.png', 'images/success/skill/sk-0261.png', 'images/success/skill/sk-0262.png', 'images/success/skill/sk-0263.png', 'images/success/skill/sk-0264.png', 'images/success/skill/sk-0265.png', 'images/success/skill/sk-0266.png', 'images/success/skill/sk-0267.png', 'images/success/skill/sk-0268.png', 'images/success/skill/sk-0269.png', 'images/success/skill/sk-0270.png', 'images/success/skill/sk-0271.png', 'images/success/skill/sk-0272.png', 'images/success/skill/sk-0273.png', 'images/success/skill/sk-0274.png', 'images/success/skill/sk-0292.png', 'images/success/skill/sk-0293.png', 'images/success/skill/sk-0294.png', 'images/success/skill/sk-0295.png', 'images/success/skill/sk-0296.png', 'images/success/skill/sk-0297.png', 'images/success/skill/sk-0298.png', 'images/success/skill/sk-0299.png', 'images/success/skill/sk-0300.png', 'images/success/skill/sk-0301.png', 'images/success/skill/sk-0302.png', 'images/success/skill/sk-0303.png', 'images/success/skill/sk-0304.png', 'images/success/skill/sk-0305.png', 'images/success/skill/sk-0306.png', 'images/success/skill/sk-0307.png', 'images/success/skill/sk-0338.png', 'images/success/skill/sk-0339.png', 'images/success/skill/sk-0340.png', 'images/success/skill/sk-0341.png', 'images/success/skill/sk-0342.png', 'images/success/skill/sk-0343.png', 'images/success/skill/sk-0344.png', 'images/success/skill/sk-0345.png', 'images/success/skill/sk-0346.png', 'images/success/skill/sk-0347.png', 'images/success/skill/sk-0348.png', 'images/success/skill/sk-0349.png', 'images/success/skill/sk-0350.png', 'images/success/skill/sk-0351.png', 'images/success/skill/sk-0384.png', 'images/success/skill/sk-0385.png', 'images/success/skill/sk-0386.png', 'images/success/skill/sk-0387.png', 'images/success/skill/sk-0388.png', 'images/success/skill/sk-0389.png', 'images/success/skill/sk-0390.png', 'images/success/skill/sk-0391.png', 'images/success/skill/sk-0392.png', 'images/success/skill/sk-0393.png', 'images/success/skill/sk-0394.png', 'images/success/skill/sk-0395.png', 'images/success/skill/sk-0396.png', 'images/success/skill/sk-0397.png', 'images/success/skill/sk-0398.png', 'images/success/skill/sk-0399.png', 'images/success/skill/sk-0400.png', 'images/success/skill/sk-0401.png', 'images/success/skill/sk-0402.png', 'images/success/skill/sk-0403.png', 'images/success/skill/sk-0404.png', 'images/success/skill/sk-0405.png', 'images/success/skill/sk-0406.png', 'images/success/skill/sk-0407.png', 'images/success/skill/sk-0408.png', 'images/success/skill/sk-0409.png', 'images/success/skill/sk-0410.png', 'images/success/skill/sk-0411.png', 'images/success/skill/sk-0412.png', 'images/success/skill/sk-0413.png', 'images/success/skill/sk-0414.png', 'images/success/skill/sk-0415.png', 'images/success/skill/sk-0416.png', 'images/success/skill/sk-0446.png', 'images/success/skill/sk-0447.png', 'images/success/skill/sk-0448.png', 'images/success/skill/sk-0449.png', 'images/success/skill/sk-0450.png', 'images/success/skill/sk-0451.png', 'images/success/skill/sk-0452.png', 'images/success/skill/sk-0453.png', 'images/success/skill/sk-0454.png', 'images/success/skill/sk-0455.png', 'images/success/skill/sk-0456.png', 'images/success/skill/sk-0457.png', 'images/success/skill/sk-0458.png', 'images/success/skill/sk-0459.png', 'images/success/skill/sk-0460.png', 'images/success/skill/sk-0461.png', 'images/success/skill/sk-0462.png', 'images/success/skill/sk-0463.png', 'images/success/skill/sk-0464.png', 'images/success/skill/sk-0465.png', 'images/success/skill/sk-0466.png', 'images/success/skill/sk-0467.png', 'images/success/skill/sk-0468.png', 'images/success/skill/sk-0469.png', 'images/success/skill/sk-0470.png', 'images/success/skill/sk-0471.png', 'images/success/skill/sk-0472.png', 'images/success/skill/sk-0473.png', 'images/success/skill/sk-0474.png', 'images/success/skill/sk-0475.png', 'images/success/skill/sk-0476.png', 'images/success/skill/sk-0477.png', 'images/success/skill/sk-0478.png', 'images/success/skill/sk-0479.png', 'images/success/skill/sk-0480.png', 'images/success/skill/sk-0481.png', 'images/success/skill/sk-0482.png', 'images/success/skill/sk-0483.png', 'images/success/skill/sk-0484.png', 'images/success/skill/sk-0485.png', 'images/success/skill/sk-0486.png', 'images/success/skill/sk-0487.png', 'images/success/skill/sk-0488.png', 'images/success/skill/sk-0489.png', 'images/success/skill/sk-0490.png', 'images/success/skill/sk-0491.png', 'images/success/skill/sk-0496.png', 'images/success/skill/sk-0511.png', 'images/success/skill/sk-0512.png', 'images/success/skill/sk-0513.png', 'images/success/skill/sk-0514.png', 'images/success/skill/sk-0515.png', 'images/success/skill/sk-0516.png', 'images/success/skill/sk-0517.png', 'images/success/skill/sk-0518.png', 'images/success/skill/sk-0519.png', 'images/success/skill/sk-0520.png', 'images/success/skill/sk-0521.png', 'images/success/skill/sk-0522.png', 'images/success/skill/sk-0523.png', 'images/success/skill/sk-0524.png', 'images/success/skill/sk-0525.png', 'images/success/skill/sk-0526.png', 'images/success/skill/sk-0573.png', 'images/success/skill/sk-0574.png', 'images/success/skill/sk-0575.png', 'images/success/skill/sk-0576.png', 'images/success/skill/sk-0577.png', 'images/success/skill/sk-0578.png', 'images/success/skill/sk-0579.png', 'images/success/skill/sk-0580.png', 'images/success/skill/sk-0581.png', 'images/success/skill/sk-0582.png', 'images/success/skill/sk-0583.png', 'images/success/skill/sk-0584.png', 'images/success/skill/sk-0585.png', 'images/success/skill/sk-0586.png', 'images/success/skill/sk-0587.png', 'images/success/skill/sk-0588.png', 'images/success/skill/sk-0589.png', 'images/success/skill/sk-0590.png', 'images/success/skill/sk-0591.png', 'images/success/skill/sk-0592.png', 'images/success/skill/sk-0593.png', 'images/success/skill/sk-0594.png', 'images/success/skill/sk-0595.png', 'images/success/skill/sk-0596.png', 'images/success/skill/sk-0597.png', 'images/success/skill/sk-0598.png', 'images/success/skill/sk-0599.png', 'images/success/skill/sk-0742.png', 'images/success/skill/sk-0743.png', 'images/success/skill/sk-0744.png', 'images/success/skill/sk-0785.png', 'images/success/skill/sk-0787.png', 'images/success/skill/sk-0788.png', 'images/success/skill/sk-0797.png', 'images/success/skill/sk-0798.png', 'images/success/skill/sk-0799.png', 'images/success/skill/sk-0824.png', 'images/success/skill/eiki_o01.png', 'images/success/skill/eiki_o02.png', 'images/success/skill/eiki_o03.png', 'images/success/skill/eiki_o04.png', 'images/success/skill/eiki_o05.png', 'images/success/skill/eiki_o06.png', 'images/success/skill/eiki_o07.png', 'images/success/skill/eiki_o08.png', 'images/success/skill/eiki_o09.png', 'images/success/skill/eiki_o10.png', 'images/success/skill/eiki_o11.png', 'images/success/skill/eiki_o12.png', 'images/success/skill/eiki_o13.png', 'images/success/skill/eiki_o14.png', 'images/success/skill/eiki_o15.png', 'images/success/skill/eiki_o16.png', 'images/success/skill/eiki_o17.png', 'images/success/skill/eiki_o18.png', 'images/success/skill/kenshimocchi_o01.png', 'images/success/skill/kenshimocchi_o02.png', 'images/success/skill/kenshimocchi_o03.png', 'images/success/skill/kenshimocchi_o04.png', 'images/success/skill/kenshimocchi_o05.png', 'images/success/skill/kenshimocchi_o06.png', 'images/success/skill/kenshimocchi_o07.png', 'images/success/skill/kenshimocchi_o08.png', 'images/success/skill/kenshimocchi_o09.png', 'images/success/skill/kenshimocchi_o10.png', 'images/success/skill/kenshimocchi_o11.png', 'images/success/skill/kenshimocchi_o12.png', 'images/success/skill/kenshimocchi_o13.png', 'images/success/skill/kenshimocchi_o14.png', 'images/success/skill/kenshimocchi_o15.png', 'images/success/skill/kenshimocchi_o16.png', 'images/success/skill/kenshimocchi_o17.png', 'images/success/skill/kenshimocchi_o18.png', 'images/success/skill/kuromy_o01.png', 'images/success/skill/kuromy_o02.png', 'images/success/skill/kuromy_o03.png', 'images/success/skill/kuromy_o04.png', 'images/success/skill/kuromy_o05.png', 'images/success/skill/kuromy_o06.png', 'images/success/skill/kuromy_o07.png', 'images/success/skill/kuromy_o08.png', 'images/success/skill/kuromy_o09.png', 'images/success/skill/kuromy_o10.png', 'images/success/skill/kuromy_o11.png', 'images/success/skill/kuromy_o12.png', 'images/success/skill/kuromy_o13.png', 'images/success/skill/kuromy_o14.png', 'images/success/skill/kuromy_o15.png', 'images/success/skill/kuromy_o16.png', 'images/success/skill/kuromy_o17.png', 'images/success/skill/kuromy_o18.png', 'images/success/skill/melody_o01.png', 'images/success/skill/melody_o02.png', 'images/success/skill/melody_o03.png', 'images/success/skill/melody_o04.png', 'images/success/skill/melody_o05.png', 'images/success/skill/melody_o06.png', 'images/success/skill/melody_o07.png', 'images/success/skill/melody_o08.png', 'images/success/skill/melody_o09.png', 'images/success/skill/melody_o10.png', 'images/success/skill/melody_o11.png', 'images/success/skill/melody_o12.png', 'images/success/skill/melody_o13.png', 'images/success/skill/melody_o14.png', 'images/success/skill/melody_o15.png', 'images/success/skill/melody_o16.png', 'images/success/skill/melody_o17.png', 'images/success/skill/melody_o18.png', 'images/success/skill/pandora_o01.png', 'images/success/skill/pandora_o02.png', 'images/success/skill/pandora_o03.png', 'images/success/skill/pandora_o04.png', 'images/success/skill/pandora_o05.png', 'images/success/skill/pandora_o06.png', 'images/success/skill/pandora_o07.png', 'images/success/skill/pandora_o08.png', 'images/success/skill/pandora_o09.png', 'images/success/skill/pandora_o10.png', 'images/success/skill/pandora_o11.png', 'images/success/skill/pandora_o12.png', 'images/success/skill/pandora_o13.png', 'images/success/skill/pandora_o14.png', 'images/success/skill/pandora_o15.png', 'images/success/skill/pandora_o16.png', 'images/success/skill/pandora_o17.png', 'images/success/skill/pandora_o18.png', 'images/success/skill/pandora_o19.png', 'images/success/skill/pandora_o20.png', 'images/success/skill/pandora_o21.png', 'images/success/skill/pandora_o22.png', 'images/success/skill/pandora_o23.png', 'images/success/skill/pandora_o24.png', 'images/success/skill/pandora_o25.png', 'images/success/skill/pandora_o26.png']);
+const MSX_SKILL_ICONS = new Set(['images/success/skill/sk-0001.png', 'images/success/skill/sk-0002.png', 'images/success/skill/sk-0003.png', 'images/success/skill/sk-0004.png', 'images/success/skill/sk-0005.png', 'images/success/skill/sk-0008.png', 'images/success/skill/sk-0009.png', 'images/success/skill/sk-0010.png', 'images/success/skill/sk-0015.png', 'images/success/skill/sk-0016.png', 'images/success/skill/sk-0017.png', 'images/success/skill/sk-0018.png', 'images/success/skill/sk-0023.png', 'images/success/skill/sk-0025.png', 'images/success/skill/sk-0026.png', 'images/success/skill/sk-0027.png', 'images/success/skill/sk-0028.png', 'images/success/skill/sk-0035.png', 'images/success/skill/sk-0036.png', 'images/success/skill/sk-0037.png', 'images/success/skill/sk-0039.png', 'images/success/skill/sk-0040.png', 'images/success/skill/sk-0041.png', 'images/success/skill/sk-0042.png', 'images/success/skill/sk-0043.png', 'images/success/skill/sk-0044.png', 'images/success/skill/sk-0045.png', 'images/success/skill/sk-0046.png', 'images/success/skill/sk-0047.png', 'images/success/skill/sk-0048.png', 'images/success/skill/sk-0049.png', 'images/success/skill/sk-0050.png', 'images/success/skill/sk-0051.png', 'images/success/skill/sk-0052.png', 'images/success/skill/sk-0053.png', 'images/success/skill/sk-0054.png', 'images/success/skill/sk-0055.png', 'images/success/skill/sk-0064.png', 'images/success/skill/sk-0065.png', 'images/success/skill/sk-0066.png', 'images/success/skill/sk-0067.png', 'images/success/skill/sk-0068.png', 'images/success/skill/sk-0069.png', 'images/success/skill/sk-0070.png', 'images/success/skill/sk-0071.png', 'images/success/skill/sk-0072.png', 'images/success/skill/sk-0073.png', 'images/success/skill/sk-0074.png', 'images/success/skill/sk-0075.png', 'images/success/skill/sk-0076.png', 'images/success/skill/sk-0077.png', 'images/success/skill/sk-0078.png', 'images/success/skill/sk-0079.png', 'images/success/skill/sk-0080.png', 'images/success/skill/sk-0082.png', 'images/success/skill/sk-0083.png', 'images/success/skill/sk-0084.png', 'images/success/skill/sk-0110.png', 'images/success/skill/sk-0111.png', 'images/success/skill/sk-0112.png', 'images/success/skill/sk-0113.png', 'images/success/skill/sk-0114.png', 'images/success/skill/sk-0115.png', 'images/success/skill/sk-0116.png', 'images/success/skill/sk-0117.png', 'images/success/skill/sk-0118.png', 'images/success/skill/sk-0119.png', 'images/success/skill/sk-0120.png', 'images/success/skill/sk-0121.png', 'images/success/skill/sk-0122.png', 'images/success/skill/sk-0123.png', 'images/success/skill/sk-0124.png', 'images/success/skill/sk-0125.png', 'images/success/skill/sk-0129.png', 'images/success/skill/sk-0258.png', 'images/success/skill/sk-0259.png', 'images/success/skill/sk-0260.png', 'images/success/skill/sk-0261.png', 'images/success/skill/sk-0262.png', 'images/success/skill/sk-0263.png', 'images/success/skill/sk-0264.png', 'images/success/skill/sk-0265.png', 'images/success/skill/sk-0266.png', 'images/success/skill/sk-0267.png', 'images/success/skill/sk-0268.png', 'images/success/skill/sk-0269.png', 'images/success/skill/sk-0270.png', 'images/success/skill/sk-0271.png', 'images/success/skill/sk-0272.png', 'images/success/skill/sk-0273.png', 'images/success/skill/sk-0274.png', 'images/success/skill/sk-0292.png', 'images/success/skill/sk-0293.png', 'images/success/skill/sk-0294.png', 'images/success/skill/sk-0295.png', 'images/success/skill/sk-0296.png', 'images/success/skill/sk-0297.png', 'images/success/skill/sk-0298.png', 'images/success/skill/sk-0299.png', 'images/success/skill/sk-0300.png', 'images/success/skill/sk-0301.png', 'images/success/skill/sk-0302.png', 'images/success/skill/sk-0303.png', 'images/success/skill/sk-0304.png', 'images/success/skill/sk-0305.png', 'images/success/skill/sk-0306.png', 'images/success/skill/sk-0307.png', 'images/success/skill/sk-0338.png', 'images/success/skill/sk-0339.png', 'images/success/skill/sk-0340.png', 'images/success/skill/sk-0341.png', 'images/success/skill/sk-0342.png', 'images/success/skill/sk-0343.png', 'images/success/skill/sk-0344.png', 'images/success/skill/sk-0345.png', 'images/success/skill/sk-0346.png', 'images/success/skill/sk-0347.png', 'images/success/skill/sk-0348.png', 'images/success/skill/sk-0349.png', 'images/success/skill/sk-0350.png', 'images/success/skill/sk-0351.png', 'images/success/skill/sk-0384.png', 'images/success/skill/sk-0385.png', 'images/success/skill/sk-0386.png', 'images/success/skill/sk-0387.png', 'images/success/skill/sk-0388.png', 'images/success/skill/sk-0389.png', 'images/success/skill/sk-0390.png', 'images/success/skill/sk-0391.png', 'images/success/skill/sk-0392.png', 'images/success/skill/sk-0393.png', 'images/success/skill/sk-0394.png', 'images/success/skill/sk-0395.png', 'images/success/skill/sk-0396.png', 'images/success/skill/sk-0397.png', 'images/success/skill/sk-0398.png', 'images/success/skill/sk-0399.png', 'images/success/skill/sk-0400.png', 'images/success/skill/sk-0401.png', 'images/success/skill/sk-0402.png', 'images/success/skill/sk-0403.png', 'images/success/skill/sk-0404.png', 'images/success/skill/sk-0405.png', 'images/success/skill/sk-0406.png', 'images/success/skill/sk-0407.png', 'images/success/skill/sk-0408.png', 'images/success/skill/sk-0409.png', 'images/success/skill/sk-0410.png', 'images/success/skill/sk-0411.png', 'images/success/skill/sk-0412.png', 'images/success/skill/sk-0413.png', 'images/success/skill/sk-0414.png', 'images/success/skill/sk-0415.png', 'images/success/skill/sk-0416.png', 'images/success/skill/sk-0446.png', 'images/success/skill/sk-0447.png', 'images/success/skill/sk-0448.png', 'images/success/skill/sk-0449.png', 'images/success/skill/sk-0450.png', 'images/success/skill/sk-0451.png', 'images/success/skill/sk-0452.png', 'images/success/skill/sk-0453.png', 'images/success/skill/sk-0454.png', 'images/success/skill/sk-0455.png', 'images/success/skill/sk-0456.png', 'images/success/skill/sk-0457.png', 'images/success/skill/sk-0458.png', 'images/success/skill/sk-0459.png', 'images/success/skill/sk-0460.png', 'images/success/skill/sk-0461.png', 'images/success/skill/sk-0462.png', 'images/success/skill/sk-0463.png', 'images/success/skill/sk-0464.png', 'images/success/skill/sk-0465.png', 'images/success/skill/sk-0466.png', 'images/success/skill/sk-0467.png', 'images/success/skill/sk-0468.png', 'images/success/skill/sk-0469.png', 'images/success/skill/sk-0470.png', 'images/success/skill/sk-0471.png', 'images/success/skill/sk-0472.png', 'images/success/skill/sk-0473.png', 'images/success/skill/sk-0474.png', 'images/success/skill/sk-0475.png', 'images/success/skill/sk-0476.png', 'images/success/skill/sk-0477.png', 'images/success/skill/sk-0478.png', 'images/success/skill/sk-0479.png', 'images/success/skill/sk-0480.png', 'images/success/skill/sk-0481.png', 'images/success/skill/sk-0482.png', 'images/success/skill/sk-0483.png', 'images/success/skill/sk-0484.png', 'images/success/skill/sk-0485.png', 'images/success/skill/sk-0486.png', 'images/success/skill/sk-0487.png', 'images/success/skill/sk-0488.png', 'images/success/skill/sk-0489.png', 'images/success/skill/sk-0490.png', 'images/success/skill/sk-0491.png', 'images/success/skill/sk-0496.png', 'images/success/skill/sk-0511.png', 'images/success/skill/sk-0512.png', 'images/success/skill/sk-0513.png', 'images/success/skill/sk-0514.png', 'images/success/skill/sk-0515.png', 'images/success/skill/sk-0516.png', 'images/success/skill/sk-0517.png', 'images/success/skill/sk-0518.png', 'images/success/skill/sk-0519.png', 'images/success/skill/sk-0520.png', 'images/success/skill/sk-0521.png', 'images/success/skill/sk-0522.png', 'images/success/skill/sk-0523.png', 'images/success/skill/sk-0524.png', 'images/success/skill/sk-0525.png', 'images/success/skill/sk-0526.png', 'images/success/skill/sk-0573.png', 'images/success/skill/sk-0574.png', 'images/success/skill/sk-0575.png', 'images/success/skill/sk-0576.png', 'images/success/skill/sk-0577.png', 'images/success/skill/sk-0578.png', 'images/success/skill/sk-0579.png', 'images/success/skill/sk-0580.png', 'images/success/skill/sk-0581.png', 'images/success/skill/sk-0582.png', 'images/success/skill/sk-0583.png', 'images/success/skill/sk-0584.png', 'images/success/skill/sk-0585.png', 'images/success/skill/sk-0586.png', 'images/success/skill/sk-0587.png', 'images/success/skill/sk-0588.png', 'images/success/skill/sk-0589.png', 'images/success/skill/sk-0590.png', 'images/success/skill/sk-0591.png', 'images/success/skill/sk-0592.png', 'images/success/skill/sk-0593.png', 'images/success/skill/sk-0594.png', 'images/success/skill/sk-0595.png', 'images/success/skill/sk-0596.png', 'images/success/skill/sk-0597.png', 'images/success/skill/sk-0598.png', 'images/success/skill/sk-0599.png', 'images/success/skill/sk-0742.png', 'images/success/skill/sk-0743.png', 'images/success/skill/sk-0744.png', 'images/success/skill/sk-0785.png', 'images/success/skill/sk-0787.png', 'images/success/skill/sk-0788.png', 'images/success/skill/sk-0797.png', 'images/success/skill/sk-0798.png', 'images/success/skill/sk-0799.png', 'images/success/skill/sk-0824.png', 'images/success/skill/eiki_o01.png', 'images/success/skill/eiki_o02.png', 'images/success/skill/eiki_o03.png', 'images/success/skill/eiki_o04.png', 'images/success/skill/eiki_o05.png', 'images/success/skill/eiki_o06.png', 'images/success/skill/eiki_o07.png', 'images/success/skill/eiki_o08.png', 'images/success/skill/eiki_o09.png', 'images/success/skill/eiki_o10.png', 'images/success/skill/eiki_o11.png', 'images/success/skill/eiki_o12.png', 'images/success/skill/eiki_o13.png', 'images/success/skill/eiki_o14.png', 'images/success/skill/eiki_o15.png', 'images/success/skill/eiki_o16.png', 'images/success/skill/eiki_o17.png', 'images/success/skill/eiki_o18.png', 'images/success/skill/kenshimocchi_o01.png', 'images/success/skill/kenshimocchi_o02.png', 'images/success/skill/kenshimocchi_o03.png', 'images/success/skill/kenshimocchi_o04.png', 'images/success/skill/kenshimocchi_o05.png', 'images/success/skill/kenshimocchi_o06.png', 'images/success/skill/kenshimocchi_o07.png', 'images/success/skill/kenshimocchi_o08.png', 'images/success/skill/kenshimocchi_o09.png', 'images/success/skill/kenshimocchi_o10.png', 'images/success/skill/kenshimocchi_o11.png', 'images/success/skill/kenshimocchi_o12.png', 'images/success/skill/kenshimocchi_o13.png', 'images/success/skill/kenshimocchi_o14.png', 'images/success/skill/kenshimocchi_o15.png', 'images/success/skill/kenshimocchi_o16.png', 'images/success/skill/kenshimocchi_o17.png', 'images/success/skill/kenshimocchi_o18.png', 'images/success/skill/kuromy_o01.png', 'images/success/skill/kuromy_o02.png', 'images/success/skill/kuromy_o03.png', 'images/success/skill/kuromy_o04.png', 'images/success/skill/kuromy_o05.png', 'images/success/skill/kuromy_o06.png', 'images/success/skill/kuromy_o07.png', 'images/success/skill/kuromy_o08.png', 'images/success/skill/kuromy_o09.png', 'images/success/skill/kuromy_o10.png', 'images/success/skill/kuromy_o11.png', 'images/success/skill/kuromy_o12.png', 'images/success/skill/kuromy_o13.png', 'images/success/skill/kuromy_o14.png', 'images/success/skill/kuromy_o15.png', 'images/success/skill/kuromy_o16.png', 'images/success/skill/kuromy_o17.png', 'images/success/skill/kuromy_o18.png', 'images/success/skill/kuromy_o19.png', 'images/success/skill/kuromy_o20.png', 'images/success/skill/melody_o01.png', 'images/success/skill/melody_o02.png', 'images/success/skill/melody_o03.png', 'images/success/skill/melody_o04.png', 'images/success/skill/melody_o05.png', 'images/success/skill/melody_o06.png', 'images/success/skill/melody_o07.png', 'images/success/skill/melody_o08.png', 'images/success/skill/melody_o09.png', 'images/success/skill/melody_o10.png', 'images/success/skill/melody_o11.png', 'images/success/skill/melody_o12.png', 'images/success/skill/melody_o13.png', 'images/success/skill/melody_o14.png', 'images/success/skill/melody_o15.png', 'images/success/skill/melody_o16.png', 'images/success/skill/melody_o17.png', 'images/success/skill/melody_o18.png', 'images/success/skill/melody_o19.png', 'images/success/skill/melody_o20.png', 'images/success/skill/pandora_o01.png', 'images/success/skill/pandora_o02.png', 'images/success/skill/pandora_o03.png', 'images/success/skill/pandora_o04.png', 'images/success/skill/pandora_o05.png', 'images/success/skill/pandora_o06.png', 'images/success/skill/pandora_o07.png', 'images/success/skill/pandora_o08.png', 'images/success/skill/pandora_o09.png', 'images/success/skill/pandora_o10.png', 'images/success/skill/pandora_o11.png', 'images/success/skill/pandora_o12.png', 'images/success/skill/pandora_o13.png', 'images/success/skill/pandora_o14.png', 'images/success/skill/pandora_o15.png', 'images/success/skill/pandora_o16.png', 'images/success/skill/pandora_o17.png', 'images/success/skill/pandora_o18.png', 'images/success/skill/pandora_o19.png', 'images/success/skill/pandora_o20.png', 'images/success/skill/pandora_o21.png', 'images/success/skill/pandora_o22.png', 'images/success/skill/pandora_o23.png', 'images/success/skill/pandora_o24.png', 'images/success/skill/pandora_o25.png', 'images/success/skill/pandora_o26.png']);
 const MSX_TG_RANK_COL = Object.freeze({
   1: ['#e9a46a', '#a95f27'],
   2: ['#f4f7fb', '#aab4c2'],
@@ -175148,7 +175181,7 @@ function MonheroSuccessScreen({
     msxSaveMeta(meta);
   };
   const toHome = () => {
-    msxReadAll(msxSuc.SUC).then(d => {
+    (typeof msxSaveWait === 'function' ? msxSaveWait() : Promise.resolve()).then(() => msxReadAll(msxSuc.SUC)).then(d => {
       setData(d);
       setRunState(d.run);
     }).catch(() => {});
@@ -178649,60 +178682,85 @@ const msxBest3Add = (list, e) => msxBest3Norm([...msxBest3Norm(list).filter(x =>
 const msxR3Retire = async (run, s, ev, assists, debug) => {
   const box = await msxR3ReadBox();
   let meta = await msxR3ReadMeta();
-  if (box.mons.some(m => m.id === run.id)) return {
-    ok: true,
-    already: true,
-    box,
-    meta
-  };
+  const inBox = box.mons.some(m => m.id === run.id);
+  const ids0 = Array.isArray(meta.retiredIds) ? meta.retiredIds.filter(x => typeof x === 'string') : null;
+  const metaDone = ids0 ? ids0.includes(run.id) : inBox;
   const fromId = run.from && typeof run.from.box === 'string' ? run.from.box : null;
-  const parent = fromId ? box.mons.find(m => m.id === fromId && m.raised === false) : null;
+  const parent = !inBox && fromId ? box.mons.find(m => m.id === fromId && m.raised === false) : null;
   const rest = parent ? box.mons.filter(m => m !== parent) : box.mons;
-  if (rest.length >= box.cap) return {
+  if (!inBox && rest.length >= box.cap) return {
     ok: false,
     full: true,
     box,
     meta
   };
-  const mon = msxR3BoxMonOf(run, s, ev, assists, parent);
-  meta = msxR3AddWon(meta, s);
-  meta.retired += 1;
-  const best = msxR3Obj(meta.best[s.species]) ? meta.best[s.species] : null;
-  if (!best || !(best.power >= ev.power)) meta.best = {
-    ...meta.best,
-    [s.species]: {
+  let best3 = null;
+  if (!metaDone) {
+    meta = msxR3AddWon(meta, s);
+    meta.retired += 1;
+    const best = msxR3Obj(meta.best[s.species]) ? meta.best[s.species] : null;
+    if (!best || !(best.power >= ev.power)) meta.best = {
+      ...meta.best,
+      [s.species]: {
+        power: ev.power,
+        rank: ev.rank,
+        id: run.id
+      }
+    };
+    const best3Prev = msxBest3Norm(meta.best3);
+    meta.best3 = msxBest3Add(best3Prev, {
+      id: run.id,
       power: ev.power,
       rank: ev.rank,
-      id: run.id
-    }
+      species: s.species,
+      nick: run.nick || '',
+      at: Date.now()
+    });
+    best3 = {
+      prev: best3Prev,
+      next: meta.best3,
+      place: meta.best3.findIndex(e => e.id === run.id),
+      power: ev.power
+    };
+    meta.titles = Array.from(new Set([...(meta.titles || []), ...(Array.isArray(s.titles) ? s.titles : [])])).slice(0, 200);
+    const seed = ids0 || box.mons.filter(m => m.raised !== false && typeof m.id === 'string').map(m => m.id);
+    meta.retiredIds = Array.from(new Set([...seed, run.id])).slice(-300);
+    if ((await storeSet(MSX_KEYS.meta, meta)) === false) return {
+      ok: false,
+      why: 'save',
+      box,
+      meta
+    };
+  }
+  let next = box;
+  let mon = inBox ? box.mons.find(m => m.id === run.id) : null;
+  if (!inBox) {
+    mon = msxR3BoxMonOf(run, s, ev, assists, parent);
+    next = {
+      ...box,
+      cap: Math.max(box.cap, msxR3BoxCap(meta.retired)),
+      mons: [...rest, mon]
+    };
+    if ((await storeSet(MSX_KEYS.box, next)) === false) return {
+      ok: false,
+      why: 'save',
+      box,
+      meta
+    };
+  }
+  const rec = await msxR3AddRecord(run, s, ev, mon.titles, mon.gen);
+  if (rec === 'fail') return {
+    ok: false,
+    why: 'save',
+    box: next,
+    meta
   };
-  const best3Prev = msxBest3Norm(meta.best3);
-  meta.best3 = msxBest3Add(best3Prev, {
-    id: run.id,
-    power: ev.power,
-    rank: ev.rank,
-    species: s.species,
-    nick: run.nick || '',
-    at: Date.now()
-  });
-  const best3 = {
-    prev: best3Prev,
-    next: meta.best3,
-    place: meta.best3.findIndex(e => e.id === run.id),
-    power: ev.power
-  };
-  meta.titles = Array.from(new Set([...(meta.titles || []), ...(Array.isArray(s.titles) ? s.titles : [])])).slice(0, 200);
-  const next = {
-    ...box,
-    cap: Math.max(box.cap, msxR3BoxCap(meta.retired)),
-    mons: [...rest, mon]
-  };
-  await storeSet(MSX_KEYS.box, next);
-  await storeSet(MSX_KEYS.meta, meta);
-  await msxR3AddRecord(run, s, ev, mon.titles, mon.gen);
-  msxR3RankSend(run, s, ev, debug);
+  if (!inBox || !metaDone || rec === true) msxR3RankSend(run, s, ev, debug);
   return {
     ok: true,
+    ...(inBox && metaDone ? {
+      already: true
+    } : {}),
     box: next,
     meta,
     mon,
@@ -178850,7 +178908,7 @@ const msxR3AddRecord = async (run, s, ev, titles, gen) => {
       endAt: Date.now(),
       gen
     });
-    if (r.added) await storeSet(R.KEY, r.book);
+    if (r.added && (await storeSet(R.KEY, r.book)) === false) return 'fail';
     return r.added;
   } catch (e) {
     return false;
@@ -181425,6 +181483,7 @@ function MsxR3Shugyo({
     }), React.createElement(MsxMonArt, {
       run: run,
       className: "mon",
+      noPeak: true,
       style: {
         bottom: '16%',
         height: '44%',
@@ -181692,7 +181751,12 @@ function MsxR3Shugyo({
       }, Math.round(rateOf[t.id] * 100), "%") : React.createElement("span", {
         className: "g qb",
         "aria-hidden": "true"
-      }, "🔒"));
+      }, "🔒"), alts.length > 1 ? React.createElement("span", {
+        className: "tg-alt",
+        "aria-hidden": "true",
+        "data-msx-alt": cellK,
+        "data-msx-alt-n": alts.length
+      }, "⇄", alts.length) : null);
     }
   }) : React.createElement("div", {
     className: "q-note msx-kp"
@@ -254173,7 +254237,7 @@ function MonsterHeroGame() {
         className: `shrink-0 rounded-full px-2 py-0.5 text-[10px] font-black ${draftAutoSettings.quickRun?.autoStart === true ? 'bg-fuchsia-500 text-white' : 'bg-slate-700 text-slate-300'}`
       }, draftAutoSettings.quickRun?.autoStart === true ? 'ON' : 'OFF')), React.createElement("p", {
         className: "mt-1 text-[10px] leading-relaxed text-slate-400"
-      }, "ONにすると、HOMEなどからモンヒロビートや助手ライフを開いたときに、この編成でクイックの∞周回が裏で始まります。すでに周回しているとき・ほかのモードのバトルが続いているときは何もしません。曲選びの上の帯や、助手ライフの周回の札から、いつでも止められます。")), React.createElement("div", {
+      }, "ONにすると、HOMEなどからモンヒロビートや助手ライフを開いたときに、この編成でクイックの∞周回が裏で始まります。すでに周回しているとき・ほかのモードのバトルが続いているときは何もしません。曲選びの上の帯や、助手ライフの周回のボタンから、いつでも止められます。")), React.createElement("div", {
         className: "pt-1"
       }, React.createElement(AssistantBubble, {
         scene: "autoQuickRunSettings",

@@ -147,7 +147,7 @@ const msxNormRun = (raw, SUC) => {
     from: msxIsObj(raw.from) && typeof raw.from.box === 'string' ? { box: raw.from.box.slice(0, 64) } : { base: msxStr(raw.from && raw.from.base, 24, s.species) },
     items: Array.isArray(raw.items) ? raw.items.filter((x) => typeof x === 'string').slice(0, 2) : [],
     used: msxNum(raw.used, 0), // 持ち物を使ったターン(1ターン1個まで)
-    phase: ['main', 'result', 'react', 'issa', 'battle', 'turn', 'over', 'event', 'story', 'awake', 'tevent', 'birth'].includes(raw.phase) ? raw.phase : 'main',
+    phase: ['main', 'result', 'react', 'issa', 'battle', 'turn', 'over', 'event', 'story', 'awake', 'tevent', 'birth', 'begin', 'intro'].includes(raw.phase) ? raw.phase : 'main', // begin・intro(育成の始まりの場面)も戻す(r1115-171 c: 再読み込みで導入と初回の処理が飛ばない)
     out: msxIsObj(raw.out) ? raw.out : null, // 直前の結果(中断して戻ったときに結果の画面から続ける)
     log: Array.isArray(raw.log) ? raw.log.filter(msxIsObj).slice(-20) : [],
     startAt: msxNum(raw.startAt, 0),
@@ -319,16 +319,32 @@ const msxBeatMark = (run) => {
   return Math.floor(e) > (Number.isFinite(sent) ? Math.floor(sent) : 0) ? { ...run, beatSent: Math.floor(e) } : run;
 };
 let msxSaveChain = Promise.resolve();
+// 終わった育成(やめた・引退・ゲームオーバー)の id(r1115-171 b・新しいキー・足すだけ)。消したあとの古い画面からの保存で育成を書き戻さないために、新しい50件だけ持つ
+const MSX_RUN_GONE_KEY = 'mh_monsuc_run_gone_v1';
+const msxRunGoneList = async () => { try { const v = await storeGet(MSX_RUN_GONE_KEY, null); return Array.isArray(v) ? v.filter((x) => typeof x === 'string').slice(-50) : []; } catch (_) { return []; } };
+const msxRunTurn = (r) => { const t = Number(r && r.s && r.s.turn); return Number.isFinite(t) ? t : 0; };
+const msxRunSent = (r) => (Number.isFinite(Number(r && r.beatSent)) ? Math.max(0, Math.floor(Number(r.beatSent))) : 0);
+// 保存してある途中の育成より古い保存か(r1115-171 b)。古い画面・別のタブ・保存の順の逆転から来た保存は書かない(払いもしない)
+//   別の育成: 保存の方があとに始めた育成なら古い / 保存が無い: 終わった育成の id なら古い / 同じ育成: ターンが前・渡した量が少ない・終わりの分を足す前なら古い
+const msxRunIsStale = async (run, stored) => {
+  if (!run || typeof run.id !== 'string') return true;
+  if (!stored || typeof stored !== 'object') return (await msxRunGoneList()).includes(run.id);
+  if (stored.id !== run.id) return Number(run.startAt || 0) <= Number(stored.startAt || 0) || (await msxRunGoneList()).includes(run.id);
+  if (msxRunTurn(run) < msxRunTurn(stored)) return true;
+  if (msxRunSent(run) < msxRunSent(stored)) return true;
+  if (stored.beatEnd === true && run.beatEnd !== true) return true;
+  return false;
+};
 const msxSaveRunNow = async (run, noPay) => {
-  const ov = msxRunOverOf(run); if (ov) { try { await storeSet(MSX_RUN_OVER_KEY, ov); } catch (_) {} } // 上限アップの控え(上限のある育成だけ)
-  const sent = Number.isFinite(Number(run && run.beatSent)) ? Math.max(0, Math.floor(Number(run.beatSent))) : 0;
-  if (noPay || !sent || typeof saveStoredValuesOrRollback !== 'function' || typeof loadRhythmEventPoints !== 'function' || typeof RHYTHM_EVENT_POINTS_KEY === 'undefined') return storeSet(MSX_KEYS.run, run);
   const stored = await storeGet(MSX_KEYS.run, null);
+  if (await msxRunIsStale(run, stored)) return false;
+  const ov = msxRunOverOf(run); if (ov) { try { await storeSet(MSX_RUN_OVER_KEY, ov); } catch (_) {} } // 上限アップの控え(上限のある育成だけ)
+  const sent = msxRunSent(run);
+  if (noPay || !sent || typeof saveStoredValuesOrRollback !== 'function' || typeof loadRhythmEventPoints !== 'function' || typeof RHYTHM_EVENT_POINTS_KEY === 'undefined') return storeSet(MSX_KEYS.run, run);
   // 渡した量があるのに、保存済みの途中の育成が無い/別の育成(2026-11-14 ミハリ8): ほかのタブで引退・やめたあとの古い画面からの保存。
   //   払わず、書きもしない(全額をもう一度足したり、消した育成を書き戻したりしない)。正しい流れでは育成を始めたときに beatSent 0 で保存済み
-  if (!stored || !run || stored.id !== run.id) return false;
-  const storedSent = Number.isFinite(Number(stored.beatSent)) ? Math.max(0, Math.floor(Number(stored.beatSent))) : 0;
-  const add = sent - storedSent;
+  if (!stored || stored.id !== run.id) return false;
+  const add = sent - msxRunSent(stored); // 上の確かめで 0 以上(保存より少ない量で書き戻さない → 次の保存で払い直さない)
   if (add <= 0) return storeSet(MSX_KEYS.run, run);
   const before = await loadRhythmEventPoints();
   return saveStoredValuesOrRollback([
@@ -340,7 +356,16 @@ const msxSaveRunNow = async (run, noPay) => {
 // noPay … デバッグの入口からの育成(2026-11-14 窓口: 社長の本当の財布がテストで増えないように)。渡した量の印だけ進め、財布には足さない
 const msxSaveRun = (run, noPay) => { msxSaveChain = msxSaveChain.then(() => msxSaveRunNow(run, noPay)).catch(() => false); return msxSaveChain; };
 // 途中の育成を消す(やめる・引退)も同じ順に並べる(先に頼んだ保存が、消したあとに書き戻さないように)
-const msxClearRun = () => { msxSaveChain = msxSaveChain.then(() => storeSet(MSX_KEYS.run, null)).catch(() => false); return msxSaveChain; };
+//   消す前に、その育成の id を「終わった育成」へ足す(r1115-171 b)。書けなくても消すのは止めない(今までどおり)
+const msxClearRun = () => {
+  msxSaveChain = msxSaveChain.then(async () => {
+    try { const cur = await storeGet(MSX_KEYS.run, null); if (cur && typeof cur.id === 'string') { const g = await msxRunGoneList(); if (!g.includes(cur.id)) await storeSet(MSX_RUN_GONE_KEY, [...g, cur.id].slice(-50)); } } catch (_) {}
+    return storeSet(MSX_KEYS.run, null);
+  }).catch(() => false);
+  return msxSaveChain;
+};
+// 並べた保存がぜんぶ終わるのを待つ(中断してホームで読み直す前に。r1115-171 c: 保存中の5ターン目より先に4ターン目を読まない)
+const msxSaveWait = () => msxSaveChain.then(() => true, () => true);
 const msxSaveMeta = (meta) => storeSet(MSX_KEYS.meta, meta);
 
 // ---- 表示に使う小物 ----

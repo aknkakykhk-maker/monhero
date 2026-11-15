@@ -506,7 +506,7 @@
     });
     // 協会会長賞・モンヒロ新聞杯(参考: ミドル期4月後半の春・プロ期11月前半の秋。固有の団体名を外した名前)
     [['middle', 8, '春'], ['pro', 10, '秋']].forEach(([p, m, ja]) => ['協会会長賞', 'モンヒロ新聞杯'].forEach((nm, i) => {
-      L.push({ sys: `pres_${p}${m}_${i}`, name: `${nm}(${ja})`, p, m, star: CUP_STAR[p], str: STAR_MULT[CUP_STAR[p]], prize: p === 'pro' ? 10500 : 6500, tk: p === 'pro' ? 600 : 250, grade: 'gold', rw: { all: p === 'pro' ? 3 : 2, pts: p === 'pro' ? 15 : 10, pop: p === 'pro' ? 8 : 6, loy: 3 } });
+      L.push({ sys: `pres_${p}${m}_${i}`, name: `${nm}(${ja})`, p, m, star: CUP_STAR[p], str: STAR_MULT[CUP_STAR[p]], prize: p === 'pro' ? 10500 : 6500, tk: p === 'pro' ? 600 : 250, grade: 'gold', rw: { all: p === 'pro' ? 3 : 2, pts: p === 'pro' ? 15 : 10, ...(i === 0 ? { pop: p === 'pro' ? 6 : 4, loy: 5 } : { pop: p === 'pro' ? 11 : 9 }) } }); // 同じ月・同じ格・同じ賞金の2つは、ごほうびの中身を変える(価値は同じ: 人気+忠誠度の合計 春 9・秋 11)。協会会長賞=忠誠度寄り・モンヒロ新聞杯=人気寄り(r1113-040)
     }));
     return L.map(Object.freeze);
   })());
