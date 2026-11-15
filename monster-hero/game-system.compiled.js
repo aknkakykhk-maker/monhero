@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a7770fce0aec9107
+// source-sha256: 8659e74eac97ee19
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -169445,10 +169445,10 @@ const MSX_CSS = `
 .msx .msx-tp-tm .fc{position:relative}.msx .msx-tp-tm .fc .fr{position:absolute;right:1px;bottom:0;font-size:12px;line-height:1}
 .msx .msx-tp-chips{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;padding:6px 8px 2px}
 .msx .msx-tp .msx-tp-chips button{min-width:0;padding:0 2px;font-size:11.5px;overflow:hidden}
-.msx .msx-tp-tabs{display:flex;gap:5px;padding:6px 8px 2px}
-.msx .msx-tp .msx-tp-tabs button{flex:1 1 0;min-width:0;overflow-wrap:anywhere;font-size:11.5px;padding:2px 4px;white-space:normal;line-height:1.15;flex-direction:column;gap:0;border-radius:12px}
+.msx .msx-tp-tabs{display:flex;flex-wrap:wrap;gap:5px;padding:6px 8px 2px}
+.msx .msx-tp .msx-tp-tabs button{flex:1 1 auto;min-width:0;font-size:11.5px;padding:2px 8px;white-space:nowrap;line-height:1.15;flex-direction:column;gap:0;border-radius:12px}
 .msx .msx-tp-tabs button,.msx .msx-tp-chips button{flex:none;display:flex;align-items:center;justify-content:center;gap:4px;min-height:44px;padding:0 12px;border-radius:99px;font-size:12px;font-weight:900;color:#fff;background:#2b3348;white-space:nowrap}
-.msx .msx-tp-tabs button small{font-size:10px;color:#cbd5e1}
+.msx .msx-tp-tabs button small{font-size:10px;color:#cbd5e1}.msx .msx-tp-tabs button.fr{background:#0c4a6e;color:#e0f2fe}
 .msx .msx-tp-tabs button.on,.msx .msx-tp-chips button.on{background:#fde047;color:#422006}.msx .msx-tp-tabs button.on small{color:#713f12}
 .msx .msx-tp-bar{display:flex;align-items:center;gap:6px;padding:4px 8px}
 .msx .msx-tp-sel{display:flex;align-items:center;gap:4px;font-size:10.5px;color:#cbd5e1}
@@ -170988,7 +170988,7 @@ function MsxSlotPicker({
       return '';
     }
   };
-  const boxFull = (Number.isFinite(teamRaisedN) ? teamRaisedN : teamBox.length) >= 5 && !(cur && (cur.box || cur.assist));
+  const boxFull = false;
   return React.createElement("div", {
     className: "msx-ov msx-fade",
     "data-msx-slot-picker": true,
@@ -171026,7 +171026,7 @@ function MsxSlotPicker({
     style: {
       marginTop: 8
     }
-  }, "マスモンボックスのモンスター(5体まで)"), raised.length ? raised.map(m => {
+  }, "マスモンボックスのモンスター"), raised.length ? raised.map(m => {
     const on = cur && cur.box === m.id;
     const used = !on && teamBox.includes(m.id);
     return React.createElement("button", {
@@ -171186,16 +171186,16 @@ function MsxStart({
   const species = pick.box ? (box.mons.find(m => m.id === pick.box) || {}).species || 'Mocchi' : pick.base;
   const [teamSlotsSt, setTeamSlotsSt] = useState(() => {
     const own0 = unlocked[0] || 'Mocchi';
-    let nb = 0;
+    const seen = new Set();
     const o = (meta.team || []).slice(0, 6).map(t => {
-      if (t && t.box && raised.some(m => m.id === t.box) && nb < 5) {
-        nb += 1;
+      if (t && t.box && raised.some(m => m.id === t.box) && !seen.has(`b${t.box}`)) {
+        seen.add(`b${t.box}`);
         return {
           box: t.box
         };
       }
-      if (t && t.assist && stock.some(m => m.id === t.assist) && nb < 5) {
-        nb += 1;
+      if (t && t.assist && stock.some(m => m.id === t.assist) && !seen.has(`a${t.assist}`)) {
+        seen.add(`a${t.assist}`);
         return {
           assist: t.assist
         };
@@ -171215,23 +171215,21 @@ function MsxStart({
   const teamAssist = teamSlotsSt.filter(t => t && t.assist).map(t => t.assist);
   const teamRaisedN = teamBox.length + teamAssist.length;
   const [friend, setFriend] = useState(null);
+  const [friendAt, setFriendAt] = useState(5);
   const [lendList, setLendList] = useState(null);
   const autoBases = useMemo(() => {
     const o = unlocked.filter(id => id !== species);
     return o.length ? o : [species];
   }, [unlocked, species]);
   const team = useMemo(() => {
-    const room = friend ? 5 : 6;
     let ai = 0;
-    const list = teamSlotsSt.slice(0, room).map(t => t || {
+    return teamSlotsSt.slice(0, 6).map((t, i) => friend && i === friendAt ? {
+      friend
+    } : t || {
       base: autoBases[ai++ % autoBases.length],
       auto: true
     });
-    if (friend) list.push({
-      friend
-    });
-    return list;
-  }, [teamSlotsSt, autoBases, friend]);
+  }, [teamSlotsSt, autoBases, friend, friendAt]);
   const members = useMemo(() => team.map(t => {
     const src = t.friend ? t.friend : msxTeamSrc(t, box, species, data.assist);
     const m = SUC.memberOf(src);
@@ -171526,27 +171524,44 @@ function MsxStart({
     }));
     go = 'このモンスターにする ▶';
   } else if (step === 1) {
-    const putSlot = (i, v) => setTeamSlotsSt(cur => {
-      const n = cur.slice();
-      if (v && v.box) {
-        const at = n.findIndex(t => t && t.box === v.box);
-        if (at >= 0) n[at] = null;
-        if (n.filter(t => t && (t.box || t.assist)).length >= 5 && !(n[i] && (n[i].box || n[i].assist))) return cur;
+    const putSlot = (i, v) => {
+      if (friend && i === friendAt) {
+        setFriend(null);
       }
-      if (v && v.assist) {
-        const at = n.findIndex(t => t && t.assist === v.assist);
-        if (at >= 0) n[at] = null;
-        if (n.filter(t => t && (t.box || t.assist)).length >= 5 && !(n[i] && (n[i].box || n[i].assist))) return cur;
+      setTeamSlotsSt(cur => {
+        const n = cur.slice();
+        if (v && v.box) {
+          const at = n.findIndex(t => t && t.box === v.box);
+          if (at >= 0) n[at] = null;
+        }
+        if (v && v.assist) {
+          const at = n.findIndex(t => t && t.assist === v.assist);
+          if (at >= 0) n[at] = null;
+        }
+        n[i] = v;
+        return n;
+      });
+    };
+    const putFriend = (i, m) => {
+      if (!m) {
+        setFriend(null);
+        return;
       }
-      n[i] = v;
-      return n;
-    });
-    const openSlot = i => i === 5 && typeof MsxFriendPick === 'function' && typeof monsucLendFriends === 'function' ? setFriendOpen(true) : setSlotPick(i);
+      setFriend(m);
+      setFriendAt(i);
+      setTeamSlotsSt(cur => {
+        const n = cur.slice();
+        n[i] = null;
+        return n;
+      });
+    };
+    const lendOn = typeof MsxFriendPick === 'function' && typeof monsucLendFriends === 'function';
+    const openSlot = i => friend && i === friendAt && lendOn ? setFriendOpen(i) : setSlotPick(i);
     body = React.createElement(React.Fragment, null, React.createElement("div", {
       className: "v-h"
     }, "編成の6体", React.createElement("small", {
       style: typeof JA_LABEL_STYLE !== 'undefined' ? JA_LABEL_STYLE : undefined
-    }, (typeof jaWrap === 'function' ? jaWrap : t => t)('枠を押して選ぶ。マスモンボックスから5体まで・右下はフレンドの枠。強いモンスターほどよく伸びる'))), React.createElement("div", {
+    }, (typeof jaWrap === 'function' ? jaWrap : t => t)('枠を押して選ぶ。6枠のどこにも自分のモンスターを入れられ、フレンドは1体まで。強いモンスターほどよく伸びる'))), React.createElement("div", {
       className: "v-slots msx-team6",
       "data-msx-team6": true
     }, members.map((m, i) => React.createElement("div", {
@@ -171559,9 +171574,9 @@ function MsxStart({
       onKeyDown: e => {
         if (e.key === 'Enter' || e.key === ' ') openSlot(i);
       }
-    }, i === 5 ? React.createElement("i", {
+    }, m.friend ? React.createElement("i", {
       className: "msx-sl-fr"
-    }, "🤝 フレンド枠") : null, React.createElement("span", {
+    }, "🤝 フレンド") : null, React.createElement("span", {
       className: `v-pf lg r${m.rank === 'base' ? 'G' : m.rank}${m.kind === 'base' ? ' base' : ''}`
     }, (() => {
       const img = React.createElement("img", {
@@ -171613,7 +171628,7 @@ function MsxStart({
     }, React.createElement("button", {
       type: "button",
       disabled: !(raised.length || stock.length) || typeof msxTeamAuto !== 'function',
-      onClick: () => setTeamSlotsSt(cur => msxTeamAuto(cur, raised, stock, SUC, box, species, data.assist)),
+      onClick: () => setTeamSlotsSt(cur => msxTeamAuto(cur, raised, stock, SUC, box, species, data.assist, friend ? friendAt : null)),
       "data-msx-team-auto": true
     }, "おまかせ"), React.createElement("button", {
       type: "button",
@@ -171633,8 +171648,13 @@ function MsxStart({
       SUC: SUC,
       box: box,
       assistData: data.assist,
+      friendAt: friend ? friendAt : null,
+      onFriend: lendOn ? () => {
+        const i = slotPick;
+        setSlotPick(null);
+        setFriendOpen(i);
+      } : null,
       onDone: v => {
-        if (slotPick === 5 && friend) setFriend(null);
         putSlot(slotPick, v);
         setSlotPick(null);
       },
@@ -171655,24 +171675,22 @@ function MsxStart({
       },
       onClose: () => setSlotPick(null)
     }));
-    if (friendOpen) full = React.createElement(MsxFriendPick, {
+    if (friendOpen !== false && friendOpen != null) full = React.createElement(MsxFriendPick, {
+      idx: friendOpen,
+      friendAt: friend ? friendAt : null,
       lendList: lendList,
       onLoad: openLend,
       friend: friend,
       members: members,
       SUC: SUC,
       onPick: m => {
-        if (m) setTeamSlotsSt(cur => {
-          const n = cur.slice();
-          n[5] = null;
-          return n;
-        });
-        setFriend(m);
+        putFriend(friendOpen, m);
         setFriendOpen(false);
       },
       onOwn: () => {
+        const i = friendOpen;
         setFriendOpen(false);
-        setSlotPick(5);
+        setSlotPick(i);
       },
       onClose: () => setFriendOpen(false)
     });
@@ -172171,10 +172189,9 @@ function msxTpPress(onTap, onLong) {
     }
   };
 }
-function msxTeamAuto(slots, raised, stock, SUC, box, own, assistData) {
+function msxTeamAuto(slots, raised, stock, SUC, box, own, assistData, skip = null) {
   const n = slots.slice();
   while (n.length < 6) n.push(null);
-  const keep5 = n[5] && (n[5].box || n[5].assist) ? n[5] : null;
   const pow = slot => {
     try {
       return SUC.memberOf(msxTeamSrc(slot, box, own, assistData)).power || 0;
@@ -172186,12 +172203,19 @@ function msxTeamAuto(slots, raised, stock, SUC, box, own, assistData) {
     box: m.id
   })), ...stock.map(m => ({
     assist: m.id
-  }))].filter(s => !msxTpSame(s, keep5)).map(s => ({
+  }))].map(s => ({
     s,
     p: pow(s)
   })).sort((a, b) => b.p - a.p);
-  const room = 5 - (keep5 ? 1 : 0);
-  for (let i = 0; i < 5; i += 1) n[i] = i < room && cand[i] ? cand[i].s : null;
+  let k = 0;
+  for (let i = 0; i < 6; i += 1) {
+    if (i === skip) {
+      n[i] = null;
+      continue;
+    }
+    n[i] = cand[k] ? cand[k].s : null;
+    k += 1;
+  }
   return n;
 }
 function MsxTpDetail({
@@ -172267,6 +172291,8 @@ function MsxTeamPick({
   SUC,
   box,
   assistData,
+  friendAt = null,
+  onFriend = null,
   onDone,
   onClose
 }) {
@@ -172338,11 +172364,6 @@ function MsxTeamPick({
       t: `編成中(${at + 1}枠目)`,
       c: 'in'
     };
-    if (x.kind !== 'base' && raisedN >= 5 && !(cand && (cand.box || cand.assist))) return {
-      t: '5体まで',
-      c: 'lk',
-      lock: true
-    };
     if (x.species === own) return {
       t: '育てる種と同じ',
       c: 'own'
@@ -172354,8 +172375,9 @@ function MsxTeamPick({
     return null;
   };
   const tabs = [['box', 'マスモンボックス', raised.length], ['memo', 'メモリアル', stock.length], ['base', 'ベースモン', unlocked.length]].filter(([k,, n]) => k !== 'memo' || n);
+  const frOf = i => i === friendAt && i !== idx && members[i] && members[i].friend;
   const curName = (s, i) => {
-    if (i === 5 && !s && members[5] && members[5].friend) return members[5].name;
+    if (frOf(i)) return members[i].name;
     const m = s ? memOf(s) : null;
     return m ? m.name : 'おまかせ';
   };
@@ -172370,8 +172392,8 @@ function MsxTeamPick({
     className: "msx-tp-team",
     "data-msx-tp-team": true
   }, view.map((s, i) => {
-    const fr = i === 5 && members[5] && members[5].friend && i !== idx;
-    const sp = fr ? members[5].species : s ? (memOf(s) || {}).species : null;
+    const fr = frOf(i);
+    const sp = fr ? members[i].species : s ? (memOf(s) || {}).species : null;
     return React.createElement("div", {
       key: i,
       className: `msx-tp-tm${i === idx ? ' on' : ''}${s ? '' : ' em'}`
@@ -172393,7 +172415,12 @@ function MsxTeamPick({
     className: tab === k ? 'on' : '',
     onClick: () => setTab(k),
     "data-msx-tp-tab": k
-  }, name, React.createElement("small", null, n)))), React.createElement("div", {
+  }, name, React.createElement("small", null, n))), onFriend ? React.createElement("button", {
+    type: "button",
+    className: "fr",
+    onClick: onFriend,
+    "data-msx-tp-tab": "friend"
+  }, "🤝 フレンド", React.createElement("small", null, friendAt != null && friendAt !== idx ? `${friendAt + 1}枠目にいる` : '1体まで')) : null), React.createElement("div", {
     className: "msx-tp-bar"
   }, React.createElement("label", {
     className: "msx-tp-sel"
@@ -172417,7 +172444,7 @@ function MsxTeamPick({
     value: k
   }, MSX_STAT_NAME[k])))), React.createElement("span", {
     className: "msx-tp-cnt"
-  }, tab === 'base' ? '' : `${raisedN}/5体`)), tab === 'memo' ? React.createElement("div", {
+  }, tab === 'base' ? '' : `自分 ${raisedN}/6体`)), tab === 'memo' ? React.createElement("div", {
     className: "msx-tp-note"
   }, "メモリアルモンスターは育成には使えません。アシスト効果と得意な能力だけ効きます") : null, React.createElement("div", {
     className: "msx-tp-list",
@@ -172486,6 +172513,8 @@ function MsxTeamPick({
   }) : null);
 }
 function MsxFriendPick({
+  idx = 5,
+  friendAt = null,
   lendList,
   onLoad,
   friend,
@@ -172499,7 +172528,7 @@ function MsxFriendPick({
   useEffect(() => {
     if (lendList === null && typeof onLoad === 'function') onLoad();
   }, []);
-  const others = members.filter((m, i) => i < 5);
+  const others = members.filter(m => m && !m.friend);
   const rows = lendList && lendList !== 'loading' && lendList.ok ? lendList.rows : [];
   const list = rows.map(row => {
     let m = null;
@@ -172529,7 +172558,10 @@ function MsxFriendPick({
     className: "msx-tp"
   }, React.createElement("div", {
     className: "msx-tp-hd"
-  }, React.createElement("b", null, "🤝 フレンドから借りる(1体)"), React.createElement("small", null, "6枠目に入ります")), React.createElement("div", {
+  }, React.createElement("b", null, "🤝 フレンドから借りる(1体まで)"), React.createElement("small", null, idx + 1, "枠目に入ります")), friendAt != null && friendAt !== idx ? React.createElement("div", {
+    className: "msx-tp-note",
+    "data-msx-fp-move": true
+  }, "フレンドは1体まで。選ぶと、", friendAt + 1, "枠目のフレンドがこの枠へ移ります") : null, React.createElement("div", {
     className: "msx-tp-chips",
     "data-msx-fp-only": true
   }, [['all', '全て'], ...MSX_STATS.map(k => [k, `${MSX_STAT_ICON[k]}${MSX_STAT_NAME[k]}`])].map(([k, n]) => React.createElement("button", {
@@ -172599,7 +172631,7 @@ function MsxFriendPick({
     type: "button",
     onClick: onOwn,
     "data-msx-fp-own": true
-  }, "自分のモンスターを入れる"))));
+  }, "自分のモンスターにする"))));
 }
 function MsxTeamEffects({
   members,
@@ -173598,6 +173630,8 @@ function MonheroSuccessScreen({
       ...data.meta,
       team: cfg.teamSlots.map(t => t.box ? {
         box: t.box
+      } : t.assist ? {
+        assist: t.assist
       } : {
         base: t.base
       }),
