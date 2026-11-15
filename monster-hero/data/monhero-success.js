@@ -1498,6 +1498,7 @@
       const s = clone(s0); const it = ITEMS[key];
       if (!it || it.use !== 'during' || num(s.bag[key]) <= 0 || s.itemTurn === s.turn || s.over) return { state: s0, out: { ok: false } };
       if (it.awake && !awakeItemOk(s, it.awake)) return { state: s0, out: { ok: false, why: 'awake' } };
+      if (it.fruit && !fruitDayOk(s)) return { state: s0, out: { ok: false, why: 'fruit-day' } };
       s.bag[key] -= 1; s.itemTurn = s.turn;
       const fires = [];
       if (it.awake) { if (num(s.awake) < 1) fires.push(awakeApply(s, 1)); if (it.awake >= 2) fires.push(awakeApply(s, 2)); }
@@ -1518,7 +1519,9 @@
     };
     // 覚醒の実を使えるか(k = 1 覚醒の実・2 超覚醒の実)。超覚醒ずみには、どちらも使えない
     const awakeItemOk = (s, k) => (k >= 2 ? num(s.awake) < 2 : num(s.awake) < 1);
-    const itemUsable = (s, key) => { const it = ITEMS[key]; if (!it || it.use !== 'during' || !s || s.over) return false; return it.awake ? awakeItemOk(s, it.awake) : true; };
+    // トレーニング用の実(このターンのトレーニングの伸び ×1.5)は、このターンにトレーニングできるときだけ(大会の日・もう動いた・体調不良・デビュー戦の再挑戦では無駄になるため。r1115-202 M7)
+    const fruitDayOk = (s) => Boolean(s) && !s.battle && !s.acted && !s.cond && !(s.debutLoss > 0 && !s.debutWon);
+    const itemUsable = (s, key) => { const it = ITEMS[key]; if (!it || it.use !== 'during' || !s || s.over) return false; if (it.fruit && !fruitDayOk(s)) return false; return it.awake ? awakeItemOk(s, it.awake) : true; };
 
     // ---- ターンを閉じる(期末の強制大会・ヒーローズファイナル・デビュー戦の再挑戦をここで立てる) ----
     const endTurn = (s0) => {
@@ -1785,12 +1788,12 @@
         return { ok: true };
       }
       const sy = CUP_SYS[c.sys] || {};
-      if (sy.stat && s.stats[sy.stat] < (CUP_NEED.stat[c.star] || 0)) return { ok: false, why: 'stat', need: CUP_NEED.stat[c.star] };
+      if (sy.stat && s.stats[sy.stat] < (CUP_NEED.stat[c.star] || 0)) return { ok: false, why: 'stat', need: CUP_NEED.stat[c.star], stat: sy.stat };
       if ((sy.stat || sy.dist !== undefined) && c.star >= 2 && !s.wonNow.includes(`${c.sys}:${c.star - 1}`)) return { ok: false, why: 'chain' };
       if (sy.dist !== undefined && c.star >= 2) { const d = aptGradesOf(s); if ((APT_RANK[d[sy.dist]] || 0) < APT_RANK.C) return { ok: false, why: 'dist' }; }
       if (sy.type) { const t = TYPE_OF[s.species]; if (t && t.main !== sy.type && t.sub !== sy.type) return { ok: false, why: 'type' }; if (c.star >= 3 && !s.wonNow.includes(`${c.sys}:2`)) return { ok: false, why: 'chain' }; }
       if (c.scenario) {
-        if (s.aid === 'kiki' && s.stats.pow < 400 && s.stats.wise < 400) return { ok: false, why: 'stat', need: 400 };
+        if (s.aid === 'kiki' && s.stats.pow < 400 && s.stats.wise < 400) return { ok: false, why: 'stat', need: 400, stat: 'pow', stat2: 'wise' };
         if (s.aid === 'dra' && s.techs.length < 3) return { ok: false, why: 'techs', need: 3 };
         if (s.aid === 'sorashido' && num(s.log.cond) > 0) return { ok: false, why: 'cond' };
         if (s.aid === 'erubin' && loyalOf(s) < 70) return { ok: false, why: 'loyal', need: 70 };
