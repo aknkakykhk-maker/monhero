@@ -53,15 +53,18 @@ for (const [sp, mainSp] of Object.entries(MAIN)) {
 // --table3(r1115-147): 主血統の技 | いまのオリジナルの技 | 直した後(間合い・ランクは主血統の技と同じ。性能は主血統の技の 威力・命中・会心 +2、ガッツ・GD は同じ。r1115-099 と同じ寄せ方)
 if (process.argv.includes('--table3')) {
   const t3 = ['# r1115-146・147 オリジナルモンスターの技を、メイン血統の技の表と同じ並びにする案(下書き)', '',
-    '直した後: 間合い・ランクは対応する主血統の技と同じ。性能は 威力・命中・会心 = 主血統の技 +2、消費ガッツ・ガッツダウン = 主血統の技と同じ。技の id・名前・技の種類(ちから/かしこさ)は変えない。',
+    '対応の付け方(r1115-151): もとのマスが同じ技を先に → 同じ間合いでランクが近い技 → 名前 → 技の種類 → 威力が近い。直した後: 間合い・ランクは対応する主血統の技と同じ。性能は 威力・命中・会心 = 主血統の技 +2、消費ガッツ・ガッツダウン = 主血統の技と同じ。技の id・名前・技の種類(ちから/かしこさ)は変えない。',
     '主血統より技が多い子は、対応の無い技が残る(表の下。①の印と入れ替えで扱う)', ''];
   const perf = (x) => `威力${x.power}・命中${x.hit}・ガッツ${x.guts}・会心${x.crit}・GD${x.gd}`;
   for (const [sp, mainSp] of Object.entries(MAIN)) {
     const own = B.species[sp]; const base = B.species[mainSp];
     const pairs = [];
     for (const m of base) for (const t of own) {
+      // r1115-151: 名前でなく「もとのマスが同じ技を先に」。同じマス(ランク・間合い)> 同じ間合いでランクが近い > 名前 > 技の種類 > 威力が近い
+      const sameCell = t.rank === m.rank && t.dist[0] === m.dist[0] ? 10000 : 0;
+      const sameDist = t.dist[0] === m.dist[0] ? 1000 - Math.abs(t.rank - m.rank) * 200 : 0;
       const nameHit = t.name.includes(m.name) ? 100 + m.name.length : 0;
-      pairs.push({ m, t, score: nameHit + (t.kind === m.kind ? 10 : 0) - Math.abs(t.power - m.power) / 5 - Math.abs(t.rank - m.rank) * 2 - (t.dist[0] === m.dist[0] ? 0 : 3) });
+      pairs.push({ m, t, score: sameCell + sameDist + nameHit + (t.kind === m.kind ? 10 : 0) - Math.abs(t.power - m.power) / 5 - Math.abs(t.rank - m.rank) * 2 });
     }
     pairs.sort((a, b) => b.score - a.score);
     const usedM = new Map(); const usedT = new Set();
