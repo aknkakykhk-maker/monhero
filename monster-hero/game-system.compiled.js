@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c153e219d99bc1a1
+// source-sha256: 2dafe6fd934d0c50
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -96384,16 +96384,21 @@ function RhythmMultiChatBubble({
     "data-rhythm-multi-chat-bubble": true,
     "data-rhythm-multi-stamp-bubble": true,
     "data-rhythm-multi-stamp-strip": true,
-    className: "mh-seat-stamp-strip pointer-events-none absolute inset-x-0.5 bottom-0.5 top-[3px] z-40 flex flex-col items-center gap-0.5 [container-type:size]"
+    className: "mh-seat-stamp-strip pointer-events-none absolute inset-x-0.5 bottom-[17px] top-[3px] z-40 flex items-start justify-center [container-type:size]"
+  }, React.createElement("span", {
+    className: "relative flex h-full w-full justify-center"
   }, React.createElement("img", {
     src: multiStampFaceSrc(stamp.sf) || undefined,
     alt: "",
     draggable: false,
     decoding: "async",
-    className: "mh-seat-stamp-strip-img block shrink-0 rounded-lg bg-white object-cover shadow-lg"
+    className: "mh-seat-stamp-strip-img block rounded-lg bg-white object-cover shadow-lg"
   }), React.createElement("b", {
-    className: "mh-seat-stamp-strip-word block w-full min-w-0 rounded-lg bg-white px-0.5 py-px text-center text-[9px] font-black leading-[1.1] text-slate-900 shadow-lg"
-  }, text));
+    className: "mh-seat-stamp-strip-word absolute inset-x-0 bottom-[3px] block whitespace-nowrap rounded-b-lg bg-white/90 px-0.5 text-center font-black leading-tight text-slate-900",
+    style: {
+      fontSize: `${Math.max(6.5, Math.min(9, 62 / Math.max(1, Array.from(String(text || '')).length)))}px`
+    }
+  }, text)));
   if (stamp) return React.createElement("span", {
     "data-rhythm-multi-chat-bubble": true,
     "data-rhythm-multi-stamp-bubble": true,
