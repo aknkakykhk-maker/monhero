@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 0fe6fd2cfe7d2ea5
+// source-sha256: 255449536fc58b85
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -158435,7 +158435,7 @@ const monsucFuseApply = (box, plan, at) => {
     from: null,
     bornAt: at || ''
   };
-  const memory = [...(Array.isArray(box.memory) ? box.memory : []), ...gone.map(m => ({
+  const memory = [...(Array.isArray(box.memory) ? box.memory : []), ...ids.map(parentAt).map(m => ({
     nick: monsucFuseNick(m),
     species: m.species,
     rank: typeof m.rank === 'string' ? m.rank : null,
@@ -158694,6 +158694,7 @@ function MonsucFuseSheet({
   }, "閉じる")) : !main ? React.createElement(React.Fragment, null, React.createElement("p", {
     className: "text-[11px] font-bold text-slate-300"
   }, "① 主の親を選んでください。生まれるモンスターの主血統は、主の親から受け継ぎます。成長の型は、生まれたモンスターの種類で決まります"), typeof MsxMmGrid === 'function' ? React.createElement(MsxMmGrid, {
+    label: "name",
     mons: usable,
     onPick: m => setMain(m.id),
     attrs: m => ({
@@ -158705,6 +158706,7 @@ function MonsucFuseSheet({
   }, "育て終えたモンスターが2体そろうと合体できます(編成・貸し出し中のモンスターは使えません)")) : !mat ? React.createElement(React.Fragment, null, React.createElement("p", {
     className: "text-[11px] font-bold text-slate-300"
   }, "② もう一方の親を選んでください。生まれるモンスターの副血統は、このモンスターの血統から決まります"), card(main, () => setMain(null), 'border-emerald-300/70 bg-emerald-950'), typeof MsxMmGrid === 'function' ? React.createElement(MsxMmGrid, {
+    label: "name",
     mons: usable.filter(m => m.id !== main.id),
     onPick: m => setMat(m.id),
     attrs: m => ({
@@ -168820,6 +168822,10 @@ const MSX_CSS = `
 .msx .v-body>.msx-scroll{flex:1 1 0;min-height:0}
 .msx .v-band{background:linear-gradient(180deg,#241d4a,#1a1636);border:1px solid #4a4380;border-radius:14px;padding:6px 8px 6px;margin-top:5px;box-shadow:inset 0 1px 0 #ffffff14}
 .msx .v-b1{display:flex;align-items:center;gap:6px}
+/* ピーク中の印(帯の上の縁にかかる)が「残り◯ターン」の数字に重ならないよう、印のぶんだけ帯の上を空ける(r1115-073) */
+.msx .v-band.pk{padding-top:15px}
+.msx.land .v-scene .rcv-myua{top:56px!important;bottom:auto!important;height:420px!important;left:4%!important}
+.msx .v-ft{flex-wrap:wrap}.msx .v-ft>button{min-width:0}
 .msx .v-turn{flex:1;min-width:0;display:flex;align-items:center;gap:6px}
 .msx .v-turn .ph{background:linear-gradient(160deg,#f472b6,#fb923c);border-radius:9px;padding:3px 7px;font-size:11px;font-weight:900;line-height:1.15;text-align:center;white-space:nowrap;box-shadow:0 2px 0 #9d174d}
 .msx .v-turn .ph small{display:block;font-size:10px;font-weight:700;opacity:.95}
@@ -173453,7 +173459,7 @@ function MsxBand({
     state: null
   };
   return React.createElement("div", {
-    className: "v-band",
+    className: `v-band${pk.state === 'in' ? ' pk' : ''}`,
     style: pk.state === 'in' ? {
       position: 'relative'
     } : undefined
@@ -177834,13 +177840,16 @@ function MsxR3Cup({
   }), React.createElement("div", {
     className: "sh"
   }), React.createElement("img", {
+    className: "rcv-myua",
     src: msxBody(s.aid, 'happy'),
     alt: "",
     style: {
       position: 'absolute',
       left: '-2%',
       bottom: '-98%',
-      height: '190%'
+      height: '190%',
+      width: 'auto',
+      maxWidth: 'none'
     }
   }), React.createElement("div", {
     className: "v-ev-h"
@@ -181822,7 +181831,7 @@ function MsxR3Box({
       "data-msx-mm-open-assist": true
     }, React.createElement("b", null, "メモリアルモンスター"), React.createElement("small", null, assist ? assist.mons.length : 0, " / ", MSX_ASSIST_CAP, "体(合体・お別れしたモンスター。編成にだけ入れられる)")), box.memory.length ? React.createElement("div", {
       className: "mm-memo"
-    }, "思い出: ", box.memory.slice(-5).reverse().map(m => `${m.nick || msxMonName(m.species)}(${m.rank || '—'})`).join('・')) : null);
+    }, "思い出: ", box.memory.slice(-5).map(m => `${m.nick || msxMonName(m.species)}(${m.rank || '—'})`).join('・')) : null);
     foot = React.createElement("div", {
       className: "v-ft"
     }, React.createElement("button", {
