@@ -30,6 +30,22 @@ const MARKS = [[/おで/, ['dra']], [/あたし/, ['mua']], [/もも/, ['momosuk
   }
   check('① 台詞: 8人×7本・40字まで・穴なし・ほかの助手の目印が混ざらない', ng.length === 0, ng.slice(0, 5).join(' / '));
 }
+// ③ 表情を変えても体の大きさがそろう(r1115-203): 表の「8表情でいちばん高い絵の高さ」が、いまの全身画と合っている
+{
+  const mt = src.match(/const ASSISTANT_LIFE_PROFILE_FULL_MAX_H = Object\.freeze\((\{[\s\S]*?\})\);/);
+  const tbl = mt ? Function(`return ${mt[1]}`)() : null;
+  const dir = path.join(root, 'monster-hero/images/assistant/fullbody');
+  const pngH = (f) => { const b = fs.readFileSync(f); return b.readUInt32BE(20); };
+  const ng = [];
+  if (!tbl || !Object.keys(tbl).length) ng.push('表が読めない');
+  const names = new Set(fs.readdirSync(dir).map(f => (/^(.+?)__[a-z]+\.png$/.exec(f) || [])[1]).filter(Boolean));
+  for (const n of [...names].filter(x => tbl && x in tbl)) { // 表にある子だけ(表に無い子は今までどおり絵ごとに枠へ収める)
+    const hs = fs.readdirSync(dir).filter(f => f.startsWith(n + '__') && /^[a-z]+\.png$/.test(f.slice(n.length + 2))).map(f => pngH(path.join(dir, f)));
+    const want = Math.max(...hs);
+    if (!tbl || tbl[n] !== want) ng.push(`${n}: 表 ${tbl && tbl[n]} / 絵 ${want}`);
+  }
+  check('③ 紹介の全身画の高さの表が、いまの絵と合っている(表情で体の大きさがずれない)', !ng.length, ng.slice(0, 5).join(' / '));
+}
 const EXPR = ['normal', 'happy', 'excited', 'wink', 'surprise', 'troubled', 'angry', 'crying'];
 const VIEWS = [{ id: 'v390', w: 390, h: 844 }, { id: 'v320', w: 320, h: 700 }, { id: 'h844', w: 844, h: 390 }];
 (async () => {
