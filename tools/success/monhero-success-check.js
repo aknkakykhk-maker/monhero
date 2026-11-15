@@ -614,6 +614,12 @@ ok(near(SUC.failRateOf({ ...base, yosu: { sabori: { visits: 0 } } }) - fFull, 0.
   ok(SUC.opponents(noRival)[0].pick === 'strong', 'ライバルがいないとき、準決勝の相手が強い常連にならない');
   // エンディング: 親密度 100・4話まで見た → 超グッド(お祝い3回 +15・+17・+20)/どちらか欠けるとグッド/負けるとバッド
   const fin = (o) => SUC.settle({ ...SUC.newRun({ id: 'end', species: 'Mocchi', aid: 'mua' }), turn: 46, battle: { kind: 'summit', round: 2 }, ...o }, [true]);
+  // ヒーローズファイナルの能力ポイント(r1115-201): 1回戦・準決勝・決勝のそれぞれで勝つたびに 120(★4 と同じ)・決勝の上乗せは無い・負けたら0
+  for (const round of [0, 1, 2]) {
+    const s0 = { ...SUC.newRun({ id: `sp${round}`, species: 'Mocchi', aid: 'mua' }), turn: 44 + round, pts: 7, battle: { kind: 'summit', round } };
+    const w1 = SUC.settle(JSON.parse(JSON.stringify(s0)), [true]).state; ok(w1.pts === 7 + 120, `ファイナル ${round + 1}戦目に勝った能力ポイントが +120 でない: +${w1.pts - 7}`);
+    const l1 = SUC.settle(JSON.parse(JSON.stringify(s0)), [false]).state; ok(l1.pts === 7, `ファイナル ${round + 1}戦目に負けても能力ポイントが増える: +${l1.pts - 7}`);
+  }
   const sup = fin({ aidBond: 100, astory: { ep: 4, path: 'good', done: false } });
   ok(sup.out.ending === 'super' && sup.state.titles.includes('みゅあの最高のチーム') && sup.out.party.life === 52, `超グッドにならない: ${sup.out.ending} ${JSON.stringify(sup.out.party)}`);
   ok(fin({ aidBond: 99, astory: { ep: 4, path: 'good', done: false } }).out.ending === 'good', '親密度 99 で超グッドになる');

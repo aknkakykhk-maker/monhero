@@ -26,11 +26,11 @@ const makeRun = async (kind) => {
   const SUC = msxSuc.SUC;
   const team = ['Tiger', 'Undine', 'Golem', 'Pixie', 'Suezo', 'Kyubi'].filter((x) => SUC.speciesList.includes(x)).map((species) => ({ kind: 'base', species }));
   const rv = { name: 'ライバルのゴーレム', kind: 'aid', species: 'Golem', stats: { life: 500, pow: 500, wise: 400, hit: 450, eva: 400, tough: 520 } };
-  let s = SUC.newRun({ id: 'arc-shot-1', species: 'Mocchi', aid: 'mua', team, aidBondLv: 4, items: { sand: 1, rainbow: 0 }, rivals: [rv] });
+  let s = SUC.newRun({ id: 'arc-shot-1', species: 'Mocchi', aid: 'mua', team, aidBondLv: 4, items: { sand: 1, rainbow: 0 }, rivals: /x$/.test(kind) ? [] : [rv] }); // 名前が x で終わる場面は、ライバルに会っていない育成(r1115-202)
   const stats = (n) => ({ life: n, pow: n, wise: n, hit: n, eva: n, tough: n });
   let phase = 'main'; let out = null;
   if (kind === 'uniq') { s = { ...s, turn: 12 }; const o = SUC.events.open(s, 'start'); s = o.state; phase = 'event'; out = { ev: o.out.ev, slot: 'start' }; }
-  if (kind === 'pick1' || kind === 'pick2' || kind === 'pick3') { const r = Number(kind.slice(-1)) - 1; s = { ...s, turn: 44 + r, stats: stats(999), aidBond: 100, astory: { ep: 4, path: 'good', done: true }, wonBefore: [`summit${r + 1}`], battle: { kind: 'summit', round: r } }; phase = 'battle'; } // 結果だけ見るは、勝った記録があるときだけ押せる(r1115-057)
+  if (/^pick[123]x?$/.test(kind)) { const r = Number(kind.slice(4, 5)) - 1; s = { ...s, turn: 44 + r, stats: stats(999), aidBond: 100, astory: { ep: 4, path: 'good', done: true }, wonBefore: [`summit${r + 1}`], battle: { kind: 'summit', round: r } }; phase = 'battle'; } // 結果だけ見るは、勝った記録があるときだけ押せる(r1115-057)
   const end = (k, over) => { s = { ...s, turn: 46, stats: stats(600), over, aidBond: k === 'super' ? 100 : 70, ending: { kind: k, parties: SUC.PARTY[k].slice(), seen: false } }; phase = 'over'; };
   if (kind === 'bad') end('bad', 'lost');
   if (kind === 'good') end('good', 'done');
@@ -51,6 +51,7 @@ const makeRun = async (kind) => {
   const SHOTS0 = [
     ['U1', 'uniq', ['cont']], ['U2', 'uniq', ['cont', 'opt']],
     ['P1', 'pick1', ['cont']], ['P2', 'pick2', ['cont', '@precup', '@enter', '@yes', 'wait']], ['P3', 'pick3', ['cont']],
+    ['P2x', 'pick2x', ['cont', '@precup', '@enter', '@yes', 'wait']],
     ['A1', 'pick1', ['cont', '@precup', '@enter', '@yes', '#next*', '@cupintro-go', '%quick', '%next', '#next']],
     ['N1', 'bad', ['cont']], ['N2', 'bad', ['cont', '#next', '#next']],
     ['G1', 'good', ['cont']], ['G2', 'good', ['cont', '#next', '#next']], ['G4', 'good', ['cont', '#next', '#next', '#next', '#next']],
