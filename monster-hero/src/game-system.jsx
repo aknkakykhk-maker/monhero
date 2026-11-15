@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: ada499c02e216c0d
+// generated-sha256: 49ff247967cfcc3b
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -83607,6 +83607,8 @@ function MsxDex({ aid = 'mua', nick = '', onClose }) {
   const [tab, setTab] = React.useState('story');
   const [pickAid, setPickAid] = React.useState(aid);
   const [open, setOpen] = React.useState(null);
+  const [chosen, setChosen] = React.useState(null); // 読む画面で選択肢を押したあと、選んだ分の続き(押した選択肢の c)。戻るで選ぶ前の場面へ(r1115-144)
+  React.useEffect(() => { setChosen(null); }, [open]);
   const [, setTick] = React.useState(0);
   const all = Object.values(list).flat();
   const got = all.filter((x) => seen.ev[x.id]).length;
@@ -83617,6 +83619,8 @@ function MsxDex({ aid = 'mua', nick = '', onClose }) {
   const scene = open ? (open.ep != null ? (se && se.SCENE ? se.SCENE.story(open.aid, open.ep) : `scn.${open.aid}.ep${open.ep}`) : open.scene) : null;
   const c2 = { aid: readAid, mon: nick || 'モンスター', name: 'あなた', callName: '', bond: 10, cheer: '編成のモンスター', cheer2: '編成のモンスター', train: 'トレーニング', id: 'dex', turn: 10 };
   let ev0 = null; try { ev0 = open && se && typeof se.event === 'function' && !open.awake ? se.event(scene, c2) : null; } catch (e) { ev0 = null; }
+  // 選んだあとの続き(台本の `<場面>.<選択肢>`)。読み込めない・無いときは null
+  let cont = null; try { cont = open && chosen && se && typeof se.event === 'function' && !open.awake && open.id !== 'issa' ? se.event(`${scene}.${chosen}`, c2) : null; } catch (e) { cont = null; }
   const aw = open && open.awake && typeof msxPickLine === 'function' ? msxPickLine({ ...c2 }, scene, { bondLv: 10 }) : null;
   const who = (l) => (l.who === 'narr' ? null : l.who === 'issa' ? 'イッサ博士' : l.who === 'mon' ? (nick || 'モンスター') : (typeof msxAidName === 'function' ? msxAidName(l.who) : l.who));
   const chOf = (x) => { const E = msxSuc && msxSuc.SUC && msxSuc.SUC.events; const e = E && E.BY_ID ? E.BY_ID[x.id] : null; return e && e.ch && (e.ch.a || e.ch.b) ? Object.keys(e.ch) : x.ep ? ['a', 'b'] : x.id === 'issa' && typeof MSX_ISSA_KEYS !== 'undefined' ? MSX_ISSA_KEYS.map((k) => k.key) : []; };
@@ -83631,13 +83635,16 @@ function MsxDex({ aid = 'mua', nick = '', onClose }) {
           <button type="button" key={a} className={a === pickAid ? 'on' : ''} onClick={() => { setPickAid(a); setOpen(null); }}>{typeof msxFace === 'function' ? <img src={msxFace(a, 'normal')} alt=""/> : null}{typeof msxAidName === 'function' ? msxAidName(a) : a}<small>{L.filter((x) => seen.ev[x.id]).length}/{L.length}</small></button>); })}</div> : null}
         {open ? (
           <div className="msx-dex-read" data-msx-dex-read={open.id}>
-            <div className="h"><b>{open.title}</b><button type="button" className="chip" onClick={() => setOpen(null)} data-msx-dex-back>← 戻る</button></div>
+            <div className="h"><b>{open.title}</b><button type="button" className="chip" onClick={() => (chosen ? setChosen(null) : setOpen(null))} data-msx-dex-back>← 戻る</button></div>
             {open.awake ? <div className="ln">{open.awake === 2 ? '覚醒したあと、さらに虹色の光に包まれて、全能力 +40・間合い適性が2つ上がった。' : 'まぶしい光に包まれて、全能力 +30・一番高い間合い適性が上がった。'}</div> : null}
             {aw && aw.t ? <div className="ln"><span className="who">{typeof msxAidName === 'function' ? msxAidName(readAid) : ''}</span>「{aw.t}」</div> : null}
             {open.id === 'issa' ? <div className="ln">夜の町に、のびのび装置を持ったイッサ博士があらわれた。成功すれば大きく強くなれるが、失敗すると…。</div> : null}
-            {ev0 ? ev0.lines.slice(0, 8).map((l, i) => <div key={i} className="ln">{who(l) ? <span className="who">{who(l)}</span> : null}{who(l) ? `「${l.t}」` : l.t}</div>) : null}
-            {chOf(open).length ? <div className="chs">{chOf(open).map((c) => { const t = ev0 && ev0.choices ? (ev0.choices.find((x) => x.c === c) || {}).t : open.id === 'issa' ? ((MSX_ISSA_KEYS.find((k) => k.key === c) || {}).name || c) : c; const known = Boolean(seen.ch[`${open.id}.${c}`]); return (
-              <div key={c} className="ch"><b>{known ? t : '？？？'}</b><span>{known ? (open.id === 'issa' ? (() => { const k = MSX_ISSA_KEYS.find((x) => x.key === c) || {}; return `⭕ ${k.ok} / ❌ ${k.ng}`; })() : open.ep != null ? 'お話の続きが変わる' : msxChoiceLines(msxEvChoice(open.id, c)).join(' / ')) : 'まだ選んだことがない'}</span></div>); })}</div> : null}
+            {chosen && cont ? <><div className="ln msx-dex-picked" data-msx-dex-picked={chosen}>▶ {(ev0 && ev0.choices ? (ev0.choices.find((x) => x.c === chosen) || {}).t : '') || '選んだ'}</div>
+              {cont.lines.slice(0, 8).map((l, i) => <div key={`c${i}`} className="ln">{who(l) ? <span className="who">{who(l)}</span> : null}{who(l) ? `「${l.t}」` : l.t}</div>)}
+              {ev0 && Array.isArray(ev0.after) ? ev0.after.slice(0, 4).map((l, i) => <div key={`a${i}`} className="ln">{who(l) ? <span className="who">{who(l)}</span> : null}{who(l) ? `「${l.t}」` : l.t}</div>) : null}</> : null}
+            {chosen && cont ? null : ev0 ? ev0.lines.slice(0, 8).map((l, i) => <div key={i} className="ln">{who(l) ? <span className="who">{who(l)}</span> : null}{who(l) ? `「${l.t}」` : l.t}</div>) : null}
+            {chosen && cont ? null : chOf(open).length ? <div className="chs">{chOf(open).map((c) => { const t = ev0 && ev0.choices ? (ev0.choices.find((x) => x.c === c) || {}).t : open.id === 'issa' ? ((MSX_ISSA_KEYS.find((k) => k.key === c) || {}).name || c) : c; const known = Boolean(seen.ch[`${open.id}.${c}`]); return (
+              <div key={c} className={`ch${known && ev0 && ev0.choices && open.id !== 'issa' ? ' tap' : ''}`} {...(known && ev0 && ev0.choices && open.id !== 'issa' ? { role: 'button', tabIndex: 0, onClick: () => setChosen(c), 'data-msx-dex-ch': c } : {})}><b>{known ? t : '？？？'}{known && ev0 && ev0.choices && open.id !== 'issa' ? <small className="msx-dex-go"> 続きを読む ▶</small> : null}</b><span>{known ? (open.id === 'issa' ? (() => { const k = MSX_ISSA_KEYS.find((x) => x.key === c) || {}; return `⭕ ${k.ok} / ❌ ${k.ng}`; })() : open.ep != null ? 'お話の続きが変わる' : msxChoiceLines(msxEvChoice(open.id, c)).join(' / ')) : 'まだ選んだことがない'}</span></div>); })}</div> : null}
             {chOf(open).length && /\+\d+〜\d+/.test(String(msxChoiceNoteSrc(open, ev0, chOf))) ? <div className="msx-note" style={{ fontSize: 10 }}>{MSX_FX_NOTE}</div> : null}
           </div>
         ) : (
@@ -83680,6 +83687,8 @@ const MSX_DEX_CSS = `
 .msx .msx-dex-read .chs{display:grid;gap:4px;margin-top:4px}
 .msx .msx-dex-read .ch{padding:5px 9px;border-radius:10px;background:#0f172a;border:1px solid #334155;font-size:11.5px;line-height:1.45}
 .msx .msx-dex-read .ch b{display:block;color:#fde047}
+.msx .msx-dex-read .ch.tap{border-color:#7dd3fc;cursor:pointer}.msx .msx-dex-read .ch .msx-dex-go{color:#7dd3fc;font-size:10px;font-weight:800}
+.msx .msx-dex-read .msx-dex-picked{color:#fde047;font-weight:900}
 .msx .msx-dex-read .ch span{color:#cbd5e1;font-weight:700}
 .msx .msx-dex .msx-sheet>.msx-btn{display:block;width:100%;border-radius:12px;padding:10px;font-size:13px;font-weight:900;text-align:center;background:#2b3348;margin-top:6px}
 .msx .msx-dex-read .h .chip{border-radius:999px;padding:3px 10px;font-size:11px;font-weight:900;border:1.5px solid #475569;background:#1e1a36}
