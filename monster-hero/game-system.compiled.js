@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 7bd2233b10577c78
+// source-sha256: 92035f40f82de76d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -20513,7 +20513,7 @@ const helpDataRows = id => {
     case 'monsakuAssists':
       {
         const T3 = globalThis.MONHERO_SUCCESS_ASSIST;
-        if (T3 && T3.VERSION === 3 && Array.isArray(T3.LIST)) return T3.LIST.filter(a => a.from === 'core').map(a => [`${a.icon} ${a.name}`, a.max > 1 ? `1目盛り ${T3.valueText(a.id, 1)}・${a.pt}ポイント ／ 最大 ${T3.valueText(a.id, a.max)}(${a.cost[a.max - 1]}ポイント)` : `${T3.valueText(a.id, 1)} ／ ${a.pt}ポイント`]);
+        if (T3 && T3.VERSION === 3 && Array.isArray(T3.LIST)) return T3.LIST.filter(a => a.from === 'core').map(a => [`${a.icon} ${a.name}`, (a.max > 1 ? `1目盛り ${T3.valueText(a.id, 1)}・${a.pt}ポイント ／ 最大 ${T3.valueText(a.id, a.max)}(${a.cost[a.max - 1]}ポイント)` : `${T3.valueText(a.id, 1)} ／ ${a.pt}ポイント`) + (typeof T3.capNote === 'function' && T3.capNote(a.id) ? ` ／ ${T3.capNote(a.id).replace(/^\(|\)$/g, '')}` : '')]);
         const list = globalThis.MONHERO_SUCCESS && globalThis.MONHERO_SUCCESS.ASSISTS || null;
         if (!list || typeof list !== 'object') return [['アシスト能力', '育て終えたとき、画面で選べます']];
         return Object.values(list).filter(a => a && a.name && Array.isArray(a.v) && Array.isArray(a.cost)).map(a => [a.name, `段1〜${a.v.length} ／ ポイント ${a.cost.join('・')}`]);
@@ -175876,7 +175876,7 @@ function MsxStats({
     setDraft([]);
   };
   const used = s.pts - ws.pts;
-  const capK = k => typeof SUC.capOf === 'function' ? SUC.capOf(s, k) : 999;
+  const capK = k => typeof SUC.statCapOf === 'function' ? SUC.statCapOf(s, k) : 999;
   const lineOf = SUC.PTS && SUC.PTS.line ? SUC.PTS.line[SUC.periodOf(s.turn).key] : null;
   const own = typeof SUC.techsOf === 'function' ? SUC.techsOf(s.species) : [];
   const techs = (Array.isArray(s.techs) ? s.techs : []).map(id => own.find(t => t && t.id === id)).filter(Boolean);
@@ -180480,7 +180480,7 @@ function MsxR3Retire({
         onClick: () => undoK(k)
       }, "−"), React.createElement("b", null, add), React.createElement("button", {
         type: "button",
-        disabled: ws.pts < SUC.ptsCost(ws, k) || ws.stats[k] >= (typeof SUC.capOf === 'function' ? SUC.capOf(ws, k) : 999),
+        disabled: ws.pts < SUC.ptsCost(ws, k) || ws.stats[k] >= (typeof SUC.statCapOf === 'function' ? SUC.statCapOf(ws, k) : 999),
         onClick: () => spend(k),
         "data-msx-r3-plus": k
       }, "＋")));
