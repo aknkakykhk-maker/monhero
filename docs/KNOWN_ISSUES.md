@@ -73,21 +73,6 @@ AI と人間が、未解決の不具合・技術的負債・調査事項を共�
 | 完了条件 | Android 16実機で、いちか4曲の試聴と、アレンジ設定後の実画面での再生を確認できること。再現する場合はChrome DevTools(リモートデバッグ)で `AudioContext.state` とデコード結果を採取する |
 | 関連 | 本修正のPR。いちか4曲には128〜248KBの埋め込みPNGジャケットがあるが、デコード阻害は確認できていないため再エンコードしていない |
 
-### KI-009: 外部CDNから読む Tone.js に完全性検証(SRI)が付いていない
-
-| 項目 | 内容 |
-| --- | --- |
-| ステータス | 保留（このサンドボックスからCDNへ出られずハッシュを取得できないため） |
-| 優先度 / 種別 | P2 / 運用 |
-| 影響 | `cdnjs.cloudflare.com` が配る `Tone.js` が差し替わった場合、そのまま実行される。効果音・BGMの処理を担うため、実行されると影響範囲は広い |
-| 再現環境 | 全環境。デバッグ限定ではなく、通常プレイの音声初期化で読み込む |
-| 再現手順 | 1. `monster-hero/src/game-system.jsx` の `Audio_` の `load()` を見る 2. `s.src = 'https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js'` に `integrity` / `crossOrigin` が無いことを確認 |
-| 期待結果 | `s.integrity = 'sha384-...'` と `s.crossOrigin = 'anonymous'` を付け、中身が変わったら実行せず読み込み失敗として扱う |
-| 実際の結果 | 検証せずに実行する |
-| 回避策 | 読み込みに失敗しても `s.onerror` で先へ進む作りなので、SRIを付けても音が出なくなるだけで進行不能にはならない |
-| 完了条件 | ネットワークのある環境で次を実行してハッシュを求め、`game-system.jsx` へ書いて `node tools/build.js` を通す。<br>`curl -sS https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js \| openssl dgst -sha384 -binary \| openssl base64 -A` |
-| 関連 | `monster-hero/src/game-system.jsx`（Tone.js の読み込み） |
-
 ### KI-010: Supabase のランキング表に対するRLSをリポジトリから確認できない
 
 | 項目 | 内容 |
@@ -141,6 +126,12 @@ AI と人間が、未解決の不具合・技術的負債・調査事項を共�
 ```
 
 ## 解決済み
+
+### KI-009: 外部CDNから読む Tone.js に完全性検証(SRI)が付いていない（2026-11-15 解決）
+
+- 解決内容: 編集元 `monster-hero/src/parts/14-audio.jsx` の `Audio_` の `load()` に `s.integrity = 'sha384-c6Uo4N9c3SOEigMVzP6IshUG1wQ5uMp3xeoQFiHWAQ86joWdgyajkvopySyKy/Z6'` と `s.crossOrigin = 'anonymous'` を追加し、`node tools/build.js` で生成物へ反映した。ハッシュは cdnjs から実ファイルをダウンロードして sha384 を算出し、cdnjs 公式 API が公開する SRI(sha512)とも一致することを確認した。中身が差し替わった場合は読み込み失敗(`s.onerror`)として扱われ、音が出なくなるだけで進行不能にはならない。
+- 検証: `node tools/build.js`、`node tools/build.js --check`(OK)、`node tools/check-syntax.js`(OK)、`node tools/run-checks.js --changed`(451本中 OK 367。NG 83・TIMEOUT 1 はいずれも本変更が原因ではなく、作業環境の取得漏れファイル・Playwright のリビジョン不一致・音量解析の時間切れ)
+- 関連: 本PR
 
 ### KI-008: GOD難易度の助手セリフ(extremeDifficultyGuides)がみゅあ/きき混在検査に落ちる（2026-09-06 解決確認）
 

@@ -82,6 +82,10 @@ const Audio_ = (() => {
       if (typeof document === 'undefined') { res(); return; }
       const s = document.createElement('script');
       s.src = 'https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js';
+      // 完全性検証(KI-009)。ハッシュは 2026-11-15 に実ファイルから求め、cdnjs 公式の SRI と一致を確認した。
+      // 中身が差し替わっていたら読み込み失敗(s.onerror)として扱い、音が出ないだけで進行は止めない。
+      s.integrity = 'sha384-c6Uo4N9c3SOEigMVzP6IshUG1wQ5uMp3xeoQFiHWAQ86joWdgyajkvopySyKy/Z6';
+      s.crossOrigin = 'anonymous';
       s.onload = () => { Tone = window.Tone; res(); };
       s.onerror = () => { toneLoadFailed = true; res(); };
       document.head.appendChild(s);
