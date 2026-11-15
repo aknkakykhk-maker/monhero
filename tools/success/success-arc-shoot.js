@@ -47,7 +47,8 @@ const makeRun = async (kind) => {
   const errors = [];
   const sizes = SHOT_DIR ? [[390, 844, ''], [320, 568, 's320']] : [[390, 844, '']];
   // [名前, 作る育成, 操作(data 属性 か テキストの正規表現)]。'@x' は [data-msx-r3-x] を押す
-  const SHOTS = [
+  const ONLY = process.env.ONLY ? process.env.ONLY.split(',') : null; // 撮る場面を絞る(例 ONLY=S6)
+  const SHOTS0 = [
     ['U1', 'uniq', ['cont']], ['U2', 'uniq', ['cont', 'opt']],
     ['P1', 'pick1', ['cont']], ['P2', 'pick2', ['cont', '@precup', '@enter', '@yes', 'wait']], ['P3', 'pick3', ['cont']],
     ['P2x', 'pick2x', ['cont', '@precup', '@enter', '@yes', 'wait']],
@@ -55,8 +56,10 @@ const makeRun = async (kind) => {
     ['N1', 'bad', ['cont']], ['N2', 'bad', ['cont', '#next', '#next']],
     ['G1', 'good', ['cont']], ['G2', 'good', ['cont', '#next', '#next']], ['G4', 'good', ['cont', '#next', '#next', '#next', '#next']],
     ['S1', 'super', ['cont']], ['S2', 'super', ['cont', '#next', '#next']], ['S5', 'super', ['cont', '#next', '#next', '#next', '#next', '#next']],
-    ['S6', 'super', ['cont', '#next', '#next', '#next', '#next', '#next', 'wait', '#next', '#next']],
+    // 特別演出は5.5秒たってから「次へ」が出る。待ったあとは、次へが無くなるまで送る(行の数・端末の重さで頁の数や出る時刻がずれても止まらない)
+    ['S6', 'super', ['cont', '#next', '#next', '#next', '#next', '#next', 'wait', '#next*']],
   ];
+  const SHOTS = ONLY ? SHOTS0.filter(([n]) => ONLY.includes(n)) : SHOTS0;
   try {
     for (const [w, h, tag] of sizes) {
       const page = await browser.newPage({ viewport: { width: w, height: h } });
@@ -116,7 +119,7 @@ const makeRun = async (kind) => {
         });
         check(`${label}: 画面が出る`, m.ok && m.text > 20, m.head);
         check(`${label}: 枠からはみ出さない`, m.ok && m.over.length === 0, m.over && m.over.slice(0, 3).join(' / '));
-        if (name === 'S6') { const r = JSON.parse(m.run || 'null'); check(`${label}: 特別演出のあと、エンディングを見た印が残る(もう一度は出ない)`, !!(r && r.s && r.s.ending && r.s.ending.seen) && /引退|評価/.test(m.head), m.head.slice(0, 40)); }
+        if (name === 'S6') { const r = JSON.parse(m.run || 'null'); check(`${label}: 特別演出のあと、エンディングを見た印が残る(もう一度は出ない)`, !!(r && r.s && r.s.ending && r.s.ending.seen) && /引退|評価|育成グレード/.test(m.head), m.head.slice(0, 40)); }
         if (name === 'P2') check(`${label}: 準決勝はライバルを選ぶ`, /ライバルのゴーレム/.test(m.all || ''), '');
         if (SHOT_DIR) { fs.mkdirSync(SHOT_DIR, { recursive: true }); await page.screenshot({ path: path.join(SHOT_DIR, `arc-${name}${tag ? `-${tag}` : ''}.png`) }); }
       }
