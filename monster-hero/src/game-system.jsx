@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: a68c5a218f4fd63b
+// generated-sha256: 8cb42846f4db5e22
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -7041,7 +7041,7 @@ const Audio_ = (() => {
 // 画面(回2・回3)は SuccessSound.* か useSuccessSound を呼ぶ。Audio_ を直接触らない。
 //
 // ★守っていること(tools/success/success-sound-check.js が見張る)
-//   ・使う Audio_ は playBGM / stopBGM / fgSe / isEnabled / currentBgmKey / setBackgroundSeQuiet だけ。
+//   ・使う Audio_ は playBGM / stopBGM / fgSe / isEnabled / currentBgmKey / setBackgroundSeQuiet / ensurePlaying(いまの曲が止まっていたら鳴らし直すだけ)だけ。
 //     音量(setSeVolume・setBgmVolume)・消音(setEnabled)・モンヒロビートの再生(startRhythmTrack)・1回だけ流す曲(setBgmOnce)には触らない
 //   ・効果音は fgSe(表の画面の音)から鳴らす。音量・消音は Audio_ 側がそのまま効く
 //   ・画面を離れる(leave / useSuccessSound の後片付け)と、待たせていた効果音を捨て、入る前に鳴っていた曲へ戻す
@@ -7091,9 +7091,24 @@ const SuccessSound = (() => {
     const a = audio(); if (!a || !active || !tableOk()) return null;
     const key = successSoundBgm(sceneId, season);
     if (!key || !knownTrack(key)) return null;
-    if (key === curBgm) return key;
+    // 覚えている曲と、実際に流れている曲(Audio_ の currentBgmKey)が食い違っていたら、同じ場面でも鳴らし直す(r1115-048)
+    let now = key; try { now = a.currentBgmKey ? a.currentBgmKey() : key; } catch (e) {}
+    if (key === curBgm && now === key) return key;
     curBgm = key;
     try { a.playBGM(key); } catch (e) {}
+    return key;
+  };
+
+  // 場面の曲が確かに鳴っているようにする(試合の曲の見張り。r1115-048)。違う曲なら鳴らし直し、同じ曲で止まっていれば(読み込みの失敗など)鳴らし直す。
+  //   ジングルが鳴っているあいだは触らない(ジングルが終わると Audio_ がいまの曲=この曲へ戻す)
+  const keep = (sceneId, season) => {
+    const a = audio(); if (!a || !active || !tableOk()) return null;
+    const key = successSoundBgm(sceneId, season);
+    if (!key || !knownTrack(key)) return null;
+    let now = null; try { now = a.currentBgmKey ? a.currentBgmKey() : null; } catch (e) {}
+    curBgm = key;
+    if (now !== key) { try { a.playBGM(key); } catch (e) {} return key; }
+    try { if (a.ensurePlaying) a.ensurePlaying(key); } catch (e) {}
     return key;
   };
 
@@ -7117,7 +7132,7 @@ const SuccessSound = (() => {
     se(sceneId, opts && opts.delayMs);
   };
 
-  return { enter, leave, scene, bgm, se, isActive: () => active };
+  return { enter, leave, scene, bgm, keep, se, isActive: () => active };
 })();
 
 // モンサクの画面の内側(育成中・修行・大会・引退など)で使う入り口。sceneId が替わるたびに場面の曲と効果音を鳴らすだけで、
@@ -90875,10 +90890,19 @@ function MsxR3Battle({ run, setRun, v, ev, ctx, bondLv, onPause, debug }) {
   const [showPh, setShowPh] = useState('bracket');
   // 知らせの段を見終えた大会(この画面のあいだだけ。やり直し・もう一度では出さない)
   const [introSeen, setIntroSeen] = useState(null);
+  // デバッグの「勝ったことにする」→「決勝へ」の流れでも、札(card)からあとは見せる部品が出る。その段も見る(2026-11-15 r1115-048 デバッグの流れで試合の曲に替わらなかった)
+  const showView = showOn || (!!debug && typeof MonsucCupShow === 'function' && (step === 'card' || step === 'watch'));
   const cupSound = st3 ? (st3.won ? 'cupWin' : 'cupLose')
-    : showOn ? (showPh === 'win' ? 'cupWin' : showPh === 'lose' ? 'cupLose' : showPh === 'cutin' || showPh === 'match' ? 'cupMatch' : 'cupPre')
+    : showView ? (showPh === 'win' ? 'cupWin' : showPh === 'lose' ? 'cupLose' : showPh === 'cutin' || showPh === 'match' ? 'cupMatch' : 'cupPre')
       : step === 'lost' ? 'cupLose' : step === 'bracket' || step === 'card' ? 'cupPre' : 'cupMatch';
   useSuccessScene(cupSound, { season: msxCalendar(s.turn).season });
+  // 試合のあいだは、試合の曲が確かに鳴っているかを見張り、違えば鳴らし直す(読み込みの失敗・ジングルのあと・中断からの再開でも試合の曲へ。r1115-048)
+  useEffect(() => {
+    if (cupSound !== 'cupMatch' || typeof SuccessSound === 'undefined' || typeof SuccessSound.keep !== 'function') return undefined;
+    const season = msxCalendar(s.turn).season;
+    const t = setInterval(() => SuccessSound.keep('cupMatch', season), 1500);
+    return () => clearInterval(t);
+  }, [cupSound]);
   useEffect(() => {
     let alive = true;
     // 試合型のアシストの表を読み終えてから試合を作る(読む前と後で同じ試合の結果が変わらないように)

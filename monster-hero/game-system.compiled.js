@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: bb7940a90f041a58
+// source-sha256: b2e87e274421c533
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -10257,10 +10257,35 @@ const SuccessSound = (() => {
     if (!a || !active || !tableOk()) return null;
     const key = successSoundBgm(sceneId, season);
     if (!key || !knownTrack(key)) return null;
-    if (key === curBgm) return key;
+    let now = key;
+    try {
+      now = a.currentBgmKey ? a.currentBgmKey() : key;
+    } catch (e) {}
+    if (key === curBgm && now === key) return key;
     curBgm = key;
     try {
       a.playBGM(key);
+    } catch (e) {}
+    return key;
+  };
+  const keep = (sceneId, season) => {
+    const a = audio();
+    if (!a || !active || !tableOk()) return null;
+    const key = successSoundBgm(sceneId, season);
+    if (!key || !knownTrack(key)) return null;
+    let now = null;
+    try {
+      now = a.currentBgmKey ? a.currentBgmKey() : null;
+    } catch (e) {}
+    curBgm = key;
+    if (now !== key) {
+      try {
+        a.playBGM(key);
+      } catch (e) {}
+      return key;
+    }
+    try {
+      if (a.ensurePlaying) a.ensurePlaying(key);
     } catch (e) {}
     return key;
   };
@@ -10295,6 +10320,7 @@ const SuccessSound = (() => {
     leave,
     scene,
     bgm,
+    keep,
     se,
     isActive: () => active
   };
@@ -176780,10 +176806,17 @@ function MsxR3Battle({
   useMsxR3Lines(s.aid);
   const [showPh, setShowPh] = useState('bracket');
   const [introSeen, setIntroSeen] = useState(null);
-  const cupSound = st3 ? st3.won ? 'cupWin' : 'cupLose' : showOn ? showPh === 'win' ? 'cupWin' : showPh === 'lose' ? 'cupLose' : showPh === 'cutin' || showPh === 'match' ? 'cupMatch' : 'cupPre' : step === 'lost' ? 'cupLose' : step === 'bracket' || step === 'card' ? 'cupPre' : 'cupMatch';
+  const showView = showOn || !!debug && typeof MonsucCupShow === 'function' && (step === 'card' || step === 'watch');
+  const cupSound = st3 ? st3.won ? 'cupWin' : 'cupLose' : showView ? showPh === 'win' ? 'cupWin' : showPh === 'lose' ? 'cupLose' : showPh === 'cutin' || showPh === 'match' ? 'cupMatch' : 'cupPre' : step === 'lost' ? 'cupLose' : step === 'bracket' || step === 'card' ? 'cupPre' : 'cupMatch';
   useSuccessScene(cupSound, {
     season: msxCalendar(s.turn).season
   });
+  useEffect(() => {
+    if (cupSound !== 'cupMatch' || typeof SuccessSound === 'undefined' || typeof SuccessSound.keep !== 'function') return undefined;
+    const season = msxCalendar(s.turn).season;
+    const t = setInterval(() => SuccessSound.keep('cupMatch', season), 1500);
+    return () => clearInterval(t);
+  }, [cupSound]);
   useEffect(() => {
     let alive = true;
     Promise.all([engine ? Promise.resolve(engine) : msxR3LoadEngine(), msxR3LoadTables()]).then(([e]) => {
