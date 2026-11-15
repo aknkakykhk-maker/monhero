@@ -5567,7 +5567,7 @@ function MonsterHeroGame() {
   // 「鍵の向こう側へ」のイベントidと、終章(閉幕のお話)のid
   const PANDORA_WINGS_EVENT_ID = 'pandora_wings_2026_11_02';
   const PANDORA_WINGS_THANKS_STORY_ID = 'pandora_wings_2026_ep8';
-  const RHYTHM_EVENT_STORY_IDS = [...HALLOWEEN_NIGHT_STORY_IDS, ...RAID_JACK_STORY_IDS, ...PANDORA_WINGS_STORY_IDS, PANDORA_WINGS_THANKS_STORY_ID, MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, RAID_JACK_RHYTHM_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RAID_JACK_HOWTO_STORY_ID, ATSU_JOIN_STORY_ID, KYUKO_JOIN_STORY_ID, SORASHIDO_JOIN_STORY_ID, ERUBIN_JOIN_STORY_ID, CARD_CUP_STORY_ID, RHYTHM_GRAND_OPEN_TEASER_STORY_ID, RHYTHM_GRAND_OPEN_STORY_ID, MONSUC_BETA_EP1_STORY_ID, SPARKLING_PINK_STORY_ID];
+  const RHYTHM_EVENT_STORY_IDS = [...HALLOWEEN_NIGHT_STORY_IDS, ...RAID_JACK_STORY_IDS, ...PANDORA_WINGS_STORY_IDS, PANDORA_WINGS_THANKS_STORY_ID, MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, RAID_JACK_RHYTHM_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RAID_JACK_HOWTO_STORY_ID, ATSU_JOIN_STORY_ID, KYUKO_JOIN_STORY_ID, SORASHIDO_JOIN_STORY_ID, ERUBIN_JOIN_STORY_ID, CARD_CUP_STORY_ID, RHYTHM_GRAND_OPEN_TEASER_STORY_ID, RHYTHM_GRAND_OPEN_STORY_ID, MONSUC_BETA_EP1_STORY_ID, MONSUC_BETA_EP2_STORY_ID, SPARKLING_PINK_STORY_ID];
   // ★イベントid → そのイベントの会話id。**イベントを足したらここへ1行足す。**
   //   以前はここが第1回のidの直書きで、第2回が始まっても第1回の会話が流れる形になっていた
   //   (2026-09-17に第2回を足したときに直した)。書かなかったイベントでは会話は流れない。
@@ -6007,6 +6007,33 @@ function MonsterHeroGame() {
     if (rhythmEventStoryStartedRef.current.includes(MONSUC_BETA_EP1_STORY_ID)) return;
     setRhythmEventStoryPending(prev => prev || MONSUC_BETA_EP1_STORY_ID);
   }, [rhythmEventStorySeen, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
+  // モンヒロサクセス 第2話(2026-11-15・β版の公開と同時)。公開の印 monheroSuccess が真になったあとの最初の HOME で、だれにでも1回だけ流す
+  //   (置き方は上の第1話と同じ。第1話をまだ見ていない人は第1話が先。見たかは mh_rhythm_event_story_v1 の id)。★ほかのお話が先に流れようとしていたら待つ
+  useEffect(() => {
+    if (!EVENT_REPLAY_RELEASE_FLAGS.monsucStoryEp2) return;
+    if (!Array.isArray(rhythmEventStorySeen) || rhythmEventStorySeen.includes(MONSUC_BETA_EP2_STORY_ID)) return;
+    if (!(bootPhase === 'GAME' && gameState === 'HOME') || eventReplay || rhythmEventStoryPending || rhythmHellGuide) return;
+    if (rhythmEventStoryStartedRef.current.includes(MONSUC_BETA_EP2_STORY_ID)) return;
+    setRhythmEventStoryPending(prev => prev || MONSUC_BETA_EP2_STORY_ID);
+  }, [rhythmEventStorySeen, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
+  // 第2話を本編で飛ばした人への、みゅあの1回だけの告知(2026-11-15・台本 script.md「第2話を入れるときにすること」)。
+  //   印は新しいキー mh_monsuc_story_skip_seen_v1 = { v:1, skippedAt, shownAt }(既存のキーは変えない)。飛ばしたら skippedAt、告知を閉じたら shownAt。
+  //   shownAt があれば二度と出さない。読み込みは型を確かめ、壊れていたら「飛ばしていない」として扱う(元の値は消さない)
+  const normalizeMonsucStorySkip = (v) => {
+    const o = v && typeof v === 'object' && !Array.isArray(v) ? v : {};
+    return { v: 1, skippedAt: Number.isFinite(o.skippedAt) ? o.skippedAt : 0, shownAt: Number.isFinite(o.shownAt) ? o.shownAt : 0 };
+  };
+  const [monsucStorySkip, setMonsucStorySkip] = useState(null);
+  useEffect(() => { let alive = true; Promise.resolve(storeGet(MONSUC_STORY_SKIP_SEEN_KEY, null, false)).then(v => { if (alive) setMonsucStorySkip(normalizeMonsucStorySkip(v)); }).catch(() => { if (alive) setMonsucStorySkip(normalizeMonsucStorySkip(null)); }); return () => { alive = false; }; }, []);
+  const markMonsucStorySkip = (field) => {
+    setMonsucStorySkip(prev => {
+      const cur = normalizeMonsucStorySkip(prev);
+      if (cur[field]) return cur;
+      const next = { ...cur, [field]: Date.now() };
+      try { storeSet(MONSUC_STORY_SKIP_SEEN_KEY, next, false); } catch {}
+      return next;
+    });
+  };
   // ききの「はじめての曲」のお話(2026-11-15 社長 r1115-102・r1115-139)。曲「Sparkling Pink Overture」と一緒に出る。
   //   ほかのお話・告知と同じ入口: 更新のあとに初めてゲームを開いて HOME に着いたとき、だれにでも1回だけ流す(置き方は上のモンヒロサクセス 第1話と同じ。
   //   ほかのお話が先に流れようとしていたら待つ・はじめて遊ぶ人は1本ずつ)。見たかは mh_rhythm_event_story_v1 の id(新しいキーは作らない)。見終えても飛ばしても「見た」になり、あとは回想から読める
@@ -9247,6 +9274,7 @@ function MonsterHeroGame() {
     rhythmGrandOpenTeaserSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(RHYTHM_GRAND_OPEN_TEASER_STORY_ID),
     rhythmGrandOpenSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(RHYTHM_GRAND_OPEN_STORY_ID),
     monsucBetaEp1Seen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(MONSUC_BETA_EP1_STORY_ID),
+    monsucBetaEp2Seen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(MONSUC_BETA_EP2_STORY_ID),
     sparklingPinkStorySeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SPARKLING_PINK_STORY_ID),
     symphonyEventSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SYMPHONY_STORY_ID) };
   // alwaysUnlocked のイベントは、本編でまだ見ていなくても回想から見られる
@@ -25121,6 +25149,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         const skip=()=>{
           if(eventReplay.live&&!eventReplay.debug&&event&&RHYTHM_EVENT_STORY_IDS.includes(event.id)) void markRhythmEventStorySeen(event.id);
           if(eventReplay.live&&!eventReplay.debug&&event&&event.id==='tactics_intro') markTacticsIntroSeen();
+          // モンヒロサクセス 第2話を本編で飛ばした人には、あとで HOME でみゅあが1回だけ知らせる(mh_monsuc_story_skip_seen_v1)
+          if(eventReplay.live&&!eventReplay.debug&&event&&event.id===MONSUC_BETA_EP2_STORY_ID) markMonsucStorySkip('skippedAt');
           if(eventReplay.live&&!eventReplay.debug&&event&&event.id===ASSISTANT_CHAT_STORY_ID) markAssistantChatStorySeen();
           if(eventReplay.live&&!eventReplay.debug&&event&&event.id===LEGEND_BREEDER_PASS_STORY_ID) markLegendPassSeen();
           if(eventReplay.live&&!eventReplay.debug&&event&&event.id===TACTICS_TYPES_STORY_ID) markTacticsTypesStorySeen();
@@ -25351,6 +25381,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   {event.endingTeaser.note&&<p className="mt-0.5 inline-block rounded-full bg-amber-400/20 px-3 text-[12px] font-black text-amber-100">{event.endingTeaser.note}</p>}
                 </div>}
                 {rich&&!nextEv&&allSeen&&<p data-story-ending-all className="mx-auto mt-4 inline-block rounded-full border border-amber-300/60 bg-amber-500/15 px-4 py-1 text-[13px] font-black text-amber-100" style={{animation:`storyEndCard 1s ease-out ${delay+1.5}s both`}}>🔑 全{allCount}{allUnit} 全部見た！</p>}
+                {/* 行き先のボタン(endingOpen・2026-11-15 モンヒロサクセス 第2話)。本編で流れたときだけ。押すとモンサクを開く(はじめてなら中の始まりの話) */}
+                {rich&&eventReplay.live&&!eventReplay.debug&&event?.endingOpen==='monsuc'&&typeof assistantLifeSuccessOpen==='function'&&<button type="button" data-story-ending-open="monsuc" onClick={go(()=>{assistantLifeSuccessOpen({assistantId:'mua',from:'story'});})} className="mt-5 min-h-[52px] w-full rounded-2xl bg-emerald-400 text-[15px] font-black text-slate-950 active:scale-[.98]" style={{animation:`storyEndCard 1s ease-out ${delay+1.5}s both`}}>🌱 モンヒロサクセスへ</button>}
                 {rich&&eventReplay.live&&!eventReplay.debug&&/^pandora_wings_/.test(event.id)&&<div data-story-ending-actions className="mt-4 grid grid-cols-2 gap-2" style={{animation:`storyEndCard 1s ease-out ${delay+1.8}s both`}}>
                   <button type="button" onClick={go(()=>setGameState('RHYTHM_DEMO_HOME'))} className="min-h-[48px] rounded-2xl bg-fuchsia-500 text-[13px] font-black text-slate-950 active:scale-[.98]">🎵 イベントの曲を遊ぶ</button>
                   <button type="button" onClick={go(()=>{setRhythmRankingTab('event');loadRhythmEventRanking('limited',rhythmEventDivision.limited);setGameState('RHYTHM_RANKING');})} className="min-h-[48px] rounded-2xl border border-fuchsia-300/60 bg-slate-900 text-[13px] font-black text-fuchsia-100 active:scale-[.98]">🏆 ランキングを見る</button>
@@ -25362,6 +25394,18 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         </div>);
       })()}
 
+      {/* モンヒロサクセス 第2話を飛ばした人への、みゅあの告知(1回だけ・2026-11-15)。HOME で、ほかのお話・案内が出ていないときだけ */}
+      {EVENT_REPLAY_RELEASE_FLAGS.monsucStoryEp2&&monsucStorySkip&&monsucStorySkip.skippedAt>0&&!monsucStorySkip.shownAt&&bootPhase==='GAME'&&gameState==='HOME'&&!eventReplay&&!rhythmEventStoryPending&&!rhythmHellGuide&&!dailyMasuAdvice&&updateGuideQueue.length===0&&(()=>{
+        const who=assistantById('mua');if(!who)return null;
+        const lv=assistantBondLevelOf(normalizeAssistantBond(assistantBondsRef.current.mua).points);
+        const text=lv<=2?'{name}、HOMEに新しい札が出ています！ 一番乗りで、いっしょに行けたらうれしいです♪':'{name}、HOMEに新しい札が出てるよ！ 一番乗りで、いっしょに行こ♪';
+        return(
+        <div data-monsuc-story-skip-notice className="fixed inset-0 flex items-end justify-center" style={{position:'fixed',inset:0,zIndex:75000,backgroundColor:'rgba(2,6,23,.9)'}} role="dialog" aria-modal="true" aria-label="みゅあからのお知らせ">
+          <div className="w-full max-w-md rounded-t-3xl border-t-2 border-x-2 border-pink-400 bg-slate-950 p-4" style={{paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
+            <div className="flex items-end gap-2"><AssistantFace who={who} size={72} accent={who.accent} expression="excited"/><div className="flex-1 rounded-2xl border-2 border-pink-400 bg-slate-900 px-3 py-3 text-[13px] font-bold leading-relaxed text-white" style={bubbleWrapStyle()}>{bubbleWrap(assistantSpeakText(text,breederName,lv,assistantCallStyles.mua||null,'mua'))}</div></div>
+            <button type="button" onClick={()=>markMonsucStorySkip('shownAt')} className="mt-4 min-h-[50px] w-full rounded-2xl bg-pink-500 text-sm font-black text-slate-950 active:scale-[.98]">閉じる</button>
+          </div>
+        </div>);})()}
       {dailyMasuAdvice&&(()=>{const who=activeAssistant;const lines=assistantSceneLinesFor(dailyMasuAdvice.shortcut===false?'dailyMasuAdviceBasic':'dailyMasuAdvice');const eligible=dailyMasuAdvice.eligible!==false;return(
         <div className="fixed inset-0 flex items-end justify-center" style={{position:'fixed',inset:0,zIndex:75000,backgroundColor:'rgba(2,6,23,.94)'}} role="dialog" aria-modal="true" aria-label="みゅあのワンポイントアドバイス">
           <div className="w-full max-w-md rounded-t-3xl border-t-2 border-x-2 border-pink-400 bg-slate-950 p-4" style={{paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>

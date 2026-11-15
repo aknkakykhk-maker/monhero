@@ -11080,6 +11080,52 @@ const ASSISTANT_MONSUC_BETA_EP1 = [
   { who:'dra', e:'happy', t:'オープンまで、もうすぐだな。……それまでに、おでも膝を仕上げとかないとな' },
   { who:'mua', e:'wink', t:'{name}には、オープンの日までないしょにしとこ。びっくりさせたいもんね♪' },
 ];
+// モンヒロサクセス 第2話(2026-11-15 ココロ4・台本 docs/progress/monsuc-beta-story/script.md「## 第2話」・社長 OK)。β版の公開と同時に出すお話。
+// 公開の印 monheroSuccess(EVENT_REPLAY_RELEASE_FLAGS.monsucStoryEp2)が真のあいだ、次の HOME で1回だけ流す(見たかは mh_rhythm_event_story_v1 の id)。
+// みゅあ・ドラ・ももすけの3人だけ(あつは出ない)。最後の「{name}〜！ 大ニュースだよ〜！」→ 終わりの札「🌱 モンヒロサクセスへ」→ モンサクの中の始まりの話へつながる。
+// ★数字を書かない。大会名はデビュー戦と「ヒーローズファイナル」だけ。修行の成功・失敗は言わない。イッサ博士は出さない
+const ASSISTANT_MONSUC_BETA_EP2 = [
+  // ---- 町の門 ----
+  { who:'mua', e:'excited', bg:'monsuc_gate', bgm:'monsuc_menu', fxText:'オープンの日の朝。育成場の門が、大きく開いている', holdMs:2500, t:'着いた〜！ ここが、モンヒロサクセス……！' },
+  { who:'momosuke', e:'surprise', t:'門、おっきい！！ 看板も、ぴかぴか光ってる！！' },
+  { who:'dra', e:'normal', t:'きゅうこちゃんの言ってたとおりだな。……今日は、門が開いてるぞ' },
+  // ---- 住む場所 ----
+  { who:'mua', e:'surprise', bg:'monsuc_home', fxText:'赤い屋根の家の前に、大きな木と土の広場がある', t:'わ、かわいいおうち！ ここなに？' },
+  { who:'dra', e:'normal', t:'育成のあいだ、モンスターとここで暮らすんだと。季節が変わると、景色も変わるらしいぞ' },
+  { who:'momosuke', e:'happy', t:'すてき♡ 春は桜で、冬は雪とか？ ももなら、毎日ここで写真撮っちゃう♡' },
+  { who:'mua', e:'happy', fxText:'広場では、モンスターが坂道を何度も駆け上がっている', t:'見て、あっちの子、坂道を何回も走ってる……！' },
+  { who:'dra', e:'happy', t:'トレーニングだな。走るのも、打ちこむのも、ぜんぶ種類がちがうんだ。どれをやるかは、毎回選べるらしい' },
+  { who:'mua', e:'normal', t:'どの子も、まだデビュー前なんだよね。みんな、すっごい真剣な顔してる' },
+  // ---- 修行の滝 ----
+  { who:'momosuke', e:'surprise', bg:'monsuc_waterfall', bgm:'monsuc_training', fxText:'町の奥では、大きな滝が流れ落ちている', t:'えっ、滝！？ あそこ、だれか打たれてるんだけど！！' },
+  { who:'dra', e:'wink', t:'修行だよ。遠くまで出かけて、まとめて鍛えるんだ。行けば、ちゃんと力になって帰ってくる' },
+  { who:'mua', e:'excited', t:'まぢか〜！ じゃあ、行き先選ぶのも楽しみぢゃん！' },
+  { who:'momosuke', e:'troubled', t:'でも、滝って冷たそう……。ももは見てるだけにする……' },
+  // ---- デビュー戦の会場 ----
+  { who:'mua', e:'surprise', bg:'monsuc_debut', bgm:'monsuc_cup', fxText:'木の観客席に、色とりどりの旗がはためいている', t:'ここは……大会の会場？' },
+  { who:'dra', e:'normal', t:'デビュー戦の会場だな。どの子も、最初の大会はここからだ' },
+  { who:'momosuke', e:'happy', t:'旗がいっぱいでかわいい♡ ここで勝ったら、みんなが拍手してくれるのかな' },
+  { who:'mua', e:'normal', t:'……ねぇ、ドラケン。デビュー戦のその先って、どこまで続いてるの？' },
+  { who:'dra', e:'wink', t:'それなら、いちばん奥まで行ってみるか' },
+  // ---- 山場: 闘技場 ----
+  { who:'mua', e:'surprise', bg:'monsuc_arena', fxText:'町のいちばん奥に、大きな闘技場がそびえている', holdMs:2500, t:'…………すごい' },
+  { who:'momosuke', e:'surprise', t:'ひろい……！ 観客席が、空まで続いてるみたい……！' },
+  { who:'dra', e:'normal', t:'ここで戦えるのは、勝ち上がってきた子だけだ。デビューして、大会で勝って、力をつけて……その先にあるのが、ヒーローズファイナル。最後の期の勝ち抜きの大会だ。そこで勝った子が、ヒーローって呼ばれるんだよ' },
+  { who:'mua', e:'normal', t:'デビューしたての子が、ここまで来るんだ……' },
+  { who:'mua', e:'troubled', t:'あたし、いままでは{name}のとなりで「がんばれ」って言うだけだったぢゃん？' },
+  { who:'mua', e:'normal', t:'でも今度は、デビューのその日から、ずっといっしょにいられる。いっしょに悩んで、いっしょに喜べる' },
+  { who:'mua', e:'excited', bgm:'monsuc_win', fx:'transform', fxText:'みゅあは、闘技場のまんなかで拳をにぎった', t:'決めた。{name}とあたしで、ぜったいここまで来る！ ヒーローズファイナルで、ヒーローになるんだ！' },
+  { who:'dra', e:'happy', t:'……ヒーローへの道、か。いい名前だな' },
+  { who:'momosuke', e:'wink', t:'みゅあねぇ、ちょっとかっこいい……。でも、ももだってすぐ追いつくから♡' },
+  { who:'dra', e:'happy', t:'おでたちも、準備ができたらすぐ行く。それまで、一番乗りの道を作っといてくれ' },
+  // ---- 受付 → 駆けだす ----
+  { who:'mua', e:'excited', bg:'monsuc_gate', bgm:'monsuc_menu', fxText:'3人は、育成場の受付へやってきた', t:'すみませーん！ 助手の一番乗り、みゅあです！' },
+  { who:'mua', e:'happy', fxText:'チラシに、「一番乗り」のしるしが押された', t:'やった〜！ 押してもらっちゃった✨' },
+  { who:'mua', e:'surprise', t:'あ……でも、これ{name}に言わないと始まらないぢゃん！' },
+  { who:'dra', e:'happy', t:'はは、そりゃそうだ。早く知らせてやれ' },
+  { who:'momosuke', e:'happy', t:'いってらっしゃい、みゅあねぇ！ ももたちは、お洋服見てから帰るね♡' },
+  { who:'mua', e:'excited', fxText:'みゅあはチラシを握りしめて、駆けだした', t:'{name}〜！ 大ニュースだよ〜！ｗ' },
+];
 const ASSISTANT_TACTICS_TYPES = [
   { who:'mua',      e:'excited',  t:'ねえねえ、モンスターにタイプができたんだって！ あたしたちも当てはめてみよ！' },
   { who:'mua',      e:'happy',    t:'まずはあたし！ ✨サポーター！ みんなを強くして、背中を押す係だよ！ ちょっとだけ🔥が付きやすいかも' },
@@ -12610,6 +12656,10 @@ const EVENT_REPLAYS = [
   //   openingLogo … 幕開けに大きく出す題字。art は本体の定数の名前(MSX_LOGO_ART・社長の題字ロゴ)。定数が無いときは text を金色の字で出す / endingTeaser … 次のお話がまだ無いときの次回予告の札(押しても何も開かない)
   { id: 'monsuc_beta_ep1', date: '2026-11-14 12:12', title: 'モンヒロサクセス 第1話 ～一番乗りは、だれだ～', script: ASSISTANT_MONSUC_BETA_EP1, unlockedKey: 'monsucBetaEp1Seen', releaseFlag: 'monsucStoryEp1', group: 'monsuc',
     openingLogo: { art: 'MSX_LOGO_ART', text: 'モンヒロサクセス', badge: 'β' }, endingTeaser: { title: '第2話 ～ヒーローへの道～', note: 'モンヒロサクセス β版 近日公開' } },
+  // モンヒロサクセス 第2話(2026-11-15 ココロ4)。β版の公開と同時。公開の印 monsucStoryEp2(= monheroSuccess)まで回想にも出さない。幕開けはいつもの iris(題字ロゴは第1話だけ)。
+  //   endingOpen … 本編で流れたときだけ、終わりの札に出す行き先のボタン('monsuc' = 🌱 モンヒロサクセスへ。押すとモンサクを開く)。回想では出さない
+  { id: 'monsuc_beta_ep2', date: '2026-11-16 00:58', title: 'モンヒロサクセス 第2話 ～ヒーローへの道～', script: ASSISTANT_MONSUC_BETA_EP2, unlockedKey: 'monsucBetaEp2Seen', releaseFlag: 'monsucStoryEp2', group: 'monsuc',
+    endingOpen: 'monsuc' },
   // MFバトルカードのはじまり(2026-10-24)。公開の印 cardBattle まで回想にも出さない。見たかは mh_story_card_battle_seen_v1(cardBattleIntroSeen)
   { id: 'card_battle_intro_2026', date: '2026-10-24 12:40', title: 'MFバトルカード ～物置の古い箱～', script: ASSISTANT_CARD_BATTLE_INTRO, unlockedKey: 'cardBattleIntroSeen', releaseFlag: 'cardBattle', group: 'update' },
   // 助手4人がタイプを教える(2026-10-17 作成・2026-10-18 公開)。releaseFlag の tacticsTypes はヘイトとタイプの公開の印(RELEASE_FLAGS.tacticsHate)と一緒
