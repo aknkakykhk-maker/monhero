@@ -37,4 +37,15 @@ check('② 上限を超えない', over === 0, `${N}戦`);
 check('② 引き分けにならない', draw === 0);
 check('② 判定になった試合がある', judged > 0, `${judged}戦`);
 check('② 判定の勝者・勝ち数・決め手が決まりどおり', bad === 0, `判定 ${judged}戦・自分の勝ち ${aWin}・決め手 ${JSON.stringify(by)}`);
+// ③ gutsPlan(r1115-090 モンサクのガッツ回復の半分): 倍率1・空なら今までと同じ指紋/半分なら試合が長引く(平均ラウンドが増える)
+{
+  let same = 0, rA = 0, rB = 0; const M = 150;
+  for (let i = 0; i < M; i++) {
+    const a = engine.simulate(input(i, {})), b = engine.simulate(input(i, { gutsPlan: { regen: 1, move: 1, charge: 1 } })), c = engine.simulate(input(i, { gutsPlan: {} }));
+    if (a.digest === b.digest && a.digest === c.digest) same++;
+    const h = engine.simulate(input(i, { gutsPlan: { regen: 0.5, move: 0.5, charge: 0.5 } })); rA += a.rounds; rB += h.rounds;
+  }
+  check('③ gutsPlan が倍率1・空・無しなら同じ指紋', same === M, `${same}/${M}`);
+  check('③ 回復を半分にすると試合が長引く', rB > rA * 1.1, `平均 ${(rA / M).toFixed(1)} → ${(rB / M).toFixed(1)} ラウンド`);
+}
 console.log(ng ? `\nNG ${ng}件` : '\nすべて OK'); process.exit(ng ? 1 : 0);
