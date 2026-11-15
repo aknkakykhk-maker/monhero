@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e721225c5c5ad803
+// source-sha256: ed8c18591f0eb3ac
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -176060,18 +176060,18 @@ function MsxPlay({
       }
     }, hpLost), " 下がった")) : null) : o.kind === 'rest' || o.kind === 'play' ? React.createElement(React.Fragment, null, React.createElement("span", {
       className: "hd2"
-    }, o.kind === 'rest' ? '🛌 休む' : '🎈 遊ぶ'), React.createElement("br", null), hpUp > 0 ? React.createElement(React.Fragment, null, "体力 ", React.createElement("b", {
+    }, o.kind === 'rest' ? '🛌 休む' : '🎈 遊ぶ'), React.createElement("br", null), typeof MsxGaugeFx === 'function' ? hpUp > 0 || stDown > 0 ? '体力とストレスが動いた' : '体力が回復した' : React.createElement(React.Fragment, null, hpUp > 0 ? React.createElement(React.Fragment, null, "体力 ", React.createElement("b", {
       className: "gu",
       "data-msx-rest-hp": true
     }, "+", hpUp)) : '体力が回復した', stDown > 0 ? React.createElement(React.Fragment, null, "・ストレス ", React.createElement("b", {
       className: "gu"
-    }, "−", stDown)) : null, (o.cured || []).includes('utsu') ? '。「うつ病」が治った' : '') : o.kind === 'clinic' ? React.createElement(React.Fragment, null, React.createElement("span", {
+    }, "−", stDown)) : null), (o.cured || []).includes('utsu') ? '。「うつ病」が治った' : '') : o.kind === 'clinic' ? React.createElement(React.Fragment, null, React.createElement("span", {
       className: "hd2"
-    }, "🏥 通院"), React.createElement("br", null), msxClinicText(o.cured, s.yosu), React.createElement("br", null), hpUp > 0 ? React.createElement(React.Fragment, null, "体力 ", React.createElement("b", {
+    }, "🏥 通院"), React.createElement("br", null), msxClinicText(o.cured, s.yosu), typeof MsxGaugeFx === 'function' ? null : React.createElement(React.Fragment, null, React.createElement("br", null), hpUp > 0 ? React.createElement(React.Fragment, null, "体力 ", React.createElement("b", {
       className: "gu"
     }, "+", hpUp)) : '体力も少し回復した', stDown > 0 ? React.createElement(React.Fragment, null, "・ストレス ", React.createElement("b", {
       className: "gu"
-    }, "−", stDown)) : null) : React.createElement(React.Fragment, null, React.createElement("span", {
+    }, "−", stDown)) : null)) : React.createElement(React.Fragment, null, React.createElement("span", {
       className: "hd2"
     }, "🛌 休み"), React.createElement("br", null), MSX_COND[o.cond] || '体調', "のため、このターンは休んだ"), o.event && typeof MsxTrainEvent !== 'function' ? React.createElement(React.Fragment, null, React.createElement("br", null), React.createElement("b", {
       className: "ga"
@@ -176079,7 +176079,13 @@ function MsxPlay({
       style: {
         color: '#fca5a5'
       }
-    }, MSX_COND[o.cond]), "をしてしまった…しばらく休み") : null), !acting && say && say.t ? React.createElement(MsxSay, {
+    }, MSX_COND[o.cond]), "をしてしまった…しばらく休み") : null), !acting && !isTrain && (o.kind === 'rest' || o.kind === 'play' || o.kind === 'clinic') && typeof MsxGaugeFx === 'function' && (hpUp > 0 || stDown > 0) ? React.createElement(MsxGaugeFx, {
+      key: `gfx-act-${s.turn}-${o.kind}`,
+      items: msxGfxItemsOf({
+        hp0: s.hp - hpUp,
+        st0: s.stress + stDown
+      }, s)
+    }) : null, !acting && say && say.t ? React.createElement(MsxSay, {
       aid: s.aid,
       ex: say.e || 'normal',
       text: say.t
