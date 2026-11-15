@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 52d6aad29fb0ed5f
+// source-sha256: 24376efa28e25a34
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -193323,23 +193323,23 @@ const CARD_TACTIC_GROUPS = Object.freeze([{
   id: 'guardN',
   cat: 'cond',
   sec: '手札の中身',
-  name: '手札に守り札◯枚以上',
+  name: '手札に守りカード◯枚以上',
   tiers: [1, 2, 3].map(v => [v, cardTacticFine([3])(v)]),
-  desc: '回避・防御の札がその数以上'
+  desc: '回避・防御のカードがその数以上'
 }, {
   id: 'guardKind',
   cat: 'cond',
   sec: '手札の中身',
   name: '手札に◯がある',
   tiers: [['回避', 'N'], ['防御', 'N']],
-  desc: 'その種類の守り札がある'
+  desc: 'その種類の守りカードがある'
 }, {
   id: 'bigInHand',
   cat: 'cond',
   sec: '手札の中身',
   name: '手札に大技がある',
   tiers: [['', 'N']],
-  desc: 'ガッツ4以上の攻撃の札がある'
+  desc: 'ガッツ4以上の攻撃のカードがある'
 }, {
   id: 'areaInHand',
   cat: 'cond',
@@ -193566,7 +193566,7 @@ const CARD_TACTIC_GROUPS = Object.freeze([{
   knob: {
     guardAll: true
   },
-  desc: '守り札を残して堅く守る(ドラの型)'
+  desc: '守りカードを残して堅く守る(ドラの型)'
 }, {
   id: 'tSave',
   cat: 'base',
@@ -193713,7 +193713,7 @@ const CARD_TACTIC_GROUPS = Object.freeze([{
   knob: {
     noDraw: true
   },
-  desc: '引く札・山札を減らす札を控え、山札を切らさない'
+  desc: '引くカード・山札を減らすカードを控え、山札を切らさない'
 }, {
   id: 'tFocus',
   cat: 'base',
@@ -193794,17 +193794,17 @@ const CARD_TACTIC_GROUPS = Object.freeze([{
   cat: 'monster',
   sec: '攻撃',
   phase: 'attack',
-  name: '付ける札を使う',
+  name: '付けるカードを使う',
   tiers: [['', 'R']],
-  desc: '技に付ける札をいっしょに出す'
+  desc: '技に付けるカードをいっしょに出す'
 }, {
   id: 'attachKind',
   cat: 'monster',
   sec: '攻撃',
   phase: 'attack',
-  name: '付ける札: ◯',
+  name: '付けるカード: ◯',
   tiers: [['ダメージを上げる', 'N'], ['回避させない', 'R'], ['ガッツを軽くする', 'N']],
-  desc: 'その効き目の付ける札を、技にいっしょに出す'
+  desc: 'その効き目の付けるカードを、技にいっしょに出す'
 }, {
   id: 'spe',
   cat: 'monster',
@@ -193852,7 +193852,7 @@ const CARD_TACTIC_GROUPS = Object.freeze([{
   phase: 'attack',
   name: '崩し: ◯',
   tiers: [['手札を捨てさせる', 'R'], ['山札を削る', 'R'], ['ガッツを減らす', 'R'], ['番を飛ばす', 'SR']],
-  desc: '相手の手を崩す札を出す'
+  desc: '相手の手を崩すカードを出す'
 }, {
   id: 'guard',
   cat: 'monster',
@@ -193861,7 +193861,7 @@ const CARD_TACTIC_GROUPS = Object.freeze([{
   name: '守る',
   tiers: [['', 'N']],
   start: [''],
-  desc: '攻撃を受けたら守り札で守る'
+  desc: '攻撃を受けたら守りカードで守る'
 }, {
   id: 'guardFirst',
   cat: 'monster',
@@ -193869,7 +193869,7 @@ const CARD_TACTIC_GROUPS = Object.freeze([{
   phase: 'guard',
   name: '◯を先に使う',
   tiers: [['回避', 'N'], ['防御', 'N'], ['はね返す守り', 'R'], ['半分にする守り', 'R']],
-  desc: '守るとき、その種類の札で守る'
+  desc: '守るとき、その種類のカードで守る'
 }, {
   id: 'guardOver',
   cat: 'monster',
@@ -193893,7 +193893,7 @@ const CARD_TACTIC_GROUPS = Object.freeze([{
   phase: 'guard',
   name: '味方をかばう',
   tiers: [['', 'R']],
-  desc: 'かばう札で、味方への攻撃を受ける'
+  desc: 'かばうカードで、味方への攻撃を受ける'
 }, {
   id: 'noGuard',
   cat: 'monster',
@@ -193901,7 +193901,7 @@ const CARD_TACTIC_GROUPS = Object.freeze([{
   phase: 'guard',
   name: '守らない',
   tiers: [['', 'R']],
-  desc: '守り札を使わず受ける(札を残す)'
+  desc: '守りカードを使わず受ける(カードを残す)'
 }, {
   id: 'save',
   cat: 'breeder',
@@ -193924,7 +193924,7 @@ const CARD_TACTIC_GROUPS = Object.freeze([{
   cat: 'breeder',
   sec: 'ガッツ',
   phase: 'guts',
-  name: '守り札を3枚まで残す',
+  name: '守りカードを3枚まで残す',
   tiers: [['', 'R']],
   desc: '回避・防御は3枚までガッツにしない'
 }, {
@@ -193934,7 +193934,7 @@ const CARD_TACTIC_GROUPS = Object.freeze([{
   phase: 'guts',
   name: '◯から置く',
   tiers: [['重い札', 'N'], ['使えない札', 'N']],
-  desc: 'ガッツにする札の順を決める'
+  desc: 'ガッツにするカードの順を決める'
 }, {
   id: 'stop',
   cat: 'breeder',
@@ -193951,7 +193951,7 @@ const CARD_TACTIC_GROUPS = Object.freeze([{
   phase: 'attack',
   name: '溜め技を使う',
   tiers: [['', 'R']],
-  desc: '次の技を何倍にする札を先に使う'
+  desc: '次の技を何倍にするカードを先に使う'
 }, {
   id: 'chargeKind',
   cat: 'monster',
@@ -193959,7 +193959,7 @@ const CARD_TACTIC_GROUPS = Object.freeze([{
   phase: 'attack',
   name: '溜め: ◯',
   tiers: [['怒り', 'R'], ['次の番の技を倍', 'R']],
-  desc: 'その溜めの札を先に使う'
+  desc: 'その溜めのカードを先に使う'
 }, {
   id: 'ace',
   cat: 'breeder',
