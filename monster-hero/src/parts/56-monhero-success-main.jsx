@@ -916,6 +916,29 @@ function MsxBag({ run, setRun, v, ev, onClose }) {
   </>);
 }
 
+// ---- 能力ポイントの刻み(1・5・10・100・MAX)と、＋/−の長押し(r1115-092。マスモン強化の bulkEnhanceUnit と同じ刻み) ----
+//   育成中の振り分け(MsxStats)と、育成完了の前の振り分け(56-monhero-success-r3-retire.jsx の E3)で同じ物を使う。刻みは保存しない(開いている間だけ覚える)
+const MSX_PT_UNITS = Object.freeze([1, 5, 10, 100, 'MAX']);
+let msxPtUnitMem = 1;
+const msxPtLimit = (u) => (u === 'MAX' ? Infinity : Math.max(1, Number(u) || 1));
+function useMsxPtUnit() {
+  const [u, setU] = useState(() => (MSX_PT_UNITS.includes(msxPtUnitMem) ? msxPtUnitMem : 1));
+  return [u, (x) => { msxPtUnitMem = x; setU(x); }];
+}
+function MsxPtUnits({ unit, setUnit }) {
+  return (
+    <div className="msx-ptunit" role="group" aria-label="振り分けの単位" data-msx-pt-units>
+      {MSX_PT_UNITS.map((x) => <button type="button" key={x} aria-pressed={unit === x} className={`chip${unit === x ? ' on' : ''}`} onClick={() => setUnit(x)} data-msx-pt-unit={x}>{x === 'MAX' ? 'MAX' : `${x}P`}</button>)}
+    </div>
+  );
+}
+// 押し続けると続けて動く(PressRepeatButton)。押したときの手は最新の物を呼ぶ(長押しの間に画面が描き直されても古い値を使わない)
+function MsxPtBtn({ onPress, ...rest }) {
+  const ref = useRef(onPress); ref.current = onPress;
+  const fire = useCallback(() => ref.current(), []);
+  return <PressRepeatButton onPress={fire} {...rest}/>;
+}
+
 // ---- 能力(能力ポイントを振る・忠誠と方針・編成の親密度) ----
 function MsxStats({ run, setRun, v, ev, onClose }) {
   // 育成中の「能力」: いじる物・育成中だけの物(能力ポイント・技・型・忠誠度と方針・編成の親密度)。能力の棒や図鑑は「くわしく」へ(2026-11-14 社長「役割で分ける」)
@@ -927,12 +950,24 @@ function MsxStats({ run, setRun, v, ev, onClose }) {
   const replay = (list) => { let w = s; for (const k of list) { const r = SUC.spendPts(w, k, 1); if (!r.out.ok) break; w = r.state; } return w; };
   const ws = replay(draft);
   const addOf = (k) => draft.filter((x) => x === k).length;
-  const plus = (k) => { const r = SUC.spendPts(ws, k, 1); if (r.out.ok) setDraft([...draft, k]); };
-  const minus = (k) => { const i = draft.lastIndexOf(k); if (i >= 0) setDraft(draft.filter((_, j) => j !== i)); };
+  const capK = (k) => (typeof SUC.statCapOf === 'function' ? SUC.statCapOf(s, k) : 999); // 能力の上限アップ(r1115-103)
+  const [unit, setUnit] = useMsxPtUnit();
+  const draftRef = useRef(draft); draftRef.current = draft;
+  const setDraftNow = (list) => { draftRef.current = list; setDraft(list); };
+  // 刻みの分(1・5・10・100・MAX)だけ続けて振る。ポイントが足りない・上限に着いたところで止まる
+  const plus = (k) => {
+    const list = draftRef.current.slice(); let w = replay(list); const lim = msxPtLimit(unit); let n = 0;
+    while (n < lim) { if (w.stats[k] >= capK(k)) break; const r = SUC.spendPts(w, k, 1); if (!r.out.ok) break; w = r.state; list.push(k); n += 1; }
+    if (n) setDraftNow(list);
+  };
+  const minus = (k) => {
+    const list = draftRef.current.slice(); const lim = msxPtLimit(unit); let n = 0;
+    while (n < lim) { const i = list.lastIndexOf(k); if (i < 0) break; list.splice(i, 1); n += 1; }
+    if (n) setDraftNow(list);
+  };
   const auto = () => { let w = replay(draft); const list = draft.slice(); while (w.pts > 0) { const k = MSX_STATS.slice().sort((x, y) => w.stats[x] - w.stats[y])[0]; const r = SUC.spendPts(w, k, 1); if (!r.out.ok) break; w = r.state; list.push(k); } setDraft(list); };
   const commit = () => { if (!draft.length) return; setRun({ ...run, s: ws }); setDraft([]); };
   const used = s.pts - ws.pts;
-  const capK = (k) => (typeof SUC.statCapOf === 'function' ? SUC.statCapOf(s, k) : 999); // 能力の上限アップ(r1115-103)
   const lineOf = SUC.PTS && SUC.PTS.line ? SUC.PTS.line[SUC.periodOf(s.turn).key] : null;
   const own = typeof SUC.techsOf === 'function' ? SUC.techsOf(s.species) : [];
   const techs = (Array.isArray(s.techs) ? s.techs : []).map((id) => own.find((t) => t && t.id === id)).filter(Boolean);
@@ -948,12 +983,13 @@ function MsxStats({ run, setRun, v, ev, onClose }) {
           <div className="v-num"><small>使う点</small><b style={{ color: used ? '#fde047' : undefined }}>{used}</b></div>
           <div className="v-num"><small>残りの点</small><b>{ws.pts}</b></div>
         </div>
-        <div className="msx-note">＋で仮に振り、「決定」で確定する。1点で +1(期の目安{lineOf ? ` ${lineOf}` : ''}を超えると 2点で +1)</div>
+        <MsxPtUnits unit={unit} setUnit={setUnit}/>
+        <div className="msx-note">＋で仮に振り(押し続けると続けて振れる)、「決定」で確定する。1点で +1(期の目安{lineOf ? ` ${lineOf}` : ''}を超えると 2点で +1)</div>
         {MSX_STATS.map((k) => { const n = addOf(k); const cost = SUC.ptsCost(ws, k); const over = lineOf != null && ws.stats[k] >= lineOf; return (
           <div key={k} className="msx-ab-row" data-msx-pts-row={k}><span className="n">{MSX_STAT_ICON[k]} {MSX_STAT_NAME[k]}<small className="sub" style={{ display: 'block', fontSize: 10, color: over ? '#fbbf24' : '#94a3b8' }}>{over ? '目安超え・2点で +1' : '1点で +1'}{capK(k) > 999 ? <span data-msx-cap={k} style={{ color: '#f0abfc' }}>・上限 {capK(k).toLocaleString()}</span> : null}</small></span>
             <span style={{ fontSize: 12, fontWeight: 900, whiteSpace: 'nowrap' }}>{n ? <>{s.stats[k]} → <b style={{ width: 'auto', color: '#fde047' }}>{ws.stats[k]}</b> <small style={{ color: '#fde047', fontSize: 11 }}>(+{n})</small></> : <b style={{ width: 'auto' }}>{s.stats[k]}</b>}</span>
-            <button type="button" className="chip sym minus" style={{ minWidth: 44, minHeight: 44 }} disabled={!n} onClick={() => minus(k)} aria-label={`${MSX_STAT_NAME[k]}を戻す`}/>
-            <button type="button" className="chip on sym plus" style={{ minWidth: 44, minHeight: 44 }} disabled={ws.pts < cost} onClick={() => plus(k)} aria-label={`${MSX_STAT_NAME[k]}を上げる`}/>
+            <MsxPtBtn className="chip sym minus pt44" disabled={!n} onPress={() => minus(k)} aria-label={`${MSX_STAT_NAME[k]}を戻す`}/>
+            <MsxPtBtn className="chip on sym plus pt44" disabled={ws.pts < cost} onPress={() => plus(k)} aria-label={`${MSX_STAT_NAME[k]}を上げる`}/>
           </div>); })}
         <div className="msx-row" style={{ marginTop: 8, gap: 6 }}>
           <button type="button" className="chip" style={{ flex: 1, minHeight: 44 }} disabled={!draft.length} onClick={() => setDraft([])}>元に戻す</button>

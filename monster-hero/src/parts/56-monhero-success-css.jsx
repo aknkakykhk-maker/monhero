@@ -1035,5 +1035,10 @@ const MSX_CSS = `
 .msx .msx-fp-r .st{flex:none;display:flex;flex-direction:column;gap:3px;max-width:42%}
 .msx .msx-tp-ft{position:static;flex:none}
 .msx .msx-tp-ft button{display:flex;align-items:center;justify-content:center}
+/* 能力ポイントの刻み(1・5・10・100・MAX)と長押し(r1115-092) */
+.msx .msx-ptunit{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin:6px 0}
+.msx .msx-ptunit .chip{min-height:40px;padding:0 2px;justify-content:center;text-align:center;font-size:12px;font-weight:900}
+.msx .pt44{min-width:44px;min-height:44px}
+.msx .sym{-webkit-user-select:none;user-select:none}
 `;
 
