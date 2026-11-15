@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 435a621b437c57ca
+// source-sha256: 92c8390445bc274f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -114247,6 +114247,22 @@ const ASSISTANT_LIFE_SAY_SPECIAL = Object.freeze({
   'cardroom:cards': ['MFバトル', 'カードを', '研究'],
   'cafe:snack': ['おやつ', '屋さんで', 'ひと休み']
 });
+const ASSISTANT_LIFE_SAY_SHORT = Object.freeze({
+  snack: 'おやつ中',
+  practice: '練習中',
+  training: '育成中',
+  cards: 'カード研究',
+  walk: '散歩中',
+  idle: 'ぼーっと',
+  read: '読書中',
+  battle: 'バトル中',
+  checkup: '診察中'
+});
+const assistantLifeSayOutShort = (place, doingKey) => {
+  const icon = ASSISTANT_LIFE_PLACE_ICON[place] || '🚶',
+    d = ASSISTANT_LIFE_DOINGS[doingKey];
+  return d && d.places.includes(place) && ASSISTANT_LIFE_SAY_SHORT[doingKey] ? [icon, ASSISTANT_LIFE_SAY_SHORT[doingKey]] : [icon, `${assistantLifePlaceShow(place) || 'おでかけ先'}へ`];
+};
 const assistantLifeSayOut = (place, doingKey) => {
   const icon = ASSISTANT_LIFE_PLACE_ICON[place] || '🚶';
   const sp = ASSISTANT_LIFE_SAY_SPECIAL[`${place}:${doingKey}`] || ASSISTANT_LIFE_SAY_SPECIAL[place];
@@ -114270,32 +114286,54 @@ const assistantLifeSayFill = (rooms, life) => {
       }
     })() : null;
     const came = t0.match(/^🚪 (.+さんの)(.+が)来ている$/u);
-    let say = r.say;
-    if (away) say = ['🏘', `${away.name}の`, '家に', 'おでかけ'];else if (came) say = ['🚪', came[1], came[2], '来ている'];else if (r.rel === 'living') say = ['🛋️', 'みんなの', '居間に'];
+    let say = r.say,
+      short = r.sayShort || null;
+    if (away) {
+      say = ['🏘', `${away.name}の`, '家に', 'おでかけ'];
+      short = ['🏘', `${away.name}の家`];
+    } else if (came) {
+      say = ['🚪', came[1], came[2], '来ている'];
+      short = ['🚪', 'お客さん'];
+    } else if (r.rel === 'living') {
+      say = ['🛋️', 'みんなの', '居間に'];
+      short = ['🛋️', '居間に'];
+    }
     if (!Array.isArray(say)) {
       const m = t0.match(/^(\S+) (.+)$/u);
       say = m ? [m[1], m[2]] : ['', t0];
     }
     let mark = null,
+      markShort = null,
       m;
-    if (m = t1.match(/^💢 (.+)とけんか中$/u)) mark = ['💢', `${m[1]}と`, 'けんか中'];else if (m = t1.match(/^💢 (.+)と言い合いのあと$/u)) mark = ['💢', `${m[1]}と`, '言い合いの', 'あと'];else if (m = t1.match(/^🤝 (.+)と仲直り$/u)) {
+    if (m = t1.match(/^💢 (.+)とけんか中$/u)) {
+      mark = ['💢', `${m[1]}と`, 'けんか中'];
+      markShort = ['💢', 'けんか中'];
+    } else if (m = t1.match(/^💢 (.+)と言い合いのあと$/u)) {
+      mark = ['💢', `${m[1]}と`, '言い合いの', 'あと'];
+      markShort = ['💢', '言い合い'];
+    } else if (m = t1.match(/^🤝 (.+)と仲直り$/u)) {
       const w = r.mend && typeof assistantLifeWhereOf === 'function' ? assistantLifeWhereOf(life, id) : null;
-      mark = ['🤝', `${m[1]}と`, w && w.group && w.group.ids.includes(r.mend) ? '過ごす' : '仲直り'];
+      const both = !!(w && w.group && w.group.ids.includes(r.mend));
+      mark = ['🤝', `${m[1]}と`, both ? '過ごす' : '仲直り'];
+      markShort = ['🤝', '仲直り'];
     }
     rooms[id] = {
       ...r,
       say,
-      sayMark: mark
+      sayShort: short || say,
+      sayMark: mark,
+      sayMarkShort: markShort || mark
     };
   }
   return rooms;
 };
+const assistantLifeSayMeasure = x => String(x).replace(/[\uFE0F\u200D]/gu, '');
 const assistantLifeSayFont = (say, avail, max = 10.5) => {
   const parts = assistantLifeSayParts(say);
-  return Math.max(8, Math.min(max, ...parts.map(x => assistantLifeTagFit(x, avail, max, 8))));
+  return Math.max(8, Math.min(max, ...parts.map(x => assistantLifeTagFit(assistantLifeSayMeasure(x), avail, max, 8))));
 };
 const assistantLifeSayParts = say => {
-  const a = (say || []).filter(x => x !== null && x !== undefined);
+  const a = (say || []).filter(x => x !== null && x !== undefined).map(String);
   return a.length > 1 && a[0] ? [`${a[0]} ${a[1]}`, ...a.slice(2)] : a.filter(Boolean);
 };
 function AssistantLifeSayText({
@@ -114308,7 +114346,7 @@ function AssistantLifeSayText({
     key: i
   }, i ? React.createElement("wbr", null) : null, React.createElement("span", {
     "data-assistant-life-say-chunk": true,
-    className: assistantLifeTagFit(x, avail, font, 0) >= font - 0.05 ? 'whitespace-nowrap' : ''
+    className: assistantLifeTagFit(assistantLifeSayMeasure(x), avail, font, 0) >= font - 0.05 ? 'whitespace-nowrap' : ''
   }, x))));
 }
 const assistantLifeTagNames = (text, budget) => {
@@ -114493,11 +114531,13 @@ function AssistantLifeRoom({
     const tagLand = typeof window !== 'undefined' && window.innerWidth > window.innerHeight;
     const tagFit = assistantLifeTagFit(t[0], w - 26, 10.5, 0);
     const short = [...String(t[0])].length <= 9;
-    const say = Array.isArray(state.say) ? compact && state.sayMark ? state.sayMark : state.say : null;
+    const avail = w - 6 - 8 - 3 - 2;
+    const oneFit = x => assistantLifeTagFit(assistantLifeSayMeasure(assistantLifeSayParts(x).join('')), avail, 10.5, 0);
+    const sayFull = Array.isArray(state.say) ? compact && state.sayMark ? state.sayMark : state.say : null;
+    const sayAlt = Array.isArray(state.say) ? (compact && state.sayMark ? state.sayMarkShort : state.sayShort) || sayFull : null;
+    const say = tagLand && sayFull && oneFit(sayFull) < 10.5 && sayAlt ? oneFit(sayAlt) >= oneFit(sayFull) ? sayAlt : sayFull : sayFull;
     if (say) {
-      const avail = w - 6 - 8 - 3 - 2;
-      const one = tagLand ? assistantLifeTagFit(assistantLifeSayParts(say).join(''), avail, 9.5, 7) : 0;
-      const f = tagLand && one >= 7 && assistantLifeTagFit(assistantLifeSayParts(say).join(''), avail, 9.5, 0) >= 7 ? one : assistantLifeSayFont(say, avail);
+      const f = tagLand ? Math.max(7, oneFit(say)) : assistantLifeSayFont(say, avail);
       return React.createElement("span", {
         className: "tag",
         "data-assistant-life-room-away": id,
@@ -114520,7 +114560,10 @@ function AssistantLifeRoom({
         style: {
           whiteSpace: 'normal',
           fontSize: f,
-          lineHeight: tagLand ? '11px' : `${Math.round(f * 1.18)}px`,
+          lineHeight: tagLand ? '13px' : `${Math.round(f * 1.18)}px`,
+          ...(tagLand ? {
+            whiteSpace: 'nowrap'
+          } : {}),
           maxHeight: 'none',
           overflow: 'visible',
           textOverflow: 'clip'
@@ -114780,14 +114823,16 @@ const assistantLifeRoomsOf = (life, metIds) => {
         }
       } else rooms[id] = {
         tag: [`🚪 ${assistantLifeName(host)}の部屋へ`, `${ids.length}人で ${doing.label}`, assistantLifeGroupNames(ids, 4)],
-        say: ['🚪', `${assistantLifeName(host)}の`, '部屋で', doing.label || '過ごす']
+        say: ['🚪', `${assistantLifeName(host)}の`, '部屋で', doing.label || '過ごす'],
+        sayShort: ['🚪', `${assistantLifeName(host)}の部屋`]
       };
       continue;
     }
     const sub = w.group ? `${w.group.ids.length}人で ${doing.label}` : `ひとりで ${doing.label}`;
     rooms[id] = {
       tag: [`${ASSISTANT_LIFE_PLACE_ICON[w.place] || '🚶'} ${assistantLifePlaceShow(w.place)}へ`, sub, w.group ? assistantLifeGroupNames(w.group.ids, 4) : null],
-      say: assistantLifeSayOut(w.place, w.doing)
+      say: assistantLifeSayOut(w.place, w.doing),
+      sayShort: assistantLifeSayOutShort(w.place, w.doing)
     };
   }
   const q = peer && peer.quarrel && peer.quarrel.pending;

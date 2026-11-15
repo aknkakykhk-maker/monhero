@@ -5,7 +5,7 @@
 const http = require('http'), path = require('path'), fs = require('fs');
 const root = path.resolve(__dirname, '..', '..'), PORT = 9283;
 const outDir = path.resolve(root, process.argv[2] || 'docs/progress/assistant-life/report-1115');
-const VIEWS = [{ id: 'v390', w: 390, h: 844 }, { id: 'v320', w: 320, h: 700 }, { id: 'h844', w: 844, h: 390 }];
+const VIEWS = [{ id: 'v390', w: 390, h: 844 }, { id: 'v320', w: 320, h: 700 }, { id: 'h844', w: 844, h: 390 }, { id: 'h667', w: 667, h: 375 }];
 (async () => {
   let chromium;
   try { ({ chromium } = require('playwright')); } catch { console.log('SKIP: playwright が入っていない'); process.exit(0); }
@@ -52,11 +52,11 @@ const VIEWS = [{ id: 'v390', w: 390, h: 844 }, { id: 'v320', w: 320, h: 700 }, {
         const cut = lines.filter(x => x.scrollWidth > x.clientWidth + 1 || x.scrollHeight > x.clientHeight + 1).map(x => x.textContent.trim());
         // 言葉の途中で折れていないか: 字の塊(data-assistant-life-chunk か whitespace-nowrap)以外で行が変わっていないか
         const broken = lines.filter(x => { const rg = document.createRange(); rg.selectNodeContents(x); const ys = [...rg.getClientRects()].map(q => Math.round(q.top)); const nLines = new Set(ys).size; return nLines > 1 && !x.querySelector('.whitespace-nowrap,[data-assistant-life-chunk]'); }).map(x => x.textContent.trim());
-        rows.push({ id: room.getAttribute('data-assistant-life-room'), text: lines.map(x => x.textContent.trim()).join(' / '), cut, broken, outside: tr.right > rr.right + 1 || tr.left < rr.left - 1 || tr.bottom > rr.bottom });
+        const fs = lines.map(x => parseFloat(getComputedStyle(x).fontSize)); rows.push({ font: Math.min(...fs), h: Math.round(tr.bottom - rr.top), rw: Math.round(rr.width), id: room.getAttribute('data-assistant-life-room'), text: lines.map(x => x.textContent.trim()).join(' / '), cut, broken, outside: tr.right > rr.right + 1 || tr.left < rr.left - 1 || tr.bottom > rr.bottom });
       }
       return rows;
     });
-    for (const x of r) { const ng = x.cut.length || x.broken.length || x.outside || /…/.test(x.text); if (ng) bad++; console.log(`${ng ? 'NG' : 'OK'} [${v.id}] ${x.id}: ${x.text}${x.cut.length ? ` 切れ:${x.cut.join('|')}` : ''}${x.broken.length ? ` 途中で折れ:${x.broken.join('|')}` : ''}${x.outside ? ' 札が部屋の外' : ''}`); }
+    for (const x of r) { const ng = x.cut.length || x.broken.length || x.outside || /…/.test(x.text); if (ng) bad++; console.log(`${ng ? 'NG' : 'OK'} [${v.id}] ${x.id}(幅${x.rw} 字${x.font}px 下端${x.h}px): ${x.text}${x.cut.length ? ` 切れ:${x.cut.join('|')}` : ''}${x.broken.length ? ` 途中で折れ:${x.broken.join('|')}` : ''}${x.outside ? ' 札が部屋の外' : ''}`); }
     const house = page.locator('[data-assistant-life-top-house]').first();
     const file = path.join(outDir, `r1115-136-house-labels-${v.id}.png`);
     if (await house.count()) await house.screenshot({ path: file }); else await page.screenshot({ path: file });

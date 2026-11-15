@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 1898abc67e7bef3a
+// generated-sha256: bc2a0ff15b235618
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -67532,6 +67532,12 @@ const assistantLifeTagChunks = (text) => {
 //   札の tag(行き先・人数・名前)は今までどおり残す(ほかの画面・検査が使う)。say は表示のためだけ
 const ASSISTANT_LIFE_SAY_WORDS = Object.freeze({ studio: ['モンヒロ', 'ビート'], cardroom: ['MFバトル', 'カード'], cafe: ['おやつ', '屋さん'], hill: ['ひなたの', '丘'], ranch: ['M/B', '管理'] });
 const ASSISTANT_LIFE_SAY_SPECIAL = Object.freeze({ battle: ['モンヒロ', 'バトル中'], 'cardroom:cards': ['MFバトル', 'カードを', '研究'], 'cafe:snack': ['おやつ', '屋さんで', 'ひと休み'] });
+// 横の狭い部屋(1行・字10.5px以上・床にかけない)で全部が入らないときの短い言い方
+const ASSISTANT_LIFE_SAY_SHORT = Object.freeze({ snack: 'おやつ中', practice: '練習中', training: '育成中', cards: 'カード研究', walk: '散歩中', idle: 'ぼーっと', read: '読書中', battle: 'バトル中', checkup: '診察中' });
+const assistantLifeSayOutShort = (place, doingKey) => {
+  const icon = ASSISTANT_LIFE_PLACE_ICON[place] || '🚶', d = ASSISTANT_LIFE_DOINGS[doingKey];
+  return d && d.places.includes(place) && ASSISTANT_LIFE_SAY_SHORT[doingKey] ? [icon, ASSISTANT_LIFE_SAY_SHORT[doingKey]] : [icon, `${assistantLifePlaceShow(place) || 'おでかけ先'}へ`];
+};
 const assistantLifeSayOut = (place, doingKey) => {
   const icon = ASSISTANT_LIFE_PLACE_ICON[place] || '🚶';
   const sp = ASSISTANT_LIFE_SAY_SPECIAL[`${place}:${doingKey}`] || ASSISTANT_LIFE_SAY_SPECIAL[place];
@@ -67548,31 +67554,34 @@ const assistantLifeSayFill = (rooms, life) => {
     const t0 = String(r.tag[0] || ''), t1 = String(r.tag[1] || '');
     const away = typeof assistantLifeFriendAwayOf === 'function' ? (() => { try { return assistantLifeFriendAwayOf(id); } catch { return null; } })() : null;
     const came = t0.match(/^🚪 (.+さんの)(.+が)来ている$/u);
-    let say = r.say;
-    if (away) say = ['🏘', `${away.name}の`, '家に', 'おでかけ'];
-    else if (came) say = ['🚪', came[1], came[2], '来ている'];
-    else if (r.rel === 'living') say = ['🛋️', 'みんなの', '居間に'];
+    let say = r.say, short = r.sayShort || null;
+    if (away) { say = ['🏘', `${away.name}の`, '家に', 'おでかけ']; short = ['🏘', `${away.name}の家`]; }
+    else if (came) { say = ['🚪', came[1], came[2], '来ている']; short = ['🚪', 'お客さん']; }
+    else if (r.rel === 'living') { say = ['🛋️', 'みんなの', '居間に']; short = ['🛋️', '居間に']; }
     if (!Array.isArray(say)) { const m = t0.match(/^(\S+) (.+)$/u); say = m ? [m[1], m[2]] : ['', t0]; }
-    let mark = null, m;
-    if ((m = t1.match(/^💢 (.+)とけんか中$/u))) mark = ['💢', `${m[1]}と`, 'けんか中'];
-    else if ((m = t1.match(/^💢 (.+)と言い合いのあと$/u))) mark = ['💢', `${m[1]}と`, '言い合いの', 'あと'];
+    let mark = null, markShort = null, m;
+    if ((m = t1.match(/^💢 (.+)とけんか中$/u))) { mark = ['💢', `${m[1]}と`, 'けんか中']; markShort = ['💢', 'けんか中']; }
+    else if ((m = t1.match(/^💢 (.+)と言い合いのあと$/u))) { mark = ['💢', `${m[1]}と`, '言い合いの', 'あと']; markShort = ['💢', '言い合い']; }
     else if ((m = t1.match(/^🤝 (.+)と仲直り$/u))) {
       const w = r.mend && typeof assistantLifeWhereOf === 'function' ? assistantLifeWhereOf(life, id) : null;
-      mark = ['🤝', `${m[1]}と`, w && w.group && w.group.ids.includes(r.mend) ? '過ごす' : '仲直り'];
+      const both = !!(w && w.group && w.group.ids.includes(r.mend));
+      mark = ['🤝', `${m[1]}と`, both ? '過ごす' : '仲直り']; markShort = ['🤝', '仲直り'];
     }
-    rooms[id] = { ...r, say, sayMark: mark };
+    rooms[id] = { ...r, say, sayShort: short || say, sayMark: mark, sayMarkShort: markShort || mark };
   }
   return rooms;
 };
 // 札の文を塊ごとに出す。字の大きさは、いちばん長い塊が1行に入る大きさ(10.5px まで)。それでも入らない長い塊(長いフレンドの名前など)だけは塊の中でも折る
+// 幅を測るときだけ、絵文字の後ろの見えない字(異体字セレクタ・ZWJ)を数えない(「⚔️」を2字に数えていた)。表示はそのまま
+const assistantLifeSayMeasure = (x) => String(x).replace(/[\uFE0F\u200D]/gu, '');
 const assistantLifeSayFont = (say, avail, max = 10.5) => {
   const parts = assistantLifeSayParts(say);
-  return Math.max(8, Math.min(max, ...parts.map(x => assistantLifeTagFit(x, avail, max, 8))));
+  return Math.max(8, Math.min(max, ...parts.map(x => assistantLifeTagFit(assistantLifeSayMeasure(x), avail, max, 8))));
 };
-const assistantLifeSayParts = (say) => { const a = (say || []).filter(x => x !== null && x !== undefined); return a.length > 1 && a[0] ? [`${a[0]} ${a[1]}`, ...a.slice(2)] : a.filter(Boolean); };
+const assistantLifeSayParts = (say) => { const a = (say || []).filter(x => x !== null && x !== undefined).map(String); return a.length > 1 && a[0] ? [`${a[0]} ${a[1]}`, ...a.slice(2)] : a.filter(Boolean); };
 function AssistantLifeSayText({ say, avail, font }) {
   const parts = assistantLifeSayParts(say);
-  return <>{parts.map((x, i) => <React.Fragment key={i}>{i ? <wbr/> : null}<span data-assistant-life-say-chunk className={assistantLifeTagFit(x, avail, font, 0) >= font - 0.05 ? 'whitespace-nowrap' : ''}>{x}</span></React.Fragment>)}</>;
+  return <>{parts.map((x, i) => <React.Fragment key={i}>{i ? <wbr/> : null}<span data-assistant-life-say-chunk className={assistantLifeTagFit(assistantLifeSayMeasure(x), avail, font, 0) >= font - 0.05 ? 'whitespace-nowrap' : ''}>{x}</span></React.Fragment>)}</>;
 }
 const assistantLifeTagNames = (text, budget) => {
   const m = String(text || '').match(/^(.*?)(?: ほか(\d+)人)?$/);
@@ -67623,15 +67632,17 @@ function AssistantLifeRoom({ id, met, look, x, y, w, h, state, onOpen, idx, othe
         const tagFit = assistantLifeTagFit(t[0], w - 26, 10.5, 0); // 1行に入る字の大きさ(10.5 に入らない狭い部屋は、意味の切れ目で2行にする)
         const short = [...String(t[0])].length <= 9; // 横は1行。行き先が長いときは人数を付けない(「…」で切らない)
         // 何をしているかの文(r1115-136)。横と開いたトップの家(compact)は札が1つなので、印のある文(「🤝 えるびんと過ごす」)を出す。塊の間だけで折り、札に全部収める
-        const say = Array.isArray(state.say) ? (compact && state.sayMark ? state.sayMark : state.say) : null;
+        const avail = w - 6 - 8 - 3 - 2;
+        // 横は札の高さが床の帯(マスモンが歩く所)に響くので1行・字10.5px。全部が入らない狭い部屋は短い言い方(「⚔️ バトル中」)
+        const oneFit = (x) => assistantLifeTagFit(assistantLifeSayMeasure(assistantLifeSayParts(x).join('')), avail, 10.5, 0);
+        const sayFull = Array.isArray(state.say) ? (compact && state.sayMark ? state.sayMark : state.say) : null;
+        const sayAlt = Array.isArray(state.say) ? ((compact && state.sayMark ? state.sayMarkShort : state.sayShort) || sayFull) : null;
+        const say = tagLand && sayFull && oneFit(sayFull) < 10.5 && sayAlt ? (oneFit(sayAlt) >= oneFit(sayFull) ? sayAlt : sayFull) : sayFull;
         if (say) {
-          const avail = w - 6 - 8 - 3 - 2;
-          // 横は札の高さが床の帯(マスモンが歩く所)に響くので1行。文の全部が1行に入る大きさにする(入らない時だけ塊の間で折る)
-          const one = tagLand ? assistantLifeTagFit(assistantLifeSayParts(say).join(''), avail, 9.5, 7) : 0;
-          const f = tagLand && one >= 7 && assistantLifeTagFit(assistantLifeSayParts(say).join(''), avail, 9.5, 0) >= 7 ? one : assistantLifeSayFont(say, avail);
+          const f = tagLand ? Math.max(7, oneFit(say)) : assistantLifeSayFont(say, avail);
           return <span className="tag" data-assistant-life-room-away={id} data-assistant-life-room-tag-mark={mark ? '1' : '0'} data-assistant-life-room-say={compact ? '1' : '0'}>
             {!compact && (mark || !names ? <small data-assistant-life-room-what style={{ marginLeft: ml }}>{t[1]}</small> : <small data-assistant-life-room-with style={{ marginLeft: ml }}><AssistantLifeNames text={names}/></small>)}
-            <b data-assistant-life-room-say-text style={{ whiteSpace: 'normal', fontSize: f, lineHeight: tagLand ? '11px' : `${Math.round(f * 1.18)}px`, maxHeight: 'none', overflow: 'visible', textOverflow: 'clip' }}>{v2 && w >= 150 ? <span data-assistant-life-room-out className="mr-1 rounded bg-slate-600 px-1 text-white">留守</span> : null}<AssistantLifeSayText say={say} avail={avail} font={f}/></b></span>;
+            <b data-assistant-life-room-say-text style={{ whiteSpace: 'normal', fontSize: f, lineHeight: tagLand ? '13px' : `${Math.round(f * 1.18)}px`, ...(tagLand ? { whiteSpace: 'nowrap' } : {}), maxHeight: 'none', overflow: 'visible', textOverflow: 'clip' }}>{v2 && w >= 150 ? <span data-assistant-life-room-out className="mr-1 rounded bg-slate-600 px-1 text-white">留守</span> : null}<AssistantLifeSayText say={say} avail={avail} font={f}/></b></span>;
         }
         return <span className="tag" data-assistant-life-room-away={id} data-assistant-life-room-tag-mark={mark ? '1' : '0'}>
           {mark || !names ? <small data-assistant-life-room-what style={{ marginLeft: ml }}>{t[1]}</small> : <small data-assistant-life-room-with style={{ marginLeft: ml }}><AssistantLifeNames text={names}/></small>}
@@ -67713,12 +67724,12 @@ const assistantLifeRoomsOf = (life, metIds) => {
           if (visit) rooms[id] = { ...rooms[id], bub: assistantLifeFurnVisitBub(visit) || rooms[id].bub, furnVisit: visit.id };
           else if (use) rooms[id] = { ...rooms[id], bub: use.bub, furnUse: use.key };
         }
-      } else rooms[id] = { tag: [`🚪 ${assistantLifeName(host)}の部屋へ`, `${ids.length}人で ${doing.label}`, assistantLifeGroupNames(ids, 4)], say: ['🚪', `${assistantLifeName(host)}の`, '部屋で', doing.label || '過ごす'] };
+      } else rooms[id] = { tag: [`🚪 ${assistantLifeName(host)}の部屋へ`, `${ids.length}人で ${doing.label}`, assistantLifeGroupNames(ids, 4)], say: ['🚪', `${assistantLifeName(host)}の`, '部屋で', doing.label || '過ごす'], sayShort: ['🚪', `${assistantLifeName(host)}の部屋`] };
       continue;
     }
     // 組で出かけているときは、どの部屋の札にも同じ全員の名前(「3人で ドラ・ソラシド・えるびん」)
     const sub = w.group ? `${w.group.ids.length}人で ${doing.label}` : `ひとりで ${doing.label}`;
-    rooms[id] = { tag: [`${ASSISTANT_LIFE_PLACE_ICON[w.place] || '🚶'} ${assistantLifePlaceShow(w.place)}へ`, sub, w.group ? assistantLifeGroupNames(w.group.ids, 4) : null], say: assistantLifeSayOut(w.place, w.doing) };
+    rooms[id] = { tag: [`${ASSISTANT_LIFE_PLACE_ICON[w.place] || '🚶'} ${assistantLifePlaceShow(w.place)}へ`, sub, w.group ? assistantLifeGroupNames(w.group.ids, 4) : null], say: assistantLifeSayOut(w.place, w.doing), sayShort: assistantLifeSayOutShort(w.place, w.doing) };
   }
   // 言い合いのあとの2人(水色の縁と「💢 ◯◯と言い合いのあと」。2026-11-07 社長「喧嘩とか仲直りとか人間じみたのもどんどん」)
   const q = peer && peer.quarrel && peer.quarrel.pending;
