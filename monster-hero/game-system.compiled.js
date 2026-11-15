@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b97c3f180443e024
+// source-sha256: 136d06e2989c3ac5
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -10211,6 +10211,9 @@ const SuccessSound = (() => {
   let beforeKey = null;
   let beforeQuiet = false;
   let curBgm = null;
+  let onceKey = null;
+  let onceAt = 0;
+  let laterTimer = null;
   const audio = () => typeof Audio_ !== 'undefined' ? Audio_ : null;
   const knownTrack = id => !!(id && typeof BGM_TRACK_BY_ID !== 'undefined' && BGM_TRACK_BY_ID[id]);
   const tableOk = () => typeof successSoundBgm === 'function' && typeof successSoundSe === 'function';
@@ -10236,6 +10239,8 @@ const SuccessSound = (() => {
     if (!active) return;
     active = false;
     epoch += 1;
+    clearLater();
+    onceKey = null;
     if (!a) {
       curBgm = null;
       return;
@@ -10263,10 +10268,24 @@ const SuccessSound = (() => {
     } catch (e) {}
     if (key === curBgm && now === key) return key;
     curBgm = key;
+    clearLater();
+    const t = typeof BGM_TRACK_BY_ID !== 'undefined' ? BGM_TRACK_BY_ID[key] : null;
+    if (t && t.loop === false) {
+      onceKey = key;
+      onceAt = Date.now();
+    } else {
+      onceKey = null;
+    }
     try {
       a.playBGM(key);
     } catch (e) {}
     return key;
+  };
+  const clearLater = () => {
+    if (laterTimer) {
+      clearTimeout(laterTimer);
+      laterTimer = null;
+    }
   };
   const keep = (sceneId, season) => {
     const a = audio();
@@ -10309,6 +10328,26 @@ const SuccessSound = (() => {
     }
     return name;
   };
+  const ONCE_MS = 7200;
+  const sceneAfterOnce = (sceneId, opts = null) => {
+    if (!active) enter();
+    clearLater();
+    const a = audio();
+    let now = null;
+    try {
+      now = a && a.currentBgmKey ? a.currentBgmKey() : null;
+    } catch (e) {}
+    const rest = onceKey && now === onceKey ? onceAt + ONCE_MS - Date.now() : 0;
+    if (!(rest > 0)) {
+      scene(sceneId, opts);
+      return;
+    }
+    const my = epoch;
+    laterTimer = setTimeout(() => {
+      laterTimer = null;
+      if (active && my === epoch) scene(sceneId, opts);
+    }, Math.min(rest, ONCE_MS));
+  };
   const scene = (sceneId, opts = null) => {
     if (!active) enter();
     const season = opts && opts.season;
@@ -10319,6 +10358,7 @@ const SuccessSound = (() => {
     enter,
     leave,
     scene,
+    sceneAfterOnce,
     bgm,
     keep,
     se,
@@ -10333,6 +10373,16 @@ const useSuccessScene = (sceneId, opts = null) => {
     SuccessSound.scene(sceneId, {
       season,
       delayMs
+    });
+    return undefined;
+  }, [sceneId, season]);
+};
+const useSuccessSceneAfterOnce = (sceneId, opts = null) => {
+  const season = opts && opts.season;
+  useEffect(() => {
+    if (!sceneId) return undefined;
+    SuccessSound.sceneAfterOnce(sceneId, {
+      season
     });
     return undefined;
   }, [sceneId, season]);
@@ -181951,6 +182001,7 @@ const msxArcFullBody = (aid, ex) => {
   const f = w && typeof assistantFullBodyImage === 'function' ? assistantFullBodyImage(w, ex) : null;
   return f || msxBody(aid, ex);
 };
+const msxArcEndingScene = s => s && s.ending && !s.ending.seen ? s.ending.kind === 'bad' ? 'endingBad' : 'ending' : null;
 const msxArcAfterOf = (SUC, s, b, won, foe) => b && b.kind === 'summit' && msxArcHas(SUC, s.aid) ? {
   round: b.round,
   won: !!won,
@@ -182111,6 +182162,9 @@ function MsxArcAfter({
   const lines = msxArcLines(`scn.${s.aid}.summit.r${after.round + 1}.${after.won ? 'win' : 'lose'}`, ctx, bondLv, {
     rival: after.foe
   });
+  useSuccessSceneAfterOnce(msxArcEndingScene(s), {
+    season: msxCalendar(s.turn).season
+  });
   return React.createElement(MsxArcTalk, {
     run: run,
     v: v,
@@ -182247,7 +182301,7 @@ function MsxArcEnding({
   const end = s.ending;
   const kind = end.kind;
   const [step, setStep] = useState(0);
-  useSuccessScene(kind === 'bad' ? 'cupLose' : 'cupWin', {
+  useSuccessSceneAfterOnce(msxArcEndingScene(s), {
     season: msxCalendar(s.turn).season
   });
   const parties = Array.isArray(end.parties) ? end.parties : [];
@@ -185089,7 +185143,7 @@ const MSA_JUDGE_BY = {
   hp: '勝ち数が同じなので、残ライフの量(実数)で決着',
   pct: '残ライフの量も同じなので、残ライフ%で決着',
   dmg: 'ここまで同じなので、与えたダメージで決着',
-  tie: 'すべて同じなので、引き分けにせず負け扱い'
+  tie: '全て同じなので、引き分けにせず負け扱い'
 };
 const MSA_JUDGE_CSS = `
 .msa-judge{position:fixed;inset:0;z-index:9650;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:max(12px,env(safe-area-inset-top)) 12px max(12px,env(safe-area-inset-bottom));background:#0b0820f2;color:#fff;overflow-y:auto;font-family:inherit}
