@@ -116,7 +116,8 @@ const open = async (browser, reducedMotion, width = 390, species = 'Mocchi', loy
         const st = await page.evaluate(() => ({ end: !!document.querySelector('[data-msc-end]'), act: !!document.querySelector('[data-msxm="act"]'), sulk: !!document.querySelector('[data-msa-sulk="A"]'), call: !!document.querySelector('[data-msa-call="sulk"]') }));
         if (st.sulk) { seen = true; callSeen = st.call; break; }
         if (st.end) break;
-        if (st.act) await page.evaluate(() => { const b = [...document.querySelectorAll('.msxm-btn:not([disabled])')].find((y) => /ためる/.test(y.textContent)); if (b) b.click(); });
+        // 版10(r1115-133): ためた番は16たまるので、すぐ満タンになり「ためる」が押せなくなる。そのときはガードで手番を進める
+        if (st.act) await page.evaluate(() => { const bs = [...document.querySelectorAll('.msxm-btn:not([disabled])')]; const b = bs.find((y) => /ためる/.test(y.textContent)) || bs.find((y) => /ガード/.test(y.textContent)); if (b) b.click(); });
         await page.waitForTimeout(80);
       }
       if (seen && process.argv.includes('--shots')) await page.screenshot({ path: path.join(ROOT, 'docs', 'progress', 'masmon-battle', 'stage-c', 'monsuc-imi-fumei.png') });

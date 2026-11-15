@@ -34,7 +34,7 @@ const __mod = { exports: {} };
 (function (root) {
   'use strict';
 
-  const VERSION = 10;          // 10 = 移動にガッツ(5×段)・ふきとばし・ためるは自然回復の分・移動/ガードの上乗せなし(r1115-110・112)/ 9まで: 計算を変えたら上げる(9 = 命中を「当たる:外れるの比」で作り直し(能力差・ガッツ・体 → 間合い → 技の係数 → 1〜99%)・ガッツ最大99・ガッツのダメージ補正 ×0.7〜1.3・全体のダメージ ×1.3/8 = 技表 第2版(資料の血統別の技・ガッツダウンを強く)・技ごとの強化 techBoost/7 = 距離適性が G〜M の12段で与ダメ・被ダメ・命中・回避に効く・オリジナル5種の等級と与ダメの補正 ×0.80〜×1.20 を社長の値に・移動速度が速いほど受けるダメージが増える・6 = ガッツの回復を種ごとに広げ(5〜15・等級 G〜A)・移動速度で先手・サイズ(小さい=当たりにくい/大きい=受けるダメージ減)・移動とガードの回復を増やし・回復の速さで与ダメを補正・サーバの試合の行に残る。2 = 技を MF のように一新・3 = 作戦と交代の早さ・4 = 忠誠度の「そっぽを向く番」と人気の会心・5 = ちから/かしこさが同じ種類の技の受けるダメージも減らす)
+  const VERSION = 10;          // 10 = 移動にガッツ(5×段)・吹き飛ばし・ためた番の合計16・自動ガッツ回復0.75倍・移動/ガードの上乗せなし・全試合で同じ決まり(r1115-110〜133)/ 9まで: 計算を変えたら上げる(9 = 命中を「当たる:外れるの比」で作り直し(能力差・ガッツ・体 → 間合い → 技の係数 → 1〜99%)・ガッツ最大99・ガッツのダメージ補正 ×0.7〜1.3・全体のダメージ ×1.3/8 = 技表 第2版(資料の血統別の技・ガッツダウンを強く)・技ごとの強化 techBoost/7 = 距離適性が G〜M の12段で与ダメ・被ダメ・命中・回避に効く・オリジナル5種の等級と与ダメの補正 ×0.80〜×1.20 を社長の値に・移動速度が速いほど受けるダメージが増える・6 = ガッツの回復を種ごとに広げ(5〜15・等級 G〜A)・移動速度で先手・サイズ(小さい=当たりにくい/大きい=受けるダメージ減)・移動とガードの回復を増やし・回復の速さで与ダメを補正・サーバの試合の行に残る。2 = 技を MF のように一新・3 = 作戦と交代の早さ・4 = 忠誠度の「そっぽを向く番」と人気の会心・5 = ちから/かしこさが同じ種類の技の受けるダメージも減らす)
   const VERSION_PLAIN = 10;    // 忠誠度・人気が効かない編成(忠誠100・人気0)の版。版4までは 3 のままにしていたが、版5でダメージの式がすべての試合で変わったのでそろえた
   // 命中(版9・2026-11-14 社長の決め。案と試算: docs/spec/ASSISTANT_MASMON_BATTLE.md「命中とダメージ(版9)」)
   const HIT_STAT_A = 0.11;    // 能力差の効き: 当たりやすさの比 = exp(a·x + c·x|x|)、x = (命中−回避)/100
@@ -100,9 +100,12 @@ const __mod = { exports: {} };
   const MOVE_COST_STEP = 5;
   const moveCostOf = (u) => MOVE_COST_STEP * ((u && u.moveLv > 0 ? u.moveLv : 0) + 1);
   // 全部の試合で同じ決まり(版10・2026-11-15 r1115-111・113・118・121 社長「全部同じにあわせてよ」):
-  //   自動ガッツ回復は種の値の半分 / 打ち切りは1体あたり30ターン(出場する体数の多い方 × 30)/ 判定は3つの比べ(r1115-058)。完全な同点は引き分け
+  //   自動ガッツ回復は種の値の0.75倍(r1115-133。最初は半分) / 打ち切りは1体あたり30ターン(出場する体数の多い方 × 30)/ 判定は3つの比べ(r1115-058)。完全な同点は引き分け
   //   (モンサクの大会だけ judgeTie:'B' = 自分の負け)。roundLimit・gutsPlan.regen・judge:'life' を渡したときだけ、それに替わる(練習の設定)
-  const REGEN_MUL = 0.5;
+  //   2026-11-15 r1115-133 社長: 自動ガッツ回復は元の 0.75倍(5〜11)。ためた番の合計はどの種も CHARGE_TOTAL(遅い種ほど上乗せが多い)
+  const REGEN_MUL = 0.75;
+  const CHARGE_TOTAL = 16;
+  const chargeAddOf = (u) => Math.max(0, CHARGE_TOTAL - (u && u.regen > 0 ? u.regen : 0));
   const ROUND_PER_UNIT = 30;
   const regenEff = (r, mul) => Math.max(1, Math.round((Number(r) || 0) * (mul == null ? REGEN_MUL : mul)));
   const REGEN_DMG_SWING = 0.2;  // 回復がいちばん速い種(A)は与ダメ ×(1−これ)、いちばん遅い種(G)は ×(1+これ)。真ん中は ×1(2026-11-13 社長「×0.80〜×1.20」)
@@ -529,7 +532,7 @@ const __mod = { exports: {} };
     }
     // ためる(ガッツが満タンなら候補に入れない)
     if (u.guts < GUTS_MAX) {
-      const afterGuts = Math.min(GUTS_MAX, u.guts + u.regen * 2);   // ためた番は自然回復の2倍(r1115-112)
+      const afterGuts = Math.min(GUTS_MAX, u.guts + chargeAddOf(u) + u.regen);   // ためた番の上乗せ + 次の自動ガッツ回復(r1115-133)
       const nowBest = bestThreat(u, f, dist, u.guts);
       const laterBest = bestThreat(u, f, dist, afterGuts);
       // 版10: ガッツが命中・重さに効く分を見落としていたので、ためるの重みを 0.6 → 12 に(自動ガッツ回復が半分の決まりで測り直し・忠誠度が低いほど勝ちにくい関係が戻る。r1115-110 の AI の見直し)
@@ -703,7 +706,7 @@ const __mod = { exports: {} };
     // ガッツの回復の規則(モンサク・2026-11-15 r1115-090 社長「全部半分」): gutsPlan:{ regen, move, charge }(倍率 0.1〜1)。版10から既定は全部の試合で半分(REGEN_MUL)。渡したときだけ替わる(指紋も変わらない)
     const gp = inp.gutsPlan && typeof inp.gutsPlan === 'object' ? inp.gutsPlan : null;
     const mulOf = (v) => (Number.isFinite(Number(v)) && Number(v) > 0 ? clamp(Number(v), 0.1, 1) : 1);
-    //   版10から gutsPlan で効くのは regen だけ(move・charge は無視。移動・ガードの上乗せは無く、ためるは自然回復の分=r1115-110・112)
+    //   版10から gutsPlan で効くのは regen だけ(move・charge は無視。移動・ガードの上乗せは無く、ためた番の合計は CHARGE_TOTAL=r1115-110・133)
     const regenMul = gp && gp.regen !== undefined ? mulOf(gp.regen) : REGEN_MUL;
     for (const side of ['A', 'B']) for (const x of state.teams[side].units) x.regen = regenEff(x.regen, regenMul);
     const ctx = { state, rng, trace: !!inp.trace, lastCands: null, buffs, noSwap: !!(rules && rules.noSwap) };
@@ -741,7 +744,7 @@ const __mod = { exports: {} };
       u.guarding = false;
       // 忠誠度が100未満のときだけ乱数を引く(忠誠100・無い編成は乱数の列も今と同じ)
       if (u.loy < 100 && !(buffs[side] && buffs[side].noSulk) && rng() < (100 - u.loy) * LOYAL_NOACT) {
-        u.guts = Math.min(GUTS_MAX, u.guts + u.regen);
+        u.guts = Math.min(GUTS_MAX, u.guts + chargeAddOf(u));
         push({ ev: 'charge', side, i: me.active, why: 'sulk', guts: u.guts });
         u.swapCooldown = Math.max(0, u.swapCooldown - 1); u.moveStreak = 0; u.moveLv = Math.max(0, u.moveLv - 1); // 「ためる」と同じあと始末
         return;
@@ -792,7 +795,7 @@ const __mod = { exports: {} };
         u.guarding = true;
         push({ ev: 'guard', side, i: me.active, why: c.why, name: 'ガード', guts: u.guts });
       } else if (c.type === 'charge') {
-        u.guts = Math.min(GUTS_MAX, u.guts + u.regen);   // 自然回復の分だけさらに(r1115-112)
+        u.guts = Math.min(GUTS_MAX, u.guts + chargeAddOf(u));   // ためた番の合計が CHARGE_TOTAL になる分だけさらに(r1115-133)
         push({ ev: 'charge', side, i: me.active, why: c.why, guts: u.guts });
       } else if (c.type === 'swap') {
         const from = me.active;
@@ -1078,7 +1081,7 @@ const __mod = { exports: {} };
   const api = Object.freeze({
     // 芯が持っている口の印(呼ぶ側が古い芯を見分ける。モンサクは techBoost があるときだけ渡す)
     FEATURES: Object.freeze({ techBoost: true, moveGuts: true, blow: true }),
-    VERSION, VERSION_PLAIN, STAT_KEYS, STAT_MAX, DIST_NAMES, TEAM_MAX, GUTS_MAX, GUTS_REGEN_MIN, GUTS_REGEN_MAX, GUTS_REGEN_GRADES, GUTS_REGEN_GRADES_UP, SPECIES_TRAITS, MOVE_SPEED_FIRST, MOVE_SPEED_TAKEN, APT_UP_LIMITS, SIZE_SMALL_EVADE, APT_DMG, APT_DEF, APT_HIT, APT_EVA, APT_ABOVE_A, SIZE_LARGE_CUT, GUTS_CHARGE, GUTS_MOVE, MOVE_COST_STEP, moveCostOf, REGEN_MUL, ROUND_PER_UNIT, regenEff, REGEN_DMG_SWING, ROUND_LIMIT, STYLES, TECH_LIMITS,
+    VERSION, VERSION_PLAIN, STAT_KEYS, STAT_MAX, DIST_NAMES, TEAM_MAX, GUTS_MAX, GUTS_REGEN_MIN, GUTS_REGEN_MAX, GUTS_REGEN_GRADES, GUTS_REGEN_GRADES_UP, SPECIES_TRAITS, MOVE_SPEED_FIRST, MOVE_SPEED_TAKEN, APT_UP_LIMITS, SIZE_SMALL_EVADE, APT_DMG, APT_DEF, APT_HIT, APT_EVA, APT_ABOVE_A, SIZE_LARGE_CUT, GUTS_CHARGE, GUTS_MOVE, MOVE_COST_STEP, moveCostOf, REGEN_MUL, ROUND_PER_UNIT, regenEff, CHARGE_TOTAL, chargeAddOf, REGEN_DMG_SWING, ROUND_LIMIT, STYLES, TECH_LIMITS,
     HIT_STAT_A, HIT_STAT_C, HIT_GUTS, HIT_TECH_STEP, HIT_MIN, HIT_MAX, DMG_ALL, techHitPreview,
     MASTERY_HIT_MAX, MASTERY_GUTS_CUT, MASTERY_GUARD_ADD, TECH_BOOST_LIMITS, BALANCE, PLANS, SWAP_PACES, STYLE_RANGE,
     LV_MAX, BUFF_LIMITS, RULE_LIMITS, unitTraits, normTechBoost, buildCatalog, simulate, hitPreviewer, createMatch, replay, firstAction, unitFromGrow, makeRng, hashSeed,

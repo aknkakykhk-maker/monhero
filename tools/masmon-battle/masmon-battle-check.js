@@ -86,7 +86,7 @@ const FORMATS = [[1, 1], [2, 2], [3, 3], [1, 2], [2, 3], [3, 1]];
       } else if (r.reason !== 'judge') ng.wipe.push(`${tag}(reason=${r.reason})`);
       // たどり直す
       const st = I.setupState(inp, catalog);
-      // 版10: 試合の中の自動ガッツ回復は種の値の半分(全部の試合・r1115-111)
+      // 版10: 試合の中の自動ガッツ回復は種の値の0.75倍(全部の試合・r1115-133)
       for (const sd of ['A', 'B']) for (const u of st.teams[sd].units) u.regen = engine.regenEff(u.regen);
       let dist = r.log[0].d, round = 0;
       const active = { A: 0, B: 0 };
@@ -132,8 +132,8 @@ const FORMATS = [[1, 1], [2, 2], [3, 3], [1, 2], [2, 3], [3, 1]];
         } else if (e.ev === 'guard') {
           // 版10: ガードの上乗せは無い
         } else if (e.ev === 'charge') {
-          // 版10: 自然回復の分だけさらに(r1115-112)
-          const u = st.teams[e.side].units[active[e.side]]; u.guts = Math.min(engine.GUTS_MAX, u.guts + u.regen);
+          // 版10: ためた番の合計が CHARGE_TOTAL になる分だけさらに(r1115-133)
+          const u = st.teams[e.side].units[active[e.side]]; u.guts = Math.min(engine.GUTS_MAX, u.guts + engine.chargeAddOf(u));
         } else if (e.ev === 'swap' || (e.ev === 'enter' && e.r > 0)) {
           active[e.side] = e.i;
           const u = st.teams[e.side].units[e.i]; u.guts = Math.max(u.guts, 40);
@@ -206,7 +206,7 @@ const FORMATS = [[1, 1], [2, 2], [3, 3], [1, 2], [2, 3], [3, 1]];
       teamB: { assistantId: STYLE_IDS[(i + 5) % 8], tactics: 0, members: team(rng, 3) } });
     for (const e of r.log) if (['tech', 'move', 'guard', 'charge', 'swap', 'blow'].includes(e.ev) && e.why !== 'blown') { acts++; if (e.ev === 'tech') tech++; if (e.ev === 'move' || e.ev === 'guard' || e.ev === 'blow') mg++; }
   }
-  // 版10: 自動ガッツ回復が半分(r1115-111)で、技を撃てる回数そのものが減る(ためるが増える)。見張るのは「動いてばかり・守ってばかりにならない」こと
+  // 版10: 自動ガッツ回復が下がり(r1115-111・133)、技を撃てる回数そのものが減る(ためるが増える)。見張るのは「動いてばかり・守ってばかりにならない」こと
   check('⑤ 戦術経験 0 どうしでも、手の2割5分以上は技・移動とガードは3割まで', tech >= acts * 0.25 && mg <= acts * 0.3, `技 ${(tech / acts * 100).toFixed(1)}%・移動とガード ${(mg / acts * 100).toFixed(1)}%`);
 }
 

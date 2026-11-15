@@ -38,17 +38,17 @@ check('② 上限を超えない', over === 0, `${N}戦`);
 check("② モンサクの大会(judgeTie:'B')は引き分けにならない", draw === 0);
 check('② 判定になった試合がある', judged > 0, `${judged}戦`);
 check('② 判定の勝者・勝ち数・決め手が決まりどおり', bad === 0, `判定 ${judged}戦・自分の勝ち ${aWin}・決め手 ${JSON.stringify(by)}`);
-// ③ 自動ガッツ回復(版10・全部の試合で半分 r1115-111): 無し・空・regen 0.5 は同じ指紋/regen 1(元の速さ)なら試合が短くなる
+// ③ 自動ガッツ回復(版10・全部の試合で0.75倍 r1115-133): 無し・空・regen 0.75 は同じ指紋/regen 1(元の速さ)なら試合が短くなる
 //   打ち切りは1体あたり30(1体30・2体60・3体90。r1115-118・121)/フレンド対戦の完全な同点は引き分け(既定)
 {
   let same = 0, rA = 0, rB = 0; const M = 150;
   for (let i = 0; i < M; i++) {
-    const a = engine.simulate(input(i, {})), b = engine.simulate(input(i, { gutsPlan: { regen: 0.5 } })), c = engine.simulate(input(i, { gutsPlan: {} }));
+    const a = engine.simulate(input(i, {})), b = engine.simulate(input(i, { gutsPlan: { regen: 0.75 } })), c = engine.simulate(input(i, { gutsPlan: {} }));
     if (a.digest === b.digest && a.digest === c.digest) same++;
     const h = engine.simulate(input(i, { gutsPlan: { regen: 1 } })); rA += a.rounds; rB += h.rounds;
   }
-  check('③ gutsPlan が無し・空・regen 0.5 なら同じ指紋(既定が半分)', same === M, `${same}/${M}`);
-  check('③ 回復を元の速さにすると試合が短くなる(=既定は半分)', rB * 1.1 < rA, `平均 ${(rA / M).toFixed(1)}(半分) / ${(rB / M).toFixed(1)}(元の速さ) ラウンド`);
+  check('③ gutsPlan が無し・空・regen 0.75 なら同じ指紋(既定が0.75倍)', same === M, `${same}/${M}`);
+  check('③ 回復を元の速さにすると試合が短くなる(=既定は0.75倍)', rB < rA, `平均 ${(rA / M).toFixed(1)}(既定) / ${(rB / M).toFixed(1)}(元の速さ) ラウンド`);
   const lim = [1, 2, 3].map(n => { const rng = engine.makeRng(`lim-${n}`); const r = engine.simulate({ seed: `lim-${n}`, catalog, roundLimit: undefined,
     teamA: { assistantId: 'atsu', tactics: 0, members: team(rng, n).map(m => ({ ...m, stats: { ...m.stats, pow: 1, wise: 1 } })) },
     teamB: { assistantId: 'atsu', tactics: 0, members: team(rng, n).map(m => ({ ...m, stats: { ...m.stats, pow: 1, wise: 1 } })) } }); return r.rounds; });
