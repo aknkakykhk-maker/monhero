@@ -74,6 +74,7 @@ const makeRun = async (kind) => {
   // H0・H1 はモンサクのホーム(育成なし・途中の育成あり。2026-11-14 作り直し)
   const SHOTS_ALL = [
     ['H0', null, []], ['H1', 'mid', []],
+    ['RW1', 'mid', ['cont', 'wait:3300']], ['RW2', 'mid', ['cont', 'wait:7800']], ['RW3', 'mid', ['cont', 'wait:11500']], ['RW4', 'mid', ['cont', 'wait:15000']], ['RW5', 'mid', ['cont', 'wait:19600']], // 育成ホームの歩き回り(r1115-052)
     ['HB1', null, ['basemon']], ['HB2', null, ['basemon', 'bmpick:Snegurochka']], ['HB3', null, ['basemon', 'bmpick:Snegurochka', 'tab:apt']], // ホームのベースモン(r1115-043)
     ['S0', null, ['new']], // ストーリー選択(2026-11-14)。S1〜S6 はその「次へ」のあと
     ['TP1', null, ['new', 'next', 'pickmon:Snegurochka', 'detail']], ['TP2', null, ['new', 'next', 'pickmon:Snegurochka', 'detail', 'alt:2-1']], ['TP3', null, ['new', 'next', 'pickmon:Snegurochka', 'detail', 'alt:2-1', 'altopt:sk-0480']], // 技の升の選び(被った升の ⇄ → 窓 → 選ぶ)
@@ -134,6 +135,7 @@ const makeRun = async (kind) => {
               window.__msxRoot.render(React.createElement(MonheroSuccessScreen, { onClose() {}, callNameOf: () => 'けんささん', bondLvOf: () => 4 }));
               await new Promise((r) => setTimeout(r, 800)); return true;
             }
+            if (st.startsWith('wait:')) { await new Promise((r) => setTimeout(r, Number(st.slice(5)))); return true; }
             if (st === 'basemon') { const d = document.querySelector('[data-msx-home-basemon]'); if (d) d.click(); return !!d; }
             if (st.startsWith('bmpick:')) { const d = document.querySelector(`[data-msx-basemon="${st.slice(7)}"]`); if (d) d.click(); return !!d; }
             if (st === 'tabfuse') return click(/合体で生まれたモンスター/);
