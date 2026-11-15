@@ -40,5 +40,29 @@ ok(cond(many, t5, [t5.id]) > cond(s, t5, [t5.id]), '覚えた技の数の条件�
 const two = SUC.techBoostConds(s, t5, [t5.id, t5.id]).find((c) => c.type === 'sum');
 const one = SUC.techBoostConds(s, t5, [t5.id]).find((c) => c.type === 'sum');
 ok(two && one && two.now === 2 * one.now, '選んだ技の段の合計は、選んだ技の組み合わせで数える');
+
+// ---- 技の間合い適性(2026-11-15 社長 r1115-041): C を基準 ±0・1段ごとに 5%。複数の間合いはいちばん高い適性 ----
+const G = SH.grades || ['G', 'F', 'E', 'D', 'C', 'B', 'A', 'S', 'S+', 'SS', 'SS+', 'M'];
+ok(SH.aptBase === 'C' && SH.aptStep === 5, '間合い適性は C 基準・1段 5%');
+const tz = techs.find((t) => Array.isArray(t.dist) && t.dist.length === 1 && t.dist[0] === 0) || techs[0]; // 零の技
+const d0 = tz.dist[0];
+const rows = [];
+for (let up = 0; up <= 3; up++) {
+  const st = { ...s, aptUp: [0, 0, 0, 0].map((_, i) => (i === d0 ? up : 0)) };
+  const add = SUC.techAptAdd(st, tz);
+  rows.push(`${up}段上げ:${add >= 0 ? '+' : ''}${add}%`);
+  ok(add % 5 === 0, '適性の増減は5の倍数');
+}
+const lo = { ...s, aptBase: [0, 0, 0, 0].map((_, i) => (i === d0 ? -2 : 0)) };
+const addLo = SUC.techAptAdd(lo, tz);
+ok(addLo <= 0, `適性が下がると率も下がる(いま ${addLo}%)`);
+// 技が複数の間合いを持つときは、いちばん高い適性
+const multi = { ...tz, dist: [0, 1] }; const stM = { ...s, aptUp: [2, 0, 0, 0] };
+ok(SUC.techAptAdd(stM, multi) === Math.max(SUC.techAptAdd(stM, { ...tz, dist: [0] }), SUC.techAptAdd(stM, { ...tz, dist: [1] })), '複数の間合いはいちばん高い適性で数える');
+// 表示の率と抽選は同じ式(techRate に適性が入っている): 適性を上げた状態の方が率が高い(上限 99 に届かない技で)
+const lowT = techs.find((t) => (t.rank || 0) === 4 && t.dist && t.dist.length === 1) || tz; const dl = lowT.dist[0];
+const up0 = SUC.techRate({ ...s, aptUp: [0, 0, 0, 0] }, lowT, {}); const up2 = SUC.techRate({ ...s, aptUp: [0, 1, 2, 3].map((_, i) => (i === dl ? 2 : 0)) }, lowT, {});
+ok(up2 > up0, `適性が上がると覚える率が上がる(${Math.round(up0 * 100)}% → ${Math.round(up2 * 100)}%)`);
+console.log('適性の増減(零の技・段を上げた数): ' + rows.join(' / '));
 if (errors.length) { errors.forEach((e) => console.error('NG: ' + e)); process.exit(1); }
 console.log('OK: 修行の覚える率が上がる条件(R1=1つ〜R5=4つ・満たした1つにつき +5%・門ではない)');

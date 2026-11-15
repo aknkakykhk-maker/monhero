@@ -692,6 +692,8 @@
     push({ ev: 'enter', side: 'B', i: 0, name: unitOf('B').name });
 
     let winner = null, reason = null;
+    // 与えたダメージ・消費ガッツの合計(判定 judge:'three' が使う。ログにも乱数にも触れない)
+    const tally = { A: { dmg: 0, guts: 0 }, B: { dmg: 0, guts: 0 } };
     function* act(side) {
       const foeSide = side === 'A' ? 'B' : 'A';
       const me = state.teams[side];
@@ -712,6 +714,7 @@
         const mv = u.moves.find(m => m.key === c.key);
         const g0 = u.guts;                       // 撃つ前のガッツで当たり・重さを決める
         u.guts -= mv.guts;
+        tally[side].guts += mv.guts;
         const p = buffedHit(hitChance(u, f, mv, g0, state.dist), buffs[side], buffs[foeSide], !usedFirst[side]);
         usedFirst[side] = true;
         const hit = rng() < p;
@@ -722,6 +725,7 @@
           const swing = 0.9 + rng() * 0.2;
           dmg = rawDamage(u, f, mv, state.dist, g0) * swing * (crit ? CRIT_MULT : 1) * (f.guarding ? 1 - guardCut(f) : 1);
           dmg = Math.max(1, Math.round(dmg));
+          tally[side].dmg += Math.min(dmg, f.hp);
           f.hp = Math.max(0, f.hp - dmg);
         }
         const gd = hit && mv.gd > 0 ? Math.min(mv.gd, f.guts) : 0;   // ガッツダウン
@@ -786,8 +790,28 @@
         yield* act(side);
       }
     }
+    if (!winner && inp.judge === 'three') {
+      // 判定(モンサク・2026-11-15 社長 r1115-058): 残ライフ%・与えたダメージ・消費ガッツを別々に比べ、勝ちの数が多い方の勝ち。
+      //   同数のときは残ライフの量(実数)→残ライフ%→与えたダメージの順。それでも同じなら A(自分)の負け。消費ガッツは多い方が勝ち
+      const sum = (side, k) => state.teams[side].units.reduce((q, x) => q + x[k], 0);
+      const hpA = sum('A', 'hp'), hpB = sum('B', 'hp'), mxA = sum('A', 'maxHp') || 1, mxB = sum('B', 'maxHp') || 1;
+      const rows = [
+        { key: 'pct', a: Math.round(hpA / mxA * 1000) / 10, b: Math.round(hpB / mxB * 1000) / 10 },
+        { key: 'dmg', a: tally.A.dmg, b: tally.B.dmg },
+        { key: 'guts', a: tally.A.guts, b: tally.B.guts },
+      ].map(r => Object.assign(r, { win: r.a > r.b ? 'A' : r.b > r.a ? 'B' : null }));
+      const wa = rows.filter(r => r.win === 'A').length, wb = rows.filter(r => r.win === 'B').length;
+      let by = 'wins';
+      if (wa > wb) winner = 'A'; else if (wb > wa) winner = 'B';
+      else if (hpA !== hpB) { winner = hpA > hpB ? 'A' : 'B'; by = 'hp'; }
+      else if (rows[0].a !== rows[0].b) { winner = rows[0].a > rows[0].b ? 'A' : 'B'; by = 'pct'; }
+      else if (rows[1].a !== rows[1].b) { winner = rows[1].a > rows[1].b ? 'A' : 'B'; by = 'dmg'; }
+      else { winner = 'B'; by = 'tie'; }
+      reason = 'judge';
+      push({ ev: 'judge', mode: 'three', mxA, mxB, aScore: Math.round(hpA / mxA * 10000), bScore: Math.round(hpB / mxB * 10000), rows, winner, winsA: wa, winsB: wb, hpA, hpB, by, limit: roundLimit });
+    }
     if (!winner) {
-      // 判定: 残りライフの割合の合計(倒れた体は0)。同じなら引き分け
+      // 判定(既定): 残りライフの割合の合計(倒れた体は0)。同じなら引き分け
       const score = (side) => {
         const t = state.teams[side];
         return Math.round(t.units.reduce((s, x) => s + x.hp / x.maxHp, 0) / t.units.length * 10000);
