@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: db9ae59cc4b90191
+// source-sha256: 90008b30032409f8
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -119380,7 +119380,7 @@ function AssistantLifeTownMap({
     className: "text-[10.5px] font-bold text-slate-300",
     style: JA_WRAP_STYLE,
     "data-assistant-life-map-sheet-home": true
-  }, jaWrap(assistantLifeMapTownOnlyNow().includes(sheetPlace) ? `町の場所。HOME では「🏡 助手ライフ」の札の下に顔が出ます` : `HOME の「${ASSISTANT_LIFE_MAP_FAC_NAME[fac]}」の札${sheetPlace === 'home' ? '(家と町にいる助手の顔もここ)' : ''}`)), React.createElement("p", {
+  }, jaWrap(assistantLifeMapTownOnlyNow().includes(sheetPlace) ? `町の場所。HOME では「🏡 助手ライフ」のボタンの下に顔が出ます` : `HOME の「${ASSISTANT_LIFE_MAP_FAC_NAME[fac]}」のボタン${sheetPlace === 'home' ? '(家と町にいる助手の顔もここ)' : ''}`)), React.createElement("p", {
     className: "mt-1 text-[11.5px] font-bold leading-snug text-slate-100",
     style: JA_WRAP_STYLE
   }, sheetPlace === 'cardroom' && typeof CARD_LIFE_UP_LABEL !== 'undefined' ? React.createElement(React.Fragment, null, jaWrap('MFバトルカードの研究をしている助手。いる助手と対戦すると、'), React.createElement("span", {
@@ -119416,7 +119416,7 @@ function AssistantLifeTownMap({
     className: "mt-3 text-[11px] font-black text-amber-200",
     "data-assistant-life-map-sheet-town": true,
     style: JA_WRAP_STYLE
-  }, jaWrap('📍 町にいる助手(HOME ではこの札の下に顔が出ます)')), sheetTown.map(([id, p]) => row(id, p, true))), React.createElement("button", {
+  }, jaWrap('📍 町にいる助手(HOME ではこのボタンの下に顔が出ます)')), sheetTown.map(([id, p]) => row(id, p, true))), React.createElement("button", {
     type: "button",
     "data-assistant-life-map-sheet-close": true,
     "data-mhl-sheet-close": true,
@@ -151701,7 +151701,7 @@ function AssistantMasmonBattleBeta({
         alignItems: 'center',
         gap: 8
       }
-    }, React.createElement("span", null, "技の札(間合いごとの代表の技)"), React.createElement("button", {
+    }, React.createElement("span", null, "技のカード(間合いごとの代表の技)"), React.createElement("button", {
       type: "button",
       className: "ambw-btn2",
       "data-ambb-rep-open": true,
@@ -151712,7 +151712,7 @@ function AssistantMasmonBattleBeta({
         flex: 'none'
       },
       onClick: () => setRepEdit(ambbRowKey(chosen[0].row))
-    }, "🃏 技の札を決める"))), React.createElement(AmbbSettings, {
+    }, "🃏 技のカードを決める"))), React.createElement(AmbbSettings, {
       set: set,
       onSet: setSet,
       local: srcNow === 'local',
@@ -152344,13 +152344,13 @@ function AssistantMasmonBattleBeta({
       onClick: ev => ev.stopPropagation()
     }, React.createElement("div", {
       className: "msa-sh-top"
-    }, React.createElement("b", null, "🃏 技の札を決める"), React.createElement("button", {
+    }, React.createElement("b", null, "🃏 技のカードを決める"), React.createElement("button", {
       type: "button",
       className: "msa-sh-x",
       onClick: close
     }, "閉じる")), React.createElement("p", {
       className: "msa-sh-note"
-    }, "試合で間合いごとに出す技(代表の技)です。札を押して、一覧の「☆ 代表にする」で決めます。決めていない間合いは「命中×威力」がいちばん大きい技になります。"), React.createElement("div", {
+    }, "試合で間合いごとに出す技(代表の技)です。カードを押して、一覧の「☆ 代表にする」で決めます。決めていない間合いは「命中×威力」がいちばん大きい技になります。"), React.createElement("div", {
       className: "ambb-tabs",
       style: {
         flexWrap: 'wrap',
@@ -175940,18 +175940,18 @@ function MsxPlay({
       }
     }, hpLost), " 下がった")) : null) : o.kind === 'rest' || o.kind === 'play' ? React.createElement(React.Fragment, null, React.createElement("span", {
       className: "hd2"
-    }, o.kind === 'rest' ? '🛌 休む' : '🎈 遊ぶ'), React.createElement("br", null), hpUp > 0 ? React.createElement(React.Fragment, null, "体力 ", React.createElement("b", {
+    }, o.kind === 'rest' ? '🛌 休む' : '🎈 遊ぶ'), React.createElement("br", null), typeof MsxGaugeFx === 'function' ? hpUp > 0 || stDown > 0 ? '体力とストレスが動いた' : '体力が回復した' : React.createElement(React.Fragment, null, hpUp > 0 ? React.createElement(React.Fragment, null, "体力 ", React.createElement("b", {
       className: "gu",
       "data-msx-rest-hp": true
     }, "+", hpUp)) : '体力が回復した', stDown > 0 ? React.createElement(React.Fragment, null, "・ストレス ", React.createElement("b", {
       className: "gu"
-    }, "−", stDown)) : null, (o.cured || []).includes('utsu') ? '。「うつ病」が治った' : '') : o.kind === 'clinic' ? React.createElement(React.Fragment, null, React.createElement("span", {
+    }, "−", stDown)) : null), (o.cured || []).includes('utsu') ? '。「うつ病」が治った' : '') : o.kind === 'clinic' ? React.createElement(React.Fragment, null, React.createElement("span", {
       className: "hd2"
-    }, "🏥 通院"), React.createElement("br", null), msxClinicText(o.cured, s.yosu), React.createElement("br", null), hpUp > 0 ? React.createElement(React.Fragment, null, "体力 ", React.createElement("b", {
+    }, "🏥 通院"), React.createElement("br", null), msxClinicText(o.cured, s.yosu), typeof MsxGaugeFx === 'function' ? null : React.createElement(React.Fragment, null, React.createElement("br", null), hpUp > 0 ? React.createElement(React.Fragment, null, "体力 ", React.createElement("b", {
       className: "gu"
     }, "+", hpUp)) : '体力も少し回復した', stDown > 0 ? React.createElement(React.Fragment, null, "・ストレス ", React.createElement("b", {
       className: "gu"
-    }, "−", stDown)) : null) : React.createElement(React.Fragment, null, React.createElement("span", {
+    }, "−", stDown)) : null)) : React.createElement(React.Fragment, null, React.createElement("span", {
       className: "hd2"
     }, "🛌 休み"), React.createElement("br", null), MSX_COND[o.cond] || '体調', "のため、このターンは休んだ"), o.event && typeof MsxTrainEvent !== 'function' ? React.createElement(React.Fragment, null, React.createElement("br", null), React.createElement("b", {
       className: "ga"
@@ -175959,7 +175959,13 @@ function MsxPlay({
       style: {
         color: '#fca5a5'
       }
-    }, MSX_COND[o.cond]), "をしてしまった…しばらく休み") : null), !acting && say && say.t ? React.createElement(MsxSay, {
+    }, MSX_COND[o.cond]), "をしてしまった…しばらく休み") : null), !acting && !isTrain && (o.kind === 'rest' || o.kind === 'play' || o.kind === 'clinic') && typeof MsxGaugeFx === 'function' && (hpUp > 0 || stDown > 0) ? React.createElement(MsxGaugeFx, {
+      key: `gfx-act-${s.turn}-${o.kind}`,
+      items: msxGfxItemsOf({
+        hp0: s.hp - hpUp,
+        st0: s.stress + stDown
+      }, s)
+    }) : null, !acting && say && say.t ? React.createElement(MsxSay, {
       aid: s.aid,
       ex: say.e || 'normal',
       text: say.t
@@ -254117,7 +254123,7 @@ function MonsterHeroGame() {
         className: `shrink-0 rounded-full px-2 py-0.5 text-[10px] font-black ${draftAutoSettings.quickRun?.autoStart === true ? 'bg-fuchsia-500 text-white' : 'bg-slate-700 text-slate-300'}`
       }, draftAutoSettings.quickRun?.autoStart === true ? 'ON' : 'OFF')), React.createElement("p", {
         className: "mt-1 text-[10px] leading-relaxed text-slate-400"
-      }, "ONにすると、HOMEなどからモンヒロビートや助手ライフを開いたときに、この編成でクイックの∞周回が裏で始まります。すでに周回しているとき・ほかのモードのバトルが続いているときは何もしません。曲選びの上の帯や、助手ライフの周回の札から、いつでも止められます。")), React.createElement("div", {
+      }, "ONにすると、HOMEなどからモンヒロビートや助手ライフを開いたときに、この編成でクイックの∞周回が裏で始まります。すでに周回しているとき・ほかのモードのバトルが続いているときは何もしません。曲選びの上の帯や、助手ライフの周回のボタンから、いつでも止められます。")), React.createElement("div", {
         className: "pt-1"
       }, React.createElement(AssistantBubble, {
         scene: "autoQuickRunSettings",
