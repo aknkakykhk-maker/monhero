@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9a5ecfa901fa3097
+// source-sha256: 0877e7e6f453228b
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -119565,6 +119565,7 @@ function AssistantLifeSleepEyes({
     const art = assistantLifeSleepArt(pid, src);
     if (art) {
       const filter = style && style.filter ? String(style.filter).replace(/drop-shadow\((?:[^()]|\([^()]*\))*\)/g, '').trim() || undefined : undefined;
+      const isFaceIcon = /\/face\//.test(String(src || ''));
       return React.createElement("img", {
         "data-assistant-life-roomview-sleep-eyes": pid,
         src: art,
@@ -119577,6 +119578,10 @@ function AssistantLifeSleepEyes({
           height: h,
           maxWidth: 'none',
           pointerEvents: 'none',
+          ...(isFaceIcon ? {
+            background: '#16122a',
+            borderRadius: 14
+          } : {}),
           ...style,
           filter
         }
