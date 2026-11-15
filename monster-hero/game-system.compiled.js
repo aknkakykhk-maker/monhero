@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 4907a950de996860
+// source-sha256: 22975c2ca64b292c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -179967,6 +179967,23 @@ const msxR3BeatPrize = (SUC, g) => {
   } : null;
 };
 const msxPh = str => String(str == null ? '' : str).replace(/｜/g, '\u200b');
+const MsxR3PrizeName = ({
+  name
+}) => {
+  const m = /^(.*?)[\s\u00a0]*([+＋][0-9,]+)$/.exec(String(name || ''));
+  if (!m || !m[1]) return React.createElement("small", {
+    className: "msx-kp"
+  }, msxPh(name));
+  return React.createElement("small", {
+    className: "msx-kp"
+  }, msxPh(m[1]), React.createElement("b", {
+    style: {
+      display: 'block',
+      whiteSpace: 'nowrap',
+      font: 'inherit'
+    }
+  }, m[2]));
+};
 const MsxR3PrizeBox = ({
   prizes,
   onPick
@@ -179988,9 +180005,9 @@ const MsxR3PrizeBox = ({
     className: `${x.rare ? 'rare' : ''}${x.pt ? ' pt' : ''}`,
     onClick: () => onPick(x),
     "data-msx-r3-prize": x.id
-  }, React.createElement("span", null, typeof msxItemIco === 'function' ? msxItemIco(x) : x.e), React.createElement("small", {
-    className: "msx-kp"
-  }, msxPh(x.name)))))) : null);
+  }, React.createElement("span", null, typeof msxItemIco === 'function' ? msxItemIco(x) : x.e), React.createElement(MsxR3PrizeName, {
+    name: x.name
+  }))))) : null);
 };
 const MSX_R3_FC_CLASS = Object.freeze({
   easy: 'fc-e',
@@ -180288,7 +180305,7 @@ function MsxR3Cup({
     onClick: e => e.stopPropagation()
   }, React.createElement("div", {
     className: "e"
-  }, typeof msxItemIco === 'function' ? msxItemIco(prz) : prz.e), React.createElement("b", null, prz.name), React.createElement("p", {
+  }, typeof msxItemIco === 'function' ? msxItemIco(prz) : prz.e), React.createElement("b", null, msxPh(prz.name)), React.createElement("p", {
     className: "msx-kp"
   }, msxPh(prz.desc)), React.createElement("button", {
     type: "button",
@@ -180841,6 +180858,13 @@ const msxR3ForcedPrizes = (SUC, b) => {
     name: `賞金 ${msxFmt(g)}G`,
     desc: '勝つともらえる賞金'
   });
+  if (b.kind === 'summit' && Number.isFinite(SUC.SUMMIT_PTS) && SUC.SUMMIT_PTS > 0) out.push({
+    id: 'pts',
+    e: '🔷',
+    name: `能力｜ポイント\u00a0+${SUC.SUMMIT_PTS}`,
+    desc: '勝つと能力ポイントがもらえる(1回戦・準決勝・決勝のそれぞれ)。「能力」の画面で、好きな能力に振り分けられる',
+    pt: true
+  });
   if (F) {
     if (F.all) out.push({
       id: 'all',
@@ -180852,7 +180876,7 @@ const msxR3ForcedPrizes = (SUC, b) => {
     if (F.pts) out.push({
       id: 'pts',
       e: '🔷',
-      name: `能力ポイント +${F.pts}`,
+      name: `能力｜ポイント\u00a0+${F.pts}`,
       desc: '勝つと能力ポイントがもらえる。「能力」の画面で、好きな能力に振り分けられる',
       pt: true
     });
@@ -181054,7 +181078,7 @@ function MsxR3PreDesk({
     onClick: e => e.stopPropagation()
   }, React.createElement("div", {
     className: "e"
-  }, typeof msxItemIco === 'function' ? msxItemIco(prz) : prz.e), React.createElement("b", null, prz.name), React.createElement("p", {
+  }, typeof msxItemIco === 'function' ? msxItemIco(prz) : prz.e), React.createElement("b", null, msxPh(prz.name)), React.createElement("p", {
     className: "msx-kp"
   }, msxPh(prz.desc)), React.createElement("button", {
     type: "button",

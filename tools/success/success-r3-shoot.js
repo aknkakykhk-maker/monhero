@@ -231,6 +231,8 @@ const makeRun = async (kind) => {
         const wr = (await scanTextWrap(page)).filter((x) => !(x.kind === '画面の外へはみ出した文字' && (!/[0-9A-Za-zぁ-んァ-ヶ一-龠]/.test(x.text) || strip.some((t) => t.startsWith(x.text.slice(0, 12))))));
         // 基準の大きさ(縦390・横844)では止める。小さい画面・大きい文字は、直す順番待ちの一覧として知らせるだけ(2026-11-14)
         if (!tag) check(`${label}: 文字が値・札の途中で折れない(scanTextWrap)`, wr.length === 0, wr.slice(0, 3).map((x) => `${x.kind}「${x.text}」`).join(' / '));
+        // 賞品の札は幅320 でも見る(r1115-201: 「+12 ⏎ 0」と数が割れた)
+        if (tag) { const pz = wr.filter((x) => /data-msx-r3-prize/.test(x.where)); check(`${label}: 賞品の札の字が値の途中で折れない(scanTextWrap)`, pz.length === 0, pz.slice(0, 3).map((x) => `${x.kind}「${x.text}」`).join(' / ')); }
         else if (wr.length) console.log(`  見張り ${label}: 文字の折れ ${wr.length}件 ${wr.slice(0, 2).map((x) => `${x.kind}「${x.text}」`).join(' / ')}`);
         // 保存枠(マスモンの画面)はクラフト12が参考 mm-01〜04 の形へ作り直し中。それまでは知らせるだけ(作り直したら外す)
         // 大会の1戦の画面(B・C2〜C4・W・R)はバトル部の受け持ち(MonsucCupShow)。決まりは渡してあるので、直るまでは知らせるだけ
