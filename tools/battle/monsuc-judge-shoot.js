@@ -81,8 +81,8 @@ const open = async (browser, reducedMotion, width = 390, species = 'Mocchi', loy
     // 止め絵: 勝ち(2勝1敗)と、勝ち数が同じで残ライフの量(実数)で決まった場合を、部品だけで描く(390×844)
     if (shots) {
       const { page } = await open(browser, 'reduce', 390, 'Mocchi', null, { id: 'arena-check', ctl: 'auto' }, 844);
-      const cases = { win: { rows: [{ key: 'pct', a: 62.5, b: 41.2, win: 'A' }, { key: 'dmg', a: 318, b: 402, win: 'B' }, { key: 'guts', a: 190, b: 120, win: 'A' }], winner: 'A', winsA: 2, winsB: 1, by: 'wins', hpA: 250, hpB: 165, limit: 30 },
-        hp: { rows: [{ key: 'pct', a: 55, b: 55, win: null }, { key: 'dmg', a: 210, b: 340, win: 'B' }, { key: 'guts', a: 150, b: 90, win: 'A' }], winner: 'A', winsA: 1, winsB: 1, by: 'hp', hpA: 330, hpB: 275, limit: 30 } };
+      const cases = { win: { rows: [{ key: 'pct', a: 62.5, b: 41.2, win: 'A' }, { key: 'dmg', a: 318, b: 402, win: 'B' }, { key: 'guts', a: 190, b: 120, win: 'A' }], winner: 'A', winsA: 2, winsB: 1, by: 'wins', hpA: 250, hpB: 165, mxA: 400, mxB: 400, limit: 30 },
+        hp: { rows: [{ key: 'pct', a: 55, b: 55, win: null }, { key: 'dmg', a: 210, b: 340, win: 'B' }, { key: 'guts', a: 150, b: 90, win: 'A' }], winner: 'A', winsA: 1, winsB: 1, by: 'hp', hpA: 330, hpB: 275, mxA: 600, mxB: 500, limit: 30 } };
       for (const k of Object.keys(cases)) {
         await page.evaluate(([row]) => { document.body.innerHTML = '<div id="jr"></div>'; ReactDOM.createRoot(document.getElementById('jr')).render(React.createElement(MsaJudge, { row, names: { A: 'もちまる', B: 'こんこ' }, onGo() {} })); }, [cases[k]]);
         await page.waitForSelector('[data-msa-judge]'); await page.waitForTimeout(300);
