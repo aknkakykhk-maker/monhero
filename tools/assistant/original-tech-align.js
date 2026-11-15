@@ -18,6 +18,8 @@ const draft = JSON.parse(fs.readFileSync(DRAFT, 'utf8'));
 const { ASSISTANT_MASMON_TECHS: B } = require(path.join(__dirname, '..', '..', 'monster-hero', 'data', 'assistant-masmon-techs.js'));
 const MAIN = { Pandora: 'Pixie', KenshiMocchi: 'Mocchi', Eiki: 'Zan', Melody: 'Yggdrasil', Kuromy: 'Yggdrasil' };
 const D = ['零', '近', '中', '遠'];
+// 組の無い専用技を、決めた主血統の技の「2つ目」として同じマス・同じ寄せ方にする(r1115-155 窓口: 社長「もちき・リープはローリンモッチ+2」)
+const SECOND = { KenshiMocchi: { 'もちき・リープ': 'ローリンモッチ' } };
 const KEYS = ['dist', 'power', 'hit', 'guts', 'crit', 'gd', 'moveTo', 'learn', 'fixRank', 'needFix', 'rank'];
 const lines = [];
 for (const [sp, mainSp] of Object.entries(MAIN)) {
@@ -52,6 +54,16 @@ for (const [sp, mainSp] of Object.entries(MAIN)) {
       put(m.rank, m.dist[0]);
       if (o.rank !== m.rank || o.d !== m.dist[0]) lines.push(`${sp}: ${t.name} ${o.rank}${D[o.d]} → ${m.rank}${D[m.dist[0]]}(${m.name}+2)`);
     }
+  }
+  // 決めた「2つ目」: 主血統の技と同じマス・同じ性能の寄せ方(重なる・⇄)
+  for (const o of own.filter((x) => !pairOf.has(x.t.id))) {
+    const mName = (SECOND[sp] || {})[o.t.name]; const m = mName ? base.find((x) => x.name === mName) : null;
+    if (!m) continue;
+    const t = o.t; delete t.learn;
+    t.dist = m.dist.slice(); t.power = m.power + 2; t.hit = m.hit + 2; t.crit = m.crit + 2; t.guts = m.guts; t.gd = m.gd;
+    if (m.moveTo != null) t.moveTo = m.moveTo; else delete t.moveTo;
+    t.fixRank = m.rank; t.rank = m.rank; put(m.rank, m.dist[0]); pairOf.set(t.id, m);
+    lines.push(`${sp}: ${t.name}(専用) ${o.rank}${D[o.d]} → ${m.rank}${D[m.dist[0]]}(${m.name}+2・2つ目・⇄)`);
   }
   // 組の無い専用技: 空きマスがあれば移す(r1115-153①)
   for (const o of own.filter((x) => !pairOf.has(x.t.id))) {

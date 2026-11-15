@@ -541,7 +541,7 @@ const ASSISTANT_MASMON_TECHS = (() => {
     ],
     KenshiMocchi: [
       {"id":"kenshimocchi_o01","name":"エッジもんた","kind":"pow","dist":[0],"power":18,"hit":-6,"guts":16,"crit":8,"gd":3,"rank":1,"role":"light","learn":{"start":true}},
-      {"id":"kenshimocchi_o02","name":"もちき・リープ","kind":"pow","dist":[3],"power":8,"hit":5,"guts":13,"crit":10,"gd":9,"moveTo":0,"rank":1,"role":"light","learn":{"by":"pow","st":{"pow":100}}},
+      {"id":"kenshimocchi_o02","name":"もちき・リープ","kind":"pow","dist":[2],"power":18,"hit":-16,"guts":21,"crit":20,"gd":9,"moveTo":0,"rank":1,"role":"light","learn":{"by":"pow","st":{"pow":100}}},
       {"id":"kenshimocchi_o03","name":"ガッチョスラント","kind":"pow","dist":[0],"power":23,"hit":4,"guts":21,"crit":10,"gd":3,"rank":2,"role":"mid","learn":{"by":"pow","st":{"pow":150}}},
       {"id":"kenshimocchi_o04","name":"エアリアルもっちゃん","kind":"pow","dist":[2],"power":18,"hit":-16,"guts":21,"crit":20,"gd":9,"moveTo":0,"rank":1,"role":"light","learn":{"start":true}},
       {"id":"kenshimocchi_o05","name":"ガッチャー・クロス","kind":"pow","dist":[1],"power":26,"hit":-16,"guts":24,"crit":10,"gd":3,"rank":1,"role":"light","learn":{"by":"pow","st":{"pow":100}}},
