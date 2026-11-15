@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 4a1fce90ac1bcff0
+// source-sha256: e5e9800c0312d8f6
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -114833,22 +114833,7 @@ const ASSISTANT_LIFE_SAY_SPECIAL = Object.freeze({
   'cardroom:cards': ['MFバトル', 'カードを', '研究'],
   'cafe:snack': ['おやつ', '屋さんで', 'ひと休み']
 });
-const ASSISTANT_LIFE_SAY_SHORT = Object.freeze({
-  snack: 'おやつ中',
-  practice: '練習中',
-  training: '育成中',
-  cards: 'カード研究',
-  walk: '散歩中',
-  idle: 'ぼーっと',
-  read: '読書中',
-  battle: 'バトル中',
-  checkup: '診察中'
-});
-const assistantLifeSayOutShort = (place, doingKey) => {
-  const icon = ASSISTANT_LIFE_PLACE_ICON[place] || '🚶',
-    d = ASSISTANT_LIFE_DOINGS[doingKey];
-  return d && d.places.includes(place) && ASSISTANT_LIFE_SAY_SHORT[doingKey] ? [icon, ASSISTANT_LIFE_SAY_SHORT[doingKey]] : [icon, `${assistantLifePlaceShow(place) || 'おでかけ先'}へ`];
-};
+const assistantLifeSayOutShort = place => [ASSISTANT_LIFE_PLACE_ICON[place] || '🚶', assistantLifePlaceShow(place) || 'おでかけ先'];
 const assistantLifeSayOut = (place, doingKey) => {
   const icon = ASSISTANT_LIFE_PLACE_ICON[place] || '🚶';
   const sp = ASSISTANT_LIFE_SAY_SPECIAL[`${place}:${doingKey}`] || ASSISTANT_LIFE_SAY_SPECIAL[place];
@@ -115117,11 +115102,12 @@ function AssistantLifeRoom({
     const tagLand = typeof window !== 'undefined' && window.innerWidth > window.innerHeight;
     const tagFit = assistantLifeTagFit(t[0], w - 26, 10.5, 0);
     const short = [...String(t[0])].length <= 9;
-    const avail = w - 6 - 8 - 3 - 2;
+    const avail = tagLand ? w - 6 - 8 - 3 : w - 6 - 8 - 3 - 2;
     const oneFit = x => assistantLifeTagFit(assistantLifeSayMeasure(assistantLifeSayParts(x).join('')), avail, 10.5, 0);
     const sayFull = Array.isArray(state.say) ? compact && state.sayMark ? state.sayMark : state.say : null;
     const sayAlt = Array.isArray(state.say) ? (compact && state.sayMark ? state.sayMarkShort : state.sayShort) || sayFull : null;
-    const say = tagLand && sayFull && oneFit(sayFull) < 10.5 && sayAlt ? oneFit(sayAlt) >= oneFit(sayFull) ? sayAlt : sayFull : sayFull;
+    const sayBare = sayAlt && sayAlt.length >= 2 ? ['', ...sayAlt.slice(1)] : sayAlt;
+    const say = !tagLand || !sayFull || oneFit(sayFull) >= 10.5 ? sayFull : [sayAlt, sayBare].find(x => x && oneFit(x) >= 10.5) || [sayFull, sayAlt, sayBare].filter(Boolean).sort((a, b) => oneFit(b) - oneFit(a))[0];
     if (say) {
       const f = tagLand ? Math.max(7, oneFit(say)) : assistantLifeSayFont(say, avail);
       return React.createElement("span", {
@@ -115418,7 +115404,7 @@ const assistantLifeRoomsOf = (life, metIds) => {
     rooms[id] = {
       tag: [`${ASSISTANT_LIFE_PLACE_ICON[w.place] || '🚶'} ${assistantLifePlaceShow(w.place)}へ`, sub, w.group ? assistantLifeGroupNames(w.group.ids, 4) : null],
       say: assistantLifeSayOut(w.place, w.doing),
-      sayShort: assistantLifeSayOutShort(w.place, w.doing)
+      sayShort: assistantLifeSayOutShort(w.place)
     };
   }
   const q = peer && peer.quarrel && peer.quarrel.pending;
