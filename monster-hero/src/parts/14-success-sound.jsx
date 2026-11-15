@@ -17,6 +17,9 @@ const SuccessSound = (() => {
   let beforeKey = null;    // 入る前に鳴っていた曲(離れるときに戻す)
   let beforeQuiet = false; // 入る前の「裏の音を止める印」
   let curBgm = null;       // いまサクセスが流している曲
+  let onceKey = null;      // 1回だけ流す曲(勝ち負けのジングル)を流し始めた曲と時刻。ジングルのあとへ曲をつなぐのに使う(r1115-091)
+  let onceAt = 0;
+  let laterTimer = null;   // ジングルが終わるのを待っている場面
 
   const audio = () => (typeof Audio_ !== 'undefined' ? Audio_ : null);
   const knownTrack = (id) => !!(id && typeof BGM_TRACK_BY_ID !== 'undefined' && BGM_TRACK_BY_ID[id]);
@@ -35,7 +38,7 @@ const SuccessSound = (() => {
   const leave = () => {
     const a = audio();
     if (!active) return;
-    active = false; epoch += 1;
+    active = false; epoch += 1; clearLater(); onceKey = null;
     if (!a) { curBgm = null; return; }
     try { if (a.setBackgroundSeQuiet) a.setBackgroundSeQuiet(beforeQuiet); } catch (e) {}
     const wasMine = curBgm !== null;
@@ -58,9 +61,13 @@ const SuccessSound = (() => {
     let now = key; try { now = a.currentBgmKey ? a.currentBgmKey() : key; } catch (e) {}
     if (key === curBgm && now === key) return key;
     curBgm = key;
+    clearLater();
+    const t = typeof BGM_TRACK_BY_ID !== 'undefined' ? BGM_TRACK_BY_ID[key] : null;
+    if (t && t.loop === false) { onceKey = key; onceAt = Date.now(); } else { onceKey = null; }
     try { a.playBGM(key); } catch (e) {}
     return key;
   };
+  const clearLater = () => { if (laterTimer) { clearTimeout(laterTimer); laterTimer = null; } };
 
   // 場面の曲が確かに鳴っているようにする(試合の曲の見張り。r1115-048)。違う曲なら鳴らし直し、同じ曲で止まっていれば(読み込みの失敗など)鳴らし直す。
   //   ジングルが鳴っているあいだは触らない(ジングルが終わると Audio_ がいまの曲=この曲へ戻す)
@@ -87,6 +94,19 @@ const SuccessSound = (() => {
     return name;
   };
 
+  // 勝ち負けのジングルが鳴っている途中なら、鳴り終わってから場面に入る(エンディングの曲。r1115-091)。鳴っていなければすぐ入る
+  const ONCE_MS = 7200; // ジングルの長さ(勝ち 6.9秒・負け 6.9秒)より少し長く
+  const sceneAfterOnce = (sceneId, opts = null) => {
+    if (!active) enter();
+    clearLater();
+    const a = audio();
+    let now = null; try { now = a && a.currentBgmKey ? a.currentBgmKey() : null; } catch (e) {}
+    const rest = onceKey && now === onceKey ? onceAt + ONCE_MS - Date.now() : 0;
+    if (!(rest > 0)) { scene(sceneId, opts); return; }
+    const my = epoch;
+    laterTimer = setTimeout(() => { laterTimer = null; if (active && my === epoch) scene(sceneId, opts); }, Math.min(rest, ONCE_MS));
+  };
+
   // 場面に入った合図(曲 + 効果音)。画面は場面が替わるたびにこれを1回呼ぶ
   const scene = (sceneId, opts = null) => {
     if (!active) enter();
@@ -95,7 +115,7 @@ const SuccessSound = (() => {
     se(sceneId, opts && opts.delayMs);
   };
 
-  return { enter, leave, scene, bgm, keep, se, isActive: () => active };
+  return { enter, leave, scene, sceneAfterOnce, bgm, keep, se, isActive: () => active };
 })();
 
 // モンサクの画面の内側(育成中・修行・大会・引退など)で使う入り口。sceneId が替わるたびに場面の曲と効果音を鳴らすだけで、
@@ -108,6 +128,15 @@ const useSuccessScene = (sceneId, opts = null) => {
   useEffect(() => {
     if (!sceneId) return undefined;
     SuccessSound.scene(sceneId, { season, delayMs });
+    return undefined;
+  }, [sceneId, season]);
+};
+// useSuccessScene と同じだが、勝ち負けのジングルが鳴っている途中なら鳴り終わってから曲を替える(エンディング。r1115-091)
+const useSuccessSceneAfterOnce = (sceneId, opts = null) => {
+  const season = opts && opts.season;
+  useEffect(() => {
+    if (!sceneId) return undefined;
+    SuccessSound.sceneAfterOnce(sceneId, { season });
     return undefined;
   }, [sceneId, season]);
 };

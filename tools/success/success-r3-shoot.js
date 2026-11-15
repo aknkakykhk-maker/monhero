@@ -56,6 +56,18 @@ const makeRun = async (kind) => {
     let t = 1; while (t < (SUC.TOTAL_TURNS || 46) && !(SUC.periodOf(t).key === want && (kind === 'summit' ? SUC.periodOf(t).at >= 3 : SUC.periodOf(t + 1).key !== want))) t++;
     s = { ...s, turn: t, battle: kind === 'kimatsu' ? { kind: 'junior', round: 0 } : { kind: 'summit', round: 0 } }; phase = 'battle';
   }
+  if (kind === 'qhit' || kind === 'qmiss' || kind === 'qmix') { // 技のくじの当たり外れを撮る(r1115-063): 乱数の種(id)を替えて、どの技を選んでも決まった結果になる種を探す
+    s = { ...s, hp: s.hpMax, superLeft: 2 };
+    const ids = SUC.learnable(s, 'fire').map((t) => t.id);
+    const want = kind === 'qhit' ? [true] : kind === 'qmiss' ? [false] : [true, false];
+    const pats = kind === 'qmix' ? ids.flatMap((a) => ids.filter((b) => b !== a).map((b) => [a, b])) : ids.map((a) => [a]);
+    for (let k = 0; k < 3000; k++) {
+      const t = { ...s, id: `r3-shot-q${k}` };
+      if (pats.every((p) => { const o = SUC.act(t, { kind: 'shugyo', course: 'fire', techs: p }).out; return o.ok && (o.tries || []).map((x) => x.hit).join() === want.join(); })) { s = t; break; }
+    }
+  }
+  if (kind === 'hpmid') s = { ...s, hp: 40 }; // 体力40: 修行(30)は行けて超修行(60)は行けない(r1115-062)
+  if (kind === 'hplow') s = { ...s, hp: 6 }; // 体力6: 修行にも行けない
   if (kind === 'gameover') { s = { ...s, turn: 7, debutLoss: 3, over: 'gameover' }; phase = 'over'; }
   if (kind === 'retire') { s = { ...s, turn: 46, pts: 34, over: 'done' }; phase = 'over'; }
   return { v: 1, id: s.id, s, nick: 'もちまる', colors: [], from: { base: 'Mocchi' }, items: [], used: 0, phase, out: null, log: [{ turn: 3, t: '休んだ' }], startAt: 1 };
@@ -80,6 +92,8 @@ const makeRun = async (kind) => {
     ['C4d', 'debutlose', ['cont', '@cupintro-go', '%quick']],
     ['Q1', 'mid', ['cont', /^⚔修行/]], ['Q6', 'mid', ['cont', /^⚔修行/]], ['Q7', 'mid', ['cont', /^⚔修行/, '$qok0']], // SHOT_SPECIES=Golem で撮ると、間合い適性(零 A・近 E・中 G・遠 G)で同じランクの技の率が分かれる(r1115-041)
     ['Q4', 'mid', ['cont', /^⚔修行/, '$qok0']], ['Q5', 'mid', ['cont', /^⚔修行/, '$qok0', '$qok1']], ['Q2', 'mid', ['cont', /^⚔修行/, '@shugyo']], ['Q2b', 'mid', ['cont', /^⚔修行/, '@shugyo', '@qskip']], ['Q3', 'mid', ['cont', /^⚔修行/, '@shugyo', '@qskip', '@qnext']], // 修行の段の演出 → 「結果へ」(Fable ①-12)
+    ['QL1', 'qhit', ['cont', /^⚔修行/, '$qok0', '@shugyo', '@qskip']], ['QL2', 'qmiss', ['cont', /^⚔修行/, '$qok0', '@shugyo', '@qskip']], ['QL3', 'qmix', ['cont', /^⚔修行/, '$qok0', '$qok1', '@shugyo', '@qskip']], // 技を覚えた/覚えられなかった/超修行で1つだけ(r1115-063)
+    ['QH0', 'hplow', ['cont']], ['QH1', 'hpmid', ['cont', /^⚔修行/, '$qok0', '$qok1']], // 体力が足りない: ホームの修行が押せない/超修行だけ行けない(r1115-062)
     // 期末の大会の当日(参考 te-30〜34): 当日のメイン(能力と大会だけ)→ 受付に1つ → 参加の確認 → 紋章の入り → 表
     ['K0', 'kimatsu', ['cont']], ['K1', 'kimatsu', ['cont', '@precup']], ['K2', 'kimatsu', ['cont', '@precup', '@enter']], ['K2c', 'kimatsu', ['cont', '@precup', '@enter', '@pre-cancel']],
     ['K3', 'kimatsu', ['cont', '@precup', '@enter', '@yes']], ['K4', 'kimatsu', ['cont', '@precup', '@enter', '@yes', '@cupintro-go']],
