@@ -99,6 +99,7 @@
   "changelog/song-art-notice-check.js",
   "changelog/song-numbers-check.js",
   "ui/ui-kanji-check.js",
+  "ui/fuda-word-check.js",
   "changelog/title-prefix-check.js",
   "compiled-runtime-check.js",
   "friends/alf-masmon-share-check.js",

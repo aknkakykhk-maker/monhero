@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d3784777c876aeaf
+// source-sha256: c2464a2d684435d4
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -5590,7 +5590,7 @@ const TRAINING_TOOLS = Object.freeze({
     desc: '次の出目に＋2'
   },
   gale: {
-    name: '疾風の札',
+    name: '疾風のお守り',
     emoji: '🌪️',
     timing: 'サイコロを振る前',
     mode: '消費型',
@@ -66115,7 +66115,7 @@ const growthFxPeerItem = ({
 const GROWTH_FX_SESSION_ROWS_MAX = 4;
 const growthFxSessionUnlocks = () => {
   const L = (v, d) => typeof v !== 'undefined' && Number.isFinite(Number(v)) ? Number(v) : d;
-  const rows = [[L(typeof RHYTHM_ASSIST_SESSION_TASTE_LEVEL !== 'undefined' ? RHYTHM_ASSIST_SESSION_TASTE_LEVEL : undefined, 10), '好きな曲が見える'], [L(typeof RHYTHM_ASSIST_SESSION_GLOW_LEVEL !== 'undefined' ? RHYTHM_ASSIST_SESSION_GLOW_LEVEL : undefined, 15), 'サビで顔が光る'], [L(typeof RHYTHM_ASSIST_SESSION_CHEER_LEVEL !== 'undefined' ? RHYTHM_ASSIST_SESSION_CHEER_LEVEL : undefined, 25), '得意の応援'], [L(typeof RHYTHM_ASSIST_SESSION_FRAME_LEVEL !== 'undefined' ? RHYTHM_ASSIST_SESSION_FRAME_LEVEL : undefined, 45), '結果の枠が助手の色に'], [L(typeof RHYTHM_ASSIST_SESSION_BADGE_LEVEL !== 'undefined' ? RHYTHM_ASSIST_SESSION_BADGE_LEVEL : undefined, 50), 'プロフィールに札'], [L(typeof RHYTHM_ASSIST_SESSION_LISTEN_LEVEL !== 'undefined' ? RHYTHM_ASSIST_SESSION_LISTEN_LEVEL : undefined, 75), '曲の聞きどころ'], [L(typeof RHYTHM_ASSIST_SESSION_BACK_LEVEL !== 'undefined' ? RHYTHM_ASSIST_SESSION_BACK_LEVEL : undefined, 90), '名前入りの背景'], [L(typeof RHYTHM_ASSIST_SESSION_MASTER_LEVEL !== 'undefined' ? RHYTHM_ASSIST_SESSION_MASTER_LEVEL : undefined, 100), '称号「セッションマスター」']];
+  const rows = [[L(typeof RHYTHM_ASSIST_SESSION_TASTE_LEVEL !== 'undefined' ? RHYTHM_ASSIST_SESSION_TASTE_LEVEL : undefined, 10), '好きな曲が見える'], [L(typeof RHYTHM_ASSIST_SESSION_GLOW_LEVEL !== 'undefined' ? RHYTHM_ASSIST_SESSION_GLOW_LEVEL : undefined, 15), 'サビで顔が光る'], [L(typeof RHYTHM_ASSIST_SESSION_CHEER_LEVEL !== 'undefined' ? RHYTHM_ASSIST_SESSION_CHEER_LEVEL : undefined, 25), '得意の応援'], [L(typeof RHYTHM_ASSIST_SESSION_FRAME_LEVEL !== 'undefined' ? RHYTHM_ASSIST_SESSION_FRAME_LEVEL : undefined, 45), '結果の枠が助手の色に'], [L(typeof RHYTHM_ASSIST_SESSION_BADGE_LEVEL !== 'undefined' ? RHYTHM_ASSIST_SESSION_BADGE_LEVEL : undefined, 50), 'プロフィールにバッジ'], [L(typeof RHYTHM_ASSIST_SESSION_LISTEN_LEVEL !== 'undefined' ? RHYTHM_ASSIST_SESSION_LISTEN_LEVEL : undefined, 75), '曲の聞きどころ'], [L(typeof RHYTHM_ASSIST_SESSION_BACK_LEVEL !== 'undefined' ? RHYTHM_ASSIST_SESSION_BACK_LEVEL : undefined, 90), '名前入りの背景'], [L(typeof RHYTHM_ASSIST_SESSION_MASTER_LEVEL !== 'undefined' ? RHYTHM_ASSIST_SESSION_MASTER_LEVEL : undefined, 100), '称号「セッションマスター」']];
   const bonus = typeof RHYTHM_ASSIST_SESSION_P_BONUS !== 'undefined' && Array.isArray(RHYTHM_ASSIST_SESSION_P_BONUS) ? RHYTHM_ASSIST_SESSION_P_BONUS : [];
   bonus.forEach(([lv, rate]) => rows.push([Number(lv), `ビートP +${Math.round(Number(rate) * 100)}%`]));
   return rows.filter(r => Number.isFinite(r[0])).sort((a, b) => a[0] - b[0]);
@@ -70358,7 +70358,7 @@ function ProfileScreen({
       className: "shrink-0 text-slate-400"
     })), React.createElement("div", {
       className: "mb-1"
-    }, React.createElement(ScreenSectionLabel, null, "見せる札（フレンドにもこう見えます）")), React.createElement("div", {
+    }, React.createElement(ScreenSectionLabel, null, "見せる欄（フレンドにもこう見えます）")), React.createElement("div", {
       className: "grid grid-cols-2 gap-2"
     }, React.createElement("button", {
       type: "button",
@@ -93172,7 +93172,7 @@ function FriendsScreen({
         className: "max-w-full truncate rounded-full border border-amber-400/40 bg-amber-950/30 px-3 py-1 text-[11px] font-black text-amber-200 active:scale-95"
       }, "📝 ", notes[selected.otherId] || 'メモを書く（自分だけに見えます）')), React.createElement("div", {
         className: "mt-3 mb-1"
-      }, React.createElement(ScreenSectionLabel, null, "見せる札")), React.createElement("div", {
+      }, React.createElement(ScreenSectionLabel, null, "見せる欄")), React.createElement("div", {
         className: "grid grid-cols-2 gap-2 items-start"
       }, React.createElement("div", {
         "data-friend-favorite": true,
@@ -172789,7 +172789,7 @@ function MsxStart({
     }, m.friend ? `借: ${m.friend.name || 'フレンド'}` : m.kind === 'base' ? m.auto ? 'ベースモン ✎⁠選ぶ' : 'ベースモン ✎⁠変える' : '✎変える')))), React.createElement("div", {
       className: "msx-note msx-sl-legend",
       "data-msx-slot-legend": true
-    }, "札の見方: 「+4%」はその能力のトレーニングの伸びが上がる分・親密度は初めの値・タッグは友情タッグのときの伸び"), React.createElement("button", {
+    }, "枠の見方: 「+4%」はその能力のトレーニングの伸びが上がる分・親密度は初めの値・タッグは友情タッグのときの伸び"), React.createElement("button", {
       type: "button",
       className: "v-card msx-heat-btn",
       "data-msx-gather-open": true,
@@ -180282,7 +180282,7 @@ function MsxR3Battle({
       }
     }, mealPick && M[mealPick] ? `${M[mealPick].name}: ${fxLong(mealPick)}`.split(/(?<=[・:])/).map((x, i) => React.createElement(React.Fragment, {
       key: i
-    }, i > 0 ? React.createElement("wbr", null) : null, typeof jaWrap === 'function' ? jaWrap(x) : x)) : '札を押すと、詳しい効き目が出ます'), React.createElement("div", {
+    }, i > 0 ? React.createElement("wbr", null) : null, typeof jaWrap === 'function' ? jaWrap(x) : x)) : 'ごはんを押すと、詳しい効き目が出ます'), React.createElement("div", {
       className: "msx-note",
       "data-msx-r3-loynote": true,
       style: {
@@ -181126,7 +181126,7 @@ function MsxR3Shugyo({
     if (!id) return React.createElement("div", {
       className: "q-slot msx-kp",
       "data-msx-r3-qslot": "0"
-    }, want.length ? superWhy ? `超修行は できない(${superWhy})` : '+ もう1つ選ぶと 🔥超修行' : '+ 下の緑の札から 技を選ぶ');
+    }, want.length ? superWhy ? `超修行は できない(${superWhy})` : '+ もう1つ選ぶと 🔥超修行' : '+ 下の緑の技のカードから 技を選ぶ');
     const t = all.find(x => x.id === id) || {};
     const bc = typeof SUC.techBoostConds === 'function' ? SUC.techBoostConds(s0, t, want) : [];
     const rate = typeof SUC.techRate === 'function' ? SUC.techRate(s0, t, {
@@ -181211,7 +181211,7 @@ function MsxR3Shugyo({
     "data-msx-r3-techlist": true
   }, React.createElement("h3", null, React.createElement("i", null, "3"), "覚えられる技", React.createElement("span", {
     className: "tk"
-  }, "緑の札をタップ")), all.length ? React.createElement(MsxTechGrid, {
+  }, "緑の技のカードをタップ")), all.length ? React.createElement(MsxTechGrid, {
     className: "q",
     all: all,
     head: aptHead,
@@ -181281,7 +181281,7 @@ function MsxR3Shugyo({
     className: c.ok ? 'ok' : ''
   }, React.createElement("i", null, "条件", i + 1), React.createElement("span", {
     className: "msx-kp"
-  }, c.long), React.createElement("b", null, c.ok ? '済' : 'まだ'))), !full && condsOf(lockT).length ? React.createElement("p", null, "条件を全て満たすと、緑の「覚えられる」札になります") : null), React.createElement("div", {
+  }, c.long), React.createElement("b", null, c.ok ? '済' : 'まだ'))), !full && condsOf(lockT).length ? React.createElement("p", null, "条件を全て満たすと、緑の「覚えられる」カードになります") : null), React.createElement("div", {
     className: "bt"
   }, React.createElement("button", {
     type: "button",
@@ -184621,7 +184621,7 @@ function MsxManualBar({
       alignItems: 'center',
       gap: 6
     }
-  }, React.createElement("span", null, "⚔ 攻撃", reachN ? '(札を押して技を選ぶ)' : '(この間合いの技なし)'), items.length ? React.createElement("button", {
+  }, React.createElement("span", null, "⚔ 攻撃", reachN ? '(技のカードを押して選ぶ)' : '(この間合いの技なし)'), items.length ? React.createElement("button", {
     type: "button",
     className: "msxm-all",
     "data-msxm-all": true,
