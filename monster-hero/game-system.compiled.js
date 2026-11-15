@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: cbbca44ac07120a4
+// source-sha256: cc22fdff59fe160c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -149331,7 +149331,7 @@ const AMBB_SWAPS = Object.freeze([{
 }]);
 const AMBB_SET_DEF = Object.freeze({
   team: 'team',
-  rounds: 150,
+  rounds: 'auto',
   dist: 'auto',
   guts: 50,
   fx: 'full',
@@ -149349,7 +149349,7 @@ const AMBB_SET_OPTS = Object.freeze({
     label: '勝ち抜き',
     note: '交代なし・倒れたら次'
   }],
-  rounds: [30, 50, 100, 150],
+  rounds: ['auto', 30, 60, 90, 120],
   dist: ['auto', 0, 1, 2, 3],
   guts: [30, 50, 70, 99],
   fx: [{
@@ -149382,7 +149382,7 @@ const normalizeAmbbSet = raw => {
   const x = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
   return {
     team: x.team === 'ko' ? 'ko' : 'team',
-    rounds: ambbInt(x.rounds, 10, 300, AMBB_SET_DEF.rounds),
+    rounds: x.rounds === 'auto' || x.rounds == null || Number(x.rounds) === 150 ? 'auto' : ambbInt(x.rounds, 10, 300, 'auto'),
     dist: Number.isInteger(x.dist) && x.dist >= 0 && x.dist <= 3 ? x.dist : 'auto',
     guts: ambbInt(x.guts, 0, 99, AMBB_SET_DEF.guts),
     fx: x.fx === 'lite' ? 'lite' : 'full',
@@ -149400,7 +149400,7 @@ const ambbMatchOpts = set => {
     ...(Object.keys(rules).length ? {
       rules
     } : {}),
-    ...(set.rounds !== AMBB_SET_DEF.rounds ? {
+    ...(set.rounds !== 'auto' && Number.isFinite(set.rounds) ? {
       roundLimit: set.rounds
     } : {}),
     balance: set.balance
@@ -149814,7 +149814,7 @@ const AMBB_CSS = `
 .ambw.ambb-full .ambb-bar-wrap .msxm{margin-top:6px;padding:7px;max-height:42vh;overflow-y:auto}
 .ambw.ambb-full .ambb-bar-wrap .msxm-btn{min-height:36px;font-size:11.5px;padding:3px 6px;flex:1 1 22%}
 .ambw.ambb-full .ambb-bar-wrap .msxm-btn small{font-size:9.5px}
-.ambw.ambb-full .ambb-bar-wrap .msxm-btn:not(.atk):not([data-msxm-move]) small{display:none}
+.ambw.ambb-full .ambb-bar-wrap .msxm-btn:not(.atk):not([data-msxm-move]):not([data-msxm-blow]) small{display:none}
 .ambw.ambb-full .ambb-bar-wrap .msxm-btn small{white-space:nowrap}
 .ambw.ambb-full .ambb-bar-wrap .msxm-sec{margin-top:5px}
 .ambw.ambb-full .ambb-bar-wrap .msxm-foot{margin-top:5px}
@@ -151643,7 +151643,7 @@ function AmbbCompare({
     className: "ambb-cmp-sec"
   }, "能力"), keys.map(k => row(AMBW_STAT_JP[k] || k, sv(ua, k), sv(ub, k), sv(ua, k) / top, sv(ub, k) / top, sv(ua, k), sv(ub, k), k)), ta && tb && React.createElement(React.Fragment, null, React.createElement("div", {
     className: "ambb-cmp-sec"
-  }, "種類の等級"), row('ガッツ回復力', ta.regen, tb.regen, (ta.regen || 0) / 15, (tb.regen || 0) / 15, regenG(ta) || ta.regen, regenG(tb) || tb.regen, 'regen'), row('移動速度', gIdx(grades, ta.move), gIdx(grades, tb.move), (gIdx(grades, ta.move) + 1) / 7, (gIdx(grades, tb.move) + 1) / 7, ta.move, tb.move, 'move'), row('サイズ', 0, 0, (sizeV[ta.size] || 2) / 3, (sizeV[tb.size] || 2) / 3, AMBB_SIZE_JP[ta.size] || 'ふつう', AMBB_SIZE_JP[tb.size] || 'ふつう', 'size'), React.createElement("div", {
+  }, "種類の等級"), row('ガッツ回復力', ta.regen, tb.regen, (ta.regen || 0) / 8, (tb.regen || 0) / 8, regenG(ta) || ta.regen, regenG(tb) || tb.regen, 'regen'), row('移動速度', gIdx(grades, ta.move), gIdx(grades, tb.move), (gIdx(grades, ta.move) + 1) / 7, (gIdx(grades, tb.move) + 1) / 7, ta.move, tb.move, 'move'), row('サイズ', 0, 0, (sizeV[ta.size] || 2) / 3, (sizeV[tb.size] || 2) / 3, AMBB_SIZE_JP[ta.size] || 'ふつう', AMBB_SIZE_JP[tb.size] || 'ふつう', 'size'), React.createElement("div", {
     className: "ambb-cmp-sec"
   }, "間合い適性"), [0, 1, 2, 3].map(d => row(`${AMBW_DIST[d]}距離`, gIdx(aptGrades, ta.apt[d]), gIdx(aptGrades, tb.apt[d]), (gIdx(aptGrades, ta.apt[d]) + 1) / 12, (gIdx(aptGrades, tb.apt[d]) + 1) / 12, ta.apt[d], tb.apt[d], `apt${d}`)), React.createElement("div", {
     className: "ambb-cmp-note"
@@ -151674,7 +151674,6 @@ function AmbbSettings({
     }, labelOf(o), noteOf && noteOf(o) ? React.createElement("small", null, noteOf(o)) : null);
   }));
   const diff = ambbSetDiff(set);
-  const limit = engine && engine.ROUND_LIMIT || 150;
   return React.createElement("div", {
     className: "ambw-card",
     "data-ambb-settings": true
@@ -151714,7 +151713,7 @@ function AmbbSettings({
     className: "ambb-set-row"
   }, React.createElement("span", null, "形式"), chips('team', AMBB_SET_OPTS.team, o => o.label, o => o.note)), React.createElement("div", {
     className: "ambb-set-row"
-  }, React.createElement("span", null, "ラウンド上限"), chips('rounds', AMBB_SET_OPTS.rounds, o => `${o}`)), React.createElement("div", {
+  }, React.createElement("span", null, "ラウンド上限"), chips('rounds', AMBB_SET_OPTS.rounds, o => o === 'auto' ? `いつも(${30 * size})` : `${o}`)), React.createElement("div", {
     className: "ambb-set-row"
   }, React.createElement("span", null, "最初の間合い"), chips('dist', AMBB_SET_OPTS.dist, o => o === 'auto' ? 'おまかせ' : AMBW_DIST[o])), React.createElement("div", {
     className: "ambb-set-row"
@@ -151739,14 +151738,14 @@ function AmbbSettings({
     min: "10",
     max: "300",
     step: "5",
-    value: set.rounds,
+    value: set.rounds === 'auto' ? 30 * size : set.rounds,
     "data-ambb-tune-rounds": true,
     onChange: ev => onSet({
       rounds: Number(ev.target.value)
     })
   }), React.createElement("div", {
     className: "ambw-small"
-  }, set.rounds, " ラウンド(いつもは ", limit, ")"))), React.createElement("div", {
+  }, set.rounds === 'auto' ? 30 * size : set.rounds, " ラウンド(いつもは1体あたり30)"))), React.createElement("div", {
     className: "ambb-set-row"
   }, React.createElement("span", null, "ガッツの初期値"), React.createElement("div", null, React.createElement("input", {
     type: "range",
@@ -152502,13 +152501,7 @@ const monsucTeams = (catalog, suc, s, info) => {
   };
 };
 const MONSUC_MATCH_RULE = Object.freeze({
-  roundLimit: 30,
-  judge: 'three',
-  gutsPlan: Object.freeze({
-    regen: 0.5,
-    move: 0.5,
-    charge: 0.5
-  })
+  judgeTie: 'B'
 });
 const monsucCupMatch = (engine, catalog, suc, s, me, info0) => {
   const info = info0 || monsucCupInfo(suc, s, me);
@@ -183726,7 +183719,7 @@ const msaGutsTagsOf = (log, frames, pos, side, regen, hitMs) => {
   const out = [];
   const R = f.r > pf.r ? regen[`${side}${f.act[side]}`] || 0 : 0;
   if (R > 0) out.push({
-    t: `自動 +${R}`,
+    t: `自動ガッツ回復 +${R}`,
     cls: 'up',
     delay: 0
   });

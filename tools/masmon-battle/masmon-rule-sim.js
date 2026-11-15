@@ -50,7 +50,7 @@ const runSet = (label, engine, mkInput) => {
   console.log(`■${label}`);
   console.log(`  1試合: 平均 ${(rounds / N).toFixed(1)} ラウンド・技を撃てた ${(techs / N).toFixed(1)} 回(当たり ${(hits / N).toFixed(1)})・打ち切り判定 ${pc(judge / N)}`);
   console.log(`  移動し合いの最長: 全試合で ${runMax} 回・1試合の平均 ${(runSum / N).toFixed(1)} 回・10回以上続いた試合 ${pc(run10 / N)}`);
-  console.log(`  手の割合: 技${pc(act.tech / tot)} 移動${pc(act.move / tot)} ふきとばし${pc(act.blow / tot)} ガード${pc(act.guard / tot)} ため${pc(act.charge / tot)} 交代${pc(act.swap / tot)}`);
+  console.log(`  手の割合: 技${pc(act.tech / tot)} 移動${pc(act.move / tot)} 吹き飛ばし${pc(act.blow / tot)} ガード${pc(act.guard / tot)} ため${pc(act.charge / tot)} 交代${pc(act.swap / tot)}`);
   console.log(`  勝ち負け: A の勝ち ${pc(aw / N)}・引き分け ${pc(draw / N)}・回復の速い側の勝ち ${fastN ? pc(fastW / fastN) : '-'}(${fastN} 戦)`);
 };
 

@@ -86,6 +86,8 @@ const FORMATS = [[1, 1], [2, 2], [3, 3], [1, 2], [2, 3], [3, 1]];
       } else if (r.reason !== 'judge') ng.wipe.push(`${tag}(reason=${r.reason})`);
       // たどり直す
       const st = I.setupState(inp, catalog);
+      // 版10: 試合の中の自動ガッツ回復は種の値の半分(全部の試合・r1115-111)
+      for (const sd of ['A', 'B']) for (const u of st.teams[sd].units) u.regen = engine.regenEff(u.regen);
       let dist = r.log[0].d, round = 0;
       const active = { A: 0, B: 0 };
       let bad = null;
@@ -197,14 +199,15 @@ const FORMATS = [[1, 1], [2, 2], [3, 3], [1, 2], [2, 3], [3, 1]];
   check('⑤ ガッツ満タンで「ためる」を選ばない', fullCharge === 0, `${fullCharge} 回`);
   check('⑤ 届かない距離の技は撃たない', invalid === 0, `${invalid} 回`);
   // (b) 経験 0 どうしでも、手の半分以上は技を撃っている(動いてばかり・守ってばかりにならない)
-  let tech = 0, acts = 0;
+  let tech = 0, acts = 0, mg = 0;
   for (let i = 0; i < 300; i++) {
     const r = engine.simulate({ seed: `rk2-${i}`, catalog,
       teamA: { assistantId: STYLE_IDS[i % 8], tactics: 0, members: team(rng, 3) },
       teamB: { assistantId: STYLE_IDS[(i + 5) % 8], tactics: 0, members: team(rng, 3) } });
-    for (const e of r.log) if (['tech', 'move', 'guard', 'charge', 'swap'].includes(e.ev)) { acts++; if (e.ev === 'tech') tech++; }
+    for (const e of r.log) if (['tech', 'move', 'guard', 'charge', 'swap', 'blow'].includes(e.ev) && e.why !== 'blown') { acts++; if (e.ev === 'tech') tech++; if (e.ev === 'move' || e.ev === 'guard' || e.ev === 'blow') mg++; }
   }
-  check('⑤ 戦術経験 0 どうしでも、手の4割以上は技を撃つ', tech >= acts * 0.4, `${(tech / acts * 100).toFixed(1)}%`);
+  // 版10: 自動ガッツ回復が半分(r1115-111)で、技を撃てる回数そのものが減る(ためるが増える)。見張るのは「動いてばかり・守ってばかりにならない」こと
+  check('⑤ 戦術経験 0 どうしでも、手の2割5分以上は技・移動とガードは3割まで', tech >= acts * 0.25 && mg <= acts * 0.3, `技 ${(tech / acts * 100).toFixed(1)}%・移動とガード ${(mg / acts * 100).toFixed(1)}%`);
 }
 
 // ── ⑥ 体数の切り詰めと空の編成 ──

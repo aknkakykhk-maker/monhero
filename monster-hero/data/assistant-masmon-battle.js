@@ -95,9 +95,15 @@
   //   段は子ごと。交代で出てきた子は0から。ふきとばし(零距離だけ)も同じ払い方・同じ段
   const MOVE_COST_STEP = 5;
   const moveCostOf = (u) => MOVE_COST_STEP * ((u && u.moveLv > 0 ? u.moveLv : 0) + 1);
+  // 全部の試合で同じ決まり(版10・2026-11-15 r1115-111・113・118・121 社長「全部同じにあわせてよ」):
+  //   自動ガッツ回復は種の値の半分 / 打ち切りは1体あたり30ターン(出場する体数の多い方 × 30)/ 判定は3つの比べ(r1115-058)。完全な同点は引き分け
+  //   (モンサクの大会だけ judgeTie:'B' = 自分の負け)。roundLimit・gutsPlan.regen・judge:'life' を渡したときだけ、それに替わる(練習の設定)
+  const REGEN_MUL = 0.5;
+  const ROUND_PER_UNIT = 30;
+  const regenEff = (r, mul) => Math.max(1, Math.round((Number(r) || 0) * (mul == null ? REGEN_MUL : mul)));
   const REGEN_DMG_SWING = 0.2;  // 回復がいちばん速い種(A)は与ダメ ×(1−これ)、いちばん遅い種(G)は ×(1+これ)。真ん中は ×1(2026-11-13 社長「×0.80〜×1.20」)
   const GUTS_SWAP_IN = 40;    // 交代で出てきたときの最低ガッツ
-  const ROUND_LIMIT = 150;    // これを超えたら判定(無限に続かない)
+  const ROUND_LIMIT = 150;    // 版9までの打ち切り(版10からは ROUND_PER_UNIT × 体数。道具のために名前だけ残す)
   const SWAP_COOLDOWN = 2;    // 出てきてから自分の手番2回は交代しない(行ったり来たりを防ぐ)
   const CRIT_MULT = 1.5;
   // 忠誠度・人気(2026-11-12 キズナ・案 masmon-plan/POWER.md 8章。助手側の計算 MASMON_CALC.noActChance・critOf と同じ数): 無い編成は 忠誠100・人気0 として、今の結果と1つも変わらない
@@ -522,8 +528,8 @@
       const afterGuts = Math.min(GUTS_MAX, u.guts + u.regen * 2);   // ためた番は自然回復の2倍(r1115-112)
       const nowBest = bestThreat(u, f, dist, u.guts);
       const laterBest = bestThreat(u, f, dist, afterGuts);
-      // 版10: ガッツが命中・重さに効く分を見落としていたので、ためるの重みを 0.6 → 7.2 に(版9の AI と戦わせて約7割勝つ。r1115-110 の AI の見直し)
-      let score = (laterBest - nowBest) / f.maxHp * 100 * 7.2 * (0.8 + 0.2 * sty.thrift);
+      // 版10: ガッツが命中・重さに効く分を見落としていたので、ためるの重みを 0.6 → 12 に(自動ガッツ回復が半分の決まりで測り直し・忠誠度が低いほど勝ちにくい関係が戻る。r1115-110 の AI の見直し)
+      let score = (laterBest - nowBest) / f.maxHp * 100 * 12 * (0.8 + 0.2 * sty.thrift);
       score -= danger * 20 * (0.8 + 0.2 * sty.caution);              // 危ないときにためるのは損
       if (nowBest === 0 && laterBest > 0) score += 8;
       cands.push({ type: 'charge', score, why: nowBest === 0 ? 'noGuts' : 'saveUp' });
@@ -674,7 +680,8 @@
   //   自分で選んだ手番では AI の見積もりの乱数(ゆらぎ)を引かない。忠誠度の「動かない番」は手を聞く前に決まる(選べない)
   function* battleFlow(inp, catalog, ctl) {
     const rng = makeRng(inp.seed);
-    const roundLimit = toInt(inp.roundLimit, 1, 1000, ROUND_LIMIT);
+    const sizeOf = (t) => (t && Array.isArray(t.members) ? Math.max(1, Math.min(TEAM_MAX, t.members.length)) : 1);
+    const roundLimit = toInt(inp.roundLimit, 1, 1000, ROUND_PER_UNIT * Math.max(sizeOf(inp.teamA), sizeOf(inp.teamB)));
     const state = setupState(inp, catalog);
     const balance = BALANCE[inp.balance] != null ? inp.balance : 'A';
     applyBalance(state, BALANCE[balance]);
@@ -689,11 +696,12 @@
     }
     state.dist = 1 + Math.floor(rng() * 2);
     if (rules && rules.distStart !== undefined) state.dist = rules.distStart;   // 乱数は上で引いたまま(ほかの流れをずらさない)
-    // ガッツの回復の規則(モンサク・2026-11-15 r1115-090 社長「全部半分」): gutsPlan:{ regen, move, charge }(倍率 0.1〜1)。渡さなければ今までと同じ(指紋も変わらない)
+    // ガッツの回復の規則(モンサク・2026-11-15 r1115-090 社長「全部半分」): gutsPlan:{ regen, move, charge }(倍率 0.1〜1)。版10から既定は全部の試合で半分(REGEN_MUL)。渡したときだけ替わる(指紋も変わらない)
     const gp = inp.gutsPlan && typeof inp.gutsPlan === 'object' ? inp.gutsPlan : null;
     const mulOf = (v) => (Number.isFinite(Number(v)) && Number(v) > 0 ? clamp(Number(v), 0.1, 1) : 1);
     //   版10から gutsPlan で効くのは regen だけ(move・charge は無視。移動・ガードの上乗せは無く、ためるは自然回復の分=r1115-110・112)
-    if (gp && gp.regen !== undefined) for (const side of ['A', 'B']) for (const x of state.teams[side].units) x.regen = Math.max(1, Math.round(x.regen * mulOf(gp.regen)));
+    const regenMul = gp && gp.regen !== undefined ? mulOf(gp.regen) : REGEN_MUL;
+    for (const side of ['A', 'B']) for (const x of state.teams[side].units) x.regen = regenEff(x.regen, regenMul);
     const ctx = { state, rng, trace: !!inp.trace, lastCands: null, buffs, noSwap: !!(rules && rules.noSwap) };
     const log = [];
     const alive = (side) => state.teams[side].units.some(x => x.hp > 0);
@@ -838,7 +846,7 @@
         }
       }
     }
-    if (!winner && inp.judge === 'three') {
+    if (!winner && inp.judge !== 'life') {
       // 判定(モンサク・2026-11-15 社長 r1115-058): 残ライフ%・与えたダメージ・消費ガッツを別々に比べ、勝ちの数が多い方の勝ち。
       //   同数のときは残ライフの量(実数)→残ライフ%→与えたダメージの順。それでも同じなら A(自分)の負け。消費ガッツは多い方が勝ち
       const sum = (side, k) => state.teams[side].units.reduce((q, x) => q + x[k], 0);
@@ -854,7 +862,7 @@
       else if (hpA !== hpB) { winner = hpA > hpB ? 'A' : 'B'; by = 'hp'; }
       else if (rows[0].a !== rows[0].b) { winner = rows[0].a > rows[0].b ? 'A' : 'B'; by = 'pct'; }
       else if (rows[1].a !== rows[1].b) { winner = rows[1].a > rows[1].b ? 'A' : 'B'; by = 'dmg'; }
-      else { winner = 'B'; by = 'tie'; }
+      else { winner = inp.judgeTie === 'B' ? 'B' : 'draw'; by = 'tie'; }
       reason = 'judge';
       push({ ev: 'judge', mode: 'three', mxA, mxB, aScore: Math.round(hpA / mxA * 10000), bScore: Math.round(hpB / mxB * 10000), rows, winner, winsA: wa, winsB: wb, hpA, hpB, by, limit: roundLimit });
     }
@@ -906,7 +914,7 @@
     const sp = catalog && catalog.species && catalog.species[u.species];
     if (!sp) return null;
     const tr = SPECIES_TRAITS[u.species] || {};
-    return { regen: sp.regen, regenGrade: typeof tr.g === 'string' ? tr.g : '', move: typeof tr.m === 'string' ? tr.m : 'D', size: sp.size || 'M',
+    return { regen: regenEff(sp.regen), regenGrade: typeof tr.g === 'string' ? tr.g : '', move: typeof tr.m === 'string' ? tr.m : 'D', size: sp.size || 'M',
       apt: applyAptUp(sp.apt, normAptUp(u.aptUp)) };
   };
 
@@ -1066,7 +1074,7 @@
   const api = Object.freeze({
     // 芯が持っている口の印(呼ぶ側が古い芯を見分ける。モンサクは techBoost があるときだけ渡す)
     FEATURES: Object.freeze({ techBoost: true, moveGuts: true, blow: true }),
-    VERSION, VERSION_PLAIN, STAT_KEYS, STAT_MAX, DIST_NAMES, TEAM_MAX, GUTS_MAX, GUTS_REGEN_MIN, GUTS_REGEN_MAX, GUTS_REGEN_GRADES, GUTS_REGEN_GRADES_UP, SPECIES_TRAITS, MOVE_SPEED_FIRST, MOVE_SPEED_TAKEN, APT_UP_LIMITS, SIZE_SMALL_EVADE, APT_DMG, APT_DEF, APT_HIT, APT_EVA, APT_ABOVE_A, SIZE_LARGE_CUT, GUTS_CHARGE, GUTS_MOVE, MOVE_COST_STEP, moveCostOf, REGEN_DMG_SWING, ROUND_LIMIT, STYLES, TECH_LIMITS,
+    VERSION, VERSION_PLAIN, STAT_KEYS, STAT_MAX, DIST_NAMES, TEAM_MAX, GUTS_MAX, GUTS_REGEN_MIN, GUTS_REGEN_MAX, GUTS_REGEN_GRADES, GUTS_REGEN_GRADES_UP, SPECIES_TRAITS, MOVE_SPEED_FIRST, MOVE_SPEED_TAKEN, APT_UP_LIMITS, SIZE_SMALL_EVADE, APT_DMG, APT_DEF, APT_HIT, APT_EVA, APT_ABOVE_A, SIZE_LARGE_CUT, GUTS_CHARGE, GUTS_MOVE, MOVE_COST_STEP, moveCostOf, REGEN_MUL, ROUND_PER_UNIT, regenEff, REGEN_DMG_SWING, ROUND_LIMIT, STYLES, TECH_LIMITS,
     HIT_STAT_A, HIT_STAT_C, HIT_GUTS, HIT_TECH_STEP, HIT_MIN, HIT_MAX, DMG_ALL, techHitPreview,
     MASTERY_HIT_MAX, MASTERY_GUTS_CUT, MASTERY_GUARD_ADD, TECH_BOOST_LIMITS, BALANCE, PLANS, SWAP_PACES, STYLE_RANGE,
     LV_MAX, BUFF_LIMITS, RULE_LIMITS, unitTraits, normTechBoost, buildCatalog, simulate, hitPreviewer, createMatch, replay, firstAction, unitFromGrow, makeRng, hashSeed,
