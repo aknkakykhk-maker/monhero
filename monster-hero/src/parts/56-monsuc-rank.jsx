@@ -83,7 +83,7 @@ const monsucRankRowOf = ({ owner, run, ev, name, colors, userName }) => {
   if (run.over === 'gameover') return null;
   const st = run.stats && typeof run.stats === 'object' ? run.stats : {};
   const stats = {};
-  MONSUC_RANK_STAT_KEYS.forEach(k => { stats[k] = monsucRankClamp(Math.round(monsucRankNum(st[k])), 0, 999); });
+  MONSUC_RANK_STAT_KEYS.forEach(k => { stats[k] = monsucRankClamp(Math.round(monsucRankNum(st[k])), 0, 99999); }); // 能力の上限アップ(r1115-103): 999 を超えた分も送る(サーバ monsuc_rank_submit も 99,999 まで受ける)
   // 技(2026-11-13 社長): 技ごとに { r: ランク 1〜5, a: 届く間合いのいちばん高い適性の段 }。サーバが同じ式で総合力を出し直す(MONSUC_RANK_V2_TECHS.sql)。
   //   芯の evaluate が techRows を返さない古い形なら、今までどおり熟練の並び(8つまで)
   const rows = ev && Array.isArray(ev.techRows) ? ev.techRows : null;
@@ -282,7 +282,7 @@ function MonsucRankScreen({ onBack }) {
         {[['all', '全モンスター'], ['lineage', '血統別']].map(([k, label]) => <button key={k} type="button" onClick={() => setTab(k)}
           className={`rounded-full py-2 text-[14px] font-black border ${tab === k ? 'bg-yellow-300 text-slate-900 border-yellow-300' : 'bg-slate-800/70 text-slate-200 border-slate-600'}`}>{label}</button>)}
       </div>
-      {tab === 'lineage' && <div className="flex gap-1.5 overflow-x-auto mt-2 pb-1">
+      {tab === 'lineage' && <div className="flex gap-1.5 overflow-x-auto overflow-y-hidden touch-pan-x mt-2 pb-1" data-msx-hscroll>
         {lineages.map(l => <button key={l} type="button" onClick={() => setLineage(l)}
           className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold border ${lineage === l ? 'bg-yellow-300 text-slate-900 border-yellow-300' : 'bg-slate-800/70 text-slate-200 border-slate-600'}`}>{monsucRankLineageName(l)}系</button>)}
       </div>}

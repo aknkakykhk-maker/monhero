@@ -54,6 +54,10 @@
   const DEF_SAME_KIND = 0.45;  // 受ける技と同じ種類の能力の、防ぎの効き目(丈夫さ 0.9 の半分。版5)
   const STAT_KEYS = ['life', 'pow', 'wise', 'hit', 'eva', 'tough'];
   const STAT_MAX = 999;
+  // モンサクの能力の上限アップ(2026-11-15 r1115-103): モンサクの試合だけ statMax(入力のいちばん上)で 999 を超えて読む。渡さなければ今までと同じ 999。
+  //   サーバ(masmon-pvp)は statMax を渡さない=今までと同じ。ガードの効き(丈夫さ ÷999)は能力が 999 を超えても今の式のまま
+  const STAT_MAX_RULE = 99999;
+  const GUARD_TOUGH_REF = 999;
   const DIST_NAMES = ['零', '近', '中', '遠'];
   const DIST_START = 2; // 種が無いときの始まりの距離(中)。ふつうは種で 近・中 のどちらか(得意な距離の有利を片寄らせない)
   const GRADES = ['G', 'F', 'E', 'D', 'C', 'B', 'A', 'S', 'S+', 'SS', 'SS+', 'M'];
@@ -331,7 +335,7 @@
     for (let i = 3; i >= 0 && ms > APT_UP_LIMITS.mMax; i--) if (res[i] === 'M' && (up[i] || 0) > 0) { res[i] = 'SS+'; ms--; }
     return res;
   };
-  const normalizeUnit = (u, catalog) => {
+  const normalizeUnit = (u, catalog, statMax = STAT_MAX) => {
     const src = u && typeof u === 'object' ? u : {};
     const ids = Object.keys(catalog.species);
     const species = catalog.species[src.species] ? src.species : ids[0];
@@ -339,7 +343,7 @@
     // 能力は stats でも st(育成の入れ物 mh_assistant_masmon_grow_v1 の形)でもよい
     const raw = src.stats && typeof src.stats === 'object' ? src.stats : src.st;
     const ss = raw && typeof raw === 'object' ? raw : {};
-    for (const k of STAT_KEYS) stats[k] = toInt(ss[k], 0, STAT_MAX, 100);
+    for (const k of STAT_KEYS) stats[k] = toInt(ss[k], 0, statMax, 100);
     const lv = toInt(src.lv, 1, LV_MAX, 1);
     // 覚えている技(無ければその種の全部)・熟練(技 id ごと+guard・dist・swap。無ければ 0)
     const techs = Array.isArray(src.techs) ? src.techs.filter(x => typeof x === 'string') : null;
@@ -354,9 +358,9 @@
     const techBoost = normTechBoost(src.techBoost, catalog.species[species].techs.map(t => t.id).filter(id => known.includes(id)));
     return { species, name: typeof src.name === 'string' && src.name ? src.name.slice(0, 24) : catalog.species[species].name, lv, stats, techs, mastery, loy, pop, aptUp, techBoost };
   };
-  const normalizeTeam = (t, catalog) => {
+  const normalizeTeam = (t, catalog, statMax = STAT_MAX) => {
     const src = t && typeof t === 'object' ? t : {};
-    const list = (Array.isArray(src.members) ? src.members : []).slice(0, TEAM_MAX).map(u => normalizeUnit(u, catalog));
+    const list = (Array.isArray(src.members) ? src.members : []).slice(0, TEAM_MAX).map(u => normalizeUnit(u, catalog, statMax));
     if (!list.length) throw new Error('assistant-masmon-battle: members が空');
     return {
       assistantId: typeof src.assistantId === 'string' ? src.assistantId : 'atsu',
@@ -407,7 +411,7 @@
       * (defU.taken || 1); // 受ける側の移動速度(速いほど多く受ける)
     return atk * def * mv.power;
   };
-  const guardCut = (u) => clamp(0.35 + u.stats.tough / STAT_MAX * 0.25, 0.35, 0.6) + (u.mastery ? u.mastery.guard : 0) / 100 * MASTERY_GUARD_ADD;
+  const guardCut = (u) => clamp(0.35 + u.stats.tough / GUARD_TOUGH_REF * 0.25, 0.35, 0.6) + (u.mastery ? u.mastery.guard : 0) / 100 * MASTERY_GUARD_ADD;
   const canUse = (u, mv, dist) => mv.dist.includes(dist) && u.guts >= mv.guts;
   const inRange = (mv, dist) => mv.dist.includes(dist);
   const expected = (atkU, defU, mv, dist, guarded, g) => {
@@ -478,7 +482,7 @@
     for (const step of [-1, 1]) {
       const nd = dist + step;
       if (nd < 0 || nd > 3) continue;
-      const myGuts = Math.min(GUTS_MAX, u.guts + u.regen + GUTS_MOVE);
+      const myGuts = Math.min(GUTS_MAX, u.guts + u.regen + (ctx.gMove || GUTS_MOVE));
       const gain = bestThreat(u, f, nd, myGuts) - bestThreat(u, f, dist, myGuts);
       const risk = bestThreat(f, u, nd, foeNextGuts) - threatNow;
       // 読みが浅いうちは、相手の反撃(risk)を半分しか見ない
@@ -498,7 +502,7 @@
     }
     // ためる(ガッツが満タンなら候補に入れない)
     if (u.guts < GUTS_MAX) {
-      const afterGuts = Math.min(GUTS_MAX, u.guts + u.regen + GUTS_CHARGE);
+      const afterGuts = Math.min(GUTS_MAX, u.guts + u.regen + (ctx.gCharge || GUTS_CHARGE));
       const nowBest = bestThreat(u, f, dist, u.guts);
       const laterBest = bestThreat(u, f, dist, afterGuts);
       let score = (laterBest - nowBest) / f.maxHp * 100 * 0.6 * (0.8 + 0.2 * sty.thrift);
@@ -567,8 +571,9 @@
 
   // 対戦の初めの状態(検査からも使う)
   const setupState = (inp, catalog) => {
+    const statMax = inp && inp.statMax != null ? toInt(inp.statMax, STAT_MAX, STAT_MAX_RULE, STAT_MAX) : STAT_MAX;
     const mkTeam = (t) => {
-      const nt = normalizeTeam(t, catalog);
+      const nt = normalizeTeam(t, catalog, statMax);
       return {
         assistantId: nt.assistantId, tactics: nt.tactics, plan: nt.plan, swapPace: nt.swapPace, style: nt.style, active: 0,
         units: nt.members.map(m => {
@@ -667,7 +672,13 @@
     }
     state.dist = 1 + Math.floor(rng() * 2);
     if (rules && rules.distStart !== undefined) state.dist = rules.distStart;   // 乱数は上で引いたまま(ほかの流れをずらさない)
-    const ctx = { state, rng, trace: !!inp.trace, lastCands: null, buffs, noSwap: !!(rules && rules.noSwap) };
+    // ガッツの回復の規則(モンサク・2026-11-15 r1115-090 社長「全部半分」): gutsPlan:{ regen, move, charge }(倍率 0.1〜1)。渡さなければ今までと同じ(指紋も変わらない)
+    const gp = inp.gutsPlan && typeof inp.gutsPlan === 'object' ? inp.gutsPlan : null;
+    const mulOf = (v) => (Number.isFinite(Number(v)) && Number(v) > 0 ? clamp(Number(v), 0.1, 1) : 1);
+    const gMove = gp ? Math.max(1, Math.round(GUTS_MOVE * mulOf(gp.move))) : GUTS_MOVE;
+    const gCharge = gp ? Math.max(1, Math.round(GUTS_CHARGE * mulOf(gp.charge))) : GUTS_CHARGE;
+    if (gp && gp.regen !== undefined) for (const side of ['A', 'B']) for (const x of state.teams[side].units) x.regen = Math.max(1, Math.round(x.regen * mulOf(gp.regen)));
+    const ctx = { state, rng, trace: !!inp.trace, lastCands: null, buffs, noSwap: !!(rules && rules.noSwap), gMove, gCharge };
     const log = [];
     const alive = (side) => state.teams[side].units.some(x => x.hp > 0);
     const unitOf = (side) => state.teams[side].units[state.teams[side].active];
@@ -692,6 +703,8 @@
     push({ ev: 'enter', side: 'B', i: 0, name: unitOf('B').name });
 
     let winner = null, reason = null;
+    // 与えたダメージ・消費ガッツの合計(判定 judge:'three' が使う。ログにも乱数にも触れない)
+    const tally = { A: { dmg: 0, guts: 0 }, B: { dmg: 0, guts: 0 } };
     function* act(side) {
       const foeSide = side === 'A' ? 'B' : 'A';
       const me = state.teams[side];
@@ -700,7 +713,7 @@
       u.guarding = false;
       // 忠誠度が100未満のときだけ乱数を引く(忠誠100・無い編成は乱数の列も今と同じ)
       if (u.loy < 100 && !(buffs[side] && buffs[side].noSulk) && rng() < (100 - u.loy) * LOYAL_NOACT) {
-        u.guts = Math.min(GUTS_MAX, u.guts + GUTS_CHARGE);
+        u.guts = Math.min(GUTS_MAX, u.guts + gCharge);
         push({ ev: 'charge', side, i: me.active, why: 'sulk', guts: u.guts });
         u.swapCooldown = Math.max(0, u.swapCooldown - 1); u.moveStreak = 0; // 「ためる」と同じあと始末
         return;
@@ -712,6 +725,7 @@
         const mv = u.moves.find(m => m.key === c.key);
         const g0 = u.guts;                       // 撃つ前のガッツで当たり・重さを決める
         u.guts -= mv.guts;
+        tally[side].guts += mv.guts;
         const p = buffedHit(hitChance(u, f, mv, g0, state.dist), buffs[side], buffs[foeSide], !usedFirst[side]);
         usedFirst[side] = true;
         const hit = rng() < p;
@@ -722,6 +736,7 @@
           const swing = 0.9 + rng() * 0.2;
           dmg = rawDamage(u, f, mv, state.dist, g0) * swing * (crit ? CRIT_MULT : 1) * (f.guarding ? 1 - guardCut(f) : 1);
           dmg = Math.max(1, Math.round(dmg));
+          tally[side].dmg += Math.min(dmg, f.hp);
           f.hp = Math.max(0, f.hp - dmg);
         }
         const gd = hit && mv.gd > 0 ? Math.min(mv.gd, f.guts) : 0;   // ガッツダウン
@@ -736,14 +751,14 @@
         }
       } else if (c.type === 'move') {
         state.dist = clamp(state.dist + c.step, 0, 3);
-        u.guts = Math.min(GUTS_MAX, u.guts + GUTS_MOVE);
+        u.guts = Math.min(GUTS_MAX, u.guts + gMove);
         push({ ev: 'move', side, i: me.active, why: c.why, step: c.step, to: state.dist, guts: u.guts });
       } else if (c.type === 'guard') {
         u.guarding = true;
-        u.guts = Math.min(GUTS_MAX, u.guts + GUTS_MOVE);
+        u.guts = Math.min(GUTS_MAX, u.guts + gMove);
         push({ ev: 'guard', side, i: me.active, why: c.why, name: 'ガード', guts: u.guts });
       } else if (c.type === 'charge') {
-        u.guts = Math.min(GUTS_MAX, u.guts + GUTS_CHARGE);
+        u.guts = Math.min(GUTS_MAX, u.guts + gCharge);
         push({ ev: 'charge', side, i: me.active, why: c.why, guts: u.guts });
       } else if (c.type === 'swap') {
         const from = me.active;
@@ -786,8 +801,28 @@
         yield* act(side);
       }
     }
+    if (!winner && inp.judge === 'three') {
+      // 判定(モンサク・2026-11-15 社長 r1115-058): 残ライフ%・与えたダメージ・消費ガッツを別々に比べ、勝ちの数が多い方の勝ち。
+      //   同数のときは残ライフの量(実数)→残ライフ%→与えたダメージの順。それでも同じなら A(自分)の負け。消費ガッツは多い方が勝ち
+      const sum = (side, k) => state.teams[side].units.reduce((q, x) => q + x[k], 0);
+      const hpA = sum('A', 'hp'), hpB = sum('B', 'hp'), mxA = sum('A', 'maxHp') || 1, mxB = sum('B', 'maxHp') || 1;
+      const rows = [
+        { key: 'pct', a: Math.round(hpA / mxA * 1000) / 10, b: Math.round(hpB / mxB * 1000) / 10 },
+        { key: 'dmg', a: tally.A.dmg, b: tally.B.dmg },
+        { key: 'guts', a: tally.A.guts, b: tally.B.guts },
+      ].map(r => Object.assign(r, { win: r.a > r.b ? 'A' : r.b > r.a ? 'B' : null }));
+      const wa = rows.filter(r => r.win === 'A').length, wb = rows.filter(r => r.win === 'B').length;
+      let by = 'wins';
+      if (wa > wb) winner = 'A'; else if (wb > wa) winner = 'B';
+      else if (hpA !== hpB) { winner = hpA > hpB ? 'A' : 'B'; by = 'hp'; }
+      else if (rows[0].a !== rows[0].b) { winner = rows[0].a > rows[0].b ? 'A' : 'B'; by = 'pct'; }
+      else if (rows[1].a !== rows[1].b) { winner = rows[1].a > rows[1].b ? 'A' : 'B'; by = 'dmg'; }
+      else { winner = 'B'; by = 'tie'; }
+      reason = 'judge';
+      push({ ev: 'judge', mode: 'three', mxA, mxB, aScore: Math.round(hpA / mxA * 10000), bScore: Math.round(hpB / mxB * 10000), rows, winner, winsA: wa, winsB: wb, hpA, hpB, by, limit: roundLimit });
+    }
     if (!winner) {
-      // 判定: 残りライフの割合の合計(倒れた体は0)。同じなら引き分け
+      // 判定(既定): 残りライフの割合の合計(倒れた体は0)。同じなら引き分け
       const score = (side) => {
         const t = state.teams[side];
         return Math.round(t.units.reduce((s, x) => s + x.hp / x.maxHp, 0) / t.units.length * 10000);
@@ -874,7 +909,7 @@
     // AI ならこの手番に何を選ぶか(おすすめの印。試合の乱数は引かない)
     const hintOf = (side) => {
       try {
-        const c = chooseAction({ state: st, rng: makeRng(`hint:${st.round}:${flow.log.length}`), trace: false, lastCands: null, noSwap: flow.ctx.noSwap }, side);
+        const c = chooseAction({ state: st, rng: makeRng(`hint:${st.round}:${flow.log.length}`), trace: false, lastCands: null, noSwap: flow.ctx.noSwap, gMove: flow.ctx.gMove, gCharge: flow.ctx.gCharge }, side);
         return c ? { type: c.type, key: c.key, step: c.step, to: c.to } : null;
       } catch (_) { return null; }
     };
@@ -988,7 +1023,7 @@
   const api = Object.freeze({
     // 芯が持っている口の印(呼ぶ側が古い芯を見分ける。モンサクは techBoost があるときだけ渡す)
     FEATURES: Object.freeze({ techBoost: true }),
-    VERSION, VERSION_PLAIN, STAT_KEYS, STAT_MAX, DIST_NAMES, TEAM_MAX, GUTS_MAX, GUTS_REGEN_MIN, GUTS_REGEN_MAX, GUTS_REGEN_GRADES, GUTS_REGEN_GRADES_UP, SPECIES_TRAITS, MOVE_SPEED_FIRST, MOVE_SPEED_TAKEN, APT_UP_LIMITS, SIZE_SMALL_EVADE, APT_DMG, APT_DEF, APT_HIT, APT_EVA, APT_ABOVE_A, SIZE_LARGE_CUT, GUTS_CHARGE, GUTS_MOVE, REGEN_DMG_SWING, ROUND_LIMIT, STYLES, TECH_LIMITS,
+    VERSION, VERSION_PLAIN, STAT_KEYS, STAT_MAX, STAT_MAX_RULE, DIST_NAMES, TEAM_MAX, GUTS_MAX, GUTS_REGEN_MIN, GUTS_REGEN_MAX, GUTS_REGEN_GRADES, GUTS_REGEN_GRADES_UP, SPECIES_TRAITS, MOVE_SPEED_FIRST, MOVE_SPEED_TAKEN, APT_UP_LIMITS, SIZE_SMALL_EVADE, APT_DMG, APT_DEF, APT_HIT, APT_EVA, APT_ABOVE_A, SIZE_LARGE_CUT, GUTS_CHARGE, GUTS_MOVE, REGEN_DMG_SWING, ROUND_LIMIT, STYLES, TECH_LIMITS,
     HIT_STAT_A, HIT_STAT_C, HIT_GUTS, HIT_TECH_STEP, HIT_MIN, HIT_MAX, DMG_ALL, techHitPreview,
     MASTERY_HIT_MAX, MASTERY_GUTS_CUT, MASTERY_GUARD_ADD, TECH_BOOST_LIMITS, BALANCE, PLANS, SWAP_PACES, STYLE_RANGE,
     LV_MAX, BUFF_LIMITS, RULE_LIMITS, unitTraits, normTechBoost, buildCatalog, simulate, hitPreviewer, createMatch, replay, firstAction, unitFromGrow, makeRng, hashSeed,

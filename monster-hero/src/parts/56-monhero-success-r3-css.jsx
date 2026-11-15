@@ -13,6 +13,15 @@ const MSX_R3_CSS = `
 .msx .r3 .q-dest .r3-chip{justify-content:center;text-align:center}
 .msx .r3 .q-sec .v-stg{margin-top:5px}
 .msx .r3 .q-note{font-size:10.5px;color:#cbd5e1;font-weight:700;line-height:1.45;margin-top:4px}
+.msx .r3 .q-res{flex:none;display:grid;gap:4px;margin:4px 0}
+.msx .r3 .q-ri{display:grid;grid-template-columns:38px minmax(0,1fr) auto;align-items:center;gap:8px;padding:5px 9px;border-radius:12px;border:2px solid #475569;background:#1e293b}
+.msx .r3 .q-ri .ti{width:38px;height:38px;border-radius:8px;overflow:hidden;display:flex;align-items:center;justify-content:center;background:#0f172a}.msx .r3 .q-ri .ti svg,.msx .r3 .q-ri .ti img{width:100%;height:100%}
+.msx .r3 .q-ri .nm{display:grid;min-width:0}.msx .r3 .q-ri .nm b{font-size:14px;font-weight:900;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.msx .r3 .q-ri .nm small{font-size:10.5px;font-weight:800;color:#cbd5e1}
+.msx .r3 .q-ri .rs{display:grid;justify-items:end;text-align:right}.msx .r3 .q-ri .rs b{font-size:15px;font-weight:900;white-space:nowrap}.msx .r3 .q-ri .rs small{font-size:11px;font-weight:900;color:#fde047;white-space:nowrap}
+.msx .r3 .q-ri.hit{border-color:#facc15;background:linear-gradient(90deg,#422006,#713f12);box-shadow:0 0 12px #facc1566}.msx .r3 .q-ri.hit .rs b{color:#fde047;font-size:18px;text-shadow:0 0 8px #f59e0b}
+.msx .r3 .q-ri.miss .rs b{color:#cbd5e1}.msx .r3 .q-ri.miss .ti{filter:grayscale(.7) brightness(.8)}
+.msx .q-hpng{flex:none;background:#3f1d2b;border-top:1px solid #9f1239;color:#fecdd3;font-size:11px;font-weight:800;line-height:1.4;padding:4px 10px;text-align:center}.msx .q-hpng b{color:#fda4af;font-size:13px}
+.msx .v-ft button.go.off,.msx .v-ft button.go:disabled{background:#334155;color:#94a3b8;box-shadow:0 3px 0 #1e293b}
 .msx .r3 .q-note.y{color:#fde047}
 .msx .r3 .q-slots{display:grid;grid-template-columns:1fr 1fr;gap:6px}
 .msx .r3 .q-slot{min-height:56px;border-radius:12px;padding:5px 8px;border:2px dashed #ffffff40;font-size:11px;font-weight:800;color:#cbd5e1;display:flex;flex-direction:column;justify-content:center;gap:1px;cursor:pointer}
@@ -31,6 +40,13 @@ const MSX_R3_CSS = `
 .msx .r3 .q-col{display:flex;flex-direction:column;gap:5px;min-width:0}
 .msx .r3 .q-col h4{text-align:center;font-size:12px;font-weight:900;padding:2px 0;margin:0;border-radius:8px;background:#ffffff1a}
 .msx .r3 .q-card{border-radius:10px;padding:5px 3px;text-align:center;font-size:10.5px;font-weight:800;line-height:1.25;background:#ffffff10;border:1px solid #ffffff22;color:#fff;min-height:52px;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:1px;min-width:0}
+/* 修行の「覚えられる技」は詳細の技の升目と同じ部品(MsxTechGrid)。状態は升の枠で出す: 覚えられる=緑・選んだ=金・覚えた=済・🔒=暗い */
+.msx .msx-md-tg.q{grid-template-columns:repeat(4,minmax(0,64px));gap:5px;margin:2px auto 0}
+.msx .msx-md-tg.q .tc.ok{box-shadow:0 0 0 2px #22c55e,0 0 8px #22c55e88}
+.msx .msx-md-tg.q .tc.sel{box-shadow:0 0 0 3px #fde047,0 0 12px #fde047aa;transform:translateY(-1px)}
+.msx .msx-md-tg.q .tc.lock .ti{filter:brightness(.5) saturate(.55)}
+.msx .msx-md-tg.q .tc .qb{position:absolute;right:2px;bottom:2px;min-width:22px;padding:0 3px;border-radius:5px;background:rgba(18,12,6,.86);color:#fff;font-size:10px;font-weight:900;line-height:13px;height:13px;text-align:center;z-index:2}
+.msx .msx-md-tg.q .tc.ok .qb{background:#16a34a}.msx .msx-md-tg.q .tc.sel .qb{background:#ca8a04;color:#fff}.msx .msx-md-tg.q .tc.got:not(.ok):not(.sel) .qb{background:#334155;color:#cbd5e1}
 .msx .r3 .q-card .nm{font-size:10px;letter-spacing:-.02em;text-wrap:balance}
 .msx .r3 .q-card .rk{font-size:9px;color:#cbd5e1}
 .msx .r3 .q-card .p{font-size:15px;font-weight:900;color:#86efac}

@@ -149,7 +149,7 @@ function MsxR3Cup({ run, setRun, v, ev, onBack, onActed }) {
   const body = (<>
     <MsxBand s={s} v={v} ev={ev}/>
     <div className="v-scene low" style={{ flex: '0 0 auto', minHeight: 128 }}><img className="bg" src="images/story-bg/monhero_town.jpg" alt=""/><div className="sh"/>
-      <img src={msxBody(s.aid, 'happy')} alt="" style={{ position: 'absolute', left: '-2%', bottom: '-98%', height: '190%' }}/>
+      <img className="rcv-myua" src={msxBody(s.aid, 'happy')} alt="" style={{ position: 'absolute', left: '-2%', bottom: '-98%', height: '190%', width: 'auto', maxWidth: 'none' }}/>
       <div className="v-ev-h"><small>{cal.year}年目 {cal.month}月・{v.period.name}</small>🏆 大会の受付</div>
       <div className="v-ibub" style={{ left: '38%', top: 'auto', bottom: 8 }}>{openLine.t}</div>
     </div>
@@ -177,7 +177,7 @@ function MsxR3Cup({ run, setRun, v, ev, onBack, onActed }) {
           </button>);
       }) : <div className="msx-note">{now ? '今月の大会はありません' : 'この月の大会はありません'}</div>}
     </div>
-    <div className="v-card" style={{ padding: '5px 9px' }}><div className="v-kv" style={{ margin: 0 }}><b>出ると</b><span>1戦だけ・1ターン使う・勝つと賞金と賞品。{toForced ? <span className="yel">{' 期末の大会まで '}<span style={{ whiteSpace: 'nowrap' }}>{`あと${toForced}ターン`}</span></span> : null}</span></div></div>
+    <div className="v-card" style={{ padding: '5px 9px' }}><div className="v-kv" style={{ margin: 0 }}><b>出ると</b><span>1戦だけ・1ターン使う・体力は減りません・勝つと賞金と賞品。{toForced ? <span className="yel">{' 期末の大会まで '}<span style={{ whiteSpace: 'nowrap' }}>{`あと${toForced}ターン`}</span></span> : null}</span></div></div>
     {wc ? (
       <div className="v-cupwin" onClick={() => { setWin(null); setPrz(null); }} data-msx-r3-cupwin>
         <div className="in" onClick={(e) => e.stopPropagation()}>
@@ -491,10 +491,19 @@ function MsxR3Battle({ run, setRun, v, ev, ctx, bondLv, onPause, debug }) {
   const [showPh, setShowPh] = useState('bracket');
   // 知らせの段を見終えた大会(この画面のあいだだけ。やり直し・もう一度では出さない)
   const [introSeen, setIntroSeen] = useState(null);
+  // デバッグの「勝ったことにする」→「決勝へ」の流れでも、札(card)からあとは見せる部品が出る。その段も見る(2026-11-15 r1115-048 デバッグの流れで試合の曲に替わらなかった)
+  const showView = showOn || (!!debug && typeof MonsucCupShow === 'function' && (step === 'card' || step === 'watch'));
   const cupSound = st3 ? (st3.won ? 'cupWin' : 'cupLose')
-    : showOn ? (showPh === 'win' ? 'cupWin' : showPh === 'lose' ? 'cupLose' : showPh === 'cutin' || showPh === 'match' ? 'cupMatch' : 'cupPre')
+    : showView ? (showPh === 'win' ? 'cupWin' : showPh === 'lose' ? 'cupLose' : showPh === 'cutin' || showPh === 'match' ? 'cupMatch' : 'cupPre')
       : step === 'lost' ? 'cupLose' : step === 'bracket' || step === 'card' ? 'cupPre' : 'cupMatch';
   useSuccessScene(cupSound, { season: msxCalendar(s.turn).season });
+  // 試合のあいだは、試合の曲が確かに鳴っているかを見張り、違えば鳴らし直す(読み込みの失敗・ジングルのあと・中断からの再開でも試合の曲へ。r1115-048)
+  useEffect(() => {
+    if (cupSound !== 'cupMatch' || typeof SuccessSound === 'undefined' || typeof SuccessSound.keep !== 'function') return undefined;
+    const season = msxCalendar(s.turn).season;
+    const t = setInterval(() => SuccessSound.keep('cupMatch', season), 1500);
+    return () => clearInterval(t);
+  }, [cupSound]);
   useEffect(() => {
     let alive = true;
     // 試合型のアシストの表を読み終えてから試合を作る(読む前と後で同じ試合の結果が変わらないように)

@@ -47,9 +47,10 @@ for (const [sp, list0] of Object.entries(draft.species)) {
     if (KEEP.some((k) => JSON.stringify(f[k]) !== JSON.stringify(t[k]))) { if (!dupNote.has(sp)) { dupNote.add(sp); console.error(`注意: ${sp} に同じ id で数字が少し違う技がある。先の方を残した`); } }
     else if (!dupNote.has(sp)) { dupNote.add(sp); console.error(`注意: ${sp} は同じ技が重複していたので1つにまとめた(${list0.length}技 → ${list0.length - list0.filter((x, i) => list0.findIndex((y) => y.id === x.id) !== i).length}技)`); }
   }
-  const base = list.map((t) => { const o = {}; for (const k of KEEP) o[k] = t[k]; if (t.moveTo != null) o.moveTo = t.moveTo; if (t.learn && t.learn.start) o.start = true; return o; });
+  const base = list.map((t) => { const o = {}; for (const k of KEEP) o[k] = t[k]; if (t.moveTo != null) o.moveTo = t.moveTo; if (t.learn && t.learn.start) o.start = true; if (Number.isInteger(t.fixRank)) o.fixRank = Math.min(5, Math.max(1, t.fixRank)); if (t.needFix && typeof t.needFix === 'object') o.needFix = t.needFix; return o; });
   const rank = new Map();
-  for (const t of base) { if (t.start) rank.set(t.id, 1); else if (resRank[t.id]) rank.set(t.id, resRank[t.id]); }
+  // fixRank … 決めたランク(2026-11-15 r1115-099 パンドラの零・近の8技。original-tech-spread.js が足す)。ほかの技の消費ガッツ順のランク分けには入れない
+  for (const t of base) { if (t.start) rank.set(t.id, 1); else if (t.fixRank) rank.set(t.id, t.fixRank); else if (resRank[t.id]) rank.set(t.id, resRank[t.id]); }
   // 資料に無い技(オリジナル5種)は、消費ガッツの軽い順に同じ数ずつ rank 1〜5 へ
   const noRes = base.filter((t) => !rank.has(t.id)).sort((a, b) => (a.guts - b.guts) || (a.power - b.power) || a.id.localeCompare(b.id));
   noRes.forEach((t, i) => rank.set(t.id, 1 + Math.min(4, Math.floor((i * 5) / Math.max(1, noRes.length)))));
@@ -63,7 +64,8 @@ for (const [sp, list0] of Object.entries(draft.species)) {
     else {
       const st = { [t.kind]: LEARN_ST[r] };
       o.learn = { by: t.kind, st };
-      if (LEARN_NEED[r]) {
+      if (t.needFix) o.learn.need = Object.fromEntries(Object.entries(t.needFix).filter(([id, v]) => base.some((x) => x.id === id) && Number.isFinite(v))); // 決めた熟練の条件(fixRank の技)
+      else if (LEARN_NEED[r]) {
         // ひとつ下の rank から順に下へ、同じ技種の技を探す
         let need = null;
         for (let q = r - 1; q >= 1 && !need; q--) need = base.find((x) => x.kind === t.kind && rank.get(x.id) === q && x.id !== t.id) || null;
@@ -100,7 +102,7 @@ const out = `// 助手のマスモンの技表 第2版(2026-11-13・社長「技
 const ASSISTANT_MASMON_TECHS = (() => {
   const idmap = ${JSON.stringify(flatMap)};
   return Object.freeze({
-  version: 2,
+  version: 3, // 3 = r1115-099 でオリジナル5体の技の数値を直し・パンドラに8技(対戦の記録 tech_version で前後を見分ける)。形は第2版と同じ
   roles: { light: '小技', mid: '中技', skill: '得意技', heavy: '重い技', big: '大技' },
   rankRates: { 1: 70, 2: 55, 3: 40, 4: 25, 5: 15 },
   idmap: Object.freeze(idmap),
