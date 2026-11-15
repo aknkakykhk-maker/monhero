@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c2855d3ad0296fcc
+// source-sha256: 7f7c4df7de449441
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -161157,6 +161157,10 @@ function MsxDex({
   const [tab, setTab] = React.useState('story');
   const [pickAid, setPickAid] = React.useState(aid);
   const [open, setOpen] = React.useState(null);
+  const [chosen, setChosen] = React.useState(null);
+  React.useEffect(() => {
+    setChosen(null);
+  }, [open]);
   const [, setTick] = React.useState(0);
   const all = Object.values(list).flat();
   const got = all.filter(x => seen.ev[x.id]).length;
@@ -161193,6 +161197,12 @@ function MsxDex({
     ev0 = open && se && typeof se.event === 'function' && !open.awake ? se.event(scene, c2) : null;
   } catch (e) {
     ev0 = null;
+  }
+  let cont = null;
+  try {
+    cont = open && chosen && se && typeof se.event === 'function' && !open.awake && open.id !== 'issa' ? se.event(`${scene}.${chosen}`, c2) : null;
+  } catch (e) {
+    cont = null;
   }
   const aw = open && open.awake && typeof msxPickLine === 'function' ? msxPickLine({
     ...c2
@@ -161259,7 +161269,7 @@ function MsxDex({
   }, React.createElement("b", null, open.title), React.createElement("button", {
     type: "button",
     className: "chip",
-    onClick: () => setOpen(null),
+    onClick: () => chosen ? setChosen(null) : setOpen(null),
     "data-msx-dex-back": true
   }, "← 戻る")), open.awake ? React.createElement("div", {
     className: "ln"
@@ -161269,20 +161279,40 @@ function MsxDex({
     className: "who"
   }, typeof msxAidName === 'function' ? msxAidName(readAid) : ''), "「", aw.t, "」") : null, open.id === 'issa' ? React.createElement("div", {
     className: "ln"
-  }, "夜の町に、のびのび装置を持ったイッサ博士があらわれた。成功すれば大きく強くなれるが、失敗すると…。") : null, ev0 ? ev0.lines.slice(0, 8).map((l, i) => React.createElement("div", {
+  }, "夜の町に、のびのび装置を持ったイッサ博士があらわれた。成功すれば大きく強くなれるが、失敗すると…。") : null, chosen && cont ? React.createElement(React.Fragment, null, React.createElement("div", {
+    className: "ln msx-dex-picked",
+    "data-msx-dex-picked": chosen
+  }, "▶ ", (ev0 && ev0.choices ? (ev0.choices.find(x => x.c === chosen) || {}).t : '') || '選んだ'), cont.lines.slice(0, 8).map((l, i) => React.createElement("div", {
+    key: `c${i}`,
+    className: "ln"
+  }, who(l) ? React.createElement("span", {
+    className: "who"
+  }, who(l)) : null, who(l) ? `「${l.t}」` : l.t)), ev0 && Array.isArray(ev0.after) ? ev0.after.slice(0, 4).map((l, i) => React.createElement("div", {
+    key: `a${i}`,
+    className: "ln"
+  }, who(l) ? React.createElement("span", {
+    className: "who"
+  }, who(l)) : null, who(l) ? `「${l.t}」` : l.t)) : null) : null, chosen && cont ? null : ev0 ? ev0.lines.slice(0, 8).map((l, i) => React.createElement("div", {
     key: i,
     className: "ln"
   }, who(l) ? React.createElement("span", {
     className: "who"
-  }, who(l)) : null, who(l) ? `「${l.t}」` : l.t)) : null, chOf(open).length ? React.createElement("div", {
+  }, who(l)) : null, who(l) ? `「${l.t}」` : l.t)) : null, chosen && cont ? null : chOf(open).length ? React.createElement("div", {
     className: "chs"
   }, chOf(open).map(c => {
     const t = ev0 && ev0.choices ? (ev0.choices.find(x => x.c === c) || {}).t : open.id === 'issa' ? (MSX_ISSA_KEYS.find(k => k.key === c) || {}).name || c : c;
     const known = Boolean(seen.ch[`${open.id}.${c}`]);
-    return React.createElement("div", {
+    return React.createElement("div", _extends({
       key: c,
-      className: "ch"
-    }, React.createElement("b", null, known ? t : '？？？'), React.createElement("span", null, known ? open.id === 'issa' ? (() => {
+      className: `ch${known && ev0 && ev0.choices && open.id !== 'issa' ? ' tap' : ''}`
+    }, known && ev0 && ev0.choices && open.id !== 'issa' ? {
+      role: 'button',
+      tabIndex: 0,
+      onClick: () => setChosen(c),
+      'data-msx-dex-ch': c
+    } : {}), React.createElement("b", null, known ? t : '？？？', known && ev0 && ev0.choices && open.id !== 'issa' ? React.createElement("small", {
+      className: "msx-dex-go"
+    }, " 続きを読む ▶") : null), React.createElement("span", null, known ? open.id === 'issa' ? (() => {
       const k = MSX_ISSA_KEYS.find(x => x.key === c) || {};
       return `⭕ ${k.ok} / ❌ ${k.ng}`;
     })() : open.ep != null ? 'お話の続きが変わる' : msxChoiceLines(msxEvChoice(open.id, c)).join(' / ') : 'まだ選んだことがない'));
@@ -161340,6 +161370,8 @@ const MSX_DEX_CSS = `
 .msx .msx-dex-read .chs{display:grid;gap:4px;margin-top:4px}
 .msx .msx-dex-read .ch{padding:5px 9px;border-radius:10px;background:#0f172a;border:1px solid #334155;font-size:11.5px;line-height:1.45}
 .msx .msx-dex-read .ch b{display:block;color:#fde047}
+.msx .msx-dex-read .ch.tap{border-color:#7dd3fc;cursor:pointer}.msx .msx-dex-read .ch .msx-dex-go{color:#7dd3fc;font-size:10px;font-weight:800}
+.msx .msx-dex-read .msx-dex-picked{color:#fde047;font-weight:900}
 .msx .msx-dex-read .ch span{color:#cbd5e1;font-weight:700}
 .msx .msx-dex .msx-sheet>.msx-btn{display:block;width:100%;border-radius:12px;padding:10px;font-size:13px;font-weight:900;text-align:center;background:#2b3348;margin-top:6px}
 .msx .msx-dex-read .h .chip{border-radius:999px;padding:3px 10px;font-size:11px;font-weight:900;border:1.5px solid #475569;background:#1e1a36}
