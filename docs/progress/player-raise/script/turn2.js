@@ -29,7 +29,7 @@ const MONSUC_SCRIPT_TURN2 = Object.freeze([
   { id:'turn.cup.rivalcard.mua2', who:'mua', e:'wink', t:'ライバルがいる大会、勝ったらごほうびすごいんだって♪' },
   { id:'turn.cup.rivalcard.mua2b', who:'mua', e:'wink', bond:[1,2], t:'ライバルがいる大会は、勝つとごほうびが多いそうですよ♪' },
   { id:'turn.cup.rivalcard.atsu1', who:'atsu', e:'excited', t:'{rival}が出る大会な。勝てばでかい、行くしかないかー笑' },
-  { id:'turn.cup.rivalcard.atsu2', who:'atsu', e:'normal', t:'ライバルの札か。今の{mon}なら、いい勝負になると思うよ笑' },
+  { id:'turn.cup.rivalcard.atsu2', who:'atsu', e:'normal', t:'ライバルの情報か。今の{mon}なら、いい勝負になると思うよ笑' },
 
   // 覚醒・超覚醒(2026-11-13): turn.awake.omen 前触れ(覚醒)/ omen2 前触れ(超覚醒)/ fire 覚醒した瞬間 / fire2 超覚醒した瞬間
   { id:'turn.awake.omen.mua1', who:'mua', e:'surprise', t:'{mon}、体がうっすら光ってない！？ なんか起きそうな予感…✨' },
