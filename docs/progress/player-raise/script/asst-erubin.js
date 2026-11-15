@@ -162,7 +162,7 @@ const MONSUC_SCRIPT_ERUBIN = Object.freeze([
   { id:'turn.retry.glass.erubin1', who:'erubin', e:'excited', t:'同じ相手にもう1回だね。今度はきっと大丈夫' },
   { id:'turn.retry.rainbow.erubin1', who:'erubin', e:'normal', t:'相手が変わったね。仕切り直し、がんばろっか' },
   { id:'turn.cup.rivalcard.erubin1', who:'erubin', e:'excited', t:'{rival}が出る大会だね。勝てたら、ごほうびも大きいみたい' },
-  { id:'turn.cup.rivalcard.erubin2', who:'erubin', e:'normal', t:'ライバルの札だね。今の{mon}なら、いい勝負になると思うよ' },
+  { id:'turn.cup.rivalcard.erubin2', who:'erubin', e:'normal', t:'ライバルの情報だね。今の{mon}なら、いい勝負になると思うよ' },
 
   // ═══════════ ふだんのランダムイベント(random.js と同じ場面) ═══════════
   { id:'ev.daily.nut.erubin1', who:'erubin', e:'normal', t:'落とし物かな。持ち主、困ってるかもしれないね' },
@@ -205,7 +205,7 @@ const MONSUC_SCRIPT_ERUBIN = Object.freeze([
   { id:'ev.goal.done.erubin1', who:'erubin', e:'happy', t:'目標達成だね。さすが！' },
   { id:'ev.goal.miss.erubin1', who:'erubin', e:'normal', t:'届かなかったね。でも、ちゃんとがんばってたよ' },
   { id:'ev.season.jan1.erubin1', who:'erubin', e:'happy', t:'おみくじだね。この世界にもあるんだね笑' },
-  { id:'ev.season.jan2.erubin1', who:'erubin', e:'normal', t:'願い札かぁ。俺は「みんな元気で」って書こうかな' },
+  { id:'ev.season.jan2.erubin1', who:'erubin', e:'normal', t:'絵馬かぁ。俺は「みんな元気で」って書こうかな' },
   { id:'ev.season.jan3.erubin1', who:'erubin', e:'normal', t:'俺の願い？ ……{mon}が、けがなく最後までいけること。それだけかな' },
   { id:'ev.season.apr1.erubin1', who:'erubin', e:'happy', t:'お花見だね。お弁当、多めに作ってきたよ☺️' },
   { id:'ev.season.apr2.erubin1', who:'erubin', e:'happy', t:'人気者になったね。ちょっと誇らしいな笑' },
