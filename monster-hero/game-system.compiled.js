@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 80c32a9e619eb347
+// source-sha256: 7a34ef291d47aac2
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -8174,9 +8174,9 @@ const Audio_ = (() => {
   };
   const AUDIO_CACHE_KEYS = {
     "audio/bgm-4u-hitasura.mp3": "f4fb42472438",
-    "audio/bgm-against-my-own-shadow.mp3": "a58782a4c46f",
+    "audio/bgm-against-my-own-shadow.mp3": "b43d691d4773",
     "audio/bgm-altar-world-tree-short.mp3": "45860ac8bd1d",
-    "audio/bgm-altar-world-tree.mp3": "2dda9c70f027",
+    "audio/bgm-altar-world-tree.mp3": "eeeeada93d95",
     "audio/bgm-anima.mp3": "c81adf3d2fff",
     "audio/bgm-atsu-cup-theme.mp3": "e93502c4df76",
     "audio/bgm-battle-ichika.mp3": "ca746d1d2ba6",
@@ -8194,10 +8194,10 @@ const Audio_ = (() => {
     "audio/bgm-departure-short.mp3": "d2dcbe5c72a8",
     "audio/bgm-departure.mp3": "ad4d5a6838c8",
     "audio/bgm-dullahan-clockwork-alt.mp3": "9e934451770b",
-    "audio/bgm-dullahan-clockwork.mp3": "f94c4b3c8cb8",
+    "audio/bgm-dullahan-clockwork.mp3": "b51e196625c4",
     "audio/bgm-dullahan-steel-ghost-alt.mp3": "1e9c04ccc1db",
     "audio/bgm-dullahan-steel-ghost.mp3": "dbb0da050ab4",
-    "audio/bgm-dullahan.mp3": "d5d987e2ccd3",
+    "audio/bgm-dullahan.mp3": "c66388ff6c14",
     "audio/bgm-eiki-boss-beat.mp3": "1c3e0cb8b29f",
     "audio/bgm-eiki-boss-remix.mp3": "83093750c9ec",
     "audio/bgm-emerald-rush.mp3": "7782e3520275",
@@ -8212,8 +8212,8 @@ const Audio_ = (() => {
     "audio/bgm-haruka.mp3": "7a7164dbf152",
     "audio/bgm-home-2.mp3": "71bf51ba1f71",
     "audio/bgm-home-ichika.mp3": "29295336d1af",
-    "audio/bgm-hopes-and-dreams-short.mp3": "46bd73c5d860",
-    "audio/bgm-hopes-and-dreams.mp3": "227e0de43aa1",
+    "audio/bgm-hopes-and-dreams-short.mp3": "a88b77ee4973",
+    "audio/bgm-hopes-and-dreams.mp3": "e6202f9f8356",
     "audio/bgm-humanoid.mp3": "763466fbbf97",
     "audio/bgm-journey.mp3": "816f0cdab93e",
     "audio/bgm-kaze-ga-soyogu-basho.mp3": "e986277401a6",
@@ -8224,11 +8224,11 @@ const Audio_ = (() => {
     "audio/bgm-light-player.mp3": "c07830c2e774",
     "audio/bgm-makutsu-no-senritsu.mp3": "8db199451f0b",
     "audio/bgm-market.mp3": "a85ba65f90e7",
-    "audio/bgm-megalovania-sans.mp3": "6fafc978fa05",
-    "audio/bgm-megalovania-smash.mp3": "1bbb6aea8bb2",
+    "audio/bgm-megalovania-sans.mp3": "8317d65943b6",
+    "audio/bgm-megalovania-smash.mp3": "038da79dd59e",
     "audio/bgm-menu.mp3": "a6aef603fd6a",
     "audio/bgm-midnight-studio-short.mp3": "936b28949b4a",
-    "audio/bgm-midnight-studio.mp3": "9ae7e65a5cf4",
+    "audio/bgm-midnight-studio.mp3": "51c39ff9dbbb",
     "audio/bgm-monster-hero-theme-alt.mp3": "6b4eb065c2e2",
     "audio/bgm-monster-hero-theme.mp3": "083a1d9db281",
     "audio/bgm-monster-short.mp3": "415b771e9bbf",
@@ -8249,7 +8249,7 @@ const Audio_ = (() => {
     "audio/bgm-pro-battle-02.mp3": "f572c81a9ef6",
     "audio/bgm-profile.mp3": "523789845ff1",
     "audio/bgm-rebellion-short.mp3": "92a340e95441",
-    "audio/bgm-rebellion.mp3": "4c8807e74e0e",
+    "audio/bgm-rebellion.mp3": "c16005aa72de",
     "audio/bgm-result.mp3": "c4dc9d2fb8a5",
     "audio/bgm-rising-hope.mp3": "5b56b8f9d099",
     "audio/bgm-rose-short.mp3": "fd5f8290037c",
@@ -8258,8 +8258,8 @@ const Audio_ = (() => {
     "audio/bgm-rpg.mp3": "36abe34289f9",
     "audio/bgm-sad-song-short.mp3": "2ff39f50eddd",
     "audio/bgm-sad-song.mp3": "47d16979bb90",
-    "audio/bgm-saudade-short.mp3": "3491f3c33de4",
-    "audio/bgm-saudade.mp3": "463d9176b94f",
+    "audio/bgm-saudade-short.mp3": "e7a88d84c06a",
+    "audio/bgm-saudade.mp3": "5364f7be63a5",
     "audio/bgm-senjou-no-shippuu.mp3": "dfcd5d833fec",
     "audio/bgm-sheriruth-proto.mp3": "a6f3c4e66746",
     "audio/bgm-sheriruth.mp3": "5044be9b5c0d",
@@ -8273,7 +8273,7 @@ const Audio_ = (() => {
     "audio/bgm-title-theme.mp3": "8af0684e79e7",
     "audio/bgm-title.mp3": "b7bdc68bb0c0",
     "audio/bgm-toriko.mp3": "3870d26f6322",
-    "audio/bgm-toward-the-stars-short.mp3": "f3160c5d2a44",
+    "audio/bgm-toward-the-stars-short.mp3": "88907da29e09",
     "audio/bgm-tsuki-ga-michiru-mae-ni-short.mp3": "fe27c9332589",
     "audio/bgm-tsuki-ga-michiru-mae-ni.mp3": "74eb2d433abd",
     "audio/bgm-wrath-of-the-thorn-king.mp3": "d1ea326a4ee2",
@@ -61125,7 +61125,10 @@ function RhythmSongShopList({
       className: "block"
     }, [meta.length, meta.levels].filter(Boolean).join(' ／ ')), bundle && React.createElement("span", {
       className: "block text-lime-300"
-    }, "short ver. つき")), React.createElement("button", {
+    }, "short ver. つき")), React.createElement("div", {
+      "data-rhythm-song-offer-foot": true,
+      className: "mt-auto flex w-full flex-col items-center gap-1"
+    }, React.createElement("button", {
       type: "button",
       "data-rhythm-song-listen": song.songId,
       onClick: () => toggleListen(song),
@@ -61133,7 +61136,7 @@ function RhythmSongShopList({
       "aria-label": `${item.name}を試し聴き${listening ? '(止める)' : ''}`,
       className: `mh-hit-expand relative min-h-[32px] w-full rounded-lg border px-1 text-[11px] font-black active:scale-95 ${listening ? 'border-lime-300/70 bg-lime-500/25 text-lime-100' : 'border-white/20 bg-white/10 text-white'}`
     }, listening ? '■ とめる' : '▶ 試し聴き'), React.createElement("div", {
-      className: "mt-auto flex w-full items-center justify-center pt-1"
+      className: "flex min-h-[44px] w-full items-center justify-center pt-1"
     }, has ? React.createElement("div", {
       className: "whitespace-nowrap rounded-full bg-emerald-950/50 px-2 py-1 text-[10px] font-black text-emerald-400"
     }, "所持済み") : React.createElement("button", {
@@ -61148,7 +61151,7 @@ function RhythmSongShopList({
       className: `mh-button mh-button-primary flex min-h-[44px] w-full max-w-full items-center justify-center gap-1 whitespace-nowrap rounded-xl px-2 text-[11px] font-black ${canBuy ? 'bg-violet-500 text-white active:scale-95' : 'bg-slate-800 text-slate-500'}`
     }, React.createElement("span", {
       "aria-hidden": "true"
-    }, "🎟️"), React.createElement("span", null, price.toLocaleString()))));
+    }, "🎟️"), React.createElement("span", null, price.toLocaleString())))));
   }));
 }
 const MULTI_STAMP_KEY = 'mh_multi_stamps_v1';
@@ -185316,6 +185319,8 @@ const MSA_CSS = `
 .msa-stage.big .msa-floor{bottom:36%}
 .msa-stage.big .msa-spot{bottom:calc(36% - 7px)}
 .msa-stage.big .msa-aim{bottom:calc(36% + 28px)}
+/* 大きな場では、ダメージの数字を場の上端(体力の棒)にかからない高さへ下げる(r1115-157 ミハリの気づき) */
+.msa-stage.big .msa-dmg{top:24%}
 .msa-stage.big .msa-hx{bottom:calc(36% + var(--msa-fh,170px) * .5);transform:scale(1.15)}
 .msa-stage.big .msa-tr{bottom:calc(36% + var(--msa-fh,170px) * .5)}
 .msa-topline{flex-wrap:wrap;row-gap:2px}
@@ -185348,6 +185353,9 @@ const MSA_CSS = `
 .msa-cut .ct b{display:block;font-weight:900;white-space:nowrap;color:#fff;text-shadow:2px 0 0 #1e1b4b,-2px 0 0 #1e1b4b,0 2px 0 #1e1b4b,0 -2px 0 #1e1b4b,0 4px 0 #0008,0 0 12px var(--k1);animation:msaCutName var(--cut,1000ms) cubic-bezier(.2,1.4,.4,1) both}
 .msa-cut .ct small,.msa-cut .ct em{text-shadow:0 1px 2px #1e1b4b,0 0 3px #1e1b4b}
 .msa-cut.wise .ct small{color:#fff}
+/* 技の種類と★は、帯の色に沈まないよう暗い札に載せる(r1115-157 ミハリの気づき) */
+.msa-cut .ct small{display:inline-block;color:#fff;background:#0f172ad9;border-radius:99px;padding:1px 9px 2px;text-shadow:none}
+.msa-cut .ct small .st{text-shadow:0 0 3px #f59e0b}
 .msa-cut .ct em{display:block;font-style:normal;font-size:11px;font-weight:800;color:#ffffffd9;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .msa-cut .cf{inset:0;background:#fff;opacity:0;animation:msaCutFlash var(--cut,1000ms) linear both}
 @keyframes msaCutOut{0%,92%{opacity:1}100%{opacity:0}}
