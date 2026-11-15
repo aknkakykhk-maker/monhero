@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: d302832f4f50ba01
+// generated-sha256: 2772a0184b704989
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -68511,7 +68511,7 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
   hosei: { sorashido: { top: 0.015, eye: 0.345, chin: 0.55, m: 1.248 } },
   // 社長の全身画の8表情から切り出した、みゅあの胸から上の立ち絵(2026-11-11)。測り方は上と同じ。m は、いまの立ち絵と目から顎の見た目の長さが同じになるように決めた
   //   数字は tools/assistant/life-expression-sheets.py が出す(絵を作り直したら、出た数字へ直す)。stand-normal=ふだんの服
-  'stand-normal': { mua: { top: 0.1386, eye: 0.3072, chin: 0.4187, m: 0.829 }, momosuke: { top: 0.0636, eye: 0.3248, chin: 0.4298, m: 0.781, above: 0.7 }, kiki: { top: 0.0835, eye: 0.3343, chin: 0.4298, m: 0.711 }, atsu: { top: 0.0699, eye: 0.3272, chin: 0.4301, m: 0.766 }, kyuko: { top: 0.0341, eye: 0.3098, chin: 0.4304, m: 0.897 }, sorashido: { top: 0.0119, eye: 0.2825, chin: 0.4302, m: 1.098 } , erubin: { top: 0.0042, eye: 0.25, chin: 0.4292, m: 1.333 } },
+  'stand-normal': { mua: { top: 0.1386, eye: 0.3072, chin: 0.4187, m: 0.829 }, momosuke: { top: 0.0636, eye: 0.3248, chin: 0.4298, m: 0.781, above: 0.7 }, kiki: { top: 0.0835, eye: 0.3343, chin: 0.4298, m: 0.711 }, atsu: { top: 0.0727, eye: 0.3275, chin: 0.4295, m: 0.758 }, kyuko: { top: 0.0341, eye: 0.3098, chin: 0.4304, m: 0.897 }, sorashido: { top: 0.0119, eye: 0.2825, chin: 0.4302, m: 1.098 } , erubin: { top: 0.0042, eye: 0.25, chin: 0.4292, m: 1.333 } },
   'stand-sekiyuou': { erubin: { top: 0.0042, eye: 0.2489, chin: 0.4293, m: 1.343 } },
   'stand-hosei': { sorashido: { top: 0.0562, eye: 0.2921, chin: 0.4307, m: 1.031 } },
   'stand-halloween': { mua: { top: 0.1502, eye: 0.3379, chin: 0.4334, m: 0.711, above: 0.85 }, momosuke: { top: 0.0614, eye: 0.3116, chin: 0.4296, m: 0.878, above: 0.95 }, kiki: { top: 0.1499, eye: 0.3353, chin: 0.4304, m: 0.708, above: 0.95 } },
@@ -71490,6 +71490,16 @@ const assistantLifeProfileFace = (id, greeting, k) => {
   const lines = ASSISTANT_LIFE_PROFILE_FACE_LINES[id];
   return { e, label, n: i + 1, t: i === 0 || !lines || !lines[i - 1] ? greeting : lines[i - 1] };
 };
+// 表情の全身画の、8表情でいちばん高い絵の高さ(画素。全身画のフォルダの <名前>__<表情>.png)。表情を変えても体の大きさをそろえるのに使う(r1115-203)。表に無い子は今までどおり
+//   全身画を作り直したら合わせる(tools/assistant/life-profile-faces-check.js の ③ が絵と食い違うと止める)
+const ASSISTANT_LIFE_PROFILE_FULL_MAX_H = Object.freeze({
+  atsu: 779, // まずあつだけ(2026-11-15 社長「ほかの助手はいい」)。ほかの子は表に無い = 今までどおり絵ごとに枠へ収める
+});
+const ASSISTANT_LIFE_PROFILE_FULL_NH = new Map(); // 読み込んだ絵の高さ(画素)
+const assistantLifeProfileFullMaxH = (src) => {
+  const m = /\/fullbody\/(.+?)__[a-z]+\.png/.exec(String(src || ''));
+  return (m && ASSISTANT_LIFE_PROFILE_FULL_MAX_H[m[1]]) || 0;
+};
 function AssistantLifeProfileStand({ who, head = 0.32, top = 0.16, expr = 'happy' }) {
   const src = typeof assistantFullImage === 'function' ? assistantFullImage(who, expr) : '';
   const boxRef = React.useRef(null);
@@ -71505,10 +71515,18 @@ function AssistantLifeProfileStand({ who, head = 0.32, top = 0.16, expr = 'happy
     return () => { window.removeEventListener('resize', f); if (ro) ro.disconnect(); };
   }, []);
   const fullSrc = typeof assistantFullBodyImage === 'function' ? assistantFullBodyImage(who, expr) : null;
-  if (fullSrc) { // 全身画: 枠の高さにおさめて足元をそろえる(頭の大きさは絵ごとの全身の比のまま)
+  const [fullH, setFullH] = React.useState(() => ASSISTANT_LIFE_PROFILE_FULL_NH.get(fullSrc) || 0);
+  React.useEffect(() => { setFullH(ASSISTANT_LIFE_PROFILE_FULL_NH.get(fullSrc) || 0); }, [fullSrc]);
+  if (fullSrc) { // 全身画: 足元をそろえる。表情を変えても体の大きさが変わらないように、8表情でいちばん背の高い絵が枠の 96% になる倍率を全部の表情に使う
+    //   (2026-11-15 r1115-203: 表情の絵は1枚ずつ体の範囲で切ってあり、腕を上げた絵などは縦が長い。絵ごとに枠へ収めると、えるびん・ききハロウィンで体が 7〜8% 縮んだ)
+    const maxH = assistantLifeProfileFullMaxH(fullSrc);
+    const sized = maxH && fullH;
+    const onLoad = (e) => { const h = e.currentTarget.naturalHeight; if (h > 0) { ASSISTANT_LIFE_PROFILE_FULL_NH.set(fullSrc, h); setFullH(h); } };
     return (
       <div ref={boxRef} className="pointer-events-none absolute inset-0 overflow-hidden" data-assistant-life-profile-stand={who.id} data-assistant-life-profile-fullbody={fullSrc}>
-        <img src={fullSrc} alt={who.name} draggable={false} className="absolute" style={{ left: 0, right: 0, bottom: '2%', width: '100%', height: '96%', objectFit: 'contain', objectPosition: 'center bottom' }}/>
+        {sized
+          ? <img src={fullSrc} alt={who.name} draggable={false} onLoad={onLoad} className="absolute max-w-none" style={{ left: '50%', bottom: '2%', width: 'auto', height: `${(96 * Math.min(1, fullH / maxH)).toFixed(2)}%`, transform: 'translateX(-50%)' }}/>
+          : <img src={fullSrc} alt={who.name} draggable={false} onLoad={onLoad} className="absolute" style={{ left: 0, right: 0, bottom: '2%', width: '100%', height: '96%', objectFit: 'contain', objectPosition: 'center bottom' }}/>}
       </div>);
   }
   const face = typeof assistantLifeStandFace === 'function' ? assistantLifeStandFace(who.id, src) : null;
@@ -106581,14 +106599,14 @@ const CARD_ART_KNOWN_BOX = Object.freeze({
   sorashido_surprise: [384, 512, 0, 38, 384, 474],
   sorashido_troubled: [384, 512, 0, 39, 384, 473],
   sorashido_wink: [384, 512, 27, 38, 357, 474],
-  'stand-normal/atsu_angry': [270, 276, 41, 4, 204, 272],
-  'stand-normal/atsu_crying': [303, 276, 54, 4, 195, 272],
-  'stand-normal/atsu_excited': [309, 276, 45, 3, 251, 273],
-  'stand-normal/atsu_happy': [247, 276, 23, 4, 211, 272],
-  'stand-normal/atsu_normal': [293, 276, 21, 3, 219, 273],
-  'stand-normal/atsu_surprise': [313, 276, 59, 4, 217, 272],
-  'stand-normal/atsu_troubled': [278, 276, 23, 4, 229, 272],
-  'stand-normal/atsu_wink': [313, 276, 41, 4, 268, 272],
+  'stand-normal/atsu_angry': [269, 278, 41, 4, 202, 274],
+  'stand-normal/atsu_crying': [302, 278, 55, 4, 193, 274],
+  'stand-normal/atsu_excited': [309, 278, 45, 4, 250, 274],
+  'stand-normal/atsu_happy': [246, 278, 23, 4, 209, 274],
+  'stand-normal/atsu_normal': [293, 278, 22, 4, 219, 274],
+  'stand-normal/atsu_surprise': [312, 278, 60, 4, 215, 274],
+  'stand-normal/atsu_troubled': [278, 278, 24, 4, 228, 274],
+  'stand-normal/atsu_wink': [312, 278, 41, 5, 267, 273],
   'stand-normal/erubin_angry': [227, 244, 16, 4, 195, 240],
   'stand-normal/erubin_crying': [274, 244, 3, 3, 265, 241],
   'stand-normal/erubin_excited': [288, 244, 3, 4, 265, 240],
