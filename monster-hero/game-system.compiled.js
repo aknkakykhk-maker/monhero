@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 6149a87d0bfb83bc
+// source-sha256: afe3ed23e6fa32b5
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -171939,17 +171939,22 @@ function MsxStart({
     }, (typeof jaWrap === 'function' ? jaWrap : t => t)('枠を押して選ぶ。6枠のどこにも自分のモンスターを入れられ、フレンドは1体まで。強いモンスターほどよく伸びる'))), React.createElement("div", {
       className: "v-slots msx-team6",
       "data-msx-team6": true
-    }, members.map((m, i) => React.createElement("div", {
+    }, members.map((m, i) => React.createElement("div", _extends({
       key: i,
       className: `v-sl${m.kind === 'base' ? ' base' : ''}${m.friend ? ' fr' : ''} msx-slot-tap`,
-      "data-msx-slot": i,
+      "data-msx-slot": i
+    }, m.assistId ? {
+      'data-msx-team-slot-assist': m.assistId
+    } : {}, m.boxId ? {
+      'data-msx-team-slot-box': m.boxId
+    } : {}, {
       role: "button",
       tabIndex: 0,
       onClick: () => openSlot(i),
       onKeyDown: e => {
         if (e.key === 'Enter' || e.key === ' ') openSlot(i);
       }
-    }, m.friend ? React.createElement("i", {
+    }), m.friend ? React.createElement("i", {
       className: "msx-sl-fr"
     }, "🤝 フレンド") : null, React.createElement("span", {
       className: `v-pf lg r${m.rank === 'base' ? 'G' : m.rank}${m.kind === 'base' ? ' base' : ''}`
@@ -172826,7 +172831,8 @@ function MsxTeamPick({
   }, MSX_STAT_NAME[k])))), React.createElement("span", {
     className: "msx-tp-cnt"
   }, tab === 'base' ? '' : `自分 ${raisedN}/6体`)), tab === 'memo' ? React.createElement("div", {
-    className: "msx-tp-note"
+    className: "msx-tp-note",
+    "data-msx-assist-head": true
   }, "メモリアルモンスターは育成には使えません。アシスト効果と得意な能力だけ効きます") : null, React.createElement("div", {
     className: "msx-tp-list",
     "data-msx-tp-list": true
@@ -176525,7 +176531,11 @@ function MsxEvent({
           ...o,
           picked: {
             scenes: [tail],
-            before: s.stats
+            before: s.stats,
+            delta: r.out.delta || null,
+            branch: !!r.out.branch,
+            hp0: s.hp,
+            st0: s.stress
           }
         }
       });
@@ -176541,6 +176551,8 @@ function MsxEvent({
         picked: {
           scenes: [r.out.next || (view && view.id ? `${view.id}.res` : null), r.out.scene].filter(Boolean),
           before: s.stats,
+          hp0: s.hp,
+          st0: s.stress,
           res: r.out.res,
           delta: r.out.delta || null,
           apt: r.out.delta && r.out.delta.apt ? r.out.delta.apt : null
@@ -176562,7 +176574,13 @@ function MsxEvent({
   const head = isStory ? `${msxAidName(s.aid)}のお話 ${o.ep === 'special' ? '特別な1話' : `第${o.ep}話`}` : isUniq ? `${msxAidName(s.aid)}の${view.title ? `「${view.title}」` : 'お話'}` : view && view.id === 'ev.self.anniv' ? '初めての育成記念日' : view && view.head || main.label || '育成イベント';
   const cheerIdx = view && Number.isInteger(view.cheer) ? view.cheer : null;
   const who = l => l.who === 'narr' ? null : l.who === 'issa' ? 'イッサ博士' : l.who === 'mon' ? run.nick : msxAidName(l.who);
-  return React.createElement(React.Fragment, null, React.createElement(MsxBand, {
+  return React.createElement(React.Fragment, null, picked && Number.isFinite(picked.hp0) ? React.createElement(MsxBand, {
+    s: s,
+    v: v,
+    ev: ev,
+    hpFrom: picked.hp0,
+    stFrom: picked.st0
+  }) : React.createElement(MsxBand, {
     s: s,
     v: v,
     ev: ev
@@ -176631,10 +176649,15 @@ function MsxEvent({
     who: s,
     stats: s.stats,
     ups: ups
-  }) : null, !isStory && typeof MsxEvResult === 'function' ? React.createElement(MsxEvResult, {
+  }) : null, typeof MsxEvResult === 'function' && (!isStory || picked.delta) ? React.createElement(MsxEvResult, {
     delta: picked.delta,
     hasStats: Object.keys(ups).length > 0
-  }) : null, gotGift ? React.createElement("div", {
+  }) : null, isStory && picked.branch ? React.createElement("div", {
+    className: "v-log",
+    "data-msx-story-branch": true
+  }, "🔀 この選び方で、", React.createElement("b", {
+    className: "ga"
+  }, "最後のお話(第4話)の結末"), "が変わる") : null, gotGift ? React.createElement("div", {
     className: "v-log",
     "data-msx-ev-gift": true
   }, msxItemIco(giftItem), " ", React.createElement("b", {
@@ -177846,7 +177869,7 @@ function MsxR3Cup({
     if (typeof SuccessSound !== 'undefined') SuccessSound.se('cupEntry');
   }, []);
   const nOk = cupsNow.filter(c => c.entry && c.entry.ok).length;
-  const openTexts = nOk ? [`「今月は ${nOk}つ 出られるよ! 出ると1ターン使うから、トレーニングとどっちにするか考えてね」`, `「出られる大会が ${nOk}つ あるよ。賞品もチェックしてみて!」`, `「${cur ? msxR3CupName(cur.sys, cur.name) : '大会'}、気になるね。体力は大丈夫?」`, `「大会は1ターン使うよ。調子がいいなら行ってみよ!」`] : ['「今月は出られる大会がないみたい。トレーニングでじっくり力をつけよ!」', '「出られる大会が今月は無いよ。次の月の予定も見てみてね」'];
+  const openTexts = nOk ? [`「今月は ${nOk}つ 出られるよ! 出ると1ターン使うから、トレーニングとどっちにするか考えてね」`, `「出られる大会が ${nOk}つ あるよ。賞品もチェックしてみて!」`, `「${cur ? msxR3CupName(cur.sys, cur.name) : '大会'}、気になるね。体力は大丈夫?」`, `「大会は1ターン使うよ。調子がいいなら行ってみよ!」`] : P.key === 'final' ? ['「最後の期は、ヒーローズファイナルだけだよ。それまではトレーニングや修行で仕上げよう!」'] : ['「今月は出られる大会がないみたい。トレーニングでじっくり力をつけよ!」', '「出られる大会が今月は無いよ。次の月の予定も見てみてね」'];
   const openLine = {
     t: msxR3Q(openTexts[Math.abs(Number(s.turn) || 0) % openTexts.length]),
     e: null
@@ -177960,7 +177983,7 @@ function MsxR3Cup({
     }, "ごほうび大")) : null);
   }) : React.createElement("div", {
     className: "msx-note"
-  }, now ? '今月の大会はありません' : 'この月の大会はありません')), React.createElement("div", {
+  }, P.key === 'final' ? '最後の期は、ヒーローズファイナルだけです' : now ? '今月の大会はありません' : 'この月の大会はありません')), React.createElement("div", {
     className: "v-card",
     style: {
       padding: '5px 9px'

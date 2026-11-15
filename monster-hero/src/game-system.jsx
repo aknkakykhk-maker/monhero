@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: ce568beb7adc8649
+// generated-sha256: 3bc162654c24bef8
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -89347,7 +89347,7 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf }) {
       <div className="v-h">編成の6体<small style={typeof JA_LABEL_STYLE !== 'undefined' ? JA_LABEL_STYLE : undefined}>{(typeof jaWrap === 'function' ? jaWrap : (t) => t)('枠を押して選ぶ。6枠のどこにも自分のモンスターを入れられ、フレンドは1体まで。強いモンスターほどよく伸びる')}</small></div>
       <div className="v-slots msx-team6" data-msx-team6>
         {members.map((m, i) => (
-          <div key={i} className={`v-sl${m.kind === 'base' ? ' base' : ''}${m.friend ? ' fr' : ''} msx-slot-tap`} data-msx-slot={i} role="button" tabIndex={0} onClick={() => openSlot(i)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') openSlot(i); }}>
+          <div key={i} className={`v-sl${m.kind === 'base' ? ' base' : ''}${m.friend ? ' fr' : ''} msx-slot-tap`} data-msx-slot={i} {...(m.assistId ? { 'data-msx-team-slot-assist': m.assistId } : {})} {...(m.boxId ? { 'data-msx-team-slot-box': m.boxId } : {})} role="button" tabIndex={0} onClick={() => openSlot(i)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') openSlot(i); }}>
             {m.friend ? <i className="msx-sl-fr">🤝 フレンド</i> : null}
             <span className={`v-pf lg r${m.rank === 'base' ? 'G' : m.rank}${m.kind === 'base' ? ' base' : ''}`}>{(() => { const img = <img src={msxMonThumb(m.species)} alt=""/>; const bm = m.boxId && box && Array.isArray(box.mons) ? box.mons.find((x) => x.id === m.boxId) : null; return bm && bm.awake && typeof MsxKira === 'function' && typeof msxKiraOf === 'function' ? <MsxKira kind={msxKiraOf(bm.awake)} small>{img}</MsxKira> : img; })()}</span>
             {m.name} {m.kind !== 'base' && <i className={msxRankCls(m.rank)}>{m.rank}</i>}
@@ -89608,7 +89608,7 @@ function MsxTeamPick({ idx, slots, members, own, unlocked, raised, stock, SUC, b
           <label className="msx-tp-sel"><span>得意</span><select value={only} onChange={(e) => setOnly(e.target.value)} data-msx-tp-only><option value="all">全て</option>{MSX_STATS.map((k) => <option key={k} value={k}>{MSX_STAT_NAME[k]}</option>)}</select></label>
           <span className="msx-tp-cnt">{tab === 'base' ? '' : `自分 ${raisedN}/6体`}</span>
         </div>
-        {tab === 'memo' ? <div className="msx-tp-note">メモリアルモンスターは育成には使えません。アシスト効果と得意な能力だけ効きます</div> : null}
+        {tab === 'memo' ? <div className="msx-tp-note" data-msx-assist-head>メモリアルモンスターは育成には使えません。アシスト効果と得意な能力だけ効きます</div> : null}
         <div className="msx-tp-list" data-msx-tp-list>
           {items.length ? items.map((x) => { const mk = markOf(x); const on = msxTpSame(cand, x.slot); const m = x.mem; return (
             <button type="button" key={x.key} className={`msx-tp-c${on ? ' on' : ''}${mk && mk.lock ? ' lk' : ''}`} data-msx-tp-item={x.key} {...(x.kind === 'base' ? { 'data-msx-pick-base': x.species } : {})}
@@ -90760,11 +90760,11 @@ function MsxEvent({ run, setRun, v, ev, ctx, bondLv, onDone }) {
     if (isStory) {
       const r = SUC.storyStep(s, c); if (!r.out || !r.out.ok) { onDone(run); return; }
       const tail = r.out.ep === 4 && r.out.end ? `${scene}.${r.out.end}` : `${scene}.${c}`;
-      setRun({ ...run, s: r.state, out: { ...o, picked: { scenes: [tail], before: s.stats } } });
+      setRun({ ...run, s: r.state, out: { ...o, picked: { scenes: [tail], before: s.stats, delta: r.out.delta || null, branch: !!r.out.branch, hp0: s.hp, st0: s.stress } } }); // r1115-056: 動いた数・結末の分かれ道も出す
       return;
     }
     const r = SUC.events.pick(s, c); if (!r.out || !r.out.ok) return;
-    setRun({ ...run, s: r.state, out: { ...o, picked: { scenes: [r.out.next || (view && view.id ? `${view.id}.res` : null), r.out.scene].filter(Boolean), before: s.stats, res: r.out.res, delta: r.out.delta || null, apt: r.out.delta && r.out.delta.apt ? r.out.delta.apt : null } } });
+    setRun({ ...run, s: r.state, out: { ...o, picked: { scenes: [r.out.next || (view && view.id ? `${view.id}.res` : null), r.out.scene].filter(Boolean), before: s.stats, hp0: s.hp, st0: s.stress, res: r.out.res, delta: r.out.delta || null, apt: r.out.delta && r.out.delta.apt ? r.out.delta.apt : null } } });
   };
   const ups = {}; if (picked && picked.before) MSX_STATS.forEach((k) => { const d = s.stats[k] - picked.before[k]; if (d) ups[k] = d; });
   const afterLines = picked ? picked.scenes.flatMap((sc) => (evOf(sc) || { lines: [] }).lines.concat((evOf(sc) || { after: [] }).after)) : [];
@@ -90773,7 +90773,7 @@ function MsxEvent({ run, setRun, v, ev, ctx, bondLv, onDone }) {
   const cheerIdx = view && Number.isInteger(view.cheer) ? view.cheer : null;
   const who = (l) => (l.who === 'narr' ? null : l.who === 'issa' ? 'イッサ博士' : l.who === 'mon' ? run.nick : msxAidName(l.who));
   return (<>
-    <MsxBand s={s} v={v} ev={ev}/>
+    {picked && Number.isFinite(picked.hp0) ? <MsxBand s={s} v={v} ev={ev} hpFrom={picked.hp0} stFrom={picked.st0}/> : <MsxBand s={s} v={v} ev={ev}/>}
     <div className="v-scene" style={{ flex: '1 1 0' }}>
       <img className="bg" src={msxSceneBg(s.turn).bg} alt=""/><div className="sh"/>
       <div className="gr" style={{ left: '30%', bottom: 'calc(30% - 5px)' }}/>
@@ -90786,7 +90786,8 @@ function MsxEvent({ run, setRun, v, ev, ctx, bondLv, onDone }) {
     </div>
     {picked ? (<>
       {Object.keys(ups).length ? <MsxStRow who={s} stats={s.stats} ups={ups}/> : null}
-      {!isStory && typeof MsxEvResult === 'function' ? <MsxEvResult delta={picked.delta} hasStats={Object.keys(ups).length > 0}/> : null}
+      {typeof MsxEvResult === 'function' && (!isStory || picked.delta) ? <MsxEvResult delta={picked.delta} hasStats={Object.keys(ups).length > 0}/> : null}
+      {isStory && picked.branch ? <div className="v-log" data-msx-story-branch>🔀 この選び方で、<b className="ga">最後のお話(第4話)の結末</b>が変わる</div> : null}
       {gotGift ? <div className="v-log" data-msx-ev-gift>{msxItemIco(giftItem)} <b className="gu">{giftItem.name}</b> を手に入れた!(🎒持ち物に入った)<br/><small>{giftItem.desc}</small></div> : null}
       {picked.apt ? <div className="v-log" data-msx-ev-apt>📏 「{['零', '近', '中', '遠'][picked.apt.dist]}」の間合い適性が <b className="ga">{picked.apt.from} → {picked.apt.grade}</b> に上がった!</div> : null}
       <div className="v-ft" style={{ marginTop: 6 }}><button type="button" className="go" onClick={() => onDone(run)}>次へ ▶</button></div>
@@ -91494,7 +91495,7 @@ function MsxR3Cup({ run, setRun, v, ev, onBack, onActed }) {
     `「出られる大会が ${nOk}つ あるよ。賞品もチェックしてみて!」`,
     `「${cur ? msxR3CupName(cur.sys, cur.name) : '大会'}、気になるね。体力は大丈夫?」`,
     `「大会は1ターン使うよ。調子がいいなら行ってみよ!」`,
-  ] : ['「今月は出られる大会がないみたい。トレーニングでじっくり力をつけよ!」', '「出られる大会が今月は無いよ。次の月の予定も見てみてね」'];
+  ] : P.key === 'final' ? ['「最後の期は、ヒーローズファイナルだけだよ。それまではトレーニングや修行で仕上げよう!」'] : ['「今月は出られる大会がないみたい。トレーニングでじっくり力をつけよ!」', '「出られる大会が今月は無いよ。次の月の予定も見てみてね」'];
   const openLine = { t: msxR3Q(openTexts[Math.abs(Number(s.turn) || 0) % openTexts.length]), e: null };
   const rankStep = typeof SUC.rankStepOf === 'function' ? SUC.rankStepOf(s) : 0; const rank = rankStep ? { name: SUC.rankNameOf(rankStep) } : null; // 賞金ランク10段(2026-11-14)
   const kindOf = (c) => (c.scenario ? 'シナリオ' : c.ex ? (MSX_R3_CUP_GRADE[c.grade] || '') : (SUC.CUP_SYS[c.sys] || {}).stat ? '自慢' : (SUC.CUP_SYS[c.sys] || {}).dist !== undefined ? '間合い' : (SUC.CUP_SYS[c.sys] || {}).type ? 'タイプ' : ['spring', 'summer', 'autumn', 'winter'].includes(c.sys) ? '四季' : 'ふつう');
@@ -91529,7 +91530,7 @@ function MsxR3Cup({ run, setRun, v, ev, onBack, onActed }) {
             </div>
             {c.rival ? <><span className="rvi"><img src={msxMonThumb(c.rival.species)} alt=""/><b>ライバル</b></span><span className="rvb">ごほうび大</span></> : null}
           </button>);
-      }) : <div className="msx-note">{now ? '今月の大会はありません' : 'この月の大会はありません'}</div>}
+      }) : <div className="msx-note">{P.key === 'final' ? '最後の期は、ヒーローズファイナルだけです' : now ? '今月の大会はありません' : 'この月の大会はありません'}</div>}
     </div>
     <div className="v-card" style={{ padding: '5px 9px' }}><div className="v-kv" style={{ margin: 0 }}><b>出ると</b><span>1戦だけ・1ターン使う・体力は減りません・勝つと賞金と賞品。{toForced ? <span className="yel">{' 期末の大会まで '}<span style={{ whiteSpace: 'nowrap' }}>{`あと${toForced}ターン`}</span></span> : null}</span></div></div>
     {wc ? (
