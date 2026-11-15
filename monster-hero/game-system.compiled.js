@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: afe3ed23e6fa32b5
+// source-sha256: 9ab512b14f705ff0
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -114178,7 +114178,7 @@ const ASSISTANT_LIFE_HOUSE_CSS = `
 .mhl-pop .pp>span{animation:mhlPop .35s ease-out both}
 @media (prefers-reduced-motion:reduce){.mhl-intro{display:none}.mhl-pop .pp>span{animation:none}}
 `;
-const ASSISTANT_LIFE_GRID4_CSS = ASSISTANT_LIFE_HOUSE_CSS.split('\n').filter(l => /^\[data-assistant-life-land="1"\] \.mhl-(room|board)/.test(l)).join('\n').split('[data-assistant-life-land="1"]').join('[data-assistant-life-grid4="1"]') + '\n[data-assistant-life-grid4="1"] .mhl-room .tag b,[data-assistant-life-grid4="1"] .mhl-room[data-assistant-life-room-v2="1"] .tag b{white-space:normal;word-break:auto-phrase;font-size:10.5px;line-height:12px;max-height:36px;text-overflow:clip}[data-assistant-life-grid4="1"] .mhl-room .tag{top:21px}' + '\n.mhl-room .evm{position:absolute;right:2px;bottom:2px;z-index:8;font-size:15px;line-height:1;filter:drop-shadow(0 1px 2px #000a)}';
+const ASSISTANT_LIFE_GRID4_CSS = ASSISTANT_LIFE_HOUSE_CSS.split('\n').filter(l => /^\[data-assistant-life-land="1"\] \.mhl-(room|board)/.test(l)).join('\n').split('[data-assistant-life-land="1"]').join('[data-assistant-life-grid4="1"]') + '\n[data-assistant-life-grid4="1"] .mhl-room .tag b,[data-assistant-life-grid4="1"] .mhl-room[data-assistant-life-room-v2="1"] .tag b{white-space:normal;word-break:auto-phrase;font-size:10.5px;line-height:12px;max-height:36px;text-overflow:clip}[data-assistant-life-grid4="1"] .mhl-room .tag{top:21px}' + '\n.mhl-room .tag[data-assistant-life-room-say="1"] b{display:block!important}' + '\n.mhl-room .evm{position:absolute;right:2px;bottom:2px;z-index:8;font-size:15px;line-height:1;filter:drop-shadow(0 1px 2px #000a)}';
 const ASSISTANT_LIFE_FX_CSS = '.mh-gfx-chips.left{left:auto;right:10px;align-items:flex-end}';
 function AssistantLifeHouseStyle() {
   return React.createElement("style", null, ASSISTANT_LIFE_HOUSE_CSS + '\n' + ASSISTANT_LIFE_GRID4_CSS + '\n' + ASSISTANT_LIFE_FX_CSS);
@@ -114235,6 +114235,82 @@ const assistantLifeTagChunks = text => {
     }, x);
   return React.createElement(React.Fragment, null, t.slice(0, i), nb(hit[1], 'a'), React.createElement("wbr", null), nb(hit[2] + t.slice(i + hit[0].length), 'b'));
 };
+const ASSISTANT_LIFE_SAY_WORDS = Object.freeze({
+  studio: ['モンヒロ', 'ビート'],
+  cardroom: ['MFバトル', 'カード'],
+  cafe: ['おやつ', '屋さん'],
+  hill: ['ひなたの', '丘'],
+  ranch: ['M/B', '管理']
+});
+const ASSISTANT_LIFE_SAY_SPECIAL = Object.freeze({
+  battle: ['モンヒロ', 'バトル中'],
+  'cardroom:cards': ['MFバトル', 'カードを', '研究'],
+  'cafe:snack': ['おやつ', '屋さんで', 'ひと休み']
+});
+const assistantLifeSayOut = (place, doingKey) => {
+  const icon = ASSISTANT_LIFE_PLACE_ICON[place] || '🚶';
+  const sp = ASSISTANT_LIFE_SAY_SPECIAL[`${place}:${doingKey}`] || ASSISTANT_LIFE_SAY_SPECIAL[place];
+  if (sp) return [icon, ...sp];
+  const words = ASSISTANT_LIFE_SAY_WORDS[place] || [assistantLifePlaceShow(place) || 'おでかけ先'];
+  const d = ASSISTANT_LIFE_DOINGS[doingKey],
+    last = words[words.length - 1];
+  return d && d.places.includes(place) ? [icon, ...words.slice(0, -1), `${last}で`, d.label] : [icon, ...words.slice(0, -1), `${last}に`, 'おでかけ'];
+};
+const assistantLifeSayFill = (rooms, life) => {
+  for (const id of Object.keys(rooms)) {
+    const r = rooms[id];
+    if (!r || !r.tag) continue;
+    const t0 = String(r.tag[0] || ''),
+      t1 = String(r.tag[1] || '');
+    const away = typeof assistantLifeFriendAwayOf === 'function' ? (() => {
+      try {
+        return assistantLifeFriendAwayOf(id);
+      } catch {
+        return null;
+      }
+    })() : null;
+    const came = t0.match(/^🚪 (.+さんの)(.+が)来ている$/u);
+    let say = r.say;
+    if (away) say = ['🏘', `${away.name}の`, '家に', 'おでかけ'];else if (came) say = ['🚪', came[1], came[2], '来ている'];else if (r.rel === 'living') say = ['🛋️', 'みんなの', '居間に'];
+    if (!Array.isArray(say)) {
+      const m = t0.match(/^(\S+) (.+)$/u);
+      say = m ? [m[1], m[2]] : ['', t0];
+    }
+    let mark = null,
+      m;
+    if (m = t1.match(/^💢 (.+)とけんか中$/u)) mark = ['💢', `${m[1]}と`, 'けんか中'];else if (m = t1.match(/^💢 (.+)と言い合いのあと$/u)) mark = ['💢', `${m[1]}と`, '言い合いの', 'あと'];else if (m = t1.match(/^🤝 (.+)と仲直り$/u)) {
+      const w = r.mend && typeof assistantLifeWhereOf === 'function' ? assistantLifeWhereOf(life, id) : null;
+      mark = ['🤝', `${m[1]}と`, w && w.group && w.group.ids.includes(r.mend) ? '過ごす' : '仲直り'];
+    }
+    rooms[id] = {
+      ...r,
+      say,
+      sayMark: mark
+    };
+  }
+  return rooms;
+};
+const assistantLifeSayFont = (say, avail, max = 10.5) => {
+  const parts = assistantLifeSayParts(say);
+  return Math.max(8, Math.min(max, ...parts.map(x => assistantLifeTagFit(x, avail, max, 8))));
+};
+const assistantLifeSayParts = say => {
+  const a = (say || []).filter(x => x !== null && x !== undefined);
+  return a.length > 1 && a[0] ? [`${a[0]} ${a[1]}`, ...a.slice(2)] : a.filter(Boolean);
+};
+function AssistantLifeSayText({
+  say,
+  avail,
+  font
+}) {
+  const parts = assistantLifeSayParts(say);
+  return React.createElement(React.Fragment, null, parts.map((x, i) => React.createElement(React.Fragment, {
+    key: i
+  }, i ? React.createElement("wbr", null) : null, React.createElement("span", {
+    "data-assistant-life-say-chunk": true,
+    className: assistantLifeTagFit(x, avail, font, 0) >= font - 0.05 ? 'whitespace-nowrap' : ''
+  }, x))));
+}
 const assistantLifeTagNames = (text, budget) => {
   const m = String(text || '').match(/^(.*?)(?: ほか(\d+)人)?$/);
   const list = String(m[1] || '').split('・').filter(Boolean);
@@ -114259,7 +114335,8 @@ function AssistantLifeRoom({
   onOpen,
   idx,
   other = null,
-  v2 = false
+  v2 = false,
+  compact = false
 }) {
   const L = ASSISTANT_LIFE_ROOM_LOOK[id];
   const view = ASSISTANT_LIFE_VIEW[look][idx % 2];
@@ -114416,6 +114493,46 @@ function AssistantLifeRoom({
     const tagLand = typeof window !== 'undefined' && window.innerWidth > window.innerHeight;
     const tagFit = assistantLifeTagFit(t[0], w - 26, 10.5, 0);
     const short = [...String(t[0])].length <= 9;
+    const say = Array.isArray(state.say) ? compact && state.sayMark ? state.sayMark : state.say : null;
+    if (say) {
+      const avail = w - 6 - 8 - 3 - 2,
+        f = assistantLifeSayFont(say, avail);
+      return React.createElement("span", {
+        className: "tag",
+        "data-assistant-life-room-away": id,
+        "data-assistant-life-room-tag-mark": mark ? '1' : '0',
+        "data-assistant-life-room-say": compact ? '1' : '0'
+      }, !compact && (mark || !names ? React.createElement("small", {
+        "data-assistant-life-room-what": true,
+        style: {
+          marginLeft: ml
+        }
+      }, t[1]) : React.createElement("small", {
+        "data-assistant-life-room-with": true,
+        style: {
+          marginLeft: ml
+        }
+      }, React.createElement(AssistantLifeNames, {
+        text: names
+      }))), React.createElement("b", {
+        "data-assistant-life-room-say-text": true,
+        style: {
+          whiteSpace: 'normal',
+          fontSize: f,
+          lineHeight: `${Math.round(f * 1.18)}px`,
+          maxHeight: 'none',
+          overflow: 'visible',
+          textOverflow: 'clip'
+        }
+      }, v2 && w >= 150 ? React.createElement("span", {
+        "data-assistant-life-room-out": true,
+        className: "mr-1 rounded bg-slate-600 px-1 text-white"
+      }, "留守") : null, React.createElement(AssistantLifeSayText, {
+        say: say,
+        avail: avail,
+        font: f
+      })));
+    }
     return React.createElement("span", {
       className: "tag",
       "data-assistant-life-room-away": id,
@@ -114552,7 +114669,8 @@ function AssistantLifeHouseArt({
       state: rooms[id],
       onOpen: onOpen,
       v2: v2 && !other,
-      other: other ? other[id] || {} : null
+      other: other ? other[id] || {} : null,
+      compact: land
     });
   }), React.createElement("div", {
     className: "mhl-liv",
@@ -114660,13 +114778,15 @@ const assistantLifeRoomsOf = (life, metIds) => {
           };
         }
       } else rooms[id] = {
-        tag: [`🚪 ${assistantLifeName(host)}の部屋へ`, `${ids.length}人で ${doing.label}`, assistantLifeGroupNames(ids, 4)]
+        tag: [`🚪 ${assistantLifeName(host)}の部屋へ`, `${ids.length}人で ${doing.label}`, assistantLifeGroupNames(ids, 4)],
+        say: ['🚪', `${assistantLifeName(host)}の`, '部屋で', doing.label || '過ごす']
       };
       continue;
     }
     const sub = w.group ? `${w.group.ids.length}人で ${doing.label}` : `ひとりで ${doing.label}`;
     rooms[id] = {
-      tag: [`${ASSISTANT_LIFE_PLACE_ICON[w.place] || '🚶'} ${assistantLifePlaceShow(w.place)}へ`, sub, w.group ? assistantLifeGroupNames(w.group.ids, 4) : null]
+      tag: [`${ASSISTANT_LIFE_PLACE_ICON[w.place] || '🚶'} ${assistantLifePlaceShow(w.place)}へ`, sub, w.group ? assistantLifeGroupNames(w.group.ids, 4) : null],
+      say: assistantLifeSayOut(w.place, w.doing)
     };
   }
   const q = peer && peer.quarrel && peer.quarrel.pending;
@@ -114696,6 +114816,7 @@ const assistantLifeRoomsOf = (life, metIds) => {
       assistantLifeFriendDecorateRooms(rooms);
     } catch {}
   }
+  assistantLifeSayFill(rooms, life);
   return rooms;
 };
 function AssistantLifeRoomSheet({
