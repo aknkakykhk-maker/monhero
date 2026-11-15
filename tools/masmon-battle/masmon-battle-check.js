@@ -86,6 +86,8 @@ const FORMATS = [[1, 1], [2, 2], [3, 3], [1, 2], [2, 3], [3, 1]];
       } else if (r.reason !== 'judge') ng.wipe.push(`${tag}(reason=${r.reason})`);
       // たどり直す
       const st = I.setupState(inp, catalog);
+      // 版10: 試合の中の自動ガッツ回復は種の値の0.75倍(全部の試合・r1115-133)
+      for (const sd of ['A', 'B']) for (const u of st.teams[sd].units) u.regen = engine.regenEff(u.regen);
       let dist = r.log[0].d, round = 0;
       const active = { A: 0, B: 0 };
       let bad = null;
@@ -111,14 +113,27 @@ const FORMATS = [[1, 1], [2, 2], [3, 3], [1, 2], [2, 3], [3, 1]];
           // 技の勢いで移った行(技表の moveTo): 1歩ずつでなくてよい・ガッツは増えない
           if (e.to < 0 || e.to > 3 || !e.byTech) { ng.dist.push(`${tag} r${e.r} 技の移動 ${dist}→${e.to}`); bad = 1; }
           dist = e.to;
+        } else if (e.ev === 'move' && e.why === 'blown') {
+          // ふきとばされた行(版10): 遠へ・ガッツは動かない
+          if (e.to !== 3) { ng.dist.push(`${tag} r${e.r} ふきとばし ${dist}→${e.to}`); bad = 1; }
+          dist = e.to;
         } else if (e.ev === 'move') {
+          // 版10: 移動はガッツを払う(5×(段+1))。払う量は行の cost
           if (Math.abs(e.to - dist) !== 1 || e.to < 0 || e.to > 3) { ng.dist.push(`${tag} r${e.r} ${dist}→${e.to}`); bad = 1; }
           dist = e.to;
-          const u = st.teams[e.side].units[active[e.side]]; u.guts = Math.min(engine.GUTS_MAX, u.guts + engine.GUTS_MOVE);
+          const u = st.teams[e.side].units[active[e.side]];
+          if (!(e.cost >= engine.MOVE_COST_STEP) || e.cost % engine.MOVE_COST_STEP || u.guts < e.cost) { ng.guts.push(`${tag} r${e.r} 移動の払い ${e.cost}/${u.guts}`); bad = 1; }
+          u.guts -= e.cost || 0;
+        } else if (e.ev === 'blow') {
+          if (dist !== 0) { ng.dist.push(`${tag} r${e.r} 零でないふきとばし ${dist}`); bad = 1; }
+          const u = st.teams[e.side].units[active[e.side]];
+          if (!(e.cost >= engine.MOVE_COST_STEP) || u.guts < e.cost) { ng.guts.push(`${tag} r${e.r} ふきとばしの払い ${e.cost}/${u.guts}`); bad = 1; }
+          u.guts -= e.cost || 0;
         } else if (e.ev === 'guard') {
-          const u = st.teams[e.side].units[active[e.side]]; u.guts = Math.min(engine.GUTS_MAX, u.guts + engine.GUTS_MOVE);
+          // 版10: ガードの上乗せは無い
         } else if (e.ev === 'charge') {
-          const u = st.teams[e.side].units[active[e.side]]; u.guts = Math.min(engine.GUTS_MAX, u.guts + 22);
+          // 版10: ためた番の合計が CHARGE_TOTAL になる分だけさらに(r1115-133)
+          const u = st.teams[e.side].units[active[e.side]]; u.guts = Math.min(engine.GUTS_MAX, u.guts + engine.chargeAddOf(u));
         } else if (e.ev === 'swap' || (e.ev === 'enter' && e.r > 0)) {
           active[e.side] = e.i;
           const u = st.teams[e.side].units[e.i]; u.guts = Math.max(u.guts, 40);
@@ -128,7 +143,7 @@ const FORMATS = [[1, 1], [2, 2], [3, 3], [1, 2], [2, 3], [3, 1]];
         if (e.ga != null && (st.teams.A.units[active.A].guts !== e.ga || st.teams.B.units[active.B].guts !== e.gb)) {
           ng.guts.push(`${tag} r${e.r} ${e.ev} 両方のガッツ ${st.teams.A.units[active.A].guts}/${st.teams.B.units[active.B].guts}≠${e.ga}/${e.gb}`); bad = 1;
         }
-        if (['tech', 'move', 'guard', 'charge', 'swap'].includes(e.ev) && !engine.WHY[e.why]) { ng.hp.push(`${tag} r${e.r} 理由が無い ${e.why}`); bad = 1; }
+        if (['tech', 'move', 'guard', 'charge', 'swap', 'blow'].includes(e.ev) && !engine.WHY[e.why]) { ng.hp.push(`${tag} r${e.r} 理由が無い ${e.why}`); bad = 1; }
         if (e.ev === 'tech' && !(e.p >= 1 && e.p <= 99)) { ng.hp.push(`${tag} r${e.r} 命中率 ${e.p}`); bad = 1; }
         if (e.d !== dist && e.ev !== 'move') { ng.dist.push(`${tag} r${e.r} 記録の距離 ${e.d}≠${dist}`); bad = 1; }
         if (e.guts != null) {
@@ -184,14 +199,15 @@ const FORMATS = [[1, 1], [2, 2], [3, 3], [1, 2], [2, 3], [3, 1]];
   check('⑤ ガッツ満タンで「ためる」を選ばない', fullCharge === 0, `${fullCharge} 回`);
   check('⑤ 届かない距離の技は撃たない', invalid === 0, `${invalid} 回`);
   // (b) 経験 0 どうしでも、手の半分以上は技を撃っている(動いてばかり・守ってばかりにならない)
-  let tech = 0, acts = 0;
+  let tech = 0, acts = 0, mg = 0;
   for (let i = 0; i < 300; i++) {
     const r = engine.simulate({ seed: `rk2-${i}`, catalog,
       teamA: { assistantId: STYLE_IDS[i % 8], tactics: 0, members: team(rng, 3) },
       teamB: { assistantId: STYLE_IDS[(i + 5) % 8], tactics: 0, members: team(rng, 3) } });
-    for (const e of r.log) if (['tech', 'move', 'guard', 'charge', 'swap'].includes(e.ev)) { acts++; if (e.ev === 'tech') tech++; }
+    for (const e of r.log) if (['tech', 'move', 'guard', 'charge', 'swap', 'blow'].includes(e.ev) && e.why !== 'blown') { acts++; if (e.ev === 'tech') tech++; if (e.ev === 'move' || e.ev === 'guard' || e.ev === 'blow') mg++; }
   }
-  check('⑤ 戦術経験 0 どうしでも、手の4割以上は技を撃つ', tech >= acts * 0.4, `${(tech / acts * 100).toFixed(1)}%`);
+  // 版10: 自動ガッツ回復が下がり(r1115-111・133)、技を撃てる回数そのものが減る(ためるが増える)。見張るのは「動いてばかり・守ってばかりにならない」こと
+  check('⑤ 戦術経験 0 どうしでも、手の2割5分以上は技・移動とガードは3割まで', tech >= acts * 0.25 && mg <= acts * 0.3, `技 ${(tech / acts * 100).toFixed(1)}%・移動とガード ${(mg / acts * 100).toFixed(1)}%`);
 }
 
 // ── ⑥ 体数の切り詰めと空の編成 ──
@@ -326,7 +342,7 @@ const FORMATS = [[1, 1], [2, 2], [3, 3], [1, 2], [2, 3], [3, 1]];
     return v.regen !== Math.round(engine.GUTS_REGEN_MIN + gi * stepD) || v.first !== (mi - 3) * engine.MOVE_SPEED_FIRST || v.size !== t.z
       || Math.abs(v.taken - (1 + (mi - 3) * engine.MOVE_SPEED_TAKEN)) > 0.002; });
   check('⑫ 種ごとの等級の表(ガッツ回復力・移動速度・サイズ)が全種にあり、回復・先手・サイズに写っている', !traitBad.length && catalog.species.Pixie.regen === engine.GUTS_REGEN_MAX && engine.SIZE_SMALL_EVADE > 0 && engine.SIZE_LARGE_CUT > 0, traitBad.join(' '));
-  check('⑫ 種ごとのガッツのたまる速さは幅の中(既存の baseGuts から)・種でちがう・速い種ほど与ダメが下がる・等級 G〜A の表が幅の両端へ等間隔・S は外へ伸びる(知らない等級は無視)', !bad.length && vals.size >= 5 && gradeOk && engine.GUTS_REGEN_MIN < engine.GUTS_REGEN_MAX && engine.GUTS_MOVE < engine.GUTS_CHARGE, bad.join(' ') || [...vals].sort().join('・'));
+  check('⑫ 種ごとのガッツのたまる速さは幅の中(既存の baseGuts から)・種でちがう・速い種ほど与ダメが下がる・等級 G〜A の表が幅の両端へ等間隔・S は外へ伸びる(知らない等級は無視)', !bad.length && vals.size >= 5 && gradeOk && engine.GUTS_REGEN_MIN < engine.GUTS_REGEN_MAX && engine.GUTS_MOVE === 0 && engine.MOVE_COST_STEP === 5, bad.join(' ') || [...vals].sort().join('・'));
 }
 
 // ⑬ 能力の差の効き方のつまみ(A/B/C。社長が観戦してから決める)

@@ -21,6 +21,7 @@ const ISSA_PICK = opt('--issa', 'hp');
 const CALIBRATE = args.includes('--calibrate');
 const JSON_OUT = opt('--json', '');
 const CUPS_ALL = opt('--cups', '') === 'all'; // 出られる大会に毎ターン出る作戦(大会の並び・賞金を変えたときの、勝率・賞金ランク・ビートPをくらべる用)
+const FORCE_TYPE = opt('--type', '') === '' ? null : Number(opt('--type', ''));
 const NO_EVENTS = args.includes('--no-events'); // ランダムイベント(monhero-success-events.js)を起こさない(くらべる用)
 
 const loaded = load();
@@ -192,7 +193,7 @@ const chooseReact = (s) => {
 const RIVALS = (rng) => [0, 1].map(i => { const r = makeRaised(rng, 'B'); return { kind: i ? 'friend' : 'aid', name: i ? 'フレンドの子' : '助手のマスモン', species: r.species, stats: r.stats }; });
 const playRun = (id, preset, aidLv, species, aid, rematch, carry, bag, rivals) => {
   const rng = SUC.rngOf(id, 'team');
-  let s = SUC.newRun({ id, species, aid, team: PRESETS[preset].team(rng), aidBondLv: aidLv, items: rematch || {}, carry: carry || [], bag: bag || {}, rivals: rivals ? RIVALS(rng) : [] });
+  let s = SUC.newRun({ id, species, aid, ...(FORCE_TYPE !== null ? { type: FORCE_TYPE } : {}), team: PRESETS[preset].team(rng), aidBondLv: aidLv, items: rematch || {}, carry: carry || [], bag: bag || {}, rivals: rivals ? RIVALS(rng) : [] });
   const trace = { loyal60: null, periodSums: {} };
   let guard = 0;
   while (!s.over && guard++ < 200) {
