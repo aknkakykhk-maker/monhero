@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b4779bef01317501
+// source-sha256: 205bdc27c9e3e3f5
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -179521,6 +179521,7 @@ function MsxR3Box({
   const [fav, setFav] = useState([]);
   const [view, setViewState] = useState(msxMmNormView(null));
   const [page, setPage] = useState('gate');
+  const [bubOff, setBubOff] = useState(false);
   const [tab, setTab] = useState('list');
   const [pick, setPick] = useState([]);
   const [byeAsk, setByeAsk] = useState(null);
@@ -179727,11 +179728,16 @@ function MsxR3Box({
       alt: ""
     }), React.createElement("img", {
       className: "mm-aid",
-      src: msxFace(aid, 'happy'),
+      src: msxBody(aid, 'happy'),
       alt: ""
-    }), React.createElement("div", {
-      className: "mm-bub"
-    }, box.mons.length ? '育てたマスモンの様子を見にきたの?' : 'まだマスモンはいないみたい。育成を最後まで終えると、ここに来るよ!')), React.createElement("div", {
+    }), !bubOff ? React.createElement("div", {
+      className: "mm-bub",
+      onClick: () => setBubOff(true),
+      role: "button",
+      "data-msx-mm-bub": true
+    }, box.mons.length ? '育てたマスモンの様子を見にきたの?' : 'まだマスモンはいないみたい。育成を最後まで終えると、ここに来るよ!', React.createElement("small", {
+      className: "mm-bub-x"
+    }, "タップで閉じる")) : null), React.createElement("div", {
       className: "mm-cards"
     }, React.createElement("button", {
       type: "button",
@@ -180229,8 +180235,9 @@ const MSX_MM_CSS = `
 .msx .mm-desk{position:relative;flex:1 1 0;min-height:200px;border-radius:16px;overflow:hidden;background:radial-gradient(circle at 70% 40%,#4c3a8a 0,#1e1a36 70%);border:1px solid #3b3566}
 /* 参考 mm-02 の組み立て: 右に助手の上半身、左に吹き出し。場面の高さに上限を付けて、助手が下に寄って上が大きく空かないようにする */
 .msx .mm-bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 60%;opacity:.85}
-.msx .mm-aid{position:absolute;right:0;bottom:0;height:100%;width:100%;object-fit:contain;object-position:right bottom;filter:drop-shadow(0 4px 8px #0008)}
-.msx .mm-bub{position:absolute;z-index:1;left:10px;top:30%;max-width:62%;background:#fff;color:#1e1b4b;border-radius:14px;padding:10px 12px;font-size:13px;font-weight:900;line-height:1.5;box-shadow:0 4px 0 #0005}
+.msx .mm-aid{position:absolute;right:-4%;bottom:0;height:92%;width:60%;object-fit:contain;object-position:right bottom;filter:drop-shadow(0 4px 8px #0008)}
+.msx .mm-bub small.mm-bub-x{display:block;margin-top:4px;font-size:10px;font-weight:800;color:#6b7280}
+.msx .mm-bub{cursor:pointer;position:absolute;z-index:1;left:10px;top:30%;max-width:62%;background:#fff;color:#1e1b4b;border-radius:14px;padding:10px 12px;font-size:13px;font-weight:900;line-height:1.5;box-shadow:0 4px 0 #0005}
 .msx .mm-cards{display:grid;grid-template-columns:1fr 1fr;gap:10px;flex:none}
 .msx .mm-card{min-height:88px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;border-radius:16px;background:linear-gradient(180deg,#43307a,#2a2052);border:2px solid #fde047;border-bottom-width:5px;padding:8px 6px;text-align:center}
 .msx .mm-card .e{font-size:30px;line-height:1.1}
