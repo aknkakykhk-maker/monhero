@@ -3085,6 +3085,64 @@ const rhythmWatchPosition = (row, nowMs = Date.now()) => {
   const age = Math.max(0, nowMs - row.pAt);
   return { p: row.p + Math.min(age, RHYTHM_WATCH_RUN_ON_MS), waiting: age > RHYTHM_WATCH_RUN_ON_MS, known: true };
 };
+// ---- 観戦している曲を、画面と同じ位置で流す(2026-11-15 r1115-190 社長「観戦中の音楽が自分の待機画面の曲のまま」) ----
+// 観戦の画面が自分で曲を鳴らす。位置は道の絵と同じ「見ている人の位置 − 1.5秒」。0.25秒ごとに確かめ、0.3秒より大きくずれたら合わせ直す。
+// 通信が止まった(待っています)あいだは一時停止。鳴らしているあいだは RHYTHM_WATCH_AUDIO.on() が true になり、本体は待機の曲と試聴を止める
+// (観戦をやめる・演奏が終わると false に戻り、本体が元の曲を流し直す)。演奏する人の端末・通信は何も変えない(届いている pg を読むだけ)
+const RHYTHM_WATCH_AUDIO_TICK_MS = 250;
+const RHYTHM_WATCH_AUDIO_DRIFT_MS = 300;
+const RHYTHM_WATCH_AUDIO = (() => {
+  let on = false;
+  const listeners = new Set();
+  return {
+    on: () => on,
+    set(next) { const v = !!next; if (v === on) return; on = v; listeners.forEach((fn) => { try { fn(on); } catch (_) { /* 画面側の失敗で止めない */ } }); },
+    subscribe(fn) { listeners.add(fn); return () => listeners.delete(fn); },
+  };
+})();
+// 本体(App)が「観戦の曲が鳴っているか」だけを知るための窓。切り替わったときだけ描き直す(1秒ごとの点の更新では描き直さない)
+const useRhythmWatchAudioOn = () => {
+  const [on, setOn] = React.useState(() => RHYTHM_WATCH_AUDIO.on());
+  React.useEffect(() => { setOn(RHYTHM_WATCH_AUDIO.on()); return RHYTHM_WATCH_AUDIO.subscribe(setOn); }, []);
+  return on;
+};
+// 見ている人の、画面に出している曲の位置(ms)。まだ分からないときは null
+const rhythmWatchAudioTarget = () => {
+  const st = RHYTHM_WATCH.view();
+  if (!st || st.phase !== 'playing') return null;
+  const pos = rhythmWatchPosition(st.rows ? st.rows[st.focus] : null);
+  return pos.known ? { ms: pos.p - RHYTHM_WATCH_LANE_DELAY_MS, waiting: pos.waiting } : null;
+};
+const useRhythmWatchAudio = (trackId, round) => {
+  React.useEffect(() => {
+    if (!trackId || typeof Audio_ === 'undefined' || !Audio_ || typeof Audio_.startRhythmTrack !== 'function') return undefined;
+    RHYTHM_WATCH_AUDIO.set(true);
+    let alive = true; let handle = null; let busy = false; let failed = false;
+    const volume = () => { const v = Number(rhythmWatchSettings().bgmVolume); return Number.isFinite(v) ? v : 100; };
+    const step = async () => {
+      if (!alive || busy || failed) return;
+      const t = rhythmWatchAudioTarget();
+      if (!t || t.ms < 0) return;   // 曲がまだ始まっていない(画面は1.5秒おくれ)
+      busy = true;
+      try {
+        if (!handle) {
+          const a = await Audio_.startRhythmTrack(trackId, volume(), { atMs: t.ms });
+          if (!alive) { if (a) a.stop(); return; }
+          if (!a) { failed = true; return; }   // 読めなかった曲は、この回は鳴らさない(無音のまま。待機の曲にも戻さない)
+          handle = a;
+          return;   // 読み込みに時間がかかった分のずれは、次の確かめで合わせる
+        }
+        if (t.waiting) { if (handle.started()) handle.pause(); return; }
+        if (handle.paused()) { await handle.seek(t.ms); return; }
+        if (handle.ended() && t.ms >= handle.durationMs) return;
+        if (Math.abs(handle.songTimeMs() - t.ms) > RHYTHM_WATCH_AUDIO_DRIFT_MS) await handle.seek(t.ms);
+      } catch (_) { failed = true; } finally { busy = false; }
+    };
+    const timer = setInterval(step, RHYTHM_WATCH_AUDIO_TICK_MS);
+    step();
+    return () => { alive = false; clearInterval(timer); if (handle) handle.stop(); handle = null; RHYTHM_WATCH_AUDIO.set(false); };
+  }, [trackId, round]);
+};
 function RhythmWatchLane({ chart, song = null, wide = false, onWaiting = null, onMode = null }) {
   const [flat, setFlat] = React.useState(() => rhythmWatchUseFlat());
   React.useEffect(() => { if (onMode) onMode(!flat); return () => { if (onMode) onMode(false); }; }, [flat]);
@@ -3280,6 +3338,9 @@ function RhythmWatchScreen({ songs = [], resolveIconUrl = null }) {
   const [roadMode, setRoadMode] = React.useState(false);
   const wide = useRhythmWatchWide();
   const focusRow = v && v.rows ? v.rows[v.focus] : null;
+  // 観戦している曲を、画面と同じ位置で流す(r1115-190)。演奏中の回だけ。終わった・やめたら止めて、本体が元の曲へ戻す
+  const audioSong = v && v.phase === 'playing' && v.songId ? songs.find((x) => x.songId === v.songId) : null;
+  useRhythmWatchAudio(audioSong && audioSong.bgmTrackId ? audioSong.bgmTrackId : '', v ? v.round : '');
   if (!v) return null;
   // 待機中のメンバーは、演奏が見つかったときだけ出す(見つからないあいだは、ふつうの待合いのまま)
   if (v.quiet && v.phase !== 'playing' && v.phase !== 'ended') return null;
@@ -3409,7 +3470,6 @@ function RhythmMultiScreen(props) {
 }
 function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList, bestRecords, resolveIconUrl, quickRunInfo = null, onRestartQuickRun = null, onResumeQuickRun = null, onPreviewSong = null, onUserGesture = null, multiLook = 'LIGHT', onChangeMultiLook = null, multiLiveBoard = true, onChangeMultiLiveBoard = null, onBack, onStartPlay, modeSelect = null, onRoomEntered = null, rankingSupport = null, masuMons = [], masuPicker = null, buddyTickets = 0, onUseBuddyTicket = null, onRefundBuddyTicket = null, onOpenMasuBeat = null, onStepAway = null, sessionAssistants = [], guideAssistantId = '', onOpenOptions = null, onCloseOptions = null }) {
   const view = useRhythmMultiView();
-  const watchV = useRhythmWatchView();
   // 助手が選ぶ曲を「無料+持っている曲」にするため、持っている曲を先に読んでおく(2026-11-13。マルチで何かを止めるわけではない)
   useRhythmOwnedSongs();
   // 観戦(2026-11-11): 誘われて入ったら演奏中だった人は、待機のあいだ、その演奏を見られる。入った直後と演奏中の部屋で、静かに「見ています」を送る
@@ -3761,9 +3821,8 @@ function RhythmMultiScreenBody({ profile, songs, difficultiesOf, difficultyList,
   // (2026-10-03・ユーザー報告「難易度設定で音が一回なくなって最初からになる」「一瞬モンスターヒーローが流れる」)
   const previewId = previewPhase === 'select' ? selectPreviewId
     : (previewPhase === 'ready' || previewPhase === 'playing') && room.songId ? room.songId : '';
-  // 観戦中は、見ている演奏の曲を鳴らす(曲の位置は合わせない。試聴と同じ鳴らし方)
-  const watchSongId = watchV && watchV.phase === 'playing' ? watchV.songId : '';
-  React.useEffect(() => { if (onPreviewSong) onPreviewSong(watchSongId || previewId); }, [previewId, watchSongId]);
+  // 観戦中の曲は、観戦の画面が画面と同じ位置で流す(useRhythmWatchAudio・r1115-190)。本体はそのあいだ試聴を止める
+  React.useEffect(() => { if (onPreviewSong) onPreviewSong(previewId); }, [previewId]);
 
   const myProfile = () => ({ name: profile.name, level: profile.level, icon: profile.icon, frame: profile.frame, diff: defaultDiff, bid: friendSelfId });
   const createPrivate = () => { setMessage(''); RHYTHM_MULTI.join(rhythmMultiMakeCode(), myProfile(), 'private'); };
