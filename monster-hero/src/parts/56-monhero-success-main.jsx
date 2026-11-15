@@ -58,7 +58,7 @@ const MSX_COND = Object.freeze({ injury: 'けが', ill: '病気', away: '家出'
 const MSX_ISSA_KEYS = Object.freeze([
   { key: 'stat', icon: '💪', name: 'ステータスアップ', ok: '全能力 +50', ng: '全能力 −10・サボりグセ', line: 'stat' },
   { key: 'hpmax', icon: '🔋', name: '体力上限アップ', ok: '体力の上限 +20', ng: '体力 −20', line: 'cap' },
-  { key: 'hp', icon: '❤️', name: '体力回復', ok: '体力を8割回復', ng: '体力 −30・うつ病', line: 'heal' },
+  { key: 'hp', icon: '❤️', name: '体力回復', ok: '体力を8割回復', ng: '体力 −30・どんより', line: 'heal' },
   { key: 'loyal', icon: '🤝', name: '忠誠度アップ', ok: '忠誠度 +15', ng: '変化なし', line: 'loy' },
   { key: 'pop', icon: '⭐', name: '人気アップ', ok: '人気 +15', ng: '人気 −5', line: 'pop' },
 ]);
@@ -148,7 +148,7 @@ function MsxBand({ s, v, ev, use = 0, stAdd = 0, hpFrom = null, stFrom = null })
 //   結果の画面では、上がる前の長さからゲージが伸び、伸びた分が光る(下がるときは縮み、減った分が赤く消える。2026-11-13 社長)。
 //   「動きを減らす」設定では、はじめから変わったあとの長さで出す
 // 通院の結果のひとこと: 治った物・治らなかった物を名前で書く(「ようすが治った」で済ませない。docs/spec/MONSUC_UI.md の 3)
-const MSX_YOSU_NAME = { sabori: 'サボりグセ', utsu: 'うつ病' };
+const MSX_YOSU_NAME = { sabori: 'サボりグセ', utsu: 'どんより' };
 function msxClinicText(cured, yosu) {
   const nm = (ks) => ks.map((k) => `「${MSX_YOSU_NAME[k] || k}」`).join('と');
   const c = (Array.isArray(cured) ? cured : []).filter((k) => MSX_YOSU_NAME[k]);
@@ -634,7 +634,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
         {isTrain && o.lvUp ? <div className="v-lvup">⬆ トレーニングLvアップ! {MSX_STAT_ICON[o.card.stat]} {MSX_STAT_NAME[o.card.stat]} <b>Lv.{o.trainLv - 1} → Lv.{o.trainLv}</b><small>次から、{MSX_STAT_NAME[o.card.stat]}のトレーニングの基本の伸びが上がる</small></div> : null}
         {isTrain ? <><span className="hd2">{msxTrainIcon(o.card.stat, tlv)} {msxTrainName(o.card.stat, tlv)}({MSX_STAT_NAME[o.card.stat]}のトレーニング)</span><br/>
           {Object.keys(gains).length ? <>{Object.entries(gains).map(([k, g], i) => <span key={k}>{i ? '・' : ''}{MSX_STAT_NAME[k]} <b className="gu">{g > 0 ? `+${g}` : g}</b></span>)}</> : '能力は上がらなかった'}{hpLost ? <><br/><span data-msx-hp-lost>体力が <b style={{ color: '#dc2626' }}>{hpLost}</b> 下がった</span></> : null}</>
-          : o.kind === 'rest' || o.kind === 'play' ? <><span className="hd2">{o.kind === 'rest' ? '🛌 休む' : '🎈 遊ぶ'}</span><br/>{typeof MsxGaugeFx === 'function' ? (hpUp > 0 || stDown > 0 ? '体力とストレスが動いた' : '体力が回復した') : <>{hpUp > 0 ? <>体力 <b className="gu" data-msx-rest-hp>+{hpUp}</b></> : '体力が回復した'}{stDown > 0 ? <>・ストレス <b className="gu">−{stDown}</b></> : null}</>}{(o.cured || []).includes('utsu') ? '。「うつ病」が治った' : ''}</>
+          : o.kind === 'rest' || o.kind === 'play' ? <><span className="hd2">{o.kind === 'rest' ? '🛌 休む' : '🎈 遊ぶ'}</span><br/>{typeof MsxGaugeFx === 'function' ? (hpUp > 0 || stDown > 0 ? '体力とストレスが動いた' : '体力が回復した') : <>{hpUp > 0 ? <>体力 <b className="gu" data-msx-rest-hp>+{hpUp}</b></> : '体力が回復した'}{stDown > 0 ? <>・ストレス <b className="gu">−{stDown}</b></> : null}</>}{(o.cured || []).includes('utsu') ? '。「どんより」が治った' : ''}</>
           : o.kind === 'clinic' ? <><span className="hd2">🏥 通院</span><br/>{msxClinicText(o.cured, s.yosu)}{typeof MsxGaugeFx === 'function' ? null : <><br/>{hpUp > 0 ? <>体力 <b className="gu">+{hpUp}</b></> : '体力も少し回復した'}{stDown > 0 ? <>・ストレス <b className="gu">−{stDown}</b></> : null}</>}</>
           : <><span className="hd2">🛌 休み</span><br/>{MSX_COND[o.cond] || '体調'}のため、このターンは休んだ</>}
         {o.event && typeof MsxTrainEvent !== 'function' ? <><br/><b className="ga">{msxMemberName(evMember)}</b>{o.event.story ? `との出来事 第${o.event.story}話` : 'との小さな出来事'}{evLine ? `: ${evLine.t}` : ''}</> : null}
@@ -840,7 +840,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
           {preOn ? <span className="v-chip hot" data-msx-pre-chip>🏆 {preName} 当日</span> : v.period.key !== 'final' ? <span className="v-chip hot">🏆 期末の大会まで {v.period.left}ターン</span> : <span className="v-chip hot">🏆 ヒーローズファイナル</span>}
           {pkI.state === 'in' ? <span className="v-chip hot" data-msx-peak-chip>🔥 ピーク中 あと{pkI.left}ターン</span> : pkI.state === 'soon' ? <span className="v-chip ylw" data-msx-peak-chip>🔥 もうすぐ伸びどき</span> : null}
           {s.yosu && s.yosu.sabori ? <span className="v-chip bad">😪 ようす: サボりグセ</span> : null}
-          {s.yosu && s.yosu.utsu ? <span className="v-chip bad">😢 ようす: うつ病</span> : null}
+          {s.yosu && s.yosu.utsu ? <span className="v-chip bad">😢 ようす: どんより</span> : null}
           {s.cond ? <span className="v-chip bad">🤕 {MSX_COND[s.cond.kind]}(あと{s.cond.left})</span> : null}
           {SUC.events && typeof SUC.events.buffs === 'function' ? SUC.events.buffs(s).slice(0, 2).map((b) => <span key={b.k} className="v-chip ylw">{cardIconNode(b.icon, 14)} {b.name}</span>) : null}</div>
         <span className="v-nm">{run.nick}<small>方針: {MSX_POLICY_SCALE[Math.max(-3, Math.min(3, s.pol || 0)) + 3]}</small></span>

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 8f3dcc0b09ad93ff
+// generated-sha256: ee0c55dbd0ed7d2c
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -83669,7 +83669,7 @@ const msxBirthEnsureCss = () => {
 //   「動きを減らす」設定(msxFxCalm)と prefers-reduced-motion では、溜めを飛ばして静かな形で結果を出す
 
 const MSX_IS_STEPS = Object.freeze([1800, 420]); // 0 溜め → 1 閃光/煙 → 2 結果(ミリ秒)
-const MSX_IS_YOSU = Object.freeze({ sabori: '😪 サボりグセ', utsu: '😞 うつ病', kega: '🤕 けが', himan: '🍖 肥満', kaze: '🤧 かぜ' });
+const MSX_IS_YOSU = Object.freeze({ sabori: '😪 サボりグセ', utsu: '😞 どんより', kega: '🤕 けが', himan: '🍖 肥満', kaze: '🤧 かぜ' });
 const msxIsCalm = () => (typeof msxFxCalm === 'function' ? Boolean(msxFxCalm()) : false);
 // 吹き出しは言葉の切れ目で折る(2026-11-14 社長の指摘「イッサ博／士」「どうなるか／な〜」。41-screen-ui の jaWrap)
 const msxIsJw = (t) => (typeof jaWrap === 'function' ? jaWrap(t) : t);
@@ -83692,7 +83692,7 @@ function msxIssaGainList(before, s, SUC) {
 // 選ぶ前の札: 当たったら実際に増える忠誠度(甘え度 +8・恐れ度 +7 のうち、上限50までの分。芯の issa と同じ分け方)
 function msxIssaLoyalAhead(s, SUC) {
   const half = (SUC && SUC.LOYAL && SUC.LOYAL.half) || 50;
-  if (s && s.yosu && s.yosu.utsu) return '忠誠度は動かない(うつ病のあいだ)';
+  if (s && s.yosu && s.yosu.utsu) return '忠誠度は動かない(どんよりのあいだ)';
   const n = Math.max(0, Math.min(8, half - (Number(s && s.ama) || 0))) + Math.max(0, Math.min(7, half - (Number(s && s.fear) || 0)));
   return n > 0 ? `忠誠度 +${n}` : '忠誠度はもう上限';
 }
@@ -88295,10 +88295,11 @@ const MSX_CSS = `
 @keyframes rx-pop{0%{transform:scale(.3);opacity:0}70%{transform:scale(1.12);opacity:1}100%{transform:scale(1);opacity:1}}
 .msx .v-body2.rx-hop{animation:rx-hop .9s ease-out 1}.msx .v-body2.rx-sag{animation:rx-sag .8s ease-out 1 forwards}
 .msx .rx-bub{position:absolute;left:6%;top:26%;background:#fff;color:#1e1b4b;border:2px solid #f9a8d4;border-radius:14px;padding:4px 10px;font-size:12px;font-weight:900;animation:rx-pop .4s ease-out .25s both;white-space:nowrap;z-index:3}
-.msx .v-ga b{font-size:12.5px;width:46px;flex:none;text-align:right}.msx .v-ga b small{font-size:10px;color:#cbd5e1;font-weight:700}
+.msx .v-ga b{font-size:12.5px;width:50px;flex:none;text-align:right}.msx .v-ga b small{font-size:10px;color:#cbd5e1;font-weight:700}
 .msx .v-ga b small.cap{color:#fde047}
-/* 増減の字(−16・+4)は棒の長さを変えない: 数の左に重ねて出す(r1115-083。どの画面でも棒の長さ・位置は同じ) */
-.msx .v-ga em{position:absolute;right:50px;top:50%;transform:translateY(-50%);z-index:2;pointer-events:none;font-style:normal;font-size:10.5px;color:#fca5a5;text-shadow:0 0 3px #0b0920,0 0 3px #0b0920,0 0 2px #0b0920}.msx .v-ga em.pl{color:#f0abfc}.msx .v-ga em.hl{color:#86efac}
+/* 増減の字(−16・+4)は棒の長さを変えない: 棒と数のあいだにいつも空けてある枠に出す(r1115-083 どの画面でも棒の長さ・位置は同じ・r1115-207 L1 棒の端と「100/100」に重ねない) */
+.msx .v-ga .tr{margin-right:26px}
+.msx .v-ga em{position:absolute;right:54px;top:50%;transform:translateY(-50%);z-index:2;pointer-events:none;font-style:normal;font-size:10.5px;color:#fca5a5;text-shadow:0 0 3px #0b0920,0 0 3px #0b0920,0 0 2px #0b0920}.msx .v-ga em.pl{color:#f0abfc}.msx .v-ga em.hl{color:#86efac}
 .msx .v-scene{flex:1 1 0;min-height:0;position:relative;border-radius:16px;border:1px solid #4a4380;overflow:hidden;margin-top:6px;background:#0f0d24}
 .msx .v-scene .bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 78%}
 .msx .v-scene .sh{position:absolute;inset:0;background:linear-gradient(180deg,#1d174055 0,#1d174000 26%,#0f0d2400 62%,#0f0d24cc 100%)}
@@ -88606,7 +88607,7 @@ const MSX_CSS = `
   .msx .v-band{padding:5px 6px}
   .msx .v-turn .n b{font-size:24px}.msx .v-turn .ph{font-size:10px;padding:2px 5px}
   .msx .v-pow b{font-size:14px}.msx .v-pow .rk.big{height:24px;min-width:24px;font-size:14px}
-  .msx .v-ga{font-size:10px;gap:3px}.msx .v-ga b{font-size:11px;width:41px}.msx .v-ga em{right:45px}.msx .v-ga .tr{height:11px}
+  .msx .v-ga{font-size:10px;gap:3px}.msx .v-ga b{font-size:11px;width:45px}.msx .v-ga em{right:48px}.msx .v-ga .tr{margin-right:24px}.msx .v-ga .tr{height:11px}
   .msx .v-st b{font-size:12px}.msx .v-st small{font-size:10px}.msx .v-st em{font-size:10px;height:12px;line-height:12px}.msx .v-st div.up.main em{font-size:11px}
   .msx .v-p{font-size:11px;padding:4px 1px 3px;border-radius:12px}.msx .v-p .e{font-size:16px}.msx .v-p small{font-size:10px}.msx .v-p.main{font-size:14px}
   .msx .v-ft{height:34px;padding:0 7px;gap:3px}.msx .v-ft span,.msx .v-ft button{font-size:10px;padding:4px 1px}.msx .v-ft span.go,.msx .v-ft span.go2,.msx .v-ft button.go,.msx .v-ft button.go2{font-size:11.5px}
@@ -88822,7 +88823,8 @@ const MSX_CSS = `
 .msx .v-ileg{display:flex;gap:10px;font-size:10px;font-weight:800;color:#cbd5e1;margin-top:5px;white-space:nowrap}
 .msx .v-ileg b{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:3px;vertical-align:-1px}.msx .v-ileg .sw1{background:#475569}.msx .v-ileg .sw2{background:#38bdf8}
 .msx .v-sum .v-ics{display:flex;align-items:center;gap:3px;font-size:10px}.msx .v-sum .v-ics .v-icw{width:20px;height:20px}
-.msx .v-cup .rvi{position:absolute;left:-6px;top:-9px;display:flex;align-items:center;gap:3px;background:linear-gradient(90deg,#ef4444,#fb923c);border-radius:99px;padding:1px 8px 1px 1px;font-size:10px;font-weight:900;line-height:1.6;white-space:nowrap}
+.msx .v-cups:has(>.v-cup:first-child .rvi){padding-top:9px} /* いちばん上の札がライバルでも印が枠で切れない(r1115-207 N3) */
+.msx .v-cup .rvi{position:absolute;left:4px;top:-9px;display:flex;align-items:center;gap:3px;background:linear-gradient(90deg,#ef4444,#fb923c);border-radius:99px;padding:1px 8px 1px 1px;font-size:10px;font-weight:900;line-height:1.6;white-space:nowrap}
 .msx .v-cup .rvi img{width:20px;height:20px;border-radius:50%;object-fit:cover;object-position:50% 20%;background:#1e1a36;border:1.5px solid #fff}
 .msx .v-cup .rvb{background:#3b2f0b;border:1px solid #fde047;color:#fde047}
 /* ---- 足したもの(ゲームの中で要った分) ---- */
@@ -89812,7 +89814,7 @@ const msxItemFx = (id) => {
   if (it.issaSure) return 'その回の博士の実験がかならず成功';
   if (it.hpMax) return `体力の上限 +${it.hpMax}`;
   if (it.hpFull) return '体力を上限まで回復';
-  if (it.cure) return `悪いようす(サボり癖・うつなど)を治し、体力を上限の${pc(it.hp || 0)}回復`;
+  if (it.cure) return `悪いようす(サボりグセ・どんよりなど)を治し、体力を上限の${pc(it.hp || 0)}回復`;
   if (it.loyal) return `忠誠度 +${it.loyal}`;
   if (it.ama || it.fear) return `甘え度 +${it.ama || 0}・恐れ度 +${it.fear || 0}(忠誠度 +${(it.ama || 0) + (it.fear || 0)})`;
   if (it.gives) { const g = it.gives; return Object.keys(g).map((k) => `${(S.ITEMS[k] && S.ITEMS[k].name) || k}${g[k]}個(${msxItemFx(k)})`).join('・'); }
@@ -90781,7 +90783,7 @@ const MSX_COND = Object.freeze({ injury: 'けが', ill: '病気', away: '家出'
 const MSX_ISSA_KEYS = Object.freeze([
   { key: 'stat', icon: '💪', name: 'ステータスアップ', ok: '全能力 +50', ng: '全能力 −10・サボりグセ', line: 'stat' },
   { key: 'hpmax', icon: '🔋', name: '体力上限アップ', ok: '体力の上限 +20', ng: '体力 −20', line: 'cap' },
-  { key: 'hp', icon: '❤️', name: '体力回復', ok: '体力を8割回復', ng: '体力 −30・うつ病', line: 'heal' },
+  { key: 'hp', icon: '❤️', name: '体力回復', ok: '体力を8割回復', ng: '体力 −30・どんより', line: 'heal' },
   { key: 'loyal', icon: '🤝', name: '忠誠度アップ', ok: '忠誠度 +15', ng: '変化なし', line: 'loy' },
   { key: 'pop', icon: '⭐', name: '人気アップ', ok: '人気 +15', ng: '人気 −5', line: 'pop' },
 ]);
@@ -90871,7 +90873,7 @@ function MsxBand({ s, v, ev, use = 0, stAdd = 0, hpFrom = null, stFrom = null })
 //   結果の画面では、上がる前の長さからゲージが伸び、伸びた分が光る(下がるときは縮み、減った分が赤く消える。2026-11-13 社長)。
 //   「動きを減らす」設定では、はじめから変わったあとの長さで出す
 // 通院の結果のひとこと: 治った物・治らなかった物を名前で書く(「ようすが治った」で済ませない。docs/spec/MONSUC_UI.md の 3)
-const MSX_YOSU_NAME = { sabori: 'サボりグセ', utsu: 'うつ病' };
+const MSX_YOSU_NAME = { sabori: 'サボりグセ', utsu: 'どんより' };
 function msxClinicText(cured, yosu) {
   const nm = (ks) => ks.map((k) => `「${MSX_YOSU_NAME[k] || k}」`).join('と');
   const c = (Array.isArray(cured) ? cured : []).filter((k) => MSX_YOSU_NAME[k]);
@@ -91357,7 +91359,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
         {isTrain && o.lvUp ? <div className="v-lvup">⬆ トレーニングLvアップ! {MSX_STAT_ICON[o.card.stat]} {MSX_STAT_NAME[o.card.stat]} <b>Lv.{o.trainLv - 1} → Lv.{o.trainLv}</b><small>次から、{MSX_STAT_NAME[o.card.stat]}のトレーニングの基本の伸びが上がる</small></div> : null}
         {isTrain ? <><span className="hd2">{msxTrainIcon(o.card.stat, tlv)} {msxTrainName(o.card.stat, tlv)}({MSX_STAT_NAME[o.card.stat]}のトレーニング)</span><br/>
           {Object.keys(gains).length ? <>{Object.entries(gains).map(([k, g], i) => <span key={k}>{i ? '・' : ''}{MSX_STAT_NAME[k]} <b className="gu">{g > 0 ? `+${g}` : g}</b></span>)}</> : '能力は上がらなかった'}{hpLost ? <><br/><span data-msx-hp-lost>体力が <b style={{ color: '#dc2626' }}>{hpLost}</b> 下がった</span></> : null}</>
-          : o.kind === 'rest' || o.kind === 'play' ? <><span className="hd2">{o.kind === 'rest' ? '🛌 休む' : '🎈 遊ぶ'}</span><br/>{typeof MsxGaugeFx === 'function' ? (hpUp > 0 || stDown > 0 ? '体力とストレスが動いた' : '体力が回復した') : <>{hpUp > 0 ? <>体力 <b className="gu" data-msx-rest-hp>+{hpUp}</b></> : '体力が回復した'}{stDown > 0 ? <>・ストレス <b className="gu">−{stDown}</b></> : null}</>}{(o.cured || []).includes('utsu') ? '。「うつ病」が治った' : ''}</>
+          : o.kind === 'rest' || o.kind === 'play' ? <><span className="hd2">{o.kind === 'rest' ? '🛌 休む' : '🎈 遊ぶ'}</span><br/>{typeof MsxGaugeFx === 'function' ? (hpUp > 0 || stDown > 0 ? '体力とストレスが動いた' : '体力が回復した') : <>{hpUp > 0 ? <>体力 <b className="gu" data-msx-rest-hp>+{hpUp}</b></> : '体力が回復した'}{stDown > 0 ? <>・ストレス <b className="gu">−{stDown}</b></> : null}</>}{(o.cured || []).includes('utsu') ? '。「どんより」が治った' : ''}</>
           : o.kind === 'clinic' ? <><span className="hd2">🏥 通院</span><br/>{msxClinicText(o.cured, s.yosu)}{typeof MsxGaugeFx === 'function' ? null : <><br/>{hpUp > 0 ? <>体力 <b className="gu">+{hpUp}</b></> : '体力も少し回復した'}{stDown > 0 ? <>・ストレス <b className="gu">−{stDown}</b></> : null}</>}</>
           : <><span className="hd2">🛌 休み</span><br/>{MSX_COND[o.cond] || '体調'}のため、このターンは休んだ</>}
         {o.event && typeof MsxTrainEvent !== 'function' ? <><br/><b className="ga">{msxMemberName(evMember)}</b>{o.event.story ? `との出来事 第${o.event.story}話` : 'との小さな出来事'}{evLine ? `: ${evLine.t}` : ''}</> : null}
@@ -91563,7 +91565,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
           {preOn ? <span className="v-chip hot" data-msx-pre-chip>🏆 {preName} 当日</span> : v.period.key !== 'final' ? <span className="v-chip hot">🏆 期末の大会まで {v.period.left}ターン</span> : <span className="v-chip hot">🏆 ヒーローズファイナル</span>}
           {pkI.state === 'in' ? <span className="v-chip hot" data-msx-peak-chip>🔥 ピーク中 あと{pkI.left}ターン</span> : pkI.state === 'soon' ? <span className="v-chip ylw" data-msx-peak-chip>🔥 もうすぐ伸びどき</span> : null}
           {s.yosu && s.yosu.sabori ? <span className="v-chip bad">😪 ようす: サボりグセ</span> : null}
-          {s.yosu && s.yosu.utsu ? <span className="v-chip bad">😢 ようす: うつ病</span> : null}
+          {s.yosu && s.yosu.utsu ? <span className="v-chip bad">😢 ようす: どんより</span> : null}
           {s.cond ? <span className="v-chip bad">🤕 {MSX_COND[s.cond.kind]}(あと{s.cond.left})</span> : null}
           {SUC.events && typeof SUC.events.buffs === 'function' ? SUC.events.buffs(s).slice(0, 2).map((b) => <span key={b.k} className="v-chip ylw">{cardIconNode(b.icon, 14)} {b.name}</span>) : null}</div>
         <span className="v-nm">{run.nick}<small>方針: {MSX_POLICY_SCALE[Math.max(-3, Math.min(3, s.pol || 0)) + 3]}</small></span>
