@@ -409,7 +409,8 @@ const MSX_CSS = `
 .msx .v-a3.got{border-color:#fbbf24;background:#33270f}.msx .v-a3.dim{opacity:.45}
 .msx .v-a3 .h{display:flex;align-items:center;gap:5px;text-align:left}.msx .v-a3 .nm{flex:1 1 auto;min-width:0;font-size:12.5px;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .msx .v-a3 .rf{flex:0 0 auto;display:inline-block;width:auto;font-size:9px;font-weight:800;padding:1px 6px;border-radius:8px;background:#1d4ed8;color:#fff}.msx .v-a3 .rf.o{background:#7e22ce}
-.msx .r3 .r3-bar.sc{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}.msx .r3 .r3-bar.sc::-webkit-scrollbar{display:none}.msx .r3 .r3-bar.sc .r3-chip{flex:0 0 auto}
+/* 横に流れる札の列は横にだけ動く(2026-11-15 社長 r1115-094「上のタブが上下にも動く」): 縦は隠す・指は横だけ・高さは中身に合わせる */
+.msx .r3 .r3-bar.sc{flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;touch-action:pan-x;overscroll-behavior-x:contain;align-items:center;flex:0 0 auto;scrollbar-width:none;padding:4px 0;margin-top:2px;margin-bottom:-4px}/* 上下 4px = 札の押せる広さ(button::after 44px)が列の中に収まる分。外の間隔は前と同じ */.msx .r3 .r3-bar.sc::-webkit-scrollbar{display:none}.msx .r3 .r3-bar.sc .r3-chip{flex:0 0 auto}
 .msx .v-a3 .val{flex:0 0 auto;min-width:54px;text-align:right;font-size:14px;color:#fde68a}
 .msx .v-a3 .ex{font-size:10px;color:#cbd5e1;font-weight:700;text-align:left;margin:2px 0 4px;line-height:1.35}
 .msx .v-a3 .ctl{display:flex;align-items:center;gap:6px}.msx .v-a3 .ctl button{flex:0 0 34px;height:28px;border-radius:8px;border:1px solid #6d5fa6;background:#2f2550;color:#fff;font-size:16px;font-weight:900;text-align:center;padding:0}
@@ -874,6 +875,12 @@ const MSX_CSS = `
 .msx .v-hm-lead small{display:block;font-size:10.5px;font-weight:700;color:#cbd5e1}
 .msx .v-hm-new{display:block;width:100%;min-height:44px;margin-top:7px;border-radius:99px;padding:8px 10px;font-size:14px;font-weight:900;text-align:center;background:#1e1a36;border:1.5px solid #f9a8d4;color:#fff;white-space:normal}
 .msx .v-big.v-hm-new{font-size:18px;padding:14px 10px;border:0;background:linear-gradient(90deg,#f472b6,#fb923c)}
+.msx .v-hm-tiles.t4{grid-auto-flow:row;grid-template-columns:1fr 1fr}
+.msx .msx-bm-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px}
+.msx .msx-bm{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-width:0;border-radius:14px;padding:8px 4px;background:#1e1a36;border:1.5px solid #64748b;border-bottom-width:3px;line-height:1.25;text-align:center}
+.msx .msx-bm img{width:100%;max-width:84px;aspect-ratio:1;border-radius:11px;object-fit:cover;background:#0f172a;border:2px solid #475569}
+.msx .msx-bm b{font-size:12px;font-weight:900;max-width:100%;word-break:keep-all}
+.msx .msx-bm small{font-size:10px;font-weight:800;color:#fde68a}
 .msx .v-hm-tiles{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:7px;margin-top:8px}
 .msx .v-hm-tile{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:62px;min-width:0;border-radius:14px;padding:5px 3px;background:#1e1a36;border:1.5px solid #64748b;border-bottom-width:3px;line-height:1.2}
 .msx .v-hm-tile .e{font-size:22px;line-height:1.1}

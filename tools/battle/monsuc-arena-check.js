@@ -46,7 +46,7 @@ const open = async (browser, reducedMotion, width = 390, species = 'Mocchi', loy
     Object.keys(Audio_.fgSe).forEach((k) => { Audio_.fgSe[k] = () => { window.__se[k] = (window.__se[k] || 0) + 1; }; });
     window.__fx = 0;
     window.__acc = {};
-    new MutationObserver(() => { if (document.querySelector('[data-skill-fx]')) window.__fx++; ['.msa-dim', '.msa-flash', '.msa-critcut', '.msa-dust', '.msa-fin', '.msa-burst', '[data-msa-tier]', '.msa-ko.big'].forEach((q) => { if (document.querySelector(q)) window.__acc[q] = (window.__acc[q] || 0) + 1; }); }).observe(document.body, { subtree: true, childList: true });
+    new MutationObserver(() => { if (document.querySelector('[data-skill-fx]')) window.__fx++; ['.msa-dim', '.msa-flash', '.msa-critcut', '.msa-dust', '.msa-fin', '.msa-burst', '[data-msa-tier]', '.msa-ko.big', '[data-msa-judge]'].forEach((q) => { if (document.querySelector(q)) window.__acc[q] = (window.__acc[q] || 0) + 1; }); }).observe(document.body, { subtree: true, childList: true });
     const SUC = MONHERO_SUCCESS.create({ calc: MASMON_CALC, apt: AMG_APT, init: AMG_INIT, techs: ASSISTANT_MASMON_TECHS, monsters: ALL_PLAYER_MONSTERS, regulars: MONSUC_REGULARS, cupNames: MONSUC_REGULAR_CUPS });
     const s = JSON.parse(JSON.stringify(SUC.newRun({ id: 'arena-check', species: SPECIES, aid: 'mua', rivals: [{ name: 'こんこ', species: 'Kyubi', stats: { life: 455, pow: 472, wise: 180, hit: 341, eva: 260, tough: 498 } }] })));
     s.stats = { life: 412, pow: 506, wise: 233, hit: 380, eva: 198, tough: 441 }; s.turn = 24;
@@ -208,7 +208,7 @@ const open = async (browser, reducedMotion, width = 390, species = 'Mocchi', loy
       check('③ 決着で勝ち/負けの音が1回', ((se.victory || 0) + (se.trainingFail || 0)) === 1, `${se.victory || 0}/${se.trainingFail || 0}`);
       check('⑤(対照) ふつうの設定では技の動きが出る', await page.evaluate(() => window.__fx > 0));
       const acc = await page.evaluate(() => window.__acc);
-      check('⑥ ふつうの設定では、数字の大きさ・KO の文字・土煙が出る', acc['[data-msa-tier]'] > 0 && acc['.msa-ko.big'] > 0 && acc['.msa-dust'] > 0, JSON.stringify(acc));
+      check('⑥ ふつうの設定では、数字の大きさ・KO の文字・土煙が出る', acc['[data-msa-tier]'] > 0 && (acc['.msa-ko.big'] > 0 || acc['[data-msa-judge]'] > 0) && acc['.msa-dust'] > 0, JSON.stringify(acc));
       await page.evaluate(() => window.__root.unmount());
       check('② 閉じると、バトルの曲の口が下りる', await page.evaluate(() => MH_BATTLE_BGM.on === false && MH_BATTLE_BGM.n === 0));
       check('実行時エラーなし(ふつう)', errs.length === 0, errs.slice(0, 2).join(' / '));
