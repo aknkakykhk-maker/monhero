@@ -240,6 +240,7 @@ const RELEASED_MARKERS=Object.freeze({
   midnight_studio_short:'midnight-studio-short-v3',
   hopes_and_dreams:'hopes-and-dreams-v3',
   hopes_and_dreams_short:'hopes-and-dreams-short-v3',
+  sparkling_pink_overture:'sparkling-pink-overture-v3',
   megalovania_sans:'megalovania-sans-v3',
   megalovania_smash:'megalovania-smash-v3',
 });
@@ -315,6 +316,7 @@ const RELEASED_TRACKS=Object.freeze({
   midnight_studio_short:'midnight_studio_short',
   hopes_and_dreams:'hopes_and_dreams',
   hopes_and_dreams_short:'hopes_and_dreams_short',
+  sparkling_pink_overture:'sparkling_pink_overture',
   megalovania_sans:'megalovania_sans',
   megalovania_smash:'megalovania_smash',
 });

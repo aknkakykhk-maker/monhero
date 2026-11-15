@@ -12584,6 +12584,8 @@ const SPARKLING_PINK_STORY = [
 ];
 const SPARKLING_PINK_STORY_CALLS = { mua: 'ひめちん', kiki: 'みゅあちん／ももさん／ドラさん', momosuke: 'ききちゃん', dra: '靴下さん', atsu: 'きき', kyuko: 'ききさん', sorashido: 'ききさん', erubin: 'ききさん' };
 const EVENT_REPLAYS = [
+  // ききが初めて作った曲「Sparkling Pink Overture」のお話(2026-11-15 社長 r1115-102)。更新のあとに初めて HOME に着いたときに1回流れ(ほかのお話と同じ入口)、あとは回想から読める。台本は SPARKLING_PINK_STORY(助手部ココロ2)
+  { id: 'sparkling_pink_kiki_story', date: '2026-11-15 12:00', title: 'はじめての曲 ～Sparkling Pink Overture～', script: SPARKLING_PINK_STORY, calls: SPARKLING_PINK_STORY_CALLS, unlockedKey: 'sparklingPinkStorySeen', group: 'kiki_song' },
   // ぱんぷきん×ジャックのストーリー(2026-10-04・台本は docs/spec/RAID_JACK_STORY.md)。**公開するまでは回想にも出さない**(releaseFlag)。
   // 第1部(halloween_night_2026_part1)は時刻で流れる既存のもの。ここは第1.5部から終章まで。
   //   第1.5部=レイド開始(公開後に初めてHOMEを開いたとき) / 第2〜6部=段階を倒したあと / 終章=期間終了後
