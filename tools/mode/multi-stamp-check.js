@@ -131,19 +131,19 @@ const FAKE_WS = () => {
       const lines = mk({ f: 'a.kiki.happy', w: 'x', t: 'い\nく\tぞ' });
       const empty = mk({ f: 'a.kiki.happy', w: 'x', t: '  ' });
       const keep = mk({ f: 'a.kiki.happy', w: 'w02' });
-      const rLong = rhythmMultiCleanMessage({ t: 'chat', id: 'p1', name: 'た', text: '一二三四五六七八九十', cid: 'c9', sf: 'a.kiki.happy', sw: 'x' });
+      const rLong = rhythmMultiCleanMessage({ t: 'chat', id: 'p1', name: 'た', text: '一二三四五六七八九十あい', cid: 'c9', sf: 'a.kiki.happy', sw: 'x' });
       const rOld = multiStampCleanWord('x');
       const store = multiStampToStore({ owned: [], slots: [{ f: 'a.kiki.happy', w: 'x', t: 'いくぞ！' }, { f: 'a.kiki.happy', w: 'w02' }] });
-      const cX = cardPvpCleanMessage({ t: 'chat', from: 'f', x: '一二三四五六七八九十', sf: 'a.dra.happy', sw: 'x' });
+      const cX = cardPvpCleanMessage({ t: 'chat', from: 'f', x: '一二三四五六七八九十あい', sf: 'a.dra.happy', sw: 'x' });
       return { long: long && long.t, lines: lines && lines.t, empty, keep: keep && !('t' in keep), rLong: rLong && rLong.text, sw: rLong && rLong.sw, rOld, store: JSON.stringify(store.slots), cX: cX && cX.x };
     });
-    check('自由入力: 全角8文字までに切る', free.long === '12345678', free.long);
+    check('自由入力: 全角10文字までに切る', free.long === '1234567890', free.long);
     check('自由入力: 改行・タブは1行の空白にする', free.lines === 'い く ぞ', free.lines);
     check('自由入力: 空の文字は枠に入らない', free.empty === null);
     check('自由入力: 決まった言葉の枠は今までの形のまま(t を持たない)', free.keep);
-    check('自由入力: 受け取った文字は8文字に切って番号 x のまま出す(長い文字を札に出さない)', free.rLong === '一二三四五六七八' && free.sw === 'x', `${free.rLong} / ${free.sw}`);
+    check('自由入力: 受け取った文字は10文字に切って番号 x のまま出す(長い文字を札に出さない)', free.rLong === '一二三四五六七八九十' && free.sw === 'x', `${free.rLong} / ${free.sw}`);
     check('自由入力: 保存の形(自由入力の枠だけ t を持つ)', free.store === '[{"f":"a.kiki.happy","w":"x","t":"いくぞ！"},{"f":"a.kiki.happy","w":"w02"}]', free.store);
-    check('自由入力: カードの知らせも8文字に切る', free.cX === '一二三四五六七八', free.cX);
+    check('自由入力: カードの知らせも10文字に切る', free.cX === '一二三四五六七八九十', free.cX);
     console.log(`  全部そろえるビートP: ${pure.all.toLocaleString()}P`);
     // 絵が実際に読めるか(道が合っているか)
     const broken = await A.evaluate(async () => {
@@ -276,7 +276,7 @@ const FAKE_WS = () => {
     await A.locator('[data-multi-stamp-slot="6"]').click();
     await A.locator('[data-multi-stamp-free-input]').fill('いくぞ！はやく来て、みんな');
     const typed = await A.locator('[data-multi-stamp-free-input]').inputValue();
-    check('自由入力: 入力欄は全角8文字までしか入らない', typed.length === 8, `${typed.length}文字`);
+    check('自由入力: 入力欄は全角10文字までしか入らない', typed.length === 10, `${typed.length}文字`);
     if (SHOT) for (const [nm, w, h] of [['390', 390, 844], ['320', 320, 568], ['yoko844', 844, 390]]) { await A.setViewportSize({ width: w, height: h }); await A.waitForTimeout(500); await A.locator('[data-multi-stamp-free]').scrollIntoViewIfNeeded().catch(() => {}); await A.waitForTimeout(200); await A.screenshot({ path: path.join(SHOT, `free-editor-${nm}.png`) }); }
     if (SHOT) await A.setViewportSize({ width: 390, height: 844 });
     await A.locator('[data-multi-stamp-put]').click();
@@ -289,7 +289,7 @@ const FAKE_WS = () => {
     check('自由入力: 打った文字のスタンプが相手に届く', gotFree);
     const freeBubble = await B.evaluate((t) => { const b = document.querySelector('[data-rhythm-multi-stamp-bubble] b'); return b ? b.textContent === t : false; }, typed);
     check('自由入力: 相手の席の上に、打った文字のスタンプが出る', freeBubble);
-    // 設定できる最大の文字数(全角8文字)の言葉が、選ぶ一覧・チャットの吹き出しの札で切れずに全部見える(2026-11-15 r1115-116)
+    // 設定できる最大の文字数(全角10文字)の言葉が、選ぶ一覧・チャットの吹き出しの札で切れずに全部見える(2026-11-15 r1115-116)
     const clipOf = (pg) => pg.evaluate(() => { const bad = []; let n = 0; document.querySelectorAll('[data-multi-stamp-word-text]').forEach((el) => { n++; const cs = getComputedStyle(el); const lh = parseFloat(cs.lineHeight) || 12; if (el.scrollHeight > el.clientHeight + 1 || el.scrollWidth > el.clientWidth + 1 || el.clientHeight > lh * 2.2) bad.push(el.textContent); }); return { n, bad }; });
     const clipA = await clipOf(A);
     check('言葉が切れずに全部見える: 選ぶ一覧・チャットの札(最大文字数を含む)', clipA.n > 0 && clipA.bad.length === 0, JSON.stringify(clipA));
