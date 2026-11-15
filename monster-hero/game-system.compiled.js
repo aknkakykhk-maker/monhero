@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d8cda0de4ffbedfe
+// source-sha256: c892829d3dcd0c31
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -10211,6 +10211,9 @@ const SuccessSound = (() => {
   let beforeKey = null;
   let beforeQuiet = false;
   let curBgm = null;
+  let onceKey = null;
+  let onceAt = 0;
+  let laterTimer = null;
   const audio = () => typeof Audio_ !== 'undefined' ? Audio_ : null;
   const knownTrack = id => !!(id && typeof BGM_TRACK_BY_ID !== 'undefined' && BGM_TRACK_BY_ID[id]);
   const tableOk = () => typeof successSoundBgm === 'function' && typeof successSoundSe === 'function';
@@ -10236,6 +10239,8 @@ const SuccessSound = (() => {
     if (!active) return;
     active = false;
     epoch += 1;
+    clearLater();
+    onceKey = null;
     if (!a) {
       curBgm = null;
       return;
@@ -10263,10 +10268,24 @@ const SuccessSound = (() => {
     } catch (e) {}
     if (key === curBgm && now === key) return key;
     curBgm = key;
+    clearLater();
+    const t = typeof BGM_TRACK_BY_ID !== 'undefined' ? BGM_TRACK_BY_ID[key] : null;
+    if (t && t.loop === false) {
+      onceKey = key;
+      onceAt = Date.now();
+    } else {
+      onceKey = null;
+    }
     try {
       a.playBGM(key);
     } catch (e) {}
     return key;
+  };
+  const clearLater = () => {
+    if (laterTimer) {
+      clearTimeout(laterTimer);
+      laterTimer = null;
+    }
   };
   const keep = (sceneId, season) => {
     const a = audio();
@@ -10309,6 +10328,26 @@ const SuccessSound = (() => {
     }
     return name;
   };
+  const ONCE_MS = 7200;
+  const sceneAfterOnce = (sceneId, opts = null) => {
+    if (!active) enter();
+    clearLater();
+    const a = audio();
+    let now = null;
+    try {
+      now = a && a.currentBgmKey ? a.currentBgmKey() : null;
+    } catch (e) {}
+    const rest = onceKey && now === onceKey ? onceAt + ONCE_MS - Date.now() : 0;
+    if (!(rest > 0)) {
+      scene(sceneId, opts);
+      return;
+    }
+    const my = epoch;
+    laterTimer = setTimeout(() => {
+      laterTimer = null;
+      if (active && my === epoch) scene(sceneId, opts);
+    }, Math.min(rest, ONCE_MS));
+  };
   const scene = (sceneId, opts = null) => {
     if (!active) enter();
     const season = opts && opts.season;
@@ -10319,6 +10358,7 @@ const SuccessSound = (() => {
     enter,
     leave,
     scene,
+    sceneAfterOnce,
     bgm,
     keep,
     se,
@@ -10333,6 +10373,16 @@ const useSuccessScene = (sceneId, opts = null) => {
     SuccessSound.scene(sceneId, {
       season,
       delayMs
+    });
+    return undefined;
+  }, [sceneId, season]);
+};
+const useSuccessSceneAfterOnce = (sceneId, opts = null) => {
+  const season = opts && opts.season;
+  useEffect(() => {
+    if (!sceneId) return undefined;
+    SuccessSound.sceneAfterOnce(sceneId, {
+      season
     });
     return undefined;
   }, [sceneId, season]);
@@ -169219,6 +169269,13 @@ const MSX_CSS = `
 .msx .v-tr.tag .o{animation:msx-glow 1.6s ease-in-out infinite}
 .msx-fade{animation:msx-fadein .18s ease-out}
 /* 社長「育成中のメイン・トレーニングの画面は、モンスターもっと小さくしてぴょこぴょこ動く」(2026-11-12)。いまの約7割 */
+.msx .v-scene.home .msx-roam{position:absolute;inset:0;pointer-events:none;transform-origin:50% 72%;animation:msx-roam-mv 28s linear infinite;will-change:transform}
+.msx .v-scene.home .msx-roam-f{position:absolute;inset:0;transform-origin:50% 72%;animation:msx-roam-fl 28s steps(1,end) infinite}
+.msx .v-scene.home .msx-roam-h{position:absolute;inset:0;animation:msx-roam-hp 28s linear infinite}
+@keyframes msx-roam-mv{0%{transform:translate(0%,0%) scale(1)}10%{transform:translate(24%,0%) scale(1)}14%{transform:translate(24%,0%) scale(1)}15%{transform:translate(24%,0%) scale(1)}26%{transform:translate(-4%,11%) scale(1.2)}30%{transform:translate(-4%,11%) scale(1.2)}31%{transform:translate(-4%,11%) scale(1.2)}40%{transform:translate(-22%,9%) scale(1.15)}41%{transform:translate(-22%,9%) scale(1.15)}52%{transform:translate(-18%,-4%) scale(0.92)}56%{transform:translate(-18%,-4%) scale(0.92)}57%{transform:translate(-18%,-4%) scale(0.92)}68%{transform:translate(20%,-4%) scale(0.92)}72%{transform:translate(20%,-4%) scale(0.92)}73%{transform:translate(20%,-4%) scale(0.92)}88%{transform:translate(0%,0%) scale(1)}92%{transform:translate(0%,0%) scale(1)}93%{transform:translate(0%,0%) scale(1)}100%{transform:translate(0%,0%) scale(1)}}
+@keyframes msx-roam-fl{0%{transform:scaleX(1)}10%{transform:scaleX(1)}14%{transform:scaleX(1)}15%{transform:scaleX(-1)}26%{transform:scaleX(-1)}30%{transform:scaleX(-1)}31%{transform:scaleX(1)}40%{transform:scaleX(1)}41%{transform:scaleX(-1)}52%{transform:scaleX(-1)}56%{transform:scaleX(-1)}57%{transform:scaleX(1)}68%{transform:scaleX(1)}72%{transform:scaleX(1)}73%{transform:scaleX(-1)}88%{transform:scaleX(-1)}92%{transform:scaleX(-1)}93%{transform:scaleX(1)}100%{transform:scaleX(1)}}
+@keyframes msx-roam-hp{0%{transform:translateY(0)}0.5%{transform:translateY(-3.5%)}1.6%{transform:translateY(0)}2.7%{transform:translateY(-3.5%)}3.8%{transform:translateY(0)}4.9%{transform:translateY(-3.5%)}6.0%{transform:translateY(0)}7.1%{transform:translateY(-3.5%)}8.2%{transform:translateY(0)}9.3%{transform:translateY(-3.5%)}10%{transform:translateY(0)}11.1%{transform:translateY(0)}11.5%{transform:translateY(-9%)}12.0%{transform:translateY(0)}12.2%{transform:translateY(0)}12.6%{transform:translateY(-9%)}13.1%{transform:translateY(0)}15.5%{transform:translateY(-3.5%)}16.6%{transform:translateY(0)}17.7%{transform:translateY(-3.5%)}18.8%{transform:translateY(0)}19.9%{transform:translateY(-3.5%)}21.0%{transform:translateY(0)}22.1%{transform:translateY(-3.5%)}23.2%{transform:translateY(0)}24.3%{transform:translateY(-3.5%)}25.4%{transform:translateY(0)}26%{transform:translateY(0)}31.5%{transform:translateY(-3.5%)}32.6%{transform:translateY(0)}33.7%{transform:translateY(-3.5%)}34.8%{transform:translateY(0)}35.9%{transform:translateY(-3.5%)}37.0%{transform:translateY(0)}38.1%{transform:translateY(-3.5%)}39.2%{transform:translateY(0)}40%{transform:translateY(0)}57.5%{transform:translateY(-3.5%)}58.1%{transform:translateY(0)}58.5%{transform:translateY(-9%)}58.6%{transform:translateY(0)}59.0%{transform:translateY(0)}59.2%{transform:translateY(0)}59.6%{transform:translateY(-9%)}59.7%{transform:translateY(-3.5%)}60.1%{transform:translateY(0)}60.8%{transform:translateY(0)}61.9%{transform:translateY(-3.5%)}63.0%{transform:translateY(0)}64.1%{transform:translateY(-3.5%)}65.2%{transform:translateY(0)}66.3%{transform:translateY(-3.5%)}67.4%{transform:translateY(0)}68%{transform:translateY(0)}73.5%{transform:translateY(-3.5%)}74.6%{transform:translateY(0)}75.7%{transform:translateY(-3.5%)}76.8%{transform:translateY(0)}77.9%{transform:translateY(-3.5%)}79.0%{transform:translateY(0)}80.1%{transform:translateY(-3.5%)}81.2%{transform:translateY(0)}82.3%{transform:translateY(-3.5%)}83.4%{transform:translateY(0)}84.5%{transform:translateY(-3.5%)}85.6%{transform:translateY(0)}86.7%{transform:translateY(-3.5%)}87.8%{transform:translateY(0)}88%{transform:translateY(0)}}
+@media (prefers-reduced-motion:reduce){.msx .v-scene.home .msx-roam,.msx .v-scene.home .msx-roam-f,.msx .v-scene.home .msx-roam-h{animation:none}}
 .msx .v-scene.home .mon{height:24%}.msx.land .v-scene.home .mon{height:28%}.msx.s320 .v-scene.home .mon{height:26%}
 .msx span.mon{display:block}
 .msx .mon.msx-live{animation:none;filter:none}
@@ -175127,12 +175184,19 @@ function MsxPlay({
     }), React.createElement("div", {
       className: "sh"
     }), React.createElement("div", {
+      className: "msx-roam",
+      "data-msx-roam": true
+    }, React.createElement("div", {
+      className: "msx-roam-h"
+    }, React.createElement("div", {
+      className: "msx-roam-f"
+    }, React.createElement("div", {
       className: "gr"
     }), React.createElement(MsxMonArt, {
       run: run,
       className: `mon${low ? ' low' : ''}`,
       live: true
-    }), React.createElement("div", {
+    })))), React.createElement("div", {
       className: "v-party"
     }, React.createElement("small", null, "編成"), s.team.map((m, i) => React.createElement(MsxPf, {
       key: i,
@@ -181985,6 +182049,7 @@ const msxArcFullBody = (aid, ex) => {
   const f = w && typeof assistantFullBodyImage === 'function' ? assistantFullBodyImage(w, ex) : null;
   return f || msxBody(aid, ex);
 };
+const msxArcEndingScene = s => s && s.ending && !s.ending.seen ? s.ending.kind === 'bad' ? 'endingBad' : 'ending' : null;
 const msxArcAfterOf = (SUC, s, b, won, foe) => b && b.kind === 'summit' && msxArcHas(SUC, s.aid) ? {
   round: b.round,
   won: !!won,
@@ -182145,6 +182210,9 @@ function MsxArcAfter({
   const lines = msxArcLines(`scn.${s.aid}.summit.r${after.round + 1}.${after.won ? 'win' : 'lose'}`, ctx, bondLv, {
     rival: after.foe
   });
+  useSuccessSceneAfterOnce(msxArcEndingScene(s), {
+    season: msxCalendar(s.turn).season
+  });
   return React.createElement(MsxArcTalk, {
     run: run,
     v: v,
@@ -182281,7 +182349,7 @@ function MsxArcEnding({
   const end = s.ending;
   const kind = end.kind;
   const [step, setStep] = useState(0);
-  useSuccessScene(kind === 'bad' ? 'cupLose' : 'cupWin', {
+  useSuccessSceneAfterOnce(msxArcEndingScene(s), {
     season: msxCalendar(s.turn).season
   });
   const parties = Array.isArray(end.parties) ? end.parties : [];
@@ -185123,7 +185191,7 @@ const MSA_JUDGE_BY = {
   hp: '勝ち数が同じなので、残ライフの量(実数)で決着',
   pct: '残ライフの量も同じなので、残ライフ%で決着',
   dmg: 'ここまで同じなので、与えたダメージで決着',
-  tie: 'すべて同じなので、引き分けにせず負け扱い'
+  tie: '全て同じなので、引き分けにせず負け扱い'
 };
 const MSA_JUDGE_CSS = `
 .msa-judge{position:fixed;inset:0;z-index:9650;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:max(12px,env(safe-area-inset-top)) 12px max(12px,env(safe-area-inset-bottom));background:#0b0820f2;color:#fff;overflow-y:auto;font-family:inherit}
