@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 4daf7648089318e2
+// source-sha256: c747cbd83587624a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -161543,6 +161543,94 @@ function MsxTrainAct({
     className: "ban"
   }, React.createElement("small", null, MSX_STAT_NAME[k], "のトレーニング ", React.createElement("b", null, "Lv.", lv)), msxTrainIcon(k, lv), " ", msxTrainName(k, lv), "!"));
 }
+const MSX_QFX_COLORS = Object.freeze(['#38bdf8', '#a78bfa', '#f472b6', '#34d399', '#fb7185', '#facc15']);
+const MSX_QFX_MS = Object.freeze({
+  say: 1000,
+  stage: 2600,
+  team: 2400,
+  lot: 2800
+});
+function MsxQfxRows({
+  run,
+  o,
+  keys
+}) {
+  const s = run.s;
+  const P = o.parts || {};
+  const gain = o.gain || {};
+  const rows = keys.filter(k => gain[k] > 0);
+  const maxG = Math.max(1, ...rows.map(k => gain[k]));
+  if (!rows.length) return React.createElement("div", {
+    className: "qg"
+  }, React.createElement("div", {
+    className: "qg-none"
+  }, "この段の能力は、もう上がりきっている"));
+  let d = 0;
+  return React.createElement("div", {
+    className: "qg",
+    "data-msx-qg": true
+  }, rows.map(k => {
+    const parts = P[k] || [{
+      src: 'course',
+      v: gain[k]
+    }];
+    const after = Math.round((s.stats || {})[k] || 0);
+    const before = after - gain[k];
+    let acc = 0;
+    const d0 = d;
+    d += parts.length;
+    return React.createElement("div", {
+      key: k,
+      className: "qg-row",
+      "data-msx-qg-row": k
+    }, React.createElement("span", {
+      className: "qg-k"
+    }, MSX_STAT_ICON[k], " ", MSX_STAT_NAME[k]), React.createElement("span", {
+      className: "qg-bar"
+    }, React.createElement("i", {
+      className: "qg-base"
+    }), parts.map((x, n) => {
+      const w = x.v / maxG * 42;
+      const l = 52 + acc;
+      acc += w;
+      return React.createElement("i", {
+        key: n,
+        className: "qg-seg",
+        style: {
+          left: `${l}%`,
+          width: `${w}%`,
+          background: x.src === 'course' ? '#f59e0b' : MSX_QFX_COLORS[x.i % MSX_QFX_COLORS.length],
+          '--d': `${0.35 + (d0 + n) * 0.3}s`
+        }
+      });
+    })), React.createElement("span", {
+      className: "qg-v"
+    }, React.createElement("small", null, msxFmt(before), "→"), React.createElement("b", {
+      style: {
+        '--d': `${0.45 + (d0 + parts.length - 1) * 0.3}s`
+      }
+    }, msxFmt(after))), React.createElement("span", {
+      className: "qg-parts"
+    }, parts.map((x, n) => {
+      const m = x.src === 'team' ? (s.team || [])[x.i] : null;
+      return React.createElement("span", {
+        key: n,
+        className: `qg-p ${x.src}`,
+        style: {
+          '--d': `${0.3 + (d0 + n) * 0.3}s`,
+          '--c': x.src === 'course' ? '#f59e0b' : MSX_QFX_COLORS[x.i % MSX_QFX_COLORS.length]
+        },
+        "data-msx-qg-part": x.src
+      }, m ? React.createElement("img", {
+        src: msxMonThumb(m.species),
+        alt: ""
+      }) : React.createElement("em", null, "⛰️"), React.createElement("b", null, "+", x.v), m ? React.createElement("small", null, ['得意1', '得意2', '得意3'][x.top] || '得意') : React.createElement("small", null, "行き先"), React.createElement("i", {
+        className: "fly",
+        "aria-hidden": "true"
+      }, "+", x.v));
+    })));
+  }));
+}
 function MsxShugyoStages({
   run,
   o,
@@ -161550,11 +161638,21 @@ function MsxShugyoStages({
   onDone
 }) {
   msxActEnsureCss();
-  const SH = msxSuc && msxSuc.SUC ? msxSuc.SUC.SHUGYO : null;
+  const SUC = msxSuc && msxSuc.SUC ? msxSuc.SUC : {};
+  const SH = SUC.SHUGYO || null;
   const course = SH && SH.courses ? SH.courses[o.course] : null;
   const stages = course && Array.isArray(course.stages) ? course.stages : [];
   const bgs = MSX_QSTAGE_BG[o.course] || MSX_QSTAGE_BG.fire;
-  const [st, setSt] = React.useState(0);
+  const inCourse = stages.flat();
+  const teamOnly = Object.keys(o.gain || {}).filter(k => !inCourse.includes(k) && o.gain[k] > 0);
+  const all = typeof SUC.techsOf === 'function' ? SUC.techsOf(run.s.species) : [];
+  const tries = (o.tries || []).map(x => ({
+    ...x,
+    t: all.find(y => y.id === x.id)
+  })).filter(x => x.t);
+  const seq = [0, ...stages.map((_, i) => i + 1), ...(teamOnly.length ? ['team'] : []), ...(tries.length ? ['lot'] : [])];
+  const [n, setN] = React.useState(0);
+  const st = seq[n];
   const done = React.useRef(false);
   const finish = () => {
     if (done.current) return;
@@ -161566,33 +161664,38 @@ function MsxShugyoStages({
       finish();
       return undefined;
     }
-    const ids = [setTimeout(() => setSt(1), 1000), setTimeout(() => setSt(2), 2300), setTimeout(finish, 3600)];
+    let t = 0;
+    const ids = seq.map((x, i) => {
+      t += x === 0 ? MSX_QFX_MS.say : x === 'team' ? MSX_QFX_MS.team : x === 'lot' ? MSX_QFX_MS.lot : MSX_QFX_MS.stage;
+      return setTimeout(() => i === seq.length - 1 ? finish() : setN(i + 1), t);
+    });
     return () => ids.forEach(clearTimeout);
   }, []);
   const mvs = MSX_QSTAGE_MOVE[o.course] || MSX_QSTAGE_MOVE.fire;
-  const qmv = st ? mvs[st - 1] : null;
-  msxUseTimedSe(msxActCalm() || !qmv ? [] : MSX_QSTAGE_SE[qmv] || [], [st]);
+  const num = typeof st === 'number' ? st : 0;
+  const qmv = num ? mvs[num - 1] : null;
+  msxUseTimedSe(msxActCalm() || !qmv ? [] : MSX_QSTAGE_SE[qmv] || [], [n]);
   if (msxActCalm()) return null;
   const s = run.s;
   const say = line ? line('turn.drill.start', 'よし、集中していこう！') : {
     t: 'よし、集中していこう！'
   };
-  const helpers = Array.isArray(o.stages) && o.stages[st - 1] ? o.stages[st - 1] : [];
-  const pair = stages[st - 1] || [];
-  const [bg, tint] = bgs[Math.max(0, st - 1)] || bgs[0];
+  const pair = num ? stages[num - 1] || [] : [];
+  const [bg, tint] = bgs[Math.max(0, Math.min(bgs.length - 1, (num || stages.length) - 1))] || bgs[0];
+  const sup = !!o.super;
   return React.createElement("div", {
-    className: `msx-qst st${st} c-${o.course || 'fire'}`,
+    className: `msx-qst qs${typeof st === 'number' ? st : 'x'} c-${o.course || 'fire'}${st === 'team' ? ' st-team' : ''}${st === 'lot' ? ' st-lot' : ''}`,
     onClick: finish,
     "data-msx-qstage": st
   }, React.createElement("img", {
-    key: `bg${st}`,
+    key: `bg${num}`,
     className: "bg",
     src: msxQstageBgUrl(bg),
     alt: ""
   }), React.createElement("span", {
     className: "tint",
     style: {
-      background: st ? tint : 'rgba(15,13,36,.55)'
+      background: st === 0 ? 'rgba(15,13,36,.55)' : tint
     }
   }), st === 0 ? React.createElement("div", {
     className: "say"
@@ -161602,22 +161705,24 @@ function MsxShugyoStages({
     alt: ""
   }) : null, React.createElement("div", {
     className: "bub"
-  }, React.createElement("b", null, course ? `${course.name}の修行` : '修行'), say && say.t)) : React.createElement(React.Fragment, null, React.createElement("div", {
-    key: `ban${st}`,
-    className: "ban"
-  }, React.createElement("small", null, "STAGE ", st), pair.map(x => `${MSX_STAT_ICON[x]} ${MSX_STAT_NAME[x]}`).join(' & ')), React.createElement("div", {
-    key: `pt${st}`,
+  }, React.createElement("b", null, course ? `${course.name}の修行${sup ? '(超修行)' : ''}` : '修行'), say && say.t, React.createElement("span", {
+    className: "plan"
+  }, stages.map((p, i) => `第${i + 1}段 ${p.map(x => MSX_STAT_NAME[x]).join('&')}`).join(' → '), tries.length ? ' → 技を覚える' : ''))) : typeof st === 'number' ? React.createElement(React.Fragment, null, React.createElement("div", {
+    key: `ban${n}`,
+    className: "ban q2"
+  }, React.createElement("small", null, "STAGE ", num), pair.map(x => `${MSX_STAT_ICON[x]} ${MSX_STAT_NAME[x]}`).join(' & '), React.createElement("em", null, course ? `${course.name}で鍛える2つの能力` : '行き先で鍛える2つの能力', sup ? '(超修行は2回分)' : '')), React.createElement("div", {
+    key: `pt${n}`,
     className: "pts",
     "aria-hidden": "true"
   }, Array.from({
-    length: 12
+    length: 10
   }, (_, i) => React.createElement("i", {
     key: i,
     style: {
       '--i': i
     }
   }, MSX_QSTAGE_PT[o.course] || '✨'))), React.createElement("div", {
-    key: `me${st}`,
+    key: `me${n}`,
     className: `me q-${qmv}`
   }, React.createElement("span", {
     className: "aura",
@@ -161628,22 +161733,92 @@ function MsxShugyoStages({
     live: true,
     noPeak: true
   })), qmv === 'float' ? null : React.createElement("span", {
-    key: `sl${st}`,
+    key: `sl${n}`,
     className: `slash ${qmv === 'slam' ? 's2' : 's1'}${qmv === 'spin' ? ' sp' : ''}`,
     "aria-hidden": "true"
   }), React.createElement("span", {
-    key: `fl${st}`,
+    key: `fl${n}`,
     className: "qflash",
     "aria-hidden": "true"
-  }), helpers.length ? React.createElement("div", {
-    className: "faces"
-  }, helpers.map(i => s.team[i]).filter(Boolean).map((m, j) => React.createElement("img", {
-    key: j,
-    src: msxMonThumb(m.species),
-    alt: ""
-  })), React.createElement("small", null, "いっしょに修行")) : null), React.createElement("div", {
+  }), React.createElement(MsxQfxRows, {
+    key: `qg${n}`,
+    run: run,
+    o: o,
+    keys: pair
+  }), React.createElement("div", {
+    className: "qg-cap"
+  }, "⛰️ 行き先の分 + 👥 編成のモンスターの得意の分")) : st === 'team' ? React.createElement(React.Fragment, null, React.createElement("div", {
+    key: "banT",
+    className: "ban q2"
+  }, React.createElement("small", null, "BONUS"), "👥 編成のおかげ", React.createElement("em", null, "いっしょに修行したモンスターの得意な能力も上がる")), React.createElement("div", {
+    key: "meT",
+    className: "me q-float"
+  }, React.createElement("span", {
+    className: "aura",
+    "aria-hidden": "true"
+  }), React.createElement(MsxMonArt, {
+    run: run,
+    className: "mon",
+    live: true,
+    noPeak: true
+  })), React.createElement(MsxQfxRows, {
+    key: "qgT",
+    run: run,
+    o: o,
+    keys: teamOnly
+  }), React.createElement("div", {
+    className: "qg-cap"
+  }, "編成を替えると、ここで上がる能力と数が変わる")) : React.createElement(React.Fragment, null, React.createElement("div", {
+    key: "banL",
+    className: "ban q2"
+  }, React.createElement("small", null, "LAST"), "✨ 技を覚える", React.createElement("em", null, sup ? '超修行: 2つとも覚えることがある' : '選んだ技の覚える率で抽選')), React.createElement("div", {
+    key: "meL",
+    className: "me q-float"
+  }, React.createElement("span", {
+    className: "aura",
+    "aria-hidden": "true"
+  }), React.createElement(MsxMonArt, {
+    run: run,
+    className: "mon",
+    live: true,
+    noPeak: true
+  })), React.createElement("div", {
+    className: "qlot",
+    "data-msx-qlot": true
+  }, tries.map((x, i) => {
+    const r = Math.round((x.rate || 0) * 100);
+    const stop = x.hit ? Math.max(3, r * 0.45) : Math.min(97, r + (100 - r) * 0.5);
+    return React.createElement("div", {
+      key: x.id,
+      className: `ql ${x.hit ? 'hit' : 'miss'}`,
+      style: {
+        '--d': `${0.2 + i * 0.5}s`,
+        '--stop': `${stop}%`
+      },
+      "data-msx-qlot-row": x.hit ? 'hit' : 'miss'
+    }, React.createElement("span", {
+      className: "ti",
+      "aria-hidden": "true"
+    }, React.createElement(MsxSkillArt, {
+      t: x.t,
+      uid: `ql${x.id}`
+    })), React.createElement("span", {
+      className: "nm"
+    }, React.createElement("b", null, x.t.name), React.createElement("small", null, "覚える率 ", r, "%")), React.createElement("span", {
+      className: "lb"
+    }, React.createElement("i", {
+      className: "zone",
+      style: {
+        width: `${r}%`
+      }
+    }), React.createElement("i", {
+      className: "ndl"
+    })), React.createElement("span", {
+      className: "rs"
+    }, x.hit ? '覚えた!' : '覚えられなかった'));
+  }))), React.createElement("div", {
     className: "skip"
-  }, "タップで飛ばす"));
+  }, "タップで結果へ"));
 }
 const MSX_ACT_CSS = `
 .msx .msx-act .ban small b{display:inline-block;margin-left:4px;padding:0 6px;border-radius:8px;background:#fde047;color:#7c2d12;font-size:11px;font-style:normal}
@@ -161746,7 +161921,7 @@ const MSX_ACT_CSS = `
 .msx .msx-qst{position:absolute;inset:0;z-index:9;overflow:hidden;cursor:pointer;background:#0f0d24}
 .msx .msx-qst .bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;animation:msxQbg .5s ease-out both}
 .msx .msx-qst .tint{position:absolute;inset:0;mix-blend-mode:multiply}
-.msx .msx-qst.st0 .tint{mix-blend-mode:normal}
+.msx .msx-qst.qs0 .tint{mix-blend-mode:normal}
 .msx .msx-qst .say{position:absolute;left:12px;right:12px;bottom:18%;display:flex;gap:8px;align-items:flex-end;animation:msxActBan .4s ease-out both}
 .msx .msx-qst .say .fc{width:64px;height:64px;border-radius:50%;border:3px solid #fff;object-fit:cover;background:#fff}
 .msx .msx-qst .say .bub{flex:1;background:#fffdf5;color:#1e1b4b;border:2px solid #fb923c;border-radius:14px;padding:8px 12px;font-size:13px;font-weight:800;line-height:1.5;text-align:left}
@@ -161758,6 +161933,42 @@ const MSX_ACT_CSS = `
 .msx .msx-qst .faces{position:absolute;left:0;right:0;bottom:6%;display:flex;justify-content:center;align-items:center;gap:6px}
 .msx .msx-qst .faces img{width:40px;height:40px;border-radius:50%;background:#fff;border:2px solid #fde047;object-fit:contain;animation:msxActBan .4s ease-out both}
 .msx .msx-qst .faces small{font-size:11px;font-weight:900;color:#fff;text-shadow:0 1px 2px #000}
+.msx .msx-qst .say .bub .plan{display:block;margin-top:4px;font-size:11px;color:#9a3412}
+.msx .msx-qst .ban.q2{top:3%;font-size:16px;padding:3px 0 5px}.msx .msx-qst .ban.q2 small{font-size:22px}.msx .msx-qst .ban.q2 em{display:block;font-style:normal;font-size:11px;-webkit-text-stroke:0;text-shadow:0 1px 2px #000;color:#fde68a;margin-top:2px}
+.msx .msx-qst:not(.qs0) .me .mon{bottom:47%;height:27%}
+.msx .msx-qst .qg{position:absolute;left:8px;right:8px;bottom:22px;display:grid;gap:5px;z-index:4}
+.msx .msx-qst .qg-none{background:#0f172add;border-radius:10px;padding:8px;color:#e2e8f0;font-size:12px;font-weight:800;text-align:center}
+.msx .msx-qst .qg-row{display:grid;grid-template-columns:76px minmax(0,1fr) 74px;grid-template-areas:"k bar v" "p p p";align-items:center;column-gap:6px;row-gap:3px;background:#0f172ad9;border:1px solid #475569;border-radius:12px;padding:5px 8px;animation:msxActBan .3s ease-out both}
+.msx .msx-qst .qg-k{grid-area:k;font-size:12px;font-weight:900;color:#fff;white-space:nowrap}
+.msx .msx-qst .qg-bar{grid-area:bar;position:relative;height:12px;border-radius:99px;background:#1e293b;border:1px solid #64748b;overflow:hidden}
+.msx .msx-qst .qg-base{position:absolute;left:0;top:0;bottom:0;width:52%;background:linear-gradient(90deg,#64748b,#94a3b8)}
+.msx .msx-qst .qg-seg{position:absolute;top:0;bottom:0;transform-origin:0 50%;transform:scaleX(0);animation:msxQgGrow .3s ease-out var(--d) both;box-shadow:inset -1px 0 0 #0006}
+.msx .msx-qst .qg-v{grid-area:v;text-align:right;white-space:nowrap;font-weight:900;color:#fff}.msx .msx-qst .qg-v small{font-size:10.5px;color:#cbd5e1}.msx .msx-qst .qg-v b{display:inline-block;font-size:15px;color:#fde047;animation:msxQgPop .35s cubic-bezier(.3,1.6,.6,1) var(--d) both}
+.msx .msx-qst .qg-parts{grid-area:p;display:flex;flex-wrap:wrap;gap:4px}
+.msx .msx-qst .qg-p{position:relative;display:inline-flex;align-items:center;gap:3px;padding:1px 6px 1px 2px;border-radius:99px;background:#1e293b;border:1.5px solid var(--c);animation:msxQgIn .3s ease-out var(--d) both}
+.msx .msx-qst .qg-p img{width:22px;height:22px;border-radius:50%;background:#fff;object-fit:contain}.msx .msx-qst .qg-p em{font-style:normal;font-size:15px;width:22px;text-align:center}
+.msx .msx-qst .qg-p b{font-size:12.5px;font-weight:900;color:var(--c)}.msx .msx-qst .qg-p small{font-size:9.5px;font-weight:800;color:#cbd5e1}
+.msx .msx-qst .qg-p .fly{position:absolute;left:8px;top:-4px;font-style:normal;font-size:16px;font-weight:900;color:var(--c);text-shadow:0 1px 0 #000,0 0 6px #000;pointer-events:none;opacity:0;animation:msxQgFly .7s ease-out var(--d) both}
+.msx .msx-qst .qg-cap{position:absolute;left:8px;right:8px;bottom:4px;text-align:center;font-size:10px;font-weight:800;color:#f8fafc;text-shadow:0 1px 2px #000;z-index:4}
+.msx .msx-qst .qlot{position:absolute;left:8px;right:8px;bottom:24px;display:grid;gap:6px;z-index:4}
+.msx .msx-qst .ql{display:grid;grid-template-columns:40px minmax(0,1fr) auto;grid-template-areas:"ti nm rs" "lb lb lb";column-gap:8px;row-gap:5px;align-items:center;background:#0f172ae6;border:2px solid #64748b;border-radius:12px;padding:6px 9px;animation:msxActBan .3s ease-out var(--d) both}
+.msx .msx-qst .ql .ti{grid-area:ti;width:40px;height:40px;border-radius:8px;overflow:hidden;display:flex;align-items:center;justify-content:center;background:#1e293b}.msx .msx-qst .ql .ti svg,.msx .msx-qst .ql .ti img{width:100%;height:100%}
+.msx .msx-qst .ql .nm{grid-area:nm;display:grid;min-width:0}.msx .msx-qst .ql .nm b{font-size:14px;font-weight:900;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.msx .msx-qst .ql .nm small{font-size:11px;font-weight:800;color:#86efac}
+.msx .msx-qst .ql .lb{grid-area:lb;position:relative;height:14px;border-radius:99px;background:#7f1d1d;border:1px solid #94a3b8;overflow:hidden}
+.msx .msx-qst .ql .lb .zone{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,#16a34a,#4ade80)}
+.msx .msx-qst .ql .lb .ndl{position:absolute;top:-2px;bottom:-2px;width:4px;margin-left:-2px;background:#fff;box-shadow:0 0 6px #fff;left:var(--stop);animation:msxQlSweep 1.2s cubic-bezier(.2,.7,.3,1) var(--d) both}
+.msx .msx-qst .ql .rs{grid-area:rs;font-size:14px;font-weight:900;white-space:nowrap;opacity:0;animation:msxQgPop .4s cubic-bezier(.3,1.6,.6,1) calc(var(--d) + 1.3s) both}
+.msx .msx-qst .ql.hit .rs{color:#fde047;font-size:18px;text-shadow:0 0 8px #f59e0b}.msx .msx-qst .ql.miss .rs{color:#cbd5e1}
+.msx .msx-qst .ql.hit{animation:msxActBan .3s ease-out var(--d) both,msxQlWin .5s ease-out calc(var(--d) + 1.3s) both}
+@media (max-height:700px){.msx .msx-qst .ban.q2{font-size:14px;padding:2px 0 3px}.msx .msx-qst .ban.q2 small{font-size:17px}.msx .msx-qst .ban.q2 em{font-size:10px;margin-top:0}
+  .msx .msx-qst .qg{gap:3px;bottom:18px}.msx .msx-qst .qg-row{padding:3px 7px;row-gap:2px}.msx .msx-qst .qg-p img{width:18px;height:18px}.msx .msx-qst .qg-p b{font-size:11.5px}.msx .msx-qst .qg-p small{display:none}
+  .msx .msx-qst .qg-cap{bottom:2px;font-size:9.5px}.msx .msx-qst .qlot{bottom:18px;gap:4px}.msx .msx-qst .ql{padding:4px 8px;row-gap:3px}.msx .msx-qst .skip{display:none}}
+@keyframes msxQgGrow{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+@keyframes msxQgPop{from{opacity:0;transform:scale(.4)}to{opacity:1;transform:none}}
+@keyframes msxQgIn{from{opacity:0;transform:translateY(8px) scale(.8)}to{opacity:1;transform:none}}
+@keyframes msxQgFly{0%{opacity:0;transform:translateY(6px)}25%{opacity:1}100%{opacity:0;transform:translateY(-30px)}}
+@keyframes msxQlSweep{0%{left:0}35%{left:100%}70%{left:20%}100%{left:var(--stop)}}
+@keyframes msxQlWin{from{border-color:#64748b;box-shadow:none}to{border-color:#facc15;box-shadow:0 0 16px #facc15aa}}
 .msx .msx-qst .skip{position:absolute;right:10px;top:8px;font-size:10px;font-weight:800;color:#e2e8f0aa}
 @keyframes msxQbg{from{opacity:0;transform:scale(1.08)}to{opacity:1;transform:none}}
 @keyframes msxQban{from{opacity:0;transform:translateX(60px)}to{opacity:1;transform:none}}
@@ -161819,7 +162030,7 @@ const MSX_ACT_CSS = `
 .msx .msx-qst.c-ice .slash{background:linear-gradient(90deg,transparent,#fff 30%,#7dd3fc 60%,transparent);box-shadow:0 0 16px #38bdf8}
 .msx .msx-qst.c-ice .slash.s2{background:none;border-color:#bae6fd;box-shadow:0 0 20px #38bdf8,inset 0 0 14px #e0f2fe}
 .msx .msx-qst .qflash{position:absolute;inset:0;pointer-events:none;background:radial-gradient(circle at 50% 60%,#fff,#fff0 65%);opacity:0;animation:msxActFlash .45s ease-out .76s both}
-.msx .msx-qst.st1 .ban,.msx .msx-qst.st2 .ban{z-index:3}
+.msx .msx-qst.qs1 .ban,.msx .msx-qst.qs2 .ban,.msx .msx-qst.qsx .ban{z-index:3}
 @keyframes msxQup{0%{opacity:0;transform:none}15%{opacity:1}100%{opacity:0;transform:translate(calc((var(--i) - 6) * 4px),-420px) scale(1.3)}}
 @keyframes msxQdown{0%{opacity:0;transform:none}15%{opacity:1}100%{opacity:0;transform:translate(-40px,420px) rotate(200deg)}}
 @keyframes msxQside{0%{opacity:0;transform:none}15%{opacity:1}100%{opacity:0;transform:translate(520px,-40px) rotate(300deg)}}
@@ -179629,6 +179840,7 @@ function MsxR3Shugyo({
       phase: 'react',
       out: {
         ...r.out,
+        parts: undefined,
         kind: 'shugyo'
       },
       log: [...(run.log || []), {
