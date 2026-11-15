@@ -133,7 +133,7 @@ const checkState = (s, where) => {
   try { JSON.stringify(s); } catch (e) { fail(`${where}: JSON にできない(${e.message})`); }
   if (!inRange(s.hpMax, 1, 160)) fail(`${where}: 体力の上限が 1〜160 でない: ${s.hpMax}`);
   if (!inRange(s.hp, 0, s.hpMax)) fail(`${where}: 体力が 0〜上限でない: ${s.hp}/${s.hpMax}`);
-  K.forEach(k => { if (!inRange(s.stats[k], 0, 999)) fail(`${where}: 能力 ${k} が 0〜999 でない: ${s.stats[k]}`); });
+  K.forEach(k => { const cap = SUC.statCapOf(s, k); if (!inRange(s.stats[k], 0, cap)) fail(`${where}: 能力 ${k} が 0〜上限(${cap})でない: ${s.stats[k]}`); }); // 上限は編成で 999 より上がる(r1115-103)
   if (!inRange(s.ama, 0, 50) || !inRange(s.fear, 0, 50)) fail(`${where}: 甘え度・恐れ度が 0〜50 でない: ${s.ama}/${s.fear}`);
   const loy = SUC.loyalOf(s); if (!inRange(loy, 0, 100)) fail(`${where}: 忠誠が 0〜100 でない: ${loy}`);
   if (!inRange(s.stress, 0, 100)) fail(`${where}: ストレスが 0〜100 でない: ${s.stress}`);

@@ -20,6 +20,7 @@ let chromium;
 try { ({ chromium } = require(path.join(ROOT, 'tools', 'node_modules', 'playwright'))); } catch (e) { console.log('SKIP: playwright が入っていないので確かめられません'); process.exit(0); }
 const { quietBootSeed, updateNoticeSeed } = require(path.resolve(__dirname, '..', 'boot', 'quiet-boot-seed'));
 const { scanTextWrap } = require(path.resolve(__dirname, '..', 'playbot', 'lib', 'text-wrap')); // 言葉・値の途中の折れ(r1114-077)
+const { measureBtnPixels } = require('./msx-btn-pixel'); // 実際に描いた画素で、ボタンの字・記号の真ん中を測る(r1115-066)
 const { msxUiRulesMeasure, msxScrollStripTexts, BLANK_MAX } = require('./msx-ui-rules'); // 画面の決まり(docs/spec/MONSUC_UI.md)の見張り
 const PORT = Number(process.env.SHOT_PORT) || 8971; // ほかの検査と同時に回すときは SHOT_PORT で替える
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.PNG': 'image/png', '.jpg': 'image/jpeg', '.webp': 'image/webp', '.json': 'application/json', '.mp3': 'audio/mpeg' };
@@ -51,6 +52,8 @@ const makeRun = async (kind) => {
     s = SUC.endTurn(s).state;
     let g2 = 0; while (s.battle && g2++ < 5) { const opp = SUC.opponents(s); s = SUC.settle(s, opp.map(() => true)).state; }
   }
+  // 能力の上限アップ(r1115-103): 999 を超えた能力の子(4桁の数がはみ出さないか・ゲージの紫の帯)
+  if (kind === 'over') s = { ...s, cap: { life: 1500, pow: 999, wise: 1800, hit: 3200, eva: 1200, tough: 999 }, stats: { ...s.stats, hit: 3123, wise: 1789, life: 1234, eva: 1001 } };
   if (kind === 'yosu') s = { ...s, yosu: { sabori: { visits: 0 } } };
   if (kind === 'bagall') s = { ...s, bag: Object.fromEntries(Object.keys(SUC.ITEMS).filter((k) => SUC.ITEMS[k].use === 'during').map((k) => [k, 1])) }; // 持ち物の升目に育成中に使う物を全部並べる(名前の折れを見る)
   if (kind === 'ki') { const pv = SUC.peek(s).period.index - 1; const pw = SUC.evaluate(s).power; s = { ...s, fameTotal: Math.max(s.fameTotal || 0, 1000) }; return { v: 1, id: s.id, s, nick: 'もちまる', colors: [], from: { base: 'Mocchi' }, items: [], used: 0, phase: 'turn', out: null, log: [], startAt: 1, ki: { p: pv, fame: 0, power: Math.max(0, pw - 616) } }; }
@@ -75,6 +78,7 @@ const makeRun = async (kind) => {
   const SHOTS_ALL = [
     ['H0', null, []], ['H1', 'mid', []],
     ['RW1', 'mid', ['cont', 'wait:3300']], ['RW2', 'mid', ['cont', 'wait:7800']], ['RW3', 'mid', ['cont', 'wait:11500']], ['RW4', 'mid', ['cont', 'wait:15000']], ['RW5', 'mid', ['cont', 'wait:19600']], // 育成ホームの歩き回り(r1115-052)
+    ['OV1', 'over', ['cont']], ['OV2', 'over', ['cont', 'train']], ['OV3', 'over', ['cont', 'stats']], ['OV4', 'over', ['cont', 'detail']], ['OV5', 'over', ['cont', 'train', 'go', 'next']], // 上限アップ(r1115-103)
     ['HB1', null, ['basemon']], ['HB2', null, ['basemon', 'bmpick:Snegurochka']], ['HB3', null, ['basemon', 'bmpick:Snegurochka', 'tab:apt']], // ホームのベースモン(r1115-043)
     ['S0', null, ['new']], // ストーリー選択(2026-11-14)。S1〜S6 はその「次へ」のあと
     ['TP1', null, ['new', 'next', 'pickmon:Snegurochka', 'detail']], ['TP2', null, ['new', 'next', 'pickmon:Snegurochka', 'detail', 'alt:2-1']], ['TP3', null, ['new', 'next', 'pickmon:Snegurochka', 'detail', 'alt:2-1', 'altopt:sk-0480']], // 技の升の選び(被った升の ⇄ → 窓 → 選ぶ)
@@ -382,6 +386,8 @@ const makeRun = async (kind) => {
         else if (wr.length) console.log(`  見張り ${name}${tag ? `(${tag})` : ''}: 文字の折れ ${wr.length}件 ${wr.slice(0, 2).map((x) => `${x.kind}「${x.text}」`).join(' / ')}`);
         if (u && u.blank != null) check(`${name}${tag ? `(${tag})` : ''}: 下に大きな空きが無い(${BLANK_MAX}px まで)`, u.blank <= BLANK_MAX, `${u.blank}px`);
         if (u) check(`${name}${tag ? `(${tag})` : ''}: 見せ場の数字(.v-num)が真ん中`, u.offNum.length === 0, u.offNum.slice(0, 3).join(' / '));
+        if (u) check(`${name}${tag ? `(${tag})` : ''}: ボタンの文字・記号が上下左右とも真ん中`, u.offBtn.length === 0, u.offBtn.slice(0, 4).join(' / '));
+        { const px = await measureBtnPixels(page); check(`${name}${tag ? `(${tag})` : ''}: 描いた画素でも字・記号がボタンの真ん中(±1.5px)`, px.length === 0, px.slice(0, 4).join(' / ')); }
         check(`${name}${tag ? `(${tag})` : ''}: 画面が出る`, m.ok && m.text > 20);
         check(`${name}${tag ? `(${tag})` : ''}: 枠からはみ出さない`, m.ok && m.over.length === 0, m.over && m.over.slice(0, 3).join(' / '));
         if (SHOT_DIR) { fs.mkdirSync(SHOT_DIR, { recursive: true }); await page.screenshot({ path: path.join(SHOT_DIR, `msx-${name}${tag ? `-${tag}` : ''}.png`) }); }

@@ -20,6 +20,7 @@ let chromium;
 try { ({ chromium } = require(path.join(ROOT, 'tools', 'node_modules', 'playwright'))); } catch (e) { console.log('SKIP: playwright が入っていないので確かめられません'); process.exit(0); }
 const { quietBootSeed, updateNoticeSeed } = require(path.resolve(__dirname, '..', 'boot', 'quiet-boot-seed'));
 const { scanTextWrap } = require(path.resolve(__dirname, '..', 'playbot', 'lib', 'text-wrap')); // 言葉・値の途中の折れ(r1114-077)
+const { measureBtnPixels } = require('./msx-btn-pixel'); // 実際に描いた画素で、ボタンの字・記号の真ん中を測る(r1115-066)
 const { msxUiRulesMeasure, msxScrollStripTexts, BLANK_MAX } = require('./msx-ui-rules'); // 画面の決まり(docs/spec/MONSUC_UI.md)の見張り
 const PORT = 8973;
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.PNG': 'image/png', '.jpg': 'image/jpeg', '.webp': 'image/webp', '.json': 'application/json', '.mp3': 'audio/mpeg' };
@@ -94,6 +95,9 @@ const makeRun = async (kind) => {
     ['Q4', 'mid', ['cont', /^⚔修行/, '$qok0']], ['Q5', 'mid', ['cont', /^⚔修行/, '$qok0', '$qok1']], ['Q2', 'mid', ['cont', /^⚔修行/, '@shugyo']], ['Q2b', 'mid', ['cont', /^⚔修行/, '@shugyo', '@qskip']], ['Q3', 'mid', ['cont', /^⚔修行/, '@shugyo', '@qskip', '@qnext']], // 修行の段の演出 → 「結果へ」(Fable ①-12)
     ['QL1', 'qhit', ['cont', /^⚔修行/, '$qok0', '@shugyo', '@qskip']], ['QL2', 'qmiss', ['cont', /^⚔修行/, '$qok0', '@shugyo', '@qskip']], ['QL3', 'qmix', ['cont', /^⚔修行/, '$qok0', '$qok1', '@shugyo', '@qskip']], // 技を覚えた/覚えられなかった/超修行で1つだけ(r1115-063)
     ['QH0', 'hplow', ['cont']], ['QH1', 'hpmid', ['cont', /^⚔修行/, '$qok0', '$qok1']], // 体力が足りない: ホームの修行が押せない/超修行だけ行けない(r1115-062)
+    // 修行の段の演出(r1115-060): 超修行で2つ選び1つ当たり(qmix)。段ごとに待って撮る(0 一言 1.0秒 → STAGE 1・2 各2.6秒 → 編成のおかげ 2.4秒 → 技のくじ 2.8秒)
+    ['QF0', 'qmix', ['cont', /^⚔修行/, '$qok0', '$qok1', '@shugyo', 'w900']], ['QF1', 'qmix', ['cont', /^⚔修行/, '$qok0', '$qok1', '@shugyo', 'w1700']], ['QF2', 'qmix', ['cont', /^⚔修行/, '$qok0', '$qok1', '@shugyo', 'w4300']],
+    ['QF3', 'qmix', ['cont', /^⚔修行/, '$qok0', '$qok1', '@shugyo', 'w6900']], ['QF4', 'qmix', ['cont', /^⚔修行/, '$qok0', '$qok1', '@shugyo', 'w9800']], ['QF5', 'qmiss', ['cont', /^⚔修行/, '$qok0', '@shugyo', 'w9800']],
     // 期末の大会の当日(参考 te-30〜34): 当日のメイン(能力と大会だけ)→ 受付に1つ → 参加の確認 → 紋章の入り → 表
     ['K0', 'kimatsu', ['cont']], ['K1', 'kimatsu', ['cont', '@precup']], ['K2', 'kimatsu', ['cont', '@precup', '@enter']], ['K2c', 'kimatsu', ['cont', '@precup', '@enter', '@pre-cancel']],
     ['K3', 'kimatsu', ['cont', '@precup', '@enter', '@yes']], ['K4', 'kimatsu', ['cont', '@precup', '@enter', '@yes', '@cupintro-go']],
@@ -202,6 +206,8 @@ const makeRun = async (kind) => {
         if (u && u.blank != null && blankLater && u.blank > BLANK_MAX) console.log(`  見張り ${label}: 下の空き ${u.blank}px(作り直し待ち)`);
         else if (u && u.blank != null) check(`${label}: 下に大きな空きが無い(${BLANK_MAX}px まで)`, u.blank <= BLANK_MAX, `${u.blank}px`);
         if (u) check(`${label}: 見せ場の数字(.v-num)が真ん中`, u.offNum.length === 0, u.offNum.slice(0, 3).join(' / '));
+        if (u) check(`${label}: ボタンの文字・記号が上下左右とも真ん中`, u.offBtn.length === 0, u.offBtn.slice(0, 4).join(' / '));
+        { const px = await measureBtnPixels(page); check(`${label}: 描いた画素でも字・記号がボタンの真ん中(±1.5px)`, px.length === 0, px.slice(0, 4).join(' / ')); }
         check(`${label}: 画面が出る`, m.ok && m.text > 20, m.head);
         check(`${label}: 枠からはみ出さない`, m.ok && m.over.length === 0, m.over && m.over.slice(0, 3).join(' / '));
         if (name === 'X2') { const b = await page.evaluate(() => JSON.parse(localStorage.getItem('mh_monsuc_box_v1') || 'null')); const m = b && b.mons.find((x) => x.id === 'b1');
