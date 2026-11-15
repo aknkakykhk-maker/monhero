@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 1f94a90261e3bdc4
+// generated-sha256: d8c7e45061116b45
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -91284,7 +91284,7 @@ function MsxR3Cup({ run, setRun, v, ev, onBack, onActed }) {
     `「出られる大会が ${nOk}つ あるよ。賞品もチェックしてみて!」`,
     `「${cur ? msxR3CupName(cur.sys, cur.name) : '大会'}、気になるね。体力は大丈夫?」`,
     `「大会は1ターン使うよ。調子がいいなら行ってみよ!」`,
-  ] : ['「今月は出られる大会がないみたい。トレーニングでじっくり力をつけよ!」', '「出られる大会が今月は無いよ。次の月の予定も見てみてね」'];
+  ] : P.key === 'final' ? ['「最後の期は、ヒーローズファイナルだけだよ。それまではトレーニングや修行で仕上げよう!」'] : ['「今月は出られる大会がないみたい。トレーニングでじっくり力をつけよ!」', '「出られる大会が今月は無いよ。次の月の予定も見てみてね」'];
   const openLine = { t: msxR3Q(openTexts[Math.abs(Number(s.turn) || 0) % openTexts.length]), e: null };
   const rankStep = typeof SUC.rankStepOf === 'function' ? SUC.rankStepOf(s) : 0; const rank = rankStep ? { name: SUC.rankNameOf(rankStep) } : null; // 賞金ランク10段(2026-11-14)
   const kindOf = (c) => (c.scenario ? 'シナリオ' : c.ex ? (MSX_R3_CUP_GRADE[c.grade] || '') : (SUC.CUP_SYS[c.sys] || {}).stat ? '自慢' : (SUC.CUP_SYS[c.sys] || {}).dist !== undefined ? '間合い' : (SUC.CUP_SYS[c.sys] || {}).type ? 'タイプ' : ['spring', 'summer', 'autumn', 'winter'].includes(c.sys) ? '四季' : 'ふつう');
@@ -91319,7 +91319,7 @@ function MsxR3Cup({ run, setRun, v, ev, onBack, onActed }) {
             </div>
             {c.rival ? <><span className="rvi"><img src={msxMonThumb(c.rival.species)} alt=""/><b>ライバル</b></span><span className="rvb">ごほうび大</span></> : null}
           </button>);
-      }) : <div className="msx-note">{now ? '今月の大会はありません' : 'この月の大会はありません'}</div>}
+      }) : <div className="msx-note">{P.key === 'final' ? '最後の期は、ヒーローズファイナルだけです' : now ? '今月の大会はありません' : 'この月の大会はありません'}</div>}
     </div>
     <div className="v-card" style={{ padding: '5px 9px' }}><div className="v-kv" style={{ margin: 0 }}><b>出ると</b><span>1戦だけ・1ターン使う・勝つと賞金と賞品。{toForced ? <span className="yel">{' 期末の大会まで '}<span style={{ whiteSpace: 'nowrap' }}>{`あと${toForced}ターン`}</span></span> : null}</span></div></div>
     {wc ? (

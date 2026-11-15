@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 136d06e2989c3ac5
+// source-sha256: e4090c1357e68eb1
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -177352,7 +177352,7 @@ function MsxR3Cup({
     if (typeof SuccessSound !== 'undefined') SuccessSound.se('cupEntry');
   }, []);
   const nOk = cupsNow.filter(c => c.entry && c.entry.ok).length;
-  const openTexts = nOk ? [`「今月は ${nOk}つ 出られるよ! 出ると1ターン使うから、トレーニングとどっちにするか考えてね」`, `「出られる大会が ${nOk}つ あるよ。賞品もチェックしてみて!」`, `「${cur ? msxR3CupName(cur.sys, cur.name) : '大会'}、気になるね。体力は大丈夫?」`, `「大会は1ターン使うよ。調子がいいなら行ってみよ!」`] : ['「今月は出られる大会がないみたい。トレーニングでじっくり力をつけよ!」', '「出られる大会が今月は無いよ。次の月の予定も見てみてね」'];
+  const openTexts = nOk ? [`「今月は ${nOk}つ 出られるよ! 出ると1ターン使うから、トレーニングとどっちにするか考えてね」`, `「出られる大会が ${nOk}つ あるよ。賞品もチェックしてみて!」`, `「${cur ? msxR3CupName(cur.sys, cur.name) : '大会'}、気になるね。体力は大丈夫?」`, `「大会は1ターン使うよ。調子がいいなら行ってみよ!」`] : P.key === 'final' ? ['「最後の期は、ヒーローズファイナルだけだよ。それまではトレーニングや修行で仕上げよう!」'] : ['「今月は出られる大会がないみたい。トレーニングでじっくり力をつけよ!」', '「出られる大会が今月は無いよ。次の月の予定も見てみてね」'];
   const openLine = {
     t: msxR3Q(openTexts[Math.abs(Number(s.turn) || 0) % openTexts.length]),
     e: null
@@ -177463,7 +177463,7 @@ function MsxR3Cup({
     }, "ごほうび大")) : null);
   }) : React.createElement("div", {
     className: "msx-note"
-  }, now ? '今月の大会はありません' : 'この月の大会はありません')), React.createElement("div", {
+  }, P.key === 'final' ? '最後の期は、ヒーローズファイナルだけです' : now ? '今月の大会はありません' : 'この月の大会はありません')), React.createElement("div", {
     className: "v-card",
     style: {
       padding: '5px 9px'
