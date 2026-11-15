@@ -52,6 +52,12 @@
     { id: 'actGreatCharge', name: 'トレーニングの場面: 大成功の溜め', se: 'enemyCharge' },
     { id: 'actGreatBoom', name: 'トレーニングの場面: 大成功の爆発', se: 'crit' },
     { id: 'actComboBoom', name: 'トレーニングの場面: 絆の大爆発', se: 'fusion' },
+    // 持ち物を使ったときの演出(56-monsuc-itemfx.jsx・2026-11-15 社長 r1115-079)。使った音と、種類ごとの効いた音
+    { id: 'itemUse', name: '持ち物: 使った', se: 'trainingTool' },
+    { id: 'itemHeal', name: '持ち物: 回復した', se: 'heal' },
+    { id: 'itemBuff', name: '持ち物: 効き目がついた', se: 'levelUp' },
+    { id: 'itemBond', name: '持ち物: 気持ちが通じた', se: 'trainingReward' },
+    { id: 'itemBox', name: '持ち物: 中身が出てきた', se: 'join' },
     // 修行の段(MsxShugyoStages)。曲は修行(ascetic)のまま。段の切り替え・溜め・斬る・跳ぶ・叩きつけ
     { id: 'qStage', name: '修行の段: 切り替え', se: 'trainingDecide' },
     { id: 'qCharge', name: '修行の段: 溜め', se: 'enemyCharge' },
