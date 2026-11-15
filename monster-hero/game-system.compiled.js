@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c7de6ebfea37f11d
+// source-sha256: 0fe6fd2cfe7d2ea5
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -169417,6 +169417,7 @@ const MSX_CSS = `
 .msx-md-st .v{flex:1;min-width:0;display:flex;flex-direction:column}
 .msx-md-st .v b{font-size:14px;line-height:1.1;text-align:right}
 .msx-md-st .g{height:4px;border-radius:2px;background:#334155;overflow:hidden}.msx-md-st .g i{display:block;height:100%}
+.msx-md-st .g.ov{position:relative}.msx-md-st .g b.ov{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,#c084fc,#f0abfc)} /* 999 を超えた分(r1115-103) */
 .msx-md-st .a{flex:none;width:1.4em;text-align:center;font-weight:900;color:#fde047}.msx-md-st .a.lo{color:#94a3b8}
 .msx-md-kv{display:flex;gap:6px;align-items:baseline;font-size:11px;padding:2px 0;border-bottom:1px solid #1e293b}
 .msx-md-kv>b{flex:none;width:6em;color:#f9a8d4;font-size:10.5px}.msx-md-kv>span{flex:1;min-width:0;overflow-wrap:anywhere}.msx-md-kv .gd{font-size:14px;font-weight:900;color:#fde047}
@@ -171046,7 +171047,7 @@ function MsxMonDetail({
   const tech = all.find(t => t.id === pickT) || list[0] || null;
   const grade = (k, v) => (typeof msaTechGrade === 'function' ? msaTechGrade(k, v) : '') || '−';
   const msOf = id => mastery && typeof mastery === 'object' ? msxMasteryOf(mastery, id) : null;
-  const maxSt = Math.max(300, ...MSX_STATS.map(k => Number(st[k]) || 0));
+  const maxSt = Math.max(300, ...MSX_STATS.map(k => Math.min(999, Number(st[k]) || 0)));
   const TOP = [['base', '基礎'], ['feat', '特徴'], ['apt', '適性']];
   return React.createElement("div", {
     className: "msx-ov msx-fade",
@@ -171098,13 +171099,19 @@ function MsxMonDetail({
   }, MSX_STAT_ICON[k], MSX_STAT_NAME[k]), React.createElement("span", {
     className: "v"
   }, React.createElement("b", null, st[k]), React.createElement("span", {
-    className: "g"
+    className: `g${(Number(st[k]) || 0) > 999 ? ' ov' : ''}`
   }, React.createElement("i", {
     style: {
-      width: `${Math.max(2, Math.min(100, (Number(st[k]) || 0) / maxSt * 100))}%`,
+      width: `${Math.max(2, Math.min(100, Math.min(999, Number(st[k]) || 0) / maxSt * 100))}%`,
       background: MSX_STAT_COLOR[k]
     }
-  }))), React.createElement("span", {
+  }), (Number(st[k]) || 0) > 999 ? React.createElement("b", {
+    className: "ov",
+    "data-msx-stat-over": (Number(st[k]) || 0) - 999,
+    style: {
+      width: `${Math.min(100, ((Number(st[k]) || 0) - 999) / 9.99)}%`
+    }
+  }) : null)), React.createElement("span", {
     className: `a${apt[i] > 'B' ? ' lo' : ''}`
   }, apt[i])))) : null, tab === 'feat' ? React.createElement("div", {
     className: "msx-md-box"

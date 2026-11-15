@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: c758aaceb2e63a3e
+// generated-sha256: e21d55a927d4832d
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -88051,6 +88051,7 @@ const MSX_CSS = `
 .msx-md-st .v{flex:1;min-width:0;display:flex;flex-direction:column}
 .msx-md-st .v b{font-size:14px;line-height:1.1;text-align:right}
 .msx-md-st .g{height:4px;border-radius:2px;background:#334155;overflow:hidden}.msx-md-st .g i{display:block;height:100%}
+.msx-md-st .g.ov{position:relative}.msx-md-st .g b.ov{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,#c084fc,#f0abfc)} /* 999 を超えた分(r1115-103) */
 .msx-md-st .a{flex:none;width:1.4em;text-align:center;font-weight:900;color:#fde047}.msx-md-st .a.lo{color:#94a3b8}
 .msx-md-kv{display:flex;gap:6px;align-items:baseline;font-size:11px;padding:2px 0;border-bottom:1px solid #1e293b}
 .msx-md-kv>b{flex:none;width:6em;color:#f9a8d4;font-size:10.5px}.msx-md-kv>span{flex:1;min-width:0;overflow-wrap:anywhere}.msx-md-kv .gd{font-size:14px;font-weight:900;color:#fde047}
@@ -89027,7 +89028,8 @@ function MsxMonDetail({ species, name, art, st, apt, type, peak, grades, known, 
   const tech = all.find((t) => t.id === pickT) || list[0] || null;
   const grade = (k, v) => (typeof msaTechGrade === 'function' ? msaTechGrade(k, v) : '') || '−';
   const msOf = (id) => (mastery && typeof mastery === 'object' ? msxMasteryOf(mastery, id) : null); // 熟練(渡されていなければ null = 出さない)
-  const maxSt = Math.max(300, ...MSX_STATS.map((k) => Number(st[k]) || 0));
+  // 棒の長さは 999 までで比べ、999 を超えた分は紫の帯で重ねる(育成のホームのゲージと同じ見せ方・能力の上限アップ r1115-103)
+  const maxSt = Math.max(300, ...MSX_STATS.map((k) => Math.min(999, Number(st[k]) || 0)));
   const TOP = [['base', '基礎'], ['feat', '特徴'], ['apt', '適性']];
   return (
     <div className="msx-ov msx-fade" data-msx-detail onClick={onClose}>
@@ -89045,7 +89047,7 @@ function MsxMonDetail({ species, name, art, st, apt, type, peak, grades, known, 
               {tab === 'base' ? (<div className="msx-md-box"><div className="cap">能力<span>素質</span></div>
                 {MSX_STATS.map((k, i) => (
                   <div key={k} className="msx-md-st"><span className="n">{MSX_STAT_ICON[k]}{MSX_STAT_NAME[k]}</span>
-                    <span className="v"><b>{st[k]}</b><span className="g"><i style={{ width: `${Math.max(2, Math.min(100, (Number(st[k]) || 0) / maxSt * 100))}%`, background: MSX_STAT_COLOR[k] }}/></span></span>
+                    <span className="v"><b>{st[k]}</b><span className={`g${(Number(st[k]) || 0) > 999 ? ' ov' : ''}`}><i style={{ width: `${Math.max(2, Math.min(100, Math.min(999, Number(st[k]) || 0) / maxSt * 100))}%`, background: MSX_STAT_COLOR[k] }}/>{(Number(st[k]) || 0) > 999 ? <b className="ov" data-msx-stat-over={(Number(st[k]) || 0) - 999} style={{ width: `${Math.min(100, ((Number(st[k]) || 0) - 999) / 9.99)}%` }}/> : null}</span></span>
                     <span className={`a${apt[i] > 'B' ? ' lo' : ''}`}>{apt[i]}</span></div>
                 ))}</div>) : null}
               {tab === 'feat' ? (<div className="msx-md-box">
