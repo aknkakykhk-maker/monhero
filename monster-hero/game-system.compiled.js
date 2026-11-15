@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9a8ea9dbe7d24d45
+// source-sha256: f167ba71ec623c73
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -160688,6 +160688,22 @@ const useMsxSeen = () => {
   }, []);
   return msxSeenCache || msxSeenNorm(null);
 };
+const msxFxStatRange = size => {
+  try {
+    const SUC = msxSuc.SUC;
+    const C = typeof MASMON_CALC !== 'undefined' ? MASMON_CALC : null;
+    if (!SUC || !SUC.BASE || !C) return '';
+    const type = 2;
+    const v = [];
+    for (let i = 0; i < 10; i++) v.push(SUC.BASE.light * (Number(size) || 0) * C.ageMult(type, i / 10 + 0.01));
+    const lo = Math.max(1, Math.round(Math.min(...v)));
+    const hi = Math.max(lo, Math.round(Math.max(...v)));
+    return lo === hi ? `+${lo}` : `+${lo}〜${hi}`;
+  } catch (e) {
+    return '';
+  }
+};
+const MSX_FX_NOTE = '能力の上がり幅は、型「普通」・素質Cのモンスターの目安(育成の時期で変わります)';
 const MSX_FX_SIZE = n => n >= 2 ? '大' : n >= 1 ? '中' : '小';
 const MSX_FX_TARGET = Object.freeze({
   main: '得意の能力',
@@ -160714,18 +160730,21 @@ const msxFxText = f => {
   if (!Array.isArray(f)) return '';
   const [k, a, b] = f;
   const BUFFS = msxSuc && msxSuc.SUC && msxSuc.SUC.events ? msxSuc.SUC.events.BUFFS || {} : {};
-  if (k === 'st') return `${typeof MSX_STAT_NAME !== 'undefined' && MSX_STAT_NAME[a] || MSX_FX_TARGET[a] || '能力'} ${MSX_FX_SIZE(Number(b) || 0)}アップ`;
-  if (k === 'loy') return `忠誠 ${a > 0 ? '+' : '−'}`;
-  if (k === 'fear') return '恐れ度 +';
+  if (k === 'st') {
+    const r = msxFxStatRange(b);
+    return `${typeof MSX_STAT_NAME !== 'undefined' && MSX_STAT_NAME[a] || MSX_FX_TARGET[a] || '能力'} ${r || `${MSX_FX_SIZE(Number(b) || 0)}アップ`}`;
+  }
+  if (k === 'loy') return `忠誠度 ${msxSigned(Number(a) || 0)}`;
+  if (k === 'fear') return `恐れ度 ${msxSigned(Number(a) || 0)}`;
   if (k === 'pop') return `人気 ${msxSigned(a)}`;
   if (k === 'popHi') return `人気 ${msxSigned(a)}(人気60〜のとき)`;
-  if (k === 'hp') return `体力 ${msxSigned(a)}`;
+  if (k === 'hp') return `体力 ${msxSigned(a)}%(最大の)`;
   if (k === 'str') return `ストレス ${msxSigned(a)}`;
   if (k === 'bond') return `${a === 'aid' ? '助手' : a === 'team' ? '編成みんな' : '編成のモンスター'}の親密度 ${msxSigned(b)}`;
   if (k === 'buff') return BUFFS[a] ? `${BUFFS[a].icon} ${BUFFS[a].name}` : 'いい調子になる';
   if (k === 'fame') return `賞金 ${msxSigned(a)}G`;
   if (k === 'pts') return `能力ポイント ${msxSigned(a)}`;
-  if (k === 'mas') return '技の熟練 +';
+  if (k === 'mas') return `技の熟練 ${msxSigned(Number(a) || 0)}`;
   if (k === 'flag') return MSX_FX_FLAG[a] || 'いいことがある';
   if (k === 'goal') return MSX_FX_GOAL[a] || '期の目標を決める';
   if (k === 'apt') return a === 'low' ? '一番低い間合い適性 +1段' : '一番高い間合い適性 +1段';
@@ -160752,6 +160771,7 @@ const msxEvChoice = (evId, c) => {
   const e = E && E.BY_ID ? E.BY_ID[evId] : null;
   return e && e.ch ? e.ch[c] || (c === 'a' && e.ch.fx ? e.ch : null) : null;
 };
+const msxChoiceNoteSrc = (open, ev0, chOf) => chOf(open).map(c => open.ep != null || String(open.id).startsWith('story.') || open.id === 'issa' ? '' : msxChoiceLines(msxEvChoice(open.id, c)).join(' ')).join(' ');
 function MsxChoiceInfo({
   evId,
   c,
@@ -160767,7 +160787,7 @@ function MsxChoiceInfo({
     "data-msx-chinfo": known ? 'known' : 'unknown'
   }, lines.map((l, i) => React.createElement("div", {
     key: i
-  }, l)), known ? null : React.createElement("small", null, "一度選ぶと、効果が分かるようになる"));
+  }, l)), known ? null : React.createElement("small", null, "一度選ぶと、効果が分かるようになる"), known && lines.some(l => /\+\d+〜?\d*/.test(l) && /(ライフ|ちから|かしこさ|命中|回避|丈夫さ|能力)/.test(l)) ? React.createElement("small", null, MSX_FX_NOTE) : null);
 }
 const MSX_EV_TITLE = Object.freeze({
   'ev.daily.nut': '道ばたの木の実',
@@ -161032,8 +161052,9 @@ function MsxDex({
   }, React.createElement("b", null, open.title), React.createElement("button", {
     type: "button",
     className: "chip",
-    onClick: () => setOpen(null)
-  }, "← 一覧へ")), open.awake ? React.createElement("div", {
+    onClick: () => setOpen(null),
+    "data-msx-dex-back": true
+  }, "← 戻る")), open.awake ? React.createElement("div", {
     className: "ln"
   }, open.awake === 2 ? '覚醒したあと、さらに虹色の光に包まれて、全能力 +40・間合い適性が2つ上がった。' : 'まぶしい光に包まれて、全能力 +30・一番高い間合い適性が上がった。') : null, aw && aw.t ? React.createElement("div", {
     className: "ln"
@@ -161058,7 +161079,12 @@ function MsxDex({
       const k = MSX_ISSA_KEYS.find(x => x.key === c) || {};
       return `⭕ ${k.ok} / ❌ ${k.ng}`;
     })() : open.ep != null ? 'お話の続きが変わる' : msxChoiceLines(msxEvChoice(open.id, c)).join(' / ') : 'まだ選んだことがない'));
-  })) : null) : React.createElement("div", {
+  })) : null, chOf(open).length && /\+\d+〜\d+/.test(String(msxChoiceNoteSrc(open, ev0, chOf))) ? React.createElement("div", {
+    className: "msx-note",
+    style: {
+      fontSize: 10
+    }
+  }, MSX_FX_NOTE) : null) : React.createElement("div", {
     className: "msx-dex-list"
   }, rows.length ? rows.map(x => {
     const known = Boolean(seen.ev[x.id]);

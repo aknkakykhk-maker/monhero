@@ -80,7 +80,7 @@ check('文の最後の1〜2字だけ落とさない CSS(画面全体 pretty・�
   html.includes('.mh-app { text-wrap: pretty; }') && html.includes('.mh-app [data-bubble-text] { text-wrap: balance; }') && html.includes('[data-rhythm-play-area], [data-rhythm-play-area] * { text-wrap: wrap; }'));
 const assistant = P('21-assistant.jsx');
 // 2026-10-24 窓口「幅320で『…』で切れている」で、2行で切るのをやめた。字を9pxにして全文を出し、伸びたぶん札を下げる(home-layout-check)
-check('M7 HOME: 幅360未満でみゅあの文は9px・切らずに全部出す', assistant.includes('<span data-bubble-text ') && html.includes('@media (max-width: 359px) { .mh-home-assistant [data-bubble-text] { font-size: 9px; } }') && !html.includes('-webkit-line-clamp: 2;'));
+check('M7 HOME: 幅360未満でみゅあの文は9px・切らずに全部出す', assistant.includes('<span data-bubble-text ') && html.includes('@media (max-width: 359px) { .mh-home-assistant [data-bubble-text] { font-size: 9px; } }') && !/\[data-bubble-text\][^}]*-webkit-line-clamp/.test(html)); // みゅあの吹き出しの文だけを見る(マルチの席のスタンプなど、ほかの所の line-clamp には関係しない)
 
 check('M8 結果: 幅360未満で判定の表と MAX COMBO を詰める', play.includes('max-[359px]:gap-y-0 max-[359px]:py-1.5 max-[359px]:text-[13px]') && play.includes('max-[359px]:text-[28px]'));
 check('M8 結果: 下の帯の上に、続きがあるあいだだけ「▼ ビートP・ライブログ」の印', /const RhythmResultMoreHint=\(\{label\}\)=>/.test(play) && play.includes('<RhythmResultMoreHint label=')
