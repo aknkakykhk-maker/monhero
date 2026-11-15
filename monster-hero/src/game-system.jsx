@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 075d5d542d4f1b11
+// generated-sha256: 69859208b30151c0
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -88061,6 +88061,16 @@ const MSX_CSS = `
 .msx-md-kv{display:flex;gap:6px;align-items:baseline;font-size:11px;padding:2px 0;border-bottom:1px solid #1e293b}
 .msx-md-kv>b{flex:none;width:6em;color:#f9a8d4;font-size:10.5px}.msx-md-kv>span{flex:1;min-width:0;overflow-wrap:anywhere}.msx-md-kv .gd{font-size:14px;font-weight:900;color:#fde047}
 .msx-md-dex{font-size:11px;font-weight:500;line-height:1.6;margin-top:4px}
+.msx-md-btabs{margin-top:6px}
+.msx-md-as .cap span{margin-left:auto}
+.msx-md-ac{display:flex;gap:8px;align-items:flex-start;background:linear-gradient(180deg,#2a2150,#1e1a36);border:1px solid #4a4380;border-radius:12px;padding:7px 8px;margin-top:6px}
+.msx-md-ac .ic{flex:none;width:30px;height:30px;display:flex;align-items:center;justify-content:center;font-size:22px;border-radius:9px;background:#0f172a}
+.msx-md-ac .bd{flex:1;min-width:0}.msx-md-ac .hd{display:flex;gap:6px;align-items:flex-start;justify-content:space-between}
+.msx-md-ac .hd b{font-size:13px;font-weight:900;line-height:1.3;min-width:0;word-break:keep-all;overflow-wrap:anywhere}.msx-md-ac .hd b em{font-style:normal;color:#fde047}
+.msx-md-ac .pips{flex:none;font-size:10px;font-weight:800;color:#cbd5e1;background:#0f172a;border-radius:99px;padding:1px 7px;white-space:nowrap}.msx-md-ac .pips i{font-style:normal;color:#fde047;font-weight:900}
+.msx-md-ac .tx{font-size:11px;font-weight:700;color:#e2e8f0;line-height:1.45;margin-top:2px;word-break:keep-all;overflow-wrap:anywhere}
+.msx-md-ac .sc{font-size:10px;font-weight:800;color:#f9a8d4;margin-top:2px}
+.msx-md-art .pw{flex-wrap:wrap;row-gap:1px}.msx-md-art .pw b{flex:1 1 auto}
 .msx-md-bot{margin-top:6px}
 .msx-md-cap{font-size:12px;font-weight:900;color:#f9a8d4}.msx-md-cap small{font-size:10px;color:#cbd5e1;margin-left:6px;font-weight:700}
 .msx-md-dists{display:grid;grid-template-columns:repeat(5,1fr);gap:2px;margin-top:3px}
@@ -89022,8 +89032,9 @@ const MSX_STAT_COLOR = Object.freeze({ life: '#facc15', pow: '#f87171', wise: '#
 // pick … 被った升で覚える技を選べるとき { sel: { 升: 技id }, locked: (升) => 覚えたあとで変えられないか, onPick: (升, 技id) => void }(無ければ見るだけ)
 // head … 名前の横に置く物(マスモンボックスのハート・✏)/ more … 特徴のタブの下に足す行 [[見出し, 中身], …] / foot … 「とじる」の上に置くボタン(貸し出し・お別れ)/ grade … 総合力の横の評価(A2 など)
 // mastery … 覚えた技の熟練 { 技id: 0〜100 }(2026-11-15 社長 r1115-082「技の熟練度ってそもそもどこにあるの？」)。渡したときだけ、升に小さなゲージ・右の欄に熟練と効き目を出す
-function MsxMonDetail({ species, name, art, st, apt, type, peak, grades, known, power, rank, sub, onClose, SUC, head = null, more = null, foot = null, grade: gradeLabel = null, pick = null, mastery = null }) {
+function MsxMonDetail({ species, name, art, st, apt, type, peak, grades, known, power, rank, sub, onClose, SUC, head = null, more = null, foot = null, grade: gradeLabel = null, pick = null, mastery = null, assists = null, info = null }) {
   const [tab, setTab] = useState('base');
+  const [btab, setBtab] = useState('tech'); // 下の段のタブ: 技 / アシスト / 育成情報(出せる情報があるときだけタブを出す・r1115-095)
   const [pickCell, setPickCell] = useState(null); // 技を選ぶ窓を開いている升(pick があるときだけ)
   const line = typeof MONSTER_LINEAGE_MAP === 'object' && MONSTER_LINEAGE_MAP ? MONSTER_LINEAGE_MAP[species] : null;
   const main = line ? msxLineName(line.main) : ''; const subL = line ? msxLineName(line.sub || line.main) : '';
@@ -89067,7 +89078,7 @@ function MsxMonDetail({ species, name, art, st, apt, type, peak, grades, known, 
                 <div className="msx-md-kv"><b>成長の型</b><span className="yel">{typeName}</span></div>
                 <div className="msx-md-kv"><b>伸びどき</b><span>{peak || '—'}</span></div>
                 <div className="msx-md-kv"><b>血統</b><span>{main ? `${main}${subL && subL !== main ? ` × ${subL}` : '(純血)'}` : '—'}</span></div>
-                {Array.isArray(more) ? more.filter(Boolean).map(([k, v], i) => <div key={`m${i}`} className="msx-md-kv"><b>{k}</b><span>{v}</span></div>) : null}
+                {false && Array.isArray(more) ? more.filter(Boolean).map(([k, v], i) => <div key={`m${i}`} className="msx-md-kv"><b>{k}</b><span>{v}</span></div>) : null}
                 <div className="msx-md-dex">{dex || 'このモンスターの図鑑は調査中'}</div></div>) : null}
               {tab === 'apt' ? (<div className="msx-md-box"><div className="cap">間合い適性</div>
                 <div className="msx-dt-dist">{MSX_DIST_NAMES.map((d, i) => <div key={d}><span>{d}</span><b>{grades ? grades[i] : '—'}</b></div>)}</div>
@@ -89076,7 +89087,27 @@ function MsxMonDetail({ species, name, art, st, apt, type, peak, grades, known, 
           </div>
           {/* 技の欄(2026-11-14 社長「今なんの技を覚えてるかわかんない」→ 参考 monster-detail-basic の形): 左から 遠・中・近・零 の4列の升目+右に技の詳細。
               升の中は技の絵と右下に消費ガッツ。覚えていない技は暗い升に錠、出ない枠は×。升を押すと右に詳細。参考の「移動間合い・技能力・連動能力」はこのゲームに無いので出さない */}
-          <div className="msx-md-bot" data-msx-detail-techs>
+          {(() => {
+            const AT = typeof window !== 'undefined' && window.MONHERO_SUCCESS_ASSIST && window.MONHERO_SUCCESS_ASSIST.VERSION === 3 ? window.MONHERO_SUCCESS_ASSIST : null;
+            const infoRows = Array.isArray(info) ? info.filter(Boolean) : [];
+            const hasA = Array.isArray(assists) && !!AT; const hasI = infoRows.length > 0;
+            if (!hasA && !hasI) return null;
+            const BT = [['tech', '技'], hasA ? ['assist', 'アシスト'] : null, hasI ? ['info', '育成情報'] : null].filter(Boolean);
+            const sceneName = (sc) => { const f = AT && AT.SCENES ? AT.SCENES.find((x) => x.key === sc) : null; return f ? f.name : ''; };
+            const got = hasA ? assists.filter((a) => a && AT.BY_ID[a.id]).map((a) => ({ a: AT.BY_ID[a.id], n: AT.fromSaved(a) })).filter((x) => x.n > 0) : [];
+            return (<div className="msx-md-btabs" data-msx-detail-btabs>
+              <div className="msx-md-tabs" style={{ gridTemplateColumns: `repeat(${BT.length},1fr)` }}>{BT.map(([k, n]) => <button type="button" key={k} className={btab === k ? 'on' : ''} data-msx-detail-btab={k} onClick={() => setBtab(k)}>{n}</button>)}</div>
+              {btab === 'assist' ? (<div className="msx-md-box msx-md-as" data-msx-detail-assist>
+                <div className="cap">取ったアシスト効果<span data-msx-assist-count>{got.length} / {AT.MAX_KINDS}種類</span></div>
+                {got.length ? got.map(({ a, n }) => (<div key={a.id} className="msx-md-ac" data-msx-assist-card={a.id}>
+                  <span className="ic" aria-hidden="true">{typeof cardIconNode === 'function' ? cardIconNode(a.icon, 28) : a.icon}</span>
+                  <div className="bd"><div className="hd"><b>{a.name} <em>{AT.valueText(a.id, n)}</em></b><span className="pips" aria-label={`目盛り ${n}/${a.max}`}><i>{n}</i>/{a.max}</span></div>
+                    <div className="tx">{AT.describe(a.id, n)}</div>{sceneName(a.scene) ? <div className="sc">効く場面: {sceneName(a.scene)}</div> : null}</div></div>))
+                  : <div className="msx-note" data-msx-assist-none style={{ padding: 8 }}>アシスト効果はまだありません</div>}</div>) : null}
+              {btab === 'info' ? (<div className="msx-md-box" data-msx-detail-info>{infoRows.map(([k, v], i) => <div key={`i${i}`} className="msx-md-kv"><b>{k}</b><span>{v}</span></div>)}</div>) : null}
+            </div>);
+          })()}
+          <div className="msx-md-bot" data-msx-detail-techs style={btab !== 'tech' && (Array.isArray(assists) || (Array.isArray(info) && info.some(Boolean))) ? { display: 'none' } : undefined}>
             <div className="msx-md-cap">技<small>{Array.isArray(known) ? '覚えた技' : '初めから使える技'} {all.filter(has).length}/{all.length}</small></div>
             <div className="msx-md-tw">
               <MsxTechGrid all={all} head={grades ? (d) => ({ g: grades[d] }) : null} cell={(alts, r, d, cellK) => {
@@ -92840,7 +92871,6 @@ function MsxR3Box({ onClose }) {
           ['忠誠 / 人気', `${Math.round(cur.loy || 0)} / ${Math.round(cur.pop || 0)}`],
           Array.isArray(cur.fav) && cur.fav.length ? ['得意な能力', cur.fav.map((k) => MSX_STAT_NAME[k] || k).join('・')] : null,
           cur.awake ? ['覚醒', cur.awake >= 2 ? '🌈 超覚醒' : '✨ 覚醒'] : null,
-          assistText ? ['アシスト', assistText] : null,
           Array.isArray(cur.titles) && cur.titles.length ? ['称号', cur.titles.slice(0, 4).map((t) => `「${msxR3TitleName(t)}」`).join('')] : null,
           cur.coach ? ['育てた助手', msxAidName(cur.coach)] : null,
           ['世代', `第${Math.max(1, Math.round(Number(cur.gen) || 1))}世代`],
@@ -92854,7 +92884,8 @@ function MsxR3Box({ onClose }) {
           pick={cur.raised === false && SUC && typeof SUC.techPickNorm === 'function' ? (() => { const sel = SUC.techPickNorm(tpAll && tpAll.mon ? tpAll.mon[cur.id] : null, cur.species); return { sel, locked: () => false, onPick: async (c, id) => { const next = { ...sel, [c]: id }; setTpAll((t0) => { const t = t0 || msxNormTechPick(null); return { ...t, mon: { ...t.mon, [cur.id]: next } }; }); try { setTpAll(await msxWriteTechPick('mon', cur.id, next)); } catch (e) {} } }; })() : null} known={Array.isArray(cur.techs) ? cur.techs : []} mastery={cur.raised !== false && Array.isArray(cur.techs) ? Object.fromEntries(cur.techs.map((t, i) => [t, Array.isArray(cur.mast) ? Number(cur.mast[i]) || 0 : 0])) : null} power={cur.raised === false ? null : msxMmPow(cur)} rank={cur.grade ? null : cur.rank} grade={cur.grade} SUC={SUC}
           head={<><button type="button" className={`mm-fav${fav.includes(cur.id) ? ' on' : ''}`} onClick={() => toggleFav(cur.id)} aria-label="お気に入り" data-msx-mm-fav>{fav.includes(cur.id) ? '❤' : '♡'}</button>
             <button type="button" className="mm-ed" aria-label="名前と染色を変える" onClick={() => { setEdit({ nick: cur.nick || msxMonName(cur.species), colors: Array.isArray(cur.colors) ? cur.colors.slice(0, 6) : [], err: '' }); setPage('edit'); }} data-msx-r3-edit>✏</button></>}
-          more={more}
+          info={more} assists={Array.isArray(cur.assists) ? cur.assists : []}
+          peak={(() => { try { return msxStartPreview(SUC, cur.species, Number.isInteger(cur.gt) ? cur.gt : null, cur.aptBase, cur.st).peak; } catch (e) { return ''; } })()}
           foot={<>{msg ? <div className="mm-hint ok">{msg}</div> : null}<div className="mm-acts">
             {lendOn && cur.raised !== false ? (lendId === cur.id ? <button type="button" onClick={unlend}>🤝 貸し出しをやめる</button> : <button type="button" onClick={lend}>🤝 貸し出す</button>) : null}
             <button type="button" disabled={!!lock} onClick={() => setByeAsk({ ids: [cur.id] })} data-msx-r3-bye>{lock ? `お別れ(${lock})` : 'お別れ'}</button></div></>}

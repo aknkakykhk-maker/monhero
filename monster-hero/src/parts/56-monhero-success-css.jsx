@@ -716,6 +716,16 @@ const MSX_CSS = `
 .msx-md-kv{display:flex;gap:6px;align-items:baseline;font-size:11px;padding:2px 0;border-bottom:1px solid #1e293b}
 .msx-md-kv>b{flex:none;width:6em;color:#f9a8d4;font-size:10.5px}.msx-md-kv>span{flex:1;min-width:0;overflow-wrap:anywhere}.msx-md-kv .gd{font-size:14px;font-weight:900;color:#fde047}
 .msx-md-dex{font-size:11px;font-weight:500;line-height:1.6;margin-top:4px}
+.msx-md-btabs{margin-top:6px}
+.msx-md-as .cap span{margin-left:auto}
+.msx-md-ac{display:flex;gap:8px;align-items:flex-start;background:linear-gradient(180deg,#2a2150,#1e1a36);border:1px solid #4a4380;border-radius:12px;padding:7px 8px;margin-top:6px}
+.msx-md-ac .ic{flex:none;width:30px;height:30px;display:flex;align-items:center;justify-content:center;font-size:22px;border-radius:9px;background:#0f172a}
+.msx-md-ac .bd{flex:1;min-width:0}.msx-md-ac .hd{display:flex;gap:6px;align-items:flex-start;justify-content:space-between}
+.msx-md-ac .hd b{font-size:13px;font-weight:900;line-height:1.3;min-width:0;word-break:keep-all;overflow-wrap:anywhere}.msx-md-ac .hd b em{font-style:normal;color:#fde047}
+.msx-md-ac .pips{flex:none;font-size:10px;font-weight:800;color:#cbd5e1;background:#0f172a;border-radius:99px;padding:1px 7px;white-space:nowrap}.msx-md-ac .pips i{font-style:normal;color:#fde047;font-weight:900}
+.msx-md-ac .tx{font-size:11px;font-weight:700;color:#e2e8f0;line-height:1.45;margin-top:2px;word-break:keep-all;overflow-wrap:anywhere}
+.msx-md-ac .sc{font-size:10px;font-weight:800;color:#f9a8d4;margin-top:2px}
+.msx-md-art .pw{flex-wrap:wrap;row-gap:1px}.msx-md-art .pw b{flex:1 1 auto}
 .msx-md-bot{margin-top:6px}
 .msx-md-cap{font-size:12px;font-weight:900;color:#f9a8d4}.msx-md-cap small{font-size:10px;color:#cbd5e1;margin-left:6px;font-weight:700}
 .msx-md-dists{display:grid;grid-template-columns:repeat(5,1fr);gap:2px;margin-top:3px}
