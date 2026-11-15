@@ -280,6 +280,8 @@ const MSA_CSS = `
 .msa-stage.big .msa-floor{bottom:36%}
 .msa-stage.big .msa-spot{bottom:calc(36% - 7px)}
 .msa-stage.big .msa-aim{bottom:calc(36% + 28px)}
+.msa-stage.big .msa-hx{bottom:calc(36% + var(--msa-fh,170px) * .5);transform:scale(1.15)}
+.msa-stage.big .msa-tr{bottom:calc(36% + var(--msa-fh,170px) * .5)}
 .msa-topline{flex-wrap:wrap;row-gap:2px}
 .msa-topline .msc-buff{font-style:normal;font-size:10.5px}
 .msa-topline .msa-breeder{font-size:11px;color:#cbd5e1;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:55%}
@@ -288,6 +290,79 @@ const MSA_CSS = `
 .msa-stage.fill .msa-f img.msa-img{max-width:140px;max-height:166px}
 .msa-stage.fill .msa-f .msa-shadow{width:80px;margin-left:-40px}
 @media (max-height:420px) and (orientation:landscape){.msa-stage{height:180px}.msa-f{height:100px}.msa-f img.msa-img{max-height:92px}}
+/* ---- 技のランクの演出(r1115-157) ---- */
+.msa-cut{position:absolute;inset:0;z-index:12;pointer-events:none;overflow:hidden;--k1:#fb923c;--k2:#dc2626;--k3:#fde047;animation:msaCutOut var(--cut,1000ms) linear both}
+.msa-cut.wise{--k1:#67e8f9;--k2:#7c3aed;--k3:#e0e7ff}
+.msa-cut>*{position:absolute;pointer-events:none}
+.msa-cut .cs{inset:0;background:radial-gradient(ellipse at 50% 50%,#0f0b2299,#020208e6);animation:msaCutShade var(--cut,1000ms) ease-out both}
+.msa-cut .cr{left:50%;top:50%;width:200%;padding-top:200%;margin:-100% 0 0 -100%;border-radius:50%;background:repeating-conic-gradient(from 0deg,#fff0 0 5deg,var(--k1) 5deg 6.5deg,#fff0 6.5deg 11deg);-webkit-mask:radial-gradient(circle,#0000 14%,#000 22%,#000 60%,#0000 70%);mask:radial-gradient(circle,#0000 14%,#000 22%,#000 60%,#0000 70%);opacity:.55;animation:msaCutRays var(--cut,1000ms) linear both}
+.msa-cut .cb{left:-12%;right:-12%;top:30%;height:40%;display:flex;align-items:center;gap:6px;padding:0 14%;transform:skewY(-8deg);background:linear-gradient(90deg,var(--k2),var(--k1) 45%,var(--k2));box-shadow:0 0 0 3px #fff,0 0 24px var(--k1);overflow:hidden;animation:msaCutBandA var(--cut,1000ms) cubic-bezier(.2,.9,.3,1) both}
+.msa-cut.B .cb{flex-direction:row-reverse;text-align:right;animation-name:msaCutBandB}
+.msa-cut.band .cb{top:36%;height:28%;transform:skewY(-5deg)}
+.msa-cut .cl{inset:0;background:repeating-linear-gradient(90deg,#fff0 0 18px,#ffffff2e 18px 20px);animation:msaCutLines .35s linear infinite}
+.msa-cut .ca{position:relative;flex:0 0 40%;height:118%;align-self:flex-end;display:flex;align-items:flex-end;justify-content:center;transform:skewY(8deg);animation:msaCutArt var(--cut,1000ms) cubic-bezier(.2,.9,.3,1) both}
+.msa-cut.band .ca{flex-basis:30%;height:100%;align-self:center}
+.msa-cut .ca img,.msa-cut .ca canvas{max-height:100%;max-width:100%;width:auto;height:auto;object-fit:contain;filter:drop-shadow(0 0 6px #fff) drop-shadow(0 4px 0 #0006)}
+.msa-cut .ca .msa-flip{transform:scaleX(-1)}
+.msa-cut .ct{position:relative;flex:1 1 auto;min-width:0;transform:skewY(8deg);color:#fff;line-height:1.05}
+.msa-cut .ct small{display:block;font-size:11px;font-weight:900;color:var(--k3);letter-spacing:.06em;white-space:nowrap}
+.msa-cut .ct .st{margin-left:6px;color:#fde047;letter-spacing:0;text-shadow:0 0 4px #f59e0b}
+.msa-cut .ct b{display:block;font-weight:900;white-space:nowrap;color:#fff;text-shadow:2px 0 0 #1e1b4b,-2px 0 0 #1e1b4b,0 2px 0 #1e1b4b,0 -2px 0 #1e1b4b,0 4px 0 #0008,0 0 12px var(--k1);animation:msaCutName var(--cut,1000ms) cubic-bezier(.2,1.4,.4,1) both}
+.msa-cut .ct small,.msa-cut .ct em{text-shadow:0 1px 2px #1e1b4b,0 0 3px #1e1b4b}
+.msa-cut.wise .ct small{color:#fff}
+.msa-cut .ct em{display:block;font-style:normal;font-size:11px;font-weight:800;color:#ffffffd9;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.msa-cut .cf{inset:0;background:#fff;opacity:0;animation:msaCutFlash var(--cut,1000ms) linear both}
+@keyframes msaCutOut{0%,92%{opacity:1}100%{opacity:0}}
+@keyframes msaCutShade{0%{opacity:0}12%,85%{opacity:1}100%{opacity:0}}
+@keyframes msaCutRays{0%{opacity:0;transform:rotate(0) scale(.6)}15%{opacity:.55}100%{opacity:.4;transform:rotate(40deg) scale(1.1)}}
+@keyframes msaCutBandA{0%{clip-path:inset(0 100% 0 0)}14%,86%{clip-path:inset(0 0 0 0)}100%{clip-path:inset(0 0 0 100%)}}
+@keyframes msaCutBandB{0%{clip-path:inset(0 0 0 100%)}14%,86%{clip-path:inset(0 0 0 0)}100%{clip-path:inset(0 100% 0 0)}}
+@keyframes msaCutLines{to{background-position:20px 0}}
+@keyframes msaCutArt{0%{transform:skewY(8deg) translateX(-60%) scale(.9);opacity:0}16%{transform:skewY(8deg) translateX(0) scale(1.06);opacity:1}80%{transform:skewY(8deg) translateX(6%) scale(1.1)}100%{transform:skewY(8deg) translateX(10%) scale(1.12);opacity:1}}
+.msa-cut.B .ca{animation-name:msaCutArtB}
+@keyframes msaCutArtB{0%{transform:skewY(8deg) translateX(60%) scale(.9);opacity:0}16%{transform:skewY(8deg) translateX(0) scale(1.06);opacity:1}80%{transform:skewY(8deg) translateX(-6%) scale(1.1)}100%{transform:skewY(8deg) translateX(-10%) scale(1.12);opacity:1}}
+@keyframes msaCutName{0%,10%{opacity:0;transform:scale(1.8)}22%{opacity:1;transform:scale(.96)}30%,100%{opacity:1;transform:scale(1)}}
+@keyframes msaCutFlash{0%,84%{opacity:0}90%{opacity:.85}100%{opacity:0}}
+.msa-sl{position:absolute;z-index:2;left:var(--msa-cx,30%);top:62%;width:520px;height:520px;margin:-260px 0 0 -260px;border-radius:50%;pointer-events:none;background:repeating-conic-gradient(#fff0 0 3deg,#ffffffee 3deg 5deg,#fff0 5deg 8deg);-webkit-mask:radial-gradient(circle,#0000 18%,#000 30%,#000 60%,#0000 75%);mask:radial-gradient(circle,#0000 18%,#000 30%,#000 60%,#0000 75%);animation:msaSl var(--msa-pre,500ms) linear both}
+.msa-sl.pow{filter:drop-shadow(0 0 2px #fb923c)}.msa-sl.wise{filter:drop-shadow(0 0 2px #67e8f9)}
+@keyframes msaSl{0%{opacity:.6;transform:scale(1.25) rotate(0)}25%{opacity:1}100%{opacity:.8;transform:scale(.8) rotate(10deg)}}
+.msa-tr{position:absolute;z-index:5;bottom:88px;height:10px;margin-top:-5px;border-radius:99px;pointer-events:none;transform-origin:left center;background:linear-gradient(90deg,#fff0,var(--k1,#fb923c) 40%,#fff);box-shadow:0 0 12px var(--k1,#fb923c);opacity:0;animation:msaTr var(--tr,240ms) ease-in both}
+.msa-tr.wise{--k1:#67e8f9}.msa-tr.rev{transform-origin:right center;background:linear-gradient(270deg,#fff0,var(--k1,#fb923c) 40%,#fff)}
+.msa-tr.r4,.msa-tr.r5{height:18px;margin-top:-9px}
+@keyframes msaTr{0%{opacity:0;transform:scaleX(0)}30%{opacity:1}85%{opacity:1;transform:scaleX(1)}100%{opacity:0;transform:scaleX(1)}}
+.msa-hx{position:absolute;z-index:8;bottom:90px;width:0;height:0;pointer-events:none;--k1:#fb923c;--k2:#dc2626;--k3:#fde047}
+.msa-hx.wise{--k1:#67e8f9;--k2:#7c3aed;--k3:#e0e7ff}
+.msa-hx>i{position:absolute;left:0;top:0;pointer-events:none;opacity:0}
+.msa-hx .core{width:44px;height:44px;margin:-22px 0 0 -22px;border-radius:50%;background:radial-gradient(circle,#fff 0,var(--k3) 25%,var(--k1) 50%,#fff0 72%);animation:msaHxCore .45s ease-out}
+.msa-hx.l2 .core{width:70px;height:70px;margin:-35px 0 0 -35px}.msa-hx.l2 .ring{width:80px;height:80px;margin:-40px 0 0 -40px}
+.msa-hx.l3 .core{width:120px;height:120px;margin:-60px 0 0 -60px}
+.msa-hx.l4 .core{width:150px;height:150px;margin:-75px 0 0 -75px;animation-duration:.6s}
+.msa-hx.l5 .core{width:200px;height:200px;margin:-100px 0 0 -100px;animation:msaHxCore5 .95s ease-out;background:radial-gradient(circle,#fff 0,#fff 14%,var(--k3) 26%,var(--k1) 44%,var(--k2) 58%,#fff0 72%)}
+.msa-hx .ring{width:56px;height:56px;margin:-28px 0 0 -28px;border-radius:50%;border:3px solid var(--k3);box-shadow:0 0 10px var(--k1),inset 0 0 8px var(--k1);animation:msaHxRing .5s ease-out}
+.msa-hx.l3 .ring{width:110px;height:110px;margin:-55px 0 0 -55px}
+.msa-hx.l4 .ring,.msa-hx.l5 .ring{width:150px;height:150px;margin:-75px 0 0 -75px;border-width:6px}
+.msa-hx .ring.r2{animation:msaHxRing .7s ease-out;border-color:var(--k1)}
+.msa-hx .rays{width:240px;height:240px;margin:-120px 0 0 -120px;border-radius:50%;background:repeating-conic-gradient(#fff0 0 8deg,var(--k3) 8deg 11deg,#fff0 11deg 22deg);-webkit-mask:radial-gradient(circle,#0000 16%,#000 26%,#0000 68%);mask:radial-gradient(circle,#0000 16%,#000 26%,#0000 68%);animation:msaHxRays .6s ease-out}
+.msa-hx.l5 .rays{width:340px;height:340px;margin:-170px 0 0 -170px;animation-duration:.9s}
+.msa-hx .wave{width:220px;height:30px;margin:52px 0 0 -110px;border-radius:50%;border:3px solid var(--k3);box-shadow:0 0 12px var(--k1);animation:msaHxWave .65s ease-out}
+.msa-hx.l5 .wave{width:380px;margin-left:-190px}
+.msa-hx .pillar{width:90px;height:420px;margin:-340px 0 0 -45px;background:linear-gradient(0deg,#fff0,var(--k1) 20%,#fff 50%,var(--k1) 80%,#fff0);filter:blur(1px);animation:msaHxPillar .9s ease-out}
+.msa-hx .circle{width:200px;height:200px;margin:-100px 0 0 -100px;border-radius:50%;border:3px dashed var(--k3);box-shadow:0 0 0 8px #fff0,0 0 0 10px var(--k1),0 0 16px var(--k2);animation:msaHxCircle 1s ease-out}
+.msa-hx .bit{width:12px;height:12px;margin:-6px 0 0 -6px;background:var(--k3);box-shadow:0 0 6px var(--k1);border-radius:2px;animation:msaHxBit .62s cubic-bezier(.15,.8,.3,1)}
+.msa-hx.wise .bit{border-radius:0;clip-path:polygon(50% 0,62% 38%,100% 50%,62% 62%,50% 100%,38% 62%,0 50%,38% 38%);width:16px;height:16px;margin:-8px 0 0 -8px;background:#fff}
+.msa-hx.l5 .bit{width:16px;height:16px;animation-duration:.85s}
+@keyframes msaHxCore{0%{opacity:0;transform:scale(.2)}12%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(1.5)}}
+@keyframes msaHxCore5{0%{opacity:0;transform:scale(.15)}10%{opacity:1;transform:scale(.9)}35%{opacity:1;transform:scale(1.15)}100%{opacity:0;transform:scale(1.6)}}
+@keyframes msaHxRing{0%{opacity:0;transform:scale(.2)}15%{opacity:1}100%{opacity:0;transform:scale(2.2)}}
+@keyframes msaHxRays{0%{opacity:0;transform:scale(.3) rotate(0)}20%{opacity:1}100%{opacity:0;transform:scale(1.25) rotate(30deg)}}
+@keyframes msaHxWave{0%{opacity:0;transform:scaleX(.2)}20%{opacity:1}100%{opacity:0;transform:scaleX(1.5)}}
+@keyframes msaHxPillar{0%{opacity:0;transform:scaleX(.1)}15%{opacity:1;transform:scaleX(1.1)}60%{opacity:.8;transform:scaleX(.8)}100%{opacity:0;transform:scaleX(.2)}}
+@keyframes msaHxCircle{0%{opacity:0;transform:scale(.3) rotate(0)}20%{opacity:1;transform:scale(1) rotate(30deg)}100%{opacity:0;transform:scale(1.5) rotate(120deg)}}
+@keyframes msaHxBit{0%{opacity:0;transform:rotate(var(--a)) translateX(0) scale(1.2)}10%{opacity:1}100%{opacity:0;transform:rotate(var(--a)) translateX(var(--r)) scale(.4)}}
+.msa-rbg{position:absolute;inset:0;z-index:0;pointer-events:none;opacity:0;animation:msaRbg 2.6s ease-out both}
+.msa-rbg.pow{background:radial-gradient(ellipse at 50% 110%,#fde047cc 0,#f97316bb 22%,#b91c1ccc 48%,#3b0a0aee 80%),repeating-linear-gradient(100deg,#0000 0 30px,#fb923c22 30px 34px)}
+.msa-rbg.wise{background:radial-gradient(1.5px 1.5px at 12% 20%,#fff,#fff0),radial-gradient(2px 2px at 30% 12%,#e0e7ff,#fff0),radial-gradient(1.5px 1.5px at 52% 26%,#fff,#fff0),radial-gradient(2px 2px at 72% 10%,#c4b5fd,#fff0),radial-gradient(1.5px 1.5px at 88% 30%,#fff,#fff0),radial-gradient(1.5px 1.5px at 40% 40%,#a5f3fc,#fff0),radial-gradient(ellipse at 50% 100%,#22d3ee88 0,#4c1d95dd 40%,#0b0626f2 80%)}
+@keyframes msaRbg{0%{opacity:0}18%,80%{opacity:1}100%{opacity:.85}}
 @media (prefers-reduced-motion: reduce){
   .msa *,.msa *::before,.msa *::after{animation:none!important;transition:none!important}
 }
@@ -350,6 +425,34 @@ const msaMotionMs = (kind) => {
   return { ms: (sp && sp.ms) || 650, hit: (sp && sp.hit) || 300 };
 };
 
+// ---- 技のランク(1〜5)ごとの演出(2026-11-15 r1115-157 社長「技演出はさっぱりしすぎてるからランク毎にもっと派手にしたい。カットイン付きとか」) ----
+//   見た目だけ。試合の芯(assistant-masmon-battle.js)の計算は読まない・変えない。ランクは技表(ASSISTANT_MASMON_TECHS)の rank を見せる側で引く
+//   cut … 撃つ前のカットイン(0 なし / 'band' 帯 / 'full' 全画面)・cutMs … その長さ(×1)/hit … 当たりの光の段(1〜5)/shake … 揺れの最低の段/bg … 背景が変わる
+const MSA_RANK_FX = Object.freeze({
+  1: { cut: 0, cutMs: 0, hit: 1, shake: 0, bg: false },
+  2: { cut: 0, cutMs: 0, hit: 2, shake: 1, bg: false },
+  3: { cut: 0, cutMs: 0, hit: 3, shake: 2, bg: false },
+  4: { cut: 'band', cutMs: 760, hit: 4, shake: 3, bg: false },
+  5: { cut: 'full', cutMs: 1250, hit: 5, shake: 3, bg: true },
+});
+let MSA_RANK_MAP = null; // 技 id → ランク(種をまたいで同じ id は同じ技)
+const msaRankOf = (log, e, species) => {
+  if (!e || e.ev !== 'tech') return 0;
+  const T = typeof ASSISTANT_MASMON_TECHS !== 'undefined' ? ASSISTANT_MASMON_TECHS : null;
+  if (!T || !T.species) return 1;
+  const own = species && Array.isArray(T.species[species]) ? T.species[species].find((t) => t.id === e.move) : null;
+  if (own && Number.isFinite(own.rank)) return Math.max(1, Math.min(5, own.rank));
+  if (!MSA_RANK_MAP) { MSA_RANK_MAP = {}; Object.values(T.species).forEach((list) => (Array.isArray(list) ? list : []).forEach((t) => { if (t && t.id && !(t.id in MSA_RANK_MAP) && Number.isFinite(t.rank)) MSA_RANK_MAP[t.id] = t.rank; })); }
+  const r = MSA_RANK_MAP[e.move];
+  return Number.isFinite(r) ? Math.max(1, Math.min(5, r)) : 1;
+};
+// カットインの長さ(見せる速さ sf を掛けた実際の長さ)。早送り(×4)と動きを減らす設定では出さない
+const msaCutMs = (rank, sf, reduce) => {
+  const R = MSA_RANK_FX[rank] || MSA_RANK_FX[1]; const f = Number(sf) || 1;
+  if (reduce || !R.cut || f <= MSA_FAST_F) return 0;
+  return Math.round(R.cutMs * (f < 1 ? 0.7 : 1));
+};
+
 // 技の行のアクセント(ため・止め・とどめ)。動きを減らす設定では、どれも 0(待ち時間を足さない)
 //   pre … 大技(消費ガッツ40以上)の前のため/stop … 当たった瞬間に場を止める長さ(ヒットストップ)/fin … この技でとどめ(次の行が相手の KO)
 const MSA_GUTS_TIRED = 10; // ガッツがこれより少ないと息切れの表示
@@ -357,17 +460,20 @@ const MSA_GUTS_TIRED = 10; // ガッツがこれより少ないと息切れの�
 const MSA_WIND_MS = 380;
 const MSA_WIND_BIG_MS = 620;
 const msaFxOf = (log, e, reduce, sf = 1) => {
-  const z = { pre: 0, stop: 0, fin: false, big: false };
+  const z = { pre: 0, stop: 0, fin: false, big: false, rank: 0, cut: 0 };
   if (!e || e.ev !== 'tech') return z;
-  const big = (Number(msaTechInfo(log, e).guts) || 0) >= 40;
+  const rank = msaRankOf(log, e);
+  const big = (Number(msaTechInfo(log, e).guts) || 0) >= 40 || rank >= 5;
   const idx = Array.isArray(log) ? log.indexOf(e) : -1;
   const nx = idx >= 0 ? log[idx + 1] : null;
   const fin = Boolean(e.hit && nx && nx.ev === 'ko' && nx.side && nx.side !== e.side);
-  if (reduce) return { ...z, fin, big };
-  const stop = !e.hit || (Number(sf) || 1) <= MSA_FAST_F ? 0 : fin ? 230 : e.crit || big ? 130 : e.guarded ? 40 : 70;
+  if (reduce) return { ...z, fin, big, rank };
+  const stop = !e.hit || (Number(sf) || 1) <= MSA_FAST_F ? 0 : fin ? 230 : e.crit || big || rank >= 4 ? 130 : rank >= 3 ? 100 : e.guarded ? 40 : 70;
   const f = Number(sf) || 1;
-  const pre = big ? Math.round(MSA_WIND_BIG_MS * f) : f <= 0.35 ? 0 : Math.round(MSA_WIND_MS * f);
-  return { pre, stop, fin, big };
+  // カットイン(ランク4・5)は構えの前。pre はカットイン+構えの長さ
+  const cut = msaCutMs(rank, f, reduce);
+  const pre = cut + (big ? Math.round(MSA_WIND_BIG_MS * f) : f <= 0.35 ? 0 : Math.round(MSA_WIND_MS * f));
+  return { pre, stop, fin, big, rank, cut };
 };
 // ダメージの数字の大きさ(1〜4)。威力 = 相手のはじめの体力に対する割合。会心・大技・とどめはいちばん大きく
 const msaDmgTier = (dmg, maxHp, e, fx) => {
@@ -397,6 +503,70 @@ const msaStepMs = (e, team, reduce, log, sf = 1) => {
   if (e.ev === 'charge' && e.why === 'sulk') return 1700; // 意味不明な行動の番は読める長さ見せる
   return { start: MSA_INTRO_MS, enter: 350, move: 820, guard: 750, charge: 800, swap: 700, ko: 1500, end: 600 }[e.ev] || 500;
 };
+
+// ---- 技のランクの演出の部品(r1115-157)。どれも見せるだけ(押せない・場の時間は msaFxOf の pre・stop が決める) ----
+const MSA_RANK_STARS = (r) => '★'.repeat(Math.max(1, Math.min(5, r))) + '☆'.repeat(5 - Math.max(1, Math.min(5, r)));
+const msaFxImg = (member, cls) => {
+  if (!member) return null;
+  const src = mscMonImg(member.species);
+  return Array.isArray(member.colors) && member.colors.some(Boolean) && typeof DyedMonsterImage === 'function'
+    ? <DyedMonsterImage baseId={member.species} src={src} masuColors={member.colors} alt="" draggable={false} className={cls}/>
+    : <img className={cls} src={src} alt="" draggable={false}/>;
+};
+// 撃つ前のカットイン。band(ランク4)= 横の帯に顔と技名/full(ランク5)= 暗転・集中線・斜めの大きな帯に立ち絵と技名
+function MsaCutin({ e, rank, member, ms }) {
+  if (!e || !ms) return null;
+  const R = MSA_RANK_FX[rank] || {}; const kd = e.kind === 'wise' ? 'wise' : 'pow'; const sd = e.side === 'B' ? 'B' : 'A';
+  const nm = String(e.name || ''); const fs = Math.max(R.cut === 'full' ? 17 : 15, Math.min(R.cut === 'full' ? 32 : 24, Math.floor((R.cut === 'full' ? 175 : 165) / Math.max(1, nm.length))));
+  return (
+    <div className={`msa-cut ${R.cut} ${kd} ${sd}`} style={{ '--cut': `${ms}ms` }} data-msa-cutin={R.cut} data-msa-rank={rank} aria-hidden="true">
+      <i className="cs"/>
+      {R.cut === 'full' && <i className="cr"/>}
+      <div className="cb">
+        <i className="cl"/>
+        <div className="ca">{msaFxImg(member, sd === 'A' ? 'msa-flip' : '')}</div>
+        <div className="ct">
+          <small>{kd === 'pow' ? 'ちから技' : 'かしこさ技'}<span className="st">{MSA_RANK_STARS(rank)}</span></small>
+          <b style={{ fontSize: `${fs}px` }}>{nm}</b>
+          <em>{member ? member.name : ''}</em>
+        </div>
+      </div>
+      {R.cut === 'full' && <i className="cf"/>}
+    </div>
+  );
+}
+// 構えのあいだの集中線(ランク3から)。攻め手のまわりに線が集まる
+function MsaSpeedLines({ x, kind, pre, at = 0, rank }) {
+  return <i className={`msa-sl ${kind === 'wise' ? 'wise' : 'pow'} r${rank}`} aria-hidden="true" style={{ '--msa-cx': `${x * 100}%`, '--msa-pre': `${pre}ms`, animationDelay: `${at}ms` }}/>;
+}
+// 間合いが中・遠のときの弾の筋(ランク2から)。攻め手から受け手へ走る
+function MsaTrail({ x0, x1, kind, delay, dur, rank }) {
+  const l = Math.min(x0, x1); const w = Math.abs(x1 - x0);
+  return <i className={`msa-tr ${kind === 'wise' ? 'wise' : 'pow'} ${x1 < x0 ? 'rev' : ''} r${rank}`} aria-hidden="true" style={{ left: `${l * 100}%`, width: `${w * 100}%`, animationDelay: `${delay}ms`, '--tr': `${dur}ms` }}/>;
+}
+// 当たりの光(ランクの段 1〜5)。ちから=橙と赤の衝撃・破片/かしこさ=水色と紫の輪・星
+function MsaHitFx({ x, kind, lv, delay, hit }) {
+  if (!hit) return null;
+  const kd = kind === 'wise' ? 'wise' : 'pow';
+  const n = lv >= 5 ? 12 : lv >= 3 ? 8 : lv >= 2 ? 4 : 0;
+  const d = { animationDelay: `${delay}ms` }; // 当たる瞬間まで待つ(クラスの animation の一括指定に負けないよう、1つずつに付ける)
+  return (
+    <div className={`msa-hx ${kd} l${lv}`} style={{ left: `${x * 100}%` }} aria-hidden="true" data-msa-hitfx={lv}>
+      <i className="core" style={d}/>
+      <i className="ring" style={d}/>
+      {lv >= 3 && <i className="rays" style={d}/>}
+      {lv >= 4 && <i className="ring r2" style={{ animationDelay: `${delay + 120}ms` }}/>}
+      {lv >= 4 && <i className="wave" style={d}/>}
+      {lv >= 5 && <i className="pillar" style={d}/>}
+      {lv >= 5 && kd === 'wise' && <i className="circle" style={d}/>}
+      {Array.from({ length: n }, (_, j) => <i key={j} className="bit" style={{ ...d, '--a': `${Math.round(j * 360 / n + (j % 2) * 13)}deg`, '--r': `${(lv >= 5 ? 120 : lv >= 3 ? 82 : 52) + (j % 3) * 14}px` }}/>)}
+    </div>
+  );
+}
+// ランク5の背景の変化(カットインのあと、その行のあいだ)。ちから=燃える赤い空/かしこさ=星の夜空
+function MsaRankBg({ kind, at }) {
+  return <i className={`msa-rbg ${kind === 'wise' ? 'wise' : 'pow'}`} aria-hidden="true" style={{ animationDelay: `${at}ms` }}/>;
+}
 
 // ダメージの数字(場の上の層。守る側の立ち位置に置く)
 function MsaDmgLayer({ e, x, delay, tier }) {
@@ -444,8 +614,8 @@ function MsaFighter({ side, member, x, e, foeX, hpNow, reduce, idleOk, gd, fx, m
   if (tech && me && !reduce && !motionOn) {
     // 撃つ前の構え: 身を沈めて、技種の色(ちから=橙・かしこさ=青)の光を集める。大技は大きく(このあいだ場が暗くなる)
     const kd = e.tech && e.tech.kind === 'wise' ? 'wise' : 'pow';
-    body = <div key={`pre-${e.k}`} className={`flex items-end justify-center ${fx.big ? 'msa-chargebig' : 'msa-wind'}`} style={{ '--msa-pre': `${fx.pre}ms` }}>{img}</div>;
-    extra.push(<span key={`ab-${e.k}`} className={`msa-aura ${fx.big ? 'big' : 'wind'} ${kd}`} aria-hidden="true" style={{ '--msa-pre': `${fx.pre}ms` }}/>);
+    body = <div key={`pre-${e.k}`} className={`flex items-end justify-center ${fx.big ? 'msa-chargebig' : 'msa-wind'}`} style={{ '--msa-pre': `${fx.pre - (fx.cut || 0)}ms`, animationDelay: `${fx.cut || 0}ms` }}>{img}</div>;
+    extra.push(<span key={`ab-${e.k}`} className={`msa-aura ${fx.big ? 'big' : 'wind'} ${kd}`} aria-hidden="true" style={{ '--msa-pre': `${fx.pre - (fx.cut || 0)}ms`, animationDelay: `${fx.cut || 0}ms` }}/>);
   } else if (tech && me && !reduce) {
     // 攻める: 相手の位置まで(--atk-dx)。モンヒロのバトルと同じ動き
     const kind = msaMotionKind(sp, e.tech);
@@ -768,7 +938,8 @@ function MsaStage({ log, frames, pos, teams, venueImg, ended = false, win = null
   const maxHpOf = (side) => { const f0 = frames[0]; return f0 && f0.hp && f0.hp[side] ? Number(f0.hp[side][f.act[side]]) || 0 : 0; };
   const tier = e.ev === 'tech' && e.hit ? msaDmgTier(e.dmg, maxHpOf(foeSide), e, fx) : 0;
   // 揺れの強弱: 小さい当たりは揺らさない/中は弱く/大きい当たりはふつう/会心・大技・とどめは強く
-  const shakeLv = reduce || !e.hit || e.ev !== 'tech' ? 0 : tier >= 4 ? 3 : tier >= 3 ? 2 : tier >= 2 ? 1 : 0;
+  const rkFx = MSA_RANK_FX[fx.rank] || MSA_RANK_FX[1];
+  const shakeLv = reduce || !e.hit || e.ev !== 'tech' ? 0 : Math.max(rkFx.shake || 0, tier >= 4 ? 3 : tier >= 3 ? 2 : tier >= 2 ? 1 : 0);
   const shake = shakeLv > 0;
   const p = Number.isFinite(e.p) ? Math.round(e.p) : null;
   const gutsOf = (side) => (f.g && Number.isFinite(Number(f.g[side])) ? Number(f.g[side]) : null);
@@ -799,13 +970,17 @@ function MsaStage({ log, frames, pos, teams, venueImg, ended = false, win = null
       <div className="msa-cam" ref={camRef} data-msa-cam>
       <div className="msa-pan" style={{ transform: `translateX(${Math.round(panX)}px)` }} data-msa-pan>
       <div className="msa-bg" aria-hidden="true" style={{ backgroundImage: venueImg ? `linear-gradient(180deg,rgba(20,16,38,.05),rgba(20,16,38,.5)),url(${venueImg})` : undefined }}/>
+      {e.ev === 'tech' && !reduce && rkFx.bg && fx.cut > 0 && <MsaRankBg key={`rb-${pos}`} kind={e.kind} at={fx.cut}/>}
       <div className="msa-floor" aria-hidden="true"/>
       {spots.map(([a, b], d) => <React.Fragment key={d}><i className={`msa-spot ${d === f.d ? 'on' : ''}`} style={{ left: `${a * 100}%` }}/><i className={`msa-spot ${d === f.d ? 'on' : ''}`} style={{ left: `${b * 100}%` }}/></React.Fragment>)}
-      {e.ev === 'tech' && fx.pre > 0 && preAt !== pos && <i key={`fo-${pos}`} className={`msa-focus ${e.kind}`} aria-hidden="true" data-msa-wind style={{ '--msa-pre': `${fx.pre}ms`, '--msa-cx': `${(e.side === 'A' ? xA : xB) * 100}%` }}/>}
-      {e.ev === 'tech' && fx.pre > 0 && <i key={`aim-${pos}`} className={`msa-aim ${e.kind}`} aria-hidden="true" style={{ left: `${(e.side === 'A' ? xB : xA) * 100}%`, '--msa-pre': `${fx.pre}ms` }}/>}
-      {e.ev === 'tech' && fx.big && fx.pre > 0 && preAt !== pos && <i key={`dim-${pos}`} className="msa-dim" aria-hidden="true" style={{ '--msa-pre': `${fx.pre}ms`, '--msa-cx': `${(e.side === 'A' ? xA : xB) * 100}%` }}/>}
+      {e.ev === 'tech' && fx.pre > 0 && preAt !== pos && <i key={`fo-${pos}`} className={`msa-focus ${e.kind}`} aria-hidden="true" data-msa-wind style={{ '--msa-pre': `${fx.pre - (fx.cut || 0)}ms`, animationDelay: `${fx.cut || 0}ms`, '--msa-cx': `${(e.side === 'A' ? xA : xB) * 100}%` }}/>}
+      {e.ev === 'tech' && fx.pre > 0 && <i key={`aim-${pos}`} className={`msa-aim ${e.kind}`} aria-hidden="true" style={{ left: `${(e.side === 'A' ? xB : xA) * 100}%`, '--msa-pre': `${fx.pre - (fx.cut || 0)}ms`, animationDelay: `${fx.cut || 0}ms` }}/>}
+      {e.ev === 'tech' && fx.big && fx.pre > 0 && preAt !== pos && <i key={`dim-${pos}`} className="msa-dim" aria-hidden="true" style={{ '--msa-pre': `${fx.pre - (fx.cut || 0)}ms`, animationDelay: `${fx.cut || 0}ms`, '--msa-cx': `${(e.side === 'A' ? xA : xB) * 100}%` }}/>}
       <MsaFighter side="A" lean={e0.side === 'A' ? walkLean : 0} member={mA} x={xA} e={e} foeX={{ x: xB, w: stageW }} hpNow={hpOf('A')} reduce={reduce} idleOk gd={null} fx={fx} motionOn={!fx.pre || preAt === pos} maxHp={maxHpOf('A')} gutsNow={gutsOf('A')}/>
       <MsaFighter side="B" lean={e0.side === 'B' ? walkLean : 0} member={mB} x={xB} e={e} foeX={{ x: xA, w: stageW }} hpNow={hpOf('B')} reduce={reduce} idleOk gd={null} fx={fx} motionOn={!fx.pre || preAt === pos} maxHp={maxHpOf('B')} gutsNow={gutsOf('B')}/>
+      {e.ev === 'tech' && !reduce && fx.rank >= 3 && fx.pre > fx.cut && preAt !== pos && <MsaSpeedLines key={`sl-${pos}`} x={e.side === 'A' ? xA : xB} kind={e.kind} pre={fx.pre - fx.cut} at={fx.cut} rank={fx.rank}/>}
+      {e.ev === 'tech' && !reduce && fx.rank >= 2 && pf && pf.d >= 2 && <MsaTrail key={`tr-${pos}`} x0={e.side === 'A' ? xA : xB} x1={e.side === 'A' ? xB : xA} kind={e.kind} rank={fx.rank} delay={Math.max(fx.pre, hitMs - 240)} dur={Math.min(300, Math.max(140, hitMs - fx.pre))}/>}
+      {e.ev === 'tech' && !reduce && <MsaHitFx key={`hx-${pos}`} x={e.side === 'A' ? xB : xA} kind={e.kind} lv={rkFx.hit} delay={hitMs} hit={!!e.hit}/>}
       {e.ev === 'tech' && <MsaDmgLayer key={`dl-${pos}`} e={e} x={e.side === 'A' ? xB : xA} delay={hitMs} tier={tier || 1}/>}
       {e.ev === 'tech' && fx.fin && !reduce && <i key={`fin-${pos}`} className="msa-fin" aria-hidden="true" style={{ animationDelay: `${hitMs}ms` }}/>}
       </div>
@@ -817,7 +992,8 @@ function MsaStage({ log, frames, pos, teams, venueImg, ended = false, win = null
       {['A', 'B'].map((sd) => (bands[sd].length ? <div key={sd} className={`msa-bands ${sd}`}>{bands[sd].map((b, j) => <span key={`${b.k}-${b.j}`} className={`msa-band ${j ? 'old' : ''}`} data-msa-band={sd}>{b.t}</span>)}</div> : null))}
       {e.ev === 'charge' && e.why === 'sulk' && !intro && !ended && <div key={`sk-${pos}`} className={`msa-sulkstamp ${e.side === 'B' ? 'B' : 'A'}`} data-msa-sulk={e.side}><b>💢 意味不明!</b><small>{e.side === 'A' ? '' : '相手は'}言うことを聞かず、<wbr/>何もしなかった</small></div>}
       {e.ev !== 'tech' && <div className="msa-dist">{AMBW_DIST.map((n, d) => <span key={d} className={d === f.d ? 'cur' : ''}>{n}</span>)}</div>}
-      {e.ev === 'tech' && <div key={`c-${pos}`} className={`msa-plate ${e.side === 'B' ? 'B' : 'A'} ${e.kind} ${big ? 'big' : ''}`} data-msa-cut={p == null ? '' : p}>
+      {e.ev === 'tech' && fx.cut > 0 && <MsaCutin key={`ci-${pos}`} e={e} rank={fx.rank} member={memberOf(e.side, e.i)} ms={fx.cut}/>}
+      {e.ev === 'tech' && <div key={`c-${pos}`} className={`msa-plate ${e.side === 'B' ? 'B' : 'A'} ${e.kind} ${big ? 'big' : ''}`} data-msa-cut={p == null ? '' : p} data-msa-rank={fx.rank || 1} style={fx.cut ? { animationDelay: `${fx.cut}ms` } : undefined}>
         <div><small>{e.kind === 'pow' ? '💪 ちから技' : '🧠 かしこさ技'}{p != null ? `・命中 ${p}%` : ''}{e.tech.guts ? `・ガッツ −${e.tech.guts}` : ''}</small>
           <b>{big && e.side === 'B' ? <span className="msa-bigtag">大技</span> : null}{e.name}{big && e.side !== 'B' ? <span className="msa-bigtag">大技</span> : null}</b></div></div>}
       {e.ev === 'tech' && e.hit && (e.crit || fx.fin) && !reduce && <i key={`fl-${pos}`} className={`msa-flash ${e.crit ? 'big' : 'fin'}`} aria-hidden="true" style={{ animationDelay: `${hitMs}ms` }}/>}
