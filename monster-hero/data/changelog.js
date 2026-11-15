@@ -46,6 +46,13 @@ const CHANGELOG = [
     ],
   },
   {
+    date: "2026-11-15 09:57", type:'update', title:'修行の技の升目で、間合いごとの適性と覚えやすさが一目で分かるようになりました', group:'success', releaseFlag:'monheroSuccess', status:'new',
+    items:[
+      '修行で技を選ぶ升目の上の見出し(遠・中・近・零)に、育てるモンスターのその間合いの適性と、覚える率の増減(例: 中 A +10%)が出ます。',
+      'モンスターの詳細の技の升目でも、見出しに間合いの適性が出ます。',
+    ],
+  },
+  {
     date: "2026-11-15 09:47", type:'update', title:'修行は体力が足りないと行けなくなりました', group:'success', releaseFlag:'monheroSuccess', status:'new',
     items:[
       '修行に出るには体力が30、超修行には60いります。足りないときは修行のボタンが押せない見た目になり、「体力があと◯足りない」と出ます。',
