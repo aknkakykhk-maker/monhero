@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a9ee58bff99105d4
+// source-sha256: e9bdc975c4612b59
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -150050,6 +150050,7 @@ function AssistantMasmonBattleWatch({
       if (x.ev === 'tech') return x.hit ? `${n}の ${x.name}${x.crit ? ' 会心!' : ''} → ${x.dmg}${x.guarded ? '(ガード)' : ''}` : `${n}の ${x.name} … はずれ`;
       if (x.ev === 'move' && x.why === 'blown') return `${n}は 吹き飛ばされて 遠距離へ`;
       if (x.ev === 'blow') return `${n}の 吹き飛ばし(相手の次の手のあと 遠へ)`;
+      if (x.ev === 'move' && x.why === 'techMove' && typeof msaTechMoveSay === 'function') return msaTechMoveSay(x, n, msaTechMoveName(log, x), `${AMBW_DIST[x.to]}距離`);
       if (x.ev === 'move') return `${n}が ${AMBW_DIST[x.to]}距離へ ${x.step > 0 ? 'さがる' : 'つめる'}`;
       if (x.ev === 'charge') return x.why === 'sulk' ? `${n}は 意味不明な行動をした…(ガッツだけたまった)` : `${n}は ガッツをためた`;
       if (x.ev === 'guard') return `${n}は 身を守った`;
@@ -150090,7 +150091,7 @@ function AssistantMasmonBattleWatch({
         className: "ambw-dmg miss"
       }, "はずれ")));
     };
-    const cutText = e.ev === 'tech' ? e.name : e.ev === 'move' ? e.why === 'blown' ? '吹き飛ばされた' : e.step > 0 ? 'さがる' : 'つめる' : e.ev === 'blow' ? '吹き飛ばし' : e.ev === 'charge' ? 'ガッツをためる' : e.ev === 'guard' ? 'ガード' : e.ev === 'swap' ? `交代 → ${who(e.side, e.i)}` : e.ev === 'ko' ? `${e.name} たおれた` : '';
+    const cutText = e.ev === 'tech' ? e.name : e.ev === 'move' ? e.why === 'blown' ? '吹き飛ばされた' : e.why === 'techMove' ? e.step > 0 ? '相手を飛ばした' : '技の勢いで移る' : e.step > 0 ? 'さがる' : 'つめる' : e.ev === 'blow' ? '吹き飛ばし' : e.ev === 'charge' ? 'ガッツをためる' : e.ev === 'guard' ? 'ガード' : e.ev === 'swap' ? `交代 → ${who(e.side, e.i)}` : e.ev === 'ko' ? `${e.name} たおれた` : '';
     const cutSmall = e.ev === 'tech' ? `${e.kind === 'pow' ? '💪 ちから技' : '🧠 かしこさ技'}${Number.isFinite(e.p) ? `・命中 ${Math.round(e.p)}%` : ''}` : e.side ? who(e.side, e.ev === 'swap' ? e.from : e.i) : '';
     const kos = log.map((x, k) => x.ev === 'ko' ? {
       k,
@@ -151942,6 +151943,7 @@ function AssistantMasmonBattleBeta({
       if (x.ev === 'tech') return x.hit ? `${n}の ${x.name}${x.crit ? ' 会心!' : ''} → ${x.dmg}${x.guarded ? '(ガード)' : ''}` : `${n}の ${x.name} … はずれ`;
       if (x.ev === 'move' && x.why === 'blown') return `${n}は 吹き飛ばされて 遠距離へ`;
       if (x.ev === 'blow') return `${n}の 吹き飛ばし(相手の次の手のあと 遠へ)`;
+      if (x.ev === 'move' && x.why === 'techMove' && typeof msaTechMoveSay === 'function') return msaTechMoveSay(x, n, msaTechMoveName(log, x), `${AMBW_DIST[x.to]}距離`);
       if (x.ev === 'move') return `${n}が ${AMBW_DIST[x.to]}距離へ ${x.step > 0 ? 'さがる' : 'つめる'}`;
       if (x.ev === 'charge') return `${n}は ガッツをためた`;
       if (x.ev === 'guard') return `${n}は 身を守った`;
@@ -151982,7 +151984,7 @@ function AssistantMasmonBattleBeta({
         className: "ambw-dmg miss"
       }, "はずれ")));
     };
-    const cutText = e.ev === 'tech' ? e.name : e.ev === 'move' ? e.why === 'blown' ? '吹き飛ばされた' : e.step > 0 ? 'さがる' : 'つめる' : e.ev === 'blow' ? '吹き飛ばし' : e.ev === 'charge' ? 'ガッツをためる' : e.ev === 'guard' ? 'ガード' : e.ev === 'swap' ? `交代 → ${who(e.side, e.i)}` : e.ev === 'ko' ? `${e.name} たおれた` : '';
+    const cutText = e.ev === 'tech' ? e.name : e.ev === 'move' ? e.why === 'blown' ? '吹き飛ばされた' : e.why === 'techMove' ? e.step > 0 ? '相手を飛ばした' : '技の勢いで移る' : e.step > 0 ? 'さがる' : 'つめる' : e.ev === 'blow' ? '吹き飛ばし' : e.ev === 'charge' ? 'ガッツをためる' : e.ev === 'guard' ? 'ガード' : e.ev === 'swap' ? `交代 → ${who(e.side, e.i)}` : e.ev === 'ko' ? `${e.name} たおれた` : '';
     const cutSmall = e.ev === 'tech' ? `${e.kind === 'pow' ? '💪 ちから技' : '🧠 かしこさ技'}${Number.isFinite(e.p) ? `・命中 ${Math.round(e.p)}%` : ''}` : e.side ? who(e.side, e.ev === 'swap' ? e.from : e.i) : '';
     const kos = log.map((x, k) => x.ev === 'ko' ? {
       k,
@@ -184805,6 +184807,7 @@ const MSA_DC_CSS = `
 .msa-dc-c .msa-dc-h i{font-style:normal;margin-left:auto;font-size:9px;color:#94a3b8}
 .msa-dc-c small{display:block;font-size:9.5px;color:#cbd5e1;white-space:nowrap;overflow:hidden}
 .msa-dc-c small.p{color:#fde68a;font-weight:900}
+.msa-dc-c small.mv{color:#7dd3fc;font-size:9px;letter-spacing:-.02em}
 /* 技の札の技名は、一番長い言葉(--tnw 字ぶん)が札の幅に入る大きさまで CSS で縮める(2026-11-15 r1115-049 iPhone で「デュアルスラッ」と切れた。JS の縮め直しより先に効く) */
 @supports (width:1cqw){.msa-dc-c .msa-tn{font-size:max(7px,min(10.5px,calc(100cqw / var(--tnw,1))))}}
 .msa-dc-c.now{border-color:#fde047;box-shadow:0 0 0 1px #fde04788 inset;background:#2d2650;color:#fff}
@@ -184926,7 +184929,11 @@ function MsaDistCards({
       }, "ダメージ", React.createElement("b", {
         className: `g${g}`
       }, g));
-    })() : null);
+    })() : null, t && typeof msxTechMoveTxt === 'function' && msxTechMoveTxt(t) ? React.createElement("small", {
+      className: "mv",
+      "data-msa-dc-move": t.moveTo,
+      title: `使ったあと ${msxTechMoveTxt(t).replace(/\u200b/g, '')}`
+    }, "↪ ", msxTechMoveTxt(t).replace(/\u200b/g, '')) : null);
   }));
 }
 function MsaTechSheet({
@@ -184991,7 +184998,7 @@ function MsaTechSheet({
       base: t.base
     }), React.createElement("small", {
       className: "p"
-    }, Number.isFinite(hp) ? `命中 ${Math.round(hp)}%` : '命中 —', "・ガッツ ", t.guts, !t.base && Number.isFinite(t.power) ? `・威力 ${Math.round(t.power)}` : '', onUse && useNote && !can ? useNote(t) : ''), React.createElement("small", null, "届く ", distOf(t))), onRep && d != null ? isRep ? React.createElement("span", {
+    }, Number.isFinite(hp) ? `命中 ${Math.round(hp)}%` : '命中 —', "・ガッツ ", t.guts, !t.base && Number.isFinite(t.power) ? `・威力 ${Math.round(t.power)}` : '', onUse && useNote && !can ? useNote(t) : ''), React.createElement("small", null, "届く ", distOf(t), typeof msxTechMoveTxt === 'function' && msxTechMoveTxt(t) ? `・使ったあと ${msxTechMoveTxt(t)}` : '')), onRep && d != null ? isRep ? React.createElement("span", {
       className: "msa-sh-rep on",
       "data-msa-rep-on": t.id
     }, "★ 代表") : React.createElement("button", {
@@ -186126,10 +186133,20 @@ function MsaDmgLayer({
     }
   }, React.createElement("b", null, "MISS"), "よけた!"));
 }
-const msaSay = (e, nm) => {
+const msaTechMoveName = (log, e) => {
+  if (!Array.isArray(log) || !e || !e.byTech) return '';
+  for (let i = log.indexOf(e) - 1; i >= 0 && i >= log.indexOf(e) - 3; i--) {
+    const r = log[i];
+    if (r && r.ev === 'tech' && r.side === e.side && r.move === e.byTech) return r.name || '';
+  }
+  return '';
+};
+const msaTechMoveSay = (e, n, tech, distName) => e.step > 0 ? `${n}の ${tech || '技'}で 相手は ${distName}へ飛ばされた` : `${n}は ${tech || '技'}の勢いで ${distName}へ移った`;
+const msaSay = (e, nm, log = null) => {
   if (!e) return '';
   if (e.ev === 'tech') return e.hit ? `${nm(e.side, e.i)}の ${e.name}!${e.crit ? ' 会心の一撃!' : e.guarded ? ' …ガードされた' : ''}` : `${nm(e.side, e.i)}の ${e.name} … よけられた`;
   if (e.ev === 'move' && e.why === 'blown') return `${nm(e.side, e.i)}は 吹き飛ばされて 遠の間合いへ!`;
+  if (e.ev === 'move' && e.why === 'techMove') return msaTechMoveSay(e, nm(e.side, e.i), msaTechMoveName(log, e), `${AMBW_DIST[e.to] || ''}の間合い`);
   if (e.ev === 'move') return `${nm(e.side, e.i)}が ${AMBW_DIST[e.to] || ''}の間合いへ`;
   if (e.ev === 'blow') return `${nm(e.side, e.i)}の 吹き飛ばし! 相手の次の手のあと 遠へ飛ばす`;
   if (e.ev === 'charge') return e.why === 'sulk' ? `${nm(e.side, e.i)}は 意味不明な行動をした…` : `${nm(e.side, e.i)}は ガッツをためた`;
@@ -186541,7 +186558,13 @@ const msaBandsOf = (log, frames, k) => {
   });else if (r.ev === 'move' && r.why === 'blown') out.push({
     side: r.side,
     t: '💨 遠へ飛ばされた'
-  });else if (r.ev === 'move') out.push({
+  });else if (r.ev === 'move' && r.why === 'techMove') {
+    const tn = msaTechMoveName(log, r);
+    out.push({
+      side: r.side,
+      t: `⚡ ${tn ? `${tn}で ` : ''}${r.step > 0 ? '相手を' : ''}${AMBW_DIST[f.d] || ''}へ`
+    });
+  } else if (r.ev === 'move') out.push({
     side: r.side,
     t: `👣 間合い ${AMBW_DIST[pf.d] || ''}→${AMBW_DIST[f.d] || ''}`
   });else if (r.ev === 'blow') out.push({
@@ -187298,7 +187321,7 @@ function MonsucArena({
     key: `call-${call.at}`,
     className: `msa-call ${call.k}`,
     "data-msa-call": call.k
-  }, "🎙 ", call.t) : msaSay(e, nm)), cardsOn ? React.createElement("div", {
+  }, "🎙 ", call.t) : msaSay(e, nm, log)), cardsOn ? React.createElement("div", {
     className: "msa-cardsrow",
     "data-msa-cards": true
   }, React.createElement(MsaDistCards, {

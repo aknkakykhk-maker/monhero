@@ -607,11 +607,22 @@ function MsaDmgLayer({ e, x, delay, tier }) {
   );
 }
 
-// 実況の1行
-const msaSay = (e, nm) => {
+// 技の勢いで間合いが動いた行(why:'techMove')の、その技の名前。記録のすぐ前にある、その技を使った行から引く(r1115-156②)
+const msaTechMoveName = (log, e) => {
+  if (!Array.isArray(log) || !e || !e.byTech) return '';
+  for (let i = log.indexOf(e) - 1; i >= 0 && i >= log.indexOf(e) - 3; i--) { const r = log[i]; if (r && r.ev === 'tech' && r.side === e.side && r.move === e.byTech) return r.name || ''; }
+  return '';
+};
+// 技の勢いで動いた間合いの文。近づく向き(step −1)は使った側が移る・遠ざかる向き(step +1)は相手を飛ばす(msxTechMoveTxt と同じ考え)
+const msaTechMoveSay = (e, n, tech, distName) => (e.step > 0
+  ? `${n}の ${tech || '技'}で 相手は ${distName}へ飛ばされた`
+  : `${n}は ${tech || '技'}の勢いで ${distName}へ移った`);
+// 実況の1行(log を渡すと、技の勢いで動いたときに技の名前を出す)
+const msaSay = (e, nm, log = null) => {
   if (!e) return '';
   if (e.ev === 'tech') return e.hit ? `${nm(e.side, e.i)}の ${e.name}!${e.crit ? ' 会心の一撃!' : e.guarded ? ' …ガードされた' : ''}` : `${nm(e.side, e.i)}の ${e.name} … よけられた`;
   if (e.ev === 'move' && e.why === 'blown') return `${nm(e.side, e.i)}は 吹き飛ばされて 遠の間合いへ!`;
+  if (e.ev === 'move' && e.why === 'techMove') return msaTechMoveSay(e, nm(e.side, e.i), msaTechMoveName(log, e), `${AMBW_DIST[e.to] || ''}の間合い`);
   if (e.ev === 'move') return `${nm(e.side, e.i)}が ${AMBW_DIST[e.to] || ''}の間合いへ`;
   if (e.ev === 'blow') return `${nm(e.side, e.i)}の 吹き飛ばし! 相手の次の手のあと 遠へ飛ばす`;
   if (e.ev === 'charge') return e.why === 'sulk' ? `${nm(e.side, e.i)}は 意味不明な行動をした…` : `${nm(e.side, e.i)}は ガッツをためた`;
@@ -814,6 +825,7 @@ const msaBandsOf = (log, frames, k) => {
   if (r.ev === 'guard') out.push({ side: r.side, t: '🛡 守りの構え' });
   else if (r.ev === 'charge') out.push({ side: r.side, t: r.why === 'sulk' ? '💢 意味不明' : '⚡ ガッツをためた' });
   else if (r.ev === 'move' && r.why === 'blown') out.push({ side: r.side, t: '💨 遠へ飛ばされた' });
+  else if (r.ev === 'move' && r.why === 'techMove') { const tn = msaTechMoveName(log, r); out.push({ side: r.side, t: `⚡ ${tn ? `${tn}で ` : ''}${r.step > 0 ? '相手を' : ''}${AMBW_DIST[f.d] || ''}へ` }); }
   else if (r.ev === 'move') out.push({ side: r.side, t: `👣 間合い ${AMBW_DIST[pf.d] || ''}→${AMBW_DIST[f.d] || ''}` });
   else if (r.ev === 'blow') out.push({ side: r.side, t: '💨 吹き飛ばし' });
   else if (r.ev === 'swap') out.push({ side: r.side, t: `🔁 ${r.name || ''} に交代` });
@@ -1148,7 +1160,7 @@ function MonsucArena({ s, info, engine, input, watch, onEnd }) {
       <div className="msa-stagebox" data-msa-stagebox>
         <MsaStage log={log} frames={frames} pos={pos} teams={stageTeams} venueImg={msaVenueBg(info.venue, bg)} ended={ended} win={result ? result.winner : null} introTitle={info.title} speedF={(MSA_SPEEDS.find(x => x.id === speed) || MSA_SPEEDS[0]).f} fill wide/>
       </div>
-      <div className="msa-say" data-msa-say>{call ? <div key={`call-${call.at}`} className={`msa-call ${call.k}`} data-msa-call={call.k}>🎙 {call.t}</div> : msaSay(e, nm)}</div>
+      <div className="msa-say" data-msa-say>{call ? <div key={`call-${call.at}`} className={`msa-call ${call.k}`} data-msa-call={call.k}>🎙 {call.t}</div> : msaSay(e, nm, log)}</div>
       {cardsOn ? <div className="msa-cardsrow" data-msa-cards><MsaDistCards list={itemsA} rep={msaRepIds(itemsA, null)} dist={f.d} guts={f.g.A} lastMove={e.side === 'A' && e.ev === 'tech' ? e.move : null} dataSide="A" hitAt={hitAtA} onOpen={(d) => setTechSheet(d)}/></div> : null}
       <div ref={barRef}>{showBar ? <MsxManualBar opt={mm.pending} onPick={pick} onAuto={goAuto} busy={busy}/> : null}</div>
       {manual && !auto && busy && !ended ? <div className="msa-wait">{e.side === 'B' ? '相手の番…' : ' '}</div> : null}

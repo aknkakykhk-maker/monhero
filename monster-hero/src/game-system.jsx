@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 2703953840e957d4
+// generated-sha256: bf823ad80cfcf7ba
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -78581,6 +78581,7 @@ function AssistantMasmonBattleWatch({ onClose }) {
       if (x.ev === 'tech') return x.hit ? `${n}の ${x.name}${x.crit ? ' 会心!' : ''} → ${x.dmg}${x.guarded ? '(ガード)' : ''}` : `${n}の ${x.name} … はずれ`;
       if (x.ev === 'move' && x.why === 'blown') return `${n}は 吹き飛ばされて 遠距離へ`;
       if (x.ev === 'blow') return `${n}の 吹き飛ばし(相手の次の手のあと 遠へ)`;
+      if (x.ev === 'move' && x.why === 'techMove' && typeof msaTechMoveSay === 'function') return msaTechMoveSay(x, n, msaTechMoveName(log, x), `${AMBW_DIST[x.to]}距離`); // 技の勢いで動いた(r1115-156②)
       if (x.ev === 'move') return `${n}が ${AMBW_DIST[x.to]}距離へ ${x.step > 0 ? 'さがる' : 'つめる'}`;
       if (x.ev === 'charge') return x.why === 'sulk' ? `${n}は 意味不明な行動をした…(ガッツだけたまった)` : `${n}は ガッツをためた`;
       if (x.ev === 'guard') return `${n}は 身を守った`;
@@ -78608,7 +78609,7 @@ function AssistantMasmonBattleWatch({ onClose }) {
         </div>
       );
     };
-    const cutText = e.ev === 'tech' ? e.name : e.ev === 'move' ? (e.why === 'blown' ? '吹き飛ばされた' : e.step > 0 ? 'さがる' : 'つめる') : e.ev === 'blow' ? '吹き飛ばし' : e.ev === 'charge' ? 'ガッツをためる' : e.ev === 'guard' ? 'ガード' : e.ev === 'swap' ? `交代 → ${who(e.side, e.i)}` : e.ev === 'ko' ? `${e.name} たおれた` : '';
+    const cutText = e.ev === 'tech' ? e.name : e.ev === 'move' ? (e.why === 'blown' ? '吹き飛ばされた' : e.why === 'techMove' ? (e.step > 0 ? '相手を飛ばした' : '技の勢いで移る') : e.step > 0 ? 'さがる' : 'つめる') : e.ev === 'blow' ? '吹き飛ばし' : e.ev === 'charge' ? 'ガッツをためる' : e.ev === 'guard' ? 'ガード' : e.ev === 'swap' ? `交代 → ${who(e.side, e.i)}` : e.ev === 'ko' ? `${e.name} たおれた` : '';
     const cutSmall = e.ev === 'tech' ? `${e.kind === 'pow' ? '💪 ちから技' : '🧠 かしこさ技'}${Number.isFinite(e.p) ? `・命中 ${Math.round(e.p)}%` : ''}` : (e.side ? who(e.side, e.ev === 'swap' ? e.from : e.i) : '');
     const kos = log.map((x, k) => x.ev === 'ko' ? { k, side: x.side } : null).filter(Boolean);
     const winName = battle.r.winner === 'draw' ? null : nameOf((battle.r.winner === 'A' ? battle.teamA : battle.teamB).assistantId);
@@ -79516,6 +79517,7 @@ function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, presetFriend, 
       if (x.ev === 'tech') return x.hit ? `${n}の ${x.name}${x.crit ? ' 会心!' : ''} → ${x.dmg}${x.guarded ? '(ガード)' : ''}` : `${n}の ${x.name} … はずれ`;
       if (x.ev === 'move' && x.why === 'blown') return `${n}は 吹き飛ばされて 遠距離へ`;
       if (x.ev === 'blow') return `${n}の 吹き飛ばし(相手の次の手のあと 遠へ)`;
+      if (x.ev === 'move' && x.why === 'techMove' && typeof msaTechMoveSay === 'function') return msaTechMoveSay(x, n, msaTechMoveName(log, x), `${AMBW_DIST[x.to]}距離`); // 技の勢いで動いた(r1115-156②)
       if (x.ev === 'move') return `${n}が ${AMBW_DIST[x.to]}距離へ ${x.step > 0 ? 'さがる' : 'つめる'}`;
       if (x.ev === 'charge') return `${n}は ガッツをためた`;
       if (x.ev === 'guard') return `${n}は 身を守った`;
@@ -79543,7 +79545,7 @@ function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, presetFriend, 
         </div>
       );
     };
-    const cutText = e.ev === 'tech' ? e.name : e.ev === 'move' ? (e.why === 'blown' ? '吹き飛ばされた' : e.step > 0 ? 'さがる' : 'つめる') : e.ev === 'blow' ? '吹き飛ばし' : e.ev === 'charge' ? 'ガッツをためる' : e.ev === 'guard' ? 'ガード' : e.ev === 'swap' ? `交代 → ${who(e.side, e.i)}` : e.ev === 'ko' ? `${e.name} たおれた` : '';
+    const cutText = e.ev === 'tech' ? e.name : e.ev === 'move' ? (e.why === 'blown' ? '吹き飛ばされた' : e.why === 'techMove' ? (e.step > 0 ? '相手を飛ばした' : '技の勢いで移る') : e.step > 0 ? 'さがる' : 'つめる') : e.ev === 'blow' ? '吹き飛ばし' : e.ev === 'charge' ? 'ガッツをためる' : e.ev === 'guard' ? 'ガード' : e.ev === 'swap' ? `交代 → ${who(e.side, e.i)}` : e.ev === 'ko' ? `${e.name} たおれた` : '';
     const cutSmall = e.ev === 'tech' ? `${e.kind === 'pow' ? '💪 ちから技' : '🧠 かしこさ技'}${Number.isFinite(e.p) ? `・命中 ${Math.round(e.p)}%` : ''}` : (e.side ? who(e.side, e.ev === 'swap' ? e.from : e.i) : '');
     const kos = log.map((x, k) => (x.ev === 'ko' ? { k, side: x.side } : null)).filter(Boolean);
     const won = battle.r.winner === 'A', draw = battle.r.winner === 'draw';
@@ -94140,6 +94142,7 @@ const MSA_DC_CSS = `
 .msa-dc-c .msa-dc-h i{font-style:normal;margin-left:auto;font-size:9px;color:#94a3b8}
 .msa-dc-c small{display:block;font-size:9.5px;color:#cbd5e1;white-space:nowrap;overflow:hidden}
 .msa-dc-c small.p{color:#fde68a;font-weight:900}
+.msa-dc-c small.mv{color:#7dd3fc;font-size:9px;letter-spacing:-.02em}
 /* 技の札の技名は、一番長い言葉(--tnw 字ぶん)が札の幅に入る大きさまで CSS で縮める(2026-11-15 r1115-049 iPhone で「デュアルスラッ」と切れた。JS の縮め直しより先に効く) */
 @supports (width:1cqw){.msa-dc-c .msa-tn{font-size:max(7px,min(10.5px,calc(100cqw / var(--tnw,1))))}}
 .msa-dc-c.now{border-color:#fde047;box-shadow:0 0 0 1px #fde04788 inset;background:#2d2650;color:#fff}
@@ -94222,6 +94225,7 @@ function MsaDistCards({ list, rep, dist = null, guts = null, hitAt = null, lastM
             {t ? <small className="p">{Number.isFinite(hp) ? `命中 ${Math.round(hp)}%` : '命中 —'}</small> : null}
             {t ? <small>ガッツ {t.guts}</small> : null}
             {t && t.base ? (() => { const g = msaTechGrade('power', t.base.power); return <small className="dmg">ダメージ<b className={`g${g}`}>{g}</b></small>; })() : null}
+            {t && typeof msxTechMoveTxt === 'function' && msxTechMoveTxt(t) ? <small className="mv" data-msa-dc-move={t.moveTo} title={`使ったあと ${msxTechMoveTxt(t).replace(/\u200b/g, '')}`}>↪ {msxTechMoveTxt(t).replace(/\u200b/g, '')}</small> : null}
           </button>
         );
       })}
@@ -94256,7 +94260,7 @@ function MsaTechSheet({ title, list, d = null, dist = null, rep = null, hitAt = 
                 <MsaTechName name={t.name} icon={`${isRep ? '★ ' : ''}${msaKindIcon(t)}`}/>
                 <MsaTechGrades base={t.base}/>
                 <small className="p">{Number.isFinite(hp) ? `命中 ${Math.round(hp)}%` : '命中 —'}・ガッツ {t.guts}{!t.base && Number.isFinite(t.power) ? `・威力 ${Math.round(t.power)}` : ''}{onUse && useNote && !can ? useNote(t) : ''}</small>
-                <small>届く {distOf(t)}</small>
+                <small>届く {distOf(t)}{typeof msxTechMoveTxt === 'function' && msxTechMoveTxt(t) ? `・使ったあと ${msxTechMoveTxt(t)}` : ''}</small>
               </button>
               {onRep && d != null ? (isRep ? <span className="msa-sh-rep on" data-msa-rep-on={t.id}>★ 代表</span>
                 : <button type="button" className="msa-sh-rep" data-msa-rep={t.id} onClick={() => onRep(d, t.id)}>☆ 代表にする</button>) : null}
@@ -94999,11 +95003,22 @@ function MsaDmgLayer({ e, x, delay, tier }) {
   );
 }
 
-// 実況の1行
-const msaSay = (e, nm) => {
+// 技の勢いで間合いが動いた行(why:'techMove')の、その技の名前。記録のすぐ前にある、その技を使った行から引く(r1115-156②)
+const msaTechMoveName = (log, e) => {
+  if (!Array.isArray(log) || !e || !e.byTech) return '';
+  for (let i = log.indexOf(e) - 1; i >= 0 && i >= log.indexOf(e) - 3; i--) { const r = log[i]; if (r && r.ev === 'tech' && r.side === e.side && r.move === e.byTech) return r.name || ''; }
+  return '';
+};
+// 技の勢いで動いた間合いの文。近づく向き(step −1)は使った側が移る・遠ざかる向き(step +1)は相手を飛ばす(msxTechMoveTxt と同じ考え)
+const msaTechMoveSay = (e, n, tech, distName) => (e.step > 0
+  ? `${n}の ${tech || '技'}で 相手は ${distName}へ飛ばされた`
+  : `${n}は ${tech || '技'}の勢いで ${distName}へ移った`);
+// 実況の1行(log を渡すと、技の勢いで動いたときに技の名前を出す)
+const msaSay = (e, nm, log = null) => {
   if (!e) return '';
   if (e.ev === 'tech') return e.hit ? `${nm(e.side, e.i)}の ${e.name}!${e.crit ? ' 会心の一撃!' : e.guarded ? ' …ガードされた' : ''}` : `${nm(e.side, e.i)}の ${e.name} … よけられた`;
   if (e.ev === 'move' && e.why === 'blown') return `${nm(e.side, e.i)}は 吹き飛ばされて 遠の間合いへ!`;
+  if (e.ev === 'move' && e.why === 'techMove') return msaTechMoveSay(e, nm(e.side, e.i), msaTechMoveName(log, e), `${AMBW_DIST[e.to] || ''}の間合い`);
   if (e.ev === 'move') return `${nm(e.side, e.i)}が ${AMBW_DIST[e.to] || ''}の間合いへ`;
   if (e.ev === 'blow') return `${nm(e.side, e.i)}の 吹き飛ばし! 相手の次の手のあと 遠へ飛ばす`;
   if (e.ev === 'charge') return e.why === 'sulk' ? `${nm(e.side, e.i)}は 意味不明な行動をした…` : `${nm(e.side, e.i)}は ガッツをためた`;
@@ -95206,6 +95221,7 @@ const msaBandsOf = (log, frames, k) => {
   if (r.ev === 'guard') out.push({ side: r.side, t: '🛡 守りの構え' });
   else if (r.ev === 'charge') out.push({ side: r.side, t: r.why === 'sulk' ? '💢 意味不明' : '⚡ ガッツをためた' });
   else if (r.ev === 'move' && r.why === 'blown') out.push({ side: r.side, t: '💨 遠へ飛ばされた' });
+  else if (r.ev === 'move' && r.why === 'techMove') { const tn = msaTechMoveName(log, r); out.push({ side: r.side, t: `⚡ ${tn ? `${tn}で ` : ''}${r.step > 0 ? '相手を' : ''}${AMBW_DIST[f.d] || ''}へ` }); }
   else if (r.ev === 'move') out.push({ side: r.side, t: `👣 間合い ${AMBW_DIST[pf.d] || ''}→${AMBW_DIST[f.d] || ''}` });
   else if (r.ev === 'blow') out.push({ side: r.side, t: '💨 吹き飛ばし' });
   else if (r.ev === 'swap') out.push({ side: r.side, t: `🔁 ${r.name || ''} に交代` });
@@ -95540,7 +95556,7 @@ function MonsucArena({ s, info, engine, input, watch, onEnd }) {
       <div className="msa-stagebox" data-msa-stagebox>
         <MsaStage log={log} frames={frames} pos={pos} teams={stageTeams} venueImg={msaVenueBg(info.venue, bg)} ended={ended} win={result ? result.winner : null} introTitle={info.title} speedF={(MSA_SPEEDS.find(x => x.id === speed) || MSA_SPEEDS[0]).f} fill wide/>
       </div>
-      <div className="msa-say" data-msa-say>{call ? <div key={`call-${call.at}`} className={`msa-call ${call.k}`} data-msa-call={call.k}>🎙 {call.t}</div> : msaSay(e, nm)}</div>
+      <div className="msa-say" data-msa-say>{call ? <div key={`call-${call.at}`} className={`msa-call ${call.k}`} data-msa-call={call.k}>🎙 {call.t}</div> : msaSay(e, nm, log)}</div>
       {cardsOn ? <div className="msa-cardsrow" data-msa-cards><MsaDistCards list={itemsA} rep={msaRepIds(itemsA, null)} dist={f.d} guts={f.g.A} lastMove={e.side === 'A' && e.ev === 'tech' ? e.move : null} dataSide="A" hitAt={hitAtA} onOpen={(d) => setTechSheet(d)}/></div> : null}
       <div ref={barRef}>{showBar ? <MsxManualBar opt={mm.pending} onPick={pick} onAuto={goAuto} busy={busy}/> : null}</div>
       {manual && !auto && busy && !ended ? <div className="msa-wait">{e.side === 'B' ? '相手の番…' : ' '}</div> : null}
