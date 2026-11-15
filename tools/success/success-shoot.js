@@ -51,6 +51,8 @@ const makeRun = async (kind) => {
     s = SUC.endTurn(s).state;
     let g2 = 0; while (s.battle && g2++ < 5) { const opp = SUC.opponents(s); s = SUC.settle(s, opp.map(() => true)).state; }
   }
+  // 能力の上限アップ(r1115-103): 999 を超えた能力の子(4桁の数がはみ出さないか・ゲージの紫の帯)
+  if (kind === 'over') s = { ...s, cap: { life: 1500, pow: 999, wise: 1800, hit: 3200, eva: 1200, tough: 999 }, stats: { ...s.stats, hit: 3123, wise: 1789, life: 1234, eva: 1001 } };
   if (kind === 'yosu') s = { ...s, yosu: { sabori: { visits: 0 } } };
   if (kind === 'bagall') s = { ...s, bag: Object.fromEntries(Object.keys(SUC.ITEMS).filter((k) => SUC.ITEMS[k].use === 'during').map((k) => [k, 1])) }; // 持ち物の升目に育成中に使う物を全部並べる(名前の折れを見る)
   if (kind === 'ki') { const pv = SUC.peek(s).period.index - 1; const pw = SUC.evaluate(s).power; s = { ...s, fameTotal: Math.max(s.fameTotal || 0, 1000) }; return { v: 1, id: s.id, s, nick: 'もちまる', colors: [], from: { base: 'Mocchi' }, items: [], used: 0, phase: 'turn', out: null, log: [], startAt: 1, ki: { p: pv, fame: 0, power: Math.max(0, pw - 616) } }; }
@@ -75,6 +77,7 @@ const makeRun = async (kind) => {
   const SHOTS_ALL = [
     ['H0', null, []], ['H1', 'mid', []],
     ['RW1', 'mid', ['cont', 'wait:3300']], ['RW2', 'mid', ['cont', 'wait:7800']], ['RW3', 'mid', ['cont', 'wait:11500']], ['RW4', 'mid', ['cont', 'wait:15000']], ['RW5', 'mid', ['cont', 'wait:19600']], // 育成ホームの歩き回り(r1115-052)
+    ['OV1', 'over', ['cont']], ['OV2', 'over', ['cont', 'train']], ['OV3', 'over', ['cont', 'stats']], ['OV4', 'over', ['cont', 'detail']], ['OV5', 'over', ['cont', 'train', 'go', 'next']], // 上限アップ(r1115-103)
     ['HB1', null, ['basemon']], ['HB2', null, ['basemon', 'bmpick:Snegurochka']], ['HB3', null, ['basemon', 'bmpick:Snegurochka', 'tab:apt']], // ホームのベースモン(r1115-043)
     ['S0', null, ['new']], // ストーリー選択(2026-11-14)。S1〜S6 はその「次へ」のあと
     ['TP1', null, ['new', 'next', 'pickmon:Snegurochka', 'detail']], ['TP2', null, ['new', 'next', 'pickmon:Snegurochka', 'detail', 'alt:2-1']], ['TP3', null, ['new', 'next', 'pickmon:Snegurochka', 'detail', 'alt:2-1', 'altopt:sk-0480']], // 技の升の選び(被った升の ⇄ → 窓 → 選ぶ)
