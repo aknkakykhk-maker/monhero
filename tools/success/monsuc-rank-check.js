@@ -3,7 +3,7 @@
 // 設計 docs/progress/player-raise/RANKING.md。担当: 開発部クラフト
 //   ① 公開の印 monheroSuccess が偽なら通信しない
 //   ② 送らない: デビュー戦のゲームオーバー・まだ終わっていない育成・デバッグの育成
-//   ③ 送る中身: 6能力は 0〜999 の整数・技は8つまで・熟練 0〜100・育成の id は「持ち主の番号-英数字」
+//   ③ 送る中身: 6能力は 0〜99,999 の整数・技は8つまで・熟練 0〜100・育成の id は「持ち主の番号-英数字」
 //   ④ 二重に送らない: 送れた id は mh_monsuc_rank_sent_v1 に残り、同じ育成は2回目を送らない
 //   ⑤ 送れなかったら mh_monsuc_rank_queue_v1 に積み、monsucRankFlush で1件ずつ送り直す。形で断られたものは積まない
 //   ⑥ 保存は新しいキー2つだけ。壊れた値でも空として読める
@@ -70,7 +70,7 @@ const ev = { loyal: 70, lv: 20, pop: 30, power: 9999 };
   check('③ 持ち主と鍵', body && body.p_owner === 'self-0001' && body.p_key.length === 48);
   const row = body ? body.p_row : {};
   check('③ 育成の id', row.run_id === 'self-0001-run1234abcd' && /^[A-Za-z0-9_-]{1,64}-[A-Za-z0-9]{6,32}$/.test(row.run_id), row.run_id);
-  check('③ 6能力は 0〜999 の整数', JSON.stringify(row.stats) === JSON.stringify({ life: 500, pow: 999, wise: 0, hit: 300, eva: 0, tough: 400 }), JSON.stringify(row.stats));
+  check('③ 6能力は 0〜99,999 の整数(999 を超えた分も送る・上限アップ r1115-103)', JSON.stringify(row.stats) === JSON.stringify({ life: 500, pow: 1200, wise: 0, hit: 300, eva: 0, tough: 400 }), JSON.stringify(row.stats));
   check('③ 古い形(芯が techRows を返さない): 技は8つまで・熟練 0〜100', Array.isArray(row.techs) && row.techs.length === 8 && row.techs[0] === 100 && row.techs[1] === 20 && row.techs[7] === 0, JSON.stringify(row.techs));
   check('③ 血統・忠誠・名前', row.lineage === 'mocchi' && row.loyal === 70 && row.child_name === 'もちまる' && row.species === 'Mocchi');
   check('③ 色は配列だけ・文字でない所は null', JSON.stringify(row.dye) === JSON.stringify(['red', 'blue', null]), JSON.stringify(row.dye));

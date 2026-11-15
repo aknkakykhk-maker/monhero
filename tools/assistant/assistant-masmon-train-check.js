@@ -80,7 +80,7 @@ const drive = (T, aid, days, opt = {}) => {
   Object.assign(M, c.M);
   const S = T.ASSISTANT_MASMON_TECHS.species;
   const ids = Object.keys(M);
-  check('⓪ 技表は第2版で、全部の種族に12〜26技ある(資料の血統別の技・パンドラは零・近の8技を足して26 r1115-099)', T.ASSISTANT_MASMON_TECHS.version === 2 && ids.filter(id => !M[id].debugOnly).every(id => Array.isArray(S[id]) && S[id].length >= 12 && S[id].length <= 26), ids.filter(id => !M[id].debugOnly && (!S[id] || S[id].length < 12 || S[id].length > 24)).join(','));
+  check('⓪ 技表は第2版で、全部の種族に12〜26技ある(資料の血統別の技・パンドラは零・近の8技を足して26 r1115-099)', T.ASSISTANT_MASMON_TECHS.version >= 2 && ids.filter(id => !M[id].debugOnly).every(id => Array.isArray(S[id]) && S[id].length >= 12 && S[id].length <= 26), ids.filter(id => !M[id].debugOnly && (!S[id] || S[id].length < 12 || S[id].length > 24)).join(','));
   const allT = Object.values(S).flat();
   check('⓪ 技の id は同じ種族の中でかぶらない・sk-0000 の形', Object.values(S).every(l => new Set(l.map(t => t.id)).size === l.length) && allT.every(t => /^(?:sk-\d{4}|[a-z]{2,20}_o\d{2})$/.test(t.id)));
   const inRange = (t) => t.power >= 1 && t.power <= 70 && t.hit >= -25 && t.hit <= 22 && t.guts >= 5 && t.guts <= 60 && t.crit >= 0 && t.crit <= 30 && t.gd >= 0 && t.gd <= 45 && ['pow', 'wise'].includes(t.kind) && Array.isArray(t.dist) && t.dist.length >= 1 && t.dist.length <= 2 && t.dist.every(d => d >= 0 && d <= 3);

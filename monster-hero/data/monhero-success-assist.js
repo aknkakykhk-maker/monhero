@@ -47,7 +47,7 @@
     haru: ['grow', '3〜5月に' + T1 + '伸び {v}'], natsu: ['grow', '6〜8月に' + T1 + '伸び {v}'],
     aki: ['grow', '9〜11月に' + T1 + '伸び {v}'], fuyu: ['grow', '12〜2月に' + T1 + '伸び {v}'],
     ninkigreat: ['rate', T1 + '人気が高いほど大成功の確率 {v}(人気100のとき)'], challenge: ['rate', T1 + '取った称号1つにつき大成功の確率 {v}'],
-    tsuika: ['rate', T1 + 'あとからどれか1つの能力がさらに +5〜20 になる確率 {v}'], kaifuku: ['val', T1 + 'トレーニングのあと体力 {v}'],
+    tsuika: ['rate', T1 + 'あとからどれか1つの能力がさらに +5〜99 になる確率 {v}'], kaifuku: ['val', T1 + 'トレーニングのあと体力 {v}'],
     atooshi: ['grow', 'このモンスターの一番高い能力のトレーニングにいっしょに来たとき、伸び {v}'],
     miharu: ['hard', T1 + 'サボりにくさ {v}'], kibarashi: ['cut', T1 + 'たまるストレス {v}'],
     kunpow: ['grow', '「ちから」のトレーニングにいっしょに来たとき、伸び {v}'], kunwise: ['grow', '「かしこさ」のトレーニングにいっしょに来たとき、伸び {v}'],
@@ -58,7 +58,7 @@
     shitashi: ['val', 'このモンスターの初めの親密度 {v}'], tagpow: ['grow', 'このモンスターが友情タッグになったとき、タッグの強さ {v}'],
     hitonatsu: ['mul', ST + 'みんなの親密度の上がり {v}(このモンスターの初めの親密度も +{start})'], nakayoshi: ['val', T1 + 'このモンスターの親密度の上がり {v}'],
     shitsuke: ['mul', ST + '褒める・叱るで上がる忠誠度 {v}'],
-    shoki: ['val', ST + '育成の初めの6つの能力 {v}'], ticket0: ['cnt', ST + '育成の初めの修行チケット {v}', '枚'], tairyoku: ['val', ST + '育成の初めの体力の上限 {v}'],
+    shoki: ['val', ST + '育成の初めの6つの能力 {v}'], genkai: ['rate', ST + '編成のモンスターが上げる能力の上限 {v}(はじめは20%)'], ticket0: ['cnt', ST + '育成の初めの修行チケット {v}', '枚'], tairyoku: ['val', ST + '育成の初めの体力の上限 {v}'],
     kuishinbo: ['mul', ST + '大会のあとのごはんの効き目 {v}'],
     trchance: ['rate', ST + '遊んだとき「ひらめき」(次のトレーニングの大成功の確率 +10%)になる確率 {v}'],
     shchance: ['rate', ST + '遊んだとき「修行の気合い」(次の修行で上がる能力 +20%)になる確率 {v}'],
@@ -105,7 +105,7 @@
     add({ id, icon, name: `トレ効果アップ・${n}`, type: 'with', scene: 'train', unit: 2, max: 10, pt: 2, u: '%', text: T(`${m}のあいだ伸びが{v}%上がる`) }));
   add({ id: 'ninkigreat', icon: '📣', name: '人気度効果大成功アップ', type: 'with', scene: 'train', unit: 1, max: 14, pt: 3, u: '点', text: T('人気が高いほど大成功しやすくなる(人気100で +{v}点)') });
   add({ id: 'challenge', icon: '🎖', name: 'チャレンジ・幸運', type: 'with', scene: 'train', unit: 0.5, max: 3, pt: 13, u: '点', text: T('取った称号1つにつき大成功しやすくなる(+{v}点ずつ)') });
-  add({ id: 'tsuika', icon: '➕', name: '追加トレボーナス', type: 'with', scene: 'train', unit: 2, max: 10, pt: 4, u: '%', text: T('{v}%で、あとからどれか1つの能力がさらに +5〜20') });
+  add({ id: 'tsuika', icon: '➕', name: '追加トレボーナス', type: 'with', scene: 'train', unit: 2, max: 10, pt: 4, u: '%', text: T('{v}%で、あとからどれか1つの能力がさらに +5〜99') });
   add({ id: 'kaifuku', icon: '💧', name: 'トレ後回復効果アップ', type: 'with', scene: 'train', unit: 1, max: 10, pt: 4, u: '', text: T('トレーニングのあと体力が{v}回復する') });
   add({ id: 'atooshi', icon: '🎯', name: '得意の後押し', ref: false, type: 'with', scene: 'train', unit: 2, max: 15, pt: 5, u: '%', v2: [6, 12, 18, 24, 30], text: 'この子の一番高い能力のトレーニングに来ると、伸びが{v}%上がる' });
   add({ id: 'miharu', icon: '👀', name: '見張り役', ref: false, type: 'with', scene: 'train', unit: 5, max: 15, pt: 3, u: '%', v2: [15, 30, 45, 60, 75], text: T('サボりにくくなる(サボりの率 −{v}%)') });
@@ -128,6 +128,8 @@
 
   // ---- はじめ ----
   add({ id: 'shoki', icon: '🌅', name: '初期ステータスアップ', type: 'stay', scene: 'start', unit: 5, max: 10, pt: 7, u: '', text: '編成にいるだけで、育てる子の6つの能力が初めから +{v}' });
+  // 🔓上限アップブースト(2026-11-15 社長・r1115-103/105): 編成の子が上げる能力の上限の割合(はじめ 20%)に足す。いるだけ型(編成でいちばん高い1つ)
+  add({ id: 'genkai', icon: '🔓', name: '上限アップブースト', ref: false, type: 'stay', scene: 'start', unit: 1, max: 10, pt: 6, u: '%', text: '編成にいるだけで、編成のモンスターが上げる能力の上限の割合が +{v}%(はじめは20%)' });
   add({ id: 'ticket0', icon: '🎟', name: '修行チケットボーナス', type: 'stay', scene: 'start', unit: 1, max: 1, pt: 40, u: '枚', text: '編成にいるだけで、育成のはじめに修行チケットが +{v}枚' });
   add({ id: 'tairyoku', icon: '🔋', name: '体力自慢', ref: false, type: 'stay', scene: 'start', unit: 2, max: 10, pt: 4, u: '', v2: [4, 8, 12, 16, 20], text: '編成にいるだけで、育てる子の体力の上限が初めから +{v}' });
 
@@ -221,11 +223,68 @@
 
   const fmt = (x) => String(Math.round(x * 100) / 100);
   // 説明の1行(目盛りつき)。例: describe('sokoji', 12) → 'いっしょにトレーニングすると、伸びが12%上がる'
+  // ★アシスト効果の合計の上限(2026-11-15 社長 r1115-104「上限とか重複不可とか作らないと大変なことになる」)。上限の数字はこの表1か所だけ。
+  //   効果id → { v: 編成の合計の上限(その効果の単位。% か 点), group?: 同じ上限を分け合う組の名前 }。表に無い効果は上限なし(今までどおり)。
+  //   計算の芯(monhero-success.js)はこの表を読んで上限をかけ、説明の文(describe)とヘルプの表もこの表から上限を書く。効果を足すときはここに1行
+  const CAP = Object.freeze({
+    sokoji: { v: 100, group: 'train' }, hagemi: { v: 100, group: 'train' }, haru: { v: 100, group: 'train' }, natsu: { v: 100, group: 'train' }, aki: { v: 100, group: 'train' }, fuyu: { v: 100, group: 'train' },
+    atooshi: { v: 120 }, kunpow: { v: 120 }, kunwise: { v: 120 }, kunhit: { v: 120 }, kuneva: { v: 120 }, kuntough: { v: 120 }, kunlife: { v: 120 },
+    kizuna: { v: 100 }, kaifuku: { v: 20 }, ochitsuki: { v: 50 }, miharu: { v: 50 }, kibarashi: { v: 50 }, itawari: { v: 40 },
+    // sum: true … いるだけ型・試合型・追加トレボーナスで、編成のいちばん高い1体ではなく全員の分を足し合わせる(2026-11-15 社長 r1115-107)。v があればその上限
+    shuugou: { v: 40, sum: true }, tsuika: { v: 50, sum: true },
+    // one: true … 編成でいちばん高い1つだけ効く(2026-11-15 r1115-107「いまのまま」・クラフト33 の「アシスト重複」の印がこれを読む)
+    asobi: { one: true },
+    genkai: { one: true }, // 🔓上限アップブースト(r1115-103)
+    genki: { one: true },
+    gussuri: { one: true },
+    hitonatsu: { one: true },
+    kuishinbo: { one: true },
+    shchance: { one: true },
+    shitsuke: { one: true },
+    shoki: { one: true },
+    tairyoku: { one: true },
+    ticket: { one: true },
+    ticket0: { one: true },
+    trchance: { one: true },
+    tsukisoi: { one: true },
+    trainlv: { one: true },
+    gyakkyo: { one: true },
+    aidcome: { sum: true },
+    aidkeisho: { sum: true },
+    aidluck: { sum: true },
+    aidtrain: { sum: true },
+    aidtrust: { sum: true },
+    aptq: { sum: true },
+    chokyo: { sum: true },
+    event: { sum: true },
+    ikioi: { sum: true },
+    joshu: { sum: true },
+    kokoroe: { sum: true },
+    mejirushi: { sum: true },
+    ninki: { sum: true },
+    peak: { sum: true },
+    rivaldamashii: { sum: true },
+    shokin: { sum: true },
+    shugyo: { sum: true },
+    shugyohp: { sum: true },
+    shugyotoku: { sum: true },
+    waza: { sum: true },
+    wazakazu: { sum: true },
+    yobimizu: { sum: true },
+    gatsu: { sum: true },
+    kensho: { sum: true },
+    mimamori: { sum: true },
+    miseba: { sum: true },
+    mitate: { sum: true },
+  });
+  const CAP_GROUP_NAME = Object.freeze({ train: 'トレ効果アップ・励・春夏秋冬の5つを合わせて' });
+  // 説明の文の後ろに付ける上限の一言(表に無ければ '')
+  const capNote = (id) => { const c = CAP[id]; if (!c) return ''; if (!Number.isFinite(c.v)) return c.sum ? '(編成の何体ぶんでも足し合わせ)' : ''; const a = BY_ID[id]; const u = a && a.u === '%' ? '%' : ''; return `(${c.group && CAP_GROUP_NAME[c.group] ? `${CAP_GROUP_NAME[c.group]}、` : ''}編成の合計 ${c.v}${u}まで)`; };
   const describe = (id, n) => {
     const a = BY_ID[id]; if (!a) return '';
     const i = nOf(id, n) - 1;
     const vt = a.k === 'cnt' && a.cu === 'Lv' ? `+${fmt(a.v[i])}` : a.k === 'rate' || a.k === 'hard' ? `+${fmt(a.v[i])}%` : a.k === 'rateDown' ? `−${fmt(a.v[i])}%` : (a.k ? valueText(id, i + 1) : fmt(a.v[i])); // 文の中は「トレーニングLv +1」「◯◯の確率 +5%」
-    return ((i === a.max - 1 && a.text5) || a.text).replace('{v}', vt).replace('{start}', a.start ? String(a.start[i]) : '');
+    return ((i === a.max - 1 && a.text5) || a.text).replace('{v}', vt).replace('{start}', a.start ? String(a.start[i]) : '') + capNote(id);
   };
   // 型ごとの数字の書き方(W の k)。掛け算も % で書く(社長 2026-11-14)
   const valueText = (id, n) => {
@@ -316,7 +375,7 @@
   const pointsOf = (power) => Math.min(POINTS_MAX, Math.max(POINTS_MIN, Math.floor(num(power) / POINTS_DIV)));
 
   const api = Object.freeze({ VERSION, LIST, BY_ID, TYPE_NAME, SCENES, LV_MAX, MAX_KINDS, POINTS_MIN, POINTS_MAX, AUTO_ORDER, AUTO_STEP,
-    describe, label, valueText, costOf, valueOf, candidates, normPicks, autoPick, pointsOf, battleBuffs, stayValue, fromSaved, toSaved });
+    CAP, capNote, describe, label, valueText, costOf, valueOf, candidates, normPicks, autoPick, pointsOf, battleBuffs, stayValue, fromSaved, toSaved });
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   if (root) root.MONHERO_SUCCESS_ASSIST = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
