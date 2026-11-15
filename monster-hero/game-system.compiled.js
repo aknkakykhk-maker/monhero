@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f44db5c32a1e65f2
+// source-sha256: a3a1329a9359594f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -171939,17 +171939,22 @@ function MsxStart({
     }, (typeof jaWrap === 'function' ? jaWrap : t => t)('枠を押して選ぶ。6枠のどこにも自分のモンスターを入れられ、フレンドは1体まで。強いモンスターほどよく伸びる'))), React.createElement("div", {
       className: "v-slots msx-team6",
       "data-msx-team6": true
-    }, members.map((m, i) => React.createElement("div", {
+    }, members.map((m, i) => React.createElement("div", _extends({
       key: i,
       className: `v-sl${m.kind === 'base' ? ' base' : ''}${m.friend ? ' fr' : ''} msx-slot-tap`,
-      "data-msx-slot": i,
+      "data-msx-slot": i
+    }, m.assistId ? {
+      'data-msx-team-slot-assist': m.assistId
+    } : {}, m.boxId ? {
+      'data-msx-team-slot-box': m.boxId
+    } : {}, {
       role: "button",
       tabIndex: 0,
       onClick: () => openSlot(i),
       onKeyDown: e => {
         if (e.key === 'Enter' || e.key === ' ') openSlot(i);
       }
-    }, m.friend ? React.createElement("i", {
+    }), m.friend ? React.createElement("i", {
       className: "msx-sl-fr"
     }, "🤝 フレンド") : null, React.createElement("span", {
       className: `v-pf lg r${m.rank === 'base' ? 'G' : m.rank}${m.kind === 'base' ? ' base' : ''}`
@@ -172826,7 +172831,8 @@ function MsxTeamPick({
   }, MSX_STAT_NAME[k])))), React.createElement("span", {
     className: "msx-tp-cnt"
   }, tab === 'base' ? '' : `自分 ${raisedN}/6体`)), tab === 'memo' ? React.createElement("div", {
-    className: "msx-tp-note"
+    className: "msx-tp-note",
+    "data-msx-assist-head": true
   }, "メモリアルモンスターは育成には使えません。アシスト効果と得意な能力だけ効きます") : null, React.createElement("div", {
     className: "msx-tp-list",
     "data-msx-tp-list": true
