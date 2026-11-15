@@ -1740,6 +1740,17 @@
     const monthOf = (turn) => { const p = periodOf(turn); return p.key === 'debut' ? 7 + p.at : p.at; }; // 1ターン = 1か月(デビューは8〜12月)
     // きゅうこのピークの大会: 成長のピーク(いちばん伸びる区間)に入った最初のターン(1回の育成に1度)
     const peakTurn = (s) => { const pk = peakOfSuc(s.type); const f = (s.turn - 1) / TOTAL_TURNS; const f0 = (s.turn - 2) / TOTAL_TURNS; return s.turn > 1 && f >= pk.from && f < pk.to && !(f0 >= pk.from) && periodOf(s.turn).key !== 'debut' && periodOf(s.turn).key !== 'final'; };
+    // 大会の賞金を決める式は1つだけ(一覧・受付・参加確認と決着が同じ値を通る。r1115-207 N1)。
+    //   ふだんの大会: 月の1つ目=銀(その期の星どおり)・2つ目=銅(銀の半分・50G で丸める。2026-11-14 社長 案C)。決まった大会は表の額。
+    //   2つ目の sys は期・月ごとに1つに決まるので、保存の id(期:月:sys:星)と sys から決め直せる(途中の育成の保存は変えない)
+    const CUP_SEASON_SYS = ['spring', 'summer', 'autumn', 'winter'];
+    const secondCupSysOf = (pk, m) => { const yrow = CUP_STAR[pk] ? YEAR[m - 1] : null; if (!yrow || !yrow.length) return null; return CUP_SEASON_SYS.includes(yrow[1]) && pk !== 'junior' ? 'normal' : yrow[1]; };
+    const cupPrizeOf = (pk, m, sys, star) => {
+      const ex = EX_BY_SYS[sys]; if (ex) return num(ex.prize);
+      const base = Math.round(CUP_PRIZE[star] * PERIOD_PRIZE[pk]);
+      return sys === secondCupSysOf(pk, m) ? Math.round(base / 2 / 50) * 50 : base;
+    };
+    const SMILE_MAX = 1.3; // 笑顔の大会(scmua): 勝つと 機嫌がよいほど ×1.0〜1.3
     const cupsOf = (s) => {
       const p = periodOf(s.turn);
       if (!CUP_STAR[p.key] && !(s.aid === 'kyuko' && peakTurn(s))) return [];
@@ -1756,8 +1767,7 @@
       if (yrow.length && p.key === 'middle' && m === 7) { const t = TYPE_OF[s.species]; if (t && t.main && CUP_SYS[t.main]) sysList.push(t.main); }
       const list = sysList.map((sys, i) => {
         const star = sys === 'herosummer' ? 4 : CUP_STAR[p.key];
-        const base = Math.round(CUP_PRIZE[star] * PERIOD_PRIZE[p.key]);
-        return { id: `${p.key}:${m}:${sys}:${star}`, sys, star, name: cupNameAt(p.key, m, i, sys) || (deps && deps.cupNames && deps.cupNames[sys]) || sys, prize: i === 1 ? Math.round(base / 2 / 50) * 50 : base, index: i };
+        return { id: `${p.key}:${m}:${sys}:${star}`, sys, star, name: cupNameAt(p.key, m, i, sys) || (deps && deps.cupNames && deps.cupNames[sys]) || sys, prize: cupPrizeOf(p.key, m, sys, star), index: i };
       });
       // 大会の第2版: 決まった期・月の大会(四大大会・季節の賞・間合いの2段・選抜→記念・宝石の記念・ジュニアの大一番)
       EX_CUPS.forEach((d) => { if (d.p === p.key && d.m === m) list.push({ id: `${p.key}:${m}:${d.sys}:${d.star}`, sys: d.sys, star: d.star, ex: true, name: d.name, grade: d.grade, hard: !!d.hard, prize: d.prize, index: list.length }); });
@@ -1767,7 +1777,7 @@
         if (!hit) return;
         let star = d.star; if (s.aid === 'momosuke' && p.key === 'pro' && s.pop >= 50) star = 3; // 人気 50 以上で ★★★
         const sys = `sc${s.aid}`;
-        list.push({ id: `${p.key}:${m}:${sys}:${star}:${k}`, sys, star, scenario: true, name: SC_NAME[s.aid], prize: Math.round(CUP_PRIZE[star] * PERIOD_PRIZE[p.key]), index: list.length });
+        list.push({ id: `${p.key}:${m}:${sys}:${star}:${k}`, sys, star, scenario: true, name: SC_NAME[s.aid], prize: cupPrizeOf(p.key, m, sys, star), ...(sys === 'scmua' ? { prizeMax: Math.round(cupPrizeOf(p.key, m, sys, star) * SMILE_MAX) } : {}), index: list.length });
       });
       const rv = rivalOf(s, list.length); if (rv) list[rv.cup].rival = rv.rival;
       return list.map(c => ({ ...c, entry: canEnter(s, c), done: s.wonNow.includes(`${c.sys}:${c.star}`) || s.wonBefore.includes(`${c.sys}:${c.star}`) }));
@@ -1954,11 +1964,12 @@
       const pk = periodOf(s.turn).key;
       const star = b.kind === 'cup' ? b.star : b.kind === 'summit' ? 4 : FORCED[b.kind].star;
       const exB = b.kind === 'cup' ? EX_BY_SYS[b.sys] : null;
-      let full = b.kind === 'summit' ? PRIZE.summit[b.round] : exB ? exB.prize : b.kind === 'cup' ? Math.round(CUP_PRIZE[b.star] * PERIOD_PRIZE[pk]) : num(PRIZE[b.kind]);
+      const idM = Number(String(b.id || '').split(':')[1]); const cupM = String(b.id || '').split(':')[0] === pk && Number.isFinite(idM) ? idM : monthOf(s.turn);
+      let full = b.kind === 'summit' ? PRIZE.summit[b.round] : b.kind === 'cup' ? cupPrizeOf(pk, cupM, b.sys, b.star) : num(PRIZE[b.kind]); // 一覧と同じ式(r1115-207 N1)
       let tkFull = b.kind === 'summit' ? TICKET_BASE.summit[b.round] : exB ? exB.tk : b.kind === 'cup' ? Math.round(TICKET_BASE.cup[b.star] * TICKET_BASE.period[pk]) : num(TICKET_BASE[b.kind]);
       let prize = won ? full : (star >= 2 && b.kind !== 'summit' ? Math.round(full * RUNNER_UP) : 0);
       if (b.sys === 'scatsu' && !won) prize = Math.round(full * 0.5); // 格上への挑戦: 負けても賞金の半分
-      if (b.sys === 'scmua' && won) prize = Math.round(full * (1 + 0.3 * (1 - s.stress / 100))); // 笑顔の大会: 機嫌がよいほど賞金 ×1.0〜1.3
+      if (b.sys === 'scmua' && won) prize = Math.round(full * (1 + (SMILE_MAX - 1) * (1 - clamp(num(s.stress), 0, 100) / 100))); // 笑顔の大会: 機嫌がよいほど賞金 ×1.0〜1.3
       prize = Math.round(prize * (1 + stayNum(s, 'shokin') / 100)); // 💰賞金かせぎ
       s.fame += prize; s.fameTotal += prize; out.prize = prize;
       if (won) { const bp = beatOfPrize(full); if (bp) { s.beatEarned = num(s.beatEarned) + bp; out.beat = bp; } } // ビートP(優勝の賞品・この大会で1回)
@@ -2122,7 +2133,7 @@
     return Object.freeze({
       events: EV,
       VERSION, STORY, KEYS, STAT_NAMES, STAT_MAX, PERIODS, TOTAL_TURNS, FORCED, SUMMIT, SUMMIT_PTS, BASE, RESULTS, RATE, REST, PLAY, CLINIC, COND, LOYAL, GATHER, BOND, STORY, LOTTERY,
-      polOfBond, POL_BANDS, CUP_PTS, techRate, techBoostConds, CAP_UP, STAT_ABS, statCapOf, capOfTeam, capTopOf, capRateOf, powerOverOf, techAptAdd, techCellOf, techCells, techPickNorm, techPickLocked, setTechPick, GROW_BY_SPECIES, speciesType, gatherChanceOf, normStats, ASSISTS, ISSA, PTS, XP, SHUGYO, TECH_POWER, MASTERY, POP_TURN_MULT, techRowsOf, techPowerOfRows, powerOf, techBoostOf, techUseOf, ITEMS, ITEM_FX: Object.freeze({ fruit: FRUIT_MULT, pop: POP_TURN_MULT, elixir: ELIXIR_ADD }), GOOD, CARRY_MAX, useItem, FAME_V, FAME_SCALE, TICKET_BASE, TRAIN_LV, trainLvOf, REMATCH, canRematch, rematch, canSkip, battleKey, PRIZE, BEAT_PRIZE, beatOfPrize, BEAT_END, beatOfEnd, MEALS, meal, mealSkip, MEAL_SKIP_FEAR, mealOpts, MEAL_PICK, MEAL_WATCH_MULT, ticketsOfPrize, TECH_MAX, techsOf, canLearn, techRate, learnable, techRank, shugyoQ, superLeft, techMissOf, techCanon, canonTechList, shugyoLeft, shugyoHpOf, shugyoHpShort, shugyoPartsOf, shugyoPartsFit, teachFrom, BENCH: BENCH_USE, STAR_MULT, TAG_POWER, BOND_START, RANK_ADD, TRAIN_COMBO, AIDS, speciesList, shugyoGainOf, EX_CUPS, EX_BY_SYS, cupItemsOf, CUP_REWARD, FAME_RANK, FAME_RANK_MAX, rankStepOf, rankNameOf, rankNeedG, rankTicketsOf, WIN_TICKET, FOUR_DONE, fourWinsOf, forecastOf, ELIXIR_ADD, FRUIT_MULT,
+      polOfBond, POL_BANDS, CUP_PTS, techRate, techBoostConds, CAP_UP, STAT_ABS, statCapOf, capOfTeam, capTopOf, capRateOf, powerOverOf, techAptAdd, techCellOf, techCells, techPickNorm, techPickLocked, setTechPick, GROW_BY_SPECIES, speciesType, gatherChanceOf, normStats, ASSISTS, ISSA, PTS, XP, SHUGYO, TECH_POWER, MASTERY, POP_TURN_MULT, techRowsOf, techPowerOfRows, powerOf, techBoostOf, techUseOf, ITEMS, ITEM_FX: Object.freeze({ fruit: FRUIT_MULT, pop: POP_TURN_MULT, elixir: ELIXIR_ADD }), GOOD, CARRY_MAX, useItem, FAME_V, FAME_SCALE, TICKET_BASE, TRAIN_LV, trainLvOf, REMATCH, canRematch, rematch, canSkip, battleKey, cupPrizeOf, SMILE_MAX, PRIZE, BEAT_PRIZE, beatOfPrize, BEAT_END, beatOfEnd, MEALS, meal, mealSkip, MEAL_SKIP_FEAR, mealOpts, MEAL_PICK, MEAL_WATCH_MULT, ticketsOfPrize, TECH_MAX, techsOf, canLearn, techRate, learnable, techRank, shugyoQ, superLeft, techMissOf, techCanon, canonTechList, shugyoLeft, shugyoHpOf, shugyoHpShort, shugyoPartsOf, shugyoPartsFit, teachFrom, BENCH: BENCH_USE, STAR_MULT, TAG_POWER, BOND_START, RANK_ADD, TRAIN_COMBO, AIDS, speciesList, shugyoGainOf, EX_CUPS, EX_BY_SYS, cupItemsOf, CUP_REWARD, FAME_RANK, FAME_RANK_MAX, rankStepOf, rankNameOf, rankNeedG, rankTicketsOf, WIN_TICKET, FOUR_DONE, fourWinsOf, forecastOf, ELIXIR_ADD, FRUIT_MULT,
       rngOf, periodOf, aptMult, initStats, memberOf, memberEffect, newRun, gatherOf, cardMult, peek, failRateOf, sabRateOf, greatRateOf,
       act, react, reactOf, issa, issaComes, issaRate, endTurn, opponents: opponentsOf, settle, cupsOf, canEnter, bracketOf, gradeOf, GRADE_STEP, stayV, SC_CUPS, SC_NAME, ASST_STORY, storyEnd, markSpecial, battleMods, battleBuffs, peakTurn, ASTORY, storyDue, storyStep, preview, restore, ARC, PARTY, summitPick, endingOf, endingSeen, CUP_SYS, YEAR, RIVAL, CUP_PRIZE, spendPts, autoPts, ptsCost, evaluate, assistPointsOf, loyalOf, loyalMult, top3Of, sumOf,
       FUSE, fuseOk, fuseKinds, fusePlan, fuseId,
