@@ -6576,13 +6576,20 @@
     "dist": [
      1
     ],
-    "power": 17,
-    "hit": -2,
+    "power": 19,
+    "hit": -15,
     "guts": 23,
-    "crit": 12,
-    "gd": 11,
+    "crit": 20,
+    "gd": 8,
     "moveTo": 0,
-    "rank": 2
+    "rank": 2,
+    "orig": {
+     "power": 17,
+     "hit": -2,
+     "gd": 11,
+     "crit": 12
+    },
+    "spread": "sk-0258"
    },
    {
     "id": "pandora_o06",
@@ -6647,12 +6654,19 @@
     "dist": [
      3
     ],
-    "power": 25,
-    "hit": -12,
+    "power": 27,
+    "hit": -25,
     "guts": 25,
-    "crit": 12,
-    "gd": 11,
-    "rank": 2
+    "crit": 20,
+    "gd": 8,
+    "rank": 2,
+    "orig": {
+     "power": 25,
+     "hit": -12,
+     "gd": 11,
+     "crit": 12
+    },
+    "spread": "sk-0258"
    },
    {
     "id": "pandora_o11",
@@ -6661,12 +6675,19 @@
     "dist": [
      2
     ],
-    "power": 25,
-    "hit": -2,
+    "power": 19,
+    "hit": 9,
     "guts": 28,
-    "crit": 12,
-    "gd": 11,
-    "rank": 3
+    "crit": 8,
+    "gd": 12,
+    "rank": 3,
+    "orig": {
+     "power": 25,
+     "hit": -2,
+     "gd": 11,
+     "crit": 12
+    },
+    "spread": "sk-0262"
    },
    {
     "id": "pandora_o12",
@@ -6765,6 +6786,145 @@
     "crit": 18,
     "gd": 14,
     "rank": 5
+   },
+   {
+    "id": "pandora_o19",
+    "name": "ダブルはり手",
+    "kind": "pow",
+    "dist": [
+     0
+    ],
+    "power": 18,
+    "hit": 3,
+    "guts": 14,
+    "crit": 10,
+    "gd": 8,
+    "fixRank": 2,
+    "from": "sk-0260"
+   },
+   {
+    "id": "pandora_o20",
+    "name": "アビスヒールレイド",
+    "kind": "pow",
+    "dist": [
+     0
+    ],
+    "power": 32,
+    "hit": -7,
+    "guts": 21,
+    "crit": 10,
+    "gd": 19,
+    "fixRank": 3,
+    "needFix": {
+     "pandora_o19": 25
+    },
+    "from": "sk-0266"
+   },
+   {
+    "id": "pandora_o21",
+    "name": "セラフ投げ飛ばし",
+    "kind": "pow",
+    "dist": [
+     0
+    ],
+    "power": 32,
+    "hit": -7,
+    "guts": 30,
+    "crit": 10,
+    "gd": 24,
+    "moveTo": 3,
+    "fixRank": 4,
+    "needFix": {
+     "pandora_o20": 40
+    },
+    "from": "sk-0270"
+   },
+   {
+    "id": "pandora_o22",
+    "name": "カオスファイトクラウド",
+    "kind": "pow",
+    "dist": [
+     0
+    ],
+    "power": 40,
+    "hit": 3,
+    "guts": 40,
+    "crit": 20,
+    "gd": 19,
+    "fixRank": 5,
+    "needFix": {
+     "pandora_o21": 50
+    },
+    "from": "sk-0273"
+   },
+   {
+    "id": "pandora_o23",
+    "name": "セラフハイキック",
+    "kind": "pow",
+    "dist": [
+     1
+    ],
+    "power": 26,
+    "hit": -1,
+    "guts": 15,
+    "crit": 10,
+    "gd": 6,
+    "fixRank": 2,
+    "from": "sk-0263"
+   },
+   {
+    "id": "pandora_o24",
+    "name": "ルミナスバン",
+    "kind": "wise",
+    "dist": [
+     1
+    ],
+    "power": 32,
+    "hit": -17,
+    "guts": 30,
+    "crit": 14,
+    "gd": 15,
+    "fixRank": 3,
+    "needFix": {
+     "pandora_o23": 25
+    },
+    "from": "sk-0265"
+   },
+   {
+    "id": "pandora_o25",
+    "name": "カオスビッグバン",
+    "kind": "wise",
+    "dist": [
+     1
+    ],
+    "power": 40,
+    "hit": -17,
+    "guts": 38,
+    "crit": 20,
+    "gd": 19,
+    "fixRank": 4,
+    "needFix": {
+     "pandora_o24": 40
+    },
+    "from": "sk-0269"
+   },
+   {
+    "id": "pandora_o26",
+    "name": "ノヴァコズミックバン",
+    "kind": "wise",
+    "dist": [
+     1
+    ],
+    "power": 40,
+    "hit": -1,
+    "guts": 45,
+    "crit": 14,
+    "gd": 24,
+    "fixRank": 5,
+    "needFix": {
+     "pandora_o25": 50
+    },
+    "from": "sk-0272"
    }
   ],
   "Eiki": [
@@ -6880,12 +7040,19 @@
     "dist": [
      1
     ],
-    "power": 26,
-    "hit": -1,
+    "power": 23,
+    "hit": 4,
     "guts": 30,
-    "crit": 16,
-    "gd": 11,
-    "rank": 3
+    "crit": 10,
+    "gd": 20,
+    "rank": 3,
+    "orig": {
+     "power": 26,
+     "hit": -1,
+     "gd": 11,
+     "crit": 16
+    },
+    "spread": "sk-0799"
    },
    {
     "id": "eiki_o09",
@@ -6922,12 +7089,19 @@
     "dist": [
      1
     ],
-    "power": 26,
-    "hit": -1,
+    "power": 20,
+    "hit": 0,
     "guts": 27,
-    "crit": 16,
-    "gd": 11,
-    "rank": 3
+    "crit": 21,
+    "gd": 7,
+    "rank": 3,
+    "orig": {
+     "power": 26,
+     "hit": -1,
+     "gd": 11,
+     "crit": 16
+    },
+    "spread": "sk-0594"
    },
    {
     "id": "eiki_o12",
@@ -6951,11 +7125,18 @@
      1
     ],
     "power": 32,
-    "hit": -1,
+    "hit": -9,
     "guts": 31,
-    "crit": 16,
-    "gd": 11,
-    "rank": 4
+    "crit": 12,
+    "gd": 2,
+    "rank": 4,
+    "orig": {
+     "power": 32,
+     "hit": -1,
+     "gd": 11,
+     "crit": 16
+    },
+    "spread": "sk-0595"
    },
    {
     "id": "eiki_o14",
@@ -7185,12 +7366,19 @@
     "dist": [
      1
     ],
-    "power": 24,
-    "hit": -1,
+    "power": 13,
+    "hit": -5,
     "guts": 25,
     "crit": 12,
-    "gd": 9,
-    "rank": 2
+    "gd": 23,
+    "rank": 2,
+    "orig": {
+     "power": 24,
+     "hit": -1,
+     "gd": 9,
+     "crit": 12
+    },
+    "spread": "sk-0405"
    },
    {
     "id": "kenshimocchi_o12",
@@ -7448,12 +7636,19 @@
     "dist": [
      2
     ],
-    "power": 30,
-    "hit": -7,
+    "power": 28,
+    "hit": -14,
     "guts": 24,
-    "crit": 12,
+    "crit": 14,
     "gd": 17,
-    "rank": 3
+    "rank": 3,
+    "orig": {
+     "power": 30,
+     "hit": -7,
+     "gd": 17,
+     "crit": 12
+    },
+    "spread": "sk-0577"
    },
    {
     "id": "melody_o12",
@@ -7505,12 +7700,19 @@
     "dist": [
      2
     ],
-    "power": 38,
-    "hit": -7,
+    "power": 42,
+    "hit": -6,
     "guts": 35,
-    "crit": 12,
-    "gd": 22,
-    "rank": 4
+    "crit": 10,
+    "gd": 19,
+    "rank": 4,
+    "orig": {
+     "power": 38,
+     "hit": -7,
+     "gd": 22,
+     "crit": 12
+    },
+    "spread": "sk-0584"
    },
    {
     "id": "melody_o16",

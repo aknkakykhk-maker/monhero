@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "id": "240de96d0822",
-  "packs": {"beat":{"bytes":171623116,"count":126},"battle":{"bytes":176809791,"count":1462},"card":{"bytes":37779758,"count":1048},"all":{"bytes":386212665,"count":2636},"core":{"bytes":22982667,"count":24}},
+  "id": "3b7f039249ab",
+  "packs": {"beat":{"bytes":171623116,"count":126},"battle":{"bytes":176846007,"count":1470},"card":{"bytes":37779758,"count":1048},"all":{"bytes":386248881,"count":2644},"core":{"bytes":22985119,"count":24}},
   "files": {
     "audio/bgm-4u-hitasura.mp3": {"v":"f4fb42472438","size":1446380,"pack":"beat"},
     "audio/bgm-against-my-own-shadow.mp3": {"v":"a58782a4c46f","size":1889175,"pack":"beat"},
@@ -2347,6 +2347,14 @@
     "images/success/skill/pandora_o16.png": {"v":"e571133c62a7","size":4752,"pack":"battle"},
     "images/success/skill/pandora_o17.png": {"v":"5ac78918495a","size":5260,"pack":"battle"},
     "images/success/skill/pandora_o18.png": {"v":"730cd7c12c8e","size":4834,"pack":"battle"},
+    "images/success/skill/pandora_o19.png": {"v":"82b79ff2b9f3","size":4097,"pack":"battle"},
+    "images/success/skill/pandora_o20.png": {"v":"6d3875d9b4b3","size":4190,"pack":"battle"},
+    "images/success/skill/pandora_o21.png": {"v":"413454a36a31","size":4358,"pack":"battle"},
+    "images/success/skill/pandora_o22.png": {"v":"72463523a193","size":4763,"pack":"battle"},
+    "images/success/skill/pandora_o23.png": {"v":"ba1c9c0007a7","size":4460,"pack":"battle"},
+    "images/success/skill/pandora_o24.png": {"v":"187aae7e0b6c","size":4774,"pack":"battle"},
+    "images/success/skill/pandora_o25.png": {"v":"8d20534a1b6f","size":4845,"pack":"battle"},
+    "images/success/skill/pandora_o26.png": {"v":"676c13791228","size":4729,"pack":"battle"},
     "images/success/skill/sk-0001.png": {"v":"4e810c9140de","size":7428,"pack":"battle"},
     "images/success/skill/sk-0002.png": {"v":"6708e7093f15","size":7613,"pack":"battle"},
     "images/success/skill/sk-0003.png": {"v":"98e8a76979ea","size":6580,"pack":"battle"},
@@ -2641,7 +2649,7 @@
     "images/ui/breakthrough-rainbow-star.PNG": {"v":"c0e9259703a7","size":199081,"pack":"battle"},
     "vendor/react.production.min.js": {"v":"18","size":10751,"pack":"core"},
     "vendor/react-dom.production.min.js": {"v":"18","size":131835,"pack":"core"},
-    "tailwind.css": {"v":"d2d05c3f534f","size":307142,"pack":"core"},
+    "tailwind.css": {"v":"3ab7181cdea9","size":307300,"pack":"core"},
     "data/images/images-ally.js": {"v":"7469815ddc0f","size":81722,"pack":"core"},
     "data/images/images-enemy.js": {"v":"f10f6ad82110","size":2926,"pack":"core"},
     "data/ally-monsters.js": {"v":"6737b7dced48","size":60894,"pack":"core"},
@@ -2654,14 +2662,14 @@
     "data/rhythm-geometry-calibration.js": {"v":"02534cca12f6","size":15552,"pack":"core"},
     "data/rhythm-result-replay-remount.js": {"v":"381554180360","size":5743,"pack":"core"},
     "data/rhythm-event.js": {"v":"e297d2fa07bf","size":96997,"pack":"core"},
-    "data/changelog.js": {"v":"4c99cf05c438","size":1792208,"pack":"core"},
+    "data/changelog.js": {"v":"1ab2bafeaf6e","size":1792220,"pack":"core"},
     "data/help.js": {"v":"c274375bae71","size":864829,"pack":"core"},
     "data/mhsave-backup.js": {"v":"7845a4fd261f","size":14703,"pack":"core"},
     "data/rhythm-step3-release.js": {"v":"ae1d7f73f23a","size":8517,"pack":"core"},
     "data/assistants.js": {"v":"c12e60c29d7f","size":2157075,"pack":"core"},
     "data/card-battle-cards.js": {"v":"a1453d49f17e","size":124624,"pack":"core"},
-    "data/assistant-masmon-techs.js": {"v":"a3439247bb0f","size":110880,"pack":"core"},
+    "data/assistant-masmon-techs.js": {"v":"5bb314fdc350","size":112615,"pack":"core"},
     "data/success-sounds.js": {"v":"e07bb568b22f","size":9906,"pack":"core"},
-    "game-system.compiled.js": {"v":"a15a2be2c12e","size":11790083,"pack":"core"}
+    "game-system.compiled.js": {"v":"2b7eaffbf06e","size":11790630,"pack":"core"}
   }
 }
