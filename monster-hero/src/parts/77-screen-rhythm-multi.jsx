@@ -2965,7 +2965,7 @@ const rhythmWatchChartOf = (songs, songId, diffId) => {
   const chart = song && song.difficulties ? song.difficulties[diffId] : null;
   return chart && Array.isArray(chart.notes) && chart.notes.length ? chart : null;
 };
-function RhythmWatchLane({ chart }) {
+function RhythmWatchLaneFlat({ chart }) {
   const ref = React.useRef(null);
   React.useEffect(() => {
     const cv = ref.current;
@@ -3037,10 +3037,203 @@ function RhythmWatchLane({ chart }) {
   }, [chart]);
   return <canvas ref={ref} data-rhythm-watch-lane className="absolute inset-0 h-full w-full" />;
 }
+// ---- 観戦の道を、プレイ画面と同じ部品で描く(2026-11-15・r1115-021) ----
+//   奥行きのレーン(rhythmProjectBoundary)・ノーツ(rhythmNoteCanvasGeometry + 描き手 drawNote の2D版)・判定ライン・判定の文字・コンボを、
+//   プレイ画面と同じ式・同じ形で描く。見る側の端末だけで描き、演奏する人の端末・通信・保存は変えない。
+//   ・曲の位置は1秒ごとの pg の p。届かなくなっても最長 RHYTHM_WATCH_RUN_ON_MS は時計で進め、そのあとは止めて「通信を待っています」を出す
+//   ・判定は束 j(ノーツ番号 → 判定)。指の位置は再現しないので、ノーツは判定どおりに消える(HOLD/SLIDE は押さえたまま終わりまで判定ラインに乗る)
+//   ・軽くする設定・省エネ・描き手が作れないときは、これまでの2D描き(RhythmWatchLaneFlat)へ戻す
+const RHYTHM_WATCH_RUN_ON_MS = 3000;
+const RHYTHM_WATCH_NOTE_H = 20;
+const rhythmWatchSettings = () => {
+  try {
+    const raw = typeof localStorage !== 'undefined' ? localStorage.getItem(RHYTHM_SETTINGS_KEY) : null;
+    return normalizeRhythmSettings(raw ? JSON.parse(raw) : null);
+  } catch (_) { return normalizeRhythmSettings(null); }
+};
+const rhythmWatchUseFlat = (s) => !!(s && (s.lightweightMode || s.effectAmount === 'MINIMAL' || s.frameRateMode !== 'DEVICE'))
+  || typeof rhythmBuildCanvasRenderer !== 'function' || typeof rhythmNoteCanvasGeometry !== 'function';
+// 見られている人の「いまの曲の位置」。pg が止まったら最長3秒は時計で進める。waiting は、その3秒も過ぎて止めたとき
+const rhythmWatchPosition = (row, nowMs = Date.now()) => {
+  if (!row || !row.pAt) return { p: 0, waiting: false, known: false };
+  const age = Math.max(0, nowMs - row.pAt);
+  return { p: row.p + Math.min(age, RHYTHM_WATCH_RUN_ON_MS), waiting: age > RHYTHM_WATCH_RUN_ON_MS, known: true };
+};
+function RhythmWatchLane({ chart, onWaiting = null }) {
+  const [flat, setFlat] = React.useState(() => rhythmWatchUseFlat(rhythmWatchSettings()));
+  if (flat) return <RhythmWatchLaneFlat chart={chart} />;
+  return <RhythmWatchLaneRoad chart={chart} onWaiting={onWaiting} onFail={() => setFlat(true)} />;
+}
+function RhythmWatchLaneRoad({ chart, onWaiting, onFail }) {
+  const hostRef = React.useRef(null);
+  const roadRef = React.useRef(null);
+  const noteRef = React.useRef(null);
+  const fxRef = React.useRef(null);
+  const waitingRef = React.useRef(false);
+  React.useEffect(() => {
+    const host = hostRef.current; const roadCv = roadRef.current; const noteCv = noteRef.current; const fxCv = fxRef.current;
+    if (!host || !roadCv || !noteCv || !fxCv || !chart) return undefined;
+    const settings = rhythmWatchSettings();
+    let renderer = null;
+    try {
+      renderer = rhythmBuildCanvasRenderer();
+      renderer.attach(noteCv, { webgl: false, gpuBand: false });
+      if (renderer.ready === false || !noteCv.getContext) throw new Error('no-renderer');
+    } catch (_) { try { if (renderer) renderer.release(); } catch (__) { /* 何もしない */ } onFail(); return undefined; }
+    const notes = chart.notes;
+    const travelMs = rhythmTravelMsForSpeed(settings.noteSpeed);
+    // 道の幅(横向きのときだけ設定が効く)と流れの速さの表は、プレイ画面と同じ入れ方。見終わったら元へ戻す
+    const keepScroll = { points: RHYTHM_SCROLL.points, back: RHYTHM_SCROLL.back, sufMin: RHYTHM_SCROLL.sufMin, groups: RHYTHM_SCROLL.groups, lerp: RHYTHM_SCROLL.lerp };
+    rhythmScrollSet(Array.isArray(chart.scrollChanges) && chart.scrollChanges.length ? chart.scrollChanges : null, travelMs, chart.scrollGroups);
+    const roadFactor = orientationIsLandscape() ? (RHYTHM_ROAD_WIDTHS[settings.roadWidth] || 1) : 1;
+    RHYTHM_ROAD_WIDTH.set(roadFactor);
+    const hasTable = !!RHYTHM_SCROLL.points;
+    const firstFrom = (t) => { let lo = 0; let hi = notes.length; while (lo < hi) { const mid = (lo + hi) >> 1; if (notes[mid].timeMs < t) lo = mid + 1; else hi = mid; } return lo; };
+    const dpr = Math.min(2, (typeof window !== 'undefined' && window.devicePixelRatio) || 1);
+    let raf = 0; let alive = true; let sizeKey = '';
+    const noteH = RHYTHM_WATCH_NOTE_H;
+    const paintRoad = (w, h, hitY) => {
+      const c = roadCv.getContext('2d'); if (!c) return;
+      c.setTransform(dpr, 0, 0, dpr, 0, 0); c.clearRect(0, 0, w, h);
+      const g = c.createLinearGradient(0, 0, 0, h); g.addColorStop(0, '#050817'); g.addColorStop(0.42, '#070718'); g.addColorStop(1, '#03040b');
+      c.fillStyle = g; c.fillRect(0, 0, w, h);
+      const glow = c.createRadialGradient(w / 2, h * 0.04, 0, w / 2, h * 0.04, w * 0.45); glow.addColorStop(0, 'rgba(217,70,239,.18)'); glow.addColorStop(1, 'rgba(217,70,239,0)');
+      c.fillStyle = glow; c.fillRect(0, 0, w, h * 0.5);
+      const STEPS = 12;
+      const edge = (b) => { const pts = []; for (let k = 0; k <= STEPS; k += 1) { const y = (k / STEPS) * h; pts.push([rhythmProjectBoundary(b, y / h) * w, y]); } return pts; };
+      for (let lane = 0; lane < RHYTHM_LANE_COUNT; lane += 1) {
+        const l = edge(lane); const r = edge(lane + 1);
+        c.beginPath(); l.forEach((p, k) => (k ? c.lineTo(p[0], p[1]) : c.moveTo(p[0], p[1]))); for (let k = r.length - 1; k >= 0; k -= 1) c.lineTo(r[k][0], r[k][1]); c.closePath();
+        c.fillStyle = lane % 2 ? 'rgba(30,41,59,.34)' : 'rgba(15,23,42,.42)'; c.fill();
+      }
+      c.lineWidth = 1;
+      for (let b = 0; b <= RHYTHM_LANE_COUNT; b += 1) {
+        const e = edge(b); c.beginPath(); e.forEach((p, k) => (k ? c.lineTo(p[0], p[1]) : c.moveTo(p[0], p[1])));
+        c.strokeStyle = b === 0 || b === RHYTHM_LANE_COUNT ? 'rgba(103,232,249,.5)' : 'rgba(255,255,255,.2)'; c.stroke();
+      }
+      const yr = hitY / h; const xl = rhythmProjectBoundary(0, yr) * w; const xr = rhythmProjectBoundary(RHYTHM_LANE_COUNT, yr) * w;
+      c.save(); c.shadowColor = 'rgba(34,211,238,.8)'; c.shadowBlur = 10; c.strokeStyle = '#22d3ee'; c.lineWidth = 3;
+      c.beginPath(); c.moveTo(xl, hitY); c.lineTo(xr, hitY); c.stroke(); c.restore();
+    };
+    const frame = () => {
+      if (!alive) return;
+      raf = requestAnimationFrame(frame);
+      const v = RHYTHM_WATCH.view();
+      const w = host.clientWidth; const h = host.clientHeight;
+      if (!v || !(w > 0 && h > 0)) return;
+      const ratio = RHYTHM_JUDGMENT_LINE_Y.ratio;
+      const hitLineY = ratio * h;
+      const judgmentY = hitLineY - noteH / 2;
+      const spawnY = -noteH + ((Number(settings.noteStartPosition) || 0) / 100) * h * 0.2;
+      const travelPx = judgmentY - spawnY;
+      const key = `${w}x${h}/${ratio}/${roadFactor}`;
+      if (key !== sizeKey) {
+        sizeKey = key;
+        roadCv.width = Math.round(w * dpr); roadCv.height = Math.round(h * dpr);
+        fxCv.width = Math.round(w * dpr); fxCv.height = Math.round(h * dpr);
+        paintRoad(w, h, hitLineY);
+      }
+      const rect = { left: 0, top: 0, width: w, height: h };
+      const row = v.rows[v.focus];
+      const pos = rhythmWatchPosition(row);
+      if (pos.waiting !== waitingRef.current) { waitingRef.current = pos.waiting; if (onWaiting) onWaiting(pos.waiting); }
+      const vis = pos.p - RHYTHM_WATCH_LANE_DELAY_MS;
+      const jm = v.judged[v.focus] || null;
+      const fx = fxCv.getContext('2d');
+      if (fx) { fx.setTransform(dpr, 0, 0, dpr, 0, 0); fx.clearRect(0, 0, w, h); }
+      const ready = renderer.begin(rect, { nowMs: performance.now(), effect: settings.effectAmount, lightweight: false, maxDpr: 2, sizeScale: (Number(settings.noteSize) || 100) / 100, ...rhythmFxRenderOptions(settings) });
+      let shown = null; let flashes = null;
+      if (ready && pos.known) {
+        const horizon = vis + travelMs * (hasTable ? 4 : 1.2);
+        const sNow = (g) => rhythmScrollPos(vis, g);
+        for (let i = firstFrom(vis - 4000); i < notes.length; i += 1) {
+          const n = notes[i];
+          if (n.timeMs > horizon) break;
+          const hasBody = rhythmNoteHasBody(n);
+          const relMs = hasBody ? rhythmReleaseTargetMs(n) : n.timeMs;
+          const endMs = hasBody ? Math.max(relMs, Number(n.endTimeMs) || 0, n.timeMs) : n.timeMs;
+          const code = jm && jm.has(i) ? jm.get(i) : -1;
+          if (code >= 0 && n.timeMs <= vis && Math.abs(vis - n.timeMs) < 700) shown = { code, age: vis - n.timeMs };
+          if (code >= 0 && code < 5 && Math.abs(vis - n.timeMs) < 260) { (flashes || (flashes = [])).push({ n, code, age: vis - n.timeMs }); }
+          const hit = code >= 0 && code < 5;
+          const miss = code === 5;
+          const holding = hit && hasBody && vis >= n.timeMs && vis < endMs;
+          const clearAt = hit ? (hasBody ? endMs : n.timeMs) : 0;
+          const clearing = hit && vis >= clearAt && vis - clearAt < RHYTHM_CLEAR_FLASH_MS;
+          if (hit && vis >= clearAt && !clearing) continue;
+          const failedTrail = (miss || (code < 0 && vis > n.timeMs + 220)) && hasBody && vis < endMs;
+          const progress = 1 - (rhythmScrollPos(n.timeMs, n.scrollGroup) - sNow(n.scrollGroup)) / travelMs;
+          const visible = holding || clearing || failedTrail || (progress >= -0.1 && progress <= 1.18);
+          if (!visible) continue;
+          let yPx = spawnY + rhythmProjectTravelProgress(progress) * travelPx;
+          if (holding || clearing) yPx = judgmentY;
+          yPx = Math.round(yPx);
+          const releaseProgress = 1 - (rhythmScrollPos(relMs, n.scrollGroup) - sNow(n.scrollGroup)) / travelMs;
+          const releaseYpx = Math.round(spawnY + rhythmProjectTravelProgress(releaseProgress) * travelPx);
+          const bodyPx = Math.max(0, yPx - releaseYpx);
+          const geo = rhythmNoteCanvasGeometry(n, yPx, n.lane, rect, noteH, hasBody ? releaseYpx : null, { chartNowMs: vis, visualTime: vis, travelMs, spawnY, travelPx, gpu: false }, hasBody ? bodyPx : 0);
+          const depthScale = Math.round((0.56 + geo.scale * 0.44) * 100) / 100;
+          const brightness = Math.round((0.72 + geo.scale * 0.28) * 100) / 100;
+          const passedUnknown = code < 0 && vis > n.timeMs + 80;
+          renderer.drawNote(n, geo, {
+            failed: miss || failedTrail, monster: false, wide: rhythmNoteIsWide(n), pressed: holding, slideOff: false, heldMs: vis - n.timeMs,
+            alpha: miss || failedTrail ? 0.34 : passedUnknown ? 0.5 : 1,
+            pop: clearing ? Math.min(1, (vis - clearAt) / RHYTHM_CLEAR_FLASH_MS) : null, depthScale, brightness,
+          });
+        }
+      }
+      renderer.end();
+      if (!fx) return;
+      // 叩いた瞬間の光(判定の色)。判定ラインの、そのノーツのレーンの位置へ
+      if (flashes) {
+        flashes.forEach((f) => {
+          const k = Math.max(0, 1 - Math.abs(f.age) / 260); if (!(k > 0)) return;
+          const at = rhythmProjectLane(Number(f.n.lane) || 0, hitLineY / h); const cx = at.center * w;
+          const wide = Math.max(at.width * w * 0.9, 24);
+          const gr = fx.createRadialGradient(cx, hitLineY, 0, cx, hitLineY, wide);
+          gr.addColorStop(0, RHYTHM_WATCH_JUDGMENT_VIEW[f.code].color); gr.addColorStop(1, 'rgba(255,255,255,0)');
+          fx.globalAlpha = 0.55 * k; fx.fillStyle = gr; fx.beginPath(); fx.arc(cx, hitLineY, wide, 0, Math.PI * 2); fx.fill(); fx.globalAlpha = 1;
+        });
+      }
+      // 判定の文字とコンボ(プレイ画面と同じく、道の真ん中の上の方・斜体の太字)
+      fx.textAlign = 'center'; fx.textBaseline = 'middle';
+      const combo = row && row.c ? row.c : 0;
+      if (combo >= 2) {
+        fx.globalAlpha = 0.9; fx.font = `italic 900 ${Math.round(Math.min(46, Math.max(26, h * 0.1)))}px sans-serif`; fx.lineWidth = 4; fx.strokeStyle = 'rgba(2,6,23,.75)'; fx.fillStyle = '#fef08a';
+        fx.strokeText(String(combo), w / 2, h * 0.3); fx.fillText(String(combo), w / 2, h * 0.3);
+        fx.font = '900 11px sans-serif'; fx.fillStyle = '#fde68a'; fx.fillText('COMBO', w / 2, h * 0.3 + Math.min(34, Math.max(20, h * 0.07)));
+        fx.globalAlpha = 1;
+      }
+      if (shown) {
+        const j = RHYTHM_WATCH_JUDGMENT_VIEW[shown.code]; const a = Math.max(0, 1 - shown.age / 700);
+        fx.globalAlpha = a; fx.font = `italic 900 ${Math.round(Math.min(26, Math.max(18, w * 0.06)))}px sans-serif`; fx.lineWidth = 4; fx.strokeStyle = 'rgba(2,6,23,.8)'; fx.fillStyle = j.color;
+        const ty = hitLineY - Math.max(46, h * 0.16);
+        fx.strokeText(j.short, w / 2, ty); fx.fillText(j.short, w / 2, ty); fx.globalAlpha = 1;
+      }
+    };
+    raf = requestAnimationFrame(frame);
+    return () => {
+      alive = false; cancelAnimationFrame(raf);
+      try { renderer.release(); } catch (_) { /* 何もしない */ }
+      RHYTHM_SCROLL.points = keepScroll.points; RHYTHM_SCROLL.back = keepScroll.back; RHYTHM_SCROLL.sufMin = keepScroll.sufMin; RHYTHM_SCROLL.groups = keepScroll.groups; RHYTHM_SCROLL.lerp = keepScroll.lerp;
+      RHYTHM_ROAD_WIDTH.reset(); RHYTHM_PROJECTION_CAMERA.reset();
+      if (waitingRef.current && onWaiting) onWaiting(false);
+    };
+  }, [chart]);
+  return (
+    <div ref={hostRef} data-rhythm-watch-lane data-rhythm-watch-lane-road className="absolute inset-0 overflow-hidden">
+      <canvas ref={roadRef} className="absolute inset-0 h-full w-full" />
+      <canvas ref={noteRef} className="absolute left-0 top-0" />
+      <canvas ref={fxRef} className="pointer-events-none absolute inset-0 h-full w-full" />
+    </div>
+  );
+}
 function RhythmWatchScreen({ songs = [], resolveIconUrl = null }) {
   const v = useRhythmWatchView();
   const [flow, setFlow] = React.useState([]);
   const seenRef = React.useRef({ round: '', focus: '', k: null });
+  const [waiting, setWaiting] = React.useState(false);
+  const wide = useRhythmWatchWide();
   const focusRow = v && v.rows ? v.rows[v.focus] : null;
   // 選んだ人の判定の数が増えた分を、「+3 MARVELOUS」のように流す(見られている1人の1秒ごとの知らせから)
   React.useEffect(() => {
@@ -3077,8 +3270,8 @@ function RhythmWatchScreen({ songs = [], resolveIconUrl = null }) {
   const body = (
     <div data-rhythm-watch data-rhythm-watch-phase={v.phase} className="fixed inset-0 z-[95000] flex flex-col bg-slate-950 text-white" style={{ paddingTop: 'max(var(--mh-sa-top), 6px)', paddingBottom: 'max(var(--mh-sa-bottom), 6px)' }}>
       <style>{'@keyframes mhWatchPop{0%{opacity:0;transform:translateY(8px)}15%{opacity:1;transform:none}85%{opacity:1}100%{opacity:0}}'}</style>
-      <header className="flex shrink-0 items-center gap-2 px-3">
-        <button data-rhythm-watch-close type="button" aria-label="観戦をやめる" onClick={close} className="min-h-[44px] min-w-[44px] rounded-xl text-lg font-black text-slate-300">←</button>
+      <header data-rhythm-watch-band className="flex shrink-0 items-center gap-2 px-3">
+        <button data-rhythm-watch-close type="button" aria-label="観戦をやめる" onClick={close} className="min-h-[40px] shrink-0 rounded-xl bg-slate-700 px-3 text-[12px] font-black text-slate-100">観戦をやめる</button>
         <div className="min-w-0 flex-1 leading-tight"><b className="block text-[13px] font-black text-amber-300">👁 観戦中</b>
           <small className="block truncate text-[11px] font-bold text-slate-300">{songName || (playing ? '' : `部屋 ${v.code}`)}</small></div>
       </header>
@@ -3089,46 +3282,26 @@ function RhythmWatchScreen({ songs = [], resolveIconUrl = null }) {
         </div>
       )}
       {playing && (
-        <div className="flex min-h-0 flex-1 flex-col gap-2 px-3 pb-2 landscape:flex-row">
-          <section className="shrink-0 landscape:w-[38%]">
-            <div className="flex items-center gap-2 text-[11px] font-black tabular-nums text-slate-300">
-              <span>{rhythmWatchClock(pos)}</span>
-              <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-800"><div data-rhythm-watch-progress className="h-full rounded-full bg-cyan-400" style={{ width: `${total > 0 ? Math.min(100, (pos / total) * 100) : 0}%` }} /></div>
-              <span>{total > 0 ? rhythmWatchClock(total) : ''}</span>
-            </div>
-            <div className="mt-1.5 flex flex-col gap-1">
-              {rank.map((x, n) => {
-                const r = v.rows[x.id];
-                const on = x.id === v.focus;
-                return (
-                  <button key={x.id} type="button" data-rhythm-watch-row={x.id} onClick={() => RHYTHM_WATCH.focus(x.id)}
-                    className={`flex min-h-[40px] items-center gap-2 rounded-xl border px-2 text-left ${on ? 'border-cyan-300 bg-cyan-950' : 'border-slate-700 bg-slate-900'}`}>
-                    <b className="w-4 text-center text-[13px] font-black">{n + 1}</b>
-                    {icon(x, 24)}
-                    <span className="min-w-0 flex-1 truncate text-[12px] font-black">{x.name}</span>
-                    <span className="text-[12px] font-black tabular-nums">{r ? r.s.toLocaleString() : '-'}</span>
-                    <span className="w-9 text-right text-[12px] font-black tabular-nums text-amber-300">{r ? r.c : ''}</span>
-                  </button>
-                );
-              })}
-            </div>
-            <p className="mt-1 text-[10px] font-bold text-slate-400">名前を押すと、その人の判定を見られます{v.member ? '。次の曲から、いっしょに遊べます' : ''}</p>
-          </section>
-          <section data-rhythm-watch-detail className="flex min-h-0 flex-1 flex-col gap-2 rounded-2xl border border-slate-700 bg-slate-900/80 p-3">
-            <div className="flex items-center gap-2">{icon(who, 28)}<b className="min-w-0 flex-1 truncate text-[13px] font-black text-cyan-200">{who ? `${who.name} さん` : ''}{who && who.diff ? ` ・ ${who.diff}` : ''}</b>
-              <span className="text-[22px] font-black italic tabular-nums text-amber-300">{focusRow ? focusRow.c : 0}<small className="ml-1 text-[10px] not-italic">COMBO</small></span></div>
-            <div className="relative min-h-[84px] flex-1 overflow-hidden rounded-xl bg-slate-950/80">
-              {chartOf && !lite && <RhythmWatchLane chart={chartOf} />}
-              {lite && <p data-rhythm-watch-lite className="absolute inset-x-2 top-2 text-center text-[11px] font-black text-amber-200" style={JA_WRAP_STYLE}>{jaWrap('この人の端末が重くなったので、譜面は出さず、数字だけにしています')}</p>}
-              <div className="absolute inset-x-0 bottom-1 flex flex-col-reverse items-center gap-0.5">
-                {flow.map((f) => <b key={f.key} className="text-[15px] font-black italic" style={{ color: f.color, animation: 'mhWatchPop 2.4s ease-out forwards' }}>{f.text}</b>)}
+        <div className={`flex min-h-0 flex-1 gap-2 px-3 pb-1 ${wide ? 'flex-row' : 'flex-col'}`}>
+          <section data-rhythm-watch-detail className="flex min-h-0 min-w-0 flex-1 flex-col gap-1.5">
+            <div data-rhythm-watch-stage className="relative min-h-[120px] flex-1 overflow-hidden rounded-xl border border-slate-700 bg-slate-950">
+              {chartOf && !lite && <RhythmWatchLane chart={chartOf} onWaiting={setWaiting} />}
+              <div className="pointer-events-none absolute inset-x-0 top-0 flex items-center gap-1.5 px-1.5 pt-1">
+                {icon(who, 22)}
+                <b className="min-w-0 flex-1 truncate text-[11px] font-black text-cyan-200" style={{ textShadow: '0 1px 3px #000' }}>{who ? `${who.name} さん` : ''}{who && who.diff ? ` ・ ${who.diff}` : ''}</b>
+                <span data-rhythm-watch-delay className="shrink-0 rounded-full border border-amber-300/60 bg-slate-950/70 px-2 py-0.5 text-[10px] font-black text-amber-200">1.5秒おくれ</span>
+              </div>
+              {lite && <p data-rhythm-watch-lite className="absolute inset-x-2 top-9 text-center text-[11px] font-black text-amber-200" style={JA_WRAP_STYLE}>{jaWrap('この人の端末が重くなったので、譜面は出さず、数字だけにしています')}</p>}
+              {waiting && v.phase === 'playing' && <p data-rhythm-watch-waiting className="absolute inset-x-2 top-9 text-center text-[12px] font-black text-amber-200" style={{ ...JA_WRAP_STYLE, textShadow: '0 1px 3px #000' }}>{jaWrap('通信を待っています…')}</p>}
+              <div className="pointer-events-none absolute inset-x-0 bottom-[22%] flex flex-col-reverse items-center gap-0.5">
+                {flow.map((f) => <b key={f.key} className="text-[14px] font-black italic" style={{ color: f.color, textShadow: '0 1px 3px #000', animation: 'mhWatchPop 2.4s ease-out forwards' }}>{f.text}</b>)}
               </div>
             </div>
-            <div className="grid grid-cols-3 gap-1 landscape:grid-cols-6">
+            <div className="grid grid-cols-6 gap-1">
               {RHYTHM_WATCH_JUDGMENT_VIEW.map((j, i) => (
-                <div key={j.id} data-rhythm-watch-count={j.id} className="rounded-lg bg-slate-950/80 px-1 py-1 text-center">
-                  <small className="block text-[9px] font-black" style={{ color: j.color }}>{j.short}</small>
-                  <b className="block text-[14px] font-black tabular-nums">{focusRow && focusRow.k ? focusRow.k[i] : '-'}</b>
+                <div key={j.id} data-rhythm-watch-count={j.id} className="min-w-0 rounded-lg bg-slate-900/80 px-0.5 py-0.5 text-center">
+                  <small className="block whitespace-nowrap text-[7px] font-black tracking-tighter" style={{ color: j.color }}>{j.short}</small>
+                  <b className="block text-[13px] font-black tabular-nums">{focusRow && focusRow.k ? focusRow.k[i] : '-'}</b>
                 </div>
               ))}
             </div>
@@ -3136,9 +3309,32 @@ function RhythmWatchScreen({ songs = [], resolveIconUrl = null }) {
               <div className="h-2 flex-1 overflow-hidden rounded-full bg-slate-800"><div data-rhythm-watch-life className="h-full rounded-full bg-emerald-400" style={{ width: `${focusRow && focusRow.l != null ? Math.max(0, Math.min(100, (focusRow.l / lifeMax) * 100)) : 100}%` }} /></div></div>
             {v.phase === 'ended' && <p className="text-center text-[12px] font-black text-amber-200">この曲の演奏が終わりました</p>}
           </section>
+          <section className={`${wide ? 'w-[36%] overflow-y-auto' : ''} shrink-0`}>
+            <div className="flex items-center gap-2 text-[11px] font-black tabular-nums text-slate-300">
+              <span>{rhythmWatchClock(pos)}</span>
+              <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-800"><div data-rhythm-watch-progress className="h-full rounded-full bg-cyan-400" style={{ width: `${total > 0 ? Math.min(100, (pos / total) * 100) : 0}%` }} /></div>
+              <span>{total > 0 ? rhythmWatchClock(total) : ''}</span>
+            </div>
+            <div className={`mt-1.5 grid gap-1 ${wide ? 'grid-cols-1' : 'grid-cols-2'}`}>
+              {rank.map((x, n) => {
+                const r = v.rows[x.id];
+                const on = x.id === v.focus;
+                return (
+                  <button key={x.id} type="button" data-rhythm-watch-row={x.id} onClick={() => RHYTHM_WATCH.focus(x.id)}
+                    className={`flex min-h-[40px] min-w-0 items-center gap-1.5 rounded-xl border px-1.5 text-left ${on ? 'border-cyan-300 bg-cyan-950' : 'border-slate-700 bg-slate-900'}`}>
+                    <b className="w-3 shrink-0 text-center text-[12px] font-black">{n + 1}</b>
+                    {icon(x, 22)}
+                    <span className="min-w-0 flex-1 leading-tight"><span className="block truncate text-[11px] font-black">{x.name}</span>
+                      <span className="block truncate text-[11px] font-black tabular-nums text-slate-200">{r ? r.s.toLocaleString() : '-'}</span></span>
+                    <span className="shrink-0 text-right text-[12px] font-black tabular-nums text-amber-300">{r ? r.c : ''}</span>
+                  </button>
+                );
+              })}
+            </div>
+            <p className="mt-1 text-[10px] font-bold text-slate-400" style={JA_WRAP_STYLE}>{jaWrap(`名前を押すと、その人の判定を見られます${v.member ? '。次の曲から、いっしょに遊べます' : ''}`)}</p>
+          </section>
         </div>
       )}
-      {playing && <div className="shrink-0 px-3"><button type="button" onClick={close} className="min-h-[44px] w-full rounded-xl bg-slate-700 text-[13px] font-black">観戦をやめる</button></div>}
     </div>
   );
   // 画面を回して遊んでいるときは、回した器の中へ出す(保存できない知らせ・新しい版の知らせと同じ出し先)
