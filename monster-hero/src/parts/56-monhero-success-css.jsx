@@ -1051,5 +1051,20 @@ const MSX_CSS = `
 .msx .msx-ptunit .chip{min-height:40px;padding:0 2px;justify-content:center;text-align:center;font-size:12px;font-weight:900}
 .msx .pt44{min-width:44px;min-height:44px}
 .msx .sym{-webkit-user-select:none;user-select:none}
+/* 動いた数字の札 MsxGaugeFx(r1115-047・054): ゲージが伸び縮み・数字が数え上がり・増減の数字が浮かぶ */
+.msx .v-gfx{background:#1e1a36;border:1px solid #3b3566;border-radius:14px;padding:8px;margin-top:6px;display:flex;flex-direction:column;gap:6px}
+.msx .v-gfx .hd2{font-size:11px;font-weight:900;color:#fde047}
+.msx .v-gfx .r{position:relative;display:grid;grid-template-columns:minmax(64px,28%) 1fr auto;align-items:center;gap:8px;min-height:26px}
+.msx .v-gfx .n{font-size:12px;font-weight:900;white-space:nowrap}.msx .v-gfx .n .e{margin-right:3px}
+.msx .v-gfx .tr{position:relative;height:9px;border-radius:5px;background:#0f0d24;border:1px solid #2f2a55;overflow:hidden}
+.msx .v-gfx .tr i{display:block;height:100%;border-radius:5px;background:linear-gradient(90deg,#fde047,#f59e0b)}
+.msx .v-gfx .r.hp .tr i{background:linear-gradient(90deg,#86efac,#22c55e)}
+.msx .v-gfx .r.st .tr i{background:linear-gradient(90deg,#c4b5fd,#8b5cf6)}
+.msx .v-gfx .r.bd .tr i{background:linear-gradient(90deg,#fca5a5,#ef4444)}
+.msx .v-gfx .v{font-size:13px;font-weight:900;font-variant-numeric:tabular-nums;min-width:3.4em;text-align:right}
+.msx .v-gfx .dl{position:absolute;right:0;top:-8px;font-style:normal;font-size:13px;font-weight:900;pointer-events:none;animation:msxGfxFloat 1.6s ease-out both;text-shadow:0 1px 0 #000}
+.msx .v-gfx .dl.up{color:#fde047}.msx .v-gfx .dl.dn{color:#fca5a5}
+@keyframes msxGfxFloat{0%{opacity:0;transform:translateY(8px) scale(.8)}18%{opacity:1;transform:translateY(-4px) scale(1.15)}70%{opacity:1;transform:translateY(-10px) scale(1)}100%{opacity:0;transform:translateY(-16px) scale(1)}}
+@media (prefers-reduced-motion:reduce){.msx .v-gfx .dl{animation:none;opacity:1;transform:none}}
 `;
 
