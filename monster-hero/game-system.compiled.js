@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f05696b694ff0ba0
+// source-sha256: 5d7d839e576f1ed3
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -168335,7 +168335,7 @@ const MSX_CSS = `
 .msx .v-p .e{font-size:19px;line-height:1.1}.msx .v-p small{display:block;font-size:10px;color:#cbd5e1;font-weight:700;white-space:nowrap}
 .msx .v-p.main{background:linear-gradient(160deg,#f472b6,#fb923c);border-color:#fde047;border-bottom-color:#9d174d;box-shadow:0 0 14px #f472b699;font-size:16px}
 .msx .v-p.main small{color:#fff;font-size:10px}
-.msx .v-p.off{background:#1e293b;border-color:#334155;color:#64748b}.msx .v-p.off small{color:#64748b}.msx .v-p.off .e{filter:grayscale(1);opacity:.6}
+.msx .v-p.off{background:#1e293b;border-color:#334155;color:#64748b}.msx .v-p.off small{color:#64748b}.msx .v-p.off small.hpng{color:#fda4af;line-height:1.15}.msx .v-p small.hpng b{color:#fecdd3}.msx .v-p.off .e{filter:grayscale(1);opacity:.6}
 .msx .v-p.hosp{background:linear-gradient(180deg,#0e7490,#155e75);border-color:#67e8f9;box-shadow:0 0 10px #22d3ee88}
 .msx .v-p .bd{position:absolute;right:-2px;top:-6px;background:#fde047;color:#422006;border-radius:99px;font-size:10px;font-weight:900;padding:0 5px;white-space:nowrap;line-height:1.5}
 .msx .v-p .bd.r{background:#ef4444;color:#fff}
@@ -174946,13 +174946,20 @@ function MsxPlay({
       })
     }, React.createElement("div", {
       className: "e"
-    }, "🎈"), "遊ぶ", React.createElement("small", null, "体力+・甘え+")), React.createElement("button", {
-      type: "button",
-      className: "v-p",
-      onClick: () => setSub('shugyo')
-    }, React.createElement("div", {
-      className: "e"
-    }, "⚔"), "修行", React.createElement("small", null, "技を覚える")), React.createElement("button", {
+    }, "🎈"), "遊ぶ", React.createElement("small", null, "体力+・甘え+")), (() => {
+      const sh = v.shugyo && v.shugyo.short || 0;
+      return React.createElement("button", {
+        type: "button",
+        className: `v-p${sh ? ' off' : ''}`,
+        disabled: sh > 0,
+        onClick: () => setSub('shugyo'),
+        "data-msx-shugyo-hp": sh || undefined
+      }, React.createElement("div", {
+        className: "e"
+      }, "⚔"), "修行", sh ? React.createElement("small", {
+        className: "hpng"
+      }, "体力があと", React.createElement("b", null, sh), React.createElement("br", null), "足りない") : React.createElement("small", null, "技を覚える"));
+    })(), React.createElement("button", {
       type: "button",
       className: `v-p${Array.isArray(v.cups) && !v.cups.length ? ' off' : ''}`,
       disabled: Array.isArray(v.cups) && !v.cups.length,
@@ -175840,6 +175847,8 @@ const MSX_R3_CSS = `
 .msx .r3 .q-dest .r3-chip{justify-content:center;text-align:center}
 .msx .r3 .q-sec .v-stg{margin-top:5px}
 .msx .r3 .q-note{font-size:10.5px;color:#cbd5e1;font-weight:700;line-height:1.45;margin-top:4px}
+.msx .q-hpng{flex:none;background:#3f1d2b;border-top:1px solid #9f1239;color:#fecdd3;font-size:11px;font-weight:800;line-height:1.4;padding:4px 10px;text-align:center}.msx .q-hpng b{color:#fda4af;font-size:13px}
+.msx .v-ft button.go.off,.msx .v-ft button.go:disabled{background:#334155;color:#94a3b8;box-shadow:0 3px 0 #1e293b}
 .msx .r3 .q-note.y{color:#fde047}
 .msx .r3 .q-slots{display:grid;grid-template-columns:1fr 1fr;gap:6px}
 .msx .r3 .q-slot{min-height:56px;border-radius:12px;padding:5px 8px;border:2px dashed #ffffff40;font-size:11px;font-weight:800;color:#cbd5e1;display:flex;flex-direction:column;justify-content:center;gap:1px;cursor:pointer}
@@ -179066,7 +179075,9 @@ function MsxR3Shugyo({
   const tickets = v.shugyo && v.shugyo.tickets || s0.tickets || 0;
   const superTk = SH.superTickets || 2;
   const tk0 = v.shugyo && v.shugyo.tickets || s0.tickets || 0;
-  const superWhy = superLeft <= 0 ? 'この育成の超修行は使いきった' : tk0 < superTk ? `超修行はチケットが${superTk}枚いる` : '';
+  const hpOf = sup => typeof SUC.shugyoHpOf === 'function' ? SUC.shugyoHpOf(s0, sup) : (SH.hp || 30) * (sup ? 2 : 1);
+  const shortOf = sup => Math.max(0, hpOf(sup) - Math.round(Number(s0.hp) || 0));
+  const superWhy = superLeft <= 0 ? 'この育成の超修行は使いきった' : tk0 < superTk ? `超修行はチケットが${superTk}枚いる` : shortOf(true) ? `超修行は体力が${hpOf(true)}いる。体力があと${shortOf(true)}足りない` : '';
   const toggle = id => setWant(w => w.includes(id) ? w.filter(x => x !== id) : w.length === 0 ? [id] : w.length === 1 && !superWhy ? [...w, id] : [id]);
   const go = () => {
     const r = SUC.act(s0, {
@@ -179330,7 +179341,7 @@ function MsxR3Shugyo({
     s: s0,
     v: v,
     ev: ev,
-    use: (SH.hp || 30) * (isSuper ? 2 : 1)
+    use: hpOf(isSuper)
   }), React.createElement("div", {
     className: "q-say"
   }, React.createElement("img", {
@@ -179444,18 +179455,22 @@ function MsxR3Shugyo({
     type: "button",
     onClick: () => setLockT(null)
   }, "閉じる")))) : null);
-  const foot = React.createElement("div", {
+  const hpShort = shortOf(isSuper);
+  const foot = React.createElement(React.Fragment, null, hpShort ? React.createElement("div", {
+    className: "q-hpng msx-kp",
+    "data-msx-r3-qhp": true
+  }, "💔 ", isSuper ? '超修行' : '修行', "は体力を ", hpOf(isSuper), " 使う。体力があと ", React.createElement("b", null, hpShort), " 足りない(休む・遊ぶで回復)") : null, React.createElement("div", {
     className: "v-ft"
   }, React.createElement("button", {
     type: "button",
     onClick: onBack
   }, "← 戻る"), React.createElement("button", {
     type: "button",
-    className: "go",
-    disabled: tickets <= 0,
+    className: `go${hpShort ? ' off' : ''}`,
+    disabled: tickets <= 0 || hpShort > 0,
     onClick: go,
     "data-msx-r3-shugyo": true
-  }, isSuper ? '🔥 超修行する' : '⚔ 修行する', "(🎫 ", tickets, " → ", Math.max(0, tickets - (isSuper ? superTk : 1)), ")"));
+  }, hpShort ? `体力があと${hpShort}足りない` : React.createElement(React.Fragment, null, isSuper ? '🔥 超修行する' : '⚔ 修行する', "(🎫 ", tickets, " → ", Math.max(0, tickets - (isSuper ? superTk : 1)), ")"))));
   return React.createElement(MsxR3Frame, {
     run: run,
     onBack: onBack,
