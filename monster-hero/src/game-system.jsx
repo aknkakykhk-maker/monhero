@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 4076d3ef469a539d
+// generated-sha256: f18597552a05e2d5
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -79746,7 +79746,7 @@ const monsucTeams = (catalog, suc, s, info) => {
 };
 
 // モンサクの試合の打ち切り(2026-11-15 r1115-058): 30ターンで判定(残ライフ%・与えたダメージ・消費ガッツの3つの比べ)。助手のマスモン対戦には渡さない
-const MONSUC_MATCH_RULE = Object.freeze({ roundLimit: 30, judge: 'three', gutsPlan: Object.freeze({ regen: 0.5, move: 0.5, charge: 0.5 }) });
+const MONSUC_MATCH_RULE = Object.freeze({ statMax: 99999, roundLimit: 30, judge: 'three', gutsPlan: Object.freeze({ regen: 0.5, move: 0.5, charge: 0.5 }) });
 // 試合を1戦だけ回す(画面なし)。結果だけ見る・スキップ・観戦のどれでも同じ記録になる
 const monsucCupMatch = (engine, catalog, suc, s, me, info0) => {
   const info = info0 || monsucCupInfo(suc, s, me);   // info0: 入れ物が opp・title を上書きした値(相手の忠誠度・人気をそろえる)
@@ -82363,7 +82363,7 @@ const monsucFuseApply = (box, plan, at) => {
   const parentAt = (id) => gone.find(m => m.id === id) || {};
   const colors = plan.child.species === parentAt(ids[0]).species ? (parentAt(ids[0]).colors || null) : null; // 種類が同じときだけ主の親の色を残す
   const child = { ...plan.child, colors, rank: null, score: 0, loy: 0, pop: 0, fav: [], coach: null, endAt: null, paid: false, over: null, assists: [], titles: [], from: null, bornAt: at || '' };
-  const memory = [...(Array.isArray(box.memory) ? box.memory : []), ...gone.map(m => ({ nick: monsucFuseNick(m), species: m.species, rank: typeof m.rank === 'string' ? m.rank : null, gen: Number.isFinite(m.gen) ? m.gen : 1, at: at || '' }))].slice(-MONSUC_MEMORY_MAX);
+  const memory = [...(Array.isArray(box.memory) ? box.memory : []), ...ids.map(parentAt).map(m => ({ nick: monsucFuseNick(m), species: m.species, rank: typeof m.rank === 'string' ? m.rank : null, gen: Number.isFinite(m.gen) ? m.gen : 1, at: at || '' }))].slice(-MONSUC_MEMORY_MAX);
   return { ...box, mons: [...mons.filter(m => !ids.includes(m.id)), child], memory };
 };
 let monsucFuseBusy = false;
@@ -82461,13 +82461,13 @@ function MonsucFuseSheet({ box, saveBox, onSave, readBox, locked = [], onDone, o
           <button type="button" onClick={onClose} data-mhl-sheet-close className="mt-3 min-h-[44px] w-full text-center rounded-xl bg-slate-700 text-[13px] font-black">閉じる</button>
         </>) : !main ? (<>
           <p className="text-[11px] font-bold text-slate-300">① 主の親を選んでください。生まれるモンスターの主血統は、主の親から受け継ぎます。成長の型は、生まれたモンスターの種類で決まります</p>
-          {typeof MsxMmGrid === 'function' ? <MsxMmGrid mons={usable} onPick={m => setMain(m.id)} attrs={m => ({ 'data-monsuc-fuse-pick': m.id })}/> : usable.map(m => card(m, () => setMain(m.id), 'border-white/15 bg-slate-800'))}
+          {typeof MsxMmGrid === 'function' ? <MsxMmGrid label="name" mons={usable} onPick={m => setMain(m.id)} attrs={m => ({ 'data-monsuc-fuse-pick': m.id })}/> : usable.map(m => card(m, () => setMain(m.id), 'border-white/15 bg-slate-800'))}
           {/* 親を並べる所はマスモンボックスと同じ顔の升目(2026-11-14 社長) */}
           {usable.length < 2 && <p className="mt-2 text-[11px] font-bold text-slate-400" data-monsuc-fuse-none>育て終えたモンスターが2体そろうと合体できます(編成・貸し出し中のモンスターは使えません)</p>}
         </>) : !mat ? (<>
           <p className="text-[11px] font-bold text-slate-300">② もう一方の親を選んでください。生まれるモンスターの副血統は、このモンスターの血統から決まります</p>
           {card(main, () => setMain(null), 'border-emerald-300/70 bg-emerald-950')}
-          {typeof MsxMmGrid === 'function' ? <MsxMmGrid mons={usable.filter(m => m.id !== main.id)} onPick={m => setMat(m.id)} attrs={m => ({ 'data-monsuc-fuse-pick': m.id })}/> : usable.filter(m => m.id !== main.id).map(m => card(m, () => setMat(m.id), 'border-white/15 bg-slate-800'))}
+          {typeof MsxMmGrid === 'function' ? <MsxMmGrid label="name" mons={usable.filter(m => m.id !== main.id)} onPick={m => setMat(m.id)} attrs={m => ({ 'data-monsuc-fuse-pick': m.id })}/> : usable.filter(m => m.id !== main.id).map(m => card(m, () => setMat(m.id), 'border-white/15 bg-slate-800'))}
         </>) : plan && plan.ok ? (<>
           <p className="text-[11px] font-bold text-slate-300">③ 生まれるモンスターの見通し</p>
           <div className="mt-1 flex items-center gap-2 rounded-xl border border-amber-300/60 bg-amber-950/40 p-2" data-monsuc-fuse-child={plan.child.species}>
@@ -87454,6 +87454,10 @@ const MSX_CSS = `
 .msx .v-body>.msx-scroll{flex:1 1 0;min-height:0}
 .msx .v-band{background:linear-gradient(180deg,#241d4a,#1a1636);border:1px solid #4a4380;border-radius:14px;padding:6px 8px 6px;margin-top:5px;box-shadow:inset 0 1px 0 #ffffff14}
 .msx .v-b1{display:flex;align-items:center;gap:6px}
+/* ピーク中の印(帯の上の縁にかかる)が「残り◯ターン」の数字に重ならないよう、印のぶんだけ帯の上を空ける(r1115-073) */
+.msx .v-band.pk{padding-top:15px}
+.msx.land .v-scene .rcv-myua{top:56px!important;bottom:auto!important;height:420px!important;left:4%!important}
+.msx .v-ft{flex-wrap:wrap}.msx .v-ft>button{min-width:0}
 .msx .v-turn{flex:1;min-width:0;display:flex;align-items:center;gap:6px}
 .msx .v-turn .ph{background:linear-gradient(160deg,#f472b6,#fb923c);border-radius:9px;padding:3px 7px;font-size:11px;font-weight:900;line-height:1.15;text-align:center;white-space:nowrap;box-shadow:0 2px 0 #9d174d}
 .msx .v-turn .ph small{display:block;font-size:10px;font-weight:700;opacity:.95}
@@ -87529,6 +87533,9 @@ const MSX_CSS = `
 .msx .v-st b{display:block;font-size:14px}
 .msx .v-st u{display:block;height:3px;border-radius:3px;background:#334155;margin:1px 5px 0;overflow:hidden;text-decoration:none}
 .msx .v-st u i{display:block;height:100%;background:linear-gradient(90deg,#f59e0b,#fb923c)}
+/* 能力の上限アップ(r1115-103): 999 を超えた分は2周目の帯を紫で重ねる */
+.msx .v-st u.ov{position:relative}
+.msx .v-st u b.ov{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,#c084fc,#f0abfc)}
 .msx .v-st em{display:block;font-style:normal;font-size:11px;font-weight:900;color:#86efac;height:14px;line-height:14px}
 .msx .v-st div.up{border-color:#fde047;background:#3b2f0b;box-shadow:0 0 8px #fde04766}.msx .v-st div.up b{color:#fde047}
 .msx .v-st div.up.main em{font-size:13px;color:#fde047}
@@ -88049,6 +88056,7 @@ const MSX_CSS = `
 .msx-md-st .v{flex:1;min-width:0;display:flex;flex-direction:column}
 .msx-md-st .v b{font-size:14px;line-height:1.1;text-align:right}
 .msx-md-st .g{height:4px;border-radius:2px;background:#334155;overflow:hidden}.msx-md-st .g i{display:block;height:100%}
+.msx-md-st .g.ov{position:relative}.msx-md-st .g b.ov{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,#c084fc,#f0abfc)} /* 999 を超えた分(r1115-103) */
 .msx-md-st .a{flex:none;width:1.4em;text-align:center;font-weight:900;color:#fde047}.msx-md-st .a.lo{color:#94a3b8}
 .msx-md-kv{display:flex;gap:6px;align-items:baseline;font-size:11px;padding:2px 0;border-bottom:1px solid #1e293b}
 .msx-md-kv>b{flex:none;width:6em;color:#f9a8d4;font-size:10.5px}.msx-md-kv>span{flex:1;min-width:0;overflow-wrap:anywhere}.msx-md-kv .gd{font-size:14px;font-weight:900;color:#fde047}
@@ -88085,6 +88093,13 @@ const MSX_CSS = `
 .msx .sym.info::before{width:20px;height:20px;border:2.5px solid currentColor;border-radius:50%;box-sizing:border-box;background:linear-gradient(currentColor,currentColor) 50% 3px/2.5px 2.5px no-repeat,linear-gradient(currentColor,currentColor) 50% 7.5px/2.5px 6px no-repeat}
 /* 注意: 全ボタンの ::after は「押せる範囲を広げる」用(838行)。記号の線は ::before だけで描く */
 .msx .msx-md-alt{margin-top:6px;width:100%;display:flex;align-items:center;justify-content:center;text-align:center;padding:6px 8px;border-radius:10px;font-size:12px;font-weight:900;color:#fff;background:linear-gradient(160deg,#6d4cd9,#4a2fa6);border:1.5px solid #a78bfa}
+/* 技の熟練(r1115-082): 升の下に小さなゲージ(覚えた技だけ)・右の欄に熟練の棒 */
+.msx-md-tg .tc .tg-ms{position:absolute;left:3px;right:26px;bottom:4px;height:5px;border-radius:3px;background:rgba(18,12,6,.85);border:1px solid rgba(255,255,255,.55);z-index:2;overflow:hidden}
+.msx-md-tg .tc .tg-ms i{display:block;height:100%;background:linear-gradient(90deg,#fde68a,#f59e0b)}
+.msx .msx-ms-v{white-space:nowrap}.msx .msx-ms-v small{opacity:.75;margin-left:1px}
+.msx .msx-ms-ef{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:0 6px}.msx .msx-ms-ef i{font-style:normal;white-space:nowrap}
+.msx .msx-ms-bar{display:block;height:6px;margin:2px 0 4px;border-radius:4px;background:#0f172a;border:1px solid #475569;overflow:hidden}
+.msx .msx-ms-bar i{display:block;height:100%;background:linear-gradient(90deg,#fde68a,#f59e0b)}
 .msx .msx-tp{display:flex;align-items:center;gap:8px;width:100%;margin:0 0 6px;padding:6px 8px;border-radius:12px;text-align:left;color:#fff;background:#1e1b3a;border:1.5px solid #3b3566}
 .msx .msx-tp.on{border-color:#facc15;background:#2a2547}
 .msx .msx-tp:disabled{opacity:.55}
@@ -88479,6 +88494,24 @@ const msxNum = (v, d = 0) => (Number.isFinite(Number(v)) && v !== null && v !== 
 const msxStr = (v, max = 40, d = '') => (typeof v === 'string' ? v.slice(0, max) : d);
 const msxColors = (v) => (Array.isArray(v) ? v.slice(0, 6).map((c) => (typeof c === 'string' && c.length <= 40 ? c : null)) : []);
 // 途中の育成。core の状態 s をそのまま持つ。芯に restore があればそれを通す(無ければ形だけ確かめる)
+// ---- 能力の上限アップ(2026-11-15 r1115-103): 999 を超えた能力の控え ----
+//   途中の育成: 新しいキー mh_monsuc_run_over_v1 に { id, cap, over }(上限と、999 を超えた分)。古い版で開くと芯の restore が cap を落として 999 に丸めるので、
+//   新しい版で読むとき、同じ育成なら cap と超えた分を戻す(キーを分けたので古い版は触らない)。
+//   ボックスの子: st は本当の値(99,999 まで)、stOver に 999 を超えた分の控え(読み込みは ...m で残すので、古い版が st を 999 に丸めても戻せる)
+const MSX_RUN_OVER_KEY = 'mh_monsuc_run_over_v1';
+const MSX_STAT_ABS = 99999; // 壊れた値を断るための形の見張り(ゲームの天井ではない)
+const msxRunOverOf = (run) => {
+  const s = msxIsObj(run) && msxIsObj(run.s) ? run.s : null; if (!s || !msxIsObj(s.cap) || !msxIsObj(s.stats) || typeof s.id !== 'string') return null;
+  const over = {}; MSX_STATS.forEach((k) => { const v = Math.round(msxNum(s.stats[k], 0)); if (v > 999) over[k] = Math.min(MSX_STAT_ABS - 999, v - 999); });
+  const cap = {}; MSX_STATS.forEach((k) => { cap[k] = Math.max(999, Math.min(MSX_STAT_ABS, Math.floor(msxNum(s.cap[k], 999)))); });
+  return { id: s.id, cap, over };
+};
+const msxRunOverMerge = (raw, ov) => {
+  if (!msxIsObj(raw) || !msxIsObj(raw.s) || !msxIsObj(ov) || ov.id !== raw.s.id || !msxIsObj(ov.cap)) return raw;
+  const s = { ...raw.s }; if (!msxIsObj(s.cap)) s.cap = ov.cap;
+  if (msxIsObj(s.stats) && msxIsObj(ov.over)) { const st = { ...s.stats }; MSX_STATS.forEach((k) => { const o = Math.round(msxNum(ov.over[k], 0)); const v = msxNum(st[k], 0); if (o > 0 && v >= 999 && v < 999 + o) st[k] = 999 + o; }); s.stats = st; }
+  return { ...raw, s };
+};
 const msxNormRun = (raw, SUC) => {
   if (!msxIsObj(raw) || raw.v !== 1 || !msxIsObj(raw.s)) return null;
   let s = raw.s;
@@ -88523,7 +88556,11 @@ const msxCanonTechs = (techs, mast) => {
 };
 const msxNormBoxMon = (m) => {
   if (!msxIsObj(m) || typeof m.id !== 'string' || typeof m.species !== 'string') return null;
-  const st = {}; MSX_STATS.forEach((k) => { st[k] = Math.max(0, Math.min(999, Math.round(msxNum(m.st && m.st[k], 0)))); });
+  const st = {}; const stOver = {}; MSX_STATS.forEach((k) => {
+    let v = Math.max(0, Math.min(MSX_STAT_ABS, Math.round(msxNum(m.st && m.st[k], 0))));
+    const o = Math.round(msxNum(m.stOver && m.stOver[k], 0)); if (o > 0 && v >= 999 && v < 999 + o) v = Math.min(MSX_STAT_ABS, 999 + o); // 古い版が 999 に丸めた分を戻す
+    st[k] = v; if (v > 999) stOver[k] = v - 999;
+  });
   // 回3・合体・レンタルが足す項目(gen・techs・mast・gt・fav・titles・paid・parents ほか)も消さずに持つ(...m)
   const tm = msxCanonTechs(m.techs, m.mast); // 技の上限 8 はなくした・古い技 id は読み替える(2026-11-13)
   return {
@@ -88532,7 +88569,7 @@ const msxNormBoxMon = (m) => {
     mast: tm.mast, fav: Array.isArray(m.fav) ? m.fav.filter((k) => MSX_STATS.includes(k)).slice(0, 3) : [],
     titles: Array.isArray(m.titles) ? m.titles.filter((x) => typeof x === 'string').slice(0, 64) : [],
     id: m.id.slice(0, 64), species: m.species.slice(0, 24), nick: msxStr(m.nick, 8), colors: msxColors(m.colors),
-    st, loy: Math.max(0, Math.min(100, msxNum(m.loy, 0))), pop: Math.max(0, Math.min(100, msxNum(m.pop, 0))), lv: Math.max(1, Math.min(99, msxNum(m.lv, 1))),
+    st, stOver: Object.keys(stOver).length ? stOver : undefined, loy: Math.max(0, Math.min(100, msxNum(m.loy, 0))), pop: Math.max(0, Math.min(100, msxNum(m.pop, 0))), lv: Math.max(1, Math.min(99, msxNum(m.lv, 1))),
     rank: msxStr(m.rank, 4, ''), score: msxNum(m.score, 0), raised: m.raised !== false,
     assists: Array.isArray(m.assists) ? m.assists.filter(msxIsObj).slice(0, 8) : [], masteries: tm.mast, // assists は第3版で8種類まで(古い子は4つ・形はそのまま。読み替えは芯の memberOf)
     coach: msxStr(m.coach, 16), endAt: msxNum(m.endAt, 0),
@@ -88645,9 +88682,11 @@ const msxTech2Backup = async (run, box) => {
   } catch (e) { return false; }
 };
 const msxReadAll = async (SUC) => {
-  const [run, box, meta, unlocked, assistRaw] = await Promise.all([
+  const [run0, box, meta, unlocked, assistRaw, runOver] = await Promise.all([
     storeGet(MSX_KEYS.run, null), storeGet(MSX_KEYS.box, null), storeGet(MSX_KEYS.meta, null), storeGet('mh_unlocked_monsters', null), storeGet(MSX_ASSIST_KEY, null).catch(() => null),
+    storeGet(MSX_RUN_OVER_KEY, null).catch(() => null),
   ]);
+  const run = msxRunOverMerge(run0, runOver); // 能力の上限アップの控えを戻す(同じ育成のときだけ)
   await msxTech2Backup(run, box);
   const all = typeof ALL_PLAYER_MONSTERS === 'object' && ALL_PLAYER_MONSTERS ? ALL_PLAYER_MONSTERS : {};
   const list = SUC && Array.isArray(SUC.speciesList) ? SUC.speciesList : Object.keys(all);
@@ -88665,6 +88704,7 @@ const msxBeatMark = (run) => {
 };
 let msxSaveChain = Promise.resolve();
 const msxSaveRunNow = async (run, noPay) => {
+  const ov = msxRunOverOf(run); if (ov) { try { await storeSet(MSX_RUN_OVER_KEY, ov); } catch (_) {} } // 上限アップの控え(上限のある育成だけ)
   const sent = Number.isFinite(Number(run && run.beatSent)) ? Math.max(0, Math.floor(Number(run.beatSent))) : 0;
   if (noPay || !sent || typeof saveStoredValuesOrRollback !== 'function' || typeof loadRhythmEventPoints !== 'function' || typeof RHYTHM_EVENT_POINTS_KEY === 'undefined') return storeSet(MSX_KEYS.run, run);
   const stored = await storeGet(MSX_KEYS.run, null);
@@ -88958,6 +88998,12 @@ function MsxTechGrid({ all, cell, className, head }) {
     </div>
   );
 }
+// 技の熟練(0〜100 の整数)と、その熟練の効き目(芯の techBoostOf と同じ数を %で。0 のときは null)。r1115-082
+const msxMasteryOf = (mastery, id) => Math.max(0, Math.min(100, Math.round(Number(mastery && mastery[id]) || 0)));
+const msxMasteryBoost = (SUC, id, m) => {
+  if (!(m > 0) || !SUC || typeof SUC.techBoostOf !== 'function') return null;
+  try { const o = SUC.techBoostOf({ techs: [id], mastery: { [id]: m } })[id]; if (!o) return null; const pc = (v) => Math.round((Number(v) || 0) * 1000) / 10; return { pow: pc(o.pow), hit: pc(o.hit) }; } catch (e) { return null; }
+};
 // まだ覚えていない技の覚え方(技表の learn: { start } / { by:修行の系統, st:{ 能力: 数 } })
 // 例: 修行で覚える(かしこさ150以上・ガッチョの熟練25)。前の技の名前は同じ種の技表から引く(無ければ「前の技」)
 const msxTechHow = (t, all = []) => {
@@ -88975,7 +89021,8 @@ const msxLineName = (id) => (id && typeof MONSTER_LINEAGES === 'object' && MONST
 const MSX_STAT_COLOR = Object.freeze({ life: '#facc15', pow: '#f87171', wise: '#4ade80', hit: '#f472b6', eva: '#60a5fa', tough: '#818cf8' });
 // pick … 被った升で覚える技を選べるとき { sel: { 升: 技id }, locked: (升) => 覚えたあとで変えられないか, onPick: (升, 技id) => void }(無ければ見るだけ)
 // head … 名前の横に置く物(マスモンボックスのハート・✏)/ more … 特徴のタブの下に足す行 [[見出し, 中身], …] / foot … 「とじる」の上に置くボタン(貸し出し・お別れ)/ grade … 総合力の横の評価(A2 など)
-function MsxMonDetail({ species, name, art, st, apt, type, peak, grades, known, power, rank, sub, onClose, SUC, head = null, more = null, foot = null, grade: gradeLabel = null, pick = null }) {
+// mastery … 覚えた技の熟練 { 技id: 0〜100 }(2026-11-15 社長 r1115-082「技の熟練度ってそもそもどこにあるの？」)。渡したときだけ、升に小さなゲージ・右の欄に熟練と効き目を出す
+function MsxMonDetail({ species, name, art, st, apt, type, peak, grades, known, power, rank, sub, onClose, SUC, head = null, more = null, foot = null, grade: gradeLabel = null, pick = null, mastery = null }) {
   const [tab, setTab] = useState('base');
   const [pickCell, setPickCell] = useState(null); // 技を選ぶ窓を開いている升(pick があるときだけ)
   const line = typeof MONSTER_LINEAGE_MAP === 'object' && MONSTER_LINEAGE_MAP ? MONSTER_LINEAGE_MAP[species] : null;
@@ -88993,7 +89040,9 @@ function MsxMonDetail({ species, name, art, st, apt, type, peak, grades, known, 
   const [pickT, setPickT] = useState(() => (all.find(has) || all[0] || {}).id || null);
   const tech = all.find((t) => t.id === pickT) || list[0] || null;
   const grade = (k, v) => (typeof msaTechGrade === 'function' ? msaTechGrade(k, v) : '') || '−';
-  const maxSt = Math.max(300, ...MSX_STATS.map((k) => Number(st[k]) || 0));
+  const msOf = (id) => (mastery && typeof mastery === 'object' ? msxMasteryOf(mastery, id) : null); // 熟練(渡されていなければ null = 出さない)
+  // 棒の長さは 999 までで比べ、999 を超えた分は紫の帯で重ねる(育成のホームのゲージと同じ見せ方・能力の上限アップ r1115-103)
+  const maxSt = Math.max(300, ...MSX_STATS.map((k) => Math.min(999, Number(st[k]) || 0)));
   const TOP = [['base', '基礎'], ['feat', '特徴'], ['apt', '適性']];
   return (
     <div className="msx-ov msx-fade" data-msx-detail onClick={onClose}>
@@ -89011,7 +89060,7 @@ function MsxMonDetail({ species, name, art, st, apt, type, peak, grades, known, 
               {tab === 'base' ? (<div className="msx-md-box"><div className="cap">能力<span>素質</span></div>
                 {MSX_STATS.map((k, i) => (
                   <div key={k} className="msx-md-st"><span className="n">{MSX_STAT_ICON[k]}{MSX_STAT_NAME[k]}</span>
-                    <span className="v"><b>{st[k]}</b><span className="g"><i style={{ width: `${Math.max(2, Math.min(100, (Number(st[k]) || 0) / maxSt * 100))}%`, background: MSX_STAT_COLOR[k] }}/></span></span>
+                    <span className="v"><b>{st[k]}</b><span className={`g${(Number(st[k]) || 0) > 999 ? ' ov' : ''}`}><i style={{ width: `${Math.max(2, Math.min(100, Math.min(999, Number(st[k]) || 0) / maxSt * 100))}%`, background: MSX_STAT_COLOR[k] }}/>{(Number(st[k]) || 0) > 999 ? <b className="ov" data-msx-stat-over={(Number(st[k]) || 0) - 999} style={{ width: `${Math.min(100, ((Number(st[k]) || 0) - 999) / 9.99)}%` }}/> : null}</span></span>
                     <span className={`a${apt[i] > 'B' ? ' lo' : ''}`}>{apt[i]}</span></div>
                 ))}</div>) : null}
               {tab === 'feat' ? (<div className="msx-md-box">
@@ -89037,7 +89086,7 @@ function MsxMonDetail({ species, name, art, st, apt, type, peak, grades, known, 
                   // 技の種類で升の色を分ける(参考どおり ちから=金・かしこさ=緑)。覚えていない技も絵を出し、升の地を暗くして見分ける(2026-11-14 社長「鍵じゃなくて覚えてないやつも表示して色分けして」)。
                   // 覚える条件の数は升に出さず、押したときの右の「覚え方」に出す(社長「150とかその数字何?」→ 升目から消す)
                   return <button type="button" key={`${r}-${d}`} className={`tc ${t.kind === 'wise' ? 'wise' : 'pow'}${got ? ' got' : ' tg-not'}${tech && tech.id === t.id ? ' on' : ''}`} data-msx-tech={t.id} data-msx-cell={cellK} aria-label={`${t.name}${got ? '' : '(まだ覚えていない)'}${canAlt ? '(選べる技が' + alts.length + 'つ)' : ''}`} onClick={() => setPickT(t.id)}>
-                    <span className="ti" aria-hidden="true"><MsxSkillArt t={t} uid={`${r}${d}`}/></span><span className={`tg-rk rk${Math.max(1, Math.min(5, Number(t.rank) || 1))}`} aria-hidden="true">{Math.max(1, Math.min(5, Number(t.rank) || 1))}</span><span className="g">{t.guts}</span>{canAlt ? <span className="tg-alt" role="button" aria-label="覚える技を選ぶ" data-msx-alt={cellK} onClick={(e) => { e.stopPropagation(); setPickCell(cellK); }}>⇄</span> : null}</button>;
+                    <span className="ti" aria-hidden="true"><MsxSkillArt t={t} uid={`${r}${d}`}/></span><span className={`tg-rk rk${Math.max(1, Math.min(5, Number(t.rank) || 1))}`} aria-hidden="true">{Math.max(1, Math.min(5, Number(t.rank) || 1))}</span><span className="g">{t.guts}</span>{got && msOf(t.id) != null ? <span className="tg-ms" aria-hidden="true" data-msx-tech-ms={msOf(t.id)}><i style={{ width: `${msOf(t.id)}%` }}/></span> : null}{canAlt ? <span className="tg-alt" role="button" aria-label="覚える技を選ぶ" data-msx-alt={cellK} onClick={(e) => { e.stopPropagation(); setPickCell(cellK); }}>⇄</span> : null}</button>;
                 }}/>
               {tech ? (<div className="msx-md-td">
                 <div className="tn">{tech.name}{has(tech) ? null : <small className="msx-md-not">まだ覚えていない</small>}</div>
@@ -89047,6 +89096,10 @@ function MsxMonDetail({ species, name, art, st, apt, type, peak, grades, known, 
                 <div className="msx-md-kv"><b>命中率</b><span className="gd">{grade('hit', tech.hit)}</span></div>
                 <div className="msx-md-kv"><b>ガッツダウン</b><span className="gd">{grade('gd', tech.gd)}</span></div>
                 <div className="msx-md-kv"><b>クリティカル率</b><span className="gd">{grade('crit', tech.crit)}</span></div>
+                {has(tech) && msOf(tech.id) != null ? (() => { const m = msOf(tech.id); const b = msxMasteryBoost(SUC, tech.id, m); return (<>
+                  <div className="msx-md-kv msx-md-ms" data-msx-detail-ms={m}><b>熟練</b><span className="msx-ms-v"><b>{m}</b><small>/100</small></span></div>
+                  <div className="msx-ms-bar" aria-hidden="true"><i style={{ width: `${m}%` }}/></div>
+                  <div className="msx-md-kv"><b>熟練の効き目</b><span className="msx-ms-ef">{b ? <><i>威力+{b.pow}%</i><i>命中+{b.hit}%</i></> : 'まだ無し'}</span></div></>); })() : null}
                 <div className="msx-md-kv msx-md-howrow"><b>覚え方</b><span>{has(tech) ? (Array.isArray(known) ? '覚えている' : '初めから') : (() => { const how = msxTechHow(tech, all); return how.startsWith('修行で覚える(') ? <>修行で覚える<small className="msx-md-how">{how.slice('修行で覚える'.length)}</small></> : how; })()}</span></div>
                 {pick && tgAt(tech.rank, Math.min(...(tech.dist || [1]))).length > 1 ? <button type="button" className="msx-md-alt" data-msx-alt-open onClick={() => setPickCell(`${tech.rank}-${Math.min(...(tech.dist || [1]))}`)}>⇄ 覚える技を選ぶ</button> : null}
               </div>) : null}
@@ -89394,6 +89447,8 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf }) {
   } else {
     const startAdd = {}; members.forEach((m) => { if (m.startAdd && m.startAdd.v > 0) startAdd[m.startAdd.stat] = (startAdd[m.startAdd.stat] || 0) + m.startAdd.v; });
     const name = nick || msxMonName(species).slice(0, MSX_NAME_MAX);
+    // 能力の上限アップ(r1115-103): 編成で 999 より上がる能力だけ出す
+    const capUp = typeof SUC.capOfTeam === 'function' ? Object.entries(SUC.capOfTeam(members)).filter(([, v]) => v > 999) : [];
     body = (<>
       <div className="v-h">これで 始める?<small>全46ターン・1回 約8〜15分。いつでも中断して続きから</small></div>
       <div className="v-scene" style={{ flex: '1 1 0' }}>
@@ -89410,6 +89465,7 @@ function MsxStart({ data, SUC, onCancel, onStart, bondLvOf, callNameOf }) {
       <button type="button" className="v-sum" onClick={() => setStep(2)}><span className="k">助手</span><span>{msxAidName(aid)}編「{sc.title}」</span><span className="ed">変える</span></button>
       <button type="button" className="v-sum" onClick={() => setStep(3)}><span className="k">持ちこみ</span><span style={JA_LABEL_STYLE}>{jaWrap(items.length ? items.map((id) => `${MSX_ITEM_BY_ID[id].e}${MSX_ITEM_BY_ID[id].name}`).join('・') : 'なし')}</span><span className="ed">変える</span></button>
       <div className="v-sum"><span className="k">初めの上乗せ</span><span>{Object.keys(startAdd).length ? `編成から ${Object.entries(startAdd).map(([k, v]) => `${MSX_STAT_NAME[k]} +${v}`).join('・')}` : '編成からの上乗せなし'}</span></div>
+      {capUp.length ? <div className="v-sum" data-msx-start-cap><span className="k">能力の上限</span><span>{capUp.map(([k, v]) => `${MSX_STAT_NAME[k]} ${v.toLocaleString()}`).join('・')}</span></div> : null}
       <button type="button" className="v-big" onClick={start}>🌱 育成を始める</button>
     </>);
   }
@@ -89794,7 +89850,7 @@ function MsxBand({ s, v, ev, use = 0, stAdd = 0, hpFrom = null, stFrom = null })
   const grow = (from, to) => (Number.isFinite(from) && from !== to ? { '--w0': `${Math.max(0, Math.min(100, from))}%`, animation: 'msxBarGrow .9s ease-out both' } : null);
   const pk = msxSuc && typeof msxSuc.SUC.peakInfo === 'function' && !s.over ? msxSuc.SUC.peakInfo(s) : { state: null };
   return (
-    <div className="v-band" style={pk.state === 'in' ? { position: 'relative' } : undefined}>
+    <div className={`v-band${pk.state === 'in' ? ' pk' : ''}`} style={pk.state === 'in' ? { position: 'relative' } : undefined}>
       {pk.state === 'in' ? <span className="v-peakb" data-msx-peak-band={pk.left} style={{ position: 'absolute', left: '50%', top: -7, transform: 'translateX(-50%)', zIndex: 2, whiteSpace: 'nowrap', padding: '1px 9px', borderRadius: 999, fontSize: 10.5, fontWeight: 900, color: '#fff7cc', background: 'linear-gradient(90deg,#ea580c,#f59e0b)', boxShadow: '0 0 8px #fb923c' }}>🔥 ピーク中(あと{pk.left}ターン)</span> : null}
       <div className="v-b1">
         {/* 最後の期は参考(taikai-entry 175)どおり「HF進出」の札と、ヒーローズファイナルの日なら「当日」・その前は「あと◯ターン」(3ターン目から1戦ずつ) */}
@@ -89882,7 +89938,8 @@ function MsxStRow({ stats, ups, main, preview = false, who = null }) {
         const after = stats[k]; const before = Math.max(0, after - (grow ? u : 0));
         // 案A: 上がる前の値の近くから、拡大した目盛り(1目盛り=10)で伸ばす
         const span = Math.max(60, Math.ceil(Math.abs(u) * 2.6 / 10) * 10);
-        const lo = Math.max(0, Math.min(999 - span, Math.floor((Math.max(after, before) - span * 0.82) / 10) * 10));
+        const top = Math.max(999, Math.ceil(Math.max(after, before) / 10) * 10 + 10); // 能力の上限アップ(r1115-103): 999 を超えた子は目盛りの上を広げる
+        const lo = Math.max(0, Math.min(top - span, Math.floor((Math.max(after, before) - span * 0.82) / 10) * 10));
         const zp = (n) => (zoomS && u ? `${Math.max(0, Math.min(100, (n - lo) / span * 100))}%` : pct(n));
         const tick = zoomS && u ? { backgroundSize: `${1000 / span}% 100%` } : undefined;
         // 棒も数字と同じ値(数え上げの途中の値)から描く。数字と長さがいつも合う
@@ -89890,7 +89947,7 @@ function MsxStRow({ stats, ups, main, preview = false, who = null }) {
         return (<div key={k} className={`${u > 0 ? 'up' : u < 0 ? 'dn' : ''}${k === main ? ' main' : ''}`}>
           <small>{MSX_STAT_ICON[k]}{MSX_STAT_NAME[k]}</small><b>{grow && u ? Math.round(before + (after - before) * ease(t)) : stats[k]}</b>
           {aptOn && aptL ? <span className={`ap a${aptL[MSX_STATS.indexOf(k)]}`}>素質 {aptL[MSX_STATS.indexOf(k)]}</span> : grow && u ? <u className="g" style={tick}><i style={{ width: zp(u > 0 ? cur : after) }}/>{u > 0 ? <s className="gu" style={{ left: zp(before), width: `calc(${zp(cur)} - ${zp(before)})` }}/> : <s className="gd" style={{ left: zp(after), width: `calc(${zp(before)} - ${zp(after)})` }}/>}{zoomS ? <q className="zl"><span>{lo}</span><span>{lo + span}</span></q> : null}</u>
-            : <u><i style={{ width: pct(after) }}/></u>}
+            : <u className={after > 999 ? 'ov' : undefined}><i style={{ width: pct(after) }}/>{after > 999 ? <b className="ov" data-msx-stat-over={after - 999} style={{ width: pct(after - 999) }}/> : null}</u>}
           {ups ? <em>{u > 0 ? `+${u}` : u < 0 ? `−${-u}` : ''}</em> : null}</div>);
       })}
     </div>
@@ -90514,7 +90571,7 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
         const pk = typeof SUC.peakInfo === 'function' ? SUC.peakInfo(s) : null;
         const peak = pk && Number.isInteger(pk.from) ? (() => { const a = SUC.periodOf(pk.from).name; const b = SUC.periodOf(pk.to).name; return a === b ? a : `${a}〜${b}`; })() : '';
         return <MsxMonDetail species={s.species} name={run.nick} sub={msxMonName(s.species)} art={<MsxMonArt run={run} noPeak/>} st={s.stats} apt={msxAptOf(s.species)} type={s.type} peak={peak}
-          grades={typeof SUC.aptGradesOf === 'function' ? SUC.aptGradesOf(s) : null} known={Array.isArray(s.techs) ? s.techs : []} power={ev.power} rank={ev.rank} SUC={SUC} pick={typeof SUC.setTechPick === 'function' && s.techPick ? { sel: s.techPick, locked: (c) => SUC.techPickLocked(s, c), onPick: (c, id) => { const n = JSON.parse(JSON.stringify(s)); if (SUC.setTechPick(n, c, id)) setRun({ ...run, s: n }); } } : null} onClose={() => setDetail(false)}/>;
+          grades={typeof SUC.aptGradesOf === 'function' ? SUC.aptGradesOf(s) : null} known={Array.isArray(s.techs) ? s.techs : []} mastery={s.mastery && typeof s.mastery === 'object' ? s.mastery : {}} power={ev.power} rank={ev.rank} SUC={SUC} pick={typeof SUC.setTechPick === 'function' && s.techPick ? { sel: s.techPick, locked: (c) => SUC.techPickLocked(s, c), onPick: (c, id) => { const n = JSON.parse(JSON.stringify(s)); if (SUC.setTechPick(n, c, id)) setRun({ ...run, s: n }); } } : null} onClose={() => setDetail(false)}/>;
       })() : null}
       {sheet === 'dex' && typeof MsxDex === 'function' ? <MsxDex aid={s.aid} nick={run.nick} onClose={() => setSheet(null)}/> : null}
       {sheet && sheet !== 'dex' && (
@@ -90616,6 +90673,7 @@ function MsxStats({ run, setRun, v, ev, onClose }) {
   const auto = () => { let w = replay(draft); const list = draft.slice(); while (w.pts > 0) { const k = MSX_STATS.slice().sort((x, y) => w.stats[x] - w.stats[y])[0]; const r = SUC.spendPts(w, k, 1); if (!r.out.ok) break; w = r.state; list.push(k); } setDraft(list); };
   const commit = () => { if (!draft.length) return; setRun({ ...run, s: ws }); setDraft([]); };
   const used = s.pts - ws.pts;
+  const capK = (k) => (typeof SUC.statCapOf === 'function' ? SUC.statCapOf(s, k) : 999); // 能力の上限アップ(r1115-103)
   const lineOf = SUC.PTS && SUC.PTS.line ? SUC.PTS.line[SUC.periodOf(s.turn).key] : null;
   const own = typeof SUC.techsOf === 'function' ? SUC.techsOf(s.species) : [];
   const techs = (Array.isArray(s.techs) ? s.techs : []).map((id) => own.find((t) => t && t.id === id)).filter(Boolean);
@@ -90633,7 +90691,7 @@ function MsxStats({ run, setRun, v, ev, onClose }) {
         </div>
         <div className="msx-note">＋で仮に振り、「決定」で確定する。1点で +1(期の目安{lineOf ? ` ${lineOf}` : ''}を超えると 2点で +1)</div>
         {MSX_STATS.map((k) => { const n = addOf(k); const cost = SUC.ptsCost(ws, k); const over = lineOf != null && ws.stats[k] >= lineOf; return (
-          <div key={k} className="msx-ab-row" data-msx-pts-row={k}><span className="n">{MSX_STAT_ICON[k]} {MSX_STAT_NAME[k]}<small className="sub" style={{ display: 'block', fontSize: 10, color: over ? '#fbbf24' : '#94a3b8' }}>{over ? '目安超え・2点で +1' : '1点で +1'}</small></span>
+          <div key={k} className="msx-ab-row" data-msx-pts-row={k}><span className="n">{MSX_STAT_ICON[k]} {MSX_STAT_NAME[k]}<small className="sub" style={{ display: 'block', fontSize: 10, color: over ? '#fbbf24' : '#94a3b8' }}>{over ? '目安超え・2点で +1' : '1点で +1'}{capK(k) > 999 ? <span data-msx-cap={k} style={{ color: '#f0abfc' }}>・上限 {capK(k).toLocaleString()}</span> : null}</small></span>
             <span style={{ fontSize: 12, fontWeight: 900, whiteSpace: 'nowrap' }}>{n ? <>{s.stats[k]} → <b style={{ width: 'auto', color: '#fde047' }}>{ws.stats[k]}</b> <small style={{ color: '#fde047', fontSize: 11 }}>(+{n})</small></> : <b style={{ width: 'auto' }}>{s.stats[k]}</b>}</span>
             <button type="button" className="chip sym minus" style={{ minWidth: 44, minHeight: 44 }} disabled={!n} onClick={() => minus(k)} aria-label={`${MSX_STAT_NAME[k]}を戻す`}/>
             <button type="button" className="chip on sym plus" style={{ minWidth: 44, minHeight: 44 }} disabled={ws.pts < cost} onClick={() => plus(k)} aria-label={`${MSX_STAT_NAME[k]}を上げる`}/>
@@ -91439,7 +91497,7 @@ function MsxR3Cup({ run, setRun, v, ev, onBack, onActed }) {
   const body = (<>
     <MsxBand s={s} v={v} ev={ev}/>
     <div className="v-scene low" style={{ flex: '0 0 auto', minHeight: 128 }}><img className="bg" src="images/story-bg/monhero_town.jpg" alt=""/><div className="sh"/>
-      <img src={msxBody(s.aid, 'happy')} alt="" style={{ position: 'absolute', left: '-2%', bottom: '-98%', height: '190%' }}/>
+      <img className="rcv-myua" src={msxBody(s.aid, 'happy')} alt="" style={{ position: 'absolute', left: '-2%', bottom: '-98%', height: '190%', width: 'auto', maxWidth: 'none' }}/>
       <div className="v-ev-h"><small>{cal.year}年目 {cal.month}月・{v.period.name}</small>🏆 大会の受付</div>
       <div className="v-ibub" style={{ left: '38%', top: 'auto', bottom: 8 }}>{openLine.t}</div>
     </div>
@@ -92194,6 +92252,7 @@ function MsxR3Shugyo({ run, setRun, v, ev, onBack, onPause }) {
           aria-label={`${t.name}${got ? '(覚えた)' : sel ? '(選んだ)' : ok ? `(覚えられる ${Math.round(rateOf[t.id] * 100)}%)` : full ? '(技がいっぱい)' : ng ? `(${ng.short})` : '(条件あり)'}`}
           onClick={() => (ok && !got ? toggle(t.id) : !got ? setLockT(t) : null)}>
           <span className="ti" aria-hidden="true"><MsxSkillArt t={t} uid={`q${r}${d}`}/></span><span className={`tg-rk rk${rk}`} aria-hidden="true">{rk}</span>
+          {got && typeof msxMasteryOf === 'function' ? <span className="tg-ms" aria-hidden="true" data-msx-tech-ms={msxMasteryOf(s0.mastery, t.id)}><i style={{ width: `${msxMasteryOf(s0.mastery, t.id)}%` }}/></span> : null}{/* 覚えた技の熟練のゲージ(r1115-082) */}
           {got ? <span className="g qb" aria-hidden="true">済</span> : ok ? <span className="g qb" aria-hidden="true">{Math.round(rateOf[t.id] * 100)}%</span> : <span className="g qb" aria-hidden="true">🔒</span>}
         </button>);
       }}/> : <div className="q-note msx-kp">このモンスターの技の表がまだありません(能力だけ上がる)</div>}
@@ -92362,9 +92421,9 @@ function MsxR3Retire({ run, setRun, onPause, debug, SUC }) {
       <div className="v-pa">{MSX_STATS.map((k) => {
         const add = ws.stats[k] - s.stats[k];
         return (<div key={k}><span className="nm">{MSX_STAT_ICON[k]} {MSX_STAT_NAME[k]}</span><span className="v0">{s.stats[k]}</span><span className="ad">{add ? `+${add}` : ''}</span>
-          <span className="st"><button type="button" className="sym minus" aria-label={`${MSX_STAT_NAME[k]}を戻す`} disabled={!add} onClick={() => undoK(k)}/><b>{add}</b><button type="button" disabled={ws.pts < SUC.ptsCost(ws, k) || ws.stats[k] >= 999} onClick={() => spend(k)} data-msx-r3-plus={k} className="sym plus" aria-label={`${MSX_STAT_NAME[k]}を上げる`}/></span></div>);
+          <span className="st"><button type="button" className="sym minus" aria-label={`${MSX_STAT_NAME[k]}を戻す`} disabled={!add} onClick={() => undoK(k)}/><b>{add}</b><button type="button" disabled={ws.pts < SUC.ptsCost(ws, k) || ws.stats[k] >= (typeof SUC.statCapOf === 'function' ? SUC.statCapOf(ws, k) : 999)} onClick={() => spend(k)} data-msx-r3-plus={k} className="sym plus" aria-label={`${MSX_STAT_NAME[k]}を上げる`}/></span></div>);
       })}</div>
-      <div className="v-card"><div className="v-kv"><b>伸びすぎ注意</b><span>能力は 999 まで。その期の目安を超えた能力は、2ポイントで +1</span></div></div>
+      <div className="v-card"><div className="v-kv"><b>伸びすぎ注意</b><span>能力の上限はふつう 999(編成のモンスターで上がる)。その期の目安を超えた能力は、2ポイントで +1</span></div></div>
       <MsxSay aid={s.aid} ex="excited" text={ws.pts > 0 ? '「能力ポイントが残ってるよ! 使い切ってから、最後の評価を見よう!」' : '「使い切ったね! それじゃあ、最後の評価を見よう!」'}/>
     </>);
     const foot = <div className="v-ft"><button type="button" onClick={() => { setWs(s); setHist([]); }}>やり直す</button><button type="button" className="go" onClick={() => { setRun({ ...run, s: ws }); setStep('e0'); }} data-msx-r3-e3>これで決める ▶</button></div>;
@@ -92708,7 +92767,7 @@ function MsxR3Box({ onClose }) {
       </div>
       <button type="button" className="mm-card mm-asb" onClick={() => { setPage('assist'); setApick([]); setMsg(''); }} data-msx-mm-open-assist>
         <b>メモリアルモンスター</b><small>{assist ? assist.mons.length : 0} / {MSX_ASSIST_CAP}体(合体・お別れしたモンスター。編成にだけ入れられる)</small></button>
-      {box.memory.length ? <div className="mm-memo">思い出: {box.memory.slice(-5).reverse().map((m) => `${m.nick || msxMonName(m.species)}(${m.rank || '—'})`).join('・')}</div> : null}
+      {box.memory.length ? <div className="mm-memo">思い出: {box.memory.slice(-5).map((m) => `${m.nick || msxMonName(m.species)}(${m.rank || '—'})`).join('・')}</div> : null}
     </div>);
     foot = <div className="v-ft"><button type="button" onClick={onClose}>← 戻る</button></div>;
   }
@@ -92785,7 +92844,7 @@ function MsxR3Box({ onClose }) {
         return (<MsxMonDetail species={cur.species} name={msxMmName(cur)} sub={`Lv.${Math.round(Number(cur.lv) || 1)}・${msxMonName(cur.species)}`}
           art={<MsxMmArt m={cur} size="100%"/>} st={MSX_STATS.reduce((o, k) => ({ ...o, [k]: Math.round((cur.st && cur.st[k]) || 0) }), {})}
           apt={typeof msxAptOf === 'function' ? msxAptOf(cur.species) : ['C', 'C', 'C', 'C', 'C', 'C']} type={cur.gt} grades={SUC && typeof SUC.aptGradesOf === 'function' ? (() => { try { return SUC.aptGradesOf(cur); } catch (e) { return null; } })() : null}
-          pick={cur.raised === false && SUC && typeof SUC.techPickNorm === 'function' ? (() => { const sel = SUC.techPickNorm(tpAll && tpAll.mon ? tpAll.mon[cur.id] : null, cur.species); return { sel, locked: () => false, onPick: async (c, id) => { const next = { ...sel, [c]: id }; setTpAll((t0) => { const t = t0 || msxNormTechPick(null); return { ...t, mon: { ...t.mon, [cur.id]: next } }; }); try { setTpAll(await msxWriteTechPick('mon', cur.id, next)); } catch (e) {} } }; })() : null} known={Array.isArray(cur.techs) ? cur.techs : []} power={cur.raised === false ? null : msxMmPow(cur)} rank={cur.grade ? null : cur.rank} grade={cur.grade} SUC={SUC}
+          pick={cur.raised === false && SUC && typeof SUC.techPickNorm === 'function' ? (() => { const sel = SUC.techPickNorm(tpAll && tpAll.mon ? tpAll.mon[cur.id] : null, cur.species); return { sel, locked: () => false, onPick: async (c, id) => { const next = { ...sel, [c]: id }; setTpAll((t0) => { const t = t0 || msxNormTechPick(null); return { ...t, mon: { ...t.mon, [cur.id]: next } }; }); try { setTpAll(await msxWriteTechPick('mon', cur.id, next)); } catch (e) {} } }; })() : null} known={Array.isArray(cur.techs) ? cur.techs : []} mastery={cur.raised !== false && Array.isArray(cur.techs) ? Object.fromEntries(cur.techs.map((t, i) => [t, Array.isArray(cur.mast) ? Number(cur.mast[i]) || 0 : 0])) : null} power={cur.raised === false ? null : msxMmPow(cur)} rank={cur.grade ? null : cur.rank} grade={cur.grade} SUC={SUC}
           head={<><button type="button" className={`mm-fav${fav.includes(cur.id) ? ' on' : ''}`} onClick={() => toggleFav(cur.id)} aria-label="お気に入り" data-msx-mm-fav>{fav.includes(cur.id) ? '❤' : '♡'}</button>
             <button type="button" className="mm-ed" aria-label="名前と染色を変える" onClick={() => { setEdit({ nick: cur.nick || msxMonName(cur.species), colors: Array.isArray(cur.colors) ? cur.colors.slice(0, 6) : [], err: '' }); setPage('edit'); }} data-msx-r3-edit>✏</button></>}
           more={more}
@@ -93125,7 +93184,7 @@ const monsucLendPayloadOf = (child) => {
   for (const k of MONSUC_LEND_STAT_KEYS) {
     const v = Number(st[k]);
     if (!Number.isFinite(v)) return null;
-    stats[k] = Math.max(0, Math.min(999, Math.round(v)));
+    stats[k] = Math.max(0, Math.min(99999, Math.round(v))); // 能力の上限アップ(r1115-103): 999 を超えた子も送る・読む(サーバの見張り LEND_STAT_MAX と同じ)
   }
   const picks = c.asp && c.asp.picks && typeof c.asp.picks === 'object' && !Array.isArray(c.asp.picks) ? c.asp.picks : {};
   let assists = Object.entries(picks).filter(([, lv]) => Number.isInteger(lv) && lv >= 1 && lv <= 3).slice(0, 4).map(([id, lv]) => ({ id, lv }));
@@ -93154,7 +93213,7 @@ const monsucLendMember = (row, SUC) => {
   for (const k of MONSUC_LEND_STAT_KEYS) {
     const v = Number(st[k]);
     if (!Number.isFinite(v)) return null;
-    stats[k] = Math.max(0, Math.min(999, Math.round(v)));
+    stats[k] = Math.max(0, Math.min(99999, Math.round(v))); // 能力の上限アップ(r1115-103): 999 を超えた子も送る・読む(サーバの見張り LEND_STAT_MAX と同じ)
   }
   let assists = [];
   const list = Array.isArray(m.assists) ? m.assists : [];
@@ -94838,7 +94897,7 @@ const monsucRankRowOf = ({ owner, run, ev, name, colors, userName }) => {
   if (run.over === 'gameover') return null;
   const st = run.stats && typeof run.stats === 'object' ? run.stats : {};
   const stats = {};
-  MONSUC_RANK_STAT_KEYS.forEach(k => { stats[k] = monsucRankClamp(Math.round(monsucRankNum(st[k])), 0, 999); });
+  MONSUC_RANK_STAT_KEYS.forEach(k => { stats[k] = monsucRankClamp(Math.round(monsucRankNum(st[k])), 0, 99999); }); // 能力の上限アップ(r1115-103): 999 を超えた分も送る(サーバ monsuc_rank_submit も 99,999 まで受ける)
   // 技(2026-11-13 社長): 技ごとに { r: ランク 1〜5, a: 届く間合いのいちばん高い適性の段 }。サーバが同じ式で総合力を出し直す(MONSUC_RANK_V2_TECHS.sql)。
   //   芯の evaluate が techRows を返さない古い形なら、今までどおり熟練の並び(8つまで)
   const rows = ev && Array.isArray(ev.techRows) ? ev.techRows : null;

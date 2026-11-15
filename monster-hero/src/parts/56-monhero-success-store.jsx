@@ -110,6 +110,24 @@ const msxNum = (v, d = 0) => (Number.isFinite(Number(v)) && v !== null && v !== 
 const msxStr = (v, max = 40, d = '') => (typeof v === 'string' ? v.slice(0, max) : d);
 const msxColors = (v) => (Array.isArray(v) ? v.slice(0, 6).map((c) => (typeof c === 'string' && c.length <= 40 ? c : null)) : []);
 // 途中の育成。core の状態 s をそのまま持つ。芯に restore があればそれを通す(無ければ形だけ確かめる)
+// ---- 能力の上限アップ(2026-11-15 r1115-103): 999 を超えた能力の控え ----
+//   途中の育成: 新しいキー mh_monsuc_run_over_v1 に { id, cap, over }(上限と、999 を超えた分)。古い版で開くと芯の restore が cap を落として 999 に丸めるので、
+//   新しい版で読むとき、同じ育成なら cap と超えた分を戻す(キーを分けたので古い版は触らない)。
+//   ボックスの子: st は本当の値(99,999 まで)、stOver に 999 を超えた分の控え(読み込みは ...m で残すので、古い版が st を 999 に丸めても戻せる)
+const MSX_RUN_OVER_KEY = 'mh_monsuc_run_over_v1';
+const MSX_STAT_ABS = 99999; // 壊れた値を断るための形の見張り(ゲームの天井ではない)
+const msxRunOverOf = (run) => {
+  const s = msxIsObj(run) && msxIsObj(run.s) ? run.s : null; if (!s || !msxIsObj(s.cap) || !msxIsObj(s.stats) || typeof s.id !== 'string') return null;
+  const over = {}; MSX_STATS.forEach((k) => { const v = Math.round(msxNum(s.stats[k], 0)); if (v > 999) over[k] = Math.min(MSX_STAT_ABS - 999, v - 999); });
+  const cap = {}; MSX_STATS.forEach((k) => { cap[k] = Math.max(999, Math.min(MSX_STAT_ABS, Math.floor(msxNum(s.cap[k], 999)))); });
+  return { id: s.id, cap, over };
+};
+const msxRunOverMerge = (raw, ov) => {
+  if (!msxIsObj(raw) || !msxIsObj(raw.s) || !msxIsObj(ov) || ov.id !== raw.s.id || !msxIsObj(ov.cap)) return raw;
+  const s = { ...raw.s }; if (!msxIsObj(s.cap)) s.cap = ov.cap;
+  if (msxIsObj(s.stats) && msxIsObj(ov.over)) { const st = { ...s.stats }; MSX_STATS.forEach((k) => { const o = Math.round(msxNum(ov.over[k], 0)); const v = msxNum(st[k], 0); if (o > 0 && v >= 999 && v < 999 + o) st[k] = 999 + o; }); s.stats = st; }
+  return { ...raw, s };
+};
 const msxNormRun = (raw, SUC) => {
   if (!msxIsObj(raw) || raw.v !== 1 || !msxIsObj(raw.s)) return null;
   let s = raw.s;
@@ -154,7 +172,11 @@ const msxCanonTechs = (techs, mast) => {
 };
 const msxNormBoxMon = (m) => {
   if (!msxIsObj(m) || typeof m.id !== 'string' || typeof m.species !== 'string') return null;
-  const st = {}; MSX_STATS.forEach((k) => { st[k] = Math.max(0, Math.min(999, Math.round(msxNum(m.st && m.st[k], 0)))); });
+  const st = {}; const stOver = {}; MSX_STATS.forEach((k) => {
+    let v = Math.max(0, Math.min(MSX_STAT_ABS, Math.round(msxNum(m.st && m.st[k], 0))));
+    const o = Math.round(msxNum(m.stOver && m.stOver[k], 0)); if (o > 0 && v >= 999 && v < 999 + o) v = Math.min(MSX_STAT_ABS, 999 + o); // 古い版が 999 に丸めた分を戻す
+    st[k] = v; if (v > 999) stOver[k] = v - 999;
+  });
   // 回3・合体・レンタルが足す項目(gen・techs・mast・gt・fav・titles・paid・parents ほか)も消さずに持つ(...m)
   const tm = msxCanonTechs(m.techs, m.mast); // 技の上限 8 はなくした・古い技 id は読み替える(2026-11-13)
   return {
@@ -163,7 +185,7 @@ const msxNormBoxMon = (m) => {
     mast: tm.mast, fav: Array.isArray(m.fav) ? m.fav.filter((k) => MSX_STATS.includes(k)).slice(0, 3) : [],
     titles: Array.isArray(m.titles) ? m.titles.filter((x) => typeof x === 'string').slice(0, 64) : [],
     id: m.id.slice(0, 64), species: m.species.slice(0, 24), nick: msxStr(m.nick, 8), colors: msxColors(m.colors),
-    st, loy: Math.max(0, Math.min(100, msxNum(m.loy, 0))), pop: Math.max(0, Math.min(100, msxNum(m.pop, 0))), lv: Math.max(1, Math.min(99, msxNum(m.lv, 1))),
+    st, stOver: Object.keys(stOver).length ? stOver : undefined, loy: Math.max(0, Math.min(100, msxNum(m.loy, 0))), pop: Math.max(0, Math.min(100, msxNum(m.pop, 0))), lv: Math.max(1, Math.min(99, msxNum(m.lv, 1))),
     rank: msxStr(m.rank, 4, ''), score: msxNum(m.score, 0), raised: m.raised !== false,
     assists: Array.isArray(m.assists) ? m.assists.filter(msxIsObj).slice(0, 8) : [], masteries: tm.mast, // assists は第3版で8種類まで(古い子は4つ・形はそのまま。読み替えは芯の memberOf)
     coach: msxStr(m.coach, 16), endAt: msxNum(m.endAt, 0),
@@ -276,9 +298,11 @@ const msxTech2Backup = async (run, box) => {
   } catch (e) { return false; }
 };
 const msxReadAll = async (SUC) => {
-  const [run, box, meta, unlocked, assistRaw] = await Promise.all([
+  const [run0, box, meta, unlocked, assistRaw, runOver] = await Promise.all([
     storeGet(MSX_KEYS.run, null), storeGet(MSX_KEYS.box, null), storeGet(MSX_KEYS.meta, null), storeGet('mh_unlocked_monsters', null), storeGet(MSX_ASSIST_KEY, null).catch(() => null),
+    storeGet(MSX_RUN_OVER_KEY, null).catch(() => null),
   ]);
+  const run = msxRunOverMerge(run0, runOver); // 能力の上限アップの控えを戻す(同じ育成のときだけ)
   await msxTech2Backup(run, box);
   const all = typeof ALL_PLAYER_MONSTERS === 'object' && ALL_PLAYER_MONSTERS ? ALL_PLAYER_MONSTERS : {};
   const list = SUC && Array.isArray(SUC.speciesList) ? SUC.speciesList : Object.keys(all);
@@ -296,6 +320,7 @@ const msxBeatMark = (run) => {
 };
 let msxSaveChain = Promise.resolve();
 const msxSaveRunNow = async (run, noPay) => {
+  const ov = msxRunOverOf(run); if (ov) { try { await storeSet(MSX_RUN_OVER_KEY, ov); } catch (_) {} } // 上限アップの控え(上限のある育成だけ)
   const sent = Number.isFinite(Number(run && run.beatSent)) ? Math.max(0, Math.floor(Number(run.beatSent))) : 0;
   if (noPay || !sent || typeof saveStoredValuesOrRollback !== 'function' || typeof loadRhythmEventPoints !== 'function' || typeof RHYTHM_EVENT_POINTS_KEY === 'undefined') return storeSet(MSX_KEYS.run, run);
   const stored = await storeGet(MSX_KEYS.run, null);

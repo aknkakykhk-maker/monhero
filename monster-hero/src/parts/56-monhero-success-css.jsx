@@ -109,6 +109,10 @@ const MSX_CSS = `
 .msx .v-body>.msx-scroll{flex:1 1 0;min-height:0}
 .msx .v-band{background:linear-gradient(180deg,#241d4a,#1a1636);border:1px solid #4a4380;border-radius:14px;padding:6px 8px 6px;margin-top:5px;box-shadow:inset 0 1px 0 #ffffff14}
 .msx .v-b1{display:flex;align-items:center;gap:6px}
+/* ピーク中の印(帯の上の縁にかかる)が「残り◯ターン」の数字に重ならないよう、印のぶんだけ帯の上を空ける(r1115-073) */
+.msx .v-band.pk{padding-top:15px}
+.msx.land .v-scene .rcv-myua{top:56px!important;bottom:auto!important;height:420px!important;left:4%!important}
+.msx .v-ft{flex-wrap:wrap}.msx .v-ft>button{min-width:0}
 .msx .v-turn{flex:1;min-width:0;display:flex;align-items:center;gap:6px}
 .msx .v-turn .ph{background:linear-gradient(160deg,#f472b6,#fb923c);border-radius:9px;padding:3px 7px;font-size:11px;font-weight:900;line-height:1.15;text-align:center;white-space:nowrap;box-shadow:0 2px 0 #9d174d}
 .msx .v-turn .ph small{display:block;font-size:10px;font-weight:700;opacity:.95}
@@ -184,6 +188,9 @@ const MSX_CSS = `
 .msx .v-st b{display:block;font-size:14px}
 .msx .v-st u{display:block;height:3px;border-radius:3px;background:#334155;margin:1px 5px 0;overflow:hidden;text-decoration:none}
 .msx .v-st u i{display:block;height:100%;background:linear-gradient(90deg,#f59e0b,#fb923c)}
+/* 能力の上限アップ(r1115-103): 999 を超えた分は2周目の帯を紫で重ねる */
+.msx .v-st u.ov{position:relative}
+.msx .v-st u b.ov{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,#c084fc,#f0abfc)}
 .msx .v-st em{display:block;font-style:normal;font-size:11px;font-weight:900;color:#86efac;height:14px;line-height:14px}
 .msx .v-st div.up{border-color:#fde047;background:#3b2f0b;box-shadow:0 0 8px #fde04766}.msx .v-st div.up b{color:#fde047}
 .msx .v-st div.up.main em{font-size:13px;color:#fde047}
@@ -704,6 +711,7 @@ const MSX_CSS = `
 .msx-md-st .v{flex:1;min-width:0;display:flex;flex-direction:column}
 .msx-md-st .v b{font-size:14px;line-height:1.1;text-align:right}
 .msx-md-st .g{height:4px;border-radius:2px;background:#334155;overflow:hidden}.msx-md-st .g i{display:block;height:100%}
+.msx-md-st .g.ov{position:relative}.msx-md-st .g b.ov{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,#c084fc,#f0abfc)} /* 999 を超えた分(r1115-103) */
 .msx-md-st .a{flex:none;width:1.4em;text-align:center;font-weight:900;color:#fde047}.msx-md-st .a.lo{color:#94a3b8}
 .msx-md-kv{display:flex;gap:6px;align-items:baseline;font-size:11px;padding:2px 0;border-bottom:1px solid #1e293b}
 .msx-md-kv>b{flex:none;width:6em;color:#f9a8d4;font-size:10.5px}.msx-md-kv>span{flex:1;min-width:0;overflow-wrap:anywhere}.msx-md-kv .gd{font-size:14px;font-weight:900;color:#fde047}
@@ -740,6 +748,13 @@ const MSX_CSS = `
 .msx .sym.info::before{width:20px;height:20px;border:2.5px solid currentColor;border-radius:50%;box-sizing:border-box;background:linear-gradient(currentColor,currentColor) 50% 3px/2.5px 2.5px no-repeat,linear-gradient(currentColor,currentColor) 50% 7.5px/2.5px 6px no-repeat}
 /* 注意: 全ボタンの ::after は「押せる範囲を広げる」用(838行)。記号の線は ::before だけで描く */
 .msx .msx-md-alt{margin-top:6px;width:100%;display:flex;align-items:center;justify-content:center;text-align:center;padding:6px 8px;border-radius:10px;font-size:12px;font-weight:900;color:#fff;background:linear-gradient(160deg,#6d4cd9,#4a2fa6);border:1.5px solid #a78bfa}
+/* 技の熟練(r1115-082): 升の下に小さなゲージ(覚えた技だけ)・右の欄に熟練の棒 */
+.msx-md-tg .tc .tg-ms{position:absolute;left:3px;right:26px;bottom:4px;height:5px;border-radius:3px;background:rgba(18,12,6,.85);border:1px solid rgba(255,255,255,.55);z-index:2;overflow:hidden}
+.msx-md-tg .tc .tg-ms i{display:block;height:100%;background:linear-gradient(90deg,#fde68a,#f59e0b)}
+.msx .msx-ms-v{white-space:nowrap}.msx .msx-ms-v small{opacity:.75;margin-left:1px}
+.msx .msx-ms-ef{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:0 6px}.msx .msx-ms-ef i{font-style:normal;white-space:nowrap}
+.msx .msx-ms-bar{display:block;height:6px;margin:2px 0 4px;border-radius:4px;background:#0f172a;border:1px solid #475569;overflow:hidden}
+.msx .msx-ms-bar i{display:block;height:100%;background:linear-gradient(90deg,#fde68a,#f59e0b)}
 .msx .msx-tp{display:flex;align-items:center;gap:8px;width:100%;margin:0 0 6px;padding:6px 8px;border-radius:12px;text-align:left;color:#fff;background:#1e1b3a;border:1.5px solid #3b3566}
 .msx .msx-tp.on{border-color:#facc15;background:#2a2547}
 .msx .msx-tp:disabled{opacity:.55}
