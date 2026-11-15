@@ -89,6 +89,10 @@ const REAL = { B: { sum: 2600, techs: 4, loy: 70, pop: 40, power: 10000 }, A: { 
 const teamOf = (SUC, kind) => {
   if (kind === 'base') return [];
   if (kind.startsWith('box-')) return boxSeed(kind).mons.slice(0, 6).map(m => ({ kind: 'raised', species: m.species, name: m.nick, stats: m.st, techs: m.techs }));
+  if (kind === 'tsuika') { // 6体とも 能力 3,400・追加トレボーナスを最大で(r1115-122 の試算用)
+    const sp = ['Undine', 'Mocchi', 'Golem', 'Pixie', 'Tiger', 'Kyubi'];
+    return sp.map((x, i) => { const st = {}; K.forEach((k, j) => { st[k] = Math.round(3400 / 6 * (0.7 + ((i + j) % 4) * 0.2)); }); return { kind: 'raised', species: x, name: `箱${i + 1}`, stats: st, lv: 30, loy: 80, pop: 55, techs: SUC.techsOf(x).slice(0, 6).map(t => t.id), assists: [{ id: 'tsuika', n: AT.BY_ID.tsuika.v.length }] }; });
+  }
   if (kind === 'max') { // 6体とも 能力の合計 4,300・いっしょ型8つを最大で(いちばん強く積んだ形)
     const ids = ['sokoji', 'atooshi', 'hirameki', 'ochitsuki', 'itawari', 'kizuna', 'ninzu', 'hagemi']; const sp = ['Undine', 'Mocchi', 'Golem', 'Pixie', 'Tiger', 'Kyubi'];
     return sp.map((x, i) => { const st = {}; K.forEach((k, j) => { st[k] = Math.round(4300 / 6 * (0.7 + ((i + j) % 4) * 0.2)); }); return { kind: 'raised', species: x, name: `箱${i + 1}`, stats: st, lv: 50, loy: 85, pop: 70, techs: SUC.techsOf(x).slice(0, 8).map(t => t.id), assists: ids.map(id => ({ id, n: AT.BY_ID[id].v.length })) }; });
