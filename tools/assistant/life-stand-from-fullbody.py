@@ -72,9 +72,7 @@ def run(key, cfg):
         x0, x1 = max(0, b[0] - g), min(im.width, b[2] + g)
         c = im.crop((x0, max(0, b[1] - g), x1, min(im.height, bottom)))
         # 上の端から外へはみ出さないよう、切った絵は体の上端に合わせてある
-        # 全身画が小さい(元の絵が小さい)ときだけ、2倍へ補間して輪郭をなめらかにする。元の大きさで作った全身画は拡大しない
-        if k < 1.5:
-            c = smooth2x(c)
+        # 拡大しない(2026-11-15 r1115-143 社長の案A: 元の画素のまま切る。前は2倍へ補間していたが、細かさは増えず重さだけ増えるのでやめた)
         tot += save_png(c, os.path.join(ROOT, 'monster-hero/images/assistant', cfg['stand'], '%s_%s.png' % (cfg['prefix'], e)))
     st = ims[0].crop((0, nb[1], ims[0].width, int(round(nb[1] + H))))
     bx0, by0, bx1, by1 = bbox(st)

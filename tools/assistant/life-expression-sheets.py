@@ -158,7 +158,7 @@ def write_all(key, cfg, cells):
         # 1) 紹介ページ用の全身(life-fullbody-art.py と同じ作り方: 切り詰め・余白は少し・拡大はしない・ふちの半透明を残して減色)
         tot_full += fb.save(fb.fit(c), os.path.join(fb.OUT, '%s__%s.png' % (name, e))) // 1024
         # 2) 場面用の立ち絵(胸から上)
-        st = smooth2x(c.crop(win))
+        st = c.crop(win)  # 拡大しない(2026-11-15 r1115-143 社長の案A: 元の画素のまま)
         tot_stand += save_png(st, os.path.join(ROOT, 'monster-hero/images/assistant', stand, '%s_%s.png' % (prefix, e)))
     # 顔の表(normal の切り出しで測る。見えている体の上を0・下を1)
     st = cells[0].crop(win)
