@@ -190,6 +190,8 @@ const normalizeAssistantLifeDiary = (v) => {
   const raw = v && typeof v === 'object' ? v : {};
   const items = Array.isArray(raw.items) ? raw.items.filter(x => x && typeof x.text === 'string').map(x => ({
     t: typeof x.t === 'string' ? x.t : '', text: x.text.slice(0, 80), ids: Array.isArray(x.ids) ? x.ids.filter(i => typeof i === 'string') : [], kind: typeof x.kind === 'string' ? x.kind : 'note',
+    // けんか・仲直りの場面を開く台本の id(2026-11-15 r1115-137。足すだけ・無い古い行は押せない札のまま)
+    ...(typeof x.tid === 'string' && x.tid ? { tid: x.tid.slice(0, 80) } : {}), ...(typeof x.how === 'string' && x.how ? { how: x.how.slice(0, 20) } : {}),
   })) : [];
   return { day: typeof raw.day === 'string' ? raw.day : null, items: items.slice(-ASSISTANT_LIFE_DIARY_MAX), slots: Array.isArray(raw.slots) ? raw.slots.filter(Number.isFinite).slice(-6) : [] };
 };
@@ -203,13 +205,13 @@ const ASSISTANT_LIFE_DIARY = {
   },
 };
 const assistantLifeClock = (now = Date.now()) => { const d = new Date(Number(now) + 9 * 3600000); return `${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`; };
-const assistantLifeDiaryAdd = async (text, ids = [], { kind = 'note', now = Date.now(), slotAbs = null } = {}) => {
+const assistantLifeDiaryAdd = async (text, ids = [], { kind = 'note', now = Date.now(), slotAbs = null, tid = null, how = null } = {}) => {
   if (!assistantLifeEnabled() || !text) return;
   await ASSISTANT_LIFE_DIARY.load();
   const day = assistantLifeDayKey(now);
   const cur = ASSISTANT_LIFE_DIARY.state.day === day ? ASSISTANT_LIFE_DIARY.state : { day, items: [], slots: [] };
   if (slotAbs != null && cur.slots.includes(slotAbs)) return;
-  const items = [...cur.items, { t: assistantLifeClock(now), text: String(text).slice(0, 80), ids, kind }].slice(-ASSISTANT_LIFE_DIARY_MAX);
+  const items = [...cur.items, { t: assistantLifeClock(now), text: String(text).slice(0, 80), ids, kind, ...(typeof tid === 'string' && tid ? { tid } : {}), ...(typeof how === 'string' && how ? { how } : {}) }].slice(-ASSISTANT_LIFE_DIARY_MAX);
   ASSISTANT_LIFE_DIARY.state = { day, items, slots: slotAbs != null ? [...cur.slots, slotAbs].slice(-6) : cur.slots };
   ASSISTANT_LIFE_DIARY.emit();
   try { storeSet(ASSISTANT_LIFE_DIARY_KEY, ASSISTANT_LIFE_DIARY.state, false); } catch {}
@@ -644,7 +646,7 @@ const assistantLifeRoomsOf = (life, metIds) => {
 };
 
 // 部屋を押したとき(その助手のこと・その場でできること)
-function AssistantLifeRoomSheet({ id, life, peerSt, bondLevelOf, diary, onClose, onPeek, onInvite, onWatch, onGive, onBeat, onCard, canGive, slot, land = false, onMediate = null, roomState = null, furnItems = null, onGiveFurn = null, openFurn = false, onFurnTalk = null, onMasmon = null, onChat = null, follow = null, onFollowDone = null, onGiveSolo = null, canGiveSolo = false, returnToMap = false, uiV2 = false, onGoPlace = null }) {
+function AssistantLifeRoomSheet({ id, life, peerSt, bondLevelOf, diary, onClose, onPeek, onInvite, onWatch, onGive, onBeat, onCard, canGive, slot, land = false, onMediate = null, onRelView = null, roomState = null, furnItems = null, onGiveFurn = null, openFurn = false, onFurnTalk = null, onMasmon = null, onChat = null, follow = null, onFollowDone = null, onGiveSolo = null, canGiveSolo = false, returnToMap = false, uiV2 = false, onGoPlace = null }) {
   const [furnOpen, setFurnOpen] = React.useState(!!openFurn);
   const [layoutOpen, setLayoutOpen] = React.useState(false); // 模様替え(56-assistant-life-roomedit.jsx・公開の印 assistantLifeRoomEdit)
   const layoutOn = typeof assistantLifeRoomEditEnabled === 'function' && assistantLifeRoomEditEnabled();
@@ -783,7 +785,7 @@ function AssistantLifeRoomSheet({ id, life, peerSt, bondLevelOf, diary, onClose,
         {(() => { const sh = assistantLifeRhythmShiftOn(((ASSISTANT_LIFE_STORE.state.rhythm || {})[id]), assistantLifeDayKey()); const rh = ASSISTANT_LIFE_RHYTHM[id]; return <p className="text-[10.5px] font-bold text-sky-200" data-assistant-life-room-rhythm={assistantLifeRhythmLabel(sh)}>🕰 生活のリズム: {rh ? rh.label : ''}{Math.abs(sh) >= 0.3 ? `(いまは ${assistantLifeRhythmLabel(sh)})` : ''}</p>; })()}
         {typeof assistantLifeBodyCondShort === 'function' && assistantLifeBodyCondShort(id) && <p className="text-[11px] font-bold text-rose-200" data-assistant-life-room-cond={id}>{assistantLifeBodyCondShort(id)}</p>}
         {asleep ? <p className="text-[11px] font-bold text-indigo-200" data-assistant-life-room-asleep>💤 ぐっすり寝ている</p> : (w && w.reason === 'lonely') ? <p className="text-[11px] font-bold text-amber-200">💭 さみしそう(だれか来てほしい)</p> : mood ? <p className="text-[11px] font-bold text-pink-200">気分: {mood}</p> : null}
-        {typeof AssistantLifeRelSheetRow === 'function' && <AssistantLifeRelSheetRow id={id} state={roomState} peerSt={peerSt} onMediate={onMediate}/>}
+        {typeof AssistantLifeRelSheetRow === 'function' && <AssistantLifeRelSheetRow id={id} state={roomState} peerSt={peerSt} onMediate={onMediate} onView={onRelView}/>}
         {doList}
         <div className={uiV2 ? 'mt-1' : land ? 'mt-2' : 'mt-8'}>
           {lv != null && !uiV2 && <div className="mhl-row"><span className="k">💗 仲良し度</span><b>Lv{lv}</b></div>}
@@ -1055,6 +1057,7 @@ function AssistantLifeScene({ scene, look, onClose, onGive, canGive }) {
           <button type="button" data-assistant-life-scene-back onClick={() => { if (peer && peer.talking && typeof ASSISTANT_PEER_STORE !== 'undefined') ASSISTANT_PEER_STORE.set({ stopTalkAt: Date.now() }); onClose(); }} aria-label="家へ戻る" className="h-9 w-9 text-[18px] text-slate-100">←</button>
           <div className="min-w-0 flex-1"><p className="mhl-en">{scene.place && scene.place !== 'home' ? String(scene.place).toUpperCase() : 'ROOM'}</p>{/* アイコンは字の塗り(背景を字の形で切り抜く)の外に置く。中に入れると絵文字まで切り抜かれ、iPhone で白い四角になった(2026-11-08 社長) */}<p className="flex items-center gap-1.5" data-assistant-life-scene-title><span aria-hidden="true" data-assistant-life-scene-icon className="text-[19px] leading-none">{ASSISTANT_LIFE_PLACE_ICON[scene.place] || '🏡'}</span><span className="mhl-ti" style={{ fontSize: 19 }}>{placeName}</span></p></div>
         </div>
+        {scene.title && <p data-assistant-life-scene-rel-title className="mt-1 w-fit rounded-full bg-slate-900/85 px-2.5 py-0.5 text-[12px] font-black text-white">{scene.title}</p>}
         {ids.length >= 3 && <p data-assistant-life-scene-group className="mt-1 w-fit rounded-full px-2 py-0.5 text-[10px] font-black" style={{ background: 'linear-gradient(90deg,#0ea5e9,#a855f7)' }}>👥 {ids.length}人で ・ <AssistantLifeNames text={assistantLifeGroupNames(ids, 8)}/></p>}
         {hint && ids.length === 2 && <p className="mt-1 w-fit rounded-full px-2 py-0.5 text-[10px] font-black" style={{ background: 'linear-gradient(90deg,#db2777,#a855f7)' }}>🤝 {ids.slice(0, 2).map(assistantLifeName).join('・')} 友情Lv{hint.lv}{stage ? ` ${assistantPeerStageName(stage)}` : ''}</p>}
       </div>
@@ -1265,6 +1268,15 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
     setNote(sleeping ? `${nameOf(id)}は寝ています。次の時間に、起きてだれかのところへ行きます` : `${nameOf(id)}に声をかけました。次の時間に、だれかのところへ行きます`);
   };
   // {name}が取り持つ(けんか中の2人を、その場で仲直りさせる。56-assistant-life-rel.jsx)
+  // けんか・仲直りの場面を見返す(r1115-137)。今日あったこと・けんか中の部屋のシートから。何も増やさない(見守ったとも書かない)
+  const relView = (tid, how = null) => {
+    const v = typeof assistantLifeRelViewOf === 'function' ? assistantLifeRelViewOf(tid, how) : null;
+    if (!v || !onReplay) { setNote('この場面は、いまは見られません'); return; }
+    const speakers = [...new Set((v.talk.lines || []).map(l => l && l.who).filter(Boolean))];
+    setRoomId(null); setBoardOpen(false); setNote('');
+    setScene({ ids: [...new Set([...v.ids, ...speakers])], place: 'home', key: `rel-${tid}-${Date.now()}`, sleep: [], title: v.title });
+    onReplay(v.talk);
+  };
   const mediate = async (id) => {
     const talk = typeof assistantLifeRelMediate === 'function' ? await assistantLifeRelMediate(id) : null;
     if (!talk) { setNote('いまは取り持てません'); return; }
@@ -1529,7 +1541,7 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
         {/* 👀 修行を見るの入れ物。地図が出ているときは地図の中のものを使う(2つ重ねない) */}
         {roomId && tab !== 'where' && typeof AssistantMasmonTrainWatchHost === 'function' && <AssistantMasmonTrainWatchHost/>}
         {roomId && partnerOk(roomId) && <AssistantLifeRoomSheet key={roomId} onGoPlace={(fn) => { try { close(); fn(); } catch {} }} id={roomId} uiV2={uiV2} returnToMap={uiV2 && tab === 'where'} openFurn={furnBack === roomId} onGiveSolo={soloOn ? openGiveSolo : null} canGiveSolo={soloOn && soloLeft > 0} life={life} peerSt={peerSt} bondLevelOf={bondLevelOf} diary={diary} slot={slot} furnItems={furnItems} onGiveFurn={onGiveFurn} onFurnTalk={(talk, text) => { playTalk(talk, { ids: [talk.pair[0]], place: 'home', gift: true }); setNote(text); }} canGive={canGive && itemsLeft > 0}
-          land={land} onClose={() => { setRoomId(null); setFollow(null); setFurnBack(null); }} onPeek={peek} onInvite={invite} onWatch={watch} onGive={(g) => openGive(g.ids)} onBeat={beat} onCard={card} onMediate={mediate} roomState={rooms[roomId]} onMasmon={setMasmonId}
+          land={land} onClose={() => { setRoomId(null); setFollow(null); setFurnBack(null); }} onPeek={peek} onInvite={invite} onWatch={watch} onGive={(g) => openGive(g.ids)} onBeat={beat} onCard={card} onMediate={mediate} onRelView={relView} roomState={rooms[roomId]} onMasmon={setMasmonId}
           onChat={chatOn ? chat : null} follow={follow && follow.id === roomId ? follow : null} onFollowDone={() => setFollow(null)}/>}
         {typeof AssistantMasmonNoteHost === 'function' && <AssistantMasmonNoteHost land={land}/>}
         {masmonId && typeof AssistantMasmonSheet === 'function' && <AssistantMasmonSheet id={masmonId} land={land} bondLv={typeof bondLevelOf === 'function' ? bondLevelOf(masmonId) : null} onClose={() => setMasmonId(null)}/>}
@@ -1539,7 +1551,9 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
             <button type="button" aria-label="閉じる" className="absolute inset-0 bg-black/60" onClick={() => setBoardOpen(false)}/>
             <div className="mhl-sheet" style={land ? { left: 'auto', width: '42%', top: 0, maxHeight: '100%', borderRadius: '22px 0 0 22px' } : undefined}>
               <p className="mhl-en">TODAY</p><p className="text-[18px] font-black">📌 今日あったこと</p><p className="text-[10.5px] font-bold text-slate-400" data-assistant-life-diary-count>全部で{(diary.items || []).length}件・新しい順</p>
-              {(diary.items || []).length ? [...diary.items].reverse().map((x, i) => <p key={i} className="mt-1.5 text-[12px] font-bold leading-snug text-slate-100"><b className="mr-1.5 text-amber-200">{x.t}</b><AssistantLifeChunks text={x.text}/></p>) : <div className="mt-2" data-assistant-life-diary-empty><p className="text-[12px] font-bold leading-snug text-slate-300">まだ何もありません。👀 見守る・💬 声をかける・🎁 贈る をすると、その日のできごとがここに残ります(朝4時に新しい1日)</p>{uiV2 && unwatched[0] && <button type="button" data-assistant-life-diary-watch onClick={() => { setBoardOpen(false); watch(unwatched[0]); }} className="mt-2 min-h-[44px] w-full rounded-xl border border-orange-300/60 bg-orange-500/20 text-[13px] font-black text-orange-100 active:scale-[.98]">👀 いまいる組を見守る(🤝💗 アップ)</button>}</div>}
+              {(diary.items || []).length ? [...diary.items].reverse().map((x, i) => x.tid && typeof assistantLifeRelViewOf === 'function' && assistantLifeRelViewOf(x.tid, x.how)
+                ? <button key={i} type="button" data-assistant-life-diary-scene={x.tid} onClick={() => relView(x.tid, x.how)} className="mt-1.5 flex min-h-[44px] w-full items-center gap-2 rounded-xl border border-sky-300/40 bg-sky-500/10 px-2 py-1 text-left text-[12px] font-bold leading-snug text-slate-100 active:scale-[.98]"><span className="min-w-0 flex-1"><b className="mr-1.5 text-amber-200">{x.t}</b><AssistantLifeChunks text={x.text}/></span><span className="shrink-0 rounded-full bg-sky-400 px-2 py-0.5 text-[11px] font-black text-slate-950">▶ 見る</span></button>
+                : <p key={i} className="mt-1.5 text-[12px] font-bold leading-snug text-slate-100"><b className="mr-1.5 text-amber-200">{x.t}</b><AssistantLifeChunks text={x.text}/></p>) : <div className="mt-2" data-assistant-life-diary-empty><p className="text-[12px] font-bold leading-snug text-slate-300">まだ何もありません。👀 見守る・💬 声をかける・🎁 贈る をすると、その日のできごとがここに残ります(朝4時に新しい1日)</p>{uiV2 && unwatched[0] && <button type="button" data-assistant-life-diary-watch onClick={() => { setBoardOpen(false); watch(unwatched[0]); }} className="mt-2 min-h-[44px] w-full rounded-xl border border-orange-300/60 bg-orange-500/20 text-[13px] font-black text-orange-100 active:scale-[.98]">👀 いまいる組を見守る(🤝💗 アップ)</button>}</div>}
               <button type="button" data-assistant-life-diary-close data-mhl-sheet-close onClick={() => setBoardOpen(false)} className="mt-3 min-h-[44px] w-full rounded-xl border border-slate-600 text-[12px] font-black text-slate-300 active:scale-[.98]">閉じる</button>
             </div>
           </div>)}

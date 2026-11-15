@@ -289,7 +289,7 @@ const rhythmMultiCleanMessage = (raw) => {
     const sf = typeof multiStampCleanFace === 'function' ? multiStampCleanFace(raw.sf) : null;
     const sw = typeof multiStampCleanWord === 'function' ? multiStampCleanWord(raw.sw) : null;
     if (sf && sw) { out.sf = sf; out.sw = sw; }
-    // 自由入力のスタンプ(sw が 'x')の文字は、受け取る側でも全角8文字・1行へそろえる(2026-11-15 r1115-026。改造した相手が長い文字を送っても札に出さない)
+    // 自由入力のスタンプ(sw が 'x')の文字は、受け取る側でも全角10文字へそろえる(2026-11-15 r1115-026。改造した相手が長い文字を送っても札に出さない)
     if (out.sw === 'x' && typeof multiStampCleanText === 'function') out.text = multiStampCleanText(out.text);
     return out.text && out.cid ? out : null;
   }
@@ -1418,7 +1418,7 @@ const RHYTHM_MULTI = (() => {
       if (!clean || !me || Date.now() - s.lastChatAt < RHYTHM_MULTI_CHAT_INTERVAL_MS) return false;
       s.lastChatAt = Date.now();
       const st = stamp && multiStampCleanFace(stamp.f) && multiStampCleanWord(stamp.w) ? { sf: stamp.f, sw: stamp.w } : {};
-      // 自由入力のスタンプ(sw が 'x')は、文字を全角8文字・1行へそろえる(2026-11-15 r1115-026)
+      // 自由入力のスタンプ(sw が 'x')は、文字を全角10文字へそろえる(2026-11-15 r1115-026)
       const sendText = st.sw === 'x' ? multiStampCleanText(clean) : clean;
       if (!sendText) return false;
       return socket.send({ t: 'chat', id: s.selfId, name: me.name, text: sendText, cid: `c${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`, ...st });

@@ -777,8 +777,8 @@ function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, presetFriend, 
         {chosen.length > 0 && typeof MsaDistCards === 'function' && (
           <div className="ambw-card" data-ambb-rep-card>
             <div className="ambw-small" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
-              <span>技の札(間合いごとの代表の技)</span>
-              <button type="button" className="ambw-btn2" data-ambb-rep-open style={{ minHeight: 32, padding: '2px 12px', fontSize: 12, flex: 'none' }} onClick={() => setRepEdit(ambbRowKey(chosen[0].row))}>🃏 技の札を決める</button>
+              <span>技のカード(間合いごとの代表の技)</span>
+              <button type="button" className="ambw-btn2" data-ambb-rep-open style={{ minHeight: 32, padding: '2px 12px', fontSize: 12, flex: 'none' }} onClick={() => setRepEdit(ambbRowKey(chosen[0].row))}>🃏 技のカードを決める</button>
             </div>
           </div>
         )}
@@ -824,6 +824,7 @@ function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, presetFriend, 
       if (x.ev === 'tech') return x.hit ? `${n}の ${x.name}${x.crit ? ' 会心!' : ''} → ${x.dmg}${x.guarded ? '(ガード)' : ''}` : `${n}の ${x.name} … はずれ`;
       if (x.ev === 'move' && x.why === 'blown') return `${n}は 吹き飛ばされて 遠距離へ`;
       if (x.ev === 'blow') return `${n}の 吹き飛ばし(相手の次の手のあと 遠へ)`;
+      if (x.ev === 'move' && x.why === 'techMove' && typeof msaTechMoveSay === 'function') return msaTechMoveSay(x, n, msaTechMoveName(log, x), `${AMBW_DIST[x.to]}距離`); // 技の勢いで動いた(r1115-156②)
       if (x.ev === 'move') return `${n}が ${AMBW_DIST[x.to]}距離へ ${x.step > 0 ? 'さがる' : 'つめる'}`;
       if (x.ev === 'charge') return `${n}は ガッツをためた`;
       if (x.ev === 'guard') return `${n}は 身を守った`;
@@ -851,7 +852,7 @@ function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, presetFriend, 
         </div>
       );
     };
-    const cutText = e.ev === 'tech' ? e.name : e.ev === 'move' ? (e.why === 'blown' ? '吹き飛ばされた' : e.step > 0 ? 'さがる' : 'つめる') : e.ev === 'blow' ? '吹き飛ばし' : e.ev === 'charge' ? 'ガッツをためる' : e.ev === 'guard' ? 'ガード' : e.ev === 'swap' ? `交代 → ${who(e.side, e.i)}` : e.ev === 'ko' ? `${e.name} たおれた` : '';
+    const cutText = e.ev === 'tech' ? e.name : e.ev === 'move' ? (e.why === 'blown' ? '吹き飛ばされた' : e.why === 'techMove' ? (e.step > 0 ? '相手を飛ばした' : '技の勢いで移る') : e.step > 0 ? 'さがる' : 'つめる') : e.ev === 'blow' ? '吹き飛ばし' : e.ev === 'charge' ? 'ガッツをためる' : e.ev === 'guard' ? 'ガード' : e.ev === 'swap' ? `交代 → ${who(e.side, e.i)}` : e.ev === 'ko' ? `${e.name} たおれた` : '';
     const cutSmall = e.ev === 'tech' ? `${e.kind === 'pow' ? '💪 ちから技' : '🧠 かしこさ技'}${Number.isFinite(e.p) ? `・命中 ${Math.round(e.p)}%` : ''}` : (e.side ? who(e.side, e.ev === 'swap' ? e.from : e.i) : '');
     const kos = log.map((x, k) => (x.ev === 'ko' ? { k, side: x.side } : null)).filter(Boolean);
     const won = battle.r.winner === 'A', draw = battle.r.winner === 'draw';
@@ -1042,8 +1043,8 @@ function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, presetFriend, 
           <>
             <div className="msa-sh" data-ambb-rep-edit onClick={close}><style>{MSA_DC_CSS}</style>
               <div className="msa-sh-in" onClick={(ev) => ev.stopPropagation()}>
-                <div className="msa-sh-top"><b>🃏 技の札を決める</b><button type="button" className="msa-sh-x" onClick={close}>閉じる</button></div>
-                <p className="msa-sh-note">試合で間合いごとに出す技(代表の技)です。札を押して、一覧の「☆ 代表にする」で決めます。決めていない間合いは「命中×威力」がいちばん大きい技になります。</p>
+                <div className="msa-sh-top"><b>🃏 技のカードを決める</b><button type="button" className="msa-sh-x" onClick={close}>閉じる</button></div>
+                <p className="msa-sh-note">試合で間合いごとに出す技(代表の技)です。カードを押して、一覧の「☆ 代表にする」で決めます。決めていない間合いは「命中×威力」がいちばん大きい技になります。</p>
                 <div className="ambb-tabs" style={{ flexWrap: 'wrap', marginTop: 6 }}>{units.map(x => (
                   <button key={ambbRowKey(x.row)} type="button" data-ambb-rep-unit={ambbRowKey(x.row)} className={ambbRowKey(x.row) === k ? 'on' : ''} onClick={() => { setRepEdit(ambbRowKey(x.row)); setRepSheet(null); }}>{chosen.includes(x) ? '⚔ ' : ''}{nm(x)}</button>
                 ))}</div>
