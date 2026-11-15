@@ -106,6 +106,8 @@ const COSTUME_DIR_TUNE = {
   // えるびんの衣装『石油王』(2026-11-05)。通常の絵と同じ 384x512 の胸から上の絵。通常の 0.594 だと頭の布(クーフィーヤ)の上が切れるので、
   //   布のぶんだけ引いた 0.66(顔の大きさは通常の顔とほぼ同じ。0.594・0.66・0.72 を並べて選んだ)
   sekiyuou: { erubin: { headRatio: 0.66, headTopSkip: 0.0 } },
+  // きゅうこの冬服(2026-11-16)。元の絵が全身画(高さ約2900px)なので、顔まわりは全体の 0.22 ほど
+  winter: { kyuko: { headRatio: 0.22, headTopSkip: 0.0, fullQuality: true } },
 };
 const PER_ASSISTANT = costumeArg ? { ...COSTUME_TUNE, ...(COSTUME_DIR_TUNE[path.basename(costumeArg)] || {}) } : PER_ASSISTANT_BASE;
 
@@ -204,13 +206,17 @@ const run = async () => {
     let sx = Math.round(cx - side / 2 + side * headShiftX);
     sx = Math.max(0, Math.min(img.width - side, sx));
     sy = Math.max(0, Math.min(img.height - side, sy));
-    const out = createCanvas(OUT_SIZE, OUT_SIZE);
+    // fullQuality(2026-11-16 社長): 切り出しを元の大きさのまま・減色なしで出す。
+    // ゲーム内に事前ダウンロードの仕組みがあるので容量は気にしなくてよく、
+    // 画質を落とすとアップで表示したときに汚くなるため
+    const outSide = tune.fullQuality ? side : OUT_SIZE;
+    const out = createCanvas(outSide, outSide);
     const octx = out.getContext('2d');
     octx.imageSmoothingEnabled = true;
     octx.imageSmoothingQuality = 'high';
-    octx.drawImage(img, sx, sy, side, side, 0, 0, OUT_SIZE, OUT_SIZE);
+    octx.drawImage(img, sx, sy, side, side, 0, 0, outSide, outSide);
     let buf = out.toBuffer('image/png', { compressionLevel: 9 });
-    if (sharp) {
+    if (sharp && !tune.fullQuality) {
       // 透明のふちを残したまま256色へ落とす(palette:true)。
       // effort を上げるほど小さくなるが時間がかかる。8枚×助手数なので 7 で十分速い
       buf = await sharp(buf).png({ palette: true, colours: 256, effort: 7, compressionLevel: 9 }).toBuffer();

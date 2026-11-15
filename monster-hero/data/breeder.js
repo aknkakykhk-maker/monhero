@@ -1272,6 +1272,17 @@ const sorashidoHoseiCostume = Object.freeze({
 // 助手ごとの「元の服」の呼び名(着替えの窓・プロフィールに出る)。無い助手は「元の服」
 const ASSISTANT_DEFAULT_OUTFIT_NAMES = Object.freeze({ sorashido: '馬骨' });
 const assistantDefaultOutfitName = (assistantId) => ASSISTANT_DEFAULT_OUTFIT_NAMES[assistantId] || '元の服';
+// きゅうこの冬服(2026-11-16 社長「これを実装して販売してほしい」)。売り場はダイヤショップ 100,000(ほかの衣装と同じ)。
+//   絵は images/assistant/winter/(立ち絵は stand-winter、全身画は fullbody/kyuko_winter)。お話「冬支度」でも着る(STORY_OUTFIT_DIRS の winter)
+const KYUKO_WINTER_COSTUME_ART = "images/assistant/winter/face/kyuko_happy.PNG?v=964ea5bd8dad";
+const kyukoWinterCostume = Object.freeze({
+  id: 'kyuko_winter_v1', assistantId: 'kyuko',
+  name: '冬の装い', desc: 'きゅうこの冬服。淡いピンクのケーブル編みカーディガンとおそろいのマフラー、ファー付きの冬ブーツです。',
+  released: true,
+  icon: KYUKO_WINTER_COSTUME_ART,
+  imageDir: 'images/assistant/winter',
+  price: Object.freeze({ diamond: 100000 }),
+});
 const ASSISTANT_COSTUMES = Object.freeze([
   halloweenCostume('mua', 'myua', 'ハロウィンの魔女', 'ハロウィン・ナイトの衣装。大きな魔女帽子とカボチャのステッキのコスプレです。'),
   halloweenCostume('kiki', 'kiki', 'ハロウィンのうさ耳フード', 'ハロウィン・ナイトの衣装。オレンジと黒のうさ耳リボンとパーカーのコスプレです。'),
@@ -1279,6 +1290,7 @@ const ASSISTANT_COSTUMES = Object.freeze([
   muaCardMasterCostume,
   erubinSekiyuouCostume,
   sorashidoHoseiCostume,
+  kyukoWinterCostume,
 ]);
 // ---- 解放が要る服(unlock を持つ服)の覚え方(2026-10-27) ----
 // 新しいキー mh_assistant_costume_unlocked_v1 … 解放された服のidの配列。足すだけで消さない(CLAUDE.md ⑦)。
