@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9ab512b14f705ff0
+// source-sha256: 369bae1423d89ae2
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -135374,14 +135374,14 @@ const ASSISTANT_LIFE_SOLO_GIFT_KEY = 'mh_assistant_life_solo_gift_v1';
 const ASSISTANT_LIFE_GIFT_WRAP = Object.freeze({
   basket: ['おやつ', 'バスケット'],
   misanga: ['おそろいの', 'ミサンガ'],
-  cake: ['はんぶんこ', 'ケーキ'],
+  cake: ['半分こ', 'ケーキ'],
   onigiri: ['ほかほか', 'おにぎり'],
   tea: ['午後の', 'ティーセット'],
-  earphone: ['かたみみ', 'イヤホン'],
-  puzzle: ['ふたりで解く', 'パズル'],
+  earphone: ['片耳', 'イヤホン'],
+  puzzle: ['二人で解く', 'パズル'],
   sleeve: ['おそろい', 'スリーブ'],
   cheki: ['思い出', 'チェキ'],
-  flower: ['ちいさな', '花束'],
+  flower: ['小さな', '花束'],
   letter: ['手書きの', '手紙'],
   candy: ['ひとつぶ', 'キャンディ'],
   omamori: ['小さな', 'おまもり'],
@@ -135389,7 +135389,10 @@ const ASSISTANT_LIFE_GIFT_WRAP = Object.freeze({
 });
 const assistantLifeGiftWrapName = g => {
   const w = g && ASSISTANT_LIFE_GIFT_WRAP[g.key];
-  return w && w.join('') === g.name ? w : [g ? g.name : ''];
+  if (w && w.join('') === g.name) return w;
+  const name = g ? String(g.name || '') : '';
+  const m = name.match(/^(.+?)([ァ-ヴー]{2,})$/u) || name.match(/^(.+?の)(.+)$/u);
+  return m ? [m[1], m[2]] : [name];
 };
 const ASSISTANT_LIFE_GIFT_LABEL = Object.freeze({
   like: '💗 好き',
