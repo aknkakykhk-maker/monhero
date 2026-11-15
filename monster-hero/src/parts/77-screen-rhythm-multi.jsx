@@ -3444,7 +3444,7 @@ function RhythmWatchChat({ member = false, wide = false }) {
         })}
       </ul>
       {stampOpen
-        ? <div data-rhythm-watch-chat-stamps className="max-h-[7.5rem] overflow-y-auto"><MultiStampPalette onSend={(x) => send(x.text, { f: x.f, w: x.w })} cols={wide ? 4 : 6} /></div>
+        ? <div data-rhythm-watch-chat-stamps className="max-h-[7.5rem] overflow-y-auto"><MultiStampPalette onSend={(x) => send(x.text, { f: x.f, w: x.w })} cols={wide ? 4 : 5} /></div>
         : (
           <div data-rhythm-watch-chat-phrases className="grid shrink-0 grid-cols-4 gap-1">
             {rhythmMultiStampsFor('watch').slice(0, 4).map((t) => (

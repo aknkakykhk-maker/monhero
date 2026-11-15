@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 01c77dfb6e3b56cb
+// generated-sha256: 5a691c256a810bb9
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -59143,7 +59143,7 @@ function RhythmWatchChat({ member = false, wide = false }) {
         })}
       </ul>
       {stampOpen
-        ? <div data-rhythm-watch-chat-stamps className="max-h-[7.5rem] overflow-y-auto"><MultiStampPalette onSend={(x) => send(x.text, { f: x.f, w: x.w })} cols={wide ? 4 : 6} /></div>
+        ? <div data-rhythm-watch-chat-stamps className="max-h-[7.5rem] overflow-y-auto"><MultiStampPalette onSend={(x) => send(x.text, { f: x.f, w: x.w })} cols={wide ? 4 : 5} /></div>
         : (
           <div data-rhythm-watch-chat-phrases className="grid shrink-0 grid-cols-4 gap-1">
             {rhythmMultiStampsFor('watch').slice(0, 4).map((t) => (
