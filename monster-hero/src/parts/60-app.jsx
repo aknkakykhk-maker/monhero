@@ -5567,7 +5567,7 @@ function MonsterHeroGame() {
   // 「鍵の向こう側へ」のイベントidと、終章(閉幕のお話)のid
   const PANDORA_WINGS_EVENT_ID = 'pandora_wings_2026_11_02';
   const PANDORA_WINGS_THANKS_STORY_ID = 'pandora_wings_2026_ep8';
-  const RHYTHM_EVENT_STORY_IDS = [...HALLOWEEN_NIGHT_STORY_IDS, ...RAID_JACK_STORY_IDS, ...PANDORA_WINGS_STORY_IDS, PANDORA_WINGS_THANKS_STORY_ID, MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, RAID_JACK_RHYTHM_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RAID_JACK_HOWTO_STORY_ID, ATSU_JOIN_STORY_ID, KYUKO_JOIN_STORY_ID, SORASHIDO_JOIN_STORY_ID, ERUBIN_JOIN_STORY_ID, CARD_CUP_STORY_ID, RHYTHM_GRAND_OPEN_TEASER_STORY_ID, RHYTHM_GRAND_OPEN_STORY_ID, MONSUC_BETA_EP1_STORY_ID, MONSUC_BETA_EP2_STORY_ID, SPARKLING_PINK_STORY_ID];
+  const RHYTHM_EVENT_STORY_IDS = [...HALLOWEEN_NIGHT_STORY_IDS, ...RAID_JACK_STORY_IDS, ...PANDORA_WINGS_STORY_IDS, PANDORA_WINGS_THANKS_STORY_ID, MONBEAT_CUP_STORY_ID, MONBEAT_CUP_THANKS_STORY_ID, SYMPHONY_STORY_ID, SYMPHONY_THANKS_STORY_ID, RAID_JACK_RHYTHM_STORY_ID, RHYTHM_MASU_CALL_STORY_ID, BEAT_POINT_ALWAYS_STORY_ID, RHYTHM_SIX_LANE_STORY_ID, BEAT_POINT_UP_STORY_ID, RHYTHM_MULTI_FRIENDS_STORY_ID, RAID_JACK_HOWTO_STORY_ID, ATSU_JOIN_STORY_ID, KYUKO_JOIN_STORY_ID, SORASHIDO_JOIN_STORY_ID, ERUBIN_JOIN_STORY_ID, CARD_CUP_STORY_ID, RHYTHM_GRAND_OPEN_TEASER_STORY_ID, RHYTHM_GRAND_OPEN_STORY_ID, MONSUC_BETA_EP1_STORY_ID, MONSUC_BETA_EP2_STORY_ID, SPARKLING_PINK_STORY_ID, KYUKO_WINTER_STORY_ID];
   // ★イベントid → そのイベントの会話id。**イベントを足したらここへ1行足す。**
   //   以前はここが第1回のidの直書きで、第2回が始まっても第1回の会話が流れる形になっていた
   //   (2026-09-17に第2回を足したときに直した)。書かなかったイベントでは会話は流れない。
@@ -6042,6 +6042,15 @@ function MonsterHeroGame() {
     if (!(bootPhase === 'GAME' && gameState === 'HOME') || eventReplay || rhythmEventStoryPending || rhythmHellGuide) return;
     if (rhythmEventStoryStartedRef.current.includes(SPARKLING_PINK_STORY_ID)) return;
     setRhythmEventStoryPending(prev => prev || SPARKLING_PINK_STORY_ID);
+  }, [rhythmEventStorySeen, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
+  // きゅうこの冬服のお話(2026-11-16 社長)。衣装『冬の装い』と一緒に出る。
+  //   ほかのお話・告知と同じ入口: 更新のあとに初めてゲームを開いて HOME に着いたとき、だれにでも1回だけ流す
+  //   (ほかのお話が先に流れようとしていたら待つ)。見たかは mh_rhythm_event_story_v1 の id(新しいキーは作らない)
+  useEffect(() => {
+    if (!Array.isArray(rhythmEventStorySeen) || rhythmEventStorySeen.includes(KYUKO_WINTER_STORY_ID)) return;
+    if (!(bootPhase === 'GAME' && gameState === 'HOME') || eventReplay || rhythmEventStoryPending || rhythmHellGuide) return;
+    if (rhythmEventStoryStartedRef.current.includes(KYUKO_WINTER_STORY_ID)) return;
+    setRhythmEventStoryPending(prev => prev || KYUKO_WINTER_STORY_ID);
   }, [rhythmEventStorySeen, bootPhase, gameState, eventReplay, rhythmEventStoryPending, rhythmHellGuide]);
   // ソラシドの加入のお話を見たら、マーケットにカード「ソラシド」が並ぶ(data/breeder.js の sorashidoCardOnSale。公開の印 assistantSorashido も要る)。
   // お話を流すのは上の加入のお話の所
@@ -9276,6 +9285,7 @@ function MonsterHeroGame() {
     monsucBetaEp1Seen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(MONSUC_BETA_EP1_STORY_ID),
     monsucBetaEp2Seen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(MONSUC_BETA_EP2_STORY_ID),
     sparklingPinkStorySeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SPARKLING_PINK_STORY_ID),
+    kyukoWinterStorySeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(KYUKO_WINTER_STORY_ID),
     symphonyEventSeen: Array.isArray(rhythmEventStorySeen) && rhythmEventStorySeen.includes(SYMPHONY_STORY_ID) };
   // alwaysUnlocked のイベントは、本編でまだ見ていなくても回想から見られる
   const isEventReplayUnlocked = (event) => !!(event && event.alwaysUnlocked) || !!EVENT_REPLAY_UNLOCK_FLAGS[event && event.unlockedKey];

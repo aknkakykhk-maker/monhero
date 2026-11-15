@@ -910,6 +910,7 @@ const ASSISTANT_LIFE_STAND_FACE_OUTFIT = Object.freeze({
   'stand-hosei': { sorashido: { top: 0.0562, eye: 0.2921, chin: 0.4307, m: 1.031 } },
   'stand-halloween': { mua: { top: 0.1502, eye: 0.3379, chin: 0.4334, m: 0.711, above: 0.85 }, momosuke: { top: 0.0614, eye: 0.3116, chin: 0.4296, m: 0.878, above: 0.95 }, kiki: { top: 0.1499, eye: 0.3353, chin: 0.4304, m: 0.708, above: 0.95 } },
   'stand-card-master': { mua: { top: 0.1166, eye: 0.2283, chin: 0.2953, m: 0.499, above: 0.75 } },
+  'stand-winter': { kyuko: { top: 0.0137, eye: 0.3311, chin: 0.43, m: 0.736 } },
 });
 // 絵の置き場所から、着替えの名前を引く(ふだんの服は null)
 const assistantLifeStandOutfitOf = (src) => { const m = /\/assistant\/([a-z0-9-]+)\/[a-z]+_[a-z]+\.png/i.exec(String(src || '')); return m && m[1] !== 'face' && m[1] !== 'temp' ? m[1] : null; };
