@@ -12,7 +12,9 @@ const fs = require('fs');
 const path = require('path');
 const root = path.resolve(__dirname, '..', '..');
 const SKIP_FILES = new Set(['changelog.js', 'assistant-chat-digest.json']);
-const PENDING = new Set(['help.js', '82-card-tactics-core.jsx', '94-card-spectate.jsx', 'assistants.js']);
+const PENDING = new Set([]);
+// 保存値・内部キーとして残っている言葉(作戦の保存を読み込めるよう変えない。画面には「重いカード」などと別の文字で出す。2026-11-15 社長OK)
+const SAVED_VALUES = /重い札|使えない札|付ける札をただにする/g;
 const COMPOUND = /(手|山|捨て|切り?|名|改|荷|表|千|入|礼|値)札/g;
 
 const files = [];
@@ -29,7 +31,7 @@ for (const rel of files) {
   if (!t.includes('札')) continue;
   t = t.replace(/\/\*[\s\S]*?\*\//g, m => m.replace(/[^\n]/g, ' '));
   t.split('\n').forEach((ln, i) => {
-    const s = ln.replace(/(^|[^:'"`\\])\/\/.*$/, '$1').replace(COMPOUND, '');
+    const s = ln.replace(/(^|[^:'"`\\])\/\/.*$/, '$1').replace(COMPOUND, '').replace(SAVED_VALUES, '');
     if (s.includes('札')) hits.push({ rel, name, line: i + 1, text: ln.trim() });
   });
 }

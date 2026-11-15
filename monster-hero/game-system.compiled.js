@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5e723881bca1b0fb
+// source-sha256: e9bdc975c4612b59
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -61172,7 +61172,7 @@ const MULTI_STAMP_SLOT_BASE = 8;
 const MULTI_STAMP_SLOT_STEP = 4;
 const MULTI_STAMP_SLOT_BUY_MAX = 2;
 const MULTI_STAMP_CUSTOM_ID = 'x';
-const MULTI_STAMP_CUSTOM_MAX = 8;
+const MULTI_STAMP_CUSTOM_MAX = 10;
 const MULTI_STAMP_WORD_CLAMP = Object.freeze({
   display: '-webkit-box',
   WebkitBoxOrient: 'vertical',
@@ -108848,6 +108848,16 @@ const assistantPeerMarkShown = (talk, {
     try {
       storeSet(ASSISTANT_PEER_QUARREL_KEY, quarrel, false);
     } catch {}
+    if (typeof assistantLifeDiaryAdd === 'function') {
+      try {
+        const cause = typeof assistantLifeRelCauseOf === 'function' ? assistantLifeRelCauseOf(talk.id) : null;
+        void assistantLifeDiaryAdd(`💢 ${talk.pair.map(assistantLifeName).join('・')}がけんか${cause ? `(${cause})` : ''}`, [...talk.pair], {
+          kind: 'quarrel',
+          now,
+          tid: talk.id
+        });
+      } catch {}
+    }
   }
   ASSISTANT_PEER_STORE.set(patch);
   if (typeof assistantLifeAddPlay === 'function') void assistantLifeAddPlay('peer', now);
@@ -114505,7 +114515,13 @@ const normalizeAssistantLifeDiary = v => {
     t: typeof x.t === 'string' ? x.t : '',
     text: x.text.slice(0, 80),
     ids: Array.isArray(x.ids) ? x.ids.filter(i => typeof i === 'string') : [],
-    kind: typeof x.kind === 'string' ? x.kind : 'note'
+    kind: typeof x.kind === 'string' ? x.kind : 'note',
+    ...(typeof x.tid === 'string' && x.tid ? {
+      tid: x.tid.slice(0, 80)
+    } : {}),
+    ...(typeof x.how === 'string' && x.how ? {
+      how: x.how.slice(0, 20)
+    } : {})
   })) : [];
   return {
     day: typeof raw.day === 'string' ? raw.day : null,
@@ -114545,7 +114561,9 @@ const assistantLifeClock = (now = Date.now()) => {
 const assistantLifeDiaryAdd = async (text, ids = [], {
   kind = 'note',
   now = Date.now(),
-  slotAbs = null
+  slotAbs = null,
+  tid = null,
+  how = null
 } = {}) => {
   if (!assistantLifeEnabled() || !text) return;
   await ASSISTANT_LIFE_DIARY.load();
@@ -114560,7 +114578,13 @@ const assistantLifeDiaryAdd = async (text, ids = [], {
     t: assistantLifeClock(now),
     text: String(text).slice(0, 80),
     ids,
-    kind
+    kind,
+    ...(typeof tid === 'string' && tid ? {
+      tid
+    } : {}),
+    ...(typeof how === 'string' && how ? {
+      how
+    } : {})
   }].slice(-ASSISTANT_LIFE_DIARY_MAX);
   ASSISTANT_LIFE_DIARY.state = {
     day,
@@ -115454,6 +115478,7 @@ function AssistantLifeRoomSheet({
   slot,
   land = false,
   onMediate = null,
+  onRelView = null,
   roomState = null,
   furnItems = null,
   onGiveFurn = null,
@@ -115894,7 +115919,8 @@ function AssistantLifeRoomSheet({
     id: id,
     state: roomState,
     peerSt: peerSt,
-    onMediate: onMediate
+    onMediate: onMediate,
+    onView: onRelView
   }), doList, React.createElement("div", {
     className: uiV2 ? 'mt-1' : land ? 'mt-2' : 'mt-8'
   }, lv != null && !uiV2 && React.createElement("div", {
@@ -116675,7 +116701,10 @@ function AssistantLifeScene({
     style: {
       fontSize: 19
     }
-  }, placeName)))), ids.length >= 3 && React.createElement("p", {
+  }, placeName)))), scene.title && React.createElement("p", {
+    "data-assistant-life-scene-rel-title": true,
+    className: "mt-1 w-fit rounded-full bg-slate-900/85 px-2.5 py-0.5 text-[12px] font-black text-white"
+  }, scene.title), ids.length >= 3 && React.createElement("p", {
     "data-assistant-life-scene-group": true,
     className: "mt-1 w-fit rounded-full px-2 py-0.5 text-[10px] font-black",
     style: {
@@ -117104,6 +117133,25 @@ function AssistantLifeHouse({
       });
     } else if (followAfterRef.current) showFollow();
     setNote(sleeping ? `${nameOf(id)}は寝ています。次の時間に、起きてだれかのところへ行きます` : `${nameOf(id)}に声をかけました。次の時間に、だれかのところへ行きます`);
+  };
+  const relView = (tid, how = null) => {
+    const v = typeof assistantLifeRelViewOf === 'function' ? assistantLifeRelViewOf(tid, how) : null;
+    if (!v || !onReplay) {
+      setNote('この場面は、いまは見られません');
+      return;
+    }
+    const speakers = [...new Set((v.talk.lines || []).map(l => l && l.who).filter(Boolean))];
+    setRoomId(null);
+    setBoardOpen(false);
+    setNote('');
+    setScene({
+      ids: [...new Set([...v.ids, ...speakers])],
+      place: 'home',
+      key: `rel-${tid}-${Date.now()}`,
+      sleep: [],
+      title: v.title
+    });
+    onReplay(v.talk);
   };
   const mediate = async id => {
     const talk = typeof assistantLifeRelMediate === 'function' ? await assistantLifeRelMediate(id) : null;
@@ -117945,6 +117993,7 @@ function AssistantLifeHouse({
     onBeat: beat,
     onCard: card,
     onMediate: mediate,
+    onRelView: relView,
     roomState: rooms[roomId],
     onMasmon: setMasmonId,
     onChat: chatOn ? chat : null,
@@ -117987,7 +118036,21 @@ function AssistantLifeHouse({
   }, "📌 今日あったこと"), React.createElement("p", {
     className: "text-[10.5px] font-bold text-slate-400",
     "data-assistant-life-diary-count": true
-  }, "全部で", (diary.items || []).length, "件・新しい順"), (diary.items || []).length ? [...diary.items].reverse().map((x, i) => React.createElement("p", {
+  }, "全部で", (diary.items || []).length, "件・新しい順"), (diary.items || []).length ? [...diary.items].reverse().map((x, i) => x.tid && typeof assistantLifeRelViewOf === 'function' && assistantLifeRelViewOf(x.tid, x.how) ? React.createElement("button", {
+    key: i,
+    type: "button",
+    "data-assistant-life-diary-scene": x.tid,
+    onClick: () => relView(x.tid, x.how),
+    className: "mt-1.5 flex min-h-[44px] w-full items-center gap-2 rounded-xl border border-sky-300/40 bg-sky-500/10 px-2 py-1 text-left text-[12px] font-bold leading-snug text-slate-100 active:scale-[.98]"
+  }, React.createElement("span", {
+    className: "min-w-0 flex-1"
+  }, React.createElement("b", {
+    className: "mr-1.5 text-amber-200"
+  }, x.t), React.createElement(AssistantLifeChunks, {
+    text: x.text
+  })), React.createElement("span", {
+    className: "shrink-0 rounded-full bg-sky-400 px-2 py-0.5 text-[11px] font-black text-slate-950"
+  }, "▶ 見る")) : React.createElement("p", {
     key: i,
     className: "mt-1.5 text-[12px] font-bold leading-snug text-slate-100"
   }, React.createElement("b", {
@@ -135610,6 +135673,55 @@ const assistantLifeRelCauseOf = quarrelId => {
   const t = assistantLifeRelSet().byId[quarrelId];
   return t && t.cause ? ASSISTANT_LIFE_REL_CAUSES[t.cause] || null : null;
 };
+const ASSISTANT_LIFE_REL_FIGHT_TITLES = Object.freeze({
+  snack: '💢 おやつのことで言い合い',
+  tidy: '💢 片づけのことで言い合い',
+  song: '💢 曲の好みで言い合い',
+  win: '💢 勝ち負けで言い合い',
+  late: '💢 寝坊・遅刻で言い合い',
+  promise: '💢 約束のことで言い合い'
+});
+const ASSISTANT_LIFE_REL_FIGHT_TITLE_ANY = '💢 ちょっとした言い合い';
+const assistantLifeRelMendTitle = how => {
+  const m = String(how || '').match(/^mediator:([a-z]+)$/);
+  if (m) return `🤝 ${assistantLifeName(m[1])}が間に入って仲直り`;
+  return how === 'gift' ? `🤝 ${assistantLifeRelGiftName()}で仲直り` : how === 'apology' ? '🤝 ごめんねで仲直り' : how === 'player' ? '🤝 あなたが取り持って仲直り' : '🤝 自分たちで仲直り';
+};
+const assistantLifeRelViewOf = (tid, how = null) => {
+  if (typeof tid !== 'string' || !tid) return null;
+  const X = assistantLifeRelSet();
+  let t = X.byId[tid] || null;
+  if (!t && typeof assistantPeerExtraTalks === 'function') {
+    try {
+      t = (assistantPeerExtraTalks().quarrels || []).find(x => x.id === tid) || null;
+    } catch {
+      t = null;
+    }
+  }
+  if (!t || !Array.isArray(t.lines) || !t.lines.length) return null;
+  const ids = Array.isArray(t.pair) ? [...t.pair] : [];
+  if (t.kind === 'quarrel') {
+    const lines = [...t.lines, ...(Array.isArray(t.distance) ? t.distance : [])];
+    const title = t.cause && ASSISTANT_LIFE_REL_FIGHT_TITLES[t.cause] || ASSISTANT_LIFE_REL_FIGHT_TITLE_ANY;
+    return {
+      talk: {
+        ...t,
+        lines
+      },
+      title,
+      ids
+    };
+  }
+  const h = how || (t.mediator ? `mediator:${t.mediator}` : t.how) || 'self';
+  return {
+    talk: {
+      ...t,
+      kind: 'makeup'
+    },
+    title: assistantLifeRelMendTitle(h),
+    ids: t.mediator ? [t.mediator, ...ids] : ids
+  };
+};
 const assistantLifeRelGiftName = () => {
   try {
     const x = typeof assistantLifeItemInfo === 'function' ? assistantLifeItemInfo('gift') : null;
@@ -135689,7 +135801,9 @@ const assistantLifeRelOnMakeup = (talk, {
     const by = talk.mediator ? `(${assistantLifeName(talk.mediator)}が間に)` : how === 'gift' ? `(${assistantLifeRelGiftName()}で)` : '';
     if (typeof assistantLifeDiaryAdd === 'function') void assistantLifeDiaryAdd(`🤝 ${a}・${b}が仲直り${by}`, [...talk.pair, ...(talk.mediator ? [talk.mediator] : [])], {
       kind: 'makeup',
-      now
+      now,
+      tid: talk.id,
+      how: talk.mediator ? `mediator:${talk.mediator}` : how || 'self'
     });
     if (talk.mediator && typeof assistantPeerGain === 'function') for (const id of talk.pair) await assistantPeerGain(talk.mediator, id, 'mediate');
   })();
@@ -135986,7 +136100,8 @@ function AssistantLifeRelSheetRow({
   id,
   state,
   peerSt,
-  onMediate
+  onMediate,
+  onView = null
 }) {
   const pending = assistantLifeRelPending(peerSt);
   const nm = assistantLifeName;
@@ -136006,7 +136121,12 @@ function AssistantLifeRelSheetRow({
       key: i
     }, i ? React.createElement("wbr", null) : null, React.createElement("span", {
       className: "whitespace-nowrap"
-    }, x)))), onMediate && React.createElement("button", {
+    }, x)))), onView && assistantLifeRelViewOf(pending.id) && React.createElement("button", {
+      type: "button",
+      className: "mt-1.5 min-h-[44px] w-full rounded-xl border border-sky-300/60 bg-sky-500/20 text-[13px] font-black text-sky-50 active:scale-[.98]",
+      "data-assistant-life-rel-view": pending.id,
+      onClick: () => onView(pending.id)
+    }, "💢 けんかの様子を見る"), onMediate && React.createElement("button", {
       type: "button",
       className: "mhl-btn mt-1.5 w-full",
       "data-assistant-life-room-act": "mediate",
@@ -149930,6 +150050,7 @@ function AssistantMasmonBattleWatch({
       if (x.ev === 'tech') return x.hit ? `${n}の ${x.name}${x.crit ? ' 会心!' : ''} → ${x.dmg}${x.guarded ? '(ガード)' : ''}` : `${n}の ${x.name} … はずれ`;
       if (x.ev === 'move' && x.why === 'blown') return `${n}は 吹き飛ばされて 遠距離へ`;
       if (x.ev === 'blow') return `${n}の 吹き飛ばし(相手の次の手のあと 遠へ)`;
+      if (x.ev === 'move' && x.why === 'techMove' && typeof msaTechMoveSay === 'function') return msaTechMoveSay(x, n, msaTechMoveName(log, x), `${AMBW_DIST[x.to]}距離`);
       if (x.ev === 'move') return `${n}が ${AMBW_DIST[x.to]}距離へ ${x.step > 0 ? 'さがる' : 'つめる'}`;
       if (x.ev === 'charge') return x.why === 'sulk' ? `${n}は 意味不明な行動をした…(ガッツだけたまった)` : `${n}は ガッツをためた`;
       if (x.ev === 'guard') return `${n}は 身を守った`;
@@ -149970,7 +150091,7 @@ function AssistantMasmonBattleWatch({
         className: "ambw-dmg miss"
       }, "はずれ")));
     };
-    const cutText = e.ev === 'tech' ? e.name : e.ev === 'move' ? e.why === 'blown' ? '吹き飛ばされた' : e.step > 0 ? 'さがる' : 'つめる' : e.ev === 'blow' ? '吹き飛ばし' : e.ev === 'charge' ? 'ガッツをためる' : e.ev === 'guard' ? 'ガード' : e.ev === 'swap' ? `交代 → ${who(e.side, e.i)}` : e.ev === 'ko' ? `${e.name} たおれた` : '';
+    const cutText = e.ev === 'tech' ? e.name : e.ev === 'move' ? e.why === 'blown' ? '吹き飛ばされた' : e.why === 'techMove' ? e.step > 0 ? '相手を飛ばした' : '技の勢いで移る' : e.step > 0 ? 'さがる' : 'つめる' : e.ev === 'blow' ? '吹き飛ばし' : e.ev === 'charge' ? 'ガッツをためる' : e.ev === 'guard' ? 'ガード' : e.ev === 'swap' ? `交代 → ${who(e.side, e.i)}` : e.ev === 'ko' ? `${e.name} たおれた` : '';
     const cutSmall = e.ev === 'tech' ? `${e.kind === 'pow' ? '💪 ちから技' : '🧠 かしこさ技'}${Number.isFinite(e.p) ? `・命中 ${Math.round(e.p)}%` : ''}` : e.side ? who(e.side, e.ev === 'swap' ? e.from : e.i) : '';
     const kos = log.map((x, k) => x.ev === 'ko' ? {
       k,
@@ -151822,6 +151943,7 @@ function AssistantMasmonBattleBeta({
       if (x.ev === 'tech') return x.hit ? `${n}の ${x.name}${x.crit ? ' 会心!' : ''} → ${x.dmg}${x.guarded ? '(ガード)' : ''}` : `${n}の ${x.name} … はずれ`;
       if (x.ev === 'move' && x.why === 'blown') return `${n}は 吹き飛ばされて 遠距離へ`;
       if (x.ev === 'blow') return `${n}の 吹き飛ばし(相手の次の手のあと 遠へ)`;
+      if (x.ev === 'move' && x.why === 'techMove' && typeof msaTechMoveSay === 'function') return msaTechMoveSay(x, n, msaTechMoveName(log, x), `${AMBW_DIST[x.to]}距離`);
       if (x.ev === 'move') return `${n}が ${AMBW_DIST[x.to]}距離へ ${x.step > 0 ? 'さがる' : 'つめる'}`;
       if (x.ev === 'charge') return `${n}は ガッツをためた`;
       if (x.ev === 'guard') return `${n}は 身を守った`;
@@ -151862,7 +151984,7 @@ function AssistantMasmonBattleBeta({
         className: "ambw-dmg miss"
       }, "はずれ")));
     };
-    const cutText = e.ev === 'tech' ? e.name : e.ev === 'move' ? e.why === 'blown' ? '吹き飛ばされた' : e.step > 0 ? 'さがる' : 'つめる' : e.ev === 'blow' ? '吹き飛ばし' : e.ev === 'charge' ? 'ガッツをためる' : e.ev === 'guard' ? 'ガード' : e.ev === 'swap' ? `交代 → ${who(e.side, e.i)}` : e.ev === 'ko' ? `${e.name} たおれた` : '';
+    const cutText = e.ev === 'tech' ? e.name : e.ev === 'move' ? e.why === 'blown' ? '吹き飛ばされた' : e.why === 'techMove' ? e.step > 0 ? '相手を飛ばした' : '技の勢いで移る' : e.step > 0 ? 'さがる' : 'つめる' : e.ev === 'blow' ? '吹き飛ばし' : e.ev === 'charge' ? 'ガッツをためる' : e.ev === 'guard' ? 'ガード' : e.ev === 'swap' ? `交代 → ${who(e.side, e.i)}` : e.ev === 'ko' ? `${e.name} たおれた` : '';
     const cutSmall = e.ev === 'tech' ? `${e.kind === 'pow' ? '💪 ちから技' : '🧠 かしこさ技'}${Number.isFinite(e.p) ? `・命中 ${Math.round(e.p)}%` : ''}` : e.side ? who(e.side, e.ev === 'swap' ? e.from : e.i) : '';
     const kos = log.map((x, k) => x.ev === 'ko' ? {
       k,
@@ -175940,18 +176062,18 @@ function MsxPlay({
       }
     }, hpLost), " 下がった")) : null) : o.kind === 'rest' || o.kind === 'play' ? React.createElement(React.Fragment, null, React.createElement("span", {
       className: "hd2"
-    }, o.kind === 'rest' ? '🛌 休む' : '🎈 遊ぶ'), React.createElement("br", null), hpUp > 0 ? React.createElement(React.Fragment, null, "体力 ", React.createElement("b", {
+    }, o.kind === 'rest' ? '🛌 休む' : '🎈 遊ぶ'), React.createElement("br", null), typeof MsxGaugeFx === 'function' ? hpUp > 0 || stDown > 0 ? '体力とストレスが動いた' : '体力が回復した' : React.createElement(React.Fragment, null, hpUp > 0 ? React.createElement(React.Fragment, null, "体力 ", React.createElement("b", {
       className: "gu",
       "data-msx-rest-hp": true
     }, "+", hpUp)) : '体力が回復した', stDown > 0 ? React.createElement(React.Fragment, null, "・ストレス ", React.createElement("b", {
       className: "gu"
-    }, "−", stDown)) : null, (o.cured || []).includes('utsu') ? '。「うつ病」が治った' : '') : o.kind === 'clinic' ? React.createElement(React.Fragment, null, React.createElement("span", {
+    }, "−", stDown)) : null), (o.cured || []).includes('utsu') ? '。「うつ病」が治った' : '') : o.kind === 'clinic' ? React.createElement(React.Fragment, null, React.createElement("span", {
       className: "hd2"
-    }, "🏥 通院"), React.createElement("br", null), msxClinicText(o.cured, s.yosu), React.createElement("br", null), hpUp > 0 ? React.createElement(React.Fragment, null, "体力 ", React.createElement("b", {
+    }, "🏥 通院"), React.createElement("br", null), msxClinicText(o.cured, s.yosu), typeof MsxGaugeFx === 'function' ? null : React.createElement(React.Fragment, null, React.createElement("br", null), hpUp > 0 ? React.createElement(React.Fragment, null, "体力 ", React.createElement("b", {
       className: "gu"
     }, "+", hpUp)) : '体力も少し回復した', stDown > 0 ? React.createElement(React.Fragment, null, "・ストレス ", React.createElement("b", {
       className: "gu"
-    }, "−", stDown)) : null) : React.createElement(React.Fragment, null, React.createElement("span", {
+    }, "−", stDown)) : null)) : React.createElement(React.Fragment, null, React.createElement("span", {
       className: "hd2"
     }, "🛌 休み"), React.createElement("br", null), MSX_COND[o.cond] || '体調', "のため、このターンは休んだ"), o.event && typeof MsxTrainEvent !== 'function' ? React.createElement(React.Fragment, null, React.createElement("br", null), React.createElement("b", {
       className: "ga"
@@ -175959,7 +176081,13 @@ function MsxPlay({
       style: {
         color: '#fca5a5'
       }
-    }, MSX_COND[o.cond]), "をしてしまった…しばらく休み") : null), !acting && say && say.t ? React.createElement(MsxSay, {
+    }, MSX_COND[o.cond]), "をしてしまった…しばらく休み") : null), !acting && !isTrain && (o.kind === 'rest' || o.kind === 'play' || o.kind === 'clinic') && typeof MsxGaugeFx === 'function' && (hpUp > 0 || stDown > 0) ? React.createElement(MsxGaugeFx, {
+      key: `gfx-act-${s.turn}-${o.kind}`,
+      items: msxGfxItemsOf({
+        hp0: s.hp - hpUp,
+        st0: s.stress + stDown
+      }, s)
+    }) : null, !acting && say && say.t ? React.createElement(MsxSay, {
       aid: s.aid,
       ex: say.e || 'normal',
       text: say.t
@@ -184679,6 +184807,7 @@ const MSA_DC_CSS = `
 .msa-dc-c .msa-dc-h i{font-style:normal;margin-left:auto;font-size:9px;color:#94a3b8}
 .msa-dc-c small{display:block;font-size:9.5px;color:#cbd5e1;white-space:nowrap;overflow:hidden}
 .msa-dc-c small.p{color:#fde68a;font-weight:900}
+.msa-dc-c small.mv{color:#7dd3fc;font-size:9px;letter-spacing:-.02em}
 /* 技の札の技名は、一番長い言葉(--tnw 字ぶん)が札の幅に入る大きさまで CSS で縮める(2026-11-15 r1115-049 iPhone で「デュアルスラッ」と切れた。JS の縮め直しより先に効く) */
 @supports (width:1cqw){.msa-dc-c .msa-tn{font-size:max(7px,min(10.5px,calc(100cqw / var(--tnw,1))))}}
 .msa-dc-c.now{border-color:#fde047;box-shadow:0 0 0 1px #fde04788 inset;background:#2d2650;color:#fff}
@@ -184800,7 +184929,11 @@ function MsaDistCards({
       }, "ダメージ", React.createElement("b", {
         className: `g${g}`
       }, g));
-    })() : null);
+    })() : null, t && typeof msxTechMoveTxt === 'function' && msxTechMoveTxt(t) ? React.createElement("small", {
+      className: "mv",
+      "data-msa-dc-move": t.moveTo,
+      title: `使ったあと ${msxTechMoveTxt(t).replace(/\u200b/g, '')}`
+    }, "↪ ", msxTechMoveTxt(t).replace(/\u200b/g, '')) : null);
   }));
 }
 function MsaTechSheet({
@@ -184865,7 +184998,7 @@ function MsaTechSheet({
       base: t.base
     }), React.createElement("small", {
       className: "p"
-    }, Number.isFinite(hp) ? `命中 ${Math.round(hp)}%` : '命中 —', "・ガッツ ", t.guts, !t.base && Number.isFinite(t.power) ? `・威力 ${Math.round(t.power)}` : '', onUse && useNote && !can ? useNote(t) : ''), React.createElement("small", null, "届く ", distOf(t))), onRep && d != null ? isRep ? React.createElement("span", {
+    }, Number.isFinite(hp) ? `命中 ${Math.round(hp)}%` : '命中 —', "・ガッツ ", t.guts, !t.base && Number.isFinite(t.power) ? `・威力 ${Math.round(t.power)}` : '', onUse && useNote && !can ? useNote(t) : ''), React.createElement("small", null, "届く ", distOf(t), typeof msxTechMoveTxt === 'function' && msxTechMoveTxt(t) ? `・使ったあと ${msxTechMoveTxt(t)}` : '')), onRep && d != null ? isRep ? React.createElement("span", {
       className: "msa-sh-rep on",
       "data-msa-rep-on": t.id
     }, "★ 代表") : React.createElement("button", {
@@ -186000,10 +186133,20 @@ function MsaDmgLayer({
     }
   }, React.createElement("b", null, "MISS"), "よけた!"));
 }
-const msaSay = (e, nm) => {
+const msaTechMoveName = (log, e) => {
+  if (!Array.isArray(log) || !e || !e.byTech) return '';
+  for (let i = log.indexOf(e) - 1; i >= 0 && i >= log.indexOf(e) - 3; i--) {
+    const r = log[i];
+    if (r && r.ev === 'tech' && r.side === e.side && r.move === e.byTech) return r.name || '';
+  }
+  return '';
+};
+const msaTechMoveSay = (e, n, tech, distName) => e.step > 0 ? `${n}の ${tech || '技'}で 相手は ${distName}へ飛ばされた` : `${n}は ${tech || '技'}の勢いで ${distName}へ移った`;
+const msaSay = (e, nm, log = null) => {
   if (!e) return '';
   if (e.ev === 'tech') return e.hit ? `${nm(e.side, e.i)}の ${e.name}!${e.crit ? ' 会心の一撃!' : e.guarded ? ' …ガードされた' : ''}` : `${nm(e.side, e.i)}の ${e.name} … よけられた`;
   if (e.ev === 'move' && e.why === 'blown') return `${nm(e.side, e.i)}は 吹き飛ばされて 遠の間合いへ!`;
+  if (e.ev === 'move' && e.why === 'techMove') return msaTechMoveSay(e, nm(e.side, e.i), msaTechMoveName(log, e), `${AMBW_DIST[e.to] || ''}の間合い`);
   if (e.ev === 'move') return `${nm(e.side, e.i)}が ${AMBW_DIST[e.to] || ''}の間合いへ`;
   if (e.ev === 'blow') return `${nm(e.side, e.i)}の 吹き飛ばし! 相手の次の手のあと 遠へ飛ばす`;
   if (e.ev === 'charge') return e.why === 'sulk' ? `${nm(e.side, e.i)}は 意味不明な行動をした…` : `${nm(e.side, e.i)}は ガッツをためた`;
@@ -186415,7 +186558,13 @@ const msaBandsOf = (log, frames, k) => {
   });else if (r.ev === 'move' && r.why === 'blown') out.push({
     side: r.side,
     t: '💨 遠へ飛ばされた'
-  });else if (r.ev === 'move') out.push({
+  });else if (r.ev === 'move' && r.why === 'techMove') {
+    const tn = msaTechMoveName(log, r);
+    out.push({
+      side: r.side,
+      t: `⚡ ${tn ? `${tn}で ` : ''}${r.step > 0 ? '相手を' : ''}${AMBW_DIST[f.d] || ''}へ`
+    });
+  } else if (r.ev === 'move') out.push({
     side: r.side,
     t: `👣 間合い ${AMBW_DIST[pf.d] || ''}→${AMBW_DIST[f.d] || ''}`
   });else if (r.ev === 'blow') out.push({
@@ -187172,7 +187321,7 @@ function MonsucArena({
     key: `call-${call.at}`,
     className: `msa-call ${call.k}`,
     "data-msa-call": call.k
-  }, "🎙 ", call.t) : msaSay(e, nm)), cardsOn ? React.createElement("div", {
+  }, "🎙 ", call.t) : msaSay(e, nm, log)), cardsOn ? React.createElement("div", {
     className: "msa-cardsrow",
     "data-msa-cards": true
   }, React.createElement(MsaDistCards, {
@@ -193323,23 +193472,23 @@ const CARD_TACTIC_GROUPS = Object.freeze([{
   id: 'guardN',
   cat: 'cond',
   sec: '手札の中身',
-  name: '手札に守り札◯枚以上',
+  name: '手札に守りカード◯枚以上',
   tiers: [1, 2, 3].map(v => [v, cardTacticFine([3])(v)]),
-  desc: '回避・防御の札がその数以上'
+  desc: '回避・防御のカードがその数以上'
 }, {
   id: 'guardKind',
   cat: 'cond',
   sec: '手札の中身',
   name: '手札に◯がある',
   tiers: [['回避', 'N'], ['防御', 'N']],
-  desc: 'その種類の守り札がある'
+  desc: 'その種類の守りカードがある'
 }, {
   id: 'bigInHand',
   cat: 'cond',
   sec: '手札の中身',
   name: '手札に大技がある',
   tiers: [['', 'N']],
-  desc: 'ガッツ4以上の攻撃の札がある'
+  desc: 'ガッツ4以上の攻撃のカードがある'
 }, {
   id: 'areaInHand',
   cat: 'cond',
@@ -193566,7 +193715,7 @@ const CARD_TACTIC_GROUPS = Object.freeze([{
   knob: {
     guardAll: true
   },
-  desc: '守り札を残して堅く守る(ドラの型)'
+  desc: '守りカードを残して堅く守る(ドラの型)'
 }, {
   id: 'tSave',
   cat: 'base',
@@ -193713,7 +193862,7 @@ const CARD_TACTIC_GROUPS = Object.freeze([{
   knob: {
     noDraw: true
   },
-  desc: '引く札・山札を減らす札を控え、山札を切らさない'
+  desc: '引くカード・山札を減らすカードを控え、山札を切らさない'
 }, {
   id: 'tFocus',
   cat: 'base',
@@ -193794,17 +193943,17 @@ const CARD_TACTIC_GROUPS = Object.freeze([{
   cat: 'monster',
   sec: '攻撃',
   phase: 'attack',
-  name: '付ける札を使う',
+  name: '付けるカードを使う',
   tiers: [['', 'R']],
-  desc: '技に付ける札をいっしょに出す'
+  desc: '技に付けるカードをいっしょに出す'
 }, {
   id: 'attachKind',
   cat: 'monster',
   sec: '攻撃',
   phase: 'attack',
-  name: '付ける札: ◯',
+  name: '付けるカード: ◯',
   tiers: [['ダメージを上げる', 'N'], ['回避させない', 'R'], ['ガッツを軽くする', 'N']],
-  desc: 'その効き目の付ける札を、技にいっしょに出す'
+  desc: 'その効き目の付けるカードを、技にいっしょに出す'
 }, {
   id: 'spe',
   cat: 'monster',
@@ -193852,7 +194001,7 @@ const CARD_TACTIC_GROUPS = Object.freeze([{
   phase: 'attack',
   name: '崩し: ◯',
   tiers: [['手札を捨てさせる', 'R'], ['山札を削る', 'R'], ['ガッツを減らす', 'R'], ['番を飛ばす', 'SR']],
-  desc: '相手の手を崩す札を出す'
+  desc: '相手の手を崩すカードを出す'
 }, {
   id: 'guard',
   cat: 'monster',
@@ -193861,7 +194010,7 @@ const CARD_TACTIC_GROUPS = Object.freeze([{
   name: '守る',
   tiers: [['', 'N']],
   start: [''],
-  desc: '攻撃を受けたら守り札で守る'
+  desc: '攻撃を受けたら守りカードで守る'
 }, {
   id: 'guardFirst',
   cat: 'monster',
@@ -193869,7 +194018,7 @@ const CARD_TACTIC_GROUPS = Object.freeze([{
   phase: 'guard',
   name: '◯を先に使う',
   tiers: [['回避', 'N'], ['防御', 'N'], ['はね返す守り', 'R'], ['半分にする守り', 'R']],
-  desc: '守るとき、その種類の札で守る'
+  desc: '守るとき、その種類のカードで守る'
 }, {
   id: 'guardOver',
   cat: 'monster',
@@ -193893,7 +194042,7 @@ const CARD_TACTIC_GROUPS = Object.freeze([{
   phase: 'guard',
   name: '味方をかばう',
   tiers: [['', 'R']],
-  desc: 'かばう札で、味方への攻撃を受ける'
+  desc: 'かばうカードで、味方への攻撃を受ける'
 }, {
   id: 'noGuard',
   cat: 'monster',
@@ -193901,7 +194050,7 @@ const CARD_TACTIC_GROUPS = Object.freeze([{
   phase: 'guard',
   name: '守らない',
   tiers: [['', 'R']],
-  desc: '守り札を使わず受ける(札を残す)'
+  desc: '守りカードを使わず受ける(カードを残す)'
 }, {
   id: 'save',
   cat: 'breeder',
@@ -193924,7 +194073,7 @@ const CARD_TACTIC_GROUPS = Object.freeze([{
   cat: 'breeder',
   sec: 'ガッツ',
   phase: 'guts',
-  name: '守り札を3枚まで残す',
+  name: '守りカードを3枚まで残す',
   tiers: [['', 'R']],
   desc: '回避・防御は3枚までガッツにしない'
 }, {
@@ -193934,7 +194083,7 @@ const CARD_TACTIC_GROUPS = Object.freeze([{
   phase: 'guts',
   name: '◯から置く',
   tiers: [['重い札', 'N'], ['使えない札', 'N']],
-  desc: 'ガッツにする札の順を決める'
+  desc: 'ガッツにするカードの順を決める'
 }, {
   id: 'stop',
   cat: 'breeder',
@@ -193951,7 +194100,7 @@ const CARD_TACTIC_GROUPS = Object.freeze([{
   phase: 'attack',
   name: '溜め技を使う',
   tiers: [['', 'R']],
-  desc: '次の技を何倍にする札を先に使う'
+  desc: '次の技を何倍にするカードを先に使う'
 }, {
   id: 'chargeKind',
   cat: 'monster',
@@ -193959,7 +194108,7 @@ const CARD_TACTIC_GROUPS = Object.freeze([{
   phase: 'attack',
   name: '溜め: ◯',
   tiers: [['怒り', 'R'], ['次の番の技を倍', 'R']],
-  desc: 'その溜めの札を先に使う'
+  desc: 'その溜めのカードを先に使う'
 }, {
   id: 'ace',
   cat: 'breeder',
@@ -219529,7 +219678,7 @@ const CardPvpWatchScreen = ({
     className: "min-w-0 flex-1 space-y-0.5"
   }, w.last && React.createElement("div", {
     className: "text-[11px] font-black text-violet-200"
-  }, nameOf(w.last.p), "が使った札"), st.pending && React.createElement(CardGuardPreview, {
+  }, nameOf(w.last.p), "が使ったカード"), st.pending && React.createElement(CardGuardPreview, {
     db: db,
     pv: cardGuardPreview(db, st),
     compact: true

@@ -545,7 +545,7 @@ const CardPvpWatchScreen = ({ onBack }) => {
               </div>
               : <div className={`${low ? 'h-[50px] w-[36px]' : 'h-[88px] w-[63px]'} shrink-0 rounded-md border border-dashed border-white/15`}/>}
             <div className="min-w-0 flex-1 space-y-0.5">
-              {w.last && <div className="text-[11px] font-black text-violet-200">{nameOf(w.last.p)}が使った札</div>}
+              {w.last && <div className="text-[11px] font-black text-violet-200">{nameOf(w.last.p)}が使ったカード</div>}
               {st.pending && <CardGuardPreview db={db} pv={cardGuardPreview(db, st)} compact/>}
               {lines.map((t, i) => <div key={i} className="text-[12px] font-bold leading-snug text-white" style={JA_WRAP_STYLE}>{jaWrap(t)}</div>)}
             </div>

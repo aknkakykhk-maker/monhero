@@ -984,7 +984,8 @@ const __mod = { exports: {} };
         const p = buffedHit(hitChance(u, f, mv, undefined, d), flow.buffs[side], flow.buffs[foeOf(side)], first);
         // base … 技表の元の数(威力・命中の補正・ガッツダウン・クリティカル。技の性能の段に使う)/power … 見せる威力(技表の値)/pd … 間合いごとの撃つ前の命中%(届かない間合いは null)。画面の「技の札」用で、記録・指紋には入らない
         const pd = [0, 1, 2, 3].map(dd => (inRange(mv, dd) ? Math.round(buffedHit(hitChance(u, f, mv, undefined, dd), flow.buffs[side], flow.buffs[foeOf(side)], first) * 1000) / 10 : null));
-        return { type: 'tech', key: mv.key, name: mv.name, kind: mv.kind, guts: mv.guts, dist: mv.dist.slice(), reach,
+        // moveTo … 使ったあとに移る間合い(画面の札の「使ったあと 零へ移る」用。r1115-156②)。記録・指紋には入らない
+        return { type: 'tech', key: mv.key, name: mv.name, kind: mv.kind, guts: mv.guts, dist: mv.dist.slice(), reach, ...(mv.moveTo != null ? { moveTo: mv.moveTo } : {}),
           ok: reach && u.guts >= mv.guts, need: Math.max(0, mv.guts - u.guts), p: Math.round(p * 1000) / 10, gd: mv.gd, crit: mv.crit,
           power: Math.round(mv.power * 20 * 10) / 10, pd, base: mv.base };
       });

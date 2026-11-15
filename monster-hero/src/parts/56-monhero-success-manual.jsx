@@ -105,6 +105,7 @@ const MSA_DC_CSS = `
 .msa-dc-c .msa-dc-h i{font-style:normal;margin-left:auto;font-size:9px;color:#94a3b8}
 .msa-dc-c small{display:block;font-size:9.5px;color:#cbd5e1;white-space:nowrap;overflow:hidden}
 .msa-dc-c small.p{color:#fde68a;font-weight:900}
+.msa-dc-c small.mv{color:#7dd3fc;font-size:9px;letter-spacing:-.02em}
 /* 技の札の技名は、一番長い言葉(--tnw 字ぶん)が札の幅に入る大きさまで CSS で縮める(2026-11-15 r1115-049 iPhone で「デュアルスラッ」と切れた。JS の縮め直しより先に効く) */
 @supports (width:1cqw){.msa-dc-c .msa-tn{font-size:max(7px,min(10.5px,calc(100cqw / var(--tnw,1))))}}
 .msa-dc-c.now{border-color:#fde047;box-shadow:0 0 0 1px #fde04788 inset;background:#2d2650;color:#fff}
@@ -187,6 +188,7 @@ function MsaDistCards({ list, rep, dist = null, guts = null, hitAt = null, lastM
             {t ? <small className="p">{Number.isFinite(hp) ? `命中 ${Math.round(hp)}%` : '命中 —'}</small> : null}
             {t ? <small>ガッツ {t.guts}</small> : null}
             {t && t.base ? (() => { const g = msaTechGrade('power', t.base.power); return <small className="dmg">ダメージ<b className={`g${g}`}>{g}</b></small>; })() : null}
+            {t && typeof msxTechMoveTxt === 'function' && msxTechMoveTxt(t) ? <small className="mv" data-msa-dc-move={t.moveTo} title={`使ったあと ${msxTechMoveTxt(t).replace(/\u200b/g, '')}`}>↪ {msxTechMoveTxt(t).replace(/\u200b/g, '')}</small> : null}
           </button>
         );
       })}
@@ -221,7 +223,7 @@ function MsaTechSheet({ title, list, d = null, dist = null, rep = null, hitAt = 
                 <MsaTechName name={t.name} icon={`${isRep ? '★ ' : ''}${msaKindIcon(t)}`}/>
                 <MsaTechGrades base={t.base}/>
                 <small className="p">{Number.isFinite(hp) ? `命中 ${Math.round(hp)}%` : '命中 —'}・ガッツ {t.guts}{!t.base && Number.isFinite(t.power) ? `・威力 ${Math.round(t.power)}` : ''}{onUse && useNote && !can ? useNote(t) : ''}</small>
-                <small>届く {distOf(t)}</small>
+                <small>届く {distOf(t)}{typeof msxTechMoveTxt === 'function' && msxTechMoveTxt(t) ? `・使ったあと ${msxTechMoveTxt(t)}` : ''}</small>
               </button>
               {onRep && d != null ? (isRep ? <span className="msa-sh-rep on" data-msa-rep-on={t.id}>★ 代表</span>
                 : <button type="button" className="msa-sh-rep" data-msa-rep={t.id} onClick={() => onRep(d, t.id)}>☆ 代表にする</button>) : null}

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: fc5d125995ab5c9d
+// generated-sha256: bf823ad80cfcf7ba
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -37723,10 +37723,10 @@ const MULTI_STAMP_RECV_GAP_MS = 2000;
 const MULTI_STAMP_SLOT_BASE = 8;
 const MULTI_STAMP_SLOT_STEP = 4;
 const MULTI_STAMP_SLOT_BUY_MAX = 2; // 8 → 12 → 16
-// 自由入力の文字(2026-11-15 r1115-026・社長「A 無料」)。言葉の番号は 'x'(買い物の言葉ではない)。全角8文字・1行・制御文字なし(ひとことと同じ見張り)
+// 自由入力の文字(2026-11-15 r1115-026・社長「A 無料」)。言葉の番号は 'x'(買い物の言葉ではない)。全角10文字・札は2行まで・制御文字なし(r1115-183で8→10)(ひとことと同じ見張り)
 const MULTI_STAMP_CUSTOM_ID = 'x';
-const MULTI_STAMP_CUSTOM_MAX = 8;
-// スタンプの言葉は、設定できる最大(全角8文字)まで切れずに見える。1行に入らなければ2行にする(r1115-116。「…」で切らない)
+const MULTI_STAMP_CUSTOM_MAX = 10; // 2026-11-15 r1115-183: 8→10(札は2行まで。前の短い言葉はそのまま読める)
+// スタンプの言葉は、設定できる最大(全角10文字)まで切れずに見える。1行に入らなければ2行にする(r1115-116。「…」で切らない)
 const MULTI_STAMP_WORD_CLAMP = Object.freeze({ display: '-webkit-box', WebkitBoxOrient: 'vertical', WebkitLineClamp: 2, overflow: 'hidden', overflowWrap: 'anywhere', wordBreak: 'break-all', lineHeight: 1.15 });
 const multiStampCleanText = (v) => String(v == null ? '' : v).replace(/[\u0000-\u001f\u007f-\u009f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, MULTI_STAMP_CUSTOM_MAX);
 // 助手(この並び)と表情。はじめに使えるのは各助手の happy
@@ -55984,7 +55984,7 @@ const rhythmMultiCleanMessage = (raw) => {
     const sf = typeof multiStampCleanFace === 'function' ? multiStampCleanFace(raw.sf) : null;
     const sw = typeof multiStampCleanWord === 'function' ? multiStampCleanWord(raw.sw) : null;
     if (sf && sw) { out.sf = sf; out.sw = sw; }
-    // 自由入力のスタンプ(sw が 'x')の文字は、受け取る側でも全角8文字・1行へそろえる(2026-11-15 r1115-026。改造した相手が長い文字を送っても札に出さない)
+    // 自由入力のスタンプ(sw が 'x')の文字は、受け取る側でも全角10文字へそろえる(2026-11-15 r1115-026。改造した相手が長い文字を送っても札に出さない)
     if (out.sw === 'x' && typeof multiStampCleanText === 'function') out.text = multiStampCleanText(out.text);
     return out.text && out.cid ? out : null;
   }
@@ -57113,7 +57113,7 @@ const RHYTHM_MULTI = (() => {
       if (!clean || !me || Date.now() - s.lastChatAt < RHYTHM_MULTI_CHAT_INTERVAL_MS) return false;
       s.lastChatAt = Date.now();
       const st = stamp && multiStampCleanFace(stamp.f) && multiStampCleanWord(stamp.w) ? { sf: stamp.f, sw: stamp.w } : {};
-      // 自由入力のスタンプ(sw が 'x')は、文字を全角8文字・1行へそろえる(2026-11-15 r1115-026)
+      // 自由入力のスタンプ(sw が 'x')は、文字を全角10文字へそろえる(2026-11-15 r1115-026)
       const sendText = st.sw === 'x' ? multiStampCleanText(clean) : clean;
       if (!sendText) return false;
       return socket.send({ t: 'chat', id: s.selfId, name: me.name, text: sendText, cid: `c${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`, ...st });
@@ -64910,6 +64910,8 @@ const assistantPeerMarkShown = (talk, { scene, special, now = Date.now() }) => {
     const quarrel = { pending: { id: talk.id, pair: assistantPeerPairKey(talk.pair[0], talk.pair[1]), at: now }, done: [...new Set([...q.done, talk.id])] };
     patch.quarrel = quarrel;
     try { storeSet(ASSISTANT_PEER_QUARREL_KEY, quarrel, false); } catch {}
+    // 今日あったことに「💢 ◯◯・◯◯がけんか(原因)」。押すとけんかの場面(2026-11-15 r1115-137)
+    if (typeof assistantLifeDiaryAdd === 'function') { try { const cause = typeof assistantLifeRelCauseOf === 'function' ? assistantLifeRelCauseOf(talk.id) : null; void assistantLifeDiaryAdd(`💢 ${talk.pair.map(assistantLifeName).join('・')}がけんか${cause ? `(${cause})` : ''}`, [...talk.pair], { kind: 'quarrel', now, tid: talk.id }); } catch {} }
   }
   ASSISTANT_PEER_STORE.set(patch);
   // 助手たちの今: 見守った分のにぎわい・言い合いのあとは2人が距離をおく・見た台本は14日出さない(公開の印 assistantLife の後ろ)
@@ -67551,6 +67553,8 @@ const normalizeAssistantLifeDiary = (v) => {
   const raw = v && typeof v === 'object' ? v : {};
   const items = Array.isArray(raw.items) ? raw.items.filter(x => x && typeof x.text === 'string').map(x => ({
     t: typeof x.t === 'string' ? x.t : '', text: x.text.slice(0, 80), ids: Array.isArray(x.ids) ? x.ids.filter(i => typeof i === 'string') : [], kind: typeof x.kind === 'string' ? x.kind : 'note',
+    // けんか・仲直りの場面を開く台本の id(2026-11-15 r1115-137。足すだけ・無い古い行は押せない札のまま)
+    ...(typeof x.tid === 'string' && x.tid ? { tid: x.tid.slice(0, 80) } : {}), ...(typeof x.how === 'string' && x.how ? { how: x.how.slice(0, 20) } : {}),
   })) : [];
   return { day: typeof raw.day === 'string' ? raw.day : null, items: items.slice(-ASSISTANT_LIFE_DIARY_MAX), slots: Array.isArray(raw.slots) ? raw.slots.filter(Number.isFinite).slice(-6) : [] };
 };
@@ -67564,13 +67568,13 @@ const ASSISTANT_LIFE_DIARY = {
   },
 };
 const assistantLifeClock = (now = Date.now()) => { const d = new Date(Number(now) + 9 * 3600000); return `${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`; };
-const assistantLifeDiaryAdd = async (text, ids = [], { kind = 'note', now = Date.now(), slotAbs = null } = {}) => {
+const assistantLifeDiaryAdd = async (text, ids = [], { kind = 'note', now = Date.now(), slotAbs = null, tid = null, how = null } = {}) => {
   if (!assistantLifeEnabled() || !text) return;
   await ASSISTANT_LIFE_DIARY.load();
   const day = assistantLifeDayKey(now);
   const cur = ASSISTANT_LIFE_DIARY.state.day === day ? ASSISTANT_LIFE_DIARY.state : { day, items: [], slots: [] };
   if (slotAbs != null && cur.slots.includes(slotAbs)) return;
-  const items = [...cur.items, { t: assistantLifeClock(now), text: String(text).slice(0, 80), ids, kind }].slice(-ASSISTANT_LIFE_DIARY_MAX);
+  const items = [...cur.items, { t: assistantLifeClock(now), text: String(text).slice(0, 80), ids, kind, ...(typeof tid === 'string' && tid ? { tid } : {}), ...(typeof how === 'string' && how ? { how } : {}) }].slice(-ASSISTANT_LIFE_DIARY_MAX);
   ASSISTANT_LIFE_DIARY.state = { day, items, slots: slotAbs != null ? [...cur.slots, slotAbs].slice(-6) : cur.slots };
   ASSISTANT_LIFE_DIARY.emit();
   try { storeSet(ASSISTANT_LIFE_DIARY_KEY, ASSISTANT_LIFE_DIARY.state, false); } catch {}
@@ -68005,7 +68009,7 @@ const assistantLifeRoomsOf = (life, metIds) => {
 };
 
 // 部屋を押したとき(その助手のこと・その場でできること)
-function AssistantLifeRoomSheet({ id, life, peerSt, bondLevelOf, diary, onClose, onPeek, onInvite, onWatch, onGive, onBeat, onCard, canGive, slot, land = false, onMediate = null, roomState = null, furnItems = null, onGiveFurn = null, openFurn = false, onFurnTalk = null, onMasmon = null, onChat = null, follow = null, onFollowDone = null, onGiveSolo = null, canGiveSolo = false, returnToMap = false, uiV2 = false, onGoPlace = null }) {
+function AssistantLifeRoomSheet({ id, life, peerSt, bondLevelOf, diary, onClose, onPeek, onInvite, onWatch, onGive, onBeat, onCard, canGive, slot, land = false, onMediate = null, onRelView = null, roomState = null, furnItems = null, onGiveFurn = null, openFurn = false, onFurnTalk = null, onMasmon = null, onChat = null, follow = null, onFollowDone = null, onGiveSolo = null, canGiveSolo = false, returnToMap = false, uiV2 = false, onGoPlace = null }) {
   const [furnOpen, setFurnOpen] = React.useState(!!openFurn);
   const [layoutOpen, setLayoutOpen] = React.useState(false); // 模様替え(56-assistant-life-roomedit.jsx・公開の印 assistantLifeRoomEdit)
   const layoutOn = typeof assistantLifeRoomEditEnabled === 'function' && assistantLifeRoomEditEnabled();
@@ -68144,7 +68148,7 @@ function AssistantLifeRoomSheet({ id, life, peerSt, bondLevelOf, diary, onClose,
         {(() => { const sh = assistantLifeRhythmShiftOn(((ASSISTANT_LIFE_STORE.state.rhythm || {})[id]), assistantLifeDayKey()); const rh = ASSISTANT_LIFE_RHYTHM[id]; return <p className="text-[10.5px] font-bold text-sky-200" data-assistant-life-room-rhythm={assistantLifeRhythmLabel(sh)}>🕰 生活のリズム: {rh ? rh.label : ''}{Math.abs(sh) >= 0.3 ? `(いまは ${assistantLifeRhythmLabel(sh)})` : ''}</p>; })()}
         {typeof assistantLifeBodyCondShort === 'function' && assistantLifeBodyCondShort(id) && <p className="text-[11px] font-bold text-rose-200" data-assistant-life-room-cond={id}>{assistantLifeBodyCondShort(id)}</p>}
         {asleep ? <p className="text-[11px] font-bold text-indigo-200" data-assistant-life-room-asleep>💤 ぐっすり寝ている</p> : (w && w.reason === 'lonely') ? <p className="text-[11px] font-bold text-amber-200">💭 さみしそう(だれか来てほしい)</p> : mood ? <p className="text-[11px] font-bold text-pink-200">気分: {mood}</p> : null}
-        {typeof AssistantLifeRelSheetRow === 'function' && <AssistantLifeRelSheetRow id={id} state={roomState} peerSt={peerSt} onMediate={onMediate}/>}
+        {typeof AssistantLifeRelSheetRow === 'function' && <AssistantLifeRelSheetRow id={id} state={roomState} peerSt={peerSt} onMediate={onMediate} onView={onRelView}/>}
         {doList}
         <div className={uiV2 ? 'mt-1' : land ? 'mt-2' : 'mt-8'}>
           {lv != null && !uiV2 && <div className="mhl-row"><span className="k">💗 仲良し度</span><b>Lv{lv}</b></div>}
@@ -68416,6 +68420,7 @@ function AssistantLifeScene({ scene, look, onClose, onGive, canGive }) {
           <button type="button" data-assistant-life-scene-back onClick={() => { if (peer && peer.talking && typeof ASSISTANT_PEER_STORE !== 'undefined') ASSISTANT_PEER_STORE.set({ stopTalkAt: Date.now() }); onClose(); }} aria-label="家へ戻る" className="h-9 w-9 text-[18px] text-slate-100">←</button>
           <div className="min-w-0 flex-1"><p className="mhl-en">{scene.place && scene.place !== 'home' ? String(scene.place).toUpperCase() : 'ROOM'}</p>{/* アイコンは字の塗り(背景を字の形で切り抜く)の外に置く。中に入れると絵文字まで切り抜かれ、iPhone で白い四角になった(2026-11-08 社長) */}<p className="flex items-center gap-1.5" data-assistant-life-scene-title><span aria-hidden="true" data-assistant-life-scene-icon className="text-[19px] leading-none">{ASSISTANT_LIFE_PLACE_ICON[scene.place] || '🏡'}</span><span className="mhl-ti" style={{ fontSize: 19 }}>{placeName}</span></p></div>
         </div>
+        {scene.title && <p data-assistant-life-scene-rel-title className="mt-1 w-fit rounded-full bg-slate-900/85 px-2.5 py-0.5 text-[12px] font-black text-white">{scene.title}</p>}
         {ids.length >= 3 && <p data-assistant-life-scene-group className="mt-1 w-fit rounded-full px-2 py-0.5 text-[10px] font-black" style={{ background: 'linear-gradient(90deg,#0ea5e9,#a855f7)' }}>👥 {ids.length}人で ・ <AssistantLifeNames text={assistantLifeGroupNames(ids, 8)}/></p>}
         {hint && ids.length === 2 && <p className="mt-1 w-fit rounded-full px-2 py-0.5 text-[10px] font-black" style={{ background: 'linear-gradient(90deg,#db2777,#a855f7)' }}>🤝 {ids.slice(0, 2).map(assistantLifeName).join('・')} 友情Lv{hint.lv}{stage ? ` ${assistantPeerStageName(stage)}` : ''}</p>}
       </div>
@@ -68626,6 +68631,15 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
     setNote(sleeping ? `${nameOf(id)}は寝ています。次の時間に、起きてだれかのところへ行きます` : `${nameOf(id)}に声をかけました。次の時間に、だれかのところへ行きます`);
   };
   // {name}が取り持つ(けんか中の2人を、その場で仲直りさせる。56-assistant-life-rel.jsx)
+  // けんか・仲直りの場面を見返す(r1115-137)。今日あったこと・けんか中の部屋のシートから。何も増やさない(見守ったとも書かない)
+  const relView = (tid, how = null) => {
+    const v = typeof assistantLifeRelViewOf === 'function' ? assistantLifeRelViewOf(tid, how) : null;
+    if (!v || !onReplay) { setNote('この場面は、いまは見られません'); return; }
+    const speakers = [...new Set((v.talk.lines || []).map(l => l && l.who).filter(Boolean))];
+    setRoomId(null); setBoardOpen(false); setNote('');
+    setScene({ ids: [...new Set([...v.ids, ...speakers])], place: 'home', key: `rel-${tid}-${Date.now()}`, sleep: [], title: v.title });
+    onReplay(v.talk);
+  };
   const mediate = async (id) => {
     const talk = typeof assistantLifeRelMediate === 'function' ? await assistantLifeRelMediate(id) : null;
     if (!talk) { setNote('いまは取り持てません'); return; }
@@ -68890,7 +68904,7 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
         {/* 👀 修行を見るの入れ物。地図が出ているときは地図の中のものを使う(2つ重ねない) */}
         {roomId && tab !== 'where' && typeof AssistantMasmonTrainWatchHost === 'function' && <AssistantMasmonTrainWatchHost/>}
         {roomId && partnerOk(roomId) && <AssistantLifeRoomSheet key={roomId} onGoPlace={(fn) => { try { close(); fn(); } catch {} }} id={roomId} uiV2={uiV2} returnToMap={uiV2 && tab === 'where'} openFurn={furnBack === roomId} onGiveSolo={soloOn ? openGiveSolo : null} canGiveSolo={soloOn && soloLeft > 0} life={life} peerSt={peerSt} bondLevelOf={bondLevelOf} diary={diary} slot={slot} furnItems={furnItems} onGiveFurn={onGiveFurn} onFurnTalk={(talk, text) => { playTalk(talk, { ids: [talk.pair[0]], place: 'home', gift: true }); setNote(text); }} canGive={canGive && itemsLeft > 0}
-          land={land} onClose={() => { setRoomId(null); setFollow(null); setFurnBack(null); }} onPeek={peek} onInvite={invite} onWatch={watch} onGive={(g) => openGive(g.ids)} onBeat={beat} onCard={card} onMediate={mediate} roomState={rooms[roomId]} onMasmon={setMasmonId}
+          land={land} onClose={() => { setRoomId(null); setFollow(null); setFurnBack(null); }} onPeek={peek} onInvite={invite} onWatch={watch} onGive={(g) => openGive(g.ids)} onBeat={beat} onCard={card} onMediate={mediate} onRelView={relView} roomState={rooms[roomId]} onMasmon={setMasmonId}
           onChat={chatOn ? chat : null} follow={follow && follow.id === roomId ? follow : null} onFollowDone={() => setFollow(null)}/>}
         {typeof AssistantMasmonNoteHost === 'function' && <AssistantMasmonNoteHost land={land}/>}
         {masmonId && typeof AssistantMasmonSheet === 'function' && <AssistantMasmonSheet id={masmonId} land={land} bondLv={typeof bondLevelOf === 'function' ? bondLevelOf(masmonId) : null} onClose={() => setMasmonId(null)}/>}
@@ -68900,7 +68914,9 @@ function AssistantLifeHouse({ metIds, onReplay, peerItems = null, onUseItem = nu
             <button type="button" aria-label="閉じる" className="absolute inset-0 bg-black/60" onClick={() => setBoardOpen(false)}/>
             <div className="mhl-sheet" style={land ? { left: 'auto', width: '42%', top: 0, maxHeight: '100%', borderRadius: '22px 0 0 22px' } : undefined}>
               <p className="mhl-en">TODAY</p><p className="text-[18px] font-black">📌 今日あったこと</p><p className="text-[10.5px] font-bold text-slate-400" data-assistant-life-diary-count>全部で{(diary.items || []).length}件・新しい順</p>
-              {(diary.items || []).length ? [...diary.items].reverse().map((x, i) => <p key={i} className="mt-1.5 text-[12px] font-bold leading-snug text-slate-100"><b className="mr-1.5 text-amber-200">{x.t}</b><AssistantLifeChunks text={x.text}/></p>) : <div className="mt-2" data-assistant-life-diary-empty><p className="text-[12px] font-bold leading-snug text-slate-300">まだ何もありません。👀 見守る・💬 声をかける・🎁 贈る をすると、その日のできごとがここに残ります(朝4時に新しい1日)</p>{uiV2 && unwatched[0] && <button type="button" data-assistant-life-diary-watch onClick={() => { setBoardOpen(false); watch(unwatched[0]); }} className="mt-2 min-h-[44px] w-full rounded-xl border border-orange-300/60 bg-orange-500/20 text-[13px] font-black text-orange-100 active:scale-[.98]">👀 いまいる組を見守る(🤝💗 アップ)</button>}</div>}
+              {(diary.items || []).length ? [...diary.items].reverse().map((x, i) => x.tid && typeof assistantLifeRelViewOf === 'function' && assistantLifeRelViewOf(x.tid, x.how)
+                ? <button key={i} type="button" data-assistant-life-diary-scene={x.tid} onClick={() => relView(x.tid, x.how)} className="mt-1.5 flex min-h-[44px] w-full items-center gap-2 rounded-xl border border-sky-300/40 bg-sky-500/10 px-2 py-1 text-left text-[12px] font-bold leading-snug text-slate-100 active:scale-[.98]"><span className="min-w-0 flex-1"><b className="mr-1.5 text-amber-200">{x.t}</b><AssistantLifeChunks text={x.text}/></span><span className="shrink-0 rounded-full bg-sky-400 px-2 py-0.5 text-[11px] font-black text-slate-950">▶ 見る</span></button>
+                : <p key={i} className="mt-1.5 text-[12px] font-bold leading-snug text-slate-100"><b className="mr-1.5 text-amber-200">{x.t}</b><AssistantLifeChunks text={x.text}/></p>) : <div className="mt-2" data-assistant-life-diary-empty><p className="text-[12px] font-bold leading-snug text-slate-300">まだ何もありません。👀 見守る・💬 声をかける・🎁 贈る をすると、その日のできごとがここに残ります(朝4時に新しい1日)</p>{uiV2 && unwatched[0] && <button type="button" data-assistant-life-diary-watch onClick={() => { setBoardOpen(false); watch(unwatched[0]); }} className="mt-2 min-h-[44px] w-full rounded-xl border border-orange-300/60 bg-orange-500/20 text-[13px] font-black text-orange-100 active:scale-[.98]">👀 いまいる組を見守る(🤝💗 アップ)</button>}</div>}
               <button type="button" data-assistant-life-diary-close data-mhl-sheet-close onClick={() => setBoardOpen(false)} className="mt-3 min-h-[44px] w-full rounded-xl border border-slate-600 text-[12px] font-black text-slate-300 active:scale-[.98]">閉じる</button>
             </div>
           </div>)}
@@ -71976,6 +71992,30 @@ const assistantLifeRelCauseOf = (quarrelId) => {
   const t = assistantLifeRelSet().byId[quarrelId];
   return t && t.cause ? ASSISTANT_LIFE_REL_CAUSES[t.cause] || null : null;
 };
+// けんか・仲直りの場面を見返す(2026-11-15 社長 r1115-137「この案で作る」)。掛け合いは今の台本のまま、題だけ足す。見返しは何も増やさない(onReplay)
+const ASSISTANT_LIFE_REL_FIGHT_TITLES = Object.freeze({ snack: '💢 おやつのことで言い合い', tidy: '💢 片づけのことで言い合い', song: '💢 曲の好みで言い合い', win: '💢 勝ち負けで言い合い', late: '💢 寝坊・遅刻で言い合い', promise: '💢 約束のことで言い合い' });
+const ASSISTANT_LIFE_REL_FIGHT_TITLE_ANY = '💢 ちょっとした言い合い';
+const assistantLifeRelMendTitle = (how) => {
+  const m = String(how || '').match(/^mediator:([a-z]+)$/);
+  if (m) return `🤝 ${assistantLifeName(m[1])}が間に入って仲直り`;
+  return how === 'gift' ? `🤝 ${assistantLifeRelGiftName()}で仲直り` : how === 'apology' ? '🤝 ごめんねで仲直り' : how === 'player' ? '🤝 あなたが取り持って仲直り' : '🤝 自分たちで仲直り';
+};
+// tid … けんか(quarrel)か仲直り(makeup)の台本の id。{ talk, title, ids } か null(台本が無い・行が無いときは開かない)
+const assistantLifeRelViewOf = (tid, how = null) => {
+  if (typeof tid !== 'string' || !tid) return null;
+  const X = assistantLifeRelSet();
+  let t = X.byId[tid] || null;
+  if (!t && typeof assistantPeerExtraTalks === 'function') { try { t = (assistantPeerExtraTalks().quarrels || []).find(x => x.id === tid) || null; } catch { t = null; } }
+  if (!t || !Array.isArray(t.lines) || !t.lines.length) return null;
+  const ids = Array.isArray(t.pair) ? [...t.pair] : [];
+  if (t.kind === 'quarrel') {
+    const lines = [...t.lines, ...(Array.isArray(t.distance) ? t.distance : [])];
+    const title = (t.cause && ASSISTANT_LIFE_REL_FIGHT_TITLES[t.cause]) || ASSISTANT_LIFE_REL_FIGHT_TITLE_ANY;
+    return { talk: { ...t, lines }, title, ids };
+  }
+  const h = how || (t.mediator ? `mediator:${t.mediator}` : t.how) || 'self';
+  return { talk: { ...t, kind: 'makeup' }, title: assistantLifeRelMendTitle(h), ids: t.mediator ? [t.mediator, ...ids] : ids };
+};
 // 仲直りに使える道具の名前(道具の表から読む。改名「🧺おやつバスケット」が入れば自動でそろう・2026-11-08 社長)
 const assistantLifeRelGiftName = () => { try { const x = typeof assistantLifeItemInfo === 'function' ? assistantLifeItemInfo('gift') : null; return (x && x.name) || '差し入れ'; } catch (_) { return '差し入れ'; } };
 const assistantLifeRelPending = (peerSt = (typeof ASSISTANT_PEER_STORE !== 'undefined' ? ASSISTANT_PEER_STORE.state : null)) => {
@@ -72029,7 +72069,7 @@ const assistantLifeRelOnMakeup = (talk, { now = Date.now() } = {}) => {
     const [a, b] = talk.pair.map(assistantLifeName);
     // 掲示板は短く(狭い横の掲示板でも切れない)。間に入った助手だけ名前を足す
     const by = talk.mediator ? `(${assistantLifeName(talk.mediator)}が間に)` : how === 'gift' ? `(${assistantLifeRelGiftName()}で)` : '';
-    if (typeof assistantLifeDiaryAdd === 'function') void assistantLifeDiaryAdd(`🤝 ${a}・${b}が仲直り${by}`, [...talk.pair, ...(talk.mediator ? [talk.mediator] : [])], { kind: 'makeup', now });
+    if (typeof assistantLifeDiaryAdd === 'function') void assistantLifeDiaryAdd(`🤝 ${a}・${b}が仲直り${by}`, [...talk.pair, ...(talk.mediator ? [talk.mediator] : [])], { kind: 'makeup', now, tid: talk.id, how: talk.mediator ? `mediator:${talk.mediator}` : (how || 'self') });
     if (talk.mediator && typeof assistantPeerGain === 'function') for (const id of talk.pair) await assistantPeerGain(talk.mediator, id, 'mediate');
   })();
 };
@@ -72225,7 +72265,7 @@ const ASSISTANT_LIFE_REL_CSS = `
 `;
 function AssistantLifeRelStyle() { return <style>{ASSISTANT_LIFE_REL_CSS}</style>; }
 // 部屋のシートの1行(けんか中・仲直りしたて・やきもち)と「🤝 取り持つ」
-function AssistantLifeRelSheetRow({ id, state, peerSt, onMediate }) {
+function AssistantLifeRelSheetRow({ id, state, peerSt, onMediate, onView = null }) {
   const pending = assistantLifeRelPending(peerSt);
   const nm = assistantLifeName;
   if (pending && pending.ids.includes(id)) {
@@ -72235,6 +72275,7 @@ function AssistantLifeRelSheetRow({ id, state, peerSt, onMediate }) {
       <div className="mt-1 rounded-xl border border-sky-300/50 bg-sky-950/60 px-2.5 py-1.5" data-assistant-life-rel-row="quarrel">
         <p className="text-[11.5px] font-black text-sky-100">💢 いま {nm(other)}とけんか中{cause ? <span className="whitespace-nowrap">(原因: {cause})</span> : null}</p>
         <p className="text-[10px] font-bold leading-snug text-sky-200">{['朝4時までには、', '自分たちで', '仲直りします。', '取り持つか、', `2人に${assistantLifeRelGiftName()}を`, '渡すと、', 'すぐ仲直り'].map((x, i) => <React.Fragment key={i}>{i ? <wbr/> : null}<span className="whitespace-nowrap">{x}</span></React.Fragment>)}</p>
+        {onView && assistantLifeRelViewOf(pending.id) && <button type="button" className="mt-1.5 min-h-[44px] w-full rounded-xl border border-sky-300/60 bg-sky-500/20 text-[13px] font-black text-sky-50 active:scale-[.98]" data-assistant-life-rel-view={pending.id} onClick={() => onView(pending.id)}>💢 けんかの様子を見る</button>}
         {onMediate && <button type="button" className="mhl-btn mt-1.5 w-full" data-assistant-life-room-act="mediate" style={{ background: 'linear-gradient(90deg,#fb923c,#f472b6)' }} onClick={() => onMediate(id)}>🤝 取り持つ(無料)</button>}
       </div>);
   }
@@ -78540,6 +78581,7 @@ function AssistantMasmonBattleWatch({ onClose }) {
       if (x.ev === 'tech') return x.hit ? `${n}の ${x.name}${x.crit ? ' 会心!' : ''} → ${x.dmg}${x.guarded ? '(ガード)' : ''}` : `${n}の ${x.name} … はずれ`;
       if (x.ev === 'move' && x.why === 'blown') return `${n}は 吹き飛ばされて 遠距離へ`;
       if (x.ev === 'blow') return `${n}の 吹き飛ばし(相手の次の手のあと 遠へ)`;
+      if (x.ev === 'move' && x.why === 'techMove' && typeof msaTechMoveSay === 'function') return msaTechMoveSay(x, n, msaTechMoveName(log, x), `${AMBW_DIST[x.to]}距離`); // 技の勢いで動いた(r1115-156②)
       if (x.ev === 'move') return `${n}が ${AMBW_DIST[x.to]}距離へ ${x.step > 0 ? 'さがる' : 'つめる'}`;
       if (x.ev === 'charge') return x.why === 'sulk' ? `${n}は 意味不明な行動をした…(ガッツだけたまった)` : `${n}は ガッツをためた`;
       if (x.ev === 'guard') return `${n}は 身を守った`;
@@ -78567,7 +78609,7 @@ function AssistantMasmonBattleWatch({ onClose }) {
         </div>
       );
     };
-    const cutText = e.ev === 'tech' ? e.name : e.ev === 'move' ? (e.why === 'blown' ? '吹き飛ばされた' : e.step > 0 ? 'さがる' : 'つめる') : e.ev === 'blow' ? '吹き飛ばし' : e.ev === 'charge' ? 'ガッツをためる' : e.ev === 'guard' ? 'ガード' : e.ev === 'swap' ? `交代 → ${who(e.side, e.i)}` : e.ev === 'ko' ? `${e.name} たおれた` : '';
+    const cutText = e.ev === 'tech' ? e.name : e.ev === 'move' ? (e.why === 'blown' ? '吹き飛ばされた' : e.why === 'techMove' ? (e.step > 0 ? '相手を飛ばした' : '技の勢いで移る') : e.step > 0 ? 'さがる' : 'つめる') : e.ev === 'blow' ? '吹き飛ばし' : e.ev === 'charge' ? 'ガッツをためる' : e.ev === 'guard' ? 'ガード' : e.ev === 'swap' ? `交代 → ${who(e.side, e.i)}` : e.ev === 'ko' ? `${e.name} たおれた` : '';
     const cutSmall = e.ev === 'tech' ? `${e.kind === 'pow' ? '💪 ちから技' : '🧠 かしこさ技'}${Number.isFinite(e.p) ? `・命中 ${Math.round(e.p)}%` : ''}` : (e.side ? who(e.side, e.ev === 'swap' ? e.from : e.i) : '');
     const kos = log.map((x, k) => x.ev === 'ko' ? { k, side: x.side } : null).filter(Boolean);
     const winName = battle.r.winner === 'draw' ? null : nameOf((battle.r.winner === 'A' ? battle.teamA : battle.teamB).assistantId);
@@ -79475,6 +79517,7 @@ function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, presetFriend, 
       if (x.ev === 'tech') return x.hit ? `${n}の ${x.name}${x.crit ? ' 会心!' : ''} → ${x.dmg}${x.guarded ? '(ガード)' : ''}` : `${n}の ${x.name} … はずれ`;
       if (x.ev === 'move' && x.why === 'blown') return `${n}は 吹き飛ばされて 遠距離へ`;
       if (x.ev === 'blow') return `${n}の 吹き飛ばし(相手の次の手のあと 遠へ)`;
+      if (x.ev === 'move' && x.why === 'techMove' && typeof msaTechMoveSay === 'function') return msaTechMoveSay(x, n, msaTechMoveName(log, x), `${AMBW_DIST[x.to]}距離`); // 技の勢いで動いた(r1115-156②)
       if (x.ev === 'move') return `${n}が ${AMBW_DIST[x.to]}距離へ ${x.step > 0 ? 'さがる' : 'つめる'}`;
       if (x.ev === 'charge') return `${n}は ガッツをためた`;
       if (x.ev === 'guard') return `${n}は 身を守った`;
@@ -79502,7 +79545,7 @@ function AssistantMasmonBattleBeta({ assistantId, foeAssistantId, presetFriend, 
         </div>
       );
     };
-    const cutText = e.ev === 'tech' ? e.name : e.ev === 'move' ? (e.why === 'blown' ? '吹き飛ばされた' : e.step > 0 ? 'さがる' : 'つめる') : e.ev === 'blow' ? '吹き飛ばし' : e.ev === 'charge' ? 'ガッツをためる' : e.ev === 'guard' ? 'ガード' : e.ev === 'swap' ? `交代 → ${who(e.side, e.i)}` : e.ev === 'ko' ? `${e.name} たおれた` : '';
+    const cutText = e.ev === 'tech' ? e.name : e.ev === 'move' ? (e.why === 'blown' ? '吹き飛ばされた' : e.why === 'techMove' ? (e.step > 0 ? '相手を飛ばした' : '技の勢いで移る') : e.step > 0 ? 'さがる' : 'つめる') : e.ev === 'blow' ? '吹き飛ばし' : e.ev === 'charge' ? 'ガッツをためる' : e.ev === 'guard' ? 'ガード' : e.ev === 'swap' ? `交代 → ${who(e.side, e.i)}` : e.ev === 'ko' ? `${e.name} たおれた` : '';
     const cutSmall = e.ev === 'tech' ? `${e.kind === 'pow' ? '💪 ちから技' : '🧠 かしこさ技'}${Number.isFinite(e.p) ? `・命中 ${Math.round(e.p)}%` : ''}` : (e.side ? who(e.side, e.ev === 'swap' ? e.from : e.i) : '');
     const kos = log.map((x, k) => (x.ev === 'ko' ? { k, side: x.side } : null)).filter(Boolean);
     const won = battle.r.winner === 'A', draw = battle.r.winner === 'draw';
@@ -90874,12 +90917,14 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
         {isTrain && o.lvUp ? <div className="v-lvup">⬆ トレーニングLvアップ! {MSX_STAT_ICON[o.card.stat]} {MSX_STAT_NAME[o.card.stat]} <b>Lv.{o.trainLv - 1} → Lv.{o.trainLv}</b><small>次から、{MSX_STAT_NAME[o.card.stat]}のトレーニングの基本の伸びが上がる</small></div> : null}
         {isTrain ? <><span className="hd2">{msxTrainIcon(o.card.stat, tlv)} {msxTrainName(o.card.stat, tlv)}({MSX_STAT_NAME[o.card.stat]}のトレーニング)</span><br/>
           {Object.keys(gains).length ? <>{Object.entries(gains).map(([k, g], i) => <span key={k}>{i ? '・' : ''}{MSX_STAT_NAME[k]} <b className="gu">{g > 0 ? `+${g}` : g}</b></span>)}</> : '能力は上がらなかった'}{hpLost ? <><br/><span data-msx-hp-lost>体力が <b style={{ color: '#dc2626' }}>{hpLost}</b> 下がった</span></> : null}</>
-          : o.kind === 'rest' || o.kind === 'play' ? <><span className="hd2">{o.kind === 'rest' ? '🛌 休む' : '🎈 遊ぶ'}</span><br/>{hpUp > 0 ? <>体力 <b className="gu" data-msx-rest-hp>+{hpUp}</b></> : '体力が回復した'}{stDown > 0 ? <>・ストレス <b className="gu">−{stDown}</b></> : null}{(o.cured || []).includes('utsu') ? '。「うつ病」が治った' : ''}</>
-          : o.kind === 'clinic' ? <><span className="hd2">🏥 通院</span><br/>{msxClinicText(o.cured, s.yosu)}<br/>{hpUp > 0 ? <>体力 <b className="gu">+{hpUp}</b></> : '体力も少し回復した'}{stDown > 0 ? <>・ストレス <b className="gu">−{stDown}</b></> : null}</>
+          : o.kind === 'rest' || o.kind === 'play' ? <><span className="hd2">{o.kind === 'rest' ? '🛌 休む' : '🎈 遊ぶ'}</span><br/>{typeof MsxGaugeFx === 'function' ? (hpUp > 0 || stDown > 0 ? '体力とストレスが動いた' : '体力が回復した') : <>{hpUp > 0 ? <>体力 <b className="gu" data-msx-rest-hp>+{hpUp}</b></> : '体力が回復した'}{stDown > 0 ? <>・ストレス <b className="gu">−{stDown}</b></> : null}</>}{(o.cured || []).includes('utsu') ? '。「うつ病」が治った' : ''}</>
+          : o.kind === 'clinic' ? <><span className="hd2">🏥 通院</span><br/>{msxClinicText(o.cured, s.yosu)}{typeof MsxGaugeFx === 'function' ? null : <><br/>{hpUp > 0 ? <>体力 <b className="gu">+{hpUp}</b></> : '体力も少し回復した'}{stDown > 0 ? <>・ストレス <b className="gu">−{stDown}</b></> : null}</>}</>
           : <><span className="hd2">🛌 休み</span><br/>{MSX_COND[o.cond] || '体調'}のため、このターンは休んだ</>}
         {o.event && typeof MsxTrainEvent !== 'function' ? <><br/><b className="ga">{msxMemberName(evMember)}</b>{o.event.story ? `との出来事 第${o.event.story}話` : 'との小さな出来事'}{evLine ? `: ${evLine.t}` : ''}</> : null}
         {o.cond && isTrain ? <><br/><b style={{ color: '#fca5a5' }}>{MSX_COND[o.cond]}</b>をしてしまった…しばらく休み</> : null}
       </div>}
+      {!acting && !isTrain && (o.kind === 'rest' || o.kind === 'play' || o.kind === 'clinic') && typeof MsxGaugeFx === 'function' && (hpUp > 0 || stDown > 0)
+        ? <MsxGaugeFx key={`gfx-act-${s.turn}-${o.kind}`} items={msxGfxItemsOf({ hp0: s.hp - hpUp, st0: s.stress + stDown }, s)}/> : null}
       {!acting && say && say.t ? <MsxSay aid={s.aid} ex={say.e || 'normal'} text={say.t}/> : null}
     </>);
     // 編成のモンスターとの出来事があれば、結果のあとに場面を1枚挟む(56-monsuc-tevent.jsx。とばすと飛ぶ)
@@ -94097,6 +94142,7 @@ const MSA_DC_CSS = `
 .msa-dc-c .msa-dc-h i{font-style:normal;margin-left:auto;font-size:9px;color:#94a3b8}
 .msa-dc-c small{display:block;font-size:9.5px;color:#cbd5e1;white-space:nowrap;overflow:hidden}
 .msa-dc-c small.p{color:#fde68a;font-weight:900}
+.msa-dc-c small.mv{color:#7dd3fc;font-size:9px;letter-spacing:-.02em}
 /* 技の札の技名は、一番長い言葉(--tnw 字ぶん)が札の幅に入る大きさまで CSS で縮める(2026-11-15 r1115-049 iPhone で「デュアルスラッ」と切れた。JS の縮め直しより先に効く) */
 @supports (width:1cqw){.msa-dc-c .msa-tn{font-size:max(7px,min(10.5px,calc(100cqw / var(--tnw,1))))}}
 .msa-dc-c.now{border-color:#fde047;box-shadow:0 0 0 1px #fde04788 inset;background:#2d2650;color:#fff}
@@ -94179,6 +94225,7 @@ function MsaDistCards({ list, rep, dist = null, guts = null, hitAt = null, lastM
             {t ? <small className="p">{Number.isFinite(hp) ? `命中 ${Math.round(hp)}%` : '命中 —'}</small> : null}
             {t ? <small>ガッツ {t.guts}</small> : null}
             {t && t.base ? (() => { const g = msaTechGrade('power', t.base.power); return <small className="dmg">ダメージ<b className={`g${g}`}>{g}</b></small>; })() : null}
+            {t && typeof msxTechMoveTxt === 'function' && msxTechMoveTxt(t) ? <small className="mv" data-msa-dc-move={t.moveTo} title={`使ったあと ${msxTechMoveTxt(t).replace(/\u200b/g, '')}`}>↪ {msxTechMoveTxt(t).replace(/\u200b/g, '')}</small> : null}
           </button>
         );
       })}
@@ -94213,7 +94260,7 @@ function MsaTechSheet({ title, list, d = null, dist = null, rep = null, hitAt = 
                 <MsaTechName name={t.name} icon={`${isRep ? '★ ' : ''}${msaKindIcon(t)}`}/>
                 <MsaTechGrades base={t.base}/>
                 <small className="p">{Number.isFinite(hp) ? `命中 ${Math.round(hp)}%` : '命中 —'}・ガッツ {t.guts}{!t.base && Number.isFinite(t.power) ? `・威力 ${Math.round(t.power)}` : ''}{onUse && useNote && !can ? useNote(t) : ''}</small>
-                <small>届く {distOf(t)}</small>
+                <small>届く {distOf(t)}{typeof msxTechMoveTxt === 'function' && msxTechMoveTxt(t) ? `・使ったあと ${msxTechMoveTxt(t)}` : ''}</small>
               </button>
               {onRep && d != null ? (isRep ? <span className="msa-sh-rep on" data-msa-rep-on={t.id}>★ 代表</span>
                 : <button type="button" className="msa-sh-rep" data-msa-rep={t.id} onClick={() => onRep(d, t.id)}>☆ 代表にする</button>) : null}
@@ -94956,11 +95003,22 @@ function MsaDmgLayer({ e, x, delay, tier }) {
   );
 }
 
-// 実況の1行
-const msaSay = (e, nm) => {
+// 技の勢いで間合いが動いた行(why:'techMove')の、その技の名前。記録のすぐ前にある、その技を使った行から引く(r1115-156②)
+const msaTechMoveName = (log, e) => {
+  if (!Array.isArray(log) || !e || !e.byTech) return '';
+  for (let i = log.indexOf(e) - 1; i >= 0 && i >= log.indexOf(e) - 3; i--) { const r = log[i]; if (r && r.ev === 'tech' && r.side === e.side && r.move === e.byTech) return r.name || ''; }
+  return '';
+};
+// 技の勢いで動いた間合いの文。近づく向き(step −1)は使った側が移る・遠ざかる向き(step +1)は相手を飛ばす(msxTechMoveTxt と同じ考え)
+const msaTechMoveSay = (e, n, tech, distName) => (e.step > 0
+  ? `${n}の ${tech || '技'}で 相手は ${distName}へ飛ばされた`
+  : `${n}は ${tech || '技'}の勢いで ${distName}へ移った`);
+// 実況の1行(log を渡すと、技の勢いで動いたときに技の名前を出す)
+const msaSay = (e, nm, log = null) => {
   if (!e) return '';
   if (e.ev === 'tech') return e.hit ? `${nm(e.side, e.i)}の ${e.name}!${e.crit ? ' 会心の一撃!' : e.guarded ? ' …ガードされた' : ''}` : `${nm(e.side, e.i)}の ${e.name} … よけられた`;
   if (e.ev === 'move' && e.why === 'blown') return `${nm(e.side, e.i)}は 吹き飛ばされて 遠の間合いへ!`;
+  if (e.ev === 'move' && e.why === 'techMove') return msaTechMoveSay(e, nm(e.side, e.i), msaTechMoveName(log, e), `${AMBW_DIST[e.to] || ''}の間合い`);
   if (e.ev === 'move') return `${nm(e.side, e.i)}が ${AMBW_DIST[e.to] || ''}の間合いへ`;
   if (e.ev === 'blow') return `${nm(e.side, e.i)}の 吹き飛ばし! 相手の次の手のあと 遠へ飛ばす`;
   if (e.ev === 'charge') return e.why === 'sulk' ? `${nm(e.side, e.i)}は 意味不明な行動をした…` : `${nm(e.side, e.i)}は ガッツをためた`;
@@ -95163,6 +95221,7 @@ const msaBandsOf = (log, frames, k) => {
   if (r.ev === 'guard') out.push({ side: r.side, t: '🛡 守りの構え' });
   else if (r.ev === 'charge') out.push({ side: r.side, t: r.why === 'sulk' ? '💢 意味不明' : '⚡ ガッツをためた' });
   else if (r.ev === 'move' && r.why === 'blown') out.push({ side: r.side, t: '💨 遠へ飛ばされた' });
+  else if (r.ev === 'move' && r.why === 'techMove') { const tn = msaTechMoveName(log, r); out.push({ side: r.side, t: `⚡ ${tn ? `${tn}で ` : ''}${r.step > 0 ? '相手を' : ''}${AMBW_DIST[f.d] || ''}へ` }); }
   else if (r.ev === 'move') out.push({ side: r.side, t: `👣 間合い ${AMBW_DIST[pf.d] || ''}→${AMBW_DIST[f.d] || ''}` });
   else if (r.ev === 'blow') out.push({ side: r.side, t: '💨 吹き飛ばし' });
   else if (r.ev === 'swap') out.push({ side: r.side, t: `🔁 ${r.name || ''} に交代` });
@@ -95497,7 +95556,7 @@ function MonsucArena({ s, info, engine, input, watch, onEnd }) {
       <div className="msa-stagebox" data-msa-stagebox>
         <MsaStage log={log} frames={frames} pos={pos} teams={stageTeams} venueImg={msaVenueBg(info.venue, bg)} ended={ended} win={result ? result.winner : null} introTitle={info.title} speedF={(MSA_SPEEDS.find(x => x.id === speed) || MSA_SPEEDS[0]).f} fill wide/>
       </div>
-      <div className="msa-say" data-msa-say>{call ? <div key={`call-${call.at}`} className={`msa-call ${call.k}`} data-msa-call={call.k}>🎙 {call.t}</div> : msaSay(e, nm)}</div>
+      <div className="msa-say" data-msa-say>{call ? <div key={`call-${call.at}`} className={`msa-call ${call.k}`} data-msa-call={call.k}>🎙 {call.t}</div> : msaSay(e, nm, log)}</div>
       {cardsOn ? <div className="msa-cardsrow" data-msa-cards><MsaDistCards list={itemsA} rep={msaRepIds(itemsA, null)} dist={f.d} guts={f.g.A} lastMove={e.side === 'A' && e.ev === 'tech' ? e.move : null} dataSide="A" hitAt={hitAtA} onOpen={(d) => setTechSheet(d)}/></div> : null}
       <div ref={barRef}>{showBar ? <MsxManualBar opt={mm.pending} onPick={pick} onAuto={goAuto} busy={busy}/> : null}</div>
       {manual && !auto && busy && !ended ? <div className="msa-wait">{e.side === 'B' ? '相手の番…' : ' '}</div> : null}
@@ -99347,9 +99406,9 @@ const CARD_TACTIC_GROUPS = Object.freeze([
   { id: 'foeHandLe', cat: 'cond', sec: '手札・山札', name: '相手の手札◯枚以下', tiers: [0, 1, 2].map((v) => [v, cardTacticFine([1])(v)]), desc: '相手の手札がその数以下' },
   { id: 'myDeck', cat: 'cond', sec: '手札・山札', name: '自分の山札◯枚以下', tiers: [30, 20, 10, 5].map((v) => [v, cardTacticFine([20, 5])(v)]), desc: '自分の山札がその数以下' },
   { id: 'foeDeck', cat: 'cond', sec: '手札・山札', name: '相手の山札◯枚以下', tiers: [30, 20, 10, 5].map((v) => [v, cardTacticFine([20, 5])(v)]), desc: '相手の山札がその数以下' },
-  { id: 'guardN', cat: 'cond', sec: '手札の中身', name: '手札に守り札◯枚以上', tiers: [1, 2, 3].map((v) => [v, cardTacticFine([3])(v)]), desc: '回避・防御の札がその数以上' },
-  { id: 'guardKind', cat: 'cond', sec: '手札の中身', name: '手札に◯がある', tiers: [['回避', 'N'], ['防御', 'N']], desc: 'その種類の守り札がある' },
-  { id: 'bigInHand', cat: 'cond', sec: '手札の中身', name: '手札に大技がある', tiers: [['', 'N']], desc: 'ガッツ4以上の攻撃の札がある' },
+  { id: 'guardN', cat: 'cond', sec: '手札の中身', name: '手札に守りカード◯枚以上', tiers: [1, 2, 3].map((v) => [v, cardTacticFine([3])(v)]), desc: '回避・防御のカードがその数以上' },
+  { id: 'guardKind', cat: 'cond', sec: '手札の中身', name: '手札に◯がある', tiers: [['回避', 'N'], ['防御', 'N']], desc: 'その種類の守りカードがある' },
+  { id: 'bigInHand', cat: 'cond', sec: '手札の中身', name: '手札に大技がある', tiers: [['', 'N']], desc: 'ガッツ4以上の攻撃のカードがある' },
   { id: 'areaInHand', cat: 'cond', sec: '手札の中身', name: '手札に全体攻撃がある', tiers: [['', 'R']], desc: '全員に当たる技がある' },
   { id: 'breederInHand', cat: 'cond', sec: '手札の中身', name: '手札にブリーダーのカードがある', tiers: [['', 'N']], desc: 'ブリーダーのカードがある' },
   { id: 'turnLe', cat: 'cond', sec: '番', name: '◯番目まで', tiers: [1, 2, 3, 5].map((v) => [v, cardTacticFine([2])(v)]), desc: '自分の番がその回数まで' },
@@ -99381,7 +99440,7 @@ const CARD_TACTIC_GROUPS = Object.freeze([
   // ---------- 基本カード(大まかな型。基本の枠: メイン1・サブ2) ----------
   { id: 'tBalance', cat: 'base', sec: '基本', name: 'バランス型', tiers: [['', 'N']], start: [''], habit: 'kyuko', desc: 'くせの少ない打ち方(きゅこの型)' },
   { id: 'tAttack', cat: 'base', sec: '基本', name: '攻め型', tiers: [['', 'N']], habit: 'mua', knob: { guardDieOnly: true }, desc: 'ためずに攻める(みゅあの型)' },
-  { id: 'tGuard', cat: 'base', sec: '基本', name: '守り型', tiers: [['', 'N']], habit: 'dra', knob: { guardAll: true }, desc: '守り札を残して堅く守る(ドラの型)' },
+  { id: 'tGuard', cat: 'base', sec: '基本', name: '守り型', tiers: [['', 'N']], habit: 'dra', knob: { guardAll: true }, desc: '守りカードを残して堅く守る(ドラの型)' },
   { id: 'tSave', cat: 'base', sec: '基本', name: '溜め型', tiers: [['', 'N']], habit: 'kiki', desc: 'ガッツをためて大技(ききの型)' },
   { id: 'tDisrupt', cat: 'base', sec: '基本', name: '崩し型', tiers: [['', 'N']], habit: 'momosuke', desc: '相手の手を崩す(ももすけの型)' },
   { id: 'tBig', cat: 'base', sec: '基本', name: '大技型', tiers: [['', 'R']], mul: { big: 1.6 }, desc: 'ダメージの大きい技を選ぶ' },
@@ -99395,7 +99454,7 @@ const CARD_TACTIC_GROUPS = Object.freeze([
   { id: 'tMill', cat: 'base', sec: '基本', name: '持久型', tiers: [['', 'SR']], habit: 'sorashido', desc: '長引かせて、相手の山札切れで勝つ(ソラシドの型)' },
   { id: 'tReckless', cat: 'base', sec: '基本', name: '捨て身型', tiers: [['', 'SR']], mul: { keepGuard: 0.5, finish: 1.3 }, knob: { noGuardUnlessFinish: true }, desc: '守らずに受けて、そのぶん倒しに行く' },
   { id: 'tHand', cat: 'base', sec: '基本', name: '手札温存型', tiers: [['', 'R']], knob: { keepHand: 2 }, desc: '手札を2枚以上残して、次の番に備える' },
-  { id: 'tDeck', cat: 'base', sec: '基本', name: '山札節約型', tiers: [['', 'R']], knob: { noDraw: true }, desc: '引く札・山札を減らす札を控え、山札を切らさない' },
+  { id: 'tDeck', cat: 'base', sec: '基本', name: '山札節約型', tiers: [['', 'R']], knob: { noDraw: true }, desc: '引くカード・山札を減らすカードを控え、山札を切らさない' },
   { id: 'tFocus', cat: 'base', sec: '基本', name: '一点集中型', tiers: [['', 'R']], knob: { focus: true }, desc: '同じ相手を倒れるまで狙い続ける' },
   { id: 'tSpread', cat: 'base', sec: '基本', name: '分散型', tiers: [['', 'SR']], mul: { area: 1.4 }, knob: { spread: true }, desc: '全員を少しずつ削り、最後にまとめて倒す' },
   { id: 'tComeback', cat: 'base', sec: '基本', name: '逆転型', tiers: [['', 'SR']], knob: { comeback: true }, desc: '勝っているあいだは堅く、負けたら捨て身で攻める' },
@@ -99405,8 +99464,8 @@ const CARD_TACTIC_GROUPS = Object.freeze([
   { id: 'cost', cat: 'monster', sec: '攻撃', phase: 'attack', name: '◯を出す', tiers: [['軽い技(ガッツ0〜1)', 'N'], ['中くらいの技(2〜3)', 'N'], ['大技(4以上)', 'N']], start: ['大技(4以上)'], desc: '払うガッツで選ぶ' },
   { id: 'reach', cat: 'monster', sec: '攻撃', phase: 'attack', name: '◯を出す', tiers: [['全体攻撃', 'R'], ['単体攻撃', 'N']], desc: '全員に当たる技か、1体に当てる技か' },
   { id: 'eff', cat: 'monster', sec: '攻撃', phase: 'attack', name: '「◯」の技を出す', tiers: [['回避されない', 'N'], ['攻撃できなくする', 'R'], ['ガッツを減らす', 'N'], ['吸い取る', 'N'], ['2回攻撃', 'R'], ['防御で減らない', 'N'], ['回避されても半分', 'N'], ['種族に強い', 'N'], ['ダメージを割り振る', 'R'], ['2枚同時', 'N'], ['手札に戻る', 'N'], ['カード投げ', 'SR']], desc: 'その効き目のついた技を出す' },
-  { id: 'attach', cat: 'monster', sec: '攻撃', phase: 'attack', name: '付ける札を使う', tiers: [['', 'R']], desc: '技に付ける札をいっしょに出す' },
-  { id: 'attachKind', cat: 'monster', sec: '攻撃', phase: 'attack', name: '付ける札: ◯', tiers: [['ダメージを上げる', 'N'], ['回避させない', 'R'], ['ガッツを軽くする', 'N']], desc: 'その効き目の付ける札を、技にいっしょに出す' },
+  { id: 'attach', cat: 'monster', sec: '攻撃', phase: 'attack', name: '付けるカードを使う', tiers: [['', 'R']], desc: '技に付けるカードをいっしょに出す' },
+  { id: 'attachKind', cat: 'monster', sec: '攻撃', phase: 'attack', name: '付けるカード: ◯', tiers: [['ダメージを上げる', 'N'], ['回避させない', 'R'], ['ガッツを軽くする', 'N']], desc: 'その効き目の付けるカードを、技にいっしょに出す' },
   { id: 'spe', cat: 'monster', sec: '特殊技', phase: 'attack', name: '特殊技: ◯', tiers: [['味方を回復', 'N'], ['引く', 'N'], ['空中になる', 'N'], ['安全になる', 'R'], ['まゆと羽化', 'R'], ['のりうつる', 'SR']], desc: 'その効き目の特殊技を出す' },
   { id: 'stance', cat: 'monster', sec: '立ち回り', phase: 'attack', name: '立ち回り: ◯', tiers: [['この子から攻める', 'N'], ['この子は攻撃しない', 'N'], ['ライフの多い子が先に', 'R'], ['ライフの少ない子は温存', 'R'], ['攻撃は1回だけ', 'N'], ['何回でも攻める', 'SR']], desc: 'その子の前に出る・下がるを決める' },
   { id: 'bEff', cat: 'breeder', sec: 'ブリーダーのカード', phase: 'attack', name: 'ブリーダー: ◯', tiers: [['回復する', 'N'], ['倒れた子を戻す', 'R'], ['攻撃できないを消す', 'N'], ['相手を攻撃できなくする', 'R'], ['相手のガッツを減らす', 'N'], ['両方のガッツを0にする', 'SR'],
@@ -99414,20 +99473,20 @@ const CARD_TACTIC_GROUPS = Object.freeze([
   { id: 'fieldCard', cat: 'breeder', sec: 'ブリーダー', phase: 'attack', name: '全体カードを出す', tiers: [['', 'R']], desc: '場に残る全体カードを出す' },
   { id: 'fieldKind', cat: 'breeder', sec: '全体カード', phase: 'attack', name: '全体カード: ◯', tiers: [['ダメージを足す', 'N'], ['払うガッツを変える', 'N'], ['大きいダメージを封じる', 'R'], ['山札を削る', 'N'], ['純血のプライド', 'N'], ['技の種類を封じる', 'SR'],
     ['持ちょうを変える', 'R'], ['じわじわ減らす', 'N'], ['ガッツの上限', 'N'], ['出すと引く', 'N']], desc: 'その種類の全体カードを場に出す' },
-  { id: 'disrupt', cat: 'monster', sec: '崩す', phase: 'attack', name: '崩し: ◯', tiers: [['手札を捨てさせる', 'R'], ['山札を削る', 'R'], ['ガッツを減らす', 'R'], ['番を飛ばす', 'SR']], desc: '相手の手を崩す札を出す' },
-  { id: 'guard', cat: 'monster', sec: '守り', phase: 'guard', name: '守る', tiers: [['', 'N']], start: [''], desc: '攻撃を受けたら守り札で守る' },
-  { id: 'guardFirst', cat: 'monster', sec: '守り', phase: 'guard', name: '◯を先に使う', tiers: [['回避', 'N'], ['防御', 'N'], ['はね返す守り', 'R'], ['半分にする守り', 'R']], desc: '守るとき、その種類の札で守る' },
+  { id: 'disrupt', cat: 'monster', sec: '崩す', phase: 'attack', name: '崩し: ◯', tiers: [['手札を捨てさせる', 'R'], ['山札を削る', 'R'], ['ガッツを減らす', 'R'], ['番を飛ばす', 'SR']], desc: '相手の手を崩すカードを出す' },
+  { id: 'guard', cat: 'monster', sec: '守り', phase: 'guard', name: '守る', tiers: [['', 'N']], start: [''], desc: '攻撃を受けたら守りカードで守る' },
+  { id: 'guardFirst', cat: 'monster', sec: '守り', phase: 'guard', name: '◯を先に使う', tiers: [['回避', 'N'], ['防御', 'N'], ['はね返す守り', 'R'], ['半分にする守り', 'R']], desc: '守るとき、その種類のカードで守る' },
   { id: 'guardOver', cat: 'monster', sec: '守り', phase: 'guard', name: 'ダメージ◯以上だけ守る', tiers: [[3, 'N'], [5, 'N'], [7, 'R'], [10, 'R']], desc: 'その数より小さい攻撃は守らない' },
   { id: 'guardDie', cat: 'monster', sec: '守り', phase: 'guard', name: '倒されるときだけ守る', tiers: [['', 'R']], desc: '受けたら倒れるときだけ守る' },
-  { id: 'cover', cat: 'monster', sec: '守り', phase: 'guard', name: '味方をかばう', tiers: [['', 'R']], desc: 'かばう札で、味方への攻撃を受ける' },
-  { id: 'noGuard', cat: 'monster', sec: '守り', phase: 'guard', name: '守らない', tiers: [['', 'R']], desc: '守り札を使わず受ける(札を残す)' },
+  { id: 'cover', cat: 'monster', sec: '守り', phase: 'guard', name: '味方をかばう', tiers: [['', 'R']], desc: 'かばうカードで、味方への攻撃を受ける' },
+  { id: 'noGuard', cat: 'monster', sec: '守り', phase: 'guard', name: '守らない', tiers: [['', 'R']], desc: '守りカードを使わず受ける(カードを残す)' },
   { id: 'save', cat: 'breeder', sec: 'ガッツ', phase: 'guts', name: 'ガッツをためる', tiers: [['', 'N']], start: [''], desc: '手札を多めにガッツへ回す' },
   { id: 'gutsN', cat: 'breeder', sec: 'ガッツ', phase: 'guts', name: 'ガッツを◯枚だけ置く', tiers: [[0, 'N'], [1, 'N'], [2, 'N'], [3, 'N']], desc: 'ガッツの番に置く数を決める' },
-  { id: 'keepGuard', cat: 'breeder', sec: 'ガッツ', phase: 'guts', name: '守り札を3枚まで残す', tiers: [['', 'R']], desc: '回避・防御は3枚までガッツにしない' },   // 2026-11-02 社長「案B 上限つきに」(前は守りの札を全部残して、手札が固まった)
-  { id: 'gutsOrder', cat: 'breeder', sec: 'ガッツ', phase: 'guts', name: '◯から置く', tiers: [['重い札', 'N'], ['使えない札', 'N']], desc: 'ガッツにする札の順を決める' },
+  { id: 'keepGuard', cat: 'breeder', sec: 'ガッツ', phase: 'guts', name: '守りカードを3枚まで残す', tiers: [['', 'R']], desc: '回避・防御は3枚までガッツにしない' },   // 2026-11-02 社長「案B 上限つきに」(前は守りの札を全部残して、手札が固まった)
+  { id: 'gutsOrder', cat: 'breeder', sec: 'ガッツ', phase: 'guts', name: '◯から置く', tiers: [['重い札', 'N'], ['使えない札', 'N']], desc: 'ガッツにするカードの順を決める' },
   { id: 'stop', cat: 'breeder', sec: '流れ', phase: 'attack', name: '攻撃を止める', tiers: [['', 'N']], start: [''], desc: 'この番の攻撃をここで終える' },
-  { id: 'charge', cat: 'monster', sec: '流れ', phase: 'attack', name: '溜め技を使う', tiers: [['', 'R']], desc: '次の技を何倍にする札を先に使う' },
-  { id: 'chargeKind', cat: 'monster', sec: '流れ', phase: 'attack', name: '溜め: ◯', tiers: [['怒り', 'R'], ['次の番の技を倍', 'R']], desc: 'その溜めの札を先に使う' },
+  { id: 'charge', cat: 'monster', sec: '流れ', phase: 'attack', name: '溜め技を使う', tiers: [['', 'R']], desc: '次の技を何倍にするカードを先に使う' },
+  { id: 'chargeKind', cat: 'monster', sec: '流れ', phase: 'attack', name: '溜め: ◯', tiers: [['怒り', 'R'], ['次の番の技を倍', 'R']], desc: 'その溜めのカードを先に使う' },
   { id: 'ace', cat: 'breeder', sec: '特別', phase: 'attack', name: '切り札を出す', tiers: [['', 'SR']], desc: '登録した切り札を、手にあれば先に出す' },
   { id: 'holdBreeder', cat: 'breeder', sec: '流れ', phase: 'attack', name: 'ブリーダーのカードを温存する', tiers: [['', 'N']], desc: 'この番はブリーダーのカードを出さない(当たればそれ以外で打つ)' },
 ]);
@@ -113784,7 +113843,7 @@ const CardPvpWatchScreen = ({ onBack }) => {
               </div>
               : <div className={`${low ? 'h-[50px] w-[36px]' : 'h-[88px] w-[63px]'} shrink-0 rounded-md border border-dashed border-white/15`}/>}
             <div className="min-w-0 flex-1 space-y-0.5">
-              {w.last && <div className="text-[11px] font-black text-violet-200">{nameOf(w.last.p)}が使った札</div>}
+              {w.last && <div className="text-[11px] font-black text-violet-200">{nameOf(w.last.p)}が使ったカード</div>}
               {st.pending && <CardGuardPreview db={db} pv={cardGuardPreview(db, st)} compact/>}
               {lines.map((t, i) => <div key={i} className="text-[12px] font-bold leading-snug text-white" style={JA_WRAP_STYLE}>{jaWrap(t)}</div>)}
             </div>
