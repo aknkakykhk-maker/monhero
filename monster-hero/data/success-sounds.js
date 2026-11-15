@@ -73,6 +73,10 @@
     // 勝ち・負けは短いジングルを1回だけ流して無音(2026-11-14 社長)。ジングルが効果音のかわりなので se は付けない
     { id: 'cupWin', name: '大会: 勝ち', bgm: 'monsuc_win', se: null },
     { id: 'cupLose', name: '大会: 負け', bgm: 'monsuc_lose', se: null },
+    // エンディング(ヒーローズファイナルのあとの掛け合い・エンディング・お祝い)。勝ち負けのジングルが鳴り終わってから流し、引退の画面まで切らさない(r1115-091)
+    //   グッド・超グッド = クリアテーマ / バッド = リザルトテーマ(引退の画面と同じ曲なので、そのまま続く)
+    { id: 'ending', name: 'エンディング(優勝)', bgm: 'ichika_clear', se: null },
+    { id: 'endingBad', name: 'エンディング(バッド)', bgm: 'original_result', se: null },
     // イッサ博士・ゲームオーバー・引退
     { id: 'issa', name: 'イッサ博士', bgm: 'original_event_01', se: 'trainingTool' },
     // 博士の大きな賭けの演出(2026-11-14 社長「イッサ博士の演出が弱い」。56-monsuc-issa.jsx)。大成功は閃光+大ファンファーレ+きらめきの重ねで専用の音にする
