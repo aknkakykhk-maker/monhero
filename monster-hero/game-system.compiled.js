@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9a5ecfa901fa3097
+// source-sha256: d0622129145f6ace
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -173172,6 +173172,7 @@ function MsxBaseMons({
     alt: ""
   }), React.createElement("b", null, msxMonName(id)), picked[id] ? React.createElement("small", null, "育成 ", picked[id], "回") : React.createElement("small", null, "まだ育てていない"))))), detail);
 }
+const MSX_POL_SEEN = {};
 const MSX_POLICY_SCALE = Object.freeze(['超溺愛', '溺愛', '甘い', '普通', '厳しい', 'スパルタ', '超スパルタ']);
 const MSX_RES = Object.freeze({
   great: {
@@ -174410,6 +174411,20 @@ function MsxPlay({
       e: 'normal'
     };
   };
+  const polNow = Math.max(-3, Math.min(3, Number(s.pol) || 0));
+  const polRec = MSX_POL_SEEN[run.id] = MSX_POL_SEEN[run.id] || {
+    pol: polNow,
+    note: null
+  };
+  if (polRec.pol !== polNow) {
+    polRec.note = {
+      turn: s.turn,
+      from: polRec.pol,
+      to: polNow
+    };
+    polRec.pol = polNow;
+  }
+  const polSay = polRec.note && polRec.note.turn === s.turn ? polRec.note : null;
   const pushLog = (r, text) => ({
     ...r,
     log: [...(r.log || []), {
@@ -175580,7 +175595,11 @@ function MsxPlay({
       state: null
     };
     const preName = preOn && typeof msxR3BattleName === 'function' ? msxR3BattleName(SUC, preB) : '';
-    const sayL = preOn ? line('turn.cup.before', `ついに今日は ${preName}だね! 準備ができたら「大会」へ行こう`, {
+    const polTxt = polSay ? `育成方針が「${MSX_POLICY_SCALE[polSay.to + 3]}」に変わったよ` + (polSay.to === 0 ? '' : polSay.to < 0 ? '(甘え度が恐れ度より多いと甘くなる)' : '(恐れ度が甘え度より多いと厳しくなる)') : '';
+    const sayL = polTxt ? {
+      t: polTxt,
+      e: 'normal'
+    } : preOn ? line('turn.cup.before', `ついに今日は ${preName}だね! 準備ができたら「大会」へ行こう`, {
       cup: preName
     }) : omenK ? line(omenK === 2 ? 'turn.awake.omen2' : 'turn.awake.omen', omenK === 2 ? 'あれ…また体が光ってる？ 虹色だ…' : 'あれ？ 体がうっすら光ってない…？') : pkI.state === 'soon' && pkI.in >= 2 && !yosu && !s.cond ? line('turn.peak.soon', 'もうすぐ伸びどきが来そうだよ！') : yosu ? line(s.yosu.sabori ? 'turn.mood.sabori' : 'turn.mood.utsu', 'ようすが気になるね…') : s.cond ? line(`turn.cond.${s.cond.kind === 'away' ? 'runaway' : s.cond.kind === 'ill' ? 'sick' : 'injury'}.in`, '今日は休ませてあげよ') : line(msxStartScene(s), '今月はどうする?');
     const cal = msxCalendar(s.turn);
@@ -175875,7 +175894,7 @@ function MsxPlay({
     className: "msx-note"
   }, "まだありません")) : sheet === 'menu' ? React.createElement(React.Fragment, null, React.createElement("h3", null, "☰ メニュー"), React.createElement("div", {
     className: "msx-note"
-  }, "育成方針: ", MSX_POLICY_SCALE[Math.max(-3, Math.min(3, s.pol || 0)) + 3], "(褒めると甘く・叱ると厳しくなる)"), React.createElement("div", {
+  }, "育成方針: ", MSX_POLICY_SCALE[Math.max(-3, Math.min(3, s.pol || 0)) + 3], "(甘え度と恐れ度の差で決まる。甘え度が多いと甘く・恐れ度が多いと厳しくなる)"), React.createElement("div", {
     className: "msx-note"
   }, "成長の型: ", typeof MASMON_CALC !== 'undefined' ? MASMON_CALC.typeOf(s.type).name : '—'), typeof MsxDex === 'function' ? React.createElement("button", {
     type: "button",
