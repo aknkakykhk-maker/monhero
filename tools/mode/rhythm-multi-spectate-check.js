@@ -208,6 +208,49 @@ const VIEW = PORTRAIT ? { width: 390, height: 844 } : { width: 844, height: 390 
       check('演奏している人の端末は、曲を鳴らす仕組みを使わない(観戦の曲は観戦の人の端末だけ)', await A.evaluate(() => typeof RHYTHM_WATCH_AUDIO !== 'undefined' && !RHYTHM_WATCH_AUDIO.on()));
       await A.evaluate(() => { const t = RHYTHM_PLAY_WATCH.timeMs; Object.defineProperty(RHYTHM_PLAY_WATCH, 'timeMs', { value: t, writable: true, configurable: true }); });
     }
+    // ---- r1115-189: 観戦の人もチャットに参加できる(新しい種類 wc。部屋の人の数・結果には入らない) ----
+    {
+      const r1 = await W.evaluate(() => RHYTHM_WATCH.say('がんばれ!'));
+      const r2 = await W.evaluate(() => RHYTHM_WATCH.say('ナイス!'));
+      check('観戦の人がひとことを送れる・続けて送ると「少し待って」(3秒に1回)', r1 === 'ok' && r2 === 'wait', `${r1}/${r2}`);
+      check('観戦の人のひとことは新しい種類(wc)で送る(部屋のチャット chat・hb は送らない)', (await sent(W, 'wc')) >= 1 && (await sent(W, 'chat')) === 0 && (await sent(W, 'hb')) === 0);
+      check('古い版の読み方(知らない種類は捨てる)では、wc は何も起こさない', await A.evaluate(() => rhythmMultiCleanMessage({ t: 'wc', id: 'w1', name: 'x', text: 'y', cid: 'c1' }) === null));
+      await W.waitForSelector('[data-rhythm-watch-chat-line="watch"]', { timeout: 3000 })
+        .then(() => check('観戦の画面のチャットの欄に、自分のひとことが 👁 つき・琥珀色で出る', true), () => check('観戦の画面のチャットの欄に、自分のひとことが 👁 つき・琥珀色で出る', false));
+      await A.waitForTimeout(600);
+      check('演奏中の人のチャットへは、演奏のあいだ足さない(控えに入れるだけ・画面を更新しない)', await A.evaluate(() => !RHYTHM_MULTI.view().chat.some((c) => c.w)));
+      const capped = await W.evaluate(() => { const st = RHYTHM_WATCH.view(); st.lastSayAt = 0; st.sayRound = st.round || ''; st.sayCount = RHYTHM_WATCH_CHAT_ROUND_MAX; return RHYTHM_WATCH.say('すごい!'); });
+      check('観戦の人が送れるのは1曲に20回まで', capped === 'max', capped);
+      await W.evaluate(() => { const st = RHYTHM_WATCH.view(); st.sayCount = 1; });
+      await B.evaluate(() => RHYTHM_MULTI.sendChat('ありがとう!'));
+      await W.waitForFunction(() => [...document.querySelectorAll('[data-rhythm-watch-chat-line="room"]')].some((x) => /ありがとう/.test(x.innerText)), null, { timeout: 4000 })
+        .then(() => check('部屋の人のチャットも、観戦の画面の欄に出る(色は部屋の人の色)', true), () => check('部屋の人のチャットも、観戦の画面の欄に出る', false));
+      const stamped = await W.evaluate(() => { const st = RHYTHM_WATCH.view(); st.lastSayAt = 0; const slot = MULTI_STAMP.get().slots.find(Boolean); return slot ? RHYTHM_WATCH.say(multiStampSlotLabel(slot), { f: slot.f, w: slot.w }) : 'none'; });
+      check('観戦の人もスタンプを送れる', stamped === 'ok', stamped);
+      // 部屋の人の id を名乗った観戦のひとことは出さない
+      await W.evaluate((id) => { const ch = new BroadcastChannel(`fake-ws:${window.__topic}`); ch.postMessage({ t: 'wc', id, name: 'にせもの', text: 'なりすまし', cid: 'wfake1' }); setTimeout(() => ch.close(), 500); }, idA);
+      check('観戦の人は部屋のメンバーに入らない(ひとことを送っても)', (await A.evaluate(() => RHYTHM_MULTI.view().members.length)) === PLAYERS);
+      await W.waitForTimeout(800);
+      check('観戦の人の欄にも、部屋の人を名乗ったひとことは出さない', await W.evaluate(() => !/なりすまし/.test((document.querySelector('[data-rhythm-watch-chat-list]') || {}).innerText || '')));
+      if (SHOT_DIR) {
+      for (const [nm, w, h] of [['yoko', 844, 390], ['tate', 390, 844], ['tate320', 320, 568]]) {
+        await W.setViewportSize({ width: w, height: h }); await W.waitForTimeout(700);
+        await W.screenshot({ path: path.join(SHOT_DIR, `chat-watcher-${nm}.png`) });
+      }
+      await W.setViewportSize({ width: 390, height: 844 }); await W.waitForTimeout(300);
+      await W.locator('[data-rhythm-watch-orientation] button').first().click().catch(() => {});
+      await W.waitForTimeout(1200);
+      await W.screenshot({ path: path.join(SHOT_DIR, 'chat-watcher-rotated.png') });
+      // もう一度押して縦へ戻す(遊ぶ人と同じ操作)
+      await W.locator('[data-rhythm-watch-orientation] button').first().click().catch(() => {});
+      await W.waitForTimeout(800);
+      check('観戦の画面の縦横ボタンで横にでき、もう一度押すと縦へ戻る(r1115-190②)', await W.evaluate(() => !RHYTHM_VIEW_ROTATION.active()));
+      await W.locator('[data-rhythm-watch-chat-stamp-toggle]').click(); await W.waitForTimeout(500);
+      await W.screenshot({ path: path.join(SHOT_DIR, 'chat-watcher-stamps-tate.png') });
+      await W.locator('[data-rhythm-watch-chat-stamp-toggle]').click();
+      await W.setViewportSize({ width: 844, height: 390 }); await W.waitForTimeout(300);
+      }
+    }
     // 見られている1人(最初は先頭)の判定の数・ライフ
     await W.waitForFunction(() => { const c = document.querySelector('[data-rhythm-watch-count="MARVELOUS"] b'); return c && c.textContent !== '-'; }, null, { timeout: 15000 });
     const detail = await W.evaluate(() => ({
@@ -354,9 +397,12 @@ const VIEW = PORTRAIT ? { width: 390, height: 844 } : { width: 844, height: 390 
       await W.setViewportSize({ width: 844, height: 390 }); await W.waitForTimeout(500);
     }
     // 縦・横・小さい端末で、観戦の画面の中身が画面からはみ出さない
-    for (const [w, h, label] of [[844, 390, '横'], [390, 844, '縦'], [375, 667, '小さい縦'], [667, 375, '小さい横']]) {
+    for (const [w, h, label] of [[844, 390, '横'], [390, 844, '縦'], [375, 667, '小さい縦'], [667, 375, '小さい横'], [320, 568, 'いちばん小さい縦']]) {
       await W.setViewportSize({ width: w, height: h }); await W.waitForTimeout(500);
-      const fit = await W.evaluate(() => { const r = document.querySelector('[data-rhythm-watch]'); const q = r.getBoundingClientRect(); const bad = [...r.querySelectorAll('button')].filter((b) => { const e = b.getBoundingClientRect(); return e.right > innerWidth + 1 || e.left < -1 || e.bottom > innerHeight + 1; }).length; return { bad, sw: r.scrollWidth <= q.width + 1 }; });
+      // r1115-189 ミハリ: チャットの欄で場が低くなっても、ライフとコンボが重ならない
+      const hudHit = await W.evaluate(() => { const a = document.querySelector('[data-rhythm-watch] [data-rhythm-hud]'); const b = document.querySelector('[data-rhythm-watch] [data-rhythm-combo]'); if (!a || !b) return null; const p = a.getBoundingClientRect(); const q = b.getBoundingClientRect(); if (!q.height) return null; return { hit: !(p.bottom <= q.top || q.bottom <= p.top || p.right <= q.left || q.right <= p.left), life: [Math.round(p.top), Math.round(p.bottom)], combo: [Math.round(q.top), Math.round(q.bottom)] }; });
+      if (hudHit) check(`${label}(${w}×${h}): ライフとコンボが重ならない`, !hudHit.hit, JSON.stringify(hudHit));
+      const fit = await W.evaluate(() => { const r = document.querySelector('[data-rhythm-watch]'); const q = r.getBoundingClientRect(); const badList = [...r.querySelectorAll('button')].filter((b) => { const e = b.getBoundingClientRect(); return e.right > innerWidth + 1 || e.left < -1 || e.bottom > innerHeight + 1; }); const bad = badList.length; const wideOnes = [...r.querySelectorAll('*')].filter((x) => x.getBoundingClientRect().right > q.right + 1).slice(0, 3).map((x) => `${x.tagName}.${String(x.className).slice(0, 40)}`); return { bad, sw: r.scrollWidth <= q.width + 1, ...(bad || wideOnes.length ? { who: badList.slice(0, 3).map((x) => x.innerText.slice(0, 12)), wide: wideOnes } : {}) }; });
       check(`${label}(${w}×${h}): ボタンが画面からはみ出さない・横に伸びない`, fit.bad === 0 && fit.sw, JSON.stringify(fit));
     }
     await W.setViewportSize({ width: 844, height: 390 });
@@ -396,6 +442,24 @@ const VIEW = PORTRAIT ? { width: 390, height: 844 } : { width: 844, height: 390 
       .then(() => check('演奏中の部屋へ後から入ると、待機のあいだ、その演奏が見える', true), () => check('演奏中の部屋へ後から入ると、待機のあいだ、その演奏が見える', false));
     check('待機のメンバーが入っても、演奏中の部屋は演奏の人数のまま(待機の人は演奏の人数に入らない)', (await A.evaluate(() => RHYTHM_MULTI.view().room.participants.length)) === PLAYERS);
     const rows3 = await L.evaluate(() => document.querySelectorAll('[data-rhythm-watch-row]').length);
+    // r1115-189: 待機中の部屋の人には、観戦の人のひとことがすぐ届く(👁観戦・琥珀色)。待機の人が見ている観戦の画面の欄にも出る
+    await W.evaluate(() => { const st = RHYTHM_WATCH.view(); st.lastSayAt = 0; return RHYTHM_WATCH.say('おしい!'); });
+    await L.waitForFunction(() => RHYTHM_MULTI.view().chat.some((c) => c.w === 1 && c.text === 'おしい!'), null, { timeout: 5000 })
+      .then(() => check('待機中の部屋の人には、観戦の人のひとことがすぐ届く', true), () => check('待機中の部屋の人には、観戦の人のひとことがすぐ届く', false));
+    await L.waitForSelector('[data-rhythm-watch-chat-line="watch"]', { timeout: 3000 })
+      .then(() => check('待機の人が見ている観戦の画面の欄にも、観戦の人のひとことが出る', true), () => check('待機の人が見ている観戦の画面の欄にも出る', false));
+    if (SHOT_DIR) {
+      // 部屋の人(待機中)の部屋のチャット: 観戦の画面を閉じて、チャットを開く
+      for (const [nm, w, h] of [['tate', 390, 844], ['tate320', 320, 568], ['yoko', 844, 390]]) {
+        await L.setViewportSize({ width: w, height: h }); await L.waitForTimeout(500);
+        await L.evaluate(() => RHYTHM_WATCH.stop()); await L.waitForTimeout(300);
+        const btn = L.locator('[data-rhythm-multi-chat-open]:visible').first();
+        if (!(await L.locator('[data-rhythm-multi-chat]').count())) await btn.click({ timeout: 3000 }).catch(() => {});
+        await L.waitForTimeout(600);
+        await L.screenshot({ path: path.join(SHOT_DIR, `chat-room-${nm}.png`) });
+      }
+      await L.setViewportSize({ width: 844, height: 390 });
+    }
     check('待機のメンバーにも順位が出る', rows3 === PLAYERS, `${rows3}行`);
     // 見ている人が2人になっても、見られている人は1秒ごとのまま増えない(1人が1通で、みんなに届く)
     // ---- 観戦の人数は10人まで ----
@@ -405,6 +469,9 @@ const VIEW = PORTRAIT ? { width: 390, height: 844 } : { width: 844, height: 390 
     check('観戦は10人まで(あふれた人は数えない)', count === 10, `${count}人`);
     // ---- 終わりの1通 → 観戦の画面が「終わりました」になる ----
     for (const p of pages) await p.evaluate((id) => RHYTHM_MULTI.reportResult(id, { score: 430000, cleared: true, maxCombo: 130, judgments: { MARVELOUS: 90, EXCELLENT: 20, GREAT: 8, GOOD: 2, BAD: 0, MISS: 1 }, fast: 1, slow: 1 }, false), await A.evaluate(() => RHYTHM_MULTI.view().room.round));
+    // r1115-189: 演奏中に届いた観戦の人のひとことは、演奏が終わってからチャットへ足す。部屋の人を名乗ったものは出さない
+    check('演奏が終わると、演奏中に届いた観戦の人のひとことがチャットに出る(👁観戦の印つき)', await A.evaluate(() => RHYTHM_MULTI.view().chat.some((c) => c.w === 1 && c.text === 'がんばれ!')), JSON.stringify(await A.evaluate(() => RHYTHM_MULTI.view().chat.map((c) => [c.text, c.w || 0]))));
+    check('部屋の人の id を名乗った観戦のひとことは出さない', await A.evaluate(() => !RHYTHM_MULTI.view().chat.some((c) => c.text === 'なりすまし')));
     await W.waitForFunction(() => /演奏が終わりました/.test(document.querySelector('[data-rhythm-watch]').innerText), null, { timeout: 8000 })
       .then(() => check('2人とも終わると、観戦の画面に「演奏が終わりました」が出る', true), () => check('2人とも終わると、観戦の画面に「演奏が終わりました」が出る', false));
     // ---- やめる ----
