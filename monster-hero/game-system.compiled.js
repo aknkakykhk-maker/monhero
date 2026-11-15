@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e3798470c41d6d81
+// source-sha256: 0afd3107dad27e80
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -98531,37 +98531,80 @@ const rhythmWatchPosition = (row, nowMs = Date.now()) => {
 };
 function RhythmWatchLane({
   chart,
-  onWaiting = null
+  song = null,
+  wide = false,
+  onWaiting = null,
+  onMode = null
 }) {
   const [flat, setFlat] = React.useState(() => rhythmWatchUseFlat(rhythmWatchSettings()));
+  React.useEffect(() => {
+    if (onMode) onMode(!flat);
+    return () => {
+      if (onMode) onMode(false);
+    };
+  }, [flat]);
   if (flat) return React.createElement(RhythmWatchLaneFlat, {
     chart: chart
   });
   return React.createElement(RhythmWatchLaneRoad, {
     chart: chart,
+    song: song,
+    wide: wide,
     onWaiting: onWaiting,
     onFail: () => setFlat(true)
   });
 }
 function RhythmWatchLaneRoad({
   chart,
+  song = null,
+  wide = false,
   onWaiting,
   onFail
 }) {
   const hostRef = React.useRef(null);
-  const roadRef = React.useRef(null);
   const noteRef = React.useRef(null);
   const fxRef = React.useRef(null);
+  const lineRef = React.useRef(null);
+  const bandRef = React.useRef(null);
+  const judgeRef = React.useRef(null);
+  const artRef = React.useRef(null);
   const waitingRef = React.useRef(false);
+  const settings = React.useMemo(() => rhythmWatchSettings(), []);
+  const hud = React.useMemo(() => rhythmCreateHud(), []);
+  const stageLevel = typeof rhythmFxStageLevel === 'function' ? rhythmFxStageLevel(settings, rhythmStageLevel(settings)) : 'SIMPLE';
+  const artSrc = stageLevel !== 'SIMPLE' && song && typeof rhythmSongArtSrc === 'function' ? rhythmSongArtSrc(song) : '';
+  const artSize = typeof rhythmFxArtSize === 'function' ? rhythmFxArtSize(settings) : 256;
+  const lineBottom = `${rhythmFiniteStep(settings.judgmentLineHeight, RHYTHM_JUDGMENT_LINE_HEIGHT_MIN, RHYTHM_JUDGMENT_LINE_HEIGHT_MAX, RHYTHM_JUDGMENT_LINE_HEIGHT_STEP, DEFAULT_RHYTHM_SETTINGS.judgmentLineHeight)}%`;
+  React.useEffect(() => {
+    const canvas = artRef.current;
+    if (!canvas || !artSrc) return undefined;
+    let alive = true;
+    const img = new Image();
+    img.onload = () => {
+      if (!alive) return;
+      try {
+        const c = canvas.getContext('2d');
+        c.clearRect(0, 0, canvas.width, canvas.height);
+        c.drawImage(img, 0, 0, canvas.width, canvas.height);
+        canvas.dataset.ready = '1';
+      } catch (_) {}
+    };
+    img.src = artSrc;
+    return () => {
+      alive = false;
+      img.onload = null;
+    };
+  }, [artSrc, artSize]);
   React.useEffect(() => {
     const host = hostRef.current;
-    const roadCv = roadRef.current;
     const noteCv = noteRef.current;
     const fxCv = fxRef.current;
-    if (!host || !roadCv || !noteCv || !fxCv || !chart) return undefined;
-    const settings = rhythmWatchSettings();
+    const line = lineRef.current;
+    if (!host || !noteCv || !fxCv || !line || !chart) return undefined;
     let renderer = null;
     try {
+      if (typeof rhythmApplyNotePalette === 'function') rhythmApplyNotePalette(settings.notePalette);
+      if (typeof rhythmApplyNoteShape === 'function') rhythmApplyNoteShape(settings.noteShape);
       renderer = rhythmBuildCanvasRenderer();
       renderer.attach(noteCv, {
         webgl: false,
@@ -98585,7 +98628,7 @@ function RhythmWatchLaneRoad({
       lerp: RHYTHM_SCROLL.lerp
     };
     rhythmScrollSet(Array.isArray(chart.scrollChanges) && chart.scrollChanges.length ? chart.scrollChanges : null, travelMs, chart.scrollGroups);
-    const roadFactor = orientationIsLandscape() ? RHYTHM_ROAD_WIDTHS[settings.roadWidth] || 1 : 1;
+    const roadFactor = wide ? RHYTHM_ROAD_WIDTHS[settings.roadWidth] || 1 : 1;
     RHYTHM_ROAD_WIDTH.set(roadFactor);
     const hasTable = !!RHYTHM_SCROLL.points;
     const firstFrom = t => {
@@ -98597,68 +98640,14 @@ function RhythmWatchLaneRoad({
       }
       return lo;
     };
-    const dpr = Math.min(2, typeof window !== 'undefined' && window.devicePixelRatio || 1);
     let raf = 0;
     let alive = true;
     let sizeKey = '';
+    let travel = null;
+    let lastHud = '';
+    const fired = new Set();
+    let prevVis = null;
     const noteH = RHYTHM_WATCH_NOTE_H;
-    const paintRoad = (w, h, hitY) => {
-      const c = roadCv.getContext('2d');
-      if (!c) return;
-      c.setTransform(dpr, 0, 0, dpr, 0, 0);
-      c.clearRect(0, 0, w, h);
-      const g = c.createLinearGradient(0, 0, 0, h);
-      g.addColorStop(0, '#050817');
-      g.addColorStop(0.42, '#070718');
-      g.addColorStop(1, '#03040b');
-      c.fillStyle = g;
-      c.fillRect(0, 0, w, h);
-      const glow = c.createRadialGradient(w / 2, h * 0.04, 0, w / 2, h * 0.04, w * 0.45);
-      glow.addColorStop(0, 'rgba(217,70,239,.18)');
-      glow.addColorStop(1, 'rgba(217,70,239,0)');
-      c.fillStyle = glow;
-      c.fillRect(0, 0, w, h * 0.5);
-      const STEPS = 12;
-      const edge = b => {
-        const pts = [];
-        for (let k = 0; k <= STEPS; k += 1) {
-          const y = k / STEPS * h;
-          pts.push([rhythmProjectBoundary(b, y / h) * w, y]);
-        }
-        return pts;
-      };
-      for (let lane = 0; lane < RHYTHM_LANE_COUNT; lane += 1) {
-        const l = edge(lane);
-        const r = edge(lane + 1);
-        c.beginPath();
-        l.forEach((p, k) => k ? c.lineTo(p[0], p[1]) : c.moveTo(p[0], p[1]));
-        for (let k = r.length - 1; k >= 0; k -= 1) c.lineTo(r[k][0], r[k][1]);
-        c.closePath();
-        c.fillStyle = lane % 2 ? 'rgba(30,41,59,.34)' : 'rgba(15,23,42,.42)';
-        c.fill();
-      }
-      c.lineWidth = 1;
-      for (let b = 0; b <= RHYTHM_LANE_COUNT; b += 1) {
-        const e = edge(b);
-        c.beginPath();
-        e.forEach((p, k) => k ? c.lineTo(p[0], p[1]) : c.moveTo(p[0], p[1]));
-        c.strokeStyle = b === 0 || b === RHYTHM_LANE_COUNT ? 'rgba(103,232,249,.5)' : 'rgba(255,255,255,.2)';
-        c.stroke();
-      }
-      const yr = hitY / h;
-      const xl = rhythmProjectBoundary(0, yr) * w;
-      const xr = rhythmProjectBoundary(RHYTHM_LANE_COUNT, yr) * w;
-      c.save();
-      c.shadowColor = 'rgba(34,211,238,.8)';
-      c.shadowBlur = 10;
-      c.strokeStyle = '#22d3ee';
-      c.lineWidth = 3;
-      c.beginPath();
-      c.moveTo(xl, hitY);
-      c.lineTo(xr, hitY);
-      c.stroke();
-      c.restore();
-    };
     const frame = () => {
       if (!alive) return;
       raf = requestAnimationFrame(frame);
@@ -98666,26 +98655,45 @@ function RhythmWatchLaneRoad({
       const w = host.clientWidth;
       const h = host.clientHeight;
       if (!v || !(w > 0 && h > 0)) return;
-      const ratio = RHYTHM_JUDGMENT_LINE_Y.ratio;
-      const hitLineY = ratio * h;
-      const judgmentY = hitLineY - noteH / 2;
-      const spawnY = -noteH + (Number(settings.noteStartPosition) || 0) / 100 * h * 0.2;
-      const travelPx = judgmentY - spawnY;
-      const key = `${w}x${h}/${ratio}/${roadFactor}`;
-      if (key !== sizeKey) {
-        sizeKey = key;
-        roadCv.width = Math.round(w * dpr);
-        roadCv.height = Math.round(h * dpr);
-        fxCv.width = Math.round(w * dpr);
-        fxCv.height = Math.round(h * dpr);
-        paintRoad(w, h, hitLineY);
+      if (`${w}x${h}/${roadFactor}` !== sizeKey) {
+        sizeKey = `${w}x${h}/${roadFactor}`;
+        RHYTHM_ROAD_WIDTH.set(roadFactor);
+        rhythmLayoutPlayArea(host);
+        const areaRect = RHYTHM_VIEW_ROTATION.rectOf(host);
+        const lineRect = RHYTHM_VIEW_ROTATION.rectOf(line);
+        const spawnY = -noteH + (Number(settings.noteStartPosition) || 0) / 100 * areaRect.height * 0.2;
+        const judgmentY = lineRect.top - areaRect.top + lineRect.height / 2 - noteH / 2;
+        travel = {
+          spawnY,
+          judgmentY,
+          travelPx: judgmentY - spawnY,
+          playAreaHeight: areaRect.height,
+          rect: {
+            left: 0,
+            top: 0,
+            width: w,
+            height: h
+          },
+          noteHeight: noteH,
+          hitY: lineRect.top + lineRect.height - areaRect.top
+        };
+        RHYTHM_JUDGMENT_LINE_Y.set((lineRect.top - areaRect.top + lineRect.height / 2) / areaRect.height);
+        fxCv.width = Math.round(w * 2);
+        fxCv.height = Math.round(h * 2);
+        const layout = rhythmJudgmentBandLayout(travel, travelMs);
+        const band = bandRef.current;
+        if (band && layout) {
+          band.style.top = `${Math.round(layout.top)}px`;
+          band.style.height = `${Math.round(layout.height)}px`;
+          band.style.opacity = '1';
+          const core = band.querySelector('[data-rhythm-judgment-core]');
+          if (core) {
+            core.style.top = `${Math.max(0, layout.marvelousTop - layout.top)}px`;
+            core.style.height = `${Math.max(1, layout.marvelousBottom - layout.marvelousTop)}px`;
+          }
+        }
       }
-      const rect = {
-        left: 0,
-        top: 0,
-        width: w,
-        height: h
-      };
+      if (!travel) return;
       const row = v.rows[v.focus];
       const pos = rhythmWatchPosition(row);
       if (pos.waiting !== waitingRef.current) {
@@ -98693,12 +98701,9 @@ function RhythmWatchLaneRoad({
         if (onWaiting) onWaiting(pos.waiting);
       }
       const vis = pos.p - RHYTHM_WATCH_LANE_DELAY_MS;
+      if (prevVis !== null && (vis < prevVis - 2000 || vis > prevVis + 4000)) fired.clear();
       const jm = v.judged[v.focus] || null;
-      const fx = fxCv.getContext('2d');
-      if (fx) {
-        fx.setTransform(dpr, 0, 0, dpr, 0, 0);
-        fx.clearRect(0, 0, w, h);
-      }
+      const rect = travel.rect;
       const ready = renderer.begin(rect, {
         nowMs: performance.now(),
         effect: settings.effectAmount,
@@ -98708,7 +98713,6 @@ function RhythmWatchLaneRoad({
         ...rhythmFxRenderOptions(settings)
       });
       let shown = null;
-      let flashes = null;
       if (ready && pos.known) {
         const horizon = vis + travelMs * (hasTable ? 4 : 1.2);
         const sNow = g => rhythmScrollPos(vis, g);
@@ -98719,19 +98723,23 @@ function RhythmWatchLaneRoad({
           const relMs = hasBody ? rhythmReleaseTargetMs(n) : n.timeMs;
           const endMs = hasBody ? Math.max(relMs, Number(n.endTimeMs) || 0, n.timeMs) : n.timeMs;
           const code = jm && jm.has(i) ? jm.get(i) : -1;
-          if (code >= 0 && n.timeMs <= vis && Math.abs(vis - n.timeMs) < 700) shown = {
+          if (code >= 0 && n.timeMs <= vis && vis - n.timeMs < 700) shown = {
             code,
             age: vis - n.timeMs
           };
-          if (code >= 0 && code < 5 && Math.abs(vis - n.timeMs) < 260) {
-            (flashes || (flashes = [])).push({
-              n,
-              code,
-              age: vis - n.timeMs
-            });
-          }
           const hit = code >= 0 && code < 5;
           const miss = code === 5;
+          if (hit && vis >= n.timeMs && vis - n.timeMs < 300 && !fired.has(i)) {
+            fired.add(i);
+            try {
+              const at = rhythmProjectLane(Number(n.lane) || 0, travel.hitY / h);
+              rhythmSpawnHitEffect(host, {
+                centerRatio: at.center,
+                widthRatio: at.width * (rhythmNoteIsWide(n) ? 2 : 1),
+                judgment: RHYTHM_WATCH_JUDGMENT_VIEW[code].id
+              });
+            } catch (_) {}
+          }
           const holding = hit && hasBody && vis >= n.timeMs && vis < endMs;
           const clearAt = hit ? hasBody ? endMs : n.timeMs : 0;
           const clearing = hit && vis >= clearAt && vis - clearAt < RHYTHM_CLEAR_FLASH_MS;
@@ -98740,18 +98748,18 @@ function RhythmWatchLaneRoad({
           const progress = 1 - (rhythmScrollPos(n.timeMs, n.scrollGroup) - sNow(n.scrollGroup)) / travelMs;
           const visible = holding || clearing || failedTrail || progress >= -0.1 && progress <= 1.18;
           if (!visible) continue;
-          let yPx = spawnY + rhythmProjectTravelProgress(progress) * travelPx;
-          if (holding || clearing) yPx = judgmentY;
+          let yPx = travel.spawnY + rhythmProjectTravelProgress(progress) * travel.travelPx;
+          if (holding || clearing) yPx = travel.judgmentY;
           yPx = Math.round(yPx);
           const releaseProgress = 1 - (rhythmScrollPos(relMs, n.scrollGroup) - sNow(n.scrollGroup)) / travelMs;
-          const releaseYpx = Math.round(spawnY + rhythmProjectTravelProgress(releaseProgress) * travelPx);
+          const releaseYpx = Math.round(travel.spawnY + rhythmProjectTravelProgress(releaseProgress) * travel.travelPx);
           const bodyPx = Math.max(0, yPx - releaseYpx);
           const geo = rhythmNoteCanvasGeometry(n, yPx, n.lane, rect, noteH, hasBody ? releaseYpx : null, {
             chartNowMs: vis,
             visualTime: vis,
             travelMs,
-            spawnY,
-            travelPx,
+            spawnY: travel.spawnY,
+            travelPx: travel.travelPx,
             gpu: false
           }, hasBody ? bodyPx : 0);
           const depthScale = Math.round((0.56 + geo.scale * 0.44) * 100) / 100;
@@ -98759,7 +98767,7 @@ function RhythmWatchLaneRoad({
           const passedUnknown = code < 0 && vis > n.timeMs + 80;
           renderer.drawNote(n, geo, {
             failed: miss || failedTrail,
-            monster: false,
+            monster: !!rhythmNoteMonsterSlot(n),
             wide: rhythmNoteIsWide(n),
             pressed: holding,
             slideOff: false,
@@ -98771,54 +98779,28 @@ function RhythmWatchLaneRoad({
           });
         }
       }
+      prevVis = vis;
       renderer.end();
-      if (!fx) return;
-      if (flashes) {
-        flashes.forEach(f => {
-          const k = Math.max(0, 1 - Math.abs(f.age) / 260);
-          if (!(k > 0)) return;
-          const at = rhythmProjectLane(Number(f.n.lane) || 0, hitLineY / h);
-          const cx = at.center * w;
-          const wide = Math.max(at.width * w * 0.9, 24);
-          const gr = fx.createRadialGradient(cx, hitLineY, 0, cx, hitLineY, wide);
-          gr.addColorStop(0, RHYTHM_WATCH_JUDGMENT_VIEW[f.code].color);
-          gr.addColorStop(1, 'rgba(255,255,255,0)');
-          fx.globalAlpha = 0.55 * k;
-          fx.fillStyle = gr;
-          fx.beginPath();
-          fx.arc(cx, hitLineY, wide, 0, Math.PI * 2);
-          fx.fill();
-          fx.globalAlpha = 1;
+      const k = row && row.k ? row.k : null;
+      const counts = k ? {
+        MARVELOUS: k[0],
+        EXCELLENT: k[1],
+        GREAT: k[2],
+        GOOD: k[3],
+        BAD: k[4],
+        MISS: k[5]
+      } : null;
+      const last = shown ? RHYTHM_WATCH_JUDGMENT_VIEW[shown.code].id : '';
+      const key = `${row ? row.c : 0}|${row && row.l != null ? row.l : ''}|${last}|${k ? k.join(',') : ''}`;
+      if (key !== lastHud) {
+        lastHud = key;
+        hud.set({
+          combo: row ? row.c || 0 : 0,
+          life: row && row.l != null ? row.l : RHYTHM_LIFE_MAX,
+          last,
+          lastPrecise: false,
+          counts
         });
-      }
-      fx.textAlign = 'center';
-      fx.textBaseline = 'middle';
-      const combo = row && row.c ? row.c : 0;
-      if (combo >= 2) {
-        fx.globalAlpha = 0.9;
-        fx.font = `italic 900 ${Math.round(Math.min(46, Math.max(26, h * 0.1)))}px sans-serif`;
-        fx.lineWidth = 4;
-        fx.strokeStyle = 'rgba(2,6,23,.75)';
-        fx.fillStyle = '#fef08a';
-        fx.strokeText(String(combo), w / 2, h * 0.3);
-        fx.fillText(String(combo), w / 2, h * 0.3);
-        fx.font = '900 11px sans-serif';
-        fx.fillStyle = '#fde68a';
-        fx.fillText('COMBO', w / 2, h * 0.3 + Math.min(34, Math.max(20, h * 0.07)));
-        fx.globalAlpha = 1;
-      }
-      if (shown) {
-        const j = RHYTHM_WATCH_JUDGMENT_VIEW[shown.code];
-        const a = Math.max(0, 1 - shown.age / 700);
-        fx.globalAlpha = a;
-        fx.font = `italic 900 ${Math.round(Math.min(26, Math.max(18, w * 0.06)))}px sans-serif`;
-        fx.lineWidth = 4;
-        fx.strokeStyle = 'rgba(2,6,23,.8)';
-        fx.fillStyle = j.color;
-        const ty = hitLineY - Math.max(46, h * 0.16);
-        fx.strokeText(j.short, w / 2, ty);
-        fx.fillText(j.short, w / 2, ty);
-        fx.globalAlpha = 1;
       }
     };
     raf = requestAnimationFrame(frame);
@@ -98837,19 +98819,158 @@ function RhythmWatchLaneRoad({
       RHYTHM_PROJECTION_CAMERA.reset();
       if (waitingRef.current && onWaiting) onWaiting(false);
     };
-  }, [chart]);
-  return React.createElement("div", {
+  }, [chart, wide]);
+  const light = settings.lightweightMode || settings.effectAmount === 'MINIMAL';
+  return React.createElement("div", _extends({
     ref: hostRef,
     "data-rhythm-watch-lane": true,
     "data-rhythm-watch-lane-road": true,
-    className: "absolute inset-0 overflow-hidden"
-  }, React.createElement("canvas", {
-    ref: roadRef,
-    className: "absolute inset-0 h-full w-full"
+    "data-rhythm-play-area": true,
+    "data-rhythm-lightweight": "false",
+    "data-rhythm-effect": settings.effectAmount,
+    "data-rhythm-judgment-fx": settings.judgmentFx === true && !light ? '1' : undefined
+  }, rhythmFxAttrs(settings), {
+    className: "absolute inset-0",
+    style: {
+      position: 'absolute',
+      overflow: 'hidden',
+      touchAction: 'none',
+      '--rhythm-note-size-scale': settings.noteSize / 100,
+      '--mh-judgment-line-bottom': lineBottom,
+      filter: settings.effectAmount === 'MINIMAL' ? 'saturate(.78)' : settings.effectAmount === 'LOW' ? 'saturate(.92)' : 'none'
+    }
+  }), React.createElement("div", {
+    className: "pointer-events-none absolute inset-0 grid",
+    style: {
+      gridTemplateColumns: `repeat(${RHYTHM_LANE_COUNT},minmax(0,1fr))`
+    }
+  }, Array.from({
+    length: RHYTHM_LANE_COUNT
+  }, (_, lane) => React.createElement("div", {
+    key: lane,
+    "data-rhythm-lane": lane,
+    "data-pressed": "false",
+    "aria-hidden": "true",
+    className: "relative border-r border-white/20 bg-slate-900/40",
+    style: {
+      borderBottom: '3px solid transparent',
+      boxSizing: 'border-box'
+    }
+  }))), React.createElement("div", {
+    className: "pointer-events-none absolute inset-0",
+    "aria-hidden": "true"
+  }, Array.from({
+    length: RHYTHM_LANE_COUNT
+  }, (_, index) => React.createElement("i", {
+    key: index,
+    "data-rhythm-sublane-boundary": ""
+  }))), stageLevel !== 'SIMPLE' && React.createElement("div", {
+    "data-rhythm-stage": stageLevel,
+    "data-stage-tier": "0",
+    "aria-hidden": "true",
+    style: rhythmFxStageStyle(settings)
+  }, artSrc && React.createElement("canvas", {
+    ref: artRef,
+    "data-rhythm-stage-art": true,
+    width: artSize,
+    height: artSize
+  })), React.createElement(RhythmHudCombo, {
+    hud: hud,
+    settings: settings,
+    assistOn: false,
+    comboPosition: RHYTHM_COMBO_POSITIONS.includes(settings.comboPosition) ? settings.comboPosition : 'CENTER',
+    isLandscape: wide,
+    comboRef: null,
+    comboRingRef: null
+  }), React.createElement("div", {
+    ref: bandRef,
+    "data-rhythm-judgment-band": true,
+    "aria-hidden": "true",
+    style: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      top: 0,
+      height: 0,
+      opacity: 0,
+      pointerEvents: 'none',
+      zIndex: 2
+    }
+  }, React.createElement("i", {
+    "data-rhythm-judgment-core": true,
+    "aria-hidden": "true",
+    style: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      top: 0,
+      height: 0,
+      background: 'linear-gradient(180deg,rgba(250,232,255,0),rgba(250,232,255,.26),rgba(250,232,255,0))'
+    }
+  }), React.createElement("i", {
+    "data-rhythm-judgment-edge": true,
+    "data-edge": "top",
+    "aria-hidden": "true",
+    style: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      top: 0,
+      height: '1px',
+      background: 'linear-gradient(90deg,rgba(103,232,249,0),rgba(103,232,249,.55),rgba(103,232,249,0))'
+    }
+  }), React.createElement("i", {
+    "data-rhythm-judgment-edge": true,
+    "data-edge": "bottom",
+    "aria-hidden": "true",
+    style: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      bottom: 0,
+      height: '1px',
+      background: 'linear-gradient(90deg,rgba(103,232,249,0),rgba(103,232,249,.55),rgba(103,232,249,0))'
+    }
+  })), React.createElement("div", {
+    ref: lineRef,
+    "data-rhythm-judgment-line": true,
+    style: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      bottom: 'var(--mh-judgment-line-bottom,12%)',
+      height: '3px',
+      background: 'linear-gradient(90deg,#f0abfc,#cffafe,#f0abfc)',
+      boxShadow: light ? 'none' : settings.effectAmount === 'LOW' ? '0 0 8px #67e8f9' : '0 0 18px #67e8f9,0 0 30px #c084fc'
+    }
   }), React.createElement("canvas", {
     ref: noteRef,
-    className: "absolute left-0 top-0"
-  }), React.createElement("canvas", {
+    "data-rhythm-note-canvas": true,
+    "aria-hidden": "true"
+  }), React.createElement("div", {
+    "data-rhythm-judgment-display": true,
+    className: "pointer-events-none absolute left-1/2 z-10 w-[88%] -translate-x-1/2 text-center",
+    style: {
+      ...rhythmJudgeScaleStyle(settings),
+      bottom: 'calc(var(--mh-judgment-line-bottom,12%) + 38px)'
+    }
+  }, React.createElement(RhythmHudJudgment, {
+    hud: hud,
+    settings: settings,
+    status: "",
+    haloKeys: null,
+    timingDisplay: "STANDARD",
+    judgmentTextRef: judgeRef
+  })), React.createElement("div", {
+    "data-rhythm-hud": true,
+    className: `pointer-events-none absolute z-10 ${wide ? 'left-1.5 top-9' : 'right-1.5 top-9'}`
+  }, React.createElement(RhythmHudLife, {
+    hud: hud,
+    settings: settings,
+    isLandscape: wide,
+    lifeBoxRef: null,
+    lifeDamageRef: null
+  })), React.createElement("canvas", {
     ref: fxRef,
     className: "pointer-events-none absolute inset-0 h-full w-full"
   }));
@@ -98866,6 +98987,7 @@ function RhythmWatchScreen({
     k: null
   });
   const [waiting, setWaiting] = React.useState(false);
+  const [roadMode, setRoadMode] = React.useState(false);
   const wide = useRhythmWatchWide();
   const focusRow = v && v.rows ? v.rows[v.focus] : null;
   React.useEffect(() => {
@@ -98959,7 +99081,10 @@ function RhythmWatchScreen({
     className: "relative min-h-[120px] flex-1 overflow-hidden rounded-xl border border-slate-700 bg-slate-950"
   }, chartOf && !lite && React.createElement(RhythmWatchLane, {
     chart: chartOf,
-    onWaiting: setWaiting
+    song: song,
+    wide: wide,
+    onWaiting: setWaiting,
+    onMode: setRoadMode
   }), React.createElement("div", {
     className: "pointer-events-none absolute inset-x-0 top-0 flex items-center gap-1.5 px-1.5 pt-1"
   }, icon(who, 22), React.createElement("b", {
@@ -99004,7 +99129,7 @@ function RhythmWatchScreen({
     }
   }, j.short), React.createElement("b", {
     className: "block text-[13px] font-black tabular-nums"
-  }, focusRow && focusRow.k ? focusRow.k[i] : '-')))), React.createElement("div", {
+  }, focusRow && focusRow.k ? focusRow.k[i] : '-')))), !roadMode && React.createElement("div", {
     className: "flex items-center gap-2 text-[10px] font-black text-slate-300"
   }, React.createElement("span", null, "LIFE"), React.createElement("div", {
     className: "h-2 flex-1 overflow-hidden rounded-full bg-slate-800"

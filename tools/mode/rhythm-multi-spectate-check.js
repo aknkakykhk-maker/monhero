@@ -170,7 +170,7 @@ const VIEW = PORTRAIT ? { width: 390, height: 844 } : { width: 844, height: 390 
     const detail = await W.evaluate(() => ({
       rows: [...document.querySelectorAll('[data-rhythm-watch-row]')].map((r) => r.innerText.replace(/\s+/g, ' ').trim()),
       counts: [...document.querySelectorAll('[data-rhythm-watch-count]')].map((c) => c.querySelector('b').textContent),
-      life: document.querySelector('[data-rhythm-watch-life]').style.width,
+      life: (document.querySelector('[data-rhythm-watch-life]') || document.querySelector('[data-rhythm-life-bar]')).style.width,
       progress: document.querySelector('[data-rhythm-watch-progress]').style.width,
       focus: RHYTHM_WATCH.view().focus,
     }));
@@ -212,11 +212,13 @@ const VIEW = PORTRAIT ? { width: 390, height: 844 } : { width: 844, height: 390 
     check('観戦の画面が、その曲・その難易度の譜面を持っている', !!chartInfo && chartInfo.n > 0 && chartInfo.idx.length >= 2, JSON.stringify(chartInfo && { n: chartInfo.n, near: chartInfo.idx.length }));
     check('譜面の絵(canvas)が出る', (await W.locator('[data-rhythm-watch-lane]').count()) === 1);
     // ---- 観戦の道を、プレイ画面と同じ部品で描く(2026-11-15 r1115-021) ----
-    check('観戦の道は、プレイ画面と同じ描き方(奥行きの道・ノーツ・光の3枚の canvas)', (await W.locator('[data-rhythm-watch-lane-road] canvas').count()) === 3);
+    check('観戦の道は、プレイ画面と同じ枠(data-rhythm-play-area)・同じ判定ライン・同じノーツの canvas で描く', (await W.locator('[data-rhythm-watch-lane-road][data-rhythm-play-area] [data-rhythm-judgment-line]').count()) === 1 && (await W.locator('[data-rhythm-watch-lane-road] [data-rhythm-note-canvas]').count()) === 1);
+    check('ノーツの色の組・形は、プレイ画面を開くときと同じく、設定どおりに当てている', await W.evaluate(() => { const st = rhythmWatchSettings(); return RHYTHM_NOTE_PALETTE_ID === (RHYTHM_NOTE_PALETTES[st.notePalette] ? st.notePalette : 'STANDARD') && RHYTHM_NOTE_SHAPE_ID === (RHYTHM_NOTE_SHAPE_IDS.includes(st.noteShape) ? st.noteShape : 'STANDARD'); }));
+    check('道・判定の帯・コンボ・判定の文字・ライフは、プレイ画面と同じ部品(同じ CSS の属性)で出る', await W.evaluate(() => { const h = document.querySelector('[data-rhythm-watch-lane-road]'); return !!h && !!h.querySelector('[data-rhythm-lane]') && !!h.querySelector('[data-rhythm-judgment-band]') && !!h.querySelector('[data-rhythm-judgment-text]') && !!h.querySelector('[data-rhythm-life]') && !!h.querySelector('[data-rhythm-combo-box]'); }));
     await W.waitForTimeout(600);
     const roadPix = await W.evaluate(() => {
       const host = document.querySelector('[data-rhythm-watch-lane-road]'); if (!host) return null;
-      const cv = host.querySelectorAll('canvas')[1]; const c2 = cv.getContext('2d'); if (!c2) return { webgl: true };
+      const cv = host.querySelector('[data-rhythm-note-canvas]'); const c2 = cv.getContext('2d'); if (!c2) return { webgl: true };
       const d = c2.getImageData(0, 0, cv.width, cv.height).data; let n = 0; for (let i = 3; i < d.length; i += 16) if (d[i] > 0) n++;
       return { n, w: cv.width, h: cv.height };
     });
@@ -225,7 +227,7 @@ const VIEW = PORTRAIT ? { width: 390, height: 844 } : { width: 844, height: 390 
     const sameAtOnce = () => W.evaluate(() => {
       const v = RHYTHM_WATCH.view(); const row = v.rows[v.focus]; const song = RHYTHM_SONGS.find((x) => x.songId === v.songId);
       const who = v.people.find((x) => x.id === v.focus); const chart = song.difficulties[who.diff];
-      const host = document.querySelector('[data-rhythm-watch-lane-road]'); const cv = host.querySelectorAll('canvas')[1]; const c2 = cv.getContext('2d'); if (!c2) return { skip: 'webgl' };
+      const host = document.querySelector('[data-rhythm-watch-lane-road]'); const cv = host.querySelector('[data-rhythm-note-canvas]'); const c2 = cv.getContext('2d'); if (!c2) return { skip: 'webgl' };
       const st = rhythmWatchSettings(); const travelMs = rhythmTravelMsForSpeed(st.noteSpeed); const w = host.clientWidth; const h = host.clientHeight;
       const vis = row.p + Math.min(Date.now() - row.pAt, 3000) - RHYTHM_WATCH_LANE_DELAY_MS;
       const keep = { points: RHYTHM_SCROLL.points, back: RHYTHM_SCROLL.back, sufMin: RHYTHM_SCROLL.sufMin, groups: RHYTHM_SCROLL.groups, lerp: RHYTHM_SCROLL.lerp };
@@ -267,6 +269,14 @@ const VIEW = PORTRAIT ? { width: 390, height: 844 } : { width: 844, height: 390 
       check('判定を送ったあと、たまりは小さいまま(1秒ごとに空になる)', (await A.evaluate(() => RHYTHM_PLAY_WATCH.jd.length)) < 40);
     }
     if (SHOT_DIR) { await W.waitForTimeout(700); await W.screenshot({ path: path.join(SHOT_DIR, 'watch-lane-landscape.png') }); }
+    // 並べる止め絵: 演奏している人の画面(プレイ画面)と観戦の画面を、同じ曲・同じ時刻に撮る(縦・横)
+    if (SHOT_DIR) {
+      for (const [nm, w, h] of [['yoko', 844, 390], ['tate', 390, 844], ['tate320', 320, 568]]) {
+        await A.setViewportSize({ width: w, height: h }); await W.setViewportSize({ width: w, height: h }); await W.waitForTimeout(1200);
+        await Promise.all([A.screenshot({ path: path.join(SHOT_DIR, `side-play-${nm}.png`) }), W.screenshot({ path: path.join(SHOT_DIR, `side-watch-${nm}.png`) })]);
+      }
+      await A.setViewportSize({ width: 844, height: 390 }); await W.setViewportSize({ width: 844, height: 390 });
+    }
     // ---- 重い端末: フレームが40枚/秒を切る状態が2秒続くと、譜面は送らず数字だけにする ----
     await B.evaluate(() => { Object.defineProperty(RHYTHM_PLAY_WATCH, 'frames', { get: () => Math.floor(Date.now() / 100), set: () => {}, configurable: true }); /* 10枚/秒で進む(重い端末) */ });
     await W.evaluate((id) => RHYTHM_WATCH.focus(id), idB);
