@@ -28,8 +28,9 @@ const MSX_SCN_CSS = `
 .msx .scn-sc>.bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .msx .scn-sc>.pl{position:absolute;left:0;right:0;bottom:0;height:16%;background:repeating-linear-gradient(0deg,#c9b9a6 0 22px,#b9a690 22px 24px)}
 .msx .scn-sc .who{position:absolute;object-fit:contain;pointer-events:none}
-.msx .scn-sc .who.l{left:-7%;bottom:40%;height:36%;z-index:2}
-.msx .scn-sc .who.r{right:-9%;bottom:38%;height:40%;z-index:2}
+/* 左右の人物は画面の内側に全身を収める(端へ寄せすぎると細い絵ほど大半が切れる。2026-11-16 実機スクショ) */
+.msx .scn-sc .who.l{left:0;bottom:40%;height:36%;z-index:2}
+.msx .scn-sc .who.r{right:0;bottom:38%;height:40%;z-index:2}
 .msx .scn-sc .who.c{left:50%;transform:translateX(-50%);bottom:46%;height:46%;z-index:1;animation:msxScnBob 3.2s ease-in-out infinite}
 @keyframes msxScnBob{0%,100%{transform:translateX(-50%) translateY(0)}50%{transform:translateX(-50%) translateY(-6px)}}
 .msx .scn-bd{position:absolute;z-index:3;right:4%;top:3%;width:68px;height:68px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fcd34d,#b45309);border:3px solid #fef3c7;box-shadow:0 2px 8px #0006;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#3b1d02;font-weight:900;font-size:11px;line-height:1.15;text-align:center}
@@ -49,13 +50,13 @@ const MSX_SCN_CSS = `
 .msx .scn-ft .dt{flex:1 1 0;background:#fff;color:#1f2937;border-color:#e5e7eb}
 .msx .land .scn-tx,.msx.land .scn-tx{right:42%}
 .msx .land .scn-sc .who.c,.msx.land .scn-sc .who.c{left:auto;right:17%;transform:none;bottom:0;height:90%;animation:none}
-.msx .land .scn-sc .who.r,.msx.land .scn-sc .who.r{right:-3%;bottom:0;height:78%}
+.msx .land .scn-sc .who.r,.msx.land .scn-sc .who.r{right:0;bottom:0;height:78%}
 .msx .land .scn-sc .who.l,.msx.land .scn-sc .who.l{display:none}
 .msx .land .scn-bd,.msx.land .scn-bd{right:2%}
 @media (orientation:landscape) and (max-height:520px){
 .msx .scn-tx{right:42%}
 .msx .scn-sc .who.c{left:auto;right:17%;transform:none;bottom:0;height:90%;animation:none}
-.msx .scn-sc .who.r{right:-3%;bottom:0;height:78%}
+.msx .scn-sc .who.r{right:0;bottom:0;height:78%}
 .msx .scn-sc .who.l{display:none}
 }
 .msx .scn-win{position:absolute;inset:0;z-index:30;background:#0008;display:flex;align-items:center;justify-content:center;padding:28px 18px}
