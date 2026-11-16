@@ -531,7 +531,13 @@ function MonsucBattleCard({ suc, s, info, catalog, odds, noSulk, onReady, onResu
         <div className="mon b"><img src={mscMonImg(o.species)} alt=""/></div>
         <div className="vs">VS</div>
         <div className="nm a"><span>{info.meName}</span></div>
-        <div className="nm b"><span>{o.name || mscMonName(o.species)}</span>{o.champ && <i className="msc-tag ch">👑王者</i>}{o.rival && <i className="msc-tag rv">ライバル</i>}</div>
+        <div className="nm b"><span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>{o.rival ? <MsxRivalOwnerIcon rival={msxRivalFaceOf(s.rivals, o)} size={20}/> : null}{o.name || mscMonName(o.species)}</span>{o.champ && <i className="msc-tag ch">👑王者</i>}{o.rival && <i className="msc-tag rv">ライバル</i>}</div>
+      </div>
+      {/* 勝敗予想・相手の得意・技が届く間合いは、能力の比較より先に出す(2026-11-16 UI改修) */}
+      <div className="msc-fc" data-msc-forecast>
+        <span className={`p ${odds ? odds.key : ''}`} data-msc-odds={odds ? odds.win : ''}><small>予想</small><b>{odds ? odds.label : '…'}</b>{odds ? <small>オートで {odds.n}回中 {odds.win}勝</small> : null}</span>
+        <span><small>相手の得意</small><b>{AMBW_DIST[foeBest.d]}</b></span>
+        <span data-msc-reach={reach.map(x => (x ? 1 : 0)).join('')}><small>技が届く</small><b className="r">{AMBW_DIST.map((dn, d) => <i key={dn} className={reach[d] ? 'y' : ''}>{dn}</i>)}</b></span>
       </div>
       <div className="msc-tabs">{[['st', 'ステータス'], ['tech', '技'], ['abl', '能力']].map(([k, l]) => <button key={k} data-msc-tab={k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)}>{l}</button>)}</div>
       <div className="msc-sheet grow" key={tab}>
@@ -559,11 +565,6 @@ function MonsucBattleCard({ suc, s, info, catalog, odds, noSulk, onReady, onResu
           <div><span>能力の合計 {sumMe}</span><span>技 {myTechs.length}つ</span><span>Lv {mscNum(s.lv, 1)}</span><span>間合い</span>{aptRow(s.species, true)}</div>
           <div><span>{o.champ ? '大会の王者' : o.rival ? 'ライバル' : '大会の常連'}</span><span>技 {foeTechs.length}つ</span><span>{o.breeder ? `育てた人 ${o.breeder}` : '育てた人 —'}</span><span>間合い</span>{aptRow(o.species)}</div>
         </div>}
-      </div>
-      <div className="msc-fc" data-msc-forecast>
-        <span className={`p ${odds ? odds.key : ''}`} data-msc-odds={odds ? odds.win : ''}><small>予想</small><b>{odds ? odds.label : '…'}</b>{odds ? <small>オートで {odds.n}回中 {odds.win}勝</small> : null}</span>
-        <span><small>相手の得意</small><b>{AMBW_DIST[foeBest.d]}</b></span>
-        <span data-msc-reach={reach.map(x => (x ? 1 : 0)).join('')}><small>技が届く</small><b className="r">{AMBW_DIST.map((dn, d) => <i key={dn} className={reach[d] ? 'y' : ''}>{dn}</i>)}</b></span>
       </div>
       <div className="msc-hint"><img src={mscFace(s.aid)} alt=""/><span style={typeof JA_LABEL_STYLE !== 'undefined' ? JA_LABEL_STYLE : undefined}>{hint}</span></div>
       <div className="msc-foot">

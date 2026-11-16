@@ -264,21 +264,33 @@ const monsucRankGet = async (path, withCount) => {
     return { rows, total };
   } catch (_) { return null; }
 };
-// lineage を渡すと血統別。{ rows, total, mine }(mine = 自分の子のいちばん上の行)
-const monsucRankRead = async ({ lineage = null } = {}) => {
+// lineage を渡すと血統別。上位の一覧と自分の順位は分けて読む(2026-11-16 UI改修: 一覧が届き次第出し、自分の順位は後から足す)
+const monsucRankViewOf = (lineage) => {
   const lin = typeof lineage === 'string' && /^[A-Za-z_]{1,32}$/.test(lineage) ? lineage : null;
-  const view = lin ? 'monsuc_rank_lineage' : 'monsuc_rank_all';
-  const where = lin ? `&lineage=eq.${lin}` : '';
-  const limit = lin ? MONSUC_RANK_LIMIT_LINEAGE : MONSUC_RANK_LIMIT_ALL;
+  return { lin, view: lin ? 'monsuc_rank_lineage' : 'monsuc_rank_all', where: lin ? `&lineage=eq.${lin}` : '', limit: lin ? MONSUC_RANK_LIMIT_LINEAGE : MONSUC_RANK_LIMIT_ALL };
+};
+// 上位の一覧 { rows, total, sent }(失敗は null)
+const monsucRankReadTop = async ({ lineage = null } = {}) => {
+  const { view, where, limit } = monsucRankViewOf(lineage);
   const top = await monsucRankGet(`${view}?select=${MONSUC_RANK_COLS}${where}&order=place.asc,run_id.asc&limit=${limit}`, true);
   if (!top) return null;
   const sent = (await monsucRankSentList()).filter(id => /^[A-Za-z0-9_-]{1,64}-[A-Za-z0-9]{6,32}$/.test(id));
-  let mine = null;
-  if (sent.length > 0) {
-    const m = await monsucRankGet(`${view}?select=${MONSUC_RANK_COLS}${where}&run_id=in.(${sent.map(encodeURIComponent).join(',')})&order=place.asc&limit=1`, false);
-    mine = m && m.rows[0] ? m.rows[0] : null;
-  }
-  return { rows: top.rows, total: top.total, mine, sent };
+  return { rows: top.rows, total: top.total, sent };
+};
+// 自分の順位(自分の子のいちばん上の行。無い・失敗は null)
+const monsucRankReadMine = async ({ lineage = null, sent = [] } = {}) => {
+  const ids = (Array.isArray(sent) ? sent : []).filter(id => /^[A-Za-z0-9_-]{1,64}-[A-Za-z0-9]{6,32}$/.test(id));
+  if (ids.length === 0) return null;
+  const { view, where } = monsucRankViewOf(lineage);
+  const m = await monsucRankGet(`${view}?select=${MONSUC_RANK_COLS}${where}&run_id=in.(${ids.map(encodeURIComponent).join(',')})&order=place.asc&limit=1`, false);
+  return m && m.rows[0] ? m.rows[0] : null;
+};
+// { rows, total, mine, sent }(従来のまとめ読み)
+const monsucRankRead = async ({ lineage = null } = {}) => {
+  const top = await monsucRankReadTop({ lineage });
+  if (!top) return null;
+  const mine = await monsucRankReadMine({ lineage, sent: top.sent });
+  return { rows: top.rows, total: top.total, mine, sent: top.sent };
 };
 
 // ---- 画面 ----
@@ -303,10 +315,10 @@ function MonsucRankStats({ stats }) {
     </div>)}
   </div>;
 }
-function MonsucRankRow({ row, open, onToggle, mine, pinned }) {
+function MonsucRankRow({ row, onOpen, mine, pinned }) {
   const top = row.place <= 3;
-  const cls = pinned ? 'border-pink-400/80 bg-pink-900/40' : open ? 'border-yellow-400/80 bg-yellow-900/30' : mine ? 'border-pink-400/60 bg-slate-800/80' : 'border-slate-600/60 bg-slate-800/70';
-  return <button type="button" onClick={onToggle} className={`w-full text-left rounded-xl border px-3 py-2 ${cls}`} aria-expanded={!!open}>
+  const cls = pinned ? 'border-pink-400/80 bg-pink-900/40' : mine ? 'border-pink-400/60 bg-slate-800/80' : 'border-slate-600/60 bg-slate-800/70';
+  return <button type="button" onClick={onOpen} className={`w-full text-left rounded-xl border px-3 py-2 ${cls}`}>
     <div className="flex items-center gap-2">
       <div className={`w-8 text-center font-black ${top ? 'text-yellow-300 text-lg' : 'text-slate-200 text-base'}`}>{row.place}</div>
       <MonsucRankMonImg species={row.species} dye={row.dye} />
@@ -317,8 +329,48 @@ function MonsucRankRow({ row, open, onToggle, mine, pinned }) {
       <MonsucRankGrade grade={row.grade} />
       <div className="w-[64px] text-right text-[15px] font-black text-yellow-300">{Math.round(monsucRankNum(row.power)).toLocaleString()}</div>
     </div>
-    {open && <MonsucRankStats stats={row.stats} />}
   </button>;
+}
+// ---- モンスター詳細(2026-11-16 UI改修・旧②ランキング詳細): 一覧の行から開く。登録済みの育成完了データだけから出す ----
+// ヘッダーと戻る位置は一覧とそろえ、「一覧へ」で元のタブ・スクロール位置に戻る(呼ぶ側が状態を保つ)
+function MonsucRankDetail({ row, pinned, onBack }) {
+  const mon = monsucRankMonOf(row.species) || {};
+  return <div className="fixed inset-0 z-[60] flex flex-col text-white" style={{ background: 'linear-gradient(180deg,#1e1b4b 0%,#0f172a 100%)', paddingTop: 'var(--mh-sa-top)', paddingBottom: 'var(--mh-sa-bottom)' }}>
+    <div className="flex items-center gap-2 px-3 pt-3">
+      <button type="button" onClick={onBack} className="rounded-full bg-slate-700/80 px-3 py-1 text-[12px] font-bold">← 一覧へ</button>
+      <div className="text-[13px] font-black text-pink-300">🌱 モンヒロサクセス</div>
+    </div>
+    <div className="px-3 pt-2">
+      <div className="text-[18px] font-black">🏆 モンスター詳細</div>
+    </div>
+    <div className="flex-1 overflow-y-auto px-3 py-3">
+      <div className="rounded-2xl border border-slate-600/60 bg-slate-800/70 px-4 py-4">
+        <div className="flex items-start gap-3">
+          <MonsucRankMonImg species={row.species} dye={row.dye} size={92} />
+          <div className="flex-1 min-w-0">
+            <div className="text-[19px] font-black text-white leading-tight">{row.child_name || mon.name || '？？？'}</div>
+            <div className="text-[12px] text-slate-300 mt-0.5">育てた人: {pinned ? 'あなた' : (row.user_name || 'ななしのブリーダー')}</div>
+            <div className="text-[12px] text-slate-300">{mon.name || row.species}・{monsucRankLineageName(row.lineage)}系</div>
+            <div className="flex items-center gap-2 mt-2">
+              <span className="text-[12px] font-bold text-slate-200">Lv {Math.round(monsucRankNum(row.lv))}</span>
+              <MonsucRankGrade grade={row.grade} />
+              <span className="text-[12px] font-bold text-slate-200">{row.place}位</span>
+            </div>
+          </div>
+        </div>
+        <div className="flex items-baseline gap-2 mt-3">
+          <span className="text-[12px] font-bold text-slate-300">総合力</span>
+          <span className="text-[24px] font-black text-yellow-300">{Math.round(monsucRankNum(row.power)).toLocaleString()}</span>
+        </div>
+        <div className="text-[12px] font-bold text-slate-300 mt-3">6能力</div>
+        <MonsucRankStats stats={row.stats} />
+        <div className="text-[12px] text-slate-200 mt-3">習得技数: <span className="font-black text-white">{Math.round(monsucRankNum(row.tech_count))}</span></div>
+      </div>
+    </div>
+    <div className="px-3 pb-3 pt-1">
+      <button type="button" onClick={onBack} className="w-full rounded-full bg-slate-700/80 py-2 text-[13px] font-bold">← 一覧へ</button>
+    </div>
+  </div>;
 }
 // 血統の札(主血統のうち、遊べるモンスターがいるもの)
 const monsucRankLineageTabs = () => {
@@ -335,9 +387,14 @@ function MonsucRankScreen({ onBack }) {
   const [lineage, setLineage] = React.useState(() => lineages[0] || 'mocchi');
   const [data, setData] = React.useState(null);
   const [loading, setLoading] = React.useState(true);
-  const [open, setOpen] = React.useState(null);
+  const [failed, setFailed] = React.useState(false); // 直近の読み込みが失敗(前のデータは出し続ける)
+  const [retryN, setRetryN] = React.useState(0);
+  const [detail, setDetail] = React.useState(null); // { row, pinned } モンスター詳細
   const [pendLeft, setPendLeft] = React.useState(0);
   const [flushed, setFlushed] = React.useState(false);
+  const cacheRef = React.useRef({}); // タブ・血統ごとの取得済みデータ(再取得中も出し続ける)
+  const listRef = React.useRef(null); // 一覧のスクロール位置(詳細から戻るときに復元する)
+  const savedScrollRef = React.useRef(0);
   const on = monsucRankOn();
   // 開いたらまず登録待ちを1件送り直し、終わってから一覧と自分の順位を読む(送れた分がそのまま順位に出る)
   React.useEffect(() => {
@@ -355,10 +412,30 @@ function MonsucRankScreen({ onBack }) {
     let alive = true;
     if (!on) { setLoading(false); return undefined; }
     if (!flushed) return undefined; // 送り直しを待ってから読む
-    setLoading(true); setOpen(null);
-    monsucRankRead({ lineage: tab === 'lineage' ? lineage : null }).then(d => { if (alive) { setData(d); setLoading(false); } });
+    const lin = tab === 'lineage' ? lineage : null;
+    const key = `${tab}:${lin || ''}`;
+    const cached = cacheRef.current[key] || null;
+    if (cached) { setData(cached); setLoading(false); } else setLoading(true);
+    setFailed(false);
+    // 上位の一覧が届き次第出し、自分の順位は後から足す
+    monsucRankReadTop({ lineage: lin }).then(top => {
+      if (!alive) return;
+      if (!top) { setLoading(false); setFailed(true); return; }
+      const merged = { rows: top.rows, total: top.total, sent: top.sent, mine: cached && cached.sent === top.sent ? cached.mine : null };
+      cacheRef.current[key] = merged; setData(merged); setLoading(false);
+      monsucRankReadMine({ lineage: lin, sent: top.sent }).then(mine => {
+        if (!alive || !mine) return;
+        const cur = cacheRef.current[key]; if (!cur) return;
+        const withMine = { ...cur, mine }; cacheRef.current[key] = withMine; setData(withMine);
+      });
+    });
     return () => { alive = false; };
-  }, [on, flushed, tab, lineage]);
+  }, [on, flushed, tab, lineage, retryN]);
+  // 詳細から戻ったら、一覧のスクロール位置を戻す
+  React.useEffect(() => {
+    if (!detail && listRef.current) listRef.current.scrollTop = savedScrollRef.current;
+  }, [detail]);
+  const openDetail = (row, pinned) => { savedScrollRef.current = listRef.current ? listRef.current.scrollTop : 0; setDetail({ row, pinned: !!pinned }); };
   const rows = data && Array.isArray(data.rows) ? data.rows : [];
   const sent = data && Array.isArray(data.sent) ? data.sent : [];
   const mine = data ? data.mine : null;
@@ -366,6 +443,7 @@ function MonsucRankScreen({ onBack }) {
   const totalText = data && Number.isFinite(data.total) ? `${data.total.toLocaleString()}${tab === 'lineage' ? '体' : '件'}` : '';
   // 血統の札は横に流さず、札と札の切りのいいところで次の行へ折り返す(2026-11-16 社長: 基本は切らないで折り返す。今回は画面が広いので全部見せる)
   // fixed の根は body の safe-area 余白が効かないので、ここで切り欠きぶんを足す(2026-11-16 社長指摘: 戻るボタンに時計が重なる)
+  if (detail) return <MonsucRankDetail row={detail.row} pinned={detail.pinned} onBack={() => setDetail(null)} />;
   return <div className="fixed inset-0 z-[60] flex flex-col text-white" style={{ background: 'linear-gradient(180deg,#1e1b4b 0%,#0f172a 100%)', paddingTop: 'var(--mh-sa-top)', paddingBottom: 'var(--mh-sa-bottom)' }}>
     <div className="flex items-center gap-2 px-3 pt-3">
       <button type="button" onClick={onBack} className="rounded-full bg-slate-700/80 px-3 py-1 text-[12px] font-bold">← 戻る</button>
@@ -385,19 +463,21 @@ function MonsucRankScreen({ onBack }) {
       <div className="text-[12px] text-slate-200 mt-1.5">{scopeName} {totalText}{mine ? <> ・ あなたの順位 <span className="text-yellow-300 font-black">{mine.place}位</span></> : null}</div>
       {pendLeft > 0 && <div className="text-[12px] font-bold text-amber-300 mt-1">⏳ 登録待ち {pendLeft}件</div>}
     </div>
-    <div className="flex-1 overflow-y-auto px-3 py-2 space-y-1.5">
+    <div ref={listRef} className="flex-1 overflow-y-auto px-3 py-2 space-y-1.5">
       {!on && <div className="text-center text-slate-300 text-[13px] py-8">{monsucRankReasonText('off')}</div>}
       {on && loading && <div className="text-center text-slate-300 text-[13px] py-8">読みこみ中…</div>}
-      {on && !loading && !data && <div className="text-center text-slate-300 text-[13px] py-8"><span className="block">つながりませんでした。</span><span className="block">少し待ってからもう一度開いてね</span></div>}
+      {on && !loading && failed && !data && <div className="text-center text-slate-300 text-[13px] py-8"><span className="block">つながりませんでした。</span><span className="block">少し待ってからもう一度開いてね</span><button type="button" onClick={() => setRetryN(n => n + 1)} className="mt-3 rounded-full bg-yellow-300 text-slate-900 px-4 py-2 text-[13px] font-black">もう一度読む</button></div>}
       {on && !loading && data && rows.length === 0 && <div className="text-center text-slate-300 text-[13px] py-8"><span className="block">まだだれも載っていません。</span><span className="block">育て終えたモンスターが最初に載ります</span></div>}
-      {rows.map(r => <MonsucRankRow key={r.run_id} row={r} open={open === r.run_id} mine={sent.includes(r.run_id)} onToggle={() => setOpen(o => (o === r.run_id ? null : r.run_id))} />)}
+      {/* 取得済みの一覧は再取得中も出し続け、失敗したらその場で読み直せる(2026-11-16 UI改修) */}
+      {on && !loading && failed && data && <div className="flex items-center justify-center gap-2 rounded-xl border border-amber-400/50 bg-amber-900/30 px-3 py-2 text-[12px] font-bold text-amber-200">新しい順位を読めませんでした<button type="button" onClick={() => setRetryN(n => n + 1)} className="rounded-full bg-yellow-300 text-slate-900 px-3 py-1 text-[12px] font-black">もう一度読む</button></div>}
+      {rows.map(r => <MonsucRankRow key={r.run_id} row={r} mine={sent.includes(r.run_id)} onOpen={() => openDetail(r, false)} />)}
     </div>
     {mine && <div className="px-3 pb-1">
-      <MonsucRankRow row={mine} pinned open={open === `me:${mine.run_id}`} onToggle={() => setOpen(o => (o === `me:${mine.run_id}` ? null : `me:${mine.run_id}`))} />
+      <MonsucRankRow row={mine} pinned onOpen={() => openDetail(mine, true)} />
     </div>}
     <div className="grid grid-cols-2 gap-2 px-3 pb-3 pt-1">
       <button type="button" onClick={onBack} className="rounded-full bg-slate-700/80 py-2 text-[13px] font-bold">← 戻る</button>
-      <div className="rounded-full bg-yellow-300 text-slate-900 py-2 text-[12px] font-black text-center">{tab === 'lineage' ? '血統は 種類のまとまり' : '押すと6能力が開く'}</div>
+      <div className="rounded-full bg-yellow-300 text-slate-900 py-2 text-[12px] font-black text-center">{tab === 'lineage' ? '血統は 種類のまとまり' : '押すと詳細が開く'}</div>
     </div>
   </div>;
 }
