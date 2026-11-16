@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 207094349593641b
+// generated-sha256: f22740a8437382fe
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -39514,7 +39514,10 @@ const PhaseSteps = ({ plan, current, nextWave = null, className = '' }) => {
 // お話や大事な窓が出ているあいだは、画面の上に重なる知らせ(新しいバージョンの帯など)を出すのを待つ。
 // 閉じたら出す(2026-10-27 社長室カゲあつくんの指摘「お話の吹き出しの頭を隠す」)。
 // 見るのは、お話の舞台(data-story-stage)と、窓(aria-modal・role="dialog")。待っているあいだだけ1秒ごとに見直す
-const OVERLAY_WAIT_SELECTOR = '[data-story-stage],[aria-modal="true"],[role="dialog"]';
+// モンサクの根(data-monhero-success)そのものは待つ対象から外す(2026-11-16 社長: モンサクを開いている間も
+// 「更新あり」を出す)。根は全画面の入れ物で role="dialog" が付いているが、お話や確認の窓ではないため。
+// 中で開く窓(子要素の aria-modal・role="dialog")は今までどおり待つ対象
+const OVERLAY_WAIT_SELECTOR = '[data-story-stage],[aria-modal="true"]:not([data-monhero-success]),[role="dialog"]:not([data-monhero-success])';
 const overlayOpenNow = () => typeof document !== 'undefined' && !!document.querySelector(OVERLAY_WAIT_SELECTOR);
 function WaitForOverlayClose({ children }) {
   const [blocked, setBlocked] = useState(overlayOpenNow);
@@ -80813,7 +80816,13 @@ function MonsucBattleCard({ suc, s, info, catalog, odds, noSulk, onReady, onResu
         <div className="mon b"><img src={mscMonImg(o.species)} alt=""/></div>
         <div className="vs">VS</div>
         <div className="nm a"><span>{info.meName}</span></div>
-        <div className="nm b"><span>{o.name || mscMonName(o.species)}</span>{o.champ && <i className="msc-tag ch">👑王者</i>}{o.rival && <i className="msc-tag rv">ライバル</i>}</div>
+        <div className="nm b"><span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>{o.rival ? <MsxRivalOwnerIcon rival={msxRivalFaceOf(s.rivals, o)} size={20}/> : null}{o.name || mscMonName(o.species)}</span>{o.champ && <i className="msc-tag ch">👑王者</i>}{o.rival && <i className="msc-tag rv">ライバル</i>}</div>
+      </div>
+      {/* 勝敗予想・相手の得意・技が届く間合いは、能力の比較より先に出す(2026-11-16 UI改修) */}
+      <div className="msc-fc" data-msc-forecast>
+        <span className={`p ${odds ? odds.key : ''}`} data-msc-odds={odds ? odds.win : ''}><small>予想</small><b>{odds ? odds.label : '…'}</b>{odds ? <small>オートで {odds.n}回中 {odds.win}勝</small> : null}</span>
+        <span><small>相手の得意</small><b>{AMBW_DIST[foeBest.d]}</b></span>
+        <span data-msc-reach={reach.map(x => (x ? 1 : 0)).join('')}><small>技が届く</small><b className="r">{AMBW_DIST.map((dn, d) => <i key={dn} className={reach[d] ? 'y' : ''}>{dn}</i>)}</b></span>
       </div>
       <div className="msc-tabs">{[['st', 'ステータス'], ['tech', '技'], ['abl', '能力']].map(([k, l]) => <button key={k} data-msc-tab={k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)}>{l}</button>)}</div>
       <div className="msc-sheet grow" key={tab}>
@@ -80841,11 +80850,6 @@ function MonsucBattleCard({ suc, s, info, catalog, odds, noSulk, onReady, onResu
           <div><span>能力の合計 {sumMe}</span><span>技 {myTechs.length}つ</span><span>Lv {mscNum(s.lv, 1)}</span><span>間合い</span>{aptRow(s.species, true)}</div>
           <div><span>{o.champ ? '大会の王者' : o.rival ? 'ライバル' : '大会の常連'}</span><span>技 {foeTechs.length}つ</span><span>{o.breeder ? `育てた人 ${o.breeder}` : '育てた人 —'}</span><span>間合い</span>{aptRow(o.species)}</div>
         </div>}
-      </div>
-      <div className="msc-fc" data-msc-forecast>
-        <span className={`p ${odds ? odds.key : ''}`} data-msc-odds={odds ? odds.win : ''}><small>予想</small><b>{odds ? odds.label : '…'}</b>{odds ? <small>オートで {odds.n}回中 {odds.win}勝</small> : null}</span>
-        <span><small>相手の得意</small><b>{AMBW_DIST[foeBest.d]}</b></span>
-        <span data-msc-reach={reach.map(x => (x ? 1 : 0)).join('')}><small>技が届く</small><b className="r">{AMBW_DIST.map((dn, d) => <i key={dn} className={reach[d] ? 'y' : ''}>{dn}</i>)}</b></span>
       </div>
       <div className="msc-hint"><img src={mscFace(s.aid)} alt=""/><span style={typeof JA_LABEL_STYLE !== 'undefined' ? JA_LABEL_STYLE : undefined}>{hint}</span></div>
       <div className="msc-foot">
@@ -84370,8 +84374,9 @@ const MSX_SCN_CSS = `
 .msx .scn-sc>.bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .msx .scn-sc>.pl{position:absolute;left:0;right:0;bottom:0;height:16%;background:repeating-linear-gradient(0deg,#c9b9a6 0 22px,#b9a690 22px 24px)}
 .msx .scn-sc .who{position:absolute;object-fit:contain;pointer-events:none}
-.msx .scn-sc .who.l{left:-7%;bottom:40%;height:36%;z-index:2}
-.msx .scn-sc .who.r{right:-9%;bottom:38%;height:40%;z-index:2}
+/* 左右の人物は画面の内側に全身を収める(端へ寄せすぎると細い絵ほど大半が切れる。2026-11-16 実機スクショ) */
+.msx .scn-sc .who.l{left:0;bottom:40%;height:36%;z-index:2}
+.msx .scn-sc .who.r{right:0;bottom:38%;height:40%;z-index:2}
 .msx .scn-sc .who.c{left:50%;transform:translateX(-50%);bottom:46%;height:46%;z-index:1;animation:msxScnBob 3.2s ease-in-out infinite}
 @keyframes msxScnBob{0%,100%{transform:translateX(-50%) translateY(0)}50%{transform:translateX(-50%) translateY(-6px)}}
 .msx .scn-bd{position:absolute;z-index:3;right:4%;top:3%;width:68px;height:68px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fcd34d,#b45309);border:3px solid #fef3c7;box-shadow:0 2px 8px #0006;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#3b1d02;font-weight:900;font-size:11px;line-height:1.15;text-align:center}
@@ -84391,13 +84396,13 @@ const MSX_SCN_CSS = `
 .msx .scn-ft .dt{flex:1 1 0;background:#fff;color:#1f2937;border-color:#e5e7eb}
 .msx .land .scn-tx,.msx.land .scn-tx{right:42%}
 .msx .land .scn-sc .who.c,.msx.land .scn-sc .who.c{left:auto;right:17%;transform:none;bottom:0;height:90%;animation:none}
-.msx .land .scn-sc .who.r,.msx.land .scn-sc .who.r{right:-3%;bottom:0;height:78%}
+.msx .land .scn-sc .who.r,.msx.land .scn-sc .who.r{right:0;bottom:0;height:78%}
 .msx .land .scn-sc .who.l,.msx.land .scn-sc .who.l{display:none}
 .msx .land .scn-bd,.msx.land .scn-bd{right:2%}
 @media (orientation:landscape) and (max-height:520px){
 .msx .scn-tx{right:42%}
 .msx .scn-sc .who.c{left:auto;right:17%;transform:none;bottom:0;height:90%;animation:none}
-.msx .scn-sc .who.r{right:-3%;bottom:0;height:78%}
+.msx .scn-sc .who.r{right:0;bottom:0;height:78%}
 .msx .scn-sc .who.l{display:none}
 }
 .msx .scn-win{position:absolute;inset:0;z-index:30;background:#0008;display:flex;align-items:center;justify-content:center;padding:28px 18px}
@@ -88390,6 +88395,14 @@ const MSX_CSS = `
 .msx .v-yousu{position:absolute;left:50%;bottom:66%;transform:translateX(18%);background:#7f1d1d;border:1.5px solid #fca5a5;border-radius:12px 12px 12px 2px;padding:2px 8px;font-size:11px;font-weight:900;white-space:nowrap;box-shadow:0 0 10px #ef444488}
 .msx .v-party{position:absolute;left:6px;top:6px;background:#0f0d24d0;border:1px solid #ffffff2a;border-radius:12px;padding:4px 5px 5px;display:flex;flex-direction:column;gap:4px;align-items:center}
 .msx .v-party>small{font-size:10px;font-weight:900;color:#f9a8d4;white-space:nowrap;line-height:1.2}
+/* 育成メイン: 編成・持ち物・詳細を風景の下にまとめた帯(2026-11-16 UI改修) */
+.msx .v-under{display:flex;gap:6px;align-items:stretch;margin-top:6px}
+.msx .v-party.row{position:static;flex:1;flex-direction:row;align-items:center;justify-content:flex-start;flex-wrap:wrap}
+.msx .v-bagb.st{position:relative;flex:0 0 auto}
+/* トレーニング: 実行ボタンの近くのまとめ(上がる能力・失敗率・体力消費。2026-11-16 UI改修) */
+.msx .v-trsum{display:flex;gap:10px;align-items:center;justify-content:center;flex-wrap:wrap;margin-top:6px;padding:6px 10px;border-radius:10px;background:#0f0d24d0;border:1px solid #ffffff2a;font-size:12px;font-weight:800;color:#e2e8f0}
+.msx .v-trsum .g{color:#fde047;font-weight:900}
+.msx .v-trsum b{color:#fff}
 .msx .v-pf{position:relative;display:block;width:30px;flex:none}
 .msx .v-pf img{display:block;width:30px;height:30px;border-radius:9px;object-fit:cover;background:#0f172a;border:2px solid #94a3b8}
 .msx .v-pf.rD img{border-color:#2dd4bf}.msx .v-pf.rC img{border-color:#38bdf8}.msx .v-pf.rB img{border-color:#a78bfa}.msx .v-pf.rA img{border-color:#f472b6}.msx .v-pf.rS img{border-color:#fbbf24}.msx .v-pf.rM img{border-color:#fde047}
@@ -88566,7 +88579,9 @@ const MSX_CSS = `
 .msx .v-card.pk{border-color:#f472b6aa}
 .msx .v-grid6{display:grid;grid-template-columns:repeat(6,1fr);gap:5px;margin-top:6px}
 .msx .v-grid6 span,.msx .v-grid6 button{position:relative;display:block;min-width:0}
-.msx .v-grid6 img{width:100%;aspect-ratio:1;border-radius:11px;object-fit:cover;background:#0f172a;border:2px solid #475569}
+/* 升の正方形はボタンの側で決める(画像の aspect-ratio 任せだと、端末によっては行の高さが画像より低く付いて次の行に被る。2026-11-16 実機スクショ) */
+.msx .v-grid6 button{aspect-ratio:1}
+.msx .v-grid6 img{position:absolute;inset:0;width:100%;height:100%;border-radius:11px;object-fit:cover;background:#0f172a;border:2px solid #475569}
 .msx .v-grid6 span.on img,.msx .v-grid6 button.on img{border-color:#fde047;box-shadow:0 0 10px #fde047aa}
 .msx .v-grid6 span.lk img,.msx .v-grid6 button.lk img{filter:grayscale(1) brightness(.4)}
 .msx .v-grid6 span.lk::after,.msx .v-grid6 button.lk::after{content:'🔒';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:13px}
@@ -88752,6 +88767,12 @@ const MSX_CSS = `
 .msx .v-cup2 .tx .g{display:block;font-size:18px;font-weight:900;color:#fde047;text-align:right;line-height:1.1}.msx .v-cup2 .tx .g small{display:inline;font-size:11px;margin-left:1px;color:#fde047}
 .msx .v-cup2.ng{opacity:1;background:#14121f;border-color:#334155}.msx .v-cup2.ng .lg,.msx .v-cup2.ng .tx>b,.msx .v-cup2.ng .tx .hd,.msx .v-cup2.ng .tx .g{opacity:.45}.msx .v-cup2.later{filter:saturate(.7)}
 .msx .v-cup2 .why{display:block;color:#fca5a5;font-size:10.5px;font-weight:900;line-height:1.3;white-space:normal}
+.msx .v-cup2 .ok{display:block;color:#86efac;font-size:10.5px;font-weight:900;line-height:1.3}
+/* 大会カードのライバルの行: 持ち主のアイコン+モンスター+名前を流れの中で読めるように(2026-11-16 UI改修) */
+.msx .v-cup2 .rvl{display:flex;align-items:center;gap:4px;font-size:11px;font-weight:900;color:#fda4af;line-height:1.3;min-width:0}
+.msx .v-cup2 .rvl img{width:20px;height:20px;border-radius:50%;object-fit:cover;object-position:50% 20%;background:#1e1a36;flex:none}
+.msx .v-cup2 .rvl b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.msx .v-cup2 .rvl small{font-size:10px;color:#cbd5e1;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .msx .v-cupwin{position:absolute;inset:0;z-index:40;background:#0009;display:flex;align-items:center;justify-content:center;padding:16px}
 .msx .v-cupwin .in{position:relative;width:100%;max-width:360px;background:#fffbeb;color:#1e1b4b;border-radius:16px;border:3px solid #f59e0b;padding:10px 12px 12px;box-shadow:0 8px 0 #0006}
 .msx .v-cupwin .h{text-align:center;font-weight:900;font-size:14px;background:#f59e0b;color:#fff;border-radius:10px;padding:3px 0;margin:-2px -2px 8px}
@@ -89013,7 +89034,8 @@ const MSX_CSS = `
 .msx .msx-tpk .tpm{flex:0 0 auto;font-size:11px;font-weight:900;color:#facc15}
 .msx .msx-tpk .tc .tg-rk{position:absolute;left:2px;top:2px;z-index:2;min-width:14px;height:14px;border-radius:4px;font-size:10px;font-weight:900;line-height:14px;text-align:center;color:#2a1608;border:1px solid #2a1608}
 /* r1115-146①・152①: 同じマスに技が2つ以上ある印「⇄2」。押せない(升を押すと右の欄に技が出て、そこの「⇄ 覚える技を選ぶ」で変える) */
-.msx-md-tg .tc .tg-alt{position:absolute;top:0;right:0;min-width:22px;height:22px;display:flex;align-items:flex-start;justify-content:flex-end;padding:1px 3px 0 0;font-size:12px;font-weight:900;line-height:1;color:#fff;text-shadow:0 1px 2px #000;pointer-events:none}
+/* 印は升の内側に収まる小さな札にする(字だけだと端末のフォント次第で隣の升へはみ出す。2026-11-16 実機スクショ) */
+.msx-md-tg .tc .tg-alt{position:absolute;top:2px;right:2px;z-index:3;display:flex;align-items:center;height:14px;padding:0 3px;border-radius:5px;background:rgba(18,12,6,.86);font-size:10px;font-weight:900;line-height:1;color:#fff;white-space:nowrap;pointer-events:none}
 
 .msx-md-not{display:block;font-size:10px;color:#94a3b8;font-weight:800}
 .msx-md-howrow{flex-direction:column;align-items:flex-start;gap:1px}.msx-md-howrow>span{width:100%}
@@ -89720,6 +89742,33 @@ const msxMonImg = (id) => { const m = msxMon(id); return m ? m.imgUrl : ''; };
 const msxMonThumb = (id) => { const m = msxMon(id); return m ? (m.faceIconUrl || m.iconUrl || m.imgUrl) : ''; };
 const msxWho = (aid) => (typeof assistantById === 'function' ? assistantById(aid) : null);
 const msxFace = (aid, ex = 'normal') => { const w = msxWho(aid); return w && typeof assistantFaceImage === 'function' ? assistantFaceImage(w, ex) : ''; };
+// ---- ライバルの持ち主アイコン(2026-11-16 社長: ライバルはモンスターだけでなく持ち主のアイコンとセットで出す) ----
+// フレンドのプロフィールアイコンの引き方は、本体のランキングと同じ(モンスターの顔か、マーケットのアイコン商品)
+const msxBreederIconSrc = (icon) => {
+  if (!icon) return null;
+  const mon = typeof ALL_PLAYER_MONSTERS !== 'undefined' && ALL_PLAYER_MONSTERS ? ALL_PLAYER_MONSTERS[icon] : null;
+  if (mon && mon.iconUrl) return mon.faceIconUrl || mon.iconUrl;
+  const items = typeof BREEDER_MARKET_ITEMS !== 'undefined' && Array.isArray(BREEDER_MARKET_ITEMS) ? BREEDER_MARKET_ITEMS : [];
+  const item = items.find((m) => m && m.id === icon && m.type === 'icon');
+  return item ? item.icon : null;
+};
+// rival は { kind:'aid'|'friend', id(個体の印), icon, profileFrame }。助手は印から助手 id を読んで顔アイコン、フレンドはプロフィールアイコン
+function MsxRivalOwnerIcon({ rival, size = 22 }) {
+  if (!rival) return null;
+  if (rival.kind === 'aid') {
+    const aid = typeof rival.id === 'string' ? rival.id.split(':')[1] : null;
+    const src = aid ? msxFace(aid) : '';
+    return src ? <img src={src} alt="" style={{ width: size, height: size, borderRadius: '50%', objectFit: 'cover', objectPosition: 'top', flexShrink: 0 }} /> : null;
+  }
+  if (typeof ProfileAvatar === 'function') return <ProfileAvatar src={msxBreederIconSrc(rival.icon)} id={rival.icon || null} frameId={rival.profileFrame || null} fit small className="shrink-0" style={{ width: size, height: size }} fallback={<span className="flex h-full w-full items-center justify-center rounded-full bg-slate-800 text-xs">👤</span>} />;
+  return null;
+}
+// 対戦相手(芯の opponents)から、持ち主アイコンを出すためのライバル情報を作る。候補が残っていればアイコンまで、無ければ印だけ
+const msxRivalFaceOf = (rivals, opp) => {
+  if (!opp || !opp.rival) return null;
+  const cand = Array.isArray(rivals) ? rivals.find((r) => r && ((opp.rivalId && r.id === opp.rivalId) || (!opp.rivalId && r.name === opp.name))) : null;
+  return cand || { kind: opp.rivalKind || null, id: opp.rivalId || null };
+};
 const msxBody = (aid, ex = 'happy') => { const w = msxWho(aid); return w && typeof assistantFullImage === 'function' ? (assistantFullImage(w, ex) || msxFace(aid, ex)) : msxFace(aid, ex); };
 const msxAidName = (aid) => { const w = msxWho(aid); return w ? w.name : aid; };
 // この育成のライバル(芯 SUC.newRun の rivals。r1115-202 社長「出るように直す」・TOURNAMENT.md §8b)
@@ -89759,7 +89808,8 @@ const msxRivalsBuild = async (SUC, aid) => {
         const m = monsucLendMember(row, SUC);
         if (!m || !ok(m.species)) continue;
         const rawSumF = ['life', 'pow', 'wise', 'hit', 'eva', 'tough'].reduce((a, k) => a + (Number.isFinite(Number(m.stats[k])) ? Number(m.stats[k]) : 0), 0);
-        out.push({ name: m.name || msxMonName(m.species), breeder: m.friend && m.friend.name ? String(m.friend.name).slice(0, 24) : null, kind: 'friend', species: m.species, stats: m.stats, rawSum: Math.round(rawSumF), id: `friend:${m.friend && m.friend.id ? m.friend.id : ''}:0:${m.species}` }); // 個体の印(フレンドは1人1体なので枠は0)と元の合計(r1116-002)
+        // 持ち主のアイコン(大会カード・対戦前で顔とセットで出すためだけに引き継ぐ。名簿の行が持っている)
+        out.push({ name: m.name || msxMonName(m.species), breeder: m.friend && m.friend.name ? String(m.friend.name).slice(0, 24) : null, kind: 'friend', species: m.species, stats: m.stats, rawSum: Math.round(rawSumF), id: `friend:${m.friend && m.friend.id ? m.friend.id : ''}:0:${m.species}`, ...(row.icon ? { icon: row.icon } : {}), ...(row.profileFrame ? { profileFrame: row.profileFrame } : {}) }); // 個体の印(フレンドは1人1体なので枠は0)と元の合計(r1116-002)
       }
     }
   } catch (_) { /* フレンドの分が読めなくても続ける */ }
@@ -89836,7 +89886,8 @@ function MonheroSuccessHomeEntry({ callNameOf, bondLvOf, onOpenChange }) {
       <button type="button" className="mh-home-success" data-home-monhero-success onClick={() => setOpen(true)} aria-label="モンヒロサクセス β">
         {/* 公開の日の入口の文(2026-11-14 ココロ・窓口経由 #6116 を r1115-206 で取り込み直し): 上のリボン「β版 開幕！」と札の一言 */}
         <i className="rb" aria-hidden="true">β版 開幕！</i>
-        <span><span aria-hidden="true">🌱</span>モンヒロサクセス<b className="beta">β</b><small className="ln">デビュー戦から<wbr/>ヒーローズファイナルまで、<wbr/>1体をじっくり育てよう</small></span>
+        {/* βの表示は上のリボン1つだけにする(2026-11-16 UI改修: 札の中の β と二重になっていた) */}
+        <span><span aria-hidden="true">🌱</span>モンヒロサクセス<small className="ln">デビュー戦から<wbr/>ヒーローズファイナルまで、<wbr/>1体をじっくり育てよう</small></span>
       </button>
       {open && <MonheroSuccessScreen onClose={() => setOpen(false)} callNameOf={callNameOf} bondLvOf={bondLvOf}/>}
     </>
@@ -91120,6 +91171,7 @@ function MonheroSuccessScreen({ onClose, callNameOf, bondLvOf, debug = false, st
   }, []);
   // 開いたときに、ランキングの登録待ちがあれば1件送り直す(待たない・落ちない)
   useEffect(() => { if (typeof monsucRankFlush === 'function') { try { monsucRankFlush(); } catch (_) {} } }, []);
+  const [loadTry, setLoadTry] = useState(0); // 読み込みのやり直し(タイトルの「もう一度読み込む」)
   useEffect(() => {
     let alive = true;
     msxLoad().then(async (L) => {
@@ -91130,7 +91182,7 @@ function MonheroSuccessScreen({ onClose, callNameOf, bondLvOf, debug = false, st
       setData(d); setRunLoaded(d.run); setView(startView === 'box' ? 'box' : 'home');
     });
     return () => { alive = false; };
-  }, []);
+  }, [loadTry]);
   // 保存の版番号(r1115-200 3b): この画面が最後に読んだ/書いた版。保存のたびに +1 して、ほかの画面が先に進めていたら書かずに読み直す
   const revRef = useRef(0);
   const setRunLoaded = (r) => { revRef.current = r && Number.isFinite(Number(r.rev)) ? Number(r.rev) : 0; setRunState(r); };
@@ -91194,8 +91246,20 @@ function MonheroSuccessScreen({ onClose, callNameOf, bondLvOf, debug = false, st
   } });
 
   let content = null;
-  if (view === 'loading') content = <div className="v-body" style={{ justifyContent: 'center', alignItems: 'center', display: 'flex' }}><div className="msx-note">読み込んでいます…</div></div>;
-  else if (view === 'fail') content = (<><MsxHd back="閉じる" onBack={onClose}/><div className="v-body"><div className="v-card">読み込めませんでした。通信のよいところで、もう一度開いてください</div></div></>);
+  // タイトル(2026-11-16 UI改修): 入口を押したら、まずロゴと背景のあるタイトルを見せ、その同じ画面で育成データを読み込む。
+  //   準備中も「閉じる」で閉じられ、失敗したらその場で「もう一度読み込む」ができる
+  if (view === 'loading' || view === 'fail') content = (<>
+    <MsxHd back="閉じる" onBack={onClose}/>
+    <div className="v-body v-hm">
+      <div className="v-scene hm">
+        <img className="bg" src={msxSceneBg(1).bg} alt=""/><div className="sh"/>
+        <div className="v-hm-logo"><img src={MSX_LOGO_ART} alt="モンヒロサクセス"/>{typeof MsxBetaMark === 'function' ? <MsxBetaMark/> : null}</div>
+      </div>
+      {view === 'loading' ? <div className="msx-note" style={{ textAlign: 'center' }}>読み込んでいます…</div>
+        : <div className="v-card" style={{ textAlign: 'center' }}>読み込めませんでした。通信のよいところで、もう一度読み込んでください
+          <button type="button" className="msx-btn go" style={{ marginTop: 10 }} onClick={() => { setView('loading'); setLoadTry((t) => t + 1); }}>もう一度読み込む</button></div>}
+    </div>
+  </>);
   else if (view === 'home') content = <MsxHome data={data} run={run} debug={debug} onClose={onClose} onBase={typeof MsxBaseMons === 'function' ? () => setView('basemon') : null} onBox={typeof MsxR3Box === 'function' ? () => setView('box') : null} onContinue={() => setView('play')} onNew={() => (run && !run.s.over ? setAsk({ text: '途中の育成があります。新しく始めると、いまの育成はなくなります', yes: '新しく始める', onYes: () => setView('start') }) : setView('start'))} setMeta={setMeta} onWipe={quit} onRank={() => setView('rank')}/>;
   else if (view === 'start') content = <MsxStart data={data} SUC={msxSuc.SUC} onCancel={() => setView('home')} onStart={startRun} bondLvOf={bondLvOf} callNameOf={callNameOf}/>;
   else if (view === 'basemon' && typeof MsxBaseMons === 'function') content = <MsxBaseMons data={data} onClose={() => setView('home')}/>;
@@ -91634,10 +91698,16 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
       <div className="v-trs" data-msx-train-swipe-row data-msx-train-scrub {...scrubOn}>
         {trail && trail.pts.length > 1 ? <svg className={`v-trail${trail.live ? '' : ' out'}`} width={trail.w} height={trail.h} viewBox={`0 0 ${trail.w} ${trail.h}`} aria-hidden="true"><polyline points={trail.pts.map((q) => `${q.x.toFixed(1)},${q.y.toFixed(1)}`).join(' ')} fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg> : null}
         {MSX_STATS.map((k) => { const c = msxCardOf(v, k); const lv = lvOf(c); return (
-          <button type="button" key={k} className={`v-tr${c && c.tags.length ? ' tag' : ''}${k === stat ? ' sel' : ''}`} onClick={() => { if (k === stat && c) doAct({ kind: c.kind, stat: k }); else setSel(k); }}>
+          <button type="button" key={k} className={`v-tr${c && c.tags.length ? ' tag' : ''}${k === stat ? ' sel' : ''}`} onClick={() => setSel(k)}>
             {k === stat && c ? <span className="fb" data-msx-train-fail>失敗率 {Math.round(c.fail * 100)}%</span> : null}
-            <div className="o">{MSX_STAT_ICON[k]}</div><b className="nm">{MSX_STAT_NAME[k]}</b><small className={`tn${msxTrainName(k, lv).length <= 5 ? ' one' : ''}`}>{msxTrainName(k, lv).length <= 5 ? msxTrainName(k, lv) : msxTrainNameParts(k, lv).map((x, i) => <React.Fragment key={i}>{i ? <wbr/> : null}{x}</React.Fragment>)}</small>{lv ? <i className="lv">Lv.{lv}</i> : null}{k === stat && c ? <span className="ke" data-msx-train-ok>決定</span> : null}</button>); })}
+            <div className="o">{MSX_STAT_ICON[k]}</div><b className="nm">{MSX_STAT_NAME[k]}</b><small className={`tn${msxTrainName(k, lv).length <= 5 ? ' one' : ''}`}>{msxTrainName(k, lv).length <= 5 ? msxTrainName(k, lv) : msxTrainNameParts(k, lv).map((x, i) => <React.Fragment key={i}>{i ? <wbr/> : null}{x}</React.Fragment>)}</small>{lv ? <i className="lv">Lv.{lv}</i> : null}{k === stat && c ? <span className="ke" data-msx-train-ok>選択中</span> : null}</button>); })}
       </div>
+      {/* 選ぶ操作と実行は分ける(2026-11-16 UI改修): 札は選ぶだけ。実行は下のボタンで、その近くに上がる能力・失敗率・体力消費を出す */}
+      {card ? <div className="v-trsum" data-msx-train-sum>
+        <span className="g">{pv && pv.gain ? MSX_STATS.filter((k) => (pv.gain[k] || 0) > 0).map((k) => `${MSX_STAT_NAME[k]} +${pv.gain[k]}`).join('・') : `${MSX_STAT_NAME[stat]}が上がる`}</span>
+        <span>失敗率 <b>{Math.round(card.fail * 100)}%</b></span>
+        <span>体力 <b>−{pv ? Math.round(pv.hp || 0) : 0}</b></span>
+      </div> : null}
     </>);
     foot = <div className="v-ft"><button type="button" onClick={() => { setSub('main'); setSel(null); }}>← 戻る</button><button type="button" className="go" disabled={!card} onClick={() => doAct({ kind: card.kind, stat })}>{msxTrainIcon(stat, trainLv)} {msxTrainName(stat, trainLv)}をする</button></div>;
   }
@@ -91661,7 +91731,6 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
       <div className="v-scene home">
         <img className="bg" src={scn.bg} alt=""/><div className="sh"/>
         <div className="msx-roam" data-msx-roam><div className="msx-roam-h"><div className="msx-roam-f"><div className="gr"/><MsxMonArt run={run} className={`mon${low ? ' low' : ''}`} live/></div></div></div>
-        <div className="v-party"><small>編成</small>{s.team.map((m, i) => <MsxPf key={i} m={m} bond={s.bond[i]} tagAt={tagAt}/>)}<MsxPf aid={s.aid} bond={s.aidBond} tagAt={tagAt}/></div>
         <div className="v-chips"><span className="v-chip">{MSX_SEASON[cal.season]}・{scn.time}</span>
           {preOn ? <span className="v-chip hot" data-msx-pre-chip>🏆 {preName} 当日</span> : v.period.key !== 'final' ? <span className="v-chip hot">🏆 期末の大会まで {v.period.left}ターン</span> : <span className="v-chip hot">🏆 ヒーローズファイナル</span>}
           {pkI.state === 'in' ? <span className="v-chip hot" data-msx-peak-chip>🔥 ピーク中 あと{pkI.left}ターン</span> : pkI.state === 'soon' ? <span className="v-chip ylw" data-msx-peak-chip>🔥 もうすぐ伸びどき</span> : null}
@@ -91670,8 +91739,12 @@ function MsxPlay({ run, setRun, onPause, onQuit, callNameOf, bondLvOf, debug, on
           {s.cond ? <span className="v-chip bad">🤕 {MSX_COND[s.cond.kind]}(あと{s.cond.left})</span> : null}
           {SUC.events && typeof SUC.events.buffs === 'function' ? SUC.events.buffs(s).slice(0, 2).map((b) => <span key={b.k} className="v-chip ylw">{cardIconNode(b.icon, 14)} {b.name}</span>) : null}</div>
         <span className="v-nm">{run.nick}<small>方針: {MSX_POLICY_SCALE[Math.max(-3, Math.min(3, s.pol || 0)) + 3]}</small></span>
-        <button type="button" className="v-bagb" onClick={() => setSub('bag')}>🎒<small>持ち物</small>{bag.length ? <i>{bag.length}</i> : null}</button>
-        <button type="button" className="v-bagb r" data-msx-detail-open onClick={() => setDetail(true)}>🔍<small>詳しく</small></button>
+      </div>
+      {/* 編成・持ち物・詳細は風景の下にまとめる(2026-11-16 UI改修: 風景に重ねず、下の帯でいつも同じ場所に) */}
+      <div className="v-under">
+        <div className="v-party row"><small>編成</small>{s.team.map((m, i) => <MsxPf key={i} m={m} bond={s.bond[i]} tagAt={tagAt}/>)}<MsxPf aid={s.aid} bond={s.aidBond} tagAt={tagAt}/></div>
+        <button type="button" className="v-bagb st" onClick={() => setSub('bag')}>🎒<small>持ち物</small>{bag.length ? <i>{bag.length}</i> : null}</button>
+        <button type="button" className="v-bagb st" data-msx-detail-open onClick={() => setDetail(true)}>🔍<small>詳しく</small></button>
       </div>
       <MsxStRow who={s} stats={s.stats}/>
       {preOn ? (
@@ -92246,7 +92319,17 @@ const MSX_R3_CSS = `
 .msx .r3 .v-pa button:disabled{opacity:.35}
 .msx .r3 .v-a{cursor:pointer}.msx .r3 .v-a .lv span{cursor:pointer}
 .msx .r3 .r3-watch{position:relative;margin-top:6px}
-.msx .r3 .r3-watch .ambw-ring{height:200px}
+/* 縦画面: 並びは 相手の札→対戦の場→自分の札→操作(従来どおり)。包み(r3-watch-side)は見た目に出ない */
+.msx .r3 .r3-watch{display:flex;flex-direction:column}
+.msx .r3 .r3-watch .r3-watch-side{display:contents}
+.msx .r3 .r3-watch .ambw-card[data-ambw-panel="B"]{order:1}
+.msx .r3 .r3-watch .ambw-ring{order:2;height:200px}
+.msx .r3 .r3-watch .ambw-card[data-ambw-panel="A"]{order:3}
+.msx .r3 .r3-watch .ambw-ctl{order:4}
+/* 横画面: 左に対戦の場を固定し、右の HP・技・操作だけをスクロールさせる(2026-11-16 UI改修) */
+.msx.land .r3 .r3-watch{display:grid;grid-template-columns:minmax(0,44%) 1fr;grid-template-areas:"ring side";column-gap:8px;flex:1;min-height:0}
+.msx.land .r3 .r3-watch .ambw-ring{grid-area:ring;height:100%}
+.msx.land .r3 .r3-watch .r3-watch-side{grid-area:side;display:flex;flex-direction:column;gap:6px;overflow-y:auto;min-height:0}
 .msx .r3 .r3-res{text-align:center;font-size:12px;font-weight:900;color:#cbd5e1;margin-top:6px}
 .msx .r3 .r3-box{display:flex;flex-direction:column;gap:5px;margin-top:6px}
 .msx .r3 .r3-bm{display:flex;align-items:center;gap:8px;background:#1e1a36;border:1.5px solid #475569;border-radius:12px;padding:5px 9px;text-align:left;color:#fff;font:inherit}
@@ -92782,13 +92865,15 @@ function MsxR3Cup({ run, setRun, v, ev, onBack, onActed }) {
         return (
           <button type="button" key={c.id} className={`v-cup v-cup2 ${cls}`} onClick={() => { if (ok) setPick(c.id); setWin(c.id); }} data-msx-r3-cup={c.id}>
             <div className="lg"><span className="e">{c.scenario ? '📖' : (MSX_R3_CUP_ICON[c.sys] || '🏆')}</span>{fc ? <span className={`fcst ${MSX_R3_FC_CLASS[fc.key] || ''}`}>{fc.key === 'none' ? 'ほぼ無理' : fc.label}</span> : null}</div>
+            {/* 読む順は 大会名 → 出場可否・条件 → ライバル → 報酬(2026-11-16 UI改修) */}
             <div className="tx">
-              <div className="hd"><span className="gr2">{kindOf(c)}</span><span className="cs">{msxR3Stars(c.star)}</span>{c.done ? <span className="dn">優勝済</span> : null}</div>
               <b>{c.scenario ? c.name : msxR3CupName(c.sys, c.name)}</b>
-              {!(c.entry && c.entry.ok) ? <span className="why">✖ {msxR3WhyText(c.entry, s)}</span> : null}
+              <div className="hd"><span className="gr2">{kindOf(c)}</span><span className="cs">{msxR3Stars(c.star)}</span>{c.done ? <span className="dn">優勝済</span> : null}</div>
+              {!(c.entry && c.entry.ok) ? <span className="why">✖ {msxR3WhyText(c.entry, s)}</span> : <span className="ok">出場できます</span>}
+              {c.rival ? <span className="rvl"><MsxRivalOwnerIcon rival={c.rival} size={20}/><img src={msxMonThumb(c.rival.species)} alt=""/><b>ライバル {c.rival.name}</b>{c.rival.breeder ? <small>{c.rival.breeder}</small> : null}</span> : null}
               <span className="g">{Number(c.prizeMax) > Number(c.prize) ? <><small>最大</small>{msxFmt(c.prizeMax)}</> : msxFmt(c.prize)}<small>G</small></span>
             </div>
-            {c.rival ? <><span className="rvi"><img src={msxMonThumb(c.rival.species)} alt=""/><b>ライバル</b></span><span className="rvb">能力ポイント1.5倍</span></> : null}
+            {c.rival ? <span className="rvb">能力ポイント1.5倍</span> : null}
           </button>);
       }) : <div className="msx-note">{P.key === 'final' ? '最後の期は、ヒーローズファイナルだけです' : now ? '今月の大会はありません' : 'この月の大会はありません'}</div>}
     </div>
@@ -92798,6 +92883,7 @@ function MsxR3Cup({ run, setRun, v, ev, onBack, onActed }) {
         <div className="in" onClick={(e) => e.stopPropagation()}>
           <div className="h">大会参加確認</div>
           <div className={`sign g-${wc.grade || 'n'}`}><span className="e">{wc.scenario ? '📖' : (MSX_R3_CUP_ICON[wc.sys] || '🏆')}</span><b>{wc.scenario ? wc.name : msxR3CupName(wc.sys, wc.name)}</b><small>{kindOf(wc)} {msxR3Stars(wc.star)}</small></div>
+          {wc.rival ? <div className="rvl" style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 8, fontSize: 12, fontWeight: 900, color: '#be123c' }}><MsxRivalOwnerIcon rival={wc.rival} size={22}/><img src={msxMonThumb(wc.rival.species)} alt="" style={{ width: 22, height: 22, borderRadius: '50%', objectFit: 'cover', objectPosition: '50% 20%' }}/><span>ライバル: {wc.rival.name}{wc.rival.breeder ? `(${wc.rival.breeder})` : ''}</span></div> : null}
           <div className="sub">獲得物</div>
           <MsxR3PrizeBox prizes={msxR3Prizes(SUC, wc)} onPick={setPrz}/>
           {wcOk ? <div className="q">この大会に参加しますか?</div> : <div className="q ng">{now ? `この大会には出られません(${msxR3WhyText(wc.entry, s)})` : 'この大会は、その月になると出られます'}</div>}
@@ -92844,16 +92930,20 @@ function MsxR3Watch({ fight, onDone }) {
   return (
     <div className="r3-watch" data-msx-r3-watch>
       <style>{AMBW_CSS}</style>
-      <AmbwPanel side="B" team={fight.teamB} frame={f} maxHp={fight.maxHp} moves={fight.moves.B} lastMove={e.side === 'B' && e.ev === 'tech' ? e.move : null} mine={false}/>
+      {/* 横画面では左に対戦の場を残し、右の HP・技・操作だけがスクロールする(2026-11-16 UI改修)。
+          縦画面では並び順(相手の札→場→自分の札→操作)を CSS の order で今までどおりに戻す */}
+      <div className="r3-watch-side">
+        <AmbwPanel side="B" team={fight.teamB} frame={f} maxHp={fight.maxHp} moves={fight.moves.B} lastMove={e.side === 'B' && e.ev === 'tech' ? e.move : null} mine={false}/>
+        <AmbwPanel side="A" team={fight.teamA} frame={f} maxHp={fight.maxHp} moves={fight.moves.A} lastMove={e.side === 'A' && e.ev === 'tech' ? e.move : null} mine/>
+        <div className="ambw-ctl">
+          {AMBW_SPEEDS.filter((x) => x.id === 'hl' || x.id === 'x2').map((x) => <button type="button" key={x.id} className={speed === x.id ? 'ambw-btn' : 'ambw-btn2'} onClick={() => setSpeed(x.id)}>{x.label}</button>)}
+          <button type="button" className="ambw-btn2" data-msx-r3-towatch-end onClick={() => onDone()}>⏭ 結果へ</button>
+        </div>
+      </div>
       <div className="ambw-ring">
         <div className="ambw-stage">{fighter('A')}<div className="ambw-gap" style={{ width: [6, 44, 92, 146][f.d] || 44 }}/>{fighter('B')}</div>
         <div className="ambw-dist">{AMBW_DIST.map((n, d) => <span key={d} className={d === f.d ? 'cur' : ''}>{n}</span>)}</div>
         {e.ev === 'tech' && <div key={`c-${pos}`} className={`ambw-cut ${e.kind} ${e.side === 'B' ? 'B' : ''}`}><small>{e.kind === 'pow' ? '💪 ちから技' : '🧠 かしこさ技'}</small><b>{e.name}</b></div>}
-      </div>
-      <AmbwPanel side="A" team={fight.teamA} frame={f} maxHp={fight.maxHp} moves={fight.moves.A} lastMove={e.side === 'A' && e.ev === 'tech' ? e.move : null} mine/>
-      <div className="ambw-ctl">
-        {AMBW_SPEEDS.filter((x) => x.id === 'hl' || x.id === 'x2').map((x) => <button type="button" key={x.id} className={speed === x.id ? 'ambw-btn' : 'ambw-btn2'} onClick={() => setSpeed(x.id)}>{x.label}</button>)}
-        <button type="button" className="ambw-btn2" data-msx-r3-towatch-end onClick={() => onDone()}>⏭ 結果へ</button>
       </div>
     </div>
   );
@@ -96819,21 +96909,33 @@ const monsucRankGet = async (path, withCount) => {
     return { rows, total };
   } catch (_) { return null; }
 };
-// lineage を渡すと血統別。{ rows, total, mine }(mine = 自分の子のいちばん上の行)
-const monsucRankRead = async ({ lineage = null } = {}) => {
+// lineage を渡すと血統別。上位の一覧と自分の順位は分けて読む(2026-11-16 UI改修: 一覧が届き次第出し、自分の順位は後から足す)
+const monsucRankViewOf = (lineage) => {
   const lin = typeof lineage === 'string' && /^[A-Za-z_]{1,32}$/.test(lineage) ? lineage : null;
-  const view = lin ? 'monsuc_rank_lineage' : 'monsuc_rank_all';
-  const where = lin ? `&lineage=eq.${lin}` : '';
-  const limit = lin ? MONSUC_RANK_LIMIT_LINEAGE : MONSUC_RANK_LIMIT_ALL;
+  return { lin, view: lin ? 'monsuc_rank_lineage' : 'monsuc_rank_all', where: lin ? `&lineage=eq.${lin}` : '', limit: lin ? MONSUC_RANK_LIMIT_LINEAGE : MONSUC_RANK_LIMIT_ALL };
+};
+// 上位の一覧 { rows, total, sent }(失敗は null)
+const monsucRankReadTop = async ({ lineage = null } = {}) => {
+  const { view, where, limit } = monsucRankViewOf(lineage);
   const top = await monsucRankGet(`${view}?select=${MONSUC_RANK_COLS}${where}&order=place.asc,run_id.asc&limit=${limit}`, true);
   if (!top) return null;
   const sent = (await monsucRankSentList()).filter(id => /^[A-Za-z0-9_-]{1,64}-[A-Za-z0-9]{6,32}$/.test(id));
-  let mine = null;
-  if (sent.length > 0) {
-    const m = await monsucRankGet(`${view}?select=${MONSUC_RANK_COLS}${where}&run_id=in.(${sent.map(encodeURIComponent).join(',')})&order=place.asc&limit=1`, false);
-    mine = m && m.rows[0] ? m.rows[0] : null;
-  }
-  return { rows: top.rows, total: top.total, mine, sent };
+  return { rows: top.rows, total: top.total, sent };
+};
+// 自分の順位(自分の子のいちばん上の行。無い・失敗は null)
+const monsucRankReadMine = async ({ lineage = null, sent = [] } = {}) => {
+  const ids = (Array.isArray(sent) ? sent : []).filter(id => /^[A-Za-z0-9_-]{1,64}-[A-Za-z0-9]{6,32}$/.test(id));
+  if (ids.length === 0) return null;
+  const { view, where } = monsucRankViewOf(lineage);
+  const m = await monsucRankGet(`${view}?select=${MONSUC_RANK_COLS}${where}&run_id=in.(${ids.map(encodeURIComponent).join(',')})&order=place.asc&limit=1`, false);
+  return m && m.rows[0] ? m.rows[0] : null;
+};
+// { rows, total, mine, sent }(従来のまとめ読み)
+const monsucRankRead = async ({ lineage = null } = {}) => {
+  const top = await monsucRankReadTop({ lineage });
+  if (!top) return null;
+  const mine = await monsucRankReadMine({ lineage, sent: top.sent });
+  return { rows: top.rows, total: top.total, mine, sent: top.sent };
 };
 
 // ---- 画面 ----
@@ -96858,10 +96960,10 @@ function MonsucRankStats({ stats }) {
     </div>)}
   </div>;
 }
-function MonsucRankRow({ row, open, onToggle, mine, pinned }) {
+function MonsucRankRow({ row, onOpen, mine, pinned }) {
   const top = row.place <= 3;
-  const cls = pinned ? 'border-pink-400/80 bg-pink-900/40' : open ? 'border-yellow-400/80 bg-yellow-900/30' : mine ? 'border-pink-400/60 bg-slate-800/80' : 'border-slate-600/60 bg-slate-800/70';
-  return <button type="button" onClick={onToggle} className={`w-full text-left rounded-xl border px-3 py-2 ${cls}`} aria-expanded={!!open}>
+  const cls = pinned ? 'border-pink-400/80 bg-pink-900/40' : mine ? 'border-pink-400/60 bg-slate-800/80' : 'border-slate-600/60 bg-slate-800/70';
+  return <button type="button" onClick={onOpen} className={`w-full text-left rounded-xl border px-3 py-2 ${cls}`}>
     <div className="flex items-center gap-2">
       <div className={`w-8 text-center font-black ${top ? 'text-yellow-300 text-lg' : 'text-slate-200 text-base'}`}>{row.place}</div>
       <MonsucRankMonImg species={row.species} dye={row.dye} />
@@ -96872,8 +96974,48 @@ function MonsucRankRow({ row, open, onToggle, mine, pinned }) {
       <MonsucRankGrade grade={row.grade} />
       <div className="w-[64px] text-right text-[15px] font-black text-yellow-300">{Math.round(monsucRankNum(row.power)).toLocaleString()}</div>
     </div>
-    {open && <MonsucRankStats stats={row.stats} />}
   </button>;
+}
+// ---- モンスター詳細(2026-11-16 UI改修・旧②ランキング詳細): 一覧の行から開く。登録済みの育成完了データだけから出す ----
+// ヘッダーと戻る位置は一覧とそろえ、「一覧へ」で元のタブ・スクロール位置に戻る(呼ぶ側が状態を保つ)
+function MonsucRankDetail({ row, pinned, onBack }) {
+  const mon = monsucRankMonOf(row.species) || {};
+  return <div className="fixed inset-0 z-[60] flex flex-col text-white" style={{ background: 'linear-gradient(180deg,#1e1b4b 0%,#0f172a 100%)', paddingTop: 'var(--mh-sa-top)', paddingBottom: 'var(--mh-sa-bottom)' }}>
+    <div className="flex items-center gap-2 px-3 pt-3">
+      <button type="button" onClick={onBack} className="rounded-full bg-slate-700/80 px-3 py-1 text-[12px] font-bold">← 一覧へ</button>
+      <div className="text-[13px] font-black text-pink-300">🌱 モンヒロサクセス</div>
+    </div>
+    <div className="px-3 pt-2">
+      <div className="text-[18px] font-black">🏆 モンスター詳細</div>
+    </div>
+    <div className="flex-1 overflow-y-auto px-3 py-3">
+      <div className="rounded-2xl border border-slate-600/60 bg-slate-800/70 px-4 py-4">
+        <div className="flex items-start gap-3">
+          <MonsucRankMonImg species={row.species} dye={row.dye} size={92} />
+          <div className="flex-1 min-w-0">
+            <div className="text-[19px] font-black text-white leading-tight">{row.child_name || mon.name || '？？？'}</div>
+            <div className="text-[12px] text-slate-300 mt-0.5">育てた人: {pinned ? 'あなた' : (row.user_name || 'ななしのブリーダー')}</div>
+            <div className="text-[12px] text-slate-300">{mon.name || row.species}・{monsucRankLineageName(row.lineage)}系</div>
+            <div className="flex items-center gap-2 mt-2">
+              <span className="text-[12px] font-bold text-slate-200">Lv {Math.round(monsucRankNum(row.lv))}</span>
+              <MonsucRankGrade grade={row.grade} />
+              <span className="text-[12px] font-bold text-slate-200">{row.place}位</span>
+            </div>
+          </div>
+        </div>
+        <div className="flex items-baseline gap-2 mt-3">
+          <span className="text-[12px] font-bold text-slate-300">総合力</span>
+          <span className="text-[24px] font-black text-yellow-300">{Math.round(monsucRankNum(row.power)).toLocaleString()}</span>
+        </div>
+        <div className="text-[12px] font-bold text-slate-300 mt-3">6能力</div>
+        <MonsucRankStats stats={row.stats} />
+        <div className="text-[12px] text-slate-200 mt-3">習得技数: <span className="font-black text-white">{Math.round(monsucRankNum(row.tech_count))}</span></div>
+      </div>
+    </div>
+    <div className="px-3 pb-3 pt-1">
+      <button type="button" onClick={onBack} className="w-full rounded-full bg-slate-700/80 py-2 text-[13px] font-bold">← 一覧へ</button>
+    </div>
+  </div>;
 }
 // 血統の札(主血統のうち、遊べるモンスターがいるもの)
 const monsucRankLineageTabs = () => {
@@ -96890,9 +97032,14 @@ function MonsucRankScreen({ onBack }) {
   const [lineage, setLineage] = React.useState(() => lineages[0] || 'mocchi');
   const [data, setData] = React.useState(null);
   const [loading, setLoading] = React.useState(true);
-  const [open, setOpen] = React.useState(null);
+  const [failed, setFailed] = React.useState(false); // 直近の読み込みが失敗(前のデータは出し続ける)
+  const [retryN, setRetryN] = React.useState(0);
+  const [detail, setDetail] = React.useState(null); // { row, pinned } モンスター詳細
   const [pendLeft, setPendLeft] = React.useState(0);
   const [flushed, setFlushed] = React.useState(false);
+  const cacheRef = React.useRef({}); // タブ・血統ごとの取得済みデータ(再取得中も出し続ける)
+  const listRef = React.useRef(null); // 一覧のスクロール位置(詳細から戻るときに復元する)
+  const savedScrollRef = React.useRef(0);
   const on = monsucRankOn();
   // 開いたらまず登録待ちを1件送り直し、終わってから一覧と自分の順位を読む(送れた分がそのまま順位に出る)
   React.useEffect(() => {
@@ -96910,10 +97057,30 @@ function MonsucRankScreen({ onBack }) {
     let alive = true;
     if (!on) { setLoading(false); return undefined; }
     if (!flushed) return undefined; // 送り直しを待ってから読む
-    setLoading(true); setOpen(null);
-    monsucRankRead({ lineage: tab === 'lineage' ? lineage : null }).then(d => { if (alive) { setData(d); setLoading(false); } });
+    const lin = tab === 'lineage' ? lineage : null;
+    const key = `${tab}:${lin || ''}`;
+    const cached = cacheRef.current[key] || null;
+    if (cached) { setData(cached); setLoading(false); } else setLoading(true);
+    setFailed(false);
+    // 上位の一覧が届き次第出し、自分の順位は後から足す
+    monsucRankReadTop({ lineage: lin }).then(top => {
+      if (!alive) return;
+      if (!top) { setLoading(false); setFailed(true); return; }
+      const merged = { rows: top.rows, total: top.total, sent: top.sent, mine: cached && cached.sent === top.sent ? cached.mine : null };
+      cacheRef.current[key] = merged; setData(merged); setLoading(false);
+      monsucRankReadMine({ lineage: lin, sent: top.sent }).then(mine => {
+        if (!alive || !mine) return;
+        const cur = cacheRef.current[key]; if (!cur) return;
+        const withMine = { ...cur, mine }; cacheRef.current[key] = withMine; setData(withMine);
+      });
+    });
     return () => { alive = false; };
-  }, [on, flushed, tab, lineage]);
+  }, [on, flushed, tab, lineage, retryN]);
+  // 詳細から戻ったら、一覧のスクロール位置を戻す
+  React.useEffect(() => {
+    if (!detail && listRef.current) listRef.current.scrollTop = savedScrollRef.current;
+  }, [detail]);
+  const openDetail = (row, pinned) => { savedScrollRef.current = listRef.current ? listRef.current.scrollTop : 0; setDetail({ row, pinned: !!pinned }); };
   const rows = data && Array.isArray(data.rows) ? data.rows : [];
   const sent = data && Array.isArray(data.sent) ? data.sent : [];
   const mine = data ? data.mine : null;
@@ -96921,6 +97088,7 @@ function MonsucRankScreen({ onBack }) {
   const totalText = data && Number.isFinite(data.total) ? `${data.total.toLocaleString()}${tab === 'lineage' ? '体' : '件'}` : '';
   // 血統の札は横に流さず、札と札の切りのいいところで次の行へ折り返す(2026-11-16 社長: 基本は切らないで折り返す。今回は画面が広いので全部見せる)
   // fixed の根は body の safe-area 余白が効かないので、ここで切り欠きぶんを足す(2026-11-16 社長指摘: 戻るボタンに時計が重なる)
+  if (detail) return <MonsucRankDetail row={detail.row} pinned={detail.pinned} onBack={() => setDetail(null)} />;
   return <div className="fixed inset-0 z-[60] flex flex-col text-white" style={{ background: 'linear-gradient(180deg,#1e1b4b 0%,#0f172a 100%)', paddingTop: 'var(--mh-sa-top)', paddingBottom: 'var(--mh-sa-bottom)' }}>
     <div className="flex items-center gap-2 px-3 pt-3">
       <button type="button" onClick={onBack} className="rounded-full bg-slate-700/80 px-3 py-1 text-[12px] font-bold">← 戻る</button>
@@ -96940,19 +97108,21 @@ function MonsucRankScreen({ onBack }) {
       <div className="text-[12px] text-slate-200 mt-1.5">{scopeName} {totalText}{mine ? <> ・ あなたの順位 <span className="text-yellow-300 font-black">{mine.place}位</span></> : null}</div>
       {pendLeft > 0 && <div className="text-[12px] font-bold text-amber-300 mt-1">⏳ 登録待ち {pendLeft}件</div>}
     </div>
-    <div className="flex-1 overflow-y-auto px-3 py-2 space-y-1.5">
+    <div ref={listRef} className="flex-1 overflow-y-auto px-3 py-2 space-y-1.5">
       {!on && <div className="text-center text-slate-300 text-[13px] py-8">{monsucRankReasonText('off')}</div>}
       {on && loading && <div className="text-center text-slate-300 text-[13px] py-8">読みこみ中…</div>}
-      {on && !loading && !data && <div className="text-center text-slate-300 text-[13px] py-8"><span className="block">つながりませんでした。</span><span className="block">少し待ってからもう一度開いてね</span></div>}
+      {on && !loading && failed && !data && <div className="text-center text-slate-300 text-[13px] py-8"><span className="block">つながりませんでした。</span><span className="block">少し待ってからもう一度開いてね</span><button type="button" onClick={() => setRetryN(n => n + 1)} className="mt-3 rounded-full bg-yellow-300 text-slate-900 px-4 py-2 text-[13px] font-black">もう一度読む</button></div>}
       {on && !loading && data && rows.length === 0 && <div className="text-center text-slate-300 text-[13px] py-8"><span className="block">まだだれも載っていません。</span><span className="block">育て終えたモンスターが最初に載ります</span></div>}
-      {rows.map(r => <MonsucRankRow key={r.run_id} row={r} open={open === r.run_id} mine={sent.includes(r.run_id)} onToggle={() => setOpen(o => (o === r.run_id ? null : r.run_id))} />)}
+      {/* 取得済みの一覧は再取得中も出し続け、失敗したらその場で読み直せる(2026-11-16 UI改修) */}
+      {on && !loading && failed && data && <div className="flex items-center justify-center gap-2 rounded-xl border border-amber-400/50 bg-amber-900/30 px-3 py-2 text-[12px] font-bold text-amber-200">新しい順位を読めませんでした<button type="button" onClick={() => setRetryN(n => n + 1)} className="rounded-full bg-yellow-300 text-slate-900 px-3 py-1 text-[12px] font-black">もう一度読む</button></div>}
+      {rows.map(r => <MonsucRankRow key={r.run_id} row={r} mine={sent.includes(r.run_id)} onOpen={() => openDetail(r, false)} />)}
     </div>
     {mine && <div className="px-3 pb-1">
-      <MonsucRankRow row={mine} pinned open={open === `me:${mine.run_id}`} onToggle={() => setOpen(o => (o === `me:${mine.run_id}` ? null : `me:${mine.run_id}`))} />
+      <MonsucRankRow row={mine} pinned onOpen={() => openDetail(mine, true)} />
     </div>}
     <div className="grid grid-cols-2 gap-2 px-3 pb-3 pt-1">
       <button type="button" onClick={onBack} className="rounded-full bg-slate-700/80 py-2 text-[13px] font-bold">← 戻る</button>
-      <div className="rounded-full bg-yellow-300 text-slate-900 py-2 text-[12px] font-black text-center">{tab === 'lineage' ? '血統は 種類のまとまり' : '押すと6能力が開く'}</div>
+      <div className="rounded-full bg-yellow-300 text-slate-900 py-2 text-[12px] font-black text-center">{tab === 'lineage' ? '血統は 種類のまとまり' : '押すと詳細が開く'}</div>
     </div>
   </div>;
 }
