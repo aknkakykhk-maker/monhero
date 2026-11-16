@@ -270,7 +270,8 @@ function MonsucRankScreen({ onBack }) {
   const mine = data ? data.mine : null;
   const scopeName = tab === 'lineage' ? `${monsucRankLineageName(lineage)}系` : '全体';
   const totalText = data && Number.isFinite(data.total) ? `${data.total.toLocaleString()}${tab === 'lineage' ? '体' : '件'}` : '';
-  return <div className="fixed inset-0 z-[60] flex flex-col text-white" style={{ background: 'linear-gradient(180deg,#1e1b4b 0%,#0f172a 100%)' }}>
+  // fixed の根は body の safe-area 余白が効かないので、ここで切り欠きぶんを足す(2026-11-16 社長指摘: 戻るボタンに時計が重なる)
+  return <div className="fixed inset-0 z-[60] flex flex-col text-white" style={{ background: 'linear-gradient(180deg,#1e1b4b 0%,#0f172a 100%)', paddingTop: 'var(--mh-sa-top)', paddingBottom: 'var(--mh-sa-bottom)' }}>
     <div className="flex items-center gap-2 px-3 pt-3">
       <button type="button" onClick={onBack} className="rounded-full bg-slate-700/80 px-3 py-1 text-[12px] font-bold">← 戻る</button>
       <div className="text-[13px] font-black text-pink-300">🌱 モンヒロサクセス</div>
@@ -291,8 +292,8 @@ function MonsucRankScreen({ onBack }) {
     <div className="flex-1 overflow-y-auto px-3 py-2 space-y-1.5">
       {!on && <div className="text-center text-slate-300 text-[13px] py-8">{monsucRankReasonText('off')}</div>}
       {on && loading && <div className="text-center text-slate-300 text-[13px] py-8">読みこみ中…</div>}
-      {on && !loading && !data && <div className="text-center text-slate-300 text-[13px] py-8">つながりませんでした。少し待ってからもう一度開いてね</div>}
-      {on && !loading && data && rows.length === 0 && <div className="text-center text-slate-300 text-[13px] py-8">まだだれも載っていません。育て終えたモンスターが最初に載ります</div>}
+      {on && !loading && !data && <div className="text-center text-slate-300 text-[13px] py-8"><span className="block">つながりませんでした。</span><span className="block">少し待ってからもう一度開いてね</span></div>}
+      {on && !loading && data && rows.length === 0 && <div className="text-center text-slate-300 text-[13px] py-8"><span className="block">まだだれも載っていません。</span><span className="block">育て終えたモンスターが最初に載ります</span></div>}
       {rows.map(r => <MonsucRankRow key={r.run_id} row={r} open={open === r.run_id} mine={sent.includes(r.run_id)} onToggle={() => setOpen(o => (o === r.run_id ? null : r.run_id))} />)}
     </div>
     {mine && <div className="px-3 pb-1">
