@@ -340,7 +340,9 @@ const MSX_CSS = `
 .msx .v-card.pk{border-color:#f472b6aa}
 .msx .v-grid6{display:grid;grid-template-columns:repeat(6,1fr);gap:5px;margin-top:6px}
 .msx .v-grid6 span,.msx .v-grid6 button{position:relative;display:block;min-width:0}
-.msx .v-grid6 img{width:100%;aspect-ratio:1;border-radius:11px;object-fit:cover;background:#0f172a;border:2px solid #475569}
+/* 升の正方形はボタンの側で決める(画像の aspect-ratio 任せだと、端末によっては行の高さが画像より低く付いて次の行に被る。2026-11-16 実機スクショ) */
+.msx .v-grid6 button{aspect-ratio:1}
+.msx .v-grid6 img{position:absolute;inset:0;width:100%;height:100%;border-radius:11px;object-fit:cover;background:#0f172a;border:2px solid #475569}
 .msx .v-grid6 span.on img,.msx .v-grid6 button.on img{border-color:#fde047;box-shadow:0 0 10px #fde047aa}
 .msx .v-grid6 span.lk img,.msx .v-grid6 button.lk img{filter:grayscale(1) brightness(.4)}
 .msx .v-grid6 span.lk::after,.msx .v-grid6 button.lk::after{content:'🔒';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:13px}
@@ -787,7 +789,8 @@ const MSX_CSS = `
 .msx .msx-tpk .tpm{flex:0 0 auto;font-size:11px;font-weight:900;color:#facc15}
 .msx .msx-tpk .tc .tg-rk{position:absolute;left:2px;top:2px;z-index:2;min-width:14px;height:14px;border-radius:4px;font-size:10px;font-weight:900;line-height:14px;text-align:center;color:#2a1608;border:1px solid #2a1608}
 /* r1115-146①・152①: 同じマスに技が2つ以上ある印「⇄2」。押せない(升を押すと右の欄に技が出て、そこの「⇄ 覚える技を選ぶ」で変える) */
-.msx-md-tg .tc .tg-alt{position:absolute;top:0;right:0;min-width:22px;height:22px;display:flex;align-items:flex-start;justify-content:flex-end;padding:1px 3px 0 0;font-size:12px;font-weight:900;line-height:1;color:#fff;text-shadow:0 1px 2px #000;pointer-events:none}
+/* 印は升の内側に収まる小さな札にする(字だけだと端末のフォント次第で隣の升へはみ出す。2026-11-16 実機スクショ) */
+.msx-md-tg .tc .tg-alt{position:absolute;top:2px;right:2px;z-index:3;display:flex;align-items:center;height:14px;padding:0 3px;border-radius:5px;background:rgba(18,12,6,.86);font-size:10px;font-weight:900;line-height:1;color:#fff;white-space:nowrap;pointer-events:none}
 
 .msx-md-not{display:block;font-size:10px;color:#94a3b8;font-weight:800}
 .msx-md-howrow{flex-direction:column;align-items:flex-start;gap:1px}.msx-md-howrow>span{width:100%}
