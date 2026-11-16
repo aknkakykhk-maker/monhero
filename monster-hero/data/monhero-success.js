@@ -655,7 +655,9 @@
       const mastery = {};
       if (techs && r.mastery && typeof r.mastery === 'object') techs.forEach(t => { const v = Number(r.mastery[t]); if (Number.isFinite(v)) mastery[t] = clamp(Math.round(v), 0, 100); });
       return { name: String(r.name || '').slice(0, 24), breeder: typeof r.breeder === 'string' ? r.breeder.slice(0, 24) : null, kind: r.kind === 'friend' ? 'friend' : 'aid', species: r.species, stats: normStats(r.stats, r.species),
-        id: typeof r.id === 'string' && r.id ? r.id.slice(0, 96) : null, rawSum, ...(techs && techs.length ? { techs, mastery } : {}) };
+        id: typeof r.id === 'string' && r.id ? r.id.slice(0, 96) : null, rawSum, ...(techs && techs.length ? { techs, mastery } : {}),
+        // 持ち主のアイコン(大会カード・対戦前で顔とセットで出すためだけ。フレンドの子だけが持つ。古い育成には無い)
+        ...(typeof r.icon === 'string' && r.icon ? { icon: r.icon.slice(0, 128) } : {}), ...(typeof r.profileFrame === 'string' && r.profileFrame ? { profileFrame: r.profileFrame.slice(0, 64) } : {}) };
     };
     // 印で候補を引く(r1116-002)。印の無い古いセーブは 名前+種+種類 → 名前+種 → 名前 の順で引く
     const rivalByMark = (list, mark) => {
@@ -1804,13 +1806,24 @@
         list.push({ id: `${p.key}:${m}:${sys}:${star}:${k}`, sys, star, scenario: true, name: SC_NAME[s.aid], prize: cupPrizeOf(p.key, m, sys, star), ...(sys === 'scmua' ? { prizeMax: Math.round(cupPrizeOf(p.key, m, sys, star) * SMILE_MAX) } : {}), index: list.length });
       });
       const rv = rivalOf(s, list.length); if (rv) list[rv.cup].rival = rv.rival;
+      // ダービーと四大大会の決勝にはライバルを確定で出す(候補がいるときだけ。抽選のライバルと重なったら確定の方を残す)
+      list.forEach(c => { if (c.sys === 'derby' || (EX_BY_SYS[c.sys] && EX_BY_SYS[c.sys].four)) { const fr = rivalForcedOf(s, c.sys); if (fr) c.rival = fr; } });
       return list.map(c => ({ ...c, entry: canEnter(s, c), done: s.wonNow.includes(`${c.sys}:${c.star}`) || s.wonBefore.includes(`${c.sys}:${c.star}`) }));
     };
+    // ライバルの印(大会の札・対戦に付ける表示と照合のための情報。強さや技は候補そのものから引く)
+    const rivalMarkOf = (r) => ({ name: r.name, breeder: typeof r.breeder === 'string' ? r.breeder : null, kind: r.kind, species: r.species, id: typeof r.id === 'string' && r.id ? r.id : null, ...(typeof r.icon === 'string' && r.icon ? { icon: r.icon } : {}), ...(typeof r.profileFrame === 'string' && r.profileFrame ? { profileFrame: r.profileFrame } : {}) });
     const rivalOf = (s, n) => {
       const list = Array.isArray(s.rivals) ? s.rivals : []; if (!list.length || !n) return null;
       const rng = rngOf(s.id, s.turn, 'rival'); if (rng() >= RIVAL.rate) return null;
       const r = list[Math.floor(rng() * list.length)];
-      return { cup: Math.floor(rng() * n), rival: { name: r.name, kind: r.kind, species: r.species, id: typeof r.id === 'string' && r.id ? r.id : null } };
+      return { cup: Math.floor(rng() * n), rival: rivalMarkOf(r) };
+    };
+    // 大一番の決勝ライバル(2026-11-16 社長): モンスターダービーと四大大会は、候補がいればライバルが必ず出る。
+    //   専用の乱数列で引くので、ふだんの大会の抽選(上の rivalOf)には影響しない。候補がいなければ null(相手は今までどおり大会の常連)
+    const rivalForcedOf = (s, sys) => {
+      const list = Array.isArray(s.rivals) ? s.rivals : []; if (!list.length) return null;
+      const rng = rngOf(s.id, s.turn, 'rivalEx', sys);
+      return rivalMarkOf(list[Math.floor(rng() * list.length)]);
     };
     // 出る条件(TOURNAMENT §5)。{ ok, why }
     const canEnter = (s, c) => {
@@ -1876,11 +1889,11 @@
         if (!s.titles.includes(FOUR_DONE.title)) s.titles.push(FOUR_DONE.title); out.fourDone = { ...FOUR_DONE };
       }
     };
-    // 大会の予想(受付の札): 自分の6能力の合計 ÷ 相手の強さ(ゆらぎ・ライバルは入れない)。敵の数字は見せず、ことばだけ返す
+    // 大会の予想(受付の札): 自分の6能力の合計 ÷ 相手の強さ(ゆらぎは入れない。ライバルの倍率は実戦と同じに入れる)。敵の数字は見せず、ことばだけ返す
     const FORECAST = Object.freeze([[1.25, 'easy', '楽勝'], [1.06, 'good', '有利'], [0.94, 'even', '互角'], [0.8, 'hard', '苦戦'], [0, 'none', '勝ち目なし…']]);
     const forecastOf = (s, c) => {
       if (!c) return null; const pk = periodOf(s.turn).key; const ex = EX_BY_SYS[c.sys];
-      const opp = ex ? benchAt(s) * ex.str : benchOf(pk === 'final' ? 'pro' : pk) * (c.sys === 'scatsu' ? STAR_MULT[4] : (STAR_MULT[c.star] || 1)) * (c.rival ? RIVAL.str : 1);
+      const opp = ex ? benchAt(s) * ex.str * (c.rival ? RIVAL.str : 1) : benchOf(pk === 'final' ? 'pro' : pk) * (c.sys === 'scatsu' ? STAR_MULT[4] : (STAR_MULT[c.star] || 1)) * (c.rival ? RIVAL.str : 1);
       const ratio = sumOf(s.stats) / Math.max(1, opp);
       let f = FORECAST.find(([min]) => ratio >= min) || FORECAST[FORECAST.length - 1];
       if (ex && ex.hard && ratio < 1.1) f = FORECAST[4]; // 大一番・最後の四大大会は、よほど勝っていないと「勝ち目なし…」
@@ -1952,7 +1965,7 @@
         if (picked.length) techIds = picked;
       }
       return [{ species: sp, stats, sum: sumOf(stats), techs: gear.techs, mastery: gear.mastery, tactics: gear.tactics, round: 0, pop, loy,
-        name: rv ? rv.name : who ? who.mon : null, breeder: rv ? (rv.breeder || null) : who ? who.breeder : null, champ: Boolean(who && who.champ), rival: Boolean(rv), note: who ? who.note : null, ...(techIds ? { techIds } : {}), ...(sp0 ? { pick: sp0.pick } : {}) }];
+        name: rv ? rv.name : who ? who.mon : null, breeder: rv ? (rv.breeder || null) : who ? who.breeder : null, champ: Boolean(who && who.champ), rival: Boolean(rv), note: who ? who.note : null, ...(techIds ? { techIds } : {}), ...(sp0 ? { pick: sp0.pick } : {}), ...(rv ? { rivalId: rv.id || null, rivalKind: rv.kind || null } : {}) }];
     };
 
     // 組み合わせ表の演出(8人のトーナメント・2026-11-14 社長「トーナメントの表示がおかしい」で作り直し)。決まった乱数で、ほかの試合の勝ち上がりも決める。戦うのは決勝の1戦だけ
