@@ -221,7 +221,17 @@ const MSX_R3_CSS = `
 .msx .r3 .v-pa button:disabled{opacity:.35}
 .msx .r3 .v-a{cursor:pointer}.msx .r3 .v-a .lv span{cursor:pointer}
 .msx .r3 .r3-watch{position:relative;margin-top:6px}
-.msx .r3 .r3-watch .ambw-ring{height:200px}
+/* 縦画面: 並びは 相手の札→対戦の場→自分の札→操作(従来どおり)。包み(r3-watch-side)は見た目に出ない */
+.msx .r3 .r3-watch{display:flex;flex-direction:column}
+.msx .r3 .r3-watch .r3-watch-side{display:contents}
+.msx .r3 .r3-watch .ambw-card[data-ambw-panel="B"]{order:1}
+.msx .r3 .r3-watch .ambw-ring{order:2;height:200px}
+.msx .r3 .r3-watch .ambw-card[data-ambw-panel="A"]{order:3}
+.msx .r3 .r3-watch .ambw-ctl{order:4}
+/* 横画面: 左に対戦の場を固定し、右の HP・技・操作だけをスクロールさせる(2026-11-16 UI改修) */
+.msx.land .r3 .r3-watch{display:grid;grid-template-columns:minmax(0,44%) 1fr;grid-template-areas:"ring side";column-gap:8px;flex:1;min-height:0}
+.msx.land .r3 .r3-watch .ambw-ring{grid-area:ring;height:100%}
+.msx.land .r3 .r3-watch .r3-watch-side{grid-area:side;display:flex;flex-direction:column;gap:6px;overflow-y:auto;min-height:0}
 .msx .r3 .r3-res{text-align:center;font-size:12px;font-weight:900;color:#cbd5e1;margin-top:6px}
 .msx .r3 .r3-box{display:flex;flex-direction:column;gap:5px;margin-top:6px}
 .msx .r3 .r3-bm{display:flex;align-items:center;gap:8px;background:#1e1a36;border:1.5px solid #475569;border-radius:12px;padding:5px 9px;text-align:left;color:#fff;font:inherit}
