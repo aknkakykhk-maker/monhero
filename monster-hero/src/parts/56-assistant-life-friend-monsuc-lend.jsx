@@ -105,8 +105,10 @@ const monsucLendMember = (row, SUC) => {
     if (cost <= budget) assists = list.map((a) => (v3 ? { id: a.id, lv: a.lv, ...(a.n != null ? { n: a.n } : {}) } : { id: a.id, lv: a.lv }));
   }
   const name = typeof m.name === 'string' && m.name.trim() ? [...m.name.trim()].slice(0, 12).join('') : m.species;
+  // 染色もそのまま借りる(部位ごとの null = 未染色の部位も残す。古い貸し出しは項目が無く未染色になる)
+  const colors = Array.isArray(m.colors) ? m.colors.slice(0, 6).map((c) => (typeof c === 'string' && c.length <= 40 ? c : null)) : [];
   return {
-    kind: 'raised', species: m.species, name, stats, assists,
+    kind: 'raised', species: m.species, name, stats, assists, colors,
     friend: { id: typeof r.friendId === 'string' ? r.friendId : null, name: typeof r.name === 'string' ? r.name.slice(0, 40) : '' },
   };
 };
