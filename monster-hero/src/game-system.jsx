@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 207094349593641b
+// generated-sha256: d8fef2b650664b3b
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -84370,8 +84370,9 @@ const MSX_SCN_CSS = `
 .msx .scn-sc>.bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .msx .scn-sc>.pl{position:absolute;left:0;right:0;bottom:0;height:16%;background:repeating-linear-gradient(0deg,#c9b9a6 0 22px,#b9a690 22px 24px)}
 .msx .scn-sc .who{position:absolute;object-fit:contain;pointer-events:none}
-.msx .scn-sc .who.l{left:-7%;bottom:40%;height:36%;z-index:2}
-.msx .scn-sc .who.r{right:-9%;bottom:38%;height:40%;z-index:2}
+/* 左右の人物は画面の内側に全身を収める(端へ寄せすぎると細い絵ほど大半が切れる。2026-11-16 実機スクショ) */
+.msx .scn-sc .who.l{left:0;bottom:40%;height:36%;z-index:2}
+.msx .scn-sc .who.r{right:0;bottom:38%;height:40%;z-index:2}
 .msx .scn-sc .who.c{left:50%;transform:translateX(-50%);bottom:46%;height:46%;z-index:1;animation:msxScnBob 3.2s ease-in-out infinite}
 @keyframes msxScnBob{0%,100%{transform:translateX(-50%) translateY(0)}50%{transform:translateX(-50%) translateY(-6px)}}
 .msx .scn-bd{position:absolute;z-index:3;right:4%;top:3%;width:68px;height:68px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fcd34d,#b45309);border:3px solid #fef3c7;box-shadow:0 2px 8px #0006;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#3b1d02;font-weight:900;font-size:11px;line-height:1.15;text-align:center}
@@ -84391,13 +84392,13 @@ const MSX_SCN_CSS = `
 .msx .scn-ft .dt{flex:1 1 0;background:#fff;color:#1f2937;border-color:#e5e7eb}
 .msx .land .scn-tx,.msx.land .scn-tx{right:42%}
 .msx .land .scn-sc .who.c,.msx.land .scn-sc .who.c{left:auto;right:17%;transform:none;bottom:0;height:90%;animation:none}
-.msx .land .scn-sc .who.r,.msx.land .scn-sc .who.r{right:-3%;bottom:0;height:78%}
+.msx .land .scn-sc .who.r,.msx.land .scn-sc .who.r{right:0;bottom:0;height:78%}
 .msx .land .scn-sc .who.l,.msx.land .scn-sc .who.l{display:none}
 .msx .land .scn-bd,.msx.land .scn-bd{right:2%}
 @media (orientation:landscape) and (max-height:520px){
 .msx .scn-tx{right:42%}
 .msx .scn-sc .who.c{left:auto;right:17%;transform:none;bottom:0;height:90%;animation:none}
-.msx .scn-sc .who.r{right:-3%;bottom:0;height:78%}
+.msx .scn-sc .who.r{right:0;bottom:0;height:78%}
 .msx .scn-sc .who.l{display:none}
 }
 .msx .scn-win{position:absolute;inset:0;z-index:30;background:#0008;display:flex;align-items:center;justify-content:center;padding:28px 18px}
@@ -88566,7 +88567,9 @@ const MSX_CSS = `
 .msx .v-card.pk{border-color:#f472b6aa}
 .msx .v-grid6{display:grid;grid-template-columns:repeat(6,1fr);gap:5px;margin-top:6px}
 .msx .v-grid6 span,.msx .v-grid6 button{position:relative;display:block;min-width:0}
-.msx .v-grid6 img{width:100%;aspect-ratio:1;border-radius:11px;object-fit:cover;background:#0f172a;border:2px solid #475569}
+/* 升の正方形はボタンの側で決める(画像の aspect-ratio 任せだと、端末によっては行の高さが画像より低く付いて次の行に被る。2026-11-16 実機スクショ) */
+.msx .v-grid6 button{aspect-ratio:1}
+.msx .v-grid6 img{position:absolute;inset:0;width:100%;height:100%;border-radius:11px;object-fit:cover;background:#0f172a;border:2px solid #475569}
 .msx .v-grid6 span.on img,.msx .v-grid6 button.on img{border-color:#fde047;box-shadow:0 0 10px #fde047aa}
 .msx .v-grid6 span.lk img,.msx .v-grid6 button.lk img{filter:grayscale(1) brightness(.4)}
 .msx .v-grid6 span.lk::after,.msx .v-grid6 button.lk::after{content:'🔒';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:13px}
@@ -89013,7 +89016,8 @@ const MSX_CSS = `
 .msx .msx-tpk .tpm{flex:0 0 auto;font-size:11px;font-weight:900;color:#facc15}
 .msx .msx-tpk .tc .tg-rk{position:absolute;left:2px;top:2px;z-index:2;min-width:14px;height:14px;border-radius:4px;font-size:10px;font-weight:900;line-height:14px;text-align:center;color:#2a1608;border:1px solid #2a1608}
 /* r1115-146①・152①: 同じマスに技が2つ以上ある印「⇄2」。押せない(升を押すと右の欄に技が出て、そこの「⇄ 覚える技を選ぶ」で変える) */
-.msx-md-tg .tc .tg-alt{position:absolute;top:0;right:0;min-width:22px;height:22px;display:flex;align-items:flex-start;justify-content:flex-end;padding:1px 3px 0 0;font-size:12px;font-weight:900;line-height:1;color:#fff;text-shadow:0 1px 2px #000;pointer-events:none}
+/* 印は升の内側に収まる小さな札にする(字だけだと端末のフォント次第で隣の升へはみ出す。2026-11-16 実機スクショ) */
+.msx-md-tg .tc .tg-alt{position:absolute;top:2px;right:2px;z-index:3;display:flex;align-items:center;height:14px;padding:0 3px;border-radius:5px;background:rgba(18,12,6,.86);font-size:10px;font-weight:900;line-height:1;color:#fff;white-space:nowrap;pointer-events:none}
 
 .msx-md-not{display:block;font-size:10px;color:#94a3b8;font-weight:800}
 .msx-md-howrow{flex-direction:column;align-items:flex-start;gap:1px}.msx-md-howrow>span{width:100%}
