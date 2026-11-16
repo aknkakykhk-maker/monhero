@@ -82,6 +82,7 @@ function MsxR3Retire({ run, setRun, onPause, debug, SUC }) {
   const [busy, setBusy] = useState(false);
   const [box, setBox] = useState(null);
   const [res, setRes] = useState(null);
+  const [rankFix, setRankFix] = useState(null); // 引退の結果の画面で送り直せたときのランキング登録の結果 { ok, placeAll }
   const [showBox, setShowBox] = useState(false);
   const [, setTablesReady] = useState(0);
   useMsxR3Lines(s.aid);
@@ -237,6 +238,25 @@ function MsxR3Retire({ run, setRun, onPause, debug, SUC }) {
     while (up) { up = false; for (const id of Object.keys(now)) { const lv = now[id]; if (lv < 3) { const add = A[id].cost[lv] - A[id].cost[lv - 1]; if (add <= rest) { now[id] = lv + 1; rest -= add; up = true; } } } }
     setPick(now); setSure(false);
   };
+  // 引退の結果の画面: 登録待ちが残っていたら送り直し、送れたら自分の順位を出し直す(待たない・落ちない)
+  useEffect(() => {
+    if (step !== 'done' && step !== 'best3') return undefined;
+    const base = res && res.rank;
+    if (!base || base.ok || !base.pending || rankFix) return undefined;
+    let alive = true;
+    (async () => {
+      try {
+        if (typeof monsucRankFlush === 'function') await monsucRankFlush();
+        if (!alive) return;
+        const st = typeof monsucRankStatusOf === 'function' ? await monsucRankStatusOf(run.id) : null;
+        if (!alive || st !== 'sent') return; // 送れたのが別の保留だった・まだ送れていないときは「登録待ち」のまま
+        let place = null;
+        if (typeof monsucRankRead === 'function') { const d = await monsucRankRead({}); if (d && d.mine) place = d.mine.place; }
+        if (alive) setRankFix({ ok: true, placeAll: place });
+      } catch (_) {}
+    })();
+    return () => { alive = false; };
+  }, [step, res, rankFix]);
   const decide = async () => {
     if (!sure) { setSure(true); return; }
     if (busy) return; setBusy(true);
@@ -257,7 +277,7 @@ function MsxR3Retire({ run, setRun, onPause, debug, SUC }) {
     if (paid !== true) { setRes({ ok: false, why: 'beat' }); setBusy(false); setSure(false); return; }
     let cl = false; try { cl = await msxR3ClearRun(run.id); } catch (e) { cl = false; }
     if (cl === false) { setRes({ ok: false, why: 'clear' }); setBusy(false); setSure(false); return; }
-    setRes({ ok: true, mon: r.mon, best3: r.best3 || null }); setStep(r.best3 && typeof MsxBest3 === 'function' ? 'best3' : 'done');
+    setRes({ ok: true, mon: r.mon, best3: r.best3 || null, rank: r.rank || null }); setStep(r.best3 && typeof MsxBest3 === 'function' ? 'best3' : 'done');
     setBusy(false); setSure(false);
   };
   // ---- 自分だけのベスト3(56-monsuc-best3.jsx・r1113-057②)。入ったらせり上がる演出 → いつもの完了の段へ ----
@@ -265,6 +285,7 @@ function MsxR3Retire({ run, setRun, onPause, debug, SUC }) {
     return <MsxR3Frame run={run} back="閉じる" onBack={() => setStep('done')} right={right} body={<MsxBest3 b={res.best3} run={run}/>} foot={<div className="v-ft"><button type="button" className="go" onClick={() => setStep('done')} data-msx-best3-next>次へ ▶</button></div>}/>;
   }
   if (step === 'done') {
+    const rankRes = rankFix || (res && res.rank) || null;
     const body = (<>
       <div className="v-scene" style={{ flex: '1 1 0', minHeight: 260 }}><img className="bg" src={msxSceneBg().bg} alt=""/><div className="sh"/><div className="v-burst"/>
         <div className="gr"/><MsxMonArt run={run} className="mon"/>
@@ -272,6 +293,9 @@ function MsxR3Retire({ run, setRun, onPause, debug, SUC }) {
       <MsxSay aid={ws.aid} ex="happy" text="「おつかれさま! 次の育成で、編成に入れてあげてね」"/>
       {!fxDone && typeof MsxFxMoment === 'function' ? <MsxFxMoment kind="retire" title="育成完了!" sub={`${run.nick || msxMonName(ws.species)}・評価 ${grade.label}`} species={ws.species} colors={run.colors} onDone={() => setFxDone(true)}/> : null}
       <div className="v-card"><div className="v-kv"><b style={{ width: 'auto', whiteSpace: 'nowrap' }}>マスモンボックス</b><span>{box ? `${box.mons.length} / ${box.cap}体` : '…'}</span></div></div>
+      {rankRes && rankRes.ok ? <div className="v-card"><div className="sub">🏆 ランキングに登録しました{rankRes.placeAll ? `(全体 ${rankRes.placeAll}位)` : ''}</div></div> : null}
+      {rankRes && !rankRes.ok && rankRes.pending ? <div className="v-card"><div className="sub">⏳ ランキングの登録待ちです。つながったら自動で送ります</div></div> : null}
+      {rankRes && !rankRes.ok && !rankRes.pending && !['off', 'skip'].includes(rankRes.reason) ? <div className="v-card"><div className="sub">この記録はランキングに載せられませんでした</div></div> : null}
     </>);
     return <MsxR3Frame run={run} back="閉じる" onBack={() => { setRun(null); onPause(); }} right={right} body={body} foot={<div className="v-ft"><button type="button" onClick={() => setShowBox(true)}>🐾 マスモンボックスを見る</button><button type="button" className="go" onClick={() => { setRun(null); onPause(); }} data-msx-r3-home>ホームへ ▶</button></div>}/>;
   }

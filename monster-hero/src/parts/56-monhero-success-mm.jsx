@@ -123,6 +123,13 @@ function MsxR3Box({ onClose }) {
   const [top, setTop] = useState('base'); // 詳細の右上のタブ base / feat / apt
   const [low, setLow] = useState('tech'); // 詳細の下のタブ tech / assist / info
   const [techSel, setTechSel] = useState(null);
+  const [rankSt, setRankSt] = useState(null); // 詳細を開いている子のランキング登録の状態 { id, st: 'sent' | 'pending' | null }
+  useEffect(() => {
+    if (page !== 'detail' || !sel || typeof monsucRankStatusOf !== 'function') return undefined;
+    let alive = true;
+    monsucRankStatusOf(sel).then((st) => { if (alive) setRankSt({ id: sel, st }); }).catch(() => {});
+    return () => { alive = false; };
+  }, [page, sel]);
   useEffect(() => {
     let alive = true;
     msxR3ReadBox().then((b) => { if (alive) setBox(b); });
@@ -269,6 +276,7 @@ function MsxR3Box({ onClose }) {
           endAt ? ['育成完了日', `${endAt.getFullYear()}/${endAt.getMonth() + 1}/${endAt.getDate()}`] : null,
           cur.ending ? ['エンディング', { super: 'スーパー', good: 'グッド', bad: 'ふつう' }[cur.ending] || cur.ending] : null,
           lendId === cur.id ? ['フレンド', '🤝 貸し出し中'] : null,
+          cur.raised !== false && rankSt && rankSt.id === cur.id && rankSt.st ? ['ランキング', rankSt.st === 'sent' ? '登録済み' : '登録待ち'] : null,
         ];
         return (<MsxMonDetail species={cur.species} name={msxMmName(cur)} sub={`Lv.${Math.round(Number(cur.lv) || 1)}・${msxMonName(cur.species)}`}
           art={<MsxMmArt m={cur} size="100%"/>} st={MSX_STATS.reduce((o, k) => ({ ...o, [k]: Math.round((cur.st && cur.st[k]) || 0) }), {})}
