@@ -719,6 +719,8 @@
       const srank = base ? 'base' : strengthRankOf(pv2 ? powerOfPartsClassic({ stats, lv, loyal: loy, pop }, techRowsOf({ species: sp, techs: canonTechList(o.techs), aptUp: o.aptUp, aptBase: o.aptBase, aptAwake: o.aptAwake }))
         : powerClassicOf({ stats, masteries, lv, loyal: loy, pop }));
       const top = base ? aptTop3(sp) : top3Of(stats, sp);
+      // 染色(その子の colors をそのまま持つ。部位ごとの null = 未染色の部位も残す。ベースモンは持たない。古い保存は項目が無く空になる)
+      const colors = base ? [] : (Array.isArray(o.colors) ? o.colors.slice(0, 6).map(c => (typeof c === 'string' && c.length <= 40 ? c : null)) : []);
       const assists = base ? [] : normAssists(o.assists);
       const own = techsOf(sp).map(t => t.id);
       const techs = base ? startTechs(sp) : (Array.isArray(o.techs) ? canonTechList(o.techs).filter(t => own.includes(t)).slice(0, TECH_MAX) : startTechs(sp));
@@ -728,7 +730,7 @@
       const hn = lvOf('hitonatsu'); const sh = lvOf('shitashi'); const so = lvOf('shutsugen');
       return {
         ...(so ? { none: num(aOf('shutsugen', 'v', so)) } : {}),
-        ...(pv2 ? { pv: 2 } : {}), kind: base ? 'base' : 'raised', species: sp, name: typeof o.name === 'string' ? o.name.slice(0, 24) : sp, stats, loy, pop, lv, masteries, rank, power, top, assists, bonus, fav, techs,
+        ...(pv2 ? { pv: 2 } : {}), kind: base ? 'base' : 'raised', species: sp, name: typeof o.name === 'string' ? o.name.slice(0, 24) : sp, stats, loy, pop, lv, masteries, rank, power, top, assists, bonus, fav, techs, colors,
         tag: base ? TAG_POWER.base : TAG_POWER[srank], bond0: clamp((base ? BOND_START.base : BOND_START[srank]) + (hn ? aOf('hitonatsu', 'start', hn) : 0) + (sh ? num(aOf('shitashi', 'v', sh)) : 0), 0, BOND.max),
         startAdd: { stat: top[0], v: Math.floor(stats[top[0]] / START_STAT_DIV) },
       };
