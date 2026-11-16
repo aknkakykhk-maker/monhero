@@ -1047,6 +1047,30 @@ const MSX_CSS = `
 .msx .msx-tp>.msx-tp-list{flex:1 1 0;min-height:0;overflow-y:auto;overflow-x:hidden;display:flex;flex-wrap:wrap;gap:8px 6px;align-content:flex-start;align-items:flex-start;padding:6px 8px 10px}
 .msx .msx-tp>.msx-tp-list>.msx-tp-c{flex:none;width:calc((100% - 12px) / 3)}
 .msx .msx-tp>.msx-tp-list.one>*{flex:none;width:100%}
+.msx .msx-tp>.msx-tp-list>.msx-tp-w{flex:none;width:calc((100% - 12px) / 3);display:flex;flex-direction:column;gap:3px;min-width:0}
+.msx .msx-tp>.msx-tp-list.one>.msx-tp-w{width:100%}
+.msx .msx-tp-w>.msx-tp-c,.msx .msx-tp-w>.msx-fp-r{width:100%}
+.msx .msx-tp-dt{flex:none;width:100%;min-height:44px;border-radius:8px;background:#1e293b;border:1px solid #4a4380;color:#f9a8d4;font:inherit;font-size:11px;font-weight:900;padding:3px 4px}
+.msx .msx-md-sup{margin-top:8px}
+.msx .msx-pt{display:flex;flex-wrap:wrap;align-items:center;gap:6px;flex:1 1 220px;min-width:0}
+.msx .msx-pt-q{flex:1 1 120px;min-width:0;min-height:44px;border-radius:8px;background:#0f172a;color:#fff;border:1px solid #4a4380;font:inherit;font-size:16px;padding:4px 8px}
+.msx .msx-pt-s select{min-height:44px;border-radius:8px;background:#0f172a;color:#fff;border:1px solid #4a4380;font:inherit;font-size:12px;font-weight:900;padding:0 4px}
+.msx .msx-pt-r{flex:none;min-height:44px;border-radius:8px;background:#1e293b;border:1px solid #4a4380;color:#cbd5e1;font:inherit;font-size:11px;font-weight:900;padding:4px 10px}
+.msx .msx-pt-r.on{background:#3b1736;color:#f9a8d4;border-color:#f472b6}
+.msx .msx-pt-c{flex:none;font-size:11px;font-weight:900;color:#f9a8d4;white-space:nowrap}
+/* スマホ向け(モンサク改善4): 狭い縦画面で操作が折り返す・効果説明が最後まで読める・下の操作がホームインジケーターに重ならない */
+.msx .msx-tp-bar{flex-wrap:wrap}
+.msx .msx-tp-ov{padding-bottom:max(14px,var(--mh-sa-bottom,0px))}
+.msx [data-msx-team-effects] .msx-gt-mon{flex-wrap:wrap}
+.msx [data-msx-team-effects] .msx-gt-mon .v{flex:1 1 100%;text-align:left;padding-left:32px;overflow-wrap:anywhere;line-height:1.45}
+.msx .msx-md-kv span{overflow-wrap:anywhere}
+/* 高さの短い画面では編成の帯を詰める(選んでいる編成が見えるままにする) */
+@media (max-height:620px){
+.msx .msx-tp-hd{padding-top:4px;padding-bottom:0}
+.msx .msx-tp-team{gap:3px;padding:4px 6px}
+.msx .msx-tp-dt{min-height:36px}
+.msx .msx-pt-q,.msx .msx-pt-s select,.msx .msx-pt-r{min-height:38px}
+}
 .msx .msx-tp-c{position:relative;display:flex;flex-direction:column;align-items:center;gap:2px;min-width:0;padding:5px 3px 6px;border-radius:12px;background:#0f172a;border:2px solid #334155;color:#fff;font:inherit;text-align:center;-webkit-touch-callout:none;user-select:none}
 .msx .msx-tp-c.on{border-color:#f472b6;background:#3b1736;box-shadow:0 0 0 2px #f472b6}
 .msx .msx-tp-c.lk{opacity:.5}
