@@ -655,7 +655,9 @@
       const mastery = {};
       if (techs && r.mastery && typeof r.mastery === 'object') techs.forEach(t => { const v = Number(r.mastery[t]); if (Number.isFinite(v)) mastery[t] = clamp(Math.round(v), 0, 100); });
       return { name: String(r.name || '').slice(0, 24), breeder: typeof r.breeder === 'string' ? r.breeder.slice(0, 24) : null, kind: r.kind === 'friend' ? 'friend' : 'aid', species: r.species, stats: normStats(r.stats, r.species),
-        id: typeof r.id === 'string' && r.id ? r.id.slice(0, 96) : null, rawSum, ...(techs && techs.length ? { techs, mastery } : {}) };
+        id: typeof r.id === 'string' && r.id ? r.id.slice(0, 96) : null, rawSum, ...(techs && techs.length ? { techs, mastery } : {}),
+        // 持ち主のアイコン(大会カード・対戦前で顔とセットで出すためだけ。フレンドの子だけが持つ。古い育成には無い)
+        ...(typeof r.icon === 'string' && r.icon ? { icon: r.icon.slice(0, 128) } : {}), ...(typeof r.profileFrame === 'string' && r.profileFrame ? { profileFrame: r.profileFrame.slice(0, 64) } : {}) };
     };
     // 印で候補を引く(r1116-002)。印の無い古いセーブは 名前+種+種類 → 名前+種 → 名前 の順で引く
     const rivalByMark = (list, mark) => {
@@ -1810,7 +1812,7 @@
       const list = Array.isArray(s.rivals) ? s.rivals : []; if (!list.length || !n) return null;
       const rng = rngOf(s.id, s.turn, 'rival'); if (rng() >= RIVAL.rate) return null;
       const r = list[Math.floor(rng() * list.length)];
-      return { cup: Math.floor(rng() * n), rival: { name: r.name, kind: r.kind, species: r.species, id: typeof r.id === 'string' && r.id ? r.id : null } };
+      return { cup: Math.floor(rng() * n), rival: { name: r.name, breeder: typeof r.breeder === 'string' ? r.breeder : null, kind: r.kind, species: r.species, id: typeof r.id === 'string' && r.id ? r.id : null, ...(typeof r.icon === 'string' && r.icon ? { icon: r.icon } : {}), ...(typeof r.profileFrame === 'string' && r.profileFrame ? { profileFrame: r.profileFrame } : {}) } };
     };
     // 出る条件(TOURNAMENT §5)。{ ok, why }
     const canEnter = (s, c) => {
@@ -1952,7 +1954,7 @@
         if (picked.length) techIds = picked;
       }
       return [{ species: sp, stats, sum: sumOf(stats), techs: gear.techs, mastery: gear.mastery, tactics: gear.tactics, round: 0, pop, loy,
-        name: rv ? rv.name : who ? who.mon : null, breeder: rv ? (rv.breeder || null) : who ? who.breeder : null, champ: Boolean(who && who.champ), rival: Boolean(rv), note: who ? who.note : null, ...(techIds ? { techIds } : {}), ...(sp0 ? { pick: sp0.pick } : {}) }];
+        name: rv ? rv.name : who ? who.mon : null, breeder: rv ? (rv.breeder || null) : who ? who.breeder : null, champ: Boolean(who && who.champ), rival: Boolean(rv), note: who ? who.note : null, ...(techIds ? { techIds } : {}), ...(sp0 ? { pick: sp0.pick } : {}), ...(rv ? { rivalId: rv.id || null, rivalKind: rv.kind || null } : {}) }];
     };
 
     // 組み合わせ表の演出(8人のトーナメント・2026-11-14 社長「トーナメントの表示がおかしい」で作り直し)。決まった乱数で、ほかの試合の勝ち上がりも決める。戦うのは決勝の1戦だけ
