@@ -1,1 +1,104 @@
-IyDplovnmbrpg6goSE9NReODu+ODnuODvOOCseODg+ODiOODu+iCsuaIkOODu+ioreWumuODu+ODmOODq+ODl+ODu+Wcn+WPsCnjga7miYvlvJXjgY0KCjwhLS0g44GT44Gu44OV44Kh44Kk44Or44GvIHRvb2xzL3RlYW0vZGVwdHMuanNvbiDjgYvjgonkvZzjgaPjgabjgYTjgovjgILnm7TjgZnjga7jga8gZGVwdHMuanNvbuOAguS9nOOCiuebtOOBlzogbm9kZSB0b29scy90ZWFtL2RlcHQtZ3VpZGUuanMgLS13cml0ZSAtLT4KCumDqOmVtzog44Kv44Op44OV44OI44GP44KTIC8g5Y+X44GR5oyB44GhOiBIT01F44O744Oe44O844Kx44OD44OI44O744Oe44K544Oi44Oz44Gu6IKy5oiQ44O744Of44OD44K344On44Oz44O744OX44Ot44OV44Kj44O844Or44O76Kit5a6a44O744OY44Or44OX44Go5pu05paw5bGl5q2044Gu5LuV57WE44G/44O75L+d5a2Y44Go6YCa5L+h44Gu5Zyf5Y+w44O744OH44OQ44OD44Kw44O75qSc5p+744Gu6YGT5YW344O76YCf44GVCgojIyDmnIDliJ3jgavmiZPjgaTjgoLjga4KCmBgYApub2RlIHRvb2xzL2N0eC5qcyBkZWNpc2lvbnMgZGV2ICAgICDnpL7plbfjga7msbrjgoHjgZTjgago6YCy44KB5pa5ICsg44GT44Gu6YOo44Gr6Zai44KP44KL6KGM44Gg44GRKQpub2RlIHRvb2xzL2N0eC5qcyBicmllZiAgICAgICAgICAgICAgIOOBhOOBvuOBrueKtuaFiwpgYGAKCiMjIOWPl+OBkeaMgeOBpOODleOCoeOCpOODqwoKLSBgbW9uc3Rlci1oZXJvL3NyYy9wYXJ0cy8xMC1jb3JlLmpzeGAKLSBgbW9uc3Rlci1oZXJvL3NyYy9wYXJ0cy8xMS1tYXN1LXByb2dyZXNzaW9uLmpzeGAKLSBgbW9uc3Rlci1oZXJvL3NyYy9wYXJ0cy8xMi10cmFpbmluZy5qc3hgCi0gYG1vbnN0ZXItaGVyby9zcmMvcGFydHMvMTYtKmAKLSBgbW9uc3Rlci1oZXJvL3NyYy9wYXJ0cy8xNy0qYAotIGBtb25zdGVyLWhlcm8vc3JjL3BhcnRzLzE4LSpgCi0gYG1vbnN0ZXItaGVyby9zcmMvcGFydHMvMjAtbWFya2V0LW5vdGljZXMtaGVscC5qc3hgCi0gYG1vbnN0ZXItaGVyby9zcmMvcGFydHMvMjMtcnBnLWRlYnVnLmpzeGAKLSBgbW9uc3Rlci1oZXJvL3NyYy9wYXJ0cy8yNS0qYAotIGBtb25zdGVyLWhlcm8vc3JjL3BhcnRzLzI2LXN1cGFiYXNlLmpzeGAKLSBgbW9uc3Rlci1oZXJvL3NyYy9wYXJ0cy8yNy1yZXN1bHQtd2lkZ2V0cy5qc3hgCi0gYG1vbnN0ZXItaGVyby9zcmMvcGFydHMvMzEtZGVidWctdWkuanN4YAotIGBtb25zdGVyLWhlcm8vc3JjL3BhcnRzLzQwLSpgCi0gYG1vbnN0ZXItaGVyby9zcmMvcGFydHMvNDEtKmAKLSBgbW9uc3Rlci1oZXJvL3NyYy9wYXJ0cy80Mi0qYAotIGBtb25zdGVyLWhlcm8vc3JjL3BhcnRzLzQzLSpgCi0gYG1vbnN0ZXItaGVyby9zcmMvcGFydHMvNDQtKmAKLSBgbW9uc3Rlci1oZXJvL3NyYy9wYXJ0cy81MC0qYAotIGBtb25zdGVyLWhlcm8vc3JjL3BhcnRzLzUxLSpgCi0gYG1vbnN0ZXItaGVyby9zcmMvcGFydHMvNTItc2NyZWVuLW1pc3Npb25zLmpzeGAKLSBgbW9uc3Rlci1oZXJvL3NyYy9wYXJ0cy81My0qYAotIGBtb25zdGVyLWhlcm8vc3JjL3BhcnRzLzU0LSpgCi0gYG1vbnN0ZXItaGVyby9zcmMvcGFydHMvNTUtKmAKLSBgbW9uc3Rlci1oZXJvL3NyYy9wYXJ0cy81Ni1xdWljay1ndWlkZS5qc3hgCi0gYG1vbnN0ZXItaGVyby9zcmMvcGFydHMvNTYtc2NyZWVuLXByb2ZpbGUuanN4YAotIGBtb25zdGVyLWhlcm8vc3JjL3BhcnRzLzU2LW1vbmhlcm8tc3VjY2Vzcy0qLmpzeGAKLSBgbW9uc3Rlci1oZXJvL3NyYy9wYXJ0cy81Ni1tb25zdWMtKi5qc3hgCi0gYG1vbnN0ZXItaGVyby9zcmMvcGFydHMvNTktKmAKLSBgbW9uc3Rlci1oZXJvL3NyYy9wYXJ0cy82MC1hcHAuanN4YCgyLjNNQuODu+mWi+OBi+OBquOBhCkKLSBgbW9uc3Rlci1oZXJvL3NyYy9wYXJ0cy82MS0qYAotIGBtb25zdGVyLWhlcm8vc3JjL3BhcnRzLzYyLSpgCi0gYG1vbnN0ZXItaGVyby9zcmMvcGFydHMvNjMtKmAKLSBgbW9uc3Rlci1oZXJvL3NyYy9wYXJ0cy82NC0qYAotIGBtb25zdGVyLWhlcm8vc3JjL3BhcnRzLzY1LSpgCi0gYG1vbnN0ZXItaGVyby9zcmMvcGFydHMvNjYtKmAKLSBgbW9uc3Rlci1oZXJvL3NyYy9wYXJ0cy82OS1zY3JlZW4taG9tZS5qc3hgCi0gYG1vbnN0ZXItaGVyby9zcmMvcGFydHMvNzAtYm9vdHN0cmFwLmpzeGAoMC42TULjg7vplovjgYvjgarjgYQpCi0gYG1vbnN0ZXItaGVyby9zcmMvcGFydHMvNzItKmAKLSBgbW9uc3Rlci1oZXJvL3NyYy9wYXJ0cy83Ni0qYAotIGBtb25zdGVyLWhlcm8vc3JjL3BhcnRzLzgxLSpgCi0gYG1vbnN0ZXItaGVyby9kYXRhL2JyZWVkZXIuanNgCi0gYG1vbnN0ZXItaGVyby9kYXRhL2hlbHAuanNgKDAuOE1C44O76ZaL44GL44Gq44GEKQotIGBtb25zdGVyLWhlcm8vZGF0YS9jaGFuZ2Vsb2cuanNgKDEuOE1C44O76ZaL44GL44Gq44GEKQotIGBtb25zdGVyLWhlcm8vZGF0YS9taHNhdmUtYmFja3VwLmpzYAotIGB0b29scy9ib290LypgCi0gYHRvb2xzL21hcmtldC8qYAotIGB0b29scy9tYXN1LypgCi0gYHRvb2xzL3VpLypgCi0gYHRvb2xzL3JhbmtpbmcvKmAKLSBgdG9vbHMvY2hhbmdlbG9nLypgCi0gYHRvb2xzL3J1bi8qYAoKIyMg5YWl5Y+j44Gu6Zai5pWwCgrmnKzkvZPjgaDjgZHoqq3jgoA6IGBub2RlIHRvb2xzL2N0eC5qcyByZWFkIDzlkI3liY0+YCAvIOS9v+OBo+OBpuOBhOOCi+WgtOaJgDogYG5vZGUgdG9vbHMvY3R4LmpzIHJlZnMgPOWQjeWJjT5gCgpgSG9tZVNjcmVlbmAgLyBgTWFya2V0TW9kYWxgIC8gYE1hcmtldFB1cmNoYXNlU2hlZXRgCgojIyDlm57jgZnmpJzmn7sKCi0gbm9kZSB0b29scy9ydW4tY2hlY2tzLmpzIC0tY2hhbmdlZAotIEhPTUUg44Gu6YWN572u44KS6Kem44Gj44Gf44KJIG5vZGUgdG9vbHMvaG9tZS1sYXlvdXQtY2hlY2suanMKLSDlhazplovjga7liY06IGBub2RlIHRvb2xzL2N0eC5qcyBnYXRlYCjjg5/jg4/jg6rnorroqo3jgYzopoHjgovjgYvjgpLmqZ/morDjgYzliKTlrprjgIJgcnVuLWNoZWNrcy5qcyAtLWNoYW5nZWRgIOOBruacgOW+jOOBq+OCguWHuuOCiykKCiMjIOmWouS/guOBmeOCi+axuuOBvuOCigoKLSBQLzYwLWFwcC5qc3goMk1C6LaFKeODu1AvNzAtYm9vdHN0cmFwLmpzeCDjga/lhajpg6jjga7pg6jjgYzpgJrjgovloLTmiYDjgILplovjgYvjgZrjgasgbm9kZSB0b29scy9jdHguanMgcmVhZCA85ZCN5YmNPiDjgafliIfjgorlh7rjgZnjgILjgbvjgYvjga7pg6jjga7loLTmiYDjgpLop6bjgovjgajjgY3jga/lhYjjgavnqpPlj6PjgbgKLSBQLzI1LXN0b3JhZ2UuanN444O7UC8yNi1zdXBhYmFzZS5qc3gg44Gv5L+d5a2Y44OH44O844K/44Go44Op44Oz44Kt44Oz44Kw44Gu5Zyf5Y+w44CC5aSJ44GI44Gf44KJIOODn+ODj+ODqueiuuiqjeOBjOimgeOCiwotIOOBr+OBmOOCgeOBpuOBruS6uuOBoOOBkeOBq+abuOOBj+WNsCghd2FzT25ib2FyZGVkIOOBruWIhuWykOODu2ZpbmlzaE9uYm9hcmRpbmcp44KS6Laz44GX44Gf44KJ44CB5b6p5YWD44Gn54mH44Gl44GR44KL5LiA6KanIE1IX0ZJUlNUX1RJTUVSX01BUktfS0VZUyhkYXRhL21oc2F2ZS1iYWNrdXAuanMp44Gr44KC6Laz44GZ44CC6KaL5by144KKOiBub2RlIHRvb2xzL2Jvb3QvcmVzdG9yZS1maXJzdC10aW1lci1tYXJrcy1jaGVjay5qcwotIOODh+ODkOODg+OCsOWwgueUqOOBruWkieabtOOBr+abtOaWsOWxpeattOOBq+OCguODmOODq+ODl+OBq+OCgui8ieOBm+OBquOBhAotIOODouODs+OCteOCr+OBrueUu+mdouOCkuS9nOOCi+ODu+ebtOOBmeWJjeOBqyBkb2NzL3JlZmVyZW5jZS9saW5lLW1mL1JFRi1NQVAubWQg44Gn44Gd44Gu55S76Z2i44Gu6KGM44KS5byV44GN44CB5Y+C6ICD44Gu5a6f54mpKOeUu+WDj+ODu+WLleeUu+OBruOCs+ODninjgpLoh6rliIbjga7nm67jgafopovjgabjgYvjgonkvZzjgoso6KaB57SE44Gu44Oh44Oi44Gg44GR44Gn5L2c44KJ44Gq44GEKQotIOODouODs+OCteOCr+OBrueUu+mdouOBryBkb2NzL3NwZWMvTU9OU1VDX1VJLm1kIOOBruaxuuOBvuOCiijnlLvpnaLjga7kvb/jgYTmlrnjg7vmlbDlrZfjga7jgZ3jgo3jgYjmlrnjg7vntZDmnpzjga7lh7rjgZfmlrnjg7vmnK3jga7lvaIp44Gr44Gd44KN44GI44KLCgojIyDos4fmlpko6KaB44KL56+A44Gg44GRIGBub2RlIHRvb2xzL2N0eC5qcyBkb2MgPOODleOCoeOCpOODqz4gPOimi+WHuuOBlz5gKQoKLSBbYGRvY3Mvc3BlYy9TQVZFX0RBVEEubWRgXSguLi8uLi9kb2NzL3NwZWMvU0FWRV9EQVRBLm1kKQotIFtgZG9jcy9ydWxlcy9TQVZFX0RBVEFfUlVMRVMubWRgXSguLi8uLi9kb2NzL3J1bGVzL1NBVkVfREFUQV9SVUxFUy5tZCkKLSBbYGRvY3MvcnVsZXMvQlVJTERfQ0hFQ0tTLm1kYF0oLi4vLi4vZG9jcy9ydWxlcy9CVUlMRF9DSEVDS1MubWQpCi0gW2Bkb2NzL3NwZWMvVUlfUlVMRVMubWRgXSguLi8uLi9kb2NzL3NwZWMvVUlfUlVMRVMubWQpCi0gW2Bkb2NzL3NwZWMvU09VTF9SQU5LX1NZU1RFTS5tZGBdKC4uLy4uL2RvY3Mvc3BlYy9TT1VMX1JBTktfU1lTVEVNLm1kKQoKIyMg5LuV5LqL44Gu5p2/44O75q6L44KK44Gu5LuV5LqLCgotIFtgZG9jcy9wcm9ncmVzcy9kZXYtYm9hcmQubWRgXSguLi8uLi9kb2NzL3Byb2dyZXNzL2Rldi1ib2FyZC5tZCkKLSBbYGRvY3MvcHJvZ3Jlc3MvY3JhZnQtYmFja2xvZy5tZGBdKC4uLy4uL2RvY3MvcHJvZ3Jlc3MvY3JhZnQtYmFja2xvZy5tZCkKLSBbYGRvY3MvcHJvZ3Jlc3MvdHN1Z2loYWdpLWJhY2tsb2cubWRgXSguLi8uLi9kb2NzL3Byb2dyZXNzL3RzdWdpaGFnaS1iYWNrbG9nLm1kKQotIFtgZG9jcy9wcm9ncmVzcy9zcGVlZC1iYWNrbG9nLm1kYF0oLi4vLi4vZG9jcy9wcm9ncmVzcy9zcGVlZC1iYWNrbG9nLm1kKQoK5Lya6Kmx44GM6ZW344GP44Gq44Gj44Gf44KJOiBgbm9kZSB0b29scy9jdHguanMgaGFuZG9mZiBkZXYgLS13cml0ZWAo5byV44GN57aZ44GO44Oh44OiIOKGkiDmlrDjgZfjgYTkvJroqbHjgIJbYFNFU1NJT05fSEFORE9GRi5tZGBdKC4uL3J1bGVzL1NFU1NJT05fSEFORE9GRi5tZCkpCg==
+# 開発部(HOME・マーケット・育成・設定・ヘルプ・土台)の手引き
+
+<!-- このファイルは tools/team/depts.json から作っている。直すのは depts.json。作り直し: node tools/team/dept-guide.js --write -->
+
+部長: クラフトくん / 受け持ち: HOME・マーケット・マスモンの育成・ミッション・プロフィール・設定・ヘルプと更新履歴の仕組み・保存と通信の土台・デバッグ・検査の道具・速さ
+
+## 最初に打つもの
+
+```
+node tools/ctx.js decisions dev     社長の決めごと(進め方 + この部に関わる行だけ)
+node tools/ctx.js brief               いまの状態
+```
+
+## 受け持つファイル
+
+- `monster-hero/src/parts/10-core.jsx`
+- `monster-hero/src/parts/11-masu-progression.jsx`
+- `monster-hero/src/parts/12-training.jsx`
+- `monster-hero/src/parts/16-*`
+- `monster-hero/src/parts/17-*`
+- `monster-hero/src/parts/18-*`
+- `monster-hero/src/parts/20-market-notices-help.jsx`
+- `monster-hero/src/parts/23-rpg-debug.jsx`
+- `monster-hero/src/parts/25-*`
+- `monster-hero/src/parts/26-supabase.jsx`
+- `monster-hero/src/parts/27-result-widgets.jsx`
+- `monster-hero/src/parts/31-debug-ui.jsx`
+- `monster-hero/src/parts/40-*`
+- `monster-hero/src/parts/41-*`
+- `monster-hero/src/parts/42-*`
+- `monster-hero/src/parts/43-*`
+- `monster-hero/src/parts/44-*`
+- `monster-hero/src/parts/50-*`
+- `monster-hero/src/parts/51-*`
+- `monster-hero/src/parts/52-screen-missions.jsx`
+- `monster-hero/src/parts/53-*`
+- `monster-hero/src/parts/54-*`
+- `monster-hero/src/parts/55-*`
+- `monster-hero/src/parts/56-quick-guide.jsx`
+- `monster-hero/src/parts/56-screen-profile.jsx`
+- `monster-hero/src/parts/56-monhero-success-*.jsx`
+- `monster-hero/src/parts/56-monsuc-*.jsx`
+- `monster-hero/src/parts/59-*`
+- `monster-hero/src/parts/60-app.jsx`(2.3MB・開かない)
+- `monster-hero/src/parts/61-*`
+- `monster-hero/src/parts/62-*`
+- `monster-hero/src/parts/63-*`
+- `monster-hero/src/parts/64-*`
+- `monster-hero/src/parts/65-*`
+- `monster-hero/src/parts/66-*`
+- `monster-hero/src/parts/69-screen-home.jsx`
+- `monster-hero/src/parts/70-bootstrap.jsx`(0.6MB・開かない)
+- `monster-hero/src/parts/72-*`
+- `monster-hero/src/parts/76-*`
+- `monster-hero/src/parts/81-*`
+- `monster-hero/data/breeder.js`
+- `monster-hero/data/help.js`(0.8MB・開かない)
+- `monster-hero/data/changelog.js`(1.8MB・開かない)
+- `monster-hero/data/mhsave-backup.js`
+- `tools/boot/*`
+- `tools/market/*`
+- `tools/masu/*`
+- `tools/ui/*`
+- `tools/ranking/*`
+- `tools/changelog/*`
+- `tools/run/*`
+
+## 入口の関数
+
+本体だけ読む: `node tools/ctx.js read <名前>` / 使っている場所: `node tools/ctx.js refs <名前>`
+
+`HomeScreen` / `MarketModal` / `MarketPurchaseSheet`
+
+## 回す検査
+
+- node tools/run-checks.js --changed
+- HOME の配置を触ったら node tools/home-layout-check.js
+- 公開の前: `node tools/ctx.js gate`(ミハリ確認が要るかを機械が判定。`run-checks.js --changed` の最後にも出る)
+
+## 関係する決まり
+
+- P/60-app.jsx(2MB超)・P/70-bootstrap.jsx は全部の部が通る場所。開かずに node tools/ctx.js read <名前> で切り出す。ほかの部の場所を触るときは先に窓口へ
+- P/25-storage.jsx・P/26-supabase.jsx は保存データとランキングの土台。変えたら ミハリ確認が要る
+- はじめての人だけに書く印(!wasOnboarded の分岐・finishOnboarding)を足したら、復元で片づける一覧 MH_FIRST_TIMER_MARK_KEYS(data/mhsave-backup.js)にも足す。見張り: node tools/boot/restore-first-timer-marks-check.js
+- デバッグ専用の変更は更新履歴にもヘルプにも載せない
+- モンサクの画面を作る・直す前に docs/reference/line-mf/REF-MAP.md でその画面の行を引き、参考の実物(画像・動画のコマ)を自分の目で見てから作る(要約のメモだけで作らない)
+- モンサクの画面は docs/spec/MONSUC_UI.md の決まり(画面の使い方・数字のそろえ方・結果の出し方・札の形)にそろえる
+
+## 資料(要る節だけ `node tools/ctx.js doc <ファイル> <見出し>`)
+
+- [`docs/spec/SAVE_DATA.md`](../../docs/spec/SAVE_DATA.md)
+- [`docs/rules/SAVE_DATA_RULES.md`](../../docs/rules/SAVE_DATA_RULES.md)
+- [`docs/rules/BUILD_CHECKS.md`](../../docs/rules/BUILD_CHECKS.md)
+- [`docs/spec/UI_RULES.md`](../../docs/spec/UI_RULES.md)
+- [`docs/spec/SOUL_RANK_SYSTEM.md`](../../docs/spec/SOUL_RANK_SYSTEM.md)
+
+## 仕事の板・残りの仕事
+
+- [`docs/progress/dev-board.md`](../../docs/progress/dev-board.md)
+- [`docs/progress/craft-backlog.md`](../../docs/progress/craft-backlog.md)
+- [`docs/progress/tsugihagi-backlog.md`](../../docs/progress/tsugihagi-backlog.md)
+- [`docs/progress/speed-backlog.md`](../../docs/progress/speed-backlog.md)
+
+会話が長くなったら: `node tools/ctx.js handoff dev --write`(引き継ぎメモ → 新しい会話。[`SESSION_HANDOFF.md`](../rules/SESSION_HANDOFF.md))
