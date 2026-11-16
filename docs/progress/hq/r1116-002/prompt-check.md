@@ -16,3 +16,4 @@ aknkakykhk-maker/monhero の PR #〈PR番号〉 を確かめてください(モ�
 - PR のブランチで node tools/build.js と node tools/run-checks.js --changed を回し、結果の最後の数行を貼る。
 - 大きいファイル(src/game-system.jsx、*.compiled.js、src/parts/60-app.jsx、data/changelog.js の全文)は開かず、node tools/ctx.js diff・read で必要な範囲だけ読む。
 - 報告は短く: 問題(大きい順。どのファイルの何行か) / 問題なし / 確かめられなかったこと。
+- 報告は、Claude Code Remote の send_message で、窓口のセッション session_014GTmSNS2ae9tRr57k3zFjC へ直接送る(PR 番号を必ず入れる)。判断に迷うことや、方針と合わないところが出たときも、作業を進める前に同じ宛先へ聞く。
