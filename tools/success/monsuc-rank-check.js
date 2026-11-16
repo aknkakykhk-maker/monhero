@@ -5,8 +5,10 @@
 //   ② 送らない: デビュー戦のゲームオーバー・まだ終わっていない育成・デバッグの育成
 //   ③ 送る中身: 6能力は 0〜99,999 の整数・技は8つまで・熟練 0〜100・育成の id は「持ち主の番号-英数字」
 //   ④ 二重に送らない: 送れた id は mh_monsuc_rank_sent_v1 に残り、同じ育成は2回目を送らない
-//   ⑤ 送れなかったら mh_monsuc_rank_queue_v1 に積み、monsucRankFlush で1件ずつ送り直す。形で断られたものは積まない
-//   ⑥ 保存は新しいキー2つだけ。壊れた値でも空として読める
+//   ⑤ 送れなかったら mh_monsuc_rank_pending_v1(登録待ち)に積み、monsucRankFlush で1件ずつ送り直す。形で断られたものは積まない
+//   ⑥ 保存は決まったキーだけ(queue_v1 には書かない)。壊れた値でも空として読める
+//   ⑨ 登録待ち(r1116-002①): 鍵が書けない・通信が落ちる・途中で止まって再起動・鍵の無い端末でも、あとで1件だけ送れる。
+//      queue_v1 からの移行は1回だけ・queue は消さない。持ち主の違う保留は消さず印を付けて飛ばす。本物の masmonPvpSelf(56-assistant-masmon-pvp.jsx)も読み込む
 //   ⑧ 画面: 絵は ALL_PLAYER_MONSTERS[種族名] で引く/ほかの人の色は配列だけ(6つ・40字まで)に整えてから DyedMonsterImage に渡す
 //   ⑦ 端末の総合力の式(MASMON_CALC.power)とサーバの SQL の式の重みがそろっている
 'use strict';
@@ -19,30 +21,42 @@ const root = path.resolve(__dirname, '..', '..');
 let failed = 0;
 const check = (name, ok, detail = '') => { if (!ok) { console.log(`NG: ${name}${detail ? ` — ${detail}` : ''}`); failed++; } };
 
-const mem = {};
-const writes = [];
-const calls = [];
-let server = () => ({ status: 200, body: JSON.stringify({ ok: true, power: 9000, grade: 'B', place_all: 3, place_lineage: 1 }) });
+const okServer = () => ({ status: 200, body: JSON.stringify({ ok: true, power: 9000, grade: 'B', place_all: 3, place_lineage: 1 }) });
 const flags = { monheroSuccess: true };
-const ctx = vm.createContext({
-  console, Math, Date, JSON, Object, Array, Number, String, Promise, RegExp, AbortController, setTimeout, clearTimeout, encodeURIComponent,
-  React: { useState: (v) => [v, () => {}], useEffect: () => {}, useMemo: (f) => f() },
-  storeGet: async (k, d) => (k in mem ? JSON.parse(JSON.stringify(mem[k])) : d),
-  storeSet: async (k, v) => { writes.push(k); mem[k] = JSON.parse(JSON.stringify(v)); return true; },
-  RELEASE_FLAGS: flags,
-  SUPABASE_URL: 'https://example.supabase.co', SB_HEADERS: { apikey: 'test', 'Content-Type': 'application/json' },
-  fetch: async (url, init = {}) => {
-    calls.push({ url: String(url), body: init.body ? JSON.parse(init.body) : null });
-    const r = server(String(url), init);
-    return { ok: r.status >= 200 && r.status < 300, status: r.status, headers: { get: () => null }, json: async () => JSON.parse(r.body) };
-  },
-  masmonPvpSelf: async () => ({ owner: 'self-0001', key: 'k'.repeat(48) }),
-  MONSTER_LINEAGE_MAP: { Mocchi: { main: 'mocchi', sub: 'mocchi' }, Golem: { main: 'golem', sub: 'golem' } },
-  MONSTER_LINEAGES: { mocchi: { id: 'mocchi', name: 'モッチー' }, golem: { id: 'golem', name: 'ゴーレム' } },
-  ALL_PLAYER_MONSTERS: { Mocchi: { id: 'Mocchi', name: 'モッチー' }, Golem: { id: 'Golem', name: 'ゴーレム' } }, // 本体と同じく種族名をキーにしたオブジェクト
-});
-const src = fs.readFileSync(path.join(root, 'monster-hero/src/parts/56-monsuc-rank.jsx'), 'utf8');
-vm.runInContext(babel.transformSync(src, { presets: [require.resolve('@babel/preset-react')], babelrc: false, configFile: false }).code.replace(/^const /gm, 'var '), ctx);
+// 本物の 56-assistant-masmon-pvp.jsx(masmonPvpSelf)と 56-monsuc-rank.jsx を同じ文脈に読み込む。保存(mem)は場面ごとに分けられる
+const loadCtx = (mem, opts = {}) => {
+  const writes = [];
+  const calls = [];
+  const env = { server: opts.server || okServer };
+  const failKeyWrites = new Set(opts.failKeyWrites || []); // このキーへの storeSet が1回だけ false を返す(鍵の書き込みの一時的な失敗)
+  const ctx = vm.createContext({
+    console, Math, Date, JSON, Object, Array, Number, String, Promise, RegExp, AbortController, setTimeout, clearTimeout, encodeURIComponent, Uint8Array,
+    crypto: require('crypto').webcrypto,
+    React: { useState: (v) => [v, () => {}], useEffect: () => {}, useMemo: (f) => f() },
+    storeGet: async (k, d) => (k in mem ? JSON.parse(JSON.stringify(mem[k])) : d),
+    storeSet: async (k, v) => { writes.push(k); if (failKeyWrites.has(k)) { failKeyWrites.delete(k); return false; } mem[k] = JSON.parse(JSON.stringify(v)); return true; },
+    RELEASE_FLAGS: flags,
+    SUPABASE_URL: 'https://example.supabase.co', SB_HEADERS: { apikey: 'test', 'Content-Type': 'application/json' },
+    fetch: async (url, init = {}) => {
+      calls.push({ url: String(url), body: init.body ? JSON.parse(init.body) : null });
+      const r = env.server(String(url), init);
+      return { ok: r.status >= 200 && r.status < 300, status: r.status, headers: { get: () => null }, json: async () => JSON.parse(r.body) };
+    },
+    ensureBreederId: async () => (opts.breederId === undefined ? 'self-0001' : opts.breederId),
+    MONSTER_LINEAGE_MAP: { Mocchi: { main: 'mocchi', sub: 'mocchi' }, Golem: { main: 'golem', sub: 'golem' } },
+    MONSTER_LINEAGES: { mocchi: { id: 'mocchi', name: 'モッチー' }, golem: { id: 'golem', name: 'ゴーレム' } },
+    ALL_PLAYER_MONSTERS: { Mocchi: { id: 'Mocchi', name: 'モッチー' }, Golem: { id: 'Golem', name: 'ゴーレム' } }, // 本体と同じく種族名をキーにしたオブジェクト
+  });
+  for (const rel of ['monster-hero/src/parts/56-assistant-masmon-pvp.jsx', 'monster-hero/src/parts/56-monsuc-rank.jsx']) {
+    const src = fs.readFileSync(path.join(root, rel), 'utf8');
+    vm.runInContext(babel.transformSync(src, { presets: [require.resolve('@babel/preset-react')], babelrc: false, configFile: false }).code.replace(/^const /gm, 'var '), ctx);
+  }
+  return { ctx, writes, calls, env };
+};
+const mem = {};
+const base = loadCtx(mem);
+const ctx = base.ctx; const writes = base.writes; const calls = base.calls;
+let server = (fn) => { base.env.server = fn; };
 
 const runOf = (o = {}) => ({ id: 'run1234abcd', species: 'Mocchi', over: 'done', lv: 20, pop: 30,
   stats: { life: 500, pow: 1200, wise: -5, hit: 300.4, eva: 'x', tough: 400 }, techs: ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i'], mastery: { a: 150, b: 20 }, ...o });
@@ -93,24 +107,25 @@ const ev = { loyal: 70, lv: 20, pop: 30, power: 9999 };
   check('④ 印が残る', Array.isArray(mem.mh_monsuc_rank_sent_v1) && mem.mh_monsuc_rank_sent_v1.includes('self-0001-run1234abcd'));
 
   // ⑤ 送れなかったら積んで送り直す
-  server = () => ({ status: 503, body: '{}' });
+  server(() => ({ status: 503, body: '{}' }));
   r = await S({ run: runOf({ id: 'run2' }), ev, name: 'ごろん' });
   check('⑤ 電波が悪いと失敗', r.ok === false && r.reason === 'network');
-  check('⑤ 列に積む', Array.isArray(mem.mh_monsuc_rank_queue_v1) && mem.mh_monsuc_rank_queue_v1.length === 1 && mem.mh_monsuc_rank_queue_v1[0].run_id === 'self-0001-run200');
-  server = () => ({ status: 200, body: JSON.stringify({ ok: true, power: 1, grade: 'G', place_all: 9, place_lineage: 2 }) });
+  check('⑤ 登録待ちに積む(run_id は送る瞬間に作る)', Array.isArray(mem.mh_monsuc_rank_pending_v1) && mem.mh_monsuc_rank_pending_v1.length === 1 && mem.mh_monsuc_rank_pending_v1[0].raw_id === 'run2' && mem.mh_monsuc_rank_pending_v1[0].run_id === null && !(mem.mh_monsuc_rank_queue_v1 || []).length);
+  server(() => ({ status: 200, body: JSON.stringify({ ok: true, power: 1, grade: 'G', place_all: 9, place_lineage: 2 }) }));
   r = await ctx.monsucRankFlush();
-  check('⑤ 送り直せた', r.ok === true && r.left === 0 && mem.mh_monsuc_rank_queue_v1.length === 0 && mem.mh_monsuc_rank_sent_v1.includes('self-0001-run200'), JSON.stringify(r));
-  server = () => ({ status: 200, body: JSON.stringify({ ok: false, reason: 'over_cap' }) });
+  check('⑤ 送り直せた', r.ok === true && r.left === 0 && mem.mh_monsuc_rank_pending_v1.length === 0 && mem.mh_monsuc_rank_sent_v1.includes('self-0001-run200'), JSON.stringify(r));
+  server(() => ({ status: 200, body: JSON.stringify({ ok: false, reason: 'over_cap' }) }));
   r = await S({ run: runOf({ id: 'run3abcdef' }), ev, name: 'x' });
-  check('⑤ 上限で断られたら積まない', r.reason === 'over_cap' && mem.mh_monsuc_rank_queue_v1.length === 0);
-  server = () => ({ status: 200, body: JSON.stringify({ ok: false, reason: 'busy' }) });
+  check('⑤ 上限で断られたら積まない', r.reason === 'over_cap' && (mem.mh_monsuc_rank_pending_v1 || []).length === 0);
+  server(() => ({ status: 200, body: JSON.stringify({ ok: false, reason: 'busy' }) }));
   r = await S({ run: runOf({ id: 'run4abcdef' }), ev, name: 'x' });
-  check('⑤ 混雑なら積む', r.reason === 'busy' && mem.mh_monsuc_rank_queue_v1.length === 1);
+  check('⑤ 混雑なら積む', r.reason === 'busy' && mem.mh_monsuc_rank_pending_v1.length === 1);
 
-  // ⑥ 保存は新しいキーだけ・壊れた値
-  check('⑥ 新しいキー2つだけに書く', writes.every(k => k === 'mh_monsuc_rank_sent_v1' || k === 'mh_monsuc_rank_queue_v1'), [...new Set(writes)].join(','));
-  mem.mh_monsuc_rank_sent_v1 = 'こわれた'; mem.mh_monsuc_rank_queue_v1 = { x: 1 };
-  check('⑥ 壊れた印は空', (await ctx.monsucRankSentList()).length === 0 && (await ctx.monsucRankQueue()).length === 0);
+  // ⑥ 保存は決まったキーだけ・壊れた値
+  check('⑥ 決まったキーだけに書く', writes.every(k => ['mh_monsuc_rank_sent_v1', 'mh_monsuc_rank_pending_v1', 'mh_monsuc_rank_pending_migrated_v1', 'mh_masmon_pvp_owner_key_v1'].includes(k)), [...new Set(writes)].join(','));
+  check('⑥ queue_v1 には書かない(消さない・移行の元として残す)', !writes.includes('mh_monsuc_rank_queue_v1'));
+  mem.mh_monsuc_rank_sent_v1 = 'こわれた'; mem.mh_monsuc_rank_pending_v1 = { x: 1 };
+  check('⑥ 壊れた印は空', (await ctx.monsucRankSentList()).length === 0 && (await ctx.monsucRankPendingList()).length === 0);
 
   // ⑦ 総合力の式の重み(端末とサーバ)
   const calc = fs.readFileSync(path.join(root, 'monster-hero/src/parts/56-assistant-life-masmon-calc.jsx'), 'utf8');
@@ -146,6 +161,72 @@ const ev = { loyal: 70, lv: 20, pop: 30, power: 9999 };
     check('⑦c 端末の能力の重み(900 で 1あたり 4.5)', Math.round(C.statPower(900)) === 4050 && Math.round(C.statPower(0)) === 0 && C.power({ stats: mk(999), lv: 99, loyal: 100, pop: 100 }) === 31777);
     const labels = [[0, 'G'], [19999, 'SSS'], [20000, 'M'], [20500, 'M1'], [24999, 'M9'], [25000, 'MG'], [25500, 'MG1'], [30000, 'MF'], [99999, 'MA9']];
     check('⑦c 端末のランクの名前', labels.every(([p, l]) => C.rankOf(p).label === l && (p < 20000 || C.rankOf(p).key === 'M')), labels.map(([p]) => C.rankOf(p).label).join(','));
+  }
+
+  // ⑨ 登録待ちの場面(r1116-002①)。保存(mem)を分けて、本物の masmonPvpSelf ごと確かめる
+  { // 鍵の書き込みが一時的に失敗 → 回復したら1件送れる
+    const m2 = {}; const c2 = loadCtx(m2, { failKeyWrites: ['mh_masmon_pvp_owner_key_v1'] });
+    let rr = await c2.ctx.monsucRankSubmit({ run: runOf({ id: 'runkey1abc' }), ev, name: 'かぎ' });
+    check('⑨ 鍵が書けないと送れない', rr.ok === false && rr.reason === 'no_id' && c2.calls.length === 0, JSON.stringify(rr));
+    check('⑨ それでも登録待ちに残る', Array.isArray(m2.mh_monsuc_rank_pending_v1) && m2.mh_monsuc_rank_pending_v1.length === 1);
+    rr = await c2.ctx.monsucRankFlush();
+    check('⑨ 鍵が回復したら1件送れる', rr.ok === true && c2.calls.filter(c => /monsuc_rank_submit/.test(c.url)).length === 1 && m2.mh_monsuc_rank_pending_v1.length === 0 && m2.mh_monsuc_rank_sent_v1.includes('self-0001-runkey1abc'), JSON.stringify(rr));
+  }
+  { // 通信が落ちたあと回復したら送れる
+    const m3 = {}; const c3 = loadCtx(m3, { server: () => ({ status: 503, body: '{}' }) });
+    let rr = await c3.ctx.monsucRankSubmit({ run: runOf({ id: 'runnet1abc' }), ev, name: 'でんぱ' });
+    check('⑨ 通信が落ちたら登録待ち', rr.ok === false && m3.mh_monsuc_rank_pending_v1.length === 1);
+    c3.env.server = okServer;
+    rr = await c3.ctx.monsucRankFlush();
+    check('⑨ 通信が回復したら送れる', rr.ok === true && m3.mh_monsuc_rank_pending_v1.length === 0 && m3.mh_monsuc_rank_sent_v1.includes('self-0001-runnet1abc'), JSON.stringify(rr));
+  }
+  { // 送る途中で止まり、再起動(文脈を作り直す)したあと送れる
+    const m4 = {}; const c4a = loadCtx(m4, { server: () => ({ status: 503, body: '{}' }) });
+    await c4a.ctx.monsucRankSubmit({ run: runOf({ id: 'runboot1ab' }), ev, name: 'さいき' });
+    check('⑨ 止まっても登録待ちが残る', m4.mh_monsuc_rank_pending_v1.length === 1);
+    const c4b = loadCtx(m4);
+    const rr = await c4b.ctx.monsucRankFlush();
+    check('⑨ 再起動のあと送れる', rr.ok === true && m4.mh_monsuc_rank_pending_v1.length === 0 && m4.mh_monsuc_rank_sent_v1.includes('self-0001-runboot1ab'), JSON.stringify(rr));
+  }
+  { // 二重に送っても載るのは1回だけ
+    const m5 = {}; const c5 = loadCtx(m5);
+    await c5.ctx.monsucRankSubmit({ run: runOf({ id: 'rundup1abc' }), ev, name: 'にど' });
+    const n5 = c5.calls.length;
+    let rr = await c5.ctx.monsucRankSubmit({ run: runOf({ id: 'rundup1abc' }), ev, name: 'にど' });
+    check('⑨ 送れた育成は2回目を送らない', rr.reason === 'skip' && c5.calls.length === n5);
+    rr = await c5.ctx.monsucRankFlush();
+    check('⑨ 送り直しでも増えない', rr.left === 0 && c5.calls.length === n5);
+    const m6 = {}; const c6 = loadCtx(m6, { server: () => ({ status: 503, body: '{}' }) });
+    await c6.ctx.monsucRankSubmit({ run: runOf({ id: 'rundup2abc' }), ev, name: 'にど' });
+    await c6.ctx.monsucRankSubmit({ run: runOf({ id: 'rundup2abc' }), ev, name: 'にど' });
+    check('⑨ 登録待ちは同じ育成で1件だけ', m6.mh_monsuc_rank_pending_v1.length === 1);
+  }
+  { // 鍵の無い端末に保留があっても送れる(送り直すときに鍵を作る)
+    const m7 = { mh_monsuc_rank_pending_v1: [{ raw_id: 'runkey9abc', run_id: null, user_name: '', child_name: 'てがき', species: 'Mocchi', lineage: 'mocchi', dye: [], stats: { life: 1, pow: 2, wise: 3, hit: 4, eva: 5, tough: 6 }, techs: [], lv: 10, loyal: 10, pop: 10, engine_version: 1 }] };
+    const c7 = loadCtx(m7);
+    const rr = await c7.ctx.monsucRankFlush();
+    check('⑨ 鍵が無くても鍵を作って送れる', rr.ok === true && typeof m7.mh_masmon_pvp_owner_key_v1 === 'string' && m7.mh_monsuc_rank_pending_v1.length === 0 && c7.calls[0].body.p_row.run_id === 'self-0001-runkey9abc', JSON.stringify(rr));
+  }
+  { // queue_v1 からの移行は1回だけ・queue は消さない
+    const row9 = { run_id: 'self-0001-runmig1abc', user_name: '', child_name: 'いこう', species: 'Mocchi', lineage: 'mocchi', dye: [], stats: { life: 1, pow: 2, wise: 3, hit: 4, eva: 5, tough: 6 }, techs: [], lv: 10, loyal: 10, pop: 10, engine_version: 1 };
+    const m8 = { mh_monsuc_rank_queue_v1: [row9] };
+    const c8 = loadCtx(m8);
+    let rr = await c8.ctx.monsucRankFlush();
+    check('⑨ 移行した分が送れる', rr.ok === true && m8.mh_monsuc_rank_sent_v1.includes('self-0001-runmig1abc'), JSON.stringify(rr));
+    check('⑨ queue_v1 は消さない・移行の印が立つ', Array.isArray(m8.mh_monsuc_rank_queue_v1) && m8.mh_monsuc_rank_queue_v1.length === 1 && m8.mh_monsuc_rank_pending_migrated_v1 === true);
+    const n8 = c8.calls.length;
+    rr = await c8.ctx.monsucRankFlush();
+    check('⑨ 移行は1回だけ(2回目は送らない)', rr.left === 0 && c8.calls.length === n8);
+  }
+  { // 持ち主の違う保留は消さず、印を付けて飛ばす。持ち主が戻れば送れる(印はサーバへ送らない)
+    const m9 = { mh_monsuc_rank_pending_v1: [{ raw_id: 'runoth1abc', run_id: 'other-9999-runoth1abc', user_name: '', child_name: 'たにん', species: 'Mocchi', lineage: 'mocchi', dye: [], stats: { life: 1, pow: 2, wise: 3, hit: 4, eva: 5, tough: 6 }, techs: [], lv: 10, loyal: 10, pop: 10, engine_version: 1 }] };
+    const c9 = loadCtx(m9);
+    let rr = await c9.ctx.monsucRankFlush();
+    check('⑨ 別の持ち主の保留は送らない', rr.ok === false && c9.calls.length === 0, JSON.stringify(rr));
+    check('⑨ 消さず印を付けて残す', m9.mh_monsuc_rank_pending_v1.length === 1 && m9.mh_monsuc_rank_pending_v1[0].held === true);
+    const c9b = loadCtx(m9, { breederId: 'other-9999' });
+    rr = await c9b.ctx.monsucRankFlush();
+    check('⑨ 持ち主が戻れば送れる・印は送らない', rr.ok === true && c9b.calls[0] && !('held' in c9b.calls[0].body.p_row) && !('raw_id' in c9b.calls[0].body.p_row), JSON.stringify(rr));
   }
 
   console.log(failed ? `NG ${failed}件` : 'OK: モンヒロサクセスの総合力ランキングの端末の口');
