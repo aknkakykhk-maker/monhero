@@ -30,3 +30,4 @@ aknkakykhk-maker/monhero のモンヒロサクセスβで、引退後のラン�
 - 大きいファイル(src/game-system.jsx、*.compiled.js、src/parts/60-app.jsx、data/changelog.js の全文)は開かず、node tools/ctx.js read/find で必要な範囲だけ読んでください。
 - 作業はブランチで行い、PR を作るところまで。マージはしない。
 - 報告は短く: 直した箇所 / 試験の結果 / 未確認のこと。
+- 報告は、Claude Code Remote の send_message で、窓口のセッション session_014GTmSNS2ae9tRr57k3zFjC へ直接送る(PR 番号を必ず入れる)。判断に迷うことや、方針と合わないところが出たときも、作業を進める前に同じ宛先へ聞く。
