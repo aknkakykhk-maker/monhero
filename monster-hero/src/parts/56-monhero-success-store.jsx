@@ -431,7 +431,17 @@ const msxRivalsBuild = async (SUC, aid) => {
       const t = r && Array.isArray(r.list) ? (r.list.find((x) => x && x.lead && ok(x.monster)) || r.list.find((x) => x && ok(x.monster))) : null;
       if (!t) continue;
       const nick = typeof t.nick === 'string' && t.nick.trim() ? [...t.nick.trim()].slice(0, 12).join('') : msxMonName(t.monster);
-      out.push({ name: nick, breeder: msxAidName(id), kind: 'aid', species: t.monster, ...(t.stats && typeof t.stats === 'object' ? { stats: t.stats } : {}) });
+      // 個体の印(所有者の種類・所有者・枠・種)。同名の別の子と取り違えないため、芯は名前でなくこの印で引く(r1116-002)
+      const slot = Number.isInteger(t.slot) ? t.slot : 0;
+      // 能力: 共有に無いとき(育成の公開印が偽で共有が能力を落とすとき)は、育成の入れ物から元の能力をそのまま使う
+      let stats = t.stats && typeof t.stats === 'object' ? t.stats : null;
+      if (!stats && typeof amgEntryOf === 'function') { try { const e = amgEntryOf(id, t); if (e && e.st && typeof e.st === 'object') stats = e.st; } catch (_) { /* 読めなければ能力なしで続ける */ } }
+      // 覚えた技と熟練(芯が第2版の技へ読み替えて、熟練の高い順に使う)
+      let techs = null; let mastery = null;
+      if (typeof amgtBattleOf === 'function') { try { const bt = amgtBattleOf(id, t, t.lv); if (bt && Array.isArray(bt.techs) && bt.techs.length) { techs = bt.techs.filter((x) => typeof x === 'string').slice(0, 16); if (techs.length && bt.mastery && typeof bt.mastery === 'object') mastery = Object.fromEntries(techs.map((x) => [x, Math.max(0, Math.min(100, Math.round(Number(bt.mastery[x]) || 0)))])); } } catch (_) { /* 読めなければ技なしで続ける */ } }
+      // 元の能力の合計(999 に丸められる前の数え。芯の強さ補正の材料・r1116-002)
+      const rawSum = stats ? ['life', 'pow', 'wise', 'hit', 'eva', 'tough'].reduce((a, k) => a + (Number.isFinite(Number(stats[k])) ? Number(stats[k]) : 0), 0) : null;
+      out.push({ name: nick, breeder: msxAidName(id), kind: 'aid', species: t.monster, id: `aid:${id}:${slot}:${t.monster}`, ...(stats ? { stats, rawSum: Math.round(rawSum) } : {}), ...(techs && techs.length ? { techs, mastery: mastery || {} } : {}) });
     }
   } catch (_) { /* 助手の分が読めなくても続ける */ }
   try {
@@ -442,7 +452,8 @@ const msxRivalsBuild = async (SUC, aid) => {
         if (out.length >= 8) break;
         const m = monsucLendMember(row, SUC);
         if (!m || !ok(m.species)) continue;
-        out.push({ name: m.name || msxMonName(m.species), breeder: m.friend && m.friend.name ? String(m.friend.name).slice(0, 24) : null, kind: 'friend', species: m.species, stats: m.stats });
+        const rawSumF = ['life', 'pow', 'wise', 'hit', 'eva', 'tough'].reduce((a, k) => a + (Number.isFinite(Number(m.stats[k])) ? Number(m.stats[k]) : 0), 0);
+        out.push({ name: m.name || msxMonName(m.species), breeder: m.friend && m.friend.name ? String(m.friend.name).slice(0, 24) : null, kind: 'friend', species: m.species, stats: m.stats, rawSum: Math.round(rawSumF), id: `friend:${m.friend && m.friend.id ? m.friend.id : ''}:0:${m.species}` }); // 個体の印(フレンドは1人1体なので枠は0)と元の合計(r1116-002)
       }
     }
   } catch (_) { /* フレンドの分が読めなくても続ける */ }
