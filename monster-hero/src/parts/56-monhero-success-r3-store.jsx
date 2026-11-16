@@ -187,8 +187,9 @@ const msxR3Retire = async (run, s, ev, assists, debug) => {
   }
   const rec = await msxR3AddRecord(run, s, ev, mon.titles, mon.gen);
   if (rec === 'fail') return { ok: false, why: 'save', box: next, meta };
-  if (!inBox || !metaDone || rec === true) msxR3RankSend(run, s, ev, debug); // 送るのは この呼び出しで新しく書けたときだけ(記録帳だけ残っていた再試行も、ここで1回)
-  return { ok: true, ...(inBox && metaDone ? { already: true } : {}), box: next, meta, mon, best3 };
+  // ランキングは、引退が決まったら必ず登録待ちに入れて結果を画面へ返す(送るのは この呼び出しで新しく書けたときだけ。記録帳だけ残っていた再試行も、ここで1回)
+  const rank = (!inBox || !metaDone || rec === true) ? await msxR3RankSend(run, s, ev, debug) : null;
+  return { ok: true, ...(inBox && metaDone ? { already: true } : {}), box: next, meta, mon, best3, rank };
 };
 // ゲームオーバー: 保存枠には入れない(PLAN §1・TOURNAMENT §12 E は「思い出」の扱いを窓口へ)。優勝ずみの大会だけ足す
 const msxR3GameOver = async (s) => {
@@ -231,13 +232,13 @@ const msxR3RankRow = (run, s, ev, debug) => {
     engine_version: msxSuc && msxSuc.core ? msxSuc.core.VERSION : null, over: s.over || 'done', debug: !!debug,
   };
 };
-const msxR3RankSend = (run, s, ev, debug) => {
+const msxR3RankSend = async (run, s, ev, debug) => {
   try {
-    if (s.over === 'gameover') return false;
-    if (typeof monsucRankSubmit === 'function') { monsucRankSubmit({ run: s, ev, name: run.nick || '', colors: Array.isArray(run.colors) ? run.colors : [], debug: !!debug, runId: run.id }); return true; }
-    if (typeof window !== 'undefined' && typeof window.MONSUC_RANK_SEND === 'function') { window.MONSUC_RANK_SEND(msxR3RankRow(run, s, ev, debug)); return true; }
-    return false;
-  } catch (e) { return false; }
+    if (s.over === 'gameover') return null;
+    if (typeof monsucRankSubmit === 'function') return await monsucRankSubmit({ run: s, ev, name: run.nick || '', colors: Array.isArray(run.colors) ? run.colors : [], debug: !!debug, runId: run.id });
+    if (typeof window !== 'undefined' && typeof window.MONSUC_RANK_SEND === 'function') { window.MONSUC_RANK_SEND(msxR3RankRow(run, s, ev, debug)); return null; }
+    return null;
+  } catch (e) { return null; }
 };
 
 // ---- 称号・アシスト能力・記録帳の表(開いたときに読む) ----

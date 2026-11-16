@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 57db9ae6d2d9f6ba
+// generated-sha256: be07d53b3cc6ea67
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -91111,6 +91111,8 @@ function MonheroSuccessScreen({ onClose, callNameOf, bondLvOf, debug = false, st
     window.addEventListener('resize', on); window.addEventListener('orientationchange', on);
     return () => { window.removeEventListener('resize', on); window.removeEventListener('orientationchange', on); };
   }, []);
+  // 開いたときに、ランキングの登録待ちがあれば1件送り直す(待たない・落ちない)
+  useEffect(() => { if (typeof monsucRankFlush === 'function') { try { monsucRankFlush(); } catch (_) {} } }, []);
   useEffect(() => {
     let alive = true;
     msxLoad().then(async (L) => {
@@ -92472,8 +92474,9 @@ const msxR3Retire = async (run, s, ev, assists, debug) => {
   }
   const rec = await msxR3AddRecord(run, s, ev, mon.titles, mon.gen);
   if (rec === 'fail') return { ok: false, why: 'save', box: next, meta };
-  if (!inBox || !metaDone || rec === true) msxR3RankSend(run, s, ev, debug); // 送るのは この呼び出しで新しく書けたときだけ(記録帳だけ残っていた再試行も、ここで1回)
-  return { ok: true, ...(inBox && metaDone ? { already: true } : {}), box: next, meta, mon, best3 };
+  // ランキングは、引退が決まったら必ず登録待ちに入れて結果を画面へ返す(送るのは この呼び出しで新しく書けたときだけ。記録帳だけ残っていた再試行も、ここで1回)
+  const rank = (!inBox || !metaDone || rec === true) ? await msxR3RankSend(run, s, ev, debug) : null;
+  return { ok: true, ...(inBox && metaDone ? { already: true } : {}), box: next, meta, mon, best3, rank };
 };
 // ゲームオーバー: 保存枠には入れない(PLAN §1・TOURNAMENT §12 E は「思い出」の扱いを窓口へ)。優勝ずみの大会だけ足す
 const msxR3GameOver = async (s) => {
@@ -92516,13 +92519,13 @@ const msxR3RankRow = (run, s, ev, debug) => {
     engine_version: msxSuc && msxSuc.core ? msxSuc.core.VERSION : null, over: s.over || 'done', debug: !!debug,
   };
 };
-const msxR3RankSend = (run, s, ev, debug) => {
+const msxR3RankSend = async (run, s, ev, debug) => {
   try {
-    if (s.over === 'gameover') return false;
-    if (typeof monsucRankSubmit === 'function') { monsucRankSubmit({ run: s, ev, name: run.nick || '', colors: Array.isArray(run.colors) ? run.colors : [], debug: !!debug, runId: run.id }); return true; }
-    if (typeof window !== 'undefined' && typeof window.MONSUC_RANK_SEND === 'function') { window.MONSUC_RANK_SEND(msxR3RankRow(run, s, ev, debug)); return true; }
-    return false;
-  } catch (e) { return false; }
+    if (s.over === 'gameover') return null;
+    if (typeof monsucRankSubmit === 'function') return await monsucRankSubmit({ run: s, ev, name: run.nick || '', colors: Array.isArray(run.colors) ? run.colors : [], debug: !!debug, runId: run.id });
+    if (typeof window !== 'undefined' && typeof window.MONSUC_RANK_SEND === 'function') { window.MONSUC_RANK_SEND(msxR3RankRow(run, s, ev, debug)); return null; }
+    return null;
+  } catch (e) { return null; }
 };
 
 // ---- 称号・アシスト能力・記録帳の表(開いたときに読む) ----
@@ -93697,6 +93700,7 @@ function MsxR3Retire({ run, setRun, onPause, debug, SUC }) {
   const [busy, setBusy] = useState(false);
   const [box, setBox] = useState(null);
   const [res, setRes] = useState(null);
+  const [rankFix, setRankFix] = useState(null); // 引退の結果の画面で送り直せたときのランキング登録の結果 { ok, placeAll }
   const [showBox, setShowBox] = useState(false);
   const [, setTablesReady] = useState(0);
   useMsxR3Lines(s.aid);
@@ -93852,6 +93856,25 @@ function MsxR3Retire({ run, setRun, onPause, debug, SUC }) {
     while (up) { up = false; for (const id of Object.keys(now)) { const lv = now[id]; if (lv < 3) { const add = A[id].cost[lv] - A[id].cost[lv - 1]; if (add <= rest) { now[id] = lv + 1; rest -= add; up = true; } } } }
     setPick(now); setSure(false);
   };
+  // 引退の結果の画面: 登録待ちが残っていたら送り直し、送れたら自分の順位を出し直す(待たない・落ちない)
+  useEffect(() => {
+    if (step !== 'done' && step !== 'best3') return undefined;
+    const base = res && res.rank;
+    if (!base || base.ok || !base.pending || rankFix) return undefined;
+    let alive = true;
+    (async () => {
+      try {
+        if (typeof monsucRankFlush === 'function') await monsucRankFlush();
+        if (!alive) return;
+        const st = typeof monsucRankStatusOf === 'function' ? await monsucRankStatusOf(run.id) : null;
+        if (!alive || st !== 'sent') return; // 送れたのが別の保留だった・まだ送れていないときは「登録待ち」のまま
+        let place = null;
+        if (typeof monsucRankRead === 'function') { const d = await monsucRankRead({}); if (d && d.mine) place = d.mine.place; }
+        if (alive) setRankFix({ ok: true, placeAll: place });
+      } catch (_) {}
+    })();
+    return () => { alive = false; };
+  }, [step, res, rankFix]);
   const decide = async () => {
     if (!sure) { setSure(true); return; }
     if (busy) return; setBusy(true);
@@ -93872,7 +93895,7 @@ function MsxR3Retire({ run, setRun, onPause, debug, SUC }) {
     if (paid !== true) { setRes({ ok: false, why: 'beat' }); setBusy(false); setSure(false); return; }
     let cl = false; try { cl = await msxR3ClearRun(run.id); } catch (e) { cl = false; }
     if (cl === false) { setRes({ ok: false, why: 'clear' }); setBusy(false); setSure(false); return; }
-    setRes({ ok: true, mon: r.mon, best3: r.best3 || null }); setStep(r.best3 && typeof MsxBest3 === 'function' ? 'best3' : 'done');
+    setRes({ ok: true, mon: r.mon, best3: r.best3 || null, rank: r.rank || null }); setStep(r.best3 && typeof MsxBest3 === 'function' ? 'best3' : 'done');
     setBusy(false); setSure(false);
   };
   // ---- 自分だけのベスト3(56-monsuc-best3.jsx・r1113-057②)。入ったらせり上がる演出 → いつもの完了の段へ ----
@@ -93880,6 +93903,7 @@ function MsxR3Retire({ run, setRun, onPause, debug, SUC }) {
     return <MsxR3Frame run={run} back="閉じる" onBack={() => setStep('done')} right={right} body={<MsxBest3 b={res.best3} run={run}/>} foot={<div className="v-ft"><button type="button" className="go" onClick={() => setStep('done')} data-msx-best3-next>次へ ▶</button></div>}/>;
   }
   if (step === 'done') {
+    const rankRes = rankFix || (res && res.rank) || null;
     const body = (<>
       <div className="v-scene" style={{ flex: '1 1 0', minHeight: 260 }}><img className="bg" src={msxSceneBg().bg} alt=""/><div className="sh"/><div className="v-burst"/>
         <div className="gr"/><MsxMonArt run={run} className="mon"/>
@@ -93887,6 +93911,9 @@ function MsxR3Retire({ run, setRun, onPause, debug, SUC }) {
       <MsxSay aid={ws.aid} ex="happy" text="「おつかれさま! 次の育成で、編成に入れてあげてね」"/>
       {!fxDone && typeof MsxFxMoment === 'function' ? <MsxFxMoment kind="retire" title="育成完了!" sub={`${run.nick || msxMonName(ws.species)}・評価 ${grade.label}`} species={ws.species} colors={run.colors} onDone={() => setFxDone(true)}/> : null}
       <div className="v-card"><div className="v-kv"><b style={{ width: 'auto', whiteSpace: 'nowrap' }}>マスモンボックス</b><span>{box ? `${box.mons.length} / ${box.cap}体` : '…'}</span></div></div>
+      {rankRes && rankRes.ok ? <div className="v-card"><div className="sub">🏆 ランキングに登録しました{rankRes.placeAll ? `(全体 ${rankRes.placeAll}位)` : ''}</div></div> : null}
+      {rankRes && !rankRes.ok && rankRes.pending ? <div className="v-card"><div className="sub">⏳ ランキングの登録待ちです。つながったら自動で送ります</div></div> : null}
+      {rankRes && !rankRes.ok && !rankRes.pending && !['off', 'skip'].includes(rankRes.reason) ? <div className="v-card"><div className="sub">この記録はランキングに載せられませんでした</div></div> : null}
     </>);
     return <MsxR3Frame run={run} back="閉じる" onBack={() => { setRun(null); onPause(); }} right={right} body={body} foot={<div className="v-ft"><button type="button" onClick={() => setShowBox(true)}>🐾 マスモンボックスを見る</button><button type="button" className="go" onClick={() => { setRun(null); onPause(); }} data-msx-r3-home>ホームへ ▶</button></div>}/>;
   }
@@ -94064,6 +94091,13 @@ function MsxR3Box({ onClose }) {
   const [top, setTop] = useState('base'); // 詳細の右上のタブ base / feat / apt
   const [low, setLow] = useState('tech'); // 詳細の下のタブ tech / assist / info
   const [techSel, setTechSel] = useState(null);
+  const [rankSt, setRankSt] = useState(null); // 詳細を開いている子のランキング登録の状態 { id, st: 'sent' | 'pending' | null }
+  useEffect(() => {
+    if (page !== 'detail' || !sel || typeof monsucRankStatusOf !== 'function') return undefined;
+    let alive = true;
+    monsucRankStatusOf(sel).then((st) => { if (alive) setRankSt({ id: sel, st }); }).catch(() => {});
+    return () => { alive = false; };
+  }, [page, sel]);
   useEffect(() => {
     let alive = true;
     msxR3ReadBox().then((b) => { if (alive) setBox(b); });
@@ -94210,6 +94244,7 @@ function MsxR3Box({ onClose }) {
           endAt ? ['育成完了日', `${endAt.getFullYear()}/${endAt.getMonth() + 1}/${endAt.getDate()}`] : null,
           cur.ending ? ['エンディング', { super: 'スーパー', good: 'グッド', bad: 'ふつう' }[cur.ending] || cur.ending] : null,
           lendId === cur.id ? ['フレンド', '🤝 貸し出し中'] : null,
+          cur.raised !== false && rankSt && rankSt.id === cur.id && rankSt.st ? ['ランキング', rankSt.st === 'sent' ? '登録済み' : '登録待ち'] : null,
         ];
         return (<MsxMonDetail species={cur.species} name={msxMmName(cur)} sub={`Lv.${Math.round(Number(cur.lv) || 1)}・${msxMonName(cur.species)}`}
           art={<MsxMmArt m={cur} size="100%"/>} st={MSX_STATS.reduce((o, k) => ({ ...o, [k]: Math.round((cur.st && cur.st[k]) || 0) }), {})}
@@ -96516,12 +96551,17 @@ function MsaFinish({ win, hero, rounds, reason, coach, venueImg, onGo }) {
 //   ★持ち主の鍵は助手マスモン対戦の鍵(mh_masmon_pvp_owner_key_v1)をそのまま使う(56-assistant-masmon-pvp.jsx の masmonPvpSelf)
 //   保存(新しいキーだけ・CLAUDE.md ⑦):
 //     mh_monsuc_rank_sent_v1  … 送れた育成の id の一覧(新しい50件)。二重に送らない印
-//     mh_monsuc_rank_queue_v1 … 送れなかった1件ずつの中身(5件まで)。開いたときに1件ずつ送り直す
+//     mh_monsuc_rank_queue_v1 … 送れなかった1件ずつの中身(5件まで)。昔の送り直しの列(消さない。pending へ写す移行の元)
+//     mh_monsuc_rank_pending_v1 … 登録待ち。送る前に必ずここへ書くので、鍵が取れない・通信が落ちる・アプリを閉じても残る。run_id は送る瞬間に作る
+//     mh_monsuc_rank_pending_migrated_v1 … queue_v1 から pending_v1 へ写す一度きりの移行が済んだ印
 //   送らないもの: デビュー戦のゲームオーバー・まだ終わっていない育成・デバッグで進めた育成
 //   公開の印: RELEASE_FLAGS.monheroSuccess(モンヒロサクセス本体と同じ印)が真のときだけ通信する
 // 引退の画面からは  typeof monsucRankSubmit === 'function' && monsucRankSubmit({ run, ev, name, colors, debug })  で呼ぶ(待たなくてよい・落ちない)
 const MONSUC_RANK_SENT_KEY = 'mh_monsuc_rank_sent_v1';
 const MONSUC_RANK_QUEUE_KEY = 'mh_monsuc_rank_queue_v1';
+const MONSUC_RANK_PENDING_KEY = 'mh_monsuc_rank_pending_v1';
+const MONSUC_RANK_MIGRATED_KEY = 'mh_monsuc_rank_pending_migrated_v1';
+const MONSUC_RANK_PENDING_MAX = 50;
 const MONSUC_RANK_SENT_MAX = 50;
 const MONSUC_RANK_QUEUE_MAX = 5;
 const MONSUC_RANK_TIMEOUT_MS = 12000;
@@ -96563,11 +96603,14 @@ const monsucRankMonOf = (species) => {
 // 染めた色は「部位ごとの色の id の配列」(DyedMonsterImage の masuColors の形)だけ通す。ほかの人の行はだれでも入れられるので、読む側でも必ず整える
 const monsucRankDyeOf = (dye) => (Array.isArray(dye) ? dye.slice(0, 6).map(c => (typeof c === 'string' && c.length <= 40 ? c : null)) : null);
 // 育成の id(英数字だけ・6〜32字)。計算の芯の s.id をもとに作り、持ち主の番号を前に付ける
-const monsucRankRunId = (owner, rawId) => {
+const monsucRankTailOf = (rawId) => {
   let tail = String(rawId === undefined || rawId === null ? '' : rawId).replace(/[^A-Za-z0-9]/g, '').slice(-32);
   if (tail.length < 6) tail = (tail + '000000').slice(0, 6);
-  return `${owner}-${tail}`;
+  return tail;
 };
+const monsucRankRunId = (owner, rawId) => `${owner}-${monsucRankTailOf(rawId)}`;
+// 送れた印(持ち主の番号つきの id の一覧)に、その育成が入っているか。登録待ちは持ち主が決まる前に書くので、本体(tail)で付き合わせる
+const monsucRankSentHas = (sentList, rawId) => { const t = monsucRankTailOf(rawId); return sentList.some(id => typeof id === 'string' && id.endsWith(`-${t}`)); };
 
 // ---- 保存(新しいキーだけ。無い・壊れている → 空) ----
 const monsucRankSentList = async () => {
@@ -96585,6 +96628,54 @@ const monsucRankQueue = async () => {
   } catch (_) { return []; }
 };
 const monsucRankQueueSave = async (list) => { try { await storeSet(MONSUC_RANK_QUEUE_KEY, list.slice(-MONSUC_RANK_QUEUE_MAX), false); } catch (_) {} };
+
+// ---- 登録待ち(送る前に必ず書く。鍵・IDが取れなくても、通信が落ちても、アプリを閉じても残る) ----
+// 1件 = 送る中身(rowOf の形) + raw_id(育成の id そのもの)。run_id は持ち主が決まる送る瞬間に作るので、移行で来た分以外は null
+const monsucRankPendingList = async () => {
+  try {
+    const v = await storeGet(MONSUC_RANK_PENDING_KEY, [], false);
+    return Array.isArray(v) ? v.filter(x => x && typeof x === 'object' && typeof x.raw_id === 'string').slice(-MONSUC_RANK_PENDING_MAX) : [];
+  } catch (_) { return []; }
+};
+const monsucRankPendingSave = async (list) => { try { await storeSet(MONSUC_RANK_PENDING_KEY, list.slice(-MONSUC_RANK_PENDING_MAX), false); } catch (_) {} };
+const monsucRankPendingDrop = async (rawId) => {
+  const t = monsucRankTailOf(rawId);
+  const list = await monsucRankPendingList();
+  const next = list.filter(x => monsucRankTailOf(x.raw_id) !== t);
+  if (next.length !== list.length) await monsucRankPendingSave(next);
+};
+// 一度きりの移行: 昔の送り直しの列(queue_v1)を登録待ちへ写す。queue_v1 は消さない
+let monsucRankMigratedCache = false;
+const monsucRankMigrate = async () => {
+  if (monsucRankMigratedCache) return;
+  monsucRankMigratedCache = true;
+  try {
+    if (await storeGet(MONSUC_RANK_MIGRATED_KEY, false, false)) return;
+    const queue = await monsucRankQueue();
+    if (queue.length) {
+      const sent = await monsucRankSentList();
+      const pending = await monsucRankPendingList();
+      const have = new Set(pending.map(x => monsucRankTailOf(x.raw_id)));
+      for (const q of queue) {
+        const tail = q.run_id.slice(q.run_id.lastIndexOf('-') + 1); // run_id は「持ち主-tail」。tail が育成の id の本体
+        if (sent.includes(q.run_id) || have.has(tail)) continue;
+        pending.push({ ...q, raw_id: tail });
+        have.add(tail);
+      }
+      await monsucRankPendingSave(pending);
+    }
+    await storeSet(MONSUC_RANK_MIGRATED_KEY, true, false);
+  } catch (_) {}
+};
+// 登録待ちの件数(ランキング画面の上に出す)
+const monsucRankPendingCount = async () => { await monsucRankMigrate(); return (await monsucRankPendingList()).length; };
+// 保存枠の詳細に出す、その子の登録の状態。'sent' 登録済み / 'pending' 登録待ち / null 対象外・まだ
+const monsucRankStatusOf = async (rawId) => {
+  if (monsucRankSentHas(await monsucRankSentList(), rawId)) return 'sent';
+  await monsucRankMigrate();
+  const t = monsucRankTailOf(rawId);
+  return (await monsucRankPendingList()).some(x => monsucRankTailOf(x.raw_id) === t) ? 'pending' : null;
+};
 
 // 送る中身(サーバの monsuc_rank_submit の p_row の形)。送らない育成は null
 const MONSUC_RANK_APT = ['G', 'F', 'E', 'D', 'C', 'B', 'A', 'S', 'S+', 'SS', 'SS+', 'M']; // 間合い適性の段(サーバの式と同じ並び)
@@ -96634,50 +96725,74 @@ const monsucRankPost = async (owner, key, row) => {
     return { ok: false, reason: 'network' };
   } finally { if (timer) clearTimeout(timer); }
 };
-// 1件を送り、結果で印と送り直しの列を整える
-const monsucRankSendRow = async (me, row) => {
+// サーバへ送る中身は決まった項目だけ(登録待ちに付いた印などは送らない)
+const MONSUC_RANK_ROW_KEYS = ['run_id', 'user_name', 'child_name', 'species', 'lineage', 'dye', 'stats', 'techs', 'lv', 'loyal', 'pop', 'engine_version'];
+const monsucRankCleanRow = (e) => { const r = {}; for (const k of MONSUC_RANK_ROW_KEYS) r[k] = e[k]; return r; };
+// 登録待ちの1件を送る。run_id がまだ無ければ、いまの持ち主で作る(送る瞬間に作るのが決めごと)
+//   送れたら: 送れた印を付けて登録待ちから外す。形・上限・鍵で断られたものは送り直しても通らないので外す。電波・混雑は残す
+const monsucRankSendPending = async (me, entry) => {
+  const row = monsucRankCleanRow(entry);
+  if (!row.run_id) row.run_id = monsucRankRunId(me.owner, entry.raw_id);
   const r = await monsucRankPost(me.owner, me.key, row);
-  const queue = (await monsucRankQueue()).filter(x => x.run_id !== row.run_id);
   if (r.ok) {
     await monsucRankMarkSent(row.run_id);
-    await monsucRankQueueSave(queue);
+    await monsucRankPendingDrop(entry.raw_id);
     return { ok: true, power: r.power, grade: r.grade, placeAll: r.place_all || null, placeLineage: r.place_lineage || null, lineage: row.lineage };
   }
-  // 形・上限・鍵で断られたものは送り直しても通らないので列から外す。電波・混雑は残す
-  if (['bad', 'over_cap', 'locked'].includes(r.reason)) await monsucRankQueueSave(queue);
-  else await monsucRankQueueSave(queue.concat([row]));
+  if (['bad', 'over_cap', 'locked'].includes(r.reason)) await monsucRankPendingDrop(entry.raw_id);
   return { ok: false, reason: r.reason || 'network' };
 };
 const monsucRankUserName = async () => { try { return String((await storeGet('mh_breeder_name', '', false)) || ''); } catch (_) { return ''; } };
 
 // 引退して育成が完了したとき1回だけ呼ぶ。run = 計算の芯の状態 s・ev = SUC.evaluate(s)・name = 育てた子の名前・colors = 染めた色・debug = デバッグで進めた育成なら真
-//   返り値 { ok, placeAll, placeLineage, lineage, power, grade } か { ok:false, reason }
+//   返り値 { ok, placeAll, placeLineage, lineage, power, grade } か { ok:false, reason, pending }。pending が真なら登録待ちに残っている
 const monsucRankSubmit = async ({ run, ev, name, colors, debug } = {}) => {
   try {
     if (!monsucRankOn()) return { ok: false, reason: 'off' };
     if (debug) return { ok: false, reason: 'skip' };
+    // 送る中身は持ち主が分からなくても作れる(run_id だけ送る瞬間に作る)
+    const draft = monsucRankRowOf({ owner: '', run, ev, name, colors, userName: await monsucRankUserName() });
+    if (!draft) return { ok: false, reason: 'skip' };
+    await monsucRankMigrate();
+    const rawId = String(run.id);
+    if (monsucRankSentHas(await monsucRankSentList(), rawId)) return { ok: false, reason: 'skip' }; // もう送った
+    // ★送る前に必ず登録待ちへ書く。鍵が取れない・通信が落ちても、ここに残っていれば あとで送り直せる
+    const pending = await monsucRankPendingList();
+    let entry = pending.find(x => monsucRankTailOf(x.raw_id) === monsucRankTailOf(rawId));
+    if (!entry) {
+      entry = { ...draft, run_id: null, raw_id: rawId };
+      await monsucRankPendingSave(pending.concat([entry]));
+    }
     const me = typeof masmonPvpSelf === 'function' ? await masmonPvpSelf(true) : null;
-    if (!me) return { ok: false, reason: 'no_id' };
-    const row = monsucRankRowOf({ owner: me.owner, run, ev, name, colors, userName: await monsucRankUserName() });
-    if (!row) return { ok: false, reason: 'skip' };
-    if ((await monsucRankSentList()).includes(row.run_id)) return { ok: false, reason: 'skip' }; // もう送った
-    return await monsucRankSendRow(me, row);
-  } catch (_) { return { ok: false, reason: 'network' }; }
+    if (!me) return { ok: false, reason: 'no_id', pending: true };
+    if (entry.run_id && !entry.run_id.startsWith(`${me.owner}-`)) return { ok: false, reason: 'no_id', pending: true }; // 別の持ち主の保留は送らない(消しもしない)
+    const r = await monsucRankSendPending(me, entry);
+    return r.ok ? r : { ...r, pending: !['bad', 'over_cap', 'locked'].includes(r.reason) };
+  } catch (_) { return { ok: false, reason: 'network', pending: true }; }
 };
-// 送れなかったものを1件だけ送り直す(サーバは1分に1回まで。開いたときに呼ぶ)
+// 登録待ちを1件だけ送り直す(サーバは1分に1回まで。モンサクを開いたとき・引退の結果・ランキング画面で呼ぶ。待たない・落ちない)
 const monsucRankFlush = async () => {
   try {
     if (!monsucRankOn()) return { ok: false, reason: 'off' };
-    const queue = await monsucRankQueue();
-    if (queue.length === 0) return { ok: true, left: 0 };
+    await monsucRankMigrate();
+    let pending = await monsucRankPendingList();
+    if (pending.length === 0) return { ok: true, left: 0 };
     const sent = await monsucRankSentList();
-    const rest = queue.filter(x => !sent.includes(x.run_id));
-    if (rest.length !== queue.length) await monsucRankQueueSave(rest);
-    if (rest.length === 0) return { ok: true, left: 0 };
-    const me = typeof masmonPvpSelf === 'function' ? await masmonPvpSelf(false) : null;
-    if (!me || !rest[0].run_id.startsWith(`${me.owner}-`)) return { ok: false, reason: 'no_id' };
-    const r = await monsucRankSendRow(me, rest[0]);
-    return { ...r, left: Math.max(0, rest.length - 1) };
+    const rest = pending.filter(x => !(x.run_id && sent.includes(x.run_id)) && !monsucRankSentHas(sent, x.raw_id));
+    if (rest.length !== pending.length) { await monsucRankPendingSave(rest); pending = rest; }
+    if (pending.length === 0) return { ok: true, left: 0 };
+    const me = typeof masmonPvpSelf === 'function' ? await masmonPvpSelf(true) : null; // 鍵の無い端末でも、送り直すときに鍵を作る
+    if (!me) return { ok: false, reason: 'no_id', left: pending.length };
+    // 持ち主の違う保留は消さず、印(held)を付けて飛ばす
+    let target = null; let marked = false;
+    for (const e of pending) {
+      if (e.run_id && !e.run_id.startsWith(`${me.owner}-`)) { if (!e.held) { e.held = true; marked = true; } continue; }
+      target = e; break;
+    }
+    if (marked) await monsucRankPendingSave(pending);
+    if (!target) return { ok: false, reason: 'no_id', left: pending.length };
+    const r = await monsucRankSendPending(me, target);
+    return { ...r, left: (await monsucRankPendingList()).length };
   } catch (_) { return { ok: false, reason: 'network' }; }
 };
 
@@ -96767,15 +96882,29 @@ function MonsucRankScreen({ onBack }) {
   const [data, setData] = React.useState(null);
   const [loading, setLoading] = React.useState(true);
   const [open, setOpen] = React.useState(null);
+  const [pendLeft, setPendLeft] = React.useState(0);
+  const [flushed, setFlushed] = React.useState(false);
   const on = monsucRankOn();
-  React.useEffect(() => { if (on) monsucRankFlush(); }, [on]);
+  // 開いたらまず登録待ちを1件送り直し、終わってから一覧と自分の順位を読む(送れた分がそのまま順位に出る)
+  React.useEffect(() => {
+    let alive = true;
+    if (!on) { setFlushed(true); return undefined; }
+    (async () => {
+      try { await monsucRankFlush(); } catch (_) {}
+      if (!alive) return;
+      try { setPendLeft(await monsucRankPendingCount()); } catch (_) {}
+      setFlushed(true);
+    })();
+    return () => { alive = false; };
+  }, [on]);
   React.useEffect(() => {
     let alive = true;
     if (!on) { setLoading(false); return undefined; }
+    if (!flushed) return undefined; // 送り直しを待ってから読む
     setLoading(true); setOpen(null);
     monsucRankRead({ lineage: tab === 'lineage' ? lineage : null }).then(d => { if (alive) { setData(d); setLoading(false); } });
     return () => { alive = false; };
-  }, [on, tab, lineage]);
+  }, [on, flushed, tab, lineage]);
   const rows = data && Array.isArray(data.rows) ? data.rows : [];
   const sent = data && Array.isArray(data.sent) ? data.sent : [];
   const mine = data ? data.mine : null;
@@ -96800,6 +96929,7 @@ function MonsucRankScreen({ onBack }) {
           className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold border ${lineage === l ? 'bg-yellow-300 text-slate-900 border-yellow-300' : 'bg-slate-800/70 text-slate-200 border-slate-600'}`}>{monsucRankLineageName(l)}系</button>)}
       </div>}
       <div className="text-[12px] text-slate-200 mt-1.5">{scopeName} {totalText}{mine ? <> ・ あなたの順位 <span className="text-yellow-300 font-black">{mine.place}位</span></> : null}</div>
+      {pendLeft > 0 && <div className="text-[12px] font-bold text-amber-300 mt-1">⏳ 登録待ち {pendLeft}件</div>}
     </div>
     <div className="flex-1 overflow-y-auto px-3 py-2 space-y-1.5">
       {!on && <div className="text-center text-slate-300 text-[13px] py-8">{monsucRankReasonText('off')}</div>}
