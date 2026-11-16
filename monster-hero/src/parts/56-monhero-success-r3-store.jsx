@@ -78,7 +78,10 @@ const msxR3Fight = (engine, SUC, run) => {
   const loy = typeof SUC.loyalOf === 'function' ? SUC.loyalOf(s) : 100;
   const a = { species: sp, name: run.nick || msxMonName(sp), lv: 1, stats: s.stats, loy, pop: s.pop, ...(s.awake ? { awake: s.awake } : {}), ...(typeof SUC.aptSendOf === 'function' ? { aptUp: SUC.aptSendOf(s) } : {}),
     ...(ts.length ? { techs: ts, ...msxR3TechGear(engine, SUC, s, ts) } : {}) };
-  const osp = spOf(opp.species); const ots = (cat.species[osp].techs || []).slice(0, Math.max(1, opp.techs || 2)).map((t) => t.id);
+  const osp = spOf(opp.species);
+  // ライバルは芯が選んだ技(techIds)をそのまま使う。無い相手は今までどおり種の技表の先頭から個数ぶん(r1116-002)
+  const ots0 = Array.isArray(opp.techIds) && opp.techIds.length ? opp.techIds.filter((id) => (cat.species[osp].techs || []).some((t) => t.id === id)) : [];
+  const ots = ots0.length ? ots0 : (cat.species[osp].techs || []).slice(0, Math.max(1, opp.techs || 2)).map((t) => t.id);
   const o = { species: osp, name: opp.name || msxMonName(osp), lv: 1, stats: opp.stats, techs: ots, ...(Number.isFinite(opp.loy) ? { loy: opp.loy } : {}), ...(Number.isFinite(opp.pop) ? { pop: opp.pop } : {}), mastery: Object.fromEntries(ots.map((t) => [t, opp.mastery || 0])) };
   const teamA = { assistantId: s.aid, tactics: MSX_R3_GEAR[SUC.periodOf(s.turn).key] || 10, members: [a] };
   const teamB = { assistantId: 'kiki', tactics: opp.tactics || 10, members: [o] };
