@@ -294,6 +294,8 @@ function MonheroSuccessScreen({ onClose, callNameOf, bondLvOf, debug = false, st
     window.addEventListener('resize', on); window.addEventListener('orientationchange', on);
     return () => { window.removeEventListener('resize', on); window.removeEventListener('orientationchange', on); };
   }, []);
+  // 開いたときに、ランキングの登録待ちがあれば1件送り直す(待たない・落ちない)
+  useEffect(() => { if (typeof monsucRankFlush === 'function') { try { monsucRankFlush(); } catch (_) {} } }, []);
   useEffect(() => {
     let alive = true;
     msxLoad().then(async (L) => {
