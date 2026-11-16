@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 4941ed9e57ea1ebc
+// generated-sha256: 1337f27be9024cd5
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -96767,6 +96767,7 @@ function MonsucRankScreen({ onBack }) {
   const mine = data ? data.mine : null;
   const scopeName = tab === 'lineage' ? `${monsucRankLineageName(lineage)}系` : '全体';
   const totalText = data && Number.isFinite(data.total) ? `${data.total.toLocaleString()}${tab === 'lineage' ? '体' : '件'}` : '';
+  // 血統の札は横に流さず、札と札の切りのいいところで次の行へ折り返す(2026-11-16 社長: 基本は切らないで折り返す。今回は画面が広いので全部見せる)
   // fixed の根は body の safe-area 余白が効かないので、ここで切り欠きぶんを足す(2026-11-16 社長指摘: 戻るボタンに時計が重なる)
   return <div className="fixed inset-0 z-[60] flex flex-col text-white" style={{ background: 'linear-gradient(180deg,#1e1b4b 0%,#0f172a 100%)', paddingTop: 'var(--mh-sa-top)', paddingBottom: 'var(--mh-sa-bottom)' }}>
     <div className="flex items-center gap-2 px-3 pt-3">
@@ -96780,7 +96781,7 @@ function MonsucRankScreen({ onBack }) {
         {[['all', '全モンスター'], ['lineage', '血統別']].map(([k, label]) => <button key={k} type="button" onClick={() => setTab(k)}
           className={`rounded-full py-2 text-[14px] font-black border ${tab === k ? 'bg-yellow-300 text-slate-900 border-yellow-300' : 'bg-slate-800/70 text-slate-200 border-slate-600'}`}>{label}</button>)}
       </div>
-      {tab === 'lineage' && <div className="flex gap-1.5 overflow-x-auto overflow-y-hidden touch-pan-x mt-2 pb-1" data-msx-hscroll>
+      {tab === 'lineage' && <div className="flex flex-wrap gap-1.5 mt-2">
         {lineages.map(l => <button key={l} type="button" onClick={() => setLineage(l)}
           className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold border ${lineage === l ? 'bg-yellow-300 text-slate-900 border-yellow-300' : 'bg-slate-800/70 text-slate-200 border-slate-600'}`}>{monsucRankLineageName(l)}系</button>)}
       </div>}
