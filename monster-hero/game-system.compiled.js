@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 670131ba44c64821
+// source-sha256: 8d8a4b57847fee45
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -160091,7 +160091,8 @@ function MonsucFuseSheet({
     className: "w-full max-w-md rounded-t-3xl border-t-2 border-fuchsia-300/70 bg-slate-900 p-3 pb-6 text-white",
     style: {
       maxHeight: '92dvh',
-      overflowY: 'auto'
+      overflowY: 'auto',
+      paddingBottom: 'max(24px, var(--mh-sa-bottom))'
     }
   }, React.createElement("p", {
     className: "text-[16px] font-black"
@@ -162563,7 +162564,7 @@ const MSX_SCN_CSS = `
 .msx .scn-ft{display:flex;gap:10px;align-items:center;padding:10px 12px calc(10px + env(safe-area-inset-bottom));background:#c9b9a6;flex:none}
 .msx .scn-ft button{display:flex;align-items:center;justify-content:center;text-align:center;line-height:1;padding:0;height:48px;border-radius:10px;font-weight:900;font-size:16px;border:3px solid #fff;box-shadow:0 3px 0 #0003}
 .msx .scn-ft .bk{width:48px;flex:none;background:#f59e0b;color:#fff;font-size:22px}
-.msx .scn-ft .go{flex:1 1 0;background:linear-gradient(180deg,#fb923c,#ea580c);color:#fff}
+.msx .scn-ft .go{flex:1 1 0;background:linear-gradient(180deg,#fb923c,#ea580c);color:#fff;padding-left:4px}/* ▶ の字は字幅の中で左寄りに描かれ、見た目の中心が 3px 左へずれる(実測)。左の余白で字そのものの中心と見た目の中心をそろえる(2026-11-16 レイアウト点検) */
 .msx .scn-ft .dt{flex:1 1 0;background:#fff;color:#1f2937;border-color:#e5e7eb}
 .msx .land .scn-tx,.msx.land .scn-tx{right:42%}
 .msx .land .scn-sc .who.c,.msx.land .scn-sc .who.c{left:auto;right:17%;transform:none;bottom:0;height:90%;animation:none}
@@ -189663,7 +189664,9 @@ function MonsucRankScreen({
   return React.createElement("div", {
     className: "fixed inset-0 z-[60] flex flex-col text-white",
     style: {
-      background: 'linear-gradient(180deg,#1e1b4b 0%,#0f172a 100%)'
+      background: 'linear-gradient(180deg,#1e1b4b 0%,#0f172a 100%)',
+      paddingTop: 'var(--mh-sa-top)',
+      paddingBottom: 'var(--mh-sa-bottom)'
     }
   }, React.createElement("div", {
     className: "flex items-center gap-2 px-3 pt-3"
@@ -189706,9 +189709,17 @@ function MonsucRankScreen({
     className: "text-center text-slate-300 text-[13px] py-8"
   }, "読みこみ中…"), on && !loading && !data && React.createElement("div", {
     className: "text-center text-slate-300 text-[13px] py-8"
-  }, "つながりませんでした。少し待ってからもう一度開いてね"), on && !loading && data && rows.length === 0 && React.createElement("div", {
+  }, React.createElement("span", {
+    className: "block"
+  }, "つながりませんでした。"), React.createElement("span", {
+    className: "block"
+  }, "少し待ってからもう一度開いてね")), on && !loading && data && rows.length === 0 && React.createElement("div", {
     className: "text-center text-slate-300 text-[13px] py-8"
-  }, "まだだれも載っていません。育て終えたモンスターが最初に載ります"), rows.map(r => React.createElement(MonsucRankRow, {
+  }, React.createElement("span", {
+    className: "block"
+  }, "まだだれも載っていません。"), React.createElement("span", {
+    className: "block"
+  }, "育て終えたモンスターが最初に載ります")), rows.map(r => React.createElement(MonsucRankRow, {
     key: r.run_id,
     row: r,
     open: open === r.run_id,
