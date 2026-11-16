@@ -228,7 +228,7 @@ function MsxPf({ m, bond, tagAt, cls = '', aid }) {
   const tag = bond >= tagAt;
   if (aid) return <span className={`v-pf as${tag ? ' tag' : ''} ${cls}`}><img src={msxFace(aid, 'happy')} alt=""/><i className="af"><b style={{ width: `${bond}%` }}/></i></span>;
   const r = m.kind === 'base' ? 'G' : m.rank;
-  return <span className={`v-pf r${r}${m.kind === 'base' ? ' base' : ''}${tag ? ' tag' : ''} ${cls}`}><img src={msxMonThumb(m.species)} alt=""/><i className="af"><b style={{ width: `${bond}%` }}/></i></span>;
+  return <span className={`v-pf r${r}${m.kind === 'base' ? ' base' : ''}${tag ? ' tag' : ''} ${cls}`}>{Array.isArray(m.colors) && m.colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? <DyedMonsterImage baseId={m.species} src={msxMonImg(m.species)} masuColors={m.colors} alt="" draggable={false}/> : <img src={msxMonThumb(m.species)} alt=""/>}<i className="af"><b style={{ width: `${bond}%` }}/></i></span>;
 }
 // 育てるモンスターの絵。live のときは演出の部品 MsxLiveMon(#5752・待機のぴょこぴょこ・気分・反応)を箱いっぱいに置く。
 //   部品が無いときは絵だけ(live なら CSS で小さく弾む .msx-hop)。箱の大きさは className / style で決まる
@@ -294,6 +294,8 @@ function MonheroSuccessScreen({ onClose, callNameOf, bondLvOf, debug = false, st
     window.addEventListener('resize', on); window.addEventListener('orientationchange', on);
     return () => { window.removeEventListener('resize', on); window.removeEventListener('orientationchange', on); };
   }, []);
+  // 開いたときに、ランキングの登録待ちがあれば1件送り直す(待たない・落ちない)
+  useEffect(() => { if (typeof monsucRankFlush === 'function') { try { monsucRankFlush(); } catch (_) {} } }, []);
   useEffect(() => {
     let alive = true;
     msxLoad().then(async (L) => {
@@ -1170,7 +1172,7 @@ function MsxEvent({ run, setRun, v, ev, ctx, bondLv, onDone }) {
       <img className="bg" src={msxSceneBg(s.turn).bg} alt=""/><div className="sh"/>
       <div className="gr" style={{ left: '30%', bottom: 'calc(30% - 5px)' }}/>
       <MsxMonArt run={run} className="mon" style={{ left: '30%', bottom: '30%', height: '17%' }} live/>
-      {cheerIdx != null && s.team[cheerIdx] ? <img className="mon" src={msxMonImg(s.team[cheerIdx].species)} alt="" style={{ left: '70%', bottom: '30%', height: '36%' }}/>
+      {cheerIdx != null && s.team[cheerIdx] ? (Array.isArray(s.team[cheerIdx].colors) && s.team[cheerIdx].colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? <DyedMonsterImage baseId={s.team[cheerIdx].species} src={msxMonImg(s.team[cheerIdx].species)} masuColors={s.team[cheerIdx].colors} alt="" draggable={false} className="mon" style={{ left: '70%', bottom: '30%', height: '36%' }}/> : <img className="mon" src={msxMonImg(s.team[cheerIdx].species)} alt="" style={{ left: '70%', bottom: '30%', height: '36%' }}/>)
         : isStory || isUniq || (view && view.id === 'ev.self.anniv') ? <img src={msxBody(s.aid, 'happy')} alt="" style={{ position: 'absolute', right: '-4%', bottom: 0, height: '70%', width: '46%', objectFit: 'contain', objectPosition: 'right bottom' }}/> : null}
       {view && view.id === 'ev.self.peakin' && !picked ? <div className="msx-peak-card msx-pop" data-msx-peak-start>🔥 ピークが始まった!</div> : null}
       {(() => { const cat = isStory || isUniq ? 'メインのお話' : (view && view.kind === 'team' ? '編成のモンスターのイベント' : '育成イベント'); return <div className="v-ev-h">{head !== cat ? <small>{cat}</small> : null}{head}</div>; })()}
