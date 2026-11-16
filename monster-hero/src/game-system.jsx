@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 1337f27be9024cd5
+// generated-sha256: 57db9ae6d2d9f6ba
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -89734,7 +89734,17 @@ const msxRivalsBuild = async (SUC, aid) => {
       const t = r && Array.isArray(r.list) ? (r.list.find((x) => x && x.lead && ok(x.monster)) || r.list.find((x) => x && ok(x.monster))) : null;
       if (!t) continue;
       const nick = typeof t.nick === 'string' && t.nick.trim() ? [...t.nick.trim()].slice(0, 12).join('') : msxMonName(t.monster);
-      out.push({ name: nick, breeder: msxAidName(id), kind: 'aid', species: t.monster, ...(t.stats && typeof t.stats === 'object' ? { stats: t.stats } : {}) });
+      // 個体の印(所有者の種類・所有者・枠・種)。同名の別の子と取り違えないため、芯は名前でなくこの印で引く(r1116-002)
+      const slot = Number.isInteger(t.slot) ? t.slot : 0;
+      // 能力: 共有に無いとき(育成の公開印が偽で共有が能力を落とすとき)は、育成の入れ物から元の能力をそのまま使う
+      let stats = t.stats && typeof t.stats === 'object' ? t.stats : null;
+      if (!stats && typeof amgEntryOf === 'function') { try { const e = amgEntryOf(id, t); if (e && e.st && typeof e.st === 'object') stats = e.st; } catch (_) { /* 読めなければ能力なしで続ける */ } }
+      // 覚えた技と熟練(芯が第2版の技へ読み替えて、熟練の高い順に使う)
+      let techs = null; let mastery = null;
+      if (typeof amgtBattleOf === 'function') { try { const bt = amgtBattleOf(id, t, t.lv); if (bt && Array.isArray(bt.techs) && bt.techs.length) { techs = bt.techs.filter((x) => typeof x === 'string').slice(0, 16); if (techs.length && bt.mastery && typeof bt.mastery === 'object') mastery = Object.fromEntries(techs.map((x) => [x, Math.max(0, Math.min(100, Math.round(Number(bt.mastery[x]) || 0)))])); } } catch (_) { /* 読めなければ技なしで続ける */ } }
+      // 元の能力の合計(999 に丸められる前の数え。芯の強さ補正の材料・r1116-002)
+      const rawSum = stats ? ['life', 'pow', 'wise', 'hit', 'eva', 'tough'].reduce((a, k) => a + (Number.isFinite(Number(stats[k])) ? Number(stats[k]) : 0), 0) : null;
+      out.push({ name: nick, breeder: msxAidName(id), kind: 'aid', species: t.monster, id: `aid:${id}:${slot}:${t.monster}`, ...(stats ? { stats, rawSum: Math.round(rawSum) } : {}), ...(techs && techs.length ? { techs, mastery: mastery || {} } : {}) });
     }
   } catch (_) { /* 助手の分が読めなくても続ける */ }
   try {
@@ -89745,7 +89755,8 @@ const msxRivalsBuild = async (SUC, aid) => {
         if (out.length >= 8) break;
         const m = monsucLendMember(row, SUC);
         if (!m || !ok(m.species)) continue;
-        out.push({ name: m.name || msxMonName(m.species), breeder: m.friend && m.friend.name ? String(m.friend.name).slice(0, 24) : null, kind: 'friend', species: m.species, stats: m.stats });
+        const rawSumF = ['life', 'pow', 'wise', 'hit', 'eva', 'tough'].reduce((a, k) => a + (Number.isFinite(Number(m.stats[k])) ? Number(m.stats[k]) : 0), 0);
+        out.push({ name: m.name || msxMonName(m.species), breeder: m.friend && m.friend.name ? String(m.friend.name).slice(0, 24) : null, kind: 'friend', species: m.species, stats: m.stats, rawSum: Math.round(rawSumF), id: `friend:${m.friend && m.friend.id ? m.friend.id : ''}:0:${m.species}` }); // 個体の印(フレンドは1人1体なので枠は0)と元の合計(r1116-002)
       }
     }
   } catch (_) { /* フレンドの分が読めなくても続ける */ }
@@ -92352,7 +92363,10 @@ const msxR3Fight = (engine, SUC, run) => {
   const loy = typeof SUC.loyalOf === 'function' ? SUC.loyalOf(s) : 100;
   const a = { species: sp, name: run.nick || msxMonName(sp), lv: 1, stats: s.stats, loy, pop: s.pop, ...(s.awake ? { awake: s.awake } : {}), ...(typeof SUC.aptSendOf === 'function' ? { aptUp: SUC.aptSendOf(s) } : {}),
     ...(ts.length ? { techs: ts, ...msxR3TechGear(engine, SUC, s, ts) } : {}) };
-  const osp = spOf(opp.species); const ots = (cat.species[osp].techs || []).slice(0, Math.max(1, opp.techs || 2)).map((t) => t.id);
+  const osp = spOf(opp.species);
+  // ライバルは芯が選んだ技(techIds)をそのまま使う。無い相手は今までどおり種の技表の先頭から個数ぶん(r1116-002)
+  const ots0 = Array.isArray(opp.techIds) && opp.techIds.length ? opp.techIds.filter((id) => (cat.species[osp].techs || []).some((t) => t.id === id)) : [];
+  const ots = ots0.length ? ots0 : (cat.species[osp].techs || []).slice(0, Math.max(1, opp.techs || 2)).map((t) => t.id);
   const o = { species: osp, name: opp.name || msxMonName(osp), lv: 1, stats: opp.stats, techs: ots, ...(Number.isFinite(opp.loy) ? { loy: opp.loy } : {}), ...(Number.isFinite(opp.pop) ? { pop: opp.pop } : {}), mastery: Object.fromEntries(ots.map((t) => [t, opp.mastery || 0])) };
   const teamA = { assistantId: s.aid, tactics: MSX_R3_GEAR[SUC.periodOf(s.turn).key] || 10, members: [a] };
   const teamB = { assistantId: 'kiki', tactics: opp.tactics || 10, members: [o] };
