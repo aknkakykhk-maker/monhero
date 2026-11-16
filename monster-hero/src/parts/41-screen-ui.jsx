@@ -1123,7 +1123,10 @@ const PhaseSteps = ({ plan, current, nextWave = null, className = '' }) => {
 // お話や大事な窓が出ているあいだは、画面の上に重なる知らせ(新しいバージョンの帯など)を出すのを待つ。
 // 閉じたら出す(2026-10-27 社長室カゲあつくんの指摘「お話の吹き出しの頭を隠す」)。
 // 見るのは、お話の舞台(data-story-stage)と、窓(aria-modal・role="dialog")。待っているあいだだけ1秒ごとに見直す
-const OVERLAY_WAIT_SELECTOR = '[data-story-stage],[aria-modal="true"],[role="dialog"]';
+// モンサクの根(data-monhero-success)そのものは待つ対象から外す(2026-11-16 社長: モンサクを開いている間も
+// 「更新あり」を出す)。根は全画面の入れ物で role="dialog" が付いているが、お話や確認の窓ではないため。
+// 中で開く窓(子要素の aria-modal・role="dialog")は今までどおり待つ対象
+const OVERLAY_WAIT_SELECTOR = '[data-story-stage],[aria-modal="true"]:not([data-monhero-success]),[role="dialog"]:not([data-monhero-success])';
 const overlayOpenNow = () => typeof document !== 'undefined' && !!document.querySelector(OVERLAY_WAIT_SELECTOR);
 function WaitForOverlayClose({ children }) {
   const [blocked, setBlocked] = useState(overlayOpenNow);

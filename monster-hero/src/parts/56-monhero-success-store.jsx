@@ -414,6 +414,33 @@ const msxMonImg = (id) => { const m = msxMon(id); return m ? m.imgUrl : ''; };
 const msxMonThumb = (id) => { const m = msxMon(id); return m ? (m.faceIconUrl || m.iconUrl || m.imgUrl) : ''; };
 const msxWho = (aid) => (typeof assistantById === 'function' ? assistantById(aid) : null);
 const msxFace = (aid, ex = 'normal') => { const w = msxWho(aid); return w && typeof assistantFaceImage === 'function' ? assistantFaceImage(w, ex) : ''; };
+// ---- ライバルの持ち主アイコン(2026-11-16 社長: ライバルはモンスターだけでなく持ち主のアイコンとセットで出す) ----
+// フレンドのプロフィールアイコンの引き方は、本体のランキングと同じ(モンスターの顔か、マーケットのアイコン商品)
+const msxBreederIconSrc = (icon) => {
+  if (!icon) return null;
+  const mon = typeof ALL_PLAYER_MONSTERS !== 'undefined' && ALL_PLAYER_MONSTERS ? ALL_PLAYER_MONSTERS[icon] : null;
+  if (mon && mon.iconUrl) return mon.faceIconUrl || mon.iconUrl;
+  const items = typeof BREEDER_MARKET_ITEMS !== 'undefined' && Array.isArray(BREEDER_MARKET_ITEMS) ? BREEDER_MARKET_ITEMS : [];
+  const item = items.find((m) => m && m.id === icon && m.type === 'icon');
+  return item ? item.icon : null;
+};
+// rival は { kind:'aid'|'friend', id(個体の印), icon, profileFrame }。助手は印から助手 id を読んで顔アイコン、フレンドはプロフィールアイコン
+function MsxRivalOwnerIcon({ rival, size = 22 }) {
+  if (!rival) return null;
+  if (rival.kind === 'aid') {
+    const aid = typeof rival.id === 'string' ? rival.id.split(':')[1] : null;
+    const src = aid ? msxFace(aid) : '';
+    return src ? <img src={src} alt="" style={{ width: size, height: size, borderRadius: '50%', objectFit: 'cover', objectPosition: 'top', flexShrink: 0 }} /> : null;
+  }
+  if (typeof ProfileAvatar === 'function') return <ProfileAvatar src={msxBreederIconSrc(rival.icon)} id={rival.icon || null} frameId={rival.profileFrame || null} fit small className="shrink-0" style={{ width: size, height: size }} fallback={<span className="flex h-full w-full items-center justify-center rounded-full bg-slate-800 text-xs">👤</span>} />;
+  return null;
+}
+// 対戦相手(芯の opponents)から、持ち主アイコンを出すためのライバル情報を作る。候補が残っていればアイコンまで、無ければ印だけ
+const msxRivalFaceOf = (rivals, opp) => {
+  if (!opp || !opp.rival) return null;
+  const cand = Array.isArray(rivals) ? rivals.find((r) => r && ((opp.rivalId && r.id === opp.rivalId) || (!opp.rivalId && r.name === opp.name))) : null;
+  return cand || { kind: opp.rivalKind || null, id: opp.rivalId || null };
+};
 const msxBody = (aid, ex = 'happy') => { const w = msxWho(aid); return w && typeof assistantFullImage === 'function' ? (assistantFullImage(w, ex) || msxFace(aid, ex)) : msxFace(aid, ex); };
 const msxAidName = (aid) => { const w = msxWho(aid); return w ? w.name : aid; };
 // この育成のライバル(芯 SUC.newRun の rivals。r1115-202 社長「出るように直す」・TOURNAMENT.md §8b)
@@ -453,7 +480,8 @@ const msxRivalsBuild = async (SUC, aid) => {
         const m = monsucLendMember(row, SUC);
         if (!m || !ok(m.species)) continue;
         const rawSumF = ['life', 'pow', 'wise', 'hit', 'eva', 'tough'].reduce((a, k) => a + (Number.isFinite(Number(m.stats[k])) ? Number(m.stats[k]) : 0), 0);
-        out.push({ name: m.name || msxMonName(m.species), breeder: m.friend && m.friend.name ? String(m.friend.name).slice(0, 24) : null, kind: 'friend', species: m.species, stats: m.stats, rawSum: Math.round(rawSumF), id: `friend:${m.friend && m.friend.id ? m.friend.id : ''}:0:${m.species}` }); // 個体の印(フレンドは1人1体なので枠は0)と元の合計(r1116-002)
+        // 持ち主のアイコン(大会カード・対戦前で顔とセットで出すためだけに引き継ぐ。名簿の行が持っている)
+        out.push({ name: m.name || msxMonName(m.species), breeder: m.friend && m.friend.name ? String(m.friend.name).slice(0, 24) : null, kind: 'friend', species: m.species, stats: m.stats, rawSum: Math.round(rawSumF), id: `friend:${m.friend && m.friend.id ? m.friend.id : ''}:0:${m.species}`, ...(row.icon ? { icon: row.icon } : {}), ...(row.profileFrame ? { profileFrame: row.profileFrame } : {}) }); // 個体の印(フレンドは1人1体なので枠は0)と元の合計(r1116-002)
       }
     }
   } catch (_) { /* フレンドの分が読めなくても続ける */ }
@@ -530,7 +558,8 @@ function MonheroSuccessHomeEntry({ callNameOf, bondLvOf, onOpenChange }) {
       <button type="button" className="mh-home-success" data-home-monhero-success onClick={() => setOpen(true)} aria-label="モンヒロサクセス β">
         {/* 公開の日の入口の文(2026-11-14 ココロ・窓口経由 #6116 を r1115-206 で取り込み直し): 上のリボン「β版 開幕！」と札の一言 */}
         <i className="rb" aria-hidden="true">β版 開幕！</i>
-        <span><span aria-hidden="true">🌱</span>モンヒロサクセス<b className="beta">β</b><small className="ln">デビュー戦から<wbr/>ヒーローズファイナルまで、<wbr/>1体をじっくり育てよう</small></span>
+        {/* βの表示は上のリボン1つだけにする(2026-11-16 UI改修: 札の中の β と二重になっていた) */}
+        <span><span aria-hidden="true">🌱</span>モンヒロサクセス<small className="ln">デビュー戦から<wbr/>ヒーローズファイナルまで、<wbr/>1体をじっくり育てよう</small></span>
       </button>
       {open && <MonheroSuccessScreen onClose={() => setOpen(false)} callNameOf={callNameOf} bondLvOf={bondLvOf}/>}
     </>
