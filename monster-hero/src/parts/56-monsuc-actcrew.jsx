@@ -85,21 +85,24 @@ function MsxActCrew({ run, o }) {
   const tagged = tagMs.length > 0 || tags.includes('aid');
   if (typeof msxUseTimedSe === 'function') msxUseTimedSe(tagged ? [['actTag', 60]] : [], []);
   const thumb = (sp) => (typeof msxMonThumb === 'function' ? msxMonThumb(sp) : typeof msxMonImg === 'function' ? msxMonImg(sp) : '');
+  // 編成の子の絵(染色があれば染め絵で出す)
+  const monImg = (m) => { const img = typeof msxMonImg === 'function' ? msxMonImg(m.species) : ''; if (!img) return null; return Array.isArray(m.colors) && m.colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? <DyedMonsterImage baseId={m.species} src={img} masuColors={m.colors} alt="" draggable={false}/> : <img src={img} alt=""/>; };
+  const faceImg = (sp, colors) => (Array.isArray(colors) && colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? <DyedMonsterImage baseId={sp} src={typeof msxMonImg === 'function' ? msxMonImg(sp) : ''} masuColors={colors} alt="" draggable={false}/> : <img src={thumb(sp)} alt=""/>);
   if (!ms.length && !aidImg) return null;
   const meSp = run && run.s ? run.s.species : '';
   return (
     <div className="crew" aria-hidden="true" data-msx-crew={ms.length} data-msx-crew-tag={tagMs.length} data-msx-crew-aid={aidImg ? 1 : 0} data-msx-tagscene={tagged ? 1 : 0}>
       {tagged ? <span className="tagglow"/> : null}
       {tagged ? Array.from({ length: 8 }, (_, i) => <i key={`st${i}`} className="tagstar" style={{ '--i': i }}>✨</i>) : null}
-      {tagMs.map((i, n) => { const img = typeof msxMonImg === 'function' ? msxMonImg(team[i].species) : ''; return img ? (
-        <div key={`t${i}`} className="cm tag duo" style={{ ...(aidImg ? MSX_CREW_SPOT_TAG_AID : MSX_CREW_SPOT_TAG)[n], '--i': n }}><img src={img} alt=""/><b className="tg">🤝 タッグ</b></div>) : null; })}
-      {restMs.map((i, n) => { const img = typeof msxMonImg === 'function' ? msxMonImg(team[i].species) : ''; return img ? (
-        <div key={i} className="cm" style={{ ...SPOT[Math.min(SPOT.length - 1, n + (aidImg ? tagMs.length : 0))], '--i': n }}><img src={img} alt=""/><i className="ch">📣</i></div>) : null; })}
+      {tagMs.map((i, n) => { const img = monImg(team[i]); return img ? (
+        <div key={`t${i}`} className="cm tag duo" style={{ ...(aidImg ? MSX_CREW_SPOT_TAG_AID : MSX_CREW_SPOT_TAG)[n], '--i': n }}>{img}<b className="tg">🤝 タッグ</b></div>) : null; })}
+      {restMs.map((i, n) => { const img = monImg(team[i]); return img ? (
+        <div key={i} className="cm" style={{ ...SPOT[Math.min(SPOT.length - 1, n + (aidImg ? tagMs.length : 0))], '--i': n }}>{img}<i className="ch">📣</i></div>) : null; })}
       {aidImg ? <div className={`aid${tags.includes('aid') ? ' tag' : ''}`}><img src={aidImg} alt=""/><b className="say">{tags.includes('aid') ? '🤝 いっしょに!' : 'がんばれ〜!'}</b></div> : null}
       {tagged ? (
         <div className="tagcut" data-msx-tag-cutin={tagMs.length + (tags.includes('aid') ? 1 : 0)}>
-          <span className="fc"><img src={thumb(meSp)} alt=""/></span>
-          {tagMs.slice(0, 3).map((i) => <React.Fragment key={i}><span className="x">×</span><span className="fc"><img src={thumb(team[i].species)} alt=""/></span></React.Fragment>)}
+          <span className="fc">{faceImg(meSp, run.colors)}</span>
+          {tagMs.slice(0, 3).map((i) => <React.Fragment key={i}><span className="x">×</span><span className="fc">{faceImg(team[i].species, team[i].colors)}</span></React.Fragment>)}
           {tags.includes('aid') && typeof msxFace === 'function' ? <><span className="x">×</span><span className="fc"><img src={msxFace(s.aid, 'excited') || msxFace(s.aid, 'happy')} alt=""/></span></> : null}
           <b>友情タッグ!<small>いっしょに 力を合わせる</small></b>
         </div>) : null}
@@ -118,8 +121,8 @@ function MsxBondChips({ s, card, add }) {
   const nameOf = (m) => (typeof msxMemberName === 'function' ? msxMemberName(m) : m.species);
   return (
     <div className="v-bchips" data-msx-bond-chips={ms.length + (aid ? 1 : 0)}>
-      {ms.map((i) => { const tag = tags.includes(i); return (
-        <span key={i} className={`v-bchip${tag ? ' tag' : ''}`} data-msx-bond-chip={tag ? 'tag' : 'm'}><img src={thumb(team[i])} alt=""/>{tag ? <i className="bc-tg">🤝</i> : null}<span className="bc-nm">{nameOf(team[i])}</span><span className="bc-up">親密度 +{add}</span></span>); })}
+      {ms.map((i) => { const tag = tags.includes(i); const m = team[i]; return (
+        <span key={i} className={`v-bchip${tag ? ' tag' : ''}`} data-msx-bond-chip={tag ? 'tag' : 'm'}>{Array.isArray(m.colors) && m.colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? <DyedMonsterImage baseId={m.species} src={typeof msxMonImg === 'function' ? msxMonImg(m.species) : ''} masuColors={m.colors} alt="" draggable={false}/> : <img src={thumb(m)} alt=""/>}{tag ? <i className="bc-tg">🤝</i> : null}<span className="bc-nm">{nameOf(m)}</span><span className="bc-up">親密度 +{add}</span></span>); })}
       {aid ? <span className={`v-bchip${tags.includes('aid') ? ' tag' : ''}`} data-msx-bond-chip="aid"><img src={typeof msxFace === 'function' ? msxFace(s.aid, 'happy') : ''} alt=""/>{tags.includes('aid') ? <i className="bc-tg">🤝</i> : null}<span className="bc-nm">{typeof msxAidName === 'function' ? msxAidName(s.aid) : ''}</span><span className="bc-up">親密度 +{add}</span></span> : null}
     </div>
   );
