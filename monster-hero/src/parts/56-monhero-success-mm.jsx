@@ -116,6 +116,8 @@ function MsxR3Box({ onClose }) {
   const [apick, setApick] = useState([]); // 置き場で、外すために選んだ子の id
   const [aAsk, setAAsk] = useState(false); // 外す確かめ
   const [menu, setMenu] = useState(null); // 'sort' / 'label' の小窓
+  const [bq, setBq] = useState(''); // 一覧の検索・逆順(表示だけの絞り込み。並び替えは今までの view.sort を使う)
+  const [brev, setBrev] = useState(false);
   const [sel, setSel] = useState(null);
   const [runFrom, setRunFrom] = useState(null);
   const [msg, setMsg] = useState('');
@@ -229,7 +231,9 @@ function MsxR3Box({ onClose }) {
   }
   // ---- 一覧(mm-03) ----
   else if (page === 'list' || (page === 'detail' && cur)) {
-    const list = msxMmSorted(box.mons, view.sort);
+    const listAll = msxMmSorted(box.mons, view.sort); // 並び替えは今までの処理(msxMmSorted)のまま
+    const listF = bq.trim() && typeof msxMatchQ === 'function' ? listAll.filter((m) => msxMatchQ(bq, msxMmName(m), msxMonName(m.species))) : listAll;
+    const list = brev ? listF.slice().reverse() : listF; // 写しだけを逆にする(元の並び・保存データは変えない)
     const sortName = (MSX_MM_SORTS.find(([k]) => k === view.sort) || [])[1];
     const labelName = (MSX_MM_LABELS.find(([k]) => k === view.label) || [])[1];
     body = (<>
@@ -237,11 +241,12 @@ function MsxR3Box({ onClose }) {
         <button type="button" className={tab === 'bye' ? 'on' : ''} onClick={() => { setTab('bye'); setPick([]); setMsg(''); }} data-msx-mm-tab-bye data-msx-r3-mmbye>お別れ</button></div>
       {tab === 'bye' ? <div className="mm-hint">お別れするマスモンを選んでね<br/>ハート・貸し出し中・育成中のマスモンは選べません</div> : null}
       {msg ? <div className="mm-hint ok">{msg}</div> : null}
+      {typeof MsxPickTools === 'function' ? <MsxPickTools q={bq} onQ={setBq} rev={brev} onRev={setBrev} count={list.length} total={box.mons.length}/> : null}
       <div className="mm-gridw">{list.length ? <MsxMmGrid mons={list} label={view.label} fav={fav}
         isOn={(m) => tab === 'bye' && pick.includes(m.id)} lockOf={tab === 'bye' ? byeLock : null}
         attrs={(m) => ({ 'data-msx-r3-boxmon': m.id })}
         onPick={(m) => { if (tab === 'bye') setPick(pick.includes(m.id) ? pick.filter((x) => x !== m.id) : [...pick, m.id]); else { setSel(m.id); setPage('detail'); setTechSel(null); setMsg(''); } }}/>
-        : <div className="msx-note" style={{ padding: 8 }}>まだマスモンはいません。育成を最後まで終えると、ここに入ります</div>}</div>
+        : <div className="msx-note" style={{ padding: 8 }}>{box.mons.length ? '検索に当てはまるモンスターがいません' : 'まだマスモンはいません。育成を最後まで終えると、ここに入ります'}</div>}</div>
       <div className="mm-bar">
         <span className="cnt">所持数 <b>{box.mons.length}</b>/{box.cap}体</span>
         <button type="button" className="mm-sel" onClick={() => setMenu('sort')} data-msx-mm-sort>並べ替え: {sortName}▼</button>

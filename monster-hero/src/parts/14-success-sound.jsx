@@ -95,6 +95,8 @@ const SuccessSound = (() => {
   };
 
   // 勝ち負けのジングルが鳴っている途中なら、鳴り終わってから場面に入る(エンディングの曲。r1115-091)。鳴っていなければすぐ入る
+  // 戻り値は「この予約を取り消す関数」。画面が離れたら呼び出し側(useSuccessSceneAfterOnce の後片付け)がこれで予約を消す。
+  // 自分のタイマーだけを消す(あとから別の予約に差し替わっていたら、そちらは消さない)
   const ONCE_MS = 7200; // ジングルの長さ(勝ち 6.9秒・負け 6.9秒)より少し長く
   const sceneAfterOnce = (sceneId, opts = null) => {
     if (!active) enter();
@@ -102,14 +104,18 @@ const SuccessSound = (() => {
     const a = audio();
     let now = null; try { now = a && a.currentBgmKey ? a.currentBgmKey() : null; } catch (e) {}
     const rest = onceKey && now === onceKey ? onceAt + ONCE_MS - Date.now() : 0;
-    if (!(rest > 0)) { scene(sceneId, opts); return; }
+    if (!(rest > 0)) { scene(sceneId, opts); return () => {}; }
     const my = epoch;
-    laterTimer = setTimeout(() => { laterTimer = null; if (active && my === epoch) scene(sceneId, opts); }, Math.min(rest, ONCE_MS));
+    const timer = setTimeout(() => { if (laterTimer === timer) laterTimer = null; if (active && my === epoch) scene(sceneId, opts); }, Math.min(rest, ONCE_MS));
+    laterTimer = timer;
+    return () => { if (laterTimer === timer) { clearTimeout(timer); laterTimer = null; } };
   };
 
   // 場面に入った合図(曲 + 効果音)。画面は場面が替わるたびにこれを1回呼ぶ
+  // 場面が替わったら、ジングル後の予約はもう要らないので消す(古い画面のタイマーが移動先の曲を上書きしない)
   const scene = (sceneId, opts = null) => {
     if (!active) enter();
+    clearLater();
     const season = opts && opts.season;
     bgm(sceneId, season);
     se(sceneId, opts && opts.delayMs);
@@ -132,12 +138,12 @@ const useSuccessScene = (sceneId, opts = null) => {
   }, [sceneId, season]);
 };
 // useSuccessScene と同じだが、勝ち負けのジングルが鳴っている途中なら鳴り終わってから曲を替える(エンディング。r1115-091)
+// 画面が消えたら、sceneAfterOnce の返す取消関数で予約を取り消す(離れた画面の遅延再生が残らない)
 const useSuccessSceneAfterOnce = (sceneId, opts = null) => {
   const season = opts && opts.season;
   useEffect(() => {
     if (!sceneId) return undefined;
-    SuccessSound.sceneAfterOnce(sceneId, { season });
-    return undefined;
+    return SuccessSound.sceneAfterOnce(sceneId, { season });
   }, [sceneId, season]);
 };
 // 画面の中で使う入り口。sceneId が替わるたびに鳴らし、画面を離れる(消える)と後片付けする。

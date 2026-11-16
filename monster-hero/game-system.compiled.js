@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 4a19d2e3c83a1b65
+// source-sha256: f8854a3637e83f23
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -10427,16 +10427,24 @@ const SuccessSound = (() => {
     const rest = onceKey && now === onceKey ? onceAt + ONCE_MS - Date.now() : 0;
     if (!(rest > 0)) {
       scene(sceneId, opts);
-      return;
+      return () => {};
     }
     const my = epoch;
-    laterTimer = setTimeout(() => {
-      laterTimer = null;
+    const timer = setTimeout(() => {
+      if (laterTimer === timer) laterTimer = null;
       if (active && my === epoch) scene(sceneId, opts);
     }, Math.min(rest, ONCE_MS));
+    laterTimer = timer;
+    return () => {
+      if (laterTimer === timer) {
+        clearTimeout(timer);
+        laterTimer = null;
+      }
+    };
   };
   const scene = (sceneId, opts = null) => {
     if (!active) enter();
+    clearLater();
     const season = opts && opts.season;
     bgm(sceneId, season);
     se(sceneId, opts && opts.delayMs);
@@ -10468,10 +10476,9 @@ const useSuccessSceneAfterOnce = (sceneId, opts = null) => {
   const season = opts && opts.season;
   useEffect(() => {
     if (!sceneId) return undefined;
-    SuccessSound.sceneAfterOnce(sceneId, {
+    return SuccessSound.sceneAfterOnce(sceneId, {
       season
     });
-    return undefined;
   }, [sceneId, season]);
 };
 const useSuccessSound = (sceneId, opts = null) => {
@@ -160030,9 +160037,11 @@ function MonsucFuseSheet({
   const [done, setDone] = React.useState(null);
   const [ready, setReady] = React.useState(true);
   const [busy, setBusy] = React.useState(false);
+  const [fq, setFq] = React.useState('');
   const lock = new Set(Array.isArray(locked) ? locked : []);
   const mons = monsucBoxMons(box);
   const usable = mons.filter(m => m.raised === true && !lock.has(m.id));
+  const usableF = fq.trim() && typeof msxMatchQ === 'function' ? usable.filter(m => msxMatchQ(fq, monsucFuseNick(m), monsucFuseSpName(m.species))) : usable;
   const main = mons.find(m => m.id === mainId) || null;
   const mat = mons.find(m => m.id === matId) || null;
   const plan = SUC && main && mat ? SUC.fusePlan(main, mat) : null;
@@ -160180,26 +160189,40 @@ function MonsucFuseSheet({
     className: "mt-3 min-h-[44px] w-full text-center rounded-xl bg-slate-700 text-[13px] font-black"
   }, "閉じる")) : !main ? React.createElement(React.Fragment, null, React.createElement("p", {
     className: "text-[11px] font-bold text-slate-300"
-  }, "① 主の親を選んでください。生まれるモンスターの主血統は、主の親から受け継ぎます。成長の型は、生まれたモンスターの種類で決まります"), typeof MsxMmGrid === 'function' ? React.createElement(MsxMmGrid, {
+  }, "① 主の親を選んでください。生まれるモンスターの主血統は、主の親から受け継ぎます。成長の型は、生まれたモンスターの種類で決まります"), typeof MsxPickTools === 'function' ? React.createElement(MsxPickTools, {
+    q: fq,
+    onQ: setFq,
+    count: usableF.length,
+    total: usable.length
+  }) : null, typeof MsxMmGrid === 'function' ? React.createElement(MsxMmGrid, {
     label: "name",
-    mons: usable,
+    mons: usableF,
     onPick: m => setMain(m.id),
     attrs: m => ({
       'data-monsuc-fuse-pick': m.id
     })
-  }) : usable.map(m => card(m, () => setMain(m.id), 'border-white/15 bg-slate-800')), usable.length < 2 && React.createElement("p", {
+  }) : usableF.map(m => card(m, () => setMain(m.id), 'border-white/15 bg-slate-800')), usable.length >= 2 && !usableF.length ? React.createElement("p", {
+    className: "mt-2 text-[11px] font-bold text-slate-400"
+  }, "検索に当てはまるモンスターがいません") : null, usable.length < 2 && React.createElement("p", {
     className: "mt-2 text-[11px] font-bold text-slate-400",
     "data-monsuc-fuse-none": true
   }, "育て終えたモンスターが2体そろうと合体できます(編成・貸し出し中のモンスターは使えません)")) : !mat ? React.createElement(React.Fragment, null, React.createElement("p", {
     className: "text-[11px] font-bold text-slate-300"
-  }, "② もう一方の親を選んでください。生まれるモンスターの副血統は、このモンスターの血統から決まります"), card(main, () => setMain(null), 'border-emerald-300/70 bg-emerald-950'), typeof MsxMmGrid === 'function' ? React.createElement(MsxMmGrid, {
+  }, "② もう一方の親を選んでください。生まれるモンスターの副血統は、このモンスターの血統から決まります"), card(main, () => setMain(null), 'border-emerald-300/70 bg-emerald-950'), typeof MsxPickTools === 'function' ? React.createElement(MsxPickTools, {
+    q: fq,
+    onQ: setFq,
+    count: usableF.filter(m => m.id !== main.id).length,
+    total: usable.length - 1
+  }) : null, typeof MsxMmGrid === 'function' ? React.createElement(MsxMmGrid, {
     label: "name",
-    mons: usable.filter(m => m.id !== main.id),
+    mons: usableF.filter(m => m.id !== main.id),
     onPick: m => setMat(m.id),
     attrs: m => ({
       'data-monsuc-fuse-pick': m.id
     })
-  }) : usable.filter(m => m.id !== main.id).map(m => card(m, () => setMat(m.id), 'border-white/15 bg-slate-800'))) : plan && plan.ok ? React.createElement(React.Fragment, null, React.createElement("p", {
+  }) : usableF.filter(m => m.id !== main.id).map(m => card(m, () => setMat(m.id), 'border-white/15 bg-slate-800')), usable.length >= 2 && !usableF.filter(m => m.id !== main.id).length ? React.createElement("p", {
+    className: "mt-2 text-[11px] font-bold text-slate-400"
+  }, "検索に当てはまるモンスターがいません") : null) : plan && plan.ok ? React.createElement(React.Fragment, null, React.createElement("p", {
     className: "text-[11px] font-bold text-slate-300"
   }, "③ 生まれるモンスターの見通し"), React.createElement("div", {
     className: "mt-1 flex items-center gap-2 rounded-xl border border-amber-300/60 bg-amber-950/40 p-2",
@@ -171533,6 +171556,30 @@ const MSX_CSS = `
 .msx .msx-tp>.msx-tp-list{flex:1 1 0;min-height:0;overflow-y:auto;overflow-x:hidden;display:flex;flex-wrap:wrap;gap:8px 6px;align-content:flex-start;align-items:flex-start;padding:6px 8px 10px}
 .msx .msx-tp>.msx-tp-list>.msx-tp-c{flex:none;width:calc((100% - 12px) / 3)}
 .msx .msx-tp>.msx-tp-list.one>*{flex:none;width:100%}
+.msx .msx-tp>.msx-tp-list>.msx-tp-w{flex:none;width:calc((100% - 12px) / 3);display:flex;flex-direction:column;gap:3px;min-width:0}
+.msx .msx-tp>.msx-tp-list.one>.msx-tp-w{width:100%}
+.msx .msx-tp-w>.msx-tp-c,.msx .msx-tp-w>.msx-fp-r{width:100%}
+.msx .msx-tp-dt{flex:none;width:100%;min-height:44px;border-radius:8px;background:#1e293b;border:1px solid #4a4380;color:#f9a8d4;font:inherit;font-size:11px;font-weight:900;padding:3px 4px}
+.msx .msx-md-sup{margin-top:8px}
+.msx .msx-pt{display:flex;flex-wrap:wrap;align-items:center;gap:6px;flex:1 1 220px;min-width:0}
+.msx .msx-pt-q{flex:1 1 120px;min-width:0;min-height:44px;border-radius:8px;background:#0f172a;color:#fff;border:1px solid #4a4380;font:inherit;font-size:16px;padding:4px 8px}
+.msx .msx-pt-s select{min-height:44px;border-radius:8px;background:#0f172a;color:#fff;border:1px solid #4a4380;font:inherit;font-size:12px;font-weight:900;padding:0 4px}
+.msx .msx-pt-r{flex:none;min-height:44px;border-radius:8px;background:#1e293b;border:1px solid #4a4380;color:#cbd5e1;font:inherit;font-size:11px;font-weight:900;padding:4px 10px}
+.msx .msx-pt-r.on{background:#3b1736;color:#f9a8d4;border-color:#f472b6}
+.msx .msx-pt-c{flex:none;font-size:11px;font-weight:900;color:#f9a8d4;white-space:nowrap}
+/* スマホ向け(モンサク改善4): 狭い縦画面で操作が折り返す・効果説明が最後まで読める・下の操作がホームインジケーターに重ならない */
+.msx .msx-tp-bar{flex-wrap:wrap}
+.msx .msx-tp-ov{padding-bottom:max(14px,var(--mh-sa-bottom,0px))}
+.msx [data-msx-team-effects] .msx-gt-mon{flex-wrap:wrap}
+.msx [data-msx-team-effects] .msx-gt-mon .v{flex:1 1 100%;text-align:left;padding-left:32px;overflow-wrap:anywhere;line-height:1.45}
+.msx .msx-md-kv span{overflow-wrap:anywhere}
+/* 高さの短い画面では編成の帯を詰める(選んでいる編成が見えるままにする) */
+@media (max-height:620px){
+.msx .msx-tp-hd{padding-top:4px;padding-bottom:0}
+.msx .msx-tp-team{gap:3px;padding:4px 6px}
+.msx .msx-tp-dt{min-height:36px}
+.msx .msx-pt-q,.msx .msx-pt-s select,.msx .msx-pt-r{min-height:38px}
+}
 .msx .msx-tp-c{position:relative;display:flex;flex-direction:column;align-items:center;gap:2px;min-width:0;padding:5px 3px 6px;border-radius:12px;background:#0f172a;border:2px solid #334155;color:#fff;font:inherit;text-align:center;-webkit-touch-callout:none;user-select:none}
 .msx .msx-tp-c.on{border-color:#f472b6;background:#3b1736;box-shadow:0 0 0 2px #f472b6}
 .msx .msx-tp-c.lk{opacity:.5}
@@ -173111,10 +173158,12 @@ function MsxMonDetail({
   pick = null,
   mastery = null,
   assists = null,
-  info = null
+  info = null,
+  initialTab = null,
+  supportSummary = null
 }) {
   const [tab, setTab] = useState('base');
-  const [btab, setBtab] = useState('tech');
+  const [btab, setBtab] = useState(() => initialTab === 'assist' && Array.isArray(assists) && assists.length ? 'assist' : 'tech');
   const [pickCell, setPickCell] = useState(null);
   const line = typeof MONSTER_LINEAGE_MAP === 'object' && MONSTER_LINEAGE_MAP ? MONSTER_LINEAGE_MAP[species] : null;
   const main = line ? msxLineName(line.main) : '';
@@ -173224,7 +173273,10 @@ function MsxMonDetail({
     style: {
       marginTop: 4
     }
-  }, "適性が高い間合いほど、その間合いの技がよく当たる")) : null)), (() => {
+  }, "適性が高い間合いほど、その間合いの技がよく当たる")) : null)), supportSummary ? React.createElement("div", {
+    className: "msx-md-box msx-md-sup",
+    "data-msx-detail-support": true
+  }, supportSummary) : null, (() => {
     const AT = typeof window !== 'undefined' && window.MONHERO_SUCCESS_ASSIST && window.MONHERO_SUCCESS_ASSIST.VERSION === 3 ? window.MONHERO_SUCCESS_ASSIST : null;
     const infoRows = Array.isArray(info) ? info.filter(Boolean) : [];
     const hasA = Array.isArray(assists) && !!AT;
@@ -173733,6 +173785,9 @@ function MsxStart({
   const [step, setStep] = useState(0);
   const [scn, setScn] = useState(null);
   const [tab, setTab] = useState('base');
+  const [pickQ, setPickQ] = useState('');
+  const [pickSort, setPickSort] = useState('std');
+  const [pickRev, setPickRev] = useState(false);
   const [look, setLook] = useState(null);
   useEffect(() => {
     if (!look || typeof document === 'undefined') return;
@@ -173978,9 +174033,10 @@ function MsxStart({
   let go = null;
   let full = null;
   if (step === 0) {
-    const list = tab === 'base' ? unlocked.map(id => ({
+    const listAll = tab === 'base' ? unlocked.map(id => ({
       key: id,
       sp: id,
+      nm: msxMonName(id),
       on: !pick.box && pick.base === id,
       pick: {
         base: id
@@ -173988,11 +174044,15 @@ function MsxStart({
     })) : unraised.map(m => ({
       key: m.id,
       sp: m.species,
+      nm: m.nick || msxMonName(m.species),
       on: pick.box === m.id,
       pick: {
         box: m.id
       }
     }));
+    const listF = pickQ.trim() && typeof msxMatchQ === 'function' ? listAll.filter(x => msxMatchQ(pickQ, x.nm, msxMonName(x.sp))) : listAll;
+    const listS = pickSort === 'name' ? listF.slice().sort((a, b) => String(a.nm).localeCompare(String(b.nm), 'ja')) : pickSort === 'species' ? listF.slice().sort((a, b) => String(msxMonName(a.sp)).localeCompare(String(msxMonName(b.sp)), 'ja')) : listF;
+    const list = pickRev ? listS.slice().reverse() : listS;
     const picked = meta.picked && meta.picked[species];
     body = React.createElement(React.Fragment, null, React.createElement("div", {
       className: "v-h"
@@ -174019,7 +174079,17 @@ function MsxStart({
           });
         }
       }
-    }, "🧬 合体で生まれたモンスター ", unraised.length)), React.createElement("div", {
+    }, "🧬 合体で生まれたモンスター ", unraised.length)), typeof MsxPickTools === 'function' ? React.createElement(MsxPickTools, {
+      q: pickQ,
+      onQ: setPickQ,
+      sorts: [['std', '標準'], ['name', '名前'], ['species', '種族']],
+      sort: pickSort,
+      onSort: setPickSort,
+      rev: pickRev,
+      onRev: setPickRev,
+      count: list.length,
+      total: listAll.length
+    }) : null, React.createElement("div", {
       className: "v-grid6",
       style: {
         maxHeight: 148,
@@ -174038,7 +174108,7 @@ function MsxStart({
       style: {
         gridColumn: '1 / -1'
       }
-    }, "まだいません(合体はこれから作ります)")), scene({
+    }, listAll.length ? '検索に当てはまるモンスターがいません' : 'まだいません(合体はこれから作ります)')), scene({
       mb: '12%',
       h: '62%'
     }, React.createElement("div", {
@@ -174725,7 +174795,56 @@ function MsxStart({
     ctx: betaCtx
   }) : null);
 }
-const MSX_TP_SORTS = Object.freeze([['power', '総合力'], ['lv', 'Lv'], ['species', '種族'], ['new', '入手']]);
+const MSX_TP_SORTS = Object.freeze([['power', '総合力'], ['lv', 'Lv'], ['name', '名前'], ['species', '種族'], ['new', '入手']]);
+const msxNormQ = s => String(s == null ? '' : s).normalize('NFKC').toLowerCase();
+const msxMatchQ = (q, ...texts) => {
+  const n = msxNormQ(q).trim();
+  if (!n) return true;
+  return texts.some(t => msxNormQ(t).includes(n));
+};
+function MsxPickTools({
+  q,
+  onQ,
+  sorts = null,
+  sort,
+  onSort,
+  rev,
+  onRev,
+  count,
+  total
+}) {
+  return React.createElement("div", {
+    className: "msx-pt",
+    "data-msx-pick-tools": true
+  }, React.createElement("input", {
+    type: "search",
+    className: "msx-pt-q",
+    value: q,
+    onChange: e => onQ(e.target.value),
+    placeholder: "名前・種族で検索",
+    "aria-label": "名前・種族で検索",
+    "data-msx-pt-q": true
+  }), sorts ? React.createElement("label", {
+    className: "msx-pt-s"
+  }, React.createElement("select", {
+    value: sort,
+    onChange: e => onSort(e.target.value),
+    "aria-label": "並べ替え",
+    "data-msx-pt-sort": true
+  }, sorts.map(([k, n]) => React.createElement("option", {
+    key: k,
+    value: k
+  }, n)))) : null, onRev ? React.createElement("button", {
+    type: "button",
+    className: `msx-pt-r${rev ? ' on' : ''}`,
+    onClick: () => onRev(!rev),
+    "aria-pressed": !!rev,
+    "data-msx-pt-rev": true
+  }, "逆順") : null, React.createElement("span", {
+    className: "msx-pt-c",
+    "data-msx-pt-count": true
+  }, count, total != null && total !== count ? ` / ${total}` : '', "件"));
+}
 const msxTpAT = () => typeof window !== 'undefined' && window.MONHERO_SUCCESS_ASSIST && window.MONHERO_SUCCESS_ASSIST.VERSION === 3 ? window.MONHERO_SUCCESS_ASSIST : null;
 const msxTpSame = (a, b) => !!(a && b && !a.auto && !b.auto && (a.box && a.box === b.box || a.assist && a.assist === b.assist || !a.box && !a.assist && !b.box && !b.assist && a.base && a.base === b.base));
 const msxTpAssistVal = (AT, a) => {
@@ -174738,6 +174857,14 @@ const msxTpAssistVal = (AT, a) => {
 const msxTpAssistText = (AT, a) => {
   try {
     return AT.valueText(a.id, AT.fromSaved(a) || a.lv);
+  } catch (e) {
+    return '';
+  }
+};
+const msxTpAssistDesc = (AT, a) => {
+  try {
+    const n = AT.fromSaved(a);
+    return n > 0 ? AT.describe(a.id, n) : AT.valueText(a.id, n);
   } catch (e) {
     return '';
   }
@@ -174821,6 +174948,30 @@ function msxTeamAuto(slots, raised, stock, SUC, box, own, assistData, skip = nul
   }
   return n;
 }
+function msxTpSupport(mem, SUC) {
+  if (!mem) return null;
+  const ch = typeof SUC.gatherChanceOf === 'function' ? (() => {
+    try {
+      return SUC.gatherChanceOf(mem);
+    } catch (e) {
+      return {};
+    }
+  })() : {};
+  return React.createElement(React.Fragment, null, React.createElement("div", {
+    className: "cap"
+  }, "サポート情報", React.createElement("span", null, "基本値")), React.createElement("div", {
+    className: "msx-md-kv"
+  }, React.createElement("b", null, "親密度(はじめ)"), React.createElement("span", null, mem.bond0)), React.createElement("div", {
+    className: "msx-md-kv"
+  }, React.createElement("b", null, "友情タッグの強さ"), React.createElement("span", null, "+", Math.round(Number(mem.tag) || 0), "%")), React.createElement("div", {
+    className: "msx-md-kv"
+  }, React.createElement("b", null, "得意率"), React.createElement("span", null, Math.round((Number(mem.fav) || 0) * 100), "%")), (Array.isArray(mem.top) ? mem.top : []).slice(0, 3).map(k => React.createElement("div", {
+    key: k,
+    className: "msx-md-kv"
+  }, React.createElement("b", null, MSX_STAT_ICON[k], MSX_STAT_NAME[k]), React.createElement("span", null, ch[k] != null ? `集合率 ${Math.round(ch[k] * 100)}%・` : '', "伸び +", Math.round(mem.bonus && mem.bonus[k] || 0), "%"))), React.createElement("div", {
+    className: "msx-note"
+  }, "基本値です。実際の効果は発動条件などで変わります"));
+}
 function MsxTpDetail({
   it,
   SUC,
@@ -174828,6 +174979,8 @@ function MsxTpDetail({
 }) {
   if (!it || typeof MsxMonDetail !== 'function') return null;
   const m = it.rec;
+  const assists = it.mem && Array.isArray(it.mem.assists) && it.mem.assists.length ? it.mem.assists : m && Array.isArray(m.assists) && m.assists.length ? m.assists : null;
+  const support = it.mem ? msxTpSupport(it.mem, SUC) : null;
   if (!m) {
     const sp = it.species;
     const st = typeof SUC.initStats === 'function' ? SUC.initStats(sp) : {};
@@ -174849,7 +175002,8 @@ function MsxTpDetail({
       grades: pv.grades || null,
       peak: pv.peak,
       SUC: SUC,
-      onClose: onClose
+      onClose: onClose,
+      supportSummary: support
     });
   }
   const st = MSX_STATS.reduce((o, k) => ({
@@ -174880,7 +175034,10 @@ function MsxTpDetail({
     rank: m.grade ? null : m.rank,
     grade: m.grade,
     SUC: SUC,
-    onClose: onClose
+    onClose: onClose,
+    assists: assists,
+    initialTab: assists ? 'assist' : null,
+    supportSummary: support
   });
 }
 function MsxTeamPick({
@@ -174901,6 +175058,8 @@ function MsxTeamPick({
 }) {
   const [tab, setTab] = useState(raised.length ? 'box' : stock.length ? 'memo' : 'base');
   const [sort, setSort] = useState('power');
+  const [q, setQ] = useState('');
+  const [rev, setRev] = useState(false);
   const [only, setOnly] = useState('all');
   const [cand, setCand] = useState(slots[idx] || null);
   const [look, setLook] = useState(null);
@@ -174948,15 +175107,18 @@ function MsxTeamPick({
       ...x,
       mem: memOf(x.slot)
     }));
-    const f = only === 'all' ? l : l.filter(x => x.mem && Array.isArray(x.mem.top) && x.mem.top.slice(0, 2).includes(only));
+    const f0 = only === 'all' ? l : l.filter(x => x.mem && Array.isArray(x.mem.top) && x.mem.top.slice(0, 2).includes(only));
+    const f = q.trim() ? f0.filter(x => msxMatchQ(q, x.rec ? x.rec.nick || '' : '', msxMonName(x.species))) : f0;
     const by = {
       power: (a, b) => (b.mem && b.mem.power || 0) - (a.mem && a.mem.power || 0) || a.i - b.i,
       lv: (a, b) => (b.mem && b.mem.lv || 0) - (a.mem && a.mem.lv || 0) || a.i - b.i,
+      name: (a, b) => String(a.rec && a.rec.nick || msxMonName(a.species)).localeCompare(String(b.rec && b.rec.nick || msxMonName(b.species)), 'ja') || a.i - b.i,
       species: (a, b) => String(msxMonName(a.species)).localeCompare(String(msxMonName(b.species)), 'ja') || a.i - b.i,
       new: (a, b) => a.kind === 'base' ? a.i - b.i : b.i - a.i
     }[sort];
-    return f.sort(by);
-  }, [lists, tab, sort, only]);
+    const sorted = f.sort(by);
+    return rev ? sorted.reverse() : sorted;
+  }, [lists, tab, sort, only, q, rev]);
   const view = slots.map((s, i) => i === idx ? cand : msxTpSame(s, cand) ? null : s);
   const raisedN = view.filter(s => s && (s.box || s.assist)).length;
   const otherIdx = slot => view.findIndex((s, i) => i !== idx && msxTpSame(s, slot));
@@ -174991,7 +175153,7 @@ function MsxTeamPick({
     className: "msx-tp"
   }, React.createElement("div", {
     className: "msx-tp-hd"
-  }, React.createElement("b", null, idx + 1, "枠目を選ぶ"), React.createElement("small", null, "長押しで詳しく")), React.createElement("div", {
+  }, React.createElement("b", null, idx + 1, "枠目を選ぶ"), React.createElement("small", null, "詳しくは「効果・詳細」・長押し")), React.createElement("div", {
     className: "msx-tp-team",
     "data-msx-tp-team": true
   }, view.map((s, i) => {
@@ -175032,16 +175194,17 @@ function MsxTeamPick({
     "data-msx-tp-tab": "friend"
   }, "🤝 フレンド", React.createElement("small", null, friendAt != null && friendAt !== idx ? `${friendAt + 1}枠目にいる` : '1体まで')) : null), React.createElement("div", {
     className: "msx-tp-bar"
-  }, React.createElement("label", {
-    className: "msx-tp-sel"
-  }, React.createElement("span", null, "並べ替え"), React.createElement("select", {
-    value: sort,
-    onChange: e => setSort(e.target.value),
-    "data-msx-tp-sort": true
-  }, MSX_TP_SORTS.map(([k, n]) => React.createElement("option", {
-    key: k,
-    value: k
-  }, n)))), React.createElement("label", {
+  }, React.createElement(MsxPickTools, {
+    q: q,
+    onQ: setQ,
+    sorts: MSX_TP_SORTS,
+    sort: sort,
+    onSort: setSort,
+    rev: rev,
+    onRev: setRev,
+    count: items.length,
+    total: lists[tab].length
+  }), React.createElement("label", {
     className: "msx-tp-sel"
   }, React.createElement("span", null, "得意"), React.createElement("select", {
     value: only,
@@ -175064,9 +175227,11 @@ function MsxTeamPick({
     const mk = markOf(x);
     const on = msxTpSame(cand, x.slot);
     const m = x.mem;
-    return React.createElement("button", _extends({
-      type: "button",
+    return React.createElement("div", {
       key: x.key,
+      className: "msx-tp-w"
+    }, React.createElement("button", _extends({
+      type: "button",
       className: `msx-tp-c${on ? ' on' : ''}${mk && mk.lock ? ' lk' : ''}`,
       "data-msx-tp-item": x.key
     }, x.kind === 'base' ? {
@@ -175097,10 +175262,15 @@ function MsxTeamPick({
       key: k
     }, `${MSX_STAT_ICON[k]}+${Math.round(m.bonus[k] || 0)}%`)) : null), React.createElement("span", {
       className: "lv"
-    }, x.kind === 'base' ? 'ベースモン' : m ? `Lv.${m.lv}・${msxFmt(m.power || 0)}` : ''));
+    }, x.kind === 'base' ? 'ベースモン' : m ? `Lv.${m.lv}・${msxFmt(m.power || 0)}` : '')), React.createElement("button", {
+      type: "button",
+      className: "msx-tp-dt",
+      "data-msx-tp-detail": x.key,
+      onClick: () => setLook(x)
+    }, "効果・詳細"));
   }) : React.createElement("div", {
     className: "msx-tp-none"
-  }, tab === 'box' ? raised.length ? '当てはまるモンスターがいません' : 'マスモンボックスはまだ空です。育て終えたモンスターが入ります' : '当てはまるモンスターがいません')), React.createElement("div", {
+  }, tab === 'box' && !raised.length ? 'マスモンボックスはまだ空です。育て終えたモンスターが入ります' : q.trim() ? '検索に当てはまるモンスターがいません' : '当てはまるモンスターがいません')), React.createElement("div", {
     className: "v-ft msx-tp-ft"
   }, React.createElement("button", {
     type: "button",
@@ -175136,12 +175306,16 @@ function MsxFriendPick({
   onClose
 }) {
   const [only, setOnly] = useState('all');
+  const [look, setLook] = useState(null);
+  const [fq, setFq] = useState('');
+  const [fsort, setFsort] = useState('power');
+  const [frev, setFrev] = useState(false);
   useEffect(() => {
     if (lendList === null && typeof onLoad === 'function') onLoad();
   }, []);
   const others = members.filter(m => m && !m.friend);
   const rows = lendList && lendList !== 'loading' && lendList.ok ? lendList.rows : [];
-  const list = rows.map(row => {
+  const list0 = rows.map(row => {
     let m = null;
     try {
       m = typeof monsucLendMember === 'function' ? monsucLendMember(row, SUC) : null;
@@ -175162,6 +175336,14 @@ function MsxFriendPick({
       dup: mem ? msxTpDupOf(mem, others) : []
     };
   }).filter(x => only === 'all' || x.mem && x.mem.top[0] === only);
+  const listF = fq.trim() ? list0.filter(x => msxMatchQ(fq, x.row.lend && x.row.lend.name || x.m && x.m.name || '', msxMonName(x.m ? x.m.species : x.row.lend && x.row.lend.species))) : list0;
+  const fby = {
+    power: (a, b) => (b.mem && b.mem.power || -1) - (a.mem && a.mem.power || -1),
+    lv: (a, b) => (b.mem && b.mem.lv || -1) - (a.mem && a.mem.lv || -1),
+    name: (a, b) => String(a.row.lend && a.row.lend.name || a.m && a.m.name || '').localeCompare(String(b.row.lend && b.row.lend.name || b.m && b.m.name || ''), 'ja')
+  }[fsort];
+  const list = listF.slice().sort(fby);
+  if (frev) list.reverse();
   return React.createElement("div", {
     className: "msx-ov msx-fade msx-tp-ov",
     "data-msx-friend-pick": true
@@ -175180,7 +175362,19 @@ function MsxFriendPick({
     key: k,
     className: only === k ? 'on' : '',
     onClick: () => setOnly(k)
-  }, n))), React.createElement("div", {
+  }, n))), lendList && lendList !== 'loading' && lendList.ok ? React.createElement("div", {
+    className: "msx-tp-bar"
+  }, React.createElement(MsxPickTools, {
+    q: fq,
+    onQ: setFq,
+    sorts: [['power', '総合力'], ['lv', 'Lv'], ['name', '名前']],
+    sort: fsort,
+    onSort: setFsort,
+    rev: frev,
+    onRev: setFrev,
+    count: list.length,
+    total: rows.length
+  })) : null, React.createElement("div", {
     className: "msx-tp-list one",
     "data-msx-fp-list": true
   }, lendList === null || lendList === 'loading' ? React.createElement("div", {
@@ -175189,7 +175383,7 @@ function MsxFriendPick({
     className: "msx-tp-none"
   }, typeof monsucLendReasonText === 'function' ? monsucLendReasonText(lendList.reason) : '今は借りられません') : !list.length ? React.createElement("div", {
     className: "msx-tp-none"
-  }, rows.length ? '当てはまるモンスターがいません' : '貸し出しているフレンドはいません') : list.map(({
+  }, rows.length ? fq.trim() ? '検索に当てはまるモンスターがいません' : '当てはまるモンスターがいません' : '貸し出しているフレンドはいません') : list.map(({
     row,
     m,
     mem,
@@ -175198,9 +175392,11 @@ function MsxFriendPick({
     const on = !!(m && friend && friend.friend && friend.friend.id === row.friendId);
     const name = row.lend && row.lend.name || m && m.name || '';
     const sp = m ? m.species : row.lend && row.lend.species;
-    return React.createElement("button", {
-      type: "button",
+    return React.createElement("div", {
       key: row.friendId,
+      className: "msx-tp-w"
+    }, React.createElement("button", {
+      type: "button",
       className: `msx-fp-r${on ? ' on' : ''}${m ? '' : ' lk'}`,
       disabled: !m,
       "data-msx-fp-row": row.friendId,
@@ -175235,7 +175431,15 @@ function MsxFriendPick({
       className: "mk dup",
       "data-msx-fp-dup": true,
       title: dup.map(a => msxTpAT() && msxTpAT().BY_ID[a.id] ? msxTpAT().BY_ID[a.id].name : a.id).join('・')
-    }, "アシスト重複") : null));
+    }, "アシスト重複") : null)), m && mem ? React.createElement("button", {
+      type: "button",
+      className: "msx-tp-dt",
+      "data-msx-fp-detail": row.friendId,
+      onClick: () => setLook({
+        m,
+        mem
+      })
+    }, "効果・詳細") : null);
   })), React.createElement("div", {
     className: "msx-tp-note"
   }, "「アシスト重複」… 編成で一番大きい1つだけ効くアシスト効果を、編成のほかのモンスターが同じかそれより大きく持っている。「編成不可」… 借りられない形のモンスター"), React.createElement("div", {
@@ -175248,7 +175452,46 @@ function MsxFriendPick({
     type: "button",
     onClick: onOwn,
     "data-msx-fp-own": true
-  }, "自分のモンスターにする"))));
+  }, "自分のモンスターにする"))), look && look.mem && typeof MsxMonDetail === 'function' ? (() => {
+    const mem = look.mem;
+    const m = look.m;
+    const fst = MSX_STATS.reduce((o, k) => ({
+      ...o,
+      [k]: Math.round(mem.stats && mem.stats[k] || 0)
+    }), {});
+    const fgrades = typeof SUC.aptGradesOf === 'function' ? (() => {
+      try {
+        return SUC.aptGradesOf(mem);
+      } catch (e) {
+        return null;
+      }
+    })() : null;
+    const fassists = Array.isArray(mem.assists) && mem.assists.length ? mem.assists : null;
+    return React.createElement(MsxMonDetail, {
+      species: mem.species,
+      name: m.name || mem.name,
+      sub: `フレンド・Lv.${mem.lv}・${msxMonName(mem.species)}`,
+      art: Array.isArray(mem.colors) && mem.colors.some(Boolean) && typeof DyedMonsterImage === 'function' ? React.createElement(DyedMonsterImage, {
+        baseId: mem.species,
+        src: msxMonImg(mem.species),
+        masuColors: mem.colors,
+        alt: "",
+        draggable: false
+      }) : null,
+      st: fst,
+      apt: msxAptOf(mem.species),
+      type: m.type != null ? m.type : null,
+      grades: fgrades,
+      known: Array.isArray(mem.techs) ? mem.techs : [],
+      power: mem.power,
+      rank: mem.rank,
+      SUC: SUC,
+      onClose: () => setLook(null),
+      assists: fassists,
+      initialTab: fassists ? 'assist' : null,
+      supportSummary: msxTpSupport(mem, SUC)
+    });
+  })() : null);
 }
 function MsxTeamEffects({
   members,
@@ -175266,7 +175509,7 @@ function MsxTeamEffects({
       mi,
       name: m.name,
       v: msxTpAssistVal(AT, a),
-      text: msxTpAssistText(AT, a)
+      text: msxTpAssistDesc(AT, a)
     });
   }));
   const list = Object.keys(groups).map(id => groups[id]);
@@ -181716,10 +181959,22 @@ function MsxR3Battle({
   const [showPh, setShowPh] = useState('bracket');
   const [introSeen, setIntroSeen] = useState(null);
   const showView = showOn || !!debug && typeof MonsucCupShow === 'function' && (step === 'card' || step === 'watch');
-  const cupSound = st3 ? st3.won ? 'cupWin' : 'cupLose' : showView ? showPh === 'win' ? 'cupWin' : showPh === 'lose' ? 'cupLose' : showPh === 'cutin' || showPh === 'match' ? 'cupMatch' : 'cupPre' : step === 'lost' ? 'cupLose' : step === 'bracket' || step === 'card' ? 'cupPre' : 'cupMatch';
-  useSuccessScene(cupSound, {
+  const cupSound = showView ? showPh === 'win' ? 'cupWin' : showPh === 'lose' ? 'cupLose' : showPh === 'cutin' || showPh === 'match' ? 'cupMatch' : 'cupPre' : step === 'lost' ? 'cupLose' : step === 'bracket' || step === 'card' ? 'cupPre' : 'cupMatch';
+  useSuccessScene(st3 ? null : cupSound, {
     season: msxCalendar(s.turn).season
   });
+  const settledKey = st3 ? `${st3.won ? 'cupWin' : 'cupLose'}:${st3.from}` : null;
+  const settledRef = useRef(settledKey);
+  useEffect(() => {
+    if (!st3 || typeof SuccessSound === 'undefined') return undefined;
+    if (settledRef.current !== settledKey) {
+      settledRef.current = settledKey;
+      SuccessSound.scene(st3.won ? 'cupWin' : 'cupLose');
+    }
+    return SuccessSound.sceneAfterOnce('cupAfter', {
+      season: msxCalendar(s.turn).season
+    });
+  }, [settledKey]);
   useEffect(() => {
     if (cupSound !== 'cupMatch' || typeof SuccessSound === 'undefined' || typeof SuccessSound.keep !== 'function') return undefined;
     const season = msxCalendar(s.turn).season;
@@ -184776,6 +185031,8 @@ function MsxR3Box({
   const [apick, setApick] = useState([]);
   const [aAsk, setAAsk] = useState(false);
   const [menu, setMenu] = useState(null);
+  const [bq, setBq] = useState('');
+  const [brev, setBrev] = useState(false);
   const [sel, setSel] = useState(null);
   const [runFrom, setRunFrom] = useState(null);
   const [msg, setMsg] = useState('');
@@ -185103,7 +185360,9 @@ function MsxR3Box({
       }
     }, "← 戻る"));
   } else if (page === 'list' || page === 'detail' && cur) {
-    const list = msxMmSorted(box.mons, view.sort);
+    const listAll = msxMmSorted(box.mons, view.sort);
+    const listF = bq.trim() && typeof msxMatchQ === 'function' ? listAll.filter(m => msxMatchQ(bq, msxMmName(m), msxMonName(m.species))) : listAll;
+    const list = brev ? listF.slice().reverse() : listF;
     const sortName = (MSX_MM_SORTS.find(([k]) => k === view.sort) || [])[1];
     const labelName = (MSX_MM_LABELS.find(([k]) => k === view.label) || [])[1];
     body = React.createElement(React.Fragment, null, React.createElement("div", {
@@ -185129,7 +185388,14 @@ function MsxR3Box({
       className: "mm-hint"
     }, "お別れするマスモンを選んでね", React.createElement("br", null), "ハート・貸し出し中・育成中のマスモンは選べません") : null, msg ? React.createElement("div", {
       className: "mm-hint ok"
-    }, msg) : null, React.createElement("div", {
+    }, msg) : null, typeof MsxPickTools === 'function' ? React.createElement(MsxPickTools, {
+      q: bq,
+      onQ: setBq,
+      rev: brev,
+      onRev: setBrev,
+      count: list.length,
+      total: box.mons.length
+    }) : null, React.createElement("div", {
       className: "mm-gridw"
     }, list.length ? React.createElement(MsxMmGrid, {
       mons: list,
@@ -185153,7 +185419,7 @@ function MsxR3Box({
       style: {
         padding: 8
       }
-    }, "まだマスモンはいません。育成を最後まで終えると、ここに入ります")), React.createElement("div", {
+    }, box.mons.length ? '検索に当てはまるモンスターがいません' : 'まだマスモンはいません。育成を最後まで終えると、ここに入ります')), React.createElement("div", {
       className: "mm-bar"
     }, React.createElement("span", {
       className: "cnt"
