@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 4a19d2e3c83a1b65
+// source-sha256: 4f945ce519c71ce3
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
@@ -10427,16 +10427,24 @@ const SuccessSound = (() => {
     const rest = onceKey && now === onceKey ? onceAt + ONCE_MS - Date.now() : 0;
     if (!(rest > 0)) {
       scene(sceneId, opts);
-      return;
+      return () => {};
     }
     const my = epoch;
-    laterTimer = setTimeout(() => {
-      laterTimer = null;
+    const timer = setTimeout(() => {
+      if (laterTimer === timer) laterTimer = null;
       if (active && my === epoch) scene(sceneId, opts);
     }, Math.min(rest, ONCE_MS));
+    laterTimer = timer;
+    return () => {
+      if (laterTimer === timer) {
+        clearTimeout(timer);
+        laterTimer = null;
+      }
+    };
   };
   const scene = (sceneId, opts = null) => {
     if (!active) enter();
+    clearLater();
     const season = opts && opts.season;
     bgm(sceneId, season);
     se(sceneId, opts && opts.delayMs);
@@ -10468,10 +10476,9 @@ const useSuccessSceneAfterOnce = (sceneId, opts = null) => {
   const season = opts && opts.season;
   useEffect(() => {
     if (!sceneId) return undefined;
-    SuccessSound.sceneAfterOnce(sceneId, {
+    return SuccessSound.sceneAfterOnce(sceneId, {
       season
     });
-    return undefined;
   }, [sceneId, season]);
 };
 const useSuccessSound = (sceneId, opts = null) => {
@@ -181716,10 +181723,22 @@ function MsxR3Battle({
   const [showPh, setShowPh] = useState('bracket');
   const [introSeen, setIntroSeen] = useState(null);
   const showView = showOn || !!debug && typeof MonsucCupShow === 'function' && (step === 'card' || step === 'watch');
-  const cupSound = st3 ? st3.won ? 'cupWin' : 'cupLose' : showView ? showPh === 'win' ? 'cupWin' : showPh === 'lose' ? 'cupLose' : showPh === 'cutin' || showPh === 'match' ? 'cupMatch' : 'cupPre' : step === 'lost' ? 'cupLose' : step === 'bracket' || step === 'card' ? 'cupPre' : 'cupMatch';
-  useSuccessScene(cupSound, {
+  const cupSound = showView ? showPh === 'win' ? 'cupWin' : showPh === 'lose' ? 'cupLose' : showPh === 'cutin' || showPh === 'match' ? 'cupMatch' : 'cupPre' : step === 'lost' ? 'cupLose' : step === 'bracket' || step === 'card' ? 'cupPre' : 'cupMatch';
+  useSuccessScene(st3 ? null : cupSound, {
     season: msxCalendar(s.turn).season
   });
+  const settledKey = st3 ? `${st3.won ? 'cupWin' : 'cupLose'}:${st3.from}` : null;
+  const settledRef = useRef(settledKey);
+  useEffect(() => {
+    if (!st3 || typeof SuccessSound === 'undefined') return undefined;
+    if (settledRef.current !== settledKey) {
+      settledRef.current = settledKey;
+      SuccessSound.scene(st3.won ? 'cupWin' : 'cupLose');
+    }
+    return SuccessSound.sceneAfterOnce('cupAfter', {
+      season: msxCalendar(s.turn).season
+    });
+  }, [settledKey]);
   useEffect(() => {
     if (cupSound !== 'cupMatch' || typeof SuccessSound === 'undefined' || typeof SuccessSound.keep !== 'function') return undefined;
     const season = msxCalendar(s.turn).season;
