@@ -45,7 +45,7 @@ const MSX_SCN_CSS = `
 .msx .scn-ft{display:flex;gap:10px;align-items:center;padding:10px 12px calc(10px + env(safe-area-inset-bottom));background:#c9b9a6;flex:none}
 .msx .scn-ft button{display:flex;align-items:center;justify-content:center;text-align:center;line-height:1;padding:0;height:48px;border-radius:10px;font-weight:900;font-size:16px;border:3px solid #fff;box-shadow:0 3px 0 #0003}
 .msx .scn-ft .bk{width:48px;flex:none;background:#f59e0b;color:#fff;font-size:22px}
-.msx .scn-ft .go{flex:1 1 0;background:linear-gradient(180deg,#fb923c,#ea580c);color:#fff}
+.msx .scn-ft .go{flex:1 1 0;background:linear-gradient(180deg,#fb923c,#ea580c);color:#fff;padding-left:4px}/* ▶ の字は字幅の中で左寄りに描かれ、見た目の中心が 3px 左へずれる(実測)。左の余白で字そのものの中心と見た目の中心をそろえる(2026-11-16 レイアウト点検) */
 .msx .scn-ft .dt{flex:1 1 0;background:#fff;color:#1f2937;border-color:#e5e7eb}
 .msx .land .scn-tx,.msx.land .scn-tx{right:42%}
 .msx .land .scn-sc .who.c,.msx.land .scn-sc .who.c{left:auto;right:17%;transform:none;bottom:0;height:90%;animation:none}
